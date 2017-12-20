@@ -39,7 +39,7 @@
 									<listOptionValue builtIn="false" value="E:/dev/libs/SQLiteCpp/include"/>
 								</option>
 								<option id="gnu.cpp.compiler.option.preprocessor.def.407750758" name="Defined symbols (-D)" superClass="gnu.cpp.compiler.option.preprocessor.def" useByScannerDiscovery="false" valueType="definedSymbols">
-									<listOptionValue builtIn="false" value="PA_USE_ASIO=E:/dev/libs/SQLiteCpp/include"/>
+									<listOptionValue builtIn="false" value="PA_USE_ASIO=1"/>
 									<listOptionValue builtIn="false" value="PA_USE_DS=1"/>
 									<listOptionValue builtIn="false" value="VST_FORCE_DEPRECATED=0"/>
 								</option>
