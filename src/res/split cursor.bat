@@ -1,1 +1,0 @@
-convert cursors.png -crop 32x32 PNG32:cursor%02d.png

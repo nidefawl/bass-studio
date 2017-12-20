@@ -13,6 +13,7 @@
 #include <queue>
 
 #include <assert.h>
+#include <exception>
 
 #include "logging.h"
 #define LOG(fmtString,...) printf(fmtString "\n", ##__VA_ARGS__); fflush(stdout)
