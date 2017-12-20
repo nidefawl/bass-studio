@@ -13,6 +13,12 @@
 #include <sstream>
 #include <string.h>
 
+using namespace std;
+
+typedef unsigned char uchar;
+typedef unsigned short ushort;
+typedef unsigned long ulong;
+
 //////////////////////////////
 //
 // Binasc::Binasc -- Constructor: set the default option values.

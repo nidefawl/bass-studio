@@ -17,29 +17,24 @@
 #include <vector>
 #include <string>
 
-using namespace std;
 
-typedef unsigned char  uchar;
-typedef unsigned short ushort;
-typedef unsigned long  ulong;
-
-class MidiMessage : public vector<uchar> {
+class MidiMessage : public std::vector<unsigned char> {
 	public:
 		               MidiMessage          (void);
 		               MidiMessage          (int command);
 		               MidiMessage          (int command, int p1);
 		               MidiMessage          (int command, int p1, int p2);
                      MidiMessage          (const MidiMessage& message);
-                     MidiMessage          (const vector<uchar>& message);
-                     MidiMessage          (const vector<char>& message);
-                     MidiMessage          (const vector<int>& message);
+                     MidiMessage          (const std::vector<unsigned char>& message);
+                     MidiMessage          (const std::vector<char>& message);
+                     MidiMessage          (const std::vector<int>& message);
 
                     ~MidiMessage         ();
 
       MidiMessage&   operator=            (const MidiMessage& message);
-      MidiMessage&   operator=            (const vector<uchar>& bytes);
-      MidiMessage&   operator=            (const vector<char>& bytes);
-      MidiMessage&   operator=            (const vector<int>& bytes);
+      MidiMessage&   operator=            (const std::vector<unsigned char>& bytes);
+      MidiMessage&   operator=            (const std::vector<char>& bytes);
+      MidiMessage&   operator=            (const std::vector<int>& bytes);
       void           setSize              (int asize);
       int            getSize              (void) const;
       int            setSizeToCommand     (void);
@@ -92,9 +87,9 @@ class MidiMessage : public vector<uchar> {
       void           setChannel           (int value);
       void           setParameters        (int p1, int p2);
       void           setParameters        (int p1);
-      void           setMessage           (const vector<uchar>& message);
-      void           setMessage           (const vector<char>& message);
-      void           setMessage           (const vector<int>& message);
+      void           setMessage           (const std::vector<unsigned char>& message);
+      void           setMessage           (const std::vector<char>& message);
+      void           setMessage           (const std::vector<int>& message);
 
       void           setSpelling          (int base7, int accidental);
       void           getSpelling          (int& base7, int& accidental);
@@ -109,13 +104,13 @@ class MidiMessage : public vector<uchar> {
       void           makeTimbre           (int channel, int patchnum);
 
       // meta-message creation helper functions:
-      void           makeMetaMessage      (int mnum, const string& data);
-      void           makeTrackName        (const string& name);
-      void           makeInstrumentName   (const string& name);
-      void           makeLyric            (const string& text);
-      void           makeMarker           (const string& text);
-      void           makeCue              (const string& text);
-      void           makeCopyright        (const string& text);
+      void           makeMetaMessage      (int mnum, const std::string& data);
+      void           makeTrackName        (const std::string& name);
+      void           makeInstrumentName   (const std::string& name);
+      void           makeLyric            (const std::string& text);
+      void           makeMarker           (const std::string& text);
+      void           makeCue              (const std::string& text);
+      void           makeCopyright        (const std::string& text);
       void           makeTempo            (double tempo) { setTempo(tempo); }
       void           makeTimeSignature    (int top, int bottom,
 	                                        int clocksPerClick = 24,

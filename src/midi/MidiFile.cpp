@@ -39,7 +39,12 @@
 #include <algorithm>
 #include <iterator>
 
+
 using namespace std;
+
+typedef unsigned char uchar;
+typedef unsigned short ushort;
+typedef unsigned long ulong;
 
 
 //////////////////////////////
@@ -973,16 +978,16 @@ void MidiFile::splitTracks(void) {
           maxTrack = (*events[0])[i].track;
       }
    }
-   int trackCount = maxTrack + 1;
+   int newtrackCount = maxTrack + 1;
 
-   if (trackCount <= 1) {
+   if (newtrackCount <= 1) {
       return;
    }
 
    MidiEventList* olddata = events[0];
    events[0] = NULL;
-   events.resize(trackCount);
-   for (i=0; i<trackCount; i++) {
+   events.resize(newtrackCount);
+   for (i=0; i<newtrackCount; i++) {
       events[i] = new MidiEventList;
    }
 
@@ -1038,16 +1043,16 @@ void MidiFile::splitTracksByChannel(void) {
          maxTrack = eventlist[i][0] & 0x0f;
       }
    }
-   int trackCount = maxTrack + 2; // + 1 for expression track
+   int newtrackCount = maxTrack + 2; // + 1 for expression track
 
-   if (trackCount <= 1) {
+   if (newtrackCount <= 1) {
       // only one channel, so don't do anything (leave as Type-0 file).
       return;
    }
 
    events[0] = NULL;
-   events.resize(trackCount);
-   for (i=0; i<trackCount; i++) {
+   events.resize(newtrackCount);
+   for (i=0; i<newtrackCount; i++) {
       events[i] = new MidiEventList;
    }
 

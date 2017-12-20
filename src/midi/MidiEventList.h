@@ -16,7 +16,6 @@
 #include "MidiEvent.h"
 #include <vector>
 
-using namespace std;
 
 class MidiEventList {
    public:
@@ -52,7 +51,7 @@ class MidiEventList {
       MidiEventList& operator=(MidiEventList other);
 
    private:
-      vector<MidiEvent*>     list;
+      std::vector<MidiEvent*>     list;
 
 };
 

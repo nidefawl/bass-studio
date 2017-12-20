@@ -16,6 +16,9 @@
 
 using namespace std;
 
+typedef unsigned char  uchar;
+typedef unsigned short ushort;
+typedef unsigned long  ulong;
 
 //////////////////////////////
 //
@@ -48,6 +51,8 @@ MidiEvent::MidiEvent(int aTime, int aTrack, vector<uchar>& message)
    tick      = aTime;
    track     = aTrack;
    eventlink = NULL;
+   seconds   = 0.0;
+   seq       = 0;
 }
 
 

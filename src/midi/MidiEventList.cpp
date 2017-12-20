@@ -21,6 +21,9 @@
 
 using namespace std;
 
+typedef unsigned char uchar;
+typedef unsigned short ushort;
+typedef unsigned long ulong;
 
 //////////////////////////////
 //
@@ -281,7 +284,7 @@ int MidiEventList::linkNotePairs(void) {
    contevents.resize(18);
    vector<vector<int> > oldstates;
    oldstates.resize(18);
-   for (int i=0; i<18; i++) {
+   for (i=0; i<18; i++) {
       contevents[i].resize(16);
       fill(contevents[i].begin(), contevents[i].end(), nullptr);
       oldstates[i].resize(16);
