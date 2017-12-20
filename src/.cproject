@@ -7,42 +7,22 @@
 				<extensions>
 					<extension id="org.eclipse.cdt.core.PE" point="org.eclipse.cdt.core.BinaryParser"/>
 					<extension id="org.eclipse.cdt.core.GASErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
-					<extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.GLDErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
-					<extension id="org.eclipse.cdt.core.CWDLocator" point="org.eclipse.cdt.core.ErrorParser"/>
 					<extension id="org.eclipse.cdt.core.GCCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
 				</extensions>
 			</storageModule>
 			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
 				<configuration artifactName="${ProjName}" buildProperties="" description="" id="cdt.managedbuild.toolchain.llvm.clang.win32.mingw.base.861092702" name="Default" optionalBuildProperties="org.eclipse.cdt.docker.launcher.containerbuild.property.selectedvolumes=,org.eclipse.cdt.docker.launcher.containerbuild.property.volumes=" parent="org.eclipse.cdt.build.core.emptycfg">
 					<folderInfo id="cdt.managedbuild.toolchain.llvm.clang.win32.mingw.base.861092702.1966503290" name="/" resourcePath="">
-						<toolChain id="cdt.managedbuild.toolchain.llvm.clang.win32.mingw.base.595421461" name="LLVM with Clang (Windows) (MinGW) " superClass="cdt.managedbuild.toolchain.llvm.clang.win32.mingw.base">
-							<targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.PE" id="cdt.managedbuild.target.llvm.win32.mingw.platform.base.1573293113" isAbstract="true" name="Debug Platform" osList="win32" superClass="cdt.managedbuild.target.llvm.win32.mingw.platform.base"/>
-							<builder arguments="-j 8 -O" buildPath="${ProjDirPath}/../" command="make" id="cdt.managedbuild.toolchain.llvm.clang.win32.mingw.base.861092702.1561555732" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" superClass="org.eclipse.cdt.build.core.settings.default.builder"/>
-							<tool id="cdt.managedbuild.tool.llvm.assembler.base.601244706" name="LLVM assembler" superClass="cdt.managedbuild.tool.llvm.assembler.base"/>
-							<tool id="cdt.managedbuild.tool.llvm.archiver.base.1120122828" name="LLVM archiver" superClass="cdt.managedbuild.tool.llvm.archiver.base"/>
-							<tool id="cdt.managedbuild.tool.llvm.c.compiler.base.1785832511" name="LLVM Clang" superClass="cdt.managedbuild.tool.llvm.c.compiler.base">
-								<option id="llvm.c_cpp.compiler.option.include.paths.701862809" name="Include paths (-I)" superClass="llvm.c_cpp.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
-									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\glfw_mingw64\include&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\glad\include&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\nanovg&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\PortAudio_190600\include&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\PortAudio_190600\src\common&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\PortAudio_190600\src\os\win&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\ASIOSDK2.3\common&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\ASIOSDK2.3\host&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\ASIOSDK2.3\host\pc&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\PortAudio_190600\src\hostapi\asio&quot;"/>
-								</option>
-								<option id="llvm.c_cpp.compiler.option.preprocessor.def.1608897719" name="Defined symbols (-D)" superClass="llvm.c_cpp.compiler.option.preprocessor.def" useByScannerDiscovery="false" valueType="definedSymbols">
-									<listOptionValue builtIn="false" value="PA_USE_ASIO=1"/>
-									<listOptionValue builtIn="false" value="PA_USE_DS=1"/>
-									<listOptionValue builtIn="false" value="VST_FORCE_DEPRECATED=0"/>
-								</option>
-								<inputType id="cdt.managedbuild.tool.llvm.c.compiler.input.1632108717" superClass="cdt.managedbuild.tool.llvm.c.compiler.input"/>
+						<toolChain id="cdt.managedbuild.toolchain.gnu.mingw.base.471140956" name="MinGW GCC" superClass="cdt.managedbuild.toolchain.gnu.mingw.base">
+							<targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.PE" id="cdt.managedbuild.target.gnu.platform.mingw.base.375155701" name="Debug Platform" osList="win32" superClass="cdt.managedbuild.target.gnu.platform.mingw.base"/>
+							<builder buildPath="${workspace_loc:/DAW}/Default" id="cdt.managedbuild.tool.gnu.builder.mingw.base.1390971967" keepEnvironmentInBuildfile="false" name="CDT Internal Builder" superClass="cdt.managedbuild.tool.gnu.builder.mingw.base"/>
+							<tool id="cdt.managedbuild.tool.gnu.assembler.mingw.base.8122312" name="GCC Assembler" superClass="cdt.managedbuild.tool.gnu.assembler.mingw.base">
+								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.1772414530" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
 							</tool>
-							<tool id="cdt.managedbuild.tool.llvm.cpp.compiler.base.934571122" name="LLVM Clang++" superClass="cdt.managedbuild.tool.llvm.cpp.compiler.base">
-								<option id="llvm.c_cpp.compiler.option.include.paths.763483162" name="Include paths (-I)" superClass="llvm.c_cpp.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
+							<tool id="cdt.managedbuild.tool.gnu.archiver.mingw.base.1716341283" name="GCC Archiver" superClass="cdt.managedbuild.tool.gnu.archiver.mingw.base"/>
+							<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.mingw.base.708697718" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.mingw.base">
+								<option id="gnu.cpp.compiler.option.include.paths.954619487" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/DAW/include}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\glfw_mingw64\include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\glad\include&quot;"/>
@@ -58,17 +38,37 @@
 									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\PortAudio_190600\src\hostapi\asio&quot;"/>
 									<listOptionValue builtIn="false" value="E:/dev/libs/SQLiteCpp/include"/>
 								</option>
-								<option id="llvm.c_cpp.compiler.option.preprocessor.def.873061675" name="Defined symbols (-D)" superClass="llvm.c_cpp.compiler.option.preprocessor.def" useByScannerDiscovery="false" valueType="definedSymbols">
+								<option id="gnu.cpp.compiler.option.preprocessor.def.407750758" name="Defined symbols (-D)" superClass="gnu.cpp.compiler.option.preprocessor.def" useByScannerDiscovery="false" valueType="definedSymbols">
 									<listOptionValue builtIn="false" value="PA_USE_ASIO=E:/dev/libs/SQLiteCpp/include"/>
 									<listOptionValue builtIn="false" value="PA_USE_DS=1"/>
 									<listOptionValue builtIn="false" value="VST_FORCE_DEPRECATED=0"/>
 								</option>
-								<inputType id="cdt.managedbuild.tool.llvm.cpp.compiler.input.1404987904" superClass="cdt.managedbuild.tool.llvm.cpp.compiler.input"/>
+								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.6641979" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
-							<tool id="cdt.managedbuild.tool.llvm.c.linker.base.1804666670" name="LLVM Clang C linker" superClass="cdt.managedbuild.tool.llvm.c.linker.base"/>
-							<tool id="cdt.managedbuild.tool.llvm.cpp.linker.base.1592021735" name="LLVM Clang C++ linker" superClass="cdt.managedbuild.tool.llvm.cpp.linker.base">
-								<option id="llvm.c.link.option.libs.85668105" name="Libraries (-l)" superClass="llvm.c.link.option.libs" valueType="libs"/>
-								<inputType id="cdt.managedbuild.tool.llvm.c.linker.input.84596339" superClass="cdt.managedbuild.tool.llvm.c.linker.input">
+							<tool id="cdt.managedbuild.tool.gnu.c.compiler.mingw.base.1055494822" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.mingw.base">
+								<option id="gnu.c.compiler.option.include.paths.421037841" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\glfw_mingw64\include&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\glad\include&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\nanovg&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\PortAudio_190600\include&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\PortAudio_190600\src\common&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\PortAudio_190600\src\os\win&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\ASIOSDK2.3\common&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\ASIOSDK2.3\host&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\ASIOSDK2.3\host\pc&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\PortAudio_190600\src\hostapi\asio&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\glad\src&quot;"/>
+								</option>
+								<option id="gnu.c.compiler.option.preprocessor.def.symbols.958408442" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols" useByScannerDiscovery="false" valueType="definedSymbols">
+									<listOptionValue builtIn="false" value="PA_USE_ASIO=1"/>
+									<listOptionValue builtIn="false" value="PA_USE_DS=1"/>
+									<listOptionValue builtIn="false" value="VST_FORCE_DEPRECATED=0"/>
+								</option>
+								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.1698193019" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
+							</tool>
+							<tool id="cdt.managedbuild.tool.gnu.c.linker.mingw.base.632651994" name="MinGW C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.mingw.base"/>
+							<tool id="cdt.managedbuild.tool.gnu.cpp.linker.mingw.base.1494036683" name="MinGW C++ Linker" superClass="cdt.managedbuild.tool.gnu.cpp.linker.mingw.base">
+								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.1030321146" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
 									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
 								</inputType>
@@ -79,9 +79,6 @@
 			</storageModule>
 			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
 		</cconfiguration>
-	</storageModule>
-	<storageModule moduleId="scannerConfiguration">
-		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 	</storageModule>
 	<storageModule moduleId="cdtBuildSystem" version="4.0.0">
 		<project id="DAW.null.41298964" name="DAW"/>
@@ -94,4 +91,13 @@
 	</storageModule>
 	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
 	<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
+	<storageModule moduleId="scannerConfiguration">
+		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		<scannerConfigBuildInfo instanceId="cdt.managedbuild.toolchain.llvm.clang.win32.mingw.base.861092702;cdt.managedbuild.toolchain.llvm.clang.win32.mingw.base.861092702.1966503290;cdt.managedbuild.tool.gnu.c.compiler.mingw.base.1055494822;cdt.managedbuild.tool.gnu.c.compiler.input.1698193019">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="cdt.managedbuild.toolchain.llvm.clang.win32.mingw.base.861092702;cdt.managedbuild.toolchain.llvm.clang.win32.mingw.base.861092702.1966503290;cdt.managedbuild.tool.gnu.cpp.compiler.mingw.base.708697718;cdt.managedbuild.tool.gnu.cpp.compiler.input.6641979">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+	</storageModule>
 </cproject>

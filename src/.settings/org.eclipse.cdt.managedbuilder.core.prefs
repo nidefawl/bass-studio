@@ -31,6 +31,14 @@ environment/buildEnvironmentInclude/cdt.managedbuild.config.gnu.mingw.exe.releas
 environment/buildEnvironmentInclude/cdt.managedbuild.config.gnu.mingw.exe.release.814165804/C_INCLUDE_PATH/operation=remove
 environment/buildEnvironmentInclude/cdt.managedbuild.config.gnu.mingw.exe.release.814165804/append=true
 environment/buildEnvironmentInclude/cdt.managedbuild.config.gnu.mingw.exe.release.814165804/appendContributed=true
+environment/buildEnvironmentInclude/cdt.managedbuild.toolchain.llvm.clang.win32.mingw.base.861092702/CPATH/delimiter=;
+environment/buildEnvironmentInclude/cdt.managedbuild.toolchain.llvm.clang.win32.mingw.base.861092702/CPATH/operation=remove
+environment/buildEnvironmentInclude/cdt.managedbuild.toolchain.llvm.clang.win32.mingw.base.861092702/CPLUS_INCLUDE_PATH/delimiter=;
+environment/buildEnvironmentInclude/cdt.managedbuild.toolchain.llvm.clang.win32.mingw.base.861092702/CPLUS_INCLUDE_PATH/operation=remove
+environment/buildEnvironmentInclude/cdt.managedbuild.toolchain.llvm.clang.win32.mingw.base.861092702/C_INCLUDE_PATH/delimiter=;
+environment/buildEnvironmentInclude/cdt.managedbuild.toolchain.llvm.clang.win32.mingw.base.861092702/C_INCLUDE_PATH/operation=remove
+environment/buildEnvironmentInclude/cdt.managedbuild.toolchain.llvm.clang.win32.mingw.base.861092702/append=true
+environment/buildEnvironmentInclude/cdt.managedbuild.toolchain.llvm.clang.win32.mingw.base.861092702/appendContributed=true
 environment/buildEnvironmentLibrary/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.111289801/LIBRARY_PATH/delimiter=;
 environment/buildEnvironmentLibrary/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.111289801/LIBRARY_PATH/operation=remove
 environment/buildEnvironmentLibrary/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.111289801/append=true
@@ -47,3 +55,7 @@ environment/buildEnvironmentLibrary/cdt.managedbuild.config.gnu.mingw.exe.releas
 environment/buildEnvironmentLibrary/cdt.managedbuild.config.gnu.mingw.exe.release.814165804/LIBRARY_PATH/operation=remove
 environment/buildEnvironmentLibrary/cdt.managedbuild.config.gnu.mingw.exe.release.814165804/append=true
 environment/buildEnvironmentLibrary/cdt.managedbuild.config.gnu.mingw.exe.release.814165804/appendContributed=true
+environment/buildEnvironmentLibrary/cdt.managedbuild.toolchain.llvm.clang.win32.mingw.base.861092702/LIBRARY_PATH/delimiter=;
+environment/buildEnvironmentLibrary/cdt.managedbuild.toolchain.llvm.clang.win32.mingw.base.861092702/LIBRARY_PATH/operation=remove
+environment/buildEnvironmentLibrary/cdt.managedbuild.toolchain.llvm.clang.win32.mingw.base.861092702/append=true
+environment/buildEnvironmentLibrary/cdt.managedbuild.toolchain.llvm.clang.win32.mingw.base.861092702/appendContributed=true
