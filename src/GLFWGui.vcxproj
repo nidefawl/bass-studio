@@ -1,0 +1,427 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Test|Win32">
+      <Configuration>Test</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Test|x64">
+      <Configuration>Test</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>15.0</VCProjectVersion>
+    <ProjectGuid>{1019B723-4FCB-4D38-BBAF-65852BBE5530}</ProjectGuid>
+    <RootNamespace>GLFWGui</RootNamespace>
+    <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v120</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Test|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v120</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v120</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Test|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Test|Win32'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Test|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);</LibraryPath>
+    <IntDir>BUILD\msvc\$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Test|x64'">
+    <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);</LibraryPath>
+    <IntDir>BUILD\msvc\$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <IntDir>BUILD\msvc\$(Platform)\$(Configuration)\</IntDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>D:\dev\glfw\include;E:\dev\libs\glad\include\;E:\dev\libs\nanovg;E:\dev\libs\glm\;$(ProjectDir)/include;E:\dev\libs\cereal;E:\dev\libs\SQLiteCpp_msvc_x64\include</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions);NOMINMAX</PreprocessorDefinitions>
+      <DisableSpecificWarnings>4244;4146;4267;4018;4067</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>D:\dev\glfw\build_x86\src\Debug</AdditionalLibraryDirectories>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;shell32.lib;glfw3.lib;winmm.lib</AdditionalDependencies>
+      <SubSystem>Windows</SubSystem>
+      <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Test|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>D:\dev\glfw\include;E:\dev\libs\glad\include\;E:\dev\libs\nanovg;E:\dev\libs\glm\;$(ProjectDir)/include;E:\dev\libs\cereal;E:\dev\libs\SQLiteCpp_msvc_x64\include</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_DEBUG;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions);NOMINMAX</PreprocessorDefinitions>
+      <DisableSpecificWarnings>4244;4146;4267;4018;4067</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>D:\dev\glfw\build_x86\src\Debug</AdditionalLibraryDirectories>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;shell32.lib;glfw3.lib;winmm.lib</AdditionalDependencies>
+      <SubSystem>Windows</SubSystem>
+      <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>E:\dev\libs\glfw_x64_vc141_dbg\include;E:\dev\libs\glad\include\;E:\dev\libs\nanovg;E:\dev\libs\glm\;$(ProjectDir)/include;E:\dev\libs\cereal;E:\dev\libs\PortAudio_190600\src\os\win;E:\dev\libs\PortAudio_190600\src\common;E:\dev\libs\PortAudio_190600\include;E:\dev\libs\ASIOSDK2.3\common;E:\dev\libs\ASIOSDK2.3\host;E:\dev\libs\ASIOSDK2.3\host\pc;E:\dev\libs\SQLiteCpp_msvc_x64_debug\include</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>VST_FORCE_DEPRECATED=0;PA_USE_ASIO=1;PA_USE_DS=1;WIN32;_WINDOWS;_DEBUG;_CRT_SECURE_NO_WARNINGS;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <LanguageStandard>stdcpp14</LanguageStandard>
+      <DisableSpecificWarnings>4244;4146;4267;4018;4067</DisableSpecificWarnings>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <MinimalRebuild>false</MinimalRebuild>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>E:\dev\libs\glfw_x64_vc141_dbg\lib;E:\dev\libs\SQLiteCpp_msvc_x64_debug\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;shell32.lib;glfw3.lib;winmm.lib;ole32.lib;comdlg32.lib;Advapi32.lib;sqlite3.lib;SQLiteCpp.lib</AdditionalDependencies>
+      <SubSystem>Windows</SubSystem>
+      <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
+      <GenerateDebugInformation>DebugFull</GenerateDebugInformation>
+      <GenerateMapFile>true</GenerateMapFile>
+      <MapExports>true</MapExports>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Test|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>E:\dev\libs\glfw_x64_vc141_dbg\include;E:\dev\libs\glad\include\;E:\dev\libs\nanovg;E:\dev\libs\glm\;$(ProjectDir)/include;E:\dev\libs\cereal;E:\dev\libs\PortAudio_190600\src\os\win;E:\dev\libs\PortAudio_190600\src\common;E:\dev\libs\PortAudio_190600\include;E:\dev\libs\ASIOSDK2.3\common;E:\dev\libs\ASIOSDK2.3\host;E:\dev\libs\ASIOSDK2.3\host\pc;E:\dev\libs\SQLiteCpp_msvc_x64\include</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>VST_FORCE_DEPRECATED=0;PA_USE_ASIO=1;PA_USE_DS=1;TEST_PROJECT;WIN32;_WINDOWS;_DEBUG;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions);NOMINMAX</PreprocessorDefinitions>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <LanguageStandard>stdcpp14</LanguageStandard>
+      <DisableSpecificWarnings>4244;4146;4267;4018;4067</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <AdditionalLibraryDirectories>E:\dev\libs\glfw_x64_vc141_dbg\lib;E:\dev\libs\SQLiteCpp_msvc_x64\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;shell32.lib;glfw3.lib;winmm.lib;ole32.lib;comdlg32.lib;Advapi32.lib;sqlite3.lib;SQLiteCpp.lib</AdditionalDependencies>
+      <SubSystem>Console</SubSystem>
+      <EntryPointSymbol>
+      </EntryPointSymbol>
+      <GenerateDebugInformation>DebugFastLink</GenerateDebugInformation>
+      <GenerateMapFile>true</GenerateMapFile>
+      <MapExports>true</MapExports>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>D:\dev\glfw\include;E:\dev\libs\glad\include\;E:\dev\libs\nanovg;E:\dev\libs\glm\;$(ProjectDir)/include;E:\dev\libs\cereal;E:\dev\libs\SQLiteCpp_msvc_x64\include</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>WIN32;_WINDOWS;_NDEBUG;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions);NOMINMAX</PreprocessorDefinitions>
+      <DisableSpecificWarnings>4244;4146;4267;4018;4067</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories>D:\dev\glfw\build_x86\src\Release</AdditionalLibraryDirectories>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;shell32.lib;glfw3.lib;winmm.lib</AdditionalDependencies>
+      <SubSystem>Windows</SubSystem>
+      <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>MaxSpeed</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <AdditionalIncludeDirectories>E:\dev\libs\glfw_x64_vc141_rel\include;E:\dev\libs\glad\include\;E:\dev\libs\nanovg;E:\dev\libs\glm\;$(ProjectDir)/include;E:\dev\libs\cereal;E:\dev\libs\PortAudio_190600\src\os\win;E:\dev\libs\PortAudio_190600\src\common;E:\dev\libs\PortAudio_190600\include;E:\dev\libs\ASIOSDK2.3\common;E:\dev\libs\ASIOSDK2.3\host;E:\dev\libs\ASIOSDK2.3\host\pc;E:\dev\libs\SQLiteCpp_msvc_x64_release\include</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>VST_FORCE_DEPRECATED=0;PA_USE_ASIO=1;PA_USE_DS=1;WIN32;_WINDOWS;_NDEBUG;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions);NOMINMAX</PreprocessorDefinitions>
+      <LanguageStandard>stdcpp14</LanguageStandard>
+      <RuntimeTypeInfo>true</RuntimeTypeInfo>
+      <DisableSpecificWarnings>4244;4146;4267;4018;4067</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories>E:\dev\libs\glfw_x64_vc141_rel\lib;E:\dev\libs\SQLiteCpp_msvc_x64_release\lib</AdditionalLibraryDirectories>
+      <AdditionalDependencies>kernel32.lib;user32.lib;gdi32.lib;shell32.lib;winmm.lib;ole32.lib;comdlg32.lib;Advapi32.lib;glfw3.lib;sqlite3.lib;SQLiteCpp.lib</AdditionalDependencies>
+      <SubSystem>Windows</SubSystem>
+      <EntryPointSymbol>mainCRTStartup</EntryPointSymbol>
+      <AdditionalOptions>/verbose:lib %(AdditionalOptions)</AdditionalOptions>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="E:\dev\libs\ASIOSDK2.3\common\asio.cpp" />
+    <ClCompile Include="E:\dev\libs\ASIOSDK2.3\host\asiodrivers.cpp" />
+    <ClCompile Include="E:\dev\libs\ASIOSDK2.3\host\pc\asiolist.cpp" />
+    <ClCompile Include="E:\dev\libs\glad\src\glad.c" />
+    <ClCompile Include="E:\dev\libs\nanovg\nanovg.c" />
+    <ClCompile Include="E:\dev\libs\PortAudio_190600\src\common\pa_allocation.c" />
+    <ClCompile Include="E:\dev\libs\PortAudio_190600\src\common\pa_converters.c" />
+    <ClCompile Include="E:\dev\libs\PortAudio_190600\src\common\pa_cpuload.c" />
+    <ClCompile Include="E:\dev\libs\PortAudio_190600\src\common\pa_debugprint.c" />
+    <ClCompile Include="E:\dev\libs\PortAudio_190600\src\common\pa_dither.c" />
+    <ClCompile Include="E:\dev\libs\PortAudio_190600\src\common\pa_front.c" />
+    <ClCompile Include="E:\dev\libs\PortAudio_190600\src\common\pa_process.c" />
+    <ClCompile Include="E:\dev\libs\PortAudio_190600\src\common\pa_ringbuffer.c" />
+    <ClCompile Include="E:\dev\libs\PortAudio_190600\src\common\pa_stream.c" />
+    <ClCompile Include="E:\dev\libs\PortAudio_190600\src\common\pa_trace.c" />
+    <ClCompile Include="E:\dev\libs\PortAudio_190600\src\hostapi\asio\pa_asio.cpp" />
+    <ClCompile Include="E:\dev\libs\PortAudio_190600\src\hostapi\dsound\pa_win_ds.c" />
+    <ClCompile Include="E:\dev\libs\PortAudio_190600\src\hostapi\dsound\pa_win_ds_dynlink.c" />
+    <ClCompile Include="E:\dev\libs\PortAudio_190600\src\os\win\pa_win_coinitialize.c" />
+    <ClCompile Include="E:\dev\libs\PortAudio_190600\src\os\win\pa_win_hostapis.c" />
+    <ClCompile Include="E:\dev\libs\PortAudio_190600\src\os\win\pa_win_util.c" />
+    <ClCompile Include="E:\dev\libs\PortAudio_190600\src\os\win\pa_win_waveformat.c" />
+    <ClCompile Include="E:\dev\libs\PortAudio_190600\src\os\win\pa_x86_plain_converters.c" />
+    <ClCompile Include="file\fileio.cpp" />
+    <ClCompile Include="file\projectfile.cpp" />
+    <ClCompile Include="gui\clipeditor.cpp" />
+    <ClCompile Include="gui\gui.cpp" />
+    <ClCompile Include="gui\guicolors.cpp" />
+    <ClCompile Include="gui\pluginctr.cpp" />
+    <ClCompile Include="gui\textfield.cpp" />
+    <ClCompile Include="gui\trackcontent.cpp" />
+    <ClCompile Include="gui\trackeditor.cpp" />
+    <ClCompile Include="host\clip.cpp" />
+    <ClCompile Include="host\keyboard.cpp" />
+    <ClCompile Include="host\main.cpp" />
+    <ClCompile Include="host\plugindatabase.cpp" />
+    <ClCompile Include="host\renderresources.cpp" />
+    <ClCompile Include="host\track.cpp" />
+    <ClCompile Include="host\vst_host.cpp" />
+    <ClCompile Include="host\vst_plugin.cpp" />
+    <ClCompile Include="host\vst_window.cpp" />
+    <ClCompile Include="midi\Binasc.cpp" />
+    <ClCompile Include="midi\MidiEvent.cpp" />
+    <ClCompile Include="midi\MidiEventList.cpp" />
+    <ClCompile Include="midi\MidiFile.cpp" />
+    <ClCompile Include="midi\MidiMessage.cpp" />
+    <ClCompile Include="midi\Options.cpp" />
+    <ClCompile Include="platform\win\DropTarget.cpp" />
+    <ClCompile Include="platform\win\hires_timer.cpp" />
+    <ClCompile Include="platform\win\menu_win32.cpp" />
+    <ClCompile Include="platform\win\msgbox_win32.cpp" />
+    <ClCompile Include="threads\childprocessthread.cpp" />
+    <ClCompile Include="threads\playbackthread.cpp" />
+    <ClCompile Include="threads\workerthread.cpp" />
+    <ClCompile Include="util\color_util.cpp" />
+    <ClCompile Include="util\debug.cpp" />
+    <ClCompile Include="util\dsp_util.cpp" />
+    <ClCompile Include="util\str_util.cpp" />
+    <ClCompile Include="gui\grid.cpp" />
+    <ClCompile Include="host\mainctrl.cpp" />
+    <ClCompile Include="platform\win\platform_win.cpp" />
+    <ClCompile Include="window\window.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="gui\button.h" />
+    <ClInclude Include="gui\clipeditor.h" />
+    <ClInclude Include="gui\guicontainer.h" />
+    <ClInclude Include="gui\guicontextmenu.h" />
+    <ClInclude Include="gui\plugin.h" />
+    <ClInclude Include="gui\pluginctr.h" />
+    <ClInclude Include="gui\pluginlist.h" />
+    <ClInclude Include="gui\statusbar.h" />
+    <ClInclude Include="gui\tempocontrols.h" />
+    <ClInclude Include="gui\textfield.h" />
+    <ClInclude Include="gui\theme.h" />
+    <ClInclude Include="gui\trackcontent.h" />
+    <ClInclude Include="gui\trackctr.h" />
+    <ClInclude Include="gui\tracktimeline.h" />
+    <ClInclude Include="host\plugindatabase.h" />
+    <ClInclude Include="host\vst_host.h" />
+    <ClInclude Include="host\vst_plugin.h" />
+    <ClInclude Include="host\vst_plugin_handles.h" />
+    <ClInclude Include="host\vst_window.h" />
+    <ClInclude Include="include\audioblock.h" />
+    <ClInclude Include="include\clip.h" />
+    <ClInclude Include="include\commands.h" />
+    <ClInclude Include="include\cursor.h" />
+    <ClInclude Include="include\droptargetlistener.h" />
+    <ClInclude Include="include\dsp_util.h" />
+    <ClInclude Include="include\edithistory.h" />
+    <ClInclude Include="include\fileio.h" />
+    <ClInclude Include="include\fileloader.h" />
+    <ClInclude Include="include\grid_constants.h" />
+    <ClInclude Include="include\hires_timer.h" />
+    <ClInclude Include="include\keyboard.h" />
+    <ClInclude Include="include\layout.h" />
+    <ClInclude Include="include\logging.h" />
+    <ClInclude Include="include\menu.h" />
+    <ClInclude Include="include\mouse.h" />
+    <ClInclude Include="include\msgbox.h" />
+    <ClInclude Include="include\note.h" />
+    <ClInclude Include="include\project.h" />
+    <ClInclude Include="include\projectfile.h" />
+    <ClInclude Include="include\rand.h" />
+    <ClInclude Include="include\refobject.h" />
+    <ClInclude Include="include\renderresources.h" />
+    <ClInclude Include="include\samplerate.h" />
+    <ClInclude Include="include\seq_time.h" />
+    <ClInclude Include="include\settings.h" />
+    <ClInclude Include="include\str_util.h" />
+    <ClInclude Include="include\appwindow.h" />
+    <ClInclude Include="include\color_util.h" />
+    <ClInclude Include="include\config.h" />
+    <ClInclude Include="include\event.h" />
+    <ClInclude Include="include\exceptions.h" />
+    <ClInclude Include="include\geom.h" />
+    <ClInclude Include="gui\gui.h" />
+    <ClInclude Include="include\guicolors.h" />
+    <ClInclude Include="include\grid.h" />
+    <ClInclude Include="include\seq_math.h" />
+    <ClInclude Include="include\mainctrl.h" />
+    <ClInclude Include="include\platform.h" />
+    <ClInclude Include="include\str_win32.h" />
+    <ClInclude Include="include\track.h" />
+    <ClInclude Include="include\seq_util.h" />
+    <ClInclude Include="include\track_audiodata.h" />
+    <ClInclude Include="include\window.h" />
+    <ClInclude Include="midi\Binasc.h" />
+    <ClInclude Include="midi\MidiEvent.h" />
+    <ClInclude Include="midi\MidiEventList.h" />
+    <ClInclude Include="midi\MidiFile.h" />
+    <ClInclude Include="midi\MidiMessage.h" />
+    <ClInclude Include="midi\Options.h" />
+    <ClInclude Include="platform\win\DropTarget.h" />
+    <ClInclude Include="platform\win\winheaders.h" />
+    <ClInclude Include="test\tests.h" />
+    <ClInclude Include="threads\childprocessthread.h" />
+    <ClInclude Include="threads\mingw.condition_variable.h" />
+    <ClInclude Include="threads\mingw.mutex.h" />
+    <ClInclude Include="threads\mingw.thread.h" />
+    <ClInclude Include="threads\playbackthread.h" />
+    <ClInclude Include="threads\workerthread.h" />
+    <ClInclude Include="util\atomicops.h" />
+    <ClInclude Include="util\readerwriterqueue.h" />
+    <ClInclude Include="vst_sdk_2.4\aeffect.h" />
+    <ClInclude Include="vst_sdk_2.4\aeffectx.h" />
+    <ClInclude Include="vst_sdk_2.4\vstfxstore.h" />
+    <ClInclude Include="window\msgbox.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Font Include="DroidSans.ttf" />
+    <Font Include="OpenSans-Regular.ttf" />
+    <Font Include="Roboto-Black.ttf" />
+    <Font Include="Roboto-BlackItalic.ttf" />
+    <Font Include="Roboto-Bold.ttf" />
+    <Font Include="Roboto-BoldItalic.ttf" />
+    <Font Include="Roboto-Italic.ttf" />
+    <Font Include="Roboto-Light.ttf" />
+    <Font Include="Roboto-LightItalic.ttf" />
+    <Font Include="Roboto-Medium.ttf" />
+    <Font Include="Roboto-MediumItalic.ttf" />
+    <Font Include="Roboto-Regular.ttf" />
+    <Font Include="Roboto-Thin.ttf" />
+    <Font Include="Roboto-ThinItalic.ttf" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="settings.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="res\cursors\cursor00.png" />
+    <Image Include="res\cursors\cursor01.png" />
+    <Image Include="res\cursors\cursor02.png" />
+    <Image Include="res\cursors\cursor03.png" />
+    <Image Include="res\cursors\cursor04.png" />
+    <Image Include="res\cursors\cursor05.png" />
+    <Image Include="res\cursors\cursor06.png" />
+    <Image Include="res\cursors\cursor07.png" />
+    <Image Include="res\cursors\cursor08.png" />
+    <Image Include="res\cursors\cursor09.png" />
+    <Image Include="res\cursors\cursor10.png" />
+    <Image Include="res\cursors\cursor11.png" />
+    <Image Include="res\cursors\cursor12.png" />
+    <Image Include="res\cursors\cursor13.png" />
+    <Image Include="res\cursors\cursor14.png" />
+    <Image Include="res\cursors\cursor15.png" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>
