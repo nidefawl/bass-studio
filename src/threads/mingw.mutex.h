@@ -213,7 +213,6 @@ class timed_mutex: public _NonRecursive<recursive_timed_mutex>
 protected:
     typedef _NonRecursive<recursive_timed_mutex> base;
 public:
-    using base::base;
     timed_mutex(const timed_mutex&) = delete;
     timed_mutex& operator=(const timed_mutex&) = delete;
     template <class Rep, class Period>

@@ -186,7 +186,6 @@ protected:
 public:
     using base::native_handle_type;
     using base::native_handle;
-    using base::base;
     using base::notify_all;
     using base::notify_one;
     void wait(unique_lock<mutex> &lock)

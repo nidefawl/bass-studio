@@ -57,6 +57,9 @@ public:
     public:
         explicit id(DWORD aId=0):mId(aId){}
         bool operator==(const id& other) const {return mId == other.mId;}
+        DWORD get() {
+        	return mId;
+        }
     };
 protected:
     HANDLE mHandle;
