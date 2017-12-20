@@ -1,0 +1,7 @@
+#pragma once
+#define CURSOR_DEFAULT 0
+#define CURSOR_CLIP_SIZE_RIGHT 1
+#define CURSOR_CLIP_SIZE_LEFT 2
+#define CURSOR_RESIZE_V 3
+#define CURSOR_RESIZE_H 4
+#define CURSOR_DUPLICATE 5

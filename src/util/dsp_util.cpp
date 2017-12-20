@@ -1,0 +1,159 @@
+#include "dsp_util.h"
+#include "samplerate.h"
+#include "config.h"
+#include <stdlib.h>
+#include <stdint.h>
+#include <malloc.h>
+#define _USE_MATH_DEFINES
+#include <cmath>
+#include <memory.h>
+#include <limits>
+
+namespace dsp_util {
+const float GAIN_DB6 = pow(10.0f, 6.0f/20.0f); // 2.0f
+const float GAIN_DBFLOOR = pow(10.0f, DBFS_FLOOR/20.0f);
+const float GAIN_DBINF = pow(10.0f, DBFS_INF_POS/20.0f);
+
+#define TABLE_SIZE   (200)
+typedef struct
+{
+	float sine[TABLE_SIZE];
+	int left_phase;
+	int right_phase;
+}
+paTestData;
+float Saturate(float input, float fMax)
+{
+	static const float fGrdDiv = 0.5f;
+	float x1 = fabsf(input + fMax);
+	float x2 = fabsf(input - fMax);
+	return fGrdDiv * (x1 - x2);
+}
+void fillSaturate(float** buffer, uint32_t samples) {
+	float* output0 = buffer[0];
+	float* output1 = buffer[1];
+	float maxGain = 1.0;
+	for (uint32_t i = 0; i<samples; i++)
+	{
+		*output0 = dsp_util::Saturate(*output0, maxGain);
+		*output1 = dsp_util::Saturate(*output1, maxGain);
+		output0++;
+		output1++;
+	}
+}
+void fillSilence(float** buffer, uint32_t samples) {
+	float* input0 = buffer[0];
+	float* input1 = buffer[1];
+	for (uint32_t i = 0; i<samples; i++)
+	{
+		*input0 = 0.0f;  /* left */
+		*input1 = 0.0f;  /* right */
+		input0++;
+		input1++;
+	}
+}
+float dBFS(float f) {
+	return 20.0f * std::log10(f);
+}
+float clampGain(float f) {
+	if (f > GAIN_DB6)
+		return GAIN_DB6;
+	if (f < GAIN_DBFLOOR)
+		return GAIN_DBINF;
+	return f;
+}
+float clampReadGain(float f) {
+	if (f > GAIN_DB6)
+		return GAIN_DB6;
+	if (f < GAIN_DBFLOOR)
+		return 0;
+	return f;
+}
+float dBFSClampInf6(float f) {
+	if (f <= GAIN_DBFLOOR)
+		return -std::numeric_limits<float>::infinity();
+	f = 20.0f * std::log10(f);
+	return f > 6.0f ? 6.0f : f;
+}
+float fromdBFSClampInf6(float f) {
+	if (f <= DBFS_FLOOR)
+		return 0.0f;
+	f = pow(10.0f, f/-20.0f);
+	if (f > GAIN_DB6) {
+		return GAIN_DB6;
+	}
+	return f;
+}
+float fromdBFS(float f) {
+	return pow(10.0f, f/-20.0f);
+}
+void copyBuffer(float** dst, float** src, uint32_t samples) {
+	memcpy(dst[0], src[0], sizeof(float)*samples);
+	memcpy(dst[1], src[1], sizeof(float)*samples);
+}
+void fillSine(float** buffer, uint32_t samples) {
+	static paTestData *data = NULL;
+	if (data == NULL) {
+		data = (paTestData*)malloc(sizeof(paTestData));
+		/* initialise sinusoidal wavetable */
+		for (uint32_t i = 0; i<TABLE_SIZE; i++)
+		{
+			data->sine[i] = (float)sin(((double)i / (double)TABLE_SIZE) * M_PI * 2.);
+		}
+		data->left_phase = data->right_phase = 0;
+	}
+	float gain = 0.1;
+	float* input0 = buffer[0];
+	float* input1 = buffer[1];
+	for (uint32_t i = 0; i<samples; i++)
+	{
+		*input0++ = data->sine[data->left_phase] * gain;  /* left */
+		*input1++ = data->sine[data->right_phase] * gain;  /* right */
+		data->left_phase += 1;
+		if (data->left_phase >= TABLE_SIZE) data->left_phase -= TABLE_SIZE;
+		data->right_phase += 3; /* higher pitch so we can distinguish left and right. */
+		if (data->right_phase >= TABLE_SIZE) data->right_phase -= TABLE_SIZE;
+	}
+}
+void fillNoise(float** buffer, uint32_t samples) {
+	float gain = 0.1f;
+	float* input0 = buffer[0];
+	float* input1 = buffer[1];
+
+	float g_fScale = 2.0f / 0xffffffff;
+	static int g_x1 = 0x67452301;
+	static int g_x2 = 0xefcdab89;
+	gain *= g_fScale;
+	for (uint32_t i = 0; i<samples; i++)
+	{
+		g_x1 ^= g_x2;
+		*input0++ = g_x2 * gain;
+		*input1++ = g_x2 * gain;
+		g_x2 += g_x1;
+	}
+}
+void fillSqare(samplerate_t samplerate, float freq, float** buffer, uint32_t samples) {
+	float gain = 0.05f;
+	float* input0 = buffer[0];
+	float* input1 = buffer[1];
+	union sample {
+		float f;
+		int i;
+	};
+	sample one;
+	one.f = 1.0f;
+	static uint32_t intOver = 0L;
+	uint32_t intIncr = (uint32_t)((4294967296.0 / samplerate) * freq);
+//	static int lastSign = (intOver & 0x80000000);
+	// loop:
+	for (uint32_t i = 0; i<samples; i++)
+	{
+		one.i &= 0x7FFFFFFF; // mask out sign bit
+		one.i |= (intOver & 0x80000000);
+		*input0++ = one.f * gain;
+		*input1++ = one.f * gain;
+		intOver += intIncr;
+	}
+}
+
+}

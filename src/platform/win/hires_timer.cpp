@@ -1,0 +1,66 @@
+#include "hires_timer.h"
+#include "exceptions.h"
+#include <windows.h>
+#include <profileapi.h>
+
+static double QPC_TOSECONDS(LARGE_INTEGER& iStart, LARGE_INTEGER& iStop, LARGE_INTEGER& freq) {
+	return ((double) iStop.QuadPart - (double) iStart.QuadPart) / (double) freq.QuadPart;
+}
+static int64_t QPC_TOMICROSECONDS(LARGE_INTEGER& iStart, LARGE_INTEGER& iStop, LARGE_INTEGER& freq) {
+	return ((int64_t)iStop.QuadPart - (int64_t)iStart.QuadPart) / (int64_t)freq.QuadPart;
+}
+class hires_timer_t::Impl {
+	LARGE_INTEGER freq, iStart, iStop;
+public:
+	Impl() {
+		if (!QueryPerformanceFrequency(&freq)) {
+			throw new SystemException(GetLastError(), "QueryPerformanceFrequency failed");
+		}
+		reset();
+	}
+	~Impl() {
+
+	}
+	void reset() {
+		QueryPerformanceCounter(&iStart);
+	}
+	void queryStop() {
+		QueryPerformanceCounter(&iStop);
+
+	}
+	int64_t getTime() {
+		queryStop();
+		return QPC_TOMICROSECONDS(iStart, iStop, freq);
+	}
+
+	double getTimeDouble() {
+		queryStop();
+		return QPC_TOSECONDS(iStart, iStop, freq);
+	}
+	double getTimeDoubleReset() {
+		queryStop();
+		double d = QPC_TOSECONDS(iStart, iStop, freq);
+		iStart = iStop;
+		return d;
+	}
+
+};
+
+hires_timer_t::hires_timer_t() : _M_Iimpl{new Impl { } } {
+
+}
+hires_timer_t::~hires_timer_t() {
+	delete _M_Iimpl;
+}
+void hires_timer_t::reset() {
+	_M_Iimpl->reset();
+}
+int64_t hires_timer_t::getTime() {
+	return _M_Iimpl->getTime();
+}
+double hires_timer_t::getTimeDouble() {
+	return _M_Iimpl->getTimeDouble();
+}
+double hires_timer_t::getTimeDoubleReset() {
+	return _M_Iimpl->getTimeDoubleReset();
+}

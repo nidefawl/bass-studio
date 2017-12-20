@@ -1,0 +1,17 @@
+#pragma once
+#define CMD_EXIT 0
+#define CMD_FILE_NEW 1
+#define CMD_FILE_OPEN 2
+#define CMD_FILE_SAVE 3
+#define CMD_FILE_SAVEAS 4
+#define CMD_FILE_CLOSE 5
+#define CMD_UNDO 10
+#define CMD_REDO 11
+#define CMD_CUT 12
+#define CMD_COPY 13
+#define CMD_PASTE 14
+#define CMD_DELETE 15
+#define CMD_SELECT_ALL 16
+#define CMD_DUPLICATE 17
+
+

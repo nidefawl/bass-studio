@@ -1,0 +1,149 @@
+#include <stdint.h>
+#include <glm/vec4.hpp>
+#include <nanovg.h>
+#include <algorithm>
+#include "color_util.h"
+#include "seq_math.h"
+#include "platform.h"
+
+NVGcolor getCursorColor() {
+	float f1 = 0.3f;
+	NVGcolor cursorColor;
+	cursorColor.r = cursorColor.a = 1;
+	cursorColor.g = cursorColor.b = CLAMP_F((1.0f-f1)+sin(getTimeMillis()/160.0f)*f1);
+	return cursorColor;
+}
+NVGcolor getContrastFontColor(uint32_t i);
+NVGcolor rgbToNvg(uint32_t i) {
+	NVGcolor c;
+	c.b = (float)((i & 0xFF) / 255.); i >>= 8;
+	c.g = (float)((i & 0xFF) / 255.); i >>= 8;
+	c.r = (float)((i & 0xFF) / 255.); i >>= 8;
+	c.a = 1.0f;
+	return c;
+}
+NVGcolor rgbaToNvg(uint32_t i) {
+	NVGcolor c;
+	c.b = (float)((i & 0xFF) / 255.); i >>= 8;
+	c.g = (float)((i & 0xFF) / 255.); i >>= 8;
+	c.r = (float)((i & 0xFF) / 255.); i >>= 8;
+	c.a = (float)((i & 0xFF) / 255.); i >>= 8;
+	return c;
+}
+uint32_t nvgToRGB(NVGcolor c) {
+	int32_t r = CLAMP_I((int32_t)(c.r*255.0), 0, 255);
+	int32_t g = CLAMP_I((int32_t)(c.g*255.0), 0, 255);
+	int32_t b = CLAMP_I((int32_t)(c.b*255.0), 0, 255);
+	uint32_t rgb = 0;
+	rgb |= b;
+	rgb |= g<<8;
+	rgb |= r<<16;
+	rgb |= 0xFF000000;
+	return rgb;
+}
+NVGcolor mulSatBright(NVGcolor rgb, float sat, float brt) {
+	NVGcolor hsl = nvgToHSL(rgb);
+	return nvgHSL(hsl.r, CLAMP_F(hsl.g*sat), CLAMP_F(hsl.b*brt));
+}
+NVGcolor nvgToHSL(NVGcolor rgb) {
+	double r, g, b;
+	r = rgb.r;
+	g = rgb.g;
+	b = rgb.b;
+	double fCMax = std::max(std::max(r, g), b);
+	double fCMin = std::min(std::min(r, g), b);
+	double diff = fCMax - fCMin;
+
+	double h = 0.0f, s = 0.0f, l = (fCMin + fCMax) / 2.0;
+
+	if (diff != 0) {
+		s = l < 0.5 ? diff / (fCMax + fCMin) : diff / (2.0 - fCMax - fCMin);
+
+		h = (r == fCMax ? (g - b) / diff : g == fCMax ? 2.0 + (b - r) / diff : 4.0 + (r - g) / diff) / 6.0;
+	}
+	NVGcolor hsv;
+	hsv.r = (float)h;
+	hsv.g = (float)s;
+	hsv.b = (float)l;
+	hsv.a = 1.0f;
+	return hsv;
+}
+NVGcolor getContrastFontColor(uint32_t color) {
+	return rgbToNvg(getContrastFontColoru32(color));
+}
+
+NVGcolor getContrastFontColorNvg(NVGcolor i) {
+	return rgbToNvg(getContrastFontColoru32(nvgToRGB(i)));
+}
+uint32_t getContrastFontColoru32(uint32_t color) {
+	glm::vec4 rgb4 = int32vec4(color);
+	for (int i = 0; i < 3; i++) {
+		double c = rgb4[i];
+		if (c <= 0.03928) {
+			c = c/12.92;
+		} else {
+			c = pow(((c+0.055)/1.055), 2.4);
+		}
+		rgb4[i] = (float) c;
+	}
+	double lum = 0.2126f * rgb4.r + 0.7152f * rgb4.g + 0.0722f * rgb4.b;
+
+	if (lum > 0.179) {
+		return 0x000000;
+	}
+	return 0xffffff;
+}
+glm::vec4 colorHex(uint32_t color)
+{
+	// input format 0xAARRGGBB
+	float b = (float)(0x000000FF & color) / 255.f;
+	color = color >> 8;
+	float g = (float)(0x000000FF & color) / 255.f;
+	color = color >> 8;
+	float r = (float)(0x000000FF & color) / 255.f;
+	color = color >> 8;
+	float a = (float)(0x000000FF & color) / 255.f;
+
+	glm::vec4 nvgColor;
+	nvgColor.r = r;
+	nvgColor.g = g;
+	nvgColor.b = b;
+	nvgColor.a = a;
+	return nvgColor;
+}
+glm::vec4 RGBtoHSV(glm::vec4 rgb) {
+	double r, g, b;
+	r = rgb.r;
+	g = rgb.g;
+	b = rgb.b;
+	double fCMax = std::max(std::max(r, g), b);
+	double fCMin = std::min(std::min(r, g), b);
+	double diff = fCMax - fCMin;
+
+	double h = 0.0f, s = 0.0f, l = (fCMin + fCMax) / 2.0;
+
+	if (diff != 0) {
+		s = l < 0.5 ? diff / (fCMax + fCMin) : diff / (2.0 - fCMax - fCMin);
+
+		h = (r == fCMax ? (g - b) / diff : g == fCMax ? 2.0 + (b - r) / diff : 4.0 + (r - g) / diff) / 6.0;
+	}
+	glm::vec4 hsv;
+	hsv.x = (float) h;
+	hsv.y = (float) s;
+	hsv.z = (float) l;
+	hsv.w = 1.0f;
+	return hsv;
+}
+glm::vec4 hexToHSL(uint32_t color) {
+	glm::vec4 color4f = colorHex(color);
+	return RGBtoHSV(color4f);
+}
+
+glm::vec4 int32vec4(uint32_t i) {
+	glm::vec4 r;
+	r.b = (float) ((i & 0xFF) / 255.); i >>= 8;
+	r.g = (float) ((i & 0xFF) / 255.); i >>= 8;
+	r.r = (float) ((i & 0xFF) / 255.); i >>= 8;
+	r.a = (float) ((i & 0xFF) / 255.); i >>= 8;
+	return r;
+}
