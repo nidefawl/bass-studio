@@ -40,12 +40,6 @@
 #endif
 #endif
 
-#ifndef MOODYCAMEL_HAS_EMPLACE
-#if !defined(_MSC_VER) || _MSC_VER >= 1800 // variadic templates: either a non-MS compiler or VS >= 2013
-#define MOODYCAMEL_HAS_EMPLACE    1
-#endif
-#endif
-
 #ifdef AE_VCPP
 #pragma warning(push)
 #pragma warning(disable: 4324)	// structure was padded due to __declspec(align())
@@ -79,8 +73,6 @@ class ReaderWriterQueue
 	// equal size to the last block) is added. Blocks are never removed.
 
 public:
-	typedef T value_type;
-
 	// Constructs a queue that can hold maxSize elements without further
 	// allocations. If more than MAX_BLOCK_SIZE elements are requested,
 	// then several blocks of MAX_BLOCK_SIZE each are reserved (including
@@ -228,14 +220,6 @@ public:
 		return inner_enqueue<CannotAlloc>(std::forward<T>(element));
 	}
 
-#if MOODYCAMEL_HAS_EMPLACE
-	// Like try_enqueue() but with emplace semantics (i.e. construct-in-place).
-	template<typename... Args>
-	AE_FORCEINLINE bool try_emplace(Args&&... args)
-	{
-		return inner_enqueue<CannotAlloc>(std::forward<Args>(args)...);
-	}
-#endif
 
 	// Enqueues a copy of element on the queue.
 	// Allocates an additional block of memory if needed.
@@ -253,14 +237,6 @@ public:
 		return inner_enqueue<CanAlloc>(std::forward<T>(element));
 	}
 
-#if MOODYCAMEL_HAS_EMPLACE
-	// Like enqueue() but with emplace semantics (i.e. construct-in-place).
-	template<typename... Args>
-	AE_FORCEINLINE bool emplace(Args&&... args)
-	{
-		return inner_enqueue<CanAlloc>(std::forward<Args>(args)...);
-	}
-#endif
 
 	// Attempts to dequeue an element; if the queue is empty,
 	// returns false instead. If the queue has at least one element,
@@ -493,13 +469,8 @@ public:
 private:
 	enum AllocationMode { CanAlloc, CannotAlloc };
 
-#if MOODYCAMEL_HAS_EMPLACE
-	template<AllocationMode canAlloc, typename... Args>
-	bool inner_enqueue(Args&&... args)
-#else
 	template<AllocationMode canAlloc, typename U>
 	bool inner_enqueue(U&& element)
-#endif
 	{
 #ifndef NDEBUG
 		ReentrantGuard guard(this->enqueuing);
@@ -521,11 +492,7 @@ private:
 			fence(memory_order_acquire);
 			// This block has room for at least one more element
 			char* location = tailBlock_->data + blockTail * sizeof(T);
-#if MOODYCAMEL_HAS_EMPLACE
-			new (location) T(std::forward<Args>(args)...);
-#else
 			new (location) T(std::forward<U>(element));
-#endif
 
 			fence(memory_order_release);
 			tailBlock_->tail = nextBlockTail;
@@ -537,7 +504,7 @@ private:
 				// is because if we did, then dequeue would stay in that block, eventually reading the new values,
 				// instead of advancing to the next full block (whose values were enqueued first and so should be
 				// consumed first).
-
+				
 				fence(memory_order_acquire);		// Ensure we get latest writes if we got the latest frontBlock
 
 				// tailBlock is full, but there's a free block ahead, use it
@@ -552,11 +519,7 @@ private:
 				tailBlockNext->localFront = nextBlockFront;
 
 				char* location = tailBlockNext->data + nextBlockTail * sizeof(T);
-#if MOODYCAMEL_HAS_EMPLACE
-				new (location) T(std::forward<Args>(args)...);
-#else
 				new (location) T(std::forward<U>(element));
-#endif
 
 				tailBlockNext->tail = (nextBlockTail + 1) & tailBlockNext->sizeMask;
 
@@ -573,11 +536,8 @@ private:
 				}
 				largestBlockSize = newBlockSize;
 
-#if MOODYCAMEL_HAS_EMPLACE
-				new (newBlock->data) T(std::forward<Args>(args)...);
-#else
 				new (newBlock->data) T(std::forward<U>(element));
-#endif
+
 				assert(newBlock->front == 0);
 				newBlock->tail = newBlock->localTail = 1;
 
@@ -589,7 +549,7 @@ private:
 				// advance to the next block until tailBlock is set anyway (because the only
 				// case where it could try to read the next is if it's already at the tailBlock,
 				// and it won't advance past tailBlock in any circumstance).
-
+				
 				fence(memory_order_release);
 				tailBlock = newBlock;
 			}
@@ -608,10 +568,16 @@ private:
 
 
 	// Disable copying
-	ReaderWriterQueue(ReaderWriterQueue const&) {  }
+	ReaderWriterQueue(ReaderWriterQueue const&) {
+#ifndef NDEBUG
+		enqueuing = false;
+		dequeuing = false;
+		largestBlockSize = 0;
+#endif
+	}
 
 	// Disable assignment
-	ReaderWriterQueue& operator=(ReaderWriterQueue const&) {  }
+	ReaderWriterQueue& operator=(ReaderWriterQueue const&) { return *this; }
 
 
 
@@ -880,7 +846,7 @@ public:
 private:
 	// Disable copying & assignment
 	BlockingReaderWriterQueue(ReaderWriterQueue const&) {  }
-	BlockingReaderWriterQueue& operator=(ReaderWriterQueue const&) {  }
+	BlockingReaderWriterQueue& operator=(ReaderWriterQueue const&) { return *this; }
 	
 private:
 	ReaderWriterQueue inner;
