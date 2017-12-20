@@ -1,0 +1,390 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<?fileVersion 4.0.0?><cproject storage_type_id="org.eclipse.cdt.core.XmlProjectDescriptionStorage">
+	<storageModule moduleId="org.eclipse.cdt.core.settings">
+		<cconfiguration id="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280">
+			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280" moduleId="org.eclipse.cdt.core.settings" name="Debug">
+				<externalSettings>
+					<externalSetting/>
+				</externalSettings>
+				<extensions>
+					<extension id="org.eclipse.cdt.core.PE" point="org.eclipse.cdt.core.BinaryParser"/>
+					<extension id="org.eclipse.cdt.core.GASErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GLDErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GCCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+				</extensions>
+			</storageModule>
+			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
+				<configuration artifactName="${ProjName}" buildArtefactType="org.eclipse.cdt.build.core.buildArtefactType.exe" buildProperties="org.eclipse.cdt.build.core.buildArtefactType=org.eclipse.cdt.build.core.buildArtefactType.exe,org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.debug" cleanCommand="rm -rf" description="" errorParsers="org.eclipse.cdt.core.GmakeErrorParser;org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GLDErrorParser;org.eclipse.cdt.core.GCCErrorParser" id="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280" name="Debug" parent="cdt.managedbuild.config.gnu.mingw.exe.debug">
+					<folderInfo id="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280." name="/" resourcePath="">
+						<toolChain errorParsers="" id="cdt.managedbuild.toolchain.gnu.mingw.base.699869935" name="MinGW GCC" superClass="cdt.managedbuild.toolchain.gnu.mingw.base">
+							<targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.PE" id="cdt.managedbuild.target.gnu.platform.mingw.base.891194511" name="Debug Platform" osList="win32" superClass="cdt.managedbuild.target.gnu.platform.mingw.base"/>
+							<builder buildPath="${workspace_loc:/HostGUI_mingw64}/Debug" errorParsers="" id="org.eclipse.cdt.build.core.internal.builder.689683992" keepEnvironmentInBuildfile="false" name="CDT Internal Builder" superClass="org.eclipse.cdt.build.core.internal.builder"/>
+							<tool errorParsers="org.eclipse.cdt.core.GASErrorParser" id="cdt.managedbuild.tool.gnu.assembler.mingw.base.409581443" name="GCC Assembler" superClass="cdt.managedbuild.tool.gnu.assembler.mingw.base">
+								<option id="gnu.both.asm.option.include.paths.1980223152" name="Include paths (-I)" superClass="gnu.both.asm.option.include.paths" useByScannerDiscovery="false"/>
+								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.496903380" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
+							</tool>
+							<tool id="cdt.managedbuild.tool.gnu.archiver.mingw.base.1157559007" name="GCC Archiver" superClass="cdt.managedbuild.tool.gnu.archiver.mingw.base"/>
+							<tool errorParsers="org.eclipse.cdt.core.GCCErrorParser" id="cdt.managedbuild.tool.gnu.cpp.compiler.mingw.base.1286212145" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.mingw.base">
+								<option id="gnu.cpp.compiler.option.include.paths.1533463962" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/include}&quot;"/>
+									<listOptionValue builtIn="false" value="E:\dev\libs\glfw_mingw64\include"/>
+									<listOptionValue builtIn="false" value="E:\dev\libs\glad\include"/>
+									<listOptionValue builtIn="false" value="E:\dev\libs\glm"/>
+									<listOptionValue builtIn="false" value="E:\dev\libs\nanovg"/>
+									<listOptionValue builtIn="false" value="E:\dev\libs\cereal"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\PortAudio_190600\include&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\PortAudio_190600\src\common&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\PortAudio_190600\src\os\win&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\ASIOSDK2.3\common&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\ASIOSDK2.3\host&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\ASIOSDK2.3\host\pc&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\PortAudio_190600\src\hostapi\asio&quot;"/>
+									<listOptionValue builtIn="false" value="E:/dev/libs/SQLiteCpp/include"/>
+								</option>
+								<option id="gnu.cpp.compiler.option.optimization.level.560994274" name="Optimization Level" superClass="gnu.cpp.compiler.option.optimization.level" useByScannerDiscovery="false" value="gnu.cpp.compiler.optimization.level.none" valueType="enumerated"/>
+								<option id="gnu.cpp.compiler.option.debugging.level.2067529965" name="Debug Level" superClass="gnu.cpp.compiler.option.debugging.level" useByScannerDiscovery="false" value="gnu.cpp.compiler.debugging.level.max" valueType="enumerated"/>
+								<option id="gnu.cpp.compiler.option.dialect.std.240761896" name="Language standard" superClass="gnu.cpp.compiler.option.dialect.std" useByScannerDiscovery="true" value="gnu.cpp.compiler.dialect.default" valueType="enumerated"/>
+								<option id="gnu.cpp.compiler.option.other.other.1948718393" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" useByScannerDiscovery="false" value="-c -fmessage-length=0" valueType="string"/>
+								<option id="gnu.cpp.compiler.option.dialect.flags.2010502105" name="Other dialect flags" superClass="gnu.cpp.compiler.option.dialect.flags" useByScannerDiscovery="true" value="-std=c++14" valueType="string"/>
+								<option id="gnu.cpp.compiler.option.preprocessor.def.2969411" name="Defined symbols (-D)" superClass="gnu.cpp.compiler.option.preprocessor.def" valueType="definedSymbols">
+									<listOptionValue builtIn="false" value="PA_USE_ASIO=1"/>
+									<listOptionValue builtIn="false" value="VST_FORCE_DEPRECATED=0"/>
+									<listOptionValue builtIn="false" value="PA_USE_DS=1"/>
+								</option>
+								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1782001645" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
+							</tool>
+							<tool errorParsers="org.eclipse.cdt.core.GCCErrorParser" id="cdt.managedbuild.tool.gnu.c.compiler.mingw.base.1470521610" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.mingw.base">
+								<option id="gnu.c.compiler.option.include.paths.1621315214" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
+									<listOptionValue builtIn="false" value="E:\dev\libs\glad\include"/>
+									<listOptionValue builtIn="false" value="E:\dev\libs\nanovg"/>
+									<listOptionValue builtIn="false" value="E:\dev\libs\glad\src"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\PortAudio_190600\include&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\PortAudio_190600\src\common&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\PortAudio_190600\src\os\win&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\ASIOSDK2.3\common&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\ASIOSDK2.3\host&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\ASIOSDK2.3\host\pc&quot;"/>
+								</option>
+								<option defaultValue="gnu.c.optimization.level.none" id="gnu.c.compiler.option.optimization.level.344636479" name="Optimization Level" superClass="gnu.c.compiler.option.optimization.level" useByScannerDiscovery="false" valueType="enumerated"/>
+								<option id="gnu.c.compiler.option.debugging.level.206726140" name="Debug Level" superClass="gnu.c.compiler.option.debugging.level" useByScannerDiscovery="false" value="gnu.c.debugging.level.max" valueType="enumerated"/>
+								<option id="gnu.c.compiler.option.misc.other.246394504" name="Other flags" superClass="gnu.c.compiler.option.misc.other" useByScannerDiscovery="false" value="-c -fmessage-length=0" valueType="string"/>
+								<option id="gnu.c.compiler.option.dialect.std.996224202" name="Language standard" superClass="gnu.c.compiler.option.dialect.std" useByScannerDiscovery="true" value="gnu.c.compiler.dialect.default" valueType="enumerated"/>
+								<option id="gnu.c.compiler.option.preprocessor.def.symbols.442983135" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols" valueType="definedSymbols">
+									<listOptionValue builtIn="false" value="PA_USE_ASIO=1"/>
+									<listOptionValue builtIn="false" value="VST_FORCE_DEPRECATED=0"/>
+									<listOptionValue builtIn="false" value="PA_USE_DS=1"/>
+								</option>
+								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.340788794" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
+							</tool>
+							<tool id="cdt.managedbuild.tool.gnu.c.linker.mingw.base.787854518" name="MinGW C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.mingw.base"/>
+							<tool errorParsers="org.eclipse.cdt.core.GLDErrorParser" id="cdt.managedbuild.tool.gnu.cpp.linker.mingw.base.1450369030" name="MinGW C++ Linker" superClass="cdt.managedbuild.tool.gnu.cpp.linker.mingw.base">
+								<option id="gnu.cpp.link.option.libs.2089870328" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" useByScannerDiscovery="false" valueType="libs">
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="glfw3"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="winmm"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="kernel32"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="gdi32"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="ole32"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="uuid"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="comdlg32"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="SQLiteCpp"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="sqlite3"/>
+								</option>
+								<option id="gnu.cpp.link.option.paths.1858113761" name="Library search path (-L)" superClass="gnu.cpp.link.option.paths" useByScannerDiscovery="false" valueType="libPaths">
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\glfw_mingw64\lib\&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\SQLiteCpp\lib&quot;"/>
+								</option>
+								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.980309405" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
+									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
+									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
+								</inputType>
+							</tool>
+						</toolChain>
+					</folderInfo>
+					<sourceEntries>
+						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+					</sourceEntries>
+				</configuration>
+			</storageModule>
+			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
+		</cconfiguration>
+		<cconfiguration id="cdt.managedbuild.config.gnu.mingw.exe.release.814165804">
+			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="cdt.managedbuild.config.gnu.mingw.exe.release.814165804" moduleId="org.eclipse.cdt.core.settings" name="Release">
+				<externalSettings>
+					<externalSetting>
+						<entry flags="VALUE_WORKSPACE_PATH" kind="includePath" name="/HostGUI_mingw64"/>
+						<entry flags="VALUE_WORKSPACE_PATH" kind="libraryPath" name="/HostGUI_mingw64/Release"/>
+						<entry flags="RESOLVED" kind="libraryFile" name="HostGUI_mingw64" srcPrefixMapping="" srcRootPath=""/>
+					</externalSetting>
+				</externalSettings>
+				<extensions>
+					<extension id="org.eclipse.cdt.core.PE" point="org.eclipse.cdt.core.BinaryParser"/>
+					<extension id="org.eclipse.cdt.core.GASErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GLDErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GCCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+				</extensions>
+			</storageModule>
+			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
+				<configuration artifactName="${ProjName}" buildArtefactType="org.eclipse.cdt.build.core.buildArtefactType.exe" buildProperties="org.eclipse.cdt.build.core.buildArtefactType=org.eclipse.cdt.build.core.buildArtefactType.exe,org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.release" cleanCommand="rm -rf" description="" errorParsers="org.eclipse.cdt.core.GmakeErrorParser;org.eclipse.cdt.core.GASErrorParser;org.eclipse.cdt.core.GLDErrorParser;org.eclipse.cdt.core.GCCErrorParser" id="cdt.managedbuild.config.gnu.mingw.exe.release.814165804" name="Release" parent="cdt.managedbuild.config.gnu.mingw.exe.release">
+					<folderInfo id="cdt.managedbuild.config.gnu.mingw.exe.release.814165804." name="/" resourcePath="">
+						<toolChain errorParsers="" id="cdt.managedbuild.toolchain.gnu.mingw.exe.release.1572669385" name="MinGW GCC" superClass="cdt.managedbuild.toolchain.gnu.mingw.exe.release">
+							<targetPlatform id="cdt.managedbuild.target.gnu.platform.mingw.exe.release.442895084" name="Debug Platform" superClass="cdt.managedbuild.target.gnu.platform.mingw.exe.release"/>
+							<builder buildPath="${workspace_loc:/HostGUI_mingw64}/Release" errorParsers="" id="org.eclipse.cdt.build.core.internal.builder.483962714" keepEnvironmentInBuildfile="false" name="CDT Internal Builder" superClass="org.eclipse.cdt.build.core.internal.builder"/>
+							<tool errorParsers="org.eclipse.cdt.core.GASErrorParser" id="cdt.managedbuild.tool.gnu.assembler.mingw.exe.release.1331769932" name="GCC Assembler" superClass="cdt.managedbuild.tool.gnu.assembler.mingw.exe.release">
+								<option id="gnu.both.asm.option.include.paths.810249785" name="Include paths (-I)" superClass="gnu.both.asm.option.include.paths" useByScannerDiscovery="false"/>
+								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.1540087912" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
+							</tool>
+							<tool id="cdt.managedbuild.tool.gnu.archiver.mingw.base.1496426235" name="GCC Archiver" superClass="cdt.managedbuild.tool.gnu.archiver.mingw.base"/>
+							<tool errorParsers="org.eclipse.cdt.core.GCCErrorParser" id="cdt.managedbuild.tool.gnu.cpp.compiler.mingw.exe.release.136730379" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.mingw.exe.release">
+								<option id="gnu.cpp.compiler.mingw.exe.release.option.optimization.level.2110473997" name="Optimization Level" superClass="gnu.cpp.compiler.mingw.exe.release.option.optimization.level" useByScannerDiscovery="false" value="gnu.cpp.compiler.optimization.level.most" valueType="enumerated"/>
+								<option id="gnu.cpp.compiler.mingw.exe.release.option.debugging.level.1420428291" name="Debug Level" superClass="gnu.cpp.compiler.mingw.exe.release.option.debugging.level" useByScannerDiscovery="false" value="gnu.cpp.compiler.debugging.level.none" valueType="enumerated"/>
+								<option id="gnu.cpp.compiler.option.include.paths.202650188" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/include}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\cereal&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\nanovg&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\glm&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\glad\include&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\glfw_mingw64\include&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\PortAudio_190600\include&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\PortAudio_190600\src\common&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\PortAudio_190600\src\os\win&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\ASIOSDK2.3\common&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\ASIOSDK2.3\host&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\ASIOSDK2.3\host\pc&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\PortAudio_190600\src\hostapi\asio&quot;"/>
+									<listOptionValue builtIn="false" value="E:/dev/libs/SQLiteCpp/include"/>
+								</option>
+								<option id="gnu.cpp.compiler.option.dialect.std.798813213" name="Language standard" superClass="gnu.cpp.compiler.option.dialect.std" useByScannerDiscovery="true" value="gnu.cpp.compiler.dialect.default" valueType="enumerated"/>
+								<option id="gnu.cpp.compiler.option.dialect.flags.1220977675" name="Other dialect flags" superClass="gnu.cpp.compiler.option.dialect.flags" useByScannerDiscovery="true" value="-std=c++14" valueType="string"/>
+								<option id="gnu.cpp.compiler.option.preprocessor.def.1229717014" name="Defined symbols (-D)" superClass="gnu.cpp.compiler.option.preprocessor.def" useByScannerDiscovery="false" valueType="definedSymbols">
+									<listOptionValue builtIn="false" value="PA_USE_ASIO=1"/>
+									<listOptionValue builtIn="false" value="VST_FORCE_DEPRECATED=0"/>
+									<listOptionValue builtIn="false" value="PA_USE_DS=1"/>
+								</option>
+								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.655920824" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
+							</tool>
+							<tool errorParsers="org.eclipse.cdt.core.GCCErrorParser" id="cdt.managedbuild.tool.gnu.c.compiler.mingw.exe.release.1331293085" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.mingw.exe.release">
+								<option defaultValue="gnu.c.optimization.level.most" id="gnu.c.compiler.mingw.exe.release.option.optimization.level.1174164411" name="Optimization Level" superClass="gnu.c.compiler.mingw.exe.release.option.optimization.level" useByScannerDiscovery="false" valueType="enumerated"/>
+								<option id="gnu.c.compiler.mingw.exe.release.option.debugging.level.291805996" name="Debug Level" superClass="gnu.c.compiler.mingw.exe.release.option.debugging.level" useByScannerDiscovery="false" value="gnu.c.debugging.level.none" valueType="enumerated"/>
+								<option id="gnu.c.compiler.option.include.paths.244640607" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
+									<listOptionValue builtIn="false" value="E:\dev\libs\glad\include"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\glad\src&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\nanovg&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\PortAudio_190600\include&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\PortAudio_190600\src\common&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\PortAudio_190600\src\os\win&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\ASIOSDK2.3\common&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\ASIOSDK2.3\host&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\ASIOSDK2.3\host\pc&quot;"/>
+								</option>
+								<option id="gnu.c.compiler.option.dialect.std.376215920" name="Language standard" superClass="gnu.c.compiler.option.dialect.std" useByScannerDiscovery="true" value="gnu.c.compiler.dialect.default" valueType="enumerated"/>
+								<option id="gnu.c.compiler.option.preprocessor.def.symbols.1335002740" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols" useByScannerDiscovery="false" valueType="definedSymbols">
+									<listOptionValue builtIn="false" value="PA_USE_ASIO=1"/>
+									<listOptionValue builtIn="false" value="VST_FORCE_DEPRECATED=0"/>
+									<listOptionValue builtIn="false" value="PA_USE_DS=1"/>
+								</option>
+								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.1475392871" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
+							</tool>
+							<tool id="cdt.managedbuild.tool.gnu.c.linker.mingw.exe.release.1352921965" name="MinGW C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.mingw.exe.release">
+								<option defaultValue="true" id="gnu.c.link.option.shared.292614459" name="Shared (-shared)" superClass="gnu.c.link.option.shared" valueType="boolean"/>
+							</tool>
+							<tool errorParsers="org.eclipse.cdt.core.GLDErrorParser" id="cdt.managedbuild.tool.gnu.cpp.linker.mingw.exe.release.107965455" name="MinGW C++ Linker" superClass="cdt.managedbuild.tool.gnu.cpp.linker.mingw.exe.release">
+								<option id="gnu.cpp.link.option.libs.1554299780" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" useByScannerDiscovery="false" valueType="libs">
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="glfw3"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="winmm"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="kernel32"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="gdi32"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="ole32"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="uuid"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="comdlg32"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="SQLiteCpp"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="sqlite3"/>
+								</option>
+								<option id="gnu.cpp.link.option.paths.2088392168" name="Library search path (-L)" superClass="gnu.cpp.link.option.paths" useByScannerDiscovery="false" valueType="libPaths">
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\glfw_mingw64\lib\&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\SQLiteCpp\lib&quot;"/>
+								</option>
+								<option defaultValue="true" id="gnu.cpp.link.option.shared.864918504" name="Shared (-shared)" superClass="gnu.cpp.link.option.shared" valueType="boolean"/>
+								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.1159739497" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
+									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
+									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
+								</inputType>
+							</tool>
+						</toolChain>
+					</folderInfo>
+					<sourceEntries>
+						<entry flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+					</sourceEntries>
+				</configuration>
+			</storageModule>
+			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
+		</cconfiguration>
+		<cconfiguration id="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100">
+			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100" moduleId="org.eclipse.cdt.core.settings" name="FastCompile">
+				<externalSettings>
+					<externalSetting/>
+				</externalSettings>
+				<extensions>
+					<extension id="org.eclipse.cdt.core.PE" point="org.eclipse.cdt.core.BinaryParser"/>
+					<extension id="org.eclipse.cdt.core.GCCErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+					<extension id="org.eclipse.cdt.core.GLDErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+				</extensions>
+			</storageModule>
+			<storageModule moduleId="cdtBuildSystem" version="4.0.0">
+				<configuration artifactName="${ProjName}" buildArtefactType="org.eclipse.cdt.build.core.buildArtefactType.exe" buildProperties="org.eclipse.cdt.build.core.buildArtefactType=org.eclipse.cdt.build.core.buildArtefactType.exe,org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.debug" cleanCommand="rm -rf" description="" errorParsers="org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GLDErrorParser;org.eclipse.cdt.core.GmakeErrorParser" id="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100" name="FastCompile" parent="cdt.managedbuild.config.gnu.mingw.exe.debug">
+					<folderInfo id="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100." name="/" resourcePath="">
+						<toolChain errorParsers="" id="cdt.managedbuild.toolchain.gnu.mingw.base.1354753871" name="MinGW GCC" nonInternalBuilderId="org.eclipse.linuxtools.cdt.autotools.core.toolchain.builder" superClass="cdt.managedbuild.toolchain.gnu.mingw.base">
+							<targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.PE" id="cdt.managedbuild.target.gnu.platform.mingw.base.1726461713" name="Debug Platform" osList="win32" superClass="cdt.managedbuild.target.gnu.platform.mingw.base"/>
+							<builder arguments="-j 8 -O" buildPath="${workspace_loc:/HostGUI_mingw64}/../buildtest" command="make" errorParsers="" id="org.eclipse.linuxtools.cdt.autotools.core.toolchain.builder.249103381" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Autotools Makefile Generator" superClass="org.eclipse.linuxtools.cdt.autotools.core.toolchain.builder"/>
+							<tool errorParsers="" id="cdt.managedbuild.tool.gnu.assembler.mingw.base.1952525854" name="GCC Assembler" superClass="cdt.managedbuild.tool.gnu.assembler.mingw.base">
+								<option id="gnu.both.asm.option.include.paths.2136151842" name="Include paths (-I)" superClass="gnu.both.asm.option.include.paths" useByScannerDiscovery="false"/>
+								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.917622701" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
+							</tool>
+							<tool id="cdt.managedbuild.tool.gnu.archiver.mingw.base.1373027306" name="GCC Archiver" superClass="cdt.managedbuild.tool.gnu.archiver.mingw.base"/>
+							<tool errorParsers="org.eclipse.cdt.core.GCCErrorParser" id="cdt.managedbuild.tool.gnu.cpp.compiler.mingw.base.1035880043" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.mingw.base">
+								<option id="gnu.cpp.compiler.option.include.paths.1732133874" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
+									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/include}&quot;"/>
+									<listOptionValue builtIn="false" value="E:\dev\libs\glfw_mingw64\include"/>
+									<listOptionValue builtIn="false" value="E:\dev\libs\glad\include"/>
+									<listOptionValue builtIn="false" value="E:\dev\libs\glm"/>
+									<listOptionValue builtIn="false" value="E:\dev\libs\nanovg"/>
+									<listOptionValue builtIn="false" value="E:\dev\libs\cereal"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\PortAudio_190600\include&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\PortAudio_190600\src\common&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\PortAudio_190600\src\os\win&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\ASIOSDK2.3\common&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\ASIOSDK2.3\host&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\ASIOSDK2.3\host\pc&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\PortAudio_190600\src\hostapi\asio&quot;"/>
+									<listOptionValue builtIn="false" value="E:/dev/libs/SQLiteCpp/include"/>
+								</option>
+								<option id="gnu.cpp.compiler.option.optimization.level.960218844" name="Optimization Level" superClass="gnu.cpp.compiler.option.optimization.level" useByScannerDiscovery="false" value="gnu.cpp.compiler.optimization.level.none" valueType="enumerated"/>
+								<option id="gnu.cpp.compiler.option.debugging.level.1883423768" name="Debug Level" superClass="gnu.cpp.compiler.option.debugging.level" useByScannerDiscovery="false" value="gnu.cpp.compiler.debugging.level.max" valueType="enumerated"/>
+								<option id="gnu.cpp.compiler.option.dialect.std.2030061700" name="Language standard" superClass="gnu.cpp.compiler.option.dialect.std" useByScannerDiscovery="true" value="gnu.cpp.compiler.dialect.default" valueType="enumerated"/>
+								<option id="gnu.cpp.compiler.option.other.other.986965145" name="Other flags" superClass="gnu.cpp.compiler.option.other.other" useByScannerDiscovery="false" value="-c -fmessage-length=0" valueType="string"/>
+								<option id="gnu.cpp.compiler.option.dialect.flags.250177470" name="Other dialect flags" superClass="gnu.cpp.compiler.option.dialect.flags" useByScannerDiscovery="true" value="-std=c++14" valueType="string"/>
+								<option id="gnu.cpp.compiler.option.preprocessor.def.1479641026" name="Defined symbols (-D)" superClass="gnu.cpp.compiler.option.preprocessor.def" useByScannerDiscovery="false" valueType="definedSymbols">
+									<listOptionValue builtIn="false" value="PA_USE_ASIO=1"/>
+									<listOptionValue builtIn="false" value="VST_FORCE_DEPRECATED=0"/>
+									<listOptionValue builtIn="false" value="PA_USE_DS=1"/>
+								</option>
+								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1323109731" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
+							</tool>
+							<tool errorParsers="org.eclipse.cdt.core.GCCErrorParser" id="cdt.managedbuild.tool.gnu.c.compiler.mingw.base.1533097334" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.mingw.base">
+								<option id="gnu.c.compiler.option.include.paths.662387813" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
+									<listOptionValue builtIn="false" value="E:\dev\libs\glad\include"/>
+									<listOptionValue builtIn="false" value="E:\dev\libs\nanovg"/>
+									<listOptionValue builtIn="false" value="E:\dev\libs\glad\src"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\PortAudio_190600\include&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\PortAudio_190600\src\common&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\PortAudio_190600\src\os\win&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\ASIOSDK2.3\common&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\ASIOSDK2.3\host&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\ASIOSDK2.3\host\pc&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\PortAudio_190600\src\hostapi\dsound&quot;"/>
+								</option>
+								<option defaultValue="gnu.c.optimization.level.none" id="gnu.c.compiler.option.optimization.level.2040679038" name="Optimization Level" superClass="gnu.c.compiler.option.optimization.level" useByScannerDiscovery="false" valueType="enumerated"/>
+								<option id="gnu.c.compiler.option.debugging.level.1776061242" name="Debug Level" superClass="gnu.c.compiler.option.debugging.level" useByScannerDiscovery="false" value="gnu.c.debugging.level.max" valueType="enumerated"/>
+								<option id="gnu.c.compiler.option.misc.other.1465570718" name="Other flags" superClass="gnu.c.compiler.option.misc.other" useByScannerDiscovery="false" value="-c -fmessage-length=0" valueType="string"/>
+								<option id="gnu.c.compiler.option.dialect.std.803944775" name="Language standard" superClass="gnu.c.compiler.option.dialect.std" useByScannerDiscovery="true" value="gnu.c.compiler.dialect.default" valueType="enumerated"/>
+								<option id="gnu.c.compiler.option.preprocessor.def.symbols.1746632369" name="Defined symbols (-D)" superClass="gnu.c.compiler.option.preprocessor.def.symbols" useByScannerDiscovery="false" valueType="definedSymbols">
+									<listOptionValue builtIn="false" value="PA_USE_ASIO=1"/>
+									<listOptionValue builtIn="false" value="VST_FORCE_DEPRECATED=0"/>
+									<listOptionValue builtIn="false" value="PA_USE_DS=1"/>
+								</option>
+								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.14326597" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
+							</tool>
+							<tool id="cdt.managedbuild.tool.gnu.c.linker.mingw.base.540318997" name="MinGW C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.mingw.base"/>
+							<tool errorParsers="org.eclipse.cdt.core.GLDErrorParser" id="cdt.managedbuild.tool.gnu.cpp.linker.mingw.base.1745957084" name="MinGW C++ Linker" superClass="cdt.managedbuild.tool.gnu.cpp.linker.mingw.base">
+								<option id="gnu.cpp.link.option.libs.768382869" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" useByScannerDiscovery="false" valueType="libs">
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="glfw3"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="winmm"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="kernel32"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="gdi32"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="ole32"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="uuid"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="comdlg32"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="SQLiteCpp"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="sqlite3"/>
+								</option>
+								<option id="gnu.cpp.link.option.paths.1104067044" name="Library search path (-L)" superClass="gnu.cpp.link.option.paths" useByScannerDiscovery="false" valueType="libPaths">
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\glfw_mingw64\lib&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\SQLiteCpp\lib&quot;"/>
+								</option>
+								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.91532565" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
+									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
+									<additionalInput kind="additionalinput" paths="$(LIBS)"/>
+								</inputType>
+								<outputType id="cdt.managedbuild.tool.gnu.cpp.linker.output.22860053" outputPrefix="" superClass="cdt.managedbuild.tool.gnu.cpp.linker.output"/>
+							</tool>
+						</toolChain>
+					</folderInfo>
+					<fileInfo id="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.470816701" name="pngcheck.exe" rcbsApplicability="disable" resourcePath="res/pngcheck.exe" toolsToInvoke=""/>
+					<sourceEntries>
+						<entry excluding="res/pngcheck.exe|BUILD" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+					</sourceEntries>
+				</configuration>
+			</storageModule>
+			<storageModule moduleId="org.eclipse.cdt.core.externalSettings"/>
+		</cconfiguration>
+	</storageModule>
+	<storageModule moduleId="cdtBuildSystem" version="4.0.0">
+		<project id="mingw_eclipse_test.cdt.managedbuild.target.gnu.mingw.exe.948619559" name="Executable" projectType="cdt.managedbuild.target.gnu.mingw.exe"/>
+	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
+	<storageModule moduleId="refreshScope" versionNumber="2">
+		<configuration configurationName="FastCompile"/>
+		<configuration configurationName="Test">
+			<resource resourceType="PROJECT" workspacePath="/HostGUI_mingw64"/>
+		</configuration>
+		<configuration configurationName="Debug">
+			<resource resourceType="PROJECT" workspacePath="/mingw_eclipse_test"/>
+		</configuration>
+		<configuration configurationName="Release">
+			<resource resourceType="PROJECT" workspacePath="/mingw_eclipse_test"/>
+		</configuration>
+	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.make.core.buildtargets"/>
+	<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
+	<storageModule moduleId="scannerConfiguration">
+		<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280;cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.;cdt.managedbuild.tool.gnu.cross.cpp.compiler.2095888165;cdt.managedbuild.tool.gnu.cpp.compiler.input.749342203">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280;cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.;cdt.managedbuild.tool.gnu.c.compiler.mingw.base.1470521610;cdt.managedbuild.tool.gnu.c.compiler.input.340788794">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100;cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.;cdt.managedbuild.tool.gnu.c.compiler.mingw.base.1533097334;cdt.managedbuild.tool.gnu.c.compiler.input.14326597">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280;cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.;cdt.managedbuild.tool.gnu.cpp.compiler.mingw.base.1286212145;cdt.managedbuild.tool.gnu.cpp.compiler.input.1782001645">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.111289801;cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.111289801.;cdt.managedbuild.tool.gnu.cpp.compiler.mingw.base.68246042;cdt.managedbuild.tool.gnu.cpp.compiler.input.855415334">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280;cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.;cdt.managedbuild.tool.gnu.cpp.compiler.mingw.exe.debug.1553120468;cdt.managedbuild.tool.gnu.cpp.compiler.input.1740414225">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.mingw.exe.release.814165804;cdt.managedbuild.config.gnu.mingw.exe.release.814165804.;cdt.managedbuild.tool.gnu.cpp.compiler.mingw.exe.release.136730379;cdt.managedbuild.tool.gnu.cpp.compiler.input.655920824">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.mingw.exe.release.814165804;cdt.managedbuild.config.gnu.mingw.exe.release.814165804.;cdt.managedbuild.tool.gnu.c.compiler.mingw.exe.release.1331293085;cdt.managedbuild.tool.gnu.c.compiler.input.1475392871">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100;cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.;cdt.managedbuild.tool.gnu.cpp.compiler.mingw.base.1035880043;cdt.managedbuild.tool.gnu.cpp.compiler.input.1323109731">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280;cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.;cdt.managedbuild.tool.gnu.c.compiler.mingw.exe.debug.2021808229;cdt.managedbuild.tool.gnu.c.compiler.input.1005929794">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.111289801;cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.111289801.;cdt.managedbuild.tool.gnu.c.compiler.mingw.base.651642687;cdt.managedbuild.tool.gnu.c.compiler.input.745584304">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280;cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.;cdt.managedbuild.tool.gnu.cross.c.compiler.157932791;cdt.managedbuild.tool.gnu.c.compiler.input.853331833">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+	</storageModule>
+</cproject>
