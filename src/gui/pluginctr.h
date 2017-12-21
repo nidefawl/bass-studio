@@ -209,7 +209,7 @@ public:
 	int getTotalWidth() {
 		guibase* last = guis.empty() ? NULL : guis.back();
 		if (!last) {
-			return getSizeContent().x;
+			return 1;
 		}
 		return last->pos.x + last->size.x + 50;
 	}
@@ -245,7 +245,9 @@ public:
 	vec2 getScale() {
 		ivec2 cs = this->getSizeContent();
 		ivec2 csp = ctr_plugins->getSizeContent();
-		return vec2(cs.x / (double)ctr_plugins->getTotalWidth(), cs.y / (double)csp.y);
+		int32_t w = ctr_plugins->getTotalWidth();
+		float sc = max(1.0f, csp.x / (float) w);
+		return vec2((cs.x / (double)csp.x)*sc, cs.y / (double)csp.y);
 	}
 
 
@@ -261,12 +263,14 @@ public:
 		}
 
 		ivec2 csp = ctr_plugins->getSizeContent();
-		vec2 scale = getScale();
-		float minScale = min(scale.x, scale.y);
-		if (minScale >= 0 && scale.y) {
+		int32_t w = ctr_plugins->getTotalWidth();
+		if (cs.x > 0 && cs.y > 0 && csp.x > 0 && csp.y > 0) {
+			float scY = cs.y / (float) csp.y;
+			float scContent = min(1.0f, csp.x / (float) w);
+			float minScale = min((cs.x / (float) max(csp.x,w)), scY);
 			nvgSave(vg);
 			if (setScissorTransform(vg)) {
-				nvgScale(vg, minScale, scale.y);
+				nvgScale(vg, minScale, scY);
 				for (guibase* gui : ctr_plugins->guis) {
 					nvgSave(vg);
 					gui->render(vg);
@@ -275,7 +279,7 @@ public:
 			}
 			nvgRestore(vg);
 			nvgBeginPath(vg);
-			nvgRect(vg, cp.x + ctr_plugins->scrolloffset*minScale, cp.y, csp.x*minScale, cs.y);
+			nvgRect(vg, cp.x + ctr_plugins->scrolloffset*minScale, cp.y, cs.x*scContent, cs.y);
 			nvgStrokeWidth(vg, 3);
 			nvgStrokeColor(vg, G_BLACK);
 			nvgStroke(vg);
@@ -288,12 +292,19 @@ public:
 			lastscrolloffset = ctr_plugins->scrolloffset;
 		}
 	}
+	float getMinScale() {
+		ivec2 cs = this->getSizeContent();
+		ivec2 csp = ctr_plugins->getSizeContent();
+		if (cs.x > 0 && cs.y > 0 && csp.x > 0 && csp.y > 0) {
+			int32_t w = ctr_plugins->getTotalWidth();
+			return min((cs.x / (float) max(csp.x,w)), cs.y / (float) csp.y);
+		}
+		return 1.0f;
+	}
 	void handleDraggedMove(MouseEvent& evt) {
 		if (evt.guiDragged == this) {
 			ivec2 move = evt.mousepos - evt.dragStart;
-			vec2 scale = getScale();
-			float minScale = min(scale.x, scale.y);
-			ctr_plugins->setScrolloffset(lastscrolloffset + (int)(move.x*(1.0 / minScale)));
+			ctr_plugins->setScrolloffset(lastscrolloffset + (int)(move.x*(1.0 / getMinScale())));
 		}
 	}
 	void layout() {

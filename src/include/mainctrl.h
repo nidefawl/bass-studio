@@ -369,5 +369,8 @@ public:
 		if (this->guiDragged == gui)  {
 			this->guiDragged = NULL;
 		}
+		if (this->guiCtrFocused == gui)  {
+			this->guiCtrFocused = NULL;
+		}
 	}
 };

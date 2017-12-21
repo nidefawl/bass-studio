@@ -11,6 +11,7 @@
 #include "commands.h"
 
 #include "mainctrl.h"
+#include "cursor.h"
 #include "exceptions.h"
 #include "color_util.h"
 #include "str_util.h"
@@ -274,10 +275,10 @@ void MainCtrl::showClipEditor() {
 	containers[1] = &view->ctr_clipeditor;
 }
 bool MainCtrl::isClipEditorVisible() {
-	return containers[0] == &view->ctr_clipeditor;
+	return containers[1] == &view->ctr_clipeditor;
 }
 bool MainCtrl::isPluginViewVisible() {
-	return containers[0] == &view->ctr_plugins;
+	return containers[1] == &view->ctr_plugins;
 }
 void MainCtrl::addDebug(String s) {
 
@@ -592,9 +593,15 @@ std::shared_ptr<project_file> MainCtrl::createProjectFile() {
 	return file;
 }
 void MainCtrl::resetMouseContext() {
-	guiCaptured = guiFocused = guiCtrFocused = guiOver = guiDragged = NULL;
+	if (guiCtrFocused) {
+		if (!guiCtrFocused->isStaticContainer()) {
+			guiCtrFocused = NULL;
+		}
+	}
+	guiCaptured = guiFocused = guiOver = guiDragged = NULL;
 }
 bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file) {
+	stopPlaying();
 	projectPath = "";
 	clipView.set(NULL);
 	closeContextMenu();
@@ -995,10 +1002,10 @@ void MainCtrl::onKeyInput(int key, int scancode, int keyState, int mods, const c
 //	}
 }
 void MainCtrl::startPlaying() {
-	playThread.addRequest(PlaybackRequest{PLAYBACK_START, cursor.cursorPos});
+	playThread.addRequest(PLAYBACK_START, cursor.cursorPos, true);
 }
 void MainCtrl::stopPlaying() {
-	playThread.addRequest(PlaybackRequest{PLAYBACK_STOP, cursor.cursorPos});
+	playThread.addRequest(PLAYBACK_STOP, cursor.cursorPos, true);
 }
 bool MainCtrl::toggleLoop() {
 	loopEnabled = !loopEnabled;

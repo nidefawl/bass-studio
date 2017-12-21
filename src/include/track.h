@@ -82,6 +82,10 @@ public:
 	tick_t start();
 	tick_t end();
 	std::pair<clip_t*, clip_t*> getMinMax();
+	bool hasClip(clip_t* c) {
+		auto it = std::find(clips.begin(), clips.end(), c);
+		return it != clips.end();
+	}
 	clip_t* getNextClip(clip_t* c) {
 		bool matched = false;
 		for (clip_t* clip : clips) {
@@ -129,7 +133,6 @@ struct trackstate_t {
 		return t;
 	}
 	~trackstate_t() {
-		my_printf("trackstate dtor\n",0);
 	}
 	void reset() {
 		for (track_t* track : tracks) {
@@ -326,7 +329,7 @@ public:
 	void removeTrack(track_t* track);
 	void copyTo(project_snapshot_t& out);
 	void copyFrom(project_snapshot_t& in);
-	void copyTracks(const Cursor& cursor, trackstate_t& _out);
+	void copyTracks(int32_t trackBegin, int32_t trackLen, trackstate_t& _out);
 	void loadPlugins(project_snapshot_t& project);
 
 

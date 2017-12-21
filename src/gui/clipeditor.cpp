@@ -590,8 +590,12 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
 		notes.selection = selectionStart;
 		std::vector<note_t*> inRangeList;
 		if (notes.getInRange(tickStart, tickEnd, pitchLow, pitchHigh, inRangeList)) {
+			std::set<note_t*>& selection = notes.selection;
 			for (note_t* inSelRange : inRangeList) {
-				notes.addOrRemoveSelection(inSelRange);
+				auto result = selection.insert(inSelRange);
+				if (!result.second) {
+					selection.erase(result.first);
+				}
 			}
 		}
 		if (!isShift(evt.kbmods)) {

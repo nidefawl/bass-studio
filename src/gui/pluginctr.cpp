@@ -40,7 +40,7 @@ void guiplugin::render(NVGcontext* vg) {
 	NVGcolor c;
 	guibase* b = MainCtrl::get()->guiFocused;
 
-	if (b && (b == this || b->parent == this)) {
+	if (b == this) {
 		c = g_guiColors[COL_BG_DRK_FOCUSED];
 	}
 	else {

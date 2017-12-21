@@ -116,6 +116,9 @@ public:
 		m_track(_track) {
 		padding = 0;
 	}
+	bool isStaticContainer() {
+		return false;
+	}
 	void render(NVGcontext* vg) {
 		if (MainCtrl::get()->getSelectedTrack() == m_track) {
 			nvgBeginPath(vg);

@@ -96,13 +96,11 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 		return false;
 	}
 	if (kevt.type != K_RELEASE) {
-		trackstate_t preModifyState;
 		MainCtrl* ctrl = MainCtrl::get();
 		bool modified = false;
 		bool handledKeyinput = false;
 		String desc = "???";
 		if (kevt.type == K_PRESS) {
-			std::unique_ptr<trackcontents_t> contentsBefore;
 			if (isKC(KC_SELECTALL, kevt)) {
 				clip_t* min = NULL;
 				clip_t* max = NULL;
@@ -143,7 +141,8 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 //						ctrl->cutIntersecting(t, cursor.getTickBegin(), cursor.getTickEnd());
 //					}
 //				}.reserve(_tracks.size());
-				project.trackList.copyTracks(cursor, resizePreModifyState);
+				project.trackList.copyTracks(cursor.getTrackBegin(), cursor.getTrackEnd(), resizePreModifyState);
+				resizePreModifyState.cursor = cursor;
 				MainCtrl::get()->cutSelection(cursor);
 				handledKeyinput = true;
 				modified = true;
@@ -151,7 +150,8 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 			}
 			else if (isKC(KC_CUT, kevt) && cursor.getRange()) {
 				clipboard = MainCtrl::get()->copySelection(cursor);
-				project.trackList.copyTracks(cursor, resizePreModifyState);
+				project.trackList.copyTracks(cursor.getTrackBegin(), cursor.getTrackEnd(), resizePreModifyState);
+				resizePreModifyState.cursor = cursor;
 				MainCtrl::get()->cutSelection(cursor);
 				for (track_t* t: project.trackCtr) {
 					if (cursor.inTrackRange(t->idx)) {
@@ -167,7 +167,8 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 				handledKeyinput = true;
 			}
 			else if (isKC(KC_DUPLICATE, kevt) && cursor.getRange()) {
-				project.trackList.copyTracks(cursor, resizePreModifyState);
+				project.trackList.copyTracks(cursor.getTrackBegin(), cursor.getTrackEnd(), resizePreModifyState);
+				resizePreModifyState.cursor = cursor;
 				clip_clipboard* clipboard = MainCtrl::get()->copySelection(cursor);
 				cursor.setLeftAligned();
 				cursor.cursorPos += cursor.getRange();
@@ -181,7 +182,8 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 				desc = "Duplicate clips";
 			}
 			else if (isKC(KC_PASTE, kevt) && clipboard) {
-				project.trackList.copyTracks(cursor, resizePreModifyState);
+				project.trackList.copyTracks(clipboard->srcTrack, clipboard->srcTrack+clipboard->selTrackRange, resizePreModifyState);
+				resizePreModifyState.cursor = cursor;
 				cursor.setLeftAligned();
 				MainCtrl::get()->cutSelection(cursor);
 				MainCtrl::get()->pasteClipboard(clipboard,
@@ -292,7 +294,8 @@ void guitrack_editor::dragSelectionBegin(gui_clip* gClip, MouseEvent& evt) {
 		dragStartLayout = *(track_t*) clicked->tr;
 		action.cursorBegin = cursor;
 		resizePreModifyState.reset();
-		project.trackList.copyTracks(cursor, resizePreModifyState);
+		project.trackList.copyTracks(cursor.getTrackBegin(), cursor.getTrackEnd(), resizePreModifyState);
+		resizePreModifyState.cursor = cursor;
 		return;
 	}
 	if (trackClicked != NULL) {
@@ -346,14 +349,16 @@ void guitrack_editor::dragSelectionMove(gui_clip* gui, MouseEvent& evt) {
 			if (action.dragtype == DRAG_CLIPS_RESIZE_LEFT) {
 				if (clip->start() != tick) {
 					tick_t offset = tick - clip->time;
-					clip->adjustStartOffset(offset);
-					clip->time += offset;
-					clip->len -= offset;
+					if (clip->len - offset > MIN_CLIPSIZE) {
+						clip->adjustStartOffset(offset);
+						clip->time += offset;
+						clip->len -= offset;
+					}
 				}
 			} else {
 				if (clip->end() != tick) {
 					tick_t offset = clip->end() - tick;
-					if (clip->len - offset > 0 && clip->len - offset >= grid.getTickLength()) {
+					if (clip->len - offset > MIN_CLIPSIZE && clip->len - offset >= grid.getTickLength()) {
 						clip->len -= offset;
 					}
 				}
@@ -429,7 +434,8 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
 				target.cursorPos = minTrack;
 				target.selTrackRange = maxTrack - minTrack;
 				trackstate_t resizePreModifyState;
-				project.trackList.copyTracks(target, resizePreModifyState);
+				project.trackList.copyTracks(target.getTrackBegin(), target.getTrackEnd(), resizePreModifyState);
+				resizePreModifyState.cursor = target;
 
 				resizePreModifyState.cursor = cursorBegin;
 				clip_clipboard* clipboard = MainCtrl::get()->copySelection(cursorBegin);
@@ -445,9 +451,13 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
 			}
 		} else if (action.dragtype == DRAG_CLIPS_RESIZE_LEFT
 				|| action.dragtype == DRAG_CLIPS_RESIZE_RIGHT) {
-
+			clip_t* clipPtr = gui->m_clip;
 			track_t* track = gui->m_clip->tr;
 			track->deleteEmptyClips();
+			if (!track->hasClip(clipPtr)) {
+				gui = NULL;
+				showclip = false;
+			}
 
 			if (dragStartLayout.diff(track)) {
 				action_modify_track* track_action = new action_modify_track("Resize clips", resizePreModifyState.get());

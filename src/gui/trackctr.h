@@ -258,6 +258,9 @@ public:
 		remove(&meter);
 		remove(&gain);
 	}
+	bool isStaticContainer() {
+		return false;
+	}
 	void handleDraggedBegin(MouseEvent& evt) {
 		MainCtrl::get()->setSelectedTrack(m_track);
 		if (isResize(evt.relMousepos+this->pos)) {

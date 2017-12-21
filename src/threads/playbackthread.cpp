@@ -37,10 +37,35 @@ public:
 	~Impl() {mutex.unlock(); }
 };
 
+class PlaybackThreadReq {
+    std::mutex m_mtx;
+    std::condition_variable m_cond;
+    std::atomic<bool> m_finished{false};
+public:
+	int32_t msgId = 0;
+	int32_t param = 0;
+	PlaybackThreadReq(int32_t _msgId, int32_t _param)
+	: msgId(_msgId), param(_param)
+	{
+
+    }
+	~PlaybackThreadReq() = default;
+	void wait() {
+        std::unique_lock<std::mutex> lock(m_mtx);
+        if (!m_finished) {
+            m_cond.wait(lock, [&](){ return m_finished == true; });
+        }
+	}
+	void notify() {
+        std::unique_lock<std::mutex> lock(m_mtx);
+        m_finished = true;
+        m_cond.notify_all();
+	}
+};
 
 class PlaybackThread::Impl {
 	std::thread t;
-    BlockingReaderWriterQueue<PlaybackRequest> q;
+	ReaderWriterQueue<std::shared_ptr<PlaybackThreadReq>> q;
     playback_state m_status = status_stop;
 	std::recursive_mutex mutex;
 public:
@@ -52,21 +77,23 @@ public:
 		});
 	}
 	void join() {
+		assert(t.joinable());
 		t.join();
 	}
-	void addRequest(PlaybackRequest& r) {
-		q.enqueue(r);
+	void addRequest(std::shared_ptr<PlaybackThreadReq>& req) {
+		assert(t.joinable());
+		if (!q.enqueue(req)) {
+			assert(0&&"Failed enqeueing req");
+		}
 	}
 
     void stop(){
-        q.enqueue(PlaybackRequest{PLAYBACK_THREAD_EXIT, 0});
-    }
-    bool dequeue(PlaybackRequest& r, bool blocking) {
-    	if (blocking) {
-    		q.wait_dequeue(r);
-    		return true;
-    	}
-    	return q.try_dequeue(r);
+		assert(t.joinable());
+		auto req = std::make_shared<PlaybackThreadReq>(PLAYBACK_THREAD_EXIT, 0);
+		if (!q.enqueue(req)) {
+			assert(0&&"Failed enqeueing req");
+		}
+        req->wait();
     }
     playback_state getState() const {
     	return m_status;
@@ -89,7 +116,6 @@ private:
 		vsthost* host = vsthost::getInstance();
 		tick_t pos = 0;
 		playback_state state = status_stop;
-		PlaybackRequest req;
 		static double approxTimePassed = 0;
 		int32_t blockPos = 0;
 		tick_t startTick = 0;
@@ -100,20 +126,21 @@ private:
 		freq.QuadPart /= 1000; // calc milliseconds
 		double wallTime = 0;
 		bool firstBlock = false;
+		std::shared_ptr<PlaybackThreadReq> req;
         while (true){
         	samplerate_t sampleRate = host->lSampleRate;
         	int32_t blockSize = host->lBlockSize;
         	int32_t bpm100 = ctrl->getCurrentTempo();
         	assert(bpm100>0);
-        	if (dequeue(req, false)) {
-        		switch (req.msgId) {
+        	if (q.try_dequeue(req)) {
+        		switch (req->msgId) {
         		case PLAYBACK_START:
         			if (state != status_play) {
             			state = m_status = status_play;
-            			pos = req.param;
-            			startTick = req.param;
+            			pos = req->param;
+            			startTick = req->param;
             			ctrl->getPlaybackPos() = pos;
-            			blockPos = tickToBlock(req.param, bpm100, sampleRate, blockSize);
+            			blockPos = tickToBlock(req->param, bpm100, sampleRate, blockSize);
             			LOG("START ON seconds: %.2f - BLOCK %d\n", toSeconds(pos, bpm100), blockPos);
             			host->onStartPlayback(blockPos);
                         QueryPerformanceCounter(&iStart);
@@ -132,8 +159,11 @@ private:
     				LOG("PLAYBACK_THREAD_EXIT");
     				Sleep(200);
 #endif
+            		req->notify();
         			return;
         		}
+        		req->notify();
+        		req.reset();
         	}
 
 
@@ -209,8 +239,12 @@ PlaybackThread::PlaybackThread() :
 	_M_impl { new PlaybackThread::Impl {  } } {
 }
 
-void PlaybackThread::addRequest(PlaybackRequest r) {
+void PlaybackThread::addRequest(int32_t _msgId, int32_t _param, bool wait) {
+	auto r = std::make_shared<PlaybackThreadReq>(_msgId, _param);
 	_M_impl->addRequest(r);
+	if (wait) {
+		r->wait();
+	}
 }
 void PlaybackThread::startThread() {
 	_M_impl->start();

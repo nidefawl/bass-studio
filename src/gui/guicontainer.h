@@ -209,4 +209,7 @@ public:
 	}
 	virtual void handleDraggedRelease(MouseEvent& evt) {
 	}
+	virtual bool isStaticContainer() {
+		return true;
+	}
 };

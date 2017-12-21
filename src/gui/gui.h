@@ -19,6 +19,7 @@ using glm::ivec2;
 struct NVGcontext;
 class guitrack_editor;
 class guiplugin;
+class guictr_base;
 class gui_pluginlist_entry;
 
 extern int allocCount;
@@ -216,6 +217,9 @@ public:
 			in = this->parent->toScreenSpace(in);
 		}
 		return in;
+	}
+	virtual bool isStaticContainer() {
+		return true;
 	}
 protected:
 

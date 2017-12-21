@@ -178,10 +178,10 @@ void trackallcontainer_t::loadPlugins(project_snapshot_t& project) {
 	trackReturnCtr.loadPlugins(project.trackReturnCtr);
 	trackMasterCtr.loadPlugins(project.trackMasterCtr);
 }
-void trackallcontainer_t::copyTracks(const Cursor& cursor, trackstate_t& _out) {
+void trackallcontainer_t::copyTracks(int32_t trackBegin, int32_t trackEnd, trackstate_t& _out) {
 	_out.reset();
 	for (track_t* t: tracks) {
-		if (cursor.inTrackRange(t->idx)) {
+		if (t->idx >= trackBegin && t->idx <= trackEnd) {
 			my_printf("copy track %d\n", t->idx);
 			track_t* trackClone = new track_t(*t);
 			_out.tracks.push_back(trackClone);
@@ -195,7 +195,6 @@ void trackallcontainer_t::copyTracks(const Cursor& cursor, trackstate_t& _out) {
 			assert(clip->tr == track);
 		}
 	}
-	_out.cursor = cursor;
 }
 track_t::track_t(const track_snapshot_t &a) : tracksettings_t(a) {
 	for (const clip_t& clip : a.clips) {
@@ -323,6 +322,9 @@ void trackcontents_t::deleteEmptyClips() {
 		}
 	}
 	this->clips = clipList;
+	for (clip_t* clip : clips) {
+		assert(clip->len>0&&clip->time>=0&&clip->gClip->m_clip==clip);
+	}
 	sortClips();
 }
 void track_t::getNotesInRange(tick_t start, tick_t end, tick_t cutStart, tick_t cutEnd, std::vector<note_t>& notes) {

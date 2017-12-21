@@ -12,6 +12,7 @@ using tick_t = int32_t;
 #define TICKS_BAR (TICKS_QUARTER<<2)
 #define TICK_MASK_16TH (TICKS_16TH-1)
 #define TICK_MASK_SUB_16TH ((TICKS_16TH>>1)-1)
+#define MIN_CLIPSIZE TICKS_16TH
 struct beatbar16th_t {
 	uint32_t bar;
 	uint32_t beat;

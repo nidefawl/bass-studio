@@ -22,12 +22,11 @@ class WorkerThread::ThreadTaskImpl {
     ThreadTask* task;
     std::mutex m_mtx;
     std::condition_variable m_cond;
-    std::atomic<bool> m_finished;
+    std::atomic<bool> m_finished{false};
 public:
     ThreadTaskImpl(ThreadTask* _task)
 	: task(_task)
 	{
-		std::atomic_init(&m_finished, false);
 	}
     virtual ~ThreadTaskImpl() {
     }

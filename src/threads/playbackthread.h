@@ -4,10 +4,6 @@
 #include <stdexcept>
 #define PLAYBACK_STOP 0
 #define PLAYBACK_START 1
-struct PlaybackRequest {
-	int32_t msgId;
-	int32_t param;
-};
 class ThreadLock {
 public:
 	class Impl;
@@ -26,8 +22,6 @@ public:
 class PlaybackThread
 {
 
-public:
-
 private:
 	class Impl;
 
@@ -38,7 +32,7 @@ public:
     void stopThread();
 	void joinThread();
 	ThreadLock lockThread();
-	void addRequest(PlaybackRequest r);
+	void addRequest(int32_t msgId, int32_t param, bool wait);
 	playback_state getState();
 
 private:
