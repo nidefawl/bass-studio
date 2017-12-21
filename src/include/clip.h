@@ -3,6 +3,7 @@
 #include <vector>
 #include "note.h"
 #include "seq_time.h"
+#include "seq_math.h"
 #include "str_util.h"
 #include "seq_util.h"
 #include "logging.h"
@@ -179,12 +180,17 @@ public:
 	tick_t getLoopBegin() const;
 	tick_t getNumLoops() const;
 	void adjustStartOffset(tick_t offset) {
-		bool inLoop = offsetStart >= loopStart;
+		if (loopEnabled && offsetStart < loopStart) {
+			tick_t lenAdj = min(offset, loopStart - offsetStart);
+			offsetStart += lenAdj;
+			offset -= lenAdj;
+		}
+		bool inLoop = loopEnabled && offsetStart >= loopStart;
 		this->offsetStart += offset;
-		if (inLoop && offsetStart < loopStart) {
+		while (inLoop && offsetStart < loopStart) {
 			offsetStart += loopLen;
 		}
-		if (inLoop && offsetStart >= loopStart+loopLen) {
+		while (inLoop && offsetStart >= loopStart+loopLen) {
 			offsetStart -= loopLen;
 		}
 	}
@@ -206,7 +212,7 @@ note_t* getFirstAfter(std::vector<note_t>& v, int32_t pitch, tick_t time);
 note_t* getFirstBefore(std::vector<note_t>& v, int32_t pitch, tick_t time);
 inline void cutClipLeft(clip_t* c, tick_t len) {
 	c->adjustStartOffset(len);
-	c->offsetStart += len;
+
 	c->time += len;
 	c->len -= len;
 	assert(c->time>0);
