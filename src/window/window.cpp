@@ -103,7 +103,7 @@ static void glfw_cb_framebuffersize(GLFWwindow *w, int width, int height);
 
 static LRESULT WIN32API_CALLBACK_TYPE winProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam);
 
-static VOID CALLBACK timerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime);
+static VOID WIN32API_CALLBACK_TYPE timerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime);
 
 static void glfw_startup_error_callback(int error, const char* description) {
 	char errorCodeStr[1024] = { 0 };
@@ -965,7 +965,7 @@ static void glfw_cb_framebuffersize(GLFWwindow *w, int width, int height) {
 	getUserData(w)->onFramebufferSizeChanged(width, height);
 	EXC_CATCH
 }
-static VOID CALLBACK timerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime) {
+static VOID WIN32API_CALLBACK_TYPE timerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime) {
 	EXC_TRY
 	appwindow* impl = NULL;
 	GLFWwindow* glfwWindow = (GLFWwindow*) GetPropW(hwnd, L"GLFW");
