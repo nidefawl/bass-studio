@@ -68,7 +68,7 @@ $(EDEV)/SQLiteCpp/lib
 endif
 #-Ofast
 OPTIMIZATION_LVL ?= -O0
-DEBUG_FLAGS ?= -g3
+DEBUG_FLAGS ?= -g
 LD_FLAGS := $(addprefix -L,$(LIB_DIRS)) -lglfw3 -lwinmm -lkernel32 -lgdi32 -lole32 -luuid -lcomdlg32 -lSQLiteCpp -lsqlite3
 LD_FLAGS += $(OPTIMIZATION_LVL) -Wall $(DEBUG_FLAGS)
 #LD_FLAGS := libs.o -lole32
