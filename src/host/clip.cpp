@@ -150,20 +150,21 @@ size_t clip_notes_t::removeDuplicates() {
 	} else {
 		nRemoved = removeDuplicatesImpl(m_list);
 	}
-	std::vector<size_t> selIdx;
-	getSelectionIndices(selIdx);
 	updateBounds();
 	return nRemoved;
 }
+#define USE_IMPL 1
 void clip_notes_t::copy( const clip_notes_t &obj) {
 	//assert(!obj.hasDuplicates());
 	m_list = obj.m_list;
 	selection.clear();
 	if (!obj.selection.empty()) {
-		std::vector<size_t> selIdx;
-		obj.getSelectionIndices(selIdx);
-		for (size_t& idx : selIdx) {
-			selection.insert(&m_list[idx]);
+		const note_t* baseOther = obj.m_list.data();
+		note_t* baseOwn = m_list.data();
+		for (note_t* notePtr : obj.selection) {
+			const ptrdiff_t diff = notePtr - baseOther;
+			note_t* ownPtr = baseOwn + diff;
+			selection.insert(ownPtr);
 		}
 	}
 	assert(obj.selection.size() == selection.size());
