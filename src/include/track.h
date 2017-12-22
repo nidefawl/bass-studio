@@ -189,13 +189,18 @@ struct tracksettings_t {
 	int rgb = -1;
 };
 
+struct param_snapshot_t {
+	int32_t idx;
+	float val;
+};
 struct plugin_snapshot_t {
 	bool present;
-	int slot;
-	int uId;
+	int32_t slot;
+	int32_t uId;
 	String name;
 	std::vector<uint8_t> dataChunk;
 	std::vector<uint8_t> dataChunk2;
+	std::vector<param_snapshot_t> params;
 };
 struct track_plugins_snapshot_t {
 	float gain = 1.0f;

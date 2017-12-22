@@ -227,6 +227,12 @@ void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin) {
 		ps.dataChunk2.assign(ptrData, ptrData + pluginDataSize2);
 		my_printf("Plugin %s: Save data2[%d]\n", StringAsCStr(plugin->sName), pluginDataSize2);
 	}
+	ps.params.reserve(plugin->params.size());
+	for (vst_param& param : plugin->params) {
+		float val = plugin->getParamValue(&param);
+		param_snapshot_t t{param.idx, val};
+		ps.params.push_back(t);
+	}
 }
 track_plugins_snapshot_t::track_plugins_snapshot_t(const track_t &a) {
 	track_plugins_t* p = a.audio;
@@ -283,16 +289,22 @@ void tracksubcontainer_t::loadPlugins(trackcontainer_snapshot_t& in) {
 			if (MainCtrl::get()->plugindb.resolve(pluginSnapshot.name, pluginSnapshot.uId, &path)) {
 				vstpluginloadres res = host->loadPlugin(path);
 				if (res.result==0&&res.plugin) {
+					vstplugin* plugin = res.plugin;
 					if (pluginSnapshot.dataChunk.size() > 0) {
 						my_printf("Plugin %s: Load data1[%d]\n", StringAsCStr(res.plugin->sName), pluginSnapshot.dataChunk.size());
-						res.plugin->dispatch(effSetChunk, 0, pluginSnapshot.dataChunk.size(), (void*)pluginSnapshot.dataChunk.data());
+						plugin->dispatch(effSetChunk, 0, pluginSnapshot.dataChunk.size(), (void*)pluginSnapshot.dataChunk.data());
 					}
 					if (pluginSnapshot.dataChunk2.size() > 0) {
 						my_printf("Plugin %s: Load data2[%d]\n", StringAsCStr(res.plugin->sName), pluginSnapshot.dataChunk2.size());
-						res.plugin->dispatch(effSetChunk, 1, pluginSnapshot.dataChunk2.size(), (void*)pluginSnapshot.dataChunk2.data());
+						plugin->dispatch(effSetChunk, 1, pluginSnapshot.dataChunk2.size(), (void*)pluginSnapshot.dataChunk2.data());
 					}
 
-					host->insertNewPlugin(trackLoaded->audio, res.plugin, pluginSnapshot.slot);
+					const std::vector<param_snapshot_t>& pluginSnapshotParams = pluginSnapshot.params;
+					for (const param_snapshot_t& param : pluginSnapshotParams) {
+						vst_param* pluginParam = plugin->getParam(param.idx);
+						plugin->setParamValue(pluginParam, param.val);
+					}
+					host->insertNewPlugin(trackLoaded->audio, plugin, pluginSnapshot.slot);
 				}
 			}
 		}
@@ -340,9 +352,8 @@ void track_t::getNotesInRange(tick_t start, tick_t end, tick_t cutStart, tick_t 
 
 vstplugin* track_plugins_t::setInstrument(vstplugin* _instrument) {
 	vstplugin* oldInstr = instrument;
-	if (oldInstr) {
-		oldInstr->handle->tr_plugins = NULL;
-		oldInstr->handle->slot = -1;
+	if (instrument) {
+		removePlugin(instrument);
 	}
 	instrument = _instrument;
 	_instrument->handle->tr_plugins = this;

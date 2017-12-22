@@ -474,6 +474,10 @@ public:
 		ctrl->mouseMoved(getMousePos(), deltapos);
 		flagNeedsRedraw();
 	}
+	virtual void onMouseScrolled(double xoffset, double yoffset) {
+		ctrl->mouseScrolled(xoffset, yoffset);
+		flagNeedsRedraw();
+	}
 	void onMouseButton(int button, int action, int mods) {
 		if (action == GLFW_PRESS) {
 			uint64_t timeMillis = getTimeMillis();

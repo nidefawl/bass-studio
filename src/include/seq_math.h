@@ -6,6 +6,7 @@
 #ifndef M_PI
 #define M_PI           3.14159265358979323846  /* pi */
 #endif
+#define FLOAT_PI           3.141592653f
 using std::max;
 using std::min;
 using std::fmod;

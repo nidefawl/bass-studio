@@ -7,6 +7,9 @@
 #include "color_util.h"
 #include "button.h"
 #include "renderresources.h"
+#include "list.h"
+#include "knob.h"
+
 using glm::vec2;
 using glm::ivec2;
 
@@ -78,11 +81,12 @@ class vstplugin;
 
 class guiplugin : public guibase {
 public:
+	vstplugin* const vst;
+	gui_list params;
 	char text[MAX_STR_TITLE];
 	guibuttontoggle buttonBypass;
 	guibuttontoggle buttonOpenEditor;
 	guibuttontoggle buttonDelete;
-	vstplugin* const vst;
 	guiplugin(vstplugin* _vst);
 	~guiplugin() {
 		my_printf("DSTR!\n",0);
@@ -94,9 +98,6 @@ public:
 	}
 	void render(NVGcontext* vg);
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
-	void setTitleCstr(const char* cstr) {
-		setTitle(String(cstr));
-	}
 	void setTitle(String wxtext) {
 		const char* wxmb = StringAsCStr(wxtext);
 		strncpy_s(this->text, MAX_STR_TITLE, wxmb, strlen(wxmb));
@@ -109,6 +110,10 @@ public:
 		buttonOpenEditor.pos.x = buttonBypass.right();
 		buttonDelete.pos.y = inset1;
 		buttonDelete.pos.x = size.x - buttonDelete.size.x - inset1;
+		int32_t insetCtrls = INSET_TITLE;
+		params.pos = ivec2(insetCtrls, insetCtrls + HEIGHT_PLUGIN_TITLE);
+		params.size = size - params.pos - ivec2(insetCtrls);
+		params.layout();
 	}
 	void handleDraggedMove(MouseEvent& evt) override;
 	void handleDraggedRelease(MouseEvent& evt) override;

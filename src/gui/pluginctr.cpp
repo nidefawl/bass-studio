@@ -14,6 +14,7 @@
 #include "pluginlist.h"
 #include "renderresources.h"
 #include "logging.h"
+#include "list.h"
 
 using glm::vec2;
 using glm::ivec2;
@@ -64,6 +65,9 @@ void guiplugin::render(NVGcontext* vg) {
 	buttonBypass.render(vg);
 	buttonOpenEditor.render(vg);
 	buttonDelete.render(vg);
+
+	params.renderBackground(vg);
+	params.render(vg);
 }
 bool guiplugin::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 	if (contains(mpos)) {
@@ -75,6 +79,9 @@ bool guiplugin::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 			return true;
 		}
 		if (buttonDelete.mouseHitTest(mouseLocal, evt)) {
+			return true;
+		}
+		if (params.mouseHitTest(mouseLocal, evt)) {
 			return true;
 		}
 		evt.requestFocus(this);
@@ -107,7 +114,66 @@ void guiplugin::buttonClicked(guibase* _button) {
     	vsthost::getInstance()->unloadPlugin(vst);
 	}
 }
-guiplugin::guiplugin(vstplugin* _vst) : guibase(), buttonBypass(ivec2(0), 12), buttonOpenEditor(ivec2(0), 12), buttonDelete(ivec2(0), 12), vst(_vst) {
+class gui_plugin_paramlist_entry : public gui_list_entry {
+
+	const float spacing = INSET_TITLE;
+public:
+	vst_param* const entry;
+	guiknob knobTest;
+	gui_plugin_paramlist_entry(vstplugin* _vst, vst_param* _entry) : gui_list_entry(), entry(_entry), knobTest(false) {
+		icon = 0;
+		knobTest.fnGetValue = [_vst, _entry] () {
+			return _vst->getParamValue(_entry);
+		};
+		knobTest.fnSetValue = [_vst, _entry] (float f) {
+			return _vst->setParamValue(_entry, f);
+		};
+	}
+	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
+		if (this->contains(mpos)) {
+			if (knobTest.mouseHitTest(mpos, evt)) {
+				return true;
+			}
+			evt.requestFocus(this);
+			return true;
+		}
+		return false;
+	}
+	void dragMoveOn(guibase* target, ivec2 mousepos) override {
+	}
+	void dragReleaseOn(guibase* target, ivec2 mousepos) override {
+	}
+	String getText() override {
+		return entry->label;
+	}
+	void layout() {
+		knobTest.pos = pos + ivec2(spacing);
+		knobTest.size = ivec2(size.y, size.y) - ivec2(spacing*2);
+	}
+	virtual void render(NVGcontext* vg) {
+		MainCtrl* ctrl = MainCtrl::get();
+		float rowHeight = size.y;
+		float x = knobTest.right()+spacing;
+		if (ctrl->guiFocused == this) {
+			nvgBeginPath(vg);
+			nvgRect(vg, pos.x, pos.y, size.x, size.y);
+			nvgFillColor(vg, g_guiColors[COL_BG_DRKER]);
+			nvgFill(vg);
+		}
+		nvgTranslate(vg, pos.x, pos.y);
+		setFont(vg, (int) (rowHeight * 0.8), G_WHITE, G_TITLE_ALIGN);
+		nvgText(vg, x, rowHeight / 2, StringAsCStr(getText()), NULL);
+		nvgTranslate(vg, -pos.x, -pos.y);
+		knobTest.render(vg);
+	}
+};
+guiplugin::guiplugin(vstplugin* _vst)
+: guibase(),
+  vst(_vst),
+  params(48),
+  buttonBypass(ivec2(0), 12),
+  buttonOpenEditor(ivec2(0), 12),
+  buttonDelete(ivec2(0), 12) {
 	text[0] = 0;
 	buttonBypass.icon = ICON_BYPASS;
 	buttonBypass.state = &vst->bIsEnabled;
@@ -122,6 +188,11 @@ guiplugin::guiplugin(vstplugin* _vst) : guibase(), buttonBypass(ivec2(0), 12), b
 	buttonDelete.state = &closeEnabled;
 	buttonDelete.parent = this;
 	buttonDelete.setColor(0x404040);
+	std::vector<gui_list_entry*> _newList;
+	for (vst_param& param : _vst->params) {
+		_newList.push_back(new gui_plugin_paramlist_entry(_vst, &param));
+	}
+	params.setList(_newList);
 }
 void guictr_plugins::addGui(vstplugin* plugin) {
 	if (!plugin->handle->gui) {

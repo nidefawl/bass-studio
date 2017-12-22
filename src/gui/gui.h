@@ -118,6 +118,9 @@ public:
 	}
 	virtual void handleDraggedRelease(MouseEvent& evt) {
 	}
+	virtual bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
+		return false;
+	}
 	virtual bool handleKeyInput(KeyEvent& kevt) {
 		return false;
 	}

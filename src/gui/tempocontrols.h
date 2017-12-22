@@ -8,6 +8,7 @@
 #include "gui.h"
 #include "guicontainer.h"
 #include "button.h"
+#include "knob.h"
 #include "../host/vst_host.h"
 #include "settings.h"
 

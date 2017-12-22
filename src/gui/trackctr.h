@@ -863,12 +863,16 @@ public:
 					drawSeperator(vg, g, cs);
 				}
 				nvgRestore(vg);
-				nvgIntersectScissor(vg, 0, ySplit, cs.x, trackView.size.y-ySplit);
-			} else {
-				nvgIntersectScissor(vg, 0, 0, cs.x, trackView.size.y);
 			}
-			for (track_t* g : project.tracksBottom) {
-				drawSeperator(vg, g, cs);
+			if (project.tracksBottom.size()) {
+				if (ySplit > 0) {
+					nvgIntersectScissor(vg, 0, ySplit, cs.x, trackView.size.y-ySplit);
+				} else {
+					nvgIntersectScissor(vg, 0, 0, cs.x, trackView.size.y);
+				}
+				for (track_t* g : project.tracksBottom) {
+					drawSeperator(vg, g, cs);
+				}
 			}
 		nvgRestore(vg);
 

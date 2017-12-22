@@ -4,6 +4,8 @@
 #include "color_util.h"
 #include "guicontainer.h"
 #include "button.h"
+#include "track.h"
+
 using glm::vec2;
 using glm::ivec2;
 
@@ -123,13 +125,14 @@ public:
 		return in;
 	}
 	void verticalLineAt(NVGcontext* vg, ivec2 posHL) {
+		nvgLineCap(vg, NVGlineCap::NVG_ROUND);
 		nvgBeginPath(vg);
 		nvgMoveTo(vg, posHL.x, 4);
 		nvgLineTo(vg, posHL.x, getSizeContent().y - 4);
-		nvgLineCap(vg, NVG_ROUND);
 		nvgStrokeColor(vg, G_MOVE_HIGHLIGHT);
 		nvgStrokeWidth(vg, 4.0);
 		nvgStroke(vg);
+		nvgLineCap(vg, NVGlineCap::NVG_BUTT);
 	}
 	void render(NVGcontext* vg) {
 		renderBackground(vg);

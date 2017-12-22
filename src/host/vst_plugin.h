@@ -9,6 +9,51 @@
 class vsthost;
 struct AudioBlock;
 struct handles_t;
+
+//-------------------------------------------------------------------------------------------------------
+/** Flags used in #VstParameterProperties. */
+//-------------------------------------------------------------------------------------------------------
+enum vst_param_flags
+{
+//-------------------------------------------------------------------------------------------------------
+	ParamIsSwitch				 = 1 << 0,	///< parameter is a switch (on/off)
+	ParamUsesIntegerMinMax		 = 1 << 1,	///< minInteger, maxInteger valid
+	ParamUsesFloatStep			 = 1 << 2,	///< stepFloat, smallStepFloat, largeStepFloat valid
+	ParamUsesIntStep			 = 1 << 3,	///< stepInteger, largeStepInteger valid
+	ParamSupportsDisplayIndex 	 = 1 << 4,	///< displayIndex valid
+	ParamSupportsDisplayCategory = 1 << 5,	///< category, etc. valid
+	ParamCanRamp				 = 1 << 6,	///< set if parameter value can ramp up/down
+	ParamIsAdvanced				 = 1 << 31	///< set if parameter value can ramp up/down
+//-------------------------------------------------------------------------------------------------------
+};
+union param_step_fi {
+	float valFloat;
+	int32_t valInt;
+};
+struct vst_param_category {
+	int32_t idx;
+	int16_t numParametersInCategory;			///< number of parameters in category
+	String label; //24
+};
+struct vst_param {
+	int32_t idx;
+	int32_t flags;
+
+	param_step_fi min;
+	param_step_fi max;
+	param_step_fi stepSmall;
+	param_step_fi step;
+	param_step_fi stepLarge;
+
+	String shortLabel;//8
+	String label;//64
+
+	//if kVstParameterSupportsDisplayIndex
+	int16_t displayIndex;		///< index where this parameter should be displayed (starting with 0)
+
+	//if kVstParameterSupportsDisplayCategory
+	int16_t category;			///< 0: no category, else group index + 1
+};
 class vstplugin {
 public:
 	String sName;
@@ -24,6 +69,8 @@ public:
 	int uId = 0;
 	vst_window* window = NULL;
 	handles_t* const handle;
+	std::vector<vst_param_category> paramsCategories;
+	std::vector<vst_param> params;
 
 	std::vector<String> inputNames;
 	std::vector<String> outputNames;
@@ -65,5 +112,8 @@ public:
 	bool close();
 	void unload();
 	void load(vsthost* host);
-
+	vst_param_category* getCategory(int idx);
+	vst_param* getParam(int idx);
+	float getParamValue(vst_param* param);
+	void setParamValue(vst_param* param, float val);
 };

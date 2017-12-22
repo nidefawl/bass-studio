@@ -162,11 +162,96 @@ void vstplugin::load(vsthost* host) {
 	this->pluginCategory = this->dispatch(effGetPlugCategory) > 0;
 	this->isSynth = (handle->aeffect->flags & effFlagsIsSynth) != 0;
 	this->bCanReceiveMidi = this->isSynth || this->dispatch(effCanDo, 0, 0, (void*)PlugCanDos::canDoReceiveVstMidiEvent) > 0;
+
+	VstParameterProperties properties{0};
+
+	char buf[1024];
+	vst_param_category fallbackCat={0, 0, "Parameters"};
+	for (int i = 0; i < aeffect->numParams; i++) {
+		vst_param param{0};
+		param.idx = i;
+		memset(buf, 0, sizeof(buf));
+		this->dispatch(effGetParamName, i, 0, buf);
+		String label = buf[0] ? buf : StringFormat("Parameter %d", i);
+		param.label = param.shortLabel = label;
+		if (this->dispatch(effGetParameterProperties, i, 0, &properties, 0)) {
+			param.flags = properties.flags | (ParamIsAdvanced);
+			param.label = properties.label;
+			param.shortLabel = properties.shortLabel;
+			if (properties.label[0]) {
+				param.label = properties.label;
+			}
+			if (properties.shortLabel[0]) {
+				param.shortLabel = properties.shortLabel;
+			}
+			if (param.flags & ParamUsesFloatStep) {
+				param.min.valFloat = 0;
+				param.max.valFloat = 0;
+				param.step.valFloat = properties.stepFloat;
+				param.stepSmall.valFloat = properties.smallStepFloat;
+				param.stepLarge.valFloat = properties.largeStepFloat;
+			}
+			if (param.flags & ParamUsesIntStep) {
+				param.min.valInt = std::numeric_limits<int32_t>::min();
+				param.max.valInt = std::numeric_limits<int32_t>::max();
+				param.step.valInt = properties.stepInteger;
+				param.stepSmall.valInt = 1;
+				param.stepLarge.valInt = properties.largeStepInteger;
+			}
+			if (param.flags & ParamUsesIntegerMinMax) {
+				param.min.valInt = properties.minInteger;
+				param.max.valInt = properties.maxInteger;
+			}
+			if (param.flags & ParamSupportsDisplayCategory) {
+				param.category = properties.category + 1;
+				if (getCategory(param.category) == 0 && properties.categoryLabel[0]) {
+					vst_param_category paramCat = { param.category, properties.numParametersInCategory, properties.categoryLabel };
+					paramsCategories.push_back(paramCat);
+				}
+			}
+			if (param.flags & ParamSupportsDisplayIndex) {
+				param.displayIndex = properties.displayIndex;
+			}
+		} else {
+			param.flags = 0;
+			fallbackCat.numParametersInCategory++;
+		}
+		params.push_back(param);
+	}
+	paramsCategories.push_back(fallbackCat);
+
+
+
 	this->resume();
 	this->sleep();
 	this->dispatch(effSetBlockSize, 0, host->lBlockSize);
 	this->resume();
 	this->bIsSetup = true;
+}
+vst_param_category* vstplugin::getCategory(int idx) {
+	if (idx >= 0 && idx < paramsCategories.size()) {
+		return &paramsCategories[idx];
+	}
+	return NULL;
+}
+float vstplugin::getParamValue(vst_param* param) {
+	assert(getParam(param->idx) == param);
+	if (param->idx >= 0 && param->idx < params.size()) {
+		return handle->aeffect->getParameter(handle->aeffect, param->idx);
+	}
+	return 0;
+}
+void vstplugin::setParamValue(vst_param* param, float val) {
+	assert(getParam(param->idx) == param);
+	if (param->idx >= 0 && param->idx < params.size()) {
+		handle->aeffect->setParameter(handle->aeffect, param->idx, val);
+	}
+}
+vst_param* vstplugin::getParam(int idx) {
+	if (idx >= 0 && idx < params.size()) {
+		return &params[idx];
+	}
+	return NULL;
 }
 
 bool vstplugin::close() {

@@ -204,11 +204,15 @@ int main(int argc, char* argv[]) {
 //	std::set_terminate(terminate_fn);
 	if (argc > 1 && !strcmp("-server", argv[1])) {
 		bool launchProcess = true;
+		bool dryRun = false;
 		String rescanPattern = "";
 	    for (int i = 2; i < argc; i++) {
 	    	if (argv[i] && strlen(argv[i]) > 2 && argv[i][0] == '-') {
 	    		if (!strcmp(argv[i], "-wait")) {
 	    			launchProcess = false;
+	    		}
+	    		if (!strcmp(argv[i], "-dry")) {
+	    			dryRun = true;
 	    		}
 	    		if (!strcmp(argv[i], "-rescan") && i+1 < argc) {
 	    			rescanPattern = argv[i+1];
@@ -264,21 +268,23 @@ int main(int argc, char* argv[]) {
 					"plugins(isSynth, uid, version, vstVersion, category, moddate, ok, path, name, vendorName) "
 					"VALUES(?,?,?,?,?,?,?,?,?,?)");
 			SQLite::Statement   queryDelete(db, "DELETE from plugins where id = ?");
-			SQLite::Statement   queryAll(db, "SELECT id, path from plugins");
-			while (queryAll.executeStep())
-			{
-				String path = queryAll.getColumn(1).getString();
-				try {
-					size_t size = GetFileSizeSafe(path);
-					if (size > 0) {
-						continue;
+			if (!dryRun) {
+				SQLite::Statement   queryAll(db, "SELECT id, path from plugins");
+				while (queryAll.executeStep())
+				{
+					String path = queryAll.getColumn(1).getString();
+					try {
+						size_t size = GetFileSizeSafe(path);
+						if (size > 0) {
+							continue;
+						}
+					} catch (std::exception& e) {
+						LOG("REMOVE %s\n", StringAsCStr(path));
 					}
-				} catch (std::exception& e) {
-					LOG("REMOVE %s\n", StringAsCStr(path));
+					queryDelete.reset();
+					queryDelete.bind(1, queryAll.getColumn(0).getInt());
+					queryDelete.exec();
 				}
-				queryDelete.reset();
-				queryDelete.bind(1, queryAll.getColumn(0).getInt());
-				queryDelete.exec();
 			}
 			for (FileFound& file : files) {
 				if (quit) {
@@ -304,7 +310,7 @@ int main(int argc, char* argv[]) {
 						needScan = false;
 					}
 				}
-				if (!needScan) {
+				if (!needScan && !dryRun) {
 					if (rescanPattern.length() && file.name.find(rescanPattern) != String::npos) {
 					} else {
 //						LOG("skip plugin %s (%d)\n", StringAsCStr(file.path), id);
@@ -370,6 +376,8 @@ int main(int argc, char* argv[]) {
 					status = hdr.cmd == CMD_PLUGIN_LOAD_SUCCESS;
 				}
 				printf("%s %s\n", data.szPath, status ?"GOOD":"BAD");
+				if (dryRun)
+					continue;
 				if (id > 0) {
 					queryDelete.reset();
 					queryDelete.bind(1, id);
@@ -452,6 +460,46 @@ int main(int argc, char* argv[]) {
 					vstpluginloadres res = audiohost->loadPlugin(data.szPath);
 					if (res.result == 0) {
 						vstplugin* plugin = res.plugin;
+//						printf("%d params in %d categories\n", plugin->params.size(), plugin->paramsCategories.size());
+//
+//						for (vst_param& cat : plugin->params) {
+//							printf("param[%d] (%s) flags: ", cat.idx, StringAsCStr(cat.label));
+//							if (cat.flags & ParamIsSwitch) {
+//								printf("ParamIsSwitch ");
+//							}
+//							if (cat.flags & ParamUsesIntegerMinMax) {
+//								printf("ParamUsesIntegerMinMax ");
+//							}
+//							if (cat.flags & ParamUsesFloatStep) {
+//								printf("ParamUsesFloatStep ");
+//							}
+//							if (cat.flags & ParamUsesIntStep) {
+//								printf("ParamUsesIntStep ");
+//							}
+//							if (cat.flags & ParamSupportsDisplayIndex) {
+//								printf("ParamSupportsDisplayIndex ");
+//							}
+//							if (cat.flags & ParamSupportsDisplayCategory) {
+//								printf("ParamSupportsDisplayCategory ");
+//							}
+//							if (cat.flags & ParamSupportsDisplayIndex) {
+//								printf("ParamSupportsDisplayIndex ");
+//							}
+//							if (cat.flags & ParamCanRamp) {
+//								printf("ParamCanRamp ");
+//							}
+//							if (cat.flags & ParamIsAdvanced) {
+//								printf("ParamIsAdvanced ");
+//							}
+//							if (!cat.flags) {
+//								printf("0");
+//							}
+//							printf("\n");
+//
+//						}
+//						for (vst_param_category& cat : plugin->paramsCategories) {
+//							printf("categories[%d] = %s (%d params)\n", cat.idx, StringAsCStr(cat.label), cat.numParametersInCategory);
+//						}
 						getPluginData(res.plugin, &data);
 						audiohost->unloadPlugin(plugin);
 						hdr.cmd = CMD_PLUGIN_LOAD_SUCCESS;

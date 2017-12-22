@@ -606,14 +606,17 @@ void guitrack_editor::render(NVGcontext* vg) {
 	ivec2 cs = getSizeContent();
 	int ySplit = getPosYFirstReturnTrack(project);
 
-	nvgSave(vg);
-	nvgIntersectScissor(vg, 0, ySplit, cs.x, cs.y-ySplit);
-	for (track_t* g : project.tracksBottom) {
+	int32_t bottomHeight = cs.y-ySplit;
+	if (bottomHeight > 0) {
 		nvgSave(vg);
-		g->content->render(vg);
+		nvgIntersectScissor(vg, 0, ySplit, cs.x, bottomHeight);
+		for (track_t* g : project.tracksBottom) {
+			nvgSave(vg);
+			g->content->render(vg);
+			nvgRestore(vg);
+		}
 		nvgRestore(vg);
 	}
-	nvgRestore(vg);
 
 	bool restore = ySplit > 0;
 	if (ySplit  > 0) {

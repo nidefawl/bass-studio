@@ -29,11 +29,17 @@ void serialize(Archive & archive, trackcontainer_snapshot_t & m)
 	archive(make_nvp("tracklist", m.tracks));
 }
 template<class Archive>
+void serialize(Archive & archive, param_snapshot_t & m)
+{
+	archive(make_nvp("idx", m.idx), make_nvp("val", m.val));
+}
+template<class Archive>
 void serialize(Archive & archive, plugin_snapshot_t & m)
 {
 	archive(make_nvp("name", m.name), make_nvp("uId", m.uId), make_nvp("slot", m.slot), make_nvp("present", m.present));
 	make_optional_nvp(archive, "data", m.dataChunk);
 	make_optional_nvp(archive, "dataProgram", m.dataChunk2);
+	make_optional_nvp(archive, "parameters", m.params);
 }
 template<class Archive>
 void serialize(Archive & archive, track_plugins_snapshot_t & m)

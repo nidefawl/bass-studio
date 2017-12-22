@@ -113,9 +113,13 @@ void testTask() {
 
 }
 class gui_ctr_debug : public guictr_base {
+	guiknob knobTest;
 public:
 	gui_ctr_debug() : guictr_base() {
-
+		add(&knobTest);
+	}
+	~gui_ctr_debug() {
+		remove(&knobTest);
 	}
 	std::vector<String> g_debugStrings;
 	virtual void render(NVGcontext* vg) {
@@ -167,9 +171,13 @@ public:
 			nvgText(vg, x, y, StringAsCStr(s), NULL);
 			y+=lineh;
 		}
-		nvgResetScissor(vg);
-		nvgResetTransform(vg);
+		knobTest.render(vg);
 		g_debugStrings.clear();
+	}
+	void layout() {
+		ivec2 cs = getSizeContent();
+		knobTest.size = ivec2(cs.x, cs.x);
+		knobTest.pos = ivec2(0, cs.y-knobTest.size.y);
 	}
 
 };
@@ -864,7 +872,7 @@ bool MainCtrl::filesDropFinal(std::vector<std::string>& files, ivec2 mousepos) {
 	return false;
 }
 
-MouseEvent MainCtrl::mouseEvent(guibase* gui, ivec2 mousePos, int button, MouseEventType evtType) {
+MouseEvent mouseEvent(MainCtrl* ctrl, guibase* gui, ivec2 mousePos, int button, MouseEventType evtType) {
 	MouseEvent mevt;
 	/*MouseEventType type;
 	int button;
@@ -879,10 +887,10 @@ MouseEvent MainCtrl::mouseEvent(guibase* gui, ivec2 mousePos, int button, MouseE
 	mevt.button = button;
 	mevt.mousepos = mousePos;
 	mevt.relMousepos = toControlsObjectSpace(mousePos, gui);
-	mevt.dragStart = this->dragStart;
-	mevt.dragOffset = this->dragOffset;
-	mevt.dragDistance = &this->dragDistance;
-	mevt.kbmods = mainWindow->getKeyMods();
+	mevt.dragStart = ctrl->dragStart;
+	mevt.dragOffset = ctrl->dragOffset;
+	mevt.dragDistance = &ctrl->dragDistance;
+	mevt.kbmods = ctrl->mainWindow->getKeyMods();
 	return mevt;
 }
 KeyEvent MainCtrl::keyEvent(int key, int scancode, int keyState, int mods, const char* key_name) {
@@ -1021,7 +1029,7 @@ void MainCtrl::mouseUp(ivec2 mousePos, int button) {
 	}
 	if (guiDragged != NULL) {
 		cursorIcon = CURSOR_DEFAULT;
-		MouseEvent evt = mouseEvent(guiDragged, mousePos, button, M_EVT_BTN_UP);
+		MouseEvent evt = mouseEvent(this, guiDragged, mousePos, button, M_EVT_BTN_UP);
 		guiDragged->handleDraggedRelease(evt);
 		guiDragged = NULL;
 	}
@@ -1063,7 +1071,7 @@ void MainCtrl::mouseDown(ivec2 mousePos, int button, bool doubleclick) {
 		dragDistance = ivec2(0);
 		dragStart = mousePos;
 		dragOffset = gui->toScreenSpace(ivec2(0)) - mousePos;
-		MouseEvent evt = mouseEvent(gui, mousePos, button, doubleclick ? M_EVT_DOUBLECLICK : M_EVT_BTN_DOWN);
+		MouseEvent evt = mouseEvent(this, gui, mousePos, button, doubleclick ? M_EVT_DOUBLECLICK : M_EVT_BTN_DOWN);
 		if (button == 0) {
 			gui->handleDraggedBegin(evt);
 		} else if (button == 1) {
@@ -1071,18 +1079,39 @@ void MainCtrl::mouseDown(ivec2 mousePos, int button, bool doubleclick) {
 		}
 	}
 }
+void processScrollEvt(MainCtrl* ctrl, guibase* gui, ivec2 mousePos, double xoffset, double yoffset) {
+	MouseEvent evt = mouseEvent(ctrl, gui, mousePos, -1, M_EVT_SCROLL);
+	if (!gui->handleMouseScroll(evt, xoffset, yoffset)) {
+		if (gui->parent) {
+			processScrollEvt(ctrl, gui->parent, mousePos, xoffset, yoffset);
+		}
+	}
+}
+void MainCtrl::mouseScrolled(double xoffset, double yoffset) {
+	ivec2 mousePos = this->m_mousePos;
+	MouseHitEvt evt(MouseHitType::MOUSE_SCROLL);
+	for (guictr_base *ctr : containers) {
+		if (ctr->mouseHitTest(mousePos, evt)) {
+			break;
+		}
+	}
+	guibase* gui = evt.getGuiHit();
+	if (gui) {
+		processScrollEvt(this, gui, mousePos, xoffset, yoffset);
+	}
+}
 void MainCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos) {
 	this->m_mousePos = mousePos;
 	if (ctxtmenu == NULL) {
 		if (guiCaptured != NULL) {
 			dragDistance += deltaPos;
-			MouseEvent evt = mouseEvent(guiCaptured, mousePos, -1, M_EVT_CAPTURED_MOVE);
+			MouseEvent evt = mouseEvent(this, guiCaptured, mousePos, -1, M_EVT_CAPTURED_MOVE);
 			guiCaptured->handleDraggedMove(evt);
 			return;
 		}
 		if (guiDragged != NULL) {
 			dragDistance += deltaPos;
-			MouseEvent evt = mouseEvent(guiDragged, mousePos, -1, M_EVT_MOVE);
+			MouseEvent evt = mouseEvent(this, guiDragged, mousePos, -1, M_EVT_MOVE);
 			guiDragged->handleDraggedMove(evt);
 			return;
 		}

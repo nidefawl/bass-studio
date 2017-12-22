@@ -13,6 +13,7 @@ enum MouseEventType {
 	M_EVT_DOUBLECLICK,
 	M_EVT_MOVE,
 	M_EVT_CAPTURED_MOVE,
+	M_EVT_SCROLL,
 };
 enum MouseHitType {
 	MOUSE_OVER,
@@ -20,6 +21,7 @@ enum MouseHitType {
 	MOUSE_RIGHT,
 	MOUSE_DRAGDROP_CLIP,
 	MOUSE_DRAGDROP_OBJECT,
+	MOUSE_SCROLL,
 };
 struct MouseEvent {
 	MouseEventType type;

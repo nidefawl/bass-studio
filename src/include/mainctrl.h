@@ -184,7 +184,6 @@ class MainCtrl : public delete_cb, public project_t
 	PlaybackThread playThread;
 	String projectPath;
 	hires_timer_t timer;
-	MouseEvent mouseEvent(guibase* gui, ivec2 mousePos, int button, MouseEventType evtType);
 	KeyEvent keyEvent(int key, int scancode, int keyState, int mods, const char* key_name);
 	track_t* selectedTrack = NULL;
 	track_t* lastHoveredTrack = NULL;
@@ -253,6 +252,7 @@ public:
 	void mouseUp(ivec2 mousePos, int button);
 	void onCharInput(unsigned int codepoint);
 	void onKeyInput(int key, int scancode, int keyState, int mods, const char* key_name);
+	void mouseScrolled(double xoffset, double yoffset);
 	void mouseMoved(ivec2 mousePos, ivec2 deltaPos);
 	void openContextMenu(guictxtmenu_base *b, ivec2 pos);
 	bool filesDropMove(ivec2 pos);
