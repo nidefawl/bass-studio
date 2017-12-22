@@ -1,5 +1,6 @@
 .ONESHELL:
 TARGET_EXEC ?= run/DAW.exe
+TARGET_SCANNER_EXEC ?= run/plugin_scan.exe
 COMPILER = clang
 
 ifeq ($(COMPILER),clang)
@@ -79,7 +80,7 @@ CFLAGS ?= $(INC_FLAGS) -fmessage-length=0 -Wall $(NO_WARNINGS) $(DEBUG_FLAGS) -M
 CPPFLAGS ?= $(CFLAGS) -std=c++14
 
 all: $(TARGET_EXEC)
-scanner: Host_vstscanner.exe
+scanner: $(TARGET_SCANNER_EXEC)
 
 tests.exe: $(OBJS_TEST)
 	$(CXX) $(OBJS_TEST) $(LD_FLAGS) -o $@ 
@@ -87,7 +88,7 @@ tests.exe: $(OBJS_TEST)
 $(TARGET_EXEC): $(OBJS_MAIN)
 	$(CXX) $(OBJS_MAIN) $(LD_FLAGS) -o $@ 
 
-Host_vstscanner.exe: $(OBJS_SCANNER)
+$(TARGET_SCANNER_EXEC): $(OBJS_SCANNER)
 	$(CXX) $(OBJS_SCANNER) $(LD_FLAGS) -o $@ 
 # assembly
 $(BUILD_DIR)/%.s.o: %.s
