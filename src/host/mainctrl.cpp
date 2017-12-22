@@ -368,7 +368,7 @@ std::vector<SupportedFileType> vFILE_TYPE_PROJECT = { FILE_TYPE_PROJECT };
 void MainCtrl::loadFile(String path) {
 	std::shared_ptr<project_file> f = loadProjectFile(this, path);
 	if (!f) {
-		setStatusText(StringFormat("Failed loading %s", StringAsCStr(path)));
+		setStatusText(StringFormat("Failed loading %s", StringAsCStr(FileNameFromPath(path))));
 	} else {
 		setLoadedProject(f);
 	}

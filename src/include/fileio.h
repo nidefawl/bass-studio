@@ -122,7 +122,11 @@ inline void SplitPath(String in, String* path, String* name, String* ext, String
     	 *nameExt = _nameExt;
      }
 }
-
+inline String FileNameFromPath(String in) {
+	String fileName;
+	SplitPath(in, NULL, NULL, NULL, &fileName);
+	return fileName;
+}
 
 void findFilesWithExt(
 		const String& strPath,
