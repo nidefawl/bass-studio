@@ -453,7 +453,7 @@ struct VstEvent_t {
 		evt.type = kVstMidiType;
 		evt.byteSize = sizeof(VstMidiEvent);
 		evt.flags = 0;//kVstMidiEventIsRealtime;
-		evt.deltaFrames = round(nevt.tickOffsetInBlock*tickToSamples);
+		evt.deltaFrames = floor(nevt.tickOffsetInBlock*tickToSamples);
 		assert(evt.deltaFrames >= 0 && evt.deltaFrames < blockSize);
 		if (nevt.isNoteOn) {
 			numOns++;
@@ -516,7 +516,7 @@ void track_plugins_t::onTick(double since) {
 	meter.onTick(since);
 }
 void track_plugins_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos) {
-	assert(end != loopEnd);
+	//assert(end != loopEnd); //if end equals loopEnd note off events will be on exact end
 	if (instrument && instrument->bCanReceiveMidi) {
 		std::vector<note_t> notes;
 		 //TODO: figure out thread synchronization model
@@ -545,9 +545,9 @@ void track_plugins_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick
 				//   (opposed to < for being in range)
 				//   for loopends to work but may put the
 				//   note event on delta sample 'blockSize'
-				if (note.end() >= start && note.end() < end) {
+				if (note.end() > start && note.end() <= end) {
 					notesEnd.push_back(note);
-					noteEvents.emplace_back(note.pitch, note.end()-start, false, note.end() == loopEnd);
+					noteEvents.emplace_back(note.pitch, note.end()-start-1, false, note.end() == loopEnd);
 				}
 //				else if (note.end() >= start && note.end() == end) {
 //					my_printf("note end is on end %d, loopEnd is %d\n", end, loopEnd);

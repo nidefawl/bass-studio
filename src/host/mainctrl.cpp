@@ -152,7 +152,7 @@ public:
 		}
 		strings.push_back(StringFormat("Samplerate: %u", vsthost::getInstance()->lSampleRate));
 		strings.push_back(StringFormat("BlockSize: %u", vsthost::getInstance()->lBlockSize));
-		strings.push_back(StringFormat("BlockPos: %u", vsthost::getInstance()->blockPos));
+		strings.push_back(StringFormat("blockReads: %u", vsthost::getInstance()->blockReads));
 		strings.push_back(StringFormat("bufferUnderuns: %u", vsthost::getInstance()->bufferUnderuns));
 		track_t* track = ctrl->getTrackId(0);
 		if (track && track->audio) {
@@ -1417,6 +1417,11 @@ void MainCtrl::pasteClipboard(clip_clipboard* clipboard, int32_t track, tick_t t
 		}
 	}
 
+}
+void MainCtrl::setTempo(int32_t _tempo100) {
+	playThread.call([this, _tempo100]() {
+		this->tempo100 = CLAMP_I(_tempo100, 100, 99900);
+	}, true);
 }
 void MainCtrl::setStatusText(String s) {
 	view->statusbar.setTitle(s);

@@ -60,6 +60,18 @@ inline int32_t tickToSample(tick_t tick, int32_t bpm100, samplerate_t samplerate
 	double samplePos = toSeconds(tick, bpm100) * samplerate;
 	return floor(samplePos);
 }
+inline double tickToSamplePrecise(double tick, int32_t bpm100, samplerate_t samplerate, int32_t blocksize) {
+	double samplePos = toSecondsPrecise(tick, bpm100) * samplerate;
+	return samplePos;
+}
+inline double sampleToTickPrecise(double sample, int32_t bpm100, samplerate_t samplerate, int32_t blocksize) {
+	double seconds = sample / (double)samplerate;
+	return toTickPrecise(seconds, bpm100);
+}
+inline int32_t sampleToTick(int32_t sample, int32_t bpm100, samplerate_t samplerate, int32_t blocksize) {
+	double seconds = sample / (double)samplerate;
+	return toTick(seconds, bpm100);
+}
 inline int32_t tickToBlock(tick_t tick, int32_t bpm100, samplerate_t samplerate, int32_t blocksize) {
 	double samplePos = toSeconds(tick, bpm100) * samplerate;
 	double blockPos = samplePos / blocksize;
@@ -83,6 +95,10 @@ inline double blockToTickPrecise(double block, int32_t bpm100, samplerate_t samp
 }
 inline tick_t blockToPPQ24TickRounded(int32_t block, int32_t bpm100, samplerate_t samplerate, int32_t blocksize) {
 	double seconds = (block * blocksize) / (double)samplerate;
+	return std::round((seconds*bpm100*24.0) / 6000.0);
+}
+inline tick_t tick4096ToPPQ24TickRounded(tick_t tick4096, int32_t bpm100, samplerate_t samplerate, int32_t blocksize) {
+	double seconds = toSeconds(tick4096, bpm100);
 	return std::round((seconds*bpm100*24.0) / 6000.0);
 }
 inline int32_t PPQ24TickSample(tick_t tick, int32_t bpm100, samplerate_t samplerate, int32_t blocksize) {

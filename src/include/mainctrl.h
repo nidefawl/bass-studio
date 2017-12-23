@@ -294,9 +294,7 @@ public:
 	int32_t getCurrentTempo() {
 		return tempo100;
 	}
-	void setTempo(int32_t _tempo100) {
-		this->tempo100 = CLAMP_I(_tempo100, 100, 99900);
-	}
+	void setTempo(int32_t _tempo100);
 	uint32_t sigNum() {
 		return signatureNum;
 	}

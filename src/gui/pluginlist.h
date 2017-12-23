@@ -41,11 +41,11 @@ public:
 		pluginListCtr.padding = 0;
 		add(&textField);
 		add(&pluginListCtr);
-		textField.setCallback([this](const String& str) {
-			curquery = str;
-			update();
-			return true;
-		});
+//		textField.setCallback([this](const String& str) {
+//			curquery = str;
+//			update();
+//			return true;
+//		});
 		textField.setPlaceholder("Search");
 	}
 	~guictr_pluginlibrary() {

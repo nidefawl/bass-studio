@@ -259,7 +259,7 @@ static int audioCallback(const void *inputBuffer, void *outputBuffer,
 	}
 
 	dsp_util::fillSaturate(outputs, framesPerBuffer);
-	host->blockPos++;
+	host->blockReads++;
 	return paContinue;
 }
 /*
@@ -339,8 +339,8 @@ vsthost::vsthost(project_globals_t& _project, uint32_t _sampleRate, uint16_t _bl
 //		(24 ppq, pulses per quarter) in samples. unless samplePos falls precicely on a midi clock,
 //		this will either be negative such that the previous MIDI clock is addressed,
 //		or positive when referencing the following (future) MIDI clock.
-void vsthost::updateTime(int32_t blockPos, tick_t pos, playback_state state) {
-	timeinfo.samplePos = blockPos*(double)lBlockSize;
+void vsthost::updateTime(int32_t samplePos, tick_t pos, playback_state state) {
+	timeinfo.samplePos = samplePos;
 	timeinfo.sampleRate = (double)lSampleRate;
 	timeinfo.nanoSeconds = (double)timeGetTime() * 1000000.0L;
 	timeinfo.ppqPos = (pos/(double)TICKS_QUARTER);
@@ -360,7 +360,7 @@ void vsthost::updateTime(int32_t blockPos, tick_t pos, playback_state state) {
 	double dOffsetInSecond = dPos - floor(dPos);
 	timeinfo.smpteFrameRate = VstSmpteFrameRate::kVstSmpte24fps;
 	timeinfo.smpteOffset = (long)(dOffsetInSecond * fSmpteDiv[timeinfo.smpteFrameRate] * 80.L);
-	tick_t midiTick = blockToPPQ24TickRounded(blockPos, project.tempo100, lSampleRate, lBlockSize);
+	tick_t midiTick = tick4096ToPPQ24TickRounded(samplePos, project.tempo100, lSampleRate, lBlockSize);
 	int32_t samplePosTick = PPQ24TickSample(midiTick, project.tempo100, lSampleRate, lBlockSize);
 	timeinfo.samplesToNextClock = samplePosTick - timeinfo.samplePos;
 //	my_printf("midi tick %d (%d offset %d)\n", midiTick, samplePosTick, timeinfo.samplesToNextClock);
@@ -397,11 +397,155 @@ void vsthost::sendNotesOff(vstplugin* plugin) {
 	if (handles && handles->tr_plugins) {
 		track_plugins_t* audio = handles->tr_plugins;
 		if (audio) {
-			audio->sendNotesOff(project.tempo100, (blockPos+4) * lBlockSize); // WONT WORK
+			audio->sendNotesOff(project.tempo100, 0);
 		}
 	}
 }
-int32_t vsthost::processPlayback(int32_t blockPos, tick_t pos, playback_state state, bool inLoop) {
+int32_t vsthost::processPlaybackSamplePos(int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround) {
+	double since = timer.getTimeDoubleReset();
+	MainCtrl* ctrl = MainCtrl::get(); //TODO: still not synchronized.
+	static int readPos = 0;
+	static int writePos = 0;
+//	static AudioBuffer* master = allocateBuffer();
+//	master->input->realloc(lBlockSize);
+//	master->output->realloc(lBlockSize);
+
+	static AudioBuffer* buffers[BUF_SIZE] = { 0 };
+	if (!buffers[0]) {
+		for (int i = 0; i < BUF_SIZE; i++) {
+			buffers[i] = allocateBuffer();
+		}
+	}
+	while (stream != NULL) {
+		AudioBuffer* buffer = buffers[readPos];
+		if (!buffer->submitted || buffer->inUse) {
+			break;
+		}
+		buffer->submitted = false;
+		readPos++;
+		readPos &= BUF_MASK;
+	}
+	int nBlocksProcessed = 0;
+	const double ticksPerBlock = toTickPrecise(lBlockSize/(double)lSampleRate, project.tempo100);
+	static double lastTickEndPos = 0;
+	static playback_state lastState = playback_state::status_stop;
+	if (stream != NULL) {
+		/*
+		 * We try to stay 4 blocks ahead of the audiothread read position
+		 * This should be adjusted depending on samplerate and blocksize
+		 */
+		int readWriteDist = writePos >= readPos ? writePos-readPos : writePos-(readPos-BUF_SIZE);
+		if (readWriteDist < 8) {
+
+		if (!isLoopAround&&state == playback_state::status_play && lastState == playback_state::status_play) {
+			assert(posDouble == lastTickEndPos);
+		}
+		lastState = state;
+		tick_t pos = floor(posDouble);
+		updateTime(sample, pos, state);
+		int32_t samplePosBlockEnd = sample + lBlockSize;
+		int32_t tickBlockEnd = floor(posDouble + ticksPerBlock);
+		assert(tickBlockEnd-pos < ceil(ticksPerBlock+1));
+		/*
+		 * Clear all master channels first
+		 */
+		for (track_t* trackMaster : ctrl->trackMasterCtr) {
+			track_plugins_t* audioMaster = trackMaster->audio;
+			if (!audioMaster) {
+				trackMaster->audio = audioMaster = vsthost::getInstance()->createAudio(trackMaster);
+			}
+			audioMaster->input.realloc(lBlockSize);
+			audioMaster->output.realloc(lBlockSize);
+			dsp_util::fillSilence(audioMaster->input.buf, lBlockSize);
+			dsp_util::fillSilence(audioMaster->output.buf, lBlockSize);
+		}
+
+		/*
+		 * Process all normal channels
+		 */
+		for (track_t* track : ctrl->trackCtr) {
+			track_plugins_t* audioTrack = track->audio;
+			if (!audioTrack) {
+				track->audio = audioTrack = vsthost::getInstance()->createAudio(track);
+			}
+			if (state == playback_state::status_play && audioTrack->instrument && audioTrack->instrument->bIsEnabled) {
+				tick_t loopCutStart = -1;
+				tick_t loopCutEnd = -1;
+				if (inLoop) {
+					loopCutStart = project.loopStart;
+					loopCutEnd = project.loopStart+project.loopLen;
+				}
+				audioTrack->sendNotes(pos, tickBlockEnd, loopCutStart, loopCutEnd, project.tempo100, sample);
+			} else if (!audioTrack->heldNotes.empty()) {
+				audioTrack->sendNotesOff(project.tempo100, sample);
+			}
+			audioTrack->input.realloc(lBlockSize);
+			audioTrack->output.realloc(lBlockSize);
+			dsp_util::fillSilence(audioTrack->input.buf, lBlockSize);
+			/* Processes a whole plugin chain */
+			processAudio(audioTrack, &audioTrack->input, &audioTrack->output, lBlockSize);
+			for (track_t* trackMaster : ctrl->trackMasterCtr) {
+				track_plugins_t* audioMaster = trackMaster->audio;
+				audioMaster->input.addFrom(&audioTrack->output);
+			}
+		}
+
+		for (track_t* trackMaster : ctrl->trackMasterCtr) {
+			track_plugins_t* audioMaster = trackMaster->audio;
+			processAudio(audioMaster, &audioMaster->input, &audioMaster->output, lBlockSize);
+		}
+
+		/*
+		 * Output all masters
+		 * Right now only first, until I figured out configuring and streaming multiple audiostreams
+		 */
+		AudioBuffer* bufferWrite = buffers[writePos];
+		assert(!bufferWrite->inUse);
+		bufferWrite->input->realloc(lBlockSize);
+		bufferWrite->output->realloc(lBlockSize);
+		dsp_util::fillSilence(bufferWrite->input->buf, lBlockSize);
+		dsp_util::fillSilence(bufferWrite->output->buf, lBlockSize);
+		AudioBlock* bufOut = bufferWrite->output;
+		for (track_t* trackMaster : ctrl->trackMasterCtr) {
+			track_plugins_t* audioMaster = trackMaster->audio;
+			AudioBlock* bufMaster = &audioMaster->output;
+			for (int n = 0; n < OUTPUT_CHANNELS; n++) {
+				float* channelWriteBuffer = bufOut->buf[n];
+				float* channelMaster = bufMaster->buf[n];
+				for (int j = 0; j < lBlockSize; j++) {
+					channelWriteBuffer[j] += channelMaster[j];
+				}
+			}
+			break;
+		}
+		/* Update all track meters */
+		for (track_t* track : ctrl->trackList) {
+			track_plugins_t* trAudio = track->audio;
+			if (!trAudio)
+				continue;
+			trAudio->meter.update(&trAudio->output);
+		}
+		sample = samplePosBlockEnd;
+		posDouble += ticksPerBlock;
+		lastTickEndPos = posDouble;
+//		dsp_util::fillSqare(fSampleRate, 440, bufferWrite->master->f, bufferWrite->master->samples);
+		bufferWrite->submitted = true;
+		bufferWrite->inUse = true;
+		writePos++;
+		writePos &= BUF_MASK;
+		audioQueue.enqueue(bufferWrite);
+		nBlocksProcessed++;
+		}
+	}
+	for (track_t* tr : ctrl->trackList) {
+		track_plugins_t* trAudio = tr->audio;
+		if (trAudio) {
+			tr->audio->onTick(since);
+		}
+	}
+	return nBlocksProcessed;
+}
+int32_t vsthost::processPlaybackBlockPos(int32_t blockPos, tick_t pos, playback_state state, bool inLoop) {
 	double since = timer.getTimeDoubleReset();
 	MainCtrl* ctrl = MainCtrl::get(); //TODO: still not synchronized.
 	static int readPos = 0;
@@ -434,7 +578,7 @@ int32_t vsthost::processPlayback(int32_t blockPos, tick_t pos, playback_state st
 		int readWriteDist = writePos >= readPos ? writePos-readPos : writePos-(readPos-BUF_SIZE);
 		if (readWriteDist < 8) {
 
-		updateTime(blockPos, pos, state);
+		updateTime(blockPos*lBlockSize, pos, state);
 		tick_t nextBlock = blockToTick(blockPos+1, project.tempo100, lSampleRate, lBlockSize);
 
 		/*
@@ -545,7 +689,7 @@ void vsthost::onStreamEnd() {
 	DELETE_PTR(blockTemp2);
 }
 void vsthost::onStartPlayback(int32_t block) {
-	blockPos = block;
+	blockReads = block;
 	bufferUnderuns = 0;
 }
 void vsthost::onStopPlayback() {

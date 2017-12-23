@@ -2,8 +2,11 @@
 #include "seq_time.h"
 #include <memory>
 #include <stdexcept>
+#include <functional>
+
 #define PLAYBACK_STOP 0
 #define PLAYBACK_START 1
+#define GUI_CALL 2
 class ThreadLock {
 public:
 	class Impl;
@@ -33,6 +36,7 @@ public:
 	void joinThread();
 	ThreadLock lockThread();
 	void addRequest(int32_t msgId, int32_t param, bool wait);
+	void call(std::function<void()> fn, bool wait);
 	playback_state getState();
 
 private:
