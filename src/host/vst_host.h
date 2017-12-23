@@ -106,8 +106,7 @@ public:
 
 
 	void updateTime(int32_t samplePos, tick_t pos, playback_state state);
-	int32_t processPlaybackBlockPos(int32_t blockPos, tick_t pos, playback_state state, bool inLoop);
-	int32_t processPlaybackSamplePos(int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround);
+	int32_t processPlayback(int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround);
 	void processAudio(track_plugins_t* channel, AudioBlock* input, AudioBlock* output, unsigned long samples);
 	void sendNotesOff(vstplugin* plugin);
 

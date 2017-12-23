@@ -292,7 +292,6 @@ void MainCtrl::destroy()
 	}
 	setSelectedTrack(NULL);
 	hist.clear();
-	clipView;
 	settings.dens = grid.grid_dens;
 	vector<track_t*> trList = trackList.vec(); // iterate a copy
 	for (track_t* track : trList) {

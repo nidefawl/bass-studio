@@ -401,7 +401,7 @@ void vsthost::sendNotesOff(vstplugin* plugin) {
 		}
 	}
 }
-int32_t vsthost::processPlaybackSamplePos(int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround) {
+int32_t vsthost::processPlayback(int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround) {
 	double since = timer.getTimeDoubleReset();
 	MainCtrl* ctrl = MainCtrl::get(); //TODO: still not synchronized.
 	static int readPos = 0;
@@ -545,140 +545,6 @@ int32_t vsthost::processPlaybackSamplePos(int32_t sample, double posDouble, play
 	}
 	return nBlocksProcessed;
 }
-int32_t vsthost::processPlaybackBlockPos(int32_t blockPos, tick_t pos, playback_state state, bool inLoop) {
-	double since = timer.getTimeDoubleReset();
-	MainCtrl* ctrl = MainCtrl::get(); //TODO: still not synchronized.
-	static int readPos = 0;
-	static int writePos = 0;
-//	static AudioBuffer* master = allocateBuffer();
-//	master->input->realloc(lBlockSize);
-//	master->output->realloc(lBlockSize);
-
-	static AudioBuffer* buffers[BUF_SIZE] = { 0 };
-	if (!buffers[0]) {
-		for (int i = 0; i < BUF_SIZE; i++) {
-			buffers[i] = allocateBuffer();
-		}
-	}
-	while (stream != NULL) {
-		AudioBuffer* buffer = buffers[readPos];
-		if (!buffer->submitted || buffer->inUse) {
-			break;
-		}
-		buffer->submitted = false;
-		readPos++;
-		readPos &= BUF_MASK;
-	}
-	int nBlocksProcessed = 0;
-	if (stream != NULL) {
-		/*
-		 * We try to stay 4 blocks ahead of the audiothread read position
-		 * This should be adjusted depending on samplerate and blocksize
-		 */
-		int readWriteDist = writePos >= readPos ? writePos-readPos : writePos-(readPos-BUF_SIZE);
-		if (readWriteDist < 8) {
-
-		updateTime(blockPos*lBlockSize, pos, state);
-		tick_t nextBlock = blockToTick(blockPos+1, project.tempo100, lSampleRate, lBlockSize);
-
-		/*
-		 * Clear all master channels first
-		 */
-		for (track_t* trackMaster : ctrl->trackMasterCtr) {
-			track_plugins_t* audioMaster = trackMaster->audio;
-			if (!audioMaster) {
-				trackMaster->audio = audioMaster = vsthost::getInstance()->createAudio(trackMaster);
-			}
-			audioMaster->input.realloc(lBlockSize);
-			audioMaster->output.realloc(lBlockSize);
-			dsp_util::fillSilence(audioMaster->input.buf, lBlockSize);
-			dsp_util::fillSilence(audioMaster->output.buf, lBlockSize);
-		}
-
-		/*
-		 * Process all normal channels
-		 */
-		for (track_t* track : ctrl->trackCtr) {
-			track_plugins_t* audioTrack = track->audio;
-			if (!audioTrack) {
-				track->audio = audioTrack = vsthost::getInstance()->createAudio(track);
-			}
-			if (state == playback_state::status_play && audioTrack->instrument && audioTrack->instrument->bIsEnabled) {
-				tick_t loopCutStart = -1;
-				tick_t loopCutEnd = -1;
-				if (inLoop) {
-					loopCutStart = project.loopStart;
-					loopCutEnd = project.loopStart+project.loopLen;
-				}
-				audioTrack->sendNotes(pos, nextBlock, loopCutStart, loopCutEnd, project.tempo100, blockPos*lBlockSize);
-			} else if (!audioTrack->heldNotes.empty()) {
-				audioTrack->sendNotesOff(project.tempo100, blockPos*lBlockSize);
-			}
-			audioTrack->input.realloc(lBlockSize);
-			audioTrack->output.realloc(lBlockSize);
-			dsp_util::fillSilence(audioTrack->input.buf, lBlockSize);
-			/* Processes a whole plugin chain */
-			processAudio(audioTrack, &audioTrack->input, &audioTrack->output, lBlockSize);
-			for (track_t* trackMaster : ctrl->trackMasterCtr) {
-				track_plugins_t* audioMaster = trackMaster->audio;
-				audioMaster->input.addFrom(&audioTrack->output);
-			}
-		}
-
-		for (track_t* trackMaster : ctrl->trackMasterCtr) {
-			track_plugins_t* audioMaster = trackMaster->audio;
-			processAudio(audioMaster, &audioMaster->input, &audioMaster->output, lBlockSize);
-		}
-
-		/*
-		 * Output all masters
-		 * Right now only first, until I figured out configuring and streaming multiple audiostreams
-		 */
-		AudioBuffer* bufferWrite = buffers[writePos];
-		assert(!bufferWrite->inUse);
-		bufferWrite->input->realloc(lBlockSize);
-		bufferWrite->output->realloc(lBlockSize);
-		dsp_util::fillSilence(bufferWrite->input->buf, lBlockSize);
-		dsp_util::fillSilence(bufferWrite->output->buf, lBlockSize);
-		AudioBlock* bufOut = bufferWrite->output;
-		for (track_t* trackMaster : ctrl->trackMasterCtr) {
-			track_plugins_t* audioMaster = trackMaster->audio;
-			AudioBlock* bufMaster = &audioMaster->output;
-			for (int n = 0; n < OUTPUT_CHANNELS; n++) {
-				float* channelWriteBuffer = bufOut->buf[n];
-				float* channelMaster = bufMaster->buf[n];
-				for (int j = 0; j < lBlockSize; j++) {
-					channelWriteBuffer[j] += channelMaster[j];
-				}
-			}
-			break;
-		}
-		/* Update all track meters */
-		for (track_t* track : ctrl->trackList) {
-			track_plugins_t* trAudio = track->audio;
-			if (!trAudio)
-				continue;
-			trAudio->meter.update(&trAudio->output);
-		}
-		blockPos++;
-		pos = nextBlock;
-//		dsp_util::fillSqare(fSampleRate, 440, bufferWrite->master->f, bufferWrite->master->samples);
-		bufferWrite->submitted = true;
-		bufferWrite->inUse = true;
-		writePos++;
-		writePos &= BUF_MASK;
-		audioQueue.enqueue(bufferWrite);
-		nBlocksProcessed++;
-		}
-	}
-	for (track_t* tr : ctrl->trackList) {
-		track_plugins_t* trAudio = tr->audio;
-		if (trAudio) {
-			tr->audio->onTick(since);
-		}
-	}
-	return nBlocksProcessed;
-}
 void vsthost::onStreamEnd() {
 	stream = NULL;
 	AudioBuffer* block;
@@ -778,33 +644,6 @@ bool vsthost::onTick() {
 }
 
 bool vsthost::postInit() {
-//	String arr[]{
-//		//"C:\\VSTPlugins\\Legend.dll",
-//		//"C:\\VSTPlugins\\DUNE 2.dll",
-//		//"DUNE 2.dll",
-//		//"C:\\VSTPlugins\\FXPansion\\Strobe.dll",
-//		//"C:\\VSTPlugins\\xfer\\Serum_x64.dll",
-//		String("C:/VSTPlugins/Piano One.dll"),
-//		//"C:\\VSTPlugins\\Nexus.dll",
-//		//"C:\\VSTPlugins\\DJMFilter_x64.dll",
-//		//"C:\\VSTPlugins\\fabfilter\\FabFilter Pro-R.dll",
-//		String("C:/VSTPlugins/xfer/OTT_x64.dll"),
-//		//"C:\\VSTPlugins\\fabfilter\\FabFilter Pro-L.dll",
-//		//"C:\\PluginManager\\configs\\default\\hosts\\Ableton\\categories\\dev\\FilterKnob.x64.dll",
-//		//	"C:\\VSTPlugins\\Massive(x64).dll",
-//	};
-//	for (size_t i = 0; i < ARR_SIZE(arr); i++) {
-//		String& arrEntry = arr[i];
-//		vstpluginloadres loaded = vsthost::getInstance()->loadPlugin(arrEntry);
-//		my_printf("load %s: %d\n", StringAsCStr(arrEntry), loaded.result);
-//		if (loaded.plugin) {
-//			//wxString info = loaded.plugin->getInfo();
-//			//appendLog(info);
-//			loaded.plugin->show();
-//			//loaded.plugin->show();
-//			//loaded.plugin->close();
-//		}
-//	}
 	if (settings.startEngine)
 		startAudio();
 	return true;
