@@ -196,10 +196,10 @@ public:
 					return true;
 				}
 			}
-			if (view.clip && evt.type <= MouseHitType::MOUSE_RIGHT) {
+			if (view.clip() && evt.type <= MouseHitType::MOUSE_RIGHT) {
 				int32_t pitch = toNoteF(local.y);
 				tick_t tickExact = grid.screenToTickSnap(local.x, SNAP_OFF);
-				const note_t* contextNote = view.clip->notes.get(tickExact, pitch);
+				const note_t* contextNote = view.clip()->notes.get(tickExact, pitch);
 				if (contextNote && local.x-grid.tickToScreenD(contextNote->start())<DRAG_RANGE) {
 					evt.requestCursor(CURSOR_CLIP_SIZE_LEFT);
 				}
@@ -259,7 +259,7 @@ public:
 	int32_t dragOffset = 0;
 	void handleDraggedBegin(MouseEvent& evt) {
 		dragHandle = drag_handle_none;
-		clip_t* clip = view.clip;
+		clip_t* clip = view.clip();
 		if (!clip) {
 			return;
 		}
@@ -268,13 +268,18 @@ public:
 		dragOffset = local.x-(int32_t)grid.tickToScreenD(clip->loopStart);
 	}
 	void handleDraggedMove(MouseEvent& evt) {
-		clip_t* clip = view.clip;
-		if (!clip)
+		clip_t* clip = view.clip();
+		gui_clip* guiClip = view.gui;
+		if (!clip || !guiClip)
+			return;
+		track_t* track = guiClip->m_track;
+		if (!track)
 			return;
 		if (dragHandle == drag_handle_none) {
 			return;
 		}
-		clip_t* clNext = clip->tr->getNextClip(clip);
+		trackdata_midi_t& midi = track->getMidi();
+		clip_t* clNext = midi.getNextClip(clip);
 		assert(clNext == NULL || (clNext != clip));
 		assert(clNext == NULL || clNext->start() >= clip->end());
 		int32_t mousePosX = evt.relMousepos.x;
@@ -352,7 +357,7 @@ public:
 		return x*x+y*y;
 	}
 	dragmode getDragZone(ivec2 local) {
-		if (view.clip) {
+		if (view.clip()) {
 			struct dist_draghandle {
 				float dist = 0;
 				dragmode mode = drag_handle_none;
@@ -385,7 +390,7 @@ public:
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
 		if (this->contains(mpos)) {
 			ivec2 local = this->toContainerSpace(mpos);
-			if (view.clip && evt.type <= MouseHitType::MOUSE_RIGHT) {
+			if (view.clip() && evt.type <= MouseHitType::MOUSE_RIGHT) {
 				dragmode mode = getDragZone(local);
 				if (mode == dragmode::drag_handle_loopleft || mode == dragmode::drag_handle_left) {
 					evt.requestCursor(CURSOR_CLIP_SIZE_LEFT);
@@ -407,16 +412,16 @@ public:
 		return false;
 	}
 	float clipStartScrX() {
-		return (float)grid.tickToScreenD(view.clip->offsetStart);
+		return (float)grid.tickToScreenD(view.clip()->offsetStart);
 	}
 	float clipEndScrX() {
-		return (float)grid.tickToScreenD(view.clip->offsetStart + view.clip->len);
+		return (float)grid.tickToScreenD(view.clip()->offsetStart + view.clip()->len);
 	}
 	float clipLoopStartScrX() {
-		return (float)grid.tickToScreenD(view.clip->loopStart);
+		return (float)grid.tickToScreenD(view.clip()->loopStart);
 	}
 	float clipLoopEndScrX() {
-		return (float)grid.tickToScreenD(view.clip->loopStart + view.clip->loopLen);
+		return (float)grid.tickToScreenD(view.clip()->loopStart + view.clip()->loopLen);
 	}
 	void render(NVGcontext* vg) {
 		ivec2 cs = clipViewSize;
@@ -424,7 +429,7 @@ public:
 			return;
 		}
 		MainCtrl* ctrl = MainCtrl::get();
-		tick_t clipOffset = (view.clip) ? view.clip->getOffsetStart() : 0;
+		tick_t clipOffset = (view.clip()) ? view.clip()->getOffsetStart() : 0;
 		nvgIntersectScissor(vg, pos.x, pos.y, cs.x, cs.y);
 		nvgTranslate(vg, pos.x, pos.y);
 		nvgBeginPath(vg);
@@ -464,7 +469,7 @@ public:
 		nvgFill(vg);
 
 		Cursor& c = ctrl->cursor;
-		if (view.clip) {
+		if (view.clip()) {
 			const NVGcolor colLI = GUI_COLOR(120);
 			const NVGcolor colLIStroke = GUI_COLOR(G_S1);
 			const float strokeWidthLI = 1.0f;
@@ -478,7 +483,7 @@ public:
 			if (!(tickBeginX - wLoopInidicator > cs.x || tickEndX + wLoopInidicator < 0)) {
 				float barBeginX = max(-wLoopInidicator, tickBeginX);
 				float barEndX = min(cs.x+wLoopInidicator, tickEndX);
-				NVGcolor color = rgbToNvg(view.clip->rgb);
+				NVGcolor color = rgbToNvg(view.clip()->rgb);
 				nvgBeginPath(vg);
 				nvgRect(vg, barBeginX, yOffset, barEndX - barBeginX, heightLoopInidicator*2);
 				nvgFillColor(vg, color);
@@ -560,7 +565,7 @@ public:
 			}
 		}
 //		-view.clip->start()+view.clip->offsetStart
-		clip_t* clip = view.clip;
+		clip_t* clip = view.clip();
 		if (clip) {
 			tick_t pos = ctrl->playbackPos - clip->time + clip->offsetStart;
 			if (clip->loopEnabled) {
@@ -677,7 +682,7 @@ public:
 		}
 	}
 	void zoomPianoRollToClipsNoteRange() {
-		clip_t* clip = view.clip;
+		clip_t* clip = view.clip();
 		if (!clip) {
 			content.showRange(2*12, 4*12);
 			return;
@@ -700,8 +705,8 @@ public:
 		yoffset = layout.yoffset;
 	}
 	void showEditClip() {
-		if (view.clip != NULL) {
-			clip_t* clip = view.clip;
+		clip_t* clip = view.clip();
+		if (clip != NULL) {
 			if (clip->noLayout) {
 				grid.showRange(clip->offsetStart, clip->offsetStart+clip->len);
 				zoomPianoRollToClipsNoteRange();
@@ -713,8 +718,8 @@ public:
 		}
 	}
 	void storeLayout() {
-		if (view.clip != NULL) {
-			clip_t* clip = view.clip;
+		clip_t* clip = view.clip();
+		if (clip != NULL) {
 			clip_editor_layout_t& layout = clip->editorLayout;
 			layout.layoutPianoRoll = *this;
 			layout.layoutGrid = grid;
@@ -753,7 +758,7 @@ public:
 		nvgTranslate(vg, posInset.x, posInset.y);
 
 		ivec2 center = getSizeContent()/2;
-		if (view.clip != NULL) {
+		if (view.clip() != NULL) {
 			noteeditor.render(vg);
 		} else {
 			setFont(vg, 18, G_WHITE, NVG_ALIGN_CENTER|NVG_ALIGN_MIDDLE);
@@ -810,7 +815,7 @@ public:
 			drawBackground(vg, cp, cs, margin, false);
 		}
 		clip_view& view = MainCtrl::get()->getClipView();
-		clip_t* clip = view.clip;
+		clip_t* clip = view.clip();
 		if (clip && !clip->notes.empty()) {
 			clip_notes_t& notes = clip->notes;
 			tick_t lenTime = notes.lastNote.end() - notes.firstNote.start();

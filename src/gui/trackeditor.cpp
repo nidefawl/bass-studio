@@ -44,9 +44,11 @@ public:
 				if (initAfter)
 					after.tracks.push_back(new track_t(*track));
 				track->releaseTrackContent();
-				my_printf("TRACKBeforeUndo[%d] HAS %d clips\n", track->idx, track->clips.size());
+				if (track->type == TRACK_TYPE_MIDI)
+				my_printf("TRACKBeforeUndo[%d] HAS %d clips\n", track->idx, track->getMidi().clips.size());
 				*track = *trackStored;
-				my_printf("TRACKAfterUndo[%d] HAS %d clips\n", track->idx, track->clips.size());
+				if (track->type == TRACK_TYPE_MIDI)
+				my_printf("TRACKAfterUndo[%d] HAS %d clips\n", track->idx, track->getMidi().clips.size());
 			} else {
 
 				my_printf("idx is now invalid\n",0);
@@ -63,12 +65,34 @@ public:
 				track_t* track = trCtr[trackStored->idx];
 				track->releaseTrackContent();
 				*track = *trackStored;
-				my_printf("TRACK[%d] HAS %d clips\n", track->idx, track->clips.size());
+				if (track->type == TRACK_TYPE_MIDI)
+				my_printf("TRACK[%d] HAS %d clips\n", track->idx, track->getMidi().clips.size());
 			}
 		}
 		ctrl->cursor = after.cursor;
 	}
 };
+
+void resizeOtherClips(trackdata_midi_t& midi, clip_t* clip) {
+	for (clip_t* c : midi.clips) {
+		if (c == clip)
+			continue;
+		if (c->start() >= clip->end() || c->end() <= clip->start()) {
+			continue;
+		}
+		if (c->start() >= clip->start() && c->end() <= clip->end()) {
+			c->len = 0;
+		} else if (c->start() >= clip->start()) {
+			cutClipLeft(c, clip->end()-c->start());
+			c->setDirty();
+		} else if (c->end() <= clip->end()) {
+			cutClipRight(c, c->end()-clip->start());
+			c->setDirty();
+		} else {
+			my_printf("WHUT!\n", 0);
+		}
+	}
+}
 
 bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 //	clip_t* clip = view.clip;
@@ -100,34 +124,28 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 		String desc = "???";
 		if (kevt.type == K_PRESS) {
 			if (isKC(KC_SELECTALL, kevt)) {
-				clip_t* min = NULL;
-				clip_t* max = NULL;
+				tick_t evtMin = INVALID_TICK;
+				tick_t evtMax = INVALID_TICK;
 				track_t* trMin = NULL;
 				track_t* trMax = NULL;
 				int idx = 0;
 				for (track_t* t: project.trackList) {
-					auto minMax = t->getMinMax();
-					if (minMax.first)
-						if (min == NULL || min->start() > minMax.first->start()) {
-							min = minMax.first;
-						}
-					if (minMax.second)
-						if (max == NULL || max->end() < minMax.second->end()) {
-							max = minMax.second;
-						}
-					if (minMax.first) {// if any content
+					auto minMax = t->getMinMaxEvents();
+					if (minMax.min != INVALID_TICK) {
+						evtMin = evtMin == INVALID_TICK ? minMax.min : min(evtMin, minMax.min);
 						if (!trMin || trMin->idx > t->idx) {
 							trMin = t;
 						}
+						evtMax = evtMax == INVALID_TICK ? minMax.max : max(evtMax, minMax.max);
 						if (!trMax || trMax->idx < t->idx) {
 							trMax = t;
 						}
 					}
 					idx++;
 				}
-				if (min && max) {
-					cursor.cursorPos = min->start();
-					cursor.selRange = max->end()-cursor.cursorPos;
+				if (evtMin != INVALID_TICK) {
+					cursor.cursorPos = evtMin;
+					cursor.selRange = evtMax-evtMin;
 					cursor.cursorTrack = trMin->idx;
 					cursor.selTrackRange = (trMax->idx - cursor.cursorTrack);
 				}
@@ -273,6 +291,7 @@ void guitrack_editor::dragSelectionBegin(gui_clip* gClip, MouseEvent& evt) {
 	tick_t tickExact = grid.screenToTickSnap(local.x, SNAP_OFF);
 	Cursor& cursor = MainCtrl::get()->cursor;
 	clip_t* clicked = gClip->m_clip;
+	track_t* track = gClip->m_track;
 //		ghostCopy = new gui_clip(clip->m_clip->clone());
 //		ghostCopy->m_clip->gClip = ghostCopy;
 	track_t *trackClicked = getTrackFromMouse(project, local, false);
@@ -288,8 +307,8 @@ void guitrack_editor::dragSelectionBegin(gui_clip* gClip, MouseEvent& evt) {
 		action.dragtype = DRAG_CLIPS_RESIZE_RIGHT;
 	}
 	if (action.dragtype) {
-		setSelectionRange(clicked, clicked->tr);
-		dragStartLayout = *(track_t*) clicked->tr;
+		setSelectionRange(clicked, track);
+		dragStartLayout = track->getMidi();
 		action.cursorBegin = cursor;
 		resizePreModifyState.reset();
 		project.trackList.copyTracks(cursor.getTrackBegin(), cursor.getTrackEnd(), resizePreModifyState);
@@ -317,32 +336,13 @@ void guitrack_editor::dragSelectionBegin(gui_clip* gClip, MouseEvent& evt) {
 		action.clipboard = MainCtrl::get()->copySelection(action.cursorBegin);
 	}
 }
-void guitrack_editor::resizeOtherClips(track_t* tr, clip_t* clip) {
-	for (clip_t* c : tr->clips) {
-		if (c == clip)
-			continue;
-		if (c->start() >= clip->end() || c->end() <= clip->start()) {
-			continue;
-		}
-		if (c->start() >= clip->start() && c->end() <= clip->end()) {
-			c->len = 0;
-		} else if (c->start() >= clip->start()) {
-			cutClipLeft(c, clip->end()-c->start());
-			c->setDirty();
-		} else if (c->end() <= clip->end()) {
-			cutClipRight(c, c->end()-clip->start());
-			c->setDirty();
-		} else {
-			my_printf("WHUT!\n", 0);
-		}
-	}
-}
 void guitrack_editor::dragSelectionMove(gui_clip* gui, MouseEvent& evt) {
 	if (action.dragtype) {
 		if (action.dragtype == DRAG_CLIPS_RESIZE_LEFT
 				|| action.dragtype == DRAG_CLIPS_RESIZE_RIGHT) {
 			clip_t* clip = gui->m_clip;
-			dragStartLayout.apply(clip->tr);
+			track_t* track = gui->m_track;
+			dragStartLayout.apply(track);
 			int32_t tick = grid.screenToTickSnap(evt.relMousepos.x, SNAP_ON);
 			if (action.dragtype == DRAG_CLIPS_RESIZE_LEFT) {
 				if (clip->start() != tick) {
@@ -362,8 +362,8 @@ void guitrack_editor::dragSelectionMove(gui_clip* gui, MouseEvent& evt) {
 				}
 			}
 			clip->setDirty();
-			resizeOtherClips(clip->tr, clip);
-			setSelectionRange(clip, clip->tr);
+			resizeOtherClips(track->getMidi(), clip);
+			setSelectionRange(clip, track);
 			updateVisibleTrackContents();
 			return;
 		}
@@ -450,14 +450,15 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
 		} else if (action.dragtype == DRAG_CLIPS_RESIZE_LEFT
 				|| action.dragtype == DRAG_CLIPS_RESIZE_RIGHT) {
 			clip_t* clipPtr = gui->m_clip;
-			track_t* track = gui->m_clip->tr;
-			track->deleteEmptyClips();
-			if (!track->hasClip(clipPtr)) {
+			track_t* trackPtr = gui->m_track;
+			trackdata_midi_t& midi = trackPtr->getMidi();
+			midi.deleteEmptyClips();
+			if (!midi.hasClip(clipPtr)) {
 				gui = NULL;
 				showclip = false;
 			}
 
-			if (dragStartLayout.diff(track)) {
+			if (dragStartLayout.diff(trackPtr)) {
 				action_modify_track* track_action = new action_modify_track("Resize clips", resizePreModifyState.get());
 				MainCtrl::get()->pushHist(track_action);
 			}
@@ -535,7 +536,7 @@ void guitrack_editor::renderClip(NVGcontext* vg, track_t* tr, const clip_t* cl, 
 	ivec2 clipSize = tr->content->size; //TODO: get rid of *tr here, figure out size before and add default fallback
 	gui_clip::getClipPosition(grid, cl, clipPos, clipSize, offset);
 	clipPos.y += tr->content->pos.y;
-	gui_clip::renderClip(vg, cl, clipPos, clipSize);
+	gui_clip::renderClip(vg, tr, cl, clipPos, clipSize);
 }
 
 void guitrack_editor::renderAction(NVGcontext* vg, clip_dragaction& action) {

@@ -68,7 +68,6 @@ void testReferences() {
 	clipInstance.len = TICKS_BAR * 4;
 	clip_t* clip = &clipInstance;
 	clip_view view;
-	view.clip = clip;
 
 	int32_t cursorPos = 64;
 

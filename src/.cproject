@@ -40,6 +40,7 @@
 									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\ASIOSDK2.3\host\pc&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\PortAudio_190600\src\hostapi\asio&quot;"/>
 									<listOptionValue builtIn="false" value="E:/dev/libs/SQLiteCpp/include"/>
+									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\nvwa&quot;"/>
 								</option>
 								<option id="gnu.cpp.compiler.option.optimization.level.960218844" name="Optimization Level" superClass="gnu.cpp.compiler.option.optimization.level" useByScannerDiscovery="false" value="gnu.cpp.compiler.optimization.level.none" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.option.debugging.level.1883423768" name="Debug Level" superClass="gnu.cpp.compiler.option.debugging.level" useByScannerDiscovery="false" value="gnu.cpp.compiler.debugging.level.max" valueType="enumerated"/>
@@ -103,6 +104,11 @@
 						</toolChain>
 					</folderInfo>
 					<fileInfo id="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.470816701" name="pngcheck.exe" rcbsApplicability="disable" resourcePath="res/pngcheck.exe" toolsToInvoke=""/>
+					<fileInfo id="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.889155914" name="external_nanovg2.c" rcbsApplicability="disable" resourcePath="external_nanovg2.c" toolsToInvoke="cdt.managedbuild.tool.gnu.c.compiler.mingw.base.1533097334.1827747582">
+						<tool id="cdt.managedbuild.tool.gnu.c.compiler.mingw.base.1533097334.1827747582" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.mingw.base.1533097334">
+							<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.90347193" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
+						</tool>
+					</fileInfo>
 					<sourceEntries>
 						<entry excluding="res/pngcheck.exe|BUILD" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>

@@ -137,10 +137,10 @@ public:
 		strings.push_back(StringFormat("undo size: %d",ctrl->getHist().getNumUndoSteps()));
 		strings.push_back(StringFormat("redo size: %d",ctrl->getHist().getNumRedoSteps()));
 		clip_view& clipView = ctrl->getClipView();
-		if (clipView.clip) {
-			strings.push_back(StringFormat("Clip: %s", StringAsCStr(clipView.clip->name)));
-			strings.push_back(StringFormat("Notes: %d", clipView.clip->notes.m_list.size()));
-			strings.push_back(StringFormat("Selection size: %d", clipView.clip->notes.selection.size()));
+		if (clipView.clip()) {
+			strings.push_back(StringFormat("Clip: %s", StringAsCStr(clipView.clip()->name)));
+			strings.push_back(StringFormat("Notes: %d", clipView.clip()->notes.m_list.size()));
+			strings.push_back(StringFormat("Selection size: %d", clipView.clip()->notes.selection.size()));
 		}
 		strings.push_back(StringFormat("Samplerate: %u", vsthost::getInstance()->lSampleRate));
 		strings.push_back(StringFormat("BlockSize: %u", vsthost::getInstance()->lBlockSize));
@@ -291,6 +291,8 @@ void MainCtrl::destroy()
 		return;
 	}
 	setSelectedTrack(NULL);
+	hist.clear();
+	clipView;
 	settings.dens = grid.grid_dens;
 	vector<track_t*> trList = trackList.vec(); // iterate a copy
 	for (track_t* track : trList) {
@@ -602,6 +604,8 @@ void MainCtrl::resetMouseContext() {
 }
 bool MainCtrl::setLoadedProject(shared_ptr<project_file> file) {
 	stopPlaying();
+	ThreadLock lock = playThread.lockThread();
+	vsthost::getInstance()->unloadAllPlugins();
 	projectPath = "";
 	clipView.set(NULL);
 	closeContextMenu();
@@ -618,7 +622,7 @@ bool MainCtrl::setLoadedProject(shared_ptr<project_file> file) {
 	copyFrom(file->project);
 	my_printf("NUM TRACKS: %d\n", trackList.size());
 	for (track_t* tr : trackList) {
-		my_printf("NEW TRACK: %d %s %d %d\n", tr->idx, StringAsCStr(tr->name), tr->height, tr->clips.size());
+		my_printf("NEW TRACK: %d %s %d\n", tr->idx, StringAsCStr(tr->name), tr->height);
 		view->ctr_tracks.addTrack(tr);
 	}
 	view->ctr_tracks.layout();
@@ -1120,7 +1124,7 @@ void MainCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos) {
 	guiOver = evt.getGuiHit();
 }
 void MainCtrl::insertNewTrack(int trackInsertPos, int trackType) {
-	assert(trackType >= TRACK_TYPE_MASTER && trackType <= TRACK_TYPE_MIDI);
+	assert(trackType >= 0 && trackType < NUM_TRACK_TYPES);
 	int32_t trTypeIdx = trackTypeCtrs[trackType]->size() + 1;
 
 	String name = StringFormat("%s %d", TrackTypeToName(trackType), trTypeIdx);
@@ -1135,7 +1139,6 @@ void MainCtrl::insertNewTrack(int trackInsertPos, int trackType) {
 		c->len = TICKS_BAR * 10;
 		c->loopStart = 0;
 		c->loopLen = c->len;
-		c->tr = newTrack;
 		for (int i = 0; i < 6 ; i++) {
 			note_t note;
 			note.pitch = 40+(((i%3)%2))*4+(i%3) + (i/3)*12*2;
@@ -1143,12 +1146,14 @@ void MainCtrl::insertNewTrack(int trackInsertPos, int trackType) {
 			note.len = TICKS_BAR;
 			c->notes.addSingle(note);
 		}
-		newTrack->clips.push_back(c);
+		newTrack->getMidi().clips.push_back(c);
 	}
 		break;
 	case TRACK_TYPE_RETURN:
 		break;
 	case TRACK_TYPE_MASTER:
+		break;
+	case TRACK_TYPE_AUTOMATION:
 		break;
 	}
 
@@ -1297,19 +1302,18 @@ void ContextCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos) {
 		this->ctxtmenu->mouseHitTest(mousePos, evt);
 	}
 }
-
-void MainCtrl::cutIntersecting(track_t* tr, tick_t tickBegin, tick_t tickEnd) {
-	vector<clip_t*>::iterator it = tr->clips.begin();
+void cutIntersectingClips(trackdata_midi_t& midi, tick_t tickBegin, tick_t tickEnd, delete_cb *cb) {
+	vector<clip_t*>::iterator it = midi.clips.begin();
 	
-	while (it != tr->clips.end()) {
+	while (it != midi.clips.end()) {
 		clip_t* c = *it;
 		if (c->start() >= tickEnd || c->end() <= tickBegin) {
 			it++;
 			continue;
 		}
 		if (c->start() >= tickBegin && c->end() <= tickEnd) {
-			it = tr->removeClip(c);
-			deleteClip(c, this);
+			it = midi.removeClip(c);
+			deleteClip(c, cb);
 			continue;
 		} else if (c->time >= tickBegin) {
 			//cut left
@@ -1323,22 +1327,26 @@ void MainCtrl::cutIntersecting(track_t* tr, tick_t tickBegin, tick_t tickEnd) {
 			clip_t* c2 = c->clone();
 			cutClipRight(c, (c->time+c->len) - tickBegin);
 			cutClipLeft(c2, tickEnd-c->time);
-			c2->tr = tr;
-			it = tr->clips.insert(it, c2);
+			it = midi.clips.insert(it, c2);
 			c->setDirty();
 		}
 		it++;
 	}
-	tr->sortClips();
+	midi.sortClips();
+}
+void MainCtrl::cutIntersecting(track_t* tr, tick_t tickBegin, tick_t tickEnd) {
+	if (tr->type == TRACK_TYPE_MIDI) {
+		cutIntersectingClips(tr->getMidi(), tickBegin, tickEnd, this);
+	}
 }
 void MainCtrl::preClipDelete(clip_t* clip) {
-	if (clipView.clip == clip) {
+	if (clipView.clip() == clip) {
 		clipView.set(NULL);
 	}
 	resetMouseContext();
 }
 void MainCtrl::preTrackDelete(track_t* track) {
-	if(clipView.clip && clipView.clip->tr == track) {
+	if(clipView.gui && clipView.gui->m_track == track) {
 		clipView.set(NULL);
 	}
 	resetMouseContext();
@@ -1374,14 +1382,15 @@ void MainCtrl::pasteClipboard(clip_clipboard* clipboard, int32_t track, tick_t t
 		int32_t trackIdx = trackList.clampTrackIdx(i + trackOffset);
 		track_t* tr = trackList[trackIdx];
 		if (tr->type == TRACK_TYPE_MIDI) {
+			trackdata_midi_t& midi = tr->getMidi();
 			for (auto it = trClipboard->clips.begin(); it != trClipboard->clips.end(); it++) {
 				clip_t* cl = (*it).get();
 				clip_t* cloned = cl->clone();
 				cloned->time += tickOffset;
 				cutIntersecting(tr, cloned);
-				tr->addClip(cloned);
+				midi.addClip(cloned);
 			}
-			tr->sortClips();
+			midi.sortClips();
 		}
 	}
 
@@ -1396,13 +1405,13 @@ void MainCtrl::setStatusText(String s) {
 }
 void MainCtrl::setEditClip(gui_clip* gclip) {
 	view->ctr_clipeditor.storeLayout();
-	clipView.set(gclip?gclip->m_clip:NULL);
+	clipView.set(gclip);
 	view->ctr_clipeditor.showEditClip();
 }
-void copyClipsInRange(trackcontents_t* in, track_clipboard_t& out, int32_t srcPos, int32_t dstPos, int32_t len) {
+void copyClipsInRange(trackdata_midi_t& in, track_clipboard_t& out, int32_t srcPos, int32_t dstPos, int32_t len) {
 
-	auto it = in->clips.cbegin();
-	while (it != in->clips.cend()) {
+	auto it = in.clips.cbegin();
+	while (it != in.clips.cend()) {
 		const clip_t* c = *it;
 		if (c->time+c->len > srcPos && c->time < srcPos+len) {
 			clip_t clone(*c);
@@ -1448,7 +1457,7 @@ clip_clipboard* MainCtrl::copySelection(const Cursor& _cursor) {
 		if (trackList.validTrackIdx(trackBegin + i)) {
 			track_t* tr = trackList[trackBegin + i];
 			if (tr->type == TRACK_TYPE_MIDI) {
-				copyClipsInRange(tr, trackClipboard, clipboard->srcPos, 0, clipboard->selRange);
+				copyClipsInRange(tr->getMidi(), trackClipboard, clipboard->srcPos, 0, clipboard->selRange);
 			}
 		}
 		clipboard->tracks.push_back(make_shared<track_clipboard_t>(move(trackClipboard)));
@@ -1456,3 +1465,13 @@ clip_clipboard* MainCtrl::copySelection(const Cursor& _cursor) {
 	return clipboard;
 }
 
+track_t* clip_view::track() const {
+	if (!this->gui)
+		return NULL;
+	return this->gui->m_track;
+}
+clip_t* clip_view::clip() const {
+	if (!this->gui)
+		return NULL;
+	return this->gui->m_clip;
+}

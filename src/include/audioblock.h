@@ -12,12 +12,16 @@ struct AudioBlock {
 		: channels(_channels), samples(0)
 	{
 		buf = new float*[_channels];
-		memset(buf, 0, sizeof(float*) * _channels);
+		for (uint32_t i = 0; i < _channels; i++) {
+			buf[i] = NULL;
+		}
 		realloc(_samples);
 	};
 	~AudioBlock() {
 		for (uint32_t i = 0; i < channels; i++) {
-			delete buf[i];
+			if (buf[i]) {
+				free(buf[i]);
+			}
 		}
 	};
 	void clear() {
@@ -69,7 +73,7 @@ struct AudioBlock {
 			samples = _samples;
 			for (uint32_t i = 0; i < channels; i++) {
 				if (buf[i]) {
-					delete buf[i];
+					free(buf[i]);
 				}
 				buf[i] = (float*)malloc(_samples * sizeof(float));
 			}

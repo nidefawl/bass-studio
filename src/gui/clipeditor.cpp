@@ -23,9 +23,9 @@ public:
 	action_modify_notes(String description, const clip_view& view, const clip_notes_t& oldNotes, const clip_cursor_t& oldCursor) : action_base() {
 		desc = description;
 //		clip = view.clip;
-		after = view.clip->notes;
-		trackIdx = view.clip->tr->idx;
-		clipTime = view.clip->time;
+		after = view.clip()->notes;
+		trackIdx = view.track()->idx;
+		clipTime = view.clip()->time;
 		cursorAfter = view.cursor;
 		before = oldNotes;
 
@@ -50,12 +50,13 @@ public:
 		track_t* tr = ctrl->getTracks()[trackIdx];
 		if (!tr)
 			return;
-		clip_t* clip = tr->getClipAt(clipTime);
+		trackdata_midi_t& midi = tr->getMidi();
+		clip_t* clip = midi.getClipAt(clipTime);
 		if (!clip)
 			return;
 		clip->notes = before;
 		clip_view& view = ctrl->getClipView();
-		if (view.clip == clip) {
+		if (view.clip() == clip) {
 			view.cursor = cursorBefore;
 			view.copySelectedNoteList();
 		}
@@ -65,12 +66,13 @@ public:
 		track_t* tr = ctrl->getTracks()[trackIdx];
 		if (!tr)
 			return;
-		clip_t* clip = tr->getClipAt(clipTime);
+		trackdata_midi_t& midi = tr->getMidi();
+		clip_t* clip = midi.getClipAt(clipTime);
 		if (!clip)
 			return;
 		clip->notes = after;
 		clip_view& view = ctrl->getClipView();
-		if (view.clip == clip) {
+		if (view.clip() == clip) {
 			view.cursor = cursorAfter;
 			view.copySelectedNoteList();
 		}
@@ -235,7 +237,7 @@ void gui_clipcontent::render(NVGcontext* vg) {
 	}
 
 	nvgRestore(vg);
-	clip_notes_t& notes = view.clip->notes;
+	clip_notes_t& notes = view.clip()->notes;
 	if (!notes.empty()) {
 		nvgBeginPath(vg);
 		for (note_t& note : notes.m_list) {
@@ -250,9 +252,11 @@ void gui_clipcontent::render(NVGcontext* vg) {
 	}
 
 
-	clip_t* clip = view.clip;
-	if (clip->tr && clip->tr->audio) {
-		std::vector<note_t>& heldNotes = clip->tr->audio->heldNotes;
+	gui_clip* guiClip = view.gui;
+	track_t* track = guiClip ? guiClip->m_track : NULL;
+	if (track && track->audio) {
+		clip_t* clip = guiClip->m_clip;
+		std::vector<note_t>& heldNotes = track->audio->heldNotes;
 		if (heldNotes.size()) {
 			nvgBeginPath(vg);
 
@@ -422,7 +426,7 @@ void gui_pianoroll::render(NVGcontext* vg) {
 
 void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
 	dragMode = drag_none;
-	clip_t* clip = view.clip;
+	clip_t* clip = view.clip();
 	if (!clip) {
 		return;
 	}
@@ -528,7 +532,7 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
 	setGlobalSelectionFromClipSelection();
 }
 void gui_clipcontent::setGlobalSelectionFromClipSelection() {
-	clip_t* clip = view.clip;
+	clip_t* clip = view.clip();
 	if (!clip) {
 		return;
 	}
@@ -537,7 +541,7 @@ void gui_clipcontent::setGlobalSelectionFromClipSelection() {
 	cursor.selRange = view.cursor.end - view.cursor.start;
 }
 void gui_clipcontent::setStatusText() {
-	clip_notes_t& notes = view.clip->notes;
+	clip_notes_t& notes = view.clip()->notes;
 	String selStatus = StringFormat("%d notes selected", notes.selection.size());
 	if (!view.draggedSelection.empty())
 	{
@@ -554,7 +558,7 @@ void gui_clipcontent::setStatusText() {
 }
 
 void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
-	clip_t* clip = view.clip;
+	clip_t* clip = view.clip();
 	if (!clip)
 		return;
 	clip_notes_t& notes = clip->notes;
@@ -683,7 +687,7 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
 	setGlobalSelectionFromClipSelection();
 }
 void gui_clipcontent::mergeDraggedNotes(dragmode mergeMode) {
-	clip_t* clip = view.clip;
+	clip_t* clip = view.clip();
 	clip_notes_t& notes = clip->notes;
 	notes = view.dragStartNotes;
 	notes.selection.clear();
@@ -716,7 +720,7 @@ void gui_clipcontent::handleDraggedRelease(MouseEvent& evt) {
 		dragMode = drag_none;
 		return;
 	}
-	clip_t* clip = view.clip;
+	clip_t* clip = view.clip();
 	if (clip) {
 		if (dragMode >= drag_notes_move) {
 			clip_notes_t& notes = clip->notes;
@@ -738,7 +742,7 @@ void gui_clipcontent::handleDraggedRelease(MouseEvent& evt) {
 }
 
 bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
-	clip_t* clip = view.clip;
+	clip_t* clip = view.clip();
 	if (!clip) {
 		return false;
 	}

@@ -440,7 +440,6 @@ public:
 		evt.guiDragged->trackViewDragRelease(this, evt);
 	}
 
-	void resizeOtherClips(track_t* tr, clip_t* clip);
 
 	void setSelectionRange(clip_t* clicked, track_t *trackClicked) {
 		cursor.selRange = clicked->len;

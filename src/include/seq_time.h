@@ -4,6 +4,11 @@
 #include <limits>
 #include "samplerate.h"
 using tick_t = int32_t;
+constexpr tick_t INVALID_TICK = 1<<31;
+struct tick_minmax_t {
+	tick_t min;
+	tick_t max;
+};
 //AKA PPQ
 #define TICK_BITS 12
 #define TICK_BITS_BAR (TICK_BITS+2)

@@ -16,50 +16,46 @@
 #define TRACK_TYPE_MASTER 0
 #define TRACK_TYPE_RETURN 1
 #define TRACK_TYPE_MIDI 2
+#define TRACK_TYPE_AUTOMATION 3
+#define NUM_TRACK_TYPES 4
 const char* TrackTypeToName(int type);
 struct track_plugins_t;
 class gui_trackcontent;
 class gui_trackmixer;
 class delete_cb;
-class trackcontents_t;
+class trackdata_midi_t;
 class track_t;
 using track_vector = std::vector<track_t*>;
-void deleteTrackContents(trackcontents_t* tr, delete_cb *cb);
+void deleteTrackContents(trackdata_midi_t* tr, delete_cb *cb);
 void deleteTrack(track_t* tr, delete_cb *cb);
 void deleteClip(clip_t* cl, delete_cb *cb);
-class trackcontents_t {
+struct trackdata_automation_t {
+
+};
+class trackdata_midi_t {
 public:
 	std::vector<clip_t*> clips;
-	trackcontents_t() {
+	trackdata_midi_t() {
 	}
-	trackcontents_t(const trackcontents_t &a) {
+	trackdata_midi_t(const trackdata_midi_t &a) {
 		deepcopy(a);
 	}
-	trackcontents_t &operator =(const trackcontents_t &a) {
+	trackdata_midi_t &operator =(const trackdata_midi_t &a) {
 		deepcopy(a);
 		return *this;
 	}
-	void deepcopy( const trackcontents_t &obj) {
-		for (clip_t* clip : clips) {
-			clip->tr = NULL;
-		}
+	void deepcopy( const trackdata_midi_t &obj) {
 		clips.clear();
 		for (clip_t* clip : obj.clips) {
 			addClip(new clip_t(*clip));
 		}
 		sortClips();
 	}
-	virtual ~trackcontents_t() {
+	~trackdata_midi_t() {
 		assert(clips.empty());
 	}
-	virtual std::vector<clip_t*>::iterator removeClip(clip_t* clip) {
-		auto it = std::find(clips.begin(), clips.end(), clip);
-		if (it == clips.end()) {
-			throw applogicexception("track - attempt to remove non-present clip");
-		}
-		return clips.erase(it);
-	}
-	virtual void addClip(clip_t* clip) {
+	std::vector<clip_t*>::iterator removeClip(clip_t* clip);
+	void addClip(clip_t* clip) {
 		auto it = std::find(clips.begin(), clips.end(), clip);
 		if (it != clips.end()) {
 			throw applogicexception("track - attempt to add clip twice");
@@ -78,6 +74,10 @@ public:
 			}
 			assert(clips[0]->start() < clips[1]->start());
 		}
+	}
+	void addClipSort(clip_t* clip) {
+		addClip(clip);
+		sortClips();
 	}
 	tick_t start();
 	tick_t end();
@@ -112,6 +112,7 @@ public:
 		return NULL;
 	}
 	void deleteEmptyClips();
+	void getNotesInRange(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, std::vector<note_t>& notes);
 };
 struct clip_layout_t {
 	clip_t* clip;
@@ -146,14 +147,14 @@ public:
 	std::list<clip_layout_t> clips;
 	tracklayout_t() {
 	}
-	tracklayout_t(const trackcontents_t &a) {
+	tracklayout_t(const trackdata_midi_t &a) {
 		copy(a);
 	}
-	tracklayout_t &operator =(const trackcontents_t &a) {
+	tracklayout_t &operator =(const trackdata_midi_t &a) {
 		copy(a);
 		return *this;
 	}
-	void copy(const trackcontents_t &a) {
+	void copy(const trackdata_midi_t &a) {
 		clips.clear();
 		for (clip_t* clip : a.clips) {
 			clips.emplace_back(clip, clip->time, clip->len, clip->offsetStart, clip->loopLen);
@@ -215,15 +216,32 @@ struct track_snapshot_t : public tracksettings_t {
 	track_snapshot_t() = default;
 	track_snapshot_t(track_t* track);
 };
-class track_t : public trackcontents_t, public tracksettings_t {
+class track_t : public tracksettings_t {
+	trackdata_midi_t midi;
+	trackdata_automation_t automation;
 public:
-	track_t(const track_t &a) : trackcontents_t() {
-		trackcontents_t::deepcopy(a);
+	trackdata_midi_t& getMidi() {
+		return midi;
+	}
+	tick_minmax_t getMinMaxEvents() {
+		tick_t evtMin = INVALID_TICK;
+		tick_t evtMax = INVALID_TICK;
+		if (type == TRACK_TYPE_MIDI) {
+			auto minMax = midi.getMinMax();
+			if (minMax.first) {
+				evtMin = minMax.first->start();
+				evtMax = minMax.second->end();
+			}
+		}
+		return {evtMin, evtMax};
+	}
+	track_t(const track_t &a) {
+		midi.deepcopy(a.midi);
 		copy(a);
 	}
 	track_t(const track_snapshot_t &a);
 	track_t &operator =(const track_t &a) {
-		trackcontents_t::deepcopy(a);
+		midi.deepcopy(a.midi);
 		copy(a);
 		return *this;
 	}
@@ -234,9 +252,6 @@ public:
 		rgb = 0;
 		height = 4;
 	}
-	std::vector<clip_t*>::iterator removeClip(clip_t* clip) override;
-	void addClip(clip_t* clip) override;
-	void addClipSort(clip_t* clip);
 	void copy( const track_t &obj) {
 		idx = obj.idx;
 		name = obj.name;
@@ -245,7 +260,6 @@ public:
 		height = obj.height;
 		rgb = obj.rgb;
 	}
-	void getNotesInRange(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, std::vector<note_t>& notes);
 	void releaseTrackContent();
 	gui_trackcontent* content = NULL;
 	gui_trackmixer* mixer = NULL;

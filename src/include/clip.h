@@ -155,7 +155,6 @@ public:
 		noLayout = obj.noLayout;
 		editorLayout = obj.editorLayout;
 		gClip = NULL;
-		tr = NULL;
 		dirty = true;
 	}
 	tick_t start() const {
@@ -195,7 +194,7 @@ public:
 		}
 	}
 	gui_clip* gClip = NULL;
-	track_t* tr = NULL;
+//	track_t* tr = NULL;
 private:
 	mutable bool dirty = true;
 	mutable clip_notes_t noteViewPlayback;
@@ -223,7 +222,7 @@ inline void cutClipRight(clip_t* c, tick_t len) {
 	assert(c->len>0);
 }
 inline bool operator==(const clip_t& lhs, const clip_t& rhs){
-	return lhs.time == rhs.time && (lhs.tr == rhs.tr); //TODO: watch out!!
+	return lhs.time == rhs.time; //TODO: watch out!!
 }
 inline bool operator!=(const clip_t& lhs, const clip_t& rhs){return !operator==(lhs,rhs);}
 inline bool operator< (const clip_t& lhs, const clip_t& rhs){

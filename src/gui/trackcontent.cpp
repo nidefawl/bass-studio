@@ -12,7 +12,7 @@ float noteToScreen(float note, float scale, float offset, float sizeY) {
 void gui_clip::handleRightClick(MouseEvent& evt) {
 	MainCtrl::get()->openContextMenu(new guictxtmenu_clip(this->m_clip), evt.mousepos);
 }
-/*static*/ void gui_clip::renderClip(NVGcontext* vg, const clip_t* cl, ivec2 pos, ivec2 size) {
+/*static*/ void gui_clip::renderClip(NVGcontext* vg, const track_t* tr, const clip_t* cl, ivec2 pos, ivec2 size) {
 	if (cl->len <= 0) {
 		return;
 	}
@@ -43,7 +43,7 @@ void gui_clip::handleRightClick(MouseEvent& evt) {
 		clip_notes_t& notesPlay = cl->getNoteViewPlayback();
 	//	clip_notes_t notesPlay;
 	//	cl->getNotesView(0, cl->len, notesPlay, true);
-		for (int i = 0; i < (cl->tr?(cl->tr->idx%2)+1:1); i++) {
+		for (int i = 0; i < (tr?(tr->idx%2)+1:1); i++) {
 			int32_t rgbNote = i == 0 ? 0xff9933 : 0x33ff33;
 			int32_t rgbNoteOverlap = i == 0 ? 0x0000ff : 0xff00ff;
 			clip_notes_t& notes = i == 0 ? notesView : notesPlay;

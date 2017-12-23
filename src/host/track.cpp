@@ -22,30 +22,25 @@
 void deleteClip(clip_t* cl, delete_cb *cb) {
 	if (cb)
 		cb->preClipDelete(cl);
-	if (cl->gClip && cl->tr && cl->tr->content) {
-		cl->tr->content->remove(cl->gClip);
-		cl->tr = NULL;
-	}
-	if (cl->gClip) {
-		cl->gClip = nullptr;
+	gui_clip* gClip = cl->gClip;
+	if (gClip) {
+		gClip->m_track->content->remove(gClip);
+		DELETE_PTR(gClip);
 	}
 	delete cl;
-}
-void deleteTrackContents(trackcontents_t* tr, delete_cb *cb) {
-	for (auto itClip = tr->clips.begin(); itClip != tr->clips.end(); itClip++) {
-		clip_t* cl = *itClip;
-		deleteClip(cl, cb);
-	}
-	tr->clips.clear();
 }
 void deleteTrack(track_t* tr, delete_cb *cb) {
 	if (cb)
 		cb->preTrackDelete(tr);
-	for (auto itClip = tr->clips.begin(); itClip != tr->clips.end(); itClip++) {
-		clip_t* cl = *itClip;
-		deleteClip(cl, cb);
+	if (tr->type == TRACK_TYPE_MIDI) {
+		trackdata_midi_t& midi = tr->getMidi();
+		std::vector<clip_t*>& clips = midi.clips;
+		for (auto itClip = clips.begin(); itClip != clips.end(); itClip++) {
+			clip_t* cl = *itClip;
+			deleteClip(cl, cb);
+		}
+		clips.clear();
 	}
-	tr->clips.clear();
 	if (tr->mixer) {
 		delete (tr->mixer);
 	}
@@ -55,23 +50,14 @@ void deleteTrack(track_t* tr, delete_cb *cb) {
 	delete tr;
 }
 
-std::vector<clip_t*>::iterator track_t::removeClip(clip_t* clip) {
-	auto it = trackcontents_t::removeClip(clip);
-	if (clip->gClip && content) {
-		content->remove(clip->gClip);
+std::vector<clip_t*>::iterator trackdata_midi_t::removeClip(clip_t* clip) {
+	auto it = std::find(clips.begin(), clips.end(), clip);
+	if (it == clips.end()) {
+		throw applogicexception("track - attempt to remove non-present clip");
 	}
-	clip->tr = NULL;
-	return it;
+	return clips.erase(it);
 }
-void track_t::addClipSort(clip_t* clip) {
-	addClip(clip);
-	sortClips();
-}
-void track_t::addClip(clip_t* clip) {
-	trackcontents_t::addClip(clip);
-	clip->tr = this;
-}
-std::pair<clip_t*, clip_t*> trackcontents_t::getMinMax() {
+std::pair<clip_t*, clip_t*> trackdata_midi_t::getMinMax() {
 	auto minmax = std::minmax_element(clips.begin(), clips.end(),
         [] (clip_t* const& lhs, clip_t* const& rhs) {
 		return lhs->time < rhs->time;
@@ -85,11 +71,11 @@ std::pair<clip_t*, clip_t*> trackcontents_t::getMinMax() {
     }
     return pairPtr;
 }
-tick_t trackcontents_t::start() {
+tick_t trackdata_midi_t::start() {
 	auto minmax = getMinMax();
 	return (minmax.first?minmax.first->time:0);
 }
-tick_t trackcontents_t::end() {
+tick_t trackdata_midi_t::end() {
 	auto minmax = getMinMax();
 	return (minmax.second?(minmax.second->time+minmax.second->len):0);
 }
@@ -190,17 +176,12 @@ void trackallcontainer_t::copyTracks(int32_t trackBegin, int32_t trackEnd, track
 			my_printf("NOT copy track %d\n", t->idx);
 		}
 	}
-	for (track_t* track : _out.tracks) {
-		for (clip_t* clip : track->clips) {
-			assert(clip->tr == track);
-		}
-	}
 }
 track_t::track_t(const track_snapshot_t &a) : tracksettings_t(a) {
+	std::vector<clip_t*>& clips = midi.clips;
 	for (const clip_t& clip : a.clips) {
 		clip_t* clipInstance = new clip_t(clip);
-		clipInstance->tr = this;
-		this->clips.push_back(clipInstance);
+		clips.push_back(clipInstance);
 	}
 	assert(this->mixer == NULL);
 	assert(this->content == NULL);
@@ -257,7 +238,8 @@ track_snapshot_t::track_snapshot_t(track_t* track)
 : tracksettings_t(*track),
   plugins(*track)
 {
-	for (clip_t* clip : track->clips) {
+	std::vector<clip_t*>& otherClips = track->getMidi().clips;
+	for (clip_t* clip : otherClips) {
 		clips.emplace_back(*clip);
 	}
 }
@@ -312,32 +294,30 @@ void tracksubcontainer_t::loadPlugins(trackcontainer_snapshot_t& in) {
 }
 
 void track_t::releaseTrackContent() {
-	for (clip_t* clip : clips) {
-		if (clip->gClip) {
+	for (clip_t* clip : midi.clips) {
+		gui_clip* gClip = clip->gClip;
+		if (gClip) {
 			if (this->content) {
-				this->content->remove(clip->gClip);
+				this->content->remove(gClip);
 			}
-			DELETE_PTR(clip->gClip);
+			DELETE_PTR(gClip);
 		}
 	}
 }
-void trackcontents_t::deleteEmptyClips() {
-	//TODO: makes this more efficient (merge inserting and sorting if possible)
-	std::vector<clip_t*> clipList;
-	for (clip_t* clip : clips) {
-		if (clip->len <= 0) {
-			deleteClip(clip, MainCtrl::get());
+void trackdata_midi_t::deleteEmptyClips() {
+	std::vector<clip_t*>::iterator it = clips.begin();
+	while (it != clips.end()) {
+		clip_t* c = *it;
+		if (c->len <= 0) {
+			it = removeClip(c);
+			deleteClip(c, MainCtrl::get());
 		} else {
-			clipList.push_back(clip);
+			it++;
 		}
-	}
-	this->clips = clipList;
-	for (clip_t* clip : clips) {
-		assert(clip->len>0&&clip->time>=0&&clip->gClip->m_clip==clip);
 	}
 	sortClips();
 }
-void track_t::getNotesInRange(tick_t start, tick_t end, tick_t cutStart, tick_t cutEnd, std::vector<note_t>& notes) {
+void trackdata_midi_t::getNotesInRange(tick_t start, tick_t end, tick_t cutStart, tick_t cutEnd, std::vector<note_t>& notes) {
 //	my_printf("range %d to %d\n", start, end);
 	for (clip_t* clip : clips) {
 		if (clip->end() <= start || clip->start() > end) {
@@ -524,7 +504,7 @@ void track_plugins_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick
 			heldBegin = min(heldBegin, note.start());
 			heldEnd = max(heldEnd, note.end());
 		}
-		track->getNotesInRange(heldBegin, heldEnd, -1, loopEnd, notes);
+		track->getMidi().getNotesInRange(heldBegin, heldEnd, -1, loopEnd, notes);
 		if (loopStart > -1&&start<loopStart)
 			start = loopStart;
 		if (!notes.empty() || !heldNotes.empty()) {
@@ -625,8 +605,8 @@ void track_plugins_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick
 
 }
 
-const char* trackTypeNames[3] = {
-	"Master", "Return", "Midi"
+const char* trackTypeNames[4] = {
+	"Master", "Return", "Midi", "Automation"
 };
 const char* TrackTypeToName(int type) {
 	return trackTypeNames[type];

@@ -326,7 +326,9 @@ public:
 	guictxtmenu_trackcontent(int32_t _trackid) {
 		this->trackid = _trackid;
 		this->size.x = 320;
-		if (MainCtrl::get()->cursor.selRange && _trackid >= 0) {
+		MainCtrl* ctrl = MainCtrl::get();
+		track_t* tr = ctrl->getTrackId(this->trackid);
+		if (MainCtrl::get()->cursor.selRange && tr && tr->type == TRACK_TYPE_MIDI) {
 			auto newClip = new ctxtmenu_entry("Create clip", 20);
 			add(newClip);
 			add(new ctxtmenu_splitter());
@@ -347,13 +349,13 @@ public:
 			Cursor cursor = MainCtrl::get()->cursor.getLeftAligned();
 			if (cursor.selRange) {
 				track_t* tr = ctrl->getTrackId(this->trackid);
-				if (tr) {
+				if (tr && tr->type == TRACK_TYPE_MIDI) {
 					clip_t* cl = new clip_t(StringFormat("%s Clip", StringAsCStr(tr->name)));
 					cl->time = cursor.cursorPos;
 					cl->len = cursor.selRange;
 					cl->loopStart = 0;
 					cl->loopLen = cl->len;
-					tr->addClipSort(cl);
+					tr->getMidi().addClipSort(cl);
 				}
 			}
 		}
@@ -405,7 +407,7 @@ class guictxtmenu_notrack : public guictxtmenu_base {
 public:
 	guictxtmenu_notrack() {
 		this->size.x = 190;
-		for (int i = 0; i <= TRACK_TYPE_MIDI; i++) {
+		for (int i = 0; i < NUM_TRACK_TYPES; i++) {
 			add(new ctxtmenu_entry(StringFormat("Insert %s Track", TrackTypeToName(i)), i));
 		}
 		layout();

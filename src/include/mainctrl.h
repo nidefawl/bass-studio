@@ -128,27 +128,32 @@ class ViewContainers;
 class clip_view {
 public:
 	gui_clip * gui = NULL;
-	clip_t * clip = NULL; // this should be a weak pointer
 	clip_cursor_t cursor;
 	clip_notes_t dragStartNotes;
 	std::vector<note_t> draggedSelectionBegin;
 	std::vector<note_t> draggedSelection;
 	clip_notes_t clipboard;
 	tick_t clipboardCursorRange;
-	void set(clip_t* _clip) {
+	void set(gui_clip* _clip) {
 		if (_clip == NULL) {
-			this->clip = NULL;
 			this->gui = NULL;
 		} else {
-			this->clip = _clip;
-			this->gui = _clip->gClip;
+			this->gui = _clip;
 		}
 //		this->selection.clear();
 	}
+	clip_t* clip() const;
+//	{
+//		return this->gui->m_clip;
+//	}
+	track_t* track() const;
+//	{
+//		return this->gui->m_track;
+//	}
 	void copySelectedNoteList() {
-		dragStartNotes = clip->notes;
-		clip->notes.copySelectionTo(draggedSelection);
-		clip->notes.copySelectionTo(draggedSelectionBegin);
+		dragStartNotes = clip()->notes;
+		clip()->notes.copySelectionTo(draggedSelection);
+		clip()->notes.copySelectionTo(draggedSelectionBegin);
 	}
 };
 struct Menus {

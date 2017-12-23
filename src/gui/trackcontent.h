@@ -14,9 +14,11 @@
 class gui_clip : public guibase {
 public:
 	clip_t* const m_clip;
-	gui_clip(clip_t* _clip)
+	track_t* const m_track;
+	gui_clip(clip_t* _clip, track_t* _track)
 		: guibase(),
-		  m_clip(_clip) {
+		  m_clip(_clip),
+		  m_track(_track) {
 	}
 	bool isClipTitleBar(ivec2 mpos) {
 		return mpos.x >= pos.x &&
@@ -37,9 +39,9 @@ public:
 			mpos.y < pos.y + HEIGHT_CLIP_TITLE;
 	}
 	void render(NVGcontext* vg) {
-		renderClip(vg, m_clip, pos, size);
+		renderClip(vg, m_track, m_clip, pos, size);
 	}
-	static void renderClip(NVGcontext* vg, const clip_t* cl, ivec2 pos, ivec2 size);
+	static void renderClip(NVGcontext* vg, const track_t* tr, const clip_t* cl, ivec2 pos, ivec2 size);
 	static void getClipPosition(scaled_grid& grid, const clip_t* cl, ivec2& pos, ivec2& size, tick_t offset) {
 		tick_t tickBegin = cl->time + offset;
 		tick_t tickEnd = cl->time + offset + cl->len;
@@ -56,7 +58,6 @@ public:
 		getClipPosition(grid, m_clip, pos, size, 0);
 	}
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-		assert(m_clip->tr);
 		if (isLeftDragZone(mpos)) {
 			if (evt.type <= MouseHitType::MOUSE_RIGHT)
 				evt.requestCursor(CURSOR_CLIP_SIZE_LEFT);
@@ -79,19 +80,16 @@ public:
 		return parent->handleKeyInput(kevt);
 	}
 	void handleDraggedBegin(MouseEvent& evt) {
-		assert(m_clip->tr);
 		evt.relMousepos += pos;
 		parent->handleDraggedBegin(evt);
 	}
 
 	void handleDraggedMove(MouseEvent& evt) {
-		assert(m_clip->tr);
 		evt.relMousepos += pos;
 		parent->handleDraggedMove(evt);
 	}
 
 	void handleDraggedRelease(MouseEvent& evt) {
-		assert(m_clip->tr);
 		evt.relMousepos += pos;
 		parent->handleDraggedRelease(evt);
 	}
@@ -111,9 +109,10 @@ public:
 class gui_trackcontent : public guictr_base {
 public:
 	track_t* const m_track;
+	trackdata_midi_t& midi;
 	gui_trackcontent(track_t* _track)
 		: guictr_base(),
-		m_track(_track) {
+		m_track(_track), midi(m_track->getMidi()) {
 		padding = 0;
 	}
 	bool isStaticContainer() {
@@ -130,7 +129,7 @@ public:
 			return;
 		}
 //		nvgTranslate(vg, pos.x, pos.y);
-		for (clip_t* clip : m_track->clips) {
+		for (clip_t* clip : midi.clips) {
 			if(!clip->gClip) {
 				continue;
 			}
@@ -164,10 +163,10 @@ public:
 	void handleRightClick(MouseEvent& evt);
 
 	void updateVisibleTrackContents(scaled_grid& grid) {
-		for (clip_t* clip : m_track->clips) {
+		for (clip_t* clip : midi.clips) {
 //			gui_clip* gClip = clip->gClip;
 			if(!clip->gClip) {
-				clip->gClip = new gui_clip(clip);
+				clip->gClip = new gui_clip(clip, m_track);
 				add(clip->gClip);
 			}
 			clip->gClip->updatePosition(grid);

@@ -32,7 +32,6 @@ void LoadMidiTask::loadFile() {
 
 				tick_t tickClipMin = -1;
 				tick_t tickClipMax = -1;
-				int tracksLoaded = 0;
 				for (int track = 0; track < tracks; track++) {
 					clip_notes_t notes;
 					MidiEventList& list = midiFile[track];
