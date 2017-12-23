@@ -54,7 +54,8 @@ $(EDEV)/PortAudio_190600/src/hostapi/dsound \
 $(EDEV)/ASIOSDK2.3/common \
 $(EDEV)/ASIOSDK2.3/host \
 $(EDEV)/ASIOSDK2.3/host/pc \
-$(EDEV)/SQLiteCpp/include
+$(EDEV)/SQLiteCpp/include \
+$(EDEV)/nvwa
 
 #$(info OBJS_MAIN="$(OBJS_MAIN)")
 #$(info OBJS_SCANNER="$(OBJS_SCANNER)")
