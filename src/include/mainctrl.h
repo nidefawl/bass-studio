@@ -23,6 +23,7 @@
 #include "cursor.h"
 #include "track.h"
 #include "clip.h"
+#include "clipboard.h"
 #include "note.h"
 #include "logging.h"
 #include "../threads/workerthread.h"
@@ -73,24 +74,13 @@ enum clip_dragtype_t {
 	DRAG_CLIPS_RESIZE_RIGHT,
 	DROP_FILE_EXTERNAL
 };
-class clip_clipboard {
-public:
-	~clip_clipboard();
-	std::vector<trackcontents_t*> tracks;
-	tick_t srcPos = 0;
-	tick_t srcTrack = 0;
-	int32_t selRange = 0;
-	int32_t selTrackRange = 0;
-};
 struct clip_dragaction {
 	clip_dragtype_t dragtype = DRAG_NONE;
 	clip_clipboard *clipboard = NULL;
 	Cursor cursorBegin;
 };
-class dragdrop_midifile {
-public:
-	~dragdrop_midifile();
-	trackcontents_t content;
+struct dragdrop_midifile {
+	std::shared_ptr<clip_clipboard> clipboard;
 	bool isLoaded = false;
 	bool isValidTarget = false;
 	void reset();
@@ -337,7 +327,7 @@ public:
 	void cutSelection(const Cursor& cursor);
 	void cutIntersecting(track_t* tr, clip_t* mask);
 	void cutIntersecting(track_t* tr, tick_t tickBegin, tick_t tickEnd);
-	void copyClipsInRange(trackcontents_t* in, trackcontents_t* out, int32_t srcPos, int32_t dstPos, int32_t len);
+//	void copyClipsInRange(trackcontents_t* in, trackcontents_t* out, int32_t srcPos, int32_t dstPos, int32_t len);
 
 	void objectDragMove(guibase* g, MouseEvent& evt);
 	void objectDragRelease(guibase* g, MouseEvent& evt);

@@ -247,7 +247,6 @@ public:
 	}
 	void getNotesInRange(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, std::vector<note_t>& notes);
 	void releaseTrackContent();
-	void updateTrackContent();
 	gui_trackcontent* content = NULL;
 	gui_trackmixer* mixer = NULL;
 	track_plugins_t* audio = NULL;

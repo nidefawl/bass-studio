@@ -131,6 +131,10 @@ public:
 		double bar = x / (double)TICKS_BAR;
 		return toScreenSpace(bar);
 	}
+	int32_t pixelsToTicks(int32_t pixels) {
+		double x = toObjSpace(pixels, this->zoom, 0) * TICKS_BAR;
+		return std::max(1, (int32_t)ceil(x));
+	}
 	void showRange(tick_t start, tick_t end);
 	void calcLen(int scrollOffsetX, float zoom, int contentWidth);
 	void makeTickVisible(tick_t tickTime);

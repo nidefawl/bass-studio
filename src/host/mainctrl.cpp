@@ -2,6 +2,8 @@
 #include <time.h>
 #include <algorithm>
 #include <functional>
+#include <vector>
+#include <memory>
 #include <GLFW/glfw3.h>
 
 #include "window.h"
@@ -44,13 +46,14 @@ using glm::vec4;
 using glm::ivec4;
 using std::min;
 using std::max;
+using namespace std;
 
 //helper macros to ease porting from java
 #define boolean (0) 
 
 
 ivec2 toControlsObjectSpace(ivec2& pos, guibase* gui) {
-	std::vector<guibase*> guiHierachy;
+	vector<guibase*> guiHierachy;
 	gui->getHierachy(guiHierachy);
 	ivec2 posOS = pos;
 	while (!guiHierachy.empty()) {
@@ -59,17 +62,6 @@ ivec2 toControlsObjectSpace(ivec2& pos, guibase* gui) {
 	}
 	return posOS - gui->pos;
 }
-clip_clipboard::~clip_clipboard() {
-	for (auto it = this->tracks.begin(); it != this->tracks.end(); it++) {
-		trackcontents_t* tr = *it;
-		deleteTrackContents(tr, NULL);
-		delete tr;
-	}
-	this->tracks.clear();
-}
-dragdrop_midifile::~dragdrop_midifile() {
-	deleteTrackContents(&content, NULL);
-}
 void dragdrop_midifile::reset() {
 	if (isLoaded) {
 
@@ -77,7 +69,7 @@ void dragdrop_midifile::reset() {
 	}
 	isValidTarget = false;
 	isLoaded = false;
-	deleteTrackContents(&content, NULL);
+	clipboard.reset();
 }
 void testTask() {
 
@@ -94,13 +86,13 @@ void testTask() {
 	}
 	if (task.isError()) {
 		printf("task[%d] iserror: %d\n", task.id, task.result);
-		std::exception_ptr eptr = task.getException();
+		exception_ptr eptr = task.getException();
 		if (eptr != nullptr) {
 			printf("task[%d] had exception.. rethrowing\n",task.id);
 	        try{
-	            std::rethrow_exception(eptr);
+	            rethrow_exception(eptr);
 	        }
-	        catch(const std::exception &ex)
+	        catch(const exception &ex)
 	        {
 				printf("task[%d] had exception: %s\n",task.id,  ex.what());
 	        }
@@ -121,7 +113,7 @@ public:
 	~gui_ctr_debug() {
 		remove(&knobTest);
 	}
-	std::vector<String> g_debugStrings;
+	vector<String> g_debugStrings;
 	virtual void render(NVGcontext* vg) {
 		renderBackground(vg);
 		if (!setScissorTransform(vg)) {
@@ -129,7 +121,7 @@ public:
 		}
 		MainCtrl *ctrl = MainCtrl::get();
 
-		std::vector<String> strings;
+		vector<String> strings;
 		String str;
 		str = ctrl->guiOver ? ctrl->guiOver->getClassName() : "<null>";
 		strings.push_back(String("guiOver: ")+str);
@@ -262,7 +254,7 @@ public:
 		splitterList.pos = ivec2(ctr_pluginlist.right() - 5, hTopControls);
 		splitterList.size = ivec2(10, hTrackCtr);
 	}
-	void addTo(std::vector<guictr_base*>& v) {
+	void addTo(vector<guictr_base*>& v) {
 		 v.push_back(&ctr_tracks);
 		 v.push_back(&ctr_clipeditor);
 		 v.push_back(&ctr_tempo);
@@ -300,7 +292,7 @@ void MainCtrl::destroy()
 	}
 	setSelectedTrack(NULL);
 	settings.dens = grid.grid_dens;
-	std::vector<track_t*> trList = trackList.vec(); // iterate a copy
+	vector<track_t*> trList = trackList.vec(); // iterate a copy
 	for (track_t* track : trList) {
 		removeTrackImpl(track);
 		deleteTrack(track, NULL);
@@ -364,9 +356,9 @@ void MainCtrl::onMenuOpen(ngui::Menu* menu) {
 	this->mainWindow->updateMenu();
 }
 static SupportedFileType FILE_TYPE_PROJECT {"Project File", PROJECT_FILE_EXT};
-std::vector<SupportedFileType> vFILE_TYPE_PROJECT = { FILE_TYPE_PROJECT };
+vector<SupportedFileType> vFILE_TYPE_PROJECT = { FILE_TYPE_PROJECT };
 void MainCtrl::loadFile(String path) {
-	std::shared_ptr<project_file> f = loadProjectFile(this, path);
+	shared_ptr<project_file> f = loadProjectFile(this, path);
 	if (!f) {
 		setStatusText(StringFormat("Failed loading %s", StringAsCStr(FileNameFromPath(path))));
 	} else {
@@ -407,7 +399,7 @@ void MainCtrl::menuCommand(int cmd) {
 			}
 			if (!path.empty())
 			{
-				std::shared_ptr<project_file> f = createProjectFile();
+				shared_ptr<project_file> f = createProjectFile();
 				saveProject(f, path);
 				projectPath = path;
 			}
@@ -594,8 +586,8 @@ void MainCtrl::onTick()
 void MainCtrl::pushHist(action_base* action) {
 	hist.push(action);
 }
-std::shared_ptr<project_file> MainCtrl::createProjectFile() {
-	std::shared_ptr<project_file> file = std::make_shared<project_file>();
+shared_ptr<project_file> MainCtrl::createProjectFile() {
+	shared_ptr<project_file> file = make_shared<project_file>();
 	file->path = projectPath;
 	copyTo(file->project);
 	return file;
@@ -608,14 +600,14 @@ void MainCtrl::resetMouseContext() {
 	}
 	guiCaptured = guiFocused = guiOver = guiDragged = NULL;
 }
-bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file) {
+bool MainCtrl::setLoadedProject(shared_ptr<project_file> file) {
 	stopPlaying();
 	projectPath = "";
 	clipView.set(NULL);
 	closeContextMenu();
 	resetMouseContext();
 	hist.clear();
-	std::vector<track_t*> _tracks = trackList.vec();  // iterate a copy
+	vector<track_t*> _tracks = trackList.vec();  // iterate a copy
 	trackList.clear();
 	for (track_t* tr : _tracks) {
 		view->ctr_tracks.removeTrack(tr);
@@ -754,7 +746,7 @@ void MainCtrl::objectDragRelease(guibase* g, MouseEvent& mevt) {
 //		}
 	}
 }
-bool MainCtrl::filesDropBegin(std::vector<std::string>& files, ivec2 mousepos) {
+bool MainCtrl::filesDropBegin(vector<string>& files, ivec2 mousepos) {
 	my_printf("filesDropBegin %d %d isdragging=%d\n", mousepos.x, mousepos.y, dragdropclip.isLoaded);
 	dragdropclip.reset();
 	if (guiDragged || guiCaptured) {
@@ -770,10 +762,10 @@ bool MainCtrl::filesDropBegin(std::vector<std::string>& files, ivec2 mousepos) {
 			if (task.isInQueue()) {
 				task.wait();
 				if (task.isGood()) {
-					clip_t* clip = task.getClip();
-					if (clip) {
+					shared_ptr<clip_clipboard> fileloadedClipboard = task.getClipboard();
+					if (fileloadedClipboard) {
 						dragdropclip.reset();
-						dragdropclip.content.clips.push_back(clip);
+						dragdropclip.clipboard = fileloadedClipboard;
 						dragdropclip.isLoaded = true;
 						my_printf("got clip\n",0);
 					} else {
@@ -843,7 +835,7 @@ public:
 		clip.reset();
 	}
 };
-bool MainCtrl::filesDropFinal(std::vector<std::string>& files, ivec2 mousepos) {
+bool MainCtrl::filesDropFinal(vector<string>& files, ivec2 mousepos) {
 	clipreset rst(dragdropclip);
 	if (guiDragged || guiCaptured) {
 		my_printf("filesDropFinal guiDragged || guiCaptured\n",0);
@@ -1183,14 +1175,12 @@ public:
 			ctrl->removeTrackImpl(t);
 		}
 		trackPtr = t;
-		ctrl->updateVisibleTrackContents();
 	}
 	void redo(MainCtrl* ctrl) {
 		ctrl->resetMouseContext();
 		ctrl->setEditClip(NULL);
 		ctrl->addTrackImpl(trackIdx, trackPtr);
 		trackPtr = NULL;
-		ctrl->updateVisibleTrackContents();
 	}
 };
 class action_modify_removetrack : public action_base {
@@ -1206,13 +1196,11 @@ public:
 		ctrl->resetMouseContext();
 		ctrl->setEditClip(NULL);
 		ctrl->addTrackImpl(trackIdx, trackPtr);
-		ctrl->updateVisibleTrackContents();
 	}
 	void redo(MainCtrl* ctrl) {
 		ctrl->resetMouseContext();
 		ctrl->setEditClip(NULL);
 		ctrl->removeTrackImpl(trackPtr);
-		ctrl->updateVisibleTrackContents();
 	}
 };
 void MainCtrl::addTrackImpl(int32_t trackInsertPos, track_t* newTrack) {
@@ -1310,28 +1298,8 @@ void ContextCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos) {
 	}
 }
 
-void MainCtrl::copyClipsInRange(trackcontents_t* in, trackcontents_t* out, int32_t srcPos, int32_t dstPos, int32_t len) {
-
-	auto it = in->clips.cbegin();
-	while (it != in->clips.cend()) {
-		const clip_t* c = *it;
-		if (c->time+c->len > srcPos && c->time < srcPos+len) {
-			clip_t* clone = c->clone();
-			if (c->time < srcPos && c->time + c->len > srcPos) {
-				cutClipLeft(clone, srcPos - c->time);
-			}
-			if (c->time < srcPos + len && c->time + c->len > srcPos + len) {
-				cutClipRight(clone, (c->time + c->len) - (srcPos+len));
-			}
-
-			out->addClip(clone);
-		}
-		it++;
-	}
-	out->sortClips();
-}
 void MainCtrl::cutIntersecting(track_t* tr, tick_t tickBegin, tick_t tickEnd) {
-	std::vector<clip_t*>::iterator it = tr->clips.begin();
+	vector<clip_t*>::iterator it = tr->clips.begin();
 	
 	while (it != tr->clips.end()) {
 		clip_t* c = *it;
@@ -1399,7 +1367,7 @@ void MainCtrl::pasteClipboard(clip_clipboard* clipboard, int32_t track, tick_t t
 	tick_t tickOffset = tick - clipboard->srcPos;
 	tick_t trackOffset = track;
 	for (int i = 0; i <= clipboard->selTrackRange; i++) {
-		trackcontents_t* trClipboard = clipboard->tracks[i];
+		track_clipboard_t* trClipboard = clipboard->tracks[i].get();
 		if (!trackList.validTrackIdx(i + trackOffset)) {
 			continue;
 		}
@@ -1407,7 +1375,7 @@ void MainCtrl::pasteClipboard(clip_clipboard* clipboard, int32_t track, tick_t t
 		track_t* tr = trackList[trackIdx];
 		if (tr->type == TRACK_TYPE_MIDI) {
 			for (auto it = trClipboard->clips.begin(); it != trClipboard->clips.end(); it++) {
-				clip_t* cl = *it;
+				clip_t* cl = (*it).get();
 				clip_t* cloned = cl->clone();
 				cloned->time += tickOffset;
 				cutIntersecting(tr, cloned);
@@ -1431,6 +1399,37 @@ void MainCtrl::setEditClip(gui_clip* gclip) {
 	clipView.set(gclip?gclip->m_clip:NULL);
 	view->ctr_clipeditor.showEditClip();
 }
+void copyClipsInRange(trackcontents_t* in, track_clipboard_t& out, int32_t srcPos, int32_t dstPos, int32_t len) {
+
+	auto it = in->clips.cbegin();
+	while (it != in->clips.cend()) {
+		const clip_t* c = *it;
+		if (c->time+c->len > srcPos && c->time < srcPos+len) {
+			clip_t clone(*c);
+			if (c->time < srcPos && c->time + c->len > srcPos) {
+				cutClipLeft(&clone, srcPos - c->time);
+			}
+			if (c->time < srcPos + len && c->time + c->len > srcPos + len) {
+				cutClipRight(&clone, (c->time + c->len) - (srcPos+len));
+			}
+			out.clips.push_back(make_shared<clip_t>(move(clone)));
+		}
+		it++;
+	}
+	stable_sort(out.clips.begin(), out.clips.end(), [](
+			shared_ptr<clip_t> const & a, shared_ptr<clip_t> const & b) {
+		return a->time < b->time;
+	});
+//	if (clips.size() > 1) {
+//		if (!(clips[0]->start() < clips[1]->start())) {
+//			for (int i = 0; i < clips.size(); i++) {
+//				my_printf("clip[%d] = %d\n", i, clips[i]->start());
+//			}
+//		}
+//		assert(clips[0]->start() < clips[1]->start());
+//	}
+//	out->sortClips();
+}
 clip_clipboard* MainCtrl::copySelection(const Cursor& _cursor) {
 	int32_t tickBegin = _cursor.getTickBegin();
 	int32_t tickEnd = _cursor.getTickEnd();
@@ -1445,14 +1444,14 @@ clip_clipboard* MainCtrl::copySelection(const Cursor& _cursor) {
 	clipboard->selTrackRange = trackEnd - trackBegin;
 	clipboard->selRange = tickEnd - tickBegin;
 	for (int i = 0; i <= clipboard->selTrackRange; i++) {
-		trackcontents_t* contents = new trackcontents_t();
+		track_clipboard_t trackClipboard;
 		if (trackList.validTrackIdx(trackBegin + i)) {
 			track_t* tr = trackList[trackBegin + i];
 			if (tr->type == TRACK_TYPE_MIDI) {
-				copyClipsInRange(tr, contents, clipboard->srcPos, 0, clipboard->selRange);
+				copyClipsInRange(tr, trackClipboard, clipboard->srcPos, 0, clipboard->selRange);
 			}
 		}
-		clipboard->tracks.push_back(contents);
+		clipboard->tracks.push_back(make_shared<track_clipboard_t>(move(trackClipboard)));
 	}
 	return clipboard;
 }

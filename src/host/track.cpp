@@ -321,8 +321,6 @@ void track_t::releaseTrackContent() {
 		}
 	}
 }
-void track_t::updateTrackContent() {
-}
 void trackcontents_t::deleteEmptyClips() {
 	//TODO: makes this more efficient (merge inserting and sorting if possible)
 	std::vector<clip_t*> clipList;

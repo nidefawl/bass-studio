@@ -9,6 +9,7 @@
 #include "color_util.h"
 #include "platform.h"
 #include "grid.h"
+
 class guitrack_timeline : public guictr_base, grid_changed_cb {
 	scaled_grid& grid;
 public:

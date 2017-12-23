@@ -59,6 +59,7 @@ public:
 			view.cursor = cursorBefore;
 			view.copySelectedNoteList();
 		}
+		clip->setDirty();
 	}
 	void redo(MainCtrl* ctrl) {
 		track_t* tr = ctrl->getTracks()[trackIdx];
@@ -73,6 +74,7 @@ public:
 			view.cursor = cursorAfter;
 			view.copySelectedNoteList();
 		}
+		clip->setDirty();
 	}
 };
 class guictxtmenu_noteeditor : public guictxtmenu_base {
@@ -764,6 +766,7 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
 		const clip_notes_t notesBefore = notes; // copy
 		clip_cursor_t cursorBefore = cursor; // copy
 		bool handled = false;
+		bool edit = false;
 		String desc = "???";
 		if (kevt.type == K_PRESS) {
 			if (isKC(KC_SELECTALL, kevt)) {
@@ -777,6 +780,7 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
 			if (isKC(KC_DELETE, kevt) && !notes.selection.empty()) {
 				notes.deleteSelectedNotes(notes);
 				handled = true;
+				edit = true;
 				desc = "Delete notes";
 			}
 			else if (isKC(KC_CUT, kevt) && !notes.selection.empty()) {
@@ -784,6 +788,7 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
 				view.clipboard.setTo(notes.selection, -cursor.start);
 				notes.deleteSelectedNotes(notes);
 				handled = true;
+				edit = true;
 				desc = "Cut notes";
 			}
 			else if (isKC(KC_COPY, kevt) && !notes.selection.empty()) {
@@ -817,6 +822,7 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
 				if (pair.second)
 					grid.makeTickVisible(pair.second->end());
 				handled = true;
+				edit = true;
 				desc = "Duplicate notes";
 			}
 			else if (isKC(KC_PASTE, kevt) && !view.clipboard.empty()) {
@@ -834,6 +840,7 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
 				if (pair.second)
 					grid.makeTickVisible(pair.second->end());
 				handled = true;
+				edit = true;
 				desc = "Paste notes";
 			}
 		} else {
@@ -859,14 +866,20 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
 						makeNoteVisible(pair.second->pitch);
 					}
 				}
+				edit = true;
 
 			} else if (dir.x) {
-				tick_t timeOffset = dir.x*grid.getTickLength();
+				tick_t timeOffset = dir.x;
+				tick_t minLen = grid.pixelsToTicks(2);
+				if (!isAlt(kevt.mods)) {
+					minLen = grid.getTickLength();
+				}
+				timeOffset *= minLen;
 				cursor.start += timeOffset;
 				cursor.end += timeOffset;
 				if (!notes.selection.empty()) {
 					if ((kevt.mods & KB_MOD_SHIFT)) {
-						offsetEndTime(view.draggedSelection, timeOffset);
+						offsetEndTime(view.draggedSelection, timeOffset, minLen);
 					} else {
 						offsetStartTime(view.draggedSelection, timeOffset);
 					}
@@ -883,6 +896,7 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
 							grid.makeTickVisible(pair.second->end());
 						}
 					}
+					edit = true;
 				} else {
 					grid.makeTickVisible(cursor.start);
 				}
@@ -890,7 +904,8 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
 			handled = true;
 			desc = "Move notes";
 		}
-		if (notesBefore != notes) {
+		if (edit) {
+			notes.updateBounds();
 			MainCtrl::get()->pushHist(new action_modify_notes(desc, view, notesBefore, cursorBefore));
 			clip->setDirty();
 		}

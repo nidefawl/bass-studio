@@ -53,7 +53,6 @@ public:
 			}
 		}
 		ctrl->cursor = before.cursor;
-		ctrl->updateVisibleTrackContents();
 	}
 	void redo(MainCtrl* ctrl) {
 		ctrl->resetMouseContext();
@@ -68,7 +67,6 @@ public:
 			}
 		}
 		ctrl->cursor = after.cursor;
-		ctrl->updateVisibleTrackContents();
 	}
 };
 
@@ -485,15 +483,8 @@ bool guitrack_editor::clipDropBegin(dragdrop_midifile& clip, ivec2 mousepos) {
 		dragStartTick = tickExact;
 		dragStartTrackIdx = trackClicked->idx;
 
-		trackcontents_t& trackcontent = clip.content;
-		clip_clipboard* clipboard = new clip_clipboard();
-		clipboard->srcPos = 0;
+		clip_clipboard* clipboard = clip.clipboard.get();
 		clipboard->srcTrack = trackClicked->idx;
-		clipboard->selRange = trackcontent.end()-trackcontent.start();
-		clipboard->selTrackRange = 0;
-		//Watch out!! clip.content will get freed from multiple places
-		//TODO: copy the contents
-		clipboard->tracks.push_back(&clip.content);
 
 		action.dragtype = clip_dragtype_t::DROP_FILE_EXTERNAL;
 		action.clipboard = clipboard;
@@ -551,7 +542,7 @@ void guitrack_editor::renderAction(NVGcontext* vg, clip_dragaction& action) {
 	Cursor& cursor = MainCtrl::get()->cursor;
 	clip_clipboard* _clipboard = action.clipboard;
 	for (int i = 0; _clipboard && i <= _clipboard->selTrackRange; i++) {
-		trackcontents_t* trClipboard = _clipboard->tracks[i];
+		track_clipboard_t* trClipboard = _clipboard->tracks[i].get();
 		int32_t trackIdx = _clipboard->srcTrack + i + (cursor.cursorTrack-action.cursorBegin.cursorTrack);
 		if (!project.trackList.validTrackIdx(trackIdx)) {
 			continue;
@@ -560,7 +551,7 @@ void guitrack_editor::renderAction(NVGcontext* vg, clip_dragaction& action) {
 		track_t* tr = project.trackList[trackIdx];
 		if (tr->type == TRACK_TYPE_MIDI) {
 			for (auto it = trClipboard->clips.begin(); it != trClipboard->clips.end(); it++) {
-				clip_t* cl = *it;
+				clip_t* cl = (*it).get();
 				renderClip(vg, tr, cl, (cursor.cursorPos - _clipboard->srcPos));
 			}
 		}

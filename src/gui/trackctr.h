@@ -890,46 +890,48 @@ public:
 		loophandles.render(vg);
 		nvgRestore(vg);
 
-		nvgIntersectScissor(vg, 0, 0, trackView.size.x, cs.y);
-		tick_t pos = project.playbackPos;
-//		if (project.loopEnabled) {
-//			if (pos > project.loopStart) {
-//				pos = project.loopStart + (pos - project.loopStart) % project.loopLen;
-//			}
-//		}
-		float playBackX = (float) grid.tickToScreenD(pos);
-		if (playBackX > -4.0f && playBackX < cs.x + 4.0f) {
-			nvgBeginPath(vg);
-			nvgMoveTo(vg, playBackX, 0);
-			nvgLineTo(vg, playBackX, cs.y);
-			nvgStrokeColor(vg, GUI_COLOR(120));
-			nvgStrokeWidth(vg, 3);
-			nvgStroke(vg);
-			nvgBeginPath(vg);
-			nvgMoveTo(vg, playBackX, 0);
-			nvgLineTo(vg, playBackX, cs.y);
-			nvgStrokeColor(vg, GUI_COLOR(250));
-			nvgStrokeWidth(vg, 1);
-			nvgStroke(vg);
-		}
-//		nvgIntersectScissor(vg, 0, 0, trackView.size.x, trackView.size.y);
-//		nvgTranslate(vg, 0, trackTimeline.bottom());
+		if (trackView.size.x > 0) {
+			nvgIntersectScissor(vg, 0, 0, trackView.size.x, cs.y);
+			tick_t pos = project.playbackPos;
+	//		if (project.loopEnabled) {
+	//			if (pos > project.loopStart) {
+	//				pos = project.loopStart + (pos - project.loopStart) % project.loopLen;
+	//			}
+	//		}
+			float playBackX = (float) grid.tickToScreenD(pos);
+			if (playBackX > -4.0f && playBackX < cs.x + 4.0f) {
+				nvgBeginPath(vg);
+				nvgMoveTo(vg, playBackX, 0);
+				nvgLineTo(vg, playBackX, cs.y);
+				nvgStrokeColor(vg, GUI_COLOR(120));
+				nvgStrokeWidth(vg, 3);
+				nvgStroke(vg);
+				nvgBeginPath(vg);
+				nvgMoveTo(vg, playBackX, 0);
+				nvgLineTo(vg, playBackX, cs.y);
+				nvgStrokeColor(vg, GUI_COLOR(250));
+				nvgStrokeWidth(vg, 1);
+				nvgStroke(vg);
+			}
+	//		nvgIntersectScissor(vg, 0, 0, trackView.size.x, trackView.size.y);
+	//		nvgTranslate(vg, 0, trackTimeline.bottom());
 
-//		double playBackX = grid.tickToScreenD(MainCtrl::get()->playbackPos);
-//		if (playBackX > -4 && playBackX < cs.x+4) {
-//			nvgBeginPath(vg);
-//			nvgMoveTo(vg, playBackX, 0);
-//			nvgLineTo(vg, playBackX, cs.y);
-//			nvgStrokeColor(vg, GUI_COLOR(120));
-//			nvgStrokeWidth(vg, 3);
-//			nvgStroke(vg);
-//			nvgBeginPath(vg);
-//			nvgMoveTo(vg, playBackX, 0);
-//			nvgLineTo(vg, playBackX, cs.y);
-//			nvgStrokeColor(vg, GUI_COLOR(250));
-//			nvgStrokeWidth(vg, 1);
-//			nvgStroke(vg);
-//		}
+	//		double playBackX = grid.tickToScreenD(MainCtrl::get()->playbackPos);
+	//		if (playBackX > -4 && playBackX < cs.x+4) {
+	//			nvgBeginPath(vg);
+	//			nvgMoveTo(vg, playBackX, 0);
+	//			nvgLineTo(vg, playBackX, cs.y);
+	//			nvgStrokeColor(vg, GUI_COLOR(120));
+	//			nvgStrokeWidth(vg, 3);
+	//			nvgStroke(vg);
+	//			nvgBeginPath(vg);
+	//			nvgMoveTo(vg, playBackX, 0);
+	//			nvgLineTo(vg, playBackX, cs.y);
+	//			nvgStrokeColor(vg, GUI_COLOR(250));
+	//			nvgStrokeWidth(vg, 1);
+	//			nvgStroke(vg);
+	//		}
+		}
 	}
 	void setTrackPosition(track_t* t, int32_t trackheight, int32_t y) {
 		t->content->pos.x = 0;

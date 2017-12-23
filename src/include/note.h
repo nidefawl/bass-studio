@@ -85,8 +85,12 @@ inline void offsetStartTime(std::vector<note_t>& notesPtrs, tick_t offset) {
 		note.time += offset;
 	}
 }
-inline void offsetEndTime(std::vector<note_t>& notesPtrs, tick_t offset) {
+inline void offsetEndTime(std::vector<note_t>& notesPtrs, tick_t offset, tick_t minLen) {
 	for (note_t& note : notesPtrs) {
-		note.len += offset;
+		if (note.len + offset < minLen) {
+			note.len = note.len < minLen ? note.len : minLen;
+		} else {
+			note.len += offset;
+		}
 	}
 }
