@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include "str_util.h"
+#include "exceptions.h"
 
 namespace ngui {
 
@@ -14,37 +15,57 @@ namespace ngui {
 		menu_type type;
 		int command;
 		String title;
-		std::vector<Menu*> entries;
+		std::vector<Menu> entries;
+		std::vector<Menu*> children;
 		bool disabled = false;
 		bool checked = false;
 		Menu* parent = NULL;
+	private:
+		Menu& makeChild_() {
+			if (entries.size() == 0) {
+				entries.reserve(16);
+			} else if (entries.capacity()-entries.size() < 1) {
+				throw new applogicexception("out of menu space");
+			}
+			Menu m;
+			entries.push_back(m);
+			return entries.back();
+		}
+	public:
 		void addCommand(int cmd, String title) {
-			Menu* m = new Menu();
-			m->type = menu_type::command;
-			m->command = cmd;
-			m->title = title;
-			add(m);
+			Menu& m = makeChild_();
+			m.type = menu_type::command;
+			m.command = cmd;
+			m.title = title;
+			add(&m);
+		}
+		void remove(Menu* m) {
+			auto it = std::find(children.begin(), children.end(), m);
+			if (it != children.end()) {
+				(*it)->parent = NULL;
+				children.erase(it);
+			}
 		}
 		void addSeperator() {
-			Menu* m = new Menu();
-			m->type = menu_type::seperator;
-			m->command = 0;
-			m->title = "";
-			add(m);
+			Menu& m = makeChild_();
+			m.type = menu_type::seperator;
+			m.command = 0;
+			m.title = "";
+			add(&m);
 		}
 		void add(Menu* m) {
-			entries.push_back(m);
+			children.push_back(m);
 			m->parent = this;
 		}
 		Menu* getByName(String name) {
-			for (Menu* m : entries){
+			for (Menu* m : children){
 				if (m->title == name)
 					return m;
 			}
 			return NULL;
 		}
 		Menu* getByCmd(int cmd) {
-			for (Menu* m : entries){
+			for (Menu* m : children){
 				if (m->type == menu_type::command) {
 					if (m->command == cmd) {
 						return m;

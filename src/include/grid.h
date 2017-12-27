@@ -95,6 +95,19 @@ public:
 		return toObjSpace(screenx, this->zoom, this->offset);
 	}
 	double toObjSpace(double screenx, double _zoom, double _offset) {
+		return _zoom * (screenx + _offset) / 8.0;
+	}
+	double toScreenSpace(double objx) {
+		return toScreenSpace(objx, this->zoom);
+	}
+	double toScreenSpace(double objx, double _zoom) {
+		return 8.0*objx/_zoom;
+	}
+	double calcOffset(double screenx, double objx) {
+		double screenpos = toScreenSpace(objx);
+		return screenpos - screenx;
+	}
+	double toObjSpace2(double screenx, double _zoom, double _offset) {
 		double relx = screenx + _offset;
 		const double stepSize = _zoom * 128;
 		const double scale = 1024.0f;
@@ -102,19 +115,12 @@ public:
 		double objx = relx / barSize;
 		return objx;
 	}
-	double toScreenSpace(double objx) {
-		return toScreenSpace(objx, this->zoom);
-	}
-	double toScreenSpace(double objx, double _zoom) {
+	double toScreenSpace2(double objx, double _zoom) {
 		const double stepSize = _zoom * 128;
 		const double scale = 1024.0f;
 		double barSize = scale / stepSize;
 		double screenx = objx * barSize;
 		return screenx;
-	}
-	double calcOffset(double screenx, double objx) {
-		double screenpos = toScreenSpace(objx);
-		return screenpos - screenx;
 	}
 	tick_t screenToTickSnap(int32_t x, int snap);
 
@@ -134,6 +140,10 @@ public:
 	int32_t pixelsToTicks(int32_t pixels) {
 		double x = toObjSpace(pixels, this->zoom, 0) * TICKS_BAR;
 		return std::max(1, (int32_t)ceil(x));
+	}
+	int32_t pixelsToTicks2(int32_t pixels) {
+		double x = toObjSpace(pixels, this->zoom, 0) * TICKS_BAR;
+		return (int32_t)round(x);
 	}
 	void showRange(tick_t start, tick_t end);
 	void calcLen(int scrollOffsetX, float zoom, int contentWidth);

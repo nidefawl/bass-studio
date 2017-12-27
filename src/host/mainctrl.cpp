@@ -39,6 +39,7 @@
 
 #include "vst_host.h"
 #include "vst_plugin.h"
+#include "leak_detect.h"
 
 using glm::vec2;
 using glm::ivec2;
@@ -60,7 +61,8 @@ ivec2 toControlsObjectSpace(ivec2& pos, guibase* gui) {
 		guibase* b = guiHierachy.back(); guiHierachy.pop_back();
 		posOS = b->toContainerSpace(posOS);
 	}
-	return posOS - gui->pos;
+//	return posOS - gui->pos;
+	return gui->toContainerSpace(posOS);
 }
 void dragdrop_midifile::reset() {
 	if (isLoaded) {
@@ -104,6 +106,12 @@ void testTask() {
 	}
 
 }
+extern "C" {
+
+int getNumMsg();
+int getMsgId(int i);
+int getMsgCnt(int i);
+}
 class gui_ctr_debug : public guictr_base {
 	guiknob knobTest;
 public:
@@ -146,9 +154,34 @@ public:
 		strings.push_back(StringFormat("BlockSize: %u", vsthost::getInstance()->lBlockSize));
 		strings.push_back(StringFormat("blockReads: %u", vsthost::getInstance()->blockReads));
 		strings.push_back(StringFormat("bufferUnderuns: %u", vsthost::getInstance()->bufferUnderuns));
+		strings.push_back(StringFormat("numCallsWaitEvents: %u", ctrl->numCallsWaitEvents));
+
+
 		track_t* track = ctrl->getTrackId(0);
 		if (track && track->audio) {
 			strings.push_back(StringFormat("level: %.4f", track->audio->meter.getRms(0)));
+		}
+		struct win32_msg {
+				int id;
+				int cnt;
+			};
+			std::vector<win32_msg> msgs;
+			for (int i = 0; i < getNumMsg(); i++) {
+				int id = getMsgId(i);
+				int cnt = getMsgCnt(i);
+				msgs.push_back({id, cnt});
+
+
+			}
+		std::sort(msgs.begin(), msgs.end(), [](win32_msg const & a, win32_msg const & b) {
+			if (a.cnt == b.cnt) {
+				return a.id < b.id;
+			}
+			return a.cnt > b.cnt;
+		});
+		for (win32_msg& msg : msgs) {
+			strings.push_back(StringFormat("WM_ 0x%04X: %d", msg.id, msg.cnt));
+
 		}
 		int x = 5;
 		setFont(vg, 20, G_WHITE, NVG_ALIGN_BOTTOM|NVG_ALIGN_LEFT);
@@ -292,6 +325,7 @@ void MainCtrl::destroy()
 	}
 	setSelectedTrack(NULL);
 	hist.clear();
+	view->ctr_tracks.trackView.clipboard.reset();
 	settings.dens = grid.grid_dens;
 	vector<track_t*> trList = trackList.vec(); // iterate a copy
 	for (track_t* track : trList) {
@@ -351,6 +385,9 @@ void MainCtrl::updateMenubar() {
 		redo->disabled = true;
 		redo->title = menuName("Redo", KC_REDO);
 	}
+}
+void MainCtrl::onWindowCloseRequest() {
+	stopPlaying();
 }
 void MainCtrl::onMenuOpen(ngui::Menu* menu) {
 	updateMenubar();
@@ -1122,7 +1159,7 @@ void MainCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos) {
 //	}
 	guiOver = evt.getGuiHit();
 }
-void MainCtrl::insertNewTrack(int trackInsertPos, int trackType) {
+track_t* MainCtrl::insertNewTrack(int trackInsertPos, int trackType) {
 	assert(trackType >= 0 && trackType < NUM_TRACK_TYPES);
 	int32_t trTypeIdx = trackTypeCtrs[trackType]->size() + 1;
 
@@ -1159,6 +1196,7 @@ void MainCtrl::insertNewTrack(int trackInsertPos, int trackType) {
 
 
 	addTrack(trackInsertPos, newTrack);
+	return newTrack;
 }
 
 class action_modify_addtrack : public action_base {
@@ -1277,6 +1315,9 @@ void ContextCtrl::render(int32_t x, int32_t y, int32_t w, int32_t h, float ratio
 	}
 	nvgRestore(vg);
 	nvgEndFrame(vg);
+}
+void ContextCtrl::destroy() {
+	isOK = false;
 }
 
 bool ContextCtrl::init(window_overlay* _window, NVGcontext* nanovg)
@@ -1438,13 +1479,13 @@ void copyClipsInRange(trackdata_midi_t& in, track_clipboard_t& out, int32_t srcP
 //	}
 //	out->sortClips();
 }
-clip_clipboard* MainCtrl::copySelection(const Cursor& _cursor) {
+shared_ptr<clip_clipboard> MainCtrl::copySelection(const Cursor& _cursor) {
 	int32_t tickBegin = _cursor.getTickBegin();
 	int32_t tickEnd = _cursor.getTickEnd();
 	int32_t trackBegin = _cursor.getTrackBegin();
 	int32_t trackEnd = _cursor.getTrackEnd();
 
-	clip_clipboard* clipboard = new clip_clipboard();
+	shared_ptr<clip_clipboard> clipboard = make_shared<clip_clipboard>();
 	clipboard->srcPos = tickBegin;
 //	clipboard->dstPos = tickBegin;
 	clipboard->srcTrack = trackBegin;

@@ -7,6 +7,7 @@
 #include "grid.h"
 #include "guicontextmenu.h"
 #include "track_audiodata.h"
+#include "leak_detect.h"
 
 class action_modify_notes : public action_base {
 protected:

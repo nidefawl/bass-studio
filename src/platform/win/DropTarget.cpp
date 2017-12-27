@@ -210,4 +210,5 @@ void UnregisterDropWindow(HWND hwnd, DropTarget* pDropTarget) {
 	// release our own reference
 	pDropTargetImpl->Release();
 	delete pDropTarget;
+	delete pDropTargetImpl;
 }

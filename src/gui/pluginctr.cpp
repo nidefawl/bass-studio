@@ -15,6 +15,9 @@
 #include "renderresources.h"
 #include "logging.h"
 #include "list.h"
+#include "track.h"
+#include "guicontextmenu.h"
+#include "leak_detect.h"
 
 using glm::vec2;
 using glm::ivec2;
@@ -114,25 +117,83 @@ void guiplugin::buttonClicked(guibase* _button) {
     	vsthost::getInstance()->unloadPlugin(vst);
 	}
 }
+class guictxtmenu_vstparam : public guictxtmenu_base {
+	static const int32_t ID_DELETE = 1;
+	static const int32_t ID_CREATE = 2;
+	static const int32_t ID_REENABLE = 3;
+	vstplugin* const vst;
+	vst_param* const entry;
+public:
+	guictxtmenu_vstparam(vstplugin* _vst, vst_param* _entry) : vst(_vst), entry(_entry)
+	{
+		this->size.x = 240;
+		automated_param_t* param = _vst->getRegisteredAutomation(_entry->idx);
+		if (param) {
+			if (!param->src->isActive()) {
+				add(new ctxtmenu_entry("Reenable Automation", ID_REENABLE));
+			}
+			add(new ctxtmenu_entry("Delete Automation", ID_DELETE));
+		} else {
+			add(new ctxtmenu_entry("Create Automation Track", ID_CREATE));
+		}
+		layout();
+	}
+	void clicked(int _id) {
+		switch (_id) {
+		case ID_CREATE:
+		{
+
+			track_t* track = MainCtrl::get()->insertNewTrack(-1, TRACK_TYPE_AUTOMATION);
+			trackdata_automation_t& automation = track->getAutomation();
+			automated_param_t& target = automation.target;
+			target.paramIdx = entry->idx;
+			target.src = &automation.src;
+			target.ref = &automation;
+			target.plugin = NULL;
+			vst->registerAutomationSrc(target);
+		}
+			break;
+		case ID_DELETE:
+			break;
+		case ID_REENABLE:
+			break;
+		}
+		MainCtrl::get()->closeContextMenu();
+	}
+};
+
 class gui_plugin_paramlist_entry : public gui_list_entry {
 
 	const float spacing = INSET_TITLE;
 public:
+	vstplugin* const vst;
 	vst_param* const entry;
 	guiknob knobTest;
-	gui_plugin_paramlist_entry(vstplugin* _vst, vst_param* _entry) : gui_list_entry(), entry(_entry), knobTest(false) {
+	gui_plugin_paramlist_entry(vstplugin* _vst, vst_param* _entry)
+		: gui_list_entry(),
+		  vst(_vst),
+		  entry(_entry),
+		  knobTest(false)
+	{
 		icon = 0;
-		knobTest.fnGetValue = [_vst, _entry] () {
-			return _vst->getParamValue(_entry);
+		const int32_t paramIdx = _entry->idx;
+		knobTest.fnGetValue = [_vst, paramIdx] () {
+			return _vst->getParamValue(paramIdx);
 		};
-		knobTest.fnSetValue = [_vst, _entry] (float f) {
-			return _vst->setParamValue(_entry, f);
+		knobTest.fnSetValue = [_vst, paramIdx] (float f) {
+			return _vst->setParamValue(paramIdx, f);
 		};
 	}
-	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
+	void handleRightClick(MouseEvent& evt) override {
+		MainCtrl::get()->openContextMenu(new guictxtmenu_vstparam(vst, entry), evt.mousepos);
+	}
+	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
 		if (this->contains(mpos)) {
-			if (knobTest.mouseHitTest(mpos, evt)) {
-				return true;
+			if (evt.type != MouseHitType::MOUSE_RIGHT)
+			{
+				if (knobTest.mouseHitTest(mpos, evt)) {
+					return true;
+				}
 			}
 			evt.requestFocus(this);
 			return true;

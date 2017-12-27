@@ -5,6 +5,7 @@
 #include "str_util.h"
 //#include "../vst_sdk_2.4/aeffectx.h"
 #include "vst_window.h"
+#include "automation.h"
 
 class vsthost;
 struct AudioBlock;
@@ -26,6 +27,7 @@ enum vst_param_flags
 	ParamIsAdvanced				 = 1 << 31	///< set if parameter value can ramp up/down
 //-------------------------------------------------------------------------------------------------------
 };
+
 union param_step_fi {
 	float valFloat;
 	int32_t valInt;
@@ -54,6 +56,7 @@ struct vst_param {
 	//if kVstParameterSupportsDisplayCategory
 	int16_t category;			///< 0: no category, else group index + 1
 };
+
 class vstplugin {
 public:
 	String sName;
@@ -71,6 +74,7 @@ public:
 	handles_t* const handle;
 	std::vector<vst_param_category> paramsCategories;
 	std::vector<vst_param> params;
+	std::vector<automated_param_t> automatedParams;
 
 	std::vector<String> inputNames;
 	std::vector<String> outputNames;
@@ -113,7 +117,12 @@ public:
 	void unload();
 	void load(vsthost* host);
 	vst_param_category* getCategory(int idx);
-	vst_param* getParam(int idx);
-	float getParamValue(vst_param* param);
-	void setParamValue(vst_param* param, float val);
+	vst_param* getParam(int32_t idx);
+	float getParamValue(int32_t idx);
+	void setParamValue(int32_t idx, float val);
+	automated_param_t* getRegisteredAutomation(int32_t idx);
+	void registerAutomationSrc(automated_param_t& p);
+	void unregisterAutomationSrc(automated_param_t& p);
+	void updateAutomatedParameters(tick_t pos);
 };
+

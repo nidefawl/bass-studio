@@ -114,14 +114,12 @@ protected:
     float mTextOffset;
     double mLastClick;
 protected:
-
     bool mVisible;
     bool mEnabled;
     std::string mTooltip;
     bool mFocused;
     float mFontSize;
     bool mMouseFocus;
-    guitheme_t* mTheme;
 public:
 
 	virtual bool hovered() {

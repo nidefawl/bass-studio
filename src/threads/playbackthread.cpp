@@ -81,6 +81,8 @@ public:
 		t = std::thread([this]() {
 			this->run();
 		});
+		HANDLE h = t.native_handle();
+		SetThreadPriority(h, THREAD_PRIORITY_TIME_CRITICAL);
 	}
 	void join() {
 		assert(t.joinable());
@@ -178,6 +180,10 @@ private:
             bool inLoop = tickPos >= ctrl->loopStart && tickPos < ctrl->loopStart+ctrl->loopLen
             		&& state == status_play && ctrl->loopEnabled;
 
+            //this is stupid
+//			if (state != status_play) {
+//				tickPos = ctrl->cursor.cursorPos;
+//			}
             int32_t processedBlock;
             {
             	ThreadLock lock = this->lockThread();

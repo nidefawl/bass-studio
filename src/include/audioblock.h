@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <memory.h>
 #include <stdlib.h>
+#include <assert.h>
 #include "seq_math.h"
 
 struct AudioBlock {
@@ -23,6 +24,7 @@ struct AudioBlock {
 				free(buf[i]);
 			}
 		}
+		delete[] buf;
 	};
 	void clear() {
 		for (uint32_t i = 0; i < channels; i++) {

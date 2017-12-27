@@ -9,12 +9,14 @@
 #include "clip.h"
 #include "grid.h"
 #include "guicontainer.h"
+#include "leak_detect.h"
 
-#define DRAG_RANGE 10
+
 class gui_clip : public guibase {
 public:
 	clip_t* const m_clip;
 	track_t* const m_track;
+	bool culled = true;
 	gui_clip(clip_t* _clip, track_t* _track)
 		: guibase(),
 		  m_clip(_clip),
@@ -39,25 +41,36 @@ public:
 			mpos.y < pos.y + HEIGHT_CLIP_TITLE;
 	}
 	void render(NVGcontext* vg) {
-		renderClip(vg, m_track, m_clip, pos, size);
+		if (!culled) {
+			renderClip(vg, m_track, m_clip, pos, size);
+		}
 	}
 	static void renderClip(NVGcontext* vg, const track_t* tr, const clip_t* cl, ivec2 pos, ivec2 size);
-	static void getClipPosition(scaled_grid& grid, const clip_t* cl, ivec2& pos, ivec2& size, tick_t offset) {
+	static bool getClipPosition(scaled_grid& grid, const ivec2& trackSize, const clip_t* cl, ivec2& pos, ivec2& size, tick_t offset) {
 		tick_t tickBegin = cl->time + offset;
 		tick_t tickEnd = cl->time + offset + cl->len;
 		double tickBeginX = grid.tickToScreenD(tickBegin);
 		double tickEndX = grid.tickToScreenD(tickEnd);
+		if (tickEndX < -4 || tickBeginX > trackSize.x + 4) {
+			return false;
+		}
 		double width = tickEndX - tickBeginX;
+		assert(FitsTypeRange<int32_t>(tickBeginX));
+		assert(FitsTypeRange<int32_t>(tickEndX));
 		int32_t tickBeginPx = (int32_t) round(tickBeginX);
 		int32_t widthPx = (int32_t) round(width);
 		pos = ivec2(tickBeginPx, INSET_TRACK_CONTENT);
 		size = ivec2(widthPx, size.y-INSET_TRACK_CONTENT*2);
+		return true;
 	}
-	void updatePosition(scaled_grid& grid) {
+	void updatePosition(scaled_grid& grid, ivec2& trackSize) {
 		size = this->parent->size;
-		getClipPosition(grid, m_clip, pos, size, 0);
+		culled = !getClipPosition(grid, trackSize, m_clip, pos, size, 0);
 	}
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
+		if (culled) {
+			return false;
+		}
 		if (isLeftDragZone(mpos)) {
 			if (evt.type <= MouseHitType::MOUSE_RIGHT)
 				evt.requestCursor(CURSOR_CLIP_SIZE_LEFT);
@@ -106,38 +119,49 @@ public:
 		return true;
 	}
 };
-class gui_trackcontent : public guictr_base {
+class gui_track : public guictr_base {
 public:
 	track_t* const m_track;
-	trackdata_midi_t& midi;
-	gui_trackcontent(track_t* _track)
-		: guictr_base(),
-		m_track(_track), midi(m_track->getMidi()) {
+	gui_track(track_t* _track) : guictr_base(), m_track(_track) {
 		padding = 0;
+	}
+	virtual ~gui_track() {
+
 	}
 	bool isStaticContainer() {
 		return false;
 	}
-	void render(NVGcontext* vg) {
+	bool handleKeyInput(KeyEvent& kevt) override {
+		return parent->handleKeyInput(kevt);
+	}
+
+	virtual void handleDraggedBegin(MouseEvent& evt) override {
+		MainCtrl::get()->setSelectedTrack(m_track);
+		evt.relMousepos += getPosContent();
+		parent->handleDraggedBegin(evt);
+	}
+
+	void handleDraggedMove(MouseEvent& evt) override {
+		evt.relMousepos += getPosContent();
+		parent->handleDraggedMove(evt);
+	}
+
+	void handleDraggedRelease(MouseEvent& evt) override {
+		evt.relMousepos += getPosContent();
+		parent->handleDraggedRelease(evt);
+	}
+
+	void handleRightClick(MouseEvent& evt) override;
+
+	virtual void render(NVGcontext* vg) override {
 		if (MainCtrl::get()->getSelectedTrack() == m_track) {
 			nvgBeginPath(vg);
 			nvgRect(vg, pos.x, pos.y, size.x, size.y);
 			nvgFillColor(vg, g_guiColors[COL_BG_SELECTEDTRACK]);
 			nvgFill(vg);
 		}
-		if (!setScissorTransform(vg)) {
-			return;
-		}
-//		nvgTranslate(vg, pos.x, pos.y);
-		for (clip_t* clip : midi.clips) {
-			if(!clip->gClip) {
-				continue;
-			}
-			clip->gClip->render(vg);
-		}
 	}
-
-	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
+	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
 		if (this->contains(mpos)) {
 			ivec2 localMouse = this->toContainerSpace(mpos);
 			for (guibase* gui : guis) {
@@ -154,38 +178,78 @@ public:
 					return true;
 				}
 			}
+			// tracks need to always cancel further mouse tests for z-order to work in parent container
+			return true;
 		}
 		return false;
 	}
-	bool handleKeyInput(KeyEvent& kevt) {
-		return parent->handleKeyInput(kevt);
-	}
-	void handleRightClick(MouseEvent& evt);
+	virtual void updateVisibleTrackContents(scaled_grid& grid) {
 
-	void updateVisibleTrackContents(scaled_grid& grid) {
-		for (clip_t* clip : midi.clips) {
-//			gui_clip* gClip = clip->gClip;
-			if(!clip->gClip) {
-				clip->gClip = new gui_clip(clip, m_track);
-				add(clip->gClip);
-			}
-			clip->gClip->updatePosition(grid);
-		}
+	}
+};
+class gui_track_controls: public guictr_base {
+	int dragMode = -1;
+	const int resizeHitY = 8;
+	const int DRAG_RESIZE = 1;
+public:
+	track_t* const m_track;
+	gui_track_controls(track_t* _track) :
+			guictr_base(), m_track(_track) {
+
+	}
+	virtual ~gui_track_controls() {
+	}
+	bool isStaticContainer() {
+		return false;
 	}
 	void handleDraggedBegin(MouseEvent& evt) {
 		MainCtrl::get()->setSelectedTrack(m_track);
-		evt.relMousepos += pos;
-		parent->handleDraggedBegin(evt);
+		if (isResize(evt.relMousepos+this->pos)) {
+			dragMode = DRAG_RESIZE;
+		}
 	}
 
 	void handleDraggedMove(MouseEvent& evt) {
-		evt.relMousepos += pos;
-		parent->handleDraggedMove(evt);
+		if (dragMode == DRAG_RESIZE) {
+			int32_t mouseDragDist = evt.relMousepos.y;
+			bool resizeTop = m_track->type < TRACK_TYPE_MIDI;
+			if (resizeTop) {
+				mouseDragDist = -evt.relMousepos.y+size.y;
+			}
+			m_track->height = min(12, max(1, (mouseDragDist) / TRACK_HEIGHT_STEP));
+			my_printf("%d %d %d %d \n", resizeTop, mouseDragDist, m_track->height, (mouseDragDist) / TRACK_HEIGHT_STEP);
+			this->parent->onChildLayoutChanged(this);
+		}
 	}
 
 	void handleDraggedRelease(MouseEvent& evt) {
-		evt.relMousepos += pos;
-		parent->handleDraggedRelease(evt);
+		dragMode = -1;
+	}
+	void handleRightClick(MouseEvent& evt);
+	bool isResize(ivec2 mpos) {
+		int32_t resizeTopOrBottom = m_track->type < TRACK_TYPE_MIDI ? top() : bottom();
+		return mpos.y >= resizeTopOrBottom - resizeHitY
+				&& mpos.y < resizeTopOrBottom + resizeHitY;
+	}
+
+	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
+		if (contains(mpos)) {
+			ivec2 local = this->toContainerSpace(mpos);
+			for (guibase* gui : guis) {
+				if (gui->mouseHitTest(local, evt)) {
+					return true;
+				}
+			}
+			evt.requestFocus(this);
+			return true; // always need to return true if contained, parent has z-order
+		}
+		if (isResize(mpos)) {
+			evt.requestFocus(this);
+			if (evt.type <= MouseHitType::MOUSE_RIGHT)
+				evt.requestCursor(CURSOR_RESIZE_V);
+			return true;
+		}
+		return false;
 	}
 };
 

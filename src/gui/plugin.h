@@ -9,6 +9,7 @@
 #include "renderresources.h"
 #include "list.h"
 #include "knob.h"
+#include "leak_detect.h"
 
 using glm::vec2;
 using glm::ivec2;

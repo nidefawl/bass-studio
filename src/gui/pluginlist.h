@@ -9,6 +9,7 @@
 #include "textfield.h"
 #include "list.h"
 #include "../host/plugindatabase.h"
+#include "leak_detect.h"
 
 using glm::vec2;
 using glm::ivec2;

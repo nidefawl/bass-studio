@@ -159,10 +159,10 @@ void saveSettings(appsettings& _settings) {
 appsettings settings;
 class appwindow : protected DropTargetListener {
 private:
-	UINT_PTR timer = 0;
 	std::vector<appwindow*> children;
 	uint64_t last = 0;
 protected:
+	UINT_PTR timer = 0;
 	char name[32];
 	int cursorIcon = CURSOR_DEFAULT;
 	DropTarget* dropTarget = NULL;
@@ -195,7 +195,12 @@ public:
 	}
 
 	/* FROM GLFW CALLBACKS */
-	virtual void onWindowClose() = 0;
+	virtual void onWindowClose() {
+		my_printf("on window close\n", 0);
+		if (timer && hwnd) {
+			KillTimer(hwnd, this->timer);
+		}
+	}
 	virtual void onRefresh() = 0;
 	virtual void onKeyInput(int key, int scancode, int action, int mods, const char* key_name) = 0;
 	virtual void onMouseMoved(ivec2 deltapos) {
@@ -216,7 +221,7 @@ public:
 	}
 
 
-	virtual void updateWindow() = 0;
+	virtual void onTick() = 0;
 
 	virtual void hideSystemCursor() {
 		glfwSetInputMode(glfw, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
@@ -317,7 +322,7 @@ public:
 
 		case WM_COMMAND:
 			menuCommand(LOWORD(wParam));
-			break;
+			return 0;
 		case WM_INITMENUPOPUP:
 		{
 			HMENU hmenuPopup = (HMENU) wParam; // handle of submenu
@@ -334,7 +339,7 @@ public:
 
 			}
 		}
-			break;
+		return 0;
 		default:
 			break;
 
@@ -375,6 +380,7 @@ class appwindow_main : public appwindow, public window_main  {
 	uint64_t tm_lastfps;
 	String fpsStats;
 public:
+	appwindow_overlay* overlayWindow = NULL;
 	appwindow_main(MainCtrl* _ctrl)
 		: appwindow(),
 		  window_main(),
@@ -406,9 +412,11 @@ public:
 	void destroy() {
 		if (!glfw)
 			throw appexception("window null");
+		UnregisterDropWindow(hwnd, this->dropTarget);
 		settings.size = windowsize(hwnd);
 	}
-	void updateWindow() {
+	void onTick() {
+		PREVENT_REENTRANT("REENTRANT IN onTick")
 //		flagNeedsRedraw();
 		ctrl->onTick();
 	}
@@ -506,6 +514,8 @@ public:
 
 	void onWindowClose() 
 	{
+		appwindow::onWindowClose();
+		ctrl->onWindowCloseRequest();
 	}
 	bool filesDropBegin(std::vector<String>& files, ivec2 pos) {
 		flagNeedsRedraw();
@@ -625,8 +635,9 @@ public:
 	}
 	void onWindowClose()
 	{
+		appwindow::onWindowClose();
 	}
-	void updateWindow() {
+	void onTick() {
 	//	uint64_t tm = getTimeMillis();
 	//	float f = (float)(tm / 1000.0);
 	//	this->rgb[1] = 0.2f + sin(f*2.0f)*0.1f;
@@ -760,11 +771,12 @@ public:
 	}
 	void onWindowClose()
 	{
+		appwindow::onWindowClose();
 		EnableWindow(parent->getHWND(), TRUE);
 		glfwDestroyWindow(glfw);
 		this->parent->onChildClose(this);
 	}
-	void updateWindow() {
+	void onTick() {
 	//	uint64_t tm = getTimeMillis();
 	//	float f = (float)(tm / 1000.0);
 	//	this->rgb[1] = 0.2f + sin(f*2.0f)*0.1f;
@@ -827,7 +839,7 @@ void appwindow_main::create(const char* title, int w, int h) {
 
 	this->dropTarget = RegisterDropWindow(hwnd, this);
 
-	appwindow_overlay* overlayWindow = new appwindow_overlay(this);
+	this->overlayWindow = new appwindow_overlay(this);
 	String sName = StringFormat("%s menu", this->name);
 	overlayWindow->create(StringAsCStr(sName), 200, 200);
 	if (settings.size.valid) {
@@ -979,7 +991,7 @@ static VOID WIN32API_CALLBACK_TYPE timerProc(HWND hwnd, UINT uMsg, UINT_PTR idEv
 	if (impl == NULL) {
 		return;
 	}
-	impl->updateWindow();
+	impl->onTick();
 	EXC_CATCH
 
 }
@@ -1062,22 +1074,25 @@ int mainHost() {
 	GLFWwindow* glfwHandle = mainWindow->getGLFW();
 	while (!glfwWindowShouldClose(glfwHandle)) {
 		glfwWaitEvents();
+		ctrl->numCallsWaitEvents++;
 	}
 	audiohost->stopAudio();
 	mainWindow->destroy();
 	audiohost->unload();
 	ctrl->destroy();
 	audiohost->destroy();
+	ContextCtrl::get()->destroy();
 
 	// I _want_ to use smart pointers, but eclipse cdt doesn't want me to
 
 	glfwTerminate();
 	saveSettings(settings);
+	DELETE_PTR(mainWindow->overlayWindow);
 	DELETE_PTR(mainWindow);
+	DELETE_PTR(audiohost);
 	DELETE_PTR(ctrl);
 	EXC_CATCH
 	printLeaked();
-
 	exit(EXIT_SUCCESS);
 	OleUninitialize();
 	return 0;

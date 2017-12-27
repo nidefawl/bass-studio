@@ -89,3 +89,7 @@ template<typename C1, typename V1>
 	}
 	return -1;
 }
+template <typename T, typename U>
+    inline bool FitsTypeRange(const U value) {
+        return value >= std::numeric_limits<T>::min()  && value <= std::numeric_limits<T>::max() ;
+    }

@@ -278,6 +278,7 @@ public:
 		return false;
 	}
 	void layout() {
+		//TODO: figure out string width here to make life easier laying out context menus
 		int y = 2;
 		for (ctxtmenu_entry* e : entries) {
 			e->y = y;

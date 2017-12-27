@@ -234,17 +234,54 @@ vst_param_category* vstplugin::getCategory(int idx) {
 	}
 	return NULL;
 }
-float vstplugin::getParamValue(vst_param* param) {
-	assert(getParam(param->idx) == param);
-	if (param->idx >= 0 && param->idx < params.size()) {
-		return handle->aeffect->getParameter(handle->aeffect, param->idx);
+float vstplugin::getParamValue(int32_t idx) {
+	if (idx >= 0 && idx < params.size()) {
+		return handle->aeffect->getParameter(handle->aeffect, idx);
 	}
 	return 0;
 }
-void vstplugin::setParamValue(vst_param* param, float val) {
-	assert(getParam(param->idx) == param);
-	if (param->idx >= 0 && param->idx < params.size()) {
-		handle->aeffect->setParameter(handle->aeffect, param->idx, val);
+void vstplugin::setParamValue(int32_t idx, float val) {
+	if (idx >= 0 && idx < params.size()) {
+		handle->aeffect->setParameter(handle->aeffect, idx, val);
+	}
+}
+automated_param_t* vstplugin::getRegisteredAutomation(int32_t idx) {
+	auto it = std::find_if(automatedParams.begin(), automatedParams.end(), [idx](automated_param_t& ap) {
+		return ap.paramIdx == idx;
+	});
+	if (it != automatedParams.end()) {
+		return &(*it);
+	}
+	return NULL;
+}
+void vstplugin::registerAutomationSrc(automated_param_t& p) {
+	assert(getParam(p.paramIdx));
+	auto it = std::find_if(automatedParams.begin(), automatedParams.end(), [&p](automated_param_t& ap) {
+		return ap.paramIdx == p.paramIdx;
+	});
+	if (it != automatedParams.end()) {
+		automated_param_t& ap = * it;
+		assert(ap.ref);
+		ap.ref->breakReference();
+		ap = p;
+		return;
+	}
+	automatedParams.push_back(p);
+	p.ref->setReference(this);
+}
+void vstplugin::unregisterAutomationSrc(automated_param_t& p) {
+	assert(getParam(p.paramIdx));
+	auto it = std::find_if(automatedParams.begin(), automatedParams.end(), [&p](automated_param_t& ap) {
+		return ap.paramIdx == p.paramIdx && ap.src == p.src;
+	});
+	if (it != automatedParams.end()) {
+		automatedParams.erase(it);
+	}
+}
+void vstplugin::updateAutomatedParameters(tick_t pos) {
+	for (automated_param_t& param : automatedParams) {
+		float val = param.src->getValueAt(pos);
+		setParamValue(param.paramIdx, val);
 	}
 }
 vst_param* vstplugin::getParam(int idx) {

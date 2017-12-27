@@ -19,6 +19,7 @@
 #include "platform.h"
 #include "dsp_util.h"
 #include "track_audiodata.h"
+#include "leak_detect.h"
 
 //inline const float lvlFloor = -48.0f;
 //inline const float lvlCeil = 6.0f;
@@ -33,6 +34,7 @@ float inline scaledRange(float db, float lvlFloor, float lvlCeil) {
 }
 int32_t getPosYFirstReturnTrack(project_t& project);
 track_t *getTrackFromMouse(project_t& project, ivec2 mouse, bool isDragSnap);
+gui_track* createTrackGui(track_t* t); // trackcontent.cpp
 
 class gui_trackgain: public guibase {
 	track_t* const m_track;
@@ -156,8 +158,6 @@ public:
 	}
 };
 class gui_trackmeter: public guibase {
-#define TRACK_HEIGHT_STEP 20
-#define TRACK_HEIGHT_SPACING 2
 public:
 	track_t* const m_track;
 	gui_trackmeter(track_t* _track) :
@@ -238,132 +238,7 @@ public:
 		nvgStroke(vg);
 	}
 };
-class gui_trackmixer: public guictr_base {
-#define TRACK_HEIGHT_STEP 20
-#define TRACK_HEIGHT_SPACING 2
-public:
-	track_t* const m_track;
-	gui_trackmeter meter;
-	gui_trackgain gain;
-	int dragMode = -1;
-	const int resizeHitY = 8;
-	const int DRAG_RESIZE = 1;
-	gui_trackmixer(track_t* _track) :
-			guictr_base(), m_track(_track), meter(_track), gain(_track) {
-		padding = 0;
-		add(&gain);
-		add(&meter);
-	}
-	~gui_trackmixer() {
-		remove(&meter);
-		remove(&gain);
-	}
-	bool isStaticContainer() {
-		return false;
-	}
-	void handleDraggedBegin(MouseEvent& evt) {
-		MainCtrl::get()->setSelectedTrack(m_track);
-		if (isResize(evt.relMousepos+this->pos)) {
-			dragMode = DRAG_RESIZE;
-		}
-	}
 
-	void handleDraggedMove(MouseEvent& evt) {
-		if (dragMode == DRAG_RESIZE) {
-			int32_t mouseDragDist = evt.relMousepos.y;
-			bool resizeTop = m_track->type < TRACK_TYPE_MIDI;
-			if (resizeTop) {
-				mouseDragDist = -evt.relMousepos.y+size.y;
-			}
-			m_track->height = min(12, max(1, (mouseDragDist) / TRACK_HEIGHT_STEP));
-			my_printf("%d %d %d %d \n", resizeTop, mouseDragDist, m_track->height, (mouseDragDist) / TRACK_HEIGHT_STEP);
-			this->parent->onChildLayoutChanged(this);
-		}
-	}
-
-	void handleDraggedRelease(MouseEvent& evt) {
-		dragMode = -1;
-	}
-	void handleRightClick(MouseEvent& evt) {
-		MainCtrl::get()->openContextMenu(new guictxtmenu_track(this->m_track->idx), evt.mousepos);
-	}
-	bool isResize(ivec2 mpos) {
-		int32_t resizeTopOrBottom = m_track->type < TRACK_TYPE_MIDI ? top() : bottom();
-		return mpos.y >= resizeTopOrBottom - resizeHitY
-				&& mpos.y < resizeTopOrBottom + resizeHitY;
-	}
-
-	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-		ivec2 local = this->toContainerSpace(mpos);
-		for (guibase* gui : guis) {
-			if (gui->mouseHitTest(local, evt)) {
-				return true;
-			}
-		}
-		if (contains(mpos)) {
-			evt.requestFocus(this);
-			return true;
-		}
-		if (isResize(mpos)) {
-			evt.requestFocus(this);
-			if (evt.type <= MouseHitType::MOUSE_RIGHT)
-				evt.requestCursor(CURSOR_RESIZE_V);
-			return true;
-		}
-		return false;
-	}
-	void layout() {
-		float mW = 20;
-		meter.size = ivec2(mW, size.y);
-		meter.pos = ivec2(size.x - mW, 0);
-		gain.size = ivec2(120, mW);
-		gain.pos = ivec2(INSET_TITLE, HEIGHT_TRACK_TITLE + INSET_TITLE);
-
-	}
-
-	void render(NVGcontext* vg) {
-		if (!setScissorTransform(vg)) {
-			return;
-		}
-		NVGcolor color = rgbToNvg(m_track->rgb);
-		ivec2 titleSize(size.x-meter.size.x, size.y);
-		nvgBeginPath(vg);
-		nvgRect(vg, 0, 0, size.x, size.y);
-		nvgFillColor(vg, g_guiColors[COL_GRID_BRT]);
-		nvgFill(vg);
-		if (MainCtrl::get()->getSelectedTrack() == m_track) {
-			nvgFillColor(vg, g_guiColors[COL_BG_SELECTEDTRACK]);
-			nvgFill(vg);
-			color = G_BLACK;
-		}
-		int titleHeight = min(HEIGHT_TRACK_TITLE, size.y);
-		nvgBeginPath(vg);
-		nvgRect(vg, 0, 0, titleSize.x, titleHeight);
-		nvgFillColor(vg, color);
-		nvgFill(vg);
-		setFont(vg, (int) (titleHeight * 0.8), getContrastFontColorNvg(color), G_TITLE_ALIGN);
-		renderText(vg, 0 + INSET_TITLE, 0 + titleHeight / 2, titleSize.x, StringAsCStr(m_track->name));
-
-
-		//debug stuff
-//		size_t nClips = m_track->clips.size();
-//		auto it = m_track->clips.begin();
-//		size_t nGuiClips = 0;
-//		size_t nGuiClips2 = m_track->content->guis.size();
-//		while (it != m_track->clips.end()) {
-//			clip_t* c = *it;
-//			if (c->gClip != NULL)
-//				nGuiClips++;
-//			it++;
-//		}
-//		String s = StringFormat("%u (%u/%u) Clips", nClips, nGuiClips, nGuiClips2);
-//		setFont(vg, (int) (titleHeight * 0.6), getContrastFontColor(m_track->rgb), G_TITLE_ALIGN);
-//		nvgText(vg, 0 + INSET_TITLE, pos.y + titleHeight+titleHeight, StringAsCStr(s), NULL);
-
-		meter.render(vg);
-		gain.render(vg);
-	}
-};
 
 class guitrack_editor : public guictr_base {
 public:
@@ -373,7 +248,7 @@ public:
 	dragdrop_midifile& dragdrop;
 	track_t *trSelected = NULL;
 	clip_dragaction action;
-	clip_clipboard* clipboard = NULL;
+	std::shared_ptr<clip_clipboard> clipboard;
 	tracklayout_t dragStartLayout;
 	int32_t dragStartTick = 0;
 	int32_t dragStartTrackIdx = 0;
@@ -400,6 +275,8 @@ public:
 			ivec2 localMouse = this->toContainerSpace(v);
 			for (guibase* gui : guis) {
 				if (gui->mouseHitTest(localMouse, evt)) {
+					if (!evt.getGuiHit()) // respect z-order, not an actual hit
+						break;
 					return true;
 				}
 			}
@@ -431,6 +308,11 @@ public:
 
 
 	void handleDraggedBegin(MouseEvent& evt) {
+		if (evt.type == MouseEventType::M_EVT_DOUBLECLICK) {
+			if (evt.guiDragged->trackViewDoubleClick(this, evt)) {
+				return;
+			}
+		}
 		evt.guiDragged->trackViewDragBegin(this, evt);
 	}
 	void handleDraggedMove(MouseEvent& evt) {
@@ -451,9 +333,21 @@ public:
 	void addTrack(track_t* t) {
 		if (t->content)
 			throw applogicexception("expected t->content == NULL");
-		t->content = new gui_trackcontent(t);
+		t->content = createTrackGui(t);
 		t->content->setZOrder(t->type >= TRACK_TYPE_MIDI ? 0 : 1);
 		add(t->content);
+#ifndef NDEBUG
+		for (guibase* child : guis) {
+			gui_track* t = dynamic_cast<gui_track*>(child);
+			assert(t);
+		}
+		int idx = 0;
+		for (guibase* child : guis) {
+			gui_track* t = dynamic_cast<gui_track*>(child);
+			my_printf("idx %d = %s\n", idx, StringAsCStr(t->m_track->name));
+			idx++;
+		}
+#endif
 	}
 	void removeTrack(track_t* t) {
 		if (t->content) {
@@ -474,6 +368,8 @@ public:
 	}
 };
 
+gui_track_controls* createTrackGuiMixer(track_t* t); // trackcontent.cpp
+
 class guitrack_mixers : public guictr_base {
 	project_t& project;
 public:
@@ -489,6 +385,8 @@ public:
 			ivec2 localMouse = this->toContainerSpace(v);
 			for (guibase* gui : guis) {
 				if (gui->mouseHitTest(localMouse, evt)) {
+					if (!evt.getGuiHit()) // respect z-order, not an actual hit
+						break;
 					return true;
 				}
 			}
@@ -537,7 +435,7 @@ public:
 	void addTrack(track_t* t) {
 		if (t->mixer)
 			throw applogicexception("expected t->mixer == NULL");
-		t->mixer = new gui_trackmixer(t);
+		t->mixer = createTrackGuiMixer(t);
 		t->mixer->setZOrder(t->type >= TRACK_TYPE_MIDI ? 0 : 1);
 		this->add(t->mixer);
 	}

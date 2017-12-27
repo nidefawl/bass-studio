@@ -1,7 +1,10 @@
 .ONESHELL:
+EDEV := E:/dev/libs
+
 TARGET_EXEC ?= run/DAW.exe
 TARGET_SCANNER_EXEC ?= run/plugin_scan.exe
 COMPILER = clang
+BUILD_TYPE ?= DEBUG
 
 ifeq ($(COMPILER),clang)
 CXX = clang++ -target x86_64-pc-windows-gnu
@@ -12,15 +15,12 @@ CC = gcc
 endif
 
 AS = as
-EDEV := E:/dev/libs
 BUILD_DIR ?= build
-
-
 SRC_DIR ?= src
 SRC_TESTS_DIR ?= $(SRC_DIR)/test
 EXCLUDE_PATHS := test res
 #EXCLUDE_PATHS_ARG := $(EXCLUDE_PATHS:%=-and ! -path "$(SRC_DIR)/%/*")
-EXCLUDE_PATHS_ARG := -and ! -path "$(SRC_DIR)/test/test.cpp"
+EXCLUDE_PATHS_ARG := -and ! -path "$(SRC_DIR)/test/*"
 #$(info EXCLUDE_PATHS_ARG="$(EXCLUDE_PATHS_ARG)")
 
 SRCS := $(shell find $(SRC_DIR) -type f \( -name *.cpp -or -name *.c -or -name *.s \) $(EXCLUDE_PATHS_ARG))
@@ -62,17 +62,22 @@ $(EDEV)/nvwa
 INC_FLAGS := $(addprefix -isystem ,$(INC_DIRS)) -iquote $(SRC_DIR)/include
 
 ifeq ($(COMPILER),clang)
-LIB_DIRS += $(EDEV)/glfw_mingw64/lib \
-$(EDEV)/SQLiteCpp_clang/lib
+	LIB_DIRS += $(EDEV)/glfw_mingw64_dbg/lib \
+	$(EDEV)/SQLiteCpp_clang/lib
 else
-LIB_DIRS += $(EDEV)/glfw_mingw64/lib \
-$(EDEV)/SQLiteCpp/lib
+	LIB_DIRS += $(EDEV)/glfw_mingw64_dbg/lib \
+	$(EDEV)/SQLiteCpp/lib
 endif
-#-Ofast
-OPTIMIZATION_LVL ?= -O0
-DEBUG_FLAGS ?= -g
+
+ifeq ($(BUILD_TYPE),RELEASE)
+	OPTIMIZATION_LVL ?= -O2
+	DEBUG_FLAGS ?= -DNDEBUG
+else
+	OPTIMIZATION_LVL ?= -O0
+	DEBUG_FLAGS ?= -g
+endif
 LD_FLAGS := $(addprefix -L,$(LIB_DIRS)) -lglfw3 -lwinmm -lkernel32 -lgdi32 -lole32 -luuid -lcomdlg32 -lSQLiteCpp -lsqlite3
-LD_FLAGS += $(OPTIMIZATION_LVL) -Wall $(DEBUG_FLAGS)
+LD_FLAGS += $(OPTIMIZATION_LVL) -Wall $(DEBUG_FLAGS) 
 #LD_FLAGS := libs.o -lole32
 #-DTEST_PROJECT=1 
 NO_WARNINGS := -Wno-inconsistent-missing-override
@@ -87,6 +92,7 @@ tests.exe: $(OBJS_TEST)
 	$(CXX) $(OBJS_TEST) $(LD_FLAGS) -o $@ 
 
 $(TARGET_EXEC): $(OBJS_MAIN)
+	@echo "LINK: $@"
 	$(CXX) $(OBJS_MAIN) $(LD_FLAGS) -o $@ 
 
 $(TARGET_SCANNER_EXEC): $(OBJS_SCANNER)
@@ -104,13 +110,17 @@ $(BUILD_DIR)/%.c.o: $(SRC_DIR)/%.c
 	@$(CC) $(CFLAGS) -c $< -o $@
 
 # c++ source
+#####@echo "$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $@"
 $(BUILD_DIR)/%.cpp.o: $(SRC_DIR)/%.cpp
 	@echo "Compile: ${COMPILER}++ $@"
+	
 	@$(MKDIR_P) $(dir $@)
 	@$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
 
 
 .PHONY: all clean link scanner
+.DEFAULT_GOAL := $(TARGET_EXEC)
+
 
 link:
 	rm -f $(BUILD_DIR)/$(TARGET_EXEC)

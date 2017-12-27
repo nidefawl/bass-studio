@@ -5,6 +5,7 @@
 #include "audioblock.h"
 #include "samplerate.h"
 #include "note.h"
+#include "leak_detect.h"
 
 struct VstEvent_t;
 

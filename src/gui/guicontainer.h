@@ -51,6 +51,7 @@ public:
 	virtual ivec2 paddingBR(int _padding) {
 		return ivec2(_padding - margin*snapSides.z, _padding - margin*snapSides.w);
 	}
+	//TODO: cache this and remove method
 	virtual ivec2 getPosContent() {
 		return pos + paddingTL(padding);
 	}

@@ -28,6 +28,7 @@
 #ifdef __MINGW32__
 #include "../threads/mingw.mutex.h"
 #endif
+#include "leak_detect.h"
 
 //#define DBG_PRINT_CALLBACKS
 #ifdef DBG_PRINT_CALLBACKS
@@ -298,6 +299,7 @@ String getModuleName(HMODULE module);
 class vsthost::ModuleManager {
     std::mutex m_mtx;
 	std::vector<UnloadModule> modules;
+	int32_t cnt = 0;
 	const uint64_t timeout = 1500;
 public:
 	ModuleManager() {
@@ -307,8 +309,11 @@ public:
 	    std::unique_lock<std::mutex> lock(m_mtx);
 		UnloadModule ulModule{getTimeMillis(), module};
 		modules.push_back(ulModule);
+		cnt++;
 	}
 	void onTick() {
+		if (!cnt)
+			return;
 	    std::unique_lock<std::mutex> lock(m_mtx);
 		auto it = modules.begin();
 		while (it != modules.end()) {
@@ -324,6 +329,19 @@ public:
 		}
 	}
 };
+
+
+AudioBuffer* allocateBuffer() {
+	AudioBuffer* buffer = (AudioBuffer*) aligned_malloc(sizeof(AudioBuffer), 128);
+	buffer->output = new AudioBlock(OUTPUT_CHANNELS, 1);
+	buffer->input = new AudioBlock(OUTPUT_CHANNELS, 1);
+	buffer->submitted = false;
+	std::atomic_init(&buffer->inUse, false);
+	return buffer;
+}
+vsthost::~vsthost() {
+	delete moduleMgr;
+}
 vsthost::vsthost(project_globals_t& _project, uint32_t _sampleRate, uint16_t _blockSize)
 	: moduleMgr{new vsthost::ModuleManager{}},
 	  project(_project),
@@ -332,6 +350,9 @@ vsthost::vsthost(project_globals_t& _project, uint32_t _sampleRate, uint16_t _bl
 	  numChannels(OUTPUT_CHANNELS)
 {
 	memset(&timeinfo, 0, sizeof(timeinfo));
+	for (int i = 0; i < RING_BUF_SIZE; i++) {
+		ringbuffer.buffers[i] = allocateBuffer();
+	}
 	updateTime(0, 0, playback_state::status_stop);
 }
 //\note VstTimeInfo::samplesToNextClock :
@@ -381,16 +402,6 @@ void vsthost::updateTime(int32_t samplePos, tick_t pos, playback_state state) {
 	setFlag(timeinfo.flags, kVstClockValid, true);
 
 }
-AudioBuffer* allocateBuffer() {
-	AudioBuffer* buffer = (AudioBuffer*) aligned_malloc(sizeof(AudioBuffer), 128);
-	buffer->output = new AudioBlock(OUTPUT_CHANNELS, 1);
-	buffer->input = new AudioBlock(OUTPUT_CHANNELS, 1);
-	buffer->submitted = false;
-	std::atomic_init(&buffer->inUse, false);
-	return buffer;
-}
-#define BUF_SIZE 16
-#define BUF_MASK (BUF_SIZE-1)
 
 void vsthost::sendNotesOff(vstplugin* plugin) {
 	handles_t* handles = plugin->handle;
@@ -404,18 +415,12 @@ void vsthost::sendNotesOff(vstplugin* plugin) {
 int32_t vsthost::processPlayback(int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround) {
 	double since = timer.getTimeDoubleReset();
 	MainCtrl* ctrl = MainCtrl::get(); //TODO: still not synchronized.
-	static int readPos = 0;
-	static int writePos = 0;
 //	static AudioBuffer* master = allocateBuffer();
 //	master->input->realloc(lBlockSize);
 //	master->output->realloc(lBlockSize);
-
-	static AudioBuffer* buffers[BUF_SIZE] = { 0 };
-	if (!buffers[0]) {
-		for (int i = 0; i < BUF_SIZE; i++) {
-			buffers[i] = allocateBuffer();
-		}
-	}
+	int32_t& readPos = ringbuffer.readPos;
+	int32_t& writePos = ringbuffer.writePos;
+	AudioBuffer** buffers = ringbuffer.buffers;
 	while (stream != NULL) {
 		AudioBuffer* buffer = buffers[readPos];
 		if (!buffer->submitted || buffer->inUse) {
@@ -423,26 +428,34 @@ int32_t vsthost::processPlayback(int32_t sample, double posDouble, playback_stat
 		}
 		buffer->submitted = false;
 		readPos++;
-		readPos &= BUF_MASK;
+		readPos &= RING_BUF_MASK;
 	}
 	int nBlocksProcessed = 0;
 	const double ticksPerBlock = toTickPrecise(lBlockSize/(double)lSampleRate, project.tempo100);
+
+#ifndef NDEBUG
+
 	static double lastTickEndPos = 0;
 	static playback_state lastState = playback_state::status_stop;
+#endif
 	if (stream != NULL) {
 		/*
 		 * We try to stay 4 blocks ahead of the audiothread read position
 		 * This should be adjusted depending on samplerate and blocksize
 		 */
-		int readWriteDist = writePos >= readPos ? writePos-readPos : writePos-(readPos-BUF_SIZE);
+		int readWriteDist = writePos >= readPos ? writePos-readPos : writePos-(readPos-RING_BUF_SIZE);
 		if (readWriteDist < 8) {
-
+#ifndef NDEBUG
 		if (!isLoopAround&&state == playback_state::status_play && lastState == playback_state::status_play) {
 			assert(posDouble == lastTickEndPos);
 		}
 		lastState = state;
+#endif
 		tick_t pos = floor(posDouble);
 		updateTime(sample, pos, state);
+		for (vstplugin* plugin : this->list) {
+			plugin->updateAutomatedParameters(pos);
+		}
 		int32_t samplePosBlockEnd = sample + lBlockSize;
 		int32_t tickBlockEnd = floor(posDouble + ticksPerBlock);
 		assert(tickBlockEnd-pos < ceil(ticksPerBlock+1));
@@ -527,12 +540,14 @@ int32_t vsthost::processPlayback(int32_t sample, double posDouble, playback_stat
 		}
 		sample = samplePosBlockEnd;
 		posDouble += ticksPerBlock;
+#ifndef NDEBUG
 		lastTickEndPos = posDouble;
+#endif
 //		dsp_util::fillSqare(fSampleRate, 440, bufferWrite->master->f, bufferWrite->master->samples);
 		bufferWrite->submitted = true;
 		bufferWrite->inUse = true;
 		writePos++;
-		writePos &= BUF_MASK;
+		writePos &= RING_BUF_MASK;
 		audioQueue.enqueue(bufferWrite);
 		nBlocksProcessed++;
 		}
@@ -551,8 +566,6 @@ void vsthost::onStreamEnd() {
 	while (audioQueue.try_dequeue(block)) {
 		block->inUse = false;
 	}
-	DELETE_PTR(blockTemp);
-	DELETE_PTR(blockTemp2);
 }
 void vsthost::onStartPlayback(int32_t block) {
 	blockReads = block;
@@ -673,6 +686,14 @@ void vsthost::unload() {
 	unloadAllPlugins();
 }
 void vsthost::destroy() {
+	for (int i = 0; i < RING_BUF_SIZE; i++) {
+		if (ringbuffer.buffers[i]) {
+			delete ringbuffer.buffers[i]->input;
+			delete ringbuffer.buffers[i]->output;
+			aligned_free(ringbuffer.buffers[i]);
+			ringbuffer.buffers[i] = nullptr;
+		}
+	}
 }
 bool vsthost::startAudio() {
 	my_printf("startAudio\n", 0);
@@ -750,8 +771,6 @@ bool vsthost::startAudio() {
 	err = Pa_StartStream(paStream);
 	if (err != paNoError)
 		return error("Pa_StartStream", err);
-	blockTemp = new AudioBlock(OUTPUT_CHANNELS, this->lBlockSize * 1);
-	blockTemp2 = new AudioBlock(OUTPUT_CHANNELS, this->lBlockSize * 1);
 	this->stream = paStream;
 	return true;
 }
@@ -790,6 +809,7 @@ vstplugin* vsthost::getPlugin(AEffect* aeffect) {
 	return NULL;
 }
 void vsthost::unloadPlugin(vstplugin* plugin) {
+	ContextCtrl::get()->close(); // Make sure context controls do not reference vst
 	plugin->close();
 	auto it = std::find(list.begin(), list.end(), plugin);
 	if (it != list.end()) {

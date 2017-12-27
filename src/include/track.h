@@ -12,16 +12,23 @@
 #include "str_util.h"
 #include "logging.h"
 #include "project.h"
+#include "automation.h"
 
 #define TRACK_TYPE_MASTER 0
 #define TRACK_TYPE_RETURN 1
 #define TRACK_TYPE_MIDI 2
 #define TRACK_TYPE_AUTOMATION 3
 #define NUM_TRACK_TYPES 4
+
+
+#define DRAG_RANGE 10
+#define TRACK_HEIGHT_STEP 20
+#define TRACK_HEIGHT_SPACING 2
+
 const char* TrackTypeToName(int type);
 struct track_plugins_t;
-class gui_trackcontent;
-class gui_trackmixer;
+class gui_track;
+class gui_track_controls;
 class delete_cb;
 class trackdata_midi_t;
 class track_t;
@@ -29,8 +36,149 @@ using track_vector = std::vector<track_t*>;
 void deleteTrackContents(trackdata_midi_t* tr, delete_cb *cb);
 void deleteTrack(track_t* tr, delete_cb *cb);
 void deleteClip(clip_t* cl, delete_cb *cb);
-struct trackdata_automation_t {
+struct automation_point_t {
+	tick_t time;
+	float val;
+};
+inline void simplifyData(std::vector<automation_point_t>& data) {
+//	data.erase( std::unique( data.begin(), data.end(), [](automation_point_t const & a, automation_point_t const & b) {
+//
+//		return a.time == b.time && a.val == b.val;
+//	} ), data.end() );
 
+	//remove multiple points on same time
+	{
+
+		auto first = data.begin();
+		auto last = data.end();
+	    if (first != last) {
+	        for(auto i = first; i != last; ++i) {
+	        	tick_t firstTime = (*i).time;
+	        	my_printf("copy %d to %d\n", i-data.begin(), first-data.begin());
+	            *first++ = std::move(*i);
+	            for(auto j = i + 2; j < last;  ++j) {
+	            	if (firstTime != (*j).time) {
+	                	my_printf("inner break at %d\n", (j)-data.begin());
+						i = j - 2;
+	            		break;
+	            	}
+	            }
+	        }
+	        data.erase(first, last);
+	    }
+	}
+    {
+
+        //remove multiple consecutive points with same value
+    	auto first = data.begin();
+    	auto last = data.end();
+        if (first != last) {
+            for(auto i = first; i != last; ++i) {
+            	float firstVal = (*i).val;
+            	my_printf("copy vals %d to %d\n", i-data.begin(), first-data.begin());
+                *first++ = std::move(*i);
+                auto j = i + 2;
+                for(; j < last;  ++j) {
+                	if (firstVal != (*j).val) {
+                		break;
+                	}
+                }
+            	my_printf("skip %d values\n", (j-2)-i);
+				i = j - 2;
+            }
+            data.erase(first, last);
+        }
+    }
+}
+inline int32_t indexOfTick(std::vector<automation_point_t>& dataPoints, tick_t tick) {
+	int32_t idx;
+	for (idx = 0; idx < dataPoints.size(); idx++) {
+		automation_point_t& pt = dataPoints[idx];
+		if (pt.time > tick) {
+			break;
+		}
+	}
+	return idx;
+}
+inline int32_t addPointAt(std::vector<automation_point_t>& dataPoints, tick_t tick) {
+	int32_t idx;
+	for (idx = 0; idx < dataPoints.size(); idx++) {
+		automation_point_t& pt = dataPoints[idx];
+		if (pt.time > tick) {
+			break;
+		}
+	}
+	if (!dataPoints.empty()) {
+		if (idx > 0 && idx < dataPoints.size()) {
+			automation_point_t& pt2 = dataPoints[idx];
+			automation_point_t& pt1 = dataPoints[idx-1];
+			assert(tick>=pt1.time && tick <= pt2.time);
+			tick_t tickDist = pt2.time-pt1.time;
+			float pr = (tick-pt1.time)/(float)tickDist;
+			float v = pt1.val+pr*(pt2.val-pt1.val);
+			dataPoints.insert(dataPoints.begin()+idx, {tick, v});
+		} else if (idx > 0) {
+			automation_point_t& pt1 = dataPoints[idx-1];
+			dataPoints.insert(dataPoints.begin()+idx, {tick, pt1.val});
+		}
+		return idx;
+	} else {
+		dataPoints.insert(dataPoints.begin(), {tick, 0});
+	}
+	return 0;
+}
+class automation_src_track : public param_automation_src_t {
+public:
+	std::vector<automation_point_t>& points;
+	float current = 0;
+	automation_src_track(std::vector<automation_point_t>& _points) : param_automation_src_t(), points(_points) {
+	}
+	bool isActive() override {
+		return true;
+	}
+	float getValueAt(tick_t tick) override {
+		if (points.size()) {
+			int32_t idx = indexOfTick(points, tick);
+			assert(idx <= points.size());
+			if (idx == points.size())
+				return points.back().val;
+			if (idx > 0) {
+				automation_point_t& pt1 = points[idx-1];
+				automation_point_t& pt2 = points[idx];
+				assert(tick>=pt1.time && tick <= pt2.time);
+				tick_t tickDist = pt2.time-pt1.time;
+				float pr = (tick-pt1.time)/(float)tickDist;
+				return pt1.val+pr*(pt2.val-pt1.val);
+			}
+			return points.front().val;
+		}
+		return current;
+	}
+};
+class vstplugin;
+struct trackdata_automation_t: public plugin_reference_t {
+	std::vector<automation_point_t> points;
+	automated_param_t target;
+	automation_src_track src;
+	float dummy = 0;
+	trackdata_automation_t()
+		: plugin_reference_t(), src(points)
+	{
+	}
+	~trackdata_automation_t() {
+		//notify vstplugin
+	}
+	void breakReference() override {
+		target = automated_param_t();
+	}
+	void setReference(vstplugin* plugin) override {
+		target.plugin = plugin;
+	}
+	vstplugin* getTargetPlugin() {
+		return target.plugin;
+	}
+	float getDstValue();
+	void setDstValue(float f);
 };
 class trackdata_midi_t {
 public:
@@ -128,12 +276,17 @@ struct clip_layout_t {
 struct trackstate_t {
 	track_vector tracks;
 	Cursor cursor;
-	trackstate_t get() {
-		trackstate_t t = *this;
-		tracks.clear();
-		return t;
+	trackstate_t copy();
+	trackstate_t() {
 	}
+	trackstate_t(const trackstate_t& ref) = delete;
+	trackstate_t& operator=(const trackstate_t& ref) = delete;
+	trackstate_t(trackstate_t&& ref) = default;
+	trackstate_t& operator=(trackstate_t&& ref) = default;
 	~trackstate_t() {
+		for (track_t* track : tracks) {
+			deleteTrack(track, NULL);
+		}
 	}
 	void reset() {
 		for (track_t* track : tracks) {
@@ -223,6 +376,9 @@ public:
 	trackdata_midi_t& getMidi() {
 		return midi;
 	}
+	trackdata_automation_t& getAutomation() {
+		return automation;
+	}
 	tick_minmax_t getMinMaxEvents() {
 		tick_t evtMin = INVALID_TICK;
 		tick_t evtMax = INVALID_TICK;
@@ -259,10 +415,14 @@ public:
 		type = obj.type;
 		height = obj.height;
 		rgb = obj.rgb;
+		content = NULL;
+		mixer = NULL;
+		audio = NULL;
+		scrolloffset = 0;
 	}
 	void releaseTrackContent();
-	gui_trackcontent* content = NULL;
-	gui_trackmixer* mixer = NULL;
+	gui_track* content = NULL;
+	gui_track_controls* mixer = NULL;
 	track_plugins_t* audio = NULL;
 	int scrolloffset = 0;
 };

@@ -4,6 +4,7 @@
 #include <iostream>
 #include <nanovg.h>
 #include "theme.h"
+#include "leak_detect.h"
 
 
 gui_textfield::gui_textfield()
@@ -28,7 +29,6 @@ gui_textfield::gui_textfield()
       mTextOffset(0),
       mLastClick(0), mVisible(true), mEnabled(true),
       mFocused(false), mFontSize(28.0f), mMouseFocus(false) {
-	mTheme = new guitheme_t();
 //    if (mTheme) mFontSize = mTheme->mTextBoxFontSize;
 //    mIconExtraScale = 0.8f;// widget override
 }
@@ -239,10 +239,10 @@ void gui_textfield::render(NVGcontext* ctx) {
             break;
     }
 
-    nvgFontSize(ctx, fontSize());
-    nvgFillColor(ctx, mEnabled && (!mCommitted || !mValue.empty()) ?
-        mTheme->mTextColor :
-        mTheme->mDisabledTextColor);
+	nvgFontSize(ctx, fontSize());
+	NVGcolor mTextColor = GUI_COLORA(5, 160);
+	NVGcolor mDisabledTextColor = GUI_COLORA(255, 80);
+    nvgFillColor(ctx, mEnabled && (!mCommitted || !mValue.empty()) ? mTextColor : mDisabledTextColor);
 
     // clip visible text area
     float clipX = pos.x + xSpacing + spinArrowsWidth - 1.0f;

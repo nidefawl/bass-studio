@@ -16,6 +16,7 @@
 #include "logging.h"
 #include "mainctrl.h"
 #include "../gui/pluginctr.h"
+#include "leak_detect.h"
 
 #define ERROR_LOG(x) (my_printf("ERROR: %s\n", x))
 
@@ -47,6 +48,10 @@ void deleteTrack(track_t* tr, delete_cb *cb) {
 	if (tr->content) {
 		delete (tr->content);
 	}
+	if (tr->audio) {
+		delete (tr->audio);
+	}
+	my_printf("DELETE TRACK %08X\n", (uint64_t) tr);
 	delete tr;
 }
 
@@ -210,7 +215,7 @@ void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin) {
 	}
 	ps.params.reserve(plugin->params.size());
 	for (vst_param& param : plugin->params) {
-		float val = plugin->getParamValue(&param);
+		float val = plugin->getParamValue(param.idx);
 		param_snapshot_t t{param.idx, val};
 		ps.params.push_back(t);
 	}
@@ -283,8 +288,9 @@ void tracksubcontainer_t::loadPlugins(trackcontainer_snapshot_t& in) {
 
 					const std::vector<param_snapshot_t>& pluginSnapshotParams = pluginSnapshot.params;
 					for (const param_snapshot_t& param : pluginSnapshotParams) {
-						vst_param* pluginParam = plugin->getParam(param.idx);
-						plugin->setParamValue(pluginParam, param.val);
+						if (plugin->getParam(param.idx)) {
+							plugin->setParamValue(param.idx, param.val);
+						}
 					}
 					host->insertNewPlugin(trackLoaded->audio, plugin, pluginSnapshot.slot);
 				}
@@ -326,6 +332,20 @@ void trackdata_midi_t::getNotesInRange(tick_t start, tick_t end, tick_t cutStart
 		clip->getInTimeRange(start, end, cutStart, cutEnd, notes);
 	}
 
+}
+float trackdata_automation_t::getDstValue() {
+	vstplugin* plugin = target.plugin;
+	if (plugin) {
+		return plugin->getParamValue(target.paramIdx);
+	}
+	return dummy;
+}
+void trackdata_automation_t::setDstValue(float f) {
+	dummy = f;
+	vstplugin* plugin = target.plugin;
+	if (plugin) {
+		return plugin->setParamValue(target.paramIdx, f);
+	}
 }
 
 vstplugin* track_plugins_t::setInstrument(vstplugin* _instrument) {
@@ -603,6 +623,14 @@ void track_plugins_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick
 
 //	return NULL;
 
+}
+trackstate_t trackstate_t::copy() {
+	trackstate_t t;
+	for (track_t* track : tracks) {
+		t.tracks.push_back(new track_t(*track));
+	}
+	tracks.clear();
+	return t;
 }
 
 const char* trackTypeNames[4] = {

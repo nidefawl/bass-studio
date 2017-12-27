@@ -76,7 +76,7 @@ enum clip_dragtype_t {
 };
 struct clip_dragaction {
 	clip_dragtype_t dragtype = DRAG_NONE;
-	clip_clipboard *clipboard = NULL;
+	std::shared_ptr<clip_clipboard> clipboard;
 	Cursor cursorBegin;
 };
 struct dragdrop_midifile {
@@ -100,6 +100,7 @@ public:
 		static ContextCtrl ctrl;
 		return &ctrl;
 	}
+	void destroy();
 	bool isOk() const {
 		return isOK;
 	}
@@ -185,6 +186,7 @@ class MainCtrl : public delete_cb, public project_t
 	int32_t lastHoveredTrackTicks = 0;
 	seq_rand rand;
 public:
+	int32_t numCallsWaitEvents = 0;
 	window_main* mainWindow = NULL;
 	static MainCtrl* get();
 	static PlaybackThread* getPlayThread() {
@@ -255,6 +257,7 @@ public:
     bool filesDropFinal(std::vector<String>& files, ivec2 pos);
 	void menuCommand(int cmd);
 	void onMenuOpen(ngui::Menu* menu);
+	void onWindowCloseRequest();
 	void updateMenubar();
 	void closeContextMenu();
 	void onTick();
@@ -279,7 +282,7 @@ public:
 	void showClipEditor();
 	bool isClipEditorVisible();
 	bool isPluginViewVisible();
-	void insertNewTrack(int trackInsertPos, int trackType);
+	track_t* insertNewTrack(int trackInsertPos, int trackType);
 	void updateGrid();
 	void updateVisibleTrackContents();
 	void setStatusText(String s);
@@ -327,7 +330,7 @@ public:
 		}
 		return t;
 	}
-	clip_clipboard* copySelection(const Cursor& cursor);
+	std::shared_ptr<clip_clipboard> copySelection(const Cursor& cursor);
 	void pasteClipboard(clip_clipboard* c, int32_t trackOffset, tick_t tickOffset);
 	void cutSelection(const Cursor& cursor);
 	void cutIntersecting(track_t* tr, clip_t* mask);

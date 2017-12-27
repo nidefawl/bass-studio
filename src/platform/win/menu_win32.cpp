@@ -31,7 +31,7 @@ void syncMenuEntry(bool disabledALL, HMENU menuParent, ngui::Menu* menu, int idx
 	    	hMenu = GetSubMenu(menuParent, hMenuIdx);
 	    }
 	    int idxSub = 0;
-		for (ngui::Menu* entry : menu->entries) {
+		for (ngui::Menu* entry : menu->children) {
 		    syncMenuEntry(disabledALL, hMenu, entry, idxSub++);
 		}
 		if (regMenu2) {
@@ -102,7 +102,7 @@ void syncMenu(HWND hwnd, ngui::MenuBar& menubar) {
 	}
 	bool disabledALL = menubar.disableAll;
 	int idx = 0;
-    for (ngui::Menu* menu : menubar.entries) {
+    for (ngui::Menu* menu : menubar.children) {
     	syncMenuEntry(disabledALL, hMenubar, menu, idx);
     	idx++;
     }

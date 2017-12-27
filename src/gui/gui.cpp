@@ -2,6 +2,7 @@
 #include "gui.h"
 #include "platform.h"
 #include "seq_util.h"
+#include "leak_detect.h"
 
 NVGcolor g_guiColors[24];
 NVGcolor g_colorPalette[COLOR_PALETTE_LEN];

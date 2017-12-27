@@ -13,6 +13,7 @@
 #include "grid.h"
 #include "keyboard.h"
 #include "edithistory.h"
+#include "leak_detect.h"
 
 #define PIANO_COLOR_WHITE rgbToNvg(0xffffff)
 #define PIANO_COLOR_BLACK rgbToNvg(0x111111)

@@ -15,6 +15,7 @@
 #include "guicontextmenu.h"
 #include "mouse.h"
 #include "logging.h"
+#include "leak_detect.h"
 
 class action_modify_track : public action_base {
 protected:
@@ -23,9 +24,9 @@ protected:
 public:
 	action_modify_track() : action_base() {
 	}
-	action_modify_track(String description, trackstate_t _tracks) : action_base() {
+	action_modify_track(String description, trackstate_t&& _tracks) : action_base() {
 		desc = description;
-		before = _tracks;//std::move(_tracks);
+		before = std::move(_tracks);
 	}
 
 	void undo(MainCtrl* ctrl) {
@@ -185,14 +186,13 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 			else if (isKC(KC_DUPLICATE, kevt) && cursor.getRange()) {
 				project.trackList.copyTracks(cursor.getTrackBegin(), cursor.getTrackEnd(), resizePreModifyState);
 				resizePreModifyState.cursor = cursor;
-				clip_clipboard* clipboard = MainCtrl::get()->copySelection(cursor);
+				std::shared_ptr<clip_clipboard> clipboard = MainCtrl::get()->copySelection(cursor);
 				cursor.setLeftAligned();
 				cursor.cursorPos += cursor.getRange();
-				MainCtrl::get()->pasteClipboard(clipboard,
+				MainCtrl::get()->pasteClipboard(clipboard.get(),
 						cursor.cursorTrack,
 						cursor.cursorPos);
 				grid.makeTickVisible(cursor.cursorPos+clipboard->selRange);
-				delete clipboard;
 				handledKeyinput = true;
 				modified = true;
 				desc = "Duplicate clips";
@@ -202,7 +202,7 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 				resizePreModifyState.cursor = cursor;
 				cursor.setLeftAligned();
 				MainCtrl::get()->cutSelection(cursor);
-				MainCtrl::get()->pasteClipboard(clipboard,
+				MainCtrl::get()->pasteClipboard(clipboard.get(),
 						cursor.cursorTrack,
 						cursor.getTickBegin());
 				cursor.selTrackRange = clipboard->selTrackRange;
@@ -231,7 +231,7 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 //			desc = "Move notes";
 		}
 		if (modified) {
-			action_modify_track* track_action = new action_modify_track(desc, resizePreModifyState.get());
+			action_modify_track* track_action = new action_modify_track(desc, resizePreModifyState.copy());
 			MainCtrl::get()->pushHist(track_action);
 
 		}
@@ -419,7 +419,6 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
 			if (trNxtSelected) {
 				MainCtrl::get()->setSelectedTrack(trNxtSelected);
 			}
-			DELETE_PTR(action.clipboard);
 			if (selectionMoved) {
 				Cursor target = cursor + cursorBegin;
 				int32_t trackOffset = dragStartTrackIdx - cursorBegin.cursorTrack;
@@ -436,15 +435,14 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
 				resizePreModifyState.cursor = target;
 
 				resizePreModifyState.cursor = cursorBegin;
-				clip_clipboard* clipboard = MainCtrl::get()->copySelection(cursorBegin);
+				std::shared_ptr<clip_clipboard> clipboard = MainCtrl::get()->copySelection(cursorBegin);
 				if (!isCtrl(evt.kbmods)) {
 					MainCtrl::get()->cutSelection(cursorBegin);
 				}
-				MainCtrl::get()->pasteClipboard(clipboard, dstTrack - trackOffset, dstPos);
+				MainCtrl::get()->pasteClipboard(clipboard.get(), dstTrack - trackOffset, dstPos);
 				updateVisibleTrackContents();
-				DELETE_PTR(clipboard);
 				showclip = false;
-				action_modify_track* track_action = new action_modify_track("Move clips", resizePreModifyState.get());
+				action_modify_track* track_action = new action_modify_track("Move clips", std::move(resizePreModifyState));
 				MainCtrl::get()->pushHist(track_action);
 			}
 		} else if (action.dragtype == DRAG_CLIPS_RESIZE_LEFT
@@ -459,7 +457,7 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
 			}
 
 			if (dragStartLayout.diff(trackPtr)) {
-				action_modify_track* track_action = new action_modify_track("Resize clips", resizePreModifyState.get());
+				action_modify_track* track_action = new action_modify_track("Resize clips", resizePreModifyState.copy());
 				MainCtrl::get()->pushHist(track_action);
 			}
 		}
@@ -488,7 +486,7 @@ bool guitrack_editor::clipDropBegin(dragdrop_midifile& clip, ivec2 mousepos) {
 		clipboard->srcTrack = trackClicked->idx;
 
 		action.dragtype = clip_dragtype_t::DROP_FILE_EXTERNAL;
-		action.clipboard = clipboard;
+		action.clipboard = clip.clipboard;
 		action.cursorBegin = dragCursor;
 		clip.isValidTarget = true;//inform higher level that we accept and process this drop attempt
 		return true;
@@ -515,11 +513,9 @@ bool guitrack_editor::clipDropFinal(dragdrop_midifile& clip, ivec2 mousepos) {
 		int32_t tick = grid.screenToTickSnap(mousepos.x, SNAP_ON);
 		tick_t dstPos = tick;
 		int32_t dstTrack = trNxtSelected->idx;
-		clip_clipboard* clipboard = action.clipboard;
-		MainCtrl::get()->pasteClipboard(clipboard, dstTrack, dstPos);
-		clipboard->tracks.clear();
+		MainCtrl::get()->pasteClipboard(action.clipboard.get(), dstTrack, dstPos);
 		updateVisibleTrackContents();
-		action.clipboard = NULL; // DONT FREE; we dont own!
+		action.clipboard = NULL;
 		action.dragtype = DRAG_NONE;
 		clip.isValidTarget = true;//inform higher level that we accept and process this drop attempt
 		return true;
@@ -534,14 +530,15 @@ void guitrack_editor::handleRightClick(MouseEvent& evt) {
 void guitrack_editor::renderClip(NVGcontext* vg, track_t* tr, const clip_t* cl, tick_t offset) {
 	ivec2 clipPos = ivec2();
 	ivec2 clipSize = tr->content->size; //TODO: get rid of *tr here, figure out size before and add default fallback
-	gui_clip::getClipPosition(grid, cl, clipPos, clipSize, offset);
-	clipPos.y += tr->content->pos.y;
-	gui_clip::renderClip(vg, tr, cl, clipPos, clipSize);
+	if (!gui_clip::getClipPosition(grid, size, cl, clipPos, clipSize, offset)) {
+		clipPos.y += tr->content->pos.y;
+		gui_clip::renderClip(vg, tr, cl, clipPos, clipSize);
+	}
 }
 
 void guitrack_editor::renderAction(NVGcontext* vg, clip_dragaction& action) {
 	Cursor& cursor = MainCtrl::get()->cursor;
-	clip_clipboard* _clipboard = action.clipboard;
+	clip_clipboard* _clipboard = action.clipboard.get();
 	for (int i = 0; _clipboard && i <= _clipboard->selTrackRange; i++) {
 		track_clipboard_t* trClipboard = _clipboard->tracks[i].get();
 		int32_t trackIdx = _clipboard->srcTrack + i + (cursor.cursorTrack-action.cursorBegin.cursorTrack);

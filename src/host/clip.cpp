@@ -6,6 +6,7 @@
 #include "logging.h"
 #include "seq_time.h"
 #include "seq_math.h"
+#include "leak_detect.h"
 
 note_t& clip_notes_t::addSingle(note_t& t) {
 	assert(selection.empty());

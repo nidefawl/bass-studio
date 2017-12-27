@@ -4,10 +4,8 @@
 #include "seq_time.h"
 #include "dsp_util.h"
 #include <vector>
-#include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
-#include <stdint.h>
 #include "../vst_sdk_2.4/aeffectx.h"
 #include "../util/readerwriterqueue.h"
 #include "note.h"
@@ -75,6 +73,13 @@ struct AudioBuffer {
 struct plugin_notes_t {
 	std::vector<note_t> notes;
 };
+#define RING_BUF_SIZE 16
+#define RING_BUF_MASK 15
+struct audiothread_ringbuffer_t {
+	int32_t readPos = 0;
+	int32_t writePos = 0;
+	AudioBuffer* buffers[RING_BUF_SIZE] = { 0 };
+};
 class vsthost {
 private:
 	class ModuleManager;
@@ -89,14 +94,14 @@ private:
 
 	std::vector<vstplugin*> list;
 
-	AudioBlock* blockTemp = NULL;
-	AudioBlock* blockTemp2 = NULL;
 	std::atomic<PaStream*> stream{NULL};
+	audiothread_ringbuffer_t ringbuffer;
 public:
 	moodycamel::ReaderWriterQueue<AudioBuffer*> audioQueue;
 public:
 	vsthost(project_globals_t& _project, uint32_t _sampleRate = 44100, uint16_t _blockSize = 512);
 	vsthost(vsthost const&) = delete;
+	~vsthost();
 	void operator=(vsthost const&) = delete;
 	static vsthost* getInstance();
 

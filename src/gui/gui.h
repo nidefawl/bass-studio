@@ -34,6 +34,9 @@ void drawPlaySymbol(NVGcontext* vg, ivec2& pos, ivec2& size, NVGcolor& color, in
 void drawStopSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, NVGcolor& color, int drawParm, int drawParm2);
 void drawTextureSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, NVGcolor& color, int drawParm, int drawParm2);
 void drawTri(NVGcontext* vg, float xTop, float yTop, float h, const int dir, const NVGcolor& color, const NVGcolor& strokeColor, float strokeWidth);
+
+ivec2 toControlsObjectSpace(ivec2& pos, guibase* gui);
+
 inline float calcInset(float desiredInset, float size) {
 	return min(desiredInset, max(0.f, (size-4.0f)/2.0f));
 }
@@ -125,6 +128,9 @@ public:
 		return false;
 	}
 	virtual bool handleCharInput(unsigned int codepoint) {
+		return false;
+	}
+	virtual bool trackViewDoubleClick(guitrack_editor* view, MouseEvent& evt) {
 		return false;
 	}
 	virtual void trackViewDragBegin(guitrack_editor* view, MouseEvent& evt) {
