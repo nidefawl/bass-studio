@@ -214,6 +214,7 @@ class gui_track_automation : public gui_track {
 	std::vector<automation_point_t> dataPointsEdited;
 	int32_t segmentDataPtOffset = 0;
 	hit_result dragged = {drag_none, -1, 0};
+	bool canSimplify = false;
 
 	hit_result hitTest(vec2 mpos) {
 		if (data.points.empty()) {
@@ -281,6 +282,7 @@ public:
 		return NULL;
 	}
 	void trackViewDragBegin(guitrack_editor* view, MouseEvent& evt) override {
+		canSimplify = true;
 		ivec2 trackEditorLocal = evt.relMousepos;
 		ivec2 local = toContainerSpace(trackEditorLocal);
 		scaled_grid& grid = view->grid;
@@ -407,13 +409,15 @@ public:
 	}
 	void trackViewDragRelease(guitrack_editor* view, MouseEvent& evt) override {
 		dragged = {dragmode::drag_none, -1, 0};
-		simplifyData(data.points);
+		if (canSimplify)
+			simplifyData(data.points);
 		updateVisibleTrackContents(view->grid);
 	}
 	bool trackViewDoubleClick(guitrack_editor* view, MouseEvent& evt) override {
 		ivec2 trackEditorLocal = evt.relMousepos;
 		ivec2 local = toContainerSpace(trackEditorLocal);
 		hit_result clicked = hitTest(local);
+		canSimplify = false;
 		std::vector<automation_point_t>& dataPoints = data.points;
 		if (clicked.mode == dragmode::drag_node) {
 			int32_t i = clicked.idx + segmentDataPtOffset;
@@ -428,7 +432,7 @@ public:
 			ivec2 cs = getSizeContent();
 			scaled_grid& grid = view->grid;
 			tick_t tick = grid.screenToTickSnap(trackEditorLocal.x, SNAP_OFF);
-			float val = ctrToData(local.y, cs.y);
+			float val = min(1.0f, max(0.0f, ctrToData(local.y, cs.y)));
 			int32_t idx = indexOfTick(dataPoints, tick);
 			assert(idx >= 0 && idx <= dataPoints.size());
 			automation_point_t pt{tick, val};

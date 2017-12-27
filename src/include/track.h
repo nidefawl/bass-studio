@@ -79,7 +79,7 @@ inline void simplifyData(std::vector<automation_point_t>& data) {
                 *first++ = std::move(*i);
                 auto j = i + 2;
                 for(; j < last;  ++j) {
-                	if (firstVal != (*j).val) {
+                	if (firstVal != (*j).val||firstVal != (*(j-1)).val) {
                 		break;
                 	}
                 }
@@ -109,21 +109,23 @@ inline int32_t addPointAt(std::vector<automation_point_t>& dataPoints, tick_t ti
 		}
 	}
 	if (!dataPoints.empty()) {
-		if (idx > 0 && idx < dataPoints.size()) {
+		float v;
+		if (idx == dataPoints.size()) {
+			v = dataPoints[idx-1].val;
+		} else if (idx == 0) {
+			v = dataPoints[0].val;
+		} else {
 			automation_point_t& pt2 = dataPoints[idx];
-			automation_point_t& pt1 = dataPoints[idx-1];
-			assert(tick>=pt1.time && tick <= pt2.time);
-			tick_t tickDist = pt2.time-pt1.time;
-			float pr = (tick-pt1.time)/(float)tickDist;
-			float v = pt1.val+pr*(pt2.val-pt1.val);
-			dataPoints.insert(dataPoints.begin()+idx, {tick, v});
-		} else if (idx > 0) {
-			automation_point_t& pt1 = dataPoints[idx-1];
-			dataPoints.insert(dataPoints.begin()+idx, {tick, pt1.val});
+			automation_point_t& pt1 = dataPoints[idx - 1];
+			assert(tick >= pt1.time && tick <= pt2.time);
+			tick_t tickDist = pt2.time - pt1.time;
+			float pr = (tick - pt1.time) / (float) tickDist;
+			v = pt1.val + pr * (pt2.val - pt1.val);
 		}
+		dataPoints.insert(dataPoints.begin() + idx, { tick, v });
 		return idx;
 	} else {
-		dataPoints.insert(dataPoints.begin(), {tick, 0});
+		dataPoints.insert(dataPoints.begin(), { tick, 0 });
 	}
 	return 0;
 }

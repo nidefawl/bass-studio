@@ -645,8 +645,10 @@ void guitrack_editor::render(NVGcontext* vg) {
 
 			int32_t tickBegin = c.getTickBegin();
 			int32_t tickEnd = c.getTickEnd();
-			double tickBeginX = max(-2, (int) grid.tickToScreenD(tickBegin));
-			double tickEndX = min(size.x + 2, (int) grid.tickToScreenD(tickEnd));
+//			double tickBeginX = max(-2, (int) grid.tickToScreenD(tickBegin));
+//			double tickEndX = min(size.x + 2, (int) grid.tickToScreenD(tickEnd));
+			double tickBeginX = grid.tickToScreenD(tickBegin);
+			double tickEndX = grid.tickToScreenD(tickEnd);
 
 			float trackYMin = min(trB->content->top(), trE->content->top());
 			float trackYMax = max(trB->content->bottom(), trE->content->bottom());
