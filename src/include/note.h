@@ -6,27 +6,12 @@
 
 class track_t;
 class gui_clip;
-class note_t {
+struct note_t {
 public:
 	int32_t pitch = 0;
 	tick_t time = 0;
 	tick_t len = 0;
 	bool enabled = true;
-	note_t() {
-	}
-	note_t(const note_t &a) {
-		copy(a);
-	}
-	note_t &operator =(const note_t &a) {
-		copy(a);
-		return *this;
-	}
-	void copy( const note_t &obj) {
-		enabled = obj.enabled;
-		pitch = obj.pitch;
-		time = obj.time;
-		len = obj.len;
-	}
 	inline tick_t start() const {
 		return time;
 	}
