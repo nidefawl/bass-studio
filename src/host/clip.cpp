@@ -240,8 +240,12 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
 			notesView.m_list.push_back(nnote);
 		}
 	}
+
+
 	const tick_t lenClipLoopSection = (localEnd - localStart) - preLoopLen;
 	const tick_t numLoops = (lenClipLoopSection+loopLen-1) / loopLen;
+	if (notesView.m_list.capacity() < numLoops * listLoop.size())
+		notesView.m_list.reserve(numLoops * listLoop.size());
 
 	for (int i = 0; i < numLoops; i++) {
 		auto itNote = listLoop.cbegin();
@@ -297,6 +301,9 @@ int clip_t::getInTimeRange(tick_t absStart, tick_t absEnd, tick_t cutStart, tick
 			note_t noteOffset(note);
 			noteOffset.time += clipStart;
 			noteOffset.len = min(noteOffset.end(), clipEnd) - noteOffset.time;
+			if (!list.capacity()) {
+				list.reserve(128);
+			}
 			list.push_back(noteOffset);
 		}
 		itNote++;
