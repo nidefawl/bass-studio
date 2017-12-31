@@ -122,6 +122,7 @@ tick_t scaled_grid::screenToTickSnap(int32_t x, int snap) {
 
 void scaled_grid::calcLen(int scrollOffsetX, float fzoom, int contentWidth) {
 	gridList.clear();
+	gridList.reserve(100);
 	const float stepSize = fzoom * 128;
 	const float scale = 1024.0f;
 	const float barSize = scale / stepSize;
