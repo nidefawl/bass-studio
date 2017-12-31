@@ -104,7 +104,7 @@ LRESULT vst_window::proc (UINT message, WPARAM wParam, LPARAM lParam)
 		}
 		case WM_SIZE:
 		{
-			plugin->onResize (this, getContentSize ());
+			plugin->onResize(this, getContentSize ());
 			break;
 		}
 		case WM_SIZING:

@@ -635,7 +635,7 @@ void vsthost::processAudio(track_plugins_t* channel, AudioBlock* input, AudioBlo
 	//   If a plugin runs mono inputs or outputs we need to handle this manually here
 	output->copyFrom(input);
 
-	float gain = dsp_util::clampReadGain(channel->gain);
+	float gain = dsp_util::clampReadGain(channel->mixer.gain);
 	mulGain(output, gain);
 
 }

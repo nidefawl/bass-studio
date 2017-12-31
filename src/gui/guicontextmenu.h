@@ -9,30 +9,36 @@ class ctxtmenu_entry {
 public:
 	String title;
 	int width = -1;
-	int height;
-	int id;
+	int height = 0;
+	int id = 0;
 	int y = 0;
+	int fontSize = 0;
 	ctxtmenu_entry(String _title, int _id) {
 		this->id = _id;
 		this->title = _title;
-		this->height = FONT_SIZE_CTXT+5;
 	}
 	virtual ~ctxtmenu_entry() {
 
 	}
+	virtual void layout(ivec2 size, int32_t _fontSize) {
+		this->fontSize = _fontSize;
+		this->height = (int32_t) round(_fontSize*1.1f);
+	}
+	int leftOffset() {
+		return (int32_t) round(this->fontSize/2.4f);
+	}
 	virtual void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) {
-		int leftOffset = 10;
 		if (contains(ctxtSize, mouse)) {
 			nvgBeginPath(vg);
 			nvgRect(vg, 0, y, ctxtSize.x, height);
 			nvgFillColor(vg, g_guiColors[COL_CTXTMNU_HILIGHT]);
 			nvgFill(vg);
 		}
-		setFont(vg, FONT_SIZE_CTXT, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-		nvgText(vg, leftOffset, y + height / 2, StringAsCStr(title), NULL);
+		setFont(vg, this->fontSize, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+		nvgText(vg, leftOffset(), y + height / 2, StringAsCStr(title), NULL);
 	}
 	bool contains(ivec2& ctxtSize, ivec2& mouse) {
-		return mouse.y > y && mouse.y < y + height && mouse.x >= 0 && mouse.x < ctxtSize.x;
+		return mouse.y >= y && mouse.y < y + height && mouse.x >= 0 && mouse.x < ctxtSize.x;
 	}
 	virtual int getClicked(ivec2& ctxtSize, ivec2& mouse) {
 		if (contains(ctxtSize, mouse)) {
@@ -46,7 +52,6 @@ public:
 	ctxtmenu_splitter()
 		: ctxtmenu_entry("-", -1)
 	{
-		height /= 2;
 	}
 	void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) {
 		nvgBeginPath(vg);
@@ -55,6 +60,10 @@ public:
 		nvgStrokeColor(vg, g_guiColors[COL_CTXTMNU_OUTLINE]);
 		nvgStrokeWidth(vg, 1.0f);
 		nvgStroke(vg);
+	}
+	void layout(ivec2 size, int32_t _fontSize) override {
+		this->fontSize = _fontSize;
+		this->height = ((int32_t) round(_fontSize*1.1f)) / 2;
 	}
 	bool contains(ivec2& ctxtSize, ivec2& mouse) {
 		return false;
@@ -74,22 +83,24 @@ public:
 	{
 		this->id = _id;
 		this->title = _title;
+	}
+	void layout(ivec2 size, int32_t _fontSize) override {
+		this->fontSize = _fontSize;
 		width = pad * 2 + (WH + padCell) * COLS - padCell;
-		height = FONT_SIZE_CTXT + pad * 2 + (WH + padCell) * ROWS - padCell;
+		height = _fontSize + pad * 2 + (WH + padCell) * ROWS - padCell;
 	}
 	void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) {
-		int leftOffset = 10;
-		setFont(vg, FONT_SIZE_CTXT, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-		nvgText(vg, leftOffset, y+FONT_SIZE_CTXT/2, StringAsCStr(title), NULL);
-		nvgFontSize(vg, FONT_SIZE_CTXT-4);
+		setFont(vg, this->fontSize, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+		nvgText(vg, leftOffset(), y+this->fontSize/2, StringAsCStr(title), NULL);
+		nvgFontSize(vg, this->fontSize-4);
 		int focusIdx = -1;
-		int y = this->y+FONT_SIZE_CTXT+pad;
+		int y = this->y+this->fontSize+pad-4;
 		for (int col = 0; col < COLS; col++) {
 			int cX = pad+(WH+padCell)*col;
 			for (int row = 0; row < ROWS; row++) {
 				int idx = col*ROWS+row;
 				int cY = pad+(WH+padCell)*row;
-				if (mouse.y > y + cY && mouse.y < y + cY + WH && mouse.x >= cX && mouse.x < cX + WH) {
+				if (mouse.y >= y + cY && mouse.y < y + cY + WH && mouse.x >= cX && mouse.x < cX + WH) {
 					focusIdx = idx;
 				}
 				nvgBeginPath(vg);
@@ -117,17 +128,17 @@ public:
 		}
 	}
 	bool contains(ivec2& ctxtSize, ivec2& mouse) {
-		return mouse.y > y && mouse.y < y + height && mouse.x >= 0 && mouse.x < ctxtSize.x;
+		return mouse.y >= y && mouse.y < y + height && mouse.x >= 0 && mouse.x < ctxtSize.x;
 	}
 	int getClicked(ivec2& ctxtSize, ivec2& mouse) {
 		if (contains(ctxtSize, mouse)) {
-			int y = this->y+FONT_SIZE_CTXT+pad;
+			int y = this->y+this->fontSize+pad-4;
 			for (int col = 0; col < COLS; col++) {
 				int cX = pad+(WH+padCell)*col;
 				for (int row = 0; row < ROWS; row++) {
 					int idx = col*ROWS+row;
 					int cY = pad+(WH+padCell)*row;
-					if (mouse.y > y + cY && mouse.y < y + cY + WH && mouse.x >= cX && mouse.x < cX + WH) {
+					if (mouse.y >= y + cY && mouse.y < y + cY + WH && mouse.x >= cX && mouse.x < cX + WH) {
 						return this->id+idx;
 					}
 				}
@@ -148,7 +159,6 @@ class ctxtmenu_time_select : public ctxtmenu_entry {
 	scaled_grid& grid;
 	std::vector<_time_sel_entry> entries;
 public:
-	const int h = FONT_SIZE_CTXT;
 	const int pad = 10;
 	bool fixed = false;
 	const int inset = 5;
@@ -159,9 +169,23 @@ public:
 		this->id = _id;
 		this->title = _title;
 	}
+	void layout(ivec2 size, int32_t _fontSize) override {
+		this->fontSize = _fontSize;
+		this->height = (int32_t) round(_fontSize*1.1f);
+		const int h = this->fontSize;
+		layoutE(size.x, fixed?5:3);
+		if (fixed) {
+
+			_time_sel_entry& off = entries.back();
+			off.x = inset;
+			off.y += h;
+			this->height = off.y+h;
+		}
+	}
 	void layoutE(int tw, int perRow) {
+		const int h = this->fontSize;
 		int iX = inset;
-		int iY = FONT_SIZE_CTXT+2;
+		int iY = h+2;
 		int elW = (tw-inset*2)/perRow;
 		for (_time_sel_entry& e : entries) {
 			this->height = iY+h;
@@ -175,16 +199,15 @@ public:
 			}
 		}
 	}
-	void initAdaptive(int tw) {
+	void initAdaptive() {
 		fixed = false;
 		entries.push_back({GRID_WIDEST, 0, 0, 0, "Widest"});
 		entries.push_back({GRID_WIDE, 0, 0, 0, "Wide"});
 		entries.push_back({GRID_MED, 0, 0, 0, "Medium"});
 		entries.push_back({GRID_NARROW, 0, 0, 0, "Narrow"});
 		entries.push_back({GRID_NARROWEST, 0, 0, 0+15, "Narrowest"});
-		layoutE(tw, 3);
 	}
-	void initFixed(int tw) {
+	void initFixed() {
 		fixed = true;
 		entries.push_back({GRID_8BAR, 0, 0, 0, "8 Bars"});
 		entries.push_back({GRID_4BAR, 0, 0, 0, "4 Bars"});
@@ -196,17 +219,12 @@ public:
 		entries.push_back({GRID_1_16, 0, 0, 0, "1/16"});
 		entries.push_back({GRID_1_32, 0, 0, 0, "1/32"});
 		entries.push_back({GRID_OFF, 0, 0, 0, "Off"});
-		layoutE(tw, 5);
-		_time_sel_entry& off = entries.back();
-		off.x = inset;
-		off.y += h;
-		this->height = off.y+h;
 	}
 	void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) {
-		int leftOffset = 10;
-		setFont(vg, FONT_SIZE_CTXT, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-		nvgText(vg, leftOffset, y+h/2, StringAsCStr(title), NULL);
-		nvgFontSize(vg, FONT_SIZE_CTXT-4);
+		const int h = this->fontSize;
+		setFont(vg, h, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+		nvgText(vg, leftOffset(), y+h/2, StringAsCStr(title), NULL);
+		nvgFontSize(vg, this->fontSize-4);
 		int n = 0;
 		for (_time_sel_entry& e : entries) {
 			if (mouse.y > y+e.y && mouse.y < y+e.y + h && mouse.x >= e.x && mouse.x < e.x+e.w) {
@@ -235,6 +253,7 @@ public:
 	int getClicked(ivec2& ctxtSize, ivec2& mouse) {
 		if (contains(ctxtSize, mouse)) {
 			int n = fixed ? 10 : 0;
+			const int h = this->fontSize;
 			for (_time_sel_entry& e : entries) {
 				if (mouse.y > y+e.y && mouse.y < y+e.y + h && mouse.x >= 0 && mouse.x < e.x+e.w) {
 					return n+100;
@@ -247,7 +266,10 @@ public:
 };
 
 class guictxtmenu_base : public guibase {
+protected:
 	std::vector<ctxtmenu_entry*> entries;
+	int paddingV = 2;
+	int fontSize = FONT_SIZE_CTXT;
 public:
 	~guictxtmenu_base() {
 		for (ctxtmenu_entry* e : entries) {
@@ -279,10 +301,11 @@ public:
 	}
 	void layout() {
 		//TODO: figure out string width here to make life easier laying out context menus
-		int y = 2;
+		int y = paddingV;
 		for (ctxtmenu_entry* e : entries) {
+			e->layout(size, fontSize);
 			e->y = y;
-			y += e->height + 2;
+			y += e->height + paddingV;
 			size.x = std::max(size.x, e->width);
 		}
 		size.y = y;
@@ -336,10 +359,10 @@ public:
 		}
 		scaled_grid& grid = MainCtrl::get()->getGrid();
 		auto adaptive = new ctxtmenu_time_select(grid, "Adaptive Grid", 0);
-		adaptive->initAdaptive(this->size.x);
+		adaptive->initAdaptive();
 		add(adaptive);
 		auto fixed = new ctxtmenu_time_select(grid, "Fixed Grid", 0);
-		fixed->initFixed(this->size.x);
+		fixed->initFixed();
 		add(fixed);
 		layout();
 	}

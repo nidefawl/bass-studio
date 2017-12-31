@@ -112,11 +112,19 @@ int getNumMsg();
 int getMsgId(int i);
 int getMsgCnt(int i);
 }
+extern int colorVal;
 class gui_ctr_debug : public guictr_base {
 	guiknob knobTest;
 public:
 	gui_ctr_debug() : guictr_base() {
 		add(&knobTest);
+		knobTest.fnSetValue = [](float f) {
+			colorVal = 0+max(0, min(255, (int32_t)std::floor(f*255)));
+			initColor();
+		};
+		knobTest.fnGetValue = [](void) {
+			return max(0.0f, min(1.0f, colorVal/255.0f));
+		};
 	}
 	~gui_ctr_debug() {
 		remove(&knobTest);
@@ -658,7 +666,6 @@ bool MainCtrl::setLoadedProject(shared_ptr<project_file> file) {
 	copyFrom(file->project);
 	my_printf("NUM TRACKS: %d\n", trackList.size());
 	for (track_t* tr : trackList) {
-		my_printf("NEW TRACK: %d %s %d\n", tr->idx, StringAsCStr(tr->name), tr->height);
 		view->ctr_tracks.addTrack(tr);
 	}
 	view->ctr_tracks.layout();
@@ -1283,7 +1290,7 @@ void ContextCtrl::open(guictxtmenu_base *_ctxtmenu, ivec2 pos) {
 	this->mousepos = ivec2(-1111111);
 	this->ctxtmenu = _ctxtmenu;
 	this->ctxtmenu->pos = insetCtxtMenu;
-	this->window->positionOnScreen(pos, _ctxtmenu->size+ivec2(insetCtxtMenu*2));
+	this->window->positionOnScreen(pos-insetCtxtMenu, _ctxtmenu->size+ivec2(insetCtxtMenu*2));
 //	this->window->setPos(pos);
 //	this->window->setSize(ctxtmenu->size);
 	this->window->show();

@@ -17,7 +17,9 @@
 #include "list.h"
 #include "track.h"
 #include "guicontextmenu.h"
+#include "automation_link.h"
 #include "leak_detect.h"
+#include <memory>
 
 using glm::vec2;
 using glm::ivec2;
@@ -145,12 +147,8 @@ public:
 
 			track_t* track = MainCtrl::get()->insertNewTrack(-1, TRACK_TYPE_AUTOMATION);
 			trackdata_automation_t& automation = track->getAutomation();
-			automated_param_t& target = automation.target;
-			target.paramIdx = entry->idx;
-			target.src = &automation.src;
-			target.ref = &automation;
-			target.plugin = NULL;
-			vst->registerAutomationSrc(target);
+			std::shared_ptr<plugin_reference_t> ref(new plugin_track_link_t{track, vst, entry->idx});
+			vst->registerAutomationSrc(entry->idx, &automation, ref);
 		}
 			break;
 		case ID_DELETE:

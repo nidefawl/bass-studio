@@ -16,6 +16,7 @@
 #include "logging.h"
 #include "mainctrl.h"
 #include "../gui/pluginctr.h"
+#include "automation_link.h"
 #include "leak_detect.h"
 
 #define ERROR_LOG(x) (my_printf("ERROR: %s\n", x))
@@ -133,6 +134,9 @@ void trackallcontainer_t::removeTrack(track_t* track) {
 }
 
 void trackallcontainer_t::copyTo(project_snapshot_t& project) {
+	for (track_t* t : *this) {
+		my_printf("TRACK[%d] = %s\n", t->idx, StringAsCStr(t->name));
+	}
 	trackCtr.copyTo(project.trackCtr);
 	trackMasterCtr.copyTo(project.trackMasterCtr);
 	trackReturnCtr.copyTo(project.trackReturnCtr);
@@ -155,6 +159,9 @@ void trackallcontainer_t::copyFrom(project_snapshot_t& project) {
 	addAll(tracks, trackCtr.tracks);
 	addAll(tracks, trackReturnCtr.tracks);
 	addAll(tracks, trackMasterCtr.tracks);
+	std::sort(tracks.begin(), tracks.end(), [](track_t* const & a, track_t* const & b) {
+		return a->idx < b->idx;
+	});
 	assert(tracks.size()==(project.trackCtr.tracks.size()+project.trackMasterCtr.tracks.size()+project.trackReturnCtr.tracks.size()));
 	tracksBottom.tracks.clear();
 	addAll(tracksBottom.tracks, trackReturnCtr.tracks);
@@ -165,9 +172,9 @@ void trackallcontainer_t::copyFrom(project_snapshot_t& project) {
 	}
 }
 void trackallcontainer_t::loadPlugins(project_snapshot_t& project) {
-	trackCtr.loadPlugins(project.trackCtr);
-	trackReturnCtr.loadPlugins(project.trackReturnCtr);
-	trackMasterCtr.loadPlugins(project.trackMasterCtr);
+	trackCtr.loadPlugins(this, project.trackCtr);
+	trackReturnCtr.loadPlugins(this, project.trackReturnCtr);
+	trackMasterCtr.loadPlugins(this, project.trackMasterCtr);
 }
 void trackallcontainer_t::copyTracks(int32_t trackBegin, int32_t trackEnd, trackstate_t& _out) {
 	_out.reset();
@@ -188,6 +195,7 @@ track_t::track_t(const track_snapshot_t &a) : tracksettings_t(a) {
 		clip_t* clipInstance = new clip_t(clip);
 		clips.push_back(clipInstance);
 	}
+	automation.points = a.points;
 	assert(this->mixer == NULL);
 	assert(this->content == NULL);
 }
@@ -219,11 +227,17 @@ void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin) {
 		param_snapshot_t t{param.idx, val};
 		ps.params.push_back(t);
 	}
+	for (automated_param_t& src : plugin->automatedParams) {
+		if (src.ref) {
+			plugin_param_autiomation_src_t paramSrc = src.ref->serialize();
+			ps.automatedParams.push_back(paramSrc);
+		}
+	}
 }
 track_plugins_snapshot_t::track_plugins_snapshot_t(const track_t &a) {
 	track_plugins_t* p = a.audio;
 	if (p) {
-		gain = p->gain;
+		gain = p->mixer.gain;
 		int32_t nPlugins = p->effects.size();
 		if (p->instrument) nPlugins++;
 		plugins.reserve(nPlugins);
@@ -247,6 +261,8 @@ track_snapshot_t::track_snapshot_t(track_t* track)
 	for (clip_t* clip : otherClips) {
 		clips.emplace_back(*clip);
 	}
+	trackdata_automation_t& automation = track->getAutomation();
+	this->points = automation.points;
 }
 
 void tracksubcontainer_t::copyTo(trackcontainer_snapshot_t& out) {
@@ -263,14 +279,14 @@ void tracksubcontainer_t::copyFrom(trackcontainer_snapshot_t& in) {
 		this->tracks.push_back(track);
 	}
 }
-void tracksubcontainer_t::loadPlugins(trackcontainer_snapshot_t& in) {
+void tracksubcontainer_t::loadPlugins(trackallcontainer_t* all, trackcontainer_snapshot_t& in) {
 	for (track_snapshot_t& trackStatic : in.tracks) {
 		track_t* trackLoaded = trackStatic.trackLoaded;
 		vsthost* host = vsthost::getInstance();
 		trackLoaded->audio = host->createAudio(trackLoaded);
 		String path;
 		const track_plugins_snapshot_t& trackPlugins = trackStatic.plugins;
-		trackLoaded->audio->gain = trackPlugins.gain;
+		trackLoaded->audio->mixer.gain = trackPlugins.gain;
 		const std::vector<plugin_snapshot_t>& trPluginList = trackPlugins.plugins;
 		for (const plugin_snapshot_t& pluginSnapshot : trPluginList) {
 			if (MainCtrl::get()->plugindb.resolve(pluginSnapshot.name, pluginSnapshot.uId, &path)) {
@@ -293,6 +309,28 @@ void tracksubcontainer_t::loadPlugins(trackcontainer_snapshot_t& in) {
 						}
 					}
 					host->insertNewPlugin(trackLoaded->audio, plugin, pluginSnapshot.slot);
+					const std::vector<plugin_param_autiomation_src_t>& automatedParams = pluginSnapshot.automatedParams;
+
+					for (const plugin_param_autiomation_src_t& param : automatedParams) {
+						if (plugin->getParam(param.paramIdx)) {
+							if (all->validTrackIdx(param.trackIdx)) {
+								track_t* trackSrc = (*all)[param.trackIdx];
+								assert(trackSrc->idx ==param.trackIdx);
+								for (track_t* t : (*all)) {
+									my_printf("TRACK[%d] = %s\n", t->idx, StringAsCStr(t->name));
+								}
+								my_printf("LOAD AUTOMATION SRC IDX %d NAME %s\n", trackSrc->idx, StringAsCStr(trackSrc->name));
+
+								trackdata_automation_t& automation = trackSrc->getAutomation();
+								std::shared_ptr<plugin_reference_t> ref(new plugin_track_link_t{trackSrc, plugin, param.paramIdx});
+								plugin->registerAutomationSrc(param.paramIdx, &automation, ref);
+
+
+
+
+							}
+						}
+					}
 				}
 			}
 		}
@@ -334,17 +372,15 @@ void trackdata_midi_t::getNotesInRange(tick_t start, tick_t end, tick_t cutStart
 
 }
 float trackdata_automation_t::getDstValue() {
-	vstplugin* plugin = target.plugin;
 	if (plugin) {
-		return plugin->getParamValue(target.paramIdx);
+		return plugin->getParamValue(paramIdx);
 	}
 	return dummy;
 }
 void trackdata_automation_t::setDstValue(float f) {
 	dummy = f;
-	vstplugin* plugin = target.plugin;
 	if (plugin) {
-		return plugin->setParamValue(target.paramIdx, f);
+		return plugin->setParamValue(paramIdx, f);
 	}
 }
 
@@ -510,6 +546,12 @@ VstEvent_t* track_plugins_t::reallocEvts(size_t size) {
 	midiEventsBuf->reset();
 	return midiEventsBuf;
 }
+void track_plugins_t::getAutomatableTargets(std::vector<automatable_t*>& targets) {
+	targets.push_back(&mixer);
+	if (instrument)
+		targets.push_back(instrument);
+	targets.insert(targets.end(), effects.begin(), effects.end());
+}
 void track_plugins_t::onTick(double since) {
 	meter.onTick(since);
 }
@@ -517,6 +559,7 @@ void track_plugins_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick
 	//assert(end != loopEnd); //if end equals loopEnd note off events will be on exact end
 	if (instrument && instrument->bCanReceiveMidi) {
 		std::vector<note_t> notes;
+
 		 //TODO: figure out thread synchronization model
 		tick_t heldBegin = start;
 		tick_t heldEnd = end;

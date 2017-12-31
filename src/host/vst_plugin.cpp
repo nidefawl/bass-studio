@@ -122,6 +122,10 @@ void vstplugin::unload() {
 //	}
 //	this->dispatch(effMainsChanged, 0, 0);
 //	this->dispatch(effSetBypass, 0, 1);
+	for (automated_param_t& ap : this->automatedParams) {
+		assert(ap.ref);
+		ap.ref->onDstDelete();
+	}
 	this->dispatch(effClose);
 	this->bIsSetup = false;
 	my_printf("UNLOAD %s\n", StringAsCStr(this->sName));
@@ -234,6 +238,18 @@ vst_param_category* vstplugin::getCategory(int idx) {
 	}
 	return NULL;
 }
+int32_t vstplugin::getNumParameters() {
+	return params.size();
+}
+String vstplugin::getParamName(int32_t idx) {
+	if (idx >= 0 && idx < params.size()) {
+		return params[idx].label;
+	}
+	return "";
+}
+String vstplugin::getAutomatableName() {
+	return this->sName;
+}
 float vstplugin::getParamValue(int32_t idx) {
 	if (idx >= 0 && idx < params.size()) {
 		return handle->aeffect->getParameter(handle->aeffect, idx);
@@ -254,25 +270,26 @@ automated_param_t* vstplugin::getRegisteredAutomation(int32_t idx) {
 	}
 	return NULL;
 }
-void vstplugin::registerAutomationSrc(automated_param_t& p) {
-	assert(getParam(p.paramIdx));
-	auto it = std::find_if(automatedParams.begin(), automatedParams.end(), [&p](automated_param_t& ap) {
-		return ap.paramIdx == p.paramIdx;
+void vstplugin::registerAutomationSrc(int32_t paramIdx, automation_src_t* src, std::shared_ptr<plugin_reference_t> ref) {
+	assert(getParam(paramIdx));
+	auto it = std::find_if(automatedParams.begin(), automatedParams.end(), [paramIdx](automated_param_t& ap) {
+		return ap.paramIdx == paramIdx;
 	});
 	if (it != automatedParams.end()) {
 		automated_param_t& ap = * it;
 		assert(ap.ref);
-		ap.ref->breakReference();
-		ap = p;
+		ap.ref->onDstDelete();
+		ap.ref = ref;
+		ap.src = src;
 		return;
 	}
-	automatedParams.push_back(p);
-	p.ref->setReference(this);
+	automatedParams.push_back({paramIdx, src, ref});
+	ref->setDst(this, paramIdx);
 }
-void vstplugin::unregisterAutomationSrc(automated_param_t& p) {
-	assert(getParam(p.paramIdx));
-	auto it = std::find_if(automatedParams.begin(), automatedParams.end(), [&p](automated_param_t& ap) {
-		return ap.paramIdx == p.paramIdx && ap.src == p.src;
+void vstplugin::unregisterAutomationSrc(int32_t paramIdx) {
+	assert(getParam(paramIdx));
+	auto it = std::find_if(automatedParams.begin(), automatedParams.end(), [paramIdx](automated_param_t& ap) {
+		return ap.paramIdx == paramIdx;
 	});
 	if (it != automatedParams.end()) {
 		automatedParams.erase(it);

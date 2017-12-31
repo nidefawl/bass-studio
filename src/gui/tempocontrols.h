@@ -23,25 +23,7 @@ public:
 		return true;
 	}
 	void render(NVGcontext* vg) {
-		NVGcolor c;
-		if (!enabled()) {
-			c = G_BUTTON_DISABLED;
-		}
-		else if (pressed()|| focused()) {
-			c = colorPressed;
-		} else if (hovered()) {
-			c = colorHover;
-		}
-		else {
-			c = g_guiColors[COL_BG_DRK];
-		}
-		nvgBeginPath(vg);
-		nvgRect(vg, pos.x, pos.y, size.x, size.y);
-		nvgStrokeColor(vg, g_guiColors[COL_GUI_STROKE]);
-		nvgStrokeWidth(vg, 5);
-		nvgStroke(vg);
-		nvgFillColor(vg, c);
-		nvgFill(vg);
+		renderWidgetBorder(vg, getStateFlags());
 		String tempo = FormatTempo(MainCtrl::get()->getCurrentTempoBPM());
 		setFont(vg, G_FONT_SCALE(size.y), G_WHITE, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
 		nvgText(vg, pos.x + size.x / 2.0f, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(tempo), NULL);
@@ -75,24 +57,10 @@ public:
 	}
 
 	void render(NVGcontext* vg) {
-		NVGcolor c;
-		/*if (!enabled()) {
-			c = G_BUTTON_DISABLED;
+		int32_t flags = getStateFlags();
+		if (flags > FLG_ENBL) {
+			renderWidgetBorder(vg, flags);
 		}
-		else*/ if (pressed() || focused()) {
-			c = colorPressed;
-		}
-		else if (hovered()) {
-			c = colorHover;
-		}
-		else {
-			c = color;
-		}
-//		NVGcolor c2 = colorStroke;
-		nvgBeginPath(vg);
-		nvgRect(vg, pos.x, pos.y, size.x, size.y);
-		nvgFillColor(vg, c);
-		nvgFill(vg);
 		setFont(vg, G_FONT_SCALE(size.y), G_WHITE, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
 		int n;
 		if (idx == 0) {
@@ -160,7 +128,7 @@ public:
 		inputDen.pos.x = (size.x / 4)*3 - inputNum.size.x / 2;
 	}
 	void render(NVGcontext* vg) {
-		renderWidgetBorder(vg);
+		renderWidgetBorder(vg, getStateFlags());
 		if (!setScissorTransform(vg)) {
 			return;
 		}
@@ -188,30 +156,9 @@ public:
 	}
 
 	void render(NVGcontext* vg) {
-		NVGcolor c;
-		bool hl = false;
-		/*if (!enabled()) {
-			c = G_BUTTON_DISABLED;
-		}
-		else*/ if (pressed() || focused()) {
-			c = colorPressed;
-			hl = true;
-		}
-		else if (hovered()) {
-			c = colorHover;
-			hl = true;
-		}
-		else {
-			c = color;
-		}
-		if (drawBackground) {
-			renderWidgetBorder(vg);
-		}
-		if (drawBackground || hl) {
-			nvgBeginPath(vg);
-			nvgRect(vg, pos.x, pos.y, size.x, size.y);
-			nvgFillColor(vg, c);
-			nvgFill(vg);
+		int32_t flags = getStateFlags();
+		if (drawBackground || flags > FLG_ENBL) {
+			renderWidgetBorder(vg, flags);
 		}
 		setFont(vg, G_FONT_SCALE(size.y), G_WHITE, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
 		beatbar16th_t step = MainCtrl::get()->toBeatBar16th(time);
@@ -306,11 +253,11 @@ public:
 	}
 	void render(NVGcontext* vg) {
 		if (drawModeFullBG) {
-			renderWidgetBorder(vg);
-			nvgBeginPath(vg);
-			nvgRect(vg, pos.x, pos.y, size.x, size.y);
-			nvgFillColor(vg, bar.color);
-			nvgFill(vg);
+			renderWidgetBorder(vg, getStateFlags());
+//			nvgBeginPath(vg);
+//			nvgRect(vg, pos.x, pos.y, size.x, size.y);
+//			nvgFillColor(vg, bar.color);
+//			nvgFill(vg);
 		}
 		if (!setScissorTransform(vg)) {
 			return;

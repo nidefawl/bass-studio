@@ -25,36 +25,21 @@ public:
 	guibuttontoggle(ivec2 _pos, float _radius) : guibuttonbase(_pos, ivec2((int)(_radius * 2))) {
 		this->radius = _radius;
 	}
-	bool enabled() {
+	bool enabled() override {
 		return *state;
 	}
 	void render(NVGcontext* vg) {
 		NVGcolor c;
-		if (!enabled()) {
-			c = G_BUTTON_DISABLED;
-		}
-		else if (pressed()) {
-			c = colorPressed;
-		}
-		else if (hovered()) {
-			c = colorHover;
-		}
-		else {
-			c = color;
-		}
 		vec2 cen = vec2(radius);
 		cen.x += pos.x;
 		cen.y += pos.y;
-		NVGcolor c2 = colorStroke;
-		if (hovered()) {
-			c2 = G_WHITE;
-		}
+		int32_t state = getStateFlags();
 		nvgBeginPath(vg);
 		nvgCircle(vg, cen.x, cen.y, radius);
-		nvgFillColor(vg, c);
+		nvgFillColor(vg, theme->getBgColor(state));
 		nvgFill(vg);
-		nvgStrokeColor(vg, c2);
-		nvgStrokeWidth(vg, G_STROKE);
+		nvgStrokeColor(vg, theme->getBgStrokeColor(state));
+		nvgStrokeWidth(vg, theme->getBgStrokeWidth(state));
 		nvgStroke(vg);
 		if (icon >= 0) {
 

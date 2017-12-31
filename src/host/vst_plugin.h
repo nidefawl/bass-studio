@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include "str_util.h"
+#include "seq_time.h"
 //#include "../vst_sdk_2.4/aeffectx.h"
 #include "vst_window.h"
 #include "automation.h"
@@ -57,7 +58,7 @@ struct vst_param {
 	int16_t category;			///< 0: no category, else group index + 1
 };
 
-class vstplugin {
+class vstplugin : public automatable_t {
 public:
 	String sName;
 	String sDir;
@@ -118,11 +119,14 @@ public:
 	void load(vsthost* host);
 	vst_param_category* getCategory(int idx);
 	vst_param* getParam(int32_t idx);
-	float getParamValue(int32_t idx);
-	void setParamValue(int32_t idx, float val);
 	automated_param_t* getRegisteredAutomation(int32_t idx);
-	void registerAutomationSrc(automated_param_t& p);
-	void unregisterAutomationSrc(automated_param_t& p);
-	void updateAutomatedParameters(tick_t pos);
-};
+	void registerAutomationSrc(int32_t paramIdx, automation_src_t* p, std::shared_ptr<plugin_reference_t> ref);
+	void unregisterAutomationSrc(int32_t paramIdx);
 
+	int32_t getNumParameters() override;
+	String getParamName(int32_t paramIdx) override;
+	String getAutomatableName() override;
+	float getParamValue(int32_t idx) override;
+	void setParamValue(int32_t idx, float val) override;
+	void updateAutomatedParameters(tick_t pos) override;
+};

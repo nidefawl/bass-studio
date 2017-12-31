@@ -15,13 +15,14 @@ static NVGcolor dbgcolors[5] = {
 	nvgRGBA(255, 255, 0, 55)
 };
 
+int colorVal = 57;
 void initColor() {
 	UNUSED(dbgcolors);
 	for (int i = 0; i < ARR_SIZE(colorPalette); i++) {
 		g_colorPalette[i] = rgbToNvg(colorPalette[i]);
 	}
 
-	int c = 70;
+	int c = colorVal;
 	int c2 = max(5, c - 16);
 	int c3 = min(255, c + 16);
 	g_guiColors[COL_GRID_DRK] = GUI_COLORA(c, 255);
@@ -40,13 +41,15 @@ void initColor() {
 	g_guiColors[COL_CTXTMNU_BG] = GUI_COLORA(c4, 255);
 	g_guiColors[COL_CTXTMNU_HILIGHT] = GUI_COLORA(c5, 255);
 	g_guiColors[COL_GUI_STROKE] = mulSatBright(g_guiColors[COL_GRID_DRK], 1.3f, 1.4f);
-	g_guiColors[COL_BG_DRK_FOCUSED] = GUI_COLORA(211, 255);
+	g_guiColors[COL_BG_DRK_FOCUSED] = GUI_COLORA(c3+32, 255);
 
 	g_guiColors[COL_NOTE] = rgbToNvg(0xff9933);
 	g_guiColors[COL_NOTE_PLAYING] = rgbToNvg(0x33ff33);
 	g_guiColors[COL_NOTE_OUTLINE] = rgbToNvg(0);
 	g_guiColors[COL_NOTE_TEXT] = rgbToNvg(33);
 	g_guiColors[COL_BG_SELECTEDTRACK] = GUI_COLORA(c3 + 20, 80);
+//	memset(g_guiColors, 0, sizeof(NVGcolor)*24);
+	getDefaultTheme()->initDefaultTheme();
 }
 
 void setFont(NVGcontext* vg, float size, NVGcolor color, int alignment) {
@@ -105,7 +108,7 @@ void renderDashedLineFrame(NVGcontext* vg, float x, float y, float w, float h, f
 	nvgStroke(vg);
 	nvgShapeAntiAlias(vg, 0);
 }
-void drawPlaySymbol(NVGcontext* vg, ivec2& pos, ivec2& size, NVGcolor& color, int drawParm, int drawParm2) {
+void drawPlaySymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2) {
 	float inset = max(2.0f, size.x/8.0f);
 	float x1 = pos.x + inset;
 	float y1 = pos.y + inset;
@@ -144,7 +147,7 @@ NVGpaint imagePattern(NVGcontext* vg, int width, int ext, int imgId) {
 	RenderResources::NvgImageTexture& image = RenderResources::imgIcons[imgId];
 	return nvgImagePattern(vg, -ext, -ext, width+ext*2, width+ext*2, 0, image.id, 1.0f);
 }
-void drawTextureSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, NVGcolor& color, int drawParm, int drawParm2) {
+void drawTextureSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2) {
 	int32_t inset = 3;
 //	iconPos.y -= inset;
 	int32_t extImg = 2;
@@ -185,7 +188,7 @@ void drawTextureSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, NVGcolor& color,
 	}
 
 }
-void drawStopSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, NVGcolor& color, int drawParm, int drawParm2) {
+void drawStopSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2) {
 	float inset = max(2.0f, size.x/8.0f);
 	nvgBeginPath(vg);
 	nvgRect(vg, pos.x+inset, pos.y+inset, size.x-inset*2.0f, size.y-inset*2.0f);
@@ -225,4 +228,26 @@ void drawAttachedBackground(NVGcontext* vg, ivec2 posInset, ivec2 sizeInset, int
 	nvgRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y);
 	nvgFillColor(vg, g_guiColors[COL_BG_BRT]);
 	nvgFill(vg);
+}
+void guibase::renderWidgetBorder(NVGcontext* vg, int32_t flags) {
+	nvgBeginPath(vg);
+	nvgRect(vg, pos.x, pos.y, size.x, size.y);
+	nvgStrokeColor(vg, theme->getBgStrokeColor(flags));
+	nvgStrokeWidth(vg, theme->getBgStrokeWidth(flags));
+	nvgStroke(vg);
+	nvgFillColor(vg, theme->getBgColor(flags));
+	nvgFill(vg);
+
+
+	//		nvgBeginPath(vg);
+	//		nvgRect(vg, pos.x+1, pos.y+1, size.x-2, size.y-2);
+	//		nvgStrokeColor(vg, g_guiColors[COL_GUI_STROKE]);
+	//		nvgStrokeWidth(vg, 3);
+	//		nvgStroke(vg);
+	//		nvgFillColor(vg, g_guiColors[COL_BG_DRK]);
+	//		nvgFill(vg);
+}
+guitheme_t* getDefaultTheme() {
+	static guitheme_t theme(true);
+	return &theme;
 }

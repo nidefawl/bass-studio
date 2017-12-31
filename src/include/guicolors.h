@@ -17,18 +17,36 @@
 #define G_B(x) x
 #define G_RND 2.0
 #define G_STROKE 1.0
+#define GUI_COLOR_HEX(x) (0xff000000|(x<<16)|(x<<8)|x)
 #define GUI_COLOR(x) nvgRGBA(G_R(x), G_G(x), G_B(x), 255)
 #define GUI_COLORA(x, a) nvgRGBA(G_R(x), G_G(x), G_B(x), a)
 #define GUI_COLORRGB(r, g, b, a) nvgRGBA(G_R(r), G_G(g), G_B(b), a)
+
 #define INSET_TITLE 4
 #define INSET_TRACK_CONTENT 2
 #define INSET_CLIP_CONTENT 2
-#define HEIGHT_PLUGIN_TITLE 30
-#define HEIGHT_TRACK_TITLE 30
+#define HEIGHT_PLUGIN_TITLE 36
+#define HEIGHT_TRACK_TITLE (24+INSET_TRACK_CONTENT*2)
 #define HEIGHT_CLIP_TITLE 24
-#define FONT_SIZE_CTXT 22
+#define FONT_SIZE_CTXT 24
+#define FONT_SIZE_CTXT_SMALL 18
+#define DRAG_RANGE 10
+#define TRACK_HEIGHT_STEP HEIGHT_TRACK_TITLE
+#define TRACK_HEIGHT_SPACING 2
+#define FLG_ENBL 1
+#define FLG_HVRD 2
+#define FLG_FOC 4
+#define FLG_DRG 8
+#define FLG_ACT 16
+#define CTR_SPACING 8
+#define CONTENT_INSET 14
+
 #define G_WHITE GUI_COLOR(255)
 #define G_BLACK GUI_COLOR(0)
+#define G_PURPLE_HEX 0xEF62DF
+#define G_BLUE2_HEX 0x62EFDF
+#define G_PURPLE rgbToNvg(G_PURPLE_HEX)
+#define G_BLUE2 rgbToNvg(G_BLUE2_HEX)
 #define G_BLUE GUI_COLORRGB(0, 0xdd, 0xff, 255)
 #define G_GREEN GUI_COLORRGB(30, 255, 30, 255)
 #define G_GREEN_DRK GUI_COLORRGB(10, 160, 10, 255)
@@ -66,8 +84,6 @@
 #define COL_BG_DRKER 17
 #define COL_BG_DRKER2 18
 
-#define CTR_SPACING 8
-#define CONTENT_INSET 14
 
 #define NVG_KAPPA90 0.5522847493f	// Length proportional to radius of a cubic bezier handle for 90deg arcs.
 #define PT1 (r*(1-NVG_KAPPA90))

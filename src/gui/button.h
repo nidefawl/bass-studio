@@ -13,24 +13,9 @@ using glm::ivec2;
 
 class guibuttonbase : public guibase {
 public:
-	NVGcolor color;
-	NVGcolor colorStroke;
-	NVGcolor colorHover;
-	NVGcolor colorPressed;
 	guibuttonbase() : guibase() {
-		uint32_t rgb = nvgToRGB(g_guiColors[COL_BG_DRK]);
-		setColor(rgb);
 	}
 	guibuttonbase(ivec2 _pos, ivec2 _size) : guibase(_pos, _size) {
-		uint32_t rgb = nvgToRGB(g_guiColors[COL_BG_DRK]);
-		setColor(rgb);
-	}
-	void setColor(uint32_t hex) {
-		vec4 hsl = hexToHSL(hex);
-		color = nvgHSL(hsl.x, hsl.y, hsl.z);
-		colorStroke = nvgHSL(hsl.x, CLAMP_F(hsl.y*1.3f), 0.4f);
-		colorHover = nvgHSL(hsl.x, CLAMP_F(hsl.y*0.7f), CLAMP_F(hsl.z + 0.3f));
-		colorPressed = nvgHSL(hsl.x, CLAMP_F(hsl.y*0.7f), CLAMP_F(hsl.z + 0.3f));
 	}
 	virtual bool hovered() {
 		return this == MainCtrl::get()->guiOver;
@@ -40,6 +25,9 @@ public:
 	}
 	virtual bool focused() {
 		return this == MainCtrl::get()->guiFocused;
+	}
+	virtual bool enabled() {
+		return true;
 	}
 	virtual void handleDraggedMove(MouseEvent& evt) {
 	}
@@ -54,13 +42,28 @@ public:
 		}
 		return false;
 	}
+	virtual int32_t getStateFlags() {
+		int32_t flgs = 0;
+		if (pressed()) {
+			flgs |= FLG_DRG;
+		}
+		if (hovered()) {
+			flgs |= FLG_HVRD;
+		}
+		if (focused()) {
+			flgs |= FLG_FOC;
+		}
+		if (enabled()) {
+			flgs |= FLG_ENBL;
+		}
+		return flgs;
+	}
 };
 class guibutton : public guibuttonbase {
 	bool* enabledPtr = NULL;
 	bool* activePtr = NULL;
 public:
 	guibutton() : guibuttonbase() {
-		setColor(nvgToRGB(g_guiColors[COL_BG_DRK]));
 	}
 	virtual bool enabled() {
 		if (enabledPtr)
@@ -78,41 +81,12 @@ public:
 	void setActiveRef(bool* _activePtr) {
 		activePtr = _activePtr;
 	}
-	void (*drawFn)(NVGcontext*,ivec2&, ivec2&, NVGcolor&, int drawParm, int drawParm2) = NULL;
+	void (*drawFn)(NVGcontext*,ivec2&, ivec2&, const NVGcolor&, int drawParm, int drawParm2) = NULL;
 	int drawParm = 0;
 	void render(NVGcontext* vg) {
-		NVGcolor c;
-		if (!enabled()) {
-			c = G_BUTTON_DISABLED;
-		}
-		else if (pressed()) {
-			c = colorPressed;
-		}
-		else if (hovered()) {
-			c = colorHover;
-		}
-		else {
-			c = color;
-		}
-		ivec2 insetP = pos+ivec2(1);
-		ivec2 insetS = size-ivec2(2);
-		renderWidgetBorder(vg);
-		nvgBeginPath(vg);
-		nvgRect(vg, insetP.x, insetP.y, insetS.x, insetS.y);
-		nvgFillColor(vg, c);
-		nvgFill(vg);
-		if (hovered() || focused()) {
-			NVGcolor c2 = colorStroke;
-			if (hovered())
-				c2 = G_WHITE;
-			nvgBeginPath(vg);
-			nvgRect(vg, pos.x, pos.y, size.x, size.y);
-			nvgStrokeColor(vg, c2);
-			nvgStrokeWidth(vg, 1);
-			nvgStroke(vg);
-		}
+		renderWidgetBorder(vg, getStateFlags());
 		if (drawFn) {
-			drawFn(vg, pos, size, c, drawParm, activePtr ? active() : -1);
+			drawFn(vg, pos, size, theme->getBgColor(getStateFlags()), drawParm, activePtr ? active() : -1);
 		}
 	}
 };

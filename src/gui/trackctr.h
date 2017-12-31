@@ -36,208 +36,6 @@ int32_t getPosYFirstReturnTrack(project_t& project);
 track_t *getTrackFromMouse(project_t& project, ivec2 mouse, bool isDragSnap);
 gui_track* createTrackGui(track_t* t); // trackcontent.cpp
 
-class gui_trackgain: public guibase {
-	track_t* const m_track;
-	NVGcolor color;
-	NVGcolor colorStroke;
-	NVGcolor colorHover;
-	NVGcolor colorPressed;
-	bool bEnabled;
-public:
-	gui_trackgain(track_t* _track) :
-		guibase(), m_track(_track) {
-		uint32_t rgb = nvgToRGB(g_guiColors[COL_BG_DRK]);
-		setColor(rgb);
-	}
-	void setColor(uint32_t hex) {
-		vec4 hsl = hexToHSL(hex);
-		color = nvgHSL(hsl.x, hsl.y, hsl.z);
-		colorStroke = nvgHSL(hsl.x, CLAMP_F(hsl.y*1.3f), 0.4f);
-		colorHover = nvgHSL(hsl.x, CLAMP_F(hsl.y*0.7f), CLAMP_F(hsl.z + 0.3f));
-		colorPressed = nvgHSL(hsl.x, CLAMP_F(hsl.y*0.7f), CLAMP_F(hsl.z + 0.3f));
-	}
-	virtual bool hovered() {
-		return this == MainCtrl::get()->guiOver;
-	}
-	virtual bool pressed() {
-		return this == MainCtrl::get()->guiDragged;
-	}
-	virtual bool focused() {
-		return this == MainCtrl::get()->guiFocused;
-	}
-	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-		if (contains(mpos)) {
-			evt.requestFocus(this);
-			return true;
-		}
-		return false;
-	}
-	void (*drawFn)(NVGcontext*,ivec2&, ivec2&, NVGcolor&) = NULL;
-	bool enabled() {
-		return bEnabled;
-	}
-	void render(NVGcontext* vg) {
-		NVGcolor c;
-		if (!enabled()) {
-			c = G_BUTTON_DISABLED;
-		}
-		else if (pressed()) {
-			c = colorPressed;
-		}
-		else if (hovered()) {
-			c = colorHover;
-		}
-		else {
-			c = color;
-		}
-		ivec2 insetP = pos+ivec2(1);
-		ivec2 insetS = size-ivec2(2);
-		renderWidgetBorder(vg);
-		nvgBeginPath(vg);
-		nvgRect(vg, insetP.x, insetP.y, insetS.x, insetS.y);
-		nvgFillColor(vg, c);
-		nvgFill(vg);
-		NVGcolor c2 = colorStroke;
-		if (hovered() || focused()) {
-			c2 = G_WHITE;
-		}
-		nvgBeginPath(vg);
-		nvgRect(vg, pos.x, pos.y, size.x, size.y);
-		nvgStrokeColor(vg, c2);
-		nvgStrokeWidth(vg, 1);
-		nvgStroke(vg);
-		if (drawFn) {
-			drawFn(vg, pos, size, c);
-		}
-		track_plugins_t* audio = m_track->audio;
-		if (audio) {
-			float f = audio->gain;
-			float gaindBFS = dsp_util::dBFS(f);
-			double scale = scaledRange(gaindBFS, -60.0f, MTR_CEIL);
-			float wVal = (1.0f - scale) * insetS.x;
-			float x = insetP.x;
-			float y = insetP.y;
-			nvgBeginPath(vg);
-			nvgRect(vg, x, y, wVal, insetS.y);
-			nvgFillColor(vg, rgbToNvg(0x00ddff));
-			nvgFill(vg);
-			setFont(vg, 20, G_WHITE, NVG_ALIGN_CENTER|NVG_ALIGN_MIDDLE);
-			String strLvl = StringFormat("%.2f", dsp_util::dBFSClampInf6(f));
-			nvgText(vg, insetP.x + insetS.x / 2.0f, insetP.y + G_FONT_MIDDLE_OFFSET(insetS.y), StringAsCStr(strLvl), NULL);
-		}
-	}
-	void handleDraggedBegin(MouseEvent& evt) {
-		if (evt.guiDragged == this) {
-			MainCtrl::get()->captureMouse(this);
-		}
-	}
-	void handleDraggedMove(MouseEvent& evt) {
-		if (evt.guiDragged == this && evt.type == M_EVT_CAPTURED_MOVE) {
-			int disty = (int)evt.dragDistance->y / 10;
-			if (abs(disty) < 1)
-				return;
-			evt.dragDistance->y = 0;
-			track_plugins_t* audio = m_track->audio;
-			if (audio) {
-				float f = audio->gain;
-				my_printf("disty: %d\n", disty);
-				float adj = (1.0f - disty / 10.0f);
-//				if (f < 1.0E-5f && adj > 1.0f)
-//					f = 1.0E-5f;
-				my_printf("f: %f  adj %f\n", f, adj);
-				if (dsp_util::GAIN_DBFLOOR > f) {
-					f = dsp_util::GAIN_DBFLOOR;
-				}
-				float fNew = dsp_util::clampGain(f * adj);
-				my_printf("FNEW: %f %f\n", fNew, dsp_util::dBFS(fNew));
-				audio->gain = fNew;
-			}
-		}
-	}
-	void handleDraggedRelease(MouseEvent& evt) {
-	}
-};
-class gui_trackmeter: public guibase {
-public:
-	track_t* const m_track;
-	gui_trackmeter(track_t* _track) :
-		guibase(), m_track(_track) {
-	}
-	void render(NVGcontext* vg) {
-		int32_t spacing = 1;
-		ivec2 inset(spacing);
-		ivec2 mtrPos = pos + inset;
-		ivec2 mtrSize = size - inset * 2;
-		track_plugins_t* audio = m_track->audio;
-		float channelW = (mtrSize.x-(OUTPUT_CHANNELS+1)*spacing) / (float) OUTPUT_CHANNELS;
-		const double scaledZero = scaledRange(0, MTR_FLOOR, MTR_CEIL);
-		float hZero = (1.0f - scaledZero) * mtrSize.y;
-		float yZero = mtrPos.y + mtrSize.y - hZero;
-		if (audio) {
-			float x = mtrPos.x+spacing;
-			for (int i = 0; i < OUTPUT_CHANNELS; i++) {
-				float fMax = audio->meter.getMax(i);
-				float fRms = audio->meter.getRms(i);
-				float fPeak = audio->meter.getStandingPeak(i);
-				float levels[3] = {fMax, fRms, fPeak};
-
-				nvgBeginPath(vg);
-				nvgRect(vg, x, mtrPos.y, channelW, mtrSize.y);
-				nvgFillColor(vg, GUI_COLOR(G_S1));
-				nvgFill(vg);
-				NVGcolor colGainLvl[6] = {
-					G_GREEN_DRK, G_YELLOW_DRK,
-					G_GREEN, G_YELLOW,
-					G_GREEN_DRKER, G_YELLOW_DRKER,
-				};
-
-				for (int i = 0; i < 3; i++ ){
-					float fLvl = levels[i];
-					if (fLvl < F_MIN) {
-						continue;
-					}
-					double scale = scaledRange(dsp_util::dBFS(fLvl), MTR_FLOOR, MTR_CEIL);
-					float hVal = (1.0f - scale) * mtrSize.y;
-					float y = mtrPos.y + mtrSize.y - hVal;
-					if (i == 2) {
-						nvgBeginPath(vg);
-						nvgMoveTo(vg, x, y);
-						nvgLineTo(vg, x+channelW, y);
-//						int32_t col = fLvl >= 1.0f ? 1 : 0;
-						int32_t col = y < yZero ? 1 : 0;
-						nvgStrokeColor(vg, colGainLvl[i*2+col]);
-						nvgStrokeWidth(vg, 1.5f);
-						nvgStroke(vg);
-						continue;
-					}
-					if (hVal > 0.5) {
-						float hOvershoot = max(0.0f, hVal-hZero);
-						nvgBeginPath(vg);
-						nvgRect(vg, x, max(y, yZero), channelW, min(hVal, hZero));
-						nvgFillColor(vg, colGainLvl[i*2+0]);
-						nvgFill(vg);
-						if (hOvershoot > 0) {
-							nvgBeginPath(vg);
-							nvgRect(vg, x, y, channelW, hOvershoot);
-							nvgFillColor(vg, colGainLvl[i*2+1]);
-							nvgFill(vg);
-						}
-					}
-				}
-				x += channelW;
-				x += spacing;
-			}
-		}
-		float x = mtrPos.x+spacing;
-		float x2 = mtrPos.x+(spacing+channelW)*2.0f;
-		nvgBeginPath(vg);
-		nvgMoveTo(vg, x, yZero);
-		nvgLineTo(vg, x2, yZero);
-		nvgStrokeColor(vg, g_guiColors[COL_GRID_BRT]);
-		nvgStrokeWidth(vg, 1.5f);
-		nvgStroke(vg);
-	}
-};
 
 
 class guitrack_editor : public guictr_base {
@@ -336,18 +134,18 @@ public:
 		t->content = createTrackGui(t);
 		t->content->setZOrder(t->type >= TRACK_TYPE_MIDI ? 0 : 1);
 		add(t->content);
-#ifndef NDEBUG
-		for (guibase* child : guis) {
-			gui_track* t = dynamic_cast<gui_track*>(child);
-			assert(t);
-		}
-		int idx = 0;
-		for (guibase* child : guis) {
-			gui_track* t = dynamic_cast<gui_track*>(child);
-			my_printf("idx %d = %s\n", idx, StringAsCStr(t->m_track->name));
-			idx++;
-		}
-#endif
+//#ifndef NDEBUG
+//		for (guibase* child : guis) {
+//			gui_track* t = dynamic_cast<gui_track*>(child);
+//			assert(t);
+//		}
+//		int idx = 0;
+//		for (guibase* child : guis) {
+//			gui_track* t = dynamic_cast<gui_track*>(child);
+//			my_printf("idx %d = %s\n", idx, StringAsCStr(t->m_track->name));
+//			idx++;
+//		}
+//#endif
 	}
 	void removeTrack(track_t* t) {
 		if (t->content) {
@@ -413,7 +211,6 @@ public:
 		nvgRect(vg, 0, 0, cs.x, cs.y);
 		nvgFillColor(vg, g_guiColors[COL_GRID_BRT]);
 		nvgFill(vg);
-
 		for (track_t* g : project.tracksBottom) {
 			//content
 			nvgSave(vg);
@@ -839,7 +636,7 @@ public:
 		t->mixer->size = ivec2(trackControls.size.x, trackheight);
 	}
 	void layout() {
-		const int mixerwidth = 200;
+		const int mixerwidth = 280;
 		ivec2 cs = getSizeContent();
 		trackTimeline.pos = ivec2(0, 0);
 		trackTimeline.size = ivec2(cs.x - mixerwidth, 32);
@@ -855,14 +652,14 @@ public:
 
 
 		ivec2 csTrackView = trackView.getSizeContent();
-		int y = 0;
+		int y = TRACK_HEIGHT_SPACING;
 		for (track_t* t : project.trackCtr) {
 			int trackheight = t->height * TRACK_HEIGHT_STEP;
 			assert(t->content != NULL);
 			setTrackPosition(t, trackheight, y);
 			y += trackheight + TRACK_HEIGHT_SPACING;
 		}
-		y = csTrackView.y;
+		y = csTrackView.y-TRACK_HEIGHT_SPACING;
 //		y = 0;
 		auto itMastersTracks = project.tracksBottom.rbegin();
 		auto itMastersEnd = project.tracksBottom.rend();

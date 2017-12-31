@@ -2,6 +2,7 @@
 #include "config.h"
 #include <vector>
 #include <memory>
+#include "automation.h"
 #include "audioblock.h"
 #include "samplerate.h"
 #include "note.h"
@@ -91,6 +92,28 @@ public:
 	}
 };
 class vstplugin;
+struct track_mixer: public automatable_t {
+	float gain;
+	String getAutomatableName() {
+		return "Mixer";
+	}
+	int32_t getNumParameters() {
+		return 1;
+	}
+	String getParamName(int32_t paramIdx) {
+		return "Gain";
+	}
+	float getParamValue(int32_t idx) {
+		return gain;
+	}
+	void setParamValue(int32_t idx, float val) {
+		gain = val;
+	}
+	void updateAutomatedParameters(tick_t pos) {
+//		float val = param.src->getValueAt(pos);
+//		setParamValue(param.paramIdx, val);
+	}
+};
 struct track_plugins_t {
 	track_t* const track;
 	const samplerate_t& sampleRate;
@@ -103,11 +126,11 @@ struct track_plugins_t {
 	VstEvent_t* midiEventsBuf = NULL;
 	AudioBlock input; //guaranteed to have at least 2 channels
 	AudioBlock output; //guaranteed to have at least 2 channels
-	float gain;
+	track_mixer mixer;
 	track_plugins_t(track_t* _track, const samplerate_t& _sampleRate, const uint16_t& _blockSize, int32_t nChannels)
 	: track(_track),
 	  sampleRate(_sampleRate),
-	  blockSize(_blockSize), input(nChannels, _blockSize), output(nChannels, _blockSize), gain(1.0f) {
+	  blockSize(_blockSize), input(nChannels, _blockSize), output(nChannels, _blockSize), mixer() {
 	}
 	~track_plugins_t();
 	vstplugin* setInstrument(vstplugin* _instrument);
@@ -117,4 +140,5 @@ struct track_plugins_t {
 	void sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos);
 	void onTick(double since);
 	VstEvent_t* reallocEvts(size_t size);
+	void getAutomatableTargets(std::vector<automatable_t*>& targets);
 };

@@ -87,10 +87,10 @@ public:
 		this->editor = _editor;
 		this->size.x = 320;
 		auto adaptive = new ctxtmenu_time_select(editor->grid, "Adaptive Grid", 0);
-		adaptive->initAdaptive(this->size.x);
+		adaptive->initAdaptive();
 		add(adaptive);
 		auto fixed = new ctxtmenu_time_select(editor->grid, "Fixed Grid", 0);
-		fixed->initFixed(this->size.x);
+		fixed->initFixed();
 		add(fixed);
 		layout();
 	}

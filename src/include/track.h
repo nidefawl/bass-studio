@@ -21,10 +21,6 @@
 #define NUM_TRACK_TYPES 4
 
 
-#define DRAG_RANGE 10
-#define TRACK_HEIGHT_STEP 20
-#define TRACK_HEIGHT_SPACING 2
-
 const char* TrackTypeToName(int type);
 struct track_plugins_t;
 class gui_track;
@@ -36,10 +32,7 @@ using track_vector = std::vector<track_t*>;
 void deleteTrackContents(trackdata_midi_t* tr, delete_cb *cb);
 void deleteTrack(track_t* tr, delete_cb *cb);
 void deleteClip(clip_t* cl, delete_cb *cb);
-struct automation_point_t {
-	tick_t time;
-	float val;
-};
+
 inline void simplifyData(std::vector<automation_point_t>& data) {
 //	data.erase( std::unique( data.begin(), data.end(), [](automation_point_t const & a, automation_point_t const & b) {
 //
@@ -129,15 +122,32 @@ inline int32_t addPointAt(std::vector<automation_point_t>& dataPoints, tick_t ti
 	}
 	return 0;
 }
-class automation_src_track : public param_automation_src_t {
-public:
-	std::vector<automation_point_t>& points;
-	float current = 0;
-	automation_src_track(std::vector<automation_point_t>& _points) : param_automation_src_t(), points(_points) {
+
+class vstplugin;
+
+struct trackdata_automation_t: public automation_src_t {
+	std::vector<automation_point_t> points;
+	int32_t paramIdx = -1;
+	vstplugin* plugin = NULL;
+
+	float dummy = 0;
+
+	trackdata_automation_t()
+	{
 	}
-	bool isActive() override {
-		return true;
+	~trackdata_automation_t() {
+		//notify vstplugin
 	}
+	void setTarget(vstplugin* _plugin, int32_t _paramIdx) {
+		my_printf("SET PLUGIN %08X ON %08X\n", _plugin, this);
+		plugin = _plugin;
+		paramIdx = _paramIdx;
+	}
+	vstplugin* getTargetPlugin() {
+		return plugin;
+	}
+	float getDstValue();
+	void setDstValue(float f);
 	float getValueAt(tick_t tick) override {
 		if (points.size()) {
 			int32_t idx = indexOfTick(points, tick);
@@ -154,33 +164,11 @@ public:
 			}
 			return points.front().val;
 		}
-		return current;
+		return dummy;
 	}
-};
-class vstplugin;
-struct trackdata_automation_t: public plugin_reference_t {
-	std::vector<automation_point_t> points;
-	automated_param_t target;
-	automation_src_track src;
-	float dummy = 0;
-	trackdata_automation_t()
-		: plugin_reference_t(), src(points)
-	{
+	bool isActive() override {
+		return true;
 	}
-	~trackdata_automation_t() {
-		//notify vstplugin
-	}
-	void breakReference() override {
-		target = automated_param_t();
-	}
-	void setReference(vstplugin* plugin) override {
-		target.plugin = plugin;
-	}
-	vstplugin* getTargetPlugin() {
-		return target.plugin;
-	}
-	float getDstValue();
-	void setDstValue(float f);
 };
 class trackdata_midi_t {
 public:
@@ -357,6 +345,7 @@ struct plugin_snapshot_t {
 	std::vector<uint8_t> dataChunk;
 	std::vector<uint8_t> dataChunk2;
 	std::vector<param_snapshot_t> params;
+	std::vector<plugin_param_autiomation_src_t> automatedParams;
 };
 struct track_plugins_snapshot_t {
 	float gain = 1.0f;
@@ -368,6 +357,7 @@ struct track_snapshot_t : public tracksettings_t {
 	track_t* trackLoaded = NULL;
 	track_plugins_snapshot_t plugins;
 	std::vector<clip_t> clips;
+	std::vector<automation_point_t> points;
 	track_snapshot_t() = default;
 	track_snapshot_t(track_t* track);
 };
@@ -456,6 +446,7 @@ public:
     track_vector::reference back() { return tracks.back(); }
     track_vector::reference front() { return tracks.front(); }
 };
+class trackallcontainer_t;
 class tracksubcontainer_t : public trackbasecontainer_t {
 public:
 	tracksubcontainer_t(trackbasecontainer_t *a = NULL) :
@@ -468,7 +459,7 @@ public:
 	tracksubcontainer_t &operator =(const tracksubcontainer_t &a) = delete;
 	void copyTo(trackcontainer_snapshot_t& out);
 	void copyFrom(trackcontainer_snapshot_t& in);
-	void loadPlugins(trackcontainer_snapshot_t& in);
+	void loadPlugins(trackallcontainer_t* all, trackcontainer_snapshot_t& in);
 
 };
 struct trackcontainer_snapshot_t {

@@ -188,20 +188,21 @@ public:
 	}
 };
 class gui_track_controls: public guictr_base {
+public:
+	track_t* const m_track;
+private:
+	guictr_base* title;
+	guictr_base* mixer;
 	int dragMode = -1;
 	const int resizeHitY = 8;
 	const int DRAG_RESIZE = 1;
 public:
-	track_t* const m_track;
-	gui_track_controls(track_t* _track) :
-			guictr_base(), m_track(_track) {
-
-	}
-	virtual ~gui_track_controls() {
-	}
+	gui_track_controls(track_t* _track);
+	~gui_track_controls();
 	bool isStaticContainer() {
 		return false;
 	}
+	void render(NVGcontext* vg) override;
 	void handleDraggedBegin(MouseEvent& evt) {
 		MainCtrl::get()->setSelectedTrack(m_track);
 		if (isResize(evt.relMousepos+this->pos)) {
@@ -217,7 +218,6 @@ public:
 				mouseDragDist = -evt.relMousepos.y+size.y;
 			}
 			m_track->height = min(12, max(1, (mouseDragDist) / TRACK_HEIGHT_STEP));
-			my_printf("%d %d %d %d \n", resizeTop, mouseDragDist, m_track->height, (mouseDragDist) / TRACK_HEIGHT_STEP);
 			this->parent->onChildLayoutChanged(this);
 		}
 	}
@@ -251,5 +251,6 @@ public:
 		}
 		return false;
 	}
+	void layout() override;
 };
 

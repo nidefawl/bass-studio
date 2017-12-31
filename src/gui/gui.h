@@ -12,6 +12,7 @@
 #include "logging.h"
 #include "renderresources.h"
 #include "mainctrl.h"
+#include "theme.h"
 
 using glm::vec2;
 using glm::ivec2;
@@ -30,11 +31,11 @@ void renderText(NVGcontext* ctx, float x, float y, float maxWidth, const char* s
 void renderDashedLineFrame(NVGcontext* vg, float x, float y, float w, float h, float thickness);
 void drawAttachedBackground(NVGcontext* vg, ivec2 posInset, ivec2 sizeInset, int margin);
 
-void drawPlaySymbol(NVGcontext* vg, ivec2& pos, ivec2& size, NVGcolor& color, int drawParm, int drawParm2);
-void drawStopSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, NVGcolor& color, int drawParm, int drawParm2);
-void drawTextureSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, NVGcolor& color, int drawParm, int drawParm2);
+void drawPlaySymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2);
+void drawStopSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2);
+void drawTextureSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2);
 void drawTri(NVGcontext* vg, float xTop, float yTop, float h, const int dir, const NVGcolor& color, const NVGcolor& strokeColor, float strokeWidth);
-
+guitheme_t* getDefaultTheme();
 ivec2 toControlsObjectSpace(ivec2& pos, guibase* gui);
 
 inline float calcInset(float desiredInset, float size) {
@@ -47,6 +48,7 @@ public:
 	guibase* parent = NULL;
 	int zOrder = 0;
 	int id;
+	guitheme_t* theme = getDefaultTheme();
 	guibase() {
 		id = allocCount;
 		allocCount++;
@@ -65,6 +67,15 @@ public:
 		allocCount--;
 		auto it = std::find(g_guis.begin(), g_guis.end(), this);
 		g_guis.erase(it);
+		if (!theme->isDefault) {
+			delete theme;
+		}
+	}
+	void setColor(uint32_t hex) {
+		if (theme->isDefault) {
+			theme = new guitheme_t(false);
+		}
+		theme->setBgColor(hex);
 	}
 	guibase(const guibase&) = default; guibase& operator=(const guibase&) = default;
 	guibase(guibase&&) = default; guibase& operator=(guibase&&) = default;
@@ -211,15 +222,7 @@ public:
 		}
 		return NULL;
 	}
-	void renderWidgetBorder(NVGcontext* vg) {
-		nvgBeginPath(vg);
-		nvgRect(vg, pos.x, pos.y, size.x, size.y);
-		nvgStrokeColor(vg, g_guiColors[COL_GUI_STROKE]);
-		nvgStrokeWidth(vg, 3);
-		nvgStroke(vg);
-		nvgFillColor(vg, g_guiColors[COL_BG_DRK]);
-		nvgFill(vg);
-	}
+	void renderWidgetBorder(NVGcontext* vg, int32_t flags = FLG_ENBL);
 	virtual ivec2 toScreenSpace(ivec2 in) {
 		in += this->pos;
 		if (this->parent != NULL) {
@@ -229,6 +232,9 @@ public:
 	}
 	virtual bool isStaticContainer() {
 		return true;
+	}
+	virtual int32_t getStateFlags() {
+		return FLG_ENBL;
 	}
 protected:
 
