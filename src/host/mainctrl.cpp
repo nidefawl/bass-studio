@@ -758,6 +758,12 @@ void MainCtrl::closeContextMenu() {
 	if (this->ctxtmenu)
 		DELETE_PTR(this->ctxtmenu)
 }
+bool MainCtrl::hasContextMenu() {
+	return ContextCtrl::get()->isShown();
+}
+guictxtmenu_base* MainCtrl::getContextMenu() {
+	return this->ctxtmenu;
+}
 
 void MainCtrl::objectDragMove(guibase* g, MouseEvent& mevt) {
 	MouseHitEvt evt(MouseHitType::MOUSE_DRAGDROP_OBJECT);
@@ -1075,7 +1081,10 @@ void MainCtrl::mouseUp(ivec2 mousePos, int button) {
 }
 void MainCtrl::mouseDown(ivec2 mousePos, int button, bool doubleclick) {
 	dragdropclip.reset();
-	closeContextMenu();
+	if (ctxtmenu != NULL) {
+		closeContextMenu();
+		return;
+	}
 	if (guiCaptured != NULL) {
 		return;
 	}
@@ -1140,6 +1149,9 @@ void MainCtrl::mouseScrolled(double xoffset, double yoffset) {
 	}
 }
 void MainCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos) {
+	if (ctxtmenu != NULL) {
+		return;
+	}
 	this->m_mousePos = mousePos;
 	if (ctxtmenu == NULL) {
 		if (guiCaptured != NULL) {

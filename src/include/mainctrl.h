@@ -260,6 +260,8 @@ public:
 	void onWindowCloseRequest();
 	void updateMenubar();
 	void closeContextMenu();
+	bool hasContextMenu();
+	guictxtmenu_base* getContextMenu();
 	void onTick();
 	void requestRedraw();
 	bool init(window_main* window, NVGcontext* nanovg);

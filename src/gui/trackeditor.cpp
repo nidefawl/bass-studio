@@ -530,7 +530,7 @@ void guitrack_editor::handleRightClick(MouseEvent& evt) {
 void guitrack_editor::renderClip(NVGcontext* vg, track_t* tr, const clip_t* cl, tick_t offset) {
 	ivec2 clipPos = ivec2();
 	ivec2 clipSize = tr->content->size; //TODO: get rid of *tr here, figure out size before and add default fallback
-	if (!gui_clip::getClipPosition(grid, size, cl, clipPos, clipSize, offset)) {
+	if (gui_clip::getClipPosition(grid, size, cl, clipPos, clipSize, offset)) {
 		clipPos.y += tr->content->pos.y;
 		gui_clip::renderClip(vg, tr, cl, clipPos, clipSize);
 	}
