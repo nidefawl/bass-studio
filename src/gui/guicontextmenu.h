@@ -191,7 +191,7 @@ public:
 			this->height = iY+h;
 			e.x = iX;
 			e.y = iY;
-			e.w += elW;
+			e.w = elW;
 			iX += e.w;
 			if (iX >= tw-inset*2) {
 				iX = inset;
@@ -227,7 +227,7 @@ public:
 		nvgFontSize(vg, this->fontSize-4);
 		int n = 0;
 		for (_time_sel_entry& e : entries) {
-			if (mouse.y > y+e.y && mouse.y < y+e.y + h && mouse.x >= e.x && mouse.x < e.x+e.w) {
+			if (mouse.y >= y+e.y && mouse.y < y+e.y + h && mouse.x >= e.x && mouse.x < e.x+e.w) {
 				nvgBeginPath(vg);
 				nvgRect(vg, e.x, y+e.y+2, e.w, h-4);
 				nvgFillColor(vg, g_guiColors[COL_CTXTMNU_HILIGHT]);
@@ -248,14 +248,14 @@ public:
 		}
 	}
 	bool contains(ivec2& ctxtSize, ivec2& mouse) {
-		return mouse.y > y && mouse.y < y + height && mouse.x >= 0 && mouse.x < ctxtSize.x;
+		return mouse.y >= y && mouse.y < y + height && mouse.x >= 0 && mouse.x < ctxtSize.x;
 	}
 	int getClicked(ivec2& ctxtSize, ivec2& mouse) {
 		if (contains(ctxtSize, mouse)) {
 			int n = fixed ? 10 : 0;
 			const int h = this->fontSize;
 			for (_time_sel_entry& e : entries) {
-				if (mouse.y > y+e.y && mouse.y < y+e.y + h && mouse.x >= 0 && mouse.x < e.x+e.w) {
+				if (mouse.y >= y+e.y && mouse.y < y+e.y + h && mouse.x >= 0 && mouse.x < e.x+e.w) {
 					return n+100;
 				}
 				n++;
@@ -280,24 +280,25 @@ public:
 		entries.push_back(entry);
 	}
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-		return contains(mpos);
+		if (contains(mpos)) {
+			evt.requestFocus(this);
+			return true;
+		}
+		return false;
 	}
 	virtual void clicked(int _id) {
 		MainCtrl::get()->closeContextMenu();
 	}
-	bool mouseDown(ivec2 mousePos) {
-		if (contains(mousePos)) {
-			ivec2 mouse = toContainerSpace(mousePos);
-			for (ctxtmenu_entry* e : entries) {
-				int n = e->getClicked(size, mouse);
-				if (n >= 0) {
-					clicked(n);
-					return true;
-				}
+	virtual void handleDraggedBegin(MouseEvent& evt) {
+		ivec2 local = evt.relMousepos;
+		for (ctxtmenu_entry* e : entries) {
+			int n = e->getClicked(size, local);
+			if (n >= 0) {
+				clicked(n);
+				return;
 			}
 		}
-		MainCtrl::get()->closeContextMenu();
-		return false;
+		return;
 	}
 	void layout() {
 		//TODO: figure out string width here to make life easier laying out context menus
@@ -312,8 +313,9 @@ public:
 	}
 
 	void render(NVGcontext* vg) {
+		setScissorTransform(vg);
 		int idx = 0;
-		ivec2 mouse = ContextCtrl::get()->mousepos;
+		ivec2 mouse = PopupCtrl::get()->m_mousePos;
 		mouse = toContainerSpace(mouse);
 		for (ctxtmenu_entry* e : entries) {
 			e->render(size, vg, idx, mouse);
@@ -331,7 +333,6 @@ public:
 		this->size.x = 120;
 		sel = new ctxtmenu_color_select("Pick Color", 100);
 		add(sel);
-		layout();
 	}
 	void clicked(int _id) {
 		if (_id >= sel->id) {
@@ -364,7 +365,6 @@ public:
 		auto fixed = new ctxtmenu_time_select(grid, "Fixed Grid", 0);
 		fixed->initFixed();
 		add(fixed);
-		layout();
 	}
 	void clicked(int _id) {
 		MainCtrl* ctrl = MainCtrl::get();
@@ -411,7 +411,6 @@ public:
 		add(new ctxtmenu_entry("Delete track", 0));
 		add(new ctxtmenu_splitter());
 		add(sel);
-		layout();
 	}
 	void clicked(int _id) {
 		if (_id >= sel->id) {
@@ -434,7 +433,6 @@ public:
 		for (int i = 0; i < NUM_TRACK_TYPES; i++) {
 			add(new ctxtmenu_entry(StringFormat("Insert %s Track", TrackTypeToName(i)), i));
 		}
-		layout();
 	}
 	void clicked(int _id) {
 		MainCtrl::get()->insertNewTrack(-1, _id);
@@ -447,7 +445,6 @@ public:
 	guictxtmenu_colorpalette() {
 		ctxtmenu_color_select* colorSelect = new ctxtmenu_color_select("Pick Color", 0);
 		add(colorSelect);
-		layout();
 	}
 	void clicked(int _id) {
 		if (_id >= 100) {

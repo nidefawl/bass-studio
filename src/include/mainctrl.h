@@ -85,35 +85,65 @@ struct dragdrop_midifile {
 	bool isValidTarget = false;
 	void reset();
 };
-class ContextCtrl
-{
-	bool isOK = false;
-	NVGcontext* vg = NULL;
-	guictxtmenu_base *ctxtmenu = NULL;
-	window_overlay* window = NULL;
+KeyEvent keyEvent(int key, int scancode, int keyState, int mods, const char* key_name);
+class BaseCtrl {
 public:
-	ivec2 mousepos;
-	ContextCtrl()
-	{
-	};
-	static ContextCtrl* get() {
-		static ContextCtrl ctrl;
-		return &ctrl;
-	}
-	void destroy();
+	window_base* window = NULL;
+	NVGcontext* vg = NULL;
+	std::vector<guictr_base*> containers;
+	guictxtmenu_base *ctxtmenu = NULL;
+	int cursorIcon = CURSOR_DEFAULT;
+	ivec2 m_size;
+	ivec2 m_mousePos;
+	guibase *guiOver = NULL;		//updates on mouse move "current mouseover"
+	guibase *guiDragged = NULL;		//updates on mouse click "currently dragged", set from guiOver
+	guibase *guiCaptured = NULL;	//updates when cursor is hidden, set from guiDragged
+	guibase *guiFocused = NULL;		//updates on mouse click, set from guiOver
+	guibase *guiCtrFocused = NULL;	//updates on mouse click, handles keyboard input
+
+	ivec2 dragStart;
+	ivec2 dragOffset;
+	ivec2 dragDistance;
+	bool isOK = false;
 	bool isOk() const {
 		return isOK;
 	}
+	virtual ~BaseCtrl() { }
+	virtual void render(int32_t x, int32_t y, int32_t w, int32_t h, float ratio);
+
+	virtual bool processGlobalKeyevent(KeyEvent& event) {
+		return false;
+	}
+	virtual bool mouseDownPre() {
+		return true;
+	}
+	void mouseDown(ivec2 mousePos, int button, bool doubleclick);
+	void mouseUp(ivec2 mousePos, int button);
+	void onCharInput(unsigned int codepoint);
+	void onKeyInput(int key, int scancode, int keyState, int mods, const char* key_name);
+	void mouseScrolled(double xoffset, double yoffset);
+	void mouseMoved(ivec2 mousePos, ivec2 deltaPos);
+
+};
+class guictr_popup;
+class PopupCtrl : public BaseCtrl
+{
+	guictr_popup* popupCtrs;
+public:
+	PopupCtrl();
+	~PopupCtrl();
+	static PopupCtrl* get() {
+		static PopupCtrl ctrl;
+		return &ctrl;
+	}
+	void destroy();
 	bool isShown() {
 		return this->window->isShown();
 	}
 	void close();
 	void open(guictxtmenu_base *ctxtmenu, ivec2 pos);
 	bool init(window_overlay* window, NVGcontext* nanovg);
-	void render(int32_t x, int32_t y, int32_t w, int32_t h, float ratio);
-	void mouseDown(ivec2 mousePos, int button, bool doubleclick);
-	void mouseUp(ivec2 mousePos, int button);
-	void mouseMoved(ivec2 mousePos, ivec2 deltaPos);
+//	void render(int32_t x, int32_t y, int32_t w, int32_t h, float ratio);
 
 };
 
@@ -163,24 +193,20 @@ struct Menus {
 	ngui::Menu edit;
 	ngui::Menu options;
 };
-class MainCtrl : public delete_cb, public project_t
+
+class MainCtrl : public BaseCtrl, public delete_cb, public project_t
 {
-	bool isOK = false;
-	NVGcontext* vg = NULL;
 	ViewContainers* view = NULL;
-	guictxtmenu_base* ctxtmenu = NULL;
 	ngui::MenuBar menubar;
 	Menus menus;
 
 	edithistory hist;
-	std::vector<guictr_base*> containers;
 	scaled_grid grid;
 	clip_view clipView;
 	WorkerThread workerThread;
 	PlaybackThread playThread;
 	String projectPath;
 	hires_timer_t timer;
-	KeyEvent keyEvent(int key, int scancode, int keyState, int mods, const char* key_name);
 	track_t* selectedTrack = NULL;
 	track_t* lastHoveredTrack = NULL;
 	int32_t lastHoveredTrackTicks = 0;
@@ -193,21 +219,7 @@ public:
 		return &get()->playThread;
 	}
 	static guictr_plugins* getPluginCtr();
-	bool isOk() const {
-		return isOK;
-	}
-	int cursorIcon = CURSOR_DEFAULT;
-	ivec2 m_size;
-	ivec2 m_mousePos;
-	guibase *guiOver = NULL;		//updates on mouse move "current mouseover"
-	guibase *guiDragged = NULL;		//updates on mouse click "currently dragged", set from guiOver
-	guibase *guiCaptured = NULL;	//updates when cursor is hidden, set from guiDragged
-	guibase *guiFocused = NULL;		//updates on mouse click, set from guiOver
-	guibase *guiCtrFocused = NULL;	//updates on mouse click, handles keyboard input
 	String lastKey;
-	ivec2 dragStart;
-	ivec2 dragOffset;
-	ivec2 dragDistance;
 	dragdrop_midifile dragdropclip;
 	plugindatabase_t plugindb;
 	tick_t tickJmpFrom = 0;
@@ -244,13 +256,6 @@ public:
 	}
 	void resetMouseContext();
 	void addDebug(String s);
-	void render(int32_t x, int32_t y, int32_t w, int32_t h, float ratio);
-	void mouseDown(ivec2 mousePos, int button, bool doubleclick);
-	void mouseUp(ivec2 mousePos, int button);
-	void onCharInput(unsigned int codepoint);
-	void onKeyInput(int key, int scancode, int keyState, int mods, const char* key_name);
-	void mouseScrolled(double xoffset, double yoffset);
-	void mouseMoved(ivec2 mousePos, ivec2 deltaPos);
 	void openContextMenu(guictxtmenu_base *b, ivec2 pos);
 	bool filesDropMove(ivec2 pos);
     bool filesDropBegin(std::vector<String>& files, ivec2 pos);
@@ -268,6 +273,8 @@ public:
 	void postInit();
 	void destroy();
 	void relayout(int32_t w, int32_t h);
+	bool processGlobalKeyevent(KeyEvent& event) override;
+	bool mouseDownPre() override;
 	bool captureMouse(guibase* gui);
 	void uncaptureMouse();
 	void onUncaptureMouse();

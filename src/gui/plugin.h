@@ -29,7 +29,6 @@ public:
 		return *state;
 	}
 	void render(NVGcontext* vg) {
-		NVGcolor c;
 		vec2 cen = vec2(radius);
 		cen.x += pos.x;
 		cen.y += pos.y;

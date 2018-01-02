@@ -92,7 +92,6 @@ public:
 		auto fixed = new ctxtmenu_time_select(editor->grid, "Fixed Grid", 0);
 		fixed->initFixed();
 		add(fixed);
-		layout();
 	}
 	void clicked(int clickedid) {
 		scaled_grid& grid = editor->grid;

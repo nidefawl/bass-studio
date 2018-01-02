@@ -372,6 +372,25 @@ public:
 		pos->x = x;
 		pos->y = y;
 	}
+	int getKeyMods_() {
+		int shiftL = glfwGetKey(glfw, GLFW_KEY_LEFT_SHIFT);
+		int shiftR = glfwGetKey(glfw, GLFW_KEY_RIGHT_SHIFT);
+		int ctrlL = glfwGetKey(glfw, GLFW_KEY_LEFT_CONTROL);
+		int ctrlR = glfwGetKey(glfw, GLFW_KEY_RIGHT_CONTROL);
+		int altL = glfwGetKey(glfw, GLFW_KEY_LEFT_ALT);
+		int altR = glfwGetKey(glfw, GLFW_KEY_RIGHT_ALT);
+		int mods = 0;
+		if (altL || altR) {
+			mods |= KB_MOD_ALT;
+		}
+		if (ctrlL || ctrlR) {
+			mods |= KB_MOD_CTRL;
+		}
+		if (shiftL || shiftR) {
+			mods |= KB_MOD_SHIFT;
+		}
+		return mods;
+	}
 };
 class appwindow_main : public appwindow, public window_main  {
 	MainCtrl* const ctrl;
@@ -419,25 +438,6 @@ public:
 		PREVENT_REENTRANT("REENTRANT IN onTick")
 //		flagNeedsRedraw();
 		ctrl->onTick();
-	}
-	int getKeyMods() {
-		int shiftL = glfwGetKey(glfw, GLFW_KEY_LEFT_SHIFT);
-		int shiftR = glfwGetKey(glfw, GLFW_KEY_RIGHT_SHIFT);
-		int ctrlL = glfwGetKey(glfw, GLFW_KEY_LEFT_CONTROL);
-		int ctrlR = glfwGetKey(glfw, GLFW_KEY_RIGHT_CONTROL);
-		int altL = glfwGetKey(glfw, GLFW_KEY_LEFT_ALT);
-		int altR = glfwGetKey(glfw, GLFW_KEY_RIGHT_ALT);
-		int mods = 0;
-		if (altL || altR) {
-			mods |= KB_MOD_ALT;
-		}
-		if (ctrlL || ctrlR) {
-			mods |= KB_MOD_CTRL;
-		}
-		if (shiftL || shiftR) {
-			mods |= KB_MOD_SHIFT;
-		}
-		return mods;
 	}
 	void onRefresh()
 	{
@@ -560,15 +560,15 @@ public:
 	void releaseMouse() {
 		appwindow::releaseMouse();
 	}
-	void onCursorEnter(int entered) {
-		if (entered)
-			glfwSetCursor(glfw, RenderResources::cursors[cursorIcon]);
-	}
 	void hideSystemCursor() {
 //		appwindow::hideSystemCursor();
 	}
 	bool isMouseCaptured() {
 		return appwindow::isMouseCaptured();
+	}
+	void onCursorEnter(int entered) {
+		if (entered)
+			glfwSetCursor(glfw, RenderResources::cursors[cursorIcon]);
 	}
 	window_dialog* createDialog();
 	bool isShown() {
@@ -598,17 +598,20 @@ public:
 		}
 		return str;
 	}
+	int getKeyMods() override {
+		return getKeyMods_();
+	}
 };
 
 class appwindow_overlay : public appwindow, public window_overlay {
 public:
 	appwindow* const parent;
-	ContextCtrl* const ctrl;
+	PopupCtrl* const ctrl;
 	appwindow_overlay(appwindow* _parent)
 		: appwindow(),
 		  window_overlay(),
 		  parent(_parent),
-		  ctrl(ContextCtrl::get())
+		  ctrl(PopupCtrl::get())
 	{
 	}
 	void create(const char* title, int w, int h);
@@ -668,6 +671,10 @@ public:
 		}
 		flagNeedsRedraw();
 	}
+	virtual void onMouseScrolled(double xoffset, double yoffset) {
+		ctrl->mouseScrolled(xoffset, yoffset);
+		flagNeedsRedraw();
+	}
 	void onWindowSizeChanged(int width, int height) {
 		flagNeedsRedraw();
 	}
@@ -717,6 +724,21 @@ public:
 			str = text;
 		}
 		return str;
+	}
+	int getKeyMods() override {
+		return getKeyMods_();
+	}
+	void captureMouse() {
+		appwindow::captureMouse();
+	}
+	void releaseMouse() {
+		appwindow::releaseMouse();
+	}
+	void hideSystemCursor() {
+//		appwindow::hideSystemCursor();
+	}
+	bool isMouseCaptured() {
+		return appwindow::isMouseCaptured();
 	}
 };
 
@@ -822,6 +844,21 @@ public:
 			str = text;
 		}
 		return str;
+	}
+	int getKeyMods() override {
+		return getKeyMods_();
+	}
+	void captureMouse() {
+		appwindow::captureMouse();
+	}
+	void releaseMouse() {
+		appwindow::releaseMouse();
+	}
+	void hideSystemCursor() {
+//		appwindow::hideSystemCursor();
+	}
+	bool isMouseCaptured() {
+		return appwindow::isMouseCaptured();
 	}
 };
 void appwindow_main::updateMenu() {
@@ -1081,7 +1118,7 @@ int mainHost() {
 	audiohost->unload();
 	ctrl->destroy();
 	audiohost->destroy();
-	ContextCtrl::get()->destroy();
+	PopupCtrl::get()->destroy();
 
 	// I _want_ to use smart pointers, but eclipse cdt doesn't want me to
 

@@ -334,7 +334,6 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 		bool mouseIn = MainCtrl::get()->guiOver == this && contains(imouse+getPosContent());
 		tick_t mouseTick = !mouseIn ? INVALID_TICK : MainCtrl::get()->getGrid().screenToTickSnap(imouse.x, SNAP_OFF);
 		vec2 fmouse = vec2(imouse);
-		bool b = dragged.mode || !mouseIn;
 		hit_result currentDragged = dragged.mode || !mouseIn ? dragged : hitTest(fmouse);
 		if (currentDragged.mode == dragmode::drag_node) {
 			int32_t ptIdx = currentDragged.idx+segmentDataPtOffset;

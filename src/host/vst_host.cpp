@@ -809,7 +809,7 @@ vstplugin* vsthost::getPlugin(AEffect* aeffect) {
 	return NULL;
 }
 void vsthost::unloadPlugin(vstplugin* plugin) {
-	ContextCtrl::get()->close(); // Make sure context controls do not reference vst
+	PopupCtrl::get()->close(); // Make sure context controls do not reference vst
 	plugin->close();
 	auto it = std::find(list.begin(), list.end(), plugin);
 	if (it != list.end()) {

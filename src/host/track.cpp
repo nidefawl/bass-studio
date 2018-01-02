@@ -1,22 +1,29 @@
 #include <algorithm>
-#include "track.h"
-#include "track_audiodata.h"
 
 
+#include "logging.h"
 #include "samplerate.h"
 #include "seq_util.h"
 #include "seq_time.h"
 #include "seq_math.h"
-#include "clip.h"
-#include "../gui/trackcontent.h"
+
+
+#include "../gui/pluginctr.h"
 #include "../gui/trackctr.h"
+#include "../gui/trackcontrols.h"
+#include "../gui/trackcontent.h"
+
+#include "clip.h"
+#include "track.h"
+#include "track_audiodata.h"
+#include "automation_link.h"
+
 #include "vst_plugin.h"
 #include "vst_plugin_handles.h"
 #include "vst_host.h"
-#include "logging.h"
+
 #include "mainctrl.h"
-#include "../gui/pluginctr.h"
-#include "automation_link.h"
+
 #include "leak_detect.h"
 
 #define ERROR_LOG(x) (my_printf("ERROR: %s\n", x))

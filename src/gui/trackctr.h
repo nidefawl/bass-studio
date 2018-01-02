@@ -11,30 +11,19 @@
 #include "clip.h"
 #include "grid.h"
 #include "guicontainer.h"
-#include "trackcontent.h"
 #include "tracktimeline.h"
 #include "guicontextmenu.h"
 #include "mouse.h"
 
 #include "platform.h"
 #include "dsp_util.h"
-#include "track_audiodata.h"
 #include "leak_detect.h"
 
-//inline const float lvlFloor = -48.0f;
-//inline const float lvlCeil = 6.0f;
-#define MTR_FLOOR -48.0f
-#define MTR_CEIL 6.0f
 
-float inline scaledRange(float db, float lvlFloor, float lvlCeil) {
-	if (db < dsp_util::DBFS_FLOOR)
-		return 1.0f;
-	float lvlRange = lvlFloor - lvlCeil;
-	return (max(lvlFloor, min(db, lvlCeil)) - lvlCeil) / lvlRange;
-}
 int32_t getPosYFirstReturnTrack(project_t& project);
 track_t *getTrackFromMouse(project_t& project, ivec2 mouse, bool isDragSnap);
 gui_track* createTrackGui(track_t* t); // trackcontent.cpp
+gui_track_controls* createTrackGuiMixer(track_t* t); // trackcontrols.cpp
 
 
 
@@ -166,7 +155,6 @@ public:
 	}
 };
 
-gui_track_controls* createTrackGuiMixer(track_t* t); // trackcontent.cpp
 
 class guitrack_mixers : public guictr_base {
 	project_t& project;
@@ -202,46 +190,9 @@ public:
 	void handleRightClick(MouseEvent& evt) {
 		MainCtrl::get()->openContextMenu(new guictxtmenu_notrack(), evt.mousepos);
 	}
-	void render(NVGcontext* vg) {
-		if (!setScissorTransform(vg)) {
-			return;
-		}
-		ivec2 cs = getSizeContent();
-		nvgBeginPath(vg);
-		nvgRect(vg, 0, 0, cs.x, cs.y);
-		nvgFillColor(vg, g_guiColors[COL_GRID_BRT]);
-		nvgFill(vg);
-		for (track_t* g : project.tracksBottom) {
-			//content
-			nvgSave(vg);
-			g->mixer->render(vg);
-			nvgRestore(vg);
-		}
-		int ySplit = getPosYFirstReturnTrack(project);
-		if (ySplit > 0) {
-			nvgIntersectScissor(vg, 0, 0, cs.x, ySplit);
-			for (track_t* g : project.trackCtr) {
-				//content
-				nvgSave(vg);
-				g->mixer->render(vg);
-				nvgRestore(vg);
-			}
-		}
-
-	}
-	void addTrack(track_t* t) {
-		if (t->mixer)
-			throw applogicexception("expected t->mixer == NULL");
-		t->mixer = createTrackGuiMixer(t);
-		t->mixer->setZOrder(t->type >= TRACK_TYPE_MIDI ? 0 : 1);
-		this->add(t->mixer);
-	}
-	void removeTrack(track_t* t) {
-		if (t->mixer) {
-			this->remove(t->mixer);
-			DELETE_PTR(t->mixer)
-		}
-	}
+	void render(NVGcontext* vg);
+	void addTrack(track_t* t);
+	void removeTrack(track_t* t);
 	void layout() {
 		for (guibase* gui : guis) {
 			gui->layout();
@@ -497,6 +448,7 @@ public:
 		remove(&loophandles);
 		remove(&trackTimeline);
 	}
+
 	void addSingleTrack(track_t* t) {
 		trackControls.addTrack(t);
 		trackView.addTrack(t);
@@ -515,19 +467,8 @@ public:
 		trackControls.removeTrack(t);
 		trackView.removeTrack(t);
 	}
-	void drawSeperator(NVGcontext* vg, track_t* g, ivec2& cs) {
-		//draw (seperator) line at top or bottom of track
-		int seperatorY = g->mixer->pos.y;
-		if (g->type >= TRACK_TYPE_MIDI) {
-			seperatorY += g->mixer->size.y;
-		}
-		nvgBeginPath(vg);
-		nvgMoveTo(vg, 0, seperatorY);
-		nvgLineTo(vg, cs.x, seperatorY);
-		nvgStrokeColor(vg, g_guiColors[COL_LINE_SEPERATOR]);
-		nvgStrokeWidth(vg, TRACK_HEIGHT_SPACING);
-		nvgStroke(vg);
-	}
+	void drawSeperator(NVGcontext* vg, track_t* g, ivec2& cs);
+	void setTrackPosition(track_t* t, int32_t trackheight, int32_t y);
 	void render(NVGcontext* vg) {
 		guictr_base::renderBackground(vg);
 		ivec2 cs = getSizeContent();
@@ -626,14 +567,6 @@ public:
 	//			nvgStroke(vg);
 	//		}
 		}
-	}
-	void setTrackPosition(track_t* t, int32_t trackheight, int32_t y) {
-		t->content->pos.x = 0;
-		t->content->pos.y = y;
-		t->mixer->pos.x = 0;
-		t->mixer->pos.y = y;
-		t->content->size = ivec2(trackView.size.x, trackheight);
-		t->mixer->size = ivec2(trackControls.size.x, trackheight);
 	}
 	void layout() {
 		const int mixerwidth = 280;

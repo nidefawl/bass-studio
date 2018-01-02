@@ -138,7 +138,6 @@ public:
 		} else {
 			add(new ctxtmenu_entry("Create Automation Track", ID_CREATE));
 		}
-		layout();
 	}
 	void clicked(int _id) {
 		switch (_id) {

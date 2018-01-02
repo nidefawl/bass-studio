@@ -28,6 +28,7 @@
 #include "../gui/button.h"
 #include "../gui/guicontextmenu.h"
 #include "../gui/tempocontrols.h"
+#include "../gui/scrollbar.h"
 #include "../gui/statusbar.h"
 #include "../gui/plugin.h"
 #include "../gui/pluginctr.h"
@@ -39,6 +40,8 @@
 
 #include "vst_host.h"
 #include "vst_plugin.h"
+#include "track_audiodata.h"
+
 #include "leak_detect.h"
 
 using glm::vec2;
@@ -48,9 +51,6 @@ using glm::ivec4;
 using std::min;
 using std::max;
 using namespace std;
-
-//helper macros to ease porting from java
-#define boolean (0) 
 
 
 ivec2 toControlsObjectSpace(ivec2& pos, guibase* gui) {
@@ -505,6 +505,7 @@ void MainCtrl::postInit() {
 bool MainCtrl::init(window_main* window, NVGcontext* nanovg)
 {
 	this->mainWindow = window;
+	this->window = window;
 	this->vg = nanovg;
 	plugindb.open();
 	this->playThread.startThread();
@@ -675,7 +676,7 @@ bool MainCtrl::setLoadedProject(shared_ptr<project_file> file) {
 
 	return true;
 }
-void MainCtrl::render(int32_t x, int32_t y, int32_t w, int32_t h, float ratio) {
+void BaseCtrl::render(int32_t x, int32_t y, int32_t w, int32_t h, float ratio) {
 	nvgBeginFrame(vg, w, h, ratio);
 
 
@@ -751,15 +752,15 @@ void MainCtrl::openContextMenu(guictxtmenu_base *b, ivec2 pos) {
 	this->ctxtmenu = b;
 	ivec2 windowPos;
 	this->mainWindow->getPos(&windowPos);
-	ContextCtrl::get()->open(b, windowPos + pos);
+	PopupCtrl::get()->open(b, windowPos + pos);
 }
 void MainCtrl::closeContextMenu() {
-	ContextCtrl::get()->close();
+	PopupCtrl::get()->close();
 	if (this->ctxtmenu)
 		DELETE_PTR(this->ctxtmenu)
 }
 bool MainCtrl::hasContextMenu() {
-	return ContextCtrl::get()->isShown();
+	return PopupCtrl::get()->isShown();
 }
 guictxtmenu_base* MainCtrl::getContextMenu() {
 	return this->ctxtmenu;
@@ -917,7 +918,7 @@ bool MainCtrl::filesDropFinal(vector<string>& files, ivec2 mousepos) {
 	return false;
 }
 
-MouseEvent mouseEvent(MainCtrl* ctrl, guibase* gui, ivec2 mousePos, int button, MouseEventType evtType) {
+MouseEvent mouseEvent(BaseCtrl* ctrl, guibase* gui, ivec2 mousePos, int button, MouseEventType evtType) {
 	MouseEvent mevt;
 	/*MouseEventType type;
 	int button;
@@ -935,10 +936,10 @@ MouseEvent mouseEvent(MainCtrl* ctrl, guibase* gui, ivec2 mousePos, int button, 
 	mevt.dragStart = ctrl->dragStart;
 	mevt.dragOffset = ctrl->dragOffset;
 	mevt.dragDistance = &ctrl->dragDistance;
-	mevt.kbmods = ctrl->mainWindow->getKeyMods();
+	mevt.kbmods = ctrl->window->getKeyMods();
 	return mevt;
 }
-KeyEvent MainCtrl::keyEvent(int key, int scancode, int keyState, int mods, const char* key_name) {
+KeyEvent keyEvent(int key, int scancode, int keyState, int mods, const char* key_name) {
 	KeyEvent kevt;
 	switch (keyState) {
 	case STATE_PRESS:
@@ -957,7 +958,7 @@ KeyEvent MainCtrl::keyEvent(int key, int scancode, int keyState, int mods, const
 	kevt.keyname = key_name;
 	return kevt;
 }
-void MainCtrl::onCharInput(unsigned int codepoint) {
+void BaseCtrl::onCharInput(unsigned int codepoint) {
 	if (guiCaptured) {
 		return;
 	}
@@ -973,7 +974,55 @@ void MainCtrl::onCharInput(unsigned int codepoint) {
 		}
 	}
 }
-void MainCtrl::onKeyInput(int key, int scancode, int keyState, int mods, const char* key_name)
+bool MainCtrl::processGlobalKeyevent(KeyEvent& event) {
+
+	if (event.type == KeyEventType::K_PRESS) {
+		lastKey = getKeyName(event.scancode);
+		if (!lastKey.length()) {
+			const char* ca = glfwGetKeyName(event.keyCode, event.scancode);
+			if (ca) {
+				lastKey = ca;
+
+			}
+		}
+	}
+	if (event.type != KeyEventType::K_RELEASE) {
+		if (event.keyCode == KEY_SPACE) {
+			if (isPlaying()) {
+				stopPlaying();
+			} else {
+				startPlaying();
+			}
+			return true;
+		}
+		if (isKC(KC_UNDO, event)) {
+			menuCommand(CMD_UNDO);
+			return true;
+		}
+		if (isKC(KC_REDO, event)) {
+			menuCommand(CMD_REDO);
+			return true;
+		}
+		if (isKC(KC_NEW, event)) {
+			menuCommand(CMD_FILE_NEW);
+			return true;
+		}
+		if (isKC(KC_OPEN, event)) {
+			menuCommand(CMD_FILE_OPEN);
+			return true;
+		}
+		if (isKC(KC_SAVE, event)) {
+			menuCommand(CMD_FILE_SAVE);
+			return true;
+		}
+		if (isKC(KC_SAVEAS, event)) {
+			menuCommand(CMD_FILE_SAVEAS);
+			return true;
+		}
+	}
+	return false;
+}
+void BaseCtrl::onKeyInput(int key, int scancode, int keyState, int mods, const char* key_name)
 {
 	if (guiCaptured) {
 		return;
@@ -985,39 +1034,8 @@ void MainCtrl::onKeyInput(int key, int scancode, int keyState, int mods, const c
 		}
 		return;
 	}
-	if (keyState != STATE_RELEASE) {
-		if (event.keyCode == KEY_SPACE) {
-			if (isPlaying()) {
-				stopPlaying();
-			} else {
-				startPlaying();
-			}
-			return;
-		}
-		if (isKC(KC_UNDO, event)) {
-			menuCommand(CMD_UNDO);
-			return;
-		}
-		if (isKC(KC_REDO, event)) {
-			menuCommand(CMD_REDO);
-			return;
-		}
-		if (isKC(KC_NEW, event)) {
-			menuCommand(CMD_FILE_NEW);
-			return;
-		}
-		if (isKC(KC_OPEN, event)) {
-			menuCommand(CMD_FILE_OPEN);
-			return;
-		}
-		if (isKC(KC_SAVE, event)) {
-			menuCommand(CMD_FILE_SAVE);
-			return;
-		}
-		if (isKC(KC_SAVEAS, event)) {
-			menuCommand(CMD_FILE_SAVEAS);
-			return;
-		}
+	if (processGlobalKeyevent(event)) {
+		return;
 	}
 	if (guiFocused && guiFocused->handleKeyInput(event)) {
 		return;
@@ -1028,16 +1046,6 @@ void MainCtrl::onKeyInput(int key, int scancode, int keyState, int mods, const c
 	if (guiCtrFocused != NULL && guiCtrFocused != guiFocused) {
 		if (guiCtrFocused->handleKeyInput(event)) {
 			return;
-		}
-	}
-	if (keyState == STATE_PRESS) {
-		lastKey = getKeyName(scancode);
-		if (!lastKey.length()) {
-			const char* ca = glfwGetKeyName(key, scancode);
-			if (ca) {
-				lastKey = ca;
-
-			}
 		}
 	}
 //	if (action == STATE_RELEASE)
@@ -1067,9 +1075,9 @@ bool MainCtrl::toggleLoop() {
 bool MainCtrl::isPlaying() {
 	return playThread.getState() == playback_state::status_play;
 }
-void MainCtrl::mouseUp(ivec2 mousePos, int button) {
+void BaseCtrl::mouseUp(ivec2 mousePos, int button) {
 	if (guiCaptured != NULL) {
-		this->mainWindow->releaseMouse();
+		this->window->releaseMouse();
 		guiCaptured = NULL;
 	}
 	if (guiDragged != NULL) {
@@ -1079,10 +1087,17 @@ void MainCtrl::mouseUp(ivec2 mousePos, int button) {
 		guiDragged = NULL;
 	}
 }
-void MainCtrl::mouseDown(ivec2 mousePos, int button, bool doubleclick) {
+bool MainCtrl::mouseDownPre() {
 	dragdropclip.reset();
 	if (ctxtmenu != NULL) {
 		closeContextMenu();
+		return false;
+	}
+	return true;
+}
+
+void BaseCtrl::mouseDown(ivec2 mousePos, int button, bool doubleclick) {
+	if (!mouseDownPre()) {
 		return;
 	}
 	if (guiCaptured != NULL) {
@@ -1127,7 +1142,7 @@ void MainCtrl::mouseDown(ivec2 mousePos, int button, bool doubleclick) {
 		}
 	}
 }
-void processScrollEvt(MainCtrl* ctrl, guibase* gui, ivec2 mousePos, double xoffset, double yoffset) {
+void processScrollEvt(BaseCtrl* ctrl, guibase* gui, ivec2 mousePos, double xoffset, double yoffset) {
 	MouseEvent evt = mouseEvent(ctrl, gui, mousePos, -1, M_EVT_SCROLL);
 	if (!gui->handleMouseScroll(evt, xoffset, yoffset)) {
 		if (gui->parent) {
@@ -1135,7 +1150,7 @@ void processScrollEvt(MainCtrl* ctrl, guibase* gui, ivec2 mousePos, double xoffs
 		}
 	}
 }
-void MainCtrl::mouseScrolled(double xoffset, double yoffset) {
+void BaseCtrl::mouseScrolled(double xoffset, double yoffset) {
 	ivec2 mousePos = this->m_mousePos;
 	MouseHitEvt evt(MouseHitType::MOUSE_SCROLL);
 	for (guictr_base *ctr : containers) {
@@ -1148,7 +1163,7 @@ void MainCtrl::mouseScrolled(double xoffset, double yoffset) {
 		processScrollEvt(this, gui, mousePos, xoffset, yoffset);
 	}
 }
-void MainCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos) {
+void BaseCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos) {
 	if (ctxtmenu != NULL) {
 		return;
 	}
@@ -1290,77 +1305,7 @@ track_t* MainCtrl::getTrackId(uint32_t trackId) {
 	return trackList[trackId]; // operator[] returns NULL on oob
 }
 
-void ContextCtrl::close() {
-	this->ctxtmenu = NULL;
-	if (this->window)
-		this->window->hide();
-}
-#define INSET_CTXT_MENU_X 1
-#define INSET_CTXT_MENU_Y 2
-static const ivec2 insetCtxtMenu = ivec2(INSET_CTXT_MENU_X, INSET_CTXT_MENU_Y);
-void ContextCtrl::open(guictxtmenu_base *_ctxtmenu, ivec2 pos) {
-	this->mousepos = ivec2(-1111111);
-	this->ctxtmenu = _ctxtmenu;
-	this->ctxtmenu->pos = insetCtxtMenu;
-	this->window->positionOnScreen(pos-insetCtxtMenu, _ctxtmenu->size+ivec2(insetCtxtMenu*2));
-//	this->window->setPos(pos);
-//	this->window->setSize(ctxtmenu->size);
-	this->window->show();
-}
-void ContextCtrl::render(int32_t x, int32_t y, int32_t w, int32_t h, float ratio) {
 
-
-	nvgBeginFrame(vg, w, h, ratio);
-	if (ctxtmenu != NULL) {
-		ivec2 pos = ivec2(0);
-		ivec2 size = ctxtmenu->size + ivec2(insetCtxtMenu*2);
-		nvgBeginPath(vg);
-		nvgMoveTo(vg, pos.x + size.x, pos.y);
-		nvgLineTo(vg, pos.x, pos.y);
-		nvgLineTo(vg, pos.x, pos.y + size.y);
-		nvgLineTo(vg, pos.x + size.x, pos.y + size.y);
-		nvgLineTo(vg, pos.x + size.x, pos.y);
-		nvgStrokeColor(vg, g_guiColors[COL_CTXTMNU_OUTLINE]);
-		nvgStrokeWidth(vg, 2);
-		nvgStroke(vg);
-		pos+=ivec2(1);
-		size-=ivec2(2);
-		nvgBeginPath(vg);
-		nvgRect(vg, pos.x, pos.y, size.x, size.y);
-		nvgFillColor(vg, g_guiColors[COL_CTXTMNU_BG]);
-		nvgFill(vg);
-		nvgTranslate(vg, insetCtxtMenu.x, insetCtxtMenu.y);
-		ctxtmenu->render(vg);
-	}
-	nvgRestore(vg);
-	nvgEndFrame(vg);
-}
-void ContextCtrl::destroy() {
-	isOK = false;
-}
-
-bool ContextCtrl::init(window_overlay* _window, NVGcontext* nanovg)
-{
-	this->window = _window;
-	this->vg = nanovg;
-	isOK = true;
-	return isOK;
-}
-
-void ContextCtrl::mouseDown(ivec2 mousePos, int button, bool doubleclick) {
-	if (this->ctxtmenu) {
-		this->ctxtmenu->mouseDown(mousePos);
-	}
-}
-void ContextCtrl::mouseUp(ivec2 mousePos, int button) {
-}
-void ContextCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos) {
-	this->mousepos = mousePos;
-	if (this->ctxtmenu) {
-		MouseHitEvt evt(MouseHitType::MOUSE_OVER);
-		this->ctxtmenu->mouseHitTest(mousePos, evt);
-	}
-}
 void cutIntersectingClips(trackdata_midi_t& midi, tick_t tickBegin, tick_t tickEnd, delete_cb *cb) {
 	vector<clip_t*>::iterator it = midi.clips.begin();
 	

@@ -19,6 +19,11 @@ public:
 	virtual void requestRedraw() = 0;
 	virtual void setClipboardText(String s) = 0;
 	virtual String getClipboardText() = 0;
+	virtual int getKeyMods() = 0;
+	virtual void hideSystemCursor() = 0;
+	virtual void captureMouse() = 0;
+	virtual void releaseMouse() = 0;
+	virtual bool isMouseCaptured() = 0;
 };
 class window_dialog : public window_base {
 public:
@@ -39,12 +44,7 @@ class window_main : public window_base {
 public:
 	window_main() : window_base() {}
 	virtual ~window_main() {}
-	virtual void hideSystemCursor() = 0;
-	virtual void captureMouse() = 0;
-	virtual void releaseMouse() = 0;
-	virtual bool isMouseCaptured() = 0;
 	virtual window_dialog* createDialog() = 0;
 	virtual void requestClose() = 0;
 	virtual void updateMenu() = 0;
-	virtual int getKeyMods() = 0;
 };

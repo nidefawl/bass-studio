@@ -127,6 +127,8 @@ struct track_plugins_t {
 	AudioBlock input; //guaranteed to have at least 2 channels
 	AudioBlock output; //guaranteed to have at least 2 channels
 	track_mixer mixer;
+	automatable_t* selectedAutomationCtr = NULL;
+	int32_t selectedAutomationParam = -1;
 	track_plugins_t(track_t* _track, const samplerate_t& _sampleRate, const uint16_t& _blockSize, int32_t nChannels)
 	: track(_track),
 	  sampleRate(_sampleRate),
