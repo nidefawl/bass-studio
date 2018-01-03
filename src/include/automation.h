@@ -1,20 +1,81 @@
 #pragma once
+#include "str_util.h"
 #include "seq_time.h"
 #include <memory>
-struct automatable_t {
-	virtual ~automatable_t() {};
-	virtual String getAutomatableName() = 0;
-	virtual int32_t getNumParameters() = 0;
-	virtual String getParamName(int32_t paramIdx) = 0;
-	virtual float getParamValue(int32_t idx) = 0;
-	virtual void setParamValue(int32_t idx, float val) = 0;
-	virtual void updateAutomatedParameters(tick_t pos) = 0;
-};
-class vstplugin;
+#include <assert.h>
+#include <vector>
+
 struct automation_point_t {
 	tick_t time;
 	float val;
 };
+inline int32_t indexOfTick(std::vector<automation_point_t>& dataPoints, tick_t tick) {
+	int32_t idx;
+	for (idx = 0; idx < dataPoints.size(); idx++) {
+		automation_point_t& pt = dataPoints[idx];
+		if (pt.time > tick) {
+			break;
+		}
+	}
+	return idx;
+}
+inline int32_t addPointAt(std::vector<automation_point_t>& dataPoints, tick_t tick) {
+	int32_t idx;
+	for (idx = 0; idx < dataPoints.size(); idx++) {
+		automation_point_t& pt = dataPoints[idx];
+		if (pt.time > tick) {
+			break;
+		}
+	}
+	if (!dataPoints.empty()) {
+		float v;
+		if (idx == dataPoints.size()) {
+			v = dataPoints[idx-1].val;
+		} else if (idx == 0) {
+			v = dataPoints[0].val;
+		} else {
+			automation_point_t& pt2 = dataPoints[idx];
+			automation_point_t& pt1 = dataPoints[idx - 1];
+			assert(tick >= pt1.time && tick <= pt2.time);
+			tick_t tickDist = pt2.time - pt1.time;
+			float pr = (tick - pt1.time) / (float) tickDist;
+			v = pt1.val + pr * (pt2.val - pt1.val);
+		}
+		dataPoints.insert(dataPoints.begin() + idx, { tick, v });
+		return idx;
+	} else {
+		dataPoints.insert(dataPoints.begin(), { tick, 0 });
+	}
+	return 0;
+}
+struct automation_t {
+	std::vector<automation_point_t> points;
+	virtual ~automation_t() {};
+	virtual float getDstValue() = 0;
+	virtual void setDstValue(float f) = 0;
+	virtual bool isActive() {
+		return true;
+	}
+	virtual float getValueAt(tick_t tick) {
+		if (points.size()) {
+			int32_t idx = indexOfTick(points, tick);
+			assert(idx <= points.size());
+			if (idx == points.size())
+				return points.back().val;
+			if (idx > 0) {
+				automation_point_t& pt1 = points[idx-1];
+				automation_point_t& pt2 = points[idx];
+				assert(tick>=pt1.time && tick <= pt2.time);
+				tick_t tickDist = pt2.time-pt1.time;
+				float pr = (tick-pt1.time)/(float)tickDist;
+				return pt1.val+pr*(pt2.val-pt1.val);
+			}
+			return points.front().val;
+		}
+		return getDstValue();
+	}
+};
+class vstplugin;
 struct plugin_param_autiomation_src_t {
 	int32_t pluginSlot;
 	int32_t trackIdx;
@@ -28,14 +89,19 @@ public:
 	virtual void setDst(vstplugin* plugin, int32_t paramIdx) = 0;
 	virtual plugin_param_autiomation_src_t serialize() = 0;
 };
-struct automation_src_t {
-	virtual ~automation_src_t() {};
-	virtual bool isActive() = 0;
-	virtual float getValueAt(tick_t tick) = 0;
-};
 struct automated_param_t {
 	int32_t paramIdx = -1;
-	automation_src_t* src = NULL;
-	std::shared_ptr<plugin_reference_t> ref;
+	automation_t* src = NULL;
+//	std::shared_ptr<plugin_reference_t> ref;
+};
+struct automatable_t {
+	virtual ~automatable_t() {};
+	virtual String getAutomatableName() = 0;
+	virtual int32_t getNumParameters() = 0;
+	virtual String getParamName(int32_t paramIdx) = 0;
+	virtual float getParamValue(int32_t idx) = 0;
+	virtual void setParamValue(int32_t idx, float val) = 0;
+	virtual void updateAutomatedParameters(tick_t pos) = 0;
+	virtual automation_t* getAutomation(int32_t idx) = 0;
 };
 

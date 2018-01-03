@@ -10,6 +10,7 @@
 #include "track_audiodata.h"
 #include "dropdown.h"
 #include "dsp_util.h"
+#include "str_util.h"
 #include "color_util.h"
 #include "leak_detect.h"
 
@@ -287,6 +288,7 @@ public:
 			}
 		}
 		MainCtrl::get()->closeContextMenu();
+		MainCtrl::get()->updateVisibleTrackContents();
 	}
 };
 class guidropdown_popup_sel_automation_param : public guictxtmenu_base {
@@ -322,6 +324,7 @@ public:
 			}
 		}
 		MainCtrl::get()->closeContextMenu();
+		MainCtrl::get()->updateVisibleTrackContents();
 	}
 };
 class guidropdown_automation_device : public guidropdownbase {
@@ -418,23 +421,35 @@ public:
 		setFont(vg, (int) (titleHeight * 0.8), getContrastFontColorNvg(color), G_TITLE_ALIGN);
 		renderText(vg, 0 + INSET_TITLE, 0 + titleHeight / 2, titleSize.x, StringAsCStr(m_track->name));
 
-		int32_t y = titleHeight + titleHeight/2;
-		String curvalue = "";
-		String target = "<NULL>";
-		trackdata_automation_t& automation = this->m_track->getAutomation();
-//		my_printf("PLUGIN %08X ON %08X\n", automation.plugin, &automation);
-		if (automation.plugin) {
-			target = StringFormat("%s %d", StringAsCStr(automation.plugin->sName), automation.paramIdx);
+		for (auto g : guis) {
+			g->render(vg);
 		}
-		curvalue = StringFormat("%f", automation.getValueAt(ctrl->cursor.cursorPos));
+
+		int32_t y = titleHeight + titleHeight/2;
+		String curvalue = "UNDEF";
+		String target = "<NULL>";
+		track_plugins_t* data=this->m_track->audio;
+		automatable_t* ctr = data->selectedAutomationCtr;
+		if (ctr) {
+			target = StringFormat("%s %08X", StringAsCStr(ctr->getAutomatableName()), ctr);
+			int32_t idx = data->selectedAutomationParam;
+			if (idx >= 0) {
+				automation_t* automation = ctr->getAutomation(idx);
+				if (automation) {
+					curvalue = StringFormat("%s (%d) %f", StringAsCStr(ctr->getParamName(idx)), idx, automation->getValueAt(ctrl->cursor.cursorPos));
+				} else {
+					curvalue = StringFormat("%s (%d) UNDEF", StringAsCStr(ctr->getParamName(idx)), idx);
+				}
+			} else {
+				curvalue = StringFormat("<NULL> %d", idx);
+			}
+		}
+		 y += titleHeight + titleHeight;
 		//debug
 		setFont(vg, (int) (titleHeight * 0.6), G_WHITE, G_TITLE_ALIGN);
 		renderText(vg, 0 + INSET_TITLE, y, titleSize.x, StringAsCStr(target));
 		y+=titleHeight;
 		renderText(vg, 0 + INSET_TITLE, y, titleSize.x, StringAsCStr(curvalue));
-		for (auto g : guis) {
-			g->render(vg);
-		}
 	}
 };
 

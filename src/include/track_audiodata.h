@@ -92,26 +92,46 @@ public:
 	}
 };
 class vstplugin;
-struct track_mixer: public automatable_t {
-	float gain;
-	String getAutomatableName() {
-		return "Mixer";
+
+struct trackparam_automation_t : public automation_t {
+	float& gain;
+	trackparam_automation_t(float& _gain) : automation_t(), gain(_gain) {
+
 	}
-	int32_t getNumParameters() {
-		return 1;
-	}
-	String getParamName(int32_t paramIdx) {
-		return "Gain";
-	}
-	float getParamValue(int32_t idx) {
+	float getDstValue() override {
 		return gain;
 	}
-	void setParamValue(int32_t idx, float val) {
+	void setDstValue(float f) override {
+		gain = f;
+	}
+};
+struct track_mixer: public automatable_t {
+	float gain;
+	trackparam_automation_t gainAutomation;
+	track_mixer() : automatable_t(), gainAutomation(gain) {
+
+	}
+	String getAutomatableName() override {
+		return "Mixer";
+	}
+	int32_t getNumParameters() override {
+		return 1;
+	}
+	String getParamName(int32_t paramIdx) override {
+		return "Gain";
+	}
+	float getParamValue(int32_t idx) override {
+		return gain;
+	}
+	void setParamValue(int32_t idx, float val) override {
 		gain = val;
 	}
-	void updateAutomatedParameters(tick_t pos) {
+	void updateAutomatedParameters(tick_t pos) override {
 //		float val = param.src->getValueAt(pos);
 //		setParamValue(param.paramIdx, val);
+	}
+	automation_t* getAutomation(int32_t idx) override {
+		return &gainAutomation;
 	}
 };
 struct track_plugins_t {

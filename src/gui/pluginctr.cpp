@@ -144,10 +144,10 @@ public:
 		case ID_CREATE:
 		{
 
-			track_t* track = MainCtrl::get()->insertNewTrack(-1, TRACK_TYPE_AUTOMATION);
-			trackdata_automation_t& automation = track->getAutomation();
-			std::shared_ptr<plugin_reference_t> ref(new plugin_track_link_t{track, vst, entry->idx});
-			vst->registerAutomationSrc(entry->idx, &automation, ref);
+//			track_t* track = MainCtrl::get()->insertNewTrack(-1, TRACK_TYPE_AUTOMATION);
+//			vstparam_automation_t& automation = track->getAutomation();
+//			std::shared_ptr<plugin_reference_t> ref(new plugin_track_link_t{track, vst, entry->idx});
+//			vst->registerAutomationSrc(entry->idx, &automation, ref);
 		}
 			break;
 		case ID_DELETE:

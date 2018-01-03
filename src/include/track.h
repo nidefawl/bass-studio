@@ -83,59 +83,19 @@ inline void simplifyData(std::vector<automation_point_t>& data) {
         }
     }
 }
-inline int32_t indexOfTick(std::vector<automation_point_t>& dataPoints, tick_t tick) {
-	int32_t idx;
-	for (idx = 0; idx < dataPoints.size(); idx++) {
-		automation_point_t& pt = dataPoints[idx];
-		if (pt.time > tick) {
-			break;
-		}
-	}
-	return idx;
-}
-inline int32_t addPointAt(std::vector<automation_point_t>& dataPoints, tick_t tick) {
-	int32_t idx;
-	for (idx = 0; idx < dataPoints.size(); idx++) {
-		automation_point_t& pt = dataPoints[idx];
-		if (pt.time > tick) {
-			break;
-		}
-	}
-	if (!dataPoints.empty()) {
-		float v;
-		if (idx == dataPoints.size()) {
-			v = dataPoints[idx-1].val;
-		} else if (idx == 0) {
-			v = dataPoints[0].val;
-		} else {
-			automation_point_t& pt2 = dataPoints[idx];
-			automation_point_t& pt1 = dataPoints[idx - 1];
-			assert(tick >= pt1.time && tick <= pt2.time);
-			tick_t tickDist = pt2.time - pt1.time;
-			float pr = (tick - pt1.time) / (float) tickDist;
-			v = pt1.val + pr * (pt2.val - pt1.val);
-		}
-		dataPoints.insert(dataPoints.begin() + idx, { tick, v });
-		return idx;
-	} else {
-		dataPoints.insert(dataPoints.begin(), { tick, 0 });
-	}
-	return 0;
-}
 
 class vstplugin;
 
-struct trackdata_automation_t: public automation_src_t {
-	std::vector<automation_point_t> points;
+struct vstparam_automation_t: public automation_t {
 	int32_t paramIdx = -1;
 	vstplugin* plugin = NULL;
 
-	float dummy = 0;
+	float dummy = 0.5f;
 
-	trackdata_automation_t()
+	vstparam_automation_t()
 	{
 	}
-	~trackdata_automation_t() {
+	~vstparam_automation_t() {
 		//notify vstplugin
 	}
 	void setTarget(vstplugin* _plugin, int32_t _paramIdx) {
@@ -146,26 +106,8 @@ struct trackdata_automation_t: public automation_src_t {
 	vstplugin* getTargetPlugin() {
 		return plugin;
 	}
-	float getDstValue();
-	void setDstValue(float f);
-	float getValueAt(tick_t tick) override {
-		if (points.size()) {
-			int32_t idx = indexOfTick(points, tick);
-			assert(idx <= points.size());
-			if (idx == points.size())
-				return points.back().val;
-			if (idx > 0) {
-				automation_point_t& pt1 = points[idx-1];
-				automation_point_t& pt2 = points[idx];
-				assert(tick>=pt1.time && tick <= pt2.time);
-				tick_t tickDist = pt2.time-pt1.time;
-				float pr = (tick-pt1.time)/(float)tickDist;
-				return pt1.val+pr*(pt2.val-pt1.val);
-			}
-			return points.front().val;
-		}
-		return dummy;
-	}
+	float getDstValue() override;
+	void setDstValue(float f) override;
 	bool isActive() override {
 		return true;
 	}
@@ -363,14 +305,14 @@ struct track_snapshot_t : public tracksettings_t {
 };
 class track_t : public tracksettings_t {
 	trackdata_midi_t midi;
-	trackdata_automation_t automation;
+//	vstparam_automation_t automation;
 public:
 	trackdata_midi_t& getMidi() {
 		return midi;
 	}
-	trackdata_automation_t& getAutomation() {
-		return automation;
-	}
+//	vstparam_automation_t& getAutomation() {
+//		return automation;
+//	}
 	tick_minmax_t getMinMaxEvents() {
 		tick_t evtMin = INVALID_TICK;
 		tick_t evtMax = INVALID_TICK;

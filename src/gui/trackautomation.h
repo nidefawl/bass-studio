@@ -1,7 +1,8 @@
 #pragma once
 #include <vector>
 #include "seq_time.h"
-#include "trackcontent.h"
+#include "track.h"
+#include "trackctr.h"
 #include "automation.h"
 #include <glm/vec2.hpp>
 #include "leak_detect.h"
@@ -13,9 +14,17 @@ struct automation_clipboard_t {
 	tick_t len;
 	std::vector<automation_point_t> dataPoints;
 };
+struct automation_view_t: public automation_t {
 
-
-class gui_track_automation : public gui_track {
+	float dummy = 0.5f;
+	float getDstValue() override {
+		return dummy;
+	}
+	void setDstValue(float f) override {
+		dummy = f;
+	}
+};
+class gui_track_automation : public guictr_base {
 public:
 	enum dragmode {
 		drag_none = 0,
@@ -39,6 +48,8 @@ public:
 		float dist;
 		int32_t numPoints = 0;
 	};
+protected:
+	track_t* const m_track;
 private:
 	const NVGcolor color = G_BLUE2;
 	const NVGcolor color2 = mulSatBright(color, 0.6f, 0.8f);
@@ -48,7 +59,10 @@ private:
 	const float radiusHandleHL = 3.5f;
 	const float lineWidth = 2.5f;
 
-	trackdata_automation_t& data;
+	scaled_grid& grid;
+	automatable_t* targetCtr = NULL;
+	int32_t targetIdx = -1;
+	automation_view_t data;
 	std::vector<vec2> cachedShape;
 	std::vector<path_segment_t> segments;
 //	std::vector<path_segment_dataidx_t> segmentDataIdx;
@@ -59,9 +73,21 @@ private:
 	bool canSimplify = false;
 
 	hit_result hitTest(vec2 mpos);
+
 public:
-	gui_track_automation(track_t* _track) : gui_track(_track), data(_track->getAutomation()) {
+	gui_track_automation(track_t* _track, scaled_grid& _grid) : guictr_base(), m_track(_track), grid(_grid) {
 		padding = 8;
+	}
+	void setData(automatable_t* ctr, int32_t idx) {
+		targetCtr = ctr;
+		targetIdx = idx;
+		data.points.clear();
+		if (ctr) {
+			automation_t* automation = ctr->getAutomation(idx);
+			if (automation) {
+				data.points = automation->points;
+			}
+		}
 	}
 	ivec2 paddingTL(int _padding) override {
 		return ivec2(0, _padding);
@@ -85,10 +111,26 @@ public:
 	void trackViewDragMove(guitrack_editor* view, MouseEvent& evt) override;
 	void trackViewDragRelease(guitrack_editor* view, MouseEvent& evt) override;
 	bool trackViewDoubleClick(guitrack_editor* view, MouseEvent& evt) override;
+	void postEdit();
+	void handleDraggedBegin(MouseEvent& evt) override {
+		MainCtrl::get()->setSelectedTrack(m_track);
+		evt.relMousepos += getPosContent();
+		parent->handleDraggedBegin(evt);
+	}
+
+	void handleDraggedMove(MouseEvent& evt) override {
+		evt.relMousepos += getPosContent();
+		parent->handleDraggedMove(evt);
+	}
+
+	void handleDraggedRelease(MouseEvent& evt) override {
+		evt.relMousepos += getPosContent();
+		parent->handleDraggedRelease(evt);
+	}
 
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
 
-	void updateVisibleTrackContents(scaled_grid& grid) override;
+	void updateVisibleTrackContents(scaled_grid& grid);
 	void layout() override {
 
 	}

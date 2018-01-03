@@ -29,7 +29,7 @@ public:
 	virtual ~guictr_base() {
 		assert(guis.empty());
 	}
-	void destroyGuis() {
+	virtual void destroyGuis() {
 		for (guibase* g : guis) {
 			g->onRemove();
 			g->parent = NULL;

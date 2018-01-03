@@ -37,7 +37,7 @@ float ctrToDataScale(float screenX, float ctrHeight) {
 	return (screenX/ctrHeight);
 }
 
-void copyATMNSegment(trackdata_automation_t& in, automation_clipboard_t& out, int32_t srcPos, int32_t len) {
+void copyATMNSegment(vstparam_automation_t& in, automation_clipboard_t& out, int32_t srcPos, int32_t len) {
 
 }
 using hit_result = gui_track_automation::hit_result;
@@ -198,7 +198,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 					dst.val = min(1.0f, max(0.0f, src.val));
 				}
 			}
-			updateVisibleTrackContents(view->grid);
+			postEdit();
 		}
 
 	}
@@ -206,7 +206,16 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 		dragged = {dragmode::drag_none, -1, 0};
 		if (canSimplify)
 			simplifyData(data.points);
-		updateVisibleTrackContents(view->grid);
+		postEdit();
+	}
+	void gui_track_automation::postEdit() {
+		updateVisibleTrackContents(grid);
+		if (targetCtr) {
+			automation_t* automation = targetCtr->getAutomation(targetIdx);
+			if (automation) {
+				automation->points = data.points;
+			}
+		}
 	}
 	bool gui_track_automation::trackViewDoubleClick(guitrack_editor* view, MouseEvent& evt) {
 		dragged = {dragmode::drag_none, -1, 0};
@@ -219,7 +228,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 			int32_t i = clicked.idx + segmentDataPtOffset;
 			assert(i >= 0 && i < dataPoints.size());
 			dataPoints.erase(dataPoints.begin()+i);
-			updateVisibleTrackContents(view->grid);
+			postEdit();
 			return true;
 		} else {
 			 // this is true until we relayout UI and move mixers left or something
@@ -233,7 +242,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 			assert(idx >= 0 && idx <= dataPoints.size());
 			automation_point_t pt{tick, val};
 			dataPoints.insert(dataPoints.begin()+idx, pt);
-			updateVisibleTrackContents(view->grid);
+			postEdit();
 			return true;
 		}
 	}
@@ -264,7 +273,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 				}
 			}
 			// tracks need to always cancel further mouse tests for z-order to work in parent container
-			return true;
+//			return true;
 		}
 		return false;
 	}
@@ -311,12 +320,12 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 
 	void gui_track_automation::render(NVGcontext* vg) {
 
-		if (MainCtrl::get()->getSelectedTrack() == m_track) {
-			nvgBeginPath(vg);
-			nvgRect(vg, pos.x, pos.y, size.x, size.y);
-			nvgFillColor(vg, g_guiColors[COL_BG_SELECTEDTRACK]);
-			nvgFill(vg);
-		}
+//		if (MainCtrl::get()->getSelectedTrack() == m_track) {
+//			nvgBeginPath(vg);
+//			nvgRect(vg, pos.x, pos.y, size.x, size.y);
+//			nvgFillColor(vg, g_guiColors[COL_BG_SELECTEDTRACK]);
+//			nvgFill(vg);
+//		}
 		ivec2 sizeInset = getSizeContent();
 		if (sizeInset.y <= 0 || sizeInset.x <= 0) {
 			return;

@@ -9,6 +9,7 @@
 #include "clip.h"
 #include "grid.h"
 #include "guicontainer.h"
+#include "trackautomation.h"
 #include "leak_detect.h"
 
 
@@ -119,11 +120,63 @@ public:
 		return true;
 	}
 };
-class gui_track : public guictr_base {
-public:
+
+
+
+class gui_track_midi : public guictr_base {
+protected:
 	track_t* const m_track;
-	gui_track(track_t* _track) : guictr_base(), m_track(_track) {
+public:
+	trackdata_midi_t& midi;
+	gui_track_midi(track_t* _track)
+		: guictr_base(), m_track(_track),
+		midi(m_track->getMidi()) {
 		padding = 0;
+	}
+	void render(NVGcontext* vg) {
+//		if (MainCtrl::get()->getSelectedTrack() == m_track) {
+//			nvgBeginPath(vg);
+//			nvgRect(vg, pos.x, pos.y, size.x, size.y);
+//			nvgFillColor(vg, g_guiColors[COL_BG_SELECTEDTRACK]);
+//			nvgFill(vg);
+//		}
+		if (!setScissorTransform(vg)) {
+			return;
+		}
+//		nvgTranslate(vg, pos.x, pos.y);
+		for (clip_t* clip : midi.clips) {
+			if(!clip->gClip) {
+				continue;
+			}
+			clip->gClip->render(vg);
+		}
+	}
+
+	void updateVisibleTrackContents(scaled_grid& grid) {
+		for (clip_t* clip : midi.clips) {
+//			gui_clip* gClip = clip->gClip;
+			if(!clip->gClip) {
+				clip->gClip = new gui_clip(clip, m_track);
+				add(clip->gClip);
+			}
+			clip->gClip->updatePosition(grid, size);
+		}
+	}
+};
+
+class gui_track : public guictr_base {
+protected:
+	track_t* const m_track;
+	trackdata_midi_t& midi;
+	gui_track_automation automation;
+//	gui_track_midi midi;
+public:
+	gui_track(track_t* _track, scaled_grid& _grid) : guictr_base(), m_track(_track), midi(_track->getMidi()), automation(_track, _grid)
+//, midi(_track)
+	{
+		padding = 0;
+//		add(&midi);
+//		add(&automation);
 	}
 	virtual ~gui_track() {
 
@@ -135,7 +188,7 @@ public:
 		return parent->handleKeyInput(kevt);
 	}
 
-	virtual void handleDraggedBegin(MouseEvent& evt) override {
+	void handleDraggedBegin(MouseEvent& evt) override {
 		MainCtrl::get()->setSelectedTrack(m_track);
 		evt.relMousepos += getPosContent();
 		parent->handleDraggedBegin(evt);
@@ -160,8 +213,24 @@ public:
 			nvgFillColor(vg, g_guiColors[COL_BG_SELECTEDTRACK]);
 			nvgFill(vg);
 		}
+		nvgSave(vg);
+		if (setScissorTransform(vg)) {
+			for (clip_t* clip : midi.clips) {
+				if(!clip->gClip) {
+					continue;
+				}
+				clip->gClip->render(vg);
+			}
+		}
+		nvgRestore(vg);
+		nvgSave(vg);
+		automation.render(vg);
+		nvgRestore(vg);
 	}
 	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
+		if (automation.mouseHitTest(mpos, evt)) {
+			return true;
+		}
 		if (this->contains(mpos)) {
 			ivec2 localMouse = this->toContainerSpace(mpos);
 			for (guibase* gui : guis) {
@@ -183,8 +252,24 @@ public:
 		}
 		return false;
 	}
-	virtual void updateVisibleTrackContents(scaled_grid& grid) {
-
+	virtual void updateVisibleTrackContents(scaled_grid& grid);
+	void layout() override {
+		automation.parent = this->parent;
+		automation.pos = this->pos;
+		automation.size = this->size;
+		automation.layout();
+	}
+	void destroyGuis() override {
+		automation.destroyGuis();
+		guictr_base::destroyGuis();
 	}
 };
+
+//class gui_track_audiochain : public gui_track {
+//public:
+//	gui_track_audiochain(track_t* _track) : gui_track(_track) {
+//
+//	}
+//};
+
 

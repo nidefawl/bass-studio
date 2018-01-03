@@ -202,7 +202,7 @@ track_t::track_t(const track_snapshot_t &a) : tracksettings_t(a) {
 		clip_t* clipInstance = new clip_t(clip);
 		clips.push_back(clipInstance);
 	}
-	automation.points = a.points;
+//	automation.points = a.points;
 	assert(this->mixer == NULL);
 	assert(this->content == NULL);
 }
@@ -235,10 +235,10 @@ void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin) {
 		ps.params.push_back(t);
 	}
 	for (automated_param_t& src : plugin->automatedParams) {
-		if (src.ref) {
-			plugin_param_autiomation_src_t paramSrc = src.ref->serialize();
-			ps.automatedParams.push_back(paramSrc);
-		}
+//		if (src.ref) {
+//			plugin_param_autiomation_src_t paramSrc = src.ref->serialize();
+//			ps.automatedParams.push_back(paramSrc);
+//		}
 	}
 }
 track_plugins_snapshot_t::track_plugins_snapshot_t(const track_t &a) {
@@ -268,8 +268,8 @@ track_snapshot_t::track_snapshot_t(track_t* track)
 	for (clip_t* clip : otherClips) {
 		clips.emplace_back(*clip);
 	}
-	trackdata_automation_t& automation = track->getAutomation();
-	this->points = automation.points;
+//	vstparam_automation_t& automation = track->getAutomation();
+//	this->points = automation.points;
 }
 
 void tracksubcontainer_t::copyTo(trackcontainer_snapshot_t& out) {
@@ -318,26 +318,26 @@ void tracksubcontainer_t::loadPlugins(trackallcontainer_t* all, trackcontainer_s
 					host->insertNewPlugin(trackLoaded->audio, plugin, pluginSnapshot.slot);
 					const std::vector<plugin_param_autiomation_src_t>& automatedParams = pluginSnapshot.automatedParams;
 
-					for (const plugin_param_autiomation_src_t& param : automatedParams) {
-						if (plugin->getParam(param.paramIdx)) {
-							if (all->validTrackIdx(param.trackIdx)) {
-								track_t* trackSrc = (*all)[param.trackIdx];
-								assert(trackSrc->idx ==param.trackIdx);
-								for (track_t* t : (*all)) {
-									my_printf("TRACK[%d] = %s\n", t->idx, StringAsCStr(t->name));
-								}
-								my_printf("LOAD AUTOMATION SRC IDX %d NAME %s\n", trackSrc->idx, StringAsCStr(trackSrc->name));
-
-								trackdata_automation_t& automation = trackSrc->getAutomation();
-								std::shared_ptr<plugin_reference_t> ref(new plugin_track_link_t{trackSrc, plugin, param.paramIdx});
-								plugin->registerAutomationSrc(param.paramIdx, &automation, ref);
-
-
-
-
-							}
-						}
-					}
+//					for (const plugin_param_autiomation_src_t& param : automatedParams) {
+//						if (plugin->getParam(param.paramIdx)) {
+//							if (all->validTrackIdx(param.trackIdx)) {
+//								track_t* trackSrc = (*all)[param.trackIdx];
+//								assert(trackSrc->idx ==param.trackIdx);
+//								for (track_t* t : (*all)) {
+//									my_printf("TRACK[%d] = %s\n", t->idx, StringAsCStr(t->name));
+//								}
+//								my_printf("LOAD AUTOMATION SRC IDX %d NAME %s\n", trackSrc->idx, StringAsCStr(trackSrc->name));
+//
+//								vstparam_automation_t& automation = trackSrc->getAutomation();
+//								std::shared_ptr<plugin_reference_t> ref(new plugin_track_link_t{trackSrc, plugin, param.paramIdx});
+//								plugin->registerAutomationSrc(param.paramIdx, &automation, ref);
+//
+//
+//
+//
+//							}
+//						}
+//					}
 				}
 			}
 		}
@@ -378,13 +378,13 @@ void trackdata_midi_t::getNotesInRange(tick_t start, tick_t end, tick_t cutStart
 	}
 
 }
-float trackdata_automation_t::getDstValue() {
+float vstparam_automation_t::getDstValue() {
 	if (plugin) {
 		return plugin->getParamValue(paramIdx);
 	}
 	return dummy;
 }
-void trackdata_automation_t::setDstValue(float f) {
+void vstparam_automation_t::setDstValue(float f) {
 	dummy = f;
 	if (plugin) {
 		return plugin->setParamValue(paramIdx, f);

@@ -270,10 +270,9 @@ public:
 	}
 	void handleDraggedMove(MouseEvent& evt) {
 		clip_t* clip = view.clip();
-		gui_clip* guiClip = view.gui;
-		if (!clip || !guiClip)
+		if (!clip)
 			return;
-		track_t* track = guiClip->m_track;
+		track_t* track = view.track();
 		if (!track)
 			return;
 		if (dragHandle == drag_handle_none) {

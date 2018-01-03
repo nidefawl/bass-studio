@@ -5,10 +5,14 @@
 #include "button.h"
 #include "event.h"
 #include "../host/vst_plugin.h"
+#include "track_audiodata.h"
 #include "trackautomation.h"
 #include "dropdown.h"
 #include "leak_detect.h"
 #include <glm/geometric.hpp>
+#include <glm/vec2.hpp>
+using glm::vec2;
+using glm::ivec2;
 
 float noteToScreen(float note, float scale, float offset, float sizeY) {
 	float offsetKey = note * scale;
@@ -143,62 +147,32 @@ void gui_clip::trackViewDragRelease(guitrack_editor* view, MouseEvent& evt) {
 	//!CLIP COULD BE DELETED AT THIS POINT
 }
 
-class gui_track_audiochain : public gui_track {
-public:
-	gui_track_audiochain(track_t* _track) : gui_track(_track) {
-
-	}
-};
-
-
-class gui_track_midi : public gui_track {
-public:
-	trackdata_midi_t& midi;
-	gui_track_midi(track_t* _track)
-		: gui_track(_track),
-		midi(m_track->getMidi()) {
-	}
-	void render(NVGcontext* vg) {
-		if (MainCtrl::get()->getSelectedTrack() == m_track) {
-			nvgBeginPath(vg);
-			nvgRect(vg, pos.x, pos.y, size.x, size.y);
-			nvgFillColor(vg, g_guiColors[COL_BG_SELECTEDTRACK]);
-			nvgFill(vg);
-		}
-		if (!setScissorTransform(vg)) {
-			return;
-		}
-//		nvgTranslate(vg, pos.x, pos.y);
-		for (clip_t* clip : midi.clips) {
-			if(!clip->gClip) {
-				continue;
-			}
-			clip->gClip->render(vg);
-		}
-	}
-
-	void updateVisibleTrackContents(scaled_grid& grid) {
-		for (clip_t* clip : midi.clips) {
+void gui_track::updateVisibleTrackContents(scaled_grid& grid) {
+	track_plugins_t* data=this->m_track->audio;
+	automatable_t* ctr = data->selectedAutomationCtr;
+	int32_t idx = data->selectedAutomationParam;
+	automation.setData(ctr, idx);
+	automation.updateVisibleTrackContents(grid);
+	for (clip_t* clip : midi.clips) {
 //			gui_clip* gClip = clip->gClip;
-			if(!clip->gClip) {
-				clip->gClip = new gui_clip(clip, m_track);
-				add(clip->gClip);
-			}
-			clip->gClip->updatePosition(grid, size);
+		if(!clip->gClip) {
+			clip->gClip = new gui_clip(clip, m_track);
+			add(clip->gClip);
 		}
+		clip->gClip->updatePosition(grid, size);
 	}
-};
-
-gui_track* createTrackGui(track_t* t) {
-	switch (t->type) {
-	case TRACK_TYPE_RETURN:
-	case TRACK_TYPE_MASTER:
-		return new gui_track_audiochain(t);
-	case TRACK_TYPE_MIDI:
-		return new gui_track_midi(t);
-	case TRACK_TYPE_AUTOMATION:
-		return new gui_track_automation(t);
-	}
-	assert(0&&"unhandled track type");
-	return NULL;
+}
+gui_track* createTrackGui(track_t* t, scaled_grid& grid) {
+//	switch (t->type) {
+//	case TRACK_TYPE_RETURN:
+//	case TRACK_TYPE_MASTER:
+//		return new gui_track_audiochain(t);
+//	case TRACK_TYPE_MIDI:
+//		return new gui_track(t);
+//	case TRACK_TYPE_AUTOMATION:
+//		return new gui_track_automation(t);
+//	}
+//	assert(0&&"unhandled track type");
+//	return NULL;
+	return new gui_track(t, grid);
 }

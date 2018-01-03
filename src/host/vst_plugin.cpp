@@ -123,8 +123,8 @@ void vstplugin::unload() {
 //	this->dispatch(effMainsChanged, 0, 0);
 //	this->dispatch(effSetBypass, 0, 1);
 	for (automated_param_t& ap : this->automatedParams) {
-		assert(ap.ref);
-		ap.ref->onDstDelete();
+//		assert(ap.ref);
+//		ap.ref->onDstDelete();
 	}
 	this->dispatch(effClose);
 	this->bIsSetup = false;
@@ -270,20 +270,20 @@ automated_param_t* vstplugin::getRegisteredAutomation(int32_t idx) {
 	}
 	return NULL;
 }
-void vstplugin::registerAutomationSrc(int32_t paramIdx, automation_src_t* src, std::shared_ptr<plugin_reference_t> ref) {
+void vstplugin::registerAutomationSrc(int32_t paramIdx, automation_t* src, std::shared_ptr<plugin_reference_t> ref) {
 	assert(getParam(paramIdx));
 	auto it = std::find_if(automatedParams.begin(), automatedParams.end(), [paramIdx](automated_param_t& ap) {
 		return ap.paramIdx == paramIdx;
 	});
 	if (it != automatedParams.end()) {
 		automated_param_t& ap = * it;
-		assert(ap.ref);
-		ap.ref->onDstDelete();
-		ap.ref = ref;
+//		assert(ap.ref);
+//		ap.ref->onDstDelete();
+//		ap.ref = ref;
 		ap.src = src;
 		return;
 	}
-	automatedParams.push_back({paramIdx, src, ref});
+	automatedParams.push_back({paramIdx, src});
 	ref->setDst(this, paramIdx);
 }
 void vstplugin::unregisterAutomationSrc(int32_t paramIdx) {
@@ -300,6 +300,23 @@ void vstplugin::updateAutomatedParameters(tick_t pos) {
 		float val = param.src->getValueAt(pos);
 		setParamValue(param.paramIdx, val);
 	}
+}
+automation_t* vstplugin::getAutomation(int32_t paramIdx) {
+	if (!getParam(paramIdx)) {
+		return NULL;
+	}
+	for (automated_param_t& param : automatedParams) {
+		if (paramIdx == param.paramIdx) {
+			return param.src;
+		}
+	}
+	vstparam_automation_t* param = new vstparam_automation_t();
+	param->plugin = this;
+	param->paramIdx = paramIdx;
+	param->dummy = 0.5f;
+//	{{}, this, paramIdx};
+	automatedParams.push_back({paramIdx, param});
+	return param;
 }
 vst_param* vstplugin::getParam(int idx) {
 	if (idx >= 0 && idx < params.size()) {

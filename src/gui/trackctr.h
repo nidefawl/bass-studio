@@ -12,7 +12,6 @@
 #include "grid.h"
 #include "guicontainer.h"
 #include "tracktimeline.h"
-#include "guicontextmenu.h"
 #include "mouse.h"
 
 #include "platform.h"
@@ -22,7 +21,7 @@
 
 int32_t getPosYFirstReturnTrack(project_t& project);
 track_t *getTrackFromMouse(project_t& project, ivec2 mouse, bool isDragSnap);
-gui_track* createTrackGui(track_t* t); // trackcontent.cpp
+gui_track* createTrackGui(track_t* t, scaled_grid&); // trackcontent.cpp
 gui_track_controls* createTrackGuiMixer(track_t* t); // trackcontrols.cpp
 
 
@@ -117,37 +116,9 @@ public:
 		cursor.cursorTrack = trackClicked->idx;
 	}
 
-	void addTrack(track_t* t) {
-		if (t->content)
-			throw applogicexception("expected t->content == NULL");
-		t->content = createTrackGui(t);
-		t->content->setZOrder(t->type >= TRACK_TYPE_MIDI ? 0 : 1);
-		add(t->content);
-//#ifndef NDEBUG
-//		for (guibase* child : guis) {
-//			gui_track* t = dynamic_cast<gui_track*>(child);
-//			assert(t);
-//		}
-//		int idx = 0;
-//		for (guibase* child : guis) {
-//			gui_track* t = dynamic_cast<gui_track*>(child);
-//			my_printf("idx %d = %s\n", idx, StringAsCStr(t->m_track->name));
-//			idx++;
-//		}
-//#endif
-	}
-	void removeTrack(track_t* t) {
-		if (t->content) {
-			t->content->destroyGuis();
-			remove(t->content);
-			DELETE_PTR(t->content)
-		}
-	}
-	void updateVisibleTrackContents() {
-		for (track_t* g : project.trackList) {
-			g->content->updateVisibleTrackContents(grid);
-		}
-	}
+	void addTrack(track_t* t);
+	void removeTrack(track_t* t);
+	void updateVisibleTrackContents();
 	void layout() {
 		for (guibase* gui : guis) {
 			gui->layout();
@@ -187,9 +158,7 @@ public:
 	}
 	void handleDraggedRelease(MouseEvent& evt) {
 	}
-	void handleRightClick(MouseEvent& evt) {
-		MainCtrl::get()->openContextMenu(new guictxtmenu_notrack(), evt.mousepos);
-	}
+	void handleRightClick(MouseEvent& evt);
 	void render(NVGcontext* vg);
 	void addTrack(track_t* t);
 	void removeTrack(track_t* t);
@@ -569,7 +538,7 @@ public:
 		}
 	}
 	void layout() {
-		const int mixerwidth = 280;
+		const int mixerwidth = 380;
 		ivec2 cs = getSizeContent();
 		trackTimeline.pos = ivec2(0, 0);
 		trackTimeline.size = ivec2(cs.x - mixerwidth, 32);
