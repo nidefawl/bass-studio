@@ -328,6 +328,9 @@ public:
 	track_t(const track_t &a) {
 		midi.deepcopy(a.midi);
 		copy(a);
+		content = NULL;
+		mixer = NULL;
+		audio = NULL;
 	}
 	track_t(const track_snapshot_t &a);
 	track_t &operator =(const track_t &a) {
@@ -349,9 +352,6 @@ public:
 		type = obj.type;
 		height = obj.height;
 		rgb = obj.rgb;
-		content = NULL;
-		mixer = NULL;
-		audio = NULL;
 		scrolloffset = 0;
 	}
 	void releaseTrackContent();
