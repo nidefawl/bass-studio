@@ -270,31 +270,6 @@ automated_param_t* vstplugin::getRegisteredAutomation(int32_t idx) {
 	}
 	return NULL;
 }
-void vstplugin::registerAutomationSrc(int32_t paramIdx, automation_t* src, std::shared_ptr<plugin_reference_t> ref) {
-	assert(getParam(paramIdx));
-	auto it = std::find_if(automatedParams.begin(), automatedParams.end(), [paramIdx](automated_param_t& ap) {
-		return ap.paramIdx == paramIdx;
-	});
-	if (it != automatedParams.end()) {
-		automated_param_t& ap = * it;
-//		assert(ap.ref);
-//		ap.ref->onDstDelete();
-//		ap.ref = ref;
-		ap.src = src;
-		return;
-	}
-	automatedParams.push_back({paramIdx, src});
-	ref->setDst(this, paramIdx);
-}
-void vstplugin::unregisterAutomationSrc(int32_t paramIdx) {
-	assert(getParam(paramIdx));
-	auto it = std::find_if(automatedParams.begin(), automatedParams.end(), [paramIdx](automated_param_t& ap) {
-		return ap.paramIdx == paramIdx;
-	});
-	if (it != automatedParams.end()) {
-		automatedParams.erase(it);
-	}
-}
 void vstplugin::updateAutomatedParameters(tick_t pos) {
 	for (automated_param_t& param : automatedParams) {
 		float val = param.src->getValueAt(pos);

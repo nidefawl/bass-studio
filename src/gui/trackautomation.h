@@ -9,21 +9,6 @@
 using glm::vec2;
 using glm::ivec2;
 
-struct automation_clipboard_t {
-	tick_t start;
-	tick_t len;
-	std::vector<automation_point_t> dataPoints;
-};
-struct automation_view_t: public automation_t {
-
-	float dummy = 0.5f;
-	float getDstValue() override {
-		return dummy;
-	}
-	void setDstValue(float f) override {
-		dummy = f;
-	}
-};
 class gui_track_automation : public guictr_base {
 public:
 	enum dragmode {
@@ -60,8 +45,6 @@ private:
 	const float lineWidth = 2.5f;
 
 	scaled_grid& grid;
-	automatable_t* targetCtr = NULL;
-	int32_t targetIdx = -1;
 	automation_view_t data;
 	std::vector<vec2> cachedShape;
 	std::vector<path_segment_t> segments;
@@ -79,8 +62,7 @@ public:
 		padding = 8;
 	}
 	void setData(automatable_t* ctr, int32_t idx) {
-		targetCtr = ctr;
-		targetIdx = idx;
+		data.targetParam = idx;
 		data.points.clear();
 		if (ctr) {
 			automation_t* automation = ctr->getAutomation(idx);

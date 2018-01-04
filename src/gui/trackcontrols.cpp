@@ -510,16 +510,6 @@ void gui_track_controls::layout() {
 void gui_track_controls::handleRightClick(MouseEvent& evt) {
 	MainCtrl::get()->openContextMenu(new guictxtmenu_track(this->m_track->idx), evt.mousepos);
 }
-//t->mixer = new gui_trackmixer(t);
 gui_track_controls* createTrackGuiMixer(track_t* t) {
-//	switch (t->type) {
-//	case TRACK_TYPE_RETURN:
-//	case TRACK_TYPE_MASTER:
-//	case TRACK_TYPE_MIDI:
-//		return new gui_trackmixer(t);
-//	case TRACK_TYPE_AUTOMATION:
-//		return new gui_trackcontrols_title(t);
-//	}
-//	assert(0&&"unhandled track type");
 	return new gui_track_controls(t);
 }

@@ -17,8 +17,7 @@
 #define TRACK_TYPE_MASTER 0
 #define TRACK_TYPE_RETURN 1
 #define TRACK_TYPE_MIDI 2
-#define TRACK_TYPE_AUTOMATION 3
-#define NUM_TRACK_TYPES 4
+#define NUM_TRACK_TYPES 3
 
 
 const char* TrackTypeToName(int type);
@@ -34,6 +33,7 @@ void deleteTrack(track_t* tr, delete_cb *cb);
 void deleteClip(clip_t* cl, delete_cb *cb);
 
 inline void simplifyData(std::vector<automation_point_t>& data) {
+	my_printf("simplify\n", 0);
 //	data.erase( std::unique( data.begin(), data.end(), [](automation_point_t const & a, automation_point_t const & b) {
 //
 //		return a.time == b.time && a.val == b.val;
@@ -49,69 +49,54 @@ inline void simplifyData(std::vector<automation_point_t>& data) {
 	        	tick_t firstTime = (*i).time;
 	        	my_printf("copy %d to %d\n", i-data.begin(), first-data.begin());
 	            *first++ = std::move(*i);
-	            for(auto j = i + 2; j < last;  ++j) {
-	            	if (firstTime != (*j).time) {
-	                	my_printf("inner break at %d\n", (j)-data.begin());
-						i = j - 2;
-	            		break;
-	            	}
-	            }
+				if (i + 1 != last) {
+					auto j = i + 2;
+					for (; j < last; ++j) {
+						if (firstTime != (*j).time) {
+							break;
+						}
+					}
+					my_printf("skip %d values on equal time\n", (j - 2) - i);
+					i = j - 2;
+				}
 	        }
+			auto first1 = data.begin();
+			my_printf("erase val[%d] to %d on equal time\n", first - first1, last - first1);
+			if (first != last)
 	        data.erase(first, last);
 	    }
 	}
     {
 
         //remove multiple consecutive points with same value
-    	auto first = data.begin();
+		auto first = data.begin();
+		auto first1 = data.begin();
     	auto last = data.end();
         if (first != last) {
             for(auto i = first; i != last; ++i) {
             	float firstVal = (*i).val;
             	my_printf("copy vals %d to %d\n", i-data.begin(), first-data.begin());
                 *first++ = std::move(*i);
-                auto j = i + 2;
-                for(; j < last;  ++j) {
-                	if (firstVal != (*j).val||firstVal != (*(j-1)).val) {
-                		break;
-                	}
-                }
-            	my_printf("skip %d values\n", (j-2)-i);
-				i = j - 2;
+                
+				if (i + 1 != last) {
+					auto j = i + 2;
+					for (; j < last; ++j) {
+						if (firstVal != (*j).val || firstVal != (*(j - 1)).val) {
+							break;
+						}
+					}
+					my_printf("skip %d values\n", (j - 2) - i);
+					i = j - 2;
+				}
             }
+			auto first1 = data.begin();
+			my_printf("erase val[%d] to %d\n", first - first1, last - first1);
+			if (first != last)
             data.erase(first, last);
         }
     }
 }
 
-class vstplugin;
-
-struct vstparam_automation_t: public automation_t {
-	int32_t paramIdx = -1;
-	vstplugin* plugin = NULL;
-
-	float dummy = 0.5f;
-
-	vstparam_automation_t()
-	{
-	}
-	~vstparam_automation_t() {
-		//notify vstplugin
-	}
-	void setTarget(vstplugin* _plugin, int32_t _paramIdx) {
-		my_printf("SET PLUGIN %08X ON %08X\n", _plugin, this);
-		plugin = _plugin;
-		paramIdx = _paramIdx;
-	}
-	vstplugin* getTargetPlugin() {
-		return plugin;
-	}
-	float getDstValue() override;
-	void setDstValue(float f) override;
-	bool isActive() override {
-		return true;
-	}
-};
 class trackdata_midi_t {
 public:
 	std::vector<clip_t*> clips;
@@ -287,7 +272,7 @@ struct plugin_snapshot_t {
 	std::vector<uint8_t> dataChunk;
 	std::vector<uint8_t> dataChunk2;
 	std::vector<param_snapshot_t> params;
-	std::vector<plugin_param_autiomation_src_t> automatedParams;
+	std::vector<automation_view_t> automatedParams;
 };
 struct track_plugins_snapshot_t {
 	float gain = 1.0f;
@@ -299,20 +284,15 @@ struct track_snapshot_t : public tracksettings_t {
 	track_t* trackLoaded = NULL;
 	track_plugins_snapshot_t plugins;
 	std::vector<clip_t> clips;
-	std::vector<automation_point_t> points;
 	track_snapshot_t() = default;
 	track_snapshot_t(track_t* track);
 };
 class track_t : public tracksettings_t {
 	trackdata_midi_t midi;
-//	vstparam_automation_t automation;
 public:
 	trackdata_midi_t& getMidi() {
 		return midi;
 	}
-//	vstparam_automation_t& getAutomation() {
-//		return automation;
-//	}
 	tick_minmax_t getMinMaxEvents() {
 		tick_t evtMin = INVALID_TICK;
 		tick_t evtMax = INVALID_TICK;

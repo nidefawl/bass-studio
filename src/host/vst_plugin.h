@@ -120,8 +120,6 @@ public:
 	vst_param_category* getCategory(int idx);
 	vst_param* getParam(int32_t idx);
 	automated_param_t* getRegisteredAutomation(int32_t idx);
-	void registerAutomationSrc(int32_t paramIdx, automation_t* p, std::shared_ptr<plugin_reference_t> ref);
-	void unregisterAutomationSrc(int32_t paramIdx);
 
 	int32_t getNumParameters() override;
 	String getParamName(int32_t paramIdx) override;

@@ -16,7 +16,6 @@
 #include "clip.h"
 #include "track.h"
 #include "track_audiodata.h"
-#include "automation_link.h"
 
 #include "vst_plugin.h"
 #include "vst_plugin_handles.h"
@@ -25,6 +24,8 @@
 #include "mainctrl.h"
 
 #include "leak_detect.h"
+
+const tick_t INVALID_TICK = 1 << 31;
 
 #define ERROR_LOG(x) (my_printf("ERROR: %s\n", x))
 
@@ -234,11 +235,12 @@ void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin) {
 		param_snapshot_t t{param.idx, val};
 		ps.params.push_back(t);
 	}
-	for (automated_param_t& src : plugin->automatedParams) {
-//		if (src.ref) {
-//			plugin_param_autiomation_src_t paramSrc = src.ref->serialize();
-//			ps.automatedParams.push_back(paramSrc);
-//		}
+	for (automated_param_t& automatedParam : plugin->automatedParams) {
+		assert(automatedParam.src);
+		automation_view_t automation;
+		automation.targetParam = automatedParam.paramIdx;
+		automation.points = automatedParam.src->points;
+		ps.automatedParams.push_back(automation);
 	}
 }
 track_plugins_snapshot_t::track_plugins_snapshot_t(const track_t &a) {
@@ -316,28 +318,15 @@ void tracksubcontainer_t::loadPlugins(trackallcontainer_t* all, trackcontainer_s
 						}
 					}
 					host->insertNewPlugin(trackLoaded->audio, plugin, pluginSnapshot.slot);
-					const std::vector<plugin_param_autiomation_src_t>& automatedParams = pluginSnapshot.automatedParams;
 
-//					for (const plugin_param_autiomation_src_t& param : automatedParams) {
-//						if (plugin->getParam(param.paramIdx)) {
-//							if (all->validTrackIdx(param.trackIdx)) {
-//								track_t* trackSrc = (*all)[param.trackIdx];
-//								assert(trackSrc->idx ==param.trackIdx);
-//								for (track_t* t : (*all)) {
-//									my_printf("TRACK[%d] = %s\n", t->idx, StringAsCStr(t->name));
-//								}
-//								my_printf("LOAD AUTOMATION SRC IDX %d NAME %s\n", trackSrc->idx, StringAsCStr(trackSrc->name));
-//
-//								vstparam_automation_t& automation = trackSrc->getAutomation();
-//								std::shared_ptr<plugin_reference_t> ref(new plugin_track_link_t{trackSrc, plugin, param.paramIdx});
-//								plugin->registerAutomationSrc(param.paramIdx, &automation, ref);
-//
-//
-//
-//
-//							}
-//						}
-//					}
+					const std::vector<automation_view_t>& automatedParams = pluginSnapshot.automatedParams;
+
+					for (const automation_view_t& automatedParam : automatedParams) {
+						if (plugin->getParam(automatedParam.targetParam)) {
+							automation_t* autom = plugin->getAutomation(automatedParam.targetParam);
+							autom->points = automatedParam.points;
+						}
+					}
 				}
 			}
 		}
@@ -402,6 +391,9 @@ vstplugin* track_plugins_t::setInstrument(vstplugin* _instrument) {
 	return oldInstr;
 }
 void track_plugins_t::removePlugin(vstplugin* _vst) {
+	if (this->selectedAutomationCtr == _vst) {
+		this->selectedAutomationCtr = NULL;
+	}
 	if (instrument == _vst) {
 		instrument = NULL;
 	} else {
@@ -684,7 +676,7 @@ trackstate_t trackstate_t::copy() {
 }
 
 const char* trackTypeNames[4] = {
-	"Master", "Return", "Midi", "Automation"
+	"Master", "Return", "Midi", NULL
 };
 const char* TrackTypeToName(int type) {
 	return trackTypeNames[type];

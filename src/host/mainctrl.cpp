@@ -1223,8 +1223,6 @@ track_t* MainCtrl::insertNewTrack(int trackInsertPos, int trackType) {
 		break;
 	case TRACK_TYPE_MASTER:
 		break;
-	case TRACK_TYPE_AUTOMATION:
-		break;
 	}
 
 

@@ -4,7 +4,7 @@
 #include <limits>
 #include "samplerate.h"
 using tick_t = int32_t;
-constexpr tick_t INVALID_TICK = 1<<31;
+extern const tick_t INVALID_TICK;
 struct tick_minmax_t {
 	tick_t min;
 	tick_t max;

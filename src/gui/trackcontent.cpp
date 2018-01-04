@@ -149,13 +149,18 @@ void gui_clip::trackViewDragRelease(guitrack_editor* view, MouseEvent& evt) {
 
 void gui_track::updateVisibleTrackContents(scaled_grid& grid) {
 	track_plugins_t* data=this->m_track->audio;
-	automatable_t* ctr = data->selectedAutomationCtr;
-	int32_t idx = data->selectedAutomationParam;
-	automation.setData(ctr, idx);
+	if (data) {
+		automatable_t* ctr = data->selectedAutomationCtr;
+		int32_t idx = data->selectedAutomationParam;
+		automation.setData(ctr, idx);
+	}
+	else {
+
+		automation.setData(NULL, -1);
+	}
 	automation.updateVisibleTrackContents(grid);
 	for (clip_t* clip : midi.clips) {
-//			gui_clip* gClip = clip->gClip;
-		if(!clip->gClip) {
+		if (!clip->gClip) {
 			clip->gClip = new gui_clip(clip, m_track);
 			add(clip->gClip);
 		}
@@ -163,16 +168,5 @@ void gui_track::updateVisibleTrackContents(scaled_grid& grid) {
 	}
 }
 gui_track* createTrackGui(track_t* t, scaled_grid& grid) {
-//	switch (t->type) {
-//	case TRACK_TYPE_RETURN:
-//	case TRACK_TYPE_MASTER:
-//		return new gui_track_audiochain(t);
-//	case TRACK_TYPE_MIDI:
-//		return new gui_track(t);
-//	case TRACK_TYPE_AUTOMATION:
-//		return new gui_track_automation(t);
-//	}
-//	assert(0&&"unhandled track type");
-//	return NULL;
 	return new gui_track(t, grid);
 }

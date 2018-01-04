@@ -75,7 +75,49 @@ struct automation_t {
 		return getDstValue();
 	}
 };
+struct automation_clipboard_t {
+	tick_t start;
+	tick_t len;
+	std::vector<automation_point_t> dataPoints;
+};
+struct automation_view_t: public automation_t {
+
+	int32_t targetParam = -1;
+	float dummy = 0.5f;
+	float getDstValue() override {
+		return dummy;
+	}
+	void setDstValue(float f) override {
+		dummy = f;
+	}
+};
 class vstplugin;
+
+struct vstparam_automation_t: public automation_t {
+	int32_t paramIdx = -1;
+	vstplugin* plugin = NULL;
+
+	float dummy = 0.5f;
+
+	vstparam_automation_t()
+	{
+	}
+	~vstparam_automation_t() {
+		//notify vstplugin
+	}
+	void setTarget(vstplugin* _plugin, int32_t _paramIdx) {
+		plugin = _plugin;
+		paramIdx = _paramIdx;
+	}
+	vstplugin* getTargetPlugin() {
+		return plugin;
+	}
+	float getDstValue() override;
+	void setDstValue(float f) override;
+	bool isActive() override {
+		return true;
+	}
+};
 struct plugin_param_autiomation_src_t {
 	int32_t pluginSlot;
 	int32_t trackIdx;
@@ -92,7 +134,6 @@ public:
 struct automated_param_t {
 	int32_t paramIdx = -1;
 	automation_t* src = NULL;
-//	std::shared_ptr<plugin_reference_t> ref;
 };
 struct automatable_t {
 	virtual ~automatable_t() {};

@@ -8,6 +8,7 @@
 #include "guicontainer.h"
 #include "trackctr.h"
 #include "automation.h"
+#include "track_audiodata.h"
 
 #include <glm/geometric.hpp>
 #include <glm/vec2.hpp>
@@ -210,8 +211,9 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 	}
 	void gui_track_automation::postEdit() {
 		updateVisibleTrackContents(grid);
-		if (targetCtr) {
-			automation_t* automation = targetCtr->getAutomation(targetIdx);
+		automatable_t* autom = m_track->audio->selectedAutomationCtr;
+		if (autom) {
+			automation_t* automation = autom->getAutomation(data.targetParam);
 			if (automation) {
 				automation->points = data.points;
 			}
