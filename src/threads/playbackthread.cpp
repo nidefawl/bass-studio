@@ -20,7 +20,10 @@
 #include "../util/readerwriterqueue.h"
 #include "../host/vst_host.h"
 #include <windows.h>
+
+#ifndef _MSC_VER
 #pragma GCC diagnostic push
+#endif
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Wpessimizing-move"
 #endif
@@ -132,8 +135,8 @@ private:
 		bool firstBlock = false;
 		bool isLoopAround = false;
 		std::shared_ptr<PlaybackThreadReq> req;
-		int32_t samplePos;
-		double tickPos;
+		int32_t samplePos = 0;
+		double tickPos = 0;
         while (true){
         	samplerate_t sampleRate = host->lSampleRate;
         	int32_t blockSize = host->lBlockSize;
@@ -298,5 +301,7 @@ ThreadLock::ThreadLock(ThreadLock&& other) {
 	other._M_impl = NULL;
 }
 
-
+#ifndef _MSC_VER
 #pragma GCC diagnostic pop
+#endif
+
