@@ -36,19 +36,19 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Test|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v141</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
@@ -97,14 +97,20 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);</LibraryPath>
-    <IntDir>BUILD\msvc\$(Platform)\$(Configuration)\</IntDir>
+    <IntDir>$(SolutionDir)\..\build\msvc\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(SolutionDir)\..\run\</OutDir>
+    <TargetName>daw</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Test|x64'">
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);</LibraryPath>
-    <IntDir>BUILD\msvc\$(Platform)\$(Configuration)\</IntDir>
+    <IntDir>$(SolutionDir)\..\build\msvc\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(SolutionDir)\..\run\</OutDir>
+    <TargetName>daw</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IntDir>BUILD\msvc\$(Platform)\$(Configuration)\</IntDir>
+    <IntDir>$(SolutionDir)\..\build\msvc\$(Platform)\$(Configuration)\</IntDir>
+    <OutDir>$(SolutionDir)\..\run\</OutDir>
+    <TargetName>daw</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -150,7 +156,7 @@
       <AdditionalIncludeDirectories>E:\dev\libs\glfw_x64_vc141_dbg\include;E:\dev\libs\glad\include\;E:\dev\libs\nanovg;E:\dev\libs\glm\;$(ProjectDir)/include;E:\dev\libs\cereal;E:\dev\libs\PortAudio_190600\src\os\win;E:\dev\libs\PortAudio_190600\src\common;E:\dev\libs\PortAudio_190600\include;E:\dev\libs\ASIOSDK2.3\common;E:\dev\libs\ASIOSDK2.3\host;E:\dev\libs\ASIOSDK2.3\host\pc;E:\dev\libs\SQLiteCpp_msvc_x64_debug\include</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>VST_FORCE_DEPRECATED=0;PA_USE_ASIO=1;PA_USE_DS=1;WIN32;_WINDOWS;_DEBUG;_CRT_SECURE_NO_WARNINGS;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
-      <LanguageStandard>stdcpp14</LanguageStandard>
+      <LanguageStandard>stdcpp17</LanguageStandard>
       <DisableSpecificWarnings>4244;4146;4267;4018;4067</DisableSpecificWarnings>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
@@ -259,18 +265,23 @@
     <ClCompile Include="E:\dev\libs\PortAudio_190600\src\os\win\pa_win_waveformat.c" />
     <ClCompile Include="E:\dev\libs\PortAudio_190600\src\os\win\pa_x86_plain_converters.c" />
     <ClCompile Include="file\fileio.cpp" />
+    <ClCompile Include="file\fileloader.cpp" />
     <ClCompile Include="file\projectfile.cpp" />
     <ClCompile Include="gui\clipeditor.cpp" />
     <ClCompile Include="gui\gui.cpp" />
     <ClCompile Include="gui\guicolors.cpp" />
     <ClCompile Include="gui\pluginctr.cpp" />
     <ClCompile Include="gui\textfield.cpp" />
+    <ClCompile Include="gui\trackautomation.cpp" />
     <ClCompile Include="gui\trackcontent.cpp" />
+    <ClCompile Include="gui\trackcontrols.cpp" />
+    <ClCompile Include="gui\trackctr.cpp" />
     <ClCompile Include="gui\trackeditor.cpp" />
     <ClCompile Include="host\clip.cpp" />
     <ClCompile Include="host\keyboard.cpp" />
     <ClCompile Include="host\main.cpp" />
     <ClCompile Include="host\plugindatabase.cpp" />
+    <ClCompile Include="host\popupctrl.cpp" />
     <ClCompile Include="host\renderresources.cpp" />
     <ClCompile Include="host\track.cpp" />
     <ClCompile Include="host\vst_host.cpp" />
@@ -301,16 +312,22 @@
   <ItemGroup>
     <ClInclude Include="gui\button.h" />
     <ClInclude Include="gui\clipeditor.h" />
+    <ClInclude Include="gui\dropdown.h" />
     <ClInclude Include="gui\guicontainer.h" />
     <ClInclude Include="gui\guicontextmenu.h" />
+    <ClInclude Include="gui\knob.h" />
+    <ClInclude Include="gui\list.h" />
     <ClInclude Include="gui\plugin.h" />
     <ClInclude Include="gui\pluginctr.h" />
     <ClInclude Include="gui\pluginlist.h" />
+    <ClInclude Include="gui\scrollbar.h" />
     <ClInclude Include="gui\statusbar.h" />
     <ClInclude Include="gui\tempocontrols.h" />
     <ClInclude Include="gui\textfield.h" />
     <ClInclude Include="gui\theme.h" />
+    <ClInclude Include="gui\trackautomation.h" />
     <ClInclude Include="gui\trackcontent.h" />
+    <ClInclude Include="gui\trackcontrols.h" />
     <ClInclude Include="gui\trackctr.h" />
     <ClInclude Include="gui\tracktimeline.h" />
     <ClInclude Include="host\plugindatabase.h" />
@@ -319,7 +336,9 @@
     <ClInclude Include="host\vst_plugin_handles.h" />
     <ClInclude Include="host\vst_window.h" />
     <ClInclude Include="include\audioblock.h" />
+    <ClInclude Include="include\automation.h" />
     <ClInclude Include="include\clip.h" />
+    <ClInclude Include="include\clipboard.h" />
     <ClInclude Include="include\commands.h" />
     <ClInclude Include="include\cursor.h" />
     <ClInclude Include="include\droptargetlistener.h" />
@@ -331,6 +350,7 @@
     <ClInclude Include="include\hires_timer.h" />
     <ClInclude Include="include\keyboard.h" />
     <ClInclude Include="include\layout.h" />
+    <ClInclude Include="include\leak_detect.h" />
     <ClInclude Include="include\logging.h" />
     <ClInclude Include="include\menu.h" />
     <ClInclude Include="include\mouse.h" />

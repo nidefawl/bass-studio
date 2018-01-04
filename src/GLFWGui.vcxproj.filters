@@ -109,6 +109,11 @@
     <ClCompile Include="gui\textfield.cpp" />
     <ClCompile Include="threads\childprocessthread.cpp" />
     <ClCompile Include="platform\win\hires_timer.cpp" />
+    <ClCompile Include="host\popupctrl.cpp" />
+    <ClCompile Include="gui\trackautomation.cpp" />
+    <ClCompile Include="gui\trackcontrols.cpp" />
+    <ClCompile Include="gui\trackctr.cpp" />
+    <ClCompile Include="file\fileloader.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\config.h" />
@@ -195,6 +200,15 @@
     <ClInclude Include="gui\textfield.h" />
     <ClInclude Include="gui\pluginlist.h" />
     <ClInclude Include="threads\childprocessthread.h" />
+    <ClInclude Include="gui\dropdown.h" />
+    <ClInclude Include="gui\knob.h" />
+    <ClInclude Include="gui\list.h" />
+    <ClInclude Include="gui\scrollbar.h" />
+    <ClInclude Include="gui\trackautomation.h" />
+    <ClInclude Include="gui\trackcontrols.h" />
+    <ClInclude Include="include\automation.h" />
+    <ClInclude Include="include\clipboard.h" />
+    <ClInclude Include="include\leak_detect.h" />
   </ItemGroup>
   <ItemGroup>
     <Font Include="OpenSans-Regular.ttf" />
