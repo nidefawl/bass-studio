@@ -107,6 +107,28 @@ public:
 		guis.erase(it);
 		gui->parent = NULL;
 	}
+	virtual void addUNCHECKED(guibase* gui) {
+		auto it = std::find(guis.begin(), guis.end(), gui);
+		if (it != guis.end()) {
+			return;
+		}
+		guis.push_back(gui);
+		if (sortChildren) {
+			std::sort(guis.begin(), guis.end(), [](guibase* a, guibase* b) {
+				return a->zOrder > b->zOrder;
+			});
+		}
+		gui->parent = this;
+	}
+	virtual void removeUNCHECKED(guibase* gui) {
+		auto it = std::find(guis.begin(), guis.end(), gui);
+		if (it == guis.end()) {
+			return;
+		}
+		gui->onRemove();
+		guis.erase(it);
+		gui->parent = NULL;
+	}
 	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
 		if (this->contains(mpos)) {
 			ivec2 localMouse = this->toContainerSpace(mpos);
@@ -119,7 +141,7 @@ public:
 		return false;
 	}
 	static void drawBackground(NVGcontext* vg, ivec2 posInset, ivec2 sizeInset, int margin, bool focused = false) {
-		static const ivec2 borderThickness(6);
+		static const ivec2 borderThickness(CTR_SPACING-2);
 		posInset -= ivec2(margin);
 		sizeInset += ivec2(margin) * 2;
 		if (sizeInset.y > 0 && sizeInset.x > 0) {

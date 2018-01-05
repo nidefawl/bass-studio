@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <vector>
+#include <memory>
 #include "config.h"
 #include "exceptions.h"
 #include "seq_util.h"
@@ -117,7 +118,11 @@ public:
 		cursor.cursorTrack = trackClicked->idx;
 	}
 
-	gui_track_automationlane* addAutomationLane(track_t* t, automatable_t* at, int32_t paramIdx);
+	gui_track_automationlane* addAutomationLane(track_t* t, automatable_t* at, int32_t paramIdx, bool insertFront);
+	void removeAutomationLane(gui_track_automationlane* al);
+	void removeAllAutomationLanes(track_t* t, automatable_t* at, int32_t paramIdx);
+	void removeAllAutomationLanes(track_t* t, automatable_t* at);
+	void removeAllAutomationLanes(track_t* t);
 	void addTrack(track_t* t);
 	void removeTrack(track_t* t);
 	void updateVisibleTrackContents();
@@ -159,7 +164,11 @@ public:
 	void handleRightClick(MouseEvent& evt);
 	void render(NVGcontext* vg);
 	void addTrack(track_t* t);
-	void addAutomationLane(track_t* t, gui_track_automationlane* al);
+//	void addAutomationLane(track_t* t, gui_track_automationlane* al);
+//	void removeAutomationLane(gui_track_automationlane* al);
+//	void removeAllAutomationLanes(track_t* t, automatable_t* at, int32_t paramIdx);
+//	void removeAllAutomationLanes(track_t* t, automatable_t* at);
+//	void removeAllAutomationLanes(track_t* t);
 	void removeTrack(track_t* t);
 	void layout() {
 		for (guibase* gui : guis) {
@@ -423,6 +432,7 @@ public:
 		layout();
 	}
 	void removeSingleTrack(track_t* t) {
+		removeAllAutomationLanes(t);
 		trackControls.removeTrack(t);
 		trackView.removeTrack(t);
 		layout();
@@ -431,10 +441,11 @@ public:
 		trackControls.addTrack(t);
 		trackView.addTrack(t);
 	}
-	void addAutomationLane(track_t* t, automatable_t* at, int32_t paramIdx) {
-		gui_track_automationlane* al = trackView.addAutomationLane(t, at, paramIdx);
-		trackControls.addAutomationLane(t, al);
-	}
+	void addAutomationLane(track_t* t, automatable_t* at, int32_t paramIdx, bool insertFront);
+	void removeAutomationLane(gui_track_automationlane* al);
+	void removeAllAutomationLanes(track_t* t, automatable_t* at, int32_t paramIdx);
+	void removeAllAutomationLanes(track_t* t, automatable_t* at);
+	void removeAllAutomationLanes(track_t* t);
 	void removeTrack(track_t* t) {
 		trackControls.removeTrack(t);
 		trackView.removeTrack(t);

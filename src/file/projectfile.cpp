@@ -68,6 +68,8 @@ void serialize(Archive & archive, tracksettings_t & m)
 			make_nvp("rgb", m.rgb),
 			make_nvp("enabled", m.enabled),
 			make_nvp("type", m.type));
+	make_optional_nvp(archive, "hideAutomation", m.hideAutomation);
+	make_optional_nvp(archive, "hideTrack", m.hideTrack);
 }
 template<class Archive>
 void serialize(Archive & archive, track_snapshot_t & m)

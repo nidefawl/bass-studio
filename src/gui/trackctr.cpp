@@ -35,11 +35,6 @@ void guitrack_mixers::render(NVGcontext* vg) {
 	}
 
 }
-void guitrack_mixers::addAutomationLane(track_t* t, gui_track_automationlane* al) {
-	assert(t->mixer);
-//	t->mixer->addAutomationLane(at, paramIdx);
-	t->mixer->addAutomationLane(t, al);
-}
 void guitrack_mixers::addTrack(track_t* t) {
 	if (t->mixer)
 		throw applogicexception("expected t->mixer == NULL");
@@ -67,17 +62,26 @@ int32_t guictr_tracks::setTrackPosition(track_t* t, int32_t y, bool isBottom) {
 	ivec2& mxrPos = t->mixer->pos;
 	cntPos = ivec2(0, y);
 	mxrPos = ivec2(0, y);
-	t->content->size = ivec2(trackView.size.x, t->height * TRACK_HEIGHT_STEP);
+	int32_t trH = t->hideTrack ? 1 : t->height;
+	t->content->size = ivec2(trackView.size.x, trH * TRACK_HEIGHT_STEP);
 	int32_t x2 = t->content->left();
 	int32_t y2 = t->content->bottom();
-	for (auto t2 : t->subtracks) {
-		int trackheight2 = t2->height * TRACK_HEIGHT_STEP;
-		t2->pos = ivec2(x2, y2);
-		t2->size = ivec2(t->content->size.x, trackheight2);
-		y2 = t2->bottom() + TRACK_HEIGHT_SPACING;
+	if (!(t->hideTrack || t->hideAutomation)) {
+		for (auto t2 : t->subtracks) {
+			int trackheight2 = t2->height * TRACK_HEIGHT_STEP;
+			t2->pos = ivec2(x2, y2);
+			t2->size = ivec2(t->content->size.x, trackheight2);
+			y2 = t2->bottom() + TRACK_HEIGHT_SPACING;
+		}
+	} else {
+		for (auto t2 : t->subtracks) {
+			t2->pos = ivec2(x2, y2);
+			t2->size = ivec2(0, 0);
+		}
 	}
 	int32_t totalHeight = y2-y;
 	t->mixer->size = ivec2(trackControls.size.x, y2-y);
+
 	if (isBottom) {
 		cntPos.y -= totalHeight;
 		mxrPos.y -= totalHeight;
@@ -88,6 +92,34 @@ int32_t guictr_tracks::setTrackPosition(track_t* t, int32_t y, bool isBottom) {
 	return totalHeight;
 }
 
+void guictr_tracks::addAutomationLane(track_t* t, automatable_t* at, int32_t paramIdx, bool insertFront) {
+	gui_track_automationlane* al = trackView.addAutomationLane(t, at, paramIdx, insertFront);
+	t->mixer->addAutomationLane(t, al);
+}
+void guictr_tracks::removeAutomationLane(gui_track_automationlane* al) {
+	al->m_track->mixer->removeAutomationLane(al);
+	trackView.removeAutomationLane(al);
+	layout();
+	updateVisibleTrackContents();
+}
+void guictr_tracks::removeAllAutomationLanes(track_t* t, automatable_t* at, int32_t paramIdx) {
+	t->mixer->removeAllAutomationLanes(at, paramIdx);
+	trackView.removeAllAutomationLanes(t, at, paramIdx);
+	layout();
+	updateVisibleTrackContents();
+}
+void guictr_tracks::removeAllAutomationLanes(track_t* t, automatable_t* at) {
+	t->mixer->removeAllAutomationLanes(at);
+	trackView.removeAllAutomationLanes(t, at);
+	layout();
+	updateVisibleTrackContents();
+}
+void guictr_tracks::removeAllAutomationLanes(track_t* t) {
+	t->mixer->removeAllAutomationLanes();
+	trackView.removeAllAutomationLanes(t);
+	layout();
+	updateVisibleTrackContents();
+}
 void guictr_tracks::layout() {
 	const int mixerwidth = 380;
 	ivec2 cs = getSizeContent();
@@ -105,7 +137,7 @@ void guictr_tracks::layout() {
 
 
 	ivec2 csTrackView = trackView.getSizeContent();
-	int y = TRACK_HEIGHT_SPACING+20;
+	int y = TRACK_HEIGHT_SPACING;
 	for (track_t* t : project.trackCtr) {
 		assert(t->content != NULL);
 		int32_t h = setTrackPosition(t, y, false);
@@ -228,14 +260,47 @@ void guictr_tracks::render(NVGcontext* vg) {
 	//		}
 		}
 	}
-gui_track_automationlane* guitrack_editor::addAutomationLane(track_t* t, automatable_t* at, int32_t paramIdx) {
+gui_track_automationlane* guitrack_editor::addAutomationLane(track_t* t, automatable_t* at, int32_t paramIdx, bool insertFront) {
 	assert(t->audio);
 
 	gui_track_automationlane* al = new gui_track_automationlane(t, grid, at, paramIdx);
-	t->subtracks.push_back(al);
+	if (insertFront) {
+		t->subtracks.insert(t->subtracks.begin(), al);
+	} else {
+		t->subtracks.push_back(al);
+	}
 	al->setZOrder(t->type >= TRACK_TYPE_MIDI ? 0 : 1);
 	add(al);
 	return al;
+}
+
+void guitrack_editor::removeAllAutomationLanes(track_t* t) {
+	removeAllAutomationLanes(t, NULL, -1);
+}
+void guitrack_editor::removeAllAutomationLanes(track_t* t, automatable_t* at) {
+	removeAllAutomationLanes(t, at, -1);
+}
+void guitrack_editor::removeAllAutomationLanes(track_t* t, automatable_t* at, int32_t paramIdx) {
+	auto& atLanes = t->subtracks;
+	auto it = std::remove_if(atLanes.begin(), atLanes.end(), [this, at, paramIdx] (gui_track_automationlane* al) {
+		if ((at == NULL || al->at == at) && (paramIdx < 0 || al->param == paramIdx)) {
+			remove(al);
+			delete al;
+			return true;
+		}
+		return false;
+	});
+	atLanes.erase(it, atLanes.end());
+
+}
+void guitrack_editor::removeAutomationLane(gui_track_automationlane* al) {
+	assert(al);
+	remove(al);
+	auto& atLanes = al->m_track->subtracks;
+	auto it = std::find(atLanes.begin(), atLanes.end(), al);
+	assert(it != atLanes.end());
+	atLanes.erase(it);
+	delete al;
 }
 void guitrack_editor::addTrack(track_t* t) {
 	if (t->content)
@@ -281,26 +346,6 @@ void guitrack_editor::updateVisibleTrackContents() {
 			continue;
 		}
 		g->content->updateVisibleTrackContents(grid);
-//		std::vector<automatable_t*> targets;
-//		if (g->audio) {
-//			g->audio->getAutomatableTargets(targets);
-//			for (automatable_t* at : targets) {
-//				std::vector<int32_t> targetsIdx;
-//				at->getAutomated(targetsIdx);
-//				for (int32_t idx : targetsIdx) {
-//					bool found = false;
-//					for (gui_track_automationlane* au : g->subtracks) {
-//						if (au->at == at && au->param == idx) {
-//							found = true; break;
-//						}
-//					}
-//					if (!found) {
-//						gui_track_automationlane* al = new gui_track_automationlane(g, grid, at, idx);
-//						g->subtracks.push_back(al);
-//					}
-//				}
-//			}
-//		}
 		for (gui_track_automationlane* au : g->subtracks) {
 			au->updateVisibleTrackContents(grid);
 		}

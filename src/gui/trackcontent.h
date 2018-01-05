@@ -165,13 +165,14 @@ public:
 };
 
 class gui_track_automationlane : public guictr_base {
-protected:
+public:
 	track_t* const m_track;
+protected:
 	gui_track_automation automation;
 public:
 	automatable_t* at;
 	int32_t param;
-	int height = 4;
+	int32_t height = 4;
 	gui_track_automationlane(track_t* _track, scaled_grid& _grid, automatable_t* _at, int32_t _param);
 	virtual ~gui_track_automationlane() {
 

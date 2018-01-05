@@ -5,11 +5,12 @@
 #include "leak_detect.h"
 
 class gui_trackcontrols_automation;
+class gui_trackcontrols_title;
 class gui_track_controls: public guictr_base {
 public:
 	track_t* const m_track;
 private:
-	guictr_base* title;
+	gui_trackcontrols_title* title;
 	guictr_base* mixer;
 	std::vector<gui_trackcontrols_automation*> automationLaneControls;
 	int dragMode = -1;
@@ -22,6 +23,10 @@ public:
 		return false;
 	}
 	void addAutomationLane(track_t* t, gui_track_automationlane* al);
+	void removeAutomationLane(gui_track_automationlane* al);
+	void removeAllAutomationLanes(automatable_t* at, int32_t paramIdx);
+	void removeAllAutomationLanes(automatable_t* at);
+	void removeAllAutomationLanes();
 	void render(NVGcontext* vg) override;
 	void handleDraggedBegin(MouseEvent& evt) {
 		MainCtrl::get()->setSelectedTrack(m_track);
@@ -42,28 +47,7 @@ public:
 				&& mpos.y < resizeTopOrBottom + resizeHitY;
 	}
 
-	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-		ivec2 local = this->toContainerSpace(mpos);
-		if (title->mouseHitTest(local, evt)) {
-			return true;
-		}
-		if (contains(mpos)) {
-			for (guibase* gui : guis) {
-				if (gui->mouseHitTest(local, evt)) {
-					return true;
-				}
-			}
-			evt.requestFocus(this);
-			return true; // always need to return true if contained, parent has z-order
-		}
-		if (isResize(mpos)) {
-			evt.requestFocus(this);
-			if (evt.type <= MouseHitType::MOUSE_RIGHT)
-				evt.requestCursor(CURSOR_RESIZE_V);
-			return true;
-		}
-		return false;
-	}
+	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
 	void layout() override;
 };
 

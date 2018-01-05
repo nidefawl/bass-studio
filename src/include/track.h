@@ -258,6 +258,8 @@ struct tracksettings_t {
 	int type = -1; //CONST!
 	int height = -1;
 	int rgb = -1;
+	bool hideTrack = false;
+	bool hideAutomation = false;
 };
 
 struct param_snapshot_t {

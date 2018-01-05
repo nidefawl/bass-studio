@@ -678,7 +678,7 @@ bool MainCtrl::setLoadedProject(shared_ptr<project_file> file) {
 				std::vector<int32_t> targetsIdx;
 				at->getAutomated(targetsIdx);
 				for (int32_t idx : targetsIdx) {
-					view->ctr_tracks.addAutomationLane(tr, at, idx);
+					view->ctr_tracks.addAutomationLane(tr, at, idx, false);
 				}
 			}
 		}
@@ -739,6 +739,9 @@ track_t* MainCtrl::getSelectedTrack() {
 }
 guictr_plugins* MainCtrl::getPluginCtr() {
 	return &get()->view->ctr_plugins;
+}
+guictr_tracks* MainCtrl::getGuiTrackCtr() {
+	return &get()->view->ctr_tracks;
 }
 void MainCtrl::updateGrid() {
 	grid.update(view->ctr_tracks.trackView.getSizeContent());

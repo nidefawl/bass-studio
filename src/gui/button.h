@@ -90,3 +90,51 @@ public:
 		}
 	}
 };
+class guibuttontoggle : public guibuttonbase {
+public:
+	float radius = 0;
+	bool* state = NULL;
+	int icon = -1;
+	guibuttontoggle() : guibuttonbase() {
+	}
+	guibuttontoggle(float _radius) : guibuttonbase(ivec2(0), ivec2((int)(_radius * 2))) {
+		this->radius = _radius;
+	}
+	bool enabled() override {
+		if (state)
+			return *state;
+		return true;
+	}
+	void render(NVGcontext* vg) {
+		vec2 cen = vec2(radius);
+		cen.x += pos.x;
+		cen.y += pos.y;
+		int32_t state = getStateFlags();
+		nvgBeginPath(vg);
+		nvgCircle(vg, cen.x, cen.y, radius);
+		nvgFillColor(vg, theme->getBgColor(state));
+		nvgFill(vg);
+		nvgStrokeColor(vg, theme->getBgStrokeColor(state));
+		nvgStrokeWidth(vg, theme->getBgStrokeWidth(state));
+		nvgStroke(vg);
+		if (icon >= 0) {
+
+
+			int32_t extImg = 2;
+			int32_t iconW = (int32_t)ceil(radius*2)+extImg*2;
+			RenderResources::NvgImageTexture& image = RenderResources::imgIcons[icon];
+			NVGpaint paintIcon = nvgImagePattern(vg, -extImg, -extImg, iconW, iconW, 0, image.id, 1.0f);
+			nvgTranslate(vg, pos.x, pos.y);
+			nvgBeginPath(vg);
+			nvgRect(vg, -extImg, -extImg, iconW, iconW);
+			nvgFillPaint(vg, paintIcon);
+			nvgFill(vg);
+			nvgTranslate(vg, -pos.x, -pos.y);
+		}
+
+		/*nvgBeginPath(vg);
+		nvgRect(vg, pos.x, pos.y, size.x, size.y);
+		nvgFillColor(vg, c);
+		nvgFill(vg);*/
+	}
+};

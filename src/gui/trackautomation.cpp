@@ -251,6 +251,9 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 	}
 
 	bool gui_track_automation::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
+		if (!this->at || this->param < 0) {
+			return false;
+		}
 		if (this->contains(mpos)) {
 			ivec2 localMouse = this->toContainerSpace(mpos);
 			for (guibase* gui : guis) {
@@ -322,7 +325,9 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 	}
 
 	void gui_track_automation::render(NVGcontext* vg) {
-
+		if (!this->at || this->param < 0) {
+			return;
+		}
 //		if (MainCtrl::get()->getSelectedTrack() == m_track) {
 //			nvgBeginPath(vg);
 //			nvgRect(vg, pos.x, pos.y, size.x, size.y);

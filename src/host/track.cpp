@@ -423,6 +423,7 @@ void track_plugins_t::removePlugin(vstplugin* _vst) {
 			plugins->layout();
 		}
 	}
+	MainCtrl::getGuiTrackCtr()->removeAllAutomationLanes(this->track, _vst);
 }
 
 void track_plugins_t::insertEffect(int32_t idx, vstplugin* _effect) {

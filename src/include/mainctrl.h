@@ -219,6 +219,7 @@ public:
 		return &get()->playThread;
 	}
 	static guictr_plugins* getPluginCtr();
+	static guictr_tracks* getGuiTrackCtr();
 	String lastKey;
 	dragdrop_midifile dragdropclip;
 	plugindatabase_t plugindb;

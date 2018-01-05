@@ -15,7 +15,13 @@
 #define IMG_LED 12
 #define IMG_LED_OFF 13
 #define IMG_LED_GLOW 14
-#define NUM_IMGS 20
+#define ICON_ARR_DOWN 15
+#define ICON_ARR_LEFT 16
+#define ICON_ARR_RIGHT 17
+#define ICON_PLUS 18
+#define ICON_MINUS 19
+#define ICON_AUTOMATION 20
+#define NUM_IMGS 21
 #define NUM_CURSORS 16
 namespace RenderResources {
 	struct NvgImageTexture {

@@ -224,9 +224,9 @@ guiplugin::guiplugin(vstplugin* _vst)
 : guibase(),
   vst(_vst),
   params(48),
-  buttonBypass(ivec2(0), 12),
-  buttonOpenEditor(ivec2(0), 12),
-  buttonDelete(ivec2(0), 12) {
+  buttonBypass(12),
+  buttonOpenEditor(12),
+  buttonDelete(12) {
 	text[0] = 0;
 	buttonBypass.icon = ICON_BYPASS;
 	buttonBypass.state = &vst->bIsEnabled;

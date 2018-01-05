@@ -88,10 +88,16 @@ namespace RenderResources {
 			load(vg, StringFormat("res/icons/close.png"), imgIconsBuf[ICON_CLOSE]);
 			load(vg, StringFormat("res/icons/bypass.png"), imgIconsBuf[ICON_BYPASS]);
 			load(vg, StringFormat("res/icons/loop.png"), imgIconsBuf[ICON_LOOP]);
+			load(vg, StringFormat("res/icons/arr_down.png"), imgIconsBuf[ICON_ARR_DOWN]);
+			load(vg, StringFormat("res/icons/arr_left.png"), imgIconsBuf[ICON_ARR_LEFT]);
+			load(vg, StringFormat("res/icons/arr_right.png"), imgIconsBuf[ICON_ARR_RIGHT]);
+			load(vg, StringFormat("res/icons/plus.png"), imgIconsBuf[ICON_PLUS]);
+			load(vg, StringFormat("res/icons/minus.png"), imgIconsBuf[ICON_MINUS]);
+			load(vg, StringFormat("res/icons/automation.png"), imgIconsBuf[ICON_AUTOMATION]);
 			load(vg, StringFormat("res/led.png"), imgIconsBuf[IMG_LED]);
 			load(vg, StringFormat("res/led_off.png"), imgIconsBuf[IMG_LED_OFF]);
 			load(vg, StringFormat("res/led_glow.png"), imgIconsBuf[IMG_LED_GLOW]);
-			for (int i = 0; i < 16; i++) {
+			for (int i = 0; i <= NUM_IMGS; i++) {
 				ImageBuf& buf = imgIconsBuf[i];
 				if (buf.w*buf.h == 0) {
 					continue;

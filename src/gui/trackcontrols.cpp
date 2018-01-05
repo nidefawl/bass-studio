@@ -433,29 +433,76 @@ class gui_trackcontrols_title : public guictr_base {
 	track_t* const m_track;
 	guidropdown_automation_device automationSelectDevice;
 	guidropdown_automation_param automationSelectParam;
+	guibuttontoggle hideTrack;
+	guibuttontoggle hideAutomation;
+	guibuttontoggle addAutomationLane;
 	int dragMode = -1;
 public:
-	gui_trackcontrols_title(track_t* _track) :
-		guictr_base(), m_track(_track), automationSelectDevice(_track), automationSelectParam(_track) {
+	gui_trackcontrols_title(track_t* _track)
+      :	guictr_base(), m_track(_track), automationSelectDevice(_track),
+		automationSelectParam(_track), hideTrack(12), hideAutomation(10), addAutomationLane(10) {
+		hideTrack.state = &m_track->hideTrack;
+		hideAutomation.state = &m_track->hideAutomation;
 		padding = 0;
-		add(&automationSelectDevice);
-		add(&automationSelectParam);
+		hideTrack.icon = m_track->hideTrack?ICON_ARR_RIGHT:ICON_ARR_DOWN;
+		hideAutomation.icon = m_track->hideAutomation?ICON_ARR_RIGHT:ICON_ARR_DOWN;
+		addAutomationLane.icon = ICON_PLUS;
+		add(&hideTrack);
 	}
 	~gui_trackcontrols_title() {
-		remove(&automationSelectParam);
-		remove(&automationSelectDevice);
+		removeUNCHECKED(&hideAutomation);
+		removeUNCHECKED(&hideTrack);
+		removeUNCHECKED(&addAutomationLane);
+		removeUNCHECKED(&automationSelectParam);
+		removeUNCHECKED(&automationSelectDevice);
 	}
 	bool isStaticContainer() {
 		return false;
 	}
 	void layout() {
+		removeUNCHECKED(&automationSelectParam);
+		removeUNCHECKED(&automationSelectDevice);
+		removeUNCHECKED(&hideAutomation);
+
 		int32_t inset = 4;
 		int32_t i2 = inset * 2;
 		int32_t h = TRACK_HEIGHT_STEP-i2;
-		automationSelectDevice.pos = ivec2(inset, TRACK_HEIGHT_STEP + inset);
-		automationSelectDevice.size = ivec2(size.x - i2, h);
-		automationSelectParam.pos = ivec2(inset, TRACK_HEIGHT_STEP*2 + inset);
+		int32_t insetBtn = (TRACK_HEIGHT_STEP-hideTrack.size.y)/2;
+		int32_t insetBtn2 = (TRACK_HEIGHT_STEP-hideAutomation.size.y)/2;
+		hideTrack.pos = ivec2(inset, insetBtn);
+
 		automationSelectParam.size = ivec2(size.x - i2, h);
+		automationSelectDevice.size = ivec2(size.x - i2, h);
+
+
+		int32_t yCtrls = 0;
+		int32_t hCtrls = size.y - TRACK_HEIGHT_STEP;
+		if (hCtrls >= TRACK_HEIGHT_STEP*3) {
+			yCtrls += TRACK_HEIGHT_STEP;
+			addUNCHECKED(&automationSelectDevice);
+			addUNCHECKED(&automationSelectParam);
+			addUNCHECKED(&hideAutomation);
+			addUNCHECKED(&addAutomationLane);
+			automationSelectDevice.pos = ivec2(inset, yCtrls + inset);
+			automationSelectParam.pos = ivec2(inset, yCtrls + TRACK_HEIGHT_STEP + inset);
+			hideAutomation.pos = ivec2(inset, size.y-TRACK_HEIGHT_STEP+insetBtn2);
+			addAutomationLane.pos = ivec2(size.x-inset-addAutomationLane.size.x, size.y-TRACK_HEIGHT_STEP+insetBtn2);
+		} else if (hCtrls >= TRACK_HEIGHT_STEP*2) {
+			yCtrls += TRACK_HEIGHT_STEP;
+			addUNCHECKED(&automationSelectParam);
+			addUNCHECKED(&hideAutomation);
+			addUNCHECKED(&addAutomationLane);
+			automationSelectParam.pos = ivec2(inset, yCtrls + inset);
+			hideAutomation.pos = ivec2(inset, yCtrls + TRACK_HEIGHT_STEP + insetBtn2);
+			addAutomationLane.pos = ivec2(size.x-inset-addAutomationLane.size.x, yCtrls + TRACK_HEIGHT_STEP + insetBtn2);
+		} else if (hCtrls >= TRACK_HEIGHT_STEP) {
+			yCtrls += TRACK_HEIGHT_STEP;
+			addUNCHECKED(&automationSelectParam);
+			automationSelectParam.pos = ivec2(inset, yCtrls + inset);
+		}
+		for (auto g : guis) {
+			g->layout();
+		}
 	}
 	bool isResize(ivec2 mpos) {
 		int32_t resizeTopOrBottom = bottom();
@@ -463,12 +510,6 @@ public:
 				&& mpos.y < resizeTopOrBottom + resizeHitY;
 	}
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-		if (isResize(mpos)) {
-			evt.requestFocus(this);
-			if (evt.type <= MouseHitType::MOUSE_RIGHT)
-				evt.requestCursor(CURSOR_RESIZE_V);
-			return true;
-		}
 		if (contains(mpos)) {
 			ivec2 local = this->toContainerSpace(mpos);
 			for (guibase* gui : guis) {
@@ -476,8 +517,6 @@ public:
 					return true;
 				}
 			}
-			evt.requestFocus(this);
-			return true; // always need to return true if contained, parent has z-order
 		}
 		return false;
 	}
@@ -500,6 +539,28 @@ public:
 		dragMode = -1;
 	}
 	void buttonClicked(guibase* button) override {
+		if (button == &hideTrack) {
+			m_track->hideTrack = !m_track->hideTrack;
+			hideTrack.icon = m_track->hideTrack?ICON_ARR_RIGHT:ICON_ARR_DOWN;
+			MainCtrl::getGuiTrackCtr()->layout();
+			MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
+		}
+		if (button == &hideAutomation) {
+			m_track->hideAutomation = !m_track->hideAutomation;
+			hideAutomation.icon = m_track->hideAutomation?ICON_ARR_RIGHT:ICON_ARR_DOWN;
+			MainCtrl::getGuiTrackCtr()->layout();
+			MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
+		}
+		if (button == &addAutomationLane) {
+
+			automatable_t* autom = m_track->audio->selectedAutomationCtr;
+			int32_t param = m_track->audio->selectedAutomationParam;
+			if (autom && param > -1) {
+				MainCtrl::getGuiTrackCtr()->addAutomationLane(m_track, autom, param, true);
+				MainCtrl::getGuiTrackCtr()->layout();
+				MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
+			}
+		}
 //		guictxtmenu_base *popup = NULL;
 //		if (button == &automationSelectDevice) {
 //			popup = new guidropdown_popup(m_track, automationSelectDevice);
@@ -532,58 +593,42 @@ public:
 		nvgFillColor(vg, color);
 		nvgFill(vg);
 		setFont(vg, (int) (titleHeight * 0.8), getContrastFontColorNvg(color), G_TITLE_ALIGN);
-		renderText(vg, 0 + INSET_TITLE, 0 + titleHeight / 2, titleSize.x, StringAsCStr(m_track->name));
+		renderText(vg, hideTrack.right() + INSET_TITLE, 0 + titleHeight / 2, titleSize.x-hideTrack.right(), StringAsCStr(m_track->name));
 
 		for (auto g : guis) {
 			g->render(vg);
 		}
-
-		int32_t y = titleHeight + titleHeight/2;
-		String curvalue = "UNDEF";
-		String target = "<NULL>";
-		track_plugins_t* data=this->m_track->audio;
-		automatable_t* ctr = data->selectedAutomationCtr;
-		if (ctr) {
-			target = StringFormat("%s %08X", StringAsCStr(ctr->getAutomatableName()), ctr);
-			int32_t idx = data->selectedAutomationParam;
-			if (idx >= 0) {
-				automation_t* automation = ctr->getAutomation(idx);
-				if (automation) {
-					curvalue = StringFormat("%s (%d) %f", StringAsCStr(ctr->getParamName(idx)), idx, automation->getValueAt(ctrl->cursor.cursorPos));
-				} else {
-					curvalue = StringFormat("%s (%d) UNDEF", StringAsCStr(ctr->getParamName(idx)), idx);
-				}
-			} else {
-				curvalue = StringFormat("<NULL> %d", idx);
-			}
-		}
-		 y += titleHeight + titleHeight;
-		//debug
-		setFont(vg, (int) (titleHeight * 0.6), G_WHITE, G_TITLE_ALIGN);
-		renderText(vg, 0 + INSET_TITLE, y, titleSize.x, StringAsCStr(target));
-		y+=titleHeight;
-		renderText(vg, 0 + INSET_TITLE, y, titleSize.x, StringAsCStr(curvalue));
 	}
 };
 
 class gui_trackcontrols_automation : public guictr_base {
 	track_t* const m_track;
-	int dragMode = -1;
 public:
 	gui_track_automationlane* const al;
+private:
+	guibuttontoggle removeLane;
+	int dragMode = -1;
+public:
 	gui_trackcontrols_automation(track_t* _track, gui_track_automationlane* _al) :
-		guictr_base(), m_track(_track), al(_al) {
+		guictr_base(), m_track(_track), al(_al), removeLane(10) {
 		padding = 0;
+		removeLane.icon = ICON_MINUS;
+		add(&removeLane);
 	}
 	~gui_trackcontrols_automation() {
+		remove(&removeLane);
 	}
 	bool isStaticContainer() {
 		return false;
 	}
 	void layout() {
+		int32_t insetBtn2 = (TRACK_HEIGHT_STEP-removeLane.size.y)/2;
+		removeLane.pos = ivec2(size.x-removeLane.size.x-insetBtn2, insetBtn2);
 	}
 	void buttonClicked(guibase* button) override {
-
+		if (button == &removeLane) {
+			MainCtrl::getGuiTrackCtr()->removeAutomationLane(this->al);
+		}
 	}
 	void render(NVGcontext* vg) {
 		if (!setScissorTransform(vg)) {
@@ -612,13 +657,14 @@ public:
 				curvalue = StringFormat("<NULL> %d", idx);
 			}
 		}
-		const int titleHeight = HEIGHT_TRACK_TITLE;
-		int32_t y = INSET_TITLE+(int) (titleHeight * 0.3);
+		const int titleHeight = HEIGHT_TRACK_TITLE*4/5;
+		const int fontSize = titleHeight-4;
+		int32_t y = INSET_TITLE;
 		//debug
-		setFont(vg, (int) (titleHeight * 0.6), G_WHITE, G_TITLE_ALIGN);
-		renderText(vg, 0 + INSET_TITLE, y, size.x, StringAsCStr(target));
+		setFont(vg, fontSize, G_WHITE, G_TITLE_ALIGN);
+		renderText(vg, 0 + INSET_TITLE, y+titleHeight / 2, size.x, StringAsCStr(target));
 		y+=titleHeight;
-		renderText(vg, 0 + INSET_TITLE, y, size.x, StringAsCStr(curvalue));
+		renderText(vg, 0 + INSET_TITLE, y+titleHeight / 2, size.x, StringAsCStr(curvalue));
 	}
 	bool isResize(ivec2 mpos) {
 		int32_t resizeTopOrBottom = bottom();
@@ -683,6 +729,34 @@ void gui_track_controls::addAutomationLane(track_t* t, gui_track_automationlane*
 	automationLaneControls.push_back(al_ctrl);
 	add(al_ctrl);
 }
+void gui_track_controls::removeAutomationLane(gui_track_automationlane* al) {
+	auto& ctrls = automationLaneControls;
+	auto it = std::find_if(ctrls.begin(), ctrls.end(), [al] (const gui_trackcontrols_automation* ref) {
+		return ref->al == al;
+	});
+	assert(it != ctrls.end());
+	remove(*it);
+	delete (*it);
+	ctrls.erase(it);
+}
+void gui_track_controls::removeAllAutomationLanes(automatable_t* at, int32_t paramIdx) {
+	auto& ctrls = automationLaneControls;
+	auto it = std::remove_if(ctrls.begin(), ctrls.end(), [this, at, paramIdx] (gui_trackcontrols_automation* ref) {
+		if ((at == NULL || ref->al->at == at) && (paramIdx < 0 || ref->al->param == paramIdx)) {
+			remove(ref);
+			delete ref;
+			return true;
+		}
+		return false;
+	});
+	ctrls.erase(it, ctrls.end());
+}
+void gui_track_controls::removeAllAutomationLanes(automatable_t* at) {
+	removeAllAutomationLanes(at, -1);
+}
+void gui_track_controls::removeAllAutomationLanes() {
+	removeAllAutomationLanes(NULL, -1);
+}
 void gui_track_controls::render(NVGcontext* vg) {
 	if (!setScissorTransform(vg)) {
 		return;
@@ -715,11 +789,37 @@ void gui_track_controls::render(NVGcontext* vg) {
 	nvgStroke(vg);
 
 }
+bool gui_track_controls::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
+	ivec2 local = this->toContainerSpace(mpos);
+	bool contained = contains(mpos);
+	if (contained) {
+		for (guibase* gui : guis) {
+			if (gui->mouseHitTest(local, evt)) {
+				return true;
+			}
+		}
+		evt.requestFocus(this);
+	}
+	if (evt.type <= MouseHitType::MOUSE_RIGHT) {
+		if (title->isResize(local)) {
+			evt.requestFocus(title);
+			evt.requestCursor(CURSOR_RESIZE_V);
+			return true;
+		}
+		if (isResize(mpos)) {
+			evt.requestFocus(this);
+			evt.requestCursor(CURSOR_RESIZE_V);
+			return true;
+		}
+	}
+	return contained; // always need to return true if contained, parent has z-order
+}
 void gui_track_controls::layout() {
 	int32_t mxW = 160;
 	int32_t titleW = size.x - mxW;
 	mixer->size = ivec2(mxW - TRACK_HEIGHT_SPACING, size.y);
-	title->size = ivec2(titleW - TRACK_HEIGHT_SPACING, m_track->height*TRACK_HEIGHT_STEP);
+	int32_t trH = m_track->hideTrack ? 1 : m_track->height;
+	title->size = ivec2(titleW - TRACK_HEIGHT_SPACING, trH*TRACK_HEIGHT_STEP);
 	title->pos = ivec2(TRACK_HEIGHT_SPACING_HALF, 0);
 	mixer->pos = ivec2(size.x - mixer->size.x + TRACK_HEIGHT_SPACING_HALF, 0);
 	for (gui_trackcontrols_automation* ctrl : automationLaneControls) {
