@@ -669,9 +669,22 @@ bool MainCtrl::setLoadedProject(shared_ptr<project_file> file) {
 	for (track_t* tr : trackList) {
 		view->ctr_tracks.addTrack(tr);
 	}
+	trackList.loadPlugins(file->project);
+	for (track_t* tr : trackList) {
+		if (tr->audio) {
+			std::vector<automatable_t*> targets;
+			tr->audio->getAutomatableTargets(targets);
+			for (automatable_t* at : targets) {
+				std::vector<int32_t> targetsIdx;
+				at->getAutomated(targetsIdx);
+				for (int32_t idx : targetsIdx) {
+					view->ctr_tracks.addAutomationLane(tr, at, idx);
+				}
+			}
+		}
+	}
 	view->ctr_tracks.layout();
 	updateVisibleTrackContents();
-	trackList.loadPlugins(file->project);
 	this->projectPath = file->path;
 
 	return true;

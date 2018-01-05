@@ -45,6 +45,8 @@ private:
 	const float lineWidth = 2.5f;
 
 	scaled_grid& grid;
+	automatable_t*& at;
+	int32_t& param;
 	automation_view_t data;
 	std::vector<vec2> cachedShape;
 	std::vector<path_segment_t> segments;
@@ -58,17 +60,21 @@ private:
 	hit_result hitTest(vec2 mpos);
 
 public:
-	gui_track_automation(track_t* _track, scaled_grid& _grid) : guictr_base(), m_track(_track), grid(_grid) {
+	gui_track_automation(track_t* _track, scaled_grid& _grid, automatable_t*& _at, int32_t& _param)
+	  : guictr_base(), m_track(_track), grid(_grid), at(_at), param(_param) {
 		padding = 8;
 	}
-	void setData(automatable_t* ctr, int32_t idx) {
-		data.targetParam = idx;
-		data.points.clear();
-		if (ctr) {
-			automation_t* automation = ctr->getAutomation(idx);
-			if (automation) {
-				data.points = automation->points;
-			}
+	void setData() {
+		data.targetParam = param;
+		automatable_t* automatable = this->at;
+		automation_t* automation = NULL;
+		if (automatable) {
+			automation = automatable->getAutomation(param);
+		}
+		if (automation) {
+			data.points = automation->points;
+		} else {
+			data.points.clear();
 		}
 	}
 	ivec2 paddingTL(int _padding) override {

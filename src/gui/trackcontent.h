@@ -164,30 +164,26 @@ public:
 	}
 };
 
-class gui_track : public guictr_base {
+class gui_track_automationlane : public guictr_base {
 protected:
 	track_t* const m_track;
-	trackdata_midi_t& midi;
 	gui_track_automation automation;
-//	gui_track_midi midi;
 public:
-	gui_track(track_t* _track, scaled_grid& _grid) : guictr_base(), m_track(_track), midi(_track->getMidi()), automation(_track, _grid)
-//, midi(_track)
-	{
-		padding = 0;
-//		add(&midi);
-//		add(&automation);
-	}
-	virtual ~gui_track() {
+	automatable_t* at;
+	int32_t param;
+	int height = 4;
+	gui_track_automationlane(track_t* _track, scaled_grid& _grid, automatable_t* _at, int32_t _param);
+	virtual ~gui_track_automationlane() {
 
 	}
+	void handleRightClick(MouseEvent& evt) override;
+	virtual void updateVisibleTrackContents(scaled_grid& grid);
 	bool isStaticContainer() {
 		return false;
 	}
 	bool handleKeyInput(KeyEvent& kevt) override {
 		return parent->handleKeyInput(kevt);
 	}
-
 	void handleDraggedBegin(MouseEvent& evt) override {
 		MainCtrl::get()->setSelectedTrack(m_track);
 		evt.relMousepos += getPosContent();
@@ -204,7 +200,88 @@ public:
 		parent->handleDraggedRelease(evt);
 	}
 
+
+	virtual void render(NVGcontext* vg) override {
+		if (MainCtrl::get()->getSelectedTrack() == m_track) {
+			nvgBeginPath(vg);
+			nvgRect(vg, pos.x, pos.y, size.x, size.y);
+			nvgFillColor(vg, g_guiColors[COL_BG_SELECTEDTRACK]);
+			nvgFill(vg);
+		}
+		nvgSave(vg);
+		automation.render(vg);
+		nvgRestore(vg);
+	}
+	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
+		if (automation.mouseHitTest(mpos, evt)) {
+			return true;
+		}
+		if (this->contains(mpos)) {
+			ivec2 localMouse = this->toContainerSpace(mpos);
+			for (guibase* gui : guis) {
+				if (gui->mouseHitTest(localMouse, evt)) {
+					return true;
+				}
+			}
+			if (evt.type == MouseHitType::MOUSE_RIGHT) { // righclick in selection (create clip etc.)
+				MainCtrl* ctrl = MainCtrl::get();
+				scaled_grid& grid = ctrl->getGrid();
+				tick_t tick = grid.screenToTickSnap(mpos.x, SNAP_OFF);
+				if (ctrl->cursor.contains(this->m_track->idx, tick)) {
+					evt.requestFocus(this);
+					return true;
+				}
+			}
+			// tracks need to always cancel further mouse tests for z-order to work in parent container
+			return true;
+		}
+		return false;
+	}
+	void layout() override {
+		automation.parent = this->parent;
+		automation.pos = this->pos;
+		automation.size = this->size;
+		automation.layout();
+	}
+	void destroyGuis() override {
+		automation.destroyGuis();
+		guictr_base::destroyGuis();
+	}
+};
+class gui_track : public guictr_base {
+protected:
+	track_t* const m_track;
+	trackdata_midi_t& midi;
+	gui_track_automation automation;
+public:
+	gui_track(track_t* _track, scaled_grid& _grid);
+	virtual ~gui_track() {
+
+	}
 	void handleRightClick(MouseEvent& evt) override;
+	virtual void updateVisibleTrackContents(scaled_grid& grid);
+	bool isStaticContainer() {
+		return false;
+	}
+	bool handleKeyInput(KeyEvent& kevt) override {
+		return parent->handleKeyInput(kevt);
+	}
+	void handleDraggedBegin(MouseEvent& evt) override {
+		MainCtrl::get()->setSelectedTrack(m_track);
+		evt.relMousepos += getPosContent();
+		parent->handleDraggedBegin(evt);
+	}
+
+	void handleDraggedMove(MouseEvent& evt) override {
+		evt.relMousepos += getPosContent();
+		parent->handleDraggedMove(evt);
+	}
+
+	void handleDraggedRelease(MouseEvent& evt) override {
+		evt.relMousepos += getPosContent();
+		parent->handleDraggedRelease(evt);
+	}
+
 
 	virtual void render(NVGcontext* vg) override {
 		if (MainCtrl::get()->getSelectedTrack() == m_track) {
@@ -252,7 +329,6 @@ public:
 		}
 		return false;
 	}
-	virtual void updateVisibleTrackContents(scaled_grid& grid);
 	void layout() override {
 		automation.parent = this->parent;
 		automation.pos = this->pos;

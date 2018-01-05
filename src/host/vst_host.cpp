@@ -463,10 +463,11 @@ int32_t vsthost::processPlayback(int32_t sample, double posDouble, playback_stat
 		 * Clear all master channels first
 		 */
 		for (track_t* trackMaster : ctrl->trackMasterCtr) {
+			assert(trackMaster->audio);
 			track_plugins_t* audioMaster = trackMaster->audio;
-			if (!audioMaster) {
-				trackMaster->audio = audioMaster = vsthost::getInstance()->createAudio(trackMaster);
-			}
+//			if (!audioMaster) {
+//				trackMaster->audio = audioMaster = vsthost::getInstance()->createAudio(trackMaster);
+//			}
 			audioMaster->input.realloc(lBlockSize);
 			audioMaster->output.realloc(lBlockSize);
 			dsp_util::fillSilence(audioMaster->input.buf, lBlockSize);
@@ -865,9 +866,10 @@ bool vsthost::movePlugin(track_t* dstTr, track_plugins_t* trp, int32_t src, int3
 	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 	assert((src==0?src==dst:(src>0&&dst>0)));
 	my_printf("move from %s:%d to %s:%d\n", StringAsCStr(dstTr->name), src, StringAsCStr(trp->track->name), dst);
-	if (!dstTr->audio) { //TODO: move me some central place
-		dstTr->audio = vsthost::getInstance()->createAudio(dstTr);
-	}
+	assert(dstTr->audio);
+//	if (!dstTr->audio) { //TODO: move me some central place
+//		dstTr->audio = vsthost::getInstance()->createAudio(dstTr);
+//	}
 	if (src > 0) {
 		assert(src > 0 && dst > 0);
 		src--;

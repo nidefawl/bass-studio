@@ -2,6 +2,7 @@
 #include "trackcontent.h"
 #include "trackcontrols.h"
 #include "guicontextmenu.h"
+#include "track_audiodata.h"
 #include <glm/vec2.hpp>
 using glm::vec2;
 using glm::ivec2;
@@ -34,6 +35,11 @@ void guitrack_mixers::render(NVGcontext* vg) {
 	}
 
 }
+void guitrack_mixers::addAutomationLane(track_t* t, gui_track_automationlane* al) {
+	assert(t->mixer);
+//	t->mixer->addAutomationLane(at, paramIdx);
+	t->mixer->addAutomationLane(t, al);
+}
 void guitrack_mixers::addTrack(track_t* t) {
 	if (t->mixer)
 		throw applogicexception("expected t->mixer == NULL");
@@ -48,12 +54,7 @@ void guitrack_mixers::removeTrack(track_t* t) {
 	}
 }
 
-void guictr_tracks::drawSeperator(NVGcontext* vg, track_t* g, ivec2& cs) {
-	//draw (seperator) line at top or bottom of track
-	int seperatorY = g->mixer->pos.y;
-	if (g->type >= TRACK_TYPE_MIDI) {
-		seperatorY += g->mixer->size.y;
-	}
+void drawSeperator(NVGcontext* vg, int32_t seperatorY, ivec2& cs) {
 	nvgBeginPath(vg);
 	nvgMoveTo(vg, 0, seperatorY);
 	nvgLineTo(vg, cs.x, seperatorY);
@@ -61,17 +62,185 @@ void guictr_tracks::drawSeperator(NVGcontext* vg, track_t* g, ivec2& cs) {
 	nvgStrokeWidth(vg, TRACK_HEIGHT_SPACING);
 	nvgStroke(vg);
 }
-void guictr_tracks::setTrackPosition(track_t* t, int32_t trackheight, int32_t y) {
-	t->content->pos.x = 0;
-	t->content->pos.y = y;
-	t->mixer->pos.x = 0;
-	t->mixer->pos.y = y;
-	t->content->size = ivec2(trackView.size.x, trackheight);
-	t->mixer->size = ivec2(trackControls.size.x, trackheight);
+int32_t guictr_tracks::setTrackPosition(track_t* t, int32_t y, bool isBottom) {
+	ivec2& cntPos = t->content->pos;
+	ivec2& mxrPos = t->mixer->pos;
+	cntPos = ivec2(0, y);
+	mxrPos = ivec2(0, y);
+	t->content->size = ivec2(trackView.size.x, t->height * TRACK_HEIGHT_STEP);
+	int32_t x2 = t->content->left();
+	int32_t y2 = t->content->bottom();
+	for (auto t2 : t->subtracks) {
+		int trackheight2 = t2->height * TRACK_HEIGHT_STEP;
+		t2->pos = ivec2(x2, y2);
+		t2->size = ivec2(t->content->size.x, trackheight2);
+		y2 = t2->bottom() + TRACK_HEIGHT_SPACING;
+	}
+	int32_t totalHeight = y2-y;
+	t->mixer->size = ivec2(trackControls.size.x, y2-y);
+	if (isBottom) {
+		cntPos.y -= totalHeight;
+		mxrPos.y -= totalHeight;
+		for (auto t2 : t->subtracks) {
+			t2->pos.y -= totalHeight;
+		}
+	}
+	return totalHeight;
+}
+
+void guictr_tracks::layout() {
+	const int mixerwidth = 380;
+	ivec2 cs = getSizeContent();
+	trackTimeline.pos = ivec2(0, 0);
+	trackTimeline.size = ivec2(cs.x - mixerwidth, 32);
+	loophandles.pos = ivec2(trackTimeline.left(), trackTimeline.bottom());
+	loophandles.size = ivec2(trackTimeline.size.x, heightTimelineControls);
+
+	trackView.pos = ivec2(0, loophandles.bottom());
+	trackControls.pos = ivec2(cs.x - mixerwidth, loophandles.bottom());
+	trackView.size = ivec2(cs.x - mixerwidth - trackView.pos.x, cs.y - loophandles.bottom());
+	trackControls.size = ivec2(mixerwidth, trackView.size.y);
+
+	loophandles.clipViewSize = ivec2(trackView.size.x, trackView.size.y+loophandles.size.y);
+
+
+	ivec2 csTrackView = trackView.getSizeContent();
+	int y = TRACK_HEIGHT_SPACING+20;
+	for (track_t* t : project.trackCtr) {
+		assert(t->content != NULL);
+		int32_t h = setTrackPosition(t, y, false);
+		y += h + TRACK_HEIGHT_SPACING;
+	}
+	y = csTrackView.y-TRACK_HEIGHT_SPACING;
+//		y = 0;
+	auto itMastersTracks = project.tracksBottom.rbegin();
+	auto itMastersEnd = project.tracksBottom.rend();
+	while (itMastersTracks != itMastersEnd) {
+		track_t* t = *itMastersTracks;
+		int32_t h = setTrackPosition(t, y, true);
+		y -= h;
+		assert(t->content != NULL);
+		y -= TRACK_HEIGHT_SPACING;
+		itMastersTracks++;
+	}
+
+	for (guibase* gui : guis) {
+		gui->layout();
+	}
+	MainCtrl::get()->updateGrid();
+}
+void guictr_tracks::render(NVGcontext* vg) {
+		guictr_base::renderBackground(vg);
+		ivec2 cs = getSizeContent();
+		ivec2 cp = getPosContent();
+		if (cs.y <= 0 || cs.x <= 0) {
+			return;
+		}
+		nvgIntersectScissor(vg, cp.x, cp.y, cs.x, cs.y);
+		nvgTranslate(vg, cp.x, cp.y);
+		nvgSave(vg);
+			trackView.render(vg);
+		nvgRestore(vg);
+		nvgSave(vg);
+			trackControls.render(vg);
+		nvgRestore(vg);
+		nvgSave(vg);
+			trackTimeline.render(vg);
+		nvgRestore(vg);
+
+		nvgSave(vg);
+			nvgTranslate(vg, 0, trackView.top());
+			int ySplit = getPosYFirstReturnTrack(project);
+			if (ySplit > 0) {
+				nvgSave(vg);
+				nvgIntersectScissor(vg, 0, 0, cs.x, ySplit);
+				for (track_t* g : project.trackCtr) {
+					drawSeperator(vg, g->mixer->bottom()+TRACK_HEIGHT_SPACING_HALF, cs);
+				}
+				nvgRestore(vg);
+			}
+			if (project.tracksBottom.size()) {
+				if (ySplit > 0) {
+					nvgIntersectScissor(vg, 0, ySplit, cs.x, trackView.size.y-ySplit);
+				} else {
+					nvgIntersectScissor(vg, 0, 0, cs.x, trackView.size.y);
+				}
+				for (track_t* g : project.tracksBottom) {
+					drawSeperator(vg, g->mixer->top()-TRACK_HEIGHT_SPACING_HALF, cs);
+				}
+			}
+		nvgRestore(vg);
+
+		nvgBeginPath(vg);
+		nvgMoveTo(vg, trackControls.left(), trackControls.top());
+		nvgLineTo(vg, trackControls.left(), trackControls.bottom());
+		nvgStrokeColor(vg, g_guiColors[COL_LINE_SEPERATOR]);
+		nvgStrokeWidth(vg, 3);
+		nvgStroke(vg);
+
+
+
+
+		nvgSave(vg);
+		loophandles.render(vg);
+		nvgRestore(vg);
+
+		if (trackView.size.x > 0) {
+			nvgIntersectScissor(vg, 0, 0, trackView.size.x, cs.y);
+			tick_t pos = project.playbackPos;
+	//		if (project.loopEnabled) {
+	//			if (pos > project.loopStart) {
+	//				pos = project.loopStart + (pos - project.loopStart) % project.loopLen;
+	//			}
+	//		}
+			float playBackX = (float) grid.tickToScreenD(pos);
+			if (playBackX > -4.0f && playBackX < cs.x + 4.0f) {
+				nvgBeginPath(vg);
+				nvgMoveTo(vg, playBackX, 0);
+				nvgLineTo(vg, playBackX, cs.y);
+				nvgStrokeColor(vg, GUI_COLOR(120));
+				nvgStrokeWidth(vg, 3);
+				nvgStroke(vg);
+				nvgBeginPath(vg);
+				nvgMoveTo(vg, playBackX, 0);
+				nvgLineTo(vg, playBackX, cs.y);
+				nvgStrokeColor(vg, GUI_COLOR(250));
+				nvgStrokeWidth(vg, 1);
+				nvgStroke(vg);
+			}
+	//		nvgIntersectScissor(vg, 0, 0, trackView.size.x, trackView.size.y);
+	//		nvgTranslate(vg, 0, trackTimeline.bottom());
+
+	//		double playBackX = grid.tickToScreenD(MainCtrl::get()->playbackPos);
+	//		if (playBackX > -4 && playBackX < cs.x+4) {
+	//			nvgBeginPath(vg);
+	//			nvgMoveTo(vg, playBackX, 0);
+	//			nvgLineTo(vg, playBackX, cs.y);
+	//			nvgStrokeColor(vg, GUI_COLOR(120));
+	//			nvgStrokeWidth(vg, 3);
+	//			nvgStroke(vg);
+	//			nvgBeginPath(vg);
+	//			nvgMoveTo(vg, playBackX, 0);
+	//			nvgLineTo(vg, playBackX, cs.y);
+	//			nvgStrokeColor(vg, GUI_COLOR(250));
+	//			nvgStrokeWidth(vg, 1);
+	//			nvgStroke(vg);
+	//		}
+		}
+	}
+gui_track_automationlane* guitrack_editor::addAutomationLane(track_t* t, automatable_t* at, int32_t paramIdx) {
+	assert(t->audio);
+
+	gui_track_automationlane* al = new gui_track_automationlane(t, grid, at, paramIdx);
+	t->subtracks.push_back(al);
+	al->setZOrder(t->type >= TRACK_TYPE_MIDI ? 0 : 1);
+	add(al);
+	return al;
 }
 void guitrack_editor::addTrack(track_t* t) {
 	if (t->content)
 		throw applogicexception("expected t->content == NULL");
+	assert(t->audio);
 	t->content = createTrackGui(t, grid);
 	t->content->setZOrder(t->type >= TRACK_TYPE_MIDI ? 0 : 1);
 	add(t->content);
@@ -94,6 +263,16 @@ void guitrack_editor::removeTrack(track_t* t) {
 		remove(t->content);
 		DELETE_PTR(t->content)
 	}
+	if (t->subtracks.size()) {
+		for (auto str : t->subtracks) {
+			remove(str);
+		}
+	}
+}
+void guitrack_editor::layout() {
+	for (guibase* gui : guis) {
+		gui->layout();
+	}
 }
 void guitrack_editor::updateVisibleTrackContents() {
 	for (track_t* g : project.trackList) {
@@ -102,6 +281,29 @@ void guitrack_editor::updateVisibleTrackContents() {
 			continue;
 		}
 		g->content->updateVisibleTrackContents(grid);
+//		std::vector<automatable_t*> targets;
+//		if (g->audio) {
+//			g->audio->getAutomatableTargets(targets);
+//			for (automatable_t* at : targets) {
+//				std::vector<int32_t> targetsIdx;
+//				at->getAutomated(targetsIdx);
+//				for (int32_t idx : targetsIdx) {
+//					bool found = false;
+//					for (gui_track_automationlane* au : g->subtracks) {
+//						if (au->at == at && au->param == idx) {
+//							found = true; break;
+//						}
+//					}
+//					if (!found) {
+//						gui_track_automationlane* al = new gui_track_automationlane(g, grid, at, idx);
+//						g->subtracks.push_back(al);
+//					}
+//				}
+//			}
+//		}
+		for (gui_track_automationlane* au : g->subtracks) {
+			au->updateVisibleTrackContents(grid);
+		}
 	}
 }
 void guitrack_mixers::handleRightClick(MouseEvent& evt) {

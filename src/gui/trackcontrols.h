@@ -4,12 +4,14 @@
 #include "track.h"
 #include "leak_detect.h"
 
+class gui_trackcontrols_automation;
 class gui_track_controls: public guictr_base {
 public:
 	track_t* const m_track;
 private:
 	guictr_base* title;
 	guictr_base* mixer;
+	std::vector<gui_trackcontrols_automation*> automationLaneControls;
 	int dragMode = -1;
 	const int resizeHitY = 8;
 	const int DRAG_RESIZE = 1;
@@ -19,6 +21,7 @@ public:
 	bool isStaticContainer() {
 		return false;
 	}
+	void addAutomationLane(track_t* t, gui_track_automationlane* al);
 	void render(NVGcontext* vg) override;
 	void handleDraggedBegin(MouseEvent& evt) {
 		MainCtrl::get()->setSelectedTrack(m_track);
@@ -27,17 +30,7 @@ public:
 		}
 	}
 
-	void handleDraggedMove(MouseEvent& evt) {
-		if (dragMode == DRAG_RESIZE) {
-			int32_t mouseDragDist = evt.relMousepos.y;
-			bool resizeTop = m_track->type < TRACK_TYPE_MIDI;
-			if (resizeTop) {
-				mouseDragDist = -evt.relMousepos.y+size.y;
-			}
-			m_track->height = min(12, max(1, (mouseDragDist) / TRACK_HEIGHT_STEP));
-			this->parent->onChildLayoutChanged(this);
-		}
-	}
+	void handleDraggedMove(MouseEvent& evt);
 
 	void handleDraggedRelease(MouseEvent& evt) {
 		dragMode = -1;
@@ -50,8 +43,11 @@ public:
 	}
 
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
+		ivec2 local = this->toContainerSpace(mpos);
+		if (title->mouseHitTest(local, evt)) {
+			return true;
+		}
 		if (contains(mpos)) {
-			ivec2 local = this->toContainerSpace(mpos);
 			for (guibase* gui : guis) {
 				if (gui->mouseHitTest(local, evt)) {
 					return true;

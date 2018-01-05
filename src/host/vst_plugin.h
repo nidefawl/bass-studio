@@ -128,4 +128,5 @@ public:
 	void setParamValue(int32_t idx, float val) override;
 	void updateAutomatedParameters(tick_t pos) override;
 	automation_t* getAutomation(int32_t paramIdx) override;
+	void getAutomated(std::vector<int32_t>& targets) override;
 };

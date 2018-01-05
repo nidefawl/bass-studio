@@ -113,6 +113,8 @@ void trackallcontainer_t::addTrack(int trackInsertPos, track_t* newTrack) {
 	} else {
 		tracks.insert(tracks.begin() + trackInsertPos, newTrack);
 	}
+	vsthost* host = vsthost::getInstance();
+	newTrack->audio = host->createAudio(newTrack);
 	tracksubcontainer_t* subCtr = trackTypeCtrs[newTrack->type];
 	track_vector& vec = subCtr->tracks;
 	vec.push_back(newTrack);
@@ -175,8 +177,10 @@ void trackallcontainer_t::copyFrom(project_snapshot_t& project) {
 	addAll(tracksBottom.tracks, trackReturnCtr.tracks);
 	addAll(tracksBottom.tracks, trackMasterCtr.tracks);
 	int32_t idx = 0;
+	vsthost* host = vsthost::getInstance();
 	for (track_t* t : tracks) {
 		t->idx = idx++;
+		t->audio = host->createAudio(t);
 	}
 }
 void trackallcontainer_t::loadPlugins(project_snapshot_t& project) {
@@ -237,6 +241,9 @@ void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin) {
 	}
 	for (automated_param_t& automatedParam : plugin->automatedParams) {
 		assert(automatedParam.src);
+		if (automatedParam.src->points.empty()) {
+			continue;
+		}
 		automation_view_t automation;
 		automation.targetParam = automatedParam.paramIdx;
 		automation.points = automatedParam.src->points;
@@ -291,8 +298,9 @@ void tracksubcontainer_t::copyFrom(trackcontainer_snapshot_t& in) {
 void tracksubcontainer_t::loadPlugins(trackallcontainer_t* all, trackcontainer_snapshot_t& in) {
 	for (track_snapshot_t& trackStatic : in.tracks) {
 		track_t* trackLoaded = trackStatic.trackLoaded;
+		assert(trackLoaded->audio);
 		vsthost* host = vsthost::getInstance();
-		trackLoaded->audio = host->createAudio(trackLoaded);
+//		trackLoaded->audio = host->createAudio(trackLoaded);
 		String path;
 		const track_plugins_snapshot_t& trackPlugins = trackStatic.plugins;
 		trackLoaded->audio->mixer.gain = trackPlugins.gain;

@@ -603,6 +603,12 @@ void guitrack_editor::render(NVGcontext* vg) {
 			nvgSave(vg);
 			g->content->render(vg);
 			nvgRestore(vg);
+			for (gui_track_automationlane* g2 : g->subtracks) {
+				nvgSave(vg);
+				g2->render(vg);
+				nvgRestore(vg);
+				drawSeperator(vg, g2->top()-TRACK_HEIGHT_SPACING_HALF, cs);
+			}
 		}
 		nvgRestore(vg);
 	}
@@ -616,6 +622,12 @@ void guitrack_editor::render(NVGcontext* vg) {
 			//content
 			g->content->render(vg);
 			nvgRestore(vg);
+			for (gui_track_automationlane* g2 : g->subtracks) {
+				nvgSave(vg);
+				g2->render(vg);
+				nvgRestore(vg);
+				drawSeperator(vg, g2->top()-TRACK_HEIGHT_SPACING_HALF, cs);
+			}
 		}
 
 		if (action.dragtype) {
@@ -691,10 +703,10 @@ int32_t getPosYFirstReturnTrack(project_t& project) {
 	track_t* lastMidi = project.trackCtr.size() ? project.trackCtr.back() : NULL;
 	track_t* firstReturn = project.tracksBottom.size() ? project.tracksBottom.front() : NULL;
 	if (firstReturn && firstReturn->content) {
-		return firstReturn->content->top() - TRACK_HEIGHT_SPACING / 2;
+		return firstReturn->content->top() - TRACK_HEIGHT_SPACING_HALF;
 	}
 	if (lastMidi && lastMidi->content) {
-		return lastMidi->content->bottom() + TRACK_HEIGHT_SPACING / 2;
+		return lastMidi->content->bottom() + TRACK_HEIGHT_SPACING_HALF;
 	}
 	return 0;
 }

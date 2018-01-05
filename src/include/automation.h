@@ -54,7 +54,7 @@ struct automation_t {
 	virtual float getDstValue() = 0;
 	virtual void setDstValue(float f) = 0;
 	virtual bool isActive() {
-		return true;
+		return points.size() != 0;
 	}
 	virtual float getValueAt(tick_t tick) {
 		if (points.size()) {
@@ -114,9 +114,6 @@ struct vstparam_automation_t: public automation_t {
 	}
 	float getDstValue() override;
 	void setDstValue(float f) override;
-	bool isActive() override {
-		return true;
-	}
 };
 struct plugin_param_autiomation_src_t {
 	int32_t pluginSlot;
@@ -144,5 +141,6 @@ struct automatable_t {
 	virtual void setParamValue(int32_t idx, float val) = 0;
 	virtual void updateAutomatedParameters(tick_t pos) = 0;
 	virtual automation_t* getAutomation(int32_t idx) = 0;
+	virtual void getAutomated(std::vector<int32_t>& targets) = 0;
 };
 

@@ -23,6 +23,75 @@ float inline scaledRange(float db, float lvlFloor, float lvlCeil) {
 	float lvlRange = lvlFloor - lvlCeil;
 	return (max(lvlFloor, min(db, lvlCeil)) - lvlCeil) / lvlRange;
 }
+const int resizeHitY = 8;
+const int DRAG_RESIZE = 1;
+
+int trackHeight(track_t* tr) {
+
+	int trackheight = tr->height;
+	for (auto t2 : tr->subtracks) {
+		trackheight += t2->height;
+	}
+	return trackheight;
+}
+bool addTrHeight(track_t* tr, int32_t offset) {
+
+	bool changed = false;
+	if (offset > 0 && tr->height < 4) {
+		tr->height++;
+		return true;
+	}
+	for (auto t2 : tr->subtracks) {
+		int32_t nHeight = min(TRACK_MAX_HEIGHT_SUB, max(TRACK_MIN_HEIGHT_SUB, t2->height+offset));
+		changed = nHeight != t2->height;
+		t2->height = nHeight;
+	}
+	if (offset < 0 && !changed) {
+		int32_t nHeight = min(TRACK_MAX_HEIGHT_SUB, max(2, tr->height+offset));
+		changed |= nHeight != tr->height;
+		tr->height = nHeight;
+	}
+	return changed;
+}
+template<typename T, int minHeight=TRACK_MIN_HEIGHT_SUB, int maxHeight=TRACK_MAX_HEIGHT_SUB>
+void resize(track_t* m_track, T* al, int32_t mouseDragDist) {
+
+	if (m_track->type < TRACK_TYPE_MIDI) {
+		//resize content-lane on bottom-sticked tracks
+		int32_t adjustedHeightSteps = min(128, max(1, (mouseDragDist) / TRACK_HEIGHT_STEP));
+		if (!m_track->subtracks.empty()) {
+			int32_t curHeightSteps = trackHeight(m_track);
+			int32_t distSteps = adjustedHeightSteps - al->height;
+			if (distSteps && curHeightSteps != al->height) {
+				while (distSteps) {
+					int32_t distStepsBef = distSteps;
+					for (auto t2 : m_track->subtracks) {
+						if (distSteps > 0 && t2->height > TRACK_MIN_HEIGHT_SUB && al->height < maxHeight) {
+							al->height++;
+							t2->height--;
+							distSteps--;
+						}
+						if (distSteps < 0 && t2->height < TRACK_MAX_HEIGHT_SUB && al->height > minHeight) {
+							al->height--;
+							t2->height++;
+							distSteps++;
+						}
+						if (!distSteps) {
+							break;
+						}
+					}
+					if (distStepsBef == distSteps) {
+						break;
+					}
+				}
+			}
+		}
+	} else {
+
+		int32_t totalHeightSteps = min(maxHeight, max(minHeight, (mouseDragDist) / TRACK_HEIGHT_STEP));
+		al->height = totalHeightSteps;
+	}
+}
 
 class gui_trackmeter: public guibase {
 public:
@@ -364,6 +433,7 @@ class gui_trackcontrols_title : public guictr_base {
 	track_t* const m_track;
 	guidropdown_automation_device automationSelectDevice;
 	guidropdown_automation_param automationSelectParam;
+	int dragMode = -1;
 public:
 	gui_trackcontrols_title(track_t* _track) :
 		guictr_base(), m_track(_track), automationSelectDevice(_track), automationSelectParam(_track) {
@@ -386,6 +456,48 @@ public:
 		automationSelectDevice.size = ivec2(size.x - i2, h);
 		automationSelectParam.pos = ivec2(inset, TRACK_HEIGHT_STEP*2 + inset);
 		automationSelectParam.size = ivec2(size.x - i2, h);
+	}
+	bool isResize(ivec2 mpos) {
+		int32_t resizeTopOrBottom = bottom();
+		return mpos.y >= resizeTopOrBottom - resizeHitY
+				&& mpos.y < resizeTopOrBottom + resizeHitY;
+	}
+	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
+		if (isResize(mpos)) {
+			evt.requestFocus(this);
+			if (evt.type <= MouseHitType::MOUSE_RIGHT)
+				evt.requestCursor(CURSOR_RESIZE_V);
+			return true;
+		}
+		if (contains(mpos)) {
+			ivec2 local = this->toContainerSpace(mpos);
+			for (guibase* gui : guis) {
+				if (gui->mouseHitTest(local, evt)) {
+					return true;
+				}
+			}
+			evt.requestFocus(this);
+			return true; // always need to return true if contained, parent has z-order
+		}
+		return false;
+	}
+	void handleDraggedBegin(MouseEvent& evt) {
+		MainCtrl::get()->setSelectedTrack(m_track);
+		if (isResize(evt.relMousepos+this->pos)) {
+			dragMode = DRAG_RESIZE;
+		}
+	}
+
+	void handleDraggedMove(MouseEvent& evt) {
+		if (dragMode == DRAG_RESIZE) {
+			int32_t mouseDragDist = evt.relMousepos.y;
+			resize<track_t, TRACK_MIN_HEIGHT, TRACK_MAX_HEIGHT>(m_track, m_track, mouseDragDist);
+			this->parent->onChildLayoutChanged(this);
+		}
+	}
+
+	void handleDraggedRelease(MouseEvent& evt) {
+		dragMode = -1;
 	}
 	void buttonClicked(guibase* button) override {
 //		guictxtmenu_base *popup = NULL;
@@ -413,9 +525,10 @@ public:
 		if (ctrl->getSelectedTrack() == m_track) {
 			color = G_BLACK;
 		}
-		const int titleHeight = min(HEIGHT_TRACK_TITLE, size.y);
+		const int titleHeight = HEIGHT_TRACK_TITLE;
+		const int rectHeight = min(titleHeight, size.y);
 		nvgBeginPath(vg);
-		nvgRect(vg, 0, 0, titleSize.x, titleHeight);
+		nvgRect(vg, 0, 0, titleSize.x, rectHeight);
 		nvgFillColor(vg, color);
 		nvgFill(vg);
 		setFont(vg, (int) (titleHeight * 0.8), getContrastFontColorNvg(color), G_TITLE_ALIGN);
@@ -453,6 +566,99 @@ public:
 	}
 };
 
+class gui_trackcontrols_automation : public guictr_base {
+	track_t* const m_track;
+	int dragMode = -1;
+public:
+	gui_track_automationlane* const al;
+	gui_trackcontrols_automation(track_t* _track, gui_track_automationlane* _al) :
+		guictr_base(), m_track(_track), al(_al) {
+		padding = 0;
+	}
+	~gui_trackcontrols_automation() {
+	}
+	bool isStaticContainer() {
+		return false;
+	}
+	void layout() {
+	}
+	void buttonClicked(guibase* button) override {
+
+	}
+	void render(NVGcontext* vg) {
+		if (!setScissorTransform(vg)) {
+			return;
+		}
+
+		for (auto g : guis) {
+			g->render(vg);
+		}
+
+		MainCtrl* ctrl = MainCtrl::get();
+		String curvalue = "UNDEF";
+		String target = "<NULL>";
+		automatable_t* ctr = al->at;
+		if (ctr) {
+			target = StringFormat("%s %08X", StringAsCStr(ctr->getAutomatableName()), ctr);
+			int32_t idx = al->param;
+			if (idx >= 0) {
+				automation_t* automation = ctr->getAutomation(idx);
+				if (automation) {
+					curvalue = StringFormat("%s (%d) %f", StringAsCStr(ctr->getParamName(idx)), idx, automation->getValueAt(ctrl->cursor.cursorPos));
+				} else {
+					curvalue = StringFormat("%s (%d) UNDEF", StringAsCStr(ctr->getParamName(idx)), idx);
+				}
+			} else {
+				curvalue = StringFormat("<NULL> %d", idx);
+			}
+		}
+		const int titleHeight = HEIGHT_TRACK_TITLE;
+		int32_t y = INSET_TITLE+(int) (titleHeight * 0.3);
+		//debug
+		setFont(vg, (int) (titleHeight * 0.6), G_WHITE, G_TITLE_ALIGN);
+		renderText(vg, 0 + INSET_TITLE, y, size.x, StringAsCStr(target));
+		y+=titleHeight;
+		renderText(vg, 0 + INSET_TITLE, y, size.x, StringAsCStr(curvalue));
+	}
+	bool isResize(ivec2 mpos) {
+		int32_t resizeTopOrBottom = bottom();
+		return mpos.y >= resizeTopOrBottom - resizeHitY
+				&& mpos.y < resizeTopOrBottom + resizeHitY;
+	}
+	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
+		if (isResize(mpos)) {
+			evt.requestFocus(this);
+			if (evt.type <= MouseHitType::MOUSE_RIGHT)
+				evt.requestCursor(CURSOR_RESIZE_V);
+			return true;
+		}
+		if (contains(mpos)) {
+			ivec2 local = this->toContainerSpace(mpos);
+			for (guibase* gui : guis) {
+				if (gui->mouseHitTest(local, evt)) {
+					return true;
+				}
+			}
+			evt.requestFocus(this);
+			return true; // always need to return true if contained, parent has z-order
+		}
+		return false;
+	}
+	void handleDraggedBegin(MouseEvent& evt) {
+		MainCtrl::get()->setSelectedTrack(m_track);
+		if (isResize(evt.relMousepos+this->pos)) {
+			dragMode = DRAG_RESIZE;
+		}
+	}
+
+	void handleDraggedMove(MouseEvent& evt) {
+		if (dragMode == DRAG_RESIZE) {
+			int32_t mouseDragDist = evt.relMousepos.y;
+			resize(m_track, al, mouseDragDist);
+			this->parent->onChildLayoutChanged(this);
+		}
+	}
+};
 gui_track_controls::gui_track_controls(track_t* _track)
 	: guictr_base(),
 	  m_track(_track),
@@ -463,10 +669,19 @@ gui_track_controls::gui_track_controls(track_t* _track)
 	padding = 0;
 }
 gui_track_controls::~gui_track_controls() {
+	for (gui_trackcontrols_automation* ctrl : automationLaneControls) {
+		remove(ctrl);
+		delete ctrl;
+	}
 	remove(mixer);
 	remove(title);
 	delete mixer;
 	delete title;
+}
+void gui_track_controls::addAutomationLane(track_t* t, gui_track_automationlane* al) {
+	gui_trackcontrols_automation* al_ctrl = new gui_trackcontrols_automation(t, al);
+	automationLaneControls.push_back(al_ctrl);
+	add(al_ctrl);
 }
 void gui_track_controls::render(NVGcontext* vg) {
 	if (!setScissorTransform(vg)) {
@@ -487,24 +702,48 @@ void gui_track_controls::render(NVGcontext* vg) {
 		nvgSave(vg);
 		g->render(vg);
 		nvgRestore(vg);
-		nvgBeginPath(vg);
-		nvgMoveTo(vg, g->right()+1.5f, g->top());
-		nvgLineTo(vg, g->right()+1.5f, g->bottom());
-		nvgStrokeColor(vg, g_guiColors[COL_LINE_SEPERATOR]);
-		nvgStrokeWidth(vg, 3);
-		nvgStroke(vg);
 	}
+	nvgBeginPath(vg);
+	nvgMoveTo(vg, title->right(), 0);
+	nvgLineTo(vg, title->right(), size.y);
+	for (gui_trackcontrols_automation* g : automationLaneControls) {
+		nvgMoveTo(vg, g->left(), g->top()-TRACK_HEIGHT_SPACING_HALF);
+		nvgLineTo(vg, g->right(), g->top()-TRACK_HEIGHT_SPACING_HALF);
+	}
+	nvgStrokeColor(vg, g_guiColors[COL_LINE_SEPERATOR]);
+	nvgStrokeWidth(vg, 1);
+	nvgStroke(vg);
 
 }
 void gui_track_controls::layout() {
 	int32_t mxW = 160;
 	int32_t titleW = size.x - mxW;
 	mixer->size = ivec2(mxW - TRACK_HEIGHT_SPACING, size.y);
-	title->size = ivec2(titleW - TRACK_HEIGHT_SPACING, size.y);
-	title->pos = ivec2(TRACK_HEIGHT_SPACING / 2, 0);
-	mixer->pos = ivec2(size.x - mixer->size.x + TRACK_HEIGHT_SPACING / 2, 0);
+	title->size = ivec2(titleW - TRACK_HEIGHT_SPACING, m_track->height*TRACK_HEIGHT_STEP);
+	title->pos = ivec2(TRACK_HEIGHT_SPACING_HALF, 0);
+	mixer->pos = ivec2(size.x - mixer->size.x + TRACK_HEIGHT_SPACING_HALF, 0);
+	for (gui_trackcontrols_automation* ctrl : automationLaneControls) {
+		ctrl->pos = ivec2(title->pos.x, ctrl->al->pos.y-pos.y);
+		ctrl->size = ivec2(title->size.x, ctrl->al->size.y);
+	}
 	for (guibase* g : guis) {
 		g->layout();
+	}
+}
+
+void gui_track_controls::handleDraggedMove(MouseEvent& evt) {
+	if (dragMode == DRAG_RESIZE) {
+		int32_t mouseDragDist = evt.relMousepos.y;
+		bool resizeTop = m_track->type < TRACK_TYPE_MIDI;
+		if (resizeTop) {
+			mouseDragDist = -evt.relMousepos.y+size.y;
+		}
+		int32_t totalHeightSteps = min(128, max(1, (mouseDragDist) / TRACK_HEIGHT_STEP));
+		while (totalHeightSteps < trackHeight(m_track) && addTrHeight(m_track, -1)) {
+		}
+		while (totalHeightSteps > trackHeight(m_track) && addTrHeight(m_track, 1)) {
+		}
+		this->parent->onChildLayoutChanged(this);
 	}
 }
 void gui_track_controls::handleRightClick(MouseEvent& evt) {

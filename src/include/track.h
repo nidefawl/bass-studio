@@ -23,6 +23,7 @@
 const char* TrackTypeToName(int type);
 struct track_plugins_t;
 class gui_track;
+class gui_track_automationlane;
 class gui_track_controls;
 class delete_cb;
 class trackdata_midi_t;
@@ -70,7 +71,6 @@ inline void simplifyData(std::vector<automation_point_t>& data) {
 
         //remove multiple consecutive points with same value
 		auto first = data.begin();
-		auto first1 = data.begin();
     	auto last = data.end();
         if (first != last) {
             for(auto i = first; i != last; ++i) {
@@ -336,6 +336,7 @@ public:
 	}
 	void releaseTrackContent();
 	gui_track* content = NULL;
+	std::vector<gui_track_automationlane*> subtracks;
 	gui_track_controls* mixer = NULL;
 	track_plugins_t* audio = NULL;
 	int scrolloffset = 0;

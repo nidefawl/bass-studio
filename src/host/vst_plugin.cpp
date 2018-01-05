@@ -122,10 +122,10 @@ void vstplugin::unload() {
 //	}
 //	this->dispatch(effMainsChanged, 0, 0);
 //	this->dispatch(effSetBypass, 0, 1);
-	for (automated_param_t& ap : this->automatedParams) {
+//	for (automated_param_t& ap : this->automatedParams) {
 //		assert(ap.ref);
 //		ap.ref->onDstDelete();
-	}
+//	}
 	this->dispatch(effClose);
 	this->bIsSetup = false;
 	my_printf("UNLOAD %s\n", StringAsCStr(this->sName));
@@ -270,6 +270,11 @@ automated_param_t* vstplugin::getRegisteredAutomation(int32_t idx) {
 	}
 	return NULL;
 }
+void vstplugin::getAutomated(std::vector<int32_t>& targets) {
+	for (automated_param_t t : automatedParams) {
+		targets.push_back(t.paramIdx);
+	}
+}
 void vstplugin::updateAutomatedParameters(tick_t pos) {
 	for (automated_param_t& param : automatedParams) {
 		float val = param.src->getValueAt(pos);
@@ -289,7 +294,6 @@ automation_t* vstplugin::getAutomation(int32_t paramIdx) {
 	param->plugin = this;
 	param->paramIdx = paramIdx;
 	param->dummy = 0.5f;
-//	{{}, this, paramIdx};
 	automatedParams.push_back({paramIdx, param});
 	return param;
 }

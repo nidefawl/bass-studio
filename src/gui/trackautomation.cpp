@@ -211,12 +211,13 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 	}
 	void gui_track_automation::postEdit() {
 		updateVisibleTrackContents(grid);
-		automatable_t* autom = m_track->audio->selectedAutomationCtr;
-		if (autom) {
-			automation_t* automation = autom->getAutomation(data.targetParam);
-			if (automation) {
-				automation->points = data.points;
-			}
+		automatable_t* automatable = this->at;
+		automation_t* automation = NULL;
+		if (automatable) {
+			automation = automatable->getAutomation(param);
+		}
+		if (automation) {
+			automation->points = data.points;
 		}
 	}
 	bool gui_track_automation::trackViewDoubleClick(guitrack_editor* view, MouseEvent& evt) {

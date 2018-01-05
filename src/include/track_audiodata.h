@@ -133,6 +133,9 @@ struct track_mixer: public automatable_t {
 	automation_t* getAutomation(int32_t idx) override {
 		return &gainAutomation;
 	}
+	void getAutomated(std::vector<int32_t>& targets) {
+		targets.push_back(0);
+	}
 };
 struct track_plugins_t {
 	track_t* const track;

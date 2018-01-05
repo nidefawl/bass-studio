@@ -23,6 +23,7 @@ int32_t getPosYFirstReturnTrack(project_t& project);
 track_t *getTrackFromMouse(project_t& project, ivec2 mouse, bool isDragSnap);
 gui_track* createTrackGui(track_t* t, scaled_grid&); // trackcontent.cpp
 gui_track_controls* createTrackGuiMixer(track_t* t); // trackcontrols.cpp
+void drawSeperator(NVGcontext* vg, int32_t seperatorY, ivec2& cs);
 
 
 
@@ -116,14 +117,11 @@ public:
 		cursor.cursorTrack = trackClicked->idx;
 	}
 
+	gui_track_automationlane* addAutomationLane(track_t* t, automatable_t* at, int32_t paramIdx);
 	void addTrack(track_t* t);
 	void removeTrack(track_t* t);
 	void updateVisibleTrackContents();
-	void layout() {
-		for (guibase* gui : guis) {
-			gui->layout();
-		}
-	}
+	void layout();
 };
 
 
@@ -161,6 +159,7 @@ public:
 	void handleRightClick(MouseEvent& evt);
 	void render(NVGcontext* vg);
 	void addTrack(track_t* t);
+	void addAutomationLane(track_t* t, gui_track_automationlane* al);
 	void removeTrack(track_t* t);
 	void layout() {
 		for (guibase* gui : guis) {
@@ -432,156 +431,17 @@ public:
 		trackControls.addTrack(t);
 		trackView.addTrack(t);
 	}
+	void addAutomationLane(track_t* t, automatable_t* at, int32_t paramIdx) {
+		gui_track_automationlane* al = trackView.addAutomationLane(t, at, paramIdx);
+		trackControls.addAutomationLane(t, al);
+	}
 	void removeTrack(track_t* t) {
 		trackControls.removeTrack(t);
 		trackView.removeTrack(t);
 	}
-	void drawSeperator(NVGcontext* vg, track_t* g, ivec2& cs);
-	void setTrackPosition(track_t* t, int32_t trackheight, int32_t y);
-	void render(NVGcontext* vg) {
-		guictr_base::renderBackground(vg);
-		ivec2 cs = getSizeContent();
-		ivec2 cp = getPosContent();
-		if (cs.y <= 0 || cs.x <= 0) {
-			return;
-		}
-		nvgIntersectScissor(vg, cp.x, cp.y, cs.x, cs.y);
-		nvgTranslate(vg, cp.x, cp.y);
-		nvgSave(vg);
-			trackView.render(vg);
-		nvgRestore(vg);
-		nvgSave(vg);
-			trackControls.render(vg);
-		nvgRestore(vg);
-		nvgSave(vg);
-			trackTimeline.render(vg);
-		nvgRestore(vg);
-
-		nvgSave(vg);
-			nvgTranslate(vg, 0, trackView.top());
-			int ySplit = getPosYFirstReturnTrack(project);
-			if (ySplit > 0) {
-				nvgSave(vg);
-				nvgIntersectScissor(vg, 0, 0, cs.x, ySplit);
-				for (track_t* g : project.trackCtr) {
-					drawSeperator(vg, g, cs);
-				}
-				nvgRestore(vg);
-			}
-			if (project.tracksBottom.size()) {
-				if (ySplit > 0) {
-					nvgIntersectScissor(vg, 0, ySplit, cs.x, trackView.size.y-ySplit);
-				} else {
-					nvgIntersectScissor(vg, 0, 0, cs.x, trackView.size.y);
-				}
-				for (track_t* g : project.tracksBottom) {
-					drawSeperator(vg, g, cs);
-				}
-			}
-		nvgRestore(vg);
-
-		nvgBeginPath(vg);
-		nvgMoveTo(vg, trackControls.left(), trackControls.top());
-		nvgLineTo(vg, trackControls.left(), trackControls.bottom());
-		nvgStrokeColor(vg, g_guiColors[COL_LINE_SEPERATOR]);
-		nvgStrokeWidth(vg, 3);
-		nvgStroke(vg);
-
-
-
-
-		nvgSave(vg);
-		loophandles.render(vg);
-		nvgRestore(vg);
-
-		if (trackView.size.x > 0) {
-			nvgIntersectScissor(vg, 0, 0, trackView.size.x, cs.y);
-			tick_t pos = project.playbackPos;
-	//		if (project.loopEnabled) {
-	//			if (pos > project.loopStart) {
-	//				pos = project.loopStart + (pos - project.loopStart) % project.loopLen;
-	//			}
-	//		}
-			float playBackX = (float) grid.tickToScreenD(pos);
-			if (playBackX > -4.0f && playBackX < cs.x + 4.0f) {
-				nvgBeginPath(vg);
-				nvgMoveTo(vg, playBackX, 0);
-				nvgLineTo(vg, playBackX, cs.y);
-				nvgStrokeColor(vg, GUI_COLOR(120));
-				nvgStrokeWidth(vg, 3);
-				nvgStroke(vg);
-				nvgBeginPath(vg);
-				nvgMoveTo(vg, playBackX, 0);
-				nvgLineTo(vg, playBackX, cs.y);
-				nvgStrokeColor(vg, GUI_COLOR(250));
-				nvgStrokeWidth(vg, 1);
-				nvgStroke(vg);
-			}
-	//		nvgIntersectScissor(vg, 0, 0, trackView.size.x, trackView.size.y);
-	//		nvgTranslate(vg, 0, trackTimeline.bottom());
-
-	//		double playBackX = grid.tickToScreenD(MainCtrl::get()->playbackPos);
-	//		if (playBackX > -4 && playBackX < cs.x+4) {
-	//			nvgBeginPath(vg);
-	//			nvgMoveTo(vg, playBackX, 0);
-	//			nvgLineTo(vg, playBackX, cs.y);
-	//			nvgStrokeColor(vg, GUI_COLOR(120));
-	//			nvgStrokeWidth(vg, 3);
-	//			nvgStroke(vg);
-	//			nvgBeginPath(vg);
-	//			nvgMoveTo(vg, playBackX, 0);
-	//			nvgLineTo(vg, playBackX, cs.y);
-	//			nvgStrokeColor(vg, GUI_COLOR(250));
-	//			nvgStrokeWidth(vg, 1);
-	//			nvgStroke(vg);
-	//		}
-		}
-	}
-	void layout() {
-		const int mixerwidth = 380;
-		ivec2 cs = getSizeContent();
-		trackTimeline.pos = ivec2(0, 0);
-		trackTimeline.size = ivec2(cs.x - mixerwidth, 32);
-		loophandles.pos = ivec2(trackTimeline.left(), trackTimeline.bottom());
-		loophandles.size = ivec2(trackTimeline.size.x, heightTimelineControls);
-
-		trackView.pos = ivec2(0, loophandles.bottom());
-		trackControls.pos = ivec2(cs.x - mixerwidth, loophandles.bottom());
-		trackView.size = ivec2(cs.x - mixerwidth - trackView.pos.x, cs.y - loophandles.bottom());
-		trackControls.size = ivec2(mixerwidth, trackView.size.y);
-
-		loophandles.clipViewSize = ivec2(trackView.size.x, trackView.size.y+loophandles.size.y);
-
-
-		ivec2 csTrackView = trackView.getSizeContent();
-		int y = TRACK_HEIGHT_SPACING;
-		for (track_t* t : project.trackCtr) {
-			int trackheight = t->height * TRACK_HEIGHT_STEP;
-			assert(t->content != NULL);
-			setTrackPosition(t, trackheight, y);
-			y += trackheight + TRACK_HEIGHT_SPACING;
-		}
-		y = csTrackView.y-TRACK_HEIGHT_SPACING;
-//		y = 0;
-		auto itMastersTracks = project.tracksBottom.rbegin();
-		auto itMastersEnd = project.tracksBottom.rend();
-		while (itMastersTracks != itMastersEnd) {
-			track_t* t = *itMastersTracks;
-			int trackheight = t->height * TRACK_HEIGHT_STEP;
-			y -= trackheight;
-//			y -= 100;
-			assert(t->content != NULL);
-			setTrackPosition(t, trackheight, y);
-//			y += trackheight + TRACK_HEIGHT_SPACING;
-			y -= TRACK_HEIGHT_SPACING;
-			itMastersTracks++;
-		}
-
-		for (guibase* gui : guis) {
-			gui->layout();
-		}
-		MainCtrl::get()->updateGrid();
-	}
+	int32_t setTrackPosition(track_t* t, int32_t y, bool isBottom);
+	void render(NVGcontext* vg);
+	void layout();
 	void updateVisibleTrackContents() {
 		trackView.updateVisibleTrackContents();
 	}
