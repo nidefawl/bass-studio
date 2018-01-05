@@ -129,4 +129,5 @@ public:
 	void updateAutomatedParameters(tick_t pos) override;
 	automation_t* getAutomation(int32_t paramIdx) override;
 	void getAutomated(std::vector<int32_t>& targets) override;
+	automationlane_snapshot_t toRef() override;
 };

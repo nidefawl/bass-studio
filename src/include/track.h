@@ -286,6 +286,7 @@ struct track_snapshot_t : public tracksettings_t {
 	track_t* trackLoaded = NULL;
 	track_plugins_snapshot_t plugins;
 	std::vector<clip_t> clips;
+	std::vector<automationlane_snapshot_t> automationLanes;
 	track_snapshot_t() = default;
 	track_snapshot_t(track_t* track);
 };

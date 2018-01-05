@@ -911,7 +911,7 @@ bool vsthost::insertNewPlugin(track_plugins_t* trp, vstplugin* plugin, int32_t d
 			unloadPlugin(old);
 		}
 	} else {
-		trp->insertEffect(dst, plugin);
+		trp->insertEffect(dst-1, plugin);
 	}
 	return true;
 }

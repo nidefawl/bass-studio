@@ -92,9 +92,10 @@ int32_t guictr_tracks::setTrackPosition(track_t* t, int32_t y, bool isBottom) {
 	return totalHeight;
 }
 
-void guictr_tracks::addAutomationLane(track_t* t, automatable_t* at, int32_t paramIdx, bool insertFront) {
+gui_track_automationlane* guictr_tracks::addAutomationLane(track_t* t, automatable_t* at, int32_t paramIdx, bool insertFront) {
 	gui_track_automationlane* al = trackView.addAutomationLane(t, at, paramIdx, insertFront);
 	t->mixer->addAutomationLane(t, al);
+	return al;
 }
 void guictr_tracks::removeAutomationLane(gui_track_automationlane* al) {
 	al->m_track->mixer->removeAutomationLane(al);

@@ -115,10 +115,11 @@ struct vstparam_automation_t: public automation_t {
 	float getDstValue() override;
 	void setDstValue(float f) override;
 };
-struct plugin_param_autiomation_src_t {
-	int32_t pluginSlot;
-	int32_t trackIdx;
-	int32_t paramIdx;
+struct automationlane_snapshot_t {
+	int32_t type = -1;
+	int32_t slot = -1;
+	int32_t paramIdx = -1;
+	int32_t height = 4;
 };
 class plugin_reference_t {
 public:
@@ -126,7 +127,7 @@ public:
 	virtual void onDstDelete() = 0;
 	virtual void onSrcDelete() = 0;
 	virtual void setDst(vstplugin* plugin, int32_t paramIdx) = 0;
-	virtual plugin_param_autiomation_src_t serialize() = 0;
+	virtual automationlane_snapshot_t serialize() = 0;
 };
 struct automated_param_t {
 	int32_t paramIdx = -1;
@@ -142,5 +143,6 @@ struct automatable_t {
 	virtual void updateAutomatedParameters(tick_t pos) = 0;
 	virtual automation_t* getAutomation(int32_t idx) = 0;
 	virtual void getAutomated(std::vector<int32_t>& targets) = 0;
+	virtual automationlane_snapshot_t toRef() = 0;
 };
 

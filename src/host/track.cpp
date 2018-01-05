@@ -260,25 +260,33 @@ track_plugins_snapshot_t::track_plugins_snapshot_t(const track_t &a) {
 		if (p->instrument) {
 			plugin_snapshot_t ps;
 			createSnapshot(ps, p->instrument);
+			ps.slot = p->instrument->handle->slot;
 			this->plugins.push_back(std::move(ps));
 		}
 		for (vstplugin* effect : p->effects) {
 			plugin_snapshot_t ps;
 			createSnapshot(ps, effect);
+			ps.slot = effect->handle->slot;
 			this->plugins.push_back(std::move(ps));
 		}
 	}
 }
 track_snapshot_t::track_snapshot_t(track_t* track)
-: tracksettings_t(*track),
-  plugins(*track)
+  : tracksettings_t(*track), plugins(*track)
 {
 	std::vector<clip_t*>& otherClips = track->getMidi().clips;
 	for (clip_t* clip : otherClips) {
 		clips.emplace_back(*clip);
 	}
-//	vstparam_automation_t& automation = track->getAutomation();
-//	this->points = automation.points;
+	track_plugins_t* p = track->audio;
+	if (p) {
+		for (gui_track_automationlane* atl : track->subtracks) {
+			automationlane_snapshot_t ref = atl->at->toRef();
+			ref.paramIdx = atl->param;
+			ref.height = atl->height;
+			automationLanes.push_back(std::move(ref));
+		}
+	}
 }
 
 void tracksubcontainer_t::copyTo(trackcontainer_snapshot_t& out) {
@@ -328,7 +336,6 @@ void tracksubcontainer_t::loadPlugins(trackallcontainer_t* all, trackcontainer_s
 					host->insertNewPlugin(trackLoaded->audio, plugin, pluginSnapshot.slot);
 
 					const std::vector<automation_view_t>& automatedParams = pluginSnapshot.automatedParams;
-
 					for (const automation_view_t& automatedParam : automatedParams) {
 						if (plugin->getParam(automatedParam.targetParam)) {
 							automation_t* autom = plugin->getAutomation(automatedParam.targetParam);
@@ -337,6 +344,22 @@ void tracksubcontainer_t::loadPlugins(trackallcontainer_t* all, trackcontainer_s
 					}
 				}
 			}
+		}
+		guictr_tracks* guiTracks = MainCtrl::getGuiTrackCtr();
+		const std::vector<automationlane_snapshot_t>& atl = trackStatic.automationLanes;
+		for (const automationlane_snapshot_t& ref : atl) {
+			gui_track_automationlane* al = NULL;
+			if (ref.type == 0) {
+				vstplugin* plugin = trackLoaded->audio->getPluginSlot(ref.slot);
+				assert(plugin); // ASSERT FOR NOW (will fail when plugin is no longer installed)
+				al = guiTracks->addAutomationLane(trackLoaded, plugin, ref.paramIdx, false);
+
+			}
+			if (ref.type == 1) {
+				al = guiTracks->addAutomationLane(trackLoaded, &trackLoaded->audio->mixer, ref.paramIdx, false);
+			}
+			if (al)
+				al->height = ref.height;
 		}
 	}
 }
@@ -388,6 +411,17 @@ void vstparam_automation_t::setDstValue(float f) {
 	}
 }
 
+vstplugin* track_plugins_t::getPluginSlot(int32_t idx) {
+	if (idx == 0) {
+		return instrument;
+	}
+	for (vstplugin* effect : effects) {
+		 if (idx == effect->handle->slot) {
+			 return effect;
+		 }
+	}
+	return NULL;
+}
 vstplugin* track_plugins_t::setInstrument(vstplugin* _instrument) {
 	vstplugin* oldInstr = instrument;
 	if (instrument) {

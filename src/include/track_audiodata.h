@@ -136,6 +136,12 @@ struct track_mixer: public automatable_t {
 	void getAutomated(std::vector<int32_t>& targets) {
 		targets.push_back(0);
 	}
+	automationlane_snapshot_t toRef() {
+		automationlane_snapshot_t ref;
+		ref.type = 1;
+		ref.slot = 0;
+		return ref;
+	}
 };
 struct track_plugins_t {
 	track_t* const track;
@@ -158,6 +164,7 @@ struct track_plugins_t {
 	  blockSize(_blockSize), input(nChannels, _blockSize), output(nChannels, _blockSize), mixer() {
 	}
 	~track_plugins_t();
+	vstplugin* getPluginSlot(int32_t idx);
 	vstplugin* setInstrument(vstplugin* _instrument);
 	void removePlugin(vstplugin* _vst);
 	void insertEffect(int32_t idx, vstplugin* _instrument);
