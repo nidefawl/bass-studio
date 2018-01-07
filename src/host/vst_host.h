@@ -4,6 +4,7 @@
 #include "seq_time.h"
 #include "dsp_util.h"
 #include <vector>
+#include <atomic>
 #include <stdint.h>
 #include <stdbool.h>
 #include "../vst_sdk_2.4/aeffectx.h"
@@ -108,7 +109,7 @@ public:
 	uint32_t blockReads = 0;
 	uint32_t bufferUnderuns = 0;
 	hires_timer_t timer;
-
+	std::atomic<int32_t> pluginId{100};
 
 	void updateTime(int32_t samplePos, tick_t pos, playback_state state);
 	int32_t processPlayback(int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround);
@@ -149,7 +150,7 @@ public:
 	void unloadPlugin(vstplugin* plugin);
 	uint32_t pluginCount();
 	vstplugin* getPluginIdx(uint32_t i);
-	vstpluginloadres loadPlugin(String path);
+	vstpluginloadres loadPlugin(String filepath, int32_t globalId = 0);
 	track_plugins_t* createAudio(track_t* track);
 	bool movePlugin(track_t* dstTr, track_plugins_t* trp, int32_t src, int32_t dst);
 	bool swapEffects(track_plugins_t* trp, int32_t src, int32_t dst);

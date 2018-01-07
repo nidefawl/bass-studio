@@ -915,7 +915,7 @@ bool vsthost::insertNewPlugin(track_plugins_t* trp, vstplugin* plugin, int32_t d
 	}
 	return true;
 }
-vstpluginloadres vsthost::loadPlugin(String filepath) {
+vstpluginloadres vsthost::loadPlugin(String filepath, int32_t globalId) {
 	String path, name, nameWithoutExt;
 	SplitPath(filepath, &path, &nameWithoutExt, NULL, &name);
 	VSTPluginMain_t* fn = NULL;
@@ -935,7 +935,12 @@ vstpluginloadres vsthost::loadPlugin(String filepath) {
 		return vstpluginloadres(-6, NULL);
 	}
 
-	vstplugin* plugin = new vstplugin(new handles_t(aeffect, hmodule), path, nameWithoutExt);
+	if (globalId <= 0) {
+		globalId = ++pluginId;
+	} else {
+		update_maximum(pluginId, globalId);
+	}
+	vstplugin* plugin = new vstplugin(new handles_t(aeffect, hmodule), globalId, path, nameWithoutExt);
 	list.push_back(plugin);
 	plugin->load(this);
 	return vstpluginloadres(0, plugin);

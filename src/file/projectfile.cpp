@@ -36,8 +36,9 @@ void serialize(Archive & archive, param_snapshot_t & m)
 template<class Archive>
 void serialize(Archive & archive, automationlane_snapshot_t & m)
 {
-	archive(make_nvp("type", m.type), make_nvp("slot", m.slot), make_nvp("paramIdx", m.paramIdx));
+	archive(make_nvp("type", m.type), make_nvp("paramIdx", m.paramIdx));
 	make_optional_nvp(archive, "height", m.height);
+	make_optional_nvp(archive, "refId", m.refId);
 }
 template<class Archive>
 void serialize(Archive & archive, automation_view_t & m)
@@ -53,6 +54,7 @@ void serialize(Archive & archive, plugin_snapshot_t & m)
 	make_optional_nvp(archive, "dataProgram", m.dataChunk2);
 	make_optional_nvp(archive, "parameters", m.params);
 	make_optional_nvp(archive, "automatedParams", m.automatedParams);
+	make_optional_nvp(archive, "globalId", m.projectGlobalId);
 }
 template<class Archive>
 void serialize(Archive & archive, track_plugins_snapshot_t & m)

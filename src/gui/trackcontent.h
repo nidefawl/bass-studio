@@ -173,6 +173,7 @@ public:
 	automatable_t* at;
 	int32_t param;
 	int32_t height = 4;
+	int32_t idx = -1;
 	gui_track_automationlane(track_t* _track, scaled_grid& _grid, automatable_t* _at, int32_t _param);
 	virtual ~gui_track_automationlane() {
 
@@ -228,7 +229,7 @@ public:
 				MainCtrl* ctrl = MainCtrl::get();
 				scaled_grid& grid = ctrl->getGrid();
 				tick_t tick = grid.screenToTickSnap(mpos.x, SNAP_OFF);
-				if (ctrl->cursor.contains(this->m_track->idx, tick)) {
+				if (ctrl->cursor.containsSubtrack(this->m_track->idx, this->idx, tick)) {
 					evt.requestFocus(this);
 					return true;
 				}
@@ -254,6 +255,7 @@ protected:
 	track_t* const m_track;
 	trackdata_midi_t& midi;
 	gui_track_automation automation;
+	int subtrackIdx = -1;
 public:
 	gui_track(track_t* _track, scaled_grid& _grid);
 	virtual ~gui_track() {

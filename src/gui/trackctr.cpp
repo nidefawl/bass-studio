@@ -100,26 +100,18 @@ gui_track_automationlane* guictr_tracks::addAutomationLane(track_t* t, automatab
 void guictr_tracks::removeAutomationLane(gui_track_automationlane* al) {
 	al->m_track->mixer->removeAutomationLane(al);
 	trackView.removeAutomationLane(al);
-	layout();
-	updateVisibleTrackContents();
 }
 void guictr_tracks::removeAllAutomationLanes(track_t* t, automatable_t* at, int32_t paramIdx) {
 	t->mixer->removeAllAutomationLanes(at, paramIdx);
 	trackView.removeAllAutomationLanes(t, at, paramIdx);
-	layout();
-	updateVisibleTrackContents();
 }
 void guictr_tracks::removeAllAutomationLanes(track_t* t, automatable_t* at) {
 	t->mixer->removeAllAutomationLanes(at);
 	trackView.removeAllAutomationLanes(t, at);
-	layout();
-	updateVisibleTrackContents();
 }
 void guictr_tracks::removeAllAutomationLanes(track_t* t) {
 	t->mixer->removeAllAutomationLanes();
 	trackView.removeAllAutomationLanes(t);
-	layout();
-	updateVisibleTrackContents();
 }
 void guictr_tracks::layout() {
 	const int mixerwidth = 380;
@@ -270,6 +262,10 @@ gui_track_automationlane* guitrack_editor::addAutomationLane(track_t* t, automat
 	} else {
 		t->subtracks.push_back(al);
 	}
+	int32_t idx = 0;
+	for (auto subTr : t->subtracks) {
+		subTr->idx = idx++;
+	}
 	al->setZOrder(t->type >= TRACK_TYPE_MIDI ? 0 : 1);
 	add(al);
 	return al;
@@ -293,6 +289,10 @@ void guitrack_editor::removeAllAutomationLanes(track_t* t, automatable_t* at, in
 	});
 	atLanes.erase(it, atLanes.end());
 
+	int32_t idx = 0;
+	for (auto subTr : atLanes) {
+		subTr->idx = idx++;
+	}
 }
 void guitrack_editor::removeAutomationLane(gui_track_automationlane* al) {
 	assert(al);
@@ -302,6 +302,10 @@ void guitrack_editor::removeAutomationLane(gui_track_automationlane* al) {
 	assert(it != atLanes.end());
 	atLanes.erase(it);
 	delete al;
+	int32_t idx = 0;
+	for (auto subTr : atLanes) {
+		subTr->idx = idx++;
+	}
 }
 void guitrack_editor::addTrack(track_t* t) {
 	if (t->content)

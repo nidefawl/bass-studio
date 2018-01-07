@@ -166,20 +166,24 @@ void trackallcontainer_t::copyFrom(project_snapshot_t& project) {
 	trackMasterCtr.copyFrom(project.trackMasterCtr);
 	assert(trackMasterCtr.size()==project.trackMasterCtr.tracks.size());
 
+
 	addAll(tracks, trackCtr.tracks);
 	addAll(tracks, trackReturnCtr.tracks);
 	addAll(tracks, trackMasterCtr.tracks);
+	int32_t idx = 0;
+	for (track_t* track : tracks) {
+		track->idx = idx++;
+	}
+	assert(tracks.size()==(project.trackCtr.tracks.size()+project.trackMasterCtr.tracks.size()+project.trackReturnCtr.tracks.size()));
+
 	std::sort(tracks.begin(), tracks.end(), [](track_t* const & a, track_t* const & b) {
 		return a->idx < b->idx;
 	});
-	assert(tracks.size()==(project.trackCtr.tracks.size()+project.trackMasterCtr.tracks.size()+project.trackReturnCtr.tracks.size()));
 	tracksBottom.tracks.clear();
 	addAll(tracksBottom.tracks, trackReturnCtr.tracks);
 	addAll(tracksBottom.tracks, trackMasterCtr.tracks);
-	int32_t idx = 0;
 	vsthost* host = vsthost::getInstance();
 	for (track_t* t : tracks) {
-		t->idx = idx++;
 		t->audio = host->createAudio(t);
 	}
 }
@@ -193,13 +197,29 @@ void trackallcontainer_t::copyTracks(int32_t trackBegin, int32_t trackEnd, track
 	for (track_t* t: tracks) {
 		if (t->idx >= trackBegin && t->idx <= trackEnd) {
 			my_printf("copy track %d\n", t->idx);
-			track_t* trackClone = new track_t(*t);
-			_out.tracks.push_back(trackClone);
+			track_snapshot_t* trackCopy = new track_snapshot_t(t, false);
+			_out.tracks.push_back(trackCopy);
 		} else {
 
 			my_printf("NOT copy track %d\n", t->idx);
 		}
 	}
+}
+track_t &track_t::operator =(const track_snapshot_t &obj) {
+	std::vector<clip_t*>& clips = midi.clips;
+	clips.clear();
+	for (const clip_t& clip : obj.clips) {
+		clips.push_back(new clip_t(clip));
+	}
+	midi.sortClips();
+	idx = obj.idx;
+	name = obj.name;
+	enabled = obj.enabled;
+	type = obj.type;
+	height = obj.height;
+	rgb = obj.rgb;
+	scrolloffset = 0;
+	return *this;
 }
 track_t::track_t(const track_snapshot_t &a) : tracksettings_t(a) {
 	std::vector<clip_t*>& clips = midi.clips;
@@ -211,27 +231,30 @@ track_t::track_t(const track_snapshot_t &a) : tracksettings_t(a) {
 	assert(this->mixer == NULL);
 	assert(this->content == NULL);
 }
-void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin) {
+void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin, bool storePluginChunks) {
 	ps.present = true;
 	ps.slot = 0;
+	ps.projectGlobalId = plugin->projectGlobalId;
 	ps.uId = plugin->uId;
 	ps.name = plugin->sName;
-	void* pluginData;
-	int32_t pluginDataSize = plugin->dispatch(effGetChunk, 0, 0, &pluginData, 0);
-	if (pluginDataSize > 0 && pluginData) {
-		uint8_t* ptrData = reinterpret_cast<uint8_t*>(pluginData);
-		ps.dataChunk.reserve(pluginDataSize);
-		ps.dataChunk.assign(ptrData, ptrData + pluginDataSize);
-		my_printf("Plugin %s: Save data1[%d]\n", StringAsCStr(plugin->sName), pluginDataSize);
+	if (storePluginChunks) {
+		void* pluginData;
+		int32_t pluginDataSize = plugin->dispatch(effGetChunk, 0, 0, &pluginData, 0);
+		if (pluginDataSize > 0 && pluginData) {
+			uint8_t* ptrData = reinterpret_cast<uint8_t*>(pluginData);
+			ps.dataChunk.reserve(pluginDataSize);
+			ps.dataChunk.assign(ptrData, ptrData + pluginDataSize);
+			my_printf("Plugin %s: Save data1[%d]\n", StringAsCStr(plugin->sName), pluginDataSize);
 
-	}
-	void* pluginData2;
-	int32_t pluginDataSize2 = plugin->dispatch(effGetChunk, 1, 0, &pluginData2, 0);
-	if (pluginDataSize2 > 0 && pluginData2) {
-		uint8_t* ptrData = reinterpret_cast<uint8_t*>(pluginData2);
-		ps.dataChunk2.reserve(pluginDataSize2);
-		ps.dataChunk2.assign(ptrData, ptrData + pluginDataSize2);
-		my_printf("Plugin %s: Save data2[%d]\n", StringAsCStr(plugin->sName), pluginDataSize2);
+		}
+		void* pluginData2;
+		int32_t pluginDataSize2 = plugin->dispatch(effGetChunk, 1, 0, &pluginData2, 0);
+		if (pluginDataSize2 > 0 && pluginData2) {
+			uint8_t* ptrData = reinterpret_cast<uint8_t*>(pluginData2);
+			ps.dataChunk2.reserve(pluginDataSize2);
+			ps.dataChunk2.assign(ptrData, ptrData + pluginDataSize2);
+			my_printf("Plugin %s: Save data2[%d]\n", StringAsCStr(plugin->sName), pluginDataSize2);
+		}
 	}
 	ps.params.reserve(plugin->params.size());
 	for (vst_param& param : plugin->params) {
@@ -250,7 +273,7 @@ void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin) {
 		ps.automatedParams.push_back(automation);
 	}
 }
-track_plugins_snapshot_t::track_plugins_snapshot_t(const track_t &a) {
+track_plugins_snapshot_t::track_plugins_snapshot_t(const track_t &a, bool storePluginChunks) {
 	track_plugins_t* p = a.audio;
 	if (p) {
 		gain = p->mixer.gain;
@@ -259,20 +282,20 @@ track_plugins_snapshot_t::track_plugins_snapshot_t(const track_t &a) {
 		plugins.reserve(nPlugins);
 		if (p->instrument) {
 			plugin_snapshot_t ps;
-			createSnapshot(ps, p->instrument);
+			createSnapshot(ps, p->instrument, storePluginChunks);
 			ps.slot = p->instrument->handle->slot;
 			this->plugins.push_back(std::move(ps));
 		}
 		for (vstplugin* effect : p->effects) {
 			plugin_snapshot_t ps;
-			createSnapshot(ps, effect);
+			createSnapshot(ps, effect, storePluginChunks);
 			ps.slot = effect->handle->slot;
 			this->plugins.push_back(std::move(ps));
 		}
 	}
 }
-track_snapshot_t::track_snapshot_t(track_t* track)
-  : tracksettings_t(*track), plugins(*track)
+track_snapshot_t::track_snapshot_t(track_t* track, bool storePluginChunks)
+  : tracksettings_t(*track), plugins(*track, storePluginChunks)
 {
 	std::vector<clip_t*>& otherClips = track->getMidi().clips;
 	for (clip_t* clip : otherClips) {
@@ -280,28 +303,29 @@ track_snapshot_t::track_snapshot_t(track_t* track)
 	}
 	track_plugins_t* p = track->audio;
 	if (p) {
-		for (gui_track_automationlane* atl : track->subtracks) {
-			automationlane_snapshot_t ref = atl->at->toRef();
-			ref.paramIdx = atl->param;
-			ref.height = atl->height;
-			automationLanes.push_back(std::move(ref));
-		}
+		p->saveAutomationLanes(automationLanes);
 	}
 }
 
 void tracksubcontainer_t::copyTo(trackcontainer_snapshot_t& out) {
 	out.tracks.reserve(tracks.size());
+	int32_t idx = 0;
 	for (track_t* track : tracks) {
-		out.tracks.emplace_back(track); //emplace_back makes a copy by calling track_t(track_t* ptr)
+		track_snapshot_t trackCopy(track, true);
+		out.tracks.push_back(std::move(trackCopy));
+		trackCopy.idx = idx++;
 	}
 }
 void tracksubcontainer_t::copyFrom(trackcontainer_snapshot_t& in) {
 	assert(tracks.empty());
 	for (track_snapshot_t& trackStatic : in.tracks) {
-		track_t* track = new track_t(trackStatic);
-		trackStatic.trackLoaded = track;
-		this->tracks.push_back(track);
+		track_t* trackCopy = new track_t(trackStatic);
+		trackStatic.trackLoaded = trackCopy;
+		this->tracks.push_back(trackCopy);
 	}
+	std::sort(tracks.begin(), tracks.end(), [](track_t* const & a, track_t* const & b) {
+		return a->idx < b->idx;
+	});
 }
 void tracksubcontainer_t::loadPlugins(trackallcontainer_t* all, trackcontainer_snapshot_t& in) {
 	for (track_snapshot_t& trackStatic : in.tracks) {
@@ -315,7 +339,7 @@ void tracksubcontainer_t::loadPlugins(trackallcontainer_t* all, trackcontainer_s
 		const std::vector<plugin_snapshot_t>& trPluginList = trackPlugins.plugins;
 		for (const plugin_snapshot_t& pluginSnapshot : trPluginList) {
 			if (MainCtrl::get()->plugindb.resolve(pluginSnapshot.name, pluginSnapshot.uId, &path)) {
-				vstpluginloadres res = host->loadPlugin(path);
+				vstpluginloadres res = host->loadPlugin(path, pluginSnapshot.projectGlobalId);
 				if (res.result==0&&res.plugin) {
 					vstplugin* plugin = res.plugin;
 					if (pluginSnapshot.dataChunk.size() > 0) {
@@ -345,25 +369,43 @@ void tracksubcontainer_t::loadPlugins(trackallcontainer_t* all, trackcontainer_s
 				}
 			}
 		}
-		guictr_tracks* guiTracks = MainCtrl::getGuiTrackCtr();
 		const std::vector<automationlane_snapshot_t>& atl = trackStatic.automationLanes;
-		for (const automationlane_snapshot_t& ref : atl) {
-			gui_track_automationlane* al = NULL;
-			if (ref.type == 0) {
-				vstplugin* plugin = trackLoaded->audio->getPluginSlot(ref.slot);
-				assert(plugin); // ASSERT FOR NOW (will fail when plugin is no longer installed)
-				al = guiTracks->addAutomationLane(trackLoaded, plugin, ref.paramIdx, false);
-
-			}
-			if (ref.type == 1) {
-				al = guiTracks->addAutomationLane(trackLoaded, &trackLoaded->audio->mixer, ref.paramIdx, false);
-			}
-			if (al)
-				al->height = ref.height;
+		trackLoaded->subtracks.clear();
+		bool showSubtracks = !trackLoaded->hideAutomation && !trackLoaded->hideTrack;
+		if (!showSubtracks) {
+			trackLoaded->audio->atl = atl;
+		} else {
+			trackLoaded->audio->atl.clear();
+			trackLoaded->audio->loadAutomationLanes(atl);
 		}
 	}
 }
 
+void track_t::loadPluginSnapshot(track_snapshot_t& trackStatic) {
+	assert(audio);
+	const track_plugins_snapshot_t& trackPlugins = trackStatic.plugins;
+	audio->mixer.gain = trackPlugins.gain;
+	const std::vector<plugin_snapshot_t>& trPluginList = trackPlugins.plugins;
+	for (const plugin_snapshot_t& pluginSnapshot : trPluginList) {
+		vstplugin* plugin = audio->getPluginById(pluginSnapshot.projectGlobalId);
+		if (plugin) {
+			const std::vector<param_snapshot_t>& pluginSnapshotParams = pluginSnapshot.params;
+			for (const param_snapshot_t& param : pluginSnapshotParams) {
+				if (plugin->getParam(param.idx)) {
+					plugin->setParamValue(param.idx, param.val);
+				}
+			}
+			const std::vector<automation_view_t>& automatedParams = pluginSnapshot.automatedParams;
+			for (const automation_view_t& automatedParam : automatedParams) {
+				if (plugin->getParam(automatedParam.targetParam)) {
+					automation_t* autom = plugin->getAutomation(automatedParam.targetParam);
+					autom->points = automatedParam.points;
+				}
+			}
+		}
+	}
+
+}
 void track_t::releaseTrackContent() {
 	for (clip_t* clip : midi.clips) {
 		gui_clip* gClip = clip->gClip;
@@ -422,6 +464,18 @@ vstplugin* track_plugins_t::getPluginSlot(int32_t idx) {
 	}
 	return NULL;
 }
+
+vstplugin* track_plugins_t::getPluginById(int32_t projectGlobalId) {
+	if (instrument && instrument->projectGlobalId == projectGlobalId) {
+		return instrument;
+	}
+	for (vstplugin* effect : effects) {
+		 if (effect->projectGlobalId == projectGlobalId) {
+			 return effect;
+		 }
+	}
+	return NULL;
+}
 vstplugin* track_plugins_t::setInstrument(vstplugin* _instrument) {
 	vstplugin* oldInstr = instrument;
 	if (instrument) {
@@ -458,6 +512,8 @@ void track_plugins_t::removePlugin(vstplugin* _vst) {
 		}
 	}
 	MainCtrl::getGuiTrackCtr()->removeAllAutomationLanes(this->track, _vst);
+	MainCtrl::getGuiTrackCtr()->layout();
+	MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
 }
 
 void track_plugins_t::insertEffect(int32_t idx, vstplugin* _effect) {
@@ -594,6 +650,36 @@ void track_plugins_t::getAutomatableTargets(std::vector<automatable_t*>& targets
 		targets.push_back(instrument);
 	targets.insert(targets.end(), effects.begin(), effects.end());
 }
+void track_plugins_t::saveAutomationLanes(std::vector<automationlane_snapshot_t>& atls)
+{
+	atls.reserve(track->subtracks.size());
+	for (gui_track_automationlane* atl : track->subtracks) {
+		automationlane_snapshot_t ref = atl->at->toRef();
+		ref.paramIdx = atl->param;
+		ref.height = atl->height;
+		atls.push_back(std::move(ref));
+	}
+}
+void track_plugins_t::loadAutomationLanes(const std::vector<automationlane_snapshot_t>& atls)
+{
+	guictr_tracks* guiTracks = MainCtrl::getGuiTrackCtr();
+	for (const automationlane_snapshot_t& ref : atls) {
+		gui_track_automationlane* al = NULL;
+		if (ref.type == 0) {
+			vstplugin* plugin = getPluginById(ref.refId);
+			if (!plugin) {
+				continue;
+			}
+			al = guiTracks->addAutomationLane(track, plugin, ref.paramIdx, false);
+
+		}
+		if (ref.type == 1) {
+			al = guiTracks->addAutomationLane(track, &mixer, ref.paramIdx, false);
+		}
+		if (al)
+			al->height = ref.height;
+	}
+}
 void track_plugins_t::onTick(double since) {
 	meter.onTick(since);
 }
@@ -709,10 +795,22 @@ void track_plugins_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick
 //	return NULL;
 
 }
+trackstate_t::~trackstate_t() {
+	for (track_snapshot_t* track : tracks) {
+		delete track;
+	}
+}
+void trackstate_t::reset() {
+	for (track_snapshot_t* track : tracks) {
+		delete track;
+	}
+	tracks.clear();
+}
 trackstate_t trackstate_t::copy() {
 	trackstate_t t;
-	for (track_t* track : tracks) {
-		t.tracks.push_back(new track_t(*track));
+	for (track_snapshot_t* track : tracks) {
+		track_snapshot_t* trackCopy = new track_snapshot_t(*track);
+		t.tracks.push_back(trackCopy);
 	}
 	tracks.clear();
 	return t;

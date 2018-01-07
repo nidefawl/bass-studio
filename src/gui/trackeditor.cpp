@@ -8,6 +8,7 @@
 #include "seq_math.h"
 #include "track.h"
 #include "clip.h"
+#include "cursor.h"
 #include "grid.h"
 #include "guicontainer.h"
 #include "trackcontent.h"
@@ -38,16 +39,18 @@ public:
 			after.cursor = ctrl->cursor;
 		}
 		trackallcontainer_t& trCtr = ctrl->getTracks();
-		for (track_t* trackStored : before.tracks) {
+		for (track_snapshot_t* trackStored : before.tracks) {
 			my_printf("trackStored: %d\n", trackStored->idx);
 			if (trCtr.validTrackIdx(trackStored->idx)) {
 				track_t* track = trCtr[trackStored->idx];
-				if (initAfter)
-					after.tracks.push_back(new track_t(*track));
+				if (initAfter) {
+					after.tracks.push_back(new track_snapshot_t(track, false));
+				}
 				track->releaseTrackContent();
 				if (track->type == TRACK_TYPE_MIDI)
 				my_printf("TRACKBeforeUndo[%d] HAS %d clips\n", track->idx, track->getMidi().clips.size());
 				*track = *trackStored;
+				track->loadPluginSnapshot(*trackStored);
 				if (track->type == TRACK_TYPE_MIDI)
 				my_printf("TRACKAfterUndo[%d] HAS %d clips\n", track->idx, track->getMidi().clips.size());
 			} else {
@@ -61,11 +64,12 @@ public:
 		ctrl->resetMouseContext();
 		ctrl->setEditClip(NULL);
 		trackallcontainer_t& trCtr = ctrl->getTracks();
-		for (track_t* trackStored : after.tracks) {
+		for (track_snapshot_t* trackStored : after.tracks) {
 			if (trCtr.validTrackIdx(trackStored->idx)) {
 				track_t* track = trCtr[trackStored->idx];
 				track->releaseTrackContent();
 				*track = *trackStored;
+				track->loadPluginSnapshot(*trackStored);
 				if (track->type == TRACK_TYPE_MIDI)
 				my_printf("TRACK[%d] HAS %d clips\n", track->idx, track->getMidi().clips.size());
 			}
@@ -149,6 +153,8 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 					cursor.selRange = evtMax-evtMin;
 					cursor.cursorTrack = trMin->idx;
 					cursor.selTrackRange = (trMax->idx - cursor.cursorTrack);
+					cursor.cursorSubTrack = -1;
+					cursor.selSubTrackRange = 0;
 				}
 				handledKeyinput = true;
 			}
@@ -218,9 +224,29 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 			ivec2 dir;
 			arrowKeyToXY(kevt.keyCode, dir.x, dir.y);
 			if (dir.y) {
-				cursor.selRange = 0;
-				cursor.selTrackRange = 0;
-				cursor.cursorTrack = max(0, min((int32_t)(project.trackList.size() - 1), cursor.cursorTrack + dir.y));
+				cursor.setLeftAligned();
+//				cursor.selRange = 0;
+//				cursor.selTrackRange = 0;
+				auto moveMainCursor = [this, &dir](){
+					cursor.cursorTrack = project.trackList.clampTrackIdx(cursor.cursorTrack - dir.y);
+				};
+				auto moveCursor = [this, &dir, &moveMainCursor](){
+					if (cursor.isSubtrackSelection()) {
+						if (!project.trackList.validTrackIdx(cursor.cursorTrack)) {
+							cursor.cursorTrack = 0;
+							cursor.cursorSubTrack = -1;
+							cursor.selSubTrackRange = 0;
+							return;
+						}
+						track_t* tr = project.trackList[cursor.cursorTrack];
+						cursor.cursorSubTrack -= dir.y;
+						fixCursorSubRange(cursor, tr->subtracks.size());
+						return;
+					}
+					moveMainCursor();
+
+				};
+				moveCursor();
 			} else if (dir.x) {
 				tick_t timeOffset = dir.x*grid.getTickLength();
 				cursor.selRange = 0;
@@ -247,35 +273,75 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 void guitrack_editor::trackViewDragBegin(guitrack_editor* view, MouseEvent& evt) {
 	ivec2 local = evt.relMousepos;
 	int32_t tick = grid.screenToTickSnap(local.x, SNAP_ON);
-	trSelected = getTrackFromMouse(project, local, false);
+	track_t* tr = getTrackFromMouse(project, local, false);
+	gui_track_automationlane* subTr = getSubTrackFromMouse(project, local, false);
+	if (subTr) {
+		tr = subTr->m_track;
+	}
+	trSelected = tr;
+	subTrSelected = subTr;
 	if (trSelected != NULL) {
 		MainCtrl::get()->setSelectedTrack(trSelected);
 		MainCtrl::get()->setEditClip(NULL);
 		if (evt.guiDragged == this) { // cursor move / range select
-			//beatbar16th_t songPos = MainCtrl::get()->toBeatBar16th(tick);
-			//my_printf("Click at Track %d - %u = %u.%u.%u\n", trSelected->idx, tick, songPos.bar, songPos.beat, songPos.th);
 			Cursor& c = MainCtrl::get()->cursor;
 			c.selRange = 0;
 			c.selTrackRange = 0;
 			c.cursorPos = tick;
 			c.cursorTrack = trSelected->idx;
+			c.cursorSubTrack = subTrSelected ? subTrSelected->idx : -1;
+			c.selSubTrackRange = 0;
 		}
 	}
 }
 
 void guitrack_editor::trackViewDragMove(guitrack_editor* view, MouseEvent& evt) {
 	if (trSelected != NULL) {
+		Cursor& c = MainCtrl::get()->cursor;
 		ivec2 local = evt.relMousepos;
-		track_t *trNxtSelected = getTrackFromMouse(project, local, true);
-		if (!trNxtSelected)
-			return;
-		MainCtrl::get()->setSelectedTrack(trNxtSelected);
+		track_t* trNxtSelected = NULL;
+		gui_track_automationlane* subTr = getSubTrackFromMouse(project, local, true);
+		if (subTrSelected) {
+			if (subTr)
+			my_printf("subTr hit %d\n", subTr->idx);
+			if (subTr && subTr->m_track != subTrSelected->m_track) {
+				subTr = NULL;
+			}
+			trNxtSelected = getTrackFromMouse(project, local, false);
+			if (trNxtSelected)
+			my_printf("trNxtSelected hit %d\n", trNxtSelected->idx);
+			my_printf("subTrSelected %d\n", subTrSelected->idx);
+			if (trNxtSelected && trNxtSelected->idx < subTrSelected->m_track->idx) {
+				subTr = subTrSelected->m_track->subtracks.front();
+			}
+			if (trNxtSelected && trNxtSelected->idx > subTrSelected->m_track->idx) {
+				subTr = subTrSelected->m_track->subtracks.back();
+			}
+			if (subTr)
+			my_printf("subTr fix %d\n", subTr->idx);
+		} else {
+			trNxtSelected = getTrackFromMouse(project, local, true);
+
+			MainCtrl::get()->setSelectedTrack(trNxtSelected);
+			if (!trNxtSelected)
+				return;
+		}
 		int32_t tick = grid.screenToTickSnap(local.x, SNAP_ON);
 		if (evt.guiDragged == this) { // cursor move / range select
-			Cursor& c = MainCtrl::get()->cursor;
 
 			c.selRange = tick - c.cursorPos;
-			c.selTrackRange = (trNxtSelected->idx - trSelected->idx);
+			if (c.isSubtrackSelection()) {
+				if (subTr) {
+					c.selSubTrackRange = (subTr->idx - subTrSelected->idx);
+					assert (c.getSubTrackEnd() > -1);
+					assert (c.getSubTrackBegin() <= c.getSubTrackEnd());
+					assert (c.getSubTrackBegin() < subTr->m_track->subtracks.size());
+					assert (c.getSubTrackEnd() < subTr->m_track->subtracks.size());
+				}
+
+			} else {
+				c.selTrackRange = (trNxtSelected->idx - trSelected->idx);
+			}
 //			beatbar16th_t songPos = MainCtrl::get()->toBeatBar16th(tick);
 			//my_printf("Select at Track %d - %d %d %d %d = %u.%u.%u\n", trSelected->idx, c.cursorPos, tick, c.selRange, local.x, songPos.bar, songPos.beat, songPos.th);
 
@@ -284,6 +350,7 @@ void guitrack_editor::trackViewDragMove(guitrack_editor* view, MouseEvent& evt) 
 }
 void guitrack_editor::trackViewDragRelease(guitrack_editor* view, MouseEvent& evt) {
 	trSelected = NULL;
+	subTrSelected = NULL;
 }
 void guitrack_editor::dragSelectionBegin(gui_clip* gClip, MouseEvent& evt) {
 	selectionMoved = false;
@@ -316,11 +383,7 @@ void guitrack_editor::dragSelectionBegin(gui_clip* gClip, MouseEvent& evt) {
 		return;
 	}
 	if (trackClicked != NULL) {
-		if (!cursor.selRange
-				|| tickExact < cursor.getTickBegin()
-				|| tickExact >= cursor.getTickEnd()
-				|| trackClicked->idx < cursor.getTrackBegin()
-				|| trackClicked->idx > cursor.getTrackEnd()) {
+		if (!cursor.selRange || cursor.isSubtrackSelection() || !cursor.contains(trackClicked->idx, tickExact)) {
 			setSelectionRange(clicked, trackClicked);
 		}
 		cursor.setLeftAligned();
@@ -654,7 +717,6 @@ void guitrack_editor::render(NVGcontext* vg) {
 			trackEnd = trackList.clampTrackIdx(trackEnd);
 			track_t* trB = trackList[trackBegin];
 			track_t* trE = trackList[trackEnd];
-
 			int32_t tickBegin = c.getTickBegin();
 			int32_t tickEnd = c.getTickEnd();
 //			double tickBeginX = max(-2, (int) grid.tickToScreenD(tickBegin));
@@ -664,6 +726,12 @@ void guitrack_editor::render(NVGcontext* vg) {
 
 			float trackYMin = min(trB->content->top(), trE->content->top());
 			float trackYMax = max(trB->content->bottom(), trE->content->bottom());
+			if (c.isSubtrackSelection()) {
+				auto a = trB->subtracks[c.getSubTrackBegin()];
+				auto b = trB->subtracks[c.getSubTrackEnd()];
+				trackYMin = a->top();
+				trackYMax = b->bottom();
+			}
 
 			if (tickEndX > -4.0f && tickBeginX < cs.x + 4.0f) {
 				if (indexOf(project.tracksBottom, trE) > -1) {
@@ -685,11 +753,19 @@ void guitrack_editor::render(NVGcontext* vg) {
 		} else  {
 			float cursorScreenX = (float)grid.tickToScreenD(c.cursorPos);
 			if (cursorScreenX >= -2 && cursorScreenX < size.x+2) {
+				float trackYMin = tr->content->top();
+				float trackYMax = tr->content->bottom();
+				if (c.isSubtrackSelection()) {
+					auto a = tr->subtracks[c.getSubTrackBegin()];
+					auto b = tr->subtracks[c.getSubTrackEnd()];
+					trackYMin = a->top();
+					trackYMax = b->bottom();
+				}
 				cursorScreenX+=0.5;
 				NVGcolor cursorColor = getCursorColor();
 				nvgBeginPath(vg);
-				nvgMoveTo(vg, cursorScreenX, tr->content->pos.y+1);
-				nvgLineTo(vg, cursorScreenX, tr->content->pos.y+tr->content->size.y-1);
+				nvgMoveTo(vg, cursorScreenX, trackYMin+1);
+				nvgLineTo(vg, cursorScreenX, trackYMax-1);
 				nvgStrokeColor(vg, cursorColor);
 				nvgStrokeWidth(vg, 1.5f);
 				nvgStroke(vg);
@@ -711,6 +787,23 @@ int32_t getPosYFirstReturnTrack(project_t& project) {
 	return 0;
 }
 
+gui_track_automationlane *getSubTrackFromMouse(project_t& project, ivec2 mouse, bool isDragSnap) {
+	int ySplit = getPosYFirstReturnTrack(project);
+	const trackbasecontainer_t& tracks = mouse.y < ySplit ? project.trackCtr : project.tracksBottom;
+	for (track_t *tr : tracks) {
+		if (!tr->subtracks.size()) {
+			continue;
+		}
+		for (gui_track_automationlane *atr : tr->subtracks) {
+			int top = atr->top();
+			int bottom = atr->bottom();
+			if (mouse.y >= top && mouse.y < bottom) {
+				return atr;
+			}
+		}
+	}
+	return NULL;
+}
 track_t *getTrackFromMouse(project_t& project, ivec2 mouse, bool isDragSnap) {
 	int ySplit = getPosYFirstReturnTrack(project);
 	track_t *t = NULL;

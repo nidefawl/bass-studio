@@ -539,28 +539,42 @@ public:
 		dragMode = -1;
 	}
 	void buttonClicked(guibase* button) override {
+		bool showSubtracks = !m_track->hideAutomation && !m_track->hideTrack;
 		if (button == &hideTrack) {
 			m_track->hideTrack = !m_track->hideTrack;
-			hideTrack.icon = m_track->hideTrack?ICON_ARR_RIGHT:ICON_ARR_DOWN;
-			MainCtrl::getGuiTrackCtr()->layout();
-			MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
 		}
 		if (button == &hideAutomation) {
 			m_track->hideAutomation = !m_track->hideAutomation;
-			hideAutomation.icon = m_track->hideAutomation?ICON_ARR_RIGHT:ICON_ARR_DOWN;
-			MainCtrl::getGuiTrackCtr()->layout();
-			MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
 		}
 		if (button == &addAutomationLane) {
-
+			m_track->hideTrack = false;
+			m_track->hideAutomation = false;
+		}
+		bool showSubtracksAfter = !m_track->hideAutomation && !m_track->hideTrack;
+		if (showSubtracks != showSubtracksAfter) {
+			if (!showSubtracksAfter) {
+				m_track->audio->atl.clear();
+				m_track->audio->saveAutomationLanes(m_track->audio->atl);
+				MainCtrl::getGuiTrackCtr()->removeAllAutomationLanes(m_track);
+				Cursor& cursor = MainCtrl::get()->cursor;
+				if (cursor.inSubTrackRange(m_track->idx, 0)) {
+					fixCursorSubRange(cursor, 0);
+				}
+			} else {
+				m_track->audio->loadAutomationLanes(m_track->audio->atl);
+			}
+		}
+		if (button == &addAutomationLane) {
 			automatable_t* autom = m_track->audio->selectedAutomationCtr;
 			int32_t param = m_track->audio->selectedAutomationParam;
 			if (autom && param > -1) {
 				MainCtrl::getGuiTrackCtr()->addAutomationLane(m_track, autom, param, true);
-				MainCtrl::getGuiTrackCtr()->layout();
-				MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
 			}
 		}
+		hideTrack.icon = m_track->hideTrack?ICON_ARR_RIGHT:ICON_ARR_DOWN;
+		hideAutomation.icon = m_track->hideAutomation?ICON_ARR_RIGHT:ICON_ARR_DOWN;
+		MainCtrl::getGuiTrackCtr()->layout();
+		MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
 //		guictxtmenu_base *popup = NULL;
 //		if (button == &automationSelectDevice) {
 //			popup = new guidropdown_popup(m_track, automationSelectDevice);
@@ -627,7 +641,14 @@ public:
 	}
 	void buttonClicked(guibase* button) override {
 		if (button == &removeLane) {
+			Cursor& cursor = MainCtrl::get()->cursor;
+			int32_t laneIdx = this->al->idx;
 			MainCtrl::getGuiTrackCtr()->removeAutomationLane(this->al);
+			if (cursor.inSubTrackRange(m_track->idx, laneIdx)) {
+				fixCursorSubRange(cursor, m_track->subtracks.size());
+			}
+			MainCtrl::getGuiTrackCtr()->layout();
+			MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
 		}
 	}
 	void render(NVGcontext* vg) {

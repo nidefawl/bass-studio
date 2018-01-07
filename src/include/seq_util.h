@@ -1,5 +1,7 @@
 #pragma once
 #include <algorithm>
+#include <atomic>
+
 #define UNUSED(expr) do { (void)(expr); } while (0)
 
 #define ARR_SIZE(x) (sizeof(x)/sizeof(x[0]))
@@ -93,3 +95,11 @@ template <typename T, typename U>
     inline bool FitsTypeRange(const U value) {
         return value >= std::numeric_limits<T>::min()  && value <= std::numeric_limits<T>::max() ;
     }
+template<typename T>
+void update_maximum(std::atomic<T>& maximum_value, T const& value) noexcept
+{
+    T prev_value = maximum_value;
+    while(prev_value < value &&
+            !maximum_value.compare_exchange_weak(prev_value, value))
+        ;
+}

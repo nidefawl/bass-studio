@@ -168,12 +168,12 @@ void gui_track_automationlane::updateVisibleTrackContents(scaled_grid& grid) {
 }
 
 gui_track_automationlane::gui_track_automationlane(track_t* _track, scaled_grid& _grid, automatable_t* _at, int32_t _param)
-  : guictr_base(), m_track(_track), automation(_track, _grid, at, param), at(_at), param(_param)
+  : guictr_base(), m_track(_track), automation(_track, _grid, at, param, idx), at(_at), param(_param)
 {
 	padding = 0;
 }
 gui_track::gui_track(track_t* _track, scaled_grid& _grid)
-  : guictr_base(), m_track(_track), midi(_track->getMidi()), automation(_track, _grid, m_track->audio->selectedAutomationCtr, m_track->audio->selectedAutomationParam)
+  : guictr_base(), m_track(_track), midi(_track->getMidi()), automation(_track, _grid, m_track->audio->selectedAutomationCtr, m_track->audio->selectedAutomationParam, subtrackIdx)
 {
 	padding = 0;
 }

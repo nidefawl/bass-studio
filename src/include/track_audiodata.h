@@ -139,7 +139,7 @@ struct track_mixer: public automatable_t {
 	automationlane_snapshot_t toRef() {
 		automationlane_snapshot_t ref;
 		ref.type = 1;
-		ref.slot = 0;
+		ref.refId = 0;
 		return ref;
 	}
 };
@@ -158,6 +158,7 @@ struct track_plugins_t {
 	track_mixer mixer;
 	automatable_t* selectedAutomationCtr = NULL;
 	int32_t selectedAutomationParam = -1;
+	std::vector<automationlane_snapshot_t> atl;
 	track_plugins_t(track_t* _track, const samplerate_t& _sampleRate, const uint16_t& _blockSize, int32_t nChannels)
 	: track(_track),
 	  sampleRate(_sampleRate),
@@ -165,6 +166,7 @@ struct track_plugins_t {
 	}
 	~track_plugins_t();
 	vstplugin* getPluginSlot(int32_t idx);
+	vstplugin* getPluginById(int32_t projectGlobalId);
 	vstplugin* setInstrument(vstplugin* _instrument);
 	void removePlugin(vstplugin* _vst);
 	void insertEffect(int32_t idx, vstplugin* _instrument);
@@ -173,4 +175,6 @@ struct track_plugins_t {
 	void onTick(double since);
 	VstEvent_t* reallocEvts(size_t size);
 	void getAutomatableTargets(std::vector<automatable_t*>& targets);
+	void loadAutomationLanes(const std::vector<automationlane_snapshot_t>& atl);
+	void saveAutomationLanes(std::vector<automationlane_snapshot_t>& atl);
 };

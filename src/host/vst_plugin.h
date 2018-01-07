@@ -71,6 +71,7 @@ public:
 	bool isSynth = false;
 	int vstVersion = 0;
 	int uId = 0;
+	int32_t projectGlobalId;
 	vst_window* window = NULL;
 	handles_t* const handle;
 	std::vector<vst_param_category> paramsCategories;
@@ -81,7 +82,7 @@ public:
 	std::vector<String> outputNames;
 	AudioBlock* blockInputs = NULL; // guaranteed to have at least 2 channels
 	AudioBlock* blockOutputs = NULL; // guaranteed to have at least 2 channels
-	vstplugin(handles_t* _handle, String sDir, String sName) : handle(_handle) {
+	vstplugin(handles_t* _handle, int32_t globalId, String sDir, String sName) : projectGlobalId(globalId), handle(_handle) {
 		this->sDir = sDir;
 		this->sName = sName;
 	}

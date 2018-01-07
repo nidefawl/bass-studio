@@ -14,6 +14,7 @@
 #include "guicontainer.h"
 #include "tracktimeline.h"
 #include "mouse.h"
+#include "cursor.h"
 
 #include "platform.h"
 #include "dsp_util.h"
@@ -22,6 +23,8 @@
 
 int32_t getPosYFirstReturnTrack(project_t& project);
 track_t *getTrackFromMouse(project_t& project, ivec2 mouse, bool isDragSnap);
+
+gui_track_automationlane* getSubTrackFromMouse(project_t& project, ivec2 mouse, bool isDragSnap);
 gui_track* createTrackGui(track_t* t, scaled_grid&); // trackcontent.cpp
 gui_track_controls* createTrackGuiMixer(track_t* t); // trackcontrols.cpp
 void drawSeperator(NVGcontext* vg, int32_t seperatorY, ivec2& cs);
@@ -35,6 +38,7 @@ public:
 	scaled_grid& grid;
 	dragdrop_midifile& dragdrop;
 	track_t *trSelected = NULL;
+	gui_track_automationlane* subTrSelected = NULL;
 	clip_dragaction action;
 	std::shared_ptr<clip_clipboard> clipboard;
 	tracklayout_t dragStartLayout;
@@ -116,6 +120,8 @@ public:
 		cursor.selTrackRange = 0;
 		cursor.cursorPos = clicked->time;
 		cursor.cursorTrack = trackClicked->idx;
+		cursor.cursorSubTrack = -1;
+		cursor.selSubTrackRange = 0;
 	}
 
 	gui_track_automationlane* addAutomationLane(track_t* t, automatable_t* at, int32_t paramIdx, bool insertFront);

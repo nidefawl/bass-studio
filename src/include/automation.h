@@ -117,7 +117,7 @@ struct vstparam_automation_t: public automation_t {
 };
 struct automationlane_snapshot_t {
 	int32_t type = -1;
-	int32_t slot = -1;
+	int32_t refId = -1;
 	int32_t paramIdx = -1;
 	int32_t height = 4;
 };

@@ -273,7 +273,7 @@ automated_param_t* vstplugin::getRegisteredAutomation(int32_t idx) {
 automationlane_snapshot_t vstplugin::toRef() {
 	automationlane_snapshot_t ref;
 	ref.type = 0;
-	ref.slot = this->handle->slot;
+	ref.refId = this->projectGlobalId;
 	return ref;
 }
 void vstplugin::getAutomated(std::vector<int32_t>& targets) {

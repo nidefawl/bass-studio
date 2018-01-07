@@ -190,8 +190,10 @@ struct clip_layout_t {
 			time(time), len(len), offsetStart(offsetStart), loopLen(loopLen) {
 	}
 };
+struct track_snapshot_t;
 struct trackstate_t {
-	track_vector tracks;
+//	track_vector tracks;
+	std::vector<track_snapshot_t*> tracks;
 	Cursor cursor;
 	trackstate_t copy();
 	trackstate_t() {
@@ -200,17 +202,8 @@ struct trackstate_t {
 	trackstate_t& operator=(const trackstate_t& ref) = delete;
 	trackstate_t(trackstate_t&& ref) = default;
 	trackstate_t& operator=(trackstate_t&& ref) = default;
-	~trackstate_t() {
-		for (track_t* track : tracks) {
-			deleteTrack(track, NULL);
-		}
-	}
-	void reset() {
-		for (track_t* track : tracks) {
-			deleteTrack(track, NULL);
-		}
-		tracks.clear();
-	}
+	~trackstate_t();
+	void reset();
 };
 class tracklayout_t {
 public:
@@ -267,6 +260,7 @@ struct param_snapshot_t {
 	float val;
 };
 struct plugin_snapshot_t {
+	int32_t projectGlobalId;
 	bool present;
 	int32_t slot;
 	int32_t uId;
@@ -280,7 +274,7 @@ struct track_plugins_snapshot_t {
 	float gain = 1.0f;
 	std::vector<plugin_snapshot_t> plugins;
 	track_plugins_snapshot_t() = default;
-	track_plugins_snapshot_t(const track_t &a);
+	track_plugins_snapshot_t(const track_t &a, bool storePluginChunks);
 };
 struct track_snapshot_t : public tracksettings_t {
 	track_t* trackLoaded = NULL;
@@ -288,7 +282,7 @@ struct track_snapshot_t : public tracksettings_t {
 	std::vector<clip_t> clips;
 	std::vector<automationlane_snapshot_t> automationLanes;
 	track_snapshot_t() = default;
-	track_snapshot_t(track_t* track);
+	track_snapshot_t(track_t* track, bool storePluginChunks);
 };
 class track_t : public tracksettings_t {
 	trackdata_midi_t midi;
@@ -316,6 +310,7 @@ public:
 		audio = NULL;
 	}
 	track_t(const track_snapshot_t &a);
+	track_t &operator =(const track_snapshot_t &a);
 	track_t &operator =(const track_t &a) {
 		midi.deepcopy(a.midi);
 		copy(a);
@@ -338,6 +333,7 @@ public:
 		scrolloffset = 0;
 	}
 	void releaseTrackContent();
+	void loadPluginSnapshot(track_snapshot_t& trackStatic);
 	gui_track* content = NULL;
 	std::vector<gui_track_automationlane*> subtracks;
 	gui_track_controls* mixer = NULL;

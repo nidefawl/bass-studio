@@ -47,6 +47,7 @@ private:
 	scaled_grid& grid;
 	automatable_t*& at;
 	int32_t& param;
+	int32_t& idx;
 	automation_view_t data;
 	std::vector<vec2> cachedShape;
 	std::vector<path_segment_t> segments;
@@ -60,11 +61,13 @@ private:
 	hit_result hitTest(vec2 mpos);
 
 public:
-	gui_track_automation(track_t* _track, scaled_grid& _grid, automatable_t*& _at, int32_t& _param)
-	  : guictr_base(), m_track(_track), grid(_grid), at(_at), param(_param) {
+	gui_track_automation(track_t* _track, scaled_grid& _grid, automatable_t*& _at, int32_t& _param, int32_t& _idx)
+	  : guictr_base(), m_track(_track), grid(_grid), at(_at), param(_param), idx(_idx) {
 		padding = 8;
 	}
 	void setData() {
+		if (dragged.mode != dragmode::drag_none)
+			return;
 		data.targetParam = param;
 		automatable_t* automatable = this->at;
 		automation_t* automation = NULL;

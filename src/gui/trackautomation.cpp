@@ -85,12 +85,13 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 		tick_t tickAt = grid.screenToTick(trackEditorLocal.x);
 		Cursor& cursor = view->cursor;
 		dragged = hitTest(local);
-		if (dragged.mode != dragmode::drag_node && cursor.contains(this->m_track->idx, tickAt)) {
+		if (dragged.mode != dragmode::drag_node && cursor.containsSubtrack(this->m_track->idx, this->idx, tickAt)) {
 			addPointAt(data.points, cursor.getTickBegin());
 			int32_t idx = addPointAt(data.points, cursor.getTickBegin());
 			int32_t idx2 = addPointAt(data.points, cursor.getTickEnd());
 			addPointAt(data.points, cursor.getTickEnd());
-			updateVisibleTrackContents(view->grid);
+//			updateVisibleTrackContents(view->grid);
+			MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
 			dragged = hitTest(local);
 			dragged.mode = dragmode::drag_selection;
 			dragged.idx = idx - segmentDataPtOffset;
@@ -210,7 +211,6 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 		postEdit();
 	}
 	void gui_track_automation::postEdit() {
-		updateVisibleTrackContents(grid);
 		automatable_t* automatable = this->at;
 		automation_t* automation = NULL;
 		if (automatable) {
@@ -219,6 +219,8 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 		if (automation) {
 			automation->points = data.points;
 		}
+//		updateVisibleTrackContents(grid);
+		MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
 	}
 	bool gui_track_automation::trackViewDoubleClick(guitrack_editor* view, MouseEvent& evt) {
 		dragged = {dragmode::drag_none, -1, 0};
@@ -265,7 +267,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 				MainCtrl* ctrl = MainCtrl::get();
 				scaled_grid& grid = ctrl->getGrid();
 				tick_t tick = grid.screenToTickSnap(mpos.x, SNAP_OFF);
-				if (ctrl->cursor.contains(this->m_track->idx, tick)) {
+				if (ctrl->cursor.containsSubtrack(this->m_track->idx, this->idx, tick)) {
 					evt.requestFocus(this);
 					return true;
 				}
