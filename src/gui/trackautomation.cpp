@@ -38,9 +38,6 @@ float ctrToDataScale(float screenX, float ctrHeight) {
 	return (screenX/ctrHeight);
 }
 
-void copyATMNSegment(vstparam_automation_t& in, automation_clipboard_t& out, int32_t srcPos, int32_t len) {
-
-}
 using hit_result = gui_track_automation::hit_result;
 hit_result gui_track_automation::hitTest(vec2 mpos) {
 	if (data.points.empty()) {
@@ -367,38 +364,60 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 		if (!cachedShape.empty()) {
 
 
-			nvgBeginPath(vg);
-			vec2& first = cachedShape[0];
-			nvgMoveTo(vg, first.x, first.y);
 			int len = cachedShape.size();
-			for (int i = 1; i < len; i++) {
+			int i = 0;
+			int skipped = 0;
+			for (; i < len; i++) {
 				vec2& pt = cachedShape[i];
-				nvgLineTo(vg, pt.x, pt.y);
+				if (i > 0 && pt.x > -4) {
+					break;
+				}
 			}
-			nvgStrokeColor(vg, color);
-			nvgStrokeWidth(vg, lineWidth);
-			nvgStroke(vg);
+			int start = i;
+			skipped+=i;
+			if (i < len) {
+				nvgBeginPath(vg);
+				i--;
+				vec2& first = cachedShape[i];
+				nvgMoveTo(vg, first.x, first.y);
+				i++;
+				for (; i < len; i++) {
+					vec2& pt = cachedShape[i];
+					nvgLineTo(vg, pt.x, pt.y);
+					if (i+1 != len && pt.x > sizeInset.x+4) {
+						skipped+=len-i;
+						break;
+					}
+				}
+				int end = i;
+				nvgStrokeColor(vg, color);
+				nvgStrokeWidth(vg, lineWidth);
+				nvgStroke(vg);
 
-			nvgBeginPath(vg);
-			for (int i = 1+segmentDataPtOffset; i < len; i++) {
-				vec2& pt = cachedShape[i];
-				if (currentDragged.mode == dragmode::drag_segment) {
-					if (currentDragged.idx == i || currentDragged.idx+1 == i) {
-						continue;
+				//Lots of room for optimization here (draw texture for dot, or use custom shader)
+				nvgShapeAntiAlias(vg, 0);
+				nvgBeginPath(vg);
+				for (int i = max(1, start); i < min(len-1, end); i++) {
+					vec2& pt = cachedShape[i];
+					if (currentDragged.mode == dragmode::drag_segment) {
+						if (currentDragged.idx == i || currentDragged.idx+1 == i) {
+							continue;
+						}
 					}
-				}
-				if (currentDragged.mode == dragmode::drag_node) {
-					if (currentDragged.idx == i) {
-						continue;
+					if (currentDragged.mode == dragmode::drag_node) {
+						if (currentDragged.idx == i) {
+							continue;
+						}
 					}
+					nvgCircleFastNDivs(vg, pt.x, pt.y, radiusHandle, 6);
 				}
-				nvgCircle(vg, pt.x, pt.y, radiusHandle);
+				nvgFillColor(vg, color);
+				nvgFill(vg);
+				nvgStrokeColor(vg, color2);
+				nvgStrokeWidth(vg, 1.5f);
+				nvgStroke(vg);
+				nvgShapeAntiAlias(vg, 1);
 			}
-			nvgFillColor(vg, color);
-			nvgFill(vg);
-			nvgStrokeColor(vg, color2);
-			nvgStrokeWidth(vg, 1.5f);
-			nvgStroke(vg);
 
 			path_segment_t* segment = getSegmentSafe(currentDragged.idx);
 			if (currentDragged.mode == dragmode::drag_segment && segment) {
@@ -411,8 +430,12 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 				nvgStroke(vg);
 
 				nvgBeginPath(vg);
-				nvgCircle(vg, segment->pt1.x, segment->pt1.y, radiusHandleHL);
-				nvgCircle(vg, segment->pt2.x, segment->pt2.y, radiusHandleHL);
+				if (segment->pt1.x > -4 && segment->pt1.x < sizeInset.x+4.0f) {
+					nvgCircle(vg, segment->pt1.x, segment->pt1.y, radiusHandleHL);
+				}
+				if (segment->pt2.x > -4 && segment->pt2.x < sizeInset.x+4.0f) {
+					nvgCircle(vg, segment->pt2.x, segment->pt2.y, radiusHandleHL);
+				}
 				nvgFillColor(vg, colorHL);
 				nvgFill(vg);
 				nvgStrokeColor(vg, colorHL2);

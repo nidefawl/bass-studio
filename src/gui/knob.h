@@ -154,11 +154,11 @@ public:
 	    }
 
 	    nvgBeginPath(vg);
-	    nvgCircle(vg, cx, cy, r*0.7f);
+	    nvgCircleFast(vg, cx, cy, r*0.7f);
 	    nvgFillColor(vg, g_guiColors[COL_BG_DRKER2]);
 		nvgFill(vg);
 	    nvgBeginPath(vg);
-	    nvgCircle(vg, cx, cy, r*0.7f-1.5f);
+	    nvgCircleFast(vg, cx, cy, r*0.7f-1.5f);
 	    nvgFillColor(vg, c2);
 		nvgFill(vg);
 		vec2 pos(cosf(end), sinf(end));

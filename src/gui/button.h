@@ -111,7 +111,7 @@ public:
 		cen.y += pos.y;
 		int32_t state = getStateFlags();
 		nvgBeginPath(vg);
-		nvgCircle(vg, cen.x, cen.y, radius);
+		nvgCircleFast(vg, cen.x, cen.y, radius);
 		nvgFillColor(vg, theme->getBgColor(state));
 		nvgFill(vg);
 		nvgStrokeColor(vg, theme->getBgStrokeColor(state));
