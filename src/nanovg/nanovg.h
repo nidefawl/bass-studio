@@ -512,6 +512,9 @@ void nvgEllipse(NVGcontext* ctx, float cx, float cy, float rx, float ry);
 
 // Creates new circle shaped sub-path.
 void nvgCircle(NVGcontext* ctx, float cx, float cy, float r);
+// Creates new circle shaped sub-path.
+void nvgCircleFast(NVGcontext* ctx, float cx, float cy, float r);
+void nvgCircleFastNDivs(NVGcontext* ctx, float cx, float cy, float r, int ndivs);
 
 // Fills the current path with current fill style.
 void nvgFill(NVGcontext* ctx);

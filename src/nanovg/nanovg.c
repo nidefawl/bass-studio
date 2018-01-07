@@ -2333,6 +2333,35 @@ void nvgEllipse(NVGcontext* ctx, float cx, float cy, float rx, float ry)
 	nvg__appendCommands(ctx, vals, NVG_COUNTOF(vals));
 }
 
+void nvgCircleFastNDivs(NVGcontext* ctx, float cx, float cy, float r, int ndivs)
+{
+	float a = 0;
+	float dx = 0, dy = 0, x = 0, y = 0;
+	float vals[3 + ndivs*3 + 1];
+	int i, nvals;
+	nvals = 0;
+	for (i = 0; i <= ndivs; i++) {
+		a = NVG_PI*2 * (i/(float)ndivs);
+		dx = nvg__cosf(a);
+		dy = nvg__sinf(a);
+		x = cx + dx*r;
+		y = cy + dy*r;
+
+		if (i == 0) {
+			vals[nvals++] = NVG_MOVETO;
+		} else {
+			vals[nvals++] = NVG_LINETO;
+		}
+		vals[nvals++] = x;
+		vals[nvals++] = y;
+	}
+	vals[nvals++] = NVG_CLOSE;
+	nvg__appendCommands(ctx, vals, nvals);
+}
+void nvgCircleFast(NVGcontext* ctx, float cx, float cy, float r) {
+	int ndiv = nvg__mini(64, (int)ceilf(4*r));
+	nvgCircleFastNDivs(ctx, cx, cy, r, ndiv);
+}
 void nvgCircle(NVGcontext* ctx, float cx, float cy, float r)
 {
 	nvgEllipse(ctx, cx,cy, r,r);
