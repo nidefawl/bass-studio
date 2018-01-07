@@ -225,6 +225,7 @@ public:
 	plugindatabase_t plugindb;
 	tick_t tickJmpFrom = 0;
 	tick_t tickJmpTo = 0;
+	bool fastCircle = false;
 	scaled_grid& getGrid() {
 		return grid;
 	}
@@ -342,6 +343,7 @@ public:
 	}
 	std::shared_ptr<clip_clipboard> copySelection(const Cursor& cursor);
 	void pasteClipboard(clip_clipboard* c, int32_t trackOffset, tick_t tickOffset);
+	void pasteClipboard(clip_clipboard* c, Cursor& cursor);
 	void cutSelection(const Cursor& cursor);
 	void cutIntersecting(track_t* tr, clip_t* mask);
 	void cutIntersecting(track_t* tr, tick_t tickBegin, tick_t tickEnd);

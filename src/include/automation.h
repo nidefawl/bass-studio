@@ -9,45 +9,9 @@ struct automation_point_t {
 	tick_t time;
 	float val;
 };
-inline int32_t indexOfTick(std::vector<automation_point_t>& dataPoints, tick_t tick) {
-	int32_t idx;
-	for (idx = 0; idx < dataPoints.size(); idx++) {
-		automation_point_t& pt = dataPoints[idx];
-		if (pt.time > tick) {
-			break;
-		}
-	}
-	return idx;
-}
-inline int32_t addPointAt(std::vector<automation_point_t>& dataPoints, tick_t tick) {
-	int32_t idx;
-	for (idx = 0; idx < dataPoints.size(); idx++) {
-		automation_point_t& pt = dataPoints[idx];
-		if (pt.time > tick) {
-			break;
-		}
-	}
-	if (!dataPoints.empty()) {
-		float v;
-		if (idx == dataPoints.size()) {
-			v = dataPoints[idx-1].val;
-		} else if (idx == 0) {
-			v = dataPoints[0].val;
-		} else {
-			automation_point_t& pt2 = dataPoints[idx];
-			automation_point_t& pt1 = dataPoints[idx - 1];
-			assert(tick >= pt1.time && tick <= pt2.time);
-			tick_t tickDist = pt2.time - pt1.time;
-			float pr = (tick - pt1.time) / (float) tickDist;
-			v = pt1.val + pr * (pt2.val - pt1.val);
-		}
-		dataPoints.insert(dataPoints.begin() + idx, { tick, v });
-		return idx;
-	} else {
-		dataPoints.insert(dataPoints.begin(), { tick, 0 });
-	}
-	return 0;
-}
+int32_t indexOfTick(std::vector<automation_point_t>& dataPoints, tick_t tick);
+int32_t addPointAt(std::vector<automation_point_t>& dataPoints, tick_t tick);
+void simplifyData(std::vector<automation_point_t>& data);
 struct automation_t {
 	std::vector<automation_point_t> points;
 	virtual ~automation_t() {};
@@ -56,24 +20,9 @@ struct automation_t {
 	virtual bool isActive() {
 		return points.size() != 0;
 	}
-	virtual float getValueAt(tick_t tick) {
-		if (points.size()) {
-			int32_t idx = indexOfTick(points, tick);
-			assert(idx <= points.size());
-			if (idx == points.size())
-				return points.back().val;
-			if (idx > 0) {
-				automation_point_t& pt1 = points[idx-1];
-				automation_point_t& pt2 = points[idx];
-				assert(tick>=pt1.time && tick <= pt2.time);
-				tick_t tickDist = pt2.time-pt1.time;
-				float pr = (tick-pt1.time)/(float)tickDist;
-				return pt1.val+pr*(pt2.val-pt1.val);
-			}
-			return points.front().val;
-		}
-		return getDstValue();
-	}
+	virtual float getValueAt(tick_t tick);
+	void copyRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data);
+	void setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data);
 };
 struct automation_clipboard_t {
 	tick_t start;
@@ -92,7 +41,6 @@ struct automation_view_t: public automation_t {
 	}
 };
 class vstplugin;
-
 struct vstparam_automation_t: public automation_t {
 	int32_t paramIdx = -1;
 	vstplugin* plugin = NULL;

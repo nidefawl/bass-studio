@@ -77,7 +77,7 @@ public:
 		cursorTrack = str;
 		selTrackRange = etr - str;
 		cursorSubTrack = sstr;
-		selTrackRange = estr - sstr;
+		selSubTrackRange = estr - sstr;
 	}
 	Cursor getLeftAligned() {
 		Cursor cursor;
@@ -118,14 +118,42 @@ inline void fixCursorSubRange(Cursor& cursor, int32_t size) {
 		cursor.selSubTrackRange = 0;
 		return;
 	}
-	while (cursor.selSubTrackRange >= size) {
-		cursor.selSubTrackRange--;
+	if (cursor.selSubTrackRange < 0) {
+		while (cursor.selSubTrackRange <= -size) {
+			cursor.selSubTrackRange++;
+		}
+	} else {
+		while (cursor.selSubTrackRange >= size) {
+			cursor.selSubTrackRange--;
+		}
 	}
-	if (cursor.getSubTrackBegin() < 0) {
-		cursor.cursorSubTrack = 0;
+	while (cursor.getSubTrackBegin() < 0) {
+		cursor.cursorSubTrack++;
 	}
 	while (cursor.getSubTrackEnd() >= size) {
 		cursor.cursorSubTrack--;
+	}
+}
+inline void fixCursorTrackRange(Cursor& cursor, int32_t size) {
+	if (!size) {
+		cursor.cursorTrack = -1;
+		cursor.selTrackRange = 0;
+		return;
+	}
+	if (cursor.selTrackRange < 0) {
+		while (cursor.selTrackRange <= -size) {
+			cursor.selTrackRange++;
+		}
+	} else {
+		while (cursor.selTrackRange >= size) {
+			cursor.selTrackRange--;
+		}
+	}
+	while (cursor.getSubTrackBegin() < 0) {
+		cursor.cursorSubTrack--;
+	}
+	while (cursor.getSubTrackEnd() >= size) {
+		cursor.cursorTrack--;
 	}
 }
 

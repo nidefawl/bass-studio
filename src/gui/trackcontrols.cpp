@@ -643,10 +643,10 @@ public:
 		if (button == &removeLane) {
 			Cursor& cursor = MainCtrl::get()->cursor;
 			int32_t laneIdx = this->al->idx;
-			MainCtrl::getGuiTrackCtr()->removeAutomationLane(this->al);
 			if (cursor.inSubTrackRange(m_track->idx, laneIdx)) {
-				fixCursorSubRange(cursor, m_track->subtracks.size());
+				fixCursorSubRange(cursor, m_track->subtracks.size()-1);
 			}
+			MainCtrl::getGuiTrackCtr()->removeAutomationLane(this->al);
 			MainCtrl::getGuiTrackCtr()->layout();
 			MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
 		}

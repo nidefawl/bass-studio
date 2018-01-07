@@ -195,9 +195,7 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 				std::shared_ptr<clip_clipboard> clipboard = MainCtrl::get()->copySelection(cursor);
 				cursor.setLeftAligned();
 				cursor.cursorPos += cursor.getRange();
-				MainCtrl::get()->pasteClipboard(clipboard.get(),
-						cursor.cursorTrack,
-						cursor.cursorPos);
+				MainCtrl::get()->pasteClipboard(clipboard.get(), cursor);
 				grid.makeTickVisible(cursor.cursorPos+clipboard->selRange);
 				handledKeyinput = true;
 				modified = true;
@@ -207,10 +205,9 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 				project.trackList.copyTracks(clipboard->srcTrack, clipboard->srcTrack+clipboard->selTrackRange, resizePreModifyState);
 				resizePreModifyState.cursor = cursor;
 				cursor.setLeftAligned();
-				MainCtrl::get()->cutSelection(cursor);
-				MainCtrl::get()->pasteClipboard(clipboard.get(),
-						cursor.cursorTrack,
-						cursor.getTickBegin());
+				if (clipboard->type == clip_clipboard::ClipboardFull)
+					MainCtrl::get()->cutSelection(cursor);
+				MainCtrl::get()->pasteClipboard(clipboard.get(), cursor);
 				cursor.selTrackRange = clipboard->selTrackRange;
 				cursor.selRange = clipboard->selRange;
 				grid.makeTickVisible(cursor.getTickEnd());
@@ -224,34 +221,60 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 			ivec2 dir;
 			arrowKeyToXY(kevt.keyCode, dir.x, dir.y);
 			if (dir.y) {
-				cursor.setLeftAligned();
-//				cursor.selRange = 0;
-//				cursor.selTrackRange = 0;
-				auto moveMainCursor = [this, &dir](){
-					cursor.cursorTrack = project.trackList.clampTrackIdx(cursor.cursorTrack - dir.y);
-				};
-				auto moveCursor = [this, &dir, &moveMainCursor](){
+				if (isShift(kevt.mods)) {
 					if (cursor.isSubtrackSelection()) {
-						if (!project.trackList.validTrackIdx(cursor.cursorTrack)) {
-							cursor.cursorTrack = 0;
-							cursor.cursorSubTrack = -1;
-							cursor.selSubTrackRange = 0;
+						if (project.trackList.validTrackIdx(cursor.cursorTrack)) {
+							cursor.selSubTrackRange += -dir.y;
+							track_t* tr = project.trackList[cursor.cursorTrack];
+							fixCursorSubRange(cursor, tr->subtracks.size());
+
+						}
+					} else {
+						cursor.selTrackRange += -dir.y;
+						fixCursorTrackRange(cursor, project.trackList.size());
+					}
+				} else {
+
+					cursor.setLeftAligned();
+					//				cursor.selRange = 0;
+					//				cursor.selTrackRange = 0;
+					auto moveMainCursor = [this, &dir](){
+						cursor.cursorTrack = project.trackList.clampTrackIdx(cursor.cursorTrack - dir.y);
+					};
+					auto moveCursor = [this, &dir, &moveMainCursor](){
+						if (cursor.isSubtrackSelection()) {
+							if (!project.trackList.validTrackIdx(cursor.cursorTrack)) {
+								cursor.cursorTrack = 0;
+								cursor.cursorSubTrack = -1;
+								cursor.selSubTrackRange = 0;
+								return;
+							}
+							track_t* tr = project.trackList[cursor.cursorTrack];
+							cursor.cursorSubTrack -= dir.y;
+							fixCursorSubRange(cursor, tr->subtracks.size());
 							return;
 						}
-						track_t* tr = project.trackList[cursor.cursorTrack];
-						cursor.cursorSubTrack -= dir.y;
-						fixCursorSubRange(cursor, tr->subtracks.size());
-						return;
-					}
-					moveMainCursor();
+						moveMainCursor();
 
-				};
-				moveCursor();
+					};
+					moveCursor();
+				}
 			} else if (dir.x) {
+				tick_t tickStBfr = cursor.getTickBegin();
+				tick_t tickEndBfr = cursor.getTickEnd();
 				tick_t timeOffset = dir.x*grid.getTickLength();
-				cursor.selRange = 0;
-				cursor.selTrackRange = 0;
-				cursor.cursorPos = max(0, cursor.cursorPos + timeOffset);
+				if (isShift(kevt.mods)) {
+					cursor.selRange += timeOffset;
+				} else {
+					cursor.selRange = 0;
+					cursor.selTrackRange = 0;
+					cursor.selSubTrackRange = 0;
+					cursor.cursorPos = max(0, cursor.cursorPos + timeOffset);
+				}
+				if (tickStBfr != cursor.getTickBegin())
+					grid.makeTickVisible(cursor.getTickBegin() + timeOffset);
+				if (tickEndBfr != cursor.getTickEnd())
+					grid.makeTickVisible(cursor.getTickEnd() + timeOffset);
 			}
 			handledKeyinput = true;
 //			desc = "Move notes";
@@ -734,7 +757,7 @@ void guitrack_editor::render(NVGcontext* vg) {
 			}
 
 			if (tickEndX > -4.0f && tickBeginX < cs.x + 4.0f) {
-				if (indexOf(project.tracksBottom, trE) > -1) {
+				if (indexOfCtr(project.tracksBottom, trE) > -1) {
 					restore = false;
 					nvgRestore(vg);
 				}

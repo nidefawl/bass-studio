@@ -33,69 +33,6 @@ void deleteTrackContents(trackdata_midi_t* tr, delete_cb *cb);
 void deleteTrack(track_t* tr, delete_cb *cb);
 void deleteClip(clip_t* cl, delete_cb *cb);
 
-inline void simplifyData(std::vector<automation_point_t>& data) {
-	my_printf("simplify\n", 0);
-//	data.erase( std::unique( data.begin(), data.end(), [](automation_point_t const & a, automation_point_t const & b) {
-//
-//		return a.time == b.time && a.val == b.val;
-//	} ), data.end() );
-
-	//remove multiple points on same time
-	{
-
-		auto first = data.begin();
-		auto last = data.end();
-	    if (first != last) {
-	        for(auto i = first; i != last; ++i) {
-	        	tick_t firstTime = (*i).time;
-	        	my_printf("copy %d to %d\n", i-data.begin(), first-data.begin());
-	            *first++ = std::move(*i);
-				if (i + 1 != last) {
-					auto j = i + 2;
-					for (; j < last; ++j) {
-						if (firstTime != (*j).time) {
-							break;
-						}
-					}
-					my_printf("skip %d values on equal time\n", (j - 2) - i);
-					i = j - 2;
-				}
-	        }
-			auto first1 = data.begin();
-			my_printf("erase val[%d] to %d on equal time\n", first - first1, last - first1);
-			if (first != last)
-	        data.erase(first, last);
-	    }
-	}
-    {
-
-        //remove multiple consecutive points with same value
-		auto first = data.begin();
-    	auto last = data.end();
-        if (first != last) {
-            for(auto i = first; i != last; ++i) {
-            	float firstVal = (*i).val;
-            	my_printf("copy vals %d to %d\n", i-data.begin(), first-data.begin());
-                *first++ = std::move(*i);
-                
-				if (i + 1 != last) {
-					auto j = i + 2;
-					for (; j < last; ++j) {
-						if (firstVal != (*j).val || firstVal != (*(j - 1)).val) {
-							break;
-						}
-					}
-					my_printf("skip %d values\n", (j - 2) - i);
-					i = j - 2;
-				}
-            }
-			auto first1 = data.begin();
-			my_printf("erase val[%d] to %d\n", first - first1, last - first1);
-			if (first != last)
-            data.erase(first, last);
-        }
-    }
-}
 
 class trackdata_midi_t {
 public:

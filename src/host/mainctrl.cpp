@@ -1003,6 +1003,11 @@ bool MainCtrl::processGlobalKeyevent(KeyEvent& event) {
 		}
 	}
 	if (event.type != KeyEventType::K_RELEASE) {
+		if (event.keyCode == KEY_F2) {
+			fastCircle=!fastCircle;
+			my_printf("fastcircle: %d\n", fastCircle);
+			return true;
+		}
 		if (event.keyCode == KEY_SPACE) {
 			if (isPlaying()) {
 				stopPlaying();
@@ -1457,28 +1462,83 @@ void copyClipsInRange(trackdata_midi_t& in, track_clipboard_t& out, int32_t srcP
 //	}
 //	out->sortClips();
 }
+void MainCtrl::pasteClipboard(clip_clipboard* clipboard, Cursor& cursor) {
+	if (clipboard->type == clip_clipboard::ClipboardFull) {
+		if (cursor.isSubtrackSelection())
+			return;
+		pasteClipboard(clipboard, cursor.cursorTrack, cursor.getTickBegin());
+	} else  if (clipboard->type == clip_clipboard::ClipboardAutomation) {
+		if (!cursor.isSubtrackSelection())
+			return;
+		int32_t tickBegin = cursor.getTickBegin();
+		int32_t tickLen = clipboard->selRange;
+		int32_t trackBegin = cursor.getTrackBegin();
+		if (trackList.validTrackIdx(trackBegin)) {
+			track_t* tr = trackList[trackBegin];
+			int32_t subTrackOffset = cursor.getSubTrackBegin();
+			for (int i = 0; i <= clipboard->selTrackRange; i++) {
+				int32_t subTrackIdx = subTrackOffset + i;
+				if (subTrackIdx < 0 || subTrackIdx >= tr->subtracks.size())
+					continue;
+				gui_track_automationlane* subtrack = tr->subtracks[subTrackIdx];
+				std::vector<automation_point_t>& data = clipboard->automationLanes[i];
+				automatable_t* automatable = subtrack->at;
+				automation_t* automation = NULL;
+				if (automatable) {
+					automation = automatable->getAutomation(subtrack->param);
+				}
+				if (automation) {
+					automation->setRange(tickBegin, tickBegin+tickLen, data);
+				}
+
+			}
+		}
+	}
+}
 shared_ptr<clip_clipboard> MainCtrl::copySelection(const Cursor& _cursor) {
 	int32_t tickBegin = _cursor.getTickBegin();
 	int32_t tickEnd = _cursor.getTickEnd();
 	int32_t trackBegin = _cursor.getTrackBegin();
 	int32_t trackEnd = _cursor.getTrackEnd();
-
+	int32_t trackSubBegin = _cursor.getSubTrackBegin();
+	int32_t trackSubEnd = _cursor.getSubTrackEnd();
 	shared_ptr<clip_clipboard> clipboard = make_shared<clip_clipboard>();
 	clipboard->srcPos = tickBegin;
-//	clipboard->dstPos = tickBegin;
 	clipboard->srcTrack = trackBegin;
-//	clipboard->dstTrack = trackBegin;
-	clipboard->selTrackRange = trackEnd - trackBegin;
 	clipboard->selRange = tickEnd - tickBegin;
-	for (int i = 0; i <= clipboard->selTrackRange; i++) {
-		track_clipboard_t trackClipboard;
-		if (trackList.validTrackIdx(trackBegin + i)) {
-			track_t* tr = trackList[trackBegin + i];
-			if (tr->type == TRACK_TYPE_MIDI) {
-				copyClipsInRange(tr->getMidi(), trackClipboard, clipboard->srcPos, 0, clipboard->selRange);
+	if (_cursor.isSubtrackSelection()) {
+		clipboard->selTrackRange = trackSubEnd - trackSubBegin;
+		clipboard->type = clip_clipboard::ClipboardAutomation;
+		if (trackList.validTrackIdx(trackBegin)) {
+			track_t* tr = trackList[trackBegin];
+			for (int i = trackSubBegin; i <= trackSubEnd; i++) {
+				gui_track_automationlane* subtrack = tr->subtracks[i];
+				automatable_t* automatable = subtrack->at;
+				automation_t* automation = NULL;
+				if (automatable) {
+					automation = automatable->getAutomation(subtrack->param);
+				}
+
+				std::vector<automation_point_t> data;
+				if (automation)
+				automation->copyRange(tickBegin, tickEnd, data);
+				clipboard->automationLanes.push_back(std::move(data));
 			}
 		}
-		clipboard->tracks.push_back(make_shared<track_clipboard_t>(move(trackClipboard)));
+	} else {
+		clipboard->selTrackRange = trackEnd - trackBegin;
+		clipboard->selRange = tickEnd - tickBegin;
+		clipboard->type = clip_clipboard::ClipboardFull;
+		for (int i = 0; i <= clipboard->selTrackRange; i++) {
+			track_clipboard_t trackClipboard;
+			if (trackList.validTrackIdx(trackBegin + i)) {
+				track_t* tr = trackList[trackBegin + i];
+				if (tr->type == TRACK_TYPE_MIDI) {
+					copyClipsInRange(tr->getMidi(), trackClipboard, clipboard->srcPos, 0, clipboard->selRange);
+				}
+			}
+			clipboard->tracks.push_back(make_shared<track_clipboard_t>(move(trackClipboard)));
+		}
 	}
 	return clipboard;
 }

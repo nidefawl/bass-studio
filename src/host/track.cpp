@@ -440,18 +440,6 @@ void trackdata_midi_t::getNotesInRange(tick_t start, tick_t end, tick_t cutStart
 	}
 
 }
-float vstparam_automation_t::getDstValue() {
-	if (plugin) {
-		return plugin->getParamValue(paramIdx);
-	}
-	return dummy;
-}
-void vstparam_automation_t::setDstValue(float f) {
-	dummy = f;
-	if (plugin) {
-		return plugin->setParamValue(paramIdx, f);
-	}
-}
 
 vstplugin* track_plugins_t::getPluginSlot(int32_t idx) {
 	if (idx == 0) {

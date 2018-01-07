@@ -84,7 +84,7 @@ template<typename C1, typename V1>
 }
 template<typename C1, typename V1>
   inline int32_t
-  indexOf(C1& a, const V1& b){
+  indexOfCtr(C1& a, const V1& b){
 	auto it = std::find(a.begin(), a.end(), b);
 	if (it != a.end()) {
 		return static_cast<int32_t>(it - a.begin());
