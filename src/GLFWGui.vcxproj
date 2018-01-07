@@ -153,7 +153,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>E:\dev\libs\glfw_x64_vc141_dbg\include;E:\dev\libs\glad\include\;E:\dev\libs\nanovg;E:\dev\libs\glm\;$(ProjectDir)/include;E:\dev\libs\cereal;E:\dev\libs\PortAudio_190600\src\os\win;E:\dev\libs\PortAudio_190600\src\common;E:\dev\libs\PortAudio_190600\include;E:\dev\libs\ASIOSDK2.3\common;E:\dev\libs\ASIOSDK2.3\host;E:\dev\libs\ASIOSDK2.3\host\pc;E:\dev\libs\SQLiteCpp_msvc_x64_debug\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>E:\dev\libs\glfw_x64_vc141_dbg\include;E:\dev\libs\glad\include\;E:\dev\libs\glm\;$(ProjectDir)/include;E:\dev\libs\cereal;E:\dev\libs\PortAudio_190600\src\os\win;E:\dev\libs\PortAudio_190600\src\common;E:\dev\libs\PortAudio_190600\include;E:\dev\libs\ASIOSDK2.3\common;E:\dev\libs\ASIOSDK2.3\host;E:\dev\libs\ASIOSDK2.3\host\pc;E:\dev\libs\SQLiteCpp_msvc_x64_debug\include;$(ProjectDir)/nanovg</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>VST_FORCE_DEPRECATED=0;PA_USE_ASIO=1;PA_USE_DS=1;WIN32;_WINDOWS;_DEBUG;_CRT_SECURE_NO_WARNINGS;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
       <LanguageStandard>stdcpp17</LanguageStandard>
@@ -223,7 +223,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>E:\dev\libs\glfw_x64_vc141_rel\include;E:\dev\libs\glad\include\;E:\dev\libs\nanovg;E:\dev\libs\glm\;$(ProjectDir)/include;E:\dev\libs\cereal;E:\dev\libs\PortAudio_190600\src\os\win;E:\dev\libs\PortAudio_190600\src\common;E:\dev\libs\PortAudio_190600\include;E:\dev\libs\ASIOSDK2.3\common;E:\dev\libs\ASIOSDK2.3\host;E:\dev\libs\ASIOSDK2.3\host\pc;E:\dev\libs\SQLiteCpp_msvc_x64_release\include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>E:\dev\libs\glfw_x64_vc141_rel\include;E:\dev\libs\glad\include\;E:\dev\libs\glm\;$(ProjectDir)/include;E:\dev\libs\cereal;E:\dev\libs\PortAudio_190600\src\os\win;E:\dev\libs\PortAudio_190600\src\common;E:\dev\libs\PortAudio_190600\include;E:\dev\libs\ASIOSDK2.3\common;E:\dev\libs\ASIOSDK2.3\host;E:\dev\libs\ASIOSDK2.3\host\pc;E:\dev\libs\SQLiteCpp_msvc_x64_release\include;$(ProjectDir)/nanovg</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>VST_FORCE_DEPRECATED=0;PA_USE_ASIO=1;PA_USE_DS=1;WIN32;_WINDOWS;_NDEBUG;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions);NOMINMAX</PreprocessorDefinitions>
       <LanguageStandard>stdcpp14</LanguageStandard>
       <RuntimeTypeInfo>true</RuntimeTypeInfo>
@@ -245,7 +245,6 @@
     <ClCompile Include="E:\dev\libs\ASIOSDK2.3\host\asiodrivers.cpp" />
     <ClCompile Include="E:\dev\libs\ASIOSDK2.3\host\pc\asiolist.cpp" />
     <ClCompile Include="E:\dev\libs\glad\src\glad.c" />
-    <ClCompile Include="E:\dev\libs\nanovg\nanovg.c" />
     <ClCompile Include="E:\dev\libs\PortAudio_190600\src\common\pa_allocation.c" />
     <ClCompile Include="E:\dev\libs\PortAudio_190600\src\common\pa_converters.c" />
     <ClCompile Include="E:\dev\libs\PortAudio_190600\src\common\pa_cpuload.c" />
@@ -293,6 +292,7 @@
     <ClCompile Include="midi\MidiFile.cpp" />
     <ClCompile Include="midi\MidiMessage.cpp" />
     <ClCompile Include="midi\Options.cpp" />
+    <ClCompile Include="nanovg\nanovg.c" />
     <ClCompile Include="platform\win\DropTarget.cpp" />
     <ClCompile Include="platform\win\hires_timer.cpp" />
     <ClCompile Include="platform\win\menu_win32.cpp" />
@@ -388,6 +388,12 @@
     <ClInclude Include="midi\MidiFile.h" />
     <ClInclude Include="midi\MidiMessage.h" />
     <ClInclude Include="midi\Options.h" />
+    <ClInclude Include="nanovg\fontstash.h" />
+    <ClInclude Include="nanovg\nanovg.h" />
+    <ClInclude Include="nanovg\nanovg_gl.h" />
+    <ClInclude Include="nanovg\nanovg_gl_utils.h" />
+    <ClInclude Include="nanovg\stb_image.h" />
+    <ClInclude Include="nanovg\stb_truetype.h" />
     <ClInclude Include="platform\win\DropTarget.h" />
     <ClInclude Include="platform\win\winheaders.h" />
     <ClInclude Include="test\tests.h" />

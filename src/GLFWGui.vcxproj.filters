@@ -100,9 +100,6 @@
     <ClCompile Include="E:\dev\libs\glad\src\glad.c">
       <Filter>ext</Filter>
     </ClCompile>
-    <ClCompile Include="E:\dev\libs\nanovg\nanovg.c">
-      <Filter>ext</Filter>
-    </ClCompile>
     <ClCompile Include="host\main.cpp" />
     <ClCompile Include="host\plugindatabase.cpp" />
     <ClCompile Include="gui\guicolors.cpp" />
@@ -114,6 +111,7 @@
     <ClCompile Include="gui\trackcontrols.cpp" />
     <ClCompile Include="gui\trackctr.cpp" />
     <ClCompile Include="file\fileloader.cpp" />
+    <ClCompile Include="nanovg\nanovg.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\config.h" />
@@ -209,6 +207,12 @@
     <ClInclude Include="include\automation.h" />
     <ClInclude Include="include\clipboard.h" />
     <ClInclude Include="include\leak_detect.h" />
+    <ClInclude Include="nanovg\fontstash.h" />
+    <ClInclude Include="nanovg\nanovg.h" />
+    <ClInclude Include="nanovg\nanovg_gl.h" />
+    <ClInclude Include="nanovg\nanovg_gl_utils.h" />
+    <ClInclude Include="nanovg\stb_image.h" />
+    <ClInclude Include="nanovg\stb_truetype.h" />
   </ItemGroup>
   <ItemGroup>
     <Font Include="OpenSans-Regular.ttf" />
