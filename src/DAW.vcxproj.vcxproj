@@ -29,8 +29,9 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>
     <ProjectGuid>{1019B723-4FCB-4D38-BBAF-65852BBE5530}</ProjectGuid>
-    <RootNamespace>GLFWGui</RootNamespace>
+    <RootNamespace>DAW_MS</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
+    <ProjectName>DAW</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -99,18 +100,18 @@
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);</LibraryPath>
     <IntDir>$(SolutionDir)\..\build\msvc\$(Platform)\$(Configuration)\</IntDir>
     <OutDir>$(SolutionDir)\..\run\</OutDir>
-    <TargetName>daw</TargetName>
+    <TargetName>daw_msvc_dbg</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Test|x64'">
     <LibraryPath>$(VC_LibraryPath_x64);$(WindowsSDK_LibraryPath_x64);</LibraryPath>
     <IntDir>$(SolutionDir)\..\build\msvc\$(Platform)\$(Configuration)\</IntDir>
     <OutDir>$(SolutionDir)\..\run\</OutDir>
-    <TargetName>daw</TargetName>
+    <TargetName>daw_msvc_test</TargetName>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IntDir>$(SolutionDir)\..\build\msvc\$(Platform)\$(Configuration)\</IntDir>
     <OutDir>$(SolutionDir)\..\run\</OutDir>
-    <TargetName>daw</TargetName>
+    <TargetName>daw_msvc_rel</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -276,6 +277,7 @@
     <ClCompile Include="gui\trackcontrols.cpp" />
     <ClCompile Include="gui\trackctr.cpp" />
     <ClCompile Include="gui\trackeditor.cpp" />
+    <ClCompile Include="host\automation.cpp" />
     <ClCompile Include="host\clip.cpp" />
     <ClCompile Include="host\keyboard.cpp" />
     <ClCompile Include="host\main.cpp" />
@@ -283,6 +285,7 @@
     <ClCompile Include="host\popupctrl.cpp" />
     <ClCompile Include="host\renderresources.cpp" />
     <ClCompile Include="host\track.cpp" />
+    <ClCompile Include="host\trackcontainers.cpp" />
     <ClCompile Include="host\vst_host.cpp" />
     <ClCompile Include="host\vst_plugin.cpp" />
     <ClCompile Include="host\vst_window.cpp" />

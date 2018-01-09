@@ -112,6 +112,8 @@
     <ClCompile Include="gui\trackctr.cpp" />
     <ClCompile Include="file\fileloader.cpp" />
     <ClCompile Include="nanovg\nanovg.c" />
+    <ClCompile Include="host\automation.cpp" />
+    <ClCompile Include="host\trackcontainers.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\config.h" />
