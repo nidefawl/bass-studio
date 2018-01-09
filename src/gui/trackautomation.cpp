@@ -1,5 +1,8 @@
 #include "trackautomation.h"
 
+#include "gui.h"
+#include "cursor.h"
+#include "event.h"
 #include "seq_math.h"
 #include "color_util.h"
 #include "track.h"
@@ -7,6 +10,7 @@
 #include "grid.h"
 #include "guicontainer.h"
 #include "trackctr.h"
+#include "mainctrl.h"
 #include "automation.h"
 #include <glm/geometric.hpp>
 #include <glm/vec2.hpp>
