@@ -7,7 +7,6 @@
 #include "vst_plugin.h"
 #include "fileio.h"
 #include "track.h"
-#include "track_audiodata.h"
 #include "mainctrl.h"
 
 #include "../vst_sdk_2.4/aeffectx.h"
@@ -24,24 +23,28 @@
 #include <stdlib.h>
 #include <windows.h>
 #include <memory.h>
+#include "track_impl.h"
+
 #include <mutex>
 #ifdef __MINGW32__
 #include "../threads/mingw.mutex.h"
 #endif
 #include "leak_detect.h"
 
-//#define DBG_PRINT_CALLBACKS
+#define DBG_PRINT_CALLBACKS
 #ifdef DBG_PRINT_CALLBACKS
 #define MAX_LEN_MY_DBF 512
-void cbPrintf(vstplugin* plugin, const char *fmt, ...);
-void cbPrintf(vstplugin* plugin, const char *fmt, ...) {
-	char buf[MAX_LEN_MY_DBF];
-	va_list args;
-	va_start(args, fmt);
-	vsnprintf(buf, MAX_LEN_MY_DBF - 1, fmt, args);
-	va_end(args);
-
-	my_printf("%s %s", !plugin?"UNKNOWN":StringAsCStr(plugin->sName), buf);
+bool filterOpCode(int opcode) {
+//	return opcode == audioMasterUpdateDisplay;
+	return 1;
+}
+void cbPrintf(vstplugin* plugin, const char *fmt, int index, int opcode, int value);
+void cbPrintf(vstplugin* plugin, const char *fmt, int index, int opcode, int value) {
+	if (filterOpCode(opcode)) {
+		char buf[MAX_LEN_MY_DBF];
+		snprintf(buf, MAX_LEN_MY_DBF - 1, fmt, index, opcode, value);
+		my_printf("%s %s", !plugin?"UNKNOWN":StringAsCStr(plugin->sName), buf);
+	}
 }
 #else
 void emptyPrinft(vstplugin* plugin, const char *fmt, ...) {
@@ -131,10 +134,10 @@ VstIntPtr VSTCALLBACK audioMaster(AEffect* effect, VstInt32 opcode, VstInt32 ind
 		return 0;
 	case audioMasterGetCurrentProcessLevel:
 //		cbPrintf(plugin, "audioMasterGetCurrentProcessLevel %d %d %d\n", index, opcode, value);
-		return VstProcessLevels::kVstProcessLevelRealtime;
+		return VstProcessLevels::kVstProcessLevelUnknown;
 	case audioMasterGetAutomationState:
 		cbPrintf(plugin, "audioMasterGetAutomationState %d %d %d\n", index, opcode, value);
-		return kVstAutomationOff;
+		return kVstAutomationReadWrite;
 	case audioMasterOfflineStart:
 		cbPrintf(plugin, "audioMasterOfflineStart %d %d %d\n", index, opcode, value);
 		return 0;
@@ -406,7 +409,7 @@ void vsthost::updateTime(int32_t samplePos, tick_t pos, playback_state state) {
 void vsthost::sendNotesOff(vstplugin* plugin) {
 	handles_t* handles = plugin->handle;
 	if (handles && handles->tr_plugins) {
-		track_plugins_t* audio = handles->tr_plugins;
+		track_impl_t* audio = handles->tr_plugins;
 		if (audio) {
 			audio->sendNotesOff(project.tempo100, 0);
 		}
@@ -453,8 +456,12 @@ int32_t vsthost::processPlayback(int32_t sample, double posDouble, playback_stat
 #endif
 		tick_t pos = floor(posDouble);
 		updateTime(sample, pos, state);
-		for (vstplugin* plugin : this->list) {
-			plugin->updateAutomatedParameters(pos);
+		for (track_t* tr : ctrl->trackList) {
+			std::vector<automatable_t*> targets;
+			tr->audio->getAutomatableTargets(targets);
+			for (automatable_t* at : targets) {
+				at->updateAutomatedParameters(pos);
+			}
 		}
 		int32_t samplePosBlockEnd = sample + lBlockSize;
 		int32_t tickBlockEnd = floor(posDouble + ticksPerBlock);
@@ -464,7 +471,7 @@ int32_t vsthost::processPlayback(int32_t sample, double posDouble, playback_stat
 		 */
 		for (track_t* trackMaster : ctrl->trackMasterCtr) {
 			assert(trackMaster->audio);
-			track_plugins_t* audioMaster = trackMaster->audio;
+			track_impl_t* audioMaster = trackMaster->audio;
 //			if (!audioMaster) {
 //				trackMaster->audio = audioMaster = vsthost::getInstance()->createAudio(trackMaster);
 //			}
@@ -478,7 +485,7 @@ int32_t vsthost::processPlayback(int32_t sample, double posDouble, playback_stat
 		 * Process all normal channels
 		 */
 		for (track_t* track : ctrl->trackCtr) {
-			track_plugins_t* audioTrack = track->audio;
+			track_impl_t* audioTrack = track->audio;
 			if (!audioTrack) {
 				track->audio = audioTrack = vsthost::getInstance()->createAudio(track);
 			}
@@ -499,13 +506,13 @@ int32_t vsthost::processPlayback(int32_t sample, double posDouble, playback_stat
 			/* Processes a whole plugin chain */
 			processAudio(audioTrack, &audioTrack->input, &audioTrack->output, lBlockSize);
 			for (track_t* trackMaster : ctrl->trackMasterCtr) {
-				track_plugins_t* audioMaster = trackMaster->audio;
+				track_impl_t* audioMaster = trackMaster->audio;
 				audioMaster->input.addFrom(&audioTrack->output);
 			}
 		}
 
 		for (track_t* trackMaster : ctrl->trackMasterCtr) {
-			track_plugins_t* audioMaster = trackMaster->audio;
+			track_impl_t* audioMaster = trackMaster->audio;
 			processAudio(audioMaster, &audioMaster->input, &audioMaster->output, lBlockSize);
 		}
 
@@ -521,7 +528,7 @@ int32_t vsthost::processPlayback(int32_t sample, double posDouble, playback_stat
 		dsp_util::fillSilence(bufferWrite->output->buf, lBlockSize);
 		AudioBlock* bufOut = bufferWrite->output;
 		for (track_t* trackMaster : ctrl->trackMasterCtr) {
-			track_plugins_t* audioMaster = trackMaster->audio;
+			track_impl_t* audioMaster = trackMaster->audio;
 			AudioBlock* bufMaster = &audioMaster->output;
 			for (int n = 0; n < OUTPUT_CHANNELS; n++) {
 				float* channelWriteBuffer = bufOut->buf[n];
@@ -534,7 +541,7 @@ int32_t vsthost::processPlayback(int32_t sample, double posDouble, playback_stat
 		}
 		/* Update all track meters */
 		for (track_t* track : ctrl->trackList) {
-			track_plugins_t* trAudio = track->audio;
+			track_impl_t* trAudio = track->audio;
 			if (!trAudio)
 				continue;
 			trAudio->meter.update(&trAudio->output);
@@ -554,7 +561,7 @@ int32_t vsthost::processPlayback(int32_t sample, double posDouble, playback_stat
 		}
 	}
 	for (track_t* tr : ctrl->trackList) {
-		track_plugins_t* trAudio = tr->audio;
+		track_impl_t* trAudio = tr->audio;
 		if (trAudio) {
 			tr->audio->onTick(since);
 		}
@@ -585,7 +592,7 @@ void mulGain(AudioBlock* block, float gain) {
 		}
 	}
 }
-void vsthost::processAudio(track_plugins_t* channel, AudioBlock* input, AudioBlock* output, unsigned long samples) {
+void vsthost::processAudio(track_impl_t* channel, AudioBlock* input, AudioBlock* output, unsigned long samples) {
 //	float** bufOut = outputs;
 //	float** bufIn = inputs;
 	int count = 0;
@@ -636,9 +643,20 @@ void vsthost::processAudio(track_plugins_t* channel, AudioBlock* input, AudioBlo
 	//   If a plugin runs mono inputs or outputs we need to handle this manually here
 	output->copyFrom(input);
 
-	float gain = dsp_util::clampReadGain(channel->mixer.gain);
+	float gain = dsp_util::clampReadGain(channel->mixer.getGain());
 	mulGain(output, gain);
 
+}
+void vsthost::updateDisplay() {
+	int count = list.size();
+	for (int i = 0; i < count; ++i)
+	{
+		vstplugin *current = list[i];
+		if (current) {
+//			current->dispatch(effEditIdle);
+			current->updateDisplay();
+		}
+	}
 }
 bool vsthost::onTick() {
 	int count = list.size();
@@ -650,6 +668,9 @@ bool vsthost::onTick() {
 			current->bInEditIdle = true;
 			current->dispatch(effEditIdle);
 			current->bInEditIdle = false;
+//			if (current->window) {
+//				current->updateDisplay();
+//			}
 			iDispatched++;
 		}
 	}
@@ -859,10 +880,10 @@ vstplugin::~vstplugin() {
 		delete blockOutputs;
 	delete handle;
 }
-track_plugins_t* vsthost::createAudio(track_t* track) {
-	return new track_plugins_t(track, this->lSampleRate, this->lBlockSize, OUTPUT_CHANNELS);
+track_impl_t* vsthost::createAudio(track_t* track) {
+	return new track_impl_t(track, this->lSampleRate, this->lBlockSize, OUTPUT_CHANNELS);
 }
-bool vsthost::movePlugin(track_t* dstTr, track_plugins_t* trp, int32_t src, int32_t dst) {
+bool vsthost::movePlugin(track_t* dstTr, track_impl_t* trp, int32_t src, int32_t dst) {
 	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 	assert((src==0?src==dst:(src>0&&dst>0)));
 	my_printf("move from %s:%d to %s:%d\n", StringAsCStr(dstTr->name), src, StringAsCStr(trp->track->name), dst);
@@ -888,7 +909,7 @@ bool vsthost::movePlugin(track_t* dstTr, track_plugins_t* trp, int32_t src, int3
 	}
 	return true;
 }
-bool vsthost::swapEffects(track_plugins_t* trp, int32_t src, int32_t dst) {
+bool vsthost::swapEffects(track_impl_t* trp, int32_t src, int32_t dst) {
 	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 	assert(src > 0 && dst > 0);
 	src--;
@@ -903,7 +924,7 @@ bool vsthost::swapEffects(track_plugins_t* trp, int32_t src, int32_t dst) {
 	trp->effects[dst]->handle->slot = dst+1;
 	return true;
 }
-bool vsthost::insertNewPlugin(track_plugins_t* trp, vstplugin* plugin, int32_t dst) {
+bool vsthost::insertNewPlugin(track_impl_t* trp, vstplugin* plugin, int32_t dst) {
 	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 	if (plugin->isSynth) {
 		vstplugin* old = trp->setInstrument(plugin);

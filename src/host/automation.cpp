@@ -107,7 +107,7 @@ float automation_t::getValueAt(tick_t tick) {
 		}
 		return points.front().val;
 	}
-	return getDstValue();
+	return 0.5f;
 }
 void automation_t::copyRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data) {
 	if (points.size()) {
@@ -146,7 +146,7 @@ void automation_t::setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automa
 			break;
 		}
 	}
-	if (!pointsTmp.empty() && pointsTmp.back().time != tickBegin) {
+	if (!pointsTmp.empty() && !data.empty() && pointsTmp.back().time != tickBegin) {
 		automation_point_t ptStart{tickBegin, getValueAt(tickBegin)};
 		pointsTmp.push_back(std::move(ptStart));
 	}
@@ -155,7 +155,7 @@ void automation_t::setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automa
 		pt.time += tickBegin;
 		pointsTmp.push_back(std::move(pt));
 	}
-	if (!pointsTmp.empty()) {
+	if (!pointsTmp.empty() && !data.empty()) {
 		automation_point_t ptEnd{tickEnd, getValueAt(tickEnd)};
 		pointsTmp.push_back(std::move(ptEnd));
 	}
@@ -177,6 +177,7 @@ float vstparam_automation_t::getDstValue() {
 	return dummy;
 }
 void vstparam_automation_t::setDstValue(float f) {
+	active = false;
 	dummy = f;
 	if (plugin) {
 		return plugin->setParamValue(paramIdx, f);

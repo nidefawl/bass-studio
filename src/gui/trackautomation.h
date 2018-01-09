@@ -65,6 +65,8 @@ public:
 	  : guictr_base(), m_track(_track), grid(_grid), at(_at), param(_param), idx(_idx) {
 		padding = 8;
 	}
+	float getDstVal();
+	void setDstVal(float f);
 	void setData() {
 		if (dragged.mode != dragmode::drag_none)
 			return;

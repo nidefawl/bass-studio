@@ -1,16 +1,23 @@
-#include "track.h"
-#include "trackcontent.h"
-#include "trackctr.h"
-#include "guicontextmenu.h"
-#include "button.h"
-#include "event.h"
-#include "../host/vst_plugin.h"
-#include "track_audiodata.h"
-#include "trackautomation.h"
-#include "dropdown.h"
-#include "leak_detect.h"
-#include <glm/geometric.hpp>
+
 #include <glm/vec2.hpp>
+#include <glm/geometric.hpp>
+
+
+#include "track.h"
+#include "trackautomation.h"
+#include "track_impl.h"
+#include "../host/vst_plugin.h"
+
+#include "event.h"
+#include "button.h"
+#include "dropdown.h"
+#include "guicontextmenu.h"
+#include "trackctr.h"
+#include "trackcontent.h"
+
+
+#include "leak_detect.h"
+
 using glm::vec2;
 using glm::ivec2;
 

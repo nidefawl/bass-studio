@@ -89,6 +89,9 @@ public:
 	}
 	tick_t getTickLength();
 	void notifyChange();
+	int32_t getOffset() {
+		return this->offset;
+	}
 	void setZoom(float zoom);
 	void setOffset(float offset);
 	double toObjSpace(double screenx) {

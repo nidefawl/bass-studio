@@ -19,7 +19,7 @@ public:
 			x += rowHeight+spacing;
 		}
 
-		if (ctrl->guiFocused == this) {
+		if (ctrl->isCtrOrChildFocused(this)) {
 			nvgBeginPath(vg);
 			nvgRect(vg, pos.x, pos.y, size.x, size.y);
 			nvgFillColor(vg, g_guiColors[COL_BG_DRKER]);
@@ -76,6 +76,9 @@ public:
 	~gui_list() {
 		remove(&scrollbar);
 		destroyGuis();
+	}
+	void setRowHeight(int h) {
+		rowHeight = h;
 	}
 	int32_t getContentHeight() override {
 		return rowHeight * (int32_t)listGuis.size();

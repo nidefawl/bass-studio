@@ -21,7 +21,7 @@
 
 
 const char* TrackTypeToName(int type);
-struct track_plugins_t;
+struct track_impl_t;
 class gui_track;
 class gui_track_automationlane;
 class gui_track_controls;
@@ -196,9 +196,14 @@ struct param_snapshot_t {
 	int32_t idx;
 	float val;
 };
+struct track_params_snapshot_t {
+	std::vector<param_snapshot_t> params;
+	std::vector<automation_view_t> automatedParams;
+};
 struct plugin_snapshot_t {
 	int32_t projectGlobalId;
 	bool present;
+	bool enabled;
 	int32_t slot;
 	int32_t uId;
 	String name;
@@ -207,15 +212,15 @@ struct plugin_snapshot_t {
 	std::vector<param_snapshot_t> params;
 	std::vector<automation_view_t> automatedParams;
 };
-struct track_plugins_snapshot_t {
-	float gain = 1.0f;
+struct track_impl_snapshot_t {
+	track_params_snapshot_t trackParams;
 	std::vector<plugin_snapshot_t> plugins;
-	track_plugins_snapshot_t() = default;
-	track_plugins_snapshot_t(const track_t &a, bool storePluginChunks);
+	track_impl_snapshot_t() = default;
+	track_impl_snapshot_t(const track_t &a, bool storePluginChunks);
 };
 struct track_snapshot_t : public tracksettings_t {
 	track_t* trackLoaded = NULL;
-	track_plugins_snapshot_t plugins;
+	track_impl_snapshot_t plugins;
 	std::vector<clip_t> clips;
 	std::vector<automationlane_snapshot_t> automationLanes;
 	track_snapshot_t() = default;
@@ -274,7 +279,7 @@ public:
 	gui_track* content = NULL;
 	std::vector<gui_track_automationlane*> subtracks;
 	gui_track_controls* mixer = NULL;
-	track_plugins_t* audio = NULL;
+	track_impl_t* audio = NULL;
 	int scrolloffset = 0;
 };
 struct trackcontainer_snapshot_t;

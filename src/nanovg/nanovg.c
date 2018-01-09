@@ -20,6 +20,11 @@
 #include <stdio.h>
 #include <math.h>
 #include <memory.h>
+#if defined(_MSC_VER) || defined(__MINGW32__)
+#include <malloc.h>     // alloca
+#else
+#include <alloca.h>     // alloca
+#endif
 
 #include "nanovg.h"
 #define FONTSTASH_IMPLEMENTATION
@@ -2296,14 +2301,10 @@ void nvgRoundedRectVarying(NVGcontext* ctx, float x, float y, float w, float h, 
 	} else {
 		float halfw = nvg__absf(w)*0.5f;
 		float halfh = nvg__absf(h)*0.5f;
-		float rxBL = nvg__minf(radBottomLeft, halfw) * nvg__signf(w),
-			  ryBL = nvg__minf(radBottomLeft, halfh) * nvg__signf(h);
-		float rxBR = nvg__minf(radBottomRight, halfw) * nvg__signf(w),
-			  ryBR = nvg__minf(radBottomRight, halfh) * nvg__signf(h);
-		float rxTR = nvg__minf(radTopRight, halfw) * nvg__signf(w),
-			  ryTR = nvg__minf(radTopRight, halfh) * nvg__signf(h);
-		float rxTL = nvg__minf(radTopLeft, halfw) * nvg__signf(w),
-			  ryTL = nvg__minf(radTopLeft, halfh) * nvg__signf(h);
+		float rxBL = nvg__minf(radBottomLeft, halfw) * nvg__signf(w), ryBL = nvg__minf(radBottomLeft, halfh) * nvg__signf(h);
+		float rxBR = nvg__minf(radBottomRight, halfw) * nvg__signf(w), ryBR = nvg__minf(radBottomRight, halfh) * nvg__signf(h);
+		float rxTR = nvg__minf(radTopRight, halfw) * nvg__signf(w), ryTR = nvg__minf(radTopRight, halfh) * nvg__signf(h);
+		float rxTL = nvg__minf(radTopLeft, halfw) * nvg__signf(w), ryTL = nvg__minf(radTopLeft, halfh) * nvg__signf(h);
 		float vals[] = {
 			NVG_MOVETO, x, y + ryTL,
 			NVG_LINETO, x, y + h - ryBL,
@@ -2337,7 +2338,11 @@ void nvgCircleFastNDivs(NVGcontext* ctx, float cx, float cy, float r, int ndivs)
 {
 	float a = 0;
 	float dx = 0, dy = 0, x = 0, y = 0;
-	float vals[3 + ndivs*3 + 1];
+	int nInstr = 3 + ndivs*3 + 1;
+	int power = 1;
+	while(power < nInstr)
+	    power*=2;
+	float* vals = alloca(power*sizeof(float));
 	int i, nvals;
 	nvals = 0;
 	for (i = 0; i <= ndivs; i++) {
@@ -2359,7 +2364,7 @@ void nvgCircleFastNDivs(NVGcontext* ctx, float cx, float cy, float r, int ndivs)
 	nvg__appendCommands(ctx, vals, nvals);
 }
 void nvgCircleFast(NVGcontext* ctx, float cx, float cy, float r) {
-	int ndiv = nvg__mini(64, (int)ceilf(4*r));
+	int ndiv = nvg__mini(64, nvg__maxi(6, (int)ceilf(4*r)));
 	nvgCircleFastNDivs(ctx, cx, cy, r, ndiv);
 }
 void nvgCircle(NVGcontext* ctx, float cx, float cy, float r)

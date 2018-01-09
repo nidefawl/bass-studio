@@ -1,24 +1,27 @@
 #include <glm/vec2.hpp>
-#include "guicontainer.h"
-#include "button.h"
-#include "plugin.h"
-#include "event.h"
-#include "pluginctr.h"
+#include <memory>
 #include "str_util.h"
+#include "logging.h"
+#include "event.h"
+#include "renderresources.h"
+#include "button.h"
+#include "list.h"
+#include "guicontainer.h"
+#include "guicontextmenu.h"
+#include "plugin.h"
+#include "pluginctr.h"
+#include "pluginlist.h"
+
 #include "../host/vst_plugin.h"
 #include "../host/vst_plugin_handles.h"
-#include "track_audiodata.h"
 #include "../host/vst_host.h"
 #include "../host/plugindatabase.h"
 #include "../threads/playbackthread.h"
-#include "pluginlist.h"
-#include "renderresources.h"
-#include "logging.h"
-#include "list.h"
+
 #include "track.h"
-#include "guicontextmenu.h"
+#include "track_impl.h"
 #include "leak_detect.h"
-#include <memory>
+
 
 using glm::vec2;
 using glm::ivec2;
@@ -43,13 +46,10 @@ void guiplugin::render(NVGcontext* vg) {
 	nvgBeginPath(vg);
 	nvgRoundedRect(vg, 0, 0, size.x, size.y, G_RND);
 	NVGcolor c;
-	guibase* b = MainCtrl::get()->guiFocused;
-
-	if (b == this) {
+	if (MainCtrl::get()->isCtrOrChildFocused(this)) {
 		c = g_guiColors[COL_BG_DRK_FOCUSED];
-	}
-	else {
-		c = GUI_COLOR(G_S4);
+	} else {
+		c = g_guiColors[COL_BG_BRT];
 	}
 	nvgFillColor(vg, GUI_COLOR(G_S2));
 	nvgFill(vg);
@@ -175,7 +175,14 @@ public:
 		knobTest.fnSetValue = [_vst, paramIdx] (float f) {
 			return _vst->setParamValue(paramIdx, f);
 		};
+		knobTest.fnFocus = [this](bool b) {focusEvent(b);};
+		knobTest.parent = this;
 	}
+    virtual bool focusEvent(bool focused) override {
+    	if (focused)
+    		MainCtrl::get()->showAutomation(vst->getTrack(), vst, entry->idx);
+    	return true;
+    }
 	void handleRightClick(MouseEvent& evt) override {
 		MainCtrl::get()->openContextMenu(new guictxtmenu_vstparam(vst, entry), evt.mousepos);
 	}
@@ -207,7 +214,7 @@ public:
 		MainCtrl* ctrl = MainCtrl::get();
 		float rowHeight = size.y;
 		float x = knobTest.right()+spacing;
-		if (ctrl->guiFocused == this) {
+		if (ctrl->isCtrOrChildFocused(this)) {
 			nvgBeginPath(vg);
 			nvgRect(vg, pos.x, pos.y, size.x, size.y);
 			nvgFillColor(vg, g_guiColors[COL_BG_DRKER]);
@@ -217,6 +224,14 @@ public:
 		setFont(vg, (int) (rowHeight * 0.8), G_WHITE, G_TITLE_ALIGN);
 		nvgText(vg, x, rowHeight / 2, StringAsCStr(getText()), NULL);
 		nvgTranslate(vg, -pos.x, -pos.y);
+		auto at = vst->getRegisteredAutomation(entry->idx);
+		if (at) {
+			knobTest.valColor = G_PURPLE;
+			knobTest.indColor = G_PURPLE;
+		} else {
+			knobTest.valColor = G_BLUE;
+			knobTest.indColor = G_WHITE;
+		}
 		knobTest.render(vg);
 	}
 };
@@ -241,6 +256,7 @@ guiplugin::guiplugin(vstplugin* _vst)
 	buttonDelete.state = &closeEnabled;
 	buttonDelete.parent = this;
 	buttonDelete.setColor(0x404040);
+	params.parent = this;
 	std::vector<gui_list_entry*> _newList;
 	for (vst_param& param : _vst->params) {
 		_newList.push_back(new gui_plugin_paramlist_entry(_vst, &param));
@@ -258,7 +274,7 @@ void guictr_plugins::showTrack(track_t* _track) {
 	this->track = _track;
 	removeGuis();
 	if (track) {
-		track_plugins_t* audio = track->audio;
+		track_impl_t* audio = track->audio;
 		if (audio && audio->instrument != NULL) {
 			addGui(audio->instrument);
 		} else {
@@ -281,7 +297,7 @@ void guictr_plugins::pluginDragMove(guiplugin* g, ivec2 mousepos) {
 	if (!track) return;
 	my_printf("pluginDragMove\n",0);
 	highlightSlot = -1;
-	track_plugins_t* trp = g->vst->handle->tr_plugins;
+	track_impl_t* trp = g->vst->handle->tr_plugins;
 	if (!trp) {
 		assert(0&&"TRP WAS NULL");
 		return;
@@ -323,7 +339,7 @@ void guictr_plugins::pluginDragRelease(guiplugin* g, ivec2 mousepos) {
 	highlightSlot = -1;
 	int targetslot = slotFromCoord(mousepos);
 	my_printf("pluginDragRelease %d\n",targetslot);
-	track_plugins_t* trp = g->vst->handle->tr_plugins;
+	track_impl_t* trp = g->vst->handle->tr_plugins;
 	if (!trp) {
 		assert(0&&"TRP WAS NULL");
 		return;

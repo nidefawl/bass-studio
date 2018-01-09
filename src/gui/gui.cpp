@@ -41,7 +41,7 @@ void initColor() {
 	g_guiColors[COL_CTXTMNU_BG] = GUI_COLORA(c4, 255);
 	g_guiColors[COL_CTXTMNU_HILIGHT] = GUI_COLORA(c5, 255);
 	g_guiColors[COL_GUI_STROKE] = mulSatBright(g_guiColors[COL_GRID_DRK], 1.3f, 1.4f);
-	g_guiColors[COL_BG_DRK_FOCUSED] = GUI_COLORA(c3+32, 255);
+	g_guiColors[COL_BG_DRK_FOCUSED] = GUI_COLORA(c3+48, 255);
 
 	g_guiColors[COL_NOTE] = rgbToNvg(0xff9933);
 	g_guiColors[COL_NOTE_PLAYING] = rgbToNvg(0x33ff33);
@@ -106,7 +106,7 @@ void renderDashedLineFrame(NVGcontext* vg, float x, float y, float w, float h, f
 	nvgLineTo(vg, x+w, y+h);
 	nvgStrokePaint(vg, paintLeft);
 	nvgStroke(vg);
-	nvgShapeAntiAlias(vg, 0);
+	nvgShapeAntiAlias(vg, 1);
 }
 void drawPlaySymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2) {
 	float inset = max(2.0f, size.x/8.0f);

@@ -56,11 +56,13 @@ bool vstplugin::onClose() {
 bool vstplugin::resume() {
 	bool wasSleep = !this->bIsEnabled;
 	this->dispatch(effMainsChanged, 0, true);
+	this->dispatch(effStartProcess);
 	this->bIsEnabled = true;
 	return wasSleep;
 }
 bool vstplugin::sleep() {
 	bool wasSleep = !this->bIsEnabled;
+	this->dispatch(effStopProcess);
 	this->dispatch(effMainsChanged, 0, false);
 	this->bIsEnabled = false;
 	return !wasSleep;
@@ -220,6 +222,7 @@ void vstplugin::load(vsthost* host) {
 			param.flags = 0;
 			fallbackCat.numParametersInCategory++;
 		}
+		param.value = handle->aeffect->getParameter(handle->aeffect, param.idx);
 		params.push_back(param);
 	}
 	paramsCategories.push_back(fallbackCat);
@@ -230,6 +233,7 @@ void vstplugin::load(vsthost* host) {
 	this->sleep();
 	this->dispatch(effSetBlockSize, 0, host->lBlockSize);
 	this->resume();
+//	this->dispatch(effOpen);
 	this->bIsSetup = true;
 }
 vst_param_category* vstplugin::getCategory(int idx) {
@@ -252,13 +256,17 @@ String vstplugin::getAutomatableName() {
 }
 float vstplugin::getParamValue(int32_t idx) {
 	if (idx >= 0 && idx < params.size()) {
-		return handle->aeffect->getParameter(handle->aeffect, idx);
+		auto& param = params[idx];
+		return param.value;
 	}
 	return 0;
 }
 void vstplugin::setParamValue(int32_t idx, float val) {
 	if (idx >= 0 && idx < params.size()) {
+		auto& param = params[idx];
+		param.value = val;
 		handle->aeffect->setParameter(handle->aeffect, idx, val);
+//		my_printf("set %s[%d] = %f\n", StringAsCStr(this->sName), idx, val);
 	}
 }
 automated_param_t* vstplugin::getRegisteredAutomation(int32_t idx) {
@@ -266,7 +274,9 @@ automated_param_t* vstplugin::getRegisteredAutomation(int32_t idx) {
 		return ap.paramIdx == idx;
 	});
 	if (it != automatedParams.end()) {
-		return &(*it);
+		automated_param_t* ap = &(*it);
+		if (ap->src->isAutomated())
+			return ap;
 	}
 	return NULL;
 }
@@ -283,8 +293,10 @@ void vstplugin::getAutomated(std::vector<int32_t>& targets) {
 }
 void vstplugin::updateAutomatedParameters(tick_t pos) {
 	for (automated_param_t& param : automatedParams) {
-		float val = param.src->getValueAt(pos);
-		setParamValue(param.paramIdx, val);
+		if (param.src->isActive()) {
+			float val = param.src->getValueAt(pos);
+			setParamValue(param.paramIdx, val);
+		}
 	}
 }
 automation_t* vstplugin::getAutomation(int32_t paramIdx) {

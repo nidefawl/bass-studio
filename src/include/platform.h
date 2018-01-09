@@ -4,6 +4,8 @@
 #include "str_util.h"
 
 uint64_t getTimeMillis();
+double getTimeHPC();
+double getSince(double& d);
 
 void setMinimumResolutionTimer();
 String getLastWin32ErrorString();

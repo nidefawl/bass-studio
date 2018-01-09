@@ -176,11 +176,6 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 				project.trackList.copyTracks(cursor.getTrackBegin(), cursor.getTrackEnd(), resizePreModifyState);
 				resizePreModifyState.cursor = cursor;
 				MainCtrl::get()->cutSelection(cursor);
-				for (track_t* t: project.trackCtr) {
-					if (cursor.inTrackRange(t->idx)) {
-						ctrl->cutIntersecting(t, cursor.getTickBegin(), cursor.getTickEnd());
-					}
-				}
 				handledKeyinput = true;
 				modified = true;
 				desc = "Cut clips";

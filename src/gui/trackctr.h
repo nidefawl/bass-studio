@@ -447,6 +447,7 @@ public:
 		trackControls.addTrack(t);
 		trackView.addTrack(t);
 	}
+	void showAutomationLane(track_t* tr, automatable_t* at, int32_t paramIdx);
 	gui_track_automationlane* addAutomationLane(track_t* t, automatable_t* at, int32_t paramIdx, bool insertFront);
 	void removeAutomationLane(gui_track_automationlane* al);
 	void removeAllAutomationLanes(track_t* t, automatable_t* at, int32_t paramIdx);

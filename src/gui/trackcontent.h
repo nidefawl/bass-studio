@@ -178,6 +178,12 @@ public:
 	virtual ~gui_track_automationlane() {
 
 	}
+	automation_t* getAutomation() {
+		if (at) {
+			return at->getAutomation(param);
+		}
+		return NULL;
+	}
 	void handleRightClick(MouseEvent& evt) override;
 	virtual void updateVisibleTrackContents(scaled_grid& grid);
 	bool isStaticContainer() {

@@ -2,37 +2,57 @@
 #include "trackcontent.h"
 #include "trackcontrols.h"
 #include "guicontextmenu.h"
-#include "track_audiodata.h"
 #include <glm/vec2.hpp>
+#include "track.h"
+#include "track_impl.h"
 using glm::vec2;
 using glm::ivec2;
 
 
 void guitrack_mixers::render(NVGcontext* vg) {
-	if (!setScissorTransform(vg)) {
-		return;
-	}
-	ivec2 cs = getSizeContent();
-	nvgBeginPath(vg);
-	nvgRect(vg, 0, 0, cs.x, cs.y);
-	nvgFillColor(vg, g_guiColors[COL_GRID_BRT]);
-	nvgFill(vg);
-	for (track_t* g : project.tracksBottom) {
-		//content
-		nvgSave(vg);
-		g->mixer->render(vg);
-		nvgRestore(vg);
-	}
-	int ySplit = getPosYFirstReturnTrack(project);
-	if (ySplit > 0) {
-		nvgIntersectScissor(vg, 0, 0, cs.x, ySplit);
-		for (track_t* g : project.trackCtr) {
+//	if (!setScissorTransform(vg)) {
+//		return;
+//	}
+//	ivec2 cs = getSizeContent();
+//	nvgBeginPath(vg);
+//	nvgRect(vg, 0, 0, cs.x, cs.y);
+//	nvgFillColor(vg, g_guiColors[COL_GRID_BRT]);
+//	nvgFill(vg);
+//	for (track_t* g : project.tracksBottom) {
+//		//content
+//		nvgSave(vg);
+//		g->mixer->render(vg);
+//		nvgRestore(vg);
+//	}
+//	int ySplit = getPosYFirstReturnTrack(project);
+//	if (ySplit > 0) {
+//		nvgIntersectScissor(vg, 0, 0, cs.x, ySplit);
+//		for (track_t* g : project.trackCtr) {
+//			//content
+//			nvgSave(vg);
+//			g->mixer->render(vg);
+//			nvgRestore(vg);
+//		}
+//	}
+		ivec2 cs = getSizeContent();
+	ivec2 posInset = getPosContent();
+	nvgTranslate(vg, posInset.x, posInset.y);
+		for (track_t* g : project.tracksBottom) {
 			//content
 			nvgSave(vg);
 			g->mixer->render(vg);
 			nvgRestore(vg);
 		}
-	}
+		int ySplit = getPosYFirstReturnTrack(project);
+		if (ySplit > 0) {
+			nvgIntersectScissor(vg, 0, 0, cs.x, ySplit);
+			for (track_t* g : project.trackCtr) {
+				//content
+				nvgSave(vg);
+				g->mixer->render(vg);
+				nvgRestore(vg);
+			}
+		}
 
 }
 void guitrack_mixers::addTrack(track_t* t) {
@@ -92,6 +112,11 @@ int32_t guictr_tracks::setTrackPosition(track_t* t, int32_t y, bool isBottom) {
 	return totalHeight;
 }
 
+void guictr_tracks::showAutomationLane(track_t* tr, automatable_t* at, int32_t paramIdx) {
+	tr->audio->selectedAutomationCtr = at;
+	tr->audio->selectedAutomationParam = paramIdx;
+	updateVisibleTrackContents();
+}
 gui_track_automationlane* guictr_tracks::addAutomationLane(track_t* t, automatable_t* at, int32_t paramIdx, bool insertFront) {
 	gui_track_automationlane* al = trackView.addAutomationLane(t, at, paramIdx, insertFront);
 	t->mixer->addAutomationLane(t, al);

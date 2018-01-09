@@ -1,12 +1,14 @@
 #include <algorithm>
 #include "clipeditor.h"
+
+#include "track.h"
+#include "track_impl.h"
 #include "note.h"
 #include "seq_math.h"
 #include "seq_time.h"
 #include "cursor.h"
 #include "grid.h"
 #include "guicontextmenu.h"
-#include "track_audiodata.h"
 #include "leak_detect.h"
 
 class action_modify_notes : public action_base {

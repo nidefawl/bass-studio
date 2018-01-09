@@ -2,12 +2,12 @@
 #include <glm/geometric.hpp>
 
 #include "track.h"
+#include "track_impl.h"
 #include "guicontextmenu.h"
 #include "button.h"
 #include "event.h"
 #include "../host/vst_plugin.h"
 #include "trackautomation.h"
-#include "track_audiodata.h"
 #include "dropdown.h"
 #include "dsp_util.h"
 #include "str_util.h"
@@ -104,7 +104,7 @@ public:
 		ivec2 inset(spacing);
 		ivec2 mtrPos = pos + inset;
 		ivec2 mtrSize = size - inset * 2;
-		track_plugins_t* audio = m_track->audio;
+		track_impl_t* audio = m_track->audio;
 		float channelW = (mtrSize.x-(OUTPUT_CHANNELS+1)*spacing) / (float) OUTPUT_CHANNELS;
 		const double scaledZero = scaledRange(0, MTR_FLOOR, MTR_CEIL);
 		float hZero = (1.0f - scaledZero) * mtrSize.y;
@@ -207,11 +207,11 @@ public:
 		if (drawFn) {
 			drawFn(vg, pos, size, theme->getBgColor(getStateFlags()));
 		}
-		track_plugins_t* audio = m_track->audio;
+		track_impl_t* audio = m_track->audio;
 		if (audio) {
 			ivec2 insetP = pos+ivec2(1);
 			ivec2 insetS = size-ivec2(2);
-			float f = audio->mixer.gain;
+			float f = audio->mixer.getGain();
 			float gaindBFS = dsp_util::dBFS(f);
 			double scale = scaledRange(gaindBFS, -60.0f, MTR_CEIL);
 			float wVal = (1.0f - scale) * insetS.x;
@@ -237,9 +237,9 @@ public:
 			if (abs(disty) < 1)
 				return;
 			evt.dragDistance->y = 0;
-			track_plugins_t* audio = m_track->audio;
+			track_impl_t* audio = m_track->audio;
 			if (audio) {
-				float f = audio->mixer.gain;
+				float f = audio->mixer.getGain();
 				my_printf("disty: %d\n", disty);
 				float adj = (1.0f - disty / 10.0f);
 //				if (f < 1.0E-5f && adj > 1.0f)
@@ -250,7 +250,7 @@ public:
 				}
 				float fNew = dsp_util::clampGain(f * adj);
 				my_printf("FNEW: %f %f\n", fNew, dsp_util::dBFS(fNew));
-				audio->mixer.gain = fNew;
+				audio->mixer.setParamValue(0, fNew);
 			}
 		}
 	}
@@ -552,17 +552,7 @@ public:
 		}
 		bool showSubtracksAfter = !m_track->hideAutomation && !m_track->hideTrack;
 		if (showSubtracks != showSubtracksAfter) {
-			if (!showSubtracksAfter) {
-				m_track->audio->atl.clear();
-				m_track->audio->saveAutomationLanes(m_track->audio->atl);
-				MainCtrl::getGuiTrackCtr()->removeAllAutomationLanes(m_track);
-				Cursor& cursor = MainCtrl::get()->cursor;
-				if (cursor.inSubTrackRange(m_track->idx, 0)) {
-					fixCursorSubRange(cursor, 0);
-				}
-			} else {
-				m_track->audio->loadAutomationLanes(m_track->audio->atl);
-			}
+			m_track->audio->showAutomationLanes(showSubtracksAfter);
 		}
 		if (button == &addAutomationLane) {
 			automatable_t* autom = m_track->audio->selectedAutomationCtr;

@@ -69,8 +69,8 @@ bool vst_window::init(vstplugin* plugin, const String& name, Size size, bool res
 {
 	this->plugin = plugin;
 	registerWindowClass (instance);
-	DWORD exStyle = WS_EX_APPWINDOW;
-	DWORD dwStyle = WS_CAPTION | WS_SYSMENU | WS_CLIPCHILDREN | WS_CLIPSIBLINGS;
+	DWORD exStyle = WS_EX_TOOLWINDOW;
+	DWORD dwStyle = WS_CAPTION | WS_SYSMENU | WS_CLIPSIBLINGS;
 	if (resizeable)
 		dwStyle |= WS_SIZEBOX | WS_MAXIMIZEBOX;
 	hwnd = CreateWindowEx (exStyle, gWindowClassName, StringAsCStr(name), dwStyle,
@@ -168,7 +168,11 @@ Size vst_window::getContentSize ()
 
 
 void vst_window::updateDisplay() {
-	InvalidateRect(hwnd, NULL, FALSE);
+//	InvalidateRect(hwnd, NULL, TRUE);
+	InvalidateRgn(hwnd, NULL, TRUE);
+//    RedrawWindow( hwnd, NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_FRAME | RDW_ALLCHILDREN );
+//	UpdateWindow(hwnd);
+//	my_printf("updateDisplay %d\n", getTimeMillis());
 }
 //------------------------------------------------------------------------
 void vst_window::resize (Size newSize)

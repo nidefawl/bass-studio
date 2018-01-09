@@ -225,7 +225,6 @@ public:
 	plugindatabase_t plugindb;
 	tick_t tickJmpFrom = 0;
 	tick_t tickJmpTo = 0;
-	bool fastCircle = false;
 	scaled_grid& getGrid() {
 		return grid;
 	}
@@ -291,6 +290,8 @@ public:
 	track_t* getSelectedTrack();
 	void showPluginView();
 	void showClipEditor();
+
+	void showAutomation(track_t* tr, automatable_t* at, int32_t paramIdx);
 	bool isClipEditorVisible();
 	bool isPluginViewVisible();
 	track_t* insertNewTrack(int trackInsertPos, int trackType);
@@ -364,6 +365,7 @@ public:
 		this->tickJmpFrom = tickJmpFrom;
 		this->tickJmpTo = tickJmpTo;
 	}
+	bool isCtrOrChildFocused(guibase* gui);
 	void onGuiRemoved(guibase* gui) {
 		if (this->guiOver == gui)  {
 			this->guiOver = NULL;

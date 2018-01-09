@@ -7,11 +7,13 @@
 //#include "../vst_sdk_2.4/aeffectx.h"
 #include "vst_window.h"
 #include "automation.h"
+#include "logging.h"
+#include "platform.h"
 
 class vsthost;
 struct AudioBlock;
 struct handles_t;
-
+class track_t;
 //-------------------------------------------------------------------------------------------------------
 /** Flags used in #VstParameterProperties. */
 //-------------------------------------------------------------------------------------------------------
@@ -40,6 +42,7 @@ struct vst_param_category {
 };
 struct vst_param {
 	int32_t idx;
+	float value;
 	int32_t flags;
 
 	param_step_fi min;
@@ -131,4 +134,5 @@ public:
 	automation_t* getAutomation(int32_t paramIdx) override;
 	void getAutomated(std::vector<int32_t>& targets) override;
 	automationlane_snapshot_t toRef() override;
+	track_t* getTrack();
 };

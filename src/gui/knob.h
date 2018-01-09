@@ -23,20 +23,10 @@ class guiknob : public guibase {
 public:
     std::function<float()> fnGetValue;
     std::function<void(float)> fnSetValue;
-	NVGcolor color;
-	NVGcolor colorStroke;
-	NVGcolor colorHover;
-	NVGcolor colorPressed;
+    std::function<void(bool)> fnFocus;
+	NVGcolor valColor = G_BLUE;
+	NVGcolor indColor = G_WHITE;
 	guiknob(const bool _renderBackground = true) : guibase(), renderBackground(_renderBackground) {
-		uint32_t rgb = nvgToRGB(g_guiColors[COL_BG_DRK]);
-		setColor(rgb);
-	}
-	void setColor(uint32_t hex) {
-		vec4 hsl = hexToHSL(hex);
-		color = nvgHSL(hsl.x, hsl.y, hsl.z);
-		colorStroke = nvgHSL(hsl.x, CLAMP_F(hsl.y*1.3f), 0.4f);
-		colorHover = nvgHSL(hsl.x, CLAMP_F(hsl.y*0.7f), CLAMP_F(hsl.z + 0.3f));
-		colorPressed = nvgHSL(hsl.x, CLAMP_F(hsl.y*0.7f), CLAMP_F(hsl.z + 0.3f));
 	}
 	virtual bool hovered() {
 		return this == MainCtrl::get()->guiOver;
@@ -59,11 +49,18 @@ public:
 				return;
 			float value = getValue();
 			float scale = isCtrl(evt.kbmods) ? 2000.0f : 200.0f;
-			value -= disty/scale;
-			setValue(value);
-			evt.dragDistance->y = 0;
+			float delta = disty/scale;
+			if (abs(delta) > 1e-2f) {
+				value -= delta;
+				setValue(value);
+				evt.dragDistance->y = 0;
+			}
 		}
 	}
+    virtual bool focusEvent(bool focused) override {
+    	if (fnFocus) fnFocus(focused);
+    	return true;
+    }
 	virtual bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
 		float value = getValue();
 		float scale = isCtrl(evt.kbmods) ? 200.0f : 20.0f;
@@ -82,19 +79,6 @@ public:
 	}
 	void render(NVGcontext* vg) {
 		nvgLineCap(vg, NVGlineCap::NVG_ROUND);
-		NVGcolor c;
-		if (!enabled()) {
-			c = G_BUTTON_DISABLED;
-		}
-		else if (pressed()) {
-			c = colorPressed;
-		}
-		else if (hovered()) {
-			c = colorHover;
-		}
-		else {
-			c = color;
-		}
 		ivec2 insetP = pos+ivec2(0);
 		ivec2 insetS = size-ivec2(0);
 		if (renderBackground) {
@@ -108,7 +92,8 @@ public:
 	    float cy = insetP.y+insetS.y/1.8f;
 	    	    vec2 center(cx, cy);
 	    float minSize = min(insetS.x, insetS.y);
-	    float r = (minSize*0.66f)/2.0f;
+//	    float r = (minSize*0.66f)/2.0f;
+	    float r = (minSize*0.8f)/2.0f;
 	    float lineThickness = max(1.0f, round((minSize / 8.0f)*2.0f)/2.0f);
 
 		NVGcolor c2 = g_guiColors[COL_BG_BRT];
@@ -148,7 +133,7 @@ public:
 	    if (val > 1E-8F) {
 		    nvgBeginPath(vg);
 		    nvgArc(vg, cx, cy, r, start, end, NVG_CW);
-			nvgStrokeColor(vg, G_BLUE);
+			nvgStrokeColor(vg, valColor);
 			nvgStrokeWidth(vg, lineThickness+1.0f);
 			nvgStroke(vg);
 	    }
@@ -167,7 +152,7 @@ public:
 		nvgBeginPath(vg);
 		nvgMoveTo(vg, posStart.x, posStart.y);
 		nvgLineTo(vg, posEnd.x, posEnd.y);
-		nvgStrokeColor(vg, G_WHITE);
+		nvgStrokeColor(vg, indColor);
 		nvgStrokeWidth(vg, max(1.0f, round((r/8.0f)*2.0f)/2.0f));
 		nvgStroke(vg);
 		nvgLineCap(vg, NVGlineCap::NVG_BUTT);

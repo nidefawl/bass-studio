@@ -50,6 +50,11 @@ public:
 		buttonDelete.pos.y = inset1;
 		buttonDelete.pos.x = size.x - buttonDelete.size.x - inset1;
 		int32_t insetCtrls = INSET_TITLE;
+		int rowHeight = 64;
+		while (size.y < rowHeight * 8 && rowHeight > 8) {
+			rowHeight -= 4;
+		}
+		params.setRowHeight(rowHeight);
 		params.pos = ivec2(insetCtrls, insetCtrls + HEIGHT_PLUGIN_TITLE);
 		params.size = size - params.pos - ivec2(insetCtrls);
 		params.layout();

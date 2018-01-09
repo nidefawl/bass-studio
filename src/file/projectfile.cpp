@@ -55,12 +55,18 @@ void serialize(Archive & archive, plugin_snapshot_t & m)
 	make_optional_nvp(archive, "parameters", m.params);
 	make_optional_nvp(archive, "automatedParams", m.automatedParams);
 	make_optional_nvp(archive, "globalId", m.projectGlobalId);
+	make_optional_nvp(archive, "enabled", m.enabled);
 }
 template<class Archive>
-void serialize(Archive & archive, track_plugins_snapshot_t & m)
+void serialize(Archive & archive, track_params_snapshot_t & m)
+{
+	archive(make_nvp("params", m.params), make_nvp("automation", m.automatedParams));
+}
+template<class Archive>
+void serialize(Archive & archive, track_impl_snapshot_t & m)
 {
 	archive(make_nvp("plugins", m.plugins));
-	make_optional_nvp(archive, "gain", m.gain);
+	make_optional_nvp(archive, "track", m.trackParams);
 }
 template<class Archive>
 void serialize(Archive & archive, tracksettings_t & m)

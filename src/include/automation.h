@@ -13,12 +13,16 @@ int32_t indexOfTick(std::vector<automation_point_t>& dataPoints, tick_t tick);
 int32_t addPointAt(std::vector<automation_point_t>& dataPoints, tick_t tick);
 void simplifyData(std::vector<automation_point_t>& data);
 struct automation_t {
+	bool active = true;
 	std::vector<automation_point_t> points;
 	virtual ~automation_t() {};
 	virtual float getDstValue() = 0;
 	virtual void setDstValue(float f) = 0;
 	virtual bool isActive() {
-		return points.size() != 0;
+		return active && points.size() > 0;
+	}
+	virtual bool isAutomated() {
+		return points.size() > 0;
 	}
 	virtual float getValueAt(tick_t tick);
 	void copyRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data);
@@ -38,6 +42,7 @@ struct automation_view_t: public automation_t {
 	}
 	void setDstValue(float f) override {
 		dummy = f;
+		active = false;
 	}
 };
 class vstplugin;

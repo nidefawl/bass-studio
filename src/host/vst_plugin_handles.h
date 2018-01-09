@@ -7,7 +7,7 @@
 struct handles_t {
 	AEffect* aeffect = NULL; // hmodule owns
 	HMODULE hmodule = NULL; // we dont own
-	track_plugins_t* tr_plugins = NULL;
+	track_impl_t* tr_plugins = NULL;
 	std::unique_ptr<guiplugin> gui;
 	int32_t slot = -1;
 	handles_t(AEffect* e, HMODULE m) {

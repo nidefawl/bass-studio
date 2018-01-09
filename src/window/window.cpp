@@ -18,6 +18,7 @@
 #include <fstream>
 #include <sstream>
 #include <algorithm>
+#include <map>
 #include <glm/vec4.hpp>
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
@@ -84,7 +85,7 @@ void syncMenu(HWND hwnd, ngui::MenuBar& menubar); // menu_win32.cpp
 
 ngui::Menu* getUserDataFromMenu(HMENU hmenu, UINT uPos); // menu_win32.cpp
 
-static WNDPROC glfwWndProc;
+static WNDPROC glfwWndProc = NULL;
 
 static void glfw_cb_mousepos(GLFWwindow *w, double x, double y);
 static void glfw_cb_mousebutton(GLFWwindow *w, int button, int action, int mods);
@@ -172,6 +173,29 @@ protected:
 	GLFWwindow *glfw = NULL;
 	HWND hwnd = NULL;
 	NVGcontext* nanovgCtxt = NULL;
+private:
+	void initOGL(HWND hwnd) {
+		//static code
+		if (glfwWndProc == NULL) {
+			glfwWndProc = (WNDPROC)GetWindowLongPtr(hwnd, GWLP_WNDPROC);
+			// doesn't actually check availability
+			if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+				throw appexception("Required OpenGL extensions not present.\nConsider updating graphics drivers");
+			}
+			//TODO: check actual required extensions availability
+		}
+	}
+	void initContext() {
+//		glfwSwapInterval(-1);
+		nanovgCtxt = nvgCreateGL3(NVG_ANTIALIAS | NVG_DEBUG);
+		if (!nanovgCtxt) {
+			throw appexception("Couldn't initialize nanovg");
+		}
+		int font = nvgCreateFont(nanovgCtxt, "sans", "res/fonts/Roboto-Regular.ttf");
+		if (font == -1) {
+			throw appexception("Failed loading font");
+		}
+	}
 public:
 	appwindow() {
 		name[0] = 0;
@@ -236,19 +260,6 @@ public:
 		return glfwGetInputMode(glfw, GLFW_CURSOR) != GLFW_CURSOR_NORMAL;
 	}
 
-	virtual void initContext() {
-		nanovgCtxt = nvgCreateGL3(NVG_ANTIALIAS | NVG_DEBUG);
-		if (!nanovgCtxt) {
-			throw appexception("Couldn't initialize nanovg");
-		}
-		int font = nvgCreateFont(nanovgCtxt, "sans", "res/fonts/Roboto-Regular.ttf");
-		if (font == -1) {
-			throw appexception("Failed loading font");
-		}
-	}
-	virtual void preInitContext() {
-
-	}
 	virtual void create(const char* title, int w, int h) {
 		strcpy_s(this->name, title);
 		if (glfw)
@@ -274,7 +285,8 @@ public:
 		hwnd = glfwGetWin32Window(glfw);
 		if (!hwnd)
 			throw appexception("Couldn't get win32 window handle");
-		preInitContext();
+		glfwMakeContextCurrent(glfw);
+		initOGL(hwnd);
 		SetWindowLongPtr(hwnd, GWLP_WNDPROC, (LONG_PTR)winProc);
 		initContext();
 		this->timer = SetTimer(hwnd, 0, 20, (TIMERPROC)timerProc);
@@ -302,7 +314,8 @@ public:
 		glfwMaximizeWindow(glfw);
 	}
 	virtual void flagNeedsRedraw() {
-		InvalidateRect(hwnd, NULL, TRUE);
+		InvalidateRect(hwnd, NULL, FALSE);
+//		InvalidateRgn(hwnd, NULL, FALSE);
 	}
     virtual bool filesDropBegin(std::vector<String>& files, ivec2 pos) {
     	return true;
@@ -398,6 +411,8 @@ class appwindow_main : public appwindow, public window_main  {
 	int calls = 0;
 	uint64_t tm_lastfps;
 	String fpsStats;
+	double secondsLastDraw = 0.0;
+	const double minFrameDelay = 1/288.0;
 public:
 	appwindow_overlay* overlayWindow = NULL;
 	appwindow_main(MainCtrl* _ctrl)
@@ -406,18 +421,6 @@ public:
 		  ctrl(_ctrl),
 		  tm_lastfps(getTimeMillis()) {
 		dblclicktimer = 0;
-	}
-	void preInitContext() {
-		//static code
-		if (glfwWndProc == NULL) {
-			glfwWndProc = (WNDPROC)GetWindowLongPtr(hwnd, GWLP_WNDPROC);
-		}
-		glfwMakeContextCurrent(glfw);
-		// doesn't actually check availability
-		if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-			throw appexception("Required OpenGL extensions not present.\nConsider updating graphics drivers");
-		}
-		//TODO: check actual required extensions availability
 	}
 	void create(const char* title, int w, int h);
 	void updateMenu();
@@ -439,9 +442,8 @@ public:
 //		flagNeedsRedraw();
 		ctrl->onTick();
 	}
-	void onRefresh()
+	void render()
 	{
-		PREVENT_REENTRANT("REENTRANT IN RENDER MAIN")
 		glfwMakeContextCurrent(glfw);
 		int winwidth, winheight;
 		int fbwidth, fbheight;
@@ -475,6 +477,15 @@ public:
 			calls = 0;
 		}
 		calls++;
+		secondsLastDraw = getTimeHPC();
+	}
+	void onRefresh()
+	{
+		PREVENT_REENTRANT("REENTRANT IN RENDER MAIN")
+		double delay = getSince(secondsLastDraw);
+		if (delay > minFrameDelay) {
+			render();
+		}
 	}
 	void onMouseMoved(ivec2 deltapos) {
 		if (abs(deltapos.x)+abs(deltapos.y) > 2)
@@ -745,6 +756,7 @@ public:
 
 class appwindow_dialog : public appwindow, public window_dialog {
 public:
+	void (*drawFn)(NVGcontext*,int,int,float) = NULL;
 	appwindow *parent = NULL;
 	appwindow_dialog(appwindow* _parent) : appwindow() {
 		this->parent = _parent;
@@ -754,56 +766,61 @@ public:
 		glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
 		glfwWindowHint(GLFW_FOCUSED, GL_TRUE);
 		appwindow::create(title, w, h);
+		if (parent)
 		this->parent->onChildCreate(this);
 
 		LONG l = GetWindowLong(hwnd, GWL_EXSTYLE);
 		SetWindowLong(hwnd, GWL_EXSTYLE, l & ~WS_EX_APPWINDOW);
 		SetWindowLong(hwnd, GWL_STYLE, WS_CAPTION | WS_POPUP | WS_CLIPSIBLINGS | WS_SYSMENU);
-		RECT rcOwner;
-		RECT rcDlg;
-		RECT rc;
-		GetWindowRect(this->parent->getHWND(), &rcOwner);
-		GetWindowRect(hwnd, &rcDlg);
-		CopyRect(&rc, &rcOwner);
-		OffsetRect(&rcDlg, -rcDlg.left, -rcDlg.top);
-		OffsetRect(&rc, -rc.left, -rc.top);
-		OffsetRect(&rc, -rcDlg.right, -rcDlg.bottom);
-		SetWindowPos(hwnd,
-			HWND_TOP,
-			rcOwner.left + (rc.right / 2),
-			rcOwner.top + (rc.bottom / 2),
-			0, 0,          // Ignores size arguments.
-			SWP_NOSIZE);
-		glfwMakeContextCurrent(glfw);
-		initContext();
+		if (parent) {
+			RECT rcOwner;
+			RECT rcDlg;
+			RECT rc;
+			GetWindowRect(this->parent->getHWND(), &rcOwner);
+			GetWindowRect(hwnd, &rcDlg);
+			CopyRect(&rc, &rcOwner);
+			OffsetRect(&rcDlg, -rcDlg.left, -rcDlg.top);
+			OffsetRect(&rc, -rc.left, -rc.top);
+			OffsetRect(&rc, -rcDlg.right, -rcDlg.bottom);
+			SetWindowPos(hwnd,
+				HWND_TOP,
+				rcOwner.left + (rc.right / 2),
+				rcOwner.top + (rc.bottom / 2),
+				0, 0,          // Ignores size arguments.
+				SWP_NOSIZE);
+		}
 	}
 	void onRefresh()
 	{
 		PREVENT_REENTRANT("REENTRANT IN RENDER DIALOG")
 		glfwMakeContextCurrent(glfw);
-		float ratio;
-		int width, height;
-		glfwGetFramebufferSize(glfw, &width, &height);
-		ratio = width / (float)height;
-		glViewport(0, 0, width, height);
+		int winwidth, winheight;
+		int fbwidth, fbheight;
+		glfwGetWindowSize(glfw, &winwidth, &winheight);
+		glfwGetFramebufferSize(glfw, &fbwidth, &fbheight);
+		float pxratio = fbwidth / (float)winwidth;
+		glViewport(0, 0, fbwidth, fbheight);
 		static const vec4 clearc = int32vec4(0xff121212);
 		glClearColor(clearc[0], clearc[1], clearc[2], clearc[3]);
-		glClear(GL_COLOR_BUFFER_BIT);
+		glStencilMask(~0);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
+		if (drawFn) {
+			drawFn(nanovgCtxt, winwidth, winheight, pxratio);
+		}
 		glfwSwapBuffers(glfw);
 	}
 	void onWindowClose()
 	{
 		appwindow::onWindowClose();
+		if (parent)
 		EnableWindow(parent->getHWND(), TRUE);
 		glfwDestroyWindow(glfw);
+		if (parent)
 		this->parent->onChildClose(this);
 	}
 	void onTick() {
-	//	uint64_t tm = getTimeMillis();
-	//	float f = (float)(tm / 1000.0);
-	//	this->rgb[1] = 0.2f + sin(f*2.0f)*0.1f;
-		//flagNeedsRedraw();
-		UpdateWindow(this->hwnd);
+		flagNeedsRedraw();
 	}
 	void onKeyInput(int key, int scancode, int action, int mods, const char* key_name)
 	{
@@ -816,7 +833,8 @@ public:
 	}
 	void show() {
 		appwindow::showWindow();
-		EnableWindow(parent->getHWND(), FALSE);
+		if (parent)
+			EnableWindow(parent->getHWND(), FALSE);
 	}
 	bool isShown() {
 		return appwindow::isWindowNotHidden();
@@ -918,8 +936,6 @@ void appwindow_overlay::create(const char* title, int w, int h) {
 		rcOwner.top + (rc.bottom / 2),
 		0, 0,          // Ignores size arguments.
 		SWP_NOSIZE);
-	glfwMakeContextCurrent(glfw);
-	initContext();
 	if (!ctrl->init(this, this->nanovgCtxt)) {
 		throw appexception("Couldn't start application");
 	}
@@ -1081,7 +1097,89 @@ vsthost* vsthost::getInstance()
 HWND getMainHWND() {
 	return mainWindow ? mainWindow->getHWND() : NULL;
 }
+int mainTest(void (*drawFn)(NVGcontext*,int,int,float)) {
+	std::set_terminate(on_terminate);
+	setExceptionHandler();
+
+	EXC_TRY
+	allocConsole();
+	setMinimumResolutionTimer();
+	glfwSetErrorCallback(glfw_startup_error_callback);
+	if (!glfwInit()) {
+		showerror("Initialization failed. Couldn't initialize glfw");
+		exit(EXIT_FAILURE);
+	}
+	glfwDefaultWindowHints();
+
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+	glfwWindowHint(GLFW_STENCIL_BITS, 8);
+	glfwWindowHint(GLFW_DEPTH_BITS, 24);
+
+	appwindow_dialog* w = new appwindow_dialog(NULL);
+	w->drawFn=drawFn;
+	w->create("test window", 1280, 720);
+	w->showWindow();
+	glfwSetErrorCallback(glfw_runtime_error_callback);
+	GLFWwindow* glfwHandle = w->getGLFW();
+	while (!glfwWindowShouldClose(glfwHandle)) {
+		glfwWaitEvents();
+		ctrl->numCallsWaitEvents++;
+	}
+
+	glfwTerminate();
+	DELETE_PTR(w);
+	EXC_CATCH
+	exit(EXIT_SUCCESS);
+	return 0;
+}
 #ifndef TEST_PROJECT
+
+struct data_t
+{
+	int id;
+	int count;
+};
+#define MSG_LEN 10000
+struct data_t messages[MSG_LEN]{ { 0 } };
+int maxIdx = 0;
+void incrMessage(int id) {
+	for (int i = 0; i < maxIdx; i++) {
+		int storedId = messages[i].id;
+		if (storedId == id) {
+			messages[i].count++;
+			return;
+		}
+	}
+	messages[maxIdx].id = id;
+	messages[maxIdx].count++;
+	maxIdx++;
+}
+int getNumMsg() {
+	return maxIdx;
+}
+int getMsgId(int i) {
+	return messages[i].id;
+}
+int getMsgCnt(int i) {
+	return messages[i].count;
+}
+std::map<String, int> hwndPaints;
+int getHWNDMapSize() {
+	return hwndPaints.size();
+}
+String getHWNDName(int i) {
+	auto it = hwndPaints.begin();
+	for (int j = 0; j < i; j++, it++);
+	return it->first;
+}
+int getHWNDCnt(int i) {
+	auto it = hwndPaints.begin();
+	for (int j = 0; j < i; j++, it++);
+	return it->second;
+}
+
+
 int mainHost() {
 	OleInitialize(0);
 	std::set_terminate(on_terminate);
@@ -1110,7 +1208,35 @@ int mainHost() {
 	audiohost->postInit();
 	GLFWwindow* glfwHandle = mainWindow->getGLFW();
 	while (!glfwWindowShouldClose(glfwHandle)) {
-		glfwWaitEvents();
+		DWORD timeout = 1;
+		MsgWaitForMultipleObjects(0, NULL, FALSE, timeout, QS_ALLEVENTS);
+
+	    MSG msg;
+	    while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE))
+	    {
+	        if (msg.message == WM_QUIT)
+	        {
+	        	glfwSetWindowShouldClose(mainWindow->getGLFW(), 1);
+	        }
+	        else
+	        {
+	            TranslateMessage(&msg);
+	            DispatchMessageW(&msg);
+				incrMessage(msg.message);
+//				if (msg.message == WM_PAINT)
+				{
+					char clsName_v[256];
+
+					GetClassNameA(msg.hwnd, clsName_v, 256);
+					if (hwndPaints.count(clsName_v)) {
+						hwndPaints[clsName_v] = hwndPaints.at(clsName_v)+1;
+					} else {
+						hwndPaints[clsName_v] = 1;
+					}
+				}
+	        }
+	    }
+		glfwUpdateInternals();
 		ctrl->numCallsWaitEvents++;
 	}
 	audiohost->stopAudio();
@@ -1120,7 +1246,6 @@ int mainHost() {
 	audiohost->destroy();
 	PopupCtrl::get()->destroy();
 
-	// I _want_ to use smart pointers, but eclipse cdt doesn't want me to
 
 	glfwTerminate();
 	saveSettings(settings);

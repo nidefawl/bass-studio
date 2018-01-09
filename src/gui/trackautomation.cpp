@@ -8,10 +8,10 @@
 #include "guicontainer.h"
 #include "trackctr.h"
 #include "automation.h"
-#include "track_audiodata.h"
-
 #include <glm/geometric.hpp>
 #include <glm/vec2.hpp>
+#include "track.h"
+#include "track_impl.h"
 #include "leak_detect.h"
 using glm::vec2;
 using glm::ivec2;
@@ -38,10 +38,28 @@ float ctrToDataScale(float screenX, float ctrHeight) {
 	return (screenX/ctrHeight);
 }
 
+float gui_track_automation::getDstVal() {
+	if (at) {
+		auto at2 = at->getAutomation(param);
+		if (at2)
+			return at2->getDstValue();
+	}
+	return data.getDstValue();
+}
+void gui_track_automation::setDstVal(float f) {
+	if (at) {
+		auto at2 = at->getAutomation(param);
+		if (at2) {
+			at2->setDstValue(f);
+			return;
+		}
+	}
+	data.setDstValue(f);
+}
 using hit_result = gui_track_automation::hit_result;
 hit_result gui_track_automation::hitTest(vec2 mpos) {
 	if (data.points.empty()) {
-		float fDstVal = data.getDstValue();
+		float fDstVal = getDstVal();
 		ivec2 cs = getSizeContent();
 		float dstValY = dataToCtr(fDstVal, cs.y);
 		float dist = abs(mpos.y - dstValY);
@@ -116,9 +134,9 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 		vec2* pathPtCur;
 		if (dragged.mode == dragmode::drag_empty) {
 			evt.dragDistance->y = 0;
-			float fDstVal = data.getDstValue();
+			float fDstVal = getDstVal();
 			fDstVal = min(1.0f, max(0.0f, fDstVal + valOffset));
-			data.setDstValue(fDstVal);
+			setDstVal(fDstVal);
 		} else if (dragged.mode && (pathPtCur = getPathPointSafe(dragged.idx))) {
 			std::vector<automation_point_t>& dataPoints = dataPointsEdited;
 			std::vector<automation_point_t>& pointsClamped = data.points;
@@ -296,6 +314,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 		cachedShape.clear();
 		segments.clear();
 		if (!dataPoints.empty()) {
+			cachedShape.reserve(dataPoints.size()+4);
 			automation_point_t& firstData = dataPoints[0];
 			segmentDataPtOffset = 0;
 			float firstX = (float)grid.tickToScreenD(firstData.time);
@@ -316,7 +335,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 				cachedShape.push_back({cs.x+4.0f, last.y});
 			}
 
-
+			segments.reserve(cachedShape.size()-1);
 			for (int i = 0; i < cachedShape.size()-1; i++) {
 				segments.push_back({cachedShape[i], cachedShape[i+1], i});
 			}
@@ -376,6 +395,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 			int start = i;
 			skipped+=i;
 			if (i < len) {
+//				nvgLineJoin(vg, NVGlineCap::NVG_BEVEL);
 				nvgBeginPath(vg);
 				i--;
 				vec2& first = cachedShape[i];
@@ -393,6 +413,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 				nvgStrokeColor(vg, color);
 				nvgStrokeWidth(vg, lineWidth);
 				nvgStroke(vg);
+//				nvgLineJoin(vg, NVGlineCap::NVG_MITER);
 
 				//Lots of room for optimization here (draw texture for dot, or use custom shader)
 				nvgShapeAntiAlias(vg, 0);
@@ -453,7 +474,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 				nvgStroke(vg);
 			}
 		} else { // no data points
-			float fDstVal = data.getDstValue();
+			float fDstVal = getDstVal();
 			ivec2 cs = getSizeContent();
 			float dstValY = dataToCtr(fDstVal, cs.y);
 			nvgBeginPath(vg);
@@ -466,6 +487,10 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 				nvgStrokeColor(vg, color);
 				nvgStrokeWidth(vg, lineWidth);
 			}
+			RenderResources::NvgImageTexture& image = RenderResources::imgDashedLine;
+			uint32_t texOffsetX = image.width - (grid.getOffset()%image.width);
+			NVGpaint paintDown = nvgImagePattern(vg, texOffsetX, 0, image.width, image.height, M_PI*0.5f, image.id, 0.6f);
+			nvgStrokePaint(vg, paintDown);
 			nvgStroke(vg);
 		}
 		if (mouseTick != INVALID_TICK) {

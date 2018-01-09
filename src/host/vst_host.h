@@ -49,7 +49,7 @@ namespace PlugCanDos
 }
 
 class vstplugin;
-struct track_plugins_t;
+struct track_impl_t;
 typedef void PaStream;
 
 typedef AEffect*(VSTPluginMain_t)(audioMasterCallback audioMasterCB);
@@ -113,7 +113,7 @@ public:
 
 	void updateTime(int32_t samplePos, tick_t pos, playback_state state);
 	int32_t processPlayback(int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround);
-	void processAudio(track_plugins_t* channel, AudioBlock* input, AudioBlock* output, unsigned long samples);
+	void processAudio(track_impl_t* channel, AudioBlock* input, AudioBlock* output, unsigned long samples);
 	void sendNotesOff(vstplugin* plugin);
 
 	VstTimeInfo* getTimeInfo() {
@@ -121,6 +121,7 @@ public:
 	}
 	bool startAudio();
 	bool stopAudio();
+	void updateDisplay();
 	void destroy();
 	void unload();
 	bool postInit();
@@ -151,8 +152,8 @@ public:
 	uint32_t pluginCount();
 	vstplugin* getPluginIdx(uint32_t i);
 	vstpluginloadres loadPlugin(String filepath, int32_t globalId = 0);
-	track_plugins_t* createAudio(track_t* track);
-	bool movePlugin(track_t* dstTr, track_plugins_t* trp, int32_t src, int32_t dst);
-	bool swapEffects(track_plugins_t* trp, int32_t src, int32_t dst);
-	bool insertNewPlugin(track_plugins_t* trp, vstplugin* plugin, int32_t dst);
+	track_impl_t* createAudio(track_t* track);
+	bool movePlugin(track_t* dstTr, track_impl_t* trp, int32_t src, int32_t dst);
+	bool swapEffects(track_impl_t* trp, int32_t src, int32_t dst);
+	bool insertNewPlugin(track_impl_t* trp, vstplugin* plugin, int32_t dst);
 };

@@ -164,7 +164,7 @@ public:
 		}
 	}
 	virtual void renderBackground(NVGcontext* vg) {
-		bool focused = MainCtrl::get()->guiCtrFocused == this;
+		bool focused = MainCtrl::get()->isCtrOrChildFocused(this);
 		drawBackground(vg, getPosContent(), getSizeContent(), margin, focused);
 	}
 	virtual void onTick(MainCtrl* ctrl) {

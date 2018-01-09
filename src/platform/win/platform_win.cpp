@@ -17,6 +17,22 @@ using std::min;//make code analyzer happy (and make author sad)
 uint64_t getTimeMillis() {
 	return (uint64_t) timeGetTime();
 }
+
+double getTimeHPC()
+{
+  static LARGE_INTEGER frequency;
+  if (frequency.QuadPart == 0)
+	::QueryPerformanceFrequency(&frequency);
+  LARGE_INTEGER now;
+  ::QueryPerformanceCounter(&now);
+  return now.QuadPart / double(frequency.QuadPart);
+}
+double getSince(double& d) //checks for overflow
+{
+	double now = getTimeHPC();
+	if (now < d) d = now;
+	return now - d;
+}
 String getModuleName(HMODULE module) {
 	std::vector<TCHAR> pathBuf;
 	DWORD copied = 0;

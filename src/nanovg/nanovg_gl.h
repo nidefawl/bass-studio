@@ -49,7 +49,7 @@ enum NVGcreateFlags {
 #  define NANOVG_GL_IMPLEMENTATION 1
 #endif
 
-#define NANOVG_GL_USE_STATE_FILTER (0)
+#define NANOVG_GL_USE_STATE_FILTER (1)
 
 // Creates NanoVG contexts for different OpenGL (ES) versions.
 // Flags should be combination of the create flags above.
@@ -617,7 +617,8 @@ static int glnvg__renderCreate(void* uptr)
 		"#ifdef EDGE_AA\n"
 		"// Stroke - from [0..1] to clipped pyramid, where the slope is 1px.\n"
 		"float strokeMask() {\n"
-		"	return min(1.0, (1.0-abs(ftcoord.x*2.0-1.0))*strokeMult) * min(1.0, ftcoord.y);\n"
+		//"	return min(1.0, (1.0-abs(ftcoord.x*2.0-1.0))*strokeMult) * min(1.0, ftcoord.y);\n"
+		"return smoothstep(0.0, 1.0, (1.0-abs(ftcoord.x*2.0-1.0))*strokeMult) * smoothstep(0.0, 1.0, ftcoord.y);\n"
 		"}\n"
 		"#endif\n"
 		"\n"
@@ -991,6 +992,7 @@ static void glnvg__setUniforms(GLNVGcontext* gl, int uniformOffset, int image)
 
 static void glnvg__renderViewport(void* uptr, int width, int height, float devicePixelRatio)
 {
+	NVG_NOTUSED(devicePixelRatio);
 	GLNVGcontext* gl = (GLNVGcontext*)uptr;
 	gl->view[0] = (float)width;
 	gl->view[1] = (float)height;

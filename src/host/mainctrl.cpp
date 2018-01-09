@@ -40,8 +40,7 @@
 
 #include "vst_host.h"
 #include "vst_plugin.h"
-#include "track_audiodata.h"
-
+#include "track_impl.h"
 #include "leak_detect.h"
 
 using glm::vec2;
@@ -106,12 +105,12 @@ void testTask() {
 	}
 
 }
-extern "C" {
-
 int getNumMsg();
 int getMsgId(int i);
 int getMsgCnt(int i);
-}
+int getHWNDMapSize();
+String getHWNDName(int i);
+int getHWNDCnt(int i);
 extern int colorVal;
 class gui_ctr_debug : public guictr_base {
 	guiknob knobTest;
@@ -145,10 +144,27 @@ public:
 		strings.push_back(String("guiDragged: ")+str);
 		str = ctrl->guiCaptured ? ctrl->guiCaptured->getClassName() : "<null>";
 		strings.push_back(String("guiCaptured: ")+str);
-		str = ctrl->guiFocused ? ctrl->guiFocused->getClassName() : "<null>";
-		strings.push_back(String("guiFocused: ")+str);
 		str = ctrl->guiCtrFocused ? ctrl->guiCtrFocused->getClassName() : "<null>";
 		strings.push_back(String("guiCtrFocused: ")+str);
+		str = ctrl->guiFocused ? ctrl->guiFocused->getClassName() : "<null>";
+		strings.push_back(String("guiFocused: ")+str);
+
+		guibase* p = ctrl->guiFocused;
+		int lvl = 0;
+		while (p != NULL) {
+			String s = "";
+			if (lvl == 0) {
+				s = "guiFocused: ";
+			}
+			for (int i = 0; i < lvl; i++) {
+				s+="  ";
+			}
+			strings.push_back(s+p->getClassName());
+			p = p->parent;
+			lvl++;
+		}
+
+
 		strings.push_back(String("lastKey: ")+ctrl->lastKey);
 		strings.push_back(StringFormat("undo size: %d",ctrl->getHist().getNumUndoSteps()));
 		strings.push_back(StringFormat("redo size: %d",ctrl->getHist().getNumRedoSteps()));
@@ -173,6 +189,20 @@ public:
 				int id;
 				int cnt;
 			};
+			std::vector<win32_msg> wnd;
+			for (int i = 0; i < getHWNDMapSize(); i++) {
+				int cnt = getHWNDCnt(i);
+				wnd.push_back({i, cnt});
+			}
+			std::sort(wnd.begin(), wnd.end(), [](win32_msg const & a, win32_msg const & b) {
+				return a.cnt > b.cnt;
+			});
+			for (win32_msg& msg : wnd) {
+				String s = getHWNDName(msg.id);
+				strings.push_back(StringFormat("%s: %d", StringAsCStr(s), msg.cnt));
+
+			}
+
 			std::vector<win32_msg> msgs;
 			for (int i = 0; i < getNumMsg(); i++) {
 				int id = getMsgId(i);
@@ -580,6 +610,17 @@ void MainCtrl::setClipboardText(String s)
 {
 	this->mainWindow->setClipboardText(s);
 }
+bool MainCtrl::isCtrOrChildFocused(guibase* gui) {
+	if (gui == this->guiCtrFocused)
+		return true;
+	guibase* p = this->guiFocused;
+	while (p != NULL) {
+		if (p == gui)
+			return true;
+		p = p->parent;
+	}
+	return false;
+}
 void MainCtrl::requestRedraw()
 {
 	this->mainWindow->requestRedraw();
@@ -691,6 +732,7 @@ bool MainCtrl::setLoadedProject(shared_ptr<project_file> file) {
 }
 void BaseCtrl::render(int32_t x, int32_t y, int32_t w, int32_t h, float ratio) {
 	nvgBeginFrame(vg, w, h, ratio);
+	nvgLineJoin(vg, NVGlineCap::NVG_BEVEL);
 
 
 	for (guictr_base *ctr : containers) {
@@ -1003,11 +1045,6 @@ bool MainCtrl::processGlobalKeyevent(KeyEvent& event) {
 		}
 	}
 	if (event.type != KeyEventType::K_RELEASE) {
-		if (event.keyCode == KEY_F2) {
-			fastCircle=!fastCircle;
-			my_printf("fastcircle: %d\n", fastCircle);
-			return true;
-		}
 		if (event.keyCode == KEY_SPACE) {
 			if (isPlaying()) {
 				stopPlaying();
@@ -1379,16 +1416,39 @@ void MainCtrl::cutIntersecting(track_t* tr, clip_t* mask) {
 	tick_t tickEnd = mask->time + mask->len;
 	cutIntersecting(tr, tickBegin, tickEnd);
 }
+void MainCtrl::showAutomation(track_t* tr, automatable_t* at, int32_t paramIdx) {
+	view->ctr_tracks.showAutomationLane(tr, at, paramIdx);
+}
 void MainCtrl::cutSelection(const Cursor& _cursor) {
 	int32_t tickBegin = _cursor.getTickBegin();
 	int32_t tickEnd = _cursor.getTickEnd();
 	int32_t trackBegin = _cursor.getTrackBegin();
 	int32_t trackEnd = _cursor.getTrackEnd();
-	for (int i = trackBegin; i <= trackEnd; i++) {
-		if (trackList.validTrackIdx(i)) {
-			track_t* tr = trackList[i];
-			if (tr->type == TRACK_TYPE_MIDI) {
-				cutIntersecting(tr, tickBegin, tickEnd);
+	if (!cursor.isSubtrackSelection()) {
+		for (int i = trackBegin; i <= trackEnd; i++) {
+			if (trackList.validTrackIdx(i)) {
+				track_t* tr = trackList[i];
+				if (tr->type == TRACK_TYPE_MIDI) {
+					cutIntersecting(tr, tickBegin, tickEnd);
+				}
+			}
+		}
+	} else {
+		int32_t trackSBegin = _cursor.getSubTrackBegin();
+		int32_t trackSEnd = _cursor.getSubTrackEnd();
+		if (trackList.validTrackIdx(trackBegin)) {
+			track_t* tr = trackList[trackBegin];
+			std::vector<automation_point_t> empty(0);
+			for (int i = 0; i <= trackSEnd-trackSBegin; i++) {
+				int32_t subTrackIdx = trackSBegin + i;
+				if (subTrackIdx < 0 || subTrackIdx >= tr->subtracks.size())
+					continue;
+				gui_track_automationlane* subtrack = tr->subtracks[subTrackIdx];
+				automation_t* automation = subtrack->getAutomation();
+				if (automation) {
+					automation->setRange(tickBegin, tickEnd, empty);
+				}
+
 			}
 		}
 	}
