@@ -463,7 +463,8 @@ void track_impl_t::saveAutomationLanes(std::vector<automationlane_snapshot_t>& a
 		atls.push_back(std::move(ref));
 	}
 }
-void track_impl_t::showAutomationLanes(bool show) {
+void track_impl_t::showAutomationLanes() {
+	bool show = !track->hideAutomation && !track->hideTrack;
 	if (this->atlStored == show)
 		return;
 	this->atlStored = show;

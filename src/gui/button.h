@@ -91,10 +91,14 @@ public:
 	}
 };
 class guibuttontoggle : public guibuttonbase {
+	int _getIcon() {
+		return getIcon?getIcon():icon;
+	}
 public:
 	float radius = 0;
 	bool* state = NULL;
 	int icon = -1;
+    std::function<int()> getIcon;
 	guibuttontoggle() : guibuttonbase() {
 	}
 	guibuttontoggle(float _radius) : guibuttonbase(ivec2(0), ivec2((int)(_radius * 2))) {
@@ -117,6 +121,7 @@ public:
 		nvgStrokeColor(vg, theme->getBgStrokeColor(state));
 		nvgStrokeWidth(vg, theme->getBgStrokeWidth(state));
 		nvgStroke(vg);
+		int icon = _getIcon();
 		if (icon >= 0) {
 
 

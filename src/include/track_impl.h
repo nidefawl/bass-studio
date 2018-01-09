@@ -209,5 +209,5 @@ struct track_impl_t {
 	void loadAutomationLanes(const std::vector<automationlane_snapshot_t>& atl);
 	void saveAutomationLanes(std::vector<automationlane_snapshot_t>& atl);
 	void loadPlugins(const std::vector<plugin_snapshot_t>& trPluginList);
-	void showAutomationLanes(bool b);
+	void showAutomationLanes();
 };

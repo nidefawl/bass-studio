@@ -444,8 +444,8 @@ public:
 		hideTrack.state = &m_track->hideTrack;
 		hideAutomation.state = &m_track->hideAutomation;
 		padding = 0;
-		hideTrack.icon = m_track->hideTrack?ICON_ARR_RIGHT:ICON_ARR_DOWN;
-		hideAutomation.icon = m_track->hideAutomation?ICON_ARR_RIGHT:ICON_ARR_DOWN;
+		hideTrack.getIcon = [this]{return m_track->hideTrack?ICON_ARR_RIGHT:ICON_ARR_DOWN;};
+		hideAutomation.getIcon = [this]{return m_track->hideAutomation?ICON_ARR_RIGHT:ICON_ARR_DOWN;};
 		addAutomationLane.icon = ICON_PLUS;
 		add(&hideTrack);
 	}
@@ -505,8 +505,8 @@ public:
 		}
 	}
 	bool isResize(ivec2 mpos) {
-		int32_t resizeTopOrBottom = bottom();
-		return mpos.y >= resizeTopOrBottom - resizeHitY
+		int32_t resizeTopOrBottom = m_track->type < TRACK_TYPE_MIDI ? top() : bottom();
+		return mpos.x >= left() && mpos.x < right() && mpos.y >= resizeTopOrBottom - resizeHitY
 				&& mpos.y < resizeTopOrBottom + resizeHitY;
 	}
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
@@ -539,7 +539,6 @@ public:
 		dragMode = -1;
 	}
 	void buttonClicked(guibase* button) override {
-		bool showSubtracks = !m_track->hideAutomation && !m_track->hideTrack;
 		if (button == &hideTrack) {
 			m_track->hideTrack = !m_track->hideTrack;
 		}
@@ -550,10 +549,7 @@ public:
 			m_track->hideTrack = false;
 			m_track->hideAutomation = false;
 		}
-		bool showSubtracksAfter = !m_track->hideAutomation && !m_track->hideTrack;
-		if (showSubtracks != showSubtracksAfter) {
-			m_track->audio->showAutomationLanes(showSubtracksAfter);
-		}
+		m_track->audio->showAutomationLanes();
 		if (button == &addAutomationLane) {
 			automatable_t* autom = m_track->audio->selectedAutomationCtr;
 			int32_t param = m_track->audio->selectedAutomationParam;
@@ -561,8 +557,6 @@ public:
 				MainCtrl::getGuiTrackCtr()->addAutomationLane(m_track, autom, param, true);
 			}
 		}
-		hideTrack.icon = m_track->hideTrack?ICON_ARR_RIGHT:ICON_ARR_DOWN;
-		hideAutomation.icon = m_track->hideAutomation?ICON_ARR_RIGHT:ICON_ARR_DOWN;
 		MainCtrl::getGuiTrackCtr()->layout();
 		MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
 //		guictxtmenu_base *popup = NULL;
@@ -679,7 +673,7 @@ public:
 	}
 	bool isResize(ivec2 mpos) {
 		int32_t resizeTopOrBottom = bottom();
-		return mpos.y >= resizeTopOrBottom - resizeHitY
+		return mpos.x >= left() && mpos.x < right() && mpos.y >= resizeTopOrBottom - resizeHitY
 				&& mpos.y < resizeTopOrBottom + resizeHitY;
 	}
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
@@ -800,6 +794,9 @@ void gui_track_controls::render(NVGcontext* vg) {
 	nvgStroke(vg);
 
 }
+bool canResizeTitleBar(track_t* tr) {
+	return !tr->hideTrack&&!tr->hideAutomation&&tr->subtracks.size();
+}
 bool gui_track_controls::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 	ivec2 local = this->toContainerSpace(mpos);
 	bool contained = contains(mpos);
@@ -812,13 +809,22 @@ bool gui_track_controls::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 		evt.requestFocus(this);
 	}
 	if (evt.type <= MouseHitType::MOUSE_RIGHT) {
-		if (title->isResize(local)) {
-			evt.requestFocus(title);
-			evt.requestCursor(CURSOR_RESIZE_V);
-			return true;
+		guibase* g = NULL;
+		if (m_track->type < TRACK_TYPE_MIDI) {
+			if (isResize(mpos)) {
+				g = this;
+			} else if (canResizeTitleBar(m_track) && title->isResize(local)) {
+				g = title;
+			}
+		} else {
+			if (canResizeTitleBar(m_track) && title->isResize(local)) {
+				g = title;
+			} else if (isResize(mpos)) {
+				g = this;
+			}
 		}
-		if (isResize(mpos)) {
-			evt.requestFocus(this);
+		if (g) {
+			evt.requestFocus(g);
 			evt.requestCursor(CURSOR_RESIZE_V);
 			return true;
 		}
@@ -850,9 +856,20 @@ void gui_track_controls::handleDraggedMove(MouseEvent& evt) {
 			mouseDragDist = -evt.relMousepos.y+size.y;
 		}
 		int32_t totalHeightSteps = min(128, max(1, (mouseDragDist) / TRACK_HEIGHT_STEP));
+		if ( m_track->hideTrack && totalHeightSteps > TRACK_MIN_HEIGHT) {
+			m_track->hideTrack = false;
+			m_track->audio->showAutomationLanes();
+		}
+		int nChanged = 0;
 		while (totalHeightSteps < trackHeight(m_track) && addTrHeight(m_track, -1)) {
+			nChanged++;
 		}
 		while (totalHeightSteps > trackHeight(m_track) && addTrHeight(m_track, 1)) {
+			nChanged++;
+		}
+		if (!nChanged && m_track->height == TRACK_MIN_HEIGHT && totalHeightSteps == TRACK_MIN_HEIGHT) {
+			m_track->hideTrack = true;
+			m_track->audio->showAutomationLanes();
 		}
 		this->parent->onChildLayoutChanged(this);
 	}
