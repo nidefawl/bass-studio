@@ -751,6 +751,10 @@ public:
 	void showEditClip() {
 		noteeditor.showEditClip();
 	}
+	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
+		if (!view.clip()) return false;
+		return guictr_base::mouseHitTest(mpos, evt);
+	}
 	void render(NVGcontext* vg) {
 		guictr_base::renderBackground(vg);
 //		guictr_base::setScissorTransform(vg);
