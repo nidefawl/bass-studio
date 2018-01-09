@@ -99,16 +99,17 @@ struct trackparam_automation_t : public automation_t {
 
 	}
 	float getDstValue() override {
-		return gain;
+		return gain / 2.0f;
 	}
 	void setDstValue(float f) override {
-		gain = f;
+		gain = f*2.0f;
+		active = false;
 	}
 };
-struct track_mixer: public automatable_t {
-	float gain;
+struct track_params_t : public automatable_t {
+	float val;
 	trackparam_automation_t gainAutomation;
-	track_mixer() : automatable_t(), gainAutomation(gain) {
+	track_params_t(String name, int32_t idx) : automatable_t(), gainAutomation(val) {
 
 	}
 	String getAutomatableName() override {
@@ -121,14 +122,15 @@ struct track_mixer: public automatable_t {
 		return "Gain";
 	}
 	float getParamValue(int32_t idx) override {
-		return gain;
+		return val;
 	}
 	void setParamValue(int32_t idx, float val) override {
-		gain = val;
+		this->val = val;
 	}
 	void updateAutomatedParameters(tick_t pos) override {
-//		float val = param.src->getValueAt(pos);
-//		setParamValue(param.paramIdx, val);
+		if (getAutomation(0)->isActive()) {
+			val = gainAutomation.getValueAt(pos) * 2.0f;
+		}
 	}
 	automation_t* getAutomation(int32_t idx) override {
 		return &gainAutomation;
@@ -142,8 +144,36 @@ struct track_mixer: public automatable_t {
 		ref.refId = 0;
 		return ref;
 	}
+	void createSnapshot(track_params_snapshot_t& snapshot) {
+		for (int i = 0; i < getNumParameters(); i++) {
+			float val = getParamValue(i);
+			param_snapshot_t snapParam{i, val};
+			snapshot.params.push_back(std::move(snapParam));
+			automation_t* automation = getAutomation(i);
+			automation_view_t automationView;
+			if (automation) {
+				automationView.targetParam = i;
+				automationView.dummy = val;
+				automationView.points = automation->points;
+			}
+			snapshot.automatedParams.push_back(std::move(automationView));
+		}
+	}
+	void loadSnapshot(const track_params_snapshot_t& snapshot) {
+		for (auto p : snapshot.automatedParams) {
+			automation_t* automation = getAutomation(p.targetParam);
+			automation->points = p.points;
+			automation->setDstValue(p.dummy); // NOT SURE
+		}
+		for (auto p : snapshot.params) {
+			this->setParamValue(p.idx, p.val);
+		}
+	}
+	float getGain() {
+		return val;
+	}
 };
-struct track_plugins_t {
+struct track_impl_t {
 	track_t* const track;
 	const samplerate_t& sampleRate;
 	const uint16_t& blockSize;
@@ -155,16 +185,17 @@ struct track_plugins_t {
 	VstEvent_t* midiEventsBuf = NULL;
 	AudioBlock input; //guaranteed to have at least 2 channels
 	AudioBlock output; //guaranteed to have at least 2 channels
-	track_mixer mixer;
+	track_params_t mixer;
 	automatable_t* selectedAutomationCtr = NULL;
 	int32_t selectedAutomationParam = -1;
 	std::vector<automationlane_snapshot_t> atl;
-	track_plugins_t(track_t* _track, const samplerate_t& _sampleRate, const uint16_t& _blockSize, int32_t nChannels)
+	bool atlStored = false;
+	track_impl_t(track_t* _track, const samplerate_t& _sampleRate, const uint16_t& _blockSize, int32_t nChannels)
 	: track(_track),
 	  sampleRate(_sampleRate),
-	  blockSize(_blockSize), input(nChannels, _blockSize), output(nChannels, _blockSize), mixer() {
+	  blockSize(_blockSize), input(nChannels, _blockSize), output(nChannels, _blockSize), mixer("Mixer", 0) {
 	}
-	~track_plugins_t();
+	~track_impl_t();
 	vstplugin* getPluginSlot(int32_t idx);
 	vstplugin* getPluginById(int32_t projectGlobalId);
 	vstplugin* setInstrument(vstplugin* _instrument);
@@ -177,4 +208,6 @@ struct track_plugins_t {
 	void getAutomatableTargets(std::vector<automatable_t*>& targets);
 	void loadAutomationLanes(const std::vector<automationlane_snapshot_t>& atl);
 	void saveAutomationLanes(std::vector<automationlane_snapshot_t>& atl);
+	void loadPlugins(const std::vector<plugin_snapshot_t>& trPluginList);
+	void showAutomationLanes(bool b);
 };
