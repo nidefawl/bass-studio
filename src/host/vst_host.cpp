@@ -134,7 +134,7 @@ VstIntPtr VSTCALLBACK audioMaster(AEffect* effect, VstInt32 opcode, VstInt32 ind
 		return 0;
 	case audioMasterGetCurrentProcessLevel:
 //		cbPrintf(plugin, "audioMasterGetCurrentProcessLevel %d %d %d\n", index, opcode, value);
-		return VstProcessLevels::kVstProcessLevelUnknown;
+		return VstProcessLevels::kVstProcessLevelRealtime;
 	case audioMasterGetAutomationState:
 		cbPrintf(plugin, "audioMasterGetAutomationState %d %d %d\n", index, opcode, value);
 		return kVstAutomationReadWrite;
