@@ -107,7 +107,7 @@ struct trackparam_automation_t : public automation_t {
 	}
 };
 struct track_params_t : public automatable_t {
-	float val;
+	float val = 0;
 	trackparam_automation_t gainAutomation;
 	track_params_t(String name, int32_t idx) : automatable_t(), gainAutomation(val) {
 
@@ -126,6 +126,10 @@ struct track_params_t : public automatable_t {
 	}
 	void setParamValue(int32_t idx, float val) override {
 		this->val = val;
+		automation_t* at = getAutomation(idx);
+		if (at && at->isActive()) {
+			at->active = false;
+		}
 	}
 	void updateAutomatedParameters(tick_t pos) override {
 		if (getAutomation(0)->isActive()) {
@@ -164,6 +168,7 @@ struct track_params_t : public automatable_t {
 			automation_t* automation = getAutomation(p.targetParam);
 			automation->points = p.points;
 			automation->setDstValue(p.dummy); // NOT SURE
+			automation->active = p.active;
 		}
 		for (auto p : snapshot.params) {
 			this->setParamValue(p.idx, p.val);

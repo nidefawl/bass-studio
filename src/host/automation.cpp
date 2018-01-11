@@ -1,5 +1,6 @@
 #include "automation.h"
 #include "vst_plugin.h"
+#include "../gui/automatable.h"
 
 int32_t indexOfTick(std::vector<automation_point_t>& dataPoints, tick_t tick) {
 	int32_t idx;
@@ -183,3 +184,4 @@ void vstparam_automation_t::setDstValue(float f) {
 		return plugin->setParamValue(paramIdx, f);
 	}
 }
+

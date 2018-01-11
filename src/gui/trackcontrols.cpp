@@ -13,6 +13,8 @@
 #include "str_util.h"
 #include "color_util.h"
 #include "leak_detect.h"
+#include "automation.h"
+#include "automatable.h"
 
 #define MTR_FLOOR -48.0f
 #define MTR_CEIL 6.0f
@@ -175,6 +177,22 @@ public:
 	}
 };
 
+class guictxtmenu_trackparam : public guictxtmenu_base {
+	track_t* const track;
+	int32_t const paramIdx;
+public:
+	guictxtmenu_trackparam(track_t* _track, int32_t _paramIdx) : track(_track), paramIdx(_paramIdx)
+	{
+		this->size.x = 240;
+		automation_t* at = track->audio->mixer.getAutomation(_paramIdx);
+		addContextEntries(this, at);
+	}
+	void clicked(int _id) {
+		automatable_t* atl = &track->audio->mixer;
+		handleAutomatbleContextMenu(track, atl, paramIdx, _id);
+		MainCtrl::get()->closeContextMenu();
+	}
+};
 class gui_trackgain: public guibase {
 	track_t* const m_track;
 	bool bEnabled = false;
@@ -190,6 +208,9 @@ public:
 	}
 	virtual bool focused() {
 		return this == MainCtrl::get()->guiFocused;
+	}
+	void handleRightClick(MouseEvent& evt) override {
+		MainCtrl::get()->openContextMenu(new guictxtmenu_trackparam(m_track, 0), evt.mousepos);
 	}
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
 		if (contains(mpos)) {

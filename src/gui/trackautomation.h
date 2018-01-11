@@ -37,6 +37,7 @@ protected:
 	track_t* const m_track;
 private:
 	const NVGcolor color = G_BLUE2;
+	const NVGcolor colorInactive = rgbaToNvg(0xAAAAAAAA);
 	const NVGcolor color2 = mulSatBright(color, 0.6f, 0.8f);
 	const NVGcolor colorHL = G_PURPLE;
 	const NVGcolor colorHL2 = mulSatBright(colorHL, 0.6f, 0.8f);
@@ -81,6 +82,13 @@ public:
 		} else {
 			data.points.clear();
 		}
+	}
+	bool isActive() {
+		if (this->at) {
+			automation_t* automation = this->at->getAutomation(param);
+			return automation && automation->isActive();
+		}
+		return false;
 	}
 	ivec2 paddingTL(int _padding) override {
 		return ivec2(0, _padding);

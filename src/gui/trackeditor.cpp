@@ -123,7 +123,6 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 		return false;
 	}
 	if (kevt.type != K_RELEASE) {
-		MainCtrl* ctrl = MainCtrl::get();
 		bool modified = false;
 		bool handledKeyinput = false;
 		String desc = "???";

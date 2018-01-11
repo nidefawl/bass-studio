@@ -6,6 +6,7 @@
 #include "renderresources.h"
 #include "button.h"
 #include "list.h"
+#include "automatable.h"
 #include "guicontainer.h"
 #include "guicontextmenu.h"
 #include "plugin.h"
@@ -119,37 +120,17 @@ void guiplugin::buttonClicked(guibase* _button) {
 	}
 }
 class guictxtmenu_vstparam : public guictxtmenu_base {
-	static const int32_t ID_DELETE = 1;
-	static const int32_t ID_CREATE = 2;
-	static const int32_t ID_REENABLE = 3;
 	vstplugin* const vst;
 	vst_param* const entry;
 public:
 	guictxtmenu_vstparam(vstplugin* _vst, vst_param* _entry) : vst(_vst), entry(_entry)
 	{
 		this->size.x = 240;
-		automated_param_t* param = _vst->getRegisteredAutomation(_entry->idx);
-		if (param) {
-			if (!param->src->isActive()) {
-				add(new ctxtmenu_entry("Reenable Automation", ID_REENABLE));
-			}
-			add(new ctxtmenu_entry("Delete Automation", ID_DELETE));
-		} else {
-			add(new ctxtmenu_entry("Create Automation Track", ID_CREATE));
-		}
+		automation_t* at = vst->getAutomation(entry->idx);
+		addContextEntries(this, at);
 	}
 	void clicked(int _id) {
-		switch (_id) {
-		case ID_CREATE:
-		{
-
-		}
-			break;
-		case ID_DELETE:
-			break;
-		case ID_REENABLE:
-			break;
-		}
+		handleAutomatbleContextMenu(vst->getTrack(), vst, entry->idx, _id);
 		MainCtrl::get()->closeContextMenu();
 	}
 };
@@ -172,8 +153,12 @@ public:
 		knobTest.fnGetValue = [_vst, paramIdx] () {
 			return _vst->getParamValue(paramIdx);
 		};
-		knobTest.fnSetValue = [_vst, paramIdx] (float f) {
-			return _vst->setParamValue(paramIdx, f);
+		knobTest.fnSetValue = [this] (float f) {
+			automation_t* param = vst->getAutomation(entry->idx);
+			if (param) {
+				param->active = false;
+			}
+			return vst->setParamValue(entry->idx, f);
 		};
 		knobTest.fnFocus = [this](bool b) {focusEvent(b);};
 		knobTest.parent = this;
@@ -225,13 +210,17 @@ public:
 		nvgText(vg, x, rowHeight / 2, StringAsCStr(getText()), NULL);
 		nvgTranslate(vg, -pos.x, -pos.y);
 		auto at = vst->getRegisteredAutomation(entry->idx);
-		if (at) {
-			knobTest.valColor = G_PURPLE;
+		if (at && at->src) {
 			knobTest.indColor = G_PURPLE;
 		} else {
-			knobTest.valColor = G_BLUE;
 			knobTest.indColor = G_WHITE;
 		}
+		if (at && at->src && at->src->isActive()) {
+			knobTest.valColor = G_PURPLE;
+		} else {
+			knobTest.valColor = G_BLUE;
+		}
+
 		knobTest.render(vg);
 	}
 };

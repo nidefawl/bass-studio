@@ -3,16 +3,12 @@
 #include "gui.h"
 #include "guicolors.h"
 
-using glm::vec2;
-using glm::ivec2;
-using glm::vec4;
-using glm::ivec4;
 class gui_scrollcontainer {
 public:
 	gui_scrollcontainer() {}
 	virtual ~gui_scrollcontainer() {}
-	virtual int32_t getContentHeight() = 0;
-	virtual int32_t getContentWidth() = 0;
+	virtual ivec2 getScrollTotalSize() = 0;
+	virtual ivec2 getScrollViewSize() = 0;
 	virtual void scrollOffsetChanged(int dir, float offset) = 0;
 	virtual bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) = 0;
 };
@@ -21,6 +17,7 @@ class gui_scrollbar : public guibase {
 	gui_scrollcontainer& ctr;
 public:
 	float scrollOffset;
+	static const int defaultW = 20;
 	gui_scrollbar(int _dir, float _offset, gui_scrollcontainer& _ctr) : guibase(), dir(_dir), ctr(_ctr), scrollOffset(_offset) {
 	}
 	virtual void render(NVGcontext* vg) {
@@ -29,36 +26,16 @@ public:
 		NVGcolor bg = g_guiColors[COL_BG_DRK];
 		nvgFillColor(vg, bg);
 		nvgFill(vg);
-		int32_t s = 0;
-		int32_t cS = 0;
-		if (dir == 1) {
-			s = size.y;
-			cS = ctr.getContentHeight();
-		} else {
-			s = size.x;
-			cS = ctr.getContentWidth();
-		}
-		float barLen = 0;
-		if (cS > 0) {
-			barLen = min((float) s, (s / (float) cS) * s);
-		}
-		float scrollRange = (s-barLen);
-		float barOffset = scrollOffset*scrollRange;
-		if (cS > 0) {
-			float barW = size.x;
-			float barH = size.y;
-			float barOffsetX = 0;
-			float barOffsetY = 0;
-			if (dir == 1) {
-				barH = barLen;
-				barOffsetY = barOffset;
-			} else {
-				barW = barLen;
-				barOffsetX = barOffset;
-			}
+		ivec2 vcS = ctr.getScrollTotalSize();
+		ivec2 vs = ctr.getScrollViewSize();
+		if (vcS[dir] > 0&&vcS[dir] > vs[dir]) {
+			vec2 barOff(0);
+			vec2 barS = size;
+			barS[dir] = min((float) size[dir], (vs[dir] / (float) vcS[dir]) * size[dir]);
+			barOff[dir] = (size[dir] - barS[dir]) * scrollOffset;
 			int32_t inset = 1;
 			nvgBeginPath(vg);
-			nvgRoundedRect(vg, pos.x+barOffsetX+inset, pos.y+barOffsetY+inset, barW-inset*2, barH-inset*2, G_RND);
+			nvgRoundedRect(vg, pos.x+barOff.x+inset, pos.y+barOff.y+inset, barS.x-inset*2, barS.y-inset*2, G_RND);
 
 
 			bool focused = MainCtrl::get()->guiCtrFocused == this->parent || (MainCtrl::get()->guiDragged==NULL&&MainCtrl::get()->guiOver == this);
@@ -86,26 +63,52 @@ public:
 		startOffset = scrollOffset;
 	}
 	void setScrollOffset(float f) {
+		if (getScrollRange() <= 0)
+			f = 0;
 		float _newOffset = f < 0 ? 0 : f > 1 ? 1 : f;
 		scrollOffset = _newOffset;
 		ctr.scrollOffsetChanged(dir, scrollOffset);
 	}
 	float getScrollRange() {
-
-		int32_t s = 0;
-		int32_t cS = 0;
-		if (dir == 1) {
-			s = size.y;
-			cS = ctr.getContentHeight();
-		} else {
-			s = size.x;
-			cS = ctr.getContentWidth();
+		ivec2 vcS = ctr.getScrollTotalSize();
+		ivec2 vs = ctr.getScrollViewSize();
+		vec2 barOff(0);
+		vec2 barS = size;
+		if (vcS[dir] > 0) {
+			barS[dir] = min((float) size[dir], (vs[dir] / (float) vcS[dir]) * size[dir]);
+			barOff[dir] = (size[dir] - barS[dir]) * scrollOffset;
 		}
-		float barLen = 0;
-		if (cS > 0) {
-			barLen = min((float) s, (s / (float) cS) * s);
+		return size[dir] - barS[dir];
+	}
+	double toPixels() {
+		ivec2 vcS = ctr.getScrollTotalSize();
+		ivec2 vs = ctr.getScrollViewSize();
+		int32_t dist = vcS[dir]-vs[dir];
+		return max(0.0, (double)scrollOffset*dist);
+	}
+	void scrollVisible(int32_t y, int32_t size) {
+		ivec2 vcS = ctr.getScrollTotalSize();
+		ivec2 vs = ctr.getScrollViewSize();
+		int32_t dist = vcS[dir]-vs[dir];
+		if (dist > 0) {
+			double pxOffset = toPixels();
+			if (y < pxOffset) {
+				double offset = y / (double)dist;
+				setScrollOffset((float) offset);
+			} else if (y+size > pxOffset+vs[dir]) {
+				double offset = (y+size-vs[dir]) / (double)dist;
+				setScrollOffset((float) offset);
+			}
 		}
-		return (s-barLen);
+	}
+	void scrollTo(double pixels) {
+		ivec2 vcS = ctr.getScrollTotalSize();
+		ivec2 vs = ctr.getScrollViewSize();
+		int32_t dist = vcS[dir]-vs[dir];
+		if (dist > 0) {
+			double offset = pixels / (double)dist;
+			setScrollOffset((float) offset);
+		}
 	}
 	virtual void handleDraggedMove(MouseEvent& evt) {
 		float scrollRange = getScrollRange();
@@ -117,12 +120,8 @@ public:
 	}
 	virtual bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
 		if (yoffset) {
-			int32_t cS = 0;
-			if (dir == 1) {
-				cS = ctr.getContentHeight();
-			} else {
-				cS = ctr.getContentWidth();
-			}
+			ivec2 vcS = ctr.getScrollTotalSize();
+			int32_t cS = vcS[dir];
 			float scrollRange = cS;
 			if (scrollRange>0) {
 				setScrollOffset(scrollOffset - (yoffset*100)/(float)scrollRange);

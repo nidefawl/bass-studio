@@ -1,58 +1,37 @@
+#include "gui.h"
 #include "trackctr.h"
 #include "trackcontent.h"
 #include "trackcontrols.h"
 #include "guicontextmenu.h"
-#include <glm/vec2.hpp>
 #include "track.h"
 #include "track_impl.h"
-using glm::vec2;
-using glm::ivec2;
 
 
 void guitrack_mixers::render(NVGcontext* vg) {
-//	if (!setScissorTransform(vg)) {
-//		return;
-//	}
-//	ivec2 cs = getSizeContent();
-//	nvgBeginPath(vg);
-//	nvgRect(vg, 0, 0, cs.x, cs.y);
-//	nvgFillColor(vg, g_guiColors[COL_GRID_BRT]);
-//	nvgFill(vg);
-//	for (track_t* g : project.tracksBottom) {
-//		//content
-//		nvgSave(vg);
-//		g->mixer->render(vg);
-//		nvgRestore(vg);
-//	}
-//	int ySplit = getPosYFirstReturnTrack(project);
-//	if (ySplit > 0) {
-//		nvgIntersectScissor(vg, 0, 0, cs.x, ySplit);
-//		for (track_t* g : project.trackCtr) {
-//			//content
-//			nvgSave(vg);
-//			g->mixer->render(vg);
-//			nvgRestore(vg);
-//		}
-//	}
-		ivec2 cs = getSizeContent();
-	ivec2 posInset = getPosContent();
-	nvgTranslate(vg, posInset.x, posInset.y);
-		for (track_t* g : project.tracksBottom) {
+	if (!setScissorTransform(vg)) {
+		return;
+	}
+	ivec2 cs = getSizeContent();
+	nvgBeginPath(vg);
+	nvgRect(vg, 0, 0, cs.x, cs.y);
+	nvgFillColor(vg, g_guiColors[COL_GRID_BRT]);
+	nvgFill(vg);
+	for (track_t* g : project.tracksBottom) {
+		//content
+		nvgSave(vg);
+		g->mixer->render(vg);
+		nvgRestore(vg);
+	}
+	int ySplit = getPosYFirstReturnTrack(project);
+	if (ySplit > 0) {
+		nvgIntersectScissor(vg, 0, 0, cs.x, ySplit);
+		for (track_t* g : project.trackCtr) {
 			//content
 			nvgSave(vg);
 			g->mixer->render(vg);
 			nvgRestore(vg);
 		}
-		int ySplit = getPosYFirstReturnTrack(project);
-		if (ySplit > 0) {
-			nvgIntersectScissor(vg, 0, 0, cs.x, ySplit);
-			for (track_t* g : project.trackCtr) {
-				//content
-				nvgSave(vg);
-				g->mixer->render(vg);
-				nvgRestore(vg);
-			}
-		}
+	}
 
 }
 void guitrack_mixers::addTrack(track_t* t) {
@@ -109,6 +88,10 @@ int32_t guictr_tracks::setTrackPosition(track_t* t, int32_t y, bool isBottom) {
 			t2->pos.y -= totalHeight;
 		}
 	}
+	t->content->positionChanged();
+	for (auto t2 : t->subtracks) {
+		t2->positionChanged();
+	}
 	return totalHeight;
 }
 
@@ -138,9 +121,31 @@ void guictr_tracks::removeAllAutomationLanes(track_t* t) {
 	t->mixer->removeAllAutomationLanes();
 	trackView.removeAllAutomationLanes(t);
 }
+void guictr_tracks::scrollOffsetChanged(int dir, float offset) {
+//	trackView.pos.y = loophandles.bottom()-offset*(contentHeight-size.y);
+//	trackControls.pos.y = loophandles.bottom()-offset*(contentHeight-size.y);
+	int32_t scrOffset = max(0.0f, offset*(contentHeight-contentViewSize));
+	int y = TRACK_HEIGHT_SPACING-scrOffset;
+	for (track_t* t : project.trackCtr) {
+		assert(t->content != NULL);
+		int32_t h = setTrackPosition(t, y, false);
+		y += h + TRACK_HEIGHT_SPACING;
+	}
+}
+void guictr_tracks::scrollTo(guibase* g) {
+	int32_t y = g->pos.y;
+	int32_t scrOffset = max(0.0f, scrollbar.scrollOffset*(contentHeight-contentViewSize));
+	scrollbar.scrollVisible(y+scrOffset, g->size.y);
+}
 void guictr_tracks::layout() {
 	const int mixerwidth = 380;
+	int scrollW = gui_scrollbar::defaultW;
+
 	ivec2 cs = getSizeContent();
+	scrollbar.pos = ivec2(cs.x-scrollW, 0);
+	scrollbar.size = ivec2(scrollW, cs.y);
+	trackTimeline.pos = ivec2(0, 0);
+	cs.x -= scrollW;
 	trackTimeline.pos = ivec2(0, 0);
 	trackTimeline.size = ivec2(cs.x - mixerwidth, 32);
 	loophandles.pos = ivec2(trackTimeline.left(), trackTimeline.bottom());
@@ -153,7 +158,7 @@ void guictr_tracks::layout() {
 
 	loophandles.clipViewSize = ivec2(trackView.size.x, trackView.size.y+loophandles.size.y);
 
-
+	double f = scrollbar.toPixels();
 	ivec2 csTrackView = trackView.getSizeContent();
 	int y = TRACK_HEIGHT_SPACING;
 	for (track_t* t : project.trackCtr) {
@@ -161,6 +166,7 @@ void guictr_tracks::layout() {
 		int32_t h = setTrackPosition(t, y, false);
 		y += h + TRACK_HEIGHT_SPACING;
 	}
+	contentHeight = y;
 	y = csTrackView.y-TRACK_HEIGHT_SPACING;
 //		y = 0;
 	auto itMastersTracks = project.tracksBottom.rbegin();
@@ -173,7 +179,14 @@ void guictr_tracks::layout() {
 		y -= TRACK_HEIGHT_SPACING;
 		itMastersTracks++;
 	}
+	contentViewSize = y;
+	if (contentHeight >= contentViewSize) {
 
+		contentHeight += TRACK_HEIGHT_STEP*4;
+	}
+	scrollbar.scrollTo(f);
+
+	scrollOffsetChanged(1, scrollbar.scrollOffset);
 	for (guibase* gui : guis) {
 		gui->layout();
 	}
@@ -233,6 +246,9 @@ void guictr_tracks::render(NVGcontext* vg) {
 
 		nvgSave(vg);
 		loophandles.render(vg);
+		nvgRestore(vg);
+		nvgSave(vg);
+		scrollbar.render(vg);
 		nvgRestore(vg);
 
 		if (trackView.size.x > 0) {

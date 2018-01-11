@@ -245,10 +245,13 @@ public:
 		}
 		return false;
 	}
-	void layout() override {
+	void positionChanged() {
 		automation.parent = this->parent;
 		automation.pos = this->pos;
 		automation.size = this->size;
+	}
+	void layout() override {
+		positionChanged();
 		automation.layout();
 	}
 	void destroyGuis() override {
@@ -339,10 +342,13 @@ public:
 		return false;
 	}
 	void layout() override {
+		positionChanged();
+		automation.layout();
+	}
+	void positionChanged() {
 		automation.parent = this->parent;
 		automation.pos = this->pos;
 		automation.size = this->size;
-		automation.layout();
 	}
 	void destroyGuis() override {
 		automation.destroyGuis();

@@ -12,6 +12,7 @@
 #include "clip.h"
 #include "grid.h"
 #include "guicontainer.h"
+#include "scrollbar.h"
 #include "tracktimeline.h"
 #include "mouse.h"
 #include "cursor.h"
@@ -402,7 +403,7 @@ public:
 
 	}
 };
-class guictr_tracks : public guictr_base, grid_changed_cb, te_constants {
+class guictr_tracks : public guictr_base, grid_changed_cb, te_constants, public gui_scrollcontainer {
 public:
 	scaled_grid& grid;
 	project_t& project;
@@ -410,6 +411,11 @@ public:
 	guitrack_editor trackView;
 	guitrack_timeline trackTimeline;
 	guictr_tracks_loophandles loophandles;
+private:
+	gui_scrollbar scrollbar;
+	int32_t contentHeight = 0;
+	int32_t contentViewSize = 0;
+public:
 	guictr_tracks(Cursor& _cursor, project_t& _project, scaled_grid& _grid, dragdrop_midifile& _dragdropclip)
 		: guictr_base(),
 		grid(_grid),
@@ -417,9 +423,11 @@ public:
 		trackControls(_project),
 		trackView(_cursor, _project, _grid, _dragdropclip),
 		trackTimeline(_grid),
-		loophandles(_project, _grid)
+		loophandles(_project, _grid),
+		scrollbar(1, 0.0f, *this)
 	{
 		_grid.addCallback(this);
+		add(&scrollbar);
 		add(&trackTimeline);
 		add(&loophandles);
 		add(&trackControls);
@@ -430,6 +438,7 @@ public:
 		remove(&trackControls);
 		remove(&loophandles);
 		remove(&trackTimeline);
+		remove(&scrollbar);
 	}
 
 	void addSingleTrack(track_t* t) {
@@ -459,6 +468,7 @@ public:
 	}
 	int32_t setTrackPosition(track_t* t, int32_t y, bool isBottom);
 	void render(NVGcontext* vg);
+	void scrollTo(guibase* g);
 	void layout();
 	void updateVisibleTrackContents() {
 		trackView.updateVisibleTrackContents();
@@ -483,6 +493,20 @@ public:
 	}
 	bool handleKeyInput(KeyEvent& kevt) {
 		return trackView.handleKeyInput(kevt);
+	}
+	ivec2 getScrollTotalSize() override {
+		ivec2 cs = getSizeContent();
+		cs.y = contentHeight;
+		return cs;
+	}
+	ivec2 getScrollViewSize() override {
+		ivec2 cs = getSizeContent();
+		cs.y = contentViewSize;
+		return cs;
+	}
+	void scrollOffsetChanged(int dir, float offset);
+	virtual bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
+		return scrollbar.handleMouseScroll(evt, xoffset, yoffset);
 	}
 };
 

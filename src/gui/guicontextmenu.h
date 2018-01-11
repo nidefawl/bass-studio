@@ -264,7 +264,6 @@ public:
 		return -1;
 	}
 };
-
 class guictxtmenu_base : public guibase {
 protected:
 	std::vector<ctxtmenu_entry*> entries;

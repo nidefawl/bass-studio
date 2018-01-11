@@ -81,7 +81,7 @@ public:
 		}
 		size += ivec2(insetCtxtMenu*2);
 		ivec2 cs = getSizeContent();
-		int scrollW = 20;
+		int scrollW = gui_scrollbar::defaultW;
 		if (hasScrollbar) {
 			int entryW = cs.x - scrollW;
 			scrollbar.size = ivec2(scrollW-4, cs.y-2);
@@ -106,11 +106,13 @@ public:
 		return false;
 	}
 
-	int32_t getContentHeight() override {
-		return contentHeight;
+	ivec2 getScrollTotalSize() override {
+		ivec2 cs = getSizeContent();
+		cs.y = contentHeight;
+		return cs;
 	}
-	int32_t getContentWidth() override {
-		return size.x;
+	ivec2 getScrollViewSize() override {
+		return getSizeContent();
 	}
 	void scrollOffsetChanged(int dir, float offset) {
 		if (hasScrollbar) {

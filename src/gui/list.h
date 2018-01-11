@@ -80,11 +80,13 @@ public:
 	void setRowHeight(int h) {
 		rowHeight = h;
 	}
-	int32_t getContentHeight() override {
-		return rowHeight * (int32_t)listGuis.size();
+	ivec2 getScrollTotalSize() override {
+		ivec2 cs = getSizeContent();
+		cs.y = rowHeight * (int32_t)listGuis.size();
+		return cs;
 	}
-	int32_t getContentWidth() override {
-		return size.x;
+	ivec2 getScrollViewSize() override {
+		return getSizeContent();
 	}
 	void updateVisible() {
 		ivec2 cs = getSizeContent();
@@ -99,8 +101,8 @@ public:
 			first = min((uint32_t)(listGuis.size()-1), first);
 			last = min((uint32_t)listGuis.size(), last);
 		}
-
 	}
+
 	void scrollOffsetChanged(int dir, float offset) {
 		updateVisible();
 	}
@@ -174,7 +176,7 @@ public:
 	}
 	void layout() {
 		ivec2 cs = getSizeContent();
-		int scrollW = 20;
+		int scrollW = gui_scrollbar::defaultW;
 		int entryW = cs.x - scrollW;
 		scrollbar.size = ivec2(scrollW, cs.y);
 		scrollbar.pos = ivec2(cs.x-scrollW, 0);

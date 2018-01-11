@@ -17,6 +17,7 @@
 #include "track.h"
 #include "track_impl.h"
 #include "leak_detect.h"
+
 using glm::vec2;
 using glm::ivec2;
 
@@ -236,7 +237,10 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 			automation = automatable->getAutomation(param);
 		}
 		if (automation) {
+			bool activate = automation->points.empty() && !data.points.empty();
 			automation->points = data.points;
+			if (activate)
+				automation->active = true;
 		}
 //		updateVisibleTrackContents(grid);
 		MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
@@ -399,6 +403,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 			int start = i;
 			skipped+=i;
 			if (i < len) {
+				NVGcolor c1 = isActive() ? this->color : this->colorInactive;
 //				nvgLineJoin(vg, NVGlineCap::NVG_BEVEL);
 				nvgBeginPath(vg);
 				i--;
@@ -414,7 +419,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 					}
 				}
 				int end = i;
-				nvgStrokeColor(vg, color);
+				nvgStrokeColor(vg, c1);
 				nvgStrokeWidth(vg, lineWidth);
 				nvgStroke(vg);
 //				nvgLineJoin(vg, NVGlineCap::NVG_MITER);
@@ -436,7 +441,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 					}
 					nvgCircleFastNDivs(vg, pt.x, pt.y, radiusHandle, 6);
 				}
-				nvgFillColor(vg, color);
+				nvgFillColor(vg, c1);
 				nvgFill(vg);
 				nvgStrokeColor(vg, color2);
 				nvgStrokeWidth(vg, 1.5f);
@@ -477,7 +482,8 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 				nvgStrokeWidth(vg, 1.5f);
 				nvgStroke(vg);
 			}
-		} else { // no data points
+		}
+		if (!isActive()) { // no data points
 			float fDstVal = getDstVal();
 			ivec2 cs = getSizeContent();
 			float dstValY = dataToCtr(fDstVal, cs.y);
