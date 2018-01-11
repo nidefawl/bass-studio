@@ -3684,6 +3684,7 @@ static int stbi__parse_huffman_block(stbi__zbuf *a)
          }
       }
    }
+   return 0; // FIX WARNINGS
 }
 
 static int stbi__compute_huffman_codes(stbi__zbuf *a)
@@ -4473,6 +4474,7 @@ static int stbi__parse_png_file(stbi__png *z, int scan, int req_comp)
       // end of PNG chunk, read and skip CRC
       stbi__get32be(s);
    }
+   return 0; // FIX WARNINGS
 }
 
 static unsigned char *stbi__do_png(stbi__png *p, int *x, int *y, int *n, int req_comp)
@@ -5903,6 +5905,7 @@ static stbi_uc *stbi__gif_load_next(stbi__context *s, stbi__gif *g, int *comp, i
    }
 
    STBI_NOTUSED(req_comp);
+   return 0; // FIX WARNINGS
 }
 
 static stbi_uc *stbi__gif_load(stbi__context *s, int *x, int *y, int *comp, int req_comp)

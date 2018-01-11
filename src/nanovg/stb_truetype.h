@@ -3198,6 +3198,7 @@ STBTT_DEF int stbtt_FindMatchingFont(const unsigned char *font_collection, const
       if (stbtt__matches((stbtt_uint8 *) font_collection, off, (stbtt_uint8*) name_utf8, flags))
          return off;
    }
+   return 0; // FIX WARNINGS
 }
 
 #endif // STB_TRUETYPE_IMPLEMENTATION
