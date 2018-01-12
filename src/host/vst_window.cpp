@@ -3,6 +3,7 @@
 #include "vst_host.h"
 #include "vst_plugin.h"
 #include <tchar.h>
+#include <Windows.h>
 
 namespace {
 	static std::vector<vst_window*> vst_window_list;

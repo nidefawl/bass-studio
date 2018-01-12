@@ -1,6 +1,7 @@
 #pragma once
 #include "config.h"
 #include <vector>
+#include <array>
 #include <memory>
 #include "automation.h"
 #include "audioblock.h"
@@ -93,51 +94,71 @@ public:
 };
 class vstplugin;
 
-struct trackparam_automation_t : public automation_t {
-	float& gain;
-	trackparam_automation_t(float& _gain) : automation_t(), gain(_gain) {
-
-	}
-	float getDstValue() override {
-		return gain / 2.0f;
-	}
-	void setDstValue(float f) override {
-		gain = f*2.0f;
-		active = false;
-	}
-};
 struct track_params_t : public automatable_t {
-	float val = 0;
-	trackparam_automation_t gainAutomation;
-	track_params_t(String name, int32_t idx) : automatable_t(), gainAutomation(val) {
+private:
+	struct track_param_entry_t {
+		String name;
+		float val;
+		automation_t automation;
+		track_param_entry_t(String _name, float _val, float _scale = 1.0f)
+		  : name(_name), val(_val), automation() {
 
+		}
+	};
+	std::array<track_param_entry_t, 2> params { {
+		track_param_entry_t("Enabled", 1.0f, 1.0f),
+		track_param_entry_t("Gain", 1.0f, 2.0f),
+	} };
+public:
+	track_params_t()
+	  : automatable_t() {
+		params[0].automation.quantizationSteps = 1;
 	}
 	String getAutomatableName() override {
 		return "Mixer";
 	}
 	int32_t getNumParameters() override {
-		return 1;
+		return params.size();
 	}
 	String getParamName(int32_t paramIdx) override {
-		return "Gain";
+		return params[paramIdx].name;
 	}
-	float getParamValue(int32_t idx) override {
-		return val;
+	float convertValFrom(int32_t idx, float f) {
+		if (idx == 1) {
+			return f*0.5f;
+		}
+		return f;
 	}
-	void setParamValue(int32_t idx, float val) override {
-		this->val = val;
-		automation_t* at = getAutomation(idx);
+	float convertValTo(int32_t idx, float f) {
+		if (idx == 1) {
+			return f*2.0f;
+		}
+		return f;
+	}
+	float getParamValue(int32_t idx) {
+		return convertValFrom(idx, params[idx].val);
+	}
+	void setParamValue(int32_t idx, float val) {
+		params[idx].val = convertValTo(idx, val);
+	}
+	void deactivateAutomation(int32_t paramIdx) override {
+		automation_t* at = getAutomation(paramIdx);
 		if (at && at->isActive()) {
 			at->active = false;
 		}
 	}
 	void updateAutomatedParameters(tick_t pos) override {
-		if (getAutomation(0)->isActive()) {
-			val = gainAutomation.getValueAt(pos) * 2.0f;
+		for (int idx = 0; idx < params.size(); idx++) {
+			track_param_entry_t& param = params[idx];
+			if (param.automation.isActive()) {
+				float f = param.automation.getValueAt(pos);
+				param.val = convertValTo(idx, f);
+			}
 		}
 	}
 	automation_t* getAutomation(int32_t idx) override {
-		return &gainAutomation;
+		track_param_entry_t& param = params[idx];
+		return &param.automation;
 	}
 	void getAutomated(std::vector<int32_t>& targets) {
 		targets.push_back(0);
@@ -152,30 +173,37 @@ struct track_params_t : public automatable_t {
 		for (int i = 0; i < getNumParameters(); i++) {
 			float val = getParamValue(i);
 			param_snapshot_t snapParam{i, val};
+			my_printf("VAL[%d] = %f\n", i, val);
 			snapshot.params.push_back(std::move(snapParam));
 			automation_t* automation = getAutomation(i);
 			automation_view_t automationView;
 			if (automation) {
 				automationView.targetParam = i;
-				automationView.dummy = val;
 				automationView.points = automation->points;
+				automationView.active = automation->active;
 			}
 			snapshot.automatedParams.push_back(std::move(automationView));
 		}
 	}
 	void loadSnapshot(const track_params_snapshot_t& snapshot) {
+		for (auto p : snapshot.params) {
+			my_printf("VAL[%d] = %f\n", p.idx, p.val);
+			this->setParamValue(p.idx, p.val);
+		}
 		for (auto p : snapshot.automatedParams) {
 			automation_t* automation = getAutomation(p.targetParam);
 			automation->points = p.points;
-			automation->setDstValue(p.dummy); // NOT SURE
 			automation->active = p.active;
-		}
-		for (auto p : snapshot.params) {
-			this->setParamValue(p.idx, p.val);
 		}
 	}
 	float getGain() {
-		return val;
+		return params[1].val;
+	}
+	void setGain(float f) {
+		params[1].val = f;
+	}
+	bool isEnabled() {
+		return params[0].val >= 0.5f;
 	}
 };
 struct track_impl_t {
@@ -198,7 +226,9 @@ struct track_impl_t {
 	track_impl_t(track_t* _track, const samplerate_t& _sampleRate, const uint16_t& _blockSize, int32_t nChannels)
 	: track(_track),
 	  sampleRate(_sampleRate),
-	  blockSize(_blockSize), input(nChannels, _blockSize), output(nChannels, _blockSize), mixer("Mixer", 0) {
+	  blockSize(_blockSize),
+	  input(nChannels, _blockSize),
+	  output(nChannels, _blockSize) {
 	}
 	~track_impl_t();
 	vstplugin* getPluginSlot(int32_t idx);

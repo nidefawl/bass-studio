@@ -10,14 +10,19 @@ struct automation_point_t {
 	float val;
 };
 int32_t indexOfTick(std::vector<automation_point_t>& dataPoints, tick_t tick);
-int32_t addPointAt(std::vector<automation_point_t>& dataPoints, tick_t tick);
+int32_t addPointAt(std::vector<automation_point_t>& dataPoints, tick_t tick, int32_t quantizationSteps);
 void simplifyData(std::vector<automation_point_t>& data);
+inline float quantizeFloat(float f, int32_t steps) {
+	if (!steps)
+		return f;
+	int32_t val = steps * f;
+	return val / (float) steps;
+}
 struct automation_t {
+	int32_t quantizationSteps = 0;
 	bool active = true;
 	std::vector<automation_point_t> points;
 	virtual ~automation_t() {};
-	virtual float getDstValue() = 0;
-	virtual void setDstValue(float f) = 0;
 	virtual bool isActive() {
 		return active && points.size() > 0;
 	}
@@ -34,23 +39,11 @@ struct automation_clipboard_t {
 	std::vector<automation_point_t> dataPoints;
 };
 struct automation_view_t: public automation_t {
-
 	int32_t targetParam = -1;
-	float dummy = 0.5f;
-	float getDstValue() override {
-		return dummy;
-	}
-	void setDstValue(float f) override {
-		dummy = f;
-		active = false;
-	}
 };
 class vstplugin;
 struct vstparam_automation_t: public automation_t {
 	int32_t paramIdx = -1;
-	vstplugin* plugin = NULL;
-
-	float dummy = 0.5f;
 
 	vstparam_automation_t()
 	{
@@ -58,15 +51,9 @@ struct vstparam_automation_t: public automation_t {
 	~vstparam_automation_t() {
 		//notify vstplugin
 	}
-	void setTarget(vstplugin* _plugin, int32_t _paramIdx) {
-		plugin = _plugin;
+	void setTarget(int32_t _paramIdx) {
 		paramIdx = _paramIdx;
 	}
-	vstplugin* getTargetPlugin() {
-		return plugin;
-	}
-	float getDstValue() override;
-	void setDstValue(float f) override;
 };
 struct automationlane_snapshot_t {
 	int32_t type = -1;
@@ -84,7 +71,8 @@ public:
 };
 struct automated_param_t {
 	int32_t paramIdx = -1;
-	automation_t* src = NULL;
+	automation_t src;
+	automated_param_t(int32_t _paramIdx) : paramIdx(_paramIdx) { }
 };
 struct automatable_t {
 	virtual ~automatable_t() {};
@@ -96,6 +84,18 @@ struct automatable_t {
 	virtual void updateAutomatedParameters(tick_t pos) = 0;
 	virtual automation_t* getAutomation(int32_t idx) = 0;
 	virtual void getAutomated(std::vector<int32_t>& targets) = 0;
+	virtual void deactivateAutomation(int32_t paramIdx) = 0;
 	virtual automationlane_snapshot_t toRef() = 0;
+	int32_t getQuantizationSteps(int32_t idx) {
+		automation_t* at = getAutomation(idx);
+		assert(at);
+		return at->quantizationSteps;
+	}
+	float quantizeVal(int32_t idx, float f) {
+		automation_t* at = getAutomation(idx);
+		assert(at);
+		f = quantizeFloat(f, at->quantizationSteps);
+		return f;
+	}
 };
 

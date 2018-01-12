@@ -1,6 +1,6 @@
 #pragma once
 #include "../vst_sdk_2.4/aeffectx.h"
-#include <windows.h>
+#include <minwindef.h>
 #include <memory>
 #include "../gui/plugin.h"
 

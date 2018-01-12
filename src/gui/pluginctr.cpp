@@ -126,8 +126,7 @@ public:
 	guictxtmenu_vstparam(vstplugin* _vst, vst_param* _entry) : vst(_vst), entry(_entry)
 	{
 		this->size.x = 240;
-		automation_t* at = vst->getAutomation(entry->idx);
-		addContextEntries(this, at);
+		addContextEntries(this, vst->getTrack(), vst, entry->idx);
 	}
 	void clicked(int _id) {
 		handleAutomatbleContextMenu(vst->getTrack(), vst, entry->idx, _id);
@@ -210,12 +209,12 @@ public:
 		nvgText(vg, x, rowHeight / 2, StringAsCStr(getText()), NULL);
 		nvgTranslate(vg, -pos.x, -pos.y);
 		auto at = vst->getRegisteredAutomation(entry->idx);
-		if (at && at->src) {
+		if (at && at->src.isAutomated()) {
 			knobTest.indColor = G_PURPLE;
 		} else {
 			knobTest.indColor = G_WHITE;
 		}
-		if (at && at->src && at->src->isActive()) {
+		if (at && at->src.isActive()) {
 			knobTest.valColor = G_PURPLE;
 		} else {
 			knobTest.valColor = G_BLUE;

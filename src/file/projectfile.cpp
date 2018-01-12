@@ -45,7 +45,6 @@ void serialize(Archive & archive, automation_view_t & m)
 {
 	archive(make_nvp("param", m.targetParam), make_nvp("data", m.points));
 	make_optional_nvp(archive, "active", m.active);
-	make_optional_nvp(archive, "val", m.dummy);
 
 }
 template<class Archive>
@@ -77,7 +76,6 @@ void serialize(Archive & archive, tracksettings_t & m)
 			make_nvp("name", m.name),
 			make_nvp("height", m.height),
 			make_nvp("rgb", m.rgb),
-			make_nvp("enabled", m.enabled),
 			make_nvp("type", m.type));
 	make_optional_nvp(archive, "hideAutomation", m.hideAutomation);
 	make_optional_nvp(archive, "hideTrack", m.hideTrack);

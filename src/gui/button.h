@@ -70,10 +70,10 @@ public:
 			return *enabledPtr;
 		return true;
 	}
-	virtual bool active() {
+	virtual int active() {
 		if (activePtr)
-			return *activePtr;
-		return true;
+			return (*activePtr) ? 1 : 0;
+		return -1;
 	}
 	void setEnabledRef(bool* _enabledPtr) {
 		enabledPtr = _enabledPtr;
@@ -86,7 +86,7 @@ public:
 	void render(NVGcontext* vg) {
 		renderWidgetBorder(vg, getStateFlags());
 		if (drawFn) {
-			drawFn(vg, pos, size, theme->getBgColor(getStateFlags()), drawParm, activePtr ? active() : -1);
+			drawFn(vg, pos, size, theme->getBgColor(getStateFlags()), drawParm, active());
 		}
 	}
 };

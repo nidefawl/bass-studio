@@ -45,21 +45,14 @@ float ctrToDataScale(float screenX, float ctrHeight) {
 
 float gui_track_automation::getDstVal() {
 	if (at) {
-		auto at2 = at->getAutomation(param);
-		if (at2)
-			return at2->getDstValue();
+		return at->getParamValue(param);
 	}
-	return data.getDstValue();
+	return 0.5f;
 }
 void gui_track_automation::setDstVal(float f) {
 	if (at) {
-		auto at2 = at->getAutomation(param);
-		if (at2) {
-			at2->setDstValue(f);
-			return;
-		}
+		at->setParamValue(param, f);
 	}
-	data.setDstValue(f);
 }
 using hit_result = gui_track_automation::hit_result;
 hit_result gui_track_automation::hitTest(vec2 mpos) {
@@ -69,35 +62,56 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 		float dstValY = dataToCtr(fDstVal, cs.y);
 		float dist = abs(mpos.y - dstValY);
 		if (dist < 10) {
-			return {drag_empty, -1, dist};
+			return {drag_empty, -1, -1, dist};
 		}
-		return {drag_none, -1, 0};
+		return {drag_none, -1, -1, 0};
 	}
 	std::vector<hit_result> hit;
 	for (int i = 0; i < segments.size(); i++) {
 		path_segment_t& segment = segments[i];
-		if (mpos.x >= segment.pt1.x - 5 && mpos.x < segment.pt2.x + 5) {
-			float dist = dist_to_segment(segment.pt1, segment.pt2, mpos);
-			float distA = glm::distance(segment.pt1, mpos);
-			float distB = glm::distance(segment.pt2, mpos);
-			hit.push_back( { dragmode::drag_segment, i, dist });
-			if (i + segmentDataPtOffset >= 0)
-				hit.push_back( { dragmode::drag_node, i, distA - 4 });
-			if (i + segmentDataPtOffset + 1 < data.points.size())
-				hit.push_back( { dragmode::drag_node, i + 1, distB - 4 });
+		auto segBegin = segment.points.begin();
+		auto segEnd = segment.points.end();
+		float minSegLineDist = 16;
+		for (auto it = segBegin; it != segEnd && (it+1) != segEnd; ++it) {
+			int32_t idxSegStart = *it;
+			int32_t idxSegEnd = *(it+1);
+			vec2& ptStart = cachedShape[idxSegStart];
+			vec2& ptEnd = cachedShape[idxSegEnd];
+			float dist = dist_to_segment(ptStart, ptEnd, mpos);
+			minSegLineDist = min(dist, minSegLineDist);
+		}
+		if (minSegLineDist < 10) {
+			hit_result hitSeg{ dragmode::drag_segment, segment.dataOffset, i, minSegLineDist };
+			hit.push_back(std::move(hitSeg));
+
+			int32_t ptIdx = segment.points.front();
+			vec2& ptStart = cachedShape[ptIdx];
+			float distPtEndSeg = glm::distance(ptStart, mpos);
+			if (distPtEndSeg < 10) {
+
+				hit_result hitSeg { dragmode::drag_node, segment.dataOffset, ptIdx, distPtEndSeg - 4 };
+				hit.push_back(std::move(hitSeg));
+			}
+//			if (dataPtIdx + 1 < data.points.size()) {
+//				float distB = glm::distance(ptEnd, mpos);
+//				hit.push_back( { dragmode::drag_node, dataPtIdx + 1, i+segOffset, distB - 4 });
+//			}
 		}
 	}
 	std::sort(hit.begin(), hit.end(), [](hit_result const & a, hit_result const & b) {
 		return a.dist<b.dist;
 	});
-	hit_result& h = hit[0];
-	if (h.dist < 10) {
-		return h;
+	if (hit.size()) {
+
+		hit_result& h = hit[0];
+		if (h.dist < 10) {
+			return h;
+		}
 	}
-	return {drag_none, -1, 0};
+	return {drag_none, -1, -1, 0};
 }
 	void gui_track_automation::trackViewDragBegin(guitrack_editor* view, MouseEvent& evt) {
-		dragged = {dragmode::drag_none, -1, 0};
+		dragged = hit_result(dragmode::drag_none, -1, -1, 0.0f);
 		canSimplify = true;
 		ivec2 trackEditorLocal = evt.relMousepos;
 		ivec2 local = toContainerSpace(trackEditorLocal);
@@ -106,15 +120,16 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 		Cursor& cursor = view->cursor;
 		dragged = hitTest(local);
 		if (dragged.mode != dragmode::drag_node && cursor.containsSubtrack(this->m_track->idx, this->idx, tickAt)) {
-			addPointAt(data.points, cursor.getTickBegin());
-			int32_t idx = addPointAt(data.points, cursor.getTickBegin());
-			int32_t idx2 = addPointAt(data.points, cursor.getTickEnd());
-			addPointAt(data.points, cursor.getTickEnd());
+			int32_t steps = at->getQuantizationSteps(param);
+			addPointAt(data.points, cursor.getTickBegin(), steps);
+			int32_t idx = addPointAt(data.points, cursor.getTickBegin(), steps);
+			int32_t idx2 = addPointAt(data.points, cursor.getTickEnd(), steps);
+			addPointAt(data.points, cursor.getTickEnd(), steps);
 //			updateVisibleTrackContents(view->grid);
 			MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
 			dragged = hitTest(local);
 			dragged.mode = dragmode::drag_selection;
-			dragged.idx = idx - segmentDataPtOffset;
+			dragged.dataPt = idx;
 			dragged.numPoints = idx2 - idx + 1;
 		}
 		dataPointsCopy = data.points;
@@ -134,25 +149,33 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 		} else {
 			evt.dragDistance->x = 0;
 		}
-		evt.dragDistance->y = 0;
 		float valOffset = ctrToDataScale(disty, cs.y);
-		vec2* pathPtCur;
 		if (dragged.mode == dragmode::drag_empty) {
 			evt.dragDistance->y = 0;
-			float fDstVal = getDstVal();
-			fDstVal = min(1.0f, max(0.0f, fDstVal + valOffset));
+			float fOld = getDstVal();
+			float fDstVal = fOld + valOffset;
+			if (at) {
+				float fNew = at->quantizeVal(param, fDstVal);
+				if (fNew == fOld) {
+					return;
+				}
+				fDstVal = fNew;
+			}
+			evt.dragDistance->y = 0;
+			fDstVal = min(1.0f, max(0.0f, fDstVal));
 			setDstVal(fDstVal);
-		} else if (dragged.mode && (pathPtCur = getPathPointSafe(dragged.idx))) {
+		} else if (dragged.mode) {
+			evt.dragDistance->y = 0;
 			std::vector<automation_point_t>& dataPoints = dataPointsEdited;
 			std::vector<automation_point_t>& pointsClamped = data.points;
-			bool firstSegment = dragged.idx + segmentDataPtOffset < 0;
+			bool firstSegment = dragged.dataPt < 0;
 			int32_t dataPtIdx1;
 			tick_t tickOffset = grid.pixelsToTicks2(distx);
 			int32_t numPoints = 1;
 			if (firstSegment) {
 				dataPtIdx1 = 0;
 			} else {
-				dataPtIdx1 = dragged.idx + segmentDataPtOffset;
+				dataPtIdx1 = dragged.dataPt;
 				if (dragged.mode == dragmode::drag_selection) {
 					numPoints = dragged.numPoints;
 				}
@@ -217,7 +240,11 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 					}
 					assert(tickOffset || newTick == dst.time);
 					dst.time = newTick;
-					dst.val = min(1.0f, max(0.0f, src.val));
+					float f = min(1.0f, max(0.0f, src.val));
+					if (at) {
+						f = at->quantizeVal(param, f);
+					}
+					dst.val = f;
 				}
 			}
 			postEdit();
@@ -225,7 +252,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 
 	}
 	void gui_track_automation::trackViewDragRelease(guitrack_editor* view, MouseEvent& evt) {
-		dragged = {dragmode::drag_none, -1, 0};
+		dragged = hit_result(dragmode::drag_none, -1, -1, 0.0f);
 		if (canSimplify)
 			simplifyData(data.points);
 		postEdit();
@@ -246,14 +273,14 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 		MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
 	}
 	bool gui_track_automation::trackViewDoubleClick(guitrack_editor* view, MouseEvent& evt) {
-		dragged = {dragmode::drag_none, -1, 0};
+		dragged = hit_result(dragmode::drag_none, -1, -1, 0.0f);
 		ivec2 trackEditorLocal = evt.relMousepos;
 		ivec2 local = toContainerSpace(trackEditorLocal);
 		hit_result clicked = hitTest(local);
 		canSimplify = false;
 		std::vector<automation_point_t>& dataPoints = data.points;
 		if (clicked.mode == dragmode::drag_node) {
-			int32_t i = clicked.idx + segmentDataPtOffset;
+			int32_t i = clicked.dataPt;
 			assert(i >= 0 && i < dataPoints.size());
 			dataPoints.erase(dataPoints.begin()+i);
 			postEdit();
@@ -265,7 +292,11 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 			ivec2 cs = getSizeContent();
 			scaled_grid& grid = view->grid;
 			tick_t tick = grid.screenToTickSnap(trackEditorLocal.x, SNAP_OFF);
-			float val = min(1.0f, max(0.0f, ctrToData(local.y, cs.y)));
+			float val = ctrToData(local.y, cs.y);
+			if (at) {
+				val = at->quantizeVal(param, val);
+			}
+			val = min(1.0f, max(0.0f, val));
 			int32_t idx = indexOfTick(dataPoints, tick);
 			assert(idx >= 0 && idx <= dataPoints.size());
 			automation_point_t pt{tick, val};
@@ -321,32 +352,62 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 		std::vector<automation_point_t>& dataPoints = data.points;
 		cachedShape.clear();
 		segments.clear();
+		int32_t segmentDataPtOffset = 0;
 		if (!dataPoints.empty()) {
 			cachedShape.reserve(dataPoints.size()+4);
+			segments.reserve(dataPoints.size()+4);
 			automation_point_t& firstData = dataPoints[0];
 			segmentDataPtOffset = 0;
 			float firstX = (float)grid.tickToScreenD(firstData.time);
-			float firstY = dataToCtr(firstData.val, cs.y);
-			if (firstX > -4.0f) { // > left start of viewable area
+			float val = firstData.val;
+			int steps = at->getQuantizationSteps(param);
+			float firstY = dataToCtr(val, cs.y);
+//			if (firstX > -4.0f)
+			{ // > left start of viewable area
 				cachedShape.push_back({-4.0f, firstY});
+				path_segment_t seg;
+				seg.dataOffset = -1;
+				seg.points.push_back(0);
+				seg.points.push_back(1);
+				segments.push_back(std::move(seg));
 				segmentDataPtOffset = -1;
 			}
+			float lastVal = dataPoints[0].val;
 			cachedShape.push_back({firstX, firstY});
 			for (int i = 1; i < dataPoints.size(); i++) {
+				path_segment_t seg;
+				seg.dataOffset = i + segmentDataPtOffset;
+				seg.points.push_back(cachedShape.size()-1);
+				seg.points.push_back(cachedShape.size());
 				automation_point_t& nextPt = dataPoints[i];
 				float ptX = (float)grid.tickToScreenD(nextPt.time);
-				float ptY = dataToCtr(nextPt.val, cs.y);
+				float val = nextPt.val;
+				if (steps && val != lastVal) {
+					vec2 prev = cachedShape.back();
+					prev.x = ptX;
+					cachedShape.push_back(std::move(prev));
+					seg.points.push_back(cachedShape.size());
+				}
+				float ptY = dataToCtr(val, cs.y);
 				cachedShape.push_back({ptX, ptY});
+				segments.push_back(std::move(seg));
+				lastVal = val;
 			}
 			vec2& last = cachedShape.back();
 			if (last.x < cs.x) { // < right end of viewable area
+				path_segment_t seg;
+				seg.dataOffset = dataPoints.size() + segmentDataPtOffset;
+				seg.points.push_back(cachedShape.size()-1);
+				seg.points.push_back(cachedShape.size());
 				cachedShape.push_back({cs.x+4.0f, last.y});
+				segments.push_back(std::move(seg));
 			}
 
-			segments.reserve(cachedShape.size()-1);
-			for (int i = 0; i < cachedShape.size()-1; i++) {
-				segments.push_back({cachedShape[i], cachedShape[i+1], i});
-			}
+//			segments.reserve(cachedShape.size()-1);
+//			for (int i = 0; i < cachedShape.size()-1; i++) {
+//				path_segment_t seg{cachedShape[i], cachedShape[i+1], i};
+////				segments.push_back(std::move(seg));
+//			}
 		}
 	}
 
@@ -379,24 +440,25 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 		vec2 fmouse = vec2(imouse);
 		hit_result currentDragged = dragged.mode || !mouseIn ? dragged : hitTest(fmouse);
 		if (currentDragged.mode == dragmode::drag_node) {
-			int32_t ptIdx = currentDragged.idx+segmentDataPtOffset;
+			int32_t ptIdx = currentDragged.dataPt;
 			assert(ptIdx >= 0 && ptIdx < data.points.size());
 			automation_point_t& pt = data.points[ptIdx];
-			vec2* point = getPathPointSafe(currentDragged.idx);
+			vec2* point = getPathPointSafe(currentDragged.segidx);
 			mouseTick = pt.time;
 			fmouse.x = point->x;
 		}
 
 		float val = 0;
-		if (!cachedShape.empty()) {
+		if (!segments.empty()) {
 
 
-			int len = cachedShape.size();
+			int len = segments.size();
 			int i = 0;
 			int skipped = 0;
 			for (; i < len; i++) {
-				vec2& pt = cachedShape[i];
-				if (i > 0 && pt.x > -4) {
+				path_segment_t& segment = segments[i];
+				vec2* pt2 = getPathPointSafe(segment.points.back());
+				if (pt2->x > -4) {
 					break;
 				}
 			}
@@ -406,17 +468,20 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 				NVGcolor c1 = isActive() ? this->color : this->colorInactive;
 //				nvgLineJoin(vg, NVGlineCap::NVG_BEVEL);
 				nvgBeginPath(vg);
-				i--;
-				vec2& first = cachedShape[i];
-				nvgMoveTo(vg, first.x, first.y);
-				i++;
+				bool first = true;
 				for (; i < len; i++) {
-					vec2& pt = cachedShape[i];
-					nvgLineTo(vg, pt.x, pt.y);
-					if (i+1 != len && pt.x > sizeInset.x+4) {
-						skipped+=len-i;
-						break;
+					path_segment_t& segment = segments[i];
+					for (auto it = segment.points.begin(); it != segment.points.end(); ++it) {
+						vec2* pt2 = getPathPointSafe(*it);
+						if (first) {
+							nvgMoveTo(vg, pt2->x, pt2->y);
+							first = false;
+						} else {
+							nvgLineTo(vg, pt2->x, pt2->y);
+							if (pt2->x > sizeInset.x+4) break;
+						}
 					}
+
 				}
 				int end = i;
 				nvgStrokeColor(vg, c1);
@@ -427,19 +492,23 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 				//Lots of room for optimization here (draw texture for dot, or use custom shader)
 				nvgShapeAntiAlias(vg, 0);
 				nvgBeginPath(vg);
-				for (int i = max(1, start); i < min(len-1, end); i++) {
-					vec2& pt = cachedShape[i];
-					if (currentDragged.mode == dragmode::drag_segment) {
-						if (currentDragged.idx == i || currentDragged.idx+1 == i) {
-							continue;
-						}
+				for (int i = start; i < min(len-1, end); i++) {
+					path_segment_t& segment = segments[i];
+					if (currentDragged.mode == dragmode::drag_segment && currentDragged.segidx == i) {
+						continue;
 					}
+					int32_t idxPtEnd = segment.points.back();
 					if (currentDragged.mode == dragmode::drag_node) {
-						if (currentDragged.idx == i) {
+//						if (currentDragged.segidx >= segment.points.front() && currentDragged.segidx <= segment.points.back()) {
+//							continue;
+//						}
+						if (currentDragged.segidx == idxPtEnd) {
 							continue;
 						}
 					}
-					nvgCircleFastNDivs(vg, pt.x, pt.y, radiusHandle, 6);
+					vec2* pt = getPathPointSafe(idxPtEnd);
+					nvgCircleFastNDivs(vg, pt->x, pt->y, radiusHandle, 6);
+
 				}
 				nvgFillColor(vg, c1);
 				nvgFill(vg);
@@ -449,22 +518,28 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 				nvgShapeAntiAlias(vg, 1);
 			}
 
-			path_segment_t* segment = getSegmentSafe(currentDragged.idx);
+			path_segment_t* segment = getSegmentSafe(currentDragged.segidx);
 			if (currentDragged.mode == dragmode::drag_segment && segment) {
 				val = data.getValueAt(0);
 				nvgBeginPath(vg);
-				nvgMoveTo(vg, segment->pt1.x, segment->pt1.y);
-				nvgLineTo(vg, segment->pt2.x, segment->pt2.y);
+				vec2* ptStart = getPathPointSafe(segment->points.front());
+				nvgMoveTo(vg, ptStart->x, ptStart->y);
+				for (auto it = segment->points.begin()+1; it != segment->points.end(); ++it) {
+					vec2* pt2 = getPathPointSafe(*it);
+					nvgLineTo(vg, pt2->x, pt2->y);
+
+				}
+				vec2* ptEnd = getPathPointSafe(segment->points.back());
 				nvgStrokeColor(vg, colorHL);
 				nvgStrokeWidth(vg, lineWidth+0.5f);
 				nvgStroke(vg);
 
 				nvgBeginPath(vg);
-				if (segment->pt1.x > -4 && segment->pt1.x < sizeInset.x+4.0f) {
-					nvgCircle(vg, segment->pt1.x, segment->pt1.y, radiusHandleHL);
+				if (ptStart->x > -4 && ptStart->x < sizeInset.x+4.0f) {
+					nvgCircle(vg, ptStart->x, ptStart->y, radiusHandleHL);
 				}
-				if (segment->pt2.x > -4 && segment->pt2.x < sizeInset.x+4.0f) {
-					nvgCircle(vg, segment->pt2.x, segment->pt2.y, radiusHandleHL);
+				if (ptEnd->x > -4 && ptEnd->x < sizeInset.x+4.0f) {
+					nvgCircle(vg, ptEnd->x, ptEnd->y, radiusHandleHL);
 				}
 				nvgFillColor(vg, colorHL);
 				nvgFill(vg);
@@ -472,7 +547,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 				nvgStrokeWidth(vg, 1.5f);
 				nvgStroke(vg);
 			}
-			vec2* pt = getPathPointSafe(currentDragged.idx);
+			vec2* pt = getPathPointSafe(currentDragged.segidx);
 			if (currentDragged.mode == dragmode::drag_node && pt) {
 				nvgBeginPath(vg);
 				nvgCircle(vg, pt->x, pt->y, radiusHandleHL);

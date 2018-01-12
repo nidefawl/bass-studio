@@ -7,17 +7,18 @@
 #define ID_REENABLE 2
 #define ID_SHOW 3
 #define ID_SHOW_NEW 4
-void addContextEntries(guictxtmenu_base* ctxt, automation_t* at) {
+void addContextEntries(guictxtmenu_base* ctxt, track_t* tr, automatable_t* atl, int paramIdx) {
 
+	MainCtrl::get()->showAutomation(tr, atl, paramIdx);
+	automation_t* at = atl->getAutomation(paramIdx);
 	if (at && at->isAutomated()) {
 		if (!at->active) {
 			ctxt->add(new ctxtmenu_entry("Reenable Automation", ID_REENABLE));
 		}
 		ctxt->add(new ctxtmenu_entry("Delete Automation", ID_DELETE));
-	} else {
-		ctxt->add(new ctxtmenu_entry("Show Automation", ID_SHOW));
-		ctxt->add(new ctxtmenu_entry("Show in new Automation Lane", ID_SHOW_NEW));
 	}
+	ctxt->add(new ctxtmenu_entry("Show Automation", ID_SHOW));
+	ctxt->add(new ctxtmenu_entry("Show in new Automation Lane", ID_SHOW_NEW));
 }
 bool handleAutomatbleContextMenu(track_t* tr, automatable_t* at, int paramIdx, int _id) {
 	automation_t* param = at->getAutomation(paramIdx);

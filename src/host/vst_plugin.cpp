@@ -6,6 +6,8 @@
 #include "logging.h"
 #include "audioblock.h"
 #include "../gui/plugin.h"
+#include <windef.h>
+#include <libloaderapi.h>
 #include <algorithm>
 
 const char* plug_features_array[] = {
@@ -275,7 +277,7 @@ automated_param_t* vstplugin::getRegisteredAutomation(int32_t idx) {
 	});
 	if (it != automatedParams.end()) {
 		automated_param_t* ap = &(*it);
-		if (ap->src->isAutomated())
+		if (ap->src.isAutomated())
 			return ap;
 	}
 	return NULL;
@@ -293,8 +295,8 @@ void vstplugin::getAutomated(std::vector<int32_t>& targets) {
 }
 void vstplugin::updateAutomatedParameters(tick_t pos) {
 	for (automated_param_t& param : automatedParams) {
-		if (param.src->isActive()) {
-			float val = param.src->getValueAt(pos);
+		if (param.src.isActive()) {
+			float val = param.src.getValueAt(pos);
 			setParamValue(param.paramIdx, val);
 		}
 	}
@@ -305,15 +307,19 @@ automation_t* vstplugin::getAutomation(int32_t paramIdx) {
 	}
 	for (automated_param_t& param : automatedParams) {
 		if (paramIdx == param.paramIdx) {
-			return param.src;
+			return &param.src;
 		}
 	}
-	vstparam_automation_t* param = new vstparam_automation_t();
-	param->plugin = this;
-	param->paramIdx = paramIdx;
-	param->dummy = 0.5f;
-	automatedParams.push_back({paramIdx, param});
-	return param;
+	automatedParams.emplace_back(paramIdx);
+	return &automatedParams.back().src;
+}
+void vstplugin::deactivateAutomation(int32_t paramIdx) {
+	for (automated_param_t& param : automatedParams) {
+		if (paramIdx == param.paramIdx) {
+			param.src.active = false;
+			return;
+		}
+	}
 }
 vst_param* vstplugin::getParam(int idx) {
 	if (idx >= 0 && idx < params.size()) {

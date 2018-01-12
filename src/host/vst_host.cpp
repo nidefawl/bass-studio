@@ -21,7 +21,7 @@
 #include <stdlib.h>
 #include <algorithm>
 #include <stdlib.h>
-#include <windows.h>
+#include <windef.h>
 #include <memory.h>
 #include "track_impl.h"
 
@@ -505,9 +505,11 @@ int32_t vsthost::processPlayback(int32_t sample, double posDouble, playback_stat
 			dsp_util::fillSilence(audioTrack->input.buf, lBlockSize);
 			/* Processes a whole plugin chain */
 			processAudio(audioTrack, &audioTrack->input, &audioTrack->output, lBlockSize);
-			for (track_t* trackMaster : ctrl->trackMasterCtr) {
-				track_impl_t* audioMaster = trackMaster->audio;
-				audioMaster->input.addFrom(&audioTrack->output);
+			if (audioTrack->mixer.isEnabled()) {
+				for (track_t* trackMaster : ctrl->trackMasterCtr) {
+					track_impl_t* audioMaster = trackMaster->audio;
+					audioMaster->input.addFrom(&audioTrack->output);
+				}
 			}
 		}
 

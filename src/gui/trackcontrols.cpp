@@ -184,8 +184,7 @@ public:
 	guictxtmenu_trackparam(track_t* _track, int32_t _paramIdx) : track(_track), paramIdx(_paramIdx)
 	{
 		this->size.x = 240;
-		automation_t* at = track->audio->mixer.getAutomation(_paramIdx);
-		addContextEntries(this, at);
+		addContextEntries(this, track, &track->audio->mixer, paramIdx);
 	}
 	void clicked(int _id) {
 		automatable_t* atl = &track->audio->mixer;
@@ -210,7 +209,7 @@ public:
 		return this == MainCtrl::get()->guiFocused;
 	}
 	void handleRightClick(MouseEvent& evt) override {
-		MainCtrl::get()->openContextMenu(new guictxtmenu_trackparam(m_track, 0), evt.mousepos);
+		MainCtrl::get()->openContextMenu(new guictxtmenu_trackparam(m_track, 1), evt.mousepos);
 	}
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
 		if (contains(mpos)) {
@@ -266,12 +265,13 @@ public:
 //				if (f < 1.0E-5f && adj > 1.0f)
 //					f = 1.0E-5f;
 				my_printf("f: %f  adj %f\n", f, adj);
-				if (dsp_util::GAIN_DBFLOOR > f) {
+				if (f < dsp_util::GAIN_DBFLOOR) {
 					f = dsp_util::GAIN_DBFLOOR;
 				}
 				float fNew = dsp_util::clampGain(f * adj);
 				my_printf("FNEW: %f %f\n", fNew, dsp_util::dBFS(fNew));
-				audio->mixer.setParamValue(0, fNew);
+				audio->mixer.deactivateAutomation(1);
+				audio->mixer.setGain(fNew);
 			}
 		}
 	}
@@ -284,8 +284,18 @@ class guibutton_trackbypass : public guibutton {
 	track_t* const m_track;
 public:
 	guibutton_trackbypass(track_t* _track) : guibutton(), m_track(_track) {
-		setActiveRef(&m_track->enabled);
-		setEnabledRef(&m_track->enabled);
+	}
+	bool trackenabled() {
+		return m_track->audio && m_track->audio->mixer.isEnabled();
+	}
+	bool enabled() override {
+		return trackenabled();
+	}
+	int active() override {
+		return trackenabled() ? 1 : 0;
+	}
+	void handleRightClick(MouseEvent& evt) override {
+		MainCtrl::get()->openContextMenu(new guictxtmenu_trackparam(m_track, 0), evt.mousepos);
 	}
 };
 class gui_trackcontrols_mixer: public guictr_base {
@@ -311,7 +321,9 @@ public:
 	}
 	void buttonClicked(guibase* button) override {
 		if (&btnBypass == button) {
-			m_track->enabled = !m_track->enabled;
+			track_params_t& trackParams = m_track->audio->mixer;
+			trackParams.deactivateAutomation(0);
+			trackParams.setParamValue(0, trackParams.isEnabled() ? 0.0f : 1.0f);
 		}
 	}
 	void layout() {

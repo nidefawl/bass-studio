@@ -1,10 +1,11 @@
 
 #pragma once
 
-#include <Windows.h>
+#include <windef.h>
 #include <vector>
 #include <stdint.h>
 #include "str_util.h"
+
 class vstplugin;
 struct Size {
 	int32_t width;

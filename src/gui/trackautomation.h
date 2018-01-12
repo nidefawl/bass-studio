@@ -18,20 +18,21 @@ public:
 		drag_selection,
 		drag_empty,
 	};
+
 	struct path_segment_t {
-		vec2 pt1;
-		vec2 pt2;
-		int32_t idx;
-	};
-	struct path_segment_dataidx_t {
-		int32_t idx1;
-		int32_t idx2;
+		std::vector<int32_t> points;
+		int32_t dataOffset;
 	};
 	struct hit_result {
 		dragmode mode;
-		int idx;
+		int dataPt;
+		int segidx;
 		float dist;
 		int32_t numPoints = 0;
+		hit_result(dragmode _mode, int _dataPt, int _segidx, float _dist, int32_t _numPoints = 0)
+		  : mode(_mode), dataPt(_dataPt), segidx(_segidx), dist(_dist), numPoints(_numPoints) {
+
+		}
 	};
 protected:
 	track_t* const m_track;
@@ -52,11 +53,9 @@ private:
 	automation_view_t data;
 	std::vector<vec2> cachedShape;
 	std::vector<path_segment_t> segments;
-//	std::vector<path_segment_dataidx_t> segmentDataIdx;
 	std::vector<automation_point_t> dataPointsCopy;
 	std::vector<automation_point_t> dataPointsEdited;
-	int32_t segmentDataPtOffset = 0;
-	hit_result dragged = {drag_none, -1, 0};
+	hit_result dragged = {drag_none, -1, -1, 0};
 	bool canSimplify = false;
 
 	hit_result hitTest(vec2 mpos);

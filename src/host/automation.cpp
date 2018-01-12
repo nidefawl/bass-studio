@@ -12,7 +12,7 @@ int32_t indexOfTick(std::vector<automation_point_t>& dataPoints, tick_t tick) {
 	}
 	return idx;
 }
-int32_t addPointAt(std::vector<automation_point_t>& dataPoints, tick_t tick) {
+int32_t addPointAt(std::vector<automation_point_t>& dataPoints, tick_t tick, int32_t quantizationSteps) {
 	int32_t idx;
 	for (idx = 0; idx < dataPoints.size(); idx++) {
 		automation_point_t& pt = dataPoints[idx];
@@ -27,12 +27,20 @@ int32_t addPointAt(std::vector<automation_point_t>& dataPoints, tick_t tick) {
 		} else if (idx == 0) {
 			v = dataPoints[0].val;
 		} else {
-			automation_point_t& pt2 = dataPoints[idx];
 			automation_point_t& pt1 = dataPoints[idx - 1];
-			assert(tick >= pt1.time && tick <= pt2.time);
-			tick_t tickDist = pt2.time - pt1.time;
-			float pr = (tick - pt1.time) / (float) tickDist;
-			v = pt1.val + pr * (pt2.val - pt1.val);
+			if (quantizationSteps) {
+				v = pt1.val;
+			} else {
+				automation_point_t& pt2 = dataPoints[idx];
+				assert(tick >= pt1.time && tick <= pt2.time);
+				tick_t tickDist = pt2.time - pt1.time;
+				if (tickDist == 0) {
+					v = pt2.val;
+				} else {
+					float pr = (tick - pt1.time) / (float) tickDist;
+					v = pt1.val + pr * (pt2.val - pt1.val);
+				}
+			}
 		}
 		dataPoints.insert(dataPoints.begin() + idx, { tick, v });
 		return idx;
@@ -100,9 +108,15 @@ float automation_t::getValueAt(tick_t tick) {
 			return points.back().val;
 		if (idx > 0) {
 			automation_point_t& pt1 = points[idx-1];
+			if (quantizationSteps) {
+				return pt1.val;
+			}
 			automation_point_t& pt2 = points[idx];
 			assert(tick>=pt1.time && tick <= pt2.time);
 			tick_t tickDist = pt2.time-pt1.time;
+			if (!tickDist) {
+				return pt2.val;
+			}
 			float pr = (tick-pt1.time)/(float)tickDist;
 			return pt1.val+pr*(pt2.val-pt1.val);
 		}
@@ -154,6 +168,7 @@ void automation_t::setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automa
 	for (int32_t idx = 0; idx < data.size(); idx++) {
 		auto pt = data[idx];
 		pt.time += tickBegin;
+		pt.val = quantizeFloat(pt.val, quantizationSteps);
 		pointsTmp.push_back(std::move(pt));
 	}
 	if (!pointsTmp.empty() && !data.empty()) {
@@ -171,17 +186,4 @@ void automation_t::setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automa
 
 }
 
-float vstparam_automation_t::getDstValue() {
-	if (plugin) {
-		return plugin->getParamValue(paramIdx);
-	}
-	return dummy;
-}
-void vstparam_automation_t::setDstValue(float f) {
-	active = false;
-	dummy = f;
-	if (plugin) {
-		return plugin->setParamValue(paramIdx, f);
-	}
-}
 

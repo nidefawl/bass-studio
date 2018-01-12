@@ -128,10 +128,11 @@ public:
 	int32_t getNumParameters() override;
 	String getParamName(int32_t paramIdx) override;
 	String getAutomatableName() override;
-	float getParamValue(int32_t idx) override;
-	void setParamValue(int32_t idx, float val) override;
+	float getParamValue(int32_t idx);
+	void setParamValue(int32_t idx, float val);
 	void updateAutomatedParameters(tick_t pos) override;
 	automation_t* getAutomation(int32_t paramIdx) override;
+	void deactivateAutomation(int32_t paramIdx) override;
 	void getAutomated(std::vector<int32_t>& targets) override;
 	automationlane_snapshot_t toRef() override;
 	track_t* getTrack();

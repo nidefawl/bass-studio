@@ -102,7 +102,6 @@ track_t &track_t::operator =(const track_snapshot_t &obj) {
 	midi.sortClips();
 	idx = obj.idx;
 	name = obj.name;
-	enabled = obj.enabled;
 	type = obj.type;
 	height = obj.height;
 	rgb = obj.rgb;
@@ -152,13 +151,12 @@ void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin, bool storePluginCh
 		ps.params.push_back(t);
 	}
 	for (automated_param_t& automatedParam : plugin->automatedParams) {
-		assert(automatedParam.src);
-		if (automatedParam.src->points.empty()) {
+		if (automatedParam.src.points.empty()) {
 			continue;
 		}
 		automation_view_t automation;
 		automation.targetParam = automatedParam.paramIdx;
-		automation.points = automatedParam.src->points;
+		automation.points = automatedParam.src.points;
 		ps.automatedParams.push_back(automation);
 	}
 }
@@ -514,10 +512,12 @@ void track_impl_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginLis
 					if (plugin->getParam(automatedParam.targetParam)) {
 						automation_t* autom = plugin->getAutomation(automatedParam.targetParam);
 						autom->points = automatedParam.points;
+						autom->active = automatedParam.active;
 					}
 				}
-				if (plugin == this->instrument)
-					plugin->show();
+				if (plugin == this->instrument) {
+//					plugin->show();
+				}
 			}
 		}
 	}

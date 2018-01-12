@@ -184,7 +184,6 @@ public:
 struct tracksettings_t {
 	int32_t idx = -1;
 	String name = "INVALID";
-	bool enabled = true;
 	int type = -1; //CONST!
 	int height = -1;
 	int rgb = -1;
@@ -261,14 +260,12 @@ public:
 	track_t(int _type, String _name, bool state) {
 		this->type = _type;
 		this->name = _name;
-		this->enabled = state;
 		rgb = 0;
 		height = 4;
 	}
 	void copy( const track_t &obj) {
 		idx = obj.idx;
 		name = obj.name;
-		enabled = obj.enabled;
 		type = obj.type;
 		height = obj.height;
 		rgb = obj.rgb;
