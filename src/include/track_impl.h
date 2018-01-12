@@ -7,6 +7,7 @@
 #include "audioblock.h"
 #include "samplerate.h"
 #include "note.h"
+#include "dsp_util.h"
 #include "leak_detect.h"
 
 struct VstEvent_t;
@@ -123,15 +124,25 @@ public:
 	String getParamName(int32_t paramIdx) override {
 		return params[paramIdx].name;
 	}
+	const float lvlRange = dsp_util::DBFS_MUTE_POS - dsp_util::MTR_CEIL;
+	float gainToLinScale(float f) {
+		float db = dsp_util::dBFS(f);
+		return 1.0f - ((max(dsp_util::DBFS_MUTE_POS, min(db, dsp_util::MTR_CEIL)) - dsp_util::MTR_CEIL) / lvlRange);
+	}
+	float linScaleToGain(float f) {
+		float f2 = ((1.0f-f) * lvlRange)+dsp_util::MTR_CEIL;
+		return dsp_util::fromdBFS(f2);
+	}
 	float convertValFrom(int32_t idx, float f) {
 		if (idx == 1) {
-			return f*0.5f;
+			float f2 = gainToLinScale(f);
+			return f2;
 		}
 		return f;
 	}
 	float convertValTo(int32_t idx, float f) {
 		if (idx == 1) {
-			return f*2.0f;
+			return linScaleToGain(f);
 		}
 		return f;
 	}
@@ -171,7 +182,7 @@ public:
 	}
 	void createSnapshot(track_params_snapshot_t& snapshot) {
 		for (int i = 0; i < getNumParameters(); i++) {
-			float val = getParamValue(i);
+			float val = params[i].val;
 			param_snapshot_t snapParam{i, val};
 			my_printf("VAL[%d] = %f\n", i, val);
 			snapshot.params.push_back(std::move(snapParam));
@@ -188,7 +199,7 @@ public:
 	void loadSnapshot(const track_params_snapshot_t& snapshot) {
 		for (auto p : snapshot.params) {
 			my_printf("VAL[%d] = %f\n", p.idx, p.val);
-			this->setParamValue(p.idx, p.val);
+			params[p.idx].val = p.val;
 		}
 		for (auto p : snapshot.automatedParams) {
 			automation_t* automation = getAutomation(p.targetParam);

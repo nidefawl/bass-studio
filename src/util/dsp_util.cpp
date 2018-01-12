@@ -7,7 +7,10 @@
 #define _USE_MATH_DEFINES
 #include <cmath>
 #include <memory.h>
+#include <algorithm>
 #include <limits>
+using std::max;
+using std::min;
 
 namespace dsp_util {
 const float GAIN_DB6 = pow(10.0f, 6.0f/20.0f); // 2.0f
@@ -85,7 +88,13 @@ float fromdBFSClampInf6(float f) {
 	return f;
 }
 float fromdBFS(float f) {
-	return pow(10.0f, f/-20.0f);
+	return pow(10.0f, f/20.0f);
+}
+float scaledRange(float db, float lvlFloor, float lvlCeil) {
+	if (db < dsp_util::DBFS_FLOOR)
+		return 1.0f;
+	float lvlRange = lvlFloor - lvlCeil;
+	return (max(lvlFloor, min(db, lvlCeil)) - lvlCeil) / lvlRange;
 }
 void copyBuffer(float** dst, float** src, uint32_t samples) {
 	memcpy(dst[0], src[0], sizeof(float)*samples);

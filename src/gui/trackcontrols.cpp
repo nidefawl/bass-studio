@@ -16,15 +16,6 @@
 #include "automation.h"
 #include "automatable.h"
 
-#define MTR_FLOOR -48.0f
-#define MTR_CEIL 6.0f
-
-float inline scaledRange(float db, float lvlFloor, float lvlCeil) {
-	if (db < dsp_util::DBFS_FLOOR)
-		return 1.0f;
-	float lvlRange = lvlFloor - lvlCeil;
-	return (max(lvlFloor, min(db, lvlCeil)) - lvlCeil) / lvlRange;
-}
 const int resizeHitY = 8;
 const int DRAG_RESIZE = 1;
 
@@ -108,7 +99,7 @@ public:
 		ivec2 mtrSize = size - inset * 2;
 		track_impl_t* audio = m_track->audio;
 		float channelW = (mtrSize.x-(OUTPUT_CHANNELS+1)*spacing) / (float) OUTPUT_CHANNELS;
-		const double scaledZero = scaledRange(0, MTR_FLOOR, MTR_CEIL);
+		const double scaledZero = dsp_util::scaledRange(0, dsp_util::MTR_FLOOR, dsp_util::MTR_CEIL);
 		float hZero = (1.0f - scaledZero) * mtrSize.y;
 		float yZero = mtrPos.y + mtrSize.y - hZero;
 		if (audio) {
@@ -134,7 +125,7 @@ public:
 					if (fLvl < F_MIN) {
 						continue;
 					}
-					double scale = scaledRange(dsp_util::dBFS(fLvl), MTR_FLOOR, MTR_CEIL);
+					double scale = dsp_util::scaledRange(dsp_util::dBFS(fLvl), dsp_util::MTR_FLOOR, dsp_util::MTR_CEIL);
 					float hVal = (1.0f - scale) * mtrSize.y;
 					float y = mtrPos.y + mtrSize.y - hVal;
 					if (i == 2) {
@@ -233,7 +224,7 @@ public:
 			ivec2 insetS = size-ivec2(2);
 			float f = audio->mixer.getGain();
 			float gaindBFS = dsp_util::dBFS(f);
-			double scale = scaledRange(gaindBFS, -60.0f, MTR_CEIL);
+			double scale = dsp_util::scaledRange(gaindBFS, -60.0f, dsp_util::MTR_CEIL);
 			float wVal = (1.0f - scale) * insetS.x;
 			float x = insetP.x;
 			float y = insetP.y;
