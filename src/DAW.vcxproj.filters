@@ -114,6 +114,7 @@
     <ClCompile Include="nanovg\nanovg.c" />
     <ClCompile Include="host\automation.cpp" />
     <ClCompile Include="host\trackcontainers.cpp" />
+    <ClCompile Include="gui\automatable.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\config.h" />
@@ -215,6 +216,7 @@
     <ClInclude Include="nanovg\nanovg_gl_utils.h" />
     <ClInclude Include="nanovg\stb_image.h" />
     <ClInclude Include="nanovg\stb_truetype.h" />
+    <ClInclude Include="gui\automatable.h" />
   </ItemGroup>
   <ItemGroup>
     <Font Include="OpenSans-Regular.ttf" />

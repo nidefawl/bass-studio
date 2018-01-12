@@ -267,6 +267,7 @@
     <ClCompile Include="file\fileio.cpp" />
     <ClCompile Include="file\fileloader.cpp" />
     <ClCompile Include="file\projectfile.cpp" />
+    <ClCompile Include="gui\automatable.cpp" />
     <ClCompile Include="gui\clipeditor.cpp" />
     <ClCompile Include="gui\gui.cpp" />
     <ClCompile Include="gui\guicolors.cpp" />
@@ -313,6 +314,7 @@
     <ClCompile Include="window\window.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="gui\automatable.h" />
     <ClInclude Include="gui\button.h" />
     <ClInclude Include="gui\clipeditor.h" />
     <ClInclude Include="gui\dropdown.h" />
