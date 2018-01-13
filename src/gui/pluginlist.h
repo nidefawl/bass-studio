@@ -50,13 +50,14 @@ public:
 		textField.setPlaceholder("Search");
 	}
 	~guictr_pluginlibrary() {
+		std::vector<gui_list_entry*> _newList;
+		pluginListCtr.setList(_newList);
 		remove(&pluginListCtr);
 		remove(&textField);
 	}
 	void update() {
 		MainCtrl *ctrl = MainCtrl::get();
 		std::vector<gui_list_entry*> _newList;
-
 		pluginsLibList.clear();
 		ctrl->plugindb.query(curquery, pluginsLibList);
 

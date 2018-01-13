@@ -34,4 +34,6 @@ void printLeaked() {
 		guibase* ctrl = *it;
 		my_printf("leaked %d %s\n", ctrl->id, StringAsCStr(ctrl->getClassName()));
 	}
+	g_guis.clear();
+	g_guis.shrink_to_fit();
 }
