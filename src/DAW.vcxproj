@@ -107,6 +107,8 @@
     <IntDir>$(SolutionDir)\..\build\msvc\$(Platform)\$(Configuration)\</IntDir>
     <OutDir>$(SolutionDir)\..\run\</OutDir>
     <TargetName>daw_msvc_test</TargetName>
+    <CodeAnalysisRuleSet>NativeRecommendedRules.ruleset</CodeAnalysisRuleSet>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IntDir>$(SolutionDir)\..\build\msvc\$(Platform)\$(Configuration)\</IntDir>
@@ -184,6 +186,7 @@
       <LanguageStandard>stdcpp14</LanguageStandard>
       <DisableSpecificWarnings>4244;4146;4267;4018;4067</DisableSpecificWarnings>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <EnablePREfast>false</EnablePREfast>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>E:\dev\libs\glfw_x64_vc141_dbg\lib;E:\dev\libs\SQLiteCpp_msvc_x64\lib</AdditionalLibraryDirectories>
@@ -269,6 +272,7 @@
     <ClCompile Include="file\projectfile.cpp" />
     <ClCompile Include="gui\automatable.cpp" />
     <ClCompile Include="gui\clipeditor.cpp" />
+    <ClCompile Include="gui\debugctr.cpp" />
     <ClCompile Include="gui\gui.cpp" />
     <ClCompile Include="gui\guicolors.cpp" />
     <ClCompile Include="gui\pluginctr.cpp" />
@@ -317,6 +321,7 @@
     <ClInclude Include="gui\automatable.h" />
     <ClInclude Include="gui\button.h" />
     <ClInclude Include="gui\clipeditor.h" />
+    <ClInclude Include="gui\debugctr.h" />
     <ClInclude Include="gui\dropdown.h" />
     <ClInclude Include="gui\guicontainer.h" />
     <ClInclude Include="gui\guicontextmenu.h" />
@@ -386,6 +391,7 @@
     <ClInclude Include="include\track.h" />
     <ClInclude Include="include\seq_util.h" />
     <ClInclude Include="include\track_audiodata.h" />
+    <ClInclude Include="include\track_impl.h" />
     <ClInclude Include="include\window.h" />
     <ClInclude Include="midi\Binasc.h" />
     <ClInclude Include="midi\MidiEvent.h" />
