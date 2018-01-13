@@ -1,6 +1,7 @@
 #include "str_util.h"
 #include "../host/vst_host.h"
 #include "../host/vst_plugin.h"
+#include "../vst_sdk_2.4/aeffectx.h"
 #include "../host/vst_plugin_handles.h"
 #include "fileio.h"
 #include "exceptions.h"
@@ -10,6 +11,7 @@
 #include <SQLiteCpp/SQLiteCpp.h>
 #include <SQLiteCpp/VariadicBind.h>
 #include <iostream>
+#include <memory>
 
 
 #define LOG(fmtString,...) printf(fmtString "\n", ##__VA_ARGS__); fflush(stdout)
@@ -17,6 +19,7 @@
 #define CMD_PLUGIN_LOAD_ERROR 3
 #define CMD_PLUGIN_LOAD_SUCCESS 2
 #define CMD_PLUGIN_LOAD_REQUEST 1
+#define CMD_PLUGIN_THREAD_QUIT 4
 #define BUF_SIZE 2048
 #define SCANNER_PIPE_NAME _T("\\\\.\\pipe\\vst_scanner_pipe")
 HANDLE pipe = NULL;
@@ -40,7 +43,7 @@ struct vst_metadata {
 	char szName[256];
 	char szVendorName[256];
 };
-char* buf = new char[BUF_SIZE];
+char buf[BUF_SIZE];
 bool sendData(pipe_msg_hdr* hdr, vst_metadata* data) {
     memset(buf, 0, BUF_SIZE);
     char* bufPos = buf;
@@ -259,7 +262,7 @@ int main(int argc, char* argv[]) {
 			}
 			pipe_msg_hdr hdr;
 			vst_metadata data;
-			ProcessThread thread;
+			std::unique_ptr<ProcessThread> thread;
 			int a = 0;
 			bool pipeConnected = false;
 //			db.exec("delete from plugins where 1");
@@ -318,24 +321,28 @@ int main(int argc, char* argv[]) {
 						continue;
 					}
 				}
-				if (launchProcess&&!thread.isRunning()) {
-					thread.joinProcess();
+				if (launchProcess&& (!thread || !thread->isRunning())) {
+					if (thread)
+						thread->joinProcess();
 					if (pipeConnected) {
 						DisconnectNamedPipe(pipe);
 					}
 					Sleep(1200);
 					pipeConnected = false;
-					thread = ProcessThread();
+					thread = std::make_unique<ProcessThread>();
 					LOG("!thread.isRunning(), last recv state: %s", lastRecvState ?"GOOD":"BAD");
-					thread.startProcess(exeName, "-client");
+					String arg1 = "-client";
+					String lastCmd = StringFormat("%s %s", StringAsCStr(exeName), StringAsCStr(arg1));
+
+					thread->startProcess(exeName, "-client");
 					Sleep(200);
-					if (!thread.isRunning()) {
-						thread.checkExcepetion();
+					if (!thread->isRunning()) {
+						thread->checkExcepetion();
 						LOG("Failed starting client");
 						break;
 					}
 				}
-				if (!pipeConnected && (!launchProcess || thread.isRunning())) {
+				if (!pipeConnected && (!launchProcess || (thread && thread->isRunning()))) {
 					LOG("ConnectNamedPipe()");
 					inConnectNamedPipe = true;
 					bool connectStatus = ConnectNamedPipe(pipe, NULL);
@@ -403,6 +410,16 @@ int main(int argc, char* argv[]) {
 				}
 				Sleep(200);
 			}
+			if (thread && thread->isRunning() && pipe) {
+
+				memset(&data, 0, sizeof(data));
+				memset(&hdr, 0, sizeof(hdr));
+				hdr.cmd = CMD_PLUGIN_THREAD_QUIT;
+				sendData(&hdr, &data);
+				DisconnectNamedPipe(pipe);
+				thread->joinProcess();
+			}
+			thread.reset();
 	    } catch (SQLite::Exception& e) {
 			std::cout << "SQLite exception: " << e.getErrorStr() << std::endl;
 		} catch (std::exception& e) {
@@ -443,13 +460,17 @@ int main(int argc, char* argv[]) {
 			return 1;
 	    }
 	    project_globals_t project;
-	    vsthost* audiohost = new vsthost(project);
+	    vsthost::setInstance(std::make_unique<vsthost>(project));
+	    auto audiohost = vsthost::getInstance();
 		LOG("START");
 		pipe_msg_hdr hdr;
 		vst_metadata data;
 		while (pipe && !quit) {
 //			LOG("client recvData()");
 			if (!recvData(&hdr, &data)) {
+				break;
+			}
+			if (hdr.cmd == CMD_PLUGIN_THREAD_QUIT) {
 				break;
 			}
 			if (hdr.cmd == CMD_PLUGIN_LOAD_REQUEST) {
@@ -516,6 +537,7 @@ int main(int argc, char* argv[]) {
 		}
 		closePipe();
 		Sleep(500);
+		vsthost::getInstance()->destroy();
 	} else {
 	}
 	return 0;

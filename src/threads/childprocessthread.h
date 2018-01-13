@@ -14,7 +14,9 @@ public:
 	bool isRunning();
 	bool checkExcepetion();
 	int32_t getExitCode();
+	ProcessThread(const ProcessThread&) = delete;
+	ProcessThread& operator=(const ProcessThread&) = delete;
 private:
-	Impl* _M_impl;
+	Impl* _M_impl = NULL;
 };
 

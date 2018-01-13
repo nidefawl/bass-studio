@@ -58,7 +58,7 @@ public:
 			CloseHandle(processInformation.hThread);
 		}
 	};
-	void startProcess(String& binary, String& params) {
+	void startProcess(String binary, String params) {
 		started = true;
 		isrunning = true;
 		this->lastCmd = StringFormat("%s %s", StringAsCStr(binary), StringAsCStr(params));
@@ -85,7 +85,7 @@ ProcessThread::ProcessThread() :
 	_M_impl { new ProcessThread::Impl {  } } {
 }
 ProcessThread::~ProcessThread() {
-
+	delete _M_impl;
 }
 void ProcessThread::startProcess(String binary, String params) {
 	_M_impl->startProcess(binary, params);
