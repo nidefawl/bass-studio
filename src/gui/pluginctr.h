@@ -234,6 +234,7 @@ public:
 	void pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 mousepos) override;
 	void pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mousepos) override;
 	void showTrack(track_t* track);
+	void hideTrack(track_t* track);
 	void addGui(vstplugin* plugin);
 };
 class guictr_pluginview : public guictr_base {

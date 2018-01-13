@@ -63,6 +63,11 @@ struct vst_param {
 
 class vstplugin : public automatable_t {
 public:
+#ifndef NDEBUG
+	//helper indicator in gdb.
+	//gdb cannot display std::string when built without clib-debug flag (SLOW)
+	const char* szName = NULL;
+#endif
 	String sName;
 	String sDir;
 	bool bEditOpen = false;
@@ -88,6 +93,9 @@ public:
 	vstplugin(handles_t* _handle, int32_t globalId, String sDir, String sName) : projectGlobalId(globalId), handle(_handle) {
 		this->sDir = sDir;
 		this->sName = sName;
+#ifndef NDEBUG
+		this->szName = this->sName.c_str();
+#endif
 	}
 	~vstplugin();
 	bool resume();
@@ -104,7 +112,7 @@ public:
 		}
 		return false;
 	}
-	String getInfo();
+	String getInfo(std::vector<String>& list);
 	long dispatch(
 		long opcode = 0,
 		long index = 0,
@@ -114,7 +122,9 @@ public:
 	bool getNameString(const char* szBuf);
 	void printNames();
 	bool onClose();
+	void onWindowDestroy();
 	bool onShow(vst_window* window);
+	bool updateWindowSize();
 	bool onResize(vst_window* window, Size size);
 	Size constrainSize(vst_window* window, Size& size);
 	bool show();
@@ -130,6 +140,7 @@ public:
 	String getAutomatableName() override;
 	float getParamValue(int32_t idx);
 	void setParamValue(int32_t idx, float val);
+	void recvPluginEditParamUpdate(int32_t idx);
 	void updateAutomatedParameters(tick_t pos) override;
 	automation_t* getAutomation(int32_t paramIdx) override;
 	void deactivateAutomation(int32_t paramIdx) override;

@@ -37,6 +37,7 @@
 #include "../gui/trackcontent.h"
 #include "../gui/trackctr.h"
 #include "../gui/pluginlist.h"
+#include "../gui/debugctr.h"
 
 #include "vst_host.h"
 #include "vst_plugin.h"
@@ -105,145 +106,6 @@ void testTask() {
 	}
 
 }
-int getNumMsg();
-int getMsgId(int i);
-int getMsgCnt(int i);
-int getHWNDMapSize();
-String getHWNDName(int i);
-int getHWNDCnt(int i);
-extern int colorVal;
-class gui_ctr_debug : public guictr_base {
-	guiknob knobTest;
-public:
-	gui_ctr_debug() : guictr_base() {
-		add(&knobTest);
-		knobTest.fnSetValue = [](float f) {
-			colorVal = 0+max(0, min(255, (int32_t)std::floor(f*255)));
-			initColor();
-		};
-		knobTest.fnGetValue = [](void) {
-			return max(0.0f, min(1.0f, colorVal/255.0f));
-		};
-	}
-	~gui_ctr_debug() {
-		remove(&knobTest);
-	}
-	vector<String> g_debugStrings;
-	virtual void render(NVGcontext* vg) {
-		renderBackground(vg);
-		if (!setScissorTransform(vg)) {
-			return;
-		}
-		MainCtrl *ctrl = MainCtrl::get();
-
-		vector<String> strings;
-		String str;
-		str = ctrl->guiOver ? ctrl->guiOver->getClassName() : "<null>";
-		strings.push_back(String("guiOver: ")+str);
-		str = ctrl->guiDragged ? ctrl->guiDragged->getClassName() : "<null>";
-		strings.push_back(String("guiDragged: ")+str);
-		str = ctrl->guiCaptured ? ctrl->guiCaptured->getClassName() : "<null>";
-		strings.push_back(String("guiCaptured: ")+str);
-		str = ctrl->guiCtrFocused ? ctrl->guiCtrFocused->getClassName() : "<null>";
-		strings.push_back(String("guiCtrFocused: ")+str);
-		str = ctrl->guiFocused ? ctrl->guiFocused->getClassName() : "<null>";
-		strings.push_back(String("guiFocused: ")+str);
-
-		guibase* p = ctrl->guiFocused;
-		int lvl = 0;
-		while (p != NULL) {
-			String s = "";
-			if (lvl == 0) {
-				s = "guiFocused: ";
-			}
-			for (int i = 0; i < lvl; i++) {
-				s+="  ";
-			}
-			strings.push_back(s+p->getClassName());
-			p = p->parent;
-			lvl++;
-		}
-
-
-		strings.push_back(String("lastKey: ")+ctrl->lastKey);
-		strings.push_back(StringFormat("undo size: %d",ctrl->getHist().getNumUndoSteps()));
-		strings.push_back(StringFormat("redo size: %d",ctrl->getHist().getNumRedoSteps()));
-		clip_view& clipView = ctrl->getClipView();
-		if (clipView.clip()) {
-			strings.push_back(StringFormat("Clip: %s", StringAsCStr(clipView.clip()->name)));
-			strings.push_back(StringFormat("Notes: %d", clipView.clip()->notes.m_list.size()));
-			strings.push_back(StringFormat("Selection size: %d", clipView.clip()->notes.selection.size()));
-		}
-		strings.push_back(StringFormat("Samplerate: %u", vsthost::getInstance()->lSampleRate));
-		strings.push_back(StringFormat("BlockSize: %u", vsthost::getInstance()->lBlockSize));
-		strings.push_back(StringFormat("blockReads: %u", vsthost::getInstance()->blockReads));
-		strings.push_back(StringFormat("bufferUnderuns: %u", vsthost::getInstance()->bufferUnderuns));
-		strings.push_back(StringFormat("numCallsWaitEvents: %u", ctrl->numCallsWaitEvents));
-
-
-		track_t* track = ctrl->getTrackId(0);
-		if (track && track->audio) {
-			strings.push_back(StringFormat("level: %.4f", track->audio->meter.getRms(0)));
-		}
-		struct win32_msg {
-				int id;
-				int cnt;
-			};
-			std::vector<win32_msg> wnd;
-			for (int i = 0; i < getHWNDMapSize(); i++) {
-				int cnt = getHWNDCnt(i);
-				wnd.push_back({i, cnt});
-			}
-			std::sort(wnd.begin(), wnd.end(), [](win32_msg const & a, win32_msg const & b) {
-				return a.cnt > b.cnt;
-			});
-			for (win32_msg& msg : wnd) {
-				String s = getHWNDName(msg.id);
-				strings.push_back(StringFormat("%s: %d", StringAsCStr(s), msg.cnt));
-
-			}
-
-			std::vector<win32_msg> msgs;
-			for (int i = 0; i < getNumMsg(); i++) {
-				int id = getMsgId(i);
-				int cnt = getMsgCnt(i);
-				msgs.push_back({id, cnt});
-
-
-			}
-		std::sort(msgs.begin(), msgs.end(), [](win32_msg const & a, win32_msg const & b) {
-			if (a.cnt == b.cnt) {
-				return a.id < b.id;
-			}
-			return a.cnt > b.cnt;
-		});
-		for (win32_msg& msg : msgs) {
-			strings.push_back(StringFormat("WM_ 0x%04X: %d", msg.id, msg.cnt));
-
-		}
-		int x = 5;
-		setFont(vg, 20, G_WHITE, NVG_ALIGN_BOTTOM|NVG_ALIGN_LEFT);
-		float lineh;
-		nvgTextMetrics(vg, NULL, NULL, &lineh);
-		int y = 5+lineh;
-		for (String& s : strings) {
-			nvgText(vg, x, y, StringAsCStr(s), NULL);
-			y+=lineh;
-		}
-		for (String& s : g_debugStrings) {
-			nvgText(vg, x, y, StringAsCStr(s), NULL);
-			y+=lineh;
-		}
-		knobTest.render(vg);
-		g_debugStrings.clear();
-	}
-	void layout() {
-		ivec2 cs = getSizeContent();
-		knobTest.size = ivec2(cs.x, cs.x);
-		knobTest.pos = ivec2(0, cs.y-knobTest.size.y);
-	}
-
-};
 class ViewContainers {
 	guictr_noteeditor noteeditor;
 public:
@@ -353,23 +215,38 @@ bool MainCtrl::isPluginViewVisible() {
 }
 void MainCtrl::addDebug(String s) {
 
-	view->ctr_dbg.g_debugStrings.push_back(s);
+	view->ctr_dbg.addStr(s);
 }
 
+void MainCtrl::unloadProject() {
+	closeContextMenu();
+	resetMouseContext();
+	projectPath = "";
+	setSelectedTrack(NULL);
+	clipView.set(NULL);
+//	std::shared_ptr<clip_clipboard>& clipboard = view->ctr_tracks.trackView.clipboard;
+//	clipboard.reset();
+	vector<track_t*> _tracks = trackList.vec();  // iterate a copy
+	my_printf("DELETE _tracks %d\n", _tracks.size());
+	for (track_t* tr : _tracks) {
+		my_printf("DELETE TRACK %s\n", tr->szName);
+		vsthost::getInstance()->unloadTrack(tr);
+		removeTrackImpl(tr);
+	}
+	trackList.clear();
+	for (track_t* tr : _tracks) {
+		deleteTrack(tr, this);
+	}
+	hist.clear();
+
+}
 void MainCtrl::destroy()
 {
 	if (!isOK) {
 		return;
 	}
-	setSelectedTrack(NULL);
-	hist.clear();
-	view->ctr_tracks.trackView.clipboard.reset();
+	unloadProject();
 	settings.dens = grid.grid_dens;
-	vector<track_t*> trList = trackList.vec(); // iterate a copy
-	for (track_t* track : trList) {
-		removeTrackImpl(track);
-		deleteTrack(track, NULL);
-	}
 	isOK = false;
 	delete view;
 	plugindb.close();
@@ -425,7 +302,7 @@ void MainCtrl::updateMenubar() {
 	}
 }
 void MainCtrl::onWindowCloseRequest() {
-	stopPlaying();
+	setAudioThreadState(playback_state::status_no_process);
 }
 void MainCtrl::onMenuOpen(ngui::Menu* menu) {
 	updateMenubar();
@@ -440,6 +317,12 @@ void MainCtrl::loadFile(String path) {
 	} else {
 		setLoadedProject(f);
 	}
+}
+void MainCtrl::setEmptyProject() {
+	ThreadLock lock = playThread.lockThread();
+	unloadProject();
+	insertNewTrack(-1, TRACK_TYPE_MIDI);
+	insertNewTrack(-1, TRACK_TYPE_MASTER);
 }
 void MainCtrl::menuCommand(int cmd) {
 	String path = projectPath;
@@ -457,6 +340,9 @@ void MainCtrl::menuCommand(int cmd) {
 		}
 		break;
 	case CMD_FILE_NEW:
+	{
+		setEmptyProject();
+	}
 		break;
 	case CMD_FILE_OPEN:
 		{
@@ -502,7 +388,7 @@ void MainCtrl::menuCommand(int cmd) {
 	}
 }
 void MainCtrl::postInit() {
-	loadFile("test.project");
+	loadFile("jad.project");
 	for (int i = 0; i < 2; i++) {
 		track_t* track = getTrackId(i);
 		if (track) {
@@ -577,7 +463,7 @@ bool MainCtrl::init(window_main* window, NVGcontext* nanovg)
 	this->updateMenubar();
 	this->mainWindow->updateMenu();
 
-	insertNewTrack(-1, TRACK_TYPE_MIDI);
+	setEmptyProject();
 //	int w = 120;
 //	int x = 0;
 //	for (int i = 0; i < 10; i++) {
@@ -678,6 +564,8 @@ shared_ptr<project_file> MainCtrl::createProjectFile() {
 	shared_ptr<project_file> file = make_shared<project_file>();
 	file->path = projectPath;
 	copyTo(file->project);
+	file->layout.layoutGrid = grid;
+	file->layout.scrollOffsetX = view->ctr_tracks.getScrollOffset();
 	return file;
 }
 void MainCtrl::resetMouseContext() {
@@ -689,22 +577,9 @@ void MainCtrl::resetMouseContext() {
 	guiCaptured = guiFocused = guiOver = guiDragged = NULL;
 }
 bool MainCtrl::setLoadedProject(shared_ptr<project_file> file) {
-	stopPlaying();
+	setAudioThreadState(playback_state::status_no_process);
 	ThreadLock lock = playThread.lockThread();
-	vsthost::getInstance()->unloadAllPlugins();
-	projectPath = "";
-	clipView.set(NULL);
-	closeContextMenu();
-	resetMouseContext();
-	hist.clear();
-	vector<track_t*> _tracks = trackList.vec();  // iterate a copy
-	trackList.clear();
-	for (track_t* tr : _tracks) {
-		view->ctr_tracks.removeTrack(tr);
-	}
-	for (track_t* tr : _tracks) {
-		deleteTrack(tr, NULL);
-	}
+	unloadProject();
 	copyFrom(file->project);
 	my_printf("NUM TRACKS: %d\n", trackList.size());
 	for (track_t* tr : trackList) {
@@ -725,8 +600,11 @@ bool MainCtrl::setLoadedProject(shared_ptr<project_file> file) {
 //		}
 //	}
 	view->ctr_tracks.layout();
+	grid.setLayout(file->layout.layoutGrid);
+	view->ctr_tracks.setScrollOffset(file->layout.scrollOffsetX);
 	updateVisibleTrackContents();
 	this->projectPath = file->path;
+	setAudioThreadState(playback_state::status_stop);
 
 	return true;
 }
@@ -1121,10 +999,13 @@ void BaseCtrl::onKeyInput(int key, int scancode, int keyState, int mods, const c
 //	}
 }
 void MainCtrl::startPlaying() {
-	playThread.addRequest(PLAYBACK_START, cursor.cursorPos, true);
+	setAudioThreadState(playback_state::status_play);
 }
 void MainCtrl::stopPlaying() {
-	playThread.addRequest(PLAYBACK_STOP, cursor.cursorPos, true);
+	setAudioThreadState(playback_state::status_stop);
+}
+void MainCtrl::setAudioThreadState(playback_state state) {
+	playThread.addRequest(REQ_STATE, (int) state, true);
 }
 bool MainCtrl::toggleLoop() {
 	loopEnabled = !loopEnabled;
@@ -1149,7 +1030,6 @@ bool MainCtrl::mouseDownPre() {
 	dragdropclip.reset();
 	if (ctxtmenu != NULL) {
 		closeContextMenu();
-		return false;
 	}
 	return true;
 }
@@ -1328,10 +1208,13 @@ public:
 		ctrl->resetMouseContext();
 		ctrl->setEditClip(NULL);
 		ctrl->addTrackImpl(trackIdx, trackPtr);
+		//UNSERIALIZE TRACK VSTs
 	}
 	void redo(MainCtrl* ctrl) {
 		ctrl->resetMouseContext();
 		ctrl->setEditClip(NULL);
+		//SERIALIZE TRACK VSTs
+		vsthost::getInstance()->unloadTrack(trackPtr);
 		ctrl->removeTrackImpl(trackPtr);
 	}
 };
@@ -1344,10 +1227,17 @@ void MainCtrl::addTrack(int32_t trackInsertPos, track_t* newTrack) {
 	pushHist(new action_modify_addtrack(StringFormat("Add %s Track", TrackTypeToName(newTrack->type)), newTrack));
 }
 void MainCtrl::removeTrackImpl(track_t* track) {
+	guictr_plugins* plugins = MainCtrl::getPluginCtr();
+	plugins->hideTrack(track);
+	if (clipView.gui && clipView.gui->m_track == track){
+		clipView.set(NULL);
+	}
 	trackList.removeTrack(track);
 	view->ctr_tracks.removeSingleTrack(track);
 }
 void MainCtrl::removeTrack(track_t* track) {
+	//SERIALIZE TRACK
+	vsthost::getInstance()->unloadTrack(track);
 	removeTrackImpl(track);
 	pushHist(new action_modify_removetrack(StringFormat("Remove %s Track", TrackTypeToName(track->type)), track));
 }

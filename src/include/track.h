@@ -228,6 +228,11 @@ struct track_snapshot_t : public tracksettings_t {
 class track_t : public tracksettings_t {
 	trackdata_midi_t midi;
 public:
+#ifndef NDEBUG
+	//helper indicator in gdb.
+	//gdb cannot display std::string when built without clib-debug flag (SLOW)
+	const char* szName = NULL;
+#endif
 	trackdata_midi_t& getMidi() {
 		return midi;
 	}
@@ -262,6 +267,9 @@ public:
 		this->name = _name;
 		rgb = 0;
 		height = 4;
+#ifndef NDEBUG
+		this->szName = this->name.c_str();
+#endif
 	}
 	void copy( const track_t &obj) {
 		idx = obj.idx;
@@ -270,6 +278,9 @@ public:
 		height = obj.height;
 		rgb = obj.rgb;
 		scrolloffset = 0;
+#ifndef NDEBUG
+		this->szName = this->name.c_str();
+#endif
 	}
 	void releaseTrackContent();
 	void loadPluginSnapshot(track_snapshot_t& trackStatic);
@@ -391,6 +402,10 @@ public:
 
 
 };
+struct project_layout_t {
+	layout_grid_t layoutGrid;
+	float scrollOffsetX;
+};
 class project_t : public project_globals_t {
 public:
 	trackallcontainer_t trackList;
@@ -417,7 +432,7 @@ public:
 		*this = project.globals;
 	}
 	void operator=(project_globals_t const & globals) {
-		*static_cast<project_globals_t*>(this) = globals; //KILL ME
+		*static_cast<project_globals_t*>(this) = globals;
 	}
 };
 class delete_cb {

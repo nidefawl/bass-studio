@@ -63,7 +63,8 @@ public:
 	}
 	virtual ~guibase() {
 		MainCtrl* ctrl = MainCtrl::get();
-		ctrl->onGuiRemoved(this); // TODO: don't call this from here, feels nasty
+		if (ctrl)
+			ctrl->onGuiRemoved(this); // TODO: don't call this from here, feels nasty
 		allocCount--;
 		auto it = std::find(g_guis.begin(), g_guis.end(), this);
 		g_guis.erase(it);

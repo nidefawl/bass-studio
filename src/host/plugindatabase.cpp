@@ -4,6 +4,7 @@
 #include <vector>
 #include <SQLiteCpp/SQLiteCpp.h>
 #include <SQLiteCpp/VariadicBind.h>
+#include "leak_detect.h"
 
 class plugindatabase_t::Impl {
 	SQLite::Database db;

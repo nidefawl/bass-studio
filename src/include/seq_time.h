@@ -113,5 +113,6 @@ inline int32_t PPQ24TickSample(tick_t tick, int32_t bpm100, samplerate_t sampler
 }
 enum playback_state {
 	status_stop,
-	status_play
+	status_play,
+	status_no_process,
 };

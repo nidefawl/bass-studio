@@ -52,6 +52,19 @@ struct AudioBlock {
 			memcpy(dstBufChannel, srcBufChannel, nSamples * sizeof(float));
 		}
 	}
+	void copyFromPosToPos(float **srcBuf, uint32_t offsetIn, uint32_t offsetOut, uint32_t srcSamples, uint32_t srcChannels) {
+//		assert(srcSamples == samples);
+		uint32_t nChannels = max(srcChannels, channels);
+		uint32_t nSamples = min(srcSamples, samples);
+		for (uint32_t i = 0; i < nChannels; i++) {
+			uint32_t srcChannelIdx = min(srcChannels-1, i);
+			uint32_t dstChannelIdx = min(channels-1, i);
+			float* srcBufChannel = srcBuf[srcChannelIdx];
+			float* dstBufChannel = buf[dstChannelIdx];
+			//TODO: this does 2 copys to the same destination when going from stereo to mono (MIX FIRST)
+			memcpy(dstBufChannel+offsetOut, srcBufChannel+offsetIn, nSamples * sizeof(float));
+		}
+	}
 	void addFrom(AudioBlock* src) {
 		addFrom(src->buf, src->samples, src->channels);
 	}
@@ -72,13 +85,24 @@ struct AudioBlock {
 	}
 	void realloc(uint32_t _samples) {
 		if (samples < _samples) {
-			samples = _samples;
 			for (uint32_t i = 0; i < channels; i++) {
+				float* newBuf = (float*)calloc(_samples,sizeof(float));
 				if (buf[i]) {
+					memcpy(newBuf, buf[i], samples * sizeof(float));
 					free(buf[i]);
 				}
-				buf[i] = (float*)malloc(_samples * sizeof(float));
+				buf[i] = newBuf;
 			}
+			samples = _samples;
 		}
 	}
+};
+
+
+struct DelayLine {
+	AudioBlock block;
+	int32_t blockOffset = 0;
+	DelayLine(uint32_t _channels, uint32_t _samples)
+	  : block(_channels, _samples)
+	{ }
 };

@@ -6,7 +6,6 @@
 #include <nanovg.h>
 #include <nanovg_gl.h>
 
-#include <windef.h>
 #include <windows.h>
 #include <ole2.h>
 
@@ -208,6 +207,10 @@ public:
 	}
 	HWND getHWND() {
 		return hwnd;
+	}
+	void destroyGL() {
+		if (nanovgCtxt)
+			nvgDeleteGL3(nanovgCtxt);
 	}
 	void _onMouseMoved(double x, double y) {
 		lastmousepos = mousepos;
@@ -414,7 +417,7 @@ class appwindow_main : public appwindow, public window_main  {
 	double secondsLastDraw = 0.0;
 	const double minFrameDelay = 1/288.0;
 public:
-	appwindow_overlay* overlayWindow = NULL;
+	std::unique_ptr<appwindow_overlay> overlayWindow;
 	appwindow_main(MainCtrl* _ctrl)
 		: appwindow(),
 		  window_main(),
@@ -431,12 +434,7 @@ public:
 			cursorIcon = ctrl->cursorIcon;
 		}
 	}
-	void destroy() {
-		if (!glfw)
-			throw appexception("window null");
-		UnregisterDropWindow(hwnd, this->dropTarget);
-		settings.size = windowsize(hwnd);
-	}
+	void destroy();
 	void onTick() {
 		PREVENT_REENTRANT("REENTRANT IN onTick")
 //		flagNeedsRedraw();
@@ -883,6 +881,16 @@ void appwindow_main::updateMenu() {
 	ngui::MenuBar& menubar = ctrl->getMenubar();
 	syncMenu(hwnd, menubar);
 }
+void appwindow_main::destroy() {
+	if (!glfw)
+		throw appexception("window null");
+	if (overlayWindow) {
+		overlayWindow->destroyGL();
+	}
+	appwindow::destroyGL();
+	UnregisterDropWindow(hwnd, this->dropTarget);
+	settings.size = windowsize(hwnd);
+}
 void appwindow_main::create(const char* title, int w, int h) {
 	glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
 	appwindow::create(title, w, h);
@@ -894,7 +902,7 @@ void appwindow_main::create(const char* title, int w, int h) {
 
 	this->dropTarget = RegisterDropWindow(hwnd, this);
 
-	this->overlayWindow = new appwindow_overlay(this);
+	this->overlayWindow = std::make_unique<appwindow_overlay>(this);
 	String sName = StringFormat("%s menu", this->name);
 	overlayWindow->create(StringAsCStr(sName), 200, 200);
 	if (settings.size.valid) {
@@ -1084,15 +1092,11 @@ void _my_printf(const char *file, int line, const char *func, const char *fmt, .
 }
 void printLeaked();
 
-static MainCtrl* ctrl = new MainCtrl();
-static vsthost* audiohost = new vsthost(*ctrl, 44100, 128);
-static appwindow_main* mainWindow = NULL;
+static std::unique_ptr<MainCtrl> ctrl;
+static std::unique_ptr<appwindow_main> mainWindow;
+
 MainCtrl* MainCtrl::get() {
-	return ctrl;
-}
-vsthost* vsthost::getInstance()
-{
-	return audiohost;
+	return ctrl.get();
 }
 HWND getMainHWND() {
 	return mainWindow ? mainWindow->getHWND() : NULL;
@@ -1115,7 +1119,6 @@ int mainTest(void (*drawFn)(NVGcontext*,int,int,float)) {
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
 	glfwWindowHint(GLFW_STENCIL_BITS, 8);
 	glfwWindowHint(GLFW_DEPTH_BITS, 24);
-
 	appwindow_dialog* w = new appwindow_dialog(NULL);
 	w->drawFn=drawFn;
 	w->create("test window", 1280, 720);
@@ -1200,12 +1203,14 @@ int mainHost() {
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
 	glfwWindowHint(GLFW_STENCIL_BITS, 8);
 	glfwWindowHint(GLFW_DEPTH_BITS, 24);
-	mainWindow = new appwindow_main(ctrl);
+	ctrl = std::make_unique<MainCtrl>();
+	vsthost::setInstance(std::make_unique<vsthost>(*ctrl.get(), 44100, 128));
+	mainWindow = std::make_unique<appwindow_main>(ctrl.get());
 	mainWindow->create("main window", 1280, 720);
 	mainWindow->showWindow();
 	glfwSetErrorCallback(glfw_runtime_error_callback);
 	ctrl->postInit();
-	audiohost->postInit();
+	vsthost::getInstance()->postInit();
 	GLFWwindow* glfwHandle = mainWindow->getGLFW();
 	while (!glfwWindowShouldClose(glfwHandle)) {
 		DWORD timeout = 1;
@@ -1239,24 +1244,33 @@ int mainHost() {
 		glfwUpdateInternals();
 		ctrl->numCallsWaitEvents++;
 	}
-	audiohost->stopAudio();
+	my_printf("END 1\n", 0);
+	vsthost::getInstance()->stopAudio();
+	my_printf("END 2\n", 0);
 	mainWindow->destroy();
-	audiohost->unload();
+	my_printf("END 3\n", 0);
+	ctrl->unloadProject();
+	my_printf("END 3.2\n", 0);
+	vsthost::getInstance()->unload();
+	my_printf("END 4\n", 0);
 	ctrl->destroy();
-	audiohost->destroy();
+	my_printf("END 5\n", 0);
 	PopupCtrl::get()->destroy();
+	my_printf("END 6\n", 0);
+	vsthost::getInstance()->destroy();
+	my_printf("END 7\n", 0);
 
 
 	glfwTerminate();
+	my_printf("END 8\n", 0);
 	saveSettings(settings);
-	DELETE_PTR(mainWindow->overlayWindow);
-	DELETE_PTR(mainWindow);
-	DELETE_PTR(audiohost);
-	DELETE_PTR(ctrl);
+	mainWindow->overlayWindow.reset();
+	ctrl.reset();
+	mainWindow.reset();
 	EXC_CATCH
 	printLeaked();
-	exit(EXIT_SUCCESS);
 	OleUninitialize();
+	exit(EXIT_SUCCESS);
 	return 0;
 }
 

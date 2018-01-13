@@ -1,6 +1,7 @@
 #pragma once
 #include "seq_time.h"
 #include "cursor.h"
+#include "logging.h"
 
 struct project_globals_t {
 	tick_t loopStart = 0;

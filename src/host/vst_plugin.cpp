@@ -6,9 +6,10 @@
 #include "logging.h"
 #include "audioblock.h"
 #include "../gui/plugin.h"
-#include <windef.h>
+#include <windows.h>
 #include <libloaderapi.h>
 #include <algorithm>
+#include "leak_detect.h"
 
 const char* plug_features_array[] = {
 	PlugCanDos::canDoSendVstEvents,
@@ -52,8 +53,10 @@ bool vstplugin::onClose() {
 		this->dispatch(effEditClose);
 	}
 	bEditOpen = false;
-	this->window = NULL;
 	return true;
+}
+void vstplugin::onWindowDestroy() {
+	this->window = NULL;
 }
 bool vstplugin::resume() {
 	bool wasSleep = !this->bIsEnabled;
@@ -91,18 +94,23 @@ bool vstplugin::getNameString(const char* szBuf) {
 	}
 	return false;
 }
-bool vstplugin::onShow(vst_window* window) {
-	this->window = window;
+bool vstplugin::updateWindowSize() {
 	if (this->window != NULL) {
-		bEditOpen = true;
-		this->dispatch(effEditOpen, 0, 0, this->window->getHWND());
-
 		ERect *prc = NULL;
 		this->dispatch(effEditGetRect, 0, 0, (void*)&prc);
 		if (prc)
 		{
 			this->window->resize({ prc->right - prc->left, prc->bottom - prc->top });
+			return true;
 		}
+	}
+	return false;
+}
+bool vstplugin::onShow(vst_window* window) {
+	if (this->window == window) {
+		bEditOpen = true;
+		this->dispatch(effEditOpen, 0, 0, window->getHWND());
+		updateWindowSize();
 		this->updateDisplay();
 	}
 	return true;
@@ -130,6 +138,9 @@ void vstplugin::unload() {
 //		assert(ap.ref);
 //		ap.ref->onDstDelete();
 //	}
+	if (this->window) {
+		this->window->destroy();
+	}
 	this->dispatch(effClose);
 	this->bIsSetup = false;
 	my_printf("UNLOAD %s\n", StringAsCStr(this->sName));
@@ -259,6 +270,7 @@ String vstplugin::getAutomatableName() {
 float vstplugin::getParamValue(int32_t idx) {
 	if (idx >= 0 && idx < params.size()) {
 		auto& param = params[idx];
+		param.value = handle->aeffect->getParameter(handle->aeffect, param.idx);
 		return param.value;
 	}
 	return 0;
@@ -269,6 +281,12 @@ void vstplugin::setParamValue(int32_t idx, float val) {
 		param.value = val;
 		handle->aeffect->setParameter(handle->aeffect, idx, val);
 //		my_printf("set %s[%d] = %f\n", StringAsCStr(this->sName), idx, val);
+	}
+}
+void vstplugin::recvPluginEditParamUpdate(int32_t idx) {
+	if (idx >= 0 && idx < params.size()) {
+		auto& param = params[idx];
+		param.value = handle->aeffect->getParameter(handle->aeffect, param.idx);
 	}
 }
 automated_param_t* vstplugin::getRegisteredAutomation(int32_t idx) {
@@ -335,10 +353,7 @@ bool vstplugin::close() {
 	return true;
 }
 bool vstplugin::show() {
-	if (this->window != NULL) {
-		this->window->close();
-	}
-	if (handle->aeffect->flags & effFlagsHasEditor) {
+	if (this->window == NULL && (handle->aeffect->flags & effFlagsHasEditor)) {
 		ERect *prc = NULL;
 		this->dispatch(effEditGetRect, 0, 0, (void*)&prc);
 		Size size = { 0, 0 };
@@ -347,56 +362,26 @@ bool vstplugin::show() {
 			size = { prc->right - prc->left, prc->bottom - prc->top };
 		}
 		this->window = vst_window::make(this, this->sName, size, false, GetModuleHandle(NULL));
+	}
+	if (this->window != NULL) {
 		this->window->show();
 	}
 	return false;
 }
-String vstplugin::getInfo() {
+String vstplugin::getInfo(std::vector<String>& list) {
 	String out;
 
 	char szBuf[256] = "";
-	const char *sep = "\n";
 
-	out += StringFormat("Filename %s", StringAsCStr(this->sName));
-	out += sep;
+	list.push_back(StringFormat("Filename %s", StringAsCStr(this->sName)));
+
 	if (this->getNameString(szBuf)) {
-		out += StringFormat("Name %s", szBuf);
-		out += sep;
+		list.push_back(StringFormat("Name %s", szBuf));
+
 	}
-	out += StringFormat("Dir %s", StringAsCStr(this->sDir));
-	out += sep;
+	list.push_back(StringFormat("Dir %s", StringAsCStr(this->sDir)));
 
 	AEffect* handle = this->handle->aeffect;
-	out += StringFormat("%d programs", handle->numPrograms);
-	out += sep;
-	out += StringFormat("%d parameters", handle->numParams);
-	out += sep;
-	out += StringFormat("%d inputs", handle->numInputs);
-	out += sep;
-	out += StringFormat("%d outputs", handle->numOutputs);
-	out += sep;
-	out += StringFormat("Flags: %08lXH", handle->flags);
-
-
-	if (handle->flags & effFlagsHasEditor)
-		out += "Has Editor\n";
-	if (handle->flags & effFlagsCanReplacing)
-		out += "Supports in place output\n";
-	if (handle->flags & effFlagsProgramChunks)
-		out += "Program data are handled in formatless chunks\n";
-	if (handle->flags & effFlagsIsSynth)
-		out += "Is a synth\n";
-	if (handle->flags & effFlagsNoSoundInStop)
-		out += "Does not produce sound when input is all silence\n";
-	if (handle->flags & effFlagsCanDoubleReplacing)
-		out += "Supports in place double-precision output\n";
-
-	if (handle->initialDelay)
-	{
-		out += StringFormat("Initial Delay: %d", handle->initialDelay);
-		out += sep;
-	}
-
 	char sUID[5];
 	int i;
 	for (i = 0; i < 4; i++)
@@ -406,18 +391,39 @@ String vstplugin::getInfo() {
 			sUID[i] = ' ';
 	}
 	sUID[i] = '\0';
-	out += StringFormat("Unique ID: '%s' (%08lXH)", sUID, handle->uniqueID);
-	out += sep;
-	out += StringFormat("Version %d", handle->version);
-	out += sep;
+	list.push_back(StringFormat("VstID: '%s' (%08lXH)", sUID, handle->uniqueID));
+	list.push_back(StringFormat("Version %d", handle->version));
+	list.push_back(StringFormat("initialDelay: %d", handle->initialDelay));
+
+	list.push_back(StringFormat("%d outputs", handle->numOutputs));
+	list.push_back(StringFormat("%d inputs", handle->numInputs));
+	list.push_back(StringFormat("%d programs", handle->numPrograms));
+	list.push_back(StringFormat("%d parameters", handle->numParams));
+
+	list.push_back(StringFormat("Flags: %08lXH", handle->flags));
+	if (handle->flags & effFlagsNoSoundInStop)
+		out += "effFlagsNoSoundInStop\n";
+	if (handle->flags & effFlagsIsSynth)
+		out += "effFlagsIsSynth\n";
+	if (handle->flags & effFlagsProgramChunks)
+		out += "effFlagsProgramChunks\n";
+	if (handle->flags & effFlagsCanReplacing)
+		out += "effFlagsCanReplacing\n";
+	if (handle->flags & effFlagsHasEditor)
+		out += "effFlagsHasEditor\n";
+	if (handle->flags & effFlagsCanDoubleReplacing)
+		out += "effFlagsCanDoubleReplacing\n";
+
+
+
 
 
 #define ARR_SIZE(x) (sizeof(x)/sizeof(x[0]))
 	for (size_t j = 0; j < ARR_SIZE(plug_features_array); j++)
 	{
 		if (this->dispatch(effCanDo, 0, 0, (void *)plug_features_array[j])) {
-			out += StringFormat("Supports %s", plug_features_array[j]);
-			out += sep;
+			list.push_back(StringFormat("effCanDo %s", plug_features_array[j]));
+
 		}
 	}
 

@@ -154,10 +154,12 @@ void PopupCtrl::open(guictxtmenu_base *_ctxtmenu, ivec2 pos) {
 }
 void PopupCtrl::destroy() {
 	isOK = false;
+	this->containers.clear();
+	this->containers.shrink_to_fit();
+	delete popupCtrs;
 }
 
 PopupCtrl::~PopupCtrl() {
-//	delete popupCtrs;
 }
 bool PopupCtrl::init(window_overlay* _window, NVGcontext* nanovg)
 {

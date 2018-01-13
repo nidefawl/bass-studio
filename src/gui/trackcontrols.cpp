@@ -30,7 +30,8 @@ int trackHeight(track_t* tr) {
 bool addTrHeight(track_t* tr, int32_t offset) {
 
 	bool changed = false;
-	if (offset > 0 && tr->height < 4) {
+	int maxHeight = tr->subtracks.size() ? 4 : TRACK_MAX_HEIGHT;
+	if (offset > 0 && tr->height < maxHeight) {
 		tr->height++;
 		return true;
 	}
@@ -170,15 +171,15 @@ public:
 
 class guictxtmenu_trackparam : public guictxtmenu_base {
 	track_t* const track;
+	automatable_t* const atl;
 	int32_t const paramIdx;
 public:
-	guictxtmenu_trackparam(track_t* _track, int32_t _paramIdx) : track(_track), paramIdx(_paramIdx)
+	guictxtmenu_trackparam(track_t* _track, automatable_t* _atl, int32_t _paramIdx) : track(_track), atl(_atl), paramIdx(_paramIdx)
 	{
 		this->size.x = 240;
-		addContextEntries(this, track, &track->audio->mixer, paramIdx);
+		addContextEntries(this, track, _atl, paramIdx);
 	}
 	void clicked(int _id) {
-		automatable_t* atl = &track->audio->mixer;
 		handleAutomatbleContextMenu(track, atl, paramIdx, _id);
 		MainCtrl::get()->closeContextMenu();
 	}
@@ -200,7 +201,7 @@ public:
 		return this == MainCtrl::get()->guiFocused;
 	}
 	void handleRightClick(MouseEvent& evt) override {
-		MainCtrl::get()->openContextMenu(new guictxtmenu_trackparam(m_track, 1), evt.mousepos);
+		MainCtrl::get()->openContextMenu(new guictxtmenu_trackparam(m_track, &m_track->audio->mixer, 1), evt.mousepos);
 	}
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
 		if (contains(mpos)) {
@@ -223,17 +224,23 @@ public:
 			ivec2 insetP = pos+ivec2(1);
 			ivec2 insetS = size-ivec2(2);
 			float f = audio->mixer.getGain();
-			float gaindBFS = dsp_util::dBFS(f);
-			double scale = dsp_util::scaledRange(gaindBFS, -60.0f, dsp_util::MTR_CEIL);
-			float wVal = (1.0f - scale) * insetS.x;
+			float f2 = (f-dsp_util::GAIN_DBFLOOR) / (dsp_util::GAIN_DB6-dsp_util::GAIN_DBFLOOR);
+			if (f2 <= 0) {
+				f2 = 0;
+			} else {
+				f2 = pow(f2, 1/3.0f);
+			}
 			float x = insetP.x;
 			float y = insetP.y;
-			nvgBeginPath(vg);
-			nvgRect(vg, x, y, wVal, insetS.y);
-			nvgFillColor(vg, rgbToNvg(0x00ddff));
-			nvgFill(vg);
+			if (f2 > 0.01f) {
+				float wVal = (f2) * insetS.x;
+				nvgBeginPath(vg);
+				nvgRect(vg, x, y, wVal, insetS.y);
+				nvgFillColor(vg, rgbToNvg(0x00ddff));
+				nvgFill(vg);
+			}
 			setFont(vg, 20, G_WHITE, NVG_ALIGN_CENTER|NVG_ALIGN_MIDDLE);
-			String strLvl = StringFormat("%.2f", dsp_util::dBFSClampInf6(f));
+			String strLvl = StringFormat("%.2f", dsp_util::dBFSClampInf6(audio->mixer.getGain()));
 			nvgText(vg, insetP.x + insetS.x / 2.0f, insetP.y + G_FONT_MIDDLE_OFFSET(insetS.y), StringAsCStr(strLvl), NULL);
 		}
 	}
@@ -244,23 +251,27 @@ public:
 	}
 	void handleDraggedMove(MouseEvent& evt) {
 		if (evt.guiDragged == this && evt.type == M_EVT_CAPTURED_MOVE) {
-			int disty = (int)evt.dragDistance->y / 10;
-			if (abs(disty) < 1)
+			int scale = isCtrl(evt.kbmods) ? 15 : 2;
+			int disty = (int)evt.dragDistance->y / scale;
+			if (!disty)
 				return;
 			evt.dragDistance->y = 0;
 			track_impl_t* audio = m_track->audio;
 			if (audio) {
-				float f = audio->mixer.getGain();
-				my_printf("disty: %d\n", disty);
-				float adj = (1.0f - disty / 10.0f);
-//				if (f < 1.0E-5f && adj > 1.0f)
-//					f = 1.0E-5f;
-				my_printf("f: %f  adj %f\n", f, adj);
-				if (f < dsp_util::GAIN_DBFLOOR) {
-					f = dsp_util::GAIN_DBFLOOR;
+				float fGain = audio->mixer.getGain();
+				if (fGain < dsp_util::GAIN_DBFLOOR) {
+					fGain = dsp_util::GAIN_DBFLOOR;
 				}
-				float fNew = dsp_util::clampGain(f * adj);
-				my_printf("FNEW: %f %f\n", fNew, dsp_util::dBFS(fNew));
+				float dbfs = dsp_util::dBFS(fGain);
+				float delta = 0.1f;
+				for (int i = 1; i < 4; i++) {
+					if (dbfs < -12*i) {
+						delta *= 2;
+					}
+				}
+				dbfs -= delta * disty;
+				float f = dsp_util::fromdBFS(dbfs);
+				float fNew = dsp_util::clampGain(f);
 				audio->mixer.deactivateAutomation(1);
 				audio->mixer.setGain(fNew);
 			}
@@ -286,7 +297,7 @@ public:
 		return trackenabled() ? 1 : 0;
 	}
 	void handleRightClick(MouseEvent& evt) override {
-		MainCtrl::get()->openContextMenu(new guictxtmenu_trackparam(m_track, 0), evt.mousepos);
+		MainCtrl::get()->openContextMenu(new guictxtmenu_trackparam(m_track, &m_track->audio->mixer, 0), evt.mousepos);
 	}
 };
 class gui_trackcontrols_mixer: public guictr_base {
@@ -380,8 +391,8 @@ public:
 				m_track->audio->selectedAutomationParam = numParams?0:-1;
 			}
 		}
-		MainCtrl::get()->closeContextMenu();
 		MainCtrl::get()->updateVisibleTrackContents();
+		MainCtrl::get()->closeContextMenu();
 	}
 };
 class guidropdown_popup_sel_automation_param : public guictxtmenu_base {
@@ -416,8 +427,8 @@ public:
 				}
 			}
 		}
-		MainCtrl::get()->closeContextMenu();
 		MainCtrl::get()->updateVisibleTrackContents();
+		MainCtrl::get()->closeContextMenu();
 	}
 };
 class guidropdown_automation_device : public guidropdownbase {
@@ -732,6 +743,9 @@ public:
 			resize(m_track, al, mouseDragDist);
 			this->parent->onChildLayoutChanged(this);
 		}
+	}
+	void handleRightClick(MouseEvent& evt) override {
+		MainCtrl::get()->openContextMenu(new guictxtmenu_trackparam(m_track, al->at, al->param), evt.mousepos);
 	}
 };
 gui_track_controls::gui_track_controls(track_t* _track)

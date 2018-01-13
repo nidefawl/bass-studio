@@ -12,6 +12,7 @@
 #include "note.h"
 #include "hires_timer.h"
 #include "project.h"
+#include <memory>
 
 
 //-------------------------------------------------------------------------------------------------------
@@ -105,6 +106,7 @@ public:
 	~vsthost();
 	void operator=(vsthost const&) = delete;
 	static vsthost* getInstance();
+	static void setInstance(std::unique_ptr<vsthost> host);
 
 	uint32_t blockReads = 0;
 	uint32_t bufferUnderuns = 0;
@@ -149,6 +151,7 @@ public:
 	}
 	vstplugin* getPlugin(AEffect* aeffect);
 	void unloadPlugin(vstplugin* plugin);
+	void unloadTrack(track_t* track);
 	uint32_t pluginCount();
 	vstplugin* getPluginIdx(uint32_t i);
 	vstpluginloadres loadPlugin(String filepath, int32_t globalId = 0);

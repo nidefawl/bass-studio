@@ -1,7 +1,7 @@
 
 #pragma once
 
-#include <windef.h>
+#include <windows.h>
 #include <vector>
 #include <stdint.h>
 #include "str_util.h"
@@ -31,6 +31,7 @@ public:
 
 	void show ();
 	void close ();
+	void destroy ();
 	void resize (Size newSize);
 	Size getContentSize ();
 

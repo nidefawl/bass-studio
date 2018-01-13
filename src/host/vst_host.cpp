@@ -21,7 +21,7 @@
 #include <stdlib.h>
 #include <algorithm>
 #include <stdlib.h>
-#include <windef.h>
+#include <windows.h>
 #include <memory.h>
 #include "track_impl.h"
 
@@ -36,7 +36,15 @@
 #define MAX_LEN_MY_DBF 512
 bool filterOpCode(int opcode) {
 //	return opcode == audioMasterUpdateDisplay;
-	return 1;
+	if ( opcode == audioMasterSizeWindow)
+		return true;
+	if ( opcode == audioMasterBeginEdit)
+		return true;
+	if ( opcode == audioMasterEndEdit)
+		return true;
+	if ( opcode == audioMasterAutomate)
+		return true;
+	return true;
 }
 void cbPrintf(vstplugin* plugin, const char *fmt, int index, int opcode, int value);
 void cbPrintf(vstplugin* plugin, const char *fmt, int index, int opcode, int value) {
@@ -86,14 +94,23 @@ namespace PlugCanDos
 	const char* canDoMidiProgramNames = "midiProgramNames"; ///< plug-in supports function #getMidiProgramName ()
 	const char* canDoBypass = "bypass"; ///< plug-in supports function #setBypass ()
 }
+namespace
+{
+	std::unique_ptr<vsthost> g_instance;
+}
+
 
 VstIntPtr VSTCALLBACK audioMaster(AEffect* effect, VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt) {
-	vstplugin* plugin = vsthost::getInstance()->getPlugin(effect);
+	vstplugin* plugin = g_instance->getPlugin(effect);
 
 	switch (opcode)
 	{
 	case audioMasterAutomate:
 		cbPrintf(plugin, "audioMasterAutomate %d %d %d\n", index, opcode, value);
+		if (plugin) {
+			plugin->deactivateAutomation(index);
+			plugin->recvPluginEditParamUpdate(index);
+		}
 		//return OnSetParameterAutomated(nEffect, index, opt);
 		return 1;
 	case audioMasterVersion:
@@ -119,7 +136,10 @@ VstIntPtr VSTCALLBACK audioMaster(AEffect* effect, VstInt32 opcode, VstInt32 ind
 		return 0;
 	case audioMasterSizeWindow:
 		cbPrintf(plugin, "audioMasterSizeWindow %d %d %d\n", index, opcode, value);
-		return 0;
+		if (plugin) {
+			plugin->updateWindowSize();
+		}
+		return 1;
 	case audioMasterGetSampleRate:
 		cbPrintf(plugin, "audioMasterGetSampleRate %d %d %d\n", index, opcode, value);
 		return (long)vsthost::getInstance()->lSampleRate;
@@ -300,7 +320,7 @@ struct UnloadModule {
 };
 String getModuleName(HMODULE module);
 class vsthost::ModuleManager {
-    std::mutex m_mtx;
+//    std::mutex m_mtx;
 	std::vector<UnloadModule> modules;
 	int32_t cnt = 0;
 	const uint64_t timeout = 1500;
@@ -309,27 +329,34 @@ public:
 
 	}
 	void queueRelease(HMODULE module) {
-	    std::unique_lock<std::mutex> lock(m_mtx);
+		String moduleName = getModuleName(module);
+		my_printf("queueRelease module %s\n", StringAsCStr(moduleName));
+//	    std::unique_lock<std::mutex> lock(m_mtx);
 		UnloadModule ulModule{getTimeMillis(), module};
 		modules.push_back(ulModule);
 		cnt++;
 	}
-	void onTick() {
+	void unloadModules(bool force) {
 		if (!cnt)
 			return;
-	    std::unique_lock<std::mutex> lock(m_mtx);
+//	    std::unique_lock<std::mutex> lock(m_mtx);
 		auto it = modules.begin();
 		while (it != modules.end()) {
 			UnloadModule& ulModule = *it;
-			if (getTimeMillis() - ulModule.time > timeout) {
+			if (force || (getTimeMillis() - ulModule.time > timeout)) {
 				String moduleName = getModuleName(ulModule.handle);
 				my_printf("Unloading module %s\n", StringAsCStr(moduleName));
 				FreeLibrary(ulModule.handle);
 				it = modules.erase(it);
+				cnt--;
 			} else {
 				it++;
 			}
 		}
+
+	}
+	void onTick() {
+		unloadModules(false);
 	}
 };
 
@@ -389,7 +416,7 @@ void vsthost::updateTime(int32_t samplePos, tick_t pos, playback_state state) {
 	timeinfo.samplesToNextClock = samplePosTick - timeinfo.samplePos;
 //	my_printf("midi tick %d (%d offset %d)\n", midiTick, samplePosTick, timeinfo.samplesToNextClock);
 	bool changed;
-	changed = setFlag(timeinfo.flags, kVstTransportPlaying, state != playback_state::status_stop);
+	changed = setFlag(timeinfo.flags, kVstTransportPlaying, state == playback_state::status_play);
 	changed |= setFlag(timeinfo.flags, kVstTransportCycleActive, project.loopEnabled);
 	changed |= setFlag(timeinfo.flags, kVstTransportRecording, false);
 	setFlag(timeinfo.flags, kVstTransportChanged, changed);
@@ -415,6 +442,35 @@ void vsthost::sendNotesOff(vstplugin* plugin) {
 		}
 	}
 }
+void delayAudio(DelayLine* delayLine, AudioBlock* output, samplerate_t delay) {
+	int32_t bufSize = (int32_t)output->samples;
+	int32_t bufDelay = delay;
+	int32_t numBlocks = 1;
+	while (bufDelay > 0) {
+		bufDelay -= bufSize;
+		numBlocks++;
+	}
+	int32_t delayLineSize = numBlocks*bufSize;
+	delayLine->blockOffset = (delayLine->blockOffset+1)%numBlocks;
+	int32_t writePos = delayLine->blockOffset*bufSize;
+	int32_t readPos = writePos - delay;
+	if (readPos < 0) {
+		readPos += delayLineSize;
+	}
+	AudioBlock& delayBlock = delayLine->block;
+	delayBlock.realloc(delayLineSize);
+	delayBlock.copyFromPosToPos(output->buf, 0, writePos, output->samples, output->channels);
+	if (readPos + output->samples > delayLineSize) {
+		int32_t read1Len = delayLineSize - readPos;
+		int32_t read2Len = output->samples - read1Len;
+		output->copyFromPosToPos(delayBlock.buf, readPos, 0, read1Len, delayBlock.channels);
+		output->copyFromPosToPos(delayBlock.buf, 0, read1Len, read2Len, delayBlock.channels);
+	} else {
+		output->copyFromPosToPos(delayBlock.buf, readPos, 0, output->samples, delayBlock.channels);
+	}
+
+}
+
 int32_t vsthost::processPlayback(int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround) {
 	double since = timer.getTimeDoubleReset();
 	MainCtrl* ctrl = MainCtrl::get(); //TODO: still not synchronized.
@@ -484,6 +540,14 @@ int32_t vsthost::processPlayback(int32_t sample, double posDouble, playback_stat
 		/*
 		 * Process all normal channels
 		 */
+		samplerate_t maxLatency = 0;
+		for (track_t* track : ctrl->trackCtr) {
+			track_impl_t* audioTrack = track->audio;
+			assert(audioTrack);
+			audioTrack->pluginsChanged();
+			samplerate_t latency = audioTrack->getLatency();
+			maxLatency = max(latency, maxLatency);
+		}
 		for (track_t* track : ctrl->trackCtr) {
 			track_impl_t* audioTrack = track->audio;
 			if (!audioTrack) {
@@ -505,6 +569,8 @@ int32_t vsthost::processPlayback(int32_t sample, double posDouble, playback_stat
 			dsp_util::fillSilence(audioTrack->input.buf, lBlockSize);
 			/* Processes a whole plugin chain */
 			processAudio(audioTrack, &audioTrack->input, &audioTrack->output, lBlockSize);
+			samplerate_t delay = maxLatency - audioTrack->getLatency();
+			delayAudio(&audioTrack->delayLine, &audioTrack->output, delay);
 			if (audioTrack->mixer.isEnabled()) {
 				for (track_t* trackMaster : ctrl->trackMasterCtr) {
 					track_impl_t* audioMaster = trackMaster->audio;
@@ -595,8 +661,6 @@ void mulGain(AudioBlock* block, float gain) {
 	}
 }
 void vsthost::processAudio(track_impl_t* channel, AudioBlock* input, AudioBlock* output, unsigned long samples) {
-//	float** bufOut = outputs;
-//	float** bufIn = inputs;
 	int count = 0;
 	if (channel->instrument) {
 		count++;
@@ -606,7 +670,6 @@ void vsthost::processAudio(track_impl_t* channel, AudioBlock* input, AudioBlock*
 	}
 
 
-//	AudioBlock* input = block->input;
 	for (int i = 0; i < count; ++i)
 	{
 		vstplugin *current = NULL;
@@ -718,6 +781,16 @@ void vsthost::destroy() {
 			ringbuffer.buffers[i] = nullptr;
 		}
 	}
+	moduleMgr->unloadModules(true);
+	g_instance.reset();
+}
+vsthost* vsthost::getInstance()
+{
+	return g_instance.get();
+}
+void vsthost::setInstance(std::unique_ptr<vsthost> host)
+{
+	g_instance = std::move(host);
 }
 bool vsthost::startAudio() {
 	my_printf("startAudio\n", 0);
@@ -829,8 +902,19 @@ vstplugin* vsthost::getPlugin(AEffect* aeffect) {
 				return current;
 		}
 	}
-
 	return NULL;
+}
+void vsthost::unloadTrack(track_t* track) {
+	assert(track->audio);
+	auto audio = track->audio;
+	std::vector<vstplugin*> effects = audio->effects;
+	for (vstplugin* effect : effects) {
+		unloadPlugin(effect);
+	}
+	vstplugin* instrument = audio->instrument;
+	if (instrument) {
+		unloadPlugin(instrument);
+	}
 }
 void vsthost::unloadPlugin(vstplugin* plugin) {
 	PopupCtrl::get()->close(); // Make sure context controls do not reference vst
@@ -840,7 +924,7 @@ void vsthost::unloadPlugin(vstplugin* plugin) {
 		list.erase(it);
 	}
 	if (plugin->handle->tr_plugins) {
-		plugin->handle->tr_plugins->removePlugin(plugin);
+		plugin->handle->tr_plugins->removePlugin(plugin, true);
 	}
 	plugin->unload();
 	moduleMgr->queueRelease(plugin->handle->hmodule);
@@ -848,19 +932,23 @@ void vsthost::unloadPlugin(vstplugin* plugin) {
 }
 bool vsthost::unloadAllPlugins() {
 	int count = list.size();
+	my_printf("count %d...\n", count);
 	for (int i = 0; i < count; ++i)
 	{
 		vstplugin *current = list[i];
 		if (current->handle && current->handle->tr_plugins) {
-			current->handle->tr_plugins->removePlugin(current);
+			my_printf("removePlugin %d...\n", i);
+			current->handle->tr_plugins->removePlugin(current, false);
 		}
 	}
 	for (int i = 0; i < count; ++i)
 	{
+		my_printf("close %d...\n", i);
 		vstplugin *current = list[i];
 		current->close();
 		list[i] = NULL;
 		current->unload();
+		moduleMgr->queueRelease(current->handle->hmodule);
 		delete current;
 	}
 	list.clear();
@@ -898,17 +986,19 @@ bool vsthost::movePlugin(track_t* dstTr, track_impl_t* trp, int32_t src, int32_t
 		src--;
 		dst--;
 		vstplugin* tmpPlugin = trp->effects[src];
-		trp->removePlugin(tmpPlugin);
+		trp->removePlugin(tmpPlugin, true);
 		dstTr->audio->insertEffect(dst, tmpPlugin);
 	} else {
 		assert(src == 0 && dst == 0);
 		vstplugin* tmpPlugin = trp->instrument;
-		trp->removePlugin(tmpPlugin);
+		trp->removePlugin(tmpPlugin, true);
 		vstplugin* old = dstTr->audio->setInstrument(tmpPlugin);
 		if (old) {
 			unloadPlugin(old);
 		}
 	}
+	trp->pluginsChanged();
+	dstTr->audio->pluginsChanged();
 	return true;
 }
 bool vsthost::swapEffects(track_impl_t* trp, int32_t src, int32_t dst) {
@@ -936,6 +1026,7 @@ bool vsthost::insertNewPlugin(track_impl_t* trp, vstplugin* plugin, int32_t dst)
 	} else {
 		trp->insertEffect(dst-1, plugin);
 	}
+	trp->pluginsChanged();
 	return true;
 }
 vstpluginloadres vsthost::loadPlugin(String filepath, int32_t globalId) {

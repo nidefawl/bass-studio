@@ -166,11 +166,7 @@ public:
 	clip_notes_t clipboard;
 	tick_t clipboardCursorRange;
 	void set(gui_clip* _clip) {
-		if (_clip == NULL) {
-			this->gui = NULL;
-		} else {
-			this->gui = _clip;
-		}
+		this->gui = _clip;
 //		this->selection.clear();
 	}
 	clip_t* clip() const;
@@ -246,6 +242,7 @@ public:
 	std::shared_ptr<project_file> createProjectFile();
 	void loadFile(String path);
 	bool setLoadedProject(std::shared_ptr<project_file> file);
+	void setEmptyProject();
 	void pushHist(action_base* action);
 	void focusLost() {
 		closeContextMenu();
@@ -273,6 +270,7 @@ public:
 	bool init(window_main* window, NVGcontext* nanovg);
 	void postInit();
 	void destroy();
+	void unloadProject();
 	void relayout(int32_t w, int32_t h);
 	bool processGlobalKeyevent(KeyEvent& event) override;
 	bool mouseDownPre() override;
@@ -356,6 +354,7 @@ public:
 	void preTrackDelete(track_t* clip);
 	void startPlaying();
 	void stopPlaying();
+	void setAudioThreadState(playback_state state);
 	bool isPlaying();
 	bool toggleLoop();
 

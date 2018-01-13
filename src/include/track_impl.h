@@ -125,12 +125,16 @@ public:
 		return params[paramIdx].name;
 	}
 	const float lvlRange = dsp_util::DBFS_MUTE_POS - dsp_util::MTR_CEIL;
+	const float EXP = 2.0f;
 	float gainToLinScale(float f) {
 		float db = dsp_util::dBFS(f);
-		return 1.0f - ((max(dsp_util::DBFS_MUTE_POS, min(db, dsp_util::MTR_CEIL)) - dsp_util::MTR_CEIL) / lvlRange);
+		float f2 = ((max(dsp_util::DBFS_MUTE_POS, min(db, dsp_util::MTR_CEIL)) - dsp_util::MTR_CEIL) / lvlRange);
+		return 1.0f - powf(f2, 1.0/EXP);
 	}
 	float linScaleToGain(float f) {
-		float f2 = ((1.0f-f) * lvlRange)+dsp_util::MTR_CEIL;
+		float f1 = (1.0f-f);
+		f1 = powf(f1, EXP);
+		float f2 = (f1 * lvlRange)+dsp_util::MTR_CEIL;
 		return dsp_util::fromdBFS(f2);
 	}
 	float convertValFrom(int32_t idx, float f) {
@@ -147,10 +151,15 @@ public:
 		return f;
 	}
 	float getParamValue(int32_t idx) {
-		return convertValFrom(idx, params[idx].val);
+		if (idx >= 0 && idx < params.size()) {
+			return convertValFrom(idx, params[idx].val);
+		}
+		return 0.0f;
 	}
 	void setParamValue(int32_t idx, float val) {
-		params[idx].val = convertValTo(idx, val);
+		if (idx >= 0 && idx < params.size()) {
+			params[idx].val = convertValTo(idx, val);
+		}
 	}
 	void deactivateAutomation(int32_t paramIdx) override {
 		automation_t* at = getAutomation(paramIdx);
@@ -168,8 +177,11 @@ public:
 		}
 	}
 	automation_t* getAutomation(int32_t idx) override {
-		track_param_entry_t& param = params[idx];
-		return &param.automation;
+		if (idx >= 0 && idx < params.size()) {
+			track_param_entry_t& param = params[idx];
+			return &param.automation;
+		}
+		return NULL;
 	}
 	void getAutomated(std::vector<int32_t>& targets) {
 		targets.push_back(0);
@@ -229,23 +241,26 @@ struct track_impl_t {
 	VstEvent_t* midiEventsBuf = NULL;
 	AudioBlock input; //guaranteed to have at least 2 channels
 	AudioBlock output; //guaranteed to have at least 2 channels
+	DelayLine delayLine;
 	track_params_t mixer;
 	automatable_t* selectedAutomationCtr = NULL;
 	int32_t selectedAutomationParam = -1;
 	std::vector<automationlane_snapshot_t> atl;
 	bool atlStored = false;
+	int32_t latency = 0;
 	track_impl_t(track_t* _track, const samplerate_t& _sampleRate, const uint16_t& _blockSize, int32_t nChannels)
 	: track(_track),
 	  sampleRate(_sampleRate),
 	  blockSize(_blockSize),
 	  input(nChannels, _blockSize),
-	  output(nChannels, _blockSize) {
+	  output(nChannels, _blockSize),
+	  delayLine(nChannels, _blockSize) {
 	}
 	~track_impl_t();
 	vstplugin* getPluginSlot(int32_t idx);
 	vstplugin* getPluginById(int32_t projectGlobalId);
 	vstplugin* setInstrument(vstplugin* _instrument);
-	void removePlugin(vstplugin* _vst);
+	void removePlugin(vstplugin* _vst, bool notifyUp);
 	void insertEffect(int32_t idx, vstplugin* _instrument);
 	void sendNotesOff(int32_t bpm100, int32_t blockSamplePos);
 	void sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos);
@@ -256,4 +271,6 @@ struct track_impl_t {
 	void saveAutomationLanes(std::vector<automationlane_snapshot_t>& atl);
 	void loadPlugins(const std::vector<plugin_snapshot_t>& trPluginList);
 	void showAutomationLanes();
+	int32_t getLatency();
+	void pluginsChanged();
 };

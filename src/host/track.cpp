@@ -1,6 +1,7 @@
 #include <algorithm>
 
 
+#include "exceptions.h"
 #include "logging.h"
 #include "samplerate.h"
 #include "seq_util.h"
@@ -21,6 +22,7 @@
 #include "track_impl.h"
 
 #include "mainctrl.h"
+#include "plugindatabase.h"
 
 #include "leak_detect.h"
 
@@ -55,6 +57,12 @@ void deleteTrack(track_t* tr, delete_cb *cb) {
 	}
 	if (tr->content) {
 		delete (tr->content);
+	}
+	if (tr->subtracks.size()) {
+		for (gui_track_automationlane* al : tr->subtracks) {
+			delete al;
+		}
+		tr->subtracks.clear();
 	}
 	if (tr->audio) {
 		delete (tr->audio);
@@ -280,41 +288,57 @@ vstplugin* track_impl_t::getPluginById(int32_t projectGlobalId) {
 vstplugin* track_impl_t::setInstrument(vstplugin* _instrument) {
 	vstplugin* oldInstr = instrument;
 	if (instrument) {
-		removePlugin(instrument);
+		removePlugin(instrument, true);
 	}
 	instrument = _instrument;
 	_instrument->handle->tr_plugins = this;
 	_instrument->handle->slot = 0;
 	return oldInstr;
 }
-void track_impl_t::removePlugin(vstplugin* _vst) {
+void track_impl_t::removePlugin(vstplugin* _vst, bool notifyUp) {
+	my_printf("this = %016X...\n", this);
+	my_printf("selectedAutomationCtr...\n", selectedAutomationCtr);
 	if (this->selectedAutomationCtr == _vst) {
 		this->selectedAutomationCtr = NULL;
 	}
+	my_printf("asdfasdf\n", 0);
 	if (instrument == _vst) {
 		instrument = NULL;
+		my_printf("instrument = NULL...\n", 0);
 	} else {
+		my_printf("removeEntry...\n", 0);
 		if (!removeEntry(effects, _vst)) {
+			my_printf("return...\n", 0);
 			return;
 		}
+		my_printf("reassing slots...\n", 0);
 		int slot = 1;
 		for (vstplugin* effect : effects) {
 			effect->handle->slot = slot++;
 		}
 	}
+	my_printf("_vst->handle = %016X...\n", _vst->handle);
+	my_printf("tr_plugins = NULL...\n", 0);
 	_vst->handle->tr_plugins = NULL;
 	_vst->handle->slot = -1;
+	my_printf("_vst->handle->gui.get...\n", 0);
+	if (notifyUp) {
 	guiplugin* gui = _vst->handle->gui.get();
 	if (gui) {
 		guictr_plugins* plugins = MainCtrl::getPluginCtr();
 		if (plugins && plugins->hasGui(gui)) {
+			my_printf("plugins->hasGui...\n", 0);
 			plugins->remove(gui);
 			plugins->layout();
 		}
 	}
-	MainCtrl::getGuiTrackCtr()->removeAllAutomationLanes(this->track, _vst);
-	MainCtrl::getGuiTrackCtr()->layout();
-	MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
+		my_printf("removeAllAutomationLanes...\n", 0);
+		MainCtrl::getGuiTrackCtr()->removeAllAutomationLanes(this->track, _vst);
+		my_printf("layout...\n", 0);
+		MainCtrl::getGuiTrackCtr()->layout();
+		my_printf("updateVisibleTrackContents...\n", 0);
+		MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
+	}
 }
 
 void track_impl_t::insertEffect(int32_t idx, vstplugin* _effect) {
@@ -435,6 +459,7 @@ void track_impl_t::sendNotesOff(int32_t bpm100, int32_t blockSamplePos) {
 }
 track_impl_t::~track_impl_t() {
 	if (midiEventsBuf) delete midiEventsBuf;
+	my_printf("~track_impl_t() %016X\n", this);
 }
 VstEvent_t* track_impl_t::reallocEvts(size_t size) {
 	size = max((size_t)128, size);
@@ -444,6 +469,19 @@ VstEvent_t* track_impl_t::reallocEvts(size_t size) {
 	}
 	midiEventsBuf->reset();
 	return midiEventsBuf;
+}
+int32_t track_impl_t::getLatency() {
+	return latency;
+}
+void track_impl_t::pluginsChanged() {
+	samplerate_t latency = 0;
+	if (instrument) {
+		latency += instrument->handle->aeffect->initialDelay;
+	}
+	for (vstplugin* effect : effects) {
+		latency += effect->handle->aeffect->initialDelay;
+	}
+	this->latency = latency;
 }
 void track_impl_t::getAutomatableTargets(std::vector<automatable_t*>& targets) {
 	targets.push_back(&mixer);
@@ -462,11 +500,11 @@ void track_impl_t::saveAutomationLanes(std::vector<automationlane_snapshot_t>& a
 	}
 }
 void track_impl_t::showAutomationLanes() {
-	bool show = !track->hideAutomation && !track->hideTrack;
-	if (this->atlStored == show)
+	bool hide = track->hideAutomation || track->hideTrack;
+	if (this->atlStored == hide)
 		return;
-	this->atlStored = show;
-	if (!show) {
+	this->atlStored = hide;
+	if (hide) {
 		atl.clear();
 		saveAutomationLanes(atl);
 		MainCtrl::getGuiTrackCtr()->removeAllAutomationLanes(track);
@@ -480,10 +518,11 @@ void track_impl_t::showAutomationLanes() {
 }
 void track_impl_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginList)
 {
-	String path;
 	vsthost* host = vsthost::getInstance();
+	plugindatabase_t& db = MainCtrl::get()->plugindb;
 	for (const plugin_snapshot_t& pluginSnapshot : trPluginList) {
-		if (MainCtrl::get()->plugindb.resolve(pluginSnapshot.name, pluginSnapshot.uId, &path)) {
+		String path;
+		if (db.resolve(pluginSnapshot.name, pluginSnapshot.uId, &path)) {
 			vstpluginloadres res = host->loadPlugin(path, pluginSnapshot.projectGlobalId);
 			if (res.result==0&&res.plugin) {
 				vstplugin* plugin = res.plugin;
@@ -649,7 +688,7 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 			if (eff->bCanReceiveMidi&& eff->bIsEnabled) {
 				noEvData = { 0 };
 
-				instrument->dispatch(effProcessEvents, 0, 0, &noEvData);
+				eff->dispatch(effProcessEvents, 0, 0, &noEvData);
 			}
 		}
 	}

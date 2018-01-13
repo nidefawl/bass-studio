@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include "event.h"
 #include "mainctrl.h"
 #include "gui.h"
 #include "guicolors.h"

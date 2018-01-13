@@ -463,6 +463,7 @@ public:
 	void removeAllAutomationLanes(track_t* t, automatable_t* at);
 	void removeAllAutomationLanes(track_t* t);
 	void removeTrack(track_t* t) {
+		removeAllAutomationLanes(t);
 		trackControls.removeTrack(t);
 		trackView.removeTrack(t);
 	}
@@ -507,6 +508,12 @@ public:
 	void scrollOffsetChanged(int dir, float offset);
 	virtual bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
 		return scrollbar.handleMouseScroll(evt, xoffset, yoffset);
+	}
+	void setScrollOffset(float offset) {
+		this->scrollbar.setScrollOffset(offset);
+	}
+	float getScrollOffset() {
+		return this->scrollbar.scrollOffset;
 	}
 };
 

@@ -6,6 +6,7 @@
 #include "renderresources.h"
 #include "button.h"
 #include "list.h"
+#include "knob.h"
 #include "automatable.h"
 #include "guicontainer.h"
 #include "guicontextmenu.h"
@@ -257,6 +258,13 @@ void guictr_plugins::addGui(vstplugin* plugin) {
 		plugin->handle->gui->setTitle(StringFormat("%s", StringAsCStr(plugin->sName)));
 	}
 	add(plugin->handle->gui.get());
+}
+void guictr_plugins::hideTrack(track_t* _track) {
+	if (this->track == _track) {
+		this->track = NULL;
+		removeGuis();
+		layout();
+	}
 }
 void guictr_plugins::showTrack(track_t* _track) {
 	this->track = _track;

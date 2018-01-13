@@ -2,9 +2,13 @@
 #include "vst_window.h"
 #include "vst_host.h"
 #include "vst_plugin.h"
+#include "mainctrl.h"
+
 #include <tchar.h>
 #include <Windows.h>
+#include "leak_detect.h"
 
+HWND getMainHWND(); // window.cpp
 namespace {
 	static std::vector<vst_window*> vst_window_list;
 	static void addWindow (vst_window* window)
@@ -74,8 +78,27 @@ bool vst_window::init(vstplugin* plugin, const String& name, Size size, bool res
 	DWORD dwStyle = WS_CAPTION | WS_SYSMENU | WS_CLIPSIBLINGS;
 	if (resizeable)
 		dwStyle |= WS_SIZEBOX | WS_MAXIMIZEBOX;
+	HWND parent = getMainHWND();
 	hwnd = CreateWindowEx (exStyle, gWindowClassName, StringAsCStr(name), dwStyle,
             0, 0, size.width, size.height, nullptr, nullptr, instance, nullptr);
+	if (parent) {
+
+		RECT rcOwner;
+		RECT rcDlg;
+		RECT rc;
+		GetWindowRect(parent, &rcOwner);
+		GetWindowRect(hwnd, &rcDlg);
+		CopyRect(&rc, &rcOwner);
+		OffsetRect(&rcDlg, -rcDlg.left, -rcDlg.top);
+		OffsetRect(&rc, -rc.left, -rc.top);
+		OffsetRect(&rc, -rcDlg.right, -rcDlg.bottom);
+		SetWindowPos(hwnd,
+			HWND_TOP,
+			rcOwner.left + (rc.right / 2),
+			rcOwner.top + (rc.bottom / 2),
+			0, 0,          // Ignores size arguments.
+			SWP_NOSIZE);
+	}
 //	CreateWindowExA(DWORD dwExStyle,LPCSTR lpClassName,LPCSTR lpWindowName,DWORD dwStyle,int X,int Y,int nWidth,int nHeight,HWND hWndParent,HMENU hMenu,HINSTANCE hInstance,LPVOID lpParam);
 	if (hwnd)
 	{
@@ -147,8 +170,15 @@ LRESULT vst_window::proc (UINT message, WPARAM wParam, LPARAM lParam)
 void vst_window::close()
 {
 	plugin->onClose();
-	SetWindowLongPtr (hwnd, GWLP_USERDATA, (__int3264) (LONG_PTR) nullptr);
 	ShowWindow(hwnd, false);
+}
+
+//------------------------------------------------------------------------
+void vst_window::destroy()
+{
+	plugin->onWindowDestroy();
+	SetWindowLongPtr (hwnd, GWLP_USERDATA, (__int3264) (LONG_PTR) nullptr);
+	DestroyWindow(hwnd);
 	removeWindow (this);
 }
 //------------------------------------------------------------------------

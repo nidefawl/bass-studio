@@ -163,6 +163,7 @@ void serialize(Archive & archive, project_globals_t & m)
 	make_optional_nvp(archive, "signatureNum", m.signatureNum);
 	make_optional_nvp(archive, "signatureDenom", m.signatureDenom);
 	make_optional_nvp(archive, "playbackPos", m.playbackPos);
+	make_optional_nvp(archive, "cursor", m.cursor);
 }
 template<class Archive>
 void serialize(Archive & archive, project_snapshot_t & m)
@@ -172,6 +173,23 @@ void serialize(Archive & archive, project_snapshot_t & m)
 			make_nvp("tracks", m.trackCtr));
 	make_optional_nvp(archive, "globals", m.globals);
 };
+template<class Archive>
+void serialize(Archive & archive, project_layout_t & m)
+{
+	archive(make_nvp("grid", m.layoutGrid),
+			make_nvp("scrollOffsetX", m.scrollOffsetX));
+};
+
+template<class Archive>
+void serialize(Archive & archive, Cursor & m)
+{
+	archive(make_nvp("pos", m.cursorPos),
+			make_nvp("track", m.cursorTrack),
+			make_nvp("subtrack", m.cursorSubTrack),
+			make_nvp("range", m.selRange),
+			make_nvp("trackrange", m.selTrackRange),
+			make_nvp("subtrackrange", m.selSubTrackRange));
+};
 
 template <class Archive>
 void load( Archive & archive, project_file & file, const std::uint32_t version)
@@ -179,12 +197,14 @@ void load( Archive & archive, project_file & file, const std::uint32_t version)
 	if (version != FILE_FORMAT_VERSION)
 		return;
 	archive(cereal::make_nvp("projectdata", file.project));
+	make_optional_nvp(archive, "layout", file.layout);
 }
 
 template <class Archive>
 void save( Archive & archive, project_file const & file, const std::uint32_t version)
 {
 	archive(cereal::make_nvp("projectdata", file.project));
+	make_optional_nvp(archive, "layout", file.layout);
 }
 CEREAL_CLASS_VERSION( project_file, FILE_FORMAT_VERSION);
 

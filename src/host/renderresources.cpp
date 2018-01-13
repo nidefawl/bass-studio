@@ -58,8 +58,6 @@ namespace {
 namespace RenderResources {
 	NvgImageTexture imgDashedLine;
 	NvgImageTexture imgIcons[NUM_IMGS];
-	ImageBuf imgIconsBuf[NUM_IMGS];
-	ImageBuf imgCursors[NUM_CURSORS];
 	GLFWcursor* cursors[NUM_CURSORS];
 	void load(NVGcontext* vg, String path, ImageBuf& out) {
 		if (ReadImage(path, out) < 0) {
@@ -76,6 +74,8 @@ namespace RenderResources {
 			nvgImageSize(vg, imgDashedLine.id, &imgDashedLine.width, &imgDashedLine.height);
 		}
 		{
+			ImageBuf imgIconsBuf[NUM_IMGS];
+			ImageBuf imgCursors[NUM_CURSORS];
 			load(vg, StringFormat("res/icons/synth_32px.png"), imgIconsBuf[ICON_SYNTH]);
 			load(vg, StringFormat("res/icons/effect.png"), imgIconsBuf[ICON_EFFECT]);
 			load(vg, StringFormat("res/icons/folder.png"), imgIconsBuf[ICON_FOLDER]);
@@ -97,6 +97,9 @@ namespace RenderResources {
 			load(vg, StringFormat("res/led.png"), imgIconsBuf[IMG_LED]);
 			load(vg, StringFormat("res/led_off.png"), imgIconsBuf[IMG_LED_OFF]);
 			load(vg, StringFormat("res/led_glow.png"), imgIconsBuf[IMG_LED_GLOW]);
+			for (int i = 0; i < 6; i++) {
+				load(vg, StringFormat("res/cursors/cursor%02d.png", i), imgCursors[i]);
+			}
 			for (int i = 0; i <= NUM_IMGS; i++) {
 				ImageBuf& buf = imgIconsBuf[i];
 				if (buf.w*buf.h == 0) {
@@ -108,11 +111,14 @@ namespace RenderResources {
 			}
 			cursors[0] = NULL;
 			for (int i = 0; i < 6; i++) {
-				load(vg, StringFormat("res/cursors/cursor%02d.png", i), imgCursors[i]);
+				ImageBuf& buf = imgCursors[i];
+				if (buf.w*buf.h == 0) {
+					continue;
+				}
 				GLFWimage image;
-				image.width = imgCursors[i].w;
-				image.height = imgCursors[i].h;
-				image.pixels = &imgCursors[i].bytes[0];
+				image.width = buf.w;
+				image.height = buf.h;
+				image.pixels = &buf.bytes[0];
 				int posx = image.width/2;
 				int posy = image.height/2;
 				if (i+1 == CURSOR_DUPLICATE) {

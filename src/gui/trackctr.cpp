@@ -1,4 +1,5 @@
 #include "gui.h"
+#include "exceptions.h"
 #include "trackctr.h"
 #include "trackcontent.h"
 #include "trackcontrols.h"

@@ -1,6 +1,5 @@
 #pragma once
-#include <windef.h>
-#include <winuser.h>
+#include <windows.h>
 #include <cereal/cereal.hpp>
 #include <cereal/cereal_optional_nvp.hpp>
 #include "str_util.h"
