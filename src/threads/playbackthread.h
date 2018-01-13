@@ -4,8 +4,7 @@
 #include <stdexcept>
 #include <functional>
 
-#define PLAYBACK_STOP 0
-#define PLAYBACK_START 1
+#define REQ_STATE 1
 #define GUI_CALL 2
 class ThreadLock {
 public:

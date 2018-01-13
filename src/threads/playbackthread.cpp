@@ -20,6 +20,7 @@
 #include "../util/readerwriterqueue.h"
 #include "../host/vst_host.h"
 #include <windows.h>
+#include "leak_detect.h"
 
 #ifndef _MSC_VER
 #pragma GCC diagnostic push
@@ -75,7 +76,7 @@ public:
 class PlaybackThread::Impl {
 	std::thread t;
 	ReaderWriterQueue<std::shared_ptr<PlaybackThreadReq>> q;
-    playback_state m_status = status_stop;
+    playback_state m_status = status_no_process;
 	std::recursive_mutex mutex;
 public:
     Impl() : q(128) {
@@ -125,7 +126,6 @@ private:
 
 		MainCtrl* ctrl = MainCtrl::get();
 		vsthost* host = vsthost::getInstance();
-		playback_state state = status_stop;
 		static double playbackDuration = 0;
         LARGE_INTEGER freq, iStart, iStop;
         if (!QueryPerformanceFrequency(&freq)) {
@@ -142,27 +142,38 @@ private:
         	int32_t blockSize = host->lBlockSize;
         	if (q.try_dequeue(req)) {
         		switch (req->msgId) {
-        		case PLAYBACK_START:
-        			if (state != status_play) {
-            			state = m_status = status_play;
-                    	tickPos = req->param;
-            			ctrl->getPlaybackPos() = req->param;
-                    	int32_t bpm100 = ctrl->getCurrentTempo();
-                    	samplePos = tickToSample(req->param, bpm100, sampleRate, blockSize);
-            			LOG("START ON seconds: %.2f - sample %d\n", toSeconds(req->param, bpm100), samplePos);
-            			host->onStartPlayback(0);
-                        QueryPerformanceCounter(&iStart);
-                        playbackDuration = 0;
-                        firstBlock = true;
-                        isLoopAround = false;
-        			}
-        			break;
-        		case PLAYBACK_STOP:
-        			if (state != status_stop) {
-            			state = m_status = status_stop;
-            			host->onStopPlayback();
-        			}
-        			break;
+        		case REQ_STATE:
+					{
+						playback_state reqState = (playback_state) req->param;
+						switch (reqState) {
+							case playback_state::status_play:
+							{
+								tick_t startPos = ctrl->cursor.cursorPos;
+								tickPos = startPos;
+								ctrl->getPlaybackPos() = startPos;
+								int32_t bpm100 = ctrl->getCurrentTempo();
+								samplePos = tickToSample(startPos, bpm100, sampleRate, blockSize);
+								LOG("START ON seconds: %.2f - sample %d\n", toSeconds(startPos, bpm100), samplePos);
+								host->onStartPlayback(0);
+								QueryPerformanceCounter(&iStart);
+								playbackDuration = 0;
+								firstBlock = true;
+								isLoopAround = false;
+								break;
+							}
+							case playback_state::status_stop:
+							{
+								host->onStopPlayback();
+								break;
+							}
+							case playback_state::status_no_process:
+							{
+								break;
+							}
+						}
+						m_status = reqState;
+					}
+					break;
         		case GUI_CALL:
         			req->fn();
         			break;
@@ -181,16 +192,18 @@ private:
 
 
             bool inLoop = tickPos >= ctrl->loopStart && tickPos < ctrl->loopStart+ctrl->loopLen
-            		&& state == status_play && ctrl->loopEnabled;
+            		&& m_status == status_play && ctrl->loopEnabled;
 
             //this is stupid
 //			if (state != status_play) {
 //				tickPos = ctrl->cursor.cursorPos;
 //			}
-            int32_t processedBlock;
+            int32_t processedBlock = 0;
+
+            if (m_status != playback_state::status_no_process)
             {
             	ThreadLock lock = this->lockThread();
-            	processedBlock = host->processPlayback(samplePos, tickPos, state, inLoop, isLoopAround);
+            	processedBlock = host->processPlayback(samplePos, tickPos, m_status, inLoop, isLoopAround);
             }
             /*
              * at sample rate 44100 and blocksize 512 the block duration is 1.xxms
@@ -211,7 +224,7 @@ private:
 	            if (WaitForSingleObject(hTimer, INFINITE) != WAIT_OBJECT_0)
 	    	    	throw new SystemException(GetLastError(), "WaitForSingleObject failed");
 			}
-			if (state == status_play) {
+			if (m_status == status_play) {
 				double blocksPerS = sampleRate / (double) blockSize;
 				double msPerBlock = 1000.0 / blocksPerS;
 				const double ticksPerBlock = toTickPrecise(blockSize/(double)sampleRate, bpm100);
@@ -233,7 +246,7 @@ private:
 					playbackDuration += msPerBlock;
 				}
 			}
-			if (playbackDuration > 10000 && state == status_play) {
+			if (playbackDuration > 10000 && m_status == status_play) {
 				QueryPerformanceCounter(&iStop);
 				double wallTime = QPC_TOSECONDS(iStart, iStop, freq);
 	            LOG("playbackDuration %.4f wallTime %.4f error %.4f\n", playbackDuration, wallTime, playbackDuration-wallTime);
