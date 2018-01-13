@@ -1,0 +1,161 @@
+#include "debugctr.h"
+#include "str_util.h"
+#include "mainctrl.h"
+#include "knob.h"
+#include "plugin.h"
+#include "guicontainer.h"
+#include "../host/vst_host.h"
+#include "../host/vst_plugin.h"
+#include "../host/vst_plugin_handles.h"
+#include "track.h"
+#include "track_impl.h"
+#include <vector>
+#include "leak_detect.h"
+using namespace std;
+#define DISPLAY_HWND_DRAWS 0
+#define DISPLAY_WIN_MSG_STATS 0
+struct win32_msg {
+	int id;
+	int cnt;
+};
+#if DISPLAY_WIN_MSG_STATS
+int getNumMsg();
+int getMsgId(int i);
+int getMsgCnt(int i);
+#endif
+#if DISPLAY_HWND_DRAWS
+int getHWNDMapSize();
+String getHWNDName(int i);
+int getHWNDCnt(int i);
+#endif
+extern int colorVal;
+gui_ctr_debug::gui_ctr_debug() : guictr_base() {
+	add(&knobTest);
+	knobTest.fnSetValue = [](float f) {
+		colorVal = 0+max(0, min(255, (int32_t)std::floor(f*255)));
+		initColor();
+	};
+	knobTest.fnGetValue = [](void) {
+		return max(0.0f, min(1.0f, colorVal/255.0f));
+	};
+}
+void gui_ctr_debug::render(NVGcontext* vg) {
+	renderBackground(vg);
+	if (!setScissorTransform(vg)) {
+		return;
+	}
+	MainCtrl *ctrl = MainCtrl::get();
+
+	vector<String> strings;
+	String str;
+	str = ctrl->guiOver ? ctrl->guiOver->getClassName() : "<null>";
+	strings.push_back(String("guiOver: ") + str);
+	str = ctrl->guiDragged ? ctrl->guiDragged->getClassName() : "<null>";
+	strings.push_back(String("guiDragged: ") + str);
+	str = ctrl->guiCaptured ? ctrl->guiCaptured->getClassName() : "<null>";
+	strings.push_back(String("guiCaptured: ") + str);
+	str = ctrl->guiCtrFocused ? ctrl->guiCtrFocused->getClassName() : "<null>";
+	strings.push_back(String("guiCtrFocused: ") + str);
+	str = ctrl->guiFocused ? ctrl->guiFocused->getClassName() : "<null>";
+	strings.push_back(String("guiFocused: ") + str);
+
+	guibase* p = ctrl->guiFocused;
+	int lvl = 0;
+	while (p != NULL) {
+		String s = "";
+		if (lvl == 0) {
+			s = "guiFocused: ";
+		}
+		for (int i = 0; i < lvl; i++) {
+			s += "  ";
+		}
+		strings.push_back(s + p->getClassName());
+		p = p->parent;
+		lvl++;
+	}
+
+	strings.push_back(String("lastKey: ") + ctrl->lastKey);
+	strings.push_back(StringFormat("undo size: %d", ctrl->getHist().getNumUndoSteps()));
+	strings.push_back(StringFormat("redo size: %d", ctrl->getHist().getNumRedoSteps()));
+	clip_view& clipView = ctrl->getClipView();
+	if (clipView.clip()) {
+		strings.push_back(StringFormat("Clip: %s", StringAsCStr(clipView.clip()->name)));
+		strings.push_back(StringFormat("Notes: %d", clipView.clip()->notes.m_list.size()));
+		strings.push_back(StringFormat("Selection size: %d", clipView.clip()->notes.selection.size()));
+	}
+	strings.push_back(StringFormat("Samplerate: %u", vsthost::getInstance()->lSampleRate));
+	strings.push_back(StringFormat("BlockSize: %u", vsthost::getInstance()->lBlockSize));
+	strings.push_back(StringFormat("blockReads: %u", vsthost::getInstance()->blockReads));
+	strings.push_back(StringFormat("bufferUnderuns: %u", vsthost::getInstance()->bufferUnderuns));
+	strings.push_back(StringFormat("numCallsWaitEvents: %u", ctrl->numCallsWaitEvents));
+
+	track_t* track = ctrl->getTrackId(0);
+	if (track && track->audio) {
+		strings.push_back(StringFormat("level: %.4f", track->audio->meter.getRms(0)));
+	}
+	if (ctrl->guiFocused && ctrl->guiFocused->parent == (guibase*)ctrl->getPluginCtr()) {
+		guiplugin* gplugin = dynamic_cast<guiplugin*>(ctrl->guiFocused);
+		if (gplugin) {
+			vstplugin* vst = gplugin->vst;
+			strings.push_back("\n\n");
+			vst->getInfo(strings);
+		}
+	}
+#if DISPLAY_HWND_DRAWS
+	std::vector<win32_msg> wnd;
+	for (int i = 0; i < getHWNDMapSize(); i++) {
+		int cnt = getHWNDCnt(i);
+		wnd.push_back( { i, cnt });
+	}
+	std::sort(wnd.begin(), wnd.end(), [](win32_msg const & a, win32_msg const & b) {
+		return a.cnt > b.cnt;
+	});
+	for (win32_msg& msg : wnd) {
+		String s = getHWNDName(msg.id);
+		strings.push_back(StringFormat("%s: %d", StringAsCStr(s), msg.cnt));
+
+	}
+#endif
+
+#if DISPLAY_WIN_MSG_STATS
+	std::vector<win32_msg> msgs;
+	for (int i = 0; i < getNumMsg(); i++) {
+		int id = getMsgId(i);
+		int cnt = getMsgCnt(i);
+		msgs.push_back( { id, cnt });
+
+	}
+	std::sort(msgs.begin(), msgs.end(), [](win32_msg const & a, win32_msg const & b) {
+		if (a.cnt == b.cnt) {
+			return a.id < b.id;
+		}
+		return a.cnt > b.cnt;
+	});
+	for (win32_msg& msg : msgs) {
+		strings.push_back(StringFormat("WM_ 0x%04X: %d", msg.id, msg.cnt));
+
+	}
+#endif
+
+	int x = 5;
+	setFont(vg, 20, G_WHITE, NVG_ALIGN_BOTTOM | NVG_ALIGN_LEFT);
+	float lineh;
+	nvgTextMetrics(vg, NULL, NULL, &lineh);
+	int y = 5 + lineh;
+	for (String& s : strings) {
+		nvgText(vg, x, y, StringAsCStr(s), NULL);
+		y += lineh;
+	}
+	for (String& s : g_debugStrings) {
+		nvgText(vg, x, y, StringAsCStr(s), NULL);
+		y += lineh;
+	}
+	knobTest.render(vg);
+	g_debugStrings.clear();
+}
+void gui_ctr_debug::layout() {
+	ivec2 cs = getSizeContent();
+	knobTest.size = ivec2(48, 48);
+	knobTest.pos = ivec2(cs.x-knobTest.size.x, cs.y-knobTest.size.y);
+}
+
