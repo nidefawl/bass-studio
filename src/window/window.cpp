@@ -51,6 +51,7 @@ using std::ofstream;
 #include "renderresources.h"
 
 #include "../host/vst_host.h"
+#include "../host/vst_window.h"
 
 class reentrantblocker {
 	bool& boolField;
@@ -101,7 +102,7 @@ static void glfw_cb_framebuffersize(GLFWwindow *w, int width, int height);
 
 
 
-static LRESULT WIN32API_CALLBACK_TYPE winProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam);
+LRESULT WIN32API_CALLBACK_TYPE appWndProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam);
 
 static VOID WIN32API_CALLBACK_TYPE timerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime);
 
@@ -290,7 +291,7 @@ public:
 			throw appexception("Couldn't get win32 window handle");
 		glfwMakeContextCurrent(glfw);
 		initOGL(hwnd);
-		SetWindowLongPtr(hwnd, GWLP_WNDPROC, (LONG_PTR)winProc);
+		SetWindowLongPtr(hwnd, GWLP_WNDPROC, (LONG_PTR)appWndProc);
 		initContext();
 		this->timer = SetTimer(hwnd, 0, 20, (TIMERPROC)timerProc);
 		last = getTimeMillis();
@@ -1056,7 +1057,7 @@ static VOID WIN32API_CALLBACK_TYPE timerProc(HWND hwnd, UINT uMsg, UINT_PTR idEv
 	EXC_CATCH
 
 }
-static LRESULT WIN32API_CALLBACK_TYPE winProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
+LRESULT WIN32API_CALLBACK_TYPE appWndProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 	EXC_TRY
 	appwindow* impl = NULL;
 	GLFWwindow* glfwWindow = (GLFWwindow*) GetPropW(hwnd, L"GLFW");
@@ -1182,8 +1183,8 @@ int getHWNDCnt(int i) {
 	return it->second;
 }
 
-
-int mainHost() {
+int mainHost(int argc, char* argv[]) {
+	bool test = argc > 1 && String(argv[1]) == "--test";
 	OleInitialize(0);
 	std::set_terminate(on_terminate);
 	setExceptionHandler();
@@ -1204,7 +1205,7 @@ int mainHost() {
 	glfwWindowHint(GLFW_STENCIL_BITS, 8);
 	glfwWindowHint(GLFW_DEPTH_BITS, 24);
 	ctrl = std::make_unique<MainCtrl>();
-	vsthost::setInstance(std::make_unique<vsthost>(*ctrl.get(), 44100, 128));
+	vsthost::setInstance(std::make_unique<vsthost>(*ctrl.get(), 44100, 256));
 	mainWindow = std::make_unique<appwindow_main>(ctrl.get());
 	mainWindow->create("main window", 1280, 720);
 	mainWindow->showWindow();
@@ -1212,6 +1213,8 @@ int mainHost() {
 	ctrl->postInit();
 	vsthost::getInstance()->postInit();
 	GLFWwindow* glfwHandle = mainWindow->getGLFW();
+	long start = getTimeMillis();
+	int step = 0;
 	while (!glfwWindowShouldClose(glfwHandle)) {
 		DWORD timeout = 1;
 		MsgWaitForMultipleObjects(0, NULL, FALSE, timeout, QS_ALLEVENTS);
@@ -1221,18 +1224,36 @@ int mainHost() {
 	    {
 	        if (msg.message == WM_QUIT)
 	        {
-	        	glfwSetWindowShouldClose(mainWindow->getGLFW(), 1);
+	        	glfwSetWindowShouldClose(glfwHandle, 1);
 	        }
 	        else
 	        {
-	            TranslateMessage(&msg);
-	            DispatchMessageW(&msg);
-				incrMessage(msg.message);
-//				if (msg.message == WM_PAINT)
-				{
-					char clsName_v[256];
+				char clsName_v[256];
 
-					GetClassNameA(msg.hwnd, clsName_v, 256);
+				GetClassNameA(msg.hwnd, clsName_v, 256);
+
+	            switch (msg.message) {
+					case WM_KEYDOWN:
+					case WM_SYSKEYDOWN:
+					case WM_KEYUP:
+					case WM_SYSKEYUP: {
+						String sChain = clsName_v;
+						vst_window* window = vst_window::getVSTWindow(msg.hwnd);
+						if (window) {
+							msg.hwnd = mainWindow->getHWND();
+						}
+					}
+					//no break
+					default:
+						TranslateMessage(&msg);
+			            DispatchMessageW(&msg);
+						break;
+	            }
+
+
+				incrMessage(msg.message);
+				if (msg.message == WM_PAINT)
+				{
 					if (hwndPaints.count(clsName_v)) {
 						hwndPaints[clsName_v] = hwndPaints.at(clsName_v)+1;
 					} else {
@@ -1243,6 +1264,39 @@ int mainHost() {
 	    }
 		glfwUpdateInternals();
 		ctrl->numCallsWaitEvents++;
+		if (test && getTimeMillis()-start > 4) {
+			switch (step) {
+			case 0:
+				ctrl->loadFile("muuure.project");
+				break;
+			case 1:
+				ctrl->startPlaying();
+				break;
+			case 2:
+				ctrl->stopPlaying();
+				break;
+			case 3:
+				ctrl->loadFile("more.project");
+				break;
+			case 4:
+				ctrl->startPlaying();
+				break;
+			case 5:
+				ctrl->loadFile("jad.project");
+				break;
+			case 6:
+				ctrl->startPlaying();
+				break;
+			case 7:
+				ctrl->stopPlaying();
+				break;
+			case 8:
+				glfwSetWindowShouldClose(glfwHandle, 1);
+				break;
+			}
+			start = getTimeMillis();
+			step++;
+		}
 	}
 	my_printf("END 1\n", 0);
 	vsthost::getInstance()->stopAudio();
@@ -1262,7 +1316,6 @@ int mainHost() {
 
 
 	glfwTerminate();
-	my_printf("END 8\n", 0);
 	saveSettings(settings);
 	mainWindow->overlayWindow.reset();
 	ctrl.reset();
@@ -1270,6 +1323,7 @@ int mainHost() {
 	EXC_CATCH
 	printLeaked();
 	OleUninitialize();
+	my_printf("EXIT_SUCCESS\n", 0);
 	exit(EXIT_SUCCESS);
 	return 0;
 }

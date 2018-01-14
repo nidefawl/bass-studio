@@ -40,9 +40,9 @@ public:
 		}
 		trackallcontainer_t& trCtr = ctrl->getTracks();
 		for (track_snapshot_t* trackStored : before.tracks) {
-			my_printf("trackStored: %d\n", trackStored->idx);
-			if (trCtr.validTrackIdx(trackStored->idx)) {
-				track_t* track = trCtr[trackStored->idx];
+			my_printf("trackStored: %s %d\n", TrackTypeToName(trackStored->type), trackStored->localIdx);
+			if (trCtr.validTrackTypeIdx(trackStored->type, trackStored->localIdx)) {
+				track_t* track = trCtr.getTrackTypeIdx(trackStored->type, trackStored->localIdx);
 				if (initAfter) {
 					after.tracks.push_back(new track_snapshot_t(track, false));
 				}
@@ -50,7 +50,7 @@ public:
 				if (track->type == TRACK_TYPE_MIDI)
 				my_printf("TRACKBeforeUndo[%d] HAS %d clips\n", track->idx, track->getMidi().clips.size());
 				*track = *trackStored;
-				track->loadPluginSnapshot(*trackStored);
+				track->loadPluginAutomationParameters(trackStored->plugins);
 				if (track->type == TRACK_TYPE_MIDI)
 				my_printf("TRACKAfterUndo[%d] HAS %d clips\n", track->idx, track->getMidi().clips.size());
 			} else {
@@ -65,11 +65,11 @@ public:
 		ctrl->setEditClip(NULL);
 		trackallcontainer_t& trCtr = ctrl->getTracks();
 		for (track_snapshot_t* trackStored : after.tracks) {
-			if (trCtr.validTrackIdx(trackStored->idx)) {
-				track_t* track = trCtr[trackStored->idx];
+			if (trCtr.validTrackTypeIdx(trackStored->type, trackStored->localIdx)) {
+				track_t* track = trCtr.getTrackTypeIdx(trackStored->type, trackStored->localIdx);
 				track->releaseTrackContent();
 				*track = *trackStored;
-				track->loadPluginSnapshot(*trackStored);
+				track->loadPluginAutomationParameters(trackStored->plugins);
 				if (track->type == TRACK_TYPE_MIDI)
 				my_printf("TRACK[%d] HAS %d clips\n", track->idx, track->getMidi().clips.size());
 			}
@@ -603,9 +603,6 @@ bool guitrack_editor::clipDropFinal(dragdrop_midifile& clip, ivec2 mousepos) {
 	return false;
 }
 
-void guitrack_editor::handleRightClick(MouseEvent& evt) {
-	MainCtrl::get()->openContextMenu(new guictxtmenu_trackcontent(-1), evt.mousepos);
-}
 
 void guitrack_editor::renderClip(NVGcontext* vg, track_t* tr, const clip_t* cl, tick_t offset) {
 	ivec2 clipPos = ivec2();
@@ -744,10 +741,14 @@ void guitrack_editor::render(NVGcontext* vg) {
 			float trackYMin = min(trB->content->top(), trE->content->top());
 			float trackYMax = max(trB->content->bottom(), trE->content->bottom());
 			if (c.isSubtrackSelection()) {
-				auto a = trB->subtracks[c.getSubTrackBegin()];
-				auto b = trB->subtracks[c.getSubTrackEnd()];
-				trackYMin = a->top();
-				trackYMax = b->bottom();
+				int32_t ssTrIdx = c.getSubTrackBegin();
+				int32_t esTrIdx = c.getSubTrackEnd();
+				if (trB->validSubtrack(ssTrIdx) && trB->validSubtrack(esTrIdx)) {
+					trackYMin = trB->subtracks[ssTrIdx]->top();
+					trackYMax = trB->subtracks[esTrIdx]->bottom();
+				} else {
+					assert(0);
+				}
 			}
 
 			if (tickEndX > -4.0f && tickBeginX < cs.x + 4.0f) {
@@ -773,10 +774,15 @@ void guitrack_editor::render(NVGcontext* vg) {
 				float trackYMin = tr->content->top();
 				float trackYMax = tr->content->bottom();
 				if (c.isSubtrackSelection()) {
-					auto a = tr->subtracks[c.getSubTrackBegin()];
-					auto b = tr->subtracks[c.getSubTrackEnd()];
-					trackYMin = a->top();
-					trackYMax = b->bottom();
+					int32_t ssTrIdx = c.getSubTrackBegin();
+					int32_t esTrIdx = c.getSubTrackEnd();
+					if (tr->validSubtrack(ssTrIdx) && tr->validSubtrack(esTrIdx)) {
+						trackYMin = tr->subtracks[ssTrIdx]->top();
+						trackYMax = tr->subtracks[esTrIdx]->bottom();
+					} else {
+						assert(0);
+					}
+
 				}
 				cursorScreenX+=0.5;
 				NVGcolor cursorColor = getCursorColor();

@@ -182,7 +182,6 @@ public:
 	}
 };
 struct tracksettings_t {
-	int32_t idx = -1;
 	String name = "INVALID";
 	int type = -1; //CONST!
 	int height = -1;
@@ -218,6 +217,7 @@ struct track_impl_snapshot_t {
 	track_impl_snapshot_t(const track_t &a, bool storePluginChunks);
 };
 struct track_snapshot_t : public tracksettings_t {
+	int32_t localIdx = -1;
 	track_t* trackLoaded = NULL;
 	track_impl_snapshot_t plugins;
 	std::vector<clip_t> clips;
@@ -248,7 +248,7 @@ public:
 		}
 		return {evtMin, evtMax};
 	}
-	track_t(const track_t &a) {
+	track_t(const track_t &a) : localIdx(a.localIdx) {
 		midi.deepcopy(a.midi);
 		copy(a);
 		content = NULL;
@@ -272,7 +272,7 @@ public:
 #endif
 	}
 	void copy( const track_t &obj) {
-		idx = obj.idx;
+//		idx = obj.idx;
 		name = obj.name;
 		type = obj.type;
 		height = obj.height;
@@ -283,7 +283,13 @@ public:
 #endif
 	}
 	void releaseTrackContent();
-	void loadPluginSnapshot(track_snapshot_t& trackStatic);
+	void loadPluginAutomationParameters(const track_impl_snapshot_t& snap);
+	void loadSnapshot(const track_snapshot_t& snap);
+	bool validSubtrack(int32_t idx) {
+		return idx >= 0 && idx < subtracks.size();
+	}
+	int32_t idx = -1;
+	int32_t localIdx = -1;
 	gui_track* content = NULL;
 	std::vector<gui_track_automationlane*> subtracks;
 	gui_track_controls* mixer = NULL;
@@ -305,7 +311,7 @@ public:
 		return tracks;
 	}
 
-	size_t size() {
+	size_t size() const {
 		return tracks.size();
 	}
 
@@ -331,7 +337,7 @@ public:
 	tracksubcontainer_t &operator =(const tracksubcontainer_t &a) = delete;
 	void copyTo(trackcontainer_snapshot_t& out);
 	void copyFrom(trackcontainer_snapshot_t& in);
-	void loadPlugins(trackallcontainer_t* all, trackcontainer_snapshot_t& in);
+	void loadPlugins(trackcontainer_snapshot_t& in);
 
 };
 struct trackcontainer_snapshot_t {
@@ -384,6 +390,8 @@ public:
 	bool validTrackIdx(int32_t idx) const {
 		return idx >= 0 && idx < (int32_t) this->tracks.size();
 	}
+	bool validTrackTypeIdx(int32_t type, int32_t idx) const;
+	track_t* getTrackTypeIdx(int32_t type, int32_t idx);
 
 	void getTracks(const Cursor& cursor, std::vector<track_t*>& _out) const {
 		for (track_t* t : tracks) {

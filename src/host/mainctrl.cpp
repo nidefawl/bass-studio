@@ -229,7 +229,7 @@ void MainCtrl::unloadProject() {
 	vector<track_t*> _tracks = trackList.vec();  // iterate a copy
 	my_printf("DELETE _tracks %d\n", _tracks.size());
 	for (track_t* tr : _tracks) {
-		my_printf("DELETE TRACK %s\n", tr->szName);
+		my_printf("DELETE TRACK %s\n", StringAsCStr(tr->name));
 		vsthost::getInstance()->unloadTrack(tr);
 		removeTrackImpl(tr);
 	}
@@ -388,7 +388,10 @@ void MainCtrl::menuCommand(int cmd) {
 	}
 }
 void MainCtrl::postInit() {
-	loadFile("jad.project");
+	loadFile("empty.project");
+//	for (int i = 0; i < 32; i++) {
+//		loadFile("muuure.project");
+//	}
 	for (int i = 0; i < 2; i++) {
 		track_t* track = getTrackId(i);
 		if (track) {
@@ -603,6 +606,12 @@ bool MainCtrl::setLoadedProject(shared_ptr<project_file> file) {
 	grid.setLayout(file->layout.layoutGrid);
 	view->ctr_tracks.setScrollOffset(file->layout.scrollOffsetX);
 	updateVisibleTrackContents();
+	if (cursor.isSubtrackSelection() && trackList.validTrackIdx(cursor.cursorTrack)) {
+		track_t* tr = trackList[cursor.cursorTrack];
+		fixCursorSubRange(cursor, tr->subtracks.size());
+	} else {
+		fixCursorTrackRange(cursor, trackList.size());
+	}
 	this->projectPath = file->path;
 	setAudioThreadState(playback_state::status_stop);
 
@@ -1133,9 +1142,9 @@ void BaseCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos) {
 }
 track_t* MainCtrl::insertNewTrack(int trackInsertPos, int trackType) {
 	assert(trackType >= 0 && trackType < NUM_TRACK_TYPES);
-	int32_t trTypeIdx = trackTypeCtrs[trackType]->size() + 1;
+	int32_t tryTypeOffset = trackTypeCtrs[trackType]->size();
 
-	String name = StringFormat("%s %d", TrackTypeToName(trackType), trTypeIdx);
+	String name = StringFormat("%s %d", TrackTypeToName(trackType), tryTypeOffset + 1);
 	track_t* newTrack = new track_t(trackType, name, true);
 	newTrack->rgb = colorPalette[rand.rng_rand(COLOR_PALETTE_LEN)];
 
@@ -1164,7 +1173,7 @@ track_t* MainCtrl::insertNewTrack(int trackInsertPos, int trackType) {
 	}
 
 
-
+//	if (trackin)
 	addTrack(trackInsertPos, newTrack);
 	return newTrack;
 }
@@ -1331,12 +1340,12 @@ void MainCtrl::cutSelection(const Cursor& _cursor) {
 			std::vector<automation_point_t> empty(0);
 			for (int i = 0; i <= trackSEnd-trackSBegin; i++) {
 				int32_t subTrackIdx = trackSBegin + i;
-				if (subTrackIdx < 0 || subTrackIdx >= tr->subtracks.size())
-					continue;
-				gui_track_automationlane* subtrack = tr->subtracks[subTrackIdx];
-				automation_t* automation = subtrack->getAutomation();
-				if (automation) {
-					automation->setRange(tickBegin, tickEnd, empty);
+				if (tr->validSubtrack(subTrackIdx)) {
+					gui_track_automationlane* subtrack = tr->subtracks[subTrackIdx];
+					automation_t* automation = subtrack->getAutomation();
+					if (automation) {
+						automation->setRange(tickBegin, tickEnd, empty);
+					}
 				}
 
 			}
@@ -1428,17 +1437,17 @@ void MainCtrl::pasteClipboard(clip_clipboard* clipboard, Cursor& cursor) {
 			int32_t subTrackOffset = cursor.getSubTrackBegin();
 			for (int i = 0; i <= clipboard->selTrackRange; i++) {
 				int32_t subTrackIdx = subTrackOffset + i;
-				if (subTrackIdx < 0 || subTrackIdx >= tr->subtracks.size())
-					continue;
-				gui_track_automationlane* subtrack = tr->subtracks[subTrackIdx];
-				std::vector<automation_point_t>& data = clipboard->automationLanes[i];
-				automatable_t* automatable = subtrack->at;
-				automation_t* automation = NULL;
-				if (automatable) {
-					automation = automatable->getAutomation(subtrack->param);
-				}
-				if (automation) {
-					automation->setRange(tickBegin, tickBegin+tickLen, data);
+				if (tr->validSubtrack(subTrackIdx)) {
+					gui_track_automationlane* subtrack = tr->subtracks[subTrackIdx];
+					std::vector<automation_point_t>& data = clipboard->automationLanes[i];
+					automatable_t* automatable = subtrack->at;
+					automation_t* automation = NULL;
+					if (automatable) {
+						automation = automatable->getAutomation(subtrack->param);
+					}
+					if (automation) {
+						automation->setRange(tickBegin, tickBegin+tickLen, data);
+					}
 				}
 
 			}
@@ -1462,17 +1471,20 @@ shared_ptr<clip_clipboard> MainCtrl::copySelection(const Cursor& _cursor) {
 		if (trackList.validTrackIdx(trackBegin)) {
 			track_t* tr = trackList[trackBegin];
 			for (int i = trackSubBegin; i <= trackSubEnd; i++) {
-				gui_track_automationlane* subtrack = tr->subtracks[i];
-				automatable_t* automatable = subtrack->at;
-				automation_t* automation = NULL;
-				if (automatable) {
-					automation = automatable->getAutomation(subtrack->param);
-				}
+				if (tr->validSubtrack(i)) {
+					gui_track_automationlane* subtrack = tr->subtracks[i];
+					automatable_t* automatable = subtrack->at;
+					automation_t* automation = NULL;
+					if (automatable) {
+						automation = automatable->getAutomation(subtrack->param);
+					}
 
-				std::vector<automation_point_t> data;
-				if (automation)
-				automation->copyRange(tickBegin, tickEnd, data);
-				clipboard->automationLanes.push_back(std::move(data));
+					std::vector<automation_point_t> data;
+					if (automation)
+					automation->copyRange(tickBegin, tickEnd, data);
+					clipboard->automationLanes.push_back(std::move(data));
+
+				}
 			}
 		}
 	} else {

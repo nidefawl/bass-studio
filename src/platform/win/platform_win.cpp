@@ -117,7 +117,7 @@ extern String excDescription;
 static LONG WINAPI TopLevelExceptionHandler(PEXCEPTION_POINTERS pExceptionInfo)
 {
 	DWORD excCode = pExceptionInfo->ExceptionRecord->ExceptionCode;
-	excDescription = StringFormat("Application crash: %s", _exc_as_str(excCode));
+	excDescription = StringFormat("Application crash: %s (0x%08X)", _exc_as_str(excCode), (int)excCode);
 //	std::cout << s << std::endl;
 	//	ngui::show(StringAsCStr(s), "Error", ngui::Style::Error, ngui::Buttons::OK);
 	std::terminate();

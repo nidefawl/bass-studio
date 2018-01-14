@@ -20,22 +20,25 @@ trackbasecontainer_t::~trackbasecontainer_t() {
 	tracks.clear();
 }
 void trackallcontainer_t::addTrack(int trackInsertPos, track_t* newTrack) {
-	int numTracks = (int) this->tracks.size();
 	auto it = std::find(tracks.begin(), tracks.end(), newTrack);
 	if (it != tracks.end()) {
 		assert(0);
 		throw applogicexception("attempt to add track twice");
 	}
-	if (trackInsertPos < 0 || trackInsertPos >= numTracks) {
-		tracks.push_back(newTrack);
-	} else {
-		tracks.insert(tracks.begin() + trackInsertPos, newTrack);
-	}
+	tracks.push_back(newTrack);
 	vsthost* host = vsthost::getInstance();
 	newTrack->audio = host->createAudio(newTrack);
 	tracksubcontainer_t* subCtr = trackTypeCtrs[newTrack->type];
 	track_vector& vec = subCtr->tracks;
-	vec.push_back(newTrack);
+	if (trackInsertPos < 0 || trackInsertPos >= vec.size()) {
+		vec.push_back(newTrack);
+	} else {
+		vec.insert(vec.begin() + trackInsertPos, newTrack);
+	}
+	int32_t locIdx = 0;
+	for (track_t* t : vec) {
+		t->localIdx = locIdx++;
+	}
 	int32_t idx = 0;
 	for (track_t* t : tracks) {
 		t->idx = idx++;
@@ -52,6 +55,10 @@ void trackallcontainer_t::removeTrack(track_t* track) {
 	tracksubcontainer_t* subCtr = trackTypeCtrs[track->type];
 	track_vector& vec = subCtr->tracks;
 	removeEntry(vec, track);
+	int32_t locIdx = 0;
+	for (track_t* t : vec) {
+		t->localIdx = locIdx++;
+	}
 	int32_t idx = 0;
 	for (track_t* t : tracks) {
 		t->idx = idx++;
@@ -94,9 +101,6 @@ void trackallcontainer_t::copyFrom(project_snapshot_t& project) {
 	}
 	assert(tracks.size()==(project.trackCtr.tracks.size()+project.trackMasterCtr.tracks.size()+project.trackReturnCtr.tracks.size()));
 
-	std::sort(tracks.begin(), tracks.end(), [](track_t* const & a, track_t* const & b) {
-		return a->idx < b->idx;
-	});
 	tracksBottom.tracks.clear();
 	addAll(tracksBottom.tracks, trackReturnCtr.tracks);
 	addAll(tracksBottom.tracks, trackMasterCtr.tracks);
@@ -106,9 +110,9 @@ void trackallcontainer_t::copyFrom(project_snapshot_t& project) {
 	}
 }
 void trackallcontainer_t::loadPlugins(project_snapshot_t& project) {
-	trackCtr.loadPlugins(this, project.trackCtr);
-	trackReturnCtr.loadPlugins(this, project.trackReturnCtr);
-	trackMasterCtr.loadPlugins(this, project.trackMasterCtr);
+	trackCtr.loadPlugins(project.trackCtr);
+	trackReturnCtr.loadPlugins(project.trackReturnCtr);
+	trackMasterCtr.loadPlugins(project.trackMasterCtr);
 }
 void trackallcontainer_t::copyTracks(int32_t trackBegin, int32_t trackEnd, trackstate_t& _out) {
 	_out.reset();
@@ -125,45 +129,48 @@ void trackallcontainer_t::copyTracks(int32_t trackBegin, int32_t trackEnd, track
 }
 void tracksubcontainer_t::copyTo(trackcontainer_snapshot_t& out) {
 	out.tracks.reserve(tracks.size());
-	int32_t idx = 0;
 	for (track_t* track : tracks) {
 		track_snapshot_t trackCopy(track, true);
 		out.tracks.push_back(std::move(trackCopy));
-		trackCopy.idx = idx++;
 	}
 }
 void tracksubcontainer_t::copyFrom(trackcontainer_snapshot_t& in) {
 	assert(tracks.empty());
+	bool reassignIdx = false;
 	for (track_snapshot_t& trackStatic : in.tracks) {
 		track_t* trackCopy = new track_t(trackStatic);
 		trackStatic.trackLoaded = trackCopy;
+		reassignIdx |= trackCopy->localIdx < 0;
 		this->tracks.push_back(trackCopy);
 	}
-	std::sort(tracks.begin(), tracks.end(), [](track_t* const & a, track_t* const & b) {
-		return a->idx < b->idx;
-	});
+	if (reassignIdx) {
+		int32_t idx = 0;
+		for (track_t* tr2 : this->tracks) {
+			tr2->localIdx = idx++;
+		}
+
+	} else {
+		std::sort(tracks.begin(), tracks.end(), [](track_t* const & a, track_t* const & b) {
+			return a->localIdx < b->localIdx;
+		});
+	}
 }
-void tracksubcontainer_t::loadPlugins(trackallcontainer_t* all, trackcontainer_snapshot_t& in) {
+void tracksubcontainer_t::loadPlugins(trackcontainer_snapshot_t& in) {
 	for (track_snapshot_t& trackStatic : in.tracks) {
 		track_t* trackLoaded = trackStatic.trackLoaded;
-		auto audio = trackLoaded->audio;
-		assert(audio);
-		const track_impl_snapshot_t& trackImplSnapshot = trackStatic.plugins;
-		audio->mixer.loadSnapshot(trackImplSnapshot.trackParams);
-		const std::vector<plugin_snapshot_t>& trPluginList = trackImplSnapshot.plugins;
-		audio->loadPlugins(trPluginList);
-		const std::vector<automationlane_snapshot_t>& atl = trackStatic.automationLanes;
-		trackLoaded->subtracks.clear();
-		bool showSubtracks = !trackLoaded->hideAutomation && !trackLoaded->hideTrack;
-		if (!showSubtracks) {
-			audio->atl = atl;
-			audio->atlStored = true;
-		} else {
-			audio->atlStored = false;
-			audio->atl.clear();
-			audio->loadAutomationLanes(atl);
-		}
+		trackLoaded->loadSnapshot(trackStatic);
 	}
+}
+bool trackallcontainer_t::validTrackTypeIdx(int32_t type, int32_t idx) const {
+	if (type >= 0 && type < 3) {
+		const tracksubcontainer_t* trackTypeCtr = trackTypeCtrs[type];
+		return idx >= 0 && idx < (int32_t) trackTypeCtr->size();
+	}
+	return false;
+}
+track_t* trackallcontainer_t::getTrackTypeIdx(int32_t type, int32_t idx) {
+	track_vector& vec = trackTypeCtrs[type]->tracks;
+	return vec[idx];
 }
 
 trackstate_t::~trackstate_t() {

@@ -25,7 +25,7 @@ class vst_window
 {
 public:
 	static vst_window* make(vstplugin* plugin, const String& name, Size size, bool resizeable, HINSTANCE instance);
-
+	static vst_window* getVSTWindow(HWND handle);
 
 	bool init (vstplugin* plugin, const String& name, Size size, bool resizeable, HINSTANCE instance);
 
@@ -39,10 +39,11 @@ public:
 	void updateDisplay();
 
 	std::vector<vst_window*>& getWindows ();
-
+	vstplugin* getPlugin() {
+		return plugin;
+	}
 private:
 	LRESULT CALLBACK proc (UINT message, WPARAM wParam, LPARAM lParam);
-	static LRESULT CALLBACK WndProc (HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
 	void registerWindowClass (HINSTANCE instance);
 	vstplugin* plugin = NULL;

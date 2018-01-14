@@ -239,6 +239,9 @@ public:
 	tick_t& getPlaybackPos() {
 		return playbackPos;
 	}
+	String& getProjectPath() {
+		return projectPath;
+	}
 	std::shared_ptr<project_file> createProjectFile();
 	void loadFile(String path);
 	bool setLoadedProject(std::shared_ptr<project_file> file);

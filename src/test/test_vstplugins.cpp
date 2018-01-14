@@ -12,7 +12,7 @@ namespace {
 project_globals_t project;
 static vsthost* audiohost = new vsthost(project);
 
-LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
 static std::vector<FileFound> files;
 //static String vstPlugPath = "C:/VstPlugins/xfer/Serum_x64.dll";
@@ -80,7 +80,7 @@ VOID CALLBACK TimerCallback(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime
 		tick++;
 	}
 }
-LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     switch(msg)
     {

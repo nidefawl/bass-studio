@@ -318,25 +318,34 @@ struct UnloadModule {
 	uint64_t time;
 	HMODULE handle;
 };
+#define DELAY_UNLOAD 0
 String getModuleName(HMODULE module);
 class vsthost::ModuleManager {
 //    std::mutex m_mtx;
+#if DELAY_UNLOAD
 	std::vector<UnloadModule> modules;
 	int32_t cnt = 0;
 	const uint64_t timeout = 1500;
+#endif
 public:
 	ModuleManager() {
 
 	}
+
 	void queueRelease(HMODULE module) {
+#if DELAY_UNLOAD
 		String moduleName = getModuleName(module);
 		my_printf("queueRelease module %s\n", StringAsCStr(moduleName));
 //	    std::unique_lock<std::mutex> lock(m_mtx);
 		UnloadModule ulModule{getTimeMillis(), module};
 		modules.push_back(ulModule);
 		cnt++;
+#else
+		FreeLibrary(module);
+#endif
 	}
 	void unloadModules(bool force) {
+#if DELAY_UNLOAD
 		if (!cnt)
 			return;
 //	    std::unique_lock<std::mutex> lock(m_mtx);
@@ -353,6 +362,8 @@ public:
 				it++;
 			}
 		}
+#else
+#endif
 
 	}
 	void onTick() {
@@ -494,8 +505,6 @@ int32_t vsthost::processPlayback(int32_t sample, double posDouble, playback_stat
 
 #ifndef NDEBUG
 
-	static double lastTickEndPos = 0;
-	static playback_state lastState = playback_state::status_stop;
 #endif
 	if (stream != NULL) {
 		/*
@@ -581,6 +590,7 @@ int32_t vsthost::processPlayback(int32_t sample, double posDouble, playback_stat
 
 		for (track_t* trackMaster : ctrl->trackMasterCtr) {
 			track_impl_t* audioMaster = trackMaster->audio;
+//			audioMaster->mixer.setGain(0);
 			processAudio(audioMaster, &audioMaster->input, &audioMaster->output, lBlockSize);
 		}
 
@@ -646,6 +656,8 @@ void vsthost::onStreamEnd() {
 void vsthost::onStartPlayback(int32_t block) {
 	blockReads = block;
 	bufferUnderuns = 0;
+	lastTickEndPos = 0;
+	lastState = playback_state::status_stop;
 }
 void vsthost::onStopPlayback() {
 }
@@ -932,18 +944,15 @@ void vsthost::unloadPlugin(vstplugin* plugin) {
 }
 bool vsthost::unloadAllPlugins() {
 	int count = list.size();
-	my_printf("count %d...\n", count);
 	for (int i = 0; i < count; ++i)
 	{
 		vstplugin *current = list[i];
 		if (current->handle && current->handle->tr_plugins) {
-			my_printf("removePlugin %d...\n", i);
 			current->handle->tr_plugins->removePlugin(current, false);
 		}
 	}
 	for (int i = 0; i < count; ++i)
 	{
-		my_printf("close %d...\n", i);
 		vstplugin *current = list[i];
 		current->close();
 		list[i] = NULL;
@@ -1017,7 +1026,6 @@ bool vsthost::swapEffects(track_impl_t* trp, int32_t src, int32_t dst) {
 	return true;
 }
 bool vsthost::insertNewPlugin(track_impl_t* trp, vstplugin* plugin, int32_t dst) {
-	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 	if (plugin->isSynth) {
 		vstplugin* old = trp->setInstrument(plugin);
 		if (old) {

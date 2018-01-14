@@ -91,6 +91,9 @@ public:
 	samplerate_t lSampleRate;
 	uint16_t lBlockSize;
 private:
+
+	double lastTickEndPos = 0;
+	playback_state lastState = playback_state::status_stop;
 	uint8_t numChannels;
 	VstTimeInfo timeinfo{0};
 

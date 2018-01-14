@@ -108,15 +108,14 @@ track_t &track_t::operator =(const track_snapshot_t &obj) {
 		clips.push_back(new clip_t(clip));
 	}
 	midi.sortClips();
-	idx = obj.idx;
-	name = obj.name;
-	type = obj.type;
-	height = obj.height;
-	rgb = obj.rgb;
+	tracksettings_t& dst = *static_cast<tracksettings_t*>(this);
+	const tracksettings_t& src = *static_cast<const tracksettings_t*>(&obj);
+	dst = src;
 	scrolloffset = 0;
 	return *this;
 }
-track_t::track_t(const track_snapshot_t &a) : tracksettings_t(a) {
+track_t::track_t(const track_snapshot_t &a)
+  : tracksettings_t(a), localIdx(a.localIdx) {
 	std::vector<clip_t*>& clips = midi.clips;
 	for (const clip_t& clip : a.clips) {
 		clip_t* clipInstance = new clip_t(clip);
@@ -165,6 +164,7 @@ void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin, bool storePluginCh
 		automation_view_t automation;
 		automation.targetParam = automatedParam.paramIdx;
 		automation.points = automatedParam.src.points;
+		automation.active = automatedParam.src.active;
 		ps.automatedParams.push_back(automation);
 	}
 }
@@ -190,7 +190,7 @@ track_impl_snapshot_t::track_impl_snapshot_t(const track_t &a, bool storePluginC
 	}
 }
 track_snapshot_t::track_snapshot_t(track_t* track, bool storePluginChunks)
-  : tracksettings_t(*track), plugins(*track, storePluginChunks)
+  : tracksettings_t(*track), localIdx(track->localIdx), plugins(*track, storePluginChunks)
 {
 	std::vector<clip_t*>& otherClips = track->getMidi().clips;
 	for (clip_t* clip : otherClips) {
@@ -203,10 +203,28 @@ track_snapshot_t::track_snapshot_t(track_t* track, bool storePluginChunks)
 }
 
 
-void track_t::loadPluginSnapshot(track_snapshot_t& trackStatic) {
+void track_t::loadSnapshot(const track_snapshot_t& snapshot) {
+	auto audio = this->audio;
 	assert(audio);
-	const track_impl_snapshot_t& trackInternals = trackStatic.plugins;
-	const std::vector<plugin_snapshot_t>& trPluginList = trackInternals.plugins;
+	const auto& implSnapshot = snapshot.plugins;
+	audio->mixer.loadSnapshot(implSnapshot.trackParams);
+	const std::vector<plugin_snapshot_t>& trPluginList = implSnapshot.plugins;
+	audio->loadPlugins(trPluginList);
+	const std::vector<automationlane_snapshot_t>& atl = snapshot.automationLanes;
+	this->subtracks.clear();
+	bool showSubtracks = !this->hideAutomation && !this->hideTrack;
+	if (!showSubtracks) {
+		audio->atl = atl;
+		audio->atlStored = true;
+	} else {
+		audio->atlStored = false;
+		audio->atl.clear();
+		audio->loadAutomationLanes(atl);
+	}
+}
+void track_t::loadPluginAutomationParameters(const track_impl_snapshot_t& trackStatic) {
+	assert(audio);
+	const std::vector<plugin_snapshot_t>& trPluginList = trackStatic.plugins;
 	for (const plugin_snapshot_t& pluginSnapshot : trPluginList) {
 		vstplugin* plugin = audio->getPluginById(pluginSnapshot.projectGlobalId);
 		if (plugin) {
@@ -296,47 +314,33 @@ vstplugin* track_impl_t::setInstrument(vstplugin* _instrument) {
 	return oldInstr;
 }
 void track_impl_t::removePlugin(vstplugin* _vst, bool notifyUp) {
-	my_printf("this = %016X...\n", this);
-	my_printf("selectedAutomationCtr...\n", selectedAutomationCtr);
 	if (this->selectedAutomationCtr == _vst) {
 		this->selectedAutomationCtr = NULL;
 	}
-	my_printf("asdfasdf\n", 0);
 	if (instrument == _vst) {
 		instrument = NULL;
-		my_printf("instrument = NULL...\n", 0);
 	} else {
-		my_printf("removeEntry...\n", 0);
 		if (!removeEntry(effects, _vst)) {
-			my_printf("return...\n", 0);
 			return;
 		}
-		my_printf("reassing slots...\n", 0);
 		int slot = 1;
 		for (vstplugin* effect : effects) {
 			effect->handle->slot = slot++;
 		}
 	}
-	my_printf("_vst->handle = %016X...\n", _vst->handle);
-	my_printf("tr_plugins = NULL...\n", 0);
 	_vst->handle->tr_plugins = NULL;
 	_vst->handle->slot = -1;
-	my_printf("_vst->handle->gui.get...\n", 0);
 	if (notifyUp) {
-	guiplugin* gui = _vst->handle->gui.get();
-	if (gui) {
-		guictr_plugins* plugins = MainCtrl::getPluginCtr();
-		if (plugins && plugins->hasGui(gui)) {
-			my_printf("plugins->hasGui...\n", 0);
-			plugins->remove(gui);
-			plugins->layout();
+		guiplugin* gui = _vst->handle->gui.get();
+		if (gui) {
+			guictr_plugins* plugins = MainCtrl::getPluginCtr();
+			if (plugins && plugins->hasGui(gui)) {
+				plugins->remove(gui);
+				plugins->layout();
+			}
 		}
-	}
-		my_printf("removeAllAutomationLanes...\n", 0);
 		MainCtrl::getGuiTrackCtr()->removeAllAutomationLanes(this->track, _vst);
-		my_printf("layout...\n", 0);
 		MainCtrl::getGuiTrackCtr()->layout();
-		my_printf("updateVisibleTrackContents...\n", 0);
 		MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
 	}
 }
@@ -518,6 +522,7 @@ void track_impl_t::showAutomationLanes() {
 }
 void track_impl_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginList)
 {
+//	return;
 	vsthost* host = vsthost::getInstance();
 	plugindatabase_t& db = MainCtrl::get()->plugindb;
 	for (const plugin_snapshot_t& pluginSnapshot : trPluginList) {
@@ -541,9 +546,6 @@ void track_impl_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginLis
 						plugin->setParamValue(param.idx, param.val);
 					}
 				}
-				if (!pluginSnapshot.enabled) {
-					plugin->sleep();
-				}
 				host->insertNewPlugin(this, plugin, pluginSnapshot.slot);
 
 				const std::vector<automation_view_t>& automatedParams = pluginSnapshot.automatedParams;
@@ -556,6 +558,9 @@ void track_impl_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginLis
 				}
 				if (plugin == this->instrument) {
 //					plugin->show();
+				}
+				if (pluginSnapshot.enabled) {
+					plugin->resume();
 				}
 			}
 		}

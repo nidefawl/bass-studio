@@ -72,8 +72,7 @@ void serialize(Archive & archive, track_impl_snapshot_t & m)
 template<class Archive>
 void serialize(Archive & archive, tracksettings_t & m)
 {
-	archive(make_nvp("idx", m.idx),
-			make_nvp("name", m.name),
+	archive(make_nvp("name", m.name),
 			make_nvp("height", m.height),
 			make_nvp("rgb", m.rgb),
 			make_nvp("type", m.type));
@@ -83,6 +82,7 @@ void serialize(Archive & archive, tracksettings_t & m)
 template<class Archive>
 void serialize(Archive & archive, track_snapshot_t & m)
 {
+	make_optional_nvp(archive, "idx", m.localIdx);
 	archive(make_nvp("settings", base_class<tracksettings_t>(&m)), make_nvp("clips", m.clips), make_nvp("plugins", m.plugins));
 	make_optional_nvp(archive, "automation", m.automationLanes);
 }

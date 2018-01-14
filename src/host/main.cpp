@@ -35,8 +35,8 @@ int main(int argc, char* argv[]) {
 }
 
 #else
-int mainHost();
+int mainHost(int argc, char* argv[]);
 int main(int argc, char* argv[]) {
-	return mainHost();
+	return mainHost(argc, argv);
 }
 #endif

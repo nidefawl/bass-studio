@@ -324,9 +324,11 @@ void guictr_plugins::pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mouse
 	int32_t dstSlot = highlightSlot;
 	highlightSlot = -1;
 	const pluginentry_t& entry = g->entry;
+	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 	vstpluginloadres res = vsthost::getInstance()->loadPlugin(entry.path);
 	if (res.result == 0 && res.plugin) {
 		vsthost::getInstance()->insertNewPlugin(track->audio, res.plugin, dstSlot);
+		res.plugin->resume();
 	}
 	showTrack(track);
 }

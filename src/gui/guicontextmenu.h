@@ -3,6 +3,9 @@
 #include "event.h"
 #include "mainctrl.h"
 #include "gui.h"
+#include "trackctr.h"
+#include "track.h"
+#include "track_impl.h"
 #include "guicolors.h"
 #include "clipeditor.h"
 
@@ -341,87 +344,6 @@ public:
 			if (m_clip) {
 				m_clip->rgb = col;
 			}
-		}
-		MainCtrl::get()->closeContextMenu();
-	}
-};
-class guictxtmenu_trackcontent : public guictxtmenu_base {
-public:
-	int32_t trackid;
-	guictxtmenu_trackcontent(int32_t _trackid) {
-		this->trackid = _trackid;
-		this->size.x = 320;
-		MainCtrl* ctrl = MainCtrl::get();
-		track_t* tr = ctrl->getTrackId(this->trackid);
-		if (MainCtrl::get()->cursor.selRange && tr && tr->type == TRACK_TYPE_MIDI) {
-			auto newClip = new ctxtmenu_entry("Create clip", 20);
-			add(newClip);
-			add(new ctxtmenu_splitter());
-		}
-		scaled_grid& grid = MainCtrl::get()->getGrid();
-		auto adaptive = new ctxtmenu_time_select(grid, "Adaptive Grid", 0);
-		adaptive->initAdaptive();
-		add(adaptive);
-		auto fixed = new ctxtmenu_time_select(grid, "Fixed Grid", 0);
-		fixed->initFixed();
-		add(fixed);
-	}
-	void clicked(int _id) {
-		MainCtrl* ctrl = MainCtrl::get();
-		scaled_grid& grid = ctrl->getGrid();
-		if (_id == 20) {
-			Cursor cursor = MainCtrl::get()->cursor.getLeftAligned();
-			if (cursor.selRange) {
-				track_t* tr = ctrl->getTrackId(this->trackid);
-				if (tr && tr->type == TRACK_TYPE_MIDI) {
-					clip_t* cl = new clip_t(StringFormat("%s Clip", StringAsCStr(tr->name)));
-					cl->time = cursor.cursorPos;
-					cl->len = cursor.selRange;
-					cl->loopStart = 0;
-					cl->loopLen = cl->len;
-					tr->getMidi().addClipSort(cl);
-				}
-			}
-		}
-		else if (_id == 110+9) { // OFF
-			grid.grid_dens.enabled = false;
-		} else if (_id >= 110) {
-			grid.grid_dens.enabled = true;
-			grid.grid_dens.fixedBars = _id - 110;
-			grid.grid_dens.isfixed = true;
-		} else {
-			grid.grid_dens.enabled = true;
-			grid.grid_dens.dynamicDensity = _id - 100;
-			grid.grid_dens.isfixed = false;
-		}
-//		ctrl->updateVisibleTrackContents();
-		MainCtrl::get()->updateGrid();
-
-		MainCtrl::get()->closeContextMenu();
-	}
-};
-class guictxtmenu_track : public guictxtmenu_base {
-public:
-	int32_t trackid;
-	ctxtmenu_color_select* sel;
-	guictxtmenu_track(int32_t _trackid) {
-		this->trackid = _trackid;
-		this->size.x = 120;
-		sel = new ctxtmenu_color_select("Pick Color", 100);
-		add(new ctxtmenu_entry("Delete track", 0));
-		add(new ctxtmenu_splitter());
-		add(sel);
-	}
-	void clicked(int _id) {
-		if (_id >= sel->id) {
-			_id -= sel->id;
-			int32_t col = colorPalette[_id];
-			track_t* tr = MainCtrl::get()->getTrackId(trackid);
-			if (tr) {
-				tr->rgb = col;
-			}
-		} else if (_id == 0) {
-			MainCtrl::get()->removeTrackId(trackid);
 		}
 		MainCtrl::get()->closeContextMenu();
 	}

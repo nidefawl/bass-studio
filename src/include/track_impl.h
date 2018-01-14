@@ -184,7 +184,12 @@ public:
 		return NULL;
 	}
 	void getAutomated(std::vector<int32_t>& targets) {
-		targets.push_back(0);
+		for (int idx = 0; idx < params.size(); idx++) {
+			track_param_entry_t& param = params[idx];
+			if (param.automation.isAutomated()) {
+				targets.push_back(idx);
+			}
+		}
 	}
 	automationlane_snapshot_t toRef() {
 		automationlane_snapshot_t ref;

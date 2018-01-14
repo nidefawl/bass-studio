@@ -242,11 +242,12 @@ void vstplugin::load(vsthost* host) {
 
 
 
-	this->resume();
+//	this->resume();
 	this->sleep();
 	this->dispatch(effSetBlockSize, 0, host->lBlockSize);
-	this->resume();
-//	this->dispatch(effOpen);
+//	this->resume();
+
+
 	this->bIsSetup = true;
 }
 vst_param_category* vstplugin::getCategory(int idx) {
@@ -308,7 +309,8 @@ automationlane_snapshot_t vstplugin::toRef() {
 }
 void vstplugin::getAutomated(std::vector<int32_t>& targets) {
 	for (automated_param_t t : automatedParams) {
-		targets.push_back(t.paramIdx);
+		if (t.src.isAutomated())
+			targets.push_back(t.paramIdx);
 	}
 }
 void vstplugin::updateAutomatedParameters(tick_t pos) {

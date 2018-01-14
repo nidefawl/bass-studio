@@ -136,12 +136,17 @@ void gui_ctr_debug::render(NVGcontext* vg) {
 
 	}
 #endif
-
+	int y1 = 30;
 	int x = 5;
-	setFont(vg, 20, G_WHITE, NVG_ALIGN_BOTTOM | NVG_ALIGN_LEFT);
+
+	setFont(vg, 26, G_WHITE, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
+	String proj = StringFormat("Project: %s", StringAsCStr(ctrl->getProjectPath()));
+	nvgText(vg, x, 0, StringAsCStr(proj), NULL);
 	float lineh;
 	nvgTextMetrics(vg, NULL, NULL, &lineh);
-	int y = 5 + lineh;
+	int y = y1 + lineh;
+	y += lineh;
+	y += lineh;
 	for (String& s : strings) {
 		nvgText(vg, x, y, StringAsCStr(s), NULL);
 		y += lineh;

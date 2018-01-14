@@ -139,9 +139,6 @@ void gui_clip::handleRightClick(MouseEvent& evt) {
 	}
 }
 
-void gui_track::handleRightClick(MouseEvent& evt) {
-	MainCtrl::get()->openContextMenu(new guictxtmenu_trackcontent(this->m_track->idx), evt.mousepos);
-}
 
 void gui_clip::trackViewDragBegin(guitrack_editor* view, MouseEvent& evt) {
 	view->dragSelectionBegin(this, evt);
@@ -166,9 +163,6 @@ void gui_track::updateVisibleTrackContents(scaled_grid& grid) {
 	}
 }
 
-void gui_track_automationlane::handleRightClick(MouseEvent& evt) {
-	MainCtrl::get()->openContextMenu(new guictxtmenu_trackcontent(this->m_track->idx), evt.mousepos);
-}
 void gui_track_automationlane::updateVisibleTrackContents(scaled_grid& grid) {
 	automation.setData();
 	automation.updateVisibleTrackContents(grid);
@@ -186,4 +180,71 @@ gui_track::gui_track(track_t* _track, scaled_grid& _grid)
 }
 gui_track* createTrackGui(track_t* t, scaled_grid& grid) {
 	return new gui_track(t, grid);
+}
+
+
+
+class guictxtmenu_trackcontent : public guictxtmenu_base {
+public:
+	int32_t trackid;
+	guictxtmenu_trackcontent(int32_t _trackid) {
+		this->trackid = _trackid;
+		this->size.x = 320;
+		MainCtrl* ctrl = MainCtrl::get();
+		track_t* tr = ctrl->getTrackId(this->trackid);
+		if (MainCtrl::get()->cursor.selRange && tr && tr->type == TRACK_TYPE_MIDI) {
+			auto newClip = new ctxtmenu_entry("Create clip", 20);
+			add(newClip);
+			add(new ctxtmenu_splitter());
+		}
+		scaled_grid& grid = MainCtrl::get()->getGrid();
+		auto adaptive = new ctxtmenu_time_select(grid, "Adaptive Grid", 0);
+		adaptive->initAdaptive();
+		add(adaptive);
+		auto fixed = new ctxtmenu_time_select(grid, "Fixed Grid", 0);
+		fixed->initFixed();
+		add(fixed);
+	}
+	void clicked(int _id) {
+		MainCtrl* ctrl = MainCtrl::get();
+		scaled_grid& grid = ctrl->getGrid();
+		if (_id == 20) {
+			Cursor cursor = MainCtrl::get()->cursor.getLeftAligned();
+			if (cursor.selRange) {
+				track_t* tr = ctrl->getTrackId(this->trackid);
+				if (tr && tr->type == TRACK_TYPE_MIDI) {
+					clip_t* cl = new clip_t(StringFormat("%s Clip", StringAsCStr(tr->name)));
+					cl->time = cursor.cursorPos;
+					cl->len = cursor.selRange;
+					cl->loopStart = 0;
+					cl->loopLen = cl->len;
+					tr->getMidi().addClipSort(cl);
+				}
+			}
+		}
+		else if (_id == 110+9) { // OFF
+			grid.grid_dens.enabled = false;
+		} else if (_id >= 110) {
+			grid.grid_dens.enabled = true;
+			grid.grid_dens.fixedBars = _id - 110;
+			grid.grid_dens.isfixed = true;
+		} else {
+			grid.grid_dens.enabled = true;
+			grid.grid_dens.dynamicDensity = _id - 100;
+			grid.grid_dens.isfixed = false;
+		}
+//		ctrl->updateVisibleTrackContents();
+		MainCtrl::get()->updateGrid();
+
+		MainCtrl::get()->closeContextMenu();
+	}
+};
+void gui_track_automationlane::handleRightClick(MouseEvent& evt) {
+	MainCtrl::get()->openContextMenu(new guictxtmenu_trackcontent(this->m_track->idx), evt.mousepos);
+}
+void gui_track::handleRightClick(MouseEvent& evt) {
+	MainCtrl::get()->openContextMenu(new guictxtmenu_trackcontent(this->m_track->idx), evt.mousepos);
+}
+void guitrack_editor::handleRightClick(MouseEvent& evt) {
+	MainCtrl::get()->openContextMenu(new guictxtmenu_trackcontent(-1), evt.mousepos);
 }

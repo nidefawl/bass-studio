@@ -149,10 +149,10 @@ inline void fixCursorTrackRange(Cursor& cursor, int32_t size) {
 			cursor.selTrackRange--;
 		}
 	}
-	while (cursor.getSubTrackBegin() < 0) {
-		cursor.cursorSubTrack--;
+	while (cursor.getTrackBegin() < 0) {
+		cursor.cursorTrack++;
 	}
-	while (cursor.getSubTrackEnd() >= size) {
+	while (cursor.getTrackEnd() >= size) {
 		cursor.cursorTrack--;
 	}
 }

@@ -912,6 +912,91 @@ void gui_track_controls::handleDraggedMove(MouseEvent& evt) {
 		this->parent->onChildLayoutChanged(this);
 	}
 }
+String makeUniqueTrackName(const String& strNewName) {
+
+	auto& trackCtr = MainCtrl::get()->getTracks();
+	int offset = 0;
+	while (offset < 100) {
+		String test = strNewName;
+		if (offset > 0) {
+			test += StringFormat(" %d", offset);
+		}
+		auto it = std::find_if(trackCtr.begin(), trackCtr.end(), [&test](const track_t* tr) {
+			return tr->name == test;
+		});
+		if (it == trackCtr.end())
+			return test;
+		offset++;
+	}
+	return strNewName;
+}
+class guictxtmenu_track : public guictxtmenu_base {
+public:
+	int32_t trackid;
+	ctxtmenu_color_select* sel;
+	guictxtmenu_track(int32_t _trackid) {
+		this->trackid = _trackid;
+		this->size.x = 120;
+		sel = new ctxtmenu_color_select("Pick Color", 100);
+		add(new ctxtmenu_entry("Show all automation", 0));
+		add(new ctxtmenu_entry("Duplicate track", 1));
+		add(new ctxtmenu_entry("Delete track", 2));
+		add(new ctxtmenu_splitter());
+		add(sel);
+		track_t* tr = MainCtrl::get()->getTrackId(trackid);
+		MainCtrl::get()->setSelectedTrack(tr);
+	}
+	void clicked(int _id) {
+		track_t* tr = MainCtrl::get()->getTrackId(trackid);
+		if (_id >= sel->id) {
+			_id -= sel->id;
+			if (tr) {
+				int32_t col = colorPalette[_id];
+				tr->rgb = col;
+			}
+		} else if (_id == 0) {
+			gui_track_automationlane* gtr_at = NULL;
+			if (tr) {
+				tr->hideTrack = false;
+				tr->hideAutomation = false;
+				tr->audio->showAutomationLanes();
+				auto trCtr = MainCtrl::getGuiTrackCtr();
+				std::vector<automatable_t*> targets;
+				tr->audio->getAutomatableTargets(targets);
+				for (automatable_t* atl : targets) {
+					std::vector<int32_t> automated;
+					atl->getAutomated(automated);
+					for (int32_t param : automated) {
+						gtr_at = trCtr->addAutomationLane(tr, atl, param, true);
+					}
+				}
+			}
+			if (gtr_at) {
+				MainCtrl::getGuiTrackCtr()->layout();
+				MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
+				MainCtrl::getGuiTrackCtr()->scrollTo(gtr_at);
+			}
+		} else if (_id == 1) {
+			if (tr) {
+				ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+				track_t* track = MainCtrl::get()->insertNewTrack(tr->localIdx+1, tr->type);
+				String strNewName = StringFormat("%s copy", StringAsCStr(tr->name));
+
+				track_snapshot_t trSnap(tr, true);
+				*track = trSnap;
+				track->loadSnapshot(trSnap);
+				track->name = makeUniqueTrackName(strNewName);
+
+				MainCtrl::getGuiTrackCtr()->layout();
+				MainCtrl::get()->updateVisibleTrackContents();
+				MainCtrl::getGuiTrackCtr()->scrollTo(track->content);
+			}
+		} else if (_id == 2) {
+			MainCtrl::get()->removeTrackId(trackid);
+		}
+		MainCtrl::get()->closeContextMenu();
+	}
+};
 void gui_track_controls::handleRightClick(MouseEvent& evt) {
 	MainCtrl::get()->openContextMenu(new guictxtmenu_track(this->m_track->idx), evt.mousepos);
 }

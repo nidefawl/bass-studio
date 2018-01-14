@@ -8,7 +8,10 @@
 #include <Windows.h>
 #include "leak_detect.h"
 
+#define WIN32API_CALLBACK_TYPE __stdcall
 HWND getMainHWND(); // window.cpp
+LRESULT WIN32API_CALLBACK_TYPE appWndProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam); // window.cpp
+
 namespace {
 	static std::vector<vst_window*> vst_window_list;
 	static void addWindow (vst_window* window)
@@ -21,6 +24,15 @@ namespace {
 		if (it != vst_window_list.end ())
 			vst_window_list.erase(it);
 	}
+	static vst_window* getWindowByHWND (HWND hwnd)
+	{
+		auto it = std::find_if(vst_window_list.begin (), vst_window_list.end (), [hwnd](vst_window* window) {
+			return window->getHWND() == hwnd;
+		});
+		if (it != vst_window_list.end ())
+			return *it;
+		return nullptr;
+	}
 }
 
 static const TCHAR* gWindowClassName = _T("VSTHOSTWINDOW");
@@ -32,13 +44,109 @@ vst_window* vst_window::make (vstplugin* plugin, const String& name, Size size, 
 		return window;
 	return nullptr;
 }
-
-LRESULT CALLBACK vst_window::WndProc (HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+vst_window* vst_window::getVSTWindow(HWND handle)
 {
-	vst_window* window = reinterpret_cast<vst_window*> ((LONG_PTR)GetWindowLongPtr (hWnd, GWLP_USERDATA));
-	if (window)
-		return window->proc (message, wParam, lParam);
-	return DefWindowProc (hWnd, message, wParam, lParam);
+	assert(handle);
+	TCHAR clsName_v[512];
+	String sChain = "";
+	vst_window* vstwinhandle = nullptr;
+	while (handle /*&& !vstwinhandle*/) {
+		if (GetClassName(handle, clsName_v, 512)) {
+			if (!vstwinhandle && strcmp(clsName_v, "VSTHOSTWINDOW") == 0) {
+				vstwinhandle = getWindowByHWND(handle);
+			}
+			if (!strcmp(clsName_v, "Edit")) {
+				vstwinhandle = nullptr;
+				break;
+			}
+			if (!sChain.length()) {
+				sChain = String(clsName_v);
+			} else {
+				sChain = String(clsName_v) + " > " + sChain;
+			}
+		} else {
+			my_printf("GetClassName failed\n",0);
+		}
+		WINDOWINFO info;
+		info.cbSize = sizeof(info);
+		GetWindowInfo(handle, &info);
+		if (info.dwStyle & WS_CHILD) {
+			handle = GetParent(handle);
+		} else break;
+	}
+//	my_printf("getVSTWindow %s isPlugin %d\n", StringAsCStr(sChain), vstwinhandle ? 1 : 0);
+	return vstwinhandle;
+}
+
+static LRESULT CALLBACK PluginWndProc (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	vst_window* window = reinterpret_cast<vst_window*> ((LONG_PTR)GetWindowLongPtr (hwnd, GWLP_USERDATA));
+	if (window) {
+		vstplugin* plugin = window->getPlugin();
+		switch (message)
+		{
+			case WM_ERASEBKGND:
+			{
+				return 1; // don't draw background
+			}
+			case WM_PAINT:
+			{
+				PAINTSTRUCT ps{};
+				BeginPaint(hwnd, &ps);
+				EndPaint(hwnd, &ps);
+				return 0;
+			}
+			case WM_SIZE:
+			{
+				plugin->onResize(window, window->getContentSize ());
+				break;
+			}
+	        case WM_KEYDOWN:
+	        case WM_SYSKEYDOWN:
+	        case WM_KEYUP:
+	        case WM_SYSKEYUP:
+	        	my_printf("key \n", 0);
+				{
+					HWND hwndMain = getMainHWND();
+					if (hwndMain) {
+						return appWndProc(hwndMain, message, wParam, lParam);
+					}
+				}
+	        	break;
+			case WM_SIZING:
+			{
+				RECT* newSize = reinterpret_cast<RECT*> (lParam);
+				RECT oldSize;
+				GetWindowRect (hwnd, &oldSize);
+				RECT clientSize;
+				GetClientRect (hwnd, &clientSize);
+
+				auto diffX = (newSize->right - newSize->left) - (oldSize.right - oldSize.left);
+				auto diffY = (newSize->bottom - newSize->top) - (oldSize.bottom - oldSize.top);
+
+				Size newClientSize = {(clientSize.right - clientSize.left),
+				                      (clientSize.bottom - clientSize.top)};
+				newClientSize.width += diffX;
+				newClientSize.height += diffY;
+
+				Size constraintSize = plugin->constrainSize (window, newClientSize);
+				if (constraintSize != newClientSize)
+				{
+					auto diffX = (oldSize.right - oldSize.left) - (clientSize.right - clientSize.left);
+					auto diffY = (oldSize.bottom - oldSize.top) - (clientSize.bottom - clientSize.top);
+					newSize->right = newSize->left + static_cast<LONG> (constraintSize.width + diffX);
+					newSize->bottom = newSize->top + static_cast<LONG> (constraintSize.height + diffY);
+				}
+				return TRUE;
+			}
+			case WM_CLOSE:
+			{
+				window->close();
+				return 1;
+			}
+		}
+	}
+	return DefWindowProc (hwnd, message, wParam, lParam);
 }
 
 //------------------------------------------------------------------------
@@ -54,7 +162,7 @@ void vst_window::registerWindowClass (HINSTANCE instance)
 	wcex.cbSize = sizeof (WNDCLASSEX);
 
 	wcex.style = CS_DBLCLKS;
-	wcex.lpfnWndProc = WndProc;
+	wcex.lpfnWndProc = PluginWndProc;
 	wcex.hInstance = instance;
 	wcex.hCursor = LoadCursor (instance, IDC_ARROW);
 	wcex.hbrBackground = nullptr;
@@ -106,64 +214,6 @@ bool vst_window::init(vstplugin* plugin, const String& name, Size size, bool res
 		addWindow (this);
 	}
 	return hwnd != nullptr;
-}
-
-//------------------------------------------------------------------------
-LRESULT vst_window::proc (UINT message, WPARAM wParam, LPARAM lParam)
-{
-
-
-	switch (message)
-	{
-		case WM_ERASEBKGND:
-		{
-			return 1; // don't draw background
-		}
-		case WM_PAINT:
-		{
-			PAINTSTRUCT ps{};
-			BeginPaint(hwnd, &ps);
-			EndPaint(hwnd, &ps);
-			return 0;
-		}
-		case WM_SIZE:
-		{
-			plugin->onResize(this, getContentSize ());
-			break;
-		}
-		case WM_SIZING:
-		{
-			RECT* newSize = reinterpret_cast<RECT*> (lParam);
-			RECT oldSize;
-			GetWindowRect (hwnd, &oldSize);
-			RECT clientSize;
-			GetClientRect (hwnd, &clientSize);
-
-			auto diffX = (newSize->right - newSize->left) - (oldSize.right - oldSize.left);
-			auto diffY = (newSize->bottom - newSize->top) - (oldSize.bottom - oldSize.top);
-
-			Size newClientSize = {(clientSize.right - clientSize.left),
-			                      (clientSize.bottom - clientSize.top)};
-			newClientSize.width += diffX;
-			newClientSize.height += diffY;
-
-			Size constraintSize = plugin->constrainSize (this, newClientSize);
-			if (constraintSize != newClientSize)
-			{
-				auto diffX = (oldSize.right - oldSize.left) - (clientSize.right - clientSize.left);
-				auto diffY = (oldSize.bottom - oldSize.top) - (clientSize.bottom - clientSize.top);
-				newSize->right = newSize->left + static_cast<LONG> (constraintSize.width + diffX);
-				newSize->bottom = newSize->top + static_cast<LONG> (constraintSize.height + diffY);
-			}
-			return TRUE;
-		}
-		case WM_CLOSE:
-		{
-			close();
-			return 1;
-		}
-	}
-	return DefWindowProc (hwnd, message, wParam, lParam);
 }
 
 //------------------------------------------------------------------------
