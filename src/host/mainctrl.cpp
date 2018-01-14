@@ -329,12 +329,14 @@ void MainCtrl::menuCommand(int cmd) {
 	switch (cmd) {
 	case CMD_UNDO:
 		if (hist.canUndo()) {
+			ThreadLock lock = playThread.lockThread();
 			hist.undoStep(this);
 			updateVisibleTrackContents();
 		}
 		break;
 	case CMD_REDO:
 		if (hist.canRedo()) {
+			ThreadLock lock = playThread.lockThread();
 			hist.redoStep(this);
 			updateVisibleTrackContents();
 		}

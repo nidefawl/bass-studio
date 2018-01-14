@@ -278,6 +278,7 @@ public:
 		if (dragHandle == drag_handle_none) {
 			return;
 		}
+		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 		trackdata_midi_t& midi = track->getMidi();
 		clip_t* clNext = midi.getNextClip(clip);
 		assert(clNext == NULL || (clNext != clip));

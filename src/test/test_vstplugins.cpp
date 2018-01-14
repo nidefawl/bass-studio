@@ -9,8 +9,7 @@
 #include "project.h"
 namespace {
 
-project_globals_t project;
-static vsthost* audiohost = new vsthost(project);
+static vsthost* audiohost = new vsthost();
 
 static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 

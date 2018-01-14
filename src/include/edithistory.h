@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include "str_util.h"
 class MainCtrl;
 class action_base {
 public:

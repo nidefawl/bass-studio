@@ -123,6 +123,7 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 		return false;
 	}
 	if (kevt.type != K_RELEASE) {
+		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 		bool modified = false;
 		bool handledKeyinput = false;
 		String desc = "???";
@@ -420,6 +421,7 @@ void guitrack_editor::dragSelectionMove(gui_clip* gui, MouseEvent& evt) {
 	if (action.dragtype) {
 		if (action.dragtype == DRAG_CLIPS_RESIZE_LEFT
 				|| action.dragtype == DRAG_CLIPS_RESIZE_RIGHT) {
+			ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 			clip_t* clip = gui->m_clip;
 			track_t* track = gui->m_track;
 			dragStartLayout.apply(track);
@@ -500,6 +502,7 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
 				MainCtrl::get()->setSelectedTrack(trNxtSelected);
 			}
 			if (selectionMoved) {
+				ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 				Cursor target = cursor + cursorBegin;
 				int32_t trackOffset = dragStartTrackIdx - cursorBegin.cursorTrack;
 				tick_t dstPos = cursor.cursorPos;
@@ -527,6 +530,7 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
 			}
 		} else if (action.dragtype == DRAG_CLIPS_RESIZE_LEFT
 				|| action.dragtype == DRAG_CLIPS_RESIZE_RIGHT) {
+			ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 			clip_t* clipPtr = gui->m_clip;
 			track_t* trackPtr = gui->m_track;
 			trackdata_midi_t& midi = trackPtr->getMidi();
@@ -589,6 +593,7 @@ bool guitrack_editor::clipDropFinal(dragdrop_midifile& clip, ivec2 mousepos) {
 	if (action.dragtype == clip_dragtype_t::DROP_FILE_EXTERNAL) {
 //			dragClipboardMove(mousepos); //TODO: maybe call move again to set final pos?
 
+		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 		track_t *trNxtSelected = getTrackFromMouse(project, mousepos, true);
 		int32_t tick = grid.screenToTickSnap(mousepos.x, SNAP_ON);
 		tick_t dstPos = tick;

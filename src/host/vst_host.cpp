@@ -44,6 +44,10 @@ bool filterOpCode(int opcode) {
 		return true;
 	if ( opcode == audioMasterAutomate)
 		return true;
+	if ( opcode == audioMasterGetInputLatency)
+		return false;
+	if ( opcode == audioMasterGetOutputLatency)
+		return false;
 	return true;
 }
 void cbPrintf(vstplugin* plugin, const char *fmt, int index, int opcode, int value);
@@ -383,9 +387,8 @@ AudioBuffer* allocateBuffer() {
 vsthost::~vsthost() {
 	delete moduleMgr;
 }
-vsthost::vsthost(project_globals_t& _project, uint32_t _sampleRate, uint16_t _blockSize)
+vsthost::vsthost(uint32_t _sampleRate, uint16_t _blockSize)
 	: moduleMgr{new vsthost::ModuleManager{}},
-	  project(_project),
 	  lSampleRate(_sampleRate),
 	  lBlockSize(_blockSize),
 	  numChannels(OUTPUT_CHANNELS)

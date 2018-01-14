@@ -86,8 +86,8 @@ class vsthost {
 private:
 	class ModuleManager;
 	ModuleManager* moduleMgr;
-	project_globals_t& project;
 public:
+	project_globals_t project;
 	samplerate_t lSampleRate;
 	uint16_t lBlockSize;
 private:
@@ -104,7 +104,7 @@ private:
 public:
 	moodycamel::ReaderWriterQueue<AudioBuffer*> audioQueue;
 public:
-	vsthost(project_globals_t& _project, uint32_t _sampleRate = 44100, uint16_t _blockSize = 512);
+	vsthost(uint32_t _sampleRate = 44100, uint16_t _blockSize = 512);
 	vsthost(vsthost const&) = delete;
 	~vsthost();
 	void operator=(vsthost const&) = delete;

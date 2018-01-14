@@ -980,6 +980,7 @@ public:
 			if (tr) {
 				ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 				track_t* track = MainCtrl::get()->insertNewTrack(tr->localIdx+1, tr->type);
+				track->releaseTrackContent();
 				String strNewName = StringFormat("%s copy", StringAsCStr(tr->name));
 
 				track_snapshot_t trSnap(tr, true);

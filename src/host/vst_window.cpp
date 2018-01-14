@@ -182,7 +182,7 @@ bool vst_window::init(vstplugin* plugin, const String& name, Size size, bool res
 {
 	this->plugin = plugin;
 	registerWindowClass (instance);
-	DWORD exStyle = WS_EX_TOOLWINDOW;
+	DWORD exStyle = WS_EX_APPWINDOW;
 	DWORD dwStyle = WS_CAPTION | WS_SYSMENU | WS_CLIPSIBLINGS;
 	if (resizeable)
 		dwStyle |= WS_SIZEBOX | WS_MAXIMIZEBOX;

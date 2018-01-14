@@ -188,21 +188,26 @@ private:
         		req->notify();
         		req.reset();
         	}
-        	int32_t bpm100 = ctrl->getCurrentTempo();
 
-
-            bool inLoop = tickPos >= ctrl->loopStart && tickPos < ctrl->loopStart+ctrl->loopLen
-            		&& m_status == status_play && ctrl->loopEnabled;
 
             //this is stupid
 //			if (state != status_play) {
 //				tickPos = ctrl->cursor.cursorPos;
 //			}
             int32_t processedBlock = 0;
-
+            bool inLoop = false;
             if (m_status != playback_state::status_no_process)
             {
-            	ThreadLock lock = this->lockThread();
+				std::unique_lock<std::recursive_mutex> lock(mutex);
+
+
+            	//ctrl may still alter project settings during copy here
+            	project_globals_t& projGlobals = host->project;
+            	projGlobals = *static_cast<project_globals_t*>(ctrl);
+
+            	inLoop = (tickPos >= projGlobals.loopStart
+            			&& tickPos < projGlobals.loopStart+projGlobals.loopLen
+						&& m_status == status_play && projGlobals.loopEnabled);
             	processedBlock = host->processPlayback(samplePos, tickPos, m_status, inLoop, isLoopAround);
             }
             /*
@@ -225,6 +230,8 @@ private:
 	    	    	throw new SystemException(GetLastError(), "WaitForSingleObject failed");
 			}
 			if (m_status == status_play) {
+            	project_globals_t& projGlobals = host->project;
+            	int32_t bpm100 = projGlobals.tempo100;
 				double blocksPerS = sampleRate / (double) blockSize;
 				double msPerBlock = 1000.0 / blocksPerS;
 				const double ticksPerBlock = toTickPrecise(blockSize/(double)sampleRate, bpm100);
@@ -233,12 +240,12 @@ private:
 					samplePos += blockSize*processedBlock;
 					tickPos += ticksPerBlock;
 					if (inLoop) {
-						if (tickPos >= ctrl->loopStart + ctrl->loopLen) {
-							ctrl->setJumpFromTo(tickPos, ctrl->loopStart);
-							LOG("JMP FROM %.2f to %d\n", tickPos, ctrl->loopStart);
-							tickPos = ctrl->loopStart;
-							samplePos = tickToSample(ctrl->loopStart, bpm100, sampleRate, blockSize);
-							LOG("JMP LOOPBEGIN seconds: %.2f - BLOCK %d\n", toSeconds(ctrl->loopStart, bpm100), samplePos / blockSize);
+						if (tickPos >= projGlobals.loopStart + projGlobals.loopLen) {
+							ctrl->setJumpFromTo(tickPos, projGlobals.loopStart);
+							LOG("JMP FROM %.2f to %d\n", tickPos, projGlobals.loopStart);
+							tickPos = projGlobals.loopStart;
+							samplePos = tickToSample(projGlobals.loopStart, bpm100, sampleRate, blockSize);
+							LOG("JMP LOOPBEGIN seconds: %.2f - BLOCK %d\n", toSeconds(projGlobals.loopStart, bpm100), samplePos / blockSize);
 							isLoopAround = true;
 						}
 					}

@@ -1205,7 +1205,7 @@ int mainHost(int argc, char* argv[]) {
 	glfwWindowHint(GLFW_STENCIL_BITS, 8);
 	glfwWindowHint(GLFW_DEPTH_BITS, 24);
 	ctrl = std::make_unique<MainCtrl>();
-	vsthost::setInstance(std::make_unique<vsthost>(*ctrl.get(), 44100, 256));
+	vsthost::setInstance(std::make_unique<vsthost>(44100, 256));
 	mainWindow = std::make_unique<appwindow_main>(ctrl.get());
 	mainWindow->create("main window", 1280, 720);
 	mainWindow->showWindow();

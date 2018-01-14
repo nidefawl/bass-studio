@@ -442,6 +442,7 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
 	tick_t tickGridNearest = grid.screenToTickSnap(local.x, SNAP_ON);
 	tick_t tickGridLeast = grid.prev(tickExact);
 	if (evt.type == M_EVT_DOUBLECLICK) {
+		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 		clip_cursor_t cursorBefore = view.cursor;
 		notes.clearSelection();
 		clip_notes_t notesBefore = notes;
@@ -617,6 +618,7 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
 
 		setStatusText();
 	} else if (dragMode >= drag_notes_move) {
+		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 		int modeMove = SNAP_LEAST;
 		if (isAlt(evt.kbmods)) {
 			modeMove = SNAP_OFF;
@@ -725,6 +727,7 @@ void gui_clipcontent::handleDraggedRelease(MouseEvent& evt) {
 	clip_t* clip = view.clip();
 	if (clip) {
 		if (dragMode >= drag_notes_move) {
+			ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 			clip_notes_t& notes = clip->notes;
 			mergeDraggedNotes(dragMode);
 			setSelectionFrame(getMinMaxTime(notes.selection));
@@ -748,6 +751,7 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
 	if (!clip) {
 		return false;
 	}
+	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 	clip_notes_t& notes = clip->notes;
 	if (kevt.type != STATE_REPEAT && isCtrlKey(kevt.keyCode)) {
 		if ((dragMode == drag_notes_move || dragMode == drag_notes_copy)) {
