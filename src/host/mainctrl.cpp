@@ -121,7 +121,7 @@ public:
 	guictr_pluginlibrary ctr_pluginlist;
 	Splitter splitterList;
 	Splitter splitterCenter;
-	Splitter splitterDbg;
+	Splitter splitterRight;
 	ViewContainers(Cursor& _cursor, project_t& project, scaled_grid& grid, clip_view& clipView, dragdrop_midifile& dragdropclip)
 	  : noteeditor(clipView),
 	  ctr_tempo(project),
@@ -129,26 +129,27 @@ public:
 	  ctr_clipeditorview(noteeditor),
 	  ctr_clipeditor(noteeditor, clipView),
 	  ctr_tracks(_cursor, project, grid, dragdropclip),
-	  splitterList(1, 0.3f),
+	  splitterList(0, 0.5f),
 	  splitterCenter(0, 0.7f),
-	  splitterDbg(1, 0.8f)
+	  splitterRight(1, 0.8f)
 	{
 		splitterCenter.setMinMax(0.25f, 0.9f);
-		splitterList.setMinMax(0.1f, 0.5f);
-		splitterDbg.setMinMax(0.5f, 0.9f);
+		splitterList.setMinMax(0.1f, 0.9f);
+		splitterRight.setMinMax(0.2f, 0.9f);
 	}
 	void layout(int32_t winW, int32_t winH) {
 		int hTopControls = 48;
 		int hStatusBar = 60;
 		int hCenter = winH - hTopControls - hStatusBar;
+		int hRight = winH - hTopControls;
 		int hTrackCtr = splitterCenter.leftOrTop(hCenter);
 		int hEditor = splitterCenter.rightOrBottom(hCenter);
-		int widthList = splitterList.leftOrTop(winW);
-		int widthRight = splitterList.rightOrBottom(winW);
-		int width = splitterDbg.leftOrTop(winW);
-		int wDebug = splitterDbg.rightOrBottom(winW);
-		ctr_tempo.size = { width, hTopControls };
-		ctr_tracks.size = { widthRight-wDebug, hTrackCtr };
+		int heightList = splitterList.leftOrTop(hRight);
+		int heightDebug = splitterList.rightOrBottom(hRight);
+		int width = splitterRight.leftOrTop(winW);
+		int wRight = splitterRight.rightOrBottom(winW);
+		ctr_tempo.size = { winW, hTopControls };
+		ctr_tracks.size = { width, hTrackCtr };
 		ctr_clipeditor.size = { width, hEditor };
 		ctr_plugins.size = { width, hEditor };
 		ctr_pluginview.size = { 300, hStatusBar };
@@ -160,7 +161,7 @@ public:
 		statusbar.size = { wbottom, hStatusBar };
 
 		ctr_tempo.pos = { 0, 0 };
-		ctr_tracks.pos = { widthList, hTopControls };
+		ctr_tracks.pos = { 0, hTopControls };
 		statusbar.pos = { 0, winH - hStatusBar };
 		ctr_clipeditorview.pos = { statusbar.right(), winH - hStatusBar };
 		ctr_pluginview.pos = { ctr_clipeditorview.right(), winH - hStatusBar };
@@ -175,17 +176,18 @@ public:
 		ctr_pluginview.setSnapSides(ivec4(0, 1, 0, 0));
 		ctr_clipeditor.setSnapSides(ivec4(0, 1, 0, 0));
 		ctr_plugins.setSnapSides(ivec4(0, 1, 0, 0));
-		ctr_pluginlist.setSnapSides(ivec4(0, 0, 1, 0));
+		ctr_pluginlist.setSnapSides(ivec4(1, 0, 0, 0));
+		ctr_dbg.setSnapSides(ivec4(1, 1, 0, 0));
 
 
-		ctr_dbg.pos = {winW-wDebug, 0};
-		ctr_dbg.size = {wDebug, winH};
-		ctr_pluginlist.pos = {0, hTopControls};
-		ctr_pluginlist.size = {widthList, hTrackCtr};
-		splitterDbg.pos = ivec2(ctr_dbg.pos.x - 5, 0);
-		splitterDbg.size = ivec2(10, winH);
-		splitterList.pos = ivec2(ctr_pluginlist.right() - 5, hTopControls);
-		splitterList.size = ivec2(10, hTrackCtr);
+		ctr_dbg.pos = {width, hTopControls+heightList};
+		ctr_dbg.size = {wRight, heightDebug};
+		ctr_pluginlist.pos = {width, hTopControls};
+		ctr_pluginlist.size = {wRight, heightList};
+		splitterRight.pos = ivec2(ctr_dbg.pos.x - 5, hTopControls);
+		splitterRight.size = ivec2(10, hRight);
+		splitterList.pos = ivec2(ctr_dbg.pos.x, ctr_pluginlist.bottom()-5);
+		splitterList.size = ivec2(wRight, 10);
 	}
 	void addTo(vector<guictr_base*>& v) {
 		 v.push_back(&ctr_tracks);
@@ -198,7 +200,7 @@ public:
 		 v.push_back(&ctr_dbg);
 		 v.push_back(&splitterCenter);
 		 v.push_back(&splitterList);
-		 v.push_back(&splitterDbg);
+		 v.push_back(&splitterRight);
 	}
 };
 void MainCtrl::showPluginView() {
@@ -620,6 +622,7 @@ bool MainCtrl::setLoadedProject(shared_ptr<project_file> file) {
 	return true;
 }
 void BaseCtrl::render(int32_t x, int32_t y, int32_t w, int32_t h, float ratio) {
+	static int test = 0;
 	nvgBeginFrame(vg, w, h, ratio);
 	nvgLineJoin(vg, NVGlineCap::NVG_BEVEL);
 
@@ -643,8 +646,25 @@ void BaseCtrl::render(int32_t x, int32_t y, int32_t w, int32_t h, float ratio) {
 
 //	int lx = 20; int ly = 20; int lw = 300;
 //	renderDashedLineFrame(vg, lx, ly, lw, lw, 1.0f);
+//	RenderResources::NvgImageTexture& image = RenderResources::imgDashedLine;
+//
+//
+//		nvgBeginPath(vg);
+//		nvgRect(vg, 0, 0, 100, 100);
+//		nvgFillColor(vg, rgbToNvg(0x333333));
+//		nvgFill(vg);
+//		NVGpaint paintDown = nvgImagePattern(vg, 0, 0, image.width, image.height, 0, image.id, 1.0f);
+//
+//		nvgBeginPath(vg);
+//		nvgRect(vg, 20, 20, 60, 60);
+//		nvgFillPaint(vg, paintDown);
+//		nvgFill(vg);
 
 	nvgEndFrame(vg);
+	test++;
+	if (test > 100) {
+		test = 0;
+	}
 }
 void MainCtrl::relayout(int32_t w, int32_t h) {
 	closeContextMenu();

@@ -11,10 +11,12 @@
 #include "dropdown.h"
 #include "dsp_util.h"
 #include "str_util.h"
+#include "guimeter.h"
 #include "color_util.h"
 #include "leak_detect.h"
 #include "automation.h"
 #include "automatable.h"
+#include "meter.h"
 
 const int resizeHitY = 8;
 const int DRAG_RESIZE = 1;
@@ -87,87 +89,7 @@ void resize(track_t* m_track, T* al, int32_t mouseDragDist) {
 	}
 }
 
-class gui_trackmeter: public guibase {
-public:
-	track_t* const m_track;
-	gui_trackmeter(track_t* _track) :
-		guibase(), m_track(_track) {
-	}
-	void render(NVGcontext* vg) {
-		int32_t spacing = 1;
-		ivec2 inset(spacing);
-		ivec2 mtrPos = pos + inset;
-		ivec2 mtrSize = size - inset * 2;
-		track_impl_t* audio = m_track->audio;
-		float channelW = (mtrSize.x-(OUTPUT_CHANNELS+1)*spacing) / (float) OUTPUT_CHANNELS;
-		const double scaledZero = dsp_util::scaledRange(0, dsp_util::MTR_FLOOR, dsp_util::MTR_CEIL);
-		float hZero = (1.0f - scaledZero) * mtrSize.y;
-		float yZero = mtrPos.y + mtrSize.y - hZero;
-		if (audio) {
-			float x = mtrPos.x+spacing;
-			for (int i = 0; i < OUTPUT_CHANNELS; i++) {
-				float fMax = audio->meter.getMax(i);
-				float fRms = audio->meter.getRms(i);
-				float fPeak = audio->meter.getStandingPeak(i);
-				float levels[3] = {fMax, fRms, fPeak};
 
-				nvgBeginPath(vg);
-				nvgRect(vg, x, mtrPos.y, channelW, mtrSize.y);
-				nvgFillColor(vg, GUI_COLOR(G_S1));
-				nvgFill(vg);
-				NVGcolor colGainLvl[6] = {
-					G_GREEN_DRK, G_YELLOW_DRK,
-					G_GREEN, G_YELLOW,
-					G_GREEN_DRKER, G_YELLOW_DRKER,
-				};
-
-				for (int i = 0; i < 3; i++ ){
-					float fLvl = levels[i];
-					if (fLvl < F_MIN) {
-						continue;
-					}
-					double scale = dsp_util::scaledRange(dsp_util::dBFS(fLvl), dsp_util::MTR_FLOOR, dsp_util::MTR_CEIL);
-					float hVal = (1.0f - scale) * mtrSize.y;
-					float y = mtrPos.y + mtrSize.y - hVal;
-					if (i == 2) {
-						nvgBeginPath(vg);
-						nvgMoveTo(vg, x, y);
-						nvgLineTo(vg, x+channelW, y);
-//						int32_t col = fLvl >= 1.0f ? 1 : 0;
-						int32_t col = y < yZero ? 1 : 0;
-						nvgStrokeColor(vg, colGainLvl[i*2+col]);
-						nvgStrokeWidth(vg, 1.5f);
-						nvgStroke(vg);
-						continue;
-					}
-					if (hVal > 0.5) {
-						float hOvershoot = max(0.0f, hVal-hZero);
-						nvgBeginPath(vg);
-						nvgRect(vg, x, max(y, yZero), channelW, min(hVal, hZero));
-						nvgFillColor(vg, colGainLvl[i*2+0]);
-						nvgFill(vg);
-						if (hOvershoot > 0) {
-							nvgBeginPath(vg);
-							nvgRect(vg, x, y, channelW, hOvershoot);
-							nvgFillColor(vg, colGainLvl[i*2+1]);
-							nvgFill(vg);
-						}
-					}
-				}
-				x += channelW;
-				x += spacing;
-			}
-		}
-		float x = mtrPos.x+spacing;
-		float x2 = mtrPos.x+(spacing+channelW)*2.0f;
-		nvgBeginPath(vg);
-		nvgMoveTo(vg, x, yZero);
-		nvgLineTo(vg, x2, yZero);
-		nvgStrokeColor(vg, g_guiColors[COL_GRID_BRT]);
-		nvgStrokeWidth(vg, 1.5f);
-		nvgStroke(vg);
-	}
-};
 
 class guictxtmenu_trackparam : public guictxtmenu_base {
 	track_t* const track;
@@ -307,7 +229,7 @@ public:
 	gui_trackgain gain;
 	guibutton_trackbypass btnBypass;
 	gui_trackcontrols_mixer(track_t* _track) :
-		guictr_base(), m_track(_track), meter(_track), gain(_track), btnBypass(_track) {
+		guictr_base(), m_track(_track), meter(&_track->audio->meter), gain(_track), btnBypass(_track) {
 		padding = 0;
 		btnBypass.setColor(GUI_COLOR_HEX(G_S1));
 		btnBypass.drawFn = drawTextureSymbol;

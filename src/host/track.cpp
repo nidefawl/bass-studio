@@ -588,6 +588,12 @@ void track_impl_t::loadAutomationLanes(const std::vector<automationlane_snapshot
 }
 void track_impl_t::onTick(double since) {
 	meter.onTick(since);
+	if (instrument) {
+		instrument->meter.onTick(since);
+	}
+	for (auto effect : effects) {
+		effect->meter.onTick(since);
+	}
 }
 void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos) {
 	//assert(end != loopEnd); //if end equals loopEnd note off events will be on exact end

@@ -243,8 +243,17 @@ void gui_clipcontent::render(NVGcontext* vg) {
 	if (!notes.empty()) {
 		nvgBeginPath(vg);
 		for (note_t& note : notes.m_list) {
-			//TODO: CULL
-			renderNote(vg, this, &note);
+			float nx = grid.tickToScreenD(note.time);
+			float nw = grid.tickLenToScreen(note.len);
+			if (nx + nw < -4)
+				continue;
+			if (nx > w+4)
+				continue;
+			float ny = toScreenF(note.pitch);
+			float nh = scale;
+			float insetx = calcInset(1, nw);
+			float insety = calcInset(1, nh);
+			nvgRect(vg, nx+insetx, ny - scale+insety, nw-insetx*2, nh-insety*2);
 		}
 		nvgFillColor(vg, g_guiColors[COL_NOTE]);
 		nvgFill(vg);

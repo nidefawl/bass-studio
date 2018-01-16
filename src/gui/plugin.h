@@ -8,6 +8,7 @@
 #include "button.h"
 #include "renderresources.h"
 #include "list.h"
+#include "guimeter.h"
 #include "knob.h"
 #include "leak_detect.h"
 
@@ -26,6 +27,7 @@ public:
 	guibuttontoggle buttonBypass;
 	guibuttontoggle buttonOpenEditor;
 	guibuttontoggle buttonDelete;
+	gui_trackmeter meter;
 	guiplugin(vstplugin* _vst);
 	~guiplugin() {
 		my_printf("DSTR!\n",0);
@@ -42,7 +44,12 @@ public:
 		strncpy_s(this->text, MAX_STR_TITLE, wxmb, strlen(wxmb));
 	}
 	void layout() {
+		int32_t meterW = 32;
+		while (size.x < meterW * 16 && meterW > 16) {
+			meterW -= 4;
+		}
 		int32_t inset1 = (HEIGHT_PLUGIN_TITLE - buttonBypass.size.y) / 2;
+		ivec2 contentS(size.x - meterW, size.y-HEIGHT_PLUGIN_TITLE);
 		buttonBypass.pos.y = inset1;
 		buttonBypass.pos.x = inset1;
 		buttonOpenEditor.pos.y = inset1;
@@ -51,13 +58,16 @@ public:
 		buttonDelete.pos.x = size.x - buttonDelete.size.x - inset1;
 		int32_t insetCtrls = INSET_TITLE;
 		int rowHeight = 64;
-		while (size.y < rowHeight * 8 && rowHeight > 8) {
+		while (contentS.y < rowHeight * 8 && rowHeight > 8) {
 			rowHeight -= 4;
 		}
 		params.setRowHeight(rowHeight);
 		params.pos = ivec2(insetCtrls, insetCtrls + HEIGHT_PLUGIN_TITLE);
-		params.size = size - params.pos - ivec2(insetCtrls);
+		params.size = contentS - ivec2(insetCtrls*2);
 		params.layout();
+		meter.pos = ivec2(size.x - meterW, HEIGHT_PLUGIN_TITLE);
+		meter.size = ivec2(meterW, contentS.y);
+		meter.layout();
 	}
 	void handleDraggedMove(MouseEvent& evt) override;
 	void handleDraggedRelease(MouseEvent& evt) override;

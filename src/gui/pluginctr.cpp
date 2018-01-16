@@ -72,6 +72,7 @@ void guiplugin::render(NVGcontext* vg) {
 	buttonOpenEditor.render(vg);
 	buttonDelete.render(vg);
 
+	meter.render(vg);
 	params.renderBackground(vg);
 	params.render(vg);
 }
@@ -230,7 +231,8 @@ guiplugin::guiplugin(vstplugin* _vst)
   params(48),
   buttonBypass(12),
   buttonOpenEditor(12),
-  buttonDelete(12) {
+  buttonDelete(12),
+  meter(&_vst->meter) {
 	text[0] = 0;
 	buttonBypass.icon = ICON_BYPASS;
 	buttonBypass.state = &vst->bIsEnabled;
@@ -246,6 +248,7 @@ guiplugin::guiplugin(vstplugin* _vst)
 	buttonDelete.parent = this;
 	buttonDelete.setColor(0x404040);
 	params.parent = this;
+	meter.parent = this;
 	std::vector<gui_list_entry*> _newList;
 	for (vst_param& param : _vst->params) {
 		_newList.push_back(new gui_plugin_paramlist_entry(_vst, &param));

@@ -9,6 +9,7 @@
 #include "automation.h"
 #include "logging.h"
 #include "platform.h"
+#include "meter.h"
 
 class vsthost;
 struct AudioBlock;
@@ -90,6 +91,7 @@ public:
 	std::vector<String> outputNames;
 	AudioBlock* blockInputs = NULL; // guaranteed to have at least 2 channels
 	AudioBlock* blockOutputs = NULL; // guaranteed to have at least 2 channels
+	rmsmeter<16000> meter;
 	vstplugin(handles_t* _handle, int32_t globalId, String sDir, String sName) : projectGlobalId(globalId), handle(_handle) {
 		this->sDir = sDir;
 		this->sName = sName;

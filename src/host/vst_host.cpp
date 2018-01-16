@@ -610,12 +610,14 @@ int32_t vsthost::processPlayback(int32_t sample, double posDouble, playback_stat
 		AudioBlock* bufOut = bufferWrite->output;
 		for (track_t* trackMaster : ctrl->trackMasterCtr) {
 			track_impl_t* audioMaster = trackMaster->audio;
-			AudioBlock* bufMaster = &audioMaster->output;
-			for (int n = 0; n < OUTPUT_CHANNELS; n++) {
-				float* channelWriteBuffer = bufOut->buf[n];
-				float* channelMaster = bufMaster->buf[n];
-				for (int j = 0; j < lBlockSize; j++) {
-					channelWriteBuffer[j] += channelMaster[j];
+			if (audioMaster->mixer.isEnabled()) {
+				AudioBlock* bufMaster = &audioMaster->output;
+				for (int n = 0; n < OUTPUT_CHANNELS; n++) {
+					float* channelWriteBuffer = bufOut->buf[n];
+					float* channelMaster = bufMaster->buf[n];
+					for (int j = 0; j < lBlockSize; j++) {
+						channelWriteBuffer[j] += channelMaster[j];
+					}
 				}
 			}
 			break;
@@ -716,6 +718,7 @@ void vsthost::processAudio(track_impl_t* channel, AudioBlock* input, AudioBlock*
 			} else {
 				handle->aeffect->process(handle->aeffect, blockIn->buf, blockOut->buf, samples);
 			}
+			current->meter.update(blockOut);
 			//TODO: maybe sanitize plugins output floats here (NaN/Inf/ >50 dBFS)
 			input = blockOut;
 		}

@@ -139,22 +139,22 @@ void guictr_tracks::scrollTo(guibase* g) {
 	scrollbar.scrollVisible(y+scrOffset, g->size.y);
 }
 void guictr_tracks::layout() {
+	bool trackCtrlsLeft = true;
 	const int mixerwidth = 380;
 	int scrollW = gui_scrollbar::defaultW;
 
 	ivec2 cs = getSizeContent();
 	scrollbar.pos = ivec2(cs.x-scrollW, 0);
 	scrollbar.size = ivec2(scrollW, cs.y);
-	trackTimeline.pos = ivec2(0, 0);
 	cs.x -= scrollW;
-	trackTimeline.pos = ivec2(0, 0);
+	trackTimeline.pos = ivec2(trackCtrlsLeft?mixerwidth:0, 0);
+	trackTimeline.pos = ivec2(trackCtrlsLeft?mixerwidth:0, 0);
 	trackTimeline.size = ivec2(cs.x - mixerwidth, 32);
 	loophandles.pos = ivec2(trackTimeline.left(), trackTimeline.bottom());
 	loophandles.size = ivec2(trackTimeline.size.x, heightTimelineControls);
-
-	trackView.pos = ivec2(0, loophandles.bottom());
-	trackControls.pos = ivec2(cs.x - mixerwidth, loophandles.bottom());
-	trackView.size = ivec2(cs.x - mixerwidth - trackView.pos.x, cs.y - loophandles.bottom());
+	trackView.pos = ivec2(trackCtrlsLeft?mixerwidth:0, loophandles.bottom());
+	trackControls.pos = ivec2(trackCtrlsLeft?0:cs.x - mixerwidth, loophandles.bottom());
+	trackView.size = ivec2(cs.x - mixerwidth, cs.y - loophandles.bottom());
 	trackControls.size = ivec2(mixerwidth, trackView.size.y);
 
 	loophandles.clipViewSize = ivec2(trackView.size.x, trackView.size.y+loophandles.size.y);
@@ -253,7 +253,8 @@ void guictr_tracks::render(NVGcontext* vg) {
 		nvgRestore(vg);
 
 		if (trackView.size.x > 0) {
-			nvgIntersectScissor(vg, 0, 0, trackView.size.x, cs.y);
+			nvgIntersectScissor(vg, trackView.pos.x, 0, trackView.size.x, cs.y);
+			nvgTranslate(vg, trackView.pos.x, 0);
 			tick_t pos = project.playbackPos;
 	//		if (project.loopEnabled) {
 	//			if (pos > project.loopStart) {

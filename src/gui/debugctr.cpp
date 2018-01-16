@@ -145,8 +145,6 @@ void gui_ctr_debug::render(NVGcontext* vg) {
 	float lineh;
 	nvgTextMetrics(vg, NULL, NULL, &lineh);
 	int y = y1 + lineh;
-	y += lineh;
-	y += lineh;
 	for (String& s : strings) {
 		nvgText(vg, x, y, StringAsCStr(s), NULL);
 		y += lineh;
