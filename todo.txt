@@ -1,0 +1,22 @@
+TODO:
+Sends/Return tracks
+Solo buttons
+Fold button in piano roll
+Missing undo/redo
+Recent file list
+Compressed binary file format
+vu-meters on plugins
+latency compensated automation 
+stress-test synchronization
+
+later:
+group tracks
+plugin groups
+audio settings dialog
+audio track routing options
+midi export
+freeze track
+
+Done:
+Catch key presses from plugin windows
+Synchronization 
