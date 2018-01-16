@@ -8,6 +8,7 @@
 #include <string>
 #include <GLFW/glfw3.h>
 #include <vector>
+#include <assert.h>
 #include "fileio.h"
 #include "mouse.h"
 
@@ -16,38 +17,23 @@ using ImgData = std::shared_ptr<uint8_t>;
 
 
 namespace {
+	void setColor(uint8_t* b, int i) {
+		b[0] = i & 0xFF; i = i >> 8;
+		b[1] = i & 0xFF; i = i >> 8;
+		b[2] = i & 0xFF; i = i >> 8;
+		b[3] = i & 0xFF; i = i >> 8;
+	};
 	ImgData createDashedLineTexture(int w) {
 		int size = w*w*4;
-		union byteint
-		{
-			uint8_t b[4];
-			uint32_t i;
-		};
 		std::shared_ptr<uint8_t> imageData(new uint8_t[size], std::default_delete<uint8_t[]>());
 
+		uint8_t *dataBuf = imageData.get();
 		for (int x = 0; x < w; x++) {
 			for (int y = 0; y < w; y++) {
 				int idx = (x*w+y) * 4;
-				byteint rgb;
-				{
-
-					int scale = 8;
-					int ix = x%scale;
-					int iy = y%scale;
-					rgb.i = 0x00ffffff;
-					if (ix == iy) {
-						rgb.i = -1;
-					}
-				}
 				int scale = 16;
-				int ix = x%scale;
-				rgb.i = 0x00ffffff;
-				if (ix<10) {
-					rgb.i = 0xffffffff;
-				}
-				uint8_t *dataBuf = imageData.get();
-				for (int i = 0; i < 4; i++)
-					dataBuf[idx+i] = rgb.b[i];
+				int ix = x % scale;
+				setColor(dataBuf + idx, ix < 10 ? 0xffffffff : 0x00ffffff);
 			}
 
 		}
@@ -67,15 +53,17 @@ namespace RenderResources {
 		}
 	}
 	void init(GLFWwindow *glfw, NVGcontext* vg) {
-		int texSize = 64;
-		{
-			ImgData data = createDashedLineTexture(texSize);
-			imgDashedLine.id = nvgCreateImageRGBA(vg, texSize, texSize, NVG_IMAGE_REPEATX|NVG_IMAGE_REPEATY|NVG_IMAGE_NEAREST, (const unsigned char*)data.get());
-			nvgImageSize(vg, imgDashedLine.id, &imgDashedLine.width, &imgDashedLine.height);
-		}
 		{
 			ImageBuf imgIconsBuf[NUM_IMGS];
 			ImageBuf imgCursors[NUM_CURSORS];
+			for (int i = 0; i < NUM_IMGS; i++) {
+				ImageBuf& buf = imgIconsBuf[i];
+				assert(buf.bytes.size() == buf.w*buf.h * 4);
+			}
+			for (int i = 0; i < NUM_CURSORS; i++) {
+				ImageBuf& buf = imgCursors[i];
+				assert(buf.bytes.size() == buf.w*buf.h * 4);
+			}
 			load(vg, StringFormat("res/icons/synth_32px.png"), imgIconsBuf[ICON_SYNTH]);
 			load(vg, StringFormat("res/icons/effect.png"), imgIconsBuf[ICON_EFFECT]);
 			load(vg, StringFormat("res/icons/folder.png"), imgIconsBuf[ICON_FOLDER]);
@@ -100,17 +88,18 @@ namespace RenderResources {
 			for (int i = 0; i < 6; i++) {
 				load(vg, StringFormat("res/cursors/cursor%02d.png", i), imgCursors[i]);
 			}
-			for (int i = 0; i <= NUM_IMGS; i++) {
+			for (int i = 0; i < NUM_IMGS; i++) {
 				ImageBuf& buf = imgIconsBuf[i];
 				if (buf.w*buf.h == 0) {
 					continue;
 				}
+				assert(buf.bytes.size() == buf.w*buf.h * 4);
 				NvgImageTexture& nvgTex = imgIcons[i];
 				nvgTex.id = nvgCreateImageRGBA(vg, buf.w, buf.h, NVG_IMAGE_GENERATE_MIPMAPS, (const unsigned char*)buf.bytes.data());
 				nvgImageSize(vg, nvgTex.id, &nvgTex.width, &nvgTex.height);
 			}
 			cursors[0] = NULL;
-			for (int i = 0; i < 6; i++) {
+			for (int i = 0; i < NUM_CURSORS; i++) {
 				ImageBuf& buf = imgCursors[i];
 				if (buf.w*buf.h == 0) {
 					continue;
@@ -133,6 +122,12 @@ namespace RenderResources {
 				}
 				cursors[i+1] = glfwCreateCursor(&image, posx, posy);
 			}
+		}
+		{
+			int texSize = 64;
+			ImgData dataB = createDashedLineTexture(texSize);
+			imgDashedLine.id = nvgCreateImageRGBA(vg, texSize, texSize, NVG_IMAGE_REPEATX | NVG_IMAGE_REPEATY | NVG_IMAGE_NEAREST, (const unsigned char*)dataB.get());
+			nvgImageSize(vg, imgDashedLine.id, &imgDashedLine.width, &imgDashedLine.height);
 		}
 	}
 
