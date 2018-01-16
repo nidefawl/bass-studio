@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.3)
+project(DAW)
+add_definitions("-Wall" "-g")
+include_directories("src/include")
+file(GLOB_RECURSE SRC_FILES src/*.cpp)
+add_executable(DAW ${SRC_FILES})
