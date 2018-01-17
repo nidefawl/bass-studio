@@ -84,6 +84,22 @@ public:
 		assert(0&&reentrant_err_msg);		    \
 		throw new applogicexception(reentrant_err_msg); \
 	}
+#define EXC_TRY try {
+#define EXC_CATCH \
+	} catch (std::exception& e) { 									\
+		handleStdException(e);										\
+	} catch (...) {													\
+		handleException();											\
+	}
+String excDescription;
+void handleStdException(std::exception& e) {
+	excDescription = StringFormat("Fatal error: %s", e.what());
+	std::terminate();
+}
+void handleException() {
+	excDescription = "Unhandled program exception";
+	std::terminate();
+}
 
 namespace RenderResources{
 void init(GLFWwindow *glfw, NVGcontext* vg); // renderresources.cpp
@@ -1039,7 +1055,6 @@ static VOID WIN32API_CALLBACK_TYPE timerProc(HWND hwnd, UINT uMsg, UINT_PTR idEv
 	}
 	impl->onTick();
 	EXC_CATCH
-
 }
 LRESULT WIN32API_CALLBACK_TYPE appWndProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 	EXC_TRY
@@ -1071,7 +1086,6 @@ static appwindow* getUserData(GLFWwindow *w) {
 	}
 	return impl;
 }
-String excDescription;
 void on_terminate() {
 	glfwTerminate();
 	if (excDescription.length()) {
@@ -1080,22 +1094,7 @@ void on_terminate() {
 	}
 }
 
-void handleStdException(std::exception& e) {
-	excDescription = StringFormat("Fatal error: %s", e.what());
-	std::terminate();
-}
-void handleException() {
-	excDescription = "Unhandled program exception";
-	std::terminate();
-}
 
-#define EXC_TRY try {
-#define EXC_CATCH \
-	} catch (std::exception& e) { 									\
-		handleStdException(e);										\
-	} catch (...) {													\
-		handleException();											\
-	}
 static void glfw_cb_mousepos(GLFWwindow *w, double x, double y) {
 	EXC_TRY
 	getUserData(w)->_onMouseMoved(x, y);
