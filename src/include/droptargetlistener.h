@@ -1,3 +1,4 @@
+#pragma once
 #include "str_util.h"
 #include <vector>
 #include <glm/vec2.hpp>
