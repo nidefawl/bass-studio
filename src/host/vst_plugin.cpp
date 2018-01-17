@@ -6,8 +6,6 @@
 #include "logging.h"
 #include "audioblock.h"
 #include "../gui/plugin.h"
-#include <windows.h>
-#include <libloaderapi.h>
 #include <algorithm>
 #include "leak_detect.h"
 
@@ -363,7 +361,7 @@ bool vstplugin::show() {
 		{
 			size = { prc->right - prc->left, prc->bottom - prc->top };
 		}
-		this->window = vst_window::make(this, this->sName, size, false, GetModuleHandle(NULL));
+		this->window = vst_window::make(this, this->sName, size, false);
 	}
 	if (this->window != NULL) {
 		this->window->show();

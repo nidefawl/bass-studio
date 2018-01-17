@@ -1,3 +1,4 @@
+#ifdef _WIN32
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -134,3 +135,4 @@ String getKeyName(int scancode) {
 	GetKeyNameText(scancode<<16, strBuf, 512);
 	return strBuf;
 }
+#endif

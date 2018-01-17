@@ -1,3 +1,4 @@
+#ifdef _WIN32
 #include "hires_timer.h"
 #include "exceptions.h"
 #include <windows.h>
@@ -64,3 +65,5 @@ double hires_timer_t::getTimeDouble() {
 double hires_timer_t::getTimeDoubleReset() {
 	return _M_Iimpl->getTimeDoubleReset();
 }
+
+#endif

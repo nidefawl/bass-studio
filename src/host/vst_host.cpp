@@ -74,7 +74,7 @@ namespace HostCanDos
 	const char* canDoSendVstTimeInfo = "sendVstTimeInfo"; ///< Host supports send of VstTimeInfo to plug-in
 	const char* canDoReceiveVstEvents = "receiveVstEvents"; ///< Host can receive Vst events from plug-in
 	const char* canDoReceiveVstMidiEvent = "receiveVstMidiEvent"; ///< Host can receive MIDI events from plug-in 
-	const char* canDoReportConnectionChanges = "reportConnectionChanges"; ///< Host will indicates the plug-in when something change in plug-in´s routing/connections with #suspend/#resume/#setSpeakerArrangement 
+	const char* canDoReportConnectionChanges = "reportConnectionChanges"; ///< Host will indicates the plug-in when something change in plug-inï¿½s routing/connections with #suspend/#resume/#setSpeakerArrangement 
 	const char* canDoAcceptIOChanges = "acceptIOChanges"; ///< Host supports #ioChanged ()
 	const char* canDoSizeWindow = "sizeWindow"; ///< used by VSTGUI
 	const char* canDoOffline = "offline"; ///< Host supports offline feature
@@ -318,60 +318,17 @@ bool setFlag(int& _out, int flag, bool state) {
 	}
 	return curState != state;
 }
-struct UnloadModule {
-	uint64_t time;
-	HMODULE handle;
-};
-#define DELAY_UNLOAD 0
-String getModuleName(HMODULE module);
+//String getModuleName(HMODULE module);
 class vsthost::ModuleManager {
-//    std::mutex m_mtx;
-#if DELAY_UNLOAD
-	std::vector<UnloadModule> modules;
-	int32_t cnt = 0;
-	const uint64_t timeout = 1500;
-#endif
 public:
 	ModuleManager() {
 
 	}
 
-	void queueRelease(HMODULE module) {
-#if DELAY_UNLOAD
-		String moduleName = getModuleName(module);
-		my_printf("queueRelease module %s\n", StringAsCStr(moduleName));
-//	    std::unique_lock<std::mutex> lock(m_mtx);
-		UnloadModule ulModule{getTimeMillis(), module};
-		modules.push_back(ulModule);
-		cnt++;
-#else
-		FreeLibrary(module);
+	void releaseModule(void* module) {
+#ifdef _WIN32
+		FreeLibrary((HMODULE)module);
 #endif
-	}
-	void unloadModules(bool force) {
-#if DELAY_UNLOAD
-		if (!cnt)
-			return;
-//	    std::unique_lock<std::mutex> lock(m_mtx);
-		auto it = modules.begin();
-		while (it != modules.end()) {
-			UnloadModule& ulModule = *it;
-			if (force || (getTimeMillis() - ulModule.time > timeout)) {
-				String moduleName = getModuleName(ulModule.handle);
-				my_printf("Unloading module %s\n", StringAsCStr(moduleName));
-				FreeLibrary(ulModule.handle);
-				it = modules.erase(it);
-				cnt--;
-			} else {
-				it++;
-			}
-		}
-#else
-#endif
-
-	}
-	void onTick() {
-		unloadModules(false);
 	}
 };
 
@@ -757,7 +714,6 @@ bool vsthost::onTick() {
 			iDispatched++;
 		}
 	}
-	moduleMgr->onTick();
 	return false;
 }
 
@@ -799,7 +755,6 @@ void vsthost::destroy() {
 			ringbuffer.buffers[i] = nullptr;
 		}
 	}
-	moduleMgr->unloadModules(true);
 	g_instance.reset();
 }
 vsthost* vsthost::getInstance()
@@ -945,7 +900,7 @@ void vsthost::unloadPlugin(vstplugin* plugin) {
 		plugin->handle->tr_plugins->removePlugin(plugin, true);
 	}
 	plugin->unload();
-	moduleMgr->queueRelease(plugin->handle->hmodule);
+	moduleMgr->releaseModule(plugin->handle->hmodule);
 	delete plugin;
 }
 bool vsthost::unloadAllPlugins() {
@@ -963,7 +918,7 @@ bool vsthost::unloadAllPlugins() {
 		current->close();
 		list[i] = NULL;
 		current->unload();
-		moduleMgr->queueRelease(current->handle->hmodule);
+		moduleMgr->releaseModule(current->handle->hmodule);
 		delete current;
 	}
 	list.clear();

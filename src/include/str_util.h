@@ -20,10 +20,11 @@ extern "C"
 #define USE_WSTRING
 #endif
 
-#ifdef __MINGW32__
+#ifdef __GNUC__
 #include <string.h>
 #define _T
-#else
+#endif
+#ifdef _MSC_VER
 #include <tchar.h>
 #endif
 

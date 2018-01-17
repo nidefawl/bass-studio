@@ -1,7 +1,26 @@
 #include "str_util.h"
 #include <stdarg.h>
 #include <vector>
+#include <limits.h>
+
+#ifdef _WIN32
 #include <windows.h>
+#endif
+#if __linux__
+#include <stdio.h>
+#define _snprintf_s(a,b,c,...) snprintf(a,b,__VA_ARGS__)
+#endif
+
+#if __linux__
+int _vscprintf (const char * format, va_list pargs) {
+	int retval;
+	va_list argcopy;
+	va_copy(argcopy, pargs);
+	retval = vsnprintf(NULL, 0, format, argcopy);
+	va_end(argcopy);
+	return retval;
+}
+#endif
 
 String StringFormat(const char *fmt, ...)
 {
@@ -29,6 +48,7 @@ int asprintf(char **strp, const char *fmt, ...)
 	va_end(ap);
 	return(r);
 }
+
 int vasprintf(char **strp, const char *fmt, va_list ap)
 {
 	int r = -1, size = _vscprintf(fmt, ap);
@@ -79,7 +99,7 @@ const char* noteName(int note) { //NOT THREAD SAFE; DONT KEEP REFERENCE
 	_snprintf_s(buf, buf_size, _TRUNCATE, "%s%d", noteNames[note%12], (note/12)-2);
 	return buf;
 }
-
+#ifdef _WIN32
 String wcharToSring(const LPWSTR text) {
 #ifdef USE_WSTRING
 	String s = text;
@@ -96,3 +116,4 @@ String wcharToSring(const LPWSTR text) {
 	return "";
 #endif
 }
+#endif

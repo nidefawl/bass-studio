@@ -24,7 +24,7 @@ namespace {
 		if (it != vst_window_list.end ())
 			vst_window_list.erase(it);
 	}
-	static vst_window* getWindowByHWND (HWND hwnd)
+	static vst_window* getWindowByHWND (void* hwnd)
 	{
 		auto it = std::find_if(vst_window_list.begin (), vst_window_list.end (), [hwnd](vst_window* window) {
 			return window->getHWND() == hwnd;
@@ -37,10 +37,10 @@ namespace {
 
 static const TCHAR* gWindowClassName = _T("VSTHOSTWINDOW");
 
-vst_window* vst_window::make (vstplugin* plugin, const String& name, Size size, bool resizeable, HINSTANCE instance)
+vst_window* vst_window::make (vstplugin* plugin, const String& name, Size size, bool resizeable)
 {
 	vst_window* window = new vst_window();
-	if (window->init (plugin, name, size, resizeable, instance))
+	if (window->init (plugin, name, size, resizeable))
 		return window;
 	return nullptr;
 }
@@ -178,9 +178,10 @@ std::vector<vst_window*>& vst_window::getWindows ()
 }
 
 //------------------------------------------------------------------------
-bool vst_window::init(vstplugin* plugin, const String& name, Size size, bool resizeable, HINSTANCE instance)
+bool vst_window::init(vstplugin* plugin, const String& name, Size size, bool resizeable)
 {
 	this->plugin = plugin;
+	HINSTANCE instance = GetModuleHandle(NULL);
 	registerWindowClass (instance);
 	DWORD exStyle = WS_EX_APPWINDOW;
 	DWORD dwStyle = WS_CAPTION | WS_SYSMENU | WS_CLIPSIBLINGS;

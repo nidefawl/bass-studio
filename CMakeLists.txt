@@ -18,6 +18,17 @@ foreach(f ${CPP_ALL_FILES})
     if (f MATCHES "/test/[^/]*$")
         continue()
     endif()
+    if (UNIX)
+	    if (f MATCHES "/platform/win/[^/]*$")
+	        continue()
+	    endif()
+	    if (f MATCHES "/platform/mingw/[^/]*$")
+	        continue()
+	    endif()
+	    if (f MATCHES "/external_asio.cpp")
+	        continue()
+	    endif()
+	endif (UNIX)
     list(APPEND CPP_SRC_FILES ${f})
 endforeach()
 message (STATUS "CPP_SRC_FILES = ${CPP_SRC_FILES}")
@@ -27,6 +38,10 @@ message (STATUS "CPP_SRC_FILES = ${CPP_SRC_FILES}")
 
 
 SET(DAW_COMPILE_FLAGS -DPA_USE_ASIO=1 -DPA_USE_DS=1 -DVST_FORCE_DEPRECATED=0)
+if (UNIX)
+set(DAW_COMPILE_FLAGS ${DAW_COMPILE_FLAGS} -D__cdecl="")
+
+endif(UNIX)
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -78,17 +93,17 @@ include_directories(
     ${DAW_DEPS_DIR}/glad/include
     ${DAW_DEPS_DIR}/glad/src
     ${DAW_DEPS_DIR}/glm
-    ${DAW_DEPS_DIR}/PortAudio/include
-    ${DAW_DEPS_DIR}/PortAudio/src/common
+    ${DAW_DEPS_DIR}/portaudio/include
+    ${DAW_DEPS_DIR}/portaudio/src/common
     ${DAW_DEPS_DIR}/cereal
     ${DAW_DEPS_DIR}/nvwa/nvwa)
 if (WIN32)
     include_directories(${DAW_DEPS_DIR}/ASIOSDK2.3/common
         ${DAW_DEPS_DIR}/ASIOSDK2.3/host
         ${DAW_DEPS_DIR}/ASIOSDK2.3/host/pc
-        ${DAW_DEPS_DIR}/PortAudio/src/os/win
-        ${DAW_DEPS_DIR}/PortAudio/src/hostapi/asio
-        ${DAW_DEPS_DIR}/PortAudio/src/hostapi/dsound)
+        ${DAW_DEPS_DIR}/portaudio/src/os/win
+        ${DAW_DEPS_DIR}/portaudio/src/hostapi/asio
+        ${DAW_DEPS_DIR}/portaudio/src/hostapi/dsound)
 endif()
 target_link_libraries(DAW PRIVATE ${GLFW_LIB} ${SQLITECPP_LIB} ${SQLITE3_LIB})
 target_link_libraries(DAW PRIVATE winmm kernel32 gdi32 ole32 uuid comdlg32 ssp)

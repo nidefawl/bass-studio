@@ -1,8 +1,9 @@
-#include <windows.h>
+#ifdef _WIN32
+
 #include "menu.h"
 #include "str_util.h"
 #include "str_win32.h"
-
+#include <windows.h>
 int findSub(HMENU parent, void* ptr) {
 	int cnt = GetMenuItemCount(parent);
     for (int i = 0; i < cnt; i++) {
@@ -112,3 +113,5 @@ void syncMenu(HWND hwnd, ngui::MenuBar& menubar) {
 		DrawMenuBar(hwnd);
 	}
 }
+
+#endif

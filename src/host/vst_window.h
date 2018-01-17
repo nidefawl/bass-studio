@@ -1,7 +1,9 @@
 
 #pragma once
 
+#ifdef _WIN32
 #include <windows.h>
+#endif
 #include <vector>
 #include <stdint.h>
 #include "str_util.h"
@@ -24,10 +26,10 @@ inline bool operator== (const Size& lhs, const Size& rhs)
 class vst_window
 {
 public:
-	static vst_window* make(vstplugin* plugin, const String& name, Size size, bool resizeable, HINSTANCE instance);
+	static vst_window* make(vstplugin* plugin, const String& name, Size size, bool resizeable);
 	static vst_window* getVSTWindow(HWND handle);
-
-	bool init (vstplugin* plugin, const String& name, Size size, bool resizeable, HINSTANCE instance);
+	bool init (vstplugin* plugin, const String& name, Size size, bool resizeable);
+	void* getHWND () const;
 
 	void show ();
 	void close ();
@@ -35,7 +37,6 @@ public:
 	void resize (Size newSize);
 	Size getContentSize ();
 
-	HWND getHWND () const;
 	void updateDisplay();
 
 	std::vector<vst_window*>& getWindows ();
@@ -44,8 +45,7 @@ public:
 	}
 private:
 	LRESULT CALLBACK proc (UINT message, WPARAM wParam, LPARAM lParam);
-
 	void registerWindowClass (HINSTANCE instance);
+	void* hwnd = NULL;
 	vstplugin* plugin = NULL;
-	HWND hwnd = NULL;
 };

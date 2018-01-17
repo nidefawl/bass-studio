@@ -1,10 +1,14 @@
 #include "childprocessthread.h"
+
+#ifdef __linux__
+#include <thread>
+#endif
 #ifdef __MINGW32__
 #undef _GLIBCXX_HAS_GTHREADS
-#include "mingw.thread.h"
+#include "../platform/mingw/mingw.thread.h"
 #include <mutex>
-#include "mingw.mutex.h"
-#include "mingw.condition_variable.h"
+#include "../platform/mingw/mingw.mutex.h"
+#include "../platform/mingw/mingw.condition_variable.h"
 #else
 #include <mutex>
 #endif
@@ -14,7 +18,80 @@
 #include "../host/vst_plugin.h"
 #include "fileio.h"
 #include "exceptions.h"
+#if __linux__
+#include <unistd.h>
+#include <spawn.h>
+#include <sys/wait.h>
+#include <vector>
+#include <sstream>
+#include <stdio.h>
+class ProcessRunScope {
+public:
+	int exitCode = 0;
+	ProcessRunScope(String binary, String params) {
+		pid_t pid;
+//		char *argv[] = { "ls", (char *) 0 };
+	    std::vector<String> strings;
+	    std::istringstream f(params);
+	    String s;
+	    while (getline(f, s, ' ')) {
+	        printf("SPLIT %s\n", s.c_str());
+	        strings.push_back(s);
+	    }
+	    const char* argv = (const char*)alloca(sizeof(char*)*(strings.size()+1));
+	    for (int i = 0; i < strings.size(); i++) {
+	    	argv[i] = StringAsCStr(strings[i]);
+	    }
+	    argv[strings.size()] = 0;
+	    const char* bin = StringAsCStr(binary);
+		int status = posix_spawn(&pid, bin, NULL, NULL, argv, environ);
+		if (status == 0) {
+			int waitRet = waitpid(pid, &status, 0);
+			if (waitRet == -1) {
+				throw SystemException(strerror(errno),
+						"Process did not exit normally");
+			}
+		} else {
+			String errmsg = StringFormat("posix_spawn(%s, %s) failed",
+					StringAsCStr(binary), StringAsCStr(params));
+			throw SystemException(strerror(status), errmsg);
+		}
+	}
+	~ProcessRunScope() {
+
+	}
+};
+#elif defined _WIN32
 #include <windows.h>
+class ProcessRunScope {
+public:
+	DWORD exitCode = 0;
+	PROCESS_INFORMATION processInformation = { 0 };
+	STARTUPINFO startupInfo = { 0 };
+	ProcessRunScope(String binary, String params) {
+		startupInfo.cb = sizeof(startupInfo);
+		if (CreateProcess((LPSTR) StringAsCStr(binary), (LPSTR) StringAsCStr(params),
+								NULL, NULL, FALSE,
+								NORMAL_PRIORITY_CLASS|CREATE_NEW_CONSOLE /*| CREATE_NO_WINDOW*/,
+								NULL, NULL, &startupInfo, &processInformation)) {
+			WaitForSingleObject(processInformation.hProcess, INFINITE);
+//				if (WAIT_OBJECT_0 != WaitForSingleObject(processInformation.hProcess, 30000)) {
+//					TerminateProcess(processInformation.hProcess, 1);
+//				}
+			if (!GetExitCodeProcess(processInformation.hProcess, &exitCode)) {
+				throw SystemException(GetLastError(), "Process did not exit normally");
+			}
+		} else {
+			String errmsg = StringFormat("CreateProcess(%s, %s) failed", StringAsCStr(binary), StringAsCStr(params));
+			throw SystemException(GetLastError(), errmsg);
+		}
+	}
+	~ProcessRunScope() {
+		CloseHandle(processInformation.hProcess);
+		CloseHandle(processInformation.hThread);
+	}
+};
+#endif
 class ProcessThread::Impl
 {
 	std::thread t;
@@ -30,34 +107,6 @@ public:
 	~Impl() {
 
 	}
-	class ProcessRunScope {
-	public:
-	    DWORD exitCode = 0;
-		PROCESS_INFORMATION processInformation = { 0 };
-		STARTUPINFO startupInfo = { 0 };
-		ProcessRunScope(String binary, String params) {
-			startupInfo.cb = sizeof(startupInfo);
-			if (CreateProcess((LPSTR) StringAsCStr(binary), (LPSTR) StringAsCStr(params),
-									NULL, NULL, FALSE,
-									NORMAL_PRIORITY_CLASS|CREATE_NEW_CONSOLE /*| CREATE_NO_WINDOW*/,
-									NULL, NULL, &startupInfo, &processInformation)) {
-				WaitForSingleObject(processInformation.hProcess, INFINITE);
-//				if (WAIT_OBJECT_0 != WaitForSingleObject(processInformation.hProcess, 30000)) {
-//					TerminateProcess(processInformation.hProcess, 1);
-//				}
-				if (!GetExitCodeProcess(processInformation.hProcess, &exitCode)) {
-					throw SystemException(GetLastError(), "Process did not exit normally");
-				}
-			} else {
-				String errmsg = StringFormat("CreateProcess(%s, %s) failed", StringAsCStr(binary), StringAsCStr(params));
-				throw SystemException(GetLastError(), errmsg);
-			}
-		}
-		~ProcessRunScope() {
-			CloseHandle(processInformation.hProcess);
-			CloseHandle(processInformation.hThread);
-		}
-	};
 	void startProcess(String binary, String params) {
 		started = true;
 		isrunning = true;

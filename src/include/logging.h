@@ -1,7 +1,7 @@
 #pragma once
 #include "config.h"
 #if USE_LOGGING
-#include <typeinfo.h>
+#include <typeinfo>
 #include "str_util.h"
 String demangleName(String toDemangle);
 template <class T>

@@ -1,13 +1,18 @@
 #include "playbackthread.h"
+#ifdef __linux__
+#include <thread>
+#include <condition_variable>
+#endif
 #ifdef __MINGW32__
 #undef _GLIBCXX_HAS_GTHREADS
-#include "mingw.thread.h"
+#include "../platform/mingw/mingw.thread.h"
 #include <mutex>
-#include "mingw.mutex.h"
-#include "mingw.condition_variable.h"
+#include "../platform/mingw/mingw.mutex.h"
+#include "../platform/mingw/mingw.condition_variable.h"
 #else
 #include <mutex>
 #endif
+#include <chrono>
 
 #include <atomic>
 #include <queue>
@@ -19,7 +24,10 @@
 #include "logging.h"
 #include "../util/readerwriterqueue.h"
 #include "../host/vst_host.h"
+#include "hires_timer.h"
+#ifdef _WIN32
 #include <windows.h>
+#endif
 #include "leak_detect.h"
 
 #ifndef _MSC_VER
@@ -85,8 +93,10 @@ public:
 		t = std::thread([this]() {
 			this->run();
 		});
+#ifdef _WIN32
 		HANDLE h = t.native_handle();
 		SetThreadPriority(h, THREAD_PRIORITY_TIME_CRITICAL);
+#endif
 	}
 	void join() {
 		assert(t.joinable());
@@ -115,23 +125,14 @@ public:
     	return std::move(t); //CANNOT RELY ON RVO
     }
 private:
-    double QPC_TOSECONDS(LARGE_INTEGER& iStart, LARGE_INTEGER& iStop, LARGE_INTEGER& freq) {
-    	return ((double) iStop.QuadPart - (double) iStart.QuadPart) / (double) freq.QuadPart;
-    }
+
 	void run() {
-	    HANDLE hTimer = CreateWaitableTimer(NULL, TRUE, NULL);
-	    if (NULL == hTimer)
-	    	throw new SystemException(GetLastError(), "CreateWaitableTimer failed");
-	    LARGE_INTEGER liDueTime;
 
 		MainCtrl* ctrl = MainCtrl::get();
 		vsthost* host = vsthost::getInstance();
 		static double playbackDuration = 0;
-        LARGE_INTEGER freq, iStart, iStop;
-        if (!QueryPerformanceFrequency(&freq)) {
-        	throw new SystemException(GetLastError(), "QueryPerformanceFrequency failed");
-        }
-		freq.QuadPart /= 1000; // calc milliseconds
+		hires_timer_t timer;
+
 		bool firstBlock = false;
 		bool isLoopAround = false;
 		std::shared_ptr<PlaybackThreadReq> req;
@@ -155,7 +156,7 @@ private:
 								samplePos = tickToSample(startPos, bpm100, sampleRate, blockSize);
 								LOG("START ON seconds: %.2f - sample %d\n", toSeconds(startPos, bpm100), samplePos);
 								host->onStartPlayback(0);
-								QueryPerformanceCounter(&iStart);
+								timer.reset();
 								playbackDuration = 0;
 								firstBlock = true;
 								isLoopAround = false;
@@ -180,7 +181,7 @@ private:
         		case PLAYBACK_THREAD_EXIT:
 #ifndef NDEBUG
     				LOG("PLAYBACK_THREAD_EXIT");
-    				Sleep(200);
+    				std::this_thread::sleep_for(std::chrono::milliseconds(200));
 #endif
             		req->notify();
         			return;
@@ -219,15 +220,8 @@ private:
 				LOG("processedBlock > 1: %d\n", processedBlock);
 			} else if (!processedBlock) {
 
-	        	/*
-	        	 * always sleep at least 10*1000 * 100ns = 1 000 000ns = 1 000microS = 1ms
-	        	 * This should be adjusted depending on samplerate and blocksize (and load)
-	        	 */
-	    	    liDueTime.QuadPart = -10 * 1000;
-	            if (!SetWaitableTimer(hTimer, &liDueTime, 0, NULL, NULL, 0))
-	    	    	throw new SystemException(GetLastError(), "SetWaitableTimer failed");
-	            if (WaitForSingleObject(hTimer, INFINITE) != WAIT_OBJECT_0)
-	    	    	throw new SystemException(GetLastError(), "WaitForSingleObject failed");
+				std::this_thread::sleep_for(std::chrono::microseconds(10000));
+
 			}
 			if (m_status == status_play) {
             	project_globals_t& projGlobals = host->project;
@@ -254,11 +248,10 @@ private:
 				}
 			}
 			if (playbackDuration > 10000 && m_status == status_play) {
-				QueryPerformanceCounter(&iStop);
-				double wallTime = QPC_TOSECONDS(iStart, iStop, freq);
+				double wallTime = timer.getTimeDouble();;
 	            LOG("playbackDuration %.4f wallTime %.4f error %.4f\n", playbackDuration, wallTime, playbackDuration-wallTime);
 	            playbackDuration = 0;
-                QueryPerformanceCounter(&iStart);
+	            timer.reset();
 			}
 
         }

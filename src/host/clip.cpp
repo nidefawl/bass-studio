@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <vector>
 #include <assert.h>
+#include <stddef.h>
 #include "exceptions.h"
 #include "clip.h"
 #include "logging.h"

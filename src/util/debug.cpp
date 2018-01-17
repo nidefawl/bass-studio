@@ -1,6 +1,6 @@
 #include "str_util.h"
 
-#ifdef  __MINGW32__
+#ifdef __GNUC__
 
 #include <cxxabi.h>
 
