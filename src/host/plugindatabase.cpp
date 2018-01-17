@@ -6,13 +6,36 @@
 #include <SQLiteCpp/VariadicBind.h>
 #include "leak_detect.h"
 
+void createTables(SQLite::Database& db) {
+    const bool bExists = db.tableExists("plugins");
+    if (bExists) {
+//        db.exec("DROP TABLE `plugins`");
+    }
+
+    if (!db.tableExists("plugins")) {
+    	const char* queryCreate = "CREATE TABLE `plugins` (\n"
+				"	`id`	INTEGER PRIMARY KEY AUTOINCREMENT,\n"
+				"	`isSynth`	INTEGER DEFAULT 0,\n"
+				"	`uid`	INTEGER NOT NULL,\n"
+				"	`version`	INTEGER NOT NULL,\n"
+				"	`vstVersion`	INTEGER NOT NULL,\n"
+				"	`category`	INTEGER NOT NULL,\n"
+				"	`moddate`	INTEGER NOT NULL,\n"
+				"	`ok`	INTEGER DEFAULT 0,\n"
+				"	`path`	TEXT NOT NULL,\n"
+				"	`name`	TEXT NOT NULL,\n"
+				"	`vendorName`	TEXT NOT NULL\n"
+				");";
+    	db.exec(queryCreate);
+    }
+}
 class plugindatabase_t::Impl {
 	SQLite::Database db;
 public:
 	Impl(String path)
 		: db(path, SQLite::OPEN_READWRITE | SQLite::OPEN_CREATE)
 	{
-
+		createTables(db);
 	}
 	~Impl() {
 

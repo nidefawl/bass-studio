@@ -6,7 +6,7 @@
 #include <pa_process.c>
 #include <pa_ringbuffer.c>
 #include <pa_stream.c>
-#include <pa_trace.c>
+#include <pa_debugprint.c>
 #ifdef _WIN32
 #include <pa_win_coinitialize.c>
 #include <pa_win_ds.c>
@@ -15,4 +15,9 @@
 #include <pa_win_util.c>
 #include <pa_win_waveformat.c>
 #include <pa_x86_plain_converters.c>
+#endif
+#if __linux__
+#include <pa_unix_hostapis.c>
+#include <pa_unix_util.c>
+#include <pa_linux_alsa.c>
 #endif
