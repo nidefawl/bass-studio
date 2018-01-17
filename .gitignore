@@ -1,3 +1,4 @@
 # ignore everything
 build/
 testing/
+CMakeCache.txt

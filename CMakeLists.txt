@@ -54,7 +54,7 @@ message (STATUS "SQLITECPP_LIB = ${SQLITECPP_LIB}")
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     add_compile_options(-g -O0 -fstack-protector -Wall -Wno-inconsistent-missing-override)
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    add_compile_options(-g -O0 -fstack-protector -Wall)
+    add_compile_options(-g -O0 -fstack-protector -Wall -Wno-sign-compare)
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
   # using Intel C++
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
