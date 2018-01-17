@@ -3,6 +3,9 @@
 	<storageModule moduleId="org.eclipse.cdt.core.settings">
 		<cconfiguration id="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100">
 			<storageModule buildSystemId="org.eclipse.cdt.managedbuilder.core.configurationDataProvider" id="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100" moduleId="org.eclipse.cdt.core.settings" name="Default">
+				<macros>
+					<stringMacro name="DEPS_PATH" type="VALUE_PATH_DIR" value="D:/dev/daw-deps"/>
+				</macros>
 				<externalSettings>
 					<externalSetting/>
 				</externalSettings>
@@ -30,19 +33,16 @@
 								<option id="gnu.cpp.compiler.option.include.paths.1732133874" name="Include paths (-I)" superClass="gnu.cpp.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/include}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/nanovg}&quot;"/>
-									<listOptionValue builtIn="false" value="E:\dev\libs\glfw_mingw64\include"/>
-									<listOptionValue builtIn="false" value="E:\dev\libs\glad\include"/>
-									<listOptionValue builtIn="false" value="E:\dev\libs\glm"/>
-									<listOptionValue builtIn="false" value="E:\dev\libs\cereal"/>
-									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\PortAudio_190600\include&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\PortAudio_190600\src\common&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\PortAudio_190600\src\os\win&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\ASIOSDK2.3\common&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\ASIOSDK2.3\host&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\ASIOSDK2.3\host\pc&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\PortAudio_190600\src\hostapi\asio&quot;"/>
-									<listOptionValue builtIn="false" value="E:/dev/libs/SQLiteCpp/include"/>
-									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\nvwa&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/glm&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/glad/include&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/portaudio/include&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/SQLiteCpp/include&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/ASIOSDK2.3/host/pc&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/ASIOSDK2.3/host&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/ASIOSDK2.3/common&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/cereal&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/glfw/include&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/nvwa/nvwa&quot;"/>
 								</option>
 								<option id="gnu.cpp.compiler.option.optimization.level.960218844" name="Optimization Level" superClass="gnu.cpp.compiler.option.optimization.level" useByScannerDiscovery="false" value="gnu.cpp.compiler.optimization.level.none" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.option.debugging.level.1883423768" name="Debug Level" superClass="gnu.cpp.compiler.option.debugging.level" useByScannerDiscovery="false" value="gnu.cpp.compiler.debugging.level.max" valueType="enumerated"/>
@@ -58,17 +58,17 @@
 							</tool>
 							<tool errorParsers="org.eclipse.cdt.core.GCCErrorParser" id="cdt.managedbuild.tool.gnu.c.compiler.mingw.base.1533097334" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.mingw.base">
 								<option id="gnu.c.compiler.option.include.paths.662387813" name="Include paths (-I)" superClass="gnu.c.compiler.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
-									<listOptionValue builtIn="false" value="E:\dev\libs\glad\include"/>
-									<listOptionValue builtIn="false" value="E:\dev\libs\glad\src"/>
-									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\PortAudio_190600\include&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\PortAudio_190600\src\common&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\PortAudio_190600\src\os\win&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\ASIOSDK2.3\common&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\ASIOSDK2.3\host&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\ASIOSDK2.3\host\pc&quot;"/>
-									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\PortAudio_190600\src\hostapi\dsound&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/include}&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/nanovg}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/glad/include&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/glad/src&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/portaudio/src/hostapi/dsound&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/portaudio/include&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/portaudio/src/os/win&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/portaudio/src/common&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/ASIOSDK2.3/common&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/ASIOSDK2.3/host&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/ASIOSDK2.3/host/pc&quot;"/>
 								</option>
 								<option defaultValue="gnu.c.optimization.level.none" id="gnu.c.compiler.option.optimization.level.2040679038" name="Optimization Level" superClass="gnu.c.compiler.option.optimization.level" useByScannerDiscovery="false" valueType="enumerated"/>
 								<option id="gnu.c.compiler.option.debugging.level.1776061242" name="Debug Level" superClass="gnu.c.compiler.option.debugging.level" useByScannerDiscovery="false" value="gnu.c.debugging.level.max" valueType="enumerated"/>
@@ -107,22 +107,6 @@
 						</toolChain>
 					</folderInfo>
 					<fileInfo id="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.470816701" name="pngcheck.exe" rcbsApplicability="disable" resourcePath="res/pngcheck.exe" toolsToInvoke=""/>
-					<folderInfo id="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.270178038" name="/" resourcePath="Debug">
-						<toolChain id="cdt.managedbuild.toolchain.gnu.mingw.base.681019077" name="MinGW GCC" superClass="cdt.managedbuild.toolchain.gnu.mingw.base" unusedChildren="">
-							<tool id="cdt.managedbuild.tool.gnu.assembler.mingw.base.1132005649" name="GCC Assembler" superClass="cdt.managedbuild.tool.gnu.assembler.mingw.base.1952525854">
-								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.584904486" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
-							</tool>
-							<tool id="cdt.managedbuild.tool.gnu.archiver.mingw.base.1737228223" name="GCC Archiver" superClass="cdt.managedbuild.tool.gnu.archiver.mingw.base.1373027306"/>
-							<tool id="cdt.managedbuild.tool.gnu.cpp.compiler.mingw.base.1711333808" name="GCC C++ Compiler" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.mingw.base.1035880043">
-								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1848833025" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
-							</tool>
-							<tool id="cdt.managedbuild.tool.gnu.c.compiler.mingw.base.1023458984" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.mingw.base.1533097334">
-								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.390585044" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
-							</tool>
-							<tool id="cdt.managedbuild.tool.gnu.c.linker.mingw.base.892251554" name="MinGW C Linker" superClass="cdt.managedbuild.tool.gnu.c.linker.mingw.base.540318997"/>
-							<tool id="cdt.managedbuild.tool.gnu.cpp.linker.mingw.base.1832512671" name="MinGW C++ Linker" superClass="cdt.managedbuild.tool.gnu.cpp.linker.mingw.base.1745957084"/>
-						</toolChain>
-					</folderInfo>
 					<sourceEntries>
 						<entry excluding="Debug|.vs|res/pngcheck.exe|BUILD" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
