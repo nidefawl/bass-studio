@@ -11,7 +11,15 @@
 #include <io.h>
 #include <stdio.h>
 #include <vector>
-
+#ifdef __MINGW32__
+#undef _GLIBCXX_HAS_GTHREADS
+#include "../platform/mingw/mingw.thread.h"
+#include <mutex>
+#include "../platform/mingw/mingw.mutex.h"
+#include "../platform/mingw/mingw.condition_variable.h"
+#else
+#include <mutex>
+#endif
 
 using std::max;
 using std::min;//make code analyzer happy (and make author sad)
@@ -120,5 +128,9 @@ String getKeyName(int scancode) {
 	TCHAR strBuf[512];
 	GetKeyNameText(scancode<<16, strBuf, 512);
 	return strBuf;
+}
+void threadSleep(int millis) {
+
+	std::this_thread::sleep_for(std::chrono::milliseconds(200));
 }
 #endif
