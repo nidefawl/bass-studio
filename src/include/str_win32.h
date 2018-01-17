@@ -1,5 +1,5 @@
 #pragma once
-#include <winnt.h>
+#include <Windows.h>
 #include "str_util.h"
 
 String wcharToSring(const LPWSTR text);

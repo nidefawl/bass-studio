@@ -116,4 +116,4 @@ String wcharToSring(const LPWSTR text) {
 	return "";
 #endif
 }
-#endif
+#endif //_WIN32

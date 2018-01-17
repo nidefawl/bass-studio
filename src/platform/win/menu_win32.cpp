@@ -1,5 +1,4 @@
 #ifdef _WIN32
-
 #include "menu.h"
 #include "str_util.h"
 #include "str_win32.h"

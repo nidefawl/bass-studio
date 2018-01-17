@@ -3,6 +3,10 @@
 
 #ifdef _WIN32
 #include <windows.h>
+#define WINDOW_HANDLE HWND
+#endif
+#ifdef __linux__
+#define WINDOW_HANDLE Window
 #endif
 #include <vector>
 #include <stdint.h>
@@ -29,7 +33,7 @@ public:
 	static vst_window* make(vstplugin* plugin, const String& name, Size size, bool resizeable);
 	static vst_window* getVSTWindow(HWND handle);
 	bool init (vstplugin* plugin, const String& name, Size size, bool resizeable);
-	void* getHWND () const;
+	WINDOW_HANDLE getHWND () const;
 
 	void show ();
 	void close ();
@@ -46,6 +50,6 @@ public:
 private:
 	LRESULT CALLBACK proc (UINT message, WPARAM wParam, LPARAM lParam);
 	void registerWindowClass (HINSTANCE instance);
-	void* hwnd = NULL;
+	WINDOW_HANDLE hwnd = NULL;
 	vstplugin* plugin = NULL;
 };

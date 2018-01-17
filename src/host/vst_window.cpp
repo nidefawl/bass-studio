@@ -272,7 +272,7 @@ void vst_window::resize (Size newSize)
 }
 
 //------------------------------------------------------------------------
-HWND vst_window::getHWND () const
+WINDOW_HANDLE vst_window::getHWND () const
 {
 	return hwnd;
 }

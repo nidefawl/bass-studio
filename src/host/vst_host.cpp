@@ -27,7 +27,7 @@
 
 #include <mutex>
 #ifdef __MINGW32__
-#include "../threads/mingw.mutex.h"
+#include "../platform/mingw/mingw.mutex.h"
 #endif
 #include "leak_detect.h"
 
