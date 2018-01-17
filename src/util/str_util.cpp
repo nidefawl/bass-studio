@@ -8,7 +8,6 @@
 #endif
 #if __linux__
 #include <stdio.h>
-#define _snprintf_s(a,b,c,...) snprintf(a,b,__VA_ARGS__)
 #endif
 
 #if __linux__
@@ -29,7 +28,7 @@ String StringFormat(const char *fmt, ...)
 	int r;
 	va_list ap;
 	va_start(ap, fmt);
-	r = vasprintf(&strp, fmt, ap);
+	r = _________vasprintf(&strp, fmt, ap);
 	va_end(ap);
 	if (r > 0) {
 		str = strp;
@@ -39,17 +38,17 @@ String StringFormat(const char *fmt, ...)
 	}
 	return str;
 }
-int asprintf(char **strp, const char *fmt, ...)
+int _________asprintf(char **strp, const char *fmt, ...)
 {
 	int r;
 	va_list ap;
 	va_start(ap, fmt);
-	r = vasprintf(strp, fmt, ap);
+	r = _________vasprintf(strp, fmt, ap);
 	va_end(ap);
 	return(r);
 }
 
-int vasprintf(char **strp, const char *fmt, va_list ap)
+int _________vasprintf(char **strp, const char *fmt, va_list ap)
 {
 	int r = -1, size = _vscprintf(fmt, ap);
 

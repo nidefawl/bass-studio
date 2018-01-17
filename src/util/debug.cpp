@@ -37,3 +37,21 @@ void printLeaked() {
 	g_guis.clear();
 	g_guis.shrink_to_fit();
 }
+
+#define MAX_LEN_MY_PRINTF 4096
+void _my_printf(const char *file, int line, const char *func, const char *fmt, ...) {
+	char buf[MAX_LEN_MY_PRINTF];
+	//char buf2[MAX_LEN_MY_PRINTF] = { 0 };
+	va_list args;
+	va_start(args, fmt);
+	vsnprintf(buf, MAX_LEN_MY_PRINTF - 1, fmt, args);
+	va_end(args);
+	const char * pch = !file ? NULL : strrchr(file, '\\');
+	pch = pch ? pch+1 : file;
+	printf("%s:%d %s: %s", pch, line, func, buf);
+	//sprintf_s(buf2, MAX_LEN_MY_PRINTF - 1, "%s:%d %s: %s", file, line, func, buf);
+	//appendLog(buf2);
+#ifndef _MSC_VER
+	fflush(stdout);
+#endif
+}

@@ -12,7 +12,6 @@
 #include <windows.h>
 #include <ole2.h>
 #endif
-
 #define WIN32API_CALLBACK_TYPE __stdcall
 
 #include <math.h>
@@ -40,6 +39,7 @@ using std::ofstream;
 #endif
 
 #include "config.h"
+#include "str_util.h"
 #include "exceptions.h"
 #include "color_util.h"
 #include "mouse.h"
@@ -49,6 +49,7 @@ using std::ofstream;
 #include "msgbox.h"
 #include "menu.h"
 #include "mainctrl.h"
+#include "droptargetlistener.h"
 
 #include "platform.h"
 
@@ -88,13 +89,6 @@ namespace RenderResources{
 void init(GLFWwindow *glfw, NVGcontext* vg); // renderresources.cpp
 }
 
-#ifdef _WIN32
-void syncMenu(HWND hwnd, ngui::MenuBar& menubar); // menu_win32.cpp
-
-ngui::Menu* getUserDataFromMenu(HMENU hmenu, UINT uPos); // menu_win32.cpp
-
-static WNDPROC glfwWndProc = NULL;
-
 static void glfw_cb_mousepos(GLFWwindow *w, double x, double y);
 static void glfw_cb_mousebutton(GLFWwindow *w, int button, int action, int mods);
 static void glfw_cb_mousescroll(GLFWwindow *w, double xoffset, double yoffset);
@@ -107,16 +101,9 @@ static void glfw_cb_windowfocus(GLFWwindow *w, int focused);
 static void glfw_cb_windowwize(GLFWwindow *w, int width, int height);
 static void glfw_cb_framebuffersize(GLFWwindow *w, int width, int height);
 
-
-
-
-LRESULT WIN32API_CALLBACK_TYPE appWndProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam);
-
-static VOID WIN32API_CALLBACK_TYPE timerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime);
-
 static void glfw_startup_error_callback(int error, const char* description) {
 	char errorCodeStr[1024] = { 0 };
-	_snprintf_s(errorCodeStr, 1024 - 1, "Error %d: %s", error, description);
+	_snprintf_s(errorCodeStr, 1024 - 1, _TRUNCATE, "Error %d: %s", error, description);
 	ngui::show(errorCodeStr, "Error", ngui::Style::Error, ngui::Buttons::OK);
 }
 static void glfw_runtime_error_callback(int error, const char* description) {
@@ -126,14 +113,22 @@ static void showerror(const char* description) {
 	ngui::show(description, "Error", ngui::Style::Error, ngui::Buttons::OK);
 }
 
+#ifdef _WIN32
+void syncMenu(HWND hwnd, ngui::MenuBar& menubar); // menu_win32.cpp
+ngui::Menu* getUserDataFromMenu(HMENU hmenu, UINT uPos); // menu_win32.cpp
+static WNDPROC glfwWndProc = NULL;
+
+LRESULT WIN32API_CALLBACK_TYPE appWndProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam);
+static VOID WIN32API_CALLBACK_TYPE timerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime);
+
 #define IDT_TIMER1 0
+#endif
 class appwindow_dialog;
 class appwindow_overlay;
 #define SETTINGS_NAME "data/settings.json"
 bool loadSettings(appsettings& _settings) {
 	try {
 		Stringstream ss;
-		windowsize size;
 		ifstream file(SETTINGS_NAME, ifstream::in);
 		if (file) {
 		    ss << file.rdbuf();
@@ -171,27 +166,35 @@ private:
 	std::vector<appwindow*> children;
 	uint64_t last = 0;
 protected:
-	UINT_PTR timer = 0;
 	char name[32];
 	int cursorIcon = CURSOR_DEFAULT;
-	DropTarget* dropTarget = NULL;
 	vec2 lastclickpos;
 	vec2 lastmousepos;
 	vec2 mousepos;
 	GLFWwindow *glfw = NULL;
-	HWND hwnd = NULL;
 	NVGcontext* nanovgCtxt = NULL;
+#ifdef _WIN32
+	UINT_PTR timer = 0;
+	DropTarget* dropTarget = NULL;
+	HWND hwnd = NULL;
+#endif
 private:
-	void initOGL(HWND hwnd) {
+	void initOGL() {
 		//static code
-		if (glfwWndProc == NULL) {
-			glfwWndProc = (WNDPROC)GetWindowLongPtr(hwnd, GWLP_WNDPROC);
+		static bool gladInitialized = false;
+		if (!gladInitialized) {
+			gladInitialized = true;
 			// doesn't actually check availability
+			//TODO: check actual required extensions availability
 			if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
 				throw appexception("Required OpenGL extensions not present.\nConsider updating graphics drivers");
 			}
-			//TODO: check actual required extensions availability
 		}
+#ifdef _WIN32
+		if (glfwWndProc == NULL) {
+			glfwWndProc = (WNDPROC)GetWindowLongPtr(hwnd, GWLP_WNDPROC);
+		}
+#endif
 	}
 	void initContext() {
 //		glfwSwapInterval(-1);
@@ -214,9 +217,11 @@ public:
 	GLFWwindow* getGLFW() {
 		return glfw;
 	}
+#ifdef _WIN32
 	HWND getHWND() {
 		return hwnd;
 	}
+#endif
 	void destroyGL() {
 		if (nanovgCtxt)
 			nvgDeleteGL3(nanovgCtxt);
@@ -233,9 +238,11 @@ public:
 	/* FROM GLFW CALLBACKS */
 	virtual void onWindowClose() {
 		my_printf("on window close\n", 0);
+#ifdef _WIN32
 		if (timer && hwnd) {
 			KillTimer(hwnd, this->timer);
 		}
+#endif
 	}
 	virtual void onRefresh() = 0;
 	virtual void onKeyInput(int key, int scancode, int action, int mods, const char* key_name) = 0;
@@ -273,7 +280,7 @@ public:
 	}
 
 	virtual void create(const char* title, int w, int h) {
-		strcpy_s(this->name, title);
+		strncpy(this->name, title, 32);
 		if (glfw)
 			throw appexception("window not null");
 		glfw = glfwCreateWindow(w, h, title, NULL, NULL);
@@ -294,14 +301,20 @@ public:
 		double mposx, mposy;
 		glfwGetCursorPos(glfw, &mposx, &mposy);
 		mousepos = ivec2((int)mposx, (int)mposy);
+#ifdef _WIN32
 		hwnd = glfwGetWin32Window(glfw);
 		if (!hwnd)
 			throw appexception("Couldn't get win32 window handle");
+#endif
 		glfwMakeContextCurrent(glfw);
-		initOGL(hwnd);
+		initOGL();
+#ifdef _WIN32
 		SetWindowLongPtr(hwnd, GWLP_WNDPROC, (LONG_PTR)appWndProc);
+#endif
 		initContext();
+#ifdef _WIN32
 		this->timer = SetTimer(hwnd, 0, 20, (TIMERPROC)timerProc);
+#endif
 		last = getTimeMillis();
 	}
 	void showWindow() {
@@ -312,16 +325,23 @@ public:
 		//this->timer = SetTimer(hwnd, 0, 1, (TIMERPROC)NULL);
 	}
 	bool isWindowNotHidden() {
+#ifdef _WIN32
 		if (hwnd == NULL)
 			return false;
 		return IsWindowVisible(hwnd) == 1;
+#else
+		//TODO: implement linux
+		return true;
+#endif
 	}
 	void maximize() {
 		glfwMaximizeWindow(glfw);
 	}
 	virtual void flagNeedsRedraw() {
+#ifdef _WIN32
 		InvalidateRect(hwnd, NULL, FALSE);
-//		InvalidateRgn(hwnd, NULL, FALSE);
+#endif
+		//TODO: implement linux
 	}
     virtual bool filesDropBegin(std::vector<String>& files, ivec2 pos) {
     	return true;
@@ -336,6 +356,7 @@ public:
     }
     virtual void onMenuOpen(ngui::Menu* menu) {
     }
+#ifdef _WIN32
 	virtual LRESULT windowProc(HWND _hwnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 		switch (Msg) {
 
@@ -365,6 +386,7 @@ public:
 		}
 		return CallWindowProc(glfwWndProc, _hwnd, Msg, wParam, lParam);
 	}
+#endif
 
 	virtual void onChildCreate(appwindow* child) {
 		this->children.push_back(child);
@@ -491,6 +513,9 @@ public:
 	void onMouseMoved(ivec2 deltapos) {
 		if (abs(deltapos.x)+abs(deltapos.y) > 2)
 			this->dblclicktimer = 0;
+		if (abs(deltapos.x)+abs(deltapos.y) > 0) {
+			my_printf("mouse delta %d %d\n", deltapos.x, deltapos.y);
+		}
 		ctrl->mouseMoved(getMousePos(), deltapos);
 		flagNeedsRedraw();
 	}
@@ -657,7 +682,10 @@ public:
 	//	float f = (float)(tm / 1000.0);
 	//	this->rgb[1] = 0.2f + sin(f*2.0f)*0.1f;
 		//
+#ifdef _WIN32
 		UpdateWindow(this->hwnd);
+#endif
+		//TODO: implement linux
 	}
 
 	void show() {
@@ -709,6 +737,7 @@ public:
 		flagNeedsRedraw();
 	}
 	void positionOnScreen(ivec2 pos, ivec2 size) {
+#ifdef _WIN32
 	    POINT p;
 	    p.x = pos.x;
 	    p.y = pos.y;
@@ -723,6 +752,10 @@ public:
 		if (pos.y + size.y > mi.rcWork.bottom) {
 			pos.y -= size.y;
 		}
+#endif
+#if __linux__
+		//TODO: implement linux
+#endif
         appwindow::setPos(pos);
         appwindow::setSize(size);
 	}
@@ -770,6 +803,7 @@ public:
 		if (parent)
 		this->parent->onChildCreate(this);
 
+#ifdef _WIN32
 		LONG l = GetWindowLong(hwnd, GWL_EXSTYLE);
 		SetWindowLong(hwnd, GWL_EXSTYLE, l & ~WS_EX_APPWINDOW);
 		SetWindowLong(hwnd, GWL_STYLE, WS_CAPTION | WS_POPUP | WS_CLIPSIBLINGS | WS_SYSMENU);
@@ -790,6 +824,10 @@ public:
 				0, 0,          // Ignores size arguments.
 				SWP_NOSIZE);
 		}
+#endif
+#if __linux__
+		//TODO: implement linux
+#endif
 	}
 	void onRefresh()
 	{
@@ -814,8 +852,13 @@ public:
 	void onWindowClose()
 	{
 		appwindow::onWindowClose();
+#ifdef _WIN32
 		if (parent)
 		EnableWindow(parent->getHWND(), TRUE);
+#endif
+#if __linux__
+		//TODO: implement linux
+#endif
 		glfwDestroyWindow(glfw);
 		if (parent)
 		this->parent->onChildClose(this);
@@ -834,8 +877,13 @@ public:
 	}
 	void show() {
 		appwindow::showWindow();
+#ifdef _WIN32
 		if (parent)
 			EnableWindow(parent->getHWND(), FALSE);
+#endif
+#if __linux__
+		//TODO: implement linux
+#endif
 	}
 	bool isShown() {
 		return appwindow::isWindowNotHidden();
@@ -882,7 +930,12 @@ public:
 };
 void appwindow_main::updateMenu() {
 	ngui::MenuBar& menubar = ctrl->getMenubar();
+#ifdef _WIN32
 	syncMenu(hwnd, menubar);
+#endif
+#if __linux__
+		//TODO: implement linux
+#endif
 }
 void appwindow_main::destroy() {
 	if (!glfw)
@@ -891,8 +944,13 @@ void appwindow_main::destroy() {
 		overlayWindow->destroyGL();
 	}
 	appwindow::destroyGL();
+#ifdef _WIN32
 	UnregisterDropWindow(hwnd, this->dropTarget);
 	settings.size = windowsize(hwnd);
+#endif
+#if __linux__
+		//TODO: implement linux
+#endif
 }
 void appwindow_main::create(const char* title, int w, int h) {
 	glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
@@ -902,12 +960,17 @@ void appwindow_main::create(const char* title, int w, int h) {
 	if (!ctrl->init(this, this->nanovgCtxt)) {
 		throw appexception("Couldn't start application");
 	}
-
+#ifdef _WIN32
 	this->dropTarget = RegisterDropWindow(hwnd, this);
+#endif
+#if __linux__
+		//TODO: implement linux
+#endif
 
 	this->overlayWindow = std::make_unique<appwindow_overlay>(this);
 	String sName = StringFormat("%s menu", this->name);
 	overlayWindow->create(StringAsCStr(sName), 200, 200);
+#ifdef _WIN32
 	if (settings.size.valid) {
 		settings.size.apply(hwnd);
 	    RECT area;
@@ -916,6 +979,12 @@ void appwindow_main::create(const char* title, int w, int h) {
 	} else {
 		this->maximize();
 	}
+#endif
+#if __linux__
+		//TODO: implement linux
+#endif
+	glfwGetWindowSize(glfw, &w, &h);
+	this->onWindowSizeChanged(w, h);
 }
 void appwindow_overlay::create(const char* title, int w, int h) {
 	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
@@ -923,6 +992,7 @@ void appwindow_overlay::create(const char* title, int w, int h) {
 	glfwWindowHint(GLFW_FOCUSED, GL_FALSE);
 	glfwWindowHint(GLFW_DECORATED, GL_FALSE);
 	appwindow::create(title, w, h);
+#ifdef _WIN32
 	LONG l = GetWindowLong(hwnd, GWL_EXSTYLE);
 	l = l & ~WS_EX_APPWINDOW;
 	l = l | WS_EX_TOOLWINDOW;
@@ -947,10 +1017,47 @@ void appwindow_overlay::create(const char* title, int w, int h) {
 		rcOwner.top + (rc.bottom / 2),
 		0, 0,          // Ignores size arguments.
 		SWP_NOSIZE);
+#endif
+#if __linux__
+		//TODO: implement linux
+#endif
 	if (!ctrl->init(this, this->nanovgCtxt)) {
 		throw appexception("Couldn't start application");
 	}
 }
+
+#ifdef _WIN32
+static VOID WIN32API_CALLBACK_TYPE timerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime) {
+	EXC_TRY
+	appwindow* impl = NULL;
+	GLFWwindow* glfwWindow = (GLFWwindow*) GetPropW(hwnd, L"GLFW");
+	if (glfwWindow != NULL) {
+		impl = (appwindow*)glfwGetWindowUserPointer(glfwWindow);
+	}
+	if (impl == NULL) {
+		return;
+	}
+	impl->onTick();
+	EXC_CATCH
+
+}
+LRESULT WIN32API_CALLBACK_TYPE appWndProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
+	EXC_TRY
+	appwindow* impl = NULL;
+	GLFWwindow* glfwWindow = (GLFWwindow*) GetPropW(hwnd, L"GLFW");
+	if (glfwWindow != NULL) {
+		impl = (appwindow*)glfwGetWindowUserPointer(glfwWindow);
+	}
+	if (impl == NULL) {
+		if (glfwWndProc)
+			return CallWindowProc(glfwWndProc, hwnd, Msg, wParam, lParam);
+		return 0; // Cannot throw in winproc
+	}
+	return impl->windowProc(hwnd, Msg, wParam, lParam);
+	EXC_CATCH
+	return 0;
+}
+#endif
 window_dialog* appwindow_main::createDialog() {
 	appwindow_dialog* popupWindow = new appwindow_dialog(this);
 	String sName = StringFormat("%s dialog", this->name);
@@ -1045,54 +1152,7 @@ static void glfw_cb_framebuffersize(GLFWwindow *w, int width, int height) {
 	getUserData(w)->onFramebufferSizeChanged(width, height);
 	EXC_CATCH
 }
-static VOID WIN32API_CALLBACK_TYPE timerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime) {
-	EXC_TRY
-	appwindow* impl = NULL;
-	GLFWwindow* glfwWindow = (GLFWwindow*) GetPropW(hwnd, L"GLFW");
-	if (glfwWindow != NULL) {
-		impl = (appwindow*)glfwGetWindowUserPointer(glfwWindow);
-	}
-	if (impl == NULL) {
-		return;
-	}
-	impl->onTick();
-	EXC_CATCH
 
-}
-LRESULT WIN32API_CALLBACK_TYPE appWndProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
-	EXC_TRY
-	appwindow* impl = NULL;
-	GLFWwindow* glfwWindow = (GLFWwindow*) GetPropW(hwnd, L"GLFW");
-	if (glfwWindow != NULL) {
-		impl = (appwindow*)glfwGetWindowUserPointer(glfwWindow);
-	}
-	if (impl == NULL) {
-		if (glfwWndProc)
-			return CallWindowProc(glfwWndProc, hwnd, Msg, wParam, lParam);
-		return 0; // Cannot throw in winproc
-	}
-	return impl->windowProc(hwnd, Msg, wParam, lParam);
-	EXC_CATCH
-	return 0;
-}
-
-#define MAX_LEN_MY_PRINTF 4096
-void _my_printf(const char *file, int line, const char *func, const char *fmt, ...) {
-	char buf[MAX_LEN_MY_PRINTF];
-	//char buf2[MAX_LEN_MY_PRINTF] = { 0 };
-	va_list args;
-	va_start(args, fmt);
-	vsnprintf(buf, MAX_LEN_MY_PRINTF - 1, fmt, args);
-	va_end(args);
-	const char * pch = !file ? NULL : strrchr(file, '\\');
-	pch = pch ? pch+1 : file;
-	printf("%s:%d %s: %s", pch, line, func, buf);
-	//sprintf_s(buf2, MAX_LEN_MY_PRINTF - 1, "%s:%d %s: %s", file, line, func, buf);
-	//appendLog(buf2);
-#ifdef __MINGW32__
-	fflush(stdout);
-#endif
-}
 void printLeaked();
 
 static std::unique_ptr<MainCtrl> ctrl;
@@ -1100,9 +1160,6 @@ static std::unique_ptr<appwindow_main> mainWindow;
 
 MainCtrl* MainCtrl::get() {
 	return ctrl.get();
-}
-HWND getMainHWND() {
-	return mainWindow ? mainWindow->getHWND() : NULL;
 }
 int mainTest(void (*drawFn)(NVGcontext*,int,int,float)) {
 	std::set_terminate(on_terminate);
@@ -1139,6 +1196,11 @@ int mainTest(void (*drawFn)(NVGcontext*,int,int,float)) {
 	exit(EXIT_SUCCESS);
 	return 0;
 }
+#ifdef _WIN32
+HWND getMainHWND() {
+	return mainWindow ? mainWindow->getHWND() : NULL;
+}
+#endif
 #ifndef TEST_PROJECT
 
 struct data_t
@@ -1187,7 +1249,9 @@ int getHWNDCnt(int i) {
 
 int mainHost(int argc, char* argv[]) {
 	bool test = argc > 1 && String(argv[1]) == "--test";
+#ifdef _WIN32
 	OleInitialize(0);
+#endif
 	std::set_terminate(on_terminate);
 	setExceptionHandler();
 
@@ -1218,6 +1282,7 @@ int mainHost(int argc, char* argv[]) {
 	long start = getTimeMillis();
 	int step = 0;
 	while (!glfwWindowShouldClose(glfwHandle)) {
+#ifdef _WIN32
 		DWORD timeout = 1;
 		MsgWaitForMultipleObjects(0, NULL, FALSE, timeout, QS_ALLEVENTS);
 
@@ -1265,6 +1330,11 @@ int mainHost(int argc, char* argv[]) {
 	        }
 	    }
 		glfwUpdateInternals();
+#endif
+#ifdef __linux__
+		glfwWaitEventsTimeout(0.001);
+		mainWindow->onRefresh();
+#endif
 		ctrl->numCallsWaitEvents++;
 		if (test && getTimeMillis()-start > 4) {
 			switch (step) {
@@ -1324,7 +1394,9 @@ int mainHost(int argc, char* argv[]) {
 	mainWindow.reset();
 	EXC_CATCH
 	printLeaked();
+#ifdef _WIN32
 	OleUninitialize();
+#endif
 	my_printf("EXIT_SUCCESS\n", 0);
 	exit(EXIT_SUCCESS);
 	return 0;
@@ -1333,4 +1405,3 @@ int mainHost(int argc, char* argv[]) {
 
 #endif
 
-#endif

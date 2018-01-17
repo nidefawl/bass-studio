@@ -124,29 +124,7 @@ void printLastError(String fn) {
 	DWORD err = GetLastError();
 	printf("%s failed (%d): %s\n", StringAsCStr(fn), (int32_t)err, StringAsCStr(FormatErrorMessage(err)));
 }
-void createTables(SQLite::Database& db) {
-    const bool bExists = db.tableExists("plugins");
-    if (bExists) {
-//        db.exec("DROP TABLE `plugins`");
-    }
-
-    if (!db.tableExists("plugins")) {
-    	const char* queryCreate = "CREATE TABLE `plugins` (\n"
-				"	`id`	INTEGER PRIMARY KEY AUTOINCREMENT,\n"
-				"	`isSynth`	INTEGER DEFAULT 0,\n"
-				"	`uid`	INTEGER NOT NULL,\n"
-				"	`version`	INTEGER NOT NULL,\n"
-				"	`vstVersion`	INTEGER NOT NULL,\n"
-				"	`category`	INTEGER NOT NULL,\n"
-				"	`moddate`	INTEGER NOT NULL,\n"
-				"	`ok`	INTEGER DEFAULT 0,\n"
-				"	`path`	TEXT NOT NULL,\n"
-				"	`name`	TEXT NOT NULL,\n"
-				"	`vendorName`	TEXT NOT NULL\n"
-				");";
-    	db.exec(queryCreate);
-    }
-}
+void createTables(SQLite::Database& db);
 class FileTimeGetter {
 public:
     FILETIME ftCreate = {0};
