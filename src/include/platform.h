@@ -8,9 +8,10 @@ double getTimeHPC();
 double getSince(double& d);
 
 void setMinimumResolutionTimer();
-String getLastWin32ErrorString();
 
 void allocConsole();
 void setExceptionHandler();
 
 String getKeyName(int scancode);
+
+void threadSleep(int millis);

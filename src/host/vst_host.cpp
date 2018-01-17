@@ -21,12 +21,12 @@
 #include <stdlib.h>
 #include <algorithm>
 #include <stdlib.h>
-#include <windows.h>
 #include <memory.h>
 #include "track_impl.h"
 
 #include <mutex>
 #ifdef __MINGW32__
+#include <windows.h>
 #include "../platform/mingw/mingw.mutex.h"
 #endif
 #include "leak_detect.h"
@@ -364,7 +364,7 @@ vsthost::vsthost(uint32_t _sampleRate, uint16_t _blockSize)
 void vsthost::updateTime(int32_t samplePos, tick_t pos, playback_state state) {
 	timeinfo.samplePos = samplePos;
 	timeinfo.sampleRate = (double)lSampleRate;
-	timeinfo.nanoSeconds = (double)timeGetTime() * 1000000.0L;
+	timeinfo.nanoSeconds = (double)getTimeMillis() * 1000000.0L;
 	timeinfo.ppqPos = (pos/(double)TICKS_QUARTER);
 	timeinfo.tempo = project.tempo100/100.0;
 	timeinfo.barStartPos = floor(pos / (double) TICKS_BAR) * 4;
@@ -735,7 +735,7 @@ bool vsthost::stopAudio() {
 			return error("Pa_CloseStream", err);
 		}
 		while (this->stream) {
-			Sleep(100);
+			threadSleep(100);
 		}
 		return true;
 	}
@@ -844,26 +844,6 @@ bool vsthost::startAudio() {
 	this->stream = paStream;
 	return true;
 }
-int32_t loadLib(String filepath, VSTPluginMain_t** out_fn, HMODULE* out_hmodule) {
-	if (!FileExists(filepath)) {
-		return -2;
-	}
-	HMODULE hmodule = LoadLibrary(StringAsCStr(filepath));
-	if (!hmodule) {
-		return -3;
-	}
-
-	VSTPluginMain_t *fn = (VSTPluginMain_t*) GetProcAddress(hmodule, "VSTPluginMain");
-	if (fn == NULL)
-	{
-		FreeLibrary(hmodule);
-		return -4;
-	}
-	*out_hmodule = hmodule;
-	*out_fn = fn;
-
-	return 0;
-};
 vstplugin* vsthost::getPlugin(AEffect* aeffect) {
 
 	int count = list.size();
@@ -998,17 +978,43 @@ bool vsthost::insertNewPlugin(track_impl_t* trp, vstplugin* plugin, int32_t dst)
 	trp->pluginsChanged();
 	return true;
 }
+#ifdef _WIN32
+
+int32_t loadLib(String filepath, VSTPluginMain_t** out_fn, HMODULE* out_hmodule) {
+	if (!FileExists(filepath)) {
+		return -2;
+	}
+	HMODULE hmodule = LoadLibrary(StringAsCStr(filepath));
+	if (!hmodule) {
+		return -3;
+	}
+
+	VSTPluginMain_t *fn = (VSTPluginMain_t*) GetProcAddress(hmodule, "VSTPluginMain");
+	if (fn == NULL)
+	{
+		FreeLibrary(hmodule);
+		return -4;
+	}
+	*out_hmodule = hmodule;
+	*out_fn = fn;
+
+	return 0;
+}
+#endif
 vstpluginloadres vsthost::loadPlugin(String filepath, int32_t globalId) {
 	String path, name, nameWithoutExt;
 	SplitPath(filepath, &path, &nameWithoutExt, NULL, &name);
 	VSTPluginMain_t* fn = NULL;
+	void* moduleHandle = NULL;
+	AEffect* aeffect = NULL;
+#ifdef _WIN32
 	HMODULE hmodule = NULL;
 	int32_t ret = loadLib(filepath, &fn, &hmodule);
 	if (ret != 0) {
 		return vstpluginloadres(ret, NULL);
 	}
 
-	AEffect* aeffect = fn(audioMaster);
+	aeffect = fn(audioMaster);
 	if (!aeffect) {
 		FreeLibrary(hmodule);
 		return vstpluginloadres(-5, NULL);
@@ -1017,13 +1023,15 @@ vstpluginloadres vsthost::loadPlugin(String filepath, int32_t globalId) {
 		FreeLibrary(hmodule);
 		return vstpluginloadres(-6, NULL);
 	}
+	moduleHandle = hmodule;
+#endif
 
 	if (globalId <= 0) {
 		globalId = ++pluginId;
 	} else {
 		update_maximum(pluginId, globalId);
 	}
-	vstplugin* plugin = new vstplugin(new handles_t(aeffect, hmodule), globalId, path, nameWithoutExt);
+	vstplugin* plugin = new vstplugin(new handles_t(aeffect, moduleHandle), globalId, path, nameWithoutExt);
 	list.push_back(plugin);
 	plugin->load(this);
 	return vstpluginloadres(0, plugin);

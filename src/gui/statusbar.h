@@ -5,9 +5,8 @@
 
 class gui_statusbar : public guictr_base {
 public:
-	char text[MAX_STR_STATUSBAR];
+	String text;
 	gui_statusbar() : guictr_base() {
-		text[0] = 0;
 	}
 	~gui_statusbar() {
 	}
@@ -18,7 +17,7 @@ public:
 		}
 		if (this->text[0]) {
 			setFont(vg, (int)(HEIGHT_PLUGIN_TITLE*0.8), G_BLACK, G_TITLE_ALIGN);
-			nvgText(vg, INSET_TITLE, getSizeContent().y / 2, this->text, NULL);
+			nvgText(vg, INSET_TITLE, getSizeContent().y / 2, StringAsCStr(text), NULL);
 		}
 	}
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
@@ -28,11 +27,7 @@ public:
 		}
 		return false;
 	}
-	void setTitleCstr(const char* cstr) {
-		setTitle(String(cstr));
-	}
-	void setTitle(String wxtext) {
-		const char* wxmb = StringAsCStr(wxtext);
-		strncpy_s(this->text, MAX_STR_TITLE, wxmb, strlen(wxmb));
+	void setTitle(String _text) {
+		text = _text;
 	}
 };

@@ -1,7 +1,7 @@
-
-#include "vst_window.h"
-#include "vst_host.h"
-#include "vst_plugin.h"
+#ifdef _WIN32
+#include "../../vst_window.h"
+#include "../../vst_host.h"
+#include "../../vst_plugin.h"
 #include "mainctrl.h"
 
 #include <tchar.h>
@@ -24,7 +24,7 @@ namespace {
 		if (it != vst_window_list.end ())
 			vst_window_list.erase(it);
 	}
-	static vst_window* getWindowByHWND (void* hwnd)
+	static vst_window* getWindowByHWND (WINDOW_HANDLE hwnd)
 	{
 		auto it = std::find_if(vst_window_list.begin (), vst_window_list.end (), [hwnd](vst_window* window) {
 			return window->getHWND() == hwnd;
@@ -33,9 +33,30 @@ namespace {
 			return *it;
 		return nullptr;
 	}
+
+	const TCHAR* gWindowClassName = _T("VSTHOSTWINDOW");
+	void registerWindowClass (HINSTANCE instance)
+	{
+		static bool once = true;
+		if (!once)
+			return;
+		once = true;
+
+		WNDCLASSEX wcex {};
+
+		wcex.cbSize = sizeof (WNDCLASSEX);
+
+		wcex.style = CS_DBLCLKS;
+		wcex.lpfnWndProc = PluginWndProc;
+		wcex.hInstance = instance;
+		wcex.hCursor = LoadCursor (instance, IDC_ARROW);
+		wcex.hbrBackground = nullptr;
+		wcex.lpszClassName = gWindowClassName;
+
+		RegisterClassEx (&wcex);
+	}
 }
 
-static const TCHAR* gWindowClassName = _T("VSTHOSTWINDOW");
 
 vst_window* vst_window::make (vstplugin* plugin, const String& name, Size size, bool resizeable)
 {
@@ -149,27 +170,6 @@ static LRESULT CALLBACK PluginWndProc (HWND hwnd, UINT message, WPARAM wParam, L
 	return DefWindowProc (hwnd, message, wParam, lParam);
 }
 
-//------------------------------------------------------------------------
-void vst_window::registerWindowClass (HINSTANCE instance)
-{
-	static bool once = true;
-	if (!once)
-		return;
-	once = true;
-
-	WNDCLASSEX wcex {};
-
-	wcex.cbSize = sizeof (WNDCLASSEX);
-
-	wcex.style = CS_DBLCLKS;
-	wcex.lpfnWndProc = PluginWndProc;
-	wcex.hInstance = instance;
-	wcex.hCursor = LoadCursor (instance, IDC_ARROW);
-	wcex.hbrBackground = nullptr;
-	wcex.lpszClassName = gWindowClassName;
-
-	RegisterClassEx (&wcex);
-}
 
 //------------------------------------------------------------------------
 std::vector<vst_window*>& vst_window::getWindows ()
@@ -276,3 +276,4 @@ WINDOW_HANDLE vst_window::getHWND () const
 {
 	return hwnd;
 }
+#endif

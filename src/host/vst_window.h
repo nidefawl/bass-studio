@@ -6,7 +6,8 @@
 #define WINDOW_HANDLE HWND
 #endif
 #ifdef __linux__
-#define WINDOW_HANDLE Window
+//TODO: make this Window (requires include, requires namespaced Cursor or rename)
+#define WINDOW_HANDLE long
 #endif
 #include <vector>
 #include <stdint.h>
@@ -31,7 +32,7 @@ class vst_window
 {
 public:
 	static vst_window* make(vstplugin* plugin, const String& name, Size size, bool resizeable);
-	static vst_window* getVSTWindow(HWND handle);
+	static vst_window* getVSTWindow(WINDOW_HANDLE handle);
 	bool init (vstplugin* plugin, const String& name, Size size, bool resizeable);
 	WINDOW_HANDLE getHWND () const;
 
@@ -48,8 +49,9 @@ public:
 		return plugin;
 	}
 private:
+#ifdef _WIN32
 	LRESULT CALLBACK proc (UINT message, WPARAM wParam, LPARAM lParam);
-	void registerWindowClass (HINSTANCE instance);
+#endif
 	WINDOW_HANDLE hwnd = NULL;
 	vstplugin* plugin = NULL;
 };

@@ -1,3 +1,4 @@
+#ifdef _WIN32
 #include "fileio.h"
 #include "exceptions.h"
 #include <stb_image.h>
@@ -235,3 +236,4 @@ void findFilesWithExt(
 		}
 	}
 }
+#endif

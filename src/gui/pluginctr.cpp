@@ -61,7 +61,7 @@ void guiplugin::render(NVGcontext* vg) {
 	nvgFill(vg);
 	if (this->text[0]) {
 		setFont(vg, (int)(HEIGHT_PLUGIN_TITLE*0.8), G_WHITE, G_TITLE_ALIGN);
-		nvgText(vg, buttonOpenEditor.right()+INSET_TITLE, HEIGHT_PLUGIN_TITLE / 2, this->text, NULL);
+		nvgText(vg, buttonOpenEditor.right()+INSET_TITLE, HEIGHT_PLUGIN_TITLE / 2, StringAsCStr(this->text), NULL);
 	}
 	nvgBeginPath(vg);
 	nvgRoundedRect(vg, 0, 0, size.x, size.y, G_RND);

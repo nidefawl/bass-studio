@@ -38,23 +38,23 @@ public:
 	        printf("SPLIT %s\n", s.c_str());
 	        strings.push_back(s);
 	    }
-	    const char* argv = (const char*)alloca(sizeof(char*)*(strings.size()+1));
-	    for (int i = 0; i < strings.size(); i++) {
+	    const char** argv = (const char**)alloca(sizeof(char*)*(strings.size()+1));
+	    for (unsigned i = 0; i < strings.size(); i++) {
 	    	argv[i] = StringAsCStr(strings[i]);
 	    }
 	    argv[strings.size()] = 0;
 	    const char* bin = StringAsCStr(binary);
-		int status = posix_spawn(&pid, bin, NULL, NULL, argv, environ);
+		int status = posix_spawn(&pid, bin, NULL, NULL, (char* const*)argv, environ);
 		if (status == 0) {
 			int waitRet = waitpid(pid, &status, 0);
 			if (waitRet == -1) {
-				throw SystemException(strerror(errno),
+				throw SystemException(errno,
 						"Process did not exit normally");
 			}
 		} else {
 			String errmsg = StringFormat("posix_spawn(%s, %s) failed",
 					StringAsCStr(binary), StringAsCStr(params));
-			throw SystemException(strerror(status), errmsg);
+			throw SystemException(status, errmsg);
 		}
 	}
 	~ProcessRunScope() {

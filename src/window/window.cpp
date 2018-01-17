@@ -1,13 +1,17 @@
 #include <glad/glad.h>
+#ifdef _WIN32
 #define GLFW_EXPOSE_NATIVE_WIN32
+#endif
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
 #define NANOVG_GL3_IMPLEMENTATION
 #include <nanovg.h>
 #include <nanovg_gl.h>
 
+#ifdef _WIN32
 #include <windows.h>
 #include <ole2.h>
+#endif
 
 #define WIN32API_CALLBACK_TYPE __stdcall
 
@@ -30,8 +34,10 @@ using glm::ivec2;
 using std::ifstream;
 using std::ofstream;
 
+#ifdef _WIN32
 #include "../platform/win/winheaders.h"
 #include "../platform/win/DropTarget.h"
+#endif
 
 #include "config.h"
 #include "exceptions.h"
@@ -81,6 +87,8 @@ public:
 namespace RenderResources{
 void init(GLFWwindow *glfw, NVGcontext* vg); // renderresources.cpp
 }
+
+#ifdef _WIN32
 void syncMenu(HWND hwnd, ngui::MenuBar& menubar); // menu_win32.cpp
 
 ngui::Menu* getUserDataFromMenu(HMENU hmenu, UINT uPos); // menu_win32.cpp
@@ -307,12 +315,6 @@ public:
 		if (hwnd == NULL)
 			return false;
 		return IsWindowVisible(hwnd) == 1;
-//		WINDOWPLACEMENT wp = {};
-//		wp.length = sizeof(WINDOWPLACEMENT);
-//		if (!GetWindowPlacement(hwnd, &wp )) {
-//			throw appexception(StringAsCStr(getLastWin32ErrorString()));
-//		}
-//		return wp.showCmd != SW_HIDE;
 	}
 	void maximize() {
 		glfwMaximizeWindow(glfw);
@@ -1328,5 +1330,7 @@ int mainHost(int argc, char* argv[]) {
 	return 0;
 }
 
+
+#endif
 
 #endif

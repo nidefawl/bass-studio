@@ -94,7 +94,7 @@ public:
 	    float minSize = min(insetS.x, insetS.y);
 //	    float r = (minSize*0.66f)/2.0f;
 	    float r = (minSize*0.8f)/2.0f;
-	    float lineThickness = max(1.0f, round((minSize / 8.0f)*2.0f)/2.0f);
+	    float lineThickness = max(1.0f, roundf((minSize / 8.0f)*2.0f)/2.0f);
 
 		NVGcolor c2 = g_guiColors[COL_BG_BRT];
 		if (hovered())
@@ -153,7 +153,7 @@ public:
 		nvgMoveTo(vg, posStart.x, posStart.y);
 		nvgLineTo(vg, posEnd.x, posEnd.y);
 		nvgStrokeColor(vg, indColor);
-		nvgStrokeWidth(vg, max(1.0f, round((r/8.0f)*2.0f)/2.0f));
+		nvgStrokeWidth(vg, max(1.0f, roundf((r/8.0f)*2.0f)/2.0f));
 		nvgStroke(vg);
 		nvgLineCap(vg, NVGlineCap::NVG_BUTT);
 

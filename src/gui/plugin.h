@@ -23,7 +23,7 @@ class guiplugin : public guibase {
 public:
 	vstplugin* const vst;
 	gui_list params;
-	char text[MAX_STR_TITLE];
+	String text;
 	guibuttontoggle buttonBypass;
 	guibuttontoggle buttonOpenEditor;
 	guibuttontoggle buttonDelete;
@@ -39,9 +39,8 @@ public:
 	}
 	void render(NVGcontext* vg);
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
-	void setTitle(String wxtext) {
-		const char* wxmb = StringAsCStr(wxtext);
-		strncpy_s(this->text, MAX_STR_TITLE, wxmb, strlen(wxmb));
+	void setTitle(String _text) {
+		text = _text;
 	}
 	void layout() {
 		int32_t meterW = 32;

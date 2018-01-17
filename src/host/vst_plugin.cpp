@@ -107,7 +107,7 @@ bool vstplugin::updateWindowSize() {
 bool vstplugin::onShow(vst_window* window) {
 	if (this->window == window) {
 		bEditOpen = true;
-		this->dispatch(effEditOpen, 0, 0, window->getHWND());
+		this->dispatch(effEditOpen, 0, 0, (void*)window->getHWND());
 		updateWindowSize();
 		this->updateDisplay();
 	}

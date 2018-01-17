@@ -1,10 +1,11 @@
 #pragma once
-#include <windows.h>
 #include <cereal/cereal.hpp>
 #include <cereal/cereal_optional_nvp.hpp>
 #include "str_util.h"
 #include "grid.h"
+#ifdef _WIN32
 
+#include <windows.h>
 struct windowsize
 {
 public:
@@ -38,9 +39,12 @@ public:
 		}
 	}
 };
+#endif
 struct appsettings
 {
+#ifdef _WIN32
 	windowsize size;
+#endif
 	grid_density dens;
 	String device_api;
 	String device_selected;
@@ -49,11 +53,13 @@ public:
 	appsettings() { }
 	template<class Archive>
 	void serialize(Archive & ar) {
-		ar(cereal::make_nvp("window", size),
-				cereal::make_nvp("grid", dens),
-				cereal::make_nvp("device_api", device_api),
-				cereal::make_nvp("device_selected", device_selected));
-	   CEREAL_OPTIONAL_NVP(ar, startEngine);
+		ar(cereal::make_nvp("grid", dens),
+			cereal::make_nvp("device_api", device_api),
+			cereal::make_nvp("device_selected", device_selected));
+		make_optional_nvp(ar, "startEngine", startEngine);
+#ifdef _WIN32
+		make_optional_nvp(ar, "window", size);
+#endif
 	}
 };
 extern appsettings settings;
