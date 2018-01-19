@@ -12,3 +12,4 @@ using std::min;
 using std::fmod;
 using std::ceil;
 using std::floor;
+using std::abs;
