@@ -103,9 +103,9 @@ endif()
 add_executable(DAW ${CPP_SRC_FILES} ${C_SRC_FILES})
 add_definitions(${DAW_COMPILE_FLAGS})
 
-include_directories(SYSTEM "src/include")
+include_directories("src/include")
 include_directories(SYSTEM "src/nanovg")
-include_directories(
+include_directories(SYSTEM
     ${DAW_DEPS_DIR}/build/lib/glfw/include
     ${DAW_DEPS_DIR}/build/lib/SQLiteCpp/include
     ${DAW_DEPS_DIR}/glad/include
