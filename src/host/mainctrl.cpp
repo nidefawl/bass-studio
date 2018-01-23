@@ -23,6 +23,7 @@
 #include "fileloader.h"
 #include "logging.h"
 #include "menu.h"
+#include "msgbox.h"
 
 #include "../gui/gui.h"
 #include "../gui/guicontainer.h"
@@ -955,6 +956,10 @@ bool MainCtrl::processGlobalKeyevent(KeyEvent& event) {
 		}
 	}
 	if (event.type != KeyEventType::K_RELEASE) {
+		if (event.keyCode == KEY_M) {
+			ngui::show("Hello, you pressed the M key. Thanks you for your efforts", "Well done!", ngui::Style::Info, ngui::Buttons::OK);
+			return true;
+		}
 		if (event.keyCode == KEY_SPACE) {
 			if (isPlaying()) {
 				stopPlaying();
