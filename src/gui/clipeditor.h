@@ -59,7 +59,7 @@ public:
 		return (sizeY) - rel;
 	}
 	void setOffset(float f) {
-		this->offset = f < -(scale*MAX_OCTAVES*1) ? -(scale*MAX_OCTAVES*1) : f > scale*(MAX_OCTAVES-1)*12 ? scale*(MAX_OCTAVES-1)*12 : f; // TODO: clamp offset to scaled height
+		this->offset = f < -(scale*MAX_OCTAVES*1) ? -(scale*MAX_OCTAVES*1) : f > scale*(MAX_OCTAVES-1)*12 ? scale*(MAX_OCTAVES-1)*12 : f;
 	}
 	void setScale(float f) {
 		this->scale = f < PIANOROLL_MIN_SCALE ? PIANOROLL_MIN_SCALE : f > PIANOROLL_MAX_SCALE ? PIANOROLL_MAX_SCALE : f;
