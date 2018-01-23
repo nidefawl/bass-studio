@@ -1,3 +1,4 @@
+#ifdef __linux__
 #include "fileio.h"
 #include "exceptions.h"
 #include "str_util.h"
@@ -307,3 +308,4 @@ int promptUserFilePath(window_base* w, int mode,
 	return 0;
 }
 
+#endif

@@ -122,7 +122,7 @@ void ReadFileVector(const String& filename, vector<uint8_t>& out)
 	cout << filename << " out.size: " << out.size() << endl;
 
 }
-int promptUserFilePath(int mode, std::vector<SupportedFileType> fileTypes, String& _out) {
+int promptUserFilePath(window_base* w, int mode, std::vector<SupportedFileType> fileTypes, String& _out) {
 //	const char supportedFiles = "Text Files (*." fileExt ")\0*." fileExt "\0All Files (*.*)\0*.*\0";
 	char supportedFiles[MAX_PATH] = "";
 	int offset = 0;

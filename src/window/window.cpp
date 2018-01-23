@@ -1232,7 +1232,7 @@ int mainTest(void (*drawFn)(NVGcontext*,int,int,float)) {
 	while (!glfwWindowShouldClose(glfwHandle)) {
 		glfwWaitEventsTimeout(0.001);
 //		w->onRefresh();
-		sendExposeEvent(glfwHandle);
+		invalidateWindowContents(glfwHandle);
 		if (once++ == 0) {
 			 SupportedFileType FILE_TYPE_PROJECT {"Project File", "txt"};
 			 std::vector<SupportedFileType> vecft{{FILE_TYPE_PROJECT}};
