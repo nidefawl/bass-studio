@@ -43,8 +43,8 @@ inline float calcInset(float desiredInset, float size) {
 }
 class guibase {
 public:
-	ivec2 pos;
-	ivec2 size;
+	ivec2 pos{0};
+	ivec2 size{0};
 	guibase* parent = NULL;
 	int zOrder = 0;
 	int id;
