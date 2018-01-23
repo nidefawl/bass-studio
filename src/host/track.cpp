@@ -622,17 +622,10 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 					noteEvents.emplace_back(note.pitch, note.start()-start, true, false);
 				}
 
-				//TODO: this needs to be note.end() <= end
-				//   (opposed to < for being in range)
-				//   for loopends to work but may put the
-				//   note event on delta sample 'blockSize'
 				if (note.end() > start && note.end() <= end) {
 					notesEnd.push_back(note);
 					noteEvents.emplace_back(note.pitch, note.end()-start-1, false, note.end() == loopEnd);
 				}
-//				else if (note.end() >= start && note.end() == end) {
-//					my_printf("note end is on end %d, loopEnd is %d\n", end, loopEnd);
-//				}
 			}
 
 			//revalidate note ends to end notes after loop or clip modifactions
