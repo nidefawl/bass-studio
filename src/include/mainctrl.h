@@ -143,7 +143,9 @@ public:
 	void close();
 	void open(guictxtmenu_base *ctxtmenu, ivec2 pos);
 	bool init(window_overlay* window, NVGcontext* nanovg);
-//	void render(int32_t x, int32_t y, int32_t w, int32_t h, float ratio);
+	void focusReceived() {
+	}
+	void focusLost();
 
 };
 
@@ -242,18 +244,18 @@ public:
 	String& getProjectPath() {
 		return projectPath;
 	}
+	WorkerThread* getWorkerThread() {
+		return &workerThread;
+	}
 	std::shared_ptr<project_file> createProjectFile();
 	void loadFile(String path);
 	bool setLoadedProject(std::shared_ptr<project_file> file);
 	void setEmptyProject();
 	void pushHist(action_base* action);
-	void focusLost() {
-		closeContextMenu();
-	}
-	WorkerThread* getWorkerThread() {
-		return &workerThread;
-	}
 	void focusReceived() {
+	}
+	void focusLost() {
+//		closeContextMenu();
 	}
 	void resetMouseContext();
 	void addDebug(String s);

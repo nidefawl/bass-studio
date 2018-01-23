@@ -39,10 +39,12 @@ using ByteBuf = std::vector<uint8_t>;
 using std::ifstream;
 using std::ios;
 
+class window_base;
+
 int32_t WriteFileVector(const String& filename, std::vector<uint8_t>& writebuffer);
 void ReadFileVector(const String& filename, std::vector<uint8_t>& out);
-int promptUserFilePath(int mode, std::vector<SupportedFileType> fileTypes, String& _out);
-
+int promptUserFilePath(window_base* w, int mode, std::vector<SupportedFileType> fileTypes, String& _out);
+void handleGuiEvents();
 size_t GetFileSizeSafe(const String& filename);
 inline bool FileExists( const String &Filename )
 {

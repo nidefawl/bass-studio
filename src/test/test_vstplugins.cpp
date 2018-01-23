@@ -1,4 +1,4 @@
-
+#ifdef _WIN32
 #include "str_util.h"
 #include "tests.h"
 #include <iomanip>
@@ -136,3 +136,4 @@ void testVSTPlugins()
         DispatchMessage(&msg);
     }
 }
+#endif

@@ -41,7 +41,7 @@ using Stringstream = std::wstringstream;
 using String = std::string;
 using Stringstream = std::stringstream;
 #endif
-#define StringAsCStr(x) (x.c_str())
+#define StringAsCStr(x) ((x).c_str())
 String StringFormat(const char *fmt, ...);
 String FormatTempo(float tempo);
 String StringLimit(String s, int limit);

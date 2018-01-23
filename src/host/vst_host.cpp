@@ -444,7 +444,7 @@ void delayAudio(DelayLine* delayLine, AudioBlock* output, samplerate_t delay) {
 
 int32_t vsthost::processPlayback(int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround) {
 	double since = timer.getTimeDoubleReset();
-	MainCtrl* ctrl = MainCtrl::get(); //TODO: still not synchronized.
+	MainCtrl* ctrl = MainCtrl::get();
 //	static AudioBuffer* master = allocateBuffer();
 //	master->input->realloc(lBlockSize);
 //	master->output->realloc(lBlockSize);
@@ -781,6 +781,7 @@ bool vsthost::startAudio() {
 	for (int i = 0; i < apiCount; i++) {
 		const PaHostApiInfo *info = Pa_GetHostApiInfo(i);
 		if (info) {
+			my_printf("API[%d] = %s %d devices\n", i, info->name, info->deviceCount);
 			if (!strcmp(selApiNameCStr, info->name)) {
 				deviceApiIdxSelected = i;
 			}
@@ -790,8 +791,12 @@ bool vsthost::startAudio() {
 		int deviceCount = Pa_GetDeviceCount();
 		for (int i = 0; i < deviceCount; i++) {
 			const PaDeviceInfo *info = Pa_GetDeviceInfo(i);
-			if (info && info->hostApi == deviceApiIdxSelected && info->maxOutputChannels > 0 && !strcmp(selDevNameCStr, info->name)) {
-				deviceIdxSelected = i;
+			if (info && info->hostApi == deviceApiIdxSelected && info->maxOutputChannels > 0) {
+				my_printf("DEVICE[%d] = %s %d output channels\n", i, info->name, info->maxOutputChannels);
+				if (!strcmp(selDevNameCStr, info->name)) {
+					deviceIdxSelected = i;
+				}
+
 			}
 		}
 	}

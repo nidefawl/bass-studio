@@ -130,6 +130,9 @@ public:
 PopupCtrl::PopupCtrl() {
 	popupCtrs = new guictr_popup();
 }
+void PopupCtrl::focusLost() {
+	MainCtrl::get()->closeContextMenu();
+}
 void PopupCtrl::close() {
 	popupCtrs->removeGuis();
 	if (this->window)
@@ -149,8 +152,8 @@ void PopupCtrl::open(guictxtmenu_base *_ctxtmenu, ivec2 pos) {
 	popupCtrs->add(_ctxtmenu);
 	popupCtrs->layout();
 	window_overlay* appW = static_cast<window_overlay*>(this->window);
-	appW->positionOnScreen(pos-insetCtxtMenu, popupCtrs->size);
 	appW->show();
+	appW->positionOnScreen(pos-insetCtxtMenu, popupCtrs->size);
 }
 void PopupCtrl::destroy() {
 	isOK = false;

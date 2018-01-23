@@ -1,3 +1,4 @@
+#ifdef _WIN32
 #include "str_util.h"
 #include "../host/vst_host.h"
 #include "../host/vst_plugin.h"
@@ -520,3 +521,4 @@ int main(int argc, char* argv[]) {
 	}
 	return 0;
 }
+#endif

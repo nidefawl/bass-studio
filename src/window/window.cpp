@@ -1,9 +1,9 @@
 #include <glad/glad.h>
+#include <GLFW/glfw3.h>
 #ifdef _WIN32
 #define GLFW_EXPOSE_NATIVE_WIN32
-#endif
-#include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
+#endif
 #define NANOVG_GL3_IMPLEMENTATION
 #include <nanovg.h>
 #include <nanovg_gl.h>
@@ -37,6 +37,9 @@ using std::ofstream;
 #include "../platform/win/winheaders.h"
 #include "../platform/win/DropTarget.h"
 #endif
+#ifdef __linux__
+#include "../platform/linux/x11_gtk_util.h"
+#endif
 
 #include "config.h"
 #include "str_util.h"
@@ -56,6 +59,7 @@ using std::ofstream;
 #include "logging.h"
 #include "settings.h"
 #include "renderresources.h"
+#include "fileio.h"
 
 #include "../host/vst_host.h"
 #include "../host/vst_window.h"
@@ -128,7 +132,14 @@ static void glfw_runtime_error_callback(int error, const char* description) {
 static void showerror(const char* description) {
 	ngui::show(description, "Error", ngui::Style::Error, ngui::Buttons::OK);
 }
-
+void invalidateWindowContents(GLFWwindow* glfw) {
+#ifdef _WIN32
+		InvalidateRect(glfwGetWin32Window(glfw), NULL, FALSE);
+#endif
+#ifdef __linux__
+		sendExposeEvent(glfw);
+#endif
+}
 #ifdef _WIN32
 void syncMenu(HWND hwnd, ngui::MenuBar& menubar); // menu_win32.cpp
 ngui::Menu* getUserDataFromMenu(HMENU hmenu, UINT uPos); // menu_win32.cpp
@@ -195,6 +206,11 @@ protected:
 	HWND hwnd = NULL;
 #endif
 private:
+	int calls = 0;
+	uint64_t tm_lastfps;
+	String fpsStats;
+	double secondsLastDraw = 0.0;
+	const double minFrameDelay = 1/288.0;
 	void initOGL() {
 		//static code
 		static bool gladInitialized = false;
@@ -224,7 +240,8 @@ private:
 		}
 	}
 public:
-	appwindow() {
+	appwindow() :
+	  tm_lastfps(getTimeMillis()) {
 		name[0] = 0;
 	}
 	virtual ~appwindow() {
@@ -238,6 +255,29 @@ public:
 		return hwnd;
 	}
 #endif
+	void onRefresh()
+	{
+		PREVENT_REENTRANT("REENTRANT IN RENDER MAIN")
+		double delay = getSince(secondsLastDraw);
+		if (delay > minFrameDelay) {
+			render();
+			endFrame();
+		}
+	}
+	void endFrame() {
+
+		uint64_t tm = getTimeMillis();
+		double since = (tm - tm_lastfps) / 1000.0;
+		if (calls > 0 && since >= 1.0) {
+			double fps = calls / since;
+			fpsStats = StringFormat("%.2f fps\n", fps);
+			glfwSetWindowTitle(glfw, StringAsCStr(fpsStats));
+			tm_lastfps = tm;
+			calls = 0;
+		}
+		calls++;
+		secondsLastDraw = getTimeHPC();
+	}
 	void destroyGL() {
 		if (nanovgCtxt)
 			nvgDeleteGL3(nanovgCtxt);
@@ -260,7 +300,7 @@ public:
 		}
 #endif
 	}
-	virtual void onRefresh() = 0;
+	virtual void render() = 0;
 	virtual void onKeyInput(int key, int scancode, int action, int mods, const char* key_name) = 0;
 	virtual void onMouseMoved(ivec2 deltapos) {
 	}
@@ -354,10 +394,7 @@ public:
 		glfwMaximizeWindow(glfw);
 	}
 	virtual void flagNeedsRedraw() {
-#ifdef _WIN32
-		InvalidateRect(hwnd, NULL, FALSE);
-#endif
-		//TODO: implement linux
+		invalidateWindowContents(glfw);
 	}
     virtual bool filesDropBegin(std::vector<String>& files, ivec2 pos) {
     	return true;
@@ -452,18 +489,12 @@ public:
 class appwindow_main : public appwindow, public window_main  {
 	MainCtrl* const ctrl;
 	uint64_t dblclicktimer;
-	int calls = 0;
-	uint64_t tm_lastfps;
-	String fpsStats;
-	double secondsLastDraw = 0.0;
-	const double minFrameDelay = 1/288.0;
 public:
 	std::unique_ptr<appwindow_overlay> overlayWindow;
 	appwindow_main(MainCtrl* _ctrl)
 		: appwindow(),
 		  window_main(),
-		  ctrl(_ctrl),
-		  tm_lastfps(getTimeMillis()) {
+		  ctrl(_ctrl) {
 		dblclicktimer = 0;
 	}
 	void create(const char* title, int w, int h);
@@ -506,32 +537,10 @@ public:
 
 
 		glfwSwapBuffers(glfw);
-		uint64_t tm = getTimeMillis();
-		double since = (tm - tm_lastfps) / 1000.0;
-		if (calls > 0 && since >= 1.0) {
-			double fps = calls / since;
-			fpsStats = StringFormat("%.2f fps\n", fps);
-			glfwSetWindowTitle(glfw, StringAsCStr(fpsStats));
-			tm_lastfps = tm;
-			calls = 0;
-		}
-		calls++;
-		secondsLastDraw = getTimeHPC();
-	}
-	void onRefresh()
-	{
-		PREVENT_REENTRANT("REENTRANT IN RENDER MAIN")
-		double delay = getSince(secondsLastDraw);
-		if (delay > minFrameDelay) {
-			render();
-		}
 	}
 	void onMouseMoved(ivec2 deltapos) {
 		if (abs(deltapos.x)+abs(deltapos.y) > 2)
 			this->dblclicktimer = 0;
-		if (abs(deltapos.x)+abs(deltapos.y) > 0) {
-			my_printf("mouse delta %d %d\n", deltapos.x, deltapos.y);
-		}
 		ctrl->mouseMoved(getMousePos(), deltapos);
 		flagNeedsRedraw();
 	}
@@ -654,6 +663,9 @@ public:
 	int getKeyMods() override {
 		return getKeyMods_();
 	}
+	void updateWindowFromDlg() {
+		onRefresh();
+	}
 };
 
 class appwindow_overlay : public appwindow, public window_overlay {
@@ -668,9 +680,8 @@ public:
 	{
 	}
 	void create(const char* title, int w, int h);
-	void onRefresh()
+	void render()
 	{
-		PREVENT_REENTRANT("REENTRANT IN RENDER OVERLAY")
 		glfwMakeContextCurrent(glfw);
 		int winwidth, winheight;
 		int fbwidth, fbheight;
@@ -724,6 +735,14 @@ public:
 		} else if (action == GLFW_RELEASE) {
 			ctrl->mouseUp(getMousePos(), button);
 			return;
+		}
+		flagNeedsRedraw();
+	}
+	void onWindowFocusChanged(int focused) {
+		if (focused) {
+			ctrl->focusReceived();
+		} else {
+			ctrl->focusLost();
 		}
 		flagNeedsRedraw();
 	}
@@ -801,6 +820,9 @@ public:
 	bool isMouseCaptured() {
 		return appwindow::isMouseCaptured();
 	}
+	void updateWindowFromDlg() {
+		onRefresh();
+	}
 };
 
 
@@ -845,9 +867,8 @@ public:
 		//TODO: implement linux
 #endif
 	}
-	void onRefresh()
+	void render()
 	{
-		PREVENT_REENTRANT("REENTRANT IN RENDER DIALOG")
 		glfwMakeContextCurrent(glfw);
 		int winwidth, winheight;
 		int fbwidth, fbheight;
@@ -942,6 +963,9 @@ public:
 	}
 	bool isMouseCaptured() {
 		return appwindow::isMouseCaptured();
+	}
+	void updateWindowFromDlg() {
+		onRefresh();
 	}
 };
 void appwindow_main::updateMenu() {
@@ -1160,10 +1184,27 @@ static std::unique_ptr<appwindow_main> mainWindow;
 MainCtrl* MainCtrl::get() {
 	return ctrl.get();
 }
+
 int mainTest(void (*drawFn)(NVGcontext*,int,int,float)) {
 	std::set_terminate(on_terminate);
 	setExceptionHandler();
-
+	srand(time(NULL));
+	std::vector<uint8_t> vec(1024*64*4);
+	for (int i = 0; i < vec.size(); i++) {
+		vec[i] = (uint8_t) (rand()%256);
+	}
+	WriteFileVector("test.out", vec);
+	std::vector<uint8_t> vec2;
+	ReadFileVector("test.out", vec2);
+	assert(vec2.size() == vec.size());
+	for (int i = 0; i < vec.size(); i++) {
+		assert(vec[i] == vec2[i]);
+	}
+	std::vector<FileFound> files;
+	findFilesWithExt("..", "txt", true, files);
+	for (FileFound& f : files) {
+		my_printf("%s %s %s\n", StringAsCStr(f.path), StringAsCStr(f.name), StringAsCStr(f.ext));
+	}
 	EXC_TRY
 	allocConsole();
 	setMinimumResolutionTimer();
@@ -1184,9 +1225,27 @@ int mainTest(void (*drawFn)(NVGcontext*,int,int,float)) {
 	w->showWindow();
 	glfwSetErrorCallback(glfw_runtime_error_callback);
 	GLFWwindow* glfwHandle = w->getGLFW();
+	int once = 0;
+	int hasDlg = 0;
+	double secondsLastDraw = getTimeHPC();
+	const double minFrameDelay = 1/288.0;
 	while (!glfwWindowShouldClose(glfwHandle)) {
-		glfwWaitEvents();
-		ctrl->numCallsWaitEvents++;
+		glfwWaitEventsTimeout(0.001);
+//		w->onRefresh();
+		sendExposeEvent(glfwHandle);
+		if (once++ == 0) {
+			 SupportedFileType FILE_TYPE_PROJECT {"Project File", "txt"};
+			 std::vector<SupportedFileType> vecft{{FILE_TYPE_PROJECT}};
+			String path;
+			if (promptUserFilePath(w, 0, vecft, path)) {
+
+			}
+		}
+//		double delay = getSince(secondsLastDraw);
+//		if (delay > minFrameDelay) {
+//			sendExposeEvent(g_glfw);
+//			secondsLastDraw = getTimeHPC();
+//		}
 	}
 
 	glfwTerminate();

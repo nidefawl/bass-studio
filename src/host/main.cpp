@@ -1,13 +1,18 @@
-#define RENDER_TEST2
+#define RENDER_TEST1
 #ifdef RENDER_TEST
 #include <nanovg.h>
 #include "color_util.h"
 #include "seq_math.h"
 #include "logging.h"
+#include "platform.h"
 
 int mainTest(void (*drawFn)(NVGcontext*,int,int,float));
+int offsetX = 0;
+int offsetY = 0;
 void testAAScissorBleeding(NVGcontext* ctx, int winW, int winH, float pxratio) {
+	offsetX = (getTimeMillis()/5)%500;
 	nvgBeginFrame(ctx, winW, winH, pxratio);
+	nvgTranslate(ctx, offsetX, offsetY);
 	nvgSave(ctx);
 		nvgTranslate(ctx, 5, 5);
 		nvgIntersectScissor(ctx, 0, 0, 50, 50);

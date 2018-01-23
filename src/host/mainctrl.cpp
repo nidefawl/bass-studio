@@ -22,6 +22,7 @@
 #include "track.h"
 #include "fileloader.h"
 #include "logging.h"
+#include "menu.h"
 
 #include "../gui/gui.h"
 #include "../gui/guicontainer.h"
@@ -351,7 +352,7 @@ void MainCtrl::menuCommand(int cmd) {
 	case CMD_FILE_OPEN:
 		{
 			String path;
-			if (promptUserFilePath(0, vFILE_TYPE_PROJECT, path)) {
+			if (promptUserFilePath(window, 0, vFILE_TYPE_PROJECT, path)) {
 				loadFile(path);
 			}
 		}
@@ -359,7 +360,7 @@ void MainCtrl::menuCommand(int cmd) {
 	case CMD_FILE_SAVEAS:
 	case CMD_FILE_SAVE: {
 			if (cmd == CMD_FILE_SAVEAS || path.empty()) {
-				if (!promptUserFilePath(1, vFILE_TYPE_PROJECT, path)) {
+				if (!promptUserFilePath(window, 1, vFILE_TYPE_PROJECT, path)) {
 					break;
 				}
 			}
@@ -476,7 +477,7 @@ bool MainCtrl::init(window_main* window, NVGcontext* nanovg)
 //	for (int i = 0; i < 10; i++) {
 //		guiplugin *gui = new guiplugin({ x, 0 }, { w, w });
 //		if (i % 2 == 0) {
-//			gui->setTitleCstr("äöü!§$&/\\");
+//			gui->setTitleCstr("ï¿½ï¿½ï¿½!ï¿½$&/\\");
 //		}
 //		else {
 //			gui->setTitle(StringFormat("module %d", i));
