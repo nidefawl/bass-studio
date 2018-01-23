@@ -1,13 +1,31 @@
 #include "fileio.h"
 #include "exceptions.h"
+#include "str_util.h"
 #include <stb_image.h>
-#include <stdlib.h>
 #include <vector>
 #include <iostream>
 #include <string>
+
 #include <limits>
-#include <stdexcept>
 #include <stdint.h>
+#include <stdlib.h>
+#include <stdexcept>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <dirent.h>
+#include <assert.h>
+#include <fts.h>
+
+
+#include <stdio.h>
+#include <gtk/gtk.h>
+#include <gdk/gdk.h>
+#include <gdk/gdkx.h>
+#include <GLFW/glfw3.h>
+#include <GLFW/glfw3native.h>
+#include "window.h"
 
 int64_t ReadImage( const String &Filename, ImageBuf& ref)
 {
@@ -49,40 +67,79 @@ private:
 	// Declared but not defined, to avoid double closing.
 	File& operator=(const File&);
 	File(const File&);
+	int handle;
 public:
-	explicit File(const String& filename, int mode)
+	explicit File(const String& filename, int mode, int perms)
 	{
-		//TODO: implement
+		handle = open(StringAsCStr(filename), mode, perms);
+		ThrowLastErrorIf(handle < 0, "open call failed on file named " + filename);
 	}
 
 	~File() {
-		//TODO: implement
+		if (handle > -1) {
+			int ret = close(handle);
+			assert(ret == 0);
+		}
 	}
 
-//	HANDLE GetHandle() { return m_handle; }
+	int GetHandle() { return handle; }
 };
 
 size_t GetFileSizeSafe(const String& filename)
 {
-	//TODO: implement
+	struct stat fStat;
+	if (stat(StringAsCStr(filename), &fStat) == 0) {
+		return fStat.st_size;
+	}
 	return 0;
 }
 
 int32_t WriteFileVector(const String& filename, vector<uint8_t>& writebuffer)
 {
-	//TODO: implement
-	return 0;
+	File fobj(filename, O_CREAT|O_WRONLY, 0644);
+	ssize_t written = 0;
+	while (written < writebuffer.size()) {
+		ssize_t len =write(fobj.GetHandle(), writebuffer.data(), writebuffer.size());
+		if (len < 0) {
+			int err = errno;
+			if (err == EAGAIN) {
+				continue;
+			}
+			if (err == EINTR) {
+				continue;
+			}
+			throw FileIOException(errno, "WriteFile failed: " + filename);
+		}
+		written += len;
+	}
+	return (int32_t) written;
 }
 
 void ReadFileVector(const String& filename, vector<uint8_t>& out)
 {
-	//TODO: implement
-}
-int promptUserFilePath(int mode, std::vector<SupportedFileType> fileTypes, String& _out) {
-	//TODO: implement
-	return 0;
-}
+	File fobj(filename, O_RDONLY, 0);
+	size_t filesize = GetFileSizeSafe(filename);
+	ssize_t bytesRead = 0;
 
+	out.resize(filesize);
+
+	while (bytesRead < filesize) {
+		ssize_t len = read(fobj.GetHandle(), out.data(), filesize);
+		if (len < 0) {
+			int err = errno;
+			if (err == EAGAIN) {
+				continue;
+			}
+			if (err == EINTR) {
+				continue;
+			}
+			throw FileIOException(errno, "ReadFile failed: " + filename);
+		}
+		bytesRead += len;
+	}
+	cout << filename << " file size: " << filesize << ", bytesRead: " << bytesRead << endl;
+	cout << filename << " out.size: " << out.size() << endl;
+}
 
 void findFilesWithExt(
 		const String& strPath,
@@ -90,5 +147,163 @@ void findFilesWithExt(
 		const bool& bRecursive,
 		std::vector<FileFound>& _out, int depth)
 {
-	//TODO: implement
+    FTS* file_system = NULL;
+    FTSENT* child = NULL;
+    FTSENT* parent = NULL;
+
+    char* args[] = {(char*)StringAsCStr(strPath)};
+    file_system = fts_open(args, FTS_COMFOLLOW | FTS_NOCHDIR, NULL);
+
+    if (NULL != file_system)
+    {
+        while( (parent = fts_read(file_system)) != NULL)
+        {
+            child = fts_children(file_system,0);
+
+            if (errno == 0)
+            {
+				while ((NULL != child)
+					&& (NULL != child->fts_link))
+				{
+					child = child->fts_link;
+					String fileName, ext;
+					SplitPath(child->fts_name, NULL, NULL, &ext, &fileName);
+					if (ext == strExt) {
+
+						String path = String(child->fts_path) + child->fts_name;
+						const FileFound f = {std::move(path), child->fts_name, ext};
+						_out.push_back(f);
+					}
+				}
+            }
+        }
+        fts_close(file_system);
+    }
 }
+
+
+static void AddFiltersToDialog( GtkWidget *dialog, std::vector<SupportedFileType>& fileTypes )
+{
+    for (SupportedFileType& ft : fileTypes)
+    {
+    	GtkFileFilter* filter = gtk_file_filter_new();
+        gtk_file_filter_set_name( filter, StringAsCStr(String("*.")+ft.ext));
+        gtk_file_filter_add_pattern( filter, StringAsCStr(String("*.")+ft.ext));
+        gtk_file_chooser_add_filter( GTK_FILE_CHOOSER(dialog), filter );
+    }
+
+    /* always append a wildcard option to the end*/
+
+    GtkFileFilter* filter = gtk_file_filter_new();
+    gtk_file_filter_set_name( filter, "*.*" );
+    gtk_file_filter_add_pattern( filter, "*" );
+    gtk_file_chooser_add_filter( GTK_FILE_CHOOSER(dialog), filter );
+}
+
+
+static void WaitForCleanup(void)
+{
+    while (gtk_events_pending())
+        gtk_main_iteration();
+}
+
+#include "logging.h"
+
+struct DialogResult {
+	int result = 0;
+	String selected;
+};
+
+void response_cb (DialogResult *ctxt,
+                  gint response,
+				  GtkWidget *dialog)
+{
+	ctxt->result = response;
+	if (response == GTK_RESPONSE_ACCEPT) {
+		char *filename = gtk_file_chooser_get_filename( GTK_FILE_CHOOSER(dialog) );
+    	ctxt->selected = filename;
+        g_free(filename);
+	}
+    gtk_widget_hide(dialog);
+
+}
+
+void handleGuiEvents(window_base* w, GtkWidget *dialog) {
+	while (gtk_widget_is_visible(dialog)) {
+		glfwWaitEventsTimeout(0.001);
+		if (gtk_events_pending())
+			gtk_main_iteration();
+		w->updateWindowFromDlg();
+//		GdkWindow *gtk_window = gtk_widget_get_window(dialog);
+//		if (gtk_window) {
+//			GtkWindow *parent = NULL;
+//			gdk_window_get_user_data(gtk_window, (gpointer *)&parent);
+//			if (parent && !gtk_window_is_active(parent)) {
+//				gtk_window_present_with_time(parent, GDK_CURRENT_TIME);
+//			}
+//		}
+
+//	    GtkWidget *toplevel = gtk_widget_get_toplevel (dialog);
+
+	}
+    gtk_widget_destroy(dialog);
+    WaitForCleanup();
+	my_printf("Exit loop\n", 0);
+}
+int promptUserFilePath(window_base* w, int mode,
+		std::vector<SupportedFileType> fileTypes, String& _out) {
+	GtkWidget *dialog;
+
+	if (!gtk_init_check( NULL, NULL)) {
+		return 0;
+	}
+
+	GtkFileChooserAction dlgMode;
+	String dlgTitle;
+	String actionConfrimStr;
+	switch (mode) {
+	default:
+	case 0:
+		dlgMode = GTK_FILE_CHOOSER_ACTION_OPEN;
+		dlgTitle = "Open File";
+		actionConfrimStr = "_Open";
+		break;
+	case 1:
+		dlgMode = GTK_FILE_CHOOSER_ACTION_SAVE;
+		dlgTitle = "Save File";
+		actionConfrimStr = "_Save";
+		break;
+	}
+	dialog = gtk_file_chooser_dialog_new(StringAsCStr(dlgTitle),
+	NULL, dlgMode, "_Cancel", GTK_RESPONSE_CANCEL,
+			StringAsCStr(actionConfrimStr), GTK_RESPONSE_ACCEPT,
+			NULL);
+	switch (mode) {
+	default:
+	case 0:
+		break;
+	case 1:
+		gtk_file_chooser_set_do_overwrite_confirmation(GTK_FILE_CHOOSER(dialog), TRUE);
+		break;
+	}
+
+	AddFiltersToDialog(dialog, fileTypes);
+
+//    gtk_file_chooser_set_current_folder( GTK_FILE_CHOOSER(dialog), defaultPath );
+
+	DialogResult res;
+	g_signal_connect_swapped(dialog, "response", G_CALLBACK (response_cb),
+			&res);
+
+	gtk_widget_show_all(dialog);
+	handleGuiEvents(w, dialog);
+	GtkFileFilter* fil = gtk_file_chooser_get_filter(GTK_FILE_CHOOSER(dialog));
+	if (res.result == GTK_RESPONSE_ACCEPT) {
+		_out = res.selected;
+		my_printf("SELECTED PATH: %s\n", StringAsCStr(_out));
+		return 1;
+	}
+	_out = "";
+	return 0;
+}
+
