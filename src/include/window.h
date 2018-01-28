@@ -7,7 +7,7 @@
 using glm::vec4;
 using glm::vec2;
 using glm::ivec2;
-
+class PopupCtrl;
 class window_base {
 public:
 	window_base() {}
@@ -40,12 +40,14 @@ public:
 	virtual void show() = 0;
 	virtual void hide() = 0;
 	virtual void positionOnScreen(ivec2 pos, ivec2 size) = 0;
+	virtual PopupCtrl* getCtrl() = 0;
 };
 class window_main : public window_base {
 public:
 	window_main() : window_base() {}
 	virtual ~window_main() {}
 	virtual window_dialog* createDialog() = 0;
+	virtual window_overlay* createOverlay() = 0;
 	virtual void requestClose() = 0;
 	virtual void updateMenu() = 0;
 };

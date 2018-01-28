@@ -1,5 +1,6 @@
 #pragma once
 #include <stdbool.h>
+#include <glm/vec2.hpp>
 #include <stdint.h>
 #include <vector>
 #include "seq_math.h"
@@ -12,6 +13,7 @@
 #include "trackautomation.h"
 #include "leak_detect.h"
 
+using glm::ivec2;
 
 class gui_clip : public guibase {
 public:

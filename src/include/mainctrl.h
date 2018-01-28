@@ -122,7 +122,7 @@ public:
 	void onCharInput(unsigned int codepoint);
 	void onKeyInput(int key, int scancode, int keyState, int mods, const char* key_name);
 	void mouseScrolled(double xoffset, double yoffset);
-	void mouseMoved(ivec2 mousePos, ivec2 deltaPos);
+	virtual void mouseMoved(ivec2 mousePos, ivec2 deltaPos);
 
 };
 class guictr_popup;
@@ -212,6 +212,8 @@ class MainCtrl : public BaseCtrl, public delete_cb, public project_t
 public:
 	int32_t numCallsWaitEvents = 0;
 	window_main* mainWindow = NULL;
+	window_overlay* contextWindow = NULL;
+	std::vector<window_overlay*> menuWindows;
 	static MainCtrl* get();
 	static PlaybackThread* getPlayThread() {
 		return &get()->playThread;
@@ -259,10 +261,15 @@ public:
 	}
 	void resetMouseContext();
 	void addDebug(String s);
+
+	void closeAppMenus(int startlvl);
 	void openContextMenu(guictxtmenu_base *b, ivec2 pos);
+	void openAppMenu(int lvl, guictxtmenu_base *b, ivec2 pos);
+	void closeAppMenus();
 	bool filesDropMove(ivec2 pos);
     bool filesDropBegin(std::vector<String>& files, ivec2 pos);
     bool filesDropFinal(std::vector<String>& files, ivec2 pos);
+    void mouseMoved(ivec2 mousePos, ivec2 deltaPos) override;
 	void menuCommand(int cmd);
 	void onMenuOpen(ngui::Menu* menu);
 	void onWindowCloseRequest();

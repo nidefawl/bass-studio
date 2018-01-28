@@ -1,5 +1,7 @@
 #pragma once
 #include <nanovg.h>
+#include <glm/vec2.hpp>
+#include <glm/vec4.hpp>
 #include "mainctrl.h"
 #include "gui.h"
 #include "guicolors.h"

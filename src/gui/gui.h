@@ -41,6 +41,7 @@ ivec2 toControlsObjectSpace(ivec2& pos, guibase* gui);
 inline float calcInset(float desiredInset, float size) {
 	return min(desiredInset, max(0.f, (size-4.0f)/2.0f));
 }
+
 class guibase {
 public:
 	ivec2 pos{0};

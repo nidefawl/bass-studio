@@ -27,6 +27,7 @@ public:
 	virtual void layout(ivec2 size, int32_t _fontSize) {
 		this->fontSize = _fontSize;
 		this->height = (int32_t) round(_fontSize*1.1f);
+		this->width = std::max(size.x, this->width);
 	}
 	int leftOffset() {
 		return (int32_t) round(this->fontSize/2.4f);
@@ -274,6 +275,8 @@ protected:
 	int paddingV = 2;
 	int fontSize = FONT_SIZE_CTXT;
 public:
+	int maxHeight = 220;
+	PopupCtrl* ctrl;
 	~guictxtmenu_base() {
 		for (ctxtmenu_entry* e : entries) {
 			delete e;
@@ -290,6 +293,7 @@ public:
 		return false;
 	}
 	virtual void clicked(int _id) {
+		ctrl->close();
 		MainCtrl::get()->closeContextMenu();
 	}
 	virtual void handleDraggedBegin(MouseEvent& evt) {
@@ -318,7 +322,7 @@ public:
 	void render(NVGcontext* vg) {
 		setScissorTransform(vg);
 		int idx = 0;
-		ivec2 mouse = PopupCtrl::get()->m_mousePos;
+		ivec2 mouse = this->ctrl->m_mousePos;
 		mouse = toContainerSpace(mouse);
 		for (ctxtmenu_entry* e : entries) {
 			e->render(size, vg, idx, mouse);

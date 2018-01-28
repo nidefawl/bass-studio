@@ -39,6 +39,7 @@
 #include "../gui/trackcontent.h"
 #include "../gui/trackctr.h"
 #include "../gui/pluginlist.h"
+#include "../gui/guimenu.h"
 #include "../gui/debugctr.h"
 
 #include "vst_host.h"
@@ -111,6 +112,7 @@ void testTask() {
 class ViewContainers {
 	guictr_noteeditor noteeditor;
 public:
+	guictr_menubar ctr_menu;
 	guictr_tempocontrols ctr_tempo;
 	guictr_plugins ctr_plugins;
 	guictr_test ctr_test;
@@ -124,8 +126,9 @@ public:
 	Splitter splitterList;
 	Splitter splitterCenter;
 	Splitter splitterRight;
-	ViewContainers(Cursor& _cursor, project_t& project, scaled_grid& grid, clip_view& clipView, dragdrop_midifile& dragdropclip)
+	ViewContainers(ngui::MenuBar& menubar, Cursor& _cursor, project_t& project, scaled_grid& grid, clip_view& clipView, dragdrop_midifile& dragdropclip)
 	  : noteeditor(clipView),
+	  ctr_menu(menubar),
 	  ctr_tempo(project),
 	  ctr_pluginview(&ctr_plugins),
 	  ctr_clipeditorview(noteeditor),
@@ -140,6 +143,15 @@ public:
 		splitterRight.setMinMax(0.2f, 0.9f);
 	}
 	void layout(int32_t winW, int32_t winH) {
+		int winX = 0; int winY = 0;
+		int winBottom = winH;
+#if USE_GUI_MENU
+		int hMenu = 28;
+		winH -= hMenu;
+		winY += hMenu;
+		ctr_menu.pos = vec2(0, 0);
+		ctr_menu.size = vec2(winW, hMenu);
+#endif
 		int hTopControls = 48;
 		int hStatusBar = 60;
 		int hCenter = winH - hTopControls - hStatusBar;
@@ -162,14 +174,14 @@ public:
 		wbottom -= ctr_clipeditorview.size.x;
 		statusbar.size = { wbottom, hStatusBar };
 
-		ctr_tempo.pos = { 0, 0 };
-		ctr_tracks.pos = { 0, hTopControls };
-		statusbar.pos = { 0, winH - hStatusBar };
-		ctr_clipeditorview.pos = { statusbar.right(), winH - hStatusBar };
-		ctr_pluginview.pos = { ctr_clipeditorview.right(), winH - hStatusBar };
-		ctr_plugins.pos = { 0, winH - hStatusBar - hEditor};
-		ctr_clipeditor.pos = { 0, winH - hStatusBar - hEditor };
-		splitterCenter.pos = ivec2(0, ctr_clipeditor.pos.y - 5);
+		ctr_tempo.pos = { winX, winY };
+		ctr_tracks.pos = { winX, winY+hTopControls };
+		statusbar.pos = { winX, winBottom - hStatusBar };
+		ctr_clipeditorview.pos = { statusbar.right(), winBottom - hStatusBar };
+		ctr_pluginview.pos = { ctr_clipeditorview.right(), winBottom - hStatusBar };
+		ctr_plugins.pos = { winX, winBottom - hStatusBar - hEditor};
+		ctr_clipeditor.pos = { winX, winBottom - hStatusBar - hEditor };
+		splitterCenter.pos = ivec2(winX, ctr_clipeditor.pos.y - 5);
 		splitterCenter.size = ivec2(width, 10);
 
 		ctr_tempo.setSnapSides(ivec4(0, 0, 0, 1));
@@ -182,9 +194,9 @@ public:
 		ctr_dbg.setSnapSides(ivec4(1, 1, 0, 0));
 
 
-		ctr_dbg.pos = {width, hTopControls+heightList};
+		ctr_dbg.pos = {width, winY+hTopControls+heightList};
 		ctr_dbg.size = {wRight, heightDebug};
-		ctr_pluginlist.pos = {width, hTopControls};
+		ctr_pluginlist.pos = {width, winY+hTopControls};
 		ctr_pluginlist.size = {wRight, heightList};
 		splitterRight.pos = ivec2(ctr_dbg.pos.x - 5, hTopControls);
 		splitterRight.size = ivec2(10, hRight);
@@ -200,6 +212,9 @@ public:
 		 v.push_back(&ctr_pluginlist);
 		 v.push_back(&statusbar);
 		 v.push_back(&ctr_dbg);
+#if USE_GUI_MENU
+		 v.push_back(&ctr_menu);
+#endif
 		 v.push_back(&splitterCenter);
 		 v.push_back(&splitterList);
 		 v.push_back(&splitterRight);
@@ -310,7 +325,9 @@ void MainCtrl::onWindowCloseRequest() {
 }
 void MainCtrl::onMenuOpen(ngui::Menu* menu) {
 	updateMenubar();
+#if !USE_GUI_MENU
 	this->mainWindow->updateMenu();
+#endif
 }
 static SupportedFileType FILE_TYPE_PROJECT {"Project File", PROJECT_FILE_EXT};
 vector<SupportedFileType> vFILE_TYPE_PROJECT = { FILE_TYPE_PROJECT };
@@ -436,7 +453,7 @@ bool MainCtrl::init(window_main* window, NVGcontext* nanovg)
 	this->playThread.startThread();
 	this->workerThread.startThread();
 	initColor();
-	view = new ViewContainers(cursor, *this, grid, clipView, dragdropclip);
+	view = new ViewContainers(menubar, cursor, *this, grid, clipView, dragdropclip);
 	view->addTo(this->containers);
 
 	menus.recent.type = ngui::menu_type::submenu;
@@ -470,7 +487,9 @@ bool MainCtrl::init(window_main* window, NVGcontext* nanovg)
 	menubar.add(&menus.file);
 	menubar.add(&menus.edit);
 	this->updateMenubar();
+#if !USE_GUI_MENU
 	this->mainWindow->updateMenu();
+#endif
 
 	setEmptyProject();
 //	int w = 120;
@@ -717,19 +736,55 @@ void MainCtrl::uncaptureMouse() {
 void MainCtrl::onUncaptureMouse() {
 	guiCaptured = NULL;
 }
+void MainCtrl::closeAppMenus() {
+	for (auto w : menuWindows) {
+		w->getCtrl()->close();
+	}
+}
+void MainCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos) {
+#if USE_GUI_MENU
+	if (ctxtmenu != NULL) {
+		MouseHitEvt evt(MouseHitType::MOUSE_OVER);
+		if (view->ctr_menu.mouseHitTest(mousePos, evt)) {
+		}
+		return;
+	}
+#endif
+	BaseCtrl::mouseMoved(mousePos, deltaPos);
+}
+void MainCtrl::closeAppMenus(int startlvl) {
+	for (int i = startlvl; i < menuWindows.size(); i++) {
+		auto w = menuWindows[i];
+		w->getCtrl()->close();
+	}
+}
+void MainCtrl::openAppMenu(int lvl, guictxtmenu_base *b, ivec2 pos) {
+	if (menuWindows.size() <= lvl) {
+		menuWindows.push_back(this->mainWindow->createOverlay());
+	}
+	ivec2 windowPos;
+//	this->mainWindow->getPos(&windowPos);
+	menuWindows[lvl]->getCtrl()->open(b, pos);
+}
 void MainCtrl::openContextMenu(guictxtmenu_base *b, ivec2 pos) {
 	this->ctxtmenu = b;
 	ivec2 windowPos;
 	this->mainWindow->getPos(&windowPos);
-	PopupCtrl::get()->open(b, windowPos + pos);
+	if (!contextWindow) {
+		contextWindow = this->mainWindow->createOverlay();
+	}
+	contextWindow->getCtrl()->open(b, windowPos+pos);
 }
 void MainCtrl::closeContextMenu() {
-	PopupCtrl::get()->close();
+	if (contextWindow) {
+		contextWindow->getCtrl()->close();
+	}
 	if (this->ctxtmenu)
 		DELETE_PTR(this->ctxtmenu)
 }
 bool MainCtrl::hasContextMenu() {
-	return PopupCtrl::get()->isShown();
+	return this->contextWindow && this->contextWindow->isShown();
+//	return PopupCtrl::get()->isShown();
 }
 guictxtmenu_base* MainCtrl::getContextMenu() {
 	return this->ctxtmenu;

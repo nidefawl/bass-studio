@@ -607,6 +607,7 @@ void nvgTextBox(NVGcontext* ctx, float x, float y, float breakRowWidth, const ch
 // Returns the horizontal advance of the measured text (i.e. where the next character should drawn).
 // Measured values are returned in local coordinate space.
 float nvgTextBounds(NVGcontext* ctx, float x, float y, const char* string, const char* end, float* bounds);
+float nvgStaticTextBounds(NVGcontext* ctx, float x, float y, const char* string, const char* end, float* bounds);
 
 // Measures the specified multi-text string. Parameter bounds should be a pointer to float[4],
 // if the bounding box of the text should be returned. The bounds value are [xmin,ymin, xmax,ymax]

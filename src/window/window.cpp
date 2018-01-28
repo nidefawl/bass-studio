@@ -490,7 +490,7 @@ class appwindow_main : public appwindow, public window_main  {
 	MainCtrl* const ctrl;
 	uint64_t dblclicktimer;
 public:
-	std::unique_ptr<appwindow_overlay> overlayWindow;
+	std::vector<std::unique_ptr<appwindow_overlay>> overlayWindows;
 	appwindow_main(MainCtrl* _ctrl)
 		: appwindow(),
 		  window_main(),
@@ -506,6 +506,8 @@ public:
 			cursorIcon = ctrl->cursorIcon;
 		}
 	}
+	window_overlay* createOverlay();
+	void destroyOverlayWindows();
 	void destroy();
 	void onTick() {
 		PREVENT_REENTRANT("REENTRANT IN onTick")
@@ -519,24 +521,19 @@ public:
 		int fbwidth, fbheight;
 		glfwGetWindowSize(glfw, &winwidth, &winheight);
 		glfwGetFramebufferSize(glfw, &fbwidth, &fbheight);
-		float pxratio = fbwidth / (float)winwidth;
-		glViewport(0, 0, fbwidth, fbheight);
-		static const vec4 clearc = int32vec4(0xff121212);
-		glClearColor(clearc[0], clearc[1], clearc[2], clearc[3]);
-		glStencilMask(~0);
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-
-
-		if (!ctrl->isOk()) {
-			throw std::logic_error("invalid application state");
+		if (winwidth>0&&winheight>0&&fbwidth>0&&fbheight>0) {
+			float pxratio = fbwidth / (float)winwidth;
+			glViewport(0, 0, fbwidth, fbheight);
+			static const vec4 clearc = int32vec4(0xff121212);
+			glClearColor(clearc[0], clearc[1], clearc[2], clearc[3]);
+			glStencilMask(~0);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+			if (!ctrl->isOk()) {
+				throw std::logic_error("invalid application state");
+			}
+			ctrl->render(0, 0, winwidth, winheight, pxratio);
+			glfwSwapBuffers(glfw);
 		}
-
-
-
-		ctrl->render(0, 0, winwidth, winheight, pxratio);
-
-
-		glfwSwapBuffers(glfw);
 	}
 	void onMouseMoved(ivec2 deltapos) {
 		if (abs(deltapos.x)+abs(deltapos.y) > 2)
@@ -671,12 +668,13 @@ public:
 class appwindow_overlay : public appwindow, public window_overlay {
 public:
 	appwindow* const parent;
-	PopupCtrl* const ctrl;
+//	PopupCtrl* const ctrl;
+	std::unique_ptr<PopupCtrl> ctrl;
 	appwindow_overlay(appwindow* _parent)
 		: appwindow(),
 		  window_overlay(),
 		  parent(_parent),
-		  ctrl(PopupCtrl::get())
+		  ctrl(std::make_unique<PopupCtrl>())
 	{
 	}
 	void create(const char* title, int w, int h);
@@ -699,6 +697,9 @@ public:
 		}
 		ctrl->render(0, 0, winwidth, winheight, pxratio);
 		glfwSwapBuffers(glfw);
+	}
+	PopupCtrl* getCtrl() {
+		return ctrl.get();
 	}
 	void onWindowClose()
 	{
@@ -977,12 +978,23 @@ void appwindow_main::updateMenu() {
 		//TODO: implement linux
 #endif
 }
+window_overlay* appwindow_main::createOverlay() {
+	std::unique_ptr<appwindow_overlay> ow = std::make_unique<appwindow_overlay>(this);
+	String sName = StringFormat("%s menu", this->name);
+	ow->create(StringAsCStr(sName), 200, 200);
+	window_overlay* ret = ow.get();
+	this->overlayWindows.push_back(std::move(ow));
+	return ret;
+}
+void appwindow_main::destroyOverlayWindows() {
+	for (std::unique_ptr<appwindow_overlay>& ow : this->overlayWindows) {
+		ow->destroyGL();
+		ow.reset();
+	}
+}
 void appwindow_main::destroy() {
 	if (!glfw)
 		throw appexception("window null");
-	if (overlayWindow) {
-		overlayWindow->destroyGL();
-	}
 	appwindow::destroyGL();
 #ifdef _WIN32
 	UnregisterDropWindow(hwnd, this->dropTarget);
@@ -1007,9 +1019,6 @@ void appwindow_main::create(const char* title, int w, int h) {
 		//TODO: implement linux
 #endif
 
-	this->overlayWindow = std::make_unique<appwindow_overlay>(this);
-	String sName = StringFormat("%s menu", this->name);
-	overlayWindow->create(StringAsCStr(sName), 200, 200);
 #ifdef _WIN32
 	if (settings.size.valid) {
 		settings.size.apply(hwnd);
@@ -1439,7 +1448,8 @@ int mainHost(int argc, char* argv[]) {
 	my_printf("END 4\n", 0);
 	ctrl->destroy();
 	my_printf("END 5\n", 0);
-	PopupCtrl::get()->destroy();
+//	PopupCtrl::get()->destroy();
+	mainWindow->destroyOverlayWindows();
 	my_printf("END 6\n", 0);
 	vsthost::getInstance()->destroy();
 	my_printf("END 7\n", 0);
@@ -1447,7 +1457,6 @@ int mainHost(int argc, char* argv[]) {
 
 	glfwTerminate();
 	saveSettings(settings);
-	mainWindow->overlayWindow.reset();
 	ctrl.reset();
 	mainWindow.reset();
 	EXC_CATCH

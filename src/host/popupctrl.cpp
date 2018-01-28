@@ -30,6 +30,7 @@ class guictr_popup : public guictr_base, public gui_scrollcontainer {
 public:
 	int contentHeight = 0;
 	bool hasScrollbar = false;
+	int maxHeight = 220;
 	guictr_popup() : guictr_base(), scrollbar(1, 0.0f, *this) {
 		padding = 0;
 	}
@@ -73,8 +74,8 @@ public:
 			size.y = max(size.y, gui->bottom());
 		}
 		contentHeight = size.y;
-		if (size.y > 220) {
-			size.y = 200;
+		if (maxHeight > 0 && size.y > maxHeight+5) {
+			size.y = maxHeight-5;
 			hasScrollbar = true;
 			guis.insert(guis.begin(), &scrollbar);
 			scrollbar.parent = this;
@@ -147,8 +148,10 @@ void PopupCtrl::close() {
 void PopupCtrl::open(guictxtmenu_base *_ctxtmenu, ivec2 pos) {
 	this->m_mousePos = ivec2(-1111111);
 	popupCtrs->removeGuis();
+	_ctxtmenu->ctrl = this;
 	popupCtrs->pos = ivec2(0);
 	_ctxtmenu->pos = insetCtxtMenu;
+	popupCtrs->maxHeight = _ctxtmenu->maxHeight;
 	popupCtrs->add(_ctxtmenu);
 	popupCtrs->layout();
 	window_overlay* appW = static_cast<window_overlay*>(this->window);

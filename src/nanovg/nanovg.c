@@ -2968,6 +2968,34 @@ int nvgTextBreakLines(NVGcontext* ctx, const char* string, const char* end, floa
 	return nrows;
 }
 
+float nvgStaticTextBounds(NVGcontext* ctx, float x, float y, const char* string, const char* end, float* bounds)
+{
+	NVGstate* state = nvg__getState(ctx);
+	float scale = ctx->devicePxRatio;
+	float invscale = 1.0f / scale;
+	float width;
+
+	if (state->fontId == FONS_INVALID) {
+		return 0;
+	}
+
+	fonsSetSize(ctx->fs, state->fontSize*scale);
+	fonsSetSpacing(ctx->fs, state->letterSpacing*scale);
+	fonsSetBlur(ctx->fs, state->fontBlur*scale);
+	fonsSetAlign(ctx->fs, state->textAlign);
+	fonsSetFont(ctx->fs, state->fontId);
+
+	width = fonsTextBounds(ctx->fs, x*scale, y*scale, string, end, bounds);
+	if (bounds != NULL) {
+		// Use line bounds for height.
+		fonsLineBounds(ctx->fs, y*scale, &bounds[1], &bounds[3]);
+		bounds[0] *= invscale;
+		bounds[1] *= invscale;
+		bounds[2] *= invscale;
+		bounds[3] *= invscale;
+	}
+	return width * invscale;
+}
 float nvgTextBounds(NVGcontext* ctx, float x, float y, const char* string, const char* end, float* bounds)
 {
 	NVGstate* state = nvg__getState(ctx);
