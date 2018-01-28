@@ -78,37 +78,6 @@ bool recvData(pipe_msg_hdr* hdr, vst_metadata* data) {
     return false;
 }
 
-//void testVSTPlugins()
-//{
-//    MSG msg;
-//    HWND hwnd;
-//    WNDCLASS wc;
-//
-//    wc.style         = CS_HREDRAW | CS_VREDRAW;
-//    wc.cbClsExtra    = 0;
-//    wc.cbWndExtra    = 0;
-//    wc.lpszClassName = WINDOW_NAME;
-//    wc.hInstance     = GetModuleHandle(NULL);
-//    wc.hbrBackground = GetSysColorBrush(COLOR_3DFACE);
-//    wc.lpszMenuName  = NULL;
-//    wc.lpfnWndProc   = WndProc;
-//    wc.hCursor       = LoadCursor(NULL, IDC_ARROW);
-//    wc.hIcon         = LoadIcon(NULL, IDI_APPLICATION);
-//
-//    RegisterClass(&wc);
-//    hwnd = CreateWindow(wc.lpszClassName, WINDOW_NAME,
-//                WS_OVERLAPPEDWINDOW,
-//                100, 100, 350, 250, NULL, NULL, wc.hInstance, NULL);
-//    assert(hwnd != NULL);
-//
-////    ShowWindow(hwnd, SW_HIDE);
-//    UpdateWindow(hwnd);
-//
-//    while  (GetMessage(&msg, NULL, 0, 0))
-//    {
-//        DispatchMessage(&msg);
-//    }
-//}
 void getPluginData(vstplugin* plugin, vst_metadata* _out) {
 	AEffect* aeffect = plugin->handle->aeffect;
 	_out->id = aeffect->uniqueID;
