@@ -251,6 +251,12 @@ void handleGuiEvents(window_base* w, GtkWidget *dialog) {
     WaitForCleanup();
 	my_printf("Exit loop\n", 0);
 }
+
+Display* getX11Display();
+Window getX11FromWindowBase(window_base* w);
+#include <X11/Xlib.h>
+#include <X11/extensions/Xrandr.h>
+
 int promptUserFilePath(window_base* w, int mode,
 		std::vector<SupportedFileType> fileTypes, String& _out) {
 	GtkWidget *dialog;
@@ -290,15 +296,20 @@ int promptUserFilePath(window_base* w, int mode,
 
 	AddFiltersToDialog(dialog, fileTypes);
 
-//    gtk_file_chooser_set_current_folder( GTK_FILE_CHOOSER(dialog), defaultPath );
 
 	DialogResult res;
 	g_signal_connect_swapped(dialog, "response", G_CALLBACK (response_cb),
 			&res);
 
 	gtk_widget_show_all(dialog);
+	GdkWindow *gtk_window = gtk_widget_get_window(dialog);
+	if (gtk_window) {
+		Window fopenx11w = gdk_x11_window_get_xid(gtk_window);
+		Window x11w = getX11FromWindowBase(w);
+		XSetTransientForHint(getX11Display(), fopenx11w, x11w);
+	}
+
 	handleGuiEvents(w, dialog);
-	GtkFileFilter* fil = gtk_file_chooser_get_filter(GTK_FILE_CHOOSER(dialog));
 	if (res.result == GTK_RESPONSE_ACCEPT) {
 		_out = res.selected;
 		my_printf("SELECTED PATH: %s\n", StringAsCStr(_out));

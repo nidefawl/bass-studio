@@ -1040,6 +1040,7 @@ void appwindow_overlay::create(const char* title, int w, int h) {
 	glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
 	glfwWindowHint(GLFW_FOCUSED, GL_FALSE);
 	glfwWindowHint(GLFW_DECORATED, GL_FALSE);
+	glfwWindowHint(GLFW_UTILITY_WINDOW, GL_TRUE);
 	appwindow::create(title, w, h);
 #ifdef _WIN32
 	LONG l = GetWindowLong(hwnd, GWL_EXSTYLE);
@@ -1068,7 +1069,7 @@ void appwindow_overlay::create(const char* title, int w, int h) {
 		SWP_NOSIZE);
 #endif
 #if __linux__
-		//TODO: implement linux
+	setIsTransientFor(this->parent->getGLFW(), this->getGLFW());
 #endif
 	if (!ctrl->init(this, this->nanovgCtxt)) {
 		throw appexception("Couldn't start application");
@@ -1192,6 +1193,10 @@ static std::unique_ptr<appwindow_main> mainWindow;
 
 MainCtrl* MainCtrl::get() {
 	return ctrl.get();
+}
+
+GLFWwindow* getGlfwFromWindowBase(window_base* w) {
+	return dynamic_cast<appwindow*>(w)->getGLFW();
 }
 
 int mainTest(void (*drawFn)(NVGcontext*,int,int,float)) {
