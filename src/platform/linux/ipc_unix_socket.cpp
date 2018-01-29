@@ -38,9 +38,10 @@ public:
     	listen(s, 5);
 		return IPC_OK;
     }
-    void server_accept() {
+    int server_accept() {
     	unsigned int msglen = sizeof(remote);
     	s2 = accept(s, (struct sockaddr *)&(remote), &msglen);
+    	return s2 > 0 ? 0 : 1;
     }
     int server_read(char *buf, int buflen) {
     	return recv(s2, buf, buflen, 0);
@@ -49,10 +50,18 @@ public:
     	return send(s2, buf, buflen, 0);
     }
     void server_close() {
-    	if (s2) {
-    		close(s2);
+    	server_disconnect();
+    	if (s > 0) {
+    		close(s);
+			s =  0;
     	}
-    	close(s);
+
+    }
+    void server_disconnect() {
+    	if (s2 > 0) {
+    		close(s2);
+			s2 =  0;
+    	}
     }
 };
 
@@ -65,9 +74,16 @@ ipc_server::~ipc_server() {
 int ipc_server::server_open(String path) {
 	return _M_impl->server_open(path);
 }
+int ipc_server::server_accept() {
+	return _M_impl->server_accept();
+}
+void ipc_server::server_disconnect() {
+	_M_impl->server_disconnect();
+}
 void ipc_server::server_close() {
 	_M_impl->server_close();
 }
+
 
 class ipc_client::Impl
 {

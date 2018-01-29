@@ -105,7 +105,6 @@ public:
 		isrunning = false;
 	}
 	~Impl() {
-
 	}
 	void startProcess(String binary, String params) {
 		started = true;
@@ -126,7 +125,7 @@ public:
         return isrunning;
 	}
 	void joinProcess() {
-		if (started)
+		if (started && t.joinable())
 			t.join();
 	}
 };
@@ -134,6 +133,7 @@ ProcessThread::ProcessThread() :
 	_M_impl { new ProcessThread::Impl {  } } {
 }
 ProcessThread::~ProcessThread() {
+	_M_impl->joinProcess();
 	delete _M_impl;
 }
 void ProcessThread::startProcess(String binary, String params) {

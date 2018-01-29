@@ -6,13 +6,16 @@
 #include "../host/vst_plugin_handles.h"
 #include "fileio.h"
 #include "exceptions.h"
-#include <windows.h>
 #include "../threads/childprocessthread.h"
 #include "platform.h"
 #include <SQLiteCpp/SQLiteCpp.h>
 #include <SQLiteCpp/VariadicBind.h>
 #include <iostream>
 #include <memory>
+#include "ipc.h"
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 
 #define LOG(fmtString,...) printf(fmtString "\n", ##__VA_ARGS__); fflush(stdout)
@@ -22,15 +25,7 @@
 #define CMD_PLUGIN_LOAD_REQUEST 1
 #define CMD_PLUGIN_THREAD_QUIT 4
 #define BUF_SIZE 2048
-#define SCANNER_PIPE_NAME _T("\\\\.\\pipe\\vst_scanner_pipe")
-HANDLE pipe = NULL;
 
-void closePipe() {
-	if (pipe) {
-	    CloseHandle(pipe);
-		pipe = NULL;
-	}
-}
 struct pipe_msg_hdr {
 	uint32_t cmd;
 };
@@ -45,36 +40,33 @@ struct vst_metadata {
 	char szVendorName[256];
 };
 char buf[BUF_SIZE];
-bool sendData(pipe_msg_hdr* hdr, vst_metadata* data) {
+bool sendData(ipc_connection* conn, pipe_msg_hdr* hdr, vst_metadata* data) {
     memset(buf, 0, BUF_SIZE);
     char* bufPos = buf;
     memcpy(bufPos, hdr, sizeof(pipe_msg_hdr));
     bufPos += sizeof(pipe_msg_hdr);
     memcpy(bufPos, data, sizeof(vst_metadata));
     bufPos += sizeof(vst_metadata);
-    DWORD bytesSent;
-    if (WriteFile(pipe, buf, BUF_SIZE, &bytesSent, NULL)) {
-//    	printf("wrote %d bytes, expected %d\n", (int32_t)bytesSent, (int32_t)BUF_SIZE);
+    int len = conn->sendData(buf, BUF_SIZE);
+    if (len == BUF_SIZE) {
     	return true;
     }
-//    printf("Error: WriteFile operation failed: %lu\n", GetLastError());
     return false;
 }
-bool recvData(pipe_msg_hdr* hdr, vst_metadata* data) {
+bool recvData(ipc_connection* conn, pipe_msg_hdr* hdr, vst_metadata* data) {
     memset(buf, 0, BUF_SIZE);
-    DWORD bytesSent;
-    if (ReadFile(pipe, buf, BUF_SIZE, &bytesSent, NULL)) {
+    int len = conn->readData(buf, BUF_SIZE);
+    if (len == BUF_SIZE) {
 //    	printf("Read %d bytes, expected %d\n", (int32_t)bytesSent, (int32_t)BUF_SIZE);
-        char* bufPos = buf;
-        memcpy(hdr, bufPos, sizeof(pipe_msg_hdr));
-        bufPos += sizeof(pipe_msg_hdr);
-        if (data) {
-            memcpy(data, bufPos, sizeof(vst_metadata));
-            bufPos += sizeof(vst_metadata);
-        }
-        return true;
+		char* bufPos = buf;
+		memcpy(hdr, bufPos, sizeof(pipe_msg_hdr));
+		bufPos += sizeof(pipe_msg_hdr);
+		if (data) {
+			memcpy(data, bufPos, sizeof(vst_metadata));
+			bufPos += sizeof(vst_metadata);
+		}
+    	return true;
     }
-//    printf("Error: ReadFile operation failed: %lu\n", GetLastError());
     return false;
 }
 
@@ -89,10 +81,6 @@ void getPluginData(vstplugin* plugin, vst_metadata* _out) {
 		_out->szVendorName[0] = 0;
 	}
 	_out->isSynth = plugin->isSynth;
-}
-void printLastError(String fn) {
-	DWORD err = GetLastError();
-	printf("%s failed (%d): %s\n", StringAsCStr(fn), (int32_t)err, StringAsCStr(FormatErrorMessage(err)));
 }
 void createTables(SQLite::Database& db);
 class FileTimeGetter {
@@ -127,6 +115,7 @@ public:
 };
 bool quit = false;
 bool inConnectNamedPipe = false;
+#ifdef _WIN32
 BOOL WINAPI ConsoleHandler(DWORD dwType)
 {
     switch(dwType) {
@@ -141,15 +130,18 @@ BOOL WINAPI ConsoleHandler(DWORD dwType)
     }
     return TRUE;
 }
+#endif
 int main(int argc, char* argv[]) {
 	LOG("ARGC %d", argc);
 	for (int i = 0; i < argc; i++) {
 		LOG("argv[%d] %s", i, argv[i]);
 	}
+#ifdef _WIN32
     if (!SetConsoleCtrlHandler((PHANDLER_ROUTINE)ConsoleHandler,TRUE)) {
         fprintf(stderr, "Unable to install handler!\n");
         return EXIT_FAILURE;
     }
+#endif
 
     bool lastRecvState = false;
 //	std::set_terminate(terminate_fn);
@@ -191,21 +183,10 @@ int main(int argc, char* argv[]) {
 			GetModuleFileName(NULL, szFileName, MAX_PATH + 1);
 			String exeName = szFileName;
 
-			// Create a pipe to send data
-			if (pipe)
-			DisconnectNamedPipe(pipe);
-			pipe = CreateNamedPipe(
-			SCANNER_PIPE_NAME, // name of the pipe
-					PIPE_ACCESS_DUPLEX,
-					PIPE_TYPE_BYTE | PIPE_WAIT, // send data as a byte stream
-					1, // only allow 1 instance of this pipe
-					0, // no outbound buffer
-					0, // no inbound buffer
-					3000, // use default wait time
-					NULL // use default security attributes
-					);
-			if (!pipe || pipe == INVALID_HANDLE_VALUE) {
-				LOG("INVALID_HANDLE_VALUE");
+			ipc_server server;
+			int ipc_status = server.server_open("vst_scanner_pipe");
+			if (ipc_status) {
+				LOG("Failed opening ipc_server: %d", ipc_status);
 				return 1;
 			}
 			pipe_msg_hdr hdr;
@@ -261,11 +242,14 @@ int main(int argc, char* argv[]) {
 						needScan = false;
 					}
 				}
-				if (!needScan && !dryRun) {
-					if (rescanPattern.length() && file.name.find(rescanPattern) != String::npos) {
-					} else {
-//						LOG("skip plugin %s (%d)\n", StringAsCStr(file.path), id);
-
+				if (rescanPattern.length()) {
+					needScan = false;
+					needScan = file.name.find(rescanPattern) != String::npos;
+					if (!needScan) {
+						continue;
+					}
+				} else {
+					if (!needScan && !dryRun) {
 						continue;
 					}
 				}
@@ -273,7 +257,7 @@ int main(int argc, char* argv[]) {
 					if (thread)
 						thread->joinProcess();
 					if (pipeConnected) {
-						DisconnectNamedPipe(pipe);
+						server.server_disconnect();
 					}
 					Sleep(1200);
 					pipeConnected = false;
@@ -293,18 +277,14 @@ int main(int argc, char* argv[]) {
 				if (!pipeConnected && (!launchProcess || (thread && thread->isRunning()))) {
 					LOG("ConnectNamedPipe()");
 					inConnectNamedPipe = true;
-					bool connectStatus = ConnectNamedPipe(pipe, NULL);
+					int ipcstatus_connect = server.server_accept();
 					inConnectNamedPipe = false;
-					if (!connectStatus && GetLastError() != ERROR_PIPE_CONNECTED) {
-						printLastError("ConnectNamedPipe");
-						CloseHandle(pipe);
+					if (ipcstatus_connect) {
+						LOG("ipc_server::server_accept() failed: %d", ipcstatus_connect);
+						server.server_close();
 						break;
 					}
 					pipeConnected = true;
-				}
-				if (!pipe) {
-					LOG("!pipe");
-					break;
 				}
 				memset(&data, 0, sizeof(data));
 				memset(&hdr, 0, sizeof(hdr));
@@ -312,20 +292,20 @@ int main(int argc, char* argv[]) {
 				strncpy_s(data.szPath, StringAsCStr(file.path), file.path.length());
 				//			LOG("SCAN %s   %s", StringAsCStr(file.path), data.szPath);
 				//			LOG("server sendData()");
-				bool ok = sendData(&hdr, &data);
+				bool ok = sendData(&server, &hdr, &data);
 				if (!ok) {
-					printLastError("sendData");
-					DisconnectNamedPipe(pipe);
+					LOG("sendData failed");
+					server.server_disconnect();
 					pipeConnected = false;
 					continue;
 				}
 				Sleep(50);
-				ok = recvData(&hdr, &data);
+				ok = recvData(&server, &hdr, &data);
 				lastRecvState = ok;
 				bool status = false;
 				if (!ok) {
-					printLastError("recvData");
-					DisconnectNamedPipe(pipe);
+					LOG("recvData failed");
+					server.server_disconnect();
 					pipeConnected = false;
 				} else {
 					status = hdr.cmd == CMD_PLUGIN_LOAD_SUCCESS;
@@ -358,13 +338,13 @@ int main(int argc, char* argv[]) {
 				}
 				Sleep(200);
 			}
-			if (thread && thread->isRunning() && pipe) {
+			if (thread && thread->isRunning() && pipeConnected) {
 
 				memset(&data, 0, sizeof(data));
 				memset(&hdr, 0, sizeof(hdr));
 				hdr.cmd = CMD_PLUGIN_THREAD_QUIT;
-				sendData(&hdr, &data);
-				DisconnectNamedPipe(pipe);
+				sendData(&server, &hdr, &data);
+				server.server_disconnect();
 				thread->joinProcess();
 			}
 			thread.reset();
@@ -375,7 +355,6 @@ int main(int argc, char* argv[]) {
 		} catch (...) {
 			std::cout << "Unhandled exception" << std::endl;
 		}
-		closePipe();
 
 		LOG("Done.");
 		Sleep(500);
@@ -384,38 +363,21 @@ int main(int argc, char* argv[]) {
 		Sleep(120);
 	    // Open the named pipe
 	    // Most of these parameters aren't very relevant for pipes.
-		LOG("WaitNamedPipe");
-		if (!WaitNamedPipe(SCANNER_PIPE_NAME, 3000)) {
-			LOG("WaitNamedPipe timeout");
-			closePipe();
-			Sleep(5000);
+		ipc_client client;
+		int ipcstatus = client.client_connect("vst_scanner_pipe");
+		if (ipcstatus) {
+			LOG("Failed opening ipc_client: %d", ipcstatus);
 			return 1;
 		}
-		LOG("CreateFile");
-
-		pipe = CreateFile(
-			SCANNER_PIPE_NAME,
-			GENERIC_READ | GENERIC_WRITE,
-			FILE_SHARE_READ | FILE_SHARE_WRITE,
-			NULL,
-			OPEN_EXISTING,
-			FILE_ATTRIBUTE_NORMAL,
-			NULL
-		);
-	    if (!pipe || pipe == INVALID_HANDLE_VALUE) {
-			LOG("INVALID_HANDLE_VALUE");
-			Sleep(5000);
-			return 1;
-	    }
-	    project_globals_t project;
-	    vsthost::setInstance(std::make_unique<vsthost>(project));
+	    vsthost::setInstance(std::make_unique<vsthost>());
 	    auto audiohost = vsthost::getInstance();
 		LOG("START");
 		pipe_msg_hdr hdr;
 		vst_metadata data;
-		while (pipe && !quit) {
+		while (!quit) {
 //			LOG("client recvData()");
-			if (!recvData(&hdr, &data)) {
+			if (!recvData(&client, &hdr, &data)) {
+				LOG("recvData failed");
 				break;
 			}
 			if (hdr.cmd == CMD_PLUGIN_THREAD_QUIT) {
@@ -478,12 +440,13 @@ int main(int argc, char* argv[]) {
 				}
 			}
 //			LOG("client sendData()");
-			if (!sendData(&hdr, &data)) {
+			if (!sendData(&client, &hdr, &data)) {
+				LOG("sendData failed");
 				break;
 			}
 			Sleep(50);
 		}
-		closePipe();
+		client.client_close();
 		Sleep(500);
 		vsthost::getInstance()->destroy();
 	} else {

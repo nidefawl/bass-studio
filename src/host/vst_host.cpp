@@ -875,7 +875,8 @@ void vsthost::unloadTrack(track_t* track) {
 	}
 }
 void vsthost::unloadPlugin(vstplugin* plugin) {
-	MainCtrl::get()->closeContextMenu();
+	if (MainCtrl::get())
+		MainCtrl::get()->closeContextMenu();
 //	PopupCtrl::get()->close(); // Make sure context controls do not reference vst
 	plugin->close();
 	auto it = std::find(list.begin(), list.end(), plugin);
