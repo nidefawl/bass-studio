@@ -8,3 +8,4 @@
 #define FILE_FORMAT_VERSION 1
 #define PROJECT_FILE_EXT "project"
 #define USE_GUI_MENU 1
+#define SETTINGS_NAME "data/settings.json"

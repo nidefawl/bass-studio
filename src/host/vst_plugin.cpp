@@ -356,11 +356,13 @@ bool vstplugin::show() {
 	if (this->window == NULL && (handle->aeffect->flags & effFlagsHasEditor)) {
 		ERect *prc = NULL;
 		this->dispatch(effEditGetRect, 0, 0, (void*)&prc);
-		Size size = { 0, 0 };
+		Size size = { 160, 120 };
 		if (prc)
 		{
 			size = { prc->right - prc->left, prc->bottom - prc->top };
 		}
+		if (size.width <= 0) size.width = 160;
+		if (size.height <= 0) size.height = 120;
 		this->window = vst_window::make(this, this->sName, size, false);
 	}
 	if (this->window != NULL) {

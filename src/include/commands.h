@@ -1,10 +1,10 @@
 #pragma once
-#define CMD_EXIT 0
-#define CMD_FILE_NEW 1
-#define CMD_FILE_OPEN 2
-#define CMD_FILE_SAVE 3
-#define CMD_FILE_SAVEAS 4
-#define CMD_FILE_CLOSE 5
+#define CMD_EXIT 1
+#define CMD_FILE_NEW 2
+#define CMD_FILE_OPEN 3
+#define CMD_FILE_SAVE 4
+#define CMD_FILE_SAVEAS 5
+#define CMD_FILE_CLOSE 6
 #define CMD_UNDO 10
 #define CMD_REDO 11
 #define CMD_CUT 12

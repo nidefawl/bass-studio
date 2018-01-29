@@ -63,7 +63,7 @@ public:
 		}
 	}
 	void clicked(int _id) {
-		if(_id >= 0)
+		if(_id > 0)
 			MainCtrl::get()->menuCommand(_id);
 		if (lvl == 0) {
 			MainCtrl::get()->closeContextMenu();

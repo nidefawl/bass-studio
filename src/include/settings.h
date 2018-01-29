@@ -49,6 +49,7 @@ struct appsettings
 	String device_api;
 	String device_selected;
 	bool startEngine = false;
+	String pluginPath;
 public:
 	appsettings() { }
 	template<class Archive>
@@ -60,6 +61,9 @@ public:
 #ifdef _WIN32
 		make_optional_nvp(ar, "window", size);
 #endif
+		make_optional_nvp(ar, "pluginPath", pluginPath);
 	}
 };
 extern appsettings settings;
+void saveSettings(appsettings& _settings);
+bool loadSettings(appsettings& _settings);

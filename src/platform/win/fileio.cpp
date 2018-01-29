@@ -236,4 +236,44 @@ void findFilesWithExt(
 		}
 	}
 }
+
+class FileTimeGetter::Impl {
+public:
+    FILETIME ftCreate = {0};
+    FILETIME ftAccess = {0};
+    FILETIME ftWrite = {0};
+    HANDLE hFile = {0};
+    bool ok = false;
+public:
+    int64_t getWriteTimeI64() {
+    	if (!ok) {
+    		return 0;
+    	}
+    	int64_t time = (uint64_t)ftWrite.dwLowDateTime;
+    	time = (uint64_t)time | (uint64_t)ftWrite.dwHighDateTime << 32;
+    	return time;
+    }
+    Impl(String path) {
+	    hFile = CreateFile(StringAsCStr(path), GENERIC_READ, FILE_SHARE_READ, NULL,
+	        OPEN_EXISTING, 0, NULL);
+	    if(hFile != INVALID_HANDLE_VALUE)
+	    {
+	    	ok = GetFileTime(hFile, &ftCreate, &ftAccess, &ftWrite);
+	    }
+
+	}
+	~Impl() {
+	    if(hFile != INVALID_HANDLE_VALUE)
+	    	CloseHandle(hFile);
+	}
+};
+FileTimeGetter::FileTimeGetter(String path) : _M_Impl{FileTimeGetter::Impl{path}} {
+
+}
+FileTimeGetter::~FileTimeGetter() {
+	delete _M_Impl;
+}
+int64_t FileTimeGetter::getWriteTimeI64() {
+	return _M_Impl->getWriteTimeI64();
+}
 #endif

@@ -2,10 +2,17 @@
 #include "../../vst_window.h"
 #include "../../vst_host.h"
 #include "../../vst_plugin.h"
-#include "mainctrl.h"
-
+#include <vector>
+#include <GLFW/glfw3.h>
 #include "leak_detect.h"
 
+struct Display;
+void sendExposeEvent(GLFWwindow* glfw);
+GLFWwindow* getTopLevelGlfwWindow();
+extern "C" {
+WINDOW_HANDLE glfwGetX11Window(GLFWwindow* window);
+Display* glfwGetX11Display();
+}
 
 namespace {
 	static std::vector<vst_window*> vst_window_list;
@@ -33,7 +40,9 @@ namespace {
 
 vst_window* vst_window::make (vstplugin* plugin, const String& name, Size size, bool resizeable)
 {
-	return nullptr;
+	vst_window* vstWindow = new vst_window();
+	vstWindow->init(plugin, name, size, resizeable);
+	return vstWindow;
 }
 vst_window* vst_window::getVSTWindow(WINDOW_HANDLE handle)
 {
@@ -53,15 +62,23 @@ std::vector<vst_window*>& vst_window::getWindows ()
 bool vst_window::init(vstplugin* plugin, const String& name, Size size, bool resizeable)
 {
 	this->plugin = plugin;
+
+	GLFWwindow* window = getTopLevelGlfwWindow();
+	glfwDefaultWindowHints();
+	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+	glfw = glfwCreateWindow(size.width, size.height, StringAsCStr(name), NULL, NULL);
+	WINDOW_HANDLE x11Window = glfwGetX11Window(glfw);
+	hwnd = x11Window;
 	//create native window
-	//addWindow(handle)
-	return hwnd != NULL;
+	addWindow(this);
+	return hwnd != 0;
 }
 
 //------------------------------------------------------------------------
 void vst_window::close()
 {
 	plugin->onClose();
+	glfwHideWindow(glfw);
 //	ShowWindow(hwnd, false);
 }
 
@@ -71,11 +88,13 @@ void vst_window::destroy()
 	plugin->onWindowDestroy();
 //	SetWindowLongPtr (hwnd, GWLP_USERDATA, (__int3264) (LONG_PTR) nullptr);
 //	DestroyWindow(hwnd);
+	glfwDestroyWindow(glfw);
 	removeWindow (this);
 }
 //------------------------------------------------------------------------
 void vst_window::show()
 {
+	glfwShowWindow(glfw);
 //	SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOCOPYBITS | SWP_SHOWWINDOW);
 	plugin->onShow(this);
 }
@@ -83,6 +102,8 @@ void vst_window::show()
 //------------------------------------------------------------------------
 Size vst_window::getContentSize ()
 {
+	Size s;
+	glfwGetWindowSize(glfw, &s.width, &s.height);
 //	RECT r;
 //	GetClientRect (hwnd, &r);
 //	return {r.right - r.left, r.bottom - r.top};
@@ -93,12 +114,14 @@ Size vst_window::getContentSize ()
 
 void vst_window::updateDisplay() {
 //	InvalidateRgn(hwnd, NULL, TRUE);
+	sendExposeEvent(glfw);
 }
 //------------------------------------------------------------------------
 void vst_window::resize (Size newSize)
 {
 	if (getContentSize () == newSize)
 		return;
+	glfwSetWindowSize(glfw, newSize.width, newSize.height);
 //	WINDOWINFO windowInfo;
 //	GetWindowInfo (hwnd, &windowInfo);
 //	RECT clientRect {};

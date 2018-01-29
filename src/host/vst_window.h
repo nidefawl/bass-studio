@@ -6,8 +6,12 @@
 #define WINDOW_HANDLE HWND
 #endif
 #ifdef __linux__
-//TODO: make this Window (requires include, requires namespaced Cursor or rename)
-#define WINDOW_HANDLE long
+//TODO: make this Window (XID) (requires include, requires namespaced Cursor or rename)
+#if __x86_64__ || __ppc64__
+#define WINDOW_HANDLE unsigned long
+#else
+#define WINDOW_HANDLE unsigned int
+#endif
 #endif
 #include <vector>
 #include <stdint.h>
@@ -28,6 +32,7 @@ inline bool operator== (const Size& lhs, const Size& rhs)
 	return lhs.width == rhs.width && lhs.height == rhs.height;
 }
 //------------------------------------------------------------------------
+struct GLFWwindow;
 class vst_window
 {
 public:
@@ -49,9 +54,13 @@ public:
 		return plugin;
 	}
 private:
+	vstplugin* plugin = NULL;
 #ifdef _WIN32
 	LRESULT CALLBACK proc (UINT message, WPARAM wParam, LPARAM lParam);
-#endif
 	WINDOW_HANDLE hwnd = NULL;
-	vstplugin* plugin = NULL;
+#endif
+#ifdef __linux__
+	WINDOW_HANDLE hwnd = 0;
+	GLFWwindow* glfw = NULL;
+#endif
 };

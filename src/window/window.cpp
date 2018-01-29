@@ -129,6 +129,14 @@ static void glfw_startup_error_callback(int error, const char* description) {
 static void glfw_runtime_error_callback(int error, const char* description) {
 	printf("Error %d: %s", error, description);
 }
+static void setAppWindowHints() {
+	glfwDefaultWindowHints();
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+	glfwWindowHint(GLFW_STENCIL_BITS, 8);
+	glfwWindowHint(GLFW_DEPTH_BITS, 24);
+	glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_API);
+}
 static void showerror(const char* description) {
 	ngui::show(description, "Error", ngui::Style::Error, ngui::Buttons::OK);
 }
@@ -152,7 +160,6 @@ static VOID WIN32API_CALLBACK_TYPE timerProc(HWND hwnd, UINT uMsg, UINT_PTR idEv
 #endif
 class appwindow_dialog;
 class appwindow_overlay;
-#define SETTINGS_NAME "data/settings.json"
 bool loadSettings(appsettings& _settings) {
 	try {
 		Stringstream ss;
@@ -200,7 +207,11 @@ protected:
 	vec2 mousepos;
 	GLFWwindow *glfw = NULL;
 	NVGcontext* nanovgCtxt = NULL;
+#ifdef __linux__
+	bool noRawInput = true;//disable, since Virtual Machines don't handle rawinput correctly (works on native)
+#endif
 #ifdef _WIN32
+	bool noRawInput = false;
 	UINT_PTR timer = 0;
 	DropTarget* dropTarget = NULL;
 	HWND hwnd = NULL;
@@ -326,7 +337,7 @@ public:
 		glfwSetInputMode(glfw, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
 	}
 	virtual void captureMouse() {
-		glfwSetInputMode(glfw, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+		glfwSetInputMode(glfw, GLFW_CURSOR, noRawInput ? GLFW_CURSOR_HIDDEN : GLFW_CURSOR_DISABLED);
 	}
 	virtual void releaseMouse() {
 		glfwSetInputMode(glfw, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
@@ -835,6 +846,7 @@ public:
 		this->parent = _parent;
 	}
 	void create(const char* title, int w, int h) {
+		setAppWindowHints();
 		glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 		glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
 		glfwWindowHint(GLFW_FOCUSED, GL_TRUE);
@@ -1005,6 +1017,7 @@ void appwindow_main::destroy() {
 #endif
 }
 void appwindow_main::create(const char* title, int w, int h) {
+	setAppWindowHints();
 	glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
 	appwindow::create(title, w, h);
 	glfwSetWindowSizeLimits(glfw, 640, 480, GLFW_DONT_CARE, GLFW_DONT_CARE);
@@ -1036,6 +1049,7 @@ void appwindow_main::create(const char* title, int w, int h) {
 	this->onWindowSizeChanged(w, h);
 }
 void appwindow_overlay::create(const char* title, int w, int h) {
+	setAppWindowHints();
 	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 	glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
 	glfwWindowHint(GLFW_FOCUSED, GL_FALSE);
@@ -1123,8 +1137,12 @@ static appwindow* getUserData(GLFWwindow *w) {
 void on_terminate() {
 	glfwTerminate();
 	if (excDescription.length()) {
-
+#ifdef __linux__
+		printf("Error: %s\n", StringAsCStr(excDescription));
+#else
 		ngui::show(StringAsCStr(excDescription), "Error", ngui::Style::Error, ngui::Buttons::OK);
+#endif
+
 	}
 }
 
@@ -1195,8 +1213,14 @@ MainCtrl* MainCtrl::get() {
 	return ctrl.get();
 }
 
+
 GLFWwindow* getGlfwFromWindowBase(window_base* w) {
 	return dynamic_cast<appwindow*>(w)->getGLFW();
+}
+
+GLFWwindow* getTopLevelGlfwWindow() {
+	auto wbase = MainCtrl::get()->window;
+	return getGlfwFromWindowBase(wbase);
 }
 
 int mainTest(void (*drawFn)(NVGcontext*,int,int,float)) {
@@ -1227,12 +1251,7 @@ int mainTest(void (*drawFn)(NVGcontext*,int,int,float)) {
 		showerror("Initialization failed. Couldn't initialize glfw");
 		exit(EXIT_FAILURE);
 	}
-	glfwDefaultWindowHints();
-
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
-	glfwWindowHint(GLFW_STENCIL_BITS, 8);
-	glfwWindowHint(GLFW_DEPTH_BITS, 24);
+	setAppWindowHints();
 	appwindow_dialog* w = new appwindow_dialog(NULL);
 	w->drawFn=drawFn;
 	w->create("test window", 1280, 720);

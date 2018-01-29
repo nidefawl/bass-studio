@@ -13,7 +13,12 @@
 #include "hires_timer.h"
 #include "project.h"
 #include <memory>
-
+#ifdef __linux__
+#define PLATFORM_PLUGIN_EXT "so"
+#endif
+#ifdef _WIN32
+#define PLATFORM_PLUGIN_EXT "dll"
+#endif
 
 //-------------------------------------------------------------------------------------------------------
 /*! hostCanDos strings Plug-in -> Host */
@@ -24,7 +29,7 @@ namespace HostCanDos
 	extern const char* canDoSendVstTimeInfo; ///< Host supports send of VstTimeInfo to plug-in
 	extern const char* canDoReceiveVstEvents; ///< Host can receive Vst events from plug-in
 	extern const char* canDoReceiveVstMidiEvent; ///< Host can receive MIDI events from plug-in 
-	extern const char* canDoReportConnectionChanges; ///< Host will indicates the plug-in when something change in plug-in´s routing/connections with #suspend/#resume/#setSpeakerArrangement 
+	extern const char* canDoReportConnectionChanges; ///< Host will indicates the plug-in when something change in plug-inï¿½s routing/connections with #suspend/#resume/#setSpeakerArrangement 
 	extern const char* canDoAcceptIOChanges; ///< Host supports #ioChanged ()
 	extern const char* canDoSizeWindow; ///< used by VSTGUI
 	extern const char* canDoOffline; ///< Host supports offline feature

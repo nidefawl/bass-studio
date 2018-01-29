@@ -43,10 +43,10 @@ public:
     	s2 = accept(s, (struct sockaddr *)&(remote), &msglen);
     	return s2 > 0 ? 0 : 1;
     }
-    int server_read(char *buf, int buflen) {
+    int server_read(char *buf, unsigned int buflen) {
     	return recv(s2, buf, buflen, 0);
     }
-    int server_send(char *buf, int buflen) {
+    int server_send(char *buf, unsigned int buflen) {
     	return send(s2, buf, buflen, 0);
     }
     void server_close() {
@@ -83,6 +83,12 @@ void ipc_server::server_disconnect() {
 void ipc_server::server_close() {
 	_M_impl->server_close();
 }
+int ipc_server::sendData(char* buf, unsigned int len) {
+	return _M_impl->server_send(buf, len);
+}
+int ipc_server::readData(char* buf, unsigned int len) {
+	return _M_impl->server_read(buf, len);
+}
 
 
 class ipc_client::Impl
@@ -109,10 +115,10 @@ public:
     	}
 		return IPC_OK;
     }
-    int client_read(char *buf, int buflen) {
+    int client_read(char *buf, unsigned int buflen) {
     	return recv(s, buf, buflen, 0);
     }
-    int client_send(char *buf, int buflen) {
+    int client_send(char *buf, unsigned int buflen) {
     	return send(s, buf, buflen, 0);
     }
     void client_close() {
@@ -133,4 +139,10 @@ int ipc_client::client_connect(String path) {
 }
 void ipc_client::client_close() {
 	_M_impl->client_close();
+}
+int ipc_client::sendData(char* buf, unsigned int len) {
+	return _M_impl->client_send(buf, len);
+}
+int ipc_client::readData(char* buf, unsigned int len) {
+	return _M_impl->client_read(buf, len);
 }

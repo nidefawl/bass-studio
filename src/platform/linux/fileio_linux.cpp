@@ -153,7 +153,7 @@ void findFilesWithExt(
     FTSENT* parent = NULL;
 
     char* args[] = {(char*)StringAsCStr(strPath)};
-    file_system = fts_open(args, FTS_COMFOLLOW | FTS_NOCHDIR, NULL);
+    file_system = fts_open(args, FTS_LOGICAL | FTS_COMFOLLOW | FTS_NOCHDIR, NULL);
 
     if (NULL != file_system)
     {
@@ -163,10 +163,8 @@ void findFilesWithExt(
 
             if (errno == 0)
             {
-				while ((NULL != child)
-					&& (NULL != child->fts_link))
+				while ((NULL != child))
 				{
-					child = child->fts_link;
 					String fileName, ext;
 					SplitPath(child->fts_name, NULL, NULL, &ext, &fileName);
 					if (ext == strExt) {
@@ -175,6 +173,7 @@ void findFilesWithExt(
 						const FileFound f = {std::move(path), child->fts_name, ext};
 						_out.push_back(f);
 					}
+					child = child->fts_link;
 				}
             }
         }
@@ -319,4 +318,29 @@ int promptUserFilePath(window_base* w, int mode,
 	return 0;
 }
 
+class FileTimeGetter::Impl {
+	struct stat fStat;
+    bool ok = false;
+public:
+    int64_t getWriteTimeI64() {
+    	if (!ok) {
+    		return 0;
+    	}
+    	return fStat.st_mtim.tv_sec * 1000L + fStat.st_mtim.tv_nsec / 1000000L;
+    }
+    Impl(String path) {
+    	ok = stat(StringAsCStr(path), &fStat) == 0;
+	}
+	~Impl() {
+	}
+};
+FileTimeGetter::FileTimeGetter(String path) : _M_Impl{new FileTimeGetter::Impl{path}} {
+
+}
+FileTimeGetter::~FileTimeGetter() {
+	delete _M_Impl;
+}
+int64_t FileTimeGetter::getWriteTimeI64() {
+	return _M_Impl->getWriteTimeI64();
+}
 #endif

@@ -25,9 +25,14 @@
 #include "track_impl.h"
 
 #include <mutex>
-#ifdef __MINGW32__
+#ifdef _WIN32
 #include <windows.h>
+#endif
+#ifdef __MINGW32__
 #include "../platform/mingw/mingw.mutex.h"
+#endif
+#ifdef __linux__
+#include <dlfcn.h>
 #endif
 #include "leak_detect.h"
 
@@ -328,6 +333,9 @@ public:
 	void releaseModule(void* module) {
 #ifdef _WIN32
 		FreeLibrary((HMODULE)module);
+#endif
+#ifdef __linux__
+		dlclose(module);
 #endif
 	}
 };
@@ -1008,6 +1016,29 @@ int32_t loadLib(String filepath, VSTPluginMain_t** out_fn, HMODULE* out_hmodule)
 	return 0;
 }
 #endif
+#ifdef __linux__
+
+int32_t loadLib(String filepath, VSTPluginMain_t** out_fn, void** out_hmodule) {
+	if (!FileExists(filepath)) {
+		return -2;
+	}
+	void* module = dlopen(StringAsCStr(filepath), RTLD_NOW);
+	if (!module) {
+		return -3;
+	}
+
+	VSTPluginMain_t *fn = (VSTPluginMain_t*) dlsym(module, "VSTPluginMain");
+	if (fn == NULL)
+	{
+		dlclose(module);
+		return -4;
+	}
+	*out_hmodule = module;
+	*out_fn = fn;
+
+	return 0;
+}
+#endif
 vstpluginloadres vsthost::loadPlugin(String filepath, int32_t globalId) {
 	String path, name, nameWithoutExt;
 	SplitPath(filepath, &path, &nameWithoutExt, NULL, &name);
@@ -1028,6 +1059,25 @@ vstpluginloadres vsthost::loadPlugin(String filepath, int32_t globalId) {
 	}
 	if (aeffect->magic != kEffectMagic) {
 		FreeLibrary(hmodule);
+		return vstpluginloadres(-6, NULL);
+	}
+	moduleHandle = hmodule;
+#endif
+
+#ifdef __linux__
+	void* hmodule = NULL;
+	int32_t ret = loadLib(filepath, &fn, &hmodule);
+	if (ret != 0) {
+		return vstpluginloadres(ret, NULL);
+	}
+
+	aeffect = fn(audioMaster);
+	if (!aeffect) {
+		dlclose(hmodule);
+		return vstpluginloadres(-5, NULL);
+	}
+	if (aeffect->magic != kEffectMagic) {
+		dlclose(hmodule);
 		return vstpluginloadres(-6, NULL);
 	}
 	moduleHandle = hmodule;

@@ -1,4 +1,3 @@
-#ifdef _WIN32
 #include "str_util.h"
 #include "../host/vst_host.h"
 #include "../host/vst_plugin.h"
@@ -13,8 +12,13 @@
 #include <iostream>
 #include <memory>
 #include "ipc.h"
+#include "settings.h"
 #ifdef _WIN32
 #include <windows.h>
+#endif
+#ifdef __linux__
+#include <unistd.h>
+#include <limits.h>
 #endif
 
 
@@ -76,43 +80,13 @@ void getPluginData(vstplugin* plugin, vst_metadata* _out) {
 	_out->version = aeffect->version;
 	_out->vstVersion = plugin->vstVersion;
 	_out->pluginCategory = plugin->pluginCategory;
-	strncpy_s(_out->szName, StringAsCStr(plugin->sName), plugin->sName.length());
+	strncpy(_out->szName, StringAsCStr(plugin->sName), plugin->sName.length());
 	if (!plugin->dispatch(effGetVendorString, 0, 0, (void*)_out->szVendorName)) {
 		_out->szVendorName[0] = 0;
 	}
 	_out->isSynth = plugin->isSynth;
 }
 void createTables(SQLite::Database& db);
-class FileTimeGetter {
-public:
-    FILETIME ftCreate = {0};
-    FILETIME ftAccess = {0};
-    FILETIME ftWrite = {0};
-    HANDLE hFile = {0};
-    bool ok = false;
-public:
-    int64_t getWriteTimeI64() {
-    	if (!ok) {
-    		return 0;
-    	}
-    	int64_t time = (uint64_t)ftWrite.dwLowDateTime;
-    	time = (uint64_t)time | (uint64_t)ftWrite.dwHighDateTime << 32;
-    	return time;
-    }
-	FileTimeGetter(String path) {
-	    hFile = CreateFile(StringAsCStr(path), GENERIC_READ, FILE_SHARE_READ, NULL,
-	        OPEN_EXISTING, 0, NULL);
-	    if(hFile != INVALID_HANDLE_VALUE)
-	    {
-	    	ok = GetFileTime(hFile, &ftCreate, &ftAccess, &ftWrite);
-	    }
-
-	}
-	~FileTimeGetter() {
-	    if(hFile != INVALID_HANDLE_VALUE)
-	    	CloseHandle(hFile);
-	}
-};
 bool quit = false;
 bool inConnectNamedPipe = false;
 #ifdef _WIN32
@@ -142,7 +116,8 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 #endif
-
+    appsettings settings;
+    loadSettings(settings);
     bool lastRecvState = false;
 //	std::set_terminate(terminate_fn);
 	if (argc > 1 && !strcmp("-server", argv[1])) {
@@ -170,18 +145,31 @@ int main(int argc, char* argv[]) {
 	        std::cout << "SQLite database file '" << db.getFilename().c_str() << "' opened successfully\n";
 			createTables(db);
 
-			Sleep(1000);
+			threadSleep(1000);
 
 			std::vector<FileFound> files;
-			String vstPlugPath = "C:/PluginManager/configs/default/hosts/Ableton/categories/";
-			findFilesWithExt(vstPlugPath, "dll", true, files);
+//			String vstPlugPath = "C:/PluginManager/configs/default/hosts/Ableton/categories/";
+			String vstPlugPath = settings.pluginPath;
+			LOG("pluginPath %s", StringAsCStr(vstPlugPath));
+			findFilesWithExt(vstPlugPath, PLATFORM_PLUGIN_EXT, true, files);
 			LOG("Found %u files", (uint32_t )files.size());
 			if (files.empty()) {
 				return 1;
 			}
+#ifdef _WIN32
 			TCHAR szFileName[MAX_PATH + 1];
 			GetModuleFileName(NULL, szFileName, MAX_PATH + 1);
 			String exeName = szFileName;
+#endif
+#ifdef __linux__
+			String exeName = "plugin_scan";
+		    char buff[4096];
+		    ssize_t len = ::readlink("/proc/self/exe", buff, sizeof(buff)-1);
+		    if (len != -1) {
+		      buff[len] = '\0';
+		      exeName = buff;
+		    }
+#endif
 
 			ipc_server server;
 			int ipc_status = server.server_open("vst_scanner_pipe");
@@ -259,7 +247,7 @@ int main(int argc, char* argv[]) {
 					if (pipeConnected) {
 						server.server_disconnect();
 					}
-					Sleep(1200);
+					threadSleep(1200);
 					pipeConnected = false;
 					thread = std::make_unique<ProcessThread>();
 					LOG("!thread.isRunning(), last recv state: %s", lastRecvState ?"GOOD":"BAD");
@@ -267,7 +255,7 @@ int main(int argc, char* argv[]) {
 					String lastCmd = StringFormat("%s %s", StringAsCStr(exeName), StringAsCStr(arg1));
 
 					thread->startProcess(exeName, "-client");
-					Sleep(200);
+					threadSleep(200);
 					if (!thread->isRunning()) {
 						thread->checkExcepetion();
 						LOG("Failed starting client");
@@ -289,7 +277,7 @@ int main(int argc, char* argv[]) {
 				memset(&data, 0, sizeof(data));
 				memset(&hdr, 0, sizeof(hdr));
 				hdr.cmd = CMD_PLUGIN_LOAD_REQUEST;
-				strncpy_s(data.szPath, StringAsCStr(file.path), file.path.length());
+				strncpy(data.szPath, StringAsCStr(file.path), file.path.length());
 				//			LOG("SCAN %s   %s", StringAsCStr(file.path), data.szPath);
 				//			LOG("server sendData()");
 				bool ok = sendData(&server, &hdr, &data);
@@ -299,7 +287,7 @@ int main(int argc, char* argv[]) {
 					pipeConnected = false;
 					continue;
 				}
-				Sleep(50);
+				threadSleep(50);
 				ok = recvData(&server, &hdr, &data);
 				lastRecvState = ok;
 				bool status = false;
@@ -326,7 +314,7 @@ int main(int argc, char* argv[]) {
 					queryInsertPlugin.bind(bndIdx++, data.version);
 					queryInsertPlugin.bind(bndIdx++, data.vstVersion);
 					queryInsertPlugin.bind(bndIdx++, data.pluginCategory);
-					queryInsertPlugin.bind(bndIdx++, timeDisk);
+					queryInsertPlugin.bind(bndIdx++, (long long int)timeDisk);
 					queryInsertPlugin.bind(bndIdx++, status);
 					queryInsertPlugin.bind(bndIdx++, file.path);
 					queryInsertPlugin.bind(bndIdx++, data.szName);
@@ -336,7 +324,7 @@ int main(int argc, char* argv[]) {
 				} catch (SQLite::Exception& e) {
 					std::cout << "queryInsertPlugin exception: " << e.getErrorStr() << std::endl;
 				}
-				Sleep(200);
+				threadSleep(200);
 			}
 			if (thread && thread->isRunning() && pipeConnected) {
 
@@ -357,10 +345,10 @@ int main(int argc, char* argv[]) {
 		}
 
 		LOG("Done.");
-		Sleep(500);
+		threadSleep(500);
 	} else if (argc > 0 && !strcmp("-client", argv[argc-1])) {
 		setExceptionHandler();
-		Sleep(120);
+		threadSleep(120);
 	    // Open the named pipe
 	    // Most of these parameters aren't very relevant for pipes.
 		ipc_client client;
@@ -444,13 +432,12 @@ int main(int argc, char* argv[]) {
 				LOG("sendData failed");
 				break;
 			}
-			Sleep(50);
+			threadSleep(50);
 		}
 		client.client_close();
-		Sleep(500);
+		threadSleep(500);
 		vsthost::getInstance()->destroy();
 	} else {
 	}
 	return 0;
 }
-#endif

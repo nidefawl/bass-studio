@@ -135,3 +135,14 @@ void findFilesWithExt(
 		const String& strExt,
 		const bool& bRecursive,
 		std::vector<FileFound>& _out, int depth = 0);
+
+class FileTimeGetter {
+	class Impl;
+public:
+public:
+    int64_t getWriteTimeI64();
+	FileTimeGetter(String path);
+	~FileTimeGetter();
+private:
+	Impl* _M_Impl;
+};
