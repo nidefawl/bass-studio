@@ -292,6 +292,8 @@ int clip_t::getInTimeRange(tick_t absStart, tick_t absEnd, tick_t cutStart, tick
 	if (cutEnd > -1) {
 		cutRight = min(cutRight, cutEnd-start());
 	}
+	if (cutRight <= cutLeft)
+		return 0;
 	getNotesView(cutLeft, cutRight , notesView, true);
 
 	auto itNote = notesView.m_list.begin();
