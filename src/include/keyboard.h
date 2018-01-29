@@ -312,6 +312,7 @@ inline bool isAlt(int mods) {
 	return (mods&KB_MOD_ALT);
 }
 inline void arrowKeyToXY(int key, int& x, int& y) {
+	x = 0; y = 0;
 	if (key == KEY_UP) {
 		y = 1;
 	}
