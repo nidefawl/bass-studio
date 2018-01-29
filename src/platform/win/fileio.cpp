@@ -267,7 +267,7 @@ public:
 	    	CloseHandle(hFile);
 	}
 };
-FileTimeGetter::FileTimeGetter(String path) : _M_Impl{FileTimeGetter::Impl{path}} {
+FileTimeGetter::FileTimeGetter(String path) : _M_Impl{new FileTimeGetter::Impl{path}} {
 
 }
 FileTimeGetter::~FileTimeGetter() {
