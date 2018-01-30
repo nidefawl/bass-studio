@@ -155,7 +155,7 @@ size_t clip_notes_t::removeDuplicates() {
 	updateBounds();
 	return nRemoved;
 }
-#define USE_IMPL 1
+
 void clip_notes_t::copy( const clip_notes_t &obj) {
 	//assert(!obj.hasDuplicates());
 	m_list = obj.m_list;
