@@ -1312,10 +1312,8 @@ int mainTest(void (*drawFn)(NVGcontext*,int,int,float)) {
 	w->showWindow();
 	glfwSetErrorCallback(glfw_runtime_error_callback);
 	GLFWwindow* glfwHandle = w->getGLFW();
-	int once = 0;
-	int hasDlg = 0;
-	double secondsLastDraw = getTimeHPC();
-	const double minFrameDelay = 1/288.0;
+//	int once = 0;
+//	int hasDlg = 0;
 	while (!glfwWindowShouldClose(glfwHandle)) {
 		glfwWaitEventsTimeout(0.001);
 		if (w->needsRefresh()) {
@@ -1329,11 +1327,6 @@ int mainTest(void (*drawFn)(NVGcontext*,int,int,float)) {
 //			if (promptUserFilePath(w, 0, vecft, path)) {
 //
 //			}
-//		}
-//		double delay = getSince(secondsLastDraw);
-//		if (delay > minFrameDelay) {
-//			sendExposeEvent(g_glfw);
-//			secondsLastDraw = getTimeHPC();
 //		}
 	}
 	my_printf("glfwPollEvents\n", 0);
