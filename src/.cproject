@@ -109,7 +109,7 @@
 					<fileInfo id="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.470816701" name="pngcheck.exe" rcbsApplicability="disable" resourcePath="res/pngcheck.exe" toolsToInvoke=""/>
 					<fileInfo id="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.639321225" name="x11_gtk_util.h" rcbsApplicability="disable" resourcePath="platform/linux/x11_gtk_util.h" toolsToInvoke=""/>
 					<sourceEntries>
-						<entry excluding="platform/linux/x11_gtk_util.h|platform/linux/x11_gtk_util.cpp|platform/linux/platform_linux.cpp|platform/linux/msgbox_linux.cpp|platform/linux/hires_timer_linux.cpp|platform/linux/fileio_linux.cpp|platform/linux/ipc_unix_socket.cpp|Debug|.vs|res/pngcheck.exe|BUILD" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
+						<entry excluding="platform/linux/platform_linux.cpp|platform/linux/x11_gtk_util.cpp|res/pngcheck.exe|platform/linux/hires_timer_linux.cpp|platform/linux/fileio_linux.cpp|platform/linux/x11_gtk_util.h|Debug|.vs|platform/linux/msgbox_linux.cpp|BUILD|platform/linux/ipc_unix_socket.cpp" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
 				</configuration>
 			</storageModule>

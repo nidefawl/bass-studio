@@ -4,7 +4,10 @@
 #include <stdlib.h>
 #include <excpt.h>
 #include "msgbox.h"
-#include "winheaders.h"
+#include <Windows.h>
+#ifdef __MINGW32__
+#include "mmsystem.h"
+#endif
 #include "seq_math.h"
 #include "str_util.h"
 #include <fcntl.h>

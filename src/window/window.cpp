@@ -138,6 +138,7 @@ static void setAppWindowHints() {
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_API);
 }
 static void showerror(const char* description) {
+	printf("Error: %s\n", description);
 	ngui::show(description, "Error", ngui::Style::Error, ngui::Buttons::OK);
 }
 void invalidateWindowContents(GLFWwindow* glfw) {
@@ -221,7 +222,9 @@ private:
 	uint64_t tm_lastfps;
 	String fpsStats;
 	double secondsLastDraw = 0.0;
+	double secondsLastDrawReq = 0.0;
 	const double minFrameDelay = 1/288.0;
+	bool redrawFlagged = false;
 	void initOGL() {
 		//static code
 		static bool gladInitialized = false;
@@ -256,7 +259,8 @@ public:
 		name[0] = 0;
 	}
 	virtual ~appwindow() {
-
+		my_printf("glfwDestroyWindow\n", 0);
+		glfwDestroyWindow(glfw);
 	}
 	GLFWwindow* getGLFW() {
 		return glfw;
@@ -275,6 +279,17 @@ public:
 			endFrame();
 		}
 	}
+	bool needsRefresh() {
+		double delay = getSince(secondsLastDraw);
+		return delay > minFrameDelay;
+	}
+	virtual void flagNeedsRedraw() {
+//		double delay = getSince(secondsLastDrawReq);
+//		if(delay > minFrameDelay*2) {
+//			secondsLastDrawReq = getTimeHPC();
+			invalidateWindowContents(glfw);
+//		}
+	}
 	void endFrame() {
 
 		uint64_t tm = getTimeMillis();
@@ -288,6 +303,7 @@ public:
 		}
 		calls++;
 		secondsLastDraw = getTimeHPC();
+		redrawFlagged = false;
 	}
 	void destroyGL() {
 		if (nanovgCtxt)
@@ -308,6 +324,7 @@ public:
 #ifdef _WIN32
 		if (timer && hwnd) {
 			KillTimer(hwnd, this->timer);
+			my_printf("KillTimer\n", 0);
 		}
 #endif
 	}
@@ -387,6 +404,22 @@ public:
 	void showWindow() {
 		glfwShowWindow(glfw);
 	}
+	void centerOnScreen(int screenIdx) {
+	    int monitors_length;
+	    GLFWmonitor **monitors = glfwGetMonitors(&monitors_length);
+	    if (monitors_length > screenIdx) {
+	        GLFWvidmode *monitor_vidmode = (GLFWvidmode*) glfwGetVideoMode(monitors[1]);
+	        if(monitor_vidmode != NULL) {
+	            int monitor_x, monitor_y;
+	            glfwGetMonitorPos(monitors[screenIdx], &monitor_x, &monitor_y);
+	    		int ww, wh;
+	    		glfwGetWindowSize(glfw, &ww, &wh);
+	            setPos(ivec2(
+	            		monitor_x + (monitor_vidmode->width * 0.5) - ww/2,
+						monitor_y + (monitor_vidmode->height * 0.5) - wh/2));
+	        }
+	    }
+	}
 	void hideWindow() {
 		glfwHideWindow(glfw);
 		//this->timer = SetTimer(hwnd, 0, 1, (TIMERPROC)NULL);
@@ -403,9 +436,6 @@ public:
 	}
 	void maximize() {
 		glfwMaximizeWindow(glfw);
-	}
-	virtual void flagNeedsRedraw() {
-		invalidateWindowContents(glfw);
 	}
     virtual bool filesDropBegin(std::vector<String>& files, ivec2 pos) {
     	return true;
@@ -856,6 +886,7 @@ public:
 
 #ifdef _WIN32
 		LONG l = GetWindowLong(hwnd, GWL_EXSTYLE);
+		if (parent)
 		SetWindowLong(hwnd, GWL_EXSTYLE, l & ~WS_EX_APPWINDOW);
 		SetWindowLong(hwnd, GWL_STYLE, WS_CAPTION | WS_POPUP | WS_CLIPSIBLINGS | WS_SYSMENU);
 		if (parent) {
@@ -889,7 +920,7 @@ public:
 		glfwGetFramebufferSize(glfw, &fbwidth, &fbheight);
 		float pxratio = fbwidth / (float)winwidth;
 		glViewport(0, 0, fbwidth, fbheight);
-		static const vec4 clearc = int32vec4(0xff121212);
+		static const vec4 clearc = int32vec4(0x00000000);
 		glClearColor(clearc[0], clearc[1], clearc[2], clearc[3]);
 		glStencilMask(~0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -909,9 +940,11 @@ public:
 #if __linux__
 		//TODO: implement linux
 #endif
-		glfwDestroyWindow(glfw);
+		my_printf("glfwSetWindowUserPointer\n", 0);
+		glfwSetWindowUserPointer(glfw, NULL);
 		if (parent)
 		this->parent->onChildClose(this);
+		my_printf("END\n", 0);
 	}
 	void onTick() {
 		flagNeedsRedraw();
@@ -1129,9 +1162,6 @@ window_dialog* appwindow_main::createDialog() {
 }
 static appwindow* getUserData(GLFWwindow *w) {
 	appwindow* impl = (appwindow*) glfwGetWindowUserPointer(w);
-	if (impl == NULL) {
-		throw appexception("Invalid window handle");
-	}
 	return impl;
 }
 void on_terminate() {
@@ -1149,58 +1179,80 @@ void on_terminate() {
 
 static void glfw_cb_mousepos(GLFWwindow *w, double x, double y) {
 	EXC_TRY
-	getUserData(w)->_onMouseMoved(x, y);
+	appwindow* wu;
+	if ((wu = getUserData(w)))
+		wu->_onMouseMoved(x, y);
 	EXC_CATCH
 }
 static void glfw_cb_mousebutton(GLFWwindow *w, int button, int action, int mods) {
 	EXC_TRY
-	getUserData(w)->onMouseButton(button, action, mods);
+	appwindow* wu;
+	if ((wu = getUserData(w)))
+		wu->onMouseButton(button, action, mods);
 	EXC_CATCH
 }
 static void glfw_cb_cursorenter(GLFWwindow *w, int entered) {
 	EXC_TRY
-	getUserData(w)->onCursorEnter(entered);
+	appwindow* wu;
+	if ((wu = getUserData(w)))
+		wu->onCursorEnter(entered);
 	EXC_CATCH
 }
 static void glfw_cb_mousescroll(GLFWwindow *w, double xoffset, double yoffset) {
 	EXC_TRY
-	getUserData(w)->onMouseScrolled(xoffset, yoffset);
+	appwindow* wu;
+	if ((wu = getUserData(w)))
+		wu->onMouseScrolled(xoffset, yoffset);
 	EXC_CATCH
 }
 static void glfw_cb_keyinput(GLFWwindow *w, int key, int scancode, int action, int mods) {
 	EXC_TRY
 	const char* key_name = glfwGetKeyName(key, scancode);
-	getUserData(w)->onKeyInput(key, scancode, action, mods, key_name);
+	appwindow* wu;
+	if ((wu = getUserData(w)))
+		wu->onKeyInput(key, scancode, action, mods, key_name);
 	EXC_CATCH
 }
 static void glfw_cb_charinput(GLFWwindow *w, unsigned int codepoint) {
 	EXC_TRY
-	getUserData(w)->onCharInput(codepoint);
+	appwindow* wu;
+	if ((wu = getUserData(w)))
+		wu->onCharInput(codepoint);
 	EXC_CATCH
 }
 static void glfw_cb_refresh(GLFWwindow *w) {
 	EXC_TRY
-	getUserData(w)->onRefresh();
+	appwindow* wu;
+	if ((wu = getUserData(w)))
+		wu->onRefresh();
 	EXC_CATCH
 }
 static void glfw_cb_windowclose(GLFWwindow *w) {
 	EXC_TRY
-	getUserData(w)->onWindowClose();
+	appwindow* wu;
+	if ((wu = getUserData(w)))
+		wu->onWindowClose();
 	EXC_CATCH
 }
 static void glfw_cb_windowfocus(GLFWwindow *w, int focused) {
 	EXC_TRY
-	getUserData(w)->onWindowFocusChanged(focused);
+	appwindow* wu;
+	if ((wu = getUserData(w)))
+		wu->onWindowFocusChanged(focused);
 	EXC_CATCH
 }
 static void glfw_cb_windowwize(GLFWwindow *w, int width, int height) {
 	EXC_TRY
-	getUserData(w)->onWindowSizeChanged(width, height);
+	appwindow* wu;
+	if ((wu = getUserData(w)))
+		wu->onWindowSizeChanged(width, height);
 	EXC_CATCH
 }
 static void glfw_cb_framebuffersize(GLFWwindow *w, int width, int height) {
 	EXC_TRY
-	getUserData(w)->onFramebufferSizeChanged(width, height);
+	appwindow* wu;
+	if ((wu = getUserData(w)))
+		wu->onFramebufferSizeChanged(width, height);
 	EXC_CATCH
 }
 
@@ -1227,7 +1279,7 @@ int mainTest(void (*drawFn)(NVGcontext*,int,int,float)) {
 	std::set_terminate(on_terminate);
 	setExceptionHandler();
 	srand(time(NULL));
-	std::vector<uint8_t> vec(1024*64*4);
+	/*std::vector<uint8_t> vec(1024*64*4);
 	for (int i = 0; i < vec.size(); i++) {
 		vec[i] = (uint8_t) (rand()%256);
 	}
@@ -1242,7 +1294,7 @@ int mainTest(void (*drawFn)(NVGcontext*,int,int,float)) {
 	findFilesWithExt("..", "txt", true, files);
 	for (FileFound& f : files) {
 		my_printf("%s %s %s\n", StringAsCStr(f.path), StringAsCStr(f.name), StringAsCStr(f.ext));
-	}
+	}*/
 	EXC_TRY
 	allocConsole();
 	setMinimumResolutionTimer();
@@ -1251,10 +1303,12 @@ int mainTest(void (*drawFn)(NVGcontext*,int,int,float)) {
 		showerror("Initialization failed. Couldn't initialize glfw");
 		exit(EXIT_FAILURE);
 	}
-	setAppWindowHints();
 	appwindow_dialog* w = new appwindow_dialog(NULL);
 	w->drawFn=drawFn;
-	w->create("test window", 1280, 720);
+	int winW = 1280;
+	int winH = 720;
+	w->create("test window", winW, winH);
+	w->centerOnScreen(1);
 	w->showWindow();
 	glfwSetErrorCallback(glfw_runtime_error_callback);
 	GLFWwindow* glfwHandle = w->getGLFW();
@@ -1264,26 +1318,32 @@ int mainTest(void (*drawFn)(NVGcontext*,int,int,float)) {
 	const double minFrameDelay = 1/288.0;
 	while (!glfwWindowShouldClose(glfwHandle)) {
 		glfwWaitEventsTimeout(0.001);
-//		w->onRefresh();
-		invalidateWindowContents(glfwHandle);
-		if (once++ == 0) {
-			 SupportedFileType FILE_TYPE_PROJECT {"Project File", "txt"};
-			 std::vector<SupportedFileType> vecft{{FILE_TYPE_PROJECT}};
-			String path;
-			if (promptUserFilePath(w, 0, vecft, path)) {
-
-			}
+		if (w->needsRefresh()) {
+			w->flagNeedsRedraw();
 		}
+
+//		if (once++ == 0) {
+//			 SupportedFileType FILE_TYPE_PROJECT {"Project File", "txt"};
+//			 std::vector<SupportedFileType> vecft{{FILE_TYPE_PROJECT}};
+//			String path;
+//			if (promptUserFilePath(w, 0, vecft, path)) {
+//
+//			}
+//		}
 //		double delay = getSince(secondsLastDraw);
 //		if (delay > minFrameDelay) {
 //			sendExposeEvent(g_glfw);
 //			secondsLastDraw = getTimeHPC();
 //		}
 	}
-
-	glfwTerminate();
+	my_printf("glfwPollEvents\n", 0);
+	glfwPollEvents();
+	my_printf("DELETE w\n", 0);
 	DELETE_PTR(w);
+	my_printf("glfwTerminate\n", 0);
+	glfwTerminate();
 	EXC_CATCH
+	my_printf("EXIT_SUCCESS\n", 0);
 	exit(EXIT_SUCCESS);
 	return 0;
 }
@@ -1479,10 +1539,10 @@ int mainHost(int argc, char* argv[]) {
 	my_printf("END 7\n", 0);
 
 
-	glfwTerminate();
 	saveSettings(settings);
 	ctrl.reset();
 	mainWindow.reset();
+	glfwTerminate();
 	EXC_CATCH
 	printLeaked();
 #ifdef _WIN32
