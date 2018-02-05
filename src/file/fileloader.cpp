@@ -77,7 +77,7 @@ void LoadMidiTask::loadFile() {
 						SplitPath(path, &filepath, &name, &ext);
 //							my_printf("%s %s %s\n", StringAsCStr(path), StringAsCStr(name), StringAsCStr(ext));
 						clip_t clip(name);
-//						clip.notes = move(notes);
+						//clip.notes = move(notes);
 						clip.notes = notes;
 						clip.time = 0;
 						clip.offsetStart = 0;
@@ -92,8 +92,6 @@ void LoadMidiTask::loadFile() {
 						}
 						trClipboard->clips.push_back(make_shared<clip_t>(move(clip)));
 						fileClipboard->tracks.push_back(trClipboard);
-//							MainCtrl::get()->getTrackId(0)->add(clip);
-//							MainCtrl::get()->updateVisibleTrackContents();
 					}
 				}
 				if (fileClipboard->tracks.size()) {
