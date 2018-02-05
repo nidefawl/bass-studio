@@ -704,8 +704,8 @@ track_t* vstplugin::getTrack() {
 	return handle->tr_plugins->track;
 }
 
-const char* trackTypeNames[4] = {
-	"Master", "Return", "Midi", NULL
+const char* trackTypeNames[5] = {
+	"Master", "Return", "Midi", "Audio", NULL
 };
 const char* TrackTypeToName(int type) {
 	return trackTypeNames[type];

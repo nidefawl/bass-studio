@@ -265,8 +265,8 @@ void gui_clipcontent::render(NVGcontext* vg) {
 
 	gui_clip* guiClip = view.gui;
 	track_t* track = guiClip ? guiClip->m_track : NULL;
-	if (track && track->audio) {
-		clip_t* clip = guiClip->m_clip;
+	if (guiClip->getClipType() == CLIP_MIDI && track && track->audio) {
+		clip_t* clip = dynamic_cast<gui_midi_clip*>(guiClip)->m_clip;
 		std::vector<note_t>& heldNotes = track->audio->heldNotes;
 		if (heldNotes.size()) {
 			nvgBeginPath(vg);

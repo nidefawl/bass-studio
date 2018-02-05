@@ -1,7 +1,8 @@
-#define RENDER_TEST 1
-#define RENDER_FB_TEST 2
-#define BUILD_APP RENDER_TEST
-#if BUILD_APP == RENDER_FB_TEST
+#define APP_RENDER_TEST 1
+#define APP_RENDER_FB_TEST 2
+#define APP_DAW 0
+#define BUILD_APP APP_DAW
+#if BUILD_APP == APP_RENDER_FB_TEST
 //
 // Copyright (c) 2013 Mikko Mononen memon@inside.org
 //
@@ -278,7 +279,7 @@ int main(int argc, char* argv[]) {
 	glfwTerminate();
 	return 0;
 }
-#elif BUILD_APP == RENDER_TEST
+#elif BUILD_APP == APP_RENDER_TEST
 #include <nanovg.h>
 #include <vector>
 #include "color_util.h"

@@ -411,7 +411,7 @@ void MainCtrl::menuCommand(int cmd) {
 	}
 }
 void MainCtrl::postInit() {
-	loadFile("test.project");
+	loadFile("empty.project");
 //	for (int i = 0; i < 32; i++) {
 //		loadFile("muuure.project");
 //	}
@@ -1596,5 +1596,9 @@ track_t* clip_view::track() const {
 clip_t* clip_view::clip() const {
 	if (!this->gui)
 		return NULL;
-	return this->gui->m_clip;
+	clip_t* clipPtr = NULL;
+	if (gui->getClipType() == CLIP_MIDI) {
+		clipPtr = dynamic_cast<gui_midi_clip*>(gui)->m_clip;
+	}
+	return clipPtr;
 }

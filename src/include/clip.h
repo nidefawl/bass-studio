@@ -9,6 +9,8 @@
 #include "logging.h"
 #include "layout.h"
 #include <assert.h>
+#define CLIP_MIDI 0
+#define CLIP_AUDIO 1
 
 class track_t;
 class gui_clip;

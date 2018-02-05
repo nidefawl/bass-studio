@@ -17,7 +17,8 @@
 #define TRACK_TYPE_MASTER 0
 #define TRACK_TYPE_RETURN 1
 #define TRACK_TYPE_MIDI 2
-#define NUM_TRACK_TYPES 3
+#define TRACK_TYPE_AUDIO 3
+#define NUM_TRACK_TYPES 4
 
 
 const char* TrackTypeToName(int type);

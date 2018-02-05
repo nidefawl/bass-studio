@@ -284,6 +284,14 @@ void guictr_plugins::showTrack(track_t* _track) {
 				addGui(vst);
 			}
 		}
+		switch (track->type) {
+		case TRACK_TYPE_MIDI:
+			placeholder.message = "Drop Instruments here";
+			break;
+		default:
+			placeholder.message = "Drop Effects here";
+			break;
+		}
 	}
 
 	layout();
@@ -293,9 +301,9 @@ void guictr_plugins::showTrack(track_t* _track) {
 }
 
 void guictr_plugins::pluginDragMove(guiplugin* g, ivec2 mousepos) {
+	highlightSlot = -1;
 	if (!track) return;
 	my_printf("pluginDragMove\n",0);
-	highlightSlot = -1;
 	track_impl_t* trp = g->vst->handle->tr_plugins;
 	if (!trp) {
 		assert(0&&"TRP WAS NULL");
@@ -303,6 +311,9 @@ void guictr_plugins::pluginDragMove(guiplugin* g, ivec2 mousepos) {
 	}
 	if (g->vst->isSynth) {
 		if (trp->track == track) {
+			return;
+		}
+		if (track->type != TRACK_TYPE_MIDI) {
 			return;
 		}
 		highlightSlot = 0;
@@ -319,13 +330,21 @@ void guictr_plugins::pluginDragMove(guiplugin* g, ivec2 mousepos) {
 	return;
 }
 void guictr_plugins::pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 mousepos) {
+	highlightSlot = -1;
 	if (!track) return;
+	if (g->entry.isSynth) {
+		if (track->type != TRACK_TYPE_MIDI) {
+			return;
+		}
+		highlightSlot = 0;
+		return;
+	}
 	highlightSlot = slotFromCoord(mousepos);
 }
 void guictr_plugins::pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mousepos) {
+	highlightSlot = -1;
 	if (!track) return;
 	int32_t dstSlot = highlightSlot;
-	highlightSlot = -1;
 	const pluginentry_t& entry = g->entry;
 	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 	vstpluginloadres res = vsthost::getInstance()->loadPlugin(entry.path);
@@ -336,8 +355,8 @@ void guictr_plugins::pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mouse
 	showTrack(track);
 }
 void guictr_plugins::pluginDragRelease(guiplugin* g, ivec2 mousepos) {
-	if (!track) return;
 	highlightSlot = -1;
+	if (!track) return;
 	int targetslot = slotFromCoord(mousepos);
 	my_printf("pluginDragRelease %d\n",targetslot);
 	track_impl_t* trp = g->vst->handle->tr_plugins;

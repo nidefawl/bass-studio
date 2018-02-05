@@ -26,10 +26,11 @@ float noteToScreen(float note, float scale, float offset, float sizeY) {
 	float rel = offsetKey - offset;
 	return (sizeY) - rel;
 }
-void gui_clip::handleRightClick(MouseEvent& evt) {
+void gui_midi_clip::handleRightClick(MouseEvent& evt) {
 	MainCtrl::get()->openContextMenu(new guictxtmenu_clip(this->m_clip), evt.mousepos);
 }
-/*static*/ void gui_clip::renderClip(NVGcontext* vg, const track_t* tr, const clip_t* cl, ivec2 pos, ivec2 size) {
+
+void renderMidiClip(NVGcontext* vg, const track_t* tr, const clip_t* cl, ivec2 pos, ivec2 size) {
 	if (cl->len <= 0) {
 		return;
 	}
@@ -139,7 +140,23 @@ void gui_clip::handleRightClick(MouseEvent& evt) {
 	}
 }
 
-
+bool getClipPosition(scaled_grid& grid, const ivec2& trackSize, const clip_t* cl, ivec2& pos, ivec2& size, tick_t offset) {
+	tick_t tickBegin = cl->time + offset;
+	tick_t tickEnd = cl->time + offset + cl->len;
+	double tickBeginX = grid.tickToScreenD(tickBegin);
+	double tickEndX = grid.tickToScreenD(tickEnd);
+	if (tickEndX < -4 || tickBeginX > trackSize.x + 4) {
+		return false;
+	}
+	double width = tickEndX - tickBeginX;
+	assert(FitsTypeRange<int32_t>(tickBeginX));
+	assert(FitsTypeRange<int32_t>(tickEndX));
+	int32_t tickBeginPx = (int32_t) round(tickBeginX);
+	int32_t widthPx = (int32_t) round(width);
+	pos = ivec2(tickBeginPx, INSET_TRACK_CONTENT);
+	size = ivec2(widthPx, size.y-INSET_TRACK_CONTENT*2);
+	return true;
+}
 void gui_clip::trackViewDragBegin(guitrack_editor* view, MouseEvent& evt) {
 	view->dragSelectionBegin(this, evt);
 }
@@ -156,7 +173,7 @@ void gui_track::updateVisibleTrackContents(scaled_grid& grid) {
 	automation.updateVisibleTrackContents(grid);
 	for (clip_t* clip : midi.clips) {
 		if (!clip->gClip) {
-			clip->gClip = new gui_clip(clip, m_track);
+			clip->gClip = new gui_midi_clip(clip, m_track);
 			add(clip->gClip);
 		}
 		clip->gClip->updatePosition(grid, size);

@@ -15,15 +15,18 @@
 
 using glm::ivec2;
 
+void renderMidiClip(NVGcontext* vg, const track_t* tr, const clip_t* cl, ivec2 pos, ivec2 size);
+bool getClipPosition(scaled_grid& grid, const ivec2& trackSize, const clip_t* cl, ivec2& pos, ivec2& size, tick_t offset);
 class gui_clip : public guibase {
 public:
-	clip_t* const m_clip;
 	track_t* const m_track;
 	bool culled = true;
-	gui_clip(clip_t* _clip, track_t* _track)
+	gui_clip(track_t* _track)
 		: guibase(),
-		  m_clip(_clip),
 		  m_track(_track) {
+	}
+	virtual ~gui_clip() {
+
 	}
 	bool isClipTitleBar(ivec2 mpos) {
 		return mpos.x >= pos.x &&
@@ -42,33 +45,6 @@ public:
 			mpos.y >= pos.y &&
 			mpos.x < pos.x + size.x &&
 			mpos.y < pos.y + HEIGHT_CLIP_TITLE;
-	}
-	void render(NVGcontext* vg) {
-		if (!culled) {
-			renderClip(vg, m_track, m_clip, pos, size);
-		}
-	}
-	static void renderClip(NVGcontext* vg, const track_t* tr, const clip_t* cl, ivec2 pos, ivec2 size);
-	static bool getClipPosition(scaled_grid& grid, const ivec2& trackSize, const clip_t* cl, ivec2& pos, ivec2& size, tick_t offset) {
-		tick_t tickBegin = cl->time + offset;
-		tick_t tickEnd = cl->time + offset + cl->len;
-		double tickBeginX = grid.tickToScreenD(tickBegin);
-		double tickEndX = grid.tickToScreenD(tickEnd);
-		if (tickEndX < -4 || tickBeginX > trackSize.x + 4) {
-			return false;
-		}
-		double width = tickEndX - tickBeginX;
-		assert(FitsTypeRange<int32_t>(tickBeginX));
-		assert(FitsTypeRange<int32_t>(tickEndX));
-		int32_t tickBeginPx = (int32_t) round(tickBeginX);
-		int32_t widthPx = (int32_t) round(width);
-		pos = ivec2(tickBeginPx, INSET_TRACK_CONTENT);
-		size = ivec2(widthPx, size.y-INSET_TRACK_CONTENT*2);
-		return true;
-	}
-	void updatePosition(scaled_grid& grid, ivec2& trackSize) {
-		size = this->parent->size;
-		culled = !getClipPosition(grid, trackSize, m_clip, pos, size, 0);
 	}
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
 		if (culled) {
@@ -109,62 +85,44 @@ public:
 		evt.relMousepos += pos;
 		parent->handleDraggedRelease(evt);
 	}
-	void handleRightClick(MouseEvent& evt);
 
 	void trackViewDragBegin(guitrack_editor* view, MouseEvent& evt);
 	void trackViewDragMove(guitrack_editor* view, MouseEvent& evt);
 	void trackViewDragRelease(guitrack_editor* view, MouseEvent& evt);
-	virtual void onRemove() {
-		assert(m_clip->gClip == this);
-		m_clip->gClip = NULL;
-	}
 	bool isDragMoveable() {
 		return true;
 	}
+	virtual int getClipType() = 0;
+	virtual void updatePosition(scaled_grid& grid, ivec2& trackSize) = 0;
 };
-
-
-
-class gui_track_midi : public guictr_base {
-protected:
-	track_t* const m_track;
+class gui_midi_clip : public gui_clip {
 public:
-	trackdata_midi_t& midi;
-	gui_track_midi(track_t* _track)
-		: guictr_base(), m_track(_track),
-		midi(m_track->getMidi()) {
-		padding = 0;
+	clip_t* const m_clip;
+	gui_midi_clip(clip_t* _clip, track_t* _track)
+		: gui_clip(_track),
+		  m_clip(_clip) {
+	}
+	int getClipType() {
+		return CLIP_MIDI;
+	}
+	void updatePosition(scaled_grid& grid, ivec2& trackSize) {
+		size = this->parent->size;
+		culled = !getClipPosition(grid, trackSize, m_clip, pos, size, 0);
 	}
 	void render(NVGcontext* vg) {
-//		if (MainCtrl::get()->getSelectedTrack() == m_track) {
-//			nvgBeginPath(vg);
-//			nvgRect(vg, pos.x, pos.y, size.x, size.y);
-//			nvgFillColor(vg, g_guiColors[COL_BG_SELECTEDTRACK]);
-//			nvgFill(vg);
-//		}
-		if (!setScissorTransform(vg)) {
-			return;
-		}
-//		nvgTranslate(vg, pos.x, pos.y);
-		for (clip_t* clip : midi.clips) {
-			if(!clip->gClip) {
-				continue;
-			}
-			clip->gClip->render(vg);
+		if (!culled) {
+			renderMidiClip(vg, m_track, m_clip, pos, size);
 		}
 	}
-
-	void updateVisibleTrackContents(scaled_grid& grid) {
-		for (clip_t* clip : midi.clips) {
-//			gui_clip* gClip = clip->gClip;
-			if(!clip->gClip) {
-				clip->gClip = new gui_clip(clip, m_track);
-				add(clip->gClip);
-			}
-			clip->gClip->updatePosition(grid, size);
-		}
+	void onRemove() {
+		assert(m_clip->gClip == this);
+		m_clip->gClip = NULL;
 	}
+	void handleRightClick(MouseEvent& evt);
 };
+
+
+
 
 class gui_track_automationlane : public guictr_base {
 public:
@@ -259,6 +217,46 @@ public:
 	void destroyGuis() override {
 		automation.destroyGuis();
 		guictr_base::destroyGuis();
+	}
+};
+class gui_track_midi : public guictr_base {
+protected:
+	track_t* const m_track;
+public:
+	trackdata_midi_t& midi;
+	gui_track_midi(track_t* _track)
+		: guictr_base(), m_track(_track),
+		midi(m_track->getMidi()) {
+		padding = 0;
+	}
+	void render(NVGcontext* vg) {
+//		if (MainCtrl::get()->getSelectedTrack() == m_track) {
+//			nvgBeginPath(vg);
+//			nvgRect(vg, pos.x, pos.y, size.x, size.y);
+//			nvgFillColor(vg, g_guiColors[COL_BG_SELECTEDTRACK]);
+//			nvgFill(vg);
+//		}
+		if (!setScissorTransform(vg)) {
+			return;
+		}
+//		nvgTranslate(vg, pos.x, pos.y);
+		for (clip_t* clip : midi.clips) {
+			if(!clip->gClip) {
+				continue;
+			}
+			clip->gClip->render(vg);
+		}
+	}
+
+	void updateVisibleTrackContents(scaled_grid& grid) {
+		for (clip_t* clip : midi.clips) {
+//			gui_clip* gClip = clip->gClip;
+			if(!clip->gClip) {
+				clip->gClip = new gui_midi_clip(clip, m_track);
+				add(clip->gClip);
+			}
+			clip->gClip->updatePosition(grid, size);
+		}
 	}
 };
 class gui_track : public guictr_base {

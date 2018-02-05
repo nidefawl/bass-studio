@@ -59,6 +59,7 @@ public:
 };
 class guiplaceholder : public guibase {
 public:
+	String message;
 	guiplaceholder() : guibase() {
 
 	}
@@ -78,7 +79,7 @@ public:
 		nvgFillColor(vg, GUI_COLOR(G_S2));
 		nvgFill(vg);
 		setFont(vg, 18, G_WHITE, NVG_ALIGN_CENTER|NVG_ALIGN_MIDDLE);
-		nvgText(vg, pos.x + size.x/2.0f, pos.y + size.y/2.0f, "Drop Instruments here", NULL);
+		nvgText(vg, pos.x + size.x/2.0f, pos.y + size.y/2.0f, StringAsCStr(message), NULL);
 	}
 };
 class guictr_plugins : public guictr_base {

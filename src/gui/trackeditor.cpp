@@ -375,8 +375,13 @@ void guitrack_editor::dragSelectionBegin(gui_clip* gClip, MouseEvent& evt) {
 	ivec2 local = evt.relMousepos;
 	tick_t tickExact = grid.screenToTickSnap(local.x, SNAP_OFF);
 	Cursor& cursor = MainCtrl::get()->cursor;
-	clip_t* clicked = gClip->m_clip;
 	track_t* track = gClip->m_track;
+	clip_t* clicked = NULL;
+	if (gClip->getClipType() == CLIP_MIDI) {
+		clicked = dynamic_cast<gui_midi_clip*>(gClip)->m_clip;
+	}
+	if (!clicked)
+		return;
 //		ghostCopy = new gui_clip(clip->m_clip->clone());
 //		ghostCopy->m_clip->gClip = ghostCopy;
 	track_t *trackClicked = getTrackFromMouse(project, local, false);
@@ -393,7 +398,7 @@ void guitrack_editor::dragSelectionBegin(gui_clip* gClip, MouseEvent& evt) {
 	}
 	if (action.dragtype) {
 		setSelectionRange(clicked, track);
-		dragStartLayout = track->getMidi();
+		dragStartLayout = track->getMidi(); //copy
 		action.cursorBegin = cursor;
 		resizePreModifyState.reset();
 		project.trackList.copyTracks(cursor.getTrackBegin(), cursor.getTrackEnd(), resizePreModifyState);
@@ -422,7 +427,12 @@ void guitrack_editor::dragSelectionMove(gui_clip* gui, MouseEvent& evt) {
 		if (action.dragtype == DRAG_CLIPS_RESIZE_LEFT
 				|| action.dragtype == DRAG_CLIPS_RESIZE_RIGHT) {
 			ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-			clip_t* clip = gui->m_clip;
+			clip_t* clip = NULL;
+			if (gui->getClipType() == CLIP_MIDI) {
+				clip = dynamic_cast<gui_midi_clip*>(gui)->m_clip;
+			}
+			if (!clip)
+				return;
 			track_t* track = gui->m_track;
 			dragStartLayout.apply(track);
 			int32_t tick = grid.screenToTickSnap(evt.relMousepos.x, SNAP_ON);
@@ -530,8 +540,13 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
 			}
 		} else if (action.dragtype == DRAG_CLIPS_RESIZE_LEFT
 				|| action.dragtype == DRAG_CLIPS_RESIZE_RIGHT) {
+			clip_t* clipPtr = NULL;
+			if (gui->getClipType() == CLIP_MIDI) {
+				clipPtr = dynamic_cast<gui_midi_clip*>(gui)->m_clip;
+			}
+			if (!clipPtr)
+				return;
 			ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-			clip_t* clipPtr = gui->m_clip;
 			track_t* trackPtr = gui->m_track;
 			trackdata_midi_t& midi = trackPtr->getMidi();
 			midi.deleteEmptyClips();
@@ -612,9 +627,10 @@ bool guitrack_editor::clipDropFinal(dragdrop_midifile& clip, ivec2 mousepos) {
 void guitrack_editor::renderClip(NVGcontext* vg, track_t* tr, const clip_t* cl, tick_t offset) {
 	ivec2 clipPos = ivec2();
 	ivec2 clipSize = tr->content->size; //TODO: get rid of *tr here, figure out size before and add default fallback
-	if (gui_clip::getClipPosition(grid, size, cl, clipPos, clipSize, offset)) {
+
+	if (getClipPosition(grid, size, cl, clipPos, clipSize, offset)) {
 		clipPos.y += tr->content->pos.y;
-		gui_clip::renderClip(vg, tr, cl, clipPos, clipSize);
+		renderMidiClip(vg, tr, cl, clipPos, clipSize);
 	}
 }
 
