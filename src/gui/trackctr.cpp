@@ -393,7 +393,7 @@ void guitrack_editor::updateVisibleTrackContents() {
 			my_printf("NO CONTENT ON %s\n", StringAsCStr(g->name));
 			continue;
 		}
-		g->content->updateVisibleTrackContents(grid);
+		g->content->updateVisibleTrackContents(project, grid);
 		for (gui_track_automationlane* au : g->subtracks) {
 			au->updateVisibleTrackContents(grid);
 		}

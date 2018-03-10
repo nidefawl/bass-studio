@@ -834,6 +834,10 @@ int nvgCreateImageRGBA(NVGcontext* ctx, int w, int h, int imageFlags, const unsi
 {
 	return ctx->params.renderCreateTexture(ctx->params.userPtr, NVG_TEXTURE_RGBA, w, h, imageFlags, data);
 }
+int nvgGetNativeImageHanlde(NVGcontext* ctx, int w, int h, int imageFlags, const unsigned char* data)
+{
+	return ctx->params.renderCreateTexture(ctx->params.userPtr, NVG_TEXTURE_RGBA, w, h, imageFlags, data);
+}
 
 void nvgUpdateImage(NVGcontext* ctx, int image, const unsigned char* data)
 {
@@ -851,6 +855,11 @@ void nvgDeleteImage(NVGcontext* ctx, int image)
 {
 	ctx->params.renderDeleteTexture(ctx->params.userPtr, image);
 }
+int nvgGetGLImageHandle(NVGcontext* ctx, int image)
+{
+	return ctx->params.renderGetGLImageHandle(ctx->params.userPtr, image);
+}
+
 
 NVGpaint nvgLinearGradient(NVGcontext* ctx,
 								  float sx, float sy, float ex, float ey,

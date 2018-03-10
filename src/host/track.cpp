@@ -43,15 +43,13 @@ void deleteClip(clip_t* cl, delete_cb *cb) {
 void deleteTrack(track_t* tr, delete_cb *cb) {
 	if (cb)
 		cb->preTrackDelete(tr);
-	if (tr->type == TRACK_TYPE_MIDI) {
-		trackdata_midi_t& midi = tr->getMidi();
-		std::vector<clip_t*>& clips = midi.clips;
-		for (auto itClip = clips.begin(); itClip != clips.end(); itClip++) {
-			clip_t* cl = *itClip;
-			deleteClip(cl, cb);
-		}
-		clips.clear();
+	trackdata_midi_t& midi = tr->getMidi();
+	std::vector<clip_t*>& clips = midi.clips;
+	for (auto itClip = clips.begin(); itClip != clips.end(); itClip++) {
+		clip_t* cl = *itClip;
+		deleteClip(cl, cb);
 	}
+	clips.clear();
 	if (tr->mixer) {
 		delete (tr->mixer);
 	}

@@ -73,8 +73,26 @@ public:
 	void setSnapSides(ivec4 _snapSides) {
 		this->snapSides = _snapSides;
 	}
+	virtual void scissorClip(ivec2& vpos, ivec2& vsize) {
+		ivec2 posTL = toParentSpace(vpos);
+		ivec2 posBR = toParentSpace(vpos + vsize);
+		ivec2 posCnt = getPosContent();
+		ivec2 sizeCnt = getSizeContent();
+		ivec2 posBRThis = posCnt+sizeCnt;
+		vpos.x = max(posTL.x, posCnt.x);
+		vpos.y = max(posTL.y, posCnt.y);
+		vsize.x = min(posBR.x, posBRThis.x) - vpos.x;
+		vsize.y = min(posBR.y, posBRThis.y) - vpos.y;
+		if (parent != NULL) {
+			parent->scissorClip(vpos, vsize);
+		}
+		vpos = toContainerSpace(vpos);
+	}
 	virtual ivec2 toContainerSpace(ivec2 in) {
 		return in - getPosContent();
+	}
+	virtual ivec2 toParentSpace(ivec2 in) {
+		return getPosContent() + in;
 	}
 	virtual ivec2 toScreenSpace(ivec2 in) {
 		in += getPosContent();

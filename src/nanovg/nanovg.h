@@ -397,6 +397,7 @@ void nvgImageSize(NVGcontext* ctx, int image, int* w, int* h);
 // Deletes created image.
 void nvgDeleteImage(NVGcontext* ctx, int image);
 
+int nvgGetGLImageHandle(NVGcontext* ctx, int image);
 //
 // Paints
 //
@@ -675,6 +676,7 @@ struct NVGparams {
 	void (*renderStroke)(void* uptr, NVGpaint* paint, NVGcompositeOperationState compositeOperation, NVGscissor* scissor, float fringe, float strokeWidth, const NVGpath* paths, int npaths);
 	void (*renderTriangles)(void* uptr, NVGpaint* paint, NVGcompositeOperationState compositeOperation, NVGscissor* scissor, const NVGvertex* verts, int nverts);
 	void (*renderDelete)(void* uptr);
+	int (*renderGetGLImageHandle)(void* uptr, int image);
 };
 typedef struct NVGparams NVGparams;
 

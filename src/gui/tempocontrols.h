@@ -41,6 +41,7 @@ public:
 			evt.dragDistance->y = 0;
 			int tempo = MainCtrl::get()->getCurrentTempo();
 			MainCtrl::get()->setTempo(tempo - disty*100);
+			MainCtrl::get()->updateVisibleTrackContents();
 		}
 	}
 	void handleDraggedRelease(MouseEvent& evt) {

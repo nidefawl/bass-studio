@@ -14,13 +14,16 @@
 
 class track_t;
 class gui_clip;
+class clip_audio_t {
+public:
+	int32_t id = 0;
+	clip_audio_t() {
+	}
+};
 class clip_notes_t {
 public:
 	clip_notes_t() {
 		m_list.reserve(128);
-	}
-	clip_notes_t* clone() {
-		return new clip_notes_t(*this);
 	}
 	clip_notes_t &operator =(const clip_notes_t &a) {
 		copy(a);
@@ -114,19 +117,21 @@ inline bool operator!=(const clip_notes_t& lhs, const clip_notes_t& rhs){return 
 class clip_t {
 public:
 	clip_notes_t notes;
+	clip_audio_t audio;
 	tick_t time = 0;
 	tick_t len = 0;
 	tick_t offsetStart = 0;
 	tick_t loopStart = 0;
 	tick_t loopLen = 0;
+	int clipType = CLIP_MIDI;
 	String name;
-	int rgb = 0xff00ff;
+	int rgb = 0x2B82AD;
 	bool enabled = true;
 	bool loopEnabled = true;
 	bool noLayout = true;
 	clip_editor_layout_t editorLayout;
 
-	clip_t(String _name) : clip_t() {
+	clip_t(int _clipType, String _name) : clipType(_clipType) {
 		this->name = _name;
 	}
 	clip_t() {
@@ -146,6 +151,7 @@ public:
 	}
 	void copy( const clip_t &obj) {
 		this->name = StringLimit(obj.name, 64);
+		clipType = obj.clipType;
 		enabled = obj.enabled;
 		rgb = obj.rgb;
 		time = obj.time;
@@ -154,6 +160,7 @@ public:
 		loopStart = obj.loopStart;
 		loopLen = obj.loopLen;
 		notes = obj.notes;
+		audio = obj.audio;
 		noLayout = obj.noLayout;
 		editorLayout = obj.editorLayout;
 		gClip = NULL;
@@ -209,6 +216,7 @@ private:
 		}
 	}
 };
+
 note_t* getFirstAfter(std::vector<note_t>& v, int32_t pitch, tick_t time);
 note_t* getFirstBefore(std::vector<note_t>& v, int32_t pitch, tick_t time);
 inline void cutClipLeft(clip_t* c, tick_t len) {

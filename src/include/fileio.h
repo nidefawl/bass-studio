@@ -43,6 +43,7 @@ class window_base;
 
 int32_t WriteFileVector(const String& filename, std::vector<uint8_t>& writebuffer);
 void ReadFileVector(const String& filename, std::vector<uint8_t>& out);
+int64_t ReadFileText(const String& filename, String& out);
 int promptUserFilePath(window_base* w, int mode, std::vector<SupportedFileType> fileTypes, String& _out);
 void handleGuiEvents();
 size_t GetFileSizeSafe(const String& filename);

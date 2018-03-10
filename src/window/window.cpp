@@ -1,4 +1,4 @@
-#include <glad/glad.h>
+#include "glheaders.h"
 #include <GLFW/glfw3.h>
 #ifdef _WIN32
 #define GLFW_EXPOSE_NATIVE_WIN32
@@ -7,6 +7,7 @@
 #define NANOVG_GL3_IMPLEMENTATION
 #include <nanovg.h>
 #include <nanovg_gl.h>
+#include <nanovg_gl_utils.h>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -63,6 +64,10 @@ using std::ofstream;
 
 #include "../host/vst_host.h"
 #include "../host/vst_window.h"
+#include "audiocache.h"
+#include "../gui/drawwaveform.h"
+
+void enableGlDebugCallback();
 
 class reentrantblocker {
 	bool& boolField;
@@ -136,6 +141,8 @@ static void setAppWindowHints() {
 	glfwWindowHint(GLFW_STENCIL_BITS, 8);
 	glfwWindowHint(GLFW_DEPTH_BITS, 24);
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_API);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
 }
 static void showerror(const char* description) {
 	printf("Error: %s\n", description);
@@ -232,9 +239,11 @@ private:
 			gladInitialized = true;
 			// doesn't actually check availability
 			//TODO: check actual required extensions availability
+#ifdef USE_GLAD_GL_HEADERS
 			if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
 				throw appexception("Required OpenGL extensions not present.\nConsider updating graphics drivers");
 			}
+#endif
 		}
 #ifdef _WIN32
 		if (glfwWndProc == NULL) {
@@ -363,11 +372,11 @@ public:
 		return glfwGetInputMode(glfw, GLFW_CURSOR) != GLFW_CURSOR_NORMAL;
 	}
 
-	virtual void create(const char* title, int w, int h) {
+	virtual void createWindow(const char* title, int w, int h, GLFWwindow* share = NULL) {
 		strncpy(this->name, title, 32);
 		if (glfw)
 			throw appexception("window not null");
-		glfw = glfwCreateWindow(w, h, title, NULL, NULL);
+		glfw = glfwCreateWindow(w, h, title, NULL, share);
 		if (!glfw)
 			throw appexception("Couldn't create window");
 		glfwSetWindowUserPointer(glfw, this);
@@ -408,7 +417,7 @@ public:
 	    int monitors_length;
 	    GLFWmonitor **monitors = glfwGetMonitors(&monitors_length);
 	    if (monitors_length > screenIdx) {
-	        GLFWvidmode *monitor_vidmode = (GLFWvidmode*) glfwGetVideoMode(monitors[1]);
+	        GLFWvidmode *monitor_vidmode = (GLFWvidmode*) glfwGetVideoMode(monitors[screenIdx]);
 	        if(monitor_vidmode != NULL) {
 	            int monitor_x, monitor_y;
 	            glfwGetMonitorPos(monitors[screenIdx], &monitor_x, &monitor_y);
@@ -564,6 +573,7 @@ public:
 		glfwGetFramebufferSize(glfw, &fbwidth, &fbheight);
 		if (winwidth>0&&winheight>0&&fbwidth>0&&fbheight>0) {
 			float pxratio = fbwidth / (float)winwidth;
+			ctrl->prerender(0, 0, winwidth, winheight, pxratio);
 			glViewport(0, 0, fbwidth, fbheight);
 			static const vec4 clearc = int32vec4(0xff121212);
 			glClearColor(clearc[0], clearc[1], clearc[2], clearc[3]);
@@ -868,6 +878,7 @@ public:
 };
 
 
+int initDebugWindow();
 class appwindow_dialog : public appwindow, public window_dialog {
 public:
 	void (*drawFn)(NVGcontext*,int,int,float) = NULL;
@@ -875,12 +886,12 @@ public:
 	appwindow_dialog(appwindow* _parent) : appwindow() {
 		this->parent = _parent;
 	}
-	void create(const char* title, int w, int h) {
+	void create(const char* title, int w, int h, GLFWwindow* share = NULL) {
 		setAppWindowHints();
 		glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 		glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
 		glfwWindowHint(GLFW_FOCUSED, GL_TRUE);
-		appwindow::create(title, w, h);
+		appwindow::createWindow(title, w, h, share);
 		if (parent)
 		this->parent->onChildCreate(this);
 
@@ -911,9 +922,14 @@ public:
 		//TODO: implement linux
 #endif
 	}
+	bool isInit = false;
 	void render()
 	{
 		glfwMakeContextCurrent(glfw);
+		if (!isInit) {
+			isInit = true;
+			initDebugWindow();
+		}
 		int winwidth, winheight;
 		int fbwidth, fbheight;
 		glfwGetWindowSize(glfw, &winwidth, &winheight);
@@ -1052,7 +1068,7 @@ void appwindow_main::destroy() {
 void appwindow_main::create(const char* title, int w, int h) {
 	setAppWindowHints();
 	glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
-	appwindow::create(title, w, h);
+	appwindow::createWindow(title, w, h);
 	glfwSetWindowSizeLimits(glfw, 640, 480, GLFW_DONT_CARE, GLFW_DONT_CARE);
 	RenderResources::init(glfw, nanovgCtxt);
 	if (!ctrl->init(this, this->nanovgCtxt)) {
@@ -1088,7 +1104,7 @@ void appwindow_overlay::create(const char* title, int w, int h) {
 	glfwWindowHint(GLFW_FOCUSED, GL_FALSE);
 	glfwWindowHint(GLFW_DECORATED, GL_FALSE);
 	glfwWindowHint(GLFW_UTILITY_WINDOW, GL_TRUE);
-	appwindow::create(title, w, h);
+	appwindow::createWindow(title, w, h);
 #ifdef _WIN32
 	LONG l = GetWindowLong(hwnd, GWL_EXSTYLE);
 	l = l & ~WS_EX_APPWINDOW;
@@ -1391,6 +1407,7 @@ int getHWNDCnt(int i) {
 	return it->second;
 }
 
+void drawDebugWindow(NVGcontext* ctx, int winW, int winH, float pxratio);
 int mainHost(int argc, char* argv[]) {
 	bool test = argc > 1 && String(argv[1]) == "--test";
 #ifdef _WIN32
@@ -1408,17 +1425,30 @@ int mainHost(int argc, char* argv[]) {
 		showerror("Initialization failed. Couldn't initialize glfw");
 		exit(EXIT_FAILURE);
 	}
-	glfwDefaultWindowHints();
+	setAppWindowHints();
 
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
-	glfwWindowHint(GLFW_STENCIL_BITS, 8);
-	glfwWindowHint(GLFW_DEPTH_BITS, 24);
 	ctrl = std::make_unique<MainCtrl>();
 	vsthost::setInstance(std::make_unique<vsthost>(44100, 256));
+	audiocache::setInstance(std::make_unique<audiocache>());
+	audiocache::getInstance()->loadFile("PHFT_Drum Loop_130_099.wav");
+	waveformrender::setInstance(std::make_unique<waveformrender>());
 	mainWindow = std::make_unique<appwindow_main>(ctrl.get());
 	mainWindow->create("main window", 1280, 720);
 	mainWindow->showWindow();
+	enableGlDebugCallback();
+	waveformrender::getInstance()->init();
+	if (1) {
+		appwindow_dialog* w = new appwindow_dialog(NULL);
+		w->drawFn=drawDebugWindow;
+		int winW = 1280;
+		int winH = 720;
+		GLFWwindow* contextWindow = mainWindow->getGLFW();
+		w->create("test window", winW, winH, contextWindow);
+//		glfwMakeContextCurrent(w->getGLFW());
+		w->centerOnScreen(0);
+		w->showWindow();
+//		glfwMakeContextCurrent(mainWindow->getGLFW());
+	}
 	glfwSetErrorCallback(glfw_runtime_error_callback);
 	ctrl->postInit();
 	vsthost::getInstance()->postInit();
@@ -1530,7 +1560,8 @@ int mainHost(int argc, char* argv[]) {
 	my_printf("END 6\n", 0);
 	vsthost::getInstance()->destroy();
 	my_printf("END 7\n", 0);
-
+	audiocache::destroy();
+	waveformrender::destroy();
 
 	saveSettings(settings);
 	ctrl.reset();

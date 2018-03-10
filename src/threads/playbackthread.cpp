@@ -153,7 +153,7 @@ private:
 								tickPos = startPos;
 								ctrl->getPlaybackPos() = startPos;
 								int32_t bpm100 = ctrl->getCurrentTempo();
-								samplePos = tickToSample(startPos, bpm100, sampleRate, blockSize);
+								samplePos = tickToSample(startPos, bpm100, sampleRate);
 								LOG("START ON seconds: %.2f - sample %d\n", toSeconds(startPos, bpm100), samplePos);
 								host->onStartPlayback(0);
 								timer.reset();
@@ -238,7 +238,7 @@ private:
 							ctrl->setJumpFromTo(tickPos, projGlobals.loopStart);
 							LOG("JMP FROM %.2f to %d\n", tickPos, projGlobals.loopStart);
 							tickPos = projGlobals.loopStart;
-							samplePos = tickToSample(projGlobals.loopStart, bpm100, sampleRate, blockSize);
+							samplePos = tickToSample(projGlobals.loopStart, bpm100, sampleRate);
 							LOG("JMP LOOPBEGIN seconds: %.2f - BLOCK %d\n", toSeconds(projGlobals.loopStart, bpm100), samplePos / blockSize);
 							isLoopAround = true;
 						}

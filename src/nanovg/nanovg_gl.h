@@ -49,7 +49,7 @@ enum NVGcreateFlags {
 #  define NANOVG_GL_IMPLEMENTATION 1
 #endif
 
-#define NANOVG_GL_USE_STATE_FILTER (1)
+#define NANOVG_GL_USE_STATE_FILTER (0)
 
 // Creates NanoVG contexts for different OpenGL (ES) versions.
 // Flags should be combination of the create flags above.
@@ -707,7 +707,12 @@ static int glnvg__renderCreate(void* uptr)
 
 	return 1;
 }
-
+static int glnvg__renderGetGLImage(void* uptr, int image)
+{
+	GLNVGcontext* gl = (GLNVGcontext*)uptr;
+	GLNVGtexture* tex = glnvg__findTexture(gl, image);
+	return tex != NULL ? tex->tex : -1;
+}
 static int glnvg__renderCreateTexture(void* uptr, int type, int w, int h, int imageFlags, const unsigned char* data)
 {
 	GLNVGcontext* gl = (GLNVGcontext*)uptr;
@@ -1243,8 +1248,11 @@ static void glnvg__renderFlush(void* uptr)
 #if defined NANOVG_GL3
 		glBindVertexArray(0);
 #endif
+		glStencilMask(0xffffffff);
+		glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
+		glStencilFunc(GL_ALWAYS, 0, 0xffffffff);
 		glDisable(GL_CULL_FACE);
-			glBindBuffer(GL_ARRAY_BUFFER, 0);
+		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		glUseProgram(0);
 		glnvg__bindTexture(gl, 0);
 	}
@@ -1579,6 +1587,7 @@ NVGcontext* nvgCreateGLES3(int flags)
 	params.renderStroke = glnvg__renderStroke;
 	params.renderTriangles = glnvg__renderTriangles;
 	params.renderDelete = glnvg__renderDelete;
+	params.renderGetGLImageHandle = glnvg__renderGetGLImage;
 	params.userPtr = gl;
 	params.edgeAntiAlias = flags & NVG_ANTIALIAS ? 1 : 0;
 

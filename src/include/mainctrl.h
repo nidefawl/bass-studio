@@ -109,6 +109,9 @@ public:
 		return isOK;
 	}
 	virtual ~BaseCtrl() { }
+	virtual void prerender(int32_t x, int32_t y, int32_t w, int32_t h, float ratio) {
+
+	}
 	virtual void render(int32_t x, int32_t y, int32_t w, int32_t h, float ratio);
 
 	virtual bool processGlobalKeyevent(KeyEvent& event) {
@@ -279,6 +282,7 @@ public:
 	guictxtmenu_base* getContextMenu();
 	void onTick();
 	void requestRedraw();
+	void prerender(int32_t x, int32_t y, int32_t w, int32_t h, float ratio) override;
 	bool init(window_main* window, NVGcontext* nanovg);
 	void postInit();
 	void destroy();

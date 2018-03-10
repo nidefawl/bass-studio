@@ -110,7 +110,7 @@ public:
 		double screenpos = toScreenSpace(objx);
 		return screenpos - screenx;
 	}
-	double toObjSpace2(double screenx, double _zoom, double _offset) {
+/*	double toObjSpace2(double screenx, double _zoom, double _offset) {
 		double relx = screenx + _offset;
 		const double stepSize = _zoom * 128;
 		const double scale = 1024.0f;
@@ -124,13 +124,18 @@ public:
 		double barSize = scale / stepSize;
 		double screenx = objx * barSize;
 		return screenx;
-	}
+	}*/
 	tick_t screenToTickSnap(int32_t x, int snap);
 
 	tick_t screenToTick(int32_t x) {
 		double d = toObjSpace(x);
 		double dTick = TICKS_BAR * d;
 		return (int32_t) round(dTick);
+	}
+	double screenToTickD(int32_t x) {
+		double d = toObjSpace(x);
+		double dTick = TICKS_BAR * d;
+		return dTick;
 	}
 	double tickToScreenD(tick_t x) {
 		double bar = x / (double)TICKS_BAR;

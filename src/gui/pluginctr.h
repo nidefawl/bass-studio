@@ -117,6 +117,11 @@ public:
 		offsetPos.x += scrolloffset;
 		return offsetPos;
 	}
+	virtual ivec2 toParentSpace(ivec2 in) {
+		in.x -= scrolloffset;
+		ivec2 offsetPos = getPosContent() + in;
+		return offsetPos;
+	}
 	virtual ivec2 toScreenSpace(ivec2 in) {
 		in += getPosContent();
 		in.x -= scrolloffset;

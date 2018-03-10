@@ -121,12 +121,14 @@ void serialize(Archive & archive, clip_t & m)
 			make_nvp("offsetStart", m.offsetStart),
 			make_nvp("loopLen", m.loopLen),
 			make_nvp("enabled", m.enabled),
-			make_nvp("rgb", m.rgb),
-			make_nvp("clip_notes", m.notes));
+			make_nvp("rgb", m.rgb));
 	make_optional_nvp(archive, "loopStart", m.loopStart);
 	make_optional_nvp(archive, "loopEnabled", m.loopEnabled);
 	make_optional_nvp(archive, "noLayout", m.noLayout);
 	make_optional_nvp(archive, "editorLayout", m.editorLayout);
+	make_optional_nvp(archive, "clip_notes", m.notes);
+	make_optional_nvp(archive, "clip_audio", m.audio);
+	make_optional_nvp(archive, "type", m.clipType);
 	if (m.loopLen == 0) {
 		m.loopStart = m.offsetStart;
 		m.loopLen = m.len;
@@ -143,6 +145,16 @@ void load(Archive & archive, clip_notes_t & m)
 {
 	archive(make_nvp("notes", m.m_list));
 	m.updateBounds();
+}
+template<class Archive>
+void save(Archive & archive, clip_audio_t const & m)
+{
+	make_optional_nvp(archive, "id", m.id);
+}
+template<class Archive>
+void load(Archive & archive, clip_audio_t & m)
+{
+	make_optional_nvp(archive, "id", m.id);
 }
 template<class Archive>
 void serialize(Archive & archive, note_t & m)

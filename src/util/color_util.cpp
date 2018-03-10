@@ -1,4 +1,6 @@
 #include <stdint.h>
+#include <glm/vec2.hpp>
+#include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
 #include <nanovg.h>
 #include <algorithm>
@@ -86,7 +88,7 @@ uint32_t getContrastFontColoru32(uint32_t color) {
 		}
 		rgb4[i] = (float) c;
 	}
-	double lum = 0.2126f * rgb4.r + 0.7152f * rgb4.g + 0.0722f * rgb4.b;
+	double lum = 0.2126f * rgb4.x + 0.7152f * rgb4.y + 0.0722f * rgb4.z;
 
 	if (lum > 0.179) {
 		return 0x000000;
@@ -105,17 +107,17 @@ glm::vec4 colorHex(uint32_t color)
 	float a = (float)(0x000000FF & color) / 255.f;
 
 	glm::vec4 nvgColor;
-	nvgColor.r = r;
-	nvgColor.g = g;
-	nvgColor.b = b;
-	nvgColor.a = a;
+	nvgColor.x = r;
+	nvgColor.y = g;
+	nvgColor.z = b;
+	nvgColor.w = a;
 	return nvgColor;
 }
 glm::vec4 RGBtoHSV(glm::vec4 rgb) {
 	double r, g, b;
-	r = rgb.r;
-	g = rgb.g;
-	b = rgb.b;
+	r = rgb.x;
+	g = rgb.y;
+	b = rgb.z;
 	double fCMax = std::max(std::max(r, g), b);
 	double fCMin = std::min(std::min(r, g), b);
 	double diff = fCMax - fCMin;
@@ -141,9 +143,9 @@ glm::vec4 hexToHSL(uint32_t color) {
 
 glm::vec4 int32vec4(uint32_t i) {
 	glm::vec4 r;
-	r.b = (float) ((i & 0xFF) / 255.); i >>= 8;
-	r.g = (float) ((i & 0xFF) / 255.); i >>= 8;
-	r.r = (float) ((i & 0xFF) / 255.); i >>= 8;
-	r.a = (float) ((i & 0xFF) / 255.); i >>= 8;
+	r.z = (float) ((i & 0xFF) / 255.); i >>= 8;
+	r.y = (float) ((i & 0xFF) / 255.); i >>= 8;
+	r.x = (float) ((i & 0xFF) / 255.); i >>= 8;
+	r.w = (float) ((i & 0xFF) / 255.); i >>= 8;
 	return r;
 }

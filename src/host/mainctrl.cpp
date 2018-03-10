@@ -41,11 +41,13 @@
 #include "../gui/pluginlist.h"
 #include "../gui/guimenu.h"
 #include "../gui/debugctr.h"
+#include "../gui/drawwaveform.h"
 
 #include "vst_host.h"
 #include "vst_plugin.h"
 #include "track_impl.h"
 #include "leak_detect.h"
+#include "audiocache.h"
 
 using glm::vec2;
 using glm::ivec2;
@@ -453,6 +455,7 @@ bool MainCtrl::init(window_main* window, NVGcontext* nanovg)
 	this->playThread.startThread();
 	this->workerThread.startThread();
 	initColor();
+
 	view = new ViewContainers(menubar, cursor, *this, grid, clipView, dragdropclip);
 	view->addTo(this->containers);
 
@@ -641,6 +644,17 @@ bool MainCtrl::setLoadedProject(shared_ptr<project_file> file) {
 	setAudioThreadState(playback_state::status_stop);
 
 	return true;
+}
+void MainCtrl::prerender(int32_t x, int32_t y, int32_t w, int32_t h, float pixelRatio) {
+	std::vector<cachedaudio_t*> v;
+	audiocache::getInstance()->getLoaded(v);
+	for (cachedaudio_t* w : v) {
+		for (audiowaveform_t& w2 : w->waveforms) {
+			if (!w2.rendered || w2.renderedSize != w2.size) {
+				waveformrender::getInstance()->render(vg, w, &w2, pixelRatio);
+			}
+		}
+	}
 }
 void BaseCtrl::render(int32_t x, int32_t y, int32_t w, int32_t h, float ratio) {
 	static int test = 0;
@@ -1012,7 +1026,7 @@ bool MainCtrl::processGlobalKeyevent(KeyEvent& event) {
 	}
 	if (event.type != KeyEventType::K_RELEASE) {
 		if (event.keyCode == KEY_M) {
-			ngui::show("Hello, you pressed the M key. Thanks you for your efforts", "Well done!", ngui::Style::Info, ngui::Buttons::OK);
+//			ngui::show("Hello, you pressed the M key. Thanks you for your efforts", "Well done!", ngui::Style::Info, ngui::Buttons::OK);
 			return true;
 		}
 		if (event.keyCode == KEY_SPACE) {
@@ -1234,7 +1248,7 @@ track_t* MainCtrl::insertNewTrack(int trackInsertPos, int trackType) {
 	switch (trackType) {
 	case TRACK_TYPE_MIDI:
 	{
-		clip_t* c = new clip_t(StringFormat("%s-clip", StringAsCStr(name)));
+		clip_t* c = new clip_t(CLIP_MIDI, StringFormat("%s-clip", StringAsCStr(name)));
 		c->time = TICKS_BAR * 4;
 		c->len = TICKS_BAR * 10;
 		c->loopStart = 0;
@@ -1377,9 +1391,9 @@ void cutIntersectingClips(trackdata_midi_t& midi, tick_t tickBegin, tick_t tickE
 	midi.sortClips();
 }
 void MainCtrl::cutIntersecting(track_t* tr, tick_t tickBegin, tick_t tickEnd) {
-	if (tr->type == TRACK_TYPE_MIDI) {
+//	if (tr->type == TRACK_TYPE_MIDI) {
 		cutIntersectingClips(tr->getMidi(), tickBegin, tickEnd, this);
-	}
+//	}
 }
 void MainCtrl::preClipDelete(clip_t* clip) {
 	if (clipView.clip() == clip) {
@@ -1410,9 +1424,9 @@ void MainCtrl::cutSelection(const Cursor& _cursor) {
 		for (int i = trackBegin; i <= trackEnd; i++) {
 			if (trackList.validTrackIdx(i)) {
 				track_t* tr = trackList[i];
-				if (tr->type == TRACK_TYPE_MIDI) {
+//				if (tr->type == TRACK_TYPE_MIDI) {
 					cutIntersecting(tr, tickBegin, tickEnd);
-				}
+//				}
 			}
 		}
 	} else {
@@ -1446,7 +1460,7 @@ void MainCtrl::pasteClipboard(clip_clipboard* clipboard, int32_t track, tick_t t
 		}
 		int32_t trackIdx = trackList.clampTrackIdx(i + trackOffset);
 		track_t* tr = trackList[trackIdx];
-		if (tr->type == TRACK_TYPE_MIDI) {
+//		if (tr->type == TRACK_TYPE_MIDI) {
 			trackdata_midi_t& midi = tr->getMidi();
 			for (auto it = trClipboard->clips.begin(); it != trClipboard->clips.end(); it++) {
 				clip_t* cl = (*it).get();
@@ -1456,7 +1470,7 @@ void MainCtrl::pasteClipboard(clip_clipboard* clipboard, int32_t track, tick_t t
 				midi.addClip(cloned);
 			}
 			midi.sortClips();
-		}
+//		}
 	}
 
 }
@@ -1578,9 +1592,9 @@ shared_ptr<clip_clipboard> MainCtrl::copySelection(const Cursor& _cursor) {
 			track_clipboard_t trackClipboard;
 			if (trackList.validTrackIdx(trackBegin + i)) {
 				track_t* tr = trackList[trackBegin + i];
-				if (tr->type == TRACK_TYPE_MIDI) {
+//				if (tr->type == TRACK_TYPE_MIDI) {
 					copyClipsInRange(tr->getMidi(), trackClipboard, clipboard->srcPos, 0, clipboard->selRange);
-				}
+//				}
 			}
 			clipboard->tracks.push_back(make_shared<track_clipboard_t>(move(trackClipboard)));
 		}
@@ -1596,9 +1610,5 @@ track_t* clip_view::track() const {
 clip_t* clip_view::clip() const {
 	if (!this->gui)
 		return NULL;
-	clip_t* clipPtr = NULL;
-	if (gui->getClipType() == CLIP_MIDI) {
-		clipPtr = dynamic_cast<gui_midi_clip*>(gui)->m_clip;
-	}
-	return clipPtr;
+	return this->gui->m_clip;
 }

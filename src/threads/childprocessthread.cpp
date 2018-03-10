@@ -35,7 +35,6 @@ public:
 	    std::istringstream f(params);
 	    String s;
 	    while (getline(f, s, ' ')) {
-	        printf("SPLIT %s\n", s.c_str());
 	        strings.push_back(s);
 	    }
 	    const char** argv = (const char**)alloca(sizeof(char*)*(strings.size()+1));

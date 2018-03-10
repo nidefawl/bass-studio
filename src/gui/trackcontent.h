@@ -14,16 +14,18 @@
 #include "leak_detect.h"
 
 using glm::ivec2;
-
+void renderAudioClip(NVGcontext* vg, const track_t* tr, const clip_t* cl, ivec2 pos, ivec2 size);
 void renderMidiClip(NVGcontext* vg, const track_t* tr, const clip_t* cl, ivec2 pos, ivec2 size);
 bool getClipPosition(scaled_grid& grid, const ivec2& trackSize, const clip_t* cl, ivec2& pos, ivec2& size, tick_t offset);
 class gui_clip : public guibase {
 public:
 	track_t* const m_track;
+	clip_t* const m_clip;
 	bool culled = true;
-	gui_clip(track_t* _track)
+	gui_clip(track_t* _track, clip_t* _clip)
 		: guibase(),
-		  m_track(_track) {
+		  m_track(_track),
+		  m_clip(_clip) {
 	}
 	virtual ~gui_clip() {
 
@@ -93,19 +95,17 @@ public:
 		return true;
 	}
 	virtual int getClipType() = 0;
-	virtual void updatePosition(scaled_grid& grid, ivec2& trackSize) = 0;
+	virtual void updatePosition(project_t& project, scaled_grid& grid, ivec2& trackSize) = 0;
 };
 class gui_midi_clip : public gui_clip {
 public:
-	clip_t* const m_clip;
-	gui_midi_clip(clip_t* _clip, track_t* _track)
-		: gui_clip(_track),
-		  m_clip(_clip) {
+	gui_midi_clip(track_t* _track, clip_t* _clip)
+		: gui_clip(_track, _clip)  {
 	}
 	int getClipType() {
 		return CLIP_MIDI;
 	}
-	void updatePosition(scaled_grid& grid, ivec2& trackSize) {
+	void updatePosition(project_t& project, scaled_grid& grid, ivec2& trackSize) {
 		size = this->parent->size;
 		culled = !getClipPosition(grid, trackSize, m_clip, pos, size, 0);
 	}
@@ -121,6 +121,26 @@ public:
 	void handleRightClick(MouseEvent& evt);
 };
 
+class gui_audio_clip : public gui_clip {
+public:
+	gui_audio_clip(track_t* _track, clip_t* _clip)
+		: gui_clip(_track, _clip)  {
+	}
+	int getClipType() {
+		return CLIP_AUDIO;
+	}
+	void updatePosition(project_t& project, scaled_grid& grid, ivec2& trackSize);
+	void render(NVGcontext* vg) {
+		if (!culled) {
+			renderAudioClip(vg, m_track, m_clip, pos, size);
+		}
+	}
+	void onRemove() {
+		assert(m_clip->gClip == this);
+		m_clip->gClip = NULL;
+	}
+	void handleRightClick(MouseEvent& evt);
+};
 
 
 
@@ -219,46 +239,7 @@ public:
 		guictr_base::destroyGuis();
 	}
 };
-class gui_track_midi : public guictr_base {
-protected:
-	track_t* const m_track;
-public:
-	trackdata_midi_t& midi;
-	gui_track_midi(track_t* _track)
-		: guictr_base(), m_track(_track),
-		midi(m_track->getMidi()) {
-		padding = 0;
-	}
-	void render(NVGcontext* vg) {
-//		if (MainCtrl::get()->getSelectedTrack() == m_track) {
-//			nvgBeginPath(vg);
-//			nvgRect(vg, pos.x, pos.y, size.x, size.y);
-//			nvgFillColor(vg, g_guiColors[COL_BG_SELECTEDTRACK]);
-//			nvgFill(vg);
-//		}
-		if (!setScissorTransform(vg)) {
-			return;
-		}
-//		nvgTranslate(vg, pos.x, pos.y);
-		for (clip_t* clip : midi.clips) {
-			if(!clip->gClip) {
-				continue;
-			}
-			clip->gClip->render(vg);
-		}
-	}
 
-	void updateVisibleTrackContents(scaled_grid& grid) {
-		for (clip_t* clip : midi.clips) {
-//			gui_clip* gClip = clip->gClip;
-			if(!clip->gClip) {
-				clip->gClip = new gui_midi_clip(clip, m_track);
-				add(clip->gClip);
-			}
-			clip->gClip->updatePosition(grid, size);
-		}
-	}
-};
 class gui_track : public guictr_base {
 protected:
 	track_t* const m_track;
@@ -271,7 +252,7 @@ public:
 
 	}
 	void handleRightClick(MouseEvent& evt) override;
-	virtual void updateVisibleTrackContents(scaled_grid& grid);
+	virtual void updateVisibleTrackContents(project_t& project, scaled_grid& grid);
 	bool isStaticContainer() {
 		return false;
 	}

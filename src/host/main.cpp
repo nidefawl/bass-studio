@@ -22,7 +22,7 @@
 //
 
 #include <stdio.h>
-#include <glad/glad.h>
+#include "glheaders.h"
 #ifdef __APPLE__
 #	define GLFW_INCLUDE_GLCOREARB
 #endif
@@ -50,8 +50,7 @@ void renderPattern(NVGcontext* vg, NVGLUframebuffer* fb, float t, float pxRatio)
 	winHeight = (int)(fboHeight / pxRatio);
 
 	// Draw some stuff to an FBO as a test
-	++98 N                     5 mj r	c^hj+
-	 -(fb);
+	nvgluBindFramebuffer(fb);
 	glViewport(0, 0, fboWidth, fboHeight);
 	glClearColor(0, 0, 0, 0);
 	glClear(GL_COLOR_BUFFER_BIT|GL_STENCIL_BUFFER_BIT);

@@ -197,6 +197,21 @@ public:
 		nvgTranslate(vg, posInset.x, posInset.y);
 		return true;
 	}
+	virtual void scissorClip(ivec2& vpos, ivec2& vsize) {
+		ivec2 posTL = toParentSpace(vpos);
+		ivec2 posBR = toParentSpace(vpos + vsize);
+		vpos.x = max(posTL.x, pos.x);
+		vpos.y = max(posTL.y, pos.y);
+		vsize.x = min(posBR.x, (pos+size).x) - vpos.x;
+		vsize.y = min(posBR.y, (pos+size).y) - vpos.y;
+		if (parent != NULL) {
+			parent->scissorClip(vpos, vsize);
+		}
+		vpos = toContainerSpace(vpos);
+	}
+	virtual ivec2 toParentSpace(ivec2 in) {
+		return this->pos + in;
+	}
 	virtual ivec2 toContainerSpace(ivec2 in) {
 		return in - this->pos;
 	}

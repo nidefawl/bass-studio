@@ -61,11 +61,11 @@ inline double toTickPrecise(double seconds, int32_t bpm100) {
 inline tick_t millisToTick(double ms, int32_t bpm100) {
 	return std::floor((ms*bpm100*TICKS_QUARTER) / 6000000.0);
 }
-inline int32_t tickToSample(tick_t tick, int32_t bpm100, samplerate_t samplerate, int32_t blocksize) {
+inline int32_t tickToSample(tick_t tick, int32_t bpm100, samplerate_t samplerate) {
 	double samplePos = toSeconds(tick, bpm100) * samplerate;
 	return floor(samplePos);
 }
-inline double tickToSamplePrecise(double tick, int32_t bpm100, samplerate_t samplerate, int32_t blocksize) {
+inline double tickToSamplePrecise(double tick, int32_t bpm100, samplerate_t samplerate) {
 	double samplePos = toSecondsPrecise(tick, bpm100) * samplerate;
 	return samplePos;
 }
