@@ -25,6 +25,7 @@
 							<tool errorParsers="" id="cdt.managedbuild.tool.gnu.assembler.mingw.base.1952525854" name="GCC Assembler" superClass="cdt.managedbuild.tool.gnu.assembler.mingw.base">
 								<option id="gnu.both.asm.option.include.paths.2136151842" name="Include paths (-I)" superClass="gnu.both.asm.option.include.paths" useByScannerDiscovery="false" valueType="includePath">
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/include}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/build/lib/soxr/include&quot;"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.assembler.input.917622701" superClass="cdt.managedbuild.tool.gnu.assembler.input"/>
 							</tool>
@@ -43,6 +44,7 @@
 									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/cereal&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/glfw/include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/nvwa/nvwa&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/build/lib/soxr/include&quot;"/>
 								</option>
 								<option id="gnu.cpp.compiler.option.optimization.level.960218844" name="Optimization Level" superClass="gnu.cpp.compiler.option.optimization.level" useByScannerDiscovery="false" value="gnu.cpp.compiler.optimization.level.none" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.option.debugging.level.1883423768" name="Debug Level" superClass="gnu.cpp.compiler.option.debugging.level" useByScannerDiscovery="false" value="gnu.cpp.compiler.debugging.level.max" valueType="enumerated"/>
@@ -53,6 +55,8 @@
 									<listOptionValue builtIn="false" value="PA_USE_ASIO=1"/>
 									<listOptionValue builtIn="false" value="VST_FORCE_DEPRECATED=0"/>
 									<listOptionValue builtIn="false" value="PA_USE_DS=1"/>
+									<listOptionValue builtIn="false" value="GL_GLEXT_PROTOTYPES=1"/>
+									<listOptionValue builtIn="false" value="SOXR_DLL=1"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1323109731" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
@@ -69,6 +73,7 @@
 									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/ASIOSDK2.3/common&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/ASIOSDK2.3/host&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/ASIOSDK2.3/host/pc&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/build/lib/soxr/include&quot;"/>
 								</option>
 								<option defaultValue="gnu.c.optimization.level.none" id="gnu.c.compiler.option.optimization.level.2040679038" name="Optimization Level" superClass="gnu.c.compiler.option.optimization.level" useByScannerDiscovery="false" valueType="enumerated"/>
 								<option id="gnu.c.compiler.option.debugging.level.1776061242" name="Debug Level" superClass="gnu.c.compiler.option.debugging.level" useByScannerDiscovery="false" value="gnu.c.debugging.level.max" valueType="enumerated"/>
@@ -78,6 +83,8 @@
 									<listOptionValue builtIn="false" value="PA_USE_ASIO=1"/>
 									<listOptionValue builtIn="false" value="VST_FORCE_DEPRECATED=0"/>
 									<listOptionValue builtIn="false" value="PA_USE_DS=1"/>
+									<listOptionValue builtIn="false" value="GL_GLEXT_PROTOTYPES=1"/>
+									<listOptionValue builtIn="false" value="SOXR_DLL=1"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.14326597" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
@@ -93,10 +100,12 @@
 									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="comdlg32"/>
 									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="SQLiteCpp"/>
 									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="sqlite3"/>
+									<listOptionValue builtIn="false" srcPrefixMapping="" srcRootPath="" value="soxr.dll"/>
 								</option>
 								<option id="gnu.cpp.link.option.paths.1104067044" name="Library search path (-L)" superClass="gnu.cpp.link.option.paths" useByScannerDiscovery="false" valueType="libPaths">
 									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\glfw_mingw64\lib&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;E:\dev\libs\SQLiteCpp\lib&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/build/lib/soxr/lib&quot;"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.linker.input.91532565" superClass="cdt.managedbuild.tool.gnu.cpp.linker.input">
 									<additionalInput kind="additionalinputdependency" paths="$(USER_OBJS)"/>
