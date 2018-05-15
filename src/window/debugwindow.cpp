@@ -17,7 +17,7 @@
 #include "../gl/gl_attr.h"
 #include "../gl/gl_vbo.h"
 #include "../gl/gl_tess2d.h"
-#include "audiocache.h"
+#include "../gui/drawwaveform.h"
 
 
 GLuint program2dTexture;
@@ -105,26 +105,34 @@ int initDebugWindow() {
 
 void drawDebugWindow(NVGcontext* ctx, int winW, int winH, float pxratio) {
 	glm::mat4 matProj = glm::ortho(0.f, (float) winW, (float) winH, 0.f, 1.f, -1.f);
-	int n = 0;
-	auto* ptr = audiocache::getInstance()->get(0);
-	if (ptr) {
-		for (audiowaveform_t& waveform : ptr->waveforms) {
-			if (waveform.rendered) {
-				n = waveform.glTexture;
-				break;
-			}
+
+	std::vector<TextureEntry> rendered;
+	waveformrender::getInstance()->getRenderedTextures(rendered);
+//	my_printf("nrendered: %d\n", rendered.size());
+//	auto* ptr = audiocache::getInstance()->get(0);
+//	if (ptr) {
+//		for (audiowaveform_t& waveform : ptr->waveforms) {
+//			if (waveform.rendered) {
+//				n = waveform.glTexture;
+//				break;
+//			}
+//		}
+//	}
+	for (TextureEntry& e : rendered) {
+		int n = e.glTexture;
+		if (n > 0) {
+			glUseProgram(program2dTexture);
+			glUniformMatrix4fv(u_mvp, 1, GL_FALSE, value_ptr(matProj));
+			glUniform1i(u_tex0, 0);
+			glActiveTexture( GL_TEXTURE0 );
+			glBindTexture(GL_TEXTURE_2D, n);
+			glBindVertexArray(vbo.vaoId);
+			glBindBuffer(GL_ARRAY_BUFFER, vbo.vboVertId);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo.vboIdxId);
+			glDrawElements( GL_TRIANGLES, vbo.nIndices, GL_UNSIGNED_INT, NULL);
+			glBindBuffer(GL_ARRAY_BUFFER, 0);
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+			glBindVertexArray(0);
 		}
 	}
-	glUseProgram(program2dTexture);
-	glUniformMatrix4fv(u_mvp, 1, GL_FALSE, value_ptr(matProj));
-	glUniform1i(u_tex0, 0);
-	glActiveTexture( GL_TEXTURE0 );
-	glBindTexture(GL_TEXTURE_2D, n);
-	glBindVertexArray(vbo.vaoId);
-	glBindBuffer(GL_ARRAY_BUFFER, vbo.vboVertId);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo.vboIdxId);
-	glDrawElements( GL_TRIANGLES, vbo.nIndices, GL_UNSIGNED_INT, NULL);
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-	glBindVertexArray(0);
 }

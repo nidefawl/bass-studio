@@ -11,10 +11,13 @@
 #include "grid.h"
 #include "guicontainer.h"
 #include "trackautomation.h"
+#include "audiowaveform.h"
 #include "leak_detect.h"
 
 using glm::ivec2;
-void renderAudioClip(NVGcontext* vg, const track_t* tr, const clip_t* cl, ivec2 pos, ivec2 size);
+
+class gui_audio_clip;
+void renderAudioClip(NVGcontext* vg, const track_t* tr, const clip_t* cl, gui_audio_clip* guiaudioclip, ivec2 pos, ivec2 size);
 void renderMidiClip(NVGcontext* vg, const track_t* tr, const clip_t* cl, ivec2 pos, ivec2 size);
 bool getClipPosition(scaled_grid& grid, const ivec2& trackSize, const clip_t* cl, ivec2& pos, ivec2& size, tick_t offset);
 class gui_clip : public guibase {
@@ -26,9 +29,10 @@ public:
 		: guibase(),
 		  m_track(_track),
 		  m_clip(_clip) {
+		my_printf("gui_clip", 0);
 	}
 	virtual ~gui_clip() {
-
+		my_printf("~gui_clip", 0);
 	}
 	bool isClipTitleBar(ivec2 mpos) {
 		return mpos.x >= pos.x &&
@@ -96,6 +100,9 @@ public:
 	}
 	virtual int getClipType() = 0;
 	virtual void updatePosition(project_t& project, scaled_grid& grid, ivec2& trackSize) = 0;
+	virtual void prerender(NVGcontext* vg) {
+
+	}
 };
 class gui_midi_clip : public gui_clip {
 public:
@@ -123,6 +130,9 @@ public:
 
 class gui_audio_clip : public gui_clip {
 public:
+	audioclip_texture_t waveform;
+	int fbId = -1;
+	bool rendered = false;
 	gui_audio_clip(track_t* _track, clip_t* _clip)
 		: gui_clip(_track, _clip)  {
 	}
@@ -132,10 +142,13 @@ public:
 	void updatePosition(project_t& project, scaled_grid& grid, ivec2& trackSize);
 	void render(NVGcontext* vg) {
 		if (!culled) {
-			renderAudioClip(vg, m_track, m_clip, pos, size);
+			renderAudioClip(vg, m_track, m_clip, this, pos, size);
 		}
 	}
+	void releaseRendered();
+	void prerender(NVGcontext* vg);
 	void onRemove() {
+		releaseRendered();
 		assert(m_clip->gClip == this);
 		m_clip->gClip = NULL;
 	}

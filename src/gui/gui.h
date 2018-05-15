@@ -109,6 +109,8 @@ public:
 	virtual void render(NVGcontext* vg) {
 
 	}
+	virtual void prerender(NVGcontext* vg) {
+	}
 	virtual void renderDragged(NVGcontext* vg, ivec2 mousepos) {
 
 	}

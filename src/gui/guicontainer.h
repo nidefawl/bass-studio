@@ -187,6 +187,11 @@ public:
 		bool focused = MainCtrl::get()->isCtrOrChildFocused(this);
 		drawBackground(vg, getPosContent(), getSizeContent(), margin, focused);
 	}
+	virtual void prerender(NVGcontext* vg) {
+		for (guibase* gui : guis) {
+			gui->prerender(vg);
+		}
+	}
 	virtual void onTick(MainCtrl* ctrl) {
 	}
 	virtual guibase* getFocusedContainer() {

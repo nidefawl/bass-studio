@@ -617,19 +617,19 @@ bool MainCtrl::setLoadedProject(shared_ptr<project_file> file) {
 		view->ctr_tracks.addTrack(tr);
 	}
 	trackList.loadPlugins(file->project);
-//	for (track_t* tr : trackList) {
-//		if (tr->audio) {
-//			std::vector<automatable_t*> targets;
-//			tr->audio->getAutomatableTargets(targets);
-//			for (automatable_t* at : targets) {
-//				std::vector<int32_t> targetsIdx;
-//				at->getAutomated(targetsIdx);
-//				for (int32_t idx : targetsIdx) {
-//					view->ctr_tracks.addAutomationLane(tr, at, idx, false);
-//				}
-//			}
-//		}
-//	}
+	//	for (track_t* tr : trackList) {
+	//		if (tr->audio) {
+	//			std::vector<automatable_t*> targets;
+	//			tr->audio->getAutomatableTargets(targets);
+	//			for (automatable_t* at : targets) {
+	//				std::vector<int32_t> targetsIdx;
+	//				at->getAutomated(targetsIdx);
+	//				for (int32_t idx : targetsIdx) {
+	//					view->ctr_tracks.addAutomationLane(tr, at, idx, false);
+	//				}
+	//			}
+	//		}
+	//	}
 	view->ctr_tracks.layout();
 	grid.setLayout(file->layout.layoutGrid);
 	view->ctr_tracks.setScrollOffset(file->layout.scrollOffsetX);
@@ -646,14 +646,17 @@ bool MainCtrl::setLoadedProject(shared_ptr<project_file> file) {
 	return true;
 }
 void MainCtrl::prerender(int32_t x, int32_t y, int32_t w, int32_t h, float pixelRatio) {
-	std::vector<cachedaudio_t*> v;
-	audiocache::getInstance()->getLoaded(v);
-	for (cachedaudio_t* w : v) {
-		for (audiowaveform_t& w2 : w->waveforms) {
-			if (!w2.rendered || w2.renderedSize != w2.size) {
-				waveformrender::getInstance()->render(vg, w, &w2, pixelRatio);
-			}
-		}
+//	std::vector<cachedaudio_t*> v;
+//	audiocache::getInstance()->getLoaded(v);
+//	for (cachedaudio_t* w : v) {
+//		for (audiowaveform_t& w2 : w->waveforms) {
+//			if (!w2.rendered || w2.renderedSize != w2.size) {
+//				waveformrender::getInstance()->render(vg, w, &w2, pixelRatio);
+//			}
+//		}
+//	}
+	for (guictr_base *ctr : containers) {
+		ctr->prerender(vg);
 	}
 }
 void BaseCtrl::render(int32_t x, int32_t y, int32_t w, int32_t h, float ratio) {

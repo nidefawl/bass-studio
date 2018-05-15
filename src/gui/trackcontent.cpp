@@ -146,11 +146,44 @@ void renderMidiClip(NVGcontext* vg, const track_t* tr, const clip_t* cl, ivec2 p
 		nvgStroke(vg);
 	}
 }
+void makeOrUpdateWaveform(audioclip_texture_t* w, ivec2 pos, ivec2 startOffset, ivec2 size, double sampleBegin,  double sampleBeginOffset, double sampleEnd, double res, double gridZoom) {
+	w->pos = pos;
+	w->startOffset = startOffset;
+	w->size = size;
+	w->sampleBegin = sampleBegin;
+	w->sampleBeginOffset = sampleBeginOffset;
+	w->sampleEnd = sampleEnd;
+	w->res = res;
+	double scale = 0.005;
+//	if (gridZoom < 0.03) {
 
+		w->method = SampleMethod::sample_interp;
+		scale = 0.00005;
+//	} else {
+//
+//		w->method = SampleMethod::sample_minmax;
+//	}
+	int qu = 1;
+	double d = gridZoom;
+	while (d > scale && qu < 16) {
+		d /= 2.0;
+		qu*=2;
+	}
+	my_printf("zoom: %f, quality: %d\n", gridZoom, qu);
+	w->quality = qu;
+}
+void gui_audio_clip::releaseRendered() {
+	waveformrender::getInstance()->release(this->fbId);
+	this->fbId = -1;
+	this->rendered = false;
+}
 void gui_audio_clip::updatePosition(project_t& project, scaled_grid& grid, ivec2& trackSize) {
 	size = this->parent->size;
 	culled = !getClipPosition(grid, trackSize, m_clip, pos, size, 0);
-
+	cachedaudio_t* audio = audiocache::getInstance()->get(m_clip->audio.id);
+	if (culled || !audio) {
+		releaseRendered();
+	}
 //test clipping
 //	ivec2 prevSize = size;
 //	ivec4 clippedP = ivec4(pos, size);
@@ -164,7 +197,6 @@ void gui_audio_clip::updatePosition(project_t& project, scaled_grid& grid, ivec2
 //	}
 	if (!culled) {
 		assert(size.x > 0);
-		cachedaudio_t* audio = audiocache::getInstance()->get(m_clip->audio.id);
 		if (audio) {
 			samplerate_t sr = vsthost::getInstance()->lSampleRate; //TODO: store in project_t
 			double lenSamples = tickToSamplePrecise(m_clip->len, project.tempo100, sr);
@@ -178,15 +210,35 @@ void gui_audio_clip::updatePosition(project_t& project, scaled_grid& grid, ivec2
 			double tickBegin = grid.screenToTickD(pos.x);
 			double tickBeginOffset = grid.screenToTickD(pxBegin);
 			double tickEnd = grid.screenToTickD(pxEnd);
+//			tickBegin += m_clip->offsetStart;
+			tickBeginOffset += m_clip->offsetStart;
+			tickEnd += m_clip->offsetStart;
 			double sampleBegin = tickToSamplePrecise(tickBegin, project.tempo100, sr);
 			double sampleStartOffset = tickToSamplePrecise(tickBeginOffset, project.tempo100, sr);
 			double sampleEnd = tickToSamplePrecise(tickEnd, project.tempo100, sr);
 			ivec2 startOffset = posClipped - pos;
-			waveformrender::getInstance()->setPosScale(audio, posClipped, startOffset, sizeClipped, sampleBegin, sampleStartOffset, sampleEnd, res, grid.zoom);
+			audioclip_texture_t waveform;
+			makeOrUpdateWaveform(&waveform, posClipped, startOffset, sizeClipped, sampleBegin, sampleStartOffset, sampleEnd, res, grid.zoom);
+			if (waveform != this->waveform) {
+				releaseRendered();
+				this->waveform = waveform;
+			}
 		}
 	}
 }
-void renderAudioClip(NVGcontext* vg, const track_t* tr, const clip_t* cl, ivec2 pos, ivec2 size) {
+void gui_audio_clip::prerender(NVGcontext* vg) {
+//	my_printf("gui_audio_clip::prerender\n",0);
+	if (!culled && !rendered) {
+		cachedaudio_t* audio = audiocache::getInstance()->get(m_clip->audio.id);
+		if (audio) {
+			int ret = waveformrender::getInstance()->render(vg, audio, &this->waveform, 1);
+			my_printf("gui_audio_clip rendered to %d\n",ret);
+			this->fbId = ret;
+			this->rendered = true;
+		}
+	}
+}
+void renderAudioClip(NVGcontext* vg, const track_t* tr, const clip_t* cl, gui_audio_clip* guiaudioclip, ivec2 pos, ivec2 size) {
 	if (cl->len <= 0) {
 		return;
 	}
@@ -209,11 +261,10 @@ void renderAudioClip(NVGcontext* vg, const track_t* tr, const clip_t* cl, ivec2 
 	tick_t clipLen = cl->len;
 	float numBars = clipLen / (float) TICKS_BAR;
 	float barSize = sizeContents.x / (float) numBars;
-	if (sizeContents.x > 0 && sizeContents.y > 0) {
+	if (sizeContents.x > 0 && sizeContents.y > 0 && guiaudioclip->rendered) {
 		nvgSave(vg);
 		nvgTranslate(vg, posContents.x, posContents.y);
-		cachedaudio_t* audio = audiocache::getInstance()->get(cl->audio.id);
-		waveformrender::getInstance()->draw(vg, audio, sizeContents);
+		waveformrender::getInstance()->draw(vg, guiaudioclip->fbId, &guiaudioclip->waveform, sizeContents);
 
 		nvgRestore(vg);
 	}
@@ -252,7 +303,10 @@ bool getClipPosition(scaled_grid& grid, const ivec2& trackSize, const clip_t* cl
 	int32_t widthPx = (int32_t) round(width);
 	pos = ivec2(tickBeginPx, INSET_TRACK_CONTENT);
 	size = ivec2(widthPx, size.y-INSET_TRACK_CONTENT*2);
-	return true;
+	if (size.x <= 0 || size.y <= 0) {
+		my_printf("culled because of size!\n",0);
+	}
+	return size.x > 0 && size.y > 0;
 }
 void gui_clip::trackViewDragBegin(guitrack_editor* view, MouseEvent& evt) {
 	view->dragSelectionBegin(this, evt);

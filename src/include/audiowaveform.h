@@ -16,7 +16,7 @@ enum SampleMethod {
 
 
 struct NVGLUframebuffer;
-struct audiowaveform_t {
+struct audioclip_texture_t {
 	ivec2 pos;
 	ivec2 startOffset;
 	ivec2 size;
@@ -26,14 +26,14 @@ struct audiowaveform_t {
 	double res = 0;
 	int quality = 1;
 	SampleMethod method = SampleMethod::sample_peakdetect;
-
-	bool rendered = false;
-	ivec2 renderedSize;
-
-	int image = 0;
-	int glTexture = 0;
-	NVGLUframebuffer* fb = NULL;
 };
+inline bool operator==(const audioclip_texture_t& lhs, const audioclip_texture_t& rhs){
+	return lhs.pos == rhs.pos && lhs.startOffset == rhs.startOffset &&
+			lhs.size == rhs.size && lhs.sampleBegin == rhs.sampleBegin &&
+			lhs.sampleBeginOffset == rhs.sampleBeginOffset && lhs.sampleEnd == rhs.sampleEnd &&
+			lhs.res == rhs.res && lhs.quality == rhs.quality && lhs.method == rhs.method;
+}
+inline bool operator!=(const audioclip_texture_t& lhs, const audioclip_texture_t& rhs){return !operator==(lhs,rhs);}
 
 void downsample(float sampleRate, float* samplesIn, int len, std::vector<float>& samplesOut, int downSampleFactor);
-void renderWaveProcessed(audiosample_t* sample, float x, float y, audiowaveform_t* waveform, SampleMethod method, std::vector<std::vector<glm::vec2>>& channels);
+void renderWaveProcessed(audiosample_t* sample, float x, float y, audioclip_texture_t* waveform, SampleMethod method, std::vector<std::vector<glm::vec2>>& channels);

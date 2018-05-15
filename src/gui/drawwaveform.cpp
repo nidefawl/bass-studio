@@ -46,23 +46,49 @@ void waveformrender::setInstance(std::unique_ptr<waveformrender> host)
 void waveformrender::init() {
 	renderer.init();
 }
-void waveformrender::render(NVGcontext* ctxt, cachedaudio_t* audio, audiowaveform_t* waveform, float pxRatio) {
+void waveformrender::getRenderedTextures(std::vector<TextureEntry>& rendered) {
+	for (auto& texture : textures) {
+		if (texture.inuse) {
+			rendered.push_back(texture);
+		}
+	}
+}
+void waveformrender::release(int fbId) {
+	for (auto& texture : textures) {
+		if (texture.idx == fbId) {
+			texture.inuse = false;
+			return;
+		}
+	}
+}
+int waveformrender::render(NVGcontext* ctxt, cachedaudio_t* audio, audioclip_texture_t* waveform, float pxRatio) {
 	if (audio) {
 		my_printf("render %s\n", StringAsCStr(audio->path));
 	}
+	TextureEntry* entry = nullptr;
+	for (auto& texture : textures) {
+		if (!texture.inuse) {
+			entry = &texture;
+			break;
+		}
+	}
 	checkGLError("waveformrender::render start");
-	if (!waveform->fb) {
-		waveform->fb = nvgluCreateFramebuffer(ctxt, fboWidth, fboHeight, 0);
-		if (waveform->fb == NULL) {
+	if (!entry) {
+		TextureEntry e;
+		e.fb = nvgluCreateFramebuffer(ctxt, fboWidth, fboHeight, 0);
+		if (e.fb == NULL) {
 			throw new appexception("nvgluCreateFramebuffer error");
 		}
 		checkGLError("waveformrender::render nvgluCreateFramebuffer");
-		waveform->image = waveform->fb->image;
-		waveform->glTexture = nvgGetGLImageHandle(ctxt, waveform->fb->image);
-		waveform->rendered = true;
+		e.glTexture = nvgGetGLImageHandle(ctxt, e.fb->image);
+		e.idx = textures.size();
+		textures.push_back(e);
+		entry = &textures.back();
 	}
+	entry->inuse = true;
+	entry->props = *waveform;
 
-	nvgluBindFramebuffer(waveform->fb);
+	nvgluBindFramebuffer(entry->fb);
 	// Draw some stuff to an FBO as a test
 	glViewport(0, 0, fboWidth, fboHeight);
 	glClearColor(0, 0, 0, 0);
@@ -125,9 +151,7 @@ void waveformrender::render(NVGcontext* ctxt, cachedaudio_t* audio, audiowavefor
 	nvgluBindFramebuffer(NULL);
 
 	checkGLError("fb postrender");
-	waveform->renderedSize = waveform->size;
-	waveform->rendered = true;
-
+	return entry->idx;
 }
 void drawImage(NVGcontext* vg, int image, float alpha,
 		float sx, float sy, float sw, float sh, // sprite location on texture
@@ -151,48 +175,14 @@ void drawImage(NVGcontext* vg, int image, float alpha,
 	nvgFillPaint(vg, img);
 	nvgFill(vg);
 }
-void waveformrender::setPosScale(cachedaudio_t* audio, ivec2 pos, ivec2 startOffset, ivec2 size, double sampleBegin,  double sampleBeginOffset, double sampleEnd, double res, double gridZoom) {
-	if (audio->waveforms.empty()) {
-		audiowaveform_t waveform;
-		waveform.size = size;
-		audio->waveforms.push_back(waveform);
-	}
-	audiowaveform_t* w = &audio->waveforms.front();
-	w->pos = pos;
-	w->startOffset = startOffset;
-	w->size = size;
-	w->sampleBegin = sampleBegin;
-	w->sampleBeginOffset = sampleBeginOffset;
-	w->sampleEnd = sampleEnd;
-	w->res = res;
-	double scale = 0.005;
-	if (gridZoom < 0.03) {
 
-		w->method = SampleMethod::sample_peakdetect;
-		scale = 0.00005;
-	} else {
+void waveformrender::draw(NVGcontext* ctxt, int fbId, audioclip_texture_t* waveImage, ivec2 size) {
+	for (auto& texture : textures) {
+		if (texture.idx == fbId) {
+			drawImage(ctxt, texture.fb->image, 1.0f, 0, 0, size.x, size.y, waveImage->startOffset.x, 0, size.x, size.y);
+			return;
+		}
+	}
 
-		w->method = SampleMethod::sample_minmax;
-	}
-	int qu = 1;
-	double d = gridZoom;
-	while (d > scale && qu < 16) {
-		d /= 2.0;
-		qu*=2;
-	}
-	my_printf("zoom: %f, quality: %d\n", gridZoom, qu);
-	w->quality = qu;
-	w->rendered = false;
-}
-void waveformrender::draw(NVGcontext* ctxt, cachedaudio_t* audio, ivec2 size) {
-	audiowaveform_t* waveImage = NULL;
-	for (audiowaveform_t& w : audio->waveforms) {
-		waveImage = &w;
-		break;
-	}
-	if (waveImage) {
-		drawImage(ctxt, waveImage->image, 1.0f, 0, 0, size.x, size.y, waveImage->startOffset.x, 0, size.x, size.y);
-//		drawImage(ctxt, waveImage->image, 1.0f, 0, 0, size.x, size.y, 0, 0, size.x, size.y);
 
-	}
 }

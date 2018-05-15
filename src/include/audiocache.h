@@ -10,7 +10,7 @@ struct cachedaudio_t {
 	int32_t id = 0;
 	String path;
 	std::unique_ptr<audiosample_t> sample;
-	std::vector<audiowaveform_t> waveforms;
+	std::vector<audioclip_texture_t> waveforms;
 };
 class audiocache {
 	std::atomic<int32_t> nextIdx{0};

@@ -63,7 +63,8 @@ cachedaudio_t* audiocache::loadFile(String path) {
 			nSamplesAllChannels += sample->samples.back().size();
 			assert(sample->samples.back().size()==sample->nSamples);
 		}
-		int maxDownS = 5;
+		my_printf("copy done: %d\n", nSamples);
+		int maxDownS = 7;
 		for (int step = 1; step < maxDownS; step++) {
 			std::vector<samplechannel_t> downsampledChannels(2);
 			for (int i = 0; i < wav.channels; i++) {
@@ -77,6 +78,7 @@ cachedaudio_t* audiocache::loadFile(String path) {
 			}
 			sample->downsampled.push_back(std::move(downsampledChannels));
 		}
+		my_printf("downsample done: %d\n", nSamples);
 		int nDownSmplSteps = maxDownS-1;
 		assert(sample->downsampled.size() == nDownSmplSteps);
 		assert(sample->nSamples*sample->nChannels==nSamplesAllChannels);

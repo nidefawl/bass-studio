@@ -16,19 +16,19 @@ using glm::vec4;
 using vec2list = std::vector<vec2>;
 
 using samplechannel_t = std::vector<float>;
-void renderWaveProcessed(audiosample_t* sample, float x, float y, audiowaveform_t* waveformshape, SampleMethod method, std::vector<vec2list>& channels) {
+void renderWaveProcessed(audiosample_t* sample, float x, float y, audioclip_texture_t* waveformshape, SampleMethod method, std::vector<vec2list>& channels) {
 	if (sample->nSamples) {
 		int width = waveformshape->size.x;
 		int height = waveformshape->size.y;
 		int nMaxDowns = sample->downsampled.size()+1;
 		int nLevel = 0;
 		int scale = 1;
-		audiowaveform_t waveformScaled = *waveformshape;
-		while (waveformScaled.res > 16 && nLevel+1 < nMaxDowns) {
-			waveformScaled.res /= 2.0;
-			nLevel++;
-			scale <<= 1;
-		}
+		audioclip_texture_t waveformScaled = *waveformshape;
+//		while ((waveformScaled.res > 16 || nLevel < 2) && nLevel+1 < nMaxDowns) {
+//			waveformScaled.res /= 2.0;
+//			nLevel++;
+//			scale <<= 1;
+//		}
 		waveformScaled.sampleBeginOffset /= scale;
 		waveformScaled.sampleBegin /= scale;
 		waveformScaled.sampleEnd /= scale;
