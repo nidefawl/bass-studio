@@ -154,22 +154,23 @@ void makeOrUpdateWaveform(audioclip_texture_t* w, ivec2 pos, ivec2 startOffset, 
 	w->sampleBeginOffset = sampleBeginOffset;
 	w->sampleEnd = sampleEnd;
 	w->res = res;
+	w->linewidth = 1.5f+min(2.0, max(0.0, gridZoom*12.0));
 	double scale = 0.005;
 //	if (gridZoom < 0.03) {
 
-		w->method = SampleMethod::sample_interp;
+		w->method = SampleMethod::sample_peakdetect;
 		scale = 0.00005;
 //	} else {
-//
+////
 //		w->method = SampleMethod::sample_minmax;
 //	}
-	int qu = 1;
-	double d = gridZoom;
-	while (d > scale && qu < 16) {
-		d /= 2.0;
-		qu*=2;
-	}
-	my_printf("zoom: %f, quality: %d\n", gridZoom, qu);
+	int qu = 4;
+//	double d = gridZoom;
+//	while (d > scale && qu < 16) {
+//		d /= 2.0;
+//		qu*=2;
+//	}
+	my_printf("zoom: %f, quality: %d, w->linewidth %f\n", gridZoom, qu, w->linewidth);
 	w->quality = qu;
 }
 void gui_audio_clip::releaseRendered() {

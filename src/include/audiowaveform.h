@@ -25,6 +25,7 @@ struct audioclip_texture_t {
 	double sampleEnd;
 	double res = 0;
 	int quality = 1;
+	float linewidth = 1.0f;
 	SampleMethod method = SampleMethod::sample_peakdetect;
 };
 inline bool operator==(const audioclip_texture_t& lhs, const audioclip_texture_t& rhs){

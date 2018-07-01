@@ -124,10 +124,11 @@ int waveformrender::render(NVGcontext* ctxt, cachedaudio_t* audio, audioclip_tex
 	}
 	Uniforms bakeOpt;
 	bakeOpt.linecaps = vec2(LineCaps::none, LineCaps::none);
-	bakeOpt.linejoin = LineJoin::round;
-	bakeOpt.miter_limit = 3.0f;
+	bakeOpt.linejoin = LineJoin::miter;
+	bakeOpt.miter_limit = 1.8f;
 	bakeOpt.color = vec4(vec3(1), 1.0);
-	bakeOpt.linewidth = 2.5f;
+	bakeOpt.linewidth = waveform->linewidth;
+	bakeOpt.antialias = 1.0f;
 	renderer.bakePaths(tesselatedWaveForms, bakeOpt, this->bakedPath);
 
 

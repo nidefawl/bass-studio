@@ -24,22 +24,34 @@ void renderWaveProcessed(audiosample_t* sample, float x, float y, audioclip_text
 		int nLevel = 0;
 		int scale = 1;
 		audioclip_texture_t waveformScaled = *waveformshape;
-//		while ((waveformScaled.res > 16 || nLevel < 2) && nLevel+1 < nMaxDowns) {
-//			waveformScaled.res /= 2.0;
-//			nLevel++;
-//			scale <<= 1;
-//		}
+		while ((waveformScaled.res > 64) && nLevel+1 < nMaxDowns) {
+			waveformScaled.res /= 2.0;
+			nLevel++;
+			scale <<= 1;
+			break;
+		}
 		waveformScaled.sampleBeginOffset /= scale;
 		waveformScaled.sampleBegin /= scale;
 		waveformScaled.sampleEnd /= scale;
 		assert (nLevel == 0 || nLevel-1 < sample->downsampled.size());
 		std::vector<samplechannel_t>& smpCh = nLevel == 0 ? sample->samples : sample->downsampled[nLevel-1];
+		int upscale = 1;
+		double dres = waveformScaled.res;
+		while (dres >= 4.0 && upscale < 64) {
+			dres /= 2.0;
+			upscale*=2;
+		}
+		my_printf("upscale %d, waveformScaled.res %f\n", upscale, waveformScaled.res);
 //		while (samplesPerPx*subsampling < 8 && subsampling*2 < 4) {
 //			subsampling *= 2;
 //		}
 		double samplesPerPx = waveformScaled.res;
 		double renderOffset = waveformScaled.sampleBeginOffset - waveformScaled.sampleBegin;
 		int verticesPerPx = waveformScaled.quality;
+		while (dres >= 4.0) {
+			dres /= 2.0;
+			verticesPerPx*=2;
+		}
 		float channelHeight = height / (float) sample->nChannels;
 		float subsampleScale = 1.0f / (float) verticesPerPx;
 		float samplesToPx = 1.0f/samplesPerPx;
@@ -71,7 +83,7 @@ void renderWaveProcessed(audiosample_t* sample, float x, float y, audioclip_text
 					int mx_pos = sampleIdxStart;
 					int mn_pos = sampleIdxStart;
 					bool findMax = false;
-					float delta = 0.22f;
+					float delta = 0.1f;
 					float lastPtX = 0;
 					float fY = -mx * channelHeight / 2.0f;
 					vec2 vec { px, py + fY };
@@ -85,63 +97,40 @@ void renderWaveProcessed(audiosample_t* sample, float x, float y, audioclip_text
 						}
 						int32_t sampleIdx = std::floor(sampleOffset);
 						float data = samplesChPtr[sampleIdx];
-						if (mx < data) {
-							mx = data;
-							mx_pos = sampleIdx;
+						int noffset = 0;
+						int c = 0;
+						int blurrange = 4;
+						for (;noffset<blurrange; noffset++) {
+							if (sampleIdx+noffset > 0 && sampleIdx + noffset < lenSamplesCh) {
+								data+=samplesChPtr[sampleIdx+noffset];
+								c++;
+							}
+							if (sampleIdx-noffset > 0 && sampleIdx - noffset < lenSamplesCh) {
+								data+=samplesChPtr[sampleIdx-noffset];
+								c++;
+							}
 						}
-						if (mn > data) {
-							mn = data;
-							mn_pos = sampleIdx;
+						if (c > 0) {
+							data /= (float)c;
 						}
-						if (findMax && data < mx - delta) {
-							samplePos = mx_pos+waveformScaled.sampleBegin;
-							float fX = (mx_pos-renderOffset) * samplesToPx;
-							if (fX > lastPtX+vOffset) {
-								float fY = -mx * channelHeight / 2.0f;
-								float fX = (mx_pos-renderOffset) * samplesToPx;
-								vec2 vec { px + fX, py + fY };
+						if ((int)sampleIdx%upscale==0) {
+							float fCurX = (sampleOffset-renderOffset) * samplesToPx;
+							if (fCurX > lastPtX+vOffset) {
+								float fY = -data * channelHeight / 2.0f;
+								vec2 vec { px + fCurX, py + fY };
 								vecs.push_back(std::move(vec));
-								if (fX >= width) {
+								if (fCurX >= width) {
 									break;
 								}
-								lastPtX = fX;
+								lastPtX = fCurX;
+								mn = data;
+								mn_pos = sampleIdx;
+								mx = data;
+								mx_pos = sampleIdx;
 							}
-							mn = mx;
-							mn_pos = mx_pos;
-							findMax = false;
-							continue;
-						} else if (!findMax && data > mn + delta) {
-							samplePos = mn_pos+waveformScaled.sampleBegin;
-							float fX = (mn_pos-renderOffset) * samplesToPx;
-							if (fX > lastPtX+vOffset) {
-								float fY = -mn * channelHeight / 2.0f;
-								vec2 vec { px + fX, py + fY };
-								vecs.push_back(std::move(vec));
-								if (fX >= width) {
-									break;
-								}
-								lastPtX = fX;
-							}
-							mx = mn;
-							mx_pos = mn_pos;
-							findMax = true;
-							continue;
+
 						}
-						float fCurX = (sampleOffset-renderOffset) * samplesToPx;
-						if (fCurX > lastPtX+vOffset*4) {
-							float fY = -data * channelHeight / 2.0f;
-							vec2 vec { px + fCurX, py + fY };
-							vecs.push_back(std::move(vec));
-							if (fCurX >= width) {
-								break;
-							}
-							lastPtX = fCurX;
-							mn = data;
-							mn_pos = sampleIdx;
-							mx = data;
-							mx_pos = sampleIdx;
-						}
-						samplePos += 1.0;
+						samplePos += 1;
 					}
 				}
 					break;
@@ -316,11 +305,25 @@ void renderWaveProcessed(audiosample_t* sample, float x, float y, audioclip_text
 				break;
 			}
 			nvecs += vecs.size();
-			if (vecs.size()) {
-				for (int i = 1; i < vecs.size(); i++) {
-					assert(vecs[i].x > vecs[i-1].x);
-				}
-			}
+//			if (vecs.size()) {
+//				for (int i = 1; i < vecs.size(); i++) {
+//					assert(vecs[i].x > vecs[i-1].x);
+//				}
+//				auto it = vecs.begin();
+//				vec2 a = *it;
+//				it++;
+//				while (it != vecs.end()) {
+//					vec2 b = *it;
+//					float c = glm::distance(a, b);
+//					if (c < 0.125f) {
+//						vecs.erase(it);
+////						my_printf("short dist: %f\n", c);
+//						continue;
+//					}
+//					a = b;
+//					it++;
+//				}
+//			}
 			channels.push_back(std::move(vecs));
 //			waveform.channels.push_back(std::move(vecs));
 		}
