@@ -6,8 +6,8 @@ struct layout_pianoroll_t {
 	float yoffset = 0.0f;
 };
 struct layout_grid_t {
-	int offset = 0.0f;
-	float zoom = DEFAULT_ZOOM;
+	int offset = 0;
+	double zoom = DEFAULT_ZOOM;
 };
 struct clip_editor_layout_t {
 	layout_grid_t layoutGrid;

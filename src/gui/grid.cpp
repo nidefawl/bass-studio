@@ -10,10 +10,10 @@ void scaled_grid::makeTickVisible(tick_t tickTime) {
 	if (lastW > 0) {
 		double screenx = toScreenSpace(tickBars);
 		if (screenx < this->offset) {
-			setOffset(screenx);
+			setOffset((int)screenx);
 		}
 		if (screenx > this->offset+lastW) {
-			setOffset(screenx-(lastW));
+			setOffset((int)(screenx-(lastW)));
 		}
 	}
 	notifyChange();
@@ -27,7 +27,7 @@ void scaled_grid::showRange(tick_t start, tick_t end) {
 		notifyChange();
 	}
 }
-void scaled_grid::setZoom(float fNewZoom) {
+void scaled_grid::setZoom(double fNewZoom) {
 	double newZoom = fNewZoom < MIN_ZOOM ? MIN_ZOOM : fNewZoom > 100 ? 100 : fNewZoom;
 	double length = toObjSpace(lastW, fNewZoom, 0);
 	double projectWorkingArea = MainCtrl::get()->getProjectWorkingArea();
@@ -52,17 +52,17 @@ tick_t scaled_grid::getTickLength() {
 	auto second = this->gridList[1];
 	return second.time-first.time;
 }
-void scaled_grid::setOffset(float foffset) {
-	double newOffset = foffset < 0 ? 0 : foffset;
-	double rightMost = toObjSpace(lastW, this->zoom, newOffset);
-	double projectWorkingArea = MainCtrl::get()->getProjectWorkingArea();
-	if (rightMost > projectWorkingArea) {
-		double n = toScreenSpace(projectWorkingArea);
-		newOffset =  n - (double)lastW;
-		if (newOffset < 0.) {
-			newOffset = 0.;
-		}
-	}
+void scaled_grid::setOffset(int newOffset) {
+	newOffset = newOffset < 0 ? 0 : newOffset;
+//	double rightMost = toObjSpace(lastW, this->zoom, newOffset);
+//	double projectWorkingArea = MainCtrl::get()->getProjectWorkingArea();
+//	if (rightMost > projectWorkingArea) {
+//		double n = toScreenSpace(projectWorkingArea);
+//		newOffset =  n - (double)lastW;
+//		if (newOffset < 0.) {
+//			newOffset = 0.;
+//		}
+//	}
 	this->offset = (int) newOffset;
 }
 tick_t scaled_grid::next(tick_t tick) {
@@ -121,7 +121,7 @@ tick_t scaled_grid::screenToTickSnap(int32_t x, int snap) {
 	return tick;
 }
 
-void scaled_grid::calcLen(int scrollOffsetX, float fzoom, int contentWidth) {
+void scaled_grid::calcLen(int scrollOffsetX, double fzoom, int contentWidth) {
 	gridList.clear();
 	gridList.reserve(100);
 	const float stepSize = fzoom * 128;

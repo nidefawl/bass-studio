@@ -53,7 +53,7 @@ protected:
 
 	std::vector<grid_changed_cb*> callbacks;
 	int lastOffset = 0;
-	float lastZoom = DEFAULT_ZOOM;
+	double lastZoom = DEFAULT_ZOOM;
 	int lastW = 200;
 	bool dirty = false;
 public:
@@ -92,8 +92,8 @@ public:
 	int32_t getOffset() {
 		return this->offset;
 	}
-	void setZoom(float zoom);
-	void setOffset(float offset);
+	void setZoom(double zoom);
+	void setOffset(int newOffset);
 	double toObjSpace(double screenx) {
 		return toObjSpace(screenx, this->zoom, this->offset);
 	}
@@ -137,9 +137,11 @@ public:
 		double dTick = TICKS_BAR * d;
 		return dTick;
 	}
+	bool debug = false;
 	double tickToScreenD(tick_t x) {
 		double bar = x / (double)TICKS_BAR;
-		return toScreenSpace(bar) - offset;
+		double objspaceOffset = toObjSpace(0, this->zoom, offset);
+		return toScreenSpace(bar - objspaceOffset);
 	}
 	double tickLenToScreen(tick_t x) {
 		double bar = x / (double)TICKS_BAR;
@@ -154,7 +156,7 @@ public:
 		return (int32_t)round(x);
 	}
 	void showRange(tick_t start, tick_t end);
-	void calcLen(int scrollOffsetX, float zoom, int contentWidth);
+	void calcLen(int scrollOffsetX, double zoom, int contentWidth);
 	void makeTickVisible(tick_t tickTime);
 	tick_t prev(tick_t tickTime);
 	tick_t next(tick_t tickTime);

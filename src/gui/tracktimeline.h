@@ -64,9 +64,11 @@ public:
 			float distx = (float)(evt.dragDistance->x);
 			float disty = (float)(evt.dragDistance->y);
 
-			if ((!lockGesture && abs(distx) > 0) || (lockGesture && isMove)) {
+			if (abs(distx) && (!lockGesture || (lockGesture && isMove))) {
+				int prevOffset = grid.offset;
+				grid.setOffset(grid.offset - evt.dragDistance->x);
 				evt.dragDistance->x = 0;
-				grid.setOffset(grid.offset - distx);
+//				assert(grid.offset != prevOffset);
 //				MainCtrl::get()->updateGrid();
 				grid.notifyChange();
 			}
@@ -77,7 +79,7 @@ public:
 				float anchor_dragposx = (float)(startDrag.x < 50 ? 0 : evt.relMousepos.x);
 				grid.setZoom(grid.zoom * disty);
 				double newOffset = grid.calcOffset(anchor_dragposx, dragPosObjSpace);
-				grid.setOffset((float)newOffset);
+				grid.setOffset((int)newOffset);
 				grid.notifyChange();
 //				MainCtrl::get()->updateGrid();
 			}
@@ -173,6 +175,8 @@ public:
 							if (this->size.y > 28) {
 								text = StringFormat("%d", n.time);
 								nvgFontSize(vg, fontSize*scale*0.66f);
+//								nvgText(vg, n.screenpos + gap / 2, this->size.y-21, StringAsCStr(text), NULL);
+								text = StringFormat("%f", n.screenpos);
 								nvgText(vg, n.screenpos + gap / 2, this->size.y-21, StringAsCStr(text), NULL);
 							}
 						}

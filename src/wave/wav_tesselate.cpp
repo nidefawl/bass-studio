@@ -48,7 +48,7 @@ void renderWaveProcessed(audiosample_t* sample, float x, float y, audioclip_text
 		double samplesPerPx = waveformScaled.res;
 		double renderOffset = waveformScaled.sampleBeginOffset - waveformScaled.sampleBegin;
 		int verticesPerPx = waveformScaled.quality;
-		while (dres >= 4.0) {
+		while (dres >= 2.0) {
 			dres /= 2.0;
 			verticesPerPx*=2;
 		}

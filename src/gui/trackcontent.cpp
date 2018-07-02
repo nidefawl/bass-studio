@@ -154,7 +154,7 @@ void makeOrUpdateWaveform(audioclip_texture_t* w, ivec2 pos, ivec2 startOffset, 
 	w->sampleBeginOffset = sampleBeginOffset;
 	w->sampleEnd = sampleEnd;
 	w->res = res;
-	w->linewidth = 1.5f+min(2.0, max(0.0, gridZoom*12.0));
+	w->linewidth = 1.50f+min(0.75, max(0.0, gridZoom*32.0));
 	double scale = 0.005;
 //	if (gridZoom < 0.03) {
 
@@ -255,6 +255,10 @@ void renderAudioClip(NVGcontext* vg, const track_t* tr, const clip_t* cl, gui_au
 	if (cl->name.length()) {
 		setFont(vg, (int) (HEIGHT_CLIP_TITLE * 0.95), getContrastFontColor(cl->rgb), G_TITLE_ALIGN);
 		renderText(vg, pos.x + INSET_TITLE, pos.y + HEIGHT_CLIP_TITLE / 2, size.x-INSET_TITLE*3, StringAsCStr(cl->name));
+		setFont(vg, (int) (HEIGHT_CLIP_TITLE * 0.95), rgbaToNvg(-1), G_TITLE_ALIGN);
+		String text = StringFormat("%d", pos.x);
+		renderText(vg, pos.x + INSET_TITLE, pos.y + HEIGHT_CLIP_TITLE + 4, size.x-INSET_TITLE*3, StringAsCStr(text));
+
 	}
 
 	ivec2 posContents = ivec2(pos.x, pos.y+HEIGHT_CLIP_TITLE+INSET_CLIP_CONTENT);
@@ -292,7 +296,9 @@ void renderAudioClip(NVGcontext* vg, const track_t* tr, const clip_t* cl, gui_au
 bool getClipPosition(scaled_grid& grid, const ivec2& trackSize, const clip_t* cl, ivec2& pos, ivec2& size, tick_t offset) {
 	tick_t tickBegin = cl->time + offset;
 	tick_t tickEnd = cl->time + offset + cl->len;
+	grid.debug = true;
 	double tickBeginX = grid.tickToScreenD(tickBegin);
+	grid.debug = false;
 	double tickEndX = grid.tickToScreenD(tickEnd);
 	if (tickEndX < -4 || tickBeginX > trackSize.x + 4) {
 		return false;

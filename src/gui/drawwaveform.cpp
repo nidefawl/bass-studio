@@ -124,7 +124,7 @@ int waveformrender::render(NVGcontext* ctxt, cachedaudio_t* audio, audioclip_tex
 	}
 	Uniforms bakeOpt;
 	bakeOpt.linecaps = vec2(LineCaps::none, LineCaps::none);
-	bakeOpt.linejoin = LineJoin::miter;
+	bakeOpt.linejoin = waveform->linewidth > 1.75 ? LineJoin::round : LineJoin::miter;
 	bakeOpt.miter_limit = 1.8f;
 	bakeOpt.color = vec4(vec3(1), 1.0);
 	bakeOpt.linewidth = waveform->linewidth;
