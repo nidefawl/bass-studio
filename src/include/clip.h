@@ -159,6 +159,7 @@ public:
 		offsetStart = obj.offsetStart;
 		loopStart = obj.loopStart;
 		loopLen = obj.loopLen;
+		loopEnabled = obj.loopEnabled;
 		notes = obj.notes;
 		audio = obj.audio;
 		noLayout = obj.noLayout;
