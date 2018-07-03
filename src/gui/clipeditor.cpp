@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <glm/vec2.hpp>
 #include "clipeditor.h"
 
 #include "track.h"
@@ -10,6 +11,9 @@
 #include "grid.h"
 #include "guicontextmenu.h"
 #include "leak_detect.h"
+
+using glm::vec2;
+using glm::ivec2;
 
 class action_modify_notes : public action_base {
 protected:
@@ -931,4 +935,34 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
 		return handled;
 	}
 	return false;
+}
+
+void guictr_noteeditor::render(NVGcontext* vg) {
+//		setFont(vg, 14, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+//		nvgText(vg, 5, 5, "pianoroll", NULL);
+//		pianoroll.render();
+	renderBackground(vg);
+	if (!setScissorTransform(vg)) {
+		return;
+	}
+	nvgSave(vg);
+	piano.render(vg);
+	nvgRestore(vg);
+	nvgSave(vg);
+	timeline.render(vg);
+	nvgRestore(vg);
+	nvgSave(vg);
+	content.render(vg);
+	nvgRestore(vg);
+	nvgSave(vg);
+	clipHandles.render(vg);
+	nvgRestore(vg);
+//	nvgBeginPath(vg);
+//	nvgMoveTo(vg, piano.left(), 0);
+//	nvgLineTo(vg, piano.left(), size.y);
+//	nvgStrokeColor(vg, PIANO_COLOR_BLACK);
+//	nvgStrokeWidth(vg, 2.0f);
+//	nvgStroke(vg);
+
+
 }

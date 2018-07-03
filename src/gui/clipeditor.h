@@ -162,6 +162,77 @@ public:
 		widthKeys = size.x-keysX;
 	}
 };
+class gui_clipsettings : public guictr_base {
+public:
+	scaled_grid& grid;
+	clip_view& view;
+	guibutton btnLoop;
+	gui_clipsettings(scaled_grid& _grid, clip_view& _view)
+		: guictr_base(),
+		grid(_grid),
+		view(_view)
+	{
+		padding = 2;
+		btnLoop.drawFn = drawTextureSymbol;
+		btnLoop.drawParm = ICON_LOOP;
+		btnLoop.setActiveRef(nullptr);
+		add(&btnLoop);
+	}
+	~gui_clipsettings()
+	{
+		remove(&btnLoop);
+	}
+	void render(NVGcontext* vg)  {
+		renderBackground(vg);
+		if (!setScissorTransform(vg)) {
+			return;
+		}
+		btnLoop.render(vg);
+	}
+
+	void layout() {
+		int32_t inset = 4;
+		int32_t i2 = inset * 2;
+		int32_t h = TRACK_HEIGHT_STEP-i2;
+
+		int32_t mW = TRACK_HEIGHT_STEP;
+		int32_t bW = size.x-mW;
+		int32_t gW = size.x-mW;
+		btnLoop.size = ivec2(bW - i2, h);
+		btnLoop.pos = ivec2(inset, inset);
+		for (guibase* gui : guis) {
+			gui->layout();
+		}
+	}
+	void renderBackground(NVGcontext* vg) override {
+		drawInsetBackground(vg, getPosContent(), getSizeContent());
+	}
+	void buttonClicked(guibase* button) override {
+		if (&btnLoop == button) {
+			clip_t* clip = view.clip();
+			if (clip != NULL) {
+				clip->loopEnabled = !clip->loopEnabled;
+			}
+		}
+	}
+	void showEditClip() {
+		clip_t* clip = view.clip();
+		if (clip != NULL) {
+			btnLoop.setActiveRef(&clip->loopEnabled);
+//			if (clip->noLayout) {
+//				grid.showRange(clip->offsetStart, clip->offsetStart+clip->len);
+//				zoomPianoRollToClipsNoteRange();
+//			} else {
+//				clip_editor_layout_t& layout = clip->editorLayout;
+//				grid.setLayout(layout.layoutGrid);
+//				setLayout(layout.layoutPianoRoll);
+//			}
+		} else {
+
+			btnLoop.setActiveRef(nullptr);
+		}
+	}
+};
 class gui_clipcontent : public guictr_base, public piano_scale {
 public:
 	enum dragmode {
@@ -610,7 +681,7 @@ public:
 	  clipHandles(grid, _view),
 	  view(_view)
 	{
-		padding = 0;
+		padding = 2;
 		grid.showRange(0, TICKS_BAR*4);
 		grid.addCallback(this);
 		add(&piano);
@@ -633,25 +704,10 @@ public:
 //		offsetPos.x += scrolloffset;
 //		return offsetPos;
 //	}
-	void render(NVGcontext* vg) {
-//		setFont(vg, 14, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-//		nvgText(vg, 5, 5, "pianoroll", NULL);
-//		pianoroll.render();
-		nvgSave(vg);
-		piano.render(vg);
-		nvgRestore(vg);
-		nvgSave(vg);
-		timeline.render(vg);
-		nvgRestore(vg);
-		nvgSave(vg);
-		content.render(vg);
-		nvgRestore(vg);
-		nvgSave(vg);
-		clipHandles.render(vg);
-		nvgRestore(vg);
-
-
+	void renderBackground(NVGcontext* vg) override {
+		drawInsetBackground(vg, getPosContent(), getSizeContent());
 	}
+	void render(NVGcontext* vg);
 	void layout() {
 		ivec2 cs = getSizeContent();
 		piano.pos = ivec2(0, heightTimeLine+heightClipIndicators);
@@ -735,21 +791,26 @@ public:
 class guictr_clipeditor : public guictr_base {
 	clip_view& view;
 public:
+	gui_clipsettings settings;
 	guictr_noteeditor& noteeditor;
 	guictr_clipeditor(guictr_noteeditor& _noteeditor, clip_view& _view)
 	: guictr_base(),
 	  view(_view),
+	  settings(_noteeditor.grid, _view),
 	  noteeditor(_noteeditor)
 	{
 		add(&noteeditor);
+		add(&settings);
 	}
 	~guictr_clipeditor() {
+		remove(&settings);
 		remove(&noteeditor);
 	}
 	void storeLayout() {
 		noteeditor.storeLayout();
 	}
 	void showEditClip() {
+		settings.showEditClip();
 		noteeditor.showEditClip();
 	}
 	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
@@ -757,13 +818,16 @@ public:
 		return guictr_base::mouseHitTest(mpos, evt);
 	}
 	void render(NVGcontext* vg) {
-		guictr_base::renderBackground(vg);
+		renderBackground(vg);
 //		guictr_base::setScissorTransform(vg);
 		ivec2 posInset = getPosContent();
 		nvgTranslate(vg, posInset.x, posInset.y);
 
 		ivec2 center = getSizeContent()/2;
 		if (view.clip() != NULL) {
+			nvgSave(vg);
+			settings.render(vg);
+			nvgRestore(vg);
 			noteeditor.render(vg);
 		} else {
 			setFont(vg, 18, G_WHITE, NVG_ALIGN_CENTER|NVG_ALIGN_MIDDLE);
@@ -772,15 +836,23 @@ public:
 		for (guibase* gui : guis) {
 			if (gui == &noteeditor)
 				continue;
+			if (gui == &settings)
+				continue;
 			gui->render(vg);
 		}
 //		nvgResetScissor(vg);
 		nvgResetTransform(vg);
 	}
+	virtual void renderBackground(NVGcontext* vg) override {
+		bool focused = MainCtrl::get()->isCtrOrChildFocused(this);
+		drawBackground(vg, getPosContent(), getSizeContent(), margin, focused, false);
+	}
 	void layout() {
 		ivec2 cs = getSizeContent();
-		noteeditor.pos = ivec2(0, 0);
-		noteeditor.size = cs;
+		settings.pos = ivec2(0, 0);
+		settings.size = ivec2(250, cs.y);
+		noteeditor.pos = ivec2(settings.right(), 0);
+		noteeditor.size = ivec2(cs.x-settings.right(), cs.y);
 		for (guibase* gui : guis) {
 			gui->layout();
 		}

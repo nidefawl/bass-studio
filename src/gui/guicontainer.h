@@ -160,7 +160,7 @@ public:
 		}
 		return false;
 	}
-	static void drawBackground(NVGcontext* vg, ivec2 posInset, ivec2 sizeInset, int margin, bool focused = false) {
+	static void drawBackground(NVGcontext* vg, ivec2 posInset, ivec2 sizeInset, int margin, bool focused = false, bool drawInset = true) {
 		static const ivec2 borderThickness(CTR_SPACING-2);
 		posInset -= ivec2(margin);
 		sizeInset += ivec2(margin) * 2;
@@ -175,7 +175,7 @@ public:
 			nvgFill(vg);
 			posInset += borderThickness;
 			sizeInset -= borderThickness * 2;
-			if (sizeInset.y > 0 && sizeInset.x > 0) {
+			if (sizeInset.y > 0 && sizeInset.x > 0 && drawInset) {
 				nvgBeginPath(vg);
 				nvgRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y);
 				nvgFillColor(vg, g_guiColors[COL_BG_BRT]);
@@ -185,7 +185,15 @@ public:
 	}
 	virtual void renderBackground(NVGcontext* vg) {
 		bool focused = MainCtrl::get()->isCtrOrChildFocused(this);
-		drawBackground(vg, getPosContent(), getSizeContent(), margin, focused);
+		drawBackground(vg, getPosContent(), getSizeContent(), margin, focused, true);
+	}
+	static void drawInsetBackground(NVGcontext* vg, ivec2 posInset, ivec2 sizeInset) {
+		if (sizeInset.y > 0 && sizeInset.x > 0) {
+			nvgBeginPath(vg);
+			nvgRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y);
+			nvgFillColor(vg, g_guiColors[COL_BG_BRT]);
+			nvgFill(vg);
+		}
 	}
 	virtual void prerender(NVGcontext* vg) {
 		for (guibase* gui : guis) {
