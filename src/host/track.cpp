@@ -626,14 +626,22 @@ void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t 
 		int32_t clipStartSampleLen = blockSize - std::max((int32_t)0, clipStartSample-blockSamplePos);
 		int32_t srcStartOffset = std::max(0, blockSamplePos-clipStartSample);
 		int32_t dstStartOffset = std::max(0, clipStartSample-blockSamplePos);
+
 		cachedaudio_t* audio = audiocache::getInstance()->get(clip->audio.id);
 		if (audio) {
 			audiosample_t* sample = audio->sample.get();
+			if (srcStartOffset >= sample->nSamples)
+				continue;
 			assert(sample->samples.size() == 2);
 			for (int i = 0; i < 2; i++) {
 				float *dst = buffer[i];
 				auto& srcVector = sample->samples[i];
-				int32_t len = std::min(clipEndSampleLen, std::min(clipStartSampleLen, (int32_t)srcVector.size()));
+				int32_t len = std::min(clipEndSampleLen, std::min(clipStartSampleLen, (int32_t)srcVector.size()-srcStartOffset));
+				assert(dstStartOffset+len <= blockSize);
+				assert(srcStartOffset+len <= srcVector.size());
+				assert(dstStartOffset>=0);
+				assert(srcStartOffset>=0);
+				assert(len>0);
 				memcpy(dst+dstStartOffset, srcVector.data()+srcStartOffset, len*sizeof(float));
 			}
 		}
