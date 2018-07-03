@@ -172,6 +172,8 @@ void makeOrUpdateWaveform(audioclip_texture_t* w, ivec2 pos, ivec2 startOffset, 
 //		d /= 2.0;
 //		qu*=2;
 //	}
+//		assert(w->sampleEnd>w->sampleBegin);
+//		assert(w->sampleEnd>w->sampleBeginOffset);
 	my_printf("waveform[zoom:%f,q:%d,w:%f,smp/px:%f,scale:%d]\n", gridZoom, w->quality, w->linewidth, w->samplesPerPx, w->scale);
 }
 void gui_audio_clip::releaseRendered() {
@@ -200,47 +202,51 @@ void gui_audio_clip::updatePosition(project_t& project, scaled_grid& grid, ivec2
 	if (!culled) {
 		assert(size.x > 0);
 		if (audio) {
-			samplerate_t sr = vsthost::getInstance()->lSampleRate; //TODO: store in project_t
-			double lenSamples = tickToSamplePrecise(m_clip->len, project.tempo100, sr);
-			double samplesPerPx = lenSamples/size.x;
+					samplerate_t sr = vsthost::getInstance()->lSampleRate; //TODO: store in project_t
+					double lenSamples = tickToSamplePrecise(m_clip->len, project.tempo100, sr);
+					double samplesPerPx = lenSamples/size.x;
 
-			ivec2 posClipped = pos;
-			ivec2 sizeClipped = ivec2(size.x, size.y-HEIGHT_CLIP_TITLE-INSET_CLIP_CONTENT*2);
-			this->parent->scissorClip(posClipped, sizeClipped);
-			int32_t pxBegin = posClipped.x;
-			int32_t pxEnd = posClipped.x + sizeClipped.x;
-			double tickBegin = grid.screenToTickD(pos.x);
-			double tickBeginOffset = grid.screenToTickD(pxBegin);
-			double tickEnd = grid.screenToTickD(pxEnd);
-//			tickBegin += m_clip->offsetStart;
-			tickBeginOffset += m_clip->offsetStart;
-			tickEnd += m_clip->offsetStart;
-			double sampleBegin = tickToSamplePrecise(tickBegin, project.tempo100, sr);
-			double sampleStartOffset = tickToSamplePrecise(tickBeginOffset, project.tempo100, sr);
-			double sampleEnd = tickToSamplePrecise(tickEnd, project.tempo100, sr);
-			ivec2 startOffset = posClipped - pos;
-			audioclip_texture_t waveform;
-			waveform.quality=4;
-			if (samplesPerPx >= 256) {
-				waveform.quality *= 2;
-				waveform.scale = 2;
-			}
-			constexpr float MAX_RES = 512;
-			waveform.scaleX = 1.0f;
-			if (samplesPerPx > MAX_RES) {
-				waveform.scaleX = MAX_RES/samplesPerPx;
-				samplesPerPx = MAX_RES;
-			}
-//			if (samplesPerPx >= 256) {
-//				waveform.quality *= 2;
-//				waveform.scale = 2;
-//			}
-			makeOrUpdateWaveform(&waveform, posClipped, startOffset, sizeClipped, sampleBegin, sampleStartOffset, sampleEnd, samplesPerPx, grid.zoom);
-			if (waveform != this->waveform) {
-				releaseRendered();
-				this->waveform = waveform;
-			}
-		}
+					ivec2 posClipped = pos;
+					ivec2 sizeClipped = ivec2(size.x, size.y-HEIGHT_CLIP_TITLE-INSET_CLIP_CONTENT*2);
+					this->parent->scissorClip(posClipped, sizeClipped);
+					int32_t pxBegin = posClipped.x;
+					int32_t pxEnd = posClipped.x + sizeClipped.x;
+					double tickBegin = grid.screenToTickD(pos.x);
+					double tickBeginOffset = grid.screenToTickD(pxBegin);
+					double tickEnd = grid.screenToTickD(pxEnd);
+		//			tickBegin += m_clip->offsetStart;
+					tickBeginOffset += m_clip->offsetStart;
+					tickEnd += m_clip->offsetStart;
+					double sampleBegin = tickToSamplePrecise(tickBegin, project.tempo100, sr);
+					double sampleStartOffset = tickToSamplePrecise(tickBeginOffset, project.tempo100, sr);
+					double sampleEnd = tickToSamplePrecise(tickEnd, project.tempo100, sr);
+					ivec2 startOffset = posClipped - pos;
+					audioclip_texture_t waveform;
+					waveform.quality=4;
+					if (samplesPerPx >= 256) {
+						waveform.quality *= 2;
+						waveform.scale = 2;
+					}
+					constexpr float MAX_RES = 512;
+					waveform.scaleX = 1.0f;
+					if (samplesPerPx > MAX_RES) {
+						waveform.scaleX = MAX_RES/samplesPerPx;
+						samplesPerPx = MAX_RES;
+					}
+		//			if (samplesPerPx >= 256) {
+		//				waveform.quality *= 2;
+		//				waveform.scale = 2;
+		//			}
+					my_printf("sampleBegin %f\n", sampleBegin);
+					my_printf("sampleStartOffset %f\n", sampleStartOffset);
+					my_printf("sampleEnd %f\n", sampleEnd);
+					my_printf("m_clip->offsetStart %d\n", m_clip->offsetStart);
+					makeOrUpdateWaveform(&waveform, posClipped, startOffset, sizeClipped, sampleBegin, sampleStartOffset, sampleEnd, samplesPerPx, grid.zoom);
+					if (waveform != this->waveform) {
+						releaseRendered();
+						this->waveform = waveform;
+					}
+				}
 	}
 }
 void gui_audio_clip::prerender(NVGcontext* vg) {

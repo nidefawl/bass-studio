@@ -22,7 +22,7 @@ void renderWaveProcessed(audiosample_t* sample, float x, float y, audioclip_text
 		float height = waveformshape->size.y;
 		int nMaxDowns = sample->downsampled.size()+1;
 		int nLevel = 0;
-		int scale = 1;
+		int downsampleScale = 1;
 		audioclip_texture_t waveformScaled = *waveformshape;
 		double samplesPerPx = waveformshape->samplesPerPx;
 //		float xscale = 1.0f;
@@ -38,9 +38,9 @@ void renderWaveProcessed(audiosample_t* sample, float x, float y, audioclip_text
 //			scale <<= 1;
 //			break;
 //		}
-		waveformScaled.sampleBeginOffset /= scale;
-		waveformScaled.sampleBegin /= scale;
-		waveformScaled.sampleEnd /= scale;
+		waveformScaled.sampleBeginOffset /= downsampleScale;
+		waveformScaled.sampleBegin /= downsampleScale;
+		waveformScaled.sampleEnd /= downsampleScale;
 		assert (nLevel == 0 || nLevel-1 < sample->downsampled.size());
 		std::vector<samplechannel_t>& smpCh =sample->samples;// nLevel == 0 ? sample->samples : sample->downsampled[nLevel-1];
 		int upscale = 1;
@@ -65,41 +65,52 @@ void renderWaveProcessed(audiosample_t* sample, float x, float y, audioclip_text
 		float fsMin = 0.0f;
 		float fsMax = 0.0f;
 		int nvecs = 0;
-		my_printf("upscale %d, res %f vOffset %f\n", upscale, samplesPerPx, vOffset);
+		my_printf("renderOffset %f upscale %d, res %f vOffset %f\n", renderOffset, upscale, samplesPerPx, vOffset);
 		for (int iChannel = 0; iChannel < sample->nChannels; iChannel++) {
 			vec2list vecs;
 			if (nVecs > 0)
 				vecs.reserve(nVecs);
 			double samplePos = waveformScaled.sampleBeginOffset;
+			double sampleOffset = std::max(0.0, (double)(samplePos - waveformScaled.sampleBegin));
 			float px = x;
 			float py = y + channelHeight * iChannel + channelHeight / 2.0f;
 			auto& samplesCh = smpCh[iChannel];
 			float* samplesChPtr = samplesCh.data();
-			size_t lenSamplesCh = samplesCh.size();
+			int32_t lenSamplesCh = (int32_t)samplesCh.size();
 			switch (method) {
-				case SampleMethod::sample_straight:
-				{
-					int32_t sampleIdxStart = std::floor(samplePos-waveformScaled.sampleBegin);
-					if (sampleIdxStart >= lenSamplesCh) {
+			case SampleMethod::sample_straight:
+			{
+					int32_t sampleIdxStart = std::floor(sampleOffset);
+					if ((int32_t)sampleIdxStart >= (uint32_t)lenSamplesCh) {
 						break;
 					}
 					assert(sampleIdxStart >= 0);
 					float first = samplesChPtr[sampleIdxStart];
-					float lastPtX = 0;
+
+					float lastPtX = (sampleOffset - renderOffset) * samplesToPx;
 					float fY = -first * channelHeight / 2.0f;
-					vec2 vec { px, py + fY };
-					vecs.push_back(std::move(vec));
+//					vec2 vec { px, py + fY };
+//					vecs.push_back(std::move(vec));
+					bool emplacePre = true;
+					if (samplePos - waveformScaled.sampleBegin >= 0) {
+						vecs.emplace_back(px, py + fY);
+						emplacePre = false;
+					}
 
 					//todo: arithmetic
-					while ((int)(std::floor(samplePos-waveformScaled.sampleBegin))%upscale!=0) {
+					while ((int) (std::floor(samplePos - waveformScaled.sampleBegin)) % upscale != 0) {
 						samplePos++;
+					}
+					if (emplacePre) {
+						float fCurX = (sampleOffset-renderOffset) * samplesToPx;
+						vecs.emplace_back(px, py );
+						vecs.emplace_back(px + fCurX, py);
 					}
 //					samplePos -= samplePos%upscale;
 //					samplePos += upscale;
 
 					for (; samplePos < waveformScaled.sampleEnd; ) {
-						double sampleOffset = samplePos-waveformScaled.sampleBegin;
-
+						sampleOffset = std::max(0.0, (double)(samplePos - waveformScaled.sampleBegin));
 						if (sampleOffset >= lenSamplesCh) { //TODO: no loop!
 //							sampleOffset = std::max(0.0, sampleOffset-lenSamplesCh);
 							break;
@@ -151,7 +162,7 @@ void renderWaveProcessed(audiosample_t* sample, float x, float y, audioclip_text
 					float smax = 0;
 					bool minOrMax = false;
 					for (; samplePos < waveformScaled.sampleEnd; samplePos+=1.0) {
-						double sampleOffset = samplePos-waveformScaled.sampleBegin;
+						sampleOffset = samplePos-waveformScaled.sampleBegin;
 						if (sampleOffset >= lenSamplesCh) {
 							break;
 						}
@@ -337,7 +348,7 @@ void renderWaveProcessed(audiosample_t* sample, float x, float y, audioclip_text
 //			waveform.channels.push_back(std::move(vecs));
 		}
 
-//		my_printf("nvecs: %d\n", nvecs);
+		my_printf("nvecs: %d\n", nvecs);
 //		my_printf("min: %f, max: %f\n", fsMin, fsMax);
 	}
 
