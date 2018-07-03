@@ -525,33 +525,38 @@ int32_t vsthost::processPlayback(int32_t sample, double posDouble, playback_stat
 			samplerate_t latency = audioTrack->getLatency();
 			maxLatency = max(latency, maxLatency);
 		}
+		tick_t loopCutStart = -1;
+		tick_t loopCutEnd = -1;
+		if (inLoop) {
+			loopCutStart = project.loopStart;
+			loopCutEnd = project.loopStart+project.loopLen;
+		}
 		for (track_t* track : ctrl->trackCtr) {
-			track_impl_t* audioTrack = track->audio;
-			if (!audioTrack) {
-				track->audio = audioTrack = vsthost::getInstance()->createAudio(track);
+			track_impl_t* trackImpl = track->audio;
+			if (!trackImpl) {
+				track->audio = trackImpl = vsthost::getInstance()->createAudio(track);
 			}
-			if (state == playback_state::status_play && audioTrack->instrument && audioTrack->instrument->bIsEnabled) {
-				tick_t loopCutStart = -1;
-				tick_t loopCutEnd = -1;
-				if (inLoop) {
-					loopCutStart = project.loopStart;
-					loopCutEnd = project.loopStart+project.loopLen;
-				}
-				audioTrack->sendNotes(pos, tickBlockEnd, loopCutStart, loopCutEnd, project.tempo100, sample);
-			} else if (!audioTrack->heldNotes.empty()) {
-				audioTrack->sendNotesOff(project.tempo100, sample);
+			trackImpl->input.realloc(lBlockSize);
+			trackImpl->output.realloc(lBlockSize);
+			dsp_util::fillSilence(trackImpl->input.buf, lBlockSize);
+			if (state == playback_state::status_play && trackImpl->instrument && trackImpl->instrument->bIsEnabled) {
+				trackImpl->sendNotes(pos, tickBlockEnd, loopCutStart, loopCutEnd, project.tempo100, sample);
+			} else if (!trackImpl->heldNotes.empty()) {
+				trackImpl->sendNotesOff(project.tempo100, sample);
 			}
-			audioTrack->input.realloc(lBlockSize);
-			audioTrack->output.realloc(lBlockSize);
-			dsp_util::fillSilence(audioTrack->input.buf, lBlockSize);
+			if (state == playback_state::status_play) {
+				trackImpl->fillAudio(pos, tickBlockEnd, loopCutStart, loopCutEnd, project.tempo100, sample, trackImpl->input.buf, lBlockSize);
+			}
+
+
 			/* Processes a whole plugin chain */
-			processAudio(audioTrack, &audioTrack->input, &audioTrack->output, lBlockSize);
-			samplerate_t delay = maxLatency - audioTrack->getLatency();
-			delayAudio(&audioTrack->delayLine, &audioTrack->output, delay);
-			if (audioTrack->mixer.isEnabled()) {
+			processAudio(trackImpl, &trackImpl->input, &trackImpl->output, lBlockSize);
+			samplerate_t delay = maxLatency - trackImpl->getLatency();
+			delayAudio(&trackImpl->delayLine, &trackImpl->output, delay);
+			if (trackImpl->mixer.isEnabled()) {
 				for (track_t* trackMaster : ctrl->trackMasterCtr) {
 					track_impl_t* audioMaster = trackMaster->audio;
-					audioMaster->input.addFrom(&audioTrack->output);
+					audioMaster->input.addFrom(&trackImpl->output);
 				}
 			}
 		}

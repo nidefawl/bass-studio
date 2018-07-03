@@ -120,19 +120,20 @@ tick_t scaled_grid::screenToTickSnap(int32_t x, int snap) {
 	}
 	return tick;
 }
+using float_type = double;
 
 void scaled_grid::calcLen(int scrollOffsetX, double fzoom, int contentWidth) {
 	gridList.clear();
 	gridList.reserve(100);
-	const float stepSize = fzoom * 128;
-	const float scale = 1024.0f;
-	const float barSize = scale / stepSize;
+	const float_type stepSize = fzoom * 128;
+	const float_type scale = 1024.0f;
+	const float_type barSize = scale / stepSize;
 	//bg
 	{
-		float steps_bg = stepSize;
-		float incr = scale / steps_bg;
-		float minW = 256.0f;
-		float maxW = minW*2.0f;
+		float_type steps_bg = stepSize;
+		float_type incr = scale / steps_bg;
+		float_type minW = 256.0f;
+		float_type maxW = minW*2.0f;
 		while (incr < minW) {
 			steps_bg /= 4;
 			incr = scale / steps_bg;
@@ -150,8 +151,8 @@ void scaled_grid::calcLen(int scrollOffsetX, double fzoom, int contentWidth) {
 		int denum_step = 4;
 		int step = 1;
 		int denum_substep = 0;
-		float minBarSize = 24;
-		float minSubSize = 24;
+		float_type minBarSize = 24;
+		float_type minSubSize = 24;
 //		grid_dens.isfixed = false;
 //		grid_dens.fixedBars = 6;
 //		grid_dens.dynamicDensity = 3;
@@ -170,14 +171,14 @@ void scaled_grid::calcLen(int scrollOffsetX, double fzoom, int contentWidth) {
 		} else {
 			step = 1;
 			denum_substep = 32;
-			minBarSize = (float)(1 << (8 - grid_dens.dynamicDensity));
-			minSubSize = (float)(1 << (8 - grid_dens.dynamicDensity));
+			minBarSize = (float_type)(1 << (8 - grid_dens.dynamicDensity));
+			minSubSize = (float_type)(1 << (8 - grid_dens.dynamicDensity));
 		}
 		while (step < (1 << 14) && barSize*step < minBarSize) {
 			step = step * 2;
 			//					substep = 0;
 		}
-		float denom_size = denum_step > 0 ? barSize / (float)denum_step : 0;
+		float_type denom_size = denum_step > 0 ? barSize / (float_type)denum_step : 0;
 		while (denum_step > 0 && denom_size < minSubSize) {
 			denum_step = denum_step / 2;
 			denom_size = barSize / denum_step;
@@ -185,19 +186,19 @@ void scaled_grid::calcLen(int scrollOffsetX, double fzoom, int contentWidth) {
 		if (denum_step == 0) {
 			denum_substep = 0;
 		}
-		float denom_sub_size = denum_substep > 0 ? denom_size / (float)denum_substep : 0;
+		float_type denom_sub_size = denum_substep > 0 ? denom_size / (float_type)denum_substep : 0;
 		while (denum_substep > 0 && denom_sub_size < minSubSize) {
 			denum_substep = denum_substep / 2;
 			denom_sub_size = denom_size / denum_substep;
 		}
-		float bar_offset = -fmod((float)offset, (barSize*step));
+		float_type bar_offset = -fmod((double)offset, (double)(barSize*step));
 		int numBarsOnScreen = (int)ceil(contentWidth / barSize) + 1; //todo: maybe make this optimal
 		int firstBarLeftOfScreen = (int)floor(offset / (barSize));
 		firstBarLeftOfScreen = (firstBarLeftOfScreen / step)*step;
 		//TODO: very important: make sure grid is never empty
 		MainCtrl* main = MainCtrl::get();
 		for (int bar = 0; bar < numBarsOnScreen; bar += step) {
-			const float pos = bar_offset + bar * barSize;
+			const float_type pos = bar_offset + bar * barSize;
 			const tick_t timeBar = (firstBarLeftOfScreen + bar) * TICKS_BAR;
 			grid_div div = {};
 			div.time = timeBar;
@@ -210,7 +211,7 @@ void scaled_grid::calcLen(int scrollOffsetX, double fzoom, int contentWidth) {
 //			if (step < 2)
 			for (int bar_denom = 0; bar_denom < denum_step; bar_denom++) {
 				const tick_t timeQuarter = timeBar + (bar_denom*(4 / denum_step)) * TICKS_QUARTER;
-				const float pos_denom = pos + bar_denom * denom_size;
+				const float_type pos_denom = pos + bar_denom * denom_size;
 				if (bar_denom > 0) {
 					grid_div div_quarter = {};
 					div_quarter.time = timeQuarter;

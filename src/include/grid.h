@@ -60,9 +60,9 @@ public:
 	grid_density grid_dens;
 	std::vector<grid_div> gridList;
 
-	float bars = 0;
-	float bar_size = 0;
-	float incr_bg = 0;
+	double bars = 0;
+	double bar_size = 0;
+	double incr_bg = 0;
 public:
 	scaled_grid()
 	{

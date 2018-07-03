@@ -189,6 +189,7 @@ struct track_impl_t {
 	void insertEffect(int32_t idx, vstplugin* _instrument);
 	void sendNotesOff(int32_t bpm100, int32_t blockSamplePos);
 	void sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos);
+	void fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, float** buffer, uint32_t samples);
 	void onTick(double since);
 	VstEvent_t* reallocEvts(size_t size);
 	void getAutomatableTargets(std::vector<automatable_t*>& targets);

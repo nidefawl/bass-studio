@@ -1,5 +1,5 @@
 #pragma once
-#define MIN_ZOOM (1.0 / (double)(1 << 22))
+#define MIN_ZOOM (1.0 / (double)(1 << 17))
 #define DEFAULT_ZOOM (1.0 / (double)(1 << 2))
 #define GRID_WIDEST 0
 #define GRID_WIDE 1

@@ -115,6 +115,7 @@ public:
 		return NULL;
 	}
 	void deleteEmptyClips();
+	void getClipsInRange(tick_t start, tick_t end, std::vector<clip_t*>& clips);
 	void getNotesInRange(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, std::vector<note_t>& notes);
 };
 struct clip_layout_t {

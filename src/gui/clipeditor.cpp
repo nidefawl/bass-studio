@@ -150,8 +150,8 @@ void gui_clipcontent::render(NVGcontext* vg) {
 		return;
 	}
 	float w = (float)size.x;
-	float bgRepeat = grid.incr_bg*2.0f;
-	float bgOffset = (float)std::fmod(grid.offset, bgRepeat);
+	double bgRepeat = grid.incr_bg*2.0;
+	float bgOffset = (float)fmod((double)grid.offset, bgRepeat);
 	int steps_bg = (int)ceil((w + bgRepeat) / grid.incr_bg);
 	float x = -bgOffset;
 

@@ -29,10 +29,10 @@ public:
 		: guibase(),
 		  m_track(_track),
 		  m_clip(_clip) {
-		my_printf("gui_clip", 0);
+		my_printf("gui_clip\n", 0);
 	}
 	virtual ~gui_clip() {
-		my_printf("~gui_clip", 0);
+		my_printf("~gui_clip\n", 0);
 	}
 	bool isClipTitleBar(ivec2 mpos) {
 		return mpos.x >= pos.x &&

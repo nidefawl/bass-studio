@@ -11,7 +11,7 @@ using glm::ivec2;
 using glm::ivec4;
 
 enum SampleMethod {
-	sample_peakdetect, sample_sum, sample_minmax, sample_interp, sample_minmax2
+	sample_straight, sample_sum, sample_minmax, sample_interp, sample_minmax2
 };
 
 
@@ -23,16 +23,18 @@ struct audioclip_texture_t {
 	double sampleBegin;
 	double sampleBeginOffset;
 	double sampleEnd;
-	double res = 0;
+	double samplesPerPx = 0;
 	int quality = 1;
+	int scale = 1;
+	float scaleX = 1.0f;
 	float linewidth = 1.0f;
-	SampleMethod method = SampleMethod::sample_peakdetect;
+	SampleMethod method = SampleMethod::sample_straight;
 };
 inline bool operator==(const audioclip_texture_t& lhs, const audioclip_texture_t& rhs){
 	return lhs.pos == rhs.pos && lhs.startOffset == rhs.startOffset &&
 			lhs.size == rhs.size && lhs.sampleBegin == rhs.sampleBegin &&
 			lhs.sampleBeginOffset == rhs.sampleBeginOffset && lhs.sampleEnd == rhs.sampleEnd &&
-			lhs.res == rhs.res && lhs.quality == rhs.quality && lhs.method == rhs.method;
+			lhs.samplesPerPx == rhs.samplesPerPx && lhs.quality == rhs.quality && lhs.method == rhs.method;
 }
 inline bool operator!=(const audioclip_texture_t& lhs, const audioclip_texture_t& rhs){return !operator==(lhs,rhs);}
 

@@ -6,6 +6,8 @@
 // glm::translate, glm::rotate, glm::scale, glm::perspective
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/glm.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/transform.hpp>
 #include "drawwaveform.h"
 #include "audiocache.h"
 #include "platform.h"
@@ -22,8 +24,8 @@ using glm::ivec2;
 using glm::vec3;
 using glm::vec2;
 
-const int fboWidth = 1024*2;
-const int fboHeight = 1024*2;
+const int FBO_WIDTH = 1024*2;
+const int FBO_HEIGHT = 1024*2;
 
 bool checkGLError(const char* s);
 
@@ -62,9 +64,7 @@ void waveformrender::release(int fbId) {
 	}
 }
 int waveformrender::render(NVGcontext* ctxt, cachedaudio_t* audio, audioclip_texture_t* waveform, float pxRatio) {
-	if (audio) {
-		my_printf("render %s\n", StringAsCStr(audio->path));
-	}
+
 	TextureEntry* entry = nullptr;
 	for (auto& texture : textures) {
 		if (!texture.inuse) {
@@ -75,7 +75,7 @@ int waveformrender::render(NVGcontext* ctxt, cachedaudio_t* audio, audioclip_tex
 	checkGLError("waveformrender::render start");
 	if (!entry) {
 		TextureEntry e;
-		e.fb = nvgluCreateFramebuffer(ctxt, fboWidth, fboHeight, 0);
+		e.fb = nvgluCreateFramebuffer(ctxt, FBO_WIDTH, FBO_HEIGHT, 0);
 		if (e.fb == NULL) {
 			throw new appexception("nvgluCreateFramebuffer error");
 		}
@@ -90,7 +90,7 @@ int waveformrender::render(NVGcontext* ctxt, cachedaudio_t* audio, audioclip_tex
 
 	nvgluBindFramebuffer(entry->fb);
 	// Draw some stuff to an FBO as a test
-	glViewport(0, 0, fboWidth, fboHeight);
+	glViewport(0, 0, FBO_WIDTH, FBO_HEIGHT);
 	glClearColor(0, 0, 0, 0);
 	glClear(GL_COLOR_BUFFER_BIT|GL_STENCIL_BUFFER_BIT);
 	glEnable(GL_DEPTH_TEST);
@@ -117,11 +117,6 @@ int waveformrender::render(NVGcontext* ctxt, cachedaudio_t* audio, audioclip_tex
 	std::vector<std::vector<glm::vec2>> tesselatedWaveForms;
 	SampleMethod method = waveform->method;
 	renderWaveProcessed(audio->sample.get(), 0, 0, waveform, method, tesselatedWaveForms);
-	my_printf("%d channels\n", tesselatedWaveForms.size());
-	int n = 0;
-	for (auto& vec2List : tesselatedWaveForms) {
-		my_printf("[%d] size = %d\n", n++, vec2List.size());
-	}
 	Uniforms bakeOpt;
 	bakeOpt.linecaps = vec2(LineCaps::none, LineCaps::none);
 	bakeOpt.linejoin = waveform->linewidth > 1.75 ? LineJoin::round : LineJoin::miter;
@@ -129,18 +124,20 @@ int waveformrender::render(NVGcontext* ctxt, cachedaudio_t* audio, audioclip_tex
 	bakeOpt.color = vec4(vec3(1), 1.0);
 	bakeOpt.linewidth = waveform->linewidth;
 	bakeOpt.antialias = 1.0f;
+	bakeOpt.scale = waveform->scale;
 	renderer.bakePaths(tesselatedWaveForms, bakeOpt, this->bakedPath);
 
 
 	mat4x4 matView = mat4x4(1.0);
 	mat4x4 matModel = mat4x4(1.0);
+	matModel[0][0] = waveform->scaleX;
+//	matModel = glm::scale(matModel, vec3(waveform->scaleX, 1, 1));
 	mat4x4 matProj;
-	matProj = glm::ortho(0.f, (float) fboWidth, (float)fboHeight, 0.f, 1.f, -1.f);
+	matProj = glm::ortho(0.f, (float) FBO_WIDTH, (float)FBO_HEIGHT, 0.f, 1.f, -1.f);
 	glUseProgram(renderer.program2dLines);
 	glUniformMatrix4fv(renderer.u_projection, 1, GL_FALSE, value_ptr(matProj));
 	glUniformMatrix4fv(renderer.u_model, 1, GL_FALSE, value_ptr(matModel));
 	glUniformMatrix4fv(renderer.u_view, 1, GL_FALSE, value_ptr(matView));
-
 	glUniform3f ( renderer.u_uniforms_shape, 1, bakedPath.numPaths*renderer.countUniforms, renderer.countUniforms);
 	glBindTexture ( GL_TEXTURE_2D, bakedPath.uniforms_texture);
 	glBindVertexArray ( bakedPath.vbo.vaoId );
@@ -180,7 +177,7 @@ void drawImage(NVGcontext* vg, int image, float alpha,
 void waveformrender::draw(NVGcontext* ctxt, int fbId, audioclip_texture_t* waveImage, ivec2 size) {
 	for (auto& texture : textures) {
 		if (texture.idx == fbId) {
-			drawImage(ctxt, texture.fb->image, 1.0f, 0, 0, size.x, size.y, waveImage->startOffset.x, 0, size.x, size.y);
+			drawImage(ctxt, texture.fb->image, 1.0f, 0, 0, size.x*waveImage->scale, size.y*waveImage->scale, waveImage->startOffset.x, 0, size.x, size.y);
 			return;
 		}
 	}

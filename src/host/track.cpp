@@ -16,6 +16,7 @@
 
 #include "clip.h"
 #include "track.h"
+#include "audiocache.h"
 #include "vst_plugin.h"
 #include "vst_plugin_handles.h"
 #include "vst_host.h"
@@ -266,6 +267,18 @@ void trackdata_midi_t::deleteEmptyClips() {
 		}
 	}
 	sortClips();
+}
+void trackdata_midi_t::getClipsInRange(tick_t start, tick_t end, std::vector<clip_t*>& _clips) {
+//	my_printf("range %d to %d\n", start, end);
+	for (clip_t* clip : clips) {
+		if (clip->end() <= start || clip->start() > end) {
+			continue;
+		}
+		if (clip->clipType == CLIP_AUDIO) {
+			_clips.push_back(clip);
+		}
+	}
+
 }
 void trackdata_midi_t::getNotesInRange(tick_t start, tick_t end, tick_t cutStart, tick_t cutEnd, std::vector<note_t>& notes) {
 //	my_printf("range %d to %d\n", start, end);
@@ -593,12 +606,46 @@ void track_impl_t::onTick(double since) {
 		effect->meter.onTick(since);
 	}
 }
+void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, float** buffer, uint32_t blockSize) {
+
+	int32_t blockEnd = blockSamplePos+blockSize;
+	tick_t audioBegin = max(start, loopStart);
+	tick_t audioEnd = loopEnd < 0 ? end : min(end, loopEnd);
+	std::vector<clip_t*> clips;
+	track->getMidi().getClipsInRange(audioBegin, audioEnd, clips);
+	for (clip_t* clip : clips) {
+		tick_t clipStartTick = clip->getOffsetStart();
+		tick_t clipEndTick = clip->end();
+		int32_t clipStartSample = tickToSample(clipStartTick, bpm100, sampleRate);
+		int32_t clipEndSample = tickToSample(clipEndTick, bpm100, sampleRate);
+		if (clipStartSample > blockEnd)
+			continue;
+		if (clipEndSample <= blockSamplePos)
+			continue;
+		int32_t clipEndSampleLen = std::min((int32_t)blockSize, clipEndSample-blockSamplePos);
+		int32_t clipStartSampleLen = blockSize - std::max((int32_t)0, clipStartSample-blockSamplePos);
+		int32_t srcStartOffset = std::max(0, blockSamplePos-clipStartSample);
+		int32_t dstStartOffset = std::max(0, clipStartSample-blockSamplePos);
+		cachedaudio_t* audio = audiocache::getInstance()->get(clip->audio.id);
+		if (audio) {
+			audiosample_t* sample = audio->sample.get();
+			assert(sample->samples.size() == 2);
+			for (int i = 0; i < 2; i++) {
+				float *dst = buffer[i];
+				auto& srcVector = sample->samples[i];
+				int32_t len = std::min(clipEndSampleLen, std::min(clipStartSampleLen, (int32_t)srcVector.size()));
+				memcpy(dst+dstStartOffset, srcVector.data()+srcStartOffset, len*sizeof(float));
+			}
+		}
+	}
+}
+
+
 void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos) {
 	//assert(end != loopEnd); //if end equals loopEnd note off events will be on exact end
 	if (instrument && instrument->bCanReceiveMidi) {
 		std::vector<note_t> notes;
 
-		 //TODO: figure out thread synchronization model
 		tick_t heldBegin = start;
 		tick_t heldEnd = end;
 		for (const note_t& note : heldNotes) {

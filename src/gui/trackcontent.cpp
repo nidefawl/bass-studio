@@ -153,25 +153,26 @@ void makeOrUpdateWaveform(audioclip_texture_t* w, ivec2 pos, ivec2 startOffset, 
 	w->sampleBegin = sampleBegin;
 	w->sampleBeginOffset = sampleBeginOffset;
 	w->sampleEnd = sampleEnd;
-	w->res = res;
+	w->samplesPerPx = res;
 	w->linewidth = 1.50f+min(0.75, max(0.0, gridZoom*32.0));
 	double scale = 0.005;
 //	if (gridZoom < 0.03) {
 
-		w->method = SampleMethod::sample_peakdetect;
+		w->method = SampleMethod::sample_straight;
 		scale = 0.00005;
 //	} else {
 ////
 //		w->method = SampleMethod::sample_minmax;
 //	}
-	int qu = 4;
+//	int qu = 4;
+//	w->quality = qu;
+
 //	double d = gridZoom;
 //	while (d > scale && qu < 16) {
 //		d /= 2.0;
 //		qu*=2;
 //	}
-	my_printf("zoom: %f, quality: %d, w->linewidth %f\n", gridZoom, qu, w->linewidth);
-	w->quality = qu;
+	my_printf("waveform[zoom:%f,q:%d,w:%f,smp/px:%f,scale:%d]\n", gridZoom, w->quality, w->linewidth, w->samplesPerPx, w->scale);
 }
 void gui_audio_clip::releaseRendered() {
 	waveformrender::getInstance()->release(this->fbId);
@@ -201,7 +202,7 @@ void gui_audio_clip::updatePosition(project_t& project, scaled_grid& grid, ivec2
 		if (audio) {
 			samplerate_t sr = vsthost::getInstance()->lSampleRate; //TODO: store in project_t
 			double lenSamples = tickToSamplePrecise(m_clip->len, project.tempo100, sr);
-			double res = lenSamples/size.x;
+			double samplesPerPx = lenSamples/size.x;
 
 			ivec2 posClipped = pos;
 			ivec2 sizeClipped = ivec2(size.x, size.y-HEIGHT_CLIP_TITLE-INSET_CLIP_CONTENT*2);
@@ -219,7 +220,22 @@ void gui_audio_clip::updatePosition(project_t& project, scaled_grid& grid, ivec2
 			double sampleEnd = tickToSamplePrecise(tickEnd, project.tempo100, sr);
 			ivec2 startOffset = posClipped - pos;
 			audioclip_texture_t waveform;
-			makeOrUpdateWaveform(&waveform, posClipped, startOffset, sizeClipped, sampleBegin, sampleStartOffset, sampleEnd, res, grid.zoom);
+			waveform.quality=4;
+			if (samplesPerPx >= 256) {
+				waveform.quality *= 2;
+				waveform.scale = 2;
+			}
+			constexpr float MAX_RES = 512;
+			waveform.scaleX = 1.0f;
+			if (samplesPerPx > MAX_RES) {
+				waveform.scaleX = MAX_RES/samplesPerPx;
+				samplesPerPx = MAX_RES;
+			}
+//			if (samplesPerPx >= 256) {
+//				waveform.quality *= 2;
+//				waveform.scale = 2;
+//			}
+			makeOrUpdateWaveform(&waveform, posClipped, startOffset, sizeClipped, sampleBegin, sampleStartOffset, sampleEnd, samplesPerPx, grid.zoom);
 			if (waveform != this->waveform) {
 				releaseRendered();
 				this->waveform = waveform;
@@ -233,7 +249,6 @@ void gui_audio_clip::prerender(NVGcontext* vg) {
 		cachedaudio_t* audio = audiocache::getInstance()->get(m_clip->audio.id);
 		if (audio) {
 			int ret = waveformrender::getInstance()->render(vg, audio, &this->waveform, 1);
-			my_printf("gui_audio_clip rendered to %d\n",ret);
 			this->fbId = ret;
 			this->rendered = true;
 		}
