@@ -9,7 +9,6 @@
 #include "mmsystem.h"
 #endif
 #include "seq_math.h"
-#include "str_util.h"
 #include <fcntl.h>
 #include <io.h>
 #include <stdio.h>
@@ -23,6 +22,7 @@
 #else
 #include <mutex>
 #endif
+#include "str_util.h"
 
 using std::max;
 using std::min;//make code analyzer happy (and make author sad)

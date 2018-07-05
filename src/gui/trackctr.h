@@ -20,6 +20,9 @@
 #include "platform.h"
 #include "dsp_util.h"
 #include "leak_detect.h"
+#include <glm/vec2.hpp>
+using glm::vec2;
+using glm::ivec2;
 
 
 int32_t getPosYFirstReturnTrack(project_t& project);
@@ -117,7 +120,7 @@ public:
 
 
 	void setSelectionRange(clip_t* clicked, track_t *trackClicked) {
-		cursor.selRange = clicked->len;
+		cursor.selRange = clicked->getLen();
 		cursor.selTrackRange = 0;
 		cursor.cursorPos = clicked->time;
 		cursor.cursorTrack = trackClicked->idx;
@@ -223,7 +226,7 @@ public:
 		if (dragHandle == drag_handle_loopbar) {
 			mousePosX -= dragOffset;
 		}
-		tick_t tickAt = grid.screenToTickSnap(mousePosX, SNAP_ON);
+		tick_t tickAt = grid.screenToTickSnap(mousePosX, isAlt(evt.kbmods) ? SNAP_OFF : SNAP_ON);
 		tick_t curLoopEnd = project.loopStart + project.loopLen;
 
 		if (dragHandle == drag_handle_loopright) {

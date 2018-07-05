@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <glm/glm.hpp>
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
@@ -7,6 +8,9 @@
 #include "color_util.h"
 #include "seq_math.h"
 #include "platform.h"
+using glm::ivec2;
+using glm::ivec3;
+using glm::ivec4;
 
 NVGcolor getCursorColor() {
 	float f1 = 0.3f;

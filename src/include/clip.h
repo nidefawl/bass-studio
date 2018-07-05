@@ -8,17 +8,25 @@
 #include "seq_util.h"
 #include "logging.h"
 #include "layout.h"
+#include "audiocache.h"
 #include <assert.h>
+#include <memory>
+
 #define CLIP_MIDI 0
 #define CLIP_AUDIO 1
 
 class track_t;
 class gui_clip;
+//struct cachedaudio_t;
 class clip_audio_t {
 public:
 	int32_t id = 0;
+	std::weak_ptr<cachedaudio_t> weakCachedAudio;
+
 	clip_audio_t() {
 	}
+	tick_t lenInTicks();
+	tick_t lenSamples();
 };
 class clip_notes_t {
 public:
@@ -119,8 +127,12 @@ public:
 	clip_notes_t notes;
 	clip_audio_t audio;
 	tick_t time = 0;
+//private:
 	tick_t len = 0;
+public:
 	tick_t offsetStart = 0;
+	int32_t offsetSamples = 0;
+	tick_t lenSamples = 0;
 	tick_t loopStart = 0;
 	tick_t loopLen = 0;
 	int clipType = CLIP_MIDI;
@@ -157,6 +169,8 @@ public:
 		time = obj.time;
 		len = obj.len;
 		offsetStart = obj.offsetStart;
+		offsetSamples = obj.offsetSamples;
+		lenSamples = obj.lenSamples;
 		loopStart = obj.loopStart;
 		loopLen = obj.loopLen;
 		loopEnabled = obj.loopEnabled;
@@ -171,7 +185,7 @@ public:
 		return time;
 	}
 	tick_t end() const {
-		return time+len;
+		return time+getLen();
 	}
 	tick_t getOffsetStart() const {
 		return time-offsetStart;
@@ -188,7 +202,12 @@ public:
 	}
 	tick_t getLoopBegin() const;
 	tick_t getNumLoops() const;
+	void adjustStartSamples(tick_t offset);
 	void adjustStartOffset(tick_t offset) {
+		if (clipType == CLIP_AUDIO) {
+			adjustStartSamples(offset);
+			return;
+		}
 		if (loopEnabled && offsetStart < loopStart) {
 			tick_t lenAdj = min(offset, loopStart - offsetStart);
 			offsetStart += lenAdj;
@@ -203,6 +222,14 @@ public:
 			offsetStart -= loopLen;
 		}
 	}
+
+	tick_t getLen() const;
+	tick_t& getLenRef();
+	void setLen(tick_t len = 0);
+	void adjustLen(tick_t offset);
+	tick_t getLenSamples() const;
+	void setLenSamples(tick_t lenSamples = 0);
+
 	gui_clip* gClip = NULL;
 //	track_t* tr = NULL;
 private:
@@ -212,8 +239,8 @@ private:
 	void updateNoteView() const {
 		if (dirty) {
 			dirty = false;
-			getNotesView(0, len, noteViewPlayback, true);
-			getNotesView(0, len, noteViewRender, false);
+			getNotesView(0, getLen(), noteViewPlayback, true);
+			getNotesView(0, getLen(), noteViewRender, false);
 		}
 	}
 };
@@ -224,13 +251,15 @@ inline void cutClipLeft(clip_t* c, tick_t len) {
 	c->adjustStartOffset(len);
 
 	c->time += len;
-	c->len -= len;
+//	c->len -= len;
+	c->setLen(c->getLen()-len);
 	assert(c->time>0);
-	assert(c->len>0);
+	assert(c->getLenRef()>0);
 }
 inline void cutClipRight(clip_t* c, tick_t len) {
-	c->len -= len;
-	assert(c->len>0);
+//	c->len -= len;
+	c->setLen(c->getLen()-len);
+	assert(c->getLenRef()>0);
 }
 inline bool operator==(const clip_t& lhs, const clip_t& rhs){
 	return lhs.time == rhs.time; //TODO: watch out!!
@@ -238,7 +267,7 @@ inline bool operator==(const clip_t& lhs, const clip_t& rhs){
 inline bool operator!=(const clip_t& lhs, const clip_t& rhs){return !operator==(lhs,rhs);}
 inline bool operator< (const clip_t& lhs, const clip_t& rhs){
 	if (lhs.time == rhs.time) {
-		return lhs.len < rhs.len;
+		return lhs.getLen() < rhs.getLen();
 	}
 	return lhs.time < rhs.time;
 }

@@ -545,7 +545,7 @@ int32_t vsthost::processPlayback(int32_t sample, double posDouble, playback_stat
 				trackImpl->sendNotesOff(project.tempo100, sample);
 			}
 			if (state == playback_state::status_play) {
-				trackImpl->fillAudio(pos, tickBlockEnd, loopCutStart, loopCutEnd, project.tempo100, sample, trackImpl->input.buf, lBlockSize);
+				trackImpl->fillAudio(pos, tickBlockEnd, loopCutStart, loopCutEnd, project.tempo100, sample, trackImpl->input.buf, (int32_t)lBlockSize);
 			}
 
 

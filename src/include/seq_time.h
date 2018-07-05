@@ -17,7 +17,7 @@ struct tick_minmax_t {
 #define TICKS_BAR (TICKS_QUARTER<<2)
 #define TICK_MASK_16TH (TICKS_16TH-1)
 #define TICK_MASK_SUB_16TH ((TICKS_16TH>>1)-1)
-#define MIN_CLIPSIZE TICKS_16TH
+#define MIN_CLIPSIZE (TICKS_16TH>>2)
 struct beatbar16th_t {
 	uint32_t bar;
 	uint32_t beat;
@@ -69,11 +69,11 @@ inline double tickToSamplePrecise(double tick, int32_t bpm100, samplerate_t samp
 	double samplePos = toSecondsPrecise(tick, bpm100) * samplerate;
 	return samplePos;
 }
-inline double sampleToTickPrecise(double sample, int32_t bpm100, samplerate_t samplerate, int32_t blocksize) {
+inline double sampleToTickPrecise(double sample, int32_t bpm100, samplerate_t samplerate) {
 	double seconds = sample / (double)samplerate;
 	return toTickPrecise(seconds, bpm100);
 }
-inline int32_t sampleToTick(int32_t sample, int32_t bpm100, samplerate_t samplerate, int32_t blocksize) {
+inline int32_t sampleToTick(int32_t sample, int32_t bpm100, samplerate_t samplerate) {
 	double seconds = sample / (double)samplerate;
 	return toTick(seconds, bpm100);
 }

@@ -78,7 +78,7 @@ struct AudioBlock {
 			float* srcBufChannel = srcBuf[srcChannelIdx];
 			float* dstBufChannel = buf[dstChannelIdx];
 			//TODO: this does 2 additions to the same destination when going from stereo to mono (MIX FIRST)
-			for (int j = 0; j < samples; j++) {
+			for (uint32_t j = 0; j < samples; j++) {
 				dstBufChannel[j] += srcBufChannel[j];
 			}
 		}

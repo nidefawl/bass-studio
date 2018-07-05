@@ -8,6 +8,10 @@
 #include "seq_time.h"
 #include "seq_math.h"
 #include "leak_detect.h"
+#include "audiocache.h"
+#include "../host/vst_host.h"
+#include "mainctrl.h"
+#include "project.h"
 
 note_t& clip_notes_t::addSingle(note_t& t) {
 	assert(selection.empty());
@@ -285,7 +289,7 @@ int clip_t::getInTimeRange(tick_t absStart, tick_t absEnd, tick_t cutStart, tick
 	relEnd -= clipStart;
 	clip_notes_t notesView;
 	tick_t cutLeft = 0;
-	tick_t cutRight = len;
+	tick_t cutRight = getLen();
 	if (cutStart > -1) {
 		cutLeft = max(cutLeft, cutStart-start());
 	}
@@ -415,4 +419,79 @@ std::pair<note_t*, note_t*> getMinMaxTime(std::vector<note_t>& notes) {
         [] (note_t const& lhs, note_t const& rhs) { return (lhs.time+lhs.len) < (rhs.time+rhs.len); });
 
     return std::make_pair(&*min, &*max);
+}
+
+tick_t clip_audio_t::lenInTicks() {
+	cachedaudio_t* audio = audiocache::getInstance()->get(this->id);
+	vsthost* host = vsthost::getInstance();
+	project_globals_t* globals = MainCtrl::get();
+	auto* sample = audio->sample.get();
+	if (sample)
+		return sampleToTickPrecise(sample->nSamples, globals->tempo100, host->lSampleRate);
+
+	return 0;
+}
+tick_t clip_audio_t::lenSamples() {
+	cachedaudio_t* audio = audiocache::getInstance()->get(this->id);
+	vsthost* host = vsthost::getInstance();
+	project_globals_t* globals = MainCtrl::get();
+	auto* sample = audio->sample.get();
+	if (sample)
+		return sample->nSamples;
+
+	return 0;
+}
+
+void clip_t::adjustStartSamples(tick_t offset) {
+	int32_t tick = MainCtrl::get()->tickToSamples(offset);
+//	if (loopEnabled && offsetStart < loopStart) {
+//		tick_t lenAdj = min(offset, loopStart - offsetStart);
+//		offsetStart += lenAdj;
+//		offset -= lenAdj;
+//	}
+//	bool inLoop = loopEnabled && offsetStart >= loopStart;
+	this->offsetSamples += tick;
+//	if (this->offsetSamples < 0)
+//		this->offsetSamples = 0;
+//	while (inLoop && offsetStart < loopStart) {
+//		offsetStart += loopLen;
+//	}
+//	while (inLoop && offsetStart >= loopStart+loopLen) {
+//		offsetStart -= loopLen;
+//	}
+}
+
+tick_t clip_t::getLen() const {
+
+	if (this->lenSamples>0&&this->clipType == CLIP_AUDIO) {
+		return MainCtrl::get()->samplesToTicks(this->lenSamples);
+	}
+//	tick_t
+	return len;
+}
+
+tick_t& clip_t::getLenRef() {
+	return len;
+}
+
+void clip_t::setLen(tick_t len) {
+	if (this->clipType == CLIP_AUDIO) {
+		this->lenSamples = MainCtrl::get()->tickToSamples(len);
+	}
+	this->len = len;
+	assert(this->clipType != CLIP_AUDIO || MainCtrl::get()->samplesToTicks(this->lenSamples) == this->len);
+}
+
+void clip_t::adjustLen(tick_t offset) {
+	setLen(len+offset);
+}
+tick_t clip_t::getLenSamples() const {
+	return lenSamples;
+}
+
+void clip_t::setLenSamples(tick_t lenSamples) {
+	if (this->clipType == CLIP_AUDIO) {
+		this->len = MainCtrl::get()->samplesToTicks(len);
+	}
+	this->lenSamples = lenSamples;
 }

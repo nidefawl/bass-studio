@@ -93,11 +93,11 @@ std::pair<clip_t*, clip_t*> trackdata_midi_t::getMinMax() {
 }
 tick_t trackdata_midi_t::start() {
 	auto minmax = getMinMax();
-	return (minmax.first?minmax.first->time:0);
+	return minmax.first ? minmax.first->time : 0;
 }
 tick_t trackdata_midi_t::end() {
 	auto minmax = getMinMax();
-	return (minmax.second?(minmax.second->time+minmax.second->len):0);
+	return minmax.second ? minmax.second->end() : 0;
 }
 
 track_t &track_t::operator =(const track_snapshot_t &obj) {
@@ -259,7 +259,7 @@ void trackdata_midi_t::deleteEmptyClips() {
 	std::vector<clip_t*>::iterator it = clips.begin();
 	while (it != clips.end()) {
 		clip_t* c = *it;
-		if (c->len <= 0) {
+		if (c->getLen() <= 0) {
 			it = removeClip(c);
 			deleteClip(c, MainCtrl::get());
 		} else {
@@ -606,7 +606,7 @@ void track_impl_t::onTick(double since) {
 		effect->meter.onTick(since);
 	}
 }
-void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, float** buffer, uint32_t blockSize) {
+void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, float** buffer, int32_t blockSize) {
 
 	int32_t blockEnd = blockSamplePos+blockSize;
 	tick_t audioBegin = max(start, loopStart);
@@ -624,25 +624,26 @@ void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t 
 			continue;
 		int32_t clipEndSampleLen = std::min((int32_t)blockSize, clipEndSample-blockSamplePos);
 		int32_t clipStartSampleLen = blockSize - std::max((int32_t)0, clipStartSample-blockSamplePos);
-		int32_t srcStartOffset = std::max(0, blockSamplePos-clipStartSample);
+		int32_t srcStartOffset = blockSamplePos-clipStartSample + clip->offsetSamples;
 		int32_t dstStartOffset = std::max(0, clipStartSample-blockSamplePos);
+		if (srcStartOffset+blockSize <= 0)
+			continue;
 
 		cachedaudio_t* audio = audiocache::getInstance()->get(clip->audio.id);
 		if (audio) {
 			audiosample_t* sample = audio->sample.get();
-			if (srcStartOffset >= sample->nSamples)
+			if (srcStartOffset >= (int32_t)sample->nSamples)
 				continue;
 			assert(sample->samples.size() == 2);
 			for (int i = 0; i < 2; i++) {
 				float *dst = buffer[i];
 				auto& srcVector = sample->samples[i];
-				int32_t len = std::min(clipEndSampleLen, std::min(clipStartSampleLen, (int32_t)srcVector.size()-srcStartOffset));
-				assert(dstStartOffset+len <= blockSize);
-				assert(srcStartOffset+len <= srcVector.size());
+				int32_t len = std::min((int32_t)blockSize-std::max(0, -srcStartOffset), std::min(clipEndSampleLen, std::min(clipStartSampleLen, (int32_t)srcVector.size()-srcStartOffset)));
+				assert(dstStartOffset+len <= (int32_t)blockSize);
+				assert(srcStartOffset+len <= (int32_t)srcVector.size());
 				assert(dstStartOffset>=0);
-				assert(srcStartOffset>=0);
 				assert(len>0);
-				memcpy(dst+dstStartOffset, srcVector.data()+srcStartOffset, len*sizeof(float));
+				memcpy(dst+dstStartOffset, srcVector.data()+std::max(0, srcStartOffset), len*sizeof(float));
 			}
 		}
 	}

@@ -129,6 +129,8 @@ void serialize(Archive & archive, clip_t & m)
 	make_optional_nvp(archive, "clip_notes", m.notes);
 	make_optional_nvp(archive, "clip_audio", m.audio);
 	make_optional_nvp(archive, "type", m.clipType);
+	make_optional_nvp(archive, "offsetSamples", m.offsetSamples);
+	make_optional_nvp(archive, "lenSamples", m.lenSamples);
 	if (m.loopLen == 0) {
 		m.loopStart = m.offsetStart;
 		m.loopLen = m.len;

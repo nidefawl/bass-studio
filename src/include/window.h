@@ -25,6 +25,7 @@ public:
 	virtual void releaseMouse() = 0;
 	virtual bool isMouseCaptured() = 0;
 	virtual void updateWindowFromDlg() = 0;
+	virtual void fireMouseMoved() = 0;
 };
 class window_dialog : public window_base {
 public:

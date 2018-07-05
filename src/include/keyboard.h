@@ -308,6 +308,9 @@ inline bool isCtrlKey(int key) {
 	return key == KEY_LEFT_CONTROL || key == KEY_RIGHT_CONTROL;
 #endif
 }
+inline bool isAltKey(int key) {
+	return key == KEY_LEFT_ALT || key == KEY_RIGHT_ALT;
+}
 inline bool isAlt(int mods) {
 	return (mods&KB_MOD_ALT);
 }

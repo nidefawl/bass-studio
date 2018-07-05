@@ -9,11 +9,16 @@
 #include "tracktimeline.h"
 #include "button.h"
 #include "trackcontent.h"
+#include "tempocontrols.h"
 #include "note.h"
 #include "grid.h"
 #include "keyboard.h"
 #include "edithistory.h"
 #include "leak_detect.h"
+#include <glm/glm.hpp>
+#include <glm/vec2.hpp>
+using glm::vec2;
+using glm::ivec2;
 
 #define PIANO_COLOR_WHITE rgbToNvg(0xffffff)
 #define PIANO_COLOR_BLACK rgbToNvg(0x111111)
@@ -167,19 +172,36 @@ public:
 	scaled_grid& grid;
 	clip_view& view;
 	guibutton btnLoop;
+	gui_timeinput clipTimeStart;
+	gui_timeinput clipTimeLen;
+	gui_timeinput clipTimeStartOffsetTicks;
+	gui_numberinput_field clipTimeStartOffsedSamples;
 	gui_clipsettings(scaled_grid& _grid, clip_view& _view)
 		: guictr_base(),
 		grid(_grid),
-		view(_view)
+		view(_view), clipTimeStart(nullptr), clipTimeLen(nullptr),
+		clipTimeStartOffsetTicks(nullptr), clipTimeStartOffsedSamples(nullptr)
 	{
 		padding = 2;
 		btnLoop.drawFn = drawTextureSymbol;
 		btnLoop.drawParm = ICON_LOOP;
 		btnLoop.setActiveRef(nullptr);
+		clipTimeStart.setRef(nullptr);
+		clipTimeLen.setRef(nullptr);
+		clipTimeStartOffsetTicks.setRef(nullptr);
+		clipTimeStartOffsedSamples.setRef(nullptr);
 		add(&btnLoop);
+		add(&clipTimeStart);
+		add(&clipTimeLen);
+		add(&clipTimeStartOffsetTicks);
+		add(&clipTimeStartOffsedSamples);
 	}
 	~gui_clipsettings()
 	{
+		remove(&clipTimeStartOffsedSamples);
+		remove(&clipTimeStartOffsetTicks);
+		remove(&clipTimeLen);
+		remove(&clipTimeStart);
 		remove(&btnLoop);
 	}
 	void render(NVGcontext* vg)  {
@@ -187,7 +209,11 @@ public:
 		if (!setScissorTransform(vg)) {
 			return;
 		}
-		btnLoop.render(vg);
+		for (guibase* gui : guis) {
+			nvgSave(vg);
+			gui->render(vg);
+			nvgRestore(vg);
+		}
 	}
 
 	void layout() {
@@ -197,9 +223,16 @@ public:
 
 		int32_t mW = TRACK_HEIGHT_STEP;
 		int32_t bW = size.x-mW;
-		int32_t gW = size.x-mW;
 		btnLoop.size = ivec2(bW - i2, h);
 		btnLoop.pos = ivec2(inset, inset);
+		clipTimeStart.size = ivec2(bW - i2, h);
+		clipTimeStart.pos = ivec2(btnLoop.left(), btnLoop.bottom()+inset);
+		clipTimeLen.size = ivec2(bW - i2, h);
+		clipTimeLen.pos = ivec2(clipTimeStart.left(), clipTimeStart.bottom()+inset);
+		clipTimeStartOffsetTicks.size = ivec2(bW - i2, h);
+		clipTimeStartOffsetTicks.pos = ivec2(clipTimeStart.left(), clipTimeLen.bottom()+inset);
+		clipTimeStartOffsedSamples.size = ivec2(bW - i2, h);
+		clipTimeStartOffsedSamples.pos = ivec2(clipTimeStart.left(), clipTimeStartOffsetTicks.bottom()+inset);
 		for (guibase* gui : guis) {
 			gui->layout();
 		}
@@ -214,11 +247,27 @@ public:
 				clip->loopEnabled = !clip->loopEnabled;
 			}
 		}
+		if (&clipTimeStart == button||&clipTimeLen == button
+				|| &clipTimeStartOffsedSamples == button||&clipTimeStartOffsetTicks == button) {
+			clip_t* clip = view.clip();
+			if (clip && clip->gClip) {
+				track_t* track = clip->gClip->m_track;
+				if (track) {
+					resizeOtherClips(track->getMidi(), clip);
+					MainCtrl::getGuiTrackCtr()->layout();
+					MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
+				}
+			}
+		}
 	}
 	void showEditClip() {
 		clip_t* clip = view.clip();
 		if (clip != NULL) {
 			btnLoop.setActiveRef(&clip->loopEnabled);
+			clipTimeStart.setRef(&clip->time);
+			clipTimeLen.setRef(&clip->getLenRef());
+			clipTimeStartOffsedSamples.setRef(&clip->offsetSamples);
+			clipTimeStartOffsetTicks.setRef(&clip->offsetStart);
 //			if (clip->noLayout) {
 //				grid.showRange(clip->offsetStart, clip->offsetStart+clip->len);
 //				zoomPianoRollToClipsNoteRange();
@@ -230,6 +279,10 @@ public:
 		} else {
 
 			btnLoop.setActiveRef(nullptr);
+			clipTimeStart.setRef(nullptr);
+			clipTimeLen.setRef(nullptr);
+			clipTimeStartOffsedSamples.setRef(nullptr);
+			clipTimeStartOffsetTicks.setRef(nullptr);
 		}
 	}
 };
@@ -305,10 +358,10 @@ protected:
 };
 class ce_constants {
 protected:
-	const uint32_t heightTimeLine = 26;
-	const uint32_t heightSelIndicator = 8;
-	const uint32_t heightLoopInidicator = 14;
-	const uint32_t heightClipIndicators = heightSelIndicator+heightLoopInidicator*2;
+	const int32_t heightTimeLine = 26;
+	const int32_t heightSelIndicator = 8;
+	const int32_t heightLoopInidicator = 14;
+	const int32_t heightClipIndicators = heightSelIndicator+heightLoopInidicator*2;
 };
 class guictr_cliphandles : public guibase, ce_constants {
 	scaled_grid& grid;
@@ -358,18 +411,18 @@ public:
 		if (dragHandle == drag_handle_loopbar) {
 			mousePosX -= dragOffset;
 		}
-		tick_t tickAt = grid.screenToTickSnap(mousePosX, SNAP_ON);
-		tick_t curEnd = clip->offsetStart + clip->len;
+		tick_t tickAt = grid.screenToTickSnap(mousePosX, isAlt(evt.kbmods) ? SNAP_OFF : SNAP_ON);
+		tick_t curEnd = clip->offsetStart + clip->getLen();
 		tick_t curLoopEnd = clip->loopStart + clip->loopLen;
 		if (dragHandle == drag_handle_right) {
 			tick_t tickDelta = (tickAt - curEnd);
-			tick_t newLen = clip->len+tickDelta;
+			tick_t newLen = clip->getLen()+tickDelta;
 			if (newLen > 0) {
 				tick_t newEnd = clip->start() + newLen;
 				if (clNext && newEnd >= clNext->start()) {
-					clip->len = clNext->start() - clip->start();
+					clip->setLen(clNext->start() - clip->start());
 				} else {
-					clip->len = newLen;
+					clip->setLen(newLen);
 				}
 			}
 		}
@@ -381,11 +434,11 @@ public:
 				tick_t newLen = curEnd-newStart;
 				tick_t newEnd = clip->start() + newLen;
 				if (clNext && newEnd >= clNext->start()) {
-					clip->len = clNext->start() - clip->start();
-					clip->offsetStart = curEnd - clip->len;
+					clip->setLen(clNext->start() - clip->start());
+					clip->offsetStart = curEnd - clip->getLen();
 				} else {
 					clip->offsetStart = newStart;
-					clip->len = curEnd-newStart;
+					clip->setLen(curEnd-newStart);
 				}
 			}
 		}
@@ -487,7 +540,7 @@ public:
 		return (float)grid.tickToScreenD(view.clip()->offsetStart);
 	}
 	float clipEndScrX() {
-		return (float)grid.tickToScreenD(view.clip()->offsetStart + view.clip()->len);
+		return (float)grid.tickToScreenD(view.clip()->offsetStart + view.clip()->getLen());
 	}
 	float clipLoopStartScrX() {
 		return (float)grid.tickToScreenD(view.clip()->loopStart);
@@ -765,7 +818,7 @@ public:
 		clip_t* clip = view.clip();
 		if (clip != NULL) {
 			if (clip->noLayout) {
-				grid.showRange(clip->offsetStart, clip->offsetStart+clip->len);
+				grid.showRange(clip->offsetStart, clip->offsetStart+clip->getLen());
 				zoomPianoRollToClipsNoteRange();
 			} else {
 				clip_editor_layout_t& layout = clip->editorLayout;
@@ -900,7 +953,7 @@ public:
 			int32_t minTime = notes.firstNote.start();
 			int32_t distPitch = notes.maxNote.pitch - notes.minNote.pitch;
 			distPitch++;
-			lenTime = max(clip->len, lenTime);
+			lenTime = max(clip->getLen(), lenTime);
 			assert(distPitch >= 0);
 			assert(lenTime >= 0);
 			double noteScale = cs.y / (double)distPitch;

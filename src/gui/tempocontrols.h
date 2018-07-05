@@ -140,12 +140,63 @@ public:
 		nvgText(vg, size.x / 2.0f, G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(sigSep), NULL);
 	}
 };
-class gui_timeinput_field : public guibuttonbase {
-	const int idx;
-	int32_t& time;
+class gui_numberinput_field : public guibuttonbase {
+	int32_t* number;
 	bool drawBackground = true;
 public:
-	gui_timeinput_field(int _idx, int32_t& _time)
+	gui_numberinput_field(int32_t* _number)
+		: guibuttonbase(),
+		number(_number)
+	{
+		setColor(nvgToRGB(g_guiColors[COL_BG_DRK]));
+	}
+	void setDrawBackground(bool state) {
+		drawBackground = state;
+	}
+	void setRef(int32_t* number) {
+		this->number = number;
+	}
+
+	void render(NVGcontext* vg) {
+		int32_t flags = getStateFlags();
+		if (drawBackground || flags > FLG_ENBL) {
+			renderWidgetBorder(vg, flags);
+		}
+		setFont(vg, G_FONT_SCALE(size.y), G_WHITE, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+		int32_t _number = number ? *number : 0;
+		String str = StringFormat("%d", _number);
+		nvgText(vg, pos.x + size.x-3, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(str), NULL);
+	}
+	void handleDraggedBegin(MouseEvent& evt) {
+		if (evt.guiDragged == this) {
+			MainCtrl::get()->captureMouse(this);
+		}
+	}
+	void handleDraggedMove(MouseEvent& evt) {
+		if (number && evt.guiDragged == this && evt.type == M_EVT_CAPTURED_MOVE) {
+			int disty = (int)evt.dragDistance->y / 2;
+			if (abs(disty) < 1)
+				return;
+			evt.dragDistance->y = 0;
+			int absy = abs(disty);
+			if (absy >= 4) absy = 64;
+			else if (absy >= 2) absy = 4;
+			*number -= (disty<0?-1:1) * absy;
+			if (parent)
+				parent->buttonClicked(this);
+
+		}
+	}
+	void handleDraggedRelease(MouseEvent& evt) {
+	}
+
+};
+class gui_timeinput_field : public guibuttonbase {
+	const int idx;
+	int32_t* time;
+	bool drawBackground = true;
+public:
+	gui_timeinput_field(int _idx, int32_t* _time)
 		: guibuttonbase(),
 		idx(_idx),
 		time(_time)
@@ -155,6 +206,9 @@ public:
 	void setDrawBackground(bool state) {
 		drawBackground = state;
 	}
+	void setRef(int32_t* time) {
+		this->time = time;
+	}
 
 	void render(NVGcontext* vg) {
 		int32_t flags = getStateFlags();
@@ -162,7 +216,8 @@ public:
 			renderWidgetBorder(vg, flags);
 		}
 		setFont(vg, G_FONT_SCALE(size.y), G_WHITE, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
-		beatbar16th_t step = MainCtrl::get()->toBeatBar16th(time);
+		int32_t _time = time ? *time : 0;
+		beatbar16th_t step = MainCtrl::get()->toBeatBar16th(_time);
 		int32_t val = step[idx];
 		String str = StringFormat("%d", val < 0 ? val : (val+1));
 		nvgText(vg, pos.x + size.x-3, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(str), NULL);
@@ -173,33 +228,36 @@ public:
 		}
 	}
 	void handleDraggedMove(MouseEvent& evt) {
-		if (evt.guiDragged == this && evt.type == M_EVT_CAPTURED_MOVE) {
+		if (time && evt.guiDragged == this && evt.type == M_EVT_CAPTURED_MOVE) {
 			int disty = (int)evt.dragDistance->y / 20;
 			if (abs(disty) < 1)
 				return;
 			evt.dragDistance->y = 0;
 			switch (idx) {
 			case 0:
-				time -= disty*TICKS_BAR;
+				*time -= disty*TICKS_BAR;
 				break;
 			case 1:
-				time -= disty*TICKS_QUARTER;
+				*time -= disty*TICKS_QUARTER;
 				break;
 			case 2:
 				if (disty > 0) {
-					if (time & TICK_MASK_16TH) {
-						time &=~TICK_MASK_16TH;
+					if (*time & TICK_MASK_16TH) {
+						*time &=~TICK_MASK_16TH;
 						break;
 					}
 				}
 				if (disty < 0) {
-					if (time & TICK_MASK_16TH) {
-						time &=~TICK_MASK_16TH;
+					if (*time & TICK_MASK_16TH) {
+						*time &=~TICK_MASK_16TH;
 					}
 				}
-				time -= disty*TICKS_16TH;
+				*time -= disty*TICKS_16TH;
 				break;
 			}
+			if (parent)
+				parent->buttonClicked(this);
+
 		}
 	}
 	void handleDraggedRelease(MouseEvent& evt) {
@@ -207,13 +265,13 @@ public:
 
 };
 class gui_timeinput : public guictr_base {
-	int32_t& time;
+	int32_t* time = nullptr;
 	gui_timeinput_field bar;
 	gui_timeinput_field beat;
 	gui_timeinput_field sixteenths;
 	bool drawModeFullBG = false;
 public:
-	gui_timeinput(int32_t& _time)
+	gui_timeinput(int32_t* _time)
 		: guictr_base(),
 		  time(_time),
 		  bar(0, _time),
@@ -221,7 +279,6 @@ public:
 		  sixteenths(2, _time)
 	{
 		padding = 0;
-		time = 0;
 		add(&bar);
 		add(&beat);
 		add(&sixteenths);
@@ -230,6 +287,12 @@ public:
 		remove(&sixteenths);
 		remove(&beat);
 		remove(&bar);
+	}
+	void setRef(int32_t* time) {
+		this->time = time;
+		bar.setRef(time);
+		beat.setRef(time);
+		sixteenths.setRef(time);
 	}
 	bool enabled() {
 		return true;
@@ -251,6 +314,10 @@ public:
 		bar.pos = ivec2(5, size.y/2-bar.size.y/2);
 		beat.pos = ivec2(bar.right()+dist, bar.top());
 		sixteenths.pos = ivec2(beat.right()+dist, beat.top());
+	}
+	void buttonClicked(guibase* button) override {
+		if (parent)
+			parent->buttonClicked(this);
 	}
 	void render(NVGcontext* vg) {
 		if (drawModeFullBG) {
@@ -298,8 +365,8 @@ public:
 	guictr_tempocontrols(project_t& _project)
 		: guictr_base(),
 		  project(_project),
-		  cursorPos(MainCtrl::get()->cursor.cursorPos),
-		  songPos(MainCtrl::get()->playbackPos)
+		  cursorPos(&MainCtrl::get()->cursor.cursorPos),
+		  songPos(&MainCtrl::get()->playbackPos)
 	{
 		btnAudioOnOff.setColor(0x00ddff);
 		songPos.setConnectedBG();

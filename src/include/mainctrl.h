@@ -312,6 +312,8 @@ public:
 	void updateGrid();
 	void updateVisibleTrackContents();
 	void setStatusText(String s);
+	int32_t tickToSamples(tick_t ticks);
+	tick_t samplesToTicks(int32_t sample);
 	float getCurrentTempoBPM() {
 		return tempo100 / 100.0f;
 	}

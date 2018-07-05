@@ -77,7 +77,7 @@ public:
 		return 0.0f;
 	}
 	void setParamValue(int32_t idx, float val) {
-		if (idx >= 0 && idx < params.size()) {
+		if (idx >= 0 && idx < (int)params.size()) {
 			params[idx].val = convertValTo(idx, val);
 		}
 	}
@@ -88,7 +88,7 @@ public:
 		}
 	}
 	void updateAutomatedParameters(tick_t pos) override {
-		for (int idx = 0; idx < params.size(); idx++) {
+		for (int idx = 0; idx < (int)params.size(); idx++) {
 			track_param_entry_t& param = params[idx];
 			if (param.automation.isActive()) {
 				float f = param.automation.getValueAt(pos);
@@ -97,14 +97,14 @@ public:
 		}
 	}
 	automation_t* getAutomation(int32_t idx) override {
-		if (idx >= 0 && idx < params.size()) {
+		if (idx >= 0 && idx < (int)params.size()) {
 			track_param_entry_t& param = params[idx];
 			return &param.automation;
 		}
 		return NULL;
 	}
 	void getAutomated(std::vector<int32_t>& targets) {
-		for (int idx = 0; idx < params.size(); idx++) {
+		for (int idx = 0; idx < (int)params.size(); idx++) {
 			track_param_entry_t& param = params[idx];
 			if (param.automation.isAutomated()) {
 				targets.push_back(idx);
@@ -189,7 +189,7 @@ struct track_impl_t {
 	void insertEffect(int32_t idx, vstplugin* _instrument);
 	void sendNotesOff(int32_t bpm100, int32_t blockSamplePos);
 	void sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos);
-	void fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, float** buffer, uint32_t samples);
+	void fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, float** buffer, int32_t samples);
 	void onTick(double since);
 	VstEvent_t* reallocEvts(size_t size);
 	void getAutomatableTargets(std::vector<automatable_t*>& targets);

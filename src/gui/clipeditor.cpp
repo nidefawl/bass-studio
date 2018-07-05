@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <glm/glm.hpp>
 #include <glm/vec2.hpp>
 #include "clipeditor.h"
 
@@ -590,7 +591,7 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
 		float yEnd = max(dragBegin.y, dragTo.y);
 		tick_t tickStart = grid.screenToTickSnap(xStart, SNAP_OFF);
 		tick_t tickEnd = grid.screenToTickSnap(xEnd, SNAP_OFF);
-		tick_t tickOver = grid.screenToTickSnap(evt.relMousepos.x, SNAP_ON);
+		tick_t tickOver = grid.screenToTickSnap(evt.relMousepos.x, isAlt(evt.kbmods) ? SNAP_OFF : SNAP_ON);
 		clip_cursor_t& cursor = view.cursor;
 		if (isShift(evt.kbmods)) {
 			tick_t gridSize = grid.getTickLength();
@@ -604,8 +605,8 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
 				}
 			}
 		} else {
-			cursor.start = grid.screenToTickSnap(xStart, SNAP_ON);
-			cursor.end = grid.screenToTickSnap(xEnd, SNAP_ON);
+			cursor.start = grid.screenToTickSnap(xStart, isAlt(evt.kbmods) ? SNAP_OFF : SNAP_ON);
+			cursor.end = grid.screenToTickSnap(xEnd, isAlt(evt.kbmods) ? SNAP_OFF : SNAP_ON);
 		}
 		int32_t pitchLow = toNoteF(yEnd);
 		int32_t pitchHigh = toNoteF(yStart);

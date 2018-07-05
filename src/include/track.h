@@ -71,7 +71,7 @@ public:
 		});
 		if (clips.size() > 1) {
 			if (!(clips[0]->start() < clips[1]->start())) {
-				for (int i = 0; i < clips.size(); i++) {
+				for (int i = 0; i < (int)clips.size(); i++) {
 					my_printf("clip[%d] = %d\n", i, clips[i]->start());
 				}
 			}
@@ -122,11 +122,13 @@ struct clip_layout_t {
 	clip_t* clip;
 	tick_t time;
 	tick_t len;
+	tick_t lenSamples;
 	tick_t offsetStart;
+	int32_t offsetSamples;
 	tick_t loopLen;
-	clip_layout_t(clip_t* clip, tick_t time, tick_t len, tick_t offsetStart, tick_t loopLen) :
+	clip_layout_t(clip_t* clip, tick_t time, tick_t len, tick_t lenSamples, tick_t offsetStart, int32_t offsetSamples, tick_t loopLen) :
 			clip(clip),
-			time(time), len(len), offsetStart(offsetStart), loopLen(loopLen) {
+			time(time), len(len), lenSamples(lenSamples), offsetStart(offsetStart), offsetSamples(offsetSamples), loopLen(loopLen) {
 	}
 };
 struct track_snapshot_t;
@@ -159,7 +161,7 @@ public:
 	void copy(const trackdata_midi_t &a) {
 		clips.clear();
 		for (clip_t* clip : a.clips) {
-			clips.emplace_back(clip, clip->time, clip->len, clip->offsetStart, clip->loopLen);
+			clips.emplace_back(clip, clip->time, clip->len, clip->lenSamples, clip->offsetStart, clip->offsetSamples, clip->loopLen);
 		}
 	}
 	void apply(track_t* tr) {
@@ -167,7 +169,9 @@ public:
 			clip_t* clip = clipLayout.clip;
 			clip->time = clipLayout.time;
 			clip->len = clipLayout.len;
+			clip->lenSamples = clipLayout.lenSamples;
 			clip->offsetStart = clipLayout.offsetStart;
+			clip->offsetSamples = clipLayout.offsetSamples;
 			clip->loopLen = clipLayout.loopLen;
 		}
 	}
@@ -175,9 +179,12 @@ public:
 	bool diff(track_t* tr) {
 		for (clip_layout_t& clipLayout : clips) {
 			clip_t* clip = clipLayout.clip;
+			if (clip->getLen() != clipLayout.len) return true;
 			__CLPFLDEQAL(time)
 			__CLPFLDEQAL(len)
+			__CLPFLDEQAL(lenSamples)
 			__CLPFLDEQAL(offsetStart)
+			__CLPFLDEQAL(offsetSamples)
 			__CLPFLDEQAL(loopLen)
 		}
 		return false;
@@ -288,7 +295,7 @@ public:
 	void loadPluginAutomationParameters(const track_impl_snapshot_t& snap);
 	void loadSnapshot(const track_snapshot_t& snap);
 	bool validSubtrack(int32_t idx) {
-		return idx >= 0 && idx < subtracks.size();
+		return idx >= 0 && idx < (int32_t)subtracks.size();
 	}
 	int32_t idx = -1;
 	int32_t localIdx = -1;
@@ -452,3 +459,5 @@ public:
 	virtual void preClipDelete(clip_t* clip) = 0;
 	virtual void preTrackDelete(track_t* clip) = 0;
 };
+
+void resizeOtherClips(trackdata_midi_t& midi, clip_t* clip);

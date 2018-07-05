@@ -4,6 +4,8 @@
 #include <vector>
 #include <algorithm>
 #include <typeinfo>
+using glm::vec2;
+using glm::ivec2;
 
 #include "str_util.h"
 #include "event.h"
@@ -14,8 +16,6 @@
 #include "mainctrl.h"
 #include "theme.h"
 
-using glm::vec2;
-using glm::ivec2;
 
 struct NVGcontext;
 class guitrack_editor;

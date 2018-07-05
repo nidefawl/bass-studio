@@ -6,8 +6,6 @@
 // glm::translate, glm::rotate, glm::scale, glm::perspective
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/glm.hpp>
-#define GLM_ENABLE_EXPERIMENTAL
-#include <glm/gtx/transform.hpp>
 #include "drawwaveform.h"
 #include "audiocache.h"
 #include "platform.h"

@@ -38,7 +38,7 @@ void gui_audio_clip::handleRightClick(MouseEvent& evt) {
 }
 
 void renderMidiClip(NVGcontext* vg, const track_t* tr, const clip_t* cl, ivec2 pos, ivec2 size) {
-	if (cl->len <= 0) {
+	if (cl->getLen() <= 0) {
 		return;
 	}
 	NVGcolor color = rgbToNvg(cl->rgb);
@@ -56,7 +56,7 @@ void renderMidiClip(NVGcontext* vg, const track_t* tr, const clip_t* cl, ivec2 p
 	ivec2 posContents = ivec2(pos.x, pos.y+HEIGHT_CLIP_TITLE+INSET_CLIP_CONTENT);
 	ivec2 sizeContents = ivec2(size.x, size.y-HEIGHT_CLIP_TITLE-INSET_CLIP_CONTENT*2);
 
-	tick_t clipLen = cl->len;
+	tick_t clipLen = cl->getLen();
 	float numBars = clipLen / (float) TICKS_BAR;
 	float barSize = sizeContents.x / (float) numBars;
 	if (sizeContents.x > 0 && sizeContents.y > 0) {
@@ -203,7 +203,7 @@ void gui_audio_clip::updatePosition(project_t& project, scaled_grid& grid, ivec2
 		assert(size.x > 0);
 		if (audio) {
 					samplerate_t sr = vsthost::getInstance()->lSampleRate; //TODO: store in project_t
-					double lenSamples = tickToSamplePrecise(m_clip->len, project.tempo100, sr);
+					double lenSamples = tickToSamplePrecise(m_clip->getLen(), project.tempo100, sr);
 					double samplesPerPx = lenSamples/size.x;
 
 					ivec2 posClipped = pos;
@@ -214,12 +214,14 @@ void gui_audio_clip::updatePosition(project_t& project, scaled_grid& grid, ivec2
 					double tickBegin = grid.screenToTickD(pos.x);
 					double tickBeginOffset = grid.screenToTickD(pxBegin);
 					double tickEnd = grid.screenToTickD(pxEnd);
-		//			tickBegin += m_clip->offsetStart;
-					tickBeginOffset += m_clip->offsetStart;
-					tickEnd += m_clip->offsetStart;
+//					tickBeginOffset += m_clip->offsetStart;
+//					tickEnd += m_clip->offsetStart;
+
 					double sampleBegin = tickToSamplePrecise(tickBegin, project.tempo100, sr);
 					double sampleStartOffset = tickToSamplePrecise(tickBeginOffset, project.tempo100, sr);
 					double sampleEnd = tickToSamplePrecise(tickEnd, project.tempo100, sr);
+					sampleStartOffset += m_clip->offsetSamples;
+					sampleEnd += m_clip->offsetSamples;
 					ivec2 startOffset = posClipped - pos;
 					audioclip_texture_t waveform;
 					waveform.quality=4;
@@ -237,10 +239,11 @@ void gui_audio_clip::updatePosition(project_t& project, scaled_grid& grid, ivec2
 		//				waveform.quality *= 2;
 		//				waveform.scale = 2;
 		//			}
-					my_printf("sampleBegin %f\n", sampleBegin);
-					my_printf("sampleStartOffset %f\n", sampleStartOffset);
-					my_printf("sampleEnd %f\n", sampleEnd);
-					my_printf("m_clip->offsetStart %d\n", m_clip->offsetStart);
+//					my_printf("sampleBegin %f\n", sampleBegin);
+//					my_printf("sampleStartOffset %f\n", sampleStartOffset);
+//					my_printf("sampleEnd %f\n", sampleEnd);
+//					my_printf("m_clip->offsetStart %d\n", m_clip->offsetStart);
+//					my_printf("m_clip->offsetSamples %d\n", m_clip->offsetSamples);
 					makeOrUpdateWaveform(&waveform, posClipped, startOffset, sizeClipped, sampleBegin, sampleStartOffset, sampleEnd, samplesPerPx, grid.zoom);
 					if (waveform != this->waveform) {
 						releaseRendered();
@@ -261,7 +264,7 @@ void gui_audio_clip::prerender(NVGcontext* vg) {
 	}
 }
 void renderAudioClip(NVGcontext* vg, const track_t* tr, const clip_t* cl, gui_audio_clip* guiaudioclip, ivec2 pos, ivec2 size) {
-	if (cl->len <= 0) {
+	if (cl->getLen() <= 0) {
 		return;
 	}
 	NVGcolor color = rgbToNvg(cl->rgb);
@@ -284,7 +287,7 @@ void renderAudioClip(NVGcontext* vg, const track_t* tr, const clip_t* cl, gui_au
 
 	ivec2 posContents = ivec2(pos.x, pos.y+HEIGHT_CLIP_TITLE+INSET_CLIP_CONTENT);
 	ivec2 sizeContents = ivec2(size.x, size.y-HEIGHT_CLIP_TITLE-INSET_CLIP_CONTENT*2);
-	tick_t clipLen = cl->len;
+	tick_t clipLen = cl->getLen();
 	float numBars = clipLen / (float) TICKS_BAR;
 	float barSize = sizeContents.x / (float) numBars;
 	if (sizeContents.x > 0 && sizeContents.y > 0 && guiaudioclip->rendered) {
@@ -316,7 +319,7 @@ void renderAudioClip(NVGcontext* vg, const track_t* tr, const clip_t* cl, gui_au
 
 bool getClipPosition(scaled_grid& grid, const ivec2& trackSize, const clip_t* cl, ivec2& pos, ivec2& size, tick_t offset) {
 	tick_t tickBegin = cl->time + offset;
-	tick_t tickEnd = cl->time + offset + cl->len;
+	tick_t tickEnd = cl->time + offset + cl->getLen();
 	grid.debug = true;
 	double tickBeginX = grid.tickToScreenD(tickBegin);
 	grid.debug = false;
@@ -413,17 +416,17 @@ public:
 				if (tr && tr->type == TRACK_TYPE_MIDI) {
 					clip_t* cl = new clip_t(CLIP_MIDI, StringFormat("%s Clip", StringAsCStr(tr->name)));
 					cl->time = cursor.cursorPos;
-					cl->len = cursor.selRange;
+					cl->setLen(cursor.selRange);
 					cl->loopStart = 0;
-					cl->loopLen = cl->len;
+					cl->loopLen = cl->getLen();
 					tr->getMidi().addClipSort(cl);
 				}
 				if (tr && tr->type == TRACK_TYPE_AUDIO) {
 					clip_t* cl = new clip_t(CLIP_AUDIO, StringFormat("%s", StringAsCStr(tr->name)));
 					cl->time = cursor.cursorPos;
-					cl->len = cursor.selRange;
+					cl->setLen(cursor.selRange);
 					cl->loopStart = 0;
-					cl->loopLen = cl->len;
+					cl->loopLen = cl->getLen();
 					tr->getMidi().addClipSort(cl);
 				}
 			}

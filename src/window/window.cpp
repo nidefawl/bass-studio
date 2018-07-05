@@ -655,8 +655,9 @@ public:
 	}
 	void onKeyInput(int key, int scancode, int action, int mods, const char* key_name)
 	{
-		/*if (action == GLFW_PRESS)
-		my_printf("keyname %s, key %d, scancode %d\n", key_name, key, scancode);*/
+		/*if (action == GLFW_PRESS)*/
+//		my_printf("keyname %s, key %d, scancode %d\n", key_name, key, scancode);
+//		my_printf("mods %08X\n", mods);
 		ctrl->onKeyInput(key, scancode, action, mods, key_name);
 		flagNeedsRedraw();
 	}
@@ -713,6 +714,10 @@ public:
 	}
 	void updateWindowFromDlg() {
 		onRefresh();
+	}
+
+	void fireMouseMoved() override {
+		onMouseMoved(ivec2(0));
 	}
 };
 
@@ -875,6 +880,10 @@ public:
 	void updateWindowFromDlg() {
 		onRefresh();
 	}
+
+	void fireMouseMoved() override {
+		onMouseMoved(ivec2(0));
+	}
 };
 
 
@@ -1028,6 +1037,10 @@ public:
 	}
 	void updateWindowFromDlg() {
 		onRefresh();
+	}
+
+	void fireMouseMoved() override {
+		onMouseMoved(ivec2(0));
 	}
 };
 void appwindow_main::updateMenu() {

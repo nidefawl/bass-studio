@@ -9,14 +9,21 @@
 #include "track.h"
 #include "clip.h"
 #include "cursor.h"
+#include "keyboard.h"
+#include "mainctrl.h"
 #include "grid.h"
 #include "guicontainer.h"
+#include "trackctr.h"
 #include "trackcontent.h"
 #include "tracktimeline.h"
 #include "guicontextmenu.h"
 #include "mouse.h"
 #include "logging.h"
 #include "leak_detect.h"
+#include "audiocache.h"
+#include <glm/vec2.hpp>
+using glm::vec2;
+using glm::ivec2;
 
 class action_modify_track : public action_base {
 protected:
@@ -86,7 +93,7 @@ void resizeOtherClips(trackdata_midi_t& midi, clip_t* clip) {
 			continue;
 		}
 		if (c->start() >= clip->start() && c->end() <= clip->end()) {
-			c->len = 0;
+			c->setLen(0);
 		} else if (c->start() >= clip->start()) {
 			cutClipLeft(c, clip->end()-c->start());
 			c->setDirty();
@@ -118,6 +125,22 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 			}
 			return false;
 		}
+	}
+	if (kevt.type != STATE_REPEAT && isAltKey(kevt.keyCode)) {
+//		if ((action.dragtype == DRAG_CLIPS_MOVE || action.dragtype == DRAG_CLIPS_COPY)) {
+//			if ((action.dragtype == DRAG_CLIPS_COPY) != isCtrl(kevt.mods)) {
+//				if (action.dragtype == DRAG_CLIPS_MOVE) {
+//					action.dragtype = DRAG_CLIPS_COPY;
+//					MainCtrl::get()->cursorIcon = CURSOR_DUPLICATE;
+//				} else {
+//					action.dragtype = DRAG_CLIPS_MOVE;
+//					MainCtrl::get()->cursorIcon = CURSOR_DEFAULT;
+//				}
+//			}
+//			return false;
+//		}
+		MainCtrl::get()->window->fireMouseMoved();
+		return false;
 	}
 	if (action.dragtype) {
 		return false;
@@ -290,7 +313,7 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 
 void guitrack_editor::trackViewDragBegin(guitrack_editor* view, MouseEvent& evt) {
 	ivec2 local = evt.relMousepos;
-	int32_t tick = grid.screenToTickSnap(local.x, SNAP_ON);
+	int32_t tick = grid.screenToTickSnap(local.x, isAlt(evt.kbmods) ? SNAP_OFF : SNAP_ON);
 	track_t* tr = getTrackFromMouse(project, local, false);
 	gui_track_automationlane* subTr = getSubTrackFromMouse(project, local, false);
 	if (subTr) {
@@ -344,7 +367,7 @@ void guitrack_editor::trackViewDragMove(guitrack_editor* view, MouseEvent& evt) 
 			if (!trNxtSelected)
 				return;
 		}
-		int32_t tick = grid.screenToTickSnap(local.x, SNAP_ON);
+		int32_t tick = grid.screenToTickSnap(local.x, isAlt(evt.kbmods) ? SNAP_OFF : SNAP_ON);
 		if (evt.guiDragged == this) { // cursor move / range select
 
 			c.selRange = tick - c.cursorPos;
@@ -425,22 +448,50 @@ void guitrack_editor::dragSelectionMove(gui_clip* gui, MouseEvent& evt) {
 			clip_t* clip = gui->m_clip;
 			track_t* track = gui->m_track;
 			dragStartLayout.apply(track);
-			int32_t tick = grid.screenToTickSnap(evt.relMousepos.x, SNAP_ON);
+			int32_t tick = grid.screenToTickSnap(evt.relMousepos.x, isAlt(evt.kbmods) ? SNAP_OFF : SNAP_ON);
 			if (action.dragtype == DRAG_CLIPS_RESIZE_LEFT) {
 				if (clip->start() != tick) {
+					int32_t preLen = clip->getLen();
+					my_printf("pre clip->getLen() %d len %d samples %d\n", clip->getLen(), clip->len, clip->lenSamples);
 					tick_t offset = tick - clip->time;
-					if (clip->len - offset > MIN_CLIPSIZE) {
-						clip->adjustStartOffset(offset);
-						clip->time += offset;
-						clip->len -= offset;
+					if (clip->getLen() - offset < MIN_CLIPSIZE) {
+						offset = clip->getLen() - MIN_CLIPSIZE;
 					}
+					if (!(grid.grid_dens.getSnap() == SNAP_OFF || isAlt(evt.kbmods)) && clip->getLen() - offset < grid.getTickLength()) {
+						offset = clip->getLen()-grid.getTickLength();
+					}
+					if (clip->clipType == CLIP_AUDIO) {
+						tick_t sampleOffsetTicks = MainCtrl::get()->samplesToTicks(clip->offsetSamples);
+						if (sampleOffsetTicks + offset < 0) {
+							offset = -sampleOffsetTicks;
+						}
+					}
+					clip->time += offset;
+					clip->adjustLen(-offset);
+					clip->adjustStartOffset(offset);
+					my_printf("post clip->getLen() %d len %d samples %d\n", clip->getLen(), clip->len, clip->lenSamples);
+					int32_t postLen = clip->getLen();
+					assert(postLen == preLen - offset);
 				}
 			} else {
 				if (clip->end() != tick) {
 					tick_t offset = clip->end() - tick;
-					if (clip->len - offset > MIN_CLIPSIZE && clip->len - offset >= grid.getTickLength()) {
-						clip->len -= offset;
+					if (offset) {
+						if (clip->getLen() - offset < MIN_CLIPSIZE) {
+							offset = clip->getLen() - MIN_CLIPSIZE;
+						}
+						if (!(grid.grid_dens.getSnap() == SNAP_OFF || isAlt(evt.kbmods)) && clip->getLen() - offset < grid.getTickLength()) {
+							offset = clip->getLen()-grid.getTickLength();
+						}
+						if (clip->clipType == CLIP_AUDIO) {
+							tick_t sampleLen = MainCtrl::get()->samplesToTicks(clip->audio.lenSamples()-clip->offsetSamples);
+							if (sampleLen > 0 && clip->getLen()-offset > sampleLen-clip->offsetStart) {
+								offset = -(sampleLen-clip->offsetStart - clip->getLen());
+							}
+						}
+						clip->adjustLen(-offset);
 					}
+
 				}
 			}
 			clip->setDirty();

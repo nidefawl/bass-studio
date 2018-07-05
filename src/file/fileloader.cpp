@@ -81,7 +81,7 @@ void LoadMidiTask::loadFile() {
 						clip.notes = notes;
 						clip.time = 0;
 						clip.offsetStart = 0;
-						clip.len = clipLength;
+						clip.setLen(clipLength);
 						clip.loopEnabled = false;
 						if (tickClipMin < 0) {
 							tickClipMin = clip.start();
@@ -97,8 +97,8 @@ void LoadMidiTask::loadFile() {
 				if (fileClipboard->tracks.size()) {
 					for (auto& track : fileClipboard->tracks) {
 						for (auto& clip : track->clips) {
-							clip->len = tickClipMax-tickClipMin;
-							clip->loopLen = clip->len;
+							clip->setLen(tickClipMax-tickClipMin);
+							clip->loopLen = clip->getLen();
 						}
 					}
 					fileClipboard->srcTrack = 0;

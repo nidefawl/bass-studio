@@ -2,6 +2,8 @@
 
 #include "audioblock.h"
 #include "seq_math.h"
+#include "seq_util.h"
+#include "seq_time.h"
 
 //TODO: make samplerate dependent
 #define RUNNING_SUM_BUF_SIZE (1024*1)
@@ -27,7 +29,7 @@ public:
 			runningSum -= rsBuffer[rsIdx];
 			rsBuffer[rsIdx] = f;
 			rsIdx++;
-			if (rsIdx >= N) {
+			if (rsIdx >= (int32_t)N) {
 				rsIdx = 0;
 			}
 			fBuf++;

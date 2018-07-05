@@ -13,6 +13,7 @@
 #include "commands.h"
 
 #include "mainctrl.h"
+#include "note.h"
 #include "cursor.h"
 #include "exceptions.h"
 #include "color_util.h"
@@ -48,6 +49,7 @@
 #include "track_impl.h"
 #include "leak_detect.h"
 #include "audiocache.h"
+#include "seq_time.h"
 
 using glm::vec2;
 using glm::ivec2;
@@ -541,6 +543,16 @@ bool MainCtrl::isCtrOrChildFocused(guibase* gui) {
 void MainCtrl::requestRedraw()
 {
 	this->mainWindow->requestRedraw();
+}
+int32_t MainCtrl::tickToSamples(tick_t ticks)
+{
+	vsthost* host = vsthost::getInstance();
+	return std::round(tickToSamplePrecise(ticks, tempo100, host->lSampleRate));
+}
+tick_t MainCtrl::samplesToTicks(int32_t sample)
+{
+	vsthost* host = vsthost::getInstance();
+	return std::round(sampleToTickPrecise(sample, tempo100, host->lSampleRate));
 }
 void MainCtrl::onTick()
 {
@@ -1253,9 +1265,9 @@ track_t* MainCtrl::insertNewTrack(int trackInsertPos, int trackType) {
 	{
 		clip_t* c = new clip_t(CLIP_MIDI, StringFormat("%s-clip", StringAsCStr(name)));
 		c->time = TICKS_BAR * 4;
-		c->len = TICKS_BAR * 10;
+		c->setLen(TICKS_BAR * 10);
 		c->loopStart = 0;
-		c->loopLen = c->len;
+		c->loopLen = c->getLen();
 		for (int i = 0; i < 6 ; i++) {
 			note_t note;
 			note.pitch = 40+(((i%3)%2))*4+(i%3) + (i/3)*12*2;
@@ -1378,13 +1390,13 @@ void cutIntersectingClips(trackdata_midi_t& midi, tick_t tickBegin, tick_t tickE
 			//cut left
 			cutClipLeft(c, tickEnd-c->time);
 			c->setDirty();
-		} else if (c->time + c->len <= tickEnd) {
+		} else if (c->end() <= tickEnd) {
 			//cut right
-			cutClipRight(c, (c->time+c->len) - tickBegin);
+			cutClipRight(c, c->end() - tickBegin);
 			c->setDirty();
 		} else {
 			clip_t* c2 = c->clone();
-			cutClipRight(c, (c->time+c->len) - tickBegin);
+			cutClipRight(c, c->end() - tickBegin);
 			cutClipLeft(c2, tickEnd-c->time);
 			it = midi.clips.insert(it, c2);
 			c->setDirty();
@@ -1412,7 +1424,7 @@ void MainCtrl::preTrackDelete(track_t* track) {
 }
 void MainCtrl::cutIntersecting(track_t* tr, clip_t* mask) {
 	tick_t tickBegin = mask->time;
-	tick_t tickEnd = mask->time + mask->len;
+	tick_t tickEnd = mask->end();
 	cutIntersecting(tr, tickBegin, tickEnd);
 }
 void MainCtrl::showAutomation(track_t* tr, automatable_t* at, int32_t paramIdx) {
@@ -1495,13 +1507,13 @@ void copyClipsInRange(trackdata_midi_t& in, track_clipboard_t& out, int32_t srcP
 	auto it = in.clips.cbegin();
 	while (it != in.clips.cend()) {
 		const clip_t* c = *it;
-		if (c->time+c->len > srcPos && c->time < srcPos+len) {
+		if (c->end() > srcPos && c->time < srcPos+len) {
 			clip_t clone(*c);
-			if (c->time < srcPos && c->time + c->len > srcPos) {
+			if (c->time < srcPos && c->end() > srcPos) {
 				cutClipLeft(&clone, srcPos - c->time);
 			}
-			if (c->time < srcPos + len && c->time + c->len > srcPos + len) {
-				cutClipRight(&clone, (c->time + c->len) - (srcPos+len));
+			if (c->time < srcPos + len && c->end() > srcPos + len) {
+				cutClipRight(&clone, (c->end()) - (srcPos+len));
 			}
 			out.clips.push_back(make_shared<clip_t>(move(clone)));
 		}

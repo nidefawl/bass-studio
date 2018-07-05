@@ -66,8 +66,8 @@ public:
 class gui_list : public guictr_base, public gui_scrollcontainer {
 	gui_scrollbar scrollbar;
 	std::vector<gui_list_entry*> listGuis;
-	uint32_t first = 0;
-	uint32_t last = 0;
+	int32_t first = 0;
+	int32_t last = 0;
 	int rowHeight = 30;
 public:
 	gui_list(int _rowHeight = 30) : guictr_base(), scrollbar(1, 0.0f, *this), rowHeight(_rowHeight) {
@@ -93,13 +93,13 @@ public:
 		float offset = scrollbar.scrollOffset;
 		int32_t nEntriesFit = floor(cs.y/(double)rowHeight);
 		int32_t nEntries = max(0, (int32_t)listGuis.size()-nEntriesFit);
-		first = (uint32_t)max(0, (int32_t) floor(offset * nEntries));
+		first = max(0, (int32_t) floor(offset * nEntries));
 		if (listGuis.size() == 0) {
 			first = last = 0;
 		} else {
 			last = first + (int32_t) nEntriesFit+1;
-			first = min((uint32_t)(listGuis.size()-1), first);
-			last = min((uint32_t)listGuis.size(), last);
+			first = min((int32_t)(listGuis.size()-1), first);
+			last = min((int32_t)listGuis.size(), last);
 		}
 	}
 

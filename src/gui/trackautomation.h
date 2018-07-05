@@ -96,13 +96,13 @@ public:
 		return ivec2(0, _padding);
 	}
 	path_segment_t* getSegmentSafe(int32_t idx) {
-		if (idx >= 0 && idx < segments.size()) {
+		if (idx >= 0 && idx < (int32_t)segments.size()) {
 			return &segments[idx];
 		}
 		return NULL;
 	}
 	vec2* getPathPointSafe(int32_t idx) {
-		if (idx >= 0 && idx < cachedShape.size()) {
+		if (idx >= 0 && idx < (int32_t)cachedShape.size()) {
 			return &cachedShape[idx];
 		}
 		return NULL;
