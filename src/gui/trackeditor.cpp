@@ -21,6 +21,9 @@
 #include "logging.h"
 #include "leak_detect.h"
 #include "audiocache.h"
+#include "drawwaveform.h"
+#include "cliprenderer.h"
+#include <glm/glm.hpp>
 #include <glm/vec2.hpp>
 using glm::vec2;
 using glm::ivec2;
@@ -54,11 +57,11 @@ public:
 					after.tracks.push_back(new track_snapshot_t(track, false));
 				}
 				track->releaseTrackContent();
-				if (track->type == TRACK_TYPE_MIDI)
+//				if (track->type == TRACK_TYPE_MIDI)
 				my_printf("TRACKBeforeUndo[%d] HAS %d clips\n", track->idx, track->getMidi().clips.size());
 				*track = *trackStored;
 				track->loadPluginAutomationParameters(trackStored->plugins);
-				if (track->type == TRACK_TYPE_MIDI)
+//				if (track->type == TRACK_TYPE_MIDI)
 				my_printf("TRACKAfterUndo[%d] HAS %d clips\n", track->idx, track->getMidi().clips.size());
 			} else {
 
@@ -77,7 +80,7 @@ public:
 				track->releaseTrackContent();
 				*track = *trackStored;
 				track->loadPluginAutomationParameters(trackStored->plugins);
-				if (track->type == TRACK_TYPE_MIDI)
+//				if (track->type == TRACK_TYPE_MIDI)
 				my_printf("TRACK[%d] HAS %d clips\n", track->idx, track->getMidi().clips.size());
 			}
 		}
@@ -659,14 +662,64 @@ bool guitrack_editor::clipDropFinal(dragdrop_midifile& clip, ivec2 mousepos) {
 	return false;
 }
 
+void guitrack_editor::prerender(NVGcontext* vg) {
+	for (guibase* gui : guis) {
+		gui->prerender(vg);
+	}
+	if (action.dragtype) {
 
+		Cursor& cursor = MainCtrl::get()->cursor;
+		clip_clipboard* _clipboard = action.clipboard.get();
+		for (int i = 0; _clipboard && i <= _clipboard->selTrackRange; i++) {
+			track_clipboard_t* trClipboard = _clipboard->tracks[i].get();
+			int32_t trackIdx = _clipboard->srcTrack + i + (cursor.cursorTrack-action.cursorBegin.cursorTrack);
+			if (!project.trackList.validTrackIdx(trackIdx)) {
+				continue;
+			}
+			trackIdx = project.trackList.clampTrackIdx(trackIdx);
+			track_t* tr = project.trackList[trackIdx];
+			for (auto it = trClipboard->clips.begin(); it != trClipboard->clips.end(); it++) {
+				clip_t* cl = (*it).get();
+				ivec2 clipPos = ivec2();
+				ivec2 clipSize = tr->content->size; //TODO: get rid of *tr here, figure out size before and add default fallback
+				cachedaudio_t* audio = audiocache::getInstance()->get(cl->audio.id);
+				if (!audio || !getClipPosition(grid, tr->content->size, cl, clipPos, clipSize, 0)) {
+					waveformrender::getInstance()->release(cl->audio.waveformRef.fbId);
+					cl->audio.waveformRef.fbId = -1;
+					cl->audio.waveformRef.rendered = false;
+					continue;
+				}
+
+				clipSize.y -= (HEIGHT_CLIP_TITLE + INSET_CLIP_CONTENT * 2);
+				ivec2 posClipped = clipPos;
+				ivec2 sizeClipped = clipSize;
+				tr->content->scissorClip(posClipped, sizeClipped);
+				auto waveform = makeWaveformFromClip(project, grid, tr->content->size, cl, clipPos, clipSize, posClipped, sizeClipped);
+				gui_waveform_texture_ref& waveformRef = cl->audio.waveformRef;
+				if (!cl->audio.waveformRef.rendered || waveform != waveformRef.waveform) {
+					waveformRef.waveform = waveform;
+					waveformrender::getInstance()->release(waveformRef.fbId);
+					int ret = waveformrender::getInstance()->render(vg, audio, &waveformRef.waveform, 1);
+					waveformRef.fbId = ret;
+					waveformRef.rendered = true;
+				}
+
+			}
+		}
+	}
+}
 void guitrack_editor::renderClip(NVGcontext* vg, track_t* tr, const clip_t* cl, tick_t offset) {
 	ivec2 clipPos = ivec2();
 	ivec2 clipSize = tr->content->size; //TODO: get rid of *tr here, figure out size before and add default fallback
 
-	if (getClipPosition(grid, size, cl, clipPos, clipSize, offset)) {
+	if (getClipPosition(grid, tr->content->size, cl, clipPos, clipSize, offset)) {
 		clipPos.y += tr->content->pos.y;
-		renderMidiClip(vg, tr, cl, clipPos, clipSize);
+		if (tr->type == TRACK_TYPE_MIDI) {
+			renderMidiClip(vg, tr, cl, clipPos, clipSize);
+		} else if (cl->clipType == CLIP_AUDIO && tr->type == TRACK_TYPE_AUDIO) {
+			const gui_waveform_texture_ref * ptr = &cl->audio.waveformRef;
+			renderAudioClip(vg, tr, cl, ptr, clipPos, clipSize);
+		}
 	}
 }
 
@@ -681,11 +734,9 @@ void guitrack_editor::renderAction(NVGcontext* vg, clip_dragaction& action) {
 		}
 		trackIdx = project.trackList.clampTrackIdx(trackIdx);
 		track_t* tr = project.trackList[trackIdx];
-		if (tr->type == TRACK_TYPE_MIDI) {
-			for (auto it = trClipboard->clips.begin(); it != trClipboard->clips.end(); it++) {
-				clip_t* cl = (*it).get();
-				renderClip(vg, tr, cl, (cursor.cursorPos - _clipboard->srcPos));
-			}
+		for (auto it = trClipboard->clips.begin(); it != trClipboard->clips.end(); it++) {
+			clip_t* cl = (*it).get();
+			renderClip(vg, tr, cl, (cursor.cursorPos - _clipboard->srcPos));
 		}
 	}
 }

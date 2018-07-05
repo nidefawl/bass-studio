@@ -162,7 +162,7 @@ void tracksubcontainer_t::loadPlugins(trackcontainer_snapshot_t& in) {
 	}
 }
 bool trackallcontainer_t::validTrackTypeIdx(int32_t type, int32_t idx) const {
-	if (type >= 0 && type < 3) {
+	if (type >= TRACK_TYPE_MASTER && type <= TRACK_TYPE_AUDIO) {
 		const tracksubcontainer_t* trackTypeCtr = trackTypeCtrs[type];
 		return idx >= 0 && idx < (int32_t) trackTypeCtr->size();
 	}

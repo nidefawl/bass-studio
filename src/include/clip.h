@@ -9,6 +9,7 @@
 #include "logging.h"
 #include "layout.h"
 #include "audiocache.h"
+#include "../gui/drawwaveform.h"
 #include <assert.h>
 #include <memory>
 
@@ -20,10 +21,29 @@ class gui_clip;
 //struct cachedaudio_t;
 class clip_audio_t {
 public:
-	int32_t id = 0;
+	int32_t id = -1;
+	gui_waveform_texture_ref waveformRef;
 	std::weak_ptr<cachedaudio_t> weakCachedAudio;
 
 	clip_audio_t() {
+	}
+	clip_audio_t &operator =(const clip_audio_t &a) {
+		copy(a);
+		return *this;
+	}
+	clip_audio_t(const clip_audio_t &a) {
+		copy(a);
+	}
+	~clip_audio_t() {
+		if (waveformRef.rendered)
+			waveformrender::getInstance()->release(waveformRef.fbId);
+	}
+	void copy( const clip_audio_t &obj) {
+		this->id = obj.id;
+		this->waveformRef = obj.waveformRef;
+		this->weakCachedAudio = obj.weakCachedAudio;
+		this->waveformRef.fbId = -1;
+		this->waveformRef.rendered = false;
 	}
 	tick_t lenInTicks();
 	tick_t lenSamples();

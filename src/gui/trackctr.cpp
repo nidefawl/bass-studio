@@ -1,4 +1,7 @@
+#include <nanovg.h>
+
 #include "gui.h"
+#include "guicontainer.h"
 #include "exceptions.h"
 #include "trackctr.h"
 #include "trackcontent.h"

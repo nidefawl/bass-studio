@@ -1,6 +1,5 @@
 #pragma once
 #include <stdbool.h>
-#include <glm/vec2.hpp>
 #include <stdint.h>
 #include <vector>
 #include "seq_math.h"
@@ -13,13 +12,14 @@
 #include "trackautomation.h"
 #include "audiowaveform.h"
 #include "leak_detect.h"
+#include "cliprenderer.h"
 
+#include <glm/glm.hpp>
+#include <glm/vec2.hpp>
+using glm::vec2;
 using glm::ivec2;
 
-class gui_audio_clip;
-void renderAudioClip(NVGcontext* vg, const track_t* tr, const clip_t* cl, gui_audio_clip* guiaudioclip, ivec2 pos, ivec2 size);
-void renderMidiClip(NVGcontext* vg, const track_t* tr, const clip_t* cl, ivec2 pos, ivec2 size);
-bool getClipPosition(scaled_grid& grid, const ivec2& trackSize, const clip_t* cl, ivec2& pos, ivec2& size, tick_t offset);
+struct gui_waveform_texture_ref;
 class gui_clip : public guibase {
 public:
 	track_t* const m_track;
@@ -100,9 +100,6 @@ public:
 	}
 	virtual int getClipType() = 0;
 	virtual void updatePosition(project_t& project, scaled_grid& grid, ivec2& trackSize) = 0;
-	virtual void prerender(NVGcontext* vg) {
-
-	}
 };
 class gui_midi_clip : public gui_clip {
 public:
@@ -127,12 +124,8 @@ public:
 	}
 	void handleRightClick(MouseEvent& evt);
 };
-
 class gui_audio_clip : public gui_clip {
 public:
-	audioclip_texture_t waveform;
-	int fbId = -1;
-	bool rendered = false;
 	gui_audio_clip(track_t* _track, clip_t* _clip)
 		: gui_clip(_track, _clip)  {
 	}
@@ -140,13 +133,13 @@ public:
 		return CLIP_AUDIO;
 	}
 	void updatePosition(project_t& project, scaled_grid& grid, ivec2& trackSize);
-	void render(NVGcontext* vg) {
+	void render(NVGcontext* vg) override {
 		if (!culled) {
-			renderAudioClip(vg, m_track, m_clip, this, pos, size);
+			renderAudioClip(vg, m_track, m_clip, &m_clip->audio.waveformRef, pos, size);
 		}
 	}
 	void releaseRendered();
-	void prerender(NVGcontext* vg);
+	void prerender(NVGcontext* vg) override;
 	void onRemove() {
 		releaseRendered();
 		assert(m_clip->gClip == this);

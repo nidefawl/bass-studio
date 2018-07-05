@@ -20,6 +20,7 @@
 #include "platform.h"
 #include "dsp_util.h"
 #include "leak_detect.h"
+#include <glm/glm.hpp>
 #include <glm/vec2.hpp>
 using glm::vec2;
 using glm::ivec2;
@@ -36,6 +37,7 @@ void drawSeperator(NVGcontext* vg, int32_t seperatorY, ivec2& cs);
 
 
 class guitrack_editor : public guictr_base {
+
 public:
 	Cursor& cursor;
 	project_t& project;
@@ -101,6 +103,7 @@ public:
 	void renderClip(NVGcontext* vg, track_t* tr, const clip_t* cl, tick_t offset);
 	void renderAction(NVGcontext* vg, clip_dragaction& action);
 	void render(NVGcontext* vg);
+	void prerender(NVGcontext* vg) override;
 
 
 	void handleDraggedBegin(MouseEvent& evt) {

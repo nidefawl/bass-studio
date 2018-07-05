@@ -24,6 +24,7 @@ GLuint program2dTexture;
 GLint u_mvp;
 GLint u_tex0;
 
+static float wTexPreview = 256;
 static std::vector<VertexAttr> attributes{
 	{"in_position", 2, GL_FLOAT},
 	{"in_texcoord", 2, GL_FLOAT},
@@ -84,10 +85,10 @@ int initDebugWindow() {
 	if (ret)
 		return ret;
 	tess2d tess;
-	tess.add(1000.0f, 0.0f, 1, 1);
+	tess.add(wTexPreview, 0.0f, 1, 1);
 	tess.add(0.0f, 0.0f, 0, 1);
-	tess.add(0.0f, 1000.0f, 0, 0);
-	tess.add(1000.0f, 1000.0f, 1, 0);
+	tess.add(0.0f, wTexPreview, 0, 0);
+	tess.add(wTexPreview, wTexPreview, 1, 0);
 	glBindVertexArray(0);
 	checkGLError("uploadVBO");
 	glGenVertexArrays(1, &vbo.vaoId);
@@ -104,7 +105,6 @@ int initDebugWindow() {
 }
 
 void drawDebugWindow(NVGcontext* ctx, int winW, int winH, float pxratio) {
-	glm::mat4 matProj = glm::ortho(0.f, (float) winW, (float) winH, 0.f, 1.f, -1.f);
 
 	std::vector<TextureEntry> rendered;
 	waveformrender::getInstance()->getRenderedTextures(rendered);
@@ -118,21 +118,33 @@ void drawDebugWindow(NVGcontext* ctx, int winW, int winH, float pxratio) {
 //			}
 //		}
 //	}
+	float x = 0; float y = 0;
+	int nrendered = 0;
+	glBindVertexArray(vbo.vaoId);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo.vboVertId);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo.vboIdxId);
+	glActiveTexture( GL_TEXTURE0 );
+	glUseProgram(program2dTexture);
+	glUniform1i(u_tex0, 0);
 	for (TextureEntry& e : rendered) {
 		int n = e.glTexture;
-		if (n > 0) {
-			glUseProgram(program2dTexture);
-			glUniformMatrix4fv(u_mvp, 1, GL_FALSE, value_ptr(matProj));
-			glUniform1i(u_tex0, 0);
-			glActiveTexture( GL_TEXTURE0 );
+		if (n > 0 && e.inuse) {
+			glm::mat4 matProj = glm::ortho(0.f, (float) winW, (float) winH, 0.f, 1.f, -1.f);
+			glm::mat4 mvp = matProj * glm::translate(glm::mat4(1.0), vec3(x, y, 0));
+//			glDisable(GL_DEPTH_TEST);
+			glUniformMatrix4fv(u_mvp, 1, GL_FALSE, value_ptr(mvp));
 			glBindTexture(GL_TEXTURE_2D, n);
-			glBindVertexArray(vbo.vaoId);
-			glBindBuffer(GL_ARRAY_BUFFER, vbo.vboVertId);
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo.vboIdxId);
 			glDrawElements( GL_TRIANGLES, vbo.nIndices, GL_UNSIGNED_INT, NULL);
-			glBindBuffer(GL_ARRAY_BUFFER, 0);
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-			glBindVertexArray(0);
+//			glEnable(GL_DEPTH_TEST);
+			nrendered++;
+			x += wTexPreview+8;
+			if (x >= 1024) {
+				x = 0;
+				y+= wTexPreview+8;
+			}
 		}
 	}
+	glBindBuffer(GL_ARRAY_BUFFER, 0);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+	glBindVertexArray(0);
 }

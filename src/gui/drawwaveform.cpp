@@ -11,6 +11,7 @@
 #include "platform.h"
 #include "exceptions.h"
 #include "logging.h"
+#include "guicolors.h"
 #include "color_util.h"
 #include "mainctrl.h"
 
@@ -83,6 +84,7 @@ int waveformrender::render(NVGcontext* ctxt, cachedaudio_t* audio, audioclip_tex
 		textures.push_back(e);
 		entry = &textures.back();
 	}
+
 	entry->inuse = true;
 	entry->props = *waveform;
 
@@ -101,25 +103,21 @@ int waveformrender::render(NVGcontext* ctxt, cachedaudio_t* audio, audioclip_tex
 	glBindTexture(GL_TEXTURE_2D, 0);
 
 	checkGLError("fb prerender");
-//
-//
-//	audiowaveform_t* w = &audio->waveforms.front();
-//	w->pos = ivec2(0, 0);
-//	w->startOffset = ivec2(0);
-//	w->size = ivec2(fbwidth, 200);
-//	w->sampleBegin = 0;
-//	w->sampleBeginOffset = 0;
-//	w->sampleEnd = 1000;
-//	w->res = 1000/(float)fbwidth;
-//	w->rendered = false;
+
+
 	std::vector<std::vector<glm::vec2>> tesselatedWaveForms;
 	SampleMethod method = waveform->method;
-	renderWaveProcessed(audio->sample.get(), 0, 0, waveform, method, tesselatedWaveForms);
+	tesselateWaveform(audio->sample.get(), 0, 0, waveform, method, tesselatedWaveForms);
 	Uniforms bakeOpt;
 	bakeOpt.linecaps = vec2(LineCaps::none, LineCaps::none);
 	bakeOpt.linejoin = waveform->linewidth > 1.75 ? LineJoin::round : LineJoin::miter;
 	bakeOpt.miter_limit = 1.8f;
 	bakeOpt.color = vec4(vec3(1), 1.0);
+
+//	uint32_t color = colorPalette[(nextIdx++%(COLOR_PALETTE_COLS-2))*COLOR_PALETTE_ROWS+3];
+//	bakeOpt.color = int32vec4(color);
+//	bakeOpt.color.w = 1.0;
+
 	bakeOpt.linewidth = waveform->linewidth;
 	bakeOpt.antialias = 1.0f;
 	bakeOpt.scale = waveform->scale;
@@ -129,9 +127,7 @@ int waveformrender::render(NVGcontext* ctxt, cachedaudio_t* audio, audioclip_tex
 	mat4x4 matView = mat4x4(1.0);
 	mat4x4 matModel = mat4x4(1.0);
 	matModel[0][0] = waveform->scaleX;
-//	matModel = glm::scale(matModel, vec3(waveform->scaleX, 1, 1));
-	mat4x4 matProj;
-	matProj = glm::ortho(0.f, (float) FBO_WIDTH, (float)FBO_HEIGHT, 0.f, 1.f, -1.f);
+	mat4x4 matProj = glm::ortho(0.f, (float) FBO_WIDTH, (float)FBO_HEIGHT, 0.f, 1.f, -1.f);
 	glUseProgram(renderer.program2dLines);
 	glUniformMatrix4fv(renderer.u_projection, 1, GL_FALSE, value_ptr(matProj));
 	glUniformMatrix4fv(renderer.u_model, 1, GL_FALSE, value_ptr(matModel));
@@ -141,7 +137,6 @@ int waveformrender::render(NVGcontext* ctxt, cachedaudio_t* audio, audioclip_tex
 	glBindVertexArray ( bakedPath.vbo.vaoId );
 	glBindBuffer ( GL_ELEMENT_ARRAY_BUFFER, bakedPath.vbo.vboIdxId);
 	glDrawElements ( GL_TRIANGLES, bakedPath.vbo.nIndices, GL_UNSIGNED_INT, NULL);
-//		printf("render .nIndices %d\n", path.nIndices);
 	glBindVertexArray(0);
 
 	nvgluBindFramebuffer(NULL);
@@ -172,7 +167,7 @@ void drawImage(NVGcontext* vg, int image, float alpha,
 	nvgFill(vg);
 }
 
-void waveformrender::draw(NVGcontext* ctxt, int fbId, audioclip_texture_t* waveImage, ivec2 size) {
+void waveformrender::draw(NVGcontext* ctxt, int fbId, const audioclip_texture_t* waveImage, ivec2 size) {
 	for (auto& texture : textures) {
 		if (texture.idx == fbId) {
 			drawImage(ctxt, texture.fb->image, 1.0f, 0, 0, size.x*waveImage->scale, size.y*waveImage->scale, waveImage->startOffset.x, 0, size.x, size.y);

@@ -639,10 +639,13 @@ void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t 
 				float *dst = buffer[i];
 				auto& srcVector = sample->samples[i];
 				int32_t len = std::min((int32_t)blockSize-std::max(0, -srcStartOffset), std::min(clipEndSampleLen, std::min(clipStartSampleLen, (int32_t)srcVector.size()-srcStartOffset)));
+				assert(len>=0);
+				if (len <= 0) { //TODO: could figure this out outside the loop
+					continue;
+				}
 				assert(dstStartOffset+len <= (int32_t)blockSize);
 				assert(srcStartOffset+len <= (int32_t)srcVector.size());
 				assert(dstStartOffset>=0);
-				assert(len>0);
 				memcpy(dst+dstStartOffset, srcVector.data()+std::max(0, srcStartOffset), len*sizeof(float));
 			}
 		}

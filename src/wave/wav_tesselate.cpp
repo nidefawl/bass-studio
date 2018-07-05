@@ -16,7 +16,7 @@ using glm::vec4;
 using vec2list = std::vector<vec2>;
 //constexpr float MAX_RES = 512;
 using samplechannel_t = std::vector<float>;
-void renderWaveProcessed(audiosample_t* sample, float x, float y, audioclip_texture_t* waveformshape, SampleMethod method, std::vector<vec2list>& channels) {
+void tesselateWaveform(audiosample_t* sample, float x, float y, audioclip_texture_t* waveformshape, SampleMethod method, std::vector<vec2list>& channels) {
 	if (sample->nSamples) {
 		float width = waveformshape->size.x;
 		float height = waveformshape->size.y;
@@ -65,7 +65,7 @@ void renderWaveProcessed(audiosample_t* sample, float x, float y, audioclip_text
 		float fsMin = 0.0f;
 		float fsMax = 0.0f;
 		int nvecs = 0;
-		my_printf("renderOffset %f upscale %d, res %f vOffset %f\n", renderOffset, upscale, samplesPerPx, vOffset);
+//		my_printf("renderOffset %f upscale %d, res %f vOffset %f\n", renderOffset, upscale, samplesPerPx, vOffset);
 		for (int iChannel = 0; iChannel < sample->nChannels; iChannel++) {
 			vec2list vecs;
 			if (nVecs > 0)
@@ -326,9 +326,6 @@ void renderWaveProcessed(audiosample_t* sample, float x, float y, audioclip_text
 				for (int i = 1; i < vecs.size(); i++) {
 					assert(vecs[i].x > vecs[i-1].x);
 				}
-				for (int i = 0; i < vecs.size(); i++) {
-//					vecs[i].x *= xscale;
-				}
 //				auto it = vecs.begin();
 //				vec2 a = *it;
 //				it++;
@@ -348,7 +345,7 @@ void renderWaveProcessed(audiosample_t* sample, float x, float y, audioclip_text
 //			waveform.channels.push_back(std::move(vecs));
 		}
 
-		my_printf("nvecs: %d\n", nvecs);
+//		my_printf("nvecs: %d\n", nvecs);
 //		my_printf("min: %f, max: %f\n", fsMin, fsMax);
 	}
 
