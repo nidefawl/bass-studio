@@ -67,7 +67,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 		return {drag_none, -1, -1, 0};
 	}
 	std::vector<hit_result> hit;
-	for (int i = 0; i < segments.size(); i++) {
+	for (int i = 0; i < (int)segments.size(); i++) {
 		path_segment_t& segment = segments[i];
 		auto segBegin = segment.points.begin();
 		auto segEnd = segment.points.end();
@@ -188,7 +188,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 			int32_t dataPtIdx2 = dataPtIdx1+numPoints-1;
 			bool anyNonSaturatedY = false;
 			for (int i = dataPtIdx1; i <= dataPtIdx2; i++) {
-				if (i >= 0 && i < dataPoints.size()) {
+				if (i >= 0 && i < (int)dataPoints.size()) {
 					automation_point_t& pt = dataPoints[i];
 					anyNonSaturatedY |= (disty < 0 ? pt.val > 0.0f : pt.val < 1.0f);
 				}
@@ -196,28 +196,28 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 			automation_point_t zero = {0, 0};
 			automation_point_t* minPt = NULL;
 			automation_point_t* maxPt = NULL;
-			if (!firstSegment && dataPtIdx1 > 0 && dataPtIdx1 < pointsClamped.size()) {
+			if (!firstSegment && dataPtIdx1 > 0 && dataPtIdx1 < (int)pointsClamped.size()) {
 				minPt = &pointsClamped[dataPtIdx1-1];
 			} else if (dataPtIdx1 >= 0) {
 				minPt = &zero;
 			}
-			if (dataPtIdx2 >= 0 && dataPtIdx2+1 < pointsClamped.size()) {
+			if (dataPtIdx2 >= 0 && dataPtIdx2+1 < (int)pointsClamped.size()) {
 				maxPt = &pointsClamped[dataPtIdx2+1];
 			}
 			if (distx < 0 && minPt) {
-				if (dataPtIdx1 >= 0 && dataPtIdx1 < dataPoints.size()) {
+				if (dataPtIdx1 >= 0 && dataPtIdx1 < (int)dataPoints.size()) {
 					automation_point_t& ptEd = dataPoints[dataPtIdx1];
 					tickOffset = max(minPt->time - ptEd.time, tickOffset);
 				}
 			}
 			if (distx > 0 && maxPt) {
-				if (dataPtIdx2 >= 0 && dataPtIdx2 < dataPoints.size()) {
+				if (dataPtIdx2 >= 0 && dataPtIdx2 < (int)dataPoints.size()) {
 					automation_point_t& ptEd = dataPoints[dataPtIdx2];
 					tickOffset = min(maxPt->time - ptEd.time, tickOffset);
 				}
 			}
 			for (int i = dataPtIdx1; i <= dataPtIdx2; i++) {
-				if (i >= 0 && i < dataPoints.size()) {
+				if (i >= 0 && i < (int)dataPoints.size()) {
 					automation_point_t& pt = dataPoints[i];
 					if (tickOffset) {
 						pt.time = pt.time + tickOffset;
@@ -228,7 +228,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 				}
 			}
 			for (int i = dataPtIdx1; i <= dataPtIdx2; i++) {
-				if (i >= 0 && i < dataPoints.size()) {
+				if (i >= 0 && i < (int)dataPoints.size()) {
 					automation_point_t& src = dataPoints[i];
 					automation_point_t& dst = pointsClamped[i];
 					tick_t newTick = src.time;
@@ -281,7 +281,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 		std::vector<automation_point_t>& dataPoints = data.points;
 		if (clicked.mode == dragmode::drag_node) {
 			int32_t i = clicked.dataPt;
-			assert(i >= 0 && i < dataPoints.size());
+			assert(i >= 0 && i < (int)dataPoints.size());
 			dataPoints.erase(dataPoints.begin()+i);
 			postEdit();
 			return true;
@@ -298,7 +298,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 			}
 			val = min(1.0f, max(0.0f, val));
 			int32_t idx = indexOfTick(dataPoints, tick);
-			assert(idx >= 0 && idx <= dataPoints.size());
+			assert(idx >= 0 && idx <= (int)dataPoints.size());
 			automation_point_t pt{tick, val};
 			dataPoints.insert(dataPoints.begin()+idx, pt);
 			postEdit();
@@ -374,7 +374,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 			}
 			float lastVal = dataPoints[0].val;
 			cachedShape.push_back({firstX, firstY});
-			for (int i = 1; i < dataPoints.size(); i++) {
+			for (int i = 1; i < (int)dataPoints.size(); i++) {
 				path_segment_t seg;
 				seg.dataOffset = i + segmentDataPtOffset;
 				seg.points.push_back(cachedShape.size()-1);
@@ -441,7 +441,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 		hit_result currentDragged = dragged.mode || !mouseIn ? dragged : hitTest(fmouse);
 		if (currentDragged.mode == dragmode::drag_node) {
 			int32_t ptIdx = currentDragged.dataPt;
-			assert(ptIdx >= 0 && ptIdx < data.points.size());
+			assert(ptIdx >= 0 && ptIdx < (int)data.points.size());
 			automation_point_t& pt = data.points[ptIdx];
 			vec2* point = getPathPointSafe(currentDragged.segidx);
 			mouseTick = pt.time;

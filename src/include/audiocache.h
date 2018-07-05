@@ -13,12 +13,14 @@ struct cachedaudio_t {
 	std::vector<audioclip_texture_t> waveforms;
 };
 class audiocache {
+	int32_t samplerate = 0;
 	std::atomic<int32_t> nextIdx{0};
 	std::vector<std::unique_ptr<cachedaudio_t>> list;
 	std::unordered_map<int, cachedaudio_t*> mapId;
 public:
-	audiocache()
+	audiocache(int32_t _samplerate)
 	{
+		setSamplerate(_samplerate);
 	}
 	~audiocache() {
 		this->mapId.clear();
@@ -29,5 +31,6 @@ public:
 	static void destroy();
 	void getLoaded(std::vector<cachedaudio_t*>& v);
 	cachedaudio_t* loadFile(String s);
+	void setSamplerate(int32_t samplerate);
 	cachedaudio_t* get(int32_t i);
 };

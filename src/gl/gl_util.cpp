@@ -137,12 +137,12 @@ int compileShader(int type, String& src) {
 
 void bindVertexAttributes(std::vector<VertexAttr>& attrs) {
 	int32_t vertStrideBytes = 0;
-	for (int i = 0; i < attrs.size(); i++) {
+	for (int i = 0; i < (int)attrs.size(); i++) {
 		vertStrideBytes += attrs[i].elements*sizeof(float);
 	}
 
 	size_t offset = 0;
-	for (int i = 0; i < attrs.size(); i++) {
+	for (int i = 0; i < (int)attrs.size(); i++) {
 		VertexAttr& attr = attrs[i];
 		glEnableVertexAttribArray(attr.bindingPt);
 		checkGLError("glEnableVertexAttribArray");

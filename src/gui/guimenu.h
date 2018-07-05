@@ -61,11 +61,16 @@ public:
 				add(new guimenu_ctxtentry(e));
 			}
 		}
+		 my_printf("guimenu\n", 0);
+	}
+	~guimenu() {
+	 my_printf("~guimenu\n", 0);
 	}
 	void clicked(int _id) {
-		if(_id > 0)
-			MainCtrl::get()->menuCommand(_id);
-		if (lvl == 0) {
+		if(_id > 0) {
+			MainCtrl::get()->menuCommand(_id);//deletes this
+		}
+		if (lvl == 0) { //then reads here, gg
 			MainCtrl::get()->closeContextMenu();
 			MainCtrl::get()->closeAppMenus();
 		} else {
@@ -189,7 +194,7 @@ public:
 		guimenu *popup = new guimenu(entry->menu, 0);
 		popup->parentMenuBar = this;
 		popup->size.x = 250;
-		MainCtrl::get()->openContextMenu(popup, entry->toScreenSpace(ivec2(0, entry->size.y))-popup->pos+ivec2(1));
+		MainCtrl::get()->openContextMenu(popup, entry->toScreenSpace(ivec2(0, entry->size.y)) - popup->pos + ivec2(1));
 		currentMenu = entry;
 	}
 	void hoverMenu(guictr_menubar_entry* entry) {

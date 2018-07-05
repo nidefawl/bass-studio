@@ -53,7 +53,7 @@ public:
 		static_assert(sizeof(vec2) == sizeof(float)*2, "sizeof vec2 is not sizeof float * 2");
 
 		int32_t index = getBufIdx(vertexcount);
-        if (buf.size() < index+getVSize()) {
+        if ((int32_t)buf.size() < index+getVSize()) {
         	buf.resize(buf.size()+256);
         }
 		vec2 pos = v + offset;

@@ -80,8 +80,8 @@ void tesselateWaveform(audiosample_t* sample, float x, float y, audioclip_textur
 			switch (method) {
 			case SampleMethod::sample_straight:
 			{
-					int32_t sampleIdxStart = std::floor(sampleOffset);
-					if ((int32_t)sampleIdxStart >= (uint32_t)lenSamplesCh) {
+					int32_t sampleIdxStart = std::round(sampleOffset);
+					if (sampleIdxStart >= lenSamplesCh) {
 						break;
 					}
 					assert(sampleIdxStart >= 0);
@@ -98,7 +98,7 @@ void tesselateWaveform(audiosample_t* sample, float x, float y, audioclip_textur
 					}
 
 					//todo: arithmetic
-					while ((int) (std::floor(samplePos - waveformScaled.sampleBegin)) % upscale != 0) {
+					while ((int) (std::round(samplePos - waveformScaled.sampleBegin)) % upscale != 0) {
 						samplePos++;
 					}
 					if (emplacePre) {
@@ -115,7 +115,7 @@ void tesselateWaveform(audiosample_t* sample, float x, float y, audioclip_textur
 //							sampleOffset = std::max(0.0, sampleOffset-lenSamplesCh);
 							break;
 						}
-						int32_t sampleIdx = std::floor(sampleOffset);
+						int32_t sampleIdx = std::round(sampleOffset);
 						assert((int)sampleIdx%upscale==0);
 //						if ((int)sampleIdx%upscale==0) {
 							float data = samplesChPtr[sampleIdx];

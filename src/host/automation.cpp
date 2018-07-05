@@ -5,7 +5,7 @@
 
 int32_t indexOfTick(std::vector<automation_point_t>& dataPoints, tick_t tick) {
 	int32_t idx;
-	for (idx = 0; idx < dataPoints.size(); idx++) {
+	for (idx = 0; idx < (int)dataPoints.size(); idx++) {
 		automation_point_t& pt = dataPoints[idx];
 		if (pt.time > tick) {
 			break;
@@ -15,7 +15,7 @@ int32_t indexOfTick(std::vector<automation_point_t>& dataPoints, tick_t tick) {
 }
 int32_t addPointAt(std::vector<automation_point_t>& dataPoints, tick_t tick, int32_t quantizationSteps) {
 	int32_t idx;
-	for (idx = 0; idx < dataPoints.size(); idx++) {
+	for (idx = 0; idx < (int)dataPoints.size(); idx++) {
 		automation_point_t& pt = dataPoints[idx];
 		if (pt.time > tick) {
 			break;
@@ -23,7 +23,7 @@ int32_t addPointAt(std::vector<automation_point_t>& dataPoints, tick_t tick, int
 	}
 	if (!dataPoints.empty()) {
 		float v;
-		if (idx == dataPoints.size()) {
+		if (idx == (int)dataPoints.size()) {
 			v = dataPoints[idx-1].val;
 		} else if (idx == 0) {
 			v = dataPoints[0].val;
@@ -104,8 +104,8 @@ void simplifyData(std::vector<automation_point_t>& data) {
 float automation_t::getValueAt(tick_t tick) {
 	if (points.size()) {
 		int32_t idx = indexOfTick(points, tick);
-		assert(idx <= points.size());
-		if (idx == points.size())
+		assert(idx <= (int)points.size());
+		if (idx == (int)points.size())
 			return points.back().val;
 		if (idx > 0) {
 			automation_point_t& pt1 = points[idx-1];
@@ -129,10 +129,10 @@ void automation_t::copyRange(tick_t tickBegin, tick_t tickEnd, std::vector<autom
 	if (points.size()) {
 		int32_t idxStart = indexOfTick(points, tickBegin);
 		int32_t idxEnd = indexOfTick(points, tickEnd) + 1;
-		if (idxStart >= points.size()) {
+		if (idxStart >= (int)points.size()) {
 			idxStart = points.size()-1;
 		}
-		if (idxEnd >= points.size()) {
+		if (idxEnd >= (int)points.size()) {
 			idxEnd = points.size()-1;
 		}
 		automation_point_t ptStart{0, getValueAt(tickBegin)};
@@ -154,7 +154,7 @@ void automation_t::setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automa
 	std::vector<automation_point_t> pointsTmp;
 	pointsTmp.reserve(data.size()+points.size());
 	int32_t idx1 = 0;
-	for (; idx1 < points.size(); idx1++) {
+	for (; idx1 < (int)points.size(); idx1++) {
 		auto& pt = points[idx1];
 		if (pt.time <= tickBegin) {
 			pointsTmp.push_back(pt);
@@ -166,7 +166,7 @@ void automation_t::setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automa
 		automation_point_t ptStart{tickBegin, getValueAt(tickBegin)};
 		pointsTmp.push_back(std::move(ptStart));
 	}
-	for (int32_t idx = 0; idx < data.size(); idx++) {
+	for (int32_t idx = 0; idx < (int)data.size(); idx++) {
 		auto pt = data[idx];
 		pt.time += tickBegin;
 		pt.val = quantizeFloat(pt.val, quantizationSteps);
@@ -176,7 +176,7 @@ void automation_t::setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automa
 		automation_point_t ptEnd{tickEnd, getValueAt(tickEnd)};
 		pointsTmp.push_back(std::move(ptEnd));
 	}
-	for (; idx1 < points.size(); idx1++) {
+	for (; idx1 < (int)points.size(); idx1++) {
 		auto& pt = points[idx1];
 		if (pt.time >= tickEnd) {
 			pointsTmp.push_back(pt);

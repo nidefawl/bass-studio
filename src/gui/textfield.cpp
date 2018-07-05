@@ -494,7 +494,7 @@ bool gui_textfield::copySelection() {
 }
 
 void gui_textfield::pasteFromClipboard() {
-	if (mCursorPos >= 0 && mCursorPos <= mValueTemp.size()) {
+	if (mCursorPos >= 0 && mCursorPos <= (int)mValueTemp.size()) {
 		String str = std::string(MainCtrl::get()->getClipboardText());
 		mValueTemp.insert(mCursorPos, str);
 		mCursorPos += str.length();

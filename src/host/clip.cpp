@@ -248,7 +248,7 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
 
 
 	const tick_t lenClipLoopSection = (localEnd - localStart) - preLoopLen;
-	const tick_t numLoops = (lenClipLoopSection+loopLen-1) / loopLen;
+	const tick_t numLoops = !loopEnabled ? 1 : (lenClipLoopSection+loopLen-1) / loopLen;
 	if (notesView.m_list.capacity() < numLoops * listLoop.size())
 		notesView.m_list.reserve(numLoops * listLoop.size());
 

@@ -1442,8 +1442,9 @@ int mainHost(int argc, char* argv[]) {
 
 	ctrl = std::make_unique<MainCtrl>();
 	vsthost::setInstance(std::make_unique<vsthost>(44100, 256));
-	audiocache::setInstance(std::make_unique<audiocache>());
+	audiocache::setInstance(std::make_unique<audiocache>(vsthost::getInstance()->lSampleRate));
 	audiocache::getInstance()->loadFile("PHFT_Drum Loop_130_099.wav");
+	audiocache::getInstance()->loadFile("C:\\Users\\Michael\\Desktop\\left right.wav");
 	waveformrender::setInstance(std::make_unique<waveformrender>());
 	mainWindow = std::make_unique<appwindow_main>(ctrl.get());
 	mainWindow->create("main window", 1280, 720);

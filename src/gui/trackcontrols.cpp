@@ -306,7 +306,7 @@ public:
 			m_track->audio->selectedAutomationCtr = NULL;
 		} else {
 			_id--;
-			if (_id >= 0 && _id < targets.size()) {
+			if (_id >= 0 && _id < (int)targets.size()) {
 				String str = targets[_id]->getAutomatableName();
 				m_track->audio->selectedAutomationCtr = targets[_id];
 				int32_t numParams = targets[_id]->getNumParameters();

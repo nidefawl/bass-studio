@@ -5,6 +5,7 @@
 #include <stdint.h>
 #include <memory>
 
+#include <glm/glm.hpp>
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
@@ -92,6 +93,7 @@ public:
 	NVGcontext* vg = NULL;
 	std::vector<guictr_base*> containers;
 	guictxtmenu_base *ctxtmenu = NULL;
+	guictxtmenu_base *ctxtmenuOld = NULL;
 	int cursorIcon = CURSOR_DEFAULT;
 	ivec2 m_size;
 	ivec2 m_mousePos;

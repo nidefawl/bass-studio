@@ -47,16 +47,64 @@ void serialize(Archive & archive, automation_view_t & m)
 	make_optional_nvp(archive, "active", m.active);
 
 }
-template<class Archive>
-void serialize(Archive & archive, plugin_snapshot_t & m)
+//template<class Archive>
+//void load(Archive & archive, plugin_snapshot_t & m)
+//{
+//	archive(make_nvp("name", m.name), make_nvp("uId", m.uId), make_nvp("slot", m.slot), make_nvp("present", m.present));
+//	make_optional_nvp(archive, "dataProgram", m.dataChunk2);
+//	make_optional_nvp(archive, "parameters", m.params);
+//	make_optional_nvp(archive, "automatedParams", m.automatedParams);
+//	make_optional_nvp(archive, "globalId", m.projectGlobalId);
+//	make_optional_nvp(archive, "enabled", m.enabled);
+//	make_optional_nvp(archive, "data", m.dataChunk);
+//}
+template <class Archive>
+void load( Archive & archive, plugin_snapshot_t & m, const std::uint32_t version)
 {
 	archive(make_nvp("name", m.name), make_nvp("uId", m.uId), make_nvp("slot", m.slot), make_nvp("present", m.present));
-	make_optional_nvp(archive, "data", m.dataChunk);
+	if (version == 1)
 	make_optional_nvp(archive, "dataProgram", m.dataChunk2);
 	make_optional_nvp(archive, "parameters", m.params);
 	make_optional_nvp(archive, "automatedParams", m.automatedParams);
 	make_optional_nvp(archive, "globalId", m.projectGlobalId);
 	make_optional_nvp(archive, "enabled", m.enabled);
+	if (version == 1)
+	make_optional_nvp(archive, "data", m.dataChunk);
+
+	if (version > 1) {
+			{
+			size_type size;
+			archive(make_nvp("sizeprogramdata", size));
+			m.dataChunk2.resize(size);
+			((JSONInputArchive*)&archive)->loadBinaryValue((void*)m.dataChunk2.data(), size, "programdata");
+			}
+			{
+			size_type size;
+			archive(make_nvp("sizeplugindata", size));
+			m.dataChunk.resize(size);
+			((JSONInputArchive*)&archive)->loadBinaryValue((void*)m.dataChunk.data(), size, "plugindata");
+			}
+	}
+}
+
+template <class Archive>
+void save( Archive & archive, plugin_snapshot_t const & m, const std::uint32_t version)
+{
+	archive(make_nvp("name", m.name), make_nvp("uId", m.uId), make_nvp("slot", m.slot), make_nvp("present", m.present));
+	make_optional_nvp(archive, "parameters", m.params);
+	make_optional_nvp(archive, "automatedParams", m.automatedParams);
+	make_optional_nvp(archive, "globalId", m.projectGlobalId);
+	make_optional_nvp(archive, "enabled", m.enabled);
+	{
+		size_type size = m.dataChunk2.size();
+		archive(make_nvp("sizeprogramdata", size));
+		((JSONOutputArchive*)&archive)->saveBinaryValue(m.dataChunk2.data(), size, "programdata");
+	}
+	{
+		size_type size = m.dataChunk.size();
+		archive(make_nvp("sizeplugindata", size));
+		((JSONOutputArchive*)&archive)->saveBinaryValue(m.dataChunk.data(), size, "plugindata");
+	}
 }
 template<class Archive>
 void serialize(Archive & archive, track_params_snapshot_t & m)
@@ -221,6 +269,8 @@ void save( Archive & archive, project_file const & file, const std::uint32_t ver
 	make_optional_nvp(archive, "layout", file.layout);
 }
 CEREAL_CLASS_VERSION( project_file, FILE_FORMAT_VERSION);
+CEREAL_CLASS_VERSION( plugin_snapshot_t, 2 );
+
 
 std::shared_ptr<project_file> loadProjectFile(MainCtrl* ctrl, String& path) {
 	try {

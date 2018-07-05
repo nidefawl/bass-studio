@@ -165,7 +165,7 @@ int GLPathRenderer::init() {
 //	for (int i = 0; i < attributes.size(); i++) {
 //		attributes[i].bindingPt = glGetAttribLocation(program, attributes[i].name);
 //	}
-	for (int i = 0; i < attributes.size(); i++) {
+	for (int i = 0; i < (int)attributes.size(); i++) {
 		VertexAttr& attr = attributes[i];
 		attr.bindingPt = glGetAttribLocation(program, attr.name);
 		checkGLError("glGetAttribLocation");
@@ -187,7 +187,7 @@ void GLPathRenderer::bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, Ba
 	std::vector<float> bufUniforms;
 	vbuf bufFinal;
 //	printf("sizeof(Uniforms) %d\n", sizeof(Uniforms));
-	assert(sizeof(Uniforms) <= sizeUniforms);
+	assert((int)sizeof(Uniforms) <= sizeUniforms);
 	bufUniforms.resize(paths.size()*sizeUniforms);
 	const int sizeFloatsVert = sizeof(vert)/sizeof(float);
 	std::vector<vert> outVdata;

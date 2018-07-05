@@ -7,6 +7,7 @@
 #include "../wave/dr_wav.h"
 #include "logging.h"
 #include "../gui/drawwaveform.h"
+#include <soxr.h>
 
 namespace
 {
@@ -31,7 +32,10 @@ void audiocache::getLoaded(std::vector<cachedaudio_t*>& v) {
 	}
 }
 cachedaudio_t* audiocache::get(int32_t i) {
-	return this->mapId.at(i);
+	return this->mapId.count(i) ? this->mapId.at(i) : nullptr;
+}
+void audiocache::setSamplerate(int32_t samplerate) {
+	this->samplerate = samplerate;
 }
 cachedaudio_t* audiocache::loadFile(String path) {
 	drwav wav;
@@ -48,40 +52,96 @@ cachedaudio_t* audiocache::loadFile(String path) {
 
 		std::unique_ptr<audiosample_t> sample = std::make_unique<audiosample_t>();
 		sample->bitsPerSample = wav.bitsPerSample;
-		sample->sampleRate = wav.sampleRate;
 		sample->nChannels = wav.channels;
-		sample->nSamples = wav.totalSampleCount/wav.channels;
-		int nSamplesAllChannels = 0;
+		sample->sampleRate = wav.sampleRate;
+		sample->nSamples = 0;
+		std::vector<samplechannel_t> loadedSampleChannels;
+		uint64_t numSamplesInput = 0;
 		for (int i = 0; i < wav.channels; i++) {
 			samplechannel_t channel(wav.totalSampleCount/wav.channels);
 			float* out = channel.data();
-			for (int j = 0; j < wav.totalSampleCount; j+= wav.channels) {
+			for (unsigned j = i; j < wav.totalSampleCount; j+= wav.channels) {
 				*out = pSamples[j];
 				out++;
 			}
-			sample->samples.push_back(std::move(channel));
-			nSamplesAllChannels += sample->samples.back().size();
-			assert(sample->samples.back().size()==sample->nSamples);
+			numSamplesInput = i == 0 ? channel.size() : std::min(numSamplesInput, channel.size());
+			loadedSampleChannels.push_back(std::move(channel));
+		}
+		if ((int32_t)wav.sampleRate != this->samplerate) {
+
+			std::vector<samplechannel_t> resampledChannels;
+			std::vector<float*> channelPtrsOut(wav.channels);
+			std::vector<float*> channelPtrsIn(wav.channels);
+			size_t numSamplesResampled = (size_t) (numSamplesInput * this->samplerate / (double)wav.sampleRate + .5); /* Assay output len. */
+
+			for (int i = 0; i < wav.channels; i++) {
+				channelPtrsIn[i] = loadedSampleChannels[i].data();
+				samplechannel_t channel(numSamplesResampled);
+				resampledChannels.push_back(std::move(channel));
+				channelPtrsOut[i] = resampledChannels[i].data();
+			}
+
+
+//			my_printf("soxr_oneshot from %d to %d, samples %d -> %d, channels %d\n", wav.sampleRate, this->samplerate, wav.totalSampleCount, olen, wav.channels);
+//			my_printf("pSamples.size %d\n", pSamples.size());
+//			my_printf("pSamples2.size %d\n", pSamples2.size());
+
+			soxr_quality_spec_t q_spec = soxr_quality_spec(0, 0);
+			soxr_io_spec_t io_spec = soxr_io_spec(SOXR_FLOAT32_S, SOXR_FLOAT32_S);
+			soxr_runtime_spec_t const runtime_spec = soxr_runtime_spec(0);
+
+			soxr_error_t error = 0;
+			soxr_t soxr;
+			size_t offset = 0;
+			soxr = soxr_create(wav.sampleRate, this->samplerate, wav.channels, &error, &io_spec, &q_spec, &runtime_spec);
+			if (!!error) {
+				my_printf("soxr_create failed: %d %s\n", error, soxr_strerror(error));
+			} else {
+				error = soxr_process(soxr,
+						channelPtrsIn.data(),numSamplesInput, NULL, channelPtrsOut.data(), numSamplesResampled, &offset);
+				my_printf("offset %d, pSamples.size: %d\n", offset, pSamples.size());
+
+
+				my_printf("soxr_process post %d\n", error);
+				if (!!error) {
+					my_printf("soxr_process failed: %d %s\n", error, soxr_strerror(error));
+				} else {
+					sample->nSamples = offset;
+					sample->sampleRate = this->samplerate;
+					sample->samples.resize(sample->nChannels);
+					for (int i = 0; i < sample->nChannels; i++) {
+						sample->samples[i] = std::move(resampledChannels[i]);
+					}
+				}
+			}
+			my_printf("%-26s\n", soxr_strerror(error));
+			soxr_delete(soxr);
+		} else {
+			sample->nSamples = numSamplesInput;
+			sample->sampleRate = this->samplerate;
+			sample->samples.resize(sample->nChannels);
+			for (int i = 0; i < sample->nChannels; i++) {
+				sample->samples[i] = std::move(loadedSampleChannels[i]);
+			}
 		}
 		my_printf("copy done: %d\n", nSamples);
 		int maxDownS = 7;
-		for (int step = 1; step < maxDownS; step++) {
-			std::vector<samplechannel_t> downsampledChannels(2);
-			for (int i = 0; i < wav.channels; i++) {
-				size_t len = sample->nSamples>>step;
-				samplechannel_t chDownSmpld(len);
-				downsample(sample->sampleRate,
-						sample->samples.at(i).data(),
-						sample->nSamples,
-						chDownSmpld, step);
-				downsampledChannels[i] = std::move(chDownSmpld);
-			}
-			sample->downsampled.push_back(std::move(downsampledChannels));
-		}
+//		for (int step = 1; step < maxDownS; step++) {
+//			std::vector<samplechannel_t> downsampledChannels(2);
+//			for (int i = 0; i < wav.channels; i++) {
+//				size_t len = sample->nSamples>>step;
+//				samplechannel_t chDownSmpld(len);
+//				downsample(sample->sampleRate,
+//						sample->samples.at(i).data(),
+//						sample->nSamples,
+//						chDownSmpld, step);
+//				downsampledChannels[i] = std::move(chDownSmpld);
+//			}
+//			sample->downsampled.push_back(std::move(downsampledChannels));
+//		}
 		my_printf("downsample done: %d\n", nSamples);
 		int nDownSmplSteps = maxDownS-1;
-		assert(sample->downsampled.size() == nDownSmplSteps);
-		assert(sample->nSamples*sample->nChannels==nSamplesAllChannels);
+//		assert(sample->downsampled.size() == nDownSmplSteps);
 		int id = this->nextIdx++;
 		std::unique_ptr<cachedaudio_t> cachedaudio = std::make_unique<cachedaudio_t>();
 		cachedaudio->sample = std::move(sample);

@@ -379,8 +379,8 @@ void guitrack_editor::trackViewDragMove(guitrack_editor* view, MouseEvent& evt) 
 					c.selSubTrackRange = (subTr->idx - subTrSelected->idx);
 					assert (c.getSubTrackEnd() > -1);
 					assert (c.getSubTrackBegin() <= c.getSubTrackEnd());
-					assert (c.getSubTrackBegin() < subTr->m_track->subtracks.size());
-					assert (c.getSubTrackEnd() < subTr->m_track->subtracks.size());
+					assert (c.getSubTrackBegin() < (int)subTr->m_track->subtracks.size());
+					assert (c.getSubTrackEnd() < (int)subTr->m_track->subtracks.size());
 				}
 
 			} else {
@@ -680,28 +680,31 @@ void guitrack_editor::prerender(NVGcontext* vg) {
 			track_t* tr = project.trackList[trackIdx];
 			for (auto it = trClipboard->clips.begin(); it != trClipboard->clips.end(); it++) {
 				clip_t* cl = (*it).get();
-				ivec2 clipPos = ivec2();
-				ivec2 clipSize = tr->content->size; //TODO: get rid of *tr here, figure out size before and add default fallback
-				cachedaudio_t* audio = audiocache::getInstance()->get(cl->audio.id);
-				if (!audio || !getClipPosition(grid, tr->content->size, cl, clipPos, clipSize, 0)) {
-					waveformrender::getInstance()->release(cl->audio.waveformRef.fbId);
-					cl->audio.waveformRef.fbId = -1;
-					cl->audio.waveformRef.rendered = false;
-					continue;
-				}
+				if (cl->clipType == CLIP_AUDIO) {
 
-				clipSize.y -= (HEIGHT_CLIP_TITLE + INSET_CLIP_CONTENT * 2);
-				ivec2 posClipped = clipPos;
-				ivec2 sizeClipped = clipSize;
-				tr->content->scissorClip(posClipped, sizeClipped);
-				auto waveform = makeWaveformFromClip(project, grid, tr->content->size, cl, clipPos, clipSize, posClipped, sizeClipped);
-				gui_waveform_texture_ref& waveformRef = cl->audio.waveformRef;
-				if (!cl->audio.waveformRef.rendered || waveform != waveformRef.waveform) {
-					waveformRef.waveform = waveform;
-					waveformrender::getInstance()->release(waveformRef.fbId);
-					int ret = waveformrender::getInstance()->render(vg, audio, &waveformRef.waveform, 1);
-					waveformRef.fbId = ret;
-					waveformRef.rendered = true;
+					ivec2 clipPos = ivec2();
+					ivec2 clipSize = tr->content->size; //TODO: get rid of *tr here, figure out size before and add default fallback
+					cachedaudio_t* audio = audiocache::getInstance()->get(cl->audio.id);
+					if (!audio || !getClipPosition(grid, tr->content->size, cl, clipPos, clipSize, 0)) {
+						waveformrender::getInstance()->release(cl->audio.waveformRef.fbId);
+						cl->audio.waveformRef.fbId = -1;
+						cl->audio.waveformRef.rendered = false;
+						continue;
+					}
+
+					clipSize.y -= (HEIGHT_CLIP_TITLE + INSET_CLIP_CONTENT * 2);
+					ivec2 posClipped = clipPos;
+					ivec2 sizeClipped = clipSize;
+					tr->content->scissorClip(posClipped, sizeClipped);
+					auto waveform = makeWaveformFromClip(project, grid, tr->content->size, cl, clipPos, clipSize, posClipped, sizeClipped);
+					gui_waveform_texture_ref& waveformRef = cl->audio.waveformRef;
+					if (!cl->audio.waveformRef.rendered || waveform != waveformRef.waveform) {
+						waveformRef.waveform = waveform;
+						waveformrender::getInstance()->release(waveformRef.fbId);
+						int ret = waveformrender::getInstance()->render(vg, audio, &waveformRef.waveform, 1);
+						waveformRef.fbId = ret;
+						waveformRef.rendered = true;
+					}
 				}
 
 			}
@@ -714,7 +717,7 @@ void guitrack_editor::renderClip(NVGcontext* vg, track_t* tr, const clip_t* cl, 
 
 	if (getClipPosition(grid, tr->content->size, cl, clipPos, clipSize, offset)) {
 		clipPos.y += tr->content->pos.y;
-		if (tr->type == TRACK_TYPE_MIDI) {
+		if (cl->clipType == CLIP_MIDI && tr->type == TRACK_TYPE_MIDI) {
 			renderMidiClip(vg, tr, cl, clipPos, clipSize);
 		} else if (cl->clipType == CLIP_AUDIO && tr->type == TRACK_TYPE_AUDIO) {
 			const gui_waveform_texture_ref * ptr = &cl->audio.waveformRef;

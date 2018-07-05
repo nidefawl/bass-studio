@@ -12,6 +12,8 @@
 #include "keyboard.h"
 #include "commands.h"
 
+#include "project.h"
+
 #include "mainctrl.h"
 #include "note.h"
 #include "cursor.h"
@@ -415,7 +417,7 @@ void MainCtrl::menuCommand(int cmd) {
 	}
 }
 void MainCtrl::postInit() {
-	loadFile("empty.project");
+	loadFile("versiontest2.project");
 //	for (int i = 0; i < 32; i++) {
 //		loadFile("muuure.project");
 //	}
@@ -782,20 +784,22 @@ void MainCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos) {
 	BaseCtrl::mouseMoved(mousePos, deltaPos);
 }
 void MainCtrl::closeAppMenus(int startlvl) {
-	for (int i = startlvl; i < menuWindows.size(); i++) {
+	for (int i = startlvl; i < (int)menuWindows.size(); i++) {
 		auto w = menuWindows[i];
 		w->getCtrl()->close();
 	}
 }
 void MainCtrl::openAppMenu(int lvl, guictxtmenu_base *b, ivec2 pos) {
-	if (menuWindows.size() <= lvl) {
+	if ((int)menuWindows.size() <= lvl) {
 		menuWindows.push_back(this->mainWindow->createOverlay());
 	}
-	ivec2 windowPos;
+//	ivec2 windowPos;
 //	this->mainWindow->getPos(&windowPos);
 	menuWindows[lvl]->getCtrl()->open(b, pos);
 }
 void MainCtrl::openContextMenu(guictxtmenu_base *b, ivec2 pos) {
+	if (this->ctxtmenuOld)
+		DELETE_PTR(this->ctxtmenuOld) //horrible lifetime management
 	this->ctxtmenu = b;
 	ivec2 windowPos;
 	this->mainWindow->getPos(&windowPos);
@@ -808,8 +812,8 @@ void MainCtrl::closeContextMenu() {
 	if (contextWindow) {
 		contextWindow->getCtrl()->close();
 	}
-	if (this->ctxtmenu)
-		DELETE_PTR(this->ctxtmenu)
+	this->ctxtmenuOld = this->ctxtmenu;
+	this->ctxtmenu = nullptr;
 }
 bool MainCtrl::hasContextMenu() {
 	return this->contextWindow && this->contextWindow->isShown();
@@ -861,6 +865,29 @@ bool MainCtrl::filesDropBegin(vector<string>& files, ivec2 mousepos) {
 	}
 	if (files.size()) {
 		String path = files.front();
+		if (StrEndsWith(path, ".wav")) {
+			String a,b,c, d;
+			SplitPath(path, &a, &b, &c, &d);
+			cachedaudio_t* audio = audiocache::getInstance()->loadFile(path);
+			if (audio) {
+				auto* sample = audio->sample.get();
+				if (sample) {
+					clip_t clip(CLIP_AUDIO, b);
+					//clip.notes = move(notes);
+					clip.audio.id = audio->id;
+					clip.setLenSamples(sample->nSamples);
+					clip.setLen(samplesToTicks(sample->nSamples));
+					clip.loopEnabled = false;
+					shared_ptr<track_clipboard_t> trClipboard = make_shared<track_clipboard_t>();
+					trClipboard->clips.push_back(make_shared<clip_t>(move(clip)));
+					shared_ptr<clip_clipboard> fileClipboard = make_shared<clip_clipboard>();
+					fileClipboard->tracks.push_back(trClipboard);
+					dragdropclip.reset();
+					dragdropclip.clipboard = fileClipboard;
+					dragdropclip.isLoaded = true;
+				}
+			}
+		}
 		if (StrEndsWith(path, ".mid")) {
 			LoadMidiTask task(files.front());
 			if (!MainCtrl::get()->getWorkerThread()->pushTask(&task)) {
@@ -880,28 +907,28 @@ bool MainCtrl::filesDropBegin(vector<string>& files, ivec2 mousepos) {
 					}
 				}
 			}
-			if (dragdropclip.isLoaded) {
-				MouseHitEvt evt(MouseHitType::MOUSE_DRAGDROP_CLIP);
-				for (guictr_base *ctr : containers) {
-					if (ctr->mouseHitTest(mousepos, evt)) {
-						break;
-					}
+		}
+		if (dragdropclip.isLoaded) {
+			MouseHitEvt evt(MouseHitType::MOUSE_DRAGDROP_CLIP);
+			for (guictr_base *ctr : containers) {
+				if (ctr->mouseHitTest(mousepos, evt)) {
+					break;
 				}
-				guibase* gui = evt.getGuiHit();
-				if (gui) {
-					ivec2 mposObj = toControlsObjectSpace(mousepos, gui);
-					bool result = gui->clipDropBegin(dragdropclip, mposObj);
-					if (!result) {
+			}
+			guibase* gui = evt.getGuiHit();
+			if (gui) {
+				ivec2 mposObj = toControlsObjectSpace(mousepos, gui);
+				bool result = gui->clipDropBegin(dragdropclip, mposObj);
+				if (!result) {
 
-					}
-					return result;
 				}
+				return result;
+			}
 //
 ////					MainCtrl::get()->getTrackId(0)->add(clip);
 ////					MainCtrl::get()->updateVisibleTrackContents();
 ////					MainCtrl::get()->requestRedraw();
 //				return true;
-			}
 		}
 	}
 	return false;

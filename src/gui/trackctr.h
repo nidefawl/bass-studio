@@ -273,7 +273,7 @@ public:
 		float barSX = clipLoopStartScrX();
 		float barEX = clipLoopEndScrX();
 		if (local.x >= barSX && local.x < barEX
-				&& local.y >= 0 && local.y < heightLoopIndicators) {
+				&& local.y >= 0 && local.y < (int)heightLoopIndicators) {
 			distBar = DRAG_RANGE*DRAG_RANGE*0.8f;
 		}
 		std::vector<dist_draghandle> hndls {

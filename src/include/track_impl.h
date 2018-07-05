@@ -71,7 +71,7 @@ public:
 		return f;
 	}
 	float getParamValue(int32_t idx) {
-		if (idx >= 0 && idx < params.size()) {
+		if (idx >= 0 && idx < (int)params.size()) {
 			return convertValFrom(idx, params[idx].val);
 		}
 		return 0.0f;
