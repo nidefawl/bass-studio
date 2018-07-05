@@ -141,13 +141,13 @@ void guitrack_timeline::render(NVGcontext* vg) {
 						nvgFontSize(vg, fontSize*scale);
 						nvgFillColor(vg, rgbToNvg(color));
 						nvgText(vg, n.screenpos + gap / 2, this->size.y, StringAsCStr(text), NULL);
-						if (this->size.y > 28) {
-							text = StringFormat("%d", n.time);
-							nvgFontSize(vg, fontSize*scale*0.66f);
-//								nvgText(vg, n.screenpos + gap / 2, this->size.y-21, StringAsCStr(text), NULL);
-							text = StringFormat("%f", n.screenpos);
-							nvgText(vg, n.screenpos + gap / 2, this->size.y-21, StringAsCStr(text), NULL);
-						}
+//						if (this->size.y > 28) {
+//							text = StringFormat("%d", n.time);
+//							nvgFontSize(vg, fontSize*scale*0.66f);
+////								nvgText(vg, n.screenpos + gap / 2, this->size.y-21, StringAsCStr(text), NULL);
+//							text = StringFormat("%f", n.screenpos);
+//							nvgText(vg, n.screenpos + gap / 2, this->size.y-21, StringAsCStr(text), NULL);
+//						}
 					}
 				}
 
