@@ -176,11 +176,12 @@ public:
 	gui_timeinput clipTimeLen;
 	gui_timeinput clipTimeStartOffsetTicks;
 	gui_numberinput_field clipTimeStartOffsedSamples;
+	gui_numberinput_field clipAudioId;
 	gui_clipsettings(scaled_grid& _grid, clip_view& _view)
 		: guictr_base(),
 		grid(_grid),
 		view(_view), clipTimeStart(nullptr), clipTimeLen(nullptr),
-		clipTimeStartOffsetTicks(nullptr), clipTimeStartOffsedSamples(nullptr)
+		clipTimeStartOffsetTicks(nullptr), clipTimeStartOffsedSamples(nullptr), clipAudioId(nullptr)
 	{
 		padding = 2;
 		btnLoop.drawFn = drawTextureSymbol;
@@ -190,14 +191,17 @@ public:
 		clipTimeLen.setRef(nullptr);
 		clipTimeStartOffsetTicks.setRef(nullptr);
 		clipTimeStartOffsedSamples.setRef(nullptr);
+		clipAudioId.setRef(nullptr);
 		add(&btnLoop);
 		add(&clipTimeStart);
 		add(&clipTimeLen);
 		add(&clipTimeStartOffsetTicks);
 		add(&clipTimeStartOffsedSamples);
+		add(&clipAudioId);
 	}
 	~gui_clipsettings()
 	{
+		remove(&clipAudioId);
 		remove(&clipTimeStartOffsedSamples);
 		remove(&clipTimeStartOffsetTicks);
 		remove(&clipTimeLen);
@@ -232,7 +236,9 @@ public:
 		clipTimeStartOffsetTicks.size = ivec2(bW - i2, h);
 		clipTimeStartOffsetTicks.pos = ivec2(clipTimeStart.left(), clipTimeLen.bottom()+inset);
 		clipTimeStartOffsedSamples.size = ivec2(bW - i2, h);
-		clipTimeStartOffsedSamples.pos = ivec2(clipTimeStart.left(), clipTimeStartOffsetTicks.bottom()+inset);
+		clipTimeStartOffsedSamples.pos = ivec2(clipTimeStartOffsetTicks.left(), clipTimeStartOffsetTicks.bottom()+inset);
+		clipAudioId.size = ivec2(bW - i2, h);
+		clipAudioId.pos = ivec2(clipTimeStartOffsedSamples.left(), clipTimeStartOffsedSamples.bottom()+inset);
 		for (guibase* gui : guis) {
 			gui->layout();
 		}
@@ -247,8 +253,8 @@ public:
 				clip->loopEnabled = !clip->loopEnabled;
 			}
 		}
-		if (&clipTimeStart == button||&clipTimeLen == button
-				|| &clipTimeStartOffsedSamples == button||&clipTimeStartOffsetTicks == button) {
+		if (&clipTimeStart == button || &clipTimeLen == button || &clipTimeStartOffsedSamples == button
+				|| &clipTimeStartOffsetTicks == button || &clipTimeStartOffsedSamples == button) {
 			clip_t* clip = view.clip();
 			if (clip && clip->gClip) {
 				track_t* track = clip->gClip->m_track;
@@ -268,6 +274,7 @@ public:
 			clipTimeLen.setRef(&clip->getLenRef());
 			clipTimeStartOffsedSamples.setRef(&clip->offsetSamples);
 			clipTimeStartOffsetTicks.setRef(&clip->offsetStart);
+			clipAudioId.setRef(&clip->audio.id);
 //			if (clip->noLayout) {
 //				grid.showRange(clip->offsetStart, clip->offsetStart+clip->len);
 //				zoomPianoRollToClipsNoteRange();
@@ -283,6 +290,7 @@ public:
 			clipTimeLen.setRef(nullptr);
 			clipTimeStartOffsedSamples.setRef(nullptr);
 			clipTimeStartOffsetTicks.setRef(nullptr);
+			clipAudioId.setRef(nullptr);
 		}
 	}
 };

@@ -1,0 +1,12 @@
+#pragma once
+#include <stdint.h>
+#include <vector>
+#include "str_util.h"
+
+struct samplefile_entry_t {
+	int32_t id;
+	String name;
+};
+struct samplefile_index_t {
+	std::vector<samplefile_entry_t> list;
+};

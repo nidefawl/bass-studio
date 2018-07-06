@@ -4,6 +4,7 @@
 #include <sstream>
 #include <algorithm>
 #include <memory>
+#include <cereal/cereal.hpp>
 #include <cereal/archives/json.hpp>
 #include <cereal/types/vector.hpp>
 #include <cereal/types/polymorphic.hpp>
@@ -252,6 +253,16 @@ void serialize(Archive & archive, Cursor & m)
 			make_nvp("trackrange", m.selTrackRange),
 			make_nvp("subtrackrange", m.selSubTrackRange));
 };
+template<class Archive>
+void serialize(Archive & archive, samplefile_index_t & m)
+{
+	archive(make_nvp("list", m.list));
+};
+template<class Archive>
+void serialize(Archive & archive, samplefile_entry_t & m)
+{
+	archive(make_nvp("id", m.id), make_nvp("name", m.name));
+};
 
 template <class Archive>
 void load( Archive & archive, project_file & file, const std::uint32_t version)
@@ -260,6 +271,7 @@ void load( Archive & archive, project_file & file, const std::uint32_t version)
 		return;
 	archive(cereal::make_nvp("projectdata", file.project));
 	make_optional_nvp(archive, "layout", file.layout);
+	make_optional_nvp(archive, "samples", file.sampleFileIndex);
 }
 
 template <class Archive>
@@ -267,6 +279,7 @@ void save( Archive & archive, project_file const & file, const std::uint32_t ver
 {
 	archive(cereal::make_nvp("projectdata", file.project));
 	make_optional_nvp(archive, "layout", file.layout);
+	archive(cereal::make_nvp("samples", file.sampleFileIndex));
 }
 CEREAL_CLASS_VERSION( project_file, FILE_FORMAT_VERSION);
 CEREAL_CLASS_VERSION( plugin_snapshot_t, 2 );

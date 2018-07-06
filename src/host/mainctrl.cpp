@@ -609,6 +609,7 @@ shared_ptr<project_file> MainCtrl::createProjectFile() {
 	shared_ptr<project_file> file = make_shared<project_file>();
 	file->path = projectPath;
 	copyTo(file->project);
+	audiocache::getInstance()->store(file->sampleFileIndex);
 	file->layout.layoutGrid = grid;
 	file->layout.scrollOffsetX = view->ctr_tracks.getScrollOffset();
 	return file;
@@ -625,6 +626,7 @@ bool MainCtrl::setLoadedProject(shared_ptr<project_file> file) {
 	setAudioThreadState(playback_state::status_no_process);
 	ThreadLock lock = playThread.lockThread();
 	unloadProject();
+	audiocache::getInstance()->load(file->sampleFileIndex);
 	copyFrom(file->project);
 	my_printf("NUM TRACKS: %d\n", trackList.size());
 	for (track_t* tr : trackList) {

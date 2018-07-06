@@ -5,6 +5,8 @@
 #include "str_util.h"
 #include "audiosample.h"
 #include "audiowaveform.h"
+#include "samplefileidx.h"
+
 struct NVGcontext;
 struct cachedaudio_t {
 	int32_t id = 0;
@@ -30,7 +32,9 @@ public:
 	static void setInstance(std::unique_ptr<audiocache> host);
 	static void destroy();
 	void getLoaded(std::vector<cachedaudio_t*>& v);
-	cachedaudio_t* loadFile(String s);
+	cachedaudio_t* loadFile(String s, int id = -1);
 	void setSamplerate(int32_t samplerate);
 	cachedaudio_t* get(int32_t i);
+	void store(samplefile_index_t& v);
+	void load(samplefile_index_t& v);
 };

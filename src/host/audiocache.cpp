@@ -32,14 +32,16 @@ void audiocache::getLoaded(std::vector<cachedaudio_t*>& v) {
 	}
 }
 cachedaudio_t* audiocache::get(int32_t i) {
-	return this->mapId.count(i) ? this->mapId.at(i) : nullptr;
+	size_t count = this->mapId.count(i);
+	return count ? this->mapId.at(i) : nullptr;
 }
 void audiocache::setSamplerate(int32_t samplerate) {
 	this->samplerate = samplerate;
 }
-cachedaudio_t* audiocache::loadFile(String path) {
+cachedaudio_t* audiocache::loadFile(String path, int id) {
 	drwav wav;
 	if (drwav_init_file(&wav, StringAsCStr(path))) {
+		my_printf("%s\n", StringAsCStr(path));
 		std::vector<float> pSamples(wav.totalSampleCount);
 		memset(pSamples.data(), 0, sizeof(float)*pSamples.size());
 		size_t nSamples = drwav_read_f32(&wav, wav.totalSampleCount, pSamples.data());
@@ -126,31 +128,46 @@ cachedaudio_t* audiocache::loadFile(String path) {
 		}
 		my_printf("copy done: %d\n", nSamples);
 		int maxDownS = 7;
-//		for (int step = 1; step < maxDownS; step++) {
-//			std::vector<samplechannel_t> downsampledChannels(2);
-//			for (int i = 0; i < wav.channels; i++) {
-//				size_t len = sample->nSamples>>step;
-//				samplechannel_t chDownSmpld(len);
-//				downsample(sample->sampleRate,
-//						sample->samples.at(i).data(),
-//						sample->nSamples,
-//						chDownSmpld, step);
-//				downsampledChannels[i] = std::move(chDownSmpld);
-//			}
-//			sample->downsampled.push_back(std::move(downsampledChannels));
-//		}
-		my_printf("downsample done: %d\n", nSamples);
+		for (int step = 1; step < maxDownS; step++) {
+			std::vector<samplechannel_t> downsampledChannels(2);
+			for (int i = 0; i < wav.channels; i++) {
+				size_t len = sample->nSamples>>step;
+				samplechannel_t chDownSmpld(len);
+				downsample(sample->sampleRate,
+						sample->samples.at(i).data(),
+						sample->nSamples,
+						chDownSmpld, step);
+				downsampledChannels[i] = std::move(chDownSmpld);
+			}
+			sample->downsampled.push_back(std::move(downsampledChannels));
+		}
 		int nDownSmplSteps = maxDownS-1;
 //		assert(sample->downsampled.size() == nDownSmplSteps);
-		int id = this->nextIdx++;
+		int _id = id < 0 ? this->nextIdx++ : id;
 		std::unique_ptr<cachedaudio_t> cachedaudio = std::make_unique<cachedaudio_t>();
 		cachedaudio->sample = std::move(sample);
-		cachedaudio->id = id;
+		cachedaudio->id = _id;
 		cachedaudio->path = path;
+		this->mapId[_id] = cachedaudio.get();
+		my_printf("%d\n", cachedaudio->id);
 		cachedaudio_t* audio = cachedaudio.get();
 		list.push_back(std::move(cachedaudio));
-		this->mapId[id] = audio;
+		assert(mapId[_id] == audio);
 		return audio;
 	}
 	return NULL;
+}
+void audiocache::store(samplefile_index_t& v) {
+	v.list.reserve(list.size());
+	for (auto& w : list) {
+		samplefile_index_t index;
+		auto* ptr = w.get();
+		v.list.push_back({ptr->id, ptr->path});
+	}
+}
+void audiocache::load(samplefile_index_t& v) {
+	list.reserve(v.list.size());
+	for (auto& w : v.list) {
+		loadFile(w.name, w.id);
+	}
 }
