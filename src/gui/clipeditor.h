@@ -5,6 +5,7 @@
 #include "color_util.h"
 #include "clip.h"
 #include "track.h"
+#include "button.h"
 #include "guicontainer.h"
 #include "tracktimeline.h"
 #include "button.h"

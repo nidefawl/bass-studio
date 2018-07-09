@@ -249,7 +249,7 @@ void vstplugin::load(vsthost* host) {
 	this->bIsSetup = true;
 }
 vst_param_category* vstplugin::getCategory(int idx) {
-	if (idx >= 0 && idx < paramsCategories.size()) {
+	if (idx >= 0 && idx < (int)paramsCategories.size()) {
 		return &paramsCategories[idx];
 	}
 	return NULL;
@@ -258,7 +258,7 @@ int32_t vstplugin::getNumParameters() {
 	return params.size();
 }
 String vstplugin::getParamName(int32_t idx) {
-	if (idx >= 0 && idx < params.size()) {
+	if (idx >= 0 && idx < (int32_t)params.size()) {
 		return params[idx].label;
 	}
 	return "";
@@ -267,7 +267,7 @@ String vstplugin::getAutomatableName() {
 	return this->sName;
 }
 float vstplugin::getParamValue(int32_t idx) {
-	if (idx >= 0 && idx < params.size()) {
+	if (idx >= 0 && idx < (int32_t)params.size()) {
 		auto& param = params[idx];
 		param.value = handle->aeffect->getParameter(handle->aeffect, param.idx);
 		return param.value;
@@ -275,7 +275,7 @@ float vstplugin::getParamValue(int32_t idx) {
 	return 0;
 }
 void vstplugin::setParamValue(int32_t idx, float val) {
-	if (idx >= 0 && idx < params.size()) {
+	if (idx >= 0 && idx < (int32_t)params.size()) {
 		auto& param = params[idx];
 		param.value = val;
 		handle->aeffect->setParameter(handle->aeffect, idx, val);
@@ -283,7 +283,7 @@ void vstplugin::setParamValue(int32_t idx, float val) {
 	}
 }
 void vstplugin::recvPluginEditParamUpdate(int32_t idx) {
-	if (idx >= 0 && idx < params.size()) {
+	if (idx >= 0 && idx < (int32_t)params.size()) {
 		auto& param = params[idx];
 		param.value = handle->aeffect->getParameter(handle->aeffect, param.idx);
 	}
@@ -340,7 +340,7 @@ void vstplugin::deactivateAutomation(int32_t paramIdx) {
 	}
 }
 vst_param* vstplugin::getParam(int idx) {
-	if (idx >= 0 && idx < params.size()) {
+	if (idx >= 0 && idx < (int)params.size()) {
 		return &params[idx];
 	}
 	return NULL;

@@ -271,9 +271,9 @@ public:
 	void openContextMenu(guictxtmenu_base *b, ivec2 pos);
 	void openAppMenu(int lvl, guictxtmenu_base *b, ivec2 pos);
 	void closeAppMenus();
-	bool filesDropMove(ivec2 pos);
-    bool filesDropBegin(std::vector<String>& files, ivec2 pos);
-    bool filesDropFinal(std::vector<String>& files, ivec2 pos);
+	bool filesDropMove(ivec2 pos, int kbmods);
+    bool filesDropBegin(std::vector<String>& files, ivec2 pos, int kbmods);
+    bool filesDropFinal(std::vector<String>& files, ivec2 pos, int kbmods);
     void mouseMoved(ivec2 mousePos, ivec2 deltaPos) override;
 	void menuCommand(int cmd);
 	void onMenuOpen(ngui::Menu* menu);

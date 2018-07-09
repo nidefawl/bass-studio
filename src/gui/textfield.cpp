@@ -484,7 +484,7 @@ bool gui_textfield::copySelection() {
 
 		if (begin > end)
 			std::swap(begin, end);
-		if (mValueTemp.length() >= end-begin)
+		if ((int)mValueTemp.length() >= end-begin)
 		MainCtrl::get()->setClipboardText(mValueTemp.substr(begin, end).c_str());
 		onChange();
 		return true;

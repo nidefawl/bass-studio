@@ -2,10 +2,10 @@
 #include "../threads/workerthread.h"
 #ifdef __MINGW32__
 #undef _GLIBCXX_HAS_GTHREADS
-#include "../threads/mingw.thread.h"
+#include "../platform/mingw/mingw.thread.h"
 #include <mutex>
-#include "../threads/mingw.mutex.h"
-#include "../threads/mingw.condition_variable.h"
+#include "../platform/mingw/mingw.mutex.h"
+#include "../platform/mingw/mingw.condition_variable.h"
 #else
 #include <mutex>
 #endif

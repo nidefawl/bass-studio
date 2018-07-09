@@ -433,12 +433,9 @@ tick_t clip_audio_t::lenInTicks() {
 }
 tick_t clip_audio_t::lenSamples() {
 	cachedaudio_t* audio = audiocache::getInstance()->get(this->id);
-	vsthost* host = vsthost::getInstance();
-	project_globals_t* globals = MainCtrl::get();
-	auto* sample = audio->sample.get();
+	auto* sample = audio ? audio->sample.get() : nullptr;
 	if (sample)
 		return sample->nSamples;
-
 	return 0;
 }
 

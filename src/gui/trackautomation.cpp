@@ -12,6 +12,7 @@
 #include "trackctr.h"
 #include "mainctrl.h"
 #include "automation.h"
+#include <glm/glm.hpp>
 #include <glm/geometric.hpp>
 #include <glm/vec2.hpp>
 #include "track.h"

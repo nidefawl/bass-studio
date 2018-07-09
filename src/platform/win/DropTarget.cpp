@@ -4,6 +4,7 @@
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
+#include "keyboard.h"
 
 using glm::vec2;
 using glm::ivec2;
@@ -83,6 +84,16 @@ ivec2 toScreenSpace(HWND hwnd, POINTL pt) {
     ClientToScreen(hwnd, &pos);
 	return ivec2(pt.x - pos.x, pt.y - pos.y);
 }
+int toInternalKeyboardMods(DWORD grfKeyState) {
+	int mods = 0;
+	if (grfKeyState&MK_CONTROL)
+		mods |= KB_MOD_SYSTEM;
+	if (grfKeyState&MK_SHIFT)
+		mods |= KB_MOD_SHIFT;
+	if (grfKeyState&MK_ALT)
+		mods |= KB_MOD_ALT;
+	return mods;
+}
 
 HRESULT __stdcall DropTargetImpl::DragEnter(IDataObject * pDataObject, DWORD grfKeyState, POINTL pt, DWORD * pdwEffect) {
 	// does the dataobject contain data we want?
@@ -93,7 +104,7 @@ HRESULT __stdcall DropTargetImpl::DragEnter(IDataObject * pDataObject, DWORD grf
 		if (((*pdwEffect) & DROPEFFECT_COPY) != 0) {
 			std::vector<String> filePaths;
 			getFilePaths(pDataObject, filePaths);
-			bool result = this->m_pDropTargetListener->filesDropBegin(filePaths, toScreenSpace(m_hwnd, pt));
+			bool result = this->m_pDropTargetListener->filesDropBegin(filePaths, toScreenSpace(m_hwnd, pt), toInternalKeyboardMods(grfKeyState));
 			if (!result) {
 				*pdwEffect = DROPEFFECT_NONE;
 			}
@@ -104,14 +115,13 @@ HRESULT __stdcall DropTargetImpl::DragEnter(IDataObject * pDataObject, DWORD grf
 	EXC_CATCH
 	return S_OK;
 }
-
 HRESULT __stdcall DropTargetImpl::DragOver(DWORD grfKeyState, POINTL pt,
 		DWORD * pdwEffect) {
 	EXC_TRY
 	if (m_validDropType) {
 		*pdwEffect = (*pdwEffect) & DROPEFFECT_COPY;
 		if (((*pdwEffect) & DROPEFFECT_COPY) != 0) {
-			bool result = this->m_pDropTargetListener->filesDropMove(toScreenSpace(m_hwnd, pt));
+			bool result = this->m_pDropTargetListener->filesDropMove(toScreenSpace(m_hwnd, pt), toInternalKeyboardMods(grfKeyState));
 			if (!result) {
 				*pdwEffect = DROPEFFECT_NONE;
 			}
@@ -138,7 +148,7 @@ HRESULT __stdcall DropTargetImpl::Drop(IDataObject * pDataObject, DWORD grfKeySt
 			std::vector<String> filePaths;
 			getFilePaths(pDataObject, filePaths);
 
-			bool result = this->m_pDropTargetListener->filesDropFinal(filePaths, toScreenSpace(m_hwnd, pt));
+			bool result = this->m_pDropTargetListener->filesDropFinal(filePaths, toScreenSpace(m_hwnd, pt), toInternalKeyboardMods(grfKeyState));
 			if (!result) {
 				*pdwEffect = DROPEFFECT_NONE;
 			}

@@ -158,13 +158,13 @@ public:
 	virtual void trackViewDragRelease(guitrack_editor* view, MouseEvent& evt) {
 
 	}
-	virtual bool clipDropBegin(dragdrop_midifile& clip, ivec2 mousepos) {
+	virtual bool clipDropBegin(dragdrop_midifile& clip, ivec2 mousepos, int kbmods) {
 		return false;
 	}
-	virtual bool clipDropMove(dragdrop_midifile& clip, ivec2 mousepos) {
+	virtual bool clipDropMove(dragdrop_midifile& clip, ivec2 mousepos, int kbmods) {
 		return false;
 	}
-	virtual bool clipDropFinal(dragdrop_midifile& clip, ivec2 mousepos) {
+	virtual bool clipDropFinal(dragdrop_midifile& clip, ivec2 mousepos, int kbmods) {
 		return false;
 	}
 	virtual void pluginDragMove(guiplugin* g, ivec2 mousepos) {

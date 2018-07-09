@@ -18,7 +18,7 @@ static NVGcolor dbgcolors[5] = {
 int colorVal = 57;
 void initColor() {
 	UNUSED(dbgcolors);
-	for (int i = 0; i < ARR_SIZE(colorPalette); i++) {
+	for (int i = 0; i < (int)ARR_SIZE(colorPalette); i++) {
 		g_colorPalette[i] = rgbToNvg(colorPalette[i]);
 	}
 

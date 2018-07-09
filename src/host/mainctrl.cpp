@@ -859,7 +859,7 @@ void MainCtrl::objectDragRelease(guibase* g, MouseEvent& mevt) {
 //		}
 	}
 }
-bool MainCtrl::filesDropBegin(vector<string>& files, ivec2 mousepos) {
+bool MainCtrl::filesDropBegin(vector<string>& files, ivec2 mousepos, int kbmods) {
 	my_printf("filesDropBegin %d %d isdragging=%d\n", mousepos.x, mousepos.y, dragdropclip.isLoaded);
 	dragdropclip.reset();
 	if (guiDragged || guiCaptured) {
@@ -920,7 +920,7 @@ bool MainCtrl::filesDropBegin(vector<string>& files, ivec2 mousepos) {
 			guibase* gui = evt.getGuiHit();
 			if (gui) {
 				ivec2 mposObj = toControlsObjectSpace(mousepos, gui);
-				bool result = gui->clipDropBegin(dragdropclip, mposObj);
+				bool result = gui->clipDropBegin(dragdropclip, mposObj, kbmods);
 				if (!result) {
 
 				}
@@ -935,7 +935,7 @@ bool MainCtrl::filesDropBegin(vector<string>& files, ivec2 mousepos) {
 	}
 	return false;
 }
-bool MainCtrl::filesDropMove(ivec2 mousepos) {
+bool MainCtrl::filesDropMove(ivec2 mousepos, int kbmods) {
 	if (guiDragged || guiCaptured) {
 		dragdropclip.reset();
 		return false;
@@ -952,7 +952,7 @@ bool MainCtrl::filesDropMove(ivec2 mousepos) {
 		guibase* gui = evt.getGuiHit();
 		if (gui) {
 			ivec2 mposObj = toControlsObjectSpace(mousepos, gui);
-			bool result = gui->clipDropMove(dragdropclip, mposObj);
+			bool result = gui->clipDropMove(dragdropclip, mposObj, kbmods);
 			if (!result) {
 
 			}
@@ -971,7 +971,7 @@ public:
 		clip.reset();
 	}
 };
-bool MainCtrl::filesDropFinal(vector<string>& files, ivec2 mousepos) {
+bool MainCtrl::filesDropFinal(vector<string>& files, ivec2 mousepos, int kbmods) {
 	clipreset rst(dragdropclip);
 	if (guiDragged || guiCaptured) {
 		my_printf("filesDropFinal guiDragged || guiCaptured\n",0);
@@ -988,7 +988,7 @@ bool MainCtrl::filesDropFinal(vector<string>& files, ivec2 mousepos) {
 		guibase* gui = evt.getGuiHit();
 		if (gui) {
 			ivec2 mposObj = toControlsObjectSpace(mousepos, gui);
-			bool result = gui->clipDropFinal(dragdropclip, mposObj);
+			bool result = gui->clipDropFinal(dragdropclip, mposObj, kbmods);
 			return result;
 		} else {
 			my_printf("!guiOver\n",0);

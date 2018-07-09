@@ -91,11 +91,11 @@ public:
 	void dragSelectionBegin(gui_clip* gClip, MouseEvent& evt);
 	void dragSelectionMove(gui_clip* gui, MouseEvent& evt);
 	void dragSelectionRelease(gui_clip* gui, MouseEvent& evt);
-	void dragClipboardMove(ivec2 local);
+	void dragClipboardMove(ivec2 local, int kbmods);
 
-	bool clipDropBegin(dragdrop_midifile& clip, ivec2 mousepos);
-	bool clipDropMove(dragdrop_midifile& clip, ivec2 mousepos);
-	bool clipDropFinal(dragdrop_midifile& clip, ivec2 mousepos);
+	bool clipDropBegin(dragdrop_midifile& clip, ivec2 mousepos, int kbmods);
+	bool clipDropMove(dragdrop_midifile& clip, ivec2 mousepos, int kbmods);
+	bool clipDropFinal(dragdrop_midifile& clip, ivec2 mousepos, int kbmods);
 
 
 	void handleRightClick(MouseEvent& evt);

@@ -504,10 +504,10 @@ void guitrack_editor::dragSelectionMove(gui_clip* gui, MouseEvent& evt) {
 			return;
 		}
 	}
-	dragClipboardMove(evt.relMousepos);
+	dragClipboardMove(evt.relMousepos, evt.kbmods);
 }
 
-void guitrack_editor::dragClipboardMove(ivec2 local) {
+void guitrack_editor::dragClipboardMove(ivec2 local, int kbmods) {
 	if (action.dragtype) {
 		track_t *trNxtSelected = getTrackFromMouse(project, local, true);
 
@@ -517,9 +517,10 @@ void guitrack_editor::dragClipboardMove(ivec2 local) {
 		tick_t dragMouseTicks = dragMousePos - dragStartTick;
 
 		tick_t timeOffset = cursorBegin.getTickBegin();
-		if (grid.grid_dens.getSnap() != SNAP_OFF) {
-			if (dragMouseTicks) {
-				tick_t tickendExact = cursorBegin.getTickBegin()+dragMouseTicks;
+		if (dragMouseTicks) {
+			tick_t tickendExact = cursorBegin.getTickBegin()+dragMouseTicks;
+			timeOffset = tickendExact;
+			if (grid.grid_dens.getSnap() != SNAP_OFF && !isAlt(kbmods)) {
 				std::vector<tick_t> snapPoints;
 				snapPoints.reserve(5*2+1);
 				tick_t len = grid.getTickLength();
@@ -605,7 +606,7 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
 	}
 }
 
-bool guitrack_editor::clipDropBegin(dragdrop_midifile& clip, ivec2 mousepos) {
+bool guitrack_editor::clipDropBegin(dragdrop_midifile& clip, ivec2 mousepos, int kbmods) {
 	tick_t tick = grid.screenToTickSnap(mousepos.x, SNAP_ON);
 	tick_t tickExact = grid.screenToTickSnap(mousepos.x, SNAP_OFF);
 	track_t *trackClicked = getTrackFromMouse(project, mousepos, false);
@@ -631,19 +632,19 @@ bool guitrack_editor::clipDropBegin(dragdrop_midifile& clip, ivec2 mousepos) {
 	}
 	return false;
 }
-bool guitrack_editor::clipDropMove(dragdrop_midifile& clip, ivec2 mousepos) {
+bool guitrack_editor::clipDropMove(dragdrop_midifile& clip, ivec2 mousepos, int kbmods) {
 	if (!action.dragtype) {
-		if (!clipDropBegin(clip, mousepos))
+		if (!clipDropBegin(clip, mousepos, kbmods))
 			return false;
 	}
 	if (action.dragtype == clip_dragtype_t::DROP_FILE_EXTERNAL) {
-		dragClipboardMove(mousepos);
+		dragClipboardMove(mousepos, kbmods);
 		clip.isValidTarget = true;//inform higher level that we accept and process this drop attempt
 		return true;
 	}
 	return false;
 }
-bool guitrack_editor::clipDropFinal(dragdrop_midifile& clip, ivec2 mousepos) {
+bool guitrack_editor::clipDropFinal(dragdrop_midifile& clip, ivec2 mousepos, int kbmods) {
 	if (action.dragtype == clip_dragtype_t::DROP_FILE_EXTERNAL) {
 //			dragClipboardMove(mousepos); //TODO: maybe call move again to set final pos?
 

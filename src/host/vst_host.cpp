@@ -439,7 +439,7 @@ void delayAudio(DelayLine* delayLine, AudioBlock* output, samplerate_t delay) {
 	AudioBlock& delayBlock = delayLine->block;
 	delayBlock.realloc(delayLineSize);
 	delayBlock.copyFromPosToPos(output->buf, 0, writePos, output->samples, output->channels);
-	if (readPos + output->samples > delayLineSize) {
+	if (readPos + (int32_t)output->samples > delayLineSize) {
 		int32_t read1Len = delayLineSize - readPos;
 		int32_t read2Len = output->samples - read1Len;
 		output->copyFromPosToPos(delayBlock.buf, readPos, 0, read1Len, delayBlock.channels);

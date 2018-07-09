@@ -446,13 +446,13 @@ public:
 	void maximize() {
 		glfwMaximizeWindow(glfw);
 	}
-    virtual bool filesDropBegin(std::vector<String>& files, ivec2 pos) {
+    virtual bool filesDropBegin(std::vector<String>& files, ivec2 pos, int kbmods) {
     	return true;
     }
-    virtual bool filesDropMove(ivec2 pos) {
+    virtual bool filesDropMove(ivec2 pos, int kbmods) {
     	return true;
     }
-    virtual bool filesDropFinal(std::vector<String>& files, ivec2 pos) {
+    virtual bool filesDropFinal(std::vector<String>& files, ivec2 pos, int kbmods) {
     	return true;
     }
     virtual void menuCommand(int cmd) {
@@ -627,17 +627,17 @@ public:
 		appwindow::onWindowClose();
 		ctrl->onWindowCloseRequest();
 	}
-	bool filesDropBegin(std::vector<String>& files, ivec2 pos) {
+	bool filesDropBegin(std::vector<String>& files, ivec2 pos, int kbmods) {
 		flagNeedsRedraw();
-		return ctrl->filesDropBegin(files, pos);
+		return ctrl->filesDropBegin(files, pos, kbmods);
     }
-	bool filesDropMove(ivec2 pos) {
+	bool filesDropMove(ivec2 pos, int kbmods) {
 		flagNeedsRedraw();
-		return ctrl->filesDropMove(pos);
+		return ctrl->filesDropMove(pos, kbmods);
     }
-	bool filesDropFinal(std::vector<String>& files, ivec2 pos) {
+	bool filesDropFinal(std::vector<String>& files, ivec2 pos, int kbmods) {
 		flagNeedsRedraw();
-		return ctrl->filesDropFinal(files, pos);
+		return ctrl->filesDropFinal(files, pos, kbmods);
     }
     void requestClose() override {
 		glfwSetWindowShouldClose(glfw, 1);
@@ -1304,71 +1304,6 @@ GLFWwindow* getTopLevelGlfwWindow() {
 	return getGlfwFromWindowBase(wbase);
 }
 
-int mainTest(void (*drawFn)(NVGcontext*,int,int,float)) {
-	std::set_terminate(on_terminate);
-	setExceptionHandler();
-	srand(time(NULL));
-	/*std::vector<uint8_t> vec(1024*64*4);
-	for (int i = 0; i < vec.size(); i++) {
-		vec[i] = (uint8_t) (rand()%256);
-	}
-	WriteFileVector("test.out", vec);
-	std::vector<uint8_t> vec2;
-	ReadFileVector("test.out", vec2);
-	assert(vec2.size() == vec.size());
-	for (int i = 0; i < vec.size(); i++) {
-		assert(vec[i] == vec2[i]);
-	}
-	std::vector<FileFound> files;
-	findFilesWithExt("..", "txt", true, files);
-	for (FileFound& f : files) {
-		my_printf("%s %s %s\n", StringAsCStr(f.path), StringAsCStr(f.name), StringAsCStr(f.ext));
-	}*/
-	EXC_TRY
-	allocConsole();
-	setMinimumResolutionTimer();
-	glfwSetErrorCallback(glfw_startup_error_callback);
-	if (!glfwInit()) {
-		showerror("Initialization failed. Couldn't initialize glfw");
-		exit(EXIT_FAILURE);
-	}
-	appwindow_dialog* w = new appwindow_dialog(NULL);
-	w->drawFn=drawFn;
-	int winW = 1280;
-	int winH = 720;
-	w->create("test window", winW, winH);
-	w->centerOnScreen(1);
-	w->showWindow();
-	glfwSetErrorCallback(glfw_runtime_error_callback);
-	GLFWwindow* glfwHandle = w->getGLFW();
-//	int once = 0;
-//	int hasDlg = 0;
-	while (!glfwWindowShouldClose(glfwHandle)) {
-		glfwWaitEventsTimeout(0.001);
-		if (w->needsRefresh()) {
-			w->flagNeedsRedraw();
-		}
-
-//		if (once++ == 0) {
-//			 SupportedFileType FILE_TYPE_PROJECT {"Project File", "txt"};
-//			 std::vector<SupportedFileType> vecft{{FILE_TYPE_PROJECT}};
-//			String path;
-//			if (promptUserFilePath(w, 0, vecft, path)) {
-//
-//			}
-//		}
-	}
-	my_printf("glfwPollEvents\n", 0);
-	glfwPollEvents();
-	my_printf("DELETE w\n", 0);
-	DELETE_PTR(w);
-	my_printf("glfwTerminate\n", 0);
-	glfwTerminate();
-	EXC_CATCH
-	my_printf("EXIT_SUCCESS\n", 0);
-	exit(EXIT_SUCCESS);
-	return 0;
-}
 #ifdef _WIN32
 HWND getMainHWND() {
 	return mainWindow ? mainWindow->getHWND() : NULL;
@@ -1558,22 +1493,14 @@ int mainHost(int argc, char* argv[]) {
 			step++;
 		}
 	}
-	my_printf("END 1\n", 0);
 	vsthost::getInstance()->stopAudio();
-	my_printf("END 2\n", 0);
 	mainWindow->destroy();
-	my_printf("END 3\n", 0);
 	ctrl->unloadProject();
-	my_printf("END 3.2\n", 0);
 	vsthost::getInstance()->unload();
-	my_printf("END 4\n", 0);
 	ctrl->destroy();
-	my_printf("END 5\n", 0);
 //	PopupCtrl::get()->destroy();
 	mainWindow->destroyOverlayWindows();
-	my_printf("END 6\n", 0);
 	vsthost::getInstance()->destroy();
-	my_printf("END 7\n", 0);
 	audiocache::destroy();
 	waveformrender::destroy();
 

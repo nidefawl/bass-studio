@@ -30,7 +30,7 @@ void trackallcontainer_t::addTrack(int trackInsertPos, track_t* newTrack) {
 	newTrack->audio = host->createAudio(newTrack);
 	tracksubcontainer_t* subCtr = trackTypeCtrs[newTrack->type];
 	track_vector& vec = subCtr->tracks;
-	if (trackInsertPos < 0 || trackInsertPos >= vec.size()) {
+	if (trackInsertPos < 0 || trackInsertPos >= (int)vec.size()) {
 		vec.push_back(newTrack);
 	} else {
 		vec.insert(vec.begin() + trackInsertPos, newTrack);
