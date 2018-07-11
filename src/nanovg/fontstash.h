@@ -894,7 +894,7 @@ int fonsAddFont(FONScontext* stash, const char* name, const char* path)
 	readed = fread(data, 1, dataSize, fp);
 	fclose(fp);
 	fp = 0;
-	if (readed != dataSize) goto error;
+	if ((int)readed != dataSize) goto error;
 
 	return fonsAddFontMem(stash, name, data, dataSize, 1);
 

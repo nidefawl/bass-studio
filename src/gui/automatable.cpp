@@ -1,7 +1,8 @@
 #include "automatable.h"
-#include "mainctrl.h"
+#include "../host/mainctrl.h"
 #include "automation.h"
 #include "trackctr.h"
+#include "trackcontent.h"
 #include "guicontextmenu.h"
 #include "leak_detect.h"
 

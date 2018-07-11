@@ -1,5 +1,8 @@
 
-int mainHost(int argc, char* argv[]);
+int startApplication(int argc, char* argv[]);
+void runApplication() {
+
+}
 int main(int argc, char* argv[]) {
-	return mainHost(argc, argv);
+	return startApplication(argc, argv);
 }

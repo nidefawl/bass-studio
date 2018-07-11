@@ -85,7 +85,7 @@ size_t GetFileSizeSafe(const String& filename)
 	BOOL result = GetFileSizeEx(fobj.GetHandle(), &filesize);
 	ThrowLastErrorIf(result == FALSE, "GetFileSizeEx failed: " + filename);
 
-	if (filesize.QuadPart < (numeric_limits<size_t>::max)()) {
+	if (filesize.QuadPart < (numeric_limits<int64_t>::max)()) {
 		return filesize.QuadPart;
 	}
 	else {

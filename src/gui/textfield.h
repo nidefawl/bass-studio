@@ -23,6 +23,8 @@ public:
 
     const std::string &value() const { return mValue; }
     void setValue(const std::string &value) { mValue = value; }
+    void setSelectionRange(int start, int end) { this->mSelectionPos = std::max(start, 0); this->mCursorPos = end < 0 ? (int)this->mValue.length() : std::min(end, (int)this->mValue.length()); }
+    void clearSelection() { this->mSelectionPos = -1; }
 
     const std::string &defaultValue() const { return mDefaultValue; }
     void setDefaultValue(const std::string &defaultValue) { mDefaultValue = defaultValue; }
@@ -123,15 +125,18 @@ protected:
 public:
 
 	virtual bool hovered() {
-		return this == MainCtrl::get()->guiOver;
+		return this == AppCtrl::get()->guiOver;
 	}
 	virtual bool pressed() {
-		return this == MainCtrl::get()->guiDragged;
+		return this == AppCtrl::get()->guiDragged;
 	}
 	virtual bool focused() {
-		return this == MainCtrl::get()->guiFocused;
+		return this == AppCtrl::get()->guiFocused;
 	}
 	float fontSize() const {
 		return mFontSize;
+	}
+	void setFontSize(float f) {
+		mFontSize = f;
 	}
 };

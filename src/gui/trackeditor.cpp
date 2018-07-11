@@ -10,7 +10,7 @@
 #include "clip.h"
 #include "cursor.h"
 #include "keyboard.h"
-#include "mainctrl.h"
+#include "../host/mainctrl.h"
 #include "grid.h"
 #include "guicontainer.h"
 #include "trackctr.h"

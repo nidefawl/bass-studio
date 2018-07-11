@@ -41,7 +41,7 @@ void tesselateWaveform(audiosample_t* sample, float x, float y, audioclip_textur
 		waveformScaled.sampleBeginOffset /= downsampleScale;
 		waveformScaled.sampleBegin /= downsampleScale;
 		waveformScaled.sampleEnd /= downsampleScale;
-		assert (nLevel == 0 || nLevel-1 < sample->downsampled.size());
+		assert (nLevel == 0 || nLevel-1 < (int)sample->downsampled.size());
 		std::vector<samplechannel_t>& smpCh =sample->samples;// nLevel == 0 ? sample->samples : sample->downsampled[nLevel-1];
 		int upscale = 1;
 		double dres = samplesPerPx;
@@ -323,7 +323,7 @@ void tesselateWaveform(audiosample_t* sample, float x, float y, audioclip_textur
 			}
 			nvecs += vecs.size();
 			if (vecs.size()) {
-				for (int i = 1; i < vecs.size(); i++) {
+				for (int i = 1; i < (int)vecs.size(); i++) {
 					assert(vecs[i].x > vecs[i-1].x);
 				}
 //				auto it = vecs.begin();

@@ -1,6 +1,6 @@
 #pragma once
 #include <nanovg.h>
-#include "mainctrl.h"
+#include "../host/mainctrl.h"
 #include "gui.h"
 #include "str_util.h"
 #include "guicolors.h"

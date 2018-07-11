@@ -3,7 +3,7 @@
 #include <glm/glm.hpp>
 #include <glm/vec2.hpp>
 #include <glm/vec4.hpp>
-#include "mainctrl.h"
+#include "basectrl.h"
 #include "gui.h"
 #include "guicolors.h"
 #include "exceptions.h"
@@ -185,7 +185,7 @@ public:
 		}
 	}
 	virtual void renderBackground(NVGcontext* vg) {
-		bool focused = MainCtrl::get()->isCtrOrChildFocused(this);
+		bool focused = AppCtrl::get()->isCtrOrChildFocused(this);
 		drawBackground(vg, getPosContent(), getSizeContent(), margin, focused, true);
 	}
 	static void drawInsetBackground(NVGcontext* vg, ivec2 posInset, ivec2 sizeInset) {
@@ -201,7 +201,7 @@ public:
 			gui->prerender(vg);
 		}
 	}
-	virtual void onTick(MainCtrl* ctrl) {
+	virtual void onTick(AppCtrl* ctrl) {
 	}
 	virtual guibase* getFocusedContainer() {
 		if (this->parent != NULL){
@@ -259,10 +259,10 @@ public:
 	virtual void handleDraggedBegin(MouseEvent& evt) {
 	}
 	virtual void handleDraggedMove(MouseEvent& evt) {
-		ivec2 windowSize = MainCtrl::get()->m_size;
+		ivec2 windowSize = AppCtrl::get()->m_size;
 		float sc = type == 0  ? (evt.mousepos.y/(float)windowSize.y) : (evt.mousepos.x/(float)windowSize.x);
 		this->scale = (sc < min ? min : sc > max ? max : sc);
-		MainCtrl::get()->relayout(windowSize.x, windowSize.y);
+		AppCtrl::get()->relayout(windowSize.x, windowSize.y);
 	}
 	virtual void handleDraggedRelease(MouseEvent& evt) {
 	}

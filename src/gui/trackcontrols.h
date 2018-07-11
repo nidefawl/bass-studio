@@ -3,6 +3,7 @@
 #include "guicontainer.h"
 #include "track.h"
 #include "leak_detect.h"
+#include "../host/mainctrl.h"
 
 class gui_trackcontrols_automation;
 class gui_trackcontrols_title;

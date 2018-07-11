@@ -58,11 +58,11 @@ namespace RenderResources {
 			ImageBuf imgCursors[NUM_CURSORS];
 			for (int i = 0; i < NUM_IMGS; i++) {
 				ImageBuf& buf = imgIconsBuf[i];
-				assert(buf.bytes.size() == buf.w*buf.h * 4);
+				assert((int)buf.bytes.size() == buf.w*buf.h * 4);
 			}
 			for (int i = 0; i < NUM_CURSORS; i++) {
 				ImageBuf& buf = imgCursors[i];
-				assert(buf.bytes.size() == buf.w*buf.h * 4);
+				assert((int)buf.bytes.size() == buf.w*buf.h * 4);
 			}
 			load(vg, StringFormat("res/icons/synth_32px.png"), imgIconsBuf[ICON_SYNTH]);
 			load(vg, StringFormat("res/icons/effect.png"), imgIconsBuf[ICON_EFFECT]);
@@ -93,7 +93,7 @@ namespace RenderResources {
 				if (buf.w*buf.h == 0) {
 					continue;
 				}
-				assert(buf.bytes.size() == buf.w*buf.h * 4);
+				assert((int)buf.bytes.size() == buf.w*buf.h * 4);
 				NvgImageTexture& nvgTex = imgIcons[i];
 				nvgTex.id = nvgCreateImageRGBA(vg, buf.w, buf.h, NVG_IMAGE_GENERATE_MIPMAPS, (const unsigned char*)buf.bytes.data());
 				nvgImageSize(vg, nvgTex.id, &nvgTex.width, &nvgTex.height);

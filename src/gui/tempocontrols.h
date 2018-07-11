@@ -140,57 +140,6 @@ public:
 		nvgText(vg, size.x / 2.0f, G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(sigSep), NULL);
 	}
 };
-class gui_numberinput_field : public guibuttonbase {
-	int32_t* number;
-	bool drawBackground = true;
-public:
-	gui_numberinput_field(int32_t* _number)
-		: guibuttonbase(),
-		number(_number)
-	{
-		setColor(nvgToRGB(g_guiColors[COL_BG_DRK]));
-	}
-	void setDrawBackground(bool state) {
-		drawBackground = state;
-	}
-	void setRef(int32_t* number) {
-		this->number = number;
-	}
-
-	void render(NVGcontext* vg) {
-		int32_t flags = getStateFlags();
-		if (drawBackground || flags > FLG_ENBL) {
-			renderWidgetBorder(vg, flags);
-		}
-		setFont(vg, G_FONT_SCALE(size.y), G_WHITE, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
-		int32_t _number = number ? *number : 0;
-		String str = StringFormat("%d", _number);
-		nvgText(vg, pos.x + size.x-3, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(str), NULL);
-	}
-	void handleDraggedBegin(MouseEvent& evt) {
-		if (evt.guiDragged == this) {
-			MainCtrl::get()->captureMouse(this);
-		}
-	}
-	void handleDraggedMove(MouseEvent& evt) {
-		if (number && evt.guiDragged == this && evt.type == M_EVT_CAPTURED_MOVE) {
-			int disty = (int)evt.dragDistance->y / 2;
-			if (abs(disty) < 1)
-				return;
-			evt.dragDistance->y = 0;
-			int absy = abs(disty);
-			if (absy >= 4) absy = 64;
-			else if (absy >= 2) absy = 4;
-			*number -= (disty<0?-1:1) * absy;
-			if (parent)
-				parent->buttonClicked(this);
-
-		}
-	}
-	void handleDraggedRelease(MouseEvent& evt) {
-	}
-
-};
 class gui_timeinput_field : public guibuttonbase {
 	const int idx;
 	int32_t* time;

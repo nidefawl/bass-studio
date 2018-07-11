@@ -14,6 +14,7 @@
 #include "pluginctr.h"
 #include "pluginlist.h"
 
+#include "../host/mainctrl.h"
 #include "../host/vst_plugin.h"
 #include "../host/vst_plugin_handles.h"
 #include "../host/vst_host.h"

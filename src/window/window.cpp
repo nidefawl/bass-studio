@@ -22,6 +22,7 @@
 #include <sstream>
 #include <algorithm>
 #include <map>
+#include <glm/glm.hpp>
 #include <glm/vec4.hpp>
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
@@ -52,7 +53,8 @@ using std::ofstream;
 #include "window.h"
 #include "msgbox.h"
 #include "menu.h"
-#include "mainctrl.h"
+// make base header (BaseCtrl)
+#include "basectrl.h"
 #include "droptargetlistener.h"
 
 #include "platform.h"
@@ -62,10 +64,6 @@ using std::ofstream;
 #include "renderresources.h"
 #include "fileio.h"
 
-#include "../host/vst_host.h"
-#include "../host/vst_window.h"
-#include "audiocache.h"
-#include "../gui/drawwaveform.h"
 
 void enableGlDebugCallback();
 
@@ -537,11 +535,11 @@ public:
 	}
 };
 class appwindow_main : public appwindow, public window_main  {
-	MainCtrl* const ctrl;
+	AppCtrl* const ctrl;
 	uint64_t dblclicktimer;
 public:
 	std::vector<std::unique_ptr<appwindow_overlay>> overlayWindows;
-	appwindow_main(MainCtrl* _ctrl)
+	appwindow_main(AppCtrl* _ctrl)
 		: appwindow(),
 		  window_main(),
 		  ctrl(_ctrl) {
@@ -1287,12 +1285,12 @@ static void glfw_cb_framebuffersize(GLFWwindow *w, int width, int height) {
 
 void printLeaked();
 
-static std::unique_ptr<MainCtrl> ctrl;
+//static std::shared_ptr<AppCtrl> ctrl;
 static std::unique_ptr<appwindow_main> mainWindow;
 
-MainCtrl* MainCtrl::get() {
-	return ctrl.get();
-}
+//AppCtrl* AppCtrl::get() {
+//	return ctrl.get();
+//}
 
 
 GLFWwindow* getGlfwFromWindowBase(window_base* w) {
@@ -1300,7 +1298,7 @@ GLFWwindow* getGlfwFromWindowBase(window_base* w) {
 }
 
 GLFWwindow* getTopLevelGlfwWindow() {
-	auto wbase = MainCtrl::get()->window;
+	auto wbase = AppCtrl::get()->window;
 	return getGlfwFromWindowBase(wbase);
 }
 
@@ -1356,7 +1354,10 @@ int getHWNDCnt(int i) {
 }
 
 void drawDebugWindow(NVGcontext* ctx, int winW, int winH, float pxratio);
-int mainHost(int argc, char* argv[]) {
+bool isVstWindow(HWND hwnd);
+std::shared_ptr<AppCtrl> makeApp();
+void deleteApp();
+int startApplication(int argc, char* argv[]) {
 	bool test = argc > 1 && String(argv[1]) == "--test";
 #ifdef _WIN32
 	OleInitialize(0);
@@ -1374,18 +1375,12 @@ int mainHost(int argc, char* argv[]) {
 		exit(EXIT_FAILURE);
 	}
 	setAppWindowHints();
-
-	ctrl = std::make_unique<MainCtrl>();
-	vsthost::setInstance(std::make_unique<vsthost>(44100, 256));
-	audiocache::setInstance(std::make_unique<audiocache>(vsthost::getInstance()->lSampleRate));
-	audiocache::getInstance()->loadFile("PHFT_Drum Loop_130_099.wav");
-	audiocache::getInstance()->loadFile("C:\\Users\\Michael\\Desktop\\left right.wav");
-	waveformrender::setInstance(std::make_unique<waveformrender>());
+	std::shared_ptr<AppCtrl> ctrl = makeApp();
+	ctrl->initApp();
 	mainWindow = std::make_unique<appwindow_main>(ctrl.get());
 	mainWindow->create("main window", 1280, 720);
 	mainWindow->showWindow();
 	enableGlDebugCallback();
-	waveformrender::getInstance()->init();
 	if (1) {
 		appwindow_dialog* w = new appwindow_dialog(NULL);
 		w->drawFn=drawDebugWindow;
@@ -1400,7 +1395,6 @@ int mainHost(int argc, char* argv[]) {
 	}
 	glfwSetErrorCallback(glfw_runtime_error_callback);
 	ctrl->postInit();
-	vsthost::getInstance()->postInit();
 	GLFWwindow* glfwHandle = mainWindow->getGLFW();
 	long start = getTimeMillis();
 	int step = 0;
@@ -1427,9 +1421,7 @@ int mainHost(int argc, char* argv[]) {
 					case WM_SYSKEYDOWN:
 					case WM_KEYUP:
 					case WM_SYSKEYUP: {
-						String sChain = clsName_v;
-						vst_window* window = vst_window::getVSTWindow(msg.hwnd);
-						if (window) {
+						if (isVstWindow(msg.hwnd)) {
 							msg.hwnd = mainWindow->getHWND();
 						}
 					}
@@ -1458,58 +1450,52 @@ int mainHost(int argc, char* argv[]) {
 		glfwWaitEventsTimeout(0.001);
 		mainWindow->onRefresh();
 #endif
-		ctrl->numCallsWaitEvents++;
-		if (test && getTimeMillis()-start > 4) {
-			switch (step) {
-			case 0:
-				ctrl->loadFile("muuure.project");
-				break;
-			case 1:
-				ctrl->startPlaying();
-				break;
-			case 2:
-				ctrl->stopPlaying();
-				break;
-			case 3:
-				ctrl->loadFile("more.project");
-				break;
-			case 4:
-				ctrl->startPlaying();
-				break;
-			case 5:
-				ctrl->loadFile("jad.project");
-				break;
-			case 6:
-				ctrl->startPlaying();
-				break;
-			case 7:
-				ctrl->stopPlaying();
-				break;
-			case 8:
-				glfwSetWindowShouldClose(glfwHandle, 1);
-				break;
-			}
-			start = getTimeMillis();
-			step++;
-		}
+//		ctrl->numCallsWaitEvents++;
+//		if (test && getTimeMillis()-start > 4) {
+//			switch (step) {
+//			case 0:
+//				ctrl->loadFile("muuure.project");
+//				break;
+//			case 1:
+//				ctrl->startPlaying();
+//				break;
+//			case 2:
+//				ctrl->stopPlaying();
+//				break;
+//			case 3:
+//				ctrl->loadFile("more.project");
+//				break;
+//			case 4:
+//				ctrl->startPlaying();
+//				break;
+//			case 5:
+//				ctrl->loadFile("jad.project");
+//				break;
+//			case 6:
+//				ctrl->startPlaying();
+//				break;
+//			case 7:
+//				ctrl->stopPlaying();
+//				break;
+//			case 8:
+//				glfwSetWindowShouldClose(glfwHandle, 1);
+//				break;
+//			}
+//			start = getTimeMillis();
+//			step++;
+//		}
 	}
-	vsthost::getInstance()->stopAudio();
-	mainWindow->destroy();
-	ctrl->unloadProject();
-	vsthost::getInstance()->unload();
 	ctrl->destroy();
+	mainWindow->destroy();
 //	PopupCtrl::get()->destroy();
 	mainWindow->destroyOverlayWindows();
-	vsthost::getInstance()->destroy();
-	audiocache::destroy();
-	waveformrender::destroy();
 
 	saveSettings(settings);
-	ctrl.reset();
 	mainWindow.reset();
 	glfwTerminate();
 	EXC_CATCH
 	printLeaked();
+	deleteApp();
 #ifdef _WIN32
 	OleUninitialize();
 #endif

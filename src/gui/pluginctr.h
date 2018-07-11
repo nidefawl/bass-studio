@@ -5,6 +5,8 @@
 #include "guicontainer.h"
 #include "button.h"
 #include "track.h"
+#include "basectrl.h"
+#include "../host/mainctrl.h"
 
 using glm::vec2;
 using glm::ivec2;
@@ -70,7 +72,7 @@ public:
 		nvgBeginPath(vg);
 //		nvgRoundedRect(vg, pos.x, pos.y, size.x, size.y, G_RND);
 		NVGcolor c;
-		if (this == MainCtrl::get()->guiOver) {
+		if (this == AppCtrl::get()->guiOver) {
 			c = GUI_COLOR(G_S3);
 		}
 		else {
@@ -222,17 +224,17 @@ public:
 		}
 		return last->pos.x + last->size.x + 50;
 	}
-	virtual void onTick(MainCtrl* ctrl) {
+	virtual void onTick(AppCtrl* ctrl) {
 #define SCROLL_START_X 30
 
-		if (MainCtrl::get()->guiDragged != NULL && MainCtrl::get()->guiDragged->parent == this) {
+		if (ctrl->guiDragged != NULL && ctrl->guiDragged->parent == this) {
 			if (ctrl->m_mousePos.x < SCROLL_START_X && scrolloffset > 0) {
 				setScrolloffset(scrolloffset - (int)((TIMER_MS / 50.0) * 40));
 			}
 			if (ctrl->m_mousePos.x > getSizeContent().x - SCROLL_START_X && scrolloffset < getTotalWidth() - getSizeContent().x) {
 				setScrolloffset(scrolloffset + (int)((TIMER_MS / 50.0) * 40));
 			}
-			MainCtrl::get()->requestRedraw();
+			ctrl->requestRedraw();
 		}
 	}
 	void pluginDragMove(guiplugin* g, ivec2 mousepos) override;

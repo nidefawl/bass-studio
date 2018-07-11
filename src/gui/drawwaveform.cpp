@@ -13,7 +13,7 @@
 #include "logging.h"
 #include "guicolors.h"
 #include "color_util.h"
-#include "mainctrl.h"
+#include "../host/mainctrl.h"
 
 
 using glm::mat4x4;

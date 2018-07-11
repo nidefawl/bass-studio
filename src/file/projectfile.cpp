@@ -15,7 +15,7 @@
 #include "seq_time.h"
 #include "clip.h"
 #include "track.h"
-#include "mainctrl.h"
+//#include "mainctrl.h"
 #include "fileio.h"
 #include "layout.h"
 #include "project.h"

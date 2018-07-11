@@ -10,7 +10,7 @@
 #include "grid.h"
 #include "guicontainer.h"
 #include "trackctr.h"
-#include "mainctrl.h"
+#include "../host/mainctrl.h"
 #include "automation.h"
 #include <glm/glm.hpp>
 #include <glm/geometric.hpp>

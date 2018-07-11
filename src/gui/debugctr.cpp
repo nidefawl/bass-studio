@@ -1,6 +1,6 @@
 #include "debugctr.h"
 #include "str_util.h"
-#include "mainctrl.h"
+#include "../host/mainctrl.h"
 #include "knob.h"
 #include "plugin.h"
 #include "guicontainer.h"

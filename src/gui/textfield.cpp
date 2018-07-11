@@ -485,7 +485,7 @@ bool gui_textfield::copySelection() {
 		if (begin > end)
 			std::swap(begin, end);
 		if ((int)mValueTemp.length() >= end-begin)
-		MainCtrl::get()->setClipboardText(mValueTemp.substr(begin, end).c_str());
+		AppCtrl::get()->setClipboardText(mValueTemp.substr(begin, end).c_str());
 		onChange();
 		return true;
 	}
@@ -495,7 +495,7 @@ bool gui_textfield::copySelection() {
 
 void gui_textfield::pasteFromClipboard() {
 	if (mCursorPos >= 0 && mCursorPos <= (int)mValueTemp.size()) {
-		String str = std::string(MainCtrl::get()->getClipboardText());
+		String str = std::string(AppCtrl::get()->getClipboardText());
 		mValueTemp.insert(mCursorPos, str);
 		mCursorPos += str.length();
 		onChange();

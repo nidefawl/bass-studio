@@ -1,6 +1,5 @@
 #pragma once
 #include "str_util.h"
-#include "mainctrl.h"
 #include "knob.h"
 #include "guicontainer.h"
 #include <vector>

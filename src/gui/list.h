@@ -11,7 +11,7 @@ public:
 	gui_list_entry() : guibase() {
 	}
 	virtual void render(NVGcontext* vg) {
-		MainCtrl* ctrl = MainCtrl::get();
+		AppCtrl* ctrl = AppCtrl::get();
 		float spacing = INSET_TITLE;
 		float x = spacing;
 		float rowHeight = size.y;
@@ -51,10 +51,10 @@ public:
 	virtual void handleDraggedBegin(MouseEvent& evt) {
 	}
 	virtual void handleDraggedMove(MouseEvent& evt) {
-		MainCtrl::get()->objectDragMove(this, evt);
+		AppCtrl::get()->objectDragMove(this, evt);
 	}
 	virtual void handleDraggedRelease(MouseEvent& evt) {
-		MainCtrl::get()->objectDragRelease(this, evt);
+		AppCtrl::get()->objectDragRelease(this, evt);
 	}
 	virtual void dragMoveOn(guibase* target, ivec2 mousepos) = 0;
 	virtual void dragReleaseOn(guibase* target, ivec2 mousepos) = 0;

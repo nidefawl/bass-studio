@@ -1,6 +1,6 @@
 #include "seq_time.h"
 #include "grid.h"
-#include "mainctrl.h"
+#include "../host/mainctrl.h"
 #include "leak_detect.h"
 
 using glm::ivec2;

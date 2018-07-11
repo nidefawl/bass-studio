@@ -1,13 +1,15 @@
 #include "trackcontrols.h"
 #include <glm/geometric.hpp>
 
+#include "gui.h"
 #include "track.h"
 #include "track_impl.h"
-#include "guicontextmenu.h"
+#include "contextmenus.h"
 #include "button.h"
 #include "event.h"
 #include "../host/vst_plugin.h"
 #include "trackautomation.h"
+#include "trackcontent.h"
 #include "dropdown.h"
 #include "dsp_util.h"
 #include "str_util.h"

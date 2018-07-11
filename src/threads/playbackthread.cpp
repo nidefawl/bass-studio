@@ -20,7 +20,7 @@
 #include <assert.h>
 
 #include "seq_time.h"
-#include "mainctrl.h"
+#include "../host/mainctrl.h"
 #include "logging.h"
 #include "../util/readerwriterqueue.h"
 #include "../host/vst_host.h"

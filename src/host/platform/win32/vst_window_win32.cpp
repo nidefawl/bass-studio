@@ -2,7 +2,7 @@
 #include "../../vst_window.h"
 #include "../../vst_host.h"
 #include "../../vst_plugin.h"
-#include "mainctrl.h"
+#include "../host/mainctrl.h"
 
 #include <tchar.h>
 #include <Windows.h>
@@ -275,5 +275,8 @@ void vst_window::resize (Size newSize)
 WINDOW_HANDLE vst_window::getHWND () const
 {
 	return hwnd;
+}
+bool isVstWindow(HWND hwnd) {
+	return nullptr != vst_window::getVSTWindow(hwnd);
 }
 #endif

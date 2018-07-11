@@ -20,6 +20,8 @@
 #include "platform.h"
 #include "dsp_util.h"
 #include "leak_detect.h"
+#include "../host/mainctrl.h"
+
 #include <glm/glm.hpp>
 #include <glm/vec2.hpp>
 using glm::vec2;

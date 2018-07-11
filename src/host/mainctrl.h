@@ -15,6 +15,7 @@
 #include "seq_util.h"
 #include "seq_time.h"
 #include "seq_math.h"
+#include "basectrl.h"
 #include "window.h"
 #include "menu.h"
 #include "mouse.h"
@@ -27,6 +28,7 @@
 #include "clipboard.h"
 #include "note.h"
 #include "logging.h"
+#include "automation.h"
 #include "../threads/workerthread.h"
 #include "../threads/playbackthread.h"
 #include "edithistory.h"
@@ -55,18 +57,8 @@ class guictr_clipeditor;
 class guictr_clipeditorview;
 class guictxtmenu_base;
 class appwindow_main;
-//template <typename T>
-//struct TrackRange
-//{
-//	TrackRange(std::vector<T*>& src) : vec(src) { }
-//	std::vector<T*>& vec;
-//    typedef T* iterator;
-//    typedef const T* const_iterator;
-//    iterator begin() { return vec.begin(); }
-//    const_iterator begin() const { return vec.cbegin(); }
-//    iterator end() { return vec.end(); }
-//    const_iterator end() const { return vec.cend(); }
-//};
+class ViewContainers;
+
 enum clip_dragtype_t {
 	DRAG_NONE,
 	DRAG_CLIPS_MOVE,
@@ -87,72 +79,7 @@ struct dragdrop_midifile {
 	void reset();
 };
 KeyEvent keyEvent(int key, int scancode, int keyState, int mods, const char* key_name);
-class BaseCtrl {
-public:
-	window_base* window = NULL;
-	NVGcontext* vg = NULL;
-	std::vector<guictr_base*> containers;
-	guictxtmenu_base *ctxtmenu = NULL;
-	guictxtmenu_base *ctxtmenuOld = NULL;
-	int cursorIcon = CURSOR_DEFAULT;
-	ivec2 m_size;
-	ivec2 m_mousePos;
-	guibase *guiOver = NULL;		//updates on mouse move "current mouseover"
-	guibase *guiDragged = NULL;		//updates on mouse click "currently dragged", set from guiOver
-	guibase *guiCaptured = NULL;	//updates when cursor is hidden, set from guiDragged
-	guibase *guiFocused = NULL;		//updates on mouse click, set from guiOver
-	guibase *guiCtrFocused = NULL;	//updates on mouse click, handles keyboard input
 
-	ivec2 dragStart;
-	ivec2 dragOffset;
-	ivec2 dragDistance;
-	bool isOK = false;
-	bool isOk() const {
-		return isOK;
-	}
-	virtual ~BaseCtrl() { }
-	virtual void prerender(int32_t x, int32_t y, int32_t w, int32_t h, float ratio) {
-
-	}
-	virtual void render(int32_t x, int32_t y, int32_t w, int32_t h, float ratio);
-
-	virtual bool processGlobalKeyevent(KeyEvent& event) {
-		return false;
-	}
-	virtual bool mouseDownPre() {
-		return true;
-	}
-	void mouseDown(ivec2 mousePos, int button, bool doubleclick);
-	void mouseUp(ivec2 mousePos, int button);
-	void onCharInput(unsigned int codepoint);
-	void onKeyInput(int key, int scancode, int keyState, int mods, const char* key_name);
-	void mouseScrolled(double xoffset, double yoffset);
-	virtual void mouseMoved(ivec2 mousePos, ivec2 deltaPos);
-
-};
-class guictr_popup;
-class PopupCtrl : public BaseCtrl
-{
-	guictr_popup* popupCtrs;
-public:
-	PopupCtrl();
-	~PopupCtrl();
-	static PopupCtrl* get() {
-		static PopupCtrl ctrl;
-		return &ctrl;
-	}
-	void destroy();
-	bool isShown() {
-		return this->window->isShown();
-	}
-	void close();
-	void open(guictxtmenu_base *ctxtmenu, ivec2 pos);
-	bool init(window_overlay* window, NVGcontext* nanovg);
-	void focusReceived() {
-	}
-	void focusLost();
-
-};
 
 struct clip_cursor_t {
 	tick_t start = 0;
@@ -162,7 +89,7 @@ inline bool operator==(const clip_cursor_t& lhs, const clip_cursor_t& rhs){
 	return lhs.start == rhs.start && lhs.end == rhs.end;
 }
 inline bool operator!=(const clip_cursor_t& lhs, const clip_cursor_t& rhs){return !operator==(lhs,rhs);}
-class ViewContainers;
+
 class clip_view {
 public:
 	gui_clip * gui = NULL;
@@ -197,7 +124,7 @@ struct Menus {
 	ngui::Menu options;
 };
 
-class MainCtrl : public BaseCtrl, public delete_cb, public project_t
+class MainCtrl : public AppCtrl, public delete_cb, public project_t
 {
 	ViewContainers* view = NULL;
 	ngui::MenuBar menubar;
@@ -220,6 +147,9 @@ public:
 	window_overlay* contextWindow = NULL;
 	std::vector<window_overlay*> menuWindows;
 	static MainCtrl* get();
+	~MainCtrl() {
+		my_printf("~MainCtrl\n",0);
+	}
 	static PlaybackThread* getPlayThread() {
 		return &get()->playThread;
 	}
@@ -284,7 +214,6 @@ public:
 	guictxtmenu_base* getContextMenu();
 	void onTick();
 	void requestRedraw();
-	void prerender(int32_t x, int32_t y, int32_t w, int32_t h, float ratio) override;
 	bool init(window_main* window, NVGcontext* nanovg);
 	void postInit();
 	void destroy();
@@ -297,7 +226,7 @@ public:
 	void onUncaptureMouse();
 	void addTrack(int32_t trackInsertPos, track_t* t);
 	void removeTrack(track_t* t);
-	void addTrackImpl(int32_t trackInsertPos, track_t* t);
+	void addTrackImpl(int32_t trackInsertPos, track_t* t, int triggerupdate = 1);
 	void removeTrackImpl(track_t* t);
 	track_t* getTrackId(uint32_t trackId);
 	void removeTrackId(uint32_t trackId);
@@ -310,7 +239,7 @@ public:
 	void showAutomation(track_t* tr, automatable_t* at, int32_t paramIdx);
 	bool isClipEditorVisible();
 	bool isPluginViewVisible();
-	track_t* insertNewTrack(int trackInsertPos, int trackType);
+	track_t* insertNewTrack(int trackInsertPos, int trackType, int wasUserAction = 1);
 	void updateGrid();
 	void updateVisibleTrackContents();
 	void setStatusText(String s);
@@ -384,22 +313,5 @@ public:
 		this->tickJmpFrom = tickJmpFrom;
 		this->tickJmpTo = tickJmpTo;
 	}
-	bool isCtrOrChildFocused(guibase* gui);
-	void onGuiRemoved(guibase* gui) {
-		if (this->guiOver == gui)  {
-			this->guiOver = NULL;
-		}
-		if (this->guiCaptured == gui)  {
-			this->guiCaptured = NULL;
-		}
-		if (this->guiFocused == gui)  {
-			this->guiFocused = NULL;
-		}
-		if (this->guiDragged == gui)  {
-			this->guiDragged = NULL;
-		}
-		if (this->guiCtrFocused == gui)  {
-			this->guiCtrFocused = NULL;
-		}
-	}
+	void initApp();
 };

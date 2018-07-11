@@ -1,5 +1,6 @@
 #pragma once
 #include <list>
+#include <vector>
 #include "seq_math.h"
 #include "str_util.h"
 #include "color_util.h"
@@ -11,11 +12,13 @@
 #include "button.h"
 #include "trackcontent.h"
 #include "tempocontrols.h"
+#include "inputfield.h"
 #include "note.h"
 #include "grid.h"
 #include "keyboard.h"
 #include "edithistory.h"
 #include "leak_detect.h"
+#include "../host/mainctrl.h"
 #include <glm/glm.hpp>
 #include <glm/vec2.hpp>
 using glm::vec2;

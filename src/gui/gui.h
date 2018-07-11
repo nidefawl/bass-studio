@@ -1,12 +1,15 @@
 #pragma once
 #include <glm/glm.hpp>
 #include <glm/vec2.hpp>
+#include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
+using glm::vec2;
+using glm::ivec2;
+
 #include <nanovg.h>
 #include <vector>
 #include <algorithm>
 #include <typeinfo>
-using glm::vec2;
-using glm::ivec2;
 
 #include "str_util.h"
 #include "event.h"
@@ -14,8 +17,9 @@ using glm::ivec2;
 #include "guicolors.h"
 #include "logging.h"
 #include "renderresources.h"
-#include "mainctrl.h"
+#include "basectrl.h"
 #include "theme.h"
+#include "basectrl.h"
 
 
 struct NVGcontext;
@@ -23,6 +27,7 @@ class guitrack_editor;
 class guiplugin;
 class guictr_base;
 class gui_pluginlist_entry;
+struct dragdrop_midifile;
 
 extern int allocCount;
 extern std::vector<guibase*> g_guis;
@@ -42,7 +47,10 @@ ivec2 toControlsObjectSpace(ivec2& pos, guibase* gui);
 inline float calcInset(float desiredInset, float size) {
 	return min(desiredInset, max(0.f, (size-4.0f)/2.0f));
 }
-
+enum TextInputState : signed int {
+	DISABLED = 0,
+	ENABLED = 1
+};
 class guibase {
 public:
 	ivec2 pos{0};
@@ -51,6 +59,8 @@ public:
 	int zOrder = 0;
 	int id;
 	guitheme_t* theme = getDefaultTheme();
+	int dummy0 = 0;
+	bool canTextInput = false;
 	guibase() {
 		id = allocCount;
 		allocCount++;
@@ -60,13 +70,16 @@ public:
 		this->pos = _pos;
 		this->size = _size;
 	}
+	bool hasTextinput() {
+		return canTextInput;
+	}
 	String getClassName() {
 		return typeName(*this);
 	}
 	virtual ~guibase() {
-		MainCtrl* ctrl = MainCtrl::get();
+		AppCtrl* ctrl = AppCtrl::get();
 		if (ctrl)
-			ctrl->onGuiRemoved(this); // TODO: don't call this from here, feels nasty
+			ctrl->onGuiRemoved(this); // TODO: don't call this from here
 		allocCount--;
 		auto it = std::find(g_guis.begin(), g_guis.end(), this);
 		g_guis.erase(it);

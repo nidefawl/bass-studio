@@ -1,6 +1,6 @@
 #pragma once
 #include <nanovg.h>
-#include "mainctrl.h"
+#include "basectrl.h"
 #include "gui.h"
 #include "guicolors.h"
 #include "exceptions.h"
@@ -47,11 +47,11 @@ public:
 };
 class guictr_menubar;
 class guimenu : public guictxtmenu_base {
-	ngui::Menu* menu;
+	//ngui::Menu* menu;
 	int lvl = 0;
 public:
 	guictr_menubar* parentMenuBar = NULL;
-	guimenu(ngui::Menu* _menu, int _lvl = 0) : guictxtmenu_base(), menu(_menu), lvl(_lvl) {
+	guimenu(ngui::Menu* _menu, int _lvl = 0) : guictxtmenu_base()/*, menu(_menu)*/, lvl(_lvl) {
 		this->size.x = 190;
 		this->maxHeight = -1;
 		for (auto e : _menu->children) {
@@ -68,13 +68,13 @@ public:
 	}
 	void clicked(int _id) {
 		if(_id > 0) {
-			MainCtrl::get()->menuCommand(_id);//deletes this
+			AppCtrl::get()->menuCommand(_id);//deletes this
 		}
 		if (lvl == 0) { //then reads here, gg
-			MainCtrl::get()->closeContextMenu();
-			MainCtrl::get()->closeAppMenus();
+			AppCtrl::get()->closeContextMenu();
+			AppCtrl::get()->closeAppMenus();
 		} else {
-			MainCtrl::get()->closeAppMenus(lvl);
+			AppCtrl::get()->closeAppMenus(lvl);
 		}
 	}
 	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
@@ -92,12 +92,12 @@ public:
 				if (!e2->isMenuOpen) {
 					guimenu *popup =new guimenu(e2->menu, lvl+1);
 					popup->size.x = 250;
-					MainCtrl::get()->closeAppMenus(lvl);
+					AppCtrl::get()->closeAppMenus(lvl);
 					ivec2 vPos;
 					ctrl->window->getPos(&vPos);
 					vPos.y+=e2->y;
 					vPos.x+=right()+2;
-					MainCtrl::get()->openAppMenu(
+					AppCtrl::get()->openAppMenu(
 						popup->lvl-1,
 						popup,
 						vPos);
@@ -109,7 +109,7 @@ public:
 					if (e2)
 						e2->isMenuOpen = false;
 				}
-				MainCtrl::get()->closeAppMenus(lvl);
+				AppCtrl::get()->closeAppMenus(lvl);
 			}
 			evt.requestFocus(this);
 			return true;
@@ -162,10 +162,10 @@ public:
 		layout();
 	}
 	void layout() {
-		MainCtrl::get()->closeContextMenu();
-		MainCtrl::get()->closeAppMenus();
+		AppCtrl::get()->closeContextMenu();
+		AppCtrl::get()->closeAppMenus();
 		destroyGuis();
-		NVGcontext* vg = MainCtrl::get()->vg;
+		NVGcontext* vg = AppCtrl::get()->vg;
 		int fontSize = (int) (size.y * 0.8);
 		int padding = max(4, (int) (size.y * 0.8));
 		int x = 0;
@@ -190,11 +190,11 @@ public:
 		}
 	}
 	void openMenu(guictr_menubar_entry* entry) {
-		MainCtrl::get()->closeContextMenu();
+		AppCtrl::get()->closeContextMenu();
 		guimenu *popup = new guimenu(entry->menu, 0);
 		popup->parentMenuBar = this;
 		popup->size.x = 250;
-		MainCtrl::get()->openContextMenu(popup, entry->toScreenSpace(ivec2(0, entry->size.y)) - popup->pos + ivec2(1));
+		AppCtrl::get()->openContextMenu(popup, entry->toScreenSpace(ivec2(0, entry->size.y)) - popup->pos + ivec2(1));
 		currentMenu = entry;
 	}
 	void hoverMenu(guictr_menubar_entry* entry) {

@@ -1,12 +1,14 @@
 #pragma once
 #include <glm/vec2.hpp>
 #include <nanovg.h>
+#include <functional>
 #include "color_util.h"
 #include "str_util.h"
 #include "seq_util.h"
 #include "seq_math.h"
 #include "gui.h"
 #include "guicolors.h"
+#include "basectrl.h"
 #include "event.h"
 using glm::vec2;
 using glm::ivec2;
@@ -18,13 +20,13 @@ public:
 	guibuttonbase(ivec2 _pos, ivec2 _size) : guibase(_pos, _size) {
 	}
 	virtual bool hovered() {
-		return this == MainCtrl::get()->guiOver;
+		return this == AppCtrl::get()->guiOver;
 	}
 	virtual bool pressed() {
-		return this == MainCtrl::get()->guiDragged;
+		return this == AppCtrl::get()->guiDragged;
 	}
 	virtual bool focused() {
-		return this == MainCtrl::get()->guiFocused;
+		return this == AppCtrl::get()->guiFocused;
 	}
 	virtual bool enabled() {
 		return true;

@@ -1,5 +1,5 @@
 #pragma once
-#include "mainctrl.h"
+#include "../host/mainctrl.h"
 #include "automation.h"
 #include "guicontextmenu.h"
 

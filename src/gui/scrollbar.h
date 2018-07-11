@@ -2,6 +2,11 @@
 #include <nanovg.h>
 #include "gui.h"
 #include "guicolors.h"
+#include <glm/glm.hpp>
+#include <glm/vec2.hpp>
+
+using glm::vec2;
+using glm::ivec2;
 
 class gui_scrollcontainer {
 public:
@@ -38,7 +43,7 @@ public:
 			nvgRoundedRect(vg, pos.x+barOff.x+inset, pos.y+barOff.y+inset, barS.x-inset*2, barS.y-inset*2, G_RND);
 
 
-			bool focused = MainCtrl::get()->guiCtrFocused == this->parent || (MainCtrl::get()->guiDragged==NULL&&MainCtrl::get()->guiOver == this);
+			bool focused = AppCtrl::get()->guiCtrFocused == this->parent || (AppCtrl::get()->guiDragged==NULL&&AppCtrl::get()->guiOver == this);
 			if (focused) {
 //				nvgStrokeWidth(vg, 1.0f);
 //				nvgStrokeColor(vg, g_guiColors[COL_BG_DRK_FOCUSED]);

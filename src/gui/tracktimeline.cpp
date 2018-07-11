@@ -7,6 +7,7 @@
 #include "seq_util.h"
 #include "color_util.h"
 #include "platform.h"
+#include "../host/mainctrl.h"
 
 void guitrack_timeline::handleDraggedBegin(MouseEvent& evt) {
 	if (evt.guiDragged == this) {

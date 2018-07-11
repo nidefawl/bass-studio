@@ -6,7 +6,7 @@
 #include "trackctr.h"
 #include "trackcontent.h"
 #include "trackcontrols.h"
-#include "guicontextmenu.h"
+#include "contextmenus.h"
 #include "track.h"
 #include "track_impl.h"
 

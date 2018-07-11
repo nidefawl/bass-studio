@@ -10,7 +10,7 @@
 #include "seq_time.h"
 #include "cursor.h"
 #include "grid.h"
-#include "guicontextmenu.h"
+#include "contextmenus.h"
 #include "leak_detect.h"
 
 using glm::vec2;
