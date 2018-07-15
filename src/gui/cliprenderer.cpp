@@ -1,5 +1,9 @@
 #include "cliprenderer.h"
 #include "../host/vst_host.h"
+#include <glm/glm.hpp>
+#include <glm/vec2.hpp>
+using glm::vec2;
+using glm::ivec2;
 
 bool getClipPosition(scaled_grid& grid, const ivec2& trackSize, const clip_t* cl, ivec2& pos, ivec2& size, tick_t offset) {
 	tick_t tickBegin = cl->time + offset;
@@ -183,49 +187,64 @@ void renderMidiClip(NVGcontext* vg, const track_t* tr, const clip_t* cl, ivec2 p
 	if (sizeContents.x > 0 && sizeContents.y > 0) {
 		nvgSave(vg);
 		nvgTranslate(vg, posContents.x, posContents.y);
-		nvgBeginPath(vg);
 
 		clip_notes_t& notesView = cl->getNoteViewRender();
 		clip_notes_t& notesPlay = cl->getNoteViewPlayback();
 	//	clip_notes_t notesPlay;
 	//	cl->getNotesView(0, cl->len, notesPlay, true);
-		for (int i = 0; i < (tr?(tr->idx%2)+1:1); i++) {
-			int32_t rgbNote = i == 0 ? 0xff9933 : 0x33ff33;
-			int32_t rgbNoteOverlap = i == 0 ? 0x0000ff : 0xff00ff;
-			clip_notes_t& notes = i == 0 ? notesView : notesPlay;
-			if (!notes.empty()) {
-				note_t minN = notesView.minNote;
-				note_t maxN = notesView.maxNote;
-				int32_t numNotes = max((int32_t)8, maxN.pitch - minN.pitch);
-				float scale = sizeContents.y / (float) numNotes;
-				std::vector<const note_t*> notesClipped;
-				for (const note_t& note : notes.m_list) {
-					tick_t noteTime = note.time;
-					if (noteTime >= clipLen) {
-						notesClipped.push_back(&note);
-						continue;
-					}
-					if (noteTime < 0) {
-						notesClipped.push_back(&note);
-						continue;
-					}
-					float objPosNote = noteTime /(float) TICKS_BAR;
-		//			assert(objPosNote >= 0 && objPosNote < numBars);
-					float objLenNote = note.len /(float) TICKS_BAR;
-		//			assert(objPosNote+objLenNote >= 0);
-					float ny = noteToScreen(note.pitch-minN.pitch, scale, 0, sizeContents.y);
-					float nx = max(0.0f, objPosNote * barSize);
-					float nw = min(objLenNote * barSize, sizeContents.x-nx);
-					float nh = scale;
-					float insetx = calcInset(1, nw);
-					float insety = calcInset(1, nh);
-					nvgRect(vg, nx+insetx, ny+insety, nw-insetx*2, nh-insety*2);
+		int32_t rgbNote = 0xffffff;
+		int32_t rgbNoteOverlap = 0x0000ff;
+		int32_t rgbNoteMuted = 0x121212;
+		clip_notes_t& notes = notesView;
+		if (!notes.empty()) {
+			note_t minN = notesView.minNote;
+			note_t maxN = notesView.maxNote;
+			int32_t numNotes = max((int32_t)8, maxN.pitch - minN.pitch);
+			float scale = sizeContents.y / (float) numNotes;
+			std::vector<const note_t*> notesClipped;
+			std::vector<const note_t*> notesMuted;
+			int begin = 0;
+			for (const note_t& note : notes.m_list) {
+				tick_t noteTime = note.time;
+				if (noteTime >= clipLen) {
+					notesClipped.push_back(&note);
+					continue;
 				}
+				if (noteTime < 0) {
+					notesClipped.push_back(&note);
+					continue;
+				}
+				if (!note.enabled) {
+					notesMuted.push_back(&note);
+					continue;
+				}
+				if (!begin) {
+
+					nvgBeginPath(vg);
+					begin++;
+				}
+				float objPosNote = noteTime /(float) TICKS_BAR;
+	//			assert(objPosNote >= 0 && objPosNote < numBars);
+				float objLenNote = note.len /(float) TICKS_BAR;
+	//			assert(objPosNote+objLenNote >= 0);
+				float ny = noteToScreen(note.pitch-minN.pitch, scale, 0, sizeContents.y);
+				float nx = max(0.0f, objPosNote * barSize);
+				float nw = min(objLenNote * barSize, sizeContents.x-nx);
+				float nh = scale;
+				float insetx = calcInset(1, nw);
+				float insety = calcInset(1, nh);
+				nvgRect(vg, nx+insetx, ny+insety, nw-insetx*2, nh-insety*2);
+			}
+			if (begin) {
 				nvgFillColor(vg, rgbToNvg(rgbNote));
 				nvgFill(vg);
-				if (!notesClipped.empty()) {
+			}
+
+			for (int j = 0; j < 2; j++) {
+				auto& list = j == 0 ? notesClipped : notesMuted;
+				if (!list.empty()) {
 					nvgBeginPath(vg);
-					for (const note_t* noteClipped : notesClipped) {
+					for (const note_t* noteClipped : list) {
 						const note_t& note = *noteClipped;
 						tick_t noteTime = note.time;
 			//			assert(objPosNote >= 0 && objPosNote < numBars);
@@ -241,11 +260,12 @@ void renderMidiClip(NVGcontext* vg, const track_t* tr, const clip_t* cl, ivec2 p
 						float insety = calcInset(1, nh);
 						nvgRect(vg, nx+insetx, ny+insety, nw-insetx*2, nh-insety*2);
 					}
-					nvgFillColor(vg, rgbToNvg(rgbNoteOverlap));
+					nvgFillColor(vg, rgbToNvg(j == 0 ? rgbNoteOverlap : rgbNoteMuted));
 					nvgFill(vg);
 				}
 			}
 		}
+
 		nvgRestore(vg);
 	}
 	if (cl->loopEnabled) {

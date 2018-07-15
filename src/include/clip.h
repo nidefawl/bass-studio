@@ -45,7 +45,6 @@ public:
 		this->waveformRef.fbId = -1;
 		this->waveformRef.rendered = false;
 	}
-	tick_t lenInTicks();
 	tick_t lenSamples();
 };
 class clip_notes_t {
@@ -75,9 +74,10 @@ public:
 	}
 	note_t& add(note_t& t);			// does not update bounds
 	void remove(note_t& t);			// does not update bounds
+	void mute(note_t& t);			// does not update bounds
 	note_t& addSingle(note_t& t);	// updates bounds
 	void removeSingle(note_t& t);	// updates bounds
-	note_t& paste(note_t& t, bool eliminateDupes = false);		// updates bounds
+	int32_t paste(note_t& t, bool eliminateDupes = false);		// updates bounds
 	void updateBounds();
 	note_t* get(tick_t time, int32_t pitch);
 	size_t removeDuplicates();
@@ -116,6 +116,28 @@ public:
 			notes.remove(note);
 		}
 		notes.updateBounds();
+	}
+	void muteToggleSelectedNotes(clip_notes_t& notes) {
+		std::vector<note_t> delNotes(selection.size());
+		copySelectionTo(delNotes);
+		for (note_t& note : delNotes) {
+			notes.mute(note);
+		}
+//		notes.updateBounds();
+	}
+	void getNotePitches(std::vector<int32_t>& out) {
+		for (note_t& note : m_list) {
+			auto it = std::find_if(out.begin(), out.end(), [&note](const int32_t& n) {
+				return note.pitch == n;
+			});
+			if (it == out.end()) {
+				out.push_back(note.pitch);
+			}
+		}
+		stable_sort(out.begin(), out.end(), [](
+				int32_t const a, int32_t const b) {
+			return a < b;
+		});
 	}
 	void addOrRemoveSelection(note_t* note) {
 

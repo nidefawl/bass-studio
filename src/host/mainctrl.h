@@ -99,8 +99,10 @@ public:
 	std::vector<note_t> draggedSelection;
 	clip_notes_t clipboard;
 	tick_t clipboardCursorRange;
+	std::vector<int32_t> notePitches;
 	void set(gui_clip* _clip) {
 		this->gui = _clip;
+		updateNotePitches(true);
 //		this->selection.clear();
 	}
 	clip_t* clip() const;
@@ -115,6 +117,61 @@ public:
 		dragStartNotes = clip()->notes;
 		clip()->notes.copySelectionTo(draggedSelection);
 		clip()->notes.copySelectionTo(draggedSelectionBegin);
+	}
+	void getNotePitches(std::vector<int32_t>& out) {
+		out = notePitches;
+	}
+	float toFoldNote(float note) {
+		int len = (int) notePitches.size();
+		for (int i = 0; i < len; i++) {
+			if (notePitches[i] >= (int)note) {
+				return i;
+			}
+		}
+		if (len) {
+			if (note >= notePitches[len-1])
+				return len+(note-notePitches[len-1]);
+			if (note < 0)
+				return note;
+		}
+		return note;
+	}
+	float nextFoldNote(float note, int dir) {
+		float f = toFoldNote(note);
+		return unfoldNoteClamped(f+dir);
+	}
+	float unfoldNoteClamped(float note) {
+		int32_t iNote = floor(note);
+		int len = (int) notePitches.size();
+		if (!len) {
+			return 0;
+		}
+		if (iNote < 0)
+			return notePitches[0];
+		else if (iNote >= len) {
+			return notePitches[len-1];
+		}
+		return notePitches[iNote];
+	}
+	float unfoldNote(float note) {
+		int32_t iNote = floor(note);
+		int len = (int) notePitches.size();
+		if (!len) {
+			return 0;
+		}
+		if (iNote < 0)
+			return notePitches[0]+note;
+		else if (iNote >= len) {
+			return note-len+1+notePitches[len-1];
+		}
+		return notePitches[iNote];
+	}
+	void updateNotePitches(bool reset) {
+		if (reset)
+			notePitches.clear();
+		clip_t* clipPtr = clip();
+		if (clipPtr)
+			clipPtr->notes.getNotePitches(notePitches);
 	}
 };
 struct Menus {

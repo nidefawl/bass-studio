@@ -47,45 +47,71 @@ inline bool isSharp(int n) {
 class piano_scale {
 private:
 	int& sizeY;
+	clip_view& clipview;
+protected:
+	layout_pianoroll_t& layoutRoll;
 public:
-	float& scale; // Size of piano key in pixels
-	float& offset; // pixel offset
-	piano_scale(float& _scale, float& _offset, int& _sizeY)
+	piano_scale(layout_pianoroll_t& _layout, clip_view& _clipview, int& _sizeY)
 	: sizeY(_sizeY),
-	  scale(_scale),
-	  offset(_offset)
+	  clipview(_clipview),
+	  layoutRoll(_layout)
 	{
 
 	}
-	float toNoteF(int32_t y) {
+	float toNoteFNoFolding(int32_t y) {
 		int32_t rel = (sizeY) - y;
-		float offsetKey = rel + offset;
-		return offsetKey / scale;
+		float offsetKey = rel + layoutRoll.offset();
+		float note = offsetKey / layoutRoll.scale();
+		return note;
+	}
+	float toNoteFImpl(int32_t y, const bool clamp) {
+		int32_t rel = (sizeY) - y;
+		float offsetKey = rel + layoutRoll.offset();
+		float note = offsetKey / layoutRoll.scale();
+		if (layoutRoll.fold) {
+			if (clamp) {
+				return this->clipview.unfoldNoteClamped(note);
+			} else {
+				return this->clipview.unfoldNote(note);
+			}
+		}
+		return note;
+	}
+	float toNoteFClamped(int32_t y) {
+		return toNoteFImpl(y, true);
+	}
+	float toNoteF(int32_t y) {
+		return toNoteFImpl(y, false);
 	}
 	float toScreenF(float note) {
-		float offsetKey = note * scale;
-		float rel = offsetKey - offset;
+		if (layoutRoll.fold) {
+			std::vector<int32_t> pitches;
+			note = this->clipview.toFoldNote(note);
+		}
+		float offsetKey = note * layoutRoll.scale();
+		float rel = offsetKey - layoutRoll.offset();
 		return (sizeY) - rel;
 	}
 	void setOffset(float f) {
-		this->offset = f < -(scale*MAX_OCTAVES*1) ? -(scale*MAX_OCTAVES*1) : f > scale*(MAX_OCTAVES-1)*12 ? scale*(MAX_OCTAVES-1)*12 : f;
+		this->layoutRoll.offset() = f < -(layoutRoll.scale()*MAX_OCTAVES*1) ? -(layoutRoll.scale()*MAX_OCTAVES*1) : f > layoutRoll.scale()*(MAX_OCTAVES-1)*12 ? layoutRoll.scale()*(MAX_OCTAVES-1)*12 : f;
 	}
 	void setScale(float f) {
-		this->scale = f < PIANOROLL_MIN_SCALE ? PIANOROLL_MIN_SCALE : f > PIANOROLL_MAX_SCALE ? PIANOROLL_MAX_SCALE : f;
+		this->layoutRoll.scale() = f < PIANOROLL_MIN_SCALE ? PIANOROLL_MIN_SCALE : f > PIANOROLL_MAX_SCALE ? PIANOROLL_MAX_SCALE : f;
 	}
 	void showRange(int32_t noteFrom, int32_t noteTo) {
 		noteTo++;
 		int32_t nNotes = abs(noteFrom - noteTo);
 		float rangeScale = sizeY / (float) nNotes;
-		setScale(rangeScale);//TODO: maybe only zoom out here, not in (or determine on upper level)
-		setOffset(min(noteFrom, noteTo)*scale);
+		setScale(rangeScale); //TODO: maybe only zoom out here, not in (or determine on upper level)
+		setOffset(min(noteFrom, noteTo)*layoutRoll.scale());
 	}
 	void makeNoteVisible(int32_t noteFrom) {
-		float offsetNote = noteFrom*scale;
-		if (offsetNote < offset) { // below visible area
+		float foldNote = layoutRoll.fold ? this->clipview.toFoldNote(noteFrom) : noteFrom;
+		float offsetNote = foldNote*layoutRoll.scale();
+		if (offsetNote < layoutRoll.offset()) { // below visible area
 			setOffset(offsetNote);
-		} else if (offsetNote > offset+sizeY-scale) {
-			setOffset(offsetNote-(sizeY-scale));
+		} else if (offsetNote > layoutRoll.offset()+sizeY-layoutRoll.scale()) {
+			setOffset(offsetNote-(sizeY-layoutRoll.scale()));
 		}
 	}
 };
@@ -96,8 +122,9 @@ class gui_pianoroll : public guibase, piano_scale {
 	ivec2 startDrag;
 	int dragDirection = -1;
 	float dragPosObjSpace = 0;
+	clip_view& view;
 public:
-	gui_pianoroll(float& _scale, float& _offset) : guibase(), piano_scale(_scale, _offset, size.y) {
+	gui_pianoroll(clip_view& _view, layout_pianoroll_t& _layout) : guibase(), piano_scale(_layout, _view, size.y), view(_view) {
 		keysX = 0; widthKeys = 0;
 	}
 	~gui_pianoroll() {
@@ -136,7 +163,7 @@ public:
 
 			if ((!lockGesture && abs(disty) > 0) || (lockGesture && isMove)) {
 				evt.dragDistance->y = 0;
-				setOffset(offset + disty);
+				setOffset(layoutRoll.offset() + disty);
 //				grid.setOffset(grid.offset - distx);
 			}
 
@@ -144,9 +171,10 @@ public:
 				evt.dragDistance->x = 0;
 //				disty = 1.0f + disty * -0.01f;
 //				float anchor_dragposx = (float)(startDrag.x < 50 ? 0 : evt.relMousepos.x);
-				setScale(scale + distx*0.05f);
+				setScale(layoutRoll.scale() + distx*0.05f);
 				int32_t rel = min(size.y-1, max(0, size.y - evt.relMousepos.y));
-				setOffset((dragPosObjSpace * scale) - rel);
+				float offset = (size.y - toScreenF(dragPosObjSpace)) + layoutRoll.offset();
+				setOffset(offset - rel);
 
 //				double newOffset = grid.calcOffset(anchor_dragposx, dragPosObjSpace);
 //				grid.setOffset((float)newOffset);
@@ -314,11 +342,10 @@ public:
 	ivec2 dragBegin=ivec2(0);
 	ivec2 dragTo=ivec2(0);
 	note_t beginDragNote;
-//	boolean i
 	scaled_grid& grid;
 	clip_view& view;
-	gui_clipcontent(scaled_grid& _grid, clip_view& _view, float& _scale, float& _offset)
-		: guictr_base(), piano_scale(_scale, _offset, size.y),
+	gui_clipcontent(scaled_grid& _grid, clip_view& _view, layout_pianoroll_t& _layout)
+		: guictr_base(), piano_scale(_layout, _view, size.y),
 		grid(_grid),
 		view(_view)
 	{
@@ -737,11 +764,12 @@ public:
 	guitrack_timeline timeline;
 	guictr_cliphandles clipHandles;
 	clip_view& view;
+	guibutton btn;
 
 	guictr_noteeditor(clip_view& _view)
-	: guictr_base(),
-	  piano(yscale, yoffset),
-	  content(grid, _view, yscale, yoffset),
+	: guictr_base(), layout_pianoroll_t(),
+	  piano(_view, *this),
+	  content(grid, _view, *this),
 	  timeline(grid),
 	  clipHandles(grid, _view),
 	  view(_view)
@@ -753,13 +781,25 @@ public:
 		add(&content);
 		add(&timeline);
 		add(&clipHandles);
+		add(&btn);
+		btn.setText("Fold");
+		btn.setActiveRef(&fold);
+		btn.setActiveColor(nvgToRGB(g_guiColors[COL_NOTE]));
 		content.showRange(2*12, 4*12);
 	}
 	~guictr_noteeditor() {
+		remove(&btn);
 		remove(&timeline);
 		remove(&content);
 		remove(&piano);
 		remove(&clipHandles);
+	}
+	virtual void buttonClicked(guibase* button) {
+		if (button == &btn) {
+			my_printf("fold: %d\n", fold);
+			fold = !fold;
+			view.updateNotePitches(true);
+		}
 	}
 	int32_t getTotalWidth() {
 		return max(10000, getSizeContent().x);
@@ -782,7 +822,8 @@ public:
 
 		clipHandles.pos = ivec2(timeline.left(), timeline.bottom());
 		clipHandles.size = ivec2(timeline.size.x, heightClipIndicators);
-
+		btn.pos = ivec2(padding, padding);
+		btn.size = ivec2((piano.size.x)/2, 18);
 		content.pos = ivec2(timeline.left(), clipHandles.bottom());
 		content.size = ivec2(timeline.size.x, piano.size.y);
 		clipHandles.clipViewSize = ivec2(content.size.x, content.size.y+clipHandles.size.y);
@@ -825,6 +866,9 @@ public:
 	void setLayout(layout_pianoroll_t& layout) {
 		yscale = layout.yscale;
 		yoffset = layout.yoffset;
+		yscalefold = layout.yscalefold;
+		yoffsetfold = layout.yoffsetfold;
+		fold = layout.fold;
 	}
 	void showEditClip() {
 		clip_t* clip = view.clip();

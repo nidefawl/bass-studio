@@ -10,6 +10,7 @@ struct guitheme_t {
 	NVGcolor colorBgHover;
 	NVGcolor colorBgPressed;
 	NVGcolor colorBgFocused;
+	NVGcolor colorBgActive;
 	guitheme_t(bool _isDefault) : isDefault(_isDefault) {
 		initDefaultTheme();
 	}
@@ -19,9 +20,14 @@ struct guitheme_t {
 		setBgColor(rgb);
 		colorBgStroke = g_guiColors[COL_GUI_STROKE];
 	}
+	void setActiveColor(uint32_t hex) {
+		vec4 hsl = hexToHSL(hex);
+		colorBgActive = nvgHSL(hsl.x, hsl.y, hsl.z);
+	}
 	void setBgColor(uint32_t hex) {
 		vec4 hsl = hexToHSL(hex);
 		colorBg = nvgHSL(hsl.x, hsl.y, hsl.z);
+		colorBgActive = nvgHSL(hsl.x, hsl.y, hsl.z);
 		colorBgStroke = nvgHSL(hsl.x, CLAMP_F(hsl.y*1.3f), 0.4f);
 		colorBgFocused = nvgHSL(hsl.x, CLAMP_F(hsl.y*0.85f), CLAMP_F(hsl.z + 0.15f));
 		colorBgHover = nvgHSL(hsl.x, CLAMP_F(hsl.y*0.7f), CLAMP_F(hsl.z + 0.3f));
@@ -47,6 +53,9 @@ struct guitheme_t {
 		}
 		if (flags & FLG_HVRD) {
 			return colorBgHover;
+		}
+		if (flags & FLG_ACT) {
+			return colorBgActive;
 		}
 		if (flags & FLG_FOC) {
 			return colorBgFocused;

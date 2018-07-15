@@ -60,9 +60,31 @@ std::pair<note_t*, note_t*> getMinMaxSemitones(std::vector<note_t>& notes);
 std::pair<note_t*, note_t*> getMinMaxTime(std::set<note_t*>& notePtrs);
 std::pair<note_t*, note_t*> getMinMaxTime(std::vector<note_t>& notes);
 
-inline void changePitch(std::vector<note_t>& notesPtrs, int32_t semitones) {
+inline int32_t getFoldedOffsetPitch(std::vector<int32_t>& notesFolded, int32_t curPitch, int32_t direction) {
+	int len = (int) notesFolded.size();
+	for (int i = 0; i < len; i++) {
+		int32_t pitch = notesFolded[i];
+		if (pitch >= curPitch) {
+			return direction > 0 ? notesFolded[i+1 >= len ? len-1 : i+1] : notesFolded[i-1 <= 0 ? 0 : i-1];
+		}
+	}
+	if (len == 0) return curPitch;
+	return direction < 0 ? notesFolded[0] : notesFolded[len-1];
+}
+inline void changePitch(std::vector<note_t>& notesPtrs, int32_t semitones, bool fold, std::vector<int32_t> notesFolded) {
+	if (fold && std::abs(semitones) == 1) {
+		for (note_t& note : notesPtrs) {
+			note.pitch = getFoldedOffsetPitch(notesFolded, note.pitch, semitones >= 0 ? 1 : -1);
+		}
+	} else {
+		for (note_t& note : notesPtrs) {
+			note.pitch += semitones;
+		}
+	}
+}
+inline void muteNotesToggle(std::vector<note_t>& notesPtrs) {
 	for (note_t& note : notesPtrs) {
-		note.pitch += semitones;
+		note.enabled = !note.enabled;
 	}
 }
 inline void offsetStartTime(std::vector<note_t>& notesPtrs, tick_t offset) {
@@ -79,3 +101,4 @@ inline void offsetEndTime(std::vector<note_t>& notesPtrs, tick_t offset, tick_t 
 		}
 	}
 }
+int cutIntersecting(std::vector<note_t>& m_list, note_t& n, bool eliminateDupes);

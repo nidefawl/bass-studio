@@ -4,6 +4,15 @@
 struct layout_pianoroll_t {
 	float yscale = 10.0f;
 	float yoffset = 0.0f;
+	bool fold = false;
+	float yscalefold = 10.0f;
+	float yoffsetfold = 0.0f;
+	float& offset() {
+		return fold ? this->yoffset : this->yoffsetfold;
+	}
+	float& scale() {
+		return fold ? this->yscale : this->yscalefold;
+	}
 };
 struct layout_grid_t {
 	int offset = 0;

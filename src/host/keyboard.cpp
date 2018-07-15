@@ -8,6 +8,7 @@ KeyCombo KC_CUT = { KB_MOD_CTRL, 0, "x" };
 KeyCombo KC_DUPLICATE = { KB_MOD_CTRL, 0, "d"};
 KeyCombo KC_DELETE = { 0, KEY_DELETE, 0 };
 KeyCombo KC_SELECTALL = { KB_MOD_CTRL, 0, "a" };
+KeyCombo KC_MUTE = { 0, KEY_KP_0, 0 };
 
 
 KeyCombo KC_SAVE = { KB_MOD_CTRL, 0, "s" };

@@ -67,6 +67,7 @@ public:
 		if (view.clip() == clip) {
 			view.cursor = cursorBefore;
 			view.copySelectedNoteList();
+			view.updateNotePitches(false);
 		}
 		clip->setDirty();
 	}
@@ -83,6 +84,7 @@ public:
 		if (view.clip() == clip) {
 			view.cursor = cursorAfter;
 			view.copySelectedNoteList();
+			view.updateNotePitches(false);
 		}
 		clip->setDirty();
 	}
@@ -124,24 +126,24 @@ void gui_clipcontent::handleRightClick(MouseEvent& evt) {
 	guictr_noteeditor* editor = dynamic_cast<guictr_noteeditor*>(this->parent);
 	MainCtrl::get()->openContextMenu(new guictxtmenu_noteeditor(editor), evt.mousepos);
 }
-void renderNote(NVGcontext* vg, gui_clipcontent* c, note_t* note, tick_t offset = 0) {
+void renderNote(NVGcontext* vg, gui_clipcontent* c, note_t* note, float yscale, tick_t offset = 0) {
 
 	float ny = c->toScreenF(note->pitch);
 	float nx = c->grid.tickToScreenD(note->time + offset);
 	float nw = c->grid.tickLenToScreen(note->len);
-	float nh = c->scale;
+	float nh = yscale;
 	float insetx = calcInset(1, nw);
 	float insety = calcInset(1, nh);
-	nvgRect(vg, nx+insetx, ny - c->scale+insety, nw-insetx*2, nh-insety*2);
+	nvgRect(vg, nx+insetx, ny - yscale+insety, nw-insetx*2, nh-insety*2);
 }
-void renderNoteName(NVGcontext* vg, gui_clipcontent* c, note_t* note, int idx) {
+void renderNoteName(NVGcontext* vg, gui_clipcontent* c, note_t* note, int idx, float yscale) {
 
 	float ny = c->toScreenF(note->pitch);
 	float nx = c->grid.tickToScreenD(note->time);
 	float nw = c->grid.tickLenToScreen(note->len);
-	float nh = c->scale;
+	float nh = yscale;
 	float insetx = calcInset(5, nw);
-	renderText(vg, nx + insetx, ny - c->scale + nh / 2.0f, nw-insetx*2, StringAsCStr(StringFormat("%s %d", noteName(note->pitch), idx)));
+	renderText(vg, nx + insetx, ny - yscale + nh / 2.0f, nw-insetx*2, StringAsCStr(StringFormat("%s %d", noteName(note->pitch), idx)));
 }
 void renderFrame(NVGcontext* vg, ivec2 posA, ivec2 posB) {
 	float x = min(posA.x, posB.x);
@@ -186,26 +188,29 @@ void gui_clipcontent::render(NVGcontext* vg) {
 
 //		setScissorTransform(vg);
 
+
+
 	float h = size.y;
+	clip_notes_t& notes = view.clip()->notes;
+	bool fold = layoutRoll.fold;
+	float offset = layoutRoll.offset();
+	float scale = layoutRoll.scale();
+	if (fold) {
+		std::vector<int32_t> pitches;
+		this->view.getNotePitches(pitches);
+		int32_t minPitch = pitches.size() ? pitches[0] : 0;
+		float yOff = offset - scale;
 
-	int32_t firstKey = max((int32_t)floorf(offset/scale), 0);
-	//render one extra key on top and bottom to fix antialiasing on edge of container
-	if (firstKey > 0) {
-		firstKey--;
-	}
-	float yOff = offset - firstKey*scale - scale;
 
-	int32_t firstOctave = floorf(firstKey/12.0f);
-	firstKey = firstKey % 12;
-
-	nvgSave(vg);
-	nvgTranslate(vg, 0, yOff);
-	float yoct = 0;
-	for (int32_t octave = firstOctave; octave < MAX_OCTAVES; octave++) {
+		nvgSave(vg);
+		nvgTranslate(vg, 0, yOff);
+		float yoct = 0;
 		float y = yoct;
 		nvgBeginPath(vg);
-		for (int i = firstKey; i < 12; i++) {
-			if (isSharp(i)) {
+		int len = (int) pitches.size();
+		for (int i = 0; i < len; i++) {
+			int32_t pitch = pitches[i];
+			if (isSharp(pitch)) {
 				nvgRect(vg, 0, h-y, w, scale);
 			}
 			y += scale;
@@ -220,14 +225,14 @@ void gui_clipcontent::render(NVGcontext* vg) {
 		nvgBeginPath(vg);
 		nvgStrokeWidth(vg, 1.0f);
 		nvgStrokeColor(vg, PIANO_COLOR_STR);
-		if (firstKey == 0 && octave == 0) {
-			nvgMoveTo(vg, 0, h - (y-scale));
-			nvgLineTo(vg, w, h - (y-scale));
-		}
+//		if (firstKey == 0 && octave == 0) {
+//			nvgMoveTo(vg, 0, h - (y-scale));
+//			nvgLineTo(vg, w, h - (y-scale));
+//		}
 		nvgStroke(vg);
 
 		nvgBeginPath(vg);
-		for (int i = firstKey; i < 12; i++) {
+		for (int i = 0; i < len; i++) {
 			nvgMoveTo(vg, 0, h-y);
 			nvgLineTo(vg, w, h-y);
 			y += scale;
@@ -237,34 +242,91 @@ void gui_clipcontent::render(NVGcontext* vg) {
 		}
 		nvgStroke(vg);
 		yoct = y;
-		if (yoct >= size.y+scale*2) {
-			break;
+//		if (yoct >= size.y+scale*2) {
+//			break;
+//		}
+	} else {
+		int32_t firstKey = max((int32_t)floorf(offset/scale), 0);
+		//render one extra key on top and bottom to fix antialiasing on edge of container
+		if (firstKey > 0) {
+			firstKey--;
 		}
-		firstKey = 0;
+		float yOff = offset - firstKey*scale - scale;
+
+		int32_t firstOctave = floorf(firstKey/12.0f);
+		firstKey = firstKey % 12;
+
+		nvgSave(vg);
+		nvgTranslate(vg, 0, yOff);
+		float yoct = 0;
+		for (int32_t octave = firstOctave; octave < MAX_OCTAVES; octave++) {
+			float y = yoct;
+			nvgBeginPath(vg);
+			for (int i = firstKey; i < 12; i++) {
+				if (isSharp(i)) {
+					nvgRect(vg, 0, h-y, w, scale);
+				}
+				y += scale;
+				if (y >= size.y+scale*2) {
+					break;
+				}
+			}
+			nvgFillColor(vg, CONTENT_COLOR_SHARP);
+			nvgFill(vg);
+			y = yoct;
+
+			nvgBeginPath(vg);
+			nvgStrokeWidth(vg, 1.0f);
+			nvgStrokeColor(vg, PIANO_COLOR_STR);
+			if (firstKey == 0 && octave == 0) {
+				nvgMoveTo(vg, 0, h - (y-scale));
+				nvgLineTo(vg, w, h - (y-scale));
+			}
+			nvgStroke(vg);
+
+			nvgBeginPath(vg);
+			for (int i = firstKey; i < 12; i++) {
+				nvgMoveTo(vg, 0, h-y);
+				nvgLineTo(vg, w, h-y);
+				y += scale;
+				if (y >= size.y+scale*2) {
+					break;
+				}
+			}
+			nvgStroke(vg);
+			yoct = y;
+			if (yoct >= size.y+scale*2) {
+				break;
+			}
+			firstKey = 0;
+		}
 	}
 
 	nvgRestore(vg);
-	clip_notes_t& notes = view.clip()->notes;
 	if (!notes.empty()) {
-		nvgBeginPath(vg);
-		for (note_t& note : notes.m_list) {
-			float nx = grid.tickToScreenD(note.time);
-			float nw = grid.tickLenToScreen(note.len);
-			if (nx + nw < -4)
-				continue;
-			if (nx > w+4)
-				continue;
-			float ny = toScreenF(note.pitch);
-			float nh = scale;
-			float insetx = calcInset(1, nw);
-			float insety = calcInset(1, nh);
-			nvgRect(vg, nx+insetx, ny - scale+insety, nw-insetx*2, nh-insety*2);
+		for (int i = 0; i < 2; i++) {
+			nvgBeginPath(vg);
+			for (note_t& note : notes.m_list) {
+				if ((i==0) != note.enabled)
+					continue;
+				float nx = grid.tickToScreenD(note.time);
+				float nw = grid.tickLenToScreen(note.len);
+				if (nx + nw < -4)
+					continue;
+				if (nx > w+4)
+					continue;
+				float ny = toScreenF(note.pitch);
+				float nh = scale;
+				float insetx = calcInset(1, nw);
+				float insety = calcInset(1, nh);
+				nvgRect(vg, nx+insetx, ny - scale+insety, nw-insetx*2, nh-insety*2);
+			}
+			nvgFillColor(vg, g_guiColors[i==0?COL_NOTE:COL_NOTE_MUTE]);
+			nvgFill(vg);
+			nvgStrokeWidth(vg, 1.0f);
+			nvgStrokeColor(vg, g_guiColors[COL_NOTE_OUTLINE]);
+			nvgStroke(vg);
 		}
-		nvgFillColor(vg, g_guiColors[COL_NOTE]);
-		nvgFill(vg);
-		nvgStrokeWidth(vg, 1.0f);
-		nvgStrokeColor(vg, g_guiColors[COL_NOTE_OUTLINE]);
-		nvgStroke(vg);
 	}
 
 
@@ -284,7 +346,7 @@ void gui_clipcontent::render(NVGcontext* vg) {
 					}
 				}
 				//TODO: CULL
-				renderNote(vg, this, &note, -note.start() + pos);
+				renderNote(vg, this, &note, scale, -note.start() + pos);
 			}
 			nvgFillColor(vg, g_guiColors[COL_NOTE_PLAYING]);
 			nvgFill(vg);
@@ -298,26 +360,26 @@ void gui_clipcontent::render(NVGcontext* vg) {
 	nvgBeginPath(vg);
 	if (dragMode >= drag_notes_move) {
 		for (note_t& note : view.draggedSelection) {
-			renderNote(vg, this, &note);
+			renderNote(vg, this, &note, scale);
 		}
 	} else {
 		for (note_t* pnote : notes.selection) {
-			renderNote(vg, this, pnote);
+			renderNote(vg, this, pnote, scale);
 		}
 	}
+	//	nvgFillColor(vg, rgbaToNvg(0x7f000000));
+	//	nvgFill(vg);
+		nvgStrokeWidth(vg, 1.0f);
+		nvgStrokeColor(vg, GUI_COLOR(200));
+		nvgStroke(vg);
 	if (scale >= 18) {
 		int idx = 0;
 		setFont(vg, 18, g_guiColors[COL_NOTE_TEXT], NVG_ALIGN_LEFT|NVG_ALIGN_MIDDLE);
 		for (note_t& note : notes.m_list) {
 			//TODO: CULL
-			renderNoteName(vg, this, &note, idx++);
+			renderNoteName(vg, this, &note, idx++, scale);
 		}
 	}
-	nvgFillColor(vg, rgbToNvg(0));
-	nvgFill(vg);
-	nvgStrokeWidth(vg, 1.0f);
-	nvgStrokeColor(vg, GUI_COLOR(66));
-	nvgStroke(vg);
 
 	x = (float)grid.tickToScreenD(view.cursor.start);
 	if (view.cursor.start == view.cursor.end) {
@@ -359,26 +421,31 @@ void gui_pianoroll::render(NVGcontext* vg) {
 	nvgRect(vg, keysX, -4, widthKeys, size.y+8);
 	nvgFillColor(vg, PIANO_COLOR_WHITE);
 	nvgFill(vg);
-	nvgSave(vg);
 
+	bool fold = layoutRoll.fold;
+	float offset = layoutRoll.offset();
+	float scale = layoutRoll.scale();
 	int32_t firstKey = max((int32_t)floorf(offset/scale), 0);
-	//render one extra key on top and bottom to fix antialiasing on edge of container
-	if (firstKey > 0) {
-		firstKey--;
-	}
-	float yOff = offset - firstKey*scale - scale;
 
-	int32_t firstOctave = floorf(firstKey/12.0f);
-	firstKey = firstKey % 12;
+	if (fold) {
+		auto& notes = this->view.clip()->notes;
 
-	nvgTranslate(vg, 0, yOff);
+		std::vector<int32_t> pitches;
+		this->view.getNotePitches(pitches);
+		int32_t minPitch = pitches.size() ? pitches[0] : 0;
+		float yOff = offset - scale;
 
-	float yoct = 0;
-	for (int32_t octave = firstOctave; octave < MAX_OCTAVES; octave++) {
-		float y = yoct;
+
+		nvgSave(vg);
+		nvgTranslate(vg, 0, yOff);
+
+		float yoct = 0;
+		int len = (int) pitches.size();
 		nvgBeginPath(vg);
-		for (int i = firstKey; i < 12; i++) {
-			if (isSharp(i)) {
+		float y = yoct;
+		for (int i = 0; i < len; i++) {
+			int32_t pitch = pitches[i];
+			if (isSharp(pitch)) {
 				nvgRect(vg, keysX, h-y, widthKeys, scale);
 			}
 			y += scale;
@@ -397,10 +464,10 @@ void gui_pianoroll::render(NVGcontext* vg) {
 			nvgMoveTo(vg, keysX - 55, h - (y-scale));
 			nvgLineTo(vg, keysX, h - (y-scale));
 		}
-		if (firstKey == 0 && octave == 0) {
-			nvgMoveTo(vg, keysX, h - (y-scale));
-			nvgLineTo(vg, keysX+widthKeys, h - (y-scale));
-		}
+//		if (firstKey == 0 && octave == 0) {
+//			nvgMoveTo(vg, keysX, h - (y-scale));
+//			nvgLineTo(vg, keysX+widthKeys, h - (y-scale));
+//		}
 		nvgStroke(vg);
 
 		nvgBeginPath(vg);
@@ -413,24 +480,80 @@ void gui_pianoroll::render(NVGcontext* vg) {
 			}
 		}
 		nvgStroke(vg);
-		yoct = y;
-		if (yoct >= size.y+scale*2) {
-			break;
-		}
-		firstKey = 0;
-	}
-	nvgRestore(vg);
-	setFont(vg, 24, G_BLACK, NVG_ALIGN_LEFT|NVG_ALIGN_BOTTOM);
-	char buf[5];
-	for (int32_t octave = 0; octave < MAX_OCTAVES; octave++) {
-		float y = scale*octave*12;
-		float textY = h - y + offset;
-		if (textY > size.y+scale+20 || textY < -20) {
-			continue;
-		}
+		nvgRestore(vg);
+	} else {
+		nvgSave(vg);
 
-		snprintf(buf, sizeof(buf), "C%d", octave-2);
-		nvgText(vg, 4, textY, buf, NULL);
+		//render one extra key on top and bottom to fix antialiasing on edge of container
+		if (firstKey > 0) {
+			firstKey--;
+		}
+		float yOff = offset - firstKey*scale - scale;
+
+		int32_t firstOctave = floorf(firstKey/12.0f);
+		firstKey = firstKey % 12;
+
+		nvgTranslate(vg, 0, yOff);
+
+		float yoct = 0;
+		for (int32_t octave = firstOctave; octave < MAX_OCTAVES; octave++) {
+			float y = yoct;
+			nvgBeginPath(vg);
+			for (int i = firstKey; i < 12; i++) {
+				if (isSharp(i)) {
+					nvgRect(vg, keysX, h-y, widthKeys, scale);
+				}
+				y += scale;
+				if (y >= size.y+scale*2) {
+					break;
+				}
+			}
+			nvgFillColor(vg, PIANO_COLOR_BLACK);
+			nvgFill(vg);
+			y = yoct;
+
+			nvgBeginPath(vg);
+			nvgStrokeWidth(vg, 1.0f);
+			nvgStrokeColor(vg, PIANO_COLOR_STR);
+			if (firstKey == 0) {
+				nvgMoveTo(vg, keysX - 55, h - (y-scale));
+				nvgLineTo(vg, keysX, h - (y-scale));
+			}
+			if (firstKey == 0 && octave == 0) {
+				nvgMoveTo(vg, keysX, h - (y-scale));
+				nvgLineTo(vg, keysX+widthKeys, h - (y-scale));
+			}
+			nvgStroke(vg);
+
+			nvgBeginPath(vg);
+			for (int i = firstKey; i < 12; i++) {
+				nvgMoveTo(vg, keysX, h-y);
+				nvgLineTo(vg, keysX+widthKeys, h-y);
+				y += scale;
+				if (y >= size.y+scale*2) {
+					break;
+				}
+			}
+			nvgStroke(vg);
+			yoct = y;
+			if (yoct >= size.y+scale*2) {
+				break;
+			}
+			firstKey = 0;
+		}
+		nvgRestore(vg);
+		setFont(vg, 24, G_BLACK, NVG_ALIGN_LEFT|NVG_ALIGN_BOTTOM);
+		char buf[5];
+		for (int32_t octave = 0; octave < MAX_OCTAVES; octave++) {
+			float y = scale*octave*12;
+			float textY = h - y + offset;
+			if (textY > size.y+scale+20 || textY < -20) {
+				continue;
+			}
+
+			snprintf(buf, sizeof(buf), "C%d", octave-2);
+			nvgText(vg, 4, textY, buf, NULL);
+		}
 	}
 	nvgBeginPath(vg);
 	nvgMoveTo(vg, keysX+widthKeys, 0);
@@ -484,6 +607,7 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
 		}
 		MainCtrl::get()->pushHist(new action_modify_notes(desc, view, notesBefore, cursorBefore));
 		clip->setDirty();
+		view.updateNotePitches(false);
 	} else {
 
 		bool inSelection = false;
@@ -640,10 +764,9 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
 
 
 		tick_t gridSize = grid.getTickLength();
-		int32_t pitchStart = toNoteF(dragBegin.y);
-		int32_t pitchEnd = toNoteF(dragTo.y);
+		int32_t pitchStart = toNoteFNoFolding(dragBegin.y);
+		int32_t pitchEnd = toNoteFNoFolding(dragTo.y);
 		tick_t pitchOffset = pitchEnd - pitchStart;
-
 		tick_t tickStartExact = grid.screenToTick(dragBegin.x);
 		tick_t tickEndExact = grid.screenToTick(dragTo.x);
 		tick_t timeOffsetEx = tickEndExact - tickStartExact;
@@ -671,34 +794,59 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
 			timeOffset = timeOffsetEx;
 		}
 		view.draggedSelection = view.draggedSelectionBegin;
-		auto it = view.draggedSelection.begin();
-		const auto itEnd = view.draggedSelection.end();
-		while (it != itEnd) {
-			note_t& note = *it;
-			if (dragMode == drag_note_left) {
-				note_t* before = getFirstBefore(notes.m_list, note.pitch, note.time);
-				note.time = min(note.end()-1, note.start()+timeOffset);
-				note.len = max(1, note.len - timeOffset);
-				if (before) {
-					if (note.start() < before->end()) {
-						note.cutLeft(before->end());
+		{
+			auto it = view.draggedSelection.begin();
+			const auto itEnd = view.draggedSelection.end();
+			while (it != itEnd) {
+				note_t& note = *it;
+				if (dragMode == drag_note_left) {
+					note_t* before = getFirstBefore(notes.m_list, note.pitch, note.time);
+					note.time = min(note.end()-1, note.start()+timeOffset);
+					note.len = max(1, note.len - timeOffset);
+					if (before) {
+						if (note.start() < before->end()) {
+							note.cutLeft(before->end());
+						}
 					}
-				}
-			} else if (dragMode == drag_note_right) {
-				note_t* after = getFirstAfter(notes.m_list, note.pitch, note.time);
-				note.len = max(gridSize, note.len + timeOffset);
-				if (after) {
-					if (note.end() > after->start()) {
-						note.cutRight(after->start());
+				} else if (dragMode == drag_note_right) {
+					note_t* after = getFirstAfter(notes.m_list, note.pitch, note.time);
+					note.len = max(gridSize, note.len + timeOffset);
+					if (after) {
+						if (note.end() > after->start()) {
+							note.cutRight(after->start());
+						}
 					}
-				}
-			} else {
-				note.time += timeOffset;
-				note.pitch += pitchOffset;
-			}
+				} else {
+					note.time += timeOffset;
+					if (layoutRoll.fold) {
+						note.pitch = view.nextFoldNote(note.pitch, pitchOffset);
+					} else {
+						note.pitch += pitchOffset;
+					}
 
-			it++;
+				}
+
+				it++;
+			}
 		}
+		{
+			std::vector<note_t> notes = view.draggedSelection;
+			std::vector<note_t> noteCut = view.draggedSelection;
+			auto it = notes.begin();
+			auto itEnd = notes.end();
+			while (it != itEnd) {
+				note_t& note = *it;
+				it++;
+				if (cutIntersecting(noteCut, note, false)>0) {
+					notes = noteCut;
+					it = notes.begin();
+					itEnd = notes.end();
+				}
+			}
+			view.draggedSelection = noteCut;
+		}
+//		cutIntersecting()
+//		std::unique(view.draggedSelection.begin(),view.draggedSelection.end());
 		mergeDraggedNotes(dragMode);
 		setSelectionFrame(getMinMaxTime(view.draggedSelection));
 	}
@@ -712,11 +860,15 @@ void gui_clipcontent::mergeDraggedNotes(dragmode mergeMode) {
 	if (mergeMode != dragmode::drag_notes_copy) {
 		notes.removeAllKeepDuplicates(view.draggedSelectionBegin);
 	}
+	int32_t size = notes.m_list.size();
 	for (note_t& note : view.draggedSelection) {
 		notes.paste(note, true);
 	}
+//	int32_t sizePost = notes.m_list.size();
+//	if (sizePost-size > 0)
 	notes.selectLastN(view.draggedSelection.size());
 	clip->setDirty();
+	view.updateNotePitches(false);
 }
 void gui_clipcontent::expandSelectionFrame(std::pair<note_t*, note_t*> minMax) {
 	if (minMax.first && minMax.second) {
@@ -754,6 +906,7 @@ void gui_clipcontent::handleDraggedRelease(MouseEvent& evt) {
 			MainCtrl::get()->pushHist(new action_modify_notes(action, view, view.dragStartNotes, dragStartCursor));
 			view.copySelectedNoteList();
 			clip->setDirty();
+			view.updateNotePitches(false);
 		}
 	}
 	dragMode = drag_none;
@@ -806,6 +959,16 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
 				handled = true;
 				edit = true;
 				desc = "Delete notes";
+			}
+			if (isKC(KC_MUTE, kevt) && !notes.selection.empty()) {
+//				notes.muteToggleSelectedNotes(notes);
+				muteNotesToggle(view.draggedSelection);
+				mergeDraggedNotes(dragmode::drag_notes_move);
+				notes.updateBounds();
+				setSelectionFrame(getMinMaxTime(notes.selection));
+				handled = true;
+				edit = true;
+				desc = "Mute notes";
 			}
 			else if (isKC(KC_CUT, kevt) && !notes.selection.empty()) {
 				view.clipboardCursorRange = cursor.end - cursor.start;
@@ -876,7 +1039,8 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
 				if ((kevt.mods & KB_MOD_SHIFT)) {
 					dir *= 12;
 				}
-				changePitch(view.draggedSelection, dir.y);
+				changePitch(view.draggedSelection, dir.y,
+						layoutRoll.fold, layoutRoll.fold ? view.notePitches : std::vector<int32_t>{});
 				mergeDraggedNotes(dragmode::drag_notes_move);
 				notes.updateBounds();
 				setSelectionFrame(getMinMaxTime(notes.selection));
@@ -932,6 +1096,7 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
 			notes.updateBounds();
 			MainCtrl::get()->pushHist(new action_modify_notes(desc, view, notesBefore, cursorBefore));
 			clip->setDirty();
+			view.updateNotePitches(false);
 		}
 		return handled;
 	}
@@ -958,6 +1123,7 @@ void guictr_noteeditor::render(NVGcontext* vg) {
 	nvgSave(vg);
 	clipHandles.render(vg);
 	nvgRestore(vg);
+	btn.render(vg);
 //	nvgBeginPath(vg);
 //	nvgMoveTo(vg, piano.left(), 0);
 //	nvgLineTo(vg, piano.left(), size.y);

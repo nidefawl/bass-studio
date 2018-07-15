@@ -9,7 +9,6 @@
 #include "seq_math.h"
 #include "leak_detect.h"
 #include "audiocache.h"
-#include "../host/vst_host.h"
 #include "mainctrl.h"
 #include "project.h"
 
@@ -29,15 +28,17 @@ note_t& clip_notes_t::add(note_t& t) {
 int cutIntersecting(std::vector<note_t>& m_list, note_t& n, bool eliminateDupes) {
 	int nErased = 0;
 	auto it = m_list.begin();
+	int exactDupes = 0;
 	while (it != m_list.end()) {
 		note_t& c = *it;
 		if (c == n) {
-			if (eliminateDupes) {
+			if (eliminateDupes || exactDupes) {
 				it = m_list.erase(it);
 				nErased++;
 			} else {
 				it++; // allow exact duplicates
 			}
+			exactDupes++;
 		} else if (c.pitch != n.pitch) {
 			it++;
 		} else if (c.start() >= n.end() || c.end() <= n.start()) {
@@ -52,10 +53,11 @@ int cutIntersecting(std::vector<note_t>& m_list, note_t& n, bool eliminateDupes)
 	}
 	return nErased;
 }
-note_t& clip_notes_t::paste(note_t& t, bool eliminateDupes) {
+int32_t clip_notes_t::paste(note_t& t, bool eliminateDupes) {
 	assert(selection.empty());
 	cutIntersecting(m_list, t, eliminateDupes);
-	return add(t);
+	add(t);
+	return 0;
 }
 
 void clip_notes_t::removeSingle(note_t& t) {
@@ -76,6 +78,15 @@ void clip_notes_t::remove(note_t& t) {
 		throw applogicexception("track - attempt to remove non-present note");
 	}
 	m_list.erase(it);
+}
+void clip_notes_t::mute(note_t& t) {
+	auto it = std::find(m_list.begin(), m_list.end(), t);
+	if (it == m_list.end()) {
+
+		throw applogicexception("track - attempt to mute non-present note");
+	}
+	note_t& noteFound = *it;
+	noteFound.enabled = !noteFound.enabled;
 }
 void clip_notes_t::addAll(std::vector<note_t>& list) {
 	assert(selection.empty());
@@ -225,6 +236,9 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
 	auto itNoteEnd = notes.m_list.cend();
 	for (;itNote != itNoteEnd; itNote++) {
 		const note_t& note = *itNote;
+		if (forPlayback && !note.enabled){
+			continue;
+		}
 		if (note.isIntersectTime(loopStart, loopStart + loopLen)) {
 			listLoop.push_back(note);
 		}
@@ -421,16 +435,6 @@ std::pair<note_t*, note_t*> getMinMaxTime(std::vector<note_t>& notes) {
     return std::make_pair(&*min, &*max);
 }
 
-tick_t clip_audio_t::lenInTicks() {
-	cachedaudio_t* audio = audiocache::getInstance()->get(this->id);
-	vsthost* host = vsthost::getInstance();
-	project_globals_t* globals = MainCtrl::get();
-	auto* sample = audio->sample.get();
-	if (sample)
-		return sampleToTickPrecise(sample->nSamples, globals->tempo100, host->lSampleRate);
-
-	return 0;
-}
 tick_t clip_audio_t::lenSamples() {
 	cachedaudio_t* audio = audiocache::getInstance()->get(this->id);
 	auto* sample = audio ? audio->sample.get() : nullptr;

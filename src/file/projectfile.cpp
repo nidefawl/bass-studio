@@ -146,6 +146,7 @@ void serialize(Archive & archive, layout_pianoroll_t & m)
 {
 	archive(make_nvp("offset", m.yoffset),
 			make_nvp("scale", m.yscale));
+	make_optional_nvp(archive, "fold", m.fold);
 }
 template<class Archive>
 void serialize(Archive & archive, clip_editor_layout_t & m)

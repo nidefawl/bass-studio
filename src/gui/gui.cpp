@@ -45,6 +45,7 @@ void initColor() {
 
 	g_guiColors[COL_NOTE] = rgbToNvg(0xff9933);
 	g_guiColors[COL_NOTE_PLAYING] = rgbToNvg(0x33ff33);
+	g_guiColors[COL_NOTE_MUTE] = rgbToNvg(0x666666);
 	g_guiColors[COL_NOTE_OUTLINE] = rgbToNvg(0);
 	g_guiColors[COL_NOTE_TEXT] = rgbToNvg(33);
 	g_guiColors[COL_BG_SELECTEDTRACK] = GUI_COLORA(c3 + 20, 80);

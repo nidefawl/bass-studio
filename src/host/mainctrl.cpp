@@ -427,7 +427,7 @@ void MainCtrl::menuCommand(int cmd) {
 }
 void MainCtrl::postInit() {
 	vsthost::getInstance()->postInit();
-	loadFile("versiontest2.project");
+	loadFile("empty.project");
 //	for (int i = 0; i < 32; i++) {
 //		loadFile("muuure.project");
 //	}

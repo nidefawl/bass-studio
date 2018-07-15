@@ -64,6 +64,7 @@ public:
 class guibutton : public guibuttonbase {
 	bool* enabledPtr = NULL;
 	bool* activePtr = NULL;
+	String str = "";
 public:
 	guibutton() : guibuttonbase() {
 	}
@@ -83,10 +84,25 @@ public:
 	void setActiveRef(bool* _activePtr) {
 		activePtr = _activePtr;
 	}
+	void setText(String _str) {
+		str = _str;
+	}
+	virtual int32_t getStateFlags() {
+		int32_t state = guibuttonbase::getStateFlags();
+		if (activePtr&&*activePtr) {
+			state |= FLG_ACT;
+		}
+		return state;
+	}
 	void (*drawFn)(NVGcontext*,ivec2&, ivec2&, const NVGcolor&, int drawParm, int drawParm2) = NULL;
 	int drawParm = 0;
 	void render(NVGcontext* vg) {
 		renderWidgetBorder(vg, getStateFlags());
+		if (str.length() > 0) {
+			setFont(vg, G_FONT_SCALE(size.y), G_WHITE, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+			nvgText(vg, pos.x + size.x / 2.0f, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(str), NULL);
+		}
+
 		if (drawFn) {
 			drawFn(vg, pos, size, theme->getBgColor(getStateFlags()), drawParm, active());
 		}

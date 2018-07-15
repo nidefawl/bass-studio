@@ -93,6 +93,12 @@ public:
 		}
 		theme->setBgColor(hex);
 	}
+	void setActiveColor(uint32_t hex) {
+		if (theme->isDefault) {
+			theme = new guitheme_t(false);
+		}
+		theme->setActiveColor(hex);
+	}
 	guibase(const guibase&) = default; guibase& operator=(const guibase&) = default;
 	guibase(guibase&&) = default; guibase& operator=(guibase&&) = default;
 
