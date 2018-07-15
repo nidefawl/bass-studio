@@ -428,22 +428,24 @@ void gui_pianoroll::render(NVGcontext* vg) {
 	int32_t firstKey = max((int32_t)floorf(offset/scale), 0);
 
 	if (fold) {
-		auto& notes = this->view.clip()->notes;
+		//render one extra key on top and bottom to fix antialiasing on edge of container
+		if (firstKey > 0) {
+			firstKey--;
+		}
 
+		firstKey = firstKey % 12;
 		std::vector<int32_t> pitches;
 		this->view.getNotePitches(pitches);
-		int32_t minPitch = pitches.size() ? pitches[0] : 0;
-		float yOff = offset - scale;
+		float yOff = offset - firstKey*scale - scale;
 
 
 		nvgSave(vg);
 		nvgTranslate(vg, 0, yOff);
 
-		float yoct = 0;
 		int len = (int) pitches.size();
 		nvgBeginPath(vg);
-		float y = yoct;
-		for (int i = 0; i < len; i++) {
+		float y = 0;
+		for (int i = firstKey; i < len; i++) {
 			int32_t pitch = pitches[i];
 			if (isSharp(pitch)) {
 				nvgRect(vg, keysX, h-y, widthKeys, scale);
@@ -455,32 +457,52 @@ void gui_pianoroll::render(NVGcontext* vg) {
 		}
 		nvgFillColor(vg, PIANO_COLOR_BLACK);
 		nvgFill(vg);
-		y = yoct;
+		nvgRestore(vg);
+		yOff = offset - scale;
 
+		nvgSave(vg);
+		nvgTranslate(vg, 0, yOff);
 		nvgBeginPath(vg);
 		nvgStrokeWidth(vg, 1.0f);
 		nvgStrokeColor(vg, PIANO_COLOR_STR);
-		if (firstKey == 0) {
-			nvgMoveTo(vg, keysX - 55, h - (y-scale));
-			nvgLineTo(vg, keysX, h - (y-scale));
-		}
-//		if (firstKey == 0 && octave == 0) {
-//			nvgMoveTo(vg, keysX, h - (y-scale));
-//			nvgLineTo(vg, keysX+widthKeys, h - (y-scale));
-//		}
-		nvgStroke(vg);
-
-		nvgBeginPath(vg);
-		for (int i = firstKey; i < 12; i++) {
-			nvgMoveTo(vg, keysX, h-y);
-			nvgLineTo(vg, keysX+widthKeys, h-y);
+		y = 0;
+		float prevSeperator = -30;
+		for (int i = 0; i <= len; i++) {
+			if (y-prevSeperator > 25 || i == len) {
+				int wSep = 55;
+				if (i == len && y-prevSeperator < 25)
+					wSep = 20;
+				if ((h-y+scale)+offset > -30 && (h-y+scale)+offset < h+40) {
+					nvgMoveTo(vg, keysX - wSep, h-y+scale);
+					nvgLineTo(vg, keysX, h-y+scale);
+				}
+				prevSeperator = y;
+			}
+			if ((h-y+scale)+offset > -30 && (h-y+scale)+offset < h+40) {
+				nvgMoveTo(vg, keysX, h-y+scale);
+				nvgLineTo(vg, keysX+widthKeys, h-y+scale);
+			}
 			y += scale;
-			if (y >= size.y+scale*2) {
+			if (y >= h+scale*2) {
 				break;
 			}
 		}
 		nvgStroke(vg);
 		nvgRestore(vg);
+		setFont(vg, 24, G_BLACK, NVG_ALIGN_LEFT|NVG_ALIGN_BOTTOM);
+		prevSeperator = -30;
+		for (int i = 0; i < len; i++) {
+			int32_t pitch = pitches[i];
+			y = scale*i;
+			if (y-prevSeperator > 25) {
+				float textY = h - y + offset;
+				if (textY > -20 && textY < size.y+scale+20) {
+					const char* notename = noteName(pitch);
+					nvgText(vg, 4, textY, notename, NULL);
+				}
+				prevSeperator = y;
+			}
+		}
 	} else {
 		nvgSave(vg);
 
