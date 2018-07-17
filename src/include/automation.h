@@ -33,13 +33,13 @@ struct automation_t {
 	void copyRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data);
 	void setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data);
 };
+struct automation_view_t: public automation_t {
+	int32_t targetParam = -1;
+};
 struct automation_clipboard_t {
 	tick_t start;
 	tick_t len;
 	std::vector<automation_point_t> dataPoints;
-};
-struct automation_view_t: public automation_t {
-	int32_t targetParam = -1;
 };
 class vstplugin;
 struct vstparam_automation_t: public automation_t {

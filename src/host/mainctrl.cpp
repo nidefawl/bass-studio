@@ -155,6 +155,7 @@ public:
 	guictr_tracks ctr_tracks;
 	gui_ctr_debug ctr_dbg;
 	guictr_pluginlibrary ctr_pluginlist;
+	guictr_effectlibrary ctr_effectlist;
 	Splitter splitterList;
 	Splitter splitterCenter;
 	Splitter splitterRight;
@@ -222,17 +223,20 @@ public:
 		ctr_pluginview.setSnapSides(ivec4(0, 1, 0, 0));
 		ctr_clipeditor.setSnapSides(ivec4(0, 1, 0, 0));
 		ctr_plugins.setSnapSides(ivec4(0, 1, 0, 0));
-		ctr_pluginlist.setSnapSides(ivec4(1, 0, 0, 0));
-		ctr_dbg.setSnapSides(ivec4(1, 1, 0, 0));
+		ctr_pluginlist.setSnapSides(ivec4(1, 0, 0, 1));
+		ctr_effectlist.setSnapSides(ivec4(1, 0, 0, 0));
+		ctr_dbg.setSnapSides(ivec4(1, 0, 0, 0));
 
 
 		ctr_dbg.pos = {width, winY+hTopControls+heightList};
 		ctr_dbg.size = {wRight, heightDebug};
 		ctr_pluginlist.pos = {width, winY+hTopControls};
-		ctr_pluginlist.size = {wRight, heightList};
+		ctr_pluginlist.size = {wRight, heightList/2};
+		ctr_effectlist.pos = {width, ctr_pluginlist.bottom()};
+		ctr_effectlist.size = {wRight, heightList/2};
 		splitterRight.pos = ivec2(ctr_dbg.pos.x - 5, hTopControls);
 		splitterRight.size = ivec2(10, hRight);
-		splitterList.pos = ivec2(ctr_dbg.pos.x, ctr_pluginlist.bottom()-5);
+		splitterList.pos = ivec2(ctr_dbg.pos.x, ctr_effectlist.bottom()-5);
 		splitterList.size = ivec2(wRight, 10);
 	}
 	void addTo(vector<guictr_base*>& v) {
@@ -242,6 +246,7 @@ public:
 		 v.push_back(&ctr_pluginview);
 		 v.push_back(&ctr_clipeditorview);
 		 v.push_back(&ctr_pluginlist);
+		 v.push_back(&ctr_effectlist);
 		 v.push_back(&statusbar);
 		 v.push_back(&ctr_dbg);
 #if USE_GUI_MENU
@@ -459,6 +464,7 @@ void MainCtrl::postInit() {
 		}
 	}
 	view->ctr_pluginlist.update();
+	view->ctr_effectlist.update();
 }
 void MainCtrl::initApp() {
 

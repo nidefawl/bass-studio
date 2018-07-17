@@ -539,7 +539,7 @@ int32_t vsthost::processPlayback(int32_t sample, double posDouble, playback_stat
 			trackImpl->input.realloc(lBlockSize);
 			trackImpl->output.realloc(lBlockSize);
 			dsp_util::fillSilence(trackImpl->input.buf, lBlockSize);
-			if (state == playback_state::status_play && trackImpl->instrument && trackImpl->instrument->bIsEnabled) {
+			if (state == playback_state::status_play) {
 				trackImpl->sendNotes(pos, tickBlockEnd, loopCutStart, loopCutEnd, project.tempo100, sample);
 			} else if (!trackImpl->heldNotes.empty()) {
 				trackImpl->sendNotesOff(project.tempo100, sample);
@@ -649,9 +649,6 @@ void mulGain(AudioBlock* block, float gain) {
 }
 void vsthost::processAudio(track_impl_t* channel, AudioBlock* input, AudioBlock* output, unsigned long samples) {
 	int count = 0;
-	if (channel->instrument) {
-		count++;
-	}
 	if (channel->effects.size()) {
 		count+=channel->effects.size();
 	}
@@ -659,12 +656,8 @@ void vsthost::processAudio(track_impl_t* channel, AudioBlock* input, AudioBlock*
 
 	for (int i = 0; i < count; ++i)
 	{
-		vstplugin *current = NULL;
-		if (channel->instrument) {
-			current = i == 0 ? channel->instrument : channel->effects[i-1];
-		} else {
-			current = channel->effects[i];
-		}
+		effectbase *current = NULL;
+		current = channel->effects[i];
 		if (!current->bIsSetup) {
 			continue;
 		}
@@ -681,17 +674,11 @@ void vsthost::processAudio(track_impl_t* channel, AudioBlock* input, AudioBlock*
 		//   If a plugin runs mono inputs or outputs we need to handle this manually here
 		blockIn->copyFrom(input);
 
-		handles_t* handle = current->handle;
-		if (handle->aeffect != NULL) {
-			if (handle->aeffect->flags & effFlagsCanReplacing) {
- 				handle->aeffect->processReplacing(handle->aeffect, blockIn->buf, blockOut->buf, samples);
-			} else {
-				handle->aeffect->process(handle->aeffect, blockIn->buf, blockOut->buf, samples);
-			}
-			current->meter.update(blockOut);
-			//TODO: maybe sanitize plugins output floats here (NaN/Inf/ >50 dBFS)
-			input = blockOut;
-		}
+//		handles_t* handle = current->handle;
+		current->process(blockIn, blockOut, samples);
+		//TODO: maybe sanitize plugins output floats here (NaN/Inf/ >50 dBFS)
+		input = blockOut;
+		current->meter.update(blockOut);
 	}
 	//   If a plugin runs mono inputs or outputs we need to handle this manually here
 	output->copyFrom(input);
@@ -878,16 +865,12 @@ vstplugin* vsthost::getPlugin(AEffect* aeffect) {
 void vsthost::unloadTrack(track_t* track) {
 	assert(track->audio);
 	auto audio = track->audio;
-	std::vector<vstplugin*> effects = audio->effects;
-	for (vstplugin* effect : effects) {
+	std::vector<effectbase*> effects = audio->effects; // make a copy before unloading plugins
+	for (effectbase* effect : effects) {
 		unloadPlugin(effect);
 	}
-	vstplugin* instrument = audio->instrument;
-	if (instrument) {
-		unloadPlugin(instrument);
-	}
 }
-void vsthost::unloadPlugin(vstplugin* plugin) {
+void vsthost::unloadPlugin(effectbase* plugin) {
 	if (MainCtrl::get())
 		MainCtrl::get()->closeContextMenu();
 //	PopupCtrl::get()->close(); // Make sure context controls do not reference vst
@@ -896,11 +879,14 @@ void vsthost::unloadPlugin(vstplugin* plugin) {
 	if (it != list.end()) {
 		list.erase(it);
 	}
-	if (plugin->handle->tr_plugins) {
-		plugin->handle->tr_plugins->removePlugin(plugin, true);
+	vstplugin* vst = dynamic_cast<vstplugin*>(plugin);
+	if (vst) {
+		if (vst->handle->tr_plugins) {
+			vst->handle->tr_plugins->removePlugin(plugin, true);
+		}
+		vst->unload();
+		moduleMgr->releaseModule(vst->handle->hmodule);
 	}
-	plugin->unload();
-	moduleMgr->releaseModule(plugin->handle->hmodule);
 	delete plugin;
 }
 bool vsthost::unloadAllPlugins() {
@@ -951,50 +937,50 @@ bool vsthost::movePlugin(track_t* dstTr, track_impl_t* trp, int32_t src, int32_t
 //	if (!dstTr->audio) { //TODO: move me some central place
 //		dstTr->audio = vsthost::getInstance()->createAudio(dstTr);
 //	}
-	if (src > 0) {
+//	if (src > 0) {
 		assert(src > 0 && dst > 0);
 		src--;
 		dst--;
-		vstplugin* tmpPlugin = trp->effects[src];
+		effectbase* tmpPlugin = trp->effects[src];
 		trp->removePlugin(tmpPlugin, true);
 		dstTr->audio->insertEffect(dst, tmpPlugin);
-	} else {
-		assert(src == 0 && dst == 0);
-		vstplugin* tmpPlugin = trp->instrument;
-		trp->removePlugin(tmpPlugin, true);
-		vstplugin* old = dstTr->audio->setInstrument(tmpPlugin);
-		if (old) {
-			unloadPlugin(old);
-		}
-	}
+//	} else {
+//		assert(src == 0 && dst == 0);
+//		vstplugin* tmpPlugin = trp->instrument;
+//		trp->removePlugin(tmpPlugin, true);
+//		vstplugin* old = dstTr->audio->setInstrument(tmpPlugin);
+//		if (old) {
+//			unloadPlugin(old);
+//		}
+//	}
 	trp->pluginsChanged();
 	dstTr->audio->pluginsChanged();
 	return true;
 }
 bool vsthost::swapEffects(track_impl_t* trp, int32_t src, int32_t dst) {
 	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-	assert(src > 0 && dst > 0);
-	src--;
-	dst--;
+	assert(src >= 0 && dst >= 0);
+//	src--;
+//	dst--;
 
 	assert((int32_t)trp->effects.size() > src);
 	assert((int32_t)trp->effects.size() > dst);
-	vstplugin* tmpPlugin = trp->effects[dst];
+	effectbase* tmpPlugin = trp->effects[dst];
 	trp->effects[dst] = trp->effects[src];
 	trp->effects[src] = tmpPlugin;
-	trp->effects[src]->handle->slot = src+1;
-	trp->effects[dst]->handle->slot = dst+1;
+	trp->effects[src]->setSlot(src);
+	trp->effects[dst]->setSlot(dst);
 	return true;
 }
-bool vsthost::insertNewPlugin(track_impl_t* trp, vstplugin* plugin, int32_t dst) {
-	if (plugin->isSynth) {
-		vstplugin* old = trp->setInstrument(plugin);
-		if (old) {
-			unloadPlugin(old);
-		}
-	} else {
+bool vsthost::insertNewPlugin(track_impl_t* trp, effectbase* plugin, int32_t dst) {
+//	if (plugin->isSynth) {
+//		vstplugin* old = trp->setInstrument(plugin);
+//		if (old) {
+//			unloadPlugin(old);
+//		}
+//	} else {
 		trp->insertEffect(dst-1, plugin);
-	}
+//	}
 	trp->pluginsChanged();
 	return true;
 }

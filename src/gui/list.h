@@ -10,6 +10,8 @@ protected:
 public:
 	gui_list_entry() : guibase() {
 	}
+	virtual ~gui_list_entry() {
+	}
 	virtual void render(NVGcontext* vg) {
 		AppCtrl* ctrl = AppCtrl::get();
 		float spacing = INSET_TITLE;

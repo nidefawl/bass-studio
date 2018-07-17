@@ -61,6 +61,7 @@ public:
 	guitheme_t* theme = getDefaultTheme();
 	int dummy0 = 0;
 	bool canTextInput = false;
+	String label = "";
 	guibase() {
 		id = allocCount;
 		allocCount++;
@@ -75,6 +76,9 @@ public:
 	}
 	String getClassName() {
 		return typeName(*this);
+	}
+	void setLabel(String _str) {
+		label = _str;
 	}
 	virtual ~guibase() {
 		AppCtrl* ctrl = AppCtrl::get();

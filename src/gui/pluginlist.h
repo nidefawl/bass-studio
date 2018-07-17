@@ -17,8 +17,19 @@ using glm::vec4;
 using glm::ivec4;
 class gui_pluginlist_entry : public gui_list_entry {
 public:
+	gui_pluginlist_entry() {
+
+	}
+	virtual ~gui_pluginlist_entry() {
+
+	}
+	virtual effectbase* makeInstance() = 0;
+	virtual bool isSynth() = 0;
+};
+class gui_vstpluginlist_entry : public gui_pluginlist_entry {
+public:
 	const pluginentry_t entry;
-	gui_pluginlist_entry(const pluginentry_t _entry) : gui_list_entry(), entry(_entry) {
+	gui_vstpluginlist_entry(const pluginentry_t _entry) : gui_pluginlist_entry(), entry(_entry) {
 		icon = _entry.isSynth ? ICON_SYNTH : ICON_EFFECT;
 	}
 	void dragMoveOn(guibase* target, ivec2 mousepos) override {
@@ -29,6 +40,10 @@ public:
 	}
 	String getText() override {
 		return entry.name;
+	}
+	effectbase* makeInstance() override;
+	bool isSynth() override {
+		return entry.isSynth;
 	}
 };
 class guictr_pluginlibrary : public guictr_base {
@@ -62,8 +77,110 @@ public:
 		ctrl->plugindb.query(curquery, pluginsLibList);
 
 		for (pluginentry_t& entry : pluginsLibList) {
-			gui_pluginlist_entry* g = new gui_pluginlist_entry(entry);
+			gui_pluginlist_entry* g = new gui_vstpluginlist_entry(entry);
 			_newList.push_back(g);
+		}
+		pluginListCtr.setList(_newList);
+		layout();
+	}
+	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
+		if (this->contains(mpos)) {
+			ivec2 localMouse = this->toContainerSpace(mpos);
+			for (guibase* gui : guis) {
+				if (gui->mouseHitTest(localMouse, evt)) {
+//					my_printf("clicked on %s %d\n", gui->getClassName().c_str(), (int) h);
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+	void layout() {
+		ivec2 cs = getSizeContent();
+		textField.size = ivec2(cs.x, heightTextField);
+		textField.pos = ivec2(0, 0);
+		pluginListCtr.pos = ivec2(0, heightTextField);
+		pluginListCtr.size = ivec2(cs.x, cs.y-heightTextField);
+		for (guibase* gui : guis) {
+			gui->layout();
+		}
+	}
+	virtual void render(NVGcontext* vg) {
+		renderBackground(vg);
+		if (!setScissorTransform(vg)) {
+			return;
+		}
+		textField.render(vg);
+		pluginListCtr.render(vg);
+	}
+};
+struct effect_desc_t {
+	int uid;
+	String name;
+	bool isSynth;
+};
+//std::shared_ptr<effectbase> makeEffect(int effect) {
+//	switch (effect) {
+//	case 0:
+//	default:
+//		return std::make_shared<>();
+//	}
+//}
+#define EFFECT_GROUP 0
+class gui_builtinpluginlist_entry : public gui_pluginlist_entry {
+public:
+	const effect_desc_t entry;
+	gui_builtinpluginlist_entry(const effect_desc_t _entry) : gui_pluginlist_entry(), entry(_entry) {
+		icon = _entry.isSynth ? ICON_SYNTH : ICON_EFFECT;
+	}
+	void dragMoveOn(guibase* target, ivec2 mousepos) override {
+		target->pluginEntryDragMove(this, mousepos);
+	}
+	void dragReleaseOn(guibase* target, ivec2 mousepos) override {
+		target->pluginEntryDragRelease(this, mousepos);
+	}
+	String getText() override {
+		return entry.name;
+	}
+	effectbase* makeInstance() override {
+		return nullptr;
+	}
+	bool isSynth() override {
+		return entry.isSynth;
+	}
+};
+class guictr_effectlibrary : public guictr_base {
+	const int32_t heightTextField = 30;
+	gui_textfield textField;
+	gui_list pluginListCtr;
+	String curquery = "";
+	std::vector<effect_desc_t> effectEntries;
+public:
+	guictr_effectlibrary() : guictr_base() {
+		effectEntries.push_back(effect_desc_t{EFFECT_GROUP, "Group", false});
+		pluginListCtr.padding = 0;
+		add(&textField);
+		add(&pluginListCtr);
+		textField.setCallback([this](const String& str) {
+			curquery = str;
+			update();
+			return true;
+		});
+		textField.setPlaceholder("Search");
+	}
+	~guictr_effectlibrary() {
+		std::vector<gui_list_entry*> _newList;
+		pluginListCtr.setList(_newList);
+		remove(&pluginListCtr);
+		remove(&textField);
+	}
+	void update() {
+		std::vector<gui_list_entry*> _newList;
+		for (auto& t : effectEntries) {
+			if (ci_find_substr(t.name, curquery) >= 0) {
+				gui_builtinpluginlist_entry* g = new gui_builtinpluginlist_entry(t);
+				_newList.push_back(g);
+			}
 		}
 		pluginListCtr.setList(_newList);
 		layout();

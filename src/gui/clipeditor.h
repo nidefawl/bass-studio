@@ -204,6 +204,8 @@ public:
 	scaled_grid& grid;
 	clip_view& view;
 	guibutton btnLoop;
+	gui_timeinput clipLoopStart;
+	gui_timeinput clipLoopLen;
 	gui_timeinput clipTimeStart;
 	gui_timeinput clipTimeLen;
 	gui_timeinput clipTimeStartOffsetTicks;
@@ -212,19 +214,31 @@ public:
 	gui_clipsettings(scaled_grid& _grid, clip_view& _view)
 		: guictr_base(),
 		grid(_grid),
-		view(_view), clipTimeStart(nullptr), clipTimeLen(nullptr),
+		view(_view), clipLoopStart(nullptr), clipLoopLen(nullptr, false), clipTimeStart(nullptr), clipTimeLen(nullptr, false),
 		clipTimeStartOffsetTicks(nullptr), clipTimeStartOffsedSamples(nullptr), clipAudioId(nullptr)
 	{
 		padding = 2;
 		btnLoop.drawFn = drawTextureSymbol;
 		btnLoop.drawParm = ICON_LOOP;
 		btnLoop.setActiveRef(nullptr);
+		clipLoopStart.setRef(nullptr);
+		clipLoopLen.setRef(nullptr);
 		clipTimeStart.setRef(nullptr);
 		clipTimeLen.setRef(nullptr);
 		clipTimeStartOffsetTicks.setRef(nullptr);
 		clipTimeStartOffsedSamples.setRef(nullptr);
 		clipAudioId.setRef(nullptr);
+		btnLoop.setLabel("Loop");
+		clipLoopStart.setLabel("Loop Position");
+		clipLoopLen.setLabel("Loop Length");
+		clipTimeStart.setLabel("Clip Position");
+		clipTimeLen.setLabel("Clip Length");
+		clipTimeStartOffsetTicks.setLabel("Tick offset");
+		clipTimeStartOffsedSamples.setLabel("Sample offset");
+		clipAudioId.setLabel("Sample ID");
 		add(&btnLoop);
+		add(&clipLoopStart);
+		add(&clipLoopLen);
 		add(&clipTimeStart);
 		add(&clipTimeLen);
 		add(&clipTimeStartOffsetTicks);
@@ -238,43 +252,13 @@ public:
 		remove(&clipTimeStartOffsetTicks);
 		remove(&clipTimeLen);
 		remove(&clipTimeStart);
+		remove(&clipLoopLen);
+		remove(&clipLoopStart);
 		remove(&btnLoop);
 	}
-	void render(NVGcontext* vg)  {
-		renderBackground(vg);
-		if (!setScissorTransform(vg)) {
-			return;
-		}
-		for (guibase* gui : guis) {
-			nvgSave(vg);
-			gui->render(vg);
-			nvgRestore(vg);
-		}
-	}
+	void render(NVGcontext* vg);
 
-	void layout() {
-		int32_t inset = 4;
-		int32_t i2 = inset * 2;
-		int32_t h = TRACK_HEIGHT_STEP-i2;
-
-		int32_t mW = TRACK_HEIGHT_STEP;
-		int32_t bW = size.x-mW;
-		btnLoop.size = ivec2(bW - i2, h);
-		btnLoop.pos = ivec2(inset, inset);
-		clipTimeStart.size = ivec2(bW - i2, h);
-		clipTimeStart.pos = ivec2(btnLoop.left(), btnLoop.bottom()+inset);
-		clipTimeLen.size = ivec2(bW - i2, h);
-		clipTimeLen.pos = ivec2(clipTimeStart.left(), clipTimeStart.bottom()+inset);
-		clipTimeStartOffsetTicks.size = ivec2(bW - i2, h);
-		clipTimeStartOffsetTicks.pos = ivec2(clipTimeStart.left(), clipTimeLen.bottom()+inset);
-		clipTimeStartOffsedSamples.size = ivec2(bW - i2, h);
-		clipTimeStartOffsedSamples.pos = ivec2(clipTimeStartOffsetTicks.left(), clipTimeStartOffsetTicks.bottom()+inset);
-		clipAudioId.size = ivec2(bW - i2, h);
-		clipAudioId.pos = ivec2(clipTimeStartOffsedSamples.left(), clipTimeStartOffsedSamples.bottom()+inset);
-		for (guibase* gui : guis) {
-			gui->layout();
-		}
-	}
+	void layout();
 	void renderBackground(NVGcontext* vg) override {
 		drawInsetBackground(vg, getPosContent(), getSizeContent());
 	}
@@ -285,10 +269,11 @@ public:
 				clip->loopEnabled = !clip->loopEnabled;
 			}
 		}
-		if (&clipTimeStart == button || &clipTimeLen == button || &clipTimeStartOffsedSamples == button
-				|| &clipTimeStartOffsetTicks == button || &clipTimeStartOffsedSamples == button) {
+		if (&btnLoop == button || &clipTimeStart == button || &clipLoopStart == button || &clipTimeLen == button || &clipTimeStartOffsedSamples == button
+				|| &clipTimeStartOffsetTicks == button || &clipTimeStartOffsedSamples == button || &clipLoopLen == button) {
 			clip_t* clip = view.clip();
 			if (clip && clip->gClip) {
+				clip->setDirty();
 				track_t* track = clip->gClip->m_track;
 				if (track) {
 					resizeOtherClips(track->getMidi(), clip);
@@ -302,6 +287,8 @@ public:
 		clip_t* clip = view.clip();
 		if (clip != NULL) {
 			btnLoop.setActiveRef(&clip->loopEnabled);
+			clipLoopStart.setRef(&clip->loopStart);
+			clipLoopLen.setRef(&clip->loopLen);
 			clipTimeStart.setRef(&clip->time);
 			clipTimeLen.setRef(&clip->getLenRef());
 			clipTimeStartOffsedSamples.setRef(&clip->offsetSamples);
@@ -318,6 +305,8 @@ public:
 		} else {
 
 			btnLoop.setActiveRef(nullptr);
+			clipLoopStart.setRef(nullptr);
+			clipLoopLen.setRef(nullptr);
 			clipTimeStart.setRef(nullptr);
 			clipTimeLen.setRef(nullptr);
 			clipTimeStartOffsedSamples.setRef(nullptr);
@@ -796,9 +785,11 @@ public:
 	}
 	virtual void buttonClicked(guibase* button) {
 		if (button == &btn) {
-			my_printf("fold: %d\n", fold);
 			fold = !fold;
 			view.updateNotePitches(true);
+			if (fold&&yscalefold==0&&yoffsetfold==0) {
+				zoomPianoRollToClipsNoteRange();
+			}
 		}
 	}
 	int32_t getTotalWidth() {
@@ -852,6 +843,10 @@ public:
 		}
 		int32_t minSemi = clip->notes.minNote.pitch;
 		int32_t maxSemi = clip->notes.maxNote.pitch;
+		if (fold) {
+			minSemi = 0;
+			maxSemi = view.notePitches.size();
+		}
 		int32_t range = abs(maxSemi-minSemi);
 		if (range<6) {
 			int32_t add = 6-range;

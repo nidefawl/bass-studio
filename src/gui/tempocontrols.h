@@ -143,12 +143,14 @@ public:
 class gui_timeinput_field : public guibuttonbase {
 	const int idx;
 	int32_t* time;
+	const bool isRelative;
 	bool drawBackground = true;
 public:
-	gui_timeinput_field(int _idx, int32_t* _time)
+	gui_timeinput_field(int _idx, int32_t* _time, const bool _isRelative)
 		: guibuttonbase(),
 		idx(_idx),
-		time(_time)
+		time(_time),
+		isRelative(_isRelative)
 	{
 		setColor(nvgToRGB(g_guiColors[COL_BG_DRK]));
 	}
@@ -168,12 +170,15 @@ public:
 		int32_t _time = time ? *time : 0;
 		beatbar16th_t step = MainCtrl::get()->toBeatBar16th(_time);
 		int32_t val = step[idx];
-		String str = StringFormat("%d", val < 0 ? val : (val+1));
+		if (val >= 0 && !isRelative) {
+			val++;
+		}
+		String str = StringFormat("%d", val);
 		nvgText(vg, pos.x + size.x-3, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(str), NULL);
 	}
 	void handleDraggedBegin(MouseEvent& evt) {
 		if (evt.guiDragged == this) {
-			MainCtrl::get()->captureMouse(this);
+			AppCtrl::get()->captureMouse(this);
 		}
 	}
 	void handleDraggedMove(MouseEvent& evt) {
@@ -220,12 +225,12 @@ class gui_timeinput : public guictr_base {
 	gui_timeinput_field sixteenths;
 	bool drawModeFullBG = false;
 public:
-	gui_timeinput(int32_t* _time)
+	gui_timeinput(int32_t* _time, const bool isRelative = false)
 		: guictr_base(),
 		  time(_time),
-		  bar(0, _time),
-		  beat(1, _time),
-		  sixteenths(2, _time)
+		  bar(0, _time, isRelative),
+		  beat(1, _time, isRelative),
+		  sixteenths(2, _time, isRelative)
 	{
 		padding = 0;
 		add(&bar);
@@ -253,16 +258,16 @@ public:
 		sixteenths.setDrawBackground(!drawModeFullBG);
 	}
 	void layout() {
-		int fieldH = size.y-2;
-		int smallStepW = fieldH-5;
-		int dist = 8;
-		int barW = size.x-5-5-((smallStepW+8)*2);
+		int inset = 4;
+		int fieldH = size.y;
+		int barW = (size.x)/2;
+		int smallStepW = (size.x-barW-inset*2)/2;
 		bar.size = ivec2(barW, fieldH);
 		beat.size = ivec2(smallStepW, fieldH);
 		sixteenths.size = ivec2(smallStepW, fieldH);
-		bar.pos = ivec2(5, size.y/2-bar.size.y/2);
-		beat.pos = ivec2(bar.right()+dist, bar.top());
-		sixteenths.pos = ivec2(beat.right()+dist, beat.top());
+		bar.pos = ivec2(0, size.y/2-bar.size.y/2);
+		beat.pos = ivec2(bar.right()+inset, bar.top());
+		sixteenths.pos = ivec2(beat.right()+inset, beat.top());
 	}
 	void buttonClicked(guibase* button) override {
 		if (parent)
@@ -310,20 +315,28 @@ class guictr_tempocontrols : public guictr_base {
 	guibutton btnPlay;
 	guibutton btnStop;
 	guibutton btnLoop;
+	gui_timeinput loopPos;
+	gui_timeinput loopLen;
 public:
 	guictr_tempocontrols(project_t& _project)
 		: guictr_base(),
 		  project(_project),
 		  cursorPos(&MainCtrl::get()->cursor.cursorPos),
-		  songPos(&MainCtrl::get()->playbackPos)
+		  songPos(&MainCtrl::get()->playbackPos),
+		  loopPos(&MainCtrl::get()->loopStart),
+		  loopLen(&MainCtrl::get()->loopLen, true)
 	{
 		btnAudioOnOff.setColor(0x00ddff);
 		songPos.setConnectedBG();
+		loopPos.setConnectedBG();
+		loopLen.setConnectedBG();
 		btnPlay.drawFn = drawPlaySymbol;
 		btnStop.drawFn = drawStopSymbol;
 		btnLoop.drawFn = drawTextureSymbol;
 		btnLoop.drawParm = ICON_LOOP;
 		btnLoop.setActiveRef(&project.loopEnabled);
+		add(&loopLen);
+		add(&loopPos);
 		add(&tempo);
 		add(&signature);
 		add(&cursorPos);
@@ -343,6 +356,8 @@ public:
 		remove(&cursorPos);
 		remove(&signature);
 		remove(&tempo);
+		remove(&loopPos);
+		remove(&loopLen);
 	}
 	void render(NVGcontext* vg) {
 //		guictr_base::setScissorTransform(vg);
@@ -367,6 +382,8 @@ public:
 		int32_t spacingCtrls = 5;
 		btnLoop.size = btnStop.size = btnPlay.size = ivec2(32, 32);
 		btnLoop.size.x = 48;
+		loopPos.size = ivec2(100, 32);
+		loopLen.size = ivec2(100, 32);
 		songPos.size = ivec2(140, 32);
 		int32_t transportWidth = btnPlay.size.x + spacingCtrls + btnStop.size.x+ spacingCtrls + songPos.size.x;
 		int32_t transportCtrls = max(cs.x / 2 - transportWidth / 2, cursorPos.right() + spacing);
@@ -375,19 +392,27 @@ public:
 //		songPos.pos = ivec2(btnStop.right() + spacingCtrls, 5);
 //		btnLoop.pos = ivec2(songPos.right() + spacingCtrls, 5);
 		int posX = transportCtrls;
-		for (auto el :  (std::vector<guibase*>{&btnPlay, &btnStop, &songPos, &btnLoop})) {
+		for (auto el :  (std::vector<guibase*>{&btnPlay, &btnStop, &songPos})) {
+			el->pos = ivec2(posX, 5);
+			posX = el->right() + spacingCtrls;
+		}
+		posX += spacingCtrls*3;
+		for (auto el :  (std::vector<guibase*>{&btnLoop, &loopPos, &loopLen})) {
 			el->pos = ivec2(posX, 5);
 			posX = el->right() + spacingCtrls;
 		}
 
 		btnAudioOnOff.size = ivec2(100, 28);
 		btnAudioOnOff.pos = ivec2(max(songPos.right()+spacing, cs.x-5-btnAudioOnOff.size.x), 5);
-		tempo.layout();
-		signature.layout();
-		cursorPos.layout();
-		songPos.layout();
-		btnPlay.layout();
-		btnAudioOnOff.layout();
+//		tempo.layout();
+//		signature.layout();
+//		cursorPos.layout();
+//		songPos.layout();
+//		btnPlay.layout();
+//		btnAudioOnOff.layout();
+		for (guibase* gui : guis) {
+			gui->layout();
+		}
 	}
 	void buttonClicked(guibase* button) {
 		if (button == &this->btnPlay) {

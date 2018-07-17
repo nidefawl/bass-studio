@@ -1155,3 +1155,56 @@ void guictr_noteeditor::render(NVGcontext* vg) {
 
 
 }
+
+void gui_clipsettings::render(NVGcontext* vg)  {
+	renderBackground(vg);
+	if (!setScissorTransform(vg)) {
+		return;
+	}
+	for (guibase* gui : guis) {
+		nvgSave(vg);
+		gui->render(vg);
+		nvgRestore(vg);
+	}
+	nvgSave(vg);
+	nvgTranslate(vg, 0, 0);
+	int32_t inset = 4;
+	int32_t i2 = inset * 2;
+	int32_t h = TRACK_HEIGHT_STEP-i2;
+	setFont(vg, G_FONT_SCALE(h), G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+	for (guibase* gui : guis) {
+
+//			gui->render(vg);
+		nvgText(vg, i2, gui->top() + G_FONT_MIDDLE_OFFSET(gui->size.y), StringAsCStr(gui->label), nullptr);
+	}
+	nvgRestore(vg);
+}
+
+void gui_clipsettings::layout() {
+	int32_t inset = 4;
+	int32_t i2 = inset * 2;
+	int32_t w = size.x-i2;
+	int32_t btnW = std::max(std::min(w, 120), w/3);
+	int32_t btnH = TRACK_HEIGHT_STEP;
+	int32_t labelWidth = w-btnW;
+	int32_t btnX = labelWidth;
+	btnLoop.size = ivec2(btnW, btnH);
+	btnLoop.pos = ivec2(btnX, inset);
+	clipLoopStart.size = ivec2(btnW, btnH);
+	clipLoopStart.pos = ivec2(btnLoop.left(), btnLoop.bottom()+inset);
+	clipLoopLen.size = ivec2(btnW, btnH);
+	clipLoopLen.pos = ivec2(clipLoopStart.left(), clipLoopStart.bottom()+inset);
+	clipTimeStart.size = ivec2(btnW, btnH);
+	clipTimeStart.pos = ivec2(clipLoopLen.left(), clipLoopLen.bottom()+inset);
+	clipTimeLen.size = ivec2(btnW, btnH);
+	clipTimeLen.pos = ivec2(clipTimeStart.left(), clipTimeStart.bottom()+inset);
+	clipTimeStartOffsetTicks.size = ivec2(btnW, btnH);
+	clipTimeStartOffsetTicks.pos = ivec2(clipTimeStart.left(), clipTimeLen.bottom()+inset);
+	clipTimeStartOffsedSamples.size = ivec2(btnW, btnH);
+	clipTimeStartOffsedSamples.pos = ivec2(clipTimeStartOffsetTicks.left(), clipTimeStartOffsetTicks.bottom()+inset);
+	clipAudioId.size = ivec2(btnW, btnH);
+	clipAudioId.pos = ivec2(clipTimeStartOffsedSamples.left(), clipTimeStartOffsedSamples.bottom()+inset);
+	for (guibase* gui : guis) {
+		gui->layout();
+	}
+}

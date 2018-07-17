@@ -5,6 +5,7 @@
 #include "vst_plugin_handles.h"
 #include "logging.h"
 #include "audioblock.h"
+#include "snapshot.h"
 #include "../gui/plugin.h"
 #include <algorithm>
 #include "leak_detect.h"
@@ -248,6 +249,84 @@ void vstplugin::load(vsthost* host) {
 
 	this->bIsSetup = true;
 }
+void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin, bool storePluginChunks) {
+	ps.present = true;
+	ps.slot = 0;
+	ps.projectGlobalId = plugin->projectGlobalId;
+	ps.enabled = plugin->bIsEnabled;
+	ps.uId = plugin->uId;
+	ps.name = plugin->sName;
+	if (storePluginChunks) {
+		void* pluginData;
+		int32_t pluginDataSize = plugin->dispatch(effGetChunk, 0, 0, &pluginData, 0);
+		if (pluginDataSize > 0 && pluginData) {
+			uint8_t* ptrData = reinterpret_cast<uint8_t*>(pluginData);
+			ps.dataChunk.reserve(pluginDataSize);
+			ps.dataChunk.assign(ptrData, ptrData + pluginDataSize);
+			my_printf("Plugin %s: Save data1[%d]\n", StringAsCStr(plugin->sName), pluginDataSize);
+
+		}
+		void* pluginData2;
+		int32_t pluginDataSize2 = plugin->dispatch(effGetChunk, 1, 0, &pluginData2, 0);
+		if (pluginDataSize2 > 0 && pluginData2) {
+			uint8_t* ptrData = reinterpret_cast<uint8_t*>(pluginData2);
+			ps.dataChunk2.reserve(pluginDataSize2);
+			ps.dataChunk2.assign(ptrData, ptrData + pluginDataSize2);
+			my_printf("Plugin %s: Save data2[%d]\n", StringAsCStr(plugin->sName), pluginDataSize2);
+		}
+	}
+	ps.params.reserve(plugin->params.size());
+	for (vst_param& param : plugin->params) {
+		float val = plugin->getParamValue(param.idx);
+		param_snapshot_t t{param.idx, val};
+		ps.params.push_back(t);
+	}
+	for (automated_param_t& automatedParam : plugin->automatedParams) {
+		if (automatedParam.src.points.empty()) {
+			continue;
+		}
+		automation_view_t automation;
+		automation.targetParam = automatedParam.paramIdx;
+		automation.points = automatedParam.src.points;
+		automation.active = automatedParam.src.active;
+		ps.automatedParams.push_back(automation);
+	}
+}
+void vstplugin::makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) {
+	createSnapshot(ps, this, storePluginChunks);
+	ps.slot = handle->slot;
+}
+guibase* vstplugin::makeGui() {
+	if (!handle->gui) {
+		handle->gui = std::make_unique<guiplugin>(this);
+		handle->gui->setTitle(StringFormat("%s", StringAsCStr(this->sName)));
+	}
+	return handle->gui.get();
+}
+void vstplugin::setSlot(int i) {
+	handle->slot = i;
+}
+void vstplugin::breakTrackLink() {
+	handle->tr_plugins = nullptr;
+}
+void vstplugin::setTrackLink(track_impl_t* trImpl) {
+	handle->tr_plugins = trImpl;
+}
+guibase* vstplugin::getGui() {
+	return handle->gui.get();
+}
+int32_t vstplugin::getDelay() {
+	return handle->aeffect->initialDelay;
+}
+void vstplugin::process(AudioBlock* in, AudioBlock* out, int32_t samples) {
+	if (handle->aeffect != NULL) {
+		if (handle->aeffect->flags & effFlagsCanReplacing) {
+				handle->aeffect->processReplacing(handle->aeffect, in->buf, out->buf, samples);
+		} else {
+			handle->aeffect->process(handle->aeffect, in->buf, out->buf, samples);
+		}
+	}
+}
 vst_param_category* vstplugin::getCategory(int idx) {
 	if (idx >= 0 && idx < (int)paramsCategories.size()) {
 		return &paramsCategories[idx];
@@ -320,7 +399,7 @@ void vstplugin::updateAutomatedParameters(tick_t pos) {
 	}
 }
 automation_t* vstplugin::getAutomation(int32_t paramIdx) {
-	if (!getParam(paramIdx)) {
+	if (!hasParam(paramIdx)) {
 		return NULL;
 	}
 	for (automated_param_t& param : automatedParams) {
@@ -339,11 +418,11 @@ void vstplugin::deactivateAutomation(int32_t paramIdx) {
 		}
 	}
 }
-vst_param* vstplugin::getParam(int idx) {
+bool vstplugin::hasParam(int idx) {
 	if (idx >= 0 && idx < (int)params.size()) {
-		return &params[idx];
+		return true;
 	}
-	return NULL;
+	return false;
 }
 
 bool vstplugin::close() {

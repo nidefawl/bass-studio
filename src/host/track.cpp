@@ -22,6 +22,7 @@
 #include "vst_host.h"
 #include "track_impl.h"
 
+#include "project.h"
 #include "mainctrl.h"
 #include "plugindatabase.h"
 
@@ -124,66 +125,22 @@ track_t::track_t(const track_snapshot_t &a)
 	assert(this->mixer == NULL);
 	assert(this->content == NULL);
 }
-void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin, bool storePluginChunks) {
-	ps.present = true;
-	ps.slot = 0;
-	ps.projectGlobalId = plugin->projectGlobalId;
-	ps.enabled = plugin->bIsEnabled;
-	ps.uId = plugin->uId;
-	ps.name = plugin->sName;
-	if (storePluginChunks) {
-		void* pluginData;
-		int32_t pluginDataSize = plugin->dispatch(effGetChunk, 0, 0, &pluginData, 0);
-		if (pluginDataSize > 0 && pluginData) {
-			uint8_t* ptrData = reinterpret_cast<uint8_t*>(pluginData);
-			ps.dataChunk.reserve(pluginDataSize);
-			ps.dataChunk.assign(ptrData, ptrData + pluginDataSize);
-			my_printf("Plugin %s: Save data1[%d]\n", StringAsCStr(plugin->sName), pluginDataSize);
-
-		}
-		void* pluginData2;
-		int32_t pluginDataSize2 = plugin->dispatch(effGetChunk, 1, 0, &pluginData2, 0);
-		if (pluginDataSize2 > 0 && pluginData2) {
-			uint8_t* ptrData = reinterpret_cast<uint8_t*>(pluginData2);
-			ps.dataChunk2.reserve(pluginDataSize2);
-			ps.dataChunk2.assign(ptrData, ptrData + pluginDataSize2);
-			my_printf("Plugin %s: Save data2[%d]\n", StringAsCStr(plugin->sName), pluginDataSize2);
-		}
-	}
-	ps.params.reserve(plugin->params.size());
-	for (vst_param& param : plugin->params) {
-		float val = plugin->getParamValue(param.idx);
-		param_snapshot_t t{param.idx, val};
-		ps.params.push_back(t);
-	}
-	for (automated_param_t& automatedParam : plugin->automatedParams) {
-		if (automatedParam.src.points.empty()) {
-			continue;
-		}
-		automation_view_t automation;
-		automation.targetParam = automatedParam.paramIdx;
-		automation.points = automatedParam.src.points;
-		automation.active = automatedParam.src.active;
-		ps.automatedParams.push_back(automation);
-	}
-}
 track_impl_snapshot_t::track_impl_snapshot_t(const track_t &a, bool storePluginChunks) {
 	track_impl_t* p = a.audio;
 	if (p) {
 		p->mixer.createSnapshot(trackParams);
 		int32_t nPlugins = p->effects.size();
-		if (p->instrument) nPlugins++;
+//		if (p->instrument) nPlugins++;
 		plugins.reserve(nPlugins);
-		if (p->instrument) {
+//		if (p->instrument) {
+//			plugin_snapshot_t ps;
+//			createSnapshot(ps, p->instrument, storePluginChunks);
+//			ps.slot = p->instrument->handle->slot;
+//			this->plugins.push_back(std::move(ps));
+//		}
+		for (effectbase* effect : p->effects) {
 			plugin_snapshot_t ps;
-			createSnapshot(ps, p->instrument, storePluginChunks);
-			ps.slot = p->instrument->handle->slot;
-			this->plugins.push_back(std::move(ps));
-		}
-		for (vstplugin* effect : p->effects) {
-			plugin_snapshot_t ps;
-			createSnapshot(ps, effect, storePluginChunks);
-			ps.slot = effect->handle->slot;
+			effect->makeSnapshot(ps, storePluginChunks);
 			this->plugins.push_back(std::move(ps));
 		}
 	}
@@ -225,17 +182,17 @@ void track_t::loadPluginAutomationParameters(const track_impl_snapshot_t& trackS
 	assert(audio);
 	const std::vector<plugin_snapshot_t>& trPluginList = trackStatic.plugins;
 	for (const plugin_snapshot_t& pluginSnapshot : trPluginList) {
-		vstplugin* plugin = audio->getPluginById(pluginSnapshot.projectGlobalId);
+		effectbase* plugin = audio->getPluginById(pluginSnapshot.projectGlobalId);
 		if (plugin) {
 			const std::vector<param_snapshot_t>& pluginSnapshotParams = pluginSnapshot.params;
 			for (const param_snapshot_t& param : pluginSnapshotParams) {
-				if (plugin->getParam(param.idx)) {
+				if (plugin->hasParam(param.idx)) {
 					plugin->setParamValue(param.idx, param.val);
 				}
 			}
 			const std::vector<automation_view_t>& automatedParams = pluginSnapshot.automatedParams;
 			for (const automation_view_t& automatedParam : automatedParams) {
-				if (plugin->getParam(automatedParam.targetParam)) {
+				if (plugin->hasParam(automatedParam.targetParam)) {
 					automation_t* autom = plugin->getAutomation(automatedParam.targetParam);
 					autom->points = automatedParam.points;
 				}
@@ -291,58 +248,48 @@ void trackdata_midi_t::getNotesInRange(tick_t start, tick_t end, tick_t cutStart
 
 }
 
-vstplugin* track_impl_t::getPluginSlot(int32_t idx) {
-	if (idx == 0) {
-		return instrument;
-	}
-	for (vstplugin* effect : effects) {
-		 if (idx == effect->handle->slot) {
-			 return effect;
-		 }
-	}
-	return NULL;
-}
-
-vstplugin* track_impl_t::getPluginById(int32_t projectGlobalId) {
-	if (instrument && instrument->projectGlobalId == projectGlobalId) {
-		return instrument;
-	}
-	for (vstplugin* effect : effects) {
+effectbase* track_impl_t::getPluginById(int32_t projectGlobalId) {
+//	if (instrument && instrument->projectGlobalId == projectGlobalId) {
+//		return instrument;
+//	}
+	for (effectbase* effect : effects) {
 		 if (effect->projectGlobalId == projectGlobalId) {
 			 return effect;
 		 }
 	}
 	return NULL;
 }
-vstplugin* track_impl_t::setInstrument(vstplugin* _instrument) {
-	vstplugin* oldInstr = instrument;
-	if (instrument) {
-		removePlugin(instrument, true);
-	}
-	instrument = _instrument;
-	_instrument->handle->tr_plugins = this;
-	_instrument->handle->slot = 0;
-	return oldInstr;
-}
-void track_impl_t::removePlugin(vstplugin* _vst, bool notifyUp) {
-	if (this->selectedAutomationCtr == _vst) {
+//vstplugin* track_impl_t::setInstrument(vstplugin* _instrument) {
+//	vstplugin* oldInstr = instrument;
+//	if (instrument) {
+//		removePlugin(instrument, true);
+//	}
+//	instrument = _instrument;
+//	_instrument->handle->tr_plugins = this;
+//	_instrument->handle->slot = 0;
+//	return oldInstr;
+//}
+void track_impl_t::removePlugin(effectbase* _effect, bool notifyUp) {
+	if (this->selectedAutomationCtr == _effect) {
 		this->selectedAutomationCtr = NULL;
 	}
-	if (instrument == _vst) {
-		instrument = NULL;
-	} else {
-		if (!removeEntry(effects, _vst)) {
+//	if (instrument == _vst) {
+//		instrument = NULL;
+//	} else {
+		if (!removeEntry(effects, _effect)) {
 			return;
 		}
-		int slot = 1;
-		for (vstplugin* effect : effects) {
-			effect->handle->slot = slot++;
+		int slot = 0;
+		for (effectbase* effect : effects) {
+			effect->setSlot(slot++);
 		}
-	}
-	_vst->handle->tr_plugins = NULL;
-	_vst->handle->slot = -1;
+//	}
+	_effect->breakTrackLink();
+//	vstplugin* _vst = nullptr;
+//	_vst->handle->tr_plugins = NULL;
+//	_vst->handle->slot = -1;
 	if (notifyUp) {
-		guiplugin* gui = _vst->handle->gui.get();
+		guibase* gui = _effect->getGui();
 		if (gui) {
 			guictr_plugins* plugins = MainCtrl::getPluginCtr();
 			if (plugins && plugins->hasGui(gui)) {
@@ -350,14 +297,14 @@ void track_impl_t::removePlugin(vstplugin* _vst, bool notifyUp) {
 				plugins->layout();
 			}
 		}
-		MainCtrl::getGuiTrackCtr()->removeAllAutomationLanes(this->track, _vst);
+		MainCtrl::getGuiTrackCtr()->removeAllAutomationLanes(this->track, _effect);
 		MainCtrl::getGuiTrackCtr()->layout();
 		MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
 	}
 }
 
-void track_impl_t::insertEffect(int32_t idx, vstplugin* _effect) {
-	std::vector<vstplugin*>::iterator it;
+void track_impl_t::insertEffect(int32_t idx, effectbase* _effect) {
+	std::vector<effectbase*>::iterator it;
 	if (idx == -2 || idx >= (int32_t)effects.size()) {
 		it = effects.end();
 	} else if (idx <= 0) {
@@ -366,10 +313,10 @@ void track_impl_t::insertEffect(int32_t idx, vstplugin* _effect) {
 		it = effects.begin() + idx;
 	}
 	effects.insert(it, _effect);
-	_effect->handle->tr_plugins = this;
-	int slot = 1;
-	for (vstplugin* effect : effects) {
-		effect->handle->slot = slot++;
+	_effect->setTrackLink(this);
+	int slot = 0;
+	for (effectbase* effect : effects) {
+		effect->setSlot(slot++);
 	}
 }
 
@@ -469,8 +416,12 @@ void track_impl_t::sendNotesOff(int32_t bpm100, int32_t blockSamplePos) {
 	}
 	midiEventsBuf->writeInstantOff();
 	track->audio->heldNotes.clear();
-	if (instrument)
-		instrument->dispatch(effProcessEvents, 0, 0, midiEventsBuf->vstEvents);
+	int slot = 1;
+	for (effectbase* effect : effects) {
+		vstplugin* vst = dynamic_cast<vstplugin*>(effect);
+//			VstEvent_t midiEventsBufTemp = *midiEventsBuf; // make a copy
+		vst->dispatch(effProcessEvents, 0, 0, midiEventsBuf->vstEvents);
+	}
 }
 track_impl_t::~track_impl_t() {
 	if (midiEventsBuf) delete midiEventsBuf;
@@ -490,18 +441,18 @@ int32_t track_impl_t::getLatency() {
 }
 void track_impl_t::pluginsChanged() {
 	samplerate_t latency = 0;
-	if (instrument) {
-		latency += instrument->handle->aeffect->initialDelay;
-	}
-	for (vstplugin* effect : effects) {
-		latency += effect->handle->aeffect->initialDelay;
+//	if (instrument) {
+//		latency += instrument->handle->aeffect->initialDelay;
+//	}
+	for (effectbase* effect : effects) {
+		latency += effect->getDelay();
 	}
 	this->latency = latency;
 }
 void track_impl_t::getAutomatableTargets(std::vector<automatable_t*>& targets) {
 	targets.push_back(&mixer);
-	if (instrument)
-		targets.push_back(instrument);
+//	if (instrument)
+//		targets.push_back(instrument);
 	targets.insert(targets.end(), effects.begin(), effects.end());
 }
 void track_impl_t::saveAutomationLanes(std::vector<automationlane_snapshot_t>& atls)
@@ -553,7 +504,7 @@ void track_impl_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginLis
 
 				const std::vector<param_snapshot_t>& pluginSnapshotParams = pluginSnapshot.params;
 				for (const param_snapshot_t& param : pluginSnapshotParams) {
-					if (plugin->getParam(param.idx)) {
+					if (plugin->hasParam(param.idx)) {
 						plugin->setParamValue(param.idx, param.val);
 					}
 				}
@@ -561,15 +512,15 @@ void track_impl_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginLis
 
 				const std::vector<automation_view_t>& automatedParams = pluginSnapshot.automatedParams;
 				for (const automation_view_t& automatedParam : automatedParams) {
-					if (plugin->getParam(automatedParam.targetParam)) {
+					if (plugin->hasParam(automatedParam.targetParam)) {
 						automation_t* autom = plugin->getAutomation(automatedParam.targetParam);
 						autom->points = automatedParam.points;
 						autom->active = automatedParam.active;
 					}
 				}
-				if (plugin == this->instrument) {
+//				if (plugin == this->instrument) {
 //					plugin->show();
-				}
+//				}
 				if (pluginSnapshot.enabled) {
 					plugin->resume();
 				}
@@ -583,7 +534,7 @@ void track_impl_t::loadAutomationLanes(const std::vector<automationlane_snapshot
 	for (const automationlane_snapshot_t& ref : atls) {
 		gui_track_automationlane* al = NULL;
 		if (ref.type == 0) {
-			vstplugin* plugin = getPluginById(ref.refId);
+			effectbase* plugin = getPluginById(ref.refId);
 			if (!plugin) {
 				continue;
 			}
@@ -599,9 +550,9 @@ void track_impl_t::loadAutomationLanes(const std::vector<automationlane_snapshot
 }
 void track_impl_t::onTick(double since) {
 	meter.onTick(since);
-	if (instrument) {
-		instrument->meter.onTick(since);
-	}
+//	if (instrument) {
+//		instrument->meter.onTick(since);
+//	}
 	for (auto effect : effects) {
 		effect->meter.onTick(since);
 	}
@@ -655,7 +606,9 @@ void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t 
 
 void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos) {
 	//assert(end != loopEnd); //if end equals loopEnd note off events will be on exact end
-	if (instrument && instrument->bCanReceiveMidi) {
+	if (std::any_of(effects.begin(), effects.end(), [](const effectbase* ref){
+			return ref->bCanReceiveMidi;
+	})) {
 		std::vector<note_t> notes;
 
 		tick_t heldBegin = start;
@@ -737,19 +690,30 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 				midiEventsBuf->writeVstMidiEvt(evt, tickToSamples, blockSize);
 			}
 			assert(midiEventsBuf->vstEvents->numEvents == (int32_t) numEvents);
-			instrument->dispatch(effProcessEvents, 0, 0, midiEventsBuf->vstEvents);
+			for (effectbase* effect : effects) {
+				vstplugin* vst = dynamic_cast<vstplugin*>(effect);
+				if (vst && vst->bCanReceiveMidi) {
+//					VstEvent_t midiEventsBufTemp = *midiEventsBuf; // make a copy
+					vst->dispatch(effProcessEvents, 0, 0, midiEventsBuf->vstEvents);
+				}
+			}
 		} else {
-			static VstEvents noEvData;
-			noEvData = { 0 };
-
-			instrument->dispatch(effProcessEvents, 0, 0, &noEvData);
+			for (effectbase* effect : effects) {
+				vstplugin* vst = dynamic_cast<vstplugin*>(effect);
+				if (vst && vst->bCanReceiveMidi) {
+					static VstEvents noEvData;
+					noEvData = { 0 };
+					vst->dispatch(effProcessEvents, 0, 0, &noEvData);
+				}
+			}
 		}
 		static VstEvents noEvData;
-		for (vstplugin* eff : effects) {
-			if (eff->bCanReceiveMidi&& eff->bIsEnabled) {
+		for (effectbase* effect : effects) {
+			vstplugin* vst = dynamic_cast<vstplugin*>(effect);
+			if (vst && vst->bCanReceiveMidi&& effect->bIsEnabled) {
 				noEvData = { 0 };
 
-				eff->dispatch(effProcessEvents, 0, 0, &noEvData);
+				vst->dispatch(effProcessEvents, 0, 0, &noEvData);
 			}
 		}
 	}

@@ -13,6 +13,7 @@
 #include "logging.h"
 #include "project.h"
 #include "automation.h"
+#include "snapshot.h"
 
 #define TRACK_TYPE_MASTER 0
 #define TRACK_TYPE_RETURN 1
@@ -199,26 +200,11 @@ struct tracksettings_t {
 	bool hideAutomation = false;
 };
 
-struct param_snapshot_t {
-	int32_t idx;
-	float val;
-};
 struct track_params_snapshot_t {
 	std::vector<param_snapshot_t> params;
 	std::vector<automation_view_t> automatedParams;
 };
-struct plugin_snapshot_t {
-	int32_t projectGlobalId;
-	bool present;
-	bool enabled;
-	int32_t slot;
-	int32_t uId;
-	String name;
-	std::vector<uint8_t> dataChunk;
-	std::vector<uint8_t> dataChunk2;
-	std::vector<param_snapshot_t> params;
-	std::vector<automation_view_t> automatedParams;
-};
+struct plugin_snapshot_t;
 struct track_impl_snapshot_t {
 	track_params_snapshot_t trackParams;
 	std::vector<plugin_snapshot_t> plugins;

@@ -12,6 +12,7 @@ using glm::vec2;
 using glm::ivec2;
 
 class vstplugin;
+class effectbase;
 
 class guictr_test : public guictr_base {
 public:
@@ -200,7 +201,7 @@ public:
 	int slotFromCoord(ivec2 _pos) {
 		int slot = 0;
 		for (guibase* gui : guis) {
-			if (_pos.x+scrolloffset < gui->pos.x + gui->size.x / 2) {
+			if (_pos.x < gui->pos.x + gui->size.x / 2) {
 				break;
 			}
 			slot++;
@@ -243,7 +244,7 @@ public:
 	void pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mousepos) override;
 	void showTrack(track_t* track);
 	void hideTrack(track_t* track);
-	void addGui(vstplugin* plugin);
+	void addGui(effectbase* plugin);
 };
 class guictr_pluginview : public guictr_base {
 public:

@@ -14,6 +14,7 @@
 struct VstEvent_t;
 
 class vstplugin;
+class effectbase;
 
 struct track_params_t : public automatable_t {
 private:
@@ -160,8 +161,8 @@ struct track_impl_t {
 	const uint16_t& blockSize;
 //	float level = 0;
 	rmsmeter<16000> meter;
-	vstplugin* instrument = NULL;
-	std::vector<vstplugin*> effects;
+//	vstplugin* instrument = NULL;
+	std::vector<effectbase*> effects;
 	std::vector<note_t> heldNotes;
 	VstEvent_t* midiEventsBuf = NULL;
 	AudioBlock input; //guaranteed to have at least 2 channels
@@ -182,11 +183,10 @@ struct track_impl_t {
 	  delayLine(nChannels, _blockSize) {
 	}
 	~track_impl_t();
-	vstplugin* getPluginSlot(int32_t idx);
-	vstplugin* getPluginById(int32_t projectGlobalId);
-	vstplugin* setInstrument(vstplugin* _instrument);
-	void removePlugin(vstplugin* _vst, bool notifyUp);
-	void insertEffect(int32_t idx, vstplugin* _instrument);
+	effectbase* getPluginById(int32_t projectGlobalId);
+//	vstplugin* setInstrument(vstplugin* _instrument);
+	void removePlugin(effectbase* _vst, bool notifyUp);
+	void insertEffect(int32_t idx, effectbase* _instrument);
 	void sendNotesOff(int32_t bpm100, int32_t blockSamplePos);
 	void sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos);
 	void fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, float** buffer, int32_t samples);

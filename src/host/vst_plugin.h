@@ -10,6 +10,7 @@
 #include "logging.h"
 #include "platform.h"
 #include "meter.h"
+#include "snapshot.h"
 
 class vsthost;
 struct AudioBlock;
@@ -61,8 +62,37 @@ struct vst_param {
 	//if kVstParameterSupportsDisplayCategory
 	int16_t category;			///< 0: no category, else group index + 1
 };
+class guibase;
+struct track_impl_t;
+class effectbase : public automatable_t {
+public:
+	rmsmeter<16000> meter;
+	AudioBlock* blockInputs = NULL; // guaranteed to have at least 2 channels
+	AudioBlock* blockOutputs = NULL; // guaranteed to have at least 2 channels
+	int32_t projectGlobalId;
+	bool bIsEnabled = false;
+	bool bIsSetup = false;
+	bool bCanReceiveMidi = false;
+	effectbase(int32_t _projectGlobalId) : projectGlobalId(_projectGlobalId) {
+	}
+	virtual ~effectbase() {
+	}
+	virtual void makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) = 0;
+	virtual guibase* makeGui() = 0;
+	virtual void setSlot(int i) = 0;
+	virtual void breakTrackLink() = 0;
+	virtual void setTrackLink(track_impl_t* trImpl) = 0;
+	virtual guibase* getGui() = 0;
+	virtual void process(AudioBlock* in, AudioBlock* out, int32_t samples) = 0;
+	virtual bool show() = 0;
+	virtual bool close() = 0;
+	virtual int32_t getDelay() = 0;
+	virtual bool hasParam(int32_t idx) = 0;
+};
+class effectgroup {
 
-class vstplugin : public automatable_t {
+};
+class vstplugin : public effectbase {
 public:
 #ifndef NDEBUG
 	//helper indicator in gdb.
@@ -73,14 +103,10 @@ public:
 	String sDir;
 	bool bEditOpen = false;
 	bool bInEditIdle = false;
-	bool bIsEnabled = false;
-	bool bIsSetup = false;
-	bool bCanReceiveMidi = false;
 	int pluginCategory = 0;
 	bool isSynth = false;
 	int vstVersion = 0;
 	int uId = 0;
-	int32_t projectGlobalId;
 	vst_window* window = NULL;
 	handles_t* const handle;
 	std::vector<vst_param_category> paramsCategories;
@@ -89,10 +115,7 @@ public:
 
 	std::vector<String> inputNames;
 	std::vector<String> outputNames;
-	AudioBlock* blockInputs = NULL; // guaranteed to have at least 2 channels
-	AudioBlock* blockOutputs = NULL; // guaranteed to have at least 2 channels
-	rmsmeter<16000> meter;
-	vstplugin(handles_t* _handle, int32_t globalId, String sDir, String sName) : projectGlobalId(globalId), handle(_handle) {
+	vstplugin(handles_t* _handle, int32_t globalId, String sDir, String sName) : effectbase(globalId), handle(_handle) {
 		this->sDir = sDir;
 		this->sName = sName;
 #ifndef NDEBUG
@@ -134,7 +157,6 @@ public:
 	void unload();
 	void load(vsthost* host);
 	vst_param_category* getCategory(int idx);
-	vst_param* getParam(int32_t idx);
 	automated_param_t* getRegisteredAutomation(int32_t idx);
 
 	int32_t getNumParameters() override;
@@ -149,4 +171,13 @@ public:
 	void getAutomated(std::vector<int32_t>& targets) override;
 	automationlane_snapshot_t toRef() override;
 	track_t* getTrack();
+	void makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) override;
+	guibase* makeGui() override;
+	void setSlot(int i) override;
+	void breakTrackLink() override;
+	void setTrackLink(track_impl_t* trImpl) override;
+	guibase* getGui() override;
+	void process(AudioBlock* in, AudioBlock* out, int32_t samples) override;
+	int32_t getDelay() override;
+	bool hasParam(int32_t idx) override;
 };

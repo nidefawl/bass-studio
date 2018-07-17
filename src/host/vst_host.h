@@ -54,6 +54,7 @@ namespace PlugCanDos
 	extern const char* canDoBypass; ///< plug-in supports function #setBypass ()
 }
 
+class effectbase;
 class vstplugin;
 struct track_impl_t;
 typedef void PaStream;
@@ -158,7 +159,7 @@ public:
 		return false;
 	}
 	vstplugin* getPlugin(AEffect* aeffect);
-	void unloadPlugin(vstplugin* plugin);
+	void unloadPlugin(effectbase* plugin);
 	void unloadTrack(track_t* track);
 	uint32_t pluginCount();
 	vstplugin* getPluginIdx(uint32_t i);
@@ -166,5 +167,5 @@ public:
 	track_impl_t* createAudio(track_t* track);
 	bool movePlugin(track_t* dstTr, track_impl_t* trp, int32_t src, int32_t dst);
 	bool swapEffects(track_impl_t* trp, int32_t src, int32_t dst);
-	bool insertNewPlugin(track_impl_t* trp, vstplugin* plugin, int32_t dst);
+	bool insertNewPlugin(track_impl_t* trp, effectbase* plugin, int32_t dst);
 };

@@ -14,6 +14,8 @@ using glm::vec2;
 using glm::ivec2;
 
 class guibuttonbase : public guibase {
+protected:
+	String str = "";
 public:
 	guibuttonbase() : guibase() {
 	}
@@ -60,11 +62,13 @@ public:
 		}
 		return flgs;
 	}
+	void setText(String _str) {
+		str = _str;
+	}
 };
 class guibutton : public guibuttonbase {
 	bool* enabledPtr = NULL;
 	bool* activePtr = NULL;
-	String str = "";
 public:
 	guibutton() : guibuttonbase() {
 	}
@@ -83,9 +87,6 @@ public:
 	}
 	void setActiveRef(bool* _activePtr) {
 		activePtr = _activePtr;
-	}
-	void setText(String _str) {
-		str = _str;
 	}
 	virtual int32_t getStateFlags() {
 		int32_t state = guibuttonbase::getStateFlags();

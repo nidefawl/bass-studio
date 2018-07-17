@@ -1,3 +1,4 @@
+#include <glm/glm.hpp>
 #include <glm/vec2.hpp>
 #include <memory>
 #include "str_util.h"
@@ -256,12 +257,10 @@ guiplugin::guiplugin(vstplugin* _vst)
 	}
 	params.setList(_newList);
 }
-void guictr_plugins::addGui(vstplugin* plugin) {
-	if (!plugin->handle->gui) {
-		plugin->handle->gui = std::make_unique<guiplugin>(plugin);
-		plugin->handle->gui->setTitle(StringFormat("%s", StringAsCStr(plugin->sName)));
-	}
-	add(plugin->handle->gui.get());
+void guictr_plugins::addGui(effectbase* plugin) {
+	guibase* base = plugin->makeGui();
+	if (base)
+		add(base);
 }
 void guictr_plugins::hideTrack(track_t* _track) {
 	if (this->track == _track) {
@@ -275,16 +274,12 @@ void guictr_plugins::showTrack(track_t* _track) {
 	removeGuis();
 	if (track) {
 		track_impl_t* audio = track->audio;
-		if (audio && audio->instrument != NULL) {
-			addGui(audio->instrument);
-		} else {
-			add(&placeholder);
-		}
 		if (audio && !audio->effects.empty()) {
-			for (vstplugin* vst : audio->effects) {
+			for (effectbase* vst : audio->effects) {
 				addGui(vst);
 			}
-		}
+		} else
+			add(&placeholder);
 		switch (track->type) {
 		case TRACK_TYPE_MIDI:
 			placeholder.message = "Drop Instruments here";
@@ -301,39 +296,10 @@ void guictr_plugins::showTrack(track_t* _track) {
 	}
 }
 
-void guictr_plugins::pluginDragMove(guiplugin* g, ivec2 mousepos) {
-	highlightSlot = -1;
-	if (!track) return;
-	my_printf("pluginDragMove\n",0);
-	track_impl_t* trp = g->vst->handle->tr_plugins;
-	if (!trp) {
-		assert(0&&"TRP WAS NULL");
-		return;
-	}
-	if (g->vst->isSynth) {
-		if (trp->track == track) {
-			return;
-		}
-		if (track->type != TRACK_TYPE_MIDI) {
-			return;
-		}
-		highlightSlot = 0;
-		return;
-	}
-	my_printf("handle dragg\n",0);
-//	if (abs((evt.dragStart - evt.mousepos).x) > getSizeContent().y / 4) {
-		highlightSlot = slotFromCoord(mousepos);
-		int curSlot = trp->track == track ? (g->vst->handle->slot) : -2;
-		if (highlightSlot == 0 || curSlot == highlightSlot || curSlot + 1 == highlightSlot) {
-			highlightSlot = -1;
-		}
-//	}
-	return;
-}
 void guictr_plugins::pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 mousepos) {
 	highlightSlot = -1;
 	if (!track) return;
-	if (g->entry.isSynth) {
+	if (g->isSynth()) {
 		if (track->type != TRACK_TYPE_MIDI) {
 			return;
 		}
@@ -342,61 +308,60 @@ void guictr_plugins::pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 mousepos
 	}
 	highlightSlot = slotFromCoord(mousepos);
 }
+effectbase* gui_vstpluginlist_entry::makeInstance() {
+	vstpluginloadres res = vsthost::getInstance()->loadPlugin(entry.path);
+	return res.result == 0 ? res.plugin : nullptr;
+}
 void guictr_plugins::pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mousepos) {
 	highlightSlot = -1;
 	if (!track) return;
 	int32_t dstSlot = highlightSlot;
-	const pluginentry_t& entry = g->entry;
 	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-	vstpluginloadres res = vsthost::getInstance()->loadPlugin(entry.path);
-	if (res.result == 0 && res.plugin) {
-		vsthost::getInstance()->insertNewPlugin(track->audio, res.plugin, dstSlot);
-		res.plugin->resume();
+	effectbase* effect = g->makeInstance();
+	if (effect) {
+		vsthost::getInstance()->insertNewPlugin(track->audio, effect, dstSlot);
+		//	if (res.result == 0 && res.plugin) {
+		//		res.plugin->resume();
+		//	}
 	}
 	showTrack(track);
 }
+void guictr_plugins::pluginDragMove(guiplugin* g, ivec2 mousepos) {
+	highlightSlot = -1;
+	if (!track) return;
+	track_impl_t* trp = g->vst->handle->tr_plugins;
+	if (!trp) {
+		assert(0&&"TRP WAS NULL");
+		return;
+	}
+//	if (abs((evt.dragStart - evt.mousepos).x) > getSizeContent().y / 4) {
+		highlightSlot = slotFromCoord(mousepos);
+		int curSlot = trp->track == track ? (g->vst->handle->slot) : -2;
+		if (curSlot == highlightSlot || curSlot + 1 == highlightSlot) {
+			highlightSlot = -1;
+		}
+//	}
+}
 void guictr_plugins::pluginDragRelease(guiplugin* g, ivec2 mousepos) {
+	int sl = highlightSlot;
 	highlightSlot = -1;
 	if (!track) return;
 	int targetslot = slotFromCoord(mousepos);
-	my_printf("pluginDragRelease %d\n",targetslot);
 	track_impl_t* trp = g->vst->handle->tr_plugins;
 	if (!trp) {
 		assert(0&&"TRP WAS NULL");
 		return;
 	}
 	int curSlot = g->vst->handle->slot;
-	my_printf("pluginDragRelease curSlot %d\n",curSlot);
-	if (trp->track == track && (curSlot == targetslot || curSlot + 1 == targetslot)) {
-		targetslot = -1;
+	if (curSlot == targetslot || curSlot + 1 == targetslot) {
+		return;
 	}
-	if (g->vst->isSynth) {
-		if (trp->track == track) {
-			my_printf("trp->track == track\n",0);
-			return;
-		}
-		targetslot = 0;
-		curSlot = 0;
-	}
+
 	if (targetslot >= 0) {
-		if (trp->track == track&&curSlot < targetslot) {
-			targetslot--;
-		}
-
-		if (!g->vst->isSynth && targetslot < 1) {
-			my_printf("targetslot < 1 %d\n",targetslot);
-			if (!track->audio || track->audio->effects.empty()) {
-				targetslot = 1;
-			} else {
-				return;
-			}
-
-		}
 		if (trp->track != track) {
-			my_printf("movePlugin %d %d\n",curSlot, targetslot);
 			vsthost::getInstance()->movePlugin(track, trp, curSlot, targetslot);
 		} else {
-			my_printf("swapEffects %d %d\n",curSlot, targetslot);
+			if (targetslot > curSlot) targetslot--;
 			vsthost::getInstance()->swapEffects(trp, curSlot, targetslot);
 		}
 		showTrack(track);
