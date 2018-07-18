@@ -61,7 +61,7 @@ endforeach()
 #list(FILTER CPP_SRC_FILES EXCLUDE REGEX "/scanner.cpp$")
 #list(FILTER CPP_SRC_FILES EXCLUDE REGEX "/test/[^/]*$")
 
-  SET(DAW_COMPILE_FLAGS -DVST_FORCE_DEPRECATED=0 -DGLM_FORCE_CXX14=1 -DNO_LEAK_DETECT)
+  SET(DAW_COMPILE_FLAGS -DVST_FORCE_DEPRECATED=0 -DUSE_GLAD_GL_HEADERS -DGLM_FORCE_CXX14=1 -DNO_LEAK_DETECT)
 if (WIN32)
   SET(DAW_COMPILE_FLAGS ${DAW_COMPILE_FLAGS} -DPA_USE_ASIO=1 -DPA_USE_DS=1)
 endif(WIN32)
@@ -117,6 +117,7 @@ include_directories(SYSTEM "src/nanovg")
 include_directories(SYSTEM
     ${DAW_DEPS_DIR}/build/lib/glfw/include
     ${DAW_DEPS_DIR}/build/lib/SQLiteCpp/include
+    ${DAW_DEPS_DIR}/build/lib/soxr/include
     ${DAW_DEPS_DIR}/glad/include
     ${DAW_DEPS_DIR}/glad/src
     ${DAW_DEPS_DIR}/glm
