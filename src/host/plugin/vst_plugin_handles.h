@@ -1,7 +1,7 @@
 #pragma once
 #include "../vst_sdk_2.4/aeffectx.h"
 #include <memory>
-#include "../gui/plugin.h"
+#include "../../gui/plugin.h"
 
 struct handles_t {
 	AEffect* aeffect = NULL; // hmodule owns

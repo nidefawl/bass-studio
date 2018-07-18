@@ -5,17 +5,20 @@
 #include "str_util.h"
 #include "seq_time.h"
 //#include "../vst_sdk_2.4/aeffectx.h"
-#include "vst_window.h"
+#include "../vst_window.h"
 #include "automation.h"
 #include "logging.h"
 #include "platform.h"
 #include "meter.h"
 #include "snapshot.h"
+#include "base_plugin.h"
 
 class vsthost;
 struct AudioBlock;
 struct handles_t;
 class track_t;
+class guibase;
+struct track_impl_t;
 //-------------------------------------------------------------------------------------------------------
 /** Flags used in #VstParameterProperties. */
 //-------------------------------------------------------------------------------------------------------
@@ -62,36 +65,6 @@ struct vst_param {
 	//if kVstParameterSupportsDisplayCategory
 	int16_t category;			///< 0: no category, else group index + 1
 };
-class guibase;
-struct track_impl_t;
-class effectbase : public automatable_t {
-public:
-	rmsmeter<16000> meter;
-	AudioBlock* blockInputs = NULL; // guaranteed to have at least 2 channels
-	AudioBlock* blockOutputs = NULL; // guaranteed to have at least 2 channels
-	int32_t projectGlobalId;
-	bool bIsEnabled = false;
-	bool bIsSetup = false;
-	bool bCanReceiveMidi = false;
-	effectbase(int32_t _projectGlobalId) : projectGlobalId(_projectGlobalId) {
-	}
-	virtual ~effectbase() {
-	}
-	virtual void makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) = 0;
-	virtual guibase* makeGui() = 0;
-	virtual void setSlot(int i) = 0;
-	virtual void breakTrackLink() = 0;
-	virtual void setTrackLink(track_impl_t* trImpl) = 0;
-	virtual guibase* getGui() = 0;
-	virtual void process(AudioBlock* in, AudioBlock* out, int32_t samples) = 0;
-	virtual bool show() = 0;
-	virtual bool close() = 0;
-	virtual int32_t getDelay() = 0;
-	virtual bool hasParam(int32_t idx) = 0;
-};
-class effectgroup {
-
-};
 class vstplugin : public effectbase {
 public:
 #ifndef NDEBUG
@@ -137,7 +110,7 @@ public:
 		}
 		return false;
 	}
-	String getInfo(std::vector<String>& list);
+	String getInfo(std::vector<String>& list) override;
 	long dispatch(
 		long opcode = 0,
 		long index = 0,
@@ -174,8 +147,10 @@ public:
 	void makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) override;
 	guibase* makeGui() override;
 	void setSlot(int i) override;
+	int32_t getSlot() override;
 	void breakTrackLink() override;
 	void setTrackLink(track_impl_t* trImpl) override;
+	track_impl_t* getTrackLink() override;
 	guibase* getGui() override;
 	void process(AudioBlock* in, AudioBlock* out, int32_t samples) override;
 	int32_t getDelay() override;

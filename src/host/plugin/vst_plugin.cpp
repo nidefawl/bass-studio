@@ -1,13 +1,16 @@
-#include "vst_plugin.h"
-#include "vst_host.h"
-#include "vst_window.h"
+#include <algorithm>
 #include "seq_util.h"
-#include "vst_plugin_handles.h"
 #include "logging.h"
 #include "audioblock.h"
 #include "snapshot.h"
-#include "../gui/plugin.h"
-#include <algorithm>
+
+#include "base_plugin.h"
+#include "vst_plugin.h"
+#include "vst_plugin_handles.h"
+#include "../vst_host.h"
+#include "../vst_window.h"
+#include "../../gui/plugin.h"
+
 #include "leak_detect.h"
 
 const char* plug_features_array[] = {
@@ -298,19 +301,25 @@ void vstplugin::makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) {
 }
 guibase* vstplugin::makeGui() {
 	if (!handle->gui) {
-		handle->gui = std::make_unique<guiplugin>(this);
+		handle->gui = std::make_unique<guivstplugin>(this);
 		handle->gui->setTitle(StringFormat("%s", StringAsCStr(this->sName)));
 	}
 	return handle->gui.get();
 }
-void vstplugin::setSlot(int i) {
+void vstplugin::setSlot(int32_t i) {
 	handle->slot = i;
+}
+int32_t vstplugin::getSlot() {
+	return handle->slot;
 }
 void vstplugin::breakTrackLink() {
 	handle->tr_plugins = nullptr;
 }
 void vstplugin::setTrackLink(track_impl_t* trImpl) {
 	handle->tr_plugins = trImpl;
+}
+track_impl_t* vstplugin::getTrackLink() {
+	return handle->tr_plugins;
 }
 guibase* vstplugin::getGui() {
 	return handle->gui.get();
