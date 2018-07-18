@@ -164,8 +164,9 @@ public:
 	uint32_t pluginCount();
 	vstplugin* getPluginIdx(uint32_t i);
 	vstpluginloadres loadPlugin(String filepath, int32_t globalId = 0);
+	int32_t getNextGlobalModuleId();
 	track_impl_t* createAudio(track_t* track);
 	bool movePlugin(track_t* dstTr, track_impl_t* trp, int32_t src, int32_t dst);
-	bool swapEffects(track_impl_t* trp, int32_t src, int32_t dst);
+	bool moveEffect(track_impl_t* trp, int32_t src, int32_t dst);
 	bool insertNewPlugin(track_impl_t* trp, effectbase* plugin, int32_t dst);
 };

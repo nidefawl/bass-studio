@@ -3,11 +3,15 @@
 #include "seq_time.h"
 #include "seq_math.h"
 #include "dsp_util.h"
+
 #include "vst_host.h"
-#include "vst_plugin.h"
 #include "fileio.h"
 #include "track.h"
 #include "mainctrl.h"
+
+#include "plugin/base_plugin.h"
+#include "plugin/vst_plugin.h"
+#include "plugin/vst_plugin_handles.h"
 
 #include "../vst_sdk_2.4/aeffectx.h"
 #include "portaudio.h"
@@ -15,7 +19,6 @@
 
 #include "logging.h"
 #include "audioblock.h"
-#include "vst_plugin_handles.h"
 #include "platform.h"
 
 #include <stdlib.h>
@@ -957,19 +960,39 @@ bool vsthost::movePlugin(track_t* dstTr, track_impl_t* trp, int32_t src, int32_t
 	dstTr->audio->pluginsChanged();
 	return true;
 }
-bool vsthost::swapEffects(track_impl_t* trp, int32_t src, int32_t dst) {
+bool vsthost::moveEffect(track_impl_t* trp, int32_t src, int32_t dst) {
 	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 	assert(src >= 0 && dst >= 0);
+	assert(src != dst);
 //	src--;
 //	dst--;
-
 	assert((int32_t)trp->effects.size() > src);
 	assert((int32_t)trp->effects.size() > dst);
-	effectbase* tmpPlugin = trp->effects[dst];
-	trp->effects[dst] = trp->effects[src];
-	trp->effects[src] = tmpPlugin;
-	trp->effects[src]->setSlot(src);
-	trp->effects[dst]->setSlot(dst);
+	for (effectbase* effect : trp->effects) {
+		assert(effect->getSlot()>=0);
+	}
+
+
+	//shift element
+	std::vector<effectbase*> curEffects = trp->effects;
+	std::vector<effectbase*> tmpEffects;
+	tmpEffects.resize(trp->effects.size());
+	auto itIn = curEffects.cbegin();
+	auto itOut = tmpEffects.begin();
+	for (;itOut!=tmpEffects.cend();) {
+		if (curEffects.cbegin()+src == itIn) {
+			itIn++;
+		} else if (tmpEffects.cbegin()+dst == itOut) {
+			*itOut++ = curEffects[src];
+		} else {
+			*itOut++ = *itIn++;
+		}
+	}
+	trp->effects = std::move(tmpEffects);
+	int slot = 0;
+	for (effectbase* effect : trp->effects) {
+		effect->setSlot(slot++);
+	}
 	return true;
 }
 bool vsthost::insertNewPlugin(track_impl_t* trp, effectbase* plugin, int32_t dst) {
@@ -1030,6 +1053,9 @@ int32_t loadLib(String filepath, VSTPluginMain_t** out_fn, void** out_hmodule) {
 	return 0;
 }
 #endif
+int32_t vsthost::getNextGlobalModuleId() {
+	return ++pluginId;
+}
 vstpluginloadres vsthost::loadPlugin(String filepath, int32_t globalId) {
 	String path, name, nameWithoutExt;
 	SplitPath(filepath, &path, &nameWithoutExt, NULL, &name);
@@ -1075,7 +1101,7 @@ vstpluginloadres vsthost::loadPlugin(String filepath, int32_t globalId) {
 #endif
 
 	if (globalId <= 0) {
-		globalId = ++pluginId;
+		globalId = getNextGlobalModuleId();
 	} else {
 		update_maximum(pluginId, globalId);
 	}
