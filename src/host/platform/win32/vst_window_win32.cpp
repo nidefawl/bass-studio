@@ -1,7 +1,7 @@
 #ifdef _WIN32
 #include "../../vst_window.h"
 #include "../../vst_host.h"
-#include "../../vst_plugin.h"
+#include "../../plugin/vst_plugin.h"
 #include "../host/mainctrl.h"
 
 #include <tchar.h>

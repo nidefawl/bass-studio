@@ -15,7 +15,7 @@
 
 #include "str_util.h"
 #include "../host/vst_host.h"
-#include "../host/vst_plugin.h"
+#include "../host/plugin/vst_plugin.h"
 #include "fileio.h"
 #include "exceptions.h"
 #if __linux__

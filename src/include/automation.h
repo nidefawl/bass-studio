@@ -86,6 +86,7 @@ struct automatable_t {
 	virtual void getAutomated(std::vector<int32_t>& targets) = 0;
 	virtual void deactivateAutomation(int32_t paramIdx) = 0;
 	virtual automationlane_snapshot_t toRef() = 0;
+	automated_param_t* getRegisteredAutomation(int32_t idx);
 	int32_t getQuantizationSteps(int32_t idx) {
 		automation_t* at = getAutomation(idx);
 		assert(at);

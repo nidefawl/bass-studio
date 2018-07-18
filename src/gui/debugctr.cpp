@@ -5,10 +5,12 @@
 #include "plugin.h"
 #include "guicontainer.h"
 #include "../host/vst_host.h"
-#include "../host/vst_plugin.h"
-#include "../host/vst_plugin_handles.h"
+#include "../host/plugin/vst_plugin.h"
+#include "../host/plugin/vst_plugin_handles.h"
 #include "track.h"
 #include "track_impl.h"
+#include "clip.h"
+#include "edithistory.h"
 #include <vector>
 #include "leak_detect.h"
 using namespace std;
@@ -96,7 +98,7 @@ void gui_ctr_debug::render(NVGcontext* vg) {
 	if (ctrl->guiFocused && ctrl->guiFocused->parent == (guibase*)ctrl->getPluginCtr()) {
 		guiplugin* gplugin = dynamic_cast<guiplugin*>(ctrl->guiFocused);
 		if (gplugin) {
-			vstplugin* vst = gplugin->vst;
+			effectbase* vst = gplugin->getModule();
 			strings.push_back("\n\n");
 			vst->getInfo(strings);
 		}

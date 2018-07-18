@@ -16,9 +16,11 @@
 #include "pluginlist.h"
 
 #include "../host/mainctrl.h"
-#include "../host/vst_plugin.h"
-#include "../host/vst_plugin_handles.h"
 #include "../host/vst_host.h"
+#include "../host/plugin/base_plugin.h"
+#include "../host/plugin/internal_plugin.h"
+#include "../host/plugin/vst_plugin.h"
+#include "../host/plugin/vst_plugin_handles.h"
 #include "../host/plugindatabase.h"
 #include "../threads/playbackthread.h"
 
@@ -43,7 +45,7 @@ void guiplugin::dragReleaseOn(guibase* target, ivec2 mousepos) {
 	target->pluginDragRelease(this, mousepos);
 }
 
-void guiplugin::render(NVGcontext* vg) {
+void guiplugin::renderBase(NVGcontext* vg) {
 	if (!setScissorTransform(vg)) {
 		return;
 	}
@@ -63,66 +65,15 @@ void guiplugin::render(NVGcontext* vg) {
 	nvgFill(vg);
 	if (this->text[0]) {
 		setFont(vg, (int)(HEIGHT_PLUGIN_TITLE*0.8), G_WHITE, G_TITLE_ALIGN);
-		nvgText(vg, buttonOpenEditor.right()+INSET_TITLE, HEIGHT_PLUGIN_TITLE / 2, StringAsCStr(this->text), NULL);
+		nvgText(vg, titlePosX+INSET_TITLE, HEIGHT_PLUGIN_TITLE / 2, StringAsCStr(this->text), NULL);
 	}
 	nvgBeginPath(vg);
 	nvgRoundedRect(vg, 0, 0, size.x, size.y, G_RND);
 	nvgStrokeColor(vg, GUI_COLOR(G_S1));
 	nvgStrokeWidth(vg, G_STROKE);
 	nvgStroke(vg);
-	buttonBypass.render(vg);
-	buttonOpenEditor.render(vg);
-	buttonDelete.render(vg);
+}
 
-	meter.render(vg);
-	params.renderBackground(vg);
-	params.render(vg);
-}
-bool guiplugin::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
-	if (contains(mpos)) {
-		ivec2 mouseLocal = mpos - pos;
-		if (buttonBypass.mouseHitTest(mouseLocal, evt)) {
-			return true;
-		}
-		if (buttonOpenEditor.mouseHitTest(mouseLocal, evt)) {
-			return true;
-		}
-		if (buttonDelete.mouseHitTest(mouseLocal, evt)) {
-			return true;
-		}
-		if (params.mouseHitTest(mouseLocal, evt)) {
-			return true;
-		}
-		evt.requestFocus(this);
-		return true;
-	}
-	return false;
-}
-void guiplugin::buttonClicked(guibase* _button) {
-	if (_button == &buttonBypass) {
-    	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-		if (vst->bIsEnabled) {
-			vst->sleep();
-		} else {
-			vst->resume();
-		}
-		if (vst->isSynth) {
-			vsthost::getInstance()->sendNotesOff(vst);
-		}
-
-	}
-	if (_button == &buttonOpenEditor) {
-		if (vst->bEditOpen) {
-			vst->close();
-		} else {
-			vst->show();
-		}
-	}
-	if (_button == &buttonDelete) {
-    	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-    	vsthost::getInstance()->unloadPlugin(vst);
-	}
-}
 class guictxtmenu_vstparam : public guictxtmenu_base {
 	vstplugin* const vst;
 	vst_param* const entry;
@@ -227,35 +178,23 @@ public:
 		knobTest.render(vg);
 	}
 };
-guiplugin::guiplugin(vstplugin* _vst)
+
+guiplugin::guiplugin(effectbase* _effect)
 : guibase(),
-  vst(_vst),
-  params(48),
+  effect(_effect),
   buttonBypass(12),
-  buttonOpenEditor(12),
   buttonDelete(12),
-  meter(&_vst->meter) {
+  meter(&_effect->meter) {
 	text[0] = 0;
 	buttonBypass.icon = ICON_BYPASS;
-	buttonBypass.state = &vst->bIsEnabled;
+	buttonBypass.state = &_effect->bIsEnabled;
 	buttonBypass.parent = this;
 	buttonBypass.setColor(0x80c040);
-	buttonOpenEditor.icon = ICON_ADJUST;
-	buttonOpenEditor.state = &vst->bEditOpen;
-	buttonOpenEditor.parent = this;
-	buttonOpenEditor.setColor(0x40ABC0);
 	buttonDelete.icon = ICON_CLOSE;
 	static bool closeEnabled = true;
 	buttonDelete.state = &closeEnabled;
 	buttonDelete.parent = this;
 	buttonDelete.setColor(0x404040);
-	params.parent = this;
-	meter.parent = this;
-	std::vector<gui_list_entry*> _newList;
-	for (vst_param& param : _vst->params) {
-		_newList.push_back(new gui_plugin_paramlist_entry(_vst, &param));
-	}
-	params.setList(_newList);
 }
 void guictr_plugins::addGui(effectbase* plugin) {
 	guibase* base = plugin->makeGui();
@@ -312,6 +251,10 @@ effectbase* gui_vstpluginlist_entry::makeInstance() {
 	vstpluginloadres res = vsthost::getInstance()->loadPlugin(entry.path);
 	return res.result == 0 ? res.plugin : nullptr;
 }
+effectbase* gui_modulelist_entry::makeInstance() {
+	effectbase* instance = makeModuleInstance(entry.uid);
+	return instance;
+}
 void guictr_plugins::pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mousepos) {
 	highlightSlot = -1;
 	if (!track) return;
@@ -329,14 +272,15 @@ void guictr_plugins::pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mouse
 void guictr_plugins::pluginDragMove(guiplugin* g, ivec2 mousepos) {
 	highlightSlot = -1;
 	if (!track) return;
-	track_impl_t* trp = g->vst->handle->tr_plugins;
+	effectbase* effect = g->getModule();
+	track_impl_t* trp = effect->getTrackLink();
 	if (!trp) {
 		assert(0&&"TRP WAS NULL");
 		return;
 	}
 //	if (abs((evt.dragStart - evt.mousepos).x) > getSizeContent().y / 4) {
 		highlightSlot = slotFromCoord(mousepos);
-		int curSlot = trp->track == track ? (g->vst->handle->slot) : -2;
+		int curSlot = trp->track == track ? (effect->getSlot()) : -2;
 		if (curSlot == highlightSlot || curSlot + 1 == highlightSlot) {
 			highlightSlot = -1;
 		}
@@ -347,12 +291,13 @@ void guictr_plugins::pluginDragRelease(guiplugin* g, ivec2 mousepos) {
 	highlightSlot = -1;
 	if (!track) return;
 	int targetslot = slotFromCoord(mousepos);
-	track_impl_t* trp = g->vst->handle->tr_plugins;
+	effectbase* effect = g->getModule();
+	track_impl_t* trp = effect->getTrackLink();
 	if (!trp) {
 		assert(0&&"TRP WAS NULL");
 		return;
 	}
-	int curSlot = g->vst->handle->slot;
+	int curSlot = effect->getSlot();
 	if (curSlot == targetslot || curSlot + 1 == targetslot) {
 		return;
 	}
@@ -362,7 +307,7 @@ void guictr_plugins::pluginDragRelease(guiplugin* g, ivec2 mousepos) {
 			vsthost::getInstance()->movePlugin(track, trp, curSlot, targetslot);
 		} else {
 			if (targetslot > curSlot) targetslot--;
-			vsthost::getInstance()->swapEffects(trp, curSlot, targetslot);
+			vsthost::getInstance()->moveEffect(trp, curSlot, targetslot);
 		}
 		showTrack(track);
 	} else {
@@ -370,4 +315,81 @@ void guictr_plugins::pluginDragRelease(guiplugin* g, ivec2 mousepos) {
 		my_printf("targetslot < 0 %d\n", targetslot);
 	}
 	return;
+}
+
+
+guivstplugin::guivstplugin(vstplugin * _vst)
+: guiplugin(_vst),
+  vst(_vst),
+  params(48),
+  buttonOpenEditor(12) {
+	buttonOpenEditor.icon = ICON_ADJUST;
+	buttonOpenEditor.state = &_vst->bEditOpen;
+	buttonOpenEditor.parent = this;
+	buttonOpenEditor.setColor(0x40ABC0);
+	params.parent = this;
+	meter.parent = this;
+	std::vector<gui_list_entry*> _newList;
+	for (vst_param& param : _vst->params) {
+		_newList.push_back(new gui_plugin_paramlist_entry(_vst, &param));
+	}
+	params.setList(_newList);
+}
+
+guivstplugin::~guivstplugin() {
+}
+void guivstplugin::render(NVGcontext* vg) {
+	renderBase(vg);
+	buttonBypass.render(vg);
+	buttonOpenEditor.render(vg);
+	buttonDelete.render(vg);
+
+	meter.render(vg);
+	params.renderBackground(vg);
+	params.render(vg);
+}
+bool guivstplugin::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
+	if (contains(mpos)) {
+		ivec2 mouseLocal = mpos - pos;
+		if (buttonBypass.mouseHitTest(mouseLocal, evt)) {
+			return true;
+		}
+		if (buttonOpenEditor.mouseHitTest(mouseLocal, evt)) {
+			return true;
+		}
+		if (buttonDelete.mouseHitTest(mouseLocal, evt)) {
+			return true;
+		}
+		if (params.mouseHitTest(mouseLocal, evt)) {
+			return true;
+		}
+		evt.requestFocus(this);
+		return true;
+	}
+	return false;
+}
+void guivstplugin::buttonClicked(guibase* _button) {
+	if (_button == &buttonBypass) {
+    	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+		if (vst->bIsEnabled) {
+			vst->sleep();
+		} else {
+			vst->resume();
+		}
+		if (vst->isSynth) {
+			vsthost::getInstance()->sendNotesOff(vst);
+		}
+
+	}
+	if (_button == &buttonOpenEditor) {
+		if (vst->bEditOpen) {
+			vst->close();
+		} else {
+			vst->show();
+		}
+	}
+	if (_button == &buttonDelete) {
+    	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+    	vsthost::getInstance()->unloadPlugin(vst);
+	}
 }

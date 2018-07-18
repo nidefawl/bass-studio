@@ -49,11 +49,13 @@
 #include "../gui/drawwaveform.h"
 
 #include "vst_host.h"
-#include "vst_plugin.h"
+#include "plugin/base_plugin.h"
+#include "plugin/vst_plugin.h"
 #include "track_impl.h"
 #include "leak_detect.h"
 #include "audiocache.h"
 #include "seq_time.h"
+#include "../threads/workerthread.h"
 
 using glm::vec2;
 using glm::ivec2;
@@ -155,7 +157,7 @@ public:
 	guictr_tracks ctr_tracks;
 	gui_ctr_debug ctr_dbg;
 	guictr_pluginlibrary ctr_pluginlist;
-	guictr_effectlibrary ctr_effectlist;
+	guictr_modulelibrary ctr_effectlist;
 	Splitter splitterList;
 	Splitter splitterCenter;
 	Splitter splitterRight;

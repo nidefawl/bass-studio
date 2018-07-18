@@ -102,7 +102,7 @@ public:
 			track_param_entry_t& param = params[idx];
 			return &param.automation;
 		}
-		return NULL;
+		return nullptr;
 	}
 	void getAutomated(std::vector<int32_t>& targets) {
 		for (int idx = 0; idx < (int)params.size(); idx++) {
@@ -184,7 +184,6 @@ struct track_impl_t {
 	}
 	~track_impl_t();
 	effectbase* getPluginById(int32_t projectGlobalId);
-//	vstplugin* setInstrument(vstplugin* _instrument);
 	void removePlugin(effectbase* _vst, bool notifyUp);
 	void insertEffect(int32_t idx, effectbase* _instrument);
 	void sendNotesOff(int32_t bpm100, int32_t blockSamplePos);

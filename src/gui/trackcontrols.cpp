@@ -7,7 +7,7 @@
 #include "contextmenus.h"
 #include "button.h"
 #include "event.h"
-#include "../host/vst_plugin.h"
+#include "../host/plugin/vst_plugin.h"
 #include "trackautomation.h"
 #include "trackcontent.h"
 #include "dropdown.h"

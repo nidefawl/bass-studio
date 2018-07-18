@@ -7,7 +7,6 @@
 #include "track.h"
 #include "trackautomation.h"
 #include "track_impl.h"
-#include "../host/vst_plugin.h"
 
 #include "event.h"
 #include "button.h"

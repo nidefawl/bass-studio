@@ -17,8 +17,9 @@
 #include "clip.h"
 #include "track.h"
 #include "audiocache.h"
-#include "vst_plugin.h"
-#include "vst_plugin_handles.h"
+#include "plugin/base_plugin.h"
+#include "plugin/vst_plugin.h"
+#include "plugin/vst_plugin_handles.h"
 #include "vst_host.h"
 #include "track_impl.h"
 

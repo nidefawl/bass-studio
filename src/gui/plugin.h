@@ -15,34 +15,37 @@
 using glm::vec2;
 using glm::ivec2;
 
-class vstplugin;
-
+class effectbase;
 class vstplugin;
 
 class guiplugin : public guibase {
 public:
-	vstplugin* const vst;
-	gui_list params;
+	effectbase* const effect;
 	String text;
 	guibuttontoggle buttonBypass;
-	guibuttontoggle buttonOpenEditor;
 	guibuttontoggle buttonDelete;
 	gui_trackmeter meter;
-	guiplugin(vstplugin* _vst);
-	~guiplugin() {
+	float titlePosX = 0;
+	guiplugin(effectbase* _effect);
+	virtual ~guiplugin() {
 		my_printf("DSTR!\n",0);
+	}
+	virtual void render(NVGcontext* vg) = 0;
+	virtual void buttonClicked(guibase* _button) = 0;
+	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) = 0;
+	virtual void layoutModule(int32_t inset1, ivec2 contentS) = 0;
+
+	effectbase* getModule() {
+		return effect;
 	}
 	virtual void renderDragged(NVGcontext* vg, ivec2 mousepos) {
 		mousepos -= pos;
 		nvgTranslate(vg, mousepos.x, mousepos.y);
 		render(vg);
 	}
-	void render(NVGcontext* vg);
-	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
-	void setTitle(String _text) {
-		text = _text;
-	}
-	void layout() {
+	void renderBase(NVGcontext* vg);
+
+	void layout() override {
 		int32_t meterW = 32;
 		while (size.x < meterW * 16 && meterW > 16) {
 			meterW -= 4;
@@ -51,10 +54,39 @@ public:
 		ivec2 contentS(size.x - meterW, size.y-HEIGHT_PLUGIN_TITLE);
 		buttonBypass.pos.y = inset1;
 		buttonBypass.pos.x = inset1;
-		buttonOpenEditor.pos.y = inset1;
-		buttonOpenEditor.pos.x = buttonBypass.right();
 		buttonDelete.pos.y = inset1;
 		buttonDelete.pos.x = size.x - buttonDelete.size.x - inset1;
+		titlePosX = buttonBypass.right();
+		layoutModule(inset1, contentS);
+		meter.pos = ivec2(size.x - meterW, HEIGHT_PLUGIN_TITLE);
+		meter.size = ivec2(meterW, contentS.y);
+		meter.layout();
+	}
+	void handleDraggedMove(MouseEvent& evt) override;
+	void handleDraggedRelease(MouseEvent& evt) override;
+	void dragMoveOn(guibase* target, ivec2 mousepos) override;
+	void dragReleaseOn(guibase* target, ivec2 mousepos) override;
+	void setTitle(String _text) {
+		text = _text;
+		my_printf("SET TITLE %s\n", StringAsCStr(text));
+	}
+	void setState(bool state) {
+	}
+	bool isDragMoveable() {
+		return true;
+	}
+};
+class guivstplugin : public guiplugin {
+public:
+	guivstplugin(vstplugin * _vst);
+	~guivstplugin();
+	vstplugin* const vst;
+	gui_list params;
+	guibuttontoggle buttonOpenEditor;
+	void layoutModule(int32_t inset1, ivec2 contentS) {
+		buttonOpenEditor.pos.y = inset1;
+		buttonOpenEditor.pos.x = buttonBypass.right();
+		titlePosX = buttonOpenEditor.right();
 		int32_t insetCtrls = INSET_TITLE;
 		int rowHeight = 64;
 		while (contentS.y < rowHeight * 8 && rowHeight > 8) {
@@ -64,18 +96,9 @@ public:
 		params.pos = ivec2(insetCtrls, insetCtrls + HEIGHT_PLUGIN_TITLE);
 		params.size = contentS - ivec2(insetCtrls*2);
 		params.layout();
-		meter.pos = ivec2(size.x - meterW, HEIGHT_PLUGIN_TITLE);
-		meter.size = ivec2(meterW, contentS.y);
-		meter.layout();
 	}
-	void handleDraggedMove(MouseEvent& evt) override;
-	void handleDraggedRelease(MouseEvent& evt) override;
-	void dragMoveOn(guibase* target, ivec2 mousepos) override;
-	void dragReleaseOn(guibase* target, ivec2 mousepos) override;
-	void setState(bool state) {
-	}
-	void buttonClicked(guibase* _button);
-	bool isDragMoveable() {
-		return true;
-	}
+	void render(NVGcontext* vg) override;
+	void buttonClicked(guibase* _button) override;
+	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
+
 };

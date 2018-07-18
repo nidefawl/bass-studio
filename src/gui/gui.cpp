@@ -1,9 +1,13 @@
+#include <algorithm>
 #include "color_util.h"
 #include "gui.h"
 #include "platform.h"
+#include "seq_math.h"
 #include "seq_util.h"
 #include "leak_detect.h"
 
+using std::min;
+using std::max;
 NVGcolor g_guiColors[24];
 NVGcolor g_colorPalette[COLOR_PALETTE_LEN];
 

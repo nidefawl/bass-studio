@@ -9,12 +9,14 @@
 #include "textfield.h"
 #include "list.h"
 #include "../host/plugindatabase.h"
+#include "modules.h"
 #include "leak_detect.h"
 
 using glm::vec2;
 using glm::ivec2;
 using glm::vec4;
 using glm::ivec4;
+class effectbase;
 class gui_pluginlist_entry : public gui_list_entry {
 public:
 	gui_pluginlist_entry() {
@@ -114,23 +116,15 @@ public:
 		pluginListCtr.render(vg);
 	}
 };
-struct effect_desc_t {
+struct module_desc_t {
 	int uid;
 	String name;
 	bool isSynth;
 };
-//std::shared_ptr<effectbase> makeEffect(int effect) {
-//	switch (effect) {
-//	case 0:
-//	default:
-//		return std::make_shared<>();
-//	}
-//}
-#define EFFECT_GROUP 0
-class gui_builtinpluginlist_entry : public gui_pluginlist_entry {
+class gui_modulelist_entry : public gui_pluginlist_entry {
 public:
-	const effect_desc_t entry;
-	gui_builtinpluginlist_entry(const effect_desc_t _entry) : gui_pluginlist_entry(), entry(_entry) {
+	const module_desc_t entry;
+	gui_modulelist_entry(const module_desc_t _entry) : gui_pluginlist_entry(), entry(_entry) {
 		icon = _entry.isSynth ? ICON_SYNTH : ICON_EFFECT;
 	}
 	void dragMoveOn(guibase* target, ivec2 mousepos) override {
@@ -142,22 +136,21 @@ public:
 	String getText() override {
 		return entry.name;
 	}
-	effectbase* makeInstance() override {
-		return nullptr;
-	}
+	effectbase* makeInstance() override;
 	bool isSynth() override {
 		return entry.isSynth;
 	}
 };
-class guictr_effectlibrary : public guictr_base {
+class guictr_modulelibrary : public guictr_base {
 	const int32_t heightTextField = 30;
 	gui_textfield textField;
 	gui_list pluginListCtr;
 	String curquery = "";
-	std::vector<effect_desc_t> effectEntries;
+	std::vector<module_desc_t> effectEntries;
 public:
-	guictr_effectlibrary() : guictr_base() {
-		effectEntries.push_back(effect_desc_t{EFFECT_GROUP, "Group", false});
+	guictr_modulelibrary() : guictr_base() {
+		effectEntries.push_back(module_desc_t{EFFECT_EMPTY, "Empty", false});
+		effectEntries.push_back(module_desc_t{EFFECT_GROUP, "Group", false});
 		pluginListCtr.padding = 0;
 		add(&textField);
 		add(&pluginListCtr);
@@ -168,7 +161,7 @@ public:
 		});
 		textField.setPlaceholder("Search");
 	}
-	~guictr_effectlibrary() {
+	~guictr_modulelibrary() {
 		std::vector<gui_list_entry*> _newList;
 		pluginListCtr.setList(_newList);
 		remove(&pluginListCtr);
@@ -178,7 +171,7 @@ public:
 		std::vector<gui_list_entry*> _newList;
 		for (auto& t : effectEntries) {
 			if (ci_find_substr(t.name, curquery) >= 0) {
-				gui_builtinpluginlist_entry* g = new gui_builtinpluginlist_entry(t);
+				gui_modulelist_entry* g = new gui_modulelist_entry(t);
 				_newList.push_back(g);
 			}
 		}

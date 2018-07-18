@@ -1,5 +1,5 @@
 #include "automation.h"
-#include "vst_plugin.h"
+#include "plugin/vst_plugin.h"
 #include "../gui/automatable.h"
 #include "leak_detect.h"
 
