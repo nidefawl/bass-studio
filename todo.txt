@@ -1,15 +1,16 @@
 TODO:
 Sends/Return tracks
 Solo buttons
-Fold button in piano roll
 Missing undo/redo
-Recent file list
+Implement recent file list
 Compressed binary file format
-vu-meters on plugins
 latency compensated automation 
 stress-test synchronization
 
 later:
+seperate internal samplerate / external (audiointerface) samplerate
+toggle option for current tracks effect chain
+list of all thirdparty+internal plugin instances 
 group tracks
 plugin groups
 audio settings dialog
@@ -18,5 +19,6 @@ midi export
 freeze track
 
 Done:
+vu-meters on plugins
+Fold button in piano roll
 Catch key presses from plugin windows
-Synchronization 
