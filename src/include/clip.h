@@ -35,8 +35,12 @@ public:
 		copy(a);
 	}
 	~clip_audio_t() {
-		if (waveformRef.rendered)
-			waveformrender::getInstance()->release(waveformRef.fbId);
+		if (waveformRef.rendered) {
+			waveformrender* renderer = waveformrender::getInstance();
+			if (renderer) {
+				waveformrender::getInstance()->release(waveformRef.fbId);
+			}
+		}
 	}
 	void copy( const clip_audio_t &obj) {
 		this->id = obj.id;
