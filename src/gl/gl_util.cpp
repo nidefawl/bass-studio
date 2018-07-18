@@ -82,7 +82,10 @@ String getLog(int logtype, int obj) {
 		glGetProgramiv(obj, GL_INFO_LOG_LENGTH, &maxLength);
 	}
     checkGLError("glGetProgramiv");
-
+	if (maxLength <= 0) {
+		printf("GL_INFO_LOG_LENGTH: %d\n", maxLength);
+		return "";
+	}
 	// The maxLength includes the NULL character
 	std::vector<char> infoLog(maxLength);
 	if (logtype == 0) {

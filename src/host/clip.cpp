@@ -261,16 +261,16 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
 	}
 
 
+	const int loopLenProcessing = loopLen <= 0 ? 0 : loopLen;
 	const tick_t lenClipLoopSection = (localEnd - localStart) - preLoopLen;
-	const tick_t numLoops = !loopEnabled ? 1 : (lenClipLoopSection+loopLen-1) / loopLen;
+	const tick_t numLoops = loopEnabled && loopLenProcessing>0 ? (lenClipLoopSection+loopLen-1) / loopLenProcessing : 1;
 	if (notesView.m_list.capacity() < numLoops * listLoop.size())
 		notesView.m_list.reserve(numLoops * listLoop.size());
-
 	for (int i = 0; i < numLoops; i++) {
 		auto itNote = listLoop.cbegin();
 		auto itNoteEnd = listLoop.cend();
-		const tick_t posCurLoopStart = preLoopLen + (i * loopLen);
-		const tick_t posCurLoopEnd = posCurLoopStart + loopLen;
+		const tick_t posCurLoopStart = preLoopLen + (i * loopLenProcessing);
+		const tick_t posCurLoopEnd = posCurLoopStart + loopLenProcessing;
 		const tick_t clipStart = max(posCurLoopStart, localStart);
 		const tick_t clipEnd = min(posCurLoopEnd, localEnd);
 		for (;itNote != itNoteEnd; itNote++) {

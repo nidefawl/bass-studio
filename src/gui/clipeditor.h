@@ -721,7 +721,7 @@ public:
 		clip_t* clip = view.clip();
 		if (clip) {
 			tick_t pos = ctrl->playbackPos - clip->time + clip->offsetStart;
-			if (clip->loopEnabled) {
+			if (clip->loopEnabled && clip->loopLen > 0) {
 				if (pos > clip->loopStart) {
 					pos = clip->loopStart + (pos - clip->loopStart) % clip->loopLen;
 				}

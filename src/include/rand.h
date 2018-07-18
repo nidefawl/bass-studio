@@ -17,7 +17,7 @@ public:
 	    uint32_t xorshifted = ((rng_state >> 18u) ^ rng_state) >> 27u;
 	    uint32_t rot = rng_state >> 59u;
 	    rng_state = rng_state * 6364136223846793005ULL + 1;
-	    return (xorshifted >> rot) | (xorshifted << ((-rot) & 31));
+	    return (xorshifted >> rot) | (xorshifted << ((-(int)rot) & 31));
 	}
 	void rng_seed(uint64_t seed)
 	{

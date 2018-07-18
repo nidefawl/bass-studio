@@ -268,7 +268,7 @@ void renderMidiClip(NVGcontext* vg, const track_t* tr, const clip_t* cl, ivec2 p
 
 		nvgRestore(vg);
 	}
-	if (cl->loopEnabled) {
+	if (cl->loopEnabled && cl->loopLen > 0) {
 		tick_t posLoopIndicator = cl->getLoopBegin();
 		nvgBeginPath(vg);
 		while (posLoopIndicator < clipLen) {

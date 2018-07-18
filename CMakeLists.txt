@@ -90,8 +90,14 @@ find_library(
     PATHS ${DAW_DEPS_DIR}/build/lib/SQLiteCpp/
     PATH_SUFFIXES lib
     NO_DEFAULT_PATH)
-message (STATUS "GLFW_LIB = ${GLFW_LIB}")
-message (STATUS "SQLITECPP_LIB = ${SQLITECPP_LIB}")
+find_library(
+    SOXR_LIB NAMES "soxr"
+    PATHS ${DAW_DEPS_DIR}/build/lib/soxr/
+    PATH_SUFFIXES lib
+    NO_DEFAULT_PATH)
+message (STATUS "glfw3 = ${GLFW_LIB}")
+message (STATUS "SQLiteCpp = ${SQLITECPP_LIB}")
+message (STATUS "soxr = ${SOXR_LIB}")
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     add_compile_options(-g -O0 -fstack-protector -Wall -Wno-inconsistent-missing-override)
@@ -100,14 +106,7 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
   # using Intel C++
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
-    add_definitions(-D_CRT_SECURE_NO_WARNINGS)
-    if (SQLITECPP_BUILD_TESTS)
-        message(STATUS "Linking against multithread static C++ runtime for unit tests with googletest")
-        set(CMAKE_C_FLAGS_RELEASE   "${CMAKE_C_FLAGS_RELEASE} /MT")
-        set(CMAKE_C_FLAGS_DEBUG     "${CMAKE_C_FLAGS_DEBUG} /MTd")
-        set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /MT")
-        set(CMAKE_CXX_FLAGS_DEBUG   "${CMAKE_CXX_FLAGS_DEBUG} /MTd")
-    endif (SQLITECPP_BUILD_TESTS)
+    add_definitions(-D_CRT_SECURE_NO_WARNINGS -DNOMINMAX /wd4067 /wd4267 /wd4244)
 endif()
 
 add_definitions(${DAW_COMPILE_FLAGS})
@@ -138,7 +137,7 @@ if (WIN32)
 endif()
 if (BUILD_HOST)
 add_executable(DAW ${CPP_SRC_FILES} ${C_SRC_FILES})
-target_link_libraries(DAW PRIVATE ${GLFW_LIB} ${SQLITECPP_LIB} ${SQLITE3_LIB})
+target_link_libraries(DAW PRIVATE ${GLFW_LIB} ${SQLITECPP_LIB} ${SQLITE3_LIB} ${SOXR_LIB})
 endif()
 if (BUILD_SCANNER)
 add_executable(plugin_scan ${SCANNER_SRC_FILES} ${C_SRC_FILES})
@@ -177,9 +176,9 @@ if (UNIX)
 endif(UNIX)
 if (WIN32)
   if (BUILD_HOST)
-  target_link_libraries(DAW PRIVATE winmm kernel32 gdi32 ole32 uuid comdlg32 ssp)
+  target_link_libraries(DAW PRIVATE winmm kernel32 gdi32 ole32 uuid comdlg32)
   endif()
   if (BUILD_SCANNER)
-  target_link_libraries(plugin_scan PRIVATE winmm kernel32 gdi32 ole32 uuid comdlg32 ssp)
+  target_link_libraries(plugin_scan PRIVATE winmm kernel32 gdi32 ole32 uuid comdlg32)
   endif()
 endif(WIN32)
