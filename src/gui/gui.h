@@ -20,7 +20,8 @@ using glm::ivec2;
 #include "basectrl.h"
 #include "theme.h"
 #include "basectrl.h"
-
+#define GUI_PLUGIN_VIEW 1
+#define GUI_PLUGIN 2
 
 struct NVGcontext;
 class guitrack_editor;
@@ -62,7 +63,8 @@ public:
 	int dummy0 = 0;
 	bool canTextInput = false;
 	String label = "";
-	guibase() {
+	const int guiType;
+	guibase(int guiTypeId = 0) : guiType(guiTypeId) {
 		id = allocCount;
 		allocCount++;
 		g_guis.push_back(this);
@@ -141,6 +143,8 @@ public:
 	virtual void layout() {
 	}
 	virtual void onRemove() {
+	}
+	virtual void onAdded() {
 	}
 	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 		return false;

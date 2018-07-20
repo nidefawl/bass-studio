@@ -23,7 +23,7 @@ public:
 	std::vector<guibase*> guis;
 	bool sortChildren = false;
 public:
-	guictr_base() : guibase() {
+	guictr_base(int guiType = 0) : guibase(guiType) {
 		setSnapSides(ivec4(0));
 	}
 	guictr_base(ivec2 _pos, ivec2 _size) : guibase(_pos, _size) {
@@ -40,7 +40,7 @@ public:
 		}
 		guis.clear();
 	}
-	void removeGuis() {
+	virtual void removeGuis() {
 		for (guibase* g : guis) {
 			g->onRemove();
 			g->parent = NULL;
@@ -48,6 +48,13 @@ public:
 		guis.clear();
 	}
 public:
+	virtual void onRemove() override {
+		removeGuis();
+	}
+	virtual void onAdded() override {
+	}
+	virtual void determineSize() {
+	}
 	virtual ivec2 paddingTL(int _padding) {
 		return ivec2(_padding - margin*snapSides.x, _padding - margin*snapSides.y);
 	}
@@ -114,6 +121,7 @@ public:
 			});
 		}
 		gui->parent = this;
+		gui->onAdded();
 	}
 	bool hasGui(guibase* gui) {
 		auto it = std::find(guis.begin(), guis.end(), gui);
@@ -122,6 +130,8 @@ public:
 	virtual void remove(guibase* gui) {
 		auto it = std::find(guis.begin(), guis.end(), gui);
 		if (it == guis.end()) {
+			if (gui->parent == nullptr)
+				return;
 			throw applogicexception(StringFormat("%s - attempt to remove non-present element", StringAsCStr(getClassName())));
 		}
 		gui->onRemove();
@@ -146,7 +156,7 @@ public:
 		if (it == guis.end()) {
 			return;
 		}
-		gui->onRemove();
+//		gui->onRemove();
 		guis.erase(it);
 		gui->parent = NULL;
 	}

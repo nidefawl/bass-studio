@@ -15,6 +15,8 @@ struct VstEvent_t;
 
 class vstplugin;
 class effectbase;
+class guictr_plugins;
+struct track_params_snapshot_t;
 
 struct track_params_t : public automatable_t {
 private:
@@ -118,33 +120,8 @@ public:
 		ref.refId = 0;
 		return ref;
 	}
-	void createSnapshot(track_params_snapshot_t& snapshot) {
-		for (int i = 0; i < getNumParameters(); i++) {
-			float val = params[i].val;
-			param_snapshot_t snapParam{i, val};
-			my_printf("VAL[%d] = %f\n", i, val);
-			snapshot.params.push_back(std::move(snapParam));
-			automation_t* automation = getAutomation(i);
-			automation_view_t automationView;
-			if (automation) {
-				automationView.targetParam = i;
-				automationView.points = automation->points;
-				automationView.active = automation->active;
-			}
-			snapshot.automatedParams.push_back(std::move(automationView));
-		}
-	}
-	void loadSnapshot(const track_params_snapshot_t& snapshot) {
-		for (auto p : snapshot.params) {
-			my_printf("VAL[%d] = %f\n", p.idx, p.val);
-			params[p.idx].val = p.val;
-		}
-		for (auto p : snapshot.automatedParams) {
-			automation_t* automation = getAutomation(p.targetParam);
-			automation->points = p.points;
-			automation->active = p.active;
-		}
-	}
+	void createSnapshot(track_params_snapshot_t& snapshot);
+	void loadSnapshot(const track_params_snapshot_t& snapshot);
 	float getGain() {
 		return params[1].val;
 	}
@@ -155,47 +132,62 @@ public:
 		return params[0].val >= 0.5f;
 	}
 };
-struct track_impl_t {
-	track_t* const track;
-	const samplerate_t& sampleRate;
-	const uint16_t& blockSize;
-//	float level = 0;
+struct audio_stage_t {
+	audio_stage_t* parent;
+	guictr_plugins* pluginCtr;
 	rmsmeter<16000> meter;
-//	vstplugin* instrument = NULL;
-	std::vector<effectbase*> effects;
-	std::vector<note_t> heldNotes;
-	VstEvent_t* midiEventsBuf = NULL;
 	AudioBlock input; //guaranteed to have at least 2 channels
 	AudioBlock output; //guaranteed to have at least 2 channels
 	DelayLine delayLine;
 	track_params_t mixer;
+	int32_t latency = 0;
+	int type;
+	const samplerate_t& sampleRate;
+	const uint16_t& blockSize;
+	std::vector<effectbase*> effects;
+	audio_stage_t(/*track_t* _track, */const samplerate_t& _sampleRate, const uint16_t& _blockSize, int32_t nChannels, int _type = 1)
+	: parent(nullptr),/*track(_track),*/
+	  pluginCtr(nullptr),
+	  input(nChannels, _blockSize),
+	  output(nChannels, _blockSize),
+	  delayLine(nChannels, _blockSize),
+	  type(_type),
+	  sampleRate(_sampleRate),
+	  blockSize(_blockSize) {
+	}
+	virtual ~audio_stage_t() {
+
+	}
+	virtual void removePlugin(effectbase* _vst, bool notifyUp);
+	void loadPlugins(const std::vector<plugin_snapshot_t>& trPluginList);
+	int32_t getLatency();
+	void insertEffect(int32_t idx, effectbase* _instrument);
+	void pluginsChanged();
+	void onTick(double since);
+	track_t* getTrack();
+};
+struct track_impl_t : public audio_stage_t {
+	track_t* track;
+	std::vector<note_t> heldNotes;
+	VstEvent_t* midiEventsBuf = NULL;
 	automatable_t* selectedAutomationCtr = NULL;
 	int32_t selectedAutomationParam = -1;
 	std::vector<automationlane_snapshot_t> atl;
 	bool atlStored = false;
-	int32_t latency = 0;
 	track_impl_t(track_t* _track, const samplerate_t& _sampleRate, const uint16_t& _blockSize, int32_t nChannels)
-	: track(_track),
-	  sampleRate(_sampleRate),
-	  blockSize(_blockSize),
-	  input(nChannels, _blockSize),
-	  output(nChannels, _blockSize),
-	  delayLine(nChannels, _blockSize) {
+	: audio_stage_t(/*_track, */_sampleRate, _blockSize, nChannels, 0)
+	  , track(_track)
+	{
 	}
 	~track_impl_t();
 	effectbase* getPluginById(int32_t projectGlobalId);
-	void removePlugin(effectbase* _vst, bool notifyUp);
-	void insertEffect(int32_t idx, effectbase* _instrument);
 	void sendNotesOff(int32_t bpm100, int32_t blockSamplePos);
 	void sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos);
 	void fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, float** buffer, int32_t samples);
-	void onTick(double since);
 	VstEvent_t* reallocEvts(size_t size);
 	void getAutomatableTargets(std::vector<automatable_t*>& targets);
 	void loadAutomationLanes(const std::vector<automationlane_snapshot_t>& atl);
 	void saveAutomationLanes(std::vector<automationlane_snapshot_t>& atl);
-	void loadPlugins(const std::vector<plugin_snapshot_t>& trPluginList);
 	void showAutomationLanes();
-	int32_t getLatency();
-	void pluginsChanged();
+	void removePlugin(effectbase* _vst, bool notifyUp) override;
 };

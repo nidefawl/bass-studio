@@ -12,6 +12,7 @@
 #include "../../gui/guimeter.h"
 #include "../../gui/knob.h"
 #include "../../gui/gui.h"
+#include "../../gui/guicontainer.h"
 #include "../../gui/button.h"
 #include "../../gui/plugin.h"
 #include "../../gui/pluginctr.h"
@@ -43,7 +44,7 @@ public:
 	void render(NVGcontext* vg) override;
 	void buttonClicked(guibase* _button) override;
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
-	void layoutModule(int32_t inset1, ivec2 contentS) override {
+	void layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) override {
 	}
 };
 
@@ -61,11 +62,14 @@ void guimodule_empty::render(NVGcontext* vg) {
 }
 bool guimodule_empty::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 	if (contains(mpos)) {
-		ivec2 mouseLocal = mpos - pos;
-		if (buttonBypass.mouseHitTest(mouseLocal, evt)) {
+		if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
+			return false;
+		}
+		ivec2 localMouse = this->toContainerSpace(mpos);
+		if (buttonBypass.mouseHitTest(localMouse, evt)) {
 			return true;
 		}
-		if (buttonDelete.mouseHitTest(mouseLocal, evt)) {
+		if (buttonDelete.mouseHitTest(localMouse, evt)) {
 			return true;
 		}
 		evt.requestFocus(this);
@@ -118,7 +122,7 @@ float module_empty::dispatchGetParameter(int32_t idx) {
 void module_empty::dispatchSetParameter(int32_t idx, float val) {
 
 }
-guibase* module_empty::makeGui() {
+guiplugin* module_empty::makeGui() {
 	if (!handle->gui) {
 		handle->gui = std::make_unique<guimodule_empty>(this);
 		handle->gui->setTitle(StringFormat("%s", StringAsCStr(this->sName)));
@@ -127,13 +131,25 @@ guibase* module_empty::makeGui() {
 	return handle->gui.get();
 //	return handle->gui;
 }
-guibase* module_empty::getGui() {
+guiplugin* module_empty::getGui() {
 	return handle->gui.get();
 //	return handle->gui;
 }
 int32_t module_empty::getDelay() {
 	return 0;
 }
+bool module_empty::resume() {
+	bool wasSleep = !this->bIsEnabled;
+	this->bIsEnabled = true;
+	return wasSleep;
+}
+bool module_empty::sleep() {
+	bool wasSleep = !this->bIsEnabled;
+	this->bIsEnabled = false;
+	return !wasSleep;
+}
+void module_empty::unload() { }
+void module_empty::load(vsthost* host) { }
 void module_empty::process(AudioBlock* in, AudioBlock* out, int32_t samples) {
 	out->copyFrom(in);
 }

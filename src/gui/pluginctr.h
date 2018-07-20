@@ -3,6 +3,7 @@
 #include "str_util.h"
 #include "color_util.h"
 #include "guicontainer.h"
+#include "plugin.h"
 #include "button.h"
 #include "track.h"
 #include "basectrl.h"
@@ -13,6 +14,7 @@ using glm::ivec2;
 
 class vstplugin;
 class effectbase;
+struct audio_stage_t;
 
 class guictr_test : public guictr_base {
 public:
@@ -88,9 +90,13 @@ public:
 class guictr_plugins : public guictr_base {
 public:
 	int scrolloffset = 0;
-	int32_t highlightSlot = -1;
+//	int32_t highlightSlot = -1;
 	track_t* track = NULL;
+	audio_stage_t* stage = NULL;
 	guiplaceholder placeholder;
+		bool isDefaultPluginCtr = true;
+//	int myNumber1 = 5555;
+//	int myNumber2 = 1234;
 	guictr_plugins() : guictr_base() {
 
 	}
@@ -143,44 +149,18 @@ public:
 		nvgStroke(vg);
 		nvgLineCap(vg, NVGlineCap::NVG_BUTT);
 	}
-	void render(NVGcontext* vg) {
-		renderBackground(vg);
-		if (!setScissorTransform(vg)) {
-			return;
-		}
-		int32_t slot = 0;
-		guibase * lastGui = NULL;
-		nvgTranslate(vg, -scrolloffset, 0);
-		for (guibase* gui : guis) {
-			if (highlightSlot == slot) {
-				ivec2 posHL(gui->pos.x - 4, 0);
-				verticalLineAt(vg, posHL);
-				nvgTranslate(vg, 8, 0);
-			}
-			nvgSave(vg);
-			gui->render(vg);
-			nvgRestore(vg);
-			lastGui = gui;
-			slot++;
-		}
-		if (highlightSlot == slot) {
-			ivec2 posHL((lastGui ? (lastGui->pos.x + lastGui->size.x + 8) : -4), 0);
-			verticalLineAt(vg, posHL);
-		}
-		nvgResetScissor(vg);
-		nvgResetTransform(vg);
-	}
+	void render(NVGcontext* vg);
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
 		if (this->contains(mpos)) {
-			if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
-				evt.requestFocus(this);
-				return true;
-			}
 			ivec2 localMouse = this->toContainerSpace(mpos);
 			for (guibase* gui : guis) {
 				if (gui->mouseHitTest(localMouse, evt)) {
 					return true;
 				}
+			}
+			if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
+				evt.requestFocus(this);
+				return true;
 			}
 		}
 		return false;
@@ -193,21 +173,15 @@ public:
 		for (guibase* gui : guis) {
 			gui->pos = gPos;
 			gui->size = ivec2(guiH);
+			if (gui->guiType == GUI_PLUGIN) {
+				static_cast<guiplugin*>(gui)->determineSize();
+			}
 			gui->pos.y = inset;
-			gPos.x += gui->size.x + 16;
+			gPos.x += gui->size.x + margin*2;
 			gui->layout();
 		}
 	}
-	int slotFromCoord(ivec2 _pos) {
-		int slot = 0;
-		for (guibase* gui : guis) {
-			if (_pos.x < gui->pos.x + gui->size.x / 2) {
-				break;
-			}
-			slot++;
-		}
-		return slot;
-	}
+	int slotFromCoord(ivec2 _pos);
 	int slotFromChild(guibase* child) {
 		int slot = 0;
 		for (guibase* gui : guis) {
@@ -225,10 +199,12 @@ public:
 		}
 		return last->pos.x + last->size.x + 50;
 	}
+
+	virtual void onAdded() override;
 	virtual void onTick(AppCtrl* ctrl) {
 #define SCROLL_START_X 30
 
-		if (ctrl->guiDragged != NULL && ctrl->guiDragged->parent == this) {
+		if (isDefaultPluginCtr&&ctrl->guiDragged != NULL && ctrl->guiDragged->parent == this) {
 			if (ctrl->m_mousePos.x < SCROLL_START_X && scrolloffset > 0) {
 				setScrolloffset(scrolloffset - (int)((TIMER_MS / 50.0) * 40));
 			}
@@ -242,9 +218,11 @@ public:
 	void pluginDragRelease(guiplugin* g, ivec2 mousepos) override;
 	void pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 mousepos) override;
 	void pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mousepos) override;
-	void showTrack(track_t* track);
-	void hideTrack(track_t* track);
+	void showTrack(audio_stage_t* track);
+	void hideTrack(audio_stage_t* track);
 	void addGui(effectbase* plugin);
+	void onChildLayoutChanged(guibase* g) override;
+	virtual void determineSize() override;
 };
 class guictr_pluginview : public guictr_base {
 public:

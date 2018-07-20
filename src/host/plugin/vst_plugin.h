@@ -125,10 +125,10 @@ public:
 	bool updateWindowSize();
 	bool onResize(vst_window* window, Size size);
 	Size constrainSize(vst_window* window, Size& size);
-	bool show();
-	bool close();
-	void unload();
-	void load(vsthost* host);
+	bool show() override;
+	bool close() override;
+	void unload() override;
+	void load(vsthost* host) override;
 	vst_param_category* getCategory(int idx);
 	automated_param_t* getRegisteredAutomation(int32_t idx);
 
@@ -143,15 +143,14 @@ public:
 	void deactivateAutomation(int32_t paramIdx) override;
 	void getAutomated(std::vector<int32_t>& targets) override;
 	automationlane_snapshot_t toRef() override;
-	track_t* getTrack();
 	void makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) override;
-	guibase* makeGui() override;
+	guiplugin* makeGui() override;
 	void setSlot(int i) override;
 	int32_t getSlot() override;
 	void breakTrackLink() override;
-	void setTrackLink(track_impl_t* trImpl) override;
-	track_impl_t* getTrackLink() override;
-	guibase* getGui() override;
+	void setTrackLink(audio_stage_t* trImpl) override;
+	audio_stage_t* getTrackLink() override;
+	guiplugin* getGui() override;
 	void process(AudioBlock* in, AudioBlock* out, int32_t samples) override;
 	int32_t getDelay() override;
 	bool hasParam(int32_t idx) override;

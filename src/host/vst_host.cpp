@@ -418,7 +418,9 @@ void vsthost::updateTime(int32_t samplePos, tick_t pos, playback_state state) {
 void vsthost::sendNotesOff(vstplugin* plugin) {
 	handles_t* handles = plugin->handle;
 	if (handles && handles->tr_plugins) {
-		track_impl_t* audio = handles->tr_plugins;
+		track_t* tr = handles->tr_plugins->getTrack();
+		assert(tr);
+		track_impl_t* audio = tr->audio;
 		if (audio) {
 			audio->sendNotesOff(project.tempo100, 0);
 		}
@@ -619,7 +621,7 @@ int32_t vsthost::processPlayback(int32_t sample, double posDouble, playback_stat
 	for (track_t* tr : ctrl->trackList) {
 		track_impl_t* trAudio = tr->audio;
 		if (trAudio) {
-			tr->audio->onTick(since);
+			trAudio->onTick(since);
 		}
 	}
 	return nBlocksProcessed;
@@ -650,7 +652,7 @@ void mulGain(AudioBlock* block, float gain) {
 		}
 	}
 }
-void vsthost::processAudio(track_impl_t* channel, AudioBlock* input, AudioBlock* output, unsigned long samples) {
+void vsthost::processAudio(audio_stage_t* channel, AudioBlock* input, AudioBlock* output, unsigned long samples) {
 	int count = 0;
 	if (channel->effects.size()) {
 		count+=channel->effects.size();
@@ -873,9 +875,15 @@ void vsthost::unloadTrack(track_t* track) {
 		unloadPlugin(effect);
 	}
 }
+void vsthost::removePlugin(effectbase* plugin) {
+	audio_stage_t* audioStage = plugin->getTrackLink();
+	audioStage->removePlugin(plugin, false);
+	audioStage->pluginsChanged();
+}
 void vsthost::unloadPlugin(effectbase* plugin) {
 	if (MainCtrl::get())
 		MainCtrl::get()->closeContextMenu();
+	removePlugin(plugin);
 //	PopupCtrl::get()->close(); // Make sure context controls do not reference vst
 	plugin->close();
 	auto it = std::find(list.begin(), list.end(), plugin);
@@ -884,9 +892,6 @@ void vsthost::unloadPlugin(effectbase* plugin) {
 	}
 	vstplugin* vst = dynamic_cast<vstplugin*>(plugin);
 	if (vst) {
-		if (vst->handle->tr_plugins) {
-			vst->handle->tr_plugins->removePlugin(plugin, true);
-		}
 		vst->unload();
 		moduleMgr->releaseModule(vst->handle->hmodule);
 	}
@@ -932,35 +937,23 @@ vstplugin::~vstplugin() {
 track_impl_t* vsthost::createAudio(track_t* track) {
 	return new track_impl_t(track, this->lSampleRate, this->lBlockSize, OUTPUT_CHANNELS);
 }
-bool vsthost::movePlugin(track_t* dstTr, track_impl_t* trp, int32_t src, int32_t dst) {
+audio_stage_t* vsthost::createAudioStage() {
+	return new audio_stage_t(this->lSampleRate, this->lBlockSize, OUTPUT_CHANNELS);
+}
+bool vsthost::movePlugin(audio_stage_t* dstTr, audio_stage_t* trp, int32_t src, int32_t dst) {
 	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-	assert((src==0?src==dst:(src>0&&dst>0)));
-	my_printf("move from %s:%d to %s:%d\n", StringAsCStr(dstTr->name), src, StringAsCStr(trp->track->name), dst);
-	assert(dstTr->audio);
-//	if (!dstTr->audio) { //TODO: move me some central place
-//		dstTr->audio = vsthost::getInstance()->createAudio(dstTr);
-//	}
-//	if (src > 0) {
-		assert(src > 0 && dst > 0);
-		src--;
-		dst--;
+	assert(dstTr);
+	assert(trp);
+	assert(src < (int)trp->effects.size());
+	assert(dst-1 <= (int)dstTr->effects.size());
 		effectbase* tmpPlugin = trp->effects[src];
 		trp->removePlugin(tmpPlugin, true);
-		dstTr->audio->insertEffect(dst, tmpPlugin);
-//	} else {
-//		assert(src == 0 && dst == 0);
-//		vstplugin* tmpPlugin = trp->instrument;
-//		trp->removePlugin(tmpPlugin, true);
-//		vstplugin* old = dstTr->audio->setInstrument(tmpPlugin);
-//		if (old) {
-//			unloadPlugin(old);
-//		}
-//	}
+		dstTr->insertEffect(dst, tmpPlugin);
 	trp->pluginsChanged();
-	dstTr->audio->pluginsChanged();
+	dstTr->pluginsChanged();
 	return true;
 }
-bool vsthost::moveEffect(track_impl_t* trp, int32_t src, int32_t dst) {
+bool vsthost::moveEffect(audio_stage_t* trp, int32_t src, int32_t dst) {
 	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 	assert(src >= 0 && dst >= 0);
 	assert(src != dst);
@@ -995,14 +988,14 @@ bool vsthost::moveEffect(track_impl_t* trp, int32_t src, int32_t dst) {
 	}
 	return true;
 }
-bool vsthost::insertNewPlugin(track_impl_t* trp, effectbase* plugin, int32_t dst) {
+bool vsthost::insertNewPlugin(audio_stage_t* trp, effectbase* plugin, int32_t dst) {
 //	if (plugin->isSynth) {
 //		vstplugin* old = trp->setInstrument(plugin);
 //		if (old) {
 //			unloadPlugin(old);
 //		}
 //	} else {
-		trp->insertEffect(dst-1, plugin);
+		trp->insertEffect(dst, plugin);
 //	}
 	trp->pluginsChanged();
 	return true;

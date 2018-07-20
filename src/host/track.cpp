@@ -271,9 +271,12 @@ effectbase* track_impl_t::getPluginById(int32_t projectGlobalId) {
 //	return oldInstr;
 //}
 void track_impl_t::removePlugin(effectbase* _effect, bool notifyUp) {
-	if (this->selectedAutomationCtr == _effect) {
-		this->selectedAutomationCtr = NULL;
+	if (track->audio->selectedAutomationCtr == _effect) {
+		track->audio->selectedAutomationCtr = NULL;
 	}
+	audio_stage_t::removePlugin(_effect, notifyUp);
+}
+void audio_stage_t::removePlugin(effectbase* _effect, bool notifyUp) {
 //	if (instrument == _vst) {
 //		instrument = NULL;
 //	} else {
@@ -286,26 +289,31 @@ void track_impl_t::removePlugin(effectbase* _effect, bool notifyUp) {
 		}
 //	}
 	_effect->breakTrackLink();
+//	if (notifyUp) {
+//		guibase* gui = _effect->getGui();
+//		if (gui && gui->parent) {
+//			guictr_plugins& parent = dynamic_cast<guictr_plugins&>(*(gui->parent)); //throws
+//			assert(parent.hasGui(gui));
+//			parent.remove(gui);
+//			parent.layout();
+//			if (parent.parent)
+//				parent.parent->onChildLayoutChanged(&parent);
+//			my_printf("Remove effect on %s, parent %s\n", StringAsCStr(parent.getClassName()), parent.parent? StringAsCStr(parent.parent->getClassName()) : "<null>");
+//		}
+//		track_t* tr = getTrack();
+//		assert(tr);
+//		MainCtrl::getGuiTrackCtr()->removeAllAutomationLanes(tr, _effect);
+//		MainCtrl::getGuiTrackCtr()->layout();
+//		MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
+//	}
 //	vstplugin* _vst = nullptr;
 //	_vst->handle->tr_plugins = NULL;
 //	_vst->handle->slot = -1;
-	if (notifyUp) {
-		guibase* gui = _effect->getGui();
-		if (gui) {
-			guictr_plugins* plugins = MainCtrl::getPluginCtr();
-			if (plugins && plugins->hasGui(gui)) {
-				plugins->remove(gui);
-				plugins->layout();
-			}
-		}
-		MainCtrl::getGuiTrackCtr()->removeAllAutomationLanes(this->track, _effect);
-		MainCtrl::getGuiTrackCtr()->layout();
-		MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
-	}
 }
 
-void track_impl_t::insertEffect(int32_t idx, effectbase* _effect) {
+void audio_stage_t::insertEffect(int32_t idx, effectbase* _effect) {
 	std::vector<effectbase*>::iterator it;
+	my_printf("Insert effect at idx %d\n", idx);
 	if (idx == -2 || idx >= (int32_t)effects.size()) {
 		it = effects.end();
 	} else if (idx <= 0) {
@@ -420,8 +428,10 @@ void track_impl_t::sendNotesOff(int32_t bpm100, int32_t blockSamplePos) {
 	int slot = 1;
 	for (effectbase* effect : effects) {
 		vstplugin* vst = dynamic_cast<vstplugin*>(effect);
+		if (vst && vst->bCanReceiveMidi) {
+			vst->dispatch(effProcessEvents, 0, 0, midiEventsBuf->vstEvents);
+		}
 //			VstEvent_t midiEventsBufTemp = *midiEventsBuf; // make a copy
-		vst->dispatch(effProcessEvents, 0, 0, midiEventsBuf->vstEvents);
 	}
 }
 track_impl_t::~track_impl_t() {
@@ -437,10 +447,10 @@ VstEvent_t* track_impl_t::reallocEvts(size_t size) {
 	midiEventsBuf->reset();
 	return midiEventsBuf;
 }
-int32_t track_impl_t::getLatency() {
+int32_t audio_stage_t::getLatency() {
 	return latency;
 }
-void track_impl_t::pluginsChanged() {
+void audio_stage_t::pluginsChanged() {
 	samplerate_t latency = 0;
 //	if (instrument) {
 //		latency += instrument->handle->aeffect->initialDelay;
@@ -483,7 +493,7 @@ void track_impl_t::showAutomationLanes() {
 		loadAutomationLanes(atl);
 	}
 }
-void track_impl_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginList)
+void audio_stage_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginList)
 {
 //	return;
 	vsthost* host = vsthost::getInstance();
@@ -549,14 +559,25 @@ void track_impl_t::loadAutomationLanes(const std::vector<automationlane_snapshot
 			al->height = ref.height;
 	}
 }
-void track_impl_t::onTick(double since) {
+void audio_stage_t::onTick(double since) {
 	meter.onTick(since);
 //	if (instrument) {
 //		instrument->meter.onTick(since);
 //	}
 	for (auto effect : effects) {
-		effect->meter.onTick(since);
+		effect->onTick(since);
 	}
+}
+track_t* audio_stage_t::getTrack() {
+	audio_stage_t* stage = this;
+	while (stage->parent) {
+		stage = stage->parent;
+	}
+	if (stage->type == 0) {
+		return static_cast<track_impl_t*>(stage)->track;
+	}
+	assert(0);
+	return nullptr;
 }
 void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, float** buffer, int32_t blockSize) {
 
@@ -708,22 +729,38 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 				}
 			}
 		}
-		static VstEvents noEvData;
-		for (effectbase* effect : effects) {
-			vstplugin* vst = dynamic_cast<vstplugin*>(effect);
-			if (vst && vst->bCanReceiveMidi&& effect->bIsEnabled) {
-				noEvData = { 0 };
-
-				vst->dispatch(effProcessEvents, 0, 0, &noEvData);
-			}
-		}
 	}
 
 //	return NULL;
 
 }
-track_t* vstplugin::getTrack() {
-	return handle->tr_plugins->track;
+
+void track_params_t::createSnapshot(track_params_snapshot_t& snapshot) {
+	for (int i = 0; i < getNumParameters(); i++) {
+		float val = params[i].val;
+		param_snapshot_t snapParam{i, val};
+		my_printf("VAL[%d] = %f\n", i, val);
+		snapshot.params.push_back(std::move(snapParam));
+		automation_t* automation = getAutomation(i);
+		automation_view_t automationView;
+		if (automation) {
+			automationView.targetParam = i;
+			automationView.points = automation->points;
+			automationView.active = automation->active;
+		}
+		snapshot.automatedParams.push_back(std::move(automationView));
+	}
+}
+void track_params_t::loadSnapshot(const track_params_snapshot_t& snapshot) {
+	for (auto p : snapshot.params) {
+		my_printf("VAL[%d] = %f\n", p.idx, p.val);
+		params[p.idx].val = p.val;
+	}
+	for (auto p : snapshot.automatedParams) {
+		automation_t* automation = getAutomation(p.targetParam);
+		automation->points = p.points;
+		automation->active = p.active;
+	}
 }
 
 const char* trackTypeNames[5] = {

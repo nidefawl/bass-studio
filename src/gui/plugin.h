@@ -18,7 +18,7 @@ using glm::ivec2;
 class effectbase;
 class vstplugin;
 
-class guiplugin : public guibase {
+class guiplugin : public guictr_base {
 public:
 	effectbase* const effect;
 	String text;
@@ -33,7 +33,9 @@ public:
 	virtual void render(NVGcontext* vg) = 0;
 	virtual void buttonClicked(guibase* _button) = 0;
 	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) = 0;
-	virtual void layoutModule(int32_t inset1, ivec2 contentS) = 0;
+	virtual void layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) = 0;
+	virtual void determineSize() override {
+	}
 
 	effectbase* getModule() {
 		return effect;
@@ -43,21 +45,22 @@ public:
 		nvgTranslate(vg, mousepos.x, mousepos.y);
 		render(vg);
 	}
-	void renderBase(NVGcontext* vg);
+	virtual void renderBase(NVGcontext* vg);
 
-	void layout() override {
+	virtual void layout() override {
 		int32_t meterW = 32;
 		while (size.x < meterW * 16 && meterW > 16) {
 			meterW -= 4;
 		}
 		int32_t inset1 = (HEIGHT_PLUGIN_TITLE - buttonBypass.size.y) / 2;
 		ivec2 contentS(size.x - meterW, size.y-HEIGHT_PLUGIN_TITLE);
+		ivec2 contentP(0, HEIGHT_PLUGIN_TITLE);
 		buttonBypass.pos.y = inset1;
 		buttonBypass.pos.x = inset1;
 		buttonDelete.pos.y = inset1;
 		buttonDelete.pos.x = size.x - buttonDelete.size.x - inset1;
 		titlePosX = buttonBypass.right();
-		layoutModule(inset1, contentS);
+		layoutModule(contentP, contentS, inset1);
 		meter.pos = ivec2(size.x - meterW, HEIGHT_PLUGIN_TITLE);
 		meter.size = ivec2(meterW, contentS.y);
 		meter.layout();
@@ -83,7 +86,7 @@ public:
 	vstplugin* const vst;
 	gui_list params;
 	guibuttontoggle buttonOpenEditor;
-	void layoutModule(int32_t inset1, ivec2 contentS) {
+	void layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {
 		buttonOpenEditor.pos.y = inset1;
 		buttonOpenEditor.pos.x = buttonBypass.right();
 		titlePosX = buttonOpenEditor.right();

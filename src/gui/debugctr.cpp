@@ -60,6 +60,12 @@ void gui_ctr_debug::render(NVGcontext* vg) {
 	strings.push_back(String("guiCtrFocused: ") + str);
 	str = ctrl->guiFocused ? ctrl->guiFocused->getClassName() : "<null>";
 	strings.push_back(String("guiFocused: ") + str);
+	str = "<null>";
+	if (ctrl->getDragDropTarget().ptr) {
+		str = static_cast<guibase*>(ctrl->getDragDropTarget().ptr)->getClassName();
+		str += StringFormat(" %d", ctrl->getDragDropTarget().idx);
+	}
+	strings.push_back(String("target: ") + str);
 
 	guibase* p = ctrl->guiFocused;
 	int lvl = 0;

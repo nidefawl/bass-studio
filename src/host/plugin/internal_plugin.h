@@ -14,7 +14,7 @@
 struct AudioBlock;
 struct handles_t;
 class track_t;
-class guibase;
+class guiplugin;
 struct track_impl_t;
 
 struct internalplugin_param {
@@ -41,7 +41,7 @@ public:
 	std::vector<internalplugin_param> params;
 	std::vector<automated_param_t> automatedParams;
 	int32_t slot = -1;
-	track_impl_t* trackImpl = nullptr;
+	audio_stage_t* trackImpl = nullptr;
 	internalplugin(int32_t _projectGlobalId) : effectbase(_projectGlobalId) {
 	}
 	virtual ~internalplugin() {
@@ -50,17 +50,21 @@ protected:
 	virtual float dispatchGetParameter(int32_t idx) = 0;
 	virtual void dispatchSetParameter(int32_t idx, float val) = 0;
 public:
-	virtual guibase* makeGui() = 0;
-	virtual guibase* getGui() = 0;
+	virtual guiplugin* makeGui() = 0;
+	virtual guiplugin* getGui() = 0;
 	virtual int32_t getDelay() = 0;
 	virtual void process(AudioBlock* in, AudioBlock* out, int32_t samples) = 0;
+//	virtual bool resume() = 0;
+//	virtual bool sleep() = 0;
+//	virtual void unload() = 0;
+//	virtual void load(vsthost* host) = 0;
 
 	void makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) override;
 	void setSlot(int32_t i) override;
 	int32_t getSlot() override;
-	void breakTrackLink() override;
-	void setTrackLink(track_impl_t* trImpl) override;
-	track_impl_t* getTrackLink() override;
+	virtual void breakTrackLink() override;
+	virtual void setTrackLink(audio_stage_t* trImpl) override;
+	audio_stage_t* getTrackLink() override;
 	bool show() override;
 	bool close() override;
 	bool hasParam(int32_t idx) override;

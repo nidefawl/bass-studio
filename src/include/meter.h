@@ -10,9 +10,8 @@
 template <uint32_t N>
 class runningsum {
 public:
-
-	double runningSum = 0;
 	float rsBuffer[N] = {0};
+	double runningSum = 0;
 	int rsIdx = 0;
 	float fMax = 0;
 	float fPeak = 0;

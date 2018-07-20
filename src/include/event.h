@@ -36,7 +36,8 @@ struct MouseEvent {
 	int kbmods;
 };
 class MouseHitEvt {
-	guibase *guiHit = NULL;
+	guibase *guiHit = nullptr;
+	void *draggedThing = nullptr;
 	int cursorIcon = CURSOR_DEFAULT;
 	bool cursorChanged = false;
 public:
@@ -58,6 +59,12 @@ public:
 	void requestCursor(int _cursorIcon) {
 		cursorChanged = true;
 		cursorIcon = _cursorIcon;
+	}
+	void* getDraggedThing() {
+		return draggedThing;
+	}
+	void setDraggedThing(void* _draggedThing) {
+		draggedThing = _draggedThing;
 	}
 };
 enum KeyEventType {

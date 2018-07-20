@@ -16,6 +16,7 @@
 
 #include "basectrl.h"
 #include "mainctrl.h"
+#include "grid.h"
 #include "note.h"
 #include "cursor.h"
 #include "exceptions.h"
@@ -24,6 +25,7 @@
 #include "seq_util.h"
 #include "settings.h"
 #include "track.h"
+#include "clip.h"
 #include "fileloader.h"
 #include "edithistory.h"
 #include "logging.h"
@@ -434,7 +436,7 @@ void MainCtrl::menuCommand(int cmd) {
 }
 void MainCtrl::postInit() {
 	vsthost::getInstance()->postInit();
-	loadFile("empty.project");
+//	loadFile("empty.project");
 //	for (int i = 0; i < 32; i++) {
 //		loadFile("muuure.project");
 //	}
@@ -695,7 +697,7 @@ void MainCtrl::relayout(int32_t w, int32_t h) {
 }
 void MainCtrl::setSelectedTrack(track_t* track) {
 	selectedTrack = track;
-	view->ctr_plugins.showTrack(track);
+	view->ctr_plugins.showTrack(track ? track->audio : nullptr);
 }
 track_t* MainCtrl::getSelectedTrack() {
 	return selectedTrack;
@@ -733,6 +735,7 @@ void MainCtrl::closeAppMenus() {
 	}
 }
 void MainCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos) {
+	dragdropTarget.reset();
 #if USE_GUI_MENU
 	if (ctxtmenu != NULL) {
 		MouseHitEvt evt(MouseHitType::MOUSE_OVER);
@@ -785,6 +788,7 @@ guictxtmenu_base* MainCtrl::getContextMenu() {
 
 void MainCtrl::objectDragMove(guibase* g, MouseEvent& mevt) {
 	MouseHitEvt evt(MouseHitType::MOUSE_DRAGDROP_OBJECT);
+	evt.setDraggedThing(g);
 	for (guictr_base *ctr : containers) {
 		if (ctr->mouseHitTest(mevt.mousepos, evt)) {
 			break;
@@ -793,15 +797,20 @@ void MainCtrl::objectDragMove(guibase* g, MouseEvent& mevt) {
 	guibase* gui = evt.getGuiHit();
 	if (gui) {
 		ivec2 mposObj = toControlsObjectSpace(mevt.mousepos, gui);
+		my_printf("dragMoveOn %s on %s\n", StringAsCStr(g->getClassName()),  StringAsCStr(gui->getClassName()));
 		g->dragMoveOn(gui, mposObj);
 //		bool result = guiOver->pluginDragMove(g, mposObj);
 //		if (!result) {
 //
 //		}
+	} else {
+
+		my_printf("dragMoveOn %s no hit\n", StringAsCStr(g->getClassName()));
 	}
 }
 void MainCtrl::objectDragRelease(guibase* g, MouseEvent& mevt) {
 	MouseHitEvt evt(MouseHitType::MOUSE_DRAGDROP_OBJECT);
+	evt.setDraggedThing(g);
 	for (guictr_base *ctr : containers) {
 		if (ctr->mouseHitTest(mevt.mousepos, evt)) {
 			break;
@@ -870,6 +879,7 @@ bool MainCtrl::filesDropBegin(vector<string>& files, ivec2 mousepos, int kbmods)
 		}
 		if (dragdropclip.isLoaded) {
 			MouseHitEvt evt(MouseHitType::MOUSE_DRAGDROP_CLIP);
+			evt.setDraggedThing(&dragdropclip);
 			for (guictr_base *ctr : containers) {
 				if (ctr->mouseHitTest(mousepos, evt)) {
 					break;
@@ -902,6 +912,7 @@ bool MainCtrl::filesDropMove(ivec2 mousepos, int kbmods) {
 		dragdropclip.isValidTarget = false;
 //		my_printf("filesDropMove %d %d isdragging=%d\n", pos.x, pos.y, dragdropclip.isDragging);
 		MouseHitEvt evt(MouseHitType::MOUSE_DRAGDROP_CLIP);
+		evt.setDraggedThing(&dragdropclip);
 		for (guictr_base *ctr : containers) {
 			if (ctr->mouseHitTest(mousepos, evt)) {
 				break;
@@ -938,6 +949,7 @@ bool MainCtrl::filesDropFinal(vector<string>& files, ivec2 mousepos, int kbmods)
 	if (dragdropclip.isLoaded && dragdropclip.isValidTarget) {
 		my_printf("filesDropFinal %d %d isdragging=%d\n", mousepos.x, mousepos.y, dragdropclip.isLoaded);
 		MouseHitEvt evt(MouseHitType::MOUSE_DRAGDROP_CLIP);
+		evt.setDraggedThing(&dragdropclip);
 		for (guictr_base *ctr : containers) {
 			if (ctr->mouseHitTest(mousepos, evt)) {
 				break;
@@ -1141,7 +1153,7 @@ void MainCtrl::addTrack(int32_t trackInsertPos, track_t* newTrack) {
 }
 void MainCtrl::removeTrackImpl(track_t* track) {
 	guictr_plugins* plugins = MainCtrl::getPluginCtr();
-	plugins->hideTrack(track);
+	plugins->hideTrack(track->audio);
 	if (clipView.gui && clipView.gui->m_track == track){
 		clipView.set(NULL);
 	}

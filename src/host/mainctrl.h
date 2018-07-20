@@ -78,6 +78,18 @@ struct dragdrop_midifile {
 	bool isValidTarget = false;
 	void reset();
 };
+struct dragdrop_target_indicator {
+	int idx = -1;
+	void* ptr = nullptr;
+	void reset() {
+		idx = -1;
+		ptr = nullptr;
+	}
+	void set(void* _ptr, int _idx) {
+		idx = _idx;
+		ptr = _ptr;
+	}
+};
 KeyEvent keyEvent(int key, int scancode, int keyState, int mods, const char* key_name);
 
 
@@ -214,6 +226,7 @@ public:
 	static guictr_tracks* getGuiTrackCtr();
 	String lastKey;
 	dragdrop_midifile dragdropclip;
+	dragdrop_target_indicator dragdropTarget;
 	plugindatabase_t plugindb;
 	tick_t tickJmpFrom = 0;
 	tick_t tickJmpTo = 0;
@@ -222,6 +235,9 @@ public:
 	}
 	clip_view& getClipView() {
 		return clipView;
+	}
+	dragdrop_target_indicator& getDragDropTarget() {
+		return dragdropTarget;
 	}
 	ngui::MenuBar& getMenubar() {
 		return menubar;

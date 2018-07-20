@@ -13,8 +13,9 @@
 struct AudioBlock;
 struct handles_t;
 class track_t;
-class guibase;
-struct track_impl_t;
+class guiplugin;
+class vsthost;
+struct audio_stage_t;
 
 class effectbase : public automatable_t {
 public:
@@ -30,20 +31,26 @@ public:
 	virtual ~effectbase() {
 	}
 	virtual void makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) = 0;
-	virtual guibase* makeGui() = 0;
+	virtual guiplugin* makeGui() = 0;
 	virtual void setSlot(int32_t i) = 0;
 	virtual int32_t getSlot() = 0;
 	virtual void breakTrackLink() = 0;
-	virtual void setTrackLink(track_impl_t* trImpl) = 0;
-	virtual track_impl_t* getTrackLink() = 0;
-	virtual guibase* getGui() = 0;
+	virtual void setTrackLink(audio_stage_t* trImpl) = 0;
+	virtual audio_stage_t* getTrackLink() = 0;
+	virtual guiplugin* getGui() = 0;
 	virtual void process(AudioBlock* in, AudioBlock* out, int32_t samples) = 0;
 	virtual bool show() = 0;
 	virtual bool close() = 0;
+	virtual bool resume() = 0;
+	virtual bool sleep() = 0;
+	virtual void unload() = 0;
+	virtual void load(vsthost* host) = 0;
 	virtual int32_t getDelay() = 0;
 	virtual bool hasParam(int32_t idx) = 0;
 	virtual automated_param_t* getRegisteredAutomation(int32_t idx) = 0;
 	virtual String getInfo(std::vector<String>& list) = 0;
+	track_t* getTrack();
+	virtual void onTick(double since);
 };
 
 

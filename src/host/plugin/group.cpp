@@ -12,6 +12,7 @@
 #include "../../gui/guimeter.h"
 #include "../../gui/knob.h"
 #include "../../gui/gui.h"
+#include "../../gui/guicontainer.h"
 #include "../../gui/button.h"
 #include "../../gui/plugin.h"
 #include "../../gui/pluginctr.h"
@@ -33,39 +34,155 @@ using glm::vec2;
 using glm::ivec2;
 
 
+constexpr int32_t meterW = HEIGHT_PLUGIN_TITLE;
 class guimodule_group : public guiplugin {
 public:
 	module_group* const module;
+	guictr_plugins ctr;
 	guimodule_group(module_group* _vst);
 	~guimodule_group() {
+		remove(&ctr);
 		my_printf("DSTR!\n",0);
 	}
 	void render(NVGcontext* vg) override;
+	void renderBase(NVGcontext* vg) override;
 	void buttonClicked(guibase* _button) override;
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
-	void layoutModule(int32_t inset1, ivec2 contentS) override {
+	void onChildLayoutChanged(guibase* g) override;
+	void determineSize() override {
+		ctr.placeholder.size.x = std::max(100, size.y*3/5);
+		auto* audio = module->getAudioStage();
+		assert(audio);
+		my_printf("determineSize ctr.children.size() %d\n", ctr.guis.size());
+		ctr.determineSize();
+		size.x = HEIGHT_PLUGIN_TITLE+meterW;
+		size.x += ctr.size.x;
+
+	}
+	void layout() override {
+		int32_t inset1 = (HEIGHT_PLUGIN_TITLE - buttonBypass.size.y) / 2;
+		ivec2 contentS(size.x - meterW-HEIGHT_PLUGIN_TITLE, size.y);
+		ivec2 contentP(HEIGHT_PLUGIN_TITLE, 0);
+		buttonBypass.pos.y = inset1;
+		buttonBypass.pos.x = inset1;
+		buttonDelete.pos.y = inset1;
+		buttonDelete.pos.x = size.x - buttonDelete.size.x - inset1;
+		titlePosX = buttonBypass.right();
+		layoutModule(contentP, contentS, inset1);
+		meter.pos = ivec2(size.x - meterW, HEIGHT_PLUGIN_TITLE);
+		meter.size = ivec2(meterW, contentS.y);
+		meter.layout();
+	}
+	void layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) override {
+		ctr.pos = pos;
+		ctr.size = contentS;
+		assert(ctr.parent == this);
+		ctr.layout();
+		ctr.placeholder.size.x = std::max(100, size.y*3/5);
+	}
+	void removeGuis() override {
+		removeUNCHECKED(&ctr);
+		for (guibase* g : guis) {
+			g->onRemove();
+			g->parent = NULL;
+		}
+		guis.clear();
+		addUNCHECKED(&ctr);
+	}
+	void onAdded() {
+		ctr.showTrack(module->getAudioStage());
 	}
 };
 
 guimodule_group::guimodule_group(module_group* _vst)
 : guiplugin(_vst),
   module(_vst) {
+	ctr.isDefaultPluginCtr = false;
+	ctr.margin = ctr.padding = 0;
+	add(&ctr);
+}
+void guimodule_group::onChildLayoutChanged(guibase* g) {
+//	ctr.showTrack(module->getAudioStage());
+	if (this->parent != NULL) {
+		this->parent->onChildLayoutChanged(this);
+	}
 }
 
+void guimodule_group::renderBase(NVGcontext* vg) {
+	if (!setScissorTransform(vg)) {
+		return;
+	}
+	nvgBeginPath(vg);
+	nvgRoundedRect(vg, 0, 0, size.x, size.y, G_RND);
+	NVGcolor c;
+	if (MainCtrl::get()->isCtrOrChildFocused(this)) {
+		c = g_guiColors[COL_BG_DRK_FOCUSED];
+	} else {
+		c = g_guiColors[COL_BG_BRT];
+	}
+	nvgFillColor(vg, GUI_COLOR(G_S2));
+	nvgFill(vg);
+	nvgBeginPath(vg);
+	nvgRoundedRectVarying(vg, 0, 0, HEIGHT_PLUGIN_TITLE, size.y, G_RND, G_RND, 0, 0);
+	nvgFillColor(vg, c);
+	nvgFill(vg);
+	if (this->text[0]) {
+		setFont(vg, (int)(HEIGHT_PLUGIN_TITLE*0.8), G_WHITE, G_TITLE_ALIGN);
+		nvgSave(vg);
+		nvgRotate(vg, -90);
+		nvgText(vg, titlePosX+INSET_TITLE, HEIGHT_PLUGIN_TITLE / 2, StringAsCStr(this->text), NULL);
+		nvgRestore(vg);
+	}
+	nvgBeginPath(vg);
+	nvgRoundedRect(vg, 0, 0, size.x, size.y, G_RND);
+	nvgStrokeColor(vg, GUI_COLOR(G_S1));
+	nvgStrokeWidth(vg, G_STROKE);
+	nvgStroke(vg);
+}
 void guimodule_group::render(NVGcontext* vg) {
+	assert(ctr.parent == this);
+	dragdrop_target_indicator& target = MainCtrl::get()->getDragDropTarget();
+	bool extend = target.ptr == &this->ctr;
+	int extX = 8;
+	if (extend) {
+		size.x += extX;
+	}
 	renderBase(vg);
+	nvgSave(vg);
+	ctr.render(vg);
+	nvgRestore(vg);
 	buttonBypass.render(vg);
+	if (extend) {
+		nvgTranslate(vg, extX, 0);
+	}
 	buttonDelete.render(vg);
 
 	meter.render(vg);
+	if (extend) {
+		size.x -= extX;
+	}
 }
 bool guimodule_group::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 	if (contains(mpos)) {
-		ivec2 mouseLocal = mpos - pos;
-		if (buttonBypass.mouseHitTest(mouseLocal, evt)) {
+		if (evt.getDraggedThing() == this)
+			return false;
+		ivec2 localMouse = this->toContainerSpace(mpos);
+		if ( evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
+			if (ctr.mouseHitTest(localMouse, evt)) {
+				return true;
+			}
+			if (localMouse.x <= HEIGHT_PLUGIN_TITLE-10 || localMouse.x > size.x-HEIGHT_PLUGIN_TITLE+10)
+				return false;
+			evt.requestFocus(&this->ctr);
 			return true;
 		}
-		if (buttonDelete.mouseHitTest(mouseLocal, evt)) {
+		if (buttonBypass.mouseHitTest(localMouse, evt)) {
+			return true;
+		}
+		if (buttonDelete.mouseHitTest(localMouse, evt)) {
+			return true;
+		}
+		if (ctr.mouseHitTest(localMouse, evt)) {
 			return true;
 		}
 		evt.requestFocus(this);
@@ -98,7 +215,7 @@ struct internal_handles_t {
 //	guimodule_group * gui;
 };
 module_group::module_group(int32_t _projectGlobalId)
-: internalplugin(_projectGlobalId), handle(new internal_handles_t{0})
+: internalplugin(_projectGlobalId), handle(new internal_handles_t{0}), audio(nullptr)
 {
 	this->sName = "Group";
 #ifndef NDEBUG
@@ -108,6 +225,10 @@ module_group::module_group(int32_t _projectGlobalId)
 module_group::~module_group()
 {
 	delete handle;
+	if (blockInputs)
+		delete blockInputs;
+	if (blockOutputs)
+		delete blockOutputs;
 }
 
 
@@ -118,26 +239,66 @@ float module_group::dispatchGetParameter(int32_t idx) {
 void module_group::dispatchSetParameter(int32_t idx, float val) {
 
 }
-guibase* module_group::makeGui() {
+guiplugin* module_group::makeGui() {
 	if (!handle->gui) {
+		assert(this->audio);
 		handle->gui = std::make_unique<guimodule_group>(this);
 		handle->gui->setTitle(StringFormat("%s", StringAsCStr(this->sName)));
-//		handle->gui = new guimodule_group(this);
+		this->audio->pluginCtr = &this->handle->gui->ctr;
+		handle->gui->ctr.stage = this->audio;
+		handle->gui->ctr.track = this->audio->getTrack();
 	}
 	return handle->gui.get();
 //	return handle->gui;
 }
-guibase* module_group::getGui() {
+guiplugin* module_group::getGui() {
 	return handle->gui.get();
 //	return handle->gui;
 }
 int32_t module_group::getDelay() {
 	return 0;
 }
+bool module_group::resume() {
+	bool wasSleep = !this->bIsEnabled;
+	this->bIsEnabled = true;
+	return wasSleep;
+}
+bool module_group::sleep() {
+	bool wasSleep = !this->bIsEnabled;
+	this->bIsEnabled = false;
+	return !wasSleep;
+}
+void module_group::unload() {
+	delete this->audio;
+}
+void module_group::load(vsthost* host) {
+	this->audio = host->createAudioStage();
+	this->blockInputs = new AudioBlock(2, host->lBlockSize);
+	this->blockOutputs = new AudioBlock(2, host->lBlockSize);
+}
+void module_group::breakTrackLink() {
+	assert(this->audio);
+	this->audio->parent = nullptr;
+	bIsSetup = false;
+	internalplugin::breakTrackLink();
+}
+void module_group::setTrackLink(audio_stage_t* trImpl) {
+	assert(this->audio);
+	assert(trImpl != this->audio);
+	this->audio->parent = trImpl;
+	bIsSetup = true;
+	internalplugin::setTrackLink(trImpl);
+}
 void module_group::process(AudioBlock* in, AudioBlock* out, int32_t samples) {
-	out->copyFrom(in);
+	audio->input.copyFrom(in);
+	vsthost::getInstance()->processAudio(audio, &audio->input, &audio->output, samples);
+	out->copyFrom(&audio->output);
 }
 String module_group::getInfo(std::vector<String>& list) {
 	return "";
 }
 
+void module_group::onTick(double since) {
+	meter.onTick(since);
+	audio->onTick(since);
+}

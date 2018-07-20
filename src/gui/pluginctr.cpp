@@ -9,6 +9,7 @@
 #include "list.h"
 #include "knob.h"
 #include "automatable.h"
+#include "gui.h"
 #include "guicontainer.h"
 #include "guicontextmenu.h"
 #include "plugin.h"
@@ -180,11 +181,13 @@ public:
 };
 
 guiplugin::guiplugin(effectbase* _effect)
-: guibase(),
+: guictr_base(GUI_PLUGIN),
   effect(_effect),
   buttonBypass(12),
   buttonDelete(12),
   meter(&_effect->meter) {
+	padding = 0;
+	margin = 0;
 	text[0] = 0;
 	buttonBypass.icon = ICON_BYPASS;
 	buttonBypass.state = &_effect->bIsEnabled;
@@ -196,23 +199,82 @@ guiplugin::guiplugin(effectbase* _effect)
 	buttonDelete.parent = this;
 	buttonDelete.setColor(0x404040);
 }
-void guictr_plugins::addGui(effectbase* plugin) {
-	guibase* base = plugin->makeGui();
-	if (base)
-		add(base);
+void guictr_plugins::onAdded() {
+//	guibase* g = this;
+//	while (g != nullptr) {
+////		if (g->guiType == GUI_PLUGIN_VIEW) {
+////			guictr_pluginview* pv = static_cast<guictr_pluginview*>(g);
+//////			pv->pluginContainers.push_back(this);
+////		}
+//		g = g->parent;
+//	}
 }
-void guictr_plugins::hideTrack(track_t* _track) {
-	if (this->track == _track) {
-		this->track = NULL;
+void guictr_plugins::addGui(effectbase* plugin) {
+	guiplugin* base = plugin->makeGui();
+	if (base) {
+		add(base);
+	}
+}
+void guictr_plugins::hideTrack(audio_stage_t* _track) {
+	if (this->stage == _track) {
+		this->stage->pluginCtr = nullptr;
+		this->track = nullptr;
+		this->stage = nullptr;
 		removeGuis();
 		layout();
 	}
 }
-void guictr_plugins::showTrack(track_t* _track) {
-	this->track = _track;
+void guictr_plugins::onChildLayoutChanged(guibase* g) {
+	layout();
+}
+void guictr_plugins::render(NVGcontext* vg) {
+//	if (isDefaultPluginCtr) {
+//		renderBackground(vg);
+//	} else {
+//		drawInsetBackground(vg, getPosContent(), getSizeContent());
+//	}
+	renderBackground(vg);
+	if (!setScissorTransform(vg)) {
+		return;
+	}
+	guibase * lastGui = NULL;
+	int32_t slot = 0;
+	nvgTranslate(vg, -scrolloffset, 0);
+	dragdrop_target_indicator& target = MainCtrl::get()->getDragDropTarget();
+	for (guibase* gui : guis) {
+		if (target.ptr == this && target.idx == slot) {
+			ivec2 posHL(gui->pos.x + (isDefaultPluginCtr?-4:4), 0);
+			verticalLineAt(vg, posHL);
+			nvgTranslate(vg, 8, 0);
+		}
+		nvgSave(vg);
+		gui->render(vg);
+		nvgRestore(vg);
+		slot++;
+		lastGui = gui;
+	}
+	nvgResetScissor(vg);
+	if (target.ptr == this) {
+		if (target.idx == slot) {
+
+			ivec2 posHL(4, 0);
+			if (lastGui) posHL.x += lastGui->right();
+			verticalLineAt(vg, posHL);
+		}
+	}
+	nvgResetTransform(vg);
+}
+void guictr_plugins::showTrack(audio_stage_t* audio) {
 	removeGuis();
-	if (track) {
-		track_impl_t* audio = track->audio;
+	this->track = audio ? audio->getTrack() : nullptr;
+	this->stage = audio;
+//	my_printf("%d %d\n", myNumber1, myNumber2);
+	my_printf("showTrack %s\n", (isDefaultPluginCtr ? "default" : "group"));
+	if (audio) {
+		audio->pluginCtr = this;
+		if (!audio->pluginCtr->parent) {
+			my_printf("plugin ctr with parent == null\n", 0);
+		}
 		if (audio && !audio->effects.empty()) {
 			for (effectbase* vst : audio->effects) {
 				addGui(vst);
@@ -230,22 +292,41 @@ void guictr_plugins::showTrack(track_t* _track) {
 	}
 
 	layout();
-	if (track) {
+	if (track && isDefaultPluginCtr) {
 		setScrolloffset(this->track->scrolloffset);
 	}
 }
 
 void guictr_plugins::pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 mousepos) {
-	highlightSlot = -1;
+	MainCtrl::get()->getDragDropTarget().reset();
 	if (!track) return;
 	if (g->isSynth()) {
 		if (track->type != TRACK_TYPE_MIDI) {
 			return;
 		}
-		highlightSlot = 0;
+		MainCtrl::get()->getDragDropTarget().set(this, 0);
 		return;
 	}
-	highlightSlot = slotFromCoord(mousepos);
+	MainCtrl::get()->getDragDropTarget().set(this, slotFromCoord(mousepos));
+}
+void guictr_plugins::determineSize() {
+	int32_t maxX = 0;
+	for (guibase* gui : guis) {
+		maxX = std::max(gui->right(), maxX);
+	}
+	size.x = maxX;
+}
+int guictr_plugins::slotFromCoord(ivec2 _pos) {
+	if (stage->effects.empty())
+		return 0;
+	int slot = 0;
+	for (guibase* gui : guis) {
+		if (_pos.x < gui->pos.x + gui->size.x / 2) {
+			break;
+		}
+		slot++;
+	}
+	return slot;
 }
 effectbase* gui_vstpluginlist_entry::makeInstance() {
 	vstpluginloadres res = vsthost::getInstance()->loadPlugin(entry.path);
@@ -253,63 +334,66 @@ effectbase* gui_vstpluginlist_entry::makeInstance() {
 }
 effectbase* gui_modulelist_entry::makeInstance() {
 	effectbase* instance = makeModuleInstance(entry.uid);
+	instance->load(vsthost::getInstance());
 	return instance;
 }
 void guictr_plugins::pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mousepos) {
-	highlightSlot = -1;
-	if (!track) return;
-	int32_t dstSlot = highlightSlot;
+	int32_t dstSlot = MainCtrl::get()->getDragDropTarget().idx;
+	MainCtrl::get()->getDragDropTarget().reset();
+	if (!this->stage) return;
 	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 	effectbase* effect = g->makeInstance();
 	if (effect) {
-		vsthost::getInstance()->insertNewPlugin(track->audio, effect, dstSlot);
+		my_printf("Insert effect on %s, parent %s\n", StringAsCStr(getClassName()), parent? StringAsCStr(parent->getClassName()) : "<null>");
+		vsthost::getInstance()->insertNewPlugin(stage, effect, dstSlot);
+		effect->resume();
 		//	if (res.result == 0 && res.plugin) {
 		//		res.plugin->resume();
 		//	}
 	}
-	showTrack(track);
+	showTrack(stage);
 }
 void guictr_plugins::pluginDragMove(guiplugin* g, ivec2 mousepos) {
-	highlightSlot = -1;
-	if (!track) return;
+	MainCtrl::get()->getDragDropTarget().reset();
+	if (!this->stage) return;
 	effectbase* effect = g->getModule();
-	track_impl_t* trp = effect->getTrackLink();
+	audio_stage_t* trp = effect->getTrackLink();
 	if (!trp) {
 		assert(0&&"TRP WAS NULL");
 		return;
 	}
+	int highlightSlot = slotFromCoord(mousepos);
 //	if (abs((evt.dragStart - evt.mousepos).x) > getSizeContent().y / 4) {
-		highlightSlot = slotFromCoord(mousepos);
-		int curSlot = trp->track == track ? (effect->getSlot()) : -2;
-		if (curSlot == highlightSlot || curSlot + 1 == highlightSlot) {
-			highlightSlot = -1;
+		int curSlot = trp == stage ? (effect->getSlot()) : -2;
+		if (trp == this->stage && (curSlot == highlightSlot || curSlot + 1 == highlightSlot)) {
+			return;
 		}
+		MainCtrl::get()->getDragDropTarget().set(this, highlightSlot);
 //	}
 }
 void guictr_plugins::pluginDragRelease(guiplugin* g, ivec2 mousepos) {
-	int sl = highlightSlot;
-	highlightSlot = -1;
-	if (!track) return;
+	MainCtrl::get()->getDragDropTarget().reset();
+	if (!this->stage) return;
 	int targetslot = slotFromCoord(mousepos);
 	effectbase* effect = g->getModule();
-	track_impl_t* trp = effect->getTrackLink();
+	audio_stage_t* trp = effect->getTrackLink();
 	if (!trp) {
 		assert(0&&"TRP WAS NULL");
 		return;
 	}
 	int curSlot = effect->getSlot();
-	if (curSlot == targetslot || curSlot + 1 == targetslot) {
+	if (trp == this->stage && (curSlot == targetslot || curSlot + 1 == targetslot)) {
 		return;
 	}
 
 	if (targetslot >= 0) {
-		if (trp->track != track) {
-			vsthost::getInstance()->movePlugin(track, trp, curSlot, targetslot);
+		if (trp != this->stage) {
+			vsthost::getInstance()->movePlugin(this->stage, trp, curSlot, targetslot);
 		} else {
 			if (targetslot > curSlot) targetslot--;
 			vsthost::getInstance()->moveEffect(trp, curSlot, targetslot);
 		}
-		showTrack(track);
+		showTrack(stage);
 	} else {
 
 		my_printf("targetslot < 0 %d\n", targetslot);
@@ -349,18 +433,21 @@ void guivstplugin::render(NVGcontext* vg) {
 	params.render(vg);
 }
 bool guivstplugin::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
+	if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
+		return false;
+	}
 	if (contains(mpos)) {
-		ivec2 mouseLocal = mpos - pos;
-		if (buttonBypass.mouseHitTest(mouseLocal, evt)) {
+		ivec2 localMouse = this->toContainerSpace(mpos);
+		if (buttonBypass.mouseHitTest(localMouse, evt)) {
 			return true;
 		}
-		if (buttonOpenEditor.mouseHitTest(mouseLocal, evt)) {
+		if (buttonOpenEditor.mouseHitTest(localMouse, evt)) {
 			return true;
 		}
-		if (buttonDelete.mouseHitTest(mouseLocal, evt)) {
+		if (buttonDelete.mouseHitTest(localMouse, evt)) {
 			return true;
 		}
-		if (params.mouseHitTest(mouseLocal, evt)) {
+		if (params.mouseHitTest(localMouse, evt)) {
 			return true;
 		}
 		evt.requestFocus(this);

@@ -5,9 +5,11 @@
 #include "snapshot.h"
 #include "base_plugin.h"
 #include "internal_plugin.h"
+#include "track_impl.h"
 #include "../vst_host.h"
 #include "../vst_window.h"
 #include "../../gui/plugin.h"
+#include "../../gui/pluginctr.h"
 #include "leak_detect.h"
 /*
 bool internalplugin::onResize(vst_window* window, Size size) {
@@ -277,14 +279,6 @@ void internalplugin::makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks)
 //	createSnapshot(ps, this, storePluginChunks);
 //	ps.slot = handle->slot;
 }
-guibase* internalplugin::makeGui() {
-//	if (!handle->gui) {
-//		handle->gui = std::make_unique<guiplugin>(this);
-//		handle->gui->setTitle(StringFormat("%s", StringAsCStr(this->sName)));
-//	}
-//	return handle->gui.get();
-	return nullptr;
-}
 void internalplugin::setSlot(int32_t i) {
 	slot = i;
 }
@@ -292,13 +286,32 @@ int32_t internalplugin::getSlot() {
 	return slot;
 }
 void internalplugin::breakTrackLink() {
+	audio_stage_t* audioStage = this->trackImpl;
 	trackImpl = nullptr;
+	while (audioStage != nullptr) {
+		guictr_plugins* plugins = audioStage->pluginCtr;
+		if (plugins) {
+			my_printf("Update audiostage of %s which is %s\n", StringAsCStr(plugins->getClassName()),
+					plugins->isDefaultPluginCtr ? "default" : "group");
+			plugins->showTrack(audioStage);
+		}
+		audioStage = audioStage->parent;
+	}
 }
-track_impl_t* internalplugin::getTrackLink() {
+audio_stage_t* internalplugin::getTrackLink() {
 	return trackImpl;
 }
-void internalplugin::setTrackLink(track_impl_t* trImpl) {
-	trackImpl = trImpl;
+void internalplugin::setTrackLink(audio_stage_t* audioStage) {
+	trackImpl = audioStage;
+	while (audioStage != nullptr) {
+		guictr_plugins* plugins = audioStage->pluginCtr;
+		if (plugins) {
+			my_printf("Update audiostage of %s which is %s\n", StringAsCStr(plugins->getClassName()),
+					plugins->isDefaultPluginCtr ? "default" : "group");
+			plugins->showTrack(audioStage);
+		}
+		audioStage = audioStage->parent;
+	}
 }
 int32_t internalplugin::getNumParameters() {
 	return params.size();
