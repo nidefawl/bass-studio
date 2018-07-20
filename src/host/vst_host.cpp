@@ -890,9 +890,9 @@ void vsthost::unloadPlugin(effectbase* plugin) {
 	if (it != list.end()) {
 		list.erase(it);
 	}
+	plugin->unload();
 	vstplugin* vst = dynamic_cast<vstplugin*>(plugin);
 	if (vst) {
-		vst->unload();
 		moduleMgr->releaseModule(vst->handle->hmodule);
 	}
 	delete plugin;

@@ -576,7 +576,7 @@ track_t* audio_stage_t::getTrack() {
 	if (stage->type == 0) {
 		return static_cast<track_impl_t*>(stage)->track;
 	}
-	assert(0);
+//	assert(0);
 	return nullptr;
 }
 void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, float** buffer, int32_t blockSize) {

@@ -269,7 +269,13 @@ bool module_group::sleep() {
 	return !wasSleep;
 }
 void module_group::unload() {
+	vsthost* host = vsthost::getInstance();
+	std::vector<effectbase*> effects = this->audio->effects; // make a copy before unloading plugins
+	for (effectbase* effect : effects) {
+		host->unloadPlugin(effect);
+	}
 	delete this->audio;
+	this->audio = nullptr;
 }
 void module_group::load(vsthost* host) {
 	this->audio = host->createAudioStage();

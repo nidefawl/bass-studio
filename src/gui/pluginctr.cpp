@@ -270,7 +270,7 @@ void guictr_plugins::showTrack(audio_stage_t* audio) {
 	this->stage = audio;
 //	my_printf("%d %d\n", myNumber1, myNumber2);
 	my_printf("showTrack %s\n", (isDefaultPluginCtr ? "default" : "group"));
-	if (audio) {
+	if (audio && this->track) {
 		audio->pluginCtr = this;
 		if (!audio->pluginCtr->parent) {
 			my_printf("plugin ctr with parent == null\n", 0);
