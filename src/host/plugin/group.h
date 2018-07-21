@@ -5,6 +5,7 @@
 #include <vector>
 #include "internal_plugin.h"
 #include "str_util.h"
+#include "snapshot.h"
 
 struct internal_handles_t;
 struct audio_stage_t;
@@ -33,5 +34,7 @@ public:
 	virtual void setTrackLink(audio_stage_t* trImpl) override;
 	audio_stage_t* getAudioStage() { return audio; };
 	void onTick(double since) override;
+	void makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) override;
+	void loadSnapshot(const plugin_snapshot_t& snapshot) override;
 };
 

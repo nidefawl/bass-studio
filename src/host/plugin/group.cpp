@@ -2,6 +2,19 @@
 #include <stdbool.h>
 #include <glm/glm.hpp>
 #include <glm/vec2.hpp>
+#include <vector>
+#include <fstream>
+#include <sstream>
+#include <streambuf>
+#include <algorithm>
+#include <memory>
+#include <cereal/cereal.hpp>
+#include <cereal/archives/json.hpp>
+#include <cereal/types/vector.hpp>
+#include <cereal/types/polymorphic.hpp>
+#include <cereal/cereal_optional_nvp.hpp>
+#include "../../file/memoryarchive.h"
+
 #include "group.h"
 #include "event.h"
 #include "str_util.h"
@@ -29,6 +42,7 @@
 #include "track.h"
 #include "track_impl.h"
 #include "leak_detect.h"
+#include "snapshot.h"
 
 using glm::vec2;
 using glm::ivec2;
@@ -214,8 +228,11 @@ struct internal_handles_t {
 	std::unique_ptr<guimodule_group> gui;
 //	guimodule_group * gui;
 };
+struct module_group_preset {
+	std::vector<int32_t> plugins;
+};
 module_group::module_group(int32_t _projectGlobalId)
-: internalplugin(_projectGlobalId), handle(new internal_handles_t{0}), audio(nullptr)
+: internalplugin(PLUGIN_TYPE_GROUP, _projectGlobalId), handle(new internal_handles_t{0}), audio(nullptr)
 {
 	this->sName = "Group";
 #ifndef NDEBUG
@@ -284,13 +301,16 @@ void module_group::load(vsthost* host) {
 }
 void module_group::breakTrackLink() {
 	assert(this->audio);
-	this->audio->parent = nullptr;
+	assert(this->audio->parent);
+	this->audio->parent->removeAudioStage(this->audio);
+	assert(this->audio->parent == nullptr);
 	bIsSetup = false;
 	internalplugin::breakTrackLink();
 }
 void module_group::setTrackLink(audio_stage_t* trImpl) {
 	assert(this->audio);
 	assert(trImpl != this->audio);
+	trImpl->addAudioStage(this->audio);
 	this->audio->parent = trImpl;
 	bIsSetup = true;
 	internalplugin::setTrackLink(trImpl);
@@ -308,3 +328,27 @@ void module_group::onTick(double since) {
 	meter.onTick(since);
 	audio->onTick(since);
 }
+using namespace cereal;
+
+template<class Archive>
+void serialize(Archive & archive, module_group_preset & m)
+{
+	archive(cereal::make_nvp("plugins", m.plugins));
+};
+
+void module_group::loadSnapshot(const plugin_snapshot_t& pluginSnapshot)  {
+	assert(audio);
+	this->audio->loadPlugins(pluginSnapshot.pluginSnapshots);
+}
+void module_group::makeSnapshot(plugin_snapshot_t& snapshot, bool storePluginChunks) {
+	assert(audio);
+	internalplugin::makeSnapshot(snapshot, storePluginChunks);
+	std::vector<effectbase*> effects = audio->effects;
+	snapshot.pluginSnapshots.reserve(effects.size());
+	for (effectbase* effect : effects) {
+		plugin_snapshot_t ps;
+		effect->makeSnapshot(ps, storePluginChunks);
+		snapshot.pluginSnapshots.push_back(std::move(ps));
+	}
+}
+

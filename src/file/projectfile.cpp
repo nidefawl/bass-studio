@@ -62,6 +62,9 @@ void serialize(Archive & archive, automation_view_t & m)
 template <class Archive>
 void load( Archive & archive, plugin_snapshot_t & m, const std::uint32_t version)
 {
+	if (version > 2) {
+		archive(make_nvp("pluginType", m.pluginType), make_nvp("plugins", m.pluginSnapshots));
+	}
 	archive(make_nvp("name", m.name), make_nvp("uId", m.uId), make_nvp("slot", m.slot), make_nvp("present", m.present));
 	if (version == 1)
 	make_optional_nvp(archive, "dataProgram", m.dataChunk2);
@@ -86,16 +89,20 @@ void load( Archive & archive, plugin_snapshot_t & m, const std::uint32_t version
 			((JSONInputArchive*)&archive)->loadBinaryValue((void*)m.dataChunk.data(), size, "plugindata");
 			}
 	}
+	if (version > 2) {
+		archive(make_nvp("plugins", m.pluginSnapshots));
+	}
 }
 
 template <class Archive>
 void save( Archive & archive, plugin_snapshot_t const & m, const std::uint32_t version)
 {
+	archive(make_nvp("pluginType", m.pluginType));
 	archive(make_nvp("name", m.name), make_nvp("uId", m.uId), make_nvp("slot", m.slot), make_nvp("present", m.present));
-	make_optional_nvp(archive, "parameters", m.params);
-	make_optional_nvp(archive, "automatedParams", m.automatedParams);
-	make_optional_nvp(archive, "globalId", m.projectGlobalId);
-	make_optional_nvp(archive, "enabled", m.enabled);
+	archive(make_nvp("parameters", m.params));
+	archive(make_nvp("automatedParams", m.automatedParams));
+	archive(make_nvp("globalId", m.projectGlobalId));
+	archive(make_nvp("enabled", m.enabled));
 	{
 		size_type size = m.dataChunk2.size();
 		archive(make_nvp("sizeprogramdata", size));
@@ -106,6 +113,7 @@ void save( Archive & archive, plugin_snapshot_t const & m, const std::uint32_t v
 		archive(make_nvp("sizeplugindata", size));
 		((JSONOutputArchive*)&archive)->saveBinaryValue(m.dataChunk.data(), size, "plugindata");
 	}
+	archive(make_nvp("plugins", m.pluginSnapshots));
 }
 template<class Archive>
 void serialize(Archive & archive, track_params_snapshot_t & m)
@@ -115,7 +123,7 @@ void serialize(Archive & archive, track_params_snapshot_t & m)
 template<class Archive>
 void serialize(Archive & archive, track_impl_snapshot_t & m)
 {
-	archive(make_nvp("plugins", m.plugins));
+	archive(make_nvp("plugins", m.pluginSnapshots));
 	make_optional_nvp(archive, "track", m.trackParams);
 }
 template<class Archive>
@@ -283,7 +291,7 @@ void save( Archive & archive, project_file const & file, const std::uint32_t ver
 	archive(cereal::make_nvp("samples", file.sampleFileIndex));
 }
 CEREAL_CLASS_VERSION( project_file, FILE_FORMAT_VERSION);
-CEREAL_CLASS_VERSION( plugin_snapshot_t, 2 );
+CEREAL_CLASS_VERSION( plugin_snapshot_t, 3 );
 
 
 std::shared_ptr<project_file> loadProjectFile(MainCtrl* ctrl, String& path) {

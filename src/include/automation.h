@@ -77,7 +77,7 @@ struct automated_param_t {
 struct automatable_t {
 	virtual ~automatable_t() {};
 	virtual String getAutomatableName() = 0;
-	virtual int32_t getNumParameters() = 0;
+	virtual int32_t getNumParameters() const = 0;
 	virtual String getParamName(int32_t paramIdx) = 0;
 	virtual float getParamValue(int32_t idx) = 0;
 	virtual void setParamValue(int32_t idx, float val) = 0;

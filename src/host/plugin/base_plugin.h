@@ -9,6 +9,7 @@
 #include "platform.h"
 #include "meter.h"
 #include "snapshot.h"
+#include "modules.h"
 
 struct AudioBlock;
 struct handles_t;
@@ -16,17 +17,19 @@ class track_t;
 class guiplugin;
 class vsthost;
 struct audio_stage_t;
+struct plugin_snapshot_t;
 
 class effectbase : public automatable_t {
 public:
 	rmsmeter<16000> meter;
 	AudioBlock* blockInputs = NULL; // guaranteed to have at least 2 channels
 	AudioBlock* blockOutputs = NULL; // guaranteed to have at least 2 channels
+	const int32_t pluginType = 0;
 	int32_t projectGlobalId;
 	bool bIsEnabled = false;
 	bool bIsSetup = false;
 	bool bCanReceiveMidi = false;
-	effectbase(int32_t _projectGlobalId) : projectGlobalId(_projectGlobalId) {
+	effectbase(int32_t _pluginType, int32_t _projectGlobalId) : pluginType(_pluginType), projectGlobalId(_projectGlobalId) {
 	}
 	virtual ~effectbase() {
 	}
@@ -51,6 +54,7 @@ public:
 	virtual String getInfo(std::vector<String>& list) = 0;
 	track_t* getTrack();
 	virtual void onTick(double since);
+	virtual void loadSnapshot(const plugin_snapshot_t& snapshot) = 0;
 };
 
 

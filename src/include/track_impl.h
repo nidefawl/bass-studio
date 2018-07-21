@@ -41,7 +41,7 @@ public:
 	String getAutomatableName() override {
 		return "Mixer";
 	}
-	int32_t getNumParameters() override {
+	int32_t getNumParameters() const override {
 		return params.size();
 	}
 	String getParamName(int32_t paramIdx) override {
@@ -145,6 +145,7 @@ struct audio_stage_t {
 	const samplerate_t& sampleRate;
 	const uint16_t& blockSize;
 	std::vector<effectbase*> effects;
+	std::vector<audio_stage_t*> children;
 	audio_stage_t(/*track_t* _track, */const samplerate_t& _sampleRate, const uint16_t& _blockSize, int32_t nChannels, int _type = 1)
 	: parent(nullptr),/*track(_track),*/
 	  pluginCtr(nullptr),
@@ -165,6 +166,8 @@ struct audio_stage_t {
 	void pluginsChanged();
 	void onTick(double since);
 	track_t* getTrack();
+	void addAudioStage(audio_stage_t* stage);
+	void removeAudioStage(audio_stage_t* stage);
 };
 struct track_impl_t : public audio_stage_t {
 	track_t* track;

@@ -4,6 +4,7 @@
 #include <vector>
 #include "exceptions.h"
 #include "seq_util.h"
+#include "str_util.h"
 #include "color_util.h"
 #include "seq_math.h"
 #include "track.h"

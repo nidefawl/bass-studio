@@ -166,7 +166,7 @@ public:
 	uint32_t pluginCount();
 	vstplugin* getPluginIdx(uint32_t i);
 	vstpluginloadres loadPlugin(String filepath, int32_t globalId = 0);
-	int32_t getNextGlobalModuleId();
+	int32_t getNextGlobalModuleId(int32_t n);
 	track_impl_t* createAudio(track_t* track);
 	audio_stage_t* createAudioStage();
 	bool movePlugin(audio_stage_t* dstTr, audio_stage_t* trp, int32_t src, int32_t dst);

@@ -7,17 +7,22 @@
 #include "modules.h"
 #include "leak_detect.h"
 
-effectbase* makeModuleInstance(int32_t uid) {
+effectbase* makeModuleInstance(int32_t uid, int32_t globalId = -1) {
 
 	vsthost* host = vsthost::getInstance();
-	int32_t id = host->getNextGlobalModuleId();
+	int32_t id = host->getNextGlobalModuleId(globalId);
+	effectbase* effect = nullptr;
 	switch (uid) {
-	case 0:
-		return new module_empty(id);
-	case 1:
-		return new module_group(id);
+	case PLUGIN_TYPE_EMPTY:
+		effect = new module_empty(id);
+		break;
+	case PLUGIN_TYPE_GROUP:
+		effect = new module_group(id);
+		break;
 		default:
 		break;
 	}
-	return nullptr;
+	if (effect)
+		effect->load(vsthost::getInstance());
+	return effect;
 }

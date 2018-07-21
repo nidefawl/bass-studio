@@ -102,7 +102,7 @@ struct internal_handles_t {
 //	guimodule_empty * gui;
 };
 module_empty::module_empty(int32_t _projectGlobalId)
-: internalplugin(_projectGlobalId), handle(new internal_handles_t{0})
+: internalplugin(PLUGIN_TYPE_EMPTY, _projectGlobalId), handle(new internal_handles_t{0})
 {
 	this->sName = "Empty";
 #ifndef NDEBUG

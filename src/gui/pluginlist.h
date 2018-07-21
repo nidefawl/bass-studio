@@ -149,8 +149,8 @@ class guictr_modulelibrary : public guictr_base {
 	std::vector<module_desc_t> effectEntries;
 public:
 	guictr_modulelibrary() : guictr_base() {
-		effectEntries.push_back(module_desc_t{EFFECT_EMPTY, "Empty", false});
-		effectEntries.push_back(module_desc_t{EFFECT_GROUP, "Group", false});
+		effectEntries.push_back(module_desc_t{PLUGIN_TYPE_EMPTY, "Empty", false});
+		effectEntries.push_back(module_desc_t{PLUGIN_TYPE_GROUP, "Group", false});
 		pluginListCtr.padding = 0;
 		add(&textField);
 		add(&pluginListCtr);

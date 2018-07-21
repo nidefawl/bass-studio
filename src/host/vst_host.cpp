@@ -1046,8 +1046,13 @@ int32_t loadLib(String filepath, VSTPluginMain_t** out_fn, void** out_hmodule) {
 	return 0;
 }
 #endif
-int32_t vsthost::getNextGlobalModuleId() {
-	return ++pluginId;
+int32_t vsthost::getNextGlobalModuleId(int32_t globalId) {
+	if (globalId <= 0) {
+		return ++pluginId;
+	} else {
+		update_maximum(pluginId, globalId);
+	}
+	return globalId;
 }
 vstpluginloadres vsthost::loadPlugin(String filepath, int32_t globalId) {
 	String path, name, nameWithoutExt;
@@ -1093,11 +1098,7 @@ vstpluginloadres vsthost::loadPlugin(String filepath, int32_t globalId) {
 	moduleHandle = hmodule;
 #endif
 
-	if (globalId <= 0) {
-		globalId = getNextGlobalModuleId();
-	} else {
-		update_maximum(pluginId, globalId);
-	}
+	globalId = getNextGlobalModuleId(globalId);
 	vstplugin* plugin = new vstplugin(new handles_t(aeffect, moduleHandle), globalId, path, nameWithoutExt);
 	list.push_back(plugin);
 	plugin->load(this);

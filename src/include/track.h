@@ -204,12 +204,13 @@ struct track_params_snapshot_t {
 	std::vector<param_snapshot_t> params;
 	std::vector<automation_view_t> automatedParams;
 };
+struct audio_stage_t;
 struct plugin_snapshot_t;
 struct track_impl_snapshot_t {
 	track_params_snapshot_t trackParams;
-	std::vector<plugin_snapshot_t> plugins;
+	std::vector<plugin_snapshot_t> pluginSnapshots;
 	track_impl_snapshot_t() = default;
-	track_impl_snapshot_t(const track_t &a, bool storePluginChunks);
+	track_impl_snapshot_t(audio_stage_t* p, bool storePluginChunks);
 };
 struct track_snapshot_t : public tracksettings_t {
 	int32_t localIdx = -1;

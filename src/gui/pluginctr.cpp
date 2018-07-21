@@ -333,8 +333,7 @@ effectbase* gui_vstpluginlist_entry::makeInstance() {
 	return res.result == 0 ? res.plugin : nullptr;
 }
 effectbase* gui_modulelist_entry::makeInstance() {
-	effectbase* instance = makeModuleInstance(entry.uid);
-	instance->load(vsthost::getInstance());
+	effectbase* instance = makeModuleInstance(entry.uid, -1);
 	return instance;
 }
 void guictr_plugins::pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mousepos) {

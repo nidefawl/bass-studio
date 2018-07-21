@@ -10,6 +10,7 @@
 #include "vst_plugin_handles.h"
 #include "../vst_host.h"
 #include "../vst_window.h"
+#include "../../gui/gui.h"
 #include "../../gui/plugin.h"
 #include "../../gui/pluginctr.h"
 #include "track_impl.h"
@@ -255,12 +256,27 @@ void vstplugin::load(vsthost* host) {
 
 	this->bIsSetup = true;
 }
+void storeAutomation(plugin_snapshot_t& ps, std::vector<automated_param_t>& automation) {
+	for (automated_param_t& automatedParam : automation) {
+		if (automatedParam.src.points.empty()) {
+			continue;
+		}
+		automation_view_t automation;
+		automation.targetParam = automatedParam.paramIdx;
+		automation.points = automatedParam.src.points;
+		automation.active = automatedParam.src.active;
+		ps.automatedParams.push_back(automation);
+	}
+}
+namespace {
+
 void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin, bool storePluginChunks) {
 	ps.present = true;
 	ps.slot = 0;
 	ps.projectGlobalId = plugin->projectGlobalId;
 	ps.enabled = plugin->bIsEnabled;
 	ps.uId = plugin->uId;
+	ps.pluginType = PLUGIN_TYPE_VST;
 	ps.name = plugin->sName;
 	if (storePluginChunks) {
 		void* pluginData;
@@ -287,16 +303,11 @@ void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin, bool storePluginCh
 		param_snapshot_t t{param.idx, val};
 		ps.params.push_back(t);
 	}
-	for (automated_param_t& automatedParam : plugin->automatedParams) {
-		if (automatedParam.src.points.empty()) {
-			continue;
-		}
-		automation_view_t automation;
-		automation.targetParam = automatedParam.paramIdx;
-		automation.points = automatedParam.src.points;
-		automation.active = automatedParam.src.active;
-		ps.automatedParams.push_back(automation);
-	}
+	storeAutomation(ps, plugin->automatedParams);
+}
+}
+void vstplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
+
 }
 void vstplugin::makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) {
 	createSnapshot(ps, this, storePluginChunks);
@@ -356,7 +367,7 @@ vst_param_category* vstplugin::getCategory(int idx) {
 	}
 	return NULL;
 }
-int32_t vstplugin::getNumParameters() {
+int32_t vstplugin::getNumParameters() const {
 	return params.size();
 }
 String vstplugin::getParamName(int32_t idx) {

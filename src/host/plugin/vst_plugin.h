@@ -88,7 +88,7 @@ public:
 
 	std::vector<String> inputNames;
 	std::vector<String> outputNames;
-	vstplugin(handles_t* _handle, int32_t globalId, String sDir, String sName) : effectbase(globalId), handle(_handle) {
+	vstplugin(handles_t* _handle, int32_t globalId, String sDir, String sName) : effectbase(PLUGIN_TYPE_VST, globalId), handle(_handle) {
 		this->sDir = sDir;
 		this->sName = sName;
 #ifndef NDEBUG
@@ -132,7 +132,7 @@ public:
 	vst_param_category* getCategory(int idx);
 	automated_param_t* getRegisteredAutomation(int32_t idx);
 
-	int32_t getNumParameters() override;
+	int32_t getNumParameters() const override;
 	String getParamName(int32_t paramIdx) override;
 	String getAutomatableName() override;
 	float getParamValue(int32_t idx);
@@ -144,6 +144,7 @@ public:
 	void getAutomated(std::vector<int32_t>& targets) override;
 	automationlane_snapshot_t toRef() override;
 	void makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) override;
+	void loadSnapshot(const plugin_snapshot_t& pluginSnapshot) override;
 	guiplugin* makeGui() override;
 	void setSlot(int i) override;
 	int32_t getSlot() override;

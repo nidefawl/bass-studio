@@ -1,3 +1,4 @@
 #pragma once
-#define EFFECT_EMPTY 0
-#define EFFECT_GROUP 1
+#define PLUGIN_TYPE_VST 1
+#define PLUGIN_TYPE_EMPTY 2
+#define PLUGIN_TYPE_GROUP 3

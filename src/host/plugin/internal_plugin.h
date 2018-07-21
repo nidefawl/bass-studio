@@ -42,7 +42,7 @@ public:
 	std::vector<automated_param_t> automatedParams;
 	int32_t slot = -1;
 	audio_stage_t* trackImpl = nullptr;
-	internalplugin(int32_t _projectGlobalId) : effectbase(_projectGlobalId) {
+	internalplugin(int32_t _pluginType, int32_t _projectGlobalId) : effectbase(_pluginType, _projectGlobalId) {
 	}
 	virtual ~internalplugin() {
 	}
@@ -59,7 +59,8 @@ public:
 //	virtual void unload() = 0;
 //	virtual void load(vsthost* host) = 0;
 
-	void makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) override;
+	virtual void loadSnapshot(const plugin_snapshot_t& snapshot) override;
+	virtual void makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) override;
 	void setSlot(int32_t i) override;
 	int32_t getSlot() override;
 	virtual void breakTrackLink() override;
@@ -68,7 +69,7 @@ public:
 	bool show() override;
 	bool close() override;
 	bool hasParam(int32_t idx) override;
-	int32_t getNumParameters() override;
+	int32_t getNumParameters() const override;
 	String getParamName(int32_t paramIdx) override;
 	String getAutomatableName() override;
 	float getParamValue(int32_t idx);
@@ -81,4 +82,4 @@ public:
 	automationlane_snapshot_t toRef() override;
 	automated_param_t* getRegisteredAutomation(int32_t idx) override;
 };
-effectbase* makeModuleInstance(int32_t uid);
+effectbase* makeModuleInstance(int32_t uid, int32_t globalid);

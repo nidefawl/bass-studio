@@ -128,117 +128,17 @@ void internalplugin::onWindowDestroy() {
 //	my_printf("UNLOAD %s\n", StringAsCStr(this->sName));
 //}
 
-//void internalplugin::load(vsthost* host) {
-//	if (this->bIsSetup) {
-//		unload();
-//	}
-//	auto aeffect = handle->aeffect;
-//	assert(aeffect->numOutputs > 0);
-//	this->blockInputs = new AudioBlock(std::max(2, aeffect->numInputs), host->lBlockSize);
-//	this->blockOutputs = new AudioBlock(std::max(2, aeffect->numOutputs), host->lBlockSize);
-//	aeffect->resvd2 = 0;
-//	this->vstVersion = dispatch(effGetVstVersion);
-//	this->uId = aeffect->uniqueID;
-//	this->dispatch(effIdentify, 0, 0, 0, 0);
-//	this->dispatch(effSetSampleRate, 0, 0, NULL, (float) host->lSampleRate);
-//	this->dispatch(effSetBlockSize, 0, host->lBlockSize, 0, 0);
-//	this->dispatch(effOpen);
-//
-//	VstPinProperties pin;
-//	for (int32_t i = 0; i < aeffect->numInputs; i++) {
-//		if (this->dispatch(effGetInputProperties, i, 0, &pin)) {
-//			inputNames.push_back(pin.label);
-//		} else {
-//			inputNames.push_back(StringFormat("Input %d", i));
-//		}
-//	}
-//	for (int32_t i = 0; i < aeffect->numOutputs; i++) {
-//		if (this->dispatch(effGetOutputProperties, i, 0, &pin)) {
-//			inputNames.push_back(pin.label);
-//		} else {
-//			inputNames.push_back(StringFormat("Output %d", i));
-//		}
-//	}
-//
-//	this->pluginCategory = this->dispatch(effGetPlugCategory) > 0;
-//	this->isSynth = (handle->aeffect->flags & effFlagsIsSynth) != 0;
-//	this->bCanReceiveMidi = this->isSynth || this->dispatch(effCanDo, 0, 0, (void*)PlugCanDos::canDoReceiveVstMidiEvent) > 0;
-//
-//	VstParameterProperties properties{0};
-//
-//	char buf[1024];
-//	vst_param_category fallbackCat={0, 0, "Parameters"};
-//	for (int i = 0; i < aeffect->numParams; i++) {
-//		vst_param param{0};
-//		param.idx = i;
-//		memset(buf, 0, sizeof(buf));
-//		this->dispatch(effGetParamName, i, 0, buf);
-//		String label = buf[0] ? buf : StringFormat("Parameter %d", i);
-//		param.label = param.shortLabel = label;
-//		if (this->dispatch(effGetParameterProperties, i, 0, &properties, 0)) {
-//			param.flags = properties.flags | (ParamIsAdvanced);
-//			param.label = properties.label;
-//			param.shortLabel = properties.shortLabel;
-//			if (properties.label[0]) {
-//				param.label = properties.label;
-//			}
-//			if (properties.shortLabel[0]) {
-//				param.shortLabel = properties.shortLabel;
-//			}
-//			if (param.flags & ParamUsesFloatStep) {
-//				param.min.valFloat = 0;
-//				param.max.valFloat = 0;
-//				param.step.valFloat = properties.stepFloat;
-//				param.stepSmall.valFloat = properties.smallStepFloat;
-//				param.stepLarge.valFloat = properties.largeStepFloat;
-//			}
-//			if (param.flags & ParamUsesIntStep) {
-//				param.min.valInt = std::numeric_limits<int32_t>::min();
-//				param.max.valInt = std::numeric_limits<int32_t>::max();
-//				param.step.valInt = properties.stepInteger;
-//				param.stepSmall.valInt = 1;
-//				param.stepLarge.valInt = properties.largeStepInteger;
-//			}
-//			if (param.flags & ParamUsesIntegerMinMax) {
-//				param.min.valInt = properties.minInteger;
-//				param.max.valInt = properties.maxInteger;
-//			}
-//			if (param.flags & ParamSupportsDisplayCategory) {
-//				param.category = properties.category + 1;
-//				if (getCategory(param.category) == 0 && properties.categoryLabel[0]) {
-//					vst_param_category paramCat = { param.category, properties.numParametersInCategory, properties.categoryLabel };
-//					paramsCategories.push_back(paramCat);
-//				}
-//			}
-//			if (param.flags & ParamSupportsDisplayIndex) {
-//				param.displayIndex = properties.displayIndex;
-//			}
-//		} else {
-//			param.flags = 0;
-//			fallbackCat.numParametersInCategory++;
-//		}
-//		param.value = handle->aeffect->getParameter(handle->aeffect, param.idx);
-//		params.push_back(param);
-//	}
-//	paramsCategories.push_back(fallbackCat);
-//
-//
-//
-////	this->resume();
-//	this->sleep();
-//	this->dispatch(effSetBlockSize, 0, host->lBlockSize);
-////	this->resume();
-//
-//
-//	this->bIsSetup = true;
-//}
-//void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin, bool storePluginChunks) {
-//	ps.present = true;
-//	ps.slot = 0;
-//	ps.projectGlobalId = plugin->projectGlobalId;
-//	ps.enabled = plugin->bIsEnabled;
-//	ps.uId = plugin->uId;
-//	ps.name = plugin->sName;
+void storeAutomation(plugin_snapshot_t& ps, std::vector<automated_param_t>& automation);
+namespace {
+
+void createSnapshot(plugin_snapshot_t& ps, internalplugin* plugin, bool storePluginChunks) {
+	ps.present = true;
+	ps.slot = 0;
+	ps.projectGlobalId = plugin->projectGlobalId;
+	ps.enabled = plugin->bIsEnabled;
+	ps.uId = plugin->uId;
+	ps.pluginType = plugin->pluginType;
+	ps.name = plugin->sName;
 //	if (storePluginChunks) {
 //		void* pluginData;
 //		int32_t pluginDataSize = plugin->dispatch(effGetChunk, 0, 0, &pluginData, 0);
@@ -258,26 +158,25 @@ void internalplugin::onWindowDestroy() {
 //			my_printf("Plugin %s: Save data2[%d]\n", StringAsCStr(plugin->sName), pluginDataSize2);
 //		}
 //	}
-//	ps.params.reserve(plugin->params.size());
-//	for (vst_param& param : plugin->params) {
-//		float val = plugin->getParamValue(param.idx);
-//		param_snapshot_t t{param.idx, val};
-//		ps.params.push_back(t);
-//	}
-//	for (automated_param_t& automatedParam : plugin->automatedParams) {
-//		if (automatedParam.src.points.empty()) {
-//			continue;
-//		}
-//		automation_view_t automation;
-//		automation.targetParam = automatedParam.paramIdx;
-//		automation.points = automatedParam.src.points;
-//		automation.active = automatedParam.src.active;
-//		ps.automatedParams.push_back(automation);
-//	}
-//}
+	ps.params.reserve(plugin->params.size());
+	for (internalplugin_param& param : plugin->params) {
+		float val = plugin->getParamValue(param.idx);
+		param_snapshot_t t{param.idx, val};
+		ps.params.push_back(t);
+	}
+	storeAutomation(ps, plugin->automatedParams);
+
+}
+}
 void internalplugin::makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) {
 //	createSnapshot(ps, this, storePluginChunks);
 //	ps.slot = handle->slot;
+	createSnapshot(ps, this, storePluginChunks);
+	ps.slot = this->slot;
+//	this->makePresetSnapshot(ps, this);
+}
+void internalplugin::loadSnapshot(const plugin_snapshot_t& ps)  {
+	assert(ps.slot == this->slot);
 }
 void internalplugin::setSlot(int32_t i) {
 	slot = i;
@@ -313,7 +212,7 @@ void internalplugin::setTrackLink(audio_stage_t* audioStage) {
 		audioStage = audioStage->parent;
 	}
 }
-int32_t internalplugin::getNumParameters() {
+int32_t internalplugin::getNumParameters() const {
 	return params.size();
 }
 String internalplugin::getParamName(int32_t idx) {

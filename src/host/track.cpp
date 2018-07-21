@@ -126,28 +126,33 @@ track_t::track_t(const track_snapshot_t &a)
 	assert(this->mixer == NULL);
 	assert(this->content == NULL);
 }
-track_impl_snapshot_t::track_impl_snapshot_t(const track_t &a, bool storePluginChunks) {
-	track_impl_t* p = a.audio;
+namespace {
+void recursiveStore(track_impl_snapshot_t& snapshot, const audio_stage_t* p, bool storePluginChunks) {
+	snapshot.pluginSnapshots.reserve(snapshot.pluginSnapshots.size()+p->effects.size());
+	for (effectbase* effect : p->effects) {
+		plugin_snapshot_t ps;
+		effect->makeSnapshot(ps, storePluginChunks);
+		snapshot.pluginSnapshots.push_back(std::move(ps));
+	}
+	for (audio_stage_t* stage : p->children) {
+		recursiveStore(snapshot, stage, storePluginChunks);
+	}
+}
+}
+track_impl_snapshot_t::track_impl_snapshot_t(audio_stage_t* p, bool storePluginChunks) {
 	if (p) {
 		p->mixer.createSnapshot(trackParams);
-		int32_t nPlugins = p->effects.size();
-//		if (p->instrument) nPlugins++;
-		plugins.reserve(nPlugins);
-//		if (p->instrument) {
-//			plugin_snapshot_t ps;
-//			createSnapshot(ps, p->instrument, storePluginChunks);
-//			ps.slot = p->instrument->handle->slot;
-//			this->plugins.push_back(std::move(ps));
-//		}
+		std::vector<effectbase*> effects = p->effects;
+		pluginSnapshots.reserve(p->effects.size());
 		for (effectbase* effect : p->effects) {
 			plugin_snapshot_t ps;
 			effect->makeSnapshot(ps, storePluginChunks);
-			this->plugins.push_back(std::move(ps));
+			pluginSnapshots.push_back(std::move(ps));
 		}
 	}
 }
 track_snapshot_t::track_snapshot_t(track_t* track, bool storePluginChunks)
-  : tracksettings_t(*track), localIdx(track->localIdx), plugins(*track, storePluginChunks)
+  : tracksettings_t(*track), localIdx(track->localIdx), plugins(track->audio, storePluginChunks)
 {
 	std::vector<clip_t*>& otherClips = track->getMidi().clips;
 	for (clip_t* clip : otherClips) {
@@ -165,7 +170,7 @@ void track_t::loadSnapshot(const track_snapshot_t& snapshot) {
 	assert(audio);
 	const auto& implSnapshot = snapshot.plugins;
 	audio->mixer.loadSnapshot(implSnapshot.trackParams);
-	const std::vector<plugin_snapshot_t>& trPluginList = implSnapshot.plugins;
+	const std::vector<plugin_snapshot_t>& trPluginList = implSnapshot.pluginSnapshots;
 	audio->loadPlugins(trPluginList);
 	const std::vector<automationlane_snapshot_t>& atl = snapshot.automationLanes;
 	this->subtracks.clear();
@@ -181,7 +186,7 @@ void track_t::loadSnapshot(const track_snapshot_t& snapshot) {
 }
 void track_t::loadPluginAutomationParameters(const track_impl_snapshot_t& trackStatic) {
 	assert(audio);
-	const std::vector<plugin_snapshot_t>& trPluginList = trackStatic.plugins;
+	const std::vector<plugin_snapshot_t>& trPluginList = trackStatic.pluginSnapshots;
 	for (const plugin_snapshot_t& pluginSnapshot : trPluginList) {
 		effectbase* plugin = audio->getPluginById(pluginSnapshot.projectGlobalId);
 		if (plugin) {
@@ -271,9 +276,9 @@ effectbase* track_impl_t::getPluginById(int32_t projectGlobalId) {
 //	return oldInstr;
 //}
 void track_impl_t::removePlugin(effectbase* _effect, bool notifyUp) {
-	if (track->audio->selectedAutomationCtr == _effect) {
+//	if (track->audio->selectedAutomationCtr == _effect) {
 		track->audio->selectedAutomationCtr = NULL;
-	}
+//	}
 	audio_stage_t::removePlugin(_effect, notifyUp);
 }
 void audio_stage_t::removePlugin(effectbase* _effect, bool notifyUp) {
@@ -493,51 +498,64 @@ void track_impl_t::showAutomationLanes() {
 		loadAutomationLanes(atl);
 	}
 }
+
+effectbase* makeModuleInstance(int32_t uid, int32_t globalId);
 void audio_stage_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginList)
 {
-//	return;
 	vsthost* host = vsthost::getInstance();
 	plugindatabase_t& db = MainCtrl::get()->plugindb;
 	for (const plugin_snapshot_t& pluginSnapshot : trPluginList) {
 		String path;
-		if (db.resolve(pluginSnapshot.name, pluginSnapshot.uId, &path)) {
-			vstpluginloadres res = host->loadPlugin(path, pluginSnapshot.projectGlobalId);
-			if (res.result==0&&res.plugin) {
-				vstplugin* plugin = res.plugin;
-				if (pluginSnapshot.dataChunk.size() > 0) {
-					my_printf("Plugin %s: Load data1[%d]\n", StringAsCStr(res.plugin->sName), pluginSnapshot.dataChunk.size());
-					plugin->dispatch(effSetChunk, 0, pluginSnapshot.dataChunk.size(), (void*)pluginSnapshot.dataChunk.data());
-				}
-				if (pluginSnapshot.dataChunk2.size() > 0) {
-					my_printf("Plugin %s: Load data2[%d]\n", StringAsCStr(res.plugin->sName), pluginSnapshot.dataChunk2.size());
-					plugin->dispatch(effSetChunk, 1, pluginSnapshot.dataChunk2.size(), (void*)pluginSnapshot.dataChunk2.data());
-				}
-
-				const std::vector<param_snapshot_t>& pluginSnapshotParams = pluginSnapshot.params;
-				for (const param_snapshot_t& param : pluginSnapshotParams) {
-					if (plugin->hasParam(param.idx)) {
-						plugin->setParamValue(param.idx, param.val);
+		effectbase* effect = nullptr;
+		if (pluginSnapshot.pluginType == PLUGIN_TYPE_VST) {
+			if (db.resolve(pluginSnapshot.name, pluginSnapshot.uId, &path)) {
+				vstpluginloadres res = host->loadPlugin(path, pluginSnapshot.projectGlobalId);
+				if (res.result==0&&res.plugin) {
+					vstplugin* plugin = res.plugin;
+					if (pluginSnapshot.dataChunk.size() > 0) {
+						my_printf("Plugin %s: Load data1[%d]\n", StringAsCStr(res.plugin->sName), pluginSnapshot.dataChunk.size());
+						plugin->dispatch(effSetChunk, 0, pluginSnapshot.dataChunk.size(), (void*)pluginSnapshot.dataChunk.data());
 					}
-				}
-				host->insertNewPlugin(this, plugin, pluginSnapshot.slot);
-
-				const std::vector<automation_view_t>& automatedParams = pluginSnapshot.automatedParams;
-				for (const automation_view_t& automatedParam : automatedParams) {
-					if (plugin->hasParam(automatedParam.targetParam)) {
-						automation_t* autom = plugin->getAutomation(automatedParam.targetParam);
-						autom->points = automatedParam.points;
-						autom->active = automatedParam.active;
+					if (pluginSnapshot.dataChunk2.size() > 0) {
+						my_printf("Plugin %s: Load data2[%d]\n", StringAsCStr(res.plugin->sName), pluginSnapshot.dataChunk2.size());
+						plugin->dispatch(effSetChunk, 1, pluginSnapshot.dataChunk2.size(), (void*)pluginSnapshot.dataChunk2.data());
 					}
-				}
-//				if (plugin == this->instrument) {
-//					plugin->show();
-//				}
-				if (pluginSnapshot.enabled) {
-					plugin->resume();
+					effect = plugin;
 				}
 			}
+		} else {
+			effect = makeModuleInstance(pluginSnapshot.pluginType, pluginSnapshot.projectGlobalId);
 		}
+		if (effect) {
+
+			const std::vector<param_snapshot_t>& pluginSnapshotParams = pluginSnapshot.params;
+			for (const param_snapshot_t& param : pluginSnapshotParams) {
+				if (effect->hasParam(param.idx)) {
+					effect->setParamValue(param.idx, param.val);
+				}
+			}
+			host->insertNewPlugin(this, effect, pluginSnapshot.slot);
+			effect->loadSnapshot(pluginSnapshot);
+
+			const std::vector<automation_view_t>& automatedParams = pluginSnapshot.automatedParams;
+			for (const automation_view_t& automatedParam : automatedParams) {
+				if (effect->hasParam(automatedParam.targetParam)) {
+					automation_t* autom = effect->getAutomation(automatedParam.targetParam);
+					autom->points = automatedParam.points;
+					autom->active = automatedParam.active;
+				}
+			}
+	//				if (plugin == this->instrument) {
+	//					plugin->show();
+	//				}
+			if (pluginSnapshot.enabled) {
+				effect->resume();
+			}
+		}
+
 	}
+
+
 }
 void track_impl_t::loadAutomationLanes(const std::vector<automationlane_snapshot_t>& atls)
 {
@@ -568,6 +586,27 @@ void audio_stage_t::onTick(double since) {
 		effect->onTick(since);
 	}
 }
+void audio_stage_t::addAudioStage(audio_stage_t* _child) {
+	auto it = std::find(children.begin(), children.end(), _child);
+	if (it != children.end()) {
+		throw applogicexception("attempt to add audio_stage_t twice");
+	}
+	_child->parent = this;
+	this->children.push_back(_child);
+//	gui->onRemove();
+//	guis.erase(it);
+//	gui->parent = NULL;
+}
+void audio_stage_t::removeAudioStage(audio_stage_t* _child) {
+	auto it = std::find(children.begin(), children.end(), _child);
+	if (it == children.end()) {
+		if (_child->parent == nullptr)
+			return;
+		throw applogicexception("attempt to remove non-present audio_stage_t");
+	}
+	_child->parent = nullptr;
+	this->children.erase(it);
+}
 track_t* audio_stage_t::getTrack() {
 	audio_stage_t* stage = this;
 	while (stage->parent) {
@@ -576,7 +615,7 @@ track_t* audio_stage_t::getTrack() {
 	if (stage->type == 0) {
 		return static_cast<track_impl_t*>(stage)->track;
 	}
-//	assert(0);
+//	assert(0); // to be expected when deleting effectgroups
 	return nullptr;
 }
 void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, float** buffer, int32_t blockSize) {
