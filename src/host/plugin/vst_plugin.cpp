@@ -144,10 +144,10 @@ void vstplugin::unload() {
 //		assert(ap.ref);
 //		ap.ref->onDstDelete();
 //	}
+	this->dispatch(effClose);
 	if (this->window) {
 		this->window->destroy();
 	}
-	this->dispatch(effClose);
 	this->bIsSetup = false;
 	my_printf("UNLOAD %s\n", StringAsCStr(this->sName));
 }
@@ -311,7 +311,7 @@ void vstplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
 }
 void vstplugin::makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) {
 	createSnapshot(ps, this, storePluginChunks);
-	ps.slot = handle->slot;
+	ps.slot = this->slot;
 }
 guiplugin* vstplugin::makeGui() {
 	if (!handle->gui) {
@@ -319,32 +319,6 @@ guiplugin* vstplugin::makeGui() {
 		handle->gui->setTitle(StringFormat("%s", StringAsCStr(this->sName)));
 	}
 	return handle->gui.get();
-}
-void vstplugin::setSlot(int32_t i) {
-	handle->slot = i;
-}
-int32_t vstplugin::getSlot() {
-	return handle->slot;
-}
-void vstplugin::breakTrackLink() {
-	audio_stage_t* audioStage = handle->tr_plugins;
-	handle->tr_plugins = nullptr;
-	if (audioStage) {
-		guictr_plugins* plugins = audioStage->pluginCtr;
-		if (plugins)
-			plugins->showTrack(audioStage);
-	}
-}
-void vstplugin::setTrackLink(audio_stage_t* trImpl) {
-	handle->tr_plugins = trImpl;
-	if (trImpl->pluginCtr) {
-		guictr_plugins* plugins = trImpl->pluginCtr;
-		if (plugins)
-			plugins->showTrack(trImpl);
-	}
-}
-audio_stage_t* vstplugin::getTrackLink() {
-	return handle->tr_plugins;
 }
 guiplugin* vstplugin::getGui() {
 	return handle->gui.get();

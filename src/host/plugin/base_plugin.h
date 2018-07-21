@@ -29,17 +29,14 @@ public:
 	bool bIsEnabled = false;
 	bool bIsSetup = false;
 	bool bCanReceiveMidi = false;
+	audio_stage_t* trackImpl = nullptr;
+	int32_t slot = -1;
 	effectbase(int32_t _pluginType, int32_t _projectGlobalId) : pluginType(_pluginType), projectGlobalId(_projectGlobalId) {
 	}
 	virtual ~effectbase() {
 	}
 	virtual void makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) = 0;
 	virtual guiplugin* makeGui() = 0;
-	virtual void setSlot(int32_t i) = 0;
-	virtual int32_t getSlot() = 0;
-	virtual void breakTrackLink() = 0;
-	virtual void setTrackLink(audio_stage_t* trImpl) = 0;
-	virtual audio_stage_t* getTrackLink() = 0;
 	virtual guiplugin* getGui() = 0;
 	virtual void process(AudioBlock* in, AudioBlock* out, int32_t samples) = 0;
 	virtual bool show() = 0;
@@ -55,6 +52,21 @@ public:
 	track_t* getTrack();
 	virtual void onTick(double since);
 	virtual void loadSnapshot(const plugin_snapshot_t& snapshot) = 0;
+
+	virtual void breakTrackLink();
+	virtual void setTrackLink(audio_stage_t* audioStage);
+	virtual void onPreUnload() {
+
+	}
+	virtual void setSlot(int32_t i) {
+		slot = i;
+	}
+	virtual int32_t getSlot() {
+		return slot;
+	}
+	virtual audio_stage_t* getTrackLink() {
+		return trackImpl;
+	}
 };
 
 

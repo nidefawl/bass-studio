@@ -225,7 +225,10 @@ void guictr_plugins::hideTrack(audio_stage_t* _track) {
 	}
 }
 void guictr_plugins::onChildLayoutChanged(guibase* g) {
-	layout();
+//	layout();
+	if (this->parent != NULL) {
+		this->parent->onChildLayoutChanged(this);
+	}
 }
 void guictr_plugins::render(NVGcontext* vg) {
 //	if (isDefaultPluginCtr) {
@@ -351,6 +354,9 @@ void guictr_plugins::pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mouse
 		//	}
 	}
 	showTrack(stage);
+	if (this->parent) {
+		this->parent->onChildLayoutChanged(this);
+	}
 }
 void guictr_plugins::pluginDragMove(guiplugin* g, ivec2 mousepos) {
 	MainCtrl::get()->getDragDropTarget().reset();
@@ -391,6 +397,9 @@ void guictr_plugins::pluginDragRelease(guiplugin* g, ivec2 mousepos) {
 		} else {
 			if (targetslot > curSlot) targetslot--;
 			vsthost::getInstance()->moveEffect(trp, curSlot, targetslot);
+		}
+		if (this->parent) {
+			this->parent->onChildLayoutChanged(this);
 		}
 		showTrack(stage);
 	} else {

@@ -29,6 +29,7 @@ public:
 	bool resume() override;
 	bool sleep() override;
 	void unload() override;
+	void onPreUnload() override;
 	void load(vsthost* host) override;
 	virtual void breakTrackLink() override;
 	virtual void setTrackLink(audio_stage_t* trImpl) override;

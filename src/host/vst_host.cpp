@@ -417,8 +417,8 @@ void vsthost::updateTime(int32_t samplePos, tick_t pos, playback_state state) {
 
 void vsthost::sendNotesOff(vstplugin* plugin) {
 	handles_t* handles = plugin->handle;
-	if (handles && handles->tr_plugins) {
-		track_t* tr = handles->tr_plugins->getTrack();
+	if (plugin && plugin->trackImpl) {
+		track_t* tr = plugin->trackImpl->getTrack();
 		assert(tr);
 		track_impl_t* audio = tr->audio;
 		if (audio) {
@@ -883,14 +883,15 @@ void vsthost::removePlugin(effectbase* plugin) {
 void vsthost::unloadPlugin(effectbase* plugin) {
 	if (MainCtrl::get())
 		MainCtrl::get()->closeContextMenu();
+	plugin->onPreUnload();
 	removePlugin(plugin);
+	plugin->unload();
 //	PopupCtrl::get()->close(); // Make sure context controls do not reference vst
 	plugin->close();
 	auto it = std::find(list.begin(), list.end(), plugin);
 	if (it != list.end()) {
 		list.erase(it);
 	}
-	plugin->unload();
 	vstplugin* vst = dynamic_cast<vstplugin*>(plugin);
 	if (vst) {
 		moduleMgr->releaseModule(vst->handle->hmodule);
@@ -902,8 +903,8 @@ bool vsthost::unloadAllPlugins() {
 	for (int i = 0; i < count; ++i)
 	{
 		vstplugin *current = list[i];
-		if (current->handle && current->handle->tr_plugins) {
-			current->handle->tr_plugins->removePlugin(current, false);
+		if (current->trackImpl) {
+			current->trackImpl->removePlugin(current, false);
 		}
 	}
 	for (int i = 0; i < count; ++i)

@@ -797,15 +797,12 @@ void MainCtrl::objectDragMove(guibase* g, MouseEvent& mevt) {
 	guibase* gui = evt.getGuiHit();
 	if (gui) {
 		ivec2 mposObj = toControlsObjectSpace(mevt.mousepos, gui);
-		my_printf("dragMoveOn %s on %s\n", StringAsCStr(g->getClassName()),  StringAsCStr(gui->getClassName()));
 		g->dragMoveOn(gui, mposObj);
 //		bool result = guiOver->pluginDragMove(g, mposObj);
 //		if (!result) {
 //
 //		}
 	} else {
-
-		my_printf("dragMoveOn %s no hit\n", StringAsCStr(g->getClassName()));
 	}
 }
 void MainCtrl::objectDragRelease(guibase* g, MouseEvent& mevt) {

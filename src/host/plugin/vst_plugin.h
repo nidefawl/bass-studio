@@ -146,11 +146,6 @@ public:
 	void makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) override;
 	void loadSnapshot(const plugin_snapshot_t& pluginSnapshot) override;
 	guiplugin* makeGui() override;
-	void setSlot(int i) override;
-	int32_t getSlot() override;
-	void breakTrackLink() override;
-	void setTrackLink(audio_stage_t* trImpl) override;
-	audio_stage_t* getTrackLink() override;
 	guiplugin* getGui() override;
 	void process(AudioBlock* in, AudioBlock* out, int32_t samples) override;
 	int32_t getDelay() override;

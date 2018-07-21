@@ -178,40 +178,6 @@ void internalplugin::makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks)
 void internalplugin::loadSnapshot(const plugin_snapshot_t& ps)  {
 	assert(ps.slot == this->slot);
 }
-void internalplugin::setSlot(int32_t i) {
-	slot = i;
-}
-int32_t internalplugin::getSlot() {
-	return slot;
-}
-void internalplugin::breakTrackLink() {
-	audio_stage_t* audioStage = this->trackImpl;
-	trackImpl = nullptr;
-	while (audioStage != nullptr) {
-		guictr_plugins* plugins = audioStage->pluginCtr;
-		if (plugins) {
-			my_printf("Update audiostage of %s which is %s\n", StringAsCStr(plugins->getClassName()),
-					plugins->isDefaultPluginCtr ? "default" : "group");
-			plugins->showTrack(audioStage);
-		}
-		audioStage = audioStage->parent;
-	}
-}
-audio_stage_t* internalplugin::getTrackLink() {
-	return trackImpl;
-}
-void internalplugin::setTrackLink(audio_stage_t* audioStage) {
-	trackImpl = audioStage;
-	while (audioStage != nullptr) {
-		guictr_plugins* plugins = audioStage->pluginCtr;
-		if (plugins) {
-			my_printf("Update audiostage of %s which is %s\n", StringAsCStr(plugins->getClassName()),
-					plugins->isDefaultPluginCtr ? "default" : "group");
-			plugins->showTrack(audioStage);
-		}
-		audioStage = audioStage->parent;
-	}
-}
 int32_t internalplugin::getNumParameters() const {
 	return params.size();
 }

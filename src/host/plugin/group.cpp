@@ -71,7 +71,6 @@ public:
 		ctr.determineSize();
 		size.x = HEIGHT_PLUGIN_TITLE+meterW;
 		size.x += ctr.size.x;
-
 	}
 	void layout() override {
 		int32_t inset1 = (HEIGHT_PLUGIN_TITLE - buttonBypass.size.y) / 2;
@@ -117,6 +116,7 @@ guimodule_group::guimodule_group(module_group* _vst)
 }
 void guimodule_group::onChildLayoutChanged(guibase* g) {
 //	ctr.showTrack(module->getAudioStage());
+	layout();
 	if (this->parent != NULL) {
 		this->parent->onChildLayoutChanged(this);
 	}
@@ -286,13 +286,15 @@ bool module_group::sleep() {
 	return !wasSleep;
 }
 void module_group::unload() {
+	delete this->audio;
+	this->audio = nullptr;
+}
+void module_group::onPreUnload() {
 	vsthost* host = vsthost::getInstance();
 	std::vector<effectbase*> effects = this->audio->effects; // make a copy before unloading plugins
 	for (effectbase* effect : effects) {
 		host->unloadPlugin(effect);
 	}
-	delete this->audio;
-	this->audio = nullptr;
 }
 void module_group::load(vsthost* host) {
 	this->audio = host->createAudioStage();

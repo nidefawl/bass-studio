@@ -40,8 +40,6 @@ public:
 	int uId = 0;
 	std::vector<internalplugin_param> params;
 	std::vector<automated_param_t> automatedParams;
-	int32_t slot = -1;
-	audio_stage_t* trackImpl = nullptr;
 	internalplugin(int32_t _pluginType, int32_t _projectGlobalId) : effectbase(_pluginType, _projectGlobalId) {
 	}
 	virtual ~internalplugin() {
@@ -61,11 +59,6 @@ public:
 
 	virtual void loadSnapshot(const plugin_snapshot_t& snapshot) override;
 	virtual void makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) override;
-	void setSlot(int32_t i) override;
-	int32_t getSlot() override;
-	virtual void breakTrackLink() override;
-	virtual void setTrackLink(audio_stage_t* trImpl) override;
-	audio_stage_t* getTrackLink() override;
 	bool show() override;
 	bool close() override;
 	bool hasParam(int32_t idx) override;
