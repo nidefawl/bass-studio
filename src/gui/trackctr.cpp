@@ -3,6 +3,7 @@
 #include "gui.h"
 #include "guicontainer.h"
 #include "exceptions.h"
+#include "track.h"
 #include "trackctr.h"
 #include "trackcontent.h"
 #include "trackcontrols.h"
@@ -196,6 +197,17 @@ void guictr_tracks::layout() {
 	}
 	MainCtrl::get()->updateGrid();
 }
+void horizontalLineAt(guictr_base* gui, NVGcontext* vg, ivec2 posHL) {
+	nvgLineCap(vg, NVGlineCap::NVG_ROUND);
+	nvgBeginPath(vg);
+	nvgMoveTo(vg, 4, posHL.y);
+	int32_t width = gui->getSizeContent().x;
+	nvgLineTo(vg, width - 4, posHL.y);
+	nvgStrokeColor(vg, G_MOVE_HIGHLIGHT);
+	nvgStrokeWidth(vg, 4.0);
+	nvgStroke(vg);
+	nvgLineCap(vg, NVGlineCap::NVG_BUTT);
+}
 void guictr_tracks::render(NVGcontext* vg) {
 		guictr_base::renderBackground(vg);
 		ivec2 cs = getSizeContent();
@@ -216,27 +228,36 @@ void guictr_tracks::render(NVGcontext* vg) {
 		nvgRestore(vg);
 
 		nvgSave(vg);
-			nvgTranslate(vg, 0, trackView.top());
-			int ySplit = getPosYFirstReturnTrack(project);
+		dragdrop_target_indicator& target = MainCtrl::get()->getDragDropTarget();
+		bool renderIndicator = target.ptr == this;
+		ivec2 indicatorPos = target.targetPos;
+		nvgTranslate(vg, 0, trackView.top());
+		int ySplit = getPosYFirstReturnTrack(project);
+		if (ySplit > 0) {
+			nvgSave(vg);
+			nvgIntersectScissor(vg, 0, 0, cs.x, ySplit);
+			for (track_t* g : project.trackCtr) {
+				drawSeperator(vg, g->mixer->bottom()+TRACK_HEIGHT_SPACING_HALF, cs);
+			}
+			nvgRestore(vg);
+		}
+		if (project.tracksBottom.size()) {
 			if (ySplit > 0) {
-				nvgSave(vg);
-				nvgIntersectScissor(vg, 0, 0, cs.x, ySplit);
-				for (track_t* g : project.trackCtr) {
-					drawSeperator(vg, g->mixer->bottom()+TRACK_HEIGHT_SPACING_HALF, cs);
-				}
-				nvgRestore(vg);
+				nvgIntersectScissor(vg, 0, ySplit, cs.x, trackView.size.y-ySplit);
+			} else {
+				nvgIntersectScissor(vg, 0, 0, cs.x, trackView.size.y);
 			}
-			if (project.tracksBottom.size()) {
-				if (ySplit > 0) {
-					nvgIntersectScissor(vg, 0, ySplit, cs.x, trackView.size.y-ySplit);
-				} else {
-					nvgIntersectScissor(vg, 0, 0, cs.x, trackView.size.y);
-				}
-				for (track_t* g : project.tracksBottom) {
-					drawSeperator(vg, g->mixer->top()-TRACK_HEIGHT_SPACING_HALF, cs);
-				}
+			for (track_t* g : project.tracksBottom) {
+				drawSeperator(vg, g->mixer->top()-TRACK_HEIGHT_SPACING_HALF, cs);
 			}
+		}
 		nvgRestore(vg);
+		if (renderIndicator) {
+			nvgSave(vg);
+			nvgTranslate(vg, 0, trackView.top());
+			horizontalLineAt(this, vg, indicatorPos);
+			nvgRestore(vg);
+		}
 
 		nvgBeginPath(vg);
 		nvgMoveTo(vg, trackControls.left(), trackControls.top());
@@ -352,6 +373,63 @@ void guitrack_editor::removeAutomationLane(gui_track_automationlane* al) {
 	for (auto subTr : atLanes) {
 		subTr->idx = idx++;
 	}
+}
+int slotFromCoord(project_t& project, track_t* track, ivec2 _pos, ivec2& _posDrop) {
+	tracksubcontainer_t* ctrPtr = project.trackTypeCtrs[track->type];
+	tracksubcontainer_t& ctr = *ctrPtr;
+	int slot = 0;
+	for (track_t* track : ctr) {
+		auto* gui = track->content;
+		if (_pos.y < gui->pos.y + gui->size.y / 2) {
+			_posDrop = {gui->pos.x, gui->top()};
+			return track->localIdx;
+		}
+		slot++;
+	}
+	if (slot >= 0) {
+		track_t* track = ctr.back();
+		auto* gui = track->content;
+		_posDrop = {gui->pos.x, gui->bottom()};
+		return track->localIdx+1;
+	}
+	return -1;
+}
+namespace {
+	void handleTrackEntryDragMove(guibase* parent, project_t& project, track_t* track, ivec2 mousepos) {
+		ivec2 posDrop;
+		int slot = slotFromCoord(project, track, mousepos, posDrop);
+		if (slot >= 0) {
+			MainCtrl::get()->getDragDropTarget().set(parent, slot);
+			MainCtrl::get()->getDragDropTarget().setPos(posDrop);
+		}
+	}
+	void handleTrackEntryDragRelease(project_t& project, track_t* track, ivec2 mousepos) {
+		ivec2 posDrop;
+		int targetslotRender = MainCtrl::get()->getDragDropTarget().idx;
+		int targetslotNow = slotFromCoord(project, track, mousepos, posDrop);
+		int targetslot = slotFromCoord(project, track, mousepos, posDrop);
+		if (targetslot >= 0 && targetslot != track->localIdx && targetslot != track->localIdx+1) {
+			if (targetslot > track->localIdx) targetslot--;
+			int distance = targetslot - track->localIdx;
+			int destSlot = std::max(0, track->localIdx + distance);
+			MainCtrl::get()->getDragDropTarget().reset();
+			MainCtrl::get()->trackList.moveTrack(track, destSlot);
+			MainCtrl::getGuiTrackCtr()->layout();
+			MainCtrl::get()->updateVisibleTrackContents();
+		}
+	}
+}
+void guitrack_editor::trackEntryDragMove(gui_track* g, ivec2 mousepos) {
+	handleTrackEntryDragMove(parent, project, g->getTrack(), mousepos);
+}
+void guitrack_mixers::trackEntryDragMove(gui_track* g, ivec2 mousepos) {
+	handleTrackEntryDragMove(parent, project, g->getTrack(), mousepos);
+}
+void guitrack_editor::trackEntryDragRelease(gui_track* g, ivec2 mousepos) {
+	handleTrackEntryDragRelease(project, g->getTrack(), mousepos);
+}
+void guitrack_mixers::trackEntryDragRelease(gui_track* g, ivec2 mousepos) {
+	handleTrackEntryDragRelease(project, g->getTrack(), mousepos);
 }
 void guitrack_editor::addTrack(track_t* t) {
 	if (t->content)

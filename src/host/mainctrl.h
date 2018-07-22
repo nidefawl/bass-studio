@@ -81,6 +81,7 @@ struct dragdrop_midifile {
 struct dragdrop_target_indicator {
 	int idx = -1;
 	void* ptr = nullptr;
+	ivec2 targetPos;
 	void reset() {
 		idx = -1;
 		ptr = nullptr;
@@ -88,6 +89,9 @@ struct dragdrop_target_indicator {
 	void set(void* _ptr, int _idx) {
 		idx = _idx;
 		ptr = _ptr;
+	}
+	void setPos(ivec2 _targetPos) {
+		targetPos = _targetPos;
 	}
 };
 KeyEvent keyEvent(int key, int scancode, int keyState, int mods, const char* key_name);

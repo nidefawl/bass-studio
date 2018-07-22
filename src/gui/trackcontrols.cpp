@@ -1,5 +1,9 @@
 #include "trackcontrols.h"
+#include <glm/glm.hpp>
 #include <glm/geometric.hpp>
+#include <glm/vec2.hpp>
+using glm::vec2;
+using glm::ivec2;
 
 #include "gui.h"
 #include "track.h"
@@ -8,6 +12,7 @@
 #include "button.h"
 #include "event.h"
 #include "../host/plugin/vst_plugin.h"
+#include "renderresources.h"
 #include "trackautomation.h"
 #include "trackcontent.h"
 #include "dropdown.h"
@@ -476,25 +481,34 @@ public:
 					return true;
 				}
 			}
+			evt.requestFocus(this);
+			return true;
 		}
 		return false;
 	}
-	void handleDraggedBegin(MouseEvent& evt) {
+	void handleDraggedBegin(MouseEvent& evt) override {
 		MainCtrl::get()->setSelectedTrack(m_track);
 		if (isResize(evt.relMousepos+this->pos)) {
 			dragMode = DRAG_RESIZE;
 		}
 	}
 
-	void handleDraggedMove(MouseEvent& evt) {
+	void handleDraggedMove(MouseEvent& evt) override {
 		if (dragMode == DRAG_RESIZE) {
 			int32_t mouseDragDist = evt.relMousepos.y;
 			resize<track_t, TRACK_MIN_HEIGHT, TRACK_MAX_HEIGHT>(m_track, m_track, mouseDragDist);
 			this->parent->onChildLayoutChanged(this);
+		} else {
+			AppCtrl::get()->objectDragMove(this, evt);
 		}
 	}
 
-	void handleDraggedRelease(MouseEvent& evt) {
+	void handleDraggedRelease(MouseEvent& evt) override {
+		if (dragMode == DRAG_RESIZE) {
+
+		} else {
+			AppCtrl::get()->objectDragRelease(this, evt);
+		}
 		dragMode = -1;
 	}
 	void buttonClicked(guibase* button) override {
@@ -555,6 +569,12 @@ public:
 		for (auto g : guis) {
 			g->render(vg);
 		}
+	}
+	void dragMoveOn(guibase* target, ivec2 mousepos) override {
+		target->trackEntryDragMove(this->m_track->content, mousepos);
+	}
+	void dragReleaseOn(guibase* target, ivec2 mousepos) override {
+		target->trackEntryDragRelease(this->m_track->content, mousepos);
 	}
 };
 

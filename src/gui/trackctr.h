@@ -68,6 +68,10 @@ public:
 	}
 	bool mouseHitTest(ivec2 v, MouseHitEvt& evt) override {
 		if (this->contains(v)) {
+			if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
+				evt.requestFocus(this);
+				return true;
+			}
 			if (evt.type == MOUSE_DRAGDROP_CLIP) {
 				evt.requestFocus(this);
 				return true;
@@ -138,6 +142,8 @@ public:
 	void removeAllAutomationLanes(track_t* t, automatable_t* at, int32_t paramIdx);
 	void removeAllAutomationLanes(track_t* t, automatable_t* at);
 	void removeAllAutomationLanes(track_t* t);
+	virtual void trackEntryDragMove(gui_track* g, ivec2 mousepos);
+	virtual void trackEntryDragRelease(gui_track* g, ivec2 mousepos);
 	void addTrack(track_t* t);
 	void removeTrack(track_t* t);
 	void updateVisibleTrackContents();
@@ -157,6 +163,10 @@ public:
 	}
 	bool mouseHitTest(ivec2 v, MouseHitEvt& evt) override {
 		if (this->contains(v)) {
+			if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
+				evt.requestFocus(this);
+				return true;
+			}
 			ivec2 localMouse = this->toContainerSpace(v);
 			for (guibase* gui : guis) {
 				if (gui->mouseHitTest(localMouse, evt)) {
@@ -179,6 +189,8 @@ public:
 	void handleRightClick(MouseEvent& evt);
 	void render(NVGcontext* vg);
 	void addTrack(track_t* t);
+	virtual void trackEntryDragMove(gui_track* g, ivec2 mousepos);
+	virtual void trackEntryDragRelease(gui_track* g, ivec2 mousepos);
 //	void addAutomationLane(track_t* t, gui_track_automationlane* al);
 //	void removeAutomationLane(gui_track_automationlane* al);
 //	void removeAllAutomationLanes(track_t* t, automatable_t* at, int32_t paramIdx);

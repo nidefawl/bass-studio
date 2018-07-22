@@ -39,6 +39,7 @@ public:
 	virtual guiplugin* makeGui() = 0;
 	virtual guiplugin* getGui() = 0;
 	virtual void process(AudioBlock* in, AudioBlock* out, int32_t samples) = 0;
+	virtual void postProcess(AudioBlock* out, int32_t samples, bool hasProcessed);
 	virtual bool show() = 0;
 	virtual bool close() = 0;
 	virtual bool resume() = 0;

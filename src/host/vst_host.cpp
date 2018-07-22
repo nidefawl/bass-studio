@@ -354,6 +354,7 @@ AudioBuffer* allocateBuffer() {
 }
 vsthost::~vsthost() {
 	delete moduleMgr;
+	delete blockZero;
 }
 vsthost::vsthost(uint32_t _sampleRate, uint16_t _blockSize)
 	: moduleMgr{new vsthost::ModuleManager{}},
@@ -366,6 +367,12 @@ vsthost::vsthost(uint32_t _sampleRate, uint16_t _blockSize)
 		ringbuffer.buffers[i] = allocateBuffer();
 	}
 	updateTime(0, 0, playback_state::status_stop);
+	setBlockSize(_blockSize);
+}
+void vsthost::setBlockSize(uint16_t _blockSize) {
+	if (blockZero)
+		delete blockZero;
+	blockZero = new AudioBlock(numChannels, _blockSize);
 }
 //\note VstTimeInfo::samplesToNextClock :
 //MIDI Clock Resolution (24 per Quarter Note), can be negative the distance to the next midi clock
@@ -652,6 +659,7 @@ void mulGain(AudioBlock* block, float gain) {
 		}
 	}
 }
+
 void vsthost::processAudio(audio_stage_t* channel, AudioBlock* input, AudioBlock* output, unsigned long samples) {
 	int count = 0;
 	if (channel->effects.size()) {
@@ -663,27 +671,25 @@ void vsthost::processAudio(audio_stage_t* channel, AudioBlock* input, AudioBlock
 	{
 		effectbase *current = NULL;
 		current = channel->effects[i];
-		if (!current->bIsSetup) {
-			continue;
-		}
-		if (!current->bIsEnabled) {
-			continue;
-		}
-		AudioBlock* blockIn = current->blockInputs;
-		AudioBlock* blockOut = current->blockOutputs;
-		blockIn->realloc(lBlockSize);
-		blockOut->realloc(lBlockSize);
+		if (current->bIsSetup && current->bIsEnabled) {
+			AudioBlock* blockIn = current->blockInputs;
+			AudioBlock* blockOut = current->blockOutputs;
+			blockIn->realloc(lBlockSize);
+			blockOut->realloc(lBlockSize);
 
-		//TODO: maybe fill silence here, we never know how plugins can screw up
-		//TODO: blockIn/blockOut will always have 2 channels at least
-		//   If a plugin runs mono inputs or outputs we need to handle this manually here
-		blockIn->copyFrom(input);
+			//TODO: maybe fill silence here, we never know how plugins can screw up
+			//TODO: blockIn/blockOut will always have 2 channels at least
+			//   If a plugin runs mono inputs or outputs we need to handle this manually here
+			blockIn->copyFrom(input);
 
-//		handles_t* handle = current->handle;
-		current->process(blockIn, blockOut, samples);
-		//TODO: maybe sanitize plugins output floats here (NaN/Inf/ >50 dBFS)
-		input = blockOut;
-		current->meter.update(blockOut);
+	//		handles_t* handle = current->handle;
+			current->process(blockIn, blockOut, samples);
+			//TODO: maybe sanitize plugins output floats here (NaN/Inf/ >50 dBFS)
+			input = blockOut;
+			current->postProcess(blockOut, samples, true);
+		} else {
+			current->postProcess(blockZero, samples, false);
+		}
 	}
 	//   If a plugin runs mono inputs or outputs we need to handle this manually here
 	output->copyFrom(input);
@@ -852,6 +858,7 @@ bool vsthost::startAudio() {
 	if (err != paNoError)
 		return error("Pa_StartStream", err);
 	this->stream = paStream;
+	this->blockZero->realloc(lBlockSize);
 	return true;
 }
 vstplugin* vsthost::getPlugin(AEffect* aeffect) {

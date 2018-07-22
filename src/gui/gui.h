@@ -28,6 +28,7 @@ class guitrack_editor;
 class guiplugin;
 class guictr_base;
 class gui_pluginlist_entry;
+class gui_track;
 struct dragdrop_midifile;
 
 extern int allocCount;
@@ -135,6 +136,8 @@ public:
 	virtual void render(NVGcontext* vg) {
 
 	}
+	virtual void determineSize() {
+	}
 	virtual void prerender(NVGcontext* vg) {
 	}
 	virtual void renderDragged(NVGcontext* vg, ivec2 mousepos) {
@@ -201,6 +204,10 @@ public:
 	virtual void pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 mousepos) {
 	}
 	virtual void pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mousepos) {
+	}
+	virtual void trackEntryDragMove(gui_track* g, ivec2 mousepos) {
+	}
+	virtual void trackEntryDragRelease(gui_track* g, ivec2 mousepos) {
 	}
 	virtual void dragBeginOn(guibase* target, ivec2 mousepos) {
 	}

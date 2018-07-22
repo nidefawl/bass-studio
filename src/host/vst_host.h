@@ -108,6 +108,7 @@ private:
 
 	std::atomic<PaStream*> stream{NULL};
 	audiothread_ringbuffer_t ringbuffer;
+	AudioBlock* blockZero = nullptr;
 public:
 	moodycamel::ReaderWriterQueue<AudioBuffer*> audioQueue;
 public:
@@ -127,7 +128,7 @@ public:
 	int32_t processPlayback(int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround);
 	void processAudio(audio_stage_t* channel, AudioBlock* input, AudioBlock* output, unsigned long samples);
 	void sendNotesOff(vstplugin* plugin);
-
+	void setBlockSize(uint16_t blockSize);
 	VstTimeInfo* getTimeInfo() {
 		return &this->timeinfo;
 	}

@@ -64,10 +64,17 @@ public:
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
 	void onChildLayoutChanged(guibase* g) override;
 	void determineSize() override {
-		ctr.placeholder.size.x = std::max(100, size.y*3/5);
 		auto* audio = module->getAudioStage();
 		assert(audio);
+
+		ctr.size = ivec2(size.y, size.y);
+		ctr.layout();
 		my_printf("determineSize ctr.children.size() %d\n", ctr.guis.size());
+		int len = (int)ctr.guis.size();
+		for (int i = 0; i < len; i++) {
+			guibase* g = ctr.guis[i];
+			my_printf("%s guis[%d] %d %d %d %d\n", StringAsCStr(ctr.getClassName()), i, g->pos.x, g->pos.y, g->size.x, g->size.y);
+		}
 		ctr.determineSize();
 		size.x = HEIGHT_PLUGIN_TITLE+meterW;
 		size.x += ctr.size.x;
@@ -88,10 +95,10 @@ public:
 	}
 	void layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) override {
 		ctr.pos = pos;
-		ctr.size = contentS;
-		assert(ctr.parent == this);
-		ctr.layout();
-		ctr.placeholder.size.x = std::max(100, size.y*3/5);
+//		ctr.size = contentS;
+//		assert(ctr.parent == this);
+//		ctr.placeholder.size.x = std::max(100, size.y*3/5);
+		titlePosX = 0;
 	}
 	void removeGuis() override {
 		removeUNCHECKED(&ctr);
@@ -141,10 +148,13 @@ void guimodule_group::renderBase(NVGcontext* vg) {
 	nvgFillColor(vg, c);
 	nvgFill(vg);
 	if (this->text[0]) {
-		setFont(vg, (int)(HEIGHT_PLUGIN_TITLE*0.8), G_WHITE, G_TITLE_ALIGN);
+		setFont(vg, (int)(HEIGHT_PLUGIN_TITLE*0.8), G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
 		nvgSave(vg);
-		nvgRotate(vg, -90);
-		nvgText(vg, titlePosX+INSET_TITLE, HEIGHT_PLUGIN_TITLE / 2, StringAsCStr(this->text), NULL);
+		nvgTranslate(vg, titlePosX+HEIGHT_PLUGIN_TITLE/2, size.y);
+		nvgRotate(vg, -M_PI/2.0);
+//		nvgTranslate(vg, -HEIGHT_PLUGIN_TITLE, 0);
+//		nvgText(vg, 0, 0, StringAsCStr(this->text), NULL);
+		nvgText(vg, INSET_TITLE*2, 0, StringAsCStr(this->text), NULL);
 		nvgRestore(vg);
 	}
 	nvgBeginPath(vg);
@@ -208,9 +218,9 @@ void guimodule_group::buttonClicked(guibase* _button) {
 	if (_button == &buttonBypass) {
     	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 		if (module->bIsEnabled) {
-//			module->sleep();
+			module->sleep();
 		} else {
-//			module->resume();
+			module->resume();
 		}
 		if (module->isSynth) {
 //			vsthost::getInstance()->sendNotesOff(module);
@@ -329,6 +339,14 @@ String module_group::getInfo(std::vector<String>& list) {
 void module_group::onTick(double since) {
 	meter.onTick(since);
 	audio->onTick(since);
+}
+void module_group::postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) {
+	meter.update(out);
+	if (!hasProcessed) {
+		for (effectbase* effect : audio->effects) {
+			effect->postProcess(out, samples, hasProcessed);
+		}
+	}
 }
 using namespace cereal;
 

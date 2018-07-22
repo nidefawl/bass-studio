@@ -86,6 +86,9 @@ public:
 		setFont(vg, 18, G_WHITE, NVG_ALIGN_CENTER|NVG_ALIGN_MIDDLE);
 		nvgText(vg, pos.x + size.x/2.0f, pos.y + size.y/2.0f, StringAsCStr(message), NULL);
 	}
+	void determineSize() override {
+		size.x = std::max(100, size.y*3/5);
+	}
 };
 class guictr_plugins : public guictr_base {
 public:
@@ -173,9 +176,7 @@ public:
 		for (guibase* gui : guis) {
 			gui->pos = gPos;
 			gui->size = ivec2(guiH);
-			if (gui->guiType == GUI_PLUGIN) {
-				static_cast<guiplugin*>(gui)->determineSize();
-			}
+			gui->determineSize();
 			gui->pos.y = inset;
 			gPos.x += gui->size.x + margin*2;
 			gui->layout();

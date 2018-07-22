@@ -11,6 +11,8 @@
 #include "vst_host.h"
 
 #include "leak_detect.h"
+#include "mainctrl.h"
+#include "../threads/playbackthread.h"
 
 trackbasecontainer_t::~trackbasecontainer_t() {
 	for (auto it = tracks.begin(); it != tracks.end(); it++) {
@@ -68,6 +70,41 @@ void trackallcontainer_t::removeTrack(track_t* track) {
 	addAll(tracksBottom.tracks, trackMasterCtr.tracks);
 }
 
+void trackallcontainer_t::moveTrack(track_t* track, int32_t dst) {
+	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+	tracksubcontainer_t* subCtr = trackTypeCtrs[track->type];
+	int32_t src = indexOfCtr(subCtr->tracks, track);
+	if (subCtr->tracks.size() == dst) dst--;
+	assert(src >= 0 && dst >= 0);
+	assert(src != dst);
+
+	track_vector curOrder = subCtr->tracks;
+	track_vector newOrder;
+	newOrder.resize(curOrder.size());
+	auto itIn = curOrder.cbegin();
+	auto itOut = newOrder.begin();
+	for (;itOut!=newOrder.cend();) {
+		if (curOrder.cbegin()+src == itIn) {
+			itIn++;
+		} else if (newOrder.cbegin()+dst == itOut) {
+			*itOut++ = curOrder[src];
+		} else {
+			*itOut++ = *itIn++;
+		}
+	}
+	subCtr->tracks = (newOrder);
+	int32_t locIdx = 0;
+	for (track_t* t : subCtr->tracks) {
+		t->localIdx = locIdx++;
+	}
+	int32_t idx = 0;
+	for (track_t* t : tracks) {
+		t->idx = idx++;
+	}
+	tracksBottom.tracks.clear();
+	addAll(tracksBottom.tracks, trackReturnCtr.tracks);
+	addAll(tracksBottom.tracks, trackMasterCtr.tracks);
+}
 void trackallcontainer_t::copyTo(project_snapshot_t& project) {
 	for (track_t* t : *this) {
 		my_printf("TRACK[%d] = %s\n", t->idx, StringAsCStr(t->name));

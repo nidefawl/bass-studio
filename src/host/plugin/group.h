@@ -37,5 +37,6 @@ public:
 	void onTick(double since) override;
 	void makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) override;
 	void loadSnapshot(const plugin_snapshot_t& snapshot) override;
+	virtual void postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) override;
 };
 

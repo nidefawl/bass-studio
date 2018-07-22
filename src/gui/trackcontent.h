@@ -9,6 +9,7 @@
 #include "clip.h"
 #include "grid.h"
 #include "guicontainer.h"
+#include "automatable.h"
 #include "trackautomation.h"
 #include "audiowaveform.h"
 #include "leak_detect.h"
@@ -340,6 +341,9 @@ public:
 	void destroyGuis() override {
 		automation.destroyGuis();
 		guictr_base::destroyGuis();
+	}
+	track_t* getTrack() {
+		return this->m_track;
 	}
 };
 

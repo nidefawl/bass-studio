@@ -667,6 +667,7 @@ bool MainCtrl::setLoadedProject(shared_ptr<project_file> file) {
 	view->ctr_tracks.layout();
 	grid.setLayout(file->layout.layoutGrid);
 	view->ctr_tracks.setScrollOffset(file->layout.scrollOffsetX);
+	view->ctr_plugins.layout();
 	updateVisibleTrackContents();
 	if (cursor.isSubtrackSelection() && trackList.validTrackIdx(cursor.cursorTrack)) {
 		track_t* tr = trackList[cursor.cursorTrack];
@@ -1154,6 +1155,7 @@ void MainCtrl::removeTrackImpl(track_t* track) {
 	if (clipView.gui && clipView.gui->m_track == track){
 		clipView.set(NULL);
 	}
+//	trackList.moveTrack(track);
 	trackList.removeTrack(track);
 	view->ctr_tracks.removeSingleTrack(track);
 }

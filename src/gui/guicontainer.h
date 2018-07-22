@@ -53,7 +53,7 @@ public:
 	}
 	virtual void onAdded() override {
 	}
-	virtual void determineSize() {
+	virtual void determineSize() override {
 	}
 	virtual ivec2 paddingTL(int _padding) {
 		return ivec2(_padding - margin*snapSides.x, _padding - margin*snapSides.y);

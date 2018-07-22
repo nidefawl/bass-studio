@@ -7,6 +7,7 @@
 
 class gui_trackcontrols_automation;
 class gui_trackcontrols_title;
+
 class gui_track_controls: public guictr_base {
 public:
 	track_t* const m_track;

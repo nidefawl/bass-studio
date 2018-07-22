@@ -34,8 +34,6 @@ public:
 	virtual void buttonClicked(guibase* _button) = 0;
 	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) = 0;
 	virtual void layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) = 0;
-	virtual void determineSize() override {
-	}
 
 	effectbase* getModule() {
 		return effect;

@@ -1,8 +1,12 @@
 #pragma once
+#include <algorithm>
 #include <nanovg.h>
 #include "gui.h"
 #include "guicontainer.h"
 #include "scrollbar.h"
+
+using std::max;
+using std::min;
 
 class gui_list_entry : public guibase {
 protected:

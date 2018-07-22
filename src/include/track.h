@@ -352,7 +352,7 @@ class trackallcontainer_t : public trackbasecontainer_t {
 	tracksubcontainer_t trackReturnCtr;
 	tracksubcontainer_t trackMasterCtr;
 	trackbasecontainer_t tracksBottom;
-	tracksubcontainer_t* const trackTypeCtrs[3] = {&trackMasterCtr, &trackReturnCtr, &trackCtr};
+	tracksubcontainer_t* const trackTypeCtrs[4] = {&trackMasterCtr, &trackReturnCtr, &trackCtr, &trackCtr};
 public:
 	trackallcontainer_t(trackbasecontainer_t *a = NULL) :
 		trackbasecontainer_t()
@@ -372,6 +372,7 @@ public:
 
 	void addTrack(int trackInsertPos, track_t* newTrack);
 	void removeTrack(track_t* track);
+	void moveTrack(track_t* track, int32_t newIdx);
 	void copyTo(project_snapshot_t& out);
 	void copyFrom(project_snapshot_t& in);
 	void copyTracks(int32_t trackBegin, int32_t trackLen, trackstate_t& _out);
