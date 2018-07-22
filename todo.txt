@@ -6,19 +6,27 @@ Implement recent file list
 Compressed binary file format
 latency compensated automation 
 stress-test synchronization
+multiselection of tracks and plugins
+duplicate plugin/plugin groups
+duplicate loop button in midi clip
+preset database
+optimize waveform rendering
+implement basic arpeggiator
 
 later:
 seperate internal samplerate / external (audiointerface) samplerate
-toggle option for current tracks effect chain
-list of all thirdparty+internal plugin instances 
+per track samplerate / blocksize ?
+add a toggle button for current tracks complete effect chain
+add a view of a list of all thirdparty+internal plugin instances 
 group tracks
-plugin groups
 audio settings dialog
 audio track routing options
 midi export
 freeze track
 
 Done:
+reordering tracks 
+plugin groups
 vu-meters on plugins
-Fold button in piano roll
+Fold piano roll
 Catch key presses from plugin windows
