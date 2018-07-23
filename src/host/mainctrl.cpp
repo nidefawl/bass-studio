@@ -305,6 +305,8 @@ void MainCtrl::destroy()
 	if (!isOK) {
 		return;
 	}
+	setAudioThreadState(playback_state::status_no_process);
+	assert(playThread.getState() == playback_state::status_no_process); // should have been set by window close request
 	vsthost::getInstance()->stopAudio();
 	unloadProject();
 	vsthost::getInstance()->unload();
@@ -343,7 +345,6 @@ void MainCtrl::updateMenubar() {
 	}
 }
 void MainCtrl::onWindowCloseRequest() {
-	setAudioThreadState(playback_state::status_no_process);
 }
 void MainCtrl::onMenuOpen(ngui::Menu* menu) {
 	updateMenubar();
@@ -436,7 +437,7 @@ void MainCtrl::menuCommand(int cmd) {
 }
 void MainCtrl::postInit() {
 	vsthost::getInstance()->postInit();
-//	loadFile("empty.project");
+	loadFile("arptest.project");
 //	for (int i = 0; i < 32; i++) {
 //		loadFile("muuure.project");
 //	}

@@ -9,6 +9,7 @@ class gui_clip;
 struct note_t {
 public:
 	int32_t pitch = 0;
+	int32_t velocity = 127;
 	tick_t time = 0;
 	tick_t len = 0;
 	bool enabled = true;
@@ -35,6 +36,17 @@ public:
 	}
 	bool isIntersectPitch(int32_t pitchL, int32_t pitchH) const {
 		return this->pitch >= pitchL && this->pitch <= pitchH;
+	}
+};
+
+struct noteevent_t {
+	int32_t pitch = 0;
+	int32_t velocity = 127;
+	tick_t tickOffsetInBlock;
+	bool isNoteOn;
+	bool isLoopNoteOff;
+	noteevent_t(int32_t p, int32_t v, tick_t t, bool b, bool b2) : pitch(p), velocity(v), tickOffsetInBlock(t), isNoteOn(b), isLoopNoteOff(b2) {
+
 	}
 };
 
@@ -102,3 +114,5 @@ inline void offsetEndTime(std::vector<note_t>& notesPtrs, tick_t offset, tick_t 
 	}
 }
 int cutIntersecting(std::vector<note_t>& m_list, note_t& n, bool eliminateDupes);
+
+void sortNoteEvents(std::vector<noteevent_t>& noteEvents);

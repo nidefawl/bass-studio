@@ -47,32 +47,12 @@ void guiplugin::dragReleaseOn(guibase* target, ivec2 mousepos) {
 }
 
 void guiplugin::renderBase(NVGcontext* vg) {
-	if (!setScissorTransform(vg)) {
+	if (!setScissorTransformContainer(vg)) {
 		return;
 	}
-	nvgBeginPath(vg);
-	nvgRoundedRect(vg, 0, 0, size.x, size.y, G_RND);
-	NVGcolor c;
-	if (MainCtrl::get()->isCtrOrChildFocused(this)) {
-		c = g_guiColors[COL_BG_DRK_FOCUSED];
-	} else {
-		c = g_guiColors[COL_BG_BRT];
-	}
-	nvgFillColor(vg, GUI_COLOR(G_S2));
-	nvgFill(vg);
-	nvgBeginPath(vg);
-	nvgRoundedRectVarying(vg, 0, 0, size.x, HEIGHT_PLUGIN_TITLE, G_RND, G_RND, 0, 0);
-	nvgFillColor(vg, c);
-	nvgFill(vg);
-	if (this->text[0]) {
-		setFont(vg, (int)(HEIGHT_PLUGIN_TITLE*0.8), G_WHITE, G_TITLE_ALIGN);
-		nvgText(vg, titlePosX+INSET_TITLE, HEIGHT_PLUGIN_TITLE / 2, StringAsCStr(this->text), NULL);
-	}
-	nvgBeginPath(vg);
-	nvgRoundedRect(vg, 0, 0, size.x, size.y, G_RND);
-	nvgStrokeColor(vg, GUI_COLOR(G_S1));
-	nvgStrokeWidth(vg, G_STROKE);
-	nvgStroke(vg);
+	renderFrameBase(vg);
+	renderTitleBarHorizontal(vg, this->text, titlePosX);
+	renderFrameOutline(vg);
 }
 
 class guictxtmenu_vstparam : public guictxtmenu_base {

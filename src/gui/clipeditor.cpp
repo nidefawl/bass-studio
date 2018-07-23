@@ -3,6 +3,8 @@
 #include <glm/vec2.hpp>
 #include "clipeditor.h"
 
+#include "gui.h"
+#include "guicolors.h"
 #include "track.h"
 #include "track_impl.h"
 #include "note.h"
@@ -335,7 +337,7 @@ void gui_clipcontent::render(NVGcontext* vg) {
 	if (track && track->audio) {
 		clip_t* clip = guiClip->m_clip;
 		std::vector<note_t>& heldNotes = track->audio->heldNotes;
-		if (heldNotes.size()) {
+		if (heldNotes.size()&&false) {
 			nvgBeginPath(vg);
 
 			for (note_t& note : heldNotes) {
@@ -354,6 +356,45 @@ void gui_clipcontent::render(NVGcontext* vg) {
 			nvgStrokeColor(vg, g_guiColors[COL_NOTE_OUTLINE]);
 			nvgStroke(vg);
 		}
+		std::vector<note_t>& heldNotesArp = track->audio->getArpHeldNotes();
+		if (heldNotesArp.size()) {
+			nvgBeginPath(vg);
+
+			for (note_t& note : heldNotesArp) {
+				tick_t pos = note.start() - clip->start() + clip->offsetStart;
+				if (clip->loopEnabled) {
+					if (pos > clip->loopStart) {
+						pos = clip->loopStart + (pos - clip->loopStart) % clip->loopLen;
+					}
+				}
+				//TODO: CULL
+				renderNote(vg, this, &note, scale, -note.start() + pos);
+			}
+			nvgFillColor(vg, g_guiColors[COL_NOTE_ARP]);
+			nvgFill(vg);
+			nvgStrokeWidth(vg, 1.0f);
+			nvgStrokeColor(vg, g_guiColors[COL_NOTE_OUTLINE]);
+			nvgStroke(vg);
+		}
+//		std::vector<note_t>& heldNotesArpIn = track->audio->getArpInputNotes();
+//		if (heldNotesArpIn.size()) {
+//			nvgBeginPath(vg);
+//			for (note_t& note : heldNotesArpIn) {
+//				tick_t pos = note.start() - clip->start() + clip->offsetStart;
+//				if (clip->loopEnabled) {
+//					if (pos > clip->loopStart) {
+//						pos = clip->loopStart + (pos - clip->loopStart) % clip->loopLen;
+//					}
+//				}
+//				//TODO: CULL
+//				renderNote(vg, this, &note, scale, -note.start() + pos);
+//			}
+//			nvgFillColor(vg, g_guiColors[COL_NOTE_ARP]);
+//			nvgFill(vg);
+//			nvgStrokeWidth(vg, 1.0f);
+//			nvgStrokeColor(vg, g_guiColors[COL_NOTE_OUTLINE]);
+//			nvgStroke(vg);
+//		}
 
 	}
 
@@ -1157,10 +1198,18 @@ void guictr_noteeditor::render(NVGcontext* vg) {
 }
 
 void gui_clipsettings::render(NVGcontext* vg)  {
-	renderBackground(vg);
-	if (!setScissorTransform(vg)) {
+	if (!setScissorTransformContainer(vg)) {
 		return;
 	}
+	renderFrameBase(vg);
+	String text = "Clip properties";
+
+	clip_t* clip = view.clip();
+	if (clip) {
+		text = clip->name;
+	}
+	renderTitleBarHorizontal(vg, text, 0);
+	renderFrameOutline(vg);
 	for (guibase* gui : guis) {
 		nvgSave(vg);
 		gui->render(vg);
@@ -1189,7 +1238,7 @@ void gui_clipsettings::layout() {
 	int32_t labelWidth = w-btnW;
 	int32_t btnX = labelWidth;
 	btnLoop.size = ivec2(btnW, btnH);
-	btnLoop.pos = ivec2(btnX, inset);
+	btnLoop.pos = ivec2(btnX, inset+HEIGHT_PLUGIN_TITLE);
 	clipLoopStart.size = ivec2(btnW, btnH);
 	clipLoopStart.pos = ivec2(btnLoop.left(), btnLoop.bottom()+inset);
 	clipLoopLen.size = ivec2(btnW, btnH);

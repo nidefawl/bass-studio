@@ -12,6 +12,7 @@ NVGcolor getContrastFontColor(uint32_t i);
 NVGcolor getContrastFontColorNvg(NVGcolor i);
 NVGcolor rgbToNvg(uint32_t i);
 NVGcolor rgbaToNvg(uint32_t i);
+NVGcolor rgbfToNvg(uint32_t i, float f);
 uint32_t nvgToRGB(NVGcolor i);
 uint32_t getContrastFontColoru32(uint32_t color);
 NVGcolor nvgToHSL(NVGcolor rgb);

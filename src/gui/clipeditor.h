@@ -19,6 +19,7 @@
 #include "edithistory.h"
 #include "leak_detect.h"
 #include "../host/mainctrl.h"
+#include "guiarp.h"
 #include <glm/glm.hpp>
 #include <glm/vec2.hpp>
 using glm::vec2;
@@ -217,7 +218,7 @@ public:
 		view(_view), clipLoopStart(nullptr), clipLoopLen(nullptr, false), clipTimeStart(nullptr), clipTimeLen(nullptr, false),
 		clipTimeStartOffsetTicks(nullptr), clipTimeStartOffsedSamples(nullptr), clipAudioId(nullptr)
 	{
-		padding = 2;
+		padding = 2; margin = 0;
 		btnLoop.drawFn = drawTextureSymbol;
 		btnLoop.drawParm = ICON_LOOP;
 		btnLoop.setActiveRef(nullptr);
@@ -896,18 +897,22 @@ class guictr_clipeditor : public guictr_base {
 	clip_view& view;
 public:
 	gui_clipsettings settings;
+	gui_arp arp;
 	guictr_noteeditor& noteeditor;
 	guictr_clipeditor(guictr_noteeditor& _noteeditor, clip_view& _view)
 	: guictr_base(),
 	  view(_view),
 	  settings(_noteeditor.grid, _view),
+	  arp(_view),
 	  noteeditor(_noteeditor)
 	{
 		add(&noteeditor);
+		add(&arp);
 		add(&settings);
 	}
 	~guictr_clipeditor() {
 		remove(&settings);
+		remove(&arp);
 		remove(&noteeditor);
 	}
 	void storeLayout() {
@@ -916,6 +921,7 @@ public:
 	void showEditClip() {
 		settings.showEditClip();
 		noteeditor.showEditClip();
+		arp.showEditClip();
 	}
 	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
 		if (!view.clip()) return false;
@@ -932,6 +938,9 @@ public:
 			nvgSave(vg);
 			settings.render(vg);
 			nvgRestore(vg);
+			nvgSave(vg);
+			arp.render(vg);
+			nvgRestore(vg);
 			noteeditor.render(vg);
 		} else {
 			setFont(vg, 18, G_WHITE, NVG_ALIGN_CENTER|NVG_ALIGN_MIDDLE);
@@ -941,6 +950,8 @@ public:
 			if (gui == &noteeditor)
 				continue;
 			if (gui == &settings)
+				continue;
+			if (gui == &arp)
 				continue;
 			gui->render(vg);
 		}
@@ -955,8 +966,11 @@ public:
 		ivec2 cs = getSizeContent();
 		settings.pos = ivec2(0, 0);
 		settings.size = ivec2(250, cs.y);
-		noteeditor.pos = ivec2(settings.right(), 0);
-		noteeditor.size = ivec2(cs.x-settings.right(), cs.y);
+		arp.pos = ivec2(settings.right()+margin, 0);
+		arp.size = ivec2(250, cs.y);
+		noteeditor.pos = ivec2(arp.right()+margin, 0);
+		noteeditor.size = ivec2(cs.x-arp.right(), cs.y);
+//		arp.size = ivec2(210, cs.y);
 		for (guibase* gui : guis) {
 			gui->layout();
 		}

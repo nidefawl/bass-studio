@@ -169,19 +169,17 @@ struct audio_stage_t {
 	void addAudioStage(audio_stage_t* stage);
 	void removeAudioStage(audio_stage_t* stage);
 };
+class midiarp;
 struct track_impl_t : public audio_stage_t {
+	midiarp* arp = nullptr;
 	track_t* track;
 	std::vector<note_t> heldNotes;
-	VstEvent_t* midiEventsBuf = NULL;
-	automatable_t* selectedAutomationCtr = NULL;
+	VstEvent_t* midiEventsBuf = nullptr;
+	automatable_t* selectedAutomationCtr = nullptr;
 	int32_t selectedAutomationParam = -1;
 	std::vector<automationlane_snapshot_t> atl;
 	bool atlStored = false;
-	track_impl_t(track_t* _track, const samplerate_t& _sampleRate, const uint16_t& _blockSize, int32_t nChannels)
-	: audio_stage_t(/*_track, */_sampleRate, _blockSize, nChannels, 0)
-	  , track(_track)
-	{
-	}
+	track_impl_t(track_t* _track, const samplerate_t& _sampleRate, const uint16_t& _blockSize, int32_t nChannels);
 	~track_impl_t();
 	effectbase* getPluginById(int32_t projectGlobalId);
 	void sendNotesOff(int32_t bpm100, int32_t blockSamplePos);
@@ -193,4 +191,6 @@ struct track_impl_t : public audio_stage_t {
 	void saveAutomationLanes(std::vector<automationlane_snapshot_t>& atl);
 	void showAutomationLanes();
 	void removePlugin(effectbase* _vst, bool notifyUp) override;
+	std::vector<note_t>& getArpHeldNotes();
+	std::vector<note_t>& getArpInputNotes();
 };

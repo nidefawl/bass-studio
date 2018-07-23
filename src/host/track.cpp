@@ -14,8 +14,11 @@
 #include "../gui/trackcontrols.h"
 #include "../gui/trackcontent.h"
 
+#include "note.h"
 #include "clip.h"
+#include "midiarp.h"
 #include "track.h"
+#include "cursor.h"
 #include "audiocache.h"
 #include "plugin/base_plugin.h"
 #include "plugin/vst_plugin.h"
@@ -125,19 +128,6 @@ track_t::track_t(const track_snapshot_t &a)
 //	automation.points = a.points;
 	assert(this->mixer == NULL);
 	assert(this->content == NULL);
-}
-namespace {
-void recursiveStore(track_impl_snapshot_t& snapshot, const audio_stage_t* p, bool storePluginChunks) {
-	snapshot.pluginSnapshots.reserve(snapshot.pluginSnapshots.size()+p->effects.size());
-	for (effectbase* effect : p->effects) {
-		plugin_snapshot_t ps;
-		effect->makeSnapshot(ps, storePluginChunks);
-		snapshot.pluginSnapshots.push_back(std::move(ps));
-	}
-	for (audio_stage_t* stage : p->children) {
-		recursiveStore(snapshot, stage, storePluginChunks);
-	}
-}
 }
 track_impl_snapshot_t::track_impl_snapshot_t(audio_stage_t* p, bool storePluginChunks) {
 	if (p) {
@@ -334,15 +324,6 @@ void audio_stage_t::insertEffect(int32_t idx, effectbase* _effect) {
 	}
 }
 
-struct noteevent_t {
-	int32_t pitch = 0;
-	tick_t tickOffsetInBlock;
-	bool isNoteOn;
-	bool isLoopNoteOff;
-	noteevent_t(int32_t p, tick_t t, bool b, bool b2) : pitch(p), tickOffsetInBlock(t), isNoteOn(b), isLoopNoteOff(b2) {
-
-	}
-};
 
 struct VstEvent_t {
 	int32_t maxEvents;
@@ -366,10 +347,10 @@ struct VstEvent_t {
 	~VstEvent_t() {
 		free(vstEvents);
 	}
-	void writeNoteOn(unsigned char* buf, int32_t pitch) {
+	void writeNoteOn(unsigned char* buf, int32_t pitch, int32_t velocity) {
 		buf[0] = 0x90;
 		buf[1] = CLAMP_I(pitch, 0, 0x7F);
-		buf[2] = 0x7F;
+		buf[2] = CLAMP_I(velocity, 0, 0x7F);
 		buf[3] = 0;
 	}
 	void writeNoteOff(unsigned char* buf, int32_t pitch) {
@@ -390,7 +371,7 @@ struct VstEvent_t {
 		assert(evt.deltaFrames >= 0 && evt.deltaFrames < blockSize);
 		if (nevt.isNoteOn) {
 			numOns++;
-			writeNoteOn((unsigned char*)evt.midiData, nevt.pitch);
+			writeNoteOn((unsigned char*)evt.midiData, nevt.pitch, nevt.velocity);
 		} else {
 			numOffs++;
 			writeNoteOff((unsigned char*)evt.midiData, nevt.pitch);
@@ -422,23 +403,6 @@ struct VstEvent_t {
 	}
 };
 
-void track_impl_t::sendNotesOff(int32_t bpm100, int32_t blockSamplePos) {
-	VstEvent_t* midiEventsBuf = reallocEvts(track->audio->heldNotes.size());
-	for (note_t& note : track->audio->heldNotes) {
-//		midiEventsBuf->writeVstMidiEvt(note, bpm100, blockSamplePos, sampleRate, blockSize, false);
-		my_printf("Send note off %d\n", note.pitch);
-	}
-	midiEventsBuf->writeInstantOff();
-	track->audio->heldNotes.clear();
-	int slot = 1;
-	for (effectbase* effect : effects) {
-		vstplugin* vst = dynamic_cast<vstplugin*>(effect);
-		if (vst && vst->bCanReceiveMidi) {
-			vst->dispatch(effProcessEvents, 0, 0, midiEventsBuf->vstEvents);
-		}
-//			VstEvent_t midiEventsBufTemp = *midiEventsBuf; // make a copy
-	}
-}
 track_impl_t::~track_impl_t() {
 	if (midiEventsBuf) delete midiEventsBuf;
 	my_printf("~track_impl_t() %016X\n", this);
@@ -663,8 +627,51 @@ void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t 
 		}
 	}
 }
-
-
+void sortNoteEvents(std::vector<noteevent_t>& noteEvents) {
+	std::sort(noteEvents.begin(), noteEvents.end(), [](noteevent_t& a, noteevent_t& b) {
+		if (a.isNoteOn && !b.isNoteOn) {
+			return false;
+		}
+		if (!a.isNoteOn && b.isNoteOn) {
+			return true;
+		}
+		if (a.tickOffsetInBlock == b.tickOffsetInBlock) {
+			return a.pitch < b.pitch;
+		}
+		return a.tickOffsetInBlock < b.tickOffsetInBlock;
+	});
+}
+track_impl_t::track_impl_t(track_t* _track, const samplerate_t& _sampleRate, const uint16_t& _blockSize, int32_t nChannels)
+   : audio_stage_t(/*_track, */_sampleRate, _blockSize, nChannels, 0)
+  , track(_track)
+{
+	arp = new midiarp();
+}
+std::vector<note_t>& track_impl_t::getArpInputNotes() {
+	return this->arp->heldInputAnimationNotes;
+}
+std::vector<note_t>& track_impl_t::getArpHeldNotes() {
+	return this->arp->heldOutputAnimationNotes;
+}
+void track_impl_t::sendNotesOff(int32_t bpm100, int32_t blockSamplePos) {
+	VstEvent_t* midiEventsBuf = reallocEvts(track->audio->heldNotes.size());
+	for (note_t& note : track->audio->heldNotes) {
+//		midiEventsBuf->writeVstMidiEvt(note, bpm100, blockSamplePos, sampleRate, blockSize, false);
+		my_printf("Send note off %d\n", note.pitch);
+	}
+	if (arp)
+		arp->allNotesOff();
+	midiEventsBuf->writeInstantOff();
+	track->audio->heldNotes.clear();
+	int slot = 1;
+	for (effectbase* effect : effects) {
+		vstplugin* vst = dynamic_cast<vstplugin*>(effect);
+		if (vst && vst->bCanReceiveMidi) {
+			vst->dispatch(effProcessEvents, 0, 0, midiEventsBuf->vstEvents);
+		}
+//			VstEvent_t midiEventsBufTemp = *midiEventsBuf; // make a copy
+	}
+}
 void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos) {
 	//assert(end != loopEnd); //if end equals loopEnd note off events will be on exact end
 	if (std::any_of(effects.begin(), effects.end(), [](const effectbase* ref){
@@ -681,7 +688,7 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 		track->getMidi().getNotesInRange(heldBegin, heldEnd, -1, loopEnd, notes);
 		if (loopStart > -1&&start<loopStart)
 			start = loopStart;
-		if (!notes.empty() || !heldNotes.empty()) {
+		if (!notes.empty() || !heldNotes.empty() || arp != nullptr) {
 			std::vector<note_t> notesBegin;
 			std::vector<note_t> notesEnd;
 			std::vector<noteevent_t> noteEvents;
@@ -690,12 +697,12 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 			for (note_t& note : notes) {
 				if (note.start() >= start && note.start() < end) {
 					notesBegin.push_back(note);
-					noteEvents.emplace_back(note.pitch, note.start()-start, true, false);
+					noteEvents.emplace_back(note.pitch, note.velocity, note.start()-start, true, false);
 				}
 
 				if (note.end() > start && note.end() <= end) {
 					notesEnd.push_back(note);
-					noteEvents.emplace_back(note.pitch, note.end()-start-1, false, note.end() == loopEnd);
+					noteEvents.emplace_back(note.pitch, note.velocity, note.end()-start-1, false, note.end() == loopEnd);
 				}
 			}
 
@@ -712,7 +719,7 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 				if (!found) {
 					my_printf("force note end!\n", 0);
 					notesEnd.push_back(noteHeld);
-					noteEvents.emplace_back(noteHeld.pitch, 0, false, false);
+					noteEvents.emplace_back(noteHeld.pitch, 0, 0, false, false);
 				}
 			}
 //			for (note_t& note : heldNotes) {
@@ -724,29 +731,20 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 //			}
 			addAll(heldNotes, notesBegin);
 			removeAll(heldNotes, notesEnd);
-			std::sort(noteEvents.begin(), noteEvents.end(), [](noteevent_t& a, noteevent_t& b) {
-				if (a.isNoteOn && !b.isNoteOn) {
-					return false;
-				}
-				if (!a.isNoteOn && b.isNoteOn) {
-					return true;
-				}
-				if (a.tickOffsetInBlock == b.tickOffsetInBlock) {
-					return a.pitch < b.pitch;
-				}
-				return a.tickOffsetInBlock < b.tickOffsetInBlock;
-			});
+			sortNoteEvents(noteEvents);
 //			if (noteEvents.size()) {
 //				my_printf("%d %d NOTES\n", start, noteEvents.size());
 //			}
 //			for (noteevent_t& note : noteEvents) {
 //				my_printf("NOTE_%s %d %d\n", note.isNoteOn?"ON":"OFF", note.tickOffsetInBlock, note.pitch);
 //			}
-			size_t numEvents = noteEvents.size();
+			std::vector<noteevent_t> noteEventsProcessed;
+			arp->process(noteEvents, start, end, loopStart, loopEnd, noteEventsProcessed);
+			size_t numEvents = noteEventsProcessed.size();
 			VstEvent_t* midiEventsBuf = reallocEvts(numEvents);
 			const double ticksPerBlock = toTickPrecise(blockSize/(double)sampleRate, bpm100);
 			const double tickToSamples = (60*sampleRate) / (bpm100/100.0*TICKS_QUARTER);
-			for (noteevent_t& evt : noteEvents) {
+			for (noteevent_t& evt : noteEventsProcessed) {
 				assert(evt.tickOffsetInBlock >= 0 && evt.tickOffsetInBlock < ticksPerBlock);
 				midiEventsBuf->writeVstMidiEvt(evt, tickToSamples, blockSize);
 			}

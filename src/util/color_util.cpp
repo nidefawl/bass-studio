@@ -33,7 +33,15 @@ NVGcolor rgbaToNvg(uint32_t i) {
 	c.b = (float)((i & 0xFF) / 255.); i >>= 8;
 	c.g = (float)((i & 0xFF) / 255.); i >>= 8;
 	c.r = (float)((i & 0xFF) / 255.); i >>= 8;
-	c.a = (float)((i & 0xFF) / 255.); i >>= 8;
+	c.a = (float)((i & 0xFF) / 255.);
+	return c;
+}
+NVGcolor rgbfToNvg(uint32_t i, float f) {
+	NVGcolor c;
+	c.b = (float)((i & 0xFF) / 255.); i >>= 8;
+	c.g = (float)((i & 0xFF) / 255.); i >>= 8;
+	c.r = (float)((i & 0xFF) / 255.); i >>= 8;
+	c.a = f;
 	return c;
 }
 uint32_t nvgToRGB(NVGcolor c) {
