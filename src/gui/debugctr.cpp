@@ -1,21 +1,25 @@
+#include <vector>
+
 #include "debugctr.h"
 #include "str_util.h"
-#include "../host/mainctrl.h"
 #include "knob.h"
 #include "plugin.h"
 #include "guicontainer.h"
-#include "../host/vst_host.h"
-#include "../host/plugin/vst_plugin.h"
-#include "../host/plugin/vst_plugin_handles.h"
 #include "track.h"
 #include "track_impl.h"
 #include "clip.h"
+#include "../host/mainctrl.h"
+#include "../host/vst_host.h"
+#include "../host/plugin/vst_plugin.h"
+#include "../host/plugin/vst_plugin_handles.h"
 #include "edithistory.h"
-#include <vector>
 #include "leak_detect.h"
+
 using namespace std;
+
 #define DISPLAY_HWND_DRAWS 0
 #define DISPLAY_WIN_MSG_STATS 0
+
 struct win32_msg {
 	int id;
 	int cnt;

@@ -45,26 +45,26 @@ struct vst_param_category {
 	int16_t numParametersInCategory;			///< number of parameters in category
 	String label; //24
 };
-struct vst_param {
-	int32_t idx;
-	float value;
-	int32_t flags;
-
-	param_step_fi min;
-	param_step_fi max;
-	param_step_fi stepSmall;
-	param_step_fi step;
-	param_step_fi stepLarge;
-
-	String shortLabel;//8
-	String label;//64
-
-	//if kVstParameterSupportsDisplayIndex
-	int16_t displayIndex;		///< index where this parameter should be displayed (starting with 0)
-
-	//if kVstParameterSupportsDisplayCategory
-	int16_t category;			///< 0: no category, else group index + 1
-};
+//struct vst_param {
+//	int32_t idx;
+//	float value;
+//	int32_t flags;
+//
+//	param_step_fi min;
+//	param_step_fi max;
+//	param_step_fi stepSmall;
+//	param_step_fi step;
+//	param_step_fi stepLarge;
+//
+//	String shortLabel;//8
+//	String label;//64
+//
+//	//if kVstParameterSupportsDisplayIndex
+//	int16_t displayIndex;		///< index where this parameter should be displayed (starting with 0)
+//
+//	//if kVstParameterSupportsDisplayCategory
+//	int16_t category;			///< 0: no category, else group index + 1
+//};
 class vstplugin : public effectbase {
 public:
 #ifndef NDEBUG
@@ -83,8 +83,7 @@ public:
 	vst_window* window = NULL;
 	handles_t* const handle;
 	std::vector<vst_param_category> paramsCategories;
-	std::vector<vst_param> params;
-	std::vector<automated_param_t> automatedParams;
+//	std::vector<vst_param> vstParams;
 
 	std::vector<String> inputNames;
 	std::vector<String> outputNames;
@@ -96,9 +95,12 @@ public:
 #endif
 	}
 	~vstplugin();
-	bool resume();
-	bool sleep();
-
+	void resume();
+	void sleep();
+protected:
+	void onEnable();
+	void onDisable();
+public:
 
 	const char* getDir() {
 		return sDir.c_str();
@@ -130,24 +132,18 @@ public:
 	void unload() override;
 	void load(vsthost* host) override;
 	vst_param_category* getCategory(int idx);
-	automated_param_t* getRegisteredAutomation(int32_t idx);
-
-	int32_t getNumParameters() const override;
-	String getParamName(int32_t paramIdx) override;
-	String getAutomatableName() override;
-	float getParamValue(int32_t idx);
-	void setParamValue(int32_t idx, float val);
 	void recvPluginEditParamUpdate(int32_t idx);
-	void updateAutomatedParameters(tick_t pos) override;
-	automation_t* getAutomation(int32_t paramIdx) override;
-	void deactivateAutomation(int32_t paramIdx) override;
-	void getAutomated(std::vector<int32_t>& targets) override;
+
+	//automatable_t
+	String getAutomatableName() override;
+	float getParamValue(int32_t idx) override;
+	void setParamValue(int32_t idx, float val) override;
 	automationlane_snapshot_t toRef() override;
+
 	void makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) override;
 	void loadSnapshot(const plugin_snapshot_t& pluginSnapshot) override;
 	guiplugin* makeGui() override;
 	guiplugin* getGui() override;
 	void process(AudioBlock* in, AudioBlock* out, int32_t samples) override;
 	int32_t getDelay() override;
-	bool hasParam(int32_t idx) override;
 };

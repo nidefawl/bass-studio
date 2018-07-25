@@ -14,7 +14,29 @@ track_t* effectbase::getTrack() {
 		return nullptr;
 	return stage->getTrack();
 }
-
+effectbase::effectbase(int32_t _pluginType, int32_t _projectGlobalId) : pluginType(_pluginType), projectGlobalId(_projectGlobalId) {
+	struct effectbase_param_entry_t {
+		String name;
+		float val;
+	};
+	const std::array<effectbase_param_entry_t, 1> parameterTypes { {
+		{"Enabled", 1.0f},
+	} };
+	params.reserve(parameterTypes.size());
+	int32_t idx = 0;
+	for (const auto& paramEntry : parameterTypes) {
+		automatable_param_t automatable{0};
+		automatable.idx = idx;
+		automatable.internalIdx = -1;
+		automatable.category = 0;
+		automatable.value = paramEntry.val;
+		automatable.label = paramEntry.name;
+		automatable.shortLabel = paramEntry.name;
+		params.push_back(automatable);
+		mixerParams.push_back(automatable);
+		idx++;
+	}
+}
 void effectbase::onTick(double since) {
 	meter.onTick(since);
 }

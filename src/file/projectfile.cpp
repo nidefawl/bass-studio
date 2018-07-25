@@ -69,6 +69,7 @@ void load( Archive & archive, plugin_snapshot_t & m, const std::uint32_t version
 	if (version == 1)
 	make_optional_nvp(archive, "dataProgram", m.dataChunk2);
 	make_optional_nvp(archive, "parameters", m.params);
+	make_optional_nvp(archive, "hostParams", m.hostParams);
 	make_optional_nvp(archive, "automatedParams", m.automatedParams);
 	make_optional_nvp(archive, "globalId", m.projectGlobalId);
 	make_optional_nvp(archive, "enabled", m.enabled);
@@ -100,6 +101,7 @@ void save( Archive & archive, plugin_snapshot_t const & m, const std::uint32_t v
 	archive(make_nvp("pluginType", m.pluginType));
 	archive(make_nvp("name", m.name), make_nvp("uId", m.uId), make_nvp("slot", m.slot), make_nvp("present", m.present));
 	archive(make_nvp("parameters", m.params));
+	archive(make_nvp("hostParams", m.hostParams));
 	archive(make_nvp("automatedParams", m.automatedParams));
 	archive(make_nvp("globalId", m.projectGlobalId));
 	archive(make_nvp("enabled", m.enabled));

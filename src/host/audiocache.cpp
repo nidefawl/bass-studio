@@ -40,6 +40,12 @@ void audiocache::setSamplerate(int32_t samplerate) {
 }
 cachedaudio_t* audiocache::loadFile(String path, int id) {
 	drwav wav;
+	//satinize path so comparison matches, or ask os if path equals a file we already loaded before
+
+	for (auto& w : list) {
+		if (w.get()->path == path)
+			return w.get();
+	}
 	if (drwav_init_file(&wav, StringAsCStr(path))) {
 		my_printf("%s\n", StringAsCStr(path));
 		std::vector<float> pSamples(wav.totalSampleCount);

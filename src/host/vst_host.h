@@ -127,7 +127,7 @@ public:
 	void updateTime(int32_t samplePos, tick_t pos, playback_state state);
 	int32_t processPlayback(int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround);
 	void processAudio(audio_stage_t* channel, AudioBlock* input, AudioBlock* output, unsigned long samples);
-	void sendNotesOff(vstplugin* plugin);
+	void sendNotesOff(effectbase* plugin);
 	void setBlockSize(uint16_t blockSize);
 	VstTimeInfo* getTimeInfo() {
 		return &this->timeinfo;

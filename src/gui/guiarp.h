@@ -43,17 +43,17 @@ public:
 		add(&gate);
 		add(&pattern);
 		buttonBypass.icon = ICON_BYPASS;
-		buttonBypass.state = nullptr;
 		buttonBypass.parent = this;
 		buttonBypass.setColor(0x80c040);
 		clock.setLabel("Clock");
 		gate.setLabel("Gate");
 		pattern.setLabel("Pattern");
-		clock.fnSetValue = [this](float f) {
+		buttonBypass.getState = [this]() {
 			auto arp = getArp();
 			if (arp) {
-				arp->setClockF(f);
+				return arp->getParamValue(0)>0;
 			}
+			return false;
 		};
 		clock.fnGetValue = [this](void) {
 			auto arp = getArp();
@@ -62,12 +62,6 @@ public:
 			}
 			return 0.0f;
 		};
-		pattern.fnSetValue = [this](float f) {
-			auto arp = getArp();
-			if (arp) {
-				arp->setPatternF(f);
-			}
-		};
 		pattern.fnGetValue = [this](void) {
 			auto arp = getArp();
 			if (arp) {
@@ -75,18 +69,33 @@ public:
 			}
 			return 0.0f;
 		};
-		gate.fnSetValue = [this](float f) {
-			auto arp = getArp();
-			if (arp) {
-				arp->setGateF(f);
-			}
-		};
 		gate.fnGetValue = [this](void) {
 			auto arp = getArp();
 			if (arp) {
 				return arp->getGateF();
 			}
 			return 0.0f;
+		};
+		clock.fnSetValue = [this](float f) {
+			auto arp = getArp();
+			if (arp) {
+		    	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+				arp->setClockF(f);
+			}
+		};
+		pattern.fnSetValue = [this](float f) {
+			auto arp = getArp();
+			if (arp) {
+		    	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+				arp->setPatternF(f);
+			}
+		};
+		gate.fnSetValue = [this](float f) {
+			auto arp = getArp();
+			if (arp) {
+		    	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+				arp->setGateF(f);
+			}
 		};
 	}
 	virtual ~gui_arp() {
@@ -130,7 +139,8 @@ public:
 		if (_button == &buttonBypass) {
 			midiarp* arp = getArp();
 			if (arp) {
-				arp->enable = !arp->enable;
+		    	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+				arp->flipParamValue(0);
 			}
 		}
 	}
@@ -177,10 +187,5 @@ public:
 		}
 	}
 	void showEditClip() {
-		buttonBypass.state = nullptr;
-		midiarp* arp = getArp();
-		if (arp) {
-			buttonBypass.state = &arp->enable;
-		}
 	}
 };

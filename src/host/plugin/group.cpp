@@ -217,14 +217,7 @@ bool guimodule_group::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 void guimodule_group::buttonClicked(guibase* _button) {
 	if (_button == &buttonBypass) {
     	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-		if (module->bIsEnabled) {
-			module->sleep();
-		} else {
-			module->resume();
-		}
-		if (module->isSynth) {
-//			vsthost::getInstance()->sendNotesOff(module);
-		}
+    	module->flipParamValue(0);
 
 	}
 	if (_button == &buttonDelete) {
@@ -283,17 +276,11 @@ guiplugin* module_group::getGui() {
 //	return handle->gui;
 }
 int32_t module_group::getDelay() {
-	return 0;
+	return audio->getLatency();
 }
-bool module_group::resume() {
-	bool wasSleep = !this->bIsEnabled;
-	this->bIsEnabled = true;
-	return wasSleep;
+void module_group::resume() {
 }
-bool module_group::sleep() {
-	bool wasSleep = !this->bIsEnabled;
-	this->bIsEnabled = false;
-	return !wasSleep;
+void module_group::sleep() {
 }
 void module_group::unload() {
 	delete this->audio;

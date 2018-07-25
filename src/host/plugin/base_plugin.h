@@ -31,8 +31,9 @@ public:
 	bool bCanReceiveMidi = false;
 	audio_stage_t* trackImpl = nullptr;
 	int32_t slot = -1;
-	effectbase(int32_t _pluginType, int32_t _projectGlobalId) : pluginType(_pluginType), projectGlobalId(_projectGlobalId) {
-	}
+	std::vector<automatable_param_t> mixerParams;
+	std::unique_ptr<DelayLine> delayLine;
+	effectbase(int32_t _pluginType, int32_t _projectGlobalId);
 	virtual ~effectbase() {
 	}
 	virtual void makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) = 0;
@@ -42,13 +43,11 @@ public:
 	virtual void postProcess(AudioBlock* out, int32_t samples, bool hasProcessed);
 	virtual bool show() = 0;
 	virtual bool close() = 0;
-	virtual bool resume() = 0;
-	virtual bool sleep() = 0;
+	virtual void resume() = 0;
+	virtual void sleep() = 0;
 	virtual void unload() = 0;
 	virtual void load(vsthost* host) = 0;
 	virtual int32_t getDelay() = 0;
-	virtual bool hasParam(int32_t idx) = 0;
-	virtual automated_param_t* getRegisteredAutomation(int32_t idx) = 0;
 	virtual String getInfo(std::vector<String>& list) = 0;
 	track_t* getTrack();
 	virtual void onTick(double since);

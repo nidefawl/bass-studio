@@ -158,11 +158,17 @@ void createSnapshot(plugin_snapshot_t& ps, internalplugin* plugin, bool storePlu
 //			my_printf("Plugin %s: Save data2[%d]\n", StringAsCStr(plugin->sName), pluginDataSize2);
 //		}
 //	}
-	ps.params.reserve(plugin->params.size());
-	for (internalplugin_param& param : plugin->params) {
+	auto& allParams = plugin->params;
+	auto& mixerParams = plugin->mixerParams;
+	ps.params.reserve(allParams.size()-mixerParams.size());
+	ps.hostParams.reserve(mixerParams.size());
+	for (automatable_param_t& param : plugin->params) {
 		float val = plugin->getParamValue(param.idx);
-		param_snapshot_t t{param.idx, val};
-		ps.params.push_back(t);
+		if (param.internalIdx < 0) {
+			ps.hostParams.push_back(param_snapshot_t{param.idx, val});
+		} else {
+			ps.params.push_back(param_snapshot_t{param.internalIdx, val});
+		}
 	}
 	storeAutomation(ps, plugin->automatedParams);
 
@@ -178,22 +184,13 @@ void internalplugin::makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks)
 void internalplugin::loadSnapshot(const plugin_snapshot_t& ps)  {
 	assert(ps.slot == this->slot);
 }
-int32_t internalplugin::getNumParameters() const {
-	return params.size();
-}
-String internalplugin::getParamName(int32_t idx) {
-	if (idx >= 0 && idx < (int32_t)params.size()) {
-		return params[idx].label;
-	}
-	return "";
-}
 String internalplugin::getAutomatableName() {
 	return this->sName;
 }
 float internalplugin::getParamValue(int32_t idx) {
 	if (idx >= 0 && idx < (int32_t)params.size()) {
 		auto& param = params[idx];
-		param.value = dispatchGetParameter(param.idx);
+		param.value = dispatchGetParameter(param.internalIdx);
 		return param.value;
 	}
 	return 0;
@@ -202,7 +199,20 @@ void internalplugin::setParamValue(int32_t idx, float val) {
 	if (idx >= 0 && idx < (int32_t)params.size()) {
 		auto& param = params[idx];
 		param.value = val;
-		dispatchSetParameter(idx, val);
+		if (param.idx == PARAM_ENABLE) {
+			bool wasEnable = this->bIsEnabled;
+			this->bIsEnabled = val > 0;
+			if (this->bIsEnabled != wasEnable) {
+				if (this->bIsEnabled) {
+					onEnable();
+				} else {
+					onDisable();
+				}
+			}
+		} else {
+			assert(param.internalIdx >= 0);
+			dispatchSetParameter(param.internalIdx, val);
+		}
 //		my_printf("set %s[%d] = %f\n", StringAsCStr(this->sName), idx, val);
 	}
 }
@@ -212,64 +222,19 @@ void internalplugin::recvPluginEditParamUpdate(int32_t idx) {
 		param.value = dispatchGetParameter(param.idx);
 	}
 }
-automated_param_t* internalplugin::getRegisteredAutomation(int32_t idx) {
-	auto it = std::find_if(automatedParams.begin(), automatedParams.end(), [idx](automated_param_t& ap) {
-		return ap.paramIdx == idx;
-	});
-	if (it != automatedParams.end()) {
-		automated_param_t* ap = &(*it);
-		if (ap->src.isAutomated())
-			return ap;
-	}
-	return NULL;
-}
 automationlane_snapshot_t internalplugin::toRef() {
 	automationlane_snapshot_t ref;
 	ref.type = 0;
 	ref.refId = this->projectGlobalId;
 	return ref;
 }
-void internalplugin::getAutomated(std::vector<int32_t>& targets) {
-	for (automated_param_t t : automatedParams) {
-		if (t.src.isAutomated())
-			targets.push_back(t.paramIdx);
-	}
+void internalplugin::onEnable() {
+	resume();
 }
-void internalplugin::updateAutomatedParameters(tick_t pos) {
-	for (automated_param_t& param : automatedParams) {
-		if (param.src.isActive()) {
-			float val = param.src.getValueAt(pos);
-			setParamValue(param.paramIdx, val);
-		}
-	}
+void internalplugin::onDisable() {
+	sleep();
+//	vsthost::getInstance()->sendNotesOff(this);
 }
-automation_t* internalplugin::getAutomation(int32_t paramIdx) {
-	if (!hasParam(paramIdx)) {
-		return NULL;
-	}
-	for (automated_param_t& param : automatedParams) {
-		if (paramIdx == param.paramIdx) {
-			return &param.src;
-		}
-	}
-	automatedParams.emplace_back(paramIdx);
-	return &automatedParams.back().src;
-}
-void internalplugin::deactivateAutomation(int32_t paramIdx) {
-	for (automated_param_t& param : automatedParams) {
-		if (paramIdx == param.paramIdx) {
-			param.src.active = false;
-			return;
-		}
-	}
-}
-bool internalplugin::hasParam(int idx) {
-	if (idx >= 0 && idx < (int)params.size()) {
-		return true;
-	}
-	return false;
-}
-
 bool internalplugin::close() {
 //	if (this->window != NULL) {
 //		this->window->close();

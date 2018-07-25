@@ -55,14 +55,14 @@ void simplifyData(std::vector<automation_point_t>& data) {
 	//remove multiple points on same time
 	{
 
-		auto first = data.begin();
-		auto last = data.end();
+		std::vector<automation_point_t>::iterator first = data.begin();
+		std::vector<automation_point_t>::iterator last = data.end();
 	    if (first != last) {
 	        for(auto i = first; i != last; ++i) {
 	        	tick_t firstTime = (*i).time;
 	            *first++ = std::move(*i);
 				if (i + 1 != last) {
-					auto j = i + 2;
+					std::vector<automation_point_t>::iterator j = i + 2;
 					for (; j < last; ++j) {
 						if (firstTime != (*j).time) {
 							break;
@@ -78,15 +78,15 @@ void simplifyData(std::vector<automation_point_t>& data) {
     {
 
         //remove multiple consecutive points with same value
-		auto first = data.begin();
-    	auto last = data.end();
+    	std::vector<automation_point_t>::iterator first = data.begin();
+		std::vector<automation_point_t>::iterator last = data.end();
         if (first != last) {
             for(auto i = first; i != last; ++i) {
             	float firstVal = (*i).val;
                 *first++ = std::move(*i);
 
 				if (i + 1 != last) {
-					auto j = i + 2;
+					std::vector<automation_point_t>::iterator j = i + 2;
 					for (; j < last; ++j) {
 						if (firstVal != (*j).val || firstVal != (*(j - 1)).val) {
 							break;
@@ -101,6 +101,9 @@ void simplifyData(std::vector<automation_point_t>& data) {
     }
 }
 
+//float automation_t::getEventsInRange(tick_t tick) {
+//
+//}
 float automation_t::getValueAt(tick_t tick) {
 	if (points.size()) {
 		int32_t idx = indexOfTick(points, tick);
@@ -118,8 +121,8 @@ float automation_t::getValueAt(tick_t tick) {
 			if (!tickDist) {
 				return pt2.val;
 			}
-			float pr = (tick-pt1.time)/(float)tickDist;
-			return pt1.val+pr*(pt2.val-pt1.val);
+			float pr = (tick - pt1.time) / (float) tickDist;
+			return pt1.val + pr * (pt2.val - pt1.val);
 		}
 		return points.front().val;
 	}

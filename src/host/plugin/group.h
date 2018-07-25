@@ -26,8 +26,8 @@ public:
 	int32_t getDelay() override;
 	void process(AudioBlock* in, AudioBlock* out, int32_t samples) override;
 	virtual String getInfo(std::vector<String>& list) override;
-	bool resume() override;
-	bool sleep() override;
+	void resume() override;
+	void sleep() override;
 	void unload() override;
 	void onPreUnload() override;
 	void load(vsthost* host) override;

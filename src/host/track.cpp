@@ -431,6 +431,7 @@ void audio_stage_t::pluginsChanged() {
 }
 void track_impl_t::getAutomatableTargets(std::vector<automatable_t*>& targets) {
 	targets.push_back(&mixer);
+	targets.push_back(arp);
 //	if (instrument)
 //		targets.push_back(instrument);
 	targets.insert(targets.end(), effects.begin(), effects.end());
@@ -494,7 +495,14 @@ void audio_stage_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginLi
 
 			const std::vector<param_snapshot_t>& pluginSnapshotParams = pluginSnapshot.params;
 			for (const param_snapshot_t& param : pluginSnapshotParams) {
-				if (effect->hasParam(param.idx)) {
+				int32_t paramIdxEffect = effect->mixerParams.size() + param.idx;
+				if (effect->hasParam(paramIdxEffect)) {
+					effect->setParamValue(paramIdxEffect, param.val);
+				}
+			}
+			const std::vector<param_snapshot_t>& pluginHostSideParams = pluginSnapshot.hostParams;
+			for (const param_snapshot_t& param : pluginHostSideParams) {
+				if (param.idx < (int32_t)effect->mixerParams.size() && effect->hasParam(param.idx)) {
 					effect->setParamValue(param.idx, param.val);
 				}
 			}
@@ -774,7 +782,7 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 
 void track_params_t::createSnapshot(track_params_snapshot_t& snapshot) {
 	for (int i = 0; i < getNumParameters(); i++) {
-		float val = params[i].val;
+		float val = params[i].value;
 		param_snapshot_t snapParam{i, val};
 		my_printf("VAL[%d] = %f\n", i, val);
 		snapshot.params.push_back(std::move(snapParam));
@@ -791,7 +799,7 @@ void track_params_t::createSnapshot(track_params_snapshot_t& snapshot) {
 void track_params_t::loadSnapshot(const track_params_snapshot_t& snapshot) {
 	for (auto p : snapshot.params) {
 		my_printf("VAL[%d] = %f\n", p.idx, p.val);
-		params[p.idx].val = p.val;
+		params[p.idx].value = p.val;
 	}
 	for (auto p : snapshot.automatedParams) {
 		automation_t* automation = getAutomation(p.targetParam);

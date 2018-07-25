@@ -422,8 +422,7 @@ void vsthost::updateTime(int32_t samplePos, tick_t pos, playback_state state) {
 
 }
 
-void vsthost::sendNotesOff(vstplugin* plugin) {
-	handles_t* handles = plugin->handle;
+void vsthost::sendNotesOff(effectbase* plugin) {
 	if (plugin && plugin->trackImpl) {
 		track_t* tr = plugin->trackImpl->getTrack();
 		assert(tr);
@@ -433,8 +432,8 @@ void vsthost::sendNotesOff(vstplugin* plugin) {
 		}
 	}
 }
-void delayAudio(DelayLine* delayLine, AudioBlock* output, samplerate_t delay) {
-	int32_t bufSize = (int32_t)output->samples;
+void delayAudio(DelayLine* delayLine, AudioBlock* input, AudioBlock* output, samplerate_t delay) {
+	int32_t bufSize = (int32_t)input->samples;
 	int32_t bufDelay = delay;
 	int32_t numBlocks = 1;
 	while (bufDelay > 0) {
@@ -450,7 +449,7 @@ void delayAudio(DelayLine* delayLine, AudioBlock* output, samplerate_t delay) {
 	}
 	AudioBlock& delayBlock = delayLine->block;
 	delayBlock.realloc(delayLineSize);
-	delayBlock.copyFromPosToPos(output->buf, 0, writePos, output->samples, output->channels);
+	delayBlock.copyFromPosToPos(input->buf, 0, writePos, input->samples, input->channels);
 	if (readPos + (int32_t)output->samples > delayLineSize) {
 		int32_t read1Len = delayLineSize - readPos;
 		int32_t read2Len = output->samples - read1Len;
@@ -564,7 +563,7 @@ int32_t vsthost::processPlayback(int32_t sample, double posDouble, playback_stat
 			/* Processes a whole plugin chain */
 			processAudio(trackImpl, &trackImpl->input, &trackImpl->output, lBlockSize);
 			samplerate_t delay = maxLatency - trackImpl->getLatency();
-			delayAudio(&trackImpl->delayLine, &trackImpl->output, delay);
+			delayAudio(&trackImpl->delayLine, &trackImpl->output, &trackImpl->output, delay);
 			if (trackImpl->mixer.isEnabled()) {
 				for (track_t* trackMaster : ctrl->trackMasterCtr) {
 					track_impl_t* audioMaster = trackMaster->audio;
@@ -663,7 +662,7 @@ void mulGain(AudioBlock* block, float gain) {
 void vsthost::processAudio(audio_stage_t* channel, AudioBlock* input, AudioBlock* output, unsigned long samples) {
 	int count = 0;
 	if (channel->effects.size()) {
-		count+=channel->effects.size();
+		count += channel->effects.size();
 	}
 
 
@@ -671,25 +670,36 @@ void vsthost::processAudio(audio_stage_t* channel, AudioBlock* input, AudioBlock
 	{
 		effectbase *current = NULL;
 		current = channel->effects[i];
-		if (current->bIsSetup && current->bIsEnabled) {
-			AudioBlock* blockIn = current->blockInputs;
-			AudioBlock* blockOut = current->blockOutputs;
-			blockIn->realloc(lBlockSize);
-			blockOut->realloc(lBlockSize);
+		assert(current->bIsSetup);
 
-			//TODO: maybe fill silence here, we never know how plugins can screw up
-			//TODO: blockIn/blockOut will always have 2 channels at least
-			//   If a plugin runs mono inputs or outputs we need to handle this manually here
-			blockIn->copyFrom(input);
-
-	//		handles_t* handle = current->handle;
-			current->process(blockIn, blockOut, samples);
-			//TODO: maybe sanitize plugins output floats here (NaN/Inf/ >50 dBFS)
-			input = blockOut;
-			current->postProcess(blockOut, samples, true);
-		} else {
+		if (!current->bIsEnabled) {
+			samplerate_t delay = current->getDelay();
+			if (delay > 0) {
+				if (!current->delayLine.get()) {
+					current->delayLine.reset(new DelayLine(this->numChannels, this->lBlockSize));
+				}
+				AudioBlock* blockOut = current->blockOutputs;
+				delayAudio(current->delayLine.get(), input, blockOut, delay);
+				input = blockOut;
+			}
 			current->postProcess(blockZero, samples, false);
+			continue;
 		}
+
+		AudioBlock* blockIn = current->blockInputs;
+		AudioBlock* blockOut = current->blockOutputs;
+		blockIn->realloc(lBlockSize);
+		blockOut->realloc(lBlockSize);
+		//TODO: maybe fill silence here, we never know how plugins can screw up
+		//TODO: blockIn/blockOut will always have 2 channels at least
+		//   If a plugin runs mono inputs or outputs we need to handle this manually here
+		blockIn->copyFrom(input);
+
+//		handles_t* handle = current->handle;
+		current->process(blockIn, blockOut, samples);
+		//TODO: maybe sanitize plugins output floats here (NaN/Inf/ >50 dBFS)
+		input = blockOut;
+		current->postProcess(blockOut, samples, true);
 	}
 	//   If a plugin runs mono inputs or outputs we need to handle this manually here
 	output->copyFrom(input);

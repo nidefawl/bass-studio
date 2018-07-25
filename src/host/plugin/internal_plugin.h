@@ -17,12 +17,6 @@ class track_t;
 class guiplugin;
 struct track_impl_t;
 
-struct internalplugin_param {
-	int32_t idx;
-	float value;
-	String shortLabel;
-	String label;
-};
 class internalplugin : public effectbase {
 public:
 #ifndef NDEBUG
@@ -38,13 +32,13 @@ public:
 	bool isSynth = false;
 	int vstVersion = 0;
 	int uId = 0;
-	std::vector<internalplugin_param> params;
-	std::vector<automated_param_t> automatedParams;
 	internalplugin(int32_t _pluginType, int32_t _projectGlobalId) : effectbase(_pluginType, _projectGlobalId) {
 	}
 	virtual ~internalplugin() {
 	}
 protected:
+	virtual void onEnable();
+	virtual void onDisable();
 	virtual float dispatchGetParameter(int32_t idx) = 0;
 	virtual void dispatchSetParameter(int32_t idx, float val) = 0;
 public:
@@ -61,18 +55,12 @@ public:
 	virtual void makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) override;
 	bool show() override;
 	bool close() override;
-	bool hasParam(int32_t idx) override;
-	int32_t getNumParameters() const override;
-	String getParamName(int32_t paramIdx) override;
+
+	//automatble_t
 	String getAutomatableName() override;
-	float getParamValue(int32_t idx);
-	void setParamValue(int32_t idx, float val);
+	float getParamValue(int32_t idx) override;
+	void setParamValue(int32_t idx, float val) override;
 	void recvPluginEditParamUpdate(int32_t idx);
-	void updateAutomatedParameters(tick_t pos) override;
-	automation_t* getAutomation(int32_t paramIdx) override;
-	void deactivateAutomation(int32_t paramIdx) override;
-	void getAutomated(std::vector<int32_t>& targets) override;
 	automationlane_snapshot_t toRef() override;
-	automated_param_t* getRegisteredAutomation(int32_t idx) override;
 };
 effectbase* makeModuleInstance(int32_t uid, int32_t globalid);

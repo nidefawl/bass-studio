@@ -15,6 +15,7 @@
 #include "plugin.h"
 #include "pluginctr.h"
 #include "pluginlist.h"
+#include "edithistory.h"
 
 #include "../host/mainctrl.h"
 #include "../host/vst_host.h"
@@ -56,16 +57,16 @@ void guiplugin::renderBase(NVGcontext* vg) {
 }
 
 class guictxtmenu_vstparam : public guictxtmenu_base {
-	vstplugin* const vst;
-	vst_param* const entry;
+	effectbase* const effect;
+	automatable_param_t* const entry;
 public:
-	guictxtmenu_vstparam(vstplugin* _vst, vst_param* _entry) : vst(_vst), entry(_entry)
+	guictxtmenu_vstparam(effectbase* _effect, automatable_param_t* _entry) : effect(_effect), entry(_entry)
 	{
 		this->size.x = 240;
-		addContextEntries(this, vst->getTrack(), vst, entry->idx);
+		addContextEntries(this, effect->getTrack(), effect, entry->idx);
 	}
 	void clicked(int _id) {
-		handleAutomatbleContextMenu(vst->getTrack(), vst, entry->idx, _id);
+		handleAutomatbleContextMenu(effect->getTrack(), effect, entry->idx, _id);
 		MainCtrl::get()->closeContextMenu();
 	}
 };
@@ -74,37 +75,37 @@ class gui_plugin_paramlist_entry : public gui_list_entry {
 
 	const float spacing = INSET_TITLE;
 public:
-	vstplugin* const vst;
-	vst_param* const entry;
+	effectbase* const effect;
+	automatable_param_t* const entry;
 	guiknob knobTest;
-	gui_plugin_paramlist_entry(vstplugin* _vst, vst_param* _entry)
+	gui_plugin_paramlist_entry(effectbase* _effect, automatable_param_t* _entry)
 		: gui_list_entry(),
-		  vst(_vst),
+		  effect(_effect),
 		  entry(_entry),
 		  knobTest(false)
 	{
 		icon = 0;
 		const int32_t paramIdx = _entry->idx;
-		knobTest.fnGetValue = [_vst, paramIdx] () {
-			return _vst->getParamValue(paramIdx);
+		knobTest.fnGetValue = [_effect, paramIdx] () {
+			return _effect->getParamValue(paramIdx);
 		};
 		knobTest.fnSetValue = [this] (float f) {
-			automation_t* param = vst->getAutomation(entry->idx);
+			automation_t* param = effect->getAutomation(entry->idx);
 			if (param) {
 				param->active = false;
 			}
-			return vst->setParamValue(entry->idx, f);
+			return effect->setParamValue(entry->idx, f);
 		};
 		knobTest.fnFocus = [this](bool b) {focusEvent(b);};
 		knobTest.parent = this;
 	}
     virtual bool focusEvent(bool focused) override {
     	if (focused)
-    		MainCtrl::get()->showAutomation(vst->getTrack(), vst, entry->idx);
+    		MainCtrl::get()->showAutomation(effect->getTrack(), effect, entry->idx);
     	return true;
     }
 	void handleRightClick(MouseEvent& evt) override {
-		MainCtrl::get()->openContextMenu(new guictxtmenu_vstparam(vst, entry), evt.mousepos);
+		MainCtrl::get()->openContextMenu(new guictxtmenu_vstparam(effect, entry), evt.mousepos);
 	}
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
 		if (this->contains(mpos)) {
@@ -144,7 +145,7 @@ public:
 		setFont(vg, (int) (rowHeight * 0.8), G_WHITE, G_TITLE_ALIGN);
 		nvgText(vg, x, rowHeight / 2, StringAsCStr(getText()), NULL);
 		nvgTranslate(vg, -pos.x, -pos.y);
-		auto at = vst->getRegisteredAutomation(entry->idx);
+		auto at = effect->getRegisteredAutomation(entry->idx);
 		if (at && at->src.isAutomated()) {
 			knobTest.indColor = G_PURPLE;
 		} else {
@@ -170,7 +171,9 @@ guiplugin::guiplugin(effectbase* _effect)
 	margin = 0;
 	text[0] = 0;
 	buttonBypass.icon = ICON_BYPASS;
-	buttonBypass.state = &_effect->bIsEnabled;
+	buttonBypass.getState = [_effect]() {
+		return _effect->getParamValue(0)>0;
+	};
 	buttonBypass.parent = this;
 	buttonBypass.setColor(0x80c040);
 	buttonDelete.icon = ICON_CLOSE;
@@ -329,9 +332,9 @@ void guictr_plugins::pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mouse
 		my_printf("Insert effect on %s, parent %s\n", StringAsCStr(getClassName()), parent? StringAsCStr(parent->getClassName()) : "<null>");
 		vsthost::getInstance()->insertNewPlugin(stage, effect, dstSlot);
 		effect->resume();
-		//	if (res.result == 0 && res.plugin) {
-		//		res.plugin->resume();
-		//	}
+//	if (res.result == 0 && res.plugin) {
+//		res.plugin->resume();
+//	}
 	}
 	showTrack(stage);
 	if (this->parent) {
@@ -402,8 +405,9 @@ guivstplugin::guivstplugin(vstplugin * _vst)
 	params.parent = this;
 	meter.parent = this;
 	std::vector<gui_list_entry*> _newList;
-	for (vst_param& param : _vst->params) {
-		_newList.push_back(new gui_plugin_paramlist_entry(_vst, &param));
+	for (automatable_param_t& param : _vst->params) {
+		if (param.internalIdx >= 0)
+			_newList.push_back(new gui_plugin_paramlist_entry(_vst, &param));
 	}
 	params.setList(_newList);
 }
@@ -443,18 +447,59 @@ bool guivstplugin::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 	}
 	return false;
 }
+class action_modify_effect_parameter : public action_base {
+	int32_t trackIdx = 0;
+	int32_t globalEffectInstanceId = 0;
+	int32_t parameterIdx = 0;
+	float valBefore = 0;
+	float valAfter = 0;
+public:
+	action_modify_effect_parameter() : action_base() {
+	}
+	//desc, clip, notesBefore, cursorBefore
+	action_modify_effect_parameter(String description, int32_t _trackIdx,
+			int32_t _globalId, int32_t _parameterIdx, float _oldVal, float _newVal) :
+		action_base(),
+		trackIdx(_trackIdx),
+		globalEffectInstanceId(_globalId),
+		parameterIdx(_parameterIdx),
+		valBefore(_oldVal),
+		valAfter(_newVal) {
+		desc = description;
+	}
+	effectbase* tryGetEffect(MainCtrl* ctrl) {
+		track_t* tr = ctrl->getTracks()[trackIdx];
+		if (!tr) {
+			setError("track missing");
+			return nullptr;
+		}
+		auto audio = tr->audio;
+		if (!audio) {
+			setError("track does not have audio stage");
+			return nullptr;
+		}
+		effectbase* effect = audio->getPluginById(globalEffectInstanceId);
+		if (!effect) {
+			setError("track audio stage does not have effect");
+			return nullptr;
+		}
+		return effect;
+	}
+	void undo(MainCtrl* ctrl) {
+		effectbase* effect = tryGetEffect(ctrl);
+		if (effect)
+			effect->setParamValue(parameterIdx, valBefore);
+	}
+	void redo(MainCtrl* ctrl) {
+		effectbase* effect = tryGetEffect(ctrl);
+		if (effect)
+			effect->setParamValue(parameterIdx, valAfter);
+	}
+};
 void guivstplugin::buttonClicked(guibase* _button) {
 	if (_button == &buttonBypass) {
     	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-		if (vst->bIsEnabled) {
-			vst->sleep();
-		} else {
-			vst->resume();
-		}
-		if (vst->isSynth) {
-			vsthost::getInstance()->sendNotesOff(vst);
-		}
-
+		vst->flipParamValue(0);
 	}
 	if (_button == &buttonOpenEditor) {
 		if (vst->bEditOpen) {

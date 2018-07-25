@@ -138,15 +138,9 @@ guiplugin* module_empty::getGui() {
 int32_t module_empty::getDelay() {
 	return 0;
 }
-bool module_empty::resume() {
-	bool wasSleep = !this->bIsEnabled;
-	this->bIsEnabled = true;
-	return wasSleep;
+void module_empty::resume() {
 }
-bool module_empty::sleep() {
-	bool wasSleep = !this->bIsEnabled;
-	this->bIsEnabled = false;
-	return !wasSleep;
+void module_empty::sleep() {
 }
 void module_empty::unload() { }
 void module_empty::load(vsthost* host) { }

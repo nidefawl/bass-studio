@@ -23,29 +23,29 @@ private:
 	struct track_param_entry_t {
 		String name;
 		float val;
-		automation_t automation;
-		track_param_entry_t(String _name, float _val, float _scale = 1.0f)
-		  : name(_name), val(_val), automation() {
-
-		}
 	};
-	std::array<track_param_entry_t, 2> params { {
-		track_param_entry_t("Enabled", 1.0f, 1.0f),
-		track_param_entry_t("Gain", 1.0f, 2.0f),
-	} };
+
 public:
 	track_params_t()
 	  : automatable_t() {
-		params[0].automation.quantizationSteps = 1;
-	}
-	String getAutomatableName() override {
-		return "Mixer";
-	}
-	int32_t getNumParameters() const override {
-		return params.size();
-	}
-	String getParamName(int32_t paramIdx) override {
-		return params[paramIdx].name;
+		int32_t idx = 0;
+		const std::array<track_param_entry_t, 2> parameterTypes { {
+			track_param_entry_t{"Enabled", 1.0f},
+			track_param_entry_t{"Gain", 1.0f},
+		} };
+		params.reserve(parameterTypes.size());
+		for (const track_param_entry_t& paramEntry : parameterTypes) {
+			automatable_param_t automatable{0};
+			automatable.idx = idx;
+			automatable.internalIdx = -1;
+			automatable.category = 0;
+			automatable.value = paramEntry.val;
+			automatable.label = paramEntry.name;
+			automatable.shortLabel = paramEntry.name;
+			params.push_back(std::move(automatable));
+			idx++;
+		}
+		getAutomation(0)->quantizationSteps = 1;
 	}
 	const float lvlRange = dsp_util::DBFS_MUTE_POS - dsp_util::MTR_CEIL;
 	const float EXP = 2.0f;
@@ -73,48 +73,21 @@ public:
 		}
 		return f;
 	}
-	float getParamValue(int32_t idx) {
+	String getAutomatableName() override {
+		return "Mixer";
+	}
+	float getParamValue(int32_t idx) override {
 		if (idx >= 0 && idx < (int)params.size()) {
-			return convertValFrom(idx, params[idx].val);
+			return convertValFrom(idx, params[idx].value);
 		}
 		return 0.0f;
 	}
-	void setParamValue(int32_t idx, float val) {
+	void setParamValue(int32_t idx, float val) override {
 		if (idx >= 0 && idx < (int)params.size()) {
-			params[idx].val = convertValTo(idx, val);
+			params[idx].value = convertValTo(idx, val);
 		}
 	}
-	void deactivateAutomation(int32_t paramIdx) override {
-		automation_t* at = getAutomation(paramIdx);
-		if (at && at->isActive()) {
-			at->active = false;
-		}
-	}
-	void updateAutomatedParameters(tick_t pos) override {
-		for (int idx = 0; idx < (int)params.size(); idx++) {
-			track_param_entry_t& param = params[idx];
-			if (param.automation.isActive()) {
-				float f = param.automation.getValueAt(pos);
-				param.val = convertValTo(idx, f);
-			}
-		}
-	}
-	automation_t* getAutomation(int32_t idx) override {
-		if (idx >= 0 && idx < (int)params.size()) {
-			track_param_entry_t& param = params[idx];
-			return &param.automation;
-		}
-		return nullptr;
-	}
-	void getAutomated(std::vector<int32_t>& targets) {
-		for (int idx = 0; idx < (int)params.size(); idx++) {
-			track_param_entry_t& param = params[idx];
-			if (param.automation.isAutomated()) {
-				targets.push_back(idx);
-			}
-		}
-	}
-	automationlane_snapshot_t toRef() {
+	automationlane_snapshot_t toRef() override {
 		automationlane_snapshot_t ref;
 		ref.type = 1;
 		ref.refId = 0;
@@ -123,13 +96,13 @@ public:
 	void createSnapshot(track_params_snapshot_t& snapshot);
 	void loadSnapshot(const track_params_snapshot_t& snapshot);
 	float getGain() {
-		return params[1].val;
+		return params[1].value;
 	}
 	void setGain(float f) {
-		params[1].val = f;
+		params[1].value = f;
 	}
 	bool isEnabled() {
-		return params[0].val >= 0.5f;
+		return params[0].value >= 0.5f;
 	}
 };
 struct audio_stage_t {

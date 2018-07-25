@@ -64,19 +64,13 @@ bool vstplugin::onClose() {
 void vstplugin::onWindowDestroy() {
 	this->window = NULL;
 }
-bool vstplugin::resume() {
-	bool wasSleep = !this->bIsEnabled;
+void vstplugin::resume() {
 	this->dispatch(effMainsChanged, 0, true);
 	this->dispatch(effStartProcess);
-	this->bIsEnabled = true;
-	return wasSleep;
 }
-bool vstplugin::sleep() {
-	bool wasSleep = !this->bIsEnabled;
+void vstplugin::sleep() {
 	this->dispatch(effStopProcess);
 	this->dispatch(effMainsChanged, 0, false);
-	this->bIsEnabled = false;
-	return !wasSleep;
 }
 void vstplugin::printNames() {
 	char buf[256];
@@ -192,9 +186,11 @@ void vstplugin::load(vsthost* host) {
 
 	char buf[1024];
 	vst_param_category fallbackCat={0, 0, "Parameters"};
+	int paramIdx = params.size();
 	for (int i = 0; i < aeffect->numParams; i++) {
-		vst_param param{0};
-		param.idx = i;
+		automatable_param_t param{0};
+		param.idx = paramIdx;
+		param.internalIdx = i;
 		memset(buf, 0, sizeof(buf));
 		this->dispatch(effGetParamName, i, 0, buf);
 		String label = buf[0] ? buf : StringFormat("Parameter %d", i);
@@ -241,8 +237,9 @@ void vstplugin::load(vsthost* host) {
 			param.flags = 0;
 			fallbackCat.numParametersInCategory++;
 		}
-		param.value = handle->aeffect->getParameter(handle->aeffect, param.idx);
+		param.value = handle->aeffect->getParameter(handle->aeffect, param.internalIdx);
 		params.push_back(param);
+		paramIdx++;
 	}
 	paramsCategories.push_back(fallbackCat);
 
@@ -297,11 +294,17 @@ void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin, bool storePluginCh
 			my_printf("Plugin %s: Save data2[%d]\n", StringAsCStr(plugin->sName), pluginDataSize2);
 		}
 	}
-	ps.params.reserve(plugin->params.size());
-	for (vst_param& param : plugin->params) {
+	auto& allParams = plugin->params;
+	auto& mixerParams = plugin->mixerParams;
+	ps.params.reserve(allParams.size()-mixerParams.size());
+	ps.hostParams.reserve(mixerParams.size());
+	for (automatable_param_t& param : plugin->params) {
 		float val = plugin->getParamValue(param.idx);
-		param_snapshot_t t{param.idx, val};
-		ps.params.push_back(t);
+		if (param.internalIdx < 0) {
+			ps.hostParams.push_back(param_snapshot_t{param.idx, val});
+		} else {
+			ps.params.push_back(param_snapshot_t{param.internalIdx, val});
+		}
 	}
 	storeAutomation(ps, plugin->automatedParams);
 }
@@ -341,22 +344,15 @@ vst_param_category* vstplugin::getCategory(int idx) {
 	}
 	return NULL;
 }
-int32_t vstplugin::getNumParameters() const {
-	return params.size();
-}
-String vstplugin::getParamName(int32_t idx) {
-	if (idx >= 0 && idx < (int32_t)params.size()) {
-		return params[idx].label;
-	}
-	return "";
-}
 String vstplugin::getAutomatableName() {
 	return this->sName;
 }
 float vstplugin::getParamValue(int32_t idx) {
 	if (idx >= 0 && idx < (int32_t)params.size()) {
 		auto& param = params[idx];
-		param.value = handle->aeffect->getParameter(handle->aeffect, param.idx);
+		if (param.internalIdx >= 0) {
+			param.value = handle->aeffect->getParameter(handle->aeffect, param.internalIdx);
+		}
 		return param.value;
 	}
 	return 0;
@@ -365,26 +361,29 @@ void vstplugin::setParamValue(int32_t idx, float val) {
 	if (idx >= 0 && idx < (int32_t)params.size()) {
 		auto& param = params[idx];
 		param.value = val;
-		handle->aeffect->setParameter(handle->aeffect, idx, val);
+		if (param.internalIdx >= 0) {
+			handle->aeffect->setParameter(handle->aeffect, param.internalIdx, val);
+		} else if (param.idx == PARAM_ENABLE) {
+			bool wasEnable = this->bIsEnabled;
+			this->bIsEnabled = val > 0;
+			if (this->bIsEnabled != wasEnable) {
+				if (this->bIsEnabled) {
+					onEnable();
+				} else {
+					onDisable();
+				}
+			}
+		}
 //		my_printf("set %s[%d] = %f\n", StringAsCStr(this->sName), idx, val);
 	}
 }
 void vstplugin::recvPluginEditParamUpdate(int32_t idx) {
 	if (idx >= 0 && idx < (int32_t)params.size()) {
 		auto& param = params[idx];
-		param.value = handle->aeffect->getParameter(handle->aeffect, param.idx);
+		if (param.internalIdx >= 0) {
+			param.value = handle->aeffect->getParameter(handle->aeffect, param.internalIdx);
+		}
 	}
-}
-automated_param_t* vstplugin::getRegisteredAutomation(int32_t idx) {
-	auto it = std::find_if(automatedParams.begin(), automatedParams.end(), [idx](automated_param_t& ap) {
-		return ap.paramIdx == idx;
-	});
-	if (it != automatedParams.end()) {
-		automated_param_t* ap = &(*it);
-		if (ap->src.isAutomated())
-			return ap;
-	}
-	return NULL;
 }
 automationlane_snapshot_t vstplugin::toRef() {
 	automationlane_snapshot_t ref;
@@ -392,47 +391,14 @@ automationlane_snapshot_t vstplugin::toRef() {
 	ref.refId = this->projectGlobalId;
 	return ref;
 }
-void vstplugin::getAutomated(std::vector<int32_t>& targets) {
-	for (automated_param_t t : automatedParams) {
-		if (t.src.isAutomated())
-			targets.push_back(t.paramIdx);
-	}
-}
-void vstplugin::updateAutomatedParameters(tick_t pos) {
-	for (automated_param_t& param : automatedParams) {
-		if (param.src.isActive()) {
-			float val = param.src.getValueAt(pos);
-			setParamValue(param.paramIdx, val);
-		}
-	}
-}
-automation_t* vstplugin::getAutomation(int32_t paramIdx) {
-	if (!hasParam(paramIdx)) {
-		return NULL;
-	}
-	for (automated_param_t& param : automatedParams) {
-		if (paramIdx == param.paramIdx) {
-			return &param.src;
-		}
-	}
-	automatedParams.emplace_back(paramIdx);
-	return &automatedParams.back().src;
-}
-void vstplugin::deactivateAutomation(int32_t paramIdx) {
-	for (automated_param_t& param : automatedParams) {
-		if (paramIdx == param.paramIdx) {
-			param.src.active = false;
-			return;
-		}
-	}
-}
-bool vstplugin::hasParam(int idx) {
-	if (idx >= 0 && idx < (int)params.size()) {
-		return true;
-	}
-	return false;
-}
 
+void vstplugin::onEnable() {
+	resume();
+}
+void vstplugin::onDisable() {
+	sleep();
+	vsthost::getInstance()->sendNotesOff(this);
+}
 bool vstplugin::close() {
 	if (this->window != NULL) {
 		this->window->close();

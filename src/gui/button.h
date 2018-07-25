@@ -118,6 +118,7 @@ public:
 	bool* state = NULL;
 	int icon = -1;
     std::function<int()> getIcon;
+    std::function<bool()> getState;
 	guibuttontoggle() : guibuttonbase() {
 	}
 	guibuttontoggle(float _radius) : guibuttonbase(ivec2(0), ivec2((int)(_radius * 2))) {
@@ -126,6 +127,8 @@ public:
 	bool enabled() override {
 		if (state)
 			return *state;
+		if (getState)
+			return getState();
 		return true;
 	}
 	void render(NVGcontext* vg) {

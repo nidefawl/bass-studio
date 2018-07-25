@@ -5,6 +5,8 @@
 #include <assert.h>
 #include <vector>
 
+#define PARAM_ENABLE 0
+
 struct automation_point_t {
 	tick_t time;
 	float val;
@@ -74,19 +76,43 @@ struct automated_param_t {
 	automation_t src;
 	automated_param_t(int32_t _paramIdx) : paramIdx(_paramIdx) { }
 };
+union param_step_fi_u {
+	float valFloat;
+	int32_t valInt;
+};
+struct automatable_param_t {
+	int32_t idx;
+	float value;
+	int32_t flags;
+
+	param_step_fi_u min;
+	param_step_fi_u max;
+	param_step_fi_u stepSmall;
+	param_step_fi_u step;
+	param_step_fi_u stepLarge;
+
+	String shortLabel;//8
+	String label;//64
+
+	//if kVstParameterSupportsDisplayIndex
+	int16_t displayIndex;		///< index where this parameter should be displayed (starting with 0)
+
+	//if kVstParameterSupportsDisplayCategory
+	int16_t category;			///< 0: no category, else group index + 1
+	int32_t internalIdx;
+};
 struct automatable_t {
+	std::vector<automatable_param_t> params;
+	std::vector<automated_param_t> automatedParams;
 	virtual ~automatable_t() {};
 	virtual String getAutomatableName() = 0;
-	virtual int32_t getNumParameters() const = 0;
-	virtual String getParamName(int32_t paramIdx) = 0;
 	virtual float getParamValue(int32_t idx) = 0;
 	virtual void setParamValue(int32_t idx, float val) = 0;
-	virtual void updateAutomatedParameters(tick_t pos) = 0;
-	virtual automation_t* getAutomation(int32_t idx) = 0;
-	virtual void getAutomated(std::vector<int32_t>& targets) = 0;
-	virtual void deactivateAutomation(int32_t paramIdx) = 0;
 	virtual automationlane_snapshot_t toRef() = 0;
-	automated_param_t* getRegisteredAutomation(int32_t idx);
+
+	virtual void flipParamValue(int32_t idx) {
+		setParamValue(idx, 1.0f-getParamValue(idx));
+	}
 	int32_t getQuantizationSteps(int32_t idx) {
 		automation_t* at = getAutomation(idx);
 		assert(at);
@@ -97,6 +123,67 @@ struct automatable_t {
 		assert(at);
 		f = quantizeFloat(f, at->quantizationSteps);
 		return f;
+	}
+
+	int32_t getNumParameters() const {
+		return params.size();
+	}
+	String getParamName(int32_t idx) {
+		if (idx >= 0 && idx < (int32_t)params.size()) {
+			return params[idx].label;
+		}
+		return "";
+	}
+	void getAutomated(std::vector<int32_t>& targets) {
+		for (automated_param_t t : automatedParams) {
+			if (t.src.isAutomated())
+				targets.push_back(t.paramIdx);
+		}
+	}
+	void updateAutomatedParameters(tick_t pos) {
+		for (automated_param_t& param : automatedParams) {
+			if (param.src.isActive()) {
+				float val = param.src.getValueAt(pos);
+				setParamValue(param.paramIdx, val);
+			}
+		}
+	}
+	automation_t* getAutomation(int32_t paramIdx) {
+		if (!hasParam(paramIdx)) {
+			return NULL;
+		}
+		for (automated_param_t& param : automatedParams) {
+			if (paramIdx == param.paramIdx) {
+				return &param.src;
+			}
+		}
+		automatedParams.emplace_back(paramIdx);
+		return &automatedParams.back().src;
+	}
+	void deactivateAutomation(int32_t paramIdx) {
+		for (automated_param_t& param : automatedParams) {
+			if (paramIdx == param.paramIdx) {
+				param.src.active = false;
+				return;
+			}
+		}
+	}
+	bool hasParam(int32_t idx) {
+		if (idx >= 0 && idx < (int32_t)params.size()) {
+			return true;
+		}
+		return false;
+	}
+	automated_param_t* getRegisteredAutomation(int32_t idx) {
+		auto it = std::find_if(automatedParams.begin(), automatedParams.end(), [idx](automated_param_t& ap) {
+			return ap.paramIdx == idx;
+		});
+		if (it != automatedParams.end()) {
+			automated_param_t* ap = &(*it);
+			if (ap->src.isAutomated())
+				return ap;
+		}
+		return NULL;
 	}
 };
 

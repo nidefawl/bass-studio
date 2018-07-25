@@ -5,11 +5,17 @@ class MainCtrl;
 class action_base {
 public:
 	std::string desc;
+	bool errored = false;
+	std::string errorDesc;
 	virtual ~action_base(){ };
 	virtual void undo(MainCtrl* ctrl) = 0;
 	virtual void redo(MainCtrl* ctrl) = 0;
 	String getDesc() {
 		return desc;
+	}
+	void setError(String err) {
+		this->errored = true;
+		this->errorDesc = err;
 	}
 };
 class edithistory {
