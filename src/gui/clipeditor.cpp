@@ -200,7 +200,6 @@ void gui_clipcontent::render(NVGcontext* vg) {
 	if (fold) {
 		std::vector<int32_t> pitches;
 		this->view.getNotePitches(pitches);
-		int32_t minPitch = pitches.size() ? pitches[0] : 0;
 		float yOff = offset - scale;
 
 
@@ -356,13 +355,33 @@ void gui_clipcontent::render(NVGcontext* vg) {
 			nvgStrokeColor(vg, g_guiColors[COL_NOTE_OUTLINE]);
 			nvgStroke(vg);
 		}
+		std::vector<note_t>& heldNotesArpIn = track->audio->getArpInputNotes();
+		if (heldNotesArpIn.size()&&false) {
+			nvgBeginPath(vg);
+			for (note_t& note : heldNotesArpIn) {
+				tick_t pos = note.start() - clip->start() + clip->offsetStart;
+				if (clip->loopEnabled) {
+					if (pos > clip->loopStart) {
+						pos = clip->loopStart + (pos - clip->loopStart) % clip->loopLen;
+					}
+				}
+				//TODO: CULL
+				renderNote(vg, this, &note, scale, -note.start() + pos);
+			}
+			nvgFillColor(vg, rgbToNvg(0xbbbb00));
+			nvgFill(vg);
+			nvgStrokeWidth(vg, 1.0f);
+			nvgStrokeColor(vg, g_guiColors[COL_NOTE_OUTLINE]);
+			nvgStroke(vg);
+		}
+
 		std::vector<note_t>& heldNotesArp = track->audio->getArpHeldNotes();
 		if (heldNotesArp.size()) {
 			nvgBeginPath(vg);
 
 			for (note_t& note : heldNotesArp) {
 				tick_t pos = note.start() - clip->start() + clip->offsetStart;
-				if (clip->loopEnabled) {
+				if (clip->loopEnabled && clip->loopLen>0) {
 					if (pos > clip->loopStart) {
 						pos = clip->loopStart + (pos - clip->loopStart) % clip->loopLen;
 					}
@@ -376,26 +395,40 @@ void gui_clipcontent::render(NVGcontext* vg) {
 			nvgStrokeColor(vg, g_guiColors[COL_NOTE_OUTLINE]);
 			nvgStroke(vg);
 		}
-//		std::vector<note_t>& heldNotesArpIn = track->audio->getArpInputNotes();
-//		if (heldNotesArpIn.size()) {
-//			nvgBeginPath(vg);
-//			for (note_t& note : heldNotesArpIn) {
-//				tick_t pos = note.start() - clip->start() + clip->offsetStart;
-//				if (clip->loopEnabled) {
-//					if (pos > clip->loopStart) {
-//						pos = clip->loopStart + (pos - clip->loopStart) % clip->loopLen;
-//					}
-//				}
-//				//TODO: CULL
-//				renderNote(vg, this, &note, scale, -note.start() + pos);
-//			}
-//			nvgFillColor(vg, g_guiColors[COL_NOTE_ARP]);
-//			nvgFill(vg);
-//			nvgStrokeWidth(vg, 1.0f);
-//			nvgStrokeColor(vg, g_guiColors[COL_NOTE_OUTLINE]);
-//			nvgStroke(vg);
-//		}
-
+		std::vector<marker_t> markers = track->audio->getArpMarkers();
+		if (markers.size()) {
+			for (marker_t& m : markers) {
+				tick_t pos = m.time - clip->start() + clip->offsetStart;
+				if (clip->loopEnabled) {
+					if (pos > clip->loopStart) {
+						pos = clip->loopStart + (pos - clip->loopStart) % clip->loopLen;
+					}
+				}
+ 				float nx = grid.tickToScreenD(pos);
+				if (nx < -4)
+					continue;
+				if (nx > w+4)
+					continue;
+				nvgBeginPath(vg);
+				nvgMoveTo(vg, nx, 0);
+				nvgLineTo(vg, nx, h);
+				nvgStrokeColor(vg, rgbToNvg(m.color));
+				nvgStrokeWidth(vg, 2.0f);
+				nvgStroke(vg);
+				if (m.desc[0]) {
+					String cstr = m.desc;
+					float bounds[4];
+					float w = nvgTextBounds(vg, 0, 0, cstr.c_str(), nullptr, bounds);
+					setFont(vg, G_FONT_SCALE(24), G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+					nvgBeginPath(vg);
+					nvgRect(vg, nx + INSET_TRACK_CONTENT, INSET_TRACK_CONTENT, bounds[2]+INSET_TRACK_CONTENT*2, bounds[3]+INSET_TRACK_CONTENT*2);
+					nvgFillColor(vg, rgbaToNvg(0xFF333333));
+					nvgFill(vg);
+					nvgFillColor(vg, G_WHITE);
+					nvgText(vg, nx + INSET_TRACK_CONTENT*2, INSET_TRACK_CONTENT*2+24/2.0, cstr.c_str(), nullptr);
+				}
+			}
+		}
 	}
 
 	nvgBeginPath(vg);
@@ -923,12 +956,9 @@ void gui_clipcontent::mergeDraggedNotes(dragmode mergeMode) {
 	if (mergeMode != dragmode::drag_notes_copy) {
 		notes.removeAllKeepDuplicates(view.draggedSelectionBegin);
 	}
-	int32_t size = notes.m_list.size();
 	for (note_t& note : view.draggedSelection) {
 		notes.paste(note, true);
 	}
-//	int32_t sizePost = notes.m_list.size();
-//	if (sizePost-size > 0)
 	notes.selectLastN(view.draggedSelection.size());
 	clip->setDirty();
 	view.updateNotePitches(false);

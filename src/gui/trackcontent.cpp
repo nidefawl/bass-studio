@@ -32,8 +32,8 @@ void gui_audio_clip::handleRightClick(MouseEvent& evt) {
 	MainCtrl::get()->openContextMenu(new guictxtmenu_clip(this->m_clip), evt.mousepos);
 }
 void gui_audio_clip::releaseRendered() {
-	waveformrender::getInstance()->release(m_clip->audio.waveformRef.fbId);
-	m_clip->audio.waveformRef.fbId = -1;
+	waveformrender::getInstance()->release(&m_clip->audio.waveformRef);
+//	m_clip->audio.waveformRef.fbId = -1;
 	m_clip->audio.waveformRef.rendered = false;
 }
 
@@ -74,9 +74,7 @@ void gui_audio_clip::prerender(NVGcontext* vg) {
 	if (!culled && !m_clip->audio.waveformRef.rendered) {
 		cachedaudio_t* audio = audiocache::getInstance()->get(m_clip->audio.id);
 		if (audio) {
-			int ret = waveformrender::getInstance()->render(vg, audio, &m_clip->audio.waveformRef.waveform, 1);
-			m_clip->audio.waveformRef.fbId = ret;
-			m_clip->audio.waveformRef.rendered = true;
+			int ret = waveformrender::getInstance()->queueUpdate(vg, audio, &m_clip->audio.waveformRef);
 		}
 	}
 }
@@ -135,8 +133,6 @@ public:
 	guictxtmenu_trackcontent(int32_t _trackid) {
 		this->trackid = _trackid;
 		this->size.x = 320;
-		MainCtrl* ctrl = MainCtrl::get();
-		track_t* tr = ctrl->getTrackId(this->trackid);
 		auto newClip = new ctxtmenu_entry("Create clip", 20);
 		add(newClip);
 		add(new ctxtmenu_splitter());

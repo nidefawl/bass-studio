@@ -10,6 +10,7 @@
 #include "note.h"
 #include "dsp_util.h"
 #include "leak_detect.h"
+#include "snapshot.h"
 
 struct VstEvent_t;
 
@@ -166,4 +167,5 @@ struct track_impl_t : public audio_stage_t {
 	void removePlugin(effectbase* _vst, bool notifyUp) override;
 	std::vector<note_t>& getArpHeldNotes();
 	std::vector<note_t>& getArpInputNotes();
+	std::vector<marker_t>& getArpMarkers();
 };

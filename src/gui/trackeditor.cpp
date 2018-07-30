@@ -688,9 +688,9 @@ void guitrack_editor::prerender(NVGcontext* vg) {
 					ivec2 clipSize = tr->content->size; //TODO: get rid of *tr here, figure out size before and add default fallback
 					cachedaudio_t* audio = audiocache::getInstance()->get(cl->audio.id);
 					if (!audio || !getClipPosition(grid, tr->content->size, cl, clipPos, clipSize, 0)) {
-						waveformrender::getInstance()->release(cl->audio.waveformRef.fbId);
-						cl->audio.waveformRef.fbId = -1;
-						cl->audio.waveformRef.rendered = false;
+						waveformrender::getInstance()->release(&cl->audio.waveformRef);
+//						cl->audio.waveformRef.fbId = -1;
+//						cl->audio.waveformRef.rendered = false;
 						continue;
 					}
 
@@ -702,10 +702,10 @@ void guitrack_editor::prerender(NVGcontext* vg) {
 					gui_waveform_texture_ref& waveformRef = cl->audio.waveformRef;
 					if (!cl->audio.waveformRef.rendered || waveform != waveformRef.waveform) {
 						waveformRef.waveform = waveform;
-						waveformrender::getInstance()->release(waveformRef.fbId);
-						int ret = waveformrender::getInstance()->render(vg, audio, &waveformRef.waveform, 1);
-						waveformRef.fbId = ret;
-						waveformRef.rendered = true;
+						waveformrender::getInstance()->release(&waveformRef);
+						int ret = waveformrender::getInstance()->queueUpdate(vg, audio, &waveformRef);
+//						waveformRef.fbId = ret;
+//						waveformRef.rendered = true;
 					}
 				}
 

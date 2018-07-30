@@ -129,8 +129,9 @@ track_t::track_t(const track_snapshot_t &a)
 	assert(this->mixer == NULL);
 	assert(this->content == NULL);
 }
-track_impl_snapshot_t::track_impl_snapshot_t(audio_stage_t* p, bool storePluginChunks) {
+track_impl_snapshot_t::track_impl_snapshot_t(track_impl_t* p, bool storePluginChunks) {
 	if (p) {
+		p->arp->createSnapshot(trackArp);
 		p->mixer.createSnapshot(trackParams);
 		std::vector<effectbase*> effects = p->effects;
 		pluginSnapshots.reserve(p->effects.size());
@@ -142,7 +143,7 @@ track_impl_snapshot_t::track_impl_snapshot_t(audio_stage_t* p, bool storePluginC
 	}
 }
 track_snapshot_t::track_snapshot_t(track_t* track, bool storePluginChunks)
-  : tracksettings_t(*track), localIdx(track->localIdx), plugins(track->audio, storePluginChunks)
+  : tracksettings_t(*track), localIdx(track->localIdx), plugins(static_cast<track_impl_t*>(track->audio), storePluginChunks)
 {
 	std::vector<clip_t*>& otherClips = track->getMidi().clips;
 	for (clip_t* clip : otherClips) {
@@ -160,6 +161,7 @@ void track_t::loadSnapshot(const track_snapshot_t& snapshot) {
 	assert(audio);
 	const auto& implSnapshot = snapshot.plugins;
 	audio->mixer.loadSnapshot(implSnapshot.trackParams);
+	audio->arp->loadSnapshot(implSnapshot.trackArp);
 	const std::vector<plugin_snapshot_t>& trPluginList = implSnapshot.pluginSnapshots;
 	audio->loadPlugins(trPluginList);
 	const std::vector<automationlane_snapshot_t>& atl = snapshot.automationLanes;
@@ -456,7 +458,7 @@ void track_impl_t::showAutomationLanes() {
 		saveAutomationLanes(atl);
 		MainCtrl::getGuiTrackCtr()->removeAllAutomationLanes(track);
 		Cursor& cursor = MainCtrl::get()->cursor;
-		if (cursor.inSubTrackRange(track->idx, 0)) {
+		if (cursor.inSubTrackAny(track->idx)) {
 			fixCursorSubRange(cursor, 0);
 		}
 	} else {
@@ -545,6 +547,9 @@ void track_impl_t::loadAutomationLanes(const std::vector<automationlane_snapshot
 		if (ref.type == 1) {
 			al = guiTracks->addAutomationLane(track, &mixer, ref.paramIdx, false);
 		}
+		if (ref.type == 2) {
+			al = guiTracks->addAutomationLane(track, arp, ref.paramIdx, false);
+		}
 		if (al)
 			al->height = ref.height;
 	}
@@ -618,10 +623,10 @@ void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t 
 			audiosample_t* sample = audio->sample.get();
 			if (srcStartOffset >= (int32_t)sample->nSamples)
 				continue;
-			assert(sample->samples.size() == 2);
+			assert(sample->samples.size() > 0);
 			for (int i = 0; i < 2; i++) {
 				float *dst = buffer[i];
-				auto& srcVector = sample->samples[i];
+				auto& srcVector = i >= (int)sample->samples.size() ? sample->samples[sample->samples.size()-1] : sample->samples[i];
 				int32_t len = std::min((int32_t)blockSize-std::max(0, -srcStartOffset), std::min(clipEndSampleLen, std::min(clipStartSampleLen, (int32_t)srcVector.size()-srcStartOffset)));
 				assert(len>=0);
 				if (len <= 0) { //TODO: could figure this out outside the loop
@@ -661,6 +666,9 @@ std::vector<note_t>& track_impl_t::getArpInputNotes() {
 std::vector<note_t>& track_impl_t::getArpHeldNotes() {
 	return this->arp->heldOutputAnimationNotes;
 }
+std::vector<marker_t>& track_impl_t::getArpMarkers() {
+	return this->arp->markers;
+}
 void track_impl_t::sendNotesOff(int32_t bpm100, int32_t blockSamplePos) {
 	VstEvent_t* midiEventsBuf = reallocEvts(track->audio->heldNotes.size());
 	for (note_t& note : track->audio->heldNotes) {
@@ -671,13 +679,12 @@ void track_impl_t::sendNotesOff(int32_t bpm100, int32_t blockSamplePos) {
 		arp->allNotesOff();
 	midiEventsBuf->writeInstantOff();
 	track->audio->heldNotes.clear();
-	int slot = 1;
 	for (effectbase* effect : effects) {
 		vstplugin* vst = dynamic_cast<vstplugin*>(effect);
 		if (vst && vst->bCanReceiveMidi) {
+			//			VstEvent_t midiEventsBufTemp = *midiEventsBuf; // make a copy
 			vst->dispatch(effProcessEvents, 0, 0, midiEventsBuf->vstEvents);
 		}
-//			VstEvent_t midiEventsBufTemp = *midiEventsBuf; // make a copy
 	}
 }
 void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos) {

@@ -38,15 +38,13 @@ public:
 		if (waveformRef.rendered) {
 			waveformrender* renderer = waveformrender::getInstance();
 			if (renderer) {
-				waveformrender::getInstance()->release(waveformRef.fbId);
+				waveformrender::getInstance()->release(&waveformRef);
 			}
 		}
 	}
 	void copy( const clip_audio_t &obj) {
 		this->id = obj.id;
-		this->waveformRef = obj.waveformRef;
 		this->weakCachedAudio = obj.weakCachedAudio;
-		this->waveformRef.fbId = -1;
 		this->waveformRef.rendered = false;
 	}
 	tick_t lenSamples();

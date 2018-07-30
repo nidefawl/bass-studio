@@ -37,10 +37,8 @@ void guitrack_timeline::handleDraggedMove(MouseEvent& evt) {
 		float disty = (float)(evt.dragDistance->y);
 
 		if (abs(distx) && (!lockGesture || (lockGesture && isMove))) {
-			int prevOffset = grid.offset;
 			grid.setOffset(grid.offset - evt.dragDistance->x);
 			evt.dragDistance->x = 0;
-//				assert(grid.offset != prevOffset);
 //				MainCtrl::get()->updateGrid();
 			grid.notifyChange();
 		}

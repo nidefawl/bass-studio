@@ -106,7 +106,7 @@ public:
 	guictxtmenu_trackparam(track_t* _track, automatable_t* _atl, int32_t _paramIdx) : track(_track), atl(_atl), paramIdx(_paramIdx)
 	{
 		this->size.x = 240;
-		addContextEntries(this, track, _atl, paramIdx);
+		addContextEntriesAutomation(this, track, _atl, paramIdx);
 	}
 	void clicked(int _id) {
 		handleAutomatbleContextMenu(track, atl, paramIdx, _id);
@@ -606,7 +606,7 @@ public:
 		if (button == &removeLane) {
 			Cursor& cursor = MainCtrl::get()->cursor;
 			int32_t laneIdx = this->al->idx;
-			if (cursor.inSubTrackRange(m_track->idx, laneIdx)) {
+			if (cursor.inSubTrack(m_track->idx, laneIdx)) {
 				fixCursorSubRange(cursor, m_track->subtracks.size()-1);
 			}
 			MainCtrl::getGuiTrackCtr()->removeAutomationLane(this->al);

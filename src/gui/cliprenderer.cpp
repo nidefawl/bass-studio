@@ -134,11 +134,11 @@ void renderAudioClip(NVGcontext* vg, const track_t* tr, const clip_t* cl, const 
 	if (sizeContents.x > 0 && sizeContents.y > 0 && guiaudioclip->rendered) {
 		nvgSave(vg);
 		nvgTranslate(vg, posContents.x, posContents.y);
-		waveformrender::getInstance()->draw(vg, guiaudioclip->fbId, &guiaudioclip->waveform, sizeContents);
+		waveformrender::getInstance()->draw(vg, guiaudioclip, sizeContents);
 
 		nvgRestore(vg);
 	}
-	if (cl->loopEnabled) {
+	if (cl->loopEnabled && cl->loopLen > 0) {
 		tick_t posLoopIndicator = cl->getLoopBegin();
 		nvgBeginPath(vg);
 		while (posLoopIndicator < clipLen) {
@@ -189,7 +189,7 @@ void renderMidiClip(NVGcontext* vg, const track_t* tr, const clip_t* cl, ivec2 p
 		nvgTranslate(vg, posContents.x, posContents.y);
 
 		clip_notes_t& notesView = cl->getNoteViewRender();
-		clip_notes_t& notesPlay = cl->getNoteViewPlayback();
+//		clip_notes_t& notesPlay = cl->getNoteViewPlayback();
 	//	clip_notes_t notesPlay;
 	//	cl->getNotesView(0, cl->len, notesPlay, true);
 		int32_t rgbNote = 0xffffff;

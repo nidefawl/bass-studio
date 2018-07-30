@@ -65,7 +65,7 @@ public:
 		return isOK;
 	}
 	virtual ~BaseCtrl() { }
-	void prerender(int32_t x, int32_t y, int32_t w, int32_t h, float ratio);
+	virtual void prerender(int32_t x, int32_t y, int32_t w, int32_t h, float ratio);
 	virtual void render(int32_t x, int32_t y, int32_t w, int32_t h, float ratio);
 
 	virtual bool processGlobalKeyevent(KeyEvent& event) {

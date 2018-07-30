@@ -3,6 +3,13 @@
 #include "str_util.h"
 #include <set>
 #include <vector>
+#include "str_util.h"
+
+struct marker_t {
+	tick_t time;
+	int32_t color;
+	String desc;
+};
 
 class track_t;
 class gui_clip;

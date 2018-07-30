@@ -39,6 +39,10 @@ public:
 		if (parent)
 			parent->buttonClicked(this);
 	}
+	void handleRightClick(MouseEvent& evt) override {
+		if (parent)
+			parent->rightClicked(evt, this);
+	}
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
 		if (contains(mpos)) {
 			evt.requestFocus(this);

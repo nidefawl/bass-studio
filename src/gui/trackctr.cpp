@@ -405,8 +405,6 @@ namespace {
 	}
 	void handleTrackEntryDragRelease(project_t& project, track_t* track, ivec2 mousepos) {
 		ivec2 posDrop;
-		int targetslotRender = MainCtrl::get()->getDragDropTarget().idx;
-		int targetslotNow = slotFromCoord(project, track, mousepos, posDrop);
 		int targetslot = slotFromCoord(project, track, mousepos, posDrop);
 		if (targetslot >= 0 && targetslot != track->localIdx && targetslot != track->localIdx+1) {
 			if (targetslot > track->localIdx) targetslot--;

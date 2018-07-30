@@ -43,12 +43,19 @@ public:
 	bool inTrackRange(int32_t track) const {
 		return track >= getTrackBegin() && track <= getTrackEnd();
 	}
-	bool inSubTrackRange(int32_t track, int32_t subTrack) const {
+	bool inSubTrack(int32_t track, int32_t subTrack) const {
 		if (track >= getTrackBegin() && track <= getTrackEnd()) {
 			if (isSubtrackSelection()) {
 				return subTrack >= getSubTrackBegin() && subTrack <= getSubTrackEnd();
 			}
-			return true;
+		}
+		return false;
+	}
+	bool inSubTrackAny(int32_t track) const {
+		if (track >= getTrackBegin() && track <= getTrackEnd()) {
+			if (isSubtrackSelection()) {
+				return true;
+			}
 		}
 		return false;
 	}

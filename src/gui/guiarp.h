@@ -15,6 +15,7 @@
 #include "leak_detect.h"
 #include "track_impl.h"
 #include "../host/midiarp.h"
+#include "../host/mainctrl.h"
 
 class gui_arp : public guictr_base {
 public:
@@ -55,49 +56,35 @@ public:
 			}
 			return false;
 		};
-		clock.fnGetValue = [this](void) {
-			auto arp = getArp();
-			if (arp) {
-				return arp->getClockF();
-			}
-			return 0.0f;
-		};
-		pattern.fnGetValue = [this](void) {
-			auto arp = getArp();
-			if (arp) {
-				return arp->getPatternF();
-			}
-			return 0.0f;
-		};
-		gate.fnGetValue = [this](void) {
-			auto arp = getArp();
-			if (arp) {
-				return arp->getGateF();
-			}
-			return 0.0f;
-		};
-		clock.fnSetValue = [this](float f) {
-			auto arp = getArp();
-			if (arp) {
-		    	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-				arp->setClockF(f);
-			}
-		};
-		pattern.fnSetValue = [this](float f) {
-			auto arp = getArp();
-			if (arp) {
-		    	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-				arp->setPatternF(f);
-			}
-		};
-		gate.fnSetValue = [this](float f) {
-			auto arp = getArp();
-			if (arp) {
-		    	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-				arp->setGateF(f);
-			}
-		};
+		guiknob* knobs[3] { &clock, &gate, &pattern };
+		int idx = 0;
+		for (guiknob* knob : knobs) {
+			const int paramIdx = idx + ARP_PARAM_CLOCK;
+			knob->fnSetValue = [this,paramIdx](float f) {
+				auto arp = getArp();
+				if (arp) {
+			    	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+					automation_t* param = arp->getAutomation(paramIdx);
+					if (param) {
+						param->active = false;
+					}
+					arp->params[paramIdx].value = std::max(0.0f, std::min(1.0f, f));
+				}
+			};
+			knob->fnGetValue = [this, paramIdx](void) {
+				auto arp = getArp();
+				if (arp) {
+					return arp->params[paramIdx].value;
+				}
+				return 0.0f;
+			};
+			knob->fnFocus = [this, paramIdx](bool b) { MainCtrl::get()->showAutomation(clipview.track(), getArp(), paramIdx); };
+
+			idx++;
+		}
 	}
+	void buttonClicked(guibase* _button);
+	void rightClicked(MouseEvent& evt, guibase* button) override;
 	virtual ~gui_arp() {
 		remove(&pattern);
 		remove(&gate);
@@ -112,35 +99,45 @@ public:
 		renderFrameBase(vg);
 		renderTitleBarHorizontal(vg, this->text, buttonBypass.right());
 		renderFrameOutline(vg);
-		clock.render(vg);
-		pattern.render(vg);
-		gate.render(vg);
 		buttonBypass.render(vg);
 		guiknob* knobs[3] = {&clock, &gate, &pattern};
-		for (guiknob* knob : knobs) {
-			nvgBeginPath(vg);
-			int32_t widthParam = this->getSizeContent().x - knob->right() - INSET_TITLE*2;
-			nvgRect(vg, knob->right()+INSET_TITLE, knob->pos.y, widthParam, knob->size.y);
-			nvgFillColor(vg, GUI_COLOR(G_S3));
-			nvgFill(vg);
-			String text = knob->label;
-			if (text[0]) {
-				setFont(vg, (int)((knob->size.y/2.0)), G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_TOP);
-				nvgText(vg, knob->right()+INSET_TITLE+INSET_TITLE, knob->pos.y+INSET_TITLE, StringAsCStr(text), NULL);
-				text = formatParameterValue(knob);
-				if (text[0]) {
-					setFont(vg, (int)((knob->size.y/2.0)*0.8), G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM);
-					nvgText(vg, knob->right()+INSET_TITLE+INSET_TITLE, knob->bottom()-INSET_TITLE, StringAsCStr(text), NULL);
+		midiarp* arp = getArp();
+		if (arp) {
+			int idx = 0;
+			for (guiknob* knob : knobs) {
+				const int paramIdx = idx + ARP_PARAM_CLOCK;
+				auto at = arp->getRegisteredAutomation(paramIdx);
+				if (at && at->src.isAutomated()) {
+					knob->indColor = G_PURPLE;
+				} else {
+					knob->indColor = G_WHITE;
 				}
+				if (at && at->src.isActive()) {
+					knob->valColor = G_PURPLE;
+				} else {
+					knob->valColor = G_BLUE;
+				}
+				knob->render(vg);
+				idx++;
 			}
-		}
-	}
-	void buttonClicked(guibase* _button) {
-		if (_button == &buttonBypass) {
-			midiarp* arp = getArp();
-			if (arp) {
-		    	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-				arp->flipParamValue(0);
+
+			idx = 0;
+			for (guiknob* knob : knobs) {
+				nvgBeginPath(vg);
+				int32_t widthParam = this->getSizeContent().x - knob->right() - INSET_TITLE*2;
+				nvgRect(vg, knob->right()+INSET_TITLE, knob->pos.y, widthParam, knob->size.y);
+				nvgFillColor(vg, GUI_COLOR(G_S3));
+				nvgFill(vg);
+				String text = knob->label;
+				if (text[0]) {
+					setFont(vg, (int)((knob->size.y/2.0)), G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_TOP);
+					nvgText(vg, knob->right()+INSET_TITLE+INSET_TITLE, knob->pos.y+INSET_TITLE, StringAsCStr(text), NULL);
+					text = formatParameterValue(knob);
+					if (text[0]) {
+						setFont(vg, (int)((knob->size.y/2.0)*0.8), G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM);
+						nvgText(vg, knob->right()+INSET_TITLE+INSET_TITLE, knob->bottom()-INSET_TITLE, StringAsCStr(text), NULL);
+					}
+				}
 			}
 		}
 	}

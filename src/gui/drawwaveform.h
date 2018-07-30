@@ -9,30 +9,48 @@ using glm::ivec2;
 #include "../gl/gl_path.h"
 
 struct NVGcontext;
-struct TextureEntry {
-	int idx = 0;
-	int glTexture = 0;
-	NVGLUframebuffer* fb = NULL;
-	bool inuse = false;
+struct TextureAtlasEntry { //TODO: fix that naming
 	audioclip_texture_t props;
+	ivec2 pos;
+	ivec2 size;
+	bool inuse = false;
+	int id;
 };
 struct gui_waveform_texture_ref {
 	audioclip_texture_t waveform;
-	int fbId = -1;
+	int atlasId = -1;
+	int atlasEntryId = -1;
+	ivec2 pos{0,0};
 	bool rendered = false;
+	bool queued = false;
+};
+struct waveform_update_task_t {
+	cachedaudio_t* audio;
+	gui_waveform_texture_ref* waveformRef;
+};
+struct TextureAtlas {
+	std::vector<waveform_update_task_t> queuedTasks;
+	std::vector<TextureAtlasEntry> entries;
+	int idx = -1;
+	int glTexture = -1;
+	NVGLUframebuffer* fb = nullptr;
+	int nextIdx = 0;
 };
 class waveformrender {
 	GLPathRenderer renderer;
 	BakeGLPath bakedPath;
-	std::vector<TextureEntry> textures;
-	int32_t nextIdx = 0;
+	std::vector<TextureAtlas> atlases;
+	std::vector<waveform_update_task_t> queuedTasks;
 public:
 	static waveformrender* getInstance();
 	static void setInstance(std::unique_ptr<waveformrender> host);
 	static void destroy();
 	void init();
-	void getRenderedTextures(std::vector<TextureEntry>& rendered);
-	int render(NVGcontext* ctxt, cachedaudio_t* audio, audioclip_texture_t* waveform, float pxRatio);
-	void draw(NVGcontext* ctxt, int fbId, const audioclip_texture_t* waveImage, glm::ivec2 size);
-	void release(int fbId);
+	void getRenderedTextures(std::vector<TextureAtlas>& rendered);
+//	int render(NVGcontext* ctxt, cachedaudio_t* audio, audioclip_texture_t* waveform);
+	int renderUpdates(NVGcontext* ctxt, float pxRatio);
+	int queueUpdate(NVGcontext* ctxt, cachedaudio_t* audio, gui_waveform_texture_ref* waveformRef);
+	void draw(NVGcontext* ctxt, const gui_waveform_texture_ref* waveformRef, ivec2 size);
+	void release(gui_waveform_texture_ref* waveformRef);
+	bool findFreeSpot(ivec2 size, int& atlasIdx, ivec2& pos);
 };

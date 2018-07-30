@@ -47,52 +47,67 @@ void waveformrender::setInstance(std::unique_ptr<waveformrender> host)
 void waveformrender::init() {
 	renderer.init();
 }
-void waveformrender::getRenderedTextures(std::vector<TextureEntry>& rendered) {
-	for (auto& texture : textures) {
-		if (texture.inuse) {
-			rendered.push_back(texture);
+void waveformrender::getRenderedTextures(std::vector<TextureAtlas>& rendered) {
+	for (auto& atlas : atlases) {
+		if (atlas.entries.size()) {
+			rendered.push_back(atlas);
 		}
 	}
 }
-void waveformrender::release(int fbId) {
-	for (auto& texture : textures) {
-		if (texture.idx == fbId) {
-			texture.inuse = false;
-			return;
+void waveformrender::release(gui_waveform_texture_ref* waveformRef) {
+	if (waveformRef->atlasId < 0) {
+//		assert(0);
+		return;
+	}
+	assert(waveformRef->atlasId >= 0 && waveformRef->atlasId < (int)atlases.size());
+	auto& atlas = this->atlases[waveformRef->atlasId];
+	assert(atlas.fb && atlas.glTexture > -1 && atlas.idx > -1);
+	auto& vec = atlas.entries;
+	const int id = waveformRef->atlasEntryId;
+	auto it = std::find_if(vec.begin(), vec.end(), [id](const TextureAtlasEntry& entry) {
+		return entry.id == id;
+	});
+	assert(it != vec.end());
+	vec.erase(it);
+	my_printf("erase entry %d from %d\n", id, waveformRef->atlasId);
+	waveformRef->atlasId = -1;
+	waveformRef->atlasEntryId = -1;
+}
+int waveformrender::queueUpdate(NVGcontext* ctxt, cachedaudio_t* audio, gui_waveform_texture_ref* waveformRef) {
+	if (waveformRef->queued) {
+		return 0;
+	}
+	waveform_update_task_t waveform_update_task{audio, waveformRef};
+	queuedTasks.push_back(waveform_update_task);
+	waveformRef->queued = true;
+	return 1;
+}
+bool waveformrender::findFreeSpot(ivec2 size, int& atlasIdx, ivec2& pos) {
+	for (TextureAtlas& _atlas : atlases) {
+		if (_atlas.entries.size() < 1) {
+			pos = {0, 0};
+			atlasIdx = _atlas.idx;
+			return true;
 		}
 	}
-}
-int waveformrender::render(NVGcontext* ctxt, cachedaudio_t* audio, audioclip_texture_t* waveform, float pxRatio) {
+	TextureAtlas e;
+	e.idx = atlases.size();
+	atlases.push_back(e);
 
-	TextureEntry* entry = nullptr;
-	for (auto& texture : textures) {
-		if (!texture.inuse) {
-			entry = &texture;
-			break;
-		}
-	}
+	pos = {0, 0};
+	atlasIdx = e.idx;
+	return true;
+}
+int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 	checkGLError("waveformrender::render start");
-	if (!entry) {
-		TextureEntry e;
-		e.fb = nvgluCreateFramebuffer(ctxt, FBO_WIDTH, FBO_HEIGHT, 0);
-		if (e.fb == NULL) {
-			throw new appexception("nvgluCreateFramebuffer error");
-		}
-		checkGLError("waveformrender::render nvgluCreateFramebuffer");
-		e.glTexture = nvgGetGLImageHandle(ctxt, e.fb->image);
-		e.idx = textures.size();
-		textures.push_back(e);
-		entry = &textures.back();
-	}
 
-	entry->inuse = true;
-	entry->props = *waveform;
+//	entry->inuse = true;
+//	entry->props = *waveform;
 
-	nvgluBindFramebuffer(entry->fb);
 	// Draw some stuff to an FBO as a test
 	glViewport(0, 0, FBO_WIDTH, FBO_HEIGHT);
 	glClearColor(0, 0, 0, 0);
-	glClear(GL_COLOR_BUFFER_BIT|GL_STENCIL_BUFFER_BIT);
+	glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);
 	glEnable(GL_BLEND);
@@ -105,44 +120,94 @@ int waveformrender::render(NVGcontext* ctxt, cachedaudio_t* audio, audioclip_tex
 	checkGLError("fb prerender");
 
 
-	std::vector<std::vector<glm::vec2>> tesselatedWaveForms;
-	SampleMethod method = waveform->method;
-	tesselateWaveform(audio->sample.get(), 0, 0, waveform, method, tesselatedWaveForms);
-	Uniforms bakeOpt;
-	bakeOpt.linecaps = vec2(LineCaps::none, LineCaps::none);
-	bakeOpt.linejoin = waveform->linewidth > 1.75 ? LineJoin::round : LineJoin::miter;
-	bakeOpt.miter_limit = 1.8f;
-	bakeOpt.color = vec4(vec3(1), 1.0);
+	//go over all waveforms that are queued up
+	//assign them to free spots in framebuffertextures
+	//go over all framebuffers: bind fb, go over all queue updates in that fb and tesselate + draw them
+	for (waveform_update_task_t& waveformQueueEntry : this->queuedTasks) {
 
-//	uint32_t color = colorPalette[(nextIdx++%(COLOR_PALETTE_COLS-2))*COLOR_PALETTE_ROWS+3];
-//	bakeOpt.color = int32vec4(color);
-//	bakeOpt.color.w = 1.0;
+		gui_waveform_texture_ref* waveformRef = waveformQueueEntry.waveformRef;
+		int atlasIdx = -1;
+		ivec2 pos;
+		if (findFreeSpot(waveformRef->waveform.size, atlasIdx, pos)) {
 
-	bakeOpt.linewidth = waveform->linewidth;
-	bakeOpt.antialias = 1.0f;
-	bakeOpt.scale = waveform->scale;
-	renderer.bakePaths(tesselatedWaveForms, bakeOpt, this->bakedPath);
+			TextureAtlas& atlas = this->atlases[atlasIdx];
+			atlas.queuedTasks.push_back(waveformQueueEntry);
+			waveformRef->pos = pos;
+			waveformRef->atlasId = atlasIdx;
+		}
+	}
+	this->queuedTasks.clear();
+	//
 
-
-	mat4x4 matView = mat4x4(1.0);
-	mat4x4 matModel = mat4x4(1.0);
-	matModel[0][0] = waveform->scaleX;
-	mat4x4 matProj = glm::ortho(0.f, (float) FBO_WIDTH, (float)FBO_HEIGHT, 0.f, 1.f, -1.f);
 	glUseProgram(renderer.program2dLines);
-	glUniformMatrix4fv(renderer.u_projection, 1, GL_FALSE, value_ptr(matProj));
-	glUniformMatrix4fv(renderer.u_model, 1, GL_FALSE, value_ptr(matModel));
-	glUniformMatrix4fv(renderer.u_view, 1, GL_FALSE, value_ptr(matView));
-	glUniform3f ( renderer.u_uniforms_shape, 1, bakedPath.numPaths*renderer.countUniforms, renderer.countUniforms);
-	glBindTexture ( GL_TEXTURE_2D, bakedPath.uniforms_texture);
-	glBindVertexArray ( bakedPath.vbo.vaoId );
-	glBindBuffer ( GL_ELEMENT_ARRAY_BUFFER, bakedPath.vbo.vboIdxId);
-	glDrawElements ( GL_TRIANGLES, bakedPath.vbo.nIndices, GL_UNSIGNED_INT, NULL);
+	for (TextureAtlas& _atlas : atlases) {
+		if (!_atlas.fb) {
+			_atlas.fb = nvgluCreateFramebuffer(ctxt, FBO_WIDTH, FBO_HEIGHT, 0);
+			if (!_atlas.fb) {
+				throw new appexception("nvgluCreateFramebuffer error");
+			}
+			checkGLError("waveformrender::render nvgluCreateFramebuffer");
+			_atlas.glTexture = nvgGetGLImageHandle(ctxt, _atlas.fb->image);
+		}
+		if (_atlas.queuedTasks.empty()) {
+			continue;
+		}
+		nvgluBindFramebuffer(_atlas.fb);
+		//ADD scissor test here
+		glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+		for (waveform_update_task_t& waveformQueueEntry : _atlas.queuedTasks) {
+			gui_waveform_texture_ref* waveformRef = waveformQueueEntry.waveformRef;
+			cachedaudio_t* audio = waveformQueueEntry.audio;
+			audioclip_texture_t& waveform = waveformRef->waveform;
+
+			SampleMethod method = waveform.method;
+			std::vector<std::vector<glm::vec2>> tesselatedWaveForms;
+			tesselateWaveform(audio->sample.get(), 0, 0, &waveform, method, tesselatedWaveForms);
+			Uniforms bakeOpt;
+			bakeOpt.linecaps = vec2(LineCaps::none, LineCaps::none);
+			bakeOpt.linejoin = waveform.linewidth > 1.75 ? LineJoin::round : LineJoin::miter;
+			bakeOpt.miter_limit = 1.8f;
+			bakeOpt.color = vec4(vec3(1), 1.0);
+			//	uint32_t color = colorPalette[(nextIdx++%(COLOR_PALETTE_COLS-2))*COLOR_PALETTE_ROWS+3];
+			//	bakeOpt.color = int32vec4(color);
+			//	bakeOpt.color.w = 1.0;
+
+			bakeOpt.linewidth = waveform.linewidth;
+			bakeOpt.antialias = 1.0f;
+			bakeOpt.scale = waveform.scale;
+			renderer.bakePaths(tesselatedWaveForms, bakeOpt, this->bakedPath);
+			mat4x4 matView = mat4x4(1.0);
+			mat4x4 matModel = mat4x4(1.0);
+			matModel[0][0] = waveform.scaleX;
+			mat4x4 matProj = glm::ortho(0.f, (float) FBO_WIDTH, (float)FBO_HEIGHT, 0.f, 1.f, -1.f);
+			glUniformMatrix4fv(renderer.u_projection, 1, GL_FALSE, value_ptr(matProj));
+			glUniformMatrix4fv(renderer.u_view, 1, GL_FALSE, value_ptr(matView));
+			glUniformMatrix4fv(renderer.u_model, 1, GL_FALSE, value_ptr(matModel));
+			glUniform3f ( renderer.u_uniforms_shape, 1, bakedPath.numPaths*renderer.countUniforms, renderer.countUniforms);
+			glBindTexture ( GL_TEXTURE_2D, bakedPath.uniforms_texture);
+			glBindVertexArray ( bakedPath.vbo.vaoId );
+			glBindBuffer ( GL_ELEMENT_ARRAY_BUFFER, bakedPath.vbo.vboIdxId);
+			glDrawElements ( GL_TRIANGLES, bakedPath.vbo.nIndices, GL_UNSIGNED_INT, NULL);
+			const int id = _atlas.nextIdx++;
+			TextureAtlasEntry e;
+			e.inuse = true;
+			e.pos = waveformRef->pos;
+			e.props = waveform;
+			e.id = id;
+			waveformRef->queued = false;
+			waveformRef->rendered = true;
+			waveformRef->atlasEntryId = id;
+			_atlas.entries.push_back(e);
+		}
+		_atlas.queuedTasks.clear();
+
+	}
+
 	glBindVertexArray(0);
-
 	nvgluBindFramebuffer(NULL);
-
 	checkGLError("fb postrender");
-	return entry->idx;
+	return 0;
+
 }
 void drawImage(NVGcontext* vg, int image, float alpha,
 		float sx, float sy, float sw, float sh, // sprite location on texture
@@ -167,13 +232,18 @@ void drawImage(NVGcontext* vg, int image, float alpha,
 	nvgFill(vg);
 }
 
-void waveformrender::draw(NVGcontext* ctxt, int fbId, const audioclip_texture_t* waveImage, ivec2 size) {
-	for (auto& texture : textures) {
-		if (texture.idx == fbId) {
-			drawImage(ctxt, texture.fb->image, 1.0f, 0, 0, size.x*waveImage->scale, size.y*waveImage->scale, waveImage->startOffset.x, 0, size.x, size.y);
-			return;
-		}
-	}
+void waveformrender::draw(NVGcontext* ctxt, const gui_waveform_texture_ref* waveformRef, ivec2 size) {
+	assert(waveformRef->atlasId >= 0 && waveformRef->atlasId < (int)atlases.size());
+	auto& atlas = this->atlases[waveformRef->atlasId];
+	assert(atlas.fb && atlas.glTexture > -1 && atlas.idx > -1);
+	const audioclip_texture_t* waveImage = &waveformRef->waveform;
+	drawImage(ctxt, atlas.fb->image, 1.0f, 0, 0, size.x*waveImage->scale, size.y*waveImage->scale, waveImage->startOffset.x, 0, size.x, size.y);
+//	for (auto& texture : textures) {
+//		if (texture.idx == fbId) {
+//			drawImage(ctxt, texture.fb->image, 1.0f, 0, 0, size.x*waveImage->scale, size.y*waveImage->scale, waveImage->startOffset.x, 0, size.x, size.y);
+//			return;
+//		}
+//	}
 
 
 }

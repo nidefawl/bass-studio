@@ -147,7 +147,7 @@ cachedaudio_t* audiocache::loadFile(String path, int id) {
 			}
 			sample->downsampled.push_back(std::move(downsampledChannels));
 		}
-		int nDownSmplSteps = maxDownS-1;
+//		int nDownSmplSteps = maxDownS-1;
 //		assert(sample->downsampled.size() == nDownSmplSteps);
 		int _id = id < 0 ? this->nextIdx++ : id;
 		std::unique_ptr<cachedaudio_t> cachedaudio = std::make_unique<cachedaudio_t>();

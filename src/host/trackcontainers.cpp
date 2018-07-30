@@ -74,7 +74,7 @@ void trackallcontainer_t::moveTrack(track_t* track, int32_t dst) {
 	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 	tracksubcontainer_t* subCtr = trackTypeCtrs[track->type];
 	int32_t src = indexOfCtr(subCtr->tracks, track);
-	if (subCtr->tracks.size() == dst) dst--;
+	if ((int32_t)subCtr->tracks.size() == dst) dst--;
 	assert(src >= 0 && dst >= 0);
 	assert(src != dst);
 

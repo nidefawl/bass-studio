@@ -312,6 +312,7 @@ public:
 	track_t* getSelectedTrack();
 	void showPluginView();
 	void showClipEditor();
+	void prerender(int32_t x, int32_t y, int32_t w, int32_t h, float pixelRatio);
 
 	void showAutomation(track_t* tr, automatable_t* at, int32_t paramIdx);
 	bool isClipEditorVisible();

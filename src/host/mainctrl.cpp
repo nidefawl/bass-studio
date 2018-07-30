@@ -1421,6 +1421,12 @@ shared_ptr<clip_clipboard> MainCtrl::copySelection(const Cursor& _cursor) {
 	return clipboard;
 }
 
+void MainCtrl::prerender(int32_t x, int32_t y, int32_t w, int32_t h, float pixelRatio) {
+	for (guictr_base *ctr : containers) {
+		ctr->prerender(vg);
+	}
+	waveformrender::getInstance()->renderUpdates(vg, pixelRatio);
+}
 track_t* clip_view::track() const {
 	if (!this->gui)
 		return NULL;

@@ -72,7 +72,7 @@ int loadShader() {
 	glUseProgram(program);
 	u_mvp = glGetUniformLocation(program, "mvp");
 	u_tex0 = glGetUniformLocation(program, "tex0");
-	for (int i = 0; i < attributes.size(); i++) {
+	for (int i = 0; i < (int)attributes.size(); i++) {
 		attributes[i].bindingPt = glGetAttribLocation(program, attributes[i].name);
 	}
 	checkGLError("glGetAttribLocation");
@@ -106,7 +106,7 @@ int initDebugWindow() {
 
 void drawDebugWindow(NVGcontext* ctx, int winW, int winH, float pxratio) {
 
-	std::vector<TextureEntry> rendered;
+	std::vector<TextureAtlas> rendered;
 	waveformrender::getInstance()->getRenderedTextures(rendered);
 //	my_printf("nrendered: %d\n", rendered.size());
 //	auto* ptr = audiocache::getInstance()->get(0);
@@ -126,9 +126,9 @@ void drawDebugWindow(NVGcontext* ctx, int winW, int winH, float pxratio) {
 	glActiveTexture( GL_TEXTURE0 );
 	glUseProgram(program2dTexture);
 	glUniform1i(u_tex0, 0);
-	for (TextureEntry& e : rendered) {
+	for (TextureAtlas& e : rendered) {
 		int n = e.glTexture;
-		if (n > 0 && e.inuse) {
+		if (n > 0 && e.entries.size()) {
 			glm::mat4 matProj = glm::ortho(0.f, (float) winW, (float) winH, 0.f, 1.f, -1.f);
 			glm::mat4 mvp = matProj * glm::translate(glm::mat4(1.0), vec3(x, y, 0));
 //			glDisable(GL_DEPTH_TEST);

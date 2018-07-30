@@ -286,15 +286,6 @@ void BaseCtrl::onKeyInput(int key, int scancode, int keyState, int mods, const c
 //	}
 }
 void BaseCtrl::prerender(int32_t x, int32_t y, int32_t w, int32_t h, float pixelRatio) {
-//	std::vector<cachedaudio_t*> v;
-//	audiocache::getInstance()->getLoaded(v);
-//	for (cachedaudio_t* w : v) {
-//		for (audiowaveform_t& w2 : w->waveforms) {
-//			if (!w2.rendered || w2.renderedSize != w2.size) {
-//				waveformrender::getInstance()->render(vg, w, &w2, pixelRatio);
-//			}
-//		}
-//	}
 	for (guictr_base *ctr : containers) {
 		ctr->prerender(vg);
 	}

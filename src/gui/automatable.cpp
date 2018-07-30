@@ -10,7 +10,7 @@
 #define ID_REENABLE 2
 #define ID_SHOW 3
 #define ID_SHOW_NEW 4
-void addContextEntries(guictxtmenu_base* ctxt, track_t* tr, automatable_t* atl, int paramIdx) {
+void addContextEntriesAutomation(guictxtmenu_base* ctxt, track_t* tr, automatable_t* atl, int paramIdx) {
 
 	MainCtrl::get()->showAutomation(tr, atl, paramIdx);
 	automation_t* at = atl->getAutomation(paramIdx);

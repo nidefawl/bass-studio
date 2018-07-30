@@ -1381,7 +1381,7 @@ int startApplication(int argc, char* argv[]) {
 	mainWindow->create("main window", 1280, 720);
 	mainWindow->showWindow();
 	enableGlDebugCallback();
-	if (0) {
+	if (1) {
 		appwindow_dialog* w = new appwindow_dialog(NULL);
 		w->drawFn=drawDebugWindow;
 		int winW = 1280;
