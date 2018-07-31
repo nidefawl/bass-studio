@@ -1,6 +1,7 @@
 #include "midiarp.h"
 #include "track.h"
 #include "snapshot.h"
+#include "color_util.h"
 
 void midiarp::loadSnapshot(const arp_snapshot& snapshot) {
 	for (auto p : snapshot.params) {
@@ -66,12 +67,6 @@ int midiarp::writeOutputNotes(std::vector<noteevent_t>& noteEventsProcessed,
 	}
 	assert(notesSpawnTime.size() == heldOutputAnimationNotes.size());
 	return nSend;
-}
-int col(int bits) {
-	int r = 0xff*(bits&1);
-	int g = 0xff*((bits&2)*128);
-	int b = 0xff*((bits&4)*64*256);
-	return r | g | b;
 }
 void midiarp::process(std::vector<noteevent_t>& noteEventsIn,
 				tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd,

@@ -27,7 +27,8 @@ bool getClipPosition(scaled_grid& grid, const ivec2& trackSize, const clip_t* cl
 	}
 	return size.x > 0 && size.y > 0;
 }
-audioclip_texture_t makeWaveformFromClip(project_t& project, scaled_grid& grid, ivec2& trackSize, clip_t* m_clip, ivec2& pos, ivec2& size, ivec2& posClipped, ivec2& sizeClipped) {
+audioclip_texture_t makeWaveformFromClip(project_t& project, scaled_grid& grid,
+		ivec2& trackSize, clip_t* m_clip, ivec2& pos, ivec2& size, ivec2& posClipped, ivec2& sizeClipped) {
 
 
 	samplerate_t sr = vsthost::getInstance()->lSampleRate; //TODO: store in project_t
@@ -72,7 +73,8 @@ audioclip_texture_t makeWaveformFromClip(project_t& project, scaled_grid& grid, 
 //	makeOrUpdateWaveform(&w, posClipped, startOffset, sizeClipped, sampleBegin, sampleStartOffset, sampleEnd, samplesPerPx, grid.zoom);
 	w.pos = pos;
 	w.startOffset = startOffset;
-	w.size = size;
+	w.size = sizeClipped;
+	assert(w.size.x > 0);
 	w.sampleBegin = sampleBegin;
 	w.sampleBeginOffset = sampleStartOffset;
 	w.sampleEnd = sampleEnd;

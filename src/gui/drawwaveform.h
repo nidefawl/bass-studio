@@ -8,8 +8,10 @@ using glm::ivec2;
 #include "audiowaveform.h"
 #include "../gl/gl_path.h"
 
+const int FBO_WIDTH = 1024*2;
+const int FBO_HEIGHT = 1024*2;
 struct NVGcontext;
-struct TextureAtlasEntry { //TODO: fix that naming
+struct TextureAtlasEntry {
 	audioclip_texture_t props;
 	ivec2 pos;
 	ivec2 size;
@@ -21,6 +23,7 @@ struct gui_waveform_texture_ref {
 	int atlasId = -1;
 	int atlasEntryId = -1;
 	ivec2 pos{0,0};
+	ivec2 size{0,0};
 	bool rendered = false;
 	bool queued = false;
 };

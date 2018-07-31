@@ -62,10 +62,14 @@ void gui_audio_clip::updatePosition(project_t& project, scaled_grid& grid, ivec2
 			ivec2 posClipped = pos;
 			ivec2 sizeClipped = clipSize;
 			this->parent->scissorClip(posClipped, sizeClipped);
-			auto waveform = makeWaveformFromClip(project, grid, trackSize, m_clip, pos, clipSize, posClipped, sizeClipped);
-			if (waveform != m_clip->audio.waveformRef.waveform) {
-				releaseRendered();
-				m_clip->audio.waveformRef.waveform = waveform;
+			if (posClipped.x+sizeClipped.x <= 0 || sizeClipped.x <= 0) {
+				culled = true;
+			} else {
+				auto waveform = makeWaveformFromClip(project, grid, trackSize, m_clip, pos, clipSize, posClipped, sizeClipped);
+				if (waveform != m_clip->audio.waveformRef.waveform) {
+					releaseRendered();
+					m_clip->audio.waveformRef.waveform = waveform;
+				}
 			}
 		}
 	}

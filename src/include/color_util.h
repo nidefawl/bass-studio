@@ -18,3 +18,4 @@ uint32_t getContrastFontColoru32(uint32_t color);
 NVGcolor nvgToHSL(NVGcolor rgb);
 NVGcolor mulSatBright(NVGcolor rgb, float sat, float brt);
 NVGcolor getCursorColor();
+int col(int bits);

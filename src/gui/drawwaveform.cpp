@@ -11,7 +11,6 @@
 #include "platform.h"
 #include "exceptions.h"
 #include "logging.h"
-#include "guicolors.h"
 #include "color_util.h"
 #include "../host/mainctrl.h"
 
@@ -23,8 +22,6 @@ using glm::ivec2;
 using glm::vec3;
 using glm::vec2;
 
-const int FBO_WIDTH = 1024*2;
-const int FBO_HEIGHT = 1024*2;
 
 bool checkGLError(const char* s);
 
@@ -72,6 +69,7 @@ void waveformrender::release(gui_waveform_texture_ref* waveformRef) {
 	my_printf("erase entry %d from %d\n", id, waveformRef->atlasId);
 	waveformRef->atlasId = -1;
 	waveformRef->atlasEntryId = -1;
+	waveformRef->rendered = false;
 }
 int waveformrender::queueUpdate(NVGcontext* ctxt, cachedaudio_t* audio, gui_waveform_texture_ref* waveformRef) {
 	if (waveformRef->queued) {
@@ -82,14 +80,76 @@ int waveformrender::queueUpdate(NVGcontext* ctxt, cachedaudio_t* audio, gui_wave
 	waveformRef->queued = true;
 	return 1;
 }
+bool collides(ivec2 pos1, ivec2 size1, ivec2 pos2, ivec2 size2, ivec2& offset) {
+	ivec2 rightBottom1 = pos1 + size1;
+	ivec2 rightBottom2 = pos2 + size2;
+	if (pos1.x >= rightBottom2.x) {
+		return false;
+	}
+	if (rightBottom1.x <= pos2.x) {
+		return false;
+	}
+	if (pos1.y >= rightBottom2.y) {
+		return false;
+	}
+	if (rightBottom1.y <= pos2.y) {
+		return false;
+	}
+	if (pos1.x >= pos2.x && pos1.x < rightBottom2.x) {
+		offset.x += rightBottom2.x - pos1.x;
+	}
+	else if (pos1.y >= pos2.y && pos1.y < rightBottom2.y) {
+		offset.y += rightBottom2.y - pos1.y;
+	}
+	return true;
+}
+struct _pos {
+	ivec2 pos;
+	ivec2 size;
+};
+bool anyCollision(std::vector<_pos>& positions, ivec2 pos1, ivec2 size1) {
+	for(auto& entry : positions) {
+		ivec2 offset(0, 0);
+		if (collides(pos1, size1, entry.pos, entry.size, offset))
+			return true;
+	}
+	return false;
+}
 bool waveformrender::findFreeSpot(ivec2 size, int& atlasIdx, ivec2& pos) {
 	for (TextureAtlas& _atlas : atlases) {
-		if (_atlas.entries.size() < 1) {
-			pos = {0, 0};
-			atlasIdx = _atlas.idx;
-			return true;
+		std::vector<_pos> positions;
+		TextureAtlasEntry a;
+		for(auto& entry : _atlas.entries) {
+			positions.push_back(_pos{entry.pos, entry.size});
+		}
+		for(auto& entry : _atlas.queuedTasks) {
+			positions.push_back(_pos{entry.waveformRef->pos, entry.waveformRef->size});
+		}
+		ivec2 tmpPos = {0, 0};
+		while (1) {
+			if (!anyCollision(positions, tmpPos, size)) {
+				pos = tmpPos;
+				atlasIdx = _atlas.idx;
+				for(auto& entry : positions) {
+					ivec2 offset(0, 0);
+					bool b = collides(tmpPos, size, entry.pos, entry.size, offset);
+					if (b) {
+						assert(0);
+					}
+				}
+				return true;
+			}
+			tmpPos.x+=16;
+			if (tmpPos.x+size.x >= FBO_WIDTH) {
+				tmpPos.x = 0;
+				tmpPos.y+=16;
+			}
+			if (tmpPos.y+size.y >= FBO_HEIGHT) { // texture is filled
+				break;
+			}
 		}
 	}
+	// create new texture
 	TextureAtlas e;
 	e.idx = atlases.size();
 	atlases.push_back(e);
@@ -98,6 +158,7 @@ bool waveformrender::findFreeSpot(ivec2 size, int& atlasIdx, ivec2& pos) {
 	atlasIdx = e.idx;
 	return true;
 }
+
 int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 	checkGLError("waveformrender::render start");
 
@@ -128,12 +189,35 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 		gui_waveform_texture_ref* waveformRef = waveformQueueEntry.waveformRef;
 		int atlasIdx = -1;
 		ivec2 pos;
-		if (findFreeSpot(waveformRef->waveform.size, atlasIdx, pos)) {
+		vec2 v(waveformRef->waveform.size.x, waveformRef->waveform.size.y);
+		v *= waveformRef->waveform.scale;
+//		v.x *= 1.0f/waveformRef->waveform.scaleX;
+		ivec2 sizeInternal = ivec2((int)std::ceil(v.x), (int)std::ceil(v.y));
+//		assert(waveformRef->waveform.size.x <= 512);
+		if (findFreeSpot(sizeInternal, atlasIdx, pos)) {
 
-			TextureAtlas& atlas = this->atlases[atlasIdx];
-			atlas.queuedTasks.push_back(waveformQueueEntry);
+			TextureAtlas& _atlas = this->atlases[atlasIdx];
+			_atlas.queuedTasks.push_back(waveformQueueEntry);
 			waveformRef->pos = pos;
+			waveformRef->size = sizeInternal;
 			waveformRef->atlasId = atlasIdx;
+			std::vector<_pos> positions;
+			for(auto& entry : _atlas.entries) {
+				positions.push_back(_pos{entry.pos, entry.size});
+			}
+			for(auto& entry : _atlas.queuedTasks) {
+				positions.push_back(_pos{entry.waveformRef->pos, entry.waveformRef->size});
+			}
+			for(auto& entry : positions) {
+				for(auto& entry2 : positions) {
+					if (&entry2 == &entry) continue;
+					ivec2 offset(0, 0);
+					bool b = collides(entry2.pos, entry2.size, entry.pos, entry.size, offset);
+					if (b) {
+						my_printf("COLLISION\n",0);
+					}
+				}
+			}
 		}
 	}
 	this->queuedTasks.clear();
@@ -141,6 +225,7 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 
 	glUseProgram(renderer.program2dLines);
 	for (TextureAtlas& _atlas : atlases) {
+		bool clearFB = false;
 		if (!_atlas.fb) {
 			_atlas.fb = nvgluCreateFramebuffer(ctxt, FBO_WIDTH, FBO_HEIGHT, 0);
 			if (!_atlas.fb) {
@@ -148,17 +233,26 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 			}
 			checkGLError("waveformrender::render nvgluCreateFramebuffer");
 			_atlas.glTexture = nvgGetGLImageHandle(ctxt, _atlas.fb->image);
+			clearFB = true;
 		}
 		if (_atlas.queuedTasks.empty()) {
 			continue;
 		}
 		nvgluBindFramebuffer(_atlas.fb);
-		//ADD scissor test here
-		glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+//		GLboolean isScissor=0;
+//		glGetBooleanv(GL_SCISSOR_TEST, &isScissor);
+//		assert(!isScissor);
+		glClearColor(0, 0, 0, 0);
+		if (clearFB) {
+			glDisable(GL_SCISSOR_TEST);
+			glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+		}
+		glEnable(GL_SCISSOR_TEST);
 		for (waveform_update_task_t& waveformQueueEntry : _atlas.queuedTasks) {
 			gui_waveform_texture_ref* waveformRef = waveformQueueEntry.waveformRef;
 			cachedaudio_t* audio = waveformQueueEntry.audio;
 			audioclip_texture_t& waveform = waveformRef->waveform;
+			const int id = _atlas.nextIdx++;
 
 			SampleMethod method = waveform.method;
 			std::vector<std::vector<glm::vec2>> tesselatedWaveForms;
@@ -179,6 +273,7 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 			mat4x4 matView = mat4x4(1.0);
 			mat4x4 matModel = mat4x4(1.0);
 			matModel[0][0] = waveform.scaleX;
+			matView = glm::translate(matView, glm::vec3(waveformRef->pos.x, waveformRef->pos.y, 0));
 			mat4x4 matProj = glm::ortho(0.f, (float) FBO_WIDTH, (float)FBO_HEIGHT, 0.f, 1.f, -1.f);
 			glUniformMatrix4fv(renderer.u_projection, 1, GL_FALSE, value_ptr(matProj));
 			glUniformMatrix4fv(renderer.u_view, 1, GL_FALSE, value_ptr(matView));
@@ -187,11 +282,15 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 			glBindTexture ( GL_TEXTURE_2D, bakedPath.uniforms_texture);
 			glBindVertexArray ( bakedPath.vbo.vaoId );
 			glBindBuffer ( GL_ELEMENT_ARRAY_BUFFER, bakedPath.vbo.vboIdxId);
+
+			glScissor(waveformRef->pos.x, FBO_HEIGHT-waveformRef->pos.y-waveformRef->size.y, waveformRef->size.x, waveformRef->size.y);
+
+			glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 			glDrawElements ( GL_TRIANGLES, bakedPath.vbo.nIndices, GL_UNSIGNED_INT, NULL);
-			const int id = _atlas.nextIdx++;
 			TextureAtlasEntry e;
 			e.inuse = true;
 			e.pos = waveformRef->pos;
+			e.size = waveformRef->size;
 			e.props = waveform;
 			e.id = id;
 			waveformRef->queued = false;
@@ -202,6 +301,8 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 		_atlas.queuedTasks.clear();
 
 	}
+	glClearColor(0, 0, 0, 0);
+	glDisable(GL_SCISSOR_TEST);
 
 	glBindVertexArray(0);
 	nvgluBindFramebuffer(NULL);
@@ -237,7 +338,7 @@ void waveformrender::draw(NVGcontext* ctxt, const gui_waveform_texture_ref* wave
 	auto& atlas = this->atlases[waveformRef->atlasId];
 	assert(atlas.fb && atlas.glTexture > -1 && atlas.idx > -1);
 	const audioclip_texture_t* waveImage = &waveformRef->waveform;
-	drawImage(ctxt, atlas.fb->image, 1.0f, 0, 0, size.x*waveImage->scale, size.y*waveImage->scale, waveImage->startOffset.x, 0, size.x, size.y);
+	drawImage(ctxt, atlas.fb->image, 1.0f, waveformRef->pos.x, waveformRef->pos.y, waveformRef->size.x, waveformRef->size.y, waveImage->startOffset.x, 0, waveImage->size.x /*-waveImage->startOffset.x */, waveImage->size.y);
 //	for (auto& texture : textures) {
 //		if (texture.idx == fbId) {
 //			drawImage(ctxt, texture.fb->image, 1.0f, 0, 0, size.x*waveImage->scale, size.y*waveImage->scale, waveImage->startOffset.x, 0, size.x, size.y);

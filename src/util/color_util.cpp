@@ -161,3 +161,10 @@ glm::vec4 int32vec4(uint32_t i) {
 	r.w = (float) ((i & 0xFF) / 255.); i >>= 8;
 	return r;
 }
+
+int col(int bits) {
+	int r = 0xff*(bits&1);
+	int g = 0xff*((bits&2)*128);
+	int b = 0xff*((bits&4)*64*256);
+	return r | g | b;
+}

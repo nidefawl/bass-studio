@@ -18,13 +18,14 @@
 #include "../gl/gl_vbo.h"
 #include "../gl/gl_tess2d.h"
 #include "../gui/drawwaveform.h"
+#include "color_util.h"
 
 
 GLuint program2dTexture;
 GLint u_mvp;
 GLint u_tex0;
 
-static float wTexPreview = 256;
+static float wTexPreview = 1024;
 static std::vector<VertexAttr> attributes{
 	{"in_position", 2, GL_FLOAT},
 	{"in_texcoord", 2, GL_FLOAT},
@@ -147,4 +148,34 @@ void drawDebugWindow(NVGcontext* ctx, int winW, int winH, float pxratio) {
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
+	nvgBeginFrame(ctx, winW, winH, pxratio);
+
+//	nvgBeginFrame(ctx, winW, winH, pxratio);
+//	nvgBeginPath(ctx);
+//	nvgRect(ctx, 0, 0, winW, winH);
+//	nvgFillColor(ctx, rgbToNvg(0x33ff33));
+//	nvgFill(ctx);
+	 x = 0;
+	 y = 0;
+	nrendered = 1;
+	float scale = (float)wTexPreview / (float) FBO_WIDTH;
+	for (TextureAtlas& _atlas : rendered) {
+		int n = _atlas.glTexture;
+		if (n > 0 && _atlas.entries.size()) {
+			for (TextureAtlasEntry& _entry : _atlas.entries) {
+				nvgBeginPath(ctx);
+				nvgRect(ctx, _entry.pos.x*scale, _entry.pos.y*scale, _entry.size.x*scale, _entry.size.y*scale);
+				nvgStrokeColor(ctx, rgbToNvg(col(nrendered)));
+				nvgStrokeWidth(ctx, 2.0f);
+				nvgStroke(ctx);
+			}
+			x += wTexPreview+8;
+			if (x >= 1024) {
+				x = 0;
+				y+= wTexPreview+8;
+			}
+		}
+		nrendered++;
+	}
+	nvgEndFrame(ctx);
 }
