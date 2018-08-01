@@ -1354,7 +1354,9 @@ int getHWNDCnt(int i) {
 }
 
 void drawDebugWindow(NVGcontext* ctx, int winW, int winH, float pxratio);
+#ifdef _WIN32
 bool isVstWindow(HWND hwnd);
+#endif
 std::shared_ptr<AppCtrl> makeApp();
 void deleteApp();
 int startApplication(int argc, char* argv[]) {

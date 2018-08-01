@@ -1,7 +1,7 @@
 #ifdef __linux__
 #include "../../vst_window.h"
 #include "../../vst_host.h"
-#include "../../vst_plugin.h"
+#include "../../plugin/vst_plugin.h"
 #include <vector>
 #include <GLFW/glfw3.h>
 #include "leak_detect.h"
