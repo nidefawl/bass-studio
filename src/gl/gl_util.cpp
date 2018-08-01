@@ -138,10 +138,12 @@ int compileShader(int type, String& src) {
 
 }
 
-void bindVertexAttributes(std::vector<VertexAttr>& attrs) {
-	int32_t vertStrideBytes = 0;
-	for (int i = 0; i < (int)attrs.size(); i++) {
-		vertStrideBytes += attrs[i].elements*sizeof(float);
+void bindVertexAttributes(std::vector<VertexAttr>& attrs, int fixedStride) {
+	int32_t vertStrideBytes = fixedStride;
+	if (!vertStrideBytes) {
+		for (int i = 0; i < (int)attrs.size(); i++) {
+			vertStrideBytes += attrs[i].elements*sizeof(float);
+		}
 	}
 
 	size_t offset = 0;

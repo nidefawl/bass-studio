@@ -40,8 +40,6 @@ audioclip_texture_t makeWaveformFromClip(project_t& project, scaled_grid& grid,
 	double tickBegin = grid.screenToTickD(pos.x);
 	double tickBeginOffset = grid.screenToTickD(pxBegin);
 	double tickEnd = grid.screenToTickD(pxEnd);
-//					tickBeginOffset += m_clip->offsetStart;
-//					tickEnd += m_clip->offsetStart;
 
 	double sampleBegin = tickToSamplePrecise(tickBegin, project.tempo100, sr);
 	double sampleStartOffset = tickToSamplePrecise(tickBeginOffset, project.tempo100, sr);
@@ -61,16 +59,6 @@ audioclip_texture_t makeWaveformFromClip(project_t& project, scaled_grid& grid,
 		w.scaleX = MAX_RES/samplesPerPx;
 		samplesPerPx = MAX_RES;
 	}
-//			if (samplesPerPx >= 256) {
-//				waveform.quality *= 2;
-//				waveform.scale = 2;
-//			}
-//					my_printf("sampleBegin %f\n", sampleBegin);
-//					my_printf("sampleStartOffset %f\n", sampleStartOffset);
-//					my_printf("sampleEnd %f\n", sampleEnd);
-//					my_printf("m_clip->offsetStart %d\n", m_clip->offsetStart);
-//					my_printf("m_clip->offsetSamples %d\n", m_clip->offsetSamples);
-//	makeOrUpdateWaveform(&w, posClipped, startOffset, sizeClipped, sampleBegin, sampleStartOffset, sampleEnd, samplesPerPx, grid.zoom);
 	w.pos = pos;
 	w.startOffset = startOffset;
 	w.size = sizeClipped;
@@ -80,26 +68,8 @@ audioclip_texture_t makeWaveformFromClip(project_t& project, scaled_grid& grid,
 	w.sampleEnd = sampleEnd;
 	w.samplesPerPx = samplesPerPx;
 	w.linewidth = 1.50f+min(0.75, max(0.0, grid.zoom*32.0));
-	double scale = 0.005;
-//	if (gridZoom < 0.03) {
-
-		w.method = SampleMethod::sample_straight;
-		scale = 0.00005;
-//	} else {
-////
-//		w->method = SampleMethod::sample_minmax;
-//	}
-//	int qu = 4;
-//	w->quality = qu;
-
-//	double d = gridZoom;
-//	while (d > scale && qu < 16) {
-//		d /= 2.0;
-//		qu*=2;
-//	}
-//		assert(w->sampleEnd>w->sampleBegin);
-//		assert(w->sampleEnd>w->sampleBeginOffset);
-	my_printf("waveform[height:%d,zoom:%f,q:%d,w:%f,smp/px:%f,scale:%d]\n", w.size.y, grid.zoom, w.quality, w.linewidth, w.samplesPerPx, w.scale);
+	w.method = SampleMethod::sample_straight;
+//	my_printf("waveform[height:%d,zoom:%f,q:%d,w:%f,smp/px:%f,scale:%d]\n", w.size.y, grid.zoom, w.quality, w.linewidth, w.samplesPerPx, w.scale);
 
 
 	return w;

@@ -8,4 +8,4 @@ struct VertexAttr {
 	int bindingPt = 0;
 };
 
-void bindVertexAttributes(std::vector<VertexAttr>& attr);
+void bindVertexAttributes(std::vector<VertexAttr>& attr, int fixedStride = 0);

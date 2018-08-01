@@ -36,7 +36,9 @@ struct vert {
 	vec2 tangent1;
 	vec2 tex;
 	float index;
+	float pad[7];
 };
+#define ATTR_STRIDE ((2+2+2+2+2+2+8)*sizeof(float))
 struct Uniforms {
 	vec4 color{1.f,1.f,1.f,1.f};
 	vec2 translate{0.f, 0.f};
