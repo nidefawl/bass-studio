@@ -69,6 +69,7 @@ audioclip_texture_t makeWaveformFromClip(project_t& project, scaled_grid& grid,
 	w.samplesPerPx = samplesPerPx;
 	w.linewidth = 1.50f+min(0.75, max(0.0, grid.zoom*32.0));
 	w.method = SampleMethod::sample_straight;
+	w.audioId = m_clip->audio.id;
 //	my_printf("waveform[height:%d,zoom:%f,q:%d,w:%f,smp/px:%f,scale:%d]\n", w.size.y, grid.zoom, w.quality, w.linewidth, w.samplesPerPx, w.scale);
 
 

@@ -17,6 +17,7 @@ struct TextureAtlasEntry {
 	ivec2 size;
 	bool inuse = false;
 	int id;
+	int refCount = 0;
 };
 struct gui_waveform_texture_ref {
 	audioclip_texture_t waveform;
@@ -30,6 +31,7 @@ struct gui_waveform_texture_ref {
 struct waveform_update_task_t {
 	cachedaudio_t* audio;
 	gui_waveform_texture_ref* waveformRef;
+	int queuedRefCount = 0;
 };
 struct TextureAtlas {
 	std::vector<waveform_update_task_t> queuedTasks;
@@ -37,7 +39,7 @@ struct TextureAtlas {
 	int idx = -1;
 	int glTexture = -1;
 	NVGLUframebuffer* fb = nullptr;
-	int nextIdx = 0;
+	int nextIdx = 10;
 };
 class waveformrender {
 	GLPathRenderer renderer;
@@ -51,6 +53,7 @@ public:
 	void init();
 	void getRenderedTextures(std::vector<TextureAtlas>& rendered);
 //	int render(NVGcontext* ctxt, cachedaudio_t* audio, audioclip_texture_t* waveform);
+	bool findSimiliarWaveform(waveform_update_task_t& waveformQueueEntry);
 	int renderUpdates(NVGcontext* ctxt, float pxRatio);
 	int queueUpdate(NVGcontext* ctxt, cachedaudio_t* audio, gui_waveform_texture_ref* waveformRef);
 	void draw(NVGcontext* ctxt, const gui_waveform_texture_ref* waveformRef, ivec2 size);

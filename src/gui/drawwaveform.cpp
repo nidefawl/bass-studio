@@ -56,17 +56,23 @@ void waveformrender::release(gui_waveform_texture_ref* waveformRef) {
 //		assert(0);
 		return;
 	}
+	const int id = waveformRef->atlasEntryId;
+	assert(id >= 10);
+	my_printf("erase entry %d from %d\n", id, waveformRef->atlasId);
 	assert(waveformRef->atlasId >= 0 && waveformRef->atlasId < (int)atlases.size());
 	auto& atlas = this->atlases[waveformRef->atlasId];
 	assert(atlas.fb && atlas.glTexture > -1 && atlas.idx > -1);
 	auto& vec = atlas.entries;
-	const int id = waveformRef->atlasEntryId;
 	auto it = std::find_if(vec.begin(), vec.end(), [id](const TextureAtlasEntry& entry) {
 		return entry.id == id;
 	});
 	assert(it != vec.end());
-	vec.erase(it);
-	my_printf("erase entry %d from %d\n", id, waveformRef->atlasId);
+	TextureAtlasEntry& entry = *it;
+	entry.refCount--;
+	if (entry.refCount <= 0) {
+		my_printf("AtlasEntry refcount <= 0. erasing.\n",0);
+		vec.erase(it);
+	}
 	waveformRef->atlasId = -1;
 	waveformRef->atlasEntryId = -1;
 	waveformRef->rendered = false;
@@ -159,6 +165,50 @@ bool waveformrender::findFreeSpot(ivec2 size, int& atlasIdx, ivec2& pos) {
 	return true;
 }
 
+struct _waveform_id {
+	ivec2 pos;
+	ivec2 size;
+};
+inline bool isEqualWaveform(const audioclip_texture_t& lhs, const audioclip_texture_t& rhs){
+	return (lhs.sampleBeginOffset - lhs.sampleBegin) == (rhs.sampleBeginOffset - rhs.sampleBegin) &&
+			(lhs.sampleEnd - lhs.sampleBegin) == (rhs.sampleEnd - rhs.sampleBegin) &&
+			lhs.startOffset == rhs.startOffset &&
+			lhs.size == rhs.size &&
+			lhs.samplesPerPx == rhs.samplesPerPx &&
+			lhs.audioId == rhs.audioId && lhs.quality == rhs.quality && lhs.method == rhs.method;
+}
+bool waveformrender::findSimiliarWaveform(waveform_update_task_t& waveformQueueEntry) {
+	gui_waveform_texture_ref* waveformRef = waveformQueueEntry.waveformRef;
+	for (TextureAtlas& _atlas : atlases) {
+		std::vector<_pos> positions;
+		TextureAtlasEntry a;
+		for(auto& entry : _atlas.entries) {
+			if (isEqualWaveform(entry.props, waveformRef->waveform)) {
+				waveformRef->atlasId = _atlas.idx;
+				waveformRef->atlasEntryId = entry.id;
+				entry.refCount++;
+				return true;
+			} else if (entry.props.audioId == waveformRef->waveform.audioId) {
+				auto& lhs = entry.props;
+				auto& rhs = waveformRef->waveform;
+				printf("almost\n",0);
+			}
+		}
+		for(auto& entry : _atlas.queuedTasks) {
+			if (isEqualWaveform(entry.waveformRef->waveform, waveformRef->waveform)) {
+				waveformRef->atlasId = _atlas.idx;
+				waveformRef->atlasEntryId = entry.waveformRef->atlasEntryId;
+				entry.queuedRefCount++;
+				return true;
+			} else if (entry.audio->id == waveformRef->waveform.audioId) {
+				auto& lhs = entry.waveformRef->waveform;
+				auto& rhs = waveformRef->waveform;
+				printf("almost\n",0);
+			}
+		}
+	}
+	return false;
+}
 int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 	checkGLError("waveformrender::render start");
 
@@ -185,8 +235,10 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 	//assign them to free spots in framebuffertextures
 	//go over all framebuffers: bind fb, go over all queue updates in that fb and tesselate + draw them
 	for (waveform_update_task_t& waveformQueueEntry : this->queuedTasks) {
-
 		gui_waveform_texture_ref* waveformRef = waveformQueueEntry.waveformRef;
+		if (findSimiliarWaveform(waveformQueueEntry)) {
+			continue;
+		}
 		int atlasIdx = -1;
 		ivec2 pos;
 		vec2 v(waveformRef->waveform.size.x, waveformRef->waveform.size.y);
@@ -201,6 +253,8 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 			waveformRef->pos = pos;
 			waveformRef->size = sizeInternal;
 			waveformRef->atlasId = atlasIdx;
+			const int id = _atlas.nextIdx++;
+			waveformRef->atlasEntryId = id;
 			std::vector<_pos> positions;
 			for(auto& entry : _atlas.entries) {
 				positions.push_back(_pos{entry.pos, entry.size});
@@ -215,6 +269,7 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 					bool b = collides(entry2.pos, entry2.size, entry.pos, entry.size, offset);
 					if (b) {
 						my_printf("COLLISION\n",0);
+						assert(0);
 					}
 				}
 			}
@@ -252,7 +307,6 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 			gui_waveform_texture_ref* waveformRef = waveformQueueEntry.waveformRef;
 			cachedaudio_t* audio = waveformQueueEntry.audio;
 			audioclip_texture_t& waveform = waveformRef->waveform;
-			const int id = _atlas.nextIdx++;
 
 			SampleMethod method = waveform.method;
 			std::vector<std::vector<glm::vec2>> tesselatedWaveForms;
@@ -291,11 +345,11 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 			e.inuse = true;
 			e.pos = waveformRef->pos;
 			e.size = waveformRef->size;
+			e.id = waveformRef->atlasEntryId;
 			e.props = waveform;
-			e.id = id;
+			e.refCount = waveformQueueEntry.queuedRefCount;
 			waveformRef->queued = false;
 			waveformRef->rendered = true;
-			waveformRef->atlasEntryId = id;
 			_atlas.entries.push_back(e);
 		}
 		_atlas.queuedTasks.clear();

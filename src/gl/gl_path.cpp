@@ -25,10 +25,6 @@ using glm::vec2;
 using glm::vec4;
 using vec2list = std::vector<vec2>;
 
-struct vbuf {
-	std::vector<float> v;
-	std::vector<int> i;
-};
 
 
 void buildIndices(int nV, int offset, std::vector<int>& _out) {
@@ -90,6 +86,7 @@ static inline void storeVertex(attribute_data_t& data, int idx, vert& v) {
 	v.index = data.index[idx];
 }
 float packVertexData(vec2list& verticesIn, std::vector<vert>& outVdata, int index = 0, bool closed = false) {
+	my_printf("packing %d vertices\n", verticesIn.size());
 	vec2list vertices = verticesIn;
 	float dist = glm::distance(vertices.front(), vertices.back());
 	if (closed && dist > 1e-10) {
@@ -105,84 +102,85 @@ float packVertexData(vec2list& verticesIn, std::vector<vert>& outVdata, int inde
 	for (int i = 0; i < n; i++) {
 		data.index[i] = index;
 	}
-	vec2list T(n-1);
-	std::vector<float> N(n-1);
-//	int idx = 0;
-//	for (vec2& v : vertices) {
-//		data.pos = v;
-//		vert& vd = vdata[idx++];
-//		vd.pos = v;
-//		vd.index = index;
-//	}
+	vec2list T(n - 1);
+	std::vector<float> N(n - 1);
+	//	int idx = 0;
+	//	for (vec_xy& v : vertices) {
+	//		data.pos = v;
+	//		vert& vd = vdata[idx++];
+	//		vd.pos = v;
+	//		vd.index = index;
+	//	}
 	for (int i = 1; i < n; i++) {
-		vec2 v = vertices[i]-vertices[i-1];
-		T[i-1] = v;
-		N[i-1] = glm::length(v);
-//		printf("T[%d] = %f %f\n", i-1, T[i-1].x, T[i-1].y);
+		vec2 v = vertices[i] - vertices[i-1];
+		T[i - 1] = v;
+		N[i - 1] = glm::length(v);
+		//		printf("T[%d] = %f %f\n", i-1, T[i-1].x, T[i-1].y);
 	}
 	for (int i = 1; i < n; i++) {
-		data.tangent0[i] = T[i-1];
-		data.tangent1[i - 1] = T[i-1];
+		data.tangent0[i] = T[i - 1];
+		data.tangent1[i - 1] = T[i - 1];
 	}
 	if (closed) {
-		data.tangent0[0] = T[n-2];
-		data.tangent1[n-1] = T[0];
-	} else {
+		data.tangent0[0] = T[n - 2];
+		data.tangent1[n - 1] = T[0];
+	}
+	else {
 		data.tangent0[0] = T[0];
-		data.tangent1[n-1] = T[n-2];
+		data.tangent1[n - 1] = T[n - 2];
 	}
 	std::vector<float> atans(n);
 	for (int i = 0; i < n; i++) {
-		float x = data.tangent0[i].x*data.tangent1[i].y-data.tangent0[i].y*data.tangent1[i].x;
-		float y = data.tangent0[i].x*data.tangent1[i].x+data.tangent0[i].y*data.tangent1[i].y;
+		float x = data.tangent0[i].x*data.tangent1[i].y - data.tangent0[i].y*data.tangent1[i].x;
+		float y = data.tangent0[i].x*data.tangent1[i].x + data.tangent0[i].y*data.tangent1[i].y;
 		atans[i] = fast_atan2(x, y);
 	}
-	for (int i = 0; i < n-1; i++) {
+	for (int i = 0; i < n - 1; i++) {
 		data.angles[i].x = atans[i];
-		data.angles[i].y = atans[i+1];
+		data.angles[i].y = atans[i + 1];
 	}
 	float fLength = 0;
-	for (int i = 0; i < n-1; i++) {
+	for (int i = 0; i < n - 1; i++) {
 		fLength += N[i];
-		data.seg[i+1].x = fLength;
+		data.seg[i + 1].x = fLength;
 		data.seg[i].y = fLength;
 	}
 
 	int idxOut = 0;
 	std::vector<vert> vdata2;
-//	vdata2.reserve(n*2+4);
-	vdata2.resize(n*2-2);
+	//	vdata2.reserve(n*2+4);
+	vdata2.resize(n * 2 - 2);
 	storeVertex(data, 0, vdata2[idxOut++]);
 
-	for (int i = 1; i < n-1; i++) {
+	for (int i = 1; i < n - 1; i++) {
 		vert& p = vdata2[idxOut++];
 		storeVertex(data, i, p);
-		p.seg = data.seg[i-1];
-		p.angles = data.angles[i-1];
+		p.seg = data.seg[i - 1];
+		p.angles = data.angles[i - 1];
 		vert& p2 = vdata2[idxOut++];
 		storeVertex(data, i, p2);
 	}
-	storeVertex(data, n-1, vdata2[idxOut]);
-	assert(idxOut+1 == (int)vdata2.size());
-	assert(idxOut+1 == n*2-2);
+	storeVertex(data, n - 1, vdata2[idxOut]);
+	assert(idxOut + 1 == (int)vdata2.size());
+	assert(idxOut + 1 == n * 2 - 2);
 	vert& p = vdata2[idxOut];
-	p.seg = data.seg[n-2];
-	p.angles = data.angles[n-2];
+	p.seg = data.seg[n - 2];
+	p.angles = data.angles[n - 2];
 
-	assert((int)vdata2.size()%2==0);
+	assert((int)vdata2.size() % 2 == 0);
 	n = vdata2.size();
-	for (int i = 0; i < n; i+=2) {
-		vdata2[i].tex = vec2(-1);
-		vdata2[i+1].tex = vec2(1);
+	for (int i = 0; i < n; i += 2) {
+		vdata2[i].tex = {-1, -1};
+		vdata2[i + 1].tex = {1, 1};
 	}
-	outVdata.resize(n*2);
+	outVdata.resize(n * 2);
 	for (int i = 0; i < n; ++i) {
-		outVdata[i*2+0] = vdata2[i];
-		outVdata[i*2+1] = vdata2[i];
+		outVdata[i * 2 + 0] = vdata2[i];
+		outVdata[i * 2 + 1] = vdata2[i];
 	}
 	for (int i = 0; i < n; ++i) {
-		outVdata[i*2+0].tex.y = -1;
-		outVdata[i*2+1].tex.y = 1;
+		outVdata[i * 2 + 0].tex.y = -1;
+		outVdata[i * 2 + 1].tex.y = 1;
 	}
 
 	return fLength;
@@ -340,18 +338,19 @@ void GLPathRenderer::destroy() {
 }
 void GLPathRenderer::bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, BakeGLPath& out) {
 
-	std::vector<float> bufUniforms;
-	vbuf bufFinal;
 //	printf("sizeof(Uniforms) %d\n", sizeof(Uniforms));
+	std::vector<vert> outVdata;
+	vbuf bufFinal;
+	std::vector<float> bufUniforms;
 	assert((int)sizeof(Uniforms) <= sizeUniforms);
 	bufUniforms.resize(paths.size()*sizeUniforms);
+	bufFinal.i.clear();
 	const int sizeFloatsVert = sizeof(vert)/sizeof(float);
-	std::vector<vert> outVdata;
 	size_t flBufUniformsPos = 0;
 	size_t flBufVertsPos = 0;
+	int packed = 0;
 	int idx = 0;
 	for (vec2list& list : paths) {
-		outVdata.clear();
 		if (list.size() > 1) {
 			float len = packVertexData(list, outVdata, idx);
 			size_t flBufPos = flBufVertsPos*sizeFloatsVert;
@@ -364,8 +363,15 @@ void GLPathRenderer::bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, Ba
 			memcpy(bufUniforms.data()+flBufUniformsPos, &uniforms, sizeof(Uniforms));
 			flBufUniformsPos += sizeUniforms;
 			flBufVertsPos += outVdata.size();
+			packed++;
+			outVdata.clear();
 		}
 		idx++;
+	}
+	if (flBufVertsPos == 0) {
+		bufFinal.v.resize(0);
+		bufFinal.i.resize(0);
+		bufUniforms.resize(0);
 	}
 //
 //	for (float f : bufFinal.v) {

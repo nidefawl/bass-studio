@@ -62,6 +62,7 @@ void gui_audio_clip::updatePosition(project_t& project, scaled_grid& grid, ivec2
 			ivec2 posClipped = pos;
 			ivec2 sizeClipped = clipSize;
 			this->parent->scissorClip(posClipped, sizeClipped);
+			sizeClipped.y = clipSize.y;
 			if (posClipped.x+sizeClipped.x <= 0 || sizeClipped.x <= 0) {
 				culled = true;
 			} else {

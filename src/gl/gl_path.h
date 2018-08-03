@@ -36,9 +36,9 @@ struct vert {
 	vec2 tangent1;
 	vec2 tex;
 	float index;
-	float pad[7];
+	float pad[3];
 };
-#define ATTR_STRIDE ((2+2+2+2+2+2+8)*sizeof(float))
+#define ATTR_STRIDE ((2+2+2+2+2+2+1+3)*sizeof(float))
 struct Uniforms {
 	vec4 color{1.f,1.f,1.f,1.f};
 	vec2 translate{0.f, 0.f};
@@ -57,6 +57,10 @@ struct Uniforms {
 	float closed {0};
 };
 #pragma pack(pop)
+struct vbuf {
+	std::vector<float> v;
+	std::vector<int> i;
+};
 class GLPathRenderer {
 	std::vector<VertexAttr> attributes {
 		{"a_position", 2, GL_FLOAT},
@@ -67,6 +71,9 @@ class GLPathRenderer {
 		{"a_index", 1, GL_FLOAT},
 	};
 public:
+	std::vector<vert> outVdata;
+	vbuf bufFinal;
+	std::vector<float> bufUniforms;
 	const int countUniforms = 32;
 	const int sizeUniforms = countUniforms*4;
 	uint32_t program2dLines;
