@@ -130,10 +130,10 @@ public:
 	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
 	virtual void handleDraggedBegin(MouseEvent& evt);
 	virtual guibase* getFocusedControl() {
-		return NULL;
+		return nullptr;
 	}
 	virtual guibase* getFocusedContainer() {
-		return NULL;
+		return nullptr;
 	}
 };
 class guictr_menubar : public guictr_base {

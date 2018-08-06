@@ -12,7 +12,6 @@ struct cachedaudio_t {
 	int32_t id = 0;
 	String path;
 	std::unique_ptr<audiosample_t> sample;
-	std::vector<audioclip_texture_t> waveforms;
 };
 class audiocache {
 	int32_t samplerate = 0;

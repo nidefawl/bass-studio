@@ -255,11 +255,13 @@ void guictr_plugins::showTrack(audio_stage_t* audio) {
 	this->track = audio ? audio->getTrack() : nullptr;
 	this->stage = audio;
 //	my_printf("%d %d\n", myNumber1, myNumber2);
-	my_printf("showTrack %s\n", (isDefaultPluginCtr ? "default" : "group"));
+//	my_printf("showTrack %s\n", (isDefaultPluginCtr ? "default" : "group"));
 	if (audio && this->track) {
 		audio->pluginCtr = this;
 		if (!audio->pluginCtr->parent) {
-			my_printf("plugin ctr with parent == null\n", 0);
+			if (MainCtrl::getPluginCtr() != audio->pluginCtr)
+				assert(0);
+//			my_printf("plugin ctr with parent == null\n", 0);
 		}
 		if (audio && !audio->effects.empty()) {
 			for (effectbase* vst : audio->effects) {

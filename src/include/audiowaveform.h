@@ -16,12 +16,12 @@ enum SampleMethod {
 
 struct NVGLUframebuffer;
 struct audioclip_texture_t {
-	ivec2 pos;
-	ivec2 startOffset;
-	ivec2 size;
-	double sampleBegin;
-	double sampleBeginOffset;
-	double sampleEnd;
+	ivec2 pos{0};
+	ivec2 startOffset{0};
+	ivec2 size{0};
+	double sampleBegin{0};
+	double sampleBeginOffset{0};
+	double sampleEnd{0};
 	double samplesPerPx = 0;
 	int quality = 1;
 	int scale = 1;

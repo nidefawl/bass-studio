@@ -126,6 +126,7 @@ public:
 	void handleRightClick(MouseEvent& evt);
 };
 class gui_audio_clip : public gui_clip {
+	bool assignedWaveform = false;
 public:
 	gui_audio_clip(track_t* _track, clip_t* _clip)
 		: gui_clip(_track, _clip)  {
@@ -142,6 +143,7 @@ public:
 	void releaseRendered();
 	void prerender(NVGcontext* vg) override;
 	void onRemove() {
+//		my_printf("release %012x from onRemove()\n", &m_clip->audio.waveformRef);
 		releaseRendered();
 		assert(m_clip->gClip == this);
 		m_clip->gClip = NULL;

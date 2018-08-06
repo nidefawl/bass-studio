@@ -670,6 +670,10 @@ void vsthost::processAudio(audio_stage_t* channel, AudioBlock* input, AudioBlock
 	{
 		effectbase *current = NULL;
 		current = channel->effects[i];
+		if (!current->bIsSetup) {
+			my_printf("Skipping effect %d: bIsSetup == false\n", current->slot);
+			continue;
+		}
 		assert(current->bIsSetup);
 
 		if (!current->bIsEnabled) {

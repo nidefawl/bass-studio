@@ -45,7 +45,7 @@ public:
 	void copy( const clip_audio_t &obj) {
 		this->id = obj.id;
 		this->weakCachedAudio = obj.weakCachedAudio;
-		this->waveformRef.rendered = false;
+//		this->waveformRef.rendered = false;
 	}
 	tick_t lenSamples();
 };

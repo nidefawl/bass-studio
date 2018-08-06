@@ -110,7 +110,7 @@ public:
 	void renderAction(NVGcontext* vg, clip_dragaction& action);
 	void render(NVGcontext* vg);
 	void prerender(NVGcontext* vg) override;
-
+	void postPreRenderCheck();
 
 	void handleDraggedBegin(MouseEvent& evt) {
 		if (evt.type == MouseEventType::M_EVT_DOUBLECLICK) {

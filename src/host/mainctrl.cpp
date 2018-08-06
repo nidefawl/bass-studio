@@ -1426,6 +1426,7 @@ void MainCtrl::prerender(int32_t x, int32_t y, int32_t w, int32_t h, float pixel
 		ctr->prerender(vg);
 	}
 	waveformrender::getInstance()->renderUpdates(vg, pixelRatio);
+	this->view->ctr_tracks.trackView.postPreRenderCheck();
 }
 track_t* clip_view::track() const {
 	if (!this->gui)

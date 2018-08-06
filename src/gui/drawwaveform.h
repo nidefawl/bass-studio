@@ -18,20 +18,24 @@ struct TextureAtlasEntry {
 	bool inuse = false;
 	int id;
 	int refCount = 0;
+//	std::vector<void*> ptrs;
 };
 struct gui_waveform_texture_ref {
 	audioclip_texture_t waveform;
 	int atlasId = -1;
 	int atlasEntryId = -1;
-	ivec2 pos{0,0};
-	ivec2 size{0,0};
+//	ivec2 pos{0,0};
+//	ivec2 size{0,0};
 	bool rendered = false;
 	bool queued = false;
 };
 struct waveform_update_task_t {
 	cachedaudio_t* audio;
 	gui_waveform_texture_ref* waveformRef;
+	ivec2 pos{0,0};
+	ivec2 size{0,0};
 	int queuedRefCount = 0;
+//	std::vector<void*> queuedptrs;
 };
 struct TextureAtlas {
 	std::vector<waveform_update_task_t> queuedTasks;
@@ -54,6 +58,7 @@ public:
 	void getRenderedTextures(std::vector<TextureAtlas>& rendered);
 //	int render(NVGcontext* ctxt, cachedaudio_t* audio, audioclip_texture_t* waveform);
 	bool findSimiliarWaveform(waveform_update_task_t& waveformQueueEntry);
+	void assertWaveformRefIsUnbound(gui_waveform_texture_ref* waveformRef);
 	int renderUpdates(NVGcontext* ctxt, float pxRatio);
 	int queueUpdate(NVGcontext* ctxt, cachedaudio_t* audio, gui_waveform_texture_ref* waveformRef);
 	void draw(NVGcontext* ctxt, const gui_waveform_texture_ref* waveformRef, ivec2 size);

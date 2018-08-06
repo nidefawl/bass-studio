@@ -688,6 +688,7 @@ void guitrack_editor::prerender(NVGcontext* vg) {
 					ivec2 clipSize = tr->content->size; //TODO: get rid of *tr here, figure out size before and add default fallback
 					cachedaudio_t* audio = audiocache::getInstance()->get(cl->audio.id);
 					if (!audio || !getClipPosition(grid, tr->content->size, cl, clipPos, clipSize, 0)) {
+//						my_printf("release %012x from prerender() (clipped) \n", &cl->audio.waveformRef);
 						waveformrender::getInstance()->release(&cl->audio.waveformRef);
 //						cl->audio.waveformRef.fbId = -1;
 //						cl->audio.waveformRef.rendered = false;
@@ -700,8 +701,10 @@ void guitrack_editor::prerender(NVGcontext* vg) {
 					tr->content->scissorClip(posClipped, sizeClipped);
 					auto waveform = makeWaveformFromClip(project, grid, tr->content->size, cl, clipPos, clipSize, posClipped, sizeClipped);
 					gui_waveform_texture_ref& waveformRef = cl->audio.waveformRef;
-					if (!cl->audio.waveformRef.rendered || waveform != waveformRef.waveform) {
+					if (!waveformRef.rendered || waveform != waveformRef.waveform) {
+						assert(!waveformRef.queued);
 						waveformRef.waveform = waveform;
+//						my_printf("release %012x from prerender() (refresh) \n", &waveformRef);
 						waveformrender::getInstance()->release(&waveformRef);
 						int ret = waveformrender::getInstance()->queueUpdate(vg, audio, &waveformRef);
 //						waveformRef.fbId = ret;
@@ -713,6 +716,30 @@ void guitrack_editor::prerender(NVGcontext* vg) {
 		}
 	}
 }
+void guitrack_editor::postPreRenderCheck() {
+//
+//	if (action.dragtype) {
+//		Cursor& cursor = MainCtrl::get()->cursor;
+//		clip_clipboard* _clipboard = action.clipboard.get();
+//		for (int i = 0; _clipboard && i <= _clipboard->selTrackRange; i++) {
+//			track_clipboard_t* trClipboard = _clipboard->tracks[i].get();
+//			int32_t trackIdx = _clipboard->srcTrack + i + (cursor.cursorTrack-action.cursorBegin.cursorTrack);
+//			if (!project.trackList.validTrackIdx(trackIdx)) {
+//				continue;
+//			}
+//			trackIdx = project.trackList.clampTrackIdx(trackIdx);
+//			track_t* tr = project.trackList[trackIdx];
+//			for (auto it = trClipboard->clips.begin(); it != trClipboard->clips.end(); it++) {
+//				clip_t* cl = (*it).get();
+//				if (cl->clipType == CLIP_AUDIO) {
+//					gui_waveform_texture_ref& waveformRef = cl->audio.waveformRef;
+//					assert(!waveformRef.queued);
+//				}
+//			}
+//		}
+//	}
+}
+
 void guitrack_editor::renderClip(NVGcontext* vg, track_t* tr, const clip_t* cl, tick_t offset) {
 	ivec2 clipPos = ivec2();
 	ivec2 clipSize = tr->content->size; //TODO: get rid of *tr here, figure out size before and add default fallback

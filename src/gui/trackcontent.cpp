@@ -32,6 +32,7 @@ void gui_audio_clip::handleRightClick(MouseEvent& evt) {
 	MainCtrl::get()->openContextMenu(new guictxtmenu_clip(this->m_clip), evt.mousepos);
 }
 void gui_audio_clip::releaseRendered() {
+//	my_printf("release %012x from releaseRendered()\n", &m_clip->audio.waveformRef);
 	waveformrender::getInstance()->release(&m_clip->audio.waveformRef);
 //	m_clip->audio.waveformRef.fbId = -1;
 	m_clip->audio.waveformRef.rendered = false;
@@ -42,6 +43,7 @@ void gui_audio_clip::updatePosition(project_t& project, scaled_grid& grid, ivec2
 	culled = !getClipPosition(grid, trackSize, m_clip, pos, size, 0);
 	cachedaudio_t* audio = audiocache::getInstance()->get(m_clip->audio.id);
 	if (culled || !audio) {
+//		my_printf("release %012x from updatePosition() (culled)\n", &m_clip->audio.waveformRef);
 		releaseRendered();
 	}
 //test clipping
@@ -68,17 +70,23 @@ void gui_audio_clip::updatePosition(project_t& project, scaled_grid& grid, ivec2
 			} else {
 				auto waveform = makeWaveformFromClip(project, grid, trackSize, m_clip, pos, clipSize, posClipped, sizeClipped);
 				if (waveform != m_clip->audio.waveformRef.waveform) {
+					assert(waveform.size.x > 0 && waveform.size.y > 0);
+//					my_printf("release %012x from updatePosition() (update)\n", &m_clip->audio.waveformRef);
 					releaseRendered();
 					m_clip->audio.waveformRef.waveform = waveform;
 				}
 			}
 		}
 	}
+	assignedWaveform = true;
 }
 void gui_audio_clip::prerender(NVGcontext* vg) {
 	if (!culled && !m_clip->audio.waveformRef.rendered) {
+		assert(assignedWaveform);
 		cachedaudio_t* audio = audiocache::getInstance()->get(m_clip->audio.id);
 		if (audio) {
+			assert(!m_clip->audio.waveformRef.queued);
+			assert(m_clip->audio.waveformRef.waveform.size.x > 0 && m_clip->audio.waveformRef.waveform.size.y > 0);
 			int ret = waveformrender::getInstance()->queueUpdate(vg, audio, &m_clip->audio.waveformRef);
 		}
 	}
