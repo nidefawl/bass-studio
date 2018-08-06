@@ -1315,7 +1315,7 @@ struct data_t
 	int count;
 };
 #define MSG_LEN 10000
-struct data_t messages[MSG_LEN]{ { 0 } };
+struct data_t messages[MSG_LEN] = {};
 int maxIdx = 0;
 void incrMessage(int id) {
 	for (int i = 0; i < maxIdx; i++) {

@@ -98,19 +98,11 @@ float packVertexData(vec2list& verticesIn, std::vector<vert>& outVdata, int inde
 	attribute_data_t data;
 	reserve(data, n);
 	data.pos = vertices;
-	int idx = 0;
 	for (int i = 0; i < n; i++) {
 		data.index[i] = index;
 	}
 	vec2list T(n - 1);
 	std::vector<float> N(n - 1);
-	//	int idx = 0;
-	//	for (vec_xy& v : vertices) {
-	//		data.pos = v;
-	//		vert& vd = vdata[idx++];
-	//		vd.pos = v;
-	//		vd.index = index;
-	//	}
 	for (int i = 1; i < n; i++) {
 		vec2 v = vertices[i] - vertices[i-1];
 		T[i - 1] = v;

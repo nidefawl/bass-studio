@@ -25,7 +25,7 @@ effectbase::effectbase(int32_t _pluginType, int32_t _projectGlobalId) : pluginTy
 	params.reserve(parameterTypes.size());
 	int32_t idx = 0;
 	for (const auto& paramEntry : parameterTypes) {
-		automatable_param_t automatable{0};
+		automatable_param_t automatable = {};
 		automatable.idx = idx;
 		automatable.internalIdx = -1;
 		automatable.category = 0;

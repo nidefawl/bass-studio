@@ -64,8 +64,7 @@ public:
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
 	void onChildLayoutChanged(guibase* g) override;
 	void determineSize() override {
-		auto* audio = module->getAudioStage();
-		assert(audio);
+		assert(module->getAudioStage());
 
 		ctr.size = ivec2(size.y, size.y);
 		ctr.layout();

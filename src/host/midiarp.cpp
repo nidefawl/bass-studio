@@ -107,7 +107,7 @@ void midiarp::process(std::vector<noteevent_t>& noteEventsIn,
 			while (TIME_STEP > nextStep+stepSize) {
 				step--;
 			}
-			markers.push_back(marker_t{tick, col(1)});
+			markers.push_back(marker_t{tick, col(1), ""});
 			String str = StringFormat("StepSize %d -> %d", lastStepSize, stepSize);
 			if (TIME_STEP<start||TIME_STEP>=end) {
 				markers.push_back(marker_t{TIME_STEP, col(2), str});

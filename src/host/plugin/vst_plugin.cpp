@@ -182,13 +182,13 @@ void vstplugin::load(vsthost* host) {
 	this->isSynth = (handle->aeffect->flags & effFlagsIsSynth) != 0;
 	this->bCanReceiveMidi = this->isSynth || this->dispatch(effCanDo, 0, 0, (void*)PlugCanDos::canDoReceiveVstMidiEvent) > 0;
 
-	VstParameterProperties properties{0};
+	VstParameterProperties properties = {};
 
 	char buf[1024];
 	vst_param_category fallbackCat={0, 0, "Parameters"};
 	int paramIdx = params.size();
 	for (int i = 0; i < aeffect->numParams; i++) {
-		automatable_param_t param{0};
+		automatable_param_t param = {};
 		param.idx = paramIdx;
 		param.internalIdx = i;
 		memset(buf, 0, sizeof(buf));

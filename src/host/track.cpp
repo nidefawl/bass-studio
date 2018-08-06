@@ -776,7 +776,7 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 				vstplugin* vst = dynamic_cast<vstplugin*>(effect);
 				if (vst && vst->bCanReceiveMidi) {
 					static VstEvents noEvData;
-					noEvData = { 0 };
+					noEvData = {  };
 					vst->dispatch(effProcessEvents, 0, 0, &noEvData);
 				}
 			}

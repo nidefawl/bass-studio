@@ -102,7 +102,7 @@ private:
 	double lastTickEndPos = 0;
 	playback_state lastState = playback_state::status_stop;
 	uint8_t numChannels;
-	VstTimeInfo timeinfo{0};
+	VstTimeInfo timeinfo = {};
 
 	std::vector<vstplugin*> list;
 

@@ -239,9 +239,9 @@ void findFilesWithExt(
 
 class FileTimeGetter::Impl {
 public:
-    FILETIME ftCreate = {0};
-    FILETIME ftAccess = {0};
-    FILETIME ftWrite = {0};
+    FILETIME ftCreate = {};
+    FILETIME ftAccess = {};
+    FILETIME ftWrite = {};
     HANDLE hFile = {0};
     bool ok = false;
 public:

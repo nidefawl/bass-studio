@@ -36,7 +36,7 @@ public:
 		} };
 		params.reserve(parameterTypes.size());
 		for (const track_param_entry_t& paramEntry : parameterTypes) {
-			automatable_param_t automatable{0};
+			automatable_param_t automatable = {};
 			automatable.idx = idx;
 			automatable.internalIdx = -1;
 			automatable.category = 0;

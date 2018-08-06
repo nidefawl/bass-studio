@@ -65,8 +65,8 @@ public:
 class ProcessRunScope {
 public:
 	DWORD exitCode = 0;
-	PROCESS_INFORMATION processInformation = { 0 };
-	STARTUPINFO startupInfo = { 0 };
+	PROCESS_INFORMATION processInformation = { };
+	STARTUPINFO startupInfo = { };
 	ProcessRunScope(String binary, String params) {
 		startupInfo.cb = sizeof(startupInfo);
 		if (CreateProcess((LPSTR) StringAsCStr(binary), (LPSTR) StringAsCStr(params),
