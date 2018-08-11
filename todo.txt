@@ -1,7 +1,7 @@
 TODO:
+Mixing desk view
 Sends/Return tracks
 Solo buttons
-Missing undo/redo
 Implement recent file list
 Compressed binary file format
 latency compensated automation 
@@ -9,9 +9,15 @@ stress-test synchronization
 multiselection of tracks and plugins
 duplicate plugin/plugin groups
 duplicate loop button in midi clip
-preset database
-optimize waveform rendering
+group+plugin snapshots
+track snapshots
 implement basic arpeggiator
+use templates + template specialization for the 3 window classes in window.cpp
+further optimize waveform rendering
+tabbed view
+scale factor for UI font sizes
+dynamic scaling for all of the UI (50%-200%)
+improve dragging effects around
 
 later:
 seperate internal samplerate / external (audiointerface) samplerate
@@ -25,8 +31,12 @@ midi export
 freeze track
 
 Done:
+optimize waveform rendering
+Missing undo/redo for adding/moving/removing plugins
+Missing undo/redo for plugin parameters
 reordering tracks 
 plugin groups
 vu-meters on plugins
 Fold piano roll
 Catch key presses from plugin windows
+implemented tooltips for object inspection (using template class)
