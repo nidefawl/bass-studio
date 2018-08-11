@@ -189,5 +189,3 @@ void automation_t::setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automa
 	points = std::move(pointsTmp);
 
 }
-
-

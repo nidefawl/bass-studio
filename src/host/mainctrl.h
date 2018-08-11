@@ -213,6 +213,8 @@ class MainCtrl : public AppCtrl, public delete_cb, public project_t
 	track_t* selectedTrack = NULL;
 	track_t* lastHoveredTrack = NULL;
 	int32_t lastHoveredTrackTicks = 0;
+	void* lastHoveredTooltip = nullptr;
+	int32_t lastHoveredTooltipTicks = 0;
 	seq_rand rand;
 public:
 	int32_t numCallsWaitEvents = 0;
@@ -234,6 +236,8 @@ public:
 	plugindatabase_t plugindb;
 	tick_t tickJmpFrom = 0;
 	tick_t tickJmpTo = 0;
+	int nextTooltipId = 0;
+//	int curTooltip = 0;
 	scaled_grid& getGrid() {
 		return grid;
 	}
@@ -299,6 +303,7 @@ public:
 	bool processGlobalKeyevent(KeyEvent& event) override;
 	bool mouseDownPre() override;
 	bool captureMouse(guibase* gui);
+	bool isZooming();
 	void uncaptureMouse();
 	void onUncaptureMouse();
 	void addTrack(int32_t trackInsertPos, track_t* t);

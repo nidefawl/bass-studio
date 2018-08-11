@@ -220,7 +220,7 @@ public:
 	guictxtmenu_clip(clip_t* const _clip) : m_clip(_clip) {
 		this->size.x = 120;
 		sel = new ctxtmenu_color_select("Pick Color", 100);
-		add(sel);
+		addEntry(sel);
 	}
 	void clicked(int _id) {
 		if (_id >= sel->id) {
@@ -238,7 +238,7 @@ public:
 	guictxtmenu_notrack() {
 		this->size.x = 190;
 		for (int i = 0; i < NUM_TRACK_TYPES; i++) {
-			add(new ctxtmenu_entry(StringFormat("Insert %s Track", TrackTypeToName(i)), i));
+			addEntry(new ctxtmenu_entry(StringFormat("Insert %s Track", TrackTypeToName(i)), i));
 		}
 	}
 	void clicked(int _id) {
@@ -251,7 +251,7 @@ class guictxtmenu_colorpalette : public guictxtmenu_base {
 public:
 	guictxtmenu_colorpalette() {
 		ctxtmenu_color_select* colorSelect = new ctxtmenu_color_select("Pick Color", 0);
-		add(colorSelect);
+		addEntry(colorSelect);
 	}
 	void clicked(int _id) {
 		if (_id >= 100) {

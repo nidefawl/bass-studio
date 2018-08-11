@@ -11,6 +11,8 @@ struct NVGcontext;
 struct cachedaudio_t {
 	int32_t id = 0;
 	String path;
+	String name;
+	String ext;
 	std::unique_ptr<audiosample_t> sample;
 };
 class audiocache {

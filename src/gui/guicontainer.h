@@ -9,6 +9,7 @@
 #include "exceptions.h"
 #include "mouse.h"
 #include "event.h"
+#include "str_util.h"
 
 using glm::vec2;
 using glm::ivec2;
@@ -208,6 +209,11 @@ public:
 			nvgRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y);
 			nvgFillColor(vg, g_guiColors[COL_BG_BRT]);
 			nvgFill(vg);
+		}
+	}
+	virtual void onIdle() {
+		for (guibase* gui : guis) {
+			gui->onIdle();
 		}
 	}
 	virtual void prerender(NVGcontext* vg) {

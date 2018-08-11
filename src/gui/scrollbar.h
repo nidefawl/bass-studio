@@ -23,6 +23,7 @@ class gui_scrollbar : public guibase {
 public:
 	float scrollOffset;
 	static const int defaultW = 20;
+	static const int smallW = 10;
 	gui_scrollbar(int _dir, float _offset, gui_scrollcontainer& _ctr) : guibase(), dir(_dir), ctr(_ctr), scrollOffset(_offset) {
 	}
 	virtual void render(NVGcontext* vg) {

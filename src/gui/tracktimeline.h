@@ -35,8 +35,7 @@ public:
 
 	void handleDraggedBegin(MouseEvent& evt);
 	void handleDraggedMove(MouseEvent& evt);
-	void handleDraggedRelease(MouseEvent& evt) {
-	}
+	void handleDraggedRelease(MouseEvent& evt);
 	void render(NVGcontext* vg);
 	void layout() {
 		for (guibase* gui : guis) {

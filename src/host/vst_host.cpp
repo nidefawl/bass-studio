@@ -498,6 +498,9 @@ int32_t vsthost::processPlayback(int32_t sample, double posDouble, playback_stat
 		}
 		lastState = state;
 #endif
+		for (track_t* track : ctrl->trackCtr) {
+			assert(track->audio);
+		}
 		tick_t pos = floor(posDouble);
 		updateTime(sample, pos, state);
 		for (track_t* tr : ctrl->trackList) {
@@ -514,7 +517,6 @@ int32_t vsthost::processPlayback(int32_t sample, double posDouble, playback_stat
 		 * Clear all master channels first
 		 */
 		for (track_t* trackMaster : ctrl->trackMasterCtr) {
-			assert(trackMaster->audio);
 			track_impl_t* audioMaster = trackMaster->audio;
 //			if (!audioMaster) {
 //				trackMaster->audio = audioMaster = vsthost::getInstance()->createAudio(trackMaster);
@@ -531,7 +533,6 @@ int32_t vsthost::processPlayback(int32_t sample, double posDouble, playback_stat
 		samplerate_t maxLatency = 0;
 		for (track_t* track : ctrl->trackCtr) {
 			track_impl_t* audioTrack = track->audio;
-			assert(audioTrack);
 			audioTrack->pluginsChanged();
 			samplerate_t latency = audioTrack->getLatency();
 			maxLatency = max(latency, maxLatency);
@@ -544,9 +545,6 @@ int32_t vsthost::processPlayback(int32_t sample, double posDouble, playback_stat
 		}
 		for (track_t* track : ctrl->trackCtr) {
 			track_impl_t* trackImpl = track->audio;
-			if (!trackImpl) {
-				track->audio = trackImpl = vsthost::getInstance()->createAudio(track);
-			}
 			trackImpl->input.realloc(lBlockSize);
 			trackImpl->output.realloc(lBlockSize);
 			dsp_util::fillSilence(trackImpl->input.buf, lBlockSize);
@@ -676,7 +674,7 @@ void vsthost::processAudio(audio_stage_t* channel, AudioBlock* input, AudioBlock
 		}
 		assert(current->bIsSetup);
 
-		if (!current->bIsEnabled) {
+		if (current->isBypass()) {
 			samplerate_t delay = current->getDelay();
 			if (delay > 0) {
 				if (!current->delayLine.get()) {
@@ -898,17 +896,22 @@ void vsthost::unloadTrack(track_t* track) {
 }
 void vsthost::removePlugin(effectbase* plugin) {
 	audio_stage_t* audioStage = plugin->getTrackLink();
-	audioStage->removePlugin(plugin, false);
+	audioStage->removePlugin(plugin, true);
 	audioStage->pluginsChanged();
 }
 void vsthost::unloadPlugin(effectbase* plugin) {
 	if (MainCtrl::get())
 		MainCtrl::get()->closeContextMenu();
 	plugin->onPreUnload();
-	removePlugin(plugin);
+	audio_stage_t* audioStage = plugin->getTrackLink();
+	if (audioStage) {
+		audioStage->removePlugin(plugin, false);
+		audioStage->pluginsChanged();
+	}
+
+	plugin->close();
 	plugin->unload();
 //	PopupCtrl::get()->close(); // Make sure context controls do not reference vst
-	plugin->close();
 	auto it = std::find(list.begin(), list.end(), plugin);
 	if (it != list.end()) {
 		list.erase(it);
@@ -957,10 +960,25 @@ vstplugin::~vstplugin() {
 	delete handle;
 }
 track_impl_t* vsthost::createAudio(track_t* track) {
-	return new track_impl_t(track, this->lSampleRate, this->lBlockSize, OUTPUT_CHANNELS);
+	auto audio = new track_impl_t(getNextGlobalAudioStageId(0), track, this->lSampleRate, this->lBlockSize, OUTPUT_CHANNELS);
+	allAudioStages.push_back(audio);
+	trackAudioStages.push_back(audio);
+	return audio;
 }
 audio_stage_t* vsthost::createAudioStage() {
-	return new audio_stage_t(this->lSampleRate, this->lBlockSize, OUTPUT_CHANNELS);
+	auto audio = new audio_stage_t(getNextGlobalAudioStageId(0), this->lSampleRate, this->lBlockSize, OUTPUT_CHANNELS);
+	allAudioStages.push_back(audio);
+	return audio;
+}
+audio_stage_t* vsthost::getAudioStage(const audio_stage_ref_t& ref) {
+	auto it = std::find_if(allAudioStages.begin(), allAudioStages.end(), [ref] (const audio_stage_t* ptr) {
+		return ptr->id == ref.id;
+	});
+	assert(it != allAudioStages.end());
+	if (it != allAudioStages.end()) {
+		return *it;
+	}
+	return nullptr;
 }
 bool vsthost::movePlugin(audio_stage_t* dstTr, audio_stage_t* trp, int32_t src, int32_t dst) {
 	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
@@ -1073,6 +1091,15 @@ int32_t vsthost::getNextGlobalModuleId(int32_t globalId) {
 		return ++pluginId;
 	} else {
 		update_maximum(pluginId, globalId);
+	}
+	return globalId;
+}
+
+int32_t vsthost::getNextGlobalAudioStageId(int32_t globalId) {
+	if (globalId <= 0) {
+		return ++audioStageId;
+	} else {
+		update_maximum(audioStageId, globalId);
 	}
 	return globalId;
 }

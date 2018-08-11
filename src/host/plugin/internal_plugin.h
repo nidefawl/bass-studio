@@ -53,13 +53,14 @@ public:
 
 	virtual void loadSnapshot(const plugin_snapshot_t& snapshot) override;
 	virtual void makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) override;
+	void postSetParameter(int32_t idx, float preVal, float val, int flags) override;
 	bool show() override;
 	bool close() override;
 
 	//automatble_t
 	String getAutomatableName() override;
 	float getParamValue(int32_t idx) override;
-	void setParamValue(int32_t idx, float val) override;
+	void setParamValue(int32_t idx, float val, int flags) override;
 	void recvPluginEditParamUpdate(int32_t idx);
 	automationlane_snapshot_t toRef() override;
 };

@@ -9,6 +9,7 @@
 class guiplugin;
 class vsthost;
 struct internal_handles_t;
+struct audio_stage_t;
 class module_empty : public internalplugin {
 	internal_handles_t* handle;
 public:
@@ -26,5 +27,16 @@ public:
 	void sleep() override;
 	void unload() override;
 	void load(vsthost* host) override;
+	void breakTrackLink() override {
+		bIsSetup = false;
+		internalplugin::breakTrackLink();
+	}
+	void setTrackLink(audio_stage_t* trImpl) override {
+		bIsSetup = !!(trImpl);
+		internalplugin::setTrackLink(trImpl);
+	}
+	virtual bool isBypass() override {
+		return true;
+	}
 };
 

@@ -137,8 +137,9 @@ public:
 	//automatable_t
 	String getAutomatableName() override;
 	float getParamValue(int32_t idx) override;
-	void setParamValue(int32_t idx, float val) override;
+	void setParamValue(int32_t idx, float val, int flags) override;
 	automationlane_snapshot_t toRef() override;
+	void postSetParameter(int32_t idx, float preVal, float val, int flags) override;
 
 	void makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) override;
 	void loadSnapshot(const plugin_snapshot_t& pluginSnapshot) override;

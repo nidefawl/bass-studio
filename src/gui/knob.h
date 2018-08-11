@@ -21,9 +21,13 @@ class guiknob : public guibase {
 	float* valuePtr = NULL;
 	float value = 0.0f;
 	const bool renderBackground;
+	bool changedValue = false;
+	float initialValue = 0.0f;
+	float lastVal = 0.0f;
 public:
     std::function<float()> fnGetValue;
-    std::function<void(float)> fnSetValue;
+    std::function<void(float,int)> fnSetValue;
+    std::function<void(float,float)> fnValueEditFinish;
     std::function<void(bool)> fnFocus;
 	NVGcolor valColor = G_BLUE;
 	NVGcolor indColor = G_WHITE;
@@ -42,6 +46,8 @@ public:
 		if (evt.guiDragged == this) {
 			AppCtrl::get()->captureMouse(this);
 		}
+		initialValue = getValue();
+		changedValue = false;
 	}
 	virtual void handleDraggedMove(MouseEvent& evt) {
 		if (evt.guiDragged == this && evt.type == M_EVT_CAPTURED_MOVE) {
@@ -53,10 +59,18 @@ public:
 			float delta = disty/scale;
 			if (abs(delta) > 1e-2f) {
 				value -= delta;
-				setValue(value);
+				setValue(value, 0);
 				evt.dragDistance->y = 0;
+				lastVal = value;
+				changedValue = true;
 			}
 		}
+	}
+	virtual void handleDraggedRelease(MouseEvent& evt) {
+		if (changedValue) {
+			onValueEditFinish(initialValue, lastVal);
+		}
+		changedValue = false;
 	}
     virtual bool focusEvent(bool focused) override {
     	if (fnFocus) fnFocus(focused);
@@ -66,10 +80,8 @@ public:
 		float value = getValue();
 		float scale = isCtrl(evt.kbmods) ? 200.0f : 20.0f;
 		value += yoffset/scale;
-		setValue(value);
+		setValue(value, 2);
 		return true;
-	}
-	virtual void handleDraggedRelease(MouseEvent& evt) {
 	}
 	void handleRightClick(MouseEvent& evt) override {
 		if (parent)
@@ -164,15 +176,21 @@ public:
 
 
 	}
-	void setValue(float newValue) {
+	void setValue(float newValue, int flags) {
 		newValue = CLAMP_I(newValue, 0.0f, 1.0f);
 		if (fnSetValue) {
-			fnSetValue(newValue);
+			fnSetValue(newValue, flags);
 		} else if (valuePtr) {
 			*valuePtr = newValue;
 		} else {
 			value = newValue;
 		}
+	}
+	virtual void onValueEditFinish(float from, float to) {
+		if (fnValueEditFinish) {
+			fnValueEditFinish(from, to);
+		}
+
 	}
 	virtual float getValue() {
 		if (fnGetValue) {
@@ -196,4 +214,5 @@ public:
 			return *enabledPtr;
 		return true;
 	}
+	guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
 };

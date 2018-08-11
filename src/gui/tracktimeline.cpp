@@ -7,6 +7,7 @@
 #include "seq_util.h"
 #include "color_util.h"
 #include "platform.h"
+#include "trackctr.h"
 #include "../host/mainctrl.h"
 
 void guitrack_timeline::handleDraggedBegin(MouseEvent& evt) {
@@ -54,6 +55,9 @@ void guitrack_timeline::handleDraggedMove(MouseEvent& evt) {
 //				MainCtrl::get()->updateGrid();
 		}
 	}
+}
+void guitrack_timeline::handleDraggedRelease(MouseEvent& evt) {
+	MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
 }
 void guitrack_timeline::render(NVGcontext* vg) {
 	if (!setScissorTransform(vg)) {

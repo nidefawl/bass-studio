@@ -9,6 +9,7 @@
 #include "samplerate.h"
 #include "note.h"
 #include "dsp_util.h"
+#include "seq_time.h"
 #include "leak_detect.h"
 #include "snapshot.h"
 
@@ -18,17 +19,19 @@ class vstplugin;
 class effectbase;
 class guictr_plugins;
 struct track_params_snapshot_t;
+struct audio_stage_t;
 
 struct track_params_t : public automatable_t {
 private:
+	audio_stage_t* audiostage;
 	struct track_param_entry_t {
 		String name;
 		float val;
 	};
 
 public:
-	track_params_t()
-	  : automatable_t() {
+	track_params_t(audio_stage_t* _audiostage)
+	  : automatable_t(), audiostage(_audiostage) {
 		int32_t idx = 0;
 		const std::array<track_param_entry_t, 2> parameterTypes { {
 			track_param_entry_t{"Enabled", 1.0f},
@@ -83,14 +86,15 @@ public:
 		}
 		return 0.0f;
 	}
-	void setParamValue(int32_t idx, float val) override {
+	void setParamValue(int32_t idx, float val, int flags) override {
 		if (idx >= 0 && idx < (int)params.size()) {
+//			float preVal = params[idx].value;
 			params[idx].value = convertValTo(idx, val);
 		}
 	}
 	automationlane_snapshot_t toRef() override {
 		automationlane_snapshot_t ref;
-		ref.type = 1;
+		ref.type = AUTOMATABLE_MIXER;
 		ref.refId = 0;
 		return ref;
 	}
@@ -105,8 +109,13 @@ public:
 	bool isEnabled() {
 		return params[0].value >= 0.5f;
 	}
+	void postSetParameter(int32_t idx, float preVal, float val, int flags);
+};
+struct audio_stage_ref_t {
+	int id;
 };
 struct audio_stage_t {
+	int32_t id;
 	audio_stage_t* parent;
 	guictr_plugins* pluginCtr;
 	rmsmeter<16000> meter;
@@ -120,12 +129,13 @@ struct audio_stage_t {
 	const uint16_t& blockSize;
 	std::vector<effectbase*> effects;
 	std::vector<audio_stage_t*> children;
-	audio_stage_t(/*track_t* _track, */const samplerate_t& _sampleRate, const uint16_t& _blockSize, int32_t nChannels, int _type = 1)
-	: parent(nullptr),/*track(_track),*/
+	audio_stage_t(int32_t _id,/*track_t* _track, */const samplerate_t& _sampleRate, const uint16_t& _blockSize, int32_t nChannels, int _type = 1)
+	: id(_id), parent(nullptr),/*track(_track),*/
 	  pluginCtr(nullptr),
 	  input(nChannels, _blockSize),
 	  output(nChannels, _blockSize),
 	  delayLine(nChannels, _blockSize),
+	  mixer(this),
 	  type(_type),
 	  sampleRate(_sampleRate),
 	  blockSize(_blockSize) {
@@ -142,6 +152,8 @@ struct audio_stage_t {
 	track_t* getTrack();
 	void addAudioStage(audio_stage_t* stage);
 	void removeAudioStage(audio_stage_t* stage);
+	effectbase* getPluginById(int32_t projectGlobalId);
+	audio_stage_ref_t toRef();
 };
 class midiarp;
 struct track_impl_t : public audio_stage_t {
@@ -153,9 +165,8 @@ struct track_impl_t : public audio_stage_t {
 	int32_t selectedAutomationParam = -1;
 	std::vector<automationlane_snapshot_t> atl;
 	bool atlStored = false;
-	track_impl_t(track_t* _track, const samplerate_t& _sampleRate, const uint16_t& _blockSize, int32_t nChannels);
+	track_impl_t(int32_t _id, track_t* _track, const samplerate_t& _sampleRate, const uint16_t& _blockSize, int32_t nChannels);
 	~track_impl_t();
-	effectbase* getPluginById(int32_t projectGlobalId);
 	void sendNotesOff(int32_t bpm100, int32_t blockSamplePos);
 	void sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos);
 	void fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, float** buffer, int32_t samples);

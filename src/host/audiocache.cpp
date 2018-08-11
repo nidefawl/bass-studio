@@ -7,6 +7,7 @@
 #include "../wave/dr_wav.h"
 #include "logging.h"
 #include "../gui/drawwaveform.h"
+#include "fileio.h"
 #include <soxr.h>
 
 namespace
@@ -133,7 +134,7 @@ cachedaudio_t* audiocache::loadFile(String path, int id) {
 			}
 		}
 		my_printf("copy done: %d\n", nSamples);
-		int maxDownS = 7;
+		int maxDownS = 1;
 		for (int step = 1; step < maxDownS; step++) {
 			std::vector<samplechannel_t> downsampledChannels(2);
 			for (int i = 0; i < wav.channels; i++) {
@@ -154,6 +155,10 @@ cachedaudio_t* audiocache::loadFile(String path, int id) {
 		cachedaudio->sample = std::move(sample);
 		cachedaudio->id = _id;
 		cachedaudio->path = path;
+		String a,b,c, d;
+		SplitPath(path, &a, &b, &c, &d);
+		cachedaudio->name = b;
+		cachedaudio->ext = c;
 		this->mapId[_id] = cachedaudio.get();
 		my_printf("%d\n", cachedaudio->id);
 		cachedaudio_t* audio = cachedaudio.get();

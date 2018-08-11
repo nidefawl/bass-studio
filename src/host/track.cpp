@@ -28,6 +28,7 @@
 
 #include "project.h"
 #include "mainctrl.h"
+#include "history.h"
 #include "plugindatabase.h"
 
 #include "leak_detect.h"
@@ -143,7 +144,7 @@ track_impl_snapshot_t::track_impl_snapshot_t(track_impl_t* p, bool storePluginCh
 	}
 }
 track_snapshot_t::track_snapshot_t(track_t* track, bool storePluginChunks)
-  : tracksettings_t(*track), localIdx(track->localIdx), plugins(static_cast<track_impl_t*>(track->audio), storePluginChunks)
+  : tracksettings_t(*track), localIdx(track->localIdx), plugins(track->audio, storePluginChunks)
 {
 	std::vector<clip_t*>& otherClips = track->getMidi().clips;
 	for (clip_t* clip : otherClips) {
@@ -180,18 +181,25 @@ void track_t::loadPluginAutomationParameters(const track_impl_snapshot_t& trackS
 	assert(audio);
 	const std::vector<plugin_snapshot_t>& trPluginList = trackStatic.pluginSnapshots;
 	for (const plugin_snapshot_t& pluginSnapshot : trPluginList) {
-		effectbase* plugin = audio->getPluginById(pluginSnapshot.projectGlobalId);
-		if (plugin) {
-			const std::vector<param_snapshot_t>& pluginSnapshotParams = pluginSnapshot.params;
-			for (const param_snapshot_t& param : pluginSnapshotParams) {
-				if (plugin->hasParam(param.idx)) {
-					plugin->setParamValue(param.idx, param.val);
-				}
-			}
+		effectbase* effect = audio->getPluginById(pluginSnapshot.projectGlobalId);
+		if (effect) {
+//			const std::vector<param_snapshot_t>& pluginSnapshotParams = pluginSnapshot.params;
+//			for (const param_snapshot_t& param : pluginSnapshotParams) {
+//				int32_t paramIdxEffect = effect->mixerParams.size() + param.idx;
+//				if (effect->hasParam(paramIdxEffect)) {
+//					effect->setParamValue(paramIdxEffect, param.val, 1);
+//				}
+//			}
+//			const std::vector<param_snapshot_t>& pluginHostSideParams = pluginSnapshot.hostParams;
+//			for (const param_snapshot_t& param : pluginHostSideParams) {
+//				if (param.idx < (int32_t)effect->mixerParams.size() && effect->hasParam(param.idx)) {
+//					effect->setParamValue(param.idx, param.val, 1);
+//				}
+//			}
 			const std::vector<automation_view_t>& automatedParams = pluginSnapshot.automatedParams;
 			for (const automation_view_t& automatedParam : automatedParams) {
-				if (plugin->hasParam(automatedParam.targetParam)) {
-					automation_t* autom = plugin->getAutomation(automatedParam.targetParam);
+				if (effect->hasParam(automatedParam.targetParam)) {
+					automation_t* autom = effect->getAutomation(automatedParam.targetParam);
 					autom->points = automatedParam.points;
 				}
 			}
@@ -246,7 +254,10 @@ void trackdata_midi_t::getNotesInRange(tick_t start, tick_t end, tick_t cutStart
 
 }
 
-effectbase* track_impl_t::getPluginById(int32_t projectGlobalId) {
+audio_stage_ref_t audio_stage_t::toRef() {
+	return {this->id};
+}
+effectbase* audio_stage_t::getPluginById(int32_t projectGlobalId) {
 //	if (instrument && instrument->projectGlobalId == projectGlobalId) {
 //		return instrument;
 //	}
@@ -255,7 +266,11 @@ effectbase* track_impl_t::getPluginById(int32_t projectGlobalId) {
 			 return effect;
 		 }
 	}
-	return NULL;
+	for (audio_stage_t* t : children) {
+		auto* effect = t->getPluginById(projectGlobalId);
+		if (effect) return effect;
+	}
+	return nullptr;
 }
 //vstplugin* track_impl_t::setInstrument(vstplugin* _instrument) {
 //	vstplugin* oldInstr = instrument;
@@ -499,13 +514,13 @@ void audio_stage_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginLi
 			for (const param_snapshot_t& param : pluginSnapshotParams) {
 				int32_t paramIdxEffect = effect->mixerParams.size() + param.idx;
 				if (effect->hasParam(paramIdxEffect)) {
-					effect->setParamValue(paramIdxEffect, param.val);
+					effect->setParamValue(paramIdxEffect, param.val, 1);
 				}
 			}
 			const std::vector<param_snapshot_t>& pluginHostSideParams = pluginSnapshot.hostParams;
 			for (const param_snapshot_t& param : pluginHostSideParams) {
 				if (param.idx < (int32_t)effect->mixerParams.size() && effect->hasParam(param.idx)) {
-					effect->setParamValue(param.idx, param.val);
+					effect->setParamValue(param.idx, param.val, 1);
 				}
 			}
 			host->insertNewPlugin(this, effect, pluginSnapshot.slot);
@@ -654,11 +669,11 @@ void sortNoteEvents(std::vector<noteevent_t>& noteEvents) {
 		return a.tickOffsetInBlock < b.tickOffsetInBlock;
 	});
 }
-track_impl_t::track_impl_t(track_t* _track, const samplerate_t& _sampleRate, const uint16_t& _blockSize, int32_t nChannels)
-   : audio_stage_t(/*_track, */_sampleRate, _blockSize, nChannels, 0)
+track_impl_t::track_impl_t(int32_t _id, track_t* _track, const samplerate_t& _sampleRate, const uint16_t& _blockSize, int32_t nChannels)
+   : audio_stage_t(_id, /*_track, */_sampleRate, _blockSize, nChannels, 0)
   , track(_track)
 {
-	arp = new midiarp();
+	arp = new midiarp(this);
 }
 std::vector<note_t>& track_impl_t::getArpInputNotes() {
 	return this->arp->heldInputAnimationNotes;
@@ -814,7 +829,16 @@ void track_params_t::loadSnapshot(const track_params_snapshot_t& snapshot) {
 		automation->active = p.active;
 	}
 }
-
+void track_params_t::postSetParameter(int32_t idx, float preVal, float val, int flags) {
+	if (flags != 2) {
+		return;
+	}
+	assert(this->audiostage->getTrack());
+	track_t* track = this->audiostage->getTrack();
+	automationlane_snapshot_t ref = toRef();
+	parameter_ref_t p = {track->idx,  ref.type, 0, idx};
+	MainCtrl::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
+}
 const char* trackTypeNames[5] = {
 	"Master", "Return", "Midi", "Audio", NULL
 };

@@ -56,9 +56,9 @@ public:
 		this->maxHeight = -1;
 		for (auto e : _menu->children) {
 			if (e->type == ngui::menu_type::seperator) {
-				add(new ctxtmenu_splitter());
+				addEntry(new ctxtmenu_splitter());
 			} else {
-				add(new guimenu_ctxtentry(e));
+				addEntry(new guimenu_ctxtentry(e));
 			}
 		}
 		 my_printf("guimenu\n", 0);

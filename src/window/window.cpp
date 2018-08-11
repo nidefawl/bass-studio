@@ -8,6 +8,7 @@
 #include <nanovg.h>
 #include <nanovg_gl.h>
 #include <nanovg_gl_utils.h>
+#include <stdint.h>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -303,7 +304,7 @@ public:
 		double since = (tm - tm_lastfps) / 1000.0;
 		if (calls > 0 && since >= 1.0) {
 			double fps = calls / since;
-			fpsStats = StringFormat("%.2f fps\n", fps);
+			fpsStats = StringFormat("%.2f fps", fps);
 			glfwSetWindowTitle(glfw, StringAsCStr(fpsStats));
 			tm_lastfps = tm;
 			calls = 0;
@@ -460,7 +461,6 @@ public:
 #ifdef _WIN32
 	virtual LRESULT windowProc(HWND _hwnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 		switch (Msg) {
-
 		case WM_COMMAND:
 			menuCommand(LOWORD(wParam));
 			return 0;
@@ -560,6 +560,7 @@ public:
 	void onTick() {
 		PREVENT_REENTRANT("REENTRANT IN onTick")
 //		flagNeedsRedraw();
+				glfwMakeContextCurrent(glfw);
 		ctrl->onTick();
 	}
 	void render()
@@ -646,6 +647,23 @@ public:
     virtual void onMenuOpen(ngui::Menu* menu) {
     	ctrl->onMenuOpen(menu);
     }
+#ifdef _WIN32
+	virtual LRESULT windowProc(HWND _hwnd, UINT Msg, WPARAM wParam, LPARAM lParam) override {
+		switch (Msg) {
+		case WM_MOVING:
+		case WM_MOVE:
+		case WM_WINDOWPOSCHANGING:
+		case WM_WINDOWPOSCHANGED:
+		case WM_NCLBUTTONDOWN:
+			my_printf("WM_ closeContextMenu\n", 0);
+//    		this->ctrl->closeAppMenus();
+    		this->ctrl->closeContextMenu();
+			break;
+
+		}
+		return appwindow::windowProc(_hwnd, Msg, wParam, lParam);
+	}
+#endif
 
 	void onCharInput(unsigned int codepoint) {
 		ctrl->onCharInput(codepoint);
@@ -676,6 +694,7 @@ public:
 		return appwindow::isMouseCaptured();
 	}
 	void onCursorEnter(int entered) {
+		ctrl->onCursorEnter(entered);
 		if (entered)
 			glfwSetCursor(glfw, RenderResources::cursors[cursorIcon]);
 	}
@@ -772,6 +791,17 @@ public:
 
 	void show() {
 		appwindow::showWindow();
+		if (parent) {
+//		    SetForegroundWindow(parent->getHWND());
+//		    SetFocus(parent->getHWND());
+//		    SetActiveWindow(parent->getHWND());
+//		    SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE);
+//		    BringWindowToTop(getHWND());
+
+		}
+//		ShowWindow(hwnd, SWP_NOACTIVATE);
+//		if (parent)
+//		SetParent(hwnd, parent->getHWND());
 	}
 	void hide() {
 		appwindow::hideWindow();
@@ -874,6 +904,11 @@ public:
 	}
 	bool isMouseCaptured() {
 		return appwindow::isMouseCaptured();
+	}
+	void onCursorEnter(int entered) {
+		ctrl->onCursorEnter(entered);
+		if (entered)
+			glfwSetCursor(glfw, RenderResources::cursors[cursorIcon]);
 	}
 	void updateWindowFromDlg() {
 		onRefresh();
@@ -1117,15 +1152,18 @@ void appwindow_overlay::create(const char* title, int w, int h) {
 	glfwWindowHint(GLFW_UTILITY_WINDOW, GL_TRUE);
 	appwindow::createWindow(title, w, h);
 #ifdef _WIN32
-	LONG l = GetWindowLong(hwnd, GWL_EXSTYLE);
-	l = l & ~WS_EX_APPWINDOW;
-	l = l | WS_EX_TOOLWINDOW;
-//	l = l | WS_EX_LAYERED;
-	SetWindowLong(hwnd, GWL_EXSTYLE, l);
-	//	SetWindowLong(hwnd, GWL_EXSTYLE, l & ~WS_EX_APPWINDOW);
-	SetWindowLong(hwnd, GWL_STYLE, WS_CHILD | WS_CLIPSIBLINGS);
-//		SetWindowLong(hwnd, GWL_EXSTYLE, l & ~WS_EX_APPWINDOW);
-//		SetWindowLong(hwnd, GWL_STYLE, WS_CAPTION | WS_POPUP | WS_CLIPSIBLINGS | WS_SYSMENU);
+	bool tooltip = false;
+	if (tooltip) {
+		SetWindowLong(hwnd, GWL_EXSTYLE, WS_EX_TOPMOST|WS_EX_NOACTIVATE|WS_EX_TOOLWINDOW);
+		SetWindowLong(hwnd, GWL_STYLE, WS_CHILDWINDOW | WS_VISIBLE | WS_BORDER | WS_CLIPSIBLINGS);
+	} else {
+
+		LONG l = GetWindowLong(hwnd, GWL_EXSTYLE);
+		l = l & ~WS_EX_APPWINDOW;
+		l = l | WS_EX_TOOLWINDOW;
+		SetWindowLong(hwnd, GWL_EXSTYLE, l);
+		SetWindowLong(hwnd, GWL_STYLE, WS_CHILD | WS_CLIPSIBLINGS);
+	}
 	RECT rcOwner;
 	RECT rcDlg;
 	RECT rc;
@@ -1135,12 +1173,21 @@ void appwindow_overlay::create(const char* title, int w, int h) {
 	OffsetRect(&rcDlg, -rcDlg.left, -rcDlg.top);
 	OffsetRect(&rc, -rc.left, -rc.top);
 	OffsetRect(&rc, -rcDlg.right, -rcDlg.bottom);
-	SetWindowPos(hwnd,
-		HWND_TOP,
-		rcOwner.left + (rc.right / 2),
-		rcOwner.top + (rc.bottom / 2),
-		0, 0,          // Ignores size arguments.
-		SWP_NOSIZE);
+	if (tooltip) {
+		SetWindowPos(hwnd,
+			HWND_TOPMOST,
+			rcOwner.left + (rc.right / 2),
+			rcOwner.top + (rc.bottom / 2),
+			0, 0,          // Ignores size arguments.
+			SWP_NOSIZE|SWP_NOACTIVATE);
+	} else {
+		SetWindowPos(hwnd,
+			HWND_TOP,
+			rcOwner.left + (rc.right / 2),
+			rcOwner.top + (rc.bottom / 2),
+			0, 0,          // Ignores size arguments.
+			SWP_NOSIZE);
+	}
 #endif
 #if __linux__
 	setIsTransientFor(this->parent->getGLFW(), this->getGLFW());
@@ -1400,11 +1447,11 @@ int startApplication(int argc, char* argv[]) {
 	GLFWwindow* glfwHandle = mainWindow->getGLFW();
 	long start = getTimeMillis();
 	int step = 0;
+	int nMsg = 0;
 	while (!glfwWindowShouldClose(glfwHandle)) {
 #ifdef _WIN32
 		DWORD timeout = 1;
 		MsgWaitForMultipleObjects(0, NULL, FALSE, timeout, QS_ALLEVENTS);
-
 	    MSG msg;
 	    while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE))
 	    {

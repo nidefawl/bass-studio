@@ -60,7 +60,7 @@ public:
 		int idx = 0;
 		for (guiknob* knob : knobs) {
 			const int paramIdx = idx + ARP_PARAM_CLOCK;
-			knob->fnSetValue = [this,paramIdx](float f) {
+			knob->fnSetValue = [this,paramIdx](float f, int flags) {
 				auto arp = getArp();
 				if (arp) {
 			    	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
@@ -68,7 +68,13 @@ public:
 					if (param) {
 						param->active = false;
 					}
-					arp->params[paramIdx].value = std::max(0.0f, std::min(1.0f, f));
+					arp->setParamValue(paramIdx, std::max(0.0f, std::min(1.0f, f)), flags);
+				}
+			};
+			knob->fnValueEditFinish = [this,paramIdx](float preVal, float val) {
+				auto arp = getArp();
+				if (arp) {
+					arp->postSetParameter(paramIdx, preVal, val, 2);
 				}
 			};
 			knob->fnGetValue = [this, paramIdx](void) {

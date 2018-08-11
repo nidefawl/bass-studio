@@ -4,6 +4,7 @@
 
 #include "gl_vbo.h"
 #include "gl_attr.h"
+#include "hires_timer.h"
 
 #ifndef GL_FLOAT
 #define GL_FLOAT 0x1406
@@ -83,6 +84,7 @@ public:
 	uint32_t u_projection;
 	uint32_t u_uniforms;
 	uint32_t u_uniforms_shape;
+	hires_timer_t timer;
 public:
 	int init();
 	void destroy();

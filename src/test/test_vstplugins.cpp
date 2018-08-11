@@ -4,7 +4,7 @@
 #include <iomanip>
 #include <windows.h>
 #include "../host/vst_host.h"
-#include "../host/vst_plugin.h"
+#include "../host/plugin/vst_plugin.h"
 #include "fileio.h"
 #include "project.h"
 namespace {

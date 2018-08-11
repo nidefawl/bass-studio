@@ -6,6 +6,9 @@
 #include <vector>
 
 #define PARAM_ENABLE 0
+#define AUTOMATABLE_MIXER 0
+#define AUTOMATABLE_ARP 1
+#define AUTOMATABLE_EFFECT 2
 
 struct automation_point_t {
 	tick_t time;
@@ -107,11 +110,11 @@ struct automatable_t {
 	virtual ~automatable_t() {};
 	virtual String getAutomatableName() = 0;
 	virtual float getParamValue(int32_t idx) = 0;
-	virtual void setParamValue(int32_t idx, float val) = 0;
+	virtual void setParamValue(int32_t idx, float val, int flags) = 0;
 	virtual automationlane_snapshot_t toRef() = 0;
 
 	virtual void flipParamValue(int32_t idx) {
-		setParamValue(idx, 1.0f-getParamValue(idx));
+		setParamValue(idx, 1.0f-getParamValue(idx), 2);
 	}
 	int32_t getQuantizationSteps(int32_t idx) {
 		automation_t* at = getAutomation(idx);
@@ -144,7 +147,7 @@ struct automatable_t {
 		for (automated_param_t& param : automatedParams) {
 			if (param.src.isActive()) {
 				float val = param.src.getValueAt(pos);
-				setParamValue(param.paramIdx, val);
+				setParamValue(param.paramIdx, val, 1);
 			}
 		}
 	}
@@ -184,6 +187,8 @@ struct automatable_t {
 				return ap;
 		}
 		return NULL;
+	}
+	virtual void postSetParameter(int32_t idx, float preVal, float val, int flags) {
 	}
 };
 

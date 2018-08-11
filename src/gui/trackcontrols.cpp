@@ -253,8 +253,8 @@ public:
 	void buttonClicked(guibase* button) override {
 		if (&btnBypass == button) {
 			track_params_t& trackParams = m_track->audio->mixer;
-			trackParams.deactivateAutomation(0);
-			trackParams.setParamValue(0, trackParams.isEnabled() ? 0.0f : 1.0f);
+			trackParams.deactivateAutomation(PARAM_ENABLE);
+			trackParams.setParamValue(PARAM_ENABLE, trackParams.isEnabled() ? 0.0f : 1.0f, 0);
 		}
 	}
 	void layout() {
@@ -299,10 +299,10 @@ public:
 		std::vector<automatable_t*> targets;
 		m_track->audio->getAutomatableTargets(targets);
 		int32_t idx = 0;
-		add(new ctxtmenu_entry("None", idx));
+		addEntry(new ctxtmenu_entry("None", idx));
 		idx++;
 		for (auto t : targets) {
-			add(new ctxtmenu_entry(t->getAutomatableName(), idx));
+			addEntry(new ctxtmenu_entry(t->getAutomatableName(), idx));
 			idx++;
 		}
 	}
@@ -333,11 +333,11 @@ public:
 		this->paddingV = 0;
 		automatable_t* autom = m_track->audio->selectedAutomationCtr;
 		if (autom) {
-			add(new ctxtmenu_entry("None", 0));
+			addEntry(new ctxtmenu_entry("None", 0));
 			int32_t numParams = autom->getNumParameters();
 			for (int i = 0; i < numParams; i++) {
 				String paramName = autom->getParamName(i);
-				add(new ctxtmenu_entry(paramName, i+1));
+				addEntry(new ctxtmenu_entry(paramName, i+1));
 			}
 		}
 	}
@@ -882,11 +882,11 @@ public:
 		this->trackid = _trackid;
 		this->size.x = 120;
 		sel = new ctxtmenu_color_select("Pick Color", 100);
-		add(new ctxtmenu_entry("Show all automation", 0));
-		add(new ctxtmenu_entry("Duplicate track", 1));
-		add(new ctxtmenu_entry("Delete track", 2));
-		add(new ctxtmenu_splitter());
-		add(sel);
+		addEntry(new ctxtmenu_entry("Show all automation", 0));
+		addEntry(new ctxtmenu_entry("Duplicate track", 1));
+		addEntry(new ctxtmenu_entry("Delete track", 2));
+		addEntry(new ctxtmenu_splitter());
+		addEntry(sel);
 		track_t* tr = MainCtrl::get()->getTrackId(trackid);
 		MainCtrl::get()->setSelectedTrack(tr);
 	}

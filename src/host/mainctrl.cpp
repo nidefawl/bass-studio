@@ -5,6 +5,7 @@
 #include <vector>
 #include <memory>
 #include <GLFW/glfw3.h>
+#include "../platform/mingw/mingw.thread.h"
 
 #include "window.h"
 #include "platform.h"
@@ -437,7 +438,7 @@ void MainCtrl::menuCommand(int cmd) {
 }
 void MainCtrl::postInit() {
 	vsthost::getInstance()->postInit();
-	loadFile("wavetest.project");
+	loadFile("singlewave.project");
 //	for (int i = 0; i < 32; i++) {
 //		loadFile("muuure.project");
 //	}
@@ -582,9 +583,37 @@ void MainCtrl::onTick()
 	for (guictr_base *ctr : containers) {
 		ctr->onTick(this);
 	}
+	for (guictr_base *ctr : containers) {
+		ctr->onIdle();
+	}
+//	my_printf("onTick %d\n", std::this_thread::get_id());
+//	waveformrender::getInstance()->renderUpdates(vg, 0);
 //	if (isPlaying()) {
 		mainWindow->requestRedraw();
 //	}
+	if (!guiDragged && !guiCaptured && guiOver && (!this->ctxtmenu || ctxtmenu->isTransient())) {
+		int32_t hoverTicks = 0;
+		if (ctxtmenu && (ctxtmenu->canClose() || guiOver->curTooltip != nextTooltipId-1)) {
+			closeContextMenu();
+		}
+		if (!ctxtmenu && guiOver == lastHoveredTooltip) {
+			hoverTicks = lastHoveredTooltipTicks + 1;
+			if (lastHoveredTooltipTicks >= 12) {
+				auto tooltip = guiOver->getTooltip(this);
+				guiOver->curTooltip = nextTooltipId++;
+				if (tooltip) {
+					openContextMenu(tooltip, m_mousePos+ivec2(0,6));
+				}
+				hoverTicks = 0;
+			}
+		}
+		lastHoveredTooltipTicks = hoverTicks;
+		lastHoveredTooltip = guiOver;
+	} else {
+		if (ctxtmenu && ctxtmenu->isTransient()) {
+			closeContextMenu();
+		}
+	}
 	if (guiDragged && !guiCaptured && guiDragged->isDragMoveable()) {
 		track_t *tr = NULL;
 		int32_t hoverTicks = 0;
@@ -725,6 +754,9 @@ bool MainCtrl::captureMouse(guibase* gui) {
 	}
 	return false;
 }
+bool MainCtrl::isZooming() {
+	return guiCaptured == &view->ctr_tracks.trackTimeline;
+}
 void MainCtrl::uncaptureMouse() {
 	this->mainWindow->releaseMouse();
 }
@@ -739,7 +771,7 @@ void MainCtrl::closeAppMenus() {
 void MainCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos) {
 	dragdropTarget.reset();
 #if USE_GUI_MENU
-	if (ctxtmenu != NULL) {
+	if (ctxtmenu && !ctxtmenu->isTransient()) {
 		MouseHitEvt evt(MouseHitType::MOUSE_OVER);
 		if (view->ctr_menu.mouseHitTest(mousePos, evt)) {
 		}
@@ -1422,11 +1454,11 @@ shared_ptr<clip_clipboard> MainCtrl::copySelection(const Cursor& _cursor) {
 }
 
 void MainCtrl::prerender(int32_t x, int32_t y, int32_t w, int32_t h, float pixelRatio) {
+//	my_printf("prerender %d\n", std::this_thread::get_id());
 	for (guictr_base *ctr : containers) {
 		ctr->prerender(vg);
 	}
-	waveformrender::getInstance()->renderUpdates(vg, pixelRatio);
-	this->view->ctr_tracks.trackView.postPreRenderCheck();
+	waveformrender::getInstance()->renderUpdates(vg, 0);
 }
 track_t* clip_view::track() const {
 	if (!this->gui)

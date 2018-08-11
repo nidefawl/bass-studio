@@ -82,6 +82,9 @@ public:
 	virtual void mouseMoved(ivec2 mousePos, ivec2 deltaPos);
 
 	bool isCtrOrChildFocused(guibase* gui);
+	virtual void onCursorEnter(int entered) {
+
+	}
 };
 class AppCtrl : public BaseCtrl {
 public:
@@ -139,12 +142,16 @@ class guictr_popup;
 class PopupCtrl : public BaseCtrl
 {
 	guictr_popup* popupCtrs;
+	bool mouseInside = false;
 public:
 	PopupCtrl();
 	~PopupCtrl();
 	static PopupCtrl* get() {
 		static PopupCtrl ctrl;
 		return &ctrl;
+	}
+	bool isMouseInside() {
+		return mouseInside;
 	}
 	void destroy();
 	bool isShown() {
@@ -156,5 +163,6 @@ public:
 	void focusReceived() {
 	}
 	void focusLost();
+	void onCursorEnter(int entered) override;
 
 };

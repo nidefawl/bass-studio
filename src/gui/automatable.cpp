@@ -16,12 +16,12 @@ void addContextEntriesAutomation(guictxtmenu_base* ctxt, track_t* tr, automatabl
 	automation_t* at = atl->getAutomation(paramIdx);
 	if (at && at->isAutomated()) {
 		if (!at->active) {
-			ctxt->add(new ctxtmenu_entry("Reenable Automation", ID_REENABLE));
+			ctxt->addEntry(new ctxtmenu_entry("Reenable Automation", ID_REENABLE));
 		}
-		ctxt->add(new ctxtmenu_entry("Delete Automation", ID_DELETE));
+		ctxt->addEntry(new ctxtmenu_entry("Delete Automation", ID_DELETE));
 	}
-	ctxt->add(new ctxtmenu_entry("Show Automation", ID_SHOW));
-	ctxt->add(new ctxtmenu_entry("Show in new Automation Lane", ID_SHOW_NEW));
+	ctxt->addEntry(new ctxtmenu_entry("Show Automation", ID_SHOW));
+	ctxt->addEntry(new ctxtmenu_entry("Show in new Automation Lane", ID_SHOW_NEW));
 }
 bool handleAutomatbleContextMenu(track_t* tr, automatable_t* at, int paramIdx, int _id) {
 	automation_t* param = at->getAutomation(paramIdx);

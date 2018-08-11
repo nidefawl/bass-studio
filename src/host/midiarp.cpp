@@ -2,11 +2,13 @@
 #include "track.h"
 #include "snapshot.h"
 #include "color_util.h"
+#include "history.h"
+#include "mainctrl.h"
 
 void midiarp::loadSnapshot(const arp_snapshot& snapshot) {
 	for (auto p : snapshot.params) {
 		if (hasParam(p.idx)) {
-			setParamValue(p.idx, p.val);
+			setParamValue(p.idx, p.val, 1);
 		}
 	}
 	for (auto p : snapshot.automatedParams) {
@@ -14,6 +16,16 @@ void midiarp::loadSnapshot(const arp_snapshot& snapshot) {
 		automation->points = p.points;
 		automation->active = p.active;
 	}
+}
+void midiarp::postSetParameter(int32_t idx, float preVal, float val, int flags) {
+	if (flags != 2) {
+		return;
+	}
+	assert(this->trackImpl->getTrack());
+	track_t* track = this->trackImpl->getTrack();
+	automationlane_snapshot_t ref = toRef();
+	parameter_ref_t p = {track->idx,  ref.type, 0, idx};
+	MainCtrl::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
 }
 void midiarp::createSnapshot(arp_snapshot& snapshot) {
 	for (int i = 0; i < getNumParameters(); i++) {

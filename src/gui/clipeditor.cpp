@@ -99,10 +99,10 @@ public:
 		this->size.x = 320;
 		auto adaptive = new ctxtmenu_time_select(editor->grid, "Adaptive Grid", 0);
 		adaptive->initAdaptive();
-		add(adaptive);
+		addEntry(adaptive);
 		auto fixed = new ctxtmenu_time_select(editor->grid, "Fixed Grid", 0);
 		fixed->initFixed();
-		add(fixed);
+		addEntry(fixed);
 	}
 	void clicked(int clickedid) {
 		scaled_grid& grid = editor->grid;

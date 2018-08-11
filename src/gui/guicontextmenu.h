@@ -2,6 +2,7 @@
 #include <vector>
 #include "event.h"
 #include "gui.h"
+#include "guicontainer.h"
 #include "guicolors.h"
 #include "basectrl.h"
 
@@ -81,20 +82,25 @@ public:
 };
 
 
-class guictxtmenu_base : public guibase {
+class guictxtmenu_base : public guictr_base {
 protected:
 	std::vector<ctxtmenu_entry*> entries;
 	int paddingV = 2;
 	int fontSize = FONT_SIZE_CTXT;
 public:
+	bool scrollbarOutside = false;
 	int maxHeight = 220;
-	PopupCtrl* ctrl;
+	PopupCtrl* ctrl = nullptr;
+	guictxtmenu_base() {
+		margin = 0;
+		padding = 0;
+	}
 	~guictxtmenu_base() {
 		for (ctxtmenu_entry* e : entries) {
 			delete e;
 		}
 	}
-	void add(ctxtmenu_entry* entry) {
+	void addEntry(ctxtmenu_entry* entry) {
 		entries.push_back(entry);
 	}
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
@@ -102,6 +108,12 @@ public:
 			evt.requestFocus(this);
 			return true;
 		}
+		return false;
+	}
+	virtual bool isTransient() {
+		return false;
+	}
+	virtual bool canClose() {
 		return false;
 	}
 	virtual void clicked(int _id) {

@@ -2,6 +2,7 @@
 #include "../host/vst_host.h"
 #include <glm/glm.hpp>
 #include <glm/vec2.hpp>
+#include "drawwaveform.h"
 using glm::vec2;
 using glm::ivec2;
 
@@ -23,7 +24,7 @@ bool getClipPosition(scaled_grid& grid, const ivec2& trackSize, const clip_t* cl
 	pos = ivec2(tickBeginPx, INSET_TRACK_CONTENT);
 	size = ivec2(widthPx, size.y-INSET_TRACK_CONTENT*2);
 	if (size.x <= 0 || size.y <= 0) {
-		my_printf("culled because of size!\n",0);
+		my_printf("culled %s because of size %d %d!\n", StringAsCStr(cl->name), size.x, size.y);
 	}
 	return size.x > 0 && size.y > 0;
 }
@@ -40,36 +41,74 @@ audioclip_texture_t makeWaveformFromClip(project_t& project, scaled_grid& grid,
 	double tickBegin = grid.screenToTickD(pos.x);
 	double tickBeginOffset = grid.screenToTickD(pxBegin);
 	double tickEnd = grid.screenToTickD(pxEnd);
-
+	if (size.x == sizeClipped.x) {
+		tickBeginOffset = m_clip->start();
+		tickBegin = m_clip->start();
+		tickEnd = m_clip->end();
+	}
 	double sampleBegin = tickToSamplePrecise(tickBegin, project.tempo100, sr);
 	double sampleStartOffset = tickToSamplePrecise(tickBeginOffset, project.tempo100, sr);
+
 	double sampleEnd = tickToSamplePrecise(tickEnd, project.tempo100, sr);
 	sampleStartOffset += m_clip->offsetSamples;
 	sampleEnd += m_clip->offsetSamples;
 	ivec2 startOffset = posClipped - pos;
 	audioclip_texture_t w;
 	w.quality=4;
-	if (samplesPerPx >= 256) {
-		w.quality *= 2;
-		w.scale = 2;
-	}
-	constexpr float MAX_RES = 512;
+	double pxPerSample = 1.0/samplesPerPx;
+//	if (samplesPerPx >= 256 && size.y * (w.scale*2) <= FBO_HEIGHT) {
+//		w.quality *= 2;
+//		w.scale *= 2;
+//	}
+//	if (samplesPerPx >= 512 && size.y * (w.scale*2) <= FBO_HEIGHT) {
+//		w.quality *= 2;
+//		w.scale *= 2;
+//	}
+//	if (samplesPerPx >= 1024 && size.y * (w.scale*2) <= FBO_HEIGHT) {
+//		w.quality *= 2;
+//		w.scale *= 2;
+//	}
+//	if (size.y * 4 <= FBO_HEIGHT) {
+//		w.quality = 2;
+//		w.scale = 4;
+//	}
+	constexpr float MAX_RES = 2048;
 	w.scaleX = 1.0f;
-	if (samplesPerPx > MAX_RES) {
-		w.scaleX = MAX_RES/samplesPerPx;
-		samplesPerPx = MAX_RES;
-	}
 	w.pos = pos;
 	w.startOffset = startOffset;
-	w.size = sizeClipped;
+	w.size = ivec2(min(sizeClipped.x, FBO_WIDTH), min(size.y, FBO_HEIGHT));
+	double nSamples = sampleEnd-sampleStartOffset;
+	if (nSamples * pxPerSample > FBO_WIDTH) {
+		samplesPerPx = (nSamples / FBO_WIDTH);
+	}
+//	if (w.scale == 1) {
+//		w.size.x = std::min(FBO_WIDTH, (int)std::round(fsizeX));
+		if (samplesPerPx > MAX_RES && (nSamples / MAX_RES) <= FBO_WIDTH) {
+			w.scaleX = MAX_RES/samplesPerPx;
+			samplesPerPx = MAX_RES;
+//			my_printf("w.scaleX %f\n", w.scaleX);
+//			size.x *= 2;
+		}
+//		int n = 0;
+//		double d = 2;
+//		while (n++ < 5) {
+//			w.scaleX /= d;
+//			samplesPerPx /= d;
+//		}
+//	}
+//	pxPerSample = 1.0/samplesPerPx;
+//	double width = (sampleEnd-sampleStartOffset)*pxPerSample*w.scale;
+//	assert(width <= FBO_WIDTH);
+	assert(w.size.x <= FBO_WIDTH && w.size.y <= FBO_HEIGHT);
 	assert(w.size.x > 0);
 	w.sampleBegin = sampleBegin;
 	w.sampleBeginOffset = sampleStartOffset;
 	w.sampleEnd = sampleEnd;
 	w.samplesPerPx = samplesPerPx;
-	w.linewidth = 1.50f+min(0.75, max(0.0, grid.zoom*32.0));
+	w.linewidth = 1.5f;//+min(0.75, max(0.0, grid.zoom*32.0));
 	w.method = SampleMethod::sample_straight;
 	w.audioId = m_clip->audio.id;
+	w.clipped = size.x != sizeClipped.x;
 //	my_printf("waveform[height:%d,zoom:%f,q:%d,w:%f,smp/px:%f,scale:%d]\n", w.size.y, grid.zoom, w.quality, w.linewidth, w.samplesPerPx, w.scale);
 
 
@@ -77,7 +116,7 @@ audioclip_texture_t makeWaveformFromClip(project_t& project, scaled_grid& grid,
 
 }
 
-void renderAudioClip(NVGcontext* vg, const track_t* tr, const clip_t* cl, const gui_waveform_texture_ref* guiaudioclip, ivec2 pos, ivec2 size) {
+void renderAudioClip(NVGcontext* vg, const track_t* tr, const clip_t* cl, const gui_waveform_texture_ref* guiaudioclip, ivec2 pos, ivec2 size, ivec2 sizeClipped) {
 	if (cl->getLen() <= 0) {
 		return;
 	}
@@ -100,14 +139,15 @@ void renderAudioClip(NVGcontext* vg, const track_t* tr, const clip_t* cl, const 
 	}
 
 	ivec2 posContents = ivec2(pos.x, pos.y+HEIGHT_CLIP_TITLE+INSET_CLIP_CONTENT);
-	ivec2 sizeContents = ivec2(size.x, size.y-HEIGHT_CLIP_TITLE-INSET_CLIP_CONTENT*2);
+//	ivec2 sizeContents = ivec2(sizeClipped.x, sizeClipped.y-HEIGHT_CLIP_TITLE-INSET_CLIP_CONTENT*2);
 	tick_t clipLen = cl->getLen();
 	float numBars = clipLen / (float) TICKS_BAR;
-	float barSize = sizeContents.x / (float) numBars;
-	if (sizeContents.x > 0 && sizeContents.y > 0 && guiaudioclip->rendered) {
+	float barSize = size.x / (float) numBars;
+	if (sizeClipped.x > 0 && sizeClipped.y > 0 && guiaudioclip->rendered) {
 		nvgSave(vg);
 		nvgTranslate(vg, posContents.x, posContents.y);
-		waveformrender::getInstance()->draw(vg, guiaudioclip, sizeContents);
+
+		waveformrender::getInstance()->draw(vg, guiaudioclip, sizeClipped);
 
 		nvgRestore(vg);
 	}

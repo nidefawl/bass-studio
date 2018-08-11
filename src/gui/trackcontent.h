@@ -9,11 +9,13 @@
 #include "clip.h"
 #include "grid.h"
 #include "guicontainer.h"
+#include "automation.h"
 #include "automatable.h"
 #include "trackautomation.h"
 #include "audiowaveform.h"
 #include "leak_detect.h"
 #include "cliprenderer.h"
+#include "logging.h"
 
 #include <glm/glm.hpp>
 #include <glm/vec2.hpp>
@@ -21,6 +23,7 @@ using glm::vec2;
 using glm::ivec2;
 
 struct gui_waveform_texture_ref;
+class guictxtmenu_base;
 class gui_clip : public guibase {
 public:
 	track_t* const m_track;
@@ -126,7 +129,7 @@ public:
 	void handleRightClick(MouseEvent& evt);
 };
 class gui_audio_clip : public gui_clip {
-	bool assignedWaveform = false;
+	audioclip_texture_t updatedWaveform;
 public:
 	gui_audio_clip(track_t* _track, clip_t* _clip)
 		: gui_clip(_track, _clip)  {
@@ -137,11 +140,20 @@ public:
 	void updatePosition(project_t& project, scaled_grid& grid, ivec2& trackSize);
 	void render(NVGcontext* vg) override {
 		if (!culled) {
-			renderAudioClip(vg, m_track, m_clip, &m_clip->audio.waveformRef, pos, size);
+			ivec2 clipSize = ivec2(size.x, size.y-(HEIGHT_CLIP_TITLE+INSET_CLIP_CONTENT*2));
+			ivec2 posClipped = ivec2(pos.x, pos.y+(HEIGHT_CLIP_TITLE+INSET_CLIP_CONTENT*2));
+			ivec2 sizeClipped = clipSize;
+			this->parent->scissorClip(posClipped, sizeClipped);
+			sizeClipped.y = clipSize.y;
+			renderAudioClip(vg, m_track, m_clip, &m_clip->audio.waveformRef, pos, size, sizeClipped);
 		}
 	}
 	void releaseRendered();
 	void prerender(NVGcontext* vg) override;
+	void onIdle() override;
+
+	void onTick(AppCtrl* appctrl) override;
+	guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
 	void onRemove() {
 //		my_printf("release %012x from onRemove()\n", &m_clip->audio.waveformRef);
 		releaseRendered();

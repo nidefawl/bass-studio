@@ -22,6 +22,7 @@
 #include "logging.h"
 #include "leak_detect.h"
 #include "audiocache.h"
+#include "audiowaveform.h"
 #include "drawwaveform.h"
 #include "cliprenderer.h"
 #include <glm/glm.hpp>
@@ -61,7 +62,7 @@ public:
 //				if (track->type == TRACK_TYPE_MIDI)
 				my_printf("TRACKBeforeUndo[%d] HAS %d clips\n", track->idx, track->getMidi().clips.size());
 				*track = *trackStored;
-				track->loadPluginAutomationParameters(trackStored->plugins);
+//				track->loadPluginAutomationParameters(trackStored->plugins);
 //				if (track->type == TRACK_TYPE_MIDI)
 				my_printf("TRACKAfterUndo[%d] HAS %d clips\n", track->idx, track->getMidi().clips.size());
 			} else {
@@ -80,7 +81,7 @@ public:
 				track_t* track = trCtr.getTrackTypeIdx(trackStored->type, trackStored->localIdx);
 				track->releaseTrackContent();
 				*track = *trackStored;
-				track->loadPluginAutomationParameters(trackStored->plugins);
+//				track->loadPluginAutomationParameters(trackStored->plugins);
 //				if (track->type == TRACK_TYPE_MIDI)
 				my_printf("TRACK[%d] HAS %d clips\n", track->idx, track->getMidi().clips.size());
 			}
@@ -150,6 +151,7 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 		return false;
 	}
 	if (kevt.type != K_RELEASE) {
+		trackstate_t resizePreModifyState;
 		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 		bool modified = false;
 		bool handledKeyinput = false;
@@ -701,43 +703,25 @@ void guitrack_editor::prerender(NVGcontext* vg) {
 					tr->content->scissorClip(posClipped, sizeClipped);
 					auto waveform = makeWaveformFromClip(project, grid, tr->content->size, cl, clipPos, clipSize, posClipped, sizeClipped);
 					gui_waveform_texture_ref& waveformRef = cl->audio.waveformRef;
-					if (!waveformRef.rendered || waveform != waveformRef.waveform) {
-						assert(!waveformRef.queued);
-						waveformRef.waveform = waveform;
-//						my_printf("release %012x from prerender() (refresh) \n", &waveformRef);
-						waveformrender::getInstance()->release(&waveformRef);
-						int ret = waveformrender::getInstance()->queueUpdate(vg, audio, &waveformRef);
-//						waveformRef.fbId = ret;
-//						waveformRef.rendered = true;
+					if (!waveformRef.queued) {
+						if (!waveformRef.rendered || waveform != waveformRef.waveform) {
+							assert(!waveformRef.queued);
+	//						my_printf("release %012x from prerender() (refresh) \n", &waveformRef);
+							waveformrender::getInstance()->release(&waveformRef);
+							if (waveform.size.x > 0 && waveform.size.y > 0) {
+								waveformRef.waveform = waveform;
+								int ret = waveformrender::getInstance()->queueUpdate(audio, &waveformRef);
+							}
+
+	//						waveformRef.fbId = ret;
+	//						waveformRef.rendered = true;
+						}
 					}
 				}
 
 			}
 		}
 	}
-}
-void guitrack_editor::postPreRenderCheck() {
-//
-//	if (action.dragtype) {
-//		Cursor& cursor = MainCtrl::get()->cursor;
-//		clip_clipboard* _clipboard = action.clipboard.get();
-//		for (int i = 0; _clipboard && i <= _clipboard->selTrackRange; i++) {
-//			track_clipboard_t* trClipboard = _clipboard->tracks[i].get();
-//			int32_t trackIdx = _clipboard->srcTrack + i + (cursor.cursorTrack-action.cursorBegin.cursorTrack);
-//			if (!project.trackList.validTrackIdx(trackIdx)) {
-//				continue;
-//			}
-//			trackIdx = project.trackList.clampTrackIdx(trackIdx);
-//			track_t* tr = project.trackList[trackIdx];
-//			for (auto it = trClipboard->clips.begin(); it != trClipboard->clips.end(); it++) {
-//				clip_t* cl = (*it).get();
-//				if (cl->clipType == CLIP_AUDIO) {
-//					gui_waveform_texture_ref& waveformRef = cl->audio.waveformRef;
-//					assert(!waveformRef.queued);
-//				}
-//			}
-//		}
-//	}
 }
 
 void guitrack_editor::renderClip(NVGcontext* vg, track_t* tr, const clip_t* cl, tick_t offset) {
@@ -750,7 +734,7 @@ void guitrack_editor::renderClip(NVGcontext* vg, track_t* tr, const clip_t* cl, 
 			renderMidiClip(vg, tr, cl, clipPos, clipSize);
 		} else if (cl->clipType == CLIP_AUDIO && tr->type == TRACK_TYPE_AUDIO) {
 			const gui_waveform_texture_ref * ptr = &cl->audio.waveformRef;
-			renderAudioClip(vg, tr, cl, ptr, clipPos, clipSize);
+			renderAudioClip(vg, tr, cl, ptr, clipPos, clipSize, clipSize);
 		}
 	}
 }

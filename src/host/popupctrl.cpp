@@ -30,6 +30,7 @@ class guictr_popup : public guictr_base, public gui_scrollcontainer {
 public:
 	int contentHeight = 0;
 	bool hasScrollbar = false;
+	bool scrollbarOutside = false;
 	int maxHeight = 220;
 	guictr_popup() : guictr_base(), scrollbar(1, 0.0f, *this) {
 		padding = 0;
@@ -82,15 +83,22 @@ public:
 		}
 		size += ivec2(insetCtxtMenu*2);
 		ivec2 cs = getSizeContent();
-		int scrollW = gui_scrollbar::defaultW;
 		if (hasScrollbar) {
-			int entryW = cs.x - scrollW;
-			scrollbar.size = ivec2(scrollW-4, cs.y-2);
-			scrollbar.pos = ivec2(cs.x-scrollW+2, 1);
-			for (guibase* gui : guis) {
-				if (gui == &scrollbar)
-					continue;
-				gui->size.x = min(entryW, gui->size.x);
+			if (scrollbarOutside) {
+				int scrollW = gui_scrollbar::smallW;
+				scrollbar.size = ivec2(scrollW-2, cs.y-2);
+				scrollbar.pos = ivec2(cs.x, 1);
+				size.x += scrollW+2;
+			} else {
+				int scrollW = gui_scrollbar::defaultW;
+				int entryW = cs.x - scrollW;
+				scrollbar.size = ivec2(scrollW-2, cs.y-2);
+				scrollbar.pos = ivec2(cs.x-scrollW+1, 1);
+				for (guibase* gui : guis) {
+					if (gui == &scrollbar)
+						continue;
+					gui->size.x = min(entryW, gui->size.x);
+				}
 			}
 			scrollOffsetChanged(1, scrollbar.scrollOffset);
 		}
@@ -145,18 +153,23 @@ void PopupCtrl::close() {
 	}
 	guiCaptured = guiFocused = guiOver = guiDragged = NULL;
 }
+void PopupCtrl::onCursorEnter(int entered) {
+	mouseInside = entered;
+}
 void PopupCtrl::open(guictxtmenu_base *_ctxtmenu, ivec2 pos) {
+	mouseInside = false;
 	this->m_mousePos = ivec2(-1111111);
 	popupCtrs->removeGuis();
 	_ctxtmenu->ctrl = this;
 	popupCtrs->pos = ivec2(0);
 	_ctxtmenu->pos = insetCtxtMenu;
 	popupCtrs->maxHeight = _ctxtmenu->maxHeight;
+	popupCtrs->scrollbarOutside = _ctxtmenu->scrollbarOutside;
 	popupCtrs->add(_ctxtmenu);
 	popupCtrs->layout();
 	window_overlay* appW = static_cast<window_overlay*>(this->window);
-	appW->show();
 	appW->positionOnScreen(pos-insetCtxtMenu, popupCtrs->size);
+	appW->show();
 }
 void PopupCtrl::destroy() {
 	isOK = false;

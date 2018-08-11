@@ -52,11 +52,13 @@ public:
 	track_t* getTrack();
 	virtual void onTick(double since);
 	virtual void loadSnapshot(const plugin_snapshot_t& snapshot) = 0;
-
 	virtual void breakTrackLink();
 	virtual void setTrackLink(audio_stage_t* audioStage);
 	virtual void onPreUnload() {
 
+	}
+	virtual bool isBypass() {
+		return !this->bIsEnabled;
 	}
 	virtual void setSlot(int32_t i) {
 		slot = i;
@@ -68,5 +70,5 @@ public:
 		return trackImpl;
 	}
 };
-
+void removePlugin(effectbase* module);
 

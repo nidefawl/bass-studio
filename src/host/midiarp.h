@@ -10,6 +10,7 @@
 #include "logging.h"
 #include "platform.h"
 #include "automation.h"
+#include "track_impl.h"
 
 using std::min;
 using std::max;
@@ -58,9 +59,10 @@ private:
 	int noteIdx = 0;
 	std::array<tick_t, 16*3> tickLength;
 	int32_t numCalls = 0;
+	track_impl_t* trackImpl;
 public:
 	bool enable = false;
-	midiarp() : automatable_t() {
+	midiarp(track_impl_t* _trImpl) : automatable_t(), trackImpl(_trImpl) {
 		for (int i = 0; i < NUM_ARP_STEPSIZE_OPTIONS; i += 2) {
 			tickLength[i + 0] = (TICKS_16TH >> 3) << (i >> 1);
 			tickLength[i + 1] = tickLength[i + 0] + (tickLength[i + 0] >> 1);
@@ -195,7 +197,7 @@ public:
 	void onDisable() {
 
 	}
-	void setParamValue(int32_t idx, float val) override {
+	void setParamValue(int32_t idx, float val, int flags) override {
 		if (idx >= 0 && idx < (int)params.size()) {
 			auto& param = params[idx];
 			param.value = val;
@@ -216,7 +218,7 @@ public:
 	}
 	automationlane_snapshot_t toRef() override {
 		automationlane_snapshot_t ref;
-		ref.type = 2;
+		ref.type = AUTOMATABLE_ARP;
 		ref.refId = 0;
 		return ref;
 	}
@@ -228,4 +230,5 @@ public:
 					std::vector<noteevent_t>& noteEventsProcessed);
 	int writeOutputNotes(std::vector<noteevent_t>& noteEventsProcessed,
 			tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int64_t time);
+	void postSetParameter(int32_t idx, float preVal, float val, int flags) override;
 };

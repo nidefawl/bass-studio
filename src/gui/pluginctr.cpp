@@ -28,6 +28,10 @@
 
 #include "track.h"
 #include "track_impl.h"
+#include "guitooltip.h"
+#include "str_util.h"
+#include "table.h"
+
 #include "leak_detect.h"
 
 
@@ -54,6 +58,29 @@ void guiplugin::renderBase(NVGcontext* vg) {
 	renderFrameBase(vg);
 	renderTitleBarHorizontal(vg, this->text, titlePosX);
 	renderFrameOutline(vg);
+}
+
+template <>
+void guitooltip<guiplugin>::layout()  {
+	size.x = 250;
+	table.rowHeight = FONT_SIZE_TOOLTIP+INSET_TABLE_CELL_PADDING*2;
+	table.rows.clear();
+	table.titleCols.clear();
+	table.colSizes.clear();
+	{
+		table.rows.push_back({{tblstr{"track"}, tblint{(int64_t)ptr->effect->getTrack(), "%12x"}}});
+		table.rows.push_back({{tblstr{"tracklink"}, tblint{(int64_t)ptr->effect->getTrackLink(), "%12x"}}});
+		table.rows.push_back({{tblstr{"bIsSetup"}, tblint{ptr->effect->bIsSetup}}});
+		table.rows.push_back({{tblstr{"bIsEnabled"}, tblint{ptr->effect->bIsEnabled}}});
+		table.rows.push_back({{tblstr{"PARAM_ENABLE"}, tblfloat{ptr->effect->getParamValue(PARAM_ENABLE)}}});
+	}
+	adjustColSizes(table, getSizeContent()-ivec2(INSET_TABLE<<1));
+	size.y = table.rows.size()*table.rowHeight;
+}
+
+guictxtmenu_base* guiplugin::getTooltip(AppCtrl* appctrl) {
+	auto tooltip = new guitooltip<guiplugin>(this);
+	return tooltip;
 }
 
 class guictxtmenu_vstparam : public guictxtmenu_base {
@@ -89,12 +116,15 @@ public:
 		knobTest.fnGetValue = [_effect, paramIdx] () {
 			return _effect->getParamValue(paramIdx);
 		};
-		knobTest.fnSetValue = [this] (float f) {
+		knobTest.fnSetValue = [this] (float f, int flags) {
 			automation_t* param = effect->getAutomation(entry->idx);
 			if (param) {
 				param->active = false;
 			}
-			return effect->setParamValue(entry->idx, f);
+			return effect->setParamValue(entry->idx, f, flags);
+		};
+		knobTest.fnValueEditFinish = [this,paramIdx](float preVal, float val) {
+			effect->postSetParameter(entry->idx, preVal, val, 2);
 		};
 		knobTest.fnFocus = [this](bool b) {focusEvent(b);};
 		knobTest.parent = this;
@@ -172,7 +202,7 @@ guiplugin::guiplugin(effectbase* _effect)
 	text[0] = 0;
 	buttonBypass.icon = ICON_BYPASS;
 	buttonBypass.getState = [_effect]() {
-		return _effect->getParamValue(0)>0;
+		return _effect->getParamValue(PARAM_ENABLE)>0;
 	};
 	buttonBypass.parent = this;
 	buttonBypass.setColor(0x80c040);
@@ -250,6 +280,9 @@ void guictr_plugins::render(NVGcontext* vg) {
 	}
 	nvgResetTransform(vg);
 }
+void guictr_plugins::relayout() {
+	showTrack(this->stage);
+}
 void guictr_plugins::showTrack(audio_stage_t* audio) {
 	removeGuis();
 	this->track = audio ? audio->getTrack() : nullptr;
@@ -324,6 +357,47 @@ effectbase* gui_modulelist_entry::makeInstance() {
 	effectbase* instance = makeModuleInstance(entry.uid, -1);
 	return instance;
 }
+class action_insert_effect : public action_base {
+	effectbase* effect;
+	audio_stage_ref_t ref;
+	int32_t dstSlot;
+	bool weOwn = false;
+	protected:
+	public:
+		action_insert_effect(String s, effectbase* _effect, audio_stage_ref_t _ref, int32_t _dst)
+			: action_base(), effect(_effect), ref(_ref), dstSlot(_dst) {
+			desc = s;
+		}
+		~action_insert_effect() {
+			if (weOwn) {
+				vsthost::getInstance()->unloadPlugin(this->effect);
+			}
+		}
+		void undo(MainCtrl* ctrl) override {
+			ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+			audio_stage_t* stage = vsthost::getInstance()->getAudioStage(ref);
+			if (!stage) {
+				setError("missing trackimpl");
+				return;
+			}
+			effect->close();
+			vsthost::getInstance()->removePlugin(effect);
+			MainCtrl::getPluginCtr()->relayout();
+			weOwn = true;
+		}
+		void redo(MainCtrl* ctrl) override {
+			ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+			audio_stage_t* stage = vsthost::getInstance()->getAudioStage(ref);
+			if (!stage) {
+				setError("missing trackimpl");
+				return;
+			}
+			vsthost::getInstance()->insertNewPlugin(stage, effect, dstSlot);
+			MainCtrl::getPluginCtr()->relayout();
+			weOwn = false;
+		}
+};
+
 void guictr_plugins::pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mousepos) {
 	int32_t dstSlot = MainCtrl::get()->getDragDropTarget().idx;
 	MainCtrl::get()->getDragDropTarget().reset();
@@ -332,8 +406,13 @@ void guictr_plugins::pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mouse
 	effectbase* effect = g->makeInstance();
 	if (effect) {
 		my_printf("Insert effect on %s, parent %s\n", StringAsCStr(getClassName()), parent? StringAsCStr(parent->getClassName()) : "<null>");
+
+
 		vsthost::getInstance()->insertNewPlugin(stage, effect, dstSlot);
 		effect->resume();
+		audio_stage_ref_t refdst = stage->toRef();
+		auto* track_action = new action_insert_effect("Insert plugin", effect, refdst, dstSlot);
+		MainCtrl::get()->pushHist(track_action);
 //	if (res.result == 0 && res.plugin) {
 //		res.plugin->resume();
 //	}
@@ -361,6 +440,121 @@ void guictr_plugins::pluginDragMove(guiplugin* g, ivec2 mousepos) {
 		MainCtrl::get()->getDragDropTarget().set(this, highlightSlot);
 //	}
 }
+class action_move_module : public action_base {
+	audio_stage_ref_t refdst;
+	audio_stage_ref_t refsrc;
+	int32_t dst;
+	int32_t src;
+	protected:
+	public:
+		action_move_module(String s, audio_stage_ref_t _refdst, audio_stage_ref_t _refsrc, int32_t _dst, int32_t _src)
+			: action_base(), refdst(_refdst), refsrc(_refsrc), dst(_dst), src(_src) {
+			desc = s;
+		}
+		void undo(MainCtrl* ctrl) override {
+			audio_stage_t* dstStage = vsthost::getInstance()->getAudioStage(refdst);
+			audio_stage_t* srcStage = vsthost::getInstance()->getAudioStage(refsrc);
+			if (!dstStage || !srcStage) {
+				setError("missing trackimpl");
+				return;
+			}
+			vsthost::getInstance()->movePlugin(srcStage, dstStage, dst, src);
+			MainCtrl::getPluginCtr()->relayout();
+		}
+		void redo(MainCtrl* ctrl) override {
+			audio_stage_t* dstStage = vsthost::getInstance()->getAudioStage(refdst);
+			audio_stage_t* srcStage = vsthost::getInstance()->getAudioStage(refsrc);
+			if (!dstStage || !srcStage) {
+				setError("missing trackimpl");
+				return;
+			}
+			vsthost::getInstance()->movePlugin(dstStage, srcStage, src, dst);
+			MainCtrl::getPluginCtr()->relayout();
+		}
+};
+class action_shift_module : public action_base {
+	audio_stage_ref_t ref;
+	int32_t dst;
+	int32_t src;
+	protected:
+	public:
+	action_shift_module(String s, audio_stage_ref_t _ref, int32_t _dst, int32_t _src)
+			: action_base(), ref(_ref), dst(_dst), src(_src) {
+			desc = s;
+		}
+		void undo(MainCtrl* ctrl) override {
+			audio_stage_t* stage = vsthost::getInstance()->getAudioStage(ref);
+			if (!stage) {
+				setError("missing trackimpl");
+				return;
+			}
+			vsthost::getInstance()->moveEffect(stage, dst, src);
+			MainCtrl::getPluginCtr()->relayout();
+		}
+		void redo(MainCtrl* ctrl) override {
+			audio_stage_t* stage = vsthost::getInstance()->getAudioStage(ref);
+			if (!stage) {
+				setError("missing trackimpl");
+				return;
+			}
+			vsthost::getInstance()->moveEffect(stage, src, dst);
+			MainCtrl::getPluginCtr()->relayout();
+		}
+};
+
+class action_remove_module : public action_base {
+	effectbase* effect;
+	audio_stage_ref_t ref;
+	int32_t dstSlot;
+	bool weOwn = true;
+	protected:
+	public:
+		action_remove_module(String s, effectbase* _effect, audio_stage_ref_t _ref, int32_t _dst)
+			: action_base(), effect(_effect), ref(_ref), dstSlot(_dst) {
+			desc = s;
+		}
+		~action_remove_module() {
+			if (weOwn) {
+				vsthost::getInstance()->unloadPlugin(this->effect);
+			}
+		}
+		void undo(MainCtrl* ctrl) override {
+			ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+			audio_stage_t* stage = vsthost::getInstance()->getAudioStage(ref);
+			if (!stage) {
+				setError("missing trackimpl");
+				return;
+			}
+			vsthost::getInstance()->insertNewPlugin(stage, effect, dstSlot);
+			assert(effect->getSlot() == dstSlot);
+			MainCtrl::getPluginCtr()->relayout();
+			weOwn = false;
+		}
+		void redo(MainCtrl* ctrl) override {
+			ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+			audio_stage_t* stage = vsthost::getInstance()->getAudioStage(ref);
+			if (!stage) {
+				setError("missing trackimpl");
+				return;
+			}
+			assert(effect->getSlot() == dstSlot);
+			effect->close();
+			vsthost::getInstance()->removePlugin(effect);
+			MainCtrl::getPluginCtr()->relayout();
+			weOwn = true;
+		}
+};
+
+void removePlugin(effectbase* module) {
+	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+	audio_stage_t* audioStage = module->getTrackLink();
+	assert(audioStage);
+	module->close();
+	audioStage->removePlugin(module, true);
+	auto* actionRemove = new action_remove_module("Remove plugin", module, audioStage->toRef(), module->getSlot());
+	MainCtrl::get()->pushHist(actionRemove);
+	audioStage->pluginsChanged();
+}
 void guictr_plugins::pluginDragRelease(guiplugin* g, ivec2 mousepos) {
 	MainCtrl::get()->getDragDropTarget().reset();
 	if (!this->stage) return;
@@ -379,9 +573,18 @@ void guictr_plugins::pluginDragRelease(guiplugin* g, ivec2 mousepos) {
 	if (targetslot >= 0) {
 		if (trp != this->stage) {
 			vsthost::getInstance()->movePlugin(this->stage, trp, curSlot, targetslot);
+
+			audio_stage_ref_t refsrc = trp->toRef();
+			audio_stage_ref_t refdst = stage->toRef();
+			auto* track_action = new action_move_module("Move plugin", refdst, refsrc, targetslot, curSlot);
+			MainCtrl::get()->pushHist(track_action);
+
 		} else {
 			if (targetslot > curSlot) targetslot--;
 			vsthost::getInstance()->moveEffect(trp, curSlot, targetslot);
+			audio_stage_ref_t ref = trp->toRef();
+			auto* track_action = new action_shift_module("Move plugin", ref, targetslot, curSlot);
+			MainCtrl::get()->pushHist(track_action);
 		}
 		if (this->parent) {
 			this->parent->onChildLayoutChanged(this);
@@ -449,59 +652,13 @@ bool guivstplugin::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 	}
 	return false;
 }
-class action_modify_effect_parameter : public action_base {
-	int32_t trackIdx = 0;
-	int32_t globalEffectInstanceId = 0;
-	int32_t parameterIdx = 0;
-	float valBefore = 0;
-	float valAfter = 0;
-public:
-	action_modify_effect_parameter() : action_base() {
-	}
-	//desc, clip, notesBefore, cursorBefore
-	action_modify_effect_parameter(String description, int32_t _trackIdx,
-			int32_t _globalId, int32_t _parameterIdx, float _oldVal, float _newVal) :
-		action_base(),
-		trackIdx(_trackIdx),
-		globalEffectInstanceId(_globalId),
-		parameterIdx(_parameterIdx),
-		valBefore(_oldVal),
-		valAfter(_newVal) {
-		desc = description;
-	}
-	effectbase* tryGetEffect(MainCtrl* ctrl) {
-		track_t* tr = ctrl->getTracks()[trackIdx];
-		if (!tr) {
-			setError("track missing");
-			return nullptr;
-		}
-		auto audio = tr->audio;
-		if (!audio) {
-			setError("track does not have audio stage");
-			return nullptr;
-		}
-		effectbase* effect = audio->getPluginById(globalEffectInstanceId);
-		if (!effect) {
-			setError("track audio stage does not have effect");
-			return nullptr;
-		}
-		return effect;
-	}
-	void undo(MainCtrl* ctrl) {
-		effectbase* effect = tryGetEffect(ctrl);
-		if (effect)
-			effect->setParamValue(parameterIdx, valBefore);
-	}
-	void redo(MainCtrl* ctrl) {
-		effectbase* effect = tryGetEffect(ctrl);
-		if (effect)
-			effect->setParamValue(parameterIdx, valAfter);
-	}
-};
 void guivstplugin::buttonClicked(guibase* _button) {
 	if (_button == &buttonBypass) {
     	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-		vst->flipParamValue(0);
+    	float f = vst->getParamValue(PARAM_ENABLE);
+    	float f2 = f > 0.5 ? 0 : 1;
+    	vst->setParamValue(PARAM_ENABLE, f2, 2);
+		vst->postSetParameter(PARAM_ENABLE, f, f2, 2);
 	}
 	if (_button == &buttonOpenEditor) {
 		if (vst->bEditOpen) {
@@ -511,7 +668,29 @@ void guivstplugin::buttonClicked(guibase* _button) {
 		}
 	}
 	if (_button == &buttonDelete) {
-    	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-    	vsthost::getInstance()->unloadPlugin(vst);
+    	removePlugin(vst);
 	}
 }
+
+
+template <>
+void guitooltip<guivstplugin>::layout()  {
+	size.x = 250;
+	table.rowHeight = FONT_SIZE_TOOLTIP+INSET_TABLE_CELL_PADDING*2;
+	table.rows.clear();
+	table.titleCols.clear();
+	table.colSizes.clear();
+	{
+		table.rows.push_back({{String("isSynth"), (int)ptr->vst->isSynth}});
+		table.rows.push_back({{tblstr{"bIsEnabled"}, tblint{ptr->vst->bIsEnabled}}});
+		table.rows.push_back({{tblstr{"PARAM_ENABLE"}, tblfloat{ptr->vst->getParamValue(PARAM_ENABLE)}}});
+	}
+	adjustColSizes(table, getSizeContent()-ivec2(INSET_TABLE<<1));
+	size.y = table.rows.size()*table.rowHeight;
+}
+
+guictxtmenu_base* guivstplugin::getTooltip(AppCtrl* appctrl) {
+	auto tooltip = new guitooltip<guivstplugin>(this);
+	return tooltip;
+}
+

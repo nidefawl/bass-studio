@@ -18,13 +18,13 @@
 #include "gl_attr.h"
 #include "gl_vbo.h"
 #include "gl_tess2d.h"
+#include "hires_timer.h"
 #include <algorithm>
 
 
 using glm::vec2;
 using glm::vec4;
 using vec2list = std::vector<vec2>;
-
 
 
 void buildIndices(int nV, int offset, std::vector<int>& _out) {
@@ -86,7 +86,6 @@ static inline void storeVertex(attribute_data_t& data, int idx, vert& v) {
 	v.index = data.index[idx];
 }
 float packVertexData(vec2list& verticesIn, std::vector<vert>& outVdata, int index = 0, bool closed = false) {
-	my_printf("packing %d vertices\n", verticesIn.size());
 	vec2list vertices = verticesIn;
 	float dist = glm::distance(vertices.front(), vertices.back());
 	if (closed && dist > 1e-10) {
@@ -103,15 +102,31 @@ float packVertexData(vec2list& verticesIn, std::vector<vert>& outVdata, int inde
 	}
 	vec2list T(n - 1);
 	std::vector<float> N(n - 1);
+#define OPT_PATH 1
+#if OPT_PATH == 0
+	for (int i = 1; i < n; i++) {
+		vec2 v = vertices[i] - vertices[i-1];
+		T[i - 1] = v;
+		//		printf("T[%d] = %f %f\n", i-1, T[i-1].x, T[i-1].y);
+	}
+	for (int i = 1; i < n; i++) {
+		vec2 v = T[i - 1];
+		N[i - 1] = sqrtf(v.x*v.x+v.y*v.y);
+	}
+#endif
+#if OPT_PATH == 1
 	for (int i = 1; i < n; i++) {
 		vec2 v = vertices[i] - vertices[i-1];
 		T[i - 1] = v;
 		N[i - 1] = glm::length(v);
-		//		printf("T[%d] = %f %f\n", i-1, T[i-1].x, T[i-1].y);
 	}
-	for (int i = 1; i < n; i++) {
-		data.tangent0[i] = T[i - 1];
-		data.tangent1[i - 1] = T[i - 1];
+#endif
+	auto itOut = data.tangent0.begin()+1;
+	auto itOut2 = data.tangent1.begin();
+	for (int i = 0; i < n-1; i++) {
+		*itOut++ = T[i];
+		*itOut2++ = T[i];
+//		vectangent1[i - 1] = T[i - 1];
 	}
 	if (closed) {
 		data.tangent0[0] = T[n - 2];
@@ -244,7 +259,7 @@ float packVertexData2(vec2list& verticesIn, std::vector<vert>& outVdata, int ind
 	vert p = vdata[n-1];
 	p.seg = vdata[n-2].seg;
 	p.angles = vdata[n-2].angles;
-	assert(vdata2.size() == n*2-2);
+	assert((int)vdata2.size() == n*2-2);
 	vdata2[n*2-3] = p;
 
 	n = vdata2.size();
@@ -344,11 +359,16 @@ void GLPathRenderer::bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, Ba
 	int idx = 0;
 	for (vec2list& list : paths) {
 		if (list.size() > 1) {
+//			timer.reset();
 			float len = packVertexData(list, outVdata, idx);
+//			int64_t t = timer.getTime();
+//			assert(t);
+//			my_printf("%d\n", t+2);
 			size_t flBufPos = flBufVertsPos*sizeFloatsVert;
 			size_t flBakedSize = outVdata.size()*sizeFloatsVert;
 			bufFinal.v.resize(flBufPos+flBakedSize);
 			memcpy(bufFinal.v.data()+flBufPos, outVdata.data(), flBakedSize*sizeof(float));
+//			my_printf("processed %d into %d bytes of data\n", list.size()*sizeof(vec2), flBakedSize*sizeof(float));
 			buildIndices(outVdata.size()/4, flBufVertsPos, bufFinal.i);
 			Uniforms uniforms = pathOpt;
 			uniforms.length = len;
@@ -365,6 +385,10 @@ void GLPathRenderer::bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, Ba
 		bufFinal.i.resize(0);
 		bufUniforms.resize(0);
 	}
+#ifdef NO_OPENGL
+	return;
+#endif
+
 //
 //	for (float f : bufFinal.v) {
 //		assert(!std::isnan(f) && !std::isinf(f));

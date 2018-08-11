@@ -223,9 +223,15 @@ struct track_snapshot_t : public tracksettings_t {
 	track_impl_snapshot_t plugins;
 	std::vector<clip_t> clips;
 	std::vector<automationlane_snapshot_t> automationLanes;
+//	int flags = 0;
 	track_snapshot_t() = default;
 	track_snapshot_t(track_t* track, bool storePluginChunks);
 };
+//namespace track_snapshot_flags {
+//constexpr int HAS_PLUGINS = 1;
+//constexpr int HAS_PLUGIN_AUTOMATION = 2;
+//constexpr int HAS_CLIPS = 4;
+//};
 class track_t : public tracksettings_t {
 	trackdata_midi_t midi;
 public:

@@ -77,22 +77,18 @@ bool guimodule_empty::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 	}
 	return false;
 }
+
 void guimodule_empty::buttonClicked(guibase* _button) {
 	if (_button == &buttonBypass) {
     	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-		if (module->bIsEnabled) {
-//			module->sleep();
-		} else {
-//			module->resume();
-		}
-		if (module->isSynth) {
-//			vsthost::getInstance()->sendNotesOff(module);
-		}
+    	float f = effect->getParamValue(PARAM_ENABLE);
+    	float f2 = f > 0.5 ? 0 : 1;
+    	effect->setParamValue(PARAM_ENABLE, f2, 2);
+    	effect->postSetParameter(PARAM_ENABLE, f, f2, 2);
 
 	}
 	if (_button == &buttonDelete) {
-    	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-    	vsthost::getInstance()->unloadPlugin(module);
+    	removePlugin(module);
 	}
 }
 
@@ -143,7 +139,14 @@ void module_empty::resume() {
 void module_empty::sleep() {
 }
 void module_empty::unload() { }
-void module_empty::load(vsthost* host) { }
+void module_empty::load(vsthost* host) {
+	bIsEnabled = this->getParamValue(PARAM_ENABLE) > 0.5;
+	if (bIsEnabled) {
+		this->resume();
+	} else {
+		this->sleep();
+	}
+}
 void module_empty::process(AudioBlock* in, AudioBlock* out, int32_t samples) {
 	out->copyFrom(in);
 }

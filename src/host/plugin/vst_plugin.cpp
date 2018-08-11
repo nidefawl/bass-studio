@@ -8,12 +8,15 @@
 #include "base_plugin.h"
 #include "vst_plugin.h"
 #include "vst_plugin_handles.h"
+#include "track.h"
+#include "track_impl.h"
 #include "../vst_host.h"
 #include "../vst_window.h"
 #include "../../gui/gui.h"
 #include "../../gui/plugin.h"
 #include "../../gui/pluginctr.h"
-#include "track_impl.h"
+#include "../mainctrl.h"
+#include "../history.h"
 
 #include "leak_detect.h"
 
@@ -55,7 +58,7 @@ Size vstplugin::constrainSize(vst_window* window, Size& size) {
 }
 
 bool vstplugin::onClose() {
-	if (this->window != NULL) {
+	if (this->window != NULL && bEditOpen) {
 		this->dispatch(effEditClose);
 	}
 	bEditOpen = false;
@@ -242,11 +245,12 @@ void vstplugin::load(vsthost* host) {
 		paramIdx++;
 	}
 	paramsCategories.push_back(fallbackCat);
-
-
-
-//	this->resume();
-	this->sleep();
+	bIsEnabled = this->getParamValue(PARAM_ENABLE) > 0.5;
+	if (bIsEnabled) {
+		this->resume();
+	} else {
+		this->sleep();
+	}
 	this->dispatch(effSetBlockSize, 0, host->lBlockSize);
 //	this->resume();
 
@@ -293,17 +297,17 @@ void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin, bool storePluginCh
 			ps.dataChunk2.assign(ptrData, ptrData + pluginDataSize2);
 			my_printf("Plugin %s: Save data2[%d]\n", StringAsCStr(plugin->sName), pluginDataSize2);
 		}
-	}
-	auto& allParams = plugin->params;
-	auto& mixerParams = plugin->mixerParams;
-	ps.params.reserve(allParams.size()-mixerParams.size());
-	ps.hostParams.reserve(mixerParams.size());
-	for (automatable_param_t& param : plugin->params) {
-		float val = plugin->getParamValue(param.idx);
-		if (param.internalIdx < 0) {
-			ps.hostParams.push_back(param_snapshot_t{param.idx, val});
-		} else {
-			ps.params.push_back(param_snapshot_t{param.internalIdx, val});
+		auto& allParams = plugin->params;
+		auto& mixerParams = plugin->mixerParams;
+		ps.params.reserve(allParams.size()-mixerParams.size());
+		ps.hostParams.reserve(mixerParams.size());
+		for (automatable_param_t& param : plugin->params) {
+			float val = plugin->getParamValue(param.idx);
+			if (param.internalIdx < 0) {
+				ps.hostParams.push_back(param_snapshot_t{param.idx, val});
+			} else {
+				ps.params.push_back(param_snapshot_t{param.internalIdx, val});
+			}
 		}
 	}
 	storeAutomation(ps, plugin->automatedParams);
@@ -357,7 +361,7 @@ float vstplugin::getParamValue(int32_t idx) {
 	}
 	return 0;
 }
-void vstplugin::setParamValue(int32_t idx, float val) {
+void vstplugin::setParamValue(int32_t idx, float val, int flags) {
 	if (idx >= 0 && idx < (int32_t)params.size()) {
 		auto& param = params[idx];
 		param.value = val;
@@ -377,6 +381,16 @@ void vstplugin::setParamValue(int32_t idx, float val) {
 //		my_printf("set %s[%d] = %f\n", StringAsCStr(this->sName), idx, val);
 	}
 }
+void vstplugin::postSetParameter(int32_t idx, float preVal, float val, int flags) {
+	if (flags != 2) {
+		return;
+	}
+	assert(this->trackImpl->getTrack());
+	track_t* track = this->trackImpl->getTrack();
+	automationlane_snapshot_t ref = toRef();
+	parameter_ref_t p = {track->idx,  ref.type, this->projectGlobalId, idx};
+	MainCtrl::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
+}
 void vstplugin::recvPluginEditParamUpdate(int32_t idx) {
 	if (idx >= 0 && idx < (int32_t)params.size()) {
 		auto& param = params[idx];
@@ -387,7 +401,7 @@ void vstplugin::recvPluginEditParamUpdate(int32_t idx) {
 }
 automationlane_snapshot_t vstplugin::toRef() {
 	automationlane_snapshot_t ref;
-	ref.type = 0;
+	ref.type = AUTOMATABLE_EFFECT;
 	ref.refId = this->projectGlobalId;
 	return ref;
 }

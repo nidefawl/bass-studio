@@ -52,7 +52,7 @@ float gui_track_automation::getDstVal() {
 }
 void gui_track_automation::setDstVal(float f) {
 	if (at) {
-		at->setParamValue(param, f);
+		at->setParamValue(param, f, 2);
 	}
 }
 using hit_result = gui_track_automation::hit_result;

@@ -8,6 +8,7 @@
 #include "audiosample.h"
 #include "audiowaveform.h"
 #include "logging.h"
+#include "str_util.h"
 
 using glm::mat4x4;
 using glm::vec2;
@@ -58,6 +59,15 @@ void tesselateWaveform(audiosample_t* sample, float x, float y, audioclip_textur
 			dres /= 2.0;
 			verticesPerPx*=2;
 		}
+		int sumRange = 4;
+//		if (samplesPerPx > 1000) {
+//			sumRange = 0;
+//		}
+//		while (dres >= 2.0 && sumRange < 256) {
+//			dres /= 2.0;
+//			sumRange*=2;
+//			my_printf("sumRange  %d\n", sumRange);
+//		}
 		float channelHeight = height / (float) sample->nChannels;
 		float vOffset = 1.0f / (float) verticesPerPx;
 		float samplesToPx = 1.0f/samplesPerPx;
@@ -65,11 +75,12 @@ void tesselateWaveform(audiosample_t* sample, float x, float y, audioclip_textur
 		float fsMin = 0.0f;
 		float fsMax = 0.0f;
 		int nvecs = 0;
-//		my_printf("renderOffset %f upscale %d, res %f vOffset %f\n", renderOffset, upscale, samplesPerPx, vOffset);
+		my_printf("renderOffset %f upscale %d, res %f vOffset %f\n", renderOffset, upscale, samplesPerPx, vOffset);
+		String sampledPoints = "";
 		for (int iChannel = 0; iChannel < sample->nChannels; iChannel++) {
 			vec2list vecs;
 			if (nVecs > 0)
-				vecs.reserve(nVecs);
+				vecs.reserve(nVecs+500);
 			double samplePos = waveformScaled.sampleBeginOffset;
 			double sampleOffset = std::max(0.0, (double)(samplePos - waveformScaled.sampleBegin));
 			float px = x;
@@ -87,13 +98,12 @@ void tesselateWaveform(audiosample_t* sample, float x, float y, audioclip_textur
 					assert(sampleIdxStart >= 0);
 					float first = samplesChPtr[sampleIdxStart];
 
-					float lastPtX = (sampleOffset - renderOffset) * samplesToPx;
 					float fY = -first * channelHeight / 2.0f;
 //					vec2 vec { px, py + fY };
 //					vecs.push_back(std::move(vec));
 					bool emplacePre = true;
 					if (samplePos - waveformScaled.sampleBegin >= 0) {
-						vecs.emplace_back(px, py + fY);
+//						vecs.emplace_back(px, py + fY);
 						emplacePre = false;
 					}
 
@@ -101,14 +111,18 @@ void tesselateWaveform(audiosample_t* sample, float x, float y, audioclip_textur
 					while ((int) (std::round(samplePos - waveformScaled.sampleBegin)) % upscale != 0) {
 						samplePos++;
 					}
+					float lastPtX;
 					if (emplacePre) {
-						float fCurX = (sampleOffset-renderOffset) * samplesToPx;
-						vecs.emplace_back(px, py );
-						vecs.emplace_back(px + fCurX, py);
+//						vecs.emplace_back(px, py );
+						lastPtX = x;
+//						vecs.emplace_back(px + lastPtX, py);
+//						lastPtX += vOffset;
+					} else {
+						lastPtX = (sampleOffset - renderOffset) * samplesToPx;
+						lastPtX -= vOffset;
 					}
 //					samplePos -= samplePos%upscale;
 //					samplePos += upscale;
-
 					for (; samplePos < waveformScaled.sampleEnd; ) {
 						sampleOffset = std::max(0.0, (double)(samplePos - waveformScaled.sampleBegin));
 						if (sampleOffset >= lenSamplesCh) { //TODO: no loop!
@@ -118,26 +132,28 @@ void tesselateWaveform(audiosample_t* sample, float x, float y, audioclip_textur
 						int32_t sampleIdx = std::round(sampleOffset);
 						assert((int)sampleIdx%upscale==0);
 //						if ((int)sampleIdx%upscale==0) {
-							float data = samplesChPtr[sampleIdx];
-							int noffset = 0;
-							int c = 0;
-							int blurrange = 4;
-							for (;noffset<blurrange; noffset++) {
-								if (sampleIdx+noffset > 0 && sampleIdx + noffset < lenSamplesCh) {
-									data+=samplesChPtr[sampleIdx+noffset];
-									c++;
-								}
-								if (sampleIdx-noffset > 0 && sampleIdx - noffset < lenSamplesCh) {
-									data+=samplesChPtr[sampleIdx-noffset];
-									c++;
-								}
-							}
-							if (c > 0) {
-								data /= (float)c;
-							}
 							float fCurX = (sampleOffset-renderOffset) * samplesToPx;
-							if (fCurX > lastPtX+vOffset) {
+							if (fCurX >= lastPtX+vOffset) {
+								float data = samplesChPtr[sampleIdx];
+								if (vecs.size() < 20)
+								sampledPoints += StringFormat("%s%d", vecs.empty() ? "" : ", ", sampleIdx);
+								int noffset = 0;
+								int c = 0;
+								for (;noffset<sumRange; noffset++) {
+									if (sampleIdx+noffset > 0 && sampleIdx + noffset < lenSamplesCh) {
+										data+=samplesChPtr[sampleIdx+noffset];
+										c++;
+									}
+									if (sampleIdx-noffset > 0 && sampleIdx - noffset < lenSamplesCh) {
+										data+=samplesChPtr[sampleIdx-noffset];
+										c++;
+									}
+								}
+								if (c > 0) {
+									data /= (float)c;
+								}
 								float fY = -data * channelHeight / 2.0f;
+//								assert(px + fCurX>0);
 								vec2 vec { px + fCurX, py + fY };
 								vecs.push_back(std::move(vec));
 								if (fCurX >= width) {
@@ -340,6 +356,9 @@ void tesselateWaveform(audiosample_t* sample, float x, float y, audioclip_textur
 //					a = b;
 //					it++;
 //				}
+			}
+			if (iChannel == 0) {
+				my_printf("sampledPoints: %s\n", StringAsCStr(sampledPoints));
 			}
 			channels.push_back(std::move(vecs));
 //			waveform.channels.push_back(std::move(vecs));

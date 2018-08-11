@@ -8,6 +8,7 @@
 #include "basectrl.h"
 #include "../gui/gui.h"
 #include "../gui/guicontainer.h"
+#include "../gui/guicontextmenu.h"
 
 #include "window.h"
 #include "platform.h"
@@ -198,7 +199,7 @@ bool BaseCtrl::isCtrOrChildFocused(guibase* gui) {
 }
 
 void BaseCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos) {
-	if (ctxtmenu != NULL) {
+	if (ctxtmenu && !ctxtmenu->isTransient()) {
 		return;
 	}
 	this->m_mousePos = mousePos;

@@ -24,18 +24,31 @@ struct audioclip_texture_t {
 	double sampleEnd{0};
 	double samplesPerPx = 0;
 	int quality = 1;
-	int scale = 1;
+//	int scale = 1;
 	float scaleX = 1.0f;
+	float scaleY = 1.0f;
 	float linewidth = 1.0f;
 	SampleMethod method = SampleMethod::sample_straight;
 	int audioId = -1;
+	bool clipped = false;
 };
+inline bool isEqualWaveform(const audioclip_texture_t& lhs, const audioclip_texture_t& rhs){
+	return (lhs.sampleBeginOffset - lhs.sampleBegin) == (rhs.sampleBeginOffset - rhs.sampleBegin) &&
+			(lhs.sampleEnd - lhs.sampleBegin) == (rhs.sampleEnd - rhs.sampleBegin) &&
+			lhs.startOffset == rhs.startOffset &&
+			lhs.size == rhs.size &&
+			lhs.samplesPerPx == rhs.samplesPerPx &&
+//			lhs.scale == rhs.scale &&
+			lhs.scaleX == rhs.scaleX &&
+			lhs.scaleY == rhs.scaleY &&
+			lhs.audioId == rhs.audioId && lhs.quality == rhs.quality && lhs.method == rhs.method;
+}
 inline bool operator==(const audioclip_texture_t& lhs, const audioclip_texture_t& rhs){
 	return lhs.pos == rhs.pos && lhs.startOffset == rhs.startOffset &&
 			lhs.size == rhs.size && lhs.sampleBegin == rhs.sampleBegin &&
 			lhs.sampleBeginOffset == rhs.sampleBeginOffset && lhs.sampleEnd == rhs.sampleEnd &&
 			lhs.samplesPerPx == rhs.samplesPerPx &&
-			lhs.audioId == rhs.audioId && lhs.quality == rhs.quality && lhs.method == rhs.method;
+			lhs.audioId == rhs.audioId && lhs.quality == rhs.quality && lhs.method == rhs.method && lhs.clipped == rhs.clipped;
 }
 inline bool operator!=(const audioclip_texture_t& lhs, const audioclip_texture_t& rhs){return !operator==(lhs,rhs);}
 

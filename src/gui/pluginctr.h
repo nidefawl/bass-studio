@@ -221,6 +221,7 @@ public:
 	void pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mousepos) override;
 	void showTrack(audio_stage_t* track);
 	void hideTrack(audio_stage_t* track);
+	void relayout();
 	void addGui(effectbase* plugin);
 	void onChildLayoutChanged(guibase* g) override;
 	virtual void determineSize() override;

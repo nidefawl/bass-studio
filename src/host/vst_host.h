@@ -58,6 +58,7 @@ class effectbase;
 class vstplugin;
 struct track_impl_t;
 struct audio_stage_t;
+struct audio_stage_ref_t;
 typedef void PaStream;
 
 typedef AEffect*(VSTPluginMain_t)(audioMasterCallback audioMasterCB);
@@ -109,6 +110,8 @@ private:
 	std::atomic<PaStream*> stream{NULL};
 	audiothread_ringbuffer_t ringbuffer;
 	AudioBlock* blockZero = nullptr;
+	std::vector<audio_stage_t*> allAudioStages;
+	std::vector<track_impl_t*> trackAudioStages;
 public:
 	moodycamel::ReaderWriterQueue<AudioBuffer*> audioQueue;
 public:
@@ -123,6 +126,7 @@ public:
 	uint32_t bufferUnderuns = 0;
 	hires_timer_t timer;
 	std::atomic<int32_t> pluginId{100};
+	std::atomic<int32_t> audioStageId{100};
 
 	void updateTime(int32_t samplePos, tick_t pos, playback_state state);
 	int32_t processPlayback(int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround);
@@ -168,8 +172,10 @@ public:
 	vstplugin* getPluginIdx(uint32_t i);
 	vstpluginloadres loadPlugin(String filepath, int32_t globalId = 0);
 	int32_t getNextGlobalModuleId(int32_t n);
+	int32_t getNextGlobalAudioStageId(int32_t as);
 	track_impl_t* createAudio(track_t* track);
 	audio_stage_t* createAudioStage();
+	audio_stage_t* getAudioStage(const audio_stage_ref_t& ref);
 	bool movePlugin(audio_stage_t* dstTr, audio_stage_t* trp, int32_t src, int32_t dst);
 	bool moveEffect(audio_stage_t* trp, int32_t src, int32_t dst);
 	bool insertNewPlugin(audio_stage_t* trp, effectbase* plugin, int32_t dst);

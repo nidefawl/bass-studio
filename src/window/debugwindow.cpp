@@ -164,7 +164,7 @@ void drawDebugWindow(NVGcontext* ctx, int winW, int winH, float pxratio) {
 		if (n > 0 && _atlas.entries.size()) {
 			for (TextureAtlasEntry& _entry : _atlas.entries) {
 				nvgBeginPath(ctx);
-				nvgRect(ctx, _entry.pos.x*scale, _entry.pos.y*scale, _entry.size.x*scale, _entry.size.y*scale);
+				nvgRect(ctx, x+_entry.pos.x*scale, y+_entry.pos.y*scale, _entry.size.x*scale, _entry.size.y*scale);
 				nvgStrokeColor(ctx, rgbToNvg(col(nrendered)));
 				nvgStrokeWidth(ctx, 2.0f);
 				nvgStroke(ctx);
@@ -174,8 +174,8 @@ void drawDebugWindow(NVGcontext* ctx, int winW, int winH, float pxratio) {
 				x = 0;
 				y+= wTexPreview+8;
 			}
+			nrendered++;
 		}
-		nrendered++;
 	}
 	nvgEndFrame(ctx);
 }

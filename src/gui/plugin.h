@@ -77,6 +77,8 @@ public:
 	bool isDragMoveable() {
 		return true;
 	}
+
+	virtual guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
 };
 class guivstplugin : public guiplugin {
 public:
@@ -102,5 +104,5 @@ public:
 	void render(NVGcontext* vg) override;
 	void buttonClicked(guibase* _button) override;
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
-
+	guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
 };

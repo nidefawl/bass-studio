@@ -22,8 +22,11 @@ void gui_arp::buttonClicked(guibase* _button) {
 	if (_button == &buttonBypass) {
 		midiarp* arp = getArp();
 		if (arp) {
-			ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-			arp->flipParamValue(0);
+	    	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+	    	float f = arp->getParamValue(PARAM_ENABLE);
+	    	float f2 = f > 0.5 ? 0 : 1;
+	    	arp->setParamValue(PARAM_ENABLE, f2, 2);
+	    	arp->postSetParameter(PARAM_ENABLE, f, f2, 2);
 		}
 	}
 }

@@ -8,6 +8,7 @@
 #include <glm/glm.hpp>
 #include "drawwaveform.h"
 #include "audiocache.h"
+#include "audiowaveform.h"
 #include "platform.h"
 #include "exceptions.h"
 #include "logging.h"
@@ -89,10 +90,16 @@ void waveformrender::release(gui_waveform_texture_ref* waveformRef) {
 	waveformRef->rendered = false;
 //	assertWaveformRefIsUnbound(waveformRef);
 }
-int waveformrender::queueUpdate(NVGcontext* ctxt, cachedaudio_t* audio, gui_waveform_texture_ref* waveformRef) {
+bool waveformrender::canQueueUpdate() {
+	return queuedTasks.size() < 4;
+}
+int waveformrender::queueUpdate(cachedaudio_t* audio, gui_waveform_texture_ref* waveformRef) {
 	if (waveformRef->queued) {
 		return 0;
 	}
+//	if (!canQueueUpdate()) {
+//		return 0;
+//	}
 //	assertWaveformRefIsUnbound(waveformRef);
 	assert(waveformRef->waveform.size.x > 0 && waveformRef->waveform.size.y > 0);
 	waveform_update_task_t waveform_update_task{audio, waveformRef, ivec2(0), waveformRef->waveform.size};
@@ -103,7 +110,7 @@ int waveformrender::queueUpdate(NVGcontext* ctxt, cachedaudio_t* audio, gui_wave
 	waveformRef->queued = true;
 	return 1;
 }
-bool collides(ivec2 pos1, ivec2 size1, ivec2 pos2, ivec2 size2, ivec2& offset) {
+bool collides(const ivec2& pos1, const ivec2& size1, const ivec2& pos2, const ivec2& size2, ivec2& offset) {
 	ivec2 rightBottom1 = pos1 + size1;
 	ivec2 rightBottom2 = pos2 + size2;
 	if (pos1.x >= rightBottom2.x) {
@@ -130,7 +137,7 @@ struct _pos {
 	ivec2 pos;
 	ivec2 size;
 };
-bool anyCollision(std::vector<_pos>& positions, ivec2 pos1, ivec2 size1) {
+bool anyCollision(std::vector<_pos>& positions, const ivec2 pos1, const ivec2 size1) {
 	for(auto& entry : positions) {
 		ivec2 offset(0, 0);
 		if (collides(pos1, size1, entry.pos, entry.size, offset))
@@ -138,7 +145,7 @@ bool anyCollision(std::vector<_pos>& positions, ivec2 pos1, ivec2 size1) {
 	}
 	return false;
 }
-bool waveformrender::findFreeSpot(ivec2 size, int& atlasIdx, ivec2& pos) {
+bool waveformrender::findFreeSpot(const ivec2 size, int& atlasIdx, ivec2& pos) {
 	for (TextureAtlas& _atlas : atlases) {
 		std::vector<_pos> positions;
 		TextureAtlasEntry a;
@@ -186,16 +193,7 @@ struct _waveform_id {
 	ivec2 pos;
 	ivec2 size;
 };
-inline bool isEqualWaveform(const audioclip_texture_t& lhs, const audioclip_texture_t& rhs){
-	return (lhs.sampleBeginOffset - lhs.sampleBegin) == (rhs.sampleBeginOffset - rhs.sampleBegin) &&
-			(lhs.sampleEnd - lhs.sampleBegin) == (rhs.sampleEnd - rhs.sampleBegin) &&
-			lhs.startOffset == rhs.startOffset &&
-			lhs.size == rhs.size &&
-			lhs.samplesPerPx == rhs.samplesPerPx &&
-			lhs.scale == rhs.scale &&
-			lhs.scaleX == rhs.scaleX &&
-			lhs.audioId == rhs.audioId && lhs.quality == rhs.quality && lhs.method == rhs.method;
-}
+
 void waveformrender::assertWaveformRefIsUnbound(gui_waveform_texture_ref* waveformRef) {
 //	for (TextureAtlas& _atlas : atlases) {
 //		std::vector<_pos> positions;
@@ -205,13 +203,32 @@ void waveformrender::assertWaveformRefIsUnbound(gui_waveform_texture_ref* wavefo
 //		}
 //	}
 }
+ivec2 absvec2(const ivec2 a);
+inline bool isAlmostEqualWaveform(const audioclip_texture_t& lhs, const audioclip_texture_t& rhs){
+	if ((lhs.sampleBeginOffset - lhs.sampleBegin) == (rhs.sampleBeginOffset - rhs.sampleBegin) &&
+			(lhs.sampleEnd - lhs.sampleBegin) == (rhs.sampleEnd - rhs.sampleBegin) &&
+			lhs.startOffset == rhs.startOffset &&
+//			lhs.size == rhs.size &&
+//			lhs.samplesPerPx == rhs.samplesPerPx &&
+//			lhs.scale == rhs.scale &&
+//			lhs.scaleX == rhs.scaleX &&
+			lhs.audioId == rhs.audioId && lhs.quality == rhs.quality && lhs.method == rhs.method) {
+
+		if (lhs.clipped || rhs.clipped)
+			return lhs.scaleX == rhs.scaleX && lhs.scaleY == rhs.scaleY && lhs.size == rhs.size && lhs.samplesPerPx == rhs.samplesPerPx;
+		ivec2 sd = absvec2(lhs.size-rhs.size);
+		ivec2 limit = lhs.size / 4;
+		return sd.x < limit.x && sd.y < limit.y;
+	}
+	return false;
+}
 bool waveformrender::findSimiliarWaveform(waveform_update_task_t& waveformQueueEntry) {
 	gui_waveform_texture_ref* waveformRef = waveformQueueEntry.waveformRef;
 	for (TextureAtlas& _atlas : atlases) {
 		std::vector<_pos> positions;
 		TextureAtlasEntry a;
 		for(auto& entry : _atlas.entries) {
-			if (isEqualWaveform(entry.props, waveformRef->waveform)) {
+			if (isAlmostEqualWaveform(entry.props, waveformRef->waveform)) {
 				waveformRef->atlasId = _atlas.idx;
 				waveformRef->atlasEntryId = entry.id;
 				waveformRef->queued = false;
@@ -220,14 +237,15 @@ bool waveformrender::findSimiliarWaveform(waveform_update_task_t& waveformQueueE
 //				assert(!istIn(entry.ptrs, waveformRef));
 //				entry.ptrs.push_back(waveformRef);
 				return true;
-			} else if (entry.props.audioId == waveformRef->waveform.audioId) {
+			}
+//			else if (entry.props.audioId == waveformRef->waveform.audioId) {
 //				auto& lhs = entry.props;
 //				auto& rhs = waveformRef->waveform;
 //				printf("almost\n",0);
-			}
+//			}
 		}
 		for(auto& entry : _atlas.queuedTasks) {
-			if (isEqualWaveform(entry.waveformRef->waveform, waveformRef->waveform)) {
+			if (isAlmostEqualWaveform(entry.waveformRef->waveform, waveformRef->waveform)) {
 				waveformRef->atlasId = _atlas.idx;
 				waveformRef->atlasEntryId = entry.waveformRef->atlasEntryId;
 				waveformRef->queued = false;
@@ -236,11 +254,12 @@ bool waveformrender::findSimiliarWaveform(waveform_update_task_t& waveformQueueE
 //				assert(!istIn(entry.queuedptrs, waveformRef));
 //				entry.queuedptrs.push_back(waveformRef);
 				return true;
-			} else if (entry.audio->id == waveformRef->waveform.audioId) {
+			}
+//			else if (entry.audio->id == waveformRef->waveform.audioId) {
 //				auto& lhs = entry.waveformRef->waveform;
 //				auto& rhs = waveformRef->waveform;
 //				printf("almost\n",0);
-			}
+//			}
 		}
 	}
 	return false;
@@ -289,7 +308,7 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 		int atlasIdx = -1;
 		ivec2 pos;
 		vec2 v(waveformQueueEntry.size.x, waveformQueueEntry.size.y);
-		v *= waveformRef->waveform.scale;
+//		v *= vec2(waveformRef->waveform.scaleX, waveformRef->waveform.scaleY);
 //		v.x *= 1.0f/waveformRef->waveform.scaleX;
 		ivec2 sizeInternal = ivec2((int)std::ceil(v.x), (int)std::ceil(v.y));
 //		assert(waveformRef->waveform.size.x <= 512);
@@ -359,7 +378,15 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 
 			SampleMethod method = waveform.method;
 			std::vector<std::vector<glm::vec2>> tesselatedWaveForms;
+			auto it = std::find(prevRendered.begin(), prevRendered.end(), waveform);
+			if (it != prevRendered.end()) {
+				my_printf("found prev rendered!\n", 0);
+			}
 			tesselateWaveform(audio->sample.get(), 0, 0, &waveform, method, tesselatedWaveForms);
+			prevRendered.push_back(waveform);
+			while (prevRendered.size() >= 1000) {
+				prevRendered.erase(prevRendered.begin(), prevRendered.begin()+10);
+			}
 			Uniforms bakeOpt;
 			bakeOpt.linecaps = vec2(LineCaps::none, LineCaps::none);
 			bakeOpt.linejoin = waveform.linewidth > 1.75 ? LineJoin::round : LineJoin::miter;
@@ -371,7 +398,7 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 
 			bakeOpt.linewidth = waveform.linewidth;
 			bakeOpt.antialias = 1.0f;
-			bakeOpt.scale = waveform.scale;
+			bakeOpt.scale = 1;
 			renderer.bakePaths(tesselatedWaveForms, bakeOpt, this->bakedPath);
 			ivec2& pos = waveformQueueEntry.pos;
 			ivec2& size = waveformQueueEntry.size;
@@ -387,7 +414,7 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 			glBindTexture ( GL_TEXTURE_2D, bakedPath.uniforms_texture);
 			glBindVertexArray ( bakedPath.vbo.vaoId );
 			glBindBuffer ( GL_ELEMENT_ARRAY_BUFFER, bakedPath.vbo.vboIdxId);
-
+			assert(pos.x+size.x<=FBO_WIDTH);
 			glScissor(pos.x, FBO_HEIGHT-pos.y-size.y, size.x, size.y);
 
 			glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -445,7 +472,7 @@ void drawImage(NVGcontext* vg, int image, float alpha,
 	nvgFill(vg);
 }
 
-void waveformrender::draw(NVGcontext* ctxt, const gui_waveform_texture_ref* waveformRef, ivec2 size) {
+void waveformrender::draw(NVGcontext* ctxt, const gui_waveform_texture_ref* waveformRef, ivec2 sizeClipped) {
 	assert(waveformRef->atlasId >= 0 && waveformRef->atlasId < (int)atlases.size());
 	auto& atlas = this->atlases[waveformRef->atlasId];
 	assert(atlas.fb && atlas.glTexture > -1 && atlas.idx > -1);
@@ -456,7 +483,9 @@ void waveformrender::draw(NVGcontext* ctxt, const gui_waveform_texture_ref* wave
 	assert(it != atlas.entries.cend());
 	auto& entry = *it;
 	const audioclip_texture_t* waveImage = &waveformRef->waveform;
-	drawImage(ctxt, atlas.fb->image, 1.0f, entry.pos.x, entry.pos.y, entry.size.x, entry.size.y, waveImage->startOffset.x, 0, waveImage->size.x , waveImage->size.y);
+	ivec2 outputSize = !waveImage->clipped ? sizeClipped : waveImage->size;
+	drawImage(ctxt, atlas.fb->image, 1.0f, entry.pos.x, entry.pos.y, entry.size.x, entry.size.y, waveImage->startOffset.x, 0, sizeClipped.x , sizeClipped.y);
+
 //	for (auto& texture : textures) {
 //		if (texture.idx == fbId) {
 //			drawImage(ctxt, texture.fb->image, 1.0f, 0, 0, size.x*waveImage->scale, size.y*waveImage->scale, waveImage->startOffset.x, 0, size.x, size.y);

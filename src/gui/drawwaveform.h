@@ -50,6 +50,7 @@ class waveformrender {
 	BakeGLPath bakedPath;
 	std::vector<TextureAtlas> atlases;
 	std::vector<waveform_update_task_t> queuedTasks;
+	std::vector<audioclip_texture_t> prevRendered;
 public:
 	static waveformrender* getInstance();
 	static void setInstance(std::unique_ptr<waveformrender> host);
@@ -60,8 +61,10 @@ public:
 	bool findSimiliarWaveform(waveform_update_task_t& waveformQueueEntry);
 	void assertWaveformRefIsUnbound(gui_waveform_texture_ref* waveformRef);
 	int renderUpdates(NVGcontext* ctxt, float pxRatio);
-	int queueUpdate(NVGcontext* ctxt, cachedaudio_t* audio, gui_waveform_texture_ref* waveformRef);
+	int queueUpdate(cachedaudio_t* audio, gui_waveform_texture_ref* waveformRef);
 	void draw(NVGcontext* ctxt, const gui_waveform_texture_ref* waveformRef, ivec2 size);
 	void release(gui_waveform_texture_ref* waveformRef);
 	bool findFreeSpot(ivec2 size, int& atlasIdx, ivec2& pos);
+	bool canQueueUpdate();
+
 };

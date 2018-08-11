@@ -5,12 +5,15 @@
 #include "snapshot.h"
 #include "base_plugin.h"
 #include "internal_plugin.h"
+#include "track.h"
 #include "track_impl.h"
 #include "../vst_host.h"
 #include "../vst_window.h"
 #include "../../gui/plugin.h"
 #include "../../gui/pluginctr.h"
+#include "../mainctrl.h"
 #include "leak_detect.h"
+#include "../history.h"
 /*
 bool internalplugin::onResize(vst_window* window, Size size) {
 	return true;
@@ -139,7 +142,7 @@ void createSnapshot(plugin_snapshot_t& ps, internalplugin* plugin, bool storePlu
 	ps.uId = plugin->uId;
 	ps.pluginType = plugin->pluginType;
 	ps.name = plugin->sName;
-//	if (storePluginChunks) {
+	if (storePluginChunks) {
 //		void* pluginData;
 //		int32_t pluginDataSize = plugin->dispatch(effGetChunk, 0, 0, &pluginData, 0);
 //		if (pluginDataSize > 0 && pluginData) {
@@ -157,17 +160,17 @@ void createSnapshot(plugin_snapshot_t& ps, internalplugin* plugin, bool storePlu
 //			ps.dataChunk2.assign(ptrData, ptrData + pluginDataSize2);
 //			my_printf("Plugin %s: Save data2[%d]\n", StringAsCStr(plugin->sName), pluginDataSize2);
 //		}
-//	}
-	auto& allParams = plugin->params;
-	auto& mixerParams = plugin->mixerParams;
-	ps.params.reserve(allParams.size()-mixerParams.size());
-	ps.hostParams.reserve(mixerParams.size());
-	for (automatable_param_t& param : plugin->params) {
-		float val = plugin->getParamValue(param.idx);
-		if (param.internalIdx < 0) {
-			ps.hostParams.push_back(param_snapshot_t{param.idx, val});
-		} else {
-			ps.params.push_back(param_snapshot_t{param.internalIdx, val});
+		auto& allParams = plugin->params;
+		auto& mixerParams = plugin->mixerParams;
+		ps.params.reserve(allParams.size()-mixerParams.size());
+		ps.hostParams.reserve(mixerParams.size());
+		for (automatable_param_t& param : plugin->params) {
+			float val = plugin->getParamValue(param.idx);
+			if (param.internalIdx < 0) {
+				ps.hostParams.push_back(param_snapshot_t{param.idx, val});
+			} else {
+				ps.params.push_back(param_snapshot_t{param.internalIdx, val});
+			}
 		}
 	}
 	storeAutomation(ps, plugin->automatedParams);
@@ -190,12 +193,14 @@ String internalplugin::getAutomatableName() {
 float internalplugin::getParamValue(int32_t idx) {
 	if (idx >= 0 && idx < (int32_t)params.size()) {
 		auto& param = params[idx];
-		param.value = dispatchGetParameter(param.internalIdx);
+		if (param.internalIdx >= 0) {
+			param.value = dispatchGetParameter(param.internalIdx);
+		}
 		return param.value;
 	}
 	return 0;
 }
-void internalplugin::setParamValue(int32_t idx, float val) {
+void internalplugin::setParamValue(int32_t idx, float val, int flags) {
 	if (idx >= 0 && idx < (int32_t)params.size()) {
 		auto& param = params[idx];
 		param.value = val;
@@ -213,8 +218,17 @@ void internalplugin::setParamValue(int32_t idx, float val) {
 			assert(param.internalIdx >= 0);
 			dispatchSetParameter(param.internalIdx, val);
 		}
-//		my_printf("set %s[%d] = %f\n", StringAsCStr(this->sName), idx, val);
 	}
+}
+void internalplugin::postSetParameter(int32_t idx, float preVal, float val, int flags) {
+	if (flags != 2) {
+		return;
+	}
+	assert(this->trackImpl->getTrack());
+	track_t* track = this->trackImpl->getTrack();
+	automationlane_snapshot_t ref = toRef();
+	parameter_ref_t p = {track->idx,  ref.type, this->projectGlobalId, idx};
+	MainCtrl::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
 }
 void internalplugin::recvPluginEditParamUpdate(int32_t idx) {
 	if (idx >= 0 && idx < (int32_t)params.size()) {
@@ -224,7 +238,7 @@ void internalplugin::recvPluginEditParamUpdate(int32_t idx) {
 }
 automationlane_snapshot_t internalplugin::toRef() {
 	automationlane_snapshot_t ref;
-	ref.type = 0;
+	ref.type = AUTOMATABLE_EFFECT;
 	ref.refId = this->projectGlobalId;
 	return ref;
 }

@@ -216,12 +216,14 @@ bool guimodule_group::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 void guimodule_group::buttonClicked(guibase* _button) {
 	if (_button == &buttonBypass) {
     	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-    	module->flipParamValue(0);
+    	float f = effect->getParamValue(PARAM_ENABLE);
+    	float f2 = f > 0.5 ? 0 : 1;
+    	effect->setParamValue(PARAM_ENABLE, f2, 2);
+    	effect->postSetParameter(PARAM_ENABLE, f, f2, 2);
 
 	}
 	if (_button == &buttonDelete) {
-    	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-    	vsthost::getInstance()->unloadPlugin(module);
+    	removePlugin(module);
 	}
 }
 
@@ -282,6 +284,7 @@ void module_group::resume() {
 void module_group::sleep() {
 }
 void module_group::unload() {
+	onPreUnload();
 	delete this->audio;
 	this->audio = nullptr;
 }
@@ -296,6 +299,12 @@ void module_group::load(vsthost* host) {
 	this->audio = host->createAudioStage();
 	this->blockInputs = new AudioBlock(2, host->lBlockSize);
 	this->blockOutputs = new AudioBlock(2, host->lBlockSize);
+	bIsEnabled = this->getParamValue(PARAM_ENABLE) > 0.5;
+	if (bIsEnabled) {
+		this->resume();
+	} else {
+		this->sleep();
+	}
 }
 void module_group::breakTrackLink() {
 	assert(this->audio);

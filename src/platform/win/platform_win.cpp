@@ -136,4 +136,15 @@ void threadSleep(int millis) {
 
 	std::this_thread::sleep_for(std::chrono::milliseconds(200));
 }
+String FormatErrorMessage(int32_t error, String msg)
+{
+	static const int BUFFERLENGTH = 1024;
+	std::vector<char> buf(BUFFERLENGTH);
+	FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM, 0, error, 0, buf.data(),
+		BUFFERLENGTH - 1, 0);
+	if (msg.empty())
+		return String(buf.data());
+	return String(buf.data()) + "   (" + msg + ")";
+}
+
 #endif

@@ -37,7 +37,7 @@ int getHWNDCnt(int i);
 extern int colorVal;
 gui_ctr_debug::gui_ctr_debug() : guictr_base() {
 	add(&knobTest);
-	knobTest.fnSetValue = [](float f) {
+	knobTest.fnSetValue = [](float f, int flags) {
 		colorVal = 0+max(0, min(255, (int32_t)std::floor(f*255)));
 		initColor();
 	};

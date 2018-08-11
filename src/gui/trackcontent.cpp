@@ -2,6 +2,8 @@
 #include <glm/glm.hpp>
 #include <glm/vec2.hpp>
 #include <glm/geometric.hpp>
+#include <memory>
+#include <numeric>
 
 
 #include "track.h"
@@ -16,9 +18,11 @@
 #include "trackcontent.h"
 #include "audiocache.h"
 #include "drawwaveform.h"
+#include "audiowaveform.h"
 #include "samplerate.h"
 #include "../host/vst_host.h"
-
+#include "table.h"
+#include "guitooltip.h"
 
 #include "leak_detect.h"
 
@@ -38,6 +42,58 @@ void gui_audio_clip::releaseRendered() {
 	m_clip->audio.waveformRef.rendered = false;
 }
 
+inline bool isEqualWaveform2(const audioclip_texture_t& lhs, const audioclip_texture_t& rhs){
+	return (lhs.sampleBeginOffset - lhs.sampleBegin) == (rhs.sampleBeginOffset - rhs.sampleBegin) &&
+			(lhs.sampleEnd - lhs.sampleBegin) == (rhs.sampleEnd - rhs.sampleBegin) &&
+			lhs.startOffset == rhs.startOffset &&
+//			lhs.size == rhs.size &&
+//			lhs.samplesPerPx == rhs.samplesPerPx &&
+//			lhs.scale == rhs.scale &&
+//			lhs.scaleX == rhs.scaleX &&
+			lhs.audioId == rhs.audioId && lhs.quality == rhs.quality && lhs.method == rhs.method;
+}
+inline bool canReuse(const audioclip_texture_t& lhs, const audioclip_texture_t& rhs){
+	if (rhs.clipped)
+		return true;
+	if ((lhs.sampleBeginOffset - lhs.sampleBegin) != (rhs.sampleBeginOffset - rhs.sampleBegin)) {
+		return false;
+	}
+	if ((lhs.sampleEnd - lhs.sampleBegin) != (rhs.sampleEnd - rhs.sampleBegin)) {
+		return false;
+	}
+//			(lhs.sampleEnd - lhs.sampleBegin) == (rhs.sampleEnd - rhs.sampleBegin) &&
+			return lhs.startOffset == rhs.startOffset &&
+//			lhs.size == rhs.size &&
+//			lhs.samplesPerPx == rhs.samplesPerPx &&
+//			lhs.scale == rhs.scale &&
+			lhs.clipped == lhs.clipped &&
+//			lhs.scaleX == rhs.scaleX &&
+			lhs.audioId == rhs.audioId && lhs.quality == rhs.quality && lhs.method == rhs.method;
+
+
+}
+inline bool isEqualWaveform3(const audioclip_texture_t& lhs, const audioclip_texture_t& rhs){
+	if ((lhs.sampleBeginOffset - lhs.sampleBegin) != (rhs.sampleBeginOffset - rhs.sampleBegin)) {
+		return false;
+	}
+	if ((lhs.sampleEnd - lhs.sampleBegin) != (rhs.sampleEnd - rhs.sampleBegin)) {
+		return false;
+	}
+//			(lhs.sampleEnd - lhs.sampleBegin) == (rhs.sampleEnd - rhs.sampleBegin) &&
+			return lhs.startOffset == rhs.startOffset &&
+//			lhs.size == rhs.size &&
+//			lhs.samplesPerPx == rhs.samplesPerPx &&
+//			lhs.scale == rhs.scale &&
+			lhs.clipped == lhs.clipped &&
+//			lhs.scaleX == rhs.scaleX &&
+			lhs.audioId == rhs.audioId && lhs.quality == rhs.quality && lhs.method == rhs.method;
+}
+ivec2 maxvec2(const ivec2& a, const ivec2& b) {
+	return {std::max(a.x, b.x), std::max(a.x, b.x)};
+}
+ivec2 absvec2(const ivec2 a) {
+	return {std::abs(a.x), std::abs(a.y)};
+}
 void gui_audio_clip::updatePosition(project_t& project, scaled_grid& grid, ivec2& trackSize) {
 	size = this->parent->size;
 	culled = !getClipPosition(grid, trackSize, m_clip, pos, size, 0);
@@ -69,27 +125,119 @@ void gui_audio_clip::updatePosition(project_t& project, scaled_grid& grid, ivec2
 				culled = true;
 			} else {
 				auto waveform = makeWaveformFromClip(project, grid, trackSize, m_clip, pos, clipSize, posClipped, sizeClipped);
-				if (waveform != m_clip->audio.waveformRef.waveform) {
-					assert(waveform.size.x > 0 && waveform.size.y > 0);
-//					my_printf("release %012x from updatePosition() (update)\n", &m_clip->audio.waveformRef);
+				if (waveform.size.x < 1 || waveform.size.y < 1) {
 					releaseRendered();
 					m_clip->audio.waveformRef.waveform = waveform;
+					this->updatedWaveform = waveform;
+				} else {
+					bool equal = ((waveform.size.y > 0) == (m_clip->audio.waveformRef.waveform.size.y > 0)) && isEqualWaveform3(waveform, m_clip->audio.waveformRef.waveform);
+
+					bool canQueue = waveformrender::getInstance()->canQueueUpdate();
+					ivec2 sizeDiff = absvec2(waveform.size-m_clip->audio.waveformRef.waveform.size);
+					ivec2 limit = maxvec2(ivec2(1), ivec2(waveform.size.x/4, 16));
+					if (!canQueue) {
+						limit.x = waveform.size.x/4;
+					}
+					if (waveform.clipped || !MainCtrl::get()->isZooming()) {
+						limit = {0,0};
+					}
+					if (!equal || (sizeDiff.x > limit.x || sizeDiff.y > limit.y)) {
+						if (!equal)
+							my_printf("unequal\n",0);
+						else
+							my_printf("sizeDiff %d / %d (canQueue %d)\n",sizeDiff,limit*limit, canQueue);
+						this->updatedWaveform = waveform;
+						if (sizeDiff.x > limit.x || sizeDiff.y > limit.y) {
+							releaseRendered();
+						}
+					}
 				}
 			}
 		}
 	}
-	assignedWaveform = true;
 }
 void gui_audio_clip::prerender(NVGcontext* vg) {
-	if (!culled && !m_clip->audio.waveformRef.rendered) {
-		assert(assignedWaveform);
-		cachedaudio_t* audio = audiocache::getInstance()->get(m_clip->audio.id);
-		if (audio) {
-			assert(!m_clip->audio.waveformRef.queued);
-			assert(m_clip->audio.waveformRef.waveform.size.x > 0 && m_clip->audio.waveformRef.waveform.size.y > 0);
-			int ret = waveformrender::getInstance()->queueUpdate(vg, audio, &m_clip->audio.waveformRef);
+	cachedaudio_t* audio = audiocache::getInstance()->get(m_clip->audio.id);
+	if (!m_clip->audio.waveformRef.queued) {
+		if (!audio || this->updatedWaveform.size.x < 1 || this->updatedWaveform.size.y < 1) {
+			return;
+		}
+		if (!culled && (!m_clip->audio.waveformRef.rendered || (this->updatedWaveform != m_clip->audio.waveformRef.waveform))) {
+			if (!m_clip->audio.waveformRef.queued) {
+				releaseRendered();
+				m_clip->audio.waveformRef.waveform = this->updatedWaveform;
+				assert(!m_clip->audio.waveformRef.queued);
+				assert(m_clip->audio.waveformRef.waveform.size.x > 0 && m_clip->audio.waveformRef.waveform.size.y > 0);
+				waveformrender::getInstance()->queueUpdate(audio, &m_clip->audio.waveformRef);
+			}
+
 		}
 	}
+}
+
+template <>
+void guitooltip<clip_t>::layout()  {
+	size.x = 400;
+	table.rowHeight = FONT_SIZE_TOOLTIP+INSET_TABLE_CELL_PADDING*2;
+	table.rows.clear();
+	table.titleCols.clear();
+	table.colSizes.clear();
+	using tbl_rows = std::vector<table_entry_t>;
+	{
+		cachedaudio_t* c = audiocache::getInstance()->get(ptr->audio.id);
+
+		String path;
+		if (c) {
+			path = StringFormat("%s.%s", StringAsCStr(c->name), StringAsCStr(c->ext));
+		} else {
+			path = "<MISSING SAMPLE>";
+		}
+		my_printf("path %s\n", StringAsCStr(path));
+		tbl_rows vec{tblstr{StringFormat("Audio Clip (sample-id %d)", ptr->audio.id)}, tblstr{path}};
+		table.rows.push_back(tbl_row_t{vec});
+	}
+	{
+		tbl_rows vec{tblstr{"num samples"}, tblint{ptr->getLenSamples()}};
+		table.rows.push_back(tbl_row_t{vec});
+	}
+	{
+		table.rows.push_back(tbl_row_t{tbl_rows{{tblstr{"ticks start"}, tblint{ptr->start()}}}});
+		table.rows.push_back(tbl_row_t{tbl_rows{{tblstr("ticks end"), tblint{ptr->end()}}}});
+		table.rows.push_back(tbl_row_t{tbl_rows{{tblstr("ticks length"), tblint{ptr->getLen()}}}});
+		table.rows.push_back(tbl_row_t{tbl_rows{{tblstr("color"), tblint{ptr->rgb, "%08x"}}}});
+	}
+	{
+		audioclip_texture_t waveform = ptr->audio.waveformRef.waveform;
+		gui_waveform_texture_ref& waveformRef = ptr->audio.waveformRef;
+
+//		table.rows.push_back(tbl_row_t{tbl_rows{{tblstr{"waveform", FONT_SIZE_TOOLTIP_BIG}, tblint{waveform.quality}}}});
+		table.rows.push_back(tbl_row_t{tbl_rows{{tblstr{"waveform samplesPerPx"}, tblfloat{(float)waveform.samplesPerPx}}}});
+		table.rows.push_back(tbl_row_t{tbl_rows{{tblstr{"waveform pos"}, waveform.pos}}});
+		table.rows.push_back(tbl_row_t{tbl_rows{{tblstr{"waveform size"}, waveform.size}}});
+		table.rows.push_back(tbl_row_t{tbl_rows{{tblstr{"waveform startOffset"}, waveform.startOffset}}});
+		table.rows.push_back(tbl_row_t{tbl_rows{{tblstr{"waveform clipped"}, tblstr{(waveform.clipped?"yes":"no")}}}});
+		table.rows.push_back(tbl_row_t{tbl_rows{{tblstr{"waveform quality"}, tblint{waveform.quality}}}});
+		table.rows.push_back(tbl_row_t{tbl_rows{{tblstr{"waveform scaleX"}, tblfloat{waveform.scaleX}}}});
+		table.rows.push_back(tbl_row_t{tbl_rows{{tblstr{"waveformRef atlasId"}, tblint{waveformRef.atlasId}}}});
+		table.rows.push_back(tbl_row_t{tbl_rows{{tblstr{"waveformRef atlasEntryId"}, tblint{waveformRef.atlasEntryId}}}});
+	}
+	adjustColSizes(table, getSizeContent()-ivec2(INSET_TABLE<<1));
+	size.y = table.rows.size()*table.rowHeight;
+}
+
+guictxtmenu_base* gui_audio_clip::getTooltip(AppCtrl* appctrl) {
+	auto tooltip = new guitooltip<clip_t>(this->m_clip); //why does casting m_clip to (clip_t*) break the ptr?
+	return tooltip;
+//	appctrl->openContextMenu(tooltip, appctrl->m_mousePos);
+}
+void gui_audio_clip::onIdle() {
+//	cachedaudio_t* audio = audiocache::getInstance()->get(m_clip->audio.id);
+//	if (!audio) {
+//		return;
+//	}
+}
+void gui_audio_clip::onTick(AppCtrl* appctrl) {
+
 }
 
 void gui_clip::trackViewDragBegin(guitrack_editor* view, MouseEvent& evt) {
@@ -147,15 +295,15 @@ public:
 		this->trackid = _trackid;
 		this->size.x = 320;
 		auto newClip = new ctxtmenu_entry("Create clip", 20);
-		add(newClip);
-		add(new ctxtmenu_splitter());
+		addEntry(newClip);
+		addEntry(new ctxtmenu_splitter());
 		scaled_grid& grid = MainCtrl::get()->getGrid();
 		auto adaptive = new ctxtmenu_time_select(grid, "Adaptive Grid", 0);
 		adaptive->initAdaptive();
-		add(adaptive);
+		addEntry(adaptive);
 		auto fixed = new ctxtmenu_time_select(grid, "Fixed Grid", 0);
 		fixed->initFixed();
-		add(fixed);
+		addEntry(fixed);
 	}
 	void clicked(int _id) {
 		MainCtrl* ctrl = MainCtrl::get();

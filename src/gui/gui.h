@@ -64,8 +64,9 @@ public:
 	int dummy0 = 0;
 	bool canTextInput = false;
 	String label = "";
-	const int guiType;
-	guibase(int guiTypeId = 0) : guiType(guiTypeId) {
+	int curTooltip = 0;
+//	const int guiType;
+	guibase(int guiTypeId = 0) /*: guiType(guiTypeId)*/ {
 		id = allocCount;
 		allocCount++;
 		g_guis.push_back(this);
@@ -139,6 +140,14 @@ public:
 	virtual void determineSize() {
 	}
 	virtual void prerender(NVGcontext* vg) {
+	}
+	virtual void onIdle() {
+	}
+	virtual void onTick(AppCtrl* appctrl) {
+
+	}
+	virtual guictxtmenu_base* getTooltip(AppCtrl* appctrl) {
+		return nullptr;
 	}
 	virtual void renderDragged(NVGcontext* vg, ivec2 mousepos) {
 
