@@ -6,18 +6,18 @@ Implement recent file list
 Compressed binary file format
 latency compensated automation 
 stress-test synchronization
-multiselection of tracks and plugins
+multiselection of tracks
 duplicate plugin/plugin groups
 duplicate loop button in midi clip
 group+plugin snapshots
 track snapshots
-implement basic arpeggiator
 use templates + template specialization for the 3 window classes in window.cpp
 further optimize waveform rendering
 tabbed view
 scale factor for UI font sizes
 dynamic scaling for all of the UI (50%-200%)
 improve dragging effects around
+fix shift-clicking not extending selection to clicked clips boundaries
 
 later:
 seperate internal samplerate / external (audiointerface) samplerate
@@ -31,6 +31,8 @@ midi export
 freeze track
 
 Done:
+multiselection of plugins
+implement basic arpeggiator
 optimize waveform rendering
 Missing undo/redo for adding/moving/removing plugins
 Missing undo/redo for plugin parameters
