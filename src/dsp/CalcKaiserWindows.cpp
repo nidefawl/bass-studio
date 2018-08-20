@@ -29,6 +29,10 @@ double* calcLPF(double sampFreq, double transFreq, double rippleDB, double trans
 // Create sinc function for filter with 1 transition - Low and High pass filters
 double *create1TransSinc(int windowLength, double transFreq, double sampFreq, enum filterType type)
 {
+	if (type != LOW_PASS && type != HIGH_PASS) {
+		fprintf(stderr, "create1TransSinc: Bad filter type, should be either LOW_PASS of HIGH_PASS\n");
+		return NULL;
+	}
 	int n;
 
 	// Allocate memory for the window
@@ -38,10 +42,6 @@ double *create1TransSinc(int windowLength, double transFreq, double sampFreq, en
 		return NULL;
 	}
 
-	if (type != LOW_PASS && type != HIGH_PASS) {
-		fprintf(stderr, "create1TransSinc: Bad filter type, should be either LOW_PASS of HIGH_PASS\n");
-		return NULL;
-	}
 
 	// Calculate the normalised transistion frequency. As transFreq should be
 	// less than or equal to sampFreq / 2, ft should be less than 0.5
@@ -62,6 +62,7 @@ double *create1TransSinc(int windowLength, double transFreq, double sampFreq, en
 	}
 	else if (type == HIGH_PASS) {
 		fprintf(stderr, "create1TransSinc: For high pass filter, window length must be odd\n");
+		free(window);
 		return NULL;
 	}
 
@@ -83,6 +84,10 @@ double *create1TransSinc(int windowLength, double transFreq, double sampFreq, en
 // Create two sinc functions for filter with 2 transitions - Band pass and band stop filters
 double *create2TransSinc(int windowLength, double trans1Freq, double trans2Freq, double sampFreq, enum filterType type)
 {
+	if (type != BAND_PASS && type != BAND_STOP) {
+		fprintf(stderr, "create2TransSinc: Bad filter type, should be either BAND_PASS or BAND_STOP\n");
+		return NULL;
+	}
 	int n;
 
 	// Allocate memory for the window
@@ -92,10 +97,6 @@ double *create2TransSinc(int windowLength, double trans1Freq, double trans2Freq,
 		return NULL;
 	}
 
-	if (type != BAND_PASS && type != BAND_STOP) {
-		fprintf(stderr, "create2TransSinc: Bad filter type, should be either BAND_PASS or BAND_STOP\n");
-		return NULL;
-	}
 
 	// Calculate the normalised transistion frequencies.
 	double ft1 = trans1Freq / sampFreq;
@@ -116,6 +117,7 @@ double *create2TransSinc(int windowLength, double trans1Freq, double trans2Freq,
 	}
 	else {
 		fprintf(stderr, "create1TransSinc: For band pass and band stop filters, window length must be odd\n");
+		free(window);
 		return NULL;
 	}
 
