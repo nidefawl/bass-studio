@@ -90,6 +90,12 @@ struct audiothread_ringbuffer_t {
 	int32_t writePos = 0;
 	AudioBuffer* buffers[RING_BUF_SIZE] = { 0 };
 };
+struct plugin_snapshot_t;
+effectbase* makeModuleInstance(int32_t uid, int32_t globalId);
+effectbase* loadEffectModule(const plugin_snapshot_t& pluginSnapshot);
+void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effectbase* effect);
+void loadEffectAutomationFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effectbase* effect);
+
 class vsthost {
 private:
 	class ModuleManager;
@@ -176,7 +182,7 @@ public:
 	track_impl_t* createAudio(track_t* track);
 	audio_stage_t* createAudioStage();
 	audio_stage_t* getAudioStage(const audio_stage_ref_t& ref);
-	bool movePlugin(audio_stage_t* dstTr, audio_stage_t* trp, int32_t src, int32_t dst);
-	bool moveEffect(audio_stage_t* trp, int32_t src, int32_t dst);
+	bool movePlugins(audio_stage_t* dstTr, audio_stage_t* trp, int32_t src, int32_t len, int32_t dst);
+	bool moveEffects(audio_stage_t* trp, int32_t src, int32_t dst, int32_t len);
 	bool insertNewPlugin(audio_stage_t* trp, effectbase* plugin, int32_t dst);
 };

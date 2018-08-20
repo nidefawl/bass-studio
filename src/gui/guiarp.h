@@ -84,7 +84,7 @@ public:
 				}
 				return 0.0f;
 			};
-			knob->fnFocus = [this, paramIdx](bool b) { MainCtrl::get()->showAutomation(clipview.track(), getArp(), paramIdx); };
+			knob->fnFocus = [this, paramIdx](MouseHitEvt& evt, bool focused) { MainCtrl::get()->showAutomation(clipview.track(), getArp(), paramIdx); };
 
 			idx++;
 		}
@@ -103,7 +103,8 @@ public:
 			return;
 		}
 		renderFrameBase(vg);
-		renderTitleBarHorizontal(vg, this->text, buttonBypass.right());
+		int flags = AppCtrl::get()->isCtrOrChildFocused(this) ? FLAG_FOCUSED : 0;
+		renderTitleBarHorizontal(vg, this->text, buttonBypass.right(), flags);
 		renderFrameOutline(vg);
 		buttonBypass.render(vg);
 		guiknob* knobs[3] = {&clock, &gate, &pattern};

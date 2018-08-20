@@ -72,6 +72,11 @@ bool guimodule_empty::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 		if (buttonDelete.mouseHitTest(localMouse, evt)) {
 			return true;
 		}
+		if (isShift(evt.kbmods)) {
+			if (MainCtrl::get()->getPluginSel().pluginCtr != this->parent) {
+				return true;
+			}
+		}
 		evt.requestFocus(this);
 		return true;
 	}

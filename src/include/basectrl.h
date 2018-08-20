@@ -74,6 +74,7 @@ public:
 	virtual bool mouseDownPre() {
 		return true;
 	}
+	MouseHitEvt mouseHitEvt(MouseHitType _type);
 	void mouseDown(ivec2 mousePos, int button, bool doubleclick);
 	void mouseUp(ivec2 mousePos, int button);
 	void onCharInput(unsigned int codepoint);

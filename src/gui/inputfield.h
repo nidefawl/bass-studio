@@ -53,15 +53,15 @@ public:
 		nvgText(vg, pos.x + size.x - 3, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(str), NULL);
 	}
 
-	bool focusEvent(bool focused) override {
+	bool focusEvent(MouseHitEvt& evt, bool focused) override {
 		if (!focused) {
 			endEdit(true);
 		}
+		this->field.focusEvent(evt, focused);
 		return true;
 	}
 	void endEdit(bool success) {
 		if (isEditing) {
-			this->field.focusEvent(false);
 			if (success && this->number) {
 				*this->number = atoi(this->field.value().c_str());
 				if (parent)
@@ -81,7 +81,7 @@ public:
 			} else {
 				this->field.setValue("");
 			}
-			this->field.focusEvent(true);
+//			this->field.focusEvent(true); //MainCtrl::get()->setFocused(this);
 			this->field.setSelectionRange(-1, -1);
 		}
 		isEditing = true;

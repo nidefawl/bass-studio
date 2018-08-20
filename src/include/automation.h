@@ -188,6 +188,13 @@ struct automatable_t {
 		}
 		return NULL;
 	}
+	void getAllAutomatedParams(std::vector<automated_param_t> out) {
+		for (automated_param_t& t : automatedParams) {
+			if (t.src.isAutomated()) {
+				out.push_back(t);
+			}
+		}
+	}
 	virtual void postSetParameter(int32_t idx, float preVal, float val, int flags) {
 	}
 };

@@ -28,7 +28,7 @@ public:
     std::function<float()> fnGetValue;
     std::function<void(float,int)> fnSetValue;
     std::function<void(float,float)> fnValueEditFinish;
-    std::function<void(bool)> fnFocus;
+    std::function<void(MouseHitEvt&, bool)> fnFocus;
 	NVGcolor valColor = G_BLUE;
 	NVGcolor indColor = G_WHITE;
 	guiknob(const bool _renderBackground = true) : guibase(), renderBackground(_renderBackground) {
@@ -72,8 +72,8 @@ public:
 		}
 		changedValue = false;
 	}
-    virtual bool focusEvent(bool focused) override {
-    	if (fnFocus) fnFocus(focused);
+    virtual bool focusEvent(MouseHitEvt& evt, bool focused) override {
+    	if (fnFocus) fnFocus(evt, focused);
     	return true;
     }
 	virtual bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {

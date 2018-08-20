@@ -78,6 +78,12 @@ struct dragdrop_midifile {
 	bool isValidTarget = false;
 	void reset();
 };
+struct plugin_selection {
+	guiplugin* firstSelection = nullptr;
+	guiplugin* lastSelection = nullptr;
+	guictr_plugins* pluginCtr = nullptr;
+};
+
 struct dragdrop_target_indicator {
 	int idx = -1;
 	void* ptr = nullptr;
@@ -221,6 +227,7 @@ public:
 	window_main* mainWindow = NULL;
 	window_overlay* contextWindow = NULL;
 	std::vector<window_overlay*> menuWindows;
+	std::shared_ptr<plugin_clipboard_t> pluginClipboard;
 	static MainCtrl* get();
 	~MainCtrl() {
 		my_printf("~MainCtrl\n",0);
@@ -233,6 +240,7 @@ public:
 	String lastKey;
 	dragdrop_midifile dragdropclip;
 	dragdrop_target_indicator dragdropTarget;
+	plugin_selection pluginSel;
 	plugindatabase_t plugindb;
 	tick_t tickJmpFrom = 0;
 	tick_t tickJmpTo = 0;
@@ -246,6 +254,9 @@ public:
 	}
 	dragdrop_target_indicator& getDragDropTarget() {
 		return dragdropTarget;
+	}
+	plugin_selection& getPluginSel() {
+		return pluginSel;
 	}
 	ngui::MenuBar& getMenubar() {
 		return menubar;
@@ -389,7 +400,13 @@ public:
 	void setAudioThreadState(playback_state state);
 	bool isPlaying();
 	bool toggleLoop();
-
+	void setDragged(guibase* g);
+	void setPluginClipboard(std::shared_ptr<plugin_clipboard_t> clipboard) {
+		pluginClipboard = clipboard;
+	}
+	std::shared_ptr<plugin_clipboard_t> getPluginClipboard() {
+		return pluginClipboard;
+	}
 	String getClipboardText();
 	void setClipboardText(String s);
 	void setJumpFromTo(tick_t tickJmpFrom, tick_t tickJmpTo) {

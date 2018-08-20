@@ -27,6 +27,7 @@ public:
 	guibuttontoggle buttonDelete;
 	gui_trackmeter meter;
 	float titlePosX = 0;
+	bool hasDragged=false;
 	guiplugin(effectbase* _effect);
 	virtual ~guiplugin() {
 		my_printf("DSTR!\n",0);
@@ -64,6 +65,7 @@ public:
 		meter.size = ivec2(meterW, contentS.y);
 		meter.layout();
 	}
+	void handleDraggedBegin(MouseEvent& evt) override;
 	void handleDraggedMove(MouseEvent& evt) override;
 	void handleDraggedRelease(MouseEvent& evt) override;
 	void dragMoveOn(guibase* target, ivec2 mousepos) override;
@@ -77,8 +79,11 @@ public:
 	bool isDragMoveable() {
 		return true;
 	}
+    virtual bool focusEvent(MouseHitEvt& evt, bool focused) override;
 
 	virtual guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
+	virtual bool isSelected() override;
+	virtual guibase* getDraggedControl() override;
 };
 class guivstplugin : public guiplugin {
 public:

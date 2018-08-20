@@ -271,7 +271,7 @@ public:
 			}
 		}
 		if (&btnLoop == button || &clipTimeStart == button || &clipLoopStart == button || &clipTimeLen == button || &clipTimeStartOffsedSamples == button
-				|| &clipTimeStartOffsetTicks == button || &clipTimeStartOffsedSamples == button || &clipLoopLen == button) {
+				|| &clipTimeStartOffsetTicks == button || &clipLoopLen == button) {
 			clip_t* clip = view.clip();
 			if (clip && clip->gClip) {
 				clip->setDirty();

@@ -69,7 +69,7 @@ public:
 	virtual ivec2 getSizeContent() {
 		return size - (paddingTL(padding) + paddingBR(padding));
 	}
-	void renderTitleBarHorizontal(NVGcontext* vg, String text, float textOffsetX);
+	void renderTitleBarHorizontal(NVGcontext* vg, String text, float textOffsetX, int flags);
 	void renderFrameBase(NVGcontext* vg);
 	void renderFrameOutline(NVGcontext* vg);
 	virtual bool setScissorTransformContainer(NVGcontext* vg);

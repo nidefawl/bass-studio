@@ -135,7 +135,13 @@ void guimodule_group::renderBase(NVGcontext* vg) {
 	nvgBeginPath(vg);
 	nvgRoundedRect(vg, 0, 0, size.x, size.y, G_RND);
 	NVGcolor c;
-	if (MainCtrl::get()->isCtrOrChildFocused(this)) {
+	int flags = AppCtrl::get()->isCtrOrChildFocused(this) ? FLAG_FOCUSED : 0;
+	if (isSelected()) {
+		flags |= FLAG_SELECTED;
+	}
+	if (flags & FLAG_SELECTED) {
+		c = g_guiColors[COL_BG_DRK_SELECTED];
+	} else if (flags & FLAG_FOCUSED) {
 		c = g_guiColors[COL_BG_DRK_FOCUSED];
 	} else {
 		c = g_guiColors[COL_BG_BRT];
@@ -207,6 +213,11 @@ bool guimodule_group::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 		}
 		if (ctr.mouseHitTest(localMouse, evt)) {
 			return true;
+		}
+		if (isShift(evt.kbmods)) {
+			if (MainCtrl::get()->getPluginSel().pluginCtr != this->parent) {
+				return true;
+			}
 		}
 		evt.requestFocus(this);
 		return true;
@@ -310,6 +321,7 @@ void module_group::breakTrackLink() {
 	assert(this->audio);
 	assert(this->audio->parent);
 	this->audio->parent->removeAudioStage(this->audio);
+	this->audio->owner = nullptr;
 	assert(this->audio->parent == nullptr);
 	bIsSetup = false;
 	internalplugin::breakTrackLink();
@@ -318,6 +330,7 @@ void module_group::setTrackLink(audio_stage_t* trImpl) {
 	assert(this->audio);
 	assert(trImpl != this->audio);
 	trImpl->addAudioStage(this->audio);
+	this->audio->owner = this;
 	this->audio->parent = trImpl;
 	bIsSetup = true;
 	internalplugin::setTrackLink(trImpl);
@@ -334,6 +347,9 @@ String module_group::getInfo(std::vector<String>& list) {
 void module_group::onTick(double since) {
 	meter.onTick(since);
 	audio->onTick(since);
+}
+void module_group::getChildAudioStages(std::vector<audio_stage_t*>& targets) {
+	targets.push_back(this->audio);
 }
 void module_group::postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) {
 	meter.update(out);

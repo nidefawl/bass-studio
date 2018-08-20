@@ -297,7 +297,7 @@ public:
 		this->fontSize = FONT_SIZE_CTXT_SMALL;
 		this->paddingV = 0;
 		std::vector<automatable_t*> targets;
-		m_track->audio->getAutomatableTargets(targets);
+		m_track->audio->getAutomatableTrackTargets(targets);
 		int32_t idx = 0;
 		addEntry(new ctxtmenu_entry("None", idx));
 		idx++;
@@ -308,7 +308,7 @@ public:
 	}
 	void clicked(int _id) {
 		std::vector<automatable_t*> targets;
-		m_track->audio->getAutomatableTargets(targets);
+		m_track->audio->getAutomatableTrackTargets(targets);
 		if (_id == 0) {
 			m_track->audio->selectedAutomationCtr = NULL;
 		} else {
@@ -343,7 +343,7 @@ public:
 	}
 	void clicked(int _id) {
 		std::vector<automatable_t*> targets;
-		m_track->audio->getAutomatableTargets(targets);
+		m_track->audio->getAutomatableTrackTargets(targets);
 		if (_id == 0) {
 			m_track->audio->selectedAutomationParam = -1;
 		} else {
@@ -906,7 +906,7 @@ public:
 				tr->audio->showAutomationLanes();
 				auto trCtr = MainCtrl::getGuiTrackCtr();
 				std::vector<automatable_t*> targets;
-				tr->audio->getAutomatableTargets(targets);
+				tr->audio->getAutomatableTrackTargets(targets);
 				for (automatable_t* atl : targets) {
 					std::vector<int32_t> automated;
 					atl->getAutomated(automated);

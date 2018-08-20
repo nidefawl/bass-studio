@@ -117,6 +117,7 @@ struct audio_stage_ref_t {
 struct audio_stage_t {
 	int32_t id;
 	audio_stage_t* parent;
+	effectbase* owner;
 	guictr_plugins* pluginCtr;
 	rmsmeter<16000> meter;
 	AudioBlock input; //guaranteed to have at least 2 channels
@@ -130,7 +131,7 @@ struct audio_stage_t {
 	std::vector<effectbase*> effects;
 	std::vector<audio_stage_t*> children;
 	audio_stage_t(int32_t _id,/*track_t* _track, */const samplerate_t& _sampleRate, const uint16_t& _blockSize, int32_t nChannels, int _type = 1)
-	: id(_id), parent(nullptr),/*track(_track),*/
+	: id(_id), parent(nullptr), owner(nullptr),/*track(_track),*/
 	  pluginCtr(nullptr),
 	  input(nChannels, _blockSize),
 	  output(nChannels, _blockSize),
@@ -154,6 +155,7 @@ struct audio_stage_t {
 	void removeAudioStage(audio_stage_t* stage);
 	effectbase* getPluginById(int32_t projectGlobalId);
 	audio_stage_ref_t toRef();
+	void getStageTargets(std::vector<automatable_t*>& targets);
 };
 class midiarp;
 struct track_impl_t : public audio_stage_t {
@@ -171,7 +173,6 @@ struct track_impl_t : public audio_stage_t {
 	void sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos);
 	void fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, float** buffer, int32_t samples);
 	VstEvent_t* reallocEvts(size_t size);
-	void getAutomatableTargets(std::vector<automatable_t*>& targets);
 	void loadAutomationLanes(const std::vector<automationlane_snapshot_t>& atl);
 	void saveAutomationLanes(std::vector<automationlane_snapshot_t>& atl);
 	void showAutomationLanes();
@@ -179,4 +180,5 @@ struct track_impl_t : public audio_stage_t {
 	std::vector<note_t>& getArpHeldNotes();
 	std::vector<note_t>& getArpInputNotes();
 	std::vector<marker_t>& getArpMarkers();
+	void getAutomatableTrackTargets(std::vector<automatable_t*>& targets);
 };

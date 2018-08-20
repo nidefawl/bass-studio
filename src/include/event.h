@@ -42,7 +42,8 @@ class MouseHitEvt {
 	bool cursorChanged = false;
 public:
 	MouseHitType type;
-	MouseHitEvt(MouseHitType _type) : type(_type) {
+	int kbmods;
+	MouseHitEvt(MouseHitType _type, int _kbmods) : type(_type), kbmods(_kbmods) {
 	}
 	void requestFocus(guibase* gui) {
 		guiHit = gui;

@@ -95,11 +95,6 @@ void draw(tbl& table, NVGcontext* vg, vec2 pos, vec2 size, float fontSize) {
 			drawTbl(ctxt, row.cols[xCol]);
 			ctxt.pos.x+=x;
 		}
-		nvgBeginPath(vg);
-		nvgMoveTo(vg, pos.x, ctxt.pos.y);
-		nvgLineTo(vg, ctxt.pos.x, ctxt.pos.y);
-		nvgStrokeColor(vg, g_guiColors[COL_LINE_SEPERATOR]);
-		nvgStroke(vg);
 		ctxt.pos.y+=table.rowHeight;
 	}
 	float height = ctxt.pos.y;

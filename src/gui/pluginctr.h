@@ -7,7 +7,10 @@
 #include "button.h"
 #include "track.h"
 #include "basectrl.h"
+#include "table.h"
 #include "../host/mainctrl.h"
+#include <glm/glm.hpp>
+#include <glm/vec2.hpp>
 
 using glm::vec2;
 using glm::ivec2;
@@ -90,16 +93,68 @@ public:
 		size.x = std::max(100, size.y*3/5);
 	}
 };
+class guictr_dragged_plugins : public guictr_base {
+	const int HEIGHT_ENTRY = 20;
+public:
+	std::vector<effectbase*> effects;
+	audio_stage_t* trackImpl = nullptr;
+	tbl table;
+	guictr_dragged_plugins() : guictr_base() {
+		pos = {0, 0};
+	}
+	~guictr_dragged_plugins() {
+	}
+	void layout() override {
+
+	}
+	virtual audio_stage_t* getTrackLink() {
+		return trackImpl;
+	}
+	void renderDragged(NVGcontext* vg, ivec2 mousepos) override {
+		mousepos -= pos;
+		nvgTranslate(vg, mousepos.x, mousepos.y);
+		drawBackground(vg, pos, size, 0, true, false);
+		ivec2 inset = {2, 2};
+		nvgFontFace(vg, "sans");
+		nvgFillColor(vg, G_WHITE);
+		draw(this->table, vg, pos+inset, size-inset*2, HEIGHT_ENTRY-4);
+	}
+	void setStrings(std::vector<String>& list) {
+		size = ivec2(200, list.size()*HEIGHT_ENTRY+4);
+		table.titleHeight = HEIGHT_ENTRY;
+		table.rowHeight = HEIGHT_ENTRY;
+		table.rows.clear();
+		for (String s : list) {
+			tbl_row_t row;
+			row.cols.push_back(s);
+			table.rows.push_back(row);
+		}
+		adjustColSizes(table, size);
+	}
+	bool isDragMoveable() {
+		return true;
+	}
+	void handleDraggedRelease(MouseEvent& evt) {
+		MainCtrl::get()->objectDragRelease(this, evt);
+	}
+	void handleDraggedMove(MouseEvent& evt) {
+		MainCtrl::get()->objectDragMove(this, evt);
+	}
+	void dragMoveOn(guibase* target, ivec2 mousepos) {
+		target->pluginMultiDragMove(this, mousepos);
+	}
+	void dragReleaseOn(guibase* target, ivec2 mousepos) {
+		target->pluginMultiDragRelease(this, mousepos);
+	}
+};
 class guictr_plugins : public guictr_base {
 public:
 	int scrolloffset = 0;
-//	int32_t highlightSlot = -1;
-	track_t* track = NULL;
-	audio_stage_t* stage = NULL;
+	track_t* track = nullptr;
+	audio_stage_t* stage = nullptr;
 	guiplaceholder placeholder;
-		bool isDefaultPluginCtr = true;
-//	int myNumber1 = 5555;
-//	int myNumber2 = 1234;
+	bool isDefaultPluginCtr = true;
+	guictr_dragged_plugins dragged;
 	guictr_plugins() : guictr_base() {
 
 	}
@@ -153,21 +208,8 @@ public:
 		nvgLineCap(vg, NVGlineCap::NVG_BUTT);
 	}
 	void render(NVGcontext* vg);
-	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-		if (this->contains(mpos)) {
-			ivec2 localMouse = this->toContainerSpace(mpos);
-			for (guibase* gui : guis) {
-				if (gui->mouseHitTest(localMouse, evt)) {
-					return true;
-				}
-			}
-			if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
-				evt.requestFocus(this);
-				return true;
-			}
-		}
-		return false;
-	}
+	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
+	bool handleKeyInput(KeyEvent& kevt) override;
 	void layout() {
 		ivec2 sizeInset = getSizeContent();
 		int32_t guiH = sizeInset.y - margin;
@@ -219,12 +261,18 @@ public:
 	void pluginDragRelease(guiplugin* g, ivec2 mousepos) override;
 	void pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 mousepos) override;
 	void pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mousepos) override;
+	void pluginMultiDragMove(guictr_dragged_plugins* g, ivec2 mousepos) override;
+	void pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mousepos) override;
 	void showTrack(audio_stage_t* track);
 	void hideTrack(audio_stage_t* track);
+	void onSelected(MouseEvent& evt, guiplugin* plugin);
 	void relayout();
 	void addGui(effectbase* plugin);
 	void onChildLayoutChanged(guibase* g) override;
 	virtual void determineSize() override;
+	virtual bool isSelected() override;
+	virtual guibase* getDraggedControl() override;
+	void getEffects(std::vector<effectbase*>& out);
 };
 class guictr_pluginview : public guictr_base {
 public:

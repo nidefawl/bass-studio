@@ -75,6 +75,7 @@ MouseEvent mouseEvent(BaseCtrl* ctrl, guibase* gui, ivec2 mousePos, int button, 
 	mevt.kbmods = ctrl->window->getKeyMods();
 	return mevt;
 }
+
 KeyEvent keyEvent(int key, int scancode, int keyState, int mods, const char* key_name) {
 	KeyEvent kevt;
 	switch (keyState) {
@@ -118,12 +119,21 @@ void BaseCtrl::mouseUp(ivec2 mousePos, int button) {
 		this->window->releaseMouse();
 		guiCaptured = NULL;
 	}
-	if (guiDragged != NULL) {
+	if (guiDragged) {
+		cursorIcon = CURSOR_DEFAULT;
+//		if (guiDragged!=guiFocused&&guiFocused) {
+//			MouseEvent evt = mouseEvent(this, guiFocused, mousePos, button, M_EVT_BTN_UP);
+//			guiFocused->handleDraggedRelease(evt);
+//		}
 		cursorIcon = CURSOR_DEFAULT;
 		MouseEvent evt = mouseEvent(this, guiDragged, mousePos, button, M_EVT_BTN_UP);
 		guiDragged->handleDraggedRelease(evt);
 		guiDragged = NULL;
 	}
+}
+MouseHitEvt BaseCtrl::mouseHitEvt(MouseHitType _type) {
+	return {_type, window->getKeyMods()};
+
 }
 void BaseCtrl::mouseDown(ivec2 mousePos, int button, bool doubleclick) {
 	if (!mouseDownPre()) {
@@ -132,7 +142,7 @@ void BaseCtrl::mouseDown(ivec2 mousePos, int button, bool doubleclick) {
 	if (guiCaptured != NULL) {
 		return;
 	}
-	MouseHitEvt evt(button == 0 ? MouseHitType::MOUSE_LEFT : MouseHitType::MOUSE_RIGHT);
+	MouseHitEvt evt = mouseHitEvt(button == 0 ? MouseHitType::MOUSE_LEFT : MouseHitType::MOUSE_RIGHT);
 	for (guictr_base *ctr : containers) {
 		if (ctr->mouseHitTest(mousePos, evt)) {
 			break;
@@ -146,19 +156,19 @@ void BaseCtrl::mouseDown(ivec2 mousePos, int button, bool doubleclick) {
 	guiCtrFocused = gui != NULL ? gui->getFocusedContainer() : NULL;
 	if (oldFocused != newFocus) {
 		if (oldFocused) {
-			oldFocused->focusEvent(false);
+			oldFocused->focusEvent(evt,false);
 		}
-		if (newFocus && newFocus->focusEvent(true)) {
+		if (newFocus && newFocus->focusEvent(evt, true)) {
 			guiFocused = newFocus;
 		}
 	}
 //	if (evt.hasCursorChanged()) {
 		cursorIcon = evt.getCursor();
 //	}
-	if (button == 0) {
-		//left button gets focus from mouse move only
-		guiDragged = gui;
-	}
+		if (button == 0) {
+			//left button gets focus from mouse move only
+			guiDragged = !!(gui) ? gui->getDraggedControl() : nullptr;
+		}
 	if (gui != NULL) {
 		dragDistance = ivec2(0);
 		dragStart = mousePos;
@@ -174,7 +184,7 @@ void BaseCtrl::mouseDown(ivec2 mousePos, int button, bool doubleclick) {
 
 void BaseCtrl::mouseScrolled(double xoffset, double yoffset) {
 	ivec2 mousePos = this->m_mousePos;
-	MouseHitEvt evt(MouseHitType::MOUSE_SCROLL);
+	MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_SCROLL);
 	for (guictr_base *ctr : containers) {
 		if (ctr->mouseHitTest(mousePos, evt)) {
 			break;
@@ -217,7 +227,7 @@ void BaseCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos) {
 			return;
 		}
 	}
-	MouseHitEvt evt(MouseHitType::MOUSE_OVER);
+	MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_OVER);
 	for (guictr_base *ctr : containers) {
 		if (ctr->mouseHitTest(mousePos, evt)) {
 			break;
@@ -266,11 +276,6 @@ void BaseCtrl::onKeyInput(int key, int scancode, int keyState, int mods, const c
 	}
 	if (guiCtrFocused && guiCtrFocused != guiFocused && guiCtrFocused->handleKeyInput(event)) {
 		return;
-	}
-	if (guiCtrFocused != NULL && guiCtrFocused != guiFocused) {
-		if (guiCtrFocused->handleKeyInput(event)) {
-			return;
-		}
 	}
 //	if (action == STATE_RELEASE)
 //		return;

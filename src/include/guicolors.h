@@ -91,6 +91,7 @@
 #define COL_BG_SELECTEDTRACK 16
 #define COL_BG_DRKER 17
 #define COL_BG_DRKER2 18
+#define COL_BG_DRK_SELECTED 22
 
 
 #define NVG_KAPPA90 0.5522847493f	// Length proportional to radius of a cubic bezier handle for 90deg arcs.

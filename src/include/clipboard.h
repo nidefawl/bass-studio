@@ -8,8 +8,7 @@
 struct track_clipboard_t {
 	std::vector<std::shared_ptr<clip_t>> clips;
 };
-class clip_clipboard {
-public:
+struct clip_clipboard {
 	enum clipboard_type_e {
 		ClipboardFull,
 		ClipboardAutomation
@@ -21,4 +20,10 @@ public:
 	int32_t selRange = 0;
 	int32_t selTrackRange = 0;
 	clipboard_type_e type = ClipboardFull;
+};
+
+
+struct plugin_clipboard_t {
+	std::vector<plugin_snapshot_t> plugins;
+	int32_t range = 0;
 };

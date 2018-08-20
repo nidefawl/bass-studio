@@ -25,18 +25,19 @@ public:
 	guiplugin* getGui() override;
 	int32_t getDelay() override;
 	void process(AudioBlock* in, AudioBlock* out, int32_t samples) override;
-	virtual String getInfo(std::vector<String>& list) override;
+	String getInfo(std::vector<String>& list) override;
 	void resume() override;
 	void sleep() override;
 	void unload() override;
 	void onPreUnload() override;
 	void load(vsthost* host) override;
-	virtual void breakTrackLink() override;
-	virtual void setTrackLink(audio_stage_t* trImpl) override;
+	void breakTrackLink() override;
+	void setTrackLink(audio_stage_t* trImpl) override;
 	audio_stage_t* getAudioStage() { return audio; };
 	void onTick(double since) override;
 	void makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) override;
 	void loadSnapshot(const plugin_snapshot_t& snapshot) override;
-	virtual void postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) override;
+	void postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) override;
+	void getChildAudioStages(std::vector<audio_stage_t*>& targets) override;
 };
 

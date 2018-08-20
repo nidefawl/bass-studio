@@ -57,7 +57,7 @@ public:
     /// Sets the callback to execute when the value of this TextBox has changed.
     void setCallback(const std::function<bool(const std::string& str)> &callback) { mCallback = callback; }
 
-    virtual bool focusEvent(bool focused);
+    virtual bool focusEvent(MouseHitEvt& evt, bool focused);
     virtual bool keyboardEvent(int key, int scancode, KeyEventType action, int modifiers);
     virtual bool handleCharInput(unsigned int codepoint) override;
 

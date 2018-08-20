@@ -670,6 +670,9 @@ void MainCtrl::resetMouseContext() {
 	}
 	guiCaptured = guiFocused = guiOver = guiDragged = NULL;
 }
+void MainCtrl::setDragged(guibase* g) {
+	guiDragged = g;
+}
 bool MainCtrl::setLoadedProject(shared_ptr<project_file> file) {
 	setAudioThreadState(playback_state::status_no_process);
 	ThreadLock lock = playThread.lockThread();
@@ -772,7 +775,7 @@ void MainCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos) {
 	dragdropTarget.reset();
 #if USE_GUI_MENU
 	if (ctxtmenu && !ctxtmenu->isTransient()) {
-		MouseHitEvt evt(MouseHitType::MOUSE_OVER);
+		MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_OVER);
 		if (view->ctr_menu.mouseHitTest(mousePos, evt)) {
 		}
 		return;
@@ -821,7 +824,7 @@ guictxtmenu_base* MainCtrl::getContextMenu() {
 }
 
 void MainCtrl::objectDragMove(guibase* g, MouseEvent& mevt) {
-	MouseHitEvt evt(MouseHitType::MOUSE_DRAGDROP_OBJECT);
+	MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_OBJECT);
 	evt.setDraggedThing(g);
 	for (guictr_base *ctr : containers) {
 		if (ctr->mouseHitTest(mevt.mousepos, evt)) {
@@ -840,7 +843,7 @@ void MainCtrl::objectDragMove(guibase* g, MouseEvent& mevt) {
 	}
 }
 void MainCtrl::objectDragRelease(guibase* g, MouseEvent& mevt) {
-	MouseHitEvt evt(MouseHitType::MOUSE_DRAGDROP_OBJECT);
+	MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_OBJECT);
 	evt.setDraggedThing(g);
 	for (guictr_base *ctr : containers) {
 		if (ctr->mouseHitTest(mevt.mousepos, evt)) {
@@ -909,7 +912,7 @@ bool MainCtrl::filesDropBegin(vector<string>& files, ivec2 mousepos, int kbmods)
 			}
 		}
 		if (dragdropclip.isLoaded) {
-			MouseHitEvt evt(MouseHitType::MOUSE_DRAGDROP_CLIP);
+			MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_CLIP);
 			evt.setDraggedThing(&dragdropclip);
 			for (guictr_base *ctr : containers) {
 				if (ctr->mouseHitTest(mousepos, evt)) {
@@ -942,7 +945,7 @@ bool MainCtrl::filesDropMove(ivec2 mousepos, int kbmods) {
 	if (dragdropclip.isLoaded) {
 		dragdropclip.isValidTarget = false;
 //		my_printf("filesDropMove %d %d isdragging=%d\n", pos.x, pos.y, dragdropclip.isDragging);
-		MouseHitEvt evt(MouseHitType::MOUSE_DRAGDROP_CLIP);
+		MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_CLIP);
 		evt.setDraggedThing(&dragdropclip);
 		for (guictr_base *ctr : containers) {
 			if (ctr->mouseHitTest(mousepos, evt)) {
@@ -979,7 +982,7 @@ bool MainCtrl::filesDropFinal(vector<string>& files, ivec2 mousepos, int kbmods)
 	}
 	if (dragdropclip.isLoaded && dragdropclip.isValidTarget) {
 		my_printf("filesDropFinal %d %d isdragging=%d\n", mousepos.x, mousepos.y, dragdropclip.isLoaded);
-		MouseHitEvt evt(MouseHitType::MOUSE_DRAGDROP_CLIP);
+		MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_CLIP);
 		evt.setDraggedThing(&dragdropclip);
 		for (guictr_base *ctr : containers) {
 			if (ctr->mouseHitTest(mousepos, evt)) {

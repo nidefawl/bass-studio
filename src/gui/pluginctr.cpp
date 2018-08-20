@@ -37,12 +37,55 @@
 
 using glm::vec2;
 using glm::ivec2;
-
+void getSelectedEffects(plugin_selection& sel, std::vector<effectbase*>& out) {
+	out.clear();
+	std::vector<effectbase*> tmp;
+	sel.pluginCtr->getEffects(tmp);
+	int n = sel.firstSelection->effect->getSlot();
+	int n2 = sel.lastSelection->effect->getSlot();
+	for (auto* effect : tmp) {
+		int slot = effect->getSlot();
+		if (slot >= n && slot <= n2) {
+			out.push_back(effect);
+		}
+	}
+}
+void setDraggedPluginsUI(guictr_dragged_plugins& gui, plugin_selection& sel) {
+	gui.trackImpl = sel.pluginCtr->stage;
+	gui.effects.clear();
+	getSelectedEffects(sel, gui.effects);
+	std::vector<String> list;
+	for (auto* effect : gui.effects) {
+		list.push_back(effect->getAutomatableName());
+	}
+	gui.setStrings(list);
+}
 void guiplugin::handleDraggedMove(MouseEvent& evt) {
-	MainCtrl::get()->objectDragMove(this, evt);
+	if (isSelected()) {
+		auto& sel = MainCtrl::get()->getPluginSel();
+		setDraggedPluginsUI(sel.pluginCtr->dragged, sel);
+		MainCtrl::get()->setDragged(&sel.pluginCtr->dragged);
+		hasDragged = true;
+	} else {
+		hasDragged = false;
+		MainCtrl::get()->objectDragMove(this, evt);
+	}
 }
 void guiplugin::handleDraggedRelease(MouseEvent& evt) {
 	MainCtrl::get()->objectDragRelease(this, evt);
+	if (hasDragged) {
+		return;
+	}
+	if (isSelected()) {
+		static_cast<guictr_plugins*>(this->parent)->onSelected(evt, this);
+	}
+}
+void guiplugin::handleDraggedBegin(MouseEvent& evt) {
+	hasDragged = false;
+	if (!isSelected()) {
+//		hasDragged = true;
+		static_cast<guictr_plugins*>(this->parent)->onSelected(evt, this);
+	}
 }
 void guiplugin::dragMoveOn(guibase* target, ivec2 mousepos) {
 	target->pluginDragMove(this, mousepos);
@@ -51,12 +94,65 @@ void guiplugin::dragReleaseOn(guibase* target, ivec2 mousepos) {
 	target->pluginDragRelease(this, mousepos);
 }
 
+guibase* guictr_plugins::getDraggedControl() {
+	if (isSelected()) {
+		auto& sel = MainCtrl::get()->getPluginSel();
+		setDraggedPluginsUI(sel.pluginCtr->dragged, sel);
+		return &sel.pluginCtr->dragged;
+	}
+	return this;
+}
+
+bool guictr_plugins::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
+	if (this->contains(mpos)) {
+		if (MouseHitType::MOUSE_LEFT == evt.type)
+			dragged.pos = parent ? parent->toScreenSpace(mpos) : mpos;
+		//handle multi selection...
+		ivec2 localMouse = this->toContainerSpace(mpos);
+		for (guibase* gui : guis) {
+			if (gui->mouseHitTest(localMouse, evt)) {
+				return true;
+			}
+		}
+		if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
+			evt.requestFocus(this);
+			return true;
+		}
+	}
+	return false;
+}
+
+guibase* guiplugin::getDraggedControl() {
+	return this;
+}
+bool guiplugin::isSelected() {
+	guictr_plugins* parentCtr = static_cast<guictr_plugins*>(this->parent);
+	if (parentCtr) {
+		auto& sel = MainCtrl::get()->getPluginSel();
+		if (sel.pluginCtr == parentCtr) {
+			if (sel.firstSelection) {
+				if (this->effect->getSlot() >= sel.firstSelection->effect->getSlot() &&
+						this->effect->getSlot() <= sel.lastSelection->effect->getSlot()) {
+					return true;
+				}
+			}
+		}
+	}
+	return this->parent && this->parent->isSelected();
+}
+bool guictr_plugins::isSelected() {
+	return parent && parent->isSelected();
+}
 void guiplugin::renderBase(NVGcontext* vg) {
 	if (!setScissorTransformContainer(vg)) {
 		return;
 	}
 	renderFrameBase(vg);
-	renderTitleBarHorizontal(vg, this->text, titlePosX);
+	int flags = AppCtrl::get()->isCtrOrChildFocused(this) ? FLAG_FOCUSED : 0;
+	if (isSelected()) {
+		flags |= FLAG_SELECTED;
+	}
+	renderTitleBarHorizontal(vg, this->text, titlePosX, flags);
 	renderFrameOutline(vg);
 }
 
@@ -83,6 +179,9 @@ guictxtmenu_base* guiplugin::getTooltip(AppCtrl* appctrl) {
 	return tooltip;
 }
 
+bool guiplugin::focusEvent(MouseHitEvt& evt, bool focused) {
+	return true;
+}
 class guictxtmenu_vstparam : public guictxtmenu_base {
 	effectbase* const effect;
 	automatable_param_t* const entry;
@@ -123,13 +222,13 @@ public:
 			}
 			return effect->setParamValue(entry->idx, f, flags);
 		};
-		knobTest.fnValueEditFinish = [this,paramIdx](float preVal, float val) {
+		knobTest.fnValueEditFinish = [this](float preVal, float val) {
 			effect->postSetParameter(entry->idx, preVal, val, 2);
 		};
-		knobTest.fnFocus = [this](bool b) {focusEvent(b);};
+		knobTest.fnFocus = [this](MouseHitEvt& evt, bool focused) {focusEvent(evt, focused);};
 		knobTest.parent = this;
 	}
-    virtual bool focusEvent(bool focused) override {
+    virtual bool focusEvent(MouseHitEvt& evt, bool focused) override {
     	if (focused)
     		MainCtrl::get()->showAutomation(effect->getTrack(), effect, entry->idx);
     	return true;
@@ -228,6 +327,139 @@ void guictr_plugins::addGui(effectbase* plugin) {
 		add(base);
 	}
 }
+
+void pastePluginClipboard(std::shared_ptr<plugin_clipboard_t>& clipboard, audio_stage_t* stage, int32_t pos) {
+	for (const plugin_snapshot_t& pluginSnapshot : clipboard->plugins) {
+		effectbase* effect = loadEffectModule(pluginSnapshot);
+		if (effect) {
+			loadEffectParamsFromSnapshot(pluginSnapshot, effect);
+			stage->insertEffect(pos, effect);
+//						host->insertNewPlugin(this, effect, pluginSnapshot.slot);
+			effect->loadSnapshot(pluginSnapshot);
+			loadEffectAutomationFromSnapshot(pluginSnapshot, effect);
+			if (pluginSnapshot.enabled) {
+				effect->resume();
+			}
+		} else {
+			//TODO: handle
+		}
+	}
+	stage->pluginsChanged();
+	MainCtrl::getPluginCtr()->relayout();
+}
+std::shared_ptr<plugin_clipboard_t> copyPluginSelection(plugin_selection& sel) {
+	std::vector<plugin_snapshot_t> pluginSnapshots;
+	std::vector<effectbase*> selection;
+	std::shared_ptr<plugin_clipboard_t> clipboard = std::make_shared<plugin_clipboard_t>();
+	getSelectedEffects(sel, selection);
+	pluginSnapshots.reserve(selection.size());
+	for (effectbase* effect : selection) {
+		plugin_snapshot_t ps;
+		effect->makeSnapshot(ps, true);
+		clipboard->plugins.push_back(std::move(ps));
+		clipboard->range++;
+	}
+	return clipboard;
+}
+bool guictr_plugins::handleKeyInput(KeyEvent& kevt) {
+	if (kevt.type != K_RELEASE) {
+		plugin_selection& sel = MainCtrl::get()->getPluginSel();
+		if (!sel.pluginCtr) {
+			return false;
+		}
+		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+		bool modified = false;
+		bool handledKeyinput = false;
+		String desc = "???";
+		std::vector<effectbase*> effectChain;
+		sel.pluginCtr->getEffects(effectChain);
+		std::vector<effectbase*> selection;
+		getSelectedEffects(sel, selection);
+
+		bool clipboard = false;
+		if (kevt.type == K_PRESS) {
+			if (isKC(KC_SELECTALL, kevt)) {
+				sel.firstSelection = effectChain.front()->getGui(); //UGLY
+				sel.lastSelection = effectChain.back()->getGui(); //UGLY
+				handledKeyinput = true;
+			}
+			if (isKC(KC_DELETE, kevt) && selection.size()) {
+				audio_stage_t* audioStage = selection[0]->getTrackLink();
+				assert(audioStage);
+				for (effectbase* eff : selection) {
+					eff->close();
+				}
+				for (effectbase* eff : selection) {
+					audioStage->removePlugin(eff, false);
+				}
+				audioStage->pluginsChanged();
+//				auto* actionRemove = new action_remove_module("Remove plugin", module, audioStage->toRef(), module->getSlot());
+//				MainCtrl::get()->pushHist(actionRemove);
+				handledKeyinput = true;
+			}
+			else if (isKC(KC_CUT, kevt) && selection.size()) {
+				std::shared_ptr<plugin_clipboard_t> clipboard = copyPluginSelection(sel);
+				MainCtrl::get()->setPluginClipboard(clipboard);
+				audio_stage_t* audioStage = selection[0]->getTrackLink();
+				assert(audioStage);
+				for (effectbase* eff : selection) {
+					eff->close();
+				}
+				for (effectbase* eff : selection) {
+					audioStage->removePlugin(eff, false);
+				}
+				audioStage->pluginsChanged();
+				handledKeyinput = true;
+			}
+			else if (isKC(KC_COPY, kevt) && selection.size()) {
+				std::shared_ptr<plugin_clipboard_t> clipboard = copyPluginSelection(sel);
+				MainCtrl::get()->setPluginClipboard(clipboard);
+				handledKeyinput = true;
+			}
+			else if (isKC(KC_DUPLICATE, kevt) && selection.size()) {
+				std::shared_ptr<plugin_clipboard_t> clipboard = copyPluginSelection(sel);
+				pastePluginClipboard(clipboard, sel.pluginCtr->stage, selection.back()->getSlot()+1);
+				handledKeyinput = true;
+			}
+			else if (isKC(KC_PASTE, kevt) && MainCtrl::get()->getPluginClipboard()) {
+				std::shared_ptr<plugin_clipboard_t> clipboard = MainCtrl::get()->getPluginClipboard();
+				pastePluginClipboard(clipboard, sel.pluginCtr->stage, selection.back()->getSlot()+1);
+				handledKeyinput = true;
+			}
+		} else {
+		}
+		if (isArrowKey(kevt.keyCode)) {
+			ivec2 dir;
+			arrowKeyToXY(kevt.keyCode, dir.x, dir.y);
+			if (dir.y) {
+				if (isShift(kevt.mods)) {
+
+				} else {
+
+				}
+			} else if (dir.x) {
+				if (isShift(kevt.mods)) {
+
+				} else {
+
+				}
+			}
+			handledKeyinput = true;
+//			desc = "Move notes";
+		}
+//		if (modified) {
+//			action_modify_track* track_action = new action_modify_track(desc, resizePreModifyState.copy());
+//			MainCtrl::get()->pushHist(track_action);
+//
+//		}
+//		if (handledKeyinput) {
+//			updateVisibleTrackContents();
+//		}
+		return handledKeyinput;
+	}
+	return false;
+}
+
 void guictr_plugins::hideTrack(audio_stage_t* _track) {
 	if (this->stage == _track) {
 		this->stage->pluginCtr = nullptr;
@@ -235,6 +467,23 @@ void guictr_plugins::hideTrack(audio_stage_t* _track) {
 		this->stage = nullptr;
 		removeGuis();
 		layout();
+	}
+}
+void guictr_plugins::onSelected(MouseEvent& evt, guiplugin* plugin) {
+	plugin_selection& sel = MainCtrl::get()->getPluginSel();
+	if (isShift(evt.kbmods)) {
+		if (sel.pluginCtr == this) {
+			if (sel.lastSelection && plugin->effect->getSlot() > sel.lastSelection->effect->getSlot()) {
+				sel.lastSelection = plugin;
+			}
+			if (sel.firstSelection && plugin->effect->getSlot() < sel.firstSelection->effect->getSlot()) {
+				sel.firstSelection = plugin;
+			}
+		}
+	} else {
+		sel.pluginCtr = this;
+		sel.firstSelection = plugin;
+		sel.lastSelection = plugin;
 	}
 }
 void guictr_plugins::onChildLayoutChanged(guibase* g) {
@@ -282,6 +531,9 @@ void guictr_plugins::render(NVGcontext* vg) {
 }
 void guictr_plugins::relayout() {
 	showTrack(this->stage);
+}
+void guictr_plugins::getEffects(std::vector<effectbase*>& out) {
+	out = this->stage->effects; // copy
 }
 void guictr_plugins::showTrack(audio_stage_t* audio) {
 	removeGuis();
@@ -422,6 +674,30 @@ void guictr_plugins::pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mouse
 		this->parent->onChildLayoutChanged(this);
 	}
 }
+void guictr_plugins::pluginMultiDragMove(guictr_dragged_plugins* g, ivec2 mousepos) {
+	MainCtrl::get()->getDragDropTarget().reset();
+	if (!this->stage) return;
+	assert(g->effects.size());
+	audio_stage_t* srcStage = g->getTrackLink();
+	int highlightSlot = slotFromCoord(mousepos);
+//	if (abs((evt.dragStart - evt.mousepos).x) > getSizeContent().y / 4) {
+		audio_stage_t* p = this->stage;
+		while (p) {
+			if (std::find(g->effects.begin(), g->effects.end(), p->owner) != g->effects.end()) {
+				return;
+			}
+			p = p->parent;
+		}
+		if (srcStage == this->stage) {
+			int first = g->effects.front()->getSlot();
+			int last = g->effects.back()->getSlot();
+			if (highlightSlot >= first && highlightSlot <= last) {
+				return;
+			}
+		}
+		MainCtrl::get()->getDragDropTarget().set(this, highlightSlot);
+//	}
+}
 void guictr_plugins::pluginDragMove(guiplugin* g, ivec2 mousepos) {
 	MainCtrl::get()->getDragDropTarget().reset();
 	if (!this->stage) return;
@@ -440,15 +716,16 @@ void guictr_plugins::pluginDragMove(guiplugin* g, ivec2 mousepos) {
 		MainCtrl::get()->getDragDropTarget().set(this, highlightSlot);
 //	}
 }
-class action_move_module : public action_base {
+class action_move_modules : public action_base {
 	audio_stage_ref_t refdst;
 	audio_stage_ref_t refsrc;
 	int32_t dst;
 	int32_t src;
+	int32_t len;
 	protected:
 	public:
-		action_move_module(String s, audio_stage_ref_t _refdst, audio_stage_ref_t _refsrc, int32_t _dst, int32_t _src)
-			: action_base(), refdst(_refdst), refsrc(_refsrc), dst(_dst), src(_src) {
+		action_move_modules(String s, audio_stage_ref_t _refdst, audio_stage_ref_t _refsrc, int32_t _dst, int32_t _src, int32_t _len)
+			: action_base(), refdst(_refdst), refsrc(_refsrc), dst(_dst), src(_src), len(_len) {
 			desc = s;
 		}
 		void undo(MainCtrl* ctrl) override {
@@ -458,7 +735,7 @@ class action_move_module : public action_base {
 				setError("missing trackimpl");
 				return;
 			}
-			vsthost::getInstance()->movePlugin(srcStage, dstStage, dst, src);
+			vsthost::getInstance()->movePlugins(srcStage, dstStage, dst, src, len);
 			MainCtrl::getPluginCtr()->relayout();
 		}
 		void redo(MainCtrl* ctrl) override {
@@ -468,18 +745,19 @@ class action_move_module : public action_base {
 				setError("missing trackimpl");
 				return;
 			}
-			vsthost::getInstance()->movePlugin(dstStage, srcStage, src, dst);
+			vsthost::getInstance()->movePlugins(dstStage, srcStage, src, dst, len);
 			MainCtrl::getPluginCtr()->relayout();
 		}
 };
-class action_shift_module : public action_base {
+class action_shift_modules : public action_base {
 	audio_stage_ref_t ref;
 	int32_t dst;
 	int32_t src;
+	int32_t len;
 	protected:
 	public:
-	action_shift_module(String s, audio_stage_ref_t _ref, int32_t _dst, int32_t _src)
-			: action_base(), ref(_ref), dst(_dst), src(_src) {
+	action_shift_modules(String s, audio_stage_ref_t _ref, int32_t _dst, int32_t _src, int32_t _len)
+			: action_base(), ref(_ref), dst(_dst), src(_src), len(_len) {
 			desc = s;
 		}
 		void undo(MainCtrl* ctrl) override {
@@ -488,7 +766,7 @@ class action_shift_module : public action_base {
 				setError("missing trackimpl");
 				return;
 			}
-			vsthost::getInstance()->moveEffect(stage, dst, src);
+			vsthost::getInstance()->moveEffects(stage, dst, src, len);
 			MainCtrl::getPluginCtr()->relayout();
 		}
 		void redo(MainCtrl* ctrl) override {
@@ -497,7 +775,7 @@ class action_shift_module : public action_base {
 				setError("missing trackimpl");
 				return;
 			}
-			vsthost::getInstance()->moveEffect(stage, src, dst);
+			vsthost::getInstance()->moveEffects(stage, src, dst, len);
 			MainCtrl::getPluginCtr()->relayout();
 		}
 };
@@ -555,6 +833,62 @@ void removePlugin(effectbase* module) {
 	MainCtrl::get()->pushHist(actionRemove);
 	audioStage->pluginsChanged();
 }
+void guictr_plugins::pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mousepos) {
+	int32_t dstSlot = MainCtrl::get()->getDragDropTarget().idx;
+	MainCtrl::get()->getDragDropTarget().reset();
+	if (!this->stage) return;
+	assert(g->effects.size());
+	audio_stage_t* srcStage = g->getTrackLink();
+	audio_stage_t* p = this->stage;
+	while (p) {
+		if (std::find(g->effects.begin(), g->effects.end(), p->owner) != g->effects.end()) {
+			return;
+		}
+		p = p->parent;
+	}
+	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+	int first = g->effects.front()->getSlot();
+	int last = g->effects.back()->getSlot();
+
+	my_printf("move %d plugins from %s:%d to %s:%d\n",
+			(int)g->effects.size(),
+			StringAsCStr(srcStage->getTrack()->name), first,
+			StringAsCStr(this->stage->getTrack()->name), dstSlot);
+	int targetslot = slotFromCoord(mousepos);
+	if (srcStage == this->stage) {
+		int first = g->effects.front()->getSlot();
+		int last = g->effects.back()->getSlot();
+		if (targetslot >= first && targetslot <= last) {
+			return;
+		}
+	}
+
+	if (targetslot >= 0) {
+		if (srcStage != this->stage) {
+			vsthost::getInstance()->movePlugins(this->stage, srcStage, first, targetslot, last-first+1);
+
+			audio_stage_ref_t refsrc = srcStage->toRef();
+			audio_stage_ref_t refdst = stage->toRef();
+			auto* track_action = new action_move_modules("Move plugin", refdst, refsrc, targetslot, first, last-first+1);
+			MainCtrl::get()->pushHist(track_action);
+		} else {
+			int first = g->effects.front()->getSlot();
+			int last = g->effects.back()->getSlot();
+			if (targetslot > first) targetslot-=g->effects.size();
+//			if (targetslot > curSlot) targetslot--;
+			if (first == targetslot)
+				return;
+			vsthost::getInstance()->moveEffects(this->stage, first, targetslot, last-first+1);
+			audio_stage_ref_t ref = this->stage->toRef();
+			auto* track_action = new action_shift_modules("Move plugin", ref, targetslot, first, last-first+1);
+//			MainCtrl::get()->pushHist(track_action);
+		}
+		if (this->parent) {
+			this->parent->onChildLayoutChanged(this);
+		}
+		showTrack(stage);
+	}
+}
 void guictr_plugins::pluginDragRelease(guiplugin* g, ivec2 mousepos) {
 	MainCtrl::get()->getDragDropTarget().reset();
 	if (!this->stage) return;
@@ -572,18 +906,18 @@ void guictr_plugins::pluginDragRelease(guiplugin* g, ivec2 mousepos) {
 
 	if (targetslot >= 0) {
 		if (trp != this->stage) {
-			vsthost::getInstance()->movePlugin(this->stage, trp, curSlot, targetslot);
+			vsthost::getInstance()->movePlugins(this->stage, trp, curSlot, targetslot, 1);
 
 			audio_stage_ref_t refsrc = trp->toRef();
 			audio_stage_ref_t refdst = stage->toRef();
-			auto* track_action = new action_move_module("Move plugin", refdst, refsrc, targetslot, curSlot);
+			auto* track_action = new action_move_modules("Move plugin", refdst, refsrc, targetslot, curSlot, 1);
 			MainCtrl::get()->pushHist(track_action);
 
 		} else {
 			if (targetslot > curSlot) targetslot--;
-			vsthost::getInstance()->moveEffect(trp, curSlot, targetslot);
+			vsthost::getInstance()->moveEffects(trp, curSlot, targetslot, 1);
 			audio_stage_ref_t ref = trp->toRef();
-			auto* track_action = new action_shift_module("Move plugin", ref, targetslot, curSlot);
+			auto* track_action = new action_shift_modules("Move plugin", ref, targetslot, curSlot, 1);
 			MainCtrl::get()->pushHist(track_action);
 		}
 		if (this->parent) {
@@ -646,6 +980,11 @@ bool guivstplugin::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 		}
 		if (params.mouseHitTest(localMouse, evt)) {
 			return true;
+		}
+		if (isShift(evt.kbmods)) {
+			if (MainCtrl::get()->getPluginSel().pluginCtr != this->parent) {
+				return true;
+			}
 		}
 		evt.requestFocus(this);
 		return true;

@@ -16,9 +16,11 @@ using glm::vec4;
 using glm::ivec4;
 
 
-void guictr_base::renderTitleBarHorizontal(NVGcontext* vg, String text, float textOffsetX) {
+void guictr_base::renderTitleBarHorizontal(NVGcontext* vg, String text, float textOffsetX, int flags) {
 	NVGcolor c;
-	if (AppCtrl::get()->isCtrOrChildFocused(this)) {
+	if (flags & FLAG_SELECTED) {
+		c = g_guiColors[COL_BG_DRK_SELECTED];
+	} else if (flags & FLAG_FOCUSED) {
 		c = g_guiColors[COL_BG_DRK_FOCUSED];
 	} else {
 		c = g_guiColors[COL_BG_BRT];

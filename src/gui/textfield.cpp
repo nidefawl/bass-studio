@@ -328,7 +328,7 @@ void gui_textfield::render(NVGcontext* ctx) {
     nvgRestore(ctx);
 }
 
-bool gui_textfield::focusEvent(bool focused) {
+bool gui_textfield::focusEvent(MouseHitEvt& evt, bool focused) {
 //    Widget::focusEvent(focused);
 
     std::string backup = mValue;

@@ -26,6 +26,7 @@ using glm::ivec2;
 struct NVGcontext;
 class guitrack_editor;
 class guiplugin;
+class guictr_dragged_plugins;
 class guictr_base;
 class gui_pluginlist_entry;
 class gui_track;
@@ -53,6 +54,8 @@ enum TextInputState : signed int {
 	DISABLED = 0,
 	ENABLED = 1
 };
+#define FLAG_FOCUSED 1
+#define FLAG_SELECTED 2
 class guibase {
 public:
 	ivec2 pos{0};
@@ -210,6 +213,10 @@ public:
 	}
 	virtual void pluginDragRelease(guiplugin* g, ivec2 mousepos) {
 	}
+	virtual void pluginMultiDragMove(guictr_dragged_plugins* g, ivec2 mousepos) {
+	}
+	virtual void pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mousepos) {
+	}
 	virtual void pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 mousepos) {
 	}
 	virtual void pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mousepos) {
@@ -278,7 +285,10 @@ public:
 	virtual guibase* getFocusedControl() {
 		return this;
 	}
-    virtual bool focusEvent(bool focused) {
+	virtual guibase* getDraggedControl() {
+		return this;
+	}
+    virtual bool focusEvent(MouseHitEvt& evt, bool focused) {
     	return true;
     }
 	virtual guibase* getFocusedContainer() {
@@ -300,6 +310,10 @@ public:
 	}
 	virtual int32_t getStateFlags() {
 		return FLG_ENBL;
+	}
+	//implementation specific
+	virtual bool isSelected() {
+		return false;
 	}
 protected:
 

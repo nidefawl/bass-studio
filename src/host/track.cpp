@@ -446,12 +446,23 @@ void audio_stage_t::pluginsChanged() {
 	}
 	this->latency = latency;
 }
-void track_impl_t::getAutomatableTargets(std::vector<automatable_t*>& targets) {
+void audio_stage_t::getStageTargets(std::vector<automatable_t*>& targets) {
+	if (std::find(targets.begin(), targets.end(), &mixer) == targets.end()) {
+		targets.push_back(&mixer);
+	}
+	for (effectbase* child : effects) {
+		targets.push_back(child);
+		std::vector<audio_stage_t*> childStages;
+		child->getChildAudioStages(childStages);
+		for (audio_stage_t* childStage : childStages) {
+			childStage->getStageTargets(targets);
+		}
+	}
+}
+void track_impl_t::getAutomatableTrackTargets(std::vector<automatable_t*>& targets) {
 	targets.push_back(&mixer);
 	targets.push_back(arp);
-//	if (instrument)
-//		targets.push_back(instrument);
-	targets.insert(targets.end(), effects.begin(), effects.end());
+	getStageTargets(targets);
 }
 void track_impl_t::saveAutomationLanes(std::vector<automationlane_snapshot_t>& atls)
 {
@@ -481,59 +492,72 @@ void track_impl_t::showAutomationLanes() {
 	}
 }
 
-effectbase* makeModuleInstance(int32_t uid, int32_t globalId);
+effectbase* loadEffectModule(const plugin_snapshot_t& pluginSnapshot) {
+	String path;
+	effectbase* effect = nullptr;
+	if (pluginSnapshot.pluginType == PLUGIN_TYPE_VST) {
+		plugindatabase_t& db = MainCtrl::get()->plugindb;
+		if (db.resolve(pluginSnapshot.name, pluginSnapshot.uId, &path)) {
+			vsthost* host = vsthost::getInstance();
+			vstpluginloadres res = host->loadPlugin(path, pluginSnapshot.projectGlobalId);
+			if (res.result==0&&res.plugin) {
+				vstplugin* plugin = res.plugin;
+				if (pluginSnapshot.dataChunk.size() > 0) {
+					my_printf("Plugin %s: Load data1[%d]\n", StringAsCStr(res.plugin->sName), pluginSnapshot.dataChunk.size());
+					plugin->dispatch(effSetChunk, 0, pluginSnapshot.dataChunk.size(), (void*)pluginSnapshot.dataChunk.data());
+				}
+				if (pluginSnapshot.dataChunk2.size() > 0) {
+					my_printf("Plugin %s: Load data2[%d]\n", StringAsCStr(res.plugin->sName), pluginSnapshot.dataChunk2.size());
+					plugin->dispatch(effSetChunk, 1, pluginSnapshot.dataChunk2.size(), (void*)pluginSnapshot.dataChunk2.data());
+				}
+				effect = plugin;
+			}
+		} else {
+			//TODO: handle failed plugin loading
+		}
+	} else {
+		effect = makeModuleInstance(pluginSnapshot.pluginType, pluginSnapshot.projectGlobalId);
+	}
+	return effect;
+}
+void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effectbase* effect) {
+
+	const std::vector<param_snapshot_t>& pluginSnapshotParams = pluginSnapshot.params;
+	for (const param_snapshot_t& param : pluginSnapshotParams) {
+		int32_t paramIdxEffect = effect->mixerParams.size() + param.idx;
+		if (effect->hasParam(paramIdxEffect)) {
+			effect->setParamValue(paramIdxEffect, param.val, 1);
+		}
+	}
+	const std::vector<param_snapshot_t>& pluginHostSideParams = pluginSnapshot.hostParams;
+	for (const param_snapshot_t& param : pluginHostSideParams) {
+		if (param.idx < (int32_t)effect->mixerParams.size() && effect->hasParam(param.idx)) {
+			effect->setParamValue(param.idx, param.val, 1);
+		}
+	}
+
+}
+void loadEffectAutomationFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effectbase* effect) {
+	const std::vector<automation_view_t>& automatedParams = pluginSnapshot.automatedParams;
+	for (const automation_view_t& automatedParam : automatedParams) {
+		if (effect->hasParam(automatedParam.targetParam)) {
+			automation_t* autom = effect->getAutomation(automatedParam.targetParam);
+			autom->points = automatedParam.points;
+			autom->active = automatedParam.active;
+		}
+	}
+}
 void audio_stage_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginList)
 {
 	vsthost* host = vsthost::getInstance();
-	plugindatabase_t& db = MainCtrl::get()->plugindb;
 	for (const plugin_snapshot_t& pluginSnapshot : trPluginList) {
-		String path;
-		effectbase* effect = nullptr;
-		if (pluginSnapshot.pluginType == PLUGIN_TYPE_VST) {
-			if (db.resolve(pluginSnapshot.name, pluginSnapshot.uId, &path)) {
-				vstpluginloadres res = host->loadPlugin(path, pluginSnapshot.projectGlobalId);
-				if (res.result==0&&res.plugin) {
-					vstplugin* plugin = res.plugin;
-					if (pluginSnapshot.dataChunk.size() > 0) {
-						my_printf("Plugin %s: Load data1[%d]\n", StringAsCStr(res.plugin->sName), pluginSnapshot.dataChunk.size());
-						plugin->dispatch(effSetChunk, 0, pluginSnapshot.dataChunk.size(), (void*)pluginSnapshot.dataChunk.data());
-					}
-					if (pluginSnapshot.dataChunk2.size() > 0) {
-						my_printf("Plugin %s: Load data2[%d]\n", StringAsCStr(res.plugin->sName), pluginSnapshot.dataChunk2.size());
-						plugin->dispatch(effSetChunk, 1, pluginSnapshot.dataChunk2.size(), (void*)pluginSnapshot.dataChunk2.data());
-					}
-					effect = plugin;
-				}
-			}
-		} else {
-			effect = makeModuleInstance(pluginSnapshot.pluginType, pluginSnapshot.projectGlobalId);
-		}
+		effectbase* effect = loadEffectModule(pluginSnapshot);
 		if (effect) {
-
-			const std::vector<param_snapshot_t>& pluginSnapshotParams = pluginSnapshot.params;
-			for (const param_snapshot_t& param : pluginSnapshotParams) {
-				int32_t paramIdxEffect = effect->mixerParams.size() + param.idx;
-				if (effect->hasParam(paramIdxEffect)) {
-					effect->setParamValue(paramIdxEffect, param.val, 1);
-				}
-			}
-			const std::vector<param_snapshot_t>& pluginHostSideParams = pluginSnapshot.hostParams;
-			for (const param_snapshot_t& param : pluginHostSideParams) {
-				if (param.idx < (int32_t)effect->mixerParams.size() && effect->hasParam(param.idx)) {
-					effect->setParamValue(param.idx, param.val, 1);
-				}
-			}
+			vsthost* host = vsthost::getInstance();
+			loadEffectParamsFromSnapshot(pluginSnapshot, effect);
 			host->insertNewPlugin(this, effect, pluginSnapshot.slot);
 			effect->loadSnapshot(pluginSnapshot);
-
-			const std::vector<automation_view_t>& automatedParams = pluginSnapshot.automatedParams;
-			for (const automation_view_t& automatedParam : automatedParams) {
-				if (effect->hasParam(automatedParam.targetParam)) {
-					automation_t* autom = effect->getAutomation(automatedParam.targetParam);
-					autom->points = automatedParam.points;
-					autom->active = automatedParam.active;
-				}
-			}
+			loadEffectAutomationFromSnapshot(pluginSnapshot, effect);
 	//				if (plugin == this->instrument) {
 	//					plugin->show();
 	//				}
@@ -541,7 +565,6 @@ void audio_stage_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginLi
 				effect->resume();
 			}
 		}
-
 	}
 
 

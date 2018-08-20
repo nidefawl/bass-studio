@@ -46,6 +46,7 @@ void initColor() {
 	g_guiColors[COL_CTXTMNU_HILIGHT] = GUI_COLORA(c5, 255);
 	g_guiColors[COL_GUI_STROKE] = mulSatBright(g_guiColors[COL_GRID_DRK], 1.3f, 1.4f);
 	g_guiColors[COL_BG_DRK_FOCUSED] = GUI_COLORA(c3+48, 255);
+	g_guiColors[COL_BG_DRK_SELECTED] = GUI_COLORA(c3+40, 255);
 
 	g_guiColors[COL_NOTE] = rgbToNvg(0xff9933);
 	g_guiColors[COL_NOTE_PLAYING] = rgbToNvg(0x33ff33);

@@ -505,7 +505,7 @@ int32_t vsthost::processPlayback(int32_t sample, double posDouble, playback_stat
 		updateTime(sample, pos, state);
 		for (track_t* tr : ctrl->trackList) {
 			std::vector<automatable_t*> targets;
-			tr->audio->getAutomatableTargets(targets);
+			tr->audio->getAutomatableTrackTargets(targets);
 			for (automatable_t* at : targets) {
 				at->updateAutomatedParameters(pos);
 			}
@@ -980,20 +980,24 @@ audio_stage_t* vsthost::getAudioStage(const audio_stage_ref_t& ref) {
 	}
 	return nullptr;
 }
-bool vsthost::movePlugin(audio_stage_t* dstTr, audio_stage_t* trp, int32_t src, int32_t dst) {
+bool vsthost::movePlugins(audio_stage_t* dstTr, audio_stage_t* trp, int32_t src, int32_t dst, int32_t len) {
 	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 	assert(dstTr);
 	assert(trp);
 	assert(src < (int)trp->effects.size());
+	assert(src+len <= (int)trp->effects.size());
 	assert(dst-1 <= (int)dstTr->effects.size());
-		effectbase* tmpPlugin = trp->effects[src];
+	std::vector<effectbase*> tmpEffects = trp->effects;
+	for (int32_t i = 0; i < len; i++) {
+		effectbase* tmpPlugin = tmpEffects[src + i];
 		trp->removePlugin(tmpPlugin, true);
-		dstTr->insertEffect(dst, tmpPlugin);
+		dstTr->insertEffect(dst+i, tmpPlugin);
+	}
 	trp->pluginsChanged();
 	dstTr->pluginsChanged();
 	return true;
 }
-bool vsthost::moveEffect(audio_stage_t* trp, int32_t src, int32_t dst) {
+bool vsthost::moveEffects(audio_stage_t* trp, int32_t src, int32_t dst, int32_t len) {
 	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 	assert(src >= 0 && dst >= 0);
 	assert(src != dst);
@@ -1012,13 +1016,26 @@ bool vsthost::moveEffect(audio_stage_t* trp, int32_t src, int32_t dst) {
 	tmpEffects.resize(trp->effects.size());
 	auto itIn = curEffects.cbegin();
 	auto itOut = tmpEffects.begin();
+	int32_t src2 = src;
+	int32_t dst2 = dst;
+	int32_t end = dst+len;
 	for (;itOut!=tmpEffects.cend();) {
 		if (curEffects.cbegin()+src == itIn) {
-			itIn++;
-		} else if (tmpEffects.cbegin()+dst == itOut) {
-			*itOut++ = curEffects[src];
+			my_printf("jump input iterator from %d to %d\n", itIn-curEffects.cbegin(), itIn-curEffects.cbegin()+len);
+			itIn+=len;
+		}
+		int srcPos;
+		int outPos = itOut-tmpEffects.begin();
+		if (dst2 < end && tmpEffects.cbegin()+dst2 == itOut) {
+			my_printf("dst2 %d\n", dst2);
+			srcPos = src2;
+			*itOut++ = curEffects[src2++];
+			dst2++;
+			my_printf("b writing %d to %d\n", srcPos, outPos);
 		} else {
+			srcPos = itIn-curEffects.cbegin();
 			*itOut++ = *itIn++;
+			my_printf("a writing %d to %d\n", srcPos, outPos);
 		}
 	}
 	trp->effects = std::move(tmpEffects);

@@ -51,6 +51,9 @@ public:
 	virtual String getInfo(std::vector<String>& list) = 0;
 	track_t* getTrack();
 	virtual void onTick(double since);
+	virtual void getChildAudioStages(std::vector<audio_stage_t*>& targets) {
+
+	}
 	virtual void loadSnapshot(const plugin_snapshot_t& snapshot) = 0;
 	virtual void breakTrackLink();
 	virtual void setTrackLink(audio_stage_t* audioStage);
