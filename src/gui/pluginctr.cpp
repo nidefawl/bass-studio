@@ -293,8 +293,8 @@ public:
 guiplugin::guiplugin(effectbase* _effect)
 : guictr_base(GUI_PLUGIN),
   effect(_effect),
-  buttonBypass(12),
-  buttonDelete(12),
+  buttonBypass((HEIGHT_PLUGIN_TITLE-HEIGHT_PLUGIN_TITLE/3)/2),
+  buttonDelete((HEIGHT_PLUGIN_TITLE-HEIGHT_PLUGIN_TITLE/3)/2),
   meter(&_effect->meter) {
 	padding = 0;
 	margin = 0;
@@ -936,7 +936,7 @@ guivstplugin::guivstplugin(vstplugin * _vst)
 : guiplugin(_vst),
   vst(_vst),
   params(48),
-  buttonOpenEditor(12) {
+  buttonOpenEditor((HEIGHT_PLUGIN_TITLE-HEIGHT_PLUGIN_TITLE/3)/2) {
 	buttonOpenEditor.icon = ICON_ADJUST;
 	buttonOpenEditor.state = &_vst->bEditOpen;
 	buttonOpenEditor.parent = this;

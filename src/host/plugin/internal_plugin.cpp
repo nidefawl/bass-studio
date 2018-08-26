@@ -185,7 +185,7 @@ void internalplugin::makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks)
 //	this->makePresetSnapshot(ps, this);
 }
 void internalplugin::loadSnapshot(const plugin_snapshot_t& ps)  {
-	assert(ps.slot == this->slot);
+	//assert(ps.slot == this->slot);
 }
 String internalplugin::getAutomatableName() {
 	return this->sName;
