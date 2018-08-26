@@ -576,6 +576,9 @@ public:
 	void dragReleaseOn(guibase* target, ivec2 mousepos) override {
 		target->trackEntryDragRelease(this->m_track->content, mousepos);
 	}
+	void handleRightClick(MouseEvent& evt) {
+		parent->handleRightClick(evt);
+	}
 };
 
 class gui_trackcontrols_automation : public guictr_base {
