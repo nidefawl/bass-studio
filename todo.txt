@@ -6,6 +6,7 @@ Implement recent file list
 Compressed binary file format
 latency compensated automation 
 stress-test synchronization
+unit tests
 multiselection of tracks
 duplicate plugin/plugin groups
 duplicate loop button in midi clip
