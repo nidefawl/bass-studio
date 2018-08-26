@@ -12,6 +12,7 @@
 #include "note.h"
 #include "hires_timer.h"
 #include "project.h"
+#include "audiobuffer.h"
 #include <memory>
 #ifdef __linux__
 #define PLATFORM_PLUGIN_EXT "so"
@@ -73,28 +74,16 @@ public:
 	int32_t result;
 	vstplugin* plugin;
 };
-struct AudioBlock;
-struct AudioBuffer {
-	AudioBlock* output;
-	AudioBlock* input;
-	std::atomic<bool> inUse;
-	bool submitted;
-};
 struct plugin_notes_t {
 	std::vector<note_t> notes;
-};
-#define RING_BUF_SIZE 16
-#define RING_BUF_MASK 15
-struct audiothread_ringbuffer_t {
-	int32_t readPos = 0;
-	int32_t writePos = 0;
-	AudioBuffer* buffers[RING_BUF_SIZE] = { 0 };
 };
 struct plugin_snapshot_t;
 effectbase* makeModuleInstance(int32_t uid, int32_t globalId);
 effectbase* loadEffectModule(const plugin_snapshot_t& pluginSnapshot);
 void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effectbase* effect);
 void loadEffectAutomationFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effectbase* effect);
+
+struct AudioBlock;
 
 class vsthost {
 private:

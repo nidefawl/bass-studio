@@ -19,6 +19,7 @@
 
 #include "logging.h"
 #include "audioblock.h"
+#include "audiobuffer.h"
 #include "platform.h"
 
 #include <stdlib.h>
@@ -344,14 +345,6 @@ public:
 };
 
 
-AudioBuffer* allocateBuffer() {
-	AudioBuffer* buffer = (AudioBuffer*) aligned_malloc(sizeof(AudioBuffer), 128);
-	buffer->output = new AudioBlock(OUTPUT_CHANNELS, 1);
-	buffer->input = new AudioBlock(OUTPUT_CHANNELS, 1);
-	buffer->submitted = false;
-	std::atomic_init(&buffer->inUse, false);
-	return buffer;
-}
 vsthost::~vsthost() {
 	delete moduleMgr;
 	delete blockZero;
@@ -363,9 +356,7 @@ vsthost::vsthost(uint32_t _sampleRate, uint16_t _blockSize)
 	  numChannels(OUTPUT_CHANNELS)
 {
 	memset(&timeinfo, 0, sizeof(timeinfo));
-	for (int i = 0; i < RING_BUF_SIZE; i++) {
-		ringbuffer.buffers[i] = allocateBuffer();
-	}
+	allocRingBuffer(ringbuffer);
 	updateTime(0, 0, playback_state::status_stop);
 	setBlockSize(_blockSize);
 }
@@ -582,9 +573,7 @@ int32_t vsthost::processPlayback(int32_t sample, double posDouble, playback_stat
 		 */
 		AudioBuffer* bufferWrite = buffers[writePos];
 		assert(!bufferWrite->inUse);
-		bufferWrite->input->realloc(lBlockSize);
 		bufferWrite->output->realloc(lBlockSize);
-		dsp_util::fillSilence(bufferWrite->input->buf, lBlockSize);
 		dsp_util::fillSilence(bufferWrite->output->buf, lBlockSize);
 		AudioBlock* bufOut = bufferWrite->output;
 		for (track_t* trackMaster : ctrl->trackMasterCtr) {
@@ -770,14 +759,7 @@ void vsthost::unload() {
 	unloadAllPlugins();
 }
 void vsthost::destroy() {
-	for (int i = 0; i < RING_BUF_SIZE; i++) {
-		if (ringbuffer.buffers[i]) {
-			delete ringbuffer.buffers[i]->input;
-			delete ringbuffer.buffers[i]->output;
-			aligned_free(ringbuffer.buffers[i]);
-			ringbuffer.buffers[i] = nullptr;
-		}
-	}
+	freeRingBuffer(ringbuffer);
 	g_instance.reset();
 }
 vsthost* vsthost::getInstance()

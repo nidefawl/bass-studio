@@ -1,0 +1,27 @@
+#pragma once
+#include <stdint.h>
+#include <memory.h>
+#include <atomic>
+#include <stdint.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <assert.h>
+#include "seq_math.h"
+
+struct AudioBlock;
+struct AudioBuffer {
+	AudioBlock* output;
+	std::atomic<bool> inUse;
+	bool submitted;
+};
+
+#define RING_BUF_SIZE 16
+#define RING_BUF_MASK 15
+struct audiothread_ringbuffer_t {
+	int32_t readPos = 0;
+	int32_t writePos = 0;
+	AudioBuffer* buffers[RING_BUF_SIZE] = { 0 };
+};
+AudioBuffer* allocateBuffer();
+void allocRingBuffer(audiothread_ringbuffer_t&);
+void freeRingBuffer(audiothread_ringbuffer_t&);
