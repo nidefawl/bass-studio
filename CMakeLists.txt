@@ -114,7 +114,8 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 
 find_library(
-    GLFW_LIB NAMES "glfw3"
+    GLFW_LIB 
+    NAMES "glfw3" "glfw3dll"
     PATHS ${DAW_DEPS_DIR}/build/lib/glfw/
     PATH_SUFFIXES lib
     NO_DEFAULT_PATH)
