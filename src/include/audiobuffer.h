@@ -13,10 +13,11 @@ struct AudioBuffer {
 	AudioBlock* output;
 	std::atomic<bool> inUse;
 	bool submitted;
+	double time;
 };
 
-#define RING_BUF_SIZE 16
-#define RING_BUF_MASK 15
+#define RING_BUF_SIZE (1<<4)
+#define RING_BUF_MASK (RING_BUF_SIZE-1)
 struct audiothread_ringbuffer_t {
 	int32_t readPos = 0;
 	int32_t writePos = 0;
