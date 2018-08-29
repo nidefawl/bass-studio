@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <memory>
 #include "str_util.h"
 #include "seq_time.h"
 #include "automation.h"
