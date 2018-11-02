@@ -655,7 +655,7 @@ public:
 		case WM_WINDOWPOSCHANGING:
 		case WM_WINDOWPOSCHANGED:
 		case WM_NCLBUTTONDOWN:
-			my_printf("WM_ closeContextMenu\n", 0);
+//			my_printf("WM_ closeContextMenu\n", 0);
 //    		this->ctrl->closeAppMenus();
     		this->ctrl->closeContextMenu();
 			break;
@@ -1408,6 +1408,9 @@ std::shared_ptr<AppCtrl> makeApp();
 void deleteApp();
 int startApplication(int argc, char* argv[]) {
 	bool test = argc > 1 && String(argv[1]) == "--test";
+#ifndef NDEBUG
+    _dup2( 1, 2 ); //workaround: redirect stderr to stdout so stderr is visible when using gdb on eclipse (bug)
+#endif
 #ifdef _WIN32
 	OleInitialize(0);
 #endif
