@@ -13,7 +13,7 @@
 using glm::vec2;
 using glm::ivec2;
 
-class guiknob : public guibase {
+class guiknob final : public guibase {
 	const float angleOpen = 90;
 	const float range = (360 - angleOpen) * M_PI / 180.0f;
 	const float start = -FLOAT_PI * 1.5f + (angleOpen / 2.0f) * M_PI / 180.0f;
