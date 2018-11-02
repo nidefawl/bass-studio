@@ -1053,6 +1053,10 @@ int32_t loadLib(String filepath, VSTPluginMain_t** out_fn, HMODULE* out_hmodule)
 	VSTPluginMain_t *fn = (VSTPluginMain_t*) GetProcAddress(hmodule, "VSTPluginMain");
 	if (fn == NULL)
 	{
+		fn = (VSTPluginMain_t*) GetProcAddress(hmodule, "main");
+	}
+	if (fn == NULL)
+	{
 		FreeLibrary(hmodule);
 		return -4;
 	}
