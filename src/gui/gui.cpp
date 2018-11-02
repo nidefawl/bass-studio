@@ -236,7 +236,7 @@ void drawAttachedBackground(NVGcontext* vg, ivec2 posInset, ivec2 sizeInset, int
 	nvgFillColor(vg, g_guiColors[COL_BG_BRT]);
 	nvgFill(vg);
 }
-void guibase::renderWidgetBorder(NVGcontext* vg, int32_t flags) {
+void guibase::renderWidgetBorder(NVGcontext* vg, int32_t flags) const {
 	nvgBeginPath(vg);
 	nvgRect(vg, pos.x, pos.y, size.x, size.y);
 	nvgStrokeColor(vg, theme->getBgStrokeColor(flags));

@@ -297,7 +297,7 @@ public:
 		}
 		return NULL;
 	}
-	void renderWidgetBorder(NVGcontext* vg, int32_t flags = FLG_ENBL);
+	void renderWidgetBorder(NVGcontext* vg, int32_t flags = FLG_ENBL) const;
 	virtual ivec2 toScreenSpace(ivec2 in) {
 		in += this->pos;
 		if (this->parent != NULL) {
