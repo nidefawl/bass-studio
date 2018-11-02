@@ -160,6 +160,8 @@ void BaseCtrl::mouseDown(ivec2 mousePos, int button, bool doubleclick) {
 		}
 		if (newFocus && newFocus->focusEvent(evt, true)) {
 			guiFocused = newFocus;
+		} else if (!newFocus) {
+			guiFocused = nullptr;
 		}
 	}
 //	if (evt.hasCursorChanged()) {
