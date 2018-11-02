@@ -10,6 +10,7 @@
 
 AudioBuffer* allocateBuffer() {
 	AudioBuffer* buffer = (AudioBuffer*) aligned_malloc(sizeof(AudioBuffer), 128);
+	memset(buffer, 0, sizeof(AudioBuffer));
 	buffer->output = new AudioBlock(OUTPUT_CHANNELS, 1);
 	buffer->submitted = false;
 	std::atomic_init(&buffer->inUse, false);

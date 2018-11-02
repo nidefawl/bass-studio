@@ -13,7 +13,8 @@ struct AudioBuffer {
 	AudioBlock* output;
 	std::atomic<bool> inUse;
 	bool submitted;
-	double time;
+	int32_t nonce;
+	int64_t timestamp;
 };
 
 #define RING_BUF_SIZE (1<<4)
