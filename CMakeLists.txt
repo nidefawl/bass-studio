@@ -101,7 +101,7 @@ source_group("Headers" FILES ${HDR_FILES})
 
   SET(DAW_COMPILE_FLAGS -DVST_FORCE_DEPRECATED=0 -DUSE_GLAD_GL_HEADERS -DGLM_FORCE_CXX14=1 -DNO_LEAK_DETECT)
 if (WIN32)
-  SET(DAW_COMPILE_FLAGS ${DAW_COMPILE_FLAGS} -DPA_USE_ASIO=1 -DPA_USE_DS=1)
+  SET(DAW_COMPILE_FLAGS ${DAW_COMPILE_FLAGS} -DPA_USE_ASIO=1 -DPA_USE_DS=1 -DPA_USE_WASAPI=1 -DPA_USE_WDMKS=1)
 endif(WIN32)
 if (UNIX)
   SET(DAW_COMPILE_FLAGS ${DAW_COMPILE_FLAGS} -DPA_USE_ALSA=1)
@@ -173,7 +173,9 @@ if (WIN32)
         ${DAW_DEPS_DIR}/ASIOSDK2.3/host/pc
         ${DAW_DEPS_DIR}/portaudio/src/os/win
         ${DAW_DEPS_DIR}/portaudio/src/hostapi/asio
-        ${DAW_DEPS_DIR}/portaudio/src/hostapi/dsound)
+        ${DAW_DEPS_DIR}/portaudio/src/hostapi/dsound
+        ${DAW_DEPS_DIR}/portaudio/src/hostapi/wasapi
+        ${DAW_DEPS_DIR}/portaudio/src/hostapi/wdmks)
 endif()
 if (BUILD_HOST)
 add_executable(DAW ${CPP_SRC_FILES} ${C_SRC_FILES} ${HDR_FILES})
