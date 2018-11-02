@@ -12,6 +12,7 @@
 #include <fcntl.h>
 #include <io.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <vector>
 #ifdef __MINGW32__
 #undef _GLIBCXX_HAS_GTHREADS
@@ -38,6 +39,18 @@ double getTimeHPC()
   LARGE_INTEGER now;
   ::QueryPerformanceCounter(&now);
   return now.QuadPart / double(frequency.QuadPart);
+}
+int64_t getTimeHPint64()
+ {
+	static LARGE_INTEGER frequency;
+	if (frequency.QuadPart == 0)
+		::QueryPerformanceFrequency(&frequency);
+	LARGE_INTEGER now;
+	::QueryPerformanceCounter(&now);
+	now.QuadPart *= 1000000L; //microseconds resolution
+	int64_t val = now.QuadPart / frequency.QuadPart;
+	assert(val > 0);
+    return val;
 }
 double getSince(double& d) //checks for overflow
 {
@@ -134,7 +147,7 @@ String getKeyName(int scancode) {
 }
 void threadSleep(int millis) {
 
-	std::this_thread::sleep_for(std::chrono::milliseconds(200));
+	std::this_thread::sleep_for(std::chrono::milliseconds(millis));
 }
 String FormatErrorMessage(int32_t error, String msg)
 {
@@ -144,7 +157,7 @@ String FormatErrorMessage(int32_t error, String msg)
 		BUFFERLENGTH - 1, 0);
 	if (msg.empty())
 		return String(buf.data());
-	return String(buf.data()) + "   (" + msg + ")";
+	return msg + " (" + String(buf.data()) + ")";
 }
 
 #endif

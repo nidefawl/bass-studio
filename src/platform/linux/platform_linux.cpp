@@ -30,6 +30,14 @@ double getTimeHPC()
 	clock_gettime(CLOCK_MONOTONIC, &t);
 	return t.tv_sec + t.tv_nsec / 1000000000.0;
 }
+int64_t getTimeHPint64()
+{
+	struct timespec t;
+	clock_gettime(CLOCK_MONOTONIC, &t);
+	int64_t microsecs = t.tv_sec*1000000;
+	int64_t microsecs2 = t.tv_nsec/1000;
+	return microsecs+microsecs2;
+}
 double getSince(double& d) //checks for overflow
 {
 	double now = getTimeHPC();
@@ -54,5 +62,16 @@ String getKeyName(int scancode) {
 void threadSleep(int millis) {
 
 	std::this_thread::sleep_for(std::chrono::milliseconds(200));
+}
+
+
+String FormatErrorMessage(int32_t error, String msg)
+{
+	static const int BUFFERLENGTH = 1024;
+	std::vector<char> buf(BUFFERLENGTH);
+	strerror_r(error, buf.data(), BUFFERLENGTH);
+	if (msg.empty())
+		return String(buf.data());
+	return String(buf.data()) + "   (" + msg + ")";
 }
 #endif

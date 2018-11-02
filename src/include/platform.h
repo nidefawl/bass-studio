@@ -6,6 +6,7 @@
 uint64_t getTimeMillis();
 double getTimeHPC();
 double getSince(double& d);
+int64_t getTimeHPint64();
 
 void setMinimumResolutionTimer();
 
