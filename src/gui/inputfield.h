@@ -43,10 +43,24 @@ public:
 		if (drawBackground || flags > FLG_ENBL) {
 			renderWidgetBorder(vg, flags);
 		}
+//		setFont(vg, G_FONT_SCALE(size.y), G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+//		String str2 = StringFormat("mValue '%s'", StringAsCStr(field.mValue));
+//		String str3 = StringFormat("mValueTemp '%s'", StringAsCStr(field.mValueTemp));
+//		String str4 = StringFormat("mCursorPos %d", field.mCursorPos);
+//
+//		String sel = "";
+//		field.copySelectionString(sel);
+//		String str5 = StringFormat("selection '%s'", StringAsCStr(sel));
+//		nvgText(vg, pos.x +  3, bottom() + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(str2), NULL);
+//		nvgText(vg, pos.x +  3, bottom() + size.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(str3), NULL);
+//		nvgText(vg, pos.x +  3, bottom() + size.y*2 + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(str4), NULL);
+//		nvgText(vg, pos.x +  3, bottom() + size.y*3 + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(str5), NULL);
 		if (isEditing) {
 			this->field.render(vg);
 			return;
 		}
+
+
 		setFont(vg, G_FONT_SCALE(size.y), G_WHITE, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
 		int32_t _number = number ? *number : 0;
 		String str = StringFormat("%d", _number);
@@ -56,14 +70,20 @@ public:
 	bool focusEvent(MouseHitEvt& evt, bool focused) override {
 		if (!focused) {
 			endEdit(true);
+		} else {
+//			isEditing = true;
+
 		}
 		this->field.focusEvent(evt, focused);
 		return true;
 	}
 	void endEdit(bool success) {
 		if (isEditing) {
+			this->field.endEdit();
 			if (success && this->number) {
-				*this->number = atoi(this->field.value().c_str());
+				const char* cstr = this->field.value().c_str();
+				int newVal = atoi(cstr);
+				*number = newVal;
 				if (parent)
 					parent->buttonClicked(this);
 			}
@@ -72,6 +92,7 @@ public:
 	}
 	void startEdit(bool keepcontent) {
 		if (!isEditing) {
+//            mValueTemp = mValue;
 			if (keepcontent) {
 				if (this->number) {
 					String s = StringFormat("%d", *this->number);
@@ -82,16 +103,17 @@ public:
 				this->field.setValue("");
 			}
 //			this->field.focusEvent(true); //MainCtrl::get()->setFocused(this);
+			this->field.beginEdit();
 			this->field.setSelectionRange(-1, -1);
 		}
 		isEditing = true;
 	}
 	void handleDraggedBegin(MouseEvent& evt) override {
-		if (evt.type == MouseEventType::M_EVT_DOUBLECLICK) {
-			startEdit(true);
+		if (isEditing) {
+			this->field.handleDraggedBegin(evt);
 		} else {
-			if (isEditing) {
-				this->field.handleDraggedBegin(evt);
+			if (evt.type == MouseEventType::M_EVT_DOUBLECLICK) {
+				startEdit(true);
 			} else {
 				if (evt.guiDragged == this) {
 					AppCtrl::get()->captureMouse(this);

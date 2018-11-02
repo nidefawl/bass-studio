@@ -10,14 +10,12 @@
 gui_textfield::gui_textfield()
     : guibase(),
       mEditable(true),
-      mSpinnable(false),
       mCommitted(true),
       mValue(""),
       mDefaultValue(""),
       mAlignment(Alignment::Left),
       mUnits(""),
       mFormat(""),
-      mUnitsImage(-1),
       mValidFormat(true),
       mValueTemp(""),
       mCursorPos(-1),
@@ -28,9 +26,13 @@ gui_textfield::gui_textfield()
       mMouseDownModifier(0),
       mTextOffset(0),
       mLastClick(0), mVisible(true), mEnabled(true),
-      mFocused(false), mFontSize(28.0f), mMouseFocus(false) {
+      mFocused(false),
+	  mFontSize(28.0f),
+	  mMouseFocus(false)
+{
 //    if (mTheme) mFontSize = mTheme->mTextBoxFontSize;
 //    mIconExtraScale = 0.8f;// widget override
+
 }
 
 void gui_textfield::setEditable(bool editable) {
@@ -44,18 +46,10 @@ Vector2i gui_textfield::preferredSize(NVGcontext *ctx) const {
     Vector2i size(0, iH);
 
     float uw = 0;
-    if (mUnitsImage > 0) {
-        int w, h;
-        nvgImageSize(ctx, mUnitsImage, &w, &h);
-        float uh = size[1] * 0.4f;
-        uw = w * uh / h;
-    } else if (!mUnits.empty()) {
+    if (!mUnits.empty()) {
         uw = nvgTextBounds(ctx, 0, 0, mUnits.c_str(), nullptr, nullptr);
     }
     float sw = 0;
-    if (mSpinnable) {
-        sw = 14.f;
-    }
 
     float ts = nvgTextBounds(ctx, 0, 0, mValue.c_str(), nullptr, nullptr);
     size[0] = size[1] + ts + uw + sw;
@@ -95,22 +89,6 @@ void gui_textfield::handleDraggedBegin(MouseEvent& evt) {
             mMouseDownPos = Vector2i(-1, -1);
         }
         mLastClick = time;
-    } else if (mSpinnable && !mFocused) {
-        if (spinArea(local) == SpinArea::None) {
-            mMouseDownPos = local;
-            mMouseDownModifier = evt.kbmods;
-
-            double time = glfwGetTime();
-            if (time - mLastClick < 0.25) {
-                /* Double-click: reset to default value */
-                mValue = mDefaultValue;
-                if (mCallback)
-                    mCallback(mValue);
-
-                mMouseDownPos = Vector2i(-1, -1);
-            }
-            mLastClick = time;
-        }
     }
 }
 void gui_textfield::handleDraggedMove(MouseEvent& evt) {
@@ -124,239 +102,181 @@ void gui_textfield::handleDraggedRelease(MouseEvent& evt) {
     mMouseDownPos = Vector2i(-1, -1);
     mMouseDragPos = Vector2i(-1, -1);
 }
+void setTfFont(NVGcontext* ctx, const gui_textfield* tf) {
+	nvgFontSize(ctx, tf->fontSize());
+	nvgFontFace(ctx, "sans");
+	switch (tf->alignment()) {
+		case gui_textfield::Alignment::Left:
+			nvgTextAlign(ctx, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+			break;
+		case gui_textfield::Alignment::Right:
+			nvgTextAlign(ctx, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+			break;
+		case gui_textfield::Alignment::Center:
+			nvgTextAlign(ctx, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+			break;
+	}
+}
 void gui_textfield::render(NVGcontext* ctx) {
-//    Widget::draw(ctx);
 
-//    NVGpaint bg = nvgBoxGradient(ctx,
-//        pos.x + 1, pos.y + 1 + 1.0f, size.x - 2, size.y - 2,
-//        3, 4, GUI_COLORA(COL_BG_DRKER, 255), GUI_COLORA(32, 255));
-//    NVGpaint fg1 = nvgBoxGradient(ctx,
-//        pos.x + 1, pos.y + 1 + 1.0f, size.x - 2, size.y - 2,
-//        3, 4, GUI_COLORA(150, 255), GUI_COLORA(32, 255));
-//    NVGpaint fg2 = nvgBoxGradient(ctx,
-//        pos.x + 1, pos.y + 1 + 1.0f, size.x - 2, size.y - 2,
-//        3, 4, nvgRGBA(255, 0, 0, 255), nvgRGBA(255, 0, 0, 255));
-	if (size.x*size.y < 10)
+	//TODO: find a better place to do this: font metrics require nano-vg context but should be calculated in drag/move on the fly
+	setTfFont(ctx, this);
+	updateTextLayout(ctx);
+    if (!mCommitted) {
+        updateCursor(ctx, metrics.textBounds[2]);
+        updateShiftCursorVisible();
+#if 0
+#endif
+    }
+	this->renderTextField(ctx);
+}
+#define X_SPACING (size.y * 0.3f)
+void gui_textfield::updateTextLayout(NVGcontext* ctx) {
+
+	nvgTextBounds(ctx, 0, 0, mValueTemp.c_str(), nullptr, metrics.textBounds);
+	metrics.lineH = metrics.textBounds[3] - metrics.textBounds[1];
+
+	// find cursor positions
+	metrics.numGlyphs = nvgTextGlyphPositions(ctx, 0, 0, mValueTemp.c_str(), nullptr, metrics.glyphPositions, MAX_CHARS);
+
+	Vector2i insetPos(pos.x, pos.y + size.y * 0.5f + 1);
+
+
+	float unitWidth = 0;
+
+	if (!mUnits.empty()) {
+		unitWidth = nvgTextBounds(ctx, 0, 0, mUnits.c_str(), nullptr, nullptr) + 2;
+	}
+
+	float leftInset = 0.f;
+	switch (mAlignment) {
+		case Alignment::Left:
+			insetPos.x += X_SPACING + leftInset;
+			break;
+		case Alignment::Right:
+			insetPos.x += size.x - unitWidth - X_SPACING;
+			break;
+		case Alignment::Center:
+			insetPos.x += size.x * 0.5f;
+			break;
+	}
+
+	drawPos = insetPos;
+	clipPos = {pos.x + X_SPACING + leftInset - 1.0f, pos.y + 1.0f};
+	clipSize = {size.x - unitWidth - leftInset - 2 * X_SPACING + 2.0f, size.y - 3.0f};
+}
+void gui_textfield::renderTextField(NVGcontext* ctx) const {
+
+	if (size.x * size.y < 10)
 		return;
-    renderWidgetBorder(ctx);
-    nvgBeginPath(ctx);
-    nvgRoundedRect(ctx, pos.x + 1, pos.y + 1 + 1.0f, size.x - 2,
-                   size.y - 2, 3);
+	renderWidgetBorder(ctx);
 
-    if (mEditable && mFocused)
-    	nvgFillColor(ctx, mValidFormat ? g_guiColors[COL_BG_DRK_FOCUSED] : nvgRGBA(200, 90, 90, 255));
-    else if (mSpinnable && mMouseDownPos.x != -1)
-        nvgFillColor(ctx, g_guiColors[COL_BG_DRK_FOCUSED]);
-    else
-    	nvgFillColor(ctx, g_guiColors[COL_BG_DRK]);
+	nvgBeginPath(ctx);
+	nvgRoundedRect(ctx, pos.x + 1, pos.y + 1 + 1.0f, size.x - 2, size.y - 2, 3);
 
-    nvgFill(ctx);
+	if (mEditable && mFocused)
+		nvgFillColor(ctx, mValidFormat ? g_guiColors[COL_BG_DRK_FOCUSED] : nvgRGBA(200, 90, 90, 255));
+	else
+		nvgFillColor(ctx, g_guiColors[COL_BG_DRK]);
 
-//    nvgBeginPath(ctx);
-//    nvgRoundedRect(ctx, pos.x + 0.5f, pos.y + 0.5f, size.x - 1,
-//                   size.y - 1, 2.5f);
-//    nvgStrokeColor(ctx, GUI_COLORA(0, 48));
-//    nvgStroke(ctx);
+	nvgFill(ctx);
 
-    nvgFontSize(ctx, fontSize());
-    nvgFontFace(ctx, "sans");
-    Vector2i drawPos(pos.x, pos.y + size.y * 0.5f + 1);
 
-    float xSpacing = size.y * 0.3f;
-
-    float unitWidth = 0;
-
-    if (mUnitsImage > 0) {
-        int w, h;
-        nvgImageSize(ctx, mUnitsImage, &w, &h);
-        float unitHeight = size.y * 0.4f;
-        unitWidth = w * unitHeight / h;
-        NVGpaint imgPaint = nvgImagePattern(
-            ctx, pos.x + size.x - xSpacing - unitWidth,
-            drawPos.y - unitHeight * 0.5f, unitWidth, unitHeight, 0,
-            mUnitsImage, mEnabled ? 0.7f : 0.35f);
-        nvgBeginPath(ctx);
-        nvgRect(ctx, pos.x + size.x - xSpacing - unitWidth,
-                drawPos.y - unitHeight * 0.5f, unitWidth, unitHeight);
-        nvgFillPaint(ctx, imgPaint);
-        nvgFill(ctx);
-        unitWidth += 2;
-    } else if (!mUnits.empty()) {
-        unitWidth = nvgTextBounds(ctx, 0, 0, mUnits.c_str(), nullptr, nullptr);
-        nvgFillColor(ctx, GUI_COLORA(255, mEnabled ? 64 : 32));
-        nvgTextAlign(ctx, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
-        nvgText(ctx, pos.x + size.x - xSpacing, drawPos.y,
-                mUnits.c_str(), nullptr);
-        unitWidth += 2;
-    }
-
-    float spinArrowsWidth = 0.f;
-
-    if (mSpinnable && !focused()) {
-        spinArrowsWidth = 14.f;
-
-        nvgFontFace(ctx, "icons");
-        nvgFontSize(ctx, mFontSize);
-
-//        bool spinning = mMouseDownPos.x != -1;
-//
-//        /* up button */ {
-//            bool hover = mMouseFocus && spinArea(mMousePos) == SpinArea::Top;
-//            nvgFillColor(ctx, (mEnabled && (hover || spinning)) ? mTheme->mTextColor : mTheme->mDisabledTextColor);
-//            auto icon = utf8(mTheme->mTextBoxUpIcon);
-//            nvgTextAlign(ctx, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-//            vec2 iconPos(pos.x + 4.f,
-//                             pos.y + size.y/2.f - xSpacing/2.f);
-//            nvgText(ctx, iconPos.x, iconPos.y, icon.data(), nullptr);
-//        }
-//
-//        /* down button */ {
-//            bool hover = mMouseFocus && spinArea(mMousePos) == SpinArea::Bottom;
-//            nvgFillColor(ctx, (mEnabled && (hover || spinning)) ? mTheme->mTextColor : mTheme->mDisabledTextColor);
-//            auto icon = utf8(mTheme->mTextBoxDownIcon);
-//            nvgTextAlign(ctx, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-//            vec2 iconPos(pos.x + 4.f,
-//                             pos.y + size.y/2.f + xSpacing/2.f + 1.5f);
-//            nvgText(ctx, iconPos.x, iconPos.y, icon.data(), nullptr);
-//        }
-
-        nvgFontSize(ctx, fontSize());
-        nvgFontFace(ctx, "sans");
-    }
-
-    switch (mAlignment) {
-        case Alignment::Left:
-            nvgTextAlign(ctx, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-            drawPos.x += xSpacing + spinArrowsWidth;
-            break;
-        case Alignment::Right:
-            nvgTextAlign(ctx, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
-            drawPos.x += size.x - unitWidth - xSpacing;
-            break;
-        case Alignment::Center:
-            nvgTextAlign(ctx, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-            drawPos.x += size.x * 0.5f;
-            break;
-    }
-
+	// clip visible text area
+	if (clipSize.x < 1 || clipSize.y < 1)
+		return;
 	nvgFontSize(ctx, fontSize());
+	nvgFontFace(ctx, "sans");
+	if (!mUnits.empty()) {
+		nvgFillColor(ctx, GUI_COLORA(255, mEnabled ? 64 : 32));
+		nvgTextAlign(ctx, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+		nvgText(ctx, pos.x + size.x - X_SPACING, drawPos.y, mUnits.c_str(), nullptr);
+	}
+	setTfFont(ctx, this);
+
 	NVGcolor mTextColor = GUI_COLORA(5, 160);
 	NVGcolor mDisabledTextColor = GUI_COLORA(255, 80);
-    nvgFillColor(ctx, mEnabled && (!mCommitted || !mValue.empty()) ? mTextColor : mDisabledTextColor);
+	NVGcolor mColor = mEnabled && (!mCommitted || !mValue.empty()) ? mTextColor : mDisabledTextColor;
 
-    // clip visible text area
-    float clipX = pos.x + xSpacing + spinArrowsWidth - 1.0f;
-    float clipY = pos.y + 1.0f;
-    float clipWidth = size.x - unitWidth - spinArrowsWidth - 2 * xSpacing + 2.0f;
-    float clipHeight = size.y - 3.0f;
-    if (clipWidth < 1 || clipHeight < 1)
-    	return;
-    nvgSave(ctx);
-    nvgIntersectScissor(ctx, clipX, clipY, clipWidth, clipHeight);
 
-    Vector2i oldDrawPos(drawPos);
-    drawPos.x += mTextOffset;
+	nvgFillColor(ctx, mColor);
 
-    if (mCommitted) {
-        nvgText(ctx, drawPos.x, drawPos.y,
-            mValue.empty() ? mPlaceholder.c_str() : mValue.c_str(), nullptr);
-    } else {
-        const int maxGlyphs = 1024;
-        NVGglyphPosition glyphs[maxGlyphs];
-        float textBound[4];
-        nvgTextBounds(ctx, drawPos.x, drawPos.y, mValueTemp.c_str(),
-                      nullptr, textBound);
-        float lineh = textBound[3] - textBound[1];
+	nvgSave(ctx);
+	nvgIntersectScissor(ctx, clipPos.x, clipPos.y, clipSize.x, clipSize.y);
 
-        // find cursor positions
-        int nglyphs =
-            nvgTextGlyphPositions(ctx, drawPos.x, drawPos.y,
-                                  mValueTemp.c_str(), nullptr, glyphs, maxGlyphs);
-        updateCursor(ctx, textBound[2], glyphs, nglyphs);
+	if (mCommitted) {
+		nvgText(ctx, drawPos.x, drawPos.y, mValue.empty() ? mPlaceholder.c_str() : mValue.c_str(), nullptr);
+	} else {
 
-        // compute text offset
-        int prevCPos = mCursorPos > 0 ? mCursorPos - 1 : 0;
-        int nextCPos = mCursorPos < nglyphs ? mCursorPos + 1 : nglyphs;
-        float prevCX = cursorIndex2Position(prevCPos, textBound[2], glyphs, nglyphs);
-        float nextCX = cursorIndex2Position(nextCPos, textBound[2], glyphs, nglyphs);
+		nvgTranslate(ctx, drawPos.x + mTextOffset, drawPos.y);
 
-        if (nextCX > clipX + clipWidth)
-            mTextOffset -= nextCX - (clipX + clipWidth) + 1;
-        if (prevCX < clipX)
-            mTextOffset += clipX - prevCX + 1;
-
-        drawPos.x = oldDrawPos.x + mTextOffset;
-
-        // draw text with offset
-        nvgText(ctx, drawPos.x, drawPos.y, mValueTemp.c_str(), nullptr);
-        nvgTextBounds(ctx, drawPos.x, drawPos.y, mValueTemp.c_str(),
-                      nullptr, textBound);
-
-        // recompute cursor positions
-        nglyphs = nvgTextGlyphPositions(ctx, drawPos.x, drawPos.y,
-                mValueTemp.c_str(), nullptr, glyphs, maxGlyphs);
-
+		// draw text with offset
+		nvgText(ctx, 0, 0, mValueTemp.c_str(), nullptr);
+//
         if (mCursorPos > -1) {
+            float lineh = metrics.lineH;
+            float caretx = cursorIndex2Position(mCursorPos, metrics.textBounds[2]);
             if (mSelectionPos > -1) {
-                float caretx = cursorIndex2Position(mCursorPos, textBound[2],
-                                                    glyphs, nglyphs);
-                float selx = cursorIndex2Position(mSelectionPos, textBound[2],
-                                                  glyphs, nglyphs);
+                float selx = cursorIndex2Position(mSelectionPos, metrics.textBounds[2]);
 
                 if (caretx > selx)
                     std::swap(caretx, selx);
 
-                // draw selection
-                nvgBeginPath(ctx);
-                nvgFillColor(ctx, nvgRGBA(255, 255, 255, 80));
-                nvgRect(ctx, caretx, drawPos.y - lineh * 0.5f, selx - caretx,
-                        lineh);
-                nvgFill(ctx);
+				// draw selection
+				nvgBeginPath(ctx);
+				nvgFillColor(ctx, nvgRGBA(255, 255, 255, 80));
+				nvgRect(ctx, caretx,  - lineh * 0.5f, selx - caretx, lineh);
+				nvgFill(ctx);
             }
 
-            float caretx = cursorIndex2Position(mCursorPos, textBound[2], glyphs, nglyphs);
 
             // draw cursor
             nvgBeginPath(ctx);
-            nvgMoveTo(ctx, caretx, drawPos.y - lineh * 0.5f);
-            nvgLineTo(ctx, caretx, drawPos.y + lineh * 0.5f);
+            nvgMoveTo(ctx, caretx,  - lineh * 0.5f);
+            nvgLineTo(ctx, caretx,  + lineh * 0.5f);
             nvgStrokeColor(ctx, nvgRGBA(255, 192, 0, 255));
             nvgStrokeWidth(ctx, 1.0f);
             nvgStroke(ctx);
         }
-    }
-    nvgRestore(ctx);
+	}
+	nvgRestore(ctx);
 }
 
-bool gui_textfield::focusEvent(MouseHitEvt& evt, bool focused) {
-//    Widget::focusEvent(focused);
-
-    std::string backup = mValue;
-    mFocused = focused;
-    if (mEditable) {
-        if (focused) {
-            mValueTemp = mValue;
-            mCommitted = false;
-            mCursorPos = 0;
-        } else {
-            if (mValidFormat) {
-                if (mValueTemp == "")
-                    mValue = mDefaultValue;
-                else
-                    mValue = mValueTemp;
-            }
+void gui_textfield::beginEdit() {
+    mValueTemp = mValue;
+    mCommitted = false;
+    mCursorPos = 0;
+    mValidFormat = (mValueTemp == "") || checkFormat(mValueTemp, mFormat);
+}
+void gui_textfield::endEdit() {
+    mValidFormat = (mValueTemp == "") || checkFormat(mValueTemp, mFormat);
+    if (mValidFormat) {
+        if (mValueTemp == "")
+            mValue = mDefaultValue;
+        else
+            mValue = mValueTemp;
+    }
 
 //            if (mCallback && !mCallback(mValue))
 //                mValue = backup;
 
-            mValidFormat = true;
-            mCommitted = true;
-            mCursorPos = -1;
-            mSelectionPos = -1;
-            mTextOffset = 0;
+    mValidFormat = true;
+    mCommitted = true;
+    mCursorPos = -1;
+    mSelectionPos = -1;
+    mTextOffset = 0;
+}
+bool gui_textfield::focusEvent(MouseHitEvt& evt, bool focused) {
+//    Widget::focusEvent(focused);
+	my_printf("focusEvent %d %d\n", static_cast<int>(evt.type), focused);
+    std::string backup = mValue;
+    mFocused = focused;
+    if (mEditable) {
+        if (focused) {
+            beginEdit();
+        } else {
+        	endEdit();
         }
-
-        mValidFormat = (mValueTemp == "") || checkFormat(mValueTemp, mFormat);
     }
 
     return true;
@@ -477,6 +397,20 @@ bool gui_textfield::checkFormat(const std::string &input, const std::string &for
     }
 }
 
+bool gui_textfield::copySelectionString(std::string& output) {
+	if (mSelectionPos > -1) {
+		int begin = mCursorPos;
+		int end = mSelectionPos;
+
+		if (begin > end)
+			std::swap(begin, end);
+		if ((int) mValueTemp.length() >= end - begin)
+			output = mValueTemp.substr(begin, end).c_str();
+		return true;
+	}
+
+	return false;
+}
 bool gui_textfield::copySelection() {
 	if (mSelectionPos > -1) {
 		int begin = mCursorPos;
@@ -486,7 +420,7 @@ bool gui_textfield::copySelection() {
 			std::swap(begin, end);
 		if ((int)mValueTemp.length() >= end-begin)
 		AppCtrl::get()->setClipboardText(mValueTemp.substr(begin, end).c_str());
-		onChange();
+		onChange(); //=??????
 		return true;
 	}
 
@@ -509,7 +443,8 @@ bool gui_textfield::deleteSelection() {
 
         if (begin > end)
             std::swap(begin, end);
-
+        if (mValueTemp.empty()) return false;
+        assert(!mValueTemp.empty());
         if (begin == end - 1)
             mValueTemp.erase(mValueTemp.begin() + begin);
         else
@@ -523,71 +458,67 @@ bool gui_textfield::deleteSelection() {
 
     return false;
 }
+void gui_textfield::updateShiftCursorVisible() {
+    // compute text offset
+    int prevCPos = mCursorPos > 0 ? mCursorPos - 1 : 0;
+    int nextCPos = mCursorPos < metrics.numGlyphs ? mCursorPos + 1 : metrics.numGlyphs;
+    float prevCX = cursorIndex2Position(prevCPos, metrics.textBounds[2]);
+    float nextCX = cursorIndex2Position(nextCPos, metrics.textBounds[2]);
 
-void gui_textfield::updateCursor(NVGcontext *, float lastx,
-                           const NVGglyphPosition *glyphs, int size) {
-    // handle mouse cursor events
-    if (mMouseDownPos.x != -1) {
-        if (mMouseDownModifier == GLFW_MOD_SHIFT) {
-            if (mSelectionPos == -1)
-                mSelectionPos = mCursorPos;
-        } else
-            mSelectionPos = -1;
+    mTextOffset = 0;
+	if (nextCX > clipSize.x)
+		mTextOffset -= nextCX - clipSize.x + 1;
+	if (prevCX < 0)
+		mTextOffset += 0 - prevCX + 1;
+}
+void gui_textfield::updateCursor(NVGcontext *, float lastx) {
+	// handle mouse cursor events
+	if (mMouseDownPos.x != -1) {
+		if (mMouseDownModifier == GLFW_MOD_SHIFT) {
+			if (mSelectionPos == -1)
+				mSelectionPos = mCursorPos;
+		} else
+			mSelectionPos = -1;
 
-        mCursorPos =
-            position2CursorIndex(mMouseDownPos.x, lastx, glyphs, size);
+		mCursorPos = position2CursorIndex(mMouseDownPos.x, lastx);
 
-        mMouseDownPos = Vector2i(-1, -1);
-    } else if (mMouseDragPos.x != -1) {
-        if (mSelectionPos == -1)
-            mSelectionPos = mCursorPos;
+		mMouseDownPos = Vector2i(-1, -1);
+	} else if (mMouseDragPos.x != -1) {
+		if (mSelectionPos == -1)
+			mSelectionPos = mCursorPos;
 
-        mCursorPos =
-            position2CursorIndex(mMouseDragPos.x, lastx, glyphs, size);
-    } else {
-        // set cursor to last character
-        if (mCursorPos == -2)
-            mCursorPos = size;
-    }
+		mCursorPos = position2CursorIndex(mMouseDragPos.x, lastx);
+	} else {
+		// set cursor to last character
+		if (mCursorPos == -2)
+			mCursorPos = metrics.numGlyphs;
+	}
 
-    if (mCursorPos == mSelectionPos)
-        mSelectionPos = -1;
+	if (mCursorPos == mSelectionPos)
+		mSelectionPos = -1;
 }
 
-float gui_textfield::cursorIndex2Position(int index, float lastx,
-                                    const NVGglyphPosition *glyphs, int size) {
+float gui_textfield::cursorIndex2Position(int index, float lastx) const {
     float pos = 0;
-    if (index == size)
+    if (index == metrics.numGlyphs)
         pos = lastx; // last character
     else
-        pos = glyphs[index].x;
+        pos = metrics.glyphPositions[index].x;
 
     return pos;
 }
 
-int gui_textfield::position2CursorIndex(float posx, float lastx,
-                                  const NVGglyphPosition *glyphs, int size) {
+int gui_textfield::position2CursorIndex(float posx, float lastx) const {
     int mCursorId = 0;
-    float caretx = glyphs[mCursorId].x;
-    for (int j = 1; j < size; j++) {
-        if (std::abs(caretx - posx) > std::abs(glyphs[j].x - posx)) {
+    float caretx = metrics.glyphPositions[mCursorId].x;
+    for (int j = 1; j < metrics.numGlyphs; j++) {
+        if (std::abs(caretx - posx) > std::abs(metrics.glyphPositions[j].x - posx)) {
             mCursorId = j;
-            caretx = glyphs[mCursorId].x;
+            caretx = metrics.glyphPositions[mCursorId].x;
         }
     }
     if (std::abs(caretx - posx) > std::abs(lastx - posx))
-        mCursorId = size;
+        mCursorId = metrics.numGlyphs;
 
     return mCursorId;
-}
-
-gui_textfield::SpinArea gui_textfield::spinArea(const Vector2i & pos) {
-    if (0 <= pos.x - pos.x && pos.x - pos.x < 14.f) { /* on scrolling arrows */
-        if (size.y >= pos.y - pos.y && pos.y - pos.y <= size.y / 2.f) { /* top part */
-            return SpinArea::Top;
-        } else if (0.f <= pos.y - pos.y && pos.y - pos.y > size.y / 2.f) { /* bottom part */
-            return SpinArea::Bottom;
-        }
-    }
-    return SpinArea::None;
 }
