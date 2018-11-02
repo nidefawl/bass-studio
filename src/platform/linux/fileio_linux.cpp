@@ -43,16 +43,6 @@ int64_t ReadImage( const String &Filename, ImageBuf& ref)
 
 using namespace std;
 
-String FormatErrorMessage(int32_t error, String msg)
-{
-	static const int BUFFERLENGTH = 1024;
-	vector<char> buf(BUFFERLENGTH);
-	strerror_r(error, buf.data(), BUFFERLENGTH);
-	if (msg.empty())
-		return String(buf.data());
-	return String(buf.data()) + "   (" + msg + ")";
-}
-
 
 void ThrowLastErrorIf(bool expression, const String& msg)
 {
