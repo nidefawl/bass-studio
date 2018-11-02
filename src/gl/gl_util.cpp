@@ -5,7 +5,9 @@
 #include "gl_tess2d.h"
 #include "gl_attr.h"
 #include "gl_vbo.h"
+#include "gl_framebuffer.h"
 #include "logging.h"
+#include <GLFW/glfw3.h>
 
 void debugCB(GLenum source,
 	GLenum type,
@@ -83,7 +85,7 @@ String getLog(int logtype, int obj) {
 	}
     checkGLError("glGetProgramiv");
 	if (maxLength <= 0) {
-		printf("GL_INFO_LOG_LENGTH: %d\n", maxLength);
+//		printf("GL_INFO_LOG_LENGTH: %d\n", maxLength);
 		return "";
 	}
 	// The maxLength includes the NULL character
@@ -98,6 +100,9 @@ String getLog(int logtype, int obj) {
 	String s;
 	if (infoLog.size()) s = infoLog.data();
     return s;
+}
+bool isGLContextPresent() {
+	return glfwIsContextPresent();
 }
 int compileShader(int type, String& src) {
     int iShader = glCreateShader(type);
@@ -119,6 +124,7 @@ int compileShader(int type, String& src) {
     }
     return iShader;
 }
+
 /*static*/ void tess2d::uploadVBO(tess2d& tess, DrawVBO& out) {
 	std::vector<float> vertices;
 	std::vector<int> indices;
@@ -146,18 +152,25 @@ void bindVertexAttributes(std::vector<VertexAttr>& attrs, int fixedStride) {
 		}
 	}
 
+	for (int i = 0; i < 6; i++) {
+		glDisableVertexAttribArray(i);
+	}
 	size_t offset = 0;
 	for (int i = 0; i < (int)attrs.size(); i++) {
 		VertexAttr& attr = attrs[i];
-		glEnableVertexAttribArray(attr.bindingPt);
-		checkGLError("glEnableVertexAttribArray");
-		glVertexAttribPointer(attr.bindingPt,
-				attr.elements,
-				attr.type,
-				GL_FALSE,
-				vertStrideBytes,
-				(const void*) offset);
-		checkGLError("glVertexAttribPointer");
+		if (attr.bindingPt >= 0) {
+			glEnableVertexAttribArray(attr.bindingPt);
+			checkGLError("glEnableVertexAttribArray");
+			glVertexAttribPointer(attr.bindingPt,
+					attr.elements,
+					attr.type,
+					GL_FALSE,
+					vertStrideBytes,
+					(const void*) offset);
+			checkGLError("glVertexAttribPointer");
+		}
 		offset += attr.elements * sizeof(float);
 	}
 }
+int FrameBuffer::frambuffersRefCount = 0;
+FrameBuffer* FrameBuffer::lastBound = nullptr;

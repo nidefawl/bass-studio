@@ -10,6 +10,8 @@ using glm::vec2;
 using glm::vec3;
 using glm::vec4;
 #define TESS_COLOR 1
+#define TESS_ATTR 2
+#define TESS_ATTR2 4
 class tess2d {
 	std::vector<float> buf;
 	int flags;
@@ -17,6 +19,8 @@ class tess2d {
 	vec4 rgba { 1.0f, 1.0f, 1.0f, 1.0f };
 	vec2 offset { 0.0f, 0.0f};
 	vec2 uv { 0.0f, 0.0f };
+	vec4 attr {  0.0f, 0.0f, 0.0f, 0.0f };
+	vec4 attr2 {  0.0f, 0.0f, 0.0f, 0.0f };
 public:
 	tess2d() : flags(0) {
 	}
@@ -41,6 +45,30 @@ public:
         }
     	this->rgba = color;
     }
+    void setAttrs(vec4 i) {
+        if (!(flags & TESS_ATTR)) {
+        	assert(0&&"tesselator flag TESS_ATTR not set!");
+        }
+    	this->attr = i;
+    }
+    void setAttrIdx(int idx, float f) {
+        if (!(flags & TESS_ATTR)) {
+        	assert(0&&"tesselator flag TESS_ATTR not set!");
+        }
+    	this->attr[idx] = f;
+    }
+    void setAttrs2(vec4 i) {
+        if (!(flags & TESS_ATTR2)) {
+        	assert(0&&"tesselator flag TESS_ATTR2 not set!");
+        }
+    	this->attr2 = i;
+    }
+    void setAttr2Idx(int idx, float f) {
+        if (!(flags & TESS_ATTR2)) {
+        	assert(0&&"tesselator flag TESS_ATTR2 not set!");
+        }
+    	this->attr2[idx] = f;
+    }
     void add(float x, float y) {
     	add({x, y});
     }
@@ -64,8 +92,16 @@ public:
     	memcpy(bufPos, glm::value_ptr(uv), sizeof(vec2));
         bufPos += 2;
         if (flags & TESS_COLOR) {
-        	memcpy(buf.data()+index, glm::value_ptr(rgba), sizeof(vec4));
-//            bufPos += 4;
+        	memcpy(bufPos, glm::value_ptr(rgba), sizeof(vec4));
+            bufPos += 4;
+        }
+        if (flags & TESS_ATTR) {
+        	memcpy(bufPos, glm::value_ptr(attr), sizeof(vec4));
+            bufPos += 4;
+        }
+        if (flags & TESS_ATTR2) {
+        	memcpy(bufPos, glm::value_ptr(attr2), sizeof(vec4));
+            bufPos += 4;
         }
         vertexcount++;
     }
@@ -73,10 +109,20 @@ public:
         return getVSize() * v;
     }
     int32_t getVSize() {
+    	int size = 2+2;
+
         if (flags & TESS_COLOR) {
-        	return 2+2+4;
+        	size += 4;
         }
-    	return 2+2;
+
+        if (flags & TESS_ATTR) {
+        	size += 4;
+        }
+        if (flags & TESS_ATTR2) {
+        	size += 4;
+        }
+
+    	return size;
     }
     void reset() {
     	buf.clear();
@@ -97,4 +143,15 @@ public:
     	}
     }
     static void uploadVBO(tess2d& tess, DrawVBO& vbo);
+    static inline void fullscreenQuad(tess2d& tess, float w, float h) {
+        float x = 0;
+        float y = 0;
+        float tw = w;
+        float th = h;
+        tess.add(x + tw,   y,      1.0f, 1.0f);
+        tess.add(x,        y,      0.0f, 1.0f);
+        tess.add(x,        y + th, 0.0f, 0.0f);
+        tess.add(x + tw,   y + th, 1.0f, 0.0f);
+    }
 };
+
