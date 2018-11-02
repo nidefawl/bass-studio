@@ -377,6 +377,7 @@ int main(int argc, char* argv[]) {
 				try {
 
 					vstpluginloadres res = audiohost->loadPlugin(data.szPath);
+					LOG("result: %d", res.result);
 					if (res.result == 0) {
 						vstplugin* plugin = res.plugin;
 //						printf("%d params in %d categories\n", plugin->params.size(), plugin->paramsCategories.size());
