@@ -57,6 +57,10 @@
 									<listOptionValue builtIn="false" value="PA_USE_DS=1"/>
 									<listOptionValue builtIn="false" value="GL_GLEXT_PROTOTYPES=1"/>
 									<listOptionValue builtIn="false" value="SOXR_DLL=1"/>
+									<listOptionValue builtIn="false" value="PA_USE_WDMKS=1"/>
+									<listOptionValue builtIn="false" value="PA_USE_WASAPI=1"/>
+									<listOptionValue builtIn="false" value="_GLIBCXX_DEBUG"/>
+									<listOptionValue builtIn="false" value="_GLIBCXX_DEBUG_PEDANTIC"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1323109731" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
@@ -67,6 +71,8 @@
 									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/glad/include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/glad/src&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/portaudio/src/hostapi/dsound&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/portaudio/src/hostapi/wdmks&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/portaudio/src/hostapi/wasapi&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/portaudio/include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/portaudio/src/os/win&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/portaudio/src/common&quot;"/>
@@ -85,6 +91,10 @@
 									<listOptionValue builtIn="false" value="PA_USE_DS=1"/>
 									<listOptionValue builtIn="false" value="GL_GLEXT_PROTOTYPES=1"/>
 									<listOptionValue builtIn="false" value="SOXR_DLL=1"/>
+									<listOptionValue builtIn="false" value="PA_USE_WDMKS=1"/>
+									<listOptionValue builtIn="false" value="PA_USE_WASAPI=1"/>
+									<listOptionValue builtIn="false" value="_GLIBCXX_DEBUG"/>
+									<listOptionValue builtIn="false" value="_GLIBCXX_DEBUG_PEDANTIC"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.14326597" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
