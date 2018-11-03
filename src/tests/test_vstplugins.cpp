@@ -1,23 +1,20 @@
+
 #ifdef _WIN32
 #include "str_util.h"
-#include "tests.h"
-#include <iomanip>
+#include "test_common.h"
 #include <windows.h>
 #include "../host/vst_host.h"
 #include "../host/plugin/vst_plugin.h"
-#include "fileio.h"
 #include "project.h"
+
 namespace {
 
-static vsthost* audiohost = new vsthost();
 
 static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-static std::vector<FileFound> files;
-//static String vstPlugPath = "C:/VstPlugins/xfer/Serum_x64.dll";
-static String vstPlugPath = "C:/PluginManager/configs/default/hosts/Ableton/categories/sonalksis/Sonalksis SV-517Mk2 Stereo EQ.dll";
-bool singleInstanceTest = false;
-int rIdx;
+static const std::vector<String> files{"mdaLimiter.dll", "mdaPiano.dll"};
+int rIdx = 0;
+HWND hwnd = NULL;
 
 class reentrantblocker {
 	bool& boolField;
@@ -44,23 +41,22 @@ VOID CALLBACK TimerCallback(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime
 
 	static int tick = 0;
 	static int test = 0;
+	auto* audiohost = vsthost::getInstance();
 	if (res.plugin == NULL) {
 		if (test > 122) {
             PostQuitMessage(0);
 		}
-	    FileFound& f = files[rIdx];
-	    if (!singleInstanceTest) {
-	    	vstPlugPath = f.path;
-	    }
-		res = audiohost->loadPlugin(vstPlugPath);
-	    LOG("loadPlugin: %s %d\n", StringAsCStr(vstPlugPath), res.result);
+		if (rIdx >= (int32_t)files.size()) {
+            PostQuitMessage(0);
+			return;
+		}
+	    String f = files[rIdx];
+		res = audiohost->loadPlugin(f);
+	    LOG("loadPlugin: %s %d\n", StringAsCStr(f), res.result);
 	    if (res.result != 0) {
 			res = vstpluginloadres(0, NULL);
 	    }
 		rIdx++;
-		if (rIdx >= (int32_t)files.size()) {
-			rIdx = 0;
-		}
 	} else {
 		if (tick == 0) {
 			res.plugin->show();
@@ -96,19 +92,9 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 }
 
 
-void testVSTPlugins()
-{
-    findFilesWithExt("C:/PluginManager/configs/default/hosts/Ableton/categories", "dll", true, files);
-    LOG("Found %u files", (uint32_t)files.size());
-    srand(time(NULL));
-    rIdx = rand()%(int32_t)files.size();
-    FileFound& f = files[rIdx];
-//    LOG("RAND: %s %s %s", StringAsCStr(f.path), StringAsCStr(f.name), StringAsCStr(f.ext));
-    if (!singleInstanceTest)
-    	vstPlugPath = f.path;
-//    return;
+int main(int argc, char* argv[]) {
+	vsthost::setInstance(std::make_unique<vsthost>(44100, 256));
     MSG msg;
-    HWND hwnd;
     WNDCLASS wc;
 
     wc.style         = CS_HREDRAW | CS_VREDRAW;
@@ -135,5 +121,7 @@ void testVSTPlugins()
     {
         DispatchMessage(&msg);
     }
+	vsthost::getInstance()->unload();
+	vsthost::getInstance()->destroy();
 }
 #endif

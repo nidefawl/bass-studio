@@ -1,16 +1,16 @@
-#include "tests.h"
-
+#include "TestBase.hpp"
 #include <vector>
-#include <assert.h>
 #include <stdint.h>
 #include "seq_time.h"
 #include "clip.h"
-#include "mainctrl.h"
 #include "project.h"
+#include "../host/mainctrl.h"
+#include "test_common.h"
 
 namespace {
 
 void testDuplicates() {
+	ALEPH_TEST_BEGIN("testDuplicates");
 	test_rng rng;
 	clip_t clip;
 	clip_notes_t& notes = clip.notes;
@@ -26,9 +26,9 @@ void testDuplicates() {
 			notes.add(note);
 		}
 	}
-	assert(notes.m_list.size() == nNotes * nDuplicates);
+	ALEPH_ASSERT_THROW(notes.m_list.size() == nNotes * nDuplicates);
 	notes.removeDuplicates();
-	assert(notes.m_list.size() == nNotes * 1);
+	ALEPH_ASSERT_THROW(notes.m_list.size() == nNotes * 1);
 	notes.updateBounds();
 	note_t noteStart;
 	note_t noteEnd;
@@ -40,29 +40,31 @@ void testDuplicates() {
 	noteEnd.pitch = 150;
 	notes.addSingle(noteStart);
 	notes.addSingle(noteEnd);
-	assert(clip.notes.minNote.time == 0);
-	assert(clip.notes.minNote.len == TICKS_16TH);
-	assert(clip.notes.minNote.pitch == 0);
-	assert(clip.notes.maxNote.time == TICKS_16TH * 1023);
-	assert(clip.notes.maxNote.len == TICKS_16TH * 1024);
-	assert(clip.notes.maxNote.pitch == 150);
+	ALEPH_ASSERT_THROW(clip.notes.minNote.time == 0);
+	ALEPH_ASSERT_THROW(clip.notes.minNote.len == TICKS_16TH);
+	ALEPH_ASSERT_THROW(clip.notes.minNote.pitch == 0);
+	ALEPH_ASSERT_THROW(clip.notes.maxNote.time == TICKS_16TH * 1023);
+	ALEPH_ASSERT_THROW(clip.notes.maxNote.len == TICKS_16TH * 1024);
+	ALEPH_ASSERT_THROW(clip.notes.maxNote.pitch == 150);
 	notes.addSingle(noteStart);
 	notes.addSingle(noteStart);
 	notes.addSingle(noteEnd);
 	notes.addSingle(noteEnd);
 	notes.removeDuplicates();
-	assert(clip.notes.minNote.time == 0);
-	assert(clip.notes.minNote.len == TICKS_16TH);
-	assert(clip.notes.minNote.pitch == 0);
-	assert(clip.notes.maxNote.time == TICKS_16TH * 1023);
-	assert(clip.notes.maxNote.len == TICKS_16TH * 1024);
-	assert(clip.notes.maxNote.pitch == 150);
+	ALEPH_ASSERT_THROW(clip.notes.minNote.time == 0);
+	ALEPH_ASSERT_THROW(clip.notes.minNote.len == TICKS_16TH);
+	ALEPH_ASSERT_THROW(clip.notes.minNote.pitch == 0);
+	ALEPH_ASSERT_THROW(clip.notes.maxNote.time == TICKS_16TH * 1023);
+	ALEPH_ASSERT_THROW(clip.notes.maxNote.len == TICKS_16TH * 1024);
+	ALEPH_ASSERT_THROW(clip.notes.maxNote.pitch == 150);
 	notes.removeSingle(noteStart);
-	assert(clip.notes.minNote.time > 0);
+	ALEPH_ASSERT_THROW(clip.notes.minNote.time > 0);
 	notes.removeSingle(noteEnd);
-	assert(clip.notes.maxNote.time < TICKS_16TH * 1023);
+	ALEPH_ASSERT_THROW(clip.notes.maxNote.time < TICKS_16TH * 1023);
+	ALEPH_TEST_END();
 }
 void testReferences() {
+	ALEPH_TEST_BEGIN("testReferences");
 	clip_t clipInstance;
 	clipInstance.time = 0;
 	clipInstance.len = TICKS_BAR * 4;
@@ -83,7 +85,7 @@ void testReferences() {
 	clip->notes.add(note); // add by value
 	note_t* contextNote;
 	contextNote = clip->notes.get(tickL, pitch); // get reference back
-	assert(contextNote != NULL);
+	ALEPH_ASSERT_THROW(contextNote != NULL);
 	clip->notes.selection.insert(contextNote); // put the added note reference in selection
 
 	//cut, shift cursor by 64 ticks, paste, repeat
@@ -92,8 +94,8 @@ void testReferences() {
 		view.clipboard.setTo(clip->notes.selection, -cursorPos);
 		clip->notes.deleteSelectedNotes(clip->notes);
 
-		assert(clip->notes.get(tickL, pitch) == NULL);
-		assert(clip->notes.empty());
+		ALEPH_ASSERT_THROW(clip->notes.get(tickL, pitch) == NULL);
+		ALEPH_ASSERT_THROW(clip->notes.empty());
 
 		// move cursor to right
 		cursorPos += 64; 
@@ -109,32 +111,16 @@ void testReferences() {
 			clip->notes.add(note);
 		}
 		clip->notes.selectIdxRange(pos, clip->notes.m_list.size());
-		assert(clip->notes.get(tickL + cursorToNoteOffset, pitch) != NULL);
-		assert(!clip->notes.empty());
-		assert(clip->notes.m_list.size() == 1);
+		ALEPH_ASSERT_THROW(clip->notes.get(tickL + cursorToNoteOffset, pitch) != NULL);
+		ALEPH_ASSERT_THROW(!clip->notes.empty());
+		ALEPH_ASSERT_THROW(clip->notes.m_list.size() == 1);
 	}
+	ALEPH_TEST_END();
 }
 
 }
-void testNotes() {
+int main() {
 	testDuplicates();
 	testReferences();
-	printf("sizeof(note_t): %llu\n", sizeof(note_t));
-}
-void testTickConversions() {
-	project_globals_t project;
-	samplerate_t samplerate = 44100;
-	int32_t blocksize = 512;
-	int32_t tempo100 = 12800;
-	int32_t blockPos = 0;
-	for (blockPos = 0; blockPos < 160000; blockPos++) {
-		double blockStartTick = blockToTickPrecise(blockPos, tempo100, samplerate, blocksize);
-//		printf("BLOCK %d blockToTickPrecise %f\n", blockPos, blockStartTick);
-		double block = tickToBlockPrecise(blockStartTick, tempo100, samplerate, blocksize);
-//		double rounded = round(block);
-//		int32_t blockPosI = (int32_t) rounded;
-//		printf("blockStartTick %f tickToBlockPrecise %f, to int %d\n", blockStartTick, block, blockPosI);
-		assert(almost_equal((double)blockPos, block, 2));
-//		assert((double)blockPos == block);
-	}
+	return 0;
 }

@@ -1,5 +1,6 @@
-#include "tests.h"
+#include "TestBase.hpp"
 #include "../threads/workerthread.h"
+#include "test_common.h"
 #ifdef __MINGW32__
 #undef _GLIBCXX_HAS_GTHREADS
 #include "../platform/mingw/mingw.thread.h"
@@ -96,9 +97,12 @@ static void test() {
 }
 
 }
-void testThreads() {
-	for (int i = 0; i < 20; i++) {
+int main() {
+	ALEPH_TEST_BEGIN("testThreadWorkerTasks");
+	for (int i = 0; i < 10; i++) {
 		test();
-		std::this_thread::sleep_for(std::chrono::milliseconds{ 120 });
+		std::this_thread::sleep_for(std::chrono::milliseconds{ 40 });
 	}
+	ALEPH_TEST_END();
+	return 0;
 }

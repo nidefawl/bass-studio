@@ -19,8 +19,3 @@ public:
 		return randI() % range;
 	}
 };
-void testThreads();
-void testNotes();
-void testTickConversions();
-void testFileIO();
-void testVSTPlugins();
