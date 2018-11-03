@@ -114,6 +114,9 @@ namespace
 
 
 VstIntPtr VSTCALLBACK audioMaster(AEffect* effect, VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt) {
+	assert(g_instance.get());
+	if (!g_instance)
+		return 0;
 	vstplugin* plugin = g_instance->getPlugin(effect);
 
 	switch (opcode)
