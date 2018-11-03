@@ -1,1 +1,0 @@
-cmake .. -G "MinGW Makefiles" -DDAW_DEPS_DIR=D:/dev/daw-deps/ -DCMAKE_BUILD_TYPE=Debug
