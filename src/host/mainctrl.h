@@ -413,5 +413,5 @@ public:
 		this->tickJmpFrom = tickJmpFrom;
 		this->tickJmpTo = tickJmpTo;
 	}
-	void initApp();
+	void initApp(int argc, char* argv[]);
 };

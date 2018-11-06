@@ -472,7 +472,7 @@ void MainCtrl::postInit() {
 	view->ctr_pluginlist.update();
 	view->ctr_effectlist.update();
 }
-void MainCtrl::initApp() {
+void MainCtrl::initApp(int argc, char* argv[]) {
 
 	vsthost::setInstance(std::make_unique<vsthost>(44100, 256));
 	audiocache::setInstance(std::make_unique<audiocache>(vsthost::getInstance()->lSampleRate));
@@ -977,7 +977,6 @@ public:
 bool MainCtrl::filesDropFinal(vector<string>& files, ivec2 mousepos, int kbmods) {
 	clipreset rst(dragdropclip);
 	if (guiDragged || guiCaptured) {
-		my_printf("filesDropFinal guiDragged || guiCaptured\n",0);
 		return false;
 	}
 	if (dragdropclip.isLoaded && dragdropclip.isValidTarget) {
@@ -994,12 +993,7 @@ bool MainCtrl::filesDropFinal(vector<string>& files, ivec2 mousepos, int kbmods)
 			ivec2 mposObj = toControlsObjectSpace(mousepos, gui);
 			bool result = gui->clipDropFinal(dragdropclip, mposObj, kbmods);
 			return result;
-		} else {
-			my_printf("!guiOver\n",0);
 		}
-	} else {
-
-		my_printf("!dragdropclip.isLoaded || !dragdropclip.isValidTarget: %d && %d\n",dragdropclip.isLoaded, dragdropclip.isValidTarget);
 	}
 	return false;
 }

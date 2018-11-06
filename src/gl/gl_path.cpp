@@ -3,6 +3,7 @@
 #include <glm/glm.hpp>
 #include <vector>
 
+#include "seq_math.h"
 #include "str_util.h"
 #include "fileio.h"
 #include "audiocache.h"

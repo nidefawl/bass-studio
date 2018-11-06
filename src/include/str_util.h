@@ -18,7 +18,9 @@ extern "C"
 
 #ifdef __GNUC__
 #include <string.h>
+#ifndef _T
 #define _T
+#endif
 #endif
 #ifdef _MSC_VER
 #ifdef UNICODE

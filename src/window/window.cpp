@@ -405,7 +405,7 @@ public:
 #endif
 		initContext();
 #ifdef _WIN32
-		this->timer = SetTimer(hwnd, 0, 20, (TIMERPROC)timerProc);
+		this->timer = SetTimer(hwnd, 0, TIMER_MS, (TIMERPROC)timerProc);
 #endif
 		last = getTimeMillis();
 	}
@@ -464,6 +464,7 @@ public:
 		case WM_COMMAND:
 			menuCommand(LOWORD(wParam));
 			return 0;
+#if WINDOW_HAS_MENUBAR
 		case WM_INITMENUPOPUP:
 		{
 			HMENU hmenuPopup = (HMENU) wParam; // handle of submenu
@@ -480,6 +481,7 @@ public:
 
 			}
 		}
+#endif
 		return 0;
 		default:
 			break;
@@ -642,10 +644,14 @@ public:
 		glfwSetWindowShouldClose(glfw, 1);
     }
     void menuCommand(int cmd) {
+#if WINDOW_HAS_MENUBAR
     	ctrl->menuCommand(cmd);
+#endif
     }
     virtual void onMenuOpen(ngui::Menu* menu) {
+#if WINDOW_HAS_MENUBAR
     	ctrl->onMenuOpen(menu);
+#endif
     }
 #ifdef _WIN32
 	virtual LRESULT windowProc(HWND _hwnd, UINT Msg, WPARAM wParam, LPARAM lParam) override {
@@ -1077,12 +1083,14 @@ public:
 	}
 };
 void appwindow_main::updateMenu() {
+#if WINDOW_HAS_MENUBAR
 	ngui::MenuBar& menubar = ctrl->getMenubar();
 #ifdef _WIN32
 	syncMenu(hwnd, menubar);
 #endif
 #if __linux__
 		//TODO: implement linux
+#endif
 #endif
 }
 window_overlay* appwindow_main::createOverlay() {
@@ -1428,12 +1436,13 @@ int startApplication(int argc, char* argv[]) {
 	}
 	setAppWindowHints();
 	std::shared_ptr<AppCtrl> ctrl = makeApp();
-	ctrl->initApp();
+	ctrl->initApp(argc, argv);
 	mainWindow = std::make_unique<appwindow_main>(ctrl.get());
 	mainWindow->create("main window", 1280, 720);
 	mainWindow->showWindow();
 	enableGlDebugCallback();
-	if (1) {
+#if CREATE_DEBUG_COMPANION_WINDOW
+	{
 		appwindow_dialog* w = new appwindow_dialog(NULL);
 		w->drawFn=drawDebugWindow;
 		int winW = 1280;
@@ -1445,6 +1454,7 @@ int startApplication(int argc, char* argv[]) {
 		w->showWindow();
 //		glfwMakeContextCurrent(mainWindow->getGLFW());
 	}
+#endif
 	glfwSetErrorCallback(glfw_runtime_error_callback);
 	ctrl->postInit();
 	GLFWwindow* glfwHandle = mainWindow->getGLFW();

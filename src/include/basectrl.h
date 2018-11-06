@@ -93,13 +93,7 @@ public:
 	virtual ~AppCtrl() { }
 	virtual void relayout(int32_t w, int32_t h) = 0;
 	virtual void requestRedraw() = 0;
-	virtual void closeAppMenus(int startlvl) = 0;
 	virtual void openContextMenu(guictxtmenu_base *b, ivec2 pos) = 0;
-	virtual void openAppMenu(int lvl, guictxtmenu_base *b, ivec2 pos) = 0;
-	virtual void closeAppMenus() = 0;
-	virtual void menuCommand(int cmd) = 0;
-	virtual void onMenuOpen(ngui::Menu* menu) = 0;
-	virtual void updateMenubar() = 0;
 	virtual void closeContextMenu() = 0;
 	virtual bool hasContextMenu() = 0;
 	virtual bool captureMouse(guibase* gui) = 0;
@@ -113,9 +107,17 @@ public:
 	virtual bool filesDropMove(ivec2 pos, int kbmods) = 0;
 	virtual bool filesDropBegin(std::vector<String>& files, ivec2 pos, int kbmods) = 0;
 	virtual bool filesDropFinal(std::vector<String>& files, ivec2 pos, int kbmods) = 0;
+	virtual void menuCommand(int cmd)  { };
+	virtual void openAppMenu(int lvl, guictxtmenu_base *b, ivec2 pos)  { };
+	virtual void onMenuOpen(ngui::Menu* menu) { };
+	virtual void closeAppMenus()  { };
+	virtual void closeAppMenus(int startlvl)  { };
+	virtual void updateMenubar()  { };
+#if WINDOW_HAS_MENUBAR
 	virtual ngui::MenuBar& getMenubar() = 0;
+#endif
 	virtual void onTick() = 0;
-	virtual void initApp() = 0;
+	virtual void initApp(int argc, char* argv[]) = 0;
 	virtual bool init(window_main* window, NVGcontext* nanovg) = 0;
 	/* OpenGL context exists at this point */
 	virtual void postInit() = 0;

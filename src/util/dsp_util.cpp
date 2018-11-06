@@ -1,6 +1,7 @@
 #include "dsp_util.h"
 #include "samplerate.h"
 #include "config.h"
+#include "seq_math.h"
 #include <stdlib.h>
 #include <stdint.h>
 #include <malloc.h>
