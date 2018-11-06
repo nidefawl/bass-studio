@@ -15,9 +15,15 @@ find_library(
     PATHS ${DAW_DEPS_PATH}/build/lib/soxr/
     PATH_SUFFIXES lib
     NO_DEFAULT_PATH)
+find_library(
+    PORTAUDIO_LIB NAMES "portaudio" "portaudio.dll"
+    PATHS ${DAW_DEPS_PATH}/build/lib/portaudio/
+    PATH_SUFFIXES lib
+    NO_DEFAULT_PATH)
 message (STATUS "glfw3 = ${GLFW_LIB}")
 message (STATUS "SQLiteCpp = ${SQLITECPP_LIB}")
 message (STATUS "soxr = ${SOXR_LIB}")
+message (STATUS "portaudio = ${PORTAUDIO_LIB}")
 
 FIND_PACKAGE ( Threads REQUIRED )
 if (UNIX)
