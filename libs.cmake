@@ -1,23 +1,25 @@
 
+set(DEPS_BUILD_FOLDER "${DAW_DEPS_PATH}/build" CACHE STRING "build subdirectory")
+
 find_library(
     GLFW_LIB 
     NAMES "glfw3" "glfw3dll"
-    PATHS ${DAW_DEPS_PATH}/build/lib/glfw/
+    PATHS ${DEPS_BUILD_FOLDER}/lib/glfw/
     PATH_SUFFIXES lib
     NO_DEFAULT_PATH)
 find_library(
     SQLITECPP_LIB NAMES "SQLiteCpp"
-    PATHS ${DAW_DEPS_PATH}/build/lib/SQLiteCpp/
+    PATHS ${DEPS_BUILD_FOLDER}/lib/SQLiteCpp/
     PATH_SUFFIXES lib
     NO_DEFAULT_PATH)
 find_library(
     SOXR_LIB NAMES "soxr"
-    PATHS ${DAW_DEPS_PATH}/build/lib/soxr/
+    PATHS ${DEPS_BUILD_FOLDER}/lib/soxr/
     PATH_SUFFIXES lib
     NO_DEFAULT_PATH)
 find_library(
-    PORTAUDIO_LIB NAMES "portaudio" "portaudio.dll"
-    PATHS ${DAW_DEPS_PATH}/build/lib/portaudio/
+    PORTAUDIO_LIB NAMES "portaudio" "portaudio.dll" "portaudio_static_x64"
+    PATHS ${DEPS_BUILD_FOLDER}/lib/portaudio/
     PATH_SUFFIXES lib
     NO_DEFAULT_PATH)
 message (STATUS "glfw3 = ${GLFW_LIB}")

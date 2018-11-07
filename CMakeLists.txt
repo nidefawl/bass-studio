@@ -6,6 +6,7 @@ set(BUILD_NAME "DAW")
 project(${BUILD_NAME} C CXX)
 option(BUILD_TESTS "Build tests" OFF)
 
+set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CMAKE_COMMAND} -E time")
 include("setup.cmake")
 include("cotire.cmake")
 
@@ -124,20 +125,23 @@ if (WIN32)
 endif(WIN32)
 
 set_target_properties(${BUILD_NAME} PROPERTIES OUTPUT_NAME "DAW")
-set_target_properties(${BUILD_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "../run/")
+set_target_properties(${BUILD_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ../run/$<$<CONFIG:Debug>:>)
+set_target_properties(${BUILD_NAME} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ../run/)
+
 
 set(COTIRE_UNITY_SOURCE_EXCLUDE_EXTENSIONS "m;mm;c")
 message(STATUS "COTIRE_UNITY_SOURCE_EXCLUDE_EXTENSIONS: ${COTIRE_UNITY_SOURCE_EXCLUDE_EXTENSIONS}")
 set_source_files_properties("${DAW_SRC_PATH}/platform/win/DropTarget.cpp" PROPERTIES COTIRE_EXCLUDED TRUE)
 set_source_files_properties("${DAW_SRC_PATH}/platform/win/fileio.cpp" PROPERTIES COTIRE_EXCLUDED TRUE)
 set_source_files_properties("${DAW_SRC_PATH}/window/window.cpp" PROPERTIES COTIRE_EXCLUDED TRUE)
+set_source_files_properties("${DAW_SRC_PATH}/window/debugwindow.cpp" PROPERTIES COTIRE_EXCLUDED TRUE)
 # set_target_properties(${BUILD_NAME} PROPERTIES COTIRE_PREFIX_HEADER_IGNORE_PATH "${DAW_SRC_PATH}/nanovg")
 
 # set_source_files_properties("src/render.cpp" PROPERTIES COTIRE_EXCLUDED TRUE)
 set(NANOVG_HDR_PATH "${DAW_SRC_PATH}/nanovg/")
 set_target_properties(${BUILD_NAME} PROPERTIES COTIRE_PREFIX_HEADER_IGNORE_PATH "${CMAKE_SOURCE_DIR};${NANOVG_HDR_PATH}")
 
-# cotire(${BUILD_NAME})
+cotire(${BUILD_NAME})
 
 if (BUILD_TESTS)
   ENABLE_TESTING()
