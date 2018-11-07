@@ -75,8 +75,7 @@ void tesselateWaveform(audiosample_t* sample, float x, float y, audioclip_textur
 		float fsMin = 0.0f;
 		float fsMax = 0.0f;
 		int nvecs = 0;
-		my_printf("renderOffset %f upscale %d, res %f vOffset %f\n", renderOffset, upscale, samplesPerPx, vOffset);
-		String sampledPoints = "";
+//		my_printf("renderOffset %f upscale %d, res %f vOffset %f\n", renderOffset, upscale, samplesPerPx, vOffset);
 		for (int iChannel = 0; iChannel < sample->nChannels; iChannel++) {
 			vec2list vecs;
 			if (nVecs > 0)
@@ -135,8 +134,6 @@ void tesselateWaveform(audiosample_t* sample, float x, float y, audioclip_textur
 							float fCurX = (sampleOffset-renderOffset) * samplesToPx;
 							if (fCurX >= lastPtX+vOffset) {
 								float data = samplesChPtr[sampleIdx];
-								if (vecs.size() < 20)
-								sampledPoints += StringFormat("%s%d", vecs.empty() ? "" : ", ", sampleIdx);
 								int noffset = 0;
 								int c = 0;
 								for (;noffset<sumRange; noffset++) {
@@ -356,9 +353,6 @@ void tesselateWaveform(audiosample_t* sample, float x, float y, audioclip_textur
 //					a = b;
 //					it++;
 //				}
-			}
-			if (iChannel == 0) {
-				my_printf("sampledPoints: %s\n", StringAsCStr(sampledPoints));
 			}
 			channels.push_back(std::move(vecs));
 //			waveform.channels.push_back(std::move(vecs));
