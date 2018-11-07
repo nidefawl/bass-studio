@@ -405,7 +405,7 @@ public:
 #endif
 		initContext();
 #ifdef _WIN32
-		this->timer = SetTimer(hwnd, 0, TIMER_MS, (TIMERPROC)timerProc);
+		this->timer = SetTimer(hwnd, 0, 1, (TIMERPROC)timerProc);
 #endif
 		last = getTimeMillis();
 	}
@@ -1463,9 +1463,10 @@ int startApplication(int argc, char* argv[]) {
 	int nMsg = 0;
 	while (!glfwWindowShouldClose(glfwHandle)) {
 #ifdef _WIN32
-		DWORD timeout = 1;
+		DWORD timeout = 5;
 		MsgWaitForMultipleObjects(0, NULL, FALSE, timeout, QS_ALLEVENTS);
 	    MSG msg;
+	    int limit = 0;
 	    while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE))
 	    {
 	        if (msg.message == WM_QUIT)
@@ -1511,6 +1512,10 @@ int startApplication(int argc, char* argv[]) {
 #ifdef __linux__
 		glfwWaitEventsTimeout(0.001);
 		mainWindow->onRefresh();
+#else
+		if (getTimeMillis() - start > 0) {
+			mainWindow->flagNeedsRedraw();
+		}
 #endif
 //		ctrl->numCallsWaitEvents++;
 //		if (test && getTimeMillis()-start > 4) {
