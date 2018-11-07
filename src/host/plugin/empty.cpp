@@ -98,12 +98,12 @@ void guimodule_empty::buttonClicked(guibase* _button) {
 }
 
 
-struct internal_handles_t {
+struct module_empty::internal_handles_t {
 	std::unique_ptr<guimodule_empty> gui;
 //	guimodule_empty * gui;
 };
 module_empty::module_empty(int32_t _projectGlobalId)
-: internalplugin(PLUGIN_TYPE_EMPTY, _projectGlobalId), handle(new internal_handles_t{0})
+: internalplugin(PLUGIN_TYPE_EMPTY, _projectGlobalId), handle(new module_empty::internal_handles_t{0})
 {
 	this->sName = "Empty";
 #ifndef NDEBUG

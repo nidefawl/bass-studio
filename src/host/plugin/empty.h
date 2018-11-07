@@ -8,9 +8,9 @@
 
 class guiplugin;
 class vsthost;
-struct internal_handles_t;
 struct audio_stage_t;
 class module_empty : public internalplugin {
+	struct internal_handles_t;
 	internal_handles_t* handle;
 public:
 	module_empty(int32_t _projectGlobalId);

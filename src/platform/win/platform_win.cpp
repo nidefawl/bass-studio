@@ -7,6 +7,8 @@
 #include <Windows.h>
 #ifdef __MINGW32__
 #include "mmsystem.h"
+#else
+#include <timeapi.h>
 #endif
 #include "seq_math.h"
 #include <fcntl.h>

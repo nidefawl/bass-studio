@@ -2,10 +2,10 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <glm/vec2.hpp>
 #include "str_util.h"
 #include "seq_time.h"
 //#include "../vst_sdk_2.4/aeffectx.h"
-#include "../vst_window.h"
 #include "automation.h"
 #include "logging.h"
 #include "platform.h"
@@ -19,6 +19,7 @@ struct handles_t;
 class track_t;
 class guibase;
 struct track_impl_t;
+class vst_window;
 //-------------------------------------------------------------------------------------------------------
 /** Flags used in #VstParameterProperties. */
 //-------------------------------------------------------------------------------------------------------
@@ -105,13 +106,7 @@ public:
 	const char* getDir() {
 		return sDir.c_str();
 	}
-	bool updateDisplay() {
-		if (this->window != NULL) {
-			this->window->updateDisplay();
-			return true;
-		}
-		return false;
-	}
+	bool updateDisplay();
 	String getInfo(std::vector<String>& list) override;
 	long dispatch(
 		long opcode = 0,
@@ -125,8 +120,8 @@ public:
 	void onWindowDestroy();
 	bool onShow(vst_window* window);
 	bool updateWindowSize();
-	bool onResize(vst_window* window, Size size);
-	Size constrainSize(vst_window* window, Size& size);
+	bool onResize(vst_window* window, glm::ivec2 size);
+	glm::ivec2 constrainSize(vst_window* window, glm::ivec2& size);
 	bool show() override;
 	bool close() override;
 	void unload() override;

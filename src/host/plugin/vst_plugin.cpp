@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <glm/vec2.hpp>
 #include "str_util.h"
 #include "seq_util.h"
 #include "logging.h"
@@ -20,6 +21,8 @@
 
 #include "leak_detect.h"
 
+using glm::ivec2;
+
 const char* plug_features_array[] = {
 	PlugCanDos::canDoSendVstEvents,
 	PlugCanDos::canDoSendVstMidiEvent,
@@ -39,19 +42,26 @@ long vstplugin::dispatch(
 	return handle->aeffect->dispatcher(handle->aeffect, opcode, index, value, ptr, opt);
 }
 
-bool vstplugin::onResize(vst_window* window, Size size) {
+bool vstplugin::onResize(vst_window* window, ivec2 size) {
 	return true;
 }
-Size vstplugin::constrainSize(vst_window* window, Size& size) {
+bool vstplugin::updateDisplay() {
+	if (this->window != NULL) {
+		this->window->updateDisplay();
+		return true;
+	}
+	return false;
+}
+ivec2 vstplugin::constrainSize(vst_window* window, ivec2& size) {
 	ERect *prc = NULL;
 	this->dispatch(effEditGetRect, 0, 0, (void*)&prc);
 	if (prc)
 	{
-		if (size.width > (prc->right - prc->left)) {
-			size.width = prc->right - prc->left;
+		if (size.x > (prc->right - prc->left)) {
+			size.x = prc->right - prc->left;
 		}
-		if (size.height > (prc->bottom - prc->top)) {
-			size.height = prc->bottom - prc->top;
+		if (size.y > (prc->bottom - prc->top)) {
+			size.y = prc->bottom - prc->top;
 		}
 	}
 	return size;
@@ -423,13 +433,13 @@ bool vstplugin::show() {
 	if (this->window == NULL && (handle->aeffect->flags & effFlagsHasEditor)) {
 		ERect *prc = NULL;
 		this->dispatch(effEditGetRect, 0, 0, (void*)&prc);
-		Size size = { 160, 120 };
+		ivec2 size = { 160, 120 };
 		if (prc)
 		{
 			size = { prc->right - prc->left, prc->bottom - prc->top };
 		}
-		if (size.width <= 0) size.width = 160;
-		if (size.height <= 0) size.height = 120;
+		if (size.x <= 0) size.x = 160;
+		if (size.y <= 0) size.y = 120;
 		this->window = vst_window::make(this, this->sName, size, false);
 	}
 	if (this->window != NULL) {

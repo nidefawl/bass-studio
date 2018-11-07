@@ -10,21 +10,21 @@
 #include "fileio.h"
 #include <soxr.h>
 
-namespace
+namespace audiocache_impl
 {
 	std::unique_ptr<audiocache> g_instance;
 }
 
 void audiocache::destroy() {
-	g_instance.reset();
+	audiocache_impl::g_instance.reset();
 }
 audiocache* audiocache::getInstance()
 {
-	return g_instance.get();
+	return audiocache_impl::g_instance.get();
 }
 void audiocache::setInstance(std::unique_ptr<audiocache> host)
 {
-	g_instance = std::move(host);
+	audiocache_impl::g_instance = std::move(host);
 }
 void audiocache::getLoaded(std::vector<cachedaudio_t*>& v) {
 	v.reserve(list.size());

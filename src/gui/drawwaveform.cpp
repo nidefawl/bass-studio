@@ -26,21 +26,21 @@ using glm::vec2;
 
 bool checkGLError(const char* s);
 
-namespace
+namespace waveformrender_impl
 {
 	std::unique_ptr<waveformrender> g_instance;
 }
 
 void waveformrender::destroy() {
-	g_instance.reset();
+	waveformrender_impl::g_instance.reset();
 }
 waveformrender* waveformrender::getInstance()
 {
-	return g_instance.get();
+	return waveformrender_impl::g_instance.get();
 }
 void waveformrender::setInstance(std::unique_ptr<waveformrender> host)
 {
-	g_instance = std::move(host);
+	waveformrender_impl::g_instance = std::move(host);
 }
 void waveformrender::init() {
 	renderer.init();

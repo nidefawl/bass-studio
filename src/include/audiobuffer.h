@@ -16,6 +16,7 @@ struct AudioBuffer {
 	int32_t nonce;
 	int64_t timestamp;
 };
+//static_assert(std::is_pod<AudioBuffer>::value, "AudioBuffer is not POD type.");
 
 #define RING_BUF_SIZE (1<<4)
 #define RING_BUF_MASK (RING_BUF_SIZE-1)

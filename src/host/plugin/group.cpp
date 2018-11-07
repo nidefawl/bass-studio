@@ -239,7 +239,7 @@ void guimodule_group::buttonClicked(guibase* _button) {
 }
 
 
-struct internal_handles_t {
+struct module_group::internal_handles_t {
 	std::unique_ptr<guimodule_group> gui;
 //	guimodule_group * gui;
 };
@@ -247,7 +247,7 @@ struct module_group_preset {
 	std::vector<int32_t> plugins;
 };
 module_group::module_group(int32_t _projectGlobalId)
-: internalplugin(PLUGIN_TYPE_GROUP, _projectGlobalId), handle(new internal_handles_t{0}), audio(nullptr)
+: internalplugin(PLUGIN_TYPE_GROUP, _projectGlobalId), handle(new module_group::internal_handles_t{0}), audio(nullptr)
 {
 	this->sName = "Group";
 #ifndef NDEBUG

@@ -7,12 +7,12 @@
 #include "str_util.h"
 #include "snapshot.h"
 
-struct internal_handles_t;
 struct audio_stage_t;
 class guiplugin;
 class guibase;
 class vsthost;
 class module_group : public internalplugin {
+	struct internal_handles_t;
 	internal_handles_t* handle;
 	audio_stage_t* audio;
 public:

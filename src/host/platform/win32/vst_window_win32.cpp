@@ -6,6 +6,9 @@
 
 #include <tchar.h>
 #include <Windows.h>
+#include <glm/glm.hpp>
+#include <glm/vec2.hpp>
+using glm::ivec2;
 #include "leak_detect.h"
 
 #define WIN32API_CALLBACK_TYPE __stdcall
@@ -80,18 +83,18 @@ namespace {
 					auto diffX = (newSize->right - newSize->left) - (oldSize.right - oldSize.left);
 					auto diffY = (newSize->bottom - newSize->top) - (oldSize.bottom - oldSize.top);
 
-					Size newClientSize = {(clientSize.right - clientSize.left),
+					ivec2 newClientSize = {(clientSize.right - clientSize.left),
 					                      (clientSize.bottom - clientSize.top)};
-					newClientSize.width += diffX;
-					newClientSize.height += diffY;
+					newClientSize.x += diffX;
+					newClientSize.y += diffY;
 
-					Size constraintSize = plugin->constrainSize (window, newClientSize);
+					ivec2 constraintSize = plugin->constrainSize (window, newClientSize);
 					if (constraintSize != newClientSize)
 					{
 						auto diffX = (oldSize.right - oldSize.left) - (clientSize.right - clientSize.left);
 						auto diffY = (oldSize.bottom - oldSize.top) - (clientSize.bottom - clientSize.top);
-						newSize->right = newSize->left + static_cast<LONG> (constraintSize.width + diffX);
-						newSize->bottom = newSize->top + static_cast<LONG> (constraintSize.height + diffY);
+						newSize->right = newSize->left + static_cast<LONG> (constraintSize.x + diffX);
+						newSize->bottom = newSize->top + static_cast<LONG> (constraintSize.y + diffY);
 					}
 					return TRUE;
 				}
@@ -128,7 +131,7 @@ namespace {
 }
 
 
-vst_window* vst_window::make (vstplugin* plugin, const String& name, Size size, bool resizeable)
+vst_window* vst_window::make (vstplugin* plugin, const String& name, ivec2 size, bool resizeable)
 {
 	vst_window* window = new vst_window();
 	if (window->init (plugin, name, size, resizeable))
@@ -178,7 +181,7 @@ std::vector<vst_window*>& vst_window::getWindows ()
 }
 
 //------------------------------------------------------------------------
-bool vst_window::init(vstplugin* plugin, const String& name, Size size, bool resizeable)
+bool vst_window::init(vstplugin* plugin, const String& name, ivec2 size, bool resizeable)
 {
 	this->plugin = plugin;
 	HINSTANCE instance = GetModuleHandle(NULL);
@@ -189,7 +192,7 @@ bool vst_window::init(vstplugin* plugin, const String& name, Size size, bool res
 		dwStyle |= WS_SIZEBOX | WS_MAXIMIZEBOX;
 	HWND parent = getMainHWND();
 	hwnd = CreateWindowEx (exStyle, gWindowClassName, StringAsCStr(name), dwStyle,
-            0, 0, size.width, size.height, nullptr, nullptr, instance, nullptr);
+            0, 0, size.x, size.y, nullptr, nullptr, instance, nullptr);
 	if (parent) {
 
 		RECT rcOwner;
@@ -240,7 +243,7 @@ void vst_window::show()
 }
 
 //------------------------------------------------------------------------
-Size vst_window::getContentSize ()
+ivec2 vst_window::getContentSize ()
 {
 	RECT r;
 	GetClientRect (hwnd, &r);
@@ -257,15 +260,15 @@ void vst_window::updateDisplay() {
 //	my_printf("updateDisplay %d\n", getTimeMillis());
 }
 //------------------------------------------------------------------------
-void vst_window::resize (Size newSize)
+void vst_window::resize (ivec2 newSize)
 {
 	if (getContentSize () == newSize)
 		return;
 	WINDOWINFO windowInfo;
 	GetWindowInfo (hwnd, &windowInfo);
 	RECT clientRect {};
-	clientRect.right = newSize.width;
-	clientRect.bottom = newSize.height;
+	clientRect.right = newSize.x;
+	clientRect.bottom = newSize.y;
 	AdjustWindowRectEx (&clientRect, windowInfo.dwStyle, false, windowInfo.dwExStyle);
 	SetWindowPos (hwnd, HWND_TOP, 0, 0, clientRect.right - clientRect.left,
 	              clientRect.bottom - clientRect.top, SWP_NOMOVE | SWP_NOCOPYBITS | SWP_NOACTIVATE);
