@@ -270,13 +270,13 @@ void BaseCtrl::onKeyInput(int key, int scancode, int keyState, int mods, const c
 		}
 		return;
 	}
-	if (processGlobalKeyevent(event)) {
-		return;
-	}
 	if (guiFocused && guiFocused->handleKeyInput(event)) {
 		return;
 	}
 	if (guiCtrFocused && guiCtrFocused != guiFocused && guiCtrFocused->handleKeyInput(event)) {
+		return;
+	}
+	if (processGlobalKeyevent(event)) {
 		return;
 	}
 //	if (action == STATE_RELEASE)
