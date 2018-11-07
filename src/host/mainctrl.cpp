@@ -5,7 +5,6 @@
 #include <vector>
 #include <memory>
 #include <GLFW/glfw3.h>
-#include "../platform/mingw/mingw.thread.h"
 
 #include "window.h"
 #include "platform.h"
