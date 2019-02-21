@@ -5,6 +5,7 @@
 #include <nanovg.h>
 
 glm::vec4 RGBtoHSV(glm::vec4 rgb);
+NVGcolor HSVtoRGB(float h, float s, float l);
 glm::vec4 colorHex(uint32_t color);
 glm::vec4 hexToHSL(uint32_t color);
 glm::vec4 int32vec4(uint32_t i);

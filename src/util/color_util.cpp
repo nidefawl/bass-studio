@@ -59,6 +59,40 @@ NVGcolor mulSatBright(NVGcolor rgb, float sat, float brt) {
 	NVGcolor hsl = nvgToHSL(rgb);
 	return nvgHSL(hsl.r, CLAMP_F(hsl.g*sat), CLAMP_F(hsl.b*brt));
 }
+NVGcolor HSVtoRGB(float h, float s, float l)
+{
+
+    if (h == 0)
+    {
+        return {l, l, l, 1.0f};
+    }
+
+    int region = floor(h*6);
+    float f = h*6-region;
+
+    float p = l * ( 1 - s );
+    float q = l * ( 1 - s * f );
+    float t = l * ( 1 - s * ( 1 - f ) );
+    NVGcolor rgb{};
+    switch (region)
+    {
+        case 0:
+        	return {l, t, p, 1.0f};
+        case 1:
+        	return {q, l, p, 1.0f};
+        case 2:
+        	return {p, l, t, 1.0f};
+        case 3:
+        	return {p, q, l, 1.0f};
+        case 4:
+        	return {t, p, l, 1.0f};
+        default:
+        	return {l, p, q, 1.0f};
+    }
+
+    return rgb;
+}
+
 NVGcolor nvgToHSL(NVGcolor rgb) {
 	double r, g, b;
 	r = rgb.r;
