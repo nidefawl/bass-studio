@@ -10,9 +10,11 @@ FUNCTION(PREPEND var prefix)
    ENDFOREACH(f)
    SET(${var} "${listVar}" PARENT_SCOPE)
 ENDFUNCTION(PREPEND)
+set(NO_TEMP_OBJECT_A Off)
 # By default cmake generates a temporary object.a archive on windows-gnu
 # Resetting the link rules here avoids this step and saves significant time when linking
-if (WIN32) 
+if (WIN32 AND NO_TEMP_OBJECT_A) 
+  message(STATUS "NO TEMP OBJECT")
 	foreach(lang C CXX)
 		set(CMAKE_${lang}_CREATE_SHARED_MODULE
 		"<CMAKE_${lang}_COMPILER> <CMAKE_SHARED_MODULE_${lang}_FLAGS> <LANGUAGE_COMPILE_FLAGS> <LINK_FLAGS> <CMAKE_SHARED_MODULE_CREATE_${lang}_FLAGS> -o <TARGET> ${CMAKE_GNULD_IMAGE_VERSION} <OBJECTS> <LINK_LIBRARIES>")
