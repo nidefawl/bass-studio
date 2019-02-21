@@ -834,10 +834,6 @@ void MainCtrl::objectDragMove(guibase* g, MouseEvent& mevt) {
 	if (gui) {
 		ivec2 mposObj = toControlsObjectSpace(mevt.mousepos, gui);
 		g->dragMoveOn(gui, mposObj);
-//		bool result = guiOver->pluginDragMove(g, mposObj);
-//		if (!result) {
-//
-//		}
 	} else {
 	}
 }
@@ -853,10 +849,6 @@ void MainCtrl::objectDragRelease(guibase* g, MouseEvent& mevt) {
 	if (gui) {
 		ivec2 mposObj = toControlsObjectSpace(mevt.mousepos, gui);
 		g->dragReleaseOn(gui, mposObj);
-//		bool result = guiOver->pluginDragRelease(g, mposObj);
-//		if (!result) {
-//
-//		}
 	}
 }
 bool MainCtrl::filesDropBegin(vector<string>& files, ivec2 mousepos, int kbmods) {
