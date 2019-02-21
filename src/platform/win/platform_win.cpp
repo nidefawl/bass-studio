@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <excpt.h>
+#include <assert.h>
 #include "msgbox.h"
 #include <Windows.h>
 #ifdef __MINGW32__
@@ -49,9 +50,13 @@ int64_t getTimeHPint64()
 		::QueryPerformanceFrequency(&frequency);
 	LARGE_INTEGER now;
 	::QueryPerformanceCounter(&now);
-	now.QuadPart *= 1000000L; //microseconds resolution
+//	now.QuadPart *= 1000000UL; //microseconds resolution
+
+	//prevent overflow, but keep some precision
+	now.QuadPart *= 10000UL;
 	int64_t val = now.QuadPart / frequency.QuadPart;
 	assert(val > 0);
+	val *= 100UL;
     return val;
 }
 double getSince(double& d) //checks for overflow
