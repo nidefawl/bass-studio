@@ -97,8 +97,8 @@ public:
 	virtual void closeContextMenu() = 0;
 	virtual bool hasContextMenu() = 0;
 	virtual bool captureMouse(guibase* gui) = 0;
-	virtual void objectDragMove(guibase* g, MouseEvent& evt) = 0;
-	virtual void objectDragRelease(guibase* g, MouseEvent& evt) = 0;
+	virtual void objectDragMove(guibase* g, MouseEvent& evt) { };
+	virtual void objectDragRelease(guibase* g, MouseEvent& evt) { };
 	virtual String getClipboardText() = 0;
 	virtual void setClipboardText(String s) = 0;
 	virtual void onWindowCloseRequest() = 0;
@@ -108,7 +108,7 @@ public:
 	virtual bool filesDropBegin(std::vector<String>& files, ivec2 pos, int kbmods) = 0;
 	virtual bool filesDropFinal(std::vector<String>& files, ivec2 pos, int kbmods) = 0;
 	virtual void menuCommand(int cmd)  { };
-	virtual void openAppMenu(int lvl, guictxtmenu_base *b, ivec2 pos)  { };
+	virtual void openAppMenu(int lvl, guictxtmenu_base *b, ivec2 pos) { };
 	virtual void onMenuOpen(ngui::Menu* menu) { };
 	virtual void closeAppMenus()  { };
 	virtual void closeAppMenus(int startlvl)  { };
