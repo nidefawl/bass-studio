@@ -105,6 +105,31 @@ enum NVGimageFlagsGL {
 
 #endif /* NANOVG_GL_H */
 
+struct NVGLUframebuffer {
+	NVGcontext* ctx;
+	GLuint fbo;
+	GLuint rbo;
+	GLuint texture;
+	int image;
+	int w;
+	int h;
+};
+typedef struct NVGLUframebuffer NVGLUframebuffer;
+struct NVGLUTempFramebuffer {
+	NVGLUframebuffer fb;
+	int setup;
+	int inuse;
+	int idleframes;
+};
+typedef struct NVGLUTempFramebuffer NVGLUTempFramebuffer;
+
+// Helper function to create GL frame buffer to render to.
+void nvgluBindFramebuffer(NVGLUframebuffer* fb);
+NVGLUframebuffer* nvgluCreateFramebuffer(NVGcontext* ctx, int w, int h, int imageFlags);
+void nvgluDeleteFramebuffer(NVGLUframebuffer* fb);
+NVGLUframebuffer* nvgluCreateTempFramebuffer(NVGcontext* ctx, int w, int h, int imageFlags);
+
+
 #ifdef NANOVG_GL_IMPLEMENTATION
 
 #include <stdlib.h>
@@ -112,6 +137,7 @@ enum NVGimageFlagsGL {
 #include <string.h>
 #include <math.h>
 #include "nanovg.h"
+
 
 enum GLNVGuniformLoc {
 	GLNVG_LOC_VIEWSIZE,
@@ -258,6 +284,9 @@ struct GLNVGcontext {
 	unsigned char* uniforms;
 	int cuniforms;
 	int nuniforms;
+	NVGLUTempFramebuffer* framebuffers;
+	int cframebuffers;
+	int nframebuffers;
 
 	// cached state
 	#if NANOVG_GL_USE_STATE_FILTER
@@ -286,6 +315,186 @@ static unsigned int glnvg__nearestPow2(unsigned int num)
 	return n;
 }
 #endif
+
+
+
+#if defined(NANOVG_GL3) || defined(NANOVG_GLES2) || defined(NANOVG_GLES3)
+// FBO is core in OpenGL 3>.
+#	define NANOVG_FBO_VALID 1
+#elif defined(NANOVG_GL2)
+// On OS X including glext defines FBO on GL2 too.
+#	ifdef __APPLE__
+#		include <OpenGL/glext.h>
+#		define NANOVG_FBO_VALID 1
+#	endif
+#endif
+
+static GLint defaultFBO = -1;
+
+static NVGLUTempFramebuffer* glnvg__allocFB(GLNVGcontext* gl)
+{
+	NVGLUTempFramebuffer* ret = NULL;
+	if (gl->nframebuffers+1 > gl->cframebuffers) {
+		NVGLUTempFramebuffer* fbs;
+		int cfbs = glnvg__maxi(gl->nframebuffers+1, 128) + gl->cframebuffers/2; // 1.5x Overallocate
+		fbs = (NVGLUTempFramebuffer*)realloc(gl->framebuffers, sizeof(NVGLUTempFramebuffer) * cfbs);
+		if (fbs == NULL) return NULL;
+		gl->framebuffers = fbs;
+		gl->cframebuffers = cfbs;
+	}
+	ret = &gl->framebuffers[gl->nframebuffers++];
+	memset(ret, 0, sizeof(NVGLUTempFramebuffer));
+	return ret;
+}
+static void nvglu__DeleteFramebuffer(NVGLUframebuffer* fb)
+{
+#ifdef NANOVG_FBO_VALID
+	if (fb == NULL) return;
+	if (fb->fbo != 0)
+		glDeleteFramebuffers(1, &fb->fbo);
+	if (fb->rbo != 0)
+		glDeleteRenderbuffers(1, &fb->rbo);
+	if (fb->image >= 0)
+		nvgDeleteImage(fb->ctx, fb->image);
+	fb->ctx = NULL;
+	fb->fbo = 0;
+	fb->rbo = 0;
+	fb->texture = 0;
+	fb->image = -1;
+//	free(fb);
+#else
+	NVG_NOTUSED(fb);
+#endif
+}
+static NVGLUframebuffer* nvglu__CreateFramebuffer(NVGcontext* ctx, NVGLUframebuffer* fb, int w, int h, int imageFlags)
+{
+#ifdef NANOVG_FBO_VALID
+	GLint defaultFBO;
+	GLint defaultRBO;
+
+	glGetIntegerv(GL_FRAMEBUFFER_BINDING, &defaultFBO);
+	glGetIntegerv(GL_RENDERBUFFER_BINDING, &defaultRBO);
+
+
+	fb->image = nvgCreateImageRGBA(ctx, w, h, imageFlags | NVG_IMAGE_FLIPY | NVG_IMAGE_PREMULTIPLIED, NULL);
+
+#if defined NANOVG_GL2
+	fb->texture = nvglImageHandleGL2(ctx, fb->image);
+#elif defined NANOVG_GL3
+	fb->texture = nvglImageHandleGL3(ctx, fb->image);
+#elif defined NANOVG_GLES2
+	fb->texture = nvglImageHandleGLES2(ctx, fb->image);
+#elif defined NANOVG_GLES3
+	fb->texture = nvglImageHandleGLES3(ctx, fb->image);
+#endif
+
+	fb->ctx = ctx;
+	fb->w = w;
+	fb->h = h;
+
+	// frame buffer object
+	glGenFramebuffers(1, &fb->fbo);
+	glBindFramebuffer(GL_FRAMEBUFFER, fb->fbo);
+
+	// render buffer object
+	glGenRenderbuffers(1, &fb->rbo);
+	glBindRenderbuffer(GL_RENDERBUFFER, fb->rbo);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_STENCIL_INDEX8, w, h);
+
+	// combine all
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fb->texture, 0);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, fb->rbo);
+
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+#ifdef GL_DEPTH24_STENCIL8
+		// If GL_STENCIL_INDEX8 is not supported, try GL_DEPTH24_STENCIL8 as a fallback.
+		// Some graphics cards require a depth buffer along with a stencil.
+		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, w, h);
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fb->texture, 0);
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, fb->rbo);
+
+		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+#endif // GL_DEPTH24_STENCIL8
+			goto error;
+	}
+
+	glBindFramebuffer(GL_FRAMEBUFFER, defaultFBO);
+	glBindRenderbuffer(GL_RENDERBUFFER, defaultRBO);
+	return fb;
+error:
+	glBindFramebuffer(GL_FRAMEBUFFER, defaultFBO);
+	glBindRenderbuffer(GL_RENDERBUFFER, defaultRBO);
+	nvglu__DeleteFramebuffer(fb);
+	return NULL;
+#else
+	NVG_NOTUSED(ctx);
+	NVG_NOTUSED(w);
+	NVG_NOTUSED(h);
+	NVG_NOTUSED(imageFlags);
+	return NULL;
+#endif
+}
+NVGLUframebuffer* nvgluCreateFramebuffer(NVGcontext* ctx, int w, int h, int imageFlags)
+{
+	GLNVGcontext* gl = (GLNVGcontext*)nvgInternalParams(ctx)->userPtr;
+	NVGLUframebuffer* fb;
+	fb = (NVGLUframebuffer*)malloc(sizeof(NVGLUframebuffer));
+	if (fb == NULL) return NULL;
+	memset(fb, 0, sizeof(NVGLUframebuffer));
+	if (NULL == nvglu__CreateFramebuffer(ctx, fb, w, h, imageFlags)) {
+		free(fb);
+		return NULL;
+	}
+	return fb;
+}
+
+NVGLUframebuffer* nvgluCreateTempFramebuffer(NVGcontext* ctx, int w, int h, int imageFlags)
+{
+	GLNVGcontext* gl = (GLNVGcontext*)nvgInternalParams(ctx)->userPtr;
+	for (int i = 0; i < gl->nframebuffers; i++) {
+		NVGLUTempFramebuffer* fb = &gl->framebuffers[i];
+		if (fb->setup && !fb->inuse && fb->fb.w == w && fb->fb.h == h) {
+			gl->framebuffers[i].idleframes = 0;
+			return &gl->framebuffers[i].fb;
+		}
+	}
+	NVGLUTempFramebuffer* fbTarget = NULL;
+	for (int i = 0; i < gl->nframebuffers; i++) {
+		NVGLUTempFramebuffer* fb = &gl->framebuffers[i];
+		if (!fb->setup) {
+			fbTarget = fb;
+			break;
+		}
+	}
+	if (!fbTarget) {
+		fbTarget = glnvg__allocFB(gl);
+	}
+	nvglu__CreateFramebuffer(ctx, &fbTarget->fb, w, h, imageFlags);
+	fbTarget->setup = 1;
+	return &fbTarget->fb;
+}
+
+void nvgluDeleteFramebuffer(NVGLUframebuffer* fb)
+{
+	nvglu__DeleteFramebuffer(fb);
+	if (fb)
+		free(fb);
+}
+
+void nvgluBindFramebuffer(NVGLUframebuffer* fb)
+{
+#ifdef NANOVG_FBO_VALID
+	if (defaultFBO == -1) glGetIntegerv(GL_FRAMEBUFFER_BINDING, &defaultFBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, fb != NULL ? fb->fbo : defaultFBO);
+#else
+	NVG_NOTUSED(fb);
+#endif
+}
+
+
+
+
+
 
 static void glnvg__bindTexture(GLNVGcontext* gl, GLuint tex)
 {
@@ -760,7 +969,7 @@ static int glnvg__renderCreateTexture(void* uptr, int type, int w, int h, int im
 	if (type == NVG_TEXTURE_RGBA)
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
 	else
-#if defined(NANOVG_GLES2)
+#if defined(NANOVG_GLES2) || defined (NANOVG_GL2)
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, w, h, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, data);
 #elif defined(NANOVG_GLES3)
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_R8, w, h, 0, GL_RED, GL_UNSIGNED_BYTE, data);
@@ -852,7 +1061,7 @@ static int glnvg__renderUpdateTexture(void* uptr, int image, int x, int y, int w
 	if (tex->type == NVG_TEXTURE_RGBA)
 		glTexSubImage2D(GL_TEXTURE_2D, 0, x,y, w,h, GL_RGBA, GL_UNSIGNED_BYTE, data);
 	else
-#ifdef NANOVG_GLES2
+#if defined(NANOVG_GLES2) || defined(NANOVG_GL2)
 		glTexSubImage2D(GL_TEXTURE_2D, 0, x,y, w,h, GL_LUMINANCE, GL_UNSIGNED_BYTE, data);
 #else
 		glTexSubImage2D(GL_TEXTURE_2D, 0, x,y, w,h, GL_RED, GL_UNSIGNED_BYTE, data);
@@ -995,12 +1204,12 @@ static void glnvg__setUniforms(GLNVGcontext* gl, int uniformOffset, int image)
 	}
 }
 
-static void glnvg__renderViewport(void* uptr, int width, int height, float devicePixelRatio)
+static void glnvg__renderViewport(void* uptr, float width, float height, float devicePixelRatio)
 {
 	NVG_NOTUSED(devicePixelRatio);
 	GLNVGcontext* gl = (GLNVGcontext*)uptr;
-	gl->view[0] = (float)width;
-	gl->view[1] = (float)height;
+	gl->view[0] = width;
+	gl->view[1] = height;
 }
 
 static void glnvg__fill(GLNVGcontext* gl, GLNVGcall* call)
@@ -1055,12 +1264,12 @@ static void glnvg__convexFill(GLNVGcontext* gl, GLNVGcall* call)
 	glnvg__setUniforms(gl, call->uniformOffset, call->image);
 	glnvg__checkError(gl, "convex fill");
 
-	for (i = 0; i < npaths; i++)
+	for (i = 0; i < npaths; i++) {
 		glDrawArrays(GL_TRIANGLE_FAN, paths[i].fillOffset, paths[i].fillCount);
-	if (gl->flags & NVG_ANTIALIAS) {
 		// Draw fringes
-		for (i = 0; i < npaths; i++)
+		if (paths[i].strokeCount > 0) {
 			glDrawArrays(GL_TRIANGLE_STRIP, paths[i].strokeOffset, paths[i].strokeCount);
+		}
 	}
 }
 
@@ -1262,6 +1471,15 @@ static void glnvg__renderFlush(void* uptr)
 	gl->npaths = 0;
 	gl->ncalls = 0;
 	gl->nuniforms = 0;
+	for (int i = 0; i < gl->nframebuffers; i++) {
+		NVGLUTempFramebuffer* fb = &gl->framebuffers[i];
+		fb->inuse = 0;
+		if (fb->setup && fb->idleframes++>3) {
+			nvglu__DeleteFramebuffer(&fb->fb);
+			fb->idleframes = 0;
+			fb->setup = 0;
+		}
+	}
 }
 
 static int glnvg__maxVertCount(const NVGpath* paths, int npaths)
