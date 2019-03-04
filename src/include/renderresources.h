@@ -1,5 +1,5 @@
 #pragma once
-#include <GLFW/glfw3.h>
+
 #define ICON_SYNTH 0
 #define ICON_EFFECT 1
 #define ICON_FOLDER 2
@@ -24,6 +24,7 @@
 #define NUM_IMGS 21
 #define NUM_CURSORS 16
 namespace RenderResources {
+	struct GLFWcursor;
 	struct NvgImageTexture {
 		int id;
 		int width;
