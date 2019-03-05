@@ -1001,7 +1001,6 @@ public:
 
 
 	void render(NVGcontext* vg) {
-		ivec2 borderThickness(4);
 		ivec2 cp = this->getPosContent();
 		ivec2 cs = this->getSizeContent();
 		if (MainCtrl::get()->isClipEditorVisible()) {

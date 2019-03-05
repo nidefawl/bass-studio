@@ -177,7 +177,6 @@ public:
 		}
 		int32_t inset1 = (HEIGHT_PLUGIN_TITLE - buttonBypass.size.y) / 2;
 		ivec2 contentS(size.x - meterW, size.y-HEIGHT_PLUGIN_TITLE);
-		ivec2 contentP(0, HEIGHT_PLUGIN_TITLE);
 		buttonBypass.pos.y = inset1;
 		buttonBypass.pos.x = inset1;
 		clock.size = ivec2(48);
