@@ -141,7 +141,7 @@ set_source_files_properties("${DAW_SRC_PATH}/window/debugwindow.cpp" PROPERTIES 
 set(NANOVG_HDR_PATH "${DAW_SRC_PATH}/nanovg/")
 set_target_properties(${BUILD_NAME} PROPERTIES COTIRE_PREFIX_HEADER_IGNORE_PATH "${CMAKE_SOURCE_DIR};${NANOVG_HDR_PATH}")
 
-cotire(${BUILD_NAME})
+# cotire(${BUILD_NAME}) #comment to disable cotire
 
 if (BUILD_TESTS)
   ENABLE_TESTING()
