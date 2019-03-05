@@ -4,6 +4,8 @@
 #include <iostream>
 #include <nanovg.h>
 #include "theme.h"
+#include "platform.h"
+#include "keyboard.h"
 #include "leak_detect.h"
 
 
@@ -81,7 +83,7 @@ void gui_textfield::handleDraggedBegin(MouseEvent& evt) {
         mMouseDownPos = local;
         mMouseDownModifier = evt.kbmods;
 
-        double time = glfwGetTime();
+        double time = getTimeMillis()/1000.0;
         if (time - mLastClick < 0.25) {
             /* Double-click: select all text */
             mSelectionPos = 0;
@@ -285,8 +287,8 @@ bool gui_textfield::focusEvent(MouseHitEvt& evt, bool focused) {
 bool gui_textfield::keyboardEvent(int key, int /* scancode */, KeyEventType action, int modifiers) {
     if (mEditable && mFocused) {
         if (action == KeyEventType::K_PRESS || action == KeyEventType::K_REPEAT) {
-            if (key == GLFW_KEY_LEFT) {
-                if (modifiers == GLFW_MOD_SHIFT) {
+            if (key == KEY_LEFT) {
+                if (modifiers == KB_MOD_SHIFT) {
                     if (mSelectionPos == -1)
                         mSelectionPos = mCursorPos;
                 } else {
@@ -295,8 +297,8 @@ bool gui_textfield::keyboardEvent(int key, int /* scancode */, KeyEventType acti
 
                 if (mCursorPos > 0)
                     mCursorPos--;
-            } else if (key == GLFW_KEY_RIGHT) {
-                if (modifiers == GLFW_MOD_SHIFT) {
+            } else if (key == KEY_RIGHT) {
+                if (modifiers == KB_MOD_SHIFT) {
                     if (mSelectionPos == -1)
                         mSelectionPos = mCursorPos;
                 } else {
@@ -305,8 +307,8 @@ bool gui_textfield::keyboardEvent(int key, int /* scancode */, KeyEventType acti
 
                 if (mCursorPos < (int) mValueTemp.length())
                     mCursorPos++;
-            } else if (key == GLFW_KEY_HOME) {
-                if (modifiers == GLFW_MOD_SHIFT) {
+            } else if (key == KEY_HOME) {
+                if (modifiers == KB_MOD_SHIFT) {
                     if (mSelectionPos == -1)
                         mSelectionPos = mCursorPos;
                 } else {
@@ -314,8 +316,8 @@ bool gui_textfield::keyboardEvent(int key, int /* scancode */, KeyEventType acti
                 }
 
                 mCursorPos = 0;
-            } else if (key == GLFW_KEY_END) {
-                if (modifiers == GLFW_MOD_SHIFT) {
+            } else if (key == KEY_END) {
+                if (modifiers == KB_MOD_SHIFT) {
                     if (mSelectionPos == -1)
                         mSelectionPos = mCursorPos;
                 } else {
@@ -323,30 +325,30 @@ bool gui_textfield::keyboardEvent(int key, int /* scancode */, KeyEventType acti
                 }
 
                 mCursorPos = (int) mValueTemp.size();
-            } else if (key == GLFW_KEY_BACKSPACE) {
+            } else if (key == KEY_BACKSPACE) {
                 if (!deleteSelection()) {
                     if (mCursorPos > 0) {
                         mValueTemp.erase(mValueTemp.begin() + mCursorPos - 1);
                         mCursorPos--;
                     }
                 }
-            } else if (key == GLFW_KEY_DELETE) {
+            } else if (key == KEY_DELETE) {
                 if (!deleteSelection()) {
                     if (mCursorPos < (int) mValueTemp.length())
                         mValueTemp.erase(mValueTemp.begin() + mCursorPos);
                 }
-            } else if (key == GLFW_KEY_ENTER) {
+            } else if (key == KEY_ENTER) {
 //                if (!mCommitted)
 //                    focusEvent(false);
-            } else if (key == GLFW_KEY_A && isCtrl(modifiers)) {
+            } else if (key == KEY_A && isCtrl(modifiers)) {
                 mCursorPos = (int) mValueTemp.length();
                 mSelectionPos = 0;
-            } else if (key == GLFW_KEY_X && isCtrl(modifiers)) {
+            } else if (key == KEY_X && isCtrl(modifiers)) {
                 copySelection();
                 deleteSelection();
-            } else if (key == GLFW_KEY_C && isCtrl(modifiers)) {
+            } else if (key == KEY_C && isCtrl(modifiers)) {
                 copySelection();
-            } else if (key == GLFW_KEY_V && isCtrl(modifiers)) {
+            } else if (key == KEY_V && isCtrl(modifiers)) {
                 deleteSelection();
                 pasteFromClipboard();
             }
@@ -474,7 +476,7 @@ void gui_textfield::updateShiftCursorVisible() {
 void gui_textfield::updateCursor(NVGcontext *, float lastx) {
 	// handle mouse cursor events
 	if (mMouseDownPos.x != -1) {
-		if (mMouseDownModifier == GLFW_MOD_SHIFT) {
+		if (mMouseDownModifier == KB_MOD_SHIFT) {
 			if (mSelectionPos == -1)
 				mSelectionPos = mCursorPos;
 		} else
