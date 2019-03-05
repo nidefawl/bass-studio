@@ -1,5 +1,5 @@
 #pragma once
-
+#include "fileio.h"
 #define ICON_SYNTH 0
 #define ICON_EFFECT 1
 #define ICON_FOLDER 2
@@ -22,9 +22,8 @@
 #define ICON_MINUS 19
 #define ICON_AUTOMATION 20
 #define NUM_IMGS 21
-#define NUM_CURSORS 16
+
 namespace RenderResources {
-	struct GLFWcursor;
 	struct NvgImageTexture {
 		int id;
 		int width;
@@ -32,5 +31,4 @@ namespace RenderResources {
 	};
 	extern NvgImageTexture imgDashedLine;
 	extern NvgImageTexture imgIcons[NUM_IMGS];
-	extern GLFWcursor* cursors[NUM_CURSORS];
 };

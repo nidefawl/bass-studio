@@ -1,4 +1,3 @@
-#include "renderresources.h"
 #include "str_util.h"
 #include "fileio.h"
 #include <stdint.h>
@@ -11,6 +10,7 @@
 #include <assert.h>
 #include "fileio.h"
 #include "mouse.h"
+#include "renderresources.h"
 
 
 using ImgData = std::shared_ptr<uint8_t>;
@@ -44,7 +44,6 @@ namespace {
 namespace RenderResources {
 	NvgImageTexture imgDashedLine;
 	NvgImageTexture imgIcons[NUM_IMGS];
-	GLFWcursor* cursors[NUM_CURSORS];
 	void load(NVGcontext* vg, String path, ImageBuf& out) {
 		if (ReadImage(path, out) < 0) {
 			my_printf("Error loading image %s\n", StringAsCStr(path));
@@ -52,16 +51,11 @@ namespace RenderResources {
 			my_printf("%s loaded: %dx%d %d-channel, bufsize: %d\n", StringAsCStr(path), out.w, out.h, out.bitdepth, out.bytes.size());
 		}
 	}
-	void init(GLFWwindow *glfw, NVGcontext* vg) {
+	void init(NVGcontext* vg) {
 		{
 			ImageBuf imgIconsBuf[NUM_IMGS];
-			ImageBuf imgCursors[NUM_CURSORS];
 			for (int i = 0; i < NUM_IMGS; i++) {
 				ImageBuf& buf = imgIconsBuf[i];
-				assert((int)buf.bytes.size() == buf.w*buf.h * 4);
-			}
-			for (int i = 0; i < NUM_CURSORS; i++) {
-				ImageBuf& buf = imgCursors[i];
 				assert((int)buf.bytes.size() == buf.w*buf.h * 4);
 			}
 			load(vg, StringFormat("res/icons/synth_32px.png"), imgIconsBuf[ICON_SYNTH]);
@@ -85,9 +79,6 @@ namespace RenderResources {
 			load(vg, StringFormat("res/led.png"), imgIconsBuf[IMG_LED]);
 			load(vg, StringFormat("res/led_off.png"), imgIconsBuf[IMG_LED_OFF]);
 			load(vg, StringFormat("res/led_glow.png"), imgIconsBuf[IMG_LED_GLOW]);
-			for (int i = 0; i < 6; i++) {
-				load(vg, StringFormat("res/cursors/cursor%02d.png", i), imgCursors[i]);
-			}
 			for (int i = 0; i < NUM_IMGS; i++) {
 				ImageBuf& buf = imgIconsBuf[i];
 				if (buf.w*buf.h == 0) {
@@ -97,30 +88,6 @@ namespace RenderResources {
 				NvgImageTexture& nvgTex = imgIcons[i];
 				nvgTex.id = nvgCreateImageRGBA(vg, buf.w, buf.h, NVG_IMAGE_GENERATE_MIPMAPS, (const unsigned char*)buf.bytes.data());
 				nvgImageSize(vg, nvgTex.id, &nvgTex.width, &nvgTex.height);
-			}
-			cursors[0] = NULL;
-			for (int i = 0; i < NUM_CURSORS; i++) {
-				ImageBuf& buf = imgCursors[i];
-				if (buf.w*buf.h == 0) {
-					continue;
-				}
-				GLFWimage image;
-				image.width = buf.w;
-				image.height = buf.h;
-				image.pixels = &buf.bytes[0];
-				int posx = image.width/2;
-				int posy = image.height/2;
-				if (i+1 == CURSOR_DUPLICATE) {
-					posx = 0;
-					posy = 0;
-				}
-				if (i+1 == CURSOR_CLIP_SIZE_LEFT) {
-					posx = 4;
-				}
-				if (i+1 == CURSOR_CLIP_SIZE_RIGHT) {
-					posx = 12;
-				}
-				cursors[i+1] = glfwCreateCursor(&image, posx, posy);
 			}
 		}
 		{

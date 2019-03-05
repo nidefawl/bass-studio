@@ -63,6 +63,7 @@ using std::ofstream;
 #include "logging.h"
 #include "settings.h"
 #include "renderresources.h"
+#include "mousecursor.h"
 #include "fileio.h"
 
 
@@ -109,9 +110,13 @@ void handleException() {
 	std::terminate();
 }
 
-namespace RenderResources{
-void init(GLFWwindow *glfw, NVGcontext* vg); // renderresources.cpp
+namespace RenderResources {
+void init(NVGcontext* vg); // renderresources.cpp
 }
+namespace MouseCursors {
+void init(NVGcontext* vg); // mousecursor.cpp
+}
+
 
 static void glfw_cb_mousepos(GLFWwindow *w, double x, double y);
 static void glfw_cb_mousebutton(GLFWwindow *w, int button, int action, int mods);
@@ -552,7 +557,7 @@ public:
 	void flagNeedsRedraw() override {
 		appwindow::flagNeedsRedraw();
 		if (cursorIcon != ctrl->cursorIcon) {
-			glfwSetCursor(glfw, RenderResources::cursors[ctrl->cursorIcon]);
+			glfwSetCursor(glfw, MouseCursors::cursors[ctrl->cursorIcon]);
 			cursorIcon = ctrl->cursorIcon;
 		}
 	}
@@ -702,7 +707,7 @@ public:
 	void onCursorEnter(int entered) {
 		ctrl->onCursorEnter(entered);
 		if (entered)
-			glfwSetCursor(glfw, RenderResources::cursors[cursorIcon]);
+			glfwSetCursor(glfw, MouseCursors::cursors[cursorIcon]);
 	}
 	window_dialog* createDialog();
 	bool isShown() {
@@ -914,7 +919,7 @@ public:
 	void onCursorEnter(int entered) {
 		ctrl->onCursorEnter(entered);
 		if (entered)
-			glfwSetCursor(glfw, RenderResources::cursors[cursorIcon]);
+			glfwSetCursor(glfw, MouseCursors::cursors[cursorIcon]);
 	}
 	void updateWindowFromDlg() {
 		onRefresh();
@@ -1124,7 +1129,9 @@ void appwindow_main::create(const char* title, int w, int h) {
 	glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
 	appwindow::createWindow(title, w, h);
 	glfwSetWindowSizeLimits(glfw, 640, 480, GLFW_DONT_CARE, GLFW_DONT_CARE);
-	RenderResources::init(glfw, nanovgCtxt);
+	RenderResources::init(nanovgCtxt);
+	MouseCursors::init(nanovgCtxt); //TODO: call MouseCursors::destroy() on exit of last instance
+
 	if (!ctrl->init(this, this->nanovgCtxt)) {
 		throw appexception("Couldn't start application");
 	}
