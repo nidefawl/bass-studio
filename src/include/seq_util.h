@@ -5,7 +5,7 @@
 #define UNUSED(expr) do { (void)(expr); } while (0)
 
 #define ARR_SIZE(x) (sizeof(x)/sizeof(x[0]))
-#define DELETE_PTR(x) do { delete x; x = NULL; } while (0)
+#define DELETE_PTR(x) do { delete x; x = NULL; } while (0);
 
 #define STL_CONTAINS(x, y) std::find(x.begin(), x.end(), y) != x.end()
 inline void* aligned_malloc(size_t size, size_t align) {
