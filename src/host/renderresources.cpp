@@ -1,20 +1,18 @@
-#include "str_util.h"
-#include "fileio.h"
 #include <stdint.h>
 #include <memory>
+#include <vector>
 #include <nanovg.h>
 
-#include <string>
-#include <GLFW/glfw3.h>
-#include <vector>
-#include <assert.h>
+#include "str_util.h"
 #include "fileio.h"
-#include "mouse.h"
 #include "renderresources.h"
+
+#include <GLFW/glfw3.h>
+
+#include <assert.h>
 
 
 using ImgData = std::shared_ptr<uint8_t>;
-
 
 namespace {
 	void setColor(uint8_t* b, int i) {

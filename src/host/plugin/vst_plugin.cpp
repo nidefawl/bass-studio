@@ -1,5 +1,7 @@
 #include <algorithm>
+#include <glm/glm.hpp>
 #include <glm/vec2.hpp>
+#include <glm/vec4.hpp>
 #include "str_util.h"
 #include "seq_util.h"
 #include "logging.h"
@@ -21,7 +23,10 @@
 
 #include "leak_detect.h"
 
+using glm::vec2;
 using glm::ivec2;
+using glm::vec4;
+using glm::ivec4;
 
 const char* plug_features_array[] = {
 	PlugCanDos::canDoSendVstEvents,

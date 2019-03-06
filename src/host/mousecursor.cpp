@@ -1,15 +1,11 @@
-#include "str_util.h"
-#include "fileio.h"
+#include <vector>
 #include <stdint.h>
 #include <memory>
-#include <nanovg.h>
-
-#include <string>
-#include <vector>
-#include <assert.h>
+#include "str_util.h"
 #include "fileio.h"
 #include "mouse.h"
 #include "mousecursor.h"
+
 #ifdef _WIN32
 #include "windows.h"
 #endif
@@ -17,11 +13,11 @@
 #include <GLFW/glfw3.h>
 #endif
 
-
+#include <assert.h>
 
 
 using ImgData = std::shared_ptr<uint8_t>;
-
+//#define NO_GLFW_LIB 1
 namespace MouseCursors {
 #ifdef NO_GLFW_LIB
 struct AppMouseCursor {
@@ -123,18 +119,26 @@ struct AppMouseCursor {
 		 }
 		 return nullptr;
 	}
+
+	int setCursorWin32(AppMouseCursor* cursorHandle) {
+	    if (cursorHandle && cursorHandle->handle)
+	        SetCursor(cursorHandle->handle);
+	    else
+	        SetCursor(LoadCursor(NULL, IDC_ARROW));
+	    return 0;
+	}
 #endif
 #endif
 
 	MouseCursorIcon* cursors[NUM_CURSORS]{0};
-	void load(NVGcontext* vg, String path, ImageBuf& out) {
+	void load(String path, ImageBuf& out) {
 		if (ReadImage(path, out) < 0) {
 			my_printf("Error loading image %s\n", StringAsCStr(path));
 		} else {
 			my_printf("%s loaded: %dx%d %d-channel, bufsize: %d\n", StringAsCStr(path), out.w, out.h, out.bitdepth, out.bytes.size());
 		}
 	}
-	void init(NVGcontext* vg) {
+	void init() {
 	{
 			ImageBuf imgCursors[NUM_CURSORS];
 			for (int i = 0; i < NUM_CURSORS; i++) {
@@ -146,7 +150,7 @@ struct AppMouseCursor {
 				assert((int)buf.bytes.size() == buf.w*buf.h * 4);
 			}
 			for (int i = 0; i < 6; i++) {
-				load(vg, StringFormat("res/cursors/cursor%02d.png", i), imgCursors[i]);
+				load(StringFormat("res/cursors/cursor%02d.png", i), imgCursors[i]);
 			}
 			cursors[0] = NULL;
 			for (int i = 0; i < NUM_CURSORS; i++) {
@@ -179,13 +183,18 @@ struct AppMouseCursor {
 			}
 		}
 	}
-	void destroy(NVGcontext* vg) {
+	void destroy() {
+#ifdef NO_GLFW_LIB
 		for (int i = 0; i < NUM_CURSORS; i++) {
 			if (cursors[i]) {
 				delete cursors[i];
 				cursors[i] = nullptr;
 			}
 		}
+#else
+		//nothing
+		// GLFW keeps reference and cleans stuff up internally
+#endif
 	}
 
 }

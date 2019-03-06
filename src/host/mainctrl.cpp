@@ -58,6 +58,7 @@
 #include "audiocache.h"
 #include "seq_time.h"
 #include "../threads/workerthread.h"
+#include "../threads/playbackthread.h"
 
 using glm::vec2;
 using glm::ivec2;
@@ -437,7 +438,7 @@ void MainCtrl::menuCommand(int cmd) {
 }
 void MainCtrl::postInit() {
 	vsthost::getInstance()->postInit();
-	loadFile("singlewave.project");
+	loadFile("empty.project");
 //	for (int i = 0; i < 32; i++) {
 //		loadFile("muuure.project");
 //	}
@@ -1314,9 +1315,15 @@ void MainCtrl::pasteClipboard(clip_clipboard* clipboard, int32_t track, tick_t t
 
 }
 void MainCtrl::setTempo(int32_t _tempo100) {
-	playThread.call([this, _tempo100]() {
+	std::function<void()> fn2 = [this, _tempo100]() {
 		this->tempo100 = CLAMP_I(_tempo100, 100, 99900);
-	}, true);
+	};
+	playThread.call(fn2, true);
+
+	// Commented the code below because of eclipse cpp indexer error
+//	playThread.call([this, _tempo100]() {
+//		this->tempo100 = CLAMP_I(_tempo100, 100, 99900);
+//	}, true);
 }
 void MainCtrl::setStatusText(String s) {
 	view->statusbar.setTitle(s);

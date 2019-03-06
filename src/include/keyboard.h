@@ -5,6 +5,8 @@
 #define STATE_REPEAT                 2
 
 
+#define 	_KEY_INVALID   -2
+
 #define 	KEY_UNKNOWN   -1
 
 #define 	KEY_SPACE   32

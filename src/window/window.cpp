@@ -114,7 +114,7 @@ namespace RenderResources {
 void init(NVGcontext* vg); // renderresources.cpp
 }
 namespace MouseCursors {
-void init(NVGcontext* vg); // mousecursor.cpp
+void init(); // mousecursor.cpp
 }
 
 
@@ -567,7 +567,7 @@ public:
 	void onTick() {
 		PREVENT_REENTRANT("REENTRANT IN onTick")
 //		flagNeedsRedraw();
-				glfwMakeContextCurrent(glfw);
+		glfwMakeContextCurrent(glfw);
 		ctrl->onTick();
 	}
 	void render()
@@ -1130,7 +1130,7 @@ void appwindow_main::create(const char* title, int w, int h) {
 	appwindow::createWindow(title, w, h);
 	glfwSetWindowSizeLimits(glfw, 640, 480, GLFW_DONT_CARE, GLFW_DONT_CARE);
 	RenderResources::init(nanovgCtxt);
-	MouseCursors::init(nanovgCtxt); //TODO: call MouseCursors::destroy() on exit of last instance
+	MouseCursors::init(); //TODO: call MouseCursors::destroy() on exit of last instance
 
 	if (!ctrl->init(this, this->nanovgCtxt)) {
 		throw appexception("Couldn't start application");
@@ -1577,6 +1577,7 @@ int startApplication(int argc, char* argv[]) {
 	exit(EXIT_SUCCESS);
 	return 0;
 }
+
 
 
 #endif
