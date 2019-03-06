@@ -150,7 +150,7 @@ int main(int argc, char* argv[]) {
 			std::vector<FileFound> files;
 //			String vstPlugPath = "C:/PluginManager/configs/default/hosts/Ableton/categories/";
 			String vstPlugPath = settings.pluginPath;
-			LOG("pluginPath %s", StringAsCStr(vstPlugPath));
+			LOG("pluginPath '%s'", StringAsCStr(vstPlugPath));
 			findFilesWithExt(vstPlugPath, PLATFORM_PLUGIN_EXT, true, files);
 			LOG("Found %u files", (uint32_t )files.size());
 			if (files.empty()) {
