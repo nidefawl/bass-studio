@@ -178,7 +178,7 @@ public:
 	}
 	void handleDraggedBegin(MouseEvent& evt) {
 		if (evt.guiDragged == this) {
-			AppCtrl::get()->captureMouse(this);
+			parentCtrl->captureMouse(this);
 		}
 	}
 	void handleDraggedMove(MouseEvent& evt) {

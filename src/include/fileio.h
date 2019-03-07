@@ -131,6 +131,10 @@ inline String FileNameFromPath(String in) {
 	return fileName;
 }
 
+extern String cwdPath;
+String toCWDPath(String relPath);
+void setCWDPath(String cwd);
+
 void findFilesWithExt(
 		const String& strPath,
 		const String& strExt,

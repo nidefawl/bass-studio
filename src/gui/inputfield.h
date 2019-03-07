@@ -116,7 +116,7 @@ public:
 				startEdit(true);
 			} else {
 				if (evt.guiDragged == this) {
-					AppCtrl::get()->captureMouse(this);
+					parentCtrl->captureMouse(this);
 				}
 			}
 		}

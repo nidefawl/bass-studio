@@ -103,7 +103,7 @@ public:
 			return;
 		}
 		renderFrameBase(vg);
-		int flags = AppCtrl::get()->isCtrOrChildFocused(this) ? FLAG_FOCUSED : 0;
+		int flags = parentCtrl->isCtrOrChildFocused(this) ? FLAG_FOCUSED : 0;
 		renderTitleBarHorizontal(vg, this->text, buttonBypass.right(), flags);
 		renderFrameOutline(vg);
 		buttonBypass.render(vg);

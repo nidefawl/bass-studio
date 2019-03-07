@@ -1238,7 +1238,7 @@ void gui_clipsettings::render(NVGcontext* vg)  {
 	if (clip) {
 		text = clip->name;
 	}
-	int flags = AppCtrl::get()->isCtrOrChildFocused(this) ? FLAG_FOCUSED : 0;
+	int flags = parentCtrl->isCtrOrChildFocused(this) ? FLAG_FOCUSED : 0;
 	renderTitleBarHorizontal(vg, text, 0, flags);
 	renderFrameOutline(vg);
 	for (guibase* gui : guis) {

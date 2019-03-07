@@ -46,7 +46,7 @@ public:
 	}
 	virtual void clicked(int _id) {
 		ctrl->close();
-		AppCtrl::get()->closeContextMenu();
+		parentCtrl->closeContextMenu();
 	}
 	virtual void handleDraggedBegin(MouseEvent& evt) {
 		return;

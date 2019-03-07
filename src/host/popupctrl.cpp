@@ -141,7 +141,7 @@ PopupCtrl::PopupCtrl() {
 	popupCtrs = new guictr_popup();
 }
 void PopupCtrl::focusLost() {
-//	AppCtrl::get()->closeContextMenu();
+//	parentCtrl->closeContextMenu();
 }
 void PopupCtrl::close() {
 	popupCtrs->removeGuis();

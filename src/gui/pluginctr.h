@@ -78,7 +78,7 @@ public:
 		nvgBeginPath(vg);
 //		nvgRoundedRect(vg, pos.x, pos.y, size.x, size.y, G_RND);
 		NVGcolor c;
-		if (this == AppCtrl::get()->guiOver) {
+		if (this == parentCtrl->guiOver) {
 			c = GUI_COLOR(G_S3);
 		}
 		else {

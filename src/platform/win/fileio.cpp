@@ -15,15 +15,16 @@ HWND getMainHWND(); // window.cpp
 
 int64_t ReadImage( const String &Filename, ImageBuf& ref)
 {
-	 unsigned char *data = stbi_load(StringAsCStr(Filename), &ref.w, &ref.h, &ref.bitdepth, 0);
-	 int64_t bufSize = -1;
-	 if (data) {
-		 bufSize = ref.w*ref.h*ref.bitdepth;
-		 ref.bytes.reserve(bufSize);
-		 ref.bytes.assign(data, data+bufSize);
-	 }
-	 stbi_image_free(data);
-	 return bufSize;
+	String path = toCWDPath(Filename);
+	unsigned char *data = stbi_load(StringAsCStr(path), &ref.w, &ref.h, &ref.bitdepth, 0);
+	if (!data) {
+		throw appexception(StringAsCStr(StringFormat("%s: %s", StringAsCStr(Filename), stbi_failure_reason())));
+	}
+	int64_t bufSize = ref.w * ref.h * ref.bitdepth;
+	ref.bytes.reserve(bufSize);
+	ref.bytes.assign(data, data + bufSize);
+	stbi_image_free(data);
+	return bufSize;
 }
 
 using namespace std;
@@ -265,5 +266,14 @@ FileTimeGetter::~FileTimeGetter() {
 }
 int64_t FileTimeGetter::getWriteTimeI64() {
 	return _M_Impl->getWriteTimeI64();
+}
+String cwdPath = "";
+String toCWDPath(String relPath) {
+	return cwdPath + relPath;
+}
+void setCWDPath(String cwd) {
+	if (cwd.length() && (!StrEndsWith(cwd, "/") && !StrEndsWith(cwd, "\\")))
+		cwd += "/";
+	cwdPath = cwd;
 }
 #endif

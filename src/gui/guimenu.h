@@ -68,13 +68,13 @@ public:
 	}
 	void clicked(int _id) {
 		if(_id > 0) {
-			AppCtrl::get()->menuCommand(_id);//deletes this
+			parentCtrl->menuCommand(_id);//deletes this
 		}
 		if (lvl == 0) { //then reads here, gg
-			AppCtrl::get()->closeContextMenu();
-			AppCtrl::get()->closeAppMenus();
+			parentCtrl->closeContextMenu();
+			parentCtrl->closeAppMenus();
 		} else {
-			AppCtrl::get()->closeAppMenus(lvl);
+			parentCtrl->closeAppMenus(lvl);
 		}
 	}
 	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
@@ -92,12 +92,12 @@ public:
 				if (!e2->isMenuOpen) {
 					guimenu *popup =new guimenu(e2->menu, lvl+1);
 					popup->size.x = 250;
-					AppCtrl::get()->closeAppMenus(lvl);
+					parentCtrl->closeAppMenus(lvl);
 					ivec2 vPos;
 					ctrl->window->getPos(&vPos);
 					vPos.y+=e2->y;
 					vPos.x+=right()+2;
-					AppCtrl::get()->openAppMenu(
+					parentCtrl->openAppMenu(
 						popup->lvl-1,
 						popup,
 						vPos);
@@ -109,7 +109,7 @@ public:
 					if (e2)
 						e2->isMenuOpen = false;
 				}
-				AppCtrl::get()->closeAppMenus(lvl);
+				parentCtrl->closeAppMenus(lvl);
 			}
 			evt.requestFocus(this);
 			return true;
@@ -162,10 +162,10 @@ public:
 		layout();
 	}
 	void layout() {
-		AppCtrl::get()->closeContextMenu();
-		AppCtrl::get()->closeAppMenus();
+		parentCtrl->closeContextMenu();
+		parentCtrl->closeAppMenus();
 		destroyGuis();
-		NVGcontext* vg = AppCtrl::get()->vg;
+		NVGcontext* vg = parentCtrl->vg;
 		int fontSize = (int) (size.y * 0.8);
 		int padding = max(4, (int) (size.y * 0.8));
 		int x = 0;
@@ -190,11 +190,11 @@ public:
 		}
 	}
 	void openMenu(guictr_menubar_entry* entry) {
-		AppCtrl::get()->closeContextMenu();
+		parentCtrl->closeContextMenu();
 		guimenu *popup = new guimenu(entry->menu, 0);
 		popup->parentMenuBar = this;
 		popup->size.x = 250;
-		AppCtrl::get()->openContextMenu(popup, entry->toScreenSpace(ivec2(0, entry->size.y)) - popup->pos + ivec2(1));
+		parentCtrl->openContextMenu(popup, entry->toScreenSpace(ivec2(0, entry->size.y)) - popup->pos + ivec2(1));
 		currentMenu = entry;
 	}
 	void hoverMenu(guictr_menubar_entry* entry) {

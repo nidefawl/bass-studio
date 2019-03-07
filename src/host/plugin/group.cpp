@@ -135,7 +135,7 @@ void guimodule_group::renderBase(NVGcontext* vg) {
 	nvgBeginPath(vg);
 	nvgRoundedRect(vg, 0, 0, size.x, size.y, G_RND);
 	NVGcolor c;
-	int flags = AppCtrl::get()->isCtrOrChildFocused(this) ? FLAG_FOCUSED : 0;
+	int flags = parentCtrl->isCtrOrChildFocused(this) ? FLAG_FOCUSED : 0;
 	if (isSelected()) {
 		flags |= FLAG_SELECTED;
 	}

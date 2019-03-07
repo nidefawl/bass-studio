@@ -499,7 +499,7 @@ public:
 			resize<track_t, TRACK_MIN_HEIGHT, TRACK_MAX_HEIGHT>(m_track, m_track, mouseDragDist);
 			this->parent->onChildLayoutChanged(this);
 		} else {
-			AppCtrl::get()->objectDragMove(this, evt);
+			parentCtrl->objectDragMove(this, evt);
 		}
 	}
 
@@ -507,7 +507,7 @@ public:
 		if (dragMode == DRAG_RESIZE) {
 
 		} else {
-			AppCtrl::get()->objectDragRelease(this, evt);
+			parentCtrl->objectDragRelease(this, evt);
 		}
 		dragMode = -1;
 	}

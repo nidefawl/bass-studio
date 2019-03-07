@@ -34,17 +34,17 @@ public:
 	guiknob(const bool _renderBackground = true) : guibase(), renderBackground(_renderBackground) {
 	}
 	virtual bool hovered() {
-		return this == AppCtrl::get()->guiOver;
+		return this == parentCtrl->guiOver;
 	}
 	virtual bool pressed() {
-		return this == AppCtrl::get()->guiDragged;
+		return this == parentCtrl->guiDragged;
 	}
 	virtual bool focused() {
-		return this == AppCtrl::get()->guiFocused;
+		return this == parentCtrl->guiFocused;
 	}
 	virtual void handleDraggedBegin(MouseEvent& evt) {
 		if (evt.guiDragged == this) {
-			AppCtrl::get()->captureMouse(this);
+			parentCtrl->captureMouse(this);
 		}
 		initialValue = getValue();
 		changedValue = false;

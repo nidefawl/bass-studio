@@ -17,7 +17,7 @@ public:
 	virtual ~gui_list_entry() {
 	}
 	virtual void render(NVGcontext* vg) {
-		AppCtrl* ctrl = AppCtrl::get();
+		AppCtrl* ctrl = parentCtrl;
 		float spacing = INSET_TITLE;
 		float x = spacing;
 		float rowHeight = size.y;
@@ -57,10 +57,10 @@ public:
 	virtual void handleDraggedBegin(MouseEvent& evt) {
 	}
 	virtual void handleDraggedMove(MouseEvent& evt) {
-		AppCtrl::get()->objectDragMove(this, evt);
+		parentCtrl->objectDragMove(this, evt);
 	}
 	virtual void handleDraggedRelease(MouseEvent& evt) {
-		AppCtrl::get()->objectDragRelease(this, evt);
+		parentCtrl->objectDragRelease(this, evt);
 	}
 	virtual void dragMoveOn(guibase* target, ivec2 mousepos) = 0;
 	virtual void dragReleaseOn(guibase* target, ivec2 mousepos) = 0;

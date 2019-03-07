@@ -118,7 +118,7 @@ public:
 	}
 	virtual void clicked(int _id) {
 		ctrl->close();
-		AppCtrl::get()->closeContextMenu();
+		parentCtrl->closeContextMenu();
 	}
 	virtual void handleDraggedBegin(MouseEvent& evt) {
 		ivec2 local = evt.relMousepos;

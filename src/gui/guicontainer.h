@@ -36,7 +36,8 @@ public:
 	virtual void destroyGuis() {
 		for (guibase* g : guis) {
 			g->onRemove();
-			g->parent = NULL;
+			g->parent = nullptr;
+			g->setControl(nullptr);
 			delete g;
 		}
 		guis.clear();
@@ -44,9 +45,17 @@ public:
 	virtual void removeGuis() {
 		for (guibase* g : guis) {
 			g->onRemove();
-			g->parent = NULL;
+			g->parent = nullptr;
+			g->setControl(nullptr);
 		}
 		guis.clear();
+	}
+
+	virtual void setControl(AppCtrl* parentCtrl) override {
+		guibase::setControl(parentCtrl);
+		for (guibase* g : guis) {
+			g->setControl(parentCtrl);
+		}
 	}
 public:
 	virtual void onRemove() override {
@@ -126,6 +135,7 @@ public:
 			});
 		}
 		gui->parent = this;
+		gui->setControl(getControl());
 		gui->onAdded();
 	}
 	bool hasGui(guibase* gui) {
@@ -141,7 +151,8 @@ public:
 		}
 		gui->onRemove();
 		guis.erase(it);
-		gui->parent = NULL;
+		gui->parent = nullptr;
+		gui->setControl(nullptr);
 	}
 	virtual void addUNCHECKED(guibase* gui) {
 		auto it = std::find(guis.begin(), guis.end(), gui);
@@ -155,6 +166,7 @@ public:
 			});
 		}
 		gui->parent = this;
+		gui->setControl(getControl());
 	}
 	virtual void removeUNCHECKED(guibase* gui) {
 		auto it = std::find(guis.begin(), guis.end(), gui);
@@ -163,7 +175,8 @@ public:
 		}
 //		gui->onRemove();
 		guis.erase(it);
-		gui->parent = NULL;
+		gui->parent = nullptr;
+		gui->setControl(nullptr);
 	}
 	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
 		if (this->contains(mpos)) {
@@ -200,7 +213,7 @@ public:
 		}
 	}
 	virtual void renderBackground(NVGcontext* vg) {
-		bool focused = AppCtrl::get()->isCtrOrChildFocused(this);
+		bool focused = parentCtrl->isCtrOrChildFocused(this);
 		drawBackground(vg, getPosContent(), getSizeContent(), margin, focused, true);
 	}
 	static void drawInsetBackground(NVGcontext* vg, ivec2 posInset, ivec2 sizeInset) {
@@ -279,10 +292,10 @@ public:
 	virtual void handleDraggedBegin(MouseEvent& evt) {
 	}
 	virtual void handleDraggedMove(MouseEvent& evt) {
-		ivec2 windowSize = AppCtrl::get()->m_size;
+		ivec2 windowSize = parentCtrl->m_size;
 		float sc = type == 0  ? (evt.mousepos.y/(float)windowSize.y) : (evt.mousepos.x/(float)windowSize.x);
 		this->scale = (sc < min ? min : sc > max ? max : sc);
-		AppCtrl::get()->relayout(windowSize.x, windowSize.y);
+		parentCtrl->relayout(windowSize.x, windowSize.y);
 	}
 	virtual void handleDraggedRelease(MouseEvent& evt) {
 	}

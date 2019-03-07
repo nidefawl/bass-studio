@@ -330,7 +330,7 @@ bool setFlag(int& _out, int flag, bool state) {
 	}
 	return curState != state;
 }
-//String getModuleName(HMODULE module);
+
 class vsthost::ModuleManager {
 public:
 	ModuleManager() {

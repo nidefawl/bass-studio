@@ -138,13 +138,13 @@ protected:
 public:
 
 	virtual bool hovered() const {
-		return this == AppCtrl::get()->guiOver;
+		return this == parentCtrl->guiOver;
 	}
 	virtual bool pressed() const {
-		return this == AppCtrl::get()->guiDragged;
+		return this == parentCtrl->guiDragged;
 	}
 	virtual bool focused() const {
-		return this == AppCtrl::get()->guiFocused;
+		return this == parentCtrl->guiFocused;
 	}
 	float fontSize() const {
 		return mFontSize;

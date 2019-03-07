@@ -148,7 +148,7 @@ void guiplugin::renderBase(NVGcontext* vg) {
 		return;
 	}
 	renderFrameBase(vg);
-	int flags = AppCtrl::get()->isCtrOrChildFocused(this) ? FLAG_FOCUSED : 0;
+	int flags = parentCtrl->isCtrOrChildFocused(this) ? FLAG_FOCUSED : 0;
 	if (isSelected()) {
 		flags |= FLAG_SELECTED;
 	}

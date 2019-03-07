@@ -102,7 +102,7 @@ void allocConsole() {
 		freopen_s(&f, "CON", "w", stdout);
 #endif
 }
-
+#ifdef USE_WIN32_EXC_HOOKS
 static const char* _exc_as_str(DWORD excCode) {
 	switch (excCode) {
 	case EXCEPTION_ACCESS_VIOLATION: return "EXCEPTION_ACCESS_VIOLATION";
@@ -147,6 +147,7 @@ void setExceptionHandler() {
 	SetErrorMode(SEM_FAILCRITICALERRORS|SEM_NOALIGNMENTFAULTEXCEPT|SEM_NOGPFAULTERRORBOX|SEM_NOOPENFILEERRORBOX);
     SetUnhandledExceptionFilter(TopLevelExceptionHandler);
 }
+#endif
 String getKeyName(int scancode) {
 	TCHAR strBuf[512];
 	GetKeyNameText(scancode<<16, strBuf, 512);

@@ -139,7 +139,7 @@ public:
 			this->guiCtrFocused = NULL;
 		}
 	}
-	static AppCtrl* get();
+//	static AppCtrl* get();
 };
 class guictr_popup;
 class PopupCtrl : public BaseCtrl

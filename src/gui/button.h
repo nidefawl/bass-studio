@@ -22,13 +22,13 @@ public:
 	guibuttonbase(ivec2 _pos, ivec2 _size) : guibase(_pos, _size) {
 	}
 	virtual bool hovered() {
-		return this == AppCtrl::get()->guiOver;
+		return this == parentCtrl->guiOver;
 	}
 	virtual bool pressed() {
-		return this == AppCtrl::get()->guiDragged;
+		return this == parentCtrl->guiDragged;
 	}
 	virtual bool focused() {
-		return this == AppCtrl::get()->guiFocused;
+		return this == parentCtrl->guiFocused;
 	}
 	virtual bool enabled() {
 		return true;

@@ -77,9 +77,7 @@ std::shared_ptr<AppCtrl> makeApp() {
 	mainctrl = std::make_shared<MainCtrl>();
 	return mainctrl;
 }
-AppCtrl* AppCtrl::get() {
-	return mainctrl.get();
-}
+
 void deleteApp() {
 	mainctrl = nullptr;
 }
@@ -95,7 +93,7 @@ void deleteApp() {
 //MainCtrl* MainCtrl::get() {
 //	return mainctrl;
 //}
-//AppCtrl* AppCtrl::get() {
+//AppCtrl* parentCtrl {
 //	return mainctrl;
 //}
 //void deleteApp() {
@@ -492,6 +490,10 @@ bool MainCtrl::init(window_main* window, NVGcontext* nanovg)
 
 	view = new ViewContainers(menubar, cursor, *this, grid, clipView, dragdropclip);
 	view->addTo(this->containers);
+	for (guictr_base *ctr : containers) {
+		ctr->setControl(this);
+	}
+	view->ctr_plugins.setControl(this);
 
 	menus.recent.type = ngui::menu_type::submenu;
 	menus.recent.title = "Open recent";
@@ -1466,3 +1468,10 @@ clip_t* clip_view::clip() const {
 	return this->gui->m_clip;
 }
 
+
+
+GLFWwindow* getGlfwFromWindowBase(window_base* w);
+GLFWwindow* getTopLevelGlfwWindow() {
+	auto wbase = MainCtrl::get()->window;
+	return getGlfwFromWindowBase(wbase);
+}

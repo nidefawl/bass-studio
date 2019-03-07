@@ -17,7 +17,7 @@ void guimenu::onRemove() {
 	if (this->parentMenuBar) {
 		this->parentMenuBar->currentMenu = NULL;
 	}
-	AppCtrl::get()->closeAppMenus(lvl);
+	parentCtrl->closeAppMenus(lvl);
 	for (ctxtmenu_entry* e : entries) {
 		guimenu_ctxtentry* e2 = dynamic_cast<guimenu_ctxtentry*>(e);
 		if (e2)
@@ -27,7 +27,7 @@ void guimenu::onRemove() {
 void guictr_menubar_entry::render(NVGcontext* vg) {
 	guictr_menubar_entry* cur = parentMenuBar->currentMenu;
 
-	bool focused = AppCtrl::get()->guiOver == this;
+	bool focused = parentCtrl->guiOver == this;
 	if (cur) focused = false;
 	NVGcolor* colHighlight = NULL;
 	if (focused) colHighlight = &g_guiColors[COL_BG_DRK];

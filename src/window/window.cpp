@@ -261,7 +261,7 @@ private:
 		if (!nanovgCtxt) {
 			throw appexception("Couldn't initialize nanovg");
 		}
-		int font = nvgCreateFont(nanovgCtxt, "sans", "res/fonts/Roboto-Regular.ttf");
+		int font = nvgCreateFont(nanovgCtxt, "sans", StringAsCStr(toCWDPath("res/fonts/Roboto-Regular.ttf")));
 		if (font == -1) {
 			throw appexception("Failed loading font");
 		}
@@ -685,6 +685,7 @@ public:
 		/*if (action == GLFW_PRESS)*/
 //		my_printf("keyname %s, key %d, scancode %d\n", key_name, key, scancode);
 //		my_printf("mods %08X\n", mods);
+		printf("onKeyInput %d (%c) %d\n", key, key, scancode);
 		ctrl->onKeyInput(key, scancode, action, mods, key_name);
 		flagNeedsRedraw();
 	}
@@ -1347,21 +1348,10 @@ static void glfw_cb_framebuffersize(GLFWwindow *w, int width, int height) {
 
 void printLeaked();
 
-//static std::shared_ptr<AppCtrl> ctrl;
 static std::unique_ptr<appwindow_main> mainWindow;
-
-//AppCtrl* AppCtrl::get() {
-//	return ctrl.get();
-//}
-
 
 GLFWwindow* getGlfwFromWindowBase(window_base* w) {
 	return dynamic_cast<appwindow*>(w)->getGLFW();
-}
-
-GLFWwindow* getTopLevelGlfwWindow() {
-	auto wbase = AppCtrl::get()->window;
-	return getGlfwFromWindowBase(wbase);
 }
 
 #ifdef _WIN32

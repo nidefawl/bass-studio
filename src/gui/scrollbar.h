@@ -44,7 +44,7 @@ public:
 			nvgRoundedRect(vg, pos.x+barOff.x+inset, pos.y+barOff.y+inset, barS.x-inset*2, barS.y-inset*2, G_RND);
 
 
-			bool focused = AppCtrl::get()->guiCtrFocused == this->parent || (AppCtrl::get()->guiDragged==NULL&&AppCtrl::get()->guiOver == this);
+			bool focused = parentCtrl->guiCtrFocused == this->parent || (parentCtrl->guiDragged==NULL&&parentCtrl->guiOver == this);
 			if (focused) {
 //				nvgStrokeWidth(vg, 1.0f);
 //				nvgStrokeColor(vg, g_guiColors[COL_BG_DRK_FOCUSED]);
