@@ -10,7 +10,7 @@ option(BUILD_TESTS "Build tests" OFF)
 set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CMAKE_COMMAND} -E time")
 include("setup.cmake")
 include("cotire.cmake")
-
+add_definitions("-DUSE_WIN32_EXC_HOOKS")
 
 # option(BUILD_HOST "Build daw" ON)
 # option(BUILD_SCANNER "Build plugin scanner" OFF)
