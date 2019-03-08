@@ -25,6 +25,10 @@ public:
 		this->canTextInput = true;
 		setColor(nvgToRGB(g_guiColors[COL_BG_DRK]));
 	}
+	virtual void setControl(AppCtrl* parentCtrl) override {
+		guibase::setControl(parentCtrl);
+		field.setControl(parentCtrl);
+	}
 	void setDrawBackground(bool state) {
 		drawBackground = state;
 	}
