@@ -332,7 +332,7 @@ public:
 	}
 
 	/* FROM GLFW CALLBACKS */
-	virtual void onWindowClose() {
+	virtual void onWindowCloseRequest() {
 		my_printf("on window close\n", 0);
 #ifdef _WIN32
 		if (timer && hwnd) {
@@ -628,9 +628,9 @@ public:
 		flagNeedsRedraw();
 	}
 
-	void onWindowClose() 
+	void onWindowCloseRequest() 
 	{
-		appwindow::onWindowClose();
+		appwindow::onWindowCloseRequest();
 		ctrl->onWindowCloseRequest();
 	}
 	bool filesDropBegin(std::vector<String>& files, ivec2 pos, int kbmods) {
@@ -786,9 +786,9 @@ public:
 	PopupCtrl* getCtrl() {
 		return ctrl.get();
 	}
-	void onWindowClose()
+	void onWindowCloseRequest()
 	{
-		appwindow::onWindowClose();
+		appwindow::onWindowCloseRequest();
 	}
 	void onTick() {
 	//	uint64_t tm = getTimeMillis();
@@ -1000,9 +1000,9 @@ public:
 		}
 		glfwSwapBuffers(glfw);
 	}
-	void onWindowClose()
+	void onWindowCloseRequest()
 	{
-		appwindow::onWindowClose();
+		appwindow::onWindowCloseRequest();
 #ifdef _WIN32
 		if (parent)
 		EnableWindow(parent->getHWND(), TRUE);
@@ -1023,7 +1023,7 @@ public:
 	{
 		if (action == GLFW_PRESS) {
 			if (key == GLFW_KEY_ESCAPE) {
-				onWindowClose();
+				onWindowCloseRequest();
 				return;
 			}
 		}
@@ -1321,7 +1321,7 @@ static void glfw_cb_windowclose(GLFWwindow *w) {
 	EXC_TRY
 	appwindow* wu;
 	if ((wu = getUserData(w)))
-		wu->onWindowClose();
+		wu->onWindowCloseRequest();
 	EXC_CATCH
 }
 static void glfw_cb_windowfocus(GLFWwindow *w, int focused) {

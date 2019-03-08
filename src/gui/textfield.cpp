@@ -270,7 +270,6 @@ void gui_textfield::endEdit() {
 }
 bool gui_textfield::focusEvent(MouseHitEvt& evt, bool focused) {
 //    Widget::focusEvent(focused);
-	my_printf("focusEvent %d %d\n", static_cast<int>(evt.type), focused);
     std::string backup = mValue;
     mFocused = focused;
     if (mEditable) {
