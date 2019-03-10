@@ -51,7 +51,7 @@ public:
 		guis.clear();
 	}
 
-	virtual void setControl(AppCtrl* parentCtrl) override {
+	virtual void setControl(BaseCtrl* parentCtrl) override {
 		guibase::setControl(parentCtrl);
 		for (guibase* g : guis) {
 			g->setControl(parentCtrl);

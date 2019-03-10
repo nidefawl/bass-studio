@@ -82,11 +82,11 @@ bool plugindatabase_t::resolve(String name, int32_t uId, String* _outPath) {
 void plugindatabase_t::query(String q, std::vector<pluginentry_t>& _out) {
 	_M_Impl->query(q, _out);
 }
-void plugindatabase_t::open() {
+void plugindatabase_t::openDatabase() {
 	assert(!_M_Impl);
 	_M_Impl = new plugindatabase_t::Impl("data/plugins.db3");
 }
-void plugindatabase_t::close() {
+void plugindatabase_t::closeDatabase() {
 	assert(_M_Impl);
 	delete _M_Impl;
 	_M_Impl = NULL;

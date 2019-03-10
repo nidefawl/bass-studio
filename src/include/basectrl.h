@@ -60,6 +60,7 @@ public:
 	ivec2 dragStart;
 	ivec2 dragOffset;
 	ivec2 dragDistance;
+	bool mouseInside = false;
 	bool isOK = false;
 	bool isOk() const {
 		return isOK;
@@ -83,69 +84,74 @@ public:
 	virtual void mouseMoved(ivec2 mousePos, ivec2 deltaPos);
 
 	bool isCtrOrChildFocused(guibase* gui);
-	virtual void onCursorEnter(int entered) {
-
+	bool isMouseInside() {
+		return mouseInside;
 	}
+	virtual void onCursorEnter(int entered) {
+		mouseInside = entered;
+	}
+	virtual void relayout(int32_t w, int32_t h) { };
+	virtual void openContextMenu(guictxtmenu_base *b, ivec2 pos) { };
+	virtual void closeContextMenu() { };
+	virtual void closeAppMenus()  { };
+	virtual void closeAppMenus(int startlvl)  { };
+	virtual void closePopup() { }; // close this window if its a popup window
+	virtual bool hasContextMenu() { return false; };
+	virtual void objectDragMove(guibase* g, MouseEvent& evt) { };
+	virtual void objectDragRelease(guibase* g, MouseEvent& evt) { };
+	bool captureMouse(guibase* gui);
+	virtual String getClipboardText();
+	virtual void setClipboardText(String s);
+	virtual void requestRedraw() {
+		this->window->requestRedraw();
+	}
+	void onGuiRemoved(guibase* gui);
+	void resetMouseContext();
 };
 class AppCtrl : public BaseCtrl {
 public:
+	window_main* mainWindow = NULL;
+	window_overlay* contextWindow = NULL;
+	std::vector<window_overlay*> menuWindows;
+#if WINDOW_HAS_MENUBAR
+	ngui::MenuBar menubar;
+#endif
 	AppCtrl() { }
 	virtual ~AppCtrl() { }
 	virtual void relayout(int32_t w, int32_t h) = 0;
-	virtual void requestRedraw() = 0;
-	virtual void openContextMenu(guictxtmenu_base *b, ivec2 pos) = 0;
-	virtual void closeContextMenu() = 0;
-	virtual bool hasContextMenu() = 0;
-	virtual bool captureMouse(guibase* gui) = 0;
-	virtual void objectDragMove(guibase* g, MouseEvent& evt) { };
-	virtual void objectDragRelease(guibase* g, MouseEvent& evt) { };
-	virtual String getClipboardText() = 0;
-	virtual void setClipboardText(String s) = 0;
-	virtual void onWindowCloseRequest() = 0;
+	void openContextMenu(guictxtmenu_base *b, ivec2 pos);
+	void closeContextMenu();
+	void openAppMenu(int lvl, guictxtmenu_base *b, ivec2 pos);
+	void closeAppMenus();
+	void closeAppMenus(int startlvl);
+	bool hasContextMenu();
+	virtual void onMenuOpen(ngui::Menu* menu);
+	virtual void updateMenubar();
+	guictxtmenu_base* getContextMenu();
+#if WINDOW_HAS_MENUBAR
+	virtual ngui::MenuBar& getMenubar();
+#endif
+
+	virtual void closePopup() { }; // close this window if its a popup window
+
 	virtual void focusReceived() = 0;
 	virtual void focusLost() = 0;
-	virtual bool filesDropMove(ivec2 pos, int kbmods) = 0;
-	virtual bool filesDropBegin(std::vector<String>& files, ivec2 pos, int kbmods) = 0;
-	virtual bool filesDropFinal(std::vector<String>& files, ivec2 pos, int kbmods) = 0;
-	virtual void menuCommand(int cmd)  { };
-	virtual void openAppMenu(int lvl, guictxtmenu_base *b, ivec2 pos) { };
-	virtual void onMenuOpen(ngui::Menu* menu) { };
-	virtual void closeAppMenus()  { };
-	virtual void closeAppMenus(int startlvl)  { };
-	virtual void updateMenubar()  { };
-#if WINDOW_HAS_MENUBAR
-	virtual ngui::MenuBar& getMenubar() = 0;
-#endif
+	virtual bool filesDropMove(ivec2 pos, int kbmods) { return false; };
+	virtual bool filesDropBegin(std::vector<String>& files, ivec2 pos, int kbmods) { return false; };
+	virtual bool filesDropFinal(std::vector<String>& files, ivec2 pos, int kbmods) { return false; };
+	virtual void menuCommand(int cmd) { };
+	virtual void onWindowCloseRequest() { };
+
 	virtual void onTick() = 0;
 	virtual void initApp(int argc, char* argv[]) = 0;
 	virtual bool init(window_main* window, NVGcontext* nanovg) = 0;
-	/* OpenGL context exists at this point */
-	virtual void postInit() = 0;
+	virtual void postInit() = 0; /* OpenGL context exists in postInit */
 	virtual void destroy() = 0;
-	void onGuiRemoved(guibase* gui) {
-		if (this->guiOver == gui)  {
-			this->guiOver = NULL;
-		}
-		if (this->guiCaptured == gui)  {
-			this->guiCaptured = NULL;
-		}
-		if (this->guiFocused == gui)  {
-			this->guiFocused = NULL;
-		}
-		if (this->guiDragged == gui)  {
-			this->guiDragged = NULL;
-		}
-		if (this->guiCtrFocused == gui)  {
-			this->guiCtrFocused = NULL;
-		}
-	}
-//	static AppCtrl* get();
 };
 class guictr_popup;
 class PopupCtrl : public BaseCtrl
 {
 	guictr_popup* popupCtrs;
-	bool mouseInside = false;
 public:
 	PopupCtrl();
 	~PopupCtrl();
@@ -153,19 +159,14 @@ public:
 		static PopupCtrl ctrl;
 		return &ctrl;
 	}
-	bool isMouseInside() {
-		return mouseInside;
-	}
 	void destroy();
 	bool isShown() {
 		return this->window->isShown();
 	}
-	void close();
+	void closePopup() override;
 	void open(guictxtmenu_base *ctxtmenu, ivec2 pos);
 	bool init(window_overlay* window, NVGcontext* nanovg);
-	void focusReceived() {
-	}
+	void focusReceived() { };
 	void focusLost();
-	void onCursorEnter(int entered) override;
 
 };

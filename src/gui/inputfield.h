@@ -5,6 +5,7 @@
 #include "str_util.h"
 #include "color_util.h"
 
+#include "keyboard.h"
 #include "gui.h"
 #include "guicontainer.h"
 #include "button.h"
@@ -25,7 +26,7 @@ public:
 		this->canTextInput = true;
 		setColor(nvgToRGB(g_guiColors[COL_BG_DRK]));
 	}
-	virtual void setControl(AppCtrl* parentCtrl) override {
+	virtual void setControl(BaseCtrl* parentCtrl) override {
 		guibase::setControl(parentCtrl);
 		field.setControl(parentCtrl);
 	}

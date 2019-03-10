@@ -4,6 +4,8 @@
 #include <iostream>
 #include <nanovg.h>
 #include "theme.h"
+#include "gui.h"
+#include "guicolors.h"
 #include "platform.h"
 #include "keyboard.h"
 #include "leak_detect.h"

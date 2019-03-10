@@ -42,10 +42,10 @@ public:
 		return true;
 	}
 	bool canClose() override {
-		return hadMouseMovement && !ctrl->isMouseInside();
+		return hadMouseMovement && !parentCtrl->isMouseInside();
 	}
 	virtual void clicked(int _id) {
-		ctrl->close();
+		parentCtrl->closePopup();
 		parentCtrl->closeContextMenu();
 	}
 	virtual void handleDraggedBegin(MouseEvent& evt) {

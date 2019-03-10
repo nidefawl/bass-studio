@@ -68,7 +68,7 @@ public:
 	bool canTextInput = false;
 	String label = "";
 	int curTooltip = 0;
-	AppCtrl* parentCtrl = nullptr;
+	BaseCtrl* parentCtrl = nullptr;
 //	const int guiType;
 	guibase(int guiTypeId = 0) /*: guiType(guiTypeId)*/ {
 		id = allocCount;
@@ -90,7 +90,7 @@ public:
 		label = _str;
 	}
 	virtual ~guibase() {
-		AppCtrl* ctrl = parentCtrl;
+		BaseCtrl* ctrl = parentCtrl;
 		if (ctrl)
 			ctrl->onGuiRemoved(this); // TODO: don't call this from here
 		allocCount--;
@@ -319,11 +319,11 @@ public:
 		return false;
 	}
 
-	AppCtrl* getControl() const {
+	BaseCtrl* getControl() const {
 		return parentCtrl;
 	}
 
-	virtual void setControl(AppCtrl* parentCtrl) {
+	virtual void setControl(BaseCtrl* parentCtrl) {
 		this->parentCtrl = parentCtrl;
 	}
 

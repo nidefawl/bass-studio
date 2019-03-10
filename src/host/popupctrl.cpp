@@ -143,7 +143,7 @@ PopupCtrl::PopupCtrl() {
 void PopupCtrl::focusLost() {
 //	parentCtrl->closeContextMenu();
 }
-void PopupCtrl::close() {
+void PopupCtrl::closePopup() {
 	popupCtrs->removeGuis();
 	if (this->window)
 		static_cast<window_overlay*>(this->window)->hide();
@@ -154,14 +154,10 @@ void PopupCtrl::close() {
 	}
 	guiCaptured = guiFocused = guiOver = guiDragged = NULL;
 }
-void PopupCtrl::onCursorEnter(int entered) {
-	mouseInside = entered;
-}
 void PopupCtrl::open(guictxtmenu_base *_ctxtmenu, ivec2 pos) {
 	mouseInside = false;
 	this->m_mousePos = ivec2(-1111111);
 	popupCtrs->removeGuis();
-	_ctxtmenu->ctrl = this;
 	popupCtrs->pos = ivec2(0);
 	_ctxtmenu->pos = insetCtxtMenu;
 	popupCtrs->maxHeight = _ctxtmenu->maxHeight;
@@ -186,6 +182,9 @@ bool PopupCtrl::init(window_overlay* _window, NVGcontext* nanovg)
 	this->window = _window;
 	this->vg = nanovg;
 	this->containers.push_back(popupCtrs);
+	for (guictr_base *ctr : containers) {
+		ctr->setControl(this);
+	}
 	isOK = true;
 	return isOK;
 }

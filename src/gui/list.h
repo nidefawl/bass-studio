@@ -17,7 +17,7 @@ public:
 	virtual ~gui_list_entry() {
 	}
 	virtual void render(NVGcontext* vg) {
-		AppCtrl* ctrl = parentCtrl;
+		BaseCtrl* ctrl = parentCtrl;
 		float spacing = INSET_TITLE;
 		float x = spacing;
 		float rowHeight = size.y;

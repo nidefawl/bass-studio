@@ -206,7 +206,6 @@ struct Menus {
 class MainCtrl : public AppCtrl, public delete_cb, public project_t
 {
 	ViewContainers* view = NULL;
-	ngui::MenuBar menubar;
 	Menus menus;
 
 	edithistory hist;
@@ -224,9 +223,6 @@ class MainCtrl : public AppCtrl, public delete_cb, public project_t
 	seq_rand rand;
 public:
 	int32_t numCallsWaitEvents = 0;
-	window_main* mainWindow = NULL;
-	window_overlay* contextWindow = NULL;
-	std::vector<window_overlay*> menuWindows;
 	std::shared_ptr<plugin_clipboard_t> pluginClipboard;
 	static MainCtrl* get();
 	~MainCtrl() {
@@ -258,9 +254,6 @@ public:
 	plugin_selection& getPluginSel() {
 		return pluginSel;
 	}
-	ngui::MenuBar& getMenubar() {
-		return menubar;
-	}
 	edithistory& getHist() {
 		return hist;
 	}
@@ -286,26 +279,17 @@ public:
 	void focusLost() {
 //		closeContextMenu();
 	}
-	void resetMouseContext();
 	void addDebug(String s);
 
-	void closeAppMenus(int startlvl);
-	void openContextMenu(guictxtmenu_base *b, ivec2 pos);
-	void openAppMenu(int lvl, guictxtmenu_base *b, ivec2 pos);
-	void closeAppMenus();
-	bool filesDropMove(ivec2 pos, int kbmods);
-    bool filesDropBegin(std::vector<String>& files, ivec2 pos, int kbmods);
-    bool filesDropFinal(std::vector<String>& files, ivec2 pos, int kbmods);
+
+	bool filesDropMove(ivec2 pos, int kbmods) override;
+    bool filesDropBegin(std::vector<String>& files, ivec2 pos, int kbmods) override;
+    bool filesDropFinal(std::vector<String>& files, ivec2 pos, int kbmods) override;
     void mouseMoved(ivec2 mousePos, ivec2 deltaPos) override;
-	void menuCommand(int cmd);
-	void onMenuOpen(ngui::Menu* menu);
-	void onWindowCloseRequest();
-	void updateMenubar();
-	void closeContextMenu();
-	bool hasContextMenu();
-	guictxtmenu_base* getContextMenu();
+	void menuCommand(int cmd) override;
+	void onWindowCloseRequest() override;
+	void updateMenubar() override;
 	void onTick();
-	void requestRedraw();
 	bool init(window_main* window, NVGcontext* nanovg);
 	void postInit();
 	void destroy();
@@ -313,7 +297,6 @@ public:
 	void relayout(int32_t w, int32_t h);
 	bool processGlobalKeyevent(KeyEvent& event) override;
 	bool mouseDownPre() override;
-	bool captureMouse(guibase* gui);
 	bool isZooming();
 	void uncaptureMouse();
 	void onUncaptureMouse();
@@ -407,8 +390,7 @@ public:
 	std::shared_ptr<plugin_clipboard_t> getPluginClipboard() {
 		return pluginClipboard;
 	}
-	String getClipboardText();
-	void setClipboardText(String s);
+
 	void setJumpFromTo(tick_t tickJmpFrom, tick_t tickJmpTo) {
 		this->tickJmpFrom = tickJmpFrom;
 		this->tickJmpTo = tickJmpTo;

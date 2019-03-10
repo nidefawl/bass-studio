@@ -343,3 +343,107 @@ void BaseCtrl::render(int32_t x, int32_t y, int32_t w, int32_t h, float ratio) {
 		test = 0;
 	}
 }
+void BaseCtrl::onGuiRemoved(guibase* gui) {
+	if (this->guiOver == gui)  {
+		this->guiOver = NULL;
+	}
+	if (this->guiCaptured == gui)  {
+		this->guiCaptured = NULL;
+	}
+	if (this->guiFocused == gui)  {
+		this->guiFocused = NULL;
+	}
+	if (this->guiDragged == gui)  {
+		this->guiDragged = NULL;
+	}
+	if (this->guiCtrFocused == gui)  {
+		this->guiCtrFocused = NULL;
+	}
+}
+void BaseCtrl::resetMouseContext() {
+	if (guiCtrFocused) {
+		if (!guiCtrFocused->isStaticContainer()) {
+			guiCtrFocused = NULL;
+		}
+	}
+	guiCaptured = guiFocused = guiOver = guiDragged = NULL;
+}
+
+bool BaseCtrl::captureMouse(guibase* gui) {
+	if (guiCaptured == NULL) {
+		guiCaptured = gui;
+		this->window->captureMouse();
+		return true;
+	}
+	return false;
+}
+String BaseCtrl::getClipboardText()
+{
+	return this->window->getClipboardText();
+}
+void BaseCtrl::setClipboardText(String s)
+{
+	this->window->setClipboardText(s);
+}
+
+
+void AppCtrl::closeAppMenus() {
+	for (auto w : menuWindows) {
+		w->getCtrl()->closePopup();
+	}
+}
+void AppCtrl::closeAppMenus(int startlvl) {
+	for (int i = startlvl; i < (int)menuWindows.size(); i++) {
+		auto w = menuWindows[i];
+		w->getCtrl()->closePopup();
+	}
+}
+void AppCtrl::openAppMenu(int lvl, guictxtmenu_base *b, ivec2 pos) {
+	if ((int)menuWindows.size() <= lvl) {
+		menuWindows.push_back(this->mainWindow->createOverlay());
+	}
+//	ivec2 windowPos;
+//	this->mainWindow->getPos(&windowPos);
+	menuWindows[lvl]->getCtrl()->open(b, pos);
+}
+void AppCtrl::openContextMenu(guictxtmenu_base *b, ivec2 pos) {
+	if (this->ctxtmenuOld)
+		DELETE_PTR(this->ctxtmenuOld) //horrible lifetime management
+	this->ctxtmenu = b;
+	ivec2 windowPos;
+	this->mainWindow->getPos(&windowPos);
+	if (!contextWindow) {
+		contextWindow = this->mainWindow->createOverlay();
+	}
+	contextWindow->getCtrl()->open(b, windowPos+pos);
+}
+void AppCtrl::closeContextMenu() {
+	if (contextWindow) {
+		contextWindow->getCtrl()->closePopup();
+	}
+	this->ctxtmenuOld = this->ctxtmenu;
+	this->ctxtmenu = nullptr;
+}
+bool AppCtrl::hasContextMenu() {
+	return this->contextWindow && this->contextWindow->isShown();
+}
+
+void AppCtrl::updateMenubar() {
+#if WINDOW_HAS_MENUBAR
+	menubar.disableAll = this->ctxtmenu != NULL;
+#endif
+}
+void AppCtrl::onMenuOpen(ngui::Menu* menu) {
+	updateMenubar();
+#if !USE_GUI_MENU
+	this->mainWindow->updateMenu();
+#endif
+}
+guictxtmenu_base* AppCtrl::getContextMenu() {
+	return this->ctxtmenu;
+}
+#if WINDOW_HAS_MENUBAR
+ngui::MenuBar& AppCtrl::getMenubar() {
+	return menubar;
+}
+#endif

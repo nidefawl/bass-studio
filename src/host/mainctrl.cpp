@@ -13,6 +13,7 @@
 #include "commands.h"
 
 #include "project.h"
+#include "projectfile.h"
 
 #include "basectrl.h"
 #include "mainctrl.h"
@@ -317,11 +318,14 @@ void MainCtrl::destroy()
 	settings.dens = grid.grid_dens;
 	isOK = false;
 	delete view;
-	plugindb.close();
+	plugindb.closeDatabase();
 	this->workerThread.stopThread();
 	this->workerThread.joinThread();
 	this->playThread.stopThread();
 	this->playThread.joinThread();
+}
+
+void MainCtrl::onWindowCloseRequest() {
 }
 
 void MainCtrl::updateMenubar() {
@@ -343,16 +347,10 @@ void MainCtrl::updateMenubar() {
 		redo->title = menuName("Redo", KC_REDO);
 	}
 }
-void MainCtrl::onWindowCloseRequest() {
-}
-void MainCtrl::onMenuOpen(ngui::Menu* menu) {
-	updateMenubar();
-#if !USE_GUI_MENU
-	this->mainWindow->updateMenu();
-#endif
-}
+
 static SupportedFileType FILE_TYPE_PROJECT {"Project File", PROJECT_FILE_EXT};
 vector<SupportedFileType> vFILE_TYPE_PROJECT = { FILE_TYPE_PROJECT };
+
 void MainCtrl::loadFile(String path) {
 	shared_ptr<project_file> f = loadProjectFile(this, path);
 	if (!f) {
@@ -483,7 +481,7 @@ bool MainCtrl::init(window_main* window, NVGcontext* nanovg)
 	this->mainWindow = window;
 	this->window = window;
 	this->vg = nanovg;
-	plugindb.open();
+	plugindb.openDatabase();
 	this->playThread.startThread();
 	this->workerThread.startThread();
 	initColor();
@@ -555,18 +553,6 @@ bool MainCtrl::init(window_main* window, NVGcontext* nanovg)
 	updateGrid();
 	isOK = true;
 	return isOK;
-}
-String MainCtrl::getClipboardText()
-{
-	return this->mainWindow->getClipboardText();
-}
-void MainCtrl::setClipboardText(String s)
-{
-	this->mainWindow->setClipboardText(s);
-}
-void MainCtrl::requestRedraw()
-{
-	this->mainWindow->requestRedraw();
 }
 int32_t MainCtrl::tickToSamples(tick_t ticks)
 {
@@ -664,14 +650,6 @@ shared_ptr<project_file> MainCtrl::createProjectFile() {
 	file->layout.scrollOffsetX = view->ctr_tracks.getScrollOffset();
 	return file;
 }
-void MainCtrl::resetMouseContext() {
-	if (guiCtrFocused) {
-		if (!guiCtrFocused->isStaticContainer()) {
-			guiCtrFocused = NULL;
-		}
-	}
-	guiCaptured = guiFocused = guiOver = guiDragged = NULL;
-}
 void MainCtrl::setDragged(guibase* g) {
 	guiDragged = g;
 }
@@ -751,14 +729,6 @@ void MainCtrl::updateGrid() {
 void MainCtrl::updateVisibleTrackContents() {
 	view->ctr_tracks.updateVisibleTrackContents();
 }
-bool MainCtrl::captureMouse(guibase* gui) {
-	if (guiCaptured == NULL) {
-		guiCaptured = gui;
-		this->mainWindow->captureMouse();
-		return true;
-	}
-	return false;
-}
 bool MainCtrl::isZooming() {
 	return guiCaptured == &view->ctr_tracks.trackTimeline;
 }
@@ -767,11 +737,6 @@ void MainCtrl::uncaptureMouse() {
 }
 void MainCtrl::onUncaptureMouse() {
 	guiCaptured = NULL;
-}
-void MainCtrl::closeAppMenus() {
-	for (auto w : menuWindows) {
-		w->getCtrl()->close();
-	}
 }
 void MainCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos) {
 	dragdropTarget.reset();
@@ -784,45 +749,6 @@ void MainCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos) {
 	}
 #endif
 	BaseCtrl::mouseMoved(mousePos, deltaPos);
-}
-void MainCtrl::closeAppMenus(int startlvl) {
-	for (int i = startlvl; i < (int)menuWindows.size(); i++) {
-		auto w = menuWindows[i];
-		w->getCtrl()->close();
-	}
-}
-void MainCtrl::openAppMenu(int lvl, guictxtmenu_base *b, ivec2 pos) {
-	if ((int)menuWindows.size() <= lvl) {
-		menuWindows.push_back(this->mainWindow->createOverlay());
-	}
-//	ivec2 windowPos;
-//	this->mainWindow->getPos(&windowPos);
-	menuWindows[lvl]->getCtrl()->open(b, pos);
-}
-void MainCtrl::openContextMenu(guictxtmenu_base *b, ivec2 pos) {
-	if (this->ctxtmenuOld)
-		DELETE_PTR(this->ctxtmenuOld) //horrible lifetime management
-	this->ctxtmenu = b;
-	ivec2 windowPos;
-	this->mainWindow->getPos(&windowPos);
-	if (!contextWindow) {
-		contextWindow = this->mainWindow->createOverlay();
-	}
-	contextWindow->getCtrl()->open(b, windowPos+pos);
-}
-void MainCtrl::closeContextMenu() {
-	if (contextWindow) {
-		contextWindow->getCtrl()->close();
-	}
-	this->ctxtmenuOld = this->ctxtmenu;
-	this->ctxtmenu = nullptr;
-}
-bool MainCtrl::hasContextMenu() {
-	return this->contextWindow && this->contextWindow->isShown();
-//	return PopupCtrl::get()->isShown();
-}
-guictxtmenu_base* MainCtrl::getContextMenu() {
-	return this->ctxtmenu;
 }
 
 void MainCtrl::objectDragMove(guibase* g, MouseEvent& mevt) {

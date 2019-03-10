@@ -66,56 +66,8 @@ public:
 	~guimenu() {
 	 my_printf("~guimenu\n", 0);
 	}
-	void clicked(int _id) {
-		if(_id > 0) {
-			parentCtrl->menuCommand(_id);//deletes this
-		}
-		if (lvl == 0) { //then reads here, gg
-			parentCtrl->closeContextMenu();
-			parentCtrl->closeAppMenus();
-		} else {
-			parentCtrl->closeAppMenus(lvl);
-		}
-	}
-	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-		if (this->contains(mpos)) {
-			ivec2 local = toContainerSpace(mpos);
-			guimenu_ctxtentry* e2 = NULL;
-			for (ctxtmenu_entry* e : entries) {
-				int n = e->getClicked(size, local);
-				if (n >= 0) {
-					e2 = dynamic_cast<guimenu_ctxtentry*>(e);
-					break;
-				}
-			}
-			if (e2 && e2->menu->type == ngui::menu_type::submenu) {
-				if (!e2->isMenuOpen) {
-					guimenu *popup =new guimenu(e2->menu, lvl+1);
-					popup->size.x = 250;
-					parentCtrl->closeAppMenus(lvl);
-					ivec2 vPos;
-					ctrl->window->getPos(&vPos);
-					vPos.y+=e2->y;
-					vPos.x+=right()+2;
-					parentCtrl->openAppMenu(
-						popup->lvl-1,
-						popup,
-						vPos);
-				}
-				e2->isMenuOpen = true;
-			} else {
-				for (ctxtmenu_entry* e : entries) {
-					guimenu_ctxtentry* e2 = dynamic_cast<guimenu_ctxtentry*>(e);
-					if (e2)
-						e2->isMenuOpen = false;
-				}
-				parentCtrl->closeAppMenus(lvl);
-			}
-			evt.requestFocus(this);
-			return true;
-		}
-		return false;
-	}
+	void clicked(int _id);
+	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
 	virtual void onRemove();
 };
 class guictr_menubar_entry : public guibase {

@@ -17,6 +17,6 @@ public:
 	~plugindatabase_t();
 	bool resolve(String name, int32_t uId, String* _outPath);
 	void query(String q, std::vector<pluginentry_t>& _out);
-	void open();
-	void close();
+	void openDatabase();
+	void closeDatabase();
 };

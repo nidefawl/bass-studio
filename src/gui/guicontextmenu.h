@@ -90,7 +90,6 @@ protected:
 public:
 	bool scrollbarOutside = false;
 	int maxHeight = 220;
-	PopupCtrl* ctrl = nullptr;
 	guictxtmenu_base() {
 		margin = 0;
 		padding = 0;
@@ -117,7 +116,7 @@ public:
 		return false;
 	}
 	virtual void clicked(int _id) {
-		ctrl->close();
+		parentCtrl->closePopup();
 		parentCtrl->closeContextMenu();
 	}
 	virtual void handleDraggedBegin(MouseEvent& evt) {
@@ -146,7 +145,7 @@ public:
 	void render(NVGcontext* vg) {
 		setScissorTransform(vg);
 		int idx = 0;
-		ivec2 mouse = this->ctrl->m_mousePos;
+		ivec2 mouse = parentCtrl->m_mousePos;
 		mouse = toContainerSpace(mouse);
 		for (ctxtmenu_entry* e : entries) {
 			e->render(size, vg, idx, mouse);
