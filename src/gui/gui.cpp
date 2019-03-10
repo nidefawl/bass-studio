@@ -237,6 +237,9 @@ void drawAttachedBackground(NVGcontext* vg, ivec2 posInset, ivec2 sizeInset, int
 	nvgFill(vg);
 }
 void guibase::renderWidgetBorder(NVGcontext* vg, int32_t flags) const {
+	renderWidgetBorderPosSize(vg, flags, pos, size);
+}
+void guibase::renderWidgetBorderPosSize(NVGcontext* vg, int32_t flags, ivec2 pos, ivec2 size) const {
 	nvgBeginPath(vg);
 	nvgRect(vg, pos.x, pos.y, size.x, size.y);
 	nvgStrokeColor(vg, theme->getBgStrokeColor(flags));
@@ -244,7 +247,6 @@ void guibase::renderWidgetBorder(NVGcontext* vg, int32_t flags) const {
 	nvgStroke(vg);
 	nvgFillColor(vg, theme->getBgColor(flags));
 	nvgFill(vg);
-
 
 	//		nvgBeginPath(vg);
 	//		nvgRect(vg, pos.x+1, pos.y+1, size.x-2, size.y-2);

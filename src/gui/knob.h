@@ -13,7 +13,7 @@
 using glm::vec2;
 using glm::ivec2;
 
-class guiknob final : public guibase {
+class guiknob : public guibase {
 	const float angleOpen = 90;
 	const float range = (360 - angleOpen) * M_PI / 180.0f;
 	const float start = -FLOAT_PI * 1.5f + (angleOpen / 2.0f) * M_PI / 180.0f;
@@ -27,6 +27,7 @@ class guiknob final : public guibase {
 public:
     std::function<float()> fnGetValue;
     std::function<void(float,int)> fnSetValue;
+    std::function<void(float,float)> fnValueEditChanged;
     std::function<void(float,float)> fnValueEditFinish;
     std::function<void(MouseHitEvt&, bool)> fnFocus;
 	NVGcolor valColor = G_BLUE;
@@ -94,17 +95,20 @@ public:
 		}
 		return false;
 	}
-	void render(NVGcontext* vg) {
-		nvgLineCap(vg, NVGlineCap::NVG_ROUND);
+	virtual void render(NVGcontext* vg) {
 		ivec2 insetP = pos+ivec2(0);
 		ivec2 insetS = size-ivec2(0);
+		renderButtonAt(vg, insetP, insetS);
+	}
+	void renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS) {
 		if (renderBackground) {
 			renderWidgetBorder(vg);
-	//		nvgBeginPath(vg);
-	//		nvgRect(vg, insetP.x, insetP.y, insetS.x, insetS.y);
-	//		nvgFillColor(vg, c);
-	//		nvgFill(vg);
+//			nvgBeginPath(vg);
+//			nvgRect(vg, insetP.x, insetP.y, insetS.x, insetS.y);
+//			nvgFillColor(vg, GUI_COLORRGB(200, 50, 200, 180));
+//			nvgFill(vg);
 		}
+		nvgLineCap(vg, NVGlineCap::NVG_ROUND);
 	    float cx = insetP.x+insetS.x/2.0f;
 	    float cy = insetP.y+insetS.y/1.8f;
 	    	    vec2 center(cx, cy);
@@ -176,7 +180,16 @@ public:
 
 
 	}
+	void setValueInit(float newValue) {
+		if (fnSetValue) {
+		} else if (valuePtr) {
+			*valuePtr = newValue;
+		} else {
+			value = newValue;
+		}
+	}
 	void setValue(float newValue, int flags) {
+		float curval = getValue();
 		newValue = CLAMP_I(newValue, 0.0f, 1.0f);
 		if (fnSetValue) {
 			fnSetValue(newValue, flags);
@@ -184,6 +197,10 @@ public:
 			*valuePtr = newValue;
 		} else {
 			value = newValue;
+		}
+
+		if (fnValueEditChanged) {
+			fnValueEditChanged(curval, getValue());
 		}
 	}
 	virtual void onValueEditFinish(float from, float to) {
