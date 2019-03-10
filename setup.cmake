@@ -10,7 +10,7 @@ FUNCTION(PREPEND var prefix)
    ENDFOREACH(f)
    SET(${var} "${listVar}" PARENT_SCOPE)
 ENDFUNCTION(PREPEND)
-set(NO_TEMP_OBJECT_A Off)
+set(NO_TEMP_OBJECT_A On)
 # By default cmake generates a temporary object.a archive on windows-gnu
 # Resetting the link rules here avoids this step and saves significant time when linking
 if (WIN32 AND NO_TEMP_OBJECT_A) 
