@@ -16,6 +16,7 @@ using glm::ivec2;
 class guibuttonbase : public guibase {
 protected:
 	String str = "";
+	int fontSize = 0;
 public:
 	guibuttonbase() : guibase() {
 	}
@@ -69,6 +70,12 @@ public:
 	void setText(String _str) {
 		str = _str;
 	}
+	void setFontSize(int fs) {
+		fontSize = fs;
+	}
+	int getFontSize() {
+		return fontSize;
+	}
 };
 class guibutton : public guibuttonbase {
 	bool* enabledPtr = NULL;
@@ -104,7 +111,8 @@ public:
 	void render(NVGcontext* vg) {
 		renderWidgetBorder(vg, getStateFlags());
 		if (str.length() > 0) {
-			setFont(vg, G_FONT_SCALE(size.y), G_WHITE, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+			int fontScale = this->fontSize > 0 ? this->fontSize : G_FONT_SCALE(size.y);
+			setFont(vg, fontScale, G_WHITE, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
 			nvgText(vg, pos.x + size.x / 2.0f, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(str), NULL);
 		}
 

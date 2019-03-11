@@ -37,6 +37,9 @@ int getHWNDCnt(int i);
 extern int colorVal;
 gui_ctr_debug::gui_ctr_debug() : guictr_base() {
 	add(&knobTest);
+	add(&btn);
+	btn.setText("Reset history");
+	btn.setFontSize(24);
 	knobTest.fnSetValue = [](float f, int flags) {
 		colorVal = 0+max(0, min(255, (int32_t)std::floor(f*255)));
 		initColor();
@@ -166,11 +169,19 @@ void gui_ctr_debug::render(NVGcontext* vg) {
 		y += lineh;
 	}
 	knobTest.render(vg);
+	btn.render(vg);
 	g_debugStrings.clear();
 }
 void gui_ctr_debug::layout() {
 	ivec2 cs = getSizeContent();
 	knobTest.size = ivec2(48, 48);
 	knobTest.pos = ivec2(cs.x-knobTest.size.x, cs.y-knobTest.size.y);
+	btn.size = ivec2(140, 48);
+	btn.pos = ivec2(0, cs.y-btn.size.y);
 }
 
+void gui_ctr_debug::buttonClicked(guibase* button) {
+	if (button == &btn) {
+		MainCtrl::get()->getHist().clear();
+	}
+}
