@@ -17,8 +17,8 @@
 
 using namespace std;
 
-#define DISPLAY_HWND_DRAWS 0
-#define DISPLAY_WIN_MSG_STATS 0
+#define DISPLAY_HWND_DRAWS 1
+#define DISPLAY_WIN_MSG_STATS 1
 
 struct win32_msg {
 	int id;
