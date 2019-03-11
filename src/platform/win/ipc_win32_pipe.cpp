@@ -108,7 +108,7 @@ int ipc_server::readData(char* buf, unsigned int len) {
 
 class ipc_client::Impl
 {
-	HANDLE pipe = NULL;
+	HANDLE pipe = nullptr;
 public:
 	Impl() {
 
@@ -158,6 +158,7 @@ public:
     void client_close() {
 		if (pipe) {
 			CloseHandle(pipe);
+			pipe = nullptr;
 		}
     }
 };
