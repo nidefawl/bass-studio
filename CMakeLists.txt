@@ -127,11 +127,13 @@ target_link_libraries(${LINK_TARGET} PRIVATE winmm kernel32 gdi32 ole32 uuid com
 target_link_libraries(${LINK_TARGET_SCANNER} PRIVATE winmm kernel32 gdi32 ole32 uuid comdlg32 setupapi mswsock ws2_32)
 endif(WIN32)
 
-set_target_properties("vstscanner" PROPERTIES OUTPUT_NAME "vstscanner")
+set(SCANNER_EXE_NAME "vstscanner-${CMAKE_CXX_COMPILER_ID}")
+set_target_properties("vstscanner" PROPERTIES OUTPUT_NAME ${SCANNER_EXE_NAME})
 set_target_properties("vstscanner" PROPERTIES RUNTIME_OUTPUT_DIRECTORY ../run/$<$<CONFIG:Debug>:>)
 set_target_properties("vstscanner" PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ../run/)
 
-set_target_properties(${BUILD_NAME} PROPERTIES OUTPUT_NAME "DAW")
+set(DAW_EXE_NAME "DAW-${CMAKE_CXX_COMPILER_ID}")
+set_target_properties(${BUILD_NAME} PROPERTIES OUTPUT_NAME ${DAW_EXE_NAME})
 set_target_properties(${BUILD_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ../run/$<$<CONFIG:Debug>:>)
 set_target_properties(${BUILD_NAME} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ../run/)
 
