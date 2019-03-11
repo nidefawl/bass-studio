@@ -17,6 +17,7 @@
 #include "mouse.h"
 #include "event.h"
 #include "commands.h"
+#include <assert.h>
 
 #include "project.h"
 
@@ -415,7 +416,9 @@ void AppCtrl::openContextMenu(guictxtmenu_base *b, ivec2 pos) {
 	if (!contextWindow) {
 		contextWindow = this->mainWindow->createOverlay();
 	}
-	contextWindow->getCtrl()->open(b, windowPos+pos);
+	if (contextWindow) {
+		contextWindow->getCtrl()->open(b, windowPos+pos);
+	}
 }
 void AppCtrl::closeContextMenu() {
 	if (contextWindow) {
