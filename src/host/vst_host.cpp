@@ -7,6 +7,7 @@
 #include "vst_host.h"
 #include "fileio.h"
 #include "track.h"
+#include "basectrl.h"
 #include "mainctrl.h"
 
 #include "plugin/base_plugin.h"
@@ -331,6 +332,7 @@ bool setFlag(int& _out, int flag, bool state) {
 	return curState != state;
 }
 
+String getModuleName(HMODULE);
 class vsthost::ModuleManager {
 public:
 	ModuleManager() {
@@ -339,6 +341,8 @@ public:
 
 	void releaseModule(void* module) {
 #ifdef _WIN32
+		String moduleName = getModuleName((HMODULE)module);
+		my_printf("Unload %s\n", StringAsCStr(moduleName));
 		FreeLibrary((HMODULE)module);
 #endif
 #ifdef __linux__
