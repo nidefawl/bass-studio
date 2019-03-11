@@ -165,7 +165,7 @@ String FormatErrorMessage(int32_t error, String msg)
 		BUFFERLENGTH - 1, 0);
 	if (msg.empty())
 		return String(buf.data());
-	return msg + " (" + String(buf.data()) + ")";
+	return msg + " (" + StringTrim(String(buf.data())) + ")";
 }
 
 #endif

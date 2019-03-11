@@ -55,6 +55,22 @@ inline bool StrEndsWith(String const & a, String const & b)
     if (b.size() > a.size()) return false;
     return std::equal(a.begin() + a.size() - b.size(), a.end(), b.begin());
 }
+inline String StringTrim(String str) {
+	// trim trailing spaces
+	size_t endpos = str.find_last_not_of(" \t\n\r");
+	size_t startpos = str.find_first_not_of(" \t\n\r");
+	if( std::string::npos != endpos )
+	{
+	    str = str.substr( 0, endpos+1 );
+	    str = str.substr( startpos );
+	    return str;
+	}
+	if( std::string::npos != startpos )
+	{
+	    str = str.substr( startpos );
+	}
+	return str;
+}
 inline String StringToUpper(String strToConvert)
 {
     std::transform(strToConvert.begin(), strToConvert.end(), strToConvert.begin(), ::toupper);
