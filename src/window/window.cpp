@@ -133,7 +133,8 @@ static void glfw_cb_framebuffersize(GLFWwindow *w, int width, int height);
 static void glfw_startup_error_callback(int error, const char* description) {
 	char errorCodeStr[1024] = { 0 };
 	_snprintf_s(errorCodeStr, 1024 - 1, _TRUNCATE, "Error %d: %s", error, description);
-	ngui::show(errorCodeStr, "Error", ngui::Style::Error, ngui::Buttons::OK);
+	my_printf("%s\n", errorCodeStr);
+//	ngui::show(errorCodeStr, "Error", ngui::Style::Error, ngui::Buttons::OK);
 }
 static void glfw_runtime_error_callback(int error, const char* description) {
 	printf("Error %d: %s", error, description);
@@ -149,8 +150,9 @@ static void setAppWindowHints() {
     glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_FALSE);
 }
 static void showerror(const char* description) {
-	printf("Error: %s\n", description);
-	ngui::show(description, "Error", ngui::Style::Error, ngui::Buttons::OK);
+	my_printf("Error: %s\n", description);
+//	ngui::show(description, "Error", ngui::Style::Error, ngui::Buttons::OK);
+//	m,y
 }
 void invalidateWindowContents(GLFWwindow* glfw) {
 #ifdef _WIN32
@@ -163,7 +165,6 @@ void invalidateWindowContents(GLFWwindow* glfw) {
 #ifdef _WIN32
 void syncMenu(HWND hwnd, ngui::MenuBar& menubar); // menu_win32.cpp
 ngui::Menu* getUserDataFromMenu(HMENU hmenu, UINT uPos); // menu_win32.cpp
-static WNDPROC glfwWndProc = NULL;
 
 LRESULT WIN32API_CALLBACK_TYPE appWndProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam);
 static VOID WIN32API_CALLBACK_TYPE timerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime);
@@ -217,8 +218,11 @@ protected:
 	vec2 lastclickpos;
 	vec2 lastmousepos;
 	vec2 mousepos;
+public:
 	GLFWwindow *glfw = NULL;
+protected:
 	NVGcontext* nanovgCtxt = NULL;
+	bool isExternalWindow = false;
 #ifdef __linux__
 	bool noRawInput = true;//disable, since Virtual Machines don't handle rawinput correctly (works on native)
 #endif
@@ -227,7 +231,19 @@ protected:
 	UINT_PTR timer = 0;
 	DropTarget* dropTarget = NULL;
 	HWND hwnd = NULL;
+	WNDPROC defWndProc = NULL;
 #endif
+	bool valid = true;
+public:
+	bool isValid() {
+		return valid;
+	}
+	void setInvalid() {
+		this->valid = false;
+	}
+	void setValid() {
+		this->valid = true;
+	}
 private:
 	int calls = 0;
 	uint64_t tm_lastfps;
@@ -249,11 +265,6 @@ private:
 			}
 #endif
 		}
-#ifdef _WIN32
-		if (glfwWndProc == NULL) {
-			glfwWndProc = (WNDPROC)GetWindowLongPtr(hwnd, GWLP_WNDPROC);
-		}
-#endif
 	}
 	void initContext() {
 //		glfwSwapInterval(-1);
@@ -272,8 +283,13 @@ public:
 		name[0] = 0;
 	}
 	virtual ~appwindow() {
-		my_printf("glfwDestroyWindow\n", 0);
-		glfwDestroyWindow(glfw);
+		if (hwnd) {
+			RemovePropW(hwnd, L"GLFW");
+		}
+		if (glfw) {
+			glfwSetWindowUserPointer(glfw, nullptr);
+			glfwDestroyWindow(glfw);
+		}
 	}
 	GLFWwindow* getGLFW() {
 		return glfw;
@@ -318,9 +334,19 @@ public:
 		secondsLastDraw = getTimeHPC();
 		redrawFlagged = false;
 	}
+	void killTimer() {
+#ifdef _WIN32
+		if (timer && hwnd) {
+			KillTimer(hwnd, this->timer);
+			my_printf("KillTimer\n", 0);
+		}
+#endif
+	}
 	void destroyGL() {
-		if (nanovgCtxt)
+		if (nanovgCtxt) {
 			nvgDeleteGL3(nanovgCtxt);
+			nanovgCtxt = nullptr;
+		}
 	}
 	void _onMouseMoved(double x, double y) {
 		lastmousepos = mousepos;
@@ -334,12 +360,6 @@ public:
 	/* FROM GLFW CALLBACKS */
 	virtual void onWindowCloseRequest() {
 		my_printf("on window close\n", 0);
-#ifdef _WIN32
-		if (timer && hwnd) {
-			KillTimer(hwnd, this->timer);
-			my_printf("KillTimer\n", 0);
-		}
-#endif
 	}
 	virtual void render() = 0;
 	virtual void onKeyInput(int key, int scancode, int action, int mods, const char* key_name) = 0;
@@ -376,11 +396,15 @@ public:
 		return glfwGetInputMode(glfw, GLFW_CURSOR) != GLFW_CURSOR_NORMAL;
 	}
 
-	virtual void createWindow(const char* title, int w, int h, GLFWwindow* share = NULL) {
+	virtual void createWindow(const char* title, int w, int h, GLFWwindow* share = nullptr, void* parentWindowHandle = nullptr) {
 		strncpy(this->name, title, 32);
 		if (glfw)
 			throw appexception("window not null");
-		glfw = glfwCreateWindow(w, h, title, NULL, share);
+		if (parentWindowHandle) {
+			glfw = glfwCreateChildWindow(parentWindowHandle, w, h, title, share);
+		} else {
+			glfw = glfwCreateWindow(w, h, title, NULL, share);
+		}
 		if (!glfw)
 			throw appexception("Couldn't create window");
 		glfwSetWindowUserPointer(glfw, this);
@@ -404,10 +428,11 @@ public:
 			throw appexception("Couldn't get win32 window handle");
 #endif
 		glfwMakeContextCurrent(glfw);
-		initOGL();
 #ifdef _WIN32
+		defWndProc = (WNDPROC)GetWindowLongPtr(hwnd, GWLP_WNDPROC);
 		SetWindowLongPtr(hwnd, GWLP_WNDPROC, (LONG_PTR)appWndProc);
 #endif
+		initOGL();
 		initContext();
 #ifdef _WIN32
 		this->timer = SetTimer(hwnd, 0, 1, (TIMERPROC)timerProc);
@@ -492,7 +517,7 @@ public:
 			break;
 
 		}
-		return CallWindowProc(glfwWndProc, _hwnd, Msg, wParam, lParam);
+		return CallWindowProc(defWndProc, _hwnd, Msg, wParam, lParam);
 	}
 #endif
 
@@ -552,7 +577,7 @@ public:
 		  ctrl(_ctrl) {
 		dblclicktimer = 0;
 	}
-	void create(const char* title, int w, int h);
+	void create(const char* title, int w, int h, void* parentWindowHandle);
 	void updateMenu();
 	void flagNeedsRedraw() override {
 		appwindow::flagNeedsRedraw();
@@ -1112,24 +1137,31 @@ void appwindow_main::destroyOverlayWindows() {
 		ow->destroyGL();
 		ow.reset();
 	}
+	this->overlayWindows.clear();
 }
 void appwindow_main::destroy() {
 	if (!glfw)
 		throw appexception("window null");
+	glfwMakeContextCurrent(glfw);
 	appwindow::destroyGL();
+	appwindow::killTimer();
 #ifdef _WIN32
-	UnregisterDropWindow(hwnd, this->dropTarget);
+	if (this->dropTarget)
+		UnregisterDropWindow(hwnd, this->dropTarget);
 	settings.size = windowsize(hwnd);
 #endif
 #if __linux__
 		//TODO: implement linux
 #endif
 }
-void appwindow_main::create(const char* title, int w, int h) {
+void appwindow_main::create(const char* title, int w, int h, void* parentWindowHandle) {
 	setAppWindowHints();
-	glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
-	appwindow::createWindow(title, w, h);
-	glfwSetWindowSizeLimits(glfw, 640, 480, GLFW_DONT_CARE, GLFW_DONT_CARE);
+	if (!parentWindowHandle)
+		glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
+	appwindow::createWindow(title, w, h, nullptr, parentWindowHandle);
+	if (!parentWindowHandle) {
+		glfwSetWindowSizeLimits(glfw, 640, 480, GLFW_DONT_CARE, GLFW_DONT_CARE);
+	}
 	RenderResources::init(nanovgCtxt);
 	MouseCursors::init(); //TODO: call MouseCursors::destroy() on exit of last instance
 
@@ -1143,18 +1175,20 @@ void appwindow_main::create(const char* title, int w, int h) {
 		//TODO: implement linux
 #endif
 
+#ifndef DAWFRAMEWORK_PLUGIN
 #ifdef _WIN32
 	if (settings.size.valid) {
 		settings.size.apply(hwnd);
 	    RECT area;
 	    GetClientRect(hwnd, &area);
-	    onWindowSizeChanged(area.right-area.left, area.bottom-area.top);
+//	    onWindowSizeChanged(area.right-area.left, area.bottom-area.top);
 	} else {
 		this->maximize();
 	}
 #endif
 #if __linux__
 		//TODO: implement linux
+#endif
 #endif
 	glfwGetWindowSize(glfw, &w, &h);
 	this->onWindowSizeChanged(w, h);
@@ -1221,10 +1255,9 @@ static VOID WIN32API_CALLBACK_TYPE timerProc(HWND hwnd, UINT uMsg, UINT_PTR idEv
 	if (glfwWindow != NULL) {
 		impl = (appwindow*)glfwGetWindowUserPointer(glfwWindow);
 	}
-	if (impl == NULL) {
-		return;
+	if (impl != NULL && impl->isValid()) {
+		impl->onTick();
 	}
-	impl->onTick();
 	EXC_CATCH
 }
 LRESULT WIN32API_CALLBACK_TYPE appWndProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
@@ -1234,12 +1267,10 @@ LRESULT WIN32API_CALLBACK_TYPE appWndProc(HWND hwnd, UINT Msg, WPARAM wParam, LP
 	if (glfwWindow != NULL) {
 		impl = (appwindow*)glfwGetWindowUserPointer(glfwWindow);
 	}
-	if (impl == NULL) {
-		if (glfwWndProc)
-			return CallWindowProc(glfwWndProc, hwnd, Msg, wParam, lParam);
-		return 0; // Cannot throw in winproc
+	if (impl != NULL && impl->isValid()) {
+		return impl->windowProc(hwnd, Msg, wParam, lParam);
 	}
-	return impl->windowProc(hwnd, Msg, wParam, lParam);
+	return DefWindowProc(hwnd, Msg, wParam, lParam);
 	EXC_CATCH
 	return 0;
 }
@@ -1270,28 +1301,28 @@ void on_terminate() {
 static void glfw_cb_mousepos(GLFWwindow *w, double x, double y) {
 	EXC_TRY
 	appwindow* wu;
-	if ((wu = getUserData(w)))
+	if ((wu = getUserData(w)) && wu->isValid())
 		wu->_onMouseMoved(x, y);
 	EXC_CATCH
 }
 static void glfw_cb_mousebutton(GLFWwindow *w, int button, int action, int mods) {
 	EXC_TRY
 	appwindow* wu;
-	if ((wu = getUserData(w)))
+	if ((wu = getUserData(w)) && wu->isValid())
 		wu->onMouseButton(button, action, mods);
 	EXC_CATCH
 }
 static void glfw_cb_cursorenter(GLFWwindow *w, int entered) {
 	EXC_TRY
 	appwindow* wu;
-	if ((wu = getUserData(w)))
+	if ((wu = getUserData(w)) && wu->isValid())
 		wu->onCursorEnter(entered);
 	EXC_CATCH
 }
 static void glfw_cb_mousescroll(GLFWwindow *w, double xoffset, double yoffset) {
 	EXC_TRY
 	appwindow* wu;
-	if ((wu = getUserData(w)))
+	if ((wu = getUserData(w)) && wu->isValid())
 		wu->onMouseScrolled(xoffset, yoffset);
 	EXC_CATCH
 }
@@ -1299,49 +1330,49 @@ static void glfw_cb_keyinput(GLFWwindow *w, int key, int scancode, int action, i
 	EXC_TRY
 	const char* key_name = glfwGetKeyName(key, scancode);
 	appwindow* wu;
-	if ((wu = getUserData(w)))
+	if ((wu = getUserData(w)) && wu->isValid())
 		wu->onKeyInput(key, scancode, action, mods, key_name);
 	EXC_CATCH
 }
 static void glfw_cb_charinput(GLFWwindow *w, unsigned int codepoint) {
 	EXC_TRY
 	appwindow* wu;
-	if ((wu = getUserData(w)))
+	if ((wu = getUserData(w)) && wu->isValid())
 		wu->onCharInput(codepoint);
 	EXC_CATCH
 }
 static void glfw_cb_refresh(GLFWwindow *w) {
 	EXC_TRY
 	appwindow* wu;
-	if ((wu = getUserData(w)))
+	if ((wu = getUserData(w)) && wu->isValid())
 		wu->onRefresh();
 	EXC_CATCH
 }
 static void glfw_cb_windowclose(GLFWwindow *w) {
 	EXC_TRY
 	appwindow* wu;
-	if ((wu = getUserData(w)))
+	if ((wu = getUserData(w)) && wu->isValid())
 		wu->onWindowCloseRequest();
 	EXC_CATCH
 }
 static void glfw_cb_windowfocus(GLFWwindow *w, int focused) {
 	EXC_TRY
 	appwindow* wu;
-	if ((wu = getUserData(w)))
+	if ((wu = getUserData(w)) && wu->isValid())
 		wu->onWindowFocusChanged(focused);
 	EXC_CATCH
 }
 static void glfw_cb_windowwize(GLFWwindow *w, int width, int height) {
 	EXC_TRY
 	appwindow* wu;
-	if ((wu = getUserData(w)))
+	if ((wu = getUserData(w)) && wu->isValid())
 		wu->onWindowSizeChanged(width, height);
 	EXC_CATCH
 }
 static void glfw_cb_framebuffersize(GLFWwindow *w, int width, int height) {
 	EXC_TRY
 	appwindow* wu;
-	if ((wu = getUserData(w)))
+	if ((wu = getUserData(w)) && wu->isValid())
 		wu->onFramebufferSizeChanged(width, height);
 	EXC_CATCH
 }
@@ -1404,10 +1435,13 @@ int getHWNDCnt(int i) {
 	for (int j = 0; j < i; j++, it++);
 	return it->second;
 }
-
+#ifndef DAWFRAMEWORK_PLUGIN
 void drawDebugWindow(NVGcontext* ctx, int winW, int winH, float pxratio);
 #ifdef _WIN32
+namespace vst_window_mgr {
+void destroyAllVSTWindows();
 bool isVstWindow(HWND hwnd);
+}
 #endif
 std::shared_ptr<AppCtrl> makeApp();
 void deleteApp();
@@ -1420,14 +1454,15 @@ int startApplication(int argc, char* argv[]) {
 	OleInitialize(0);
 #endif
 	std::set_terminate(on_terminate);
+#ifdef USE_WIN32_EXC_HOOKS
 	setExceptionHandler();
-
+#endif
 	EXC_TRY
 	allocConsole();
 	setMinimumResolutionTimer();
 	loadSettings(settings);
 	glfwSetErrorCallback(glfw_startup_error_callback);
-	if (!glfwInit()) {
+	if (!glfwInit("DAWWINDOW01")) {
 		showerror("Initialization failed. Couldn't initialize glfw");
 		exit(EXIT_FAILURE);
 	}
@@ -1435,7 +1470,7 @@ int startApplication(int argc, char* argv[]) {
 	std::shared_ptr<AppCtrl> ctrl = makeApp();
 	ctrl->initApp(argc, argv);
 	mainWindow = std::make_unique<appwindow_main>(ctrl.get());
-	mainWindow->create("main window", 1280, 720);
+	mainWindow->create("main window", 1280, 720, nullptr);
 	mainWindow->showWindow();
 	enableGlDebugCallback();
 #if CREATE_DEBUG_COMPANION_WINDOW
@@ -1455,6 +1490,7 @@ int startApplication(int argc, char* argv[]) {
 	glfwSetErrorCallback(glfw_runtime_error_callback);
 	ctrl->postInit();
 	GLFWwindow* glfwHandle = mainWindow->getGLFW();
+	HWND hwnd1 = mainWindow->getHWND();
 	long start = getTimeMillis();
 	int step = 0;
 	int nMsg = 0;
@@ -1472,16 +1508,13 @@ int startApplication(int argc, char* argv[]) {
 	        }
 	        else
 	        {
-				char clsName_v[256];
-
-				GetClassNameA(msg.hwnd, clsName_v, 256);
 
 	            switch (msg.message) {
 					case WM_KEYDOWN:
 					case WM_SYSKEYDOWN:
 					case WM_KEYUP:
 					case WM_SYSKEYUP: {
-						if (isVstWindow(msg.hwnd)) {
+						if (vst_window_mgr::isVstWindow(msg.hwnd)) {
 							msg.hwnd = mainWindow->getHWND();
 						}
 					}
@@ -1496,6 +1529,8 @@ int startApplication(int argc, char* argv[]) {
 				incrMessage(msg.message);
 				if (msg.message == WM_PAINT)
 				{
+					char clsName_v[256];
+					GetClassNameA(msg.hwnd, clsName_v, 256);
 					if (hwndPaints.count(clsName_v)) {
 						hwndPaints[clsName_v] = hwndPaints.at(clsName_v)+1;
 					} else {
@@ -1514,47 +1549,18 @@ int startApplication(int argc, char* argv[]) {
 			mainWindow->flagNeedsRedraw();
 		}
 #endif
-//		ctrl->numCallsWaitEvents++;
-//		if (test && getTimeMillis()-start > 4) {
-//			switch (step) {
-//			case 0:
-//				ctrl->loadFile("muuure.project");
-//				break;
-//			case 1:
-//				ctrl->startPlaying();
-//				break;
-//			case 2:
-//				ctrl->stopPlaying();
-//				break;
-//			case 3:
-//				ctrl->loadFile("more.project");
-//				break;
-//			case 4:
-//				ctrl->startPlaying();
-//				break;
-//			case 5:
-//				ctrl->loadFile("jad.project");
-//				break;
-//			case 6:
-//				ctrl->startPlaying();
-//				break;
-//			case 7:
-//				ctrl->stopPlaying();
-//				break;
-//			case 8:
-//				glfwSetWindowShouldClose(glfwHandle, 1);
-//				break;
-//			}
-//			start = getTimeMillis();
-//			step++;
-//		}
 	}
+	mainWindow->setInvalid();
 	ctrl->destroy();
 	mainWindow->destroy();
+
 //	PopupCtrl::get()->destroy();
 	mainWindow->destroyOverlayWindows();
 
 	saveSettings(settings);
+
+	vst_window_mgr::destroyAllVSTWindows();
+
 	mainWindow.reset();
 	glfwTerminate();
 	EXC_CATCH
@@ -1568,6 +1574,7 @@ int startApplication(int argc, char* argv[]) {
 	return 0;
 }
 
+#endif
 
 
 #endif

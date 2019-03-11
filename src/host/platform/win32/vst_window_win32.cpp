@@ -16,6 +16,7 @@ HWND getMainHWND(); // window.cpp
 LRESULT WIN32API_CALLBACK_TYPE appWndProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam); // window.cpp
 
 namespace {
+	const TCHAR* gWindowClassName = _T("VSTHOSTWINDOW");
 	static std::vector<vst_window*> vst_window_list;
 	static void addWindow (vst_window* window)
 	{
@@ -107,7 +108,6 @@ namespace {
 		}
 		return DefWindowProc (hwnd, message, wParam, lParam);
 	}
-	const TCHAR* gWindowClassName = _T("VSTHOSTWINDOW");
 	void registerWindowClass (HINSTANCE instance)
 	{
 		static bool once = true;
@@ -137,6 +137,22 @@ vst_window* vst_window::make (vstplugin* plugin, const String& name, ivec2 size,
 	if (window->init (plugin, name, size, resizeable))
 		return window;
 	return nullptr;
+}
+namespace vst_window_mgr {
+	void destroyAllVSTWindows() {
+		for (vst_window* w : vst_window_list) {
+			HWND hwnd = w->getHWND();
+			if (hwnd) {
+				ShowWindow(hwnd, false);
+				DestroyWindow(hwnd);
+			}
+		}
+		vst_window_list.clear();
+		UnregisterClass(gWindowClassName, GetModuleHandle(NULL));
+	}
+	bool isVstWindow(HWND hwnd) {
+		return nullptr != vst_window::getVSTWindow(hwnd);
+	}
 }
 vst_window* vst_window::getVSTWindow(HWND handle)
 {
@@ -278,8 +294,5 @@ void vst_window::resize (ivec2 newSize)
 WINDOW_HANDLE vst_window::getHWND () const
 {
 	return hwnd;
-}
-bool isVstWindow(HWND hwnd) {
-	return nullptr != vst_window::getVSTWindow(hwnd);
 }
 #endif

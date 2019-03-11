@@ -23,6 +23,10 @@ class vstplugin;
 
 //------------------------------------------------------------------------
 struct GLFWwindow;
+namespace vst_window_mgr {
+	void destroyAllVSTWindows();
+	bool isVstWindow(HWND hwnd);
+}
 class vst_window
 {
 public:
