@@ -23,9 +23,9 @@ class guiplugin : public guictr_base {
 public:
 	effectbase* const effect;
 	String text;
-	guibuttontoggle buttonBypass;
-	guibuttontoggle buttonDelete;
-	gui_trackmeter meter;
+	guibuttontoggle buttonBypass; //TODO: use add() on controls
+	guibuttontoggle buttonDelete; //TODO: use add() on controls
+	gui_trackmeter meter; //TODO: use add() on controls
 	float titlePosX = 0;
 	bool hasDragged=false;
 	guiplugin(effectbase* _effect);
@@ -84,14 +84,15 @@ public:
 	virtual guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
 	virtual bool isSelected() override;
 	virtual guibase* getDraggedControl() override;
+	virtual void setControl(BaseCtrl* parentCtrl) override;
 };
 class guivstplugin : public guiplugin {
 public:
 	guivstplugin(vstplugin * _vst);
 	~guivstplugin();
 	vstplugin* const vst;
-	gui_list params;
-	guibuttontoggle buttonOpenEditor;
+	gui_list params; //TODO: use add() on controls
+	guibuttontoggle buttonOpenEditor; //TODO: use add() on controls
 	void layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {
 		buttonOpenEditor.pos.y = inset1;
 		buttonOpenEditor.pos.x = buttonBypass.right();
@@ -110,4 +111,5 @@ public:
 	void buttonClicked(guibase* _button) override;
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
 	guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
+	virtual void setControl(BaseCtrl* parentCtrl) override;
 };

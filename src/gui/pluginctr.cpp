@@ -140,6 +140,13 @@ bool guiplugin::isSelected() {
 	}
 	return this->parent && this->parent->isSelected();
 }
+
+void guiplugin::setControl(BaseCtrl* parentCtrl) {
+	guictr_base::setControl(parentCtrl);
+	buttonBypass.setControl(parentCtrl);
+	buttonDelete.setControl(parentCtrl);
+	meter.setControl(parentCtrl);
+}
 bool guictr_plugins::isSelected() {
 	return parent && parent->isSelected();
 }
@@ -252,6 +259,10 @@ public:
 	void dragMoveOn(guibase* target, ivec2 mousepos) override {
 	}
 	void dragReleaseOn(guibase* target, ivec2 mousepos) override {
+	}
+	virtual void setControl(BaseCtrl* parentCtrl) {
+		guibase::setControl(parentCtrl);
+		knobTest.setControl(parentCtrl);
 	}
 	String getText() override {
 		return entry->label;
@@ -936,7 +947,8 @@ guivstplugin::guivstplugin(vstplugin * _vst)
 : guiplugin(_vst),
   vst(_vst),
   params(48),
-  buttonOpenEditor((HEIGHT_PLUGIN_TITLE-HEIGHT_PLUGIN_TITLE/3)/2) {
+  buttonOpenEditor((HEIGHT_PLUGIN_TITLE-HEIGHT_PLUGIN_TITLE/3)/2)
+{
 	buttonOpenEditor.icon = ICON_ADJUST;
 	buttonOpenEditor.state = &_vst->bEditOpen;
 	buttonOpenEditor.parent = this;
@@ -952,6 +964,11 @@ guivstplugin::guivstplugin(vstplugin * _vst)
 }
 
 guivstplugin::~guivstplugin() {
+}
+void guivstplugin::setControl(BaseCtrl* parentCtrl) {
+	guiplugin::setControl(parentCtrl);
+	buttonOpenEditor.setControl(parentCtrl);
+	params.setControl(parentCtrl);
 }
 void guivstplugin::render(NVGcontext* vg) {
 	renderBase(vg);
