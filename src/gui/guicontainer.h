@@ -37,7 +37,7 @@ public:
 		for (guibase* g : guis) {
 			g->onRemove();
 			g->parent = nullptr;
-			g->setControl(nullptr);
+			//g->setControl(nullptr);
 			delete g;
 		}
 		guis.clear();
@@ -46,7 +46,7 @@ public:
 		for (guibase* g : guis) {
 			g->onRemove();
 			g->parent = nullptr;
-			g->setControl(nullptr);
+			//g->setControl(nullptr);
 		}
 		guis.clear();
 	}
@@ -152,7 +152,7 @@ public:
 		gui->onRemove();
 		guis.erase(it);
 		gui->parent = nullptr;
-		gui->setControl(nullptr);
+		//gui->setControl(nullptr);
 	}
 	virtual void addUNCHECKED(guibase* gui) {
 		auto it = std::find(guis.begin(), guis.end(), gui);
@@ -176,7 +176,7 @@ public:
 //		gui->onRemove();
 		guis.erase(it);
 		gui->parent = nullptr;
-		gui->setControl(nullptr);
+		//gui->setControl(nullptr);
 	}
 	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
 		if (this->contains(mpos)) {

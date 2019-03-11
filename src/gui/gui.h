@@ -79,6 +79,7 @@ public:
 		this->pos = _pos;
 		this->size = _size;
 	}
+	virtual ~guibase();
 
 	bool hasTextinput() {
 		return canTextInput;
@@ -88,17 +89,6 @@ public:
 	}
 	void setLabel(String _str) {
 		label = _str;
-	}
-	virtual ~guibase() {
-		BaseCtrl* ctrl = parentCtrl;
-		if (ctrl)
-			ctrl->onGuiRemoved(this); // TODO: don't call this from here
-		allocCount--;
-		auto it = std::find(g_guis.begin(), g_guis.end(), this);
-		g_guis.erase(it);
-		if (!theme->isDefault) {
-			delete theme;
-		}
 	}
 	void setColor(uint32_t hex) {
 		if (theme->isDefault) {

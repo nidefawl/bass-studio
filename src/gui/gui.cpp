@@ -236,6 +236,20 @@ void drawAttachedBackground(NVGcontext* vg, ivec2 posInset, ivec2 sizeInset, int
 	nvgFillColor(vg, g_guiColors[COL_BG_BRT]);
 	nvgFill(vg);
 }
+guibase::~guibase() {
+	BaseCtrl* ctrl = parentCtrl;
+	if (ctrl) {
+		ctrl->onGuiRemoved(this); // TODO: don't call this from here
+	} else {
+		//assert(0);
+	}
+	allocCount--;
+	auto it = std::find(g_guis.begin(), g_guis.end(), this);
+	g_guis.erase(it);
+	if (!theme->isDefault) {
+		delete theme;
+	}
+}
 void guibase::renderWidgetBorder(NVGcontext* vg, int32_t flags) const {
 	renderWidgetBorderPosSize(vg, flags, pos, size);
 }
