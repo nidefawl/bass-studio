@@ -66,7 +66,7 @@ inline bool canReuse(const audioclip_texture_t& lhs, const audioclip_texture_t& 
 //			lhs.size == rhs.size &&
 //			lhs.samplesPerPx == rhs.samplesPerPx &&
 //			lhs.scale == rhs.scale &&
-			lhs.clipped == lhs.clipped &&
+			lhs.clipped == rhs.clipped &&
 //			lhs.scaleX == rhs.scaleX &&
 			lhs.audioId == rhs.audioId && lhs.quality == rhs.quality && lhs.method == rhs.method;
 
@@ -84,7 +84,7 @@ inline bool isEqualWaveform3(const audioclip_texture_t& lhs, const audioclip_tex
 //			lhs.size == rhs.size &&
 //			lhs.samplesPerPx == rhs.samplesPerPx &&
 //			lhs.scale == rhs.scale &&
-			lhs.clipped == lhs.clipped &&
+			lhs.clipped == rhs.clipped &&
 //			lhs.scaleX == rhs.scaleX &&
 			lhs.audioId == rhs.audioId && lhs.quality == rhs.quality && lhs.method == rhs.method;
 }
