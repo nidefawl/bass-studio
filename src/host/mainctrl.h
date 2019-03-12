@@ -78,10 +78,16 @@ struct dragdrop_midifile {
 	bool isValidTarget = false;
 	void reset();
 };
-struct plugin_selection {
+class plugin_selection {
+public:
 	guiplugin* firstSelection = nullptr;
 	guiplugin* lastSelection = nullptr;
 	guictr_plugins* pluginCtr = nullptr;
+	void clear() {
+		firstSelection = nullptr;
+		lastSelection = nullptr;
+		pluginCtr = nullptr;
+	}
 };
 
 struct dragdrop_target_indicator {

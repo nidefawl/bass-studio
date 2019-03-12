@@ -384,6 +384,7 @@ void MainCtrl::menuCommand(int cmd) {
 		break;
 	case CMD_FILE_NEW:
 	{
+		//TODO: stop playback here
 		setEmptyProject();
 		MainCtrl::getGuiTrackCtr()->layout();
 		MainCtrl::get()->updateVisibleTrackContents();
