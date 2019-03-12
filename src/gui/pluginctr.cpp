@@ -126,15 +126,12 @@ guibase* guiplugin::getDraggedControl() {
 	return this;
 }
 bool guiplugin::isSelected() {
-	guictr_plugins* parentCtr = static_cast<guictr_plugins*>(this->parent);
-	if (parentCtr) {
-		auto& sel = MainCtrl::get()->getPluginSel();
-		if (sel.pluginCtr == parentCtr) {
-			if (sel.firstSelection) {
-				if (this->effect->getSlot() >= sel.firstSelection->effect->getSlot() &&
-						this->effect->getSlot() <= sel.lastSelection->effect->getSlot()) {
-					return true;
-				}
+	auto& sel = MainCtrl::get()->getPluginSel();
+	if (sel.pluginCtr == this->parent) {
+		if (sel.firstSelection) {
+			if (this->effect->getSlot() >= sel.firstSelection->effect->getSlot() &&
+					this->effect->getSlot() <= sel.lastSelection->effect->getSlot()) {
+				return true;
 			}
 		}
 	}
