@@ -178,7 +178,7 @@ void midiarp::process(std::vector<noteevent_t>& noteEventsIn,
 				noteEventsProcessed.push_back(*evt);
 				nSend++;
 			}
-			noteEvents.erase(noteEvents.end());
+			noteEvents.pop_back();
 		}
 		if (enable) {
 			if (heldInput.size() && TIME_STEP < end) {
@@ -219,7 +219,7 @@ void midiarp::process(std::vector<noteevent_t>& noteEventsIn,
 					break;
 				}
 				noteEventsProcessed.push_back(*evt);
-				noteEvents.erase(noteEvents.end());
+				noteEvents.pop_back();
 			}
 		}
 	}
