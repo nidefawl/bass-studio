@@ -104,7 +104,7 @@ protected:
 	void onEnable();
 	void onDisable();
 public:
-	virtual int getModuleType() override { return internalModuleId >= 0 ? PLUGIN_TYPE_INTERNAL_EFFECT : PLUGIN_TYPE_EMPTY; };
+	virtual int getModuleType() override { return internalModuleId >= 0 ? PLUGIN_TYPE_INTERNAL_EFFECT : PLUGIN_TYPE_VST; };
 
 	const char* getDir() {
 		return sDir.c_str();
