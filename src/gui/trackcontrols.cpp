@@ -894,6 +894,7 @@ public:
 		MainCtrl::get()->setSelectedTrack(tr);
 	}
 	void clicked(int _id) {
+		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 		track_t* tr = MainCtrl::get()->getTrackId(trackid);
 		if (_id >= sel->id) {
 			_id -= sel->id;
@@ -925,7 +926,6 @@ public:
 			}
 		} else if (_id == 1) {
 			if (tr) {
-				ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 				track_t* track = MainCtrl::get()->insertNewTrack(tr->localIdx+1, tr->type);
 				track->releaseTrackContent();
 				String strNewName = StringFormat("%s copy", StringAsCStr(tr->name));

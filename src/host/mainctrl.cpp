@@ -40,7 +40,6 @@
 #include "../gui/tempocontrols.h"
 #include "../gui/scrollbar.h"
 #include "../gui/statusbar.h"
-#include "../gui/plugin.h"
 #include "../gui/pluginctr.h"
 #include "../gui/clipeditor.h"
 #include "../gui/trackctr.h"
@@ -58,6 +57,8 @@
 #include "leak_detect.h"
 #include "audiocache.h"
 #include "seq_time.h"
+
+#include "../gui/guiplugin.h"
 #include "../threads/workerthread.h"
 #include "../threads/playbackthread.h"
 
@@ -145,7 +146,7 @@ void testTask() {
 	}
 
 }
-class ViewContainers {
+class DawViewContainers {
 	guictr_noteeditor noteeditor;
 public:
 	guictr_menubar ctr_menu;
@@ -163,7 +164,7 @@ public:
 	Splitter splitterList;
 	Splitter splitterCenter;
 	Splitter splitterRight;
-	ViewContainers(ngui::MenuBar& menubar, Cursor& _cursor, project_t& project, scaled_grid& grid, clip_view& clipView, dragdrop_midifile& dragdropclip)
+	DawViewContainers(ngui::MenuBar& menubar, Cursor& _cursor, project_t& project, scaled_grid& grid, clip_view& clipView, dragdrop_midifile& dragdropclip)
 	  : noteeditor(clipView),
 	  ctr_menu(menubar),
 	  ctr_tempo(project),
@@ -487,7 +488,7 @@ bool MainCtrl::init(window_main* window, NVGcontext* nanovg)
 	this->workerThread.startThread();
 	initColor();
 
-	view = new ViewContainers(menubar, cursor, *this, grid, clipView, dragdropclip);
+	view = new DawViewContainers(menubar, cursor, *this, grid, clipView, dragdropclip);
 	view->addTo(this->containers);
 	for (guictr_base *ctr : containers) {
 		ctr->setControl(this);
@@ -997,6 +998,7 @@ bool MainCtrl::mouseDownPre() {
 
 track_t* MainCtrl::insertNewTrack(int trackInsertPos, int trackType, int wasUserAction) {
 	assert(trackType >= 0 && trackType < NUM_TRACK_TYPES);
+	ThreadLock lock = playThread.lockThread();
 	int32_t tryTypeOffset = trackTypeCtrs[trackType]->size();
 
 	String name = StringFormat("%s %d", TrackTypeToName(trackType), tryTypeOffset + 1);

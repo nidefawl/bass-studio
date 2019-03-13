@@ -9,10 +9,11 @@
 #include "track_impl.h"
 #include "../vst_host.h"
 #include "../vst_window.h"
-#include "../../gui/plugin.h"
 #include "../../gui/pluginctr.h"
 #include "../mainctrl.h"
 #include "leak_detect.h"
+
+#include "../../gui/guiplugin.h"
 #include "../history.h"
 /*
 bool internalplugin::onResize(vst_window* window, Size size) {

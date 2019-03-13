@@ -3,6 +3,11 @@
 #include "../../vst_host.h"
 #include "../../plugin/vst_plugin.h"
 #include "../host/mainctrl.h"
+#ifdef _WIN32
+#include <windows.h>
+#include <winuser.h>
+#define WINDOW_HANDLE HWND
+#endif
 
 #include <tchar.h>
 #include <Windows.h>
@@ -254,7 +259,10 @@ void vst_window::destroy()
 //------------------------------------------------------------------------
 void vst_window::show()
 {
+
 	SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOCOPYBITS | SWP_SHOWWINDOW);
+	SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, (__int3264) (LONG_PTR)getMainHWND());
+
 	plugin->onShow(this);
 }
 

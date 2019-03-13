@@ -299,7 +299,7 @@ public:
 		return in;
 	}
 	virtual bool isStaticContainer() {
-		return true;
+		return false;
 	}
 	virtual int32_t getStateFlags() {
 		return FLG_ENBL;

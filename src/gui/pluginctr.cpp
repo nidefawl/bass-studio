@@ -10,9 +10,10 @@
 #include "knob.h"
 #include "automatable.h"
 #include "gui.h"
+#include "pluginviewcontainers.h"
 #include "guicontainer.h"
 #include "guicontextmenu.h"
-#include "plugin.h"
+#include "contextmenus.h"
 #include "pluginctr.h"
 #include "pluginlist.h"
 #include "edithistory.h"
@@ -33,6 +34,7 @@
 #include "table.h"
 
 #include "leak_detect.h"
+#include "guiplugin.h"
 
 
 using glm::vec2;
@@ -186,20 +188,7 @@ guictxtmenu_base* guiplugin::getTooltip(AppCtrl* appctrl) {
 bool guiplugin::focusEvent(MouseHitEvt& evt, bool focused) {
 	return true;
 }
-class guictxtmenu_vstparam : public guictxtmenu_base {
-	effectbase* const effect;
-	automatable_param_t* const entry;
-public:
-	guictxtmenu_vstparam(effectbase* _effect, automatable_param_t* _entry) : effect(_effect), entry(_entry)
-	{
-		this->size.x = 240;
-		addContextEntriesAutomation(this, effect->getTrack(), effect, entry->idx);
-	}
-	void clicked(int _id) {
-		handleAutomatbleContextMenu(effect->getTrack(), effect, entry->idx, _id);
-		MainCtrl::get()->closeContextMenu();
-	}
-};
+
 
 class gui_plugin_paramlist_entry : public gui_list_entry {
 
@@ -238,7 +227,8 @@ public:
     	return true;
     }
 	void handleRightClick(MouseEvent& evt) override {
-		MainCtrl::get()->openContextMenu(new guictxtmenu_vstparam(effect, entry), evt.mousepos);
+		guictxtmenu_base* ctxt = new guictxtmenu_vstparam(effect, entry);
+		MainCtrl::get()->openContextMenu(ctxt, evt.mousepos);
 	}
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
 		if (this->contains(mpos)) {
@@ -614,7 +604,7 @@ effectbase* gui_vstpluginlist_entry::makeInstance() {
 	return res.result == 0 ? res.plugin : nullptr;
 }
 effectbase* gui_modulelist_entry::makeInstance() {
-	effectbase* instance = makeModuleInstance(entry.uid, -1);
+	effectbase* instance = makeModuleInstance(entry.moduleType, entry.moduleId, -1);
 	return instance;
 }
 class action_insert_effect : public action_base {
@@ -966,16 +956,44 @@ void guivstplugin::setControl(BaseCtrl* parentCtrl) {
 	guiplugin::setControl(parentCtrl);
 	buttonOpenEditor.setControl(parentCtrl);
 	params.setControl(parentCtrl);
+	for (auto* ctr : viewCtrs) {
+		ctr->setControl(parentCtrl);
+	}
+}
+
+void guivstplugin::determineSize() {
+	int32_t maxX = size.x;
+	int32_t maxY = size.y;
+	if (this->viewCtr) {
+		int32_t w = 0;
+		int32_t h = 0;
+		this->viewCtr->getFixedSize(&w, &h);
+		maxX = std::max(w, maxX);
+		maxY = std::max(h, maxY);
+	}
+	
+	for (guibase* gui : guis) {
+		maxX = std::max(gui->right(), maxX);
+		maxY = std::max(gui->bottom(), maxY);
+	}
+	size.x = maxX;
+	size.y = maxY;
 }
 void guivstplugin::render(NVGcontext* vg) {
 	renderBase(vg);
 	buttonBypass.render(vg);
 	buttonOpenEditor.render(vg);
 	buttonDelete.render(vg);
-
+	for (auto* ctr : viewCtrs) {
+		nvgSave(vg);
+		ctr->render(vg);
+		nvgRestore(vg);
+	}
 	meter.render(vg);
-	params.renderBackground(vg);
-	params.render(vg);
+	if (viewCtrs.empty()) {
+		params.renderBackground(vg);
+		params.render(vg);
+	}
 }
 bool guivstplugin::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 	if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
@@ -992,8 +1010,15 @@ bool guivstplugin::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 		if (buttonDelete.mouseHitTest(localMouse, evt)) {
 			return true;
 		}
-		if (params.mouseHitTest(localMouse, evt)) {
-			return true;
+		for (auto* ctr : viewCtrs) {
+			if (ctr->mouseHitTest(localMouse, evt)) {
+				return true;
+			}
+		}
+		if (viewCtrs.empty()) {
+			if (params.mouseHitTest(localMouse, evt)) {
+				return true;
+			}
 		}
 		if (isShift(evt.kbmods)) {
 			if (MainCtrl::get()->getPluginSel().pluginCtr != this->parent) {
@@ -1022,6 +1047,27 @@ void guivstplugin::buttonClicked(guibase* _button) {
 	}
 	if (_button == &buttonDelete) {
     	removePlugin(vst);
+	}
+}
+void guivstplugin::layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {
+	buttonOpenEditor.pos.y = inset1;
+	buttonOpenEditor.pos.x = buttonBypass.right();
+	titlePosX = buttonOpenEditor.right();
+	int32_t insetCtrls = INSET_TITLE;
+	int rowHeight = 64;
+	while (contentS.y < rowHeight * 8 && rowHeight > 8) {
+		rowHeight -= 4;
+	}
+	params.setRowHeight(rowHeight);
+	params.pos = ivec2(insetCtrls, insetCtrls + HEIGHT_PLUGIN_TITLE);
+	params.size = contentS - ivec2(insetCtrls*2);
+	params.layout();
+	if (viewCtrs.size()) {
+		for (auto* ctr : viewCtrs) {
+			ctr->pos = ivec2(insetCtrls, insetCtrls + HEIGHT_PLUGIN_TITLE);
+			ctr->size = contentS - ivec2(insetCtrls*2);
+			ctr->layout();
+		}
 	}
 }
 

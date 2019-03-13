@@ -3,7 +3,6 @@
 #include "debugctr.h"
 #include "str_util.h"
 #include "knob.h"
-#include "plugin.h"
 #include "guicontainer.h"
 #include "track.h"
 #include "track_impl.h"
@@ -14,6 +13,7 @@
 #include "../host/plugin/vst_plugin_handles.h"
 #include "edithistory.h"
 #include "leak_detect.h"
+#include "guiplugin.h"
 
 using namespace std;
 

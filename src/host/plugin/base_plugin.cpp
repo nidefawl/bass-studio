@@ -3,7 +3,9 @@
 #include "track_impl.h"
 #include "str_util.h"
 #include "logging.h"
-#include "../../gui/plugin.h"
+
+#include "../../gui/guiplugin.h"
+#include "../../host/mainctrl.h"
 #include "../../gui/pluginctr.h"
 
 

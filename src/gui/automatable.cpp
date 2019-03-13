@@ -1,6 +1,7 @@
 #include "automatable.h"
 #include "../host/mainctrl.h"
 #include "automation.h"
+#include "track.h"
 #include "trackctr.h"
 #include "trackcontent.h"
 #include "guicontextmenu.h"

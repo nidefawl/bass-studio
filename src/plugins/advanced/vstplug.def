@@ -1,0 +1,3 @@
+LIBRARY     advancedtest
+DESCRIPTION 'Advanced GUI Test Plugin'
+EXPORTS     main=VSTPluginMain

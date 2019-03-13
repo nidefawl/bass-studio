@@ -60,7 +60,8 @@ bool guimenu::mouseHitTest(ivec2 mpos, MouseHitEvt& evt)  {
 		}
 		if (e2 && e2->menu->type == ngui::menu_type::submenu) {
 			if (!e2->isMenuOpen) {
-				guimenu *popup =new guimenu(e2->menu, lvl+1);
+				guimenu *popup = new guimenu(e2->menu, lvl+1);
+				popup->parentMenuBar = this->parentMenuBar;
 				popup->size.x = 250;
 				appCtrlParent->closeAppMenus(lvl);
 				ivec2 vPos;

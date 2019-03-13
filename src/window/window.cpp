@@ -1438,10 +1438,12 @@ int getHWNDCnt(int i) {
 #ifndef DAWFRAMEWORK_PLUGIN
 void drawDebugWindow(NVGcontext* ctx, int winW, int winH, float pxratio);
 #ifdef _WIN32
+#ifndef BUILD_NO_VST
 namespace vst_window_mgr {
 void destroyAllVSTWindows();
 bool isVstWindow(HWND hwnd);
 }
+#endif
 #endif
 std::shared_ptr<AppCtrl> makeApp();
 void deleteApp();
@@ -1510,7 +1512,8 @@ int startApplication(int argc, char* argv[]) {
 	        {
 
 	            switch (msg.message) {
-					case WM_KEYDOWN:
+#ifndef BUILD_NO_VST
+	            	case WM_KEYDOWN:
 					case WM_SYSKEYDOWN:
 					case WM_KEYUP:
 					case WM_SYSKEYUP: {
@@ -1518,6 +1521,7 @@ int startApplication(int argc, char* argv[]) {
 							msg.hwnd = mainWindow->getHWND();
 						}
 					}
+#endif
 					//no break
 					default:
 						TranslateMessage(&msg);
@@ -1559,7 +1563,9 @@ int startApplication(int argc, char* argv[]) {
 
 	saveSettings(settings);
 
+#ifndef BUILD_NO_VST
 	vst_window_mgr::destroyAllVSTWindows();
+#endif
 
 	mainWindow.reset();
 	glfwTerminate();
@@ -1577,5 +1583,172 @@ int startApplication(int argc, char* argv[]) {
 #endif
 
 
+#endif
+
+#ifndef BUILD_NO_VST
+#include "plugins/plugin-window.h"
+#include "plugins/plugincontrol.h"
+#include "plugins/handle-exceptions.h"
+#include "../vstsdk-plugin-2.4/aeffeditor.h"
+
+class pluginwindow_main : public appwindow_main, public pluginwindow {
+public:
+	ERect _rect;
+	pluginwindow_main(AudioEffect *_effect, std::shared_ptr<PluginControl> _ctrl, int w, int h)
+		: appwindow_main((AppCtrl*)_ctrl.get()),
+		  pluginwindow(_ctrl)
+	{
+		this->effect = _effect;
+		setRect(0, 0, w, h);
+		effect->setEditor(this);
+		isExternalWindow = true;
+	}
+
+	virtual ~pluginwindow_main() {
+		my_printf("~pluginwindow_main()\n", 0);
+	}
+
+	void onSetParameter(int32_t index, float value) override {
+		this->ctrlShared->onSetParameter(index, value);
+	}
+	//start aeffect AEffEditor overrides
+	//-----------------------------------------------------------------------------
+	void setRect(int x, int y, int width, int height)
+	{
+		_rect.left = x;
+		_rect.top = y;
+		_rect.right = x+width;
+		_rect.bottom = y+height;
+	}
+	bool getRect(ERect **rect) override {
+		*rect = &_rect;
+		return true;
+	}
+
+	void createPluginWindow(const char* title, int w, int h, void* parentWindowHandle) {
+		setAppWindowHints();
+		appwindow::createWindow(title, w, h, nullptr, parentWindowHandle);
+		RenderResources::init(nanovgCtxt);
+
+		if (!ctrlShared->init(this, this->nanovgCtxt)) {
+			throw appexception("Couldn't start application");
+		}
+#ifdef _WIN32
+		this->dropTarget = RegisterDropWindow(hwnd, this);
+#endif
+#if __linux__
+		//TODO: implement linux
+#endif
+
+		glfwGetWindowSize(glfw, &w, &h);
+		this->onWindowSizeChanged(w, h);
+	}
+	bool open(void *ptr) override {
+		try {
+		AEffEditor::open(ptr);
+		if (ptr)
+		{
+
+			setAppWindowHints();
+
+			createPluginWindow("plugin-window", _rect.right-_rect.left, _rect.bottom-_rect.top, ptr);
+			assert(hwnd);
+			assert(glfw);
+			assert(nanovgCtxt);
+			if (!ctrlShared->init(this, this->nanovgCtxt)) {
+				throw appexception("Couldn't start application");
+			}
+			guiOpen();
+			return true;
+		}
+		EXC_CATCH_NO_THROW_DIALOG
+		AEffEditor::close();
+		destroyContextAndWindow();
+		return false;
+	}
+	void close() override
+	{
+		if (this->systemWindow) {
+			glfwMakeContextCurrent(glfw);
+			guiClose();
+			destroyContextAndWindow();
+			AEffEditor::close();
+		}
+	}
+	///< Receive key down event. Return true only if key was really used!
+	virtual bool onKeyDown (VstKeyCode& keyCode) override	{
+		return false;
+	}
+	///< Receive key up event. Return true only if key was really used!
+	virtual bool onKeyUp (VstKeyCode& keyCode) override		{
+		return false;
+	}
+	///< Handle mouse wheel event, distance is positive or negative to indicate wheel direction.
+	virtual bool onWheel(float distance) override {
+		return false;
+	}
+	///< Set knob mode (if supported by Host). See CKnobMode in VSTGUI.
+	virtual bool setKnobMode (VstInt32 val) override			{ return false; }
+
+	//end aeffect overrides
+
+	virtual void guiOpen() {
+		setValid();
+		assert(hwnd);
+		assert(glfw);
+		assert(effect);
+		assert(ctrlShared.get());
+	    RECT area;
+	    GetClientRect(hwnd, &area);
+	    onWindowSizeChanged(area.right-area.left, area.bottom-area.top);
+	    ctrlShared->onGuiOpen(effect);
+	}
+	virtual void guiClose() {
+		setInvalid();
+		ctrlShared->onGuiClose(effect);
+	}
+	virtual void destroyContextAndWindow() {
+		destroy();
+		if (glfw) {
+			my_printf("glfwDestroyWindow %012X\n", (int64_t)glfw);
+			glfwDestroyWindow(glfw);
+			glfw = nullptr;
+			hwnd = nullptr;
+		}
+//		wglMakeCurrent(NULL, NULL);
+	}
+};
+
+void initColor(); // gui/gui.cpp
+void onModuleLoad() {
+	try {
+	initColor();
+	char pluginWindowClassName[32];
+	sprintf_s(pluginWindowClassName, 32, "PLUGWND%I64X", (int64_t)&onModuleLoad);
+	my_printf("window class name %s\n", pluginWindowClassName);
+	glfwSetErrorCallback(glfw_startup_error_callback);
+	if (!glfwInit(pluginWindowClassName)) {
+#ifdef _WIN32
+		DWORD error = GetLastError();
+		String message = FormatErrorMessage(error, StringFormat("Couldn't initialize glfw (%d)", error));
+		showerror(StringAsCStr(message));
+#else
+		showerror("Initialization failed. Couldn't initialize glfw");
+#endif
+		exit(EXIT_FAILURE);
+	}
+	glfwSetErrorCallback(glfw_runtime_error_callback);
+
+	EXC_CATCH_NO_THROW_DIALOG
+}
+void onModuleUnload() {
+	try {
+	glfwTerminate();
+	EXC_CATCH_NO_THROW_DIALOG
+}
+AEffEditor* createPluginWindow(AudioEffect *_effect, std::shared_ptr<PluginControl> _ctrl, int w, int h) {
+	pluginwindow_main* window = new pluginwindow_main(_effect, std::move(_ctrl), w, h);
+	return window;
+}
 #endif
 

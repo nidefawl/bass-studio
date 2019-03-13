@@ -3,7 +3,6 @@
 #include "str_util.h"
 #include "color_util.h"
 #include "guicontainer.h"
-#include "plugin.h"
 #include "button.h"
 #include "track.h"
 #include "basectrl.h"
@@ -11,6 +10,7 @@
 #include "../host/mainctrl.h"
 #include <glm/glm.hpp>
 #include <glm/vec2.hpp>
+#include "guiplugin.h"
 
 using glm::vec2;
 using glm::ivec2;

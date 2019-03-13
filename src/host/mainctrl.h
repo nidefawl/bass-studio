@@ -57,7 +57,7 @@ class guictr_clipeditor;
 class guictr_clipeditorview;
 class guictxtmenu_base;
 class appwindow_main;
-class ViewContainers;
+class DawViewContainers;
 
 enum clip_dragtype_t {
 	DRAG_NONE,
@@ -211,7 +211,7 @@ struct Menus {
 
 class MainCtrl : public AppCtrl, public delete_cb, public project_t
 {
-	ViewContainers* view = NULL;
+	DawViewContainers* view = NULL;
 	Menus menus;
 
 	edithistory hist;

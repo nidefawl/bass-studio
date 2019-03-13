@@ -1,5 +1,5 @@
 #include "str_util.h"
-#include "../vst_sdk_2.4/aeffectx.h"
+#include "../vstsdk-host-2.4/aeffectx.h"
 #include "../host/vst_host.h"
 #include "../host/plugin/vst_plugin.h"
 #include "../host/plugin/vst_plugin_handles.h"

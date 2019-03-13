@@ -7,7 +7,7 @@
 #include <atomic>
 #include <stdint.h>
 #include <stdbool.h>
-#include "../vst_sdk_2.4/aeffectx.h"
+#include "../vstsdk-host-2.4/aeffectx.h"
 #include "../util/readerwriterqueue.h"
 #include "note.h"
 #include "hires_timer.h"
@@ -78,7 +78,7 @@ struct plugin_notes_t {
 	std::vector<note_t> notes;
 };
 struct plugin_snapshot_t;
-effectbase* makeModuleInstance(int32_t uid, int32_t globalId);
+effectbase* makeModuleInstance(int32_t pluginType, int32_t uid, int32_t globalId);
 effectbase* loadEffectModule(const plugin_snapshot_t& pluginSnapshot);
 void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effectbase* effect);
 void loadEffectAutomationFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effectbase* effect);
@@ -166,6 +166,7 @@ public:
 	uint32_t pluginCount();
 	vstplugin* getPluginIdx(uint32_t i);
 	vstpluginloadres loadPlugin(String filepath, int32_t globalId = 0);
+	vstpluginloadres loadInternalPlugin(int32_t type, int32_t globalId = 0);
 	int32_t getNextGlobalModuleId(int32_t n);
 	int32_t getNextGlobalAudioStageId(int32_t as);
 	track_impl_t* createAudio(track_t* track);

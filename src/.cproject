@@ -59,6 +59,7 @@
 									<listOptionValue builtIn="false" value="_GLIBCXX_DEBUG"/>
 									<listOptionValue builtIn="false" value="_GLIBCXX_DEBUG_PEDANTIC"/>
 									<listOptionValue builtIn="false" value="USE_WIN32_EXC_HOOKS"/>
+									<listOptionValue builtIn="false" value="BUILD_BUILTIN_EFFECT"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.1323109731" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
@@ -94,6 +95,8 @@
 									<listOptionValue builtIn="false" value="_GLIBCXX_DEBUG"/>
 									<listOptionValue builtIn="false" value="_GLIBCXX_DEBUG_PEDANTIC"/>
 									<listOptionValue builtIn="false" value="USE_WIN32_EXC_HOOKS"/>
+									<listOptionValue builtIn="false" value="BUILD_BUILTIN_EFFECT"/>
+									<listOptionValue builtIn="false" value="NO_EXTEND_WINDOW_CPP"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.14326597" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>

@@ -5,7 +5,7 @@
 #include <glm/vec2.hpp>
 #include "str_util.h"
 #include "seq_time.h"
-//#include "../vst_sdk_2.4/aeffectx.h"
+
 #include "automation.h"
 #include "logging.h"
 #include "platform.h"
@@ -73,6 +73,8 @@ public:
 	//gdb cannot display std::string when built without clib-debug flag (SLOW)
 	const char* szName = NULL;
 #endif
+	handles_t* const handle;
+	const int internalModuleId;
 	String sName;
 	String sDir;
 	bool bEditOpen = false;
@@ -82,13 +84,13 @@ public:
 	int vstVersion = 0;
 	int uId = 0;
 	vst_window* window = NULL;
-	handles_t* const handle;
 	std::vector<vst_param_category> paramsCategories;
 //	std::vector<vst_param> vstParams;
 
 	std::vector<String> inputNames;
 	std::vector<String> outputNames;
-	vstplugin(handles_t* _handle, int32_t globalId, String sDir, String sName) : effectbase(PLUGIN_TYPE_VST, globalId), handle(_handle) {
+	vstplugin(handles_t* _handle, int32_t globalId, String sDir, String sName, int32_t _moduleId)
+	: effectbase(PLUGIN_TYPE_VST, globalId), handle(_handle), internalModuleId(_moduleId) {
 		this->sDir = sDir;
 		this->sName = sName;
 #ifndef NDEBUG
@@ -102,6 +104,7 @@ protected:
 	void onEnable();
 	void onDisable();
 public:
+	virtual int getModuleType() override { return internalModuleId >= 0 ? PLUGIN_TYPE_INTERNAL_EFFECT : PLUGIN_TYPE_EMPTY; };
 
 	const char* getDir() {
 		return sDir.c_str();

@@ -14,7 +14,7 @@
 #include "plugin/vst_plugin.h"
 #include "plugin/vst_plugin_handles.h"
 
-#include "../vst_sdk_2.4/aeffectx.h"
+#include "../vstsdk-host-2.4/aeffectx.h"
 #include "portaudio.h"
 #include "settings.h"
 
@@ -906,7 +906,7 @@ void vsthost::unloadPlugin(effectbase* plugin) {
 		list.erase(it);
 	}
 	vstplugin* vst = dynamic_cast<vstplugin*>(plugin);
-	if (vst) {
+	if (vst->internalModuleId <= 0) {
 		moduleMgr->releaseModule(vst->handle->hmodule);
 	}
 	delete plugin;
@@ -1113,6 +1113,7 @@ int32_t vsthost::getNextGlobalAudioStageId(int32_t globalId) {
 	}
 	return globalId;
 }
+
 vstpluginloadres vsthost::loadPlugin(String filepath, int32_t globalId) {
 	String path, name, nameWithoutExt;
 	SplitPath(filepath, &path, &nameWithoutExt, NULL, &name);
@@ -1158,7 +1159,7 @@ vstpluginloadres vsthost::loadPlugin(String filepath, int32_t globalId) {
 #endif
 
 	globalId = getNextGlobalModuleId(globalId);
-	vstplugin* plugin = new vstplugin(new handles_t(aeffect, moduleHandle), globalId, path, nameWithoutExt);
+	vstplugin* plugin = new vstplugin(new handles_t(nullptr, aeffect, moduleHandle), globalId, path, nameWithoutExt, -1);
 	list.push_back(plugin);
 	plugin->load(this);
 	return vstpluginloadres(0, plugin);

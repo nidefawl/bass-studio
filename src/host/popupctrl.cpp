@@ -136,6 +136,10 @@ public:
 	virtual bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
 		return scrollbar.handleMouseScroll(evt, xoffset, yoffset);
 	}
+	virtual void setControl(BaseCtrl* parentCtrl) override {
+		guibase::setControl(parentCtrl);
+		scrollbar.setControl(parentCtrl);
+	}
 };
 PopupCtrl::PopupCtrl() {
 	popupCtrs = new guictr_popup();

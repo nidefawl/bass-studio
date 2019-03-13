@@ -27,7 +27,6 @@
 #include "../../gui/gui.h"
 #include "../../gui/guicontainer.h"
 #include "../../gui/button.h"
-#include "../../gui/plugin.h"
 #include "../../gui/pluginctr.h"
 #include "../../gui/pluginlist.h"
 
@@ -43,6 +42,7 @@
 #include "track_impl.h"
 #include "leak_detect.h"
 #include "snapshot.h"
+#include "../../gui/guiplugin.h"
 
 using glm::vec2;
 using glm::ivec2;

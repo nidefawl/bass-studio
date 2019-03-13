@@ -26,6 +26,7 @@
 #include "vst_host.h"
 #include "track_impl.h"
 
+#include "modules.h"
 #include "project.h"
 #include "mainctrl.h"
 #include "history.h"
@@ -495,28 +496,36 @@ void track_impl_t::showAutomationLanes() {
 effectbase* loadEffectModule(const plugin_snapshot_t& pluginSnapshot) {
 	String path;
 	effectbase* effect = nullptr;
+	vstplugin* loadedPlugin = nullptr;
 	if (pluginSnapshot.pluginType == PLUGIN_TYPE_VST) {
 		plugindatabase_t& db = MainCtrl::get()->plugindb;
 		if (db.resolve(pluginSnapshot.name, pluginSnapshot.uId, &path)) {
 			vsthost* host = vsthost::getInstance();
 			vstpluginloadres res = host->loadPlugin(path, pluginSnapshot.projectGlobalId);
 			if (res.result==0&&res.plugin) {
-				vstplugin* plugin = res.plugin;
-				if (pluginSnapshot.dataChunk.size() > 0) {
-					my_printf("Plugin %s: Load data1[%d]\n", StringAsCStr(res.plugin->sName), pluginSnapshot.dataChunk.size());
-					plugin->dispatch(effSetChunk, 0, pluginSnapshot.dataChunk.size(), (void*)pluginSnapshot.dataChunk.data());
-				}
-				if (pluginSnapshot.dataChunk2.size() > 0) {
-					my_printf("Plugin %s: Load data2[%d]\n", StringAsCStr(res.plugin->sName), pluginSnapshot.dataChunk2.size());
-					plugin->dispatch(effSetChunk, 1, pluginSnapshot.dataChunk2.size(), (void*)pluginSnapshot.dataChunk2.data());
-				}
-				effect = plugin;
+				loadedPlugin = res.plugin;
+				effect = res.plugin;
 			}
 		} else {
 			//TODO: handle failed plugin loading
+			my_printf("Failed loading plugin %s, uId %d\n", StringAsCStr(loadedPlugin->sName), pluginSnapshot.uId);
+
 		}
 	} else {
-		effect = makeModuleInstance(pluginSnapshot.pluginType, pluginSnapshot.projectGlobalId);
+		effect = makeModuleInstance(pluginSnapshot.pluginType, pluginSnapshot.uId, pluginSnapshot.projectGlobalId);
+		if (effect->getModuleType() == PLUGIN_TYPE_INTERNAL_EFFECT) {
+			loadedPlugin = dynamic_cast<vstplugin*>(effect);
+		}
+	}
+	if (loadedPlugin) {
+		if (pluginSnapshot.dataChunk.size() > 0) {
+			my_printf("Plugin %s: Load data1[%d]\n", StringAsCStr(loadedPlugin->sName), pluginSnapshot.dataChunk.size());
+			loadedPlugin->dispatch(effSetChunk, 0, pluginSnapshot.dataChunk.size(), (void*)pluginSnapshot.dataChunk.data());
+		}
+		if (pluginSnapshot.dataChunk2.size() > 0) {
+			my_printf("Plugin %s: Load data2[%d]\n", StringAsCStr(loadedPlugin->sName), pluginSnapshot.dataChunk2.size());
+			loadedPlugin->dispatch(effSetChunk, 1, pluginSnapshot.dataChunk2.size(), (void*)pluginSnapshot.dataChunk2.data());
+		}
 	}
 	return effect;
 }

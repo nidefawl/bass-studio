@@ -117,7 +117,8 @@ public:
 	}
 };
 struct module_desc_t {
-	int uid;
+	int moduleType;
+	int moduleId;
 	String name;
 	bool isSynth;
 };
@@ -149,8 +150,10 @@ class guictr_modulelibrary : public guictr_base {
 	std::vector<module_desc_t> effectEntries;
 public:
 	guictr_modulelibrary() : guictr_base() {
-		effectEntries.push_back(module_desc_t{PLUGIN_TYPE_EMPTY, "Empty", false});
-		effectEntries.push_back(module_desc_t{PLUGIN_TYPE_GROUP, "Group", false});
+		effectEntries.push_back(module_desc_t{PLUGIN_TYPE_EMPTY, 0, "Empty", false});
+		effectEntries.push_back(module_desc_t{PLUGIN_TYPE_GROUP, 0, "Group", false});
+		effectEntries.push_back(module_desc_t{PLUGIN_TYPE_INTERNAL_EFFECT, PLUG_INT_STEREOWIDTH, "StereoWidth", false});
+		effectEntries.push_back(module_desc_t{PLUGIN_TYPE_INTERNAL_EFFECT, PLUG_INT_TEST, "TestAdv", false});
 		pluginListCtr.padding = 0;
 		add(&textField);
 		add(&pluginListCtr);

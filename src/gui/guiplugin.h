@@ -3,6 +3,8 @@
 #include <glm/vec2.hpp>
 #include "gui.h"
 #include "guicolors.h"
+#include "guicontextmenu.h"
+#include "basectrl.h"
 #include "event.h"
 #include "str_util.h"
 #include "color_util.h"
@@ -18,6 +20,7 @@ using glm::ivec2;
 
 class effectbase;
 class vstplugin;
+class PluginViewContainers;
 
 class guiplugin : public guictr_base {
 public:
@@ -93,23 +96,13 @@ public:
 	vstplugin* const vst;
 	gui_list params; //TODO: use add() on controls
 	guibuttontoggle buttonOpenEditor; //TODO: use add() on controls
-	void layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {
-		buttonOpenEditor.pos.y = inset1;
-		buttonOpenEditor.pos.x = buttonBypass.right();
-		titlePosX = buttonOpenEditor.right();
-		int32_t insetCtrls = INSET_TITLE;
-		int rowHeight = 64;
-		while (contentS.y < rowHeight * 8 && rowHeight > 8) {
-			rowHeight -= 4;
-		}
-		params.setRowHeight(rowHeight);
-		params.pos = ivec2(insetCtrls, insetCtrls + HEIGHT_PLUGIN_TITLE);
-		params.size = contentS - ivec2(insetCtrls*2);
-		params.layout();
-	}
+	PluginViewContainers* viewCtr = nullptr;
+	std::vector<guictr_base*> viewCtrs;
+	void layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1);
 	void render(NVGcontext* vg) override;
 	void buttonClicked(guibase* _button) override;
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
 	guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
 	virtual void setControl(BaseCtrl* parentCtrl) override;
+	void determineSize() override;
 };

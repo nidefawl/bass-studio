@@ -262,3 +262,10 @@ public:
 		MainCtrl::get()->closeContextMenu();
 	}
 };
+class guictxtmenu_vstparam : public guictxtmenu_base {
+	effectbase* const effect;
+	automatable_param_t* const entry;
+public:
+	guictxtmenu_vstparam(effectbase* _effect, automatable_param_t* _entry);
+	void clicked(int _id);
+};

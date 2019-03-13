@@ -64,4 +64,4 @@ public:
 	void recvPluginEditParamUpdate(int32_t idx);
 	automationlane_snapshot_t toRef() override;
 };
-effectbase* makeModuleInstance(int32_t uid, int32_t globalid);
+effectbase* makeModuleInstance(int32_t moduleType, int32_t moduleId, int32_t globalid);

@@ -37,6 +37,7 @@ public:
 	effectbase(int32_t _pluginType, int32_t _projectGlobalId);
 	virtual ~effectbase() {
 	}
+	virtual int getModuleType() = 0;
 	virtual void makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) = 0;
 	virtual guiplugin* makeGui() = 0;
 	virtual guiplugin* getGui() = 0;

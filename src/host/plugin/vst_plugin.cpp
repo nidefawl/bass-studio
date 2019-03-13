@@ -16,12 +16,15 @@
 #include "../vst_host.h"
 #include "../vst_window.h"
 #include "../../gui/gui.h"
-#include "../../gui/plugin.h"
+#include "../../gui/guiplugin.h"
 #include "../../gui/pluginctr.h"
+#include "../../gui/pluginviewcontainers.h"
+#include "plugins/plugin-base.h"
 #include "../mainctrl.h"
 #include "../history.h"
 
 #include "leak_detect.h"
+#include "../../gui/guiplugin.h"
 
 using glm::vec2;
 using glm::ivec2;
@@ -291,8 +294,13 @@ void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin, bool storePluginCh
 	ps.slot = 0;
 	ps.projectGlobalId = plugin->projectGlobalId;
 	ps.enabled = plugin->bIsEnabled;
-	ps.uId = plugin->uId;
-	ps.pluginType = PLUGIN_TYPE_VST;
+	if (plugin->internalModuleId >= 0) {
+		ps.pluginType = PLUGIN_TYPE_INTERNAL_EFFECT;
+		ps.uId = plugin->internalModuleId;
+	} else {
+		ps.pluginType = PLUGIN_TYPE_VST;
+		ps.uId = plugin->uId;
+	}
 	ps.name = plugin->sName;
 	if (storePluginChunks) {
 		void* pluginData;
@@ -335,11 +343,28 @@ void vstplugin::makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) {
 	createSnapshot(ps, this, storePluginChunks);
 	ps.slot = this->slot;
 }
+
 guiplugin* vstplugin::makeGui() {
+
+	assert(handle->hmodule || handle->axEffect);
 	if (!handle->gui) {
 		handle->gui = std::make_unique<guivstplugin>(this);
 		handle->gui->setTitle(StringFormat("%s", StringAsCStr(this->sName)));
+		if (handle->axEffect) {
+			guiplugin* pGuiPlugin = handle->gui.get();
+			guivstplugin* pGuiVstPlugin = dynamic_cast<guivstplugin*>(pGuiPlugin);
+			assert(pGuiVstPlugin);
+			BasePluginVST2* baseVst2 = dynamic_cast<BasePluginVST2*>(handle->axEffect);
+			assert(baseVst2);
+			PluginViewContainers* viewCtr = baseVst2->createView();
+			if (viewCtr) {
+				pGuiVstPlugin->viewCtr = viewCtr;
+				viewCtr->addTo(pGuiVstPlugin->viewCtrs);
+				viewCtr->onGuiOpen(handle->axEffect);
+			}
+		}
 	}
+
 	return handle->gui.get();
 }
 guiplugin* vstplugin::getGui() {

@@ -360,7 +360,7 @@ void BaseCtrl::onGuiRemoved(guibase* gui) {
 	if (this->guiCtrFocused == gui)  {
 		this->guiCtrFocused = NULL;
 	}
-}
+}	
 void BaseCtrl::resetMouseContext() {
 	if (guiCtrFocused) {
 		if (!guiCtrFocused->isStaticContainer()) {

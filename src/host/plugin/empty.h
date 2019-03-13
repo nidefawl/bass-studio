@@ -18,6 +18,7 @@ public:
 	float dispatchGetParameter(int32_t idx) override;
 	void dispatchSetParameter(int32_t idx, float val) override;
 public:
+	int getModuleType() override { return PLUGIN_TYPE_EMPTY; };
 	guiplugin* makeGui() override;
 	guiplugin* getGui() override;
 	int32_t getDelay() override;

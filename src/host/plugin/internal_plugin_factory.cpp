@@ -3,26 +3,39 @@
 #include "empty.h"
 #include "group.h"
 
-#include "../vst_host.h"
+#include "host/vst_host.h"
+#include "host/plugin/vst_plugin.h"
 #include "modules.h"
 #include "leak_detect.h"
 
-effectbase* makeModuleInstance(int32_t uid, int32_t globalId = -1) {
+effectbase* makeModuleInstance(int32_t moduleType, int32_t moduleId, int32_t globalid = -1) {
 
 	vsthost* host = vsthost::getInstance();
-	int32_t id = host->getNextGlobalModuleId(globalId);
 	effectbase* effect = nullptr;
-	switch (uid) {
-	case PLUGIN_TYPE_EMPTY:
-		effect = new module_empty(id);
-		break;
-	case PLUGIN_TYPE_GROUP:
-		effect = new module_group(id);
-		break;
+	switch (moduleType) {
+		case PLUGIN_TYPE_EMPTY:
+			effect = new module_empty(host->getNextGlobalModuleId(globalid));
+			if (effect)
+				effect->load(host);
+			break;
+		case PLUGIN_TYPE_GROUP:
+			effect = new module_group(host->getNextGlobalModuleId(globalid));
+			if (effect)
+				effect->load(host);
+			break;
+		case PLUGIN_TYPE_INTERNAL_EFFECT:
+			{
+				vstpluginloadres res = host->loadInternalPlugin(moduleId, globalid);
+				if (res.result == 0 && res.plugin) {
+					effect = res.plugin;
+					break;
+				}
+				assert(0);
+			}
+			break;
 		default:
-		break;
+			assert(0);
+			break;
 	}
-	if (effect)
-		effect->load(vsthost::getInstance());
 	return effect;
 }
