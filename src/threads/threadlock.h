@@ -1,0 +1,17 @@
+#pragma once
+
+class ThreadLock {
+public:
+	class Impl;
+private:
+	Impl* _M_impl;
+public:
+	ThreadLock() = delete;
+	ThreadLock(Impl* _M_impl);
+	~ThreadLock();
+	ThreadLock (const ThreadLock&) = delete;
+	ThreadLock& operator= (const ThreadLock&) = delete;
+	ThreadLock& operator=(ThreadLock&& other);
+	ThreadLock(ThreadLock&& other);
+
+};

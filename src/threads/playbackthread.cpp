@@ -1,4 +1,5 @@
 #include "playbackthread.h"
+#include "threadlock.h"
 #ifdef __linux__
 #include <thread>
 #include <condition_variable>

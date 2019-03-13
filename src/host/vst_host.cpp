@@ -28,6 +28,7 @@
 #include <stdlib.h>
 #include <memory.h>
 #include "track_impl.h"
+#include "threads/threadlock.h"
 
 #include <mutex>
 #ifdef _WIN32
@@ -905,9 +906,12 @@ void vsthost::unloadPlugin(effectbase* plugin) {
 	if (it != list.end()) {
 		list.erase(it);
 	}
-	vstplugin* vst = dynamic_cast<vstplugin*>(plugin);
-	if (vst->internalModuleId <= 0) {
-		moduleMgr->releaseModule(vst->handle->hmodule);
+	if (plugin->getModuleType() == PLUGIN_TYPE_VST || plugin->getModuleType() == PLUGIN_TYPE_INTERNAL_EFFECT) {
+		vstplugin* vst = dynamic_cast<vstplugin*>(plugin);
+		assert(vst);
+		if (vst->internalModuleId <= 0) {
+			moduleMgr->releaseModule(vst->handle->hmodule);
+		}
 	}
 	delete plugin;
 }
