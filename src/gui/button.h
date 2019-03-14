@@ -88,22 +88,22 @@ public:
 			return *enabledPtr;
 		return true;
 	}
-	virtual int active() {
-		if (activePtr)
-			return (*activePtr) ? 1 : 0;
-		return -1;
-	}
+//	virtual int active() {
+//		if (activePtr)
+//			return (*activePtr) ? 1 : 0;
+//		return -1;
+//	}
 	void setEnabledRef(bool* _enabledPtr) {
 		enabledPtr = _enabledPtr;
 	}
-	void setActiveRef(bool* _activePtr) {
-		activePtr = _activePtr;
-	}
+//	void setActiveRef(bool* _activePtr) {
+//		activePtr = _activePtr;
+//	}
 	virtual int32_t getStateFlags() {
 		int32_t state = guibuttonbase::getStateFlags();
-		if (activePtr&&*activePtr) {
-			state |= FLG_ACT;
-		}
+//		if (active()) {
+//			state |= FLG_ACT;
+//		}
 		return state;
 	}
 	void (*drawFn)(NVGcontext*,ivec2&, ivec2&, const NVGcolor&, int drawParm, int drawParm2) = NULL;
@@ -112,12 +112,13 @@ public:
 		renderWidgetBorder(vg, getStateFlags());
 		if (str.length() > 0) {
 			int fontScale = this->fontSize > 0 ? this->fontSize : G_FONT_SCALE(size.y);
-			setFont(vg, fontScale, G_WHITE, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+			NVGcolor color = theme->getColor((getStateFlags()&FLG_ENBL) ? 20 : 21);
+			setFont(vg, fontScale, color, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
 			nvgText(vg, pos.x + size.x / 2.0f, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(str), NULL);
 		}
 
 		if (drawFn) {
-			drawFn(vg, pos, size, theme->getBgColor(getStateFlags()), drawParm, active());
+			drawFn(vg, pos, size, theme->getBgColor(getStateFlags()), drawParm, enabled());
 		}
 	}
 };
@@ -135,6 +136,10 @@ public:
 	}
 	guibuttontoggle(float _radius) : guibuttonbase(ivec2(0), ivec2((int)(_radius * 2))) {
 		this->radius = _radius;
+	}
+	void setRadius(float fRadius) {
+		this->radius = fRadius;
+		this->size = ivec2((int)(fRadius * 2));
 	}
 	bool enabled() override {
 		if (state)

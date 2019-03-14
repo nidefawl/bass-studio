@@ -143,7 +143,7 @@ void BaseCtrl::mouseDown(ivec2 mousePos, int button, bool doubleclick) {
 	if (guiCaptured != NULL) {
 		return;
 	}
-	MouseHitEvt evt = mouseHitEvt(button == 0 ? MouseHitType::MOUSE_LEFT : MouseHitType::MOUSE_RIGHT);
+	MouseHitEvt evt = mouseHitEvt(fromButton(button));
 	for (guictr_base *ctr : containers) {
 		if (ctr->mouseHitTest(mousePos, evt)) {
 			break;
@@ -177,11 +177,7 @@ void BaseCtrl::mouseDown(ivec2 mousePos, int button, bool doubleclick) {
 		dragStart = mousePos;
 		dragOffset = gui->toScreenSpace(ivec2(0)) - mousePos;
 		MouseEvent evt = mouseEvent(this, gui, mousePos, button, doubleclick ? M_EVT_DOUBLECLICK : M_EVT_BTN_DOWN);
-		if (button == 0) {
-			gui->handleDraggedBegin(evt);
-		} else if (button == 1) {
-			gui->handleRightClick(evt);
-		}
+		gui->handleMouseDownBegin(evt);
 	}
 }
 

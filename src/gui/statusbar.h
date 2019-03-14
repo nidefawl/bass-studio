@@ -16,7 +16,8 @@ public:
 			return;
 		}
 		if (this->text[0]) {
-			setFont(vg, (int)(HEIGHT_PLUGIN_TITLE*0.8), G_BLACK, G_TITLE_ALIGN);
+			const int32_t hpt = theme->get(G_PLUGIN_TITLE_HEIGHT);
+			setFont(vg, (int)(hpt*0.8), G_BLACK, G_TITLE_ALIGN);
 			nvgText(vg, INSET_TITLE, getSizeContent().y / 2, StringAsCStr(text), NULL);
 		}
 	}

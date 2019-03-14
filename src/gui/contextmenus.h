@@ -178,7 +178,7 @@ public:
 			if (mouse.y >= y+e.y && mouse.y < y+e.y + h && mouse.x >= e.x && mouse.x < e.x+e.w) {
 				nvgBeginPath(vg);
 				nvgRect(vg, e.x, y+e.y+2, e.w, h-4);
-				nvgFillColor(vg, g_guiColors[COL_CTXTMNU_HILIGHT]);
+				nvgFillColor(vg, theme->getColor(COL_CTXTMNU_HILIGHT));
 				nvgFill(vg);
 			}
 			if ((!grid.grid_dens.enabled && e.id == GRID_OFF) ||
@@ -187,7 +187,7 @@ public:
 				 ||  ( fixed && n == grid.grid_dens.fixedBars     ))) ) {
 				nvgBeginPath(vg);
 				nvgCircle(vg, e.x+10, y+e.y+h/2, 4);
-				nvgFillColor(vg, g_guiColors[COL_CTXTMNU_OUTLINE]);
+				nvgFillColor(vg, theme->getColor(COL_CTXTMNU_OUTLINE));
 				nvgFill(vg);
 			}
 			nvgFillColor(vg, G_WHITE);
@@ -213,7 +213,7 @@ public:
 	}
 };
 
-class guictxtmenu_clip : public guictxtmenu_base {
+class guictxtmenu_clip : public guictxtmenu {
 	ctxtmenu_color_select* sel;
 	clip_t* const m_clip;
 public:
@@ -233,7 +233,7 @@ public:
 		MainCtrl::get()->closeContextMenu();
 	}
 };
-class guictxtmenu_notrack : public guictxtmenu_base {
+class guictxtmenu_notrack : public guictxtmenu {
 public:
 	guictxtmenu_notrack() {
 		this->size.x = 190;
@@ -247,7 +247,7 @@ public:
 	}
 };
 
-class guictxtmenu_colorpalette : public guictxtmenu_base {
+class guictxtmenu_colorpalette : public guictxtmenu {
 public:
 	guictxtmenu_colorpalette() {
 		ctxtmenu_color_select* colorSelect = new ctxtmenu_color_select("Pick Color", 0);
@@ -262,7 +262,7 @@ public:
 		MainCtrl::get()->closeContextMenu();
 	}
 };
-class guictxtmenu_vstparam : public guictxtmenu_base {
+class guictxtmenu_vstparam : public guictxtmenu {
 	effectbase* const effect;
 	automatable_param_t* const entry;
 public:

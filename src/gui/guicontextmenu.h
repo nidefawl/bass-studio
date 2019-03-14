@@ -23,6 +23,7 @@ public:
 	int id = 0;
 	int y = 0;
 	int fontSize = 0;
+	guitheme_t* theme = nullptr;
 	ctxtmenu_entry(String _title, int _id) {
 		this->id = _id;
 		this->title = _title;
@@ -42,7 +43,7 @@ public:
 		if (contains(ctxtSize, mouse)) {
 			nvgBeginPath(vg);
 			nvgRect(vg, 0, y, ctxtSize.x, height);
-			nvgFillColor(vg, g_guiColors[COL_CTXTMNU_HILIGHT]);
+			nvgFillColor(vg, theme->getColor(COL_CTXTMNU_HILIGHT));
 			nvgFill(vg);
 		}
 		setFont(vg, this->fontSize, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
@@ -68,7 +69,7 @@ public:
 		nvgBeginPath(vg);
 		nvgMoveTo(vg, 0, y+height/2);
 		nvgLineTo(vg, ctxtSize.x, y+height/2);
-		nvgStrokeColor(vg, g_guiColors[COL_CTXTMNU_OUTLINE]);
+		nvgStrokeColor(vg, theme->getColor(COL_CTXTMNU_OUTLINE));
 		nvgStrokeWidth(vg, 1.0f);
 		nvgStroke(vg);
 	}
@@ -80,39 +81,62 @@ public:
 		return false;
 	}
 };
-
-
 class guictxtmenu_base : public guictr_base {
 protected:
-	std::vector<ctxtmenu_entry*> entries;
 	int paddingV = 2;
 	int fontSize = FONT_SIZE_CTXT;
 public:
 	bool scrollbarOutside = false;
-	int maxHeight = 220;
-	guictxtmenu_base() {
+	int maxHeight = 360;
+	guictxtmenu_base() : guictr_base() {
 		margin = 0;
 		padding = 0;
 	}
-	~guictxtmenu_base() {
+	virtual ~guictxtmenu_base() {
+	}
+	virtual bool isTransient() {
+		return false;
+	}
+	virtual bool canClose() {
+		return false;
+	}
+
+	void render(NVGcontext* vg) {
+		guictr_base::render(vg);
+	}
+	virtual void onChildLayoutChanged(guibase* g) {
+		ivec2 maxSize = ivec2(0);
+		for (guibase* gui : guis) {
+			maxSize.x = max(maxSize.x, gui->right());
+			maxSize.y = max(maxSize.y, gui->bottom());
+		}
+		size = maxSize;
+		if (this->parent != NULL) {
+			this->parent->onChildLayoutChanged(this);
+		}
+	}
+};
+
+class guictxtmenu : public guictxtmenu_base {
+protected:
+	std::vector<ctxtmenu_entry*> entries;
+public:
+	guictxtmenu() : guictxtmenu_base() {
+	}
+	virtual ~guictxtmenu() {
 		for (ctxtmenu_entry* e : entries) {
 			delete e;
 		}
 	}
 	void addEntry(ctxtmenu_entry* entry) {
 		entries.push_back(entry);
+		entry->theme = theme;
 	}
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
 		if (contains(mpos)) {
 			evt.requestFocus(this);
 			return true;
 		}
-		return false;
-	}
-	virtual bool isTransient() {
-		return false;
-	}
-	virtual bool canClose() {
 		return false;
 	}
 	virtual void clicked(int _id) {

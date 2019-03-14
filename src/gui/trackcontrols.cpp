@@ -57,11 +57,11 @@ bool addTrHeight(track_t* tr, int32_t offset) {
 	return changed;
 }
 template<typename T, int minHeight=TRACK_MIN_HEIGHT_SUB, int maxHeight=TRACK_MAX_HEIGHT_SUB>
-void resize(track_t* m_track, T* al, int32_t mouseDragDist) {
+void resize(track_t* m_track, T* al, int32_t mouseDragDist, int32_t heightStep) {
 
 	if (m_track->type < TRACK_TYPE_MIDI) {
 		//resize content-lane on bottom-sticked tracks
-		int32_t adjustedHeightSteps = min(128, max(1, (mouseDragDist) / TRACK_HEIGHT_STEP));
+		int32_t adjustedHeightSteps = min(128, max(1, (mouseDragDist) / heightStep));
 		if (!m_track->subtracks.empty()) {
 			int32_t curHeightSteps = trackHeight(m_track);
 			int32_t distSteps = adjustedHeightSteps - al->height;
@@ -91,14 +91,14 @@ void resize(track_t* m_track, T* al, int32_t mouseDragDist) {
 		}
 	} else {
 
-		int32_t totalHeightSteps = min(maxHeight, max(minHeight, (mouseDragDist) / TRACK_HEIGHT_STEP));
+		int32_t totalHeightSteps = min(maxHeight, max(minHeight, (mouseDragDist) / heightStep));
 		al->height = totalHeightSteps;
 	}
 }
 
 
 
-class guictxtmenu_trackparam : public guictxtmenu_base {
+class guictxtmenu_trackparam : public guictxtmenu {
 	track_t* const track;
 	automatable_t* const atl;
 	int32_t const paramIdx;
@@ -222,9 +222,6 @@ public:
 	bool enabled() override {
 		return trackenabled();
 	}
-	int active() override {
-		return trackenabled() ? 1 : 0;
-	}
 	void handleRightClick(MouseEvent& evt) override {
 		MainCtrl::get()->openContextMenu(new guictxtmenu_trackparam(m_track, &m_track->audio->mixer, 0), evt.mousepos);
 	}
@@ -238,7 +235,7 @@ public:
 	gui_trackcontrols_mixer(track_t* _track) :
 		guictr_base(), m_track(_track), meter(&_track->audio->meter), gain(_track), btnBypass(_track) {
 		padding = 0;
-		btnBypass.setColor(GUI_COLOR_HEX(G_S1));
+		btnBypass.setColor(nvgToRGB(theme->getFrameColorOutline()));
 		btnBypass.drawFn = drawTextureSymbol;
 		btnBypass.drawParm = ICON_BYPASS;
 		add(&btnBypass);
@@ -258,6 +255,7 @@ public:
 		}
 	}
 	void layout() {
+		const int32_t TRACK_HEIGHT_STEP = theme->get(G_TRACK_HEIGHT_STEP);
 		int32_t inset = 4;
 		int32_t i2 = inset * 2;
 		int32_t h = TRACK_HEIGHT_STEP-i2;
@@ -289,7 +287,7 @@ public:
 };
 
 
-class guidropdown_popup_sel_automation_device : public guictxtmenu_base {
+class guidropdown_popup_sel_automation_device : public guictxtmenu {
 	track_t* const m_track;
 public:
 	guidropdown_popup_sel_automation_device(track_t* _track) : m_track(_track) {
@@ -324,7 +322,7 @@ public:
 		MainCtrl::get()->closeContextMenu();
 	}
 };
-class guidropdown_popup_sel_automation_param : public guictxtmenu_base {
+class guidropdown_popup_sel_automation_param : public guictxtmenu {
 	track_t* const m_track;
 public:
 	guidropdown_popup_sel_automation_param(track_t* _track) : m_track(_track) {
@@ -424,6 +422,7 @@ public:
 		return false;
 	}
 	void layout() {
+		const int32_t TRACK_HEIGHT_STEP = theme->get(G_TRACK_HEIGHT_STEP);
 		removeUNCHECKED(&automationSelectParam);
 		removeUNCHECKED(&automationSelectDevice);
 		removeUNCHECKED(&hideAutomation);
@@ -496,7 +495,8 @@ public:
 	void handleDraggedMove(MouseEvent& evt) override {
 		if (dragMode == DRAG_RESIZE) {
 			int32_t mouseDragDist = evt.relMousepos.y;
-			resize<track_t, TRACK_MIN_HEIGHT, TRACK_MAX_HEIGHT>(m_track, m_track, mouseDragDist);
+			int32_t heightStep = theme->get(G_TRACK_HEIGHT_STEP);
+			resize<track_t, TRACK_MIN_HEIGHT, TRACK_MAX_HEIGHT>(m_track, m_track, mouseDragDist, heightStep);
 			this->parent->onChildLayoutChanged(this);
 		} else {
 			parentCtrl->objectDragMove(this, evt);
@@ -557,7 +557,7 @@ public:
 		if (ctrl->getSelectedTrack() == m_track) {
 			color = G_BLACK;
 		}
-		const int titleHeight = HEIGHT_TRACK_TITLE;
+		const int titleHeight = theme->get(G_HEIGHT_TRACK_TITLE);
 		const int rectHeight = min(titleHeight, size.y);
 		nvgBeginPath(vg);
 		nvgRect(vg, 0, 0, titleSize.x, rectHeight);
@@ -602,6 +602,7 @@ public:
 		return false;
 	}
 	void layout() {
+		const int32_t TRACK_HEIGHT_STEP = theme->get(G_TRACK_HEIGHT_STEP);
 		int32_t insetBtn2 = (TRACK_HEIGHT_STEP-removeLane.size.y)/2;
 		removeLane.pos = ivec2(size.x-removeLane.size.x-insetBtn2, insetBtn2);
 	}
@@ -644,7 +645,8 @@ public:
 				curvalue = StringFormat("<NULL> %d", idx);
 			}
 		}
-		const int titleHeight = HEIGHT_TRACK_TITLE*4/5;
+		const int htt = theme->get(G_HEIGHT_TRACK_TITLE);
+		const int titleHeight = htt*4/5;
 		const int fontSize = titleHeight-4;
 		int32_t y = INSET_TITLE;
 		//debug
@@ -687,7 +689,8 @@ public:
 	void handleDraggedMove(MouseEvent& evt) {
 		if (dragMode == DRAG_RESIZE) {
 			int32_t mouseDragDist = evt.relMousepos.y;
-			resize(m_track, al, mouseDragDist);
+			int32_t heightStep = theme->get(G_TRACK_HEIGHT_STEP);
+			resize(m_track, al, mouseDragDist, heightStep);
 			this->parent->onChildLayoutChanged(this);
 		}
 	}
@@ -753,11 +756,11 @@ void gui_track_controls::render(NVGcontext* vg) {
 	}
 	nvgBeginPath(vg);
 	nvgRect(vg, 0, 0, size.x, size.y);
-	nvgFillColor(vg, g_guiColors[COL_BG_BRT]);
+	nvgFillColor(vg, theme->getColor(COL_BG_BRT));
 	nvgFill(vg);
 	MainCtrl* ctrl = MainCtrl::get();
 	if (ctrl->getSelectedTrack() == m_track) {
-		nvgFillColor(vg, g_guiColors[COL_BG_SELECTEDTRACK]);
+		nvgFillColor(vg, theme->getColor(COL_BG_SELECTEDTRACK));
 		nvgFill(vg);
 	}
 
@@ -774,7 +777,7 @@ void gui_track_controls::render(NVGcontext* vg) {
 		nvgMoveTo(vg, g->left(), g->top()-TRACK_HEIGHT_SPACING_HALF);
 		nvgLineTo(vg, g->right(), g->top()-TRACK_HEIGHT_SPACING_HALF);
 	}
-	nvgStrokeColor(vg, g_guiColors[COL_LINE_SEPERATOR]);
+	nvgStrokeColor(vg, theme->getColor(COL_LINE_SEPERATOR));
 	nvgStrokeWidth(vg, 1);
 	nvgStroke(vg);
 
@@ -817,6 +820,7 @@ bool gui_track_controls::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 	return contained; // always need to return true if contained, parent has z-order
 }
 void gui_track_controls::layout() {
+	const int32_t TRACK_HEIGHT_STEP = theme->get(G_TRACK_HEIGHT_STEP);
 	int32_t mxW = 160;
 	int32_t titleW = size.x - mxW;
 	mixer->size = ivec2(mxW - TRACK_HEIGHT_SPACING, size.y);
@@ -834,6 +838,7 @@ void gui_track_controls::layout() {
 }
 
 void gui_track_controls::handleDraggedMove(MouseEvent& evt) {
+	const int32_t TRACK_HEIGHT_STEP = theme->get(G_TRACK_HEIGHT_STEP);
 	if (dragMode == DRAG_RESIZE) {
 		int32_t mouseDragDist = evt.relMousepos.y;
 		bool resizeTop = m_track->type < TRACK_TYPE_MIDI;
@@ -877,7 +882,7 @@ String makeUniqueTrackName(const String& strNewName) {
 	}
 	return strNewName;
 }
-class guictxtmenu_track : public guictxtmenu_base {
+class guictxtmenu_track : public guictxtmenu {
 public:
 	int32_t trackid;
 	ctxtmenu_color_select* sel;

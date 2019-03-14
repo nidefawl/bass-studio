@@ -179,9 +179,9 @@ void gui_textfield::renderTextField(NVGcontext* ctx) const {
 	nvgRoundedRect(ctx, pos.x + 1, pos.y + 1 + 1.0f, size.x - 2, size.y - 2, 3);
 
 	if (mEditable && mFocused)
-		nvgFillColor(ctx, mValidFormat ? g_guiColors[COL_BG_DRK_FOCUSED] : nvgRGBA(200, 90, 90, 255));
+		nvgFillColor(ctx, mValidFormat ? theme->getColor(COL_BG_DRK_FOCUSED) : nvgRGBA(200, 90, 90, 255));
 	else
-		nvgFillColor(ctx, g_guiColors[COL_BG_DRK]);
+		nvgFillColor(ctx, theme->getColor(COL_BG_DRK));
 
 	nvgFill(ctx);
 

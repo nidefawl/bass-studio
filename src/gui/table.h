@@ -5,13 +5,14 @@
 #include <numeric>
 #include <vector>
 #include "str_util.h"
+#include "theme.h"
 
-using glm::vec2;
 struct NVGcontext;
 struct table_ctxt_t {
 	NVGcontext* vg;
-	vec2 pos;
-	vec2 size;
+	guitheme_t* theme;
+	glm::vec2 pos;
+	glm::vec2 size;
 	float fontSize;
 //	int align;
 };
@@ -51,9 +52,10 @@ struct tbl {
 
 #define INSET_TABLE_CELL_PADDING 3
 #define INSET_TABLE 1
-
-void draw(tbl& table, NVGcontext* vg, vec2 pos, vec2 size, float fontSize);
-void adjustColSizes(tbl& table, vec2 size);
+struct guitheme_t;
+void draw(tbl& table, NVGcontext* vg, guitheme_t* theme, glm::vec2 pos, glm::vec2 size, float fontSize);
+bool getCellClicked(tbl& table, guitheme_t* theme, glm::vec2 mouse, glm::ivec2& res);
+void adjustColSizes(tbl& table, glm::vec2 size);
 
 struct tblstr {
 	tblstr(const char* chr) : str(chr)  {
@@ -66,6 +68,20 @@ struct tblint {
 	int64_t i;
 	const char* format = nullptr;
 };
+template <typename T>
+struct tbltype {
+	T t;
+	const char* format = nullptr;
+};
+template <typename T>
+struct tbltyperef {
+	T& t;
+	const char* format = nullptr;
+};
+template <typename T>
+void drawTbl(const table_ctxt_t& ctxt, const tbltype<T>& obj);
+template <typename T>
+void drawTbl(const table_ctxt_t& ctxt, const tbltyperef<T>& obj);
 struct tblfloat {
 	float f;
 };

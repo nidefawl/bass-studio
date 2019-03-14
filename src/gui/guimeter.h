@@ -1,6 +1,7 @@
 #pragma once
 
 #include "gui.h"
+#include "theme.h"
 #include "dsp_util.h"
 #include "meter.h"
 
@@ -29,7 +30,7 @@ public:
 
 			nvgBeginPath(vg);
 			nvgRect(vg, x, mtrPos.y, channelW, mtrSize.y);
-			nvgFillColor(vg, GUI_COLOR(G_S1));
+			nvgFillColor(vg, theme->getFrameColorOutline());
 			nvgFill(vg);
 			NVGcolor colGainLvl[6] = {
 				G_GREEN_DRK, G_YELLOW_DRK,
@@ -79,7 +80,7 @@ public:
 		nvgBeginPath(vg);
 		nvgMoveTo(vg, x, yZero);
 		nvgLineTo(vg, x2, yZero);
-		nvgStrokeColor(vg, g_guiColors[COL_GRID_BRT]);
+		nvgStrokeColor(vg, theme->getColor(COL_GRID_BRT));
 		nvgStrokeWidth(vg, 1.5f);
 		nvgStroke(vg);
 	}

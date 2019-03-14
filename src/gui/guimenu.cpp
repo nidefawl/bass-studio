@@ -29,15 +29,16 @@ void guictr_menubar_entry::render(NVGcontext* vg) {
 
 	bool focused = parentCtrl->guiOver == this;
 	if (cur) focused = false;
-	NVGcolor* colHighlight = NULL;
-	if (focused) colHighlight = &g_guiColors[COL_BG_DRK];
-	if (cur == this) {
-		colHighlight = &g_guiColors[COL_BG_DRKER];
-	}
-	if (colHighlight) {
+	if (focused||cur == this) {
+		NVGcolor colHighlight;
+		if (focused) {
+			colHighlight = theme->getColor(COL_BG_DRK);
+		} else {
+			colHighlight = theme->getColor(COL_BG_DRKER);
+		}
 		nvgBeginPath(vg);
 		nvgRect(vg, pos.x, pos.y, size.x, size.y);
-		nvgFillColor(vg, *colHighlight);
+		nvgFillColor(vg, colHighlight);
 		nvgFill(vg);
 	}
 	const char* cstr = StringAsCStr(menu->title);

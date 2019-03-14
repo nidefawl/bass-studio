@@ -14,6 +14,7 @@ public:
 	virtual ~window_base() {}
 	virtual bool isShown() = 0;
 	virtual void getPos(ivec2* pos) = 0;
+	virtual void getSize(ivec2* size) = 0;
 	virtual void setSize(ivec2 size) = 0;
 	virtual void setPos(ivec2 pos) = 0;
 	virtual void requestRedraw() = 0;

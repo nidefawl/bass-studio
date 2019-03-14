@@ -23,7 +23,25 @@ enum MouseHitType {
 	MOUSE_DRAGDROP_CLIP,
 	MOUSE_DRAGDROP_OBJECT,
 	MOUSE_SCROLL,
+	MOUSE_BTN_3,
+	MOUSE_BTN_4,
+	MOUSE_BTN_5
 };
+inline MouseHitType fromButton(const int button) {
+	switch (button) {
+		case 0:
+			return MOUSE_LEFT;
+		case 1:
+			return MOUSE_RIGHT;
+		case 2:
+			return MOUSE_BTN_3;
+		case 3:
+			return MOUSE_BTN_4;
+		case 4:
+			return MOUSE_BTN_5;
+	}
+	return MOUSE_BTN_3;
+}
 struct MouseEvent {
 	MouseEventType type;
 	int button;

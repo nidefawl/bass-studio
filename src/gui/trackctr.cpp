@@ -19,7 +19,7 @@ void guitrack_mixers::render(NVGcontext* vg) {
 	ivec2 cs = getSizeContent();
 	nvgBeginPath(vg);
 	nvgRect(vg, 0, 0, cs.x, cs.y);
-	nvgFillColor(vg, g_guiColors[COL_GRID_BRT]);
+	nvgFillColor(vg, theme->getColor(COL_GRID_BRT));
 	nvgFill(vg);
 	for (track_t* g : project.tracksBottom) {
 		//content
@@ -53,15 +53,16 @@ void guitrack_mixers::removeTrack(track_t* t) {
 	}
 }
 
-void drawSeperator(NVGcontext* vg, int32_t seperatorY, ivec2& cs) {
+void drawSeperator(NVGcontext* vg, guitheme_t* theme, int32_t seperatorY, ivec2& cs) {
 	nvgBeginPath(vg);
 	nvgMoveTo(vg, 0, seperatorY);
 	nvgLineTo(vg, cs.x, seperatorY);
-	nvgStrokeColor(vg, g_guiColors[COL_LINE_SEPERATOR]);
+	nvgStrokeColor(vg, theme->getColor(COL_LINE_SEPERATOR));
 	nvgStrokeWidth(vg, TRACK_HEIGHT_SPACING);
 	nvgStroke(vg);
 }
 int32_t guictr_tracks::setTrackPosition(track_t* t, int32_t y, bool isBottom) {
+	const int32_t TRACK_HEIGHT_STEP = theme->get(G_TRACK_HEIGHT_STEP);
 	ivec2& cntPos = t->content->pos;
 	ivec2& mxrPos = t->mixer->pos;
 	cntPos = ivec2(0, y);
@@ -186,7 +187,7 @@ void guictr_tracks::layout() {
 	}
 	contentViewSize = y;
 	if (contentHeight >= contentViewSize) {
-
+		const int32_t TRACK_HEIGHT_STEP = theme->get(G_TRACK_HEIGHT_STEP);
 		contentHeight += TRACK_HEIGHT_STEP*4;
 	}
 	scrollbar.scrollTo(f);
@@ -237,7 +238,7 @@ void guictr_tracks::render(NVGcontext* vg) {
 			nvgSave(vg);
 			nvgIntersectScissor(vg, 0, 0, cs.x, ySplit);
 			for (track_t* g : project.trackCtr) {
-				drawSeperator(vg, g->mixer->bottom()+TRACK_HEIGHT_SPACING_HALF, cs);
+				drawSeperator(vg, theme, g->mixer->bottom()+TRACK_HEIGHT_SPACING_HALF, cs);
 			}
 			nvgRestore(vg);
 		}
@@ -248,7 +249,7 @@ void guictr_tracks::render(NVGcontext* vg) {
 				nvgIntersectScissor(vg, 0, 0, cs.x, trackView.size.y);
 			}
 			for (track_t* g : project.tracksBottom) {
-				drawSeperator(vg, g->mixer->top()-TRACK_HEIGHT_SPACING_HALF, cs);
+				drawSeperator(vg, theme, g->mixer->top()-TRACK_HEIGHT_SPACING_HALF, cs);
 			}
 		}
 		nvgRestore(vg);
@@ -262,7 +263,7 @@ void guictr_tracks::render(NVGcontext* vg) {
 		nvgBeginPath(vg);
 		nvgMoveTo(vg, trackControls.left(), trackControls.top());
 		nvgLineTo(vg, trackControls.left(), trackControls.bottom());
-		nvgStrokeColor(vg, g_guiColors[COL_LINE_SEPERATOR]);
+		nvgStrokeColor(vg, theme->getColor(COL_LINE_SEPERATOR));
 		nvgStrokeWidth(vg, 3);
 		nvgStroke(vg);
 

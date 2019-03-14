@@ -6,7 +6,7 @@
 #include "color_util.h"
 #include "clip.h"
 #include "track.h"
-#include "button.h"
+#include "gui.h"
 #include "guicontainer.h"
 #include "tracktimeline.h"
 #include "button.h"
@@ -221,7 +221,7 @@ public:
 		padding = 2; margin = 0;
 		btnLoop.drawFn = drawTextureSymbol;
 		btnLoop.drawParm = ICON_LOOP;
-		btnLoop.setActiveRef(nullptr);
+		btnLoop.setEnabledRef(nullptr);
 		clipLoopStart.setRef(nullptr);
 		clipLoopLen.setRef(nullptr);
 		clipTimeStart.setRef(nullptr);
@@ -261,7 +261,7 @@ public:
 
 	void layout();
 	void renderBackground(NVGcontext* vg) override {
-		drawInsetBackground(vg, getPosContent(), getSizeContent());
+		drawInsetBackground(vg, theme, getPosContent(), getSizeContent());
 	}
 	void buttonClicked(guibase* button) override {
 		if (&btnLoop == button) {
@@ -287,7 +287,7 @@ public:
 	void showEditClip() {
 		clip_t* clip = view.clip();
 		if (clip != NULL) {
-			btnLoop.setActiveRef(&clip->loopEnabled);
+			btnLoop.setEnabledRef(&clip->loopEnabled);
 			clipLoopStart.setRef(&clip->loopStart);
 			clipLoopLen.setRef(&clip->loopLen);
 			clipTimeStart.setRef(&clip->time);
@@ -305,7 +305,7 @@ public:
 //			}
 		} else {
 
-			btnLoop.setActiveRef(nullptr);
+			btnLoop.setEnabledRef(nullptr);
 			clipLoopStart.setRef(nullptr);
 			clipLoopLen.setRef(nullptr);
 			clipTimeStart.setRef(nullptr);
@@ -588,7 +588,7 @@ public:
 		nvgTranslate(vg, pos.x, pos.y);
 		nvgBeginPath(vg);
 		nvgRect(vg, -2, 0, cs.x+2, size.y);
-		nvgFillColor(vg, g_guiColors[COL_GRID_DRK]);
+		nvgFillColor(vg, theme->getColor(COL_GRID_DRK));
 		nvgFill(vg);
 //		{
 //
@@ -601,7 +601,7 @@ public:
 //			{
 //				nvgBeginPath(vg);
 //				nvgRect(vg, x, 0, grid.incr_bg, size.y);
-//				nvgFillColor(vg, g_guiColors[COL_GRID_DRK]);
+//				nvgFillColor(vg, theme->getColor(COL_GRID_DRK));
 //				nvgFill(vg);
 //				x += grid.incr_bg*2.0f;
 //				if (x > w)
@@ -613,19 +613,19 @@ public:
 			nvgBeginPath(vg);
 			nvgMoveTo(vg, g.screenpos, 0);
 			nvgLineTo(vg, g.screenpos, heightLoopInidicator*2);
-			nvgStrokeColor(vg, g_guiColors[COL_LINE_BAR + g.color]);
+			nvgStrokeColor(vg, theme->getColor(COL_LINE_BAR + g.color));
 			nvgStrokeWidth(vg, g.thickness);
 			nvgStroke(vg);
 		}
 		nvgBeginPath(vg);
 		nvgRect(vg, -2, heightLoopInidicator*2, cs.x+2, heightSelIndicator);
-		nvgFillColor(vg, g_guiColors[COL_BG_DRKER2]);
+		nvgFillColor(vg, theme->getColor(COL_BG_DRKER2));
 		nvgFill(vg);
 
 		Cursor& c = ctrl->cursor;
 		if (view.clip()) {
 			const NVGcolor colLI = GUI_COLOR(120);
-			const NVGcolor colLIStroke = GUI_COLOR(G_S1);
+			const NVGcolor colLIStroke = theme->getFrameColorOutline();
 			const float strokeWidthLI = 1.0f;
 			const float wLoopInidicator = heightLoopInidicator;
 
@@ -773,8 +773,8 @@ public:
 		add(&clipHandles);
 		add(&btn);
 		btn.setText("Fold");
-		btn.setActiveRef(&fold);
-		btn.setActiveColor(nvgToRGB(g_guiColors[COL_NOTE]));
+		btn.setEnabledRef(&fold);
+		btn.setActiveColor(nvgToRGB(theme->getColor(COL_NOTE)));
 		content.showRange(2*12, 4*12);
 	}
 	~guictr_noteeditor() {
@@ -802,7 +802,7 @@ public:
 //		return offsetPos;
 //	}
 	void renderBackground(NVGcontext* vg) override {
-		drawInsetBackground(vg, getPosContent(), getSizeContent());
+		drawInsetBackground(vg, theme, getPosContent(), getSizeContent());
 	}
 	void render(NVGcontext* vg);
 	void layout() {
@@ -960,7 +960,7 @@ public:
 	}
 	virtual void renderBackground(NVGcontext* vg) override {
 		bool focused = MainCtrl::get()->isCtrOrChildFocused(this);
-		drawBackground(vg, getPosContent(), getSizeContent(), margin, focused, false);
+		drawBackground(vg, theme, getPosContent(), getSizeContent(), margin, focused, false);
 	}
 	void layout() {
 		ivec2 cs = getSizeContent();
@@ -1004,9 +1004,9 @@ public:
 		ivec2 cp = this->getPosContent();
 		ivec2 cs = this->getSizeContent();
 		if (MainCtrl::get()->isClipEditorVisible()) {
-			drawAttachedBackground(vg, cp, cs, margin);
+			drawAttachedBackground(vg, theme, cp, cs, margin);
 		} else {
-			drawBackground(vg, cp, cs, margin, false);
+			drawBackground(vg, theme, cp, cs, margin, false);
 		}
 		clip_view& view = MainCtrl::get()->getClipView();
 		clip_t* clip = view.clip();
@@ -1028,7 +1028,7 @@ public:
 				float nW = (float) (note.len*tickScale);
 				nvgRect(vg, cp.x + nX, cp.y + (note.pitch-minPitch) * noteScale, nW, noteScale);
 			}
-			nvgFillColor(vg, g_guiColors[COL_NOTE]);
+			nvgFillColor(vg, theme->getColor(COL_NOTE));
 			nvgFill(vg);
 
 

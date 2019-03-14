@@ -27,6 +27,7 @@ struct automation_t {
 	int32_t quantizationSteps = 0;
 	bool active = true;
 	std::vector<automation_point_t> points;
+	automation_t() = default;
 	virtual ~automation_t() {};
 	virtual bool isActive() {
 		return active && points.size() > 0;
@@ -185,6 +186,15 @@ struct automatable_t {
 			automated_param_t* ap = &(*it);
 			if (ap->src.isAutomated())
 				return ap;
+		}
+		return NULL;
+	}
+	automated_param_t* getRegisteredAutomationEffect(int32_t internalIdx) {
+		auto it = std::find_if(params.begin(), params.end(), [internalIdx](automatable_param_t& ap) {
+			return ap.internalIdx == internalIdx;
+		});
+		if (it != params.end()) {
+			return getRegisteredAutomation(it->idx);
 		}
 		return NULL;
 	}

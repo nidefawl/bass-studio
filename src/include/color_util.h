@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <glm/glm.hpp>
 #include <glm/vec4.hpp>
 #include <nanovg.h>
 

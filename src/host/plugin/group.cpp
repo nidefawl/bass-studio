@@ -33,6 +33,7 @@
 #include "base_plugin.h"
 #include "internal_plugin.h"
 
+#include "basectrl.h"
 #include "../host/mainctrl.h"
 #include "../host/vst_host.h"
 #include "../host/plugindatabase.h"
@@ -48,7 +49,6 @@ using glm::vec2;
 using glm::ivec2;
 
 
-constexpr int32_t meterW = HEIGHT_PLUGIN_TITLE;
 class guimodule_group : public guiplugin {
 public:
 	module_group* const module;
@@ -75,24 +75,29 @@ public:
 			my_printf("%s guis[%d] %d %d %d %d\n", StringAsCStr(ctr.getClassName()), i, g->pos.x, g->pos.y, g->size.x, g->size.y);
 		}
 		ctr.determineSize();
-		size.x = HEIGHT_PLUGIN_TITLE+meterW;
+		const int32_t meterW = theme->get(G_PLUGIN_TITLE_HEIGHT);
+		const int32_t hpt = theme->get(G_PLUGIN_TITLE_HEIGHT);
+		size.x = hpt+meterW;
 		size.x += ctr.size.x;
 	}
 	void layout() override {
-		int32_t inset1 = (HEIGHT_PLUGIN_TITLE - buttonBypass.size.y) / 2;
-		ivec2 contentS(size.x - meterW-HEIGHT_PLUGIN_TITLE, size.y);
-		ivec2 contentP(HEIGHT_PLUGIN_TITLE, 0);
+		const int32_t meterW = theme->get(G_PLUGIN_TITLE_HEIGHT);
+		const int32_t hpt = theme->get(G_PLUGIN_TITLE_HEIGHT);
+		int32_t inset1 = (hpt - buttonBypass.size.y) / 2;
+		ivec2 contentS(size.x - meterW-hpt, size.y);
+		ivec2 contentP(hpt, 0);
 		buttonBypass.pos.y = inset1;
 		buttonBypass.pos.x = inset1;
 		buttonDelete.pos.y = inset1;
 		buttonDelete.pos.x = size.x - buttonDelete.size.x - inset1;
 		titlePosX = buttonBypass.right();
 		layoutModule(contentP, contentS, inset1);
-		meter.pos = ivec2(size.x - meterW, HEIGHT_PLUGIN_TITLE);
+		meter.pos = ivec2(size.x - meterW, hpt);
 		meter.size = ivec2(meterW, contentS.y);
 		meter.layout();
 	}
 	void layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) override {
+		layoutButtons();
 		ctr.pos = pos;
 //		ctr.size = contentS;
 //		assert(ctr.parent == this);
@@ -140,22 +145,23 @@ void guimodule_group::renderBase(NVGcontext* vg) {
 		flags |= FLAG_SELECTED;
 	}
 	if (flags & FLAG_SELECTED) {
-		c = g_guiColors[COL_BG_DRK_SELECTED];
+		c = theme->getColor(COL_BG_DRK_SELECTED);
 	} else if (flags & FLAG_FOCUSED) {
-		c = g_guiColors[COL_BG_DRK_FOCUSED];
+		c = theme->getColor(COL_BG_DRK_FOCUSED);
 	} else {
-		c = g_guiColors[COL_BG_BRT];
+		c = theme->getColor(COL_BG_BRT);
 	}
-	nvgFillColor(vg, GUI_COLOR(G_S2));
+	const int32_t hpt = theme->get(G_PLUGIN_TITLE_HEIGHT);
+	nvgFillColor(vg, theme->getFrameColorBase());
 	nvgFill(vg);
 	nvgBeginPath(vg);
-	nvgRoundedRectVarying(vg, 0, 0, HEIGHT_PLUGIN_TITLE, size.y, G_RND, G_RND, 0, 0);
+	nvgRoundedRectVarying(vg, 0, 0, hpt, size.y, G_RND, G_RND, 0, 0);
 	nvgFillColor(vg, c);
 	nvgFill(vg);
 	if (this->text[0]) {
-		setFont(vg, (int)(HEIGHT_PLUGIN_TITLE*0.8), G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+		setFont(vg, (int)(hpt*0.8), G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
 		nvgSave(vg);
-		nvgTranslate(vg, titlePosX+HEIGHT_PLUGIN_TITLE/2, size.y);
+		nvgTranslate(vg, titlePosX+hpt/2, size.y);
 		nvgRotate(vg, -M_PI/2.0);
 //		nvgTranslate(vg, -HEIGHT_PLUGIN_TITLE, 0);
 //		nvgText(vg, 0, 0, StringAsCStr(this->text), NULL);
@@ -164,7 +170,7 @@ void guimodule_group::renderBase(NVGcontext* vg) {
 	}
 	nvgBeginPath(vg);
 	nvgRoundedRect(vg, 0, 0, size.x, size.y, G_RND);
-	nvgStrokeColor(vg, GUI_COLOR(G_S1));
+	nvgStrokeColor(vg, theme->getFrameColorOutline());
 	nvgStrokeWidth(vg, G_STROKE);
 	nvgStroke(vg);
 }
@@ -200,7 +206,8 @@ bool guimodule_group::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 			if (ctr.mouseHitTest(localMouse, evt)) {
 				return true;
 			}
-			if (localMouse.x <= HEIGHT_PLUGIN_TITLE-10 || localMouse.x > size.x-HEIGHT_PLUGIN_TITLE+10)
+			const int32_t hpt = theme->get(G_PLUGIN_TITLE_HEIGHT);
+			if (localMouse.x <= hpt-10 || localMouse.x > size.x-hpt+10)
 				return false;
 			evt.requestFocus(&this->ctr);
 			return true;

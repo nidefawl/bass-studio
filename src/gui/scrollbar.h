@@ -29,7 +29,7 @@ public:
 	virtual void render(NVGcontext* vg) {
 		nvgBeginPath(vg);
 		nvgRoundedRect(vg, pos.x, pos.y, size.x, size.y, G_RND);
-		NVGcolor bg = g_guiColors[COL_BG_DRK];
+		NVGcolor bg = theme->getColor(COL_BG_DRK);
 		nvgFillColor(vg, bg);
 		nvgFill(vg);
 		ivec2 vcS = ctr.getScrollTotalSize();
@@ -47,11 +47,11 @@ public:
 			bool focused = parentCtrl->guiCtrFocused == this->parent || (parentCtrl->guiDragged==NULL&&parentCtrl->guiOver == this);
 			if (focused) {
 //				nvgStrokeWidth(vg, 1.0f);
-//				nvgStrokeColor(vg, g_guiColors[COL_BG_DRK_FOCUSED]);
+//				nvgStrokeColor(vg, theme->getColor(COL_BG_DRK_FOCUSED));
 //				nvgStroke(vg);
-				nvgFillColor(vg, g_guiColors[COL_BG_DRK_FOCUSED]);
+				nvgFillColor(vg, theme->getColor(COL_BG_DRK_FOCUSED));
 			} else {
-				nvgFillColor(vg, g_guiColors[COL_BG_DRKER]);
+				nvgFillColor(vg, theme->getColor(COL_BG_DRKER));
 			}
 			nvgFill(vg);
 

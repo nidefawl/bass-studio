@@ -49,7 +49,7 @@ public:
 	}
 };
 class guictr_pluginlibrary : public guictr_base {
-	const int32_t heightTextField = 30;
+	const int32_t heightTextField = HEIGHT_DEFAULT_INPUT;
 	gui_textfield textField;
 	gui_list pluginListCtr;
 	String curquery = "";

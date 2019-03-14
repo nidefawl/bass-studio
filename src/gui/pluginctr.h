@@ -79,12 +79,12 @@ public:
 //		nvgRoundedRect(vg, pos.x, pos.y, size.x, size.y, G_RND);
 		NVGcolor c;
 		if (this == parentCtrl->guiOver) {
-			c = GUI_COLOR(G_S3);
+			c = theme->getFrameColorHighlight();
 		}
 		else {
-			c = GUI_COLOR(G_S1);
+			c = theme->getFrameColorOutline();
 		}
-		nvgFillColor(vg, GUI_COLOR(G_S2));
+		nvgFillColor(vg, theme->getFrameColorBase());
 		nvgFill(vg);
 		setFont(vg, 18, G_WHITE, NVG_ALIGN_CENTER|NVG_ALIGN_MIDDLE);
 		nvgText(vg, pos.x + size.x/2.0f, pos.y + size.y/2.0f, StringAsCStr(message), NULL);
@@ -113,11 +113,11 @@ public:
 	void renderDragged(NVGcontext* vg, ivec2 mousepos) override {
 		mousepos -= pos;
 		nvgTranslate(vg, mousepos.x, mousepos.y);
-		drawBackground(vg, pos, size, 0, true, false);
+		drawBackground(vg, theme, pos, size, 0, true, false);
 		ivec2 inset = {2, 2};
 		nvgFontFace(vg, "sans");
 		nvgFillColor(vg, G_WHITE);
-		draw(this->table, vg, pos+inset, size-inset*2, HEIGHT_ENTRY-4);
+		draw(this->table, vg, theme, pos+inset, size-inset*2, HEIGHT_ENTRY-4);
 	}
 	void setStrings(std::vector<String>& list) {
 		size = ivec2(200, list.size()*HEIGHT_ENTRY+4);
@@ -256,6 +256,9 @@ public:
 			}
 			ctrl->requestRedraw();
 		}
+		for (guibase* gui : guis) {
+			gui->onTick(ctrl);
+		}
 	}
 	void pluginDragMove(guiplugin* g, ivec2 mousepos) override;
 	void pluginDragRelease(guiplugin* g, ivec2 mousepos) override;
@@ -297,9 +300,9 @@ public:
 		ivec2 cp = this->getPosContent();
 		ivec2 cs = this->getSizeContent();
 		if (MainCtrl::get()->isPluginViewVisible()) {
-			drawAttachedBackground(vg, cp, cs, margin);
+			drawAttachedBackground(vg, theme, cp, cs, margin);
 		} else {
-			drawBackground(vg, cp, cs, margin, false);
+			drawBackground(vg, theme, cp, cs, margin, false);
 		}
 
 		ivec2 csp = ctr_plugins->getSizeContent();

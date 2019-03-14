@@ -60,6 +60,7 @@ public:
 		int idx = 0;
 		for (guiknob* knob : knobs) {
 			const int paramIdx = idx + ARP_PARAM_CLOCK;
+//
 			knob->fnSetValue = [this,paramIdx](float f, int flags) {
 				auto arp = getArp();
 				if (arp) {
@@ -85,7 +86,7 @@ public:
 				return 0.0f;
 			};
 			knob->fnFocus = [this, paramIdx](MouseHitEvt& evt, bool focused) { MainCtrl::get()->showAutomation(clipview.track(), getArp(), paramIdx); };
-
+//
 			idx++;
 		}
 	}
@@ -110,30 +111,14 @@ public:
 		guiknob* knobs[3] = {&clock, &gate, &pattern};
 		midiarp* arp = getArp();
 		if (arp) {
-			int idx = 0;
 			for (guiknob* knob : knobs) {
-				const int paramIdx = idx + ARP_PARAM_CLOCK;
-				auto at = arp->getRegisteredAutomation(paramIdx);
-				if (at && at->src.isAutomated()) {
-					knob->indColor = G_PURPLE;
-				} else {
-					knob->indColor = G_WHITE;
-				}
-				if (at && at->src.isActive()) {
-					knob->valColor = G_PURPLE;
-				} else {
-					knob->valColor = G_BLUE;
-				}
 				knob->render(vg);
-				idx++;
 			}
-
-			idx = 0;
 			for (guiknob* knob : knobs) {
 				nvgBeginPath(vg);
 				int32_t widthParam = this->getSizeContent().x - knob->right() - INSET_TITLE*2;
 				nvgRect(vg, knob->right()+INSET_TITLE, knob->pos.y, widthParam, knob->size.y);
-				nvgFillColor(vg, GUI_COLOR(G_S3));
+				nvgFillColor(vg, theme->getFrameColorHighlight());
 				nvgFill(vg);
 				String text = knob->label;
 				if (text[0]) {
@@ -175,14 +160,15 @@ public:
 		while (size.x < meterW * 16 && meterW > 16) {
 			meterW -= 4;
 		}
-		int32_t inset1 = (HEIGHT_PLUGIN_TITLE - buttonBypass.size.y) / 2;
-		ivec2 contentS(size.x - meterW, size.y-HEIGHT_PLUGIN_TITLE);
+		const int32_t hpt = theme->get(G_PLUGIN_TITLE_HEIGHT);
+		int32_t inset1 = (hpt - buttonBypass.size.y) / 2;
+		ivec2 contentS(size.x - meterW, size.y-hpt);
 		buttonBypass.pos.y = inset1;
 		buttonBypass.pos.x = inset1;
 		clock.size = ivec2(48);
 		gate.size = ivec2(48);
 		pattern.size = ivec2(48);
-		clock.pos = ivec2(INSET_TITLE, HEIGHT_PLUGIN_TITLE+INSET_TITLE);
+		clock.pos = ivec2(INSET_TITLE, hpt+INSET_TITLE);
 		gate.pos = ivec2(INSET_TITLE, clock.bottom()+INSET_TITLE);
 		pattern.pos = ivec2(INSET_TITLE, gate.bottom()+INSET_TITLE);
 		for (guibase* gui : guis) {
@@ -190,5 +176,11 @@ public:
 		}
 	}
 	void showEditClip() {
+#ifdef BUILD_BUILTIN_EFFECT
+		auto arp = getArp();
+		clock.setAutomationRef(arp, ARP_PARAM_CLOCK);
+		gate.setAutomationRef(arp, ARP_PARAM_GATE);
+		pattern.setAutomationRef(arp, ARP_PARAM_PATTERN);
+#endif
 	}
 };

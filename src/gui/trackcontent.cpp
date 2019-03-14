@@ -288,7 +288,7 @@ gui_track* createTrackGui(track_t* t, scaled_grid& grid) {
 
 
 
-class guictxtmenu_trackcontent : public guictxtmenu_base {
+class guictxtmenu_trackcontent : public guictxtmenu {
 public:
 	int32_t trackid;
 	guictxtmenu_trackcontent(int32_t _trackid) {

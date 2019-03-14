@@ -1,68 +1,57 @@
 #pragma once
 #include <nanovg.h>
 #include "guicolors.h"
+#include "seq_math.h"
 #include "color_util.h"
+#include <glm/glm.hpp>
+#include <glm/vec2.hpp>
+#include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
+#include <unordered_map>
 
 struct guitheme_t {
+
 	const bool isDefault;
 	NVGcolor colorBg;
 	NVGcolor colorBgStroke;
 	NVGcolor colorBgHover;
 	NVGcolor colorBgPressed;
 	NVGcolor colorBgFocused;
-	NVGcolor colorBgActive;
+	NVGcolor colorBgDisabled;
+	NVGcolor colorBgFrameBase;
+	NVGcolor colorBgFrameOutline;
+	NVGcolor colorBgFrameHighlight;
+	NVGcolor colorBgFrameBright;
+	NVGcolor guiColors[NUM_GUI_COLORS];
+	std::unordered_map<int32_t, int32_t> values;
+
 	guitheme_t(bool _isDefault) : isDefault(_isDefault) {
 		initDefaultTheme();
 	}
-	void initDefaultTheme() {
-
-		uint32_t rgb = nvgToRGB(g_guiColors[COL_BG_DRK]);
-		setBgColor(rgb);
-		colorBgStroke = g_guiColors[COL_GUI_STROKE];
-	}
+	void initDefaultTheme();
+	void setBgColor(uint32_t hex);
 	void setActiveColor(uint32_t hex) {
-		vec4 hsl = hexToHSL(hex);
-		colorBgActive = nvgHSL(hsl.x, hsl.y, hsl.z);
-	}
-	void setBgColor(uint32_t hex) {
-		vec4 hsl = hexToHSL(hex);
+		glm::vec4 hsl = hexToHSL(hex);
 		colorBg = nvgHSL(hsl.x, hsl.y, hsl.z);
-		colorBgActive = nvgHSL(hsl.x, hsl.y, hsl.z);
-		colorBgStroke = nvgHSL(hsl.x, CLAMP_F(hsl.y*1.3f), 0.4f);
-		colorBgFocused = nvgHSL(hsl.x, CLAMP_F(hsl.y*0.85f), CLAMP_F(hsl.z + 0.15f));
-		colorBgHover = nvgHSL(hsl.x, CLAMP_F(hsl.y*0.7f), CLAMP_F(hsl.z + 0.3f));
-		colorBgPressed = nvgHSL(hsl.x, CLAMP_F(hsl.y*1.15f), CLAMP_F(hsl.z - 0.1f));
 	}
-	const NVGcolor getBgStrokeColor(int32_t flags) {
-		if (!(flags & FLG_ENBL)) {
-			if (flags & FLG_FOC) {
-				return G_WHITE;
-			}
-			if (flags & FLG_HVRD) {
-				return G_WHITE;
-			}
-		}
-		return colorBgStroke;
-	}
-	const NVGcolor getBgColor(int32_t flags) {
-		if (!(flags & FLG_ENBL)) {
-			return G_BUTTON_DISABLED;
-		}
-		if (flags & FLG_DRG) {
-			return colorBgPressed;
-		}
-		if (flags & FLG_HVRD) {
-			return colorBgHover;
-		}
-		if (flags & FLG_ACT) {
-			return colorBgActive;
-		}
-		if (flags & FLG_FOC) {
-			return colorBgFocused;
-		}
-		return colorBg;
-	}
+	const NVGcolor getBgColor(int32_t flags);
+	const NVGcolor getBgStrokeColor(int32_t flags);
 	float getBgStrokeWidth(int32_t flags) {
 		return G_STROKE;
 	}
+	const NVGcolor getFrameColorOutline() {
+		return this->colorBgFrameOutline;
+	}
+	const NVGcolor getFrameColorBase() {
+		return this->colorBgFrameBase;
+	}
+	const NVGcolor getFrameColorHighlight() {
+		return this->colorBgFrameHighlight;
+	}
+	const NVGcolor getFrameColorBright() {
+		return this->colorBgFrameBright;
+	}
+	const NVGcolor getColor(int color);
+	const int32_t get(int32_t _constant);
+	void set(int32_t _constant, int32_t _newValue);
 };

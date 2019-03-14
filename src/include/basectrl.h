@@ -24,6 +24,7 @@
 #include "logging.h"
 #include "hires_timer.h"
 #include "rand.h"
+#include "saferef.h"
 
 
 using glm::vec2;
@@ -41,7 +42,7 @@ KeyEvent keyEvent(int key, int scancode, int keyState, int mods, const char* key
 String getModKeyName(int modKey);
 String menuName(String s, KeyCombo combo);
 
-class BaseCtrl {
+class BaseCtrl : public SafeRefHandler<guibase> {
 public:
 	window_base* window = NULL;
 	NVGcontext* vg = NULL;
@@ -56,6 +57,41 @@ public:
 	guibase *guiCaptured = NULL;	//updates when cursor is hidden, set from guiDragged
 	guibase *guiFocused = NULL;		//updates on mouse click, set from guiOver
 	guibase *guiCtrFocused = NULL;	//updates on mouse click, handles keyboard input
+	guibase* getGuiFocused() {
+		return guiFocused;
+	}
+	struct stored_ref {
+		guibase* ptr;
+		int32_t refId;
+	};
+	int32_t refIdNext = 1;
+	std::vector<stored_ref> refs;
+	int safeRefCreate(guibase* gui) {
+		stored_ref ref{gui, (int32_t)refIdNext++};
+		refs.push_back(ref);
+		return ref.refId;
+	}
+	guibase* safeRefGet(int32_t refId) {
+		auto it = std::find_if(refs.begin(), refs.end(), [refId](const stored_ref& ref) {
+			return ref.refId == refId;
+		});
+		if (it != refs.end()) {
+			stored_ref& ref = *it;
+			return ref.ptr;
+		}
+		return nullptr;
+	}
+	void safeRefDestroy(int32_t refId) {
+		auto it = std::find_if(refs.begin(), refs.end(), [refId](const stored_ref& ref) {
+			return ref.refId == refId;
+		});
+		if (it != refs.end()) {
+			it->ptr = nullptr;
+			refs.erase(it);
+			return;
+		}
+		assert(0);
+	}
 
 	ivec2 dragStart;
 	ivec2 dragOffset;
@@ -68,7 +104,6 @@ public:
 	virtual ~BaseCtrl() { }
 	virtual void prerender(int32_t x, int32_t y, int32_t w, int32_t h, float ratio);
 	virtual void render(int32_t x, int32_t y, int32_t w, int32_t h, float ratio);
-
 	virtual bool processGlobalKeyevent(KeyEvent& event) {
 		return false;
 	}
@@ -148,10 +183,10 @@ public:
 	virtual void postInit() = 0; /* OpenGL context exists in postInit */
 	virtual void destroy() = 0;
 };
-class guictr_popup;
+class guictr_scrollbar;
 class PopupCtrl : public BaseCtrl
 {
-	guictr_popup* popupCtrs;
+	guictr_scrollbar* popupCtrs;
 public:
 	PopupCtrl();
 	~PopupCtrl();
@@ -164,6 +199,7 @@ public:
 		return this->window->isShown();
 	}
 	void closePopup() override;
+	void relayout(int32_t w, int32_t h) override;
 	void open(guictxtmenu_base *ctxtmenu, ivec2 pos);
 	bool init(window_overlay* window, NVGcontext* nanovg);
 	void focusReceived() { };

@@ -39,7 +39,13 @@ public:
 	virtual void buttonClicked(guibase* _button) = 0;
 	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) = 0;
 	virtual void layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) = 0;
+	void layoutButtons() {
 
+		const float hpt = (float)theme->get(G_PLUGIN_TITLE_HEIGHT);
+		float radius = (hpt-hpt/3.f)/2.f;
+		buttonBypass.setRadius(radius);
+		buttonDelete.setRadius(radius);
+	}
 	effectbase* getModule() {
 		return effect;
 	}
@@ -55,16 +61,17 @@ public:
 		while (size.x < meterW * 16 && meterW > 16) {
 			meterW -= 4;
 		}
-		int32_t inset1 = (HEIGHT_PLUGIN_TITLE - buttonBypass.size.y) / 2;
-		ivec2 contentS(size.x - meterW, size.y-HEIGHT_PLUGIN_TITLE);
-		ivec2 contentP(0, HEIGHT_PLUGIN_TITLE);
+		const int32_t hpt = theme->get(G_PLUGIN_TITLE_HEIGHT);
+		int32_t inset1 = (hpt - buttonBypass.size.y) / 2;
+		ivec2 contentS(size.x - meterW, size.y-hpt);
+		ivec2 contentP(0, hpt);
 		buttonBypass.pos.y = inset1;
 		buttonBypass.pos.x = inset1;
 		buttonDelete.pos.y = inset1;
 		buttonDelete.pos.x = size.x - buttonDelete.size.x - inset1;
 		titlePosX = buttonBypass.right();
 		layoutModule(contentP, contentS, inset1);
-		meter.pos = ivec2(size.x - meterW, HEIGHT_PLUGIN_TITLE);
+		meter.pos = ivec2(size.x - meterW, hpt);
 		meter.size = ivec2(meterW, contentS.y);
 		meter.layout();
 	}
@@ -98,6 +105,7 @@ public:
 	guibuttontoggle buttonOpenEditor; //TODO: use add() on controls
 	PluginViewContainers* viewCtr = nullptr;
 	std::vector<guictr_base*> viewCtrs;
+	ivec2 sizeCtrs;
 	void layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1);
 	void render(NVGcontext* vg) override;
 	void buttonClicked(guibase* _button) override;

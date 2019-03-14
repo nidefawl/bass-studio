@@ -22,7 +22,7 @@ public:
 		if (contains(ctxtSize, mouse)) {
 			nvgBeginPath(vg);
 			nvgRect(vg, 0, y, ctxtSize.x, height);
-			nvgFillColor(vg, g_guiColors[COL_CTXTMNU_HILIGHT]);
+			nvgFillColor(vg, theme->getColor(COL_CTXTMNU_HILIGHT));
 			nvgFill(vg);
 		}
 //		nvgText(vg, leftOffset(), y + height / 2, StringAsCStr(title), NULL);
@@ -46,14 +46,14 @@ public:
 	}
 };
 class guictr_menubar;
-class guimenu : public guictxtmenu_base {
+class guimenu : public guictxtmenu {
 	//ngui::Menu* menu;
 	int lvl = 0;
 public:
 	guictr_menubar* parentMenuBar = NULL;
-	guimenu(ngui::Menu* _menu, int _lvl = 0) : guictxtmenu_base()/*, menu(_menu)*/, lvl(_lvl) {
+	guimenu(ngui::Menu* _menu, int _lvl = 0) : guictxtmenu()/*, menu(_menu)*/, lvl(_lvl) {
 		this->size.x = 190;
-		this->maxHeight = -1;
+		this->maxHeight = 0;
 		for (auto e : _menu->children) {
 			if (e->type == ngui::menu_type::seperator) {
 				addEntry(new ctxtmenu_splitter());
@@ -104,7 +104,7 @@ public:
 		setScissorTransform(vg);
 		nvgBeginPath(vg);
 		nvgRect(vg, pos.x, pos.y, size.x, size.y);
-		nvgFillColor(vg, g_guiColors[COL_BG_BRT]);
+		nvgFillColor(vg, theme->getColor(COL_BG_BRT));
 		nvgFill(vg);
 		for (guibase* gui : guis) {
 			gui->render(vg);

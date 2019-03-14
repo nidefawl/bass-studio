@@ -111,9 +111,15 @@ void PluginVST2_StereoWidth::setParameter (VstInt32 index, float value)
 		ap->gain = value;
 		break;
 	}
+#ifdef BUILD_BUILTIN_EFFECT
+	for (PluginViewContainers* pviewctr : this->views) {
+		pviewctr->onSetParameter(index, value);
+	}
+#else
 	if (this->editor) {
 		static_cast<pluginwindow*>(this->editor)->onSetParameter(index, value);
 	}
+#endif
 }
 
 float PluginVST2_StereoWidth::getParameter (VstInt32 index)

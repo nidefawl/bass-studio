@@ -3,7 +3,7 @@
 #include "../host/mainctrl.h"
 #include "../threads/playbackthread.h"
 
-class guictxtmenu_param: public guictxtmenu_base {
+class guictxtmenu_param: public guictxtmenu {
 	midiarp* const effect;
 	track_t* const m_track;
 	automatable_param_t const entry;

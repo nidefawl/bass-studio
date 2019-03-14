@@ -45,6 +45,7 @@ public:
 	void buttonClicked(guibase* _button) override;
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
 	void layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) override {
+		layoutButtons();
 	}
 };
 

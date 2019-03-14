@@ -8,10 +8,10 @@
 
 #define CLAMP(x) (x > 255 ? 255 : (x < 0 ? 0 : x))
 #define CMUL(x,y) CLAMP((int)(x*y))
-#define G_S1 50
-#define G_S2 CMUL(G_S1, 1.33)
-#define G_S3 CMUL(G_S1, 1.66)
-#define G_S4 CMUL(G_S1, 2.2)
+//#define G_S1 66
+//#define G_S2 CMUL(G_S1, 1.33)
+//#define G_S3 CMUL(G_S1, 1.66)
+//#define G_S4 CMUL(G_S1, 2.2)
 #define G_R(x) x
 #define G_G(x) x
 #define G_B(x) x
@@ -26,8 +26,9 @@
 #define INSET_TRACK_CONTENT 2
 #define INSET_CLIP_CONTENT 2
 #define INSET_CTR_SPACING 4
-#define HEIGHT_PLUGIN_TITLE 24
-#define HEIGHT_TRACK_TITLE (24+INSET_TRACK_CONTENT*2)
+//#define HEIGHT_PLUGIN_TITLE 24
+#define HEIGHT_DEFAULT_INPUT 30
+//#define HEIGHT_TRACK_TITLE (24+INSET_TRACK_CONTENT*2)
 #define HEIGHT_CLIP_TITLE 24
 #define FONT_SIZE_CTXT 24
 #define FONT_SIZE_CTXT_SMALL 18
@@ -36,17 +37,21 @@
 #define TRACK_MAX_HEIGHT 128
 #define TRACK_MAX_HEIGHT_SUB 12
 #define TRACK_MIN_HEIGHT_SUB 1
-#define TRACK_HEIGHT_STEP HEIGHT_TRACK_TITLE
+//#define TRACK_HEIGHT_STEP HEIGHT_TRACK_TITLE
 #define TRACK_HEIGHT_SPACING 2
 #define TRACK_HEIGHT_SPACING_HALF 1
-#define FLG_ENBL 1
-#define FLG_HVRD 2
-#define FLG_FOC 4
-#define FLG_DRG 8
+#define FLG_VISIBLE 1
+#define FLG_ENBL 2
+#define FLG_HVRD 4
+#define FLG_FOC 8
 #define FLG_ACT 16
+#define FLG_DRG 32
 #define CTR_SPACING 8
 #define CONTENT_INSET 14
 
+#define G_PLUGIN_TITLE_HEIGHT 0x1000
+#define G_TRACK_HEIGHT_STEP 0x1001
+#define G_HEIGHT_TRACK_TITLE 0x1002
 #define G_WHITE GUI_COLOR(255)
 #define G_BLACK GUI_COLOR(0)
 #define G_PURPLE_HEX 0xEF62DF
@@ -92,6 +97,7 @@
 #define COL_BG_DRKER 17
 #define COL_BG_DRKER2 18
 #define COL_BG_DRK_SELECTED 22
+#define NUM_GUI_COLORS 24
 
 
 #define NVG_KAPPA90 0.5522847493f	// Length proportional to radius of a cubic bezier handle for 90deg arcs.

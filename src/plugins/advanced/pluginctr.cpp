@@ -68,7 +68,9 @@ gui_ctr_main::gui_ctr_main()
 //	textField.setPlaceholder("Search");
 }
 void gui_ctr_main::onTick(AppCtrl* ctrl) {
-
+	for (guibase* gui : guis) {
+		gui->onTick(ctrl);
+	}
 }
 void gui_ctr_main::prerender(NVGcontext* vg) {
 	for (guibase* gui : guis) {
@@ -85,7 +87,7 @@ void gui_ctr_main::render(NVGcontext* vg) {
 	}
 //	nvgBeginPath(vg);
 //	nvgRect(vg, 0, 0, w, h);
-//	nvgFillColor(vg, g_guiColors[COL_GRID_BRT]);
+//	nvgFillColor(vg, theme->getColor(COL_GRID_BRT));
 //	nvgFill(vg);
 	BaseCtrl *ctrl = parentCtrl;
 

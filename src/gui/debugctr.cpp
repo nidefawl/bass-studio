@@ -37,6 +37,7 @@ int getHWNDCnt(int i);
 extern int colorVal;
 gui_ctr_debug::gui_ctr_debug() : guictr_base() {
 	add(&knobTest);
+	add(&knobTest2);
 	add(&btn);
 	btn.setText("Reset history");
 	btn.setFontSize(24);
@@ -46,6 +47,10 @@ gui_ctr_debug::gui_ctr_debug() : guictr_base() {
 	};
 	knobTest.fnGetValue = [](void) {
 		return max(0.0f, min(1.0f, colorVal/255.0f));
+	};
+	knobTest2.setValueInit(theme->get(G_PLUGIN_TITLE_HEIGHT)/255.0f);
+	knobTest2.fnSetValue = [this](float f, int flags) {
+		theme->set(G_PLUGIN_TITLE_HEIGHT, (int32_t)(knobTest2.getValueInternal()*255.0f));
 	};
 }
 void gui_ctr_debug::render(NVGcontext* vg) {
@@ -151,14 +156,15 @@ void gui_ctr_debug::render(NVGcontext* vg) {
 
 	}
 #endif
-	int y1 = 30;
 	int x = 5;
 
 	setFont(vg, 26, G_WHITE, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
+	nvgText(vg, x, 0, StringAsCStr(label), NULL);
 	String proj = StringFormat("Project: %s", StringAsCStr(ctrl->getProjectPath()));
-	nvgText(vg, x, 0, StringAsCStr(proj), NULL);
+	nvgText(vg, x, 30, StringAsCStr(proj), NULL);
 	float lineh;
 	nvgTextMetrics(vg, NULL, NULL, &lineh);
+	int y1 = 60;
 	int y = y1 + lineh;
 	for (String& s : strings) {
 		nvgText(vg, x, y, StringAsCStr(s), NULL);
@@ -168,15 +174,21 @@ void gui_ctr_debug::render(NVGcontext* vg) {
 		nvgText(vg, x, y, StringAsCStr(s), NULL);
 		y += lineh;
 	}
-	knobTest.render(vg);
-	btn.render(vg);
+	for (auto c : guis) {
+		nvgSave(vg);
+		c->render(vg);
+		nvgRestore(vg);
+	}
 	g_debugStrings.clear();
 }
 void gui_ctr_debug::layout() {
 	ivec2 cs = getSizeContent();
-	knobTest.size = ivec2(48, 48);
+	int32_t size = 64;
+	knobTest.size = ivec2(size);
+	knobTest2.size = ivec2(size);
 	knobTest.pos = ivec2(cs.x-knobTest.size.x, cs.y-knobTest.size.y);
-	btn.size = ivec2(140, 48);
+	knobTest2.pos = ivec2(knobTest.pos.x-knobTest2.size.x, cs.y-knobTest2.size.y);
+	btn.size = ivec2(size*3.5, size);
 	btn.pos = ivec2(0, cs.y-btn.size.y);
 }
 
@@ -184,4 +196,15 @@ void gui_ctr_debug::buttonClicked(guibase* button) {
 	if (button == &btn) {
 		MainCtrl::get()->getHist().clear();
 	}
+}
+bool gui_ctr_debug::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
+	if (this->contains(mpos)) {
+		ivec2 localMouse = this->toContainerSpace(mpos);
+		for (guibase* gui : guis) {
+			if (gui->mouseHitTest(localMouse, evt)) {
+				return true;
+			}
+		}
+	}
+	return false;
 }

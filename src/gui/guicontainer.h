@@ -6,6 +6,7 @@
 #include "basectrl.h"
 #include "gui.h"
 #include "guicolors.h"
+#include "theme.h"
 #include "exceptions.h"
 #include "mouse.h"
 #include "event.h"
@@ -81,6 +82,7 @@ public:
 	void renderTitleBarHorizontal(NVGcontext* vg, String text, float textOffsetX, int flags);
 	void renderFrameBase(NVGcontext* vg);
 	void renderFrameOutline(NVGcontext* vg);
+	virtual void render(NVGcontext* vg);
 	virtual bool setScissorTransformContainer(NVGcontext* vg);
 	virtual bool setScissorTransform(NVGcontext* vg) {
 		ivec2 posInset = getPosContent();
@@ -189,16 +191,16 @@ public:
 		}
 		return false;
 	}
-	static void drawBackground(NVGcontext* vg, ivec2 posInset, ivec2 sizeInset, int margin, bool focused = false, bool drawInset = true) {
+	static void drawBackground(NVGcontext* vg, guitheme_t* theme, ivec2 posInset, ivec2 sizeInset, int margin, bool focused = false, bool drawInset = true) {
 		static const ivec2 borderThickness(CTR_SPACING-2);
 		posInset -= ivec2(margin);
 		sizeInset += ivec2(margin) * 2;
 		if (sizeInset.y > 0 && sizeInset.x > 0) {
 			nvgBeginPath(vg);
 			nvgRoundedRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y, 4);
-			NVGcolor bg = g_guiColors[COL_BG_DRK];
+			NVGcolor bg = theme->getColor(COL_BG_DRK);
 			if (focused) {
-				bg = g_guiColors[COL_BG_DRK_FOCUSED];
+				bg = theme->getColor(COL_BG_DRK_FOCUSED);
 			}
 			nvgFillColor(vg, bg);
 			nvgFill(vg);
@@ -207,20 +209,20 @@ public:
 			if (sizeInset.y > 0 && sizeInset.x > 0 && drawInset) {
 				nvgBeginPath(vg);
 				nvgRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y);
-				nvgFillColor(vg, g_guiColors[COL_BG_BRT]);
+				nvgFillColor(vg, theme->getColor(COL_BG_BRT));
 				nvgFill(vg);
 			}
 		}
 	}
 	virtual void renderBackground(NVGcontext* vg) {
 		bool focused = parentCtrl->isCtrOrChildFocused(this);
-		drawBackground(vg, getPosContent(), getSizeContent(), margin, focused, true);
+		drawBackground(vg, theme, getPosContent(), getSizeContent(), margin, focused, true);
 	}
-	static void drawInsetBackground(NVGcontext* vg, ivec2 posInset, ivec2 sizeInset) {
+	static void drawInsetBackground(NVGcontext* vg, guitheme_t* theme, ivec2 posInset, ivec2 sizeInset) {
 		if (sizeInset.y > 0 && sizeInset.x > 0) {
 			nvgBeginPath(vg);
 			nvgRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y);
-			nvgFillColor(vg, g_guiColors[COL_BG_BRT]);
+			nvgFillColor(vg, theme->getColor(COL_BG_BRT));
 			nvgFill(vg);
 		}
 	}
@@ -235,6 +237,9 @@ public:
 		}
 	}
 	virtual void onTick(AppCtrl* ctrl) {
+		for (guibase* gui : guis) {
+			gui->onTick(ctrl);
+		}
 	}
 	virtual guibase* getFocusedContainer() {
 		if (this->parent != NULL){
@@ -302,4 +307,22 @@ public:
 	virtual bool isStaticContainer() {
 		return true;
 	}
+};
+class guictr_tabbed : public guictr_base {
+
+	struct tabbed_entry;
+	std::vector<tabbed_entry*> entries;
+	tabbed_entry* activeEntry = nullptr;
+	ivec2 sizeContentTab;
+public:
+	guictr_tabbed() : guictr_base() {
+
+	}
+	int32_t getNumEntries();
+	void setActiveEntry(int32_t idx);
+	void addEntry(guictr_base* ctr, String title);
+	virtual void buttonClicked(guibase* button) override;
+	virtual ~guictr_tabbed();
+	void layout() override;
+	void render(NVGcontext* vg);
 };

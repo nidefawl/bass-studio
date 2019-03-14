@@ -36,50 +36,57 @@ using namespace PluginStereoWidth;
 
 using namespace std;
 class guiknob_labeled : public guiknob {
-	const int paramIdx;
 	int labelHeight = 0;
 	int valueHeight = 0;
 	String valueDisplay = "";
 	const int button_inset = 10;
+	AudioEffect* curEffect = nullptr;
+	int32_t internalEffectIdx = 0;
 #ifdef BUILD_BUILTIN_EFFECT
 	vstplugin* hostSidePlugin = nullptr;
-	automatable_param_t* paramRef = nullptr;
 #endif
 public:
-	guiknob_labeled(int _paramIdx) : guiknob(false), paramIdx(_paramIdx) {
+	guiknob_labeled(int _paramIdx, int _internalEffectIdx) : guiknob(false) {
+#ifdef BUILD_BUILTIN_EFFECT
+		paramIdx = _paramIdx;
+#endif
+		internalEffectIdx = _internalEffectIdx;
+		fnValueEditChanged = [this](float preVal, float val) {
+			if (curEffect) {
+				curEffect->setParameterAutomated(internalEffectIdx, val);
+				setDisplayValueFromEffect();
+			}
+		};
 #ifdef BUILD_BUILTIN_EFFECT
 		fnFocus = [this](MouseHitEvt& evt, bool focused) {focusEvent(evt, focused);};
+		setAutomationHandlers();
 #endif
 	}
 	~guiknob_labeled() {
 	}
 #ifdef BUILD_BUILTIN_EFFECT
-	void setEffectInstance(vstplugin* hostSidePlugin) {
-		this->hostSidePlugin = hostSidePlugin;
-		std::vector<automatable_param_t>& params = hostSidePlugin->params;
-		auto it = std::find_if(params.begin(), params.end(), [this](automatable_param_t const & reg) {
-			return reg.internalIdx == this->paramIdx;
-		});
-		if (it == params.end()) {
-			this->paramRef = nullptr;
-		} else {
-			this->paramRef = &(*it);
-		}
+	void setEffectInstance(vstplugin* _hostSidePlugin) {
+		hostSidePlugin = _hostSidePlugin;
+		paramAutomatable = _hostSidePlugin;
 	}
     virtual bool focusEvent(MouseHitEvt& evt, bool focused) override {
-    	if (focused && this->hostSidePlugin && this->paramRef) {
+    	if (focused && paramAutomatable) {
     		MainCtrl* ctrl = dynamic_cast<MainCtrl*>(getControl());
+			assert(ctrl);
     		if (ctrl) {
-        		ctrl->showAutomation(hostSidePlugin->getTrack(), hostSidePlugin, paramRef->idx);
+        		ctrl->showAutomation(hostSidePlugin->getTrack(), hostSidePlugin, paramIdx);
     		}
     	}
     	return true;
     }
 	void handleRightClick(MouseEvent& evt) override {
-    	if (this->hostSidePlugin && this->paramRef) {
+    	if (this->hostSidePlugin) {
     		MainCtrl* ctrl = dynamic_cast<MainCtrl*>(getControl());
+			assert(ctrl);
     		if (ctrl) {
-        		ctrl->openContextMenu(new guictxtmenu_vstparam(hostSidePlugin, paramRef), evt.mousepos);
+    			automatable_param_t* paramRef = &hostSidePlugin->params[paramIdx];
+    			assert(paramRef);
+        		ctrl->openContextMenu(new guictxtmenu_vstparam(this->hostSidePlugin, paramRef), evt.mousepos);
     		}
     	}
 	}
@@ -106,6 +113,7 @@ public:
 		valueHeight = std::max(14.0f, left * scaleBottom);
 	}
 	virtual void render(NVGcontext* vg) {
+		updateAutomationState(vg);
 //		nvgBeginPath(vg);
 //		nvgRect(vg, pos.x, pos.y, size.x, size.y);
 //		nvgFillColor(vg, GUI_COLORRGB(150, 150, 200, 180));
@@ -129,13 +137,23 @@ public:
 		nvgFontSize(vg, G_FONT_SCALE(valueHeight-2));
 		nvgText(vg, pos.x + size.x / 2.0f, pos.y + size.y - valueHeight + G_FONT_MIDDLE_OFFSET(valueHeight), StringAsCStr(valueDisplay), NULL);
 	}
-	void setValueDisplay(String _str) {
-		valueDisplay = _str;
+	void setAudioEffect(AudioEffect* eff) {
+		this->curEffect = eff;
+		if (eff) {
+			setValueInit(eff->getParameter(internalEffectIdx));
+			setLabel(eff->getParameterName(internalEffectIdx));
+		}
+		setDisplayValueFromEffect();
 	}
-	void setDisplayValueFromEffect(AudioEffect* curEffect, int index) {
-		String display = curEffect->getParameterDisplay(index);
-		String displayUnit = curEffect->getParameterLabel(index);
-		this->valueDisplay = display+displayUnit;
+	void setDisplayValueFromEffect() {
+		if (this->curEffect) {
+			String display = curEffect->getParameterDisplay(internalEffectIdx);
+			String displayUnit = curEffect->getParameterLabel(internalEffectIdx);
+			this->valueDisplay = display+displayUnit;
+		} else {
+
+			this->valueDisplay = "???";
+		}
 	}
 };
 
@@ -193,40 +211,23 @@ public:
 		guiknob_labeled* knob = getKnobFromParameter(index);
 		if (knob && curEffect) {
 			knob->setValueInit(value);
-			knob->setDisplayValueFromEffect(curEffect, index);
+			knob->setDisplayValueFromEffect();
 		}
 	}
 };
 
 
 guicontainer_stereowidth::guicontainer_stereowidth()
-: guictr_base(), knobgain(0), knobwidth(1) {
+: guictr_base(), knobgain(1+kGain, kGain), knobwidth(1+kStereoWidth, kStereoWidth) {
 	padding = 4;
 	margin = 4;
 	add(&knobwidth);
 	add(&knobgain);
-	knobwidth.fnValueEditChanged = [this](float preVal, float val) {
-		if (curEffect) {
-			curEffect->setParameterAutomated(kStereoWidth, val);
-			knobwidth.setDisplayValueFromEffect(curEffect, kStereoWidth);
-		}
-	};
-	knobgain.fnValueEditChanged = [this](float preVal, float val) {
-		if (curEffect) {
-			curEffect->setParameterAutomated(kGain, val);
-			knobgain.setDisplayValueFromEffect(curEffect, kGain);
-		}
-	};
-
 }
 void guicontainer_stereowidth::onGuiOpen(AudioEffect* eff) {
 	this->curEffect = eff;
-	knobwidth.setValueInit(eff->getParameter(kStereoWidth));
-	knobgain.setValueInit(eff->getParameter(kGain));
-	knobwidth.setLabel(eff->getParameterName(kStereoWidth));
-	knobgain.setLabel(eff->getParameterName(kGain));
-	knobwidth.setDisplayValueFromEffect(curEffect, kStereoWidth);
-	knobgain.setDisplayValueFromEffect(curEffect, kGain);
+	knobwidth.setAudioEffect(eff);
+	knobgain.setAudioEffect(eff);
 }
 void guicontainer_stereowidth::onGuiClose(AudioEffect* eff) {
 	this->curEffect = nullptr;
@@ -239,7 +240,9 @@ void guicontainer_stereowidth::setVSTPlugin(vstplugin* vstHostSide)  {
 #endif
 }
 void guicontainer_stereowidth::onTick(AppCtrl* ctrl) {
-
+	for (guibase* gui : guis) {
+		gui->onTick(ctrl);
+	}
 }
 void guicontainer_stereowidth::buttonClicked(guibase* button) {
 }
@@ -334,7 +337,9 @@ namespace PluginStereoWidth {
 		return new PluginVST2_StereoWidth (audioMaster);
 	}
 	PluginViewContainers* PluginVST2_StereoWidth::createView() {
-		return new ViewContainersStereoWidth();
+		PluginViewContainers* pviewctr = new ViewContainersStereoWidth();
+		this->views.push_back(pviewctr);
+		return pviewctr;
 	}
 }
 

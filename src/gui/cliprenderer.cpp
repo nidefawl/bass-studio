@@ -3,6 +3,8 @@
 #include <glm/glm.hpp>
 #include <glm/vec2.hpp>
 #include "drawwaveform.h"
+#include "trackcontent.h"
+
 using glm::vec2;
 using glm::ivec2;
 
@@ -165,7 +167,7 @@ void renderAudioClip(NVGcontext* vg, const track_t* tr, const clip_t* cl, const 
 			}
 			posLoopIndicator += cl->loopLen;
 		}
-		nvgStrokeColor(vg, GUI_COLOR(G_S2));
+		nvgStrokeColor(vg, tr->content->theme->getFrameColorBase());
 		nvgStrokeWidth(vg, 1.f);
 		nvgStroke(vg);
 	}
@@ -295,7 +297,7 @@ void renderMidiClip(NVGcontext* vg, const track_t* tr, const clip_t* cl, ivec2 p
 			}
 			posLoopIndicator += cl->loopLen;
 		}
-		nvgStrokeColor(vg, GUI_COLOR(G_S2));
+		nvgStrokeColor(vg, tr->content->theme->getFrameColorBase());
 		nvgStrokeWidth(vg, 1.f);
 		nvgStroke(vg);
 	}

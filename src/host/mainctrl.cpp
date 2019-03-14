@@ -146,6 +146,28 @@ void testTask() {
 	}
 
 }
+guictr_base* makeCtrProperties(); //guiproperties.cpp
+guictr_base* makeCtrTheme(); //guiproperties.cpp
+class guictr_side_tabs : public guictr_tabbed {
+public:
+	gui_ctr_debug ctr_dbg;
+	guictr_base* const ctr_properties;
+	guictr_base* const ctr_theme;
+	guictr_side_tabs() : guictr_tabbed(), ctr_properties(makeCtrProperties()), ctr_theme(makeCtrTheme()) {
+		ctr_dbg.setLabel("Debug 1");
+		ctr_properties->setLabel("Properties");
+		ctr_theme->setLabel("Theme");
+		addEntry(&ctr_dbg, ctr_dbg.label);
+		addEntry(ctr_properties, ctr_properties->label);
+		addEntry(ctr_theme, ctr_theme->label);
+		setActiveEntry(0);
+	}
+	virtual ~guictr_side_tabs() {
+//		remove(&ctr_dbg);
+//		remove(ctr_properties);
+//		remove(ctr_theme);
+	}
+};
 class DawViewContainers {
 	guictr_noteeditor noteeditor;
 public:
@@ -158,7 +180,7 @@ public:
 	guictr_clipeditorview ctr_clipeditorview;
 	guictr_clipeditor ctr_clipeditor;
 	guictr_tracks ctr_tracks;
-	gui_ctr_debug ctr_dbg;
+	guictr_side_tabs ctr_tabbed;
 	guictr_pluginlibrary ctr_pluginlist;
 	guictr_modulelibrary ctr_effectlist;
 	Splitter splitterList;
@@ -230,18 +252,18 @@ public:
 		ctr_plugins.setSnapSides(ivec4(0, 1, 0, 0));
 		ctr_pluginlist.setSnapSides(ivec4(1, 0, 0, 1));
 		ctr_effectlist.setSnapSides(ivec4(1, 0, 0, 0));
-		ctr_dbg.setSnapSides(ivec4(1, 0, 0, 0));
+		ctr_tabbed.setSnapSides(ivec4(1, 0, 0, 0));
 
 
-		ctr_dbg.pos = {width, winY+hTopControls+heightList};
-		ctr_dbg.size = {wRight, heightDebug};
+		ctr_tabbed.pos = {width, winY+hTopControls+heightList};
+		ctr_tabbed.size = {wRight, heightDebug};
 		ctr_pluginlist.pos = {width, winY+hTopControls};
 		ctr_pluginlist.size = {wRight, heightList/2};
 		ctr_effectlist.pos = {width, ctr_pluginlist.bottom()};
 		ctr_effectlist.size = {wRight, heightList/2};
-		splitterRight.pos = ivec2(ctr_dbg.pos.x - 5, hTopControls);
+		splitterRight.pos = ivec2(ctr_tabbed.pos.x - 5, hTopControls);
 		splitterRight.size = ivec2(10, hRight);
-		splitterList.pos = ivec2(ctr_dbg.pos.x, ctr_effectlist.bottom()-5);
+		splitterList.pos = ivec2(ctr_tabbed.pos.x, ctr_effectlist.bottom()-5);
 		splitterList.size = ivec2(wRight, 10);
 	}
 	void addTo(vector<guictr_base*>& v) {
@@ -253,7 +275,7 @@ public:
 		 v.push_back(&ctr_pluginlist);
 		 v.push_back(&ctr_effectlist);
 		 v.push_back(&statusbar);
-		 v.push_back(&ctr_dbg);
+		 v.push_back(&ctr_tabbed);
 #if USE_GUI_MENU
 		 v.push_back(&ctr_menu);
 #endif
@@ -276,7 +298,7 @@ bool MainCtrl::isPluginViewVisible() {
 }
 void MainCtrl::addDebug(String s) {
 
-	view->ctr_dbg.addStr(s);
+	view->ctr_tabbed.ctr_dbg.addStr(s);
 }
 
 void MainCtrl::unloadProject() {
@@ -1385,6 +1407,14 @@ void MainCtrl::prerender(int32_t x, int32_t y, int32_t w, int32_t h, float pixel
 		ctr->prerender(vg);
 	}
 	waveformrender::getInstance()->renderUpdates(vg, 0);
+}
+SafeRef<guibase> guibase::makeSafeRef() {
+	assert(parentCtrl);
+	if (!safeRef.handler) {
+		safeRef.handler = parentCtrl;
+		safeRef.refId = safeRef.handler->safeRefCreate(this);
+	}
+	return safeRef;
 }
 track_t* clip_view::track() const {
 	if (!this->gui)

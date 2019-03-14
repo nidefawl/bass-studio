@@ -33,12 +33,12 @@ class gui_track;
 struct dragdrop_midifile;
 
 extern int allocCount;
-extern std::vector<guibase*> g_guis;
+extern std::vector<guibase*>* g_guis;
 void initColor();
 void setFont(NVGcontext* vg, float size, NVGcolor color, int alignment);
 void renderText(NVGcontext* ctx, float x, float y, float maxWidth, const char* string);
 void renderDashedLineFrame(NVGcontext* vg, float x, float y, float w, float h, float thickness);
-void drawAttachedBackground(NVGcontext* vg, ivec2 posInset, ivec2 sizeInset, int margin);
+void drawAttachedBackground(NVGcontext* vg, guitheme_t* theme, ivec2 posInset, ivec2 sizeInset, int margin);
 
 void drawPlaySymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2);
 void drawStopSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2);
@@ -64,22 +64,42 @@ public:
 	int zOrder = 0;
 	int id;
 	guitheme_t* theme = getDefaultTheme();
-	int dummy0 = 0;
+	int flags = FLG_ENBL|FLG_VISIBLE;
 	bool canTextInput = false;
 	String label = "";
 	int curTooltip = 0;
 	BaseCtrl* parentCtrl = nullptr;
+	SafeRef<guibase> safeRef;
 //	const int guiType;
 	guibase(int guiTypeId = 0) /*: guiType(guiTypeId)*/ {
 		id = allocCount;
 		allocCount++;
-		g_guis.push_back(this);
+		g_guis->push_back(this);
 	}
 	guibase(ivec2 _pos, ivec2 _size) : guibase() {
 		this->pos = _pos;
 		this->size = _size;
 	}
+	SafeRef<guibase> makeSafeRef();
 	virtual ~guibase();
+	void setVisible(bool b) {
+		if (!b)
+			flags &= ~FLG_VISIBLE;
+		else
+			flags |= FLG_VISIBLE;
+	}
+	bool isVisible() {
+		return (flags & FLG_VISIBLE) != 0;
+	}
+	void setEnabled(bool b) {
+		if (!b)
+			flags &= ~FLG_ENBL;
+		else
+			flags |= FLG_ENBL;
+	}
+	bool isEnabled() {
+		return (flags & FLG_ENBL) != 0;
+	}
 
 	bool hasTextinput() {
 		return canTextInput;
@@ -171,6 +191,7 @@ public:
 	}
 	virtual void handleDraggedRelease(MouseEvent& evt) {
 	}
+	void handleMouseDownBegin(MouseEvent& evt);
 	virtual bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
 		return false;
 	}
@@ -302,7 +323,7 @@ public:
 		return false;
 	}
 	virtual int32_t getStateFlags() {
-		return FLG_ENBL;
+		return this->flags & (FLG_ENBL | FLG_VISIBLE);
 	}
 	//implementation specific
 	virtual bool isSelected() {

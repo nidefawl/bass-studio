@@ -10,6 +10,7 @@
 #include "seq_math.h"
 #include "track.h"
 #include "clip.h"
+#include "clipboard.h"
 #include "grid.h"
 #include "guicontainer.h"
 #include "scrollbar.h"
@@ -34,7 +35,7 @@ track_t *getTrackFromMouse(project_t& project, ivec2 mouse, bool isDragSnap);
 gui_track_automationlane* getSubTrackFromMouse(project_t& project, ivec2 mouse, bool isDragSnap);
 gui_track* createTrackGui(track_t* t, scaled_grid&); // trackcontent.cpp
 gui_track_controls* createTrackGuiMixer(track_t* t); // trackcontrols.cpp
-void drawSeperator(NVGcontext* vg, int32_t seperatorY, ivec2& cs);
+void drawSeperator(NVGcontext* vg, guitheme_t* theme, int32_t seperatorY, ivec2& cs);
 
 
 
@@ -341,25 +342,25 @@ public:
 		nvgTranslate(vg, pos.x, pos.y);
 		nvgBeginPath(vg);
 		nvgRect(vg, -2, 0, cs.x+2, size.y);
-		nvgFillColor(vg, g_guiColors[COL_GRID_DRK]);
+		nvgFillColor(vg, theme->getColor(COL_GRID_DRK));
 		nvgFill(vg);
 
 		for (grid_div g : grid.gridList) {
 			nvgBeginPath(vg);
 			nvgMoveTo(vg, g.screenpos, 0);
 			nvgLineTo(vg, g.screenpos, heightLoopIndicators);
-			nvgStrokeColor(vg, g_guiColors[COL_LINE_BAR + g.color]);
+			nvgStrokeColor(vg, theme->getColor(COL_LINE_BAR + g.color));
 			nvgStrokeWidth(vg, g.thickness);
 			nvgStroke(vg);
 		}
 		nvgBeginPath(vg);
 		nvgRect(vg, -2, heightLoopIndicators, cs.x+2, heightSeperator);
-		nvgFillColor(vg, g_guiColors[COL_BG_DRKER2]);
+		nvgFillColor(vg, theme->getColor(COL_BG_DRKER2));
 		nvgFill(vg);
 
 
 		const NVGcolor colLI = GUI_COLOR(120);
-		const NVGcolor colLIStroke = GUI_COLOR(G_S1);
+		const NVGcolor colLIStroke = theme->getFrameColorOutline();
 		const float strokeWidthLI = 1.0f;
 		const float wLoopInidicator = heightLoopIndicators;
 

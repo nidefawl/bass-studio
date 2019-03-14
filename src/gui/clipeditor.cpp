@@ -91,7 +91,7 @@ public:
 		clip->setDirty();
 	}
 };
-class guictxtmenu_noteeditor : public guictxtmenu_base {
+class guictxtmenu_noteeditor : public guictxtmenu {
 	guictr_noteeditor* editor;
 public:
 	guictxtmenu_noteeditor(guictr_noteeditor* _editor) {
@@ -166,13 +166,13 @@ void gui_clipcontent::render(NVGcontext* vg) {
 
 	nvgBeginPath(vg);
 	nvgRect(vg, -2, 0, w+2, size.y);
-	nvgFillColor(vg, g_guiColors[COL_GRID_BRT]);
+	nvgFillColor(vg, theme->getColor(COL_GRID_BRT));
 	nvgFill(vg);
 	for (int i = 0; i < steps_bg; i+=2)
 	{
 		nvgBeginPath(vg);
 		nvgRect(vg, x, 0, grid.incr_bg, size.y);
-		nvgFillColor(vg, g_guiColors[COL_GRID_DRK]);
+		nvgFillColor(vg, theme->getColor(COL_GRID_DRK));
 		nvgFill(vg);
 		x += grid.incr_bg*2.0f;
 		if (x > w)
@@ -183,7 +183,7 @@ void gui_clipcontent::render(NVGcontext* vg) {
 		nvgBeginPath(vg);
 		nvgMoveTo(vg, g.screenpos, 0);
 		nvgLineTo(vg, g.screenpos, size.y);
-		nvgStrokeColor(vg, g_guiColors[COL_LINE_BAR + g.color]);
+		nvgStrokeColor(vg, theme->getColor(COL_LINE_BAR + g.color));
 		nvgStrokeWidth(vg, g.thickness);
 		nvgStroke(vg);
 	}
@@ -322,10 +322,10 @@ void gui_clipcontent::render(NVGcontext* vg) {
 				float insety = calcInset(1, nh);
 				nvgRect(vg, nx+insetx, ny - scale+insety, nw-insetx*2, nh-insety*2);
 			}
-			nvgFillColor(vg, g_guiColors[i==0?COL_NOTE:COL_NOTE_MUTE]);
+			nvgFillColor(vg, theme->getColor(i==0?COL_NOTE:COL_NOTE_MUTE));
 			nvgFill(vg);
 			nvgStrokeWidth(vg, 1.0f);
-			nvgStrokeColor(vg, g_guiColors[COL_NOTE_OUTLINE]);
+			nvgStrokeColor(vg, theme->getColor(COL_NOTE_OUTLINE));
 			nvgStroke(vg);
 		}
 	}
@@ -349,10 +349,10 @@ void gui_clipcontent::render(NVGcontext* vg) {
 				//TODO: CULL
 				renderNote(vg, this, &note, scale, -note.start() + pos);
 			}
-			nvgFillColor(vg, g_guiColors[COL_NOTE_PLAYING]);
+			nvgFillColor(vg, theme->getColor(COL_NOTE_PLAYING));
 			nvgFill(vg);
 			nvgStrokeWidth(vg, 1.0f);
-			nvgStrokeColor(vg, g_guiColors[COL_NOTE_OUTLINE]);
+			nvgStrokeColor(vg, theme->getColor(COL_NOTE_OUTLINE));
 			nvgStroke(vg);
 		}
 		std::vector<note_t>& heldNotesArpIn = track->audio->getArpInputNotes();
@@ -371,7 +371,7 @@ void gui_clipcontent::render(NVGcontext* vg) {
 			nvgFillColor(vg, rgbToNvg(0xbbbb00));
 			nvgFill(vg);
 			nvgStrokeWidth(vg, 1.0f);
-			nvgStrokeColor(vg, g_guiColors[COL_NOTE_OUTLINE]);
+			nvgStrokeColor(vg, theme->getColor(COL_NOTE_OUTLINE));
 			nvgStroke(vg);
 		}
 
@@ -389,10 +389,10 @@ void gui_clipcontent::render(NVGcontext* vg) {
 				//TODO: CULL
 				renderNote(vg, this, &note, scale, -note.start() + pos);
 			}
-			nvgFillColor(vg, g_guiColors[COL_NOTE_ARP]);
+			nvgFillColor(vg, theme->getColor(COL_NOTE_ARP));
 			nvgFill(vg);
 			nvgStrokeWidth(vg, 1.0f);
-			nvgStrokeColor(vg, g_guiColors[COL_NOTE_OUTLINE]);
+			nvgStrokeColor(vg, theme->getColor(COL_NOTE_OUTLINE));
 			nvgStroke(vg);
 		}
 		std::vector<marker_t> markers = track->audio->getArpMarkers();
@@ -448,7 +448,7 @@ void gui_clipcontent::render(NVGcontext* vg) {
 		nvgStroke(vg);
 	if (scale >= 18) {
 		int idx = 0;
-		setFont(vg, 18, g_guiColors[COL_NOTE_TEXT], NVG_ALIGN_LEFT|NVG_ALIGN_MIDDLE);
+		setFont(vg, 18, theme->getColor(COL_NOTE_TEXT), NVG_ALIGN_LEFT|NVG_ALIGN_MIDDLE);
 		for (note_t& note : notes.m_list) {
 			//TODO: CULL
 			renderNoteName(vg, this, &note, idx++, scale);
@@ -1250,6 +1250,7 @@ void gui_clipsettings::render(NVGcontext* vg)  {
 	nvgTranslate(vg, 0, 0);
 	int32_t inset = 4;
 	int32_t i2 = inset * 2;
+	const int32_t TRACK_HEIGHT_STEP = theme->get(G_TRACK_HEIGHT_STEP);
 	int32_t h = TRACK_HEIGHT_STEP-i2;
 	setFont(vg, G_FONT_SCALE(h), G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
 	for (guibase* gui : guis) {
@@ -1261,6 +1262,7 @@ void gui_clipsettings::render(NVGcontext* vg)  {
 }
 
 void gui_clipsettings::layout() {
+	const int32_t TRACK_HEIGHT_STEP = theme->get(G_TRACK_HEIGHT_STEP);
 	int32_t inset = 4;
 	int32_t i2 = inset * 2;
 	int32_t w = size.x-i2;
@@ -1269,7 +1271,7 @@ void gui_clipsettings::layout() {
 	int32_t labelWidth = w-btnW;
 	int32_t btnX = labelWidth;
 	btnLoop.size = ivec2(btnW, btnH);
-	btnLoop.pos = ivec2(btnX, inset+HEIGHT_PLUGIN_TITLE);
+	btnLoop.pos = ivec2(btnX, inset+theme->get(G_PLUGIN_TITLE_HEIGHT));
 	clipLoopStart.size = ivec2(btnW, btnH);
 	clipLoopStart.pos = ivec2(btnLoop.left(), btnLoop.bottom()+inset);
 	clipLoopLen.size = ivec2(btnW, btnH);

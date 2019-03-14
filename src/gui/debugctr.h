@@ -8,11 +8,13 @@
 class gui_ctr_debug : public guictr_base {
 
 	guiknob knobTest;
+	guiknob knobTest2;
 	guibutton btn;
 public:
 	gui_ctr_debug();
 	~gui_ctr_debug() {
 		remove(&btn);
+		remove(&knobTest2);
 		remove(&knobTest);
 	}
 	std::vector<String> g_debugStrings;
@@ -22,4 +24,5 @@ public:
 		g_debugStrings.push_back(std::move(str));
 	}
 	void buttonClicked(guibase* button);
+	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
 };

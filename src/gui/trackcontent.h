@@ -214,7 +214,7 @@ public:
 		if (MainCtrl::get()->getSelectedTrack() == m_track) {
 			nvgBeginPath(vg);
 			nvgRect(vg, pos.x, pos.y, size.x, size.y);
-			nvgFillColor(vg, g_guiColors[COL_BG_SELECTEDTRACK]);
+			nvgFillColor(vg, theme->getColor(COL_BG_SELECTEDTRACK));
 			nvgFill(vg);
 		}
 		nvgSave(vg);
@@ -301,7 +301,7 @@ public:
 		if (MainCtrl::get()->getSelectedTrack() == m_track) {
 			nvgBeginPath(vg);
 			nvgRect(vg, pos.x, pos.y, size.x, size.y);
-			nvgFillColor(vg, g_guiColors[COL_BG_SELECTEDTRACK]);
+			nvgFillColor(vg, theme->getColor(COL_BG_SELECTEDTRACK));
 			nvgFill(vg);
 		}
 		nvgSave(vg);

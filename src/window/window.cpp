@@ -540,6 +540,9 @@ public:
 	void setSize(ivec2 size) {
 		glfwSetWindowSize(glfw, size.x, size.y);
 	}
+	void getSize(ivec2* size) {
+		glfwGetWindowSize(glfw, &size->x, &size->y);
+	}
 	void getPos(ivec2* pos) {
 		int x, y;
 		glfwGetWindowPos(glfw, &x, &y);
@@ -740,6 +743,9 @@ public:
 		return appwindow::isWindowNotHidden();
 	}
 
+	void getSize(ivec2* size) override {
+		return appwindow::getSize(size);
+	}
 	void getPos(ivec2* pos) {
 		return appwindow::getPos(pos);
 	}
@@ -881,6 +887,9 @@ public:
 		//never fired on windows
 	}
 
+	void getSize(ivec2* size) override {
+		return appwindow::getSize(size);
+	}
 	void getPos(ivec2* pos) {
 		return appwindow::getPos(pos);
 	}
@@ -1067,6 +1076,9 @@ public:
 		return appwindow::isWindowNotHidden();
 	}
 
+	void getSize(ivec2* size) override {
+		return appwindow::getSize(size);
+	}
 	void getPos(ivec2* pos) {
 		return appwindow::getPos(pos);
 	}

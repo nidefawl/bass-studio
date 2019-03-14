@@ -7,9 +7,11 @@
 
 #define PLUGIN_VENDOR_NAME "MichaelH"
 
+class PluginViewContainers;
 class BasePluginVST2 : public AudioEffectX {
 
 public:
+	std::vector<PluginViewContainers*> views;
 	BasePluginVST2 (audioMasterCallback audioMaster,
 			const char* pluginUIDStr,
 			VstInt32 numPrograms,

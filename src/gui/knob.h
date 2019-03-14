@@ -12,8 +12,9 @@
 #include "event.h"
 using glm::vec2;
 using glm::ivec2;
-
+struct automatable_t;
 class guiknob : public guibase {
+protected:
 	const float angleOpen = 90;
 	const float range = (360 - angleOpen) * M_PI / 180.0f;
 	const float start = -FLOAT_PI * 1.5f + (angleOpen / 2.0f) * M_PI / 180.0f;
@@ -24,6 +25,10 @@ class guiknob : public guibase {
 	bool changedValue = false;
 	float initialValue = 0.0f;
 	float lastVal = 0.0f;
+#ifdef BUILD_BUILTIN_EFFECT
+	automatable_t* paramAutomatable = nullptr;
+	int32_t paramIdx = -1;
+#endif
 public:
     std::function<float()> fnGetValue;
     std::function<void(float,int)> fnSetValue;
@@ -34,6 +39,13 @@ public:
 	NVGcolor indColor = G_WHITE;
 	guiknob(const bool _renderBackground = true) : guibase(), renderBackground(_renderBackground) {
 	}
+#ifdef BUILD_BUILTIN_EFFECT
+	void setAutomationRef(automatable_t* _paramAutomatable, int32_t _paramIdx) {
+		this->paramAutomatable = _paramAutomatable;
+		this->paramIdx = _paramIdx;
+	}
+	void setAutomationHandlers();
+#endif
 	virtual bool hovered() {
 		return this == parentCtrl->guiOver;
 	}
@@ -95,110 +107,27 @@ public:
 		}
 		return false;
 	}
-	virtual void render(NVGcontext* vg) {
-		ivec2 insetP = pos+ivec2(0);
-		ivec2 insetS = size-ivec2(0);
-		renderButtonAt(vg, insetP, insetS);
-	}
-	void renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS) {
-		if (renderBackground) {
-			renderWidgetBorder(vg);
-//			nvgBeginPath(vg);
-//			nvgRect(vg, insetP.x, insetP.y, insetS.x, insetS.y);
-//			nvgFillColor(vg, GUI_COLORRGB(200, 50, 200, 180));
-//			nvgFill(vg);
-		}
-		nvgLineCap(vg, NVGlineCap::NVG_ROUND);
-	    float cx = insetP.x+insetS.x/2.0f;
-	    float cy = insetP.y+insetS.y/1.8f;
-	    	    vec2 center(cx, cy);
-	    float minSize = min(insetS.x, insetS.y);
-//	    float r = (minSize*0.66f)/2.0f;
-	    float r = (minSize*0.8f)/2.0f;
-	    float lineThickness = max(1.0f, roundf((minSize / 8.0f)*2.0f)/2.0f);
-
-		NVGcolor c2 = g_guiColors[COL_BG_BRT];
-		if (hovered())
-			c2 = g_guiColors[COL_BG_DRKER];
-		if (focused())
-			c2 = g_guiColors[COL_BG_DRKER2];
-		if ((hovered() || focused())) {
-//		    nvgBeginPath(vg);
-//		    nvgCircle(vg, cx, cy, r*1.5f);
-//		    nvgFillColor(vg, c2);
-//			nvgFill(vg);
-		}
-//	    nvgBeginPath(vg);
-//	    vec2 pts[3] = {
-//				vec2(cosf(start), sinf(start)),
-//				vec2(0, -1),
-//				vec2(cosf(start+range), sinf(start+range)),
-//	    };
-//		for (vec2 v : pts) {
-//			vec2 vStart = v * (r-lineThickness*0.5f) + center;
-//			vec2 vEnd = v * (r+lineThickness*1.2f) + center;
-//		    nvgMoveTo(vg, vStart.x, vStart.y);
-//		    nvgLineTo(vg, vEnd.x, vEnd.y);
-//	    }
-//		nvgStrokeColor(vg, g_guiColors[COL_GRID_BRT]);
-//		nvgStrokeWidth(vg, max(1.0f, round((r/16.0f)*2.0f)/2.0f));
-//		nvgStroke(vg);
-
-	    nvgBeginPath(vg);
-	    nvgArc(vg, cx, cy, r, start, start+range, NVG_CW);
-		nvgStrokeColor(vg, G_WHITE);
-		nvgStrokeWidth(vg, lineThickness);
-		nvgStroke(vg);
-		float val = getValue();
-		float end = start + val * range;
-	    if (val > 1E-8F) {
-		    nvgBeginPath(vg);
-		    nvgArc(vg, cx, cy, r, start, end, NVG_CW);
-			nvgStrokeColor(vg, valColor);
-			nvgStrokeWidth(vg, lineThickness+1.0f);
-			nvgStroke(vg);
-	    }
-
-	    nvgBeginPath(vg);
-	    nvgCircleFast(vg, cx, cy, r*0.7f);
-	    nvgFillColor(vg, g_guiColors[COL_BG_DRKER2]);
-		nvgFill(vg);
-	    nvgBeginPath(vg);
-	    nvgCircleFast(vg, cx, cy, r*0.7f-1.5f);
-	    nvgFillColor(vg, c2);
-		nvgFill(vg);
-		vec2 pos(cosf(end), sinf(end));
-		vec2 posStart = pos*1.5f+center;
-		vec2 posEnd = pos*r*0.7f+center;
-		nvgBeginPath(vg);
-		nvgMoveTo(vg, posStart.x, posStart.y);
-		nvgLineTo(vg, posEnd.x, posEnd.y);
-		nvgStrokeColor(vg, indColor);
-		nvgStrokeWidth(vg, max(1.0f, roundf((r/8.0f)*2.0f)/2.0f));
-		nvgStroke(vg);
-		nvgLineCap(vg, NVGlineCap::NVG_BUTT);
-
-
+	void renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS);
+	virtual void updateAutomationState(NVGcontext* vg);
+	virtual void render(NVGcontext* vg);
+	float getValueInternal() {
+		return value;
 	}
 	void setValueInit(float newValue) {
-		if (fnSetValue) {
-		} else if (valuePtr) {
+		value = newValue;
+		if (valuePtr) {
 			*valuePtr = newValue;
-		} else {
-			value = newValue;
 		}
 	}
 	void setValue(float newValue, int flags) {
 		float curval = getValue();
 		newValue = CLAMP_I(newValue, 0.0f, 1.0f);
+		value = newValue;
 		if (fnSetValue) {
 			fnSetValue(newValue, flags);
 		} else if (valuePtr) {
 			*valuePtr = newValue;
-		} else {
-			value = newValue;
 		}
-
 		if (fnValueEditChanged) {
 			fnValueEditChanged(curval, getValue());
 		}

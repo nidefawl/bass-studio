@@ -361,6 +361,7 @@ guiplugin* vstplugin::makeGui() {
 				pGuiVstPlugin->viewCtr = viewCtr;
 				viewCtr->addTo(pGuiVstPlugin->viewCtrs);
 				viewCtr->onGuiOpen(handle->axEffect);
+				viewCtr->setVSTPlugin(this);
 			}
 		}
 	}

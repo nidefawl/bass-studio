@@ -31,6 +31,7 @@
 #include "track_impl.h"
 #include "guitooltip.h"
 #include "str_util.h"
+#include "snapshot.h"
 #include "table.h"
 
 #include "leak_detect.h"
@@ -204,20 +205,8 @@ public:
 		  knobTest(false)
 	{
 		icon = 0;
-		const int32_t paramIdx = _entry->idx;
-		knobTest.fnGetValue = [_effect, paramIdx] () {
-			return _effect->getParamValue(paramIdx);
-		};
-		knobTest.fnSetValue = [this] (float f, int flags) {
-			automation_t* param = effect->getAutomation(entry->idx);
-			if (param) {
-				param->active = false;
-			}
-			return effect->setParamValue(entry->idx, f, flags);
-		};
-		knobTest.fnValueEditFinish = [this](float preVal, float val) {
-			effect->postSetParameter(entry->idx, preVal, val, 2);
-		};
+		knobTest.setAutomationRef(effect, entry->idx);
+		knobTest.setAutomationHandlers();
 		knobTest.fnFocus = [this](MouseHitEvt& evt, bool focused) {focusEvent(evt, focused);};
 		knobTest.parent = this;
 	}
@@ -265,24 +254,13 @@ public:
 		if (ctrl->isCtrOrChildFocused(this)) {
 			nvgBeginPath(vg);
 			nvgRect(vg, pos.x, pos.y, size.x, size.y);
-			nvgFillColor(vg, g_guiColors[COL_BG_DRKER]);
+			nvgFillColor(vg, theme->getColor(COL_BG_DRKER));
 			nvgFill(vg);
 		}
 		nvgTranslate(vg, pos.x, pos.y);
 		setFont(vg, (int) (rowHeight * 0.8), G_WHITE, G_TITLE_ALIGN);
 		nvgText(vg, x, rowHeight / 2, StringAsCStr(getText()), NULL);
 		nvgTranslate(vg, -pos.x, -pos.y);
-		auto at = effect->getRegisteredAutomation(entry->idx);
-		if (at && at->src.isAutomated()) {
-			knobTest.indColor = G_PURPLE;
-		} else {
-			knobTest.indColor = G_WHITE;
-		}
-		if (at && at->src.isActive()) {
-			knobTest.valColor = G_PURPLE;
-		} else {
-			knobTest.valColor = G_BLUE;
-		}
 
 		knobTest.render(vg);
 	}
@@ -291,8 +269,8 @@ public:
 guiplugin::guiplugin(effectbase* _effect)
 : guictr_base(GUI_PLUGIN),
   effect(_effect),
-  buttonBypass((HEIGHT_PLUGIN_TITLE-HEIGHT_PLUGIN_TITLE/3)/2),
-  buttonDelete((HEIGHT_PLUGIN_TITLE-HEIGHT_PLUGIN_TITLE/3)/2),
+  buttonBypass(32),
+  buttonDelete(32),
   meter(&_effect->meter) {
 	padding = 0;
 	margin = 0;
@@ -934,7 +912,7 @@ guivstplugin::guivstplugin(vstplugin * _vst)
 : guiplugin(_vst),
   vst(_vst),
   params(48),
-  buttonOpenEditor((HEIGHT_PLUGIN_TITLE-HEIGHT_PLUGIN_TITLE/3)/2)
+  buttonOpenEditor(32)
 {
 	buttonOpenEditor.icon = ICON_ADJUST;
 	buttonOpenEditor.state = &_vst->bEditOpen;
@@ -962,22 +940,19 @@ void guivstplugin::setControl(BaseCtrl* parentCtrl) {
 }
 
 void guivstplugin::determineSize() {
-	int32_t maxX = size.x;
-	int32_t maxY = size.y;
 	if (this->viewCtr) {
-		int32_t w = 0;
-		int32_t h = 0;
-		this->viewCtr->getFixedSize(&w, &h);
-		maxX = std::max(w, maxX);
-		maxY = std::max(h, maxY);
+		this->viewCtr->getFixedSize(&sizeCtrs.x, &sizeCtrs.y);
+		if (size.y > sizeCtrs.y) {
+			int width = (int)((sizeCtrs.x/(float)sizeCtrs.y)*size.y);
+			sizeCtrs.x = width;
+			sizeCtrs.y = size.y;
+			size.y = std::max(sizeCtrs.y, size.y);
+		}
+		size.y = std::max(sizeCtrs.y, size.y);
+		size.x += sizeCtrs.x;
+	} else {
+		sizeCtrs = {0, 0};
 	}
-	
-	for (guibase* gui : guis) {
-		maxX = std::max(gui->right(), maxX);
-		maxY = std::max(gui->bottom(), maxY);
-	}
-	size.x = maxX;
-	size.y = maxY;
 }
 void guivstplugin::render(NVGcontext* vg) {
 	renderBase(vg);
@@ -990,10 +965,8 @@ void guivstplugin::render(NVGcontext* vg) {
 		nvgRestore(vg);
 	}
 	meter.render(vg);
-	if (viewCtrs.empty()) {
-		params.renderBackground(vg);
-		params.render(vg);
-	}
+	params.renderBackground(vg);
+	params.render(vg);
 }
 bool guivstplugin::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 	if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
@@ -1015,10 +988,8 @@ bool guivstplugin::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 				return true;
 			}
 		}
-		if (viewCtrs.empty()) {
-			if (params.mouseHitTest(localMouse, evt)) {
-				return true;
-			}
+		if (params.mouseHitTest(localMouse, evt)) {
+			return true;
 		}
 		if (isShift(evt.kbmods)) {
 			if (MainCtrl::get()->getPluginSel().pluginCtr != this->parent) {
@@ -1050,6 +1021,9 @@ void guivstplugin::buttonClicked(guibase* _button) {
 	}
 }
 void guivstplugin::layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {
+	layoutButtons();
+	const int32_t hpt = theme->get(G_PLUGIN_TITLE_HEIGHT);
+	buttonOpenEditor.setRadius(buttonBypass.radius);
 	buttonOpenEditor.pos.y = inset1;
 	buttonOpenEditor.pos.x = buttonBypass.right();
 	titlePosX = buttonOpenEditor.right();
@@ -1058,15 +1032,19 @@ void guivstplugin::layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {
 	while (contentS.y < rowHeight * 8 && rowHeight > 8) {
 		rowHeight -= 4;
 	}
+	int paramsW = contentS.x - sizeCtrs.x;
 	params.setRowHeight(rowHeight);
-	params.pos = ivec2(insetCtrls, insetCtrls + HEIGHT_PLUGIN_TITLE);
-	params.size = contentS - ivec2(insetCtrls*2);
+	params.pos = ivec2(insetCtrls, insetCtrls + hpt);
+	params.size = ivec2(paramsW, contentS.y) - ivec2(insetCtrls*2);
 	params.layout();
 	if (viewCtrs.size()) {
+		int left = params.right() + INSET_TITLE;
 		for (auto* ctr : viewCtrs) {
-			ctr->pos = ivec2(insetCtrls, insetCtrls + HEIGHT_PLUGIN_TITLE);
-			ctr->size = contentS - ivec2(insetCtrls*2);
+			ctr->pos = ivec2(left, 0) + ivec2(insetCtrls, insetCtrls + hpt);
+			ctr->size = ivec2(sizeCtrs.x, contentS.y) - ivec2(insetCtrls*2);
+			ctr->determineSize();
 			ctr->layout();
+			left = ctr->right() + INSET_TITLE;
 		}
 	}
 }

@@ -24,7 +24,7 @@ public:
 	gui_numberinput_field(int32_t* _number) :
 			guibuttonbase(), number(_number) {
 		this->canTextInput = true;
-		setColor(nvgToRGB(g_guiColors[COL_BG_DRK]));
+		setColor(nvgToRGB(theme->getColor(COL_BG_DRK)));
 	}
 	virtual void setControl(BaseCtrl* parentCtrl) override {
 		guibase::setControl(parentCtrl);
@@ -45,7 +45,7 @@ public:
 
 	void render(NVGcontext* vg) {
 		int32_t flags = getStateFlags();
-		if (drawBackground || flags > FLG_ENBL) {
+		if (drawBackground || (flags & (FLG_FOC|FLG_HVRD|FLG_DRG|FLG_ACT))) {
 			renderWidgetBorder(vg, flags);
 		}
 //		setFont(vg, G_FONT_SCALE(size.y), G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);

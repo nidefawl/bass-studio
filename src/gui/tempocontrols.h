@@ -8,6 +8,7 @@
 #include "gui.h"
 #include "guicontainer.h"
 #include "button.h"
+#include "renderresources.h"
 #include "knob.h"
 #include "../host/vst_host.h"
 #include "settings.h"
@@ -17,7 +18,7 @@ class gui_tempocontrol : public guibuttonbase {
 public:
 	gui_tempocontrol()
 		:  guibuttonbase() {
-		setColor(nvgToRGB(g_guiColors[COL_BG_DRK]));
+		setColor(nvgToRGB(theme->getColor(COL_BG_DRK)));
 	}
 	bool enabled() {
 		return true;
@@ -54,12 +55,12 @@ public:
 		: guibuttonbase(),
 		idx(_idx)
 	{
-		setColor(nvgToRGB(g_guiColors[COL_BG_DRK]));
+		setColor(nvgToRGB(theme->getColor(COL_BG_DRK)));
 	}
 
 	void render(NVGcontext* vg) {
 		int32_t flags = getStateFlags();
-		if (flags > FLG_ENBL) {
+		if (flags & (FLG_FOC|FLG_HVRD|FLG_DRG|FLG_ACT)) {
 			renderWidgetBorder(vg, flags);
 		}
 		setFont(vg, G_FONT_SCALE(size.y), G_WHITE, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
@@ -152,7 +153,7 @@ public:
 		time(_time),
 		isRelative(_isRelative)
 	{
-		setColor(nvgToRGB(g_guiColors[COL_BG_DRK]));
+		setColor(nvgToRGB(theme->getColor(COL_BG_DRK)));
 	}
 	void setDrawBackground(bool state) {
 		drawBackground = state;
@@ -334,7 +335,7 @@ public:
 		btnStop.drawFn = drawStopSymbol;
 		btnLoop.drawFn = drawTextureSymbol;
 		btnLoop.drawParm = ICON_LOOP;
-		btnLoop.setActiveRef(&project.loopEnabled);
+		btnLoop.setEnabledRef(&project.loopEnabled);
 		add(&loopLen);
 		add(&loopPos);
 		add(&tempo);
