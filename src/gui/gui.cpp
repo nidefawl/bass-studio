@@ -289,7 +289,6 @@ void guibase::renderWidgetBorderPosSize(NVGcontext* vg, int32_t flags, ivec2 pos
 	//		nvgFillColor(vg, theme->getColor(COL_BG_DRK));
 	//		nvgFill(vg);
 }
-
 debugproperties* makeCtrProperties2();
 void guibase::handleMouseDownBegin(MouseEvent& evt) {
 	if (evt.button == 0) {
@@ -297,6 +296,7 @@ void guibase::handleMouseDownBegin(MouseEvent& evt) {
 	} else if (evt.button == 1) {
 		handleRightClick(evt);
 	} else if (evt.button > 1) {
+#ifdef BUILD_BUILTIN_EFFECT
 		{
 
 			debugproperties* dbgPropertiesCtr = getPropertiesTable();
@@ -313,6 +313,7 @@ void guibase::handleMouseDownBegin(MouseEvent& evt) {
 			dbgPropertiesCtrPopup->setDebugPropertyHandle(this);
 			this->parentCtrl->openContextMenu(ctxtMenu, evt.mousepos);
 		}
+#endif
 	}
 }
 guitheme_t* getDefaultTheme() {
