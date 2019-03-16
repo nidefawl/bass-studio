@@ -8,12 +8,16 @@
 #include "leak_detect.h"
 #include "guicolors.h"
 #include "debugproperties.h"
-#include "guicontextmenu.h"
-
+#include "guicontextmenu_base.h"
+namespace GuiColor {
+constant_t COL_BTN_BG_DEFAULT_INACTIVE("COL_BTN_BG_DEFAULT_INACTIVE", 0xff202020);
+constant_t COL_BTN_BG_DEFAULT_ACTIVE("COL_BTN_BG_DEFAULT_ACTIVE", 0xff404040);
+constant_t COL_BTN_BG_BYPASS_ACTIVE("COL_BTN_BG_BYPASS_ACTIVE", 0xff80ABC0);
+constant_t COL_BTN_BG_SHOW_ACTIVE("COL_BTN_BG_SHOW_ACTIVE", 0xff40ABC0);
+}
 using std::min;
 using std::max;
-int colorVal = 25;
-NVGcolor g_guiColors[NUM_GUI_COLORS];
+//NVGcolor g_guiColors[NUM_GUI_COLORS];
 NVGcolor g_colorPalette[COLOR_PALETTE_LEN];
 
 static NVGcolor dbgcolors[5] = {
@@ -23,47 +27,17 @@ static NVGcolor dbgcolors[5] = {
 	nvgRGBA(255, 0, 255, 55),
 	nvgRGBA(255, 255, 0, 55)
 };
-
-void initColorArr(NVGcolor* g_guiColors, int colorVal) {
-	int c = colorVal;
-	int c2 = max(5, c - 16);
-	int c3 = min(255, c + 16);
-	g_guiColors[COL_GRID_DRK] = GUI_COLORA(c, 255);
-	g_guiColors[COL_GRID_BRT] = GUI_COLORA(c + 3, 255);
-	g_guiColors[COL_LINE_BAR] = GUI_COLORA(c2, 255);
-	g_guiColors[COL_LINE_QRT] = GUI_COLORA(c2 + 3, 255);
-	g_guiColors[COL_LINE_XTH] = GUI_COLORA(c2 + 6, 255);
-	g_guiColors[COL_LINE_SEPERATOR] = GUI_COLORA(c2 - 3, 255);
-	g_guiColors[COL_BG_DRKER] = GUI_COLORA(max(0, c3-20), 255);
-	g_guiColors[COL_BG_DRKER2] = GUI_COLORA(max(0, c3-40), 255);
-	g_guiColors[COL_BG_DRK] = GUI_COLORA(c3, 255);
-	g_guiColors[COL_BG_BRT] = GUI_COLORA(c3 + 20, 255);
-	int c4 = max(5, c - 32);
-	int c5 = max(5, c + 32);
-	g_guiColors[COL_CTXTMNU_OUTLINE] = GUI_COLORA(255, 255);
-	g_guiColors[COL_CTXTMNU_BG] = GUI_COLORA(c4, 255);
-	g_guiColors[COL_CTXTMNU_HILIGHT] = GUI_COLORA(c5, 255);
-	g_guiColors[COL_GUI_STROKE] = mulSatBright(g_guiColors[COL_GRID_DRK], 1.3f, 1.4f);
-	g_guiColors[COL_BG_DRK_FOCUSED] = GUI_COLORA(c3+48, 255);
-	g_guiColors[COL_BG_DRK_SELECTED] = GUI_COLORA(c3+40, 255);
-
-	g_guiColors[COL_NOTE] = rgbToNvg(0xff9933);
-	g_guiColors[COL_NOTE_PLAYING] = rgbToNvg(0x33ff33);
-	g_guiColors[COL_NOTE_ARP] = rgbToNvg(0x22bb22);
-	g_guiColors[COL_NOTE_MUTE] = rgbToNvg(0x666666);
-	g_guiColors[COL_NOTE_OUTLINE] = rgbToNvg(0);
-	g_guiColors[COL_NOTE_TEXT] = rgbToNvg(33);
-	g_guiColors[COL_BG_SELECTEDTRACK] = GUI_COLORA(c3 + 20, 80);
-	g_guiColors[20] = GUI_COLORA(255, 255);
-	g_guiColors[21] = GUI_COLORA(128, 255);
-
+namespace GuiColor {
+void initConstants(int colorVal);
 }
 void initColor() {
 	UNUSED(dbgcolors);
 	for (int i = 0; i < (int)ARR_SIZE(colorPalette); i++) {
 		g_colorPalette[i] = rgbToNvg(colorPalette[i]);
 	}
-	initColorArr(g_guiColors, colorVal);
+	GuiColor::initConstants(22);
+
+//	initColorArr(g_guiColors, colorVal);
 //	memset(g_guiColors, 0, sizeof(NVGcolor)*24);
 	getDefaultTheme()->initDefaultTheme();
 
@@ -237,15 +211,78 @@ void drawAttachedBackground(NVGcontext* vg, guitheme_t* theme, ivec2 posInset, i
     nvgClosePath(vg);
 
 
-	nvgFillColor(vg, theme->getColor(COL_BG_DRK));
+	nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_DRK));
 	nvgFill(vg);
 	posInset += borderThickness;
 	sizeInset -= borderThickness * 2;
 	nvgBeginPath(vg);
 	nvgRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y);
-	nvgFillColor(vg, theme->getColor(COL_BG_BRT));
+	nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_BRT));
 	nvgFill(vg);
 }
+void guibase::renderWidgetBorder(NVGcontext* vg, int32_t flags) const {
+	renderWidgetBorderPosSize(vg, flags, pos, size);
+}
+void guibase::renderWidgetBorderPosSize(NVGcontext* vg, int32_t flags, ivec2 pos, ivec2 size) const {
+	nvgBeginPath(vg);
+	nvgRect(vg, pos.x, pos.y, size.x, size.y);
+	nvgStrokeColor(vg, theme->getBgStrokeColor(flags));
+	nvgStrokeWidth(vg, theme->getBgStrokeWidth(flags));
+	nvgStroke(vg);
+	nvgFillColor(vg, theme->getBgColor(flags));
+	nvgFill(vg);
+
+	//		nvgBeginPath(vg);
+	//		nvgRect(vg, pos.x+1, pos.y+1, size.x-2, size.y-2);
+	//		nvgStrokeColor(vg, theme->getColor(GuiColor::COL_GUI_STROKE));
+	//		nvgStrokeWidth(vg, 3);
+	//		nvgStroke(vg);
+	//		nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_DRK));
+	//		nvgFill(vg);
+}
+debugproperties* makeUniquePropertiesCtr();
+void guibase::handleMouseDownBegin(MouseEvent& evt) {
+	if (evt.button == 0) {
+		handleDraggedBegin(evt);
+	} else if (evt.button == 1) {
+		handleRightClick(evt);
+	} else if (evt.button > 1) {
+#ifdef BUILD_BUILTIN_EFFECT
+		{
+
+			setDebugPropertyHandle(this);
+
+			debugproperties* dbgPropertiesCtrPopup = makeUniquePropertiesCtr();
+			guictxtmenu_base* ctxtMenu = new guictxtmenu_base();
+			ctxtMenu->size = {240, 480};
+			ctxtMenu->add(static_cast<guibase*>(dbgPropertiesCtrPopup));
+			dbgPropertiesCtrPopup->setDebugPropertyHandle(this);
+			this->parentCtrl->openContextMenu(ctxtMenu, evt.mousepos);
+		}
+#endif
+	}
+}
+guitheme_t* getDefaultTheme() {
+	static guitheme_t theme(true);
+	return &theme;
+}
+SafeRef<guibase> guibase::makeSafeRef() {
+	assert(parentCtrl);
+	if (!safeRef.handler) {
+		safeRef.handler = parentCtrl;
+		safeRef.refId = safeRef.handler->safeRefCreate(this);
+	}
+	return safeRef;
+}
+
+extern int allocCount;
+extern std::vector<guibase*>* g_guis;
+guibase::guibase(int guiTypeId)  {
+	id = allocCount;
+	allocCount++;
+	g_guis->push_back(this);
+}
+
 guibase::~guibase() {
 	if (safeRef.handler) {
 		safeRef.handler->safeRefDestroy(safeRef.refId);
@@ -264,59 +301,4 @@ guibase::~guibase() {
 	} else {
 		g_guis->erase(it);
 	}
-
-	if (!theme->isDefault) {
-		delete theme;
-	}
-}
-void guibase::renderWidgetBorder(NVGcontext* vg, int32_t flags) const {
-	renderWidgetBorderPosSize(vg, flags, pos, size);
-}
-void guibase::renderWidgetBorderPosSize(NVGcontext* vg, int32_t flags, ivec2 pos, ivec2 size) const {
-	nvgBeginPath(vg);
-	nvgRect(vg, pos.x, pos.y, size.x, size.y);
-	nvgStrokeColor(vg, theme->getBgStrokeColor(flags));
-	nvgStrokeWidth(vg, theme->getBgStrokeWidth(flags));
-	nvgStroke(vg);
-	nvgFillColor(vg, theme->getBgColor(flags));
-	nvgFill(vg);
-
-	//		nvgBeginPath(vg);
-	//		nvgRect(vg, pos.x+1, pos.y+1, size.x-2, size.y-2);
-	//		nvgStrokeColor(vg, theme->getColor(COL_GUI_STROKE));
-	//		nvgStrokeWidth(vg, 3);
-	//		nvgStroke(vg);
-	//		nvgFillColor(vg, theme->getColor(COL_BG_DRK));
-	//		nvgFill(vg);
-}
-debugproperties* makeCtrProperties2();
-void guibase::handleMouseDownBegin(MouseEvent& evt) {
-	if (evt.button == 0) {
-		handleDraggedBegin(evt);
-	} else if (evt.button == 1) {
-		handleRightClick(evt);
-	} else if (evt.button > 1) {
-#ifdef BUILD_BUILTIN_EFFECT
-		{
-
-			debugproperties* dbgPropertiesCtr = getPropertiesTable();
-			if (dbgPropertiesCtr) {
-				dbgPropertiesCtr->setDebugPropertyHandle(this);
-			}
-		}
-		{
-
-			debugproperties* dbgPropertiesCtrPopup = makeCtrProperties2();
-			guictxtmenu_base* ctxtMenu = new guictxtmenu_base();
-			ctxtMenu->size = {240, 480};
-			ctxtMenu->add(static_cast<guibase*>(dbgPropertiesCtrPopup));
-			dbgPropertiesCtrPopup->setDebugPropertyHandle(this);
-			this->parentCtrl->openContextMenu(ctxtMenu, evt.mousepos);
-		}
-#endif
-	}
-}
-guitheme_t* getDefaultTheme() {
-	static guitheme_t theme(true);
-	return &theme;
 }

@@ -18,10 +18,7 @@ class gui_tempocontrol : public guibuttonbase {
 public:
 	gui_tempocontrol()
 		:  guibuttonbase() {
-		setColor(nvgToRGB(theme->getColor(COL_BG_DRK)));
-	}
-	bool enabled() {
-		return true;
+		setTint(nvgToRGB(theme->getColor(GuiColor::COL_BG_DRK)));
 	}
 	void render(NVGcontext* vg) {
 		renderWidgetBorder(vg, getStateFlags());
@@ -55,7 +52,7 @@ public:
 		: guibuttonbase(),
 		idx(_idx)
 	{
-		setColor(nvgToRGB(theme->getColor(COL_BG_DRK)));
+		setTint(nvgToRGB(theme->getColor(GuiColor::COL_BG_DRK)));
 	}
 
 	void render(NVGcontext* vg) {
@@ -153,7 +150,7 @@ public:
 		time(_time),
 		isRelative(_isRelative)
 	{
-		setColor(nvgToRGB(theme->getColor(COL_BG_DRK)));
+		setTint(nvgToRGB(theme->getColor(GuiColor::COL_BG_DRK)));
 	}
 	void setDrawBackground(bool state) {
 		drawBackground = state;
@@ -302,7 +299,7 @@ class guibutton_audioengine : public guibutton {
 public:
 	guibutton_audioengine() : guibutton() {
 	}
-	virtual bool enabled() {
+	bool isEnabled() override {
 		return vsthost::getInstance()->isStreaming();
 	}
 };
@@ -327,7 +324,7 @@ public:
 		  loopPos(&MainCtrl::get()->loopStart),
 		  loopLen(&MainCtrl::get()->loopLen, true)
 	{
-		btnAudioOnOff.setColor(0x00ddff);
+		btnAudioOnOff.setTint(0x00ddff);
 		songPos.setConnectedBG();
 		loopPos.setConnectedBG();
 		loopLen.setConnectedBG();

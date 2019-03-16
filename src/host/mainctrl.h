@@ -225,6 +225,7 @@ class MainCtrl : public AppCtrl, public delete_cb, public project_t
 	track_t* lastHoveredTrack = NULL;
 	int32_t lastHoveredTrackTicks = 0;
 	void* lastHoveredTooltip = nullptr;
+	void* lastTooltipSrc = nullptr;
 	int32_t lastHoveredTooltipTicks = 0;
 	seq_rand rand;
 public:

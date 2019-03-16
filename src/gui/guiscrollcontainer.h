@@ -23,18 +23,24 @@ static const ivec2 insetCtxtMenu = ivec2(INSET_CTXT_MENU_X, INSET_CTXT_MENU_Y);
 
 class guictr_scrollbar : public guictr_base, public gui_scrollcontainer {
 	gui_scrollbar scrollbar;
-public:
+	int scrollOffset = 0;
 	int contentHeight = 0;
 	bool hasScrollbar = false;
+public:
 	bool scrollbarOutside = false;
 	int maxHeight = 360;
 	guictr_scrollbar() : guictr_base(), scrollbar(1, 0.0f, *this) {
+		scrollbar.setParent(this);
+		margin = 0;
 		padding = 0;
 	}
 	guictr_scrollbar(guibase* gui) : guictr_scrollbar() {
 		add(gui);
 	}
 	~guictr_scrollbar() {
+	}
+	gui_scrollbar& getScrollbar() {
+		return scrollbar;
 	}
 	virtual void render(NVGcontext* vg);
 	void determineSize() override;
@@ -50,15 +56,7 @@ public:
 	ivec2 getScrollViewSize() override {
 		return getSizeContent();
 	}
-	void scrollOffsetChanged(int dir, float offset) {
-		if (hasScrollbar) {
-			for (guibase* gui : guis) {
-				if (gui == &scrollbar)
-					continue;
-				gui->pos.y = -offset*(contentHeight-size.y);
-			}
-		}
-	}
+	void scrollOffsetChanged(int dir, float offset);
 	virtual bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
 		return scrollbar.handleMouseScroll(evt, xoffset, yoffset);
 	}

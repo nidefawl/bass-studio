@@ -15,4 +15,5 @@
 #define WINDOW_HAS_MENUBAR 1
 #endif
 #define SETTINGS_NAME "data/settings.json"
+#define THEMEFILE_NAME "data/theme.json"
 #define CREATE_DEBUG_COMPANION_WINDOW 0

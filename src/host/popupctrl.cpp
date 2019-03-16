@@ -12,7 +12,7 @@
 
 #include "../gui/gui.h"
 #include "../gui/guicontainer.h"
-#include "../gui/guicontextmenu.h"
+#include "../gui/guicontextmenu_base.h"
 #include "../gui/guiscrollcontainer.h"
 #include "../gui/scrollbar.h"
 
@@ -50,8 +50,10 @@ void PopupCtrl::open(guictxtmenu_base *_ctxtmenu, ivec2 pos) {
 	popupCtrs->removeGuis();
 	popupCtrs->pos = ivec2(0);
 	_ctxtmenu->pos = insetCtxtMenu;
+	_ctxtmenu->setBackgroundRendered(false);
 	_ctxtmenu->determineSize();
 	_ctxtmenu->layout();
+	canTakeInputFocus = _ctxtmenu->canTakeInputFocus;
 	popupCtrs->maxHeight = _ctxtmenu->maxHeight;
 	popupCtrs->scrollbarOutside = _ctxtmenu->scrollbarOutside;
 	popupCtrs->add(_ctxtmenu);
@@ -75,8 +77,15 @@ void PopupCtrl::destroy() {
 
 PopupCtrl::~PopupCtrl() {
 }
+bool PopupCtrl::hasInputFocus() {
+	return guiFocused && canTakeInputFocus;
+}
 bool PopupCtrl::init(window_overlay* _window, NVGcontext* nanovg)
 {
+	guitheme_t themeDefault;
+	themeDefault.name = "default";
+	themes.setTheme(themeDefault);
+	themes.loadThemes();
 	this->window = _window;
 	this->vg = nanovg;
 	this->containers.push_back(popupCtrs);

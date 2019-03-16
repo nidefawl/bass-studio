@@ -108,7 +108,7 @@ public:
 		removeUNCHECKED(&ctr);
 		for (guibase* g : guis) {
 			g->onRemove();
-			g->parent = NULL;
+			g->setParent(nullptr);
 		}
 		guis.clear();
 		addUNCHECKED(&ctr);
@@ -145,11 +145,11 @@ void guimodule_group::renderBase(NVGcontext* vg) {
 		flags |= FLAG_SELECTED;
 	}
 	if (flags & FLAG_SELECTED) {
-		c = theme->getColor(COL_BG_DRK_SELECTED);
+		c = theme->getColor(GuiColor::COL_BG_DRK_SELECTED);
 	} else if (flags & FLAG_FOCUSED) {
-		c = theme->getColor(COL_BG_DRK_FOCUSED);
+		c = theme->getColor(GuiColor::COL_BG_DRK_FOCUSED);
 	} else {
-		c = theme->getColor(COL_BG_BRT);
+		c = theme->getColor(GuiColor::COL_BG_BRT);
 	}
 	const int32_t hpt = theme->get(G_PLUGIN_TITLE_HEIGHT);
 	nvgFillColor(vg, theme->getFrameColorBase());

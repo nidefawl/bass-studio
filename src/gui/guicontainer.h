@@ -27,9 +27,11 @@ public:
 public:
 	guictr_base(int guiType = 0) : guibase(guiType) {
 		setSnapSides(ivec4(0));
+		setBackgroundRendered(false);
 	}
 	guictr_base(ivec2 _pos, ivec2 _size) : guibase(_pos, _size) {
 		setSnapSides(ivec4(0));
+		setBackgroundRendered(false);
 	}
 	virtual ~guictr_base() {
 		assert(guis.empty());
@@ -37,7 +39,7 @@ public:
 	virtual void destroyGuis() {
 		for (guibase* g : guis) {
 			g->onRemove();
-			g->parent = nullptr;
+			g->setParent(nullptr);
 			//g->setControl(nullptr);
 			delete g;
 		}
@@ -46,7 +48,7 @@ public:
 	virtual void removeGuis() {
 		for (guibase* g : guis) {
 			g->onRemove();
-			g->parent = nullptr;
+			g->setParent(nullptr);
 			//g->setControl(nullptr);
 		}
 		guis.clear();
@@ -56,6 +58,13 @@ public:
 		guibase::setControl(parentCtrl);
 		for (guibase* g : guis) {
 			g->setControl(parentCtrl);
+		}
+	}
+	virtual void setParent(guibase* parent) override {
+		guibase::setParent(parent);
+		for (guibase* g : guis) {
+			assert(g->parent == this);
+//			g->setParent(this);
 		}
 	}
 public:
@@ -136,7 +145,7 @@ public:
 				return a->zOrder > b->zOrder;
 			});
 		}
-		gui->parent = this;
+		gui->setParent(this);
 		gui->setControl(getControl());
 		gui->onAdded();
 	}
@@ -153,7 +162,7 @@ public:
 		}
 		gui->onRemove();
 		guis.erase(it);
-		gui->parent = nullptr;
+		gui->setParent(nullptr);
 		//gui->setControl(nullptr);
 	}
 	virtual void addUNCHECKED(guibase* gui) {
@@ -167,7 +176,7 @@ public:
 				return a->zOrder > b->zOrder;
 			});
 		}
-		gui->parent = this;
+		gui->setParent(this);
 		gui->setControl(getControl());
 	}
 	virtual void removeUNCHECKED(guibase* gui) {
@@ -177,7 +186,7 @@ public:
 		}
 //		gui->onRemove();
 		guis.erase(it);
-		gui->parent = nullptr;
+		gui->setParent(nullptr);
 		//gui->setControl(nullptr);
 	}
 	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
@@ -198,9 +207,9 @@ public:
 		if (sizeInset.y > 0 && sizeInset.x > 0) {
 			nvgBeginPath(vg);
 			nvgRoundedRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y, 4);
-			NVGcolor bg = theme->getColor(COL_BG_DRK);
+			NVGcolor bg = theme->getColor(GuiColor::COL_BG_DRK);
 			if (focused) {
-				bg = theme->getColor(COL_BG_DRK_FOCUSED);
+				bg = theme->getColor(GuiColor::COL_BG_DRK_FOCUSED);
 			}
 			nvgFillColor(vg, bg);
 			nvgFill(vg);
@@ -209,7 +218,7 @@ public:
 			if (sizeInset.y > 0 && sizeInset.x > 0 && drawInset) {
 				nvgBeginPath(vg);
 				nvgRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y);
-				nvgFillColor(vg, theme->getColor(COL_BG_BRT));
+				nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_BRT));
 				nvgFill(vg);
 			}
 		}
@@ -222,7 +231,7 @@ public:
 		if (sizeInset.y > 0 && sizeInset.x > 0) {
 			nvgBeginPath(vg);
 			nvgRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y);
-			nvgFillColor(vg, theme->getColor(COL_BG_BRT));
+			nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_BRT));
 			nvgFill(vg);
 		}
 	}

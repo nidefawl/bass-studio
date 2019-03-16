@@ -774,13 +774,13 @@ void guitrack_editor::render(NVGcontext* vg) {
 	//drawing them zig-zag would give shimmering edges due to rounding errors
 	nvgBeginPath(vg);
 	nvgRect(vg, -2, 0, w+2, size.y);
-	nvgFillColor(vg, theme->getColor(COL_GRID_BRT));
+	nvgFillColor(vg, theme->getColor(GuiColor::COL_GRID_BRT));
 	nvgFill(vg);
 	for (int i = 0; i < steps_bg; i+=2)
 	{
 		nvgBeginPath(vg);
 		nvgRect(vg, x, 0, grid.incr_bg, size.y);
-		nvgFillColor(vg, theme->getColor(COL_GRID_DRK));
+		nvgFillColor(vg, theme->getColor(GuiColor::COL_GRID_DRK));
 		nvgFill(vg);
 		x += grid.incr_bg*2.0f;
 		if (x > w)
@@ -791,7 +791,20 @@ void guitrack_editor::render(NVGcontext* vg) {
 		nvgBeginPath(vg);
 		nvgMoveTo(vg, g.screenpos, 0);
 		nvgLineTo(vg, g.screenpos, size.y);
-		nvgStrokeColor(vg, theme->getColor(COL_LINE_BAR + g.color));
+		NVGcolor col;
+		switch (g.color) {
+		case 0:
+			col = theme->getColor(GuiColor::COL_LINE_BAR);
+			break;
+		case 1:
+			col = theme->getColor(GuiColor::COL_LINE_QRT);
+			break;
+		case 2:
+		default:
+			col = theme->getColor(GuiColor::COL_LINE_XTH);
+			break;
+		}
+		nvgStrokeColor(vg, col);
 		nvgStrokeWidth(vg, g.thickness);
 		nvgStroke(vg);
 	}

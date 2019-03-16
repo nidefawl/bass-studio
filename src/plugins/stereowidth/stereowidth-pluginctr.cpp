@@ -6,17 +6,18 @@
 #include <nanovg.h>
 #include <nanovg_gl.h>
 #include <nanovg_gl_utils.h>
-using glm::vec2;
-using glm::ivec2;
 
 #include "str_util.h"
 #include "color_util.h"
 #include "gui/gui.h"
+#include "gui/guicontainer.h"
+#include "gui/pluginviewcontainers.h"
 #include "gui/button.h"
 #include "gui/knob.h"
+#include "gui/knoblabeled.h"
 #include "gui/inputfield.h"
 #include "gui/guicontainer.h"
-#include "gui/contextmenus.h"
+#include "../../gui/guicontextmenu_daw.h"
 #include "basectrl.h"
 #include "platform.h"
 #include "plugins/plugin.h"
@@ -32,21 +33,19 @@ using glm::ivec2;
 #include "vstsdk-plugin-2.4/audioeffectx.h"
 #include "leak_detect.h"
 
+using glm::vec2;
+using glm::ivec2;
 using namespace PluginStereoWidth;
-
 using namespace std;
-class guiknob_labeled : public guiknob {
-	int labelHeight = 0;
-	int valueHeight = 0;
-	String valueDisplay = "";
-	const int button_inset = 10;
+
+class guiknob_labeled : public guiknob_labeled_base {
 	AudioEffect* curEffect = nullptr;
 	int32_t internalEffectIdx = 0;
 #ifdef BUILD_BUILTIN_EFFECT
 	vstplugin* hostSidePlugin = nullptr;
 #endif
 public:
-	guiknob_labeled(int _paramIdx, int _internalEffectIdx) : guiknob(false) {
+	guiknob_labeled(int _paramIdx, int _internalEffectIdx) : guiknob_labeled_base(false) {
 #ifdef BUILD_BUILTIN_EFFECT
 		paramIdx = _paramIdx;
 #endif
@@ -58,11 +57,11 @@ public:
 			}
 		};
 #ifdef BUILD_BUILTIN_EFFECT
-		fnFocus = [this](MouseHitEvt& evt, bool focused) {focusEvent(evt, focused);};
+		fnFocus = [this](MouseHitEvt& evt, bool focused) {focusEvent(evt, focused);};//dumb??
 		setAutomationHandlers();
 #endif
 	}
-	~guiknob_labeled() {
+	virtual ~guiknob_labeled() {
 	}
 #ifdef BUILD_BUILTIN_EFFECT
 	void setEffectInstance(vstplugin* _hostSidePlugin) {
@@ -104,39 +103,6 @@ public:
 		return false;
 	}
 #endif
-	void layout() override {
-		int buttonSize = size.x - button_inset*2;
-		int left = (size.y-buttonSize);
-		float scaleTop = 0.35f;
-		float scaleBottom = 0.25f;
-		labelHeight = std::max(14.0f, left * scaleTop);
-		valueHeight = std::max(14.0f, left * scaleBottom);
-	}
-	virtual void render(NVGcontext* vg) {
-		updateAutomationState(vg);
-//		nvgBeginPath(vg);
-//		nvgRect(vg, pos.x, pos.y, size.x, size.y);
-//		nvgFillColor(vg, GUI_COLORRGB(150, 150, 200, 180));
-//		nvgFill(vg);
-		ivec2 insetP = pos+ivec2(button_inset, labelHeight);
-		ivec2 insetS = size-ivec2(button_inset*2, labelHeight+valueHeight);
-		const int INS_BRD = 2;
-//		renderWidgetBorder(vg);
-//		renderWidgetBorderPosSize(vg, getStateFlags(), pos + ivec2(0, labelHeight+INS_BRD),
-//				size - ivec2(0, labelHeight+valueHeight+INS_BRD*2));
-		renderWidgetBorderPosSize(vg, getStateFlags(), pos + ivec2(0, +INS_BRD),
-				ivec2(size.x, labelHeight-INS_BRD*2));
-		renderWidgetBorderPosSize(vg, getStateFlags(), pos + ivec2(0, size.y - valueHeight+INS_BRD),
-				ivec2(size.x, valueHeight-INS_BRD*2));
-		auto bgColor = theme->getBgColor(getStateFlags());
-		auto contrastColor = getContrastFontColor(nvgToRGB(bgColor));
-		renderButtonAt(vg, insetP, insetS);
-		setFont(vg, G_FONT_SCALE(labelHeight-2), G_WHITE, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-		nvgFillColor(vg, contrastColor);
-		nvgText(vg, pos.x + size.x / 2.0f, pos.y + G_FONT_MIDDLE_OFFSET(labelHeight), StringAsCStr(label), NULL);
-		nvgFontSize(vg, G_FONT_SCALE(valueHeight-2));
-		nvgText(vg, pos.x + size.x / 2.0f, pos.y + size.y - valueHeight + G_FONT_MIDDLE_OFFSET(valueHeight), StringAsCStr(valueDisplay), NULL);
-	}
 	void setAudioEffect(AudioEffect* eff) {
 		this->curEffect = eff;
 		if (eff) {
@@ -154,6 +120,8 @@ public:
 
 			this->valueDisplay = "???";
 		}
+	}
+	virtual void setDisplayValue(float f) override {
 	}
 };
 
@@ -338,7 +306,8 @@ namespace PluginStereoWidth {
 	}
 	PluginViewContainers* PluginVST2_StereoWidth::createView() {
 		PluginViewContainers* pviewctr = new ViewContainersStereoWidth();
-		this->views.push_back(pviewctr);
+		std::vector<PluginViewContainers*>& mviews = this->views;
+		mviews.push_back(pviewctr);
 		return pviewctr;
 	}
 }

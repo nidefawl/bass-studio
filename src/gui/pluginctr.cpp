@@ -13,7 +13,6 @@
 #include "pluginviewcontainers.h"
 #include "guicontainer.h"
 #include "guicontextmenu.h"
-#include "contextmenus.h"
 #include "pluginctr.h"
 #include "pluginlist.h"
 #include "edithistory.h"
@@ -35,11 +34,19 @@
 #include "table.h"
 
 #include "leak_detect.h"
+
+#include "guicontextmenu_daw.h"
 #include "guiplugin.h"
 
 
 using glm::vec2;
 using glm::ivec2;
+using Table::tbl;
+using Table::tbl_row_t;
+using Table::table_entry_t;
+using Table::tblint;
+using Table::tblfloat;
+using Table::tblstr;
 void getSelectedEffects(plugin_selection& sel, std::vector<effectbase*>& out) {
 	out.clear();
 	std::vector<effectbase*> tmp;
@@ -177,7 +184,7 @@ void guitooltip<guiplugin>::layout()  {
 		table.rows.push_back({{tblstr{"bIsEnabled"}, tblint{ptr->effect->bIsEnabled}}});
 		table.rows.push_back({{tblstr{"PARAM_ENABLE"}, tblfloat{ptr->effect->getParamValue(PARAM_ENABLE)}}});
 	}
-	adjustColSizes(table, getSizeContent()-ivec2(INSET_TABLE<<1));
+	Table::AdjustColSizes(table, getSizeContent()-ivec2(INSET_TABLE<<1));
 	size.y = table.rows.size()*table.rowHeight;
 }
 
@@ -208,7 +215,7 @@ public:
 		knobTest.setAutomationRef(effect, entry->idx);
 		knobTest.setAutomationHandlers();
 		knobTest.fnFocus = [this](MouseHitEvt& evt, bool focused) {focusEvent(evt, focused);};
-		knobTest.parent = this;
+		knobTest.setParent(this);
 	}
     virtual bool focusEvent(MouseHitEvt& evt, bool focused) override {
     	if (focused)
@@ -240,6 +247,10 @@ public:
 		guibase::setControl(parentCtrl);
 		knobTest.setControl(parentCtrl);
 	}
+	virtual void setParent(guibase* parent) override {
+		guibase::setParent(parent);
+		assert(knobTest.parent == this);
+	}
 	String getText() override {
 		return entry->label;
 	}
@@ -254,7 +265,7 @@ public:
 		if (ctrl->isCtrOrChildFocused(this)) {
 			nvgBeginPath(vg);
 			nvgRect(vg, pos.x, pos.y, size.x, size.y);
-			nvgFillColor(vg, theme->getColor(COL_BG_DRKER));
+			nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_DRKER));
 			nvgFill(vg);
 		}
 		nvgTranslate(vg, pos.x, pos.y);
@@ -275,19 +286,23 @@ guiplugin::guiplugin(effectbase* _effect)
 	padding = 0;
 	margin = 0;
 	text[0] = 0;
+	buttonBypass.colorActive = GuiColor::COL_BTN_BG_BYPASS_ACTIVE;
 	buttonBypass.icon = ICON_BYPASS;
 	buttonBypass.getState = [_effect]() {
 		return _effect->getParamValue(PARAM_ENABLE)>0;
 	};
-	buttonBypass.parent = this;
-	buttonBypass.setColor(0x80c040);
+	buttonBypass.setParent(this);
+	buttonBypass.setTint(0x80c040);
 	buttonDelete.icon = ICON_CLOSE;
 	static bool closeEnabled = true;
 	buttonDelete.state = &closeEnabled;
-	buttonDelete.parent = this;
-	buttonDelete.setColor(0x404040);
+	buttonDelete.setParent(this);
+	buttonDelete.setTint(0x404040);
 }
 void guictr_plugins::onAdded() {
+	if (theme->isDefault && parent) {
+		theme = parent->theme;
+	}
 //	guibase* g = this;
 //	while (g != nullptr) {
 ////		if (g->guiType == GUI_PLUGIN_VIEW) {
@@ -907,6 +922,10 @@ void guictr_plugins::pluginDragRelease(guiplugin* g, ivec2 mousepos) {
 	return;
 }
 
+GuiColor::constant_t COL_BTN_BG_DEFAULT_INACTIVE("COL_BTN_BG_DEFAULT_INACTIVE", 0xff40ABC0);
+GuiColor::constant_t COL_BTN_BG_DEFAULT_ACTIVE("COL_BTN_BG_DEFAULT_ACTIVE", 0xff40ABC0);
+GuiColor::constant_t COL_BTN_BG_BYPASS_ACTIVE("COL_BTN_BG_BYPASS_ACTIVE", 0xff40ABC0);
+GuiColor::constant_t COL_BTN_BG_SHOW_ACTIVE("COL_BTN_BG_SHOW_ACTIVE", 0xff40ABC0);
 
 guivstplugin::guivstplugin(vstplugin * _vst)
 : guiplugin(_vst),
@@ -916,10 +935,10 @@ guivstplugin::guivstplugin(vstplugin * _vst)
 {
 	buttonOpenEditor.icon = ICON_ADJUST;
 	buttonOpenEditor.state = &_vst->bEditOpen;
-	buttonOpenEditor.parent = this;
-	buttonOpenEditor.setColor(0x40ABC0);
-	params.parent = this;
-	meter.parent = this;
+	buttonOpenEditor.setParent(this);
+	buttonOpenEditor.colorActive = GuiColor::COL_BTN_BG_SHOW_ACTIVE;
+	params.setParent(this);
+	meter.setParent(this);
 	std::vector<gui_list_entry*> _newList;
 	for (automatable_param_t& param : _vst->params) {
 		if (param.internalIdx >= 0)
@@ -1062,7 +1081,7 @@ void guitooltip<guivstplugin>::layout()  {
 		table.rows.push_back({{tblstr{"bIsEnabled"}, tblint{ptr->vst->bIsEnabled}}});
 		table.rows.push_back({{tblstr{"PARAM_ENABLE"}, tblfloat{ptr->vst->getParamValue(PARAM_ENABLE)}}});
 	}
-	adjustColSizes(table, getSizeContent()-ivec2(INSET_TABLE<<1));
+	Table::AdjustColSizes(table, getSizeContent()-ivec2(INSET_TABLE<<1));
 	size.y = table.rows.size()*table.rowHeight;
 }
 

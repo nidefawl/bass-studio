@@ -30,26 +30,9 @@ using namespace std;
 using namespace PluginTestAdv;
 
 
-void gui_color_pick::init() {
-	auto setColor = [this]() {
-		float h = knH.getValue();
-		float s = knS.getValue();
-		float v = knL.getValue();
-		rgbColor = HSVtoRGB(h, s, v);
-	};
-	knH.fnValueEditFinish = [setColor](float preVal, float val) {
-		setColor();
-	};
-	knS.fnValueEditFinish = [setColor](float preVal, float val) {
-		setColor();
-	};
-	knL.fnValueEditFinish = [setColor](float preVal, float val) {
-		setColor();
-	};
-}
 gui_ctr_main::gui_ctr_main()
 : guictr_base(), field(nullptr) {
-	add(&knobTest);
+	add(&colorPicker);
 	add(&textField);
 	add(&field);
 	field.setRef(&this->nr);
@@ -79,15 +62,15 @@ void gui_ctr_main::prerender(NVGcontext* vg) {
 }
 
 void gui_ctr_main::render(NVGcontext* vg) {
-	int w = size.x;
-	int h = size.y;
+//	int w = size.x;
+//	int h = size.y;
 	renderBackground(vg);
 	if (!setScissorTransform(vg)) {
 		return;
 	}
 //	nvgBeginPath(vg);
 //	nvgRect(vg, 0, 0, w, h);
-//	nvgFillColor(vg, theme->getColor(COL_GRID_BRT));
+//	nvgFillColor(vg, theme->getColor(GuiColor::COL_GRID_BRT));
 //	nvgFill(vg);
 	BaseCtrl *ctrl = parentCtrl;
 
@@ -144,20 +127,20 @@ void gui_ctr_main::render(NVGcontext* vg) {
 	}
 	field.render(vg);
 	textField.render(vg);
-	knobTest.render(vg);
+	colorPicker.render(vg);
 	g_debugStrings.clear();
 
 
 }
 void gui_ctr_main::layout() {
 	ivec2 cs = getSizeContent();
-	knobTest.size = ivec2(48*3+48, 48);
-	knobTest.pos = ivec2(cs.x-knobTest.size.x, cs.y-knobTest.size.y);
+	colorPicker.size = ivec2(48*3+48, 48);
+	colorPicker.pos = ivec2(cs.x-colorPicker.size.x, cs.y-colorPicker.size.y);
 	field.size = ivec2(320, 32);
 	field.pos = ivec2(0, 0);
 	textField.size = ivec2(320, 32);
 	textField.pos = ivec2(0, field.bottom()+INSET_CTR_SPACING);
-	knobTest.layout();
+	colorPicker.layout();
 	field.layout();
 	textField.layout();
 }
@@ -185,8 +168,6 @@ void gui_ctr_main::onSetParameter(int32_t index, float value) {
 //		knob->setDisplayValueFromEffect(curEffect, index);
 //	}
 }
-void gui_color_pick::handleRightClick(MouseEvent& evt) {
-}
 
 class ViewContainersAdvPlugin : public PluginViewContainersImpl {
 public:
@@ -197,10 +178,7 @@ public:
 	virtual ~ViewContainersAdvPlugin() {
 	}
 	void layout(int32_t winW, int32_t winH) override {
-		int winX = 0; int winY = 0;
-		int winBottom = winH;
-		int hMenu = 0;
-		ctr_main.pos = {winX, hMenu};
+		ctr_main.pos = {0, 0};
 		ctr_main.size = {winW, winH};
 	}
 	void addTo(std::vector<guictr_base*>& v) override {

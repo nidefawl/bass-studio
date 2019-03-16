@@ -7,43 +7,26 @@ void guictr_scrollbar::render(NVGcontext* vg) {
 	if (!setScissorTransform(vg)) {
 		return;
 	}
-	ivec2 pos(0);
-	ivec2 size(getSizeContent());
-	nvgBeginPath(vg);
-	nvgMoveTo(vg, pos.x + size.x, pos.y);
-	nvgLineTo(vg, pos.x, pos.y);
-	nvgLineTo(vg, pos.x, pos.y + size.y);
-	nvgLineTo(vg, pos.x + size.x, pos.y + size.y);
-	nvgLineTo(vg, pos.x + size.x, pos.y);
-	nvgStrokeColor(vg, theme->getColor(COL_CTXTMNU_OUTLINE));
-	nvgStrokeWidth(vg, 2);
-	nvgStroke(vg);
-	ivec2 ipos = pos + ivec2(1);
-	ivec2 isize = size - ivec2(2);
-	nvgBeginPath(vg);
-	nvgRect(vg, ipos.x, ipos.y, isize.x, isize.y);
-	nvgFillColor(vg, theme->getColor(COL_CTXTMNU_BG));
-	nvgFill(vg);
 	for (guibase* gui : guis) {
 		if (gui == &scrollbar)
 			continue;
 
 		gui->render(vg);
 	}
-	nvgRestore(vg);
 	if (scrollbar.isVisible()) {
-		nvgSave(vg);
-		nvgTranslate(vg, this->pos.x, this->pos.y);
-		scrollbar.render(vg);
 		nvgRestore(vg);
+		nvgSave(vg);
+		nvgTranslate(vg, pos.x, pos.y);
+		scrollbar.render(vg);
 	}
+	nvgRestore(vg);
 }
 
 void guictr_scrollbar::determineSize() {
 	for (guibase* gui : guis) {
 		if (gui == &scrollbar)
 			continue;
-
+		gui->pos = {0, 0};
 		gui->size = size;
 		gui->determineSize();
 		gui->layout();
@@ -53,10 +36,9 @@ void guictr_scrollbar::determineSize() {
 		if (gui == &scrollbar)
 			continue;
 
-		maxSize.x = max(maxSize.x, gui->right());
-		maxSize.y = max(maxSize.y, gui->bottom());
+		maxSize.x = std::max(maxSize.x, gui->right());
+		maxSize.y = std::max(maxSize.y, gui->bottom());
 	}
-	//maxSize += ivec2(insetCtxtMenu);
 	size.x = std::max(maxSize.x, size.x);
 	contentHeight = maxSize.y;
 	const gui_scrollbar* bar = &scrollbar;
@@ -78,7 +60,6 @@ void guictr_scrollbar::determineSize() {
 		guis.insert(guis.begin(), &scrollbar);
 		scrollbar.parent = this;
 	}
-	//		size.x = std::max(maxSize.x, size.x);
 }
 
 void guictr_scrollbar::onChildLayoutChanged(guibase* g) {
@@ -88,9 +69,18 @@ void guictr_scrollbar::onChildLayoutChanged(guibase* g) {
 		this->parent->onChildLayoutChanged(this);
 	}
 }
+void guictr_scrollbar::scrollOffsetChanged(int dir, float offset) {
+	this->scrollOffset = 0;
+	if (hasScrollbar) {
+		this->scrollOffset = -offset * (contentHeight - size.y);
+		for (guibase* gui : guis) {
+			if (gui == &scrollbar)
+				continue;
+			gui->pos = {0, this->scrollOffset};
+		}
+	}
+}
 void guictr_scrollbar::layout() {
-	//		hasScrollbar = false;
-	//		if (maxSize)
 	ivec2 cs = getSizeContent();
 	int scrollW = gui_scrollbar::defaultW;
 	if (hasScrollbar) {
@@ -103,12 +93,6 @@ void guictr_scrollbar::layout() {
 			int entryW = cs.x - scrollW;
 			scrollbar.size = ivec2(scrollW - 2, cs.y - 2);
 			scrollbar.pos = ivec2(cs.x - scrollW + 1, 1);
-			for (guibase* gui : guis) {
-				if (gui == &scrollbar)
-					continue;
-
-				gui->size.x = min(entryW, gui->size.x);
-			}
 		}
 		scrollOffsetChanged(1, scrollbar.scrollOffset);
 	} else {

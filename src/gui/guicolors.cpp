@@ -1,4 +1,7 @@
 #include "guicolors.h"
+#include <nanovg_min.h>
+#include <vector>
+#include "logging.h"
 
 
 uint32_t colorPalette[COLOR_PALETTE_LEN] = {
@@ -21,3 +24,120 @@ uint32_t colorPalette[COLOR_PALETTE_LEN] = {
 		 0xedbb99, 0xdc7633, 0xba4a00, 0x873600,
 		 0xF0F0F0, 0xA0A0A0, 0x606060, 0x050505,
 };
+namespace GuiColor {
+static std::vector<constant_t*>& _getConstants() {
+	static std::vector<constant_t*> allconstants;
+	return allconstants;
+}
+std::vector<constant_t> getAllConstants() {
+	std::vector<constant_t> v;
+	auto constants = _getConstants();
+	v.reserve(constants.size());
+	for (auto it = constants.begin(); it != constants.end();) {
+		v.push_back(*(*it++));
+	}
+	return v;
+}
+void changeConstantDefault(const constant_t& c, int32_t v) {
+	for (auto p : _getConstants()) {
+		if (p == &c) {
+			p->defValue = v;
+		} else if (p->idx == c.idx) {
+			my_printf("failed changing default for constant %d\n", p->idx);
+		}
+	}
+}
+int32_t getNextId() {
+	static int32_t constantsNextId = 0;
+	return constantsNextId++;
+}
+void initConstants(int colorVal);
+
+constant_t::constant_t()
+: idx(0),
+  name(nullptr),
+  defValue(0) {
+//  allconstants.push_back(*this);
+}
+constant_t::constant_t(const char* _name, int32_t _defValue)
+: idx(getNextId()),
+  name(_name),
+  defValue(_defValue) {
+	auto& allconstants = _getConstants();
+	my_printf("push %16s to %12X -> size %d\n", _name, (int64_t)&allconstants, allconstants.size());
+  allconstants.push_back(this);
+}
+constant_t COL_GRID_DRK = constant_t("COL_GRID_DRK", 0xFF000000);
+constant_t COL_GRID_BRT = constant_t("COL_GRID_BRT", 0xFF000000);
+constant_t COL_LINE_BAR = constant_t("COL_LINE_BAR", 0xFF000000);
+constant_t COL_LINE_QRT = constant_t("COL_LINE_QRT", 0xFF000000);
+constant_t COL_LINE_XTH = constant_t("COL_LINE_XTH", 0xFF000000);
+constant_t COL_BG_DRK = constant_t("COL_BG_DRK", 0xFF000000);
+constant_t COL_BG_BRT = constant_t("COL_BG_BRT", 0xFF000000);
+constant_t COL_LINE_SEPERATOR = constant_t("COL_LINE_SEPERATOR", 0xFF000000);
+constant_t COL_CTXTMNU_OUTLINE = constant_t("COL_CTXTMNU_OUTLINE", 0xFF000000);
+constant_t COL_CTXTMNU_BG = constant_t("COL_CTXTMNU_BG", 0xFF000000);
+constant_t COL_CTXTMNU_HILIGHT = constant_t("COL_CTXTMNU_HILIGHT", 0xFF000000);
+constant_t COL_GUI_STROKE = constant_t("COL_GUI_STROKE", 0xFF000000);
+constant_t COL_BG_DRK_FOCUSED = constant_t("COL_BG_DRK_FOCUSED", 0xFF000000);
+constant_t COL_NOTE = constant_t("COL_NOTE", 0xFF000000);
+constant_t COL_NOTE_PLAYING = constant_t("COL_NOTE_PLAYING", 0xFF000000);
+constant_t COL_NOTE_ARP = constant_t("COL_NOTE_ARP", 0xFF000000);
+constant_t COL_NOTE_MUTE = constant_t("COL_NOTE_MUTE", 0xFF000000);
+constant_t COL_NOTE_OUTLINE = constant_t("COL_NOTE_OUTLINE", 0xFF000000);
+constant_t COL_NOTE_TEXT = constant_t("COL_NOTE_TEXT", 0xFF000000);
+constant_t COL_BG_SELECTEDTRACK = constant_t("COL_BG_SELECTEDTRACK", 0xFF000000);
+constant_t COL_BG_DRKER = constant_t("COL_BG_DRKER", 0xFF000000);
+constant_t COL_BG_DRKER2 = constant_t("COL_BG_DRKER2", 0xFF000000);
+constant_t COL_BG_DRK_SELECTED = constant_t("COL_BG_DRK_SELECTED", 0xFF000000);
+constant_t COL_CLEAR_COLOR = constant_t("COL_CLEAR_COLOR", 0xFF000000);
+constant_t COL_LABEL_ACTIVE = constant_t("COL_LABEL_ACTIVE", 0xFF000000);
+constant_t COL_LABEL_INACTIVE = constant_t("COL_LABEL_INACTIVE", 0xFF000000);
+}
+
+NVGcolor rgbaToNvg(uint32_t i);
+uint32_t nvgToRGBA(NVGcolor c);
+NVGcolor mulSatBright(NVGcolor rgb, float sat, float brt);
+namespace GuiColor {
+int colorVal;
+//void changeConstantDefault(const constant_t& c, int32_t v);
+void initConstants(int colorVal) {
+	int c = colorVal;
+	int c2 = std::max(5, c - 16);
+	int c3 = std::min(255, c + 16);
+	auto setConstant = [](const GuiColor::constant_t& constantRef, int32_t rgba) {
+		changeConstantDefault(constantRef, rgba);
+	};
+	setConstant(GuiColor::COL_GRID_DRK, GUI_COLOR_HEXA(c, 255));
+	setConstant(GuiColor::COL_GRID_BRT, GUI_COLOR_HEXA(c + 3, 255));
+	setConstant(GuiColor::COL_LINE_BAR, GUI_COLOR_HEXA(c2, 255));
+	setConstant(GuiColor::COL_LINE_QRT, GUI_COLOR_HEXA(c2 + 3, 255));
+	setConstant(GuiColor::COL_LINE_XTH, GUI_COLOR_HEXA(c2 + 6, 255));
+	setConstant(GuiColor::COL_LINE_SEPERATOR, GUI_COLOR_HEXA(c2 - 3, 255));
+	setConstant(GuiColor::COL_BG_DRKER, GUI_COLOR_HEXA(std::max(0, c3-20), 255));
+	setConstant(GuiColor::COL_BG_DRKER2, GUI_COLOR_HEXA(std::max(0, c3-40), 255));
+	setConstant(GuiColor::COL_BG_DRK, GUI_COLOR_HEXA(c3, 255));
+	setConstant(GuiColor::COL_BG_BRT, GUI_COLOR_HEXA(c3 + 20, 255));
+	int c4 = std::max(5, c - 32);
+	int c5 = std::max(5, c + 32);
+	setConstant(GuiColor::COL_CTXTMNU_OUTLINE, GUI_COLOR_HEXA(255, 255));
+	setConstant(GuiColor::COL_CTXTMNU_BG, GUI_COLOR_HEXA(c4, 255));
+	setConstant(GuiColor::COL_CTXTMNU_HILIGHT, GUI_COLOR_HEXA(c5, 255));
+	auto gridDark = rgbaToNvg(GuiColor::COL_GRID_DRK.defValue);
+	setConstant(GuiColor::COL_GUI_STROKE, nvgToRGBA(mulSatBright(gridDark, 1.3f, 1.4f)));
+	setConstant(GuiColor::COL_BG_DRK_FOCUSED, GUI_COLOR_HEXA(c3+48, 255));
+	setConstant(GuiColor::COL_BG_DRK_SELECTED, GUI_COLOR_HEXA(c3+40, 255));
+	setConstant(GuiColor::COL_CLEAR_COLOR, (0xff000000));
+
+	setConstant(GuiColor::COL_NOTE, (0xffff9933));
+	setConstant(GuiColor::COL_NOTE_PLAYING, (0xff33ff33));
+	setConstant(GuiColor::COL_NOTE_ARP, (0xff22bb22));
+	setConstant(GuiColor::COL_NOTE_MUTE, (0xff666666));
+	setConstant(GuiColor::COL_NOTE_OUTLINE, (0xff000000));
+	setConstant(GuiColor::COL_NOTE_TEXT, (0xff333333));
+	setConstant(GuiColor::COL_BG_SELECTEDTRACK, GUI_COLOR_HEXA(c3 + 20, 80));
+	setConstant(GuiColor::COL_LABEL_ACTIVE, GUI_COLOR_HEXA(255, 255));
+	setConstant(GuiColor::COL_LABEL_INACTIVE, GUI_COLOR_HEXA(128, 255));
+
+}
+}

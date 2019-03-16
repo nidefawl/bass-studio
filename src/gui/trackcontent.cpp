@@ -13,7 +13,6 @@
 #include "event.h"
 #include "button.h"
 #include "dropdown.h"
-#include "contextmenus.h"
 #include "trackctr.h"
 #include "trackcontent.h"
 #include "audiocache.h"
@@ -25,6 +24,8 @@
 #include "guitooltip.h"
 
 #include "leak_detect.h"
+
+#include "guicontextmenu_daw.h"
 
 using glm::vec2;
 using glm::ivec2;
@@ -174,7 +175,12 @@ void gui_audio_clip::prerender(NVGcontext* vg) {
 		}
 	}
 }
-
+using Table::tbl;
+using Table::tbl_row_t;
+using Table::table_entry_t;
+using Table::tblint;
+using Table::tblfloat;
+using Table::tblstr;
 template <>
 void guitooltip<clip_t>::layout()  {
 	size.x = 400;
@@ -221,7 +227,7 @@ void guitooltip<clip_t>::layout()  {
 		table.rows.push_back(tbl_row_t{tbl_rows{{tblstr{"waveformRef atlasId"}, tblint{waveformRef.atlasId}}}});
 		table.rows.push_back(tbl_row_t{tbl_rows{{tblstr{"waveformRef atlasEntryId"}, tblint{waveformRef.atlasEntryId}}}});
 	}
-	adjustColSizes(table, getSizeContent()-ivec2(INSET_TABLE<<1));
+	Table::AdjustColSizes(table, getSizeContent()-ivec2(INSET_TABLE<<1));
 	size.y = table.rows.size()*table.rowHeight;
 }
 

@@ -24,39 +24,8 @@ public:
 	float scrollOffset;
 	static const int defaultW = 20;
 	static const int smallW = 10;
-	gui_scrollbar(int _dir, float _offset, gui_scrollcontainer& _ctr) : guibase(), dir(_dir), ctr(_ctr), scrollOffset(_offset) {
-	}
-	virtual void render(NVGcontext* vg) {
-		nvgBeginPath(vg);
-		nvgRoundedRect(vg, pos.x, pos.y, size.x, size.y, G_RND);
-		NVGcolor bg = theme->getColor(COL_BG_DRK);
-		nvgFillColor(vg, bg);
-		nvgFill(vg);
-		ivec2 vcS = ctr.getScrollTotalSize();
-		ivec2 vs = ctr.getScrollViewSize();
-		if (vcS[dir] > 0&&vcS[dir] > vs[dir]) {
-			vec2 barOff(0);
-			vec2 barS = size;
-			barS[dir] = min((float) size[dir], (vs[dir] / (float) vcS[dir]) * size[dir]);
-			barOff[dir] = (size[dir] - barS[dir]) * scrollOffset;
-			int32_t inset = 1;
-			nvgBeginPath(vg);
-			nvgRoundedRect(vg, pos.x+barOff.x+inset, pos.y+barOff.y+inset, barS.x-inset*2, barS.y-inset*2, G_RND);
-
-
-			bool focused = parentCtrl->guiCtrFocused == this->parent || (parentCtrl->guiDragged==NULL&&parentCtrl->guiOver == this);
-			if (focused) {
-//				nvgStrokeWidth(vg, 1.0f);
-//				nvgStrokeColor(vg, theme->getColor(COL_BG_DRK_FOCUSED));
-//				nvgStroke(vg);
-				nvgFillColor(vg, theme->getColor(COL_BG_DRK_FOCUSED));
-			} else {
-				nvgFillColor(vg, theme->getColor(COL_BG_DRKER));
-			}
-			nvgFill(vg);
-
-		}
-	}
+	gui_scrollbar(int _dir, float _offset, gui_scrollcontainer& _ctr);
+	virtual void render(NVGcontext* vg);
 	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
 		if (this->contains(mpos)) {
 			evt.requestFocus(this);
@@ -138,3 +107,4 @@ public:
 	virtual void handleDraggedRelease(MouseEvent& evt) {
 	}
 };
+

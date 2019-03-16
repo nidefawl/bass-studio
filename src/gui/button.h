@@ -1,7 +1,9 @@
 #pragma once
+#include <glm/glm.hpp>
 #include <glm/vec2.hpp>
 #include <nanovg.h>
 #include <functional>
+#include "guicolors.h"
 #include "color_util.h"
 #include "str_util.h"
 #include "seq_util.h"
@@ -12,6 +14,12 @@
 #include "event.h"
 using glm::vec2;
 using glm::ivec2;
+namespace GuiColor {
+extern constant_t COL_BTN_BG_DEFAULT_INACTIVE;
+extern constant_t COL_BTN_BG_DEFAULT_ACTIVE;
+extern constant_t COL_BTN_BG_BYPASS_ACTIVE;
+extern constant_t COL_BTN_BG_SHOW_ACTIVE;
+}
 
 class guibuttonbase : public guibase {
 protected:
@@ -21,18 +29,6 @@ public:
 	guibuttonbase() : guibase() {
 	}
 	guibuttonbase(ivec2 _pos, ivec2 _size) : guibase(_pos, _size) {
-	}
-	virtual bool hovered() {
-		return this == parentCtrl->guiOver;
-	}
-	virtual bool pressed() {
-		return this == parentCtrl->guiDragged;
-	}
-	virtual bool focused() {
-		return this == parentCtrl->guiFocused;
-	}
-	virtual bool enabled() {
-		return true;
 	}
 	virtual void handleDraggedMove(MouseEvent& evt) {
 	}
@@ -51,22 +47,6 @@ public:
 		}
 		return false;
 	}
-	virtual int32_t getStateFlags() {
-		int32_t flgs = 0;
-		if (pressed()) {
-			flgs |= FLG_DRG;
-		}
-		if (hovered()) {
-			flgs |= FLG_HVRD;
-		}
-		if (focused()) {
-			flgs |= FLG_FOC;
-		}
-		if (enabled()) {
-			flgs |= FLG_ENBL;
-		}
-		return flgs;
-	}
 	void setText(String _str) {
 		str = _str;
 	}
@@ -79,14 +59,14 @@ public:
 };
 class guibutton : public guibuttonbase {
 	bool* enabledPtr = NULL;
-	bool* activePtr = NULL;
+//	bool* activePtr = NULL;
 public:
 	guibutton() : guibuttonbase() {
 	}
-	virtual bool enabled() {
+	virtual bool isEnabled() override {
 		if (enabledPtr)
 			return *enabledPtr;
-		return true;
+		return guibuttonbase::isEnabled();
 	}
 //	virtual int active() {
 //		if (activePtr)
@@ -109,16 +89,18 @@ public:
 	void (*drawFn)(NVGcontext*,ivec2&, ivec2&, const NVGcolor&, int drawParm, int drawParm2) = NULL;
 	int drawParm = 0;
 	void render(NVGcontext* vg) {
-		renderWidgetBorder(vg, getStateFlags());
+		int32_t fl = getStateFlags();
+		renderWidgetBorder(vg, fl);
 		if (str.length() > 0) {
 			int fontScale = this->fontSize > 0 ? this->fontSize : G_FONT_SCALE(size.y);
-			NVGcolor color = theme->getColor((getStateFlags()&FLG_ENBL) ? 20 : 21);
+			GuiColor::constant_t c = (fl&FLG_ENBL) ? GuiColor::COL_LABEL_ACTIVE : GuiColor::COL_LABEL_INACTIVE;
+			NVGcolor color = theme->getColor(c);
 			setFont(vg, fontScale, color, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
 			nvgText(vg, pos.x + size.x / 2.0f, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(str), NULL);
 		}
 
 		if (drawFn) {
-			drawFn(vg, pos, size, theme->getBgColor(getStateFlags()), drawParm, enabled());
+			drawFn(vg, pos, size, theme->getBgColor(getStateFlags()), drawParm, isEnabled());
 		}
 	}
 };
@@ -132,6 +114,7 @@ public:
 	int icon = -1;
     std::function<int()> getIcon;
     std::function<bool()> getState;
+	GuiColor::constant_t colorActive = GuiColor::COL_BTN_BG_DEFAULT_ACTIVE;
 	guibuttontoggle() : guibuttonbase() {
 	}
 	guibuttontoggle(float _radius) : guibuttonbase(ivec2(0), ivec2((int)(_radius * 2))) {
@@ -141,7 +124,7 @@ public:
 		this->radius = fRadius;
 		this->size = ivec2((int)(fRadius * 2));
 	}
-	bool enabled() override {
+	bool isEnabled() override {
 		if (state)
 			return *state;
 		if (getState)
@@ -153,9 +136,13 @@ public:
 		cen.x += pos.x;
 		cen.y += pos.y;
 		int32_t state = getStateFlags();
+		GuiColor::constant_t color = GuiColor::COL_BTN_BG_DEFAULT_INACTIVE;
+		if (state & FLG_ENBL) {
+			color = colorActive;
+		}
 		nvgBeginPath(vg);
 		nvgCircleFast(vg, cen.x, cen.y, radius);
-		nvgFillColor(vg, theme->getBgColor(state));
+		nvgFillColor(vg, theme->getColor(color));
 		nvgFill(vg);
 		nvgStrokeColor(vg, theme->getBgStrokeColor(state));
 		nvgStrokeWidth(vg, theme->getBgStrokeWidth(state));

@@ -36,7 +36,7 @@
 #include "../gui/gui.h"
 #include "../gui/guicontainer.h"
 #include "../gui/button.h"
-#include "../gui/guicontextmenu.h"
+#include "../gui/guicontextmenu_base.h"
 #include "../gui/tempocontrols.h"
 #include "../gui/scrollbar.h"
 #include "../gui/statusbar.h"
@@ -168,9 +168,65 @@ public:
 //		remove(ctr_theme);
 	}
 };
+class guictr_effectlibrary : public guictr_base {
+public:
+	guictr_pluginlibrary ctr_pluginlist;
+	guictr_modulelibrary ctr_effectlist;
+	guictr_effectlibrary() : guictr_base() {
+		padding = 0;
+		margin = 0;
+		add(&ctr_pluginlist);
+		add(&ctr_effectlist);
+	}
+	virtual ~guictr_effectlibrary() {
+		remove(&ctr_effectlist);
+		remove(&ctr_pluginlist);
+	}
+	void update() {
+		ctr_pluginlist.update();
+		ctr_effectlist.update();
+	}
+	void layout() {
+		ctr_pluginlist.size.x = size.x;
+		ctr_pluginlist.size.y = size.y/2;
+		ctr_effectlist.size.x = size.x;
+		ctr_effectlist.size.y = size.y/2;
+		ctr_pluginlist.pos = {0, 0};
+		ctr_effectlist.pos = {0, ctr_pluginlist.bottom()};
+		for (guibase* gui : guis) {
+			gui->layout();
+		}
+	}
+};
+class guictr_side_tabs2 : public guictr_tabbed {
+public:
+
+	guictr_effectlibrary& ctr_effectlib;
+	guictr_base* const ctr_properties;
+	guictr_base* const ctr_theme;
+	guictr_side_tabs2(guictr_effectlibrary& _ctr_effectlib)
+	: guictr_tabbed(),
+	  ctr_effectlib(_ctr_effectlib),
+	  ctr_properties(makeCtrProperties()),
+	  ctr_theme(makeCtrTheme()) {
+		ctr_effectlib.setLabel("Plugins");
+		ctr_properties->setLabel("Properties");
+		ctr_theme->setLabel("Theme");
+		addEntry(&ctr_effectlib, ctr_effectlib.label);
+		addEntry(ctr_properties, ctr_properties->label);
+		addEntry(ctr_theme, ctr_theme->label);
+		setActiveEntry(0);
+	}
+	virtual ~guictr_side_tabs2() {
+//		remove(&ctr_dbg);
+//		remove(ctr_properties);
+//		remove(ctr_theme);
+	}
+};
 class DawViewContainers {
 	guictr_noteeditor noteeditor;
 public:
+	guictr_effectlibrary ctr_effectlib;
 	guictr_menubar ctr_menu;
 	guictr_tempocontrols ctr_tempo;
 	guictr_plugins ctr_plugins;
@@ -181,8 +237,7 @@ public:
 	guictr_clipeditor ctr_clipeditor;
 	guictr_tracks ctr_tracks;
 	guictr_side_tabs ctr_tabbed;
-	guictr_pluginlibrary ctr_pluginlist;
-	guictr_modulelibrary ctr_effectlist;
+	guictr_side_tabs2 ctr_tabbed2;
 	Splitter splitterList;
 	Splitter splitterCenter;
 	Splitter splitterRight;
@@ -194,6 +249,8 @@ public:
 	  ctr_clipeditorview(noteeditor),
 	  ctr_clipeditor(noteeditor, clipView),
 	  ctr_tracks(_cursor, project, grid, dragdropclip),
+	  ctr_tabbed(),
+	  ctr_tabbed2(ctr_effectlib),
 	  splitterList(0, 0.5f),
 	  splitterCenter(0, 0.7f),
 	  splitterRight(1, 0.8f)
@@ -250,20 +307,23 @@ public:
 		ctr_pluginview.setSnapSides(ivec4(0, 1, 0, 0));
 		ctr_clipeditor.setSnapSides(ivec4(0, 1, 0, 0));
 		ctr_plugins.setSnapSides(ivec4(0, 1, 0, 0));
-		ctr_pluginlist.setSnapSides(ivec4(1, 0, 0, 1));
-		ctr_effectlist.setSnapSides(ivec4(1, 0, 0, 0));
+		ctr_tabbed2.setSnapSides(ivec4(1, 0, 0, 1));
+//		ctr_pluginlist.setSnapSides(ivec4(1, 0, 0, 1));
+//		ctr_effectlist.setSnapSides(ivec4(1, 0, 0, 0));
 		ctr_tabbed.setSnapSides(ivec4(1, 0, 0, 0));
 
 
 		ctr_tabbed.pos = {width, winY+hTopControls+heightList};
 		ctr_tabbed.size = {wRight, heightDebug};
-		ctr_pluginlist.pos = {width, winY+hTopControls};
-		ctr_pluginlist.size = {wRight, heightList/2};
-		ctr_effectlist.pos = {width, ctr_pluginlist.bottom()};
-		ctr_effectlist.size = {wRight, heightList/2};
+		ctr_tabbed2.pos = {width, winY+hTopControls};
+		ctr_tabbed2.size = {wRight, heightList};
+//		ctr_pluginlist.pos = {width, winY+hTopControls};
+//		ctr_pluginlist.size = {wRight, heightList/2};
+//		ctr_effectlist.pos = {width, ctr_pluginlist.bottom()};
+//		ctr_effectlist.size = {wRight, heightList/2};
 		splitterRight.pos = ivec2(ctr_tabbed.pos.x - 5, hTopControls);
 		splitterRight.size = ivec2(10, hRight);
-		splitterList.pos = ivec2(ctr_tabbed.pos.x, ctr_effectlist.bottom()-5);
+		splitterList.pos = ivec2(ctr_tabbed.pos.x, ctr_tabbed2.bottom()-5);
 		splitterList.size = ivec2(wRight, 10);
 	}
 	void addTo(vector<guictr_base*>& v) {
@@ -272,8 +332,7 @@ public:
 		 v.push_back(&ctr_tempo);
 		 v.push_back(&ctr_pluginview);
 		 v.push_back(&ctr_clipeditorview);
-		 v.push_back(&ctr_pluginlist);
-		 v.push_back(&ctr_effectlist);
+		 v.push_back(&ctr_tabbed2);
 		 v.push_back(&statusbar);
 		 v.push_back(&ctr_tabbed);
 #if USE_GUI_MENU
@@ -489,8 +548,7 @@ void MainCtrl::postInit() {
 //			}
 		}
 	}
-	view->ctr_pluginlist.update();
-	view->ctr_effectlist.update();
+	view->ctr_effectlib.update();
 }
 void MainCtrl::initApp(int argc, char* argv[]) {
 
@@ -508,7 +566,9 @@ bool MainCtrl::init(window_main* window, NVGcontext* nanovg)
 	plugindb.openDatabase();
 	this->playThread.startThread();
 	this->workerThread.startThread();
-	initColor();
+	themes.loadThemes();
+
+	getDefaultTheme()->initDefaultTheme();
 
 	view = new DawViewContainers(menubar, cursor, *this, grid, clipView, dragdropclip);
 	view->addTo(this->containers);
@@ -605,16 +665,17 @@ void MainCtrl::onTick()
 //	}
 	if (!guiDragged && !guiCaptured && guiOver && (!this->ctxtmenu || ctxtmenu->isTransient())) {
 		int32_t hoverTicks = 0;
-		if (ctxtmenu && (ctxtmenu->canClose() || guiOver->curTooltip != nextTooltipId-1)) {
+		if (ctxtmenu && (ctxtmenu->canClose() || (lastTooltipSrc && guiOver && guiOver != lastTooltipSrc))) {
 			closeContextMenu();
 		}
 		if (!ctxtmenu && guiOver == lastHoveredTooltip) {
 			hoverTicks = lastHoveredTooltipTicks + 1;
 			if (lastHoveredTooltipTicks >= 12) {
-				auto tooltip = guiOver->getTooltip(this);
-				guiOver->curTooltip = nextTooltipId++;
-				if (tooltip) {
-					openContextMenu(tooltip, m_mousePos+ivec2(0,6));
+				auto ctxtmenu = guiOver->getTooltip(this);
+				if (ctxtmenu) {
+					lastTooltipSrc = guiOver;
+					nextTooltipId++;
+					openContextMenu(ctxtmenu, m_mousePos+ivec2(0,6));
 				}
 				hoverTicks = 0;
 			}
@@ -1150,44 +1211,6 @@ track_t* MainCtrl::getTrackId(uint32_t trackId) {
 	return trackList[trackId]; // operator[] returns NULL on oob
 }
 
-
-void cutIntersectingClips(trackdata_midi_t& midi, tick_t tickBegin, tick_t tickEnd, delete_cb *cb) {
-	vector<clip_t*>::iterator it = midi.clips.begin();
-	
-	while (it != midi.clips.end()) {
-		clip_t* c = *it;
-		if (c->start() >= tickEnd || c->end() <= tickBegin) {
-			it++;
-			continue;
-		}
-		if (c->start() >= tickBegin && c->end() <= tickEnd) {
-			it = midi.removeClip(c);
-			deleteClip(c, cb);
-			continue;
-		} else if (c->time >= tickBegin) {
-			//cut left
-			cutClipLeft(c, tickEnd-c->time);
-			c->setDirty();
-		} else if (c->end() <= tickEnd) {
-			//cut right
-			cutClipRight(c, c->end() - tickBegin);
-			c->setDirty();
-		} else {
-			clip_t* c2 = c->clone();
-			cutClipRight(c, c->end() - tickBegin);
-			cutClipLeft(c2, tickEnd-c->time);
-			it = midi.clips.insert(it, c2);
-			c->setDirty();
-		}
-		it++;
-	}
-	midi.sortClips();
-}
-void MainCtrl::cutIntersecting(track_t* tr, tick_t tickBegin, tick_t tickEnd) {
-//	if (tr->type == TRACK_TYPE_MIDI) {
-		cutIntersectingClips(tr->getMidi(), tickBegin, tickEnd, this);
-//	}
-}
 void MainCtrl::preClipDelete(clip_t* clip) {
 	if (clipView.clip() == clip) {
 		clipView.set(NULL);
@@ -1200,72 +1223,8 @@ void MainCtrl::preTrackDelete(track_t* track) {
 	}
 	resetMouseContext();
 }
-void MainCtrl::cutIntersecting(track_t* tr, clip_t* mask) {
-	tick_t tickBegin = mask->time;
-	tick_t tickEnd = mask->end();
-	cutIntersecting(tr, tickBegin, tickEnd);
-}
 void MainCtrl::showAutomation(track_t* tr, automatable_t* at, int32_t paramIdx) {
 	view->ctr_tracks.showAutomationLane(tr, at, paramIdx);
-}
-void MainCtrl::cutSelection(const Cursor& _cursor) {
-	int32_t tickBegin = _cursor.getTickBegin();
-	int32_t tickEnd = _cursor.getTickEnd();
-	int32_t trackBegin = _cursor.getTrackBegin();
-	int32_t trackEnd = _cursor.getTrackEnd();
-	if (!cursor.isSubtrackSelection()) {
-		for (int i = trackBegin; i <= trackEnd; i++) {
-			if (trackList.validTrackIdx(i)) {
-				track_t* tr = trackList[i];
-//				if (tr->type == TRACK_TYPE_MIDI) {
-					cutIntersecting(tr, tickBegin, tickEnd);
-//				}
-			}
-		}
-	} else {
-		int32_t trackSBegin = _cursor.getSubTrackBegin();
-		int32_t trackSEnd = _cursor.getSubTrackEnd();
-		if (trackList.validTrackIdx(trackBegin)) {
-			track_t* tr = trackList[trackBegin];
-			std::vector<automation_point_t> empty(0);
-			for (int i = 0; i <= trackSEnd-trackSBegin; i++) {
-				int32_t subTrackIdx = trackSBegin + i;
-				if (tr->validSubtrack(subTrackIdx)) {
-					gui_track_automationlane* subtrack = tr->subtracks[subTrackIdx];
-					automation_t* automation = subtrack->getAutomation();
-					if (automation) {
-						automation->setRange(tickBegin, tickEnd, empty);
-					}
-				}
-
-			}
-		}
-	}
-}
-void MainCtrl::pasteClipboard(clip_clipboard* clipboard, int32_t track, tick_t tick) {
-
-	tick_t tickOffset = tick - clipboard->srcPos;
-	tick_t trackOffset = track;
-	for (int i = 0; i <= clipboard->selTrackRange; i++) {
-		track_clipboard_t* trClipboard = clipboard->tracks[i].get();
-		if (!trackList.validTrackIdx(i + trackOffset)) {
-			continue;
-		}
-		int32_t trackIdx = trackList.clampTrackIdx(i + trackOffset);
-		track_t* tr = trackList[trackIdx];
-//		if (tr->type == TRACK_TYPE_MIDI) {
-			trackdata_midi_t& midi = tr->getMidi();
-			for (auto it = trClipboard->clips.begin(); it != trClipboard->clips.end(); it++) {
-				clip_t* cl = (*it).get();
-				clip_t* cloned = cl->clone();
-				cloned->time += tickOffset;
-				cutIntersecting(tr, cloned);
-				midi.addClip(cloned);
-			}
-			midi.sortClips();
-//		}
-	}
-
 }
 void MainCtrl::setTempo(int32_t _tempo100) {
 	std::function<void()> fn2 = [this, _tempo100]() {
@@ -1286,120 +1245,6 @@ void MainCtrl::setEditClip(gui_clip* gclip) {
 	clipView.set(gclip);
 	view->ctr_clipeditor.showEditClip();
 }
-void copyClipsInRange(trackdata_midi_t& in, track_clipboard_t& out, int32_t srcPos, int32_t dstPos, int32_t len) {
-
-	auto it = in.clips.cbegin();
-	while (it != in.clips.cend()) {
-		const clip_t* c = *it;
-		if (c->end() > srcPos && c->time < srcPos+len) {
-			clip_t clone(*c);
-			if (c->time < srcPos && c->end() > srcPos) {
-				cutClipLeft(&clone, srcPos - c->time);
-			}
-			if (c->time < srcPos + len && c->end() > srcPos + len) {
-				cutClipRight(&clone, (c->end()) - (srcPos+len));
-			}
-			out.clips.push_back(make_shared<clip_t>(move(clone)));
-		}
-		it++;
-	}
-	stable_sort(out.clips.begin(), out.clips.end(), [](
-			shared_ptr<clip_t> const & a, shared_ptr<clip_t> const & b) {
-		return a->time < b->time;
-	});
-//	if (clips.size() > 1) {
-//		if (!(clips[0]->start() < clips[1]->start())) {
-//			for (int i = 0; i < clips.size(); i++) {
-//				my_printf("clip[%d] = %d\n", i, clips[i]->start());
-//			}
-//		}
-//		assert(clips[0]->start() < clips[1]->start());
-//	}
-//	out->sortClips();
-}
-void MainCtrl::pasteClipboard(clip_clipboard* clipboard, Cursor& cursor) {
-	if (clipboard->type == clip_clipboard::ClipboardFull) {
-		if (cursor.isSubtrackSelection())
-			return;
-		pasteClipboard(clipboard, cursor.cursorTrack, cursor.getTickBegin());
-	} else  if (clipboard->type == clip_clipboard::ClipboardAutomation) {
-		if (!cursor.isSubtrackSelection())
-			return;
-		int32_t tickBegin = cursor.getTickBegin();
-		int32_t tickLen = clipboard->selRange;
-		int32_t trackBegin = cursor.getTrackBegin();
-		if (trackList.validTrackIdx(trackBegin)) {
-			track_t* tr = trackList[trackBegin];
-			int32_t subTrackOffset = cursor.getSubTrackBegin();
-			for (int i = 0; i <= clipboard->selTrackRange; i++) {
-				int32_t subTrackIdx = subTrackOffset + i;
-				if (tr->validSubtrack(subTrackIdx)) {
-					gui_track_automationlane* subtrack = tr->subtracks[subTrackIdx];
-					std::vector<automation_point_t>& data = clipboard->automationLanes[i];
-					automatable_t* automatable = subtrack->at;
-					automation_t* automation = NULL;
-					if (automatable) {
-						automation = automatable->getAutomation(subtrack->param);
-					}
-					if (automation) {
-						automation->setRange(tickBegin, tickBegin+tickLen, data);
-					}
-				}
-
-			}
-		}
-	}
-}
-shared_ptr<clip_clipboard> MainCtrl::copySelection(const Cursor& _cursor) {
-	int32_t tickBegin = _cursor.getTickBegin();
-	int32_t tickEnd = _cursor.getTickEnd();
-	int32_t trackBegin = _cursor.getTrackBegin();
-	int32_t trackEnd = _cursor.getTrackEnd();
-	int32_t trackSubBegin = _cursor.getSubTrackBegin();
-	int32_t trackSubEnd = _cursor.getSubTrackEnd();
-	shared_ptr<clip_clipboard> clipboard = make_shared<clip_clipboard>();
-	clipboard->srcPos = tickBegin;
-	clipboard->srcTrack = trackBegin;
-	clipboard->selRange = tickEnd - tickBegin;
-	if (_cursor.isSubtrackSelection()) {
-		clipboard->selTrackRange = trackSubEnd - trackSubBegin;
-		clipboard->type = clip_clipboard::ClipboardAutomation;
-		if (trackList.validTrackIdx(trackBegin)) {
-			track_t* tr = trackList[trackBegin];
-			for (int i = trackSubBegin; i <= trackSubEnd; i++) {
-				if (tr->validSubtrack(i)) {
-					gui_track_automationlane* subtrack = tr->subtracks[i];
-					automatable_t* automatable = subtrack->at;
-					automation_t* automation = NULL;
-					if (automatable) {
-						automation = automatable->getAutomation(subtrack->param);
-					}
-
-					std::vector<automation_point_t> data;
-					if (automation)
-					automation->copyRange(tickBegin, tickEnd, data);
-					clipboard->automationLanes.push_back(std::move(data));
-
-				}
-			}
-		}
-	} else {
-		clipboard->selTrackRange = trackEnd - trackBegin;
-		clipboard->selRange = tickEnd - tickBegin;
-		clipboard->type = clip_clipboard::ClipboardFull;
-		for (int i = 0; i <= clipboard->selTrackRange; i++) {
-			track_clipboard_t trackClipboard;
-			if (trackList.validTrackIdx(trackBegin + i)) {
-				track_t* tr = trackList[trackBegin + i];
-//				if (tr->type == TRACK_TYPE_MIDI) {
-					copyClipsInRange(tr->getMidi(), trackClipboard, clipboard->srcPos, 0, clipboard->selRange);
-//				}
-			}
-			clipboard->tracks.push_back(make_shared<track_clipboard_t>(move(trackClipboard)));
-		}
-	}
-	return clipboard;
-}
 
 void MainCtrl::prerender(int32_t x, int32_t y, int32_t w, int32_t h, float pixelRatio) {
 //	my_printf("prerender %d\n", std::this_thread::get_id());
@@ -1407,14 +1252,6 @@ void MainCtrl::prerender(int32_t x, int32_t y, int32_t w, int32_t h, float pixel
 		ctr->prerender(vg);
 	}
 	waveformrender::getInstance()->renderUpdates(vg, 0);
-}
-SafeRef<guibase> guibase::makeSafeRef() {
-	assert(parentCtrl);
-	if (!safeRef.handler) {
-		safeRef.handler = parentCtrl;
-		safeRef.refId = safeRef.handler->safeRefCreate(this);
-	}
-	return safeRef;
 }
 track_t* clip_view::track() const {
 	if (!this->gui)

@@ -31,7 +31,7 @@
 #include "../gui/gui.h"
 #include "../gui/guicontainer.h"
 #include "../gui/button.h"
-#include "../gui/guicontextmenu.h"
+#include "../gui/guicontextmenu_base.h"
 #include "../gui/scrollbar.h"
 #include "../gui/statusbar.h"
 #include "../gui/guimenu.h"
@@ -85,11 +85,6 @@ bool PluginControl::init(window_main* window, NVGcontext* nanovg)
 	this->mainWindow = window;
 	this->window = window;
 	this->vg = nanovg;
-	static bool initOnce = false;
-	if (!initOnce) {
-		initOnce = true;
-		initColor();
-	}
 
 	if (firstInit) {
 		firstInit = false;

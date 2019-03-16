@@ -419,7 +419,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 //		if (MainCtrl::get()->getSelectedTrack() == m_track) {
 //			nvgBeginPath(vg);
 //			nvgRect(vg, pos.x, pos.y, size.x, size.y);
-//			nvgFillColor(vg, theme->getColor(COL_BG_SELECTEDTRACK));
+//			nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_SELECTEDTRACK));
 //			nvgFill(vg);
 //		}
 		ivec2 sizeInset = getSizeContent();
@@ -466,7 +466,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 			int start = i;
 			skipped+=i;
 			if (i < len) {
-				NVGcolor c1 = isActive() ? this->color : this->colorInactive;
+				GuiColor::constant_t c1 = isActive() ? this->color : this->colorInactive;
 //				nvgLineJoin(vg, NVGlineCap::NVG_BEVEL);
 				nvgBeginPath(vg);
 				bool first = true;
@@ -485,7 +485,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 
 				}
 				int end = i;
-				nvgStrokeColor(vg, c1);
+				nvgStrokeColor(vg, theme->getColor(c1));
 				nvgStrokeWidth(vg, lineWidth);
 				nvgStroke(vg);
 //				nvgLineJoin(vg, NVGlineCap::NVG_MITER);
@@ -511,9 +511,9 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 					nvgCircleFastNDivs(vg, pt->x, pt->y, radiusHandle, 6);
 
 				}
-				nvgFillColor(vg, c1);
+				nvgFillColor(vg, theme->getColor(c1));
 				nvgFill(vg);
-				nvgStrokeColor(vg, color2);
+				nvgStrokeColor(vg, theme->getColor(color2));
 				nvgStrokeWidth(vg, 1.5f);
 				nvgStroke(vg);
 				nvgShapeAntiAlias(vg, 1);
@@ -531,7 +531,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 
 				}
 				vec2* ptEnd = getPathPointSafe(segment->points.back());
-				nvgStrokeColor(vg, colorHL);
+				nvgStrokeColor(vg, theme->getColor(colorHL));
 				nvgStrokeWidth(vg, lineWidth+0.5f);
 				nvgStroke(vg);
 
@@ -542,9 +542,9 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 				if (ptEnd->x > -4 && ptEnd->x < sizeInset.x+4.0f) {
 					nvgCircle(vg, ptEnd->x, ptEnd->y, radiusHandleHL);
 				}
-				nvgFillColor(vg, colorHL);
+				nvgFillColor(vg, theme->getColor(colorHL));
 				nvgFill(vg);
-				nvgStrokeColor(vg, colorHL2);
+				nvgStrokeColor(vg, theme->getColor(colorHL2));
 				nvgStrokeWidth(vg, 1.5f);
 				nvgStroke(vg);
 			}
@@ -552,9 +552,9 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 			if (currentDragged.mode == dragmode::drag_node && pt) {
 				nvgBeginPath(vg);
 				nvgCircle(vg, pt->x, pt->y, radiusHandleHL);
-				nvgFillColor(vg, colorHL);
+				nvgFillColor(vg, theme->getColor(colorHL));
 				nvgFill(vg);
-				nvgStrokeColor(vg, colorHL2);
+				nvgStrokeColor(vg, theme->getColor(colorHL2));
 				nvgStrokeWidth(vg, 1.5f);
 				nvgStroke(vg);
 			}
@@ -567,10 +567,10 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 			nvgMoveTo(vg, -4, dstValY);
 			nvgLineTo(vg, cs.x+4, dstValY);
 			if (currentDragged.mode == dragmode::drag_empty) {
-				nvgStrokeColor(vg, colorHL);
+				nvgStrokeColor(vg, theme->getColor(colorHL));
 				nvgStrokeWidth(vg, lineWidth+0.5f);
 			} else {
-				nvgStrokeColor(vg, color);
+				nvgStrokeColor(vg, theme->getColor(color));
 				nvgStrokeWidth(vg, lineWidth);
 			}
 			RenderResources::NvgImageTexture& image = RenderResources::imgDashedLine;

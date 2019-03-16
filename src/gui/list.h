@@ -28,7 +28,7 @@ public:
 		if (ctrl->isCtrOrChildFocused(this)) {
 			nvgBeginPath(vg);
 			nvgRect(vg, pos.x, pos.y, size.x, size.y);
-			nvgFillColor(vg, theme->getColor(COL_BG_DRKER));
+			nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_DRKER));
 			nvgFill(vg);
 		}
 		nvgTranslate(vg, pos.x, pos.y);

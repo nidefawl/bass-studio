@@ -147,7 +147,7 @@ VstIntPtr VSTCALLBACK audioMaster(AEffect* effect, VstInt32 opcode, VstInt32 ind
 		//cbPrintf(plugin, "audioMasterGetTime %d %d %d\n", index, opcode, value);
 		return (VstIntPtr)vsthost::getInstance()->getTimeInfo();
 	case audioMasterProcessEvents:
-		cbPrintf(plugin, "audioMasterProcessEvents %d %d %d\n", index, opcode, value);
+//		cbPrintf(plugin, "audioMasterProcessEvents %d %d %d\n", index, opcode, value);
 		return 0;
 	case audioMasterIOChanged:
 		cbPrintf(plugin, "audioMasterIOChanged %d %d %d\n", index, opcode, value);

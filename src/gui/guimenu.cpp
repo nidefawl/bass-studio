@@ -32,9 +32,9 @@ void guictr_menubar_entry::render(NVGcontext* vg) {
 	if (focused||cur == this) {
 		NVGcolor colHighlight;
 		if (focused) {
-			colHighlight = theme->getColor(COL_BG_DRK);
+			colHighlight = theme->getColor(GuiColor::COL_BG_DRK);
 		} else {
-			colHighlight = theme->getColor(COL_BG_DRKER);
+			colHighlight = theme->getColor(GuiColor::COL_BG_DRKER);
 		}
 		nvgBeginPath(vg);
 		nvgRect(vg, pos.x, pos.y, size.x, size.y);

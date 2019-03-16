@@ -8,7 +8,7 @@ using glm::ivec2;
 #include "gui.h"
 #include "track.h"
 #include "track_impl.h"
-#include "contextmenus.h"
+#include "guicontextmenu_daw.h"
 #include "button.h"
 #include "event.h"
 #include "../host/plugin/vst_plugin.h"
@@ -120,15 +120,6 @@ public:
 	gui_trackgain(track_t* _track) :
 		guibase(), m_track(_track) {
 	}
-	virtual bool hovered() {
-		return this == MainCtrl::get()->guiOver;
-	}
-	virtual bool pressed() {
-		return this == MainCtrl::get()->guiDragged;
-	}
-	virtual bool focused() {
-		return this == MainCtrl::get()->guiFocused;
-	}
 	void handleRightClick(MouseEvent& evt) override {
 		MainCtrl::get()->openContextMenu(new guictxtmenu_trackparam(m_track, &m_track->audio->mixer, 1), evt.mousepos);
 	}
@@ -219,7 +210,7 @@ public:
 	bool trackenabled() {
 		return m_track->audio && m_track->audio->mixer.isEnabled();
 	}
-	bool enabled() override {
+	bool isEnabled() override {
 		return trackenabled();
 	}
 	void handleRightClick(MouseEvent& evt) override {
@@ -235,7 +226,7 @@ public:
 	gui_trackcontrols_mixer(track_t* _track) :
 		guictr_base(), m_track(_track), meter(&_track->audio->meter), gain(_track), btnBypass(_track) {
 		padding = 0;
-		btnBypass.setColor(nvgToRGB(theme->getFrameColorOutline()));
+		btnBypass.setTint(nvgToRGB(theme->getFrameColorOutline()));
 		btnBypass.drawFn = drawTextureSymbol;
 		btnBypass.drawParm = ICON_BYPASS;
 		add(&btnBypass);
@@ -756,11 +747,11 @@ void gui_track_controls::render(NVGcontext* vg) {
 	}
 	nvgBeginPath(vg);
 	nvgRect(vg, 0, 0, size.x, size.y);
-	nvgFillColor(vg, theme->getColor(COL_BG_BRT));
+	nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_BRT));
 	nvgFill(vg);
 	MainCtrl* ctrl = MainCtrl::get();
 	if (ctrl->getSelectedTrack() == m_track) {
-		nvgFillColor(vg, theme->getColor(COL_BG_SELECTEDTRACK));
+		nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_SELECTEDTRACK));
 		nvgFill(vg);
 	}
 
@@ -777,7 +768,7 @@ void gui_track_controls::render(NVGcontext* vg) {
 		nvgMoveTo(vg, g->left(), g->top()-TRACK_HEIGHT_SPACING_HALF);
 		nvgLineTo(vg, g->right(), g->top()-TRACK_HEIGHT_SPACING_HALF);
 	}
-	nvgStrokeColor(vg, theme->getColor(COL_LINE_SEPERATOR));
+	nvgStrokeColor(vg, theme->getColor(GuiColor::COL_LINE_SEPERATOR));
 	nvgStrokeWidth(vg, 1);
 	nvgStroke(vg);
 

@@ -19,6 +19,7 @@
 #ifndef NANOVG_H
 #define NANOVG_H
 
+#include "nanovg_min.h"
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -29,13 +30,6 @@ extern "C" {
 #pragma warning(push)
 #pragma warning(disable: 4201)  // nonstandard extension used : nameless struct/union
 #endif
-
-typedef struct NVGcontext NVGcontext;
-
-struct NVGcolor {
-	float r,g,b,a;
-};
-typedef struct NVGcolor NVGcolor;
 
 struct NVGpaint {
 	float xform[6];

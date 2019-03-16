@@ -11,9 +11,11 @@
 #include "seq_math.h"
 #include "seq_time.h"
 #include "cursor.h"
+#include "keyboard.h"
 #include "grid.h"
-#include "contextmenus.h"
 #include "leak_detect.h"
+
+#include "guicontextmenu_daw.h"
 
 using glm::vec2;
 using glm::ivec2;
@@ -166,13 +168,13 @@ void gui_clipcontent::render(NVGcontext* vg) {
 
 	nvgBeginPath(vg);
 	nvgRect(vg, -2, 0, w+2, size.y);
-	nvgFillColor(vg, theme->getColor(COL_GRID_BRT));
+	nvgFillColor(vg, theme->getColor(GuiColor::COL_GRID_BRT));
 	nvgFill(vg);
 	for (int i = 0; i < steps_bg; i+=2)
 	{
 		nvgBeginPath(vg);
 		nvgRect(vg, x, 0, grid.incr_bg, size.y);
-		nvgFillColor(vg, theme->getColor(COL_GRID_DRK));
+		nvgFillColor(vg, theme->getColor(GuiColor::COL_GRID_DRK));
 		nvgFill(vg);
 		x += grid.incr_bg*2.0f;
 		if (x > w)
@@ -183,7 +185,20 @@ void gui_clipcontent::render(NVGcontext* vg) {
 		nvgBeginPath(vg);
 		nvgMoveTo(vg, g.screenpos, 0);
 		nvgLineTo(vg, g.screenpos, size.y);
-		nvgStrokeColor(vg, theme->getColor(COL_LINE_BAR + g.color));
+		NVGcolor col;
+		switch (g.color) {
+		case 0:
+			col = theme->getColor(GuiColor::COL_LINE_BAR);
+			break;
+		case 1:
+			col = theme->getColor(GuiColor::COL_LINE_QRT);
+			break;
+		case 2:
+		default:
+			col = theme->getColor(GuiColor::COL_LINE_XTH);
+			break;
+		}
+		nvgStrokeColor(vg, col);
 		nvgStrokeWidth(vg, g.thickness);
 		nvgStroke(vg);
 	}
@@ -322,10 +337,10 @@ void gui_clipcontent::render(NVGcontext* vg) {
 				float insety = calcInset(1, nh);
 				nvgRect(vg, nx+insetx, ny - scale+insety, nw-insetx*2, nh-insety*2);
 			}
-			nvgFillColor(vg, theme->getColor(i==0?COL_NOTE:COL_NOTE_MUTE));
+			nvgFillColor(vg, theme->getColor(i==0?GuiColor::COL_NOTE:GuiColor::COL_NOTE_MUTE));
 			nvgFill(vg);
 			nvgStrokeWidth(vg, 1.0f);
-			nvgStrokeColor(vg, theme->getColor(COL_NOTE_OUTLINE));
+			nvgStrokeColor(vg, theme->getColor(GuiColor::COL_NOTE_OUTLINE));
 			nvgStroke(vg);
 		}
 	}
@@ -341,7 +356,7 @@ void gui_clipcontent::render(NVGcontext* vg) {
 
 			for (note_t& note : heldNotes) {
 				tick_t pos = note.start() - clip->start() + clip->offsetStart;
-				if (clip->loopEnabled) {
+				if (clip->isLoopEnabled()) {
 					if (pos > clip->loopStart) {
 						pos = clip->loopStart + (pos - clip->loopStart) % clip->loopLen;
 					}
@@ -349,10 +364,10 @@ void gui_clipcontent::render(NVGcontext* vg) {
 				//TODO: CULL
 				renderNote(vg, this, &note, scale, -note.start() + pos);
 			}
-			nvgFillColor(vg, theme->getColor(COL_NOTE_PLAYING));
+			nvgFillColor(vg, theme->getColor(GuiColor::COL_NOTE_PLAYING));
 			nvgFill(vg);
 			nvgStrokeWidth(vg, 1.0f);
-			nvgStrokeColor(vg, theme->getColor(COL_NOTE_OUTLINE));
+			nvgStrokeColor(vg, theme->getColor(GuiColor::COL_NOTE_OUTLINE));
 			nvgStroke(vg);
 		}
 		std::vector<note_t>& heldNotesArpIn = track->audio->getArpInputNotes();
@@ -360,7 +375,7 @@ void gui_clipcontent::render(NVGcontext* vg) {
 			nvgBeginPath(vg);
 			for (note_t& note : heldNotesArpIn) {
 				tick_t pos = note.start() - clip->start() + clip->offsetStart;
-				if (clip->loopEnabled) {
+				if (clip->isLoopEnabled()) {
 					if (pos > clip->loopStart) {
 						pos = clip->loopStart + (pos - clip->loopStart) % clip->loopLen;
 					}
@@ -371,7 +386,7 @@ void gui_clipcontent::render(NVGcontext* vg) {
 			nvgFillColor(vg, rgbToNvg(0xbbbb00));
 			nvgFill(vg);
 			nvgStrokeWidth(vg, 1.0f);
-			nvgStrokeColor(vg, theme->getColor(COL_NOTE_OUTLINE));
+			nvgStrokeColor(vg, theme->getColor(GuiColor::COL_NOTE_OUTLINE));
 			nvgStroke(vg);
 		}
 
@@ -381,7 +396,7 @@ void gui_clipcontent::render(NVGcontext* vg) {
 
 			for (note_t& note : heldNotesArp) {
 				tick_t pos = note.start() - clip->start() + clip->offsetStart;
-				if (clip->loopEnabled && clip->loopLen>0) {
+				if (clip->isLoopEnabled()) {
 					if (pos > clip->loopStart) {
 						pos = clip->loopStart + (pos - clip->loopStart) % clip->loopLen;
 					}
@@ -389,17 +404,17 @@ void gui_clipcontent::render(NVGcontext* vg) {
 				//TODO: CULL
 				renderNote(vg, this, &note, scale, -note.start() + pos);
 			}
-			nvgFillColor(vg, theme->getColor(COL_NOTE_ARP));
+			nvgFillColor(vg, theme->getColor(GuiColor::COL_NOTE_ARP));
 			nvgFill(vg);
 			nvgStrokeWidth(vg, 1.0f);
-			nvgStrokeColor(vg, theme->getColor(COL_NOTE_OUTLINE));
+			nvgStrokeColor(vg, theme->getColor(GuiColor::COL_NOTE_OUTLINE));
 			nvgStroke(vg);
 		}
 		std::vector<marker_t> markers = track->audio->getArpMarkers();
 		if (markers.size()) {
 			for (marker_t& m : markers) {
 				tick_t pos = m.time - clip->start() + clip->offsetStart;
-				if (clip->loopEnabled) {
+				if (clip->isLoopEnabled()) {
 					if (pos > clip->loopStart) {
 						pos = clip->loopStart + (pos - clip->loopStart) % clip->loopLen;
 					}
@@ -448,7 +463,7 @@ void gui_clipcontent::render(NVGcontext* vg) {
 		nvgStroke(vg);
 	if (scale >= 18) {
 		int idx = 0;
-		setFont(vg, 18, theme->getColor(COL_NOTE_TEXT), NVG_ALIGN_LEFT|NVG_ALIGN_MIDDLE);
+		setFont(vg, 18, theme->getColor(GuiColor::COL_NOTE_TEXT), NVG_ALIGN_LEFT|NVG_ALIGN_MIDDLE);
 		for (note_t& note : notes.m_list) {
 			//TODO: CULL
 			renderNoteName(vg, this, &note, idx++, scale);

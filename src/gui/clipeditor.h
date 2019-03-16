@@ -588,7 +588,7 @@ public:
 		nvgTranslate(vg, pos.x, pos.y);
 		nvgBeginPath(vg);
 		nvgRect(vg, -2, 0, cs.x+2, size.y);
-		nvgFillColor(vg, theme->getColor(COL_GRID_DRK));
+		nvgFillColor(vg, theme->getColor(GuiColor::COL_GRID_DRK));
 		nvgFill(vg);
 //		{
 //
@@ -601,7 +601,7 @@ public:
 //			{
 //				nvgBeginPath(vg);
 //				nvgRect(vg, x, 0, grid.incr_bg, size.y);
-//				nvgFillColor(vg, theme->getColor(COL_GRID_DRK));
+//				nvgFillColor(vg, theme->getColor(GuiColor::COL_GRID_DRK));
 //				nvgFill(vg);
 //				x += grid.incr_bg*2.0f;
 //				if (x > w)
@@ -613,13 +613,26 @@ public:
 			nvgBeginPath(vg);
 			nvgMoveTo(vg, g.screenpos, 0);
 			nvgLineTo(vg, g.screenpos, heightLoopInidicator*2);
-			nvgStrokeColor(vg, theme->getColor(COL_LINE_BAR + g.color));
+			NVGcolor col;
+			switch (g.color) {
+			case 0:
+				col = theme->getColor(GuiColor::COL_LINE_BAR);
+				break;
+			case 1:
+				col = theme->getColor(GuiColor::COL_LINE_QRT);
+				break;
+			case 2:
+			default:
+				col = theme->getColor(GuiColor::COL_LINE_XTH);
+				break;
+			}
+			nvgStrokeColor(vg, col);
 			nvgStrokeWidth(vg, g.thickness);
 			nvgStroke(vg);
 		}
 		nvgBeginPath(vg);
 		nvgRect(vg, -2, heightLoopInidicator*2, cs.x+2, heightSelIndicator);
-		nvgFillColor(vg, theme->getColor(COL_BG_DRKER2));
+		nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_DRKER2));
 		nvgFill(vg);
 
 		Cursor& c = ctrl->cursor;
@@ -774,7 +787,7 @@ public:
 		add(&btn);
 		btn.setText("Fold");
 		btn.setEnabledRef(&fold);
-		btn.setActiveColor(nvgToRGB(theme->getColor(COL_NOTE)));
+		btn.setBackgroundColor(nvgToRGB(theme->getColor(GuiColor::COL_NOTE)));
 		content.showRange(2*12, 4*12);
 	}
 	~guictr_noteeditor() {
@@ -1028,7 +1041,7 @@ public:
 				float nW = (float) (note.len*tickScale);
 				nvgRect(vg, cp.x + nX, cp.y + (note.pitch-minPitch) * noteScale, nW, noteScale);
 			}
-			nvgFillColor(vg, theme->getColor(COL_NOTE));
+			nvgFillColor(vg, theme->getColor(GuiColor::COL_NOTE));
 			nvgFill(vg);
 
 

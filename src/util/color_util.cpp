@@ -55,11 +55,58 @@ uint32_t nvgToRGB(NVGcolor c) {
 	rgb |= 0xFF000000;
 	return rgb;
 }
+uint32_t nvgToRGBA(NVGcolor c) {
+	int32_t r = CLAMP_I((int32_t)(c.r*255.0), 0, 255);
+	int32_t g = CLAMP_I((int32_t)(c.g*255.0), 0, 255);
+	int32_t b = CLAMP_I((int32_t)(c.b*255.0), 0, 255);
+	int32_t a = CLAMP_I((int32_t)(c.a*255.0), 0, 255);
+	uint32_t rgba = 0;
+	rgba |= b;
+	rgba |= g<<8;
+	rgba |= r<<16;
+	rgba |= a<<24;
+	return rgba;
+}
 NVGcolor mulSatBright(NVGcolor rgb, float sat, float brt) {
 	NVGcolor hsl = nvgToHSL(rgb);
 	return nvgHSL(hsl.r, CLAMP_F(hsl.g*sat), CLAMP_F(hsl.b*brt));
 }
-NVGcolor HSVtoRGB(float h, float s, float l)
+NVGcolor HSVtoRGB(float h, float s, float v)
+{
+
+	struct rgbdouble {
+		double x, y, z;
+	};
+	rgbdouble RGB;
+    double H = h, S = s, V = v,
+            P, Q, T,
+            fract;
+
+    (H == 360.)?(H = 0.):(H /= 60.);
+    fract = H - floor(H);
+
+    P = V*(1. - S);
+    Q = V*(1. - S*fract);
+    T = V*(1. - S*(1. - fract));
+
+    if      (0. <= H && H < 1.)
+        RGB = {V, T, P};
+    else if (1. <= H && H < 2.)
+        RGB = {Q, T, P};
+    else if (2. <= H && H < 3.)
+        RGB = {P, V, T};
+    else if (3. <= H && H < 4.)
+        RGB = {P, Q, V};
+    else if (4. <= H && H < 5.)
+        RGB = {T, P, V};
+    else if (5. <= H && H < 6.)
+        RGB = {V, P, Q};
+    else
+        RGB = {0.f, 0.f, 0.f};
+
+    return nvgRGBAf(RGB.x, RGB.y, RGB.z, 1.0);
+}
+NVGcolor HSLtoRGB(float h, float s, float l)
 {
 
     if (h == 0)
@@ -185,6 +232,10 @@ glm::vec4 RGBtoHSV(glm::vec4 rgb) {
 glm::vec4 hexToHSL(uint32_t color) {
 	glm::vec4 color4f = colorHex(color);
 	return RGBtoHSV(color4f);
+}
+NVGcolor hexToHSLNvg(uint32_t color) {
+	glm::vec4 color4f = RGBtoHSV(colorHex(color));
+	return {color4f.x, color4f.y, color4f.z, color4f.w};
 }
 
 glm::vec4 int32vec4(uint32_t i) {

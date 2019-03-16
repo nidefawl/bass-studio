@@ -9,9 +9,10 @@
 
 class PluginViewContainers;
 class BasePluginVST2 : public AudioEffectX {
+protected:
+	std::vector<PluginViewContainers*> views;
 
 public:
-	std::vector<PluginViewContainers*> views;
 	BasePluginVST2 (audioMasterCallback audioMaster,
 			const char* pluginUIDStr,
 			VstInt32 numPrograms,

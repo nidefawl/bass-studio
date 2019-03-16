@@ -342,20 +342,33 @@ public:
 		nvgTranslate(vg, pos.x, pos.y);
 		nvgBeginPath(vg);
 		nvgRect(vg, -2, 0, cs.x+2, size.y);
-		nvgFillColor(vg, theme->getColor(COL_GRID_DRK));
+		nvgFillColor(vg, theme->getColor(GuiColor::COL_GRID_DRK));
 		nvgFill(vg);
 
 		for (grid_div g : grid.gridList) {
 			nvgBeginPath(vg);
 			nvgMoveTo(vg, g.screenpos, 0);
 			nvgLineTo(vg, g.screenpos, heightLoopIndicators);
-			nvgStrokeColor(vg, theme->getColor(COL_LINE_BAR + g.color));
+			NVGcolor col;
+			switch (g.color) {
+			case 0:
+				col = theme->getColor(GuiColor::COL_LINE_BAR);
+				break;
+			case 1:
+				col = theme->getColor(GuiColor::COL_LINE_QRT);
+				break;
+			case 2:
+			default:
+				col = theme->getColor(GuiColor::COL_LINE_XTH);
+				break;
+			}
+			nvgStrokeColor(vg, col);
 			nvgStrokeWidth(vg, g.thickness);
 			nvgStroke(vg);
 		}
 		nvgBeginPath(vg);
 		nvgRect(vg, -2, heightLoopIndicators, cs.x+2, heightSeperator);
-		nvgFillColor(vg, theme->getColor(COL_BG_DRKER2));
+		nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_DRKER2));
 		nvgFill(vg);
 
 

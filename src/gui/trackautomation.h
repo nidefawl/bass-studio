@@ -1,6 +1,8 @@
 #pragma once
 #include <vector>
 #include "seq_time.h"
+#include "theme.h"
+#include "guicolors.h"
 #include "track.h"
 #include "trackctr.h"
 #include "automation.h"
@@ -37,11 +39,11 @@ public:
 protected:
 	track_t* const m_track;
 private:
-	const NVGcolor color = G_BLUE2;
-	const NVGcolor colorInactive = rgbaToNvg(0xAAAAAAAA);
-	const NVGcolor color2 = mulSatBright(color, 0.6f, 0.8f);
-	const NVGcolor colorHL = G_PURPLE;
-	const NVGcolor colorHL2 = mulSatBright(colorHL, 0.6f, 0.8f);
+	GuiColor::constant_t color = GuiColor::COL_KNOB;
+	GuiColor::constant_t colorInactive = GuiColor::COL_LABEL_INACTIVE;
+	GuiColor::constant_t color2 = GuiColor::COL_KNOB;
+	GuiColor::constant_t colorHL = GuiColor::COL_AUTOMATED;
+	GuiColor::constant_t colorHL2 = GuiColor::COL_AUTOMATED;
 	const float radiusHandle = 2.5f;
 	const float radiusHandleHL = 3.5f;
 	const float lineWidth = 2.5f;

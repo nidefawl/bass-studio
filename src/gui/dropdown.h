@@ -14,9 +14,6 @@ class guidropdownbase : public guibuttonbase {
 public:
 	guidropdownbase() : guibuttonbase() {
 	}
-	virtual bool enabled() {
-		return true;
-	}
 	void render(NVGcontext* vg) {
 		renderWidgetBorder(vg, getStateFlags());
 		setFont(vg, G_FONT_SCALE(size.y), G_WHITE, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);

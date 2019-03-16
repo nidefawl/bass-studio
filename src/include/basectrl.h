@@ -24,6 +24,8 @@
 #include "logging.h"
 #include "hires_timer.h"
 #include "rand.h"
+#include "gui/theme.h"
+#include "gui/thememgr.h"
 #include "saferef.h"
 
 
@@ -43,6 +45,8 @@ String getModKeyName(int modKey);
 String menuName(String s, KeyCombo combo);
 
 class BaseCtrl : public SafeRefHandler<guibase> {
+protected:
+	guitheme_mgr themes;
 public:
 	window_base* window = NULL;
 	NVGcontext* vg = NULL;
@@ -71,7 +75,7 @@ public:
 		refs.push_back(ref);
 		return ref.refId;
 	}
-	guibase* safeRefGet(int32_t refId) {
+	guibase* safeRefGetPtr(int32_t refId) {
 		auto it = std::find_if(refs.begin(), refs.end(), [refId](const stored_ref& ref) {
 			return ref.refId == refId;
 		});
@@ -102,6 +106,12 @@ public:
 		return isOK;
 	}
 	virtual ~BaseCtrl() { }
+	virtual guitheme_t* getTheme() {
+		return &themes.getRef();
+	}
+	guitheme_mgr* getThemeMgr() {
+		return &themes;
+	}
 	virtual void prerender(int32_t x, int32_t y, int32_t w, int32_t h, float ratio);
 	virtual void render(int32_t x, int32_t y, int32_t w, int32_t h, float ratio);
 	virtual bool processGlobalKeyevent(KeyEvent& event) {
@@ -111,10 +121,11 @@ public:
 		return true;
 	}
 	MouseHitEvt mouseHitEvt(MouseHitType _type);
+	void focusGui(guibase* g);
 	void mouseDown(ivec2 mousePos, int button, bool doubleclick);
 	void mouseUp(ivec2 mousePos, int button);
-	void onCharInput(unsigned int codepoint);
-	void onKeyInput(int key, int scancode, int keyState, int mods, const char* key_name);
+	virtual void onCharInput(unsigned int codepoint);
+	virtual void onKeyInput(int key, int scancode, int keyState, int mods, const char* key_name);
 	void mouseScrolled(double xoffset, double yoffset);
 	virtual void mouseMoved(ivec2 mousePos, ivec2 deltaPos);
 
@@ -160,6 +171,8 @@ public:
 	void closeAppMenus();
 	void closeAppMenus(int startlvl);
 	bool hasContextMenu();
+	virtual void onKeyInput(int key, int scancode, int keyState, int mods, const char* key_name) override;
+	virtual void onCharInput(unsigned int codepoint) override;
 	virtual void onMenuOpen(ngui::Menu* menu);
 	virtual void updateMenubar();
 	guictxtmenu_base* getContextMenu();
@@ -187,6 +200,7 @@ class guictr_scrollbar;
 class PopupCtrl : public BaseCtrl
 {
 	guictr_scrollbar* popupCtrs;
+	bool canTakeInputFocus = false;
 public:
 	PopupCtrl();
 	~PopupCtrl();
@@ -204,5 +218,6 @@ public:
 	bool init(window_overlay* window, NVGcontext* nanovg);
 	void focusReceived() { };
 	void focusLost();
+	bool hasInputFocus();
 
 };

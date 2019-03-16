@@ -3,7 +3,7 @@
 #include <glm/vec2.hpp>
 #include "gui.h"
 #include "guicolors.h"
-#include "guicontextmenu.h"
+#include "guicontextmenu_base.h"
 #include "basectrl.h"
 #include "event.h"
 #include "str_util.h"
@@ -21,7 +21,6 @@ using glm::ivec2;
 class effectbase;
 class vstplugin;
 class PluginViewContainers;
-
 class guiplugin : public guictr_base {
 public:
 	effectbase* const effect;

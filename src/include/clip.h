@@ -252,12 +252,12 @@ public:
 			adjustStartSamples(offset);
 			return;
 		}
-		if (loopEnabled && offsetStart < loopStart) {
+		if (isLoopEnabled() && offsetStart < loopStart) {
 			tick_t lenAdj = min(offset, loopStart - offsetStart);
 			offsetStart += lenAdj;
 			offset -= lenAdj;
 		}
-		bool inLoop = loopEnabled && offsetStart >= loopStart;
+		bool inLoop = isLoopEnabled() && offsetStart >= loopStart;
 		this->offsetStart += offset;
 		while (inLoop && offsetStart < loopStart) {
 			offsetStart += loopLen;
@@ -273,6 +273,14 @@ public:
 	void adjustLen(tick_t offset);
 	tick_t getLenSamples() const;
 	void setLenSamples(tick_t lenSamples = 0);
+
+	bool isLoopEnabled() const {
+		return loopEnabled && this->loopLen > 0;
+	}
+
+	void setLoopEnabled(bool loopEnabled = true) {
+		this->loopEnabled = loopEnabled;
+	}
 
 	gui_clip* gClip = NULL;
 //	track_t* tr = NULL;

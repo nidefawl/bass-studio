@@ -21,6 +21,7 @@
 #define GUI_COLOR(x) nvgRGBA(G_R(x), G_G(x), G_B(x), 255)
 #define GUI_COLORA(x, a) nvgRGBA(G_R(x), G_G(x), G_B(x), a)
 #define GUI_COLORRGB(r, g, b, a) nvgRGBA(G_R(r), G_G(g), G_B(b), a)
+#define GUI_COLOR_HEXA(x, a) (((a)<<24)|((x)<<16)|((x)<<8)|(x))
 
 #define INSET_TITLE 4
 #define INSET_TRACK_CONTENT 2
@@ -41,11 +42,12 @@
 #define TRACK_HEIGHT_SPACING 2
 #define TRACK_HEIGHT_SPACING_HALF 1
 #define FLG_VISIBLE 1
-#define FLG_ENBL 2
-#define FLG_HVRD 4
-#define FLG_FOC 8
-#define FLG_ACT 16
-#define FLG_DRG 32
+#define FLG_RENDER_BACKGROUND 2
+#define FLG_ENBL 4
+#define FLG_HVRD 8
+#define FLG_FOC 16
+#define FLG_ACT 32
+#define FLG_DRG 64
 #define CTR_SPACING 8
 #define CONTENT_INSET 14
 
@@ -74,30 +76,53 @@
 #define G_TITLE_ALIGN NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE
 #define G_SELECTION nvgRGBA(2, 2, 2, 96)
 
-#define COL_GRID_DRK 0
-#define COL_GRID_BRT 1
-#define COL_LINE_BAR 2
-#define COL_LINE_QRT 3
-#define COL_LINE_XTH 4
-#define COL_BG_DRK 5
-#define COL_BG_BRT 6
-#define COL_LINE_SEPERATOR 7
-#define COL_CTXTMNU_OUTLINE 8
-#define COL_CTXTMNU_BG 9
-#define COL_CTXTMNU_HILIGHT 10
-#define COL_GUI_STROKE 11
-#define COL_BG_DRK_FOCUSED 12
-#define COL_NOTE 13
-#define COL_NOTE_PLAYING 19
-#define COL_NOTE_ARP 21
-#define COL_NOTE_MUTE 20
-#define COL_NOTE_OUTLINE 14
-#define COL_NOTE_TEXT 15
-#define COL_BG_SELECTEDTRACK 16
-#define COL_BG_DRKER 17
-#define COL_BG_DRKER2 18
-#define COL_BG_DRK_SELECTED 22
-#define NUM_GUI_COLORS 24
+#include "str_util.h"
+#include <vector>
+#define NUM_GUI_COLORS 255
+namespace GuiColor {
+//int32_t getNextId();
+struct constant_t {
+	int32_t idx;
+	String name;
+	int32_t defValue;
+	constant_t();
+	constant_t(const char* _name, int32_t _defValue);
+};
+std::vector<constant_t> getAllConstants();
+extern constant_t G_WHITE;
+extern constant_t G_BLACK;
+extern constant_t COL_GRID_DRK;
+extern constant_t COL_GRID_BRT;
+extern constant_t COL_LINE_BAR;
+extern constant_t COL_LINE_QRT;
+extern constant_t COL_LINE_XTH;
+extern constant_t COL_BG_DRK;
+extern constant_t COL_BG_BRT;
+extern constant_t COL_LINE_SEPERATOR;
+extern constant_t COL_CTXTMNU_OUTLINE;
+extern constant_t COL_CTXTMNU_BG;
+extern constant_t COL_CTXTMNU_HILIGHT;
+extern constant_t COL_GUI_STROKE;
+extern constant_t COL_BG_DRK_FOCUSED;
+extern constant_t COL_NOTE;
+extern constant_t COL_NOTE_PLAYING;
+extern constant_t COL_NOTE_ARP;
+extern constant_t COL_NOTE_MUTE;
+extern constant_t COL_NOTE_OUTLINE;
+extern constant_t COL_NOTE_TEXT;
+extern constant_t COL_BG_SELECTEDTRACK;
+extern constant_t COL_BG_DRKER;
+extern constant_t COL_BG_DRKER2;
+extern constant_t COL_BG_DRK_SELECTED;
+extern constant_t COL_CLEAR_COLOR;
+extern constant_t COL_LABEL_ACTIVE;
+extern constant_t COL_LABEL_INACTIVE;
+}
+namespace GuiColor {
+extern constant_t COL_KNOB;
+extern constant_t COL_KNOB_IND;
+extern constant_t COL_AUTOMATED;
+}
 
 
 #define NVG_KAPPA90 0.5522847493f	// Length proportional to radius of a cubic bezier handle for 90deg arcs.

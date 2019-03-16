@@ -7,6 +7,7 @@
 
 #include "keyboard.h"
 #include "gui.h"
+#include "guicolors.h"
 #include "guicontainer.h"
 #include "button.h"
 #include "knob.h"
@@ -23,8 +24,8 @@ class gui_numberinput_field: public guibuttonbase {
 public:
 	gui_numberinput_field(int32_t* _number) :
 			guibuttonbase(), number(_number) {
-		this->canTextInput = true;
-		setColor(nvgToRGB(theme->getColor(COL_BG_DRK)));
+		setTint(nvgToRGB(theme->getColor(GuiColor::COL_BG_DRK)));
+		field.setParent(this);
 	}
 	virtual void setControl(BaseCtrl* parentCtrl) override {
 		guibase::setControl(parentCtrl);
@@ -35,6 +36,9 @@ public:
 	}
 	void setRef(int32_t* number) {
 		this->number = number;
+	}
+	gui_textfield& getField() {
+		return field;
 	}
 	void layout() {
 		field.pos = pos;

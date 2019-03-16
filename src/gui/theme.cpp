@@ -1,4 +1,5 @@
 #include <nanovg.h>
+#include <vector>
 #include "theme.h"
 #include "color_util.h"
 #include "guicolors.h"
@@ -10,18 +11,48 @@
 
 
 
-void initColorArr(NVGcolor* g_guiColors, int colorVal);
-extern int colorVal;
-void guitheme_t::initDefaultTheme() {
-	initColorArr(this->guiColors, colorVal);
-	uint32_t rgb = nvgToRGB(this->guiColors[COL_BG_DRK]);
-	setBgColor(rgb);
-	colorBgStroke = this->guiColors[COL_GUI_STROKE];
+namespace GuiColor {
+std::vector<constant_t> getAllConstants();
 }
-const NVGcolor guitheme_t::getColor(int color) {
-	if (color < 0 || color >= NUM_GUI_COLORS)
-		color = 0;
-	return this->guiColors[color];
+
+void guitheme_t::initDefaultTheme() {
+	defaultConstructed = false;
+	if (isDefault) {
+		name = "default";
+	}
+	vecNVGColors.resize(NUM_GUI_COLORS);
+	mapColors.clear();
+	mapProperties.clear();
+	std::vector<GuiColor::constant_t> v = GuiColor::getAllConstants();
+	for (auto c : v) {
+		mapColors[c.idx] = c.defValue;
+		this->vecNVGColors[c.idx] = rgbaToNvg(c.defValue);
+	}
+	uint32_t rgb = nvgToRGB(getColor(GuiColor::COL_BG_DRK));
+	setTint(rgb);
+}
+NVGcolor& guitheme_t::getColor(GuiColor::constant_t _constant) {
+	assert(_constant.idx >= 0 && _constant.idx < this->vecNVGColors.size());
+//	auto it = mapColors.find(_constant.idx);
+//	if (it != mapColors.end()) {
+//		return rgbaToNvg(mapColors[_constant.idx]);
+//	}
+	return this->vecNVGColors[_constant.idx];
+}
+int32_t guitheme_t::getColorInt32(GuiColor::constant_t _constant) {
+    auto it = mapColors.find(_constant.idx);
+    if (it == mapColors.end()) {
+		return _constant.defValue;
+    }
+	return mapColors[_constant.idx];
+}
+void guitheme_t::setColor(GuiColor::constant_t _constant, int32_t _newValue) {
+	if (isDefault)
+		return;
+	assert(_constant.idx >= 0 && _constant.idx < this->vecNVGColors.size());
+	assert(_constant.idx < NUM_GUI_COLORS);
+	mapColors[_constant.idx] = _newValue;
+	this->vecNVGColors[_constant.idx] = rgbaToNvg(_newValue);
 }
 const int32_t getDefaultVal(int32_t _constant) {
 	switch (_constant) {
@@ -36,16 +67,16 @@ const int32_t getDefaultVal(int32_t _constant) {
 	return 0;
 }
 const int32_t guitheme_t::get(int32_t _constant) {
-    auto it = values.find(_constant);
-    if (it == values.end()) {
-    	values[_constant] = getDefaultVal(_constant);
+    auto it = mapProperties.find(_constant);
+    if (it == mapProperties.end()) {
+    	mapProperties[_constant] = getDefaultVal(_constant);
     }
-	return values[_constant];
+	return mapProperties[_constant];
 }
 void guitheme_t::set(int32_t _constant, int32_t _value) {
-	values[_constant] = _value;
+	mapProperties[_constant] = _value;
 }
-void guitheme_t::setBgColor(uint32_t hex) {
+void guitheme_t::setTint(uint32_t hex) {
 	glm::vec4 hsl = hexToHSL(hex);
 	colorBg = nvgHSL(hsl.x, hsl.y, hsl.z);
 	colorBgDisabled = nvgHSL(hsl.x, CLAMP_F(hsl.y*0.55f), CLAMP_F(hsl.z - 0.3f));

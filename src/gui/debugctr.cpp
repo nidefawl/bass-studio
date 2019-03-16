@@ -34,19 +34,23 @@ int getHWNDMapSize();
 String getHWNDName(int i);
 int getHWNDCnt(int i);
 #endif
+namespace GuiColor {
 extern int colorVal;
+void initConstants(int colorVal);
+}
 gui_ctr_debug::gui_ctr_debug() : guictr_base() {
 	add(&knobTest);
 	add(&knobTest2);
 	add(&btn);
 	btn.setText("Reset history");
 	btn.setFontSize(24);
-	knobTest.fnSetValue = [](float f, int flags) {
-		colorVal = 0+max(0, min(255, (int32_t)std::floor(f*255)));
-		initColor();
+	knobTest.fnSetValue = [this](float f, int flags) {
+		GuiColor::colorVal = 0+max(0, min(255, (int32_t)std::floor(f*255)));
+		GuiColor::initConstants(GuiColor::colorVal);
+		parentCtrl->getTheme()->initDefaultTheme();
 	};
 	knobTest.fnGetValue = [](void) {
-		return max(0.0f, min(1.0f, colorVal/255.0f));
+		return max(0.0f, min(1.0f, GuiColor::colorVal/255.0f));
 	};
 	knobTest2.setValueInit(theme->get(G_PLUGIN_TITLE_HEIGHT)/255.0f);
 	knobTest2.fnSetValue = [this](float f, int flags) {
@@ -62,6 +66,12 @@ void gui_ctr_debug::render(NVGcontext* vg) {
 
 	vector<String> strings;
 	String str;
+	str = StringFormat("%012X", (int64_t) ctrl->getTheme());
+	strings.push_back(String("ctrl->getTheme: ") + str);
+	str = StringFormat("%012X", (int64_t) (parentCtrl?parentCtrl->getTheme():0));
+	strings.push_back(String("parentCtrl->getTheme: ") + str);
+	str = StringFormat("%012X", (int64_t) (theme));
+	strings.push_back(String("this->theme: ") + str);
 	str = ctrl->guiOver ? ctrl->guiOver->getClassName() : "<null>";
 	strings.push_back(String("guiOver: ") + str);
 	str = ctrl->guiDragged ? ctrl->guiDragged->getClassName() : "<null>";

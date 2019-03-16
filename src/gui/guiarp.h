@@ -44,8 +44,8 @@ public:
 		add(&gate);
 		add(&pattern);
 		buttonBypass.icon = ICON_BYPASS;
-		buttonBypass.parent = this;
-		buttonBypass.setColor(0x80c040);
+		buttonBypass.setParent(this);
+		buttonBypass.colorActive = GuiColor::COL_BTN_BG_BYPASS_ACTIVE;
 		clock.setLabel("Clock");
 		gate.setLabel("Gate");
 		pattern.setLabel("Pattern");

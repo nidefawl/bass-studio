@@ -137,7 +137,7 @@ static void glfw_startup_error_callback(int error, const char* description) {
 //	ngui::show(errorCodeStr, "Error", ngui::Style::Error, ngui::Buttons::OK);
 }
 static void glfw_runtime_error_callback(int error, const char* description) {
-	printf("Error %d: %s", error, description);
+	my_printf("Error %d: %s", error, description);
 }
 static void setAppWindowHints() {
 	glfwDefaultWindowHints();
@@ -705,6 +705,7 @@ public:
 #endif
 
 	void onCharInput(unsigned int codepoint) {
+//		my_printf("main onCharInput 0x%04X\n", codepoint);
 		ctrl->onCharInput(codepoint);
 		flagNeedsRedraw();
 	}
@@ -713,7 +714,7 @@ public:
 		/*if (action == GLFW_PRESS)*/
 //		my_printf("keyname %s, key %d, scancode %d\n", key_name, key, scancode);
 //		my_printf("mods %08X\n", mods);
-		printf("onKeyInput %d (%c) %d\n", key, key, scancode);
+//		my_printf("main onKeyInput %d (%c) %d\n", key, key, scancode);
 		ctrl->onKeyInput(key, scancode, action, mods, key_name);
 		flagNeedsRedraw();
 	}
@@ -782,6 +783,7 @@ public:
 };
 
 class appwindow_overlay : public appwindow, public window_overlay {
+	uint64_t dblclicktimer;
 public:
 	appwindow* const parent;
 //	PopupCtrl* const ctrl;
@@ -792,8 +794,9 @@ public:
 		  parent(_parent),
 		  ctrl(std::make_unique<PopupCtrl>())
 	{
+		dblclicktimer = 0;
 	}
-	void create(const char* title, int w, int h);
+	void create(const char* title, int w, int h, void* parentHandle);
 	void render()
 	{
 		glfwMakeContextCurrent(glfw);
@@ -842,7 +845,7 @@ public:
 //		    BringWindowToTop(getHWND());
 
 		}
-//		ShowWindow(hwnd, SWP_NOACTIVATE);
+		ShowWindow(hwnd, SW_SHOW);
 //		if (parent)
 //		SetParent(hwnd, parent->getHWND());
 	}
@@ -853,17 +856,22 @@ public:
 		return appwindow::isWindowNotHidden();
 	}
 	void onMouseMoved(ivec2 deltapos) {
+		if (abs(deltapos.x)+abs(deltapos.y) > 2)
+			this->dblclicktimer = 0;
 		ctrl->mouseMoved(getMousePos(), deltapos);
 		flagNeedsRedraw();
 	}
 	void onMouseButton(int button, int action, int mods) {
 		if (action == GLFW_PRESS) {
-			ctrl->mouseDown(getMousePos(), button, false);
-			return;
+			uint64_t timeMillis = getTimeMillis();
+			bool dblClick = this->dblclicktimer != 0 && timeMillis - this->dblclicktimer < 500;
+			dblClick &= glm::distance(lastclickpos, mousepos) < 4;
+			this->dblclicktimer = dblClick ? 0 : timeMillis;
+			ctrl->mouseDown(getMousePos(), button, dblClick);
 		} else if (action == GLFW_RELEASE) {
 			ctrl->mouseUp(getMousePos(), button);
-			return;
 		}
+		lastclickpos = mousepos;
 		flagNeedsRedraw();
 	}
 	void onWindowFocusChanged(int focused) {
@@ -882,9 +890,20 @@ public:
 		flagNeedsRedraw();
 	}
 
+
+	void onCharInput(unsigned int codepoint) {
+//		my_printf("overlay onCharInput 0x%04X\n", codepoint);
+		ctrl->onCharInput(codepoint);
+		flagNeedsRedraw();
+	}
 	void onKeyInput(int key, int scancode, int action, int mods, const char* key_name)
 	{
-		//never fired on windows
+		/*if (action == GLFW_PRESS)*/
+//		my_printf("keyname %s, key %d, scancode %d\n", key_name, key, scancode);
+//		my_printf("mods %08X\n", mods);
+//		my_printf("overlay onKeyInput %d (%c) %d\n", key, key, scancode);
+		ctrl->onKeyInput(key, scancode, action, mods, key_name);
+		flagNeedsRedraw();
 	}
 
 	void getSize(ivec2* size) override {
@@ -1139,7 +1158,7 @@ void appwindow_main::updateMenu() {
 window_overlay* appwindow_main::createOverlay() {
 	std::unique_ptr<appwindow_overlay> ow = std::make_unique<appwindow_overlay>(this);
 	String sName = StringFormat("%s menu", this->name);
-	ow->create(StringAsCStr(sName), 200, 200);
+	ow->create(StringAsCStr(sName), 200, 200, nullptr);
 	window_overlay* ret = ow.get();
 	this->overlayWindows.push_back(std::move(ow));
 	return ret;
@@ -1205,14 +1224,16 @@ void appwindow_main::create(const char* title, int w, int h, void* parentWindowH
 	glfwGetWindowSize(glfw, &w, &h);
 	this->onWindowSizeChanged(w, h);
 }
-void appwindow_overlay::create(const char* title, int w, int h) {
+void appwindow_overlay::create(const char* title, int w, int h, void* parentHandle) {
 	setAppWindowHints();
 	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 	glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
 	glfwWindowHint(GLFW_FOCUSED, GL_FALSE);
 	glfwWindowHint(GLFW_DECORATED, GL_FALSE);
 	glfwWindowHint(GLFW_UTILITY_WINDOW, GL_TRUE);
-	appwindow::createWindow(title, w, h);
+	glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER , GL_TRUE);
+	appwindow::createWindow(title, w, h, nullptr, parentHandle);
+	glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER , GL_FALSE);
 #ifdef _WIN32
 	bool tooltip = false;
 	if (tooltip) {
@@ -1458,6 +1479,7 @@ bool isVstWindow(HWND hwnd);
 #endif
 #endif
 std::shared_ptr<AppCtrl> makeApp();
+void initColor();
 void deleteApp();
 int startApplication(int argc, char* argv[]) {
 	bool test = argc > 1 && String(argv[1]) == "--test";
@@ -1469,11 +1491,12 @@ int startApplication(int argc, char* argv[]) {
 #endif
 	std::set_terminate(on_terminate);
 #ifdef USE_WIN32_EXC_HOOKS
-	setExceptionHandler();
+	//setExceptionHandler();
 #endif
 	EXC_TRY
 	allocConsole();
 	setMinimumResolutionTimer();
+	initColor();
 	loadSettings(settings);
 	glfwSetErrorCallback(glfw_startup_error_callback);
 	if (!glfwInit("DAWWINDOW01")) {

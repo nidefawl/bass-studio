@@ -1,6 +1,6 @@
-#include "contextmenus.h"
 #include "automation.h"
 #include "../host/plugin/base_plugin.h"
+#include "guicontextmenu_daw.h"
 
 guictxtmenu_vstparam::guictxtmenu_vstparam(effectbase* _effect, automatable_param_t* _entry) : effect(_effect), entry(_entry)
 {

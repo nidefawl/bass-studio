@@ -80,7 +80,7 @@ public:
 		nvgBeginPath(vg);
 		nvgMoveTo(vg, x, yZero);
 		nvgLineTo(vg, x2, yZero);
-		nvgStrokeColor(vg, theme->getColor(COL_GRID_BRT));
+		nvgStrokeColor(vg, theme->getColor(GuiColor::COL_GRID_BRT));
 		nvgStrokeWidth(vg, 1.5f);
 		nvgStroke(vg);
 	}

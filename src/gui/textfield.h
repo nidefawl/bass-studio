@@ -4,6 +4,56 @@
 #include <functional>
 
 using Vector2i = glm::ivec2;
+class input_filter {
+public:
+    virtual ~input_filter() {}
+    virtual bool isAllowedChar(uint32_t codepoint) = 0;
+    virtual void setString(String string, bool trigger=false) = 0;
+    virtual bool isReplaceInput() = 0;
+    virtual String parse(String string) = 0;
+};
+
+class input_filter_hex32 : public input_filter {
+	int32_t toInt(int32_t c)
+	{
+		if (c >= '0' && c <= '9') return      c - '0';
+		if (c >= 'A' && c <= 'F') return 10 + c - 'A';
+		if (c >= 'a' && c <= 'f') return 10 + c - 'a';
+		return -1;
+	};
+public:
+    bool isAllowedChar(uint32_t codepoint) override {
+    	return toInt(codepoint) != -1;
+    }
+    void setString(String string, bool trigger=false) override {
+
+    }
+    bool isReplaceInput() override {
+    	return true;
+    }
+    String formatNumber(int32_t number) {
+    	return StringFormat("%08X", number);
+    }
+    int32_t parseString(String string) {
+    	for (auto it = string.begin(); it != string.end(); ) {
+    		if (toInt(*it) == -1) {
+    			it = string.erase(it);
+    		} else {
+    			it++;
+    		}
+    	}
+    	int32_t nr = 0;
+    	for (auto it = string.begin(); it-string.begin() < 8 && it != string.end(); it++) {
+    		auto nInt = toInt(*it);
+    		nr <<= 4;
+    		nr |= nInt;
+    	}
+    	return nr;
+    }
+    String parse(String string) override {
+    	return formatNumber(parseString(string));
+    }
+};
 class gui_textfield : public guibase {
 public:
 	static constexpr int MAX_CHARS = 1024;
@@ -13,7 +63,6 @@ public:
         Center,
         Right
     };
-
     gui_textfield();
 
     bool editable() const { return mEditable; }
@@ -84,6 +133,9 @@ public:
 
 
     bool copySelectionString(std::string& output);
+    void setFilter(input_filter* filter) {
+    	this->filter = filter;
+    }
 protected:
 	void onChange();
     bool checkFormat(const std::string& input,const std::string& format);
@@ -106,7 +158,9 @@ public:
     Alignment mAlignment;
     std::string mUnits;
     std::string mFormat;
-    std::function<bool(const std::string& str)> mCallback;
+    input_filter* filter = nullptr;
+    std::function<bool(const std::string& str)> mCallback = nullptr;
+    std::function<void(MouseHitEvt&, bool)> fnFocus = nullptr;
     bool mValidFormat;
     std::string mValueTemp;
     std::string mPlaceholder;

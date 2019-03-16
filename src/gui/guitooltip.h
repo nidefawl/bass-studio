@@ -8,6 +8,7 @@
 
 
 #include "gui.h"
+#include "guicontextmenu_base.h"
 #include "guicontextmenu.h"
 #include "guicontainer.h"
 #include "gui/textfield.h"
@@ -22,7 +23,7 @@ class guitooltip : public guictxtmenu {
 protected:
 	T* ptr;
 	bool hadMouseMovement = false;
-	tbl table;
+	Table::tbl table;
 	gui_textfield textField;
 public:
 	guitooltip(T* _ptr) : guictxtmenu(), ptr(_ptr) {
@@ -54,19 +55,9 @@ public:
 		parentCtrl->closePopup();
 		parentCtrl->closeContextMenu();
 	}
-	virtual void handleDraggedBegin(MouseEvent& evt) override {
-		ivec2 local = evt.relMousepos;
-		ivec2 tableMin = ivec2(INSET_TABLE);
-		ivec2 tableMax = tableMin + getSizeContent()-ivec2(INSET_TABLE<<1);
-		if (local.x >= tableMin.x && local.y >= tableMin.y && local.x < tableMax.x && local.y < tableMax.y) {
-			ivec2 res(-3);
-			getCellClicked(table, theme, local-tableMin, res);
-			if (res.x >= 0 && res.y >= 0) {
-				my_printf("Clicked %d %d\n", res.x, res.y);
-			}
-		}
-		return;
-	}
+//	virtual void handleDraggedBegin(MouseEvent& evt) override {
+//		return;
+//	}
 //	virtual void handleDraggedMove(MouseEvent& evt) {
 //		return;
 //	}
@@ -82,7 +73,7 @@ public:
 			return;
 		}
 		setFont(vg, FONT_SIZE_TOOLTIP_TITLE, G_WHITE, NVG_ALIGN_LEFT|NVG_ALIGN_BOTTOM);
-		draw(table, vg, theme, ivec2(INSET_TABLE), getSizeContent()-ivec2(INSET_TABLE<<1), FONT_SIZE_TOOLTIP);
+		Table::DrawTableNVG(table, vg, theme, ivec2(INSET_TABLE), getSizeContent()-ivec2(INSET_TABLE<<1), FONT_SIZE_TOOLTIP);
 		if (textField.isVisible()) {
 			textField.render(vg);
 		}

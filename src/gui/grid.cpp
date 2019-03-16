@@ -205,7 +205,7 @@ void scaled_grid::calcLen(int scrollOffsetX, double fzoom, int contentWidth) {
 			div.pos = main->toBeatBar16th(timeBar);
 			div.screenpos = pos;
 			div.width = denum_step > 0 ? (denum_substep>0 ? denom_sub_size : denom_size) : barSize*step;
-			div.color = COL_LINE_BAR;
+			div.color = 0;
 			div.thickness = 0.9f;
 			gridList.push_back(div);
 //			if (step < 2)
@@ -218,7 +218,7 @@ void scaled_grid::calcLen(int scrollOffsetX, double fzoom, int contentWidth) {
 					div_quarter.pos = main->toBeatBar16th(timeQuarter);
 					div_quarter.screenpos = pos_denom;
 					div_quarter.width = denum_substep > 0 ? denom_sub_size : denom_size;
-					div_quarter.color = COL_LINE_QRT;
+					div_quarter.color = 1;
 					div_quarter.thickness = 0.75f;
 					gridList.push_back(div_quarter);
 				}
@@ -230,7 +230,7 @@ void scaled_grid::calcLen(int scrollOffsetX, double fzoom, int contentWidth) {
 
 					div_smaller.screenpos = bar_offset + bar * barSize + bar_denom * denom_size + bar_denom_sub * denom_sub_size;
 					div_smaller.width = denom_sub_size;
-					div_smaller.color = COL_LINE_XTH;
+					div_smaller.color = 2;
 					div_smaller.thickness = 0.6f;
 					gridList.push_back(div_smaller);
 				}

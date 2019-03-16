@@ -1,13 +1,19 @@
 #include "table.h"
-#include "gui.h"
-#include <nanovg.h>
-#include <glm/glm.hpp>
 #include <memory>
 #include <numeric>
 #include <vector>
+#include <glm/glm.hpp>
+#include <glm/vec2.hpp>
+#include <nanovg.h>
+#include "str_util.h"
+#include "theme.h"
+#include "event.h"
+#include "gui.h"
 
 using glm::vec2;
-void adjustColSizes(tbl& table, vec2 size) {
+namespace Table {
+
+void AdjustColSizes(tbl& table, vec2 size) {
 	int maxCols = 0;
 	for (tbl_row_t& row : table.rows) {
 		maxCols = std::max((int)row.cols.size(), maxCols);
@@ -62,13 +68,6 @@ void drawTbl(const table_ctxt_t& ctxt, const tbltype<T>& obj) {
 	nvgTextAlign(ctxt.vg, NVG_ALIGN_LEFT|NVG_ALIGN_BOTTOM);
 	nvgText(ctxt.vg, pos.x+INSET_TABLE_CELL_PADDING, pos.y+size.y-INSET_TABLE_CELL_PADDING, "NOT IMPLEMENTED", nullptr);
 }
-template <typename T>
-void drawTbl(const table_ctxt_t& ctxt, const tbltyperef<T>& obj) {
-	const vec2& pos = ctxt.pos;
-	const vec2& size = ctxt.size;
-	nvgTextAlign(ctxt.vg, NVG_ALIGN_LEFT|NVG_ALIGN_BOTTOM);
-	nvgText(ctxt.vg, pos.x+INSET_TABLE_CELL_PADDING, pos.y+size.y-INSET_TABLE_CELL_PADDING, "NOT IMPLEMENTED", nullptr);
-}
 void drawTbl(const table_ctxt_t& ctxt, const String& obj) {
 	const vec2& pos = ctxt.pos;
 	const vec2& size = ctxt.size;
@@ -100,36 +99,54 @@ void drawTbl(const table_ctxt_t& ctxt, const glm::ivec2& obj) {
 	const vec2& pos = ctxt.pos;
 	const vec2& size = ctxt.size;
 	nvgTextAlign(ctxt.vg, NVG_ALIGN_RIGHT|NVG_ALIGN_BOTTOM);
-	String str = StringFormat("%d %d", obj.x, obj.y);
-	nvgText(ctxt.vg, pos.x+size.x-INSET_TABLE_CELL_PADDING, pos.y+size.y-INSET_TABLE_CELL_PADDING, StringAsCStr(str), nullptr);
+
+
+	String strX = StringFormat("X %d", obj.x);
+	String strY = StringFormat("Y %d", obj.y);
+	int w = 100;
+//	if(strX.length() > 5) {
+//		w = 180;
+//	}
+	nvgText(ctxt.vg,
+			pos.x+size.x-(w+INSET_TABLE_CELL_PADDING)*1-INSET_TABLE_CELL_PADDING,
+			pos.y+size.y-INSET_TABLE_CELL_PADDING, StringAsCStr(strX), nullptr);
+	nvgText(ctxt.vg,
+			pos.x+size.x-(w+INSET_TABLE_CELL_PADDING)*0-INSET_TABLE_CELL_PADDING,
+			pos.y+size.y-INSET_TABLE_CELL_PADDING, StringAsCStr(strY), nullptr);
 }
-bool getCellClicked(tbl& table, guitheme_t* theme, glm::vec2 mouse, glm::ivec2& res) {
-	res.x = -2;
-	res.y = -2;
-	int nTitleCols = table.titleCols.size();
-	auto colClicked = [nTitleCols, mouse, table]() {
+
+table_entry_t& GetCell(tbl& table, int32_t x, int32_t y) {
+	assert(y >= 0 && y < table.rows.size());
+	tbl_row_t& rowRef = table.rows[y];
+	assert(x >= 0 && x < rowRef.cols.size());
+	return rowRef.cols[x];
+}
+
+bool GetCellClicked(tbl& table, guitheme_t* theme, glm::vec2 mouse, glm::ivec2& idx, glm::ivec2& screenPos, glm::ivec2& screenSize) {
+	idx.x = -1;
+	idx.y = -1;
+	float tableHeight = table.rows.size()*table.rowHeight;
+	if (mouse.y >= 0 && mouse.y < tableHeight) {
+		idx.y = (mouse.y - (table.titleCols.size()?table.titleHeight:0))/table.rowHeight;
+		screenPos.y = idx.y*table.rowHeight;
+		screenSize.y = table.rowHeight;
+		int numCols = table.colSizes.size();
 		float xPos = 0;
-		for (int xCol = 0; xCol < nTitleCols; xCol++) {
-			if (mouse.x >= xPos && mouse.x < xPos+table.colSizes[xCol]) {
-				return xCol;
+		for (int xCol = 0; xCol < numCols; xCol++) {
+			float xColW = table.colSizes[xCol];
+			if (mouse.x >= xPos && mouse.x < xPos+xColW) {
+				screenPos.x = xPos;
+				screenSize.x = xColW;
+				idx.x = xCol;
+				return true;
 			}
-			xPos+=table.colSizes[xCol];
+			xPos+=xColW;
 		}
-		if (mouse.x >= xPos) {
-			return nTitleCols-1;
-		}
-		return -1;
-	};
-	res.x = colClicked();
-	if (nTitleCols && mouse.y < table.titleHeight) {
-		res.y = -1;
-	} else {
-		int idx = (mouse.y - (nTitleCols?table.titleHeight:0))/table.rowHeight;
-		res.y = idx;
+
 	}
 	return false;
 }
-void draw(tbl& table, NVGcontext* vg, guitheme_t* theme, vec2 pos, vec2 size, float fontSize) {
+void DrawTableNVG(tbl& table, NVGcontext* vg, guitheme_t* theme, vec2 pos, vec2 size, float fontSize) {
 	int nTitleCols = table.titleCols.size();
 	table_ctxt_t ctxt = {vg, theme, pos, size, fontSize};
 
@@ -147,14 +164,14 @@ void draw(tbl& table, NVGcontext* vg, guitheme_t* theme, vec2 pos, vec2 size, fl
 			if (nTitleCols) {
 				ctxt.size = ivec2(colSizeX, table.titleHeight);
 				nvgFontSize(ctxt.vg, fontSize);
-				drawTbl(ctxt, table.titleCols[xCol]);
+				tableDrawEntry(ctxt, table.titleCols[xCol]);
 				pos.y+=table.titleHeight;
 			}
 			for (int yRow = 0; yRow < nContentRows; yRow++) {
 				tbl_row_t& row = table.rows[yRow];
 				ctxt.size = ivec2(colSizeX, table.rowHeight);
 				nvgFontSize(ctxt.vg, fontSize);
-				drawTbl(ctxt, row.cols[xCol]);
+				tableDrawEntry(ctxt, row.cols[xCol]);
 				ctxt.pos.y+=table.rowHeight;
 			}
 			ctxt.pos.x+=colSizeX;
@@ -166,7 +183,7 @@ void draw(tbl& table, NVGcontext* vg, guitheme_t* theme, vec2 pos, vec2 size, fl
 			for (int xCol = 0; xCol < nTitleCols; xCol++) {
 				ctxt.size = ivec2(table.colSizes[xCol], table.titleHeight);
 				nvgFontSize(ctxt.vg, fontSize);
-				drawTbl(ctxt, table.titleCols[xCol]);
+				tableDrawEntry(ctxt, table.titleCols[xCol]);
 				ctxt.pos.x+=table.colSizes[xCol];
 			}
 			pos.y+=table.titleHeight;
@@ -180,7 +197,7 @@ void draw(tbl& table, NVGcontext* vg, guitheme_t* theme, vec2 pos, vec2 size, fl
 				float x = table.colSizes[xCol];
 				ctxt.size = ivec2(table.colSizes[xCol], table.rowHeight);
 				nvgFontSize(ctxt.vg, fontSize);
-				drawTbl(ctxt, row.cols[xCol]);
+				tableDrawEntry(ctxt, row.cols[xCol]);
 				ctxt.pos.x+=x;
 			}
 			ctxt.pos.y+=table.rowHeight;
@@ -194,7 +211,7 @@ void draw(tbl& table, NVGcontext* vg, guitheme_t* theme, vec2 pos, vec2 size, fl
 		nvgBeginPath(vg);
 		nvgMoveTo(vg, pos.x, ctxt.pos.y);
 		nvgLineTo(vg, ctxt.pos.x, ctxt.pos.y);
-		nvgStrokeColor(vg, theme->getColor(COL_LINE_SEPERATOR));
+		nvgStrokeColor(vg, theme->getColor(GuiColor::COL_LINE_SEPERATOR));
 		nvgStroke(vg);
 	}
 	int nMaxCols = table.colSizes.size();
@@ -204,7 +221,9 @@ void draw(tbl& table, NVGcontext* vg, guitheme_t* theme, vec2 pos, vec2 size, fl
 		nvgBeginPath(vg);
 		nvgMoveTo(vg, ctxt.pos.x, pos.y);
 		nvgLineTo(vg, ctxt.pos.x, pos.y+height);
-		nvgStrokeColor(vg, theme->getColor(COL_LINE_SEPERATOR));
+		nvgStrokeColor(vg, theme->getColor(GuiColor::COL_LINE_SEPERATOR));
 		nvgStroke(vg);
 	}
+}
+
 }

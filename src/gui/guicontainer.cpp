@@ -21,11 +21,11 @@ using glm::ivec4;
 void guictr_base::renderTitleBarHorizontal(NVGcontext* vg, String text, float textOffsetX, int flags) {
 	NVGcolor c;
 	if (flags & FLAG_SELECTED) {
-		c = theme->getColor(COL_BG_DRK_SELECTED);
+		c = theme->getColor(GuiColor::COL_BG_DRK_SELECTED);
 	} else if (flags & FLAG_FOCUSED) {
-		c = theme->getColor(COL_BG_DRK_FOCUSED);
+		c = theme->getColor(GuiColor::COL_BG_DRK_FOCUSED);
 	} else {
-		c = theme->getColor(COL_BG_BRT);
+		c = theme->getColor(GuiColor::COL_BG_BRT);
 	}
 	ivec2 sizeContent = getSizeContent();
 	const int32_t hpt = theme->get(G_PLUGIN_TITLE_HEIGHT);
@@ -39,6 +39,10 @@ void guictr_base::renderTitleBarHorizontal(NVGcontext* vg, String text, float te
 	}
 }
 void guictr_base::render(NVGcontext* vg) {
+	if (isBackgroundRendered()) {
+		renderBackground(vg);
+	}
+	isVisible();
 	if (!setScissorTransform(vg)) {
 		return;
 	}
@@ -103,7 +107,7 @@ void guictr_tabbed::setActiveEntry(int32_t idx) {
 		this->activeEntry = entry;
 		this->activeEntry->active = true;
 		this->add(this->activeEntry->tabCtr);
-		if (this->parent) {
+		if (this->parentCtrl) {
 			this->layout();
 		}
 	}

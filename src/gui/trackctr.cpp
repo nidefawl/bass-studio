@@ -7,9 +7,10 @@
 #include "trackctr.h"
 #include "trackcontent.h"
 #include "trackcontrols.h"
-#include "contextmenus.h"
 #include "track.h"
 #include "track_impl.h"
+
+#include "guicontextmenu_daw.h"
 
 
 void guitrack_mixers::render(NVGcontext* vg) {
@@ -19,7 +20,7 @@ void guitrack_mixers::render(NVGcontext* vg) {
 	ivec2 cs = getSizeContent();
 	nvgBeginPath(vg);
 	nvgRect(vg, 0, 0, cs.x, cs.y);
-	nvgFillColor(vg, theme->getColor(COL_GRID_BRT));
+	nvgFillColor(vg, theme->getColor(GuiColor::COL_GRID_BRT));
 	nvgFill(vg);
 	for (track_t* g : project.tracksBottom) {
 		//content
@@ -57,7 +58,7 @@ void drawSeperator(NVGcontext* vg, guitheme_t* theme, int32_t seperatorY, ivec2&
 	nvgBeginPath(vg);
 	nvgMoveTo(vg, 0, seperatorY);
 	nvgLineTo(vg, cs.x, seperatorY);
-	nvgStrokeColor(vg, theme->getColor(COL_LINE_SEPERATOR));
+	nvgStrokeColor(vg, theme->getColor(GuiColor::COL_LINE_SEPERATOR));
 	nvgStrokeWidth(vg, TRACK_HEIGHT_SPACING);
 	nvgStroke(vg);
 }
@@ -263,7 +264,7 @@ void guictr_tracks::render(NVGcontext* vg) {
 		nvgBeginPath(vg);
 		nvgMoveTo(vg, trackControls.left(), trackControls.top());
 		nvgLineTo(vg, trackControls.left(), trackControls.bottom());
-		nvgStrokeColor(vg, theme->getColor(COL_LINE_SEPERATOR));
+		nvgStrokeColor(vg, theme->getColor(GuiColor::COL_LINE_SEPERATOR));
 		nvgStrokeWidth(vg, 3);
 		nvgStroke(vg);
 

@@ -22,7 +22,7 @@ public:
 		if (contains(ctxtSize, mouse)) {
 			nvgBeginPath(vg);
 			nvgRect(vg, 0, y, ctxtSize.x, height);
-			nvgFillColor(vg, theme->getColor(COL_CTXTMNU_HILIGHT));
+			nvgFillColor(vg, theme->getColor(GuiColor::COL_CTXTMNU_HILIGHT));
 			nvgFill(vg);
 		}
 //		nvgText(vg, leftOffset(), y + height / 2, StringAsCStr(title), NULL);
@@ -104,7 +104,7 @@ public:
 		setScissorTransform(vg);
 		nvgBeginPath(vg);
 		nvgRect(vg, pos.x, pos.y, size.x, size.y);
-		nvgFillColor(vg, theme->getColor(COL_BG_BRT));
+		nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_BRT));
 		nvgFill(vg);
 		for (guibase* gui : guis) {
 			gui->render(vg);

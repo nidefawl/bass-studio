@@ -98,7 +98,7 @@ class guictr_dragged_plugins : public guictr_base {
 public:
 	std::vector<effectbase*> effects;
 	audio_stage_t* trackImpl = nullptr;
-	tbl table;
+	Table::tbl table;
 	guictr_dragged_plugins() : guictr_base() {
 		pos = {0, 0};
 	}
@@ -117,7 +117,7 @@ public:
 		ivec2 inset = {2, 2};
 		nvgFontFace(vg, "sans");
 		nvgFillColor(vg, G_WHITE);
-		draw(this->table, vg, theme, pos+inset, size-inset*2, HEIGHT_ENTRY-4);
+		Table::DrawTableNVG(this->table, vg, theme, pos+inset, size-inset*2, HEIGHT_ENTRY-4);
 	}
 	void setStrings(std::vector<String>& list) {
 		size = ivec2(200, list.size()*HEIGHT_ENTRY+4);
@@ -125,11 +125,11 @@ public:
 		table.rowHeight = HEIGHT_ENTRY;
 		table.rows.clear();
 		for (String s : list) {
-			tbl_row_t row;
+			Table::tbl_row_t row;
 			row.cols.push_back(s);
 			table.rows.push_back(row);
 		}
-		adjustColSizes(table, size);
+		Table::AdjustColSizes(table, size);
 	}
 	bool isDragMoveable() {
 		return true;

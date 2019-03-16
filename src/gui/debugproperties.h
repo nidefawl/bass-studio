@@ -11,4 +11,4 @@ public:
 	virtual void setDebugPropertyHandle(void *ptr) = 0;
 };
 
-debugproperties* getPropertiesTable();
+void setDebugPropertyHandle(void* ptr);

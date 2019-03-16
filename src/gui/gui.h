@@ -24,6 +24,9 @@ using glm::ivec2;
 #define GUI_PLUGIN 2
 
 struct NVGcontext;
+namespace Table {
+struct tbl;
+}
 class guitrack_editor;
 class guiplugin;
 class guictr_dragged_plugins;
@@ -32,9 +35,6 @@ class gui_pluginlist_entry;
 class gui_track;
 struct dragdrop_midifile;
 
-extern int allocCount;
-extern std::vector<guibase*>* g_guis;
-void initColor();
 void setFont(NVGcontext* vg, float size, NVGcolor color, int alignment);
 void renderText(NVGcontext* ctx, float x, float y, float maxWidth, const char* string);
 void renderDashedLineFrame(NVGcontext* vg, float x, float y, float w, float h, float thickness);
@@ -54,42 +54,52 @@ enum TextInputState : signed int {
 	DISABLED = 0,
 	ENABLED = 1
 };
+template<typename T>
+void addPropertiesFromGui(T& gui, Table::tbl* table);
+template<>
+void addPropertiesFromGui(guibase& gui, Table::tbl* table);
 #define FLAG_FOCUSED 1
 #define FLAG_SELECTED 2
 class guibase {
 public:
 	ivec2 pos{0};
 	ivec2 size{0};
-	guibase* parent = NULL;
-	int zOrder = 0;
 	int id;
-	guitheme_t* theme = getDefaultTheme();
-	int flags = FLG_ENBL|FLG_VISIBLE;
-	bool canTextInput = false;
-	String label = "";
-	int curTooltip = 0;
+	int flags = FLG_ENBL|FLG_VISIBLE|FLG_RENDER_BACKGROUND;
+	int zOrder = 0;
 	BaseCtrl* parentCtrl = nullptr;
+	guibase* parent = NULL;
+	guitheme_t* theme = getDefaultTheme();
 	SafeRef<guibase> safeRef;
+	String label = "";
 //	const int guiType;
-	guibase(int guiTypeId = 0) /*: guiType(guiTypeId)*/ {
-		id = allocCount;
-		allocCount++;
-		g_guis->push_back(this);
-	}
+	guibase(int guiTypeId = 0);
 	guibase(ivec2 _pos, ivec2 _size) : guibase() {
 		this->pos = _pos;
 		this->size = _size;
 	}
 	SafeRef<guibase> makeSafeRef();
 	virtual ~guibase();
+	virtual bool isVisible() {
+		return (flags & FLG_VISIBLE) != 0;
+	}
 	void setVisible(bool b) {
 		if (!b)
 			flags &= ~FLG_VISIBLE;
 		else
 			flags |= FLG_VISIBLE;
 	}
-	bool isVisible() {
-		return (flags & FLG_VISIBLE) != 0;
+	virtual bool isBackgroundRendered() {
+		return (flags & FLG_RENDER_BACKGROUND) != 0;
+	}
+	void setBackgroundRendered(bool b) {
+		if (!b)
+			flags &= ~FLG_RENDER_BACKGROUND;
+		else
+			flags |= FLG_RENDER_BACKGROUND;
+	}
+	virtual bool isEnabled() {
+		return (flags & FLG_ENBL) != 0;
 	}
 	void setEnabled(bool b) {
 		if (!b)
@@ -97,30 +107,33 @@ public:
 		else
 			flags |= FLG_ENBL;
 	}
-	bool isEnabled() {
-		return (flags & FLG_ENBL) != 0;
+	virtual bool hovered() const {
+		return this == parentCtrl->guiOver;
+	}
+	virtual bool pressed() const {
+		return this == parentCtrl->guiDragged;
+	}
+	virtual bool focused() const {
+		return this == parentCtrl->guiFocused;
 	}
 
-	bool hasTextinput() {
-		return canTextInput;
-	}
 	String getClassName() {
 		return typeName(*this);
 	}
 	void setLabel(String _str) {
 		label = _str;
 	}
-	void setColor(uint32_t hex) {
+	void setTint(uint32_t hex) {
 		if (theme->isDefault) {
 			theme = new guitheme_t(false);
 		}
-		theme->setBgColor(hex);
+		theme->setTint(hex);
 	}
-	void setActiveColor(uint32_t hex) {
+	void setBackgroundColor(uint32_t hex) {
 		if (theme->isDefault) {
 			theme = new guitheme_t(false);
 		}
-		theme->setActiveColor(hex);
+		theme->setBackgroundColor(hex);
 	}
 	guibase(const guibase&) = default; guibase& operator=(const guibase&) = default;
 	guibase(guibase&&) = default; guibase& operator=(guibase&&) = default;
@@ -172,6 +185,9 @@ public:
 	virtual void onRemove() {
 	}
 	virtual void onAdded() {
+		if (theme->isDefault && parent) {
+			theme = parent->theme;
+		}
 	}
 	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 		return false;
@@ -243,6 +259,11 @@ public:
 	virtual void dragMoveOn(guibase* target, ivec2 mousepos) {
 	}
 	virtual void dragReleaseOn(guibase* target, ivec2 mousepos) {
+	}
+	virtual void addProperties(Table::tbl* table) {
+#ifdef BUILD_BUILTIN_EFFECT
+		addPropertiesFromGui(*this, table);
+#endif
 	}
 	virtual void buttonClicked(guibase* button) {
 	}
@@ -323,7 +344,26 @@ public:
 		return false;
 	}
 	virtual int32_t getStateFlags() {
-		return this->flags & (FLG_ENBL | FLG_VISIBLE);
+		int32_t flgs = this->flags & ( FLG_VISIBLE | FLG_RENDER_BACKGROUND);
+		if (pressed()) {
+			flgs |= FLG_DRG;
+		}
+		if (hovered()) {
+			flgs |= FLG_HVRD;
+		}
+		if (focused()) {
+			flgs |= FLG_FOC;
+		}
+		if (isEnabled()) {
+			flgs |= FLG_ENBL;
+		}
+		if (isVisible()) {
+			flgs |= FLG_VISIBLE;
+		}
+		if (isBackgroundRendered()) {
+			flgs |= FLG_RENDER_BACKGROUND;
+		}
+		return flgs;
 	}
 	//implementation specific
 	virtual bool isSelected() {
@@ -333,9 +373,14 @@ public:
 	BaseCtrl* getControl() const {
 		return parentCtrl;
 	}
-
 	virtual void setControl(BaseCtrl* parentCtrl) {
 		this->parentCtrl = parentCtrl;
+		if (parentCtrl)
+			this->theme = parentCtrl->getTheme();
+	}
+
+	virtual void setParent(guibase* parent) {
+		this->parent = parent;
 	}
 
 protected:

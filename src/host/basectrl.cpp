@@ -1,3 +1,4 @@
+#include "glheaders.h"
 #include <nanovg.h>
 #include <time.h>
 #include <algorithm>
@@ -8,7 +9,8 @@
 #include "basectrl.h"
 #include "../gui/gui.h"
 #include "../gui/guicontainer.h"
-#include "../gui/guicontextmenu.h"
+#include "../gui/guicontextmenu_base.h"
+#include "../gui/theme.h"
 
 #include "window.h"
 #include "platform.h"
@@ -135,6 +137,25 @@ void BaseCtrl::mouseUp(ivec2 mousePos, int button) {
 MouseHitEvt BaseCtrl::mouseHitEvt(MouseHitType _type) {
 	return {_type, window->getKeyMods()};
 
+}
+void BaseCtrl::focusGui(guibase* gui) {
+	if (guiCaptured != NULL) {
+		return;
+	}
+	guibase* oldFocused = guiFocused;
+	guibase* newFocus = gui != NULL ? gui->getFocusedControl() : NULL;
+	guiCtrFocused = gui != NULL ? gui->getFocusedContainer() : NULL;
+	if (oldFocused != newFocus) {
+		MouseHitEvt evt(MouseHitType::MOUSE_LEFT, 0);
+		if (oldFocused) {
+			oldFocused->focusEvent(evt, false);
+		}
+		if (newFocus && newFocus->focusEvent(evt, true)) {
+			guiFocused = newFocus;
+		} else if (!newFocus) {
+			guiFocused = nullptr;
+		}
+	}
 }
 void BaseCtrl::mouseDown(ivec2 mousePos, int button, bool doubleclick) {
 	if (!mouseDownPre()) {
@@ -296,6 +317,9 @@ void BaseCtrl::prerender(int32_t x, int32_t y, int32_t w, int32_t h, float pixel
 	}
 }
 void BaseCtrl::render(int32_t x, int32_t y, int32_t w, int32_t h, float ratio) {
+	NVGcolor col = getTheme()->getColor(GuiColor::COL_CLEAR_COLOR);
+	glClearColor(col.r, col.g, col.b, col.a);
+	glClear(GL_COLOR_BUFFER_BIT);
 	static int test = 0;
 	nvgBeginFrame(vg, w, h, ratio);
 	nvgLineJoin(vg, NVGlineCap::NVG_BEVEL);
@@ -313,8 +337,28 @@ void BaseCtrl::render(int32_t x, int32_t y, int32_t w, int32_t h, float ratio) {
 	}
 #if RENDER_DBG_BRD
 	int colorIdx = 0;
+	auto renderDebug = [](NVGcontext* vg, guictr_base *ctr, NVGcolor color) {
+		nvgBeginPath(vg);
+		nvgRect(vg, ctr->pos.x, ctr->pos.y, ctr->size.x, ctr->size.y);
+		nvgFillColor(vg, color);
+		nvgFill(vg);
+		ivec2 posInset = ctr->getPosContent();
+		ivec2 sizeInset = ctr->getSizeContent();
+		nvgBeginPath(vg);
+		nvgRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y);
+		nvgFillColor(vg, color);
+		nvgFill(vg);
+	};
+	static NVGcolor dbgcolorsa[5] = {
+		nvgRGBA(255, 0, 0, 55),
+		nvgRGBA(0, 255, 0, 55),
+		nvgRGBA(0, 0, 255, 55),
+		nvgRGBA(255, 0, 255, 55),
+		nvgRGBA(255, 255, 0, 55)
+	};
+
 	for (guictr_base *ctr : containers) {
-		ctr->renderDebug(vg, dbgcolors[colorIdx++ % 5]);
+		renderDebug(vg, ctr, dbgcolorsa[colorIdx++ % 5]);
 	}
 #endif
 
@@ -413,6 +457,9 @@ void AppCtrl::openContextMenu(guictxtmenu_base *b, ivec2 pos) {
 		contextWindow = this->mainWindow->createOverlay();
 	}
 	if (contextWindow) {
+		auto* thisTheme = contextWindow->getCtrl()->getTheme();
+		*thisTheme = *getTheme();
+		thisTheme->setColor(GuiColor::COL_CLEAR_COLOR, 0xff000000);
 		contextWindow->getCtrl()->open(b, windowPos+pos);
 	}
 }
@@ -425,6 +472,30 @@ void AppCtrl::closeContextMenu() {
 }
 bool AppCtrl::hasContextMenu() {
 	return this->contextWindow && this->contextWindow->isShown();
+}
+void AppCtrl::onCharInput(unsigned int codepoint) {
+	window_overlay* wnd = this->contextWindow;
+	if (wnd && wnd->isShown()) {
+		if (wnd->getCtrl()->hasInputFocus()) {
+			wnd->getCtrl()->onCharInput(codepoint);
+			wnd->requestRedraw();
+			return;
+		}
+	}
+	BaseCtrl::onCharInput(codepoint);
+}
+void AppCtrl::onKeyInput(int key, int scancode, int keyState, int mods, const char* key_name)
+{
+	window_overlay* wnd = this->contextWindow;
+	if (wnd && wnd->isShown()) {
+		if (wnd->getCtrl()->hasInputFocus()) {
+			wnd->getCtrl()->onKeyInput(key, scancode, keyState, mods, key_name);
+			wnd->requestRedraw();
+			return;
+		}
+	}
+	BaseCtrl::onKeyInput(key, scancode, keyState, mods, key_name);
+
 }
 
 void AppCtrl::updateMenubar() {

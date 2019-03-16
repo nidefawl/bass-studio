@@ -21,7 +21,8 @@ protected:
 	bool* enabledPtr = NULL;
 	float* valuePtr = NULL;
 	float value = 0.0f;
-	const bool renderBackground;
+	bool isSlider;
+	bool renderBackground;
 	bool changedValue = false;
 	float initialValue = 0.0f;
 	float lastVal = 0.0f;
@@ -35,9 +36,9 @@ public:
     std::function<void(float,float)> fnValueEditChanged;
     std::function<void(float,float)> fnValueEditFinish;
     std::function<void(MouseHitEvt&, bool)> fnFocus;
-	NVGcolor valColor = G_BLUE;
-	NVGcolor indColor = G_WHITE;
-	guiknob(const bool _renderBackground = true) : guibase(), renderBackground(_renderBackground) {
+	GuiColor::constant_t valColor = GuiColor::COL_KNOB;
+	GuiColor::constant_t indColor = GuiColor::COL_KNOB_IND;
+	guiknob(const bool _renderBackground = true, const bool _isSlider = false) : guibase(), isSlider(_isSlider), renderBackground(_renderBackground) {
 	}
 #ifdef BUILD_BUILTIN_EFFECT
 	void setAutomationRef(automatable_t* _paramAutomatable, int32_t _paramIdx) {
@@ -46,13 +47,20 @@ public:
 	}
 	void setAutomationHandlers();
 #endif
-	virtual bool hovered() {
+	bool isAutomated();
+	void setRenderBackground(bool b) {
+		this->renderBackground = b;
+	}
+	void setIsSlider(bool b) {
+		this->isSlider = b;
+	}
+	virtual bool hovered() const override {
 		return this == parentCtrl->guiOver;
 	}
-	virtual bool pressed() {
+	virtual bool pressed() const override {
 		return this == parentCtrl->guiDragged;
 	}
-	virtual bool focused() {
+	virtual bool focused() const override {
 		return this == parentCtrl->guiFocused;
 	}
 	virtual void handleDraggedBegin(MouseEvent& evt) {
@@ -100,15 +108,8 @@ public:
 		if (parent)
 			parent->rightClicked(evt, this);
 	}
-	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-		if (contains(mpos)) {
-			evt.requestFocus(this);
-			return true;
-		}
-		return false;
-	}
+	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
 	void renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS);
-	virtual void updateAutomationState(NVGcontext* vg);
 	virtual void render(NVGcontext* vg);
 	float getValueInternal() {
 		return value;
@@ -118,6 +119,7 @@ public:
 		if (valuePtr) {
 			*valuePtr = newValue;
 		}
+		setDisplayValue(newValue);
 	}
 	void setValue(float newValue, int flags) {
 		float curval = getValue();
@@ -131,12 +133,19 @@ public:
 		if (fnValueEditChanged) {
 			fnValueEditChanged(curval, getValue());
 		}
+		setDisplayValue(newValue);
+	}
+	virtual void setDisplayValue(float f) {
+
 	}
 	virtual void onValueEditFinish(float from, float to) {
 		if (fnValueEditFinish) {
 			fnValueEditFinish(from, to);
 		}
 
+	}
+	float getValueClamped() {
+		return CLAMP_F(getValue());
 	}
 	virtual float getValue() {
 		if (fnGetValue) {
