@@ -1,11 +1,27 @@
 
+set(DEPS_BUILD_FOLDER "${DAW_DEPS_PATH}/build" CACHE PATH "deps build-directory")
+set(USE_SHARED_LIBS Off)
+if (USE_SHARED_LIBS)
+    set(BUILD_PATH_SUFFIX "${CMAKE_CXX_COMPILER_ID}-${CMAKE_BUILD_TYPE}-shared")
+else()
+    set(BUILD_PATH_SUFFIX "${CMAKE_CXX_COMPILER_ID}-${CMAKE_BUILD_TYPE}-static")
+endif(USE_SHARED_LIBS)
+set(BUILD_BINARY_SUFFIX "${CMAKE_CXX_COMPILER_ID}-${CMAKE_BUILD_TYPE}")
+string(TOLOWER ${BUILD_PATH_SUFFIX} BUILD_PATH_SUFFIX)
+# string(TOLOWER ${BUILD_BINARY_SUFFIX} BUILD_BINARY_SUFFIX)
+set(DEPS_BUILD_FOLDER_LIBS "lib-${BUILD_PATH_SUFFIX}")
+set(DEPS_BUILD_FOLDER_TMP "tmp-${BUILD_PATH_SUFFIX}")
+message(STATUS "BUILD_PATH_SUFFIX ${BUILD_PATH_SUFFIX}")
+message(STATUS "DEPS_BUILD_FOLDER_LIBS ${DEPS_BUILD_FOLDER_LIBS}")
+message(STATUS "GLFW PATH ${DEPS_BUILD_FOLDER}/${DEPS_BUILD_FOLDER_LIBS}/glfw/")
+
 include_directories("${DAW_SRC_PATH}")
 include_directories("${DAW_SRC_PATH}/include")
 include_directories(SYSTEM "${DAW_SRC_PATH}/nanovg")
 include_directories(SYSTEM
-    ${DAW_DEPS_PATH}/build/lib/glfw/include
-    ${DAW_DEPS_PATH}/build/lib/SQLiteCpp/include
-    ${DAW_DEPS_PATH}/build/lib/soxr/include
+    ${DEPS_BUILD_FOLDER}/${DEPS_BUILD_FOLDER_LIBS}/glfw/include
+    ${DEPS_BUILD_FOLDER}/${DEPS_BUILD_FOLDER_LIBS}/SQLiteCpp/include
+    ${DEPS_BUILD_FOLDER}/${DEPS_BUILD_FOLDER_LIBS}/soxr/include
     ${DAW_DEPS_PATH}/glad/include
     ${DAW_DEPS_PATH}/glad/src
     ${DAW_DEPS_PATH}/glm

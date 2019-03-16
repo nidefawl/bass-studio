@@ -1,31 +1,68 @@
 
-set(DEPS_BUILD_FOLDER "${DAW_DEPS_PATH}/build" CACHE STRING "build subdirectory")
-
+if (USE_SHARED_LIBS)
+set(BUILD_PATH_LIB_TYPE "shared")
+else()
+set(BUILD_PATH_LIB_TYPE "static")
+endif()
+set(BUILD_PATH_LIB_RELEASE "lib-${CMAKE_CXX_COMPILER_ID}-release-${BUILD_PATH_LIB_TYPE}")
+set(BUILD_PATH_LIB_DEBUG "lib-${CMAKE_CXX_COMPILER_ID}-debug-${BUILD_PATH_LIB_TYPE}")
+string(TOLOWER ${BUILD_PATH_LIB_RELEASE} BUILD_PATH_LIB_RELEASE)
+string(TOLOWER ${BUILD_PATH_LIB_DEBUG} BUILD_PATH_LIB_DEBUG)
+set(BUILD_PATH_LIB_RELEASE "${DEPS_BUILD_FOLDER}/${BUILD_PATH_LIB_RELEASE}")
+set(BUILD_PATH_LIB_DEBUG "${DEPS_BUILD_FOLDER}/${BUILD_PATH_LIB_DEBUG}")
+message(STATUS "BUILD_PATH_LIB_RELEASE ${BUILD_PATH_LIB_RELEASE}")
+message(STATUS "BUILD_PATH_LIB_DEBUG ${BUILD_PATH_LIB_DEBUG}")
 find_library(
-    GLFW_LIB 
+    GLFW_LIB_RELEASE
     NAMES "glfw3" "glfw3dll"
-    PATHS ${DEPS_BUILD_FOLDER}/lib/glfw/
+    PATHS ${BUILD_PATH_LIB_RELEASE}/glfw/
     PATH_SUFFIXES lib
     NO_DEFAULT_PATH)
 find_library(
-    SQLITECPP_LIB NAMES "SQLiteCpp"
-    PATHS ${DEPS_BUILD_FOLDER}/lib/SQLiteCpp/
+    SQLITECPP_LIB_RELEASE NAMES "SQLiteCpp"
+    PATHS ${BUILD_PATH_LIB_RELEASE}/SQLiteCpp/
     PATH_SUFFIXES lib
     NO_DEFAULT_PATH)
 find_library(
-    SOXR_LIB NAMES "soxr"
-    PATHS ${DEPS_BUILD_FOLDER}/lib/soxr/
+    SOXR_LIB_RELEASE NAMES "soxr"
+    PATHS ${BUILD_PATH_LIB_RELEASE}/soxr/
     PATH_SUFFIXES lib
     NO_DEFAULT_PATH)
 find_library(
-    PORTAUDIO_LIB NAMES "portaudio" "portaudio.dll" "portaudio_static_x64"
-    PATHS ${DEPS_BUILD_FOLDER}/lib/portaudio/
+    PORTAUDIO_LIB_RELEASE NAMES "portaudio" "portaudio.dll" "portaudio_static_x64"
+    PATHS ${BUILD_PATH_LIB_RELEASE}/portaudio/
     PATH_SUFFIXES lib
     NO_DEFAULT_PATH)
-message (STATUS "glfw3 = ${GLFW_LIB}")
-message (STATUS "SQLiteCpp = ${SQLITECPP_LIB}")
-message (STATUS "soxr = ${SOXR_LIB}")
-message (STATUS "portaudio = ${PORTAUDIO_LIB}")
+find_library(
+    GLFW_LIB_DEBUG
+    NAMES "glfw3" "glfw3dll"
+    PATHS ${BUILD_PATH_LIB_DEBUG}/glfw/
+    PATH_SUFFIXES lib
+    NO_DEFAULT_PATH)
+find_library(
+    SQLITECPP_LIB_DEBUG NAMES "SQLiteCpp"
+    PATHS ${BUILD_PATH_LIB_DEBUG}/SQLiteCpp/
+    PATH_SUFFIXES lib
+    NO_DEFAULT_PATH)
+find_library(
+    SOXR_LIB_DEBUG NAMES "soxr"
+    PATHS ${BUILD_PATH_LIB_DEBUG}/soxr/
+    PATH_SUFFIXES lib
+    NO_DEFAULT_PATH)
+find_library(
+    PORTAUDIO_LIB_DEBUG NAMES "portaudio" "portaudio.dll" "portaudio_static_x64"
+    PATHS ${BUILD_PATH_LIB_DEBUG}/portaudio/
+    PATH_SUFFIXES lib
+    NO_DEFAULT_PATH)
+
+message (STATUS "glfw3 debug = ${GLFW_LIB_DEBUG}")
+message (STATUS "glfw3 release = ${GLFW_LIB_RELEASE}")
+message (STATUS "SQLiteCpp debug = ${SQLITECPP_LIB_DEBUG}")
+message (STATUS "SQLiteCpp release = ${SQLITECPP_LIB_RELEASE}")
+message (STATUS "soxr debug = ${SOXR_LIB_DEBUG}")
+message (STATUS "soxr release = ${SOXR_LIB_RELEASE}")
+message (STATUS "portaudio debug = ${PORTAUDIO_LIB_DEBUG}")
+message (STATUS "portaudio release = ${PORTAUDIO_LIB_RELEASE}")
 
 FIND_PACKAGE ( Threads REQUIRED )
 if (UNIX)
