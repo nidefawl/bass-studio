@@ -136,14 +136,23 @@ static LONG WINAPI TopLevelExceptionHandler(PEXCEPTION_POINTERS pExceptionInfo)
 {
 	DWORD excCode = pExceptionInfo->ExceptionRecord->ExceptionCode;
 	excDescription = StringFormat("Application crash: %s (0x%08X)", _exc_as_str(excCode), (int)excCode);
-//	std::cout << s << std::endl;
-	//	ngui::show(StringAsCStr(s), "Error", ngui::Style::Error, ngui::Buttons::OK);
 	std::terminate();
-//	exit(1);
     return EXCEPTION_EXECUTE_HANDLER;
 }
+#if defined(_MSC_VER)
+int __cdecl DebugReportHook(int nReportType, char*, int* pnRet)
+{
+	int ret = nReportType == _CRT_ASSERT || nReportType == _CRT_ERROR;
+	*pnRet = ret;
+	return ret ? TRUE : FALSE;
+}
+#endif
 void setExceptionHandler() {
-
+#if defined(_MSC_VER)
+	//this is here to trigger a breakpoint when assert(0) is called using the ms c-runtime
+	//by default ms crt throws an exception on assert(0) and opens a dialog that interferes with out wndProc
+	_CrtSetReportHook2(_CRT_RPTHOOK_INSTALL, DebugReportHook);
+#endif
 	SetErrorMode(SEM_FAILCRITICALERRORS|SEM_NOALIGNMENTFAULTEXCEPT|SEM_NOGPFAULTERRORBOX|SEM_NOOPENFILEERRORBOX);
     SetUnhandledExceptionFilter(TopLevelExceptionHandler);
 }
