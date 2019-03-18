@@ -211,117 +211,119 @@ void horizontalLineAt(guictr_base* gui, NVGcontext* vg, ivec2 posHL) {
 	nvgLineCap(vg, NVGlineCap::NVG_BUTT);
 }
 void guictr_tracks::render(NVGcontext* vg) {
-		guictr_base::renderBackground(vg);
-		ivec2 cs = getSizeContent();
-		ivec2 cp = getPosContent();
-		if (cs.y <= 0 || cs.x <= 0) {
-			return;
-		}
-		nvgIntersectScissor(vg, cp.x, cp.y, cs.x, cs.y);
-		nvgTranslate(vg, cp.x, cp.y);
-		nvgSave(vg);
-			trackView.render(vg);
-		nvgRestore(vg);
-		nvgSave(vg);
-			trackControls.render(vg);
-		nvgRestore(vg);
-		nvgSave(vg);
-			trackTimeline.render(vg);
-		nvgRestore(vg);
+	if (isBackgroundRendered()){
+		renderBackground(vg);
+	}
+	ivec2 cs = getSizeContent();
+	ivec2 cp = getPosContent();
+	if (cs.y <= 0 || cs.x <= 0) {
+		return;
+	}
+	nvgIntersectScissor(vg, cp.x, cp.y, cs.x, cs.y);
+	nvgTranslate(vg, cp.x, cp.y);
+	nvgSave(vg);
+		trackView.render(vg);
+	nvgRestore(vg);
+	nvgSave(vg);
+		trackControls.render(vg);
+	nvgRestore(vg);
+	nvgSave(vg);
+		trackTimeline.render(vg);
+	nvgRestore(vg);
 
+	nvgSave(vg);
+	dragdrop_target_indicator& target = MainCtrl::get()->getDragDropTarget();
+	bool renderIndicator = target.ptr == this;
+	ivec2 indicatorPos = target.targetPos;
+	nvgTranslate(vg, 0, trackView.top());
+	int ySplit = getPosYFirstReturnTrack(project);
+	if (ySplit > 0) {
 		nvgSave(vg);
-		dragdrop_target_indicator& target = MainCtrl::get()->getDragDropTarget();
-		bool renderIndicator = target.ptr == this;
-		ivec2 indicatorPos = target.targetPos;
-		nvgTranslate(vg, 0, trackView.top());
-		int ySplit = getPosYFirstReturnTrack(project);
+		nvgIntersectScissor(vg, 0, 0, cs.x, ySplit);
+		for (track_t* g : project.trackCtr) {
+			drawSeperator(vg, theme, g->mixer->bottom()+TRACK_HEIGHT_SPACING_HALF, cs);
+		}
+		nvgRestore(vg);
+	}
+	if (project.tracksBottom.size()) {
 		if (ySplit > 0) {
-			nvgSave(vg);
-			nvgIntersectScissor(vg, 0, 0, cs.x, ySplit);
-			for (track_t* g : project.trackCtr) {
-				drawSeperator(vg, theme, g->mixer->bottom()+TRACK_HEIGHT_SPACING_HALF, cs);
-			}
-			nvgRestore(vg);
+			nvgIntersectScissor(vg, 0, ySplit, cs.x, trackView.size.y-ySplit);
+		} else {
+			nvgIntersectScissor(vg, 0, 0, cs.x, trackView.size.y);
 		}
-		if (project.tracksBottom.size()) {
-			if (ySplit > 0) {
-				nvgIntersectScissor(vg, 0, ySplit, cs.x, trackView.size.y-ySplit);
-			} else {
-				nvgIntersectScissor(vg, 0, 0, cs.x, trackView.size.y);
-			}
-			for (track_t* g : project.tracksBottom) {
-				drawSeperator(vg, theme, g->mixer->top()-TRACK_HEIGHT_SPACING_HALF, cs);
-			}
-		}
-		nvgRestore(vg);
-		if (renderIndicator) {
-			nvgSave(vg);
-			nvgTranslate(vg, 0, trackView.top());
-			horizontalLineAt(this, vg, indicatorPos);
-			nvgRestore(vg);
-		}
-
-		nvgBeginPath(vg);
-		nvgMoveTo(vg, trackControls.left(), trackControls.top());
-		nvgLineTo(vg, trackControls.left(), trackControls.bottom());
-		nvgStrokeColor(vg, theme->getColor(GuiColor::COL_LINE_SEPERATOR));
-		nvgStrokeWidth(vg, 3);
-		nvgStroke(vg);
-
-
-
-
-		nvgSave(vg);
-		loophandles.render(vg);
-		nvgRestore(vg);
-		nvgSave(vg);
-		scrollbar.render(vg);
-		nvgRestore(vg);
-
-		if (trackView.size.x > 0) {
-			nvgIntersectScissor(vg, trackView.pos.x, 0, trackView.size.x, cs.y);
-			nvgTranslate(vg, trackView.pos.x, 0);
-			tick_t pos = project.playbackPos;
-	//		if (project.loopEnabled) {
-	//			if (pos > project.loopStart) {
-	//				pos = project.loopStart + (pos - project.loopStart) % project.loopLen;
-	//			}
-	//		}
-			float playBackX = (float) grid.tickToScreenD(pos);
-			if (playBackX > -4.0f && playBackX < cs.x + 4.0f) {
-				nvgBeginPath(vg);
-				nvgMoveTo(vg, playBackX, 0);
-				nvgLineTo(vg, playBackX, cs.y);
-				nvgStrokeColor(vg, GUI_COLOR(120));
-				nvgStrokeWidth(vg, 3);
-				nvgStroke(vg);
-				nvgBeginPath(vg);
-				nvgMoveTo(vg, playBackX, 0);
-				nvgLineTo(vg, playBackX, cs.y);
-				nvgStrokeColor(vg, GUI_COLOR(250));
-				nvgStrokeWidth(vg, 1);
-				nvgStroke(vg);
-			}
-	//		nvgIntersectScissor(vg, 0, 0, trackView.size.x, trackView.size.y);
-	//		nvgTranslate(vg, 0, trackTimeline.bottom());
-
-	//		double playBackX = grid.tickToScreenD(MainCtrl::get()->playbackPos);
-	//		if (playBackX > -4 && playBackX < cs.x+4) {
-	//			nvgBeginPath(vg);
-	//			nvgMoveTo(vg, playBackX, 0);
-	//			nvgLineTo(vg, playBackX, cs.y);
-	//			nvgStrokeColor(vg, GUI_COLOR(120));
-	//			nvgStrokeWidth(vg, 3);
-	//			nvgStroke(vg);
-	//			nvgBeginPath(vg);
-	//			nvgMoveTo(vg, playBackX, 0);
-	//			nvgLineTo(vg, playBackX, cs.y);
-	//			nvgStrokeColor(vg, GUI_COLOR(250));
-	//			nvgStrokeWidth(vg, 1);
-	//			nvgStroke(vg);
-	//		}
+		for (track_t* g : project.tracksBottom) {
+			drawSeperator(vg, theme, g->mixer->top()-TRACK_HEIGHT_SPACING_HALF, cs);
 		}
 	}
+	nvgRestore(vg);
+	if (renderIndicator) {
+		nvgSave(vg);
+		nvgTranslate(vg, 0, trackView.top());
+		horizontalLineAt(this, vg, indicatorPos);
+		nvgRestore(vg);
+	}
+
+	nvgBeginPath(vg);
+	nvgMoveTo(vg, trackControls.left(), trackControls.top());
+	nvgLineTo(vg, trackControls.left(), trackControls.bottom());
+	nvgStrokeColor(vg, theme->getColor(GuiColor::COL_LINE_SEPERATOR));
+	nvgStrokeWidth(vg, 3);
+	nvgStroke(vg);
+
+
+
+
+	nvgSave(vg);
+	loophandles.render(vg);
+	nvgRestore(vg);
+	nvgSave(vg);
+	scrollbar.render(vg);
+	nvgRestore(vg);
+
+	if (trackView.size.x > 0) {
+		nvgIntersectScissor(vg, trackView.pos.x, 0, trackView.size.x, cs.y);
+		nvgTranslate(vg, trackView.pos.x, 0);
+		tick_t pos = project.playbackPos;
+//		if (project.loopEnabled) {
+//			if (pos > project.loopStart) {
+//				pos = project.loopStart + (pos - project.loopStart) % project.loopLen;
+//			}
+//		}
+		float playBackX = (float) grid.tickToScreenD(pos);
+		if (playBackX > -4.0f && playBackX < cs.x + 4.0f) {
+			nvgBeginPath(vg);
+			nvgMoveTo(vg, playBackX, 0);
+			nvgLineTo(vg, playBackX, cs.y);
+			nvgStrokeColor(vg, GUI_COLOR(120));
+			nvgStrokeWidth(vg, 3);
+			nvgStroke(vg);
+			nvgBeginPath(vg);
+			nvgMoveTo(vg, playBackX, 0);
+			nvgLineTo(vg, playBackX, cs.y);
+			nvgStrokeColor(vg, GUI_COLOR(250));
+			nvgStrokeWidth(vg, 1);
+			nvgStroke(vg);
+		}
+//		nvgIntersectScissor(vg, 0, 0, trackView.size.x, trackView.size.y);
+//		nvgTranslate(vg, 0, trackTimeline.bottom());
+
+//		double playBackX = grid.tickToScreenD(MainCtrl::get()->playbackPos);
+//		if (playBackX > -4 && playBackX < cs.x+4) {
+//			nvgBeginPath(vg);
+//			nvgMoveTo(vg, playBackX, 0);
+//			nvgLineTo(vg, playBackX, cs.y);
+//			nvgStrokeColor(vg, GUI_COLOR(120));
+//			nvgStrokeWidth(vg, 3);
+//			nvgStroke(vg);
+//			nvgBeginPath(vg);
+//			nvgMoveTo(vg, playBackX, 0);
+//			nvgLineTo(vg, playBackX, cs.y);
+//			nvgStrokeColor(vg, GUI_COLOR(250));
+//			nvgStrokeWidth(vg, 1);
+//			nvgStroke(vg);
+//		}
+	}
+}
 gui_track_automationlane* guitrack_editor::addAutomationLane(track_t* t, automatable_t* at, int32_t paramIdx, bool insertFront) {
 	assert(t->audio);
 

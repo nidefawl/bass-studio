@@ -8,7 +8,7 @@
 #include "fileio.h"
 #include "track.h"
 #include "basectrl.h"
-#include "mainctrl.h"
+#include "host/mainctrl.h"
 
 #include "plugin/base_plugin.h"
 #include "plugin/vst_plugin.h"

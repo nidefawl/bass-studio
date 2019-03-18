@@ -41,6 +41,7 @@ class gui_list : public guictr_base, public gui_scrollcontainer {
 public:
 	gui_list(int _rowHeight = 30) : guictr_base(), scrollbar(1, 0.0f, *this), rowHeight(_rowHeight) {
 		add(&scrollbar);
+		setBackgroundRendered(true);
 	}
 	~gui_list() {
 		remove(&scrollbar);
@@ -108,30 +109,7 @@ public:
 //		nvgResetScissor(vg);
 //		nvgResetTransform(vg);
 	}
-	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-		if (this->contains(mpos)) {
-			ivec2 localMouse = this->toContainerSpace(mpos);
-			if (scrollbar.mouseHitTest(localMouse, evt)) {
-//				my_printf("clicked on %s %d\n", scrollbar.getClassName().c_str(), (int) h);
-				return true;
-			}
-			ivec2 localMouseOffset = localMouse;
-			if (first < last) {
-				gui_list_entry* g = listGuis[first];
-				localMouseOffset.y += g->top();
-			}
-			for (int32_t idx = first; idx < last; idx++) {
-				if (listGuis[idx]->mouseHitTest(localMouseOffset, evt)) {
-//					my_printf("clicked on %s %s %d\n", listGuis[idx]->getClassName().c_str(), listGuis[idx]->getText().c_str(), (int) h);
-					return true;
-				}
-			}
-			evt.requestFocus(this);
-//			my_printf("clicked on %s %d\n", getClassName().c_str(), (int) h);
-			return true;
-		}
-		return false;
-	}
+	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
 	void setList(std::vector<gui_list_entry*> _newList) {
 		for (gui_list_entry* g : listGuis) {
 			remove(g);
@@ -166,3 +144,4 @@ public:
 		return scrollbar.handleMouseScroll(evt, xoffset, yoffset);
 	}
 };
+

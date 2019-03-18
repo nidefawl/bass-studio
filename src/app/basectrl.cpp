@@ -7,10 +7,10 @@
 #include <memory>
 #include <GLFW/glfw3.h>
 #include "basectrl.h"
+#include "theme.h"
 #include "../gui/gui.h"
 #include "../gui/guicontainer.h"
 #include "../gui/guicontextmenu_base.h"
-#include "../gui/theme.h"
 
 #include "window.h"
 #include "platform.h"
@@ -332,7 +332,7 @@ void BaseCtrl::render(int32_t x, int32_t y, int32_t w, int32_t h, float ratio) {
 	}
 	if (guiDragged) {
 		nvgSave(vg);
-		guiDragged->renderDragged(vg, this->m_mousePos + dragOffset);
+		guiDragged->renderDragged(vg, this->m_mousePos, dragOffset);
 		nvgRestore(vg);
 	}
 #if RENDER_DBG_BRD
@@ -459,7 +459,7 @@ void AppCtrl::openContextMenu(guictxtmenu_base *b, ivec2 pos) {
 	if (contextWindow) {
 		auto* thisTheme = contextWindow->getCtrl()->getTheme();
 		*thisTheme = *getTheme();
-		thisTheme->setColor(GuiColor::COL_CLEAR_COLOR, 0xff000000);
+//		thisTheme->setColor(GuiColor::COL_CLEAR_COLOR, 0xff000000);
 		contextWindow->getCtrl()->open(b, windowPos+pos);
 	}
 }

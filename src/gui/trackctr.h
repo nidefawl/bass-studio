@@ -459,6 +459,7 @@ public:
 		loophandles(_project, _grid),
 		scrollbar(1, 0.0f, *this)
 	{
+		setBackgroundRendered(true);
 		_grid.addCallback(this);
 		add(&scrollbar);
 		add(&trackTimeline);

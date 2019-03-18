@@ -110,6 +110,8 @@ protected:
 	int32_t number;
 public:
 	guiproperties_table(T* _ptr) : debugproperties(), ptr(_ptr), numberInput(nullptr) {
+		setBackgroundRendered(true);
+		setBackgroundRenderedInset(false);
 		setSnapSides(ivec4(1));
 		addControl(&textField);
 		addControl(&numberInput);
@@ -276,9 +278,11 @@ public:
 						ctxtMenu->add(color);
 						ctxtMenu->layout();
 						ctxtMenu->canTakeInputFocus = true;
+						assert(!ctxtMenu->isBackgroundRendered());
+						ctxtMenu->setBackgroundRendered(false);
 						table->parentCtrl->openContextMenu(ctxtMenu, evt.mousepos);
-						ctxtMenu->parentCtrl->getTheme()->setColor(GuiColor::COL_CLEAR_COLOR, 0x00000000);
 						table->setActiveControl(nullptr);
+						assert(!ctxtMenu->isBackgroundRendered());
 					}
 
 					void onClick(const click_ctxt_t& ctxt, NVGcolor& value) override {
@@ -294,9 +298,11 @@ public:
 						ctxtMenu->add(color);
 						ctxtMenu->layout();
 						ctxtMenu->canTakeInputFocus = true;
+						assert(!ctxtMenu->isBackgroundRendered());
+						ctxtMenu->setBackgroundRendered(false);
 						table->parentCtrl->openContextMenu(ctxtMenu, evt.mousepos);
-						ctxtMenu->parentCtrl->getTheme()->setColor(GuiColor::COL_CLEAR_COLOR, 0x00000000);
 						table->setActiveControl(nullptr);
+						assert(!ctxtMenu->isBackgroundRendered());
 					}
 				};
 				click_handler_t handler( this, cell, evt );
@@ -316,7 +322,9 @@ public:
 
 	}
 	void renderDefault(NVGcontext* vg) {
-		renderBackground(vg);
+		if (isBackgroundRendered()){
+			renderBackground(vg);
+		}
 		if (!setScissorTransformContainer(vg)) {
 			return;
 		}

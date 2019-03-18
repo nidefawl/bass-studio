@@ -7,11 +7,14 @@ class gui_statusbar : public guictr_base {
 public:
 	String text;
 	gui_statusbar() : guictr_base() {
+		setBackgroundRendered(true);
 	}
 	~gui_statusbar() {
 	}
 	void render(NVGcontext* vg) {
-		guictr_base::renderBackground(vg);
+		if (isBackgroundRendered()) {
+			renderBackground(vg);
+		}
 		if (!setScissorTransform(vg)) {
 			return;
 		}

@@ -22,6 +22,8 @@ protected:
 	std::vector<ctxtmenu_entry*> entries;
 public:
 	guictxtmenu() : guictxtmenu_base() {
+		setBackgroundRendered(true);
+		setBackgroundRenderedInset(false);
 	}
 	virtual ~guictxtmenu() {
 		for (ctxtmenu_entry* e : entries) {

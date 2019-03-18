@@ -919,6 +919,8 @@ public:
 	  arp(_view),
 	  noteeditor(_noteeditor)
 	{
+		setBackgroundRendered(true);
+		setBackgroundRenderedInset(false);
 		add(&noteeditor);
 		add(&arp);
 		add(&settings);
@@ -941,7 +943,9 @@ public:
 		return guictr_base::mouseHitTest(mpos, evt);
 	}
 	void render(NVGcontext* vg) {
-		renderBackground(vg);
+		if (isBackgroundRendered()) {
+			renderBackground(vg);
+		}
 //		guictr_base::setScissorTransform(vg);
 		ivec2 posInset = getPosContent();
 		nvgTranslate(vg, posInset.x, posInset.y);
@@ -970,10 +974,6 @@ public:
 		}
 //		nvgResetScissor(vg);
 		nvgResetTransform(vg);
-	}
-	virtual void renderBackground(NVGcontext* vg) override {
-		bool focused = MainCtrl::get()->isCtrOrChildFocused(this);
-		drawBackground(vg, theme, getPosContent(), getSizeContent(), margin, focused, false);
 	}
 	void layout() {
 		ivec2 cs = getSizeContent();

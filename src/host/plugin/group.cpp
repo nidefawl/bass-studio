@@ -66,7 +66,7 @@ public:
 		assert(module->getAudioStage());
 
 		const int32_t hpt = theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT);
-		const int32_t meterW = hpt;
+		int32_t meterW = std::max(16, (int32_t)(theme->get(GuiConstant::CONST_METER_WIDTH)*hpt/32.0));
 		ctr.pos = ivec2(hpt, 0);
 		ctr.size = ivec2(size.y, size.y);
 		ctr.layout();
@@ -99,7 +99,7 @@ public:
 guimodule_group::guimodule_group(module_group* _vst)
 : guiplugin(_vst),
   module(_vst) {
-	isHorizontalTitle = true;
+	isHorizontalTitle = false;
 	ctr.isDefaultPluginCtr = false;
 	ctr.margin = ctr.padding = 0;
 	add(&ctr);

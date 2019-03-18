@@ -53,8 +53,9 @@ void guictr_base::render(NVGcontext* vg) {
 	}
 }
 void guictr_base::renderBackground(NVGcontext* vg) {
+	assert(isBackgroundRendered());
 	bool focused = parentCtrl->isCtrOrChildFocused(this);
-	drawBackground(vg, theme, getPosContent(), getSizeContent(), margin, focused, true);
+	drawBackground(vg, theme, getPosContent(), getSizeContent(), margin, focused, isBackgroundRenderedInset());
 }
 void guictr_base::renderFrameBase(NVGcontext* vg) {
 	ivec2 sizeContent = getSizeContent();

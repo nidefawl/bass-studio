@@ -15,6 +15,7 @@
 #include "gui/guicontainer.h"
 #include "gui/textfield.h"
 #include "guicontextmenu_daw.h"
+#include "guicontextmenu_color.h"
 
 using glm::vec2;
 using glm::ivec2;
@@ -168,5 +169,9 @@ void gui_color_pick::init() {
 }
 
 void gui_color_pick::handleRightClick(MouseEvent& evt) {
-	parentCtrl->openContextMenu(new guictxtmenu_colorpalette(), evt.mousepos);
+	guictxtmenu_colorpalette* ctxt = new guictxtmenu_colorpalette();
+	ctxt->callback = [this](int32_t val) {
+		this->setInt32(val);
+	};
+	parentCtrl->openContextMenu(ctxt, evt.mousepos);
 }

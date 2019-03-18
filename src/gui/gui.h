@@ -95,6 +95,15 @@ public:
 		else
 			flags |= FLG_RENDER_BACKGROUND;
 	}
+	virtual bool isBackgroundRenderedInset() {
+		return (flags & FLG_RENDER_BACKGROUND_INSET) != 0;
+	}
+	void setBackgroundRenderedInset(bool b) {
+		if (!b)
+			flags &= ~FLG_RENDER_BACKGROUND_INSET;
+		else
+			flags |= FLG_RENDER_BACKGROUND_INSET;
+	}
 	virtual bool isEnabled() {
 		return (flags & FLG_ENBL) != 0;
 	}
@@ -154,7 +163,7 @@ public:
 	virtual guictxtmenu_base* getTooltip(AppCtrl* appctrl) {
 		return nullptr;
 	}
-	virtual void renderDragged(NVGcontext* vg, ivec2 mousepos) {
+	virtual void renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2 dragOffset) {
 
 	}
 	virtual void layout() {

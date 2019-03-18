@@ -3,7 +3,7 @@
 #include "str_util.h"
 #include "color_util.h"
 #include "config.h"
-#include "gui/theme.h"
+#include "theme.h"
 #include "msgbox.h"
 #include <math.h>
 #include <chrono>

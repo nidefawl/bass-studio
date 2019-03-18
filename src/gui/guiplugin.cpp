@@ -72,7 +72,7 @@ guiplugin::guiplugin(effectbase* _effect)
 }
 void guiplugin::layout() {
 	const int32_t hpt = theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT);
-	int32_t meterW;
+	int32_t meterW = std::max(16, (int32_t)(theme->get(GuiConstant::CONST_METER_WIDTH)*hpt/32.0));
 	int buttonSize = hpt * 0.8;
 	buttonBypass.size = {buttonSize, buttonSize};
 	buttonDelete.size = {buttonSize, buttonSize};
@@ -82,15 +82,10 @@ void guiplugin::layout() {
 	ivec2 contentS;
 	ivec2 contentP;
 	if (isHorizontalTitle) {
-		meterW = hpt;
 		contentP = ivec2(0, hpt);
 		contentS = ivec2(size.x - meterW, 		size.y - hpt);
 		titlePosX = buttonBypass.right();
 	} else {
-		meterW = theme->get(GuiConstant::CONST_METER_WIDTH);
-		while (size.x < meterW * 16 && meterW > 16) {
-			meterW -= 4;
-		}
 		contentP = ivec2(hpt, 0);
 		contentS = ivec2(size.x - hpt - meterW, size.y );
 		titlePosX = 0;
@@ -325,12 +320,9 @@ void guivstplugin::setControl(BaseCtrl* parentCtrl) {
 void guivstplugin::determineSize() {
 	if (this->viewCtr) {
 		this->viewCtr->getFixedSize(&sizeCtrs.x, &sizeCtrs.y);
-		if (size.y > sizeCtrs.y) {
-			int width = (int)((sizeCtrs.x/(float)sizeCtrs.y)*size.y);
-			sizeCtrs.x = width;
-			sizeCtrs.y = size.y;
-			size.y = std::max(sizeCtrs.y, size.y);
-		}
+		int width = (int)((sizeCtrs.x/(float)sizeCtrs.y)*size.y);
+		sizeCtrs.x = width;
+		sizeCtrs.y = size.y;
 		size.y = std::max(sizeCtrs.y, size.y);
 		size.x += sizeCtrs.x;
 	} else {
@@ -348,7 +340,9 @@ void guivstplugin::render(NVGcontext* vg) {
 		nvgRestore(vg);
 	}
 	meter.render(vg);
-	params.renderBackground(vg);
+	if (params.isBackgroundRendered()){
+		params.renderBackground(vg);
+	}
 	params.render(vg);
 }
 bool guivstplugin::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {

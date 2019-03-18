@@ -41,7 +41,8 @@ public:
 	effectbase* getModule() {
 		return effect;
 	}
-	virtual void renderDragged(NVGcontext* vg, ivec2 mousepos) {
+	virtual void renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2 dragOffset) override {
+		mousepos += dragOffset;
 		mousepos -= pos;
 		nvgTranslate(vg, mousepos.x, mousepos.y);
 		render(vg);

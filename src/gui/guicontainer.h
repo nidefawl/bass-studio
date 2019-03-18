@@ -27,10 +27,7 @@ public:
 	guictr_base(int guiType = 0) : guibase(guiType) {
 		setSnapSides(ivec4(0));
 		setBackgroundRendered(false);
-	}
-	guictr_base(ivec2 _pos, ivec2 _size) : guibase(_pos, _size) {
-		setSnapSides(ivec4(0));
-		setBackgroundRendered(false);
+		setBackgroundRenderedInset(true);
 	}
 	virtual ~guictr_base() {
 		assert(guis.empty());

@@ -3,6 +3,7 @@
 #include <vector>
 #include <cmath>
 #include "plugin.h"
+#include "../vstsdk-plugin-2.4/audioeffect.h"
 #include "../vstsdk-plugin-2.4/audioeffectx.h"
 
 #define PLUGIN_VENDOR_NAME "MichaelH"

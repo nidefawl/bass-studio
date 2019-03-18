@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include "event.h"
+#include <functional>
 #include "gui.h"
 #include "guicolors.h"
 #include "guicontextmenu_base.h"
@@ -95,8 +96,9 @@ public:
 };
 class guictxtmenu_colorpalette : public guictxtmenu {
 public:
+    std::function<void(int32_t)> callback = nullptr;
 	guictxtmenu_colorpalette() {
-		ctxtmenu_color_select* colorSelect = new ctxtmenu_color_select("Pick Color", 0);
+		ctxtmenu_color_select* colorSelect = new ctxtmenu_color_select("Pick Color", 100);
 		addEntry(colorSelect);
 	}
 	void clicked(int _id) {
@@ -104,6 +106,9 @@ public:
 			_id -= 100;
 			int32_t col = colorPalette[_id];
 			my_printf("col: %08X\n", col);
+			if (callback) {
+				callback(col);
+			}
 		}
 		parentCtrl->closePopup();
 	}

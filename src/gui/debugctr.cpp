@@ -6,6 +6,7 @@
 #include "guicontainer.h"
 #include "guicolors.h"
 #include "guiconstant.h"
+#include "button.h"
 #include "track.h"
 #include "track_impl.h"
 #include "clip.h"
@@ -41,6 +42,7 @@ extern int colorVal;
 void initConstants(int colorVal);
 }
 gui_ctr_debug::gui_ctr_debug() : guictr_base() {
+	setBackgroundRendered(true);
 	add(&knobTest);
 	add(&knobTest2);
 	add(&btn);
@@ -60,7 +62,9 @@ gui_ctr_debug::gui_ctr_debug() : guictr_base() {
 	};
 }
 void gui_ctr_debug::render(NVGcontext* vg) {
-	renderBackground(vg);
+	if (isBackgroundRendered()){
+		renderBackground(vg);
+	}
 	if (!setScissorTransform(vg)) {
 		return;
 	}

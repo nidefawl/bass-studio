@@ -22,6 +22,7 @@ struct audio_stage_t;
 class guictr_test : public guictr_base {
 public:
 	guictr_test() : guictr_base() {
+		setBackgroundRendered(true);
 
 	}
 	~guictr_test() {
@@ -31,7 +32,9 @@ public:
 		guis.clear();
 	}
 	void render(NVGcontext* vg) {
-		renderBackground(vg);
+		if (isBackgroundRendered()) {
+			renderBackground(vg);
+		}
 		if (!setScissorTransform(vg)) {
 			return;
 		}
@@ -105,47 +108,19 @@ public:
 	~guictr_dragged_plugins() {
 	}
 	void layout() override {
-
-	}
-	virtual audio_stage_t* getTrackLink() {
-		return trackImpl;
-	}
-	void renderDragged(NVGcontext* vg, ivec2 mousepos) override {
-		mousepos -= pos;
-		nvgTranslate(vg, mousepos.x, mousepos.y);
-		drawBackground(vg, theme, pos, size, 0, true, false);
-		ivec2 inset = {2, 2};
-		nvgFontFace(vg, "sans");
-		nvgFillColor(vg, G_WHITE);
-		Table::DrawTableNVG(this->table, vg, theme, pos+inset, size-inset*2, HEIGHT_ENTRY-4);
-	}
-	void setStrings(std::vector<String>& list) {
-		size = ivec2(200, list.size()*HEIGHT_ENTRY+4);
-		table.titleHeight = HEIGHT_ENTRY;
-		table.rowHeight = HEIGHT_ENTRY;
-		table.rows.clear();
-		for (String s : list) {
-			Table::tbl_row_t row;
-			row.cols.push_back(s);
-			table.rows.push_back(row);
-		}
-		Table::AdjustColSizes(table, size);
 	}
 	bool isDragMoveable() {
 		return true;
 	}
-	void handleDraggedRelease(MouseEvent& evt) {
-		MainCtrl::get()->objectDragRelease(this, evt);
+	virtual audio_stage_t* getTrackLink() {
+		return trackImpl;
 	}
-	void handleDraggedMove(MouseEvent& evt) {
-		MainCtrl::get()->objectDragMove(this, evt);
-	}
-	void dragMoveOn(guibase* target, ivec2 mousepos) {
-		target->pluginMultiDragMove(this, mousepos);
-	}
-	void dragReleaseOn(guibase* target, ivec2 mousepos) {
-		target->pluginMultiDragRelease(this, mousepos);
-	}
+	void renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2 dragOffset) override;
+	void setStrings(std::vector<String>& list);
+	void handleDraggedRelease(MouseEvent& evt);
+	void handleDraggedMove(MouseEvent& evt);
+	void dragMoveOn(guibase* target, ivec2 mousepos);
+	void dragReleaseOn(guibase* target, ivec2 mousepos);
 };
 class guictr_plugins : public guictr_base {
 public:
@@ -156,7 +131,8 @@ public:
 	bool isDefaultPluginCtr = true;
 	guictr_dragged_plugins dragged;
 	guictr_plugins() : guictr_base() {
-
+		setBackgroundRendered(true);
+		dragged.setParent(this);
 	}
 	~guictr_plugins() {
 		removeEntry(guis, &placeholder);
@@ -300,5 +276,4 @@ public:
 		return false;
 	}
 };
-
 

@@ -24,8 +24,8 @@
 #include "logging.h"
 #include "hires_timer.h"
 #include "rand.h"
-#include "gui/theme.h"
-#include "gui/thememgr.h"
+#include "theme.h"
+#include "thememgr.h"
 #include "saferef.h"
 
 

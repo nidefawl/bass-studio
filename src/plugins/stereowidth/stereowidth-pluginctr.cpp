@@ -187,6 +187,7 @@ public:
 
 guicontainer_stereowidth::guicontainer_stereowidth()
 : guictr_base(), knobgain(1+kGain, kGain), knobwidth(1+kStereoWidth, kStereoWidth) {
+	setBackgroundRendered(true);
 	padding = 4;
 	margin = 4;
 	add(&knobwidth);
@@ -225,7 +226,9 @@ void guicontainer_stereowidth::render(NVGcontext* vg) {
 //	nvgRect(vg, pos.x, pos.y, size.x, size.y);
 //	nvgFillColor(vg, GUI_COLORRGB(50, 50, 150, 180));
 //	nvgFill(vg);
-	renderBackground(vg);
+	if (isBackgroundRendered()) {
+		renderBackground(vg);
+	}
 	if (!setScissorTransform(vg)) {
 		return;
 	}
@@ -305,10 +308,9 @@ namespace PluginStereoWidth {
 		return new PluginVST2_StereoWidth (audioMaster);
 	}
 	PluginViewContainers* PluginVST2_StereoWidth::createView() {
-		PluginViewContainers* pviewctr = new ViewContainersStereoWidth();
-		std::vector<PluginViewContainers*>& mviews = this->views;
-		mviews.push_back(pviewctr);
-		return pviewctr;
+		auto* v = new ViewContainersStereoWidth();
+		this->views.push_back(v);
+		return v;
 	}
 }
 

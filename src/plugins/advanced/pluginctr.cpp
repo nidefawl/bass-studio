@@ -32,6 +32,7 @@ using namespace PluginTestAdv;
 
 gui_ctr_main::gui_ctr_main()
 : guictr_base(), field(nullptr) {
+	setBackgroundRendered(true);
 	add(&colorPicker);
 	add(&textField);
 	add(&field);
@@ -64,7 +65,9 @@ void gui_ctr_main::prerender(NVGcontext* vg) {
 void gui_ctr_main::render(NVGcontext* vg) {
 //	int w = size.x;
 //	int h = size.y;
-	renderBackground(vg);
+	if (isBackgroundRendered()){
+		renderBackground(vg);
+	}
 	if (!setScissorTransform(vg)) {
 		return;
 	}

@@ -10,6 +10,7 @@
 #include "gui/knoblabeled.h"
 #include "gui/button.h"
 #include "gui/guicontainer.h"
+#include "keyboard.h"
 
 #include "textfield.h"
 

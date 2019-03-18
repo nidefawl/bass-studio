@@ -1,9 +1,11 @@
 #include <algorithm>
 #include <typeinfo>
 #include "color_util.h"
+#include "basectrl.h"
 #include "gui.h"
 #include "button.h"
 #include "platform.h"
+#include "theme.h"
 #include "saferef.h"
 #include "seq_math.h"
 #include "seq_util.h"
@@ -37,7 +39,8 @@ void initConstants(int colorVal);
 void initColor() {
 	UNUSED(dbgcolors);
 	for (int i = 0; i < (int)ARR_SIZE(colorPalette); i++) {
-		g_colorPalette[i] = rgbToNvg(colorPalette[i]);
+		colorPalette[i] |= 0xFF000000;
+		g_colorPalette[i] = rgbaToNvg(colorPalette[i]);
 	}
 	GuiColor::initConstants(22);
 

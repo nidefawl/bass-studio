@@ -299,7 +299,9 @@ void guictr_plugins::render(NVGcontext* vg) {
 //	} else {
 //		drawInsetBackground(vg, getPosContent(), getSizeContent());
 //	}
-	renderBackground(vg);
+	if (isBackgroundRendered()) {
+		renderBackground(vg);
+	}
 	if (!setScissorTransform(vg)) {
 		return;
 	}
@@ -475,7 +477,46 @@ void guictr_plugins::pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mouse
 		this->parent->onChildLayoutChanged(this);
 	}
 }
+void guictr_dragged_plugins::handleDraggedRelease(MouseEvent& evt) {
+	MainCtrl::get()->objectDragRelease(this, evt);
+}
+
+void guictr_dragged_plugins::handleDraggedMove(MouseEvent& evt) {
+	MainCtrl::get()->objectDragMove(this, evt);
+}
+
+void guictr_dragged_plugins::dragMoveOn(guibase* target, ivec2 mousepos) {
+	target->pluginMultiDragMove(this, mousepos);
+}
+
+void guictr_dragged_plugins::dragReleaseOn(guibase* target, ivec2 mousepos) {
+	target->pluginMultiDragRelease(this, mousepos);
+}
+void guictr_dragged_plugins::renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2 dragOffset) {
+	//		mousepos += dragOffset;
+	mousepos -= pos;
+	mousepos.x -= size.x / 2;
+	nvgTranslate(vg, mousepos.x, mousepos.y);
+	drawBackground(vg, theme, pos, size, 0, true, false);
+	ivec2 inset = { 2, 2 };
+	nvgFontFace(vg, "sans");
+	nvgFillColor(vg, G_WHITE);
+	Table::DrawTableNVG(this->table, vg, theme, pos + inset, size - inset * 2, HEIGHT_ENTRY - 4);
+}
+void guictr_dragged_plugins::setStrings(std::vector<String>& list) {
+	size = ivec2(200, list.size() * HEIGHT_ENTRY + 4);
+	table.titleHeight = HEIGHT_ENTRY;
+	table.rowHeight = HEIGHT_ENTRY;
+	table.rows.clear();
+	for (String s : list) {
+		Table::tbl_row_t row;
+		row.cols.push_back(s);
+		table.rows.push_back(row);
+	}
+	Table::AdjustColSizes(table, size);
+}
 void guictr_plugins::pluginMultiDragMove(guictr_dragged_plugins* g, ivec2 mousepos) {
+//	my_printf("pluginMultiDragMove %d %d on guictr_plugins %12X\n", mousepos.x, mousepos.y, (int64_t)this);
 	MainCtrl::get()->getDragDropTarget().reset();
 	if (!this->stage) return;
 	audio_stage_t* srcStage = g->getTrackLink();
@@ -794,15 +835,25 @@ void guictr_pluginview::render(NVGcontext* vg) {
 	}
 }
 void guictr_plugins::onTick(AppCtrl* ctrl) {
-#define SCROLL_START_X 30
-	if (isDefaultPluginCtr && ctrl->guiDragged != NULL && ctrl->guiDragged->parent == this) {
-		if (ctrl->m_mousePos.x < SCROLL_START_X && scrolloffset > 0) {
-			setScrolloffset(scrolloffset - (int) ((TIMER_MS / 50.0) * 40));
+	#define SCROLL_START_X 30
+	if (isDefaultPluginCtr && ctrl->guiDragged) {
+		guictr_plugins* ctr = MainCtrl::getPluginCtr();
+		ivec2 cs = ctr->getSizeContent();
+		ivec2 screenPosMouse = ctrl->m_mousePos;
+		ivec2 screenPosCtrMin = toScreenSpace(ivec2(scrolloffset, 0));
+		ivec2 screenPosCtrMax = screenPosCtrMin + cs;
+		if (screenPosMouse.y >= screenPosCtrMin.y && screenPosMouse.y <= screenPosCtrMax.y) {
+			my_printf("screenPosMouse %d %d on guictr_plugins %12X\n", screenPosMouse.x, screenPosMouse.y, (int64_t)this);
+			my_printf("screenPosCtrMin %d %d on guictr_plugins %12X\n", screenPosCtrMin.x, screenPosCtrMin.y, (int64_t)this);
+			my_printf("screenPosCtrMax %d %d on guictr_plugins %12X\n", screenPosCtrMax.x, screenPosCtrMax.y, (int64_t)this);
+			if (screenPosMouse.x < screenPosCtrMin.x+SCROLL_START_X && scrolloffset > 0) {
+				setScrolloffset(scrolloffset - (int) ((TIMER_MS / 50.0) * 40));
+				ctrl->requestRedraw();
+			} else if (screenPosMouse.x > screenPosCtrMax.x-SCROLL_START_X && scrolloffset < getTotalWidth() - cs.x) {
+				setScrolloffset(scrolloffset + (int) ((TIMER_MS / 50.0) * 40));
+				ctrl->requestRedraw();
+			}
 		}
-		if (ctrl->m_mousePos.x > getSizeContent().x - SCROLL_START_X && scrolloffset < getTotalWidth() - getSizeContent().x) {
-			setScrolloffset(scrolloffset + (int) ((TIMER_MS / 50.0) * 40));
-		}
-		ctrl->requestRedraw();
 	}
 	for (guibase* gui : guis) {
 		gui->onTick(ctrl);

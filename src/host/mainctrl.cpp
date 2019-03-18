@@ -46,6 +46,7 @@
 #include "../gui/trackctr.h"
 #include "../gui/trackcontent.h"
 #include "../gui/trackctr.h"
+#include "../gui/list.h"
 #include "../gui/pluginlist.h"
 #include "../gui/guimenu.h"
 #include "../gui/debugctr.h"

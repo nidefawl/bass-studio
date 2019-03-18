@@ -100,7 +100,7 @@ public:
 	} catch (...) {													\
 		handleException();											\
 	}
-String excDescription;
+String excDescription = "";
 void handleStdException(std::exception& e) {
 	excDescription = StringFormat("Fatal error: %s", e.what());
 	std::terminate();
@@ -1491,7 +1491,7 @@ int startApplication(int argc, char* argv[]) {
 #endif
 	std::set_terminate(on_terminate);
 #ifdef USE_WIN32_EXC_HOOKS
-	//setExceptionHandler();
+	setExceptionHandler();
 #endif
 	EXC_TRY
 	allocConsole();

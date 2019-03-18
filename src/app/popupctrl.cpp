@@ -24,6 +24,7 @@ using namespace std;
 
 PopupCtrl::PopupCtrl() {
 	popupCtrs = new guictr_scrollbar();
+	popupCtrs->setBackgroundRendered(true);
 }
 void PopupCtrl::focusLost() {
 //	parentCtrl->closeContextMenu();
@@ -50,12 +51,13 @@ void PopupCtrl::open(guictxtmenu_base *_ctxtmenu, ivec2 pos) {
 	popupCtrs->removeGuis();
 	popupCtrs->pos = ivec2(0);
 	_ctxtmenu->pos = insetCtxtMenu;
-	_ctxtmenu->setBackgroundRendered(false);
+//	_ctxtmenu->setBackgroundRendered(false);
 	_ctxtmenu->determineSize();
 	_ctxtmenu->layout();
 	canTakeInputFocus = _ctxtmenu->canTakeInputFocus;
 	popupCtrs->maxHeight = _ctxtmenu->maxHeight;
 	popupCtrs->scrollbarOutside = _ctxtmenu->scrollbarOutside;
+	popupCtrs->setBackgroundRendered(_ctxtmenu->isBackgroundRendered());
 	popupCtrs->add(_ctxtmenu);
 //	ivec2 wndsize(0);
 //	this->window->getSize(&wndsize);
@@ -66,6 +68,13 @@ void PopupCtrl::open(guictxtmenu_base *_ctxtmenu, ivec2 pos) {
 	window_overlay* appW = static_cast<window_overlay*>(this->window);
 	appW->positionOnScreen(pos-insetCtxtMenu, popupCtrs->size);
 	appW->show();
+	int32_t clearc = getTheme()->getColorInt32(GuiColor::COL_CLEAR_COLOR);
+	if (popupCtrs->isBackgroundRendered()) {
+		clearc |= 0xFF000000;
+	} else {
+		clearc &= 0x00FFFFFF;
+	}
+	getTheme()->setColor(GuiColor::COL_CLEAR_COLOR, clearc);
 }
 void PopupCtrl::destroy() {
 	isOK = false;

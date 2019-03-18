@@ -56,6 +56,7 @@ class guictr_pluginlibrary : public guictr_base {
 	std::vector<pluginentry_t> pluginsLibList;
 public:
 	guictr_pluginlibrary() : guictr_base() {
+		setBackgroundRendered(true);
 		pluginListCtr.padding = 0;
 		add(&textField);
 		add(&pluginListCtr);
@@ -108,7 +109,9 @@ public:
 		}
 	}
 	virtual void render(NVGcontext* vg) {
-		renderBackground(vg);
+		if (isBackgroundRendered()) {
+			renderBackground(vg);
+		}
 		if (!setScissorTransform(vg)) {
 			return;
 		}
@@ -150,6 +153,7 @@ class guictr_modulelibrary : public guictr_base {
 	std::vector<module_desc_t> effectEntries;
 public:
 	guictr_modulelibrary() : guictr_base() {
+		setBackgroundRendered(true);
 		effectEntries.push_back(module_desc_t{PLUGIN_TYPE_EMPTY, 0, "Empty", false});
 		effectEntries.push_back(module_desc_t{PLUGIN_TYPE_GROUP, 0, "Group", false});
 		effectEntries.push_back(module_desc_t{PLUGIN_TYPE_INTERNAL_EFFECT, PLUG_INT_STEREOWIDTH, "StereoWidth", false});
@@ -204,7 +208,9 @@ public:
 		}
 	}
 	virtual void render(NVGcontext* vg) {
-		renderBackground(vg);
+		if (isBackgroundRendered()) {
+			renderBackground(vg);
+		}
 		if (!setScissorTransform(vg)) {
 			return;
 		}
