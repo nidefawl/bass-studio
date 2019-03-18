@@ -1,3 +1,11 @@
+DEBUG HELPER:
+Add tables for:
+- all loaded plugins
+- all tracks
+- all guibase instances
+- all automation
+
+
 TODO:
 Mixing desk view
 Sends/Return tracks
