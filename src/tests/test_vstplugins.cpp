@@ -70,7 +70,7 @@ VOID CALLBACK TimerCallback(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime
 			test++;
 		} else {
 			audiohost->onTick();
-			res.plugin->updateDisplay();
+			res.plugin->updateWindow();
 		}
 		tick++;
 	}

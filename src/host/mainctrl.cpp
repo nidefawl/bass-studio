@@ -150,12 +150,12 @@ void testTask() {
 }
 guictr_base* makeCtrProperties(); //guiproperties.cpp
 guictr_base* makeCtrTheme(); //guiproperties.cpp
-class guictr_side_tabs_test : public guictr_tabbed {
+class guictr_side_tabs_daw_1 : public guictr_tabbed {
 public:
 	gui_ctr_debug ctr_dbg;
 	guictr_base* const ctr_properties;
 	guictr_base* const ctr_theme;
-	guictr_side_tabs_test() : guictr_tabbed(), ctr_properties(makeCtrProperties()), ctr_theme(makeCtrTheme()) {
+	guictr_side_tabs_daw_1() : guictr_tabbed(), ctr_properties(makeCtrProperties()), ctr_theme(makeCtrTheme()) {
 		setBackgroundRendered(false);
 		ctr_dbg.setLabel("Debug 1");
 		ctr_properties->setLabel("Properties");
@@ -165,7 +165,7 @@ public:
 		addEntry(ctr_theme, ctr_theme->label);
 		setActiveEntry(0);
 	}
-	virtual ~guictr_side_tabs_test() {
+	virtual ~guictr_side_tabs_daw_1() {
 //		remove(&ctr_dbg);
 //		remove(ctr_properties);
 //		remove(ctr_theme);
@@ -202,27 +202,28 @@ public:
 		}
 	}
 };
-class guictr_side_tabs2 : public guictr_tabbed {
+guictr_base* makeGuiPluginsLoadedList();
+class guictr_side_tabs_daw_2 : public guictr_tabbed {
 public:
 
 	guictr_effectlibrary& ctr_effectlib;
 	guictr_base* const ctr_properties;
-	guictr_base* const ctr_theme;
-	guictr_side_tabs2(guictr_effectlibrary& _ctr_effectlib)
+	guictr_base* const ctr_loadedplugins;
+	guictr_side_tabs_daw_2(guictr_effectlibrary& _ctr_effectlib)
 	: guictr_tabbed(),
 	  ctr_effectlib(_ctr_effectlib),
 	  ctr_properties(makeCtrProperties()),
-	  ctr_theme(makeCtrTheme()) {
+	  ctr_loadedplugins(makeGuiPluginsLoadedList()) {
 		setBackgroundRendered(true);
 		ctr_effectlib.setLabel("Plugins");
+		ctr_loadedplugins->setLabel("Plugins loaded");
 		ctr_properties->setLabel("Properties");
-		ctr_theme->setLabel("Theme");
 		addEntry(&ctr_effectlib, ctr_effectlib.label);
+		addEntry(ctr_loadedplugins, ctr_loadedplugins->label);
 		addEntry(ctr_properties, ctr_properties->label);
-		addEntry(ctr_theme, ctr_theme->label);
 		setActiveEntry(0);
 	}
-	virtual ~guictr_side_tabs2() {
+	virtual ~guictr_side_tabs_daw_2() {
 //		remove(&ctr_dbg);
 //		remove(ctr_properties);
 //		remove(ctr_theme);
@@ -241,8 +242,8 @@ public:
 	guictr_clipeditorview ctr_clipeditorview;
 	guictr_clipeditor ctr_clipeditor;
 	guictr_tracks ctr_tracks;
-	guictr_side_tabs_test ctr_tabbed;
-	guictr_side_tabs2 ctr_tabbed2;
+	guictr_side_tabs_daw_1 ctr_tabbed;
+	guictr_side_tabs_daw_2 ctr_tabbed2;
 	Splitter splitterList;
 	Splitter splitterCenter;
 	Splitter splitterRight;

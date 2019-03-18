@@ -41,7 +41,7 @@ public:
 	void resize (glm::ivec2 newSize);
 	glm::ivec2 getContentSize ();
 
-	void updateDisplay();
+	void updateWindow();
 
 	std::vector<vst_window*>& getWindows ();
 	vstplugin* getPlugin() {

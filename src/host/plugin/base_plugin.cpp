@@ -7,6 +7,7 @@
 #include "../../gui/guiplugin.h"
 #include "../../host/mainctrl.h"
 #include "../../gui/pluginctr.h"
+#include "host/vst_host.h"
 
 
 
@@ -16,7 +17,20 @@ track_t* effectbase::getTrack() {
 		return nullptr;
 	return stage->getTrack();
 }
-effectbase::effectbase(int32_t _pluginType, int32_t _projectGlobalId) : pluginType(_pluginType), projectGlobalId(_projectGlobalId) {
+
+SafeRef<effectbase> effectbase::makeSafeRef() {
+	if (!safeRef.handler) {
+		safeRef.handler = vsthost::getInstance()->getSafeRefStore();
+		safeRef.refId = safeRef.handler->safeRefCreate(this);
+	}
+	return safeRef;
+}
+effectbase::~effectbase() {
+	if (safeRef.handler) {
+		safeRef.handler->safeRefDestroy(safeRef.refId);
+	}
+}
+effectbase::effectbase(String _sName, int32_t _pluginType, int32_t _projectGlobalId) : pluginType(_pluginType), projectGlobalId(_projectGlobalId), sName(_sName) {
 	struct effectbase_param_entry_t {
 		String name;
 		float val;

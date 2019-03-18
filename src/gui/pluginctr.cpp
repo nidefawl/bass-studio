@@ -409,7 +409,7 @@ effectbase* gui_vstpluginlist_entry::makeInstance() {
 	return res.result == 0 ? res.plugin : nullptr;
 }
 effectbase* gui_modulelist_entry::makeInstance() {
-	effectbase* instance = makeModuleInstance(entry.moduleType, entry.moduleId, -1);
+	effectbase* instance = vsthost::getInstance()->makeModuleInstance(entry.moduleType, entry.moduleId, -1);
 	return instance;
 }
 class action_insert_effect : public action_base {

@@ -11,6 +11,7 @@
 #include "meter.h"
 #include "snapshot.h"
 #include "modules.h"
+#include "saferef.h"
 
 struct AudioBlock;
 struct handles_t;
@@ -21,6 +22,12 @@ struct audio_stage_t;
 struct plugin_snapshot_t;
 
 class effectbase : public automatable_t {
+	SafeRef<effectbase> safeRef;
+#ifndef NDEBUG
+	//helper indicator in gdb.
+	//gdb cannot display std::string when built without clib-debug flag (SLOW)
+	const char* szName = NULL;
+#endif
 	int nLoadCalls = 0;
 public:
 	rmsmeter<16000> meter;
@@ -31,12 +38,23 @@ public:
 	bool bIsEnabled = false;
 	bool bIsSetup = false;
 	bool bCanReceiveMidi = false;
+	bool isSynth = false;
+	String sName;
+	String sProductName;
 	audio_stage_t* trackImpl = nullptr;
 	int32_t slot = -1;
 	std::vector<automatable_param_t> mixerParams;
 	std::unique_ptr<DelayLine> delayLine;
-	effectbase(int32_t _pluginType, int32_t _projectGlobalId);
-	virtual ~effectbase() {
+	effectbase(String _sName, int32_t _pluginType, int32_t _projectGlobalId);
+	virtual ~effectbase();
+	SafeRef<effectbase> makeSafeRef();
+	String getName() { return sName; };
+	String getProductName() { return sProductName; };
+	void setProductName(String sName) {
+		this->sProductName = sName;
+	#ifndef NDEBUG
+		this->szName = this->sName.c_str();
+	#endif
 	}
 	virtual int getModuleType() = 0;
 	virtual void makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) = 0;

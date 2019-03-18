@@ -53,9 +53,9 @@ long vstplugin::dispatch(
 bool vstplugin::onResize(vst_window* window, ivec2 size) {
 	return true;
 }
-bool vstplugin::updateDisplay() {
+bool vstplugin::updateWindow() {
 	if (this->window != NULL) {
-		this->window->updateDisplay();
+		this->window->updateWindow();
 		return true;
 	}
 	return false;
@@ -132,7 +132,7 @@ bool vstplugin::onShow(vst_window* window) {
 		bEditOpen = true;
 		this->dispatch(effEditOpen, 0, 0, (void*)window->getHWND());
 		updateWindowSize();
-		this->updateDisplay();
+		this->updateWindow();
 	}
 	return true;
 }
@@ -203,7 +203,10 @@ void vstplugin::load(vsthost* host) {
 	this->pluginCategory = this->dispatch(effGetPlugCategory) > 0;
 	this->isSynth = (handle->aeffect->flags & effFlagsIsSynth) != 0;
 	this->bCanReceiveMidi = this->isSynth || this->dispatch(effCanDo, 0, 0, (void*)PlugCanDos::canDoReceiveVstMidiEvent) > 0;
-
+	char szBuf[256] = "";
+	if (this->getNameString(szBuf) && szBuf[0]) {
+		setProductName(szBuf);
+	}
 	VstParameterProperties properties = {};
 
 	char buf[1024];

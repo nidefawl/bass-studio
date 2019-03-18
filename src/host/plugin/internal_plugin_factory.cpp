@@ -8,24 +8,20 @@
 #include "modules.h"
 #include "leak_detect.h"
 
-effectbase* makeModuleInstance(int32_t moduleType, int32_t moduleId, int32_t globalid = -1) {
+effectbase* vsthost::makeModuleInstance(int32_t moduleType, int32_t moduleId, int32_t globalid) {
 
-	vsthost* host = vsthost::getInstance();
+//	vsthost* host = vsthost::getInstance();
 	effectbase* effect = nullptr;
 	switch (moduleType) {
 		case PLUGIN_TYPE_EMPTY:
-			effect = new module_empty(host->getNextGlobalModuleId(globalid));
-			if (effect)
-				effect->load(host);
+			effect = new module_empty(getNextGlobalModuleId(globalid));
 			break;
 		case PLUGIN_TYPE_GROUP:
-			effect = new module_group(host->getNextGlobalModuleId(globalid));
-			if (effect)
-				effect->load(host);
+			effect = new module_group(getNextGlobalModuleId(globalid));
 			break;
 		case PLUGIN_TYPE_INTERNAL_EFFECT:
 			{
-				vstpluginloadres res = host->loadInternalPlugin(moduleId, globalid);
+				vstpluginloadres res = loadInternalPlugin(moduleId, globalid);
 				if (res.result == 0 && res.plugin) {
 					effect = res.plugin;
 					break;
@@ -35,6 +31,18 @@ effectbase* makeModuleInstance(int32_t moduleType, int32_t moduleId, int32_t glo
 			break;
 		default:
 			assert(0);
+			break;
+	}
+	switch (moduleType) {
+		case PLUGIN_TYPE_EMPTY:
+		case PLUGIN_TYPE_GROUP:
+			if (effect) {
+				effect->load(this);
+				pluginInstancesInternal.push_back(effect);
+				pluginInstances.push_back(effect);
+			}
+			break;
+		default:
 			break;
 	}
 	return effect;

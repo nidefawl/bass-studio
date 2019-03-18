@@ -112,7 +112,7 @@ Size vst_window::getContentSize ()
 
 
 
-void vst_window::updateDisplay() {
+void vst_window::updateWindow() {
 //	InvalidateRgn(hwnd, NULL, TRUE);
 	sendExposeEvent(glfw);
 }

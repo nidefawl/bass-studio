@@ -276,7 +276,7 @@ ivec2 vst_window::getContentSize ()
 
 
 
-void vst_window::updateDisplay() {
+void vst_window::updateWindow() {
 //	InvalidateRect(hwnd, NULL, TRUE);
 	InvalidateRgn(hwnd, NULL, TRUE);
 //    RedrawWindow( hwnd, NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_FRAME | RDW_ALLCHILDREN );

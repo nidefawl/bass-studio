@@ -226,7 +226,7 @@ VstIntPtr VSTCALLBACK audioMaster(AEffect* effect, VstInt32 opcode, VstInt32 ind
 		}
 		cbPrintf(plugin, "audioMasterUpdateDisplay %d %d %d\n", index, opcode, value);
 
-		return (VstIntPtr)plugin->updateDisplay();
+		return (VstIntPtr)plugin->updateWindow();
 #ifdef VST_2_1_EXTENSIONS
 	case audioMasterBeginEdit:
 		cbPrintf(plugin, "audioMasterBeginEdit %d %d %d\n", index, opcode, value);
@@ -708,24 +708,16 @@ void vsthost::processAudio(audio_stage_t* channel, AudioBlock* input, AudioBlock
 	mulGain(output, gain);
 
 }
-void vsthost::updateDisplay() {
-	int count = list.size();
-	for (int i = 0; i < count; ++i)
-	{
-		vstplugin *current = list[i];
-		if (current) {
-//			current->dispatch(effEditIdle);
-			current->updateDisplay();
-		}
+void vsthost::updatePluginWindows() {
+	for (auto* plugin : pluginInstancesVST2) {
+//		plugin->dispatch(effEditIdle);
+		plugin->updateWindow();
 	}
 }
 bool vsthost::onTick() {
-	int count = list.size();
 	int iDispatched = 0;
-	for (int i = 0; i < count; ++i)
-	{
-		vstplugin *current = list[i];
-		if (current && current->bEditOpen && !current->bInEditIdle) {
+	for (auto* current : pluginInstancesVST2) {
+		if (current->bEditOpen && !current->bInEditIdle) {
 			current->bInEditIdle = true;
 			current->dispatch(effEditIdle);
 			current->bInEditIdle = false;
@@ -865,17 +857,11 @@ bool vsthost::startAudio() {
 	return true;
 }
 vstplugin* vsthost::getPlugin(AEffect* aeffect) {
-
-	int count = list.size();
-	for (int i = 0; i < count; ++i)
-	{
-		vstplugin *current = list[i];
-		if (current) {
-			if (current->handle->aeffect == aeffect)
-				return current;
-		}
+	for (auto* current : pluginInstancesVST2) {
+		if (current->handle->aeffect == aeffect)
+			return current;
 	}
-	return NULL;
+	return nullptr;
 }
 void vsthost::unloadTrack(track_t* track) {
 	assert(track->audio);
@@ -902,49 +888,59 @@ void vsthost::unloadPlugin(effectbase* plugin) {
 
 	plugin->close();
 	plugin->unload(this);
+
 //	PopupCtrl::get()->close(); // Make sure context controls do not reference vst
-	auto it = std::find(list.begin(), list.end(), plugin);
-	if (it != list.end()) {
-		list.erase(it);
-	}
 	if (plugin->getModuleType() == PLUGIN_TYPE_VST || plugin->getModuleType() == PLUGIN_TYPE_INTERNAL_EFFECT) {
 		vstplugin* vst = dynamic_cast<vstplugin*>(plugin);
 		assert(vst);
+		auto it = std::find(pluginInstancesVST2.begin(), pluginInstancesVST2.end(), plugin);
+		assert(it != pluginInstancesVST2.end());
+		if (it != pluginInstancesVST2.end()) {
+			pluginInstancesVST2.erase(it);
+		}
 		if (vst->internalModuleId <= 0) {
 			moduleMgr->releaseModule(vst->handle->hmodule);
 		}
+	} else {
+		auto it = std::find(pluginInstancesInternal.begin(), pluginInstancesInternal.end(), plugin);
+		assert(it != pluginInstancesInternal.end());
+		if (it != pluginInstancesInternal.end()) {
+			pluginInstancesInternal.erase(it);
+		}
+	}
+	auto it = std::find(pluginInstances.begin(), pluginInstances.end(), plugin);
+	assert(it != pluginInstances.end());
+	if (it != pluginInstances.end()) {
+		pluginInstances.erase(it);
 	}
 	delete plugin;
 }
 bool vsthost::unloadAllPlugins() {
-	int count = list.size();
-	for (int i = 0; i < count; ++i)
-	{
-		vstplugin *current = list[i];
-		if (current->trackImpl) {
-			current->trackImpl->removePlugin(current, false);
-		}
-	}
-	for (int i = 0; i < count; ++i)
-	{
-		vstplugin *current = list[i];
-		current->close();
-		list[i] = NULL;
-		current->unload(this);
-		moduleMgr->releaseModule(current->handle->hmodule);
-		delete current;
-	}
-	list.clear();
-	return NULL;
+	assert(pluginInstances.empty());
+	assert(pluginInstancesVST2.empty());
+	assert(pluginInstancesInternal.empty());
+	assert(allAudioStages.empty());
+	assert(trackAudioStages.empty());
+//	int count = list.size();
+//	for (int i = 0; i < count; ++i)
+//	{
+//		vstplugin *current = list[i];
+//		if (current->trackImpl) {
+//			current->trackImpl->removePlugin(current, false);
+//		}
+//	}
+//	for (int i = 0; i < count; ++i)
+//	{
+//		vstplugin *current = list[i];
+//		current->close();
+//		list[i] = NULL;
+//		current->unload(this);
+//		moduleMgr->releaseModule(current->handle->hmodule);
+//		delete current;
+//	}
+//	list.clear();
+	return true;
 }
-vstplugin* vsthost::getPluginIdx(uint32_t i) {
-	return list[i];
-}
-uint32_t vsthost::pluginCount() {
-
-	return list.size();
-}
-
 
 vstplugin::~vstplugin() {
 	if (blockInputs)
@@ -954,6 +950,12 @@ vstplugin::~vstplugin() {
 	delete handle;
 }
 
+void vsthost::getAllInstances(std::vector<effectbase*>& effects) {
+//	for (auto* as : allAudioStages) {
+//		effects.insert( effects.end(), as->effects.begin(), as->effects.end() );
+//	}
+	effects = pluginInstances;
+}
 void vsthost::createAudio(track_t* track) {
 	auto audio = new track_impl_t(getNextGlobalAudioStageId(0), track, this->lSampleRate, this->lBlockSize, OUTPUT_CHANNELS);
 	allAudioStages.push_back(audio);
@@ -1182,7 +1184,8 @@ vstpluginloadres vsthost::loadPlugin(String filepath, int32_t globalId) {
 
 	globalId = getNextGlobalModuleId(globalId);
 	vstplugin* plugin = new vstplugin(new handles_t(nullptr, aeffect, moduleHandle), globalId, path, nameWithoutExt, -1);
-	list.push_back(plugin);
+	pluginInstancesVST2.push_back(plugin);
+	pluginInstances.push_back(plugin);
 	plugin->load(this);
 	return vstpluginloadres(0, plugin);
 };

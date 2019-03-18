@@ -103,12 +103,8 @@ struct module_empty::internal_handles_t {
 //	guimodule_empty * gui;
 };
 module_empty::module_empty(int32_t _projectGlobalId)
-: internalplugin(PLUGIN_TYPE_EMPTY, _projectGlobalId), handle(new module_empty::internal_handles_t{0})
+: internalplugin("Empty", PLUGIN_TYPE_EMPTY, _projectGlobalId), handle(new module_empty::internal_handles_t{0})
 {
-	this->sName = "Empty";
-#ifndef NDEBUG
-		this->szName = this->sName.c_str();
-#endif
 }
 module_empty::~module_empty()
 {

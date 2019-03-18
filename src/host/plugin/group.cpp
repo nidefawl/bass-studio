@@ -192,12 +192,8 @@ struct module_group_preset {
 	std::vector<int32_t> plugins;
 };
 module_group::module_group(int32_t _projectGlobalId)
-: internalplugin(PLUGIN_TYPE_GROUP, _projectGlobalId), handle(new module_group::internal_handles_t{0}), audio(nullptr)
+: internalplugin("Group", PLUGIN_TYPE_GROUP, _projectGlobalId), handle(new module_group::internal_handles_t{0}), audio(nullptr)
 {
-	this->sName = "Group";
-#ifndef NDEBUG
-		this->szName = this->sName.c_str();
-#endif
 }
 module_group::~module_group()
 {

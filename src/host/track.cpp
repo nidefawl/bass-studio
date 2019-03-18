@@ -494,13 +494,13 @@ void track_impl_t::showAutomationLanes() {
 }
 
 effectbase* loadEffectModule(const plugin_snapshot_t& pluginSnapshot) {
+	vsthost* host = vsthost::getInstance();
 	String path;
 	effectbase* effect = nullptr;
 	vstplugin* loadedPlugin = nullptr;
 	if (pluginSnapshot.pluginType == PLUGIN_TYPE_VST) {
 		plugindatabase_t& db = MainCtrl::get()->plugindb;
 		if (db.resolve(pluginSnapshot.name, pluginSnapshot.uId, &path)) {
-			vsthost* host = vsthost::getInstance();
 			vstpluginloadres res = host->loadPlugin(path, pluginSnapshot.projectGlobalId);
 			if (res.result==0&&res.plugin) {
 				loadedPlugin = res.plugin;
@@ -512,7 +512,7 @@ effectbase* loadEffectModule(const plugin_snapshot_t& pluginSnapshot) {
 
 		}
 	} else {
-		effect = makeModuleInstance(pluginSnapshot.pluginType, pluginSnapshot.uId, pluginSnapshot.projectGlobalId);
+		effect = host->makeModuleInstance(pluginSnapshot.pluginType, pluginSnapshot.uId, pluginSnapshot.projectGlobalId);
 		if (effect->getModuleType() == PLUGIN_TYPE_INTERNAL_EFFECT) {
 			loadedPlugin = dynamic_cast<vstplugin*>(effect);
 		}

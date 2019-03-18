@@ -385,11 +385,20 @@ public:
 
 	virtual void hideSystemCursor() {
 		glfwSetInputMode(glfw, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+		if (!noRawInput) {
+			glfwSetInputMode(glfw, GLFW_RAW_MOUSE_MOTION, 0);
+		}
 	}
 	virtual void captureMouse() {
+		if (!noRawInput) {
+			glfwSetInputMode(glfw, GLFW_RAW_MOUSE_MOTION, 1);
+		}
 		glfwSetInputMode(glfw, GLFW_CURSOR, noRawInput ? GLFW_CURSOR_HIDDEN : GLFW_CURSOR_DISABLED);
 	}
 	virtual void releaseMouse() {
+		if (!noRawInput) {
+			glfwSetInputMode(glfw, GLFW_RAW_MOUSE_MOTION, 0);
+		}
 		glfwSetInputMode(glfw, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 	}
 	virtual bool isMouseCaptured() {

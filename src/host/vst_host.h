@@ -13,6 +13,7 @@
 #include "hires_timer.h"
 #include "project.h"
 #include "audiobuffer.h"
+#include "saferef.h"
 #include <memory>
 #ifdef __linux__
 #define PLATFORM_PLUGIN_EXT "so"
@@ -78,7 +79,6 @@ struct plugin_notes_t {
 	std::vector<note_t> notes;
 };
 struct plugin_snapshot_t;
-effectbase* makeModuleInstance(int32_t pluginType, int32_t uid, int32_t globalId);
 effectbase* loadEffectModule(const plugin_snapshot_t& pluginSnapshot);
 void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effectbase* effect);
 void loadEffectAutomationFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effectbase* effect);
@@ -89,6 +89,7 @@ class vsthost {
 private:
 	class ModuleManager;
 	ModuleManager* moduleMgr;
+	SafeRefStorage<effectbase> safeRefs;
 public:
 	project_globals_t project;
 	samplerate_t lSampleRate;
@@ -100,14 +101,22 @@ private:
 	uint8_t numChannels;
 	VstTimeInfo timeinfo = {};
 
-	std::vector<vstplugin*> list;
+	std::vector<vstplugin*> pluginInstancesVST2;
+	std::vector<effectbase*> pluginInstancesInternal;
+	std::vector<effectbase*> pluginInstances;
 
 	std::atomic<PaStream*> stream{NULL};
 	audiothread_ringbuffer_t ringbuffer;
 	AudioBlock* blockZero = nullptr;
 	std::vector<audio_stage_t*> allAudioStages;
 	std::vector<track_impl_t*> trackAudioStages;
+	vstpluginloadres loadInternalPlugin(int32_t type, int32_t globalId = 0);
+	int32_t getNextGlobalModuleId(int32_t n);
+	int32_t getNextGlobalAudioStageId(int32_t as);
+	bool unloadAllPlugins();
+	void updateTime(int32_t samplePos, tick_t pos, playback_state state);
 public:
+	void sendNotesOff(effectbase* plugin);
 	moodycamel::ReaderWriterQueue<AudioBuffer*> audioQueue;
 public:
 	vsthost(uint32_t _sampleRate = 44100, uint16_t _blockSize = 512);
@@ -123,17 +132,15 @@ public:
 	std::atomic<int32_t> pluginId{100};
 	std::atomic<int32_t> audioStageId{100};
 
-	void updateTime(int32_t samplePos, tick_t pos, playback_state state);
 	int32_t processPlayback(int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround);
 	void processAudio(audio_stage_t* channel, AudioBlock* input, AudioBlock* output, unsigned long samples);
-	void sendNotesOff(effectbase* plugin);
 	void setBlockSize(uint16_t blockSize);
 	VstTimeInfo* getTimeInfo() {
 		return &this->timeinfo;
 	}
 	bool startAudio();
 	bool stopAudio();
-	void updateDisplay();
+	void updatePluginWindows();
 	void destroy();
 	void unload();
 	bool postInit();
@@ -141,7 +148,6 @@ public:
 	void onStreamEnd();
 	void onStartPlayback(int32_t block);
 	void onStopPlayback();
-	bool unloadAllPlugins();
 	bool isStreaming() {
 		return this->stream != NULL;
 	}
@@ -163,12 +169,8 @@ public:
 	void unloadPlugin(effectbase* plugin);
 	void removePlugin(effectbase* plugin);
 	void unloadTrack(track_t* track);
-	uint32_t pluginCount();
-	vstplugin* getPluginIdx(uint32_t i);
+	effectbase* makeModuleInstance(int32_t moduleType, int32_t moduleId, int32_t globalid = -1);
 	vstpluginloadres loadPlugin(String filepath, int32_t globalId = 0);
-	vstpluginloadres loadInternalPlugin(int32_t type, int32_t globalId = 0);
-	int32_t getNextGlobalModuleId(int32_t n);
-	int32_t getNextGlobalAudioStageId(int32_t as);
 	void createAudio(track_t* track);
 	void releaseAudio(track_t* track);
 	audio_stage_t* createAudioStage();
@@ -177,4 +179,8 @@ public:
 	bool movePlugins(audio_stage_t* dstTr, audio_stage_t* trp, int32_t src, int32_t len, int32_t dst);
 	bool moveEffects(audio_stage_t* trp, int32_t src, int32_t dst, int32_t len);
 	bool insertNewPlugin(audio_stage_t* trp, effectbase* plugin, int32_t dst);
+	void getAllInstances(std::vector<effectbase*>& effects);
+	SafeRefStorage<effectbase>* getSafeRefStore() {
+		return &safeRefs;
+	}
 };

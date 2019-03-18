@@ -68,19 +68,12 @@ struct vst_param_category {
 //};
 class vstplugin : public effectbase {
 public:
-#ifndef NDEBUG
-	//helper indicator in gdb.
-	//gdb cannot display std::string when built without clib-debug flag (SLOW)
-	const char* szName = NULL;
-#endif
 	handles_t* const handle;
 	const int internalModuleId;
-	String sName;
 	String sDir;
 	bool bEditOpen = false;
 	bool bInEditIdle = false;
 	int pluginCategory = 0;
-	bool isSynth = false;
 	int vstVersion = 0;
 	int uId = 0;
 	vst_window* window = NULL;
@@ -90,12 +83,8 @@ public:
 	std::vector<String> inputNames;
 	std::vector<String> outputNames;
 	vstplugin(handles_t* _handle, int32_t globalId, String sDir, String sName, int32_t _moduleId)
-	: effectbase(PLUGIN_TYPE_VST, globalId), handle(_handle), internalModuleId(_moduleId) {
+	: effectbase(sName, PLUGIN_TYPE_VST, globalId), handle(_handle), internalModuleId(_moduleId) {
 		this->sDir = sDir;
-		this->sName = sName;
-#ifndef NDEBUG
-		this->szName = this->sName.c_str();
-#endif
 	}
 	~vstplugin();
 	void resume();
@@ -109,7 +98,7 @@ public:
 	const char* getDir() {
 		return sDir.c_str();
 	}
-	bool updateDisplay();
+	bool updateWindow();
 	String getInfo(std::vector<String>& list) override;
 	long dispatch(
 		long opcode = 0,

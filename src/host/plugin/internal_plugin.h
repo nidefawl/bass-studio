@@ -19,20 +19,13 @@ struct track_impl_t;
 
 class internalplugin : public effectbase {
 public:
-#ifndef NDEBUG
-	//helper indicator in gdb.
-	//gdb cannot display std::string when built without clib-debug flag (SLOW)
-	const char* szName = NULL;
-#endif
-	String sName;
 	String sDir;
 	bool bEditOpen = false;
 	bool bInEditIdle = false;
 	int pluginCategory = 0;
-	bool isSynth = false;
 	int vstVersion = 0;
 	int uId = 0;
-	internalplugin(int32_t _pluginType, int32_t _projectGlobalId) : effectbase(_pluginType, _projectGlobalId) {
+	internalplugin(String _sName, int32_t _pluginType, int32_t _projectGlobalId) : effectbase(_sName, _pluginType, _projectGlobalId) {
 	}
 	virtual ~internalplugin() {
 	}
@@ -64,4 +57,3 @@ public:
 	void recvPluginEditParamUpdate(int32_t idx);
 	automationlane_snapshot_t toRef() override;
 };
-effectbase* makeModuleInstance(int32_t moduleType, int32_t moduleId, int32_t globalid);
