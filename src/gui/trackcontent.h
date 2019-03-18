@@ -119,7 +119,7 @@ public:
 	}
 	void render(NVGcontext* vg) {
 		if (!culled) {
-			renderMidiClip(vg, m_track, m_clip, pos, size);
+			renderMidiClip(vg, theme, m_track, m_clip, pos, size);
 		}
 	}
 	void onRemove() {
@@ -145,7 +145,7 @@ public:
 			ivec2 sizeClipped = clipSize;
 			this->parent->scissorClip(posClipped, sizeClipped);
 			sizeClipped.y = clipSize.y;
-			renderAudioClip(vg, m_track, m_clip, &m_clip->audio.waveformRef, pos, size, sizeClipped);
+			renderAudioClip(vg, theme, m_track, m_clip, &m_clip->audio.waveformRef, pos, size, sizeClipped);
 		}
 	}
 	void releaseRendered();

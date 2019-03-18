@@ -14,6 +14,7 @@
 #include "textfield.h"
 
 
+uint32_t nvgToRGB(NVGcolor c);
 class gui_input_filtered: public guibuttonbase {
 	int32_t* number;
 	bool drawBackground = true;

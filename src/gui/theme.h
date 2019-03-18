@@ -2,12 +2,14 @@
 #include <vector>
 #include <nanovg_min.h>
 #include "guicolors.h"
+#include "guiconstant.h"
 #include "seq_math.h"
 #include "str_util.h"
 #include <glm/vec4.hpp>
 #include <unordered_map>
 
-NVGcolor rgbaToNvg(uint32_t color) ;
+NVGcolor rgbaToNvg(uint32_t color);
+
 struct guitheme_t {
 	String name = "";
 	String fileName = "";
@@ -59,9 +61,11 @@ struct guitheme_t {
 	const NVGcolor getFrameColorBright() {
 		return this->colorBgFrameBright;
 	}
-	NVGcolor& getColor(GuiColor::constant_t _constant);
+	NVGcolor& getColorRef(GuiColor::constant_t _constant);
+	NVGcolor getColor(GuiColor::constant_t _constant) const;
+	NVGcolor getContrastColor(GuiColor::constant_t _constant) const;
 	int32_t getColorInt32(GuiColor::constant_t _constant);
 	void setColor(GuiColor::constant_t _constant, int32_t _newValue);
-	const int32_t get(int32_t _constant);
-	void set(int32_t _constant, int32_t _newValue);
+	const int32_t get(GuiConstant::constant_t _constant);
+	void set(GuiConstant::constant_t _constant, int32_t _newValue);
 };

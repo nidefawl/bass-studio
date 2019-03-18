@@ -787,7 +787,7 @@ public:
 		add(&btn);
 		btn.setText("Fold");
 		btn.setEnabledRef(&fold);
-		btn.setBackgroundColor(nvgToRGB(theme->getColor(GuiColor::COL_NOTE)));
+//		btn.setBackgroundColor(nvgToRGB(theme->getColor(GuiColor::COL_NOTE)));
 		content.showRange(2*12, 4*12);
 	}
 	~guictr_noteeditor() {

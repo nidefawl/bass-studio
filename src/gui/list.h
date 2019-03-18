@@ -5,8 +5,6 @@
 #include "guicontainer.h"
 #include "scrollbar.h"
 
-using std::max;
-using std::min;
 
 class gui_list_entry : public guibase {
 protected:
@@ -16,37 +14,7 @@ public:
 	}
 	virtual ~gui_list_entry() {
 	}
-	virtual void render(NVGcontext* vg) {
-		BaseCtrl* ctrl = parentCtrl;
-		float spacing = INSET_TITLE;
-		float x = spacing;
-		float rowHeight = size.y;
-		if (icon > -1) {
-			x += rowHeight+spacing;
-		}
-
-		if (ctrl->isCtrOrChildFocused(this)) {
-			nvgBeginPath(vg);
-			nvgRect(vg, pos.x, pos.y, size.x, size.y);
-			nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_DRKER));
-			nvgFill(vg);
-		}
-		nvgTranslate(vg, pos.x, pos.y);
-		if(icon > -1) {
-			int32_t extImg = 2;
-			int32_t iconW = rowHeight+extImg*2;
-			RenderResources::NvgImageTexture& image = RenderResources::imgIcons[icon];
-			NVGpaint paintIcon = nvgImagePattern(vg, -extImg, -extImg, iconW, iconW, 0, image.id, 1.0f);
-			nvgBeginPath(vg);
-			nvgRect(vg, -extImg, -extImg, iconW, iconW);
-			nvgFillPaint(vg, paintIcon);
-			nvgFill(vg);
-		}
-
-		setFont(vg, (int) (rowHeight * 0.8), G_WHITE, G_TITLE_ALIGN);
-		nvgText(vg, x, rowHeight / 2, StringAsCStr(getText()), NULL);
-		nvgTranslate(vg, -pos.x, -pos.y);
-	}
+	virtual void render(NVGcontext* vg);
 	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
 		if (this->contains(mpos)) {
 			evt.requestFocus(this);
@@ -54,14 +22,9 @@ public:
 		}
 		return false;
 	}
-	virtual void handleDraggedBegin(MouseEvent& evt) {
-	}
-	virtual void handleDraggedMove(MouseEvent& evt) {
-		parentCtrl->objectDragMove(this, evt);
-	}
-	virtual void handleDraggedRelease(MouseEvent& evt) {
-		parentCtrl->objectDragRelease(this, evt);
-	}
+	virtual void handleDraggedBegin(MouseEvent& evt);
+	virtual void handleDraggedMove(MouseEvent& evt);
+	virtual void handleDraggedRelease(MouseEvent& evt);
 	virtual void dragMoveOn(guibase* target, ivec2 mousepos) = 0;
 	virtual void dragReleaseOn(guibase* target, ivec2 mousepos) = 0;
 	virtual String getText() = 0;
@@ -98,14 +61,14 @@ public:
 		ivec2 cs = getSizeContent();
 		float offset = scrollbar.scrollOffset;
 		int32_t nEntriesFit = floor(cs.y/(double)rowHeight);
-		int32_t nEntries = max(0, (int32_t)listGuis.size()-nEntriesFit);
-		first = max(0, (int32_t) floor(offset * nEntries));
+		int32_t nEntries = std::max(0, (int32_t)listGuis.size()-nEntriesFit);
+		first = std::max(0, (int32_t) floor(offset * nEntries));
 		if (listGuis.size() == 0) {
 			first = last = 0;
 		} else {
 			last = first + (int32_t) nEntriesFit+1;
-			first = min((int32_t)(listGuis.size()-1), first);
-			last = min((int32_t)listGuis.size(), last);
+			first = std::min((int32_t)(listGuis.size()-1), first);
+			last = std::min((int32_t)listGuis.size(), last);
 		}
 	}
 
@@ -142,8 +105,8 @@ public:
 //		nvgStroke(vg);
 
 		scrollbar.render(vg);
-		nvgResetScissor(vg);
-		nvgResetTransform(vg);
+//		nvgResetScissor(vg);
+//		nvgResetTransform(vg);
 	}
 	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
 		if (this->contains(mpos)) {

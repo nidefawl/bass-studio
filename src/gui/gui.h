@@ -1,25 +1,22 @@
 #pragma once
 #include <glm/glm.hpp>
 #include <glm/vec2.hpp>
-#include <glm/vec3.hpp>
 #include <glm/vec4.hpp>
-using glm::vec2;
-using glm::ivec2;
-
 #include <nanovg.h>
 #include <vector>
 #include <algorithm>
-#include <typeinfo>
+//using glm::vec2;
+//using glm::ivec2;
+
 
 #include "str_util.h"
 #include "event.h"
 #include "math.h"
+#include "saferef.h"
 #include "guicolors.h"
-#include "logging.h"
-#include "renderresources.h"
-#include "basectrl.h"
-#include "theme.h"
-#include "basectrl.h"
+//#include "logging.h"
+//#include "renderresources.h"
+//#include "basectrl.h"
 #define GUI_PLUGIN_VIEW 1
 #define GUI_PLUGIN 2
 
@@ -27,43 +24,43 @@ struct NVGcontext;
 namespace Table {
 struct tbl;
 }
+class BaseCtrl;
+class AppCtrl;
+class guictxtmenu_base;
 class guitrack_editor;
 class guiplugin;
 class guictr_dragged_plugins;
 class guictr_base;
 class gui_pluginlist_entry;
 class gui_track;
+struct guitheme_t;
 struct dragdrop_midifile;
 
 void setFont(NVGcontext* vg, float size, NVGcolor color, int alignment);
 void renderText(NVGcontext* ctx, float x, float y, float maxWidth, const char* string);
 void renderDashedLineFrame(NVGcontext* vg, float x, float y, float w, float h, float thickness);
-void drawAttachedBackground(NVGcontext* vg, guitheme_t* theme, ivec2 posInset, ivec2 sizeInset, int margin);
+void drawAttachedBackground(NVGcontext* vg, const guitheme_t* theme, glm::ivec2 posInset, glm::ivec2 sizeInset, int margin);
 
-void drawPlaySymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2);
-void drawStopSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2);
-void drawTextureSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2);
+void drawPlaySymbol(NVGcontext* vg, glm::ivec2& pos, glm::ivec2& size, const NVGcolor& color, int drawParm, int drawParm2);
+void drawStopSymbol(NVGcontext* vg, glm::ivec2& pos, glm::ivec2& size, const NVGcolor& color, int drawParm, int drawParm2);
+void drawTextureSymbol(NVGcontext* vg, glm::ivec2& pos, glm::ivec2& size, const NVGcolor& color, int drawParm, int drawParm2);
 void drawTri(NVGcontext* vg, float xTop, float yTop, float h, const int dir, const NVGcolor& color, const NVGcolor& strokeColor, float strokeWidth);
 guitheme_t* getDefaultTheme();
-ivec2 toControlsObjectSpace(ivec2& pos, guibase* gui);
+glm::ivec2 toControlsObjectSpace(glm::ivec2& pos, guibase* gui);
 
 inline float calcInset(float desiredInset, float size) {
-	return min(desiredInset, max(0.f, (size-4.0f)/2.0f));
+	return std::min(desiredInset, std::max(0.f, (size-4.0f)/2.0f));
 }
 enum TextInputState : signed int {
 	DISABLED = 0,
 	ENABLED = 1
 };
-template<typename T>
-void addPropertiesFromGui(T& gui, Table::tbl* table);
-template<>
-void addPropertiesFromGui(guibase& gui, Table::tbl* table);
 #define FLAG_FOCUSED 1
 #define FLAG_SELECTED 2
 class guibase {
 public:
-	ivec2 pos{0};
-	ivec2 size{0};
+	glm::ivec2 pos{0};
+	glm::ivec2 size{0};
 	int id;
 	int flags = FLG_ENBL|FLG_VISIBLE|FLG_RENDER_BACKGROUND;
 	int zOrder = 0;
@@ -107,34 +104,14 @@ public:
 		else
 			flags |= FLG_ENBL;
 	}
-	virtual bool hovered() const {
-		return this == parentCtrl->guiOver;
-	}
-	virtual bool pressed() const {
-		return this == parentCtrl->guiDragged;
-	}
-	virtual bool focused() const {
-		return this == parentCtrl->guiFocused;
-	}
-
-	String getClassName() {
-		return typeName(*this);
-	}
+	virtual bool hovered() const;
+	virtual bool pressed() const;
+	virtual bool focused() const;
 	void setLabel(String _str) {
 		label = _str;
 	}
-	void setTint(uint32_t hex) {
-		if (theme->isDefault) {
-			theme = new guitheme_t(false);
-		}
-		theme->setTint(hex);
-	}
-	void setBackgroundColor(uint32_t hex) {
-		if (theme->isDefault) {
-			theme = new guitheme_t(false);
-		}
-		theme->setBackgroundColor(hex);
-	}
+
+	String getClassName();
 	guibase(const guibase&) = default; guibase& operator=(const guibase&) = default;
 	guibase(guibase&&) = default; guibase& operator=(guibase&&) = default;
 
@@ -185,7 +162,7 @@ public:
 	virtual void onRemove() {
 	}
 	virtual void onAdded() {
-		if (theme->isDefault && parent) {
+		if (parent) {
 			theme = parent->theme;
 		}
 	}
@@ -260,11 +237,6 @@ public:
 	}
 	virtual void dragReleaseOn(guibase* target, ivec2 mousepos) {
 	}
-	virtual void addProperties(Table::tbl* table) {
-#ifdef BUILD_BUILTIN_EFFECT
-		addPropertiesFromGui(*this, table);
-#endif
-	}
 	virtual void buttonClicked(guibase* button) {
 	}
 	virtual void rightClicked(MouseEvent& evt, guibase* button) {
@@ -289,10 +261,10 @@ public:
 	virtual void scissorClip(ivec2& vpos, ivec2& vsize) {
 		ivec2 posTL = toParentSpace(vpos);
 		ivec2 posBR = toParentSpace(vpos + vsize);
-		vpos.x = max(posTL.x, pos.x);
-		vpos.y = max(posTL.y, pos.y);
-		vsize.x = min(posBR.x, (pos+size).x) - vpos.x;
-		vsize.y = min(posBR.y, (pos+size).y) - vpos.y;
+		vpos.x = std::max(posTL.x, pos.x);
+		vpos.y = std::max(posTL.y, pos.y);
+		vsize.x = std::min(posBR.x, (pos+size).x) - vpos.x;
+		vsize.y = std::min(posBR.y, (pos+size).y) - vpos.y;
 		if (parent != NULL) {
 			parent->scissorClip(vpos, vsize);
 		}
@@ -343,47 +315,20 @@ public:
 	virtual bool isStaticContainer() {
 		return false;
 	}
-	virtual int32_t getStateFlags() {
-		int32_t flgs = this->flags & ( FLG_VISIBLE | FLG_RENDER_BACKGROUND);
-		if (pressed()) {
-			flgs |= FLG_DRG;
-		}
-		if (hovered()) {
-			flgs |= FLG_HVRD;
-		}
-		if (focused()) {
-			flgs |= FLG_FOC;
-		}
-		if (isEnabled()) {
-			flgs |= FLG_ENBL;
-		}
-		if (isVisible()) {
-			flgs |= FLG_VISIBLE;
-		}
-		if (isBackgroundRendered()) {
-			flgs |= FLG_RENDER_BACKGROUND;
-		}
-		return flgs;
-	}
-	//implementation specific
-	virtual bool isSelected() {
-		return false;
-	}
+	virtual int32_t getStateFlags();
+
 
 	BaseCtrl* getControl() const {
 		return parentCtrl;
 	}
-	virtual void setControl(BaseCtrl* parentCtrl) {
-		this->parentCtrl = parentCtrl;
-		if (parentCtrl)
-			this->theme = parentCtrl->getTheme();
-	}
-
-	virtual void setParent(guibase* parent) {
-		this->parent = parent;
-	}
-
+	virtual void setControl(BaseCtrl* parentCtrl);
+	virtual void setParent(guibase* parent);
+	virtual void addProperties(Table::tbl* table);
+public:
+	virtual bool isSelected();
 protected:
+	void setTint(uint32_t hex);
+	void setBackgroundColor(uint32_t hex);
+	bool isChildOf(guibase* parentSearch);
 
 };
-

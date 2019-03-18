@@ -17,6 +17,7 @@
 #include <glm/vec2.hpp>
 #include "track.h"
 #include "track_impl.h"
+#include "renderresources.h"
 #include "leak_detect.h"
 
 using glm::vec2;
@@ -488,7 +489,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 				nvgStrokeColor(vg, theme->getColor(c1));
 				nvgStrokeWidth(vg, lineWidth);
 				nvgStroke(vg);
-//				nvgLineJoin(vg, NVGlineCap::NVG_MITER);
+				nvgLineJoin(vg, NVGlineCap::NVG_MITER);
 
 				//Lots of room for optimization here (draw texture for dot, or use custom shader)
 				nvgShapeAntiAlias(vg, 0);

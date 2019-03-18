@@ -136,7 +136,9 @@ bool vstplugin::onShow(vst_window* window) {
 	}
 	return true;
 }
-void vstplugin::unload() {
+void vstplugin::unload(vsthost* host) {
+	effectbase::unload(host);
+	assert(this->bIsSetup);
 //	if (handle->aeffect != NULL) {
 //		float** pluginBufIn = blockInputs->buf;
 //		float** pluginBufOut = blockOutputs->buf;
@@ -168,9 +170,8 @@ void vstplugin::unload() {
 }
 
 void vstplugin::load(vsthost* host) {
-	if (this->bIsSetup) {
-		unload();
-	}
+	effectbase::load(host);
+	assert(!this->bIsSetup);
 	auto aeffect = handle->aeffect;
 	assert(aeffect->numOutputs > 0);
 	this->blockInputs = new AudioBlock(std::max(2, aeffect->numInputs), host->lBlockSize);

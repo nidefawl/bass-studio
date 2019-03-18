@@ -29,6 +29,24 @@ static std::vector<constant_t*>& _getConstants() {
 	static std::vector<constant_t*> allconstants;
 	return allconstants;
 }
+constant_t getConstantById(int32_t id) {
+	auto& v =_getConstants();
+	for (auto* c : v) {
+		if (c->idx == id) {
+			return *c;
+		}
+	}
+	return constant_t();
+}
+constant_t getConstantByName(String name) {
+	auto& v =_getConstants();
+	for (auto* c : v) {
+		if (c->name == name) {
+			return *c;
+		}
+	}
+	return constant_t();
+}
 std::vector<constant_t> getAllConstants() {
 	std::vector<constant_t> v;
 	auto constants = _getConstants();
@@ -48,7 +66,7 @@ void changeConstantDefault(const constant_t& c, int32_t v) {
 	}
 }
 int32_t getNextId() {
-	static int32_t constantsNextId = 0;
+	static int32_t constantsNextId = 1;
 	return constantsNextId++;
 }
 void initConstants(int colorVal);
@@ -93,6 +111,16 @@ constant_t COL_BG_DRK_SELECTED = constant_t("COL_BG_DRK_SELECTED", 0xFF000000);
 constant_t COL_CLEAR_COLOR = constant_t("COL_CLEAR_COLOR", 0xFF000000);
 constant_t COL_LABEL_ACTIVE = constant_t("COL_LABEL_ACTIVE", 0xFF000000);
 constant_t COL_LABEL_INACTIVE = constant_t("COL_LABEL_INACTIVE", 0xFF000000);
+constant_t COL_WHITE("COL_WHITE", -1);
+constant_t COL_BLACK("COL_BLACK", 0);
+#define TO_INT32(r,g,b,a) ((int32_t)((r&0xFF)|((g&0xFF)<<8)|((b&0xFF)<<16)|((a&0xFF)<<24)))
+constant_t COL_LEVEL_IND_GREEN("COL_LEVEL_IND_GREEN", TO_INT32(30, 255, 30, 255));
+constant_t COL_LEVEL_IND_GREEN_DRK("COL_LEVEL_IND_GREEN_DRK",TO_INT32(10, 160, 10, 255));
+constant_t COL_LEVEL_IND_GREEN_DRKER("COL_LEVEL_IND_GREEN_DRKER", TO_INT32(5, 120, 5, 255));
+constant_t COL_LEVEL_IND_YELLOW("COL_LEVEL_IND_YELLOW", TO_INT32(255, 255, 30, 255));
+constant_t COL_LEVEL_IND_YELLOW_DRK("COL_LEVEL_IND_YELLOW_DRK", TO_INT32(160, 160, 10, 255));
+constant_t COL_LEVEL_IND_YELLOW_DRKER("COL_LEVEL_IND_YELLOW_DRKER", TO_INT32(120, 120, 5, 255));
+
 }
 
 NVGcolor rgbaToNvg(uint32_t i);

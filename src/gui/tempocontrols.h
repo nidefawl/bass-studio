@@ -324,7 +324,7 @@ public:
 		  loopPos(&MainCtrl::get()->loopStart),
 		  loopLen(&MainCtrl::get()->loopLen, true)
 	{
-		btnAudioOnOff.setTint(0x00ddff);
+//		btnAudioOnOff.setTint(0x00ddff);
 		songPos.setConnectedBG();
 		loopPos.setConnectedBG();
 		loopLen.setConnectedBG();

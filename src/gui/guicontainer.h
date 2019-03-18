@@ -1,12 +1,10 @@
 #pragma once
-#include <nanovg.h>
+#include <nanovg_min.h>
 #include <glm/glm.hpp>
 #include <glm/vec2.hpp>
 #include <glm/vec4.hpp>
-#include "basectrl.h"
 #include "gui.h"
-#include "guicolors.h"
-#include "theme.h"
+#include "seq_math.h"
 #include "exceptions.h"
 #include "mouse.h"
 #include "event.h"
@@ -16,7 +14,8 @@ using glm::vec2;
 using glm::ivec2;
 using glm::vec4;
 using glm::ivec4;
-
+class BaseCtrl;
+struct guitheme_t;
 class guictr_base : public guibase {
 public:
 	int padding = CONTENT_INSET;
@@ -54,20 +53,12 @@ public:
 		guis.clear();
 	}
 
-	virtual void setControl(BaseCtrl* parentCtrl) override {
-		guibase::setControl(parentCtrl);
-		for (guibase* g : guis) {
-			g->setControl(parentCtrl);
-		}
-	}
-	virtual void setParent(guibase* parent) override {
-		guibase::setParent(parent);
-		for (guibase* g : guis) {
-			assert(g->parent == this);
-//			g->setParent(this);
-		}
-	}
+	virtual void setControl(BaseCtrl* parentCtrl) override;
+	virtual void setParent(guibase* parent) override;
 public:
+	static void drawBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 posInset, ivec2 sizeInset, int margin, bool focused = false, bool drawInset = true);
+	static void drawInsetBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 posInset, ivec2 sizeInset);
+
 	virtual void onRemove() override {
 		removeGuis();
 	}
@@ -88,9 +79,10 @@ public:
 	virtual ivec2 getSizeContent() {
 		return size - (paddingTL(padding) + paddingBR(padding));
 	}
-	void renderTitleBarHorizontal(NVGcontext* vg, String text, float textOffsetX, int flags);
+	void renderTitleBar(NVGcontext* vg, String text, float textOffsetX, int flags, bool isHorizontalTitle);
 	void renderFrameBase(NVGcontext* vg);
 	void renderFrameOutline(NVGcontext* vg);
+	virtual void renderBackground(NVGcontext* vg);
 	virtual void render(NVGcontext* vg);
 	virtual bool setScissorTransformContainer(NVGcontext* vg);
 	virtual bool setScissorTransform(NVGcontext* vg) {
@@ -200,41 +192,7 @@ public:
 		}
 		return false;
 	}
-	static void drawBackground(NVGcontext* vg, guitheme_t* theme, ivec2 posInset, ivec2 sizeInset, int margin, bool focused = false, bool drawInset = true) {
-		static const ivec2 borderThickness(CTR_SPACING-2);
-		posInset -= ivec2(margin);
-		sizeInset += ivec2(margin) * 2;
-		if (sizeInset.y > 0 && sizeInset.x > 0) {
-			nvgBeginPath(vg);
-			nvgRoundedRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y, 4);
-			NVGcolor bg = theme->getColor(GuiColor::COL_BG_DRK);
-			if (focused) {
-				bg = theme->getColor(GuiColor::COL_BG_DRK_FOCUSED);
-			}
-			nvgFillColor(vg, bg);
-			nvgFill(vg);
-			posInset += borderThickness;
-			sizeInset -= borderThickness * 2;
-			if (sizeInset.y > 0 && sizeInset.x > 0 && drawInset) {
-				nvgBeginPath(vg);
-				nvgRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y);
-				nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_BRT));
-				nvgFill(vg);
-			}
-		}
-	}
-	virtual void renderBackground(NVGcontext* vg) {
-		bool focused = parentCtrl->isCtrOrChildFocused(this);
-		drawBackground(vg, theme, getPosContent(), getSizeContent(), margin, focused, true);
-	}
-	static void drawInsetBackground(NVGcontext* vg, guitheme_t* theme, ivec2 posInset, ivec2 sizeInset) {
-		if (sizeInset.y > 0 && sizeInset.x > 0) {
-			nvgBeginPath(vg);
-			nvgRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y);
-			nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_BRT));
-			nvgFill(vg);
-		}
-	}
+
 	virtual void onIdle() {
 		for (guibase* gui : guis) {
 			gui->onIdle();
@@ -271,52 +229,6 @@ public:
 	}
 #endif
 };
-class Splitter : public guictr_base {
-public:
-	int type;
-	float scale;
-	float min, max;
-	Splitter(int _type, float _scale)
-	: guictr_base(),
-	  type(_type),
-	  scale(_scale)
-	{
-		min = 0;
-		max = 1;
-		padding = 0;
-	}
-	void setMinMax(float _min, float _max) {
-		this->min = _min;
-		this->max = _max;
-	}
-	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-		if (this->contains(mpos) && evt.type <= MouseHitType::MOUSE_RIGHT) {
-			evt.requestFocus(this);
-			evt.requestCursor(type == 0 ? CURSOR_RESIZE_V : CURSOR_RESIZE_H);
-			return true;
-		}
-		return false;
-	}
-	int32_t leftOrTop(int32_t wh) {
-		return round(wh*scale);
-	}
-	int32_t rightOrBottom(int32_t wh) {
-		return wh-leftOrTop(wh);
-	}
-	virtual void handleDraggedBegin(MouseEvent& evt) {
-	}
-	virtual void handleDraggedMove(MouseEvent& evt) {
-		ivec2 windowSize = parentCtrl->m_size;
-		float sc = type == 0  ? (evt.mousepos.y/(float)windowSize.y) : (evt.mousepos.x/(float)windowSize.x);
-		this->scale = (sc < min ? min : sc > max ? max : sc);
-		parentCtrl->relayout(windowSize.x, windowSize.y);
-	}
-	virtual void handleDraggedRelease(MouseEvent& evt) {
-	}
-	virtual bool isStaticContainer() {
-		return true;
-	}
-};
 class guictr_tabbed : public guictr_base {
 
 	struct tabbed_entry;
@@ -335,3 +247,4 @@ public:
 	void layout() override;
 	void render(NVGcontext* vg);
 };
+

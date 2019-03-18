@@ -127,7 +127,7 @@ public:
 	glm::ivec2 constrainSize(vst_window* window, glm::ivec2& size);
 	bool show() override;
 	bool close() override;
-	void unload() override;
+	void unload(vsthost* host) override;
 	void load(vsthost* host) override;
 	vst_param_category* getCategory(int idx);
 	void recvPluginEditParamUpdate(int32_t idx);

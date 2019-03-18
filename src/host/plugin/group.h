@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <vector>
+#include "modules.h"
 #include "internal_plugin.h"
 #include "str_util.h"
 #include "snapshot.h"
@@ -29,7 +30,7 @@ public:
 	String getInfo(std::vector<String>& list) override;
 	void resume() override;
 	void sleep() override;
-	void unload() override;
+	void unload(vsthost* host) override;
 	void onPreUnload() override;
 	void load(vsthost* host) override;
 	void breakTrackLink() override;

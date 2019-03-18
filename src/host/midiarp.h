@@ -50,9 +50,6 @@ public:
 private:
 #define NUM_ARP_STEPSIZE_OPTIONS 16
 #define NUM_PATTERNS 6
-#define PARAM_ARP_CLOCK 1
-#define PARAM_ARP_GATE 2
-#define PARAM_ARP_PATTER 3
 	int32_t step = 0;
 	tick_t resetTime = 0;
 	tick_t lastStepSize = 0;

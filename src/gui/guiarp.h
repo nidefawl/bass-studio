@@ -105,7 +105,7 @@ public:
 		}
 		renderFrameBase(vg);
 		int flags = parentCtrl->isCtrOrChildFocused(this) ? FLAG_FOCUSED : 0;
-		renderTitleBarHorizontal(vg, this->text, buttonBypass.right(), flags);
+		renderTitleBar(vg, this->text, buttonBypass.right(), flags, false);
 		renderFrameOutline(vg);
 		buttonBypass.render(vg);
 		guiknob* knobs[3] = {&clock, &gate, &pattern};
@@ -156,11 +156,11 @@ public:
 
 	virtual void layout() override {
 		ivec2 size = getSizeContent();
-		int32_t meterW = 32;
+		int32_t meterW = theme->get(GuiConstant::CONST_METER_WIDTH);
+		const int32_t hpt = theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT);
 		while (size.x < meterW * 16 && meterW > 16) {
 			meterW -= 4;
 		}
-		const int32_t hpt = theme->get(G_PLUGIN_TITLE_HEIGHT);
 		int32_t inset1 = (hpt - buttonBypass.size.y) / 2;
 		ivec2 contentS(size.x - meterW, size.y-hpt);
 		buttonBypass.pos.y = inset1;

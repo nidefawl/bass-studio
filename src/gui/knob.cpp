@@ -1,10 +1,12 @@
 #include <glm/glm.hpp>
 #include <glm/vec2.hpp>
 #include "knob.h"
+#include "basectrl.h"
 #include "knoblabeled.h"
 #include "gui.h"
 #include "guitooltip.h"
 #include "str_util.h"
+#include "keyboard.h"
 #include "table.h"
 #include "logging.h"
 #include "automation.h"
@@ -14,7 +16,7 @@ using namespace Table;
 namespace GuiColor {
 constant_t COL_KNOB("COL_KNOB", 0xff00ddff);
 constant_t COL_KNOB_IND("COL_KNOB_IND", 0xffffffff);
-constant_t COL_AUTOMATED("COL_KNOB_AUT", 0xFFEF62DF);
+constant_t COL_AUTOMATED("COL_AUTOMATED", 0xFFEF62DF);
 }
 
 template <>
@@ -61,6 +63,36 @@ void guiknob::render(NVGcontext* vg) {
 	ivec2 insetS = size-ivec2(0);
 	renderButtonAt(vg, insetP, insetS);
 }
+void guiknob::handleDraggedBegin(MouseEvent& evt) {
+		if (evt.guiDragged == this) {
+			parentCtrl->captureMouse(this);
+		}
+		initialValue = getValue();
+		changedValue = false;
+	}
+	void guiknob::handleDraggedMove(MouseEvent& evt) {
+		if (evt.guiDragged == this && evt.type == M_EVT_CAPTURED_MOVE) {
+			int disty = (int)evt.dragDistance->y;
+			if (abs(disty) < 1)
+				return;
+			float value = getValue();
+			float scale = isCtrl(evt.kbmods) ? 2000.0f : 200.0f;
+			float delta = disty/scale;
+			if (abs(delta) > 1e-2f) {
+				value -= delta;
+				setValue(value, 0);
+				evt.dragDistance->y = 0;
+				lastVal = value;
+				changedValue = true;
+			}
+		}
+	}
+	void guiknob::handleDraggedRelease(MouseEvent& evt) {
+		if (changedValue) {
+			onValueEditFinish(initialValue, lastVal);
+		}
+		changedValue = false;
+	}
 bool guiknob::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 	if (contains(mpos)) {
 		if (evt.type == MouseHitType::MOUSE_LEFT) {
@@ -70,6 +102,13 @@ bool guiknob::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 		return true;
 	}
 	return false;
+}
+bool guiknob::handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
+	float value = getValue();
+	float scale = isCtrl(evt.kbmods) ? 200.0f : 20.0f;
+	value += yoffset/scale;
+	setValue(value, 2);
+	return true;
 }
 void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS) {
 	if (renderBackground) {

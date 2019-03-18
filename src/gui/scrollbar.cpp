@@ -3,6 +3,8 @@
 
 #include "gui.h"
 #include "guicolors.h"
+#include "theme.h"
+#include "basectrl.h"
 #include <glm/glm.hpp>
 #include <glm/vec2.hpp>
 

@@ -41,7 +41,7 @@ protected:
 private:
 	GuiColor::constant_t color = GuiColor::COL_KNOB;
 	GuiColor::constant_t colorInactive = GuiColor::COL_LABEL_INACTIVE;
-	GuiColor::constant_t color2 = GuiColor::COL_KNOB;
+	GuiColor::constant_t color2 = GuiColor::COL_KNOB_IND;
 	GuiColor::constant_t colorHL = GuiColor::COL_AUTOMATED;
 	GuiColor::constant_t colorHL2 = GuiColor::COL_AUTOMATED;
 	const float radiusHandle = 2.5f;

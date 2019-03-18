@@ -79,6 +79,12 @@ public:
 			idx++;
 		}
 	}
+	void setControl(BaseCtrl* parentCtrl) {
+		guictxtmenu_base::setControl(parentCtrl);
+		for (auto* g : entries) {
+			g->theme = parentCtrl->getTheme();
+		}
+	}
 };
 
 

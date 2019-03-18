@@ -224,6 +224,7 @@ tick_t clip_t::getNumLoops() const {
 	const tick_t lenClipLoopSection = len - preLoopLen;
 	return (lenClipLoopSection+loopLen-1) / loopLen;
 }
+/* HOT CODEPATH */
 void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& notesView, bool forPlayback) const {
 	notesView.m_list.clear();
 	std::vector<note_t> listLoop;
@@ -293,7 +294,7 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
 	}
 	notesView.updateBounds();
 }
-
+/* HOT CODEPATH */
 int clip_t::getInTimeRange(tick_t absStart, tick_t absEnd, tick_t cutStart, tick_t cutEnd, std::vector<note_t>& list) {
 	tick_t clipStart = start();
 	tick_t clipEnd = end();
@@ -306,9 +307,13 @@ int clip_t::getInTimeRange(tick_t absStart, tick_t absEnd, tick_t cutStart, tick
 	tick_t cutRight = getLen();
 	if (cutStart > -1) {
 		cutLeft = max(cutLeft, cutStart-start());
+	} else {
+//		cutLeft = relStart;
 	}
 	if (cutEnd > -1) {
 		cutRight = min(cutRight, cutEnd-start());
+	} else {
+//		cutRight = relEnd;
 	}
 	if (cutRight <= cutLeft)
 		return 0;
@@ -347,35 +352,37 @@ void clip_notes_t::selectIdxRange(size_t start, size_t end) {
 	}
 }
 void clip_notes_t::updateBounds() {
-	std::vector<note_t>::iterator it = m_list.begin();
 	bool first = true;
 	minNote = note_t();
 	maxNote = minNote;
 	firstNote = minNote;
 	lastNote = minNote;
-	while (it != m_list.end()) {
+	if (m_list.size()) {
+		std::vector<note_t>::iterator it = m_list.begin();
 		note_t& note = *it;
-		if (first) {
-			first = false;
-			minNote = note;
-			maxNote = note;
-			firstNote = note;
-			lastNote = note;
-		}
-		if (minNote.pitch > note.pitch) {
-			minNote = note;
-		}
-		if (maxNote.pitch < note.pitch) {
-			maxNote = note;
-		}
-		if (firstNote.time > note.time) {
-			firstNote = note;
-		}
-		if (lastNote.time < note.time) {
-			lastNote = note;
-		}
+		minNote = note;
+		maxNote = note;
+		firstNote = note;
+		lastNote = note;
 		it++;
+		while (it != m_list.end()) {
+			note_t& note = *it;
+			if (minNote.pitch > note.pitch) {
+				minNote = note;
+			}
+			if (maxNote.pitch < note.pitch) {
+				maxNote = note;
+			}
+			if (firstNote.time > note.time) {
+				firstNote = note;
+			}
+			if (lastNote.time < note.time) {
+				lastNote = note;
+			}
+			it++;
+		}
 	}
+
 }
 note_t* getFirstAfter(std::vector<note_t>& v, int32_t pitch, tick_t time) {
 	auto itStart = v.begin();

@@ -7,7 +7,7 @@
 #include "keyboard.h"
 #include "commands.h"
 
-#include "mainctrl.h"
+#include "basectrl.h"
 #include "seq_util.h"
 
 #include "../gui/gui.h"

@@ -8,23 +8,79 @@
 #include <numeric>
 
 
+
+#include "str_util.h"
+#include "seq_util.h"
+#include "event.h"
+#include "mouse.h"
 #include "gui.h"
 #include "guicolors.h"
+#include "guiconstant.h"
 #include "guicontextmenu_base.h"
 #include "guicontextmenu.h"
 #include "guicontainer.h"
-#include "gui/textfield.h"
+#include "textfield.h"
+#include "button.h"
+#include "inputfield.h"
+#include "guicolorpick.h"
 #include "table.h"
 #include "theme.h"
 #include "thememgr.h"
 
 #include "guicontainer.h"
-#include "../gui/guiscrollcontainer.h"
-#include "../gui/guicolorpick.h"
-#include "../gui/dropdown.h"
+#include "guiscrollcontainer.h"
+#include "guicolorpick.h"
+#include "dropdown.h"
 #include "debugproperties.h"
 #include "inputfield.h"
+namespace Table {
 
+	class click_type_handler {
+	public:
+		virtual void onClickNotImplemented(const click_ctxt_t& ctxt) = 0;
+		virtual void onClick(const click_ctxt_t& ctxt, glm::ivec2& value) = 0;
+		virtual void onClick(const click_ctxt_t& ctxt, NVGcolor& value) = 0;
+		virtual void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, GuiColor::constant_t constant) = 0;
+		virtual void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, GuiConstant::constant_t constant) = 0;
+		virtual ~click_type_handler() {
+
+		}
+	};
+	template <typename T>
+	inline void cellClicked(const click_ctxt_t& ctxt, const tbltyperef<T>& obj) {
+		if (ctxt.callback) {
+			ctxt.callback->onClickNotImplemented(ctxt);
+		}
+	}
+	template <typename T>
+	inline void cellClicked(const click_ctxt_t& ctxt, const tbltypesaferef<T>& obj) {
+		if (safeRefOk(obj.saferef)) {
+			cellClicked(ctxt, obj.t);
+		}
+	}
+	template <>
+	inline void cellClicked(const click_ctxt_t& ctxt, const tbltypesaferef<glm::ivec2>& obj) {
+		if (safeRefOk(obj.saferef)) {
+			if (ctxt.callback) {
+				ctxt.callback->onClick(ctxt, obj.t);
+			}
+		}
+	}
+	template <>
+	inline void cellClicked(const click_ctxt_t& ctxt, const tbltyperef<NVGcolor>& obj) {
+		if (ctxt.callback) {
+			ctxt.callback->onClick(ctxt, obj.t);
+		}
+	}
+	template <>
+	inline void cellClicked(const click_ctxt_t& ctxt, const tbltypesaferef<NVGcolor>& obj) {
+		if (safeRefOk(obj.saferef)) {
+			if (ctxt.callback) {
+				ctxt.callback->onClick(ctxt, obj.t);
+			}
+		}
+	}
+}
 using namespace Table;
 
 struct guiproperties_t {
@@ -51,6 +107,7 @@ protected:
 	bool mouseDown = false;
 	cellclicked_t lastClicked;
 	std::vector<guibase*> controls;
+	int32_t number;
 public:
 	guiproperties_table(T* _ptr) : debugproperties(), ptr(_ptr), numberInput(nullptr) {
 		setSnapSides(ivec4(1));
@@ -183,6 +240,26 @@ public:
 						evt.guiDragged = &numberInput;
 						numberInput.handleDraggedBegin(evt);
 					}
+					void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, GuiConstant::constant_t constant) override {
+						click();
+						gui_numberinput_field& numberInput = table->numberInput;
+						table->number = theme->get(constant);
+						numberInput.setRef(&table->number);
+						numberInput.pos = clickedcell.pos;
+						numberInput.size = clickedcell.size;
+						BaseCtrl* const ctrl = table->parentCtrl;
+						numberInput.fnValueEditChanged = [theme, constant, ctrl](gui_numberinput_field*,int32_t rgba) {
+							theme->set(constant, rgba);
+							if (ctrl)
+								ctrl->relayout();
+						};
+						numberInput.fnClamp = [](int32_t i) {
+							return i > 1000 ? 1000 : i < 1 ? 1 : i;
+						};
+						table->setActiveControl(&numberInput);
+						evt.guiDragged = &numberInput;
+						numberInput.handleDraggedBegin(evt);
+					}
 					void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, GuiColor::constant_t constant) override {
 						click();
 						gui_color_pick* color = new gui_color_pick();
@@ -256,6 +333,8 @@ public:
 
 	}
 };
+template<typename T>
+void addPropertiesFromGui(T& gui, Table::tbl* table);
 template<>
 void addPropertiesFromGui(guibase& gui, Table::tbl* table) {
 	SafeRef<guibase> ref = gui.makeSafeRef();
@@ -269,9 +348,9 @@ void addPropertiesFromGui(guibase& gui, Table::tbl* table) {
 	} else {
 		rows.push_back({{tblstr{"parent"}, tblstr{"<null>"}}});
 	}
-	String strTheme = gui.theme->name+StringFormat("[%7X]", (int64_t)&gui.theme);
-	rows.push_back({{tblstr{"theme"}, tblstr{strTheme}}});
-	rows.push_back({{tblstr{"theme2"}, tblstr{strTheme}}});
+	String strTheme = gui.theme->name+StringFormat("[%7X]", (int64_t)gui.theme);
+	rows.push_back({{tblstr{"theme"}, tblString{strTheme, 1}}});
+	rows.push_back({{tblstr{"theme2"}, tblString{strTheme, 1}}});
 }
 
 template <>
@@ -286,16 +365,6 @@ void guiproperties_table<guiproperties_t>::layout()  {
 	if (ref)
 	{
 		ref->addProperties(&table);
-//		table.rows.push_back({{tblstr{"self"}, tbltype<SafeRef<guibase>>{ptr->safeRef, nullptr}}});
-//		table.rows.push_back({{tblstr{"pos"}, tbltypesaferef<glm::ivec2>{ptr->safeRef, ref->pos, nullptr}}});
-//		table.rows.push_back({{tblstr{"size"}, tbltypesaferef<glm::ivec2>{ptr->safeRef, ref->size, nullptr}}});
-//		table.rows.push_back({{tblstr{"size"}, tbltypesaferef<glm::ivec2>{ptr->safeRef, ref->size, nullptr}}});
-//		table.rows.push_back({{tblstr{"tracklink"}, tblint{(int64_t)ptr->effect->getTrackLink(), "%12x"}}});
-//		table.rows.push_back({{tblstr{"bIsSetup"}, tblint{ptr->effect->bIsSetup}}});
-//		table.rows.push_back({{tblstr{"bIsEnabled"}, tblint{ptr->effect->bIsEnabled}}});
-//		table.rows.push_back({{tblstr{"PARAM_ENABLE"}, tblfloat{ptr->effect->getParamValue(PARAM_ENABLE)}}});
-	} else {
-		my_printf("went away\n", 0);
 	}
 	ivec2 tableSize = getSizeContent()-ivec2(INSET_TABLE<<1);
 	AdjustColSizes(table, tableSize);
@@ -347,9 +416,13 @@ void guiproperties_table<guiproperties_t>::setDebugPropertyHandle(void *vPtr)  {
 		this->onChildLayoutChanged(this);
 	}
 }
-struct tbltype_theme_constant {
+struct tbltype_theme_color {
 	guitheme_t* theme;
 	GuiColor::constant_t constant;
+};
+struct tbltype_theme_constant {
+	guitheme_t* theme;
+	GuiConstant::constant_t constant;
 };
 namespace Table {
 void drawColor(NVGcontext* vg, ivec2 pos, ivec2 size, int32_t rgba) {
@@ -364,7 +437,7 @@ void drawColor(NVGcontext* vg, ivec2 pos, ivec2 size, int32_t rgba) {
 		sizeQuad, sizeQuad);
 	nvgFillColor(vg, rgbaToNvg(rgba));
 	nvgFill(vg);
-	nvgFillColor(vg, G_WHITE);
+	nvgFillColor(vg, rgbaToNvg(-1));
 
 }
 template <>
@@ -376,9 +449,18 @@ void drawTbl(const table_ctxt_t& ctxt, const tbltyperef<NVGcolor>& obj) {
 	drawColor(ctxt.vg, ctxt.pos, ctxt.size, nvgToRGBA(obj.t));
 }
 template <>
-void drawTbl(const table_ctxt_t& ctxt, const tbltype_theme_constant& obj) {
+void drawTbl(const table_ctxt_t& ctxt, const tbltype_theme_color& obj) {
 	auto t = obj.theme->getColorInt32(obj.constant);
 	drawColor(ctxt.vg, ctxt.pos, ctxt.size, t);
+}
+template <>
+inline void cellClicked(const click_ctxt_t& ctxt, const tbltype_theme_color& obj) {
+	ctxt.callback->onClick(ctxt, obj.theme, obj.constant);
+}
+template <>
+void drawTbl(const table_ctxt_t& ctxt, const tbltype_theme_constant& obj) {
+	int32_t t = obj.theme->get(obj.constant);
+	drawTbl(ctxt, t);
 }
 template <>
 inline void cellClicked(const click_ctxt_t& ctxt, const tbltype_theme_constant& obj) {
@@ -404,20 +486,25 @@ void guiproperties_table<guitheme_t>::layout()  {
 			table.rows.push_back({{tblstr{"colorBgFrameBase"}, tbltyperef<NVGcolor>{ptr->colorBgFrameBase, "%08X"}}});
 			table.rows.push_back({{tblstr{"colorBgFrameOutline"}, tbltyperef<NVGcolor>{ptr->colorBgFrameOutline, "%08X"}}});
 			table.rows.push_back({{tblstr{"colorBgFrameHighlight"}, tbltyperef<NVGcolor>{ptr->colorBgFrameHighlight, "%08X"}}});
-			auto add = [this](tblstr&& x, const tbltype_theme_constant& y) {
+			auto add = [this](tblstr&& x, const auto& y) {
 				table.rows.push_back({{x, y}});
 			};
-			GuiColor::constant_t c = GuiColor::COL_LINE_XTH;
 			std::vector<GuiColor::constant_t> vec = GuiColor::getAllConstants();
 			for (auto _constant : vec) {
-				add(tblstr{ _constant.name }, tbltype_theme_constant{ ptr, _constant });
+				add(tblstr{ _constant.name }, tbltype_theme_color{ ptr, _constant });
+			}
+			std::vector<GuiConstant::constant_t> vec2 = GuiConstant::getAllConstants();
+			for (auto _constant2 : vec2) {
+				add(tblstr{ _constant2.name }, tbltype_theme_constant{ ptr, _constant2 });
 			}
 		} else {
 		}
 		ivec2 tableSize = getSizeContent()-ivec2(INSET_TABLE<<1);
 		AdjustColSizes(table, tableSize);
-		table.colSizes[0] = std::max(180.0f, std::min(450.0f, 0.25f*tableSize.x));
+	if (table.colSizes.size() == 2) {
+		table.colSizes[0] = std::max(220.0f, std::min(450.0f, 0.25f*tableSize.x));
 		table.colSizes[1] = tableSize.x - table.colSizes[0];
+	}
 
 		size.y = table.rows.size()*table.rowHeight;
 		ivec2 padTL = paddingTL(padding);
@@ -496,7 +583,8 @@ public:
 	virtual void handleDraggedRelease(MouseEvent& evt) {
 		guitheme_mgr* themeMgr = this->parentCtrl->getThemeMgr();
 		guictxtmenu_base *popup = new guidropdown_selecttheme_ctxt(themeMgr);
-		popup->size.x = 250;
+		popup->size = size;
+		popup->setFontSize(size.y);
 		this->parentCtrl->openContextMenu(popup, toScreenSpace(ivec2(0, size.y))-popup->pos+ivec2(1));
 	}
 };
@@ -587,7 +675,8 @@ public:
 	}
 	virtual void setControl(BaseCtrl* parentCtrl) {
 		guictr_base::setControl(parentCtrl);
-		themeProperties.setDebugPropertyHandle(this->theme);
+		guitheme_mgr* thememgr = parentCtrl->getThemeMgr();
+		themeProperties.setDebugPropertyHandle(&thememgr->getRef());
 	}
 };
 guictr_base* makeCtrTheme() {

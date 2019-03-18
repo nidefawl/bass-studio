@@ -210,20 +210,7 @@ public:
 	void render(NVGcontext* vg);
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
 	bool handleKeyInput(KeyEvent& kevt) override;
-	void layout() {
-		ivec2 sizeInset = getSizeContent();
-		int32_t guiH = sizeInset.y - margin;
-		int32_t inset = margin / 2;
-		ivec2 gPos(inset * 3, 0);
-		for (guibase* gui : guis) {
-			gui->pos = gPos;
-			gui->size = ivec2(guiH);
-			gui->determineSize();
-			gui->pos.y = inset;
-			gPos.x += gui->size.x + margin*2;
-			gui->layout();
-		}
-	}
+	void layout() override;
 	int slotFromCoord(ivec2 _pos);
 	int slotFromChild(guibase* child) {
 		int slot = 0;
@@ -244,22 +231,7 @@ public:
 	}
 
 	virtual void onAdded() override;
-	virtual void onTick(AppCtrl* ctrl) {
-#define SCROLL_START_X 30
-
-		if (isDefaultPluginCtr&&ctrl->guiDragged != NULL && ctrl->guiDragged->parent == this) {
-			if (ctrl->m_mousePos.x < SCROLL_START_X && scrolloffset > 0) {
-				setScrolloffset(scrolloffset - (int)((TIMER_MS / 50.0) * 40));
-			}
-			if (ctrl->m_mousePos.x > getSizeContent().x - SCROLL_START_X && scrolloffset < getTotalWidth() - getSizeContent().x) {
-				setScrolloffset(scrolloffset + (int)((TIMER_MS / 50.0) * 40));
-			}
-			ctrl->requestRedraw();
-		}
-		for (guibase* gui : guis) {
-			gui->onTick(ctrl);
-		}
-	}
+	virtual void onTick(AppCtrl* ctrl) override;
 	void pluginDragMove(guiplugin* g, ivec2 mousepos) override;
 	void pluginDragRelease(guiplugin* g, ivec2 mousepos) override;
 	void pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 mousepos) override;
@@ -273,9 +245,9 @@ public:
 	void addGui(effectbase* plugin);
 	void onChildLayoutChanged(guibase* g) override;
 	virtual void determineSize() override;
-	virtual bool isSelected() override;
 	virtual guibase* getDraggedControl() override;
 	void getEffects(std::vector<effectbase*>& out);
+	virtual bool isSelected() override;
 };
 class guictr_pluginview : public guictr_base {
 public:
@@ -296,39 +268,7 @@ public:
 
 
 
-	void render(NVGcontext* vg) {
-		ivec2 cp = this->getPosContent();
-		ivec2 cs = this->getSizeContent();
-		if (MainCtrl::get()->isPluginViewVisible()) {
-			drawAttachedBackground(vg, theme, cp, cs, margin);
-		} else {
-			drawBackground(vg, theme, cp, cs, margin, false);
-		}
-
-		ivec2 csp = ctr_plugins->getSizeContent();
-		int32_t w = ctr_plugins->getTotalWidth();
-		if (cs.x > 0 && cs.y > 0 && csp.x > 0 && csp.y > 0) {
-			float scY = cs.y / (float) csp.y;
-			float scContent = min(1.0f, csp.x / (float) w);
-			float minScale = min((cs.x / (float) max(csp.x,w)), scY);
-			nvgSave(vg);
-			if (setScissorTransform(vg)) {
-				nvgScale(vg, minScale, scY);
-				for (guibase* gui : ctr_plugins->guis) {
-					nvgSave(vg);
-					gui->render(vg);
-					nvgRestore(vg);
-				}
-			}
-			nvgRestore(vg);
-			nvgBeginPath(vg);
-			nvgRect(vg, cp.x + ctr_plugins->scrolloffset*minScale, cp.y, cs.x*scContent, cs.y);
-			nvgStrokeWidth(vg, 3);
-			nvgStrokeColor(vg, G_BLACK);
-			nvgStroke(vg);
-
-		}
-	}
+	void render(NVGcontext* vg);
 	void handleDraggedBegin(MouseEvent& evt) {
 		if (evt.guiDragged == this) {
 			MainCtrl::get()->showPluginView();
@@ -360,4 +300,5 @@ public:
 		return false;
 	}
 };
+
 

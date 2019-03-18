@@ -122,7 +122,7 @@ public:
 	}
 	void setRadius(float fRadius) {
 		this->radius = fRadius;
-		this->size = ivec2((int)(fRadius * 2));
+//		this->size = ivec2((int)(fRadius * 2));
 	}
 	bool isEnabled() override {
 		if (state)
@@ -131,41 +131,5 @@ public:
 			return getState();
 		return true;
 	}
-	void render(NVGcontext* vg) {
-		vec2 cen = vec2(radius);
-		cen.x += pos.x;
-		cen.y += pos.y;
-		int32_t state = getStateFlags();
-		GuiColor::constant_t color = GuiColor::COL_BTN_BG_DEFAULT_INACTIVE;
-		if (state & FLG_ENBL) {
-			color = colorActive;
-		}
-		nvgBeginPath(vg);
-		nvgCircleFast(vg, cen.x, cen.y, radius);
-		nvgFillColor(vg, theme->getColor(color));
-		nvgFill(vg);
-		nvgStrokeColor(vg, theme->getBgStrokeColor(state));
-		nvgStrokeWidth(vg, theme->getBgStrokeWidth(state));
-		nvgStroke(vg);
-		int icon = _getIcon();
-		if (icon >= 0) {
-
-
-			int32_t extImg = 2;
-			int32_t iconW = (int32_t)ceil(radius*2)+extImg*2;
-			RenderResources::NvgImageTexture& image = RenderResources::imgIcons[icon];
-			NVGpaint paintIcon = nvgImagePattern(vg, -extImg, -extImg, iconW, iconW, 0, image.id, 1.0f);
-			nvgTranslate(vg, pos.x, pos.y);
-			nvgBeginPath(vg);
-			nvgRect(vg, -extImg, -extImg, iconW, iconW);
-			nvgFillPaint(vg, paintIcon);
-			nvgFill(vg);
-			nvgTranslate(vg, -pos.x, -pos.y);
-		}
-
-		/*nvgBeginPath(vg);
-		nvgRect(vg, pos.x, pos.y, size.x, size.y);
-		nvgFillColor(vg, c);
-		nvgFill(vg);*/
-	}
+	void render(NVGcontext* vg);
 };

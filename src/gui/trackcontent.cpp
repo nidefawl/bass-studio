@@ -181,6 +181,7 @@ using Table::table_entry_t;
 using Table::tblint;
 using Table::tblfloat;
 using Table::tblstr;
+using Table::tblString;
 template <>
 void guitooltip<clip_t>::layout()  {
 	size.x = 400;
@@ -199,7 +200,7 @@ void guitooltip<clip_t>::layout()  {
 			path = "<MISSING SAMPLE>";
 		}
 		my_printf("path %s\n", StringAsCStr(path));
-		tbl_rows vec{tblstr{StringFormat("Audio Clip (sample-id %d)", ptr->audio.id)}, tblstr{path}};
+		tbl_rows vec{ tblString{StringFormat("Audio Clip (sample-id %d)", ptr->audio.id)}, tblString{path}};
 		table.rows.push_back(tbl_row_t{vec});
 	}
 	{
@@ -207,10 +208,10 @@ void guitooltip<clip_t>::layout()  {
 		table.rows.push_back(tbl_row_t{vec});
 	}
 	{
-		table.rows.push_back(tbl_row_t{tbl_rows{{tblstr{"ticks start"}, tblint{ptr->start()}}}});
-		table.rows.push_back(tbl_row_t{tbl_rows{{tblstr("ticks end"), tblint{ptr->end()}}}});
-		table.rows.push_back(tbl_row_t{tbl_rows{{tblstr("ticks length"), tblint{ptr->getLen()}}}});
-		table.rows.push_back(tbl_row_t{tbl_rows{{tblstr("color"), tblint{ptr->rgb, "%08x"}}}});
+		table.rows.push_back(tbl_row_t{ tbl_rows{{tblstr{"ticks start"}, tblint{ptr->start()}}}});
+		table.rows.push_back(tbl_row_t{ tbl_rows{{tblstr{"ticks end"}, tblint{ptr->end()}}} });
+		table.rows.push_back(tbl_row_t{ tbl_rows{{tblstr{"ticks length"}, tblint{ptr->getLen()}}} });
+		table.rows.push_back(tbl_row_t{ tbl_rows{{tblstr{"color"}, tblint{ptr->rgb, "%08x"}}} });
 	}
 	{
 		audioclip_texture_t waveform = ptr->audio.waveformRef.waveform;

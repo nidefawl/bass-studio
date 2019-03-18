@@ -50,7 +50,7 @@ public:
 		vec2 barOff(0);
 		vec2 barS = size;
 		if (vcS[dir] > 0) {
-			barS[dir] = min((float) size[dir], (vs[dir] / (float) vcS[dir]) * size[dir]);
+			barS[dir] = std::min((float) size[dir], (vs[dir] / (float) vcS[dir]) * size[dir]);
 			barOff[dir] = (size[dir] - barS[dir]) * scrollOffset;
 		}
 		return size[dir] - barS[dir];
@@ -59,7 +59,7 @@ public:
 		ivec2 vcS = ctr.getScrollTotalSize();
 		ivec2 vs = ctr.getScrollViewSize();
 		int32_t dist = vcS[dir]-vs[dir];
-		return max(0.0, (double)scrollOffset*dist);
+		return std::max(0.0, (double)scrollOffset*dist);
 	}
 	void scrollVisible(int32_t y, int32_t size) {
 		ivec2 vcS = ctr.getScrollTotalSize();

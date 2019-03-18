@@ -1,6 +1,8 @@
 #include <algorithm>
+#include <typeinfo>
 #include "color_util.h"
 #include "gui.h"
+#include "button.h"
 #include "platform.h"
 #include "saferef.h"
 #include "seq_math.h"
@@ -9,6 +11,8 @@
 #include "guicolors.h"
 #include "debugproperties.h"
 #include "guicontextmenu_base.h"
+#include "renderresources.h"
+
 namespace GuiColor {
 constant_t COL_BTN_BG_DEFAULT_INACTIVE("COL_BTN_BG_DEFAULT_INACTIVE", 0xff202020);
 constant_t COL_BTN_BG_DEFAULT_ACTIVE("COL_BTN_BG_DEFAULT_ACTIVE", 0xff404040);
@@ -186,7 +190,7 @@ void drawStopSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& col
     nvgFillColor(vg, getContrastFontColorNvg(color));
     nvgFill(vg);
 }
-void drawAttachedBackground(NVGcontext* vg, guitheme_t* theme, ivec2 posInset, ivec2 sizeInset, int margin) {
+void drawAttachedBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 posInset, ivec2 sizeInset, int margin) {
 	static const ivec2 borderThickness(6);
 	posInset -= ivec2(margin);
 	sizeInset += ivec2(margin) * 2;
@@ -266,13 +270,108 @@ guitheme_t* getDefaultTheme() {
 	static guitheme_t theme(true);
 	return &theme;
 }
-SafeRef<guibase> guibase::makeSafeRef() {
-	assert(parentCtrl);
-	if (!safeRef.handler) {
-		safeRef.handler = parentCtrl;
-		safeRef.refId = safeRef.handler->safeRefCreate(this);
+bool guibase::isChildOf(guibase* g) {
+	if (this == g) return true;
+	return parent && parent->isChildOf(g);
+}
+void guibuttontoggle::render(NVGcontext* vg) {
+	vec2 cen = vec2(size / 2);
+	cen.x += pos.x;
+	cen.y += pos.y;
+	int32_t state = getStateFlags();
+	GuiColor::constant_t color = GuiColor::COL_BTN_BG_DEFAULT_INACTIVE;
+	if (state & FLG_ENBL) {
+		color = colorActive;
 	}
-	return safeRef;
+	nvgBeginPath(vg);
+	nvgCircleFast(vg, cen.x, cen.y, radius);
+	nvgFillColor(vg, theme->getColor(color));
+	nvgFill(vg);
+	nvgStrokeColor(vg, theme->getBgStrokeColor(state));
+	nvgStrokeWidth(vg, theme->getBgStrokeWidth(state));
+	nvgStroke(vg);
+	int icon = _getIcon();
+	if (icon >= 0) {
+
+
+		int32_t extImg = 2;
+		int32_t iconW = (int32_t)ceil(std::min(size.x, size.y)) + extImg * 2;
+		RenderResources::NvgImageTexture& image = RenderResources::imgIcons[icon];
+		NVGpaint paintIcon = nvgImagePattern(vg, -extImg, -extImg, iconW, iconW, 0, image.id, 1.0f);
+		nvgTranslate(vg, pos.x, pos.y);
+		nvgBeginPath(vg);
+		nvgRect(vg, -extImg, -extImg, iconW, iconW);
+		nvgFillPaint(vg, paintIcon);
+		nvgFill(vg);
+		nvgTranslate(vg, -pos.x, -pos.y);
+	}
+
+	/*nvgBeginPath(vg);
+	nvgRect(vg, pos.x, pos.y, size.x, size.y);
+	nvgFillColor(vg, c);
+	nvgFill(vg);*/
+}
+
+bool guibase::isSelected() {
+	return false;
+}
+bool guibase::hovered() const {
+	return this == parentCtrl->guiOver;
+}
+bool guibase::pressed() const {
+	return this == parentCtrl->guiDragged;
+}
+bool guibase::focused() const {
+	return this == parentCtrl->guiFocused;
+}
+int32_t guibase::getStateFlags() {
+	int32_t flgs = this->flags & ( FLG_VISIBLE | FLG_RENDER_BACKGROUND);
+	if (pressed()) {
+		flgs |= FLG_DRG;
+	}
+	if (hovered()) {
+		flgs |= FLG_HVRD;
+	}
+	if (focused()) {
+		flgs |= FLG_FOC;
+	}
+	if (isEnabled()) {
+		flgs |= FLG_ENBL;
+	}
+	if (isVisible()) {
+		flgs |= FLG_VISIBLE;
+	}
+	if (isBackgroundRendered()) {
+		flgs |= FLG_RENDER_BACKGROUND;
+	}
+	return flgs;
+}
+void guibase::setControl(BaseCtrl* parentCtrl) {
+	this->parentCtrl = parentCtrl;
+	if (parentCtrl)
+		this->theme = parentCtrl->getTheme();
+}
+
+void guibase::setParent(guibase* parent) {
+	this->parent = parent;
+	if (!parentCtrl && parent) {
+		theme = parent->theme;
+	}
+}
+String guibase::getClassName() {
+	return typeName(*this);
+}
+void guibase::setTint(uint32_t hex) {
+//		if (theme->isDefault) {
+//			theme = new guitheme_t(false);
+//		}
+//		theme->setTint(hex);
+}
+void guibase::setBackgroundColor(uint32_t hex) {
+//		if (theme->isDefault) {
+//			theme = new guitheme_t(false);
+//		}
+//		theme->setBackgroundColor(hex);
 }
 
 extern int allocCount;
@@ -283,6 +382,14 @@ guibase::guibase(int guiTypeId)  {
 	g_guis->push_back(this);
 }
 
+SafeRef<guibase> guibase::makeSafeRef() {
+	assert(parentCtrl);
+	if (!safeRef.handler) {
+		safeRef.handler = parentCtrl;
+		safeRef.refId = safeRef.handler->safeRefCreate(this);
+	}
+	return safeRef;
+}
 guibase::~guibase() {
 	if (safeRef.handler) {
 		safeRef.handler->safeRefDestroy(safeRef.refId);
@@ -302,3 +409,15 @@ guibase::~guibase() {
 		g_guis->erase(it);
 	}
 }
+#ifndef BUILD_BUILTIN_EFFECT
+void guibase::addProperties(Table::tbl* table) {
+}
+#else
+template<typename T>
+void addPropertiesFromGui(T& gui, Table::tbl* table);
+template<>
+void addPropertiesFromGui(guibase& gui, Table::tbl* table);
+void guibase::addProperties(Table::tbl* table) {
+	addPropertiesFromGui(*this, table);
+}
+#endif

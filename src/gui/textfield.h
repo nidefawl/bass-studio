@@ -1,4 +1,7 @@
 #pragma once
+#include <glm/glm.hpp>
+#include <glm/vec2.hpp>
+#include <glm/vec4.hpp>
 #include "gui.h"
 #include "theme.h"
 #include <functional>
@@ -186,20 +189,11 @@ protected:
         float lineH{0};
     };
     text_metrics_t metrics;
-	vec2 drawPos;
-	vec2 clipPos;
-	vec2 clipSize;
+	glm::vec2 drawPos;
+	glm::vec2 clipPos;
+	glm::vec2 clipSize;
 public:
 
-	virtual bool hovered() const {
-		return this == parentCtrl->guiOver;
-	}
-	virtual bool pressed() const {
-		return this == parentCtrl->guiDragged;
-	}
-	virtual bool focused() const {
-		return this == parentCtrl->guiFocused;
-	}
 	float fontSize() const {
 		return mFontSize;
 	}

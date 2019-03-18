@@ -1,18 +1,14 @@
 #pragma once
+#include <nanovg_min.h>
 #include <glm/glm.hpp>
 #include <glm/vec2.hpp>
 #include "gui.h"
-#include "guicolors.h"
-#include "guicontextmenu_base.h"
-#include "basectrl.h"
 #include "event.h"
 #include "str_util.h"
 #include "color_util.h"
 #include "button.h"
-#include "renderresources.h"
 #include "list.h"
 #include "guimeter.h"
-#include "knob.h"
 #include "leak_detect.h"
 
 using glm::vec2;
@@ -20,7 +16,10 @@ using glm::ivec2;
 
 class effectbase;
 class vstplugin;
+class BaseCtrl;
+class AppCtrl;
 class PluginViewContainers;
+class guictxtmenu_base;
 class guiplugin : public guictr_base {
 public:
 	effectbase* const effect;
@@ -30,6 +29,7 @@ public:
 	gui_trackmeter meter; //TODO: use add() on controls
 	float titlePosX = 0;
 	bool hasDragged=false;
+	bool isHorizontalTitle=true;
 	guiplugin(effectbase* _effect);
 	virtual ~guiplugin() {
 		my_printf("DSTR!\n",0);
@@ -38,13 +38,6 @@ public:
 	virtual void buttonClicked(guibase* _button) = 0;
 	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) = 0;
 	virtual void layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) = 0;
-	void layoutButtons() {
-
-		const float hpt = (float)theme->get(G_PLUGIN_TITLE_HEIGHT);
-		float radius = (hpt-hpt/3.f)/2.f;
-		buttonBypass.setRadius(radius);
-		buttonDelete.setRadius(radius);
-	}
 	effectbase* getModule() {
 		return effect;
 	}
@@ -55,25 +48,7 @@ public:
 	}
 	virtual void renderBase(NVGcontext* vg);
 
-	virtual void layout() override {
-		int32_t meterW = 32;
-		while (size.x < meterW * 16 && meterW > 16) {
-			meterW -= 4;
-		}
-		const int32_t hpt = theme->get(G_PLUGIN_TITLE_HEIGHT);
-		int32_t inset1 = (hpt - buttonBypass.size.y) / 2;
-		ivec2 contentS(size.x - meterW, size.y-hpt);
-		ivec2 contentP(0, hpt);
-		buttonBypass.pos.y = inset1;
-		buttonBypass.pos.x = inset1;
-		buttonDelete.pos.y = inset1;
-		buttonDelete.pos.x = size.x - buttonDelete.size.x - inset1;
-		titlePosX = buttonBypass.right();
-		layoutModule(contentP, contentS, inset1);
-		meter.pos = ivec2(size.x - meterW, hpt);
-		meter.size = ivec2(meterW, contentS.y);
-		meter.layout();
-	}
+	virtual void layout() override;
 	void handleDraggedBegin(MouseEvent& evt) override;
 	void handleDraggedMove(MouseEvent& evt) override;
 	void handleDraggedRelease(MouseEvent& evt) override;
@@ -91,9 +66,9 @@ public:
     virtual bool focusEvent(MouseHitEvt& evt, bool focused) override;
 
 	virtual guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
-	virtual bool isSelected() override;
 	virtual guibase* getDraggedControl() override;
 	virtual void setControl(BaseCtrl* parentCtrl) override;
+	virtual bool isSelected() override;
 };
 class guivstplugin : public guiplugin {
 public:

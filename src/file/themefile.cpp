@@ -56,6 +56,10 @@ void serialize(Archive & archive, NVGcolor & m)
 //	archive(make_nvp("mapColors", m.mapColors));
 //	archive(make_nvp("mapProperties", m.mapProperties));
 //}
+namespace GuiColor {
+constant_t getConstantById(int32_t id);
+constant_t getConstantByName(String name);
+}
 template<class Archive>
 void save(Archive & archive, guitheme_t const & m)
 {
@@ -70,7 +74,17 @@ void save(Archive & archive, guitheme_t const & m)
 	archive(make_nvp("colorBgFrameOutline", m.colorBgFrameOutline));
 	archive(make_nvp("colorBgFrameHighlight", m.colorBgFrameHighlight));
 	archive(make_nvp("colorBgFrameBright", m.colorBgFrameBright));
-	archive(make_nvp("mapColors", m.mapColors));
+
+	std::unordered_map<String,int32_t> mapValues;
+	for (auto it = m.mapColors.begin(); it != m.mapColors.end(); ++it) {
+		int32_t key = it->first;
+		GuiColor::constant_t c = GuiColor::getConstantById(key);
+		assert(c.idx > 0);
+//		assert(c.name.length());
+		mapValues[c.name] = it->second;
+
+	}
+	archive(make_nvp("mapValues", mapValues));
 	archive(make_nvp("mapProperties", m.mapProperties));
 
 }
@@ -88,17 +102,26 @@ void load(Archive & archive, guitheme_t & m)
 	archive(make_nvp("colorBgFrameOutline", m.colorBgFrameOutline));
 	archive(make_nvp("colorBgFrameHighlight", m.colorBgFrameHighlight));
 	archive(make_nvp("colorBgFrameBright", m.colorBgFrameBright));
-	archive(make_nvp("mapColors", m.mapColors));
+	std::unordered_map<String,int32_t> mapValues;
+	archive(make_nvp("mapValues", mapValues));
 	archive(make_nvp("mapProperties", m.mapProperties));
+	std::unordered_map<int32_t,int32_t> mapColors;
+	for (auto it = mapValues.begin(); it != mapValues.end(); ++it) {
+		String key = it->first;
+		GuiColor::constant_t c = GuiColor::getConstantByName(key);
+		if (c.idx <= 0)
+			continue;
+		mapColors[c.idx] = it->second;
+	}
 	if (m.vecNVGColors.size() != NUM_GUI_COLORS) {
 		m.vecNVGColors.resize(NUM_GUI_COLORS);
 	}
-
-	for (auto it = m.mapColors.begin(); it != m.mapColors.end(); ++it) {
+	for (auto it = mapColors.begin(); it != mapColors.end(); ++it) {
 		if (it->first < 0 || it->first >= NUM_GUI_COLORS)
 			continue;
 		m.vecNVGColors[it->first] = rgbaToNvg(it->second);
 	}
+	m.mapColors = mapColors;
 //	archive(make_nvp("values", m.values));
 }
 template<class Archive>
@@ -121,9 +144,9 @@ bool loadThemeFile(themefile& _settings) {
 		}
 		saveThemeFile(_settings);
 	} catch (std::exception& e) {
-		ngui::show("Couldn't read config file.\nSome settings may have been reset", "Warning", ngui::Style::Warning, ngui::Buttons::OK);
+	/*	ngui::show("Couldn't read config file.\nSome settings may have been reset", "Warning", ngui::Style::Warning, ngui::Buttons::OK);
 		std::cout << e.what();
-		std::cout << std::endl;
+		std::cout << std::endl;*/
 		_settings = themefile();
 	}
 	return false;

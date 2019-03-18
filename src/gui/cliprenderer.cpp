@@ -7,6 +7,9 @@
 
 using glm::vec2;
 using glm::ivec2;
+namespace GuiColor {
+constant_t COL_CLIP_OUTLINE("COL_CLIP_OUTLINE", 0x0);
+}
 
 bool getClipPosition(scaled_grid& grid, const ivec2& trackSize, const clip_t* cl, ivec2& pos, ivec2& size, tick_t offset) {
 	tick_t tickBegin = cl->time + offset;
@@ -118,7 +121,7 @@ audioclip_texture_t makeWaveformFromClip(project_t& project, scaled_grid& grid,
 
 }
 
-void renderAudioClip(NVGcontext* vg, const track_t* tr, const clip_t* cl, const gui_waveform_texture_ref* guiaudioclip, ivec2 pos, ivec2 size, ivec2 sizeClipped) {
+void renderAudioClip(NVGcontext* vg, const guitheme_t* theme, const track_t* tr, const clip_t* cl, const gui_waveform_texture_ref* guiaudioclip, ivec2 pos, ivec2 size, ivec2 sizeClipped) {
 	if (cl->getLen() <= 0) {
 		return;
 	}
@@ -127,7 +130,7 @@ void renderAudioClip(NVGcontext* vg, const track_t* tr, const clip_t* cl, const 
 	nvgRect(vg, pos.x, pos.y, size.x, HEIGHT_CLIP_TITLE);
 	nvgFillColor(vg, color);
 	nvgFill(vg);
-	nvgStrokeColor(vg, G_BLACK);
+	nvgStrokeColor(vg, theme->getColor(GuiColor::COL_CLIP_OUTLINE));
 	nvgStrokeWidth(vg, 1.f);
 	nvgStroke(vg);
 
@@ -177,7 +180,7 @@ float noteToScreen(float note, float scale, float offset, float sizeY) {
 	float rel = offsetKey - offset;
 	return (sizeY) - rel;
 }
-void renderMidiClip(NVGcontext* vg, const track_t* tr, const clip_t* cl, ivec2 pos, ivec2 size) {
+void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_t* tr, const clip_t* cl, ivec2 pos, ivec2 size) {
 	if (cl->getLen() <= 0) {
 		return;
 	}
@@ -186,7 +189,7 @@ void renderMidiClip(NVGcontext* vg, const track_t* tr, const clip_t* cl, ivec2 p
 	nvgRect(vg, pos.x, pos.y, size.x, HEIGHT_CLIP_TITLE);
 	nvgFillColor(vg, color);
 	nvgFill(vg);
-	nvgStrokeColor(vg, G_BLACK);
+	nvgStrokeColor(vg, theme->getColor(GuiColor::COL_CLIP_OUTLINE));
 	nvgStrokeWidth(vg, 1.f);
 	nvgStroke(vg);
 	if (cl->name.length()) {

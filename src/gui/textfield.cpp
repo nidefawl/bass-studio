@@ -10,6 +10,7 @@
 #include "theme.h"
 #include "str_util.h"
 #include "gui.h"
+#include "basectrl.h"
 #include "guicolors.h"
 #include "platform.h"
 #include "keyboard.h"
@@ -253,23 +254,23 @@ void gui_textfield::renderTextField(NVGcontext* ctx) const {
             nvgStroke(ctx);
         }
 	}
-	int colorIdx = 0;
-	auto renderDebugF = [](NVGcontext* vg, const guibase* gui, NVGcolor color) {
-		nvgBeginPath(vg);
-		nvgRect(vg, gui->pos.x, gui->pos.y, gui->size.x, gui->size.y);
-		nvgFillColor(vg, color);
-		nvgFill(vg);
-	};
-	static NVGcolor dbgcolorsa[5] = {
-		nvgRGBA(255, 0, 0, 55),
-		nvgRGBA(0, 255, 0, 55),
-		nvgRGBA(0, 0, 255, 55),
-		nvgRGBA(255, 0, 255, 55),
-		nvgRGBA(255, 255, 0, 55)
-	};
-	renderDebugF(ctx, this, dbgcolorsa[colorIdx++ % 5]);
+//	int colorIdx = 0;
+//	auto renderDebugF = [](NVGcontext* vg, const guibase* gui, NVGcolor color) {
+//		nvgBeginPath(vg);
+//		nvgRect(vg, gui->pos.x, gui->pos.y, gui->size.x, gui->size.y);
+//		nvgFillColor(vg, color);
+//		nvgFill(vg);
+//	};
+//	static NVGcolor dbgcolorsa[5] = {
+//		nvgRGBA(255, 0, 0, 55),
+//		nvgRGBA(0, 255, 0, 55),
+//		nvgRGBA(0, 0, 255, 55),
+//		nvgRGBA(255, 0, 255, 55),
+//		nvgRGBA(255, 255, 0, 55)
+//	};
+//	renderDebugF(ctx, this, dbgcolorsa[colorIdx++ % 5]);
 	nvgRestore(ctx);
-	renderDebugF(ctx, this, dbgcolorsa[colorIdx++ % 5]);
+//	renderDebugF(ctx, this, dbgcolorsa[colorIdx++ % 5]);
 }
 
 void gui_textfield::beginEdit() {
@@ -361,8 +362,8 @@ bool gui_textfield::keyboardEvent(int key, int /* scancode */, KeyEventType acti
                         mCursorPos--;
                     	if (filter && filter->isReplaceInput()) {
                     		mValueTemp[mCursorPos] = '0';
-                    	} else {
-                            mValueTemp.erase(mValueTemp.begin() + mCursorPos - 1);
+                    	} else if (mValueTemp.length()){
+                            mValueTemp.erase(mValueTemp.begin() + mCursorPos);
                     	}
                     }
                 }
@@ -447,21 +448,15 @@ bool gui_textfield::handleCharInput(unsigned int codepoint) {
 	return false;
 }
 void gui_textfield::onChange() {
-	my_printf("NOW %s\n", StringAsCStr(mValueTemp));
     mValidFormat = (mValueTemp == "") || checkFormat(mValueTemp, mFormat);
-	my_printf("NOW2 %s\n", StringAsCStr(mValueTemp));
     if (mValidFormat && mCallback && !mCallback(mValueTemp)){
 
     }
 	if (filter) {
-		bool b = filter->isAllowedChar(234);
-//		my_printf("pre parse len\n", 0);7
-//		my_printf("pre parse %s\n", StringAsCStr(mValueTemp));
 		mValueTemp = filter->parse(mValueTemp);
 		if (mCursorPos > mValueTemp.length()) {
 			mCursorPos = mValueTemp.length();
 		}
-		my_printf("parse %s\n", StringAsCStr(mValueTemp));
 	}
 }
 bool gui_textfield::checkFormat(const std::string &input, const std::string &format) {

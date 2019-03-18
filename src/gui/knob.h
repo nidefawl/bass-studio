@@ -54,56 +54,15 @@ public:
 	void setIsSlider(bool b) {
 		this->isSlider = b;
 	}
-	virtual bool hovered() const override {
-		return this == parentCtrl->guiOver;
-	}
-	virtual bool pressed() const override {
-		return this == parentCtrl->guiDragged;
-	}
-	virtual bool focused() const override {
-		return this == parentCtrl->guiFocused;
-	}
-	virtual void handleDraggedBegin(MouseEvent& evt) {
-		if (evt.guiDragged == this) {
-			parentCtrl->captureMouse(this);
-		}
-		initialValue = getValue();
-		changedValue = false;
-	}
-	virtual void handleDraggedMove(MouseEvent& evt) {
-		if (evt.guiDragged == this && evt.type == M_EVT_CAPTURED_MOVE) {
-			int disty = (int)evt.dragDistance->y;
-			if (abs(disty) < 1)
-				return;
-			float value = getValue();
-			float scale = isCtrl(evt.kbmods) ? 2000.0f : 200.0f;
-			float delta = disty/scale;
-			if (abs(delta) > 1e-2f) {
-				value -= delta;
-				setValue(value, 0);
-				evt.dragDistance->y = 0;
-				lastVal = value;
-				changedValue = true;
-			}
-		}
-	}
-	virtual void handleDraggedRelease(MouseEvent& evt) {
-		if (changedValue) {
-			onValueEditFinish(initialValue, lastVal);
-		}
-		changedValue = false;
-	}
+	virtual void handleDraggedBegin(MouseEvent& evt);
+	virtual void handleDraggedMove(MouseEvent& evt);
+	virtual void handleDraggedRelease(MouseEvent& evt);
+
     virtual bool focusEvent(MouseHitEvt& evt, bool focused) override {
     	if (fnFocus) fnFocus(evt, focused);
     	return true;
     }
-	virtual bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
-		float value = getValue();
-		float scale = isCtrl(evt.kbmods) ? 200.0f : 20.0f;
-		value += yoffset/scale;
-		setValue(value, 2);
-		return true;
-	}
+	virtual bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset);
 	void handleRightClick(MouseEvent& evt) override {
 		if (parent)
 			parent->rightClicked(evt, this);

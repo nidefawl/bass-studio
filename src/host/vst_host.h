@@ -169,8 +169,10 @@ public:
 	vstpluginloadres loadInternalPlugin(int32_t type, int32_t globalId = 0);
 	int32_t getNextGlobalModuleId(int32_t n);
 	int32_t getNextGlobalAudioStageId(int32_t as);
-	track_impl_t* createAudio(track_t* track);
+	void createAudio(track_t* track);
+	void releaseAudio(track_t* track);
 	audio_stage_t* createAudioStage();
+	void releaseAudioStage(audio_stage_t* audioStage);
 	audio_stage_t* getAudioStage(const audio_stage_ref_t& ref);
 	bool movePlugins(audio_stage_t* dstTr, audio_stage_t* trp, int32_t src, int32_t len, int32_t dst);
 	bool moveEffects(audio_stage_t* trp, int32_t src, int32_t dst, int32_t len);

@@ -20,8 +20,10 @@ class gui_numberinput_field: public guibuttonbase {
 	bool drawBackground = true;
 	gui_textfield field;
 	bool isEditing = false;
-
 public:
+    std::function<void(gui_numberinput_field*,int32_t)> fnValueEditChanged;
+    std::function<int32_t(int32_t)> fnClamp;
+
 	gui_numberinput_field(int32_t* _number) :
 			guibuttonbase(), number(_number) {
 		setTint(nvgToRGB(theme->getColor(GuiColor::COL_BG_DRK)));
@@ -92,9 +94,15 @@ public:
 			if (success && this->number) {
 				const char* cstr = this->field.value().c_str();
 				int newVal = atoi(cstr);
+				if (fnClamp) {
+					newVal = fnClamp(newVal);
+				}
 				*number = newVal;
 				if (parent)
 					parent->buttonClicked(this);
+				if (fnValueEditChanged) {
+					fnValueEditChanged(this, newVal);
+				}
 			}
 		}
 		isEditing = false;
@@ -145,7 +153,14 @@ public:
 				absy = 64;
 			else if (absy >= 2)
 				absy = 4;
-			*number -= (disty < 0 ? -1 : 1) * absy;
+			int newVal = *number - ( (disty < 0 ? -1 : 1) * absy );
+			if (fnClamp) {
+				newVal = fnClamp(newVal);
+			}
+			*number = newVal;
+			if (fnValueEditChanged) {
+				fnValueEditChanged(this, newVal);
+			}
 			if (parent)
 				parent->buttonClicked(this);
 			return;

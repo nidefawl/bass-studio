@@ -1254,7 +1254,7 @@ void gui_clipsettings::render(NVGcontext* vg)  {
 		text = clip->name;
 	}
 	int flags = parentCtrl->isCtrOrChildFocused(this) ? FLAG_FOCUSED : 0;
-	renderTitleBarHorizontal(vg, text, 0, flags);
+	renderTitleBar(vg, text, 0, flags, false);
 	renderFrameOutline(vg);
 	for (guibase* gui : guis) {
 		nvgSave(vg);
@@ -1265,7 +1265,7 @@ void gui_clipsettings::render(NVGcontext* vg)  {
 	nvgTranslate(vg, 0, 0);
 	int32_t inset = 4;
 	int32_t i2 = inset * 2;
-	const int32_t TRACK_HEIGHT_STEP = theme->get(G_TRACK_HEIGHT_STEP);
+	const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
 	int32_t h = TRACK_HEIGHT_STEP-i2;
 	setFont(vg, G_FONT_SCALE(h), G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
 	for (guibase* gui : guis) {
@@ -1277,7 +1277,7 @@ void gui_clipsettings::render(NVGcontext* vg)  {
 }
 
 void gui_clipsettings::layout() {
-	const int32_t TRACK_HEIGHT_STEP = theme->get(G_TRACK_HEIGHT_STEP);
+	const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
 	int32_t inset = 4;
 	int32_t i2 = inset * 2;
 	int32_t w = size.x-i2;
@@ -1286,7 +1286,7 @@ void gui_clipsettings::layout() {
 	int32_t labelWidth = w-btnW;
 	int32_t btnX = labelWidth;
 	btnLoop.size = ivec2(btnW, btnH);
-	btnLoop.pos = ivec2(btnX, inset+theme->get(G_PLUGIN_TITLE_HEIGHT));
+	btnLoop.pos = ivec2(btnX, inset+theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT));
 	clipLoopStart.size = ivec2(btnW, btnH);
 	clipLoopStart.pos = ivec2(btnLoop.left(), btnLoop.bottom()+inset);
 	clipLoopLen.size = ivec2(btnW, btnH);

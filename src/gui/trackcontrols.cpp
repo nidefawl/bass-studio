@@ -121,7 +121,7 @@ public:
 		guibase(), m_track(_track) {
 	}
 	void handleRightClick(MouseEvent& evt) override {
-		MainCtrl::get()->openContextMenu(new guictxtmenu_trackparam(m_track, &m_track->audio->mixer, 1), evt.mousepos);
+		MainCtrl::get()->openContextMenu(new guictxtmenu_trackparam(m_track, &m_track->audio->mixer, PARAM_TRACK_GAIN), evt.mousepos);
 	}
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
 		if (contains(mpos)) {
@@ -134,10 +134,26 @@ public:
 	bool enabled() {
 		return bEnabled;
 	}
+	bool isAutomated() {
+		if (m_track->audio) {
+			auto at = m_track->audio->mixer.getRegisteredAutomation(PARAM_TRACK_GAIN);
+			return at && at->src.isAutomated();
+		}
+		return false;
+	}
 	void render(NVGcontext* vg) {
 		renderWidgetBorder(vg, getStateFlags());
 		if (drawFn) {
 			drawFn(vg, pos, size, theme->getBgColor(getStateFlags()));
+		}
+		GuiColor::constant_t valColor;
+		GuiColor::constant_t indColor;
+		if (isAutomated()) {
+			valColor = GuiColor::COL_AUTOMATED;
+			indColor = GuiColor::COL_AUTOMATED;
+		} else {
+			indColor = GuiColor::COL_KNOB_IND;
+			valColor = GuiColor::COL_KNOB;
 		}
 		track_impl_t* audio = m_track->audio;
 		if (audio) {
@@ -156,10 +172,10 @@ public:
 				float wVal = (f2) * insetS.x;
 				nvgBeginPath(vg);
 				nvgRect(vg, x, y, wVal, insetS.y);
-				nvgFillColor(vg, rgbToNvg(0x00ddff));
+				nvgFillColor(vg, theme->getColor(valColor));
 				nvgFill(vg);
 			}
-			setFont(vg, 20, G_WHITE, NVG_ALIGN_CENTER|NVG_ALIGN_MIDDLE);
+			setFont(vg, 20, theme->getContrastColor(valColor), NVG_ALIGN_CENTER|NVG_ALIGN_MIDDLE);
 			String strLvl = StringFormat("%.2f", dsp_util::dBFSClampInf6(audio->mixer.getGain()));
 			nvgText(vg, insetP.x + insetS.x / 2.0f, insetP.y + G_FONT_MIDDLE_OFFSET(insetS.y), StringAsCStr(strLvl), NULL);
 		}
@@ -214,7 +230,7 @@ public:
 		return trackenabled();
 	}
 	void handleRightClick(MouseEvent& evt) override {
-		MainCtrl::get()->openContextMenu(new guictxtmenu_trackparam(m_track, &m_track->audio->mixer, 0), evt.mousepos);
+		MainCtrl::get()->openContextMenu(new guictxtmenu_trackparam(m_track, &m_track->audio->mixer, PARAM_TRACK_ENABLED), evt.mousepos);
 	}
 };
 class gui_trackcontrols_mixer: public guictr_base {
@@ -226,7 +242,7 @@ public:
 	gui_trackcontrols_mixer(track_t* _track) :
 		guictr_base(), m_track(_track), meter(&_track->audio->meter), gain(_track), btnBypass(_track) {
 		padding = 0;
-		btnBypass.setTint(nvgToRGB(theme->getFrameColorOutline()));
+//		btnBypass.setTint(nvgToRGB(theme->getFrameColorOutline()));
 		btnBypass.drawFn = drawTextureSymbol;
 		btnBypass.drawParm = ICON_BYPASS;
 		add(&btnBypass);
@@ -246,7 +262,7 @@ public:
 		}
 	}
 	void layout() {
-		const int32_t TRACK_HEIGHT_STEP = theme->get(G_TRACK_HEIGHT_STEP);
+		const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
 		int32_t inset = 4;
 		int32_t i2 = inset * 2;
 		int32_t h = TRACK_HEIGHT_STEP-i2;
@@ -413,7 +429,8 @@ public:
 		return false;
 	}
 	void layout() {
-		const int32_t TRACK_HEIGHT_STEP = theme->get(G_TRACK_HEIGHT_STEP);
+		const int titleHeight = theme->get(GuiConstant::CONST_TRACK_HEIGHT_TITLE);
+		const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
 		removeUNCHECKED(&automationSelectParam);
 		removeUNCHECKED(&automationSelectDevice);
 		removeUNCHECKED(&hideAutomation);
@@ -423,7 +440,8 @@ public:
 		int32_t h = TRACK_HEIGHT_STEP-i2;
 		int32_t insetBtn = (TRACK_HEIGHT_STEP-hideTrack.size.y)/2;
 		int32_t insetBtn2 = (TRACK_HEIGHT_STEP-hideAutomation.size.y)/2;
-		hideTrack.pos = ivec2(inset, insetBtn);
+		const int32_t hideTrIns = (titleHeight-hideTrack.size.y)/2;
+		hideTrack.pos = ivec2(hideTrIns, hideTrIns);
 
 		automationSelectParam.size = ivec2(size.x - i2, h);
 		automationSelectDevice.size = ivec2(size.x - i2, h);
@@ -486,7 +504,7 @@ public:
 	void handleDraggedMove(MouseEvent& evt) override {
 		if (dragMode == DRAG_RESIZE) {
 			int32_t mouseDragDist = evt.relMousepos.y;
-			int32_t heightStep = theme->get(G_TRACK_HEIGHT_STEP);
+			int32_t heightStep = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
 			resize<track_t, TRACK_MIN_HEIGHT, TRACK_MAX_HEIGHT>(m_track, m_track, mouseDragDist, heightStep);
 			this->parent->onChildLayoutChanged(this);
 		} else {
@@ -548,7 +566,7 @@ public:
 		if (ctrl->getSelectedTrack() == m_track) {
 			color = G_BLACK;
 		}
-		const int titleHeight = theme->get(G_HEIGHT_TRACK_TITLE);
+		const int titleHeight = theme->get(GuiConstant::CONST_TRACK_HEIGHT_TITLE);
 		const int rectHeight = min(titleHeight, size.y);
 		nvgBeginPath(vg);
 		nvgRect(vg, 0, 0, titleSize.x, rectHeight);
@@ -593,7 +611,7 @@ public:
 		return false;
 	}
 	void layout() {
-		const int32_t TRACK_HEIGHT_STEP = theme->get(G_TRACK_HEIGHT_STEP);
+		const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
 		int32_t insetBtn2 = (TRACK_HEIGHT_STEP-removeLane.size.y)/2;
 		removeLane.pos = ivec2(size.x-removeLane.size.x-insetBtn2, insetBtn2);
 	}
@@ -636,7 +654,7 @@ public:
 				curvalue = StringFormat("<NULL> %d", idx);
 			}
 		}
-		const int htt = theme->get(G_HEIGHT_TRACK_TITLE);
+		const int htt = theme->get(GuiConstant::CONST_TRACK_HEIGHT_TITLE);
 		const int titleHeight = htt*4/5;
 		const int fontSize = titleHeight-4;
 		int32_t y = INSET_TITLE;
@@ -680,7 +698,7 @@ public:
 	void handleDraggedMove(MouseEvent& evt) {
 		if (dragMode == DRAG_RESIZE) {
 			int32_t mouseDragDist = evt.relMousepos.y;
-			int32_t heightStep = theme->get(G_TRACK_HEIGHT_STEP);
+			int32_t heightStep = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
 			resize(m_track, al, mouseDragDist, heightStep);
 			this->parent->onChildLayoutChanged(this);
 		}
@@ -811,7 +829,7 @@ bool gui_track_controls::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 	return contained; // always need to return true if contained, parent has z-order
 }
 void gui_track_controls::layout() {
-	const int32_t TRACK_HEIGHT_STEP = theme->get(G_TRACK_HEIGHT_STEP);
+	const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
 	int32_t mxW = 160;
 	int32_t titleW = size.x - mxW;
 	mixer->size = ivec2(mxW - TRACK_HEIGHT_SPACING, size.y);
@@ -829,7 +847,7 @@ void gui_track_controls::layout() {
 }
 
 void gui_track_controls::handleDraggedMove(MouseEvent& evt) {
-	const int32_t TRACK_HEIGHT_STEP = theme->get(G_TRACK_HEIGHT_STEP);
+	const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
 	if (dragMode == DRAG_RESIZE) {
 		int32_t mouseDragDist = evt.relMousepos.y;
 		bool resizeTop = m_track->type < TRACK_TYPE_MIDI;

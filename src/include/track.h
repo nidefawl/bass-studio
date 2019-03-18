@@ -20,6 +20,8 @@
 #define TRACK_TYPE_MIDI 2
 #define TRACK_TYPE_AUDIO 3
 #define NUM_TRACK_TYPES 4
+#define PARAM_TRACK_ENABLED 0
+#define PARAM_TRACK_GAIN 1
 
 
 const char* TrackTypeToName(int type);
@@ -223,7 +225,6 @@ struct track_snapshot_t : public tracksettings_t {
 	track_impl_snapshot_t plugins;
 	std::vector<clip_t> clips;
 	std::vector<automationlane_snapshot_t> automationLanes;
-//	int flags = 0;
 	track_snapshot_t() = default;
 	track_snapshot_t(track_t* track, bool storePluginChunks);
 };

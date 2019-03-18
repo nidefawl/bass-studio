@@ -4,7 +4,9 @@
 #include <glm/vec4.hpp>
 #include "basectrl.h"
 #include "gui.h"
+#include "guiglobals.h"
 #include "guicolors.h"
+#include "color_util.h"
 #include "exceptions.h"
 #include "mouse.h"
 #include "event.h"
@@ -17,32 +19,30 @@ using glm::ivec2;
 using glm::vec4;
 using glm::ivec4;
 
+namespace GuiColor {
+constant_t COL_PLUG_TITLE("COL_PLUG_TITLE", 0xff151515);
+constant_t COL_PLUG_TITLE_SELECTED("COL_PLUG_TITLE_SELECTED", 0xff353535);
+constant_t COL_PLUG_TITLE_FOCUSED("COL_PLUG_TITLE_FOCUSED", 0xffff0000);
+}
 
-void guictr_base::renderTitleBarHorizontal(NVGcontext* vg, String text, float textOffsetX, int flags) {
-	NVGcolor c;
-	if (flags & FLAG_SELECTED) {
-		c = theme->getColor(GuiColor::COL_BG_DRK_SELECTED);
-	} else if (flags & FLAG_FOCUSED) {
-		c = theme->getColor(GuiColor::COL_BG_DRK_FOCUSED);
-	} else {
-		c = theme->getColor(GuiColor::COL_BG_BRT);
+
+void guictr_base::setControl(BaseCtrl* parentCtrl) {
+	guibase::setControl(parentCtrl);
+	for (guibase* g : guis) {
+		g->setControl(parentCtrl);
 	}
-	ivec2 sizeContent = getSizeContent();
-	const int32_t hpt = theme->get(G_PLUGIN_TITLE_HEIGHT);
-	nvgBeginPath(vg);
-	nvgRoundedRectVarying(vg, 0, 0, sizeContent.x, hpt, G_RND, G_RND, 0, 0);
-	nvgFillColor(vg, c);
-	nvgFill(vg);
-	if (text[0]) {
-		setFont(vg, (int)(hpt*0.8), G_WHITE, G_TITLE_ALIGN);
-		nvgText(vg, textOffsetX+INSET_TITLE, hpt / 2, StringAsCStr(text), NULL);
+}
+void guictr_base::setParent(guibase* parent) {
+	guibase::setParent(parent);
+	for (guibase* g : guis) {
+		assert(g->parent == this);
+//			g->setParent(this);
 	}
 }
 void guictr_base::render(NVGcontext* vg) {
 	if (isBackgroundRendered()) {
 		renderBackground(vg);
 	}
-	isVisible();
 	if (!setScissorTransform(vg)) {
 		return;
 	}
@@ -51,6 +51,10 @@ void guictr_base::render(NVGcontext* vg) {
 		c->render(vg);
 		nvgRestore(vg);
 	}
+}
+void guictr_base::renderBackground(NVGcontext* vg) {
+	bool focused = parentCtrl->isCtrOrChildFocused(this);
+	drawBackground(vg, theme, getPosContent(), getSizeContent(), margin, focused, true);
 }
 void guictr_base::renderFrameBase(NVGcontext* vg) {
 	ivec2 sizeContent = getSizeContent();
@@ -68,6 +72,77 @@ void guictr_base::renderFrameOutline(NVGcontext* vg) {
 	nvgStroke(vg);
 	ivec2 sizeInset = getSizeContent();
 	nvgIntersectScissor(vg, 0, 0, sizeInset.x, sizeInset.y);
+}
+
+void guictr_base::renderTitleBar(NVGcontext* vg, String text, float textOffsetX, int flags, bool isHorizontalTitle) {
+	NVGcolor c;
+	if (flags & FLAG_SELECTED) {
+		c = theme->getColor(GuiColor::COL_PLUG_TITLE_SELECTED);
+	} else if (flags & FLAG_FOCUSED) {
+		c = theme->getColor(GuiColor::COL_PLUG_TITLE_FOCUSED);
+	} else {
+		c = theme->getColor(GuiColor::COL_PLUG_TITLE);
+	}
+
+	//	ivec2 sizeContent = getSizeContent();
+	const int32_t hpt = theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT);
+	nvgBeginPath(vg);
+	if (isHorizontalTitle) {
+		nvgRoundedRectVarying(vg, 0, 0, size.x, hpt, G_RND, G_RND, 0, 0);
+	} else {
+		nvgRoundedRectVarying(vg, 0, 0, hpt, size.y, G_RND, G_RND, 0, 0);
+	}
+	nvgFillColor(vg, c);
+	nvgFill(vg);
+	if (text[0]) {
+		if (isHorizontalTitle) {
+			setFont(vg, (int) (hpt * 0.8), getContrastFontColorNvg(c), G_TITLE_ALIGN);
+			nvgText(vg, textOffsetX + INSET_TITLE, hpt / 2, StringAsCStr(text), NULL);
+		} else {
+			setFont(vg, (int) (hpt * 0.8), G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+			nvgSave(vg);
+			nvgTranslate(vg, textOffsetX + hpt / 2, size.y);
+			nvgRotate(vg, -M_PI / 2.0);
+			//		nvgTranslate(vg, -HEIGHT_PLUGIN_TITLE, 0);
+			//		nvgText(vg, 0, 0, StringAsCStr(this->text), NULL);
+			nvgText(vg, INSET_TITLE * 2, 0, StringAsCStr(text), NULL);
+			nvgRestore(vg);
+		}
+	}
+}
+/*static*/
+void guictr_base::drawInsetBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 posInset, ivec2 sizeInset) {
+	if (sizeInset.y > 0 && sizeInset.x > 0) {
+		nvgBeginPath(vg);
+		nvgRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y);
+		nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_BRT));
+		nvgFill(vg);
+	}
+}
+/*static*/
+void guictr_base::drawBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 posInset, ivec2 sizeInset, int margin, bool focused,
+		bool drawInset) {
+	static const ivec2 borderThickness(CTR_SPACING - 2);
+	posInset -= ivec2(margin);
+	sizeInset += ivec2(margin) * 2;
+	if (sizeInset.y > 0 && sizeInset.x > 0) {
+		nvgBeginPath(vg);
+		nvgRoundedRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y, 4);
+		NVGcolor bg = theme->getColor(GuiColor::COL_BG_DRK);
+		if (focused) {
+			bg = theme->getColor(GuiColor::COL_BG_DRK_FOCUSED);
+		}
+		nvgFillColor(vg, bg);
+		nvgFill(vg);
+		posInset += borderThickness;
+		sizeInset -= borderThickness * 2;
+		if (sizeInset.y > 0 && sizeInset.x > 0 && drawInset) {
+			nvgBeginPath(vg);
+			nvgRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y);
+			nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_BRT));
+			nvgFill(vg);
+		}
+	}
 }
 bool guictr_base::setScissorTransformContainer(NVGcontext* vg) {
 	ivec2 posInset = getPosContent();
@@ -140,14 +215,7 @@ void guictr_tabbed::addEntry(guictr_base* ctr, String title) {
 	this->entries.push_back(entry);
 }
 void guictr_tabbed::render(NVGcontext* vg) {
-	if (!setScissorTransform(vg)) {
-		return;
-	}
-	for (auto c : guis) {
-		nvgSave(vg);
-		c->render(vg);
-		nvgRestore(vg);
-	}
+	guictr_base::render(vg);
 }
 void guictr_tabbed::layout() {
 	ivec2 csize = getSizeContent();
@@ -170,3 +238,4 @@ void guictr_tabbed::layout() {
 	}
 
 }
+

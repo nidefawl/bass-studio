@@ -59,13 +59,15 @@ public:
 		my_printf("DSTR!\n",0);
 	}
 	void render(NVGcontext* vg) override;
-	void renderBase(NVGcontext* vg) override;
 	void buttonClicked(guibase* _button) override;
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
 	void onChildLayoutChanged(guibase* g) override;
 	void determineSize() override {
 		assert(module->getAudioStage());
 
+		const int32_t hpt = theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT);
+		const int32_t meterW = hpt;
+		ctr.pos = ivec2(hpt, 0);
 		ctr.size = ivec2(size.y, size.y);
 		ctr.layout();
 		my_printf("determineSize ctr.children.size() %d\n", ctr.guis.size());
@@ -75,34 +77,10 @@ public:
 			my_printf("%s guis[%d] %d %d %d %d\n", StringAsCStr(ctr.getClassName()), i, g->pos.x, g->pos.y, g->size.x, g->size.y);
 		}
 		ctr.determineSize();
-		const int32_t meterW = theme->get(G_PLUGIN_TITLE_HEIGHT);
-		const int32_t hpt = theme->get(G_PLUGIN_TITLE_HEIGHT);
 		size.x = hpt+meterW;
 		size.x += ctr.size.x;
 	}
-	void layout() override {
-		const int32_t meterW = theme->get(G_PLUGIN_TITLE_HEIGHT);
-		const int32_t hpt = theme->get(G_PLUGIN_TITLE_HEIGHT);
-		int32_t inset1 = (hpt - buttonBypass.size.y) / 2;
-		ivec2 contentS(size.x - meterW-hpt, size.y);
-		ivec2 contentP(hpt, 0);
-		buttonBypass.pos.y = inset1;
-		buttonBypass.pos.x = inset1;
-		buttonDelete.pos.y = inset1;
-		buttonDelete.pos.x = size.x - buttonDelete.size.x - inset1;
-		titlePosX = buttonBypass.right();
-		layoutModule(contentP, contentS, inset1);
-		meter.pos = ivec2(size.x - meterW, hpt);
-		meter.size = ivec2(meterW, contentS.y);
-		meter.layout();
-	}
 	void layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) override {
-		layoutButtons();
-		ctr.pos = pos;
-//		ctr.size = contentS;
-//		assert(ctr.parent == this);
-//		ctr.placeholder.size.x = std::max(100, size.y*3/5);
-		titlePosX = 0;
 	}
 	void removeGuis() override {
 		removeUNCHECKED(&ctr);
@@ -121,6 +99,7 @@ public:
 guimodule_group::guimodule_group(module_group* _vst)
 : guiplugin(_vst),
   module(_vst) {
+	isHorizontalTitle = true;
 	ctr.isDefaultPluginCtr = false;
 	ctr.margin = ctr.padding = 0;
 	add(&ctr);
@@ -133,47 +112,6 @@ void guimodule_group::onChildLayoutChanged(guibase* g) {
 	}
 }
 
-void guimodule_group::renderBase(NVGcontext* vg) {
-	if (!setScissorTransform(vg)) {
-		return;
-	}
-	nvgBeginPath(vg);
-	nvgRoundedRect(vg, 0, 0, size.x, size.y, G_RND);
-	NVGcolor c;
-	int flags = parentCtrl->isCtrOrChildFocused(this) ? FLAG_FOCUSED : 0;
-	if (isSelected()) {
-		flags |= FLAG_SELECTED;
-	}
-	if (flags & FLAG_SELECTED) {
-		c = theme->getColor(GuiColor::COL_BG_DRK_SELECTED);
-	} else if (flags & FLAG_FOCUSED) {
-		c = theme->getColor(GuiColor::COL_BG_DRK_FOCUSED);
-	} else {
-		c = theme->getColor(GuiColor::COL_BG_BRT);
-	}
-	const int32_t hpt = theme->get(G_PLUGIN_TITLE_HEIGHT);
-	nvgFillColor(vg, theme->getFrameColorBase());
-	nvgFill(vg);
-	nvgBeginPath(vg);
-	nvgRoundedRectVarying(vg, 0, 0, hpt, size.y, G_RND, G_RND, 0, 0);
-	nvgFillColor(vg, c);
-	nvgFill(vg);
-	if (this->text[0]) {
-		setFont(vg, (int)(hpt*0.8), G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-		nvgSave(vg);
-		nvgTranslate(vg, titlePosX+hpt/2, size.y);
-		nvgRotate(vg, -M_PI/2.0);
-//		nvgTranslate(vg, -HEIGHT_PLUGIN_TITLE, 0);
-//		nvgText(vg, 0, 0, StringAsCStr(this->text), NULL);
-		nvgText(vg, INSET_TITLE*2, 0, StringAsCStr(this->text), NULL);
-		nvgRestore(vg);
-	}
-	nvgBeginPath(vg);
-	nvgRoundedRect(vg, 0, 0, size.x, size.y, G_RND);
-	nvgStrokeColor(vg, theme->getFrameColorOutline());
-	nvgStrokeWidth(vg, G_STROKE);
-	nvgStroke(vg);
-}
 void guimodule_group::render(NVGcontext* vg) {
 	assert(ctr.parent == this);
 	dragdrop_target_indicator& target = MainCtrl::get()->getDragDropTarget();
@@ -206,7 +144,7 @@ bool guimodule_group::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 			if (ctr.mouseHitTest(localMouse, evt)) {
 				return true;
 			}
-			const int32_t hpt = theme->get(G_PLUGIN_TITLE_HEIGHT);
+			const int32_t hpt = theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT);
 			if (localMouse.x <= hpt-10 || localMouse.x > size.x-hpt+10)
 				return false;
 			evt.requestFocus(&this->ctr);
@@ -301,9 +239,10 @@ void module_group::resume() {
 }
 void module_group::sleep() {
 }
-void module_group::unload() {
+void module_group::unload(vsthost* host) {
+	effectbase::unload(host);
 	onPreUnload();
-	delete this->audio;
+	host->releaseAudioStage(audio);
 	this->audio = nullptr;
 }
 void module_group::onPreUnload() {
@@ -314,6 +253,7 @@ void module_group::onPreUnload() {
 	}
 }
 void module_group::load(vsthost* host) {
+	effectbase::load(host);
 	this->audio = host->createAudioStage();
 	this->blockInputs = new AudioBlock(2, host->lBlockSize);
 	this->blockOutputs = new AudioBlock(2, host->lBlockSize);
@@ -324,12 +264,13 @@ void module_group::load(vsthost* host) {
 		this->sleep();
 	}
 }
+
 void module_group::breakTrackLink() {
 	assert(this->audio);
 	assert(this->audio->parent);
 	this->audio->parent->removeAudioStage(this->audio);
-	this->audio->owner = nullptr;
 	assert(this->audio->parent == nullptr);
+	this->audio->owner = nullptr;
 	bIsSetup = false;
 	internalplugin::breakTrackLink();
 }
@@ -337,8 +278,8 @@ void module_group::setTrackLink(audio_stage_t* trImpl) {
 	assert(this->audio);
 	assert(trImpl != this->audio);
 	trImpl->addAudioStage(this->audio);
+	assert(this->audio->parent == trImpl);
 	this->audio->owner = this;
-	this->audio->parent = trImpl;
 	bIsSetup = true;
 	internalplugin::setTrackLink(trImpl);
 }

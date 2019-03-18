@@ -36,6 +36,7 @@
 #include "../gui/gui.h"
 #include "../gui/guicontainer.h"
 #include "../gui/button.h"
+#include "../gui/splitter.h"
 #include "../gui/guicontextmenu_base.h"
 #include "../gui/tempocontrols.h"
 #include "../gui/scrollbar.h"
@@ -148,12 +149,13 @@ void testTask() {
 }
 guictr_base* makeCtrProperties(); //guiproperties.cpp
 guictr_base* makeCtrTheme(); //guiproperties.cpp
-class guictr_side_tabs : public guictr_tabbed {
+class guictr_side_tabs_test : public guictr_tabbed {
 public:
 	gui_ctr_debug ctr_dbg;
 	guictr_base* const ctr_properties;
 	guictr_base* const ctr_theme;
-	guictr_side_tabs() : guictr_tabbed(), ctr_properties(makeCtrProperties()), ctr_theme(makeCtrTheme()) {
+	guictr_side_tabs_test() : guictr_tabbed(), ctr_properties(makeCtrProperties()), ctr_theme(makeCtrTheme()) {
+		setBackgroundRendered(false);
 		ctr_dbg.setLabel("Debug 1");
 		ctr_properties->setLabel("Properties");
 		ctr_theme->setLabel("Theme");
@@ -162,7 +164,7 @@ public:
 		addEntry(ctr_theme, ctr_theme->label);
 		setActiveEntry(0);
 	}
-	virtual ~guictr_side_tabs() {
+	virtual ~guictr_side_tabs_test() {
 //		remove(&ctr_dbg);
 //		remove(ctr_properties);
 //		remove(ctr_theme);
@@ -173,6 +175,7 @@ public:
 	guictr_pluginlibrary ctr_pluginlist;
 	guictr_modulelibrary ctr_effectlist;
 	guictr_effectlibrary() : guictr_base() {
+		setBackgroundRendered(false);
 		padding = 0;
 		margin = 0;
 		add(&ctr_pluginlist);
@@ -209,6 +212,7 @@ public:
 	  ctr_effectlib(_ctr_effectlib),
 	  ctr_properties(makeCtrProperties()),
 	  ctr_theme(makeCtrTheme()) {
+		setBackgroundRendered(true);
 		ctr_effectlib.setLabel("Plugins");
 		ctr_properties->setLabel("Properties");
 		ctr_theme->setLabel("Theme");
@@ -236,7 +240,7 @@ public:
 	guictr_clipeditorview ctr_clipeditorview;
 	guictr_clipeditor ctr_clipeditor;
 	guictr_tracks ctr_tracks;
-	guictr_side_tabs ctr_tabbed;
+	guictr_side_tabs_test ctr_tabbed;
 	guictr_side_tabs2 ctr_tabbed2;
 	Splitter splitterList;
 	Splitter splitterCenter;

@@ -4,6 +4,8 @@
 #include "str_util.h"
 #include "knob.h"
 #include "guicontainer.h"
+#include "guicolors.h"
+#include "guiconstant.h"
 #include "track.h"
 #include "track_impl.h"
 #include "clip.h"
@@ -52,9 +54,9 @@ gui_ctr_debug::gui_ctr_debug() : guictr_base() {
 	knobTest.fnGetValue = [](void) {
 		return max(0.0f, min(1.0f, GuiColor::colorVal/255.0f));
 	};
-	knobTest2.setValueInit(theme->get(G_PLUGIN_TITLE_HEIGHT)/255.0f);
+	knobTest2.setValueInit(theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT)/255.0f);
 	knobTest2.fnSetValue = [this](float f, int flags) {
-		theme->set(G_PLUGIN_TITLE_HEIGHT, (int32_t)(knobTest2.getValueInternal()*255.0f));
+		theme->set(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT, (int32_t)(knobTest2.getValueInternal()*255.0f));
 	};
 }
 void gui_ctr_debug::render(NVGcontext* vg) {

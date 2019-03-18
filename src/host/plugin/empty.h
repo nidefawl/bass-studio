@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <vector>
 #include "internal_plugin.h"
+#include "modules.h"
 #include "str_util.h"
 
 class guiplugin;
@@ -26,7 +27,7 @@ public:
 	virtual String getInfo(std::vector<String>& list) override;
 	void resume() override;
 	void sleep() override;
-	void unload() override;
+	void unload(vsthost* host) override;
 	void load(vsthost* host) override;
 	void breakTrackLink() override {
 		bIsSetup = false;

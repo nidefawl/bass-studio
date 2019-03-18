@@ -94,6 +94,9 @@ public:
 		margin = 0;
 		padding = 0;
 	}
+	void setFontSize(int i) {
+		this->fontSize = i;
+	}
 	virtual ~guictxtmenu_base() {
 	}
 	virtual bool isTransient() {

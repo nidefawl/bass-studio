@@ -45,7 +45,6 @@ public:
 	void buttonClicked(guibase* _button) override;
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
 	void layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) override {
-		layoutButtons();
 	}
 };
 
@@ -144,8 +143,11 @@ void module_empty::resume() {
 }
 void module_empty::sleep() {
 }
-void module_empty::unload() { }
+void module_empty::unload(vsthost* host) {
+	effectbase::unload(host);
+}
 void module_empty::load(vsthost* host) {
+	effectbase::load(host);
 	bIsEnabled = this->getParamValue(PARAM_ENABLE) > 0.5;
 	if (bIsEnabled) {
 		this->resume();

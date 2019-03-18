@@ -37,8 +37,16 @@ void drawTbl(const table_ctxt_t& ctxt, const tblint& obj) {
 void drawTbl(const table_ctxt_t& ctxt, const tblstr& obj) {
 	const vec2& pos = ctxt.pos;
 	const vec2& size = ctxt.size;
-	nvgTextAlign(ctxt.vg, NVG_ALIGN_LEFT|NVG_ALIGN_BOTTOM);
-	nvgText(ctxt.vg, pos.x+INSET_TABLE_CELL_PADDING, pos.y+size.y-INSET_TABLE_CELL_PADDING, StringAsCStr(obj.str), nullptr);
+	bool right = (obj.flags&1);
+	nvgTextAlign(ctxt.vg, (right?NVG_ALIGN_RIGHT:NVG_ALIGN_LEFT)|NVG_ALIGN_BOTTOM);
+	nvgText(ctxt.vg, pos.x+(right?size.x-INSET_TABLE_CELL_PADDING:INSET_TABLE_CELL_PADDING), pos.y+size.y-INSET_TABLE_CELL_PADDING, obj.str, nullptr);
+}
+void drawTbl(const table_ctxt_t& ctxt, const tblString& obj) {
+	const vec2& pos = ctxt.pos;
+	const vec2& size = ctxt.size;
+	bool right = (obj.flags&1);
+	nvgTextAlign(ctxt.vg, (right?NVG_ALIGN_RIGHT:NVG_ALIGN_LEFT)|NVG_ALIGN_BOTTOM);
+	nvgText(ctxt.vg, pos.x+(right?size.x-INSET_TABLE_CELL_PADDING:INSET_TABLE_CELL_PADDING), pos.y+size.y-INSET_TABLE_CELL_PADDING, StringAsCStr(obj.str), nullptr);
 }
 template <>
 void drawTbl(const table_ctxt_t& ctxt, const tbltype<glm::ivec2>& obj) {
@@ -122,7 +130,7 @@ table_entry_t& GetCell(tbl& table, int32_t x, int32_t y) {
 	return rowRef.cols[x];
 }
 
-bool GetCellClicked(tbl& table, guitheme_t* theme, glm::vec2 mouse, glm::ivec2& idx, glm::ivec2& screenPos, glm::ivec2& screenSize) {
+bool GetCellClicked(tbl& table, const guitheme_t* theme, glm::vec2 mouse, glm::ivec2& idx, glm::ivec2& screenPos, glm::ivec2& screenSize) {
 	idx.x = -1;
 	idx.y = -1;
 	float tableHeight = table.rows.size()*table.rowHeight;

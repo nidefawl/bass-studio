@@ -114,6 +114,13 @@ public:
 struct audio_stage_ref_t {
 	int id;
 };
+struct audio_stage_t;
+//class audio_stage_holder_t {
+//public:
+//	std::vector<audio_stage_t*> stages;
+//	virtual ~audio_stage_holder_t() { };
+//	virtual void onStagesCreated();
+//};
 struct audio_stage_t {
 	int32_t id;
 	audio_stage_t* parent;
@@ -157,6 +164,18 @@ struct audio_stage_t {
 	audio_stage_ref_t toRef();
 	void getStageTargets(std::vector<automatable_t*>& targets);
 };
+inline bool isAudioStageChildOf(audio_stage_t* parent, audio_stage_t* child) {
+	std::vector<audio_stage_t*>& children = parent->children;
+	for (audio_stage_t* t : children) {
+		if (t == child) {
+			return true;
+		}
+		if (t->children.size() && isAudioStageChildOf(t, child)) {
+			return true;
+		}
+	}
+	return false;
+}
 class midiarp;
 struct track_impl_t : public audio_stage_t {
 	midiarp* arp = nullptr;

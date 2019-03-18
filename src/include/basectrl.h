@@ -136,6 +136,7 @@ public:
 	virtual void onCursorEnter(int entered) {
 		mouseInside = entered;
 	}
+	virtual void relayout() { relayout(m_size.x, m_size.y); };
 	virtual void relayout(int32_t w, int32_t h) { };
 	virtual void openContextMenu(guictxtmenu_base *b, ivec2 pos) { };
 	virtual void closeContextMenu() { };

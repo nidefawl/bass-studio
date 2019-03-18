@@ -30,6 +30,7 @@ public:
 	bool scrollbarOutside = false;
 	int maxHeight = 360;
 	guictr_scrollbar() : guictr_base(), scrollbar(1, 0.0f, *this) {
+		setBackgroundRendered(true);
 		scrollbar.setParent(this);
 		margin = 0;
 		padding = 0;

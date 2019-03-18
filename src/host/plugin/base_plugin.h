@@ -21,6 +21,7 @@ struct audio_stage_t;
 struct plugin_snapshot_t;
 
 class effectbase : public automatable_t {
+	int nLoadCalls = 0;
 public:
 	rmsmeter<16000> meter;
 	AudioBlock* blockInputs = NULL; // guaranteed to have at least 2 channels
@@ -47,8 +48,8 @@ public:
 	virtual bool close() = 0;
 	virtual void resume() = 0;
 	virtual void sleep() = 0;
-	virtual void unload() = 0;
-	virtual void load(vsthost* host) = 0;
+	virtual void unload(vsthost* host) { assert(nLoadCalls==1); nLoadCalls--; };
+	virtual void load(vsthost* host) { assert(nLoadCalls==0); nLoadCalls++; };
 	virtual int32_t getDelay() = 0;
 	virtual String getInfo(std::vector<String>& list) = 0;
 	track_t* getTrack();

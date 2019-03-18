@@ -2,8 +2,9 @@
 
 
 void guictr_scrollbar::render(NVGcontext* vg) {
-	//		renderBackground(vg);
-	nvgSave(vg);
+	if (isBackgroundRendered()) {
+		renderBackground(vg);
+	}
 	if (!setScissorTransform(vg)) {
 		return;
 	}
@@ -19,7 +20,6 @@ void guictr_scrollbar::render(NVGcontext* vg) {
 		nvgTranslate(vg, pos.x, pos.y);
 		scrollbar.render(vg);
 	}
-	nvgRestore(vg);
 }
 
 void guictr_scrollbar::determineSize() {

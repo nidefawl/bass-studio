@@ -29,7 +29,7 @@ void trackallcontainer_t::addTrack(int trackInsertPos, track_t* newTrack) {
 	}
 	tracks.push_back(newTrack);
 	vsthost* host = vsthost::getInstance();
-	newTrack->audio = host->createAudio(newTrack);
+	host->createAudio(newTrack);
 	tracksubcontainer_t* subCtr = trackTypeCtrs[newTrack->type];
 	track_vector& vec = subCtr->tracks;
 	if (trackInsertPos < 0 || trackInsertPos >= (int)vec.size()) {
@@ -68,6 +68,8 @@ void trackallcontainer_t::removeTrack(track_t* track) {
 	tracksBottom.tracks.clear();
 	addAll(tracksBottom.tracks, trackReturnCtr.tracks);
 	addAll(tracksBottom.tracks, trackMasterCtr.tracks);
+	vsthost* host = vsthost::getInstance();
+	host->releaseAudio(track);
 }
 
 void trackallcontainer_t::moveTrack(track_t* track, int32_t dst) {
@@ -143,7 +145,7 @@ void trackallcontainer_t::copyFrom(project_snapshot_t& project) {
 	addAll(tracksBottom.tracks, trackMasterCtr.tracks);
 	vsthost* host = vsthost::getInstance();
 	for (track_t* t : tracks) {
-		t->audio = host->createAudio(t);
+		host->createAudio(t);
 	}
 }
 void trackallcontainer_t::loadPlugins(project_snapshot_t& project) {

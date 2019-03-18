@@ -80,12 +80,15 @@ struct dragdrop_midifile {
 };
 class plugin_selection {
 public:
-	guiplugin* firstSelection = nullptr;
-	guiplugin* lastSelection = nullptr;
+	int32_t firstSelection = -1;
+	int32_t lastSelection = -1;
 	guictr_plugins* pluginCtr = nullptr;
+	bool hasSelection() {
+		return firstSelection >= 0 && lastSelection >= 0 && pluginCtr;
+	}
 	void clear() {
-		firstSelection = nullptr;
-		lastSelection = nullptr;
+		firstSelection = -1;
+		lastSelection = -1;
 		pluginCtr = nullptr;
 	}
 };

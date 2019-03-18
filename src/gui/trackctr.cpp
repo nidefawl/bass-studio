@@ -54,7 +54,7 @@ void guitrack_mixers::removeTrack(track_t* t) {
 	}
 }
 
-void drawSeperator(NVGcontext* vg, guitheme_t* theme, int32_t seperatorY, ivec2& cs) {
+void drawSeperator(NVGcontext* vg, const guitheme_t* theme, int32_t seperatorY, ivec2& cs) {
 	nvgBeginPath(vg);
 	nvgMoveTo(vg, 0, seperatorY);
 	nvgLineTo(vg, cs.x, seperatorY);
@@ -63,7 +63,7 @@ void drawSeperator(NVGcontext* vg, guitheme_t* theme, int32_t seperatorY, ivec2&
 	nvgStroke(vg);
 }
 int32_t guictr_tracks::setTrackPosition(track_t* t, int32_t y, bool isBottom) {
-	const int32_t TRACK_HEIGHT_STEP = theme->get(G_TRACK_HEIGHT_STEP);
+	const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
 	ivec2& cntPos = t->content->pos;
 	ivec2& mxrPos = t->mixer->pos;
 	cntPos = ivec2(0, y);
@@ -188,7 +188,7 @@ void guictr_tracks::layout() {
 	}
 	contentViewSize = y;
 	if (contentHeight >= contentViewSize) {
-		const int32_t TRACK_HEIGHT_STEP = theme->get(G_TRACK_HEIGHT_STEP);
+		const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
 		contentHeight += TRACK_HEIGHT_STEP*4;
 	}
 	scrollbar.scrollTo(f);

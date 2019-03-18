@@ -25,6 +25,7 @@
 
 #include <stdlib.h>
 #include <algorithm>
+#include <assert.h>
 #include <stdlib.h>
 #include <memory.h>
 #include "track_impl.h"
@@ -900,7 +901,7 @@ void vsthost::unloadPlugin(effectbase* plugin) {
 	}
 
 	plugin->close();
-	plugin->unload();
+	plugin->unload(this);
 //	PopupCtrl::get()->close(); // Make sure context controls do not reference vst
 	auto it = std::find(list.begin(), list.end(), plugin);
 	if (it != list.end()) {
@@ -929,7 +930,7 @@ bool vsthost::unloadAllPlugins() {
 		vstplugin *current = list[i];
 		current->close();
 		list[i] = NULL;
-		current->unload();
+		current->unload(this);
 		moduleMgr->releaseModule(current->handle->hmodule);
 		delete current;
 	}
@@ -952,16 +953,33 @@ vstplugin::~vstplugin() {
 		delete blockOutputs;
 	delete handle;
 }
-track_impl_t* vsthost::createAudio(track_t* track) {
+
+void vsthost::createAudio(track_t* track) {
 	auto audio = new track_impl_t(getNextGlobalAudioStageId(0), track, this->lSampleRate, this->lBlockSize, OUTPUT_CHANNELS);
 	allAudioStages.push_back(audio);
 	trackAudioStages.push_back(audio);
-	return audio;
+	track->audio = audio;
+}
+void vsthost::releaseAudio(track_t* track) {
+	auto audioStage = track->audio;
+	assert(audioStage);
+	track->audio = nullptr;
+	auto it = std::find(allAudioStages.begin(), allAudioStages.end(), audioStage);
+	assert(it != allAudioStages.end());
+	allAudioStages.erase(it);
+	auto it2 = std::find(trackAudioStages.begin(), trackAudioStages.end(), audioStage);
+	assert(it2 != trackAudioStages.end());
+	trackAudioStages.erase(it2);
 }
 audio_stage_t* vsthost::createAudioStage() {
 	auto audio = new audio_stage_t(getNextGlobalAudioStageId(0), this->lSampleRate, this->lBlockSize, OUTPUT_CHANNELS);
 	allAudioStages.push_back(audio);
 	return audio;
+}
+void vsthost::releaseAudioStage(audio_stage_t* audioStage) {
+	auto it = std::find(allAudioStages.begin(), allAudioStages.end(), audioStage);
+	assert(it != allAudioStages.end());
+	allAudioStages.erase(it);
 }
 audio_stage_t* vsthost::getAudioStage(const audio_stage_ref_t& ref) {
 	auto it = std::find_if(allAudioStages.begin(), allAudioStages.end(), [ref] (const audio_stage_t* ptr) {
