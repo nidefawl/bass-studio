@@ -10,6 +10,8 @@
 #include "color_util.h"
 #include "config.h"
 #include "theme.h"
+#include "guiconstant.h"
+#include "guicolors.h"
 #include "msgbox.h"
 #include <math.h>
 #include <chrono>
@@ -21,44 +23,73 @@
 #include <map>
 using namespace std;
 using namespace cereal;
+
+
+namespace GuiColor {
+constant_t getConstantById(int32_t id);
+constant_t getConstantByName(String name);
+}
+namespace GuiConstant {
+constant_t getConstantById(int32_t id);
+constant_t getConstantByName(String name);
+}
+
+struct theme_data {
+	std::unordered_map<String,int32_t> mapColors;
+	std::unordered_map<String,int32_t> mapProperties;
+};
+
+void storeThemeData(guitheme_t const & m, theme_data& out) {
+	for (auto it = m.mapColors.begin(); it != m.mapColors.end(); ++it) {
+		int32_t key = it->first;
+		GuiColor::constant_t c = GuiColor::getConstantById(key);
+		if (c.idx <= 0)
+			continue;
+		out.mapColors[c.name] = it->second;
+	}
+	for (auto it = m.mapProperties.begin(); it != m.mapProperties.end(); ++it) {
+		int32_t key = it->first;
+		GuiConstant::constant_t c = GuiConstant::getConstantById(key);
+		if (c.idx <= 0)
+			continue;
+		out.mapProperties[c.name] = it->second;
+	}
+
+}
+void loadThemeData(theme_data& data, guitheme_t& out) {
+	out.mapColors.clear();
+	out.mapProperties.clear();
+	for (auto it = data.mapColors.begin(); it != data.mapColors.end(); ++it) {
+		String key = it->first;
+		GuiColor::constant_t c = GuiColor::getConstantByName(key);
+		assert(c.idx > 0);
+		out.mapColors[c.idx] = it->second;
+		if (c.idx < out.vecNVGColors.size()) {
+			out.vecNVGColors[c.idx] = rgbaToNvg(it->second);
+		} else {
+			assert(0);
+		}
+
+	}
+	for (auto it = data.mapProperties.begin(); it != data.mapProperties.end(); ++it) {
+		String key = it->first;
+		GuiConstant::constant_t c = GuiConstant::getConstantByName(key);
+		assert(c.idx > 0);
+		out.mapProperties[c.idx] = it->second;
+	}
+}
+
 template<class Archive>
 void serialize(Archive & archive, NVGcolor & m)
 {
 	archive(make_nvp("r", m.r), make_nvp("g", m.g), make_nvp("b", m.b), make_nvp("a", m.a));
 }
-//template<class Archive>
-//void save(Archive & archive,
-//		guitheme_t const & m)
-//{
-//  archive(make_nvp("colorBg", m.colorBg));
-//}
-//
-//template<class Archive>
-//void load(Archive & archive,
-//		guitheme_t & m)
-//{
-//  archive(make_nvp("colorBg", m.colorBg));
-//}
-//template<class Archive>
-//void serialize(Archive & archive, guitheme_t const & m)
-//{
-//	archive(make_nvp("colorBg", m.colorBg));
-//	archive(make_nvp("colorBgStroke", m.colorBgStroke));
-//	archive(make_nvp("colorBgHover", m.colorBgHover));
-//	archive(make_nvp("colorBgPressed", m.colorBgPressed));
-//	archive(make_nvp("colorBgFocused", m.colorBgFocused));
-//	archive(make_nvp("colorBgDisabled", m.colorBgDisabled));
-//	archive(make_nvp("colorBgFrameBase", m.colorBgFrameBase));
-//	archive(make_nvp("colorBgFrameOutline", m.colorBgFrameOutline));
-//	archive(make_nvp("colorBgFrameHighlight", m.colorBgFrameHighlight));
-//	archive(make_nvp("colorBgFrameBright", m.colorBgFrameBright));
-//	archive(make_nvp("guiColors", m.vecNVGColors));
-//	archive(make_nvp("mapColors", m.mapColors));
-//	archive(make_nvp("mapProperties", m.mapProperties));
-//}
-namespace GuiColor {
-constant_t getConstantById(int32_t id);
-constant_t getConstantByName(String name);
+
+template<class Archive>
+void serialize(Archive & archive, theme_data & m)
+{
+	archive(make_nvp("colors", m.mapColors));
+	archive(make_nvp("properties", m.mapProperties));
 }
 template<class Archive>
 void save(Archive & archive, guitheme_t const & m)
@@ -74,20 +105,12 @@ void save(Archive & archive, guitheme_t const & m)
 	archive(make_nvp("colorBgFrameOutline", m.colorBgFrameOutline));
 	archive(make_nvp("colorBgFrameHighlight", m.colorBgFrameHighlight));
 	archive(make_nvp("colorBgFrameBright", m.colorBgFrameBright));
-
-	std::unordered_map<String,int32_t> mapValues;
-	for (auto it = m.mapColors.begin(); it != m.mapColors.end(); ++it) {
-		int32_t key = it->first;
-		GuiColor::constant_t c = GuiColor::getConstantById(key);
-		assert(c.idx > 0);
-//		assert(c.name.length());
-		mapValues[c.name] = it->second;
-
-	}
-	archive(make_nvp("mapValues", mapValues));
-	archive(make_nvp("mapProperties", m.mapProperties));
-
+	//save new
+	theme_data data;
+	storeThemeData(m, data);
+	archive(make_nvp("data", data));
 }
+
 template<class Archive>
 void load(Archive & archive, guitheme_t & m)
 {
@@ -102,27 +125,37 @@ void load(Archive & archive, guitheme_t & m)
 	archive(make_nvp("colorBgFrameOutline", m.colorBgFrameOutline));
 	archive(make_nvp("colorBgFrameHighlight", m.colorBgFrameHighlight));
 	archive(make_nvp("colorBgFrameBright", m.colorBgFrameBright));
-	std::unordered_map<String,int32_t> mapValues;
-	archive(make_nvp("mapValues", mapValues));
-	archive(make_nvp("mapProperties", m.mapProperties));
-	std::unordered_map<int32_t,int32_t> mapColors;
-	for (auto it = mapValues.begin(); it != mapValues.end(); ++it) {
-		String key = it->first;
-		GuiColor::constant_t c = GuiColor::getConstantByName(key);
-		if (c.idx <= 0)
-			continue;
-		mapColors[c.idx] = it->second;
-	}
-	if (m.vecNVGColors.size() != NUM_GUI_COLORS) {
-		m.vecNVGColors.resize(NUM_GUI_COLORS);
-	}
-	for (auto it = mapColors.begin(); it != mapColors.end(); ++it) {
-		if (it->first < 0 || it->first >= NUM_GUI_COLORS)
-			continue;
-		m.vecNVGColors[it->first] = rgbaToNvg(it->second);
-	}
-	m.mapColors = mapColors;
-//	archive(make_nvp("values", m.values));
+
+	const char* namePtr = archive.getNodeName();
+    if (namePtr && strcmp(namePtr, "mapValues") == 0) {
+    	//load old
+
+    	std::unordered_map<String,int32_t> mapValues;
+    	archive(make_nvp("mapValues", mapValues));
+    	archive(make_nvp("mapProperties", m.mapProperties));
+    	std::unordered_map<int32_t,int32_t> mapColors;
+    	for (auto it = mapValues.begin(); it != mapValues.end(); ++it) {
+    		String key = it->first;
+    		GuiColor::constant_t c = GuiColor::getConstantByName(key);
+    		if (c.idx <= 0)
+    			continue;
+    		mapColors[c.idx] = it->second;
+    	}
+    	if (m.vecNVGColors.size() != NUM_GUI_COLORS) {
+    		m.vecNVGColors.resize(NUM_GUI_COLORS);
+    	}
+    	for (auto it = mapColors.begin(); it != mapColors.end(); ++it) {
+    		if (it->first < 0 || it->first >= NUM_GUI_COLORS)
+    			continue;
+    		m.vecNVGColors[it->first] = rgbaToNvg(it->second);
+    	}
+    	m.mapColors = mapColors;
+    } else {
+    	//load new
+    	theme_data data;
+    	archive(make_nvp("data", data));
+    	loadThemeData(data, m);
+    }
 }
 template<class Archive>
 void serialize(Archive & archive, themefile & m)
@@ -144,9 +177,9 @@ bool loadThemeFile(themefile& _settings) {
 		}
 		saveThemeFile(_settings);
 	} catch (std::exception& e) {
-	/*	ngui::show("Couldn't read config file.\nSome settings may have been reset", "Warning", ngui::Style::Warning, ngui::Buttons::OK);
+	/*	ngui::show("Couldn't read config file.\nSome settings may have been reset", "Warning", ngui::Style::Warning, ngui::Buttons::OK);*/
 		std::cout << e.what();
-		std::cout << std::endl;*/
+		std::cout << std::endl;
 		_settings = themefile();
 	}
 	return false;
