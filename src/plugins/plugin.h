@@ -1,5 +1,4 @@
 #pragma once
-#include "../gui/pluginviewcontainers.h"
 #include <vector>
 #include <stdint.h>
 #include "gui/gui.h"

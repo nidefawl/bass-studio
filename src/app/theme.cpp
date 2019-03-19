@@ -22,6 +22,14 @@ namespace GuiConstant {
 std::vector<constant_t> getAllConstants();
 }
 
+bool nvgColorEqual(NVGcolor a, NVGcolor b) {
+#define F_EPS 0.000001f
+	if (fabs(a.r-b.r) > F_EPS) return false;
+	if (fabs(a.g-b.g) > F_EPS) return false;
+	if (fabs(a.b-b.b) > F_EPS) return false;
+	if (fabs(a.a-b.a) > F_EPS) return false;
+	return true;
+}
 void guitheme_t::initDefaultTheme() {
 	defaultConstructed = false;
 	if (isDefault) {
@@ -44,14 +52,24 @@ void guitheme_t::initDefaultTheme() {
 }
 NVGcolor& guitheme_t::getColorRef(GuiColor::constant_t _constant) {
 	assert(_constant.idx >= 0 && _constant.idx < this->vecNVGColors.size());
+#ifndef NDEBUG
+	//Make sure the 2 are in sync
+	auto it = mapColors.find(_constant.idx);
+	if (it != mapColors.end()) {
+		assert(nvgColorEqual(this->vecNVGColors[_constant.idx], rgbaToNvg(it->second)));
+	}
+#endif
 	return this->vecNVGColors[_constant.idx];
 }
 NVGcolor guitheme_t::getColor(GuiColor::constant_t _constant) const {
 	assert(_constant.idx >= 0 && _constant.idx < this->vecNVGColors.size());
-//	auto it = mapColors.find(_constant.idx);
-//	if (it != mapColors.end()) {
-//		return rgbaToNvg(mapColors[_constant.idx]);
-//	}
+#ifndef NDEBUG
+	//Make sure the 2 are in sync
+	auto it = mapColors.find(_constant.idx);
+	if (it != mapColors.end()) {
+		assert(nvgColorEqual(this->vecNVGColors[_constant.idx], rgbaToNvg(it->second)));
+	}
+#endif
 	return this->vecNVGColors[_constant.idx];
 }
 NVGcolor guitheme_t::getContrastColor(GuiColor::constant_t _constant) const {
@@ -61,8 +79,12 @@ NVGcolor guitheme_t::getContrastColor(GuiColor::constant_t _constant) const {
 int32_t guitheme_t::getColorInt32(GuiColor::constant_t _constant) {
     auto it = mapColors.find(_constant.idx);
     if (it == mapColors.end()) {
+    	//Make sure the 2 are in sync
+    	assert(nvgColorEqual(this->vecNVGColors[_constant.idx], rgbaToNvg(_constant.defValue)));
 		return _constant.defValue;
     }
+	//Make sure the 2 are in sync
+	assert(nvgColorEqual(this->vecNVGColors[_constant.idx], rgbaToNvg(mapColors[_constant.idx])));
 	return mapColors[_constant.idx];
 }
 void guitheme_t::setColor(GuiColor::constant_t _constant, int32_t _newValue) {

@@ -843,9 +843,6 @@ void guictr_plugins::onTick(AppCtrl* ctrl) {
 		ivec2 screenPosCtrMin = toScreenSpace(ivec2(scrolloffset, 0));
 		ivec2 screenPosCtrMax = screenPosCtrMin + cs;
 		if (screenPosMouse.y >= screenPosCtrMin.y && screenPosMouse.y <= screenPosCtrMax.y) {
-			my_printf("screenPosMouse %d %d on guictr_plugins %12X\n", screenPosMouse.x, screenPosMouse.y, (int64_t)this);
-			my_printf("screenPosCtrMin %d %d on guictr_plugins %12X\n", screenPosCtrMin.x, screenPosCtrMin.y, (int64_t)this);
-			my_printf("screenPosCtrMax %d %d on guictr_plugins %12X\n", screenPosCtrMax.x, screenPosCtrMax.y, (int64_t)this);
 			if (screenPosMouse.x < screenPosCtrMin.x+SCROLL_START_X && scrolloffset > 0) {
 				setScrolloffset(scrolloffset - (int) ((TIMER_MS / 50.0) * 40));
 				ctrl->requestRedraw();

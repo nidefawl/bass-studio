@@ -12,7 +12,6 @@
 #include "button.h"
 #include "trackcontent.h"
 #include "tempocontrols.h"
-#include "inputfield.h"
 #include "note.h"
 #include "grid.h"
 #include "keyboard.h"
@@ -22,13 +21,11 @@
 #include "guiarp.h"
 #include <glm/glm.hpp>
 #include <glm/vec2.hpp>
+
+#include "guiinputfield.h"
 using glm::vec2;
 using glm::ivec2;
 
-#define PIANO_COLOR_WHITE rgbToNvg(0xffffff)
-#define PIANO_COLOR_BLACK rgbToNvg(0x111111)
-#define PIANO_COLOR_STR rgbToNvg(0x444444)
-#define CONTENT_COLOR_SHARP rgbaToNvg(0x33111111)
 #define MAX_OCTAVES (8-(-2))
 #define PIANOROLL_MIN_SCALE 4
 #define PIANOROLL_MAX_SCALE 48
@@ -758,6 +755,7 @@ public:
 		}
 	}
 };
+
 class guictr_noteeditor : public guictr_base, public layout_pianoroll_t, grid_changed_cb, ce_constants {
 public:
 
@@ -767,7 +765,7 @@ public:
 	guitrack_timeline timeline;
 	guictr_cliphandles clipHandles;
 	clip_view& view;
-	guibutton btn;
+	guibutton btnToggleFold;
 
 	guictr_noteeditor(clip_view& _view)
 	: guictr_base(), layout_pianoroll_t(),
@@ -784,21 +782,21 @@ public:
 		add(&content);
 		add(&timeline);
 		add(&clipHandles);
-		add(&btn);
-		btn.setText("Fold");
-		btn.setEnabledRef(&fold);
+		add(&btnToggleFold);
+		btnToggleFold.setText("Fold");
+		btnToggleFold.setEnabledRef(&fold);
 //		btn.setBackgroundColor(nvgToRGB(theme->getColor(GuiColor::COL_NOTE)));
 		content.showRange(2*12, 4*12);
 	}
 	~guictr_noteeditor() {
-		remove(&btn);
+		remove(&btnToggleFold);
 		remove(&timeline);
 		remove(&content);
 		remove(&piano);
 		remove(&clipHandles);
 	}
 	virtual void buttonClicked(guibase* button) {
-		if (button == &btn) {
+		if (button == &btnToggleFold) {
 			fold = !fold;
 			view.updateNotePitches(true);
 			if (fold&&yscalefold==0&&yoffsetfold==0) {
@@ -827,8 +825,8 @@ public:
 
 		clipHandles.pos = ivec2(timeline.left(), timeline.bottom());
 		clipHandles.size = ivec2(timeline.size.x, heightClipIndicators);
-		btn.pos = ivec2(padding, padding);
-		btn.size = ivec2((piano.size.x)/2, 18);
+		btnToggleFold.pos = ivec2(padding, padding);
+		btnToggleFold.size = ivec2((piano.size.x)/2, 18);
 		content.pos = ivec2(timeline.left(), clipHandles.bottom());
 		content.size = ivec2(timeline.size.x, piano.size.y);
 		clipHandles.clipViewSize = ivec2(content.size.x, content.size.y+clipHandles.size.y);

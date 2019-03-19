@@ -30,7 +30,7 @@ effectbase* vsthost::makeModuleInstance(int32_t moduleType, int32_t moduleId, in
 			}
 			break;
 		default:
-			assert(0);
+//			assert(0);
 			break;
 	}
 	switch (moduleType) {

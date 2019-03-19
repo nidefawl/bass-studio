@@ -1,4 +1,5 @@
 #include <vector>
+#include <cmath>
 #include <memory>
 #include <glm/glm.hpp>
 #include <glm/vec2.hpp>
@@ -14,13 +15,15 @@
 #include "gui/pluginviewcontainers.h"
 #include "gui/button.h"
 #include "gui/knob.h"
+#include "gui/guiinputfield.h"
 #include "gui/knoblabeled.h"
-#include "gui/inputfield.h"
 #include "gui/guicontainer.h"
-#include "../../gui/guicontextmenu_daw.h"
+#include "gui/guicontextmenu_daw.h"
 #include "basectrl.h"
 #include "platform.h"
+
 #include "plugins/plugin.h"
+#include "plugins/plugin-base.h"
 #include "host/plugin/base_plugin.h"
 #include "host/plugin/vst_plugin.h"
 #ifdef BUILD_BUILTIN_EFFECT

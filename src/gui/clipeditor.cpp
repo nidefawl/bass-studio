@@ -19,7 +19,13 @@
 
 using glm::vec2;
 using glm::ivec2;
+namespace GuiColor {
 
+constant_t COL_PIANOROLL_WHITE("COL_PIANOROLL_WHITE", 0xFFFFFFFF);
+constant_t COL_PIANOROLL_BLACK("COL_PIANOROLL_BLACK", 0x33111111);
+constant_t COL_PIANOROLL_STROKE("COL_PIANOROLL_STROKE", 0xFF444444);
+constant_t COL_CLIPEDITOR_SHARP("COL_CLIPEDITOR_SHARP", 0x33111111);
+}
 class action_modify_notes : public action_base {
 protected:
 public:
@@ -222,25 +228,27 @@ void gui_clipcontent::render(NVGcontext* vg) {
 		nvgTranslate(vg, 0, yOff);
 		float yoct = 0;
 		float y = yoct;
+		int numRowsSharp = 0;
 		nvgBeginPath(vg);
 		int len = (int) pitches.size();
 		for (int i = 0; i < len; i++) {
 			int32_t pitch = pitches[i];
 			if (isSharp(pitch)) {
 				nvgRect(vg, 0, h-y, w, scale);
+				numRowsSharp++;
 			}
 			y += scale;
 			if (y >= size.y+scale*2) {
 				break;
 			}
 		}
-		nvgFillColor(vg, CONTENT_COLOR_SHARP);
+		nvgFillColor(vg, theme->getColor(GuiColor::COL_CLIPEDITOR_SHARP));
 		nvgFill(vg);
 		y = yoct;
 
 		nvgBeginPath(vg);
 		nvgStrokeWidth(vg, 1.0f);
-		nvgStrokeColor(vg, PIANO_COLOR_STR);
+		nvgStrokeColor(vg, theme->getColor(GuiColor::COL_PIANOROLL_STROKE));
 //		if (firstKey == 0 && octave == 0) {
 //			nvgMoveTo(vg, 0, h - (y-scale));
 //			nvgLineTo(vg, w, h - (y-scale));
@@ -287,13 +295,13 @@ void gui_clipcontent::render(NVGcontext* vg) {
 					break;
 				}
 			}
-			nvgFillColor(vg, CONTENT_COLOR_SHARP);
+			nvgFillColor(vg, theme->getColor(GuiColor::COL_CLIPEDITOR_SHARP));
 			nvgFill(vg);
 			y = yoct;
 
 			nvgBeginPath(vg);
 			nvgStrokeWidth(vg, 1.0f);
-			nvgStrokeColor(vg, PIANO_COLOR_STR);
+			nvgStrokeColor(vg, theme->getColor(GuiColor::COL_PIANOROLL_STROKE));
 			if (firstKey == 0 && octave == 0) {
 				nvgMoveTo(vg, 0, h - (y-scale));
 				nvgLineTo(vg, w, h - (y-scale));
@@ -508,7 +516,7 @@ void gui_pianoroll::render(NVGcontext* vg) {
 
 	nvgBeginPath(vg);
 	nvgRect(vg, keysX, -4, widthKeys, size.y+8);
-	nvgFillColor(vg, PIANO_COLOR_WHITE);
+	nvgFillColor(vg, theme->getColor(GuiColor::COL_PIANOROLL_WHITE));
 	nvgFill(vg);
 
 	bool fold = layoutRoll.fold;
@@ -544,7 +552,7 @@ void gui_pianoroll::render(NVGcontext* vg) {
 				break;
 			}
 		}
-		nvgFillColor(vg, PIANO_COLOR_BLACK);
+		nvgFillColor(vg, theme->getColor(GuiColor::COL_PIANOROLL_BLACK));
 		nvgFill(vg);
 		nvgRestore(vg);
 		yOff = offset - scale;
@@ -553,7 +561,7 @@ void gui_pianoroll::render(NVGcontext* vg) {
 		nvgTranslate(vg, 0, yOff);
 		nvgBeginPath(vg);
 		nvgStrokeWidth(vg, 1.0f);
-		nvgStrokeColor(vg, PIANO_COLOR_STR);
+		nvgStrokeColor(vg, theme->getColor(GuiColor::COL_PIANOROLL_STROKE));
 		y = 0;
 		float prevSeperator = -30;
 		for (int i = 0; i <= len; i++) {
@@ -619,13 +627,13 @@ void gui_pianoroll::render(NVGcontext* vg) {
 					break;
 				}
 			}
-			nvgFillColor(vg, PIANO_COLOR_BLACK);
+			nvgFillColor(vg, theme->getColor(GuiColor::COL_PIANOROLL_BLACK));
 			nvgFill(vg);
 			y = yoct;
 
 			nvgBeginPath(vg);
 			nvgStrokeWidth(vg, 1.0f);
-			nvgStrokeColor(vg, PIANO_COLOR_STR);
+			nvgStrokeColor(vg, theme->getColor(GuiColor::COL_PIANOROLL_STROKE));
 			if (firstKey == 0) {
 				nvgMoveTo(vg, keysX - 55, h - (y-scale));
 				nvgLineTo(vg, keysX, h - (y-scale));
@@ -669,7 +677,7 @@ void gui_pianoroll::render(NVGcontext* vg) {
 	nvgBeginPath(vg);
 	nvgMoveTo(vg, keysX+widthKeys, 0);
 	nvgLineTo(vg, keysX+widthKeys, size.y);
-	nvgStrokeColor(vg, PIANO_COLOR_STR);
+	nvgStrokeColor(vg, theme->getColor(GuiColor::COL_PIANOROLL_STROKE));
 	nvgStrokeWidth(vg, 1.0f);
 	nvgStroke(vg);
 }
@@ -1231,11 +1239,11 @@ void guictr_noteeditor::render(NVGcontext* vg) {
 	nvgSave(vg);
 	clipHandles.render(vg);
 	nvgRestore(vg);
-	btn.render(vg);
+	btnToggleFold.render(vg);
 //	nvgBeginPath(vg);
 //	nvgMoveTo(vg, piano.left(), 0);
 //	nvgLineTo(vg, piano.left(), size.y);
-//	nvgStrokeColor(vg, PIANO_COLOR_BLACK);
+//	nvgStrokeColor(vg, theme->getColor(GuiColor::COL_PIANOROLL_BLACK));
 //	nvgStrokeWidth(vg, 2.0f);
 //	nvgStroke(vg);
 

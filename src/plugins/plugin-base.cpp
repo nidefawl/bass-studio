@@ -11,18 +11,24 @@
 #include "plugins/plugincontrol.h"
 #include "../gui/pluginviewcontainers.h"
 #include "exceptions.h"
+#include "handle-exceptions.h"
 #include "msgbox.h"
+#ifndef BUILD_BUILTIN_EFFECT
+#include <GLFW/glfw3.h>
+namespace MouseCursors {
+void initCursors(); // mousecursor.cpp
+}
+#endif
+
 
 
 #ifndef BUILD_BUILTIN_EFFECT
+bool isFirstPluginLoad = false;
 extern HMODULE hInstance;
 String getModuleName(HMODULE module); //platform_win.cpp
 #endif
 
 AEffEditor* createPluginWindow(AudioEffect *_effect, std::shared_ptr<PluginControl> _ctrl, int w, int h);
-namespace MouseCursors {
-void init(); // mousecursor.cpp
-}
 
 void BasePluginVST2::createEditorWindow(PluginViewContainersImpl* view) {
 	try {
@@ -122,6 +128,12 @@ bool BasePluginVST2::getVendorString (char* text)
 
 void BasePluginVST2::open () {
 #ifndef BUILD_BUILTIN_EFFECT
+#ifdef _WIN32
+	if (!isFirstPluginLoad) {
+		return;
+	}
+	isFirstPluginLoad = false;
+#endif
 	//this is the first point where we have the right currentworkingdirectory set
 	//no file io before this point!
 	const int bufLen = 512*4;
@@ -143,9 +155,50 @@ void BasePluginVST2::open () {
 		setCWDPath(strPath);// remember cwd, it _will_ change
 		my_printf("setCWDPath: %s\n", StringAsCStr(strPath));
 	}
-	MouseCursors::init(); //TODO: call MouseCursors::destroy() on exit of last instance
+	isFirstPluginLoad = false;
+	MouseCursors::initCursors(); //TODO: call MouseCursors::destroy() on exit of last instance
+
+
 #endif
 
 }
+#ifndef BUILD_BUILTIN_EFFECT
+static void glfw_plugin_error_callback(int error, const char* description) {
+	char errorCodeStr[1024] = { 0 };
+	_snprintf_s(errorCodeStr, 1024 - 1, _TRUNCATE, "Error %d: %s", error, description);
+	my_printf("%s\n", errorCodeStr);
+//	ngui::show(errorCodeStr, "Error", ngui::Style::Error, ngui::Buttons::OK);
+}
+static void showerror(const char* description) {
+	ngui::show(description, "Error", ngui::Style::Error, ngui::Buttons::OK);
+}
+void initColor(); // gui/gui.cpp
+void onModuleLoad() {
+	isFirstPluginLoad = true;
+	try {
+	initColor();
+	char pluginWindowClassName[32];
+	sprintf_s(pluginWindowClassName, 32, "PLUGWND%I64X", (int64_t)&onModuleLoad);
+	my_printf("window class name %s\n", pluginWindowClassName);
+	glfwSetErrorCallback(glfw_plugin_error_callback);
+	if (!glfwInit(pluginWindowClassName)) {
+#ifdef _WIN32
+		DWORD error = GetLastError();
+		String message = FormatErrorMessage(error, StringFormat("Couldn't initialize glfw (%d)", error));
+		showerror(StringAsCStr(message));
+#else
+		showerror("Initialization failed. Couldn't initialize glfw");
+#endif
+		exit(EXIT_FAILURE);
+	}
+
+	EXC_CATCH_NO_THROW_DIALOG
+}
+void onModuleUnload() {
+	try {
+	glfwTerminate();
+	EXC_CATCH_NO_THROW_DIALOG
+}
+#endif
 
 

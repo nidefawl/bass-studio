@@ -3,11 +3,12 @@
 #include <memory>
 
 #include "str_util.h"
+
+#include "../../gui/guiinputfield.h"
 #include "gui/knob.h"
 #include "gui/button.h"
 #include "gui/guicontainer.h"
 #include "gui/guicolorpick.h"
-#include "gui/inputfield.h"
 
 
 class vstplugin;

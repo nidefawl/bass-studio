@@ -1,4 +1,6 @@
 #pragma once
+#include <glm/glm.hpp>
+#include <glm/vec2.hpp>
 #include "str_util.h"
 #include "knob.h"
 #include "guicontainer.h"
@@ -10,6 +12,7 @@ class gui_ctr_debug : public guictr_base {
 	guiknob knobTest;
 	guiknob knobTest2;
 	guibutton btn;
+	int32_t curVal = 0;
 public:
 	gui_ctr_debug();
 	~gui_ctr_debug() {
@@ -24,5 +27,5 @@ public:
 		g_debugStrings.push_back(std::move(str));
 	}
 	void buttonClicked(guibase* button);
-	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
+	virtual bool mouseHitTest(glm::ivec2 mpos, MouseHitEvt& evt) override;
 };

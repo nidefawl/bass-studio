@@ -131,6 +131,7 @@ struct AppMouseCursor {
 #endif
 
 	MouseCursorIcon* cursors[NUM_CURSORS]{0};
+	namespace {
 	void load(String path, ImageBuf& out) {
 		if (ReadImage(path, out) < 0) {
 			my_printf("Error loading image %s\n", StringAsCStr(path));
@@ -138,7 +139,8 @@ struct AppMouseCursor {
 			my_printf("%s loaded: %dx%d %d-channel, bufsize: %d\n", StringAsCStr(path), out.w, out.h, out.bitdepth, out.bytes.size());
 		}
 	}
-	void init() {
+	}
+	void initCursors() {
 	{
 			ImageBuf imgCursors[NUM_CURSORS];
 			for (int i = 0; i < NUM_CURSORS; i++) {
@@ -183,7 +185,7 @@ struct AppMouseCursor {
 			}
 		}
 	}
-	void destroy() {
+	void destroyCursors() {
 #ifdef NO_GLFW_LIB
 		for (int i = 0; i < NUM_CURSORS; i++) {
 			if (cursors[i]) {

@@ -4,8 +4,12 @@
 #include "basectrl.h"
 #include "knoblabeled.h"
 #include "gui.h"
+#include "guicolors.h"
+#include "guiconstant.h"
+#include "theme.h"
 #include "guitooltip.h"
 #include "str_util.h"
+#include "color_util.h"
 #include "keyboard.h"
 #include "table.h"
 #include "logging.h"
@@ -200,7 +204,6 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS) {
 #ifndef BUILD_NO_VST
 #ifdef BUILD_BUILTIN_EFFECT
 void guiknob::setAutomationHandlers() {
-	my_printf("set handlers %012X\n", (int64_t)paramAutomatable);
 	fnGetValue = [this] () {
 		if (paramAutomatable) {
 			return paramAutomatable->getParamValue(paramIdx);
@@ -277,7 +280,7 @@ void guiknob_labeled_base::render(NVGcontext* vg) {
 		nvgFillColor(vg, theme->getColor(bgColor));
 		nvgFill(vg);
 	};
-	auto bgColor = theme->getBgColor(getStateFlags());
+	auto bgColor = getBackgroundColor(getStateFlags());
 	auto contrastColor = getContrastFontColor(nvgToRGB(bgColor));
 	renderButtonAt(vg, insetP, insetS);
 	if (labelHeight) {

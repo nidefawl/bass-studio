@@ -21,7 +21,6 @@
 #include "guicontainer.h"
 #include "textfield.h"
 #include "button.h"
-#include "inputfield.h"
 #include "guicolorpick.h"
 #include "table.h"
 #include "theme.h"
@@ -32,7 +31,8 @@
 #include "guicolorpick.h"
 #include "dropdown.h"
 #include "debugproperties.h"
-#include "inputfield.h"
+#include "guiinputfield.h"
+
 namespace Table {
 
 	class click_type_handler {

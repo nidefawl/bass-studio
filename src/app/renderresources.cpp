@@ -42,14 +42,16 @@ namespace {
 namespace RenderResources {
 	NvgImageTexture imgDashedLine;
 	NvgImageTexture imgIcons[NUM_IMGS];
-	void load(NVGcontext* vg, String path, ImageBuf& out) {
-		if (ReadImage(path, out) < 0) {
-			my_printf("Error loading image %s\n", StringAsCStr(path));
-		} else {
-			my_printf("%s loaded: %dx%d %d-channel, bufsize: %d\n", StringAsCStr(path), out.w, out.h, out.bitdepth, out.bytes.size());
+	namespace {
+		void load(NVGcontext* vg, String path, ImageBuf& out) {
+			if (ReadImage(path, out) < 0) {
+				my_printf("Error loading image %s\n", StringAsCStr(path));
+			} else {
+				my_printf("%s loaded: %dx%d %d-channel, bufsize: %d\n", StringAsCStr(path), out.w, out.h, out.bitdepth, out.bytes.size());
+			}
 		}
 	}
-	void init(NVGcontext* vg) {
+	void initResources(NVGcontext* vg) {
 		{
 			ImageBuf imgIconsBuf[NUM_IMGS];
 			for (int i = 0; i < NUM_IMGS; i++) {

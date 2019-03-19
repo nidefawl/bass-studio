@@ -5,13 +5,19 @@
 using glm::vec2;
 using glm::ivec2;
 
+#include "host/mainctrl.h"
+#include "host/plugin/vst_plugin.h"
 #include "gui.h"
+#include "guicolors.h"
+#include "guiconstant.h"
+#include "theme.h"
 #include "track.h"
 #include "track_impl.h"
+#include "guicontextmenu_base.h"
+#include "guicontextmenu.h"
 #include "guicontextmenu_daw.h"
 #include "button.h"
 #include "event.h"
-#include "../host/plugin/vst_plugin.h"
 #include "renderresources.h"
 #include "trackautomation.h"
 #include "trackcontent.h"
@@ -144,7 +150,7 @@ public:
 	void render(NVGcontext* vg) {
 		renderWidgetBorder(vg, getStateFlags());
 		if (drawFn) {
-			drawFn(vg, pos, size, theme->getBgColor(getStateFlags()));
+			drawFn(vg, pos, size, getBackgroundColor(getStateFlags()));
 		}
 		GuiColor::constant_t valColor;
 		GuiColor::constant_t indColor;
@@ -223,10 +229,10 @@ class guibutton_trackbypass : public guibutton {
 public:
 	guibutton_trackbypass(track_t* _track) : guibutton(), m_track(_track) {
 	}
-	bool trackenabled() {
+	bool trackenabled() const {
 		return m_track->audio && m_track->audio->mixer.isEnabled();
 	}
-	bool isEnabled() override {
+	bool isEnabled() const override {
 		return trackenabled();
 	}
 	void handleRightClick(MouseEvent& evt) override {

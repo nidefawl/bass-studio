@@ -77,7 +77,7 @@ public:
 	}
 	SafeRef<guibase> makeSafeRef();
 	virtual ~guibase();
-	virtual bool isVisible() {
+	virtual bool isVisible() const {
 		return (flags & FLG_VISIBLE) != 0;
 	}
 	void setVisible(bool b) {
@@ -86,7 +86,7 @@ public:
 		else
 			flags |= FLG_VISIBLE;
 	}
-	virtual bool isBackgroundRendered() {
+	virtual bool isBackgroundRendered() const {
 		return (flags & FLG_RENDER_BACKGROUND) != 0;
 	}
 	void setBackgroundRendered(bool b) {
@@ -104,7 +104,7 @@ public:
 		else
 			flags |= FLG_RENDER_BACKGROUND_INSET;
 	}
-	virtual bool isEnabled() {
+	virtual bool isEnabled() const {
 		return (flags & FLG_ENBL) != 0;
 	}
 	void setEnabled(bool b) {
@@ -324,7 +324,7 @@ public:
 	virtual bool isStaticContainer() {
 		return false;
 	}
-	virtual int32_t getStateFlags();
+	virtual int32_t getStateFlags() const;
 
 
 	BaseCtrl* getControl() const {
@@ -336,6 +336,7 @@ public:
 public:
 	virtual bool isSelected();
 protected:
+	virtual NVGcolor getBackgroundColor(int stateflags) const;
 	void setTint(uint32_t hex);
 	void setBackgroundColor(uint32_t hex);
 	bool isChildOf(guibase* parentSearch);

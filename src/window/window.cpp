@@ -111,10 +111,10 @@ void handleException() {
 }
 
 namespace RenderResources {
-void init(NVGcontext* vg); // renderresources.cpp
+void initResources(NVGcontext* vg); // renderresources.cpp
 }
 namespace MouseCursors {
-void init(); // mousecursor.cpp
+void initCursors(); // mousecursor.cpp
 }
 
 
@@ -150,9 +150,7 @@ static void setAppWindowHints() {
     glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_FALSE);
 }
 static void showerror(const char* description) {
-	my_printf("Error: %s\n", description);
-//	ngui::show(description, "Error", ngui::Style::Error, ngui::Buttons::OK);
-//	m,y
+	ngui::show(description, "Error", ngui::Style::Error, ngui::Buttons::OK);
 }
 void invalidateWindowContents(GLFWwindow* glfw) {
 #ifdef _WIN32
@@ -405,7 +403,7 @@ public:
 		return glfwGetInputMode(glfw, GLFW_CURSOR) != GLFW_CURSOR_NORMAL;
 	}
 
-	virtual void createWindow(const char* title, int w, int h, GLFWwindow* share = nullptr, void* parentWindowHandle = nullptr) {
+	void createBaseWindow(const char* title, int w, int h, GLFWwindow* share = nullptr, void* parentWindowHandle = nullptr) {
 		strncpy(this->name, title, 32);
 		if (glfw)
 			throw appexception("window not null");
@@ -589,7 +587,7 @@ public:
 		  ctrl(_ctrl) {
 		dblclicktimer = 0;
 	}
-	void create(const char* title, int w, int h, void* parentWindowHandle);
+	void createMainWindow(const char* title, int w, int h, void* parentWindowHandle);
 	void updateMenu();
 	void flagNeedsRedraw() override {
 		appwindow::flagNeedsRedraw();
@@ -805,7 +803,7 @@ public:
 	{
 		dblclicktimer = 0;
 	}
-	void create(const char* title, int w, int h, void* parentHandle);
+	void createOverlayWindow(const char* title, int w, int h, void* parentHandle);
 	void render()
 	{
 		glfwMakeContextCurrent(glfw);
@@ -1002,12 +1000,12 @@ public:
 	appwindow_dialog(appwindow* _parent) : appwindow() {
 		this->parent = _parent;
 	}
-	void create(const char* title, int w, int h, GLFWwindow* share = NULL) {
+	void createDialogWindow(const char* title, int w, int h, GLFWwindow* share = NULL) {
 		setAppWindowHints();
 		glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 		glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
 		glfwWindowHint(GLFW_FOCUSED, GL_TRUE);
-		appwindow::createWindow(title, w, h, share);
+		appwindow::createBaseWindow(title, w, h, share);
 		if (parent)
 		this->parent->onChildCreate(this);
 
@@ -1167,7 +1165,7 @@ void appwindow_main::updateMenu() {
 window_overlay* appwindow_main::createOverlay() {
 	std::unique_ptr<appwindow_overlay> ow = std::make_unique<appwindow_overlay>(this);
 	String sName = StringFormat("%s menu", this->name);
-	ow->create(StringAsCStr(sName), 200, 200, nullptr);
+	ow->createOverlayWindow(StringAsCStr(sName), 200, 200, nullptr);
 	window_overlay* ret = ow.get();
 	this->overlayWindows.push_back(std::move(ow));
 	return ret;
@@ -1194,16 +1192,16 @@ void appwindow_main::destroy() {
 		//TODO: implement linux
 #endif
 }
-void appwindow_main::create(const char* title, int w, int h, void* parentWindowHandle) {
+void appwindow_main::createMainWindow(const char* title, int w, int h, void* parentWindowHandle) {
 	setAppWindowHints();
 	if (!parentWindowHandle)
 		glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
-	appwindow::createWindow(title, w, h, nullptr, parentWindowHandle);
+	appwindow::createBaseWindow(title, w, h, nullptr, parentWindowHandle);
 	if (!parentWindowHandle) {
 		glfwSetWindowSizeLimits(glfw, 640, 480, GLFW_DONT_CARE, GLFW_DONT_CARE);
 	}
-	RenderResources::init(nanovgCtxt);
-	MouseCursors::init(); //TODO: call MouseCursors::destroy() on exit of last instance
+	RenderResources::initResources(nanovgCtxt);
+	MouseCursors::initCursors(); //TODO: call MouseCursors::destroy() on exit of last instance
 
 	if (!ctrl->init(this, this->nanovgCtxt)) {
 		throw appexception("Couldn't start application");
@@ -1233,7 +1231,7 @@ void appwindow_main::create(const char* title, int w, int h, void* parentWindowH
 	glfwGetWindowSize(glfw, &w, &h);
 	this->onWindowSizeChanged(w, h);
 }
-void appwindow_overlay::create(const char* title, int w, int h, void* parentHandle) {
+void appwindow_overlay::createOverlayWindow(const char* title, int w, int h, void* parentHandle) {
 	setAppWindowHints();
 	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 	glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
@@ -1241,7 +1239,7 @@ void appwindow_overlay::create(const char* title, int w, int h, void* parentHand
 	glfwWindowHint(GLFW_DECORATED, GL_FALSE);
 	glfwWindowHint(GLFW_UTILITY_WINDOW, GL_TRUE);
 	glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER , GL_TRUE);
-	appwindow::createWindow(title, w, h, nullptr, parentHandle);
+	appwindow::createBaseWindow(title, w, h, nullptr, parentHandle);
 	glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER , GL_FALSE);
 #ifdef _WIN32
 	bool tooltip = false;
@@ -1320,7 +1318,7 @@ LRESULT WIN32API_CALLBACK_TYPE appWndProc(HWND hwnd, UINT Msg, WPARAM wParam, LP
 window_dialog* appwindow_main::createDialog() {
 	appwindow_dialog* popupWindow = new appwindow_dialog(this);
 	String sName = StringFormat("%s dialog", this->name);
-	popupWindow->create(StringAsCStr(sName), 200, 200);
+	popupWindow->createDialogWindow(StringAsCStr(sName), 200, 200);
 	return popupWindow;
 }
 static appwindow* getUserData(GLFWwindow *w) {
@@ -1478,7 +1476,9 @@ int getHWNDCnt(int i) {
 	return it->second;
 }
 #ifndef DAWFRAMEWORK_PLUGIN
+#if CREATE_DEBUG_COMPANION_WINDOW
 void drawDebugWindow(NVGcontext* ctx, int winW, int winH, float pxratio);
+#endif
 #ifdef _WIN32
 #ifndef BUILD_NO_VST
 namespace vst_window_mgr {
@@ -1516,7 +1516,7 @@ int startApplication(int argc, char* argv[]) {
 	std::shared_ptr<AppCtrl> ctrl = makeApp();
 	ctrl->initApp(argc, argv);
 	mainWindow = std::make_unique<appwindow_main>(ctrl.get());
-	mainWindow->create("main window", 1280, 720, nullptr);
+	mainWindow->createMainWindow("main window", 1280, 720, nullptr);
 	mainWindow->showWindow();
 	enableGlDebugCallback();
 #if CREATE_DEBUG_COMPANION_WINDOW
@@ -1526,7 +1526,7 @@ int startApplication(int argc, char* argv[]) {
 		int winW = 1280;
 		int winH = 720;
 		GLFWwindow* contextWindow = mainWindow->getGLFW();
-		w->create("test window", winW, winH, contextWindow);
+		w->createDialogWindow("test window", winW, winH, contextWindow);
 //		glfwMakeContextCurrent(w->getGLFW());
 		w->centerOnScreen(0);
 		w->showWindow();
@@ -1635,10 +1635,10 @@ int startApplication(int argc, char* argv[]) {
 #include "plugins/handle-exceptions.h"
 #include "../vstsdk-plugin-2.4/aeffeditor.h"
 
-class pluginwindow_main : public appwindow_main, public pluginwindow {
+class appwindow_plugin : public appwindow_main, public pluginwindow {
 public:
 	ERect _rect;
-	pluginwindow_main(AudioEffect *_effect, std::shared_ptr<PluginControl> _ctrl, int w, int h)
+	appwindow_plugin(AudioEffect *_effect, std::shared_ptr<PluginControl> _ctrl, int w, int h)
 		: appwindow_main((AppCtrl*)_ctrl.get()),
 		  pluginwindow(_ctrl)
 	{
@@ -1648,7 +1648,7 @@ public:
 		isExternalWindow = true;
 	}
 
-	virtual ~pluginwindow_main() {
+	virtual ~appwindow_plugin() {
 		my_printf("~pluginwindow_main()\n", 0);
 	}
 
@@ -1671,8 +1671,8 @@ public:
 
 	void createPluginWindow(const char* title, int w, int h, void* parentWindowHandle) {
 		setAppWindowHints();
-		appwindow::createWindow(title, w, h, nullptr, parentWindowHandle);
-		RenderResources::init(nanovgCtxt);
+		appwindow::createBaseWindow(title, w, h, nullptr, parentWindowHandle);
+		RenderResources::initResources(nanovgCtxt);
 
 		if (!ctrlShared->init(this, this->nanovgCtxt)) {
 			throw appexception("Couldn't start application");
@@ -1702,6 +1702,7 @@ public:
 			if (!ctrlShared->init(this, this->nanovgCtxt)) {
 				throw appexception("Couldn't start application");
 			}
+			showWindow();
 			guiOpen();
 			return true;
 		}
@@ -1715,6 +1716,7 @@ public:
 		if (this->systemWindow) {
 			glfwMakeContextCurrent(glfw);
 			guiClose();
+			hideWindow();
 			destroyContextAndWindow();
 			AEffEditor::close();
 		}
@@ -1763,35 +1765,8 @@ public:
 	}
 };
 
-void initColor(); // gui/gui.cpp
-void onModuleLoad() {
-	try {
-	initColor();
-	char pluginWindowClassName[32];
-	sprintf_s(pluginWindowClassName, 32, "PLUGWND%I64X", (int64_t)&onModuleLoad);
-	my_printf("window class name %s\n", pluginWindowClassName);
-	glfwSetErrorCallback(glfw_startup_error_callback);
-	if (!glfwInit(pluginWindowClassName)) {
-#ifdef _WIN32
-		DWORD error = GetLastError();
-		String message = FormatErrorMessage(error, StringFormat("Couldn't initialize glfw (%d)", error));
-		showerror(StringAsCStr(message));
-#else
-		showerror("Initialization failed. Couldn't initialize glfw");
-#endif
-		exit(EXIT_FAILURE);
-	}
-	glfwSetErrorCallback(glfw_runtime_error_callback);
-
-	EXC_CATCH_NO_THROW_DIALOG
-}
-void onModuleUnload() {
-	try {
-	glfwTerminate();
-	EXC_CATCH_NO_THROW_DIALOG
-}
 AEffEditor* createPluginWindow(AudioEffect *_effect, std::shared_ptr<PluginControl> _ctrl, int w, int h) {
-	pluginwindow_main* window = new pluginwindow_main(_effect, std::move(_ctrl), w, h);
+	appwindow_plugin* window = new appwindow_plugin(_effect, std::move(_ctrl), w, h);
 	return window;
 }
 #endif

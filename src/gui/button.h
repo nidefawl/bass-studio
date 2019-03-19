@@ -23,12 +23,26 @@ extern constant_t COL_BTN_BG_SHOW_ACTIVE;
 
 class guibuttonbase : public guibase {
 protected:
+	GuiColor::constant_t buttonColor;
 	String str = "";
 	int fontSize = 0;
+public:
+	void (*drawFn)(NVGcontext*,ivec2&, ivec2&, const NVGcolor&, int drawParm, int drawParm2) = NULL;
+	int drawParm = 0;
 public:
 	guibuttonbase() : guibase() {
 	}
 	guibuttonbase(ivec2 _pos, ivec2 _size) : guibase(_pos, _size) {
+	}
+	void setButtonColor(GuiColor::constant_t color) {
+		buttonColor = color;
+		flags |= FLG_HAS_COLOR_BG;
+	}
+	virtual NVGcolor getBackgroundColor(int stateflags) const override {
+		if (flags&FLG_HAS_COLOR_BG) {
+			return theme->getColor(buttonColor);
+		}
+		return theme->getBgColor(stateflags);
 	}
 	virtual void handleDraggedMove(MouseEvent& evt) {
 	}
@@ -56,6 +70,28 @@ public:
 	int getFontSize() {
 		return fontSize;
 	}
+	void renderButtonLabel(NVGcontext* vg, int32_t stateFlags) {
+		if (drawFn||str.length()) {
+			nvgSave(vg);
+			setScissorTransform(vg);
+			ivec2 renderPos(0);
+			if (str.length() > 0) {
+	//			nvgDawText(vg, this, pos, size, str, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+				int fontScale = this->fontSize > 0 ? this->fontSize : G_FONT_SCALE(size.y);
+				GuiColor::constant_t c = (stateFlags&FLG_ENBL) ? GuiColor::COL_LABEL_ACTIVE : GuiColor::COL_LABEL_INACTIVE;
+				NVGcolor color = theme->getColor(c);
+				setFont(vg, fontScale, color, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+				float strWidth = nvgText(vg, renderPos.x + size.x / 2.0f, renderPos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(str), NULL);
+				if (strWidth*2 > size.x) {
+				}
+			}
+
+			if (drawFn) {
+				drawFn(vg, renderPos, size, getBackgroundColor(getStateFlags()), drawParm, isEnabled());
+			}
+			nvgRestore(vg);
+		}
+	}
 };
 class guibutton : public guibuttonbase {
 	bool* enabledPtr = NULL;
@@ -63,7 +99,7 @@ class guibutton : public guibuttonbase {
 public:
 	guibutton() : guibuttonbase() {
 	}
-	virtual bool isEnabled() override {
+	virtual bool isEnabled() const override {
 		if (enabledPtr)
 			return *enabledPtr;
 		return guibuttonbase::isEnabled();
@@ -79,29 +115,17 @@ public:
 //	void setActiveRef(bool* _activePtr) {
 //		activePtr = _activePtr;
 //	}
-	virtual int32_t getStateFlags() {
+	virtual int32_t getStateFlags() const {
 		int32_t state = guibuttonbase::getStateFlags();
 //		if (active()) {
 //			state |= FLG_ACT;
 //		}
 		return state;
 	}
-	void (*drawFn)(NVGcontext*,ivec2&, ivec2&, const NVGcolor&, int drawParm, int drawParm2) = NULL;
-	int drawParm = 0;
 	void render(NVGcontext* vg) {
 		int32_t fl = getStateFlags();
 		renderWidgetBorder(vg, fl);
-		if (str.length() > 0) {
-			int fontScale = this->fontSize > 0 ? this->fontSize : G_FONT_SCALE(size.y);
-			GuiColor::constant_t c = (fl&FLG_ENBL) ? GuiColor::COL_LABEL_ACTIVE : GuiColor::COL_LABEL_INACTIVE;
-			NVGcolor color = theme->getColor(c);
-			setFont(vg, fontScale, color, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-			nvgText(vg, pos.x + size.x / 2.0f, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(str), NULL);
-		}
-
-		if (drawFn) {
-			drawFn(vg, pos, size, theme->getBgColor(getStateFlags()), drawParm, isEnabled());
-		}
+		renderButtonLabel(vg, fl);
 	}
 };
 class guibuttontoggle : public guibuttonbase {
@@ -124,7 +148,7 @@ public:
 		this->radius = fRadius;
 //		this->size = ivec2((int)(fRadius * 2));
 	}
-	bool isEnabled() override {
+	bool isEnabled() const override {
 		if (state)
 			return *state;
 		if (getState)

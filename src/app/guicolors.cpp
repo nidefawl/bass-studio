@@ -69,7 +69,6 @@ int32_t getNextId() {
 	static int32_t constantsNextId = 1;
 	return constantsNextId++;
 }
-void initConstants(int colorVal);
 
 constant_t::constant_t()
 : idx(0),
@@ -127,8 +126,7 @@ NVGcolor rgbaToNvg(uint32_t i);
 uint32_t nvgToRGBA(NVGcolor c);
 NVGcolor mulSatBright(NVGcolor rgb, float sat, float brt);
 namespace GuiColor {
-int colorVal;
-//void changeConstantDefault(const constant_t& c, int32_t v);
+
 void initConstants(int colorVal) {
 	int c = colorVal;
 	int c2 = std::max(5, c - 16);

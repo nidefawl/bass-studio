@@ -19,7 +19,6 @@ NVGcolor getCursorColor() {
 	cursorColor.g = cursorColor.b = CLAMP_F((1.0f-f1)+sin(getTimeMillis()/160.0f)*f1);
 	return cursorColor;
 }
-NVGcolor getContrastFontColor(uint32_t i);
 NVGcolor rgbToNvg(uint32_t i) {
 	NVGcolor c;
 	c.b = (float)((i & 0xFF) / 255.); i >>= 8;

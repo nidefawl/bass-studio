@@ -393,4 +393,38 @@ struct ERect
 	#pragma -a-
 #endif
 
+
+//-------------------------------------------------------------------------------------------------------
+/*! hostCanDos strings Plug-in -> Host */
+namespace HostCanDos
+{
+	extern const char* canDoSendVstEvents; ///< Host supports send of Vst events to plug-in
+	extern const char* canDoSendVstMidiEvent; ///< Host supports send of MIDI events to plug-in
+	extern const char* canDoSendVstTimeInfo; ///< Host supports send of VstTimeInfo to plug-in
+	extern const char* canDoReceiveVstEvents; ///< Host can receive Vst events from plug-in
+	extern const char* canDoReceiveVstMidiEvent; ///< Host can receive MIDI events from plug-in
+	extern const char* canDoReportConnectionChanges; ///< Host will indicates the plug-in when something change in plug-in�s routing/connections with #suspend/#resume/#setSpeakerArrangement
+	extern const char* canDoAcceptIOChanges; ///< Host supports #ioChanged ()
+	extern const char* canDoSizeWindow; ///< used by VSTGUI
+	extern const char* canDoOffline; ///< Host supports offline feature
+	extern const char* canDoOpenFileSelector; ///< Host supports function #openFileSelector ()
+	extern const char* canDoCloseFileSelector; ///< Host supports function #closeFileSelector ()
+	extern const char* canDoStartStopProcess; ///< Host supports functions #startProcess () and #stopProcess ()
+	extern const char* canDoShellCategory; ///< 'shell' handling via uniqueID. If supported by the Host and the Plug-in has the category #kPlugCategShell
+	extern const char* canDoSendVstMidiEventFlagIsRealtime; ///< Host supports flags for #VstMidiEvent
+}
+
+//-------------------------------------------------------------------------------------------------------
+/*! plugCanDos strings Host -> Plug-in */
+namespace PlugCanDos
+{
+	extern const char* canDoSendVstEvents; ///< plug-in will send Vst events to Host
+	extern const char* canDoSendVstMidiEvent; ///< plug-in will send MIDI events to Host
+	extern const char* canDoReceiveVstEvents; ///< plug-in can receive MIDI events from Host
+	extern const char* canDoReceiveVstMidiEvent; ///< plug-in can receive MIDI events from Host
+	extern const char* canDoReceiveVstTimeInfo; ///< plug-in can receive Time info from Host
+	extern const char* canDoOffline; ///< plug-in supports offline functions (#offlineNotify, #offlinePrepare, #offlineRun)
+	extern const char* canDoMidiProgramNames; ///< plug-in supports function #getMidiProgramName ()
+	extern const char* canDoBypass; ///< plug-in supports function #setBypass ()
+}
 #endif // __aeffect__

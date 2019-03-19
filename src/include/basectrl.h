@@ -138,7 +138,7 @@ public:
 	}
 	virtual void relayout() { relayout(m_size.x, m_size.y); };
 	virtual void relayout(int32_t w, int32_t h) { };
-	virtual void openContextMenu(guictxtmenu_base *b, ivec2 pos) { };
+	virtual void openContextMenu(guictxtmenu_base *b, glm::ivec2 pos) { };
 	virtual void closeContextMenu() { };
 	virtual void closeAppMenus()  { };
 	virtual void closeAppMenus(int startlvl)  { };

@@ -38,44 +38,6 @@
 #include "str_util.h"
 #include "plugins/handle-exceptions.h"
 
-#ifndef BUILD_BUILTIN_EFFECT
-#define PLUG_CAN_DO(strx, stry) const char* strx = stry;
-#else
-#define PLUG_CAN_DO(strx, stry) extern const char* strx;
-#endif
-//-------------------------------------------------------------------------------------------------------
-/*! hostCanDos strings Plug-in -> Host */
-namespace HostCanDos
-{
-	PLUG_CAN_DO(canDoSendVstEvents, "sendVstEvents"); ///< Host supports send of Vst events to plug-in
-	PLUG_CAN_DO(canDoSendVstMidiEvent, "sendVstMidiEvent"); ///< Host supports send of MIDI events to plug-in
-	PLUG_CAN_DO(canDoSendVstTimeInfo, "sendVstTimeInfo"); ///< Host supports send of VstTimeInfo to plug-in
-	PLUG_CAN_DO(canDoReceiveVstEvents, "receiveVstEvents"); ///< Host can receive Vst events from plug-in
-	PLUG_CAN_DO(canDoReceiveVstMidiEvent, "receiveVstMidiEvent"); ///< Host can receive MIDI events from plug-in
-	PLUG_CAN_DO(canDoReportConnectionChanges, "reportConnectionChanges"); ///< Host will indicates the plug-in when something change in plug-in�s routing/connections with #suspend/#resume/#setSpeakerArrangement
-	PLUG_CAN_DO(canDoAcceptIOChanges, "acceptIOChanges"); ///< Host supports #ioChanged ()
-	PLUG_CAN_DO(canDoSizeWindow, "sizeWindow"); ///< used by VSTGUI
-	PLUG_CAN_DO(canDoOffline, "offline"); ///< Host supports offline feature
-	PLUG_CAN_DO(canDoOpenFileSelector, "openFileSelector"); ///< Host supports function #openFileSelector ()
-	PLUG_CAN_DO(canDoCloseFileSelector, "closeFileSelector"); ///< Host supports function #closeFileSelector ()
-	PLUG_CAN_DO(canDoStartStopProcess, "startStopProcess"); ///< Host supports functions #startProcess () and #stopProcess ()
-	PLUG_CAN_DO(canDoShellCategory, "shellCategory"); ///< 'shell' handling via uniqueID. If supported by the Host and the Plug-in has the category #kPlugCategShell
-	PLUG_CAN_DO(canDoSendVstMidiEventFlagIsRealtime, "sendVstMidiEventFlagIsRealtime"); ///< Host supports flags for #VstMidiEvent
-}
-
-//-------------------------------------------------------------------------------------------------------
-/*! plugCanDos strings Host -> Plug-in */
-namespace PlugCanDos
-{
-	PLUG_CAN_DO(canDoSendVstEvents, "sendVstEvents"); ///< plug-in will send Vst events to Host
-	PLUG_CAN_DO(canDoSendVstMidiEvent, "sendVstMidiEvent"); ///< plug-in will send MIDI events to Host
-	PLUG_CAN_DO(canDoReceiveVstEvents, "receiveVstEvents"); ///< plug-in can receive MIDI events from Host
-	PLUG_CAN_DO(canDoReceiveVstMidiEvent, "receiveVstMidiEvent"); ///< plug-in can receive MIDI events from Host
-	PLUG_CAN_DO(canDoReceiveVstTimeInfo, "receiveVstTimeInfo"); ///< plug-in can receive Time info from Host
-	PLUG_CAN_DO(canDoOffline, "offline"); ///< plug-in supports offline functions (#offlineNotify, #offlinePrepare, #offlineRun)
-	PLUG_CAN_DO(canDoMidiProgramNames, "midiProgramNames"); ///< plug-in supports function #getMidiProgramName ()
-	PLUG_CAN_DO(canDoBypass, "bypass"); ///< plug-in supports function #setBypass ()
-}
 
 //-----------------------------------------------------------------------------------------------------------------
 // Class AudioEffectX Implementation
@@ -335,7 +297,7 @@ VstIntPtr AudioEffectX::dispatcher (VstInt32 opcode, VstInt32 index, VstIntPtr v
 */
 void AudioEffectX::resume ()
 {
-	if (cEffect.flags & effFlagsIsSynth || canDo ((char*)PlugCanDos::canDoReceiveVstMidiEvent) == 1)
+	if ((cEffect.flags & effFlagsIsSynth) || canDo ((char*)PlugCanDos::canDoReceiveVstMidiEvent) == 1)
 		DECLARE_VST_DEPRECATED (wantEvents) ();
 }
 

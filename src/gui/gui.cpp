@@ -236,7 +236,7 @@ void guibase::renderWidgetBorderPosSize(NVGcontext* vg, int32_t flags, ivec2 pos
 	nvgStrokeColor(vg, theme->getBgStrokeColor(flags));
 	nvgStrokeWidth(vg, theme->getBgStrokeWidth(flags));
 	nvgStroke(vg);
-	nvgFillColor(vg, theme->getBgColor(flags));
+	nvgFillColor(vg, getBackgroundColor(getStateFlags()));
 	nvgFill(vg);
 
 	//		nvgBeginPath(vg);
@@ -327,7 +327,7 @@ bool guibase::pressed() const {
 bool guibase::focused() const {
 	return this == parentCtrl->guiFocused;
 }
-int32_t guibase::getStateFlags() {
+int32_t guibase::getStateFlags() const {
 	int32_t flgs = this->flags & ( FLG_VISIBLE | FLG_RENDER_BACKGROUND);
 	if (pressed()) {
 		flgs |= FLG_DRG;
@@ -360,6 +360,9 @@ void guibase::setParent(guibase* parent) {
 	if (!parentCtrl && parent) {
 		theme = parent->theme;
 	}
+}
+NVGcolor guibase::getBackgroundColor(int stateflags) const {
+	return theme->getBgColor(stateflags);
 }
 String guibase::getClassName() {
 	return typeName(*this);

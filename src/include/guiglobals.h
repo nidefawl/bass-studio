@@ -50,6 +50,7 @@
 #define FLG_FOC (FLG_HVRD<<1)
 #define FLG_ACT (FLG_FOC<<1)
 #define FLG_DRG (FLG_ACT<<1)
+#define FLG_HAS_COLOR_BG (FLG_DRG<<1)
 #define CTR_SPACING 8
 #define CONTENT_INSET 14
 

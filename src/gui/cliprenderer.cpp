@@ -2,6 +2,9 @@
 #include "../host/vst_host.h"
 #include <glm/glm.hpp>
 #include <glm/vec2.hpp>
+#include "theme.h"
+#include "guicolors.h"
+#include "guiconstant.h"
 #include "drawwaveform.h"
 #include "trackcontent.h"
 
@@ -9,6 +12,10 @@ using glm::vec2;
 using glm::ivec2;
 namespace GuiColor {
 constant_t COL_CLIP_OUTLINE("COL_CLIP_OUTLINE", 0x0);
+
+constant_t COL_CLIP_NOTE("COL_CLIP_NOTE", 0xFFFFFFFF);
+constant_t COL_CLIP_NOTE_OVERLAP("COL_CLIP_NOTE_OVERLAP", 0xFF0000FF);
+constant_t COL_CLIP_NOTE_MUTED("COL_CLIP_NOTE_MUTED", 0xFF121212);
 }
 
 bool getClipPosition(scaled_grid& grid, const ivec2& trackSize, const clip_t* cl, ivec2& pos, ivec2& size, tick_t offset) {
@@ -207,12 +214,10 @@ void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_t* tr, 
 		nvgTranslate(vg, posContents.x, posContents.y);
 
 		clip_notes_t& notesView = cl->getNoteViewRender();
-//		clip_notes_t& notesPlay = cl->getNoteViewPlayback();
-	//	clip_notes_t notesPlay;
-	//	cl->getNotesView(0, cl->len, notesPlay, true);
-		int32_t rgbNote = 0xffffff;
-		int32_t rgbNoteOverlap = 0x0000ff;
-		int32_t rgbNoteMuted = 0x121212;
+
+		NVGcolor rgbNote = theme->getColor(GuiColor::COL_CLIP_NOTE);
+		NVGcolor rgbNoteOverlap = theme->getColor(GuiColor::COL_CLIP_NOTE_OVERLAP);
+		NVGcolor rgbNoteMuted = theme->getColor(GuiColor::COL_CLIP_NOTE_MUTED);
 		clip_notes_t& notes = notesView;
 		if (!notes.empty()) {
 			note_t minN = notesView.minNote;
@@ -254,7 +259,7 @@ void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_t* tr, 
 				nvgRect(vg, nx+insetx, ny+insety, nw-insetx*2, nh-insety*2);
 			}
 			if (begin) {
-				nvgFillColor(vg, rgbToNvg(rgbNote));
+				nvgFillColor(vg, rgbNote);
 				nvgFill(vg);
 			}
 
@@ -278,7 +283,7 @@ void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_t* tr, 
 						float insety = calcInset(1, nh);
 						nvgRect(vg, nx+insetx, ny+insety, nw-insetx*2, nh-insety*2);
 					}
-					nvgFillColor(vg, rgbToNvg(j == 0 ? rgbNoteOverlap : rgbNoteMuted));
+					nvgFillColor(vg, j == 0 ? rgbNoteOverlap : rgbNoteMuted);
 					nvgFill(vg);
 				}
 			}

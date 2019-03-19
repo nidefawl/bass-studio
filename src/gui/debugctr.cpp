@@ -3,9 +3,12 @@
 #include "debugctr.h"
 #include "str_util.h"
 #include "knob.h"
+#include "guiglobals.h"
+#include "gui.h"
 #include "guicontainer.h"
 #include "guicolors.h"
 #include "guiconstant.h"
+#include "theme.h"
 #include "button.h"
 #include "track.h"
 #include "track_impl.h"
@@ -38,7 +41,6 @@ String getHWNDName(int i);
 int getHWNDCnt(int i);
 #endif
 namespace GuiColor {
-extern int colorVal;
 void initConstants(int colorVal);
 }
 gui_ctr_debug::gui_ctr_debug() : guictr_base() {
@@ -49,12 +51,12 @@ gui_ctr_debug::gui_ctr_debug() : guictr_base() {
 	btn.setText("Reset history");
 	btn.setFontSize(24);
 	knobTest.fnSetValue = [this](float f, int flags) {
-		GuiColor::colorVal = 0+max(0, min(255, (int32_t)std::floor(f*255)));
-		GuiColor::initConstants(GuiColor::colorVal);
+		curVal = 0+max(0, min(255, (int32_t)std::floor(f*255)));
+		GuiColor::initConstants(curVal);
 		parentCtrl->getTheme()->initDefaultTheme();
 	};
-	knobTest.fnGetValue = [](void) {
-		return max(0.0f, min(1.0f, GuiColor::colorVal/255.0f));
+	knobTest.fnGetValue = [this](void) {
+		return std::max(0.0f, std::min(1.0f, curVal/255.0f));
 	};
 	knobTest2.setValueInit(theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT)/255.0f);
 	knobTest2.fnSetValue = [this](float f, int flags) {

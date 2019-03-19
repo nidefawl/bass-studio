@@ -299,7 +299,7 @@ class guibutton_audioengine : public guibutton {
 public:
 	guibutton_audioengine() : guibutton() {
 	}
-	bool isEnabled() override {
+	bool isEnabled() const override {
 		return vsthost::getInstance()->isStreaming();
 	}
 };
