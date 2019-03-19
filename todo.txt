@@ -1,25 +1,35 @@
-DEBUG HELPER:
-Add tables for:
+Add tables for debugging:
 - all loaded plugins
 - all tracks
 - all guibase instances
 - all automation
 
-
 TODO:
-Mixing desk view
+other:
+make splitter ctr
+fix notes border rendering not respecting z-order when notes overlap
+
+important:
+duplicate loop button in midi clip
+duplicate plugin/plugin groups
+consolidate clips
+plugin gui preset select 
+plugin preset store/load
+group+plugin snapshots
+track snapshots
 Sends/Return tracks
 Solo buttons
+add keybind constant
+keybind editor/presets
+multiselection of tracks
+Mixing desk view
+Load/Save current view quickbuttons
 Implement recent file list
+more work:
 Compressed binary file format
 latency compensated automation 
 stress-test synchronization
 unit tests
-multiselection of tracks
-duplicate plugin/plugin groups
-duplicate loop button in midi clip
-group+plugin snapshots
-track snapshots
 use templates + template specialization for the 3 window classes in window.cpp
 further optimize waveform rendering
 tabbed view
