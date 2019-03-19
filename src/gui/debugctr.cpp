@@ -46,21 +46,16 @@ void initConstants(int colorVal);
 gui_ctr_debug::gui_ctr_debug() : guictr_base() {
 	setBackgroundRendered(true);
 	add(&knobTest);
-	add(&knobTest2);
 	add(&btn);
 	btn.setText("Reset history");
 	btn.setFontSize(24);
 	knobTest.fnSetValue = [this](float f, int flags) {
 		curVal = 0+max(0, min(255, (int32_t)std::floor(f*255)));
 		GuiColor::initConstants(curVal);
-		parentCtrl->getTheme()->initDefaultTheme();
+		parentCtrl->getTheme()->initTheme();
 	};
 	knobTest.fnGetValue = [this](void) {
 		return std::max(0.0f, std::min(1.0f, curVal/255.0f));
-	};
-	knobTest2.setValueInit(theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT)/255.0f);
-	knobTest2.fnSetValue = [this](float f, int flags) {
-		theme->set(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT, (int32_t)(knobTest2.getValueInternal()*255.0f));
 	};
 }
 void gui_ctr_debug::render(NVGcontext* vg) {
@@ -203,9 +198,7 @@ void gui_ctr_debug::layout() {
 	ivec2 cs = getSizeContent();
 	int32_t size = 64;
 	knobTest.size = ivec2(size);
-	knobTest2.size = ivec2(size);
 	knobTest.pos = ivec2(cs.x-knobTest.size.x, cs.y-knobTest.size.y);
-	knobTest2.pos = ivec2(knobTest.pos.x-knobTest2.size.x, cs.y-knobTest2.size.y);
 	btn.size = ivec2(size*3.5, size);
 	btn.pos = ivec2(0, cs.y-btn.size.y);
 }

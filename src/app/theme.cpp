@@ -30,11 +30,12 @@ bool nvgColorEqual(NVGcolor a, NVGcolor b) {
 	if (fabs(a.a-b.a) > F_EPS) return false;
 	return true;
 }
-void guitheme_t::initDefaultTheme() {
-	defaultConstructed = false;
-	if (isDefault) {
-		name = "default";
-	}
+
+guitheme_t::guitheme_t() {
+	initTheme();
+}
+
+void guitheme_t::initTheme() {
 	vecNVGColors.resize(NUM_GUI_COLORS);
 	mapColors.clear();
 	mapProperties.clear();
@@ -50,6 +51,7 @@ void guitheme_t::initDefaultTheme() {
 	uint32_t rgb = nvgToRGB(getColor(GuiColor::COL_BG_DRK));
 	setTint(rgb);
 }
+
 NVGcolor& guitheme_t::getColorRef(GuiColor::constant_t _constant) {
 	assert(_constant.idx >= 0 && _constant.idx < this->vecNVGColors.size());
 #ifndef NDEBUG
@@ -95,18 +97,10 @@ void guitheme_t::setColor(GuiColor::constant_t _constant, int32_t _newValue) {
 	mapColors[_constant.idx] = _newValue;
 	this->vecNVGColors[_constant.idx] = rgbaToNvg(_newValue);
 }
-//const int32_t getDefaultVal(int32_t _constant) {
-//	switch (_constant) {
-//	case GuiConstant::CONST_PLUGIN_TITLE_HEIGHT:
-//		return 24;
-//	case GuiConstant::CONST_TRACK_HEIGHT_STEP:
-//	case G_HEIGHT_TRACK_TITLE:
-//		return 24+INSET_TRACK_CONTENT*2;
-//	default:
-//		break;
-//	}
-//	return 0;
-//}
+
+const float guitheme_t::getFloat(GuiConstant::constant_t _constant) {
+	return get(_constant)/10.0f;
+}
 const int32_t guitheme_t::get(GuiConstant::constant_t _constant) {
     auto it = mapProperties.find(_constant.idx);
     if (it == mapProperties.end()) {

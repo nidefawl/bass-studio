@@ -48,6 +48,9 @@ class BaseCtrl : public SafeRefHandler<guibase> {
 protected:
 	guitheme_mgr themes;
 public:
+	BaseCtrl() {
+		themes.parent = this;
+	}
 	window_base* window = NULL;
 	NVGcontext* vg = NULL;
 	std::vector<guictr_base*> containers;
@@ -70,12 +73,12 @@ public:
 	};
 	int32_t refIdNext = 1;
 	std::vector<stored_ref> refs;
-	int safeRefCreate(guibase* gui) {
+	int safeRefCreate(guibase* gui) override {
 		stored_ref ref{gui, (int32_t)refIdNext++};
 		refs.push_back(ref);
 		return ref.refId;
 	}
-	guibase* safeRefGetPtr(int32_t refId) {
+	guibase* safeRefGetPtr(int32_t refId) override {
 		auto it = std::find_if(refs.begin(), refs.end(), [refId](const stored_ref& ref) {
 			return ref.refId == refId;
 		});
@@ -85,7 +88,7 @@ public:
 		}
 		return nullptr;
 	}
-	void safeRefDestroy(int32_t refId) {
+	void safeRefDestroy(int32_t refId) override {
 		auto it = std::find_if(refs.begin(), refs.end(), [refId](const stored_ref& ref) {
 			return ref.refId == refId;
 		});

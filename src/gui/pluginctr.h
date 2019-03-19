@@ -124,12 +124,13 @@ public:
 };
 class guictr_plugins : public guictr_base {
 public:
-	int scrolloffset = 0;
+	guiplaceholder placeholder;
+	guictr_dragged_plugins dragged;
 	track_t* track = nullptr;
 	audio_stage_t* stage = nullptr;
-	guiplaceholder placeholder;
+	int scrolloffset = 0;
 	bool isDefaultPluginCtr = true;
-	guictr_dragged_plugins dragged;
+public:
 	guictr_plugins() : guictr_base() {
 		setBackgroundRendered(true);
 		dragged.setParent(this);
@@ -137,6 +138,11 @@ public:
 	~guictr_plugins() {
 		removeEntry(guis, &placeholder);
 		guis.clear();
+	}
+	virtual void setControl(BaseCtrl* parentCtrl) override {
+		guibase::setControl(parentCtrl);
+		placeholder.setControl(parentCtrl);
+		dragged.setControl(parentCtrl);
 	}
 	void setScrolloffset(int offset) {
 		if (offset < 0) {

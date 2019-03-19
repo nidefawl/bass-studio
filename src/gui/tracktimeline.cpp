@@ -1,13 +1,24 @@
 #include "tracktimeline.h"
+
+#include <nanovg.h>
+#include <glm/vec2.hpp>
+#include <glm/vec4.hpp>
 #include <stdbool.h>
 #include <stdint.h>
 #include <vector>
+#include "grid.h"
+#include "event.h"
+#include "mouse.h"
+#include "guiglobals.h"
+#include "gui.h"
+#include "guicontainer.h"
 #include "seq_math.h"
 #include "exceptions.h"
 #include "seq_util.h"
 #include "color_util.h"
 #include "platform.h"
 #include "trackctr.h"
+#include "basectrl.h"
 #include "../host/mainctrl.h"
 
 void guitrack_timeline::handleDraggedBegin(MouseEvent& evt) {

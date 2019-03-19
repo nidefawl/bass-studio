@@ -46,7 +46,7 @@ void initColor() {
 
 //	initColorArr(g_guiColors, colorVal);
 //	memset(g_guiColors, 0, sizeof(NVGcolor)*24);
-	getDefaultTheme()->initDefaultTheme();
+	getDefaultTheme()->initTheme();
 
 }
 
@@ -236,7 +236,8 @@ void guibase::renderWidgetBorderPosSize(NVGcontext* vg, int32_t flags, ivec2 pos
 	nvgStrokeColor(vg, theme->getBgStrokeColor(flags));
 	nvgStrokeWidth(vg, theme->getBgStrokeWidth(flags));
 	nvgStroke(vg);
-	nvgFillColor(vg, getBackgroundColor(getStateFlags()));
+	auto color = getBackgroundColor(flags);
+	nvgFillColor(vg, color);
 	nvgFill(vg);
 
 	//		nvgBeginPath(vg);
@@ -270,12 +271,20 @@ void guibase::handleMouseDownBegin(MouseEvent& evt) {
 	}
 }
 guitheme_t* getDefaultTheme() {
-	static guitheme_t theme(true);
+	static guitheme_t theme;
 	return &theme;
 }
 bool guibase::isChildOf(guibase* g) {
 	if (this == g) return true;
 	return parent && parent->isChildOf(g);
+}
+
+NVGcolor guibuttonbase::getBackgroundColor(int stateflags) const {
+	int fl = FLG_HAS_COLOR_BG|FLG_ENBL;
+	if ((stateflags&fl) == fl) {
+		return theme->getColor(buttonColor);
+	}
+	return theme->getBgColor(stateflags);
 }
 void guibuttontoggle::render(NVGcontext* vg) {
 	vec2 cen = vec2(size / 2);
@@ -328,7 +337,8 @@ bool guibase::focused() const {
 	return this == parentCtrl->guiFocused;
 }
 int32_t guibase::getStateFlags() const {
-	int32_t flgs = this->flags & ( FLG_VISIBLE | FLG_RENDER_BACKGROUND);
+	int dynFlags = FLG_DRG|FLG_HVRD|FLG_FOC|FLG_ENBL|FLG_VISIBLE|FLG_RENDER_BACKGROUND;
+	int32_t flgs = this->flags & (~dynFlags);
 	if (pressed()) {
 		flgs |= FLG_DRG;
 	}
@@ -367,22 +377,10 @@ NVGcolor guibase::getBackgroundColor(int stateflags) const {
 String guibase::getClassName() {
 	return typeName(*this);
 }
-void guibase::setTint(uint32_t hex) {
-//		if (theme->isDefault) {
-//			theme = new guitheme_t(false);
-//		}
-//		theme->setTint(hex);
-}
-void guibase::setBackgroundColor(uint32_t hex) {
-//		if (theme->isDefault) {
-//			theme = new guitheme_t(false);
-//		}
-//		theme->setBackgroundColor(hex);
-}
 
 extern int allocCount;
 extern std::vector<guibase*>* g_guis;
-guibase::guibase(int guiTypeId)  {
+guibase::guibase()  {
 	id = allocCount;
 	allocCount++;
 	g_guis->push_back(this);

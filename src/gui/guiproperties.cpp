@@ -10,15 +10,17 @@
 
 
 #include "str_util.h"
+#include "saferef.h"
 #include "seq_util.h"
+#include "color_util.h"
 #include "event.h"
 #include "mouse.h"
 #include "gui.h"
 #include "guicolors.h"
+#include "guicontainer.h"
 #include "guiconstant.h"
 #include "guicontextmenu_base.h"
 #include "guicontextmenu.h"
-#include "guicontainer.h"
 #include "textfield.h"
 #include "button.h"
 #include "guicolorpick.h"
@@ -32,6 +34,7 @@
 #include "dropdown.h"
 #include "debugproperties.h"
 #include "guiinputfield.h"
+#include "logging.h"
 
 namespace Table {
 
@@ -46,6 +49,17 @@ namespace Table {
 
 		}
 	};
+	template <typename T>
+	struct tbltypesaferef {
+		SafeRef<guibase> saferef;
+		T& t;
+		const char* format = nullptr;
+	};
+	struct tbltype_gui_flags {
+		SafeRef<guibase> saferef;
+		int mask;
+	};
+
 	template <typename T>
 	inline void cellClicked(const click_ctxt_t& ctxt, const tbltyperef<T>& obj) {
 		if (ctxt.callback) {
@@ -341,18 +355,31 @@ public:
 
 	}
 };
+
+
 template<typename T>
 void addPropertiesFromGui(T& gui, Table::tbl* table);
 template<>
 void addPropertiesFromGui(guibase& gui, Table::tbl* table) {
 	SafeRef<guibase> ref = gui.makeSafeRef();
 	std::vector<tbl_row_t>& rows = table->rows;
-	rows.push_back({{tblstr{"this"}, tbltype<SafeRef<guibase>>{ref, nullptr}}});
+	rows.push_back({{tblstr{"this"}, ref}});
 	rows.push_back({{tblstr{"pos"}, tbltypesaferef<glm::ivec2>{ref, gui.pos, nullptr}}});
 	rows.push_back({{tblstr{"size"}, tbltypesaferef<glm::ivec2>{ref, gui.size, nullptr}}});
+
+	rows.push_back({{tblstr{"FLG_VISIBLE"}, tbltype_gui_flags{ref, FLG_VISIBLE}}});
+	rows.push_back({{tblstr{"FLG_RENDER_BACKGROUND"}, tbltype_gui_flags{ref, FLG_RENDER_BACKGROUND}}});
+	rows.push_back({{tblstr{"FLG_RENDER_BACKGROUND_INSET"}, tbltype_gui_flags{ref, FLG_RENDER_BACKGROUND_INSET}}});
+	rows.push_back({{tblstr{"FLG_ENBL"}, tbltype_gui_flags{ref, FLG_ENBL}}});
+	rows.push_back({{tblstr{"FLG_HVRD"}, tbltype_gui_flags{ref, FLG_HVRD}}});
+	rows.push_back({{tblstr{"FLG_FOC"}, tbltype_gui_flags{ref, FLG_FOC}}});
+	rows.push_back({{tblstr{"FLG_ACT"}, tbltype_gui_flags{ref, FLG_ACT}}});
+	rows.push_back({{tblstr{"FLG_DRG"}, tbltype_gui_flags{ref, FLG_DRG}}});
+	rows.push_back({{tblstr{"FLG_HAS_COLOR_BG"}, tbltype_gui_flags{ref, FLG_HAS_COLOR_BG}}});
+
 	if (gui.parent) {
-		SafeRef<guibase> safeRef = gui.parent->makeSafeRef();
-		rows.push_back({{tblstr{"parent"}, tbltype<SafeRef<guibase>>{safeRef, nullptr}}});
+		SafeRef<guibase> parentSafeRef = gui.parent->makeSafeRef();
+		rows.push_back({{tblstr{"parent"}, parentSafeRef}});
 	} else {
 		rows.push_back({{tblstr{"parent"}, tblstr{"<null>"}}});
 	}
@@ -432,6 +459,7 @@ struct tbltype_theme_constant {
 	guitheme_t* theme;
 	GuiConstant::constant_t constant;
 };
+
 namespace Table {
 void drawColor(NVGcontext* vg, ivec2 pos, ivec2 size, int32_t rgba) {
 	nvgTextAlign(vg, NVG_ALIGN_RIGHT | NVG_ALIGN_BOTTOM);
@@ -447,6 +475,44 @@ void drawColor(NVGcontext* vg, ivec2 pos, ivec2 size, int32_t rgba) {
 	nvgFill(vg);
 	nvgFillColor(vg, rgbaToNvg(-1));
 
+}
+template <typename T>
+inline void drawTbl(const table_ctxt_t& ctxt, const tbltypesaferef<T>& obj) {
+	if (safeRefOk(obj.saferef)) {
+		drawTbl(ctxt, const_cast<const T&>(obj.t));
+	}
+}
+
+template <>
+void drawTbl(const table_ctxt_t& ctxt, const SafeRef<guibase>& obj) {
+	const vec2& pos = ctxt.pos;
+	const vec2& size = ctxt.size;
+	nvgTextAlign(ctxt.vg, NVG_ALIGN_RIGHT|NVG_ALIGN_BOTTOM);
+	guibase* ref = safeRefGet(obj);
+	if (ref)
+	{
+		String strAddr = StringFormat("0x%6X (refId %d)", (int64_t)ref, obj.refId);
+		String className = ref->getClassName();
+		nvgText(ctxt.vg, pos.x+size.x-INSET_TABLE_CELL_PADDING, pos.y+size.y-INSET_TABLE_CELL_PADDING, StringAsCStr(StringFormat("%s [%s]", StringAsCStr(className), StringAsCStr(strAddr))), nullptr);
+
+	} else {
+		nvgText(ctxt.vg, pos.x+size.x-INSET_TABLE_CELL_PADDING, pos.y+size.y-INSET_TABLE_CELL_PADDING, StringAsCStr(StringFormat("<null> [%d]", obj.refId)), nullptr);
+
+	}
+}
+
+template <>
+void drawTbl(const table_ctxt_t& ctxt, const tbltype_gui_flags& obj) {
+	const vec2& pos = ctxt.pos;
+	const vec2& size = ctxt.size;
+	guibase* ref = safeRefGet(obj.saferef);
+	if (ref)
+	{
+		int flags = ref->getStateFlags();
+		const char* strState = (flags&obj.mask) != 0 ? "1" : "0";
+		nvgTextAlign(ctxt.vg, NVG_ALIGN_RIGHT|NVG_ALIGN_BOTTOM);
+		nvgText(ctxt.vg, pos.x+size.x-INSET_TABLE_CELL_PADDING, pos.y+size.y-INSET_TABLE_CELL_PADDING, strState, nullptr);
+	}
 }
 template <>
 void drawTbl(const table_ctxt_t& ctxt, NVGcolor& obj) {
@@ -531,26 +597,6 @@ template <>
 void guiproperties_table<guitheme_t>::setDebugPropertyHandle(void *vPtr) {
 	ptr = static_cast<guitheme_t*>(vPtr);
 	layout();
-}
-namespace Table {
-
-template <>
-void drawTbl(const table_ctxt_t& ctxt, const tbltype<SafeRef<guibase>>& obj) {
-	const vec2& pos = ctxt.pos;
-	const vec2& size = ctxt.size;
-	nvgTextAlign(ctxt.vg, NVG_ALIGN_RIGHT|NVG_ALIGN_BOTTOM);
-	guibase* ref = safeRefGet(obj.t);
-	if (ref)
-	{
-		String strAddr = StringFormat("0x%6X (refId %d)", (int64_t)ref, obj.t.refId);
-		String className = ref->getClassName();
-		nvgText(ctxt.vg, pos.x+size.x-INSET_TABLE_CELL_PADDING, pos.y+size.y-INSET_TABLE_CELL_PADDING, StringAsCStr(StringFormat((obj.format?obj.format:"%s@%s"), StringAsCStr(className), StringAsCStr(strAddr))), nullptr);
-
-	} else {
-		nvgText(ctxt.vg, pos.x+size.x-INSET_TABLE_CELL_PADDING, pos.y+size.y-INSET_TABLE_CELL_PADDING, StringAsCStr(StringFormat("<null> RefId %d", obj.t.refId)), nullptr);
-
-	}
-}
 }
 
 
@@ -651,11 +697,12 @@ public:
 		if (button == &buttonAdd) {
 			guitheme_mgr* thememgr = parentCtrl->getThemeMgr();
 			thememgr->saveCurrentAsNewTheme("User");
+			this->parentCtrl->relayout();
 		}
 		if (button == &buttonRemove) {
 			guitheme_mgr* thememgr = parentCtrl->getThemeMgr();
 			thememgr->removeTheme(thememgr->getRef());
-			//thememgr->setThemeName("default");
+			this->parentCtrl->relayout();
 		}
 		if (button == &buttonSave) {
 			guitheme_mgr* thememgr = parentCtrl->getThemeMgr();

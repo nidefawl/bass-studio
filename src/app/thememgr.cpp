@@ -1,9 +1,11 @@
-#include "thememgr.h"
-#include "theme.h"
-#include "str_util.h"
 #include <vector>
+#include "thememgr.h"
 
+#include "str_util.h"
+#include "theme.h"
 #include "themefile.h"
+#include "basectrl.h"
+
 void saveThemeFile(themefile& _settings);
 bool loadThemeFile(themefile& _settings);
 bool hasThemeWithName(const std::vector<guitheme_t>& themes, const String& themeName) {
@@ -63,8 +65,6 @@ void guitheme_mgr::loadThemes() {
 	}
 
 	themefile themeFile;
-	themeFile.theme = current;
-	themeFile.themes.clear();
 	loadThemeFile(themeFile);
 	String selectedTheme = themeFile.theme.name;
 	auto it = themeFile.themes.begin();
@@ -99,10 +99,15 @@ void guitheme_mgr::setTheme(guitheme_t setTheme) {
 	if (setTheme.isDefault) {
 		setTheme = defaultTheme;
 	}
-	current = setTheme;
+//	if (current != setTheme) {
+		current = setTheme;
+		if (parent && parent->isOk()) {
+			parent->relayout();
+		}
+
+//	}
 }
 void guitheme_mgr::setThemeName(String themeName) {
-	const char* thStr = StringAsCStr(themeName);
 	if (themeName == "default") {
 		setTheme(defaultTheme);
 		return;

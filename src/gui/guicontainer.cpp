@@ -75,7 +75,7 @@ void guictr_base::renderFrameOutline(NVGcontext* vg) {
 	nvgIntersectScissor(vg, 0, 0, sizeInset.x, sizeInset.y);
 }
 
-void guictr_base::renderTitleBar(NVGcontext* vg, String text, float textOffsetX, int flags, bool isHorizontalTitle) {
+void guictr_base::renderTitleBar(NVGcontext* vg, String text, GuiConstant::constant_t& constantHeight, float textOffsetX, int flags, bool isHorizontalTitle) {
 	NVGcolor c;
 	if (flags & FLAG_SELECTED) {
 		c = theme->getColor(GuiColor::COL_PLUG_TITLE_SELECTED);
@@ -86,7 +86,7 @@ void guictr_base::renderTitleBar(NVGcontext* vg, String text, float textOffsetX,
 	}
 
 	//	ivec2 sizeContent = getSizeContent();
-	const int32_t hpt = theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT);
+	const int32_t hpt = theme->get(constantHeight);
 	nvgBeginPath(vg);
 	if (isHorizontalTitle) {
 		nvgRoundedRectVarying(vg, 0, 0, size.x, hpt, G_RND, G_RND, 0, 0);

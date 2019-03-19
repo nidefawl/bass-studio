@@ -227,7 +227,6 @@ void gui_color_pick::handleRightClick(MouseEvent& evt) {
 
 gui_input_filtered::gui_input_filtered(int32_t* _number) :
 		guibuttonbase(), number(_number) {
-	setTint(nvgToRGB(theme->getColor(GuiColor::COL_BG_DRK)));
 	field.setParent(this);
 	field.setFilter(&filter);
 	setAlignCenter(false);

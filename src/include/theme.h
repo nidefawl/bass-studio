@@ -27,19 +27,13 @@ struct guitheme_t {
 	std::vector<NVGcolor> vecNVGColors;
 	std::unordered_map<int32_t, int32_t> mapColors;
 	std::unordered_map<int32_t, int32_t> mapProperties;
-	bool defaultConstructed = true;
-	guitheme_t() {
-		initDefaultTheme();
-	}
-	guitheme_t(bool _isDefault) : isDefault(_isDefault) {
-		initDefaultTheme();
-	}
+	guitheme_t();
     guitheme_t(const guitheme_t &) = default;
     ~guitheme_t() = default;
     guitheme_t(guitheme_t &&) = default;
     guitheme_t & operator= (const guitheme_t &) = default;
 
-	void initDefaultTheme();
+	void initTheme();
 	void setTint(uint32_t hex);
 	void setBackgroundColor(uint32_t rgbaint32) {
 		colorBg = rgbaToNvg(rgbaint32);
@@ -67,5 +61,6 @@ struct guitheme_t {
 	int32_t getColorInt32(GuiColor::constant_t _constant);
 	void setColor(GuiColor::constant_t _constant, int32_t _newValue);
 	const int32_t get(GuiConstant::constant_t _constant);
+	const float getFloat(GuiConstant::constant_t _constant);
 	void set(GuiConstant::constant_t _constant, int32_t _newValue);
 };

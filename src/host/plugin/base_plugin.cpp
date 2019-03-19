@@ -65,15 +65,15 @@ void effectbase::breakTrackLink() {
 	audio_stage_t* audioStage = this->trackImpl;
 	trackImpl = nullptr;
 	while (audioStage != nullptr) {
-		plugin_selection& sel = MainCtrl::get()->getPluginSel();
-		if (sel.pluginCtr == audioStage->pluginCtr) {
-			sel.clear();
-		}
-		guictr_plugins* plugins = audioStage->pluginCtr;
-		if (plugins) {
-			my_printf("Update audiostage of %s which is %s\n", StringAsCStr(plugins->getClassName()),
-					plugins->isDefaultPluginCtr ? "default" : "group");
-			plugins->showTrack(audioStage);
+		guictr_plugins* pluginCtr = audioStage->pluginCtr;
+		if (pluginCtr) {
+			plugin_selection& sel = MainCtrl::get()->getPluginSel();
+			if (sel.pluginCtr == pluginCtr) {
+				sel.clear();
+			}
+			my_printf("Update audiostage of %s which is %s\n", StringAsCStr(pluginCtr->getClassName()),
+				pluginCtr->isDefaultPluginCtr ? "default" : "group");
+			pluginCtr->showTrack(audioStage);
 		}
 		audioStage = audioStage->parent;
 	}

@@ -415,7 +415,11 @@ class gui_trackcontrols_title : public guictr_base {
 public:
 	gui_trackcontrols_title(track_t* _track)
       :	guictr_base(), m_track(_track), automationSelectDevice(_track),
-		automationSelectParam(_track), hideTrack(12), hideAutomation(10), addAutomationLane(10) {
+		automationSelectParam(_track) {
+		hideTrack.setRadius(12);
+		hideAutomation.setRadius(10);
+		addAutomationLane.setRadius(10);
+
 		hideTrack.state = &m_track->hideTrack;
 		hideAutomation.state = &m_track->hideAutomation;
 		padding = 0;
@@ -605,7 +609,8 @@ private:
 	int dragMode = -1;
 public:
 	gui_trackcontrols_automation(track_t* _track, gui_track_automationlane* _al) :
-		guictr_base(), m_track(_track), al(_al), removeLane(10) {
+		guictr_base(), m_track(_track), al(_al) {
+		removeLane.setRadius(10);
 		padding = 0;
 		removeLane.icon = ICON_MINUS;
 		add(&removeLane);

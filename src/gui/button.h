@@ -32,18 +32,11 @@ public:
 public:
 	guibuttonbase() : guibase() {
 	}
-	guibuttonbase(ivec2 _pos, ivec2 _size) : guibase(_pos, _size) {
-	}
 	void setButtonColor(GuiColor::constant_t color) {
 		buttonColor = color;
-		flags |= FLG_HAS_COLOR_BG;
+		setFlagInternal(FLG_HAS_COLOR_BG);
 	}
-	virtual NVGcolor getBackgroundColor(int stateflags) const override {
-		if (flags&FLG_HAS_COLOR_BG) {
-			return theme->getColor(buttonColor);
-		}
-		return theme->getBgColor(stateflags);
-	}
+	virtual NVGcolor getBackgroundColor(int stateflags) const override;
 	virtual void handleDraggedMove(MouseEvent& evt) {
 	}
 	virtual void handleDraggedRelease(MouseEvent& evt) {
@@ -141,12 +134,11 @@ public:
 	GuiColor::constant_t colorActive = GuiColor::COL_BTN_BG_DEFAULT_ACTIVE;
 	guibuttontoggle() : guibuttonbase() {
 	}
-	guibuttontoggle(float _radius) : guibuttonbase(ivec2(0), ivec2((int)(_radius * 2))) {
-		this->radius = _radius;
-	}
 	void setRadius(float fRadius) {
 		this->radius = fRadius;
-//		this->size = ivec2((int)(fRadius * 2));
+		if (size.x == 0 && size.y == 0) {
+			size = ivec2((int32_t)std::round(this->radius*2.0f));
+		}
 	}
 	bool isEnabled() const override {
 		if (state)

@@ -3,12 +3,13 @@
 #include <glm/glm.hpp>
 #include <glm/vec2.hpp>
 #include <glm/vec4.hpp>
-#include "gui.h"
 #include "seq_math.h"
+#include "str_util.h"
 #include "exceptions.h"
 #include "mouse.h"
 #include "event.h"
-#include "str_util.h"
+#include "guiconstant.h"
+#include "gui.h"
 
 using glm::vec2;
 using glm::ivec2;
@@ -24,7 +25,7 @@ public:
 	std::vector<guibase*> guis;
 	bool sortChildren = false;
 public:
-	guictr_base(int guiType = 0) : guibase(guiType) {
+	guictr_base() : guibase() {
 		setSnapSides(ivec4(0));
 		setBackgroundRendered(false);
 		setBackgroundRenderedInset(true);
@@ -76,7 +77,7 @@ public:
 	virtual ivec2 getSizeContent() {
 		return size - (paddingTL(padding) + paddingBR(padding));
 	}
-	void renderTitleBar(NVGcontext* vg, String text, float textOffsetX, int flags, bool isHorizontalTitle);
+	void renderTitleBar(NVGcontext* vg, String text, GuiConstant::constant_t& constantHeight, float textOffsetX, int flags, bool isHorizontalTitle);
 	void renderFrameBase(NVGcontext* vg);
 	void renderFrameOutline(NVGcontext* vg);
 	virtual void renderBackground(NVGcontext* vg);

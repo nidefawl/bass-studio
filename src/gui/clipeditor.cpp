@@ -5,6 +5,8 @@
 
 #include "gui.h"
 #include "guicolors.h"
+#include "guiconstant.h"
+#include "guicontextmenu.h"
 #include "track.h"
 #include "track_impl.h"
 #include "note.h"
@@ -22,10 +24,15 @@ using glm::ivec2;
 namespace GuiColor {
 
 constant_t COL_PIANOROLL_WHITE("COL_PIANOROLL_WHITE", 0xFFFFFFFF);
-constant_t COL_PIANOROLL_BLACK("COL_PIANOROLL_BLACK", 0x33111111);
+constant_t COL_PIANOROLL_BLACK("COL_PIANOROLL_BLACK", 0xFF111111);
 constant_t COL_PIANOROLL_STROKE("COL_PIANOROLL_STROKE", 0xFF444444);
 constant_t COL_CLIPEDITOR_SHARP("COL_CLIPEDITOR_SHARP", 0x33111111);
 }
+namespace GuiConstant {
+constant_t CONST_PIANOROLL_STROKE_WIDTH("CONST_PIANOROLL_STROKE_WIDTH", 10);
+constant_t CONST_CLIPEDITOR_HANDLES_STROKE_WIDTH("CONST_CLIPEDITOR_HANDLES_STROKE_WIDTH", 10);
+}
+
 class action_modify_notes : public action_base {
 protected:
 public:
@@ -162,6 +169,30 @@ void renderFrame(NVGcontext* vg, ivec2 posA, ivec2 posB) {
 	float h = max(posA.y - posB.y, posB.y - posA.y);
 	renderDashedLineFrame(vg, x, y, w, h, 2.0f);
 }
+void renderGridLines(NVGcontext* vg, const guitheme_t* theme, const scaled_grid& grid, const ivec2& size) {
+
+	for (grid_div g : grid.gridList) {
+		nvgBeginPath(vg);
+		nvgMoveTo(vg, g.screenpos, 0);
+		nvgLineTo(vg, g.screenpos, size.y);
+		NVGcolor col;
+		switch (g.color) {
+		case 0:
+			col = theme->getColor(GuiColor::COL_LINE_BAR);
+			break;
+		case 1:
+			col = theme->getColor(GuiColor::COL_LINE_QRT);
+			break;
+		case 2:
+		default:
+			col = theme->getColor(GuiColor::COL_LINE_XTH);
+			break;
+		}
+		nvgStrokeColor(vg, col);
+		nvgStrokeWidth(vg, g.thickness);
+		nvgStroke(vg);
+	}
+}
 void gui_clipcontent::render(NVGcontext* vg) {
 	if (!setScissorTransform(vg)) {
 		return;
@@ -187,32 +218,6 @@ void gui_clipcontent::render(NVGcontext* vg) {
 			break;
 	}
 
-	for (grid_div g : grid.gridList) {
-		nvgBeginPath(vg);
-		nvgMoveTo(vg, g.screenpos, 0);
-		nvgLineTo(vg, g.screenpos, size.y);
-		NVGcolor col;
-		switch (g.color) {
-		case 0:
-			col = theme->getColor(GuiColor::COL_LINE_BAR);
-			break;
-		case 1:
-			col = theme->getColor(GuiColor::COL_LINE_QRT);
-			break;
-		case 2:
-		default:
-			col = theme->getColor(GuiColor::COL_LINE_XTH);
-			break;
-		}
-		nvgStrokeColor(vg, col);
-		nvgStrokeWidth(vg, g.thickness);
-		nvgStroke(vg);
-	}
-
-//		setScissorTransform(vg);
-
-
-
 	float h = size.y;
 	clip_notes_t& notes = view.clip()->notes;
 	bool fold = layoutRoll.fold;
@@ -224,8 +229,8 @@ void gui_clipcontent::render(NVGcontext* vg) {
 		float yOff = offset - scale;
 
 
-		nvgSave(vg);
-		nvgTranslate(vg, 0, yOff);
+//		nvgSave(vg);
+//		nvgTranslate(vg, 0, yOff);
 		float yoct = 0;
 		float y = yoct;
 		int numRowsSharp = 0;
@@ -234,7 +239,7 @@ void gui_clipcontent::render(NVGcontext* vg) {
 		for (int i = 0; i < len; i++) {
 			int32_t pitch = pitches[i];
 			if (isSharp(pitch)) {
-				nvgRect(vg, 0, h-y, w, scale);
+				nvgRect(vg, 0, h-y + yOff, w, scale);
 				numRowsSharp++;
 			}
 			y += scale;
@@ -244,26 +249,30 @@ void gui_clipcontent::render(NVGcontext* vg) {
 		}
 		nvgFillColor(vg, theme->getColor(GuiColor::COL_CLIPEDITOR_SHARP));
 		nvgFill(vg);
-		y = yoct;
 
-		nvgBeginPath(vg);
-		nvgStrokeWidth(vg, 1.0f);
-		nvgStrokeColor(vg, theme->getColor(GuiColor::COL_PIANOROLL_STROKE));
+		renderGridLines(vg, theme, grid, size);
+
+//		nvgBeginPath(vg);
+//		nvgStrokeWidth(vg, theme->getFloat(GuiConstant::CONST_PIANOROLL_STROKE_WIDTH));
+//		nvgStrokeColor(vg, theme->getColor(GuiColor::COL_PIANOROLL_STROKE));
 //		if (firstKey == 0 && octave == 0) {
 //			nvgMoveTo(vg, 0, h - (y-scale));
 //			nvgLineTo(vg, w, h - (y-scale));
 //		}
-		nvgStroke(vg);
+//		nvgStroke(vg);
 
+		y = yoct;
 		nvgBeginPath(vg);
 		for (int i = 0; i < len; i++) {
-			nvgMoveTo(vg, 0, h-y);
-			nvgLineTo(vg, w, h-y);
+			nvgMoveTo(vg, 0, h-y + yOff);
+			nvgLineTo(vg, w, h-y + yOff);
 			y += scale;
 			if (y >= size.y+scale*2) {
 				break;
 			}
 		}
+		nvgStrokeWidth(vg, theme->getFloat(GuiConstant::CONST_PIANOROLL_STROKE_WIDTH));
+		nvgStrokeColor(vg, theme->getColor(GuiColor::COL_PIANOROLL_STROKE));
 		nvgStroke(vg);
 		yoct = y;
 //		if (yoct >= size.y+scale*2) {
@@ -280,15 +289,15 @@ void gui_clipcontent::render(NVGcontext* vg) {
 		int32_t firstOctave = floorf(firstKey/12.0f);
 		firstKey = firstKey % 12;
 
-		nvgSave(vg);
-		nvgTranslate(vg, 0, yOff);
+//		nvgSave(vg);
+//		nvgTranslate(vg, 0, yOff);
 		float yoct = 0;
 		for (int32_t octave = firstOctave; octave < MAX_OCTAVES; octave++) {
 			float y = yoct;
 			nvgBeginPath(vg);
 			for (int i = firstKey; i < 12; i++) {
 				if (isSharp(i)) {
-					nvgRect(vg, 0, h-y, w, scale);
+					nvgRect(vg, 0, h-y + yOff, w, scale);
 				}
 				y += scale;
 				if (y >= size.y+scale*2) {
@@ -297,26 +306,31 @@ void gui_clipcontent::render(NVGcontext* vg) {
 			}
 			nvgFillColor(vg, theme->getColor(GuiColor::COL_CLIPEDITOR_SHARP));
 			nvgFill(vg);
-			y = yoct;
 
+
+			renderGridLines(vg, theme, grid, size);
+
+			y = yoct;
 			nvgBeginPath(vg);
-			nvgStrokeWidth(vg, 1.0f);
-			nvgStrokeColor(vg, theme->getColor(GuiColor::COL_PIANOROLL_STROKE));
 			if (firstKey == 0 && octave == 0) {
-				nvgMoveTo(vg, 0, h - (y-scale));
-				nvgLineTo(vg, w, h - (y-scale));
+				nvgMoveTo(vg, 0, h - (y-scale) + yOff);
+				nvgLineTo(vg, w, h - (y-scale) + yOff);
 			}
+			nvgStrokeWidth(vg, theme->getFloat(GuiConstant::CONST_PIANOROLL_STROKE_WIDTH));
+			nvgStrokeColor(vg, theme->getColor(GuiColor::COL_PIANOROLL_STROKE));
 			nvgStroke(vg);
 
 			nvgBeginPath(vg);
 			for (int i = firstKey; i < 12; i++) {
-				nvgMoveTo(vg, 0, h-y);
-				nvgLineTo(vg, w, h-y);
+				nvgMoveTo(vg, 0, h-y + yOff);
+				nvgLineTo(vg, w, h-y + yOff);
 				y += scale;
 				if (y >= size.y+scale*2) {
 					break;
 				}
 			}
+			nvgStrokeWidth(vg, theme->getFloat(GuiConstant::CONST_PIANOROLL_STROKE_WIDTH));
+			nvgStrokeColor(vg, theme->getColor(GuiColor::COL_PIANOROLL_STROKE));
 			nvgStroke(vg);
 			yoct = y;
 			if (yoct >= size.y+scale*2) {
@@ -326,7 +340,7 @@ void gui_clipcontent::render(NVGcontext* vg) {
 		}
 	}
 
-	nvgRestore(vg);
+//	nvgRestore(vg);
 	if (!notes.empty()) {
 		for (int i = 0; i < 2; i++) {
 			nvgBeginPath(vg);
@@ -508,179 +522,6 @@ void gui_clipcontent::render(NVGcontext* vg) {
 	}
 }
 
-void gui_pianoroll::render(NVGcontext* vg) {
-	if (!setScissorTransform(vg)) {
-		return;
-	}
-	float h = size.y;
-
-	nvgBeginPath(vg);
-	nvgRect(vg, keysX, -4, widthKeys, size.y+8);
-	nvgFillColor(vg, theme->getColor(GuiColor::COL_PIANOROLL_WHITE));
-	nvgFill(vg);
-
-	bool fold = layoutRoll.fold;
-	float offset = layoutRoll.offset();
-	float scale = layoutRoll.scale();
-	int32_t firstKey = max((int32_t)floorf(offset/scale), 0);
-
-	if (fold) {
-		//render one extra key on top and bottom to fix antialiasing on edge of container
-		if (firstKey > 0) {
-			firstKey--;
-		}
-
-		firstKey = firstKey % 12;
-		std::vector<int32_t> pitches;
-		this->view.getNotePitches(pitches);
-		float yOff = offset - firstKey*scale - scale;
-
-
-		nvgSave(vg);
-		nvgTranslate(vg, 0, yOff);
-
-		int len = (int) pitches.size();
-		nvgBeginPath(vg);
-		float y = 0;
-		for (int i = firstKey; i < len; i++) {
-			int32_t pitch = pitches[i];
-			if (isSharp(pitch)) {
-				nvgRect(vg, keysX, h-y, widthKeys, scale);
-			}
-			y += scale;
-			if (y >= size.y+scale*2) {
-				break;
-			}
-		}
-		nvgFillColor(vg, theme->getColor(GuiColor::COL_PIANOROLL_BLACK));
-		nvgFill(vg);
-		nvgRestore(vg);
-		yOff = offset - scale;
-
-		nvgSave(vg);
-		nvgTranslate(vg, 0, yOff);
-		nvgBeginPath(vg);
-		nvgStrokeWidth(vg, 1.0f);
-		nvgStrokeColor(vg, theme->getColor(GuiColor::COL_PIANOROLL_STROKE));
-		y = 0;
-		float prevSeperator = -30;
-		for (int i = 0; i <= len; i++) {
-			if (y-prevSeperator > 25 || i == len) {
-				int wSep = 55;
-				if (i == len && y-prevSeperator < 25)
-					wSep = 20;
-				if ((h-y+scale)+offset > -30 && (h-y+scale)+offset < h+40) {
-					nvgMoveTo(vg, keysX - wSep, h-y+scale);
-					nvgLineTo(vg, keysX, h-y+scale);
-				}
-				prevSeperator = y;
-			}
-			if ((h-y+scale)+offset > -30 && (h-y+scale)+offset < h+40) {
-				nvgMoveTo(vg, keysX, h-y+scale);
-				nvgLineTo(vg, keysX+widthKeys, h-y+scale);
-			}
-			y += scale;
-			if (y >= h+scale*2) {
-				break;
-			}
-		}
-		nvgStroke(vg);
-		nvgRestore(vg);
-		setFont(vg, 24, G_BLACK, NVG_ALIGN_LEFT|NVG_ALIGN_BOTTOM);
-		prevSeperator = -30;
-		for (int i = 0; i < len; i++) {
-			int32_t pitch = pitches[i];
-			y = scale*i;
-			if (y-prevSeperator > 25) {
-				float textY = h - y + offset;
-				if (textY > -20 && textY < size.y+scale+20) {
-					const char* notename = noteName(pitch);
-					nvgText(vg, 4, textY, notename, NULL);
-				}
-				prevSeperator = y;
-			}
-		}
-	} else {
-		nvgSave(vg);
-
-		//render one extra key on top and bottom to fix antialiasing on edge of container
-		if (firstKey > 0) {
-			firstKey--;
-		}
-		float yOff = offset - firstKey*scale - scale;
-
-		int32_t firstOctave = floorf(firstKey/12.0f);
-		firstKey = firstKey % 12;
-
-		nvgTranslate(vg, 0, yOff);
-
-		float yoct = 0;
-		for (int32_t octave = firstOctave; octave < MAX_OCTAVES; octave++) {
-			float y = yoct;
-			nvgBeginPath(vg);
-			for (int i = firstKey; i < 12; i++) {
-				if (isSharp(i)) {
-					nvgRect(vg, keysX, h-y, widthKeys, scale);
-				}
-				y += scale;
-				if (y >= size.y+scale*2) {
-					break;
-				}
-			}
-			nvgFillColor(vg, theme->getColor(GuiColor::COL_PIANOROLL_BLACK));
-			nvgFill(vg);
-			y = yoct;
-
-			nvgBeginPath(vg);
-			nvgStrokeWidth(vg, 1.0f);
-			nvgStrokeColor(vg, theme->getColor(GuiColor::COL_PIANOROLL_STROKE));
-			if (firstKey == 0) {
-				nvgMoveTo(vg, keysX - 55, h - (y-scale));
-				nvgLineTo(vg, keysX, h - (y-scale));
-			}
-			if (firstKey == 0 && octave == 0) {
-				nvgMoveTo(vg, keysX, h - (y-scale));
-				nvgLineTo(vg, keysX+widthKeys, h - (y-scale));
-			}
-			nvgStroke(vg);
-
-			nvgBeginPath(vg);
-			for (int i = firstKey; i < 12; i++) {
-				nvgMoveTo(vg, keysX, h-y);
-				nvgLineTo(vg, keysX+widthKeys, h-y);
-				y += scale;
-				if (y >= size.y+scale*2) {
-					break;
-				}
-			}
-			nvgStroke(vg);
-			yoct = y;
-			if (yoct >= size.y+scale*2) {
-				break;
-			}
-			firstKey = 0;
-		}
-		nvgRestore(vg);
-		setFont(vg, 24, G_BLACK, NVG_ALIGN_LEFT|NVG_ALIGN_BOTTOM);
-		char buf[5];
-		for (int32_t octave = 0; octave < MAX_OCTAVES; octave++) {
-			float y = scale*octave*12;
-			float textY = h - y + offset;
-			if (textY > size.y+scale+20 || textY < -20) {
-				continue;
-			}
-
-			snprintf(buf, sizeof(buf), "C%d", octave-2);
-			nvgText(vg, 4, textY, buf, NULL);
-		}
-	}
-	nvgBeginPath(vg);
-	nvgMoveTo(vg, keysX+widthKeys, 0);
-	nvgLineTo(vg, keysX+widthKeys, size.y);
-	nvgStrokeColor(vg, theme->getColor(GuiColor::COL_PIANOROLL_STROKE));
-	nvgStrokeWidth(vg, 1.0f);
-	nvgStroke(vg);
-}
 
 void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
 	dragMode = drag_none;
@@ -971,6 +812,32 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
 	}
 	setGlobalSelectionFromClipSelection();
 }
+bool gui_clipcontent::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
+	if (this->contains(mpos)) {
+
+		ivec2 local = this->toContainerSpace(mpos);
+		for (guibase* gui : guis) {
+			if (gui->mouseHitTest(local, evt)) {
+				return true;
+			}
+		}
+		if (view.clip() && evt.type <= MouseHitType::MOUSE_RIGHT) {
+			int32_t pitch = toNoteF(local.y);
+			tick_t tickExact = grid.screenToTickSnap(local.x, SNAP_OFF);
+			const note_t* contextNote = view.clip()->notes.get(tickExact, pitch);
+			if (contextNote && local.x - grid.tickToScreenD(contextNote->start()) < DRAG_RANGE) {
+				evt.requestCursor(CURSOR_CLIP_SIZE_LEFT);
+			}
+			if (contextNote && grid.tickToScreenD(contextNote->end()) - local.x < DRAG_RANGE) {
+				evt.requestCursor(CURSOR_CLIP_SIZE_RIGHT);
+			}
+		}
+		evt.requestFocus(this);
+		return true;
+	}
+	return false;
+}
+
 void gui_clipcontent::mergeDraggedNotes(dragmode mergeMode) {
 	clip_t* clip = view.clip();
 	clip_notes_t& notes = clip->notes;
@@ -1219,97 +1086,4 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
 	return false;
 }
 
-void guictr_noteeditor::render(NVGcontext* vg) {
-//		setFont(vg, 14, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-//		nvgText(vg, 5, 5, "pianoroll", NULL);
-//		pianoroll.render();
-	renderBackground(vg);
-	if (!setScissorTransform(vg)) {
-		return;
-	}
-	nvgSave(vg);
-	piano.render(vg);
-	nvgRestore(vg);
-	nvgSave(vg);
-	timeline.render(vg);
-	nvgRestore(vg);
-	nvgSave(vg);
-	content.render(vg);
-	nvgRestore(vg);
-	nvgSave(vg);
-	clipHandles.render(vg);
-	nvgRestore(vg);
-	btnToggleFold.render(vg);
-//	nvgBeginPath(vg);
-//	nvgMoveTo(vg, piano.left(), 0);
-//	nvgLineTo(vg, piano.left(), size.y);
-//	nvgStrokeColor(vg, theme->getColor(GuiColor::COL_PIANOROLL_BLACK));
-//	nvgStrokeWidth(vg, 2.0f);
-//	nvgStroke(vg);
 
-
-}
-
-void gui_clipsettings::render(NVGcontext* vg)  {
-	if (!setScissorTransformContainer(vg)) {
-		return;
-	}
-	renderFrameBase(vg);
-	String text = "Clip properties";
-
-	clip_t* clip = view.clip();
-	if (clip) {
-		text = clip->name;
-	}
-	int flags = parentCtrl->isCtrOrChildFocused(this) ? FLAG_FOCUSED : 0;
-	renderTitleBar(vg, text, 0, flags, true);
-	renderFrameOutline(vg);
-	for (guibase* gui : guis) {
-		nvgSave(vg);
-		gui->render(vg);
-		nvgRestore(vg);
-	}
-	nvgSave(vg);
-	nvgTranslate(vg, 0, 0);
-	int32_t inset = 4;
-	int32_t i2 = inset * 2;
-	const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
-	int32_t h = TRACK_HEIGHT_STEP-i2;
-	setFont(vg, G_FONT_SCALE(h), G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-	for (guibase* gui : guis) {
-
-//			gui->render(vg);
-		nvgText(vg, i2, gui->top() + G_FONT_MIDDLE_OFFSET(gui->size.y), StringAsCStr(gui->label), nullptr);
-	}
-	nvgRestore(vg);
-}
-
-void gui_clipsettings::layout() {
-	const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
-	int32_t inset = 4;
-	int32_t i2 = inset * 2;
-	int32_t w = size.x-i2;
-	int32_t btnW = std::max(std::min(w, 120), w/3);
-	int32_t btnH = TRACK_HEIGHT_STEP;
-	int32_t labelWidth = w-btnW;
-	int32_t btnX = labelWidth;
-	btnLoop.size = ivec2(btnW, btnH);
-	btnLoop.pos = ivec2(btnX, inset+theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT));
-	clipLoopStart.size = ivec2(btnW, btnH);
-	clipLoopStart.pos = ivec2(btnLoop.left(), btnLoop.bottom()+inset);
-	clipLoopLen.size = ivec2(btnW, btnH);
-	clipLoopLen.pos = ivec2(clipLoopStart.left(), clipLoopStart.bottom()+inset);
-	clipTimeStart.size = ivec2(btnW, btnH);
-	clipTimeStart.pos = ivec2(clipLoopLen.left(), clipLoopLen.bottom()+inset);
-	clipTimeLen.size = ivec2(btnW, btnH);
-	clipTimeLen.pos = ivec2(clipTimeStart.left(), clipTimeStart.bottom()+inset);
-	clipTimeStartOffsetTicks.size = ivec2(btnW, btnH);
-	clipTimeStartOffsetTicks.pos = ivec2(clipTimeStart.left(), clipTimeLen.bottom()+inset);
-	clipTimeStartOffsedSamples.size = ivec2(btnW, btnH);
-	clipTimeStartOffsedSamples.pos = ivec2(clipTimeStartOffsetTicks.left(), clipTimeStartOffsetTicks.bottom()+inset);
-	clipAudioId.size = ivec2(btnW, btnH);
-	clipAudioId.pos = ivec2(clipTimeStartOffsedSamples.left(), clipTimeStartOffsedSamples.bottom()+inset);
-	for (guibase* gui : guis) {
-		gui->layout();
-	}
-}

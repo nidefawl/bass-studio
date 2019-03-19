@@ -216,7 +216,7 @@ public:
 	  ctr_loadedplugins(makeGuiPluginsLoadedList()) {
 		setBackgroundRendered(true);
 		ctr_effectlib.setLabel("Plugins");
-		ctr_loadedplugins->setLabel("Plugins loaded");
+		ctr_loadedplugins->setLabel("Instances");
 		ctr_properties->setLabel("Properties");
 		addEntry(&ctr_effectlib, ctr_effectlib.label);
 		addEntry(ctr_loadedplugins, ctr_loadedplugins->label);
@@ -574,7 +574,7 @@ bool MainCtrl::init(window_main* window, NVGcontext* nanovg)
 	this->workerThread.startThread();
 	themes.loadThemes();
 
-	getDefaultTheme()->initDefaultTheme();
+	getDefaultTheme()->initTheme();
 
 	view = new DawViewContainers(menubar, cursor, *this, grid, clipView, dragdropclip);
 	view->addTo(this->containers);

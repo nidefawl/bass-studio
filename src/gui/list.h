@@ -39,7 +39,7 @@ class gui_list : public guictr_base, public gui_scrollcontainer {
 	int32_t last = 0;
 	int rowHeight = 30;
 public:
-	gui_list(int _rowHeight = 30) : guictr_base(), scrollbar(1, 0.0f, *this), rowHeight(_rowHeight) {
+	gui_list() : guictr_base(), scrollbar(1, 0.0f, *this) {
 		add(&scrollbar);
 		setBackgroundRendered(true);
 	}

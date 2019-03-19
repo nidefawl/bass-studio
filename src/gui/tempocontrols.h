@@ -18,7 +18,6 @@ class gui_tempocontrol : public guibuttonbase {
 public:
 	gui_tempocontrol()
 		:  guibuttonbase() {
-		setTint(nvgToRGB(theme->getColor(GuiColor::COL_BG_DRK)));
 	}
 	void render(NVGcontext* vg) {
 		renderWidgetBorder(vg, getStateFlags());
@@ -50,9 +49,7 @@ class gui_signaturecontrol_input : public guibuttonbase {
 public:
 	gui_signaturecontrol_input(int _idx)
 		: guibuttonbase(),
-		idx(_idx)
-	{
-		setTint(nvgToRGB(theme->getColor(GuiColor::COL_BG_DRK)));
+		idx(_idx) {
 	}
 
 	void render(NVGcontext* vg) {
@@ -150,7 +147,6 @@ public:
 		time(_time),
 		isRelative(_isRelative)
 	{
-		setTint(nvgToRGB(theme->getColor(GuiColor::COL_BG_DRK)));
 	}
 	void setDrawBackground(bool state) {
 		drawBackground = state;

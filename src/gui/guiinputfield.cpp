@@ -18,7 +18,6 @@
 
 gui_numberinput_field::gui_numberinput_field(int32_t* _number) :
 		guibuttonbase(), number(_number) {
-	setTint(nvgToRGB(theme->getColor(GuiColor::COL_BG_DRK)));
 	field.setParent(this);
 }
 

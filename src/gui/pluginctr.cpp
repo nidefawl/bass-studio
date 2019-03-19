@@ -346,12 +346,8 @@ void guictr_plugins::showTrack(audio_stage_t* audio) {
 //	my_printf("showTrack %s\n", (isDefaultPluginCtr ? "default" : "group"));
 	if (audio && this->track) {
 		audio->pluginCtr = this;
-		if (!audio->pluginCtr->parent) {
-			if (MainCtrl::getPluginCtr() != audio->pluginCtr)
-				assert(0);
-//			my_printf("plugin ctr with parent == null\n", 0);
-		}
-		if (audio && !audio->effects.empty()) {
+		assert(audio->parent || MainCtrl::getPluginCtr() == this);
+		if (!audio->effects.empty()) {
 			for (effectbase* vst : audio->effects) {
 				addGui(vst);
 			}

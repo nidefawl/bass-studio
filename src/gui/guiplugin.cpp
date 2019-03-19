@@ -16,6 +16,8 @@
 #include "list.h"
 #include "table.h"
 #include "guicolors.h"
+#include "guiconstant.h"
+#include "theme.h"
 #include "guitooltip.h"
 #include "pluginviewcontainers.h"
 #include "guicontainer.h"
@@ -49,10 +51,8 @@ using Table::tblstr;
 void setDraggedPluginsUI(guictr_dragged_plugins& gui, plugin_selection& sel);
 
 guiplugin::guiplugin(effectbase* _effect)
-: guictr_base(GUI_PLUGIN),
+: guictr_base(),
   effect(_effect),
-  buttonBypass(32),
-  buttonDelete(32),
   meter(&_effect->meter) {
 	padding = 0;
 	margin = 0;
@@ -72,13 +72,18 @@ guiplugin::guiplugin(effectbase* _effect)
 }
 void guiplugin::layout() {
 	const int32_t hpt = theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT);
-	int32_t meterW = std::max(16, (int32_t)(theme->get(GuiConstant::CONST_METER_WIDTH)*hpt/32.0));
 	int buttonSize = hpt * 0.8;
+	int32_t inset1 = (hpt - buttonSize) / 2;
 	buttonBypass.size = {buttonSize, buttonSize};
 	buttonDelete.size = {buttonSize, buttonSize};
-	int32_t inset1 = (hpt - buttonBypass.size.y) / 2;
 	buttonBypass.pos = {inset1, inset1};
 	buttonDelete.pos = {size.x - buttonDelete.size.x - inset1, inset1};
+	buttonBypass.setRadius(hpt/3.f);
+	buttonDelete.setRadius(hpt/3.f);
+
+
+
+	int32_t meterW = std::max(16, (int32_t)(theme->get(GuiConstant::CONST_METER_WIDTH)*hpt/32.0));
 	ivec2 contentS;
 	ivec2 contentP;
 	if (isHorizontalTitle) {
@@ -92,8 +97,6 @@ void guiplugin::layout() {
 	}
 	meter.pos = ivec2(size.x - meterW, hpt);
 	meter.size = ivec2(meterW, size.y - hpt);
-	buttonBypass.setRadius(hpt/3.f);
-	buttonDelete.setRadius(hpt/3.f);
 	layoutModule(contentP, contentS, inset1);
 	meter.layout();
 	buttonDelete.layout();
@@ -108,7 +111,7 @@ void guiplugin::renderBase(NVGcontext* vg) {
 	if (isSelected()) {
 		flags |= FLAG_SELECTED;
 	}
-	renderTitleBar(vg, this->text, titlePosX, flags, isHorizontalTitle);
+	renderTitleBar(vg, this->text, GuiConstant::CONST_PLUGIN_TITLE_HEIGHT, titlePosX, flags, isHorizontalTitle);
 	renderFrameOutline(vg);
 }
 
@@ -287,11 +290,9 @@ public:
 };
 
 guivstplugin::guivstplugin(vstplugin * _vst)
-: guiplugin(_vst),
-  vst(_vst),
-  params(48),
-  buttonOpenEditor(32)
+  : guiplugin(_vst), vst(_vst)
 {
+	params.setRowHeight(48);
 	buttonOpenEditor.icon = ICON_ADJUST;
 	buttonOpenEditor.state = &_vst->bEditOpen;
 	buttonOpenEditor.setParent(this);

@@ -14,11 +14,6 @@
 #include "math.h"
 #include "saferef.h"
 #include "guicolors.h"
-//#include "logging.h"
-//#include "renderresources.h"
-//#include "basectrl.h"
-#define GUI_PLUGIN_VIEW 1
-#define GUI_PLUGIN 2
 
 struct NVGcontext;
 namespace Table {
@@ -58,25 +53,30 @@ enum TextInputState : signed int {
 #define FLAG_FOCUSED 1
 #define FLAG_SELECTED 2
 class guibase {
+private:
+	int flags = FLG_ENBL|FLG_VISIBLE|FLG_RENDER_BACKGROUND;
 public:
 	glm::ivec2 pos{0};
 	glm::ivec2 size{0};
 	int id;
-	int flags = FLG_ENBL|FLG_VISIBLE|FLG_RENDER_BACKGROUND;
 	int zOrder = 0;
 	BaseCtrl* parentCtrl = nullptr;
-	guibase* parent = NULL;
-	guitheme_t* theme = getDefaultTheme();
+	guibase* parent = nullptr;
+	guitheme_t* theme = nullptr;
 	SafeRef<guibase> safeRef;
 	String label = "";
-//	const int guiType;
-	guibase(int guiTypeId = 0);
-	guibase(ivec2 _pos, ivec2 _size) : guibase() {
-		this->pos = _pos;
-		this->size = _size;
-	}
-	SafeRef<guibase> makeSafeRef();
+public:
+	guibase();
 	virtual ~guibase();
+protected:
+	void setFlagInternal(int flag) {
+		this->flags |= flag;
+	}
+	void clearFlagInternal(int flag) {
+		this->flags &= ~flag;
+	}
+public:
+	SafeRef<guibase> makeSafeRef();
 	virtual bool isVisible() const {
 		return (flags & FLG_VISIBLE) != 0;
 	}
@@ -337,8 +337,6 @@ public:
 	virtual bool isSelected();
 protected:
 	virtual NVGcolor getBackgroundColor(int stateflags) const;
-	void setTint(uint32_t hex);
-	void setBackgroundColor(uint32_t hex);
 	bool isChildOf(guibase* parentSearch);
 
 };

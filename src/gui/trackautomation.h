@@ -44,6 +44,7 @@ private:
 	GuiColor::constant_t color2 = GuiColor::COL_KNOB_IND;
 	GuiColor::constant_t colorHL = GuiColor::COL_AUTOMATED;
 	GuiColor::constant_t colorHL2 = GuiColor::COL_AUTOMATED;
+	//TODO: make these GuiConstant::constant_t
 	const float radiusHandle = 2.5f;
 	const float radiusHandleHL = 3.5f;
 	const float lineWidth = 2.5f;

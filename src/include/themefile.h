@@ -1,18 +1,8 @@
 #pragma once
-
-#include "str_util.h"
-#include "color_util.h"
+#include <vector>
 #include "config.h"
 #include "theme.h"
-#include "msgbox.h"
-#include <math.h>
-#include <chrono>
-#include <vector>
-#include <iostream>
-#include <sstream>
-#include <fstream>
-#include <algorithm>
-#include <map>
+
 struct themefile
 {
 public:
