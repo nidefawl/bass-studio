@@ -73,12 +73,11 @@ template<typename C1>
 }
 template<typename C1, typename V1>
 inline bool removeEntry(C1& a, const V1& b) {
-  auto itEnd = a.end();
-  auto itRemove = std::remove_if(a.begin(), itEnd, [b](const auto& ref) {
-					return ref == b;
-				  });
-  auto it = a.erase(itRemove, a.end());
-  return it != itEnd;
+  auto curSize = a.size();
+  auto it = a.erase(std::remove_if(a.begin(), itEnd, [b](const auto& ref) {
+	  return ref == b;
+  }), a.end());
+  return curSize != a.size();
 }
 template<typename C1, typename V1>
   inline int32_t
