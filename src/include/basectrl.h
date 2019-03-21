@@ -155,7 +155,8 @@ public:
 	virtual void requestRedraw() {
 		this->window->requestRedraw();
 	}
-	void onGuiRemoved(guibase* gui);
+	// Only use this pointer for comparison!
+	void onGuiRemoved(void* gui);
 	void resetMouseContext();
 };
 class AppCtrl : public BaseCtrl {

@@ -384,7 +384,8 @@ void BaseCtrl::render(int32_t x, int32_t y, int32_t w, int32_t h, float ratio) {
 		test = 0;
 	}
 }
-void BaseCtrl::onGuiRemoved(guibase* gui) {
+// Only use this pointer for comparison!
+void BaseCtrl::onGuiRemoved(void* gui) {
 	if (this->guiOver == gui)  {
 		this->guiOver = NULL;
 	}
