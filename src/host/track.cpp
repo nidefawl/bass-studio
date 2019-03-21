@@ -36,8 +36,6 @@
 
 const tick_t INVALID_TICK = 1 << 31;
 
-#define ERROR_LOG(x) (my_printf("ERROR: %s\n", x))
-
 void deleteClip(clip_t* cl, delete_cb *cb) {
 	if (cb)
 		cb->preClipDelete(cl);
@@ -127,7 +125,6 @@ track_t::track_t(const track_snapshot_t &a)
 		clip_t* clipInstance = new clip_t(clip);
 		clips.push_back(clipInstance);
 	}
-//	automation.points = a.points;
 	assert(this->mixer == NULL);
 	assert(this->content == NULL);
 }
@@ -184,19 +181,6 @@ void track_t::loadPluginAutomationParameters(const track_impl_snapshot_t& trackS
 	for (const plugin_snapshot_t& pluginSnapshot : trPluginList) {
 		effectbase* effect = audio->getPluginById(pluginSnapshot.projectGlobalId);
 		if (effect) {
-//			const std::vector<param_snapshot_t>& pluginSnapshotParams = pluginSnapshot.params;
-//			for (const param_snapshot_t& param : pluginSnapshotParams) {
-//				int32_t paramIdxEffect = effect->mixerParams.size() + param.idx;
-//				if (effect->hasParam(paramIdxEffect)) {
-//					effect->setParamValue(paramIdxEffect, param.val, 1);
-//				}
-//			}
-//			const std::vector<param_snapshot_t>& pluginHostSideParams = pluginSnapshot.hostParams;
-//			for (const param_snapshot_t& param : pluginHostSideParams) {
-//				if (param.idx < (int32_t)effect->mixerParams.size() && effect->hasParam(param.idx)) {
-//					effect->setParamValue(param.idx, param.val, 1);
-//				}
-//			}
 			const std::vector<automation_view_t>& automatedParams = pluginSnapshot.automatedParams;
 			for (const automation_view_t& automatedParam : automatedParams) {
 				if (effect->hasParam(automatedParam.targetParam)) {
@@ -233,7 +217,6 @@ void trackdata_midi_t::deleteEmptyClips() {
 	sortClips();
 }
 void trackdata_midi_t::getClipsInRange(tick_t start, tick_t end, std::vector<clip_t*>& _clips) {
-//	my_printf("range %d to %d\n", start, end);
 	for (clip_t* clip : clips) {
 		if (clip->end() <= start || clip->start() > end) {
 			continue;
@@ -245,7 +228,6 @@ void trackdata_midi_t::getClipsInRange(tick_t start, tick_t end, std::vector<cli
 
 }
 void trackdata_midi_t::getNotesInRange(tick_t start, tick_t end, tick_t cutStart, tick_t cutEnd, std::vector<note_t>& notes) {
-//	my_printf("range %d to %d\n", start, end);
 	for (clip_t* clip : clips) {
 		if (clip->end() <= start || clip->start() > end) {
 			continue;
@@ -259,9 +241,6 @@ audio_stage_ref_t audio_stage_t::toRef() {
 	return {this->id};
 }
 effectbase* audio_stage_t::getPluginById(int32_t projectGlobalId) {
-//	if (instrument && instrument->projectGlobalId == projectGlobalId) {
-//		return instrument;
-//	}
 	for (effectbase* effect : effects) {
 		 if (effect->projectGlobalId == projectGlobalId) {
 			 return effect;
@@ -273,16 +252,6 @@ effectbase* audio_stage_t::getPluginById(int32_t projectGlobalId) {
 	}
 	return nullptr;
 }
-//vstplugin* track_impl_t::setInstrument(vstplugin* _instrument) {
-//	vstplugin* oldInstr = instrument;
-//	if (instrument) {
-//		removePlugin(instrument, true);
-//	}
-//	instrument = _instrument;
-//	_instrument->handle->tr_plugins = this;
-//	_instrument->handle->slot = 0;
-//	return oldInstr;
-//}
 void track_impl_t::removePlugin(effectbase* _effect, bool notifyUp) {
 //	if (track->audio->selectedAutomationCtr == _effect) {
 		track->audio->selectedAutomationCtr = NULL;
@@ -290,43 +259,18 @@ void track_impl_t::removePlugin(effectbase* _effect, bool notifyUp) {
 	audio_stage_t::removePlugin(_effect, notifyUp);
 }
 void audio_stage_t::removePlugin(effectbase* _effect, bool notifyUp) {
-//	if (instrument == _vst) {
-//		instrument = NULL;
-//	} else {
-		if (!removeEntry(effects, _effect)) {
-			return;
-		}
-		int slot = 0;
-		for (effectbase* effect : effects) {
-			effect->setSlot(slot++);
-		}
-//	}
+	if (!removeEntry(effects, _effect)) {
+		return;
+	}
+	int slot = 0;
+	for (effectbase* effect : effects) {
+		effect->setSlot(slot++);
+	}
 	_effect->breakTrackLink();
-//	if (notifyUp) {
-//		guibase* gui = _effect->getGui();
-//		if (gui && gui->parent) {
-//			guictr_plugins& parent = dynamic_cast<guictr_plugins&>(*(gui->parent)); //throws
-//			assert(parent.hasGui(gui));
-//			parent.remove(gui);
-//			parent.layout();
-//			if (parent.parent)
-//				parent.parent->onChildLayoutChanged(&parent);
-//			my_printf("Remove effect on %s, parent %s\n", StringAsCStr(parent.getClassName()), parent.parent? StringAsCStr(parent.parent->getClassName()) : "<null>");
-//		}
-//		track_t* tr = getTrack();
-//		assert(tr);
-//		MainCtrl::getGuiTrackCtr()->removeAllAutomationLanes(tr, _effect);
-//		MainCtrl::getGuiTrackCtr()->layout();
-//		MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
-//	}
-//	vstplugin* _vst = nullptr;
-//	_vst->handle->tr_plugins = NULL;
-//	_vst->handle->slot = -1;
 }
 
 void audio_stage_t::insertEffect(int32_t idx, effectbase* _effect) {
 	std::vector<effectbase*>::iterator it;
-	my_printf("Insert effect at idx %d\n", idx);
 	if (idx == -2 || idx >= (int32_t)effects.size()) {
 		it = effects.end();
 	} else if (idx <= 0) {
@@ -381,7 +325,6 @@ struct VstEvent_t {
 		int32_t idx = vstEvents->numEvents;
 		assert(idx < maxEvents);
 		VstMidiEvent& evt = evtArr[idx];
-//		tick_t noteSamplePos = tickToSample(pos, bpm100, sampleRate, blockSize);
 		evt.type = kVstMidiType;
 		evt.byteSize = sizeof(VstMidiEvent);
 		evt.flags = 0;//kVstMidiEventIsRealtime;
@@ -422,8 +365,9 @@ struct VstEvent_t {
 };
 
 track_impl_t::~track_impl_t() {
-	if (midiEventsBuf) delete midiEventsBuf;
-	my_printf("~track_impl_t() %016X\n", this);
+	if (midiEventsBuf) {
+		delete midiEventsBuf;
+	}
 }
 VstEvent_t* track_impl_t::reallocEvts(size_t size) {
 	size = max((size_t)128, size);
@@ -439,9 +383,6 @@ int32_t audio_stage_t::getLatency() {
 }
 void audio_stage_t::pluginsChanged() {
 	samplerate_t latency = 0;
-//	if (instrument) {
-//		latency += instrument->handle->aeffect->initialDelay;
-//	}
 	for (effectbase* effect : effects) {
 		latency += effect->getDelay();
 	}
@@ -567,9 +508,6 @@ void audio_stage_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginLi
 			host->insertNewPlugin(this, effect, pluginSnapshot.slot);
 			effect->loadSnapshot(pluginSnapshot);
 			loadEffectAutomationFromSnapshot(pluginSnapshot, effect);
-	//				if (plugin == this->instrument) {
-	//					plugin->show();
-	//				}
 			if (pluginSnapshot.enabled) {
 				effect->resume();
 			}
@@ -603,9 +541,6 @@ void track_impl_t::loadAutomationLanes(const std::vector<automationlane_snapshot
 }
 void audio_stage_t::onTick(double since) {
 	meter.onTick(since);
-//	if (instrument) {
-//		instrument->meter.onTick(since);
-//	}
 	for (auto effect : effects) {
 		effect->onTick(since);
 	}
@@ -617,9 +552,6 @@ void audio_stage_t::addAudioStage(audio_stage_t* _child) {
 	}
 	_child->parent = this;
 	this->children.push_back(_child);
-//	gui->onRemove();
-//	guis.erase(it);
-//	gui->parent = NULL;
 }
 void audio_stage_t::removeAudioStage(audio_stage_t* _child) {
 	auto it = std::find(children.begin(), children.end(), _child);
@@ -838,7 +770,6 @@ void track_params_t::createSnapshot(track_params_snapshot_t& snapshot) {
 	for (int i = 0; i < getNumParameters(); i++) {
 		float val = params[i].value;
 		param_snapshot_t snapParam{i, val};
-		my_printf("VAL[%d] = %f\n", i, val);
 		snapshot.params.push_back(std::move(snapParam));
 		automation_t* automation = getAutomation(i);
 		automation_view_t automationView;
@@ -852,7 +783,6 @@ void track_params_t::createSnapshot(track_params_snapshot_t& snapshot) {
 }
 void track_params_t::loadSnapshot(const track_params_snapshot_t& snapshot) {
 	for (auto p : snapshot.params) {
-		my_printf("VAL[%d] = %f\n", p.idx, p.val);
 		params[p.idx].value = p.val;
 	}
 	for (auto p : snapshot.automatedParams) {

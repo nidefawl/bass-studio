@@ -15,7 +15,6 @@
 #include "audiowaveform.h"
 #include "leak_detect.h"
 #include "cliprenderer.h"
-#include "logging.h"
 
 #include <glm/glm.hpp>
 #include <glm/vec2.hpp>
@@ -33,10 +32,8 @@ public:
 		: guibase(),
 		  m_track(_track),
 		  m_clip(_clip) {
-		my_printf("gui_clip\n", 0);
 	}
 	virtual ~gui_clip() {
-		my_printf("~gui_clip\n", 0);
 	}
 	bool isClipTitleBar(ivec2 mpos) {
 		return mpos.x >= pos.x &&
@@ -155,7 +152,6 @@ public:
 	void onTick(AppCtrl* appctrl) override;
 	guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
 	void onRemove() {
-//		my_printf("release %012x from onRemove()\n", &m_clip->audio.waveformRef);
 		releaseRendered();
 		assert(m_clip->gClip == this);
 		m_clip->gClip = NULL;
