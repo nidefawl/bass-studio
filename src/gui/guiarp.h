@@ -95,11 +95,7 @@ public:
 	void buttonClicked(guibase* _button);
 	void rightClicked(MouseEvent& evt, guibase* button) override;
 	virtual ~gui_arp() {
-		remove(&pattern);
-		remove(&gate);
-		remove(&clock);
-		remove(&buttonBypass);
-		my_printf("DSTR!\n",0);
+		removeGuis();
 	}
 	virtual void render(NVGcontext* vg) {
 		if (!setScissorTransformContainer(vg)) {

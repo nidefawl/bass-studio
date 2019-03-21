@@ -14,6 +14,7 @@
 #include "debugproperties.h"
 #include "guicontextmenu_base.h"
 #include "renderresources.h"
+#include "util/debug_alloc.h"
 
 namespace GuiColor {
 constant_t COL_BTN_BG_DEFAULT_INACTIVE("COL_BTN_BG_DEFAULT_INACTIVE", 0xff202020);
@@ -378,12 +379,45 @@ String guibase::getClassName() {
 	return typeName(*this);
 }
 
-extern int allocCount;
-extern std::vector<guibase*>* g_guis;
+
+namespace {
+	DebugAlloc::Tracker<guibase> tracker;
+}
+
+template<>
+void DebugAlloc::Tracker<guibase>::throwUntrackked(guibase* g) {
+	my_printf("guibase with allocId %lld was not tracked\n", g->id);
+	assert(0);
+}
+template<>
+void DebugAlloc::Tracker<guibase>::printLeaked() {
+	my_printf("allocCount %lld\n", allocCount);
+	for (auto it = allocList.begin(); it != allocList.end(); it++) {
+		guibase* ctrl = *it;
+		my_printf("leaked %lld %s \n", ctrl->id, StringAsCStr(ctrl->getClassName()));
+	}
+	allocList.clear();
+	allocList.shrink_to_fit();
+}
+template<>
+DebugAlloc::Tracker<guibase>* DebugAlloc::getTracker() {
+	return &tracker;
+}
+void printLeakedGuiBase() {
+	DebugAlloc::getTracker<guibase>()->printLeaked();
+}
 guibase::guibase()  {
-	id = allocCount;
-	allocCount++;
-	g_guis->push_back(this);
+	id = DebugAlloc::getTracker<guibase>()->objConstructor(this);
+}
+guibase::~guibase() {
+	DebugAlloc::getTracker<guibase>()->objDestructor(this);
+	BaseCtrl* ctrl = parentCtrl;
+	if (ctrl) {
+		ctrl->onGuiRemoved(this);
+	}
+	if (safeRef.handler) {
+		safeRef.handler->safeRefDestroy(safeRef.refId);
+	}
 }
 
 SafeRef<guibase> guibase::makeSafeRef() {
@@ -393,25 +427,6 @@ SafeRef<guibase> guibase::makeSafeRef() {
 		safeRef.refId = safeRef.handler->safeRefCreate(this);
 	}
 	return safeRef;
-}
-guibase::~guibase() {
-	if (safeRef.handler) {
-		safeRef.handler->safeRefDestroy(safeRef.refId);
-	}
-//	SafeRefDelete(safeRef);
-	BaseCtrl* ctrl = parentCtrl;
-	if (ctrl) {
-		ctrl->onGuiRemoved(this); // TODO: don't call this from here
-	} else {
-		//assert(0);
-	}
-	allocCount--;
-	auto it = std::find(g_guis->begin(), g_guis->end(), this);
-	if (it == g_guis->end()) {
-		my_printf("%s not in global gui list\n", StringAsCStr(getClassName()));
-	} else {
-		g_guis->erase(it);
-	}
 }
 #ifndef BUILD_BUILTIN_EFFECT
 void guibase::addProperties(Table::tbl* table) {

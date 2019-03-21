@@ -39,6 +39,11 @@ void guictr_base::setParent(guibase* parent) {
 //			g->setParent(this);
 	}
 }
+void guictr_base::onRemove() {
+//		removeGuis();
+}
+void guictr_base::onAdded() {
+}
 void guictr_base::render(NVGcontext* vg) {
 	if (isBackgroundRendered()) {
 		renderBackground(vg);
@@ -200,15 +205,13 @@ void guictr_tabbed::buttonClicked(guibase* button) {
 }
 guictr_tabbed::~guictr_tabbed() {
 	for (tabbed_entry* entry : entries) {
-		guictr_base::remove(&entry->tabButton);
-	}
-	if (this->activeEntry) {
-		this->remove(this->activeEntry->tabCtr);
-	}
-	for (tabbed_entry* entry : entries) {
+		remove(&entry->tabButton);
 		delete entry;
 	}
-	entries.clear();
+	// only this->activeEntry->tabCtr should be in this cointainer
+	// at this point. And it must be a valid pointer
+	assert(guis.size() <= 1);
+	removeGuis();
 }
 void guictr_tabbed::addEntry(guictr_base* ctr, String title) {
 	guictr_tabbed::tabbed_entry* entry = new guictr_tabbed::tabbed_entry{ctr, title};

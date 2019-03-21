@@ -39,6 +39,7 @@ public:
 		add(gui);
 	}
 	~guictr_scrollbar() {
+		removeGuis();
 	}
 	gui_scrollbar& getScrollbar() {
 		return scrollbar;

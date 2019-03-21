@@ -26,9 +26,7 @@ class gui_ctr_main : public guictr_base {
 public:
 	gui_ctr_main();
 	~gui_ctr_main() {
-		remove(&field);
-		remove(&textField);
-		remove(&colorPicker);
+		removeGuis();
 	}
 	std::vector<String> g_debugStrings;
 	virtual void render(NVGcontext* vg);

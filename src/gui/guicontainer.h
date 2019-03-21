@@ -57,11 +57,8 @@ public:
 	static void drawBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 posInset, ivec2 sizeInset, int margin, bool focused = false, bool drawInset = true);
 	static void drawInsetBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 posInset, ivec2 sizeInset);
 
-	virtual void onRemove() override {
-		removeGuis();
-	}
-	virtual void onAdded() override {
-	}
+	virtual void onRemove() override;
+	virtual void onAdded() override;
 	virtual void determineSize() override {
 	}
 	virtual ivec2 paddingTL(int _padding) {

@@ -35,7 +35,7 @@ public:
 		maxHeight = 220;
 	}
 	~guitooltip() {
-		remove(&textField);
+		removeGuis();
 	}
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
 		hadMouseMovement = true;

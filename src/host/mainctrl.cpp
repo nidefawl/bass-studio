@@ -166,9 +166,11 @@ public:
 		setActiveEntry(0);
 	}
 	virtual ~guictr_side_tabs_daw_1() {
-//		remove(&ctr_dbg);
-//		remove(ctr_properties);
-//		remove(ctr_theme);
+		//remove the entries we have to delete, base class would see dangling ptr otherwise
+		remove(ctr_properties);
+		remove(ctr_theme);
+		delete ctr_properties;
+		delete ctr_theme;
 	}
 };
 class guictr_effectlibrary : public guictr_base {
@@ -183,8 +185,7 @@ public:
 		add(&ctr_effectlist);
 	}
 	virtual ~guictr_effectlibrary() {
-		remove(&ctr_effectlist);
-		remove(&ctr_pluginlist);
+		removeGuis();
 	}
 	void update() {
 		ctr_pluginlist.update();
@@ -224,9 +225,11 @@ public:
 		setActiveEntry(0);
 	}
 	virtual ~guictr_side_tabs_daw_2() {
-//		remove(&ctr_dbg);
-//		remove(ctr_properties);
-//		remove(ctr_theme);
+		//remove the entries we have to delete, base class would see dangling ptr otherwise
+		remove(ctr_properties);
+		remove(ctr_loadedplugins);
+		delete ctr_properties;
+		delete ctr_loadedplugins;
 	}
 };
 class DawViewContainers {

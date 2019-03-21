@@ -169,10 +169,7 @@ public:
 		textField.setPlaceholder("Search");
 	}
 	~guictr_modulelibrary() {
-		std::vector<gui_list_entry*> _newList;
-		pluginListCtr.setList(_newList);
-		remove(&pluginListCtr);
-		remove(&textField);
+		removeGuis();
 	}
 	void update() {
 		std::vector<gui_list_entry*> _newList;

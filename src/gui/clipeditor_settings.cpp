@@ -51,14 +51,7 @@ gui_clipsettings::gui_clipsettings(scaled_grid& _grid, clip_view& _view) :
 }
 
 gui_clipsettings::~gui_clipsettings() {
-	remove(&clipAudioId);
-	remove(&clipTimeStartOffsedSamples);
-	remove(&clipTimeStartOffsetTicks);
-	remove(&clipTimeLen);
-	remove(&clipTimeStart);
-	remove(&clipLoopLen);
-	remove(&clipLoopStart);
-	remove(&btnLoop);
+	removeGuis();
 }
 
 void gui_clipsettings::renderBackground(NVGcontext* vg) {

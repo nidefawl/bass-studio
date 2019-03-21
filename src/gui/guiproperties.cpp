@@ -147,8 +147,7 @@ public:
 //		maxHeight = 220;
 	}
 	~guiproperties_table() {
-		remove(&numberInput);
-		remove(&textField);
+		removeGuis();
 	}
 	void addControl(guibase* g) {
 		controls.push_back(g);
@@ -665,6 +664,9 @@ public:
 		scrollbar.add(&themeProperties);
 		scrollbar.maxHeight = -1;
 	}
+	~guictr_theme_settings() {
+		removeGuis();
+	}
 	void render(NVGcontext* vg) {
 		if (!setScissorTransform(vg)) {
 			return;
@@ -752,4 +754,10 @@ guictr_base* makeCtrProperties() {
 	auto* ptr = new guiproperties_table<guiproperties_t>(new guiproperties_t());
 	propTableInstances.push_back(ptr);
 	return ptr;
+}
+
+template <>
+guiproperties_table<guiproperties_t>::~guiproperties_table() {
+	removeGuis();
+	assert(removeEntry(propTableInstances, this));
 }

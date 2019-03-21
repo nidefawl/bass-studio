@@ -247,7 +247,7 @@ private:
 	uint64_t tm_lastfps;
 	String fpsStats;
 	double secondsLastDraw = 0.0;
-	double secondsLastDrawReq = 0.0;
+//	double secondsLastDrawReq = 0.0;
 	const double minFrameDelay = 1/288.0;
 	bool redrawFlagged = false;
 	void initOGL() {
@@ -1417,7 +1417,7 @@ static void glfw_cb_framebuffersize(GLFWwindow *w, int width, int height) {
 	EXC_CATCH
 }
 
-void printLeaked();
+void printLeakedGuiBase();
 
 static std::unique_ptr<appwindow_main> mainWindow;
 
@@ -1491,7 +1491,6 @@ std::shared_ptr<AppCtrl> makeApp();
 void initColor();
 void deleteApp();
 int startApplication(int argc, char* argv[]) {
-	bool test = argc > 1 && String(argv[1]) == "--test";
 #ifndef NDEBUG
     _dup2( 1, 2 ); //workaround: redirect stderr to stdout so stderr is visible when using gdb on eclipse (bug)
 #endif
@@ -1536,16 +1535,12 @@ int startApplication(int argc, char* argv[]) {
 	glfwSetErrorCallback(glfw_runtime_error_callback);
 	ctrl->postInit();
 	GLFWwindow* glfwHandle = mainWindow->getGLFW();
-	HWND hwnd1 = mainWindow->getHWND();
 	long start = getTimeMillis();
-	int step = 0;
-	int nMsg = 0;
 	while (!glfwWindowShouldClose(glfwHandle)) {
 #ifdef _WIN32
 		DWORD timeout = 5;
 		MsgWaitForMultipleObjects(0, NULL, FALSE, timeout, QS_ALLEVENTS);
 	    MSG msg;
-	    int limit = 0;
 	    while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE))
 	    {
 	        if (msg.message == WM_QUIT)
@@ -1614,13 +1609,13 @@ int startApplication(int argc, char* argv[]) {
 	mainWindow.reset();
 	glfwTerminate();
 	EXC_CATCH
-	printLeaked();
+	printLeakedGuiBase();
 	deleteApp();
 #ifdef _WIN32
 	OleUninitialize();
 #endif
 	my_printf("EXIT_SUCCESS\n", 0);
-	exit(EXIT_SUCCESS);
+//	exit(EXIT_SUCCESS);
 	return 0;
 }
 

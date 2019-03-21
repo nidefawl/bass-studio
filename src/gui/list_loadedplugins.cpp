@@ -55,10 +55,7 @@ public:
 		textField.setPlaceholder("Search");
 	}
 	~gui_pluginsloaded_list() {
-		std::vector<gui_list_entry*> _newList;
-		listCtr.setList(_newList);
-		remove(&listCtr);
-		remove(&textField);
+		removeGuis();
 	}
 	void onTick(AppCtrl* ctrl) override {
 		guictr_base::onTick(ctrl);

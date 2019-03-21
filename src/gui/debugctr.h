@@ -15,8 +15,7 @@ class gui_ctr_debug : public guictr_base {
 public:
 	gui_ctr_debug();
 	~gui_ctr_debug() {
-		remove(&btn);
-		remove(&knobTest);
+		removeGuis();
 	}
 	std::vector<String> g_debugStrings;
 	virtual void render(NVGcontext* vg);

@@ -110,8 +110,7 @@ public:
 		add(&inputDen);
 	}
 	~gui_signaturecontrol() {
-		remove(&inputDen);
-		remove(&inputNum);
+		removeGuis();
 	}
 
 	bool enabled() {
@@ -232,9 +231,7 @@ public:
 		add(&sixteenths);
 	}
 	~gui_timeinput() {
-		remove(&sixteenths);
-		remove(&beat);
-		remove(&bar);
+		removeGuis();
 	}
 	void setRef(int32_t* time) {
 		this->time = time;

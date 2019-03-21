@@ -35,10 +35,7 @@ public:
 	void setInt32(int32_t rgba);
 	void init();
 	~gui_color_pick() {
-		remove(&knA);
-		remove(&knH);
-		remove(&knS);
-		remove(&knL);
+		removeGuis();
 	}
 	virtual void buttonClicked(guibase* button) override;
 	void layout();
