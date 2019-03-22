@@ -19,6 +19,7 @@
 #include "trackctr.h"
 #include "trackcontent.h"
 #include "tracktimeline.h"
+#include "theme.h"
 #include "guicontextmenu.h"
 #include "mouse.h"
 #include "logging.h"

@@ -844,8 +844,11 @@ void vsthost::removePlugin(effectbase* plugin) {
 	audioStage->pluginsChanged();
 }
 void vsthost::unloadPlugin(effectbase* plugin) {
+
+	//TODO: this shouldn't be here!
 	if (MainCtrl::get())
 		MainCtrl::get()->closeContextMenu();
+
 	plugin->onPreUnload();
 	audio_stage_t* audioStage = plugin->getTrackLink();
 	if (audioStage) {

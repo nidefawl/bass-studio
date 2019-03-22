@@ -258,6 +258,16 @@ void gui_clip::trackViewDragRelease(guitrack_editor* view, MouseEvent& evt) {
 	//!CLIP COULD BE DELETED AT THIS POINT
 }
 
+gui_track::gui_track(track_t* _track, scaled_grid& _grid)
+  : guictr_base(), m_track(_track), midi(_track->getMidi()), automation(_track, _grid, m_track->audio->selectedAutomationCtr, m_track->audio->selectedAutomationParam, subtrackIdx)
+{
+	padding = 0;
+}
+
+gui_track* createTrackGui(track_t* t, scaled_grid& grid) {
+	return new gui_track(t, grid);
+}
+
 void gui_track::updateVisibleTrackContents(project_t& project, scaled_grid& grid) {
 	automation.setData();
 	automation.updateVisibleTrackContents(grid);
@@ -273,6 +283,31 @@ void gui_track::updateVisibleTrackContents(project_t& project, scaled_grid& grid
 		clip->gClip->updatePosition(project, grid, size);
 	}
 }
+bool gui_track::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
+	if (automation.mouseHitTest(mpos, evt)) {
+		return true;
+	}
+	if (this->contains(mpos)) {
+		ivec2 localMouse = this->toContainerSpace(mpos);
+		for (guibase* gui : guis) {
+			if (gui->mouseHitTest(localMouse, evt)) {
+				return true;
+			}
+		}
+		if (evt.type == MouseHitType::MOUSE_RIGHT) { // righclick in selection (create clip etc.)
+			MainCtrl* ctrl = MainCtrl::get();
+			scaled_grid& grid = ctrl->getGrid();
+			tick_t tick = grid.screenToTickSnap(mpos.x, SNAP_OFF);
+			if (ctrl->cursor.contains(this->m_track->idx, tick)) {
+				evt.requestFocus(this);
+				return true;
+			}
+		}
+		// tracks need to always cancel further mouse tests for z-order to work in parent container
+		return true;
+	}
+	return false;
+}
 
 void gui_track_automationlane::updateVisibleTrackContents(scaled_grid& grid) {
 	automation.setData();
@@ -284,16 +319,6 @@ gui_track_automationlane::gui_track_automationlane(track_t* _track, scaled_grid&
 {
 	padding = 0;
 }
-gui_track::gui_track(track_t* _track, scaled_grid& _grid)
-  : guictr_base(), m_track(_track), midi(_track->getMidi()), automation(_track, _grid, m_track->audio->selectedAutomationCtr, m_track->audio->selectedAutomationParam, subtrackIdx)
-{
-	padding = 0;
-}
-gui_track* createTrackGui(track_t* t, scaled_grid& grid) {
-	return new gui_track(t, grid);
-}
-
-
 
 class guictxtmenu_trackcontent : public guictxtmenu {
 public:
@@ -348,10 +373,10 @@ public:
 			grid.grid_dens.dynamicDensity = _id - 100;
 			grid.grid_dens.isfixed = false;
 		}
+		grid.notifyChange();
 //		ctrl->updateVisibleTrackContents();
-		MainCtrl::get()->updateGrid();
-
-		MainCtrl::get()->closeContextMenu();
+//		MainCtrl::get()->updateGrid();
+		parentCtrl->closePopup();
 	}
 };
 void gui_track_automationlane::handleRightClick(MouseEvent& evt) {

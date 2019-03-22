@@ -30,9 +30,12 @@ void PopupCtrl::focusLost() {
 //	parentCtrl->closeContextMenu();
 }
 void PopupCtrl::closePopup() {
-	popupCtrs->removeGuis();
-	if (this->window)
+	if (isShown()) {
 		static_cast<window_overlay*>(this->window)->hide();
+	}
+}
+void PopupCtrl::onWindowClose() {
+	popupCtrs->removeGuis();
 	if (guiCtrFocused) {
 		if (!guiCtrFocused->isStaticContainer()) {
 			guiCtrFocused = NULL;
@@ -40,29 +43,33 @@ void PopupCtrl::closePopup() {
 	}
 	guiCaptured = guiFocused = guiOver = guiDragged = NULL;
 }
+bool PopupCtrl::onWindowCloseRequest() {
+	return true;
+}
 void PopupCtrl::relayout(int32_t w, int32_t h) {
 	popupCtrs->size = ivec2(w, h);
 	popupCtrs->determineSize();
 	popupCtrs->layout();
 };
 void PopupCtrl::open(guictxtmenu_base *_ctxtmenu, ivec2 pos) {
+	assert(!isShown());
 	mouseInside = false;
 	this->m_mousePos = ivec2(-1111111);
 	popupCtrs->removeGuis();
 	popupCtrs->pos = ivec2(0);
 	_ctxtmenu->pos = insetCtxtMenu;
-//	_ctxtmenu->setBackgroundRendered(false);
-	_ctxtmenu->determineSize();
-	_ctxtmenu->layout();
 	canTakeInputFocus = _ctxtmenu->canTakeInputFocus;
 	popupCtrs->maxHeight = _ctxtmenu->maxHeight;
 	popupCtrs->scrollbarOutside = _ctxtmenu->scrollbarOutside;
 	popupCtrs->setBackgroundRendered(_ctxtmenu->isBackgroundRendered());
+	_ctxtmenu->determineSize();
+	_ctxtmenu->layout();
+
+
+
+
+	popupCtrs->size = vec2(0);
 	popupCtrs->add(_ctxtmenu);
-//	ivec2 wndsize(0);
-//	this->window->getSize(&wndsize);
-//	wndsize.y = std::max(wndsize.y, popupCtrs->maxHeight);
-	popupCtrs->size = _ctxtmenu->size;
 	popupCtrs->determineSize();
 	popupCtrs->layout();
 	window_overlay* appW = static_cast<window_overlay*>(this->window);

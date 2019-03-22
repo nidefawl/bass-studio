@@ -1,12 +1,15 @@
 #pragma once
 #include "str_util.h"
 
-#include <glm/vec4.hpp>
+#include <glm/glm.hpp>
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
+
 using glm::vec4;
 using glm::vec2;
 using glm::ivec2;
+
 class PopupCtrl;
 class window_base {
 public:
@@ -41,7 +44,7 @@ public:
 	virtual ~window_overlay() {}
 	virtual void show() = 0;
 	virtual void hide() = 0;
-	virtual void positionOnScreen(ivec2 pos, ivec2 size) = 0;
+	virtual void positionOnScreen(glm::ivec2 pos, glm::ivec2 size) = 0;
 	virtual PopupCtrl* getCtrl() = 0;
 };
 class window_main : public window_base {

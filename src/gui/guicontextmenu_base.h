@@ -98,6 +98,7 @@ public:
 		this->fontSize = i;
 	}
 	virtual ~guictxtmenu_base() {
+		destroyGuis();
 	}
 	virtual bool isTransient() {
 		return false;
@@ -105,19 +106,32 @@ public:
 	virtual bool canClose() {
 		return false;
 	}
+	virtual void onParentWindowClose() {
 
-	void render(NVGcontext* vg) {
+	}
+
+	void render(NVGcontext* vg) override {
 		guictr_base::render(vg);
 	}
-	virtual void onChildLayoutChanged(guibase* g) {
+	void determineSize() override {
 		ivec2 maxSize = ivec2(0);
 		for (guibase* gui : guis) {
 			maxSize.x = max(maxSize.x, gui->right());
 			maxSize.y = max(maxSize.y, gui->bottom());
 		}
 		size = maxSize;
+	}
+	virtual void onChildLayoutChanged(guibase* g) override {
+		determineSize();
 		if (this->parent != NULL) {
 			this->parent->onChildLayoutChanged(this);
+		}
+	}
+	void layout() override {
+		for (auto* g : guis) {
+			g->pos = {0, 0};
+			g->size = size;
+			g->layout();
 		}
 	}
 };

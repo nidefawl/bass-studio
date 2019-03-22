@@ -107,8 +107,9 @@ void gui_color_pick::layout() {
 	knS.pos = vec2(knL.left()-sliderW, 0);
 	knH.pos = vec2(knS.left()-sliderW, 0);
 	this->hexInput.pos = {knH.left()-sizeQuad, sizeQuad/4*3};
-	for (auto* g : guis)
+	for (auto* g : guis) {
 		g->layout();
+	}
 }
 void gui_color_pick::render(NVGcontext* vg) {
 	if (!setScissorTransform(vg)) {

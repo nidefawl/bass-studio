@@ -116,7 +116,7 @@ public:
 	}
 	void clicked(int _id) {
 		handleAutomatbleContextMenu(track, atl, paramIdx, _id);
-		MainCtrl::get()->closeContextMenu();
+		parentCtrl->closePopup();
 	}
 };
 class gui_trackgain: public guibase {
@@ -332,7 +332,7 @@ public:
 			}
 		}
 		MainCtrl::get()->updateVisibleTrackContents();
-		MainCtrl::get()->closeContextMenu();
+		parentCtrl->closePopup();
 	}
 };
 class guidropdown_popup_sel_automation_param : public guictxtmenu {
@@ -368,7 +368,7 @@ public:
 			}
 		}
 		MainCtrl::get()->updateVisibleTrackContents();
-		MainCtrl::get()->closeContextMenu();
+		parentCtrl->closePopup();
 	}
 };
 class guidropdown_automation_device : public guidropdownbase {
@@ -573,17 +573,30 @@ public:
 		NVGcolor color = rgbToNvg(m_track->rgb);
 		ivec2 titleSize(size.x, size.y);
 		MainCtrl* ctrl = MainCtrl::get();
-		if (ctrl->getSelectedTrack() == m_track) {
-			color = G_BLACK;
-		}
 		const int titleHeight = theme->get(GuiConstant::CONST_TRACK_HEIGHT_TITLE);
 		const int rectHeight = min(titleHeight, size.y);
 		nvgBeginPath(vg);
 		nvgRect(vg, 0, 0, titleSize.x, rectHeight);
 		nvgFillColor(vg, color);
 		nvgFill(vg);
+//		if (ctrl->getSelectedTrack() == m_track) {
+//			color = theme->getColor(GuiColor::COL_BG_SELECTEDTRACK_TITLE);
+//			int posX = hideTrack.right() + INSET_TITLE;
+//			nvgBeginPath(vg);
+//			nvgRect(vg, posX, 0, titleSize.x-posX, rectHeight);
+//			nvgFillColor(vg, color);
+//			nvgFill(vg);
+//		}
+		if (ctrl->getSelectedTrack() == m_track) {
+			NVGcolor color2 = theme->getColor(GuiColor::COL_BG_SELECTEDTRACK_TITLE);
+			int right = hideTrack.right() + (hideTrack.pos.x)/*inset*/;
+			nvgBeginPath(vg);
+			nvgRect(vg, 0, 0, right, rectHeight);
+			nvgFillColor(vg, color2);
+			nvgFill(vg);
+		}
 		setFont(vg, (int) (titleHeight * 0.8), getContrastFontColorNvg(color), G_TITLE_ALIGN);
-		renderText(vg, hideTrack.right() + INSET_TITLE, 0 + titleHeight / 2, titleSize.x-hideTrack.right(), StringAsCStr(m_track->name));
+		renderText(vg, hideTrack.right() + INSET_TITLE*2, 0 + titleHeight / 2, titleSize.x-hideTrack.right(), StringAsCStr(m_track->name));
 
 		for (auto g : guis) {
 			g->render(vg);
@@ -967,7 +980,7 @@ public:
 		} else if (_id == 2) {
 			MainCtrl::get()->removeTrackId(trackid);
 		}
-		MainCtrl::get()->closeContextMenu();
+		parentCtrl->closePopup();
 	}
 };
 void gui_track_controls::handleRightClick(MouseEvent& evt) {

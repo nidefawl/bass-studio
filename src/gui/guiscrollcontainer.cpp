@@ -27,7 +27,7 @@ void guictr_scrollbar::determineSize() {
 		if (gui == &scrollbar)
 			continue;
 		gui->pos = {0, 0};
-		gui->size = size;
+//		gui->size = size;
 		gui->determineSize();
 		gui->layout();
 	}

@@ -5,6 +5,8 @@
 #include "knob.h"
 #include "guiglobals.h"
 #include "gui.h"
+#include "button.h"
+#include "knob.h"
 #include "guicontainer.h"
 #include "guicolors.h"
 #include "guiconstant.h"

@@ -45,6 +45,7 @@ extern constant_t COL_NOTE_MUTE;
 extern constant_t COL_NOTE_OUTLINE;
 extern constant_t COL_NOTE_TEXT;
 extern constant_t COL_BG_SELECTEDTRACK;
+extern constant_t COL_BG_SELECTEDTRACK_TITLE;
 extern constant_t COL_BG_DRKER;
 extern constant_t COL_BG_DRKER2;
 extern constant_t COL_BG_DRK_SELECTED;

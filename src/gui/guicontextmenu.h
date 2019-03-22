@@ -43,7 +43,6 @@ public:
 	}
 	virtual void clicked(int _id) {
 		parentCtrl->closePopup();
-		parentCtrl->closeContextMenu();
 	}
 	virtual void handleDraggedBegin(MouseEvent& evt) {
 		ivec2 local = evt.relMousepos;
@@ -59,13 +58,19 @@ public:
 	void layout() {
 		//TODO: figure out string width here to make life easier laying out context menus
 		int y = paddingV;
+		ivec2 initSize = size;
+		ivec2 newMaxSize(0);
 		for (ctxtmenu_entry* e : entries) {
-			e->layout(size, fontSize);
+			e->layout(initSize, fontSize);
 			e->y = y;
 			y += e->height + paddingV;
-			size.x = std::max(size.x, e->width);
+			newMaxSize.x = std::max(newMaxSize.x, e->width);
 		}
-		size.y = y;
+		newMaxSize.y = y;
+		size = newMaxSize;
+	}
+	void determineSize() override {
+		//nothing
 	}
 
 	void render(NVGcontext* vg) {

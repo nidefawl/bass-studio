@@ -122,8 +122,14 @@ protected:
 	cellclicked_t lastClicked;
 	std::vector<guibase*> controls;
 	int32_t number;
+	const bool isGlobalInstance;
 public:
-	guiproperties_table(T* _ptr) : debugproperties(), ptr(_ptr), numberInput(nullptr) {
+	guiproperties_table(T* _ptr, bool _isGlobalInstance)
+		: debugproperties(),
+		  ptr(_ptr),
+		  numberInput(nullptr),
+		  isGlobalInstance(_isGlobalInstance)
+	{
 		setBackgroundRendered(true);
 		setBackgroundRenderedInset(false);
 		setSnapSides(ivec4(1));
@@ -190,7 +196,6 @@ public:
 //	}
 	virtual void clicked(int _id) {
 		parentCtrl->closePopup();
-		parentCtrl->closeContextMenu();
 	}
 	virtual void handleDraggedBegin(MouseEvent& evt) override {
 		validateReferences();
@@ -650,7 +655,7 @@ class guictr_theme_settings : public guictr_base {
 	guibutton buttonRemove;
 	guibutton buttonSave;
 public:
-	guictr_theme_settings() : guictr_base(), themeProperties(nullptr), scrollbar(), selectTheme() {
+	guictr_theme_settings() : guictr_base(), themeProperties(nullptr, false), scrollbar(), selectTheme() {
 		padding = 0;
 		margin = 0;
 		buttonAdd.setText("+");
@@ -748,10 +753,10 @@ void setDebugPropertyHandle(void* ptr) {
 	}
 }
 debugproperties* makeUniquePropertiesCtr() {
-	return new guiproperties_table<guiproperties_t>(new guiproperties_t());
+	return new guiproperties_table<guiproperties_t>(new guiproperties_t(), false);
 }
 guictr_base* makeCtrProperties() {
-	auto* ptr = new guiproperties_table<guiproperties_t>(new guiproperties_t());
+	auto* ptr = new guiproperties_table<guiproperties_t>(new guiproperties_t(), true);
 	propTableInstances.push_back(ptr);
 	return ptr;
 }
@@ -759,5 +764,8 @@ guictr_base* makeCtrProperties() {
 template <>
 guiproperties_table<guiproperties_t>::~guiproperties_table() {
 	removeGuis();
-	assert(removeEntry(propTableInstances, this));
+	if (isGlobalInstance) {
+		bool b = removeEntry(propTableInstances, this);
+		assert(b);
+	}
 }

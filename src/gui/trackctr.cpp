@@ -3,12 +3,15 @@
 #include "gui.h"
 #include "guicontainer.h"
 #include "exceptions.h"
+#include "theme.h"
 #include "track.h"
 #include "trackctr.h"
 #include "trackcontent.h"
 #include "trackcontrols.h"
 #include "track.h"
 #include "track_impl.h"
+#include "host/mainctrl.h"
+#include "logging.h"
 
 #include "guicontextmenu_daw.h"
 
@@ -420,6 +423,33 @@ namespace {
 			MainCtrl::get()->updateVisibleTrackContents();
 		}
 	}
+}
+bool guitrack_editor::mouseHitTest(ivec2 v, MouseHitEvt& evt) {
+	if (this->contains(v)) {
+		if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
+			evt.requestFocus(this);
+			return true;
+		}
+		if (evt.type == MOUSE_DRAGDROP_CLIP) {
+			evt.requestFocus(this);
+			return true;
+		}
+		ivec2 localMouse = this->toContainerSpace(v);
+		for (guibase* gui : guis) {
+			if (gui->mouseHitTest(localMouse, evt)) {
+
+				// respect z-order, not an actual hit
+				if (!evt.getGuiHit()) {
+					break;
+				}
+
+				return true;
+			}
+		}
+		evt.requestFocus(this);
+		return true;
+	}
+	return false;
 }
 void guitrack_editor::trackEntryDragMove(gui_track* g, ivec2 mousepos) {
 	handleTrackEntryDragMove(parent, project, g->getTrack(), mousepos);

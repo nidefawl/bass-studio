@@ -16,6 +16,7 @@
 #include "scrollbar.h"
 #include "tracktimeline.h"
 #include "mouse.h"
+#include "keyboard.h"
 #include "cursor.h"
 
 #include "platform.h"
@@ -67,29 +68,7 @@ public:
 		padding = 0;
 		sortChildren = true;
 	}
-	bool mouseHitTest(ivec2 v, MouseHitEvt& evt) override {
-		if (this->contains(v)) {
-			if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
-				evt.requestFocus(this);
-				return true;
-			}
-			if (evt.type == MOUSE_DRAGDROP_CLIP) {
-				evt.requestFocus(this);
-				return true;
-			}
-			ivec2 localMouse = this->toContainerSpace(v);
-			for (guibase* gui : guis) {
-				if (gui->mouseHitTest(localMouse, evt)) {
-					if (!evt.getGuiHit()) // respect z-order, not an actual hit
-						break;
-					return true;
-				}
-			}
-			evt.requestFocus(this);
-			return true;
-		}
-		return false;
-	}
+	bool mouseHitTest(ivec2 v, MouseHitEvt& evt) override;
 	bool handleKeyInput(KeyEvent& kevt);
 
 	void trackViewDragBegin(guitrack_editor* view, MouseEvent& evt);

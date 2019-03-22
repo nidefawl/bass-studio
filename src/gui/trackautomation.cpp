@@ -10,6 +10,7 @@
 #include "grid.h"
 #include "guicontainer.h"
 #include "trackctr.h"
+#include "basectrl.h"
 #include "../host/mainctrl.h"
 #include "automation.h"
 #include <glm/glm.hpp>
@@ -323,9 +324,18 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 				MainCtrl* ctrl = MainCtrl::get();
 				scaled_grid& grid = ctrl->getGrid();
 				tick_t tick = grid.screenToTickSnap(mpos.x, SNAP_OFF);
-				if (ctrl->cursor.containsSubtrack(this->m_track->idx, this->idx, tick)) {
+
+				// automation subtracks have priority over parent if they are in the selection range
+				if (this->idx >= 0 && ctrl->cursor.containsSubtrack(this->m_track->idx, this->idx, tick)) {
 					evt.requestFocus(this);
 					return true;
+				} else if (this->idx < 0) {
+					//if its the overlay automation we only take focus if its an actual hit
+					hit_result hit = hitTest(localMouse);
+					if (hit.mode) {
+						evt.requestFocus(this);
+						return true;
+					}
 				}
 				return false;
 			}

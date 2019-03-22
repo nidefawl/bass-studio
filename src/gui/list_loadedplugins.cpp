@@ -8,6 +8,7 @@
 #include "host/plugin/base_plugin.h"
 #include "host/mainctrl.h"
 #include "host/vst_host.h"
+#include "platform.h"
 
 class gui_pluginsloaded_list_entry : public gui_list_entry {
 	SafeRef<effectbase> ref;

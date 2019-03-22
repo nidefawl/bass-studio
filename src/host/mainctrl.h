@@ -297,7 +297,7 @@ public:
     bool filesDropFinal(std::vector<String>& files, ivec2 pos, int kbmods) override;
     void mouseMoved(ivec2 mousePos, ivec2 deltaPos) override;
 	void menuCommand(int cmd) override;
-	void onWindowCloseRequest() override;
+	bool onWindowCloseRequest() override;
 	void updateMenubar() override;
 	void onTick();
 	bool init(window_main* window, NVGcontext* nanovg);

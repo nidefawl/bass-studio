@@ -63,6 +63,7 @@
 #include "../gui/guiplugin.h"
 #include "../threads/workerthread.h"
 #include "../threads/playbackthread.h"
+#include "plugindatabase.h"
 
 using glm::vec2;
 using glm::ivec2;
@@ -416,7 +417,8 @@ void MainCtrl::destroy()
 	this->playThread.joinThread();
 }
 
-void MainCtrl::onWindowCloseRequest() {
+bool MainCtrl::onWindowCloseRequest() {
+	return true;
 }
 
 void MainCtrl::updateMenubar() {
@@ -526,7 +528,7 @@ void MainCtrl::menuCommand(int cmd) {
 }
 void MainCtrl::postInit() {
 	vsthost::getInstance()->postInit();
-	loadFile("testplugin.project");
+	loadFile("empty.project");
 //	for (int i = 0; i < 32; i++) {
 //		loadFile("muuure.project");
 //	}
@@ -789,6 +791,7 @@ bool MainCtrl::setLoadedProject(shared_ptr<project_file> file) {
 }
 
 void MainCtrl::relayout(int32_t w, int32_t h) {
+	closeAllAppMenus();
 	closeContextMenu();
 	m_size = ivec2(w, h);
 	view->layout(w, h);
@@ -1082,9 +1085,7 @@ bool MainCtrl::isPlaying() {
 }
 bool MainCtrl::mouseDownPre() {
 	dragdropclip.reset();
-	if (ctxtmenu != NULL) {
-		closeContextMenu();
-	}
+	closeAllContextMenus();
 	return true;
 }
 

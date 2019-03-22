@@ -133,9 +133,7 @@ public:
 			grid.grid_dens.isfixed = false;
 		}
 		grid.notifyChange();
-//		ctrl->updateVisibleTrackContents();
-//		MainCtrl::get()->updateGrid();
-		MainCtrl::get()->closeContextMenu();
+		parentCtrl->closePopup();
 	}
 };
 

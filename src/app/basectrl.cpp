@@ -423,34 +423,41 @@ String BaseCtrl::getClipboardText()
 {
 	return this->window->getClipboardText();
 }
+void BaseCtrl::openContextMenu(guictxtmenu_base *b, glm::ivec2 pos)
+{
+	delete b; //TODO: defer delete
+}
 void BaseCtrl::setClipboardText(String s)
 {
 	this->window->setClipboardText(s);
 }
 
-
-void AppCtrl::closeAppMenus() {
-	for (auto w : menuWindows) {
-		w->getCtrl()->closePopup();
-	}
-}
-void AppCtrl::closeAppMenus(int startlvl) {
+void AppCtrl::closeAppMenusAtLvl(int startlvl) {
 	for (int i = startlvl; i < (int)menuWindows.size(); i++) {
-		auto w = menuWindows[i];
-		w->getCtrl()->closePopup();
+		auto menuWnd = menuWindows[i];
+		if (menuWnd.ctxt) {
+	my_printf("closeAppMenu lvl %d, num windows %d\n", i, menuWindows.size());
+			menuWnd.wnd->getCtrl()->closePopup();
+		}
 	}
 }
 void AppCtrl::openAppMenu(int lvl, guictxtmenu_base *b, ivec2 pos) {
 	if ((int)menuWindows.size() <= lvl) {
-		menuWindows.push_back(this->mainWindow->createOverlay());
+		auto newWnd = this->mainWindow->createOverlay();
+		menuWindows.push_back({ newWnd, nullptr });
 	}
-//	ivec2 windowPos;
-//	this->mainWindow->getPos(&windowPos);
-	menuWindows[lvl]->getCtrl()->open(b, pos);
+	//TODO: menu change on same level will let his assertation fail
+	auto& entry = menuWindows[lvl];
+	assert(entry.wnd && !entry.ctxt);
+	entry.ctxt = b;
+	ivec2 windowPos;
+	this->mainWindow->getPos(&windowPos);
+	entry.wnd->getCtrl()->open(b, windowPos+pos);
+	my_printf("menuWindows[%d].ctxt is now %12X\n", lvl, (int64_t)b);
 }
 void AppCtrl::openContextMenu(guictxtmenu_base *b, ivec2 pos) {
-	if (this->ctxtmenuOld)
-		DELETE_PTR(this->ctxtmenuOld) //horrible lifetime management
+//	if (this->ctxtmenuOld)
+//		DELETE_PTR(this->ctxtmenuOld) //horrible lifetime management
 	this->ctxtmenu = b;
 	ivec2 windowPos;
 	this->mainWindow->getPos(&windowPos);
@@ -458,18 +465,42 @@ void AppCtrl::openContextMenu(guictxtmenu_base *b, ivec2 pos) {
 		contextWindow = this->mainWindow->createOverlay();
 	}
 	if (contextWindow) {
-		auto* thisTheme = contextWindow->getCtrl()->getTheme();
-		*thisTheme = *getTheme();
-//		thisTheme->setColor(GuiColor::COL_CLEAR_COLOR, 0xff000000);
+		auto* ctxtWindowTheme = contextWindow->getCtrl()->getTheme();
+		//copy theme from this control to contextWindows control
+		*ctxtWindowTheme = *getTheme();
 		contextWindow->getCtrl()->open(b, windowPos+pos);
 	}
 }
 void AppCtrl::closeContextMenu() {
-	if (contextWindow) {
+	if (this->ctxtmenu) {
+		assert(contextWindow);
 		contextWindow->getCtrl()->closePopup();
 	}
-	this->ctxtmenuOld = this->ctxtmenu;
-	this->ctxtmenu = nullptr;
+}
+void AppCtrl::onChildOverlayWindowClose(window_overlay* ptr) {
+	if (ptr == this->contextWindow) {
+		my_printf("ptr == this->contextWindow\n", 0);
+		assert(this->ctxtmenu);
+		this->ctxtmenu->onParentWindowClose();
+		//let it leak for now
+//		delete this->ctxtmenu;
+		this->ctxtmenu = nullptr;
+		return;
+	}
+	auto it = std::find_if(menuWindows.begin(), menuWindows.end(), [ptr](const auto& entry) {
+		return entry.wnd == ptr;
+	});
+	if (it != menuWindows.end()) {
+		auto lvl = it-menuWindows.begin();
+		auto& menuWnd = *it;
+		assert(menuWnd.ctxt);
+		menuWnd.ctxt->onParentWindowClose();
+//		delete menuWnd.ctxt;
+		menuWnd.ctxt = nullptr;
+		my_printf("menuWindows[%d].ctxt is now nullptr\n", lvl);
+		return;
+	}
+	assert(0);
 }
 bool AppCtrl::hasContextMenu() {
 	return this->contextWindow && this->contextWindow->isShown();

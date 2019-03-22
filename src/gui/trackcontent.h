@@ -314,31 +314,7 @@ public:
 		automation.render(vg);
 		nvgRestore(vg);
 	}
-	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-		if (automation.mouseHitTest(mpos, evt)) {
-			return true;
-		}
-		if (this->contains(mpos)) {
-			ivec2 localMouse = this->toContainerSpace(mpos);
-			for (guibase* gui : guis) {
-				if (gui->mouseHitTest(localMouse, evt)) {
-					return true;
-				}
-			}
-			if (evt.type == MouseHitType::MOUSE_RIGHT) { // righclick in selection (create clip etc.)
-				MainCtrl* ctrl = MainCtrl::get();
-				scaled_grid& grid = ctrl->getGrid();
-				tick_t tick = grid.screenToTickSnap(mpos.x, SNAP_OFF);
-				if (ctrl->cursor.contains(this->m_track->idx, tick)) {
-					evt.requestFocus(this);
-					return true;
-				}
-			}
-			// tracks need to always cancel further mouse tests for z-order to work in parent container
-			return true;
-		}
-		return false;
-	}
+	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
 	void layout() override {
 		positionChanged();
 		automation.layout();
@@ -356,12 +332,4 @@ public:
 		return this->m_track;
 	}
 };
-
-//class gui_track_audiochain : public gui_track {
-//public:
-//	gui_track_audiochain(track_t* _track) : gui_track(_track) {
-//
-//	}
-//};
-
 

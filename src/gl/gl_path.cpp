@@ -1,3 +1,4 @@
+#include "glheaders.h"
 #define _USE_MATH_DEFINES
 #include <cmath>
 #include <glm/glm.hpp>
@@ -7,12 +8,6 @@
 #include "str_util.h"
 #include "fileio.h"
 #include "audiocache.h"
-
-#if USE_GLAD_GL_HEADERS
-#include <glad/glad.h>
-#else
-#include "glcorearb.h"
-#endif
 
 #include "gl_path.h"
 #include "gl_util.h"

@@ -74,7 +74,7 @@ template<typename C1>
 template<typename C1, typename V1>
 inline bool removeEntry(C1& a, const V1& b) {
   auto curSize = a.size();
-  auto it = a.erase(std::remove_if(a.begin(), a.end(), [b](const auto& ref) {
+  a.erase(std::remove_if(a.begin(), a.end(), [b](const auto& ref) {
 	  return ref == b;
   }), a.end());
   return curSize != a.size();

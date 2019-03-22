@@ -1,6 +1,6 @@
 #include "plugincontrol.h"
 
-#include <glad/glad.h>
+#include "glheaders.h"
 #include <nanovg.h>
 #include <time.h>
 #include <algorithm>
@@ -103,6 +103,7 @@ void PluginControl::mouseMoved(ivec2 mousePos, ivec2 deltaPos) {
 }
 
 void PluginControl::relayout(int32_t w, int32_t h) {
+	closeAllAppMenus();
 	closeContextMenu();
 	m_size = ivec2(w, h);
 	view->layout(w, h);
@@ -143,9 +144,7 @@ bool PluginControl::processGlobalKeyevent(KeyEvent& event) {
 }
 
 bool PluginControl::mouseDownPre() {
-	if (ctxtmenu != NULL) {
-		closeContextMenu();
-	}
+	closeAllContextMenus();
 	return true;
 }
 

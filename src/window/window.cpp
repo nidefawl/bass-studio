@@ -19,6 +19,7 @@
 #include <math.h>
 #include <chrono>
 #include <vector>
+#include <iostream>
 #include <fstream>
 #include <sstream>
 #include <algorithm>
@@ -355,10 +356,7 @@ public:
 		onMouseMoved(idelta);
 	}
 
-	/* FROM GLFW CALLBACKS */
-	virtual void onWindowCloseRequest() {
-		my_printf("on window close\n", 0);
-	}
+	/* glfw callbacks */
 	virtual void render() = 0;
 	virtual void onKeyInput(int key, int scancode, int action, int mods, const char* key_name) = 0;
 	virtual void onMouseMoved(ivec2 deltapos) {
@@ -377,6 +375,9 @@ public:
 	}
 	virtual void onFramebufferSizeChanged(int width, int height) {
 	}
+	/* not from glfw */
+	virtual void onWindowClose() = 0;
+	virtual void onWindowCloseRequest() = 0;
 
 
 	virtual void onTick() = 0;
@@ -468,8 +469,10 @@ public:
 	void hideWindow() {
 		glfwHideWindow(glfw);
 		//this->timer = SetTimer(hwnd, 0, 1, (TIMERPROC)NULL);
+		onWindowClose();
 	}
 	bool isWindowNotHidden() {
+		//TODO: keep track of window visible state locally
 #ifdef _WIN32
 		if (hwnd == NULL)
 			return false;
@@ -528,15 +531,17 @@ public:
 	}
 #endif
 
-	virtual void onChildCreate(appwindow* child) {
+	virtual void onChildDialogCreate(appwindow* child) {
 		this->children.push_back(child);
 	}
-	virtual void onChildClose(appwindow* child) {
+	virtual void onChildDialogClose(appwindow* child) {
 		auto it = std::find(children.begin(), children.end(), child);
 		if (it != children.end())
 			children.erase(it);
 
 		delete child;
+	}
+	virtual void onChildOverlayClose(appwindow* child) {
 	}
 	ivec2 getMousePos() {
 		return ivec2((int)mousepos.x, (int)mousepos.y);
@@ -663,10 +668,15 @@ public:
 		flagNeedsRedraw();
 	}
 
-	void onWindowCloseRequest() 
-	{
-		appwindow::onWindowCloseRequest();
-		ctrl->onWindowCloseRequest();
+	void onWindowCloseRequest() override {
+		bool b = ctrl->onWindowCloseRequest();
+		glfwSetWindowShouldClose(glfw, b ? 1 : 0);
+		if (b) {
+			onWindowClose();
+		}
+	}
+	void onWindowClose() override {
+		ctrl->onWindowClose();
 	}
 	bool filesDropBegin(std::vector<String>& files, ivec2 pos, int kbmods) {
 		flagNeedsRedraw();
@@ -682,6 +692,7 @@ public:
     }
     void requestClose() override {
 		glfwSetWindowShouldClose(glfw, 1);
+		onWindowClose();
     }
     void menuCommand(int cmd) {
 #if WINDOW_HAS_MENUBAR
@@ -693,17 +704,23 @@ public:
     	ctrl->onMenuOpen(menu);
 #endif
     }
+    void someCrap() {
+
+    }
 #ifdef _WIN32
 	virtual LRESULT windowProc(HWND _hwnd, UINT Msg, WPARAM wParam, LPARAM lParam) override {
+		if (this->ctrl->hasMenuWindow()) {
+			bool dbg;
+			dbg = !!_hwnd;
+			someCrap();
+		}
 		switch (Msg) {
 		case WM_MOVING:
 		case WM_MOVE:
 		case WM_WINDOWPOSCHANGING:
 		case WM_WINDOWPOSCHANGED:
 		case WM_NCLBUTTONDOWN:
-//			my_printf("WM_ closeContextMenu\n", 0);
-//    		this->ctrl->closeAppMenus();
-    		this->ctrl->closeContextMenu();
+			this->ctrl->closeAllContextMenus();
 			break;
 
 		}
@@ -725,10 +742,11 @@ public:
 		ctrl->onKeyInput(key, scancode, action, mods, key_name);
 		flagNeedsRedraw();
 	}
-	void onChildClose(appwindow* child) {
+	void onChildDialogClose(appwindow* child) override {
 		glfwFocusWindow(this->glfw);
-		appwindow::onChildClose(child);
+		appwindow::onChildDialogClose(child);
 	}
+	void onChildOverlayClose(appwindow* child) override;
 	void captureMouse() {
 		appwindow::captureMouse();
 	}
@@ -794,12 +812,12 @@ class appwindow_overlay : public appwindow, public window_overlay {
 public:
 	appwindow* const parent;
 //	PopupCtrl* const ctrl;
-	std::unique_ptr<PopupCtrl> ctrl;
+	std::unique_ptr<PopupCtrl> popupCtrl;
 	appwindow_overlay(appwindow* _parent)
 		: appwindow(),
 		  window_overlay(),
 		  parent(_parent),
-		  ctrl(std::make_unique<PopupCtrl>())
+		  popupCtrl(std::make_unique<PopupCtrl>())
 	{
 		dblclicktimer = 0;
 	}
@@ -818,19 +836,17 @@ public:
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		if (!ctrl->isOk()) {
+		if (!popupCtrl->isOk()) {
 			throw std::logic_error("invalid application state");
 		}
-		ctrl->render(0, 0, winwidth, winheight, pxratio);
+		popupCtrl->render(0, 0, winwidth, winheight, pxratio);
 		glfwSwapBuffers(glfw);
 	}
+
 	PopupCtrl* getCtrl() {
-		return ctrl.get();
+		return popupCtrl.get();
 	}
-	void onWindowCloseRequest()
-	{
-		appwindow::onWindowCloseRequest();
-	}
+
 	void onTick() {
 	//	uint64_t tm = getTimeMillis();
 	//	float f = (float)(tm / 1000.0);
@@ -856,16 +872,31 @@ public:
 //		if (parent)
 //		SetParent(hwnd, parent->getHWND());
 	}
+
 	void hide() {
 		appwindow::hideWindow();
 	}
+
 	bool isShown() {
 		return appwindow::isWindowNotHidden();
 	}
+
+	void onWindowCloseRequest() override {
+		bool b = popupCtrl->onWindowCloseRequest();
+		glfwSetWindowShouldClose(glfw, b ? 1 : 0);
+		if (b) {
+			onWindowClose();
+		}
+	}
+	void onWindowClose() override {
+		popupCtrl->onWindowClose();
+		parent->onChildOverlayClose(this);
+	}
+
 	void onMouseMoved(ivec2 deltapos) {
 		if (abs(deltapos.x)+abs(deltapos.y) > 2)
 			this->dblclicktimer = 0;
-		ctrl->mouseMoved(getMousePos(), deltapos);
+		popupCtrl->mouseMoved(getMousePos(), deltapos);
 		flagNeedsRedraw();
 	}
 	void onMouseButton(int button, int action, int mods) {
@@ -874,23 +905,23 @@ public:
 			bool dblClick = this->dblclicktimer != 0 && timeMillis - this->dblclicktimer < 500;
 			dblClick &= glm::distance(lastclickpos, mousepos) < 4;
 			this->dblclicktimer = dblClick ? 0 : timeMillis;
-			ctrl->mouseDown(getMousePos(), button, dblClick);
+			popupCtrl->mouseDown(getMousePos(), button, dblClick);
 		} else if (action == GLFW_RELEASE) {
-			ctrl->mouseUp(getMousePos(), button);
+			popupCtrl->mouseUp(getMousePos(), button);
 		}
 		lastclickpos = mousepos;
 		flagNeedsRedraw();
 	}
 	void onWindowFocusChanged(int focused) {
 		if (focused) {
-			ctrl->focusReceived();
+			popupCtrl->focusReceived();
 		} else {
-			ctrl->focusLost();
+			popupCtrl->focusLost();
 		}
 		flagNeedsRedraw();
 	}
 	virtual void onMouseScrolled(double xoffset, double yoffset) {
-		ctrl->mouseScrolled(xoffset, yoffset);
+		popupCtrl->mouseScrolled(xoffset, yoffset);
 		flagNeedsRedraw();
 	}
 	void onWindowSizeChanged(int width, int height) {
@@ -900,7 +931,7 @@ public:
 
 	void onCharInput(unsigned int codepoint) {
 //		my_printf("overlay onCharInput 0x%04X\n", codepoint);
-		ctrl->onCharInput(codepoint);
+		popupCtrl->onCharInput(codepoint);
 		flagNeedsRedraw();
 	}
 	void onKeyInput(int key, int scancode, int action, int mods, const char* key_name)
@@ -909,7 +940,7 @@ public:
 //		my_printf("keyname %s, key %d, scancode %d\n", key_name, key, scancode);
 //		my_printf("mods %08X\n", mods);
 //		my_printf("overlay onKeyInput %d (%c) %d\n", key, key, scancode);
-		ctrl->onKeyInput(key, scancode, action, mods, key_name);
+		popupCtrl->onKeyInput(key, scancode, action, mods, key_name);
 		flagNeedsRedraw();
 	}
 
@@ -978,7 +1009,7 @@ public:
 		return appwindow::isMouseCaptured();
 	}
 	void onCursorEnter(int entered) {
-		ctrl->onCursorEnter(entered);
+		popupCtrl->onCursorEnter(entered);
 		if (entered)
 			glfwSetCursor(glfw, MouseCursors::cursors[cursorIcon]);
 	}
@@ -991,6 +1022,12 @@ public:
 	}
 };
 
+
+void appwindow_main::onChildOverlayClose(appwindow* child) {
+	appwindow::onChildOverlayClose(child);
+	appwindow_overlay* wndOverlay = static_cast<appwindow_overlay*>(child);
+	this->ctrl->onChildOverlayWindowClose(static_cast<window_overlay*>(wndOverlay));
+}
 
 int initDebugWindow();
 class appwindow_dialog : public appwindow, public window_dialog {
@@ -1007,7 +1044,7 @@ public:
 		glfwWindowHint(GLFW_FOCUSED, GL_TRUE);
 		appwindow::createBaseWindow(title, w, h, share);
 		if (parent)
-		this->parent->onChildCreate(this);
+		this->parent->onChildDialogCreate(this);
 
 #ifdef _WIN32
 		LONG l = GetWindowLong(hwnd, GWL_EXSTYLE);
@@ -1060,9 +1097,10 @@ public:
 		}
 		glfwSwapBuffers(glfw);
 	}
-	void onWindowCloseRequest()
-	{
-		appwindow::onWindowCloseRequest();
+	void onWindowCloseRequest() override {
+		onWindowClose();
+	}
+	void onWindowClose() override {
 #ifdef _WIN32
 		if (parent)
 		EnableWindow(parent->getHWND(), TRUE);
@@ -1073,7 +1111,7 @@ public:
 		my_printf("glfwSetWindowUserPointer\n", 0);
 		glfwSetWindowUserPointer(glfw, NULL);
 		if (parent)
-		this->parent->onChildClose(this);
+		this->parent->onChildDialogClose(this);
 		my_printf("END\n", 0);
 	}
 	void onTick() {
@@ -1282,7 +1320,7 @@ void appwindow_overlay::createOverlayWindow(const char* title, int w, int h, voi
 #if __linux__
 	setIsTransientFor(this->parent->getGLFW(), this->getGLFW());
 #endif
-	if (!ctrl->init(this, this->nanovgCtxt)) {
+	if (!popupCtrl->init(this, this->nanovgCtxt)) {
 		throw appexception("Couldn't start application");
 	}
 }

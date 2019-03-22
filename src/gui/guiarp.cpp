@@ -1,5 +1,6 @@
 #include "guiarp.h"
 #include "automatable.h"
+#include "guicontextmenu.h"
 #include "../host/mainctrl.h"
 #include "../threads/playbackthread.h"
 
@@ -15,7 +16,7 @@ public:
 	}
 	void clicked(int _id) {
 		handleAutomatbleContextMenu(m_track, effect, entry.idx, _id);
-		MainCtrl::get()->closeContextMenu();
+		parentCtrl->closePopup();
 	}
 };
 void gui_arp::buttonClicked(guibase* _button) {

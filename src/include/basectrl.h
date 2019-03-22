@@ -55,7 +55,7 @@ public:
 	NVGcontext* vg = NULL;
 	std::vector<guictr_base*> containers;
 	guictxtmenu_base *ctxtmenu = NULL;
-	guictxtmenu_base *ctxtmenuOld = NULL;
+//	guictxtmenu_base *ctxtmenuOld = NULL;
 	int cursorIcon = CURSOR_DEFAULT;
 	ivec2 m_size;
 	ivec2 m_mousePos;
@@ -141,10 +141,15 @@ public:
 	}
 	virtual void relayout() { relayout(m_size.x, m_size.y); };
 	virtual void relayout(int32_t w, int32_t h) { };
-	virtual void openContextMenu(guictxtmenu_base *b, glm::ivec2 pos) { };
+	virtual void openContextMenu(guictxtmenu_base *b, glm::ivec2 pos);
 	virtual void closeContextMenu() { };
-	virtual void closeAppMenus()  { };
-	virtual void closeAppMenus(int startlvl)  { };
+	void closeAllAppMenus()  { closeAppMenusAtLvl(0); };
+	virtual void closeAppMenusAtLvl(int startlvl)  { };
+	void closeAllContextMenus() {
+		closeContextMenu();
+		closeAllAppMenus();
+	}
+	virtual void openAppMenu(int lvl, guictxtmenu_base *b, ivec2 pos) { };
 	virtual void closePopup() { }; // close this window if its a popup window
 	virtual bool hasContextMenu() { return false; };
 	virtual void objectDragMove(guibase* g, MouseEvent& evt) { };
@@ -160,22 +165,37 @@ public:
 	void resetMouseContext();
 };
 class AppCtrl : public BaseCtrl {
+protected:
+	struct appmenu_window_entry {
+		window_overlay* wnd;
+		guictxtmenu_base *ctxt;
+	};
+	std::vector<appmenu_window_entry> menuWindows;
 public:
+	bool hasCtxtMenu() {
+		return this->ctxtmenu!=NULL;
+	}
+	bool hasMenuWindow() {
+		for (auto& w : menuWindows) {
+			if (w.ctxt)
+				return true;
+		}
+		return false;
+	}
 	window_main* mainWindow = NULL;
 	window_overlay* contextWindow = NULL;
-	std::vector<window_overlay*> menuWindows;
 #if WINDOW_HAS_MENUBAR
 	ngui::MenuBar menubar;
 #endif
 	AppCtrl() { }
 	virtual ~AppCtrl() { }
-	virtual void relayout(int32_t w, int32_t h) = 0;
-	void openContextMenu(guictxtmenu_base *b, ivec2 pos);
-	void closeContextMenu();
-	void openAppMenu(int lvl, guictxtmenu_base *b, ivec2 pos);
-	void closeAppMenus();
-	void closeAppMenus(int startlvl);
-	bool hasContextMenu();
+	virtual void relayout(int32_t w, int32_t h) override = 0;
+	void onChildOverlayWindowClose(window_overlay*);
+	void openContextMenu(guictxtmenu_base *b, ivec2 pos) override;
+	void closeContextMenu() override;
+	void openAppMenu(int lvl, guictxtmenu_base *b, ivec2 pos) override;
+	void closeAppMenusAtLvl(int startlvl) override;
+	bool hasContextMenu() override;
 	virtual void onKeyInput(int key, int scancode, int keyState, int mods, const char* key_name) override;
 	virtual void onCharInput(unsigned int codepoint) override;
 	virtual void onMenuOpen(ngui::Menu* menu);
@@ -193,7 +213,8 @@ public:
 	virtual bool filesDropBegin(std::vector<String>& files, ivec2 pos, int kbmods) { return false; };
 	virtual bool filesDropFinal(std::vector<String>& files, ivec2 pos, int kbmods) { return false; };
 	virtual void menuCommand(int cmd) { };
-	virtual void onWindowCloseRequest() { };
+	virtual void onWindowClose() { };
+	virtual bool onWindowCloseRequest() { return true; };
 
 	virtual void onTick() = 0;
 	virtual void initApp(int argc, char* argv[]) = 0;
@@ -215,7 +236,7 @@ public:
 	}
 	void destroy();
 	bool isShown() {
-		return this->window->isShown();
+		return this->window && this->window->isShown();
 	}
 	void closePopup() override;
 	void relayout(int32_t w, int32_t h) override;
@@ -224,5 +245,6 @@ public:
 	void focusReceived() { };
 	void focusLost();
 	bool hasInputFocus();
-
+	void onWindowClose();
+	bool onWindowCloseRequest();
 };

@@ -53,7 +53,6 @@ public:
 	}
 	virtual void clicked(int _id) {
 		parentCtrl->closePopup();
-		parentCtrl->closeContextMenu();
 	}
 //	virtual void handleDraggedBegin(MouseEvent& evt) override {
 //		return;

@@ -49,16 +49,20 @@ class guictr_menubar;
 class guimenu : public guictxtmenu {
 	//ngui::Menu* menu;
 	int lvl = 0;
+	std::vector<guimenu_ctxtentry*> guimenuEntries;
+	guimenu_ctxtentry* const parentSubmenuEntry;
 public:
 	guictr_menubar* parentMenuBar = NULL;
-	guimenu(ngui::Menu* _menu, int _lvl = 0) : guictxtmenu()/*, menu(_menu)*/, lvl(_lvl) {
+	guimenu(ngui::Menu* _menu, int _lvl = 0, guimenu_ctxtentry* parent = nullptr) : guictxtmenu()/*, menu(_menu)*/, lvl(_lvl), parentSubmenuEntry(parent) {
 		this->size.x = 190;
 		this->maxHeight = 0;
 		for (auto e : _menu->children) {
 			if (e->type == ngui::menu_type::seperator) {
 				addEntry(new ctxtmenu_splitter());
 			} else {
-				addEntry(new guimenu_ctxtentry(e));
+				auto* entry = new guimenu_ctxtentry(e);
+				addEntry(entry);
+				guimenuEntries.push_back(entry);
 			}
 		}
 		 my_printf("guimenu\n", 0);
@@ -68,7 +72,8 @@ public:
 	}
 	void clicked(int _id);
 	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
-	virtual void onRemove();
+	virtual void onRemove() override;
+	virtual void onParentWindowClose() override;
 };
 class guictr_menubar_entry : public guibase {
 public:
@@ -114,8 +119,7 @@ public:
 		layout();
 	}
 	void layout() {
-		parentCtrl->closeContextMenu();
-		parentCtrl->closeAppMenus();
+		parentCtrl->closeAllAppMenus();
 		destroyGuis();
 		NVGcontext* vg = parentCtrl->vg;
 		int fontSize = (int) (size.y * 0.8);
@@ -142,11 +146,12 @@ public:
 		}
 	}
 	void openMenu(guictr_menubar_entry* entry) {
+		parentCtrl->closeAllAppMenus();
 		parentCtrl->closeContextMenu();
 		guimenu *popup = new guimenu(entry->menu, 0);
 		popup->parentMenuBar = this;
 		popup->size.x = 250;
-		parentCtrl->openContextMenu(popup, entry->toScreenSpace(ivec2(0, entry->size.y)) - popup->pos + ivec2(1));
+		parentCtrl->openAppMenu(0, popup, entry->toScreenSpace(ivec2(0, entry->size.y)) - popup->pos + ivec2(1));
 		currentMenu = entry;
 	}
 	void hoverMenu(guictr_menubar_entry* entry) {

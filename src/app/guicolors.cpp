@@ -104,6 +104,7 @@ constant_t COL_NOTE_MUTE = constant_t("COL_NOTE_MUTE", 0xFF000000);
 constant_t COL_NOTE_OUTLINE = constant_t("COL_NOTE_OUTLINE", 0xFF000000);
 constant_t COL_NOTE_TEXT = constant_t("COL_NOTE_TEXT", 0xFF000000);
 constant_t COL_BG_SELECTEDTRACK = constant_t("COL_BG_SELECTEDTRACK", 0xFF000000);
+constant_t COL_BG_SELECTEDTRACK_TITLE = constant_t("COL_BG_SELECTEDTRACK_TITLE", 0xFF000000);
 constant_t COL_BG_DRKER = constant_t("COL_BG_DRKER", 0xFF000000);
 constant_t COL_BG_DRKER2 = constant_t("COL_BG_DRKER2", 0xFF000000);
 constant_t COL_BG_DRK_SELECTED = constant_t("COL_BG_DRK_SELECTED", 0xFF000000);
