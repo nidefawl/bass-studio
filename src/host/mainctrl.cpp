@@ -376,6 +376,7 @@ void MainCtrl::unloadProject() {
 	projectPath = "";
 	setSelectedTrack(NULL);
 	clipView.set(NULL);
+	cursor.setEmptySelection();
 //	std::shared_ptr<clip_clipboard>& clipboard = view->ctr_tracks.trackView.clipboard;
 //	clipboard.reset();
 	vector<track_t*> _tracks = trackList.vec();  // iterate a copy

@@ -86,6 +86,9 @@ public:
 		cursorSubTrack = sstr;
 		selSubTrackRange = estr - sstr;
 	}
+	void setEmptySelection() {
+		*this = Cursor();
+	}
 	Cursor getLeftAligned() {
 		Cursor cursor;
 		cursor = *this;
