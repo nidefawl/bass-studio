@@ -1015,6 +1015,11 @@ bool MainCtrl::filesDropFinal(vector<string>& files, ivec2 mousepos, int kbmods)
 	}
 	return false;
 }
+#if defined(__GNUC__) && defined(ENABLE_MICHAELS_GLIBCXX_HACKS)
+namespace STLVectorDebugTracking {
+	void dbgPrintVectorAllocs();
+}
+#endif
 
 bool MainCtrl::processGlobalKeyevent(KeyEvent& event) {
 
@@ -1030,6 +1035,10 @@ bool MainCtrl::processGlobalKeyevent(KeyEvent& event) {
 	}
 	if (event.type != KeyEventType::K_RELEASE) {
 		if (event.keyCode == KEY_M) {
+			ThreadLock lock = playThread.lockThread();
+#if defined(__GNUC__) && defined(ENABLE_MICHAELS_GLIBCXX_HACKS)
+			STLVectorDebugTracking::dbgPrintVectorAllocs();
+#endif
 //			ngui::show("Hello, you pressed the M key. Thanks you for your efforts", "Well done!", ngui::Style::Info, ngui::Buttons::OK);
 			return true;
 		}
