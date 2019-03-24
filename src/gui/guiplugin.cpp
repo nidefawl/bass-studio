@@ -318,16 +318,17 @@ void guivstplugin::setControl(BaseCtrl* parentCtrl) {
 	}
 }
 
-void guivstplugin::determineSize() {
+void guivstplugin::determineSize(glm::ivec2& prefSize) {
 	if (this->viewCtr) {
 		this->viewCtr->getFixedSize(&sizeCtrs.x, &sizeCtrs.y);
 		int width = (int)((sizeCtrs.x/(float)sizeCtrs.y)*size.y);
 		sizeCtrs.x = width;
 		sizeCtrs.y = size.y;
-		size.y = std::max(sizeCtrs.y, size.y);
-		size.x += sizeCtrs.x;
+		prefSize.y = std::max(sizeCtrs.y, prefSize.y);
+		prefSize.x += sizeCtrs.x;
 	} else {
 		sizeCtrs = {0, 0};
+		// we accept whatever prefSize
 	}
 }
 void guivstplugin::render(NVGcontext* vg) {
@@ -419,8 +420,9 @@ void guivstplugin::layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {
 		int left = params.right() + INSET_TITLE;
 		for (auto* ctr : viewCtrs) {
 			ctr->pos = ivec2(left, 0) + ivec2(insetCtrls, insetCtrls + hpt);
-			ctr->size = ivec2(sizeCtrs.x, contentS.y) - ivec2(insetCtrls*2);
-			ctr->determineSize();
+			ivec2 prefSizeCtr = ivec2(sizeCtrs.x, contentS.y) - ivec2(insetCtrls*2);
+			ctr->determineSize(prefSizeCtr);
+			ctr->size = prefSizeCtr;
 			ctr->layout();
 			left = ctr->right() + INSET_TITLE;
 		}

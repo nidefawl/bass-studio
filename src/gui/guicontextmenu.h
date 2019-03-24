@@ -31,6 +31,7 @@ public:
 		}
 	}
 	void addEntry(ctxtmenu_entry* entry) {
+		size.x = std::max(size.x, entry->width);
 		entries.push_back(entry);
 		entry->theme = theme;
 	}
@@ -58,19 +59,21 @@ public:
 	void layout() {
 		//TODO: figure out string width here to make life easier laying out context menus
 		int y = paddingV;
-		ivec2 initSize = size;
-		ivec2 newMaxSize(0);
 		for (ctxtmenu_entry* e : entries) {
-			e->layout(initSize, fontSize);
+			e->layout(size, fontSize);
 			e->y = y;
 			y += e->height + paddingV;
-			newMaxSize.x = std::max(newMaxSize.x, e->width);
 		}
-		newMaxSize.y = y;
-		size = newMaxSize;
 	}
-	void determineSize() override {
-		//nothing
+	void determineSize(glm::ivec2& prefSize) override {
+		ivec2 newMaxSize = {size.x, paddingV};
+		for (ctxtmenu_entry* e : entries) {
+			newMaxSize.y += e->height + paddingV;
+		}
+		if (entries.empty()) {
+			newMaxSize.y += paddingV;
+		}
+		prefSize = newMaxSize;
 	}
 
 	void render(NVGcontext* vg) {

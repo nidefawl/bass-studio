@@ -47,8 +47,11 @@ bool PopupCtrl::onWindowCloseRequest() {
 	return true;
 }
 void PopupCtrl::relayout(int32_t w, int32_t h) {
-	popupCtrs->size = ivec2(w, h);
-	popupCtrs->determineSize();
+
+	// Popup window shouldn't change its shape, just call layout
+//	ivec2 prefSize(w, h)
+//	popupCtrs->determineSize(prefSize);
+//	popupCtrs->size = prefSize;
 	popupCtrs->layout();
 };
 void PopupCtrl::open(guictxtmenu_base *_ctxtmenu, ivec2 pos) {
@@ -62,15 +65,14 @@ void PopupCtrl::open(guictxtmenu_base *_ctxtmenu, ivec2 pos) {
 	popupCtrs->maxHeight = _ctxtmenu->maxHeight;
 	popupCtrs->scrollbarOutside = _ctxtmenu->scrollbarOutside;
 	popupCtrs->setBackgroundRendered(_ctxtmenu->isBackgroundRendered());
-	_ctxtmenu->determineSize();
+	_ctxtmenu->determineSize(_ctxtmenu->size);
 	_ctxtmenu->layout();
 
 
 
-
-	popupCtrs->size = vec2(0);
+	popupCtrs->size = vec2(_ctxtmenu->size.x, std::max(0, popupCtrs->maxHeight));
 	popupCtrs->add(_ctxtmenu);
-	popupCtrs->determineSize();
+	popupCtrs->determineSize(popupCtrs->size);
 	popupCtrs->layout();
 	window_overlay* appW = static_cast<window_overlay*>(this->window);
 	appW->positionOnScreen(pos-insetCtxtMenu, popupCtrs->size);

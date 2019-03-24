@@ -1,5 +1,20 @@
 #include "guiscrollcontainer.h"
+#include <vector>
+#include "event.h"
+#include "gui.h"
+#include "guicontainer.h"
+#include "guicolors.h"
+#include "scrollbar.h"
+#include "basectrl.h"
 
+#include <glm/glm.hpp>
+#include <glm/vec2.hpp>
+#include <glm/vec3.hpp>
+#include <glm/vec4.hpp>
+using glm::vec2;
+using glm::ivec2;
+using glm::vec4;
+using glm::ivec4;
 
 void guictr_scrollbar::render(NVGcontext* vg) {
 	if (isBackgroundRendered()) {
@@ -22,14 +37,16 @@ void guictr_scrollbar::render(NVGcontext* vg) {
 	}
 }
 
-void guictr_scrollbar::determineSize() {
+void guictr_scrollbar::determineSize(glm::ivec2& prefSize) /* const */{
 	for (guibase* gui : guis) {
 		if (gui == &scrollbar)
 			continue;
+
 		gui->pos = {0, 0};
-//		gui->size = size;
-		gui->determineSize();
+		gui->size = prefSize;
+		gui->determineSize(gui->size);
 		gui->layout();
+
 	}
 	ivec2 maxSize = ivec2(0);
 	for (guibase* gui : guis) {
@@ -39,17 +56,17 @@ void guictr_scrollbar::determineSize() {
 		maxSize.x = std::max(maxSize.x, gui->right());
 		maxSize.y = std::max(maxSize.y, gui->bottom());
 	}
-	size.x = std::max(maxSize.x, size.x);
+	prefSize.x = std::max(maxSize.x, prefSize.x);
 	contentHeight = maxSize.y;
 	const gui_scrollbar* bar = &scrollbar;
 	if (maxHeight == -1) {
-		hasScrollbar = maxSize.y > size.y;
+		hasScrollbar = maxSize.y > prefSize.y;
 	} else if (maxHeight > 0 && maxSize.y > maxHeight) {
-		size.y = maxHeight - 5;
+		prefSize.y = maxHeight - 5;
 		hasScrollbar = true;
 	} else {
 		hasScrollbar = false;
-		size.y = maxSize.y;
+		prefSize.y = maxSize.y;
 	}
 	scrollbar.setVisible(hasScrollbar);
 	scrollbar.parent = this;
@@ -63,7 +80,8 @@ void guictr_scrollbar::determineSize() {
 }
 
 void guictr_scrollbar::onChildLayoutChanged(guibase* g) {
-	determineSize();
+//	glm::ivec2 prefSize = getSizeContent();
+//	determineSize(prefSize);
 	layout();
 	if (this->parent != NULL) {
 		this->parent->onChildLayoutChanged(this);

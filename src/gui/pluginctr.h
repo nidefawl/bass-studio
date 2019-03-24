@@ -92,7 +92,7 @@ public:
 		setFont(vg, 18, G_WHITE, NVG_ALIGN_CENTER|NVG_ALIGN_MIDDLE);
 		nvgText(vg, pos.x + size.x/2.0f, pos.y + size.y/2.0f, StringAsCStr(message), NULL);
 	}
-	void determineSize() override {
+	void determineSize(glm::ivec2& prefSize) override {
 		size.x = std::max(100, size.y*3/5);
 	}
 };
@@ -226,7 +226,7 @@ public:
 	void relayout();
 	void addGui(effectbase* plugin);
 	void onChildLayoutChanged(guibase* g) override;
-	virtual void determineSize() override;
+	virtual void determineSize(glm::ivec2& prefSize) override;
 	virtual guibase* getDraggedControl() override;
 	void getEffects(std::vector<effectbase*>& out);
 	virtual bool isSelected() override;

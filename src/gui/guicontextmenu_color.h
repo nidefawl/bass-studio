@@ -30,10 +30,10 @@ public:
 	{
 		this->id = _id;
 		this->title = _title;
+		this->width = pad * 2 + (WH + padCell) * COLS - padCell;
 	}
 	void layout(ivec2 size, int32_t _fontSize) override {
 		this->fontSize = _fontSize;
-		width = pad * 2 + (WH + padCell) * COLS - padCell;
 		height = _fontSize + pad * 2 + (WH + padCell) * ROWS - padCell;
 	}
 	void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) {

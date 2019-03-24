@@ -151,7 +151,7 @@ public:
 	virtual void render(NVGcontext* vg) {
 
 	}
-	virtual void determineSize() {
+	virtual void determineSize(glm::ivec2& prefSize)/* const */ {
 	}
 	virtual void prerender(NVGcontext* vg) {
 	}

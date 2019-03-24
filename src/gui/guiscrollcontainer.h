@@ -45,7 +45,7 @@ public:
 		return scrollbar;
 	}
 	virtual void render(NVGcontext* vg);
-	void determineSize() override;
+	void determineSize(glm::ivec2& prefSize) override;
 	void layout() override;
 	void onChildLayoutChanged(guibase* g) override;
 	bool mouseHitTest(ivec2 v, MouseHitEvt& evt) override;

@@ -59,7 +59,7 @@ public:
 
 	virtual void onRemove() override;
 	virtual void onAdded() override;
-	virtual void determineSize() override {
+	virtual void determineSize(glm::ivec2& prefSize) override {
 	}
 	virtual ivec2 paddingTL(int _padding) {
 		return ivec2(_padding - margin*snapSides.x, _padding - margin*snapSides.y);

@@ -381,13 +381,6 @@ void guictr_plugins::pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 mousepos
 	}
 	MainCtrl::get()->getDragDropTarget().set(this, slotFromCoord(mousepos));
 }
-void guictr_plugins::determineSize() {
-	int32_t maxX = 0;
-	for (guibase* gui : guis) {
-		maxX = std::max(gui->right(), maxX);
-	}
-	size.x = maxX;
-}
 int guictr_plugins::slotFromCoord(ivec2 _pos) {
 	if (stage->effects.empty())
 		return 0;
@@ -853,7 +846,14 @@ void guictr_plugins::onTick(AppCtrl* ctrl) {
 	}
 }
 void guictr_plugins::layout() {
-	ivec2 sizeInset = getSizeContent();
+	determineSize(size);
+//	for (guibase* gui : guis) {
+//		gui->layout();
+//	}
+}
+void guictr_plugins::determineSize(glm::ivec2& prefSize) {
+
+	ivec2 sizeInset = prefSize - (paddingTL(padding) + paddingBR(padding));
 	int32_t guiH = sizeInset.y - margin;
 	int32_t titleHeight = ((guiH/8)>>1)<<1;
 	theme->set(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT, titleHeight);
@@ -861,10 +861,17 @@ void guictr_plugins::layout() {
 	ivec2 gPos(inset * 3, 0);
 	for (guibase* gui : guis) {
 		gui->pos = gPos;
-		gui->size = ivec2(guiH);
-		gui->determineSize();
+		gui->size = {guiH, guiH};
+		gui->determineSize(gui->size);
 		gui->pos.y = inset;
 		gPos.x += gui->size.x + margin * 2;
 		gui->layout();
+	}
+	if (!isDefaultPluginCtr) {
+		int32_t maxX = 0;
+		for (guibase* gui : guis) {
+			maxX = std::max(gui->right(), maxX);
+		}
+		prefSize.x = maxX;
 	}
 }

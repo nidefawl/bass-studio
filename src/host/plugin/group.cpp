@@ -62,23 +62,25 @@ public:
 	void buttonClicked(guibase* _button) override;
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
 	void onChildLayoutChanged(guibase* g) override;
-	void determineSize() override {
+	void determineSize(glm::ivec2& prefSize) override {
 		assert(module->getAudioStage());
 
 		const int32_t hpt = theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT);
 		int32_t meterW = std::max(16, (int32_t)(theme->get(GuiConstant::CONST_METER_WIDTH)*hpt/32.0));
 		ctr.pos = ivec2(hpt, 0);
-		ctr.size = ivec2(size.y, size.y);
+//		ctr.size = ivec2(size.y, size.y);
+//		ctr.layout();
+//		my_printf("determineSize ctr.children.size() %d\n", ctr.guis.size());
+//		int len = (int)ctr.guis.size();
+//		for (int i = 0; i < len; i++) {
+//			guibase* g = ctr.guis[i];
+//			my_printf("%s guis[%d] %d %d %d %d\n", StringAsCStr(ctr.getClassName()), i, g->pos.x, g->pos.y, g->size.x, g->size.y);
+//		}
+		glm::ivec2 prefSizeGrpContent = {prefSize.y, prefSize.y};
+		ctr.size = prefSizeGrpContent;
+//		ctr.determineSize(prefSizeGrpContent);
 		ctr.layout();
-		my_printf("determineSize ctr.children.size() %d\n", ctr.guis.size());
-		int len = (int)ctr.guis.size();
-		for (int i = 0; i < len; i++) {
-			guibase* g = ctr.guis[i];
-			my_printf("%s guis[%d] %d %d %d %d\n", StringAsCStr(ctr.getClassName()), i, g->pos.x, g->pos.y, g->size.x, g->size.y);
-		}
-		ctr.determineSize();
-		size.x = hpt+meterW;
-		size.x += ctr.size.x;
+		prefSize.x = hpt+ctr.size.x+meterW;
 	}
 	void layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) override {
 	}

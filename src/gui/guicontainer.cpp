@@ -36,7 +36,7 @@ void guictr_base::setParent(guibase* parent) {
 	guibase::setParent(parent);
 	for (guibase* g : guis) {
 		assert(g->parent == this);
-//			g->setParent(this);
+			g->setParent(this);
 	}
 }
 void guictr_base::onRemove() {
@@ -237,7 +237,7 @@ void guictr_tabbed::layout() {
 	for (tabbed_entry* entry : entries) {
 		entry->tabCtr->pos = ivec2(0, sizeBar.y);
 		entry->tabCtr->size = sizeContentTab;
-		entry->tabCtr->determineSize();
+		entry->tabCtr->determineSize(entry->tabCtr->size);
 		entry->tabCtr->layout();
 	}
 

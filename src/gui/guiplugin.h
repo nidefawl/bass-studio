@@ -78,14 +78,20 @@ public:
 	vstplugin* const vst;
 	gui_list params; //TODO: use add() on controls
 	guibuttontoggle buttonOpenEditor; //TODO: use add() on controls
+
+	/* holds view controller for internal vstplugins with custom gui (non-steinberg api) */
 	PluginViewContainers* viewCtr = nullptr;
+	/* holds guictrs of internal vstplugins with custom gui (non-steinberg api) */
 	std::vector<guictr_base*> viewCtrs;
+	/* holds size for internal vstplugins with custom gui (non-steinberg api) */
 	ivec2 sizeCtrs;
+
+
 	void layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1);
 	void render(NVGcontext* vg) override;
 	void buttonClicked(guibase* _button) override;
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
 	guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
 	virtual void setControl(BaseCtrl* parentCtrl) override;
-	void determineSize() override;
+	void determineSize(glm::ivec2& prefSize) override;
 };

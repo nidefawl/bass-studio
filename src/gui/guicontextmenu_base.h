@@ -113,16 +113,16 @@ public:
 	void render(NVGcontext* vg) override {
 		guictr_base::render(vg);
 	}
-	void determineSize() override {
+	void determineSize(glm::ivec2& prefSize) override {
 		ivec2 maxSize = ivec2(0);
 		for (guibase* gui : guis) {
 			maxSize.x = max(maxSize.x, gui->right());
 			maxSize.y = max(maxSize.y, gui->bottom());
 		}
-		size = maxSize;
+		prefSize = maxSize;
 	}
 	virtual void onChildLayoutChanged(guibase* g) override {
-		determineSize();
+//		determineSize();
 		if (this->parent != NULL) {
 			this->parent->onChildLayoutChanged(this);
 		}

@@ -355,7 +355,7 @@ public:
 		}
 	}
 	void setDebugPropertyHandle(void *ptr) override;
-	void determineSize() override {
+	void determineSize(glm::ivec2& prefSize) override {
 
 	}
 };
@@ -649,25 +649,25 @@ public:
 class guictr_theme_settings : public guictr_base {
 
 	guiproperties_table<guitheme_t> themeProperties;
-	guictr_scrollbar scrollbar;
+	guictr_scrollbar scrollContainer;
 	guidropdown_selecttheme selectTheme;
 	guibutton buttonAdd;
 	guibutton buttonRemove;
 	guibutton buttonSave;
 public:
-	guictr_theme_settings() : guictr_base(), themeProperties(nullptr, false), scrollbar(), selectTheme() {
+	guictr_theme_settings() : guictr_base(), themeProperties(nullptr, false), scrollContainer(), selectTheme() {
 		padding = 0;
 		margin = 0;
 		buttonAdd.setText("+");
 		buttonRemove.setText("-");
 		buttonSave.setText("save");
-		add(&scrollbar);
+		add(&scrollContainer);
 		add(&selectTheme);
 		add(&buttonSave);
 		add(&buttonRemove);
 		add(&buttonAdd);
-		scrollbar.add(&themeProperties);
-		scrollbar.maxHeight = -1;
+		scrollContainer.add(&themeProperties);
+		scrollContainer.maxHeight = -1;
 	}
 	~guictr_theme_settings() {
 		removeGuis();
@@ -727,9 +727,9 @@ public:
 		buttonAdd.pos = { buttonRemove.left() - buttonAdd.size.x, 0 };
 		selectTheme.pos = {0, 0};
 		selectTheme.size = { buttonAdd.left(), hTop};
-		scrollbar.pos = {0, hTop};
-		scrollbar.size = {size.x, size.y-hTop};
-		scrollbar.determineSize();
+		scrollContainer.pos = {0, hTop};
+		scrollContainer.size = {size.x, size.y-hTop};
+		scrollContainer.determineSize(scrollContainer.size);
 
 		for (auto c : guis) {
 			c->layout();
