@@ -1666,6 +1666,8 @@ int startApplication(int argc, char* argv[]) {
 #include "plugins/plugin-window.h"
 #include "plugins/plugincontrol.h"
 #include "plugins/handle-exceptions.h"
+#include "../vstsdk-host-2.4/aeffect.h"
+#include "../vstsdk-host-2.4/aeffectx.h"
 #include "../vstsdk-plugin-2.4/aeffeditor.h"
 
 class appwindow_plugin : public appwindow_main, public pluginwindow {

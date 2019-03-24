@@ -381,7 +381,7 @@ int32_t vstplugin::getDelay() {
 void vstplugin::process(AudioBlock* in, AudioBlock* out, int32_t samples) {
 	if (handle->aeffect != NULL) {
 		if (handle->aeffect->flags & effFlagsCanReplacing) {
-				handle->aeffect->processReplacing(handle->aeffect, in->buf, out->buf, samples);
+			handle->aeffect->processReplacing(handle->aeffect, in->buf, out->buf, samples);
 		} else {
 			handle->aeffect->process(handle->aeffect, in->buf, out->buf, samples);
 		}
