@@ -1,4 +1,5 @@
 # ignore everything
 build*/
 testing/
+old-versions/
 CMakeCache.txt
