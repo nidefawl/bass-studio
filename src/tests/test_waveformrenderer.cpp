@@ -1,28 +1,23 @@
-#include "TestBase.hpp"
-#include <vector>
-#include <memory>
-#include "../gui/drawwaveform.h"
-#include "audiocache.h"
-
 #include "glheaders.h"
 #define NANOVG_GL3_IMPLEMENTATION
 #include <nanovg.h>
 #include <nanovg_gl.h>
 #include <nanovg_gl_utils.h>
-#include "audiowaveform.h"
-#include <glm/glm.hpp>
+#include <vector>
+#include <memory>
 #include <algorithm>
-#include "logging.h"
 #include <unistd.h>
 
 
-using std::min;
-using std::max;
+#include "TestBase.hpp"
+#include "math/vec.h"
+#include "math/seq_math.h"
+#include "str_util.h"
+#include "audiocache.h"
+#include "audiowaveform.h"
+#include "gui/drawwaveform.h"
+#include "logging.h"
 
-
-using glm::ivec2;
-using glm::vec2;
-using glm::vec3;
 
 String excDescription;
 GLPathRenderer renderer;
@@ -54,7 +49,7 @@ int benchmark_waverender(cachedaudio_t* sample, BakeGLPath& bakedPath) {
 	w.sampleBeginOffset = 0;
 	w.sampleEnd = lenSamples;
 	w.samplesPerPx = samplesPerPx;
-	w.linewidth = 1.50f+min(0.75, max(0.0, zoom*32.0));
+	w.linewidth = 1.50f+math::min(0.75, math::max(0.0, zoom*32.0));
 	w.method = SampleMethod::sample_straight;
 	w.audioId = sample->id;
 
@@ -62,13 +57,13 @@ int benchmark_waverender(cachedaudio_t* sample, BakeGLPath& bakedPath) {
 
 
 	SampleMethod method = w.method;
-	std::vector<std::vector<glm::vec2>> tesselatedWaveForms;
+	std::vector<std::vector<vec2>> tesselatedWaveForms;
 	tesselateWaveform(audioSample, 0, 0, &w, method, tesselatedWaveForms);
 	Uniforms bakeOpt;
 	bakeOpt.linecaps = vec2(LineCaps::none, LineCaps::none);
 	bakeOpt.linejoin = w.linewidth > 1.75 ? LineJoin::round : LineJoin::miter;
 	bakeOpt.miter_limit = 1.8f;
-	bakeOpt.color = vec4(vec3(1), 1.0);
+	bakeOpt.color = { 1.0f, 1.0f, 1.0f, 1.0f };
 	//	uint32_t color = colorPalette[(nextIdx++%(COLOR_PALETTE_COLS-2))*COLOR_PALETTE_ROWS+3];
 	//	bakeOpt.color = int32vec4(color);
 	//	bakeOpt.color.w = 1.0;
@@ -81,7 +76,7 @@ int benchmark_waverender(cachedaudio_t* sample, BakeGLPath& bakedPath) {
 
 	return 0;
 }
-void tesselate(cachedaudio_t* sample, std::vector<std::vector<glm::vec2>>& out) {
+void tesselate(cachedaudio_t* sample, std::vector<std::vector<vec2>>& out) {
 	audiosample_t* audioSample = sample->sample.get();
 	ivec2 size = {700, 120};
 
@@ -109,7 +104,7 @@ void tesselate(cachedaudio_t* sample, std::vector<std::vector<glm::vec2>>& out) 
 	w.sampleBeginOffset = 0;
 	w.sampleEnd = lenSamples;
 	w.samplesPerPx = samplesPerPx;
-	w.linewidth = 1.50f+min(0.75, max(0.0, zoom*32.0));
+	w.linewidth = 1.50f+math::min(0.75, math::max(0.0, zoom*32.0));
 	w.method = SampleMethod::sample_straight;
 	w.audioId = sample->id;
 
@@ -171,7 +166,7 @@ void packVertexDataTest(vec2list& verticesIn, std::vector<vert>& outVdata, int i
 	}
 }
 template <typename F>
-void benchmark_packdata(F f, std::vector<std::vector<glm::vec2>>& tesselatedWaveForms) {
+void benchmark_packdata(F f, std::vector<std::vector<vec2>>& tesselatedWaveForms) {
 
 	std::vector<vert> outVdata;
 	int len = tesselatedWaveForms.size();
@@ -196,7 +191,7 @@ int main(int argc, char* argv[]) {
 	ALEPH_TEST_BEGIN("testThreadWorkerTasks");
 #define NLOOPS 2111
 	hires_timer_t t;
-	std::vector<std::vector<glm::vec2>> tesselatedWaveForms;
+	std::vector<std::vector<vec2>> tesselatedWaveForms;
 	t.reset();
 	tesselate(sample, tesselatedWaveForms);
 	my_printf("tesselate %luus\n", t.getTime());

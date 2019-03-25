@@ -1,8 +1,8 @@
 #pragma once
-#include <glm/glm.hpp>
 #include <vector>
 #include <stdint.h>
 
+#include "math/vec.h"
 #include "gl_vbo.h"
 #include "gl_attr.h"
 #include "hires_timer.h"
@@ -10,8 +10,6 @@
 #ifndef GL_FLOAT
 #define GL_FLOAT 0x1406
 #endif
-using glm::vec2;
-using glm::vec4;
 using vec2list = std::vector<vec2>;
 
 struct BakeGLPath {

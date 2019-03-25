@@ -1,5 +1,4 @@
 #pragma once
-#include <glm/vec2.hpp>
 #include "str_util.h"
 #include "color_util.h"
 #include "guicontainer.h"
@@ -8,12 +7,8 @@
 #include "basectrl.h"
 #include "table.h"
 #include "../host/mainctrl.h"
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
+#include "math/vec.h"
 #include "guiplugin.h"
-
-using glm::vec2;
-using glm::ivec2;
 
 class vstplugin;
 class effectbase;
@@ -92,8 +87,8 @@ public:
 		setFont(vg, 18, G_WHITE, NVG_ALIGN_CENTER|NVG_ALIGN_MIDDLE);
 		nvgText(vg, pos.x + size.x/2.0f, pos.y + size.y/2.0f, StringAsCStr(message), NULL);
 	}
-	void determineSize(glm::ivec2& prefSize) override {
-		size.x = std::max(100, size.y*3/5);
+	void determineSize(ivec2& prefSize) override {
+		size.x = math::max(100, size.y*3/5);
 	}
 };
 class guictr_dragged_plugins : public guictr_base {
@@ -226,7 +221,7 @@ public:
 	void relayout();
 	void addGui(effectbase* plugin);
 	void onChildLayoutChanged(guibase* g) override;
-	virtual void determineSize(glm::ivec2& prefSize) override;
+	virtual void determineSize(ivec2& prefSize) override;
 	virtual guibase* getDraggedControl() override;
 	void getEffects(std::vector<effectbase*>& out);
 	virtual bool isSelected() override;
@@ -244,7 +239,7 @@ public:
 		ivec2 cs = this->getSizeContent();
 		ivec2 csp = ctr_plugins->getSizeContent();
 		int32_t w = ctr_plugins->getTotalWidth();
-		float sc = max(1.0f, csp.x / (float) w);
+		float sc = math::max(1.0f, csp.x / (float) w);
 		return vec2((cs.x / (double)csp.x)*sc, cs.y / (double)csp.y);
 	}
 
@@ -262,7 +257,7 @@ public:
 		ivec2 csp = ctr_plugins->getSizeContent();
 		if (cs.x > 0 && cs.y > 0 && csp.x > 0 && csp.y > 0) {
 			int32_t w = ctr_plugins->getTotalWidth();
-			return min((cs.x / (float) max(csp.x,w)), cs.y / (float) csp.y);
+			return math::min((cs.x / (float) math::max(csp.x,w)), cs.y / (float) csp.y);
 		}
 		return 1.0f;
 	}

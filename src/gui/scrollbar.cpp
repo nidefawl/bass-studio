@@ -5,11 +5,7 @@
 #include "guicolors.h"
 #include "theme.h"
 #include "basectrl.h"
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
 
-using glm::vec2;
-using glm::ivec2;
 void gui_scrollbar::render(NVGcontext* vg) {
 	nvgBeginPath(vg);
 	nvgRoundedRect(vg, pos.x, pos.y, size.x, size.y, G_RND);
@@ -21,7 +17,7 @@ void gui_scrollbar::render(NVGcontext* vg) {
 	if (vcS[dir] > 0 && vcS[dir] > vs[dir]) {
 		vec2 barOff(0);
 		vec2 barS = size;
-		barS[dir] = std::min((float) size[dir], (vs[dir] / (float) vcS[dir]) * size[dir]);
+		barS[dir] = math::min((float) size[dir], (vs[dir] / (float) vcS[dir]) * size[dir]);
 		barOff[dir] = (size[dir] - barS[dir]) * scrollOffset;
 		int32_t inset = 1;
 		nvgBeginPath(vg);

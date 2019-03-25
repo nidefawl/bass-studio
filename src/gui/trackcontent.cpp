@@ -1,6 +1,3 @@
-
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
 #include <glm/geometric.hpp>
 #include <memory>
 #include <numeric>
@@ -26,9 +23,6 @@
 #include "leak_detect.h"
 
 #include "guicontextmenu_daw.h"
-
-using glm::vec2;
-using glm::ivec2;
 
 void gui_midi_clip::handleRightClick(MouseEvent& evt) {
 	MainCtrl::get()->openContextMenu(new guictxtmenu_clip(this->m_clip), evt.mousepos);
@@ -90,10 +84,10 @@ inline bool isEqualWaveform3(const audioclip_texture_t& lhs, const audioclip_tex
 			lhs.audioId == rhs.audioId && lhs.quality == rhs.quality && lhs.method == rhs.method;
 }
 ivec2 maxvec2(const ivec2& a, const ivec2& b) {
-	return {std::max(a.x, b.x), std::max(a.x, b.x)};
+	return {math::max(a.x, b.x), math::max(a.x, b.x)};
 }
 ivec2 absvec2(const ivec2 a) {
-	return {std::abs(a.x), std::abs(a.y)};
+	return {math::abs(a.x), math::abs(a.y)};
 }
 void gui_audio_clip::updatePosition(project_t& project, scaled_grid& grid, ivec2& trackSize) {
 	size = this->parent->size;

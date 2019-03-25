@@ -1,8 +1,9 @@
 #pragma once
-#include "config.h"
 #include <vector>
 #include <array>
 #include <memory>
+#include "config.h"
+#include "math/seq_math.h"
 #include "automation.h"
 #include "meter.h"
 #include "audioblock.h"
@@ -55,7 +56,7 @@ public:
 	const float EXP = 2.0f;
 	float gainToLinScale(float f) {
 		float db = dsp_util::dBFS(f);
-		float f2 = ((max(dsp_util::DBFS_MUTE_POS, min(db, dsp_util::MTR_CEIL)) - dsp_util::MTR_CEIL) / lvlRange);
+		float f2 = ((math::max(dsp_util::DBFS_MUTE_POS, math::min(db, dsp_util::MTR_CEIL)) - dsp_util::MTR_CEIL) / lvlRange);
 		return 1.0f - powf(f2, 1.0/EXP);
 	}
 	float linScaleToGain(float f) {

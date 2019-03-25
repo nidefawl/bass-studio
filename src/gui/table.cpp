@@ -2,21 +2,18 @@
 #include <memory>
 #include <numeric>
 #include <vector>
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
 #include <nanovg.h>
 #include "str_util.h"
 #include "theme.h"
 #include "event.h"
 #include "gui.h"
 
-using glm::vec2;
 namespace Table {
 
 void AdjustColSizes(tbl& table, vec2 size) {
 	int maxCols = 0;
 	for (tbl_row_t& row : table.rows) {
-		maxCols = std::max((int)row.cols.size(), maxCols);
+		maxCols = math::max((int)row.cols.size(), maxCols);
 	}
 	if ((int)table.colSizes.size() != maxCols) {
 		table.colSizes.resize(maxCols);

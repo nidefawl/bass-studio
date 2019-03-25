@@ -23,12 +23,6 @@
 
 #include "project.h"
 
-using glm::vec2;
-using glm::ivec2;
-using glm::vec4;
-using glm::ivec4;
-using std::min;
-using std::max;
 using namespace std;
 
 String getModKeyName(int modKey) {
@@ -423,7 +417,7 @@ String BaseCtrl::getClipboardText()
 {
 	return this->window->getClipboardText();
 }
-void BaseCtrl::openContextMenu(guictxtmenu_base *b, glm::ivec2 pos)
+void BaseCtrl::openContextMenu(guictxtmenu_base *b, ivec2 pos)
 {
 	delete b; //TODO: defer delete
 }

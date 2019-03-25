@@ -1,15 +1,12 @@
 #include "cliprenderer.h"
+#include "math/seq_math.h"
 #include "../host/vst_host.h"
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
 #include "theme.h"
 #include "guicolors.h"
 #include "guiconstant.h"
 #include "drawwaveform.h"
 #include "trackcontent.h"
 
-using glm::vec2;
-using glm::ivec2;
 namespace GuiColor {
 constant_t COL_CLIP_OUTLINE("COL_CLIP_OUTLINE", 0x0);
 
@@ -88,13 +85,13 @@ audioclip_texture_t makeWaveformFromClip(project_t& project, scaled_grid& grid,
 	w.scaleX = 1.0f;
 	w.pos = pos;
 	w.startOffset = startOffset;
-	w.size = ivec2(min(sizeClipped.x, FBO_WIDTH), min(size.y, FBO_HEIGHT));
+	w.size = ivec2(math::min(sizeClipped.x, FBO_WIDTH), math::min(size.y, FBO_HEIGHT));
 	double nSamples = sampleEnd-sampleStartOffset;
 	if (nSamples * pxPerSample > FBO_WIDTH) {
 		samplesPerPx = (nSamples / FBO_WIDTH);
 	}
 //	if (w.scale == 1) {
-//		w.size.x = std::min(FBO_WIDTH, (int)std::round(fsizeX));
+//		w.size.x = math::min(FBO_WIDTH, (int)std::round(fsizeX));
 		if (samplesPerPx > MAX_RES && (nSamples / MAX_RES) <= FBO_WIDTH) {
 			w.scaleX = MAX_RES/samplesPerPx;
 			samplesPerPx = MAX_RES;
@@ -222,7 +219,7 @@ void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_t* tr, 
 		if (!notes.empty()) {
 			note_t minN = notesView.minNote;
 			note_t maxN = notesView.maxNote;
-			int32_t numNotes = max((int32_t)8, maxN.pitch - minN.pitch);
+			int32_t numNotes = math::max((int32_t)8, maxN.pitch - minN.pitch);
 			float scale = sizeContents.y / (float) numNotes;
 			std::vector<const note_t*> notesClipped;
 			std::vector<const note_t*> notesMuted;
@@ -251,8 +248,8 @@ void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_t* tr, 
 				float objLenNote = note.len /(float) TICKS_BAR;
 	//			assert(objPosNote+objLenNote >= 0);
 				float ny = noteToScreen(note.pitch-minN.pitch, scale, 0, sizeContents.y);
-				float nx = max(0.0f, objPosNote * barSize);
-				float nw = min(objLenNote * barSize, sizeContents.x-nx);
+				float nx = math::max(0.0f, objPosNote * barSize);
+				float nw = math::min(objLenNote * barSize, sizeContents.x-nx);
 				float nh = scale;
 				float insetx = calcInset(1, nw);
 				float insety = calcInset(1, nh);

@@ -1,6 +1,5 @@
 #pragma once
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
+#include "math/vec.h"
 #include <memory>
 #include <numeric>
 #include <vector>
@@ -24,8 +23,8 @@ namespace Table {
 struct table_ctxt_t {
 	NVGcontext* vg;
 	guitheme_t* theme;
-	glm::vec2 pos;
-	glm::vec2 size;
+	vec2 pos;
+	vec2 size;
 	float fontSize;
 //	int align;
 };
@@ -76,10 +75,10 @@ struct tbl {
 	std::vector<tbl_row_t> rows;
 };
 
-void DrawTableNVG(tbl& table, NVGcontext* vg, guitheme_t* theme, glm::vec2 pos, glm::vec2 size, float fontSize);
+void DrawTableNVG(tbl& table, NVGcontext* vg, guitheme_t* theme, vec2 pos, vec2 size, float fontSize);
 table_entry_t& GetCell(tbl& table, int32_t x, int32_t y);
-bool GetCellClicked(tbl& table, const guitheme_t* theme, glm::vec2 mouse, glm::ivec2& idx, glm::ivec2& cellPos, glm::ivec2& cellSize);
-void AdjustColSizes(tbl& table, glm::vec2 size);
+bool GetCellClicked(tbl& table, const guitheme_t* theme, vec2 mouse, ivec2& idx, ivec2& cellPos, ivec2& cellSize);
+void AdjustColSizes(tbl& table, vec2 size);
 
 struct tblString {
 	String str;
@@ -123,7 +122,7 @@ void drawTbl(const table_ctxt_t& ctxt, const tblint& obj);
 void drawTbl(const table_ctxt_t& ctxt, const int& obj);
 void drawTbl(const table_ctxt_t& ctxt, const float& obj);
 void drawTbl(const table_ctxt_t& ctxt, const String& obj);
-void drawTbl(const table_ctxt_t& ctxt, const glm::ivec2& obj);
+void drawTbl(const table_ctxt_t& ctxt, const ivec2& obj);
 template <typename T>
 inline void cellClicked(const click_ctxt_t& ctxt, T& obj) {
 
@@ -131,7 +130,7 @@ inline void cellClicked(const click_ctxt_t& ctxt, T& obj) {
 //class click_type_handler {
 //public:
 //	virtual void onClickNotImplemented(const click_ctxt_t& ctxt) = 0;
-//	virtual void onClick(const click_ctxt_t& ctxt, glm::ivec2& value) = 0;
+//	virtual void onClick(const click_ctxt_t& ctxt, ivec2& value) = 0;
 //	virtual void onClick(const click_ctxt_t& ctxt, NVGcolor& value) = 0;
 //	virtual void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, GuiColor::constant_t constant) = 0;
 //	virtual void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, GuiConstant::constant_t constant) = 0;
@@ -152,7 +151,7 @@ inline void cellClicked(const click_ctxt_t& ctxt, T& obj) {
 //	}
 //}
 //template <>
-//inline void cellClicked(const click_ctxt_t& ctxt, const tbltypesaferef<glm::ivec2>& obj) {
+//inline void cellClicked(const click_ctxt_t& ctxt, const tbltypesaferef<ivec2>& obj) {
 //	if (safeRefOk(obj.saferef)) {
 //		if (ctxt.callback) {
 //			ctxt.callback->onClick(ctxt, obj.t);

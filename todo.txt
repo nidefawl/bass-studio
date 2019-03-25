@@ -1,16 +1,48 @@
+
+
+
+Bugs:
+ctxt menus might leak, not getting deleted as intended
+status bar does not show text
+clipsettings labels overlap input fields
+ALT key sometimes stuck, wonderful
+mousewheel scrolling on noteeditor not working
+
+ALT key to disable grid is not allowing note-resize below grid size
+
+
+TS-808 Stereo.dll only plays on left channel
+Reverb.dll crashes on mingw
+Freeverb3VST_ProG_Reverb.dll 2.66 (from 2012) crashes probably 
+  because of some hack they do with static linking on mingw to 
+  get rid of dynamic c-runtime dependency. 3.1.2 works
+FM8 is possible still not working
+
 Add tables for debugging:
 - all loaded plugins
 - all tracks
 - all guibase instances
 - all automation
-
 TODO:
 other:
+height track title should be equal height clip title, at least on folded tracks
 make splitter ctr
 fix notes border rendering not respecting z-order when notes overlap
+Render drop shadow on popups or use other background color or outline to make them stand outline
+
+change to initializer braces assignment for ivec2 (so we can easily change the type)
+find: \s*=\s*ivec2\s*\(\s*([^, ]*),\s*([^, ]*)\s*\)\s*;
+replace: = {\1, \2};
 
 important:
+Solo buttons!
+velocity editor 
+randomize note velocity + offset (shuffle/humanize/groove)
+global midi pitch offset (and per track global offset bypass)
+per track velocity scaling (min max curve?!)
+quantize midi 
 duplicate loop button in midi clip
+legato button in midi editor
 duplicate plugin/plugin groups
 consolidate clips
 plugin gui preset select 
@@ -18,7 +50,6 @@ plugin preset store/load
 group+plugin snapshots
 track snapshots
 Sends/Return tracks
-Solo buttons
 add keybind constant
 keybind editor/presets
 multiselection of tracks
@@ -27,17 +58,15 @@ Load/Save current view quickbuttons
 Implement recent file list
 more work:
 Compressed binary file format
-latency compensated automation 
+latency compensated automation !!!
 stress-test synchronization
 unit tests
 use templates + template specialization for the 3 window classes in window.cpp
 further optimize waveform rendering
-tabbed view
 scale factor for UI font sizes
 dynamic scaling for all of the UI (50%-200%)
-improve dragging effects around
 fix shift-clicking not extending selection to clicked clips boundaries
-
+support waves shell plugins 
 later:
 seperate internal samplerate / external (audiointerface) samplerate
 per track samplerate / blocksize ?
@@ -48,7 +77,9 @@ audio settings dialog
 audio track routing options
 midi export
 freeze track
-
+filter automation (smoothing): outgoing on host as option, incoming on plugin required
+don't fully close vst-windows, just hide them and defer destruction so they reopen quickly 
+try rendering vst-windows into gui at fixed location (kind of a bookmark)
 Done:
 multiselection of plugins
 implement basic arpeggiator

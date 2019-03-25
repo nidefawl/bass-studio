@@ -1,16 +1,16 @@
 #pragma once
 
 #include <stdint.h>
-#include <glm/glm.hpp>
-#include <glm/vec4.hpp>
+#include "math/vec.h"
 #include <nanovg_min.h>
 
-glm::vec4 RGBtoHSV(glm::vec4 rgb);
+vec4 rgbToHSL(float r, float g, float b);
+vec4 RGBtoHSV(vec4 rgb);
 NVGcolor HSLtoRGB(float h, float s, float l);
 NVGcolor HSVtoRGB(float h, float s, float v);
-glm::vec4 colorHex(uint32_t color);
-glm::vec4 hexToHSL(uint32_t color);
-glm::vec4 int32vec4(uint32_t i);
+vec4 colorHex(uint32_t color);
+vec4 hexToHSL(uint32_t color);
+vec4 int32vec4(uint32_t i);
 NVGcolor getContrastFontColor(uint32_t i);
 NVGcolor getContrastFontColorNvg(NVGcolor i);
 NVGcolor rgbToNvg(uint32_t i);

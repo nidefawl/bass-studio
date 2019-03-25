@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
+#include "math/seq_math.h"
 #include "str_util.h"
-#include "seq_math.h"
 
 void enableGlDebugCallback();
 bool checkGLError(const char* s);

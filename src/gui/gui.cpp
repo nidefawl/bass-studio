@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <typeinfo>
+#include "math/seq_math.h"
 #include "color_util.h"
 #include "basectrl.h"
 #include "gui.h"
@@ -7,7 +8,6 @@
 #include "platform.h"
 #include "theme.h"
 #include "saferef.h"
-#include "seq_math.h"
 #include "seq_util.h"
 #include "leak_detect.h"
 #include "guicolors.h"
@@ -22,8 +22,6 @@ constant_t COL_BTN_BG_DEFAULT_ACTIVE("COL_BTN_BG_DEFAULT_ACTIVE", 0xff404040);
 constant_t COL_BTN_BG_BYPASS_ACTIVE("COL_BTN_BG_BYPASS_ACTIVE", 0xff80ABC0);
 constant_t COL_BTN_BG_SHOW_ACTIVE("COL_BTN_BG_SHOW_ACTIVE", 0xff40ABC0);
 }
-using std::min;
-using std::max;
 //NVGcolor g_guiColors[NUM_GUI_COLORS];
 NVGcolor g_colorPalette[COLOR_PALETTE_LEN];
 
@@ -108,7 +106,7 @@ void renderDashedLineFrame(NVGcontext* vg, float x, float y, float w, float h, f
 	nvgShapeAntiAlias(vg, 1);
 }
 void drawPlaySymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2) {
-	float inset = max(2.0f, size.x/8.0f);
+	float inset = math::max(2.0f, size.x/8.0f);
 	float x1 = pos.x + inset;
 	float y1 = pos.y + inset;
 	float y2 = pos.y + size.y - inset;
@@ -150,8 +148,8 @@ void drawTextureSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& 
 	int32_t inset = 3;
 //	iconPos.y -= inset;
 	int32_t extImg = 2;
-	int32_t iconW = min(size.x, size.y);
-	ivec2 offset = ivec2(max(0, (size.x-iconW)/2), max(0, (size.y-iconW)/2));
+	int32_t iconW = math::min(size.x, size.y);
+	ivec2 offset = ivec2(math::max(0, (size.x-iconW)/2), math::max(0, (size.y-iconW)/2));
 	ivec2 iconPos = pos + inset + offset;
 	iconW -= inset*2;
 	NVGpaint paintIcon = imagePattern(vg, iconW, extImg, drawParm);
@@ -188,7 +186,7 @@ void drawTextureSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& 
 
 }
 void drawStopSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2) {
-	float inset = max(2.0f, size.x/8.0f);
+	float inset = math::max(2.0f, size.x/8.0f);
 	nvgBeginPath(vg);
 	nvgRect(vg, pos.x+inset, pos.y+inset, size.x-inset*2.0f, size.y-inset*2.0f);
     nvgFillColor(vg, getContrastFontColorNvg(color));
@@ -308,7 +306,7 @@ void guibuttontoggle::render(NVGcontext* vg) {
 
 
 		int32_t extImg = 2;
-		int32_t iconW = (int32_t)ceil(std::min(size.x, size.y)) + extImg * 2;
+		int32_t iconW = (int32_t)ceil(math::min(size.x, size.y)) + extImg * 2;
 		RenderResources::NvgImageTexture& image = RenderResources::imgIcons[icon];
 		NVGpaint paintIcon = nvgImagePattern(vg, -extImg, -extImg, iconW, iconW, 0, image.id, 1.0f);
 		nvgTranslate(vg, pos.x, pos.y);

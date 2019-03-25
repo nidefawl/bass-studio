@@ -1,5 +1,6 @@
 #include <vector>
 
+#include "math/seq_math.h"
 #include "debugctr.h"
 #include "str_util.h"
 #include "knob.h"
@@ -52,12 +53,12 @@ gui_ctr_debug::gui_ctr_debug() : guictr_base() {
 	btn.setText("Reset history");
 	btn.setFontSize(24);
 	knobTest.fnSetValue = [this](float f, int flags) {
-		curVal = 0+max(0, min(255, (int32_t)std::floor(f*255)));
+		curVal = 0+math::max(0, math::min(255, (int32_t)math::floor(f*255)));
 		GuiColor::initConstants(curVal);
 		parentCtrl->getTheme()->initTheme();
 	};
 	knobTest.fnGetValue = [this](void) {
-		return std::max(0.0f, std::min(1.0f, curVal/255.0f));
+		return math::max(0.0f, math::min(1.0f, curVal/255.0f));
 	};
 }
 void gui_ctr_debug::render(NVGcontext* vg) {

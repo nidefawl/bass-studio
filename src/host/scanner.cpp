@@ -28,7 +28,7 @@
 #define CMD_PLUGIN_LOAD_SUCCESS 2
 #define CMD_PLUGIN_LOAD_REQUEST 1
 #define CMD_PLUGIN_THREAD_QUIT 4
-#define BUF_SIZE 2048
+#define NUM_BUFS 2048
 
 struct pipe_msg_hdr {
 	uint32_t cmd;
@@ -43,24 +43,24 @@ struct vst_metadata {
 	char szName[256];
 	char szVendorName[256];
 };
-char buf[BUF_SIZE];
+char buf[NUM_BUFS];
 bool sendData(ipc_connection* conn, pipe_msg_hdr* hdr, vst_metadata* data) {
-    memset(buf, 0, BUF_SIZE);
+    memset(buf, 0, NUM_BUFS);
     char* bufPos = buf;
     memcpy(bufPos, hdr, sizeof(pipe_msg_hdr));
     bufPos += sizeof(pipe_msg_hdr);
     memcpy(bufPos, data, sizeof(vst_metadata));
     bufPos += sizeof(vst_metadata);
-    int len = conn->sendData(buf, BUF_SIZE);
-    if (len == BUF_SIZE) {
+    int len = conn->sendData(buf, NUM_BUFS);
+    if (len == NUM_BUFS) {
     	return true;
     }
     return false;
 }
 bool recvData(ipc_connection* conn, pipe_msg_hdr* hdr, vst_metadata* data) {
-    memset(buf, 0, BUF_SIZE);
-    int len = conn->readData(buf, BUF_SIZE);
-    if (len == BUF_SIZE) {
+    memset(buf, 0, NUM_BUFS);
+    int len = conn->readData(buf, NUM_BUFS);
+    if (len == NUM_BUFS) {
 //    	printf("Read %d bytes, expected %d\n", (int32_t)bytesSent, (int32_t)BUF_SIZE);
 		char* bufPos = buf;
 		memcpy(hdr, bufPos, sizeof(pipe_msg_hdr));

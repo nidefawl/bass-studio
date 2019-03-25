@@ -1,6 +1,3 @@
-
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
 #include <glm/geometric.hpp>
 #include <nanovg.h>
 #include <vector>
@@ -109,7 +106,7 @@ template <typename T>
 class guiproperties_table : public debugproperties {
 protected:
 	struct cellclicked_t {
-		ivec2 idx{-1};
+		ivec2 idx{-1,-1};
 		ivec2 pos{0};
 		ivec2 size{0};
 	};
@@ -408,7 +405,7 @@ void guiproperties_table<guiproperties_t>::layout()  {
 	ivec2 tableSize = getSizeContent()-ivec2(INSET_TABLE<<1);
 	AdjustColSizes(table, tableSize);
 	if (table.colSizes.size() == 2) {
-		table.colSizes[0] = std::max(100.0f, std::min(250.0f, 0.25f*tableSize.x));
+		table.colSizes[0] = math::max(100.0f, math::min(250.0f, 0.25f*tableSize.x));
 		table.colSizes[1] = tableSize.x - table.colSizes[0];
 	}
 	size.y = table.rows.size()*table.rowHeight+table.rowHeight;
@@ -580,7 +577,7 @@ void guiproperties_table<guitheme_t>::layout()  {
 		ivec2 tableSize = getSizeContent()-ivec2(INSET_TABLE<<1);
 		AdjustColSizes(table, tableSize);
 	if (table.colSizes.size() == 2) {
-		table.colSizes[0] = std::max(220.0f, std::min(450.0f, 0.25f*tableSize.x));
+		table.colSizes[0] = math::max(220.0f, math::min(450.0f, 0.25f*tableSize.x));
 		table.colSizes[1] = tableSize.x - table.colSizes[0];
 	}
 

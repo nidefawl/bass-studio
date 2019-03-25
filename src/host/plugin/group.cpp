@@ -1,7 +1,5 @@
 #include <stdint.h>
 #include <stdbool.h>
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
 #include <vector>
 #include <fstream>
 #include <sstream>
@@ -13,9 +11,9 @@
 #include <cereal/types/vector.hpp>
 #include <cereal/types/polymorphic.hpp>
 #include <cereal/cereal_optional_nvp.hpp>
-#include "../../file/memoryarchive.h"
 
 #include "group.h"
+#include "math/seq_math.h"
 #include "event.h"
 #include "str_util.h"
 #include "color_util.h"
@@ -24,9 +22,10 @@
 #include "../../gui/list.h"
 #include "../../gui/guimeter.h"
 #include "../../gui/knob.h"
+#include "../../gui/button.h"
 #include "../../gui/gui.h"
 #include "../../gui/guicontainer.h"
-#include "../../gui/button.h"
+#include "../../gui/guiplugin.h"
 #include "../../gui/pluginctr.h"
 #include "../../gui/pluginlist.h"
 
@@ -43,11 +42,7 @@
 #include "track_impl.h"
 #include "leak_detect.h"
 #include "snapshot.h"
-#include "../../gui/guiplugin.h"
-
-using glm::vec2;
-using glm::ivec2;
-
+#include "../../file/memoryarchive.h"
 
 class guimodule_group : public guiplugin {
 public:
@@ -56,7 +51,6 @@ public:
 	guimodule_group(module_group* _vst);
 	~guimodule_group() {
 		remove(&ctr);
-		my_printf("DSTR!\n",0);
 	}
 	void render(NVGcontext* vg) override;
 	void buttonClicked(guibase* _button) override;
@@ -66,7 +60,7 @@ public:
 		assert(module->getAudioStage());
 
 		const int32_t hpt = theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT);
-		int32_t meterW = std::max(16, (int32_t)(theme->get(GuiConstant::CONST_METER_WIDTH)*hpt/32.0));
+		int32_t meterW = math::max(16, (int32_t)(theme->get(GuiConstant::CONST_METER_WIDTH)*hpt/32.0));
 		ctr.pos = ivec2(hpt, 0);
 //		ctr.size = ivec2(size.y, size.y);
 //		ctr.layout();

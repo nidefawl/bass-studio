@@ -1,12 +1,9 @@
 #pragma once
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
-#include <glm/vec4.hpp>
+#include "math/vec.h"
 #include "gui.h"
 #include "theme.h"
 #include <functional>
 
-using Vector2i = glm::ivec2;
 class input_filter {
 public:
     virtual ~input_filter() {}
@@ -79,8 +76,8 @@ public:
 			this->mSelectionPos = -1;
 			this->mCursorPos = -1;
 		} else {
-			this->mSelectionPos = std::max(start, 0);
-			this->mCursorPos = end < 0 ? (int) this->mValue.length() : std::min(end, (int) this->mValue.length());
+			this->mSelectionPos = math::max(start, 0);
+			this->mCursorPos = end < 0 ? (int) this->mValue.length() : math::min(end, (int) this->mValue.length());
 		}
 	}
     void clearSelection() { this->mSelectionPos = -1; }
@@ -117,7 +114,7 @@ public:
     virtual bool keyboardEvent(int key, int scancode, KeyEventType action, int modifiers);
     virtual bool handleCharInput(unsigned int codepoint) override;
 
-    virtual Vector2i preferredSize(NVGcontext *ctx) const;
+    virtual ivec2 preferredSize(NVGcontext *ctx) const;
 
 
     void beginEdit();
@@ -169,9 +166,9 @@ public:
     std::string mPlaceholder;
     int mCursorPos;
     int mSelectionPos;
-    Vector2i mMousePos;
-    Vector2i mMouseDownPos;
-    Vector2i mMouseDragPos;
+    ivec2 mMousePos;
+    ivec2 mMouseDownPos;
+    ivec2 mMouseDragPos;
     int mMouseDownModifier;
     float mTextOffset;
     double mLastClick;
@@ -189,9 +186,9 @@ protected:
         float lineH{0};
     };
     text_metrics_t metrics;
-	glm::vec2 drawPos;
-	glm::vec2 clipPos;
-	glm::vec2 clipSize;
+	vec2 drawPos;
+	vec2 clipPos;
+	vec2 clipSize;
 public:
 
 	float fontSize() const {

@@ -1,7 +1,7 @@
+#include "math/seq_math.h"
 #include "str_util.h"
 #include "seq_util.h"
 #include "seq_time.h"
-#include "seq_math.h"
 #include "dsp_util.h"
 
 #include "vst_host.h"
@@ -502,7 +502,7 @@ int32_t vsthost::processPlayback(int32_t sample, double posDouble, playback_stat
 			track_impl_t* audioTrack = track->audio;
 			audioTrack->pluginsChanged();
 			samplerate_t latency = audioTrack->getLatency();
-			maxLatency = max(latency, maxLatency);
+			maxLatency = math::max(latency, maxLatency);
 		}
 		tick_t loopCutStart = -1;
 		tick_t loopCutEnd = -1;

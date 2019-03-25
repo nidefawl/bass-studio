@@ -2,11 +2,11 @@
 #include <vector>
 #include <assert.h>
 #include <stddef.h>
+#include "math/seq_math.h"
 #include "exceptions.h"
 #include "clip.h"
 #include "logging.h"
 #include "seq_time.h"
-#include "seq_math.h"
 #include "leak_detect.h"
 #include "audiocache.h"
 #include "mainctrl.h"
@@ -230,7 +230,7 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
 	std::vector<note_t> listLoop;
 	listLoop.reserve(128);
 	const tick_t preLoopLen = loopStart - offsetStart;
-	const tick_t clipEndPre = min(preLoopLen, localEnd);
+	const tick_t clipEndPre = math::min(preLoopLen, localEnd);
 	const tick_t start = offsetStart+localStart;
 
 	auto itNote = notes.m_list.cbegin();
@@ -272,8 +272,8 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
 		auto itNoteEnd = listLoop.cend();
 		const tick_t posCurLoopStart = preLoopLen + (i * loopLenProcessing);
 		const tick_t posCurLoopEnd = posCurLoopStart + loopLenProcessing;
-		const tick_t clipStart = max(posCurLoopStart, localStart);
-		const tick_t clipEnd = min(posCurLoopEnd, localEnd);
+		const tick_t clipStart = math::max(posCurLoopStart, localStart);
+		const tick_t clipEnd = math::min(posCurLoopEnd, localEnd);
 		for (;itNote != itNoteEnd; itNote++) {
 			note_t note = *itNote; // copy
 			note.time -= loopStart;
@@ -299,19 +299,19 @@ int clip_t::getInTimeRange(tick_t absStart, tick_t absEnd, tick_t cutStart, tick
 	tick_t clipStart = start();
 	tick_t clipEnd = end();
 	tick_t relStart = absStart;
-	tick_t relEnd = min(clipEnd, absEnd);
+	tick_t relEnd = math::min(clipEnd, absEnd);
 	relStart -= clipStart;
 	relEnd -= clipStart;
 	clip_notes_t notesView;
 	tick_t cutLeft = 0;
 	tick_t cutRight = getLen();
 	if (cutStart > -1) {
-		cutLeft = max(cutLeft, cutStart-start());
+		cutLeft = math::max(cutLeft, cutStart-start());
 	} else {
 //		cutLeft = relStart;
 	}
 	if (cutEnd > -1) {
-		cutRight = min(cutRight, cutEnd-start());
+		cutRight = math::min(cutRight, cutEnd-start());
 	} else {
 //		cutRight = relEnd;
 	}
@@ -326,7 +326,7 @@ int clip_t::getInTimeRange(tick_t absStart, tick_t absEnd, tick_t cutStart, tick
 		if (note.isIntersectTimeIncludeEnds(relStart, relEnd)) {
 			note_t noteOffset(note);
 			noteOffset.time += clipStart;
-			noteOffset.len = min(noteOffset.end(), clipEnd) - noteOffset.time;
+			noteOffset.len = math::min(noteOffset.end(), clipEnd) - noteOffset.time;
 			if (!list.capacity()) {
 				list.reserve(128);
 			}

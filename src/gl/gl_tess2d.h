@@ -1,14 +1,8 @@
 #pragma once
 #include <vector>
-#include <glm/glm.hpp>
-#include <glm/gtc/type_ptr.hpp>
-#include <glm/gtc/matrix_transform.hpp>
+#include "math/vec.h"
 #include "gl_vbo.h"
 
-using glm::mat4x4;
-using glm::vec2;
-using glm::vec3;
-using glm::vec4;
 #define TESS_COLOR 1
 #define TESS_ATTR 2
 #define TESS_ATTR2 4
@@ -87,20 +81,20 @@ public:
 		vec2 pos = v + offset;
 		float* bufPos = buf.data() + index;
 
-        memcpy(bufPos, glm::value_ptr(pos), sizeof(vec2));
+        memcpy(bufPos, vec_ptr(pos), sizeof(vec2));
         bufPos += 2;
-    	memcpy(bufPos, glm::value_ptr(uv), sizeof(vec2));
+    	memcpy(bufPos, vec_ptr(uv), sizeof(vec2));
         bufPos += 2;
         if (flags & TESS_COLOR) {
-        	memcpy(bufPos, glm::value_ptr(rgba), sizeof(vec4));
+        	memcpy(bufPos, vec_ptr(rgba), sizeof(vec4));
             bufPos += 4;
         }
         if (flags & TESS_ATTR) {
-        	memcpy(bufPos, glm::value_ptr(attr), sizeof(vec4));
+        	memcpy(bufPos, vec_ptr(attr), sizeof(vec4));
             bufPos += 4;
         }
         if (flags & TESS_ATTR2) {
-        	memcpy(bufPos, glm::value_ptr(attr2), sizeof(vec4));
+        	memcpy(bufPos, vec_ptr(attr2), sizeof(vec4));
             bufPos += 4;
         }
         vertexcount++;

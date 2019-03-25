@@ -2,21 +2,12 @@
 #include <vector>
 #include "event.h"
 #include <functional>
+#include "math/vec.h"
 #include "gui.h"
 #include "guicolors.h"
 #include "guicontextmenu_base.h"
 #include "guicontextmenu.h"
 #include "basectrl.h"
-
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
-#include <glm/vec3.hpp>
-#include <glm/vec4.hpp>
-using glm::vec2;
-using glm::ivec2;
-using glm::vec4;
-using glm::ivec4;
-
 
 class ctxtmenu_color_select : public ctxtmenu_entry {
 public:

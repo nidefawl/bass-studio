@@ -7,15 +7,6 @@
 #include "scrollbar.h"
 #include "basectrl.h"
 
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
-#include <glm/vec3.hpp>
-#include <glm/vec4.hpp>
-using glm::vec2;
-using glm::ivec2;
-using glm::vec4;
-using glm::ivec4;
-
 void guictr_scrollbar::render(NVGcontext* vg) {
 	if (isBackgroundRendered()) {
 		renderBackground(vg);
@@ -53,10 +44,10 @@ void guictr_scrollbar::determineSize(glm::ivec2& prefSize) /* const */{
 		if (gui == &scrollbar)
 			continue;
 
-		maxSize.x = std::max(maxSize.x, gui->right());
-		maxSize.y = std::max(maxSize.y, gui->bottom());
+		maxSize.x = math::max(maxSize.x, gui->right());
+		maxSize.y = math::max(maxSize.y, gui->bottom());
 	}
-	prefSize.x = std::max(maxSize.x, prefSize.x);
+	prefSize.x = math::max(maxSize.x, prefSize.x);
 	contentHeight = maxSize.y;
 	const gui_scrollbar* bar = &scrollbar;
 	if (maxHeight == -1) {
@@ -130,7 +121,7 @@ void guictr_scrollbar::layout() {
 			int newRight = cs.x - scrollW;
 			int32_t right = gui->right();
 			if (right > newRight) {
-				gui->size.x = std::max(10, newRight - gui->pos.x);
+				gui->size.x = math::max(10, newRight - gui->pos.x);
 			}
 		}
 		gui->layout();

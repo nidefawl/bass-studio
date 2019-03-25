@@ -1,15 +1,13 @@
 #include <algorithm>
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
-#include <glm/vec4.hpp>
+#include "vst_plugin.h"
+
+#include "math/seq_math.h"
 #include "str_util.h"
 #include "seq_util.h"
 #include "logging.h"
 #include "audioblock.h"
 #include "snapshot.h"
-
 #include "base_plugin.h"
-#include "vst_plugin.h"
 #include "vst_plugin_handles.h"
 #include "track.h"
 #include "track_impl.h"
@@ -24,12 +22,6 @@
 #include "../history.h"
 
 #include "leak_detect.h"
-#include "../../gui/guiplugin.h"
-
-using glm::vec2;
-using glm::ivec2;
-using glm::vec4;
-using glm::ivec4;
 
 const char* plug_features_array[] = {
 	PlugCanDos::canDoSendVstEvents,
@@ -174,8 +166,8 @@ void vstplugin::load(vsthost* host) {
 	assert(!this->bIsSetup);
 	auto aeffect = handle->aeffect;
 	assert(aeffect->numOutputs > 0);
-	this->blockInputs = new AudioBlock(std::max(2, aeffect->numInputs), host->lBlockSize);
-	this->blockOutputs = new AudioBlock(std::max(2, aeffect->numOutputs), host->lBlockSize);
+	this->blockInputs = new AudioBlock(math::max(2, aeffect->numInputs), host->lBlockSize);
+	this->blockOutputs = new AudioBlock(math::max(2, aeffect->numOutputs), host->lBlockSize);
 	aeffect->resvd2 = 0;
 	this->vstVersion = dispatch(effGetVstVersion);
 	this->uId = aeffect->uniqueID;

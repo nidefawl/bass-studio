@@ -1,5 +1,3 @@
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
 #include "knob.h"
 #include "basectrl.h"
 #include "knoblabeled.h"
@@ -14,8 +12,7 @@
 #include "table.h"
 #include "logging.h"
 #include "automation.h"
-using glm::ivec2;
-using glm::vec2;
+
 using namespace Table;
 namespace GuiColor {
 constant_t COL_KNOB("COL_KNOB", 0xff00ddff);
@@ -77,12 +74,12 @@ void guiknob::handleDraggedBegin(MouseEvent& evt) {
 	void guiknob::handleDraggedMove(MouseEvent& evt) {
 		if (evt.guiDragged == this && evt.type == M_EVT_CAPTURED_MOVE) {
 			int disty = (int)evt.dragDistance->y;
-			if (abs(disty) < 1)
+			if (math::abs(disty) < 1)
 				return;
 			float value = getValue();
 			float scale = isCtrl(evt.kbmods) ? 2000.0f : 200.0f;
 			float delta = disty/scale;
-			if (abs(delta) > 1e-2f) {
+			if (math::abs(delta) > 1e-2f) {
 				value -= delta;
 				setValue(value, 0);
 				evt.dragDistance->y = 0;
@@ -134,13 +131,13 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS) {
 //		    nvgFillColor(vg, c2);
 //			nvgFill(vg);
 	}
-    float minSize = min(insetS.x, insetS.y);
+    float minSize = math::min(insetS.x, insetS.y);
     float r = (minSize*0.8f)/2.0f;
-    float lineThickness = max(1.0f, roundf((minSize / 8.0f)*2.0f)/2.0f);
+    float lineThickness = math::max(1.0f, roundf((minSize / 8.0f)*2.0f)/2.0f);
 	nvgLineCap(vg, NVGlineCap::NVG_ROUND);
 	float val = getValueClamped();
 	if (isSlider) {
-		lineThickness = max(1.0f, roundf((minSize / 32.0f)*2.0f)/2.0f);
+		lineThickness = math::max(1.0f, roundf((minSize / 32.0f)*2.0f)/2.0f);
 	    float cx = insetP.x;
 	    float cy = insetP.y;
 	    float height = insetS.y;
@@ -153,7 +150,7 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS) {
 	    nvgRect(vg, cx, cy+height-heightRange, insetS.x, heightRange);
 	    nvgFillColor(vg, theme->getColor(valColor));
 		nvgFill(vg);
-	    float heightHandle = std::max(3.0f, lineThickness+3.0f);
+	    float heightHandle = math::max(3.0f, lineThickness+3.0f);
 	    nvgBeginPath(vg);
 	    nvgRect(vg, cx, cy+height-heightRange-heightHandle*0.5f, insetS.x, heightHandle);
 	    c2.a = 0.5f;
@@ -193,7 +190,7 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS) {
 		nvgMoveTo(vg, posStart.x, posStart.y);
 		nvgLineTo(vg, posEnd.x, posEnd.y);
 		nvgStrokeColor(vg, theme->getColor(indColor));
-		nvgStrokeWidth(vg, max(1.0f, roundf((r/8.0f)*2.0f)/2.0f));
+		nvgStrokeWidth(vg, math::max(1.0f, roundf((r/8.0f)*2.0f)/2.0f));
 		nvgStroke(vg);
 		nvgLineCap(vg, NVGlineCap::NVG_BUTT);
 	}
@@ -235,11 +232,11 @@ void guiknob_labeled_base::layout() {
 	int left = (size.y - buttonSize);
 	float scaleTop = 0.35f;
 	float scaleBottom = 0.25f;
-	labelHeight = std::max(14.0f, left * scaleTop);
-	valueHeight = std::max(14.0f, left * scaleBottom);
+	labelHeight = math::max(14.0f, left * scaleTop);
+	valueHeight = math::max(14.0f, left * scaleBottom);
 	if (isSlider) {
 		if (label.length() < 12) {
-			labelHeight = std::max(14.0f, left * 0.15f);
+			labelHeight = math::max(14.0f, left * 0.15f);
 		} else {
 			labelHeight = 0;
 		}

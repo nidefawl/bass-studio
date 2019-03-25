@@ -1,13 +1,9 @@
 #include "DropTarget.h"
-#include "str_win32.h"
 #include <ole2.h>
-#include <glm/vec2.hpp>
-#include <glm/vec3.hpp>
-#include <glm/vec4.hpp>
+#include "math/vec.h"
+#include "str_win32.h"
 #include "keyboard.h"
 
-using glm::vec2;
-using glm::ivec2;
 
 void handleStdException(std::exception& e);
 void handleException();

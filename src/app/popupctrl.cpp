@@ -1,7 +1,7 @@
 #include <nanovg.h>
 #include <vector>
-#include <glm/glm.hpp>
-
+#include "math/seq_math.h"
+#include "math/vec.h"
 #include "window.h"
 
 #include "keyboard.h"
@@ -18,8 +18,6 @@
 
 #include "leak_detect.h"
 
-using glm::vec2;
-using glm::ivec2;
 using namespace std;
 
 PopupCtrl::PopupCtrl() {
@@ -70,7 +68,7 @@ void PopupCtrl::open(guictxtmenu_base *_ctxtmenu, ivec2 pos) {
 
 
 
-	popupCtrs->size = vec2(_ctxtmenu->size.x, std::max(0, popupCtrs->maxHeight));
+	popupCtrs->size = vec2(_ctxtmenu->size.x, math::max(0, popupCtrs->maxHeight));
 	popupCtrs->add(_ctxtmenu);
 	popupCtrs->determineSize(popupCtrs->size);
 	popupCtrs->layout();

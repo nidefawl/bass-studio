@@ -4,6 +4,7 @@
 #include <memory>
 #include <assert.h>
 #include <atomic>
+#include <algorithm>
 #include "logging.h"
 #include "platform.h"
 #include "str_util.h"

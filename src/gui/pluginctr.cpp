@@ -1,6 +1,6 @@
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
 #include <memory>
+#include "pluginctr.h"
+#include "math/seq_math.h"
 #include "str_util.h"
 #include "logging.h"
 #include "event.h"
@@ -15,7 +15,6 @@
 #include "pluginviewcontainers.h"
 #include "guicontainer.h"
 #include "guicontextmenu.h"
-#include "pluginctr.h"
 #include "pluginlist.h"
 #include "edithistory.h"
 
@@ -33,6 +32,7 @@
 #include "guitooltip.h"
 #include "str_util.h"
 #include "snapshot.h"
+#include "clipboard.h"
 #include "table.h"
 
 #include "leak_detect.h"
@@ -40,9 +40,6 @@
 #include "guicontextmenu_daw.h"
 #include "guiplugin.h"
 
-
-using glm::vec2;
-using glm::ivec2;
 using Table::tbl;
 using Table::tbl_row_t;
 using Table::table_entry_t;
@@ -803,8 +800,8 @@ void guictr_pluginview::render(NVGcontext* vg) {
 	int32_t w = ctr_plugins->getTotalWidth();
 	if (cs.x > 0 && cs.y > 0 && csp.x > 0 && csp.y > 0) {
 		float scY = cs.y / (float) csp.y;
-		float scContent = min(1.0f, csp.x / (float) w);
-		float minScale = min((cs.x / (float) max(csp.x, w)), scY);
+		float scContent = math::min(1.0f, csp.x / (float) w);
+		float minScale = math::min((cs.x / (float) math::max(csp.x, w)), scY);
 		nvgSave(vg);
 		if (setScissorTransform(vg)) {
 			nvgScale(vg, minScale, scY);
@@ -870,7 +867,7 @@ void guictr_plugins::determineSize(glm::ivec2& prefSize) {
 	if (!isDefaultPluginCtr) {
 		int32_t maxX = 0;
 		for (guibase* gui : guis) {
-			maxX = std::max(gui->right(), maxX);
+			maxX = math::max(gui->right(), maxX);
 		}
 		prefSize.x = maxX;
 	}

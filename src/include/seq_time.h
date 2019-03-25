@@ -2,7 +2,9 @@
 #include <stdint.h>
 #include <cmath>
 #include <limits>
+#include "math/seq_math.h"
 #include "samplerate.h"
+
 using tick_t = int32_t;
 extern const tick_t INVALID_TICK;
 struct tick_minmax_t {
@@ -39,9 +41,9 @@ inline bool almost_equal(T x, T y, int ulp)
 {
     // the machine epsilon has to be scaled to the magnitude of the values used
     // and multiplied by the desired precision in ULPs (units in the last place)
-    return std::abs(x-y) <= std::numeric_limits<T>::epsilon() * std::abs(x+y) * ulp
+    return math::abs(x-y) <= std::numeric_limits<T>::epsilon() * math::abs(x+y) * ulp
     // unless the result is subnormal
-           || std::abs(x-y) < std::numeric_limits<T>::min();
+           || math::abs(x-y) < std::numeric_limits<T>::min();
 }
 inline double toMilliSeconds(tick_t tick, int32_t bpm100) {
 	return ((tick)/(double)(bpm100*TICKS_QUARTER)) * 100.0 * 60.0 * 1000.0;

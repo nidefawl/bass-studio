@@ -5,16 +5,11 @@
 #include <stdint.h>
 #include <memory>
 
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
-#include <glm/vec3.hpp>
-#include <glm/vec4.hpp>
-
+#include "math/vec.h"
 #include "config.h"
 #include "str_util.h"
 #include "seq_util.h"
 #include "seq_time.h"
-#include "seq_math.h"
 #include "window.h"
 #include "menu.h"
 #include "mouse.h"
@@ -27,12 +22,6 @@
 #include "theme.h"
 #include "thememgr.h"
 #include "saferef.h"
-
-
-using glm::vec2;
-using glm::ivec2;
-using glm::vec4;
-using glm::ivec4;
 
 struct NVGcontext;
 class guibase;
@@ -141,7 +130,7 @@ public:
 	}
 	virtual void relayout() { relayout(m_size.x, m_size.y); };
 	virtual void relayout(int32_t w, int32_t h) { };
-	virtual void openContextMenu(guictxtmenu_base *b, glm::ivec2 pos);
+	virtual void openContextMenu(guictxtmenu_base *b, ivec2 pos);
 	virtual void closeContextMenu() { };
 	void closeAllAppMenus()  { closeAppMenusAtLvl(0); };
 	virtual void closeAppMenusAtLvl(int startlvl)  { };

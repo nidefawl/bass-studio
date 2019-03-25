@@ -140,7 +140,7 @@ void automation_t::copyRange(tick_t tickBegin, tick_t tickEnd, std::vector<autom
 		}
 		automation_point_t ptStart{0, getValueAt(tickBegin)};
 		automation_point_t ptEnd{tickEnd - tickBegin, getValueAt(tickEnd)};
-		int32_t loopLen = std::max(0, (idxEnd)-(idxStart));
+		int32_t loopLen = math::max(0, (idxEnd)-(idxStart));
 		data.reserve(2+loopLen);
 		data.push_back(std::move(ptStart));
 		for (int j = idxStart; j <= idxEnd; j++) {

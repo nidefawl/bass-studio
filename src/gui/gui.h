@@ -1,13 +1,9 @@
 #pragma once
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
-#include <glm/vec4.hpp>
+#include "math/seq_math.h"
+#include "math/vec.h"
 #include <nanovg.h>
 #include <vector>
 #include <algorithm>
-//using glm::vec2;
-//using glm::ivec2;
-
 
 #include "str_util.h"
 #include "event.h"
@@ -34,17 +30,17 @@ struct dragdrop_midifile;
 void setFont(NVGcontext* vg, float size, NVGcolor color, int alignment);
 void renderText(NVGcontext* ctx, float x, float y, float maxWidth, const char* string);
 void renderDashedLineFrame(NVGcontext* vg, float x, float y, float w, float h, float thickness);
-void drawAttachedBackground(NVGcontext* vg, const guitheme_t* theme, glm::ivec2 posInset, glm::ivec2 sizeInset, int margin);
+void drawAttachedBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 posInset, ivec2 sizeInset, int margin);
 
-void drawPlaySymbol(NVGcontext* vg, glm::ivec2& pos, glm::ivec2& size, const NVGcolor& color, int drawParm, int drawParm2);
-void drawStopSymbol(NVGcontext* vg, glm::ivec2& pos, glm::ivec2& size, const NVGcolor& color, int drawParm, int drawParm2);
-void drawTextureSymbol(NVGcontext* vg, glm::ivec2& pos, glm::ivec2& size, const NVGcolor& color, int drawParm, int drawParm2);
+void drawPlaySymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2);
+void drawStopSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2);
+void drawTextureSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2);
 void drawTri(NVGcontext* vg, float xTop, float yTop, float h, const int dir, const NVGcolor& color, const NVGcolor& strokeColor, float strokeWidth);
 guitheme_t* getDefaultTheme();
-glm::ivec2 toControlsObjectSpace(glm::ivec2& pos, guibase* gui);
+ivec2 toControlsObjectSpace(ivec2& pos, guibase* gui);
 
 inline float calcInset(float desiredInset, float size) {
-	return std::min(desiredInset, std::max(0.f, (size-4.0f)/2.0f));
+	return math::min(desiredInset, math::max(0.f, (size-4.0f)/2.0f));
 }
 enum TextInputState : signed int {
 	DISABLED = 0,
@@ -56,8 +52,8 @@ class guibase {
 private:
 	int flags = FLG_ENBL|FLG_VISIBLE|FLG_RENDER_BACKGROUND;
 public:
-	glm::ivec2 pos{0};
-	glm::ivec2 size{0};
+	ivec2 pos{0};
+	ivec2 size{0};
 	int id;
 	int zOrder = 0;
 	BaseCtrl* parentCtrl = nullptr;
@@ -151,7 +147,7 @@ public:
 	virtual void render(NVGcontext* vg) {
 
 	}
-	virtual void determineSize(glm::ivec2& prefSize)/* const */ {
+	virtual void determineSize(ivec2& prefSize)/* const */ {
 	}
 	virtual void prerender(NVGcontext* vg) {
 	}
@@ -270,10 +266,10 @@ public:
 	virtual void scissorClip(ivec2& vpos, ivec2& vsize) {
 		ivec2 posTL = toParentSpace(vpos);
 		ivec2 posBR = toParentSpace(vpos + vsize);
-		vpos.x = std::max(posTL.x, pos.x);
-		vpos.y = std::max(posTL.y, pos.y);
-		vsize.x = std::min(posBR.x, (pos+size).x) - vpos.x;
-		vsize.y = std::min(posBR.y, (pos+size).y) - vpos.y;
+		vpos.x = math::max(posTL.x, pos.x);
+		vpos.y = math::max(posTL.y, pos.y);
+		vsize.x = math::min(posBR.x, (pos+size).x) - vpos.x;
+		vsize.y = math::min(posBR.y, (pos+size).y) - vpos.y;
 		if (parent != NULL) {
 			parent->scissorClip(vpos, vsize);
 		}

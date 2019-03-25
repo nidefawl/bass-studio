@@ -1,19 +1,11 @@
 #pragma once
 #include <vector>
+#include "math/vec.h"
 #include "event.h"
 #include "gui.h"
 #include "guicontainer.h"
 #include "guicolors.h"
 #include "basectrl.h"
-
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
-#include <glm/vec3.hpp>
-#include <glm/vec4.hpp>
-using glm::vec2;
-using glm::ivec2;
-using glm::vec4;
-using glm::ivec4;
 
 class ctxtmenu_entry {
 public:
@@ -34,7 +26,7 @@ public:
 	virtual void layout(ivec2 size, int32_t _fontSize) {
 		this->fontSize = _fontSize;
 		this->height = (int32_t) round(_fontSize*1.1f);
-		this->width = std::max(size.x, this->width);
+		this->width = math::max(size.x, this->width);
 	}
 	int leftOffset() {
 		return (int32_t) round(this->fontSize/2.4f);
@@ -113,11 +105,11 @@ public:
 	void render(NVGcontext* vg) override {
 		guictr_base::render(vg);
 	}
-	void determineSize(glm::ivec2& prefSize) override {
+	void determineSize(ivec2& prefSize) override {
 		ivec2 maxSize = ivec2(0);
 		for (guibase* gui : guis) {
-			maxSize.x = max(maxSize.x, gui->right());
-			maxSize.y = max(maxSize.y, gui->bottom());
+			maxSize.x = math::max(maxSize.x, gui->right());
+			maxSize.y = math::max(maxSize.y, gui->bottom());
 		}
 		prefSize = maxSize;
 	}

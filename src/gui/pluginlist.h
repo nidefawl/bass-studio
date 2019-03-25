@@ -12,10 +12,6 @@
 #include "modules.h"
 #include "leak_detect.h"
 
-using glm::vec2;
-using glm::ivec2;
-using glm::vec4;
-using glm::ivec4;
 class effectbase;
 class gui_pluginlist_entry : public gui_list_entry {
 public:

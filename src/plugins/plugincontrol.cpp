@@ -2,15 +2,14 @@
 
 #include "glheaders.h"
 #include <nanovg.h>
+#include <GLFW/glfw3.h>
 #include <time.h>
 #include <algorithm>
 #include <functional>
 #include <vector>
 #include <memory>
-#include <GLFW/glfw3.h>
 #include <cstdio>
 #include <cstdarg>
-#include <glm/glm.hpp>
 
 
 #include "window.h"
@@ -37,13 +36,6 @@
 #include "../gui/guimenu.h"
 #include "leak_detect.h"
 #include "plugin.h"
-
-using glm::vec2;
-using glm::ivec2;
-using glm::vec4;
-using glm::ivec4;
-using std::min;
-using std::max;
 
 
 void PluginControl::destroy()

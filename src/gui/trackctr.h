@@ -4,10 +4,11 @@
 #include <vector>
 #include <memory>
 #include "config.h"
+#include "math/vec.h"
+#include "math/seq_math.h"
 #include "exceptions.h"
 #include "seq_util.h"
 #include "color_util.h"
-#include "seq_math.h"
 #include "track.h"
 #include "clip.h"
 #include "clipboard.h"
@@ -18,17 +19,10 @@
 #include "mouse.h"
 #include "keyboard.h"
 #include "cursor.h"
-
 #include "platform.h"
 #include "dsp_util.h"
 #include "leak_detect.h"
 #include "../host/mainctrl.h"
-
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
-using glm::vec2;
-using glm::ivec2;
-
 
 int32_t getPosYFirstReturnTrack(project_t& project);
 track_t *getTrackFromMouse(project_t& project, ivec2 mouse, bool isDragSnap);
@@ -361,8 +355,8 @@ public:
 		float tickBeginX = clipLoopStartScrX();
 		float tickEndX = clipLoopEndScrX();
 		if (!(tickBeginX - wLoopInidicator > cs.x || tickEndX + wLoopInidicator < 0)) {
-			float barBeginX = max(-wLoopInidicator, tickBeginX);
-			float barEndX = min(cs.x + wLoopInidicator, tickEndX);
+			float barBeginX = math::max(-wLoopInidicator, tickBeginX);
+			float barEndX = math::min(cs.x + wLoopInidicator, tickEndX);
 			nvgBeginPath(vg);
 			nvgRect(vg, barBeginX, yOffset, barEndX-barBeginX, heightLoopIndicators);
 

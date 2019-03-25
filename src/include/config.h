@@ -5,7 +5,6 @@
 #endif
 
 #define OUTPUT_CHANNELS 2
-#define F_MIN 1E-12F
 #define FILE_FORMAT_VERSION 2
 #define PROJECT_FILE_EXT "project"
 #ifndef USE_GUI_MENU

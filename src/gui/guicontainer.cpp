@@ -1,7 +1,5 @@
 #include <nanovg.h>
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
-#include <glm/vec4.hpp>
+#include "math/seq_math.h"
 #include "basectrl.h"
 #include "gui.h"
 #include "guiglobals.h"
@@ -13,11 +11,6 @@
 #include "gui.h"
 #include "guicontainer.h"
 #include "button.h"
-
-using glm::vec2;
-using glm::ivec2;
-using glm::vec4;
-using glm::ivec4;
 
 namespace GuiColor {
 constant_t COL_PLUG_TITLE("COL_PLUG_TITLE", 0xff151515);
@@ -229,8 +222,8 @@ void guictr_tabbed::layout() {
 	for (tabbed_entry* entry : entries) {
 		entry->tabButton.pos = ivec2(sizeBar.x, 0);
 		entry->tabButton.size = ivec2(sizePer, HEIGHT_DEFAULT_INPUT);
-		sizeBar.x = std::max(sizeBar.x, entry->tabButton.right()+INSET_CTR_SPACING);
-		sizeBar.y = std::max(sizeBar.y, entry->tabButton.bottom()+INSET_CTR_SPACING);
+		sizeBar.x = math::max(sizeBar.x, entry->tabButton.right()+INSET_CTR_SPACING);
+		sizeBar.y = math::max(sizeBar.y, entry->tabButton.bottom()+INSET_CTR_SPACING);
 		entry->tabButton.layout();
 	}
 	sizeContentTab = ivec2(csize.x, csize.y-sizeBar.y);

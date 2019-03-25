@@ -1,6 +1,5 @@
 #pragma once
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
+#include "math/vec.h"
 #include "gui.h"
 #include "guicontainer.h"
 #include "guicolors.h"
@@ -71,7 +70,7 @@ public:
 					if (param) {
 						param->active = false;
 					}
-					arp->setParamValue(paramIdx, std::max(0.0f, std::min(1.0f, f)), flags);
+					arp->setParamValue(paramIdx, math::max(0.0f, math::min(1.0f, f)), flags);
 				}
 			};
 			knob->fnValueEditFinish = [this,paramIdx](float preVal, float val) {

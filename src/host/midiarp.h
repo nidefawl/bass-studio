@@ -121,7 +121,7 @@ public:
 		return params[ARP_PARAM_CLOCK].value;
 	}
 	void setClockF(float f) {
-		params[ARP_PARAM_CLOCK].value = std::max(0.0f, std::min(1.0f, f));
+		params[ARP_PARAM_CLOCK].value = math::max(0.0f, math::min(1.0f, f));
 	}
 	tick_t getStepSize() {
 		int32_t option = (int32_t)std::floor(getClockF()*(NUM_ARP_STEPSIZE_OPTIONS-1));

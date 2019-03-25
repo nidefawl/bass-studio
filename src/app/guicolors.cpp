@@ -1,6 +1,8 @@
 #include "guicolors.h"
 #include <nanovg_min.h>
 #include <vector>
+#include <algorithm>
+#include "math/seq_math.h"
 #include "logging.h"
 
 
@@ -130,8 +132,8 @@ namespace GuiColor {
 
 void initConstants(int colorVal) {
 	int c = colorVal;
-	int c2 = std::max(5, c - 16);
-	int c3 = std::min(255, c + 16);
+	int c2 = math::max(5, c - 16);
+	int c3 = math::min(255, c + 16);
 	auto setConstant = [](const GuiColor::constant_t& constantRef, int32_t rgba) {
 		changeConstantDefault(constantRef, rgba);
 	};
@@ -141,12 +143,12 @@ void initConstants(int colorVal) {
 	setConstant(GuiColor::COL_LINE_QRT, GUI_COLOR_HEXA(c2 + 3, 255));
 	setConstant(GuiColor::COL_LINE_XTH, GUI_COLOR_HEXA(c2 + 6, 255));
 	setConstant(GuiColor::COL_LINE_SEPERATOR, GUI_COLOR_HEXA(c2 - 3, 255));
-	setConstant(GuiColor::COL_BG_DRKER, GUI_COLOR_HEXA(std::max(0, c3-20), 255));
-	setConstant(GuiColor::COL_BG_DRKER2, GUI_COLOR_HEXA(std::max(0, c3-40), 255));
+	setConstant(GuiColor::COL_BG_DRKER, GUI_COLOR_HEXA(math::max(0, c3-20), 255));
+	setConstant(GuiColor::COL_BG_DRKER2, GUI_COLOR_HEXA(math::max(0, c3-40), 255));
 	setConstant(GuiColor::COL_BG_DRK, GUI_COLOR_HEXA(c3, 255));
 	setConstant(GuiColor::COL_BG_BRT, GUI_COLOR_HEXA(c3 + 20, 255));
-	int c4 = std::max(5, c - 32);
-	int c5 = std::max(5, c + 32);
+	int c4 = math::max(5, c - 32);
+	int c5 = math::max(5, c + 32);
 	setConstant(GuiColor::COL_CTXTMNU_OUTLINE, GUI_COLOR_HEXA(255, 255));
 	setConstant(GuiColor::COL_CTXTMNU_BG, GUI_COLOR_HEXA(c4, 255));
 	setConstant(GuiColor::COL_CTXTMNU_HILIGHT, GUI_COLOR_HEXA(c5, 255));

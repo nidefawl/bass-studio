@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
-#include <glm/vec2.hpp>
+#include "math/vec.h"
 #include "str_util.h"
 #include "seq_time.h"
 
@@ -112,8 +112,8 @@ public:
 	void onWindowDestroy();
 	bool onShow(vst_window* window);
 	bool updateWindowSize();
-	bool onResize(vst_window* window, glm::ivec2 size);
-	glm::ivec2 constrainSize(vst_window* window, glm::ivec2& size);
+	bool onResize(vst_window* window, ivec2 size);
+	ivec2 constrainSize(vst_window* window, ivec2& size);
 	bool show() override;
 	bool close() override;
 	void unload(vsthost* host) override;

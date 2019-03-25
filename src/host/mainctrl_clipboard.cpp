@@ -1,22 +1,20 @@
 #include <nanovg.h>
+#include <GLFW/glfw3.h>
 #include <time.h>
 #include <algorithm>
 #include <functional>
 #include <vector>
 #include <memory>
-#include <GLFW/glfw3.h>
 
+#include "mainctrl.h"
+#include "math/seq_math.h"
+#include "basectrl.h"
 #include "window.h"
 #include "platform.h"
-
 #include "keyboard.h"
 #include "commands.h"
-
 #include "project.h"
 #include "projectfile.h"
-
-#include "basectrl.h"
-#include "mainctrl.h"
 #include "grid.h"
 #include "note.h"
 #include "cursor.h"
@@ -36,6 +34,7 @@
 #include "../gui/gui.h"
 #include "../gui/guicontainer.h"
 #include "../gui/button.h"
+#include "../gui/splitter.h"
 #include "../gui/guicontextmenu_base.h"
 #include "../gui/tempocontrols.h"
 #include "../gui/scrollbar.h"
@@ -45,6 +44,7 @@
 #include "../gui/trackctr.h"
 #include "../gui/trackcontent.h"
 #include "../gui/trackctr.h"
+#include "../gui/list.h"
 #include "../gui/pluginlist.h"
 #include "../gui/guimenu.h"
 #include "../gui/debugctr.h"
@@ -62,12 +62,6 @@
 #include "../threads/workerthread.h"
 #include "../threads/playbackthread.h"
 
-using glm::vec2;
-using glm::ivec2;
-using glm::vec4;
-using glm::ivec4;
-using std::min;
-using std::max;
 using namespace std;
 
 void copyClipsInRange(trackdata_midi_t& in, track_clipboard_t& out, int32_t srcPos, int32_t dstPos, int32_t len) {

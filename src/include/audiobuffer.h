@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <assert.h>
-#include "seq_math.h"
 
 struct AudioBlock;
 struct AudioBuffer {

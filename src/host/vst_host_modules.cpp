@@ -1,7 +1,7 @@
+#include "math/seq_math.h"
 #include "str_util.h"
 #include "seq_util.h"
 #include "seq_time.h"
-#include "seq_math.h"
 #include "dsp_util.h"
 
 #include "vst_host.h"

@@ -1,18 +1,16 @@
-#include "tracktimeline.h"
-
 #include <nanovg.h>
-#include <glm/vec2.hpp>
-#include <glm/vec4.hpp>
 #include <stdbool.h>
 #include <stdint.h>
 #include <vector>
+
+#include "tracktimeline.h"
+#include "math/seq_math.h"
 #include "grid.h"
 #include "event.h"
 #include "mouse.h"
 #include "guiglobals.h"
 #include "gui.h"
 #include "guicontainer.h"
-#include "seq_math.h"
 #include "exceptions.h"
 #include "seq_util.h"
 #include "color_util.h"
@@ -36,8 +34,8 @@ void guitrack_timeline::handleDraggedMove(MouseEvent& evt) {
 		bool isMove = true;
 		if (lockGesture) {
 			if (dragDirection < 0) {
-				float initialx = (float)abs(evt.mousepos.x - evt.dragStart.x);
-				float initialy = (float)abs(evt.mousepos.y - evt.dragStart.y);
+				float initialx = (float)math::abs(evt.mousepos.x - evt.dragStart.x);
+				float initialy = (float)math::abs(evt.mousepos.y - evt.dragStart.y);
 				if (initialx + initialy < 4)
 					return;
 				if (initialx > initialy) dragDirection = 1;
@@ -48,14 +46,14 @@ void guitrack_timeline::handleDraggedMove(MouseEvent& evt) {
 		float distx = (float)(evt.dragDistance->x);
 		float disty = (float)(evt.dragDistance->y);
 
-		if (abs(distx) && (!lockGesture || (lockGesture && isMove))) {
+		if (math::abs(distx) && (!lockGesture || (lockGesture && isMove))) {
 			grid.setOffset(grid.offset - evt.dragDistance->x);
 			evt.dragDistance->x = 0;
 //				MainCtrl::get()->updateGrid();
 			grid.notifyChange();
 		}
 
-		if ((!lockGesture && abs(disty) > 0) || (lockGesture && !isMove)) {
+		if ((!lockGesture && math::abs(disty) > 0) || (lockGesture && !isMove)) {
 			evt.dragDistance->y = 0;
 			disty = 1.0f + disty * -0.01f;
 			float anchor_dragposx = (float)(startDrag.x < 50 ? 0 : evt.relMousepos.x);

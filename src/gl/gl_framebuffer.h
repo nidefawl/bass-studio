@@ -1,11 +1,10 @@
 #pragma once
 #include <array>
 #include "glheaders.h"
-#include <glm/glm.hpp>
-#include <glm/vec4.hpp>
+#include "math/seq_math.h"
+#include "math/vec.h"
 #include "gl_util.h"
 
-using glm::vec4;
 #define MAX_COLOR_ATT 8
 #define GL_ERROR_CHECKS true
 class FrameBuffer {
@@ -131,7 +130,7 @@ public:
 
 
         for (int i = 0; i < MAX_COLOR_ATT; i++) {
-            highestColorAtt = std::max(i, highestColorAtt);
+            highestColorAtt = math::max(i, highestColorAtt);
             if (highestColorAtt < i)
                 highestColorAtt = i;
 //            if (!end) {

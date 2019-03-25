@@ -3,7 +3,7 @@
 #include <memory.h>
 #include <stdlib.h>
 #include <assert.h>
-#include "seq_math.h"
+#include "math/seq_math.h"
 
 struct AudioBlock {
 	const uint32_t channels;
@@ -41,11 +41,11 @@ struct AudioBlock {
 	}
 	void copyFrom(float **srcBuf, uint32_t srcSamples, uint32_t srcChannels) {
 		assert(srcSamples == samples);
-		uint32_t nChannels = max(srcChannels, channels);
-		uint32_t nSamples = min(srcSamples, samples);
+		uint32_t nChannels = math::max(srcChannels, channels);
+		uint32_t nSamples = math::min(srcSamples, samples);
 		for (uint32_t i = 0; i < nChannels; i++) {
-			uint32_t srcChannelIdx = min(srcChannels-1, i);
-			uint32_t dstChannelIdx = min(channels-1, i);
+			uint32_t srcChannelIdx = math::min(srcChannels-1, i);
+			uint32_t dstChannelIdx = math::min(channels-1, i);
 			float* srcBufChannel = srcBuf[srcChannelIdx];
 			float* dstBufChannel = buf[dstChannelIdx];
 			//TODO: this does 2 copys to the same destination when going from stereo to mono (MIX FIRST)
@@ -54,11 +54,11 @@ struct AudioBlock {
 	}
 	void copyFromPosToPos(float **srcBuf, uint32_t offsetIn, uint32_t offsetOut, uint32_t srcSamples, uint32_t srcChannels) {
 //		assert(srcSamples == samples);
-		uint32_t nChannels = max(srcChannels, channels);
-		uint32_t nSamples = min(srcSamples, samples);
+		uint32_t nChannels = math::max(srcChannels, channels);
+		uint32_t nSamples = math::min(srcSamples, samples);
 		for (uint32_t i = 0; i < nChannels; i++) {
-			uint32_t srcChannelIdx = min(srcChannels-1, i);
-			uint32_t dstChannelIdx = min(channels-1, i);
+			uint32_t srcChannelIdx = math::min(srcChannels-1, i);
+			uint32_t dstChannelIdx = math::min(channels-1, i);
 			float* srcBufChannel = srcBuf[srcChannelIdx];
 			float* dstBufChannel = buf[dstChannelIdx];
 			//TODO: this does 2 copys to the same destination when going from stereo to mono (MIX FIRST)
@@ -71,10 +71,10 @@ struct AudioBlock {
 	void addFrom(float **srcBuf, uint32_t srcSamples, uint32_t srcChannels) {
 		assert(srcSamples == samples);
 		assert(srcChannels == channels); //remove when adding sub-track mixers (between plugins)
-		uint32_t nChannels = max(srcChannels, channels);
+		uint32_t nChannels = math::max(srcChannels, channels);
 		for (uint32_t i = 0; i < nChannels; i++) {
-			uint32_t srcChannelIdx = min(srcChannels-1, i);
-			uint32_t dstChannelIdx = min(channels-1, i);
+			uint32_t srcChannelIdx = math::min(srcChannels-1, i);
+			uint32_t dstChannelIdx = math::min(channels-1, i);
 			float* srcBufChannel = srcBuf[srcChannelIdx];
 			float* dstBufChannel = buf[dstChannelIdx];
 			//TODO: this does 2 additions to the same destination when going from stereo to mono (MIX FIRST)

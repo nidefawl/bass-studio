@@ -1,8 +1,5 @@
 #pragma once
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
-using glm::vec2;
-using glm::ivec2;
+#include "math/vec.h"
 #include <vector>
 #include "audiocache.h"
 #include "audiowaveform.h"

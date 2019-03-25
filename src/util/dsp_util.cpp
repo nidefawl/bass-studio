@@ -1,7 +1,7 @@
 #include "dsp_util.h"
 #include "samplerate.h"
 #include "config.h"
-#include "seq_math.h"
+#include "math/seq_math.h"
 #include <stdlib.h>
 #include <stdint.h>
 #include <malloc.h>
@@ -10,13 +10,11 @@
 #include <memory.h>
 #include <algorithm>
 #include <limits>
-using std::max;
-using std::min;
 
 namespace dsp_util {
-const float GAIN_DB6 = pow(10.0f, 6.0f/20.0f); // 2.0f
-const float GAIN_DBFLOOR = pow(10.0f, DBFS_FLOOR/20.0f);
-const float GAIN_DBINF = pow(10.0f, DBFS_INF_POS/20.0f);
+const float GAIN_DB6 = math::powf(10.0f, 6.0f/20.0f); // 2.0f
+const float GAIN_DBFLOOR = math::powf(10.0f, DBFS_FLOOR/20.0f);
+const float GAIN_DBINF = math::powf(10.0f, DBFS_INF_POS/20.0f);
 
 #define TABLE_SIZE   (200)
 typedef struct
@@ -95,7 +93,7 @@ float scaledRange(float db, float lvlFloor, float lvlCeil) {
 	if (db < dsp_util::DBFS_FLOOR)
 		return 1.0f;
 	float lvlRange = lvlFloor - lvlCeil;
-	return (max(lvlFloor, min(db, lvlCeil)) - lvlCeil) / lvlRange;
+	return (math::max(lvlFloor, math::min(db, lvlCeil)) - lvlCeil) / lvlRange;
 }
 void copyBuffer(float** dst, float** src, uint32_t samples) {
 	memcpy(dst[0], src[0], sizeof(float)*samples);

@@ -1,20 +1,12 @@
 #pragma once
 #include <vector>
+#include "math/vec.h"
 #include "event.h"
 #include "str_util.h"
 #include "gui.h"
 #include "guicolors.h"
 #include "guicontextmenu_base.h"
 #include "basectrl.h"
-
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
-#include <glm/vec3.hpp>
-#include <glm/vec4.hpp>
-using glm::vec2;
-using glm::ivec2;
-using glm::vec4;
-using glm::ivec4;
 
 class ctxtmenu_entry;
 class guictxtmenu : public guictxtmenu_base {
@@ -31,7 +23,7 @@ public:
 		}
 	}
 	void addEntry(ctxtmenu_entry* entry) {
-		size.x = std::max(size.x, entry->width);
+		size.x = math::max(size.x, entry->width);
 		entries.push_back(entry);
 		entry->theme = theme;
 	}
@@ -65,7 +57,7 @@ public:
 			y += e->height + paddingV;
 		}
 	}
-	void determineSize(glm::ivec2& prefSize) override {
+	void determineSize(ivec2& prefSize) override {
 		ivec2 newMaxSize = {size.x, paddingV};
 		for (ctxtmenu_entry* e : entries) {
 			newMaxSize.y += e->height + paddingV;

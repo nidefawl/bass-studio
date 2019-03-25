@@ -1,14 +1,12 @@
 #include <algorithm>
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
 #include "clipeditor.h"
 
+#include "math/seq_math.h"
 #include "gui.h"
 #include "guicolors.h"
 #include "track.h"
 #include "track_impl.h"
 #include "note.h"
-#include "seq_math.h"
 #include "seq_time.h"
 #include "cursor.h"
 #include "keyboard.h"
@@ -241,8 +239,8 @@ void guictr_cliphandles::render(NVGcontext* vg) {
 		int yOffset = 0;
 
 		if (!(tickBeginX - wLoopInidicator > cs.x || tickEndX + wLoopInidicator < 0)) {
-			float barBeginX = max(-wLoopInidicator, tickBeginX);
-			float barEndX = min(cs.x + wLoopInidicator, tickEndX);
+			float barBeginX = math::max(-wLoopInidicator, tickBeginX);
+			float barEndX = math::min(cs.x + wLoopInidicator, tickEndX);
 			NVGcolor color = rgbToNvg(view.clip()->rgb);
 			nvgBeginPath(vg);
 			nvgRect(vg, barBeginX, yOffset, barEndX - barBeginX, heightLoopInidicator * 2);
@@ -273,8 +271,8 @@ void guictr_cliphandles::render(NVGcontext* vg) {
 		tickBeginX = clipLoopStartScrX();
 		tickEndX = clipLoopEndScrX();
 		if (!(tickBeginX - wLoopInidicator > cs.x || tickEndX + wLoopInidicator < 0)) {
-			float barBeginX = max(-wLoopInidicator, tickBeginX);
-			float barEndX = min(cs.x + wLoopInidicator, tickEndX);
+			float barBeginX = math::max(-wLoopInidicator, tickBeginX);
+			float barEndX = math::min(cs.x + wLoopInidicator, tickEndX);
 			nvgBeginPath(vg);
 			nvgRect(vg, barBeginX, yOffset, barEndX - barBeginX, heightLoopInidicator);
 
@@ -391,7 +389,7 @@ void guictr_noteeditor::renderBackground(NVGcontext* vg) {
 }
 
 int32_t guictr_noteeditor::getTotalWidth() {
-	return max(10000, getSizeContent().x);
+	return math::max(10000, getSizeContent().x);
 }
 
 void guictr_noteeditor::layout() {
@@ -439,7 +437,7 @@ void guictr_noteeditor::zoomPianoRollToClipsNoteRange() {
 		minSemi = 0;
 		maxSemi = view.notePitches.size();
 	}
-	int32_t range = abs(maxSemi - minSemi);
+	int32_t range = math::abs(maxSemi - minSemi);
 	if (range < 6) {
 		int32_t add = 6 - range;
 		minSemi -= add / 2;

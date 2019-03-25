@@ -1,9 +1,7 @@
 #include <algorithm>
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
 #include "clipeditor.h"
 
-#include "seq_math.h"
+#include "math/seq_math.h"
 #include "seq_time.h"
 #include "gui.h"
 #include "guicolors.h"
@@ -152,7 +150,7 @@ void gui_clipsettings::layout() {
 	int32_t inset = 4;
 	int32_t i2 = inset * 2;
 	int32_t w = size.x-i2;
-	int32_t btnW = std::max(std::min(w, 120), w/3);
+	int32_t btnW = math::max(math::min(w, 120), w/3);
 	int32_t btnH = TRACK_HEIGHT_STEP;
 	int32_t labelWidth = w-btnW;
 	int32_t btnX = labelWidth;

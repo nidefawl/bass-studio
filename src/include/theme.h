@@ -1,12 +1,10 @@
 #pragma once
 #include <vector>
 #include <nanovg_min.h>
+#include <unordered_map>
 #include "guicolors.h"
 #include "guiconstant.h"
-#include "seq_math.h"
 #include "str_util.h"
-#include <glm/vec4.hpp>
-#include <unordered_map>
 
 NVGcolor rgbaToNvg(uint32_t color);
 

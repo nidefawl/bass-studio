@@ -1,9 +1,9 @@
 #pragma once
 #include <list>
 #include <vector>
+#include "math/seq_math.h"
 #include "note.h"
 #include "seq_time.h"
-#include "seq_math.h"
 #include "str_util.h"
 #include "seq_util.h"
 #include "logging.h"
@@ -253,7 +253,7 @@ public:
 			return;
 		}
 		if (isLoopEnabled() && offsetStart < loopStart) {
-			tick_t lenAdj = min(offset, loopStart - offsetStart);
+			tick_t lenAdj = math::min(offset, loopStart - offsetStart);
 			offsetStart += lenAdj;
 			offset -= lenAdj;
 		}

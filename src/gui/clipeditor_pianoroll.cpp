@@ -1,14 +1,9 @@
-#include <algorithm>
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
 #include "clipeditor.h"
-
 #include "gui.h"
 #include "guicolors.h"
 #include "track.h"
 #include "track_impl.h"
 #include "note.h"
-#include "seq_math.h"
 #include "seq_time.h"
 #include "cursor.h"
 #include "keyboard.h"
@@ -27,8 +22,6 @@ namespace GuiConstant {
 extern constant_t CONST_PIANOROLL_STROKE_WIDTH;
 }
 
-using glm::vec2;
-using glm::ivec2;
 
 gui_pianoroll::gui_pianoroll(clip_view& _view, layout_pianoroll_t& _layout) :
 		guibase(), piano_scale(_layout, _view, size.y), view(_view) {
@@ -55,8 +48,8 @@ void gui_pianoroll::handleDraggedMove(MouseEvent& evt) {
 		bool isMove = true;
 		if (lockGesture) {
 			if (dragDirection < 0) {
-				float initialx = (float) (abs(evt.mousepos.x - evt.dragStart.x));
-				float initialy = (float) (abs(evt.mousepos.y - evt.dragStart.y));
+				float initialx = (float) (math::abs(evt.mousepos.x - evt.dragStart.x));
+				float initialy = (float) (math::abs(evt.mousepos.y - evt.dragStart.y));
 				if (initialx + initialy < 4)
 					return;
 
@@ -69,17 +62,17 @@ void gui_pianoroll::handleDraggedMove(MouseEvent& evt) {
 		}
 		float distx = (float) ((evt.dragDistance->x));
 		float disty = (float) ((evt.dragDistance->y));
-		if ((!lockGesture && abs(disty) > 0) || (lockGesture && isMove)) {
+		if ((!lockGesture && math::abs(disty) > 0) || (lockGesture && isMove)) {
 			evt.dragDistance->y = 0;
 			setOffset(layoutRoll.offset() + disty);
 			//				grid.setOffset(grid.offset - distx);
 		}
-		if ((!lockGesture && abs(distx) > 0) || (lockGesture && !isMove)) {
+		if ((!lockGesture && math::abs(distx) > 0) || (lockGesture && !isMove)) {
 			evt.dragDistance->x = 0;
 			//				disty = 1.0f + disty * -0.01f;
 			//				float anchor_dragposx = (float)(startDrag.x < 50 ? 0 : evt.relMousepos.x);
 			setScale(layoutRoll.scale() + distx * 0.05f);
-			int32_t rel = min(size.y - 1, max(0, size.y - evt.relMousepos.y));
+			int32_t rel = math::min(size.y - 1, math::max(0, size.y - evt.relMousepos.y));
 			float offset = (size.y - toScreenF(dragPosObjSpace)) + layoutRoll.offset();
 			setOffset(offset - rel);
 			//				double newOffset = grid.calcOffset(anchor_dragposx, dragPosObjSpace);
@@ -121,7 +114,7 @@ void gui_pianoroll::render(NVGcontext* vg) {
 	bool fold = layoutRoll.fold;
 	float offset = layoutRoll.offset();
 	float scale = layoutRoll.scale();
-	int32_t firstKey = max((int32_t)floorf(offset/scale), 0);
+	int32_t firstKey = math::max((int32_t)floorf(offset/scale), 0);
 
 	if (fold) {
 		//render one extra key on top and bottom to fix antialiasing on edge of container

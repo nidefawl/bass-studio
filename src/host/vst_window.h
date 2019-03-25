@@ -15,9 +15,8 @@
 #endif
 #include <vector>
 #include <stdint.h>
+#include "math/vec.h"
 #include "str_util.h"
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
 
 class vstplugin;
 
@@ -30,16 +29,16 @@ namespace vst_window_mgr {
 class vst_window
 {
 public:
-	static vst_window* make(vstplugin* plugin, const String& name, glm::ivec2 size, bool resizeable);
+	static vst_window* make(vstplugin* plugin, const String& name, ivec2 size, bool resizeable);
 	static vst_window* getVSTWindow(WINDOW_HANDLE handle);
-	bool init (vstplugin* plugin, const String& name, glm::ivec2 size, bool resizeable);
+	bool init (vstplugin* plugin, const String& name, ivec2 size, bool resizeable);
 	WINDOW_HANDLE getHWND () const;
 
 	void show ();
 	void close ();
 	void destroy ();
-	void resize (glm::ivec2 newSize);
-	glm::ivec2 getContentSize ();
+	void resize (ivec2 newSize);
+	ivec2 getContentSize ();
 
 	void updateWindow();
 

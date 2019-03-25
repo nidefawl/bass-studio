@@ -24,16 +24,9 @@
 #include <sstream>
 #include <algorithm>
 #include <map>
-#include <glm/glm.hpp>
-#include <glm/vec4.hpp>
-#include <glm/vec2.hpp>
-#include <glm/vec3.hpp>
 #include <glm/geometric.hpp>
 #include <cereal/archives/json.hpp>
 
-using glm::vec4;
-using glm::vec2;
-using glm::ivec2;
 using std::ifstream;
 using std::ofstream;
 
@@ -46,6 +39,8 @@ using std::ofstream;
 #endif
 
 #include "config.h"
+#include "math/vec.h"
+#include "math/seq_math.h"
 #include "str_util.h"
 #include "exceptions.h"
 #include "color_util.h"
@@ -633,7 +628,7 @@ public:
 		}
 	}
 	void onMouseMoved(ivec2 deltapos) {
-		if (abs(deltapos.x)+abs(deltapos.y) > 2)
+		if (math::abs(deltapos.x)+math::abs(deltapos.y) > 2)
 			this->dblclicktimer = 0;
 		ctrl->mouseMoved(getMousePos(), deltapos);
 		flagNeedsRedraw();
@@ -894,7 +889,7 @@ public:
 	}
 
 	void onMouseMoved(ivec2 deltapos) {
-		if (abs(deltapos.x)+abs(deltapos.y) > 2)
+		if (math::abs(deltapos.x)+math::abs(deltapos.y) > 2)
 			this->dblclicktimer = 0;
 		popupCtrl->mouseMoved(getMousePos(), deltapos);
 		flagNeedsRedraw();

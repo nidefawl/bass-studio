@@ -1,22 +1,20 @@
 #include <nanovg.h>
+#include <GLFW/glfw3.h>
 #include <time.h>
 #include <algorithm>
 #include <functional>
 #include <vector>
 #include <memory>
-#include <GLFW/glfw3.h>
 
+#include "mainctrl.h"
+#include "math/seq_math.h"
+#include "basectrl.h"
 #include "window.h"
 #include "platform.h"
-
 #include "keyboard.h"
 #include "commands.h"
-
 #include "project.h"
 #include "projectfile.h"
-
-#include "basectrl.h"
-#include "mainctrl.h"
 #include "grid.h"
 #include "note.h"
 #include "cursor.h"
@@ -65,13 +63,6 @@
 #include "../threads/playbackthread.h"
 #include "plugindatabase.h"
 
-using glm::vec2;
-using glm::ivec2;
-using glm::vec4;
-using glm::ivec4;
-using std::min;
-using std::max;
-using namespace std;
 
 
 std::shared_ptr<MainCtrl> mainctrl;
@@ -131,13 +122,13 @@ void testTask() {
 	}
 	if (task.isError()) {
 		printf("task[%d] iserror: %d\n", task.id, task.result);
-		exception_ptr eptr = task.getException();
+		std::exception_ptr eptr = task.getException();
 		if (eptr != nullptr) {
 			printf("task[%d] had exception.. rethrowing\n",task.id);
 	        try{
-	            rethrow_exception(eptr);
+	        	std::rethrow_exception(eptr);
 	        }
-	        catch(const exception &ex)
+	        catch(const std::exception &ex)
 	        {
 				printf("task[%d] had exception: %s\n",task.id,  ex.what());
 	        }
@@ -336,7 +327,7 @@ public:
 		splitterList.pos = ivec2(ctr_tabbed.pos.x, ctr_tabbed2.bottom()-5);
 		splitterList.size = ivec2(wRight, 10);
 	}
-	void addTo(vector<guictr_base*>& v) {
+	void addTo(std::vector<guictr_base*>& v) {
 		 v.push_back(&ctr_tracks);
 		 v.push_back(&ctr_clipeditor);
 		 v.push_back(&ctr_tempo);
@@ -379,7 +370,7 @@ void MainCtrl::unloadProject() {
 	cursor.setEmptySelection();
 //	std::shared_ptr<clip_clipboard>& clipboard = view->ctr_tracks.trackView.clipboard;
 //	clipboard.reset();
-	vector<track_t*> _tracks = trackList.vec();  // iterate a copy
+	std::vector<track_t*> _tracks = trackList.vec();  // iterate a copy
 	my_printf("DELETE _tracks %d\n", _tracks.size());
 	for (track_t* tr : _tracks) {
 		my_printf("DELETE TRACK %s\n", StringAsCStr(tr->name));
@@ -443,10 +434,10 @@ void MainCtrl::updateMenubar() {
 }
 
 static SupportedFileType FILE_TYPE_PROJECT {"Project File", PROJECT_FILE_EXT};
-vector<SupportedFileType> vFILE_TYPE_PROJECT = { FILE_TYPE_PROJECT };
+std::vector<SupportedFileType> vFILE_TYPE_PROJECT = { FILE_TYPE_PROJECT };
 
 void MainCtrl::loadFile(String path) {
-	shared_ptr<project_file> f = loadProjectFile(this, path);
+	std::shared_ptr<project_file> f = loadProjectFile(this, path);
 	if (!f) {
 		setStatusText(StringFormat("Failed loading %s", StringAsCStr(FileNameFromPath(path))));
 	} else {
@@ -501,7 +492,7 @@ void MainCtrl::menuCommand(int cmd) {
 			}
 			if (!path.empty())
 			{
-				shared_ptr<project_file> f = createProjectFile();
+				std::shared_ptr<project_file> f = createProjectFile();
 				saveProject(f, path);
 				projectPath = path;
 			}
@@ -738,8 +729,8 @@ void MainCtrl::onTick()
 void MainCtrl::pushHist(action_base* action) {
 	hist.push(action);
 }
-shared_ptr<project_file> MainCtrl::createProjectFile() {
-	shared_ptr<project_file> file = make_shared<project_file>();
+std::shared_ptr<project_file> MainCtrl::createProjectFile() {
+	std::shared_ptr<project_file> file = std::make_shared<project_file>();
 	file->path = projectPath;
 	copyTo(file->project);
 	audiocache::getInstance()->store(file->sampleFileIndex);
@@ -750,7 +741,7 @@ shared_ptr<project_file> MainCtrl::createProjectFile() {
 void MainCtrl::setDragged(guibase* g) {
 	guiDragged = g;
 }
-bool MainCtrl::setLoadedProject(shared_ptr<project_file> file) {
+bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file) {
 	setAudioThreadState(playback_state::status_no_process);
 	ThreadLock lock = playThread.lockThread();
 	unloadProject();
@@ -878,7 +869,7 @@ void MainCtrl::objectDragRelease(guibase* g, MouseEvent& mevt) {
 		g->dragReleaseOn(gui, mposObj);
 	}
 }
-bool MainCtrl::filesDropBegin(vector<string>& files, ivec2 mousepos, int kbmods) {
+bool MainCtrl::filesDropBegin(std::vector<String>& files, ivec2 mousepos, int kbmods) {
 	my_printf("filesDropBegin %d %d isdragging=%d\n", mousepos.x, mousepos.y, dragdropclip.isLoaded);
 	dragdropclip.reset();
 	if (guiDragged || guiCaptured) {
@@ -899,9 +890,9 @@ bool MainCtrl::filesDropBegin(vector<string>& files, ivec2 mousepos, int kbmods)
 					clip.setLenSamples(sample->nSamples);
 					clip.setLen(samplesToTicks(sample->nSamples));
 					clip.loopEnabled = false;
-					shared_ptr<track_clipboard_t> trClipboard = make_shared<track_clipboard_t>();
-					trClipboard->clips.push_back(make_shared<clip_t>(move(clip)));
-					shared_ptr<clip_clipboard> fileClipboard = make_shared<clip_clipboard>();
+					std::shared_ptr<track_clipboard_t> trClipboard = std::make_shared<track_clipboard_t>();
+					trClipboard->clips.push_back(std::make_shared<clip_t>(std::move(clip)));
+					std::shared_ptr<clip_clipboard> fileClipboard = std::make_shared<clip_clipboard>();
 					fileClipboard->tracks.push_back(trClipboard);
 					dragdropclip.reset();
 					dragdropclip.clipboard = fileClipboard;
@@ -917,7 +908,7 @@ bool MainCtrl::filesDropBegin(vector<string>& files, ivec2 mousepos, int kbmods)
 			if (task.isInQueue()) {
 				task.wait();
 				if (task.isGood()) {
-					shared_ptr<clip_clipboard> fileloadedClipboard = task.getClipboard();
+					std::shared_ptr<clip_clipboard> fileloadedClipboard = task.getClipboard();
 					if (fileloadedClipboard) {
 						dragdropclip.reset();
 						dragdropclip.clipboard = fileloadedClipboard;
@@ -992,7 +983,7 @@ public:
 		clip.reset();
 	}
 };
-bool MainCtrl::filesDropFinal(vector<string>& files, ivec2 mousepos, int kbmods) {
+bool MainCtrl::filesDropFinal(std::vector<String>& files, ivec2 mousepos, int kbmods) {
 	clipreset rst(dragdropclip);
 	if (guiDragged || guiCaptured) {
 		return false;

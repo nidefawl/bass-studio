@@ -1,6 +1,4 @@
 #include "guicolorpick.h"
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
 #include "glheaders.h"
 #include <nanovg.h>
 #include <vector>
@@ -9,6 +7,7 @@
 #include <nanovg.h>
 
 #include "str_util.h"
+#include "color_util.h"
 
 #include "basectrl.h"
 #include "gui/knob.h"
@@ -18,36 +17,6 @@
 #include "guicontextmenu_daw.h"
 #include "guicontextmenu_color.h"
 
-using glm::vec2;
-using glm::ivec2;
-using glm::vec4;
-glm::vec4 rgbToHSL(float r, float g, float b) {
-    float minV = std::min(std::min(r, g), b);
-    float maxV = std::max(std::max(r, g), b);
-    float h, s, l = (maxV + minV) / 2;
-
-    if(maxV == minV){
-        h = s = 0; // achromatic
-    }else{
-    	auto greatest = [](auto x, auto y, auto z){
-    	  return x > y ? (x > z ? 0 : 2) : (y > z ? 1 : 2);
-    	};
-    	float d = maxV - minV;
-        s = l > 0.5 ? d / (2 - maxV - minV) : d / (maxV + minV);
-        int mx = greatest(r, g, b);
-        if (mx == 0) {
-        	h = (g - b) / d + (g < b ? 6 : 0);
-        } else if (mx == 1) {
-        	h = (b - r) / d + 2;
-        } else {
-        	h = (r - g) / d + 4;
-        }
-        h /= 6;
-    }
-
-	return glm::vec4{ h, s, l, 1.0f };
-
-}
 gui_color_pick::gui_color_pick() :
 		guictr_base(), knH(false), knS(false), knL(false), knA(false), hexInput(&colorInt32) {
 	padding = 0;
@@ -246,7 +215,7 @@ void gui_input_filtered::layout() {
 	field.pos = pos;
 	field.size = size;
 	field.layout();
-	field.setFontSize((int32_t) (std::max(4.0, field.size.y * 0.7)));
+	field.setFontSize((int32_t) (math::max(4.0, field.size.y * 0.7)));
 }
 
 void gui_input_filtered::render(NVGcontext* vg) {
@@ -343,11 +312,11 @@ void gui_input_filtered::handleDraggedMove(MouseEvent& evt) {
 		if (this->draggedByte >= 0 && draggedByte < 4) {
 			//				my_printf("drag start %d %d\n", evt.dragStart.x, evt.dragStart.y);
 			int disty = (int) (evt.dragDistance->y) / 2;
-			if (abs(disty) < 1)
+			if (math::abs(disty) < 1)
 				return;
 
 			evt.dragDistance->y = 0;
-			int absy = abs(disty);
+			int absy = math::abs(disty);
 			if (absy >= 4)
 				absy = 64;
 			else if (absy >= 2)

@@ -7,6 +7,7 @@
 using std::shared_ptr;
 using std::make_shared;
 using std::move;
+
 tick_t roundUp(tick_t len) {
 	if (len > 0 && (len&(TICKS_BAR-1)) == 0)
 		return len;
@@ -87,8 +88,8 @@ void LoadMidiTask::loadFile() {
 							tickClipMin = clip.start();
 							tickClipMax = clip.end();
 						} else {
-							tickClipMin = min(tickClipMin, clip.start());
-							tickClipMax = max(tickClipMax, clip.end());
+							tickClipMin = math::min(tickClipMin, clip.start());
+							tickClipMax = math::max(tickClipMax, clip.end());
 						}
 						trClipboard->clips.push_back(make_shared<clip_t>(move(clip)));
 						fileClipboard->tracks.push_back(trClipboard);

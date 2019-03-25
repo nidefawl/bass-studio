@@ -2,11 +2,7 @@
 #include <nanovg.h>
 #include "gui.h"
 #include "guicolors.h"
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
-
-using glm::vec2;
-using glm::ivec2;
+#include "math/vec.h"
 
 class gui_scrollcontainer {
 public:
@@ -50,7 +46,7 @@ public:
 		vec2 barOff(0);
 		vec2 barS = size;
 		if (vcS[dir] > 0) {
-			barS[dir] = std::min((float) size[dir], (vs[dir] / (float) vcS[dir]) * size[dir]);
+			barS[dir] = math::min((float) size[dir], (vs[dir] / (float) vcS[dir]) * size[dir]);
 			barOff[dir] = (size[dir] - barS[dir]) * scrollOffset;
 		}
 		return size[dir] - barS[dir];
@@ -59,7 +55,7 @@ public:
 		ivec2 vcS = ctr.getScrollTotalSize();
 		ivec2 vs = ctr.getScrollViewSize();
 		int32_t dist = vcS[dir]-vs[dir];
-		return std::max(0.0, (double)scrollOffset*dist);
+		return math::max(0.0, (double)scrollOffset*dist);
 	}
 	void scrollVisible(int32_t y, int32_t size) {
 		ivec2 vcS = ctr.getScrollTotalSize();

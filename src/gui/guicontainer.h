@@ -1,9 +1,7 @@
 #pragma once
 #include <nanovg_min.h>
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
-#include <glm/vec4.hpp>
-#include "seq_math.h"
+#include "math/vec.h"
+#include "math/seq_math.h"
 #include "str_util.h"
 #include "exceptions.h"
 #include "mouse.h"
@@ -11,10 +9,6 @@
 #include "guiconstant.h"
 #include "gui.h"
 
-using glm::vec2;
-using glm::ivec2;
-using glm::vec4;
-using glm::ivec4;
 class BaseCtrl;
 struct guitheme_t;
 class guictr_base : public guibase {
@@ -59,7 +53,7 @@ public:
 
 	virtual void onRemove() override;
 	virtual void onAdded() override;
-	virtual void determineSize(glm::ivec2& prefSize) override {
+	virtual void determineSize(ivec2& prefSize) override {
 	}
 	virtual ivec2 paddingTL(int _padding) {
 		return ivec2(_padding - margin*snapSides.x, _padding - margin*snapSides.y);
@@ -99,10 +93,10 @@ public:
 		ivec2 posCnt = getPosContent();
 		ivec2 sizeCnt = getSizeContent();
 		ivec2 posBRThis = posCnt+sizeCnt;
-		vpos.x = max(posTL.x, posCnt.x);
-		vpos.y = max(posTL.y, posCnt.y);
-		vsize.x = min(posBR.x, posBRThis.x) - vpos.x;
-		vsize.y = min(posBR.y, posBRThis.y) - vpos.y;
+		vpos.x = math::max(posTL.x, posCnt.x);
+		vpos.y = math::max(posTL.y, posCnt.y);
+		vsize.x = math::min(posBR.x, posBRThis.x) - vpos.x;
+		vsize.y = math::min(posBR.y, posBRThis.y) - vpos.y;
 		if (parent != NULL) {
 			parent->scissorClip(vpos, vsize);
 		}

@@ -1,14 +1,11 @@
 #include <nanovg.h>
 #include <vector>
 #include "theme.h"
+#include "math/vec.h"
+#include "math/seq_math.h"
 #include "color_util.h"
 #include "guicolors.h"
 #include "guiconstant.h"
-#include "seq_math.h"
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
-#include <glm/vec3.hpp>
-#include <glm/vec4.hpp>
 
 
 uint32_t nvgToRGB(NVGcolor c);
@@ -114,7 +111,7 @@ void guitheme_t::set(GuiConstant::constant_t _constant, int32_t _value) {
 	mapProperties[_constant.idx] = _value;
 }
 void guitheme_t::setTint(uint32_t hex) {
-	glm::vec4 hsl = hexToHSL(hex);
+	vec4 hsl = hexToHSL(hex);
 	colorBg = nvgHSL(hsl.x, hsl.y, hsl.z);
 	colorBgDisabled = nvgHSL(hsl.x, CLAMP_F(hsl.y*0.55f), CLAMP_F(hsl.z - 0.3f));
 //	colorBgActive = nvgRGBAf(1, 0, 0, 1);

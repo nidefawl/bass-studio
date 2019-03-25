@@ -177,8 +177,8 @@ static void processStereo(float** inputs, float** outputs, VstInt32 sampleFrames
 	float *in1 = inputs[0];
 	float *in2 = inputs[1];
 
-	float scaleMono = 1.0f - std::max(0.0f, (width-0.5f)*2.0f);
-	float scaleStereo = std::min(1.0f, width*2.0f);
+	float scaleMono = 1.0f - math::max(0.0f, (width-0.5f)*2.0f);
+	float scaleStereo = math::min(1.0f, width*2.0f);
 	for (int a = 0; a < sampleFrames; a++) {
 		float channelL = (*in1++);
 		float channelR = (*in2++);

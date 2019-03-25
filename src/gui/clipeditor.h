@@ -1,7 +1,8 @@
 #pragma once
 #include <list>
 #include <vector>
-#include "seq_math.h"
+#include "math/vec.h"
+#include "math/seq_math.h"
 #include "str_util.h"
 #include "color_util.h"
 #include "clip.h"
@@ -19,12 +20,7 @@
 #include "leak_detect.h"
 #include "../host/mainctrl.h"
 #include "guiarp.h"
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
-
 #include "guiinputfield.h"
-using glm::vec2;
-using glm::ivec2;
 
 #define MAX_OCTAVES (8-(-2))
 #define PIANOROLL_MIN_SCALE 4
@@ -98,10 +94,10 @@ public:
 	}
 	void showRange(int32_t noteFrom, int32_t noteTo) {
 		noteTo++;
-		int32_t nNotes = abs(noteFrom - noteTo);
+		int32_t nNotes = math::abs(noteFrom - noteTo);
 		float rangeScale = sizeY / (float) nNotes;
 		setScale(rangeScale); //TODO: maybe only zoom out here, not in (or determine on upper level)
-		setOffset(min(noteFrom, noteTo)*layoutRoll.scale());
+		setOffset(math::min(noteFrom, noteTo)*layoutRoll.scale());
 	}
 	void makeNoteVisible(int32_t noteFrom) {
 		float foldNote = layoutRoll.fold ? this->clipview.toFoldNote(noteFrom) : noteFrom;
@@ -405,7 +401,7 @@ public:
 			int32_t minTime = notes.firstNote.start();
 			int32_t distPitch = notes.maxNote.pitch - notes.minNote.pitch;
 			distPitch++;
-			lenTime = max(clip->getLen(), lenTime);
+			lenTime = math::max(clip->getLen(), lenTime);
 			assert(distPitch >= 0);
 			assert(lenTime >= 0);
 			double noteScale = cs.y / (double)distPitch;

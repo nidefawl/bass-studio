@@ -1,7 +1,5 @@
-#include <algorithm>
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
 #include "clipeditor.h"
+#include "math/seq_math.h"
 
 #include "gui.h"
 #include "guicolors.h"
@@ -10,7 +8,6 @@
 #include "track.h"
 #include "track_impl.h"
 #include "note.h"
-#include "seq_math.h"
 #include "seq_time.h"
 #include "cursor.h"
 #include "keyboard.h"
@@ -19,8 +16,6 @@
 
 #include "guicontextmenu_daw.h"
 
-using glm::vec2;
-using glm::ivec2;
 namespace GuiColor {
 
 constant_t COL_PIANOROLL_WHITE("COL_PIANOROLL_WHITE", 0xFFFFFFFF);
@@ -161,10 +156,10 @@ void renderNoteName(NVGcontext* vg, gui_clipcontent* c, note_t* note, int idx, f
 	renderText(vg, nx + insetx, ny - yscale + nh / 2.0f, nw-insetx*2, StringAsCStr(StringFormat("%s %d", noteName(note->pitch), idx)));
 }
 void renderFrame(NVGcontext* vg, ivec2 posA, ivec2 posB) {
-	float x = min(posA.x, posB.x);
-	float y = min(posA.y, posB.y);
-	float w = max(posA.x - posB.x, posB.x - posA.x);
-	float h = max(posA.y - posB.y, posB.y - posA.y);
+	float x = math::min(posA.x, posB.x);
+	float y = math::min(posA.y, posB.y);
+	float w = math::max(posA.x - posB.x, posB.x - posA.x);
+	float h = math::max(posA.y - posB.y, posB.y - posA.y);
 	renderDashedLineFrame(vg, x, y, w, h, 2.0f);
 }
 void renderGridLines(NVGcontext* vg, const guitheme_t* theme, const scaled_grid& grid, const ivec2& size) {
@@ -277,7 +272,7 @@ void gui_clipcontent::render(NVGcontext* vg) {
 //			break;
 //		}
 	} else {
-		int32_t firstKey = max((int32_t)floorf(offset/scale), 0);
+		int32_t firstKey = math::max((int32_t)floorf(offset/scale), 0);
 		//render one extra key on top and bottom to fix antialiasing on edge of container
 		if (firstKey > 0) {
 			firstKey--;
@@ -609,7 +604,7 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
 				notes.removeDuplicates();
 			if (isShift(evt.kbmods)) {
 				selectionStart = notes.selection;
-				if (abs(view.cursor.start-tickGridNearest) < abs(view.cursor.end-tickGridNearest)) {
+				if (math::abs(view.cursor.start-tickGridNearest) < math::abs(view.cursor.end-tickGridNearest)) {
 					view.cursor.start = tickGridNearest;
 				} else {
 					view.cursor.end = tickGridNearest;
@@ -667,17 +662,17 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
 	if (dragMode == drag_frame)
 	{
 		*evt.dragDistance = ivec2(0);
-		float xStart = min(dragBegin.x, dragTo.x);
-		float xEnd = max(dragBegin.x, dragTo.x);
-		float yStart = min(dragBegin.y, dragTo.y);
-		float yEnd = max(dragBegin.y, dragTo.y);
+		float xStart = math::min(dragBegin.x, dragTo.x);
+		float xEnd = math::max(dragBegin.x, dragTo.x);
+		float yStart = math::min(dragBegin.y, dragTo.y);
+		float yEnd = math::max(dragBegin.y, dragTo.y);
 		tick_t tickStart = grid.screenToTickSnap(xStart, SNAP_OFF);
 		tick_t tickEnd = grid.screenToTickSnap(xEnd, SNAP_OFF);
 		tick_t tickOver = grid.screenToTickSnap(evt.relMousepos.x, isAlt(evt.kbmods) ? SNAP_OFF : SNAP_ON);
 		clip_cursor_t& cursor = view.cursor;
 		if (isShift(evt.kbmods)) {
 			tick_t gridSize = grid.getTickLength();
-			if (abs(cursor.start-tickOver) < abs(cursor.end-tickOver)) {
+			if (math::abs(cursor.start-tickOver) < math::abs(cursor.end-tickOver)) {
 				if (tickOver < cursor.end-gridSize) {
 					cursor.start = tickOver;
 				}
@@ -733,7 +728,7 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
 		const note_t note = this->beginDragNote;
 		if (modeMove == SNAP_LEAST) {
 			tick_t handlePos = dragMode == drag_note_right ? note.end() : note.start();
-			if (abs(timeOffsetEx) > gridSize/4) {
+			if (math::abs(timeOffsetEx) > gridSize/4) {
 				tick_t next = grid.next(handlePos+timeOffsetEx) - handlePos;
 				tick_t prev = grid.prev(handlePos+timeOffsetEx) - handlePos;
 				if (prev < 0 && timeOffsetEx > 0) {
@@ -742,7 +737,7 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
 				if (next > 0 && timeOffsetEx < 0) {
 					next = prev;
 				}
-				if (abs(next) > abs(prev)) {
+				if (math::abs(next) > math::abs(prev)) {
 					timeOffset = prev;
 				} else {
 					timeOffset = next;
@@ -759,8 +754,8 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
 				note_t& note = *it;
 				if (dragMode == drag_note_left) {
 					note_t* before = getFirstBefore(notes.m_list, note.pitch, note.time);
-					note.time = min(note.end()-1, note.start()+timeOffset);
-					note.len = max(1, note.len - timeOffset);
+					note.time = math::min(note.end()-1, note.start()+timeOffset);
+					note.len = math::max(1, note.len - timeOffset);
 					if (before) {
 						if (note.start() < before->end()) {
 							note.cutLeft(before->end());
@@ -768,7 +763,7 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
 					}
 				} else if (dragMode == drag_note_right) {
 					note_t* after = getFirstAfter(notes.m_list, note.pitch, note.time);
-					note.len = max(gridSize, note.len + timeOffset);
+					note.len = math::max(gridSize, note.len + timeOffset);
 					if (after) {
 						if (note.end() > after->start()) {
 							note.cutRight(after->start());
@@ -854,8 +849,8 @@ void gui_clipcontent::mergeDraggedNotes(dragmode mergeMode) {
 void gui_clipcontent::expandSelectionFrame(std::pair<note_t*, note_t*> minMax) {
 	if (minMax.first && minMax.second) {
 		clip_cursor_t& cursor = view.cursor;
-		cursor.start = min(cursor.start, minMax.first->time);
-		cursor.end = max(cursor.end, (minMax.second->time+minMax.second->len));
+		cursor.start = math::min(cursor.start, minMax.first->time);
+		cursor.end = math::max(cursor.end, (minMax.second->time+minMax.second->len));
 	}
 }
 void gui_clipcontent::setSelectionFrame(std::pair<note_t*, note_t*> minMax) {

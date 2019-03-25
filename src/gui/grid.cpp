@@ -3,8 +3,6 @@
 #include "../host/mainctrl.h"
 #include "leak_detect.h"
 
-using glm::ivec2;
-
 void scaled_grid::makeTickVisible(tick_t tickTime) {
 	double tickBars = tickTime / (double)TICKS_BAR;
 	if (lastW > 0) {
@@ -105,7 +103,7 @@ tick_t scaled_grid::screenToTickSnap(int32_t x, int snap) {
 				}
 				min = &d;
 			} else {
-				tick_t dist = abs(d.time-tick);
+				tick_t dist = math::abs(d.time-tick);
 				if (min == NULL || dist < minDist) {
 					minDist = dist;
 					min = &d;

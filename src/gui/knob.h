@@ -1,17 +1,15 @@
 #pragma once
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
 #include <nanovg.h>
 #include <functional>
+#include "math/vec.h"
+#include "math/seq_math.h"
 #include "color_util.h"
 #include "str_util.h"
 #include "seq_util.h"
-#include "seq_math.h"
 #include "gui.h"
 #include "guicolors.h"
 #include "event.h"
-using glm::vec2;
-using glm::ivec2;
+
 struct automatable_t;
 class guiknob : public guibase {
 protected:

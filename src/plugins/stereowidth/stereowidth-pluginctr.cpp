@@ -1,14 +1,13 @@
-#include <vector>
-#include <cmath>
-#include <memory>
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
 #include "glheaders.h"
 #include <nanovg.h>
 #include <nanovg_gl.h>
 #include <nanovg_gl_utils.h>
+#include <vector>
+#include <cmath>
+#include <memory>
 
 #include "str_util.h"
+#include "math/seq_math.h"
 #include "color_util.h"
 #include "gui/gui.h"
 #include "gui/guicontainer.h"
@@ -36,10 +35,7 @@
 #include "vstsdk-plugin-2.4/audioeffectx.h"
 #include "leak_detect.h"
 
-using glm::vec2;
-using glm::ivec2;
 using namespace PluginStereoWidth;
-using namespace std;
 
 class guiknob_labeled : public guiknob_labeled_base {
 	AudioEffect* curEffect = nullptr;
@@ -256,7 +252,7 @@ void guicontainer_stereowidth::render(NVGcontext* vg) {
 void guicontainer_stereowidth::layout() {
 	ivec2 cs = getSizeContent();
 	const int inset = 4;
-	const int knobSize = max(32, (cs.x-inset*3)/2);
+	const int knobSize = math::max(32, (cs.x-inset*3)/2);
 	knobwidth.size = ivec2(knobSize, cs.y-inset*2);
 	knobgain.size = ivec2(knobSize, cs.y-inset*2);
 	knobwidth.pos = ivec2(inset);

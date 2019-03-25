@@ -11,7 +11,6 @@
 #else
 #include <timeapi.h>
 #endif
-#include "seq_math.h"
 #include <fcntl.h>
 #include <io.h>
 #include <stdio.h>
@@ -26,10 +25,9 @@
 #else
 #include <mutex>
 #endif
+#include "math/seq_math.h"
 #include "str_util.h"
 
-using std::max;
-using std::min;//make code analyzer happy (and make author sad)
 uint64_t getTimeMillis() {
 	return (uint64_t) timeGetTime();
 }
@@ -88,7 +86,7 @@ void setMinimumResolutionTimer() {
 	{
 		// Error; application can't continue.
 	}
-	wTimerRes = min(max((uint32_t)tc.wPeriodMin, (uint32_t)TARGET_RESOLUTION), (uint32_t)tc.wPeriodMax);
+	wTimerRes = math::min(math::max((uint32_t)tc.wPeriodMin, (uint32_t)TARGET_RESOLUTION), (uint32_t)tc.wPeriodMax);
 	timeBeginPeriod(wTimerRes);
 
 }

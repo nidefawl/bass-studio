@@ -3,9 +3,6 @@
 #include <vector>
 #include <assert.h>
 
-using std::max;
-using std::min;
-
 void downsample(float sampleRate, float* samplesIn, int len, std::vector<float>& samplesOut, int downsampleBits) {
 //	float srtDown = sampleRate / (float) (1 << downsampleBits);
 ////	double ft = (srtDown*0.4f);

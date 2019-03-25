@@ -2,12 +2,8 @@
 #include <vector>
 #include <stdint.h>
 #include <vector>
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
-#include <glm/vec4.hpp>
+#include "math/vec.h"
 #include "audiosample.h"
-using glm::ivec2;
-using glm::ivec4;
 
 enum SampleMethod {
 	sample_straight, sample_sum, sample_minmax, sample_interp, sample_minmax2
@@ -53,4 +49,4 @@ inline bool operator==(const audioclip_texture_t& lhs, const audioclip_texture_t
 inline bool operator!=(const audioclip_texture_t& lhs, const audioclip_texture_t& rhs){return !operator==(lhs,rhs);}
 
 void downsample(float sampleRate, float* samplesIn, int len, std::vector<float>& samplesOut, int downSampleFactor);
-void tesselateWaveform(audiosample_t* sample, float x, float y, audioclip_texture_t* waveform, SampleMethod method, std::vector<std::vector<glm::vec2>>& channels);
+void tesselateWaveform(audiosample_t* sample, float x, float y, audioclip_texture_t* waveform, SampleMethod method, std::vector<std::vector<vec2>>& channels);

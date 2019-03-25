@@ -1,7 +1,5 @@
 #pragma once
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
-#include <glm/vec3.hpp>
+#include "math/vec.h"
 #include <stdint.h>
 #include <vector>
 #include "math.h"
@@ -10,10 +8,6 @@
 #include "logging.h"
 #include "layout.h"
 #include "grid_constants.h"
-
-using glm::ivec2;
-
-
 
 struct grid_div {
 	tick_t time;
@@ -150,7 +144,7 @@ public:
 	}
 	int32_t pixelsToTicks(int32_t pixels) {
 		double x = toObjSpace(pixels, this->zoom, 0) * TICKS_BAR;
-		return std::max(1, (int32_t)ceil(x));
+		return math::max(1, (int32_t)ceil(x));
 	}
 	int32_t pixelsToTicks2(int32_t pixels) {
 		double x = toObjSpace(pixels, this->zoom, 0) * TICKS_BAR;

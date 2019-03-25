@@ -1,7 +1,6 @@
 #pragma once
 #include <nanovg_min.h>
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
+#include "math/vec.h"
 #include "gui.h"
 #include "event.h"
 #include "str_util.h"
@@ -10,9 +9,6 @@
 #include "list.h"
 #include "guimeter.h"
 #include "leak_detect.h"
-
-using glm::vec2;
-using glm::ivec2;
 
 class effectbase;
 class vstplugin;
@@ -93,5 +89,5 @@ public:
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
 	guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
 	virtual void setControl(BaseCtrl* parentCtrl) override;
-	void determineSize(glm::ivec2& prefSize) override;
+	void determineSize(ivec2& prefSize) override;
 };

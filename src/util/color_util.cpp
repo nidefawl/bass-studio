@@ -1,16 +1,10 @@
 #include <stdint.h>
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
-#include <glm/vec3.hpp>
-#include <glm/vec4.hpp>
 #include <nanovg.h>
 #include <algorithm>
+#include "math/seq_math.h"
+#include "math/vec.h"
 #include "color_util.h"
-#include "seq_math.h"
 #include "platform.h"
-using glm::ivec2;
-using glm::ivec3;
-using glm::ivec4;
 
 NVGcolor getCursorColor() {
 	float f1 = 0.3f;
@@ -144,8 +138,8 @@ NVGcolor nvgToHSL(NVGcolor rgb) {
 	r = rgb.r;
 	g = rgb.g;
 	b = rgb.b;
-	double fCMax = std::max(std::max(r, g), b);
-	double fCMin = std::min(std::min(r, g), b);
+	double fCMax = math::max(math::max(r, g), b);
+	double fCMin = math::min(math::min(r, g), b);
 	double diff = fCMax - fCMin;
 
 	double h = 0.0f, s = 0.0f, l = (fCMin + fCMax) / 2.0;
@@ -205,13 +199,40 @@ glm::vec4 colorHex(uint32_t color)
 	nvgColor.w = a;
 	return nvgColor;
 }
+vec4 rgbToHSL(float r, float g, float b) {
+    float minV = math::min(math::min(r, g), b);
+    float maxV = math::max(math::max(r, g), b);
+    float h, s, l = (maxV + minV) / 2;
+
+    if(maxV == minV){
+        h = s = 0; // achromatic
+    }else{
+    	auto greatest = [](auto x, auto y, auto z){
+    	  return x > y ? (x > z ? 0 : 2) : (y > z ? 1 : 2);
+    	};
+    	float d = maxV - minV;
+        s = l > 0.5 ? d / (2 - maxV - minV) : d / (maxV + minV);
+        int mx = greatest(r, g, b);
+        if (mx == 0) {
+        	h = (g - b) / d + (g < b ? 6 : 0);
+        } else if (mx == 1) {
+        	h = (b - r) / d + 2;
+        } else {
+        	h = (r - g) / d + 4;
+        }
+        h /= 6;
+    }
+
+	return glm::vec4{ h, s, l, 1.0f };
+
+}
 glm::vec4 RGBtoHSV(glm::vec4 rgb) {
 	double r, g, b;
 	r = rgb.x;
 	g = rgb.y;
 	b = rgb.z;
-	double fCMax = std::max(std::max(r, g), b);
-	double fCMin = std::min(std::min(r, g), b);
+	double fCMax = math::max(math::max(r, g), b);
+	double fCMin = math::min(math::min(r, g), b);
 	double diff = fCMax - fCMin;
 
 	double h = 0.0f, s = 0.0f, l = (fCMin + fCMax) / 2.0;

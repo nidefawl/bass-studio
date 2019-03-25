@@ -1,7 +1,5 @@
 #pragma once
 #include <nanovg.h>
-#include <glm/vec2.hpp>
-#include <glm/vec4.hpp>
 #include "grid.h"
 #include "event.h"
 #include "guicontainer.h"

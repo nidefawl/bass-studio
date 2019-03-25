@@ -2,12 +2,13 @@
 #include <unordered_map>
 #include <atomic>
 #include <assert.h>
+#include "math/seq_math.h"
 #include "str_util.h"
 #include "audiosample.h"
 #include "../wave/dr_wav.h"
-#include "logging.h"
 #include "../gui/drawwaveform.h"
 #include "fileio.h"
+#include "logging.h"
 #include <soxr.h>
 
 namespace audiocache_impl
@@ -73,7 +74,7 @@ cachedaudio_t* audiocache::loadFile(String path, int id) {
 				*out = pSamples[j];
 				out++;
 			}
-			numSamplesInput = i == 0 ? channel.size() : std::min(numSamplesInput, channel.size());
+			numSamplesInput = i == 0 ? channel.size() : math::min(numSamplesInput, channel.size());
 			loadedSampleChannels.push_back(std::move(channel));
 		}
 		if ((int32_t)wav.sampleRate != this->samplerate) {

@@ -1,27 +1,20 @@
 #include "glheaders.h"
+#include "drawwaveform.h"
+
 #include <nanovg.h>
 #include <nanovg_gl.h>
 #include <nanovg_gl_utils.h>
-#include <math.h>
-// glm::translate, glm::rotate, glm::scale, glm::perspective
 #include <glm/gtc/matrix_transform.hpp>
-#include <glm/glm.hpp>
-#include "drawwaveform.h"
-#include "audiocache.h"
-#include "audiowaveform.h"
+
+#include "math/seq_math.h"
+#include "math/mat.h"
+#include "color_util.h"
 #include "platform.h"
 #include "exceptions.h"
+#include "audiocache.h"
+#include "audiowaveform.h"
 #include "logging.h"
-#include "color_util.h"
 #include "../host/mainctrl.h"
-
-
-using glm::mat4x4;
-using glm::ivec4;
-using glm::ivec3;
-using glm::ivec2;
-using glm::vec3;
-using glm::vec2;
 
 
 bool checkGLError(const char* s);
@@ -391,7 +384,7 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 			bakeOpt.linecaps = vec2(LineCaps::none, LineCaps::none);
 			bakeOpt.linejoin = waveform.linewidth > 1.75 ? LineJoin::round : LineJoin::miter;
 			bakeOpt.miter_limit = 1.8f;
-			bakeOpt.color = vec4(vec3(1), 1.0);
+			bakeOpt.color = {1.0f, 1.0f, 1.0f, 1.0f};
 			//	uint32_t color = colorPalette[(nextIdx++%(COLOR_PALETTE_COLS-2))*COLOR_PALETTE_ROWS+3];
 			//	bakeOpt.color = int32vec4(color);
 			//	bakeOpt.color.w = 1.0;

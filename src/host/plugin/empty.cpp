@@ -1,7 +1,5 @@
 #include <stdint.h>
 #include <stdbool.h>
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
 #include "empty.h"
 #include "event.h"
 #include "str_util.h"
@@ -29,9 +27,6 @@
 #include "track_impl.h"
 #include "leak_detect.h"
 #include "../../gui/guiplugin.h"
-
-using glm::vec2;
-using glm::ivec2;
 
 
 class guimodule_empty : public guiplugin {

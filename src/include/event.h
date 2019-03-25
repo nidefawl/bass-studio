@@ -1,10 +1,7 @@
 #pragma once
 
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
+#include "math/vec.h"
 #include "mouse.h"
-using glm::ivec2;
-
 
 class guibase;
 
@@ -46,11 +43,11 @@ struct MouseEvent {
 	MouseEventType type;
 	int button;
 	guibase* guiDragged;
-	glm::ivec2 mousepos;
-	glm::ivec2 relMousepos;
-	glm::ivec2 dragStart;
-	glm::ivec2 dragOffset;
-	glm::ivec2* dragDistance;
+	ivec2 mousepos;
+	ivec2 relMousepos;
+	ivec2 dragStart;
+	ivec2 dragOffset;
+	ivec2* dragDistance;
 	int kbmods;
 };
 class MouseHitEvt {

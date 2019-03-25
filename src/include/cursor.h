@@ -1,6 +1,6 @@
 #pragma once
+#include "math/seq_math.h"
 #include "seq_time.h"
-#include <algorithm>
 
 class Cursor {
 public:
@@ -16,22 +16,22 @@ public:
 		return cursorSubTrack > -1;
 	}
 	tick_t getTickBegin() const {
-		return std::min(cursorPos, cursorPos + selRange);
+		return math::min(cursorPos, cursorPos + selRange);
 	}
 	tick_t getTickEnd() const {
-		return std::max(cursorPos, cursorPos + selRange);
+		return math::max(cursorPos, cursorPos + selRange);
 	}
 	tick_t getTrackBegin() const {
-		return std::min(cursorTrack, cursorTrack + selTrackRange);
+		return math::min(cursorTrack, cursorTrack + selTrackRange);
 	}
 	tick_t getTrackEnd() const {
-		return std::max(cursorTrack, cursorTrack + selTrackRange);
+		return math::max(cursorTrack, cursorTrack + selTrackRange);
 	}
 	tick_t getSubTrackBegin() const {
-		return std::min(cursorSubTrack, cursorSubTrack + selSubTrackRange);
+		return math::min(cursorSubTrack, cursorSubTrack + selSubTrackRange);
 	}
 	tick_t getSubTrackEnd() const {
-		return std::max(cursorSubTrack, cursorSubTrack + selSubTrackRange);
+		return math::max(cursorSubTrack, cursorSubTrack + selSubTrackRange);
 	}
 	tick_t getRange() {
 		if (cursorTrack < 0)
@@ -111,12 +111,12 @@ public:
 	Cursor operator+(const Cursor &c2) const
 	{
 		Cursor tmp;
-		tmp.cursorTrack = min(getTrackBegin(), c2.getTrackBegin());
-		tmp.selTrackRange = max(getTrackEnd(), c2.getTrackEnd()) - tmp.selTrackRange;
-		tmp.cursorPos = min(getTickBegin(), c2.getTickBegin());
-		tmp.selRange = max(getTickEnd(), c2.getTickEnd()) - tmp.cursorPos;
-		tmp.cursorSubTrack = min(getSubTrackBegin(), c2.getSubTrackBegin());
-		tmp.selSubTrackRange = max(getSubTrackEnd(), c2.getSubTrackEnd()) - tmp.cursorSubTrack;
+		tmp.cursorTrack = math::min(getTrackBegin(), c2.getTrackBegin());
+		tmp.selTrackRange = math::max(getTrackEnd(), c2.getTrackEnd()) - tmp.selTrackRange;
+		tmp.cursorPos = math::min(getTickBegin(), c2.getTickBegin());
+		tmp.selRange = math::max(getTickEnd(), c2.getTickEnd()) - tmp.cursorPos;
+		tmp.cursorSubTrack = math::min(getSubTrackBegin(), c2.getSubTrackBegin());
+		tmp.selSubTrackRange = math::max(getSubTrackEnd(), c2.getSubTrackEnd()) - tmp.cursorSubTrack;
 		return tmp;
 	}
 };

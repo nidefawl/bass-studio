@@ -2,6 +2,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "math/seq_math.h"
 #include "str_util.h"
 #include "color_util.h"
 
@@ -33,7 +34,7 @@ public:
 	void handleDraggedMove(MouseEvent& evt) {
 		if (evt.guiDragged == this && evt.type == M_EVT_CAPTURED_MOVE) {
 			int disty = (int)evt.dragDistance->y / 10;
-			if (abs(disty) < 1)
+			if (math::abs(disty) < 1)
 				return;
 			evt.dragDistance->y = 0;
 			int tempo = MainCtrl::get()->getCurrentTempo();
@@ -75,7 +76,7 @@ public:
 	void handleDraggedMove(MouseEvent& evt) {
 		if (evt.guiDragged == this && evt.type == M_EVT_CAPTURED_MOVE) {
 			int disty = (int)evt.dragDistance->y / 20;
-			if (abs(disty) < 1)
+			if (math::abs(disty) < 1)
 				return;
 			evt.dragDistance->y = 0;
 			if (idx == 0) {
@@ -177,7 +178,7 @@ public:
 	void handleDraggedMove(MouseEvent& evt) {
 		if (time && evt.guiDragged == this && evt.type == M_EVT_CAPTURED_MOVE) {
 			int disty = (int)evt.dragDistance->y / 20;
-			if (abs(disty) < 1)
+			if (math::abs(disty) < 1)
 				return;
 			evt.dragDistance->y = 0;
 			switch (idx) {
@@ -377,7 +378,7 @@ public:
 		loopLen.size = ivec2(100, 32);
 		songPos.size = ivec2(140, 32);
 		int32_t transportWidth = btnPlay.size.x + spacingCtrls + btnStop.size.x+ spacingCtrls + songPos.size.x;
-		int32_t transportCtrls = max(cs.x / 2 - transportWidth / 2, cursorPos.right() + spacing);
+		int32_t transportCtrls = math::max(cs.x / 2 - transportWidth / 2, cursorPos.right() + spacing);
 //		btnPlay.pos = ivec2(transportCtrls, 5);
 //		btnStop.pos = ivec2(btnPlay.right() + spacingCtrls, 5);
 //		songPos.pos = ivec2(btnStop.right() + spacingCtrls, 5);
@@ -394,7 +395,7 @@ public:
 		}
 
 		btnAudioOnOff.size = ivec2(100, 28);
-		btnAudioOnOff.pos = ivec2(max(songPos.right()+spacing, cs.x-5-btnAudioOnOff.size.x), 5);
+		btnAudioOnOff.pos = ivec2(math::max(songPos.right()+spacing, cs.x-5-btnAudioOnOff.size.x), 5);
 //		tempo.layout();
 //		signature.layout();
 //		cursorPos.layout();

@@ -1,11 +1,11 @@
 #include <nanovg.h>
-
+#include "trackctr.h"
+#include "math/seq_math.h"
 #include "gui.h"
 #include "guicontainer.h"
 #include "exceptions.h"
 #include "theme.h"
 #include "track.h"
-#include "trackctr.h"
 #include "trackcontent.h"
 #include "trackcontrols.h"
 #include "track.h"
@@ -134,7 +134,7 @@ void guictr_tracks::removeAllAutomationLanes(track_t* t) {
 void guictr_tracks::scrollOffsetChanged(int dir, float offset) {
 //	trackView.pos.y = loophandles.bottom()-offset*(contentHeight-size.y);
 //	trackControls.pos.y = loophandles.bottom()-offset*(contentHeight-size.y);
-	int32_t scrOffset = max(0.0f, offset*(contentHeight-contentViewSize));
+	int32_t scrOffset = math::max(0.0f, offset*(contentHeight-contentViewSize));
 	int y = TRACK_HEIGHT_SPACING-scrOffset;
 	for (track_t* t : project.trackCtr) {
 		assert(t->content != NULL);
@@ -144,7 +144,7 @@ void guictr_tracks::scrollOffsetChanged(int dir, float offset) {
 }
 void guictr_tracks::scrollTo(guibase* g) {
 	int32_t y = g->pos.y;
-	int32_t scrOffset = max(0.0f, scrollbar.scrollOffset*(contentHeight-contentViewSize));
+	int32_t scrOffset = math::max(0.0f, scrollbar.scrollOffset*(contentHeight-contentViewSize));
 	scrollbar.scrollVisible(y+scrOffset, g->size.y);
 }
 void guictr_tracks::layout() {
@@ -416,7 +416,7 @@ namespace {
 		if (targetslot >= 0 && targetslot != track->localIdx && targetslot != track->localIdx+1) {
 			if (targetslot > track->localIdx) targetslot--;
 			int distance = targetslot - track->localIdx;
-			int destSlot = std::max(0, track->localIdx + distance);
+			int destSlot = math::max(0, track->localIdx + distance);
 			MainCtrl::get()->getDragDropTarget().reset();
 			MainCtrl::get()->trackList.moveTrack(track, destSlot);
 			MainCtrl::getGuiTrackCtr()->layout();

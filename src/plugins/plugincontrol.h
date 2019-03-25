@@ -5,8 +5,7 @@
 #include <stdint.h>
 #include <memory>
 
-#include <glm/glm.hpp>
-
+#include "math/vec.h"
 #include "config.h"
 #include "str_util.h"
 #include "basectrl.h"
@@ -18,12 +17,6 @@
 #include "logging.h"
 #include "plugin.h"
 #include "../gui/pluginviewcontainers.h"
-
-
-using glm::vec2;
-using glm::ivec2;
-using glm::vec4;
-using glm::ivec4;
 
 struct NVGcontext;
 class guibase;

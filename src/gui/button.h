@@ -1,19 +1,17 @@
 #pragma once
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
 #include <nanovg.h>
 #include <functional>
+#include "math/vec.h"
+#include "math/seq_math.h"
 #include "guicolors.h"
 #include "color_util.h"
 #include "str_util.h"
 #include "seq_util.h"
-#include "seq_math.h"
 #include "gui.h"
 #include "guicolors.h"
 #include "basectrl.h"
 #include "event.h"
-using glm::vec2;
-using glm::ivec2;
+
 namespace GuiColor {
 extern constant_t COL_BTN_BG_DEFAULT_INACTIVE;
 extern constant_t COL_BTN_BG_DEFAULT_ACTIVE;
@@ -27,7 +25,7 @@ protected:
 	String str = "";
 	int fontSize = 0;
 public:
-	void (*drawFn)(NVGcontext*,ivec2&, ivec2&, const NVGcolor&, int drawParm, int drawParm2) = NULL;
+	void (*drawFn)(NVGcontext*, ivec2&, ivec2&, const NVGcolor&, int drawParm, int drawParm2) = NULL;
 	int drawParm = 0;
 public:
 	guibuttonbase() : guibase() {

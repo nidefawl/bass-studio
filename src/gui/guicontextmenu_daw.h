@@ -1,7 +1,7 @@
 #pragma once
 #include <vector>
+#include "math/vec.h"
 #include "event.h"
-
 #include "gui.h"
 #include "guicontextmenu_base.h"
 #include "guicontextmenu.h"
@@ -11,15 +11,6 @@
 #include "track_impl.h"
 #include "guicolors.h"
 #include "clipeditor.h"
-
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
-#include <glm/vec3.hpp>
-#include <glm/vec4.hpp>
-using glm::vec2;
-using glm::ivec2;
-using glm::vec4;
-using glm::ivec4;
 
 class ctxtmenu_time_select : public ctxtmenu_entry {
 	struct _time_sel_entry {

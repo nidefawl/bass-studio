@@ -393,7 +393,7 @@ public:
 
 
 	int32_t clampTrackIdx(int32_t idx) const {
-		return max(0, min((int32_t) this->tracks.size() - 1, idx));
+		return math::max(0, math::min((int32_t) this->tracks.size() - 1, idx));
 	}
 
 	bool validTrackIdx(int32_t idx) const {

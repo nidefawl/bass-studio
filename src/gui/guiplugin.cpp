@@ -1,7 +1,5 @@
 #include "guiplugin.h"
 #include <nanovg.h>
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
 #include <memory>
 #include "str_util.h"
 #include "logging.h"
@@ -38,9 +36,6 @@
 #include "leak_detect.h"
 
 
-
-using glm::vec2;
-using glm::ivec2;
 using Table::tbl;
 using Table::tbl_row_t;
 using Table::table_entry_t;
@@ -83,7 +78,7 @@ void guiplugin::layout() {
 
 
 
-	int32_t meterW = std::max(16, (int32_t)(theme->get(GuiConstant::CONST_METER_WIDTH)*hpt/32.0));
+	int32_t meterW = math::max(16, (int32_t)(theme->get(GuiConstant::CONST_METER_WIDTH)*hpt/32.0));
 	ivec2 contentS;
 	ivec2 contentP;
 	if (isHorizontalTitle) {
@@ -324,7 +319,7 @@ void guivstplugin::determineSize(glm::ivec2& prefSize) {
 		int width = (int)((sizeCtrs.x/(float)sizeCtrs.y)*size.y);
 		sizeCtrs.x = width;
 		sizeCtrs.y = size.y;
-		prefSize.y = std::max(sizeCtrs.y, prefSize.y);
+		prefSize.y = math::max(sizeCtrs.y, prefSize.y);
 		prefSize.x += sizeCtrs.x;
 	} else {
 		sizeCtrs = {0, 0};

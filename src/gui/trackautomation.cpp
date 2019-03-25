@@ -1,9 +1,9 @@
 #include "trackautomation.h"
 
+#include "math/seq_math.h"
 #include "gui.h"
 #include "cursor.h"
 #include "event.h"
-#include "seq_math.h"
 #include "color_util.h"
 #include "track.h"
 #include "clip.h"
@@ -13,16 +13,10 @@
 #include "basectrl.h"
 #include "../host/mainctrl.h"
 #include "automation.h"
-#include <glm/glm.hpp>
-#include <glm/geometric.hpp>
-#include <glm/vec2.hpp>
 #include "track.h"
 #include "track_impl.h"
 #include "renderresources.h"
 #include "leak_detect.h"
-
-using glm::vec2;
-using glm::ivec2;
 
 
 float dist_to_segment(vec2 a, vec2 b, vec2 pt)
@@ -32,7 +26,7 @@ float dist_to_segment(vec2 a, vec2 b, vec2 pt)
 	if (lenSq < 1E-4F) {
 		return glm::distance(pt, a);
 	}
-	float t = std::max(0.0f, std::min(1.0f, glm::dot(pt - a, v) / lenSq));
+	float t = math::max(0.0f, math::min(1.0f, glm::dot(pt - a, v) / lenSq));
 	const vec2 p = a + t * v;
 	return glm::distance(pt, p);
 }
@@ -81,7 +75,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 			vec2& ptStart = cachedShape[idxSegStart];
 			vec2& ptEnd = cachedShape[idxSegEnd];
 			float dist = dist_to_segment(ptStart, ptEnd, mpos);
-			minSegLineDist = min(dist, minSegLineDist);
+			minSegLineDist = math::min(dist, minSegLineDist);
 		}
 		if (minSegLineDist < 10) {
 			hit_result hitSeg{ dragmode::drag_segment, segment.dataOffset, i, minSegLineDist };
@@ -147,7 +141,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 		scaled_grid& grid = view->grid;
 		int32_t disty = -evt.dragDistance->y;
 		int32_t distx = evt.dragDistance->x;
-		if (grid.pixelsToTicks(abs(distx)) < grid.getTickLength()/32) {
+		if (grid.pixelsToTicks(math::abs(distx)) < grid.getTickLength()/32) {
 			distx = 0;
 		} else {
 			evt.dragDistance->x = 0;
@@ -165,7 +159,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 				fDstVal = fNew;
 			}
 			evt.dragDistance->y = 0;
-			fDstVal = min(1.0f, max(0.0f, fDstVal));
+			fDstVal = math::min(1.0f, math::max(0.0f, fDstVal));
 			setDstVal(fDstVal);
 		} else if (dragged.mode) {
 			evt.dragDistance->y = 0;
@@ -210,13 +204,13 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 			if (distx < 0 && minPt) {
 				if (dataPtIdx1 >= 0 && dataPtIdx1 < (int)dataPoints.size()) {
 					automation_point_t& ptEd = dataPoints[dataPtIdx1];
-					tickOffset = max(minPt->time - ptEd.time, tickOffset);
+					tickOffset = math::max(minPt->time - ptEd.time, tickOffset);
 				}
 			}
 			if (distx > 0 && maxPt) {
 				if (dataPtIdx2 >= 0 && dataPtIdx2 < (int)dataPoints.size()) {
 					automation_point_t& ptEd = dataPoints[dataPtIdx2];
-					tickOffset = min(maxPt->time - ptEd.time, tickOffset);
+					tickOffset = math::min(maxPt->time - ptEd.time, tickOffset);
 				}
 			}
 			for (int i = dataPtIdx1; i <= dataPtIdx2; i++) {
@@ -236,14 +230,14 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 					automation_point_t& dst = pointsClamped[i];
 					tick_t newTick = src.time;
 					if (minPt) {
-						newTick = max(newTick, minPt->time);
+						newTick = math::max(newTick, minPt->time);
 					}
 					if (maxPt) {
-						newTick = min(newTick, maxPt->time);
+						newTick = math::min(newTick, maxPt->time);
 					}
 					assert(tickOffset || newTick == dst.time);
 					dst.time = newTick;
-					float f = min(1.0f, max(0.0f, src.val));
+					float f = math::min(1.0f, math::max(0.0f, src.val));
 					if (at) {
 						f = at->quantizeVal(param, f);
 					}
@@ -299,7 +293,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 			if (at) {
 				val = at->quantizeVal(param, val);
 			}
-			val = min(1.0f, max(0.0f, val));
+			val = math::min(1.0f, math::max(0.0f, val));
 			int32_t idx = indexOfTick(dataPoints, tick);
 			assert(idx >= 0 && idx <= (int)dataPoints.size());
 			automation_point_t pt{tick, val};
@@ -504,7 +498,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 				//Lots of room for optimization here (draw texture for dot, or use custom shader)
 				nvgShapeAntiAlias(vg, 0);
 				nvgBeginPath(vg);
-				for (int i = start; i < min(len-1, end); i++) {
+				for (int i = start; i < math::min(len-1, end); i++) {
 					path_segment_t& segment = segments[i];
 					if (currentDragged.mode == dragmode::drag_segment && currentDragged.segidx == i) {
 						continue;

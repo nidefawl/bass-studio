@@ -2,9 +2,7 @@
 #include <vector>
 #include <memory>
 #include <functional>
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
-
+#include "math/vec.h"
 #include "str_util.h"
 #include "color_util.h"
 #include "gui/gui.h"

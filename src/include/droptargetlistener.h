@@ -1,13 +1,7 @@
 #pragma once
-#include "str_util.h"
 #include <vector>
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
-#include <glm/vec3.hpp>
-#include <glm/vec4.hpp>
-using glm::vec2;
-using glm::ivec2;
-
+#include "str_util.h"
+#include "math/vec.h"
 
 class DropTargetListener {
 public:

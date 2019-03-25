@@ -11,11 +11,7 @@
 #include <chrono>
 
 #include "msgbox.h"
-#include "seq_math.h"
 #include "str_util.h"
-
-using std::max;
-using std::min;//make code analyzer happy (and make author sad)
 
 uint64_t getTimeMillis() {
 	struct timeval tp;

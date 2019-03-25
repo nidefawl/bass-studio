@@ -3,9 +3,6 @@
 #include <sstream>
 #include <iostream>
 #include <nanovg.h>
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
-#include <glm/vec4.hpp>
 
 #include "theme.h"
 #include "str_util.h"
@@ -15,11 +12,6 @@
 #include "platform.h"
 #include "keyboard.h"
 #include "leak_detect.h"
-
-using glm::vec2;
-using glm::ivec2;
-using glm::vec4;
-using glm::ivec4;
 
 gui_textfield::gui_textfield()
     : guibase(),
@@ -34,9 +26,9 @@ gui_textfield::gui_textfield()
       mValueTemp(""),
       mCursorPos(-1),
       mSelectionPos(-1),
-      mMousePos(Vector2i(-1,-1)),
-      mMouseDownPos(Vector2i(-1,-1)),
-      mMouseDragPos(Vector2i(-1,-1)),
+      mMousePos(ivec2(-1,-1)),
+      mMouseDownPos(ivec2(-1,-1)),
+      mMouseDragPos(ivec2(-1,-1)),
       mMouseDownModifier(0),
       mTextOffset(0),
       mLastClick(0), mVisible(true), mEnabled(true),
@@ -55,9 +47,9 @@ void gui_textfield::setEditable(bool editable) {
 }
 
 
-Vector2i gui_textfield::preferredSize(NVGcontext *ctx) const {
+ivec2 gui_textfield::preferredSize(NVGcontext *ctx) const {
 	int iH = (int32_t)ceil(fontSize() * 1.4f);
-    Vector2i size(0, iH);
+    ivec2 size(0, iH);
 
     float uw = 0;
     if (!mUnits.empty()) {
@@ -100,7 +92,7 @@ void gui_textfield::handleDraggedBegin(MouseEvent& evt) {
             /* Double-click: select all text */
             mSelectionPos = 0;
             mCursorPos = (int) mValueTemp.size();
-            mMouseDownPos = Vector2i(-1, -1);
+            mMouseDownPos = ivec2(-1, -1);
         }
         mLastClick = time;
     }
@@ -113,8 +105,8 @@ void gui_textfield::handleDraggedMove(MouseEvent& evt) {
     }
 }
 void gui_textfield::handleDraggedRelease(MouseEvent& evt) {
-    mMouseDownPos = Vector2i(-1, -1);
-    mMouseDragPos = Vector2i(-1, -1);
+    mMouseDownPos = ivec2(-1, -1);
+    mMouseDragPos = ivec2(-1, -1);
 }
 void setTfFont(NVGcontext* ctx, const gui_textfield* tf) {
 	nvgFontSize(ctx, tf->fontSize());
@@ -153,7 +145,7 @@ void gui_textfield::updateTextLayout(NVGcontext* ctx) {
 	// find cursor positions
 	metrics.numGlyphs = nvgTextGlyphPositions(ctx, 0, 0, mValueTemp.c_str(), nullptr, metrics.glyphPositions, MAX_CHARS);
 
-	Vector2i insetPos(pos.x, pos.y + size.y * 0.5f + 1);
+	ivec2 insetPos(pos.x, pos.y + size.y * 0.5f + 1);
 
 
 	float unitWidth = 0;
@@ -419,8 +411,8 @@ bool gui_textfield::handleCharInput(unsigned int codepoint) {
 				int32_t len = 1;
 				int32_t mincursor = mCursorPos;
 			    if (mSelectionPos > -1) {
-					mincursor = std::min(mSelectionPos, mCursorPos);
-			    	len = std::max(mSelectionPos, mCursorPos) - mincursor;
+					mincursor = math::min(mSelectionPos, mCursorPos);
+			    	len = math::max(mSelectionPos, mCursorPos) - mincursor;
 			    }
 		        for (int i = 0; i < len; i++) {
 		        	mValueTemp[i+mincursor] = cvchar;
@@ -587,7 +579,7 @@ void gui_textfield::updateCursor(NVGcontext *, float lastx) {
 
 		mCursorPos = position2CursorIndex(mMouseDownPos.x-(drawPos.x-pos.x), lastx);
 
-		mMouseDownPos = Vector2i(-1, -1);
+		mMouseDownPos = ivec2(-1, -1);
 	} else if (mMouseDragPos.x != -1) {
 		if (mSelectionPos == -1)
 			mSelectionPos = mCursorPos;
@@ -618,12 +610,12 @@ int gui_textfield::position2CursorIndex(float posx, float lastx) const {
     int mCursorId = 0;
     float caretx = metrics.glyphPositions[mCursorId].x;
     for (int j = 1; j < metrics.numGlyphs; j++) {
-        if (std::abs(caretx - posx) > std::abs(metrics.glyphPositions[j].x - posx)) {
+        if (math::abs(caretx - posx) > math::abs(metrics.glyphPositions[j].x - posx)) {
             mCursorId = j;
             caretx = metrics.glyphPositions[mCursorId].x;
         }
     }
-    if (std::abs(caretx - posx) > std::abs(lastx - posx))
+    if (math::abs(caretx - posx) > math::abs(lastx - posx))
         mCursorId = metrics.numGlyphs;
 
     return mCursorId;

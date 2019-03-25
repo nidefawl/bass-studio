@@ -1,13 +1,11 @@
 #include <algorithm>
 
-
+#include "math/seq_math.h"
 #include "exceptions.h"
 #include "logging.h"
 #include "samplerate.h"
 #include "seq_util.h"
 #include "seq_time.h"
-#include "seq_math.h"
-
 
 #include "../gui/pluginctr.h"
 #include "../gui/trackctr.h"
@@ -370,7 +368,7 @@ track_impl_t::~track_impl_t() {
 	}
 }
 VstEvent_t* track_impl_t::reallocEvts(size_t size) {
-	size = max((size_t)128, size);
+	size = math::max((size_t)128, size);
 	if (midiEventsBuf == NULL || midiEventsBuf->maxEvents < (int32_t)size) {
 		if (midiEventsBuf) delete midiEventsBuf;
 		midiEventsBuf = new VstEvent_t(size);
@@ -577,8 +575,8 @@ track_t* audio_stage_t::getTrack() {
 void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, float** buffer, int32_t blockSize) {
 
 	int32_t blockEnd = blockSamplePos+blockSize;
-	tick_t audioBegin = max(start, loopStart);
-	tick_t audioEnd = loopEnd < 0 ? end : min(end, loopEnd);
+	tick_t audioBegin = math::max(start, loopStart);
+	tick_t audioEnd = loopEnd < 0 ? end : math::min(end, loopEnd);
 	std::vector<clip_t*> clips;
 	track->getMidi().getClipsInRange(audioBegin, audioEnd, clips);
 	for (clip_t* clip : clips) {
@@ -590,10 +588,10 @@ void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t 
 			continue;
 		if (clipEndSample <= blockSamplePos)
 			continue;
-		int32_t clipEndSampleLen = std::min((int32_t)blockSize, clipEndSample-blockSamplePos);
-		int32_t clipStartSampleLen = blockSize - std::max((int32_t)0, clipStartSample-blockSamplePos);
+		int32_t clipEndSampleLen = math::min((int32_t)blockSize, clipEndSample-blockSamplePos);
+		int32_t clipStartSampleLen = blockSize - math::max((int32_t)0, clipStartSample-blockSamplePos);
 		int32_t srcStartOffset = blockSamplePos-clipStartSample + clip->offsetSamples;
-		int32_t dstStartOffset = std::max(0, clipStartSample-blockSamplePos);
+		int32_t dstStartOffset = math::max(0, clipStartSample-blockSamplePos);
 		if (srcStartOffset+blockSize <= 0)
 			continue;
 
@@ -606,7 +604,8 @@ void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t 
 			for (int i = 0; i < 2; i++) {
 				float *dst = buffer[i];
 				auto& srcVector = i >= (int)sample->samples.size() ? sample->samples[sample->samples.size()-1] : sample->samples[i];
-				int32_t len = std::min((int32_t)blockSize-std::max(0, -srcStartOffset), std::min(clipEndSampleLen, std::min(clipStartSampleLen, (int32_t)srcVector.size()-srcStartOffset)));
+				int32_t len = math::min((int32_t)blockSize-math::max(0, -srcStartOffset),
+								math::min(clipEndSampleLen, math::min(clipStartSampleLen, (int32_t)srcVector.size()-srcStartOffset)));
 				assert(len>=0);
 				if (len <= 0) { //TODO: could figure this out outside the loop
 					continue;
@@ -614,7 +613,7 @@ void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t 
 				assert(dstStartOffset+len <= (int32_t)blockSize);
 				assert(srcStartOffset+len <= (int32_t)srcVector.size());
 				assert(dstStartOffset>=0);
-				memcpy(dst+dstStartOffset, srcVector.data()+std::max(0, srcStartOffset), len*sizeof(float));
+				memcpy(dst+dstStartOffset, srcVector.data()+math::max(0, srcStartOffset), len*sizeof(float));
 			}
 		}
 	}
@@ -676,8 +675,8 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 		tick_t heldBegin = start;
 		tick_t heldEnd = end;
 		for (const note_t& note : heldNotes) {
-			heldBegin = min(heldBegin, note.start());
-			heldEnd = max(heldEnd, note.end());
+			heldBegin = math::min(heldBegin, note.start());
+			heldEnd = math::max(heldEnd, note.end());
 		}
 		track->getMidi().getNotesInRange(heldBegin, heldEnd, -1, loopEnd, notes);
 		if (loopStart > -1&&start<loopStart)

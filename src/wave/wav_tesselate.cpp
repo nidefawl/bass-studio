@@ -3,17 +3,14 @@
 #include <vector>
 #include <algorithm>
 
-#include <glm/glm.hpp>
-
+#include "math/vec.h"
+#include "math/mat.h"
+#include "math/seq_math.h"
 #include "audiosample.h"
 #include "audiowaveform.h"
 #include "logging.h"
 #include "str_util.h"
 
-using glm::mat4x4;
-using glm::vec2;
-using glm::vec3;
-using glm::vec4;
 using vec2list = std::vector<vec2>;
 //constexpr float MAX_RES = 512;
 using samplechannel_t = std::vector<float>;
@@ -81,7 +78,7 @@ void tesselateWaveform(audiosample_t* sample, float x, float y, audioclip_textur
 			if (nVecs > 0)
 				vecs.reserve(nVecs+500);
 			double samplePos = waveformScaled.sampleBeginOffset;
-			double sampleOffset = std::max(0.0, (double)(samplePos - waveformScaled.sampleBegin));
+			double sampleOffset = math::max(0.0, (double)(samplePos - waveformScaled.sampleBegin));
 			float px = x;
 			float py = y + channelHeight * iChannel + channelHeight / 2.0f;
 			auto& samplesCh = smpCh[iChannel];
@@ -123,9 +120,9 @@ void tesselateWaveform(audiosample_t* sample, float x, float y, audioclip_textur
 //					samplePos -= samplePos%upscale;
 //					samplePos += upscale;
 					for (; samplePos < waveformScaled.sampleEnd; ) {
-						sampleOffset = std::max(0.0, (double)(samplePos - waveformScaled.sampleBegin));
+						sampleOffset = math::max(0.0, (double)(samplePos - waveformScaled.sampleBegin));
 						if (sampleOffset >= lenSamplesCh) { //TODO: no loop!
-//							sampleOffset = std::max(0.0, sampleOffset-lenSamplesCh);
+//							sampleOffset = math::max(0.0, sampleOffset-lenSamplesCh);
 							break;
 						}
 						int32_t sampleIdx = std::round(sampleOffset);
@@ -181,8 +178,8 @@ void tesselateWaveform(audiosample_t* sample, float x, float y, audioclip_textur
 						}
 						int32_t sampleIdx = std::floor(sampleOffset);
 						float data = samplesChPtr[sampleIdx];
-						smin = std::min(smin, data);
-						smax = std::max(smax, data);
+						smin = math::min(smin, data);
+						smax = math::max(smax, data);
 						float fCurX = (sampleOffset-renderOffset)*samplesToPx;
 						if (fCurX - lastPtX >= vOffset) {
 							float fs = minOrMax ? smin : smax;
@@ -218,11 +215,11 @@ void tesselateWaveform(audiosample_t* sample, float x, float y, audioclip_textur
 						if (sampleOffset >= lenSamplesCh) {
 							break;
 						}
-						int32_t sampleIdx = std::floor(sampleOffset);
+						int32_t sampleIdx = math::floor(sampleOffset);
 						float data = samplesChPtr[sampleIdx];
 						float fCurX = (sampleOffset-renderOffset)*samplesToPx;
-					    float logScalef = log(std::abs(data)+1) / log(2.);
-						sum += std::abs(logScalef);
+					    float logScalef = log(math::abs(data)+1) / log(2.);
+						sum += math::abs(logScalef);
 						nCollect++;
 						if (fCurX - lastPtX >= vOffset) {
 							float f = 0;
@@ -321,8 +318,8 @@ void tesselateWaveform(audiosample_t* sample, float x, float y, audioclip_textur
 						}
 						int32_t sampleIdx = std::floor(sampleOffset);
 						float data = samplesChPtr[sampleIdx];
-						fsMin = std::min(fsMin, data);
-						fsMax = std::max(fsMax, data);
+						fsMin = math::min(fsMin, data);
+						fsMax = math::max(fsMax, data);
 						float fCurX = (sampleOffset-renderOffset)*samplesToPx;
 						float fY = -data * channelHeight / 2.0f;
 						vec2 vec { px + fCurX, py + fY };

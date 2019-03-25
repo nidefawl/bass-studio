@@ -6,7 +6,7 @@
 #include "seq_util.h"
 #include "str_util.h"
 #include "color_util.h"
-#include "seq_math.h"
+#include "math/seq_math.h"
 #include "track.h"
 #include "clip.h"
 #include "clipboard.h"
@@ -30,10 +30,6 @@
 #include "audiowaveform.h"
 #include "drawwaveform.h"
 #include "cliprenderer.h"
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
-using glm::vec2;
-using glm::ivec2;
 
 class action_modify_track : public action_base {
 protected:
@@ -171,11 +167,11 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 				for (track_t* t: project.trackList) {
 					auto minMax = t->getMinMaxEvents();
 					if (minMax.min != INVALID_TICK) {
-						evtMin = evtMin == INVALID_TICK ? minMax.min : min(evtMin, minMax.min);
+						evtMin = evtMin == INVALID_TICK ? minMax.min : math::min(evtMin, minMax.min);
 						if (!trMin || trMin->idx > t->idx) {
 							trMin = t;
 						}
-						evtMax = evtMax == INVALID_TICK ? minMax.max : max(evtMax, minMax.max);
+						evtMax = evtMax == INVALID_TICK ? minMax.max : math::max(evtMax, minMax.max);
 						if (!trMax || trMax->idx < t->idx) {
 							trMax = t;
 						}
@@ -298,7 +294,7 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 					cursor.selRange = 0;
 					cursor.selTrackRange = 0;
 					cursor.selSubTrackRange = 0;
-					cursor.cursorPos = max(0, cursor.cursorPos + timeOffset);
+					cursor.cursorPos = math::max(0, cursor.cursorPos + timeOffset);
 				}
 				if (tickStBfr != cursor.getTickBegin())
 					grid.makeTickVisible(cursor.getTickBegin() + timeOffset);
@@ -540,7 +536,7 @@ void guitrack_editor::dragClipboardMove(ivec2 local, int kbmods) {
 				}
 				snapPoints.push_back(cursorBegin.getTickBegin());
 				std::sort(snapPoints.begin(), snapPoints.end(), [tickendExact](tick_t const &t1, tick_t const &t2) {
-					return abs(tickendExact-t1) < abs(tickendExact-t2);
+					return math::abs(tickendExact-t1) < math::abs(tickendExact-t2);
 				});
 				timeOffset = snapPoints[0];
 			}
@@ -571,8 +567,8 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
 				tick_t dstPos = cursor.cursorPos;
 				int32_t dstTrack = trNxtSelected->idx;
 
-				int32_t minTrack = min (target.getTrackBegin(), dstTrack-trackOffset);
-				int32_t maxTrack = max (target.getTrackEnd(), dstTrack-trackOffset+(target.getTrackEnd()-target.getTrackBegin()));
+				int32_t minTrack = math::min(target.getTrackBegin(), dstTrack-trackOffset);
+				int32_t maxTrack = math::max(target.getTrackEnd(), dstTrack-trackOffset+(target.getTrackEnd()-target.getTrackBegin()));
 				//TODO: make this more efficient: dont use a bounding box on copy
 				target.cursorPos = minTrack;
 				target.selTrackRange = maxTrack - minTrack;
@@ -880,8 +876,8 @@ void guitrack_editor::render(NVGcontext* vg) {
 			double tickBeginX = grid.tickToScreenD(tickBegin);
 			double tickEndX = grid.tickToScreenD(tickEnd);
 
-			float trackYMin = min(trB->content->top(), trE->content->top());
-			float trackYMax = max(trB->content->bottom(), trE->content->bottom());
+			float trackYMin = math::min(trB->content->top(), trE->content->top());
+			float trackYMax = math::max(trB->content->bottom(), trE->content->bottom());
 			if (c.isSubtrackSelection()) {
 				int32_t ssTrIdx = c.getSubTrackBegin();
 				int32_t esTrIdx = c.getSubTrackEnd();
@@ -979,13 +975,13 @@ track_t *getTrackFromMouse(project_t& project, ivec2 mouse, bool isDragSnap) {
 		int top = tr->content->top();
 		int bottom = tr->content->bottom();
 		if (tMin == NULL) {
-			minDist = min(abs(top - mouse.y), abs(bottom - mouse.y));
+			minDist = math::min(math::abs(top - mouse.y), math::abs(bottom - mouse.y));
 			tMin = tr;
-		} else if (abs(top - mouse.y) < minDist) {
-			minDist = abs(top - mouse.y);
+		} else if (math::abs(top - mouse.y) < minDist) {
+			minDist = math::abs(top - mouse.y);
 			tMin = tr;
-		} else if (abs(bottom - mouse.y) < minDist) {
-			minDist = abs(bottom - mouse.y);
+		} else if (math::abs(bottom - mouse.y) < minDist) {
+			minDist = math::abs(bottom - mouse.y);
 			tMin = tr;
 		}
 		if (mouse.y >= top && mouse.y < bottom) {

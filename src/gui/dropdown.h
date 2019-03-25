@@ -3,7 +3,7 @@
 #include "color_util.h"
 #include "str_util.h"
 #include "seq_util.h"
-#include "seq_math.h"
+#include "math/seq_math.h"
 #include "gui.h"
 #include "guicolors.h"
 #include "event.h"

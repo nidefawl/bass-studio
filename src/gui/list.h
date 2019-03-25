@@ -62,14 +62,14 @@ public:
 		ivec2 cs = getSizeContent();
 		float offset = scrollbar.scrollOffset;
 		int32_t nEntriesFit = floor(cs.y/(double)rowHeight);
-		int32_t nEntries = std::max(0, (int32_t)listGuis.size()-nEntriesFit);
-		first = std::max(0, (int32_t) floor(offset * nEntries));
+		int32_t nEntries = math::max(0, (int32_t)listGuis.size()-nEntriesFit);
+		first = math::max(0, (int32_t) floor(offset * nEntries));
 		if (listGuis.size() == 0) {
 			first = last = 0;
 		} else {
 			last = first + (int32_t) nEntriesFit+1;
-			first = std::min((int32_t)(listGuis.size()-1), first);
-			last = std::min((int32_t)listGuis.size(), last);
+			first = math::min((int32_t)(listGuis.size()-1), first);
+			last = math::min((int32_t)listGuis.size(), last);
 		}
 	}
 

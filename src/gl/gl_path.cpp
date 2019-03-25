@@ -1,10 +1,10 @@
 #include "glheaders.h"
 #define _USE_MATH_DEFINES
 #include <cmath>
-#include <glm/glm.hpp>
 #include <vector>
 
-#include "seq_math.h"
+#include "math/seq_math.h"
+#include "math/vec.h"
 #include "str_util.h"
 #include "fileio.h"
 #include "audiocache.h"
@@ -17,9 +17,6 @@
 #include "hires_timer.h"
 #include <algorithm>
 
-
-using glm::vec2;
-using glm::vec4;
 using vec2list = std::vector<vec2>;
 
 

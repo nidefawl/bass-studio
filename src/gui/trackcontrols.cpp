@@ -1,10 +1,6 @@
 #include "trackcontrols.h"
-#include <glm/glm.hpp>
-#include <glm/geometric.hpp>
-#include <glm/vec2.hpp>
-using glm::vec2;
-using glm::ivec2;
 
+#include "math/seq_math.h"
 #include "host/mainctrl.h"
 #include "host/plugin/vst_plugin.h"
 #include "gui.h"
@@ -51,12 +47,12 @@ bool addTrHeight(track_t* tr, int32_t offset) {
 		return true;
 	}
 	for (auto t2 : tr->subtracks) {
-		int32_t nHeight = min(TRACK_MAX_HEIGHT_SUB, max(TRACK_MIN_HEIGHT_SUB, t2->height+offset));
+		int32_t nHeight = math::min(TRACK_MAX_HEIGHT_SUB, math::max(TRACK_MIN_HEIGHT_SUB, t2->height+offset));
 		changed = nHeight != t2->height;
 		t2->height = nHeight;
 	}
 	if (offset < 0 && !changed) {
-		int32_t nHeight = min(TRACK_MAX_HEIGHT_SUB, max(2, tr->height+offset));
+		int32_t nHeight = math::min(TRACK_MAX_HEIGHT_SUB, math::max(2, tr->height+offset));
 		changed |= nHeight != tr->height;
 		tr->height = nHeight;
 	}
@@ -67,7 +63,7 @@ void resize(track_t* m_track, T* al, int32_t mouseDragDist, int32_t heightStep) 
 
 	if (m_track->type < TRACK_TYPE_MIDI) {
 		//resize content-lane on bottom-sticked tracks
-		int32_t adjustedHeightSteps = min(128, max(1, (mouseDragDist) / heightStep));
+		int32_t adjustedHeightSteps = math::min(128, math::max(1, (mouseDragDist) / heightStep));
 		if (!m_track->subtracks.empty()) {
 			int32_t curHeightSteps = trackHeight(m_track);
 			int32_t distSteps = adjustedHeightSteps - al->height;
@@ -97,7 +93,7 @@ void resize(track_t* m_track, T* al, int32_t mouseDragDist, int32_t heightStep) 
 		}
 	} else {
 
-		int32_t totalHeightSteps = min(maxHeight, max(minHeight, (mouseDragDist) / heightStep));
+		int32_t totalHeightSteps = math::min(maxHeight, math::max(minHeight, (mouseDragDist) / heightStep));
 		al->height = totalHeightSteps;
 	}
 }
@@ -574,7 +570,7 @@ public:
 		ivec2 titleSize(size.x, size.y);
 		MainCtrl* ctrl = MainCtrl::get();
 		const int titleHeight = theme->get(GuiConstant::CONST_TRACK_HEIGHT_TITLE);
-		const int rectHeight = min(titleHeight, size.y);
+		const int rectHeight = math::min(titleHeight, size.y);
 		nvgBeginPath(vg);
 		nvgRect(vg, 0, 0, titleSize.x, rectHeight);
 		nvgFillColor(vg, color);
@@ -878,7 +874,7 @@ void gui_track_controls::handleDraggedMove(MouseEvent& evt) {
 		if (resizeTop) {
 			mouseDragDist = -evt.relMousepos.y+size.y;
 		}
-		int32_t totalHeightSteps = min(128, max(1, (mouseDragDist) / TRACK_HEIGHT_STEP));
+		int32_t totalHeightSteps = math::min(128, math::max(1, (mouseDragDist) / TRACK_HEIGHT_STEP));
 		if ( m_track->hideTrack && totalHeightSteps > TRACK_MIN_HEIGHT) {
 			m_track->hideTrack = false;
 			m_track->audio->showAutomationLanes();

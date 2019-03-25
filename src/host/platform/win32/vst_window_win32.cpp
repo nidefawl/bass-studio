@@ -11,9 +11,8 @@
 
 #include <tchar.h>
 #include <Windows.h>
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
-using glm::ivec2;
+#include "math/vec.h"
+#include "math/seq_math.h"
 #include "leak_detect.h"
 
 #define WIN32API_CALLBACK_TYPE __stdcall

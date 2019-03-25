@@ -6,10 +6,7 @@
 #include "track.h"
 #include "trackctr.h"
 #include "automation.h"
-#include <glm/vec2.hpp>
 #include "leak_detect.h"
-using glm::vec2;
-using glm::ivec2;
 
 class gui_track_automation : public guictr_base {
 public:

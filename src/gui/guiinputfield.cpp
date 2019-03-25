@@ -1,7 +1,8 @@
-#include "guiinputfield.h"
 #include <stdbool.h>
 #include <stdint.h>
+#include "guiinputfield.h"
 
+#include "math/seq_math.h"
 #include "str_util.h"
 #include "color_util.h"
 
@@ -25,7 +26,7 @@ void gui_numberinput_field::layout() {
 	field.pos = pos;
 	field.size = size;
 	field.layout();
-	field.setFontSize(max(4, field.size.y - 2));
+	field.setFontSize(math::max(4, field.size.y - 2));
 }
 
 void gui_numberinput_field::render(NVGcontext* vg) {
@@ -113,11 +114,11 @@ void gui_numberinput_field::handleDraggedMove(MouseEvent& evt) {
 	}
 	if (number && evt.guiDragged == this && evt.type == M_EVT_CAPTURED_MOVE) {
 		int disty = (int) (evt.dragDistance->y) / 2;
-		if (abs(disty) < 1)
+		if (math::abs(disty) < 1)
 			return;
 
 		evt.dragDistance->y = 0;
-		int absy = abs(disty);
+		int absy = math::abs(disty);
 		if (absy >= 4)
 			absy = 64;
 		else if (absy >= 2)

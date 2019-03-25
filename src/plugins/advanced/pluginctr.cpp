@@ -1,12 +1,8 @@
-#include <vector>
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
 #include "glheaders.h"
 #include <nanovg.h>
 #include <nanovg_gl.h>
 #include <nanovg_gl_utils.h>
-using glm::vec2;
-using glm::ivec2;
+#include <vector>
 
 #include "str_util.h"
 #include "color_util.h"

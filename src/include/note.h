@@ -1,4 +1,5 @@
 #pragma once
+#include "math/seq_math.h"
 #include "seq_time.h"
 #include "str_util.h"
 #include <set>
@@ -91,7 +92,7 @@ inline int32_t getFoldedOffsetPitch(std::vector<int32_t>& notesFolded, int32_t c
 	return direction < 0 ? notesFolded[0] : notesFolded[len-1];
 }
 inline void changePitch(std::vector<note_t>& notesPtrs, int32_t semitones, bool fold, std::vector<int32_t> notesFolded) {
-	if (fold && std::abs(semitones) == 1) {
+	if (fold && math::abs(semitones) == 1) {
 		for (note_t& note : notesPtrs) {
 			note.pitch = getFoldedOffsetPitch(notesFolded, note.pitch, semitones >= 0 ? 1 : -1);
 		}

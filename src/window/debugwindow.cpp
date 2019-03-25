@@ -7,10 +7,10 @@
 #include <nanovg.h>
 #include <nanovg_gl.h>
 #include <nanovg_gl_utils.h>
-#include <glm/glm.hpp>
-#include <glm/mat4x4.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include "math/vec.h"
+#include "math/mat.h"
 #include "fileio.h"
 #include "str_util.h"
 #include "../gl/gl_util.h"
@@ -131,7 +131,7 @@ void drawDebugWindow(NVGcontext* ctx, int winW, int winH, float pxratio) {
 		int n = e.glTexture;
 		if (n > 0 && e.entries.size()) {
 			glm::mat4 matProj = glm::ortho(0.f, (float) winW, (float) winH, 0.f, 1.f, -1.f);
-			glm::mat4 mvp = matProj * glm::translate(glm::mat4(1.0), vec3(x, y, 0));
+			glm::mat4 mvp = matProj * glm::translate(glm::mat4(1.0), glm::vec3(x, y, 0));
 //			glDisable(GL_DEPTH_TEST);
 			glUniformMatrix4fv(u_mvp, 1, GL_FALSE, value_ptr(mvp));
 			glBindTexture(GL_TEXTURE_2D, n);

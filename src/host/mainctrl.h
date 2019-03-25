@@ -5,16 +5,12 @@
 #include <stdint.h>
 #include <memory>
 
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
-#include <glm/vec3.hpp>
-#include <glm/vec4.hpp>
-
 #include "config.h"
+#include "math/vec.h"
+#include "math/seq_math.h"
 #include "str_util.h"
 #include "seq_util.h"
 #include "seq_time.h"
-#include "seq_math.h"
 #include "basectrl.h"
 #include "window.h"
 #include "menu.h"
@@ -36,12 +32,6 @@
 #include "hires_timer.h"
 #include "../host/plugindatabase.h"
 #include "rand.h"
-
-
-using glm::vec2;
-using glm::ivec2;
-using glm::vec4;
-using glm::ivec4;
 
 struct NVGcontext;
 class guibase;

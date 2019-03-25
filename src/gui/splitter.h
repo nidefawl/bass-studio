@@ -1,9 +1,7 @@
 #pragma once
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
-#include <glm/vec4.hpp>
+#include "math/vec.h"
+#include "math/seq_math.h"
 #include "gui.h"
-#include "seq_math.h"
 #include "exceptions.h"
 #include "mouse.h"
 #include "event.h"
@@ -27,7 +25,7 @@ public:
 		this->min = _min;
 		this->max = _max;
 	}
-	virtual bool mouseHitTest(glm::ivec2 mpos, MouseHitEvt& evt) override {
+	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
 		if (this->contains(mpos) && evt.type <= MouseHitType::MOUSE_RIGHT) {
 			evt.requestFocus(this);
 			evt.requestCursor(type == 0 ? CURSOR_RESIZE_V : CURSOR_RESIZE_H);

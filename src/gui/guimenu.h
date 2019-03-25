@@ -1,5 +1,6 @@
 #pragma once
 #include <nanovg.h>
+#include "math/seq_math.h"
 #include "basectrl.h"
 #include "gui.h"
 #include "guicolors.h"
@@ -123,7 +124,7 @@ public:
 		destroyGuis();
 		NVGcontext* vg = parentCtrl->vg;
 		int fontSize = (int) (size.y * 0.8);
-		int padding = max(4, (int) (size.y * 0.8));
+		int padding = math::max(4, (int) (size.y * 0.8));
 		int x = 0;
 		int y = 0;
 		std::vector<ngui::Menu*> list = menubar.children;

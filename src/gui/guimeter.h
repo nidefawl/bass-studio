@@ -1,5 +1,7 @@
 #pragma once
 
+#include "config.h"
+#include "math/seq_math.h"
 #include "gui.h"
 #include "theme.h"
 #include "dsp_util.h"
@@ -40,7 +42,7 @@ public:
 
 			for (int i = 0; i < 3; i++ ){
 				float fLvl = levels[i];
-				if (fLvl < F_MIN) {
+				if (fLvl < math::F_MIN) {
 					continue;
 				}
 				double scale = dsp_util::scaledRange(dsp_util::dBFS(fLvl), dsp_util::MTR_FLOOR, dsp_util::MTR_CEIL);
@@ -58,9 +60,9 @@ public:
 					continue;
 				}
 				if (hVal > 0.5) {
-					float hOvershoot = max(0.0f, hVal-hZero);
+					float hOvershoot = math::max(0.0f, hVal-hZero);
 					nvgBeginPath(vg);
-					nvgRect(vg, x, max(y, yZero), channelW, min(hVal, hZero));
+					nvgRect(vg, x, math::max(y, yZero), channelW, math::min(hVal, hZero));
 					nvgFillColor(vg, colGainLvl[i*2+0]);
 					nvgFill(vg);
 					if (hOvershoot > 0) {
