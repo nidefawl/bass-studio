@@ -36,9 +36,6 @@ struct FileFound {
 
 using ByteBuf = std::vector<uint8_t>;
 
-using std::ifstream;
-using std::ios;
-
 class window_base;
 
 int32_t WriteFileVector(const String& filename, std::vector<uint8_t>& writebuffer);
@@ -53,14 +50,14 @@ inline bool FileExists( const String &Filename )
 }
 inline int64_t FileSize(const String &fileName)
 {
-    ifstream file(fileName.c_str(), ifstream::in | ifstream::binary);
+	std::ifstream file(fileName.c_str(), std::ifstream::in | std::ifstream::binary);
 
     if(!file.is_open())
     {
         return -1;
     }
 
-    file.seekg(0, ios::end);
+    file.seekg(0, std::ios::end);
     size_t fileSize = file.tellg();
     file.close();
 
@@ -73,7 +70,7 @@ inline int64_t ReadFileFully( const String &Filename, ByteBuf& ref)
     if (FileExists(Filename)) {
     	int64_t size = FileSize(Filename);
     	if (size > 0) {
-    	    ifstream file(Filename.c_str(), ifstream::in | ifstream::binary);
+    		std::ifstream file(Filename.c_str(), std::ifstream::in | std::ifstream::binary);
     		if (file) {
     			ref.reserve(size);
     			ref.assign(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());

@@ -1,8 +1,6 @@
 #pragma once
 #include "seq_time.h"
 #include <algorithm>
-using std::max;
-using std::min;
 
 class Cursor {
 public:
@@ -18,22 +16,22 @@ public:
 		return cursorSubTrack > -1;
 	}
 	tick_t getTickBegin() const {
-		return min(cursorPos, cursorPos + selRange);
+		return std::min(cursorPos, cursorPos + selRange);
 	}
 	tick_t getTickEnd() const {
-		return max(cursorPos, cursorPos + selRange);
+		return std::max(cursorPos, cursorPos + selRange);
 	}
 	tick_t getTrackBegin() const {
-		return min(cursorTrack, cursorTrack + selTrackRange);
+		return std::min(cursorTrack, cursorTrack + selTrackRange);
 	}
 	tick_t getTrackEnd() const {
-		return max(cursorTrack, cursorTrack + selTrackRange);
+		return std::max(cursorTrack, cursorTrack + selTrackRange);
 	}
 	tick_t getSubTrackBegin() const {
-		return min(cursorSubTrack, cursorSubTrack + selSubTrackRange);
+		return std::min(cursorSubTrack, cursorSubTrack + selSubTrackRange);
 	}
 	tick_t getSubTrackEnd() const {
-		return max(cursorSubTrack, cursorSubTrack + selSubTrackRange);
+		return std::max(cursorSubTrack, cursorSubTrack + selSubTrackRange);
 	}
 	tick_t getRange() {
 		if (cursorTrack < 0)

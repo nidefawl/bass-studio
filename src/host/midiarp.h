@@ -12,8 +12,7 @@
 #include "automation.h"
 #include "track_impl.h"
 
-using std::min;
-using std::max;
+
 struct arp_snapshot;
 
 class midiarp : public automatable_t {
