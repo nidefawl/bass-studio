@@ -39,6 +39,7 @@
 									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/cereal&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/glfw/include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/nvwa/nvwa&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/build/lib-clang-debug-static/soxr/include&quot;"/>
 								</option>
 								<option id="gnu.cpp.compiler.option.optimization.level.960218844" name="Optimization Level" superClass="gnu.cpp.compiler.option.optimization.level" useByScannerDiscovery="false" value="gnu.cpp.compiler.optimization.level.none" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.option.debugging.level.1883423768" name="Debug Level" superClass="gnu.cpp.compiler.option.debugging.level" useByScannerDiscovery="false" value="gnu.cpp.compiler.debugging.level.max" valueType="enumerated"/>
@@ -313,6 +314,7 @@
 									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/nvwa/nvwa&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/build-gcc/lib-gnu-debug-static/soxr/include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/build/lib-clang-debug-static/soxr/include&quot;"/>
 								</option>
 								<option id="gnu.cpp.compiler.option.optimization.level.421082064" name="Optimization Level" superClass="gnu.cpp.compiler.option.optimization.level" useByScannerDiscovery="false" value="gnu.cpp.compiler.optimization.level.none" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.option.debugging.level.941778429" name="Debug Level" superClass="gnu.cpp.compiler.option.debugging.level" useByScannerDiscovery="false" value="gnu.cpp.compiler.debugging.level.max" valueType="enumerated"/>
@@ -450,6 +452,7 @@
 									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/nvwa/nvwa&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/build/lib-clang-release-static/soxr/include&quot;"/>
 									<listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/}&quot;"/>
+									<listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/build/lib-clang-debug-static/soxr/include&quot;"/>
 								</option>
 								<option id="gnu.cpp.compiler.option.optimization.level.526306127" name="Optimization Level" superClass="gnu.cpp.compiler.option.optimization.level" useByScannerDiscovery="false" value="gnu.cpp.compiler.optimization.level.none" valueType="enumerated"/>
 								<option id="gnu.cpp.compiler.option.debugging.level.1335642942" name="Debug Level" superClass="gnu.cpp.compiler.option.debugging.level" useByScannerDiscovery="false" value="gnu.cpp.compiler.debugging.level.max" valueType="enumerated"/>
