@@ -521,36 +521,6 @@ void MainCtrl::menuCommand(int cmd) {
 void MainCtrl::postInit() {
 	vsthost::getInstance()->postInit();
 	loadFile("empty.project");
-//	for (int i = 0; i < 32; i++) {
-//		loadFile("muuure.project");
-//	}
-	for (int i = 0; i < 2; i++) {
-		track_t* track = getTrackId(i);
-		if (track) {
-//			track->audio = vsthost::getInstance()->createAudio(track);
-//			vstpluginloadres res = vsthost::getInstance()->loadPlugin("C:/PluginManager/configs/default/hosts/Ableton/categories/DUNE 2.dll");
-//			if (res.result == 0) {
-//				track->audio->setInstrument(res.plugin);
-//				track->audio->instrument->show();
-//
-//				void* ptr;
-//				int32_t size = res.plugin->dispatch(effGetChunk, 0, 0, &ptr);
-//				if (ptr) {
-//					my_printf("effGetChunk: %llu, %d\n", ptr, size);
-//				}
-//			}
-//			res = vsthost::getInstance()->loadPlugin("C:/VstPlugins/fabfilter/FabFilter Pro-Q 2.dll");
-//			if (res.result == 0) {
-//				track->audio->insertEffect(-2, res.plugin);
-//	//			track->audio->instrument->show();
-//			}
-//			res = vsthost::getInstance()->loadPlugin("C:/VstPlugins/fabfilter/FabFilter Pro-L.dll");
-//			if (res.result == 0) {
-//				track->audio->insertEffect(-2, res.plugin);
-//	//			track->audio->instrument->show();
-//			}
-		}
-	}
 	view->ctr_effectlib.update();
 }
 void MainCtrl::initApp(int argc, char* argv[]) {
