@@ -20,6 +20,7 @@ namespace ngui {
 		bool disabled = false;
 		bool checked = false;
 		Menu* parent = NULL;
+		int icon = -1;
 	private:
 		Menu& makeChild_() {
 			if (entries.size() == 0) {
@@ -32,11 +33,12 @@ namespace ngui {
 			return entries.back();
 		}
 	public:
-		void addCommand(int cmd, String title) {
+		void addCommand(int cmd, String title, int icon = -1) {
 			Menu& m = makeChild_();
 			m.type = menu_type::command;
 			m.command = cmd;
 			m.title = title;
+			m.icon = icon;
 			add(&m);
 		}
 		void remove(Menu* m) {

@@ -17,8 +17,12 @@ void debugCB(GLenum source,
 	const GLchar *message,
 	const void *userParam) {
 
-	if (strstr(message, "Buffer detailed info") == NULL)
+	if (strstr(message, "Buffer detailed info") == NULL) {
 		my_printf("%s\n", message);
+		if (strstr(message, "error")) {
+
+		}
+	}
 
 }
 void enableGlDebugCallback() {

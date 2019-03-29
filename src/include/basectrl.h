@@ -160,6 +160,7 @@ protected:
 		guictxtmenu_base *ctxt;
 	};
 	std::vector<appmenu_window_entry> menuWindows;
+	std::vector<guibase*> garbageGuis;
 public:
 	bool hasCtxtMenu() {
 		return this->ctxtmenu!=NULL;
@@ -176,8 +177,8 @@ public:
 #if WINDOW_HAS_MENUBAR
 	ngui::MenuBar menubar;
 #endif
-	AppCtrl() { }
-	virtual ~AppCtrl() { }
+	AppCtrl();
+	virtual ~AppCtrl();
 	virtual void relayout(int32_t w, int32_t h) override = 0;
 	void onChildOverlayWindowClose(window_overlay*);
 	void openContextMenu(guictxtmenu_base *b, ivec2 pos) override;
@@ -210,19 +211,16 @@ public:
 	virtual bool init(window_main* window, NVGcontext* nanovg) = 0;
 	virtual void postInit() = 0; /* OpenGL context exists in postInit */
 	virtual void destroy() = 0;
+	void destroyControl();
 };
 class guictr_scrollbar;
 class PopupCtrl : public BaseCtrl
 {
-	guictr_scrollbar* popupCtrs;
+	guictr_scrollbar* popupCtrs = nullptr;
 	bool canTakeInputFocus = false;
 public:
 	PopupCtrl();
 	~PopupCtrl();
-	static PopupCtrl* get() {
-		static PopupCtrl ctrl;
-		return &ctrl;
-	}
 	void destroy();
 	bool isShown() {
 		return this->window && this->window->isShown();

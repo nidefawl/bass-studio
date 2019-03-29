@@ -63,6 +63,7 @@ namespace RenderResources {
 			load(vg, StringFormat("res/icons/folder.png"), imgIconsBuf[ICON_FOLDER]);
 			load(vg, StringFormat("res/icons/folder_open.png"), imgIconsBuf[ICON_FOLDER_OPEN]);
 			load(vg, StringFormat("res/icons/file.png"), imgIconsBuf[ICON_FILE]);
+			load(vg, StringFormat("res/icons/save.png"), imgIconsBuf[ICON_SAVE]);
 			load(vg, StringFormat("res/icons/copy.png"), imgIconsBuf[ICON_COPY]);
 			load(vg, StringFormat("res/icons/paste.png"), imgIconsBuf[ICON_PASTE]);
 			load(vg, StringFormat("res/icons/cut.png"), imgIconsBuf[ICON_CUT]);
@@ -86,15 +87,17 @@ namespace RenderResources {
 				}
 				assert((int)buf.bytes.size() == buf.w*buf.h * 4);
 				NvgImageTexture& nvgTex = imgIcons[i];
-				nvgTex.id = nvgCreateImageRGBA(vg, buf.w, buf.h, NVG_IMAGE_GENERATE_MIPMAPS, (const unsigned char*)buf.bytes.data());
-				nvgImageSize(vg, nvgTex.id, &nvgTex.width, &nvgTex.height);
+				int32_t nvgid = nvgCreateImageRGBA(vg, buf.w, buf.h, NVG_IMAGE_GENERATE_MIPMAPS, (const unsigned char*)buf.bytes.data());
+				nvgImageSize(vg, nvgid, &nvgTex.width, &nvgTex.height);
+				nvgTex.perContextId[vg] = nvgid;
 			}
 		}
 		{
 			int texSize = 64;
 			ImgData dataB = createDashedLineTexture(texSize);
-			imgDashedLine.id = nvgCreateImageRGBA(vg, texSize, texSize, NVG_IMAGE_REPEATX | NVG_IMAGE_REPEATY | NVG_IMAGE_NEAREST, (const unsigned char*)dataB.get());
-			nvgImageSize(vg, imgDashedLine.id, &imgDashedLine.width, &imgDashedLine.height);
+			int32_t nvgid = nvgCreateImageRGBA(vg, texSize, texSize, NVG_IMAGE_REPEATX | NVG_IMAGE_REPEATY | NVG_IMAGE_NEAREST, (const unsigned char*)dataB.get());
+			nvgImageSize(vg, nvgid, &imgDashedLine.width, &imgDashedLine.height);
+			imgDashedLine.perContextId[vg] = nvgid;
 		}
 	}
 

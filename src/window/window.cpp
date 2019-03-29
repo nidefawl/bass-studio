@@ -50,7 +50,7 @@ using std::ofstream;
 #include "window.h"
 #include "msgbox.h"
 #include "menu.h"
-// make base header (BaseCtrl)
+
 #include "basectrl.h"
 #include "droptargetlistener.h"
 
@@ -699,15 +699,11 @@ public:
     	ctrl->onMenuOpen(menu);
 #endif
     }
-    void someCrap() {
-
-    }
 #ifdef _WIN32
 	virtual LRESULT windowProc(HWND _hwnd, UINT Msg, WPARAM wParam, LPARAM lParam) override {
 		if (this->ctrl->hasMenuWindow()) {
 			bool dbg;
 			dbg = !!_hwnd;
-			someCrap();
 		}
 		switch (Msg) {
 		case WM_MOVING:
@@ -806,7 +802,6 @@ class appwindow_overlay : public appwindow, public window_overlay {
 	uint64_t dblclicktimer;
 public:
 	appwindow* const parent;
-//	PopupCtrl* const ctrl;
 	std::unique_ptr<PopupCtrl> popupCtrl;
 	appwindow_overlay(appwindow* _parent)
 		: appwindow(),
@@ -815,6 +810,15 @@ public:
 		  popupCtrl(std::make_unique<PopupCtrl>())
 	{
 		dblclicktimer = 0;
+	}
+	~appwindow_overlay() {
+
+	}
+	void destroy() {
+		popupCtrl->destroy();
+		glfwMakeContextCurrent(glfw);
+		destroyGL();
+		killTimer();
 	}
 	void createOverlayWindow(const char* title, int w, int h, void* parentHandle);
 	void render()
@@ -1205,7 +1209,7 @@ window_overlay* appwindow_main::createOverlay() {
 }
 void appwindow_main::destroyOverlayWindows() {
 	for (std::unique_ptr<appwindow_overlay>& ow : this->overlayWindows) {
-		ow->destroyGL();
+		ow->destroy();
 		ow.reset();
 	}
 	this->overlayWindows.clear();
@@ -1315,6 +1319,7 @@ void appwindow_overlay::createOverlayWindow(const char* title, int w, int h, voi
 #if __linux__
 	setIsTransientFor(this->parent->getGLFW(), this->getGLFW());
 #endif
+	RenderResources::initResources(nanovgCtxt);
 	if (!popupCtrl->init(this, this->nanovgCtxt)) {
 		throw appexception("Couldn't start application");
 	}
@@ -1627,10 +1632,9 @@ int startApplication(int argc, char* argv[]) {
 #endif
 	}
 	mainWindow->setInvalid();
-	ctrl->destroy();
+	ctrl->destroyControl();
 	mainWindow->destroy();
 
-//	PopupCtrl::get()->destroy();
 	mainWindow->destroyOverlayWindows();
 
 	saveSettings(settings);
@@ -1642,8 +1646,8 @@ int startApplication(int argc, char* argv[]) {
 	mainWindow.reset();
 	glfwTerminate();
 	EXC_CATCH
-	printLeakedGuiBase();
 	deleteApp();
+	printLeakedGuiBase();
 #ifdef _WIN32
 	OleUninitialize();
 #endif

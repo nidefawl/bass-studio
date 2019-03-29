@@ -1,4 +1,5 @@
 #pragma once
+#include <unordered_map>
 #include "fileio.h"
 #define ICON_SYNTH 0
 #define ICON_EFFECT 1
@@ -21,11 +22,12 @@
 #define ICON_PLUS 18
 #define ICON_MINUS 19
 #define ICON_AUTOMATION 20
-#define NUM_IMGS 21
+#define ICON_SAVE 21
+#define NUM_IMGS 22
 
 namespace RenderResources {
 	struct NvgImageTexture {
-		int id;
+		std::unordered_map<NVGcontext*,int32_t> perContextId;
 		int width;
 		int height;
 	};

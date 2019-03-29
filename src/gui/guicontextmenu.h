@@ -84,7 +84,7 @@ public:
 	void setControl(BaseCtrl* parentCtrl) {
 		guictxtmenu_base::setControl(parentCtrl);
 		for (auto* g : entries) {
-			g->theme = parentCtrl->getTheme();
+			g->theme = parentCtrl ? parentCtrl->getTheme() : nullptr;
 		}
 	}
 };

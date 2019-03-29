@@ -15,6 +15,9 @@ struct NVGcontext;
 namespace Table {
 struct tbl;
 }
+namespace RenderResources {
+struct NvgImageTexture;
+}
 class BaseCtrl;
 class AppCtrl;
 class guictxtmenu_base;
@@ -31,23 +34,27 @@ void setFont(NVGcontext* vg, float size, NVGcolor color, int alignment);
 void renderText(NVGcontext* ctx, float x, float y, float maxWidth, const char* string);
 void renderDashedLineFrame(NVGcontext* vg, float x, float y, float w, float h, float thickness);
 void drawAttachedBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 posInset, ivec2 sizeInset, int margin);
-
+void drawIcon(NVGcontext* vg, ivec2& size, RenderResources::NvgImageTexture* image);
 void drawPlaySymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2);
 void drawStopSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2);
 void drawTextureSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2);
 void drawTri(NVGcontext* vg, float xTop, float yTop, float h, const int dir, const NVGcolor& color, const NVGcolor& strokeColor, float strokeWidth);
+
 guitheme_t* getDefaultTheme();
 ivec2 toControlsObjectSpace(ivec2& pos, guibase* gui);
 
 inline float calcInset(float desiredInset, float size) {
 	return math::min(desiredInset, math::max(0.f, (size-4.0f)/2.0f));
 }
+
 enum TextInputState : signed int {
 	DISABLED = 0,
 	ENABLED = 1
 };
+
 #define FLAG_FOCUSED 1
 #define FLAG_SELECTED 2
+
 class guibase {
 private:
 	int flags = FLG_ENBL|FLG_VISIBLE|FLG_RENDER_BACKGROUND;

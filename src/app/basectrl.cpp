@@ -426,11 +426,21 @@ void BaseCtrl::setClipboardText(String s)
 	this->window->setClipboardText(s);
 }
 
+AppCtrl::AppCtrl() {
+
+}
+AppCtrl::~AppCtrl() {
+}
+void AppCtrl::destroyControl() {
+	destroy();
+	for (auto gui : garbageGuis) {
+		delete gui;
+	}
+}
 void AppCtrl::closeAppMenusAtLvl(int startlvl) {
 	for (int i = startlvl; i < (int)menuWindows.size(); i++) {
 		auto menuWnd = menuWindows[i];
 		if (menuWnd.ctxt) {
-	my_printf("closeAppMenu lvl %d, num windows %d\n", i, menuWindows.size());
 			menuWnd.wnd->getCtrl()->closePopup();
 		}
 	}
@@ -447,11 +457,14 @@ void AppCtrl::openAppMenu(int lvl, guictxtmenu_base *b, ivec2 pos) {
 	ivec2 windowPos;
 	this->mainWindow->getPos(&windowPos);
 	entry.wnd->getCtrl()->open(b, windowPos+pos);
-	my_printf("menuWindows[%d].ctxt is now %12X\n", lvl, (int64_t)b);
 }
 void AppCtrl::openContextMenu(guictxtmenu_base *b, ivec2 pos) {
-//	if (this->ctxtmenuOld)
-//		DELETE_PTR(this->ctxtmenuOld) //horrible lifetime management
+	 //move this in some garbageCollect() methdo and trigger garbage collection after every window-msg on win32 (linux?)
+	for (auto gui : garbageGuis) {
+		delete gui;
+	}
+	garbageGuis.clear();
+
 	this->ctxtmenu = b;
 	ivec2 windowPos;
 	this->mainWindow->getPos(&windowPos);
@@ -473,11 +486,11 @@ void AppCtrl::closeContextMenu() {
 }
 void AppCtrl::onChildOverlayWindowClose(window_overlay* ptr) {
 	if (ptr == this->contextWindow) {
-		my_printf("ptr == this->contextWindow\n", 0);
 		assert(this->ctxtmenu);
 		this->ctxtmenu->onParentWindowClose();
-		//let it leak for now
-//		delete this->ctxtmenu;
+		this->ctxtmenu->setControl(nullptr);
+		// ctxtmenu can't be deleted at this point, some point in the call chain may dereference it again
+		garbageGuis.push_back(this->ctxtmenu);
 		this->ctxtmenu = nullptr;
 		return;
 	}
@@ -489,9 +502,10 @@ void AppCtrl::onChildOverlayWindowClose(window_overlay* ptr) {
 		auto& menuWnd = *it;
 		assert(menuWnd.ctxt);
 		menuWnd.ctxt->onParentWindowClose();
-//		delete menuWnd.ctxt;
+		menuWnd.ctxt->setControl(nullptr);
+		// ctxtmenu can't be deleted at this point, some point in the call chain may dereference it again
+		garbageGuis.push_back(menuWnd.ctxt);
 		menuWnd.ctxt = nullptr;
-		my_printf("menuWindows[%d].ctxt is now nullptr\n", lvl);
 		return;
 	}
 	assert(0);

@@ -1,10 +1,57 @@
 #include "guimenu.h"
 #include "../host/mainctrl.h"
+#include "renderresources.h"
+
+guimenu_ctxtentry::guimenu_ctxtentry(ngui::Menu* _menu)
+	: ctxtmenu_entry(_menu->title, _menu->command), menu(_menu)
+{
+	int32_t iconId = menu->icon;
+	if (iconId > -1) {
+		setIcon(&RenderResources::imgIcons[iconId]);
+	}
+
+}
+
+void guimenu_ctxtentry::render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) {
+	if (contains(ctxtSize, mouse)) {
+		nvgBeginPath(vg);
+		nvgRect(vg, 0, y, ctxtSize.x, height);
+		nvgFillColor(vg, theme->getColor(GuiColor::COL_CTXTMNU_HILIGHT));
+		nvgFill(vg);
+	}
+	if (this->icon) {
+		ivec2 iconSize(height, height);
+		nvgTranslate(vg, height / 4, y);
+		drawIcon(vg, iconSize, icon);
+		nvgTranslate(vg, -height / 4, -y);
+	}
+	//		nvgText(vg, leftOffset(), y + height / 2, StringAsCStr(title), NULL);
+	String t1 = title;
+	String t2;
+	auto p = title.find("\t");
+	if (p != String::npos) {
+		t1 = title.substr(0, p);
+		t2 = title.substr(p + 1);
+	}
+	setFont(vg, this->fontSize, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+	nvgText(vg, leftOffset(), y + height / 2, StringAsCStr(t1), NULL);
+	int32_t defoffset = (int32_t) round(this->fontSize/2.4f);
+	if (t2.length()) {
+		nvgTextAlign(vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+		nvgText(vg, width - defoffset, y + height / 2, StringAsCStr(t2), NULL);
+	}
+	if (menu->type == ngui::menu_type::submenu) {
+		nvgTextAlign(vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+		nvgText(vg, width - defoffset, y + height / 2, ">", NULL);
+	}
+}
+
 
 
 void guictr_menubar_entry::handleDraggedBegin(MouseEvent& evt) {
 	parentMenuBar->openMenu(this);
 }
+
 bool guictr_menubar_entry::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 	if (this->contains(mpos)) {
 		evt.requestFocus(this);
@@ -13,17 +60,7 @@ bool guictr_menubar_entry::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 	}
 	return false;
 }
-void guimenu::onRemove() {
-	if (this->parentMenuBar) {
-		this->parentMenuBar->currentMenu = NULL;
-	}
-	parentCtrl->closeAppMenusAtLvl(lvl);
-	for (ctxtmenu_entry* e : entries) {
-		guimenu_ctxtentry* e2 = dynamic_cast<guimenu_ctxtentry*>(e);
-		if (e2)
-			e2->isMenuOpen = false;
-	}
-}
+
 void guictr_menubar_entry::render(NVGcontext* vg) {
 	guictr_menubar_entry* cur = parentMenuBar->currentMenu;
 
@@ -46,11 +83,54 @@ void guictr_menubar_entry::render(NVGcontext* vg) {
 	nvgText(vg, pos.x + size.x/2, pos.y+size.y/2, cstr, NULL);
 }
 
+
+guimenu::guimenu(ngui::Menu* _menu, int _lvl, guimenu_ctxtentry* parent) :
+		guictxtmenu() /*, menu(_menu)*/, lvl(_lvl), parentSubmenuEntry(parent) {
+	this->size.x = 190;
+	this->maxHeight = 0;
+	for (auto e : _menu->children) {
+		if (e->type == ngui::menu_type::seperator) {
+			addEntry(new ctxtmenu_splitter());
+		} else {
+			auto* entry = new guimenu_ctxtentry(e);
+			addEntry(entry);
+			guimenuEntries.push_back(entry);
+		}
+	}
+}
+
+void guimenu::layout() {
+	for (auto entry : guimenuEntries) {
+		entry->fixedLeftOffset = -1;
+	}
+	guictxtmenu::layout();
+	int leftOffset = 0;
+	for (auto entry : guimenuEntries) {
+		leftOffset = math::max(entry->leftOffset(), leftOffset);
+	}
+	for (auto e : guimenuEntries) {
+		e->fixedLeftOffset = leftOffset;
+	}
+}
+
+void guimenu::onRemove() {
+	if (this->parentMenuBar) {
+		this->parentMenuBar->currentMenu = NULL;
+	}
+	parentCtrl->closeAppMenusAtLvl(lvl);
+	for (ctxtmenu_entry* e : entries) {
+		guimenu_ctxtentry* e2 = dynamic_cast<guimenu_ctxtentry*>(e);
+		if (e2)
+			e2->isMenuOpen = false;
+	}
+}
+
 void guimenu::onParentWindowClose() {
 	if (parentSubmenuEntry) {
 		parentSubmenuEntry->isMenuOpen = false;
 	}
 }
+
 bool guimenu::mouseHitTest(ivec2 mpos, MouseHitEvt& evt)  {
 	if (this->contains(mpos)) {
 		ivec2 local = toContainerSpace(mpos);

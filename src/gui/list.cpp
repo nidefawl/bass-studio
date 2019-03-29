@@ -17,6 +17,7 @@ void gui_list_entry::handleDraggedMove(MouseEvent& evt) {
 void gui_list_entry::handleDraggedRelease(MouseEvent& evt) {
 	parentCtrl->objectDragRelease(this, evt);
 }
+
 void gui_list_entry::render(NVGcontext* vg) {
 	BaseCtrl* ctrl = parentCtrl;
 	float spacing = INSET_TITLE;
@@ -33,14 +34,8 @@ void gui_list_entry::render(NVGcontext* vg) {
 	}
 	nvgTranslate(vg, pos.x, pos.y);
 	if (icon > -1) {
-		int32_t extImg = 2;
-		int32_t iconW = rowHeight + extImg * 2;
 		RenderResources::NvgImageTexture& image = RenderResources::imgIcons[icon];
-		NVGpaint paintIcon = nvgImagePattern(vg, -extImg, -extImg, iconW, iconW, 0, image.id, 1.0f);
-		nvgBeginPath(vg);
-		nvgRect(vg, -extImg, -extImg, iconW, iconW);
-		nvgFillPaint(vg, paintIcon);
-		nvgFill(vg);
+		drawIcon(vg, size, &image);
 	}
 	setFont(vg, (int) (rowHeight * 0.8), G_WHITE, G_TITLE_ALIGN);
 	nvgText(vg, x, rowHeight / 2, StringAsCStr(getText()), NULL);

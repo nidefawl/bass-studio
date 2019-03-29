@@ -7,6 +7,9 @@
 #include "guicolors.h"
 #include "basectrl.h"
 
+namespace RenderResources {
+struct NvgImageTexture;
+}
 class ctxtmenu_entry {
 public:
 	String title;
@@ -16,6 +19,8 @@ public:
 	int y = 0;
 	int fontSize = 0;
 	guitheme_t* theme = nullptr;
+	int fixedLeftOffset = -1;
+	RenderResources::NvgImageTexture* icon = nullptr;
 	ctxtmenu_entry(String _title, int _id) {
 		this->id = _id;
 		this->title = _title;
@@ -23,13 +28,23 @@ public:
 	virtual ~ctxtmenu_entry() {
 
 	}
+	void setIcon(RenderResources::NvgImageTexture* _icon) {
+		this->icon = _icon;
+	}
 	virtual void layout(ivec2 size, int32_t _fontSize) {
 		this->fontSize = _fontSize;
 		this->height = (int32_t) round(_fontSize*1.1f);
 		this->width = math::max(size.x, this->width);
 	}
-	int leftOffset() {
-		return (int32_t) round(this->fontSize/2.4f);
+	virtual int leftOffset() {
+		if (fixedLeftOffset >= 0) {
+			return fixedLeftOffset;
+		}
+		int32_t offset = (int32_t) round(this->fontSize/2.4f);
+		if (icon != nullptr) {
+			offset += height;
+		}
+		return offset;
 	}
 	virtual void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) {
 		if (contains(ctxtSize, mouse)) {

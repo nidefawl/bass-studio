@@ -21,17 +21,21 @@
 using namespace std;
 
 PopupCtrl::PopupCtrl() {
-	popupCtrs = new guictr_scrollbar();
-	popupCtrs->setBackgroundRendered(true);
 }
+
+PopupCtrl::~PopupCtrl() {
+}
+
 void PopupCtrl::focusLost() {
 //	parentCtrl->closeContextMenu();
 }
+
 void PopupCtrl::closePopup() {
 	if (isShown()) {
 		static_cast<window_overlay*>(this->window)->hide();
 	}
 }
+
 void PopupCtrl::onWindowClose() {
 	popupCtrs->removeGuis();
 	if (guiCtrFocused) {
@@ -41,9 +45,11 @@ void PopupCtrl::onWindowClose() {
 	}
 	guiCaptured = guiFocused = guiOver = guiDragged = NULL;
 }
+
 bool PopupCtrl::onWindowCloseRequest() {
 	return true;
 }
+
 void PopupCtrl::relayout(int32_t w, int32_t h) {
 
 	// Popup window shouldn't change its shape, just call layout
@@ -51,7 +57,8 @@ void PopupCtrl::relayout(int32_t w, int32_t h) {
 //	popupCtrs->determineSize(prefSize);
 //	popupCtrs->size = prefSize;
 	popupCtrs->layout();
-};
+}
+
 void PopupCtrl::open(guictxtmenu_base *_ctxtmenu, ivec2 pos) {
 	assert(!isShown());
 	mouseInside = false;
@@ -83,6 +90,7 @@ void PopupCtrl::open(guictxtmenu_base *_ctxtmenu, ivec2 pos) {
 	}
 	getTheme()->setColor(GuiColor::COL_CLEAR_COLOR, clearc);
 }
+
 void PopupCtrl::destroy() {
 	isOK = false;
 	this->containers.clear();
@@ -91,11 +99,10 @@ void PopupCtrl::destroy() {
 	popupCtrs = nullptr;
 }
 
-PopupCtrl::~PopupCtrl() {
-}
 bool PopupCtrl::hasInputFocus() {
 	return guiFocused && canTakeInputFocus;
 }
+
 bool PopupCtrl::init(window_overlay* _window, NVGcontext* nanovg)
 {
 	guitheme_t themeDefault;
@@ -104,6 +111,8 @@ bool PopupCtrl::init(window_overlay* _window, NVGcontext* nanovg)
 	themes.loadThemes();
 	this->window = _window;
 	this->vg = nanovg;
+	popupCtrs = new guictr_scrollbar();
+	popupCtrs->setBackgroundRendered(true);
 	this->containers.push_back(popupCtrs);
 	for (guictr_base *ctr : containers) {
 		ctr->setControl(this);

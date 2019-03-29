@@ -76,10 +76,11 @@ void renderDashedLineFrame(NVGcontext* vg, float x, float y, float w, float h, f
 	float t = (getTimeMillis()%duration) / (float) duration;
 	uint32_t texOffsetX = t*image.width;
 	uint32_t texOffsetY = t*image.height;
-	NVGpaint paintDown = nvgImagePattern(vg, 0, texOffsetY, image.width, image.height, 0, image.id, 1.0f);
-	NVGpaint paintRight = nvgImagePattern(vg, texOffsetX, 0, image.width, image.height, M_PI*0.5f, image.id, 1.0f);
-	NVGpaint paintUp = nvgImagePattern(vg, 0, image.height-texOffsetY, image.width, image.height, 0, image.id, 1.0f);
-	NVGpaint paintLeft = nvgImagePattern(vg, image.width-texOffsetX, 0, image.width, image.height, M_PI*0.5f, image.id, 1.0f);
+	int32_t imageId = image.perContextId[vg];
+	NVGpaint paintDown = nvgImagePattern(vg, 0, texOffsetY, image.width, image.height, 0, imageId, 1.0f);
+	NVGpaint paintRight = nvgImagePattern(vg, texOffsetX, 0, image.width, image.height, M_PI*0.5f, imageId, 1.0f);
+	NVGpaint paintUp = nvgImagePattern(vg, 0, image.height-texOffsetY, image.width, image.height, 0, imageId, 1.0f);
+	NVGpaint paintLeft = nvgImagePattern(vg, image.width-texOffsetX, 0, image.width, image.height, M_PI*0.5f, imageId, 1.0f);
 
 	nvgShapeAntiAlias(vg, 0);
 	nvgStrokeWidth(vg, thickness);
@@ -142,7 +143,17 @@ void drawTri(NVGcontext* vg, float x, float y, float h, const int dir, const NVG
 }
 NVGpaint imagePattern(NVGcontext* vg, int width, int ext, int imgId) {
 	RenderResources::NvgImageTexture& image = RenderResources::imgIcons[imgId];
-	return nvgImagePattern(vg, -ext, -ext, width+ext*2, width+ext*2, 0, image.id, 1.0f);
+	return nvgImagePattern(vg, -ext, -ext, width+ext*2, width+ext*2, 0, image.perContextId[vg], 1.0f);
+}
+void drawIcon(NVGcontext* vg, ivec2& size, RenderResources::NvgImageTexture* image) {
+	const int32_t extImg = 2;
+	const int32_t iconW = (int32_t)ceil(math::min(size.x, size.y));
+	const int32_t renderW = iconW + extImg * 2;
+	NVGpaint paintIcon = nvgImagePattern(vg, -extImg, -extImg, iconW + extImg * 2, iconW + extImg * 2, 0, image->perContextId[vg], 1.0f);
+	nvgBeginPath(vg);
+	nvgRect(vg, -extImg, -extImg, iconW + extImg * 2, iconW + extImg * 2);
+	nvgFillPaint(vg, paintIcon);
+	nvgFill(vg);
 }
 void drawTextureSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2) {
 	int32_t inset = 3;
@@ -303,17 +314,9 @@ void guibuttontoggle::render(NVGcontext* vg) {
 	nvgStroke(vg);
 	int icon = _getIcon();
 	if (icon >= 0) {
-
-
-		int32_t extImg = 2;
-		int32_t iconW = (int32_t)ceil(math::min(size.x, size.y)) + extImg * 2;
 		RenderResources::NvgImageTexture& image = RenderResources::imgIcons[icon];
-		NVGpaint paintIcon = nvgImagePattern(vg, -extImg, -extImg, iconW, iconW, 0, image.id, 1.0f);
 		nvgTranslate(vg, pos.x, pos.y);
-		nvgBeginPath(vg);
-		nvgRect(vg, -extImg, -extImg, iconW, iconW);
-		nvgFillPaint(vg, paintIcon);
-		nvgFill(vg);
+		drawIcon(vg, size, &image);
 		nvgTranslate(vg, -pos.x, -pos.y);
 	}
 
@@ -406,6 +409,9 @@ void printLeakedGuiBase() {
 }
 guibase::guibase()  {
 	id = DebugAlloc::getTracker<guibase>()->objConstructor(this);
+	if (id == 934) {
+
+	}
 }
 guibase::~guibase() {
 	DebugAlloc::getTracker<guibase>()->objDestructor(this);

@@ -588,10 +588,10 @@ bool MainCtrl::init(window_main* window, NVGcontext* nanovg)
 	menus.recent.addCommand(CMD_FILE_OPEN, "File 5");
 	menus.file.type = ngui::menu_type::submenu;
 	menus.file.title = "File";
-	menus.file.addCommand(CMD_FILE_NEW, menuName("New", KC_NEW));
-	menus.file.addCommand(CMD_FILE_OPEN, menuName("Open", KC_OPEN));
+	menus.file.addCommand(CMD_FILE_NEW, menuName("New", KC_NEW), ICON_FILE);
+	menus.file.addCommand(CMD_FILE_OPEN, menuName("Open", KC_OPEN), ICON_FOLDER);
 	menus.file.add(&menus.recent);
-	menus.file.addCommand(CMD_FILE_SAVE, menuName("Save", KC_SAVE));
+	menus.file.addCommand(CMD_FILE_SAVE, menuName("Save", KC_SAVE), ICON_SAVE);
 	menus.file.addCommand(CMD_FILE_SAVEAS, "Save As");
 	menus.file.addSeperator();
 	menus.file.addCommand(CMD_EXIT, "Quit");
