@@ -20,6 +20,7 @@ endif (BUILD_TESTS)
 # set(BUILD_DAW_LIB ON) #override
 
 set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CMAKE_COMMAND} -E time")
+set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "${CMAKE_COMMAND} -E time")
 include("setup.cmake")
 include("cotire.cmake")
 add_definitions("-DUSE_WIN32_EXC_HOOKS")
@@ -88,6 +89,10 @@ foreach(f ${CPP_ALL_FILES})
         message("STATUS SKIPPING SRC ${f}")
         continue()
     endif()
+    if (f MATCHES ".*/file/[^/]*$")
+        message("STATUS SKIPPING SRC ${f}")
+        continue()
+    endif()
     if (UNIX)
 	    if (f MATCHES ".*/host/platform/win/[^/]*$")
 	        continue()
@@ -118,6 +123,16 @@ foreach(f ${CPP_ALL_FILES})
     list(APPEND CPP_SRC_FILES ${f})
 endforeach()
 
+set(SRC_FILES_SUBDIR_FILES 
+    src/file/fileloader.cpp
+    src/file/projectfile.cpp
+    src/file/themefile.cpp
+)
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    set_source_files_properties(${SRC_FILES_SUBDIR_FILES} PROPERTIES COMPILE_OPTIONS "-g0;-O2")
+endif()
+
+set(CPP_SRC_FILES ${SRC_FILES_SUBDIR_FILES} ${CPP_SRC_FILES})
 source_group("Sources" FILES ${CPP_SRC_FILES})
 source_group("Headers" FILES ${HDR_FILES})
 
