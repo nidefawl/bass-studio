@@ -16,7 +16,6 @@
 #include "track.h"
 #include "track_impl.h"
 #include "renderresources.h"
-#include "leak_detect.h"
 
 
 float dist_to_segment(vec2 a, vec2 b, vec2 pt)

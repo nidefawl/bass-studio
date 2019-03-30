@@ -16,7 +16,6 @@
 #include "../gui/guiscrollcontainer.h"
 #include "../gui/scrollbar.h"
 
-#include "leak_detect.h"
 
 using namespace std;
 

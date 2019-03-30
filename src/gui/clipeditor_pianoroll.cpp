@@ -8,7 +8,6 @@
 #include "cursor.h"
 #include "keyboard.h"
 #include "grid.h"
-#include "leak_detect.h"
 
 #include "guicontextmenu_daw.h"
 

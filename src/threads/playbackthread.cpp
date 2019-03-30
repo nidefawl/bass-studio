@@ -29,7 +29,6 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
-#include "leak_detect.h"
 
 #ifndef _MSC_VER
 #pragma GCC diagnostic push

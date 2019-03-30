@@ -12,7 +12,6 @@
 #include "cursor.h"
 #include "keyboard.h"
 #include "grid.h"
-#include "leak_detect.h"
 
 
 gui_clipsettings::gui_clipsettings(scaled_grid& _grid, clip_view& _view) :

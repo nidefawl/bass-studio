@@ -30,7 +30,6 @@
 #include "history.h"
 #include "plugindatabase.h"
 
-#include "leak_detect.h"
 
 const tick_t INVALID_TICK = 1 << 31;
 

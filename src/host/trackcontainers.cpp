@@ -10,7 +10,6 @@
 #include "track_impl.h"
 #include "vst_host.h"
 
-#include "leak_detect.h"
 #include "mainctrl.h"
 #include "../threads/playbackthread.h"
 

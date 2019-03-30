@@ -5,7 +5,6 @@
 #include "trackctr.h"
 #include "trackcontent.h"
 #include "guicontextmenu.h"
-#include "leak_detect.h"
 
 #define ID_DELETE 1
 #define ID_REENABLE 2

@@ -33,7 +33,6 @@
 #include "../host/plugin/vst_plugin.h"
 #include "automatable.h"
 
-#include "leak_detect.h"
 
 
 using Table::tbl;

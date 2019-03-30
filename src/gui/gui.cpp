@@ -9,7 +9,6 @@
 #include "theme.h"
 #include "saferef.h"
 #include "seq_util.h"
-#include "leak_detect.h"
 #include "guicolors.h"
 #include "debugproperties.h"
 #include "guicontextmenu_base.h"

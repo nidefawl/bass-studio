@@ -11,7 +11,6 @@
 #include "../vst_window.h"
 #include "../../gui/pluginctr.h"
 #include "../mainctrl.h"
-#include "leak_detect.h"
 
 #include "../../gui/guiplugin.h"
 #include "../history.h"

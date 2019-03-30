@@ -20,7 +20,6 @@
 #include "table.h"
 #include "guitooltip.h"
 
-#include "leak_detect.h"
 
 #include "guicontextmenu_daw.h"
 

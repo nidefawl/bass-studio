@@ -21,7 +21,6 @@
 #include "cursor.h"
 #include "platform.h"
 #include "dsp_util.h"
-#include "leak_detect.h"
 #include "../host/mainctrl.h"
 
 int32_t getPosYFirstReturnTrack(project_t& project);

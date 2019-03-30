@@ -54,7 +54,6 @@
 #include "plugin/base_plugin.h"
 #include "plugin/vst_plugin.h"
 #include "track_impl.h"
-#include "leak_detect.h"
 #include "audiocache.h"
 #include "seq_time.h"
 

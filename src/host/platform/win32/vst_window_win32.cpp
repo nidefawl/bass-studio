@@ -13,7 +13,6 @@
 #include <Windows.h>
 #include "math/vec.h"
 #include "math/seq_math.h"
-#include "leak_detect.h"
 
 #define WIN32API_CALLBACK_TYPE __stdcall
 HWND getMainHWND(); // window.cpp

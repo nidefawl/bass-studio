@@ -4,7 +4,6 @@
 #include "../../plugin/vst_plugin.h"
 #include <vector>
 #include <GLFW/glfw3.h>
-#include "leak_detect.h"
 
 struct Display;
 void sendExposeEvent(GLFWwindow* glfw);

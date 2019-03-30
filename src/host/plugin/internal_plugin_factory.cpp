@@ -6,7 +6,6 @@
 #include "host/vst_host.h"
 #include "host/plugin/vst_plugin.h"
 #include "modules.h"
-#include "leak_detect.h"
 
 effectbase* vsthost::makeModuleInstance(int32_t moduleType, int32_t moduleId, int32_t globalid) {
 

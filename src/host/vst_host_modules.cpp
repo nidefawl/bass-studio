@@ -39,7 +39,6 @@
 #ifdef __linux__
 #include <dlfcn.h>
 #endif
-#include "leak_detect.h"
 #include "vstsdk-plugin-2.4/audioeffect.h"
 #include "vstsdk-plugin-2.4/audioeffectx.h"
 #include "plugins/advanced/adv-plugin.h"

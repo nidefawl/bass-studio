@@ -35,7 +35,6 @@
 #include "clipboard.h"
 #include "table.h"
 
-#include "leak_detect.h"
 
 #include "guicontextmenu_daw.h"
 #include "guiplugin.h"

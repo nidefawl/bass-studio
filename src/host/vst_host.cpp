@@ -41,7 +41,6 @@
 #ifdef __linux__
 #include <dlfcn.h>
 #endif
-#include "leak_detect.h"
 
 #define DBG_PRINT_CALLBACKS
 #ifdef DBG_PRINT_CALLBACKS

@@ -17,7 +17,6 @@
 #include "grid.h"
 #include "keyboard.h"
 #include "edithistory.h"
-#include "leak_detect.h"
 #include "../host/mainctrl.h"
 #include "guiarp.h"
 #include "guiinputfield.h"

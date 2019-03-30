@@ -10,7 +10,6 @@
 #include "list.h"
 #include "../host/plugindatabase.h"
 #include "modules.h"
-#include "leak_detect.h"
 
 class effectbase;
 class gui_pluginlist_entry : public gui_list_entry {

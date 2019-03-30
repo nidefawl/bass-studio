@@ -34,7 +34,6 @@
 #include "../gui/scrollbar.h"
 #include "../gui/statusbar.h"
 #include "../gui/guimenu.h"
-#include "leak_detect.h"
 #include "plugin.h"
 
 

@@ -8,7 +8,6 @@
 #include "button.h"
 #include "list.h"
 #include "guimeter.h"
-#include "leak_detect.h"
 
 class effectbase;
 class vstplugin;

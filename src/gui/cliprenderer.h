@@ -12,7 +12,6 @@
 #include "guicontainer.h"
 #include "trackautomation.h"
 #include "audiowaveform.h"
-#include "leak_detect.h"
 
 void renderAudioClip(NVGcontext* vg, const guitheme_t* theme, const track_t* tr, const clip_t* cl, const gui_waveform_texture_ref* guiaudioclip, ivec2 pos, ivec2 size, ivec2 sizeClipped);
 void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_t* tr, const clip_t* cl, ivec2 pos, ivec2 size);

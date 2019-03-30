@@ -21,7 +21,6 @@
 #include "../mainctrl.h"
 #include "../history.h"
 
-#include "leak_detect.h"
 
 const char* plug_features_array[] = {
 	PlugCanDos::canDoSendVstEvents,

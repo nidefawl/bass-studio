@@ -7,7 +7,6 @@
 #include "clip.h"
 #include "logging.h"
 #include "seq_time.h"
-#include "leak_detect.h"
 #include "audiocache.h"
 #include "mainctrl.h"
 #include "project.h"

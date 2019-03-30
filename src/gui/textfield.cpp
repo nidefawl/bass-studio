@@ -1,5 +1,4 @@
 #include "textfield.h"
-#include <regex>
 #include <sstream>
 #include <iostream>
 #include <nanovg.h>
@@ -11,7 +10,11 @@
 #include "guicolors.h"
 #include "platform.h"
 #include "keyboard.h"
-#include "leak_detect.h"
+
+#define TEXTFIELD_USE_REGEX_PATTERN 0
+#if TEXTFIELD_USE_REGEX_PATTERN
+#include <regex>
+#endif
 
 gui_textfield::gui_textfield()
     : guibase(),
@@ -452,6 +455,7 @@ void gui_textfield::onChange() {
 	}
 }
 bool gui_textfield::checkFormat(const std::string &input, const std::string &format) {
+#if TEXTFIELD_USE_REGEX_PATTERN
     if (format.empty())
         return true;
     try {
@@ -465,6 +469,9 @@ bool gui_textfield::checkFormat(const std::string &input, const std::string &for
         throw;
 #endif
     }
+#else
+    return true;
+#endif
 }
 
 bool gui_textfield::copySelectionString(std::string& output) {

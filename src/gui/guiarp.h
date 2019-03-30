@@ -11,7 +11,6 @@
 #include "list.h"
 #include "guimeter.h"
 #include "knob.h"
-#include "leak_detect.h"
 #include "track_impl.h"
 #include "../host/midiarp.h"
 #include "../host/mainctrl.h"

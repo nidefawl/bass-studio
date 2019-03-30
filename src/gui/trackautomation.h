@@ -6,7 +6,6 @@
 #include "track.h"
 #include "trackctr.h"
 #include "automation.h"
-#include "leak_detect.h"
 
 class gui_track_automation : public guictr_base {
 public:

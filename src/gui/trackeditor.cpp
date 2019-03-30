@@ -25,7 +25,6 @@
 #include "mouse.h"
 #include "mousecursor.h"
 #include "logging.h"
-#include "leak_detect.h"
 #include "audiocache.h"
 #include "audiowaveform.h"
 #include "drawwaveform.h"

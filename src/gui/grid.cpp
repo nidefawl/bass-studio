@@ -1,7 +1,6 @@
 #include "seq_time.h"
 #include "grid.h"
 #include "../host/mainctrl.h"
-#include "leak_detect.h"
 
 void scaled_grid::makeTickVisible(tick_t tickTime) {
 	double tickBars = tickTime / (double)TICKS_BAR;

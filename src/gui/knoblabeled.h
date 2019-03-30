@@ -10,7 +10,6 @@
 #include "gui/pluginviewcontainers.h"
 #include "gui/knob.h"
 
-#include "leak_detect.h"
 
 class guiknob_labeled_base : public guiknob {
 public:

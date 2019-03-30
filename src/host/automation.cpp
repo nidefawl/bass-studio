@@ -1,7 +1,6 @@
 #include "automation.h"
 #include "plugin/vst_plugin.h"
 #include "../gui/automatable.h"
-#include "leak_detect.h"
 
 int32_t indexOfTick(std::vector<automation_point_t>& dataPoints, tick_t tick) {
 	int32_t idx;

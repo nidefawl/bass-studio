@@ -11,7 +11,6 @@
 #include "note.h"
 #include "dsp_util.h"
 #include "seq_time.h"
-#include "leak_detect.h"
 #include "snapshot.h"
 
 struct VstEvent_t;

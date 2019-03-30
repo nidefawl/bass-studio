@@ -21,7 +21,6 @@
 #include "../host/plugin/vst_plugin.h"
 #include "../host/plugin/vst_plugin_handles.h"
 #include "edithistory.h"
-#include "leak_detect.h"
 #include "guiplugin.h"
 
 using namespace std;

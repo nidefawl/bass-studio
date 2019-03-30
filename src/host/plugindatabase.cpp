@@ -4,7 +4,6 @@
 #include <vector>
 #include <SQLiteCpp/SQLiteCpp.h>
 #include <SQLiteCpp/VariadicBind.h>
-#include "leak_detect.h"
 
 void createTables(SQLite::Database& db) {
     const bool bExists = db.tableExists("plugins");

@@ -22,7 +22,6 @@
 #include "str_util.h"
 #include "guimeter.h"
 #include "color_util.h"
-#include "leak_detect.h"
 #include "automation.h"
 #include "automatable.h"
 #include "meter.h"
