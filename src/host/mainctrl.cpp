@@ -63,7 +63,6 @@
 #include "plugindatabase.h"
 
 
-
 std::shared_ptr<MainCtrl> mainctrl;
 MainCtrl* MainCtrl::get() {
 	return mainctrl.get();
@@ -76,26 +75,6 @@ std::shared_ptr<AppCtrl> makeApp() {
 void deleteApp() {
 	mainctrl = nullptr;
 }
-
-
-
-
-//MainCtrl* mainctrl = nullptr;
-//AppCtrl* makeApp() {
-//	mainctrl = new MainCtrl();
-//	return mainctrl;
-//}
-//MainCtrl* MainCtrl::get() {
-//	return mainctrl;
-//}
-//AppCtrl* parentCtrl {
-//	return mainctrl;
-//}
-//void deleteApp() {
-//	if (mainctrl)
-//		delete mainctrl;
-//	mainctrl = nullptr;
-//}
 
 void dragdrop_midifile::reset() {
 	if (isLoaded) {
@@ -586,25 +565,7 @@ bool MainCtrl::init(window_main* window, NVGcontext* nanovg)
 
 	waveformrender::getInstance()->init();
 	setEmptyProject();
-//	int w = 120;
-//	int x = 0;
-//	for (int i = 0; i < 10; i++) {
-//		guiplugin *gui = new guiplugin({ x, 0 }, { w, w });
-//		if (i % 2 == 0) {
-//			gui->setTitleCstr("���!�$&/\\");
-//		}
-//		else {
-//			gui->setTitle(StringFormat("module %d", i));
-//		}
-//		view->ctr_test.add(gui);
-//		x += (int)(w*1.2);
-//	}
-//	for (int i = 0; i < 19; i++) {
-//		guiplugin *gui = new guiplugin({ x, 0 }, { w, w });
-//		gui->setTitle(StringFormat("Plugin %d", i));
-//		view->ctr_plugins.add(gui);
-//		x += (int)(w*1.2);
-//	}
+
 	grid.grid_dens = settings.dens;
 	updateGrid();
 	isOK = true;
@@ -667,8 +628,6 @@ void MainCtrl::onTick()
 		if (ctrMixers.contains(trackViewLocalPos)) {
 			ivec2 posRelative = m_mousePos - ctrMixers.toScreenSpace(ivec2(0));
 			tr = getTrackFromMouse(*this, posRelative, false);
-			if (tr)
-			my_printf("hovered %s, ticks %d\n", StringAsCStr(tr->name), lastHoveredTrackTicks);
 			if (tr && tr == lastHoveredTrack && selectedTrack != tr) {
 				hoverTicks = lastHoveredTrackTicks + 1;
 				if (lastHoveredTrackTicks >= 6) {
@@ -998,9 +957,8 @@ bool MainCtrl::processGlobalKeyevent(KeyEvent& event) {
 			ThreadLock lock = playThread.lockThread();
 #if defined(__GNUC__) && defined(ENABLE_MICHAELS_GLIBCXX_HACKS)
 			STLVectorDebugTracking::dbgPrintVectorAllocs();
-#endif
-//			ngui::show("Hello, you pressed the M key. Thanks you for your efforts", "Well done!", ngui::Style::Info, ngui::Buttons::OK);
 			return true;
+#endif
 		}
 		if (event.keyCode == KEY_SPACE) {
 			if (isPlaying()) {
@@ -1092,8 +1050,6 @@ track_t* MainCtrl::insertNewTrack(int trackInsertPos, int trackType, int wasUser
 		break;
 	}
 
-
-//	if (trackin)
 	if (wasUserAction) {
 		addTrack(trackInsertPos, newTrack);
 	} else {
