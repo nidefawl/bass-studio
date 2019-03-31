@@ -3,9 +3,11 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 #include "audiobuffer.h"
 #include "config.h"
 #include "seq_util.h"
+#include "mem.h"
 #include "audioblock.h"
 
 AudioBuffer* allocateBuffer() {

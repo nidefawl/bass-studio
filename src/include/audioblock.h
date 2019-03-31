@@ -4,15 +4,15 @@
 #include <stdlib.h>
 #include <assert.h>
 #include "math/seq_math.h"
+#include "mem.h"
 
 struct AudioBlock {
-	const uint32_t channels;
-	uint32_t samples;
-	float** buf;
+	const uint32_t channels{ 0 };
+	uint32_t samples{ 0 };
+	float** buf{ 0 };
 	AudioBlock(uint32_t _channels, uint32_t _samples)
-		: channels(_channels), samples(0)
+		: channels(_channels), samples(0), buf(new float*[_channels])
 	{
-		buf = new float*[_channels];
 		for (uint32_t i = 0; i < _channels; i++) {
 			buf[i] = NULL;
 		}
@@ -87,7 +87,9 @@ struct AudioBlock {
 		if (samples < _samples) {
 			for (uint32_t i = 0; i < channels; i++) {
 				float* newBuf = (float*)calloc(_samples,sizeof(float));
-				if (buf[i]) {
+				if (!newBuf) {
+					handleFailedAllocation(0x1000, _samples*sizeof(float));
+				} else if (buf[i]) {
 					memcpy(newBuf, buf[i], samples * sizeof(float));
 					free(buf[i]);
 				}
