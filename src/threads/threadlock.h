@@ -11,7 +11,7 @@ public:
 	~ThreadLock();
 	ThreadLock (const ThreadLock&) = delete;
 	ThreadLock& operator= (const ThreadLock&) = delete;
-	ThreadLock& operator=(ThreadLock&& other);
-	ThreadLock(ThreadLock&& other);
+	ThreadLock& operator=(ThreadLock&& other) noexcept;
+	ThreadLock(ThreadLock&& other) noexcept;
 
 };

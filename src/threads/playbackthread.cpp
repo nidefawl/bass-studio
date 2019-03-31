@@ -304,12 +304,12 @@ ThreadLock PlaybackThread::lockThread() {
 	return std::move(t); //CANNOT RELY ON RVO
 }
 
-ThreadLock& ThreadLock::operator=(ThreadLock&& other) {
+ThreadLock& ThreadLock::operator=(ThreadLock&& other) noexcept {
 	this->_M_impl = other._M_impl;
 	other._M_impl = NULL;
 	return *this;
 }
-ThreadLock::ThreadLock(ThreadLock&& other) {
+ThreadLock::ThreadLock(ThreadLock&& other) noexcept {
 	this->_M_impl = other._M_impl;
 	other._M_impl = NULL;
 }
