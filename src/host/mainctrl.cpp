@@ -713,6 +713,8 @@ bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file) {
 void MainCtrl::relayout(int32_t w, int32_t h) {
 	closeAllAppMenus();
 	closeContextMenu();
+	w = math::max(640, w);
+	h = math::max(480, h);
 	m_size = ivec2(w, h);
 	view->layout(w, h);
 
