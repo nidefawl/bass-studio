@@ -12,7 +12,7 @@ struct parameter_ref_t {
 	int32_t paramIdx;
 };
 class action_modify_effect_parameter : public action_base {
-	parameter_ref_t ref;
+	parameter_ref_t ref{ 0 };
 	float valBefore = 0;
 	float valAfter = 0;
 public:

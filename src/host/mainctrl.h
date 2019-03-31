@@ -86,7 +86,7 @@ public:
 struct dragdrop_target_indicator {
 	int idx = -1;
 	void* ptr = nullptr;
-	ivec2 targetPos;
+	ivec2 targetPos{ -1, -1 };
 	void reset() {
 		idx = -1;
 		ptr = nullptr;
@@ -119,7 +119,7 @@ public:
 	std::vector<note_t> draggedSelectionBegin;
 	std::vector<note_t> draggedSelection;
 	clip_notes_t clipboard;
-	tick_t clipboardCursorRange;
+	tick_t clipboardCursorRange = 0;
 	std::vector<int32_t> notePitches;
 	void set(gui_clip* _clip) {
 		this->gui = _clip;

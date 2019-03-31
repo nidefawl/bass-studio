@@ -46,8 +46,8 @@ public:
 	guictxtmenu_base *ctxtmenu = NULL;
 //	guictxtmenu_base *ctxtmenuOld = NULL;
 	int cursorIcon = CURSOR_DEFAULT;
-	ivec2 m_size;
-	ivec2 m_mousePos;
+	ivec2 m_size = { -1, -1 };
+	ivec2 m_mousePos = { -1, -1 };
 	guibase *guiOver = NULL;		//updates on mouse move "current mouseover"
 	guibase *guiDragged = NULL;		//updates on mouse click "currently dragged", set from guiOver
 	guibase *guiCaptured = NULL;	//updates when cursor is hidden, set from guiDragged

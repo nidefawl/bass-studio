@@ -378,6 +378,8 @@ void guitrack_editor::trackViewDragMove(guitrack_editor* view, MouseEvent& evt) 
 
 			c.selRange = tick - c.cursorPos;
 			if (c.isSubtrackSelection()) {
+				//c.isSubtrackSelection() guarantees subTrSelected to be non-null
+				assert(subTrSelected);
 				if (subTr) {
 					c.selSubTrackRange = (subTr->idx - subTrSelected->idx);
 					assert (c.getSubTrackEnd() > -1);
@@ -559,7 +561,7 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
 			if (trNxtSelected) {
 				MainCtrl::get()->setSelectedTrack(trNxtSelected);
 			}
-			if (selectionMoved) {
+			if (selectionMoved && trNxtSelected) {
 				ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 				Cursor target = cursor + cursorBegin;
 				int32_t trackOffset = dragStartTrackIdx - cursorBegin.cursorTrack;
@@ -888,13 +890,13 @@ void guitrack_editor::render(NVGcontext* vg) {
 				}
 			}
 
-			if (tickEndX > -4.0f && tickBeginX < cs.x + 4.0f) {
+			if (tickEndX > -4.0 && tickBeginX < cs.x + 4.0) {
 				if (indexOfCtr(project.tracksBottom, trE) > -1) {
 					restore = false;
 					nvgRestore(vg);
 				}
-				tickBeginX = CLAMP_I(tickBeginX, -4.0f, cs.x + 3.0f);
-				tickEndX = CLAMP_I(tickEndX, -3.0f, cs.x + 4.0f);
+				tickBeginX = CLAMP_I(tickBeginX, -4.0, cs.x + 3.0);
+				tickEndX = CLAMP_I(tickEndX, -3.0, cs.x + 4.0);
 				float width = (float) (tickEndX - tickBeginX);
 				float height = trackYMax - trackYMin;
 

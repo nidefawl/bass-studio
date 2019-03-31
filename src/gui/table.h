@@ -68,8 +68,8 @@ struct tbl_row_t {
 	std::vector<table_entry_t> cols;
 };
 struct tbl {
-	float titleHeight;
-	float rowHeight;
+	float titleHeight = 0;
+	float rowHeight = 0;
 	std::vector<float> colSizes;
 	std::vector<table_entry_t> titleCols;
 	std::vector<tbl_row_t> rows;

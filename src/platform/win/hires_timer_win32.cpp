@@ -14,7 +14,9 @@ static int64_t QPC_TOMICROSECONDS(LARGE_INTEGER& iStart, LARGE_INTEGER& iStop, L
 	return ((int64_t)iStop.QuadPart - (int64_t)iStart.QuadPart) / div;
 }
 class hires_timer_t::Impl {
-	LARGE_INTEGER freq, iStart, iStop;
+	LARGE_INTEGER freq{ 0 };
+	LARGE_INTEGER iStart{ 0 };
+	LARGE_INTEGER iStop{ 0 };
 public:
 	Impl() {
 		if (!QueryPerformanceFrequency(&freq)) {

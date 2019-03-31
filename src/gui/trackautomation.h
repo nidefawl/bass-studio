@@ -19,7 +19,7 @@ public:
 
 	struct path_segment_t {
 		std::vector<int32_t> points;
-		int32_t dataOffset;
+		int32_t dataOffset = 0;
 	};
 	struct hit_result {
 		dragmode mode;

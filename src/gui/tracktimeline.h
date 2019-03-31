@@ -7,7 +7,7 @@
 class guitrack_timeline : public guictr_base, grid_changed_cb {
 	scaled_grid& grid;
 public:
-	ivec2 startDrag;
+	ivec2 startDrag{ 0, 0 };
 	int dragDirection = -1;
 	double dragPosObjSpace = 0;
 	guitrack_timeline(scaled_grid& _grid)

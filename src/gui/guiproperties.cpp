@@ -118,7 +118,7 @@ protected:
 	bool mouseDown = false;
 	cellclicked_t lastClicked;
 	std::vector<guibase*> controls;
-	int32_t number;
+	int32_t number = 0;
 	const bool isGlobalInstance;
 public:
 	guiproperties_table(T* _ptr, bool _isGlobalInstance)

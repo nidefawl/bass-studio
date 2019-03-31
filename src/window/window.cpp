@@ -173,11 +173,11 @@ private:
 	std::vector<appwindow*> children;
 	uint64_t last = 0;
 protected:
-	char name[32];
+	char name[32]{ 0 };
 	int cursorIcon = CURSOR_DEFAULT;
-	vec2 lastclickpos;
-	vec2 lastmousepos;
-	vec2 mousepos;
+	vec2 lastclickpos{ -10000, -10000 };
+	vec2 lastmousepos{ -10000, -10000 };
+	vec2 mousepos{ -10000, -10000 };
 public:
 	GLFWwindow *glfw = NULL;
 protected:
@@ -206,7 +206,7 @@ public:
 	}
 private:
 	int calls = 0;
-	uint64_t tm_lastfps;
+	uint64_t tm_lastfps = 0;
 	String fpsStats;
 	double secondsLastDraw = 0.0;
 //	double secondsLastDrawReq = 0.0;
@@ -1632,7 +1632,7 @@ int startApplication(int argc, char* argv[]) {
 
 class appwindow_plugin : public appwindow_main, public pluginwindow {
 public:
-	ERect _rect;
+	ERect _rect{ 0 };
 	appwindow_plugin(AudioEffect *_effect, std::shared_ptr<PluginControl> _ctrl, int w, int h)
 		: appwindow_main((AppCtrl*)_ctrl.get()),
 		  pluginwindow(_ctrl)

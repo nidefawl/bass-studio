@@ -195,7 +195,7 @@ class guictr_tracks_loophandles : public guibase, te_constants {
 	};
 	dragmode dragHandle = drag_handle_none;
 public:
-	ivec2 clipViewSize;
+	ivec2 clipViewSize{ 0, 0 };
 	guictr_tracks_loophandles(project_t& _project, scaled_grid& _grid) :
 			guibase(), project(_project), grid(_grid) {
 

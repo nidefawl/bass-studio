@@ -15,12 +15,11 @@ class guictr_base : public guibase {
 public:
 	int padding = CONTENT_INSET;
 	int margin = CTR_SPACING;
-	ivec4 snapSides;
+	ivec4 snapSides{ 0, 0, 0, 0 };
 	std::vector<guibase*> guis;
 	bool sortChildren = false;
 public:
 	guictr_base() : guibase() {
-		setSnapSides(ivec4(0));
 		setBackgroundRendered(false);
 		setBackgroundRenderedInset(true);
 	}

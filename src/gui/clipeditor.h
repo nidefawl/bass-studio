@@ -218,7 +218,7 @@ class guictr_cliphandles : public guibase, ce_constants {
 	};
 	dragmode dragHandle = drag_handle_none;
 public:
-	ivec2 clipViewSize;
+	ivec2 clipViewSize{ 0, 0 };
 	int32_t dragOffset = 0;
 public:
 	guictr_cliphandles(scaled_grid& _grid, clip_view& _view) :
