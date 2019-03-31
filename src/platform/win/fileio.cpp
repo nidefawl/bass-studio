@@ -119,12 +119,18 @@ int promptUserFilePath(window_base* w, int mode, std::vector<SupportedFileType> 
 	int offset = 0;
 	fileTypes.push_back(SupportedFileType{"All Files", "*"});
 	for (SupportedFileType& type : fileTypes) {
-		offset += _snprintf(supportedFiles+offset, MAX_PATH-offset, "%s (*.%s)", StringAsCStr(type.desc), StringAsCStr(type.ext));
-		supportedFiles[offset] = 0;
-		offset++;
-		offset += _snprintf(supportedFiles+offset, MAX_PATH-offset, "*.%s", StringAsCStr(type.ext));
-		supportedFiles[offset] = 0;
-		offset++;
+		int val = _snprintf(supportedFiles+offset, MAX_PATH-offset, "%s (*.%s)", StringAsCStr(type.desc), StringAsCStr(type.ext));
+		if (val > 0) {
+			offset += val;
+			supportedFiles[offset] = 0;
+			offset++;
+		}
+		val = _snprintf(supportedFiles+offset, MAX_PATH-offset, "*.%s", StringAsCStr(type.ext));
+		if (val > 0) {
+			offset += val;
+			supportedFiles[offset] = 0;
+			offset++;
+		}
 	}
 	supportedFiles[offset] = 0;
 	offset++;
