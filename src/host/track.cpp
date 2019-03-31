@@ -365,6 +365,7 @@ track_impl_t::~track_impl_t() {
 	if (midiEventsBuf) {
 		delete midiEventsBuf;
 	}
+	delete arp;
 }
 VstEvent_t* track_impl_t::reallocEvts(size_t size) {
 	size = math::max((size_t)128, size);

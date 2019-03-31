@@ -11,7 +11,6 @@
 #include "guicontainer.h"
 #include "button.h"
 #include "knob.h"
-#include "settings.h"
 #include "basectrl.h"
 #include "textfield.h"
 

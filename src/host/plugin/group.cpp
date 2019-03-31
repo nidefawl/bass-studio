@@ -6,11 +6,6 @@
 #include <streambuf>
 #include <algorithm>
 #include <memory>
-#include <cereal/cereal.hpp>
-#include <cereal/archives/json.hpp>
-#include <cereal/types/vector.hpp>
-#include <cereal/types/polymorphic.hpp>
-#include <cereal/cereal_optional_nvp.hpp>
 
 #include "group.h"
 #include "math/seq_math.h"
@@ -33,6 +28,8 @@
 #include "internal_plugin.h"
 
 #include "basectrl.h"
+#include "audioblock.h"
+#include "meter.h"
 #include "../host/mainctrl.h"
 #include "../host/vst_host.h"
 #include "../host/plugindatabase.h"
@@ -55,12 +52,13 @@ public:
 	void buttonClicked(guibase* _button) override;
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
 	void onChildLayoutChanged(guibase* g) override;
-	void determineSize(glm::ivec2& prefSize) override {
+	void determineSize(ivec2& prefSize) override {
 		assert(module->getAudioStage());
 
 		const int32_t hpt = theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT);
 		int32_t meterW = math::max(16, (int32_t)(theme->get(GuiConstant::CONST_METER_WIDTH)*hpt/32.0));
 		ctr.pos = ivec2(hpt, 0);
+
 //		ctr.size = ivec2(size.y, size.y);
 //		ctr.layout();
 //		my_printf("determineSize ctr.children.size() %d\n", ctr.guis.size());
@@ -69,7 +67,7 @@ public:
 //			guibase* g = ctr.guis[i];
 //			my_printf("%s guis[%d] %d %d %d %d\n", StringAsCStr(ctr.getClassName()), i, g->pos.x, g->pos.y, g->size.x, g->size.y);
 //		}
-		glm::ivec2 prefSizeGrpContent = {prefSize.y, prefSize.y};
+		ivec2 prefSizeGrpContent = {prefSize.y, prefSize.y};
 		ctr.size = prefSizeGrpContent;
 //		ctr.determineSize(prefSizeGrpContent);
 		ctr.layout();
@@ -183,9 +181,7 @@ struct module_group::internal_handles_t {
 	std::unique_ptr<guimodule_group> gui;
 //	guimodule_group * gui;
 };
-struct module_group_preset {
-	std::vector<int32_t> plugins;
-};
+
 module_group::module_group(int32_t _projectGlobalId)
 : internalplugin("Group", PLUGIN_TYPE_GROUP, _projectGlobalId), handle(new module_group::internal_handles_t{0}), audio(nullptr)
 {
@@ -298,13 +294,6 @@ void module_group::postProcess(AudioBlock* out, int32_t samples, bool hasProcess
 		}
 	}
 }
-using namespace cereal;
-
-template<class Archive>
-void serialize(Archive & archive, module_group_preset & m)
-{
-	archive(cereal::make_nvp("plugins", m.plugins));
-};
 
 void module_group::loadSnapshot(const plugin_snapshot_t& pluginSnapshot)  {
 	assert(audio);

@@ -12,7 +12,6 @@
 #include "renderresources.h"
 #include "knob.h"
 #include "../host/vst_host.h"
-#include "settings.h"
 
 void testTask();
 class gui_tempocontrol : public guibuttonbase {
@@ -417,14 +416,7 @@ public:
 			project.loopEnabled = !project.loopEnabled;
 		}
 		if (button == &this->btnAudioOnOff) {
-			if (vsthost::getInstance()->isStreaming()) {
-				vsthost::getInstance()->stopAudio();
-				settings.startEngine = false;
-			} else {
-				if (vsthost::getInstance()->startAudio()) {
-					settings.startEngine = true;
-				}
-			}
+			vsthost::getInstance()->toggleAudioEngineOnOff();
 		}
 	}
 };

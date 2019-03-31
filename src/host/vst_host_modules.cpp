@@ -16,7 +16,6 @@
 
 #include "../vstsdk-host-2.4/aeffectx.h"
 #include "portaudio.h"
-#include "settings.h"
 
 #include "logging.h"
 #include "audioblock.h"

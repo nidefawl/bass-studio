@@ -22,7 +22,7 @@
 #include "color_util.h"
 #include "str_util.h"
 #include "seq_util.h"
-#include "settings.h"
+#include "appsettings.h"
 #include "track.h"
 #include "clip.h"
 #include "fileloader.h"

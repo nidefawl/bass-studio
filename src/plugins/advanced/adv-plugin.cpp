@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <memory>
 #include "config.h"
-#include "settings.h"
 #include "str_util.h"
 #include "dsp_util.h"
 

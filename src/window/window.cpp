@@ -25,10 +25,6 @@
 #include <algorithm>
 #include <map>
 #include <glm/geometric.hpp>
-#include <cereal/archives/json.hpp>
-
-using std::ifstream;
-using std::ofstream;
 
 #ifdef _WIN32
 #include "../platform/win/winheaders.h"
@@ -57,7 +53,7 @@ using std::ofstream;
 #include "platform.h"
 
 #include "logging.h"
-#include "settings.h"
+#include "appsettings.h"
 #include "renderresources.h"
 #include "mousecursor.h"
 #include "fileio.h"
@@ -148,6 +144,7 @@ static void setAppWindowHints() {
 static void showerror(const char* description) {
 	ngui::show(description, "Error", ngui::Style::Error, ngui::Buttons::OK);
 }
+
 void invalidateWindowContents(GLFWwindow* glfw) {
 #ifdef _WIN32
 		InvalidateRect(glfwGetWin32Window(glfw), NULL, FALSE);
@@ -156,52 +153,21 @@ void invalidateWindowContents(GLFWwindow* glfw) {
 		sendExposeEvent(glfw);
 #endif
 }
+
+appsettings settings;
+class appwindow_dialog;
+class appwindow_overlay;
+
 #ifdef _WIN32
 void syncMenu(HWND hwnd, ngui::MenuBar& menubar); // menu_win32.cpp
 ngui::Menu* getUserDataFromMenu(HMENU hmenu, UINT uPos); // menu_win32.cpp
-
 LRESULT WIN32API_CALLBACK_TYPE appWndProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam);
 static VOID WIN32API_CALLBACK_TYPE timerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime);
-
+bool restoreWindowPos(HWND hwnd, windowsize* size);
+void saveWindowPos(HWND hwnd, windowsize* size);
 #define IDT_TIMER1 0
 #endif
-class appwindow_dialog;
-class appwindow_overlay;
-bool loadSettings(appsettings& _settings) {
-	try {
-		Stringstream ss;
-		ifstream file(SETTINGS_NAME, ifstream::in);
-		if (file) {
-		    ss << file.rdbuf();
-		    std::streampos length = file.tellg();
-		    if (length > 10) {
-			    cereal::JSONInputArchive ar(ss);
-			    ar( _settings );
-			    return true;
-		    }
-		}
-	} catch (std::exception& e) {
-		ngui::show("Couldn't read config file.\nSome settings may have been reset", "Warning", ngui::Style::Warning, ngui::Buttons::OK);
-		std::cout << e.what();
-		std::cout << std::endl;
-		_settings = appsettings();
-	}
-	return false;
-}
-void saveSettings(appsettings& _settings) {
-	ofstream file;
-	file.exceptions(~ofstream::goodbit);
-	try {
-		file.open(SETTINGS_NAME, ofstream::out);
-	    cereal::JSONOutputArchive ar( file );
-	    ar( _settings );
-	} catch (std::exception& e) {
-		std::cout << "Failed writing settings\n";
-		std::cout << e.what();
-		std::cout << std::endl;
-	}
-}
-appsettings settings;
+
 class appwindow : protected DropTargetListener {
 private:
 	std::vector<appwindow*> children;
@@ -1223,7 +1189,7 @@ void appwindow_main::destroy() {
 #ifdef _WIN32
 	if (this->dropTarget)
 		UnregisterDropWindow(hwnd, this->dropTarget);
-	settings.size = windowsize(hwnd);
+	saveWindowPos(hwnd, settings.size);
 #endif
 #if __linux__
 		//TODO: implement linux
@@ -1252,12 +1218,7 @@ void appwindow_main::createMainWindow(const char* title, int w, int h, void* par
 
 #ifndef DAWFRAMEWORK_PLUGIN
 #ifdef _WIN32
-	if (settings.size.valid) {
-		settings.size.apply(hwnd);
-	    RECT area;
-	    GetClientRect(hwnd, &area);
-//	    onWindowSizeChanged(area.right-area.left, area.bottom-area.top);
-	} else {
+	if (!restoreWindowPos(hwnd, settings.size)) {
 		this->maximize();
 	}
 #endif

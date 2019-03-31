@@ -22,7 +22,6 @@
 #include "exceptions.h"
 #include "color_util.h"
 #include "str_util.h"
-#include "settings.h"
 #include "logging.h"
 #include "menu.h"
 #include "msgbox.h"

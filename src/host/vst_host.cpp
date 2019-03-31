@@ -16,7 +16,7 @@
 
 #include "../vstsdk-host-2.4/aeffectx.h"
 #include "portaudio.h"
-#include "settings.h"
+#include "appsettings.h"
 
 #include "logging.h"
 #include "audioblock.h"
@@ -609,6 +609,16 @@ void vsthost::onStartPlayback(int32_t block) {
 }
 void vsthost::onStopPlayback() {
 }
+void vsthost::toggleAudioEngineOnOff() {
+	if (isStreaming()) {
+		stopAudio();
+		settings.startEngine = false;
+	} else {
+		if (startAudio()) {
+			settings.startEngine = true;
+		}
+	}
+}
 
 void mulGain(AudioBlock* block, float gain) {
 
@@ -941,6 +951,7 @@ void vsthost::releaseAudio(track_t* track) {
 	auto it2 = std::find(trackAudioStages.begin(), trackAudioStages.end(), audioStage);
 	assert(it2 != trackAudioStages.end());
 	trackAudioStages.erase(it2);
+	delete audioStage;
 }
 audio_stage_t* vsthost::createAudioStage() {
 	auto audio = new audio_stage_t(getNextGlobalAudioStageId(0), this->lSampleRate, this->lBlockSize, OUTPUT_CHANNELS);

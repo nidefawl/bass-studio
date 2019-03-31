@@ -127,6 +127,7 @@ set(SRC_FILES_SUBDIR_FILES
     src/file/fileloader.cpp
     src/file/projectfile.cpp
     src/file/themefile.cpp
+    src/file/appsettingsfile.cpp
 )
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     set_source_files_properties(${SRC_FILES_SUBDIR_FILES} PROPERTIES COMPILE_OPTIONS "-g0;-O2")

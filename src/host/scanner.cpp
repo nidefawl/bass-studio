@@ -12,7 +12,7 @@
 #include <iostream>
 #include <memory>
 #include "ipc.h"
-#include "settings.h"
+#include "appsettings.h"
 #ifdef _WIN32
 #include <windows.h>
 #endif

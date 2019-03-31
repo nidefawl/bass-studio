@@ -114,6 +114,7 @@ public:
 	void onStreamEnd();
 	void onStartPlayback(int32_t block);
 	void onStopPlayback();
+	void toggleAudioEngineOnOff();
 	bool isStreaming() {
 		return this->stream != NULL;
 	}
