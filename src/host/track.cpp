@@ -447,7 +447,7 @@ effectbase* loadEffectModule(const plugin_snapshot_t& pluginSnapshot) {
 			}
 		} else {
 			//TODO: handle failed plugin loading
-			my_printf("Failed loading plugin %s, uId %d\n", StringAsCStr(loadedPlugin->sName), pluginSnapshot.uId);
+			my_printf("Failed loading plugin %s, uId %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId);
 
 		}
 	} else {
