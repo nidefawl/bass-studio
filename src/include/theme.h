@@ -28,8 +28,9 @@ struct guitheme_t {
 	guitheme_t();
     guitheme_t(const guitheme_t &) = default;
     ~guitheme_t() = default;
-    guitheme_t(guitheme_t &&) = default;
+    guitheme_t(guitheme_t &&) noexcept = default;
     guitheme_t & operator= (const guitheme_t &) = default;
+	guitheme_t & operator= (guitheme_t &&) noexcept = default;
 
 	void initTheme();
 	void setTint(uint32_t hex);

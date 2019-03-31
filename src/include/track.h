@@ -140,12 +140,11 @@ struct trackstate_t {
 	std::vector<track_snapshot_t*> tracks;
 	Cursor cursor;
 	trackstate_t copy();
-	trackstate_t() {
-	}
+	trackstate_t() = default;
 	trackstate_t(const trackstate_t& ref) = delete;
 	trackstate_t& operator=(const trackstate_t& ref) = delete;
-	trackstate_t(trackstate_t&& ref) = default;
-	trackstate_t& operator=(trackstate_t&& ref) = default;
+	trackstate_t(trackstate_t&& ref) noexcept = default;
+	trackstate_t& operator=(trackstate_t&& ref) noexcept = default;
 	~trackstate_t();
 	void reset();
 };

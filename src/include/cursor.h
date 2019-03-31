@@ -4,14 +4,18 @@
 
 class Cursor {
 public:
-	Cursor() {
-	}
 	tick_t cursorPos = 0;
 	int32_t cursorTrack = -1;
 	tick_t selRange = 0;
 	int32_t selTrackRange = 0;
 	int32_t cursorSubTrack = -1;
 	int32_t selSubTrackRange = 0;
+public:
+	Cursor() = default;
+	Cursor(const Cursor& ref) = default;
+	Cursor& operator=(const Cursor& ref) = default;
+	Cursor(Cursor&& ref) noexcept = default;
+	Cursor& operator=(Cursor&& ref) noexcept = default;
 	bool isSubtrackSelection() const {
 		return cursorSubTrack > -1;
 	}
@@ -93,21 +97,21 @@ public:
 		cursor.setLeftAligned();
 		return cursor;
 	}
-	void copy( const Cursor &obj) {
-		this->cursorPos = obj.cursorPos;
-		this->cursorTrack = obj.cursorTrack;
-		this->cursorSubTrack = obj.cursorSubTrack;
-		this->selRange = obj.selRange;
-		this->selTrackRange = obj.selTrackRange;
-		this->selSubTrackRange = obj.selSubTrackRange;
-	}
-	Cursor &operator =(const Cursor &a) {
-		copy(a);
-		return *this;
-	}
-	Cursor(const Cursor &a) {
-		copy(a);
-	}
+//	void copy( const Cursor &obj) {
+//		this->cursorPos = obj.cursorPos;
+//		this->cursorTrack = obj.cursorTrack;
+//		this->cursorSubTrack = obj.cursorSubTrack;
+//		this->selRange = obj.selRange;
+//		this->selTrackRange = obj.selTrackRange;
+//		this->selSubTrackRange = obj.selSubTrackRange;
+//	}
+//	Cursor &operator =(const Cursor &a) {
+//		copy(a);
+//		return *this;
+//	}
+//	Cursor(const Cursor &a) {
+//		copy(a);
+//	}
 	Cursor operator+(const Cursor &c2) const
 	{
 		Cursor tmp;
