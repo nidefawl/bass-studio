@@ -286,7 +286,8 @@ void vst_window::resize (ivec2 newSize)
 {
 	if (getContentSize () == newSize)
 		return;
-	WINDOWINFO windowInfo;
+	WINDOWINFO windowInfo{ 0 };
+	windowInfo.cbSize = sizeof(WINDOWINFO);
 	GetWindowInfo (hwnd, &windowInfo);
 	RECT clientRect {};
 	clientRect.right = newSize.x;
