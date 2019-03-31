@@ -466,7 +466,7 @@ void guictr_noteeditor::storeLayout() {
 	clip_t* clip = view.clip();
 	if (clip != NULL) {
 		clip_editor_layout_t& layout = clip->editorLayout;
-		layout.layoutPianoRoll = *this;
+		layout.layoutPianoRoll = *static_cast<layout_pianoroll_t*>(this);
 		layout.layoutGrid = grid;
 		clip->noLayout = false;
 	}
