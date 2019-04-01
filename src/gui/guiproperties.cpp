@@ -556,11 +556,13 @@ void guiproperties_table<guitheme_t>::layout()  {
 			table.rows.push_back({{tblstr{"colorBg"}, tbltyperef<NVGcolor>{ptr->colorBg, "%08X"}}});
 			table.rows.push_back({{tblstr{"colorBgHover"}, tbltyperef<NVGcolor>{ ptr->colorBgHover, "%08X"}}});
 			table.rows.push_back({{tblstr{"colorBgPressed"}, tbltyperef<NVGcolor>{ptr->colorBgPressed, "%08X"}}});
-			table.rows.push_back({{tblstr{"colorBgFocused"}, tbltyperef<NVGcolor>{ptr->colorBgFocused, "%08X"}}});
+			table.rows.push_back({{tblstr{"colorBgFocused"}, tbltyperef<NVGcolor>{ptr->colorBgFocused, "%08X0"}}});
 			table.rows.push_back({{tblstr{"colorBgDisabled"}, tbltyperef<NVGcolor>{ptr->colorBgDisabled, "%08X"}}});
 			table.rows.push_back({{tblstr{"colorBgFrameBase"}, tbltyperef<NVGcolor>{ptr->colorBgFrameBase, "%08X"}}});
+			table.rows.push_back({{tblstr{"colorBgFrameBright"}, tbltyperef<NVGcolor>{ptr->colorBgFrameBright, "%08X"}}});
 			table.rows.push_back({{tblstr{"colorBgFrameOutline"}, tbltyperef<NVGcolor>{ptr->colorBgFrameOutline, "%08X"}}});
 			table.rows.push_back({{tblstr{"colorBgFrameHighlight"}, tbltyperef<NVGcolor>{ptr->colorBgFrameHighlight, "%08X"}}});
+			table.rows.push_back({{tblstr{"colorBgStroke"}, tbltyperef<NVGcolor>{ptr->colorBgStroke, "%08X"}}});
 			auto add = [this](tblstr&& x, const auto& y) {
 				table.rows.push_back({{x, y}});
 			};
@@ -620,9 +622,9 @@ public:
 		my_printf("added %d themes \n", idx);
 	}
 	void clicked(int _id) {
+		parentCtrl->closePopup();
 		if (_id >= 0 && _id < strThemeNames.size()) {
 			themeMgr->setThemeName(strThemeNames[_id]);
-			parentCtrl->closePopup();
 		}
 	}
 };
