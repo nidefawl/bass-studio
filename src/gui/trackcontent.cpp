@@ -83,7 +83,7 @@ inline bool isEqualWaveform3(const audioclip_texture_t& lhs, const audioclip_tex
 			lhs.audioId == rhs.audioId && lhs.quality == rhs.quality && lhs.method == rhs.method;
 }
 ivec2 maxvec2(const ivec2& a, const ivec2& b) {
-	return {math::max(a.x, b.x), math::max(a.x, b.x)};
+	return {math::max(a.x, b.x), math::max(a.y, b.y)};
 }
 ivec2 absvec2(const ivec2 a) {
 	return {math::abs(a.x), math::abs(a.y)};
