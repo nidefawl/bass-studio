@@ -136,10 +136,11 @@ void gui_audio_clip::updatePosition(project_t& project, scaled_grid& grid, ivec2
 						limit = {0,0};
 					}
 					if (!equal || (sizeDiff.x > limit.x || sizeDiff.y > limit.y)) {
-						if (!equal)
-							my_printf("unequal\n",0);
-						else
-							my_printf("sizeDiff %d / %d (canQueue %d)\n",sizeDiff,limit*limit, canQueue);
+//						if (!equal)
+//							my_printf("unequal\n",0);
+//						else {
+//							my_printf("sizeDiff %d,%d / %d,%d (canQueue %d)\n",sizeDiff.x,sizeDiff.y,limit.x,limit.y, canQueue);
+//						}
 						this->updatedWaveform = waveform;
 						if (sizeDiff.x > limit.x || sizeDiff.y > limit.y) {
 							releaseRendered();
@@ -157,14 +158,11 @@ void gui_audio_clip::prerender(NVGcontext* vg) {
 			return;
 		}
 		if (!culled && (!m_clip->audio.waveformRef.rendered || (this->updatedWaveform != m_clip->audio.waveformRef.waveform))) {
-			if (!m_clip->audio.waveformRef.queued) {
-				releaseRendered();
-				m_clip->audio.waveformRef.waveform = this->updatedWaveform;
-				assert(!m_clip->audio.waveformRef.queued);
-				assert(m_clip->audio.waveformRef.waveform.size.x > 0 && m_clip->audio.waveformRef.waveform.size.y > 0);
-				waveformrender::getInstance()->queueUpdate(audio, &m_clip->audio.waveformRef);
-			}
-
+			releaseRendered();
+			m_clip->audio.waveformRef.waveform = this->updatedWaveform;
+			assert(!m_clip->audio.waveformRef.queued);
+			assert(m_clip->audio.waveformRef.waveform.size.x > 0 && m_clip->audio.waveformRef.waveform.size.y > 0);
+			waveformrender::getInstance()->queueUpdate(audio, &m_clip->audio.waveformRef);
 		}
 	}
 }
