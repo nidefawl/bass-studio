@@ -130,7 +130,7 @@ private:
 
 		MainCtrl* ctrl = MainCtrl::get();
 		vsthost* host = vsthost::getInstance();
-		static double playbackDuration = 0;
+		double playbackDuration = 0;
 		hires_timer_t timer;
 
 		bool firstBlock = false;
@@ -248,8 +248,8 @@ private:
 				}
 			}
 			if (playbackDuration > 10000 && m_status == status_play) {
-				double wallTime = timer.getTimeDouble();;
-	            LOG("playbackDuration %.4f wallTime %.4f error %.4f\n", playbackDuration, wallTime, playbackDuration-wallTime);
+				double wallTimeMs = timer.getTimeDouble() * 1000.0;
+	            LOG("playbackDuration %.4f wallTime %.4f error %.4f\n", playbackDuration, wallTimeMs, playbackDuration-wallTimeMs);
 	            playbackDuration = 0;
 	            timer.reset();
 			}
