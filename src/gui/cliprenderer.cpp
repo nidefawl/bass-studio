@@ -2,6 +2,7 @@
 #include "math/seq_math.h"
 #include "../host/vst_host.h"
 #include "theme.h"
+#include "gui.h"
 #include "guicolors.h"
 #include "guiconstant.h"
 #include "drawwaveform.h"
