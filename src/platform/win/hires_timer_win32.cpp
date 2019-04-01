@@ -61,12 +61,15 @@ hires_timer_t::~hires_timer_t() {
 void hires_timer_t::reset() {
 	_M_Iimpl->reset();
 }
+/* returns time passed in int64_t MICROSECONDS */
 int64_t hires_timer_t::getTime() {
 	return _M_Iimpl->getTime();
 }
+/* returns time passed in double SECONDS */
 double hires_timer_t::getTimeDouble() {
 	return _M_Iimpl->getTimeDouble();
 }
+/* returns time passed in double SECONDS */
 double hires_timer_t::getTimeDoubleReset() {
 	return _M_Iimpl->getTimeDoubleReset();
 }
