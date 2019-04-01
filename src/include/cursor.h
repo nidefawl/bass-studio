@@ -97,21 +97,6 @@ public:
 		cursor.setLeftAligned();
 		return cursor;
 	}
-//	void copy( const Cursor &obj) {
-//		this->cursorPos = obj.cursorPos;
-//		this->cursorTrack = obj.cursorTrack;
-//		this->cursorSubTrack = obj.cursorSubTrack;
-//		this->selRange = obj.selRange;
-//		this->selTrackRange = obj.selTrackRange;
-//		this->selSubTrackRange = obj.selSubTrackRange;
-//	}
-//	Cursor &operator =(const Cursor &a) {
-//		copy(a);
-//		return *this;
-//	}
-//	Cursor(const Cursor &a) {
-//		copy(a);
-//	}
 	Cursor operator+(const Cursor &c2) const
 	{
 		Cursor tmp;
