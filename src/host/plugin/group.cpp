@@ -14,6 +14,7 @@
 #include "color_util.h"
 #include "guicolors.h"
 #include "renderresources.h"
+#include "keyboard.h"
 #include "../../gui/list.h"
 #include "../../gui/guimeter.h"
 #include "../../gui/knob.h"

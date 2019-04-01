@@ -429,6 +429,7 @@ void delayAudio(DelayLine* delayLine, AudioBlock* input, AudioBlock* output, sam
 
 int32_t vsthost::processPlayback(int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround) {
 	double since = timer.getTimeDoubleReset();
+	timer2.reset();
 	MainCtrl* ctrl = MainCtrl::get();
 //	static AudioBuffer* master = allocateBuffer();
 //	master->input->realloc(lBlockSize);
@@ -592,6 +593,13 @@ int32_t vsthost::processPlayback(int32_t sample, double posDouble, playback_stat
 			trAudio->onTick(since);
 		}
 	}
+	int64_t timeTaken = timer2.getTime();
+
+	int64_t microSecsPerBlock = (int64_t)this->lBlockSize * 1000000L / (int64_t)this->lSampleRate;
+	stats.timeLastBlock = (stats.timeLastBlock*99 + timeTaken) / 100;
+	stats.usage = stats.timeLastBlock / (double) microSecsPerBlock;
+	stats.blocksProcessed += nBlocksProcessed;
+	stats.samplesProcessed += nBlocksProcessed*lBlockSize;
 	return nBlocksProcessed;
 }
 void vsthost::onStreamEnd() {
@@ -637,7 +645,8 @@ void vsthost::processAudio(audio_stage_t* channel, AudioBlock* input, AudioBlock
 		count += channel->effects.size();
 	}
 
-
+	int64_t microSecsPerBlock = (int64_t)this->lBlockSize * 1000000L / (int64_t)this->lSampleRate;
+	hires_timer_t timer;
 	for (int i = 0; i < count; ++i)
 	{
 		effectbase *current = NULL;
@@ -647,8 +656,10 @@ void vsthost::processAudio(audio_stage_t* channel, AudioBlock* input, AudioBlock
 			continue;
 		}
 		assert(current->bIsSetup);
-
-		if (current->isBypass()) {
+		timer.reset();
+		bool isBypass = current->isBypass();
+		AudioBlock* blockPostProcess;
+		if (isBypass) {
 			samplerate_t delay = current->getDelay();
 			if (delay > 0) {
 				if (!current->delayLine.get()) {
@@ -658,24 +669,25 @@ void vsthost::processAudio(audio_stage_t* channel, AudioBlock* input, AudioBlock
 				delayAudio(current->delayLine.get(), input, blockOut, delay);
 				input = blockOut;
 			}
-			current->postProcess(blockZero, samples, false);
-			continue;
+			blockPostProcess = blockZero;
+		} else {
+			AudioBlock* blockIn = current->blockInputs;
+			AudioBlock* blockOut = current->blockOutputs;
+			blockIn->realloc(lBlockSize);
+			blockOut->realloc(lBlockSize);
+			//TODO: maybe fill silence here, we never know how plugins can screw up
+			//TODO: blockIn/blockOut will always have 2 channels at least
+			//   If a plugin runs mono inputs or outputs we need to handle this manually here
+			blockIn->copyFrom(input);
+
+	//		handles_t* handle = current->handle;
+			current->process(blockIn, blockOut, samples);
+			//TODO: maybe sanitize plugins output floats here (NaN/Inf/ >50 dBFS)
+			input = blockOut;
+			blockPostProcess = blockOut;
 		}
-
-		AudioBlock* blockIn = current->blockInputs;
-		AudioBlock* blockOut = current->blockOutputs;
-		blockIn->realloc(lBlockSize);
-		blockOut->realloc(lBlockSize);
-		//TODO: maybe fill silence here, we never know how plugins can screw up
-		//TODO: blockIn/blockOut will always have 2 channels at least
-		//   If a plugin runs mono inputs or outputs we need to handle this manually here
-		blockIn->copyFrom(input);
-
-//		handles_t* handle = current->handle;
-		current->process(blockIn, blockOut, samples);
-		//TODO: maybe sanitize plugins output floats here (NaN/Inf/ >50 dBFS)
-		input = blockOut;
-		current->postProcess(blockOut, samples, true);
+		current->postProcess(blockPostProcess, samples, isBypass);
+		current->fTimePercentBlockProcess = ((current->fTimePercentBlockProcess*49.0)+(timer.getTime() / (double) microSecsPerBlock))/50.0;
 	}
 	//   If a plugin runs mono inputs or outputs we need to handle this manually here
 	output->copyFrom(input);

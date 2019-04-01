@@ -50,7 +50,13 @@ void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effec
 void loadEffectAutomationFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effectbase* effect);
 
 struct AudioBlock;
+struct host_stats_t {
+	int32_t samplesProcessed;
+	int32_t blocksProcessed;
+	int64_t timeLastBlock;
+	double usage;
 
+};
 class vsthost {
 private:
 	class ModuleManager;
@@ -61,7 +67,7 @@ public:
 	samplerate_t lSampleRate;
 	uint16_t lBlockSize;
 private:
-
+	host_stats_t stats{0};
 	double lastTickEndPos = 0;
 	playback_state lastState = playback_state::status_stop;
 	uint8_t numChannels;
@@ -95,6 +101,7 @@ public:
 	uint32_t blockReads = 0;
 	uint32_t bufferUnderuns = 0;
 	hires_timer_t timer;
+	hires_timer_t timer2;
 	std::atomic<int32_t> pluginId{100};
 	std::atomic<int32_t> audioStageId{100};
 
@@ -103,6 +110,9 @@ public:
 	void setBlockSize(uint16_t blockSize);
 	VstTimeInfo* getTimeInfo() {
 		return &this->timeinfo;
+	}
+	void getStats(host_stats_t& stats) {
+		stats = this->stats;
 	}
 	bool startAudio();
 	bool stopAudio();
