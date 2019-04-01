@@ -33,9 +33,6 @@ bool getClipPosition(scaled_grid& grid, const ivec2& trackSize, const clip_t* cl
 	int32_t widthPx = (int32_t) round(width);
 	pos = ivec2(tickBeginPx, INSET_TRACK_CONTENT);
 	size = ivec2(widthPx, size.y-INSET_TRACK_CONTENT*2);
-	if (size.x <= 0 || size.y <= 0) {
-		my_printf("culled %s because of size %d %d!\n", StringAsCStr(cl->name), size.x, size.y);
-	}
 	return size.x > 0 && size.y > 0;
 }
 audioclip_texture_t makeWaveformFromClip(project_t& project, scaled_grid& grid,
