@@ -21,6 +21,9 @@ constant_t COL_BTN_BG_DEFAULT_ACTIVE("COL_BTN_BG_DEFAULT_ACTIVE", 0xff404040);
 constant_t COL_BTN_BG_BYPASS_ACTIVE("COL_BTN_BG_BYPASS_ACTIVE", 0xff80ABC0);
 constant_t COL_BTN_BG_SHOW_ACTIVE("COL_BTN_BG_SHOW_ACTIVE", 0xff40ABC0);
 }
+namespace GuiConstant {
+constant_t CONST_GUI_FRAME_STROKE_WIDTH("CONST_GUI_FRAME_STROKE_WIDTH", 10);
+}
 //NVGcolor g_guiColors[NUM_GUI_COLORS];
 NVGcolor g_colorPalette[COLOR_PALETTE_LEN];
 
@@ -243,7 +246,7 @@ void guibase::renderWidgetBorderPosSize(NVGcontext* vg, int32_t flags, ivec2 pos
 	nvgBeginPath(vg);
 	nvgRect(vg, pos.x, pos.y, size.x, size.y);
 	nvgStrokeColor(vg, theme->getBgStrokeColor(flags));
-	nvgStrokeWidth(vg, theme->getBgStrokeWidth(flags));
+	nvgStrokeWidth(vg, theme->getFloat(GuiConstant::CONST_GUI_FRAME_STROKE_WIDTH));
 	nvgStroke(vg);
 	auto color = getBackgroundColor(flags);
 	nvgFillColor(vg, color);
@@ -309,7 +312,7 @@ void guibuttontoggle::render(NVGcontext* vg) {
 	nvgFillColor(vg, theme->getColor(color));
 	nvgFill(vg);
 	nvgStrokeColor(vg, theme->getBgStrokeColor(state));
-	nvgStrokeWidth(vg, theme->getBgStrokeWidth(state));
+	nvgStrokeWidth(vg, theme->getFloat(GuiConstant::CONST_GUI_FRAME_STROKE_WIDTH));
 	nvgStroke(vg);
 	int icon = _getIcon();
 	if (icon >= 0) {

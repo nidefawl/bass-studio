@@ -39,9 +39,6 @@ struct guitheme_t {
 	}
 	const NVGcolor getBgColor(int32_t flags);
 	const NVGcolor getBgStrokeColor(int32_t flags);
-	float getBgStrokeWidth(int32_t flags) {
-		return G_STROKE;
-	}
 	const NVGcolor getFrameColorOutline() {
 		return this->colorBgFrameOutline;
 	}

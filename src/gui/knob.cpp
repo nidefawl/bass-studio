@@ -272,7 +272,7 @@ void guiknob_labeled_base::render(NVGcontext* vg) {
 		nvgBeginPath(vg);
 		nvgRect(vg, pos.x, pos.y, size.x, size.y);
 		nvgStrokeColor(vg, theme->getBgStrokeColor(flags));
-		nvgStrokeWidth(vg, theme->getBgStrokeWidth(flags));
+		nvgStrokeWidth(vg, theme->getFloat(GuiConstant::CONST_GUI_FRAME_STROKE_WIDTH));
 		nvgStroke(vg);
 		nvgFillColor(vg, theme->getColor(bgColor));
 		nvgFill(vg);
