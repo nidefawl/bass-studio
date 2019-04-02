@@ -10,5 +10,5 @@ guictxtmenu_vstparam::guictxtmenu_vstparam(effectbase* _effect, automatable_para
 }
 void guictxtmenu_vstparam::clicked(int _id) {
 	handleAutomatbleContextMenu(effect->getTrack(), effect, entry->idx, _id);
-	parentCtrl->closePopup();
+	closeContextMenu();
 }

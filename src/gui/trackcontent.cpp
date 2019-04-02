@@ -367,7 +367,7 @@ public:
 		grid.notifyChange();
 //		ctrl->updateVisibleTrackContents();
 //		MainCtrl::get()->updateGrid();
-		parentCtrl->closePopup();
+		closeContextMenu();
 	}
 };
 void gui_track_automationlane::handleRightClick(MouseEvent& evt) {

@@ -101,6 +101,6 @@ public:
 				callback(col);
 			}
 		}
-		parentCtrl->closePopup();
+		closeContextMenu();
 	}
 };

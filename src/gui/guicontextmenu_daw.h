@@ -146,7 +146,7 @@ public:
 				m_clip->rgb = col;
 			}
 		}
-		parentCtrl->closePopup();
+		closeContextMenu();
 	}
 };
 class guictxtmenu_notrack : public guictxtmenu {
@@ -159,7 +159,7 @@ public:
 	}
 	void clicked(int _id) {
 		MainCtrl::get()->insertNewTrack(-1, _id);
-		parentCtrl->closePopup();
+		closeContextMenu();
 	}
 };
 

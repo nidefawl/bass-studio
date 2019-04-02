@@ -141,4 +141,9 @@ public:
 			g->layout();
 		}
 	}
+	void closeContextMenu() {
+		// may be null if we got closed
+		if (parentCtrl)
+			parentCtrl->closePopup();
+	}
 };

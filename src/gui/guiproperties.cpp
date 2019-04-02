@@ -191,9 +191,6 @@ public:
 //	bool canClose() override {
 //		return hadMouseMovement && !parentCtrl->isMouseInside();
 //	}
-	virtual void clicked(int _id) {
-		parentCtrl->closePopup();
-	}
 	virtual void handleDraggedBegin(MouseEvent& evt) override {
 		validateReferences();
 		lastClicked = cellclicked_t();
@@ -622,7 +619,7 @@ public:
 		my_printf("added %d themes \n", idx);
 	}
 	void clicked(int _id) {
-		parentCtrl->closePopup();
+		closeContextMenu();
 		if (_id >= 0 && _id < strThemeNames.size()) {
 			themeMgr->setThemeName(strThemeNames[_id]);
 		}

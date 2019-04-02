@@ -127,7 +127,7 @@ public:
 			grid.grid_dens.isfixed = false;
 		}
 		grid.notifyChange();
-		parentCtrl->closePopup();
+		closeContextMenu();
 	}
 };
 

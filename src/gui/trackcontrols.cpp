@@ -111,7 +111,7 @@ public:
 	}
 	void clicked(int _id) {
 		handleAutomatbleContextMenu(track, atl, paramIdx, _id);
-		parentCtrl->closePopup();
+		closeContextMenu();
 	}
 };
 class gui_trackgain: public guibase {
@@ -327,7 +327,7 @@ public:
 			}
 		}
 		MainCtrl::get()->updateVisibleTrackContents();
-		parentCtrl->closePopup();
+		closeContextMenu();
 	}
 };
 class guidropdown_popup_sel_automation_param : public guictxtmenu {
@@ -363,7 +363,7 @@ public:
 			}
 		}
 		MainCtrl::get()->updateVisibleTrackContents();
-		parentCtrl->closePopup();
+		closeContextMenu();
 	}
 };
 class guidropdown_automation_device : public guidropdownbase {
@@ -975,7 +975,7 @@ public:
 		} else if (_id == 2) {
 			MainCtrl::get()->removeTrackId(trackid);
 		}
-		parentCtrl->closePopup();
+		closeContextMenu();
 	}
 };
 void gui_track_controls::handleRightClick(MouseEvent& evt) {

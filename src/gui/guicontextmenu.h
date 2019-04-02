@@ -35,7 +35,7 @@ public:
 		return false;
 	}
 	virtual void clicked(int _id) {
-		parentCtrl->closePopup();
+		closeContextMenu();
 	}
 	virtual void handleDraggedBegin(MouseEvent& evt) {
 		ivec2 local = evt.relMousepos;
