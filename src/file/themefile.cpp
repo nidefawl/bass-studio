@@ -19,6 +19,7 @@
 #include <iostream>
 #include <sstream>
 #include <fstream>
+#include <assert.h>
 #include <algorithm>
 #include <map>
 using namespace std;
