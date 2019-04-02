@@ -118,6 +118,12 @@ int main(int argc, char* argv[]) {
 #endif
     appsettings settings;
     loadSettings(settings);
+	String vstPlugPath = settings.pluginPath;
+	LOG("pluginPath '%s'", StringAsCStr(vstPlugPath));
+    if (vstPlugPath.empty()) {
+        fprintf(stderr, "Error: pluginPath not configured\n");
+        return EXIT_FAILURE;
+    }
     bool lastRecvState = false;
 //	std::set_terminate(terminate_fn);
 	if (argc > 1 && !strcmp("-server", argv[1])) {
@@ -149,8 +155,6 @@ int main(int argc, char* argv[]) {
 
 			std::vector<FileFound> files;
 //			String vstPlugPath = "C:/PluginManager/configs/default/hosts/Ableton/categories/";
-			String vstPlugPath = settings.pluginPath;
-			LOG("pluginPath '%s'", StringAsCStr(vstPlugPath));
 			findFilesWithExt(vstPlugPath, PLATFORM_PLUGIN_EXT, true, files);
 			LOG("Found %u files", (uint32_t )files.size());
 			if (files.empty()) {

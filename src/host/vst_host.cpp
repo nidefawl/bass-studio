@@ -775,22 +775,25 @@ bool vsthost::startAudio() {
 	for (int i = 0; i < apiCount; i++) {
 		const PaHostApiInfo *info = Pa_GetHostApiInfo(i);
 		if (info) {
-			my_printf("API[%d] = %s %d devices\n", i, info->name, info->deviceCount);
+			const char* pref = "[ ] ";
 			if (!strcmp(selApiNameCStr, info->name)) {
 				deviceApiIdxSelected = i;
+				pref = "[x] ";
 			}
+			my_printf("%sAPI[%d] = %s %d devices\n", pref, i, info->name, info->deviceCount);
 		}
 	}
 	if (deviceApiIdxSelected >= 0) {
 		int deviceCount = Pa_GetDeviceCount();
 		for (int i = 0; i < deviceCount; i++) {
 			const PaDeviceInfo *info = Pa_GetDeviceInfo(i);
+			const char* pref = "[ ] ";
 			if (info && info->hostApi == deviceApiIdxSelected && info->maxOutputChannels > 0) {
-				my_printf("DEVICE[%d] = %s %d output channels\n", i, info->name, info->maxOutputChannels);
 				if (!strcmp(selDevNameCStr, info->name)) {
 					deviceIdxSelected = i;
+					pref = "[x] ";
 				}
-
+				my_printf("%sDEVICE[%d] = %s %d output channels\n", pref, i, info->name, info->maxOutputChannels);
 			}
 		}
 	}
@@ -816,7 +819,7 @@ bool vsthost::startAudio() {
 
 	my_printf("Open stream on device %s | %s\n", apiInfo->name, devInfo->name);
 	my_printf("samplerate %u\n", lSampleRate);
-	my_printf("channelCount %f\n", outputParameters.channelCount);
+	my_printf("channelCount %d\n", outputParameters.channelCount);
 	my_printf("lBlockSize %d\n", this->lBlockSize);
 	PaStream* paStream = NULL;
 	err = Pa_OpenStream(

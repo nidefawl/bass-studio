@@ -46,6 +46,7 @@ void serialize(Archive & ar, appsettings& settings) {
 	make_optional_nvp(ar, "window", *(settings.size));
 #endif
 	make_optional_nvp(ar, "pluginPath", settings.pluginPath);
+	make_optional_nvp(ar, "vmmode", settings.vmmode);
 }
 
 bool loadSettings(appsettings& _settings) {

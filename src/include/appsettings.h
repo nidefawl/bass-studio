@@ -14,6 +14,7 @@ struct appsettings
 	String device_api;
 	String device_selected;
 	bool startEngine = false;
+	bool vmmode = false;
 	String pluginPath;
 public:
 	appsettings();
