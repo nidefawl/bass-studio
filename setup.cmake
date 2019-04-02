@@ -59,7 +59,9 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
 endif()
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   if (NOT WIN32)  #cant use stack-protector with clang/gnu toolchain on windows
-  	add_compile_options(-fstack-protector)
+    add_compile_options(-fstack-protector)
+  else() 
+  #  add_compile_options(-D__MSVCRT_VERSION__=0x1200) #link against msvcr120 runtime
   endif(NOT WIN32)
   add_compile_options(-fno-omit-frame-pointer)
 endif()
