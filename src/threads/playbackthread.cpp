@@ -1,18 +1,6 @@
 #include "playbackthread.h"
 #include "threadlock.h"
-#ifdef __linux__
-#include <thread>
-#include <condition_variable>
-#endif
-#ifdef __MINGW32__
-#undef _GLIBCXX_HAS_GTHREADS
-#include "../platform/mingw/mingw.thread.h"
-#include <mutex>
-#include "../platform/mingw/mingw.mutex.h"
-#include "../platform/mingw/mingw.condition_variable.h"
-#else
-#include <mutex>
-#endif
+#include "threads.h"
 #include <chrono>
 
 #include <atomic>
@@ -86,14 +74,23 @@ class PlaybackThread::Impl {
 	ReaderWriterQueue<std::shared_ptr<PlaybackThreadReq>> q;
     playback_state m_status = status_no_process;
 	std::recursive_mutex mutex;
+	int32_t threadid = 0;
 public:
     Impl() : q(128) {
 	}
+    int32_t getThreadId() {
+    	return threadid;
+    }
 	void start() {
 		t = std::thread([this]() {
 			this->run();
 		});
 #ifdef _WIN32
+#ifdef _MSC_VER
+#error todo: implement
+#else
+		this->threadid = static_cast<int32_t>(t.get_id().get());
+#endif
 		HANDLE h = t.native_handle();
 		SetThreadPriority(h, THREAD_PRIORITY_TIME_CRITICAL);
 #endif
@@ -127,6 +124,7 @@ public:
 private:
 
 	void run() {
+		setCurrentThreadName("audiothread");
 
 		MainCtrl* ctrl = MainCtrl::get();
 		vsthost* host = vsthost::getInstance();
@@ -254,6 +252,7 @@ private:
 	            timer.reset();
 			}
 
+	    	logEveryMsec(1, 5000, "audio thread loop");
         }
 	}
 };
@@ -287,6 +286,9 @@ void PlaybackThread::stopThread() {
 }
 void PlaybackThread::joinThread() {
 	_M_impl->join();
+}
+int32_t PlaybackThread::getThreadId() {
+	return _M_impl->getThreadId();
 }
 playback_state PlaybackThread::getState() {
 	return _M_impl->getState();
