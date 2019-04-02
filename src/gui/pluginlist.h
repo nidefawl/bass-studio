@@ -153,6 +153,7 @@ public:
 		effectEntries.push_back(module_desc_t{PLUGIN_TYPE_GROUP, 0, "Group", false});
 		effectEntries.push_back(module_desc_t{PLUGIN_TYPE_INTERNAL_EFFECT, PLUG_INT_STEREOWIDTH, "StereoWidth", false});
 		effectEntries.push_back(module_desc_t{PLUGIN_TYPE_INTERNAL_EFFECT, PLUG_INT_TEST, "TestAdv", false});
+		effectEntries.push_back(module_desc_t{PLUGIN_TYPE_INTERNAL_EFFECT, PLUG_INT_CRASHVST, "CrashVST2", false});
 		pluginListCtr.padding = 0;
 		add(&textField);
 		add(&pluginListCtr);

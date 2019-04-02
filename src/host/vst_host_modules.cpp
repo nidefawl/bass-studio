@@ -42,6 +42,7 @@
 #include "vstsdk-plugin-2.4/audioeffectx.h"
 #include "plugins/advanced/adv-plugin.h"
 #include "plugins/stereowidth/stereowidth-plugin.h"
+#include "plugins/empty/empty-plugin.h"
 
 
 //typedef AudioEffectX*(AEffectXMainProc)(audioMasterCallback audioMasterCB);
@@ -64,6 +65,11 @@ vstpluginloadres vsthost::loadInternalPlugin(int32_t moduleId, int32_t globalId)
 	case PLUG_INT_TEST:
 		axeffect = PluginTestAdv::createPlugin(audioMaster);
 		name = "TestAdv";
+		break;
+	case PLUG_INT_CRASHVST:
+		axeffect = PluginEmptyVST2::createPlugin(audioMaster);
+//		axeffect = PluginTestAdv::createPlugin(audioMaster);
+		name = "CrashVST2";
 		break;
 	default:
 		assert(0);
