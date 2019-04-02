@@ -94,10 +94,14 @@ public:
 	}
 String excDescription = "";
 void handleStdException(std::exception& e) {
+	printf("handleStdException\n");
+	fflush(stdout);
 	excDescription = StringFormat("Fatal error: %s", e.what());
 	std::terminate();
 }
 void handleException() {
+	printf("handleException\n");
+	fflush(stdout);
 	excDescription = "Unhandled program exception";
 	std::terminate();
 }
@@ -154,7 +158,9 @@ void invalidateWindowContents(GLFWwindow* glfw) {
 #endif
 }
 
+#ifndef DAWFRAMEWORK_PLUGIN
 appsettings settings;
+#endif
 class appwindow_dialog;
 class appwindow_overlay;
 
@@ -183,11 +189,8 @@ public:
 protected:
 	NVGcontext* nanovgCtxt = NULL;
 	bool isExternalWindow = false;
-#ifdef __linux__
-	bool noRawInput = true;//disable, since Virtual Machines don't handle rawinput correctly (works on native)
-#endif
-#ifdef _WIN32
 	bool noRawInput = false;
+#ifdef _WIN32
 	UINT_PTR timer = 0;
 	DropTarget* dropTarget = NULL;
 	HWND hwnd = NULL;
@@ -241,6 +244,7 @@ public:
 	appwindow() :
 	  tm_lastfps(getTimeMillis()) {
 		name[0] = 0;
+		noRawInput = settings.vmmode;
 	}
 	virtual ~appwindow() {
 		if (hwnd) {
@@ -1186,6 +1190,7 @@ void appwindow_main::destroy() {
 	glfwMakeContextCurrent(glfw);
 	appwindow::destroyGL();
 	appwindow::killTimer();
+#ifndef DAWFRAMEWORK_PLUGIN
 #ifdef _WIN32
 	if (this->dropTarget)
 		UnregisterDropWindow(hwnd, this->dropTarget);
@@ -1193,6 +1198,7 @@ void appwindow_main::destroy() {
 #endif
 #if __linux__
 		//TODO: implement linux
+#endif
 #endif
 }
 void appwindow_main::createMainWindow(const char* title, int w, int h, void* parentWindowHandle) {
@@ -1209,21 +1215,15 @@ void appwindow_main::createMainWindow(const char* title, int w, int h, void* par
 	if (!ctrl->init(this, this->nanovgCtxt)) {
 		throw appexception("Couldn't start application");
 	}
-#ifdef _WIN32
-	this->dropTarget = RegisterDropWindow(hwnd, this);
-#endif
-#if __linux__
-		//TODO: implement linux
-#endif
-
 #ifndef DAWFRAMEWORK_PLUGIN
 #ifdef _WIN32
+	this->dropTarget = RegisterDropWindow(hwnd, this);
 	if (!restoreWindowPos(hwnd, settings.size)) {
 		this->maximize();
 	}
 #endif
 #if __linux__
-		//TODO: implement linux
+		//TODO: implement linux window pos
 #endif
 #endif
 	glfwGetWindowSize(glfw, &w, &h);
@@ -1325,6 +1325,8 @@ static appwindow* getUserData(GLFWwindow *w) {
 	return impl;
 }
 void on_terminate() {
+	printf("on_terminate\n");
+	fflush(stdout);
 	glfwTerminate();
 	if (excDescription.length()) {
 #ifdef __linux__
@@ -1487,8 +1489,10 @@ bool isVstWindow(HWND hwnd);
 #endif
 #endif
 std::shared_ptr<AppCtrl> makeApp();
-void initColor();
-void deleteApp();
+void initColor(); // Forward declare from gui/gui.cpp
+void deleteApp(); // Forward declare from host/mainctrl.cpp
+void openGlobalLog(); // Forward declare from util/debug.cpp
+void closeGlobalLog(); // Forward declare from util/debug.cpp
 int startApplication(int argc, char* argv[]) {
 #ifndef NDEBUG
     _dup2( 1, 2 ); //workaround: redirect stderr to stdout so stderr is visible when using gdb on eclipse (bug)
@@ -1502,6 +1506,7 @@ int startApplication(int argc, char* argv[]) {
 #endif
 	EXC_TRY
 	allocConsole();
+	openGlobalLog();
 	setMinimumResolutionTimer();
 	initColor();
 	loadSettings(settings);
@@ -1609,6 +1614,7 @@ int startApplication(int argc, char* argv[]) {
 	EXC_CATCH
 	deleteApp();
 	printLeakedGuiBase();
+	closeGlobalLog();
 #ifdef _WIN32
 	OleUninitialize();
 #endif

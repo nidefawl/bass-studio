@@ -132,6 +132,8 @@ static const char* _exc_as_str(DWORD excCode) {
 extern String excDescription;
 static LONG WINAPI TopLevelExceptionHandler(PEXCEPTION_POINTERS pExceptionInfo)
 {
+	printf("TopLevelExceptionHandler\n");
+	fflush(stdout);
 	DWORD excCode = pExceptionInfo->ExceptionRecord->ExceptionCode;
 	excDescription = StringFormat("Application crash: %s (0x%08X)", _exc_as_str(excCode), (int)excCode);
 	std::terminate();

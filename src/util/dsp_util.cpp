@@ -10,6 +10,7 @@
 #include <memory.h>
 #include <algorithm>
 #include <limits>
+#include <string.h>
 
 namespace dsp_util {
 const float GAIN_DB6 = math::powf(10.0f, 6.0f/20.0f); // 2.0f

@@ -333,4 +333,22 @@ FileTimeGetter::~FileTimeGetter() {
 int64_t FileTimeGetter::getWriteTimeI64() {
 	return _M_Impl->getWriteTimeI64();
 }
+IOFile::IOFile(FileImpl* _impl) : impl(_impl) {
+#error implement me
+	this->validHandle = true;
+}
+IOFile::~IOFile() {
+#error implement me
+	delete impl;
+}
+void IOFile::write(const char* data, size_t len) {
+#error implement me
+}
+void IOFile::flush() {
+#error implement me
+}
+
+IOFile* IOFile::openFile(String filename, OpenFileMode mode) {
+#error implement me
+}
 #endif

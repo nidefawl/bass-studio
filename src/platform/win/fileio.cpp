@@ -10,6 +10,7 @@
 #include <limits>
 #include <stdexcept>
 #include <stdint.h>
+#include <assert.h>
 
 HWND getMainHWND(); // window.cpp
 
@@ -38,39 +39,53 @@ void ThrowLastErrorIf(bool expression, const String& msg)
 	}
 }
 
-class File
+class FileImpl
 {
 private:
 	HANDLE m_handle;
 
 	// Declared but not defined, to avoid double closing.
-	File& operator=(const File&);
-	File(const File&);
+	FileImpl& operator=(const FileImpl&);
+	FileImpl(const FileImpl&);
 public:
-	explicit File(const String& filename, int mode)
+	explicit FileImpl(const String& filename, OpenFileMode mode)
 	{
-		int flags = OPEN_EXISTING;
-		int attr = FILE_ATTRIBUTE_NORMAL;
-		int access = FILE_SHARE_READ;
-		if (mode == GENERIC_WRITE) {
-			flags = CREATE_ALWAYS;
-			attr = FILE_ATTRIBUTE_NORMAL;
-			access = 0; //exclusive
+		int createFlags, attr, shareMode;
+		int accessMode;
+		switch (mode) {
+			case OpenFileMode::READ:
+				createFlags = OPEN_EXISTING;
+				attr = FILE_ATTRIBUTE_NORMAL;
+				shareMode = FILE_SHARE_READ;
+				accessMode = GENERIC_READ;
+				break;
+			case OpenFileMode::WRITE:
+				createFlags = CREATE_ALWAYS;
+				attr = FILE_ATTRIBUTE_NORMAL;
+				shareMode = 0; //exclusive
+				accessMode = GENERIC_WRITE;
+				break;
+			case OpenFileMode::READWRITE:
+				createFlags = CREATE_ALWAYS;
+				attr = FILE_ATTRIBUTE_NORMAL;
+				shareMode = FILE_SHARE_READ;
+				accessMode = GENERIC_READ | GENERIC_WRITE;
+				break;
 		}
-		m_handle = CreateFileA(filename.c_str(), mode, access,
-			nullptr, flags, attr, nullptr);
+		m_handle = CreateFileA(filename.c_str(), accessMode, shareMode,
+			nullptr, createFlags, attr, nullptr);
 		ThrowLastErrorIf(m_handle == INVALID_HANDLE_VALUE,
 			"CreateFile call failed on file named " + filename);
 	}
 
-	~File() { CloseHandle(m_handle); }
+	~FileImpl() { CloseHandle(m_handle); }
 
 	HANDLE GetHandle() { return m_handle; }
 };
 
 size_t GetFileSizeSafe(const String& filename)
 {
-	File fobj(filename, GENERIC_READ);
+	FileImpl fobj(filename, OpenFileMode::READ);
 	LARGE_INTEGER filesize;
 
 	BOOL result = GetFileSizeEx(fobj.GetHandle(), &filesize);
@@ -86,7 +101,7 @@ size_t GetFileSizeSafe(const String& filename)
 
 int32_t WriteFileVector(const String& filename, vector<uint8_t>& writebuffer)
 {
-	File fobj(filename, GENERIC_WRITE);
+	FileImpl fobj(filename, OpenFileMode::WRITE);
 	DWORD bytesWrite = 0;
 
 	BOOL result = WriteFile(fobj.GetHandle(), writebuffer.data(), writebuffer.size(),
@@ -100,7 +115,7 @@ int32_t WriteFileVector(const String& filename, vector<uint8_t>& writebuffer)
 
 void ReadFileVector(const String& filename, vector<uint8_t>& out)
 {
-	File fobj(filename, GENERIC_READ);
+	FileImpl fobj(filename, OpenFileMode::READ);
 	size_t filesize = GetFileSizeSafe(filename);
 	DWORD bytesRead = 0;
 
@@ -281,5 +296,40 @@ void setCWDPath(String cwd) {
 	if (cwd.length() && (!StrEndsWith(cwd, "/") && !StrEndsWith(cwd, "\\")))
 		cwd += "/";
 	cwdPath = cwd;
+}
+
+IOFile::IOFile(FileImpl* _impl) : impl(_impl) {
+	assert(impl->GetHandle());
+	this->validHandle = true;
+}
+IOFile::~IOFile() {
+	assert(impl->GetHandle());
+	delete impl;
+}
+void IOFile::write(const char* data, size_t len) {
+	DWORD bytesWrite = 0;
+
+	BOOL result = WriteFile(impl->GetHandle(), data, len, &bytesWrite, nullptr);
+	if (!result) {
+		validHandle = false;
+	}
+}
+void IOFile::flush() {
+	assert(impl->GetHandle());
+	if (!FlushFileBuffers(impl->GetHandle())) {
+		validHandle = false;
+	}
+}
+
+IOFile* IOFile::openFile(String filename, OpenFileMode mode) {
+	try {
+		FileImpl* impl = new FileImpl(filename, mode);
+		IOFile* iofile = new IOFile(impl);
+		return iofile;
+	} catch (const FileIOException& e)
+	{
+		my_printf("IOFile::openFile File IO exception: %s (%d)\n", e.what(), e.GetErrorCode());
+	}
+	return nullptr;
 }
 #endif

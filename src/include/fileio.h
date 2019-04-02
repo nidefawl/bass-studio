@@ -6,7 +6,7 @@
 
 #ifdef _WIN32
    #include <io.h>
-   #define access    _access_s
+   #define shareMode    _access_s
 #else
    #include <unistd.h>
 #endif
@@ -46,7 +46,7 @@ void handleGuiEvents();
 size_t GetFileSizeSafe(const String& filename);
 inline bool FileExists( const String &Filename )
 {
-    return access( Filename.c_str(), 0 ) == 0;
+    return shareMode( Filename.c_str(), 0 ) == 0;
 }
 inline int64_t FileSize(const String &fileName)
 {
@@ -147,4 +147,24 @@ public:
 	~FileTimeGetter();
 private:
 	Impl* _M_Impl;
+};
+
+class FileImpl;
+enum class OpenFileMode {
+	READ, WRITE, READWRITE
+};
+class IOFile {
+private:
+	FileImpl* impl;
+	bool validHandle;
+	IOFile(FileImpl* _impl);
+public:
+	~IOFile();
+	void write(const char* data, size_t len);
+	void flush();
+	bool isValid() {
+		return validHandle;
+	}
+	/** may return null, will not throw and not indicate reason of failure **/
+	static IOFile* openFile(String filename, OpenFileMode mode);
 };
