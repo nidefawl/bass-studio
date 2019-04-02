@@ -655,6 +655,7 @@ void vsthost::processAudio(audio_stage_t* channel, AudioBlock* input, AudioBlock
 			my_printf("Skipping effect %d: bIsSetup == false\n", current->slot);
 			continue;
 		}
+		processing.pluginId = current->projectGlobalId;
 		assert(current->bIsSetup);
 		timer.reset();
 		bool isBypass = current->isBypass();
@@ -688,6 +689,7 @@ void vsthost::processAudio(audio_stage_t* channel, AudioBlock* input, AudioBlock
 		}
 		current->postProcess(blockPostProcess, samples, isBypass);
 		current->fTimePercentBlockProcess = ((current->fTimePercentBlockProcess*49.0)+(timer.getTime() / (double) microSecsPerBlock))/50.0;
+		processing.pluginId = 0;
 	}
 	//   If a plugin runs mono inputs or outputs we need to handle this manually here
 	output->copyFrom(input);
@@ -851,6 +853,16 @@ vstplugin* vsthost::getPlugin(AEffect* aeffect) {
 	for (auto* current : pluginInstancesVST2) {
 		if (current->handle->aeffect == aeffect)
 			return current;
+	}
+	return nullptr;
+}
+effectbase* vsthost::getPluginById(int32_t projectGlobalId) {
+	auto it = std::find_if(pluginInstances.begin(), pluginInstances.end(),
+		[projectGlobalId] (const effectbase* ptr) {
+			return ptr->projectGlobalId == projectGlobalId;
+		});
+	if (it != pluginInstances.end()) {
+		return *it;
 	}
 	return nullptr;
 }

@@ -57,6 +57,9 @@ struct host_stats_t {
 	double usage;
 
 };
+struct host_processing_stats_t {
+	int32_t pluginId;
+};
 class vsthost {
 private:
 	class ModuleManager;
@@ -68,6 +71,7 @@ public:
 	uint16_t lBlockSize;
 private:
 	host_stats_t stats{0};
+	host_processing_stats_t processing{0};
 	double lastTickEndPos = 0;
 	playback_state lastState = playback_state::status_stop;
 	uint8_t numChannels;
@@ -114,6 +118,9 @@ public:
 	void getStats(host_stats_t& stats) {
 		stats = this->stats;
 	}
+	void getProcessingStats(host_processing_stats_t& stats) {
+		stats = this->processing;
+	}
 	bool startAudio();
 	bool stopAudio();
 	void updatePluginWindows();
@@ -143,6 +150,7 @@ public:
 		return false;
 	}
 	vstplugin* getPlugin(AEffect* aeffect);
+	effectbase* getPluginById(int32_t projectGlobalId);
 	void unloadPlugin(effectbase* plugin);
 	void removePlugin(effectbase* plugin);
 	void unloadTrack(track_t* track);
