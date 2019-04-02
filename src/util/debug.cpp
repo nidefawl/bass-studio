@@ -23,11 +23,13 @@ String demangleName(String to_demangle)
 #include "logging.h"
 #include <assert.h>
 #include <ctime>
+#include <unordered_map>
 #include "math/seq_math.h"
 #include "fileio.h"
 #include "threads.h"
-class ThreadSafeFileLogger {
-	std::thread daemon;
+#include "platform.h"
+
+class ThreadSafeFileLogger : public Logger {
 	std::recursive_mutex mutex;
 	IOFile* handle = nullptr;
 public:
@@ -56,7 +58,7 @@ public:
 
 public:
 	//threadsafe
-	void log(const char* data, size_t len) {
+	void log(const char* data, size_t len) override {
 		if (handle) {
 			std::lock_guard<std::recursive_mutex> lockguard(mutex);
 		    std::time_t t = std::time(nullptr);
@@ -72,22 +74,25 @@ public:
 			}
 		}
 	}
-	void logStr(String s) {
+	void logStr(String s) override {
 		const char* str = StringAsCStr(s);
 		log(str, s.length());
 	}
 };
-ThreadSafeFileLogger& getGlobalLogger() {
+static ThreadSafeFileLogger& getGlobalLoggerImpl() {
 	static ThreadSafeFileLogger gGlobalLogger;
 	return gGlobalLogger;
 }
+Logger* getGlobalLogger() {
+	return &getGlobalLoggerImpl();
+}
 void closeGlobalLog() {
-	getGlobalLogger().logStr("End of logfile\n");
-	getGlobalLogger().closeLog();
+	getGlobalLoggerImpl().logStr("End of logfile\n");
+	getGlobalLoggerImpl().closeLog();
 }
 void openGlobalLog() {
-	getGlobalLogger().openFile("daw.log");
-	getGlobalLogger().logStr("Begin of logfile\n");
+	getGlobalLoggerImpl().openFile("daw.log");
+	getGlobalLoggerImpl().logStr("Begin of logfile\n");
 }
 #define MAX_LEN_MY_PRINTF 4096
 #define MAX_LEN_FILENAME 512
@@ -129,26 +134,87 @@ void sanitizeFilename(char* buf, const char* filename) {
 	buf[i] = '\0';
 }
 void _my_printf(const char *file, int line, const char *func, const char *fmt, ...) {
-	char buf[MAX_LEN_MY_PRINTF];
-	char fnamebuf[MAX_LEN_FILENAME];
+	char szLogStr[MAX_LEN_MY_PRINTF]{ 0 };
+	char szFileShort[MAX_LEN_FILENAME]{ 0 };
+	char szLogStatement[MAX_LEN_MY_PRINTF]{ 0 };
 	va_list args;
 	va_start(args, fmt);
-	int ret = vsnprintf(buf, MAX_LEN_MY_PRINTF - 1, fmt, args);
+	int ret = vsnprintf(szLogStr, MAX_LEN_MY_PRINTF - 1, fmt, args);
 	va_end(args);
 	if (ret <= 0) {
 		assert(0);
 		return;
 	}
-	sanitizeFilename(fnamebuf, relFileName(file));
-	printf("%s:%d %s: %s", fnamebuf, line, func, buf);
-	char buf2[MAX_LEN_MY_PRINTF] = { 0 };
-	ret = sprintf_s(buf2, MAX_LEN_MY_PRINTF - 1, "%s:%d %s: %s", fnamebuf, line, func, buf);
+	sanitizeFilename(szFileShort, relFileName(file));
+	String threadName = getCurrentThreadName();
+	const char* szThreadName = StringAsCStr(threadName);
+//	printf("%s:%d %s: %s", szFileShort, line, func, szLogStr);
+	ret = sprintf_s(szLogStatement, MAX_LEN_MY_PRINTF - 1, "%s:%s:%d %s: %s", szThreadName, szFileShort, line, func, szLogStr);
 	if (ret > 0) {
 		assert(ret+1 <= MAX_LEN_MY_PRINTF);
-		getGlobalLogger().log(buf2, ret);
+		fprintf(stdout, szLogStatement);
+		getGlobalLoggerImpl().log(szLogStatement, ret);
 	}
-//	appendLog(buf2);
+//	appendLog(szLogStatement);
 #ifndef _MSC_VER
 	fflush(stdout);
 #endif
+}
+namespace {
+
+struct threadnames_t {
+	std::mutex gThreadMutex;
+	std::unordered_map<std::thread::id, String> gThreadNames;
+	threadnames_t() {
+		std::lock_guard<std::mutex> lock(gThreadMutex);
+	}
+	void setCurrentsName(String str) {
+		auto threadId = std::this_thread::get_id();
+		std::lock_guard<std::mutex> lock(gThreadMutex);
+		gThreadNames[threadId] = str;
+	}
+	String getCurrentsName() {
+		auto threadId = std::this_thread::get_id();
+		std::lock_guard<std::mutex> lock(gThreadMutex);
+		auto it = gThreadNames.find(threadId);
+		if (it == gThreadNames.end()) {
+			return "unknown";
+		}
+		return it->second;
+	}
+};
+threadnames_t& getThreadNames() {
+	static threadnames_t threadnames;
+	return threadnames;
+}
+}
+void setCurrentThreadName(String str) {
+	getThreadNames().setCurrentsName(str);
+}
+String getCurrentThreadName() {
+	return getThreadNames().getCurrentsName();
+}
+void logEveryMsec(int32_t nId, int32_t delayMs, String str) {
+	static std::recursive_mutex gLogMutex;
+	static std::unordered_map<int32_t, int32_t> gEntries;
+	if (str.back() != '\n')
+		str += "\n";
+	auto now = getTimeMillis();
+	bool shouldLog = false;
+	{
+		std::lock_guard<std::recursive_mutex> lock(gLogMutex);
+		auto it = gEntries.find(nId);
+		if (it == gEntries.end() || now - it->second > delayMs) {
+			shouldLog = true;
+			gEntries[nId] = now;
+		}
+	}
+	if (shouldLog) {
+		const char* szLogStatement = StringAsCStr(str);
+		fprintf(stdout, szLogStatement);
+		getGlobalLoggerImpl().log(szLogStatement, str.length());
+#ifndef _MSC_VER
+		fflush(stdout);
+#endif
+	}
 }

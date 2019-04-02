@@ -27,6 +27,7 @@
 #endif
 #include "math/seq_math.h"
 #include "str_util.h"
+#include "logging.h"
 
 uint64_t getTimeMillis() {
 	return (uint64_t) timeGetTime();
@@ -129,13 +130,12 @@ static const char* _exc_as_str(DWORD excCode) {
 	return "UKNOWN_EXCEPTION";
 }
 #define WINAPI __stdcall
-extern String excDescription;
+void handleFatalError(String s);
 static LONG WINAPI TopLevelExceptionHandler(PEXCEPTION_POINTERS pExceptionInfo)
 {
-	printf("TopLevelExceptionHandler\n");
-	fflush(stdout);
 	DWORD excCode = pExceptionInfo->ExceptionRecord->ExceptionCode;
-	excDescription = StringFormat("Application crash: %s (0x%08X)", _exc_as_str(excCode), (int)excCode);
+	String excDescription = StringFormat("Application crash: %s (0x%08X)", _exc_as_str(excCode), (int)excCode);
+	handleFatalError(excDescription);
 	std::terminate();
     return EXCEPTION_EXECUTE_HANDLER;
 }
@@ -148,6 +148,9 @@ int __cdecl DebugReportHook(int nReportType, char*, int* pnRet)
 }
 #endif
 void setExceptionHandler() {
+#if defined(_MSC_VER) || (defined(__MSVCRT_VERSION__) && __MSVCRT_VERSION__ > 0x800)
+	_set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
+#endif
 #if defined(_MSC_VER)
 	//this is here to trigger a breakpoint when assert(0) is called using the ms c-runtime
 	//by default ms crt throws an exception on assert(0) and opens a dialog that interferes with out wndProc
@@ -175,6 +178,15 @@ String FormatErrorMessage(int32_t error, String msg)
 	if (msg.empty())
 		return String(buf.data());
 	return msg + " (" + StringTrim(String(buf.data())) + ")";
+}
+namespace seqthreads {
+int32_t currentThreadsId() {
+#ifdef _MSC_VER
+#error todo: implement
+#else
+	return static_cast<int32_t>(std::this_thread::get_id().get());
+#endif
+}
 }
 
 #endif

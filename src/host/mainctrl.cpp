@@ -29,6 +29,7 @@
 #include "edithistory.h"
 #include "logging.h"
 #include "menu.h"
+#include "thread.h"
 #include "msgbox.h"
 
 #include "../gui/gui.h"
@@ -1209,4 +1210,21 @@ GLFWwindow* getGlfwFromWindowBase(window_base* w);
 GLFWwindow* getTopLevelGlfwWindow() {
 	auto wbase = MainCtrl::get()->window;
 	return getGlfwFromWindowBase(wbase);
+}
+
+void handleFatalError(String s) {
+	my_printf("Fatal: %s\n", StringAsCStr(s));
+	seqthreads::thread_base* thread = MainCtrl::getPlayThread();
+	if (seqthreads::currentThreadsId() == thread->getThreadId()) {
+		host_processing_stats_t processing;
+		auto host = vsthost::getInstance();
+		host->getProcessingStats(processing);
+		if (processing.pluginId) {
+			effectbase* eff = host->getPluginById(processing.pluginId);
+			if (eff) {
+				//TODO: print track/context whatever
+				my_printf("Crash was most likely caused by %s\n", StringAsCStr(eff->getName()));
+			}
+		}
+	}
 }

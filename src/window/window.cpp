@@ -57,6 +57,7 @@
 #include "renderresources.h"
 #include "mousecursor.h"
 #include "fileio.h"
+#include "threads.h"
 
 
 void enableGlDebugCallback();
@@ -92,17 +93,12 @@ public:
 	} catch (...) {													\
 		handleException();											\
 	}
-String excDescription = "";
 void handleStdException(std::exception& e) {
-	printf("handleStdException\n");
-	fflush(stdout);
-	excDescription = StringFormat("Fatal error: %s", e.what());
+	getGlobalLogger()->logStr(StringFormat("Exception: %s", e.what()));
 	std::terminate();
 }
 void handleException() {
-	printf("handleException\n");
-	fflush(stdout);
-	excDescription = "Unhandled program exception";
+	getGlobalLogger()->logStr("Unhandled program exception");
 	std::terminate();
 }
 
@@ -127,13 +123,10 @@ static void glfw_cb_windowwize(GLFWwindow *w, int width, int height);
 static void glfw_cb_framebuffersize(GLFWwindow *w, int width, int height);
 
 static void glfw_startup_error_callback(int error, const char* description) {
-	char errorCodeStr[1024] = { 0 };
-	_snprintf_s(errorCodeStr, 1024 - 1, _TRUNCATE, "Error %d: %s", error, description);
-	my_printf("%s\n", errorCodeStr);
-//	ngui::show(errorCodeStr, "Error", ngui::Style::Error, ngui::Buttons::OK);
+	my_printf("glfw-error %d: %s\n", error, description);
 }
 static void glfw_runtime_error_callback(int error, const char* description) {
-	my_printf("Error %d: %s", error, description);
+	my_printf("glfw-error %d: %s\n", error, description);
 }
 static void setAppWindowHints() {
 	glfwDefaultWindowHints();
@@ -158,9 +151,16 @@ void invalidateWindowContents(GLFWwindow* glfw) {
 #endif
 }
 
-#ifndef DAWFRAMEWORK_PLUGIN
+#ifdef DAWFRAMEWORK_PLUGIN
+#define HAS_APP_SETTINGS 0
+#else
+#define HAS_APP_SETTINGS 1
+#endif
+
+#if HAS_APP_SETTINGS
 appsettings settings;
 #endif
+
 class appwindow_dialog;
 class appwindow_overlay;
 
@@ -244,7 +244,9 @@ public:
 	appwindow() :
 	  tm_lastfps(getTimeMillis()) {
 		name[0] = 0;
+#if HAS_APP_SETTINGS
 		noRawInput = settings.vmmode;
+#endif
 	}
 	virtual ~appwindow() {
 		if (hwnd) {
@@ -1324,18 +1326,10 @@ static appwindow* getUserData(GLFWwindow *w) {
 	appwindow* impl = (appwindow*) glfwGetWindowUserPointer(w);
 	return impl;
 }
-void on_terminate() {
-	printf("on_terminate\n");
-	fflush(stdout);
-	glfwTerminate();
-	if (excDescription.length()) {
-#ifdef __linux__
-		printf("Error: %s\n", StringAsCStr(excDescription));
-#else
-		ngui::show(StringAsCStr(excDescription), "Error", ngui::Style::Error, ngui::Buttons::OK);
-#endif
 
-	}
+void on_terminate() {
+	my_printf("on_terminate\n", 0);
+	exit(1); // required on mingw (at least)
 }
 
 
@@ -1493,7 +1487,9 @@ void initColor(); // Forward declare from gui/gui.cpp
 void deleteApp(); // Forward declare from host/mainctrl.cpp
 void openGlobalLog(); // Forward declare from util/debug.cpp
 void closeGlobalLog(); // Forward declare from util/debug.cpp
+
 int startApplication(int argc, char* argv[]) {
+	setCurrentThreadName("mainthread");
 #ifndef NDEBUG
     _dup2( 1, 2 ); //workaround: redirect stderr to stdout so stderr is visible when using gdb on eclipse (bug)
 #endif
@@ -1505,7 +1501,15 @@ int startApplication(int argc, char* argv[]) {
 	setExceptionHandler();
 #endif
 	EXC_TRY
-	allocConsole();
+	//bool runConsoleMode = false;
+	//for (int i = 0; i < argc; i++) {
+	//	if (strcmp(argv[i], "-console")) {
+	//		runConsoleMode = true;
+	//	}
+	//}
+	//if (!runConsoleMode) {
+		allocConsole();
+	//}
 	openGlobalLog();
 	setMinimumResolutionTimer();
 	initColor();
@@ -1547,6 +1551,7 @@ int startApplication(int argc, char* argv[]) {
 	    MSG msg;
 	    while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE))
 	    {
+	    	logEveryMsec(0, 5000, "Main msg loop");
 	        if (msg.message == WM_QUIT)
 	        {
 	        	glfwSetWindowShouldClose(glfwHandle, 1);
