@@ -86,11 +86,7 @@ public:
 			this->run();
 		});
 #ifdef _WIN32
-#ifdef _MSC_VER
-#error todo: implement
-#else
 		this->threadid = static_cast<int32_t>(t.get_id().get());
-#endif
 		HANDLE h = t.native_handle();
 		SetThreadPriority(h, THREAD_PRIORITY_TIME_CRITICAL);
 #endif
