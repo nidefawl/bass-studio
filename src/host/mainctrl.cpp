@@ -500,6 +500,7 @@ void MainCtrl::postInit() {
 	vsthost::getInstance()->postInit();
 	loadFile("empty.project");
 	view->ctr_effectlib.update();
+	setAudioThreadState(playback_state::status_stop);
 }
 void MainCtrl::initApp(int argc, char* argv[]) {
 
