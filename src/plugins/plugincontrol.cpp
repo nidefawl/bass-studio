@@ -53,12 +53,6 @@ void PluginControl::menuCommand(int cmd) {
 
 	}
 }
-void PrintHelp()
-{
-    printf("-r,--host <addr>:       Connect to remote host\n"
-           "-h,--help:              Show this help\n");
-    exit(1);
-}
 
 void PluginControl::initApp(int argc, char* argv[]) {
 }
