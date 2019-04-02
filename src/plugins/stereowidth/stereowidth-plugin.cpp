@@ -17,6 +17,10 @@
 #include "vstsdk-plugin-2.4/audioeffect.h"
 #include "vstsdk-plugin-2.4/audioeffectx.h"
 
+#define PLUGIN_EFFECT_NAME "NoneAdv"
+#define PLUGIN_UID "AGTP" //advanced gui test plugin
+#define PLUGIN_PRODUCT_NAME "advanced gui test plugin VST2.x "
+
 
 #ifndef BUILD_BUILTIN_EFFECT
 AudioEffect* createEffectInstance (audioMasterCallback audioMaster)
@@ -31,7 +35,6 @@ namespace PluginStereoWidth {
 PluginVST2_StereoWidth::PluginVST2_StereoWidth (audioMasterCallback audioMaster)
 	: BasePluginVST2(audioMaster, PLUGIN_UID, kNumPrograms, kNumParams, kNumInputs, kNumOutputs)
 {
-	srand(time(NULL));
 	createEditorWindow(static_cast<PluginViewContainersImpl*>(createView()));
 
 	curProgram = 0;

@@ -4,10 +4,6 @@
 #include "../plugin-base.h"
 #include "vstsdk-plugin-2.4/audioeffectx.h"
 
-#define PLUGIN_EFFECT_NAME "NoneAdv"
-#define PLUGIN_UID "AGTP" //advanced gui test plugin
-#define PLUGIN_PRODUCT_NAME "advanced gui test plugin VST2.x "
-
 
 class PluginVST2_StereoWidth;
 namespace PluginStereoWidth {
