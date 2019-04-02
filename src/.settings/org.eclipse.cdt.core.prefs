@@ -4,6 +4,16 @@ environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.11128
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.111289801/PATH/value=${MINGW_HOME}/bin
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.111289801/append=true
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.111289801/appendContributed=true
+environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.700633768/DEPS_PATH/delimiter=;
+environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.700633768/DEPS_PATH/operation=append
+environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.700633768/DEPS_PATH/value=D\:/dev/daw-deps
+environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.700633768/MSYS_HOME/delimiter=;
+environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.700633768/MSYS_HOME/operation=remove
+environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.700633768/PATH/delimiter=;
+environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.700633768/PATH/operation=replace
+environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.700633768/PATH/value=${WORKSPACE_ENV_PATH}
+environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.700633768/append=true
+environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.700633768/appendContributed=true
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.779292911/DEPS_PATH/delimiter=;
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.779292911/DEPS_PATH/operation=append
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.779292911/DEPS_PATH/value=D\:/dev/daw-deps
