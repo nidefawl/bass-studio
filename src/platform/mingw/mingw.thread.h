@@ -57,6 +57,8 @@ public:
     public:
         explicit id(DWORD aId=0):mId(aId){}
         bool operator==(const id& other) const {return mId == other.mId;}
+    	bool operator<(const id& other) const noexcept {return mId < other.mId;}
+    	friend hash<thread::id>;
         DWORD get() {
         	return mId;
         }
@@ -156,7 +158,13 @@ public:
         mThreadId.clear();
     }
 };
-
+template<>
+struct hash<thread::id>
+{
+	size_t operator()(const thread::id& _tid) const {
+		return static_cast<size_t>(_tid.mId);
+	}
+};
 namespace this_thread
 {
     inline thread::id get_id() {return thread::id(GetCurrentThreadId());}
