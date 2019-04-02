@@ -1,1 +1,20 @@
-cmake .. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Release -DDAW_DEPS_PATH=D:\dev\daw-deps\ -DCMAKE_CXX_FLAGS=--target=x86_64-pc-windows-gnu -DCMAKE_C_FLAGS=--target=x86_64-pc-windows-gnu
+cmake ../.. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Debug -DDAW_DEPS_PATH=D:\dev\daw-deps\ -DCMAKE_CXX_FLAGS=--target=x86_64-pc-windows-gnu -DCMAKE_C_FLAGS=--target=x86_64-pc-windows-gnu
+
+
+msvc currently requires a patch to its std thread header:
+C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Tools\MSVC\14.16.27023\include\thread
+
+class thread::id
+	{	// thread id
+public:
+.....
+	//START EDIT
+	int32_t get() {
+		return static_cast<int32_t>(_Id);
+	}
+	//END EDIT
+	
+.....
+.....
+
+Maybe find a better workaround like: https://hackernoon.com/c-telltales-pt-1-human-readable-thread-id-92caa554a35f
