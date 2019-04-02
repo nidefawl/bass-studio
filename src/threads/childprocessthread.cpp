@@ -1,23 +1,12 @@
 #include "childprocessthread.h"
 
-#ifdef __linux__
-#include <thread>
-#endif
-#ifdef __MINGW32__
-#undef _GLIBCXX_HAS_GTHREADS
-#include "../platform/mingw/mingw.thread.h"
-#include <mutex>
-#include "../platform/mingw/mingw.mutex.h"
-#include "../platform/mingw/mingw.condition_variable.h"
-#else
-#include <mutex>
-#endif
-
+#include "threads.h"
 #include "str_util.h"
 #include "../host/vst_host.h"
 #include "../host/plugin/vst_plugin.h"
 #include "fileio.h"
 #include "exceptions.h"
+
 #if __linux__
 #include <unistd.h>
 #include <spawn.h>
@@ -110,6 +99,7 @@ public:
 		isrunning = true;
 		this->lastCmd = StringFormat("%s %s", StringAsCStr(binary), StringAsCStr(params));
 		t = std::thread([this, binary, params]() {
+			setCurrentThreadName("childprocessthread");
 			try {
 				ProcessRunScope scopedProcess(binary, params);
 				processExitCode = (int32_t) scopedProcess.exitCode;

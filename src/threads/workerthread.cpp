@@ -1,21 +1,8 @@
 #include "workerthread.h"
-#ifdef __linux__
-#include <thread>
-#include <condition_variable>
-#endif
-#ifdef __MINGW32__
-#undef _GLIBCXX_HAS_GTHREADS
-#include "../platform/mingw/mingw.thread.h"
-#include <mutex>
-#include "../platform/mingw/mingw.mutex.h"
-#include "../platform/mingw/mingw.condition_variable.h"
-#else
-#include <mutex>
-#endif
+#include "threads.h"
 
 #include <atomic>
 #include <queue>
-
 #include <assert.h>
 #include <exception>
 
@@ -82,6 +69,7 @@ public:
 	}
 	void start() {
 		t = std::thread([this]() {
+			setCurrentThreadName("workerthread");
 			this->run();
 		});
 	}

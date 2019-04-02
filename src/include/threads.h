@@ -11,3 +11,7 @@
 #else
 #include <mutex>
 #endif
+#include "str_util.h"
+
+void setCurrentThreadName(String s); // util/debug.cpp
+String getCurrentThreadName(); // util/debug.cpp
