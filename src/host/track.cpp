@@ -452,7 +452,7 @@ effectbase* loadEffectModule(const plugin_snapshot_t& pluginSnapshot) {
 		}
 	} else {
 		effect = host->makeModuleInstance(pluginSnapshot.pluginType, pluginSnapshot.uId, pluginSnapshot.projectGlobalId);
-		if (effect->getModuleType() == PLUGIN_TYPE_INTERNAL_EFFECT) {
+		if (effect && effect->getModuleType() == PLUGIN_TYPE_INTERNAL_EFFECT) {
 			loadedPlugin = dynamic_cast<vstplugin*>(effect);
 		}
 	}

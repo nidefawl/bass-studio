@@ -9,15 +9,20 @@
 
 #ifdef _WIN32
 #include "windows.h"
+
+
+bool isHandledExc(int n) {
+	return true;
+}
+
 #ifdef __MINGW32__
 #include <excpt.h>
 #include "platform/mingw/mingw.exc.h"
 extern "C" int exchandler(_In_ EXCEPTION_POINTERS *lpEP);
 int exchandler(_In_ EXCEPTION_POINTERS *lpEP)
 {
-//	my_printf("Exception code: %u  Flags: %u\n", lpEP->ExceptionRecord->ExceptionCode, lpEP->ExceptionRecord->ExceptionFlags);
-	if (lpEP->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION) {
-	    return EXCEPTION_EXECUTE_HANDLER;
+	if (isHandledExc(lpEP->ExceptionRecord->ExceptionCode)) {
+		return EXCEPTION_EXECUTE_HANDLER;
 	}
     return EXCEPTION_CONTINUE_SEARCH;
 }
@@ -51,7 +56,7 @@ long vstplugin::dispatch(
 		}
 #ifdef _WIN32
 #if defined(_MSC_VER)
-		__except(GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
+		__except(isHandledExc(GetExceptionCode()) ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
 		{
 			dealWithPluginException(this);
 		}
@@ -80,7 +85,7 @@ float vst_getParameter(vstplugin* plugin, AEffect* aeffect, int32_t idx) {
 		}
 #ifdef _WIN32
 #if defined(_MSC_VER)
-		__except(GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
+		__except(isHandledExc(GetExceptionCode()) ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
 		{
 			dealWithPluginException(plugin);
 		}
@@ -107,7 +112,7 @@ void vst_setParameter(vstplugin* plugin, AEffect* aeffect, int32_t idx, float va
 		}
 #ifdef _WIN32
 #if defined(_MSC_VER)
-		__except(GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
+		__except(isHandledExc(GetExceptionCode()) ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
 		{
 			dealWithPluginException(plugin);
 		}
@@ -143,7 +148,7 @@ void vstplugin::process(AudioBlock* in, AudioBlock* out, int32_t samples) {
 
 #ifdef _WIN32
 #if defined(_MSC_VER)
-		__except(GetExceptionCode() == EXCEPTION_ACCESS_VIOLATION ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
+		__except(isHandledExc(GetExceptionCode()) ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
 		{
 			dealWithPluginException(this);
 		}

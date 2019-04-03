@@ -47,7 +47,7 @@ namespace RenderResources {
 			if (ReadImage(path, out) < 0) {
 				my_printf("Error loading image %s\n", StringAsCStr(path));
 			} else {
-				my_printf("%s loaded: %dx%d %d-channel, bufsize: %d\n", StringAsCStr(path), out.w, out.h, out.bitdepth, out.bytes.size());
+//				my_printf("%s loaded: %dx%d %d-channel, bufsize: %d\n", StringAsCStr(path), out.w, out.h, out.bitdepth, out.bytes.size());
 			}
 		}
 	}
