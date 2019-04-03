@@ -14,6 +14,9 @@
 #include "vstsdk-plugin-2.4/audioeffect.h"
 #include "vstsdk-plugin-2.4/audioeffectx.h"
 #include "logging.h"
+#ifdef _MSC_VER
+#include <Windows.h>
+#endif
 
 #define PLUGIN_EFFECT_NAME "Empty"
 #define PLUGIN_VENDOR_NAME "MichaelH"
@@ -170,13 +173,13 @@ VstInt32 EmptyPluginVST2::canDo (char* text)
 
 void EmptyPluginVST2::processReplacing(float** inputs, float** outputs, VstInt32 sampleFrames)
 {
+	numCalls++;
 	if (issetprogram)
 		return;
 
 	if (sampleFrames != blockSize) {
 		return;
 	}
-	BaseVST2_Program *ap = current();
 	if (this->getAeffect()->numOutputs == 1) {
 		if (inputs)
 			memset(inputs[0], 0, sizeof(float)*sampleFrames);
@@ -185,16 +188,15 @@ void EmptyPluginVST2::processReplacing(float** inputs, float** outputs, VstInt32
 		if (inputs)
 			dsp_util::fillSilence(inputs, sampleFrames);
 		dsp_util::fillSilence(outputs, sampleFrames);
-
 #if defined(PLUGIN_BUILD_CRASHVERSION) || defined(BUILD_BUILTIN_EFFECT)
-		my_printf("producing segfault\n", 0);
+//		my_printf("producing segfault\n", 0);
 		int64_t* ptr = nullptr;
 		ptr = static_cast<int64_t*>((void*)0xBAADF00D);
 		int64_t val = *ptr;
 		my_printf("val = %lld WTF\n", val);
-//		std::terminate();
 #endif
 	}
+	numCalls2++;
 }
 
 

@@ -55,9 +55,12 @@ private:
 //------------------------------------------------------------------------------------------
 // FSM_VST_Plugin
 //------------------------------------------------------------------------------------------
-
+class guictr_emptyvst;
 class EmptyPluginVST2 : public BasePluginVST2 {
-
+	friend class guictr_emptyvst;
+protected:
+	int numCalls = 0;
+	int numCalls2 = 0;
 public:
 	EmptyPluginVST2 (audioMasterCallback audioMaster);
 	virtual ~EmptyPluginVST2 ();

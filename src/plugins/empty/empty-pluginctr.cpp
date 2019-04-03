@@ -23,6 +23,7 @@
 #include "host/plugin/vst_plugin.h"
 
 #include "empty-plugin.h"
+#include "empty-pluginctr.h"
 #include "vstsdk-plugin-2.4/audioeffect.h"
 #include "vstsdk-plugin-2.4/audioeffectx.h"
 
@@ -33,19 +34,9 @@
 class vstplugin;
 class AudioEffect;
 
-namespace {
 
-class guictr_emptyvst : public guictr_base {
-	vstplugin* vstHostSide = nullptr;
-	AudioEffect* curEffect = nullptr;
-public:
-	guictr_emptyvst() : guictr_base() {
-		setBackgroundRendered(true);
-	}
-	~guictr_emptyvst() {
-		removeGuis();
-	}
-	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
+namespace PluginEmptyVST2 {
+	bool guictr_emptyvst::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 		if (this->contains(mpos)) {
 			ivec2 localMouse = this->toContainerSpace(mpos);
 			for (guibase* gui : guis) {
@@ -61,80 +52,80 @@ public:
 		return false;
 	}
 
-	void render(NVGcontext* vg) override {
-		if (isBackgroundRendered()){
+	void guictr_emptyvst::render(NVGcontext* vg) {
+		if (isBackgroundRendered()) {
 			renderBackground(vg);
 		}
 		if (!setScissorTransform(vg)) {
 			return;
 		}
-		setFont(vg, 26, G_WHITE, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
-		nvgText(vg, 5, 25, "EMPTY VST", NULL);
-	#ifdef NO_GLFW_LIB
-		nvgText(vg, 5, 75, "NO GLFW", NULL);
-	#else
-		nvgText(vg, 5, 75, "USING GLFW", NULL);
-	#endif
-
+		int line = 26;
+		setFont(vg, line-2, G_WHITE, NVG_ALIGN_BOTTOM | NVG_ALIGN_LEFT);
+		int y = line;
+		nvgText(vg, 5, y, "CRASH VST", NULL);
+		y += line;
+		String str = StringFormat("%d processBlock calls", this->curEffect->numCalls);
+		nvgText(vg, 5, y, StringAsCStr(str), NULL);
+		y += line;
+		str = StringFormat("%d finished blocks", this->curEffect->numCalls2);
+		nvgText(vg, 5, y, StringAsCStr(str), NULL);
 	}
-	bool handleKeyInput(KeyEvent& event) override {
-		if (event.type != KeyEventType::K_RELEASE) {
 
+	bool guictr_emptyvst::handleKeyInput(KeyEvent& event) {
+		if (event.type != KeyEventType::K_RELEASE) {
 		}
 		return false;
 	}
 
-	void onGuiOpen(AudioEffect* eff) {
-		this->curEffect = eff;
+	void guictr_emptyvst::onGuiOpen(AudioEffect* eff) {
+		this->curEffect = static_cast<PluginEmptyVST2::EmptyPluginVST2*>(eff);
 	}
-	void onGuiClose(AudioEffect* eff) {
+
+	void guictr_emptyvst::onGuiClose(AudioEffect* eff) {
 		this->curEffect = nullptr;
 	}
-	void setVSTPlugin(vstplugin* vstHostSide)  {
+
+	void guictr_emptyvst::setVSTPlugin(vstplugin* vstHostSide) {
 		this->vstHostSide = vstHostSide;
 	}
 
-	void onSetParameter(int32_t index, float value) {
+	inline void guictr_emptyvst::onSetParameter(int32_t index, float value) {
 	}
-};
 
 
-class ViewContainersEmptyPlugin : public PluginViewContainersImpl {
-public:
-	guictr_emptyvst ctr_main;
-	ViewContainersEmptyPlugin() : PluginViewContainersImpl(400, 300)
-	{
-	}
-	virtual ~ViewContainersEmptyPlugin() {
-	}
-	void layout(int32_t winW, int32_t winH) override {
-		ctr_main.pos = {0, 0};
-		ctr_main.size = {winW, winH};
-	}
-	void addTo(std::vector<guictr_base*>& v) override {
-		 v.push_back(&ctr_main);
-	}
-	void onGuiOpen(AudioEffect* eff) override {
-		ctr_main.onGuiOpen(eff);
-	}
-	void onGuiClose(AudioEffect* eff) override {
-		ctr_main.onGuiClose(eff);
-	}
-	void onSetParameter(int32_t index, float value) override {
-		ctr_main.onSetParameter(index, value);
-	}
-	void getFixedSize(int32_t* w, int32_t* h) override {
-		*w = this->width;
-		*h = this->height;
-	}
-	void setVSTPlugin(vstplugin* hostsideplugin)  {
-		ctr_main.setVSTPlugin(hostsideplugin);
-	}
-};
+	class ViewContainersEmptyPlugin : public PluginViewContainersImpl {
+	public:
+		guictr_emptyvst ctr_main;
+		ViewContainersEmptyPlugin() : PluginViewContainersImpl(400, 300)
+		{
+		}
+		virtual ~ViewContainersEmptyPlugin() {
+		}
+		void layout(int32_t winW, int32_t winH) override {
+			ctr_main.pos = {0, 0};
+			ctr_main.size = {winW, winH};
+		}
+		void addTo(std::vector<guictr_base*>& v) override {
+			 v.push_back(&ctr_main);
+		}
+		void onGuiOpen(AudioEffect* eff) override {
+			ctr_main.onGuiOpen(eff);
+		}
+		void onGuiClose(AudioEffect* eff) override {
+			ctr_main.onGuiClose(eff);
+		}
+		void onSetParameter(int32_t index, float value) override {
+			ctr_main.onSetParameter(index, value);
+		}
+		void getFixedSize(int32_t* w, int32_t* h) override {
+			*w = this->width;
+			*h = this->height;
+		}
+		void setVSTPlugin(vstplugin* hostsideplugin)  {
+			ctr_main.setVSTPlugin(hostsideplugin);
+		}
+	};
 
-}
-
-namespace PluginEmptyVST2 {
 	AudioEffectX* createPlugin (audioMasterCallback audioMaster) {
 		return new EmptyPluginVST2 (audioMaster);
 	}
