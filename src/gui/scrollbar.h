@@ -22,13 +22,6 @@ public:
 	static const int smallW = 10;
 	gui_scrollbar(int _dir, float _offset, gui_scrollcontainer& _ctr);
 	virtual void render(NVGcontext* vg);
-	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-		if (this->contains(mpos)) {
-			evt.requestFocus(this);
-			return true;
-		}
-		return false;
-	}
 	float startOffset = 0;
 	virtual void handleDraggedBegin(MouseEvent& evt) {
 		startOffset = scrollOffset;

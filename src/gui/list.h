@@ -11,17 +11,11 @@ protected:
 	int icon = 0;
 public:
 	gui_list_entry() : guibase() {
+		setCanMouseHit(true);
 	}
 	virtual ~gui_list_entry() {
 	}
 	virtual void render(NVGcontext* vg);
-	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-		if (this->contains(mpos)) {
-			evt.requestFocus(this);
-			return true;
-		}
-		return false;
-	}
 	virtual void handleDraggedBegin(MouseEvent& evt);
 	virtual void handleDraggedMove(MouseEvent& evt);
 	virtual void handleDraggedRelease(MouseEvent& evt);

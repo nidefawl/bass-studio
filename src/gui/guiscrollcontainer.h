@@ -21,13 +21,12 @@ public:
 	bool scrollbarOutside = false;
 	int maxHeight = 360;
 	guictr_scrollbar() : guictr_base(), scrollbar(1, 0.0f, *this) {
-		setBackgroundRendered(true);
+		setBackgroundRendered(false);
+		setBackgroundRenderedInset(false);
+		setSnapSides(ivec4(1));
 		scrollbar.setParent(this);
 		margin = 0;
 		padding = 0;
-	}
-	guictr_scrollbar(guibase* gui) : guictr_scrollbar() {
-		add(gui);
 	}
 	~guictr_scrollbar() {
 		removeGuis();

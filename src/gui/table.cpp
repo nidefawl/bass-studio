@@ -3,6 +3,7 @@
 #include <numeric>
 #include <vector>
 #include <nanovg.h>
+#include "math/seq_math.h"
 #include "str_util.h"
 #include "theme.h"
 #include "event.h"

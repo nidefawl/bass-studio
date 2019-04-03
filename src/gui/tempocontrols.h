@@ -11,7 +11,8 @@
 #include "button.h"
 #include "renderresources.h"
 #include "knob.h"
-#include "../host/vst_host.h"
+#include "host/vst_host.h"
+#include "host/mainctrl.h"
 
 void testTask();
 class gui_tempocontrol : public guibuttonbase {
@@ -53,10 +54,8 @@ public:
 	}
 
 	void render(NVGcontext* vg) {
-		int32_t flags = getStateFlags();
-		if (flags & (FLG_FOC|FLG_HVRD|FLG_DRG|FLG_ACT)) {
-			renderWidgetBorder(vg, flags);
-		}
+		int32_t fl = getStateFlags();
+		renderWidgetBorder(vg, fl);
 		setFont(vg, G_FONT_SCALE(size.y), G_WHITE, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
 		int n;
 		if (idx == 0) {
@@ -138,77 +137,15 @@ class gui_timeinput_field : public guibuttonbase {
 	const int idx;
 	int32_t* time;
 	const bool isRelative;
-	bool drawBackground = true;
 public:
-	gui_timeinput_field(int _idx, int32_t* _time, const bool _isRelative)
-		: guibuttonbase(),
-		idx(_idx),
-		time(_time),
-		isRelative(_isRelative)
-	{
-	}
-	void setDrawBackground(bool state) {
-		drawBackground = state;
-	}
+	gui_timeinput_field(int _idx, int32_t* _time, const bool _isRelative);
 	void setRef(int32_t* time) {
 		this->time = time;
 	}
-
-	void render(NVGcontext* vg) {
-		int32_t flags = getStateFlags();
-		if (drawBackground || flags > FLG_ENBL) {
-			renderWidgetBorder(vg, flags);
-		}
-		setFont(vg, G_FONT_SCALE(size.y), G_WHITE, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
-		int32_t _time = time ? *time : 0;
-		beatbar16th_t step = MainCtrl::get()->toBeatBar16th(_time);
-		int32_t val = step[idx];
-		if (val >= 0 && !isRelative) {
-			val++;
-		}
-		String str = StringFormat("%d", val);
-		nvgText(vg, pos.x + size.x-3, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(str), NULL);
-	}
-	void handleDraggedBegin(MouseEvent& evt) {
-		if (evt.guiDragged == this) {
-			parentCtrl->captureMouse(this);
-		}
-	}
-	void handleDraggedMove(MouseEvent& evt) {
-		if (time && evt.guiDragged == this && evt.type == M_EVT_CAPTURED_MOVE) {
-			int disty = (int)evt.dragDistance->y / 20;
-			if (math::abs(disty) < 1)
-				return;
-			evt.dragDistance->y = 0;
-			switch (idx) {
-			case 0:
-				*time -= disty*TICKS_BAR;
-				break;
-			case 1:
-				*time -= disty*TICKS_QUARTER;
-				break;
-			case 2:
-				if (disty > 0) {
-					if (*time & TICK_MASK_16TH) {
-						*time &=~TICK_MASK_16TH;
-						break;
-					}
-				}
-				if (disty < 0) {
-					if (*time & TICK_MASK_16TH) {
-						*time &=~TICK_MASK_16TH;
-					}
-				}
-				*time -= disty*TICKS_16TH;
-				break;
-			}
-			if (parent)
-				parent->buttonClicked(this);
-
-		}
-	}
-	void handleDraggedRelease(MouseEvent& evt) {
-	}
+	void render(NVGcontext* vg) override;
+	void handleDraggedBegin(MouseEvent& evt) override;
+	void handleDraggedMove(MouseEvent& evt) override;
+	void handleDraggedRelease(MouseEvent& evt) override;
 
 };
 class gui_timeinput : public guictr_base {
@@ -216,75 +153,19 @@ class gui_timeinput : public guictr_base {
 	gui_timeinput_field bar;
 	gui_timeinput_field beat;
 	gui_timeinput_field sixteenths;
-	bool drawModeFullBG = false;
 public:
-	gui_timeinput(int32_t* _time, const bool isRelative = false)
-		: guictr_base(),
-		  time(_time),
-		  bar(0, _time, isRelative),
-		  beat(1, _time, isRelative),
-		  sixteenths(2, _time, isRelative)
-	{
-		padding = 0;
-		add(&bar);
-		add(&beat);
-		add(&sixteenths);
-	}
+	gui_timeinput(int32_t* _time, const bool isRelative = false);
 	~gui_timeinput() {
 		removeGuis();
 	}
-	void setRef(int32_t* time) {
-		this->time = time;
-		bar.setRef(time);
-		beat.setRef(time);
-		sixteenths.setRef(time);
-	}
-	bool enabled() {
-		return true;
-	}
-	void setConnectedBG() {
-		drawModeFullBG = true;
-		bar.setDrawBackground(!drawModeFullBG);
-		beat.setDrawBackground(!drawModeFullBG);
-		sixteenths.setDrawBackground(!drawModeFullBG);
-	}
-	void layout() {
-		int inset = 4;
-		int fieldH = size.y;
-		int barW = (size.x)/2;
-		int smallStepW = (size.x-barW-inset*2)/2;
-		bar.size = ivec2(barW, fieldH);
-		beat.size = ivec2(smallStepW, fieldH);
-		sixteenths.size = ivec2(smallStepW, fieldH);
-		bar.pos = ivec2(0, size.y/2-bar.size.y/2);
-		beat.pos = ivec2(bar.right()+inset, bar.top());
-		sixteenths.pos = ivec2(beat.right()+inset, beat.top());
-	}
+	void setRef(int32_t* time);
+	void setConnectedBG();
+	void layout();
 	void buttonClicked(guibase* button) override {
 		if (parent)
 			parent->buttonClicked(this);
 	}
-	void render(NVGcontext* vg) {
-		if (drawModeFullBG) {
-			renderWidgetBorder(vg, getStateFlags());
-//			nvgBeginPath(vg);
-//			nvgRect(vg, pos.x, pos.y, size.x, size.y);
-//			nvgFillColor(vg, bar.color);
-//			nvgFill(vg);
-		}
-		if (!setScissorTransform(vg)) {
-			return;
-		}
-		this->bar.render(vg);
-		this->beat.render(vg);
-		this->sixteenths.render(vg);
-		if (drawModeFullBG) {
-			String str = ".";
-			setFont(vg, G_FONT_SCALE(this->sixteenths.size.y), G_WHITE, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
-			nvgText(vg, this->beat.pos.x, this->beat.pos.y + G_FONT_MIDDLE_OFFSET(this->beat.size.y), StringAsCStr(str), NULL);
-			nvgText(vg, this->sixteenths.pos.x, this->sixteenths.pos.y + G_FONT_MIDDLE_OFFSET(this->sixteenths.size.y), StringAsCStr(str), NULL);
-		}
-	}
+	void render(NVGcontext* vg);
 };
 
 class guibutton_audioengine : public guibutton {

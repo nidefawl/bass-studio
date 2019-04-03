@@ -240,7 +240,9 @@ void drawAttachedBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 posIn
 	nvgFill(vg);
 }
 void guibase::renderWidgetBorder(NVGcontext* vg, int32_t flags) const {
-	renderWidgetBorderPosSize(vg, flags, pos, size);
+	if (flags & FLG_RENDER_BACKGROUND) {
+		renderWidgetBorderPosSize(vg, flags, pos, size);
+	}
 }
 void guibase::renderWidgetBorderPosSize(NVGcontext* vg, int32_t flags, ivec2 pos, ivec2 size) const {
 	nvgBeginPath(vg);
@@ -332,13 +334,13 @@ bool guibase::isSelected() {
 	return false;
 }
 bool guibase::hovered() const {
-	return this == parentCtrl->guiOver;
+	return parentCtrl && this == parentCtrl->guiOver;
 }
 bool guibase::pressed() const {
-	return this == parentCtrl->guiDragged;
+	return parentCtrl && this == parentCtrl->guiDragged;
 }
 bool guibase::focused() const {
-	return this == parentCtrl->guiFocused;
+	return parentCtrl && this == parentCtrl->guiFocused;
 }
 int32_t guibase::getStateFlags() const {
 	int dynFlags = FLG_DRG|FLG_HVRD|FLG_FOC|FLG_ENBL|FLG_VISIBLE|FLG_RENDER_BACKGROUND;

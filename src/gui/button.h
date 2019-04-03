@@ -29,6 +29,7 @@ public:
 	int drawParm = 0;
 public:
 	guibuttonbase() : guibase() {
+		setCanMouseHit(true);
 	}
 	void setButtonColor(GuiColor::constant_t color) {
 		buttonColor = color;
@@ -44,13 +45,6 @@ public:
 	void handleRightClick(MouseEvent& evt) override {
 		if (parent)
 			parent->rightClicked(evt, this);
-	}
-	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-		if (contains(mpos)) {
-			evt.requestFocus(this);
-			return true;
-		}
-		return false;
 	}
 	void setText(String _str) {
 		str = _str;

@@ -11,7 +11,7 @@ void guictr_scrollbar::render(NVGcontext* vg) {
 	if (isBackgroundRendered()) {
 		renderBackground(vg);
 	}
-	if (!setScissorTransform(vg)) {
+	if (!setScissorTransformContainer(vg)) {
 		return;
 	}
 	for (guibase* gui : guis) {

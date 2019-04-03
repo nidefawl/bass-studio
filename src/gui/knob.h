@@ -20,7 +20,6 @@ protected:
 	float* valuePtr = NULL;
 	float value = 0.0f;
 	bool isSlider;
-	bool renderBackground;
 	bool changedValue = false;
 	float initialValue = 0.0f;
 	float lastVal = 0.0f;
@@ -36,7 +35,9 @@ public:
     std::function<void(MouseHitEvt&, bool)> fnFocus;
 	GuiColor::constant_t valColor = GuiColor::COL_KNOB;
 	GuiColor::constant_t indColor = GuiColor::COL_KNOB_IND;
-	guiknob(const bool _renderBackground = true, const bool _isSlider = false) : guibase(), isSlider(_isSlider), renderBackground(_renderBackground) {
+	guiknob(const bool _renderBackground = true, const bool _isSlider = false) : guibase(), isSlider(_isSlider) {
+		setBackgroundRendered(_renderBackground);
+		setCanMouseHit(true);
 	}
 #ifdef BUILD_BUILTIN_EFFECT
 	void setAutomationRef(automatable_t* _paramAutomatable, int32_t _paramIdx) {
@@ -46,9 +47,6 @@ public:
 	void setAutomationHandlers();
 #endif
 	bool isAutomated();
-	void setRenderBackground(bool b) {
-		this->renderBackground = b;
-	}
 	void setIsSlider(bool b) {
 		this->isSlider = b;
 	}
@@ -65,7 +63,6 @@ public:
 		if (parent)
 			parent->rightClicked(evt, this);
 	}
-	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
 	void renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS);
 	virtual void render(NVGcontext* vg);
 	float getValueInternal() {

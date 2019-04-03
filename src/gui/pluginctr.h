@@ -40,17 +40,6 @@ public:
 		nvgResetScissor(vg);
 		nvgResetTransform(vg);
 	}
-	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-		if (this->contains(mpos)) {
-			ivec2 localMouse = this->toContainerSpace(mpos);
-			for (guibase* gui : guis) {
-				if (gui->mouseHitTest(localMouse, evt)) {
-					return true;
-				}
-			}
-		}
-		return false;
-	}
 	void layout() {
 		for (guibase* gui : guis) {
 			gui->layout();
@@ -232,6 +221,7 @@ public:
 	guictr_plugins* ctr_plugins;
 	guictr_pluginview(guictr_plugins* _plugins) : guictr_base() {
 		this->ctr_plugins = _plugins;
+		setCanMouseHit(true);
 	}
 	~guictr_pluginview() {
 	}
@@ -268,13 +258,6 @@ public:
 		}
 	}
 	void layout() {
-	}
-	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-		if (this->contains(mpos)) {
-			evt.requestFocus(this);
-			return true;
-		}
-		return false;
 	}
 };
 

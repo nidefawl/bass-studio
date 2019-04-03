@@ -113,18 +113,6 @@ public:
 		listCtr.setList(_newList);
 		layout();
 	}
-	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-		if (this->contains(mpos)) {
-			ivec2 localMouse = this->toContainerSpace(mpos);
-			for (guibase* gui : guis) {
-				if (gui->mouseHitTest(localMouse, evt)) {
-//					my_printf("clicked on %s %d\n", gui->getClassName().c_str(), (int) h);
-					return true;
-				}
-			}
-		}
-		return false;
-	}
 	void layout() {
 		ivec2 cs = getSizeContent();
 //		textField.size = ivec2(cs.x, heightTextField);

@@ -73,34 +73,11 @@ public:
 	virtual void renderBackground(NVGcontext* vg);
 	virtual void render(NVGcontext* vg);
 	virtual bool setScissorTransformContainer(NVGcontext* vg);
-	virtual bool setScissorTransform(NVGcontext* vg) {
-		ivec2 posInset = getPosContent();
-		ivec2 sizeInset = getSizeContent();
-		if (sizeInset.y <= 0 || sizeInset.x <= 0) {
-			return false;
-		}
-		nvgIntersectScissor(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y);
-		nvgTranslate(vg, posInset.x, posInset.y);
-		return true;
-	}
+	virtual bool setScissorTransform(NVGcontext* vg);
 	void setSnapSides(ivec4 _snapSides) {
 		this->snapSides = _snapSides;
 	}
-	virtual void scissorClip(ivec2& vpos, ivec2& vsize) {
-		ivec2 posTL = toParentSpace(vpos);
-		ivec2 posBR = toParentSpace(vpos + vsize);
-		ivec2 posCnt = getPosContent();
-		ivec2 sizeCnt = getSizeContent();
-		ivec2 posBRThis = posCnt+sizeCnt;
-		vpos.x = math::max(posTL.x, posCnt.x);
-		vpos.y = math::max(posTL.y, posCnt.y);
-		vsize.x = math::min(posBR.x, posBRThis.x) - vpos.x;
-		vsize.y = math::min(posBR.y, posBRThis.y) - vpos.y;
-		if (parent != NULL) {
-			parent->scissorClip(vpos, vsize);
-		}
-		vpos = toContainerSpace(vpos);
-	}
+	virtual void scissorClip(ivec2& vpos, ivec2& vsize);
 	virtual ivec2 toContainerSpace(ivec2 in) {
 		return in - getPosContent();
 	}
@@ -173,9 +150,15 @@ public:
 		if (this->contains(mpos)) {
 			ivec2 localMouse = this->toContainerSpace(mpos);
 			for (guibase* gui : guis) {
+				if (!gui->isVisible())
+					continue;
 				if (gui->mouseHitTest(localMouse, evt)) {
 					return true;
 				}
+			}
+			if (canMouseHit()) {
+				evt.requestFocus(this);
+				return true;
 			}
 		}
 		return false;

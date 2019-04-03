@@ -143,14 +143,14 @@ const NVGcolor guitheme_t::getBgColor(int32_t flags) {
 	return colorBg;
 }
 const NVGcolor guitheme_t::getBgStrokeColor(int32_t flags) {
-	if (!(flags & FLG_ENBL)) {
-		return colorBgDisabled;
-	}
 	if (flags & FLG_FOC) {
 		return colorBgFocused;
 	}
 	if (flags & FLG_HVRD) {
 		return colorBgHover;
+	}
+	if (!(flags & FLG_ENBL)) {
+		return colorBgDisabled;
 	}
 	return colorBgStroke;
 }

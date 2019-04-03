@@ -42,7 +42,6 @@ public:
 	void setRefInt32(int32_t* ptrInt32);
 	void setRefNvg(NVGcolor* ptrNvg);
 	void render(NVGcontext* vg) override;
-	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
 	void handleRightClick(MouseEvent& evt);
 	void setColor(int32_t rgba);
 };

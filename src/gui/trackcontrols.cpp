@@ -120,16 +120,10 @@ class gui_trackgain: public guibase {
 public:
 	gui_trackgain(track_t* _track) :
 		guibase(), m_track(_track) {
+		setCanMouseHit(true);
 	}
 	void handleRightClick(MouseEvent& evt) override {
 		MainCtrl::get()->openContextMenu(new guictxtmenu_trackparam(m_track, &m_track->audio->mixer, PARAM_TRACK_GAIN), evt.mousepos);
-	}
-	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-		if (contains(mpos)) {
-			evt.requestFocus(this);
-			return true;
-		}
-		return false;
 	}
 	void (*drawFn)(NVGcontext*,ivec2&, ivec2&, const NVGcolor&) = NULL;
 	bool enabled() {
@@ -411,6 +405,7 @@ public:
 	gui_trackcontrols_title(track_t* _track)
       :	guictr_base(), m_track(_track), automationSelectDevice(_track),
 		automationSelectParam(_track) {
+		setCanMouseHit(true);
 		hideTrack.setRadius(12);
 		hideAutomation.setRadius(10);
 		addAutomationLane.setRadius(10);
@@ -485,19 +480,6 @@ public:
 		int32_t resizeTopOrBottom = m_track->type < TRACK_TYPE_MIDI ? top() : bottom();
 		return mpos.x >= left() && mpos.x < right() && mpos.y >= resizeTopOrBottom - resizeHitY
 				&& mpos.y < resizeTopOrBottom + resizeHitY;
-	}
-	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-		if (contains(mpos)) {
-			ivec2 local = this->toContainerSpace(mpos);
-			for (guibase* gui : guis) {
-				if (gui->mouseHitTest(local, evt)) {
-					return true;
-				}
-			}
-			evt.requestFocus(this);
-			return true;
-		}
-		return false;
 	}
 	void handleDraggedBegin(MouseEvent& evt) override {
 		MainCtrl::get()->setSelectedTrack(m_track);

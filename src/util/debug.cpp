@@ -178,9 +178,9 @@ struct threadnames_t {
 		std::lock_guard<std::mutex> lock(gThreadMutex);
 		auto it = gThreadNames.find(threadId);
 		if (it == gThreadNames.end()) {
-			return "unknown";
+			return StringFormat("thread-%X", static_cast<int32_t>(threadId.get()));
 		}
-		return it->second;
+		return it->second+StringFormat("-%X", static_cast<int32_t>(threadId.get()));
 	}
 };
 threadnames_t& getThreadNames() {

@@ -178,7 +178,8 @@ void gui_textfield::renderTextField(NVGcontext* ctx) const {
 
 	if (size.x * size.y < 10)
 		return;
-	renderWidgetBorder(ctx);
+	int32_t fl = getStateFlags();
+	renderWidgetBorder(ctx, fl);
 
 	nvgBeginPath(ctx);
 	nvgRoundedRect(ctx, pos.x + 1, pos.y + 1 + 1.0f, size.x - 2, size.y - 2, 3);
@@ -431,7 +432,7 @@ bool gui_textfield::handleCharInput(unsigned int codepoint) {
 					}
 			    }
 			} else {
-
+				deleteSelection();
 				mValueTemp.insert(mCursorPos, cvstr);
 	 			mCursorPos++;
 			}

@@ -638,12 +638,15 @@ track_impl_t::track_impl_t(int32_t _id, track_t* _track, const samplerate_t& _sa
 {
 	arp = new midiarp(this);
 }
+//TODO: make threadsafe getters
 std::vector<note_t>& track_impl_t::getArpInputNotes() {
 	return this->arp->heldInputAnimationNotes;
 }
+//TODO: make threadsafe getters
 std::vector<note_t>& track_impl_t::getArpHeldNotes() {
 	return this->arp->heldOutputAnimationNotes;
 }
+//TODO: make threadsafe getters
 std::vector<marker_t>& track_impl_t::getArpMarkers() {
 	return this->arp->markers;
 }

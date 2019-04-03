@@ -31,6 +31,7 @@
 #include "../host/plugin/base_plugin.h"
 #include "../host/plugin/internal_plugin.h"
 #include "../host/plugin/vst_plugin.h"
+#include "../host/plugin/vst_plugin_handles.h"
 #include "automatable.h"
 
 
@@ -41,6 +42,7 @@ using Table::table_entry_t;
 using Table::tblint;
 using Table::tblfloat;
 using Table::tblstr;
+using Table::tblString;
 
 void setDraggedPluginsUI(guictr_dragged_plugins& gui, plugin_selection& sel);
 
@@ -433,8 +435,32 @@ void guitooltip<guivstplugin>::layout()  {
 	table.colSizes.clear();
 	{
 		table.rows.push_back({{String("isSynth"), (int)ptr->vst->isSynth}});
+		auto vst = ptr->vst;
+		auto aeffect = vst->handle->aeffect;
+		table.rows.push_back({{tblstr{"numInputs"}, tblint{aeffect->numInputs}}});
+		table.rows.push_back({{tblstr{"numOutputs"}, tblint{aeffect->numOutputs}}});
+		table.rows.push_back({{tblstr{"numParams"}, tblint{aeffect->numParams}}});
+		table.rows.push_back({{tblstr{"numPrograms"}, tblint{aeffect->numPrograms}}});
+		table.rows.push_back({{tblstr{"uniqueID"}, tblint{aeffect->uniqueID, "%8X"}}});
+		table.rows.push_back({{tblstr{"version"}, tblint{aeffect->version}}});
 		table.rows.push_back({{tblstr{"bIsEnabled"}, tblint{ptr->vst->bIsEnabled}}});
 		table.rows.push_back({{tblstr{"PARAM_ENABLE"}, tblfloat{ptr->vst->getParamValue(PARAM_ENABLE)}}});
+		table.rows.push_back({{tblstr{"flags"}, tblint{aeffect->flags}}});
+		table.rows.push_back({{tblstr{"initialDelay"}, tblint{aeffect->initialDelay}}});
+		table.rows.push_back({{tblstr{"magic"}, tblint{aeffect->magic}}});
+		table.rows.push_back({{tblstr{"offQualities"}, tblint{aeffect->offQualities}}});
+		table.rows.push_back({{tblstr{"realQualities"}, tblint{aeffect->realQualities}}});
+		int n = 0;
+		for (auto& in : vst->inputNames) {
+			table.rows.push_back({{tblString{StringFormat("input[%d]", n)}, tblstr{StringAsCStr(in)}}});
+			n++;
+		}
+		n = 0;
+		for (auto& out : vst->outputNames) {
+			table.rows.push_back({{tblString{StringFormat("output[%d]", n)}, tblstr{StringAsCStr(out)}}});
+			n++;
+		}
+
 	}
 	Table::AdjustColSizes(table, getSizeContent()-ivec2(INSET_TABLE<<1));
 	size.y = table.rows.size()*table.rowHeight;

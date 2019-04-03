@@ -639,10 +639,10 @@ void mulGain(AudioBlock* block, float gain) {
 	}
 }
 
-void vsthost::processAudio(audio_stage_t* channel, AudioBlock* input, AudioBlock* output, unsigned long samples) {
+void vsthost::processAudio(audio_stage_t* stage, AudioBlock* input, AudioBlock* output, unsigned long samples) {
 	int count = 0;
-	if (channel->effects.size()) {
-		count += channel->effects.size();
+	if (stage->effects.size()) {
+		count += stage->effects.size();
 	}
 
 	int64_t microSecsPerBlock = (int64_t)this->lBlockSize * 1000000L / (int64_t)this->lSampleRate;
@@ -650,7 +650,7 @@ void vsthost::processAudio(audio_stage_t* channel, AudioBlock* input, AudioBlock
 	for (int i = 0; i < count; ++i)
 	{
 		effectbase *current = NULL;
-		current = channel->effects[i];
+		current = stage->effects[i];
 		if (!current->bIsSetup) {
 			my_printf("Skipping effect %d: bIsSetup == false\n", current->slot);
 			continue;
@@ -672,18 +672,15 @@ void vsthost::processAudio(audio_stage_t* channel, AudioBlock* input, AudioBlock
 			}
 			blockPostProcess = blockZero;
 		} else {
+			//blockIn/blockOut will always have 2 channels at least
 			AudioBlock* blockIn = current->blockInputs;
 			AudioBlock* blockOut = current->blockOutputs;
 			blockIn->realloc(lBlockSize);
 			blockOut->realloc(lBlockSize);
-			//TODO: maybe fill silence here, we never know how plugins can screw up
-			//TODO: blockIn/blockOut will always have 2 channels at least
-			//   If a plugin runs mono inputs or outputs we need to handle this manually here
+			//TODO: respect pin configuration and mono plugins
 			blockIn->copyFrom(input);
 
-	//		handles_t* handle = current->handle;
 			current->process(blockIn, blockOut, samples);
-			//TODO: maybe sanitize plugins output floats here (NaN/Inf/ >50 dBFS)
 			input = blockOut;
 			blockPostProcess = blockOut;
 		}
@@ -694,7 +691,7 @@ void vsthost::processAudio(audio_stage_t* channel, AudioBlock* input, AudioBlock
 	//   If a plugin runs mono inputs or outputs we need to handle this manually here
 	output->copyFrom(input);
 
-	float gain = dsp_util::clampReadGain(channel->mixer.getGain());
+	float gain = dsp_util::clampReadGain(stage->mixer.getGain());
 	mulGain(output, gain);
 
 }

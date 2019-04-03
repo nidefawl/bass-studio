@@ -94,16 +94,6 @@ void guiknob::handleDraggedBegin(MouseEvent& evt) {
 		}
 		changedValue = false;
 	}
-bool guiknob::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
-	if (contains(mpos)) {
-		if (evt.type == MouseHitType::MOUSE_LEFT) {
-			my_printf("click knob %s\n", StringAsCStr(label));
-		}
-		evt.requestFocus(this);
-		return true;
-	}
-	return false;
-}
 bool guiknob::handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
 	float value = getValue();
 	float scale = isCtrl(evt.kbmods) ? 200.0f : 20.0f;
@@ -112,13 +102,7 @@ bool guiknob::handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset)
 	return true;
 }
 void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS) {
-	if (renderBackground) {
-		renderWidgetBorder(vg);
-//			nvgBeginPath(vg);
-//			nvgRect(vg, insetP.x, insetP.y, insetS.x, insetS.y);
-//			nvgFillColor(vg, GUI_COLORRGB(200, 50, 200, 180));
-//			nvgFill(vg);
-	}
+	renderWidgetBorder(vg, getStateFlags());
 
 	NVGcolor c2 = theme->getColor(GuiColor::COL_BG_BRT);
 	if (hovered())

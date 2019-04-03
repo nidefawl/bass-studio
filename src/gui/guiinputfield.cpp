@@ -29,10 +29,8 @@ void gui_numberinput_field::layout() {
 }
 
 void gui_numberinput_field::render(NVGcontext* vg) {
-	int32_t flags = getStateFlags();
-	if (drawBackground || (flags & (FLG_FOC | FLG_HVRD | FLG_DRG | FLG_ACT))) {
-		renderWidgetBorder(vg, flags);
-	}
+	int32_t fl = getStateFlags();
+	renderWidgetBorder(vg, fl);
 	if (isEditing) {
 		this->field.render(vg);
 		return;

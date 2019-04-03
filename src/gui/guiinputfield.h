@@ -17,7 +17,6 @@
 
 class gui_numberinput_field: public guibuttonbase {
 	int32_t* number;
-	bool drawBackground = true;
 	gui_textfield field;
 	bool isEditing = false;
 public:
@@ -28,9 +27,6 @@ public:
 	virtual void setControl(BaseCtrl* parentCtrl) override {
 		guibase::setControl(parentCtrl);
 		field.setControl(parentCtrl);
-	}
-	void setDrawBackground(bool state) {
-		drawBackground = state;
 	}
 	void setRef(int32_t* number) {
 		this->number = number;
@@ -58,7 +54,6 @@ uint32_t nvgToRGB(NVGcolor c);
 
 class gui_input_filtered: public guibuttonbase {
 	int32_t* number;
-	bool drawBackground = true;
 	gui_textfield field;
 	input_filter_hex32 filter;
 	bool isAlignCenter = false;
@@ -70,9 +65,6 @@ public:
 	virtual void setControl(BaseCtrl* parentCtrl) override {
 		guibase::setControl(parentCtrl);
 		field.setControl(parentCtrl);
-	}
-	void setDrawBackground(bool state) {
-		drawBackground = state;
 	}
 	void setRef(int32_t* number) {
 		this->number = number;

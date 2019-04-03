@@ -45,4 +45,5 @@ void gui_scrollbar::render(NVGcontext* vg) {
 
 gui_scrollbar::gui_scrollbar(int _dir, float _offset, gui_scrollcontainer& _ctr) :
 		guibase(), dir(_dir), ctr(_ctr), scrollOffset(_offset) {
+	setCanMouseHit(true);
 }

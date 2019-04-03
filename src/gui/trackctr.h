@@ -480,17 +480,6 @@ public:
 	void updateVisibleTrackContents() {
 		trackView.updateVisibleTrackContents();
 	}
-	bool mouseHitTest(ivec2 v, MouseHitEvt& evt) override {
-		if (this->contains(v)) {
-			ivec2 localMouse = this->toContainerSpace(v);
-			for (guibase* gui : guis) {
-				if (gui->mouseHitTest(localMouse, evt)) {
-					return true;
-				}
-			}
-		}
-		return false;
-	}
 
 	void onChildLayoutChanged(guibase* g) {
 		layout();

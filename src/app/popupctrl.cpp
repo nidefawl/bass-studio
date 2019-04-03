@@ -111,7 +111,6 @@ bool PopupCtrl::init(window_overlay* _window, NVGcontext* nanovg)
 	this->window = _window;
 	this->vg = nanovg;
 	popupCtrs = new guictr_scrollbar();
-	popupCtrs->setBackgroundRendered(true);
 	this->containers.push_back(popupCtrs);
 	for (guictr_base *ctr : containers) {
 		ctr->setControl(this);

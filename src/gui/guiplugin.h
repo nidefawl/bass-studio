@@ -52,7 +52,6 @@ public:
 	void dragReleaseOn(guibase* target, ivec2 mousepos) override;
 	void setTitle(String _text) {
 		text = _text;
-		my_printf("SET TITLE %s\n", StringAsCStr(text));
 	}
 	void setState(bool state) {
 	}

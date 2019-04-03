@@ -1,15 +1,15 @@
 #include <nanovg.h>
 #include "math/seq_math.h"
-#include "basectrl.h"
-#include "gui.h"
 #include "guiglobals.h"
 #include "guicolors.h"
+#include "guiconstant.h"
+#include "gui.h"
+#include "guicontainer.h"
+#include "basectrl.h"
 #include "color_util.h"
 #include "exceptions.h"
 #include "mouse.h"
 #include "event.h"
-#include "gui.h"
-#include "guicontainer.h"
 #include "button.h"
 
 namespace GuiColor {
@@ -158,6 +158,32 @@ bool guictr_base::setScissorTransformContainer(NVGcontext* vg) {
 	return true;
 }
 
+bool guictr_base::setScissorTransform(NVGcontext* vg) {
+	ivec2 posInset = getPosContent();
+	ivec2 sizeInset = getSizeContent();
+	if (sizeInset.y <= 0 || sizeInset.x <= 0) {
+		return false;
+	}
+	int expand = 1;
+	nvgIntersectScissor(vg, posInset.x-expand, posInset.y-expand, sizeInset.x+expand*2, sizeInset.y+expand*2);
+	nvgTranslate(vg, posInset.x, posInset.y);
+	return true;
+}
+void guictr_base::scissorClip(ivec2& vpos, ivec2& vsize) {
+	ivec2 posTL = toParentSpace(vpos);
+	ivec2 posBR = toParentSpace(vpos + vsize);
+	ivec2 posCnt = getPosContent();
+	ivec2 sizeCnt = getSizeContent();
+	ivec2 posBRThis = posCnt+sizeCnt;
+	vpos.x = math::max(posTL.x, posCnt.x);
+	vpos.y = math::max(posTL.y, posCnt.y);
+	vsize.x = math::min(posBR.x, posBRThis.x) - vpos.x;
+	vsize.y = math::min(posBR.y, posBRThis.y) - vpos.y;
+	if (parent != NULL) {
+		parent->scissorClip(vpos, vsize);
+	}
+	vpos = toContainerSpace(vpos);
+}
 struct guictr_tabbed::tabbed_entry
 {
 	guibutton tabButton;

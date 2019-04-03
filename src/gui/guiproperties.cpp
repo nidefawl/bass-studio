@@ -395,7 +395,7 @@ void guiproperties_table<guiproperties_t>::layout()  {
 	table.titleCols.clear();
 	table.colSizes.clear();
 	guibase* ref = safeRefGet(ptr->safeRef);
-	if (ref)
+	if (ref && ref->parentCtrl)
 	{
 		ref->addProperties(&table);
 	}

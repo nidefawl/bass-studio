@@ -107,6 +107,15 @@ public:
 		else
 			flags |= FLG_RENDER_BACKGROUND_INSET;
 	}
+	virtual bool canMouseHit() const {
+		return (flags & FLG_CANFOCUS) != 0;
+	}
+	void setCanMouseHit(bool b) {
+		if (!b)
+			flags &= ~FLG_CANFOCUS;
+		else
+			flags |= FLG_CANFOCUS;
+	}
 	virtual bool isEnabled() const {
 		return (flags & FLG_ENBL) != 0;
 	}
@@ -179,6 +188,10 @@ public:
 		}
 	}
 	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
+		if (canMouseHit() && contains(mpos)) {
+			evt.requestFocus(this);
+			return true;
+		}
 		return false;
 	}
 	guibase* getTopParent() {
@@ -315,7 +328,7 @@ public:
 		}
 		return NULL;
 	}
-	void renderWidgetBorder(NVGcontext* vg, int32_t flags = FLG_ENBL) const;
+	void renderWidgetBorder(NVGcontext* vg, int32_t flags) const;
 	void renderWidgetBorderPosSize(NVGcontext* vg, int32_t flags, ivec2 pos, ivec2 size) const;
 	virtual ivec2 toScreenSpace(ivec2 in) {
 		in += this->pos;

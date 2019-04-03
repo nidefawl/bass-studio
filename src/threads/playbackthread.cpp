@@ -248,7 +248,7 @@ private:
 	            timer.reset();
 			}
 
-	    	logEveryMsec(1, 5000, "audio thread loop");
+//	    	logEveryMsec(1, 5000, "audio thread loop");
         }
 	}
 };

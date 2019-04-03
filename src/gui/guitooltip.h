@@ -26,9 +26,10 @@ protected:
 public:
 	guitooltip(T* _ptr) : guictxtmenu(), ptr(_ptr) {
 		add(&textField);
+		setBackgroundRendered(true);
+		setBackgroundRenderedInset(false);
+//		setSnapSides(ivec4(1));
 		textField.setVisible(false);
-		padding = 0;
-		margin = 0;
 		scrollbarOutside=true;
 		maxHeight = 220;
 	}
@@ -66,7 +67,10 @@ public:
 	}
 	void layout();
 	void render(NVGcontext* vg) {
-		if (!setScissorTransformContainer(vg)) {
+		if (isBackgroundRendered()) {
+			renderBackground(vg);
+		}
+		if (!setScissorTransform(vg)) {
 			return;
 		}
 		setFont(vg, FONT_SIZE_TOOLTIP_TITLE, G_WHITE, NVG_ALIGN_LEFT|NVG_ALIGN_BOTTOM);

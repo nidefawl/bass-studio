@@ -14,8 +14,10 @@ protected:
 	std::vector<ctxtmenu_entry*> entries;
 public:
 	guictxtmenu() : guictxtmenu_base() {
+		setCanMouseHit(true);
 		setBackgroundRendered(true);
 		setBackgroundRenderedInset(false);
+		setSnapSides(ivec4(1));
 	}
 	virtual ~guictxtmenu() {
 		for (ctxtmenu_entry* e : entries) {
@@ -26,13 +28,6 @@ public:
 		size.x = math::max(size.x, entry->width);
 		entries.push_back(entry);
 		entry->theme = theme;
-	}
-	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-		if (contains(mpos)) {
-			evt.requestFocus(this);
-			return true;
-		}
-		return false;
 	}
 	virtual void clicked(int _id) {
 		closeContextMenu();

@@ -179,9 +179,9 @@ void vstplugin::load(vsthost* host) {
 	}
 	for (int32_t i = 0; i < aeffect->numOutputs; i++) {
 		if (this->dispatch(effGetOutputProperties, i, 0, &pin)) {
-			inputNames.push_back(pin.label);
+			outputNames.push_back(pin.label);
 		} else {
-			inputNames.push_back(StringFormat("Output %d", i));
+			outputNames.push_back(StringFormat("Output %d", i));
 		}
 	}
 

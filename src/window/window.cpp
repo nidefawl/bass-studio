@@ -1551,7 +1551,7 @@ int startApplication(int argc, char* argv[]) {
 	    MSG msg;
 	    while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE))
 	    {
-	    	logEveryMsec(0, 5000, "Main msg loop");
+//	    	logEveryMsec(0, 5000, "Main msg loop");
 	        if (msg.message == WM_QUIT)
 	        {
 	        	glfwSetWindowShouldClose(glfwHandle, 1);

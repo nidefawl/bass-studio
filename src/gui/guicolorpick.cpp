@@ -21,6 +21,7 @@ gui_color_pick::gui_color_pick() :
 		guictr_base(), knH(false), knS(false), knL(false), knA(false), hexInput(&colorInt32) {
 	padding = 0;
 	margin = 0;
+	setCanMouseHit(true);
 	add(&knH);
 	add(&knS);
 	add(&knL);
@@ -54,7 +55,7 @@ void gui_color_pick::init() {
 		auto* knob = knobs[i];
 		knob->setIsSlider(true);
 		knob->setLabel(knoblabels[i]);
-		knob->setRenderBackground(true);
+		knob->setBackgroundRendered(true);
 		knob->fnValueEditChanged = setEditColor;
 		knob->fnValueEditFinish = setEditColor;
 		knob->fnGetDisplayValue = getDisplayValue;
@@ -100,22 +101,6 @@ void gui_color_pick::render(NVGcontext* vg) {
 	for (auto* g : guis)
 		g->render(vg);
 }
-
-
-bool gui_color_pick::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
-	if (this->contains(mpos)) {
-		ivec2 localMouse = this->toContainerSpace(mpos);
-		for (guibase* gui : guis) {
-			if (gui->mouseHitTest(localMouse, evt)) {
-				return true;
-			}
-		}
-		evt.requestFocus(this);
-		return true;
-	}
-	return false;
-}
-
 
 void gui_color_pick::buttonClicked(guibase* button) {
 	if (button == &hexInput) {
@@ -219,10 +204,8 @@ void gui_input_filtered::layout() {
 }
 
 void gui_input_filtered::render(NVGcontext* vg) {
-	int32_t flags = getStateFlags();
-	if (drawBackground || (flags & (FLG_FOC | FLG_HVRD | FLG_DRG | FLG_ACT))) {
-		renderWidgetBorder(vg, flags);
-	}
+	int32_t fl = getStateFlags();
+	renderWidgetBorder(vg, fl);
 	//		setFont(vg, G_FONT_SCALE(size.y), G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
 	//		String str2 = StringFormat("mValue '%s'", StringAsCStr(field.mValue));
 	//		String str3 = StringFormat("mValueTemp '%s'", StringAsCStr(field.mValueTemp));

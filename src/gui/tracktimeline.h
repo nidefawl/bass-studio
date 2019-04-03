@@ -14,21 +14,9 @@ public:
 		: guictr_base(),
 		grid(_grid)
 	{
+		setCanMouseHit(true);
 		grid.addCallback(this);
 		padding = 0;
-	}
-	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-		if (this->contains(mpos)) {
-			ivec2 localMouse = this->toContainerSpace(mpos);
-			for (guibase* gui : guis) {
-				if (gui->mouseHitTest(localMouse, evt)) {
-					return true;
-				}
-			}
-			evt.requestFocus(this);
-			return true;
-		}
-		return false;
 	}
 
 	void handleDraggedBegin(MouseEvent& evt);
