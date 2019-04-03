@@ -32,14 +32,8 @@ const char* plug_features_array[] = {
 	PlugCanDos::canDoMidiProgramNames,
 	PlugCanDos::canDoBypass,
 };
-long vstplugin::dispatch(
-	long opcode,
-	long index,
-	long value,
-	void *ptr,
-	float opt) {
-	return handle->aeffect->dispatcher(handle->aeffect, opcode, index, value, ptr, opt);
-}
+float vst_getParameter(vstplugin* plugin, AEffect* aeffect, int32_t idx);
+void vst_setParameter(vstplugin* plugin, AEffect* aeffect, int32_t idx, float value);
 
 bool vstplugin::onResize(vst_window* window, ivec2 size) {
 	return true;
@@ -253,6 +247,7 @@ void vstplugin::load(vsthost* host) {
 			param.flags = 0;
 			fallbackCat.numParametersInCategory++;
 		}
+		//TODO: wrap getParameter call in exception handler
 		param.value = handle->aeffect->getParameter(handle->aeffect, param.internalIdx);
 		params.push_back(param);
 		paramIdx++;
@@ -369,14 +364,14 @@ guiplugin* vstplugin::getGui() {
 int32_t vstplugin::getDelay() {
 	return handle->aeffect->initialDelay;
 }
-void vstplugin::process(AudioBlock* in, AudioBlock* out, int32_t samples) {
-	if (handle->aeffect != NULL) {
-		if (handle->aeffect->flags & effFlagsCanReplacing) {
-			handle->aeffect->processReplacing(handle->aeffect, in->buf, out->buf, samples);
-		} else {
-			handle->aeffect->process(handle->aeffect, in->buf, out->buf, samples);
-		}
+extern "C" int exc(_In_ EXCEPTION_POINTERS *lpEP);
+int exc(_In_ EXCEPTION_POINTERS *lpEP)
+{
+	my_printf("Exception code: %u  Flags: %u\n", lpEP->ExceptionRecord->ExceptionCode, lpEP->ExceptionRecord->ExceptionFlags);
+	if (lpEP->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION) {
+	    return EXCEPTION_EXECUTE_HANDLER;
 	}
+    return EXCEPTION_CONTINUE_SEARCH;
 }
 vst_param_category* vstplugin::getCategory(int idx) {
 	if (idx >= 0 && idx < (int)paramsCategories.size()) {
@@ -391,7 +386,7 @@ float vstplugin::getParamValue(int32_t idx) {
 	if (idx >= 0 && idx < (int32_t)params.size()) {
 		auto& param = params[idx];
 		if (param.internalIdx >= 0) {
-			param.value = handle->aeffect->getParameter(handle->aeffect, param.internalIdx);
+			param.value = vst_getParameter(this, handle->aeffect, param.internalIdx);
 		}
 		return param.value;
 	}
@@ -402,7 +397,7 @@ void vstplugin::setParamValue(int32_t idx, float val, int flags) {
 		auto& param = params[idx];
 		param.value = val;
 		if (param.internalIdx >= 0) {
-			handle->aeffect->setParameter(handle->aeffect, param.internalIdx, val);
+			vst_setParameter(this, handle->aeffect, param.internalIdx, val);
 		} else if (param.idx == PARAM_ENABLE) {
 			bool wasEnable = this->bIsEnabled;
 			this->bIsEnabled = val > 0;
@@ -431,7 +426,7 @@ void vstplugin::recvPluginEditParamUpdate(int32_t idx) {
 	if (idx >= 0 && idx < (int32_t)params.size()) {
 		auto& param = params[idx];
 		if (param.internalIdx >= 0) {
-			param.value = handle->aeffect->getParameter(handle->aeffect, param.internalIdx);
+			param.value = vst_getParameter(this, handle->aeffect, param.internalIdx);
 		}
 	}
 }

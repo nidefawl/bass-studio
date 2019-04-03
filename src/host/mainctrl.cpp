@@ -8,6 +8,7 @@
 
 #include "mainctrl.h"
 #include "math/seq_math.h"
+#include "error.h"
 #include "basectrl.h"
 #include "window.h"
 #include "platform.h"
@@ -1212,8 +1213,7 @@ GLFWwindow* getTopLevelGlfwWindow() {
 	return getGlfwFromWindowBase(wbase);
 }
 
-void handleFatalError(String s) {
-	my_printf("Fatal: %s\n", StringAsCStr(s));
+int handleFatalError(int type, int implSpecType) {
 	seqthreads::thread_base* thread = MainCtrl::getPlayThread();
 	if (seqthreads::currentThreadsId() == thread->getThreadId()) {
 		host_processing_stats_t processing;
@@ -1222,9 +1222,9 @@ void handleFatalError(String s) {
 		if (processing.pluginId) {
 			effectbase* eff = host->getPluginById(processing.pluginId);
 			if (eff) {
-				//TODO: print track/context whatever
 				my_printf("Crash was most likely caused by %s\n", StringAsCStr(eff->getName()));
 			}
 		}
 	}
+	return 0;
 }

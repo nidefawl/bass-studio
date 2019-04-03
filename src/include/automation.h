@@ -111,6 +111,7 @@ struct automatable_t {
 	virtual ~automatable_t() {};
 	virtual String getAutomatableName() = 0;
 	virtual float getParamValue(int32_t idx) = 0;
+	//TODO: describe and define flags
 	virtual void setParamValue(int32_t idx, float val, int flags) = 0;
 	virtual automationlane_snapshot_t toRef() = 0;
 
