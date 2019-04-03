@@ -41,14 +41,13 @@ struct AudioBlock {
 	}
 	void copyFrom(float **srcBuf, uint32_t srcSamples, uint32_t srcChannels) {
 		assert(srcSamples == samples);
-		uint32_t nChannels = math::max(srcChannels, channels);
+		uint32_t nChannels = math::min(srcChannels, channels);
 		uint32_t nSamples = math::min(srcSamples, samples);
 		for (uint32_t i = 0; i < nChannels; i++) {
 			uint32_t srcChannelIdx = math::min(srcChannels-1, i);
 			uint32_t dstChannelIdx = math::min(channels-1, i);
 			float* srcBufChannel = srcBuf[srcChannelIdx];
 			float* dstBufChannel = buf[dstChannelIdx];
-			//TODO: this does 2 copys to the same destination when going from stereo to mono (MIX FIRST)
 			memcpy(dstBufChannel, srcBufChannel, nSamples * sizeof(float));
 		}
 	}
