@@ -2,6 +2,7 @@
 
 
 Bugs:
+clip loop gets notes stuck
 ctxt menus might leak, not getting deleted as intended
 status bar does not show text
 clipsettings labels overlap input fields
