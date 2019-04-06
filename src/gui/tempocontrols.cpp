@@ -8,10 +8,13 @@
 
 #include "gui.h"
 #include "guicontainer.h"
+#include "guicolors.h"
+#include "theme.h"
 #include "button.h"
 #include "renderresources.h"
 #include "knob.h"
 #include "host/vst_host.h"
+#include "basectrl.h"
 #include "host/mainctrl.h"
 
 

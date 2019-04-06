@@ -6,6 +6,7 @@
 
 
 
+#include "math/seq_math.h"
 #include "str_util.h"
 #include "saferef.h"
 #include "seq_util.h"
