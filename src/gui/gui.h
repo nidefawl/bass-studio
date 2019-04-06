@@ -54,14 +54,19 @@ enum TextInputState : signed int {
 
 #define FLAG_FOCUSED 1
 #define FLAG_SELECTED 2
-
+namespace DebugAlloc {
+template<typename T>
+class Tracker;
+}
 class guibase {
+	friend class DebugAlloc::Tracker<guibase>;
 private:
 	int flags = FLG_ENBL|FLG_VISIBLE|FLG_RENDER_BACKGROUND;
+	int allocId;
 public:
 	ivec2 pos{0};
 	ivec2 size{0};
-	int id;
+	int id = 0;
 	int zOrder = 0;
 	BaseCtrl* parentCtrl = nullptr;
 	guibase* parent = nullptr;

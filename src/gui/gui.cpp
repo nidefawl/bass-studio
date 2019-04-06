@@ -10,6 +10,7 @@
 #include "saferef.h"
 #include "seq_util.h"
 #include "guicolors.h"
+#include "guiconstant.h"
 #include "debugproperties.h"
 #include "guicontextmenu_base.h"
 #include "renderresources.h"
@@ -399,7 +400,7 @@ void DebugAlloc::Tracker<guibase>::printLeaked() {
 	my_printf("allocCount %lld\n", allocCount);
 	for (auto it = allocList.begin(); it != allocList.end(); it++) {
 		guibase* ctrl = *it;
-		my_printf("leaked %lld %s \n", ctrl->id, StringAsCStr(ctrl->getClassName()));
+		my_printf("leaked %lld %s \n", ctrl->allocId, StringAsCStr(ctrl->getClassName()));
 	}
 	allocList.clear();
 	allocList.shrink_to_fit();
@@ -412,8 +413,8 @@ void printLeakedGuiBase() {
 	DebugAlloc::getTracker<guibase>()->printLeaked();
 }
 guibase::guibase()  {
-	id = DebugAlloc::getTracker<guibase>()->objConstructor(this);
-	if (id == 934) {
+	allocId = DebugAlloc::getTracker<guibase>()->objConstructor(this);
+	if (allocId == 934) {
 
 	}
 }
