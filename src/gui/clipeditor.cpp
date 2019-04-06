@@ -446,15 +446,17 @@ void gui_clipcontent::render(NVGcontext* vg) {
 				nvgStroke(vg);
 				if (m.desc[0]) {
 					String cstr = m.desc;
-					float bounds[4];
 					setFont(vg, G_FONT_SCALE(24), G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-					float w = nvgTextBounds(vg, 0, 0, cstr.c_str(), nullptr, bounds);
+					float bounds[4];
+					float textX = nx + INSET_TRACK_CONTENT;
+					float textY = 24/2.0 + INSET_TRACK_CONTENT;
+					float w = nvgTextBounds(vg, textX, textY, cstr.c_str(), nullptr, bounds);
 					nvgBeginPath(vg);
-					nvgRect(vg, nx + INSET_TRACK_CONTENT, INSET_TRACK_CONTENT, bounds[2]+INSET_TRACK_CONTENT*2, bounds[3]+INSET_TRACK_CONTENT*2);
-					nvgFillColor(vg, rgbaToNvg(0xFF333333));
+					nvgRect(vg, bounds[0], bounds[1], bounds[2]-bounds[0], bounds[3]-bounds[1]);
+					nvgFillColor(vg, rgbaToNvg(0xFF121212));
 					nvgFill(vg);
 					nvgFillColor(vg, G_WHITE);
-					nvgText(vg, nx + INSET_TRACK_CONTENT*2, INSET_TRACK_CONTENT*2+24/2.0, cstr.c_str(), nullptr);
+					nvgText(vg, textX, textY, cstr.c_str(), nullptr);
 				}
 			}
 		}
