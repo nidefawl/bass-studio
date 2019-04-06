@@ -105,7 +105,7 @@ public:
 		return &themes;
 	}
 	virtual void prerender(int32_t x, int32_t y, int32_t w, int32_t h, float ratio);
-	virtual void render(int32_t x, int32_t y, int32_t w, int32_t h, float ratio);
+	void render(int32_t x, int32_t y, int32_t w, int32_t h, float ratio);
 	virtual bool processGlobalKeyevent(KeyEvent& event) {
 		return false;
 	}

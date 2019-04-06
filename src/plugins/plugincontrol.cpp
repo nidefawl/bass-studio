@@ -139,9 +139,6 @@ void PluginControl::onTick()
 	}
 	mainWindow->requestRedraw();
 }
-void PluginControl::render(int32_t x, int32_t y, int32_t w, int32_t h, float ratio) {
-	BaseCtrl::render(x, y, w, h, ratio);
-}
 
 class AudioEffect;
 void PluginControl::onGuiOpen(AudioEffect* eff) {
