@@ -7,7 +7,7 @@ void enableGlDebugCallback();
 bool checkGLError(const char* s);
 int getStatus(int obj, int type);
 String getLog(int logtype, int obj);
-int compileShader(int type, String& src);
+int compileShader(int type, const String& src);
 bool isGLContextPresent();
 inline void gldPerspective(double* mat4x4, double fovy, double aspect, double zNear, double zFar)
 {

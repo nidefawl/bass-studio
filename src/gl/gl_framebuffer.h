@@ -380,7 +380,6 @@ public:
             }
             glDeleteTextures(colorTextures.size(), colorTextures.data());
             if (GL_ERROR_CHECKS) checkGLError("FrameBuffers.glDeleteTextures");
-            printf("delete fb!\n");
             frambuffersRefCount--;
         }
     }

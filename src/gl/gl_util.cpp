@@ -108,7 +108,7 @@ String getLog(int logtype, int obj) {
 bool isGLContextPresent() {
 	return glfwIsContextPresent();
 }
-int compileShader(int type, String& src) {
+int compileShader(int type, const String& src) {
     int iShader = glCreateShader(type);
     checkGLError("glCreateShader");
     const GLchar* szSrc = (const GLchar*)StringAsCStr(src);
@@ -147,7 +147,6 @@ int compileShader(int type, String& src) {
     out.nIndices = indices.size();
 
 }
-
 void bindVertexAttributes(std::vector<VertexAttr>& attrs, int fixedStride) {
 	int32_t vertStrideBytes = fixedStride;
 	if (!vertStrideBytes) {
@@ -174,6 +173,29 @@ void bindVertexAttributes(std::vector<VertexAttr>& attrs, int fixedStride) {
 			checkGLError("glVertexAttribPointer");
 		}
 		offset += attr.elements * sizeof(float);
+	}
+}
+void DrawVBO::genBuffers() {
+	assert(!vboVertId);
+	assert(!vboIdxId);
+	GLuint buffers[2];
+	glGenBuffers(2, buffers);
+	vboVertId = buffers[0];
+	vboIdxId = buffers[1];
+}
+DrawVBO::~DrawVBO() {
+	if (isGLContextPresent()) {
+		if (vaoId) {
+			glDeleteVertexArrays(1, &vaoId);
+		}
+		if (vboIdxId && vboVertId) {
+			const GLuint buffers[] = { vboIdxId, vboVertId };
+			glDeleteBuffers(2, buffers);
+		} else if (vboVertId) {
+			glDeleteBuffers(1, &vboVertId);
+		} else if (vboIdxId) {
+			glDeleteBuffers(1, &vboIdxId);
+		}
 	}
 }
 int FrameBuffer::frambuffersRefCount = 0;
