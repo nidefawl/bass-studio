@@ -364,15 +364,6 @@ guiplugin* vstplugin::getGui() {
 int32_t vstplugin::getDelay() {
 	return handle->aeffect->initialDelay;
 }
-extern "C" int exc(_In_ EXCEPTION_POINTERS *lpEP);
-int exc(_In_ EXCEPTION_POINTERS *lpEP)
-{
-	my_printf("Exception code: %u  Flags: %u\n", lpEP->ExceptionRecord->ExceptionCode, lpEP->ExceptionRecord->ExceptionFlags);
-	if (lpEP->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION) {
-	    return EXCEPTION_EXECUTE_HANDLER;
-	}
-    return EXCEPTION_CONTINUE_SEARCH;
-}
 vst_param_category* vstplugin::getCategory(int idx) {
 	if (idx >= 0 && idx < (int)paramsCategories.size()) {
 		return &paramsCategories[idx];
