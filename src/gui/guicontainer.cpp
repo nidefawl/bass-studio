@@ -187,9 +187,9 @@ void guictr_base::scissorClip(ivec2& vpos, ivec2& vsize) {
 struct guictr_tabbed::tabbed_entry
 {
 	guibutton tabButton;
-	guictr_base* tabCtr;
+	guibase* tabCtr;
 	bool active = false;
-	tabbed_entry(guictr_base* _ctr, String title) : tabButton(), tabCtr(_ctr) {
+	tabbed_entry(guibase* _ctr, String title) : tabButton(), tabCtr(_ctr) {
 		tabButton.setText(title);
 		tabButton.setEnabledRef(&active);
 	}
@@ -232,7 +232,7 @@ guictr_tabbed::~guictr_tabbed() {
 	assert(guis.size() <= 1);
 	removeGuis();
 }
-void guictr_tabbed::addEntry(guictr_base* ctr, String title) {
+void guictr_tabbed::addEntry(guibase* ctr, String title) {
 	guictr_tabbed::tabbed_entry* entry = new guictr_tabbed::tabbed_entry{ctr, title};
 	guictr_base::add(&entry->tabButton);
 	this->entries.push_back(entry);

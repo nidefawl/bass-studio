@@ -51,6 +51,7 @@
 #include "../gui/guimenu.h"
 #include "../gui/debugctr.h"
 #include "../gui/drawwaveform.h"
+#include "../gui/guishaderview.h"
 
 #include "vst_host.h"
 #include "plugin/base_plugin.h"
@@ -122,19 +123,23 @@ void testTask() {
 }
 guictr_base* makeCtrProperties(); //guiproperties.cpp
 guictr_base* makeCtrTheme(); //guiproperties.cpp
+
 class guictr_side_tabs_daw_1 : public guictr_tabbed {
 public:
 	gui_ctr_debug ctr_dbg;
 	guictr_base* const ctr_properties;
 	guictr_base* const ctr_theme;
+	gui_shaderview shaderView;
 	guictr_side_tabs_daw_1() : guictr_tabbed(), ctr_properties(makeCtrProperties()), ctr_theme(makeCtrTheme()) {
 		setBackgroundRendered(false);
 		ctr_dbg.setLabel("Debug 1");
 		ctr_properties->setLabel("Properties");
 		ctr_theme->setLabel("Theme");
+		shaderView.setLabel("Shader");
 		addEntry(&ctr_dbg, ctr_dbg.label);
 		addEntry(ctr_properties, ctr_properties->label);
 		addEntry(ctr_theme, ctr_theme->label);
+		addEntry(&shaderView, shaderView.label);
 		setActiveEntry(0);
 	}
 	virtual ~guictr_side_tabs_daw_1() {
@@ -594,6 +599,9 @@ void MainCtrl::onTick()
 	for (guictr_base *ctr : containers) {
 		ctr->onIdle();
 	}
+//	if (rand.rng_rand(100000) == 0) {
+//		throw std::bad_alloc();
+//	}
 //	my_printf("onTick %d\n", std::this_thread::get_id());
 //	waveformrender::getInstance()->renderUpdates(vg, 0);
 //	if (isPlaying()) {
@@ -964,6 +972,10 @@ bool MainCtrl::processGlobalKeyevent(KeyEvent& event) {
 			STLVectorDebugTracking::dbgPrintVectorAllocs();
 			return true;
 #endif
+		}
+		if (event.keyCode == KEY_S) {
+			logStackTrace();
+			return true;
 		}
 		if (event.keyCode == KEY_SPACE) {
 			if (isPlaying()) {

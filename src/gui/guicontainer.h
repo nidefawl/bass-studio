@@ -91,6 +91,15 @@ public:
 		}
 		return in;
 	}
+	guibase* getByID(int id) {
+		auto it = std::find_if(guis.begin(), guis.end(), [id](auto g) {
+			return g->id == id;
+		});
+		if (it == guis.end()) {
+			return nullptr;
+		}
+		return *it;
+	}
 	virtual void add(guibase* gui) {
 		auto it = std::find(guis.begin(), guis.end(), gui);
 		if (it != guis.end()) {
@@ -212,7 +221,7 @@ public:
 	}
 	int32_t getNumEntries();
 	void setActiveEntry(int32_t idx);
-	void addEntry(guictr_base* ctr, String title);
+	void addEntry(guibase* ctr, String title);
 	virtual void buttonClicked(guibase* button) override;
 	virtual ~guictr_tabbed();
 	void layout() override;
