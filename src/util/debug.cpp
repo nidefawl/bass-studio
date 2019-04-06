@@ -8,8 +8,14 @@ using namespace __cxxabiv1;
 
 String demangleName(String to_demangle) {
 	int status = 0;
-	char * buff = __cxxabiv1::__cxa_demangle(to_demangle.c_str(), NULL, NULL, &status);
-	String demangled = buff;
+    size_t buff_size = 128;
+    auto buff = reinterpret_cast<char*>(std::malloc(buff_size));
+	char * buff2 = __cxxabiv1::__cxa_demangle(to_demangle.c_str(), buff, &buff_size, &status);
+	String demangled;
+	if (buff2) {
+		buff = buff2;
+		demangled = buff2;
+	}
 	std::free(buff);
 	return demangled;
 }
@@ -75,6 +81,8 @@ public:
 		}
 	}
 	void logStr(String s) override {
+		if (s.back() != '\n')
+			s += '\n';
 		const char* str = StringAsCStr(s);
 		log(str, s.length());
 	}
@@ -133,10 +141,10 @@ void sanitizeFilename(char* buf, const char* filename) {
 	}
 	buf[i] = '\0';
 }
-void _my_printf(const char *file, int line, const char *func, const char *fmt, ...) {
+void global_log_format_impl(const char *file, int line, const char *func, const char *fmt, ...) {
 	char szLogStr[MAX_LEN_MY_PRINTF]{ 0 };
 	char szFileShort[MAX_LEN_FILENAME]{ 0 };
-	char szLogStatement[MAX_LEN_MY_PRINTF]{ 0 };
+	char szLogBuf[MAX_LEN_MY_PRINTF]{ 0 };
 	va_list args;
 	va_start(args, fmt);
 	int ret = vsnprintf(szLogStr, MAX_LEN_MY_PRINTF - 1, fmt, args);
@@ -145,13 +153,20 @@ void _my_printf(const char *file, int line, const char *func, const char *fmt, .
 		assert(0);
 		return;
 	}
-	sanitizeFilename(szFileShort, relFileName(file));
-	String threadName = getCurrentThreadName();
-	const char* szThreadName = StringAsCStr(threadName);
-//	printf("%s:%d %s: %s", szFileShort, line, func, szLogStr);
-	ret = sprintf_s(szLogStatement, MAX_LEN_MY_PRINTF - 1, "%s:%s:%d %s: %s", szThreadName, szFileShort, line, func, szLogStr);
-	if (ret > 0) {
-		assert(ret+1 <= MAX_LEN_MY_PRINTF);
+	const char* szLogStatement = nullptr;
+	if (file && line && func) {
+		sanitizeFilename(szFileShort, relFileName(file));
+		String threadName = getCurrentThreadName();
+		const char* szThreadName = StringAsCStr(threadName);
+		ret = sprintf_s(szLogBuf, MAX_LEN_MY_PRINTF - 1, "%s:%s:%d %s: %s", szThreadName, szFileShort, line, func, szLogStr);
+		if (ret > 0) {
+			assert(ret+1 <= MAX_LEN_MY_PRINTF);
+			szLogStatement = szLogBuf;
+		}
+	} else {
+		szLogStatement = szLogStr;
+	}
+	if (szLogStatement) {
 		fprintf(stdout, szLogStatement);
 		getGlobalLoggerImpl().log(szLogStatement, ret);
 	}

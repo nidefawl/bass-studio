@@ -8,9 +8,11 @@ template <class T>
 String typeName(const T& t) {
     return demangleName(typeid(t).name());
 }
-void _my_printf(const char *file, int line, const char *func, const char *fmt, ...);
+void global_log_format_impl(const char *file, int line, const char *func, const char *fmt, ...);
 #define OBJ(x) typeid(x).name()
-#define my_printf(fmt, ...) _my_printf(__FILE__, __LINE__, __FUNCTION__, fmt, __VA_ARGS__)
+#define my_printf(fmt, ...) global_log_format_impl(__FILE__, __LINE__, __FUNCTION__, fmt, __VA_ARGS__)
+#define log_out(fmt, ...) global_log_format_impl(nullptr, 0, nullptr, fmt, __VA_ARGS__)
+#define log_printf my_printf
 void logEveryMsec(int32_t nId, int32_t delayMs, String str);
 #else
 #define my_printf(fmt, ...) 

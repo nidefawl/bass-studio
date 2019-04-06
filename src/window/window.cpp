@@ -60,6 +60,7 @@
 #include "threads.h"
 
 
+volatile bool fataError = false;
 void enableGlDebugCallback();
 
 class reentrantblocker {
@@ -93,13 +94,22 @@ public:
 	} catch (...) {													\
 		handleException();											\
 	}
+
 void handleStdException(std::exception& e) {
 	getGlobalLogger()->logStr(StringFormat("Exception: %s", e.what()));
-	std::terminate();
+	logStackTrace();
+	fataError = true;
+//	terminateCppExc();
+//	std::terminate();
+	//throw e;
 }
 void handleException() {
 	getGlobalLogger()->logStr("Unhandled program exception");
-	std::terminate();
+	logStackTrace();
+	fataError = true;
+//	terminateCppExc();
+//	std::terminate();
+	//throw;
 }
 
 namespace RenderResources {
@@ -239,6 +249,10 @@ private:
 		if (font == -1) {
 			throw appexception("Failed loading font");
 		}
+		glEnable(GL_BLEND);
+		glDisable(GL_CULL_FACE);
+		glDisable(GL_DEPTH_TEST);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	}
 public:
 	appwindow() :
@@ -585,16 +599,21 @@ public:
 		glfwGetWindowSize(glfw, &winwidth, &winheight);
 		glfwGetFramebufferSize(glfw, &fbwidth, &fbheight);
 		if (winwidth>0&&winheight>0&&fbwidth>0&&fbheight>0) {
+			if (!ctrl->isOk()) {
+				throw std::logic_error("invalid application state");
+			}
 			float pxratio = fbwidth / (float)winwidth;
+			glViewport(0, 0, fbwidth, fbheight);
+			glEnable(GL_BLEND);
+			glDisable(GL_CULL_FACE);
+			glDisable(GL_DEPTH_TEST);
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 			ctrl->prerender(0, 0, winwidth, winheight, pxratio);
 			glViewport(0, 0, fbwidth, fbheight);
 			static const vec4 clearc = int32vec4(0xff121212);
 			glClearColor(clearc[0], clearc[1], clearc[2], clearc[3]);
 			glStencilMask(~0);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-			if (!ctrl->isOk()) {
-				throw std::logic_error("invalid application state");
-			}
 			ctrl->render(0, 0, winwidth, winheight, pxratio);
 			glfwSwapBuffers(glfw);
 		}
@@ -1544,12 +1563,12 @@ int startApplication(int argc, char* argv[]) {
 	ctrl->postInit();
 	GLFWwindow* glfwHandle = mainWindow->getGLFW();
 	long start = getTimeMillis();
-	while (!glfwWindowShouldClose(glfwHandle)) {
+	while (!fataError && !glfwWindowShouldClose(glfwHandle)) {
 #ifdef _WIN32
 		DWORD timeout = 5;
 		MsgWaitForMultipleObjects(0, NULL, FALSE, timeout, QS_ALLEVENTS);
 	    MSG msg;
-	    while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE))
+	    while (!fataError && PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE))
 	    {
 //	    	logEveryMsec(0, 5000, "Main msg loop");
 	        if (msg.message == WM_QUIT)
@@ -1607,8 +1626,9 @@ int startApplication(int argc, char* argv[]) {
 	mainWindow->destroy();
 
 	mainWindow->destroyOverlayWindows();
-
-	saveSettings(settings);
+	if (!fataError) {
+		saveSettings(settings);
+	}
 
 #ifndef BUILD_NO_VST
 	vst_window_mgr::destroyAllVSTWindows();
@@ -1619,13 +1639,16 @@ int startApplication(int argc, char* argv[]) {
 	EXC_CATCH
 	deleteApp();
 	printLeakedGuiBase();
+	if (fataError) {
+		my_printf("EXIT_FAILURE\n", 0);
+	} else {
+		my_printf("EXIT_SUCCESS\n", 0);
+	}
 	closeGlobalLog();
 #ifdef _WIN32
 	OleUninitialize();
 #endif
-	my_printf("EXIT_SUCCESS\n", 0);
-//	exit(EXIT_SUCCESS);
-	return 0;
+	return fataError ? 1 : 0;
 }
 
 #endif

@@ -260,6 +260,13 @@ bool waveformrender::findSimiliarWaveform(waveform_update_task_t& waveformQueueE
 int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 	checkGLError("waveformrender::render start");
 
+	GLboolean b;
+	glGetBooleanv(GL_CULL_FACE, &b);
+	assert(!b);
+	glGetBooleanv(GL_BLEND, &b);
+	assert(b);
+	glGetBooleanv(GL_DEPTH_TEST, &b);
+	assert(!b);
 //	entry->inuse = true;
 //	entry->props = *waveform;
 
@@ -269,10 +276,10 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 	glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	glEnable(GL_DEPTH_TEST);
 	glDepthFunc(GL_LEQUAL);
-	glEnable(GL_BLEND);
+//	glEnable(GL_BLEND);
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	glDisable(GL_CULL_FACE);
+//	glDisable(GL_CULL_FACE);
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, 0);
 
@@ -400,9 +407,9 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 			matModel[0][0] = waveform.scaleX;
 			matView = glm::translate(matView, glm::vec3(pos.x, pos.y, 0));
 			mat4x4 matProj = glm::ortho(0.f, (float) FBO_WIDTH, (float)FBO_HEIGHT, 0.f, 1.f, -1.f);
-			glUniformMatrix4fv(renderer.u_projection, 1, GL_FALSE, value_ptr(matProj));
-			glUniformMatrix4fv(renderer.u_view, 1, GL_FALSE, value_ptr(matView));
-			glUniformMatrix4fv(renderer.u_model, 1, GL_FALSE, value_ptr(matModel));
+			glUniformMatrix4fv(renderer.u_projection, 1, GL_FALSE, mat_ptr(matProj));
+			glUniformMatrix4fv(renderer.u_view, 1, GL_FALSE, mat_ptr(matView));
+			glUniformMatrix4fv(renderer.u_model, 1, GL_FALSE, mat_ptr(matModel));
 			glUniform3f ( renderer.u_uniforms_shape, 1, bakedPath.numPaths*renderer.countUniforms, renderer.countUniforms);
 			glBindTexture ( GL_TEXTURE_2D, bakedPath.uniforms_texture);
 			glBindVertexArray ( bakedPath.vbo.vaoId );
@@ -435,6 +442,7 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 	}
 	glClearColor(0, 0, 0, 0);
 	glDisable(GL_SCISSOR_TEST);
+	glDisable(GL_DEPTH_TEST);
 
 	glBindVertexArray(0);
 	nvgluBindFramebuffer(NULL);

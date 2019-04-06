@@ -159,6 +159,8 @@ static int toErrorCode(DWORD excCode) {
 	}
 	return ERR_UNKNOWN;
 }
+extern "C" void logStackTrace();
+extern volatile bool fataError;
 #define WINAPI __stdcall
 static LONG WINAPI TopLevelExceptionHandler(PEXCEPTION_POINTERS pExceptionInfo)
 {
@@ -166,10 +168,10 @@ static LONG WINAPI TopLevelExceptionHandler(PEXCEPTION_POINTERS pExceptionInfo)
 	if (handleFatalError(toErrorCode(excCode), static_cast<int32_t>(excCode))) {
 		return EXCEPTION_CONTINUE_EXECUTION;
 	}
-	String excDescription = StringFormat("Application crash: %s (0x%08X)", _exc_as_str(excCode), (int)excCode);
-	my_printf("Fatal: %s\n", StringAsCStr(excDescription));
-	std::terminate();
-    return EXCEPTION_EXECUTE_HANDLER;
+	log_out("Fatal exception: %s (0x%08X)\n", _exc_as_str(excCode), (int)excCode);
+	logStackTrace();
+	fataError = true;
+    return EXCEPTION_CONTINUE_SEARCH;
 }
 #if defined(_MSC_VER)
 int __cdecl DebugReportHook(int nReportType, char*, int* pnRet)

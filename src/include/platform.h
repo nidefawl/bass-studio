@@ -16,3 +16,4 @@ void setExceptionHandler();
 String getKeyName(int scancode);
 
 void threadSleep(int millis);
+extern "C" void logStackTrace();
