@@ -10,6 +10,7 @@
 #include "../vstsdk-host-2.4/aeffectx.h"
 #include "../util/readerwriterqueue.h"
 #include "note.h"
+#include "rand.h"
 #include "hires_timer.h"
 #include "project.h"
 #include "audiobuffer.h"
@@ -72,6 +73,7 @@ public:
 private:
 	host_stats_t stats{0};
 	host_processing_stats_t processing{0};
+	seq_rand rnd;
 	double lastTickEndPos = 0;
 	playback_state lastState = playback_state::status_stop;
 	uint8_t numChannels;
