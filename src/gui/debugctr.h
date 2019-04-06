@@ -8,15 +8,17 @@
 
 class gui_ctr_debug : public guictr_base {
 
-	guiknob knobTest;
-	guibutton btn;
 	int32_t curVal = 0;
+	std::vector<guibase*> debugGuis;
+	std::vector<String> g_debugStrings;
 public:
 	gui_ctr_debug();
 	~gui_ctr_debug() {
 		removeGuis();
+		for (auto* g : debugGuis) {
+			delete g;
+		}
 	}
-	std::vector<String> g_debugStrings;
 	virtual void render(NVGcontext* vg);
 	void layout();
 	void addStr(String str) {
