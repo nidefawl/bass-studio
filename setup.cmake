@@ -1,4 +1,3 @@
-
 if(NOT CMAKE_BUILD_TYPE) 
     set(CMAKE_BUILD_TYPE Debug)
 endif(NOT CMAKE_BUILD_TYPE)
@@ -10,6 +9,25 @@ FUNCTION(PREPEND var prefix)
    ENDFOREACH(f)
    SET(${var} "${listVar}" PARENT_SCOPE)
 ENDFUNCTION(PREPEND)
+
+FUNCTION(ADD_POST_BUILD_PDB_GEN targetBuildName)
+  if (IS_MINGW_BUILD)
+    if (CV2PDB) 
+      add_custom_command(
+          TARGET ${targetBuildName} POST_BUILD
+          COMMAND ${CV2PDB} -k $<TARGET_FILE:${targetBuildName}>
+          COMMENT "Generating PDB for MinGW binary"
+      )
+    else()
+      message(STATUS "Configured without CV2PDB. Skipping PDB generation")
+      add_custom_command(
+          TARGET ${targetBuildName} POST_BUILD
+          COMMENT "Configured without CV2PDB. Skipping PDB generation"
+      )
+    endif()
+  endif()
+ENDFUNCTION()
+
 set(NO_TEMP_OBJECT_A On)
 # By default cmake generates a temporary object.a archive on windows-gnu
 # Resetting the link rules here avoids this step and saves significant time when linking
@@ -57,16 +75,21 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   add_definitions(-D_CRT_SECURE_NO_WARNINGS -DNOMINMAX /wd4067 /wd4267 /wd4244)
 endif()
+set(IS_MINGW_BUILD OFF)
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   if (NOT WIN32)  #cant use stack-protector with clang/gnu toolchain on windows
     add_compile_options(-fstack-protector)
   else() 
+    set(IS_MINGW_BUILD ON)
+    add_compile_options(-gdwarf-3) #cv2pdb does not produce correct filenames/lines with dwarf > 3
   #  add_compile_options(-D__MSVCRT_VERSION__=0x1200) #link against msvcr120 runtime
-  endif(NOT WIN32)
+  endif()
   add_compile_options(-fno-omit-frame-pointer)
 endif()
 
-
-
-
 add_definitions(${DAW_COMPILE_FLAGS})
+
+
+if (IS_MINGW_BUILD)
+  find_program(CV2PDB cv2pdb)
+endif()

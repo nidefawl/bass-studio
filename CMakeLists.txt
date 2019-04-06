@@ -174,7 +174,7 @@ if (UNIX)
 target_link_libraries(${LINK_TARGET} PRIVATE ${X11_X11_LIB} ${CMAKE_THREAD_LIBS_INIT} ${CMAKE_DL_LIBS} ${ALSA_LIBRARY} ${GTK3_LIBRARIES} rt m)
 endif(UNIX)
 if (WIN32)
-target_link_libraries(${LINK_TARGET} PRIVATE winmm opengl32 kernel32 gdi32 ole32 uuid comdlg32 setupapi mswsock ws2_32)
+target_link_libraries(${LINK_TARGET} PRIVATE dbghelp winmm opengl32 kernel32 gdi32 ole32 uuid comdlg32 setupapi mswsock ws2_32)
 endif(WIN32)
 
 if (BUILD_SCANNER)
@@ -213,6 +213,7 @@ set_target_properties(${BUILD_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${DAW_WO
 set_target_properties(${BUILD_NAME} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ${DAW_WORKING_DIR})
 set_target_properties(${BUILD_NAME} PROPERTIES OUTPUT_NAME_DEBUG "DAW-${CMAKE_CXX_COMPILER_ID}-debug" )
 set_target_properties(${BUILD_NAME} PROPERTIES OUTPUT_NAME_RELEASE "DAW-${CMAKE_CXX_COMPILER_ID}-release" )
+ADD_POST_BUILD_PDB_GEN(${BUILD_NAME})
 
 if (BUILD_SCANNER)
 set(SCANNER_EXE_NAME "vstscanner-${BUILD_BINARY_SUFFIX}")
