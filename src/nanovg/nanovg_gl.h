@@ -103,8 +103,6 @@ enum NVGimageFlagsGL {
 }
 #endif
 
-#endif /* NANOVG_GL_H */
-
 struct NVGLUframebuffer {
 	NVGcontext* ctx;
 	GLuint fbo;
@@ -128,6 +126,9 @@ void nvgluBindFramebuffer(NVGLUframebuffer* fb);
 NVGLUframebuffer* nvgluCreateFramebuffer(NVGcontext* ctx, int w, int h, int imageFlags);
 void nvgluDeleteFramebuffer(NVGLUframebuffer* fb);
 NVGLUframebuffer* nvgluCreateTempFramebuffer(NVGcontext* ctx, int w, int h, int imageFlags);
+
+#endif /* NANOVG_GL_H */
+
 
 
 #ifdef NANOVG_GL_IMPLEMENTATION
