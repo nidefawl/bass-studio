@@ -121,12 +121,18 @@ struct NVGLUTempFramebuffer {
 };
 typedef struct NVGLUTempFramebuffer NVGLUTempFramebuffer;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 // Helper function to create GL frame buffer to render to.
 void nvgluBindFramebuffer(NVGLUframebuffer* fb);
 NVGLUframebuffer* nvgluCreateFramebuffer(NVGcontext* ctx, int w, int h, int imageFlags);
 void nvgluDeleteFramebuffer(NVGLUframebuffer* fb);
 NVGLUframebuffer* nvgluCreateTempFramebuffer(NVGcontext* ctx, int w, int h, int imageFlags);
 
+#ifdef __cplusplus
+}
+#endif
 #endif /* NANOVG_GL_H */
 
 
