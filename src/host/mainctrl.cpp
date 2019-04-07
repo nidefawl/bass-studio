@@ -1221,13 +1221,17 @@ clip_t* clip_view::clip() const {
 
 GLFWwindow* getGlfwFromWindowBase(window_base* w);
 GLFWwindow* getTopLevelGlfwWindow() {
-	auto wbase = MainCtrl::get()->window;
-	return getGlfwFromWindowBase(wbase);
+	auto main = MainCtrl::get();
+	if (main) {
+		return getGlfwFromWindowBase(main->window);
+	}
+	assert(0);
+	return nullptr;
 }
 
 int handleFatalError(int type, int implSpecType) {
 	seqthreads::thread_base* thread = MainCtrl::getPlayThread();
-	if (seqthreads::currentThreadsId() == thread->getThreadId()) {
+	if (thread && seqthreads::currentThreadsId() == thread->getThreadId()) {
 		host_processing_stats_t processing;
 		auto host = vsthost::getInstance();
 		host->getProcessingStats(processing);

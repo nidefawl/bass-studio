@@ -229,7 +229,8 @@ public:
 		my_printf("~MainCtrl\n",0);
 	}
 	static PlaybackThread* getPlayThread() {
-		return &get()->playThread;
+		MainCtrl* ctrl = MainCtrl::get();
+		return ctrl ? &ctrl->playThread : nullptr;
 	}
 	static guictr_plugins* getPluginCtr();
 	static guictr_tracks* getGuiTrackCtr();
