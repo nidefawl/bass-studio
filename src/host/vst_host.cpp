@@ -31,12 +31,8 @@
 #include "track_impl.h"
 #include "threads/threadlock.h"
 
-#include <mutex>
 #ifdef _WIN32
 #include <windows.h>
-#endif
-#ifdef __MINGW32__
-#include "../platform/mingw/mingw.mutex.h"
 #endif
 #ifdef __linux__
 #include <dlfcn.h>

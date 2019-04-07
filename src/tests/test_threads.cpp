@@ -1,17 +1,10 @@
 #include "TestBase.hpp"
-#include "../threads/workerthread.h"
-#include "test_common.h"
-#ifdef __MINGW32__
-#undef _GLIBCXX_HAS_GTHREADS
-#include "../platform/mingw/mingw.thread.h"
-#include <mutex>
-#include "../platform/mingw/mingw.mutex.h"
-#include "../platform/mingw/mingw.condition_variable.h"
-#else
-#include <mutex>
-#endif
 #include <vector>
 #include <stdint.h>
+#include "test_common.h"
+#include "threads.h"
+#include "threads/workerthread.h"
+
 
 namespace {
 static test_rng rng;

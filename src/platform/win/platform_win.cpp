@@ -16,15 +16,8 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <vector>
-#ifdef __MINGW32__
-#undef _GLIBCXX_HAS_GTHREADS
-#include "../platform/mingw/mingw.thread.h"
-#include <mutex>
-#include "../platform/mingw/mingw.mutex.h"
-#include "../platform/mingw/mingw.condition_variable.h"
-#else
-#include <mutex>
-#endif
+
+#include "threads.h"
 #include "math/seq_math.h"
 #include "str_util.h"
 #include "logging.h"
@@ -164,6 +157,9 @@ extern volatile bool fataError;
 #define WINAPI __stdcall
 static LONG WINAPI TopLevelExceptionHandler(PEXCEPTION_POINTERS pExceptionInfo)
 {
+	log_out("TopLevelExceptionHandler %X\n", (int64_t)pExceptionInfo);
+	log_out("ExceptionRecord %X\n", (int64_t)(pExceptionInfo?pExceptionInfo->ExceptionRecord:0));
+	log_out("ExceptionCode %X\n", (int64_t)(pExceptionInfo&&pExceptionInfo->ExceptionRecord?pExceptionInfo->ExceptionRecord->ExceptionCode:0));
 	DWORD excCode = pExceptionInfo->ExceptionRecord->ExceptionCode;
 	if (handleFatalError(toErrorCode(excCode), static_cast<int32_t>(excCode))) {
 		return EXCEPTION_CONTINUE_EXECUTION;

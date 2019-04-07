@@ -1,16 +1,17 @@
-#ifdef __linux__
+#if defined(__linux__) || defined(_MSC_VER) || defined(_LIBCPP_VERSION) || (defined(_GLIBCXX_HAS_GTHREADS) && _GLIBCXX_HAS_GTHREADS)
 #include <thread>
 #include <condition_variable>
+#include <mutex>
+#else
+#ifndef __MINGW32__
+#error threads on this platform not supported
 #endif
-#ifdef __MINGW32__
-#undef _GLIBCXX_HAS_GTHREADS
 #include "../platform/mingw/mingw.thread.h"
 #include <mutex>
 #include "../platform/mingw/mingw.mutex.h"
 #include "../platform/mingw/mingw.condition_variable.h"
-#else
-#include <mutex>
 #endif
+
 #include "str_util.h"
 
 void setCurrentThreadName(String s); // util/debug.cpp

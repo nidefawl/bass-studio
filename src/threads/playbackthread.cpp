@@ -87,7 +87,7 @@ public:
 		});
 #ifdef _WIN32
 		this->threadid = static_cast<int32_t>(t.get_id().get());
-		HANDLE h = t.native_handle();
+		HANDLE h = reinterpret_cast<HANDLE*>(t.native_handle());
 		SetThreadPriority(h, THREAD_PRIORITY_TIME_CRITICAL);
 #endif
 	}
