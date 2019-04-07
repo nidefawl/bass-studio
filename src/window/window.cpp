@@ -4,7 +4,7 @@
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
 #endif
-#define NANOVG_GL3_IMPLEMENTATION
+#define NANOVG_GL3 1
 #include <nanovg.h>
 #include <nanovg_gl.h>
 #include <nanovg_gl_utils.h>
@@ -1508,6 +1508,7 @@ void openGlobalLog(); // Forward declare from util/debug.cpp
 void closeGlobalLog(); // Forward declare from util/debug.cpp
 
 int startApplication(int argc, char* argv[]) {
+	log_out("mainthread\n", 0);
 	setCurrentThreadName("mainthread");
 #ifndef NDEBUG
     _dup2( 1, 2 ); //workaround: redirect stderr to stdout so stderr is visible when using gdb on eclipse (bug)
