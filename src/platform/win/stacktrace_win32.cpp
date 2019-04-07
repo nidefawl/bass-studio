@@ -102,7 +102,7 @@ extern "C" {
 			} else {
 				snprintf(bufPrefix+prefOffset, 128, "%s:%d", shortName(moduleName, 0), (int)displacement);
 			}
-			log_out("%-32s %s\n", bufPrefix, functioName);
+			log_out("%-42s %s\n", bufPrefix, functioName);
 
 
 			stackPos++;
