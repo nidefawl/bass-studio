@@ -1,5 +1,6 @@
 #include <vector>
 
+#include "error.h"
 #include "math/seq_math.h"
 #include "debugctr.h"
 #include "str_util.h"
@@ -48,6 +49,9 @@ void initConstants(int colorVal);
 constexpr int ID_BTN_RESET_HIST = 1;
 constexpr int ID_KNOB_SET_COLOR = 2;
 constexpr int ID_BTN_INJECT_SEGFAULT_AUDIO_THREAD = 3;
+constexpr int ID_BTN_INJECT_BAD_MALLOC_AUDIO_THREAD = 4;
+constexpr int ID_BTN_INJECT_SEGFAULT_MAIN_THREAD = 5;
+constexpr int ID_BTN_INJECT_BAD_MALLOC_MAIN_THREAD = 6;
 constexpr int BTN_FONT_SIZE = 16;
 gui_ctr_debug::gui_ctr_debug() : guictr_base() {
 	setBackgroundRendered(true);
@@ -65,13 +69,34 @@ gui_ctr_debug::gui_ctr_debug() : guictr_base() {
 	knob->fnGetValue = [this](void) {
 		return math::max(0.0f, math::min(1.0f, curVal/255.0f));
 	};
-	auto btn2 = new guibutton;
-	btn2->id = ID_BTN_INJECT_SEGFAULT_AUDIO_THREAD;
-	btn2->setText("Segfault on Audiothread");
-	btn2->setFontSize(BTN_FONT_SIZE);
 	debugGuis.push_back(btn);
 	debugGuis.push_back(knob);
-	debugGuis.push_back(btn2);
+	{
+
+		auto btn2 = new guibutton;
+		btn2->id = ID_BTN_INJECT_SEGFAULT_AUDIO_THREAD;
+		btn2->setText("Segfault on Audiothread");
+		btn2->setFontSize(BTN_FONT_SIZE);
+		debugGuis.push_back(btn2);
+		auto btn3 = new guibutton;
+		btn3->id = ID_BTN_INJECT_BAD_MALLOC_AUDIO_THREAD;
+		btn3->setText("BadAlloc on Audiothread");
+		btn3->setFontSize(BTN_FONT_SIZE);
+		debugGuis.push_back(btn3);
+	}
+	{
+
+		auto btn2 = new guibutton;
+		btn2->id = ID_BTN_INJECT_SEGFAULT_MAIN_THREAD;
+		btn2->setText("Segfault on Mainthread");
+		btn2->setFontSize(BTN_FONT_SIZE);
+		debugGuis.push_back(btn2);
+		auto btn3 = new guibutton;
+		btn3->id = ID_BTN_INJECT_BAD_MALLOC_MAIN_THREAD;
+		btn3->setText("BadAlloc on Mainthread");
+		btn3->setFontSize(BTN_FONT_SIZE);
+		debugGuis.push_back(btn3);
+	}
 	for (auto g : debugGuis) {
 		add(g);
 	}
@@ -237,8 +262,19 @@ void gui_ctr_debug::buttonClicked(guibase* button) {
 		break;
 	case ID_BTN_INJECT_SEGFAULT_AUDIO_THREAD:
 		MainCtrl::getPlayThread()->call([]() {
-			int n = *static_cast<int*>((void*)0x0);
+			debugRaiseSegFault();
 		}, true);
+		break;
+	case ID_BTN_INJECT_BAD_MALLOC_AUDIO_THREAD:
+		MainCtrl::getPlayThread()->call([]() {
+			throw std::bad_alloc();
+		}, true);
+		break;
+	case ID_BTN_INJECT_SEGFAULT_MAIN_THREAD:
+		debugRaiseSegFault();
+		break;
+	case ID_BTN_INJECT_BAD_MALLOC_MAIN_THREAD:
+		throw std::bad_alloc();
 		break;
 
 	}
