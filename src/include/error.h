@@ -1,7 +1,9 @@
 #pragma once
+#include <exception>
 #define ERR_ACCESSVIOLATION 1
 #define ERR_UNKNOWN 2
 int handleFatalError(int type, int implSpecType);
+void handleStdException(std::exception& e);
 
 
 #undef HAVE_BUILTIN_TRAP

@@ -58,6 +58,7 @@
 #include "mousecursor.h"
 #include "fileio.h"
 #include "threads.h"
+#include "error.h"
 
 
 volatile bool fataError = false;
@@ -91,25 +92,24 @@ public:
 #define EXC_CATCH \
 	} catch (std::exception& e) { 									\
 		handleStdException(e);										\
-	} catch (...) {													\
-		handleException();											\
 	}
 
 void handleStdException(std::exception& e) {
-	getGlobalLogger()->logStr(StringFormat("Exception: %s", e.what()));
+	getGlobalLogger()->logStr(StringFormat("Exception: %s\n", e.what()));
 	logStackTrace();
 	fataError = true;
-//	terminateCppExc();
-//	std::terminate();
-	//throw e;
+	std::terminate();
 }
-void handleException() {
-	getGlobalLogger()->logStr("Unhandled program exception");
+
+void on_terminate() {
+	getGlobalLogger()->logStr("on_terminate\n");
+	exit(1); // required on mingw (at least)
+}
+void on_unexpected() {
+	getGlobalLogger()->logStr("on_unexpected\n");
 	logStackTrace();
 	fataError = true;
-//	terminateCppExc();
-//	std::terminate();
-	//throw;
+	exit(1); // required on mingw (at least)
 }
 
 namespace RenderResources {
@@ -1346,11 +1346,6 @@ static appwindow* getUserData(GLFWwindow *w) {
 	return impl;
 }
 
-void on_terminate() {
-	my_printf("on_terminate\n", 0);
-	exit(1); // required on mingw (at least)
-}
-
 
 static void glfw_cb_mousepos(GLFWwindow *w, double x, double y) {
 	EXC_TRY
@@ -1517,10 +1512,11 @@ int startApplication(int argc, char* argv[]) {
 	OleInitialize(0);
 #endif
 	std::set_terminate(on_terminate);
+	std::set_unexpected(on_unexpected);
 #ifdef USE_WIN32_EXC_HOOKS
 	setExceptionHandler();
 #endif
-	EXC_TRY
+	try {
 	//bool runConsoleMode = false;
 	//for (int i = 0; i < argc; i++) {
 	//	if (strcmp(argv[i], "-console")) {
@@ -1637,7 +1633,10 @@ int startApplication(int argc, char* argv[]) {
 
 	mainWindow.reset();
 	glfwTerminate();
-	EXC_CATCH
+
+	} catch (std::exception& e) {
+		handleStdException(e);
+	}
 	deleteApp();
 	printLeakedGuiBase();
 	if (fataError) {

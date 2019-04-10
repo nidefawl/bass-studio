@@ -6,13 +6,10 @@
 
 
 void handleStdException(std::exception& e);
-void handleException();
 #define EXC_TRY try {
 #define EXC_CATCH \
 	} catch (std::exception& e) { 									\
 		handleStdException(e);										\
-	} catch (...) {													\
-		handleException();											\
 	}
 class DropTargetImpl : public IDropTarget
 {

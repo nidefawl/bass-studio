@@ -157,17 +157,14 @@ extern volatile bool fataError;
 #define WINAPI __stdcall
 static LONG WINAPI TopLevelExceptionHandler(PEXCEPTION_POINTERS pExceptionInfo)
 {
-	log_out("TopLevelExceptionHandler %X\n", (int64_t)pExceptionInfo);
-	log_out("ExceptionRecord %X\n", (int64_t)(pExceptionInfo?pExceptionInfo->ExceptionRecord:0));
-	log_out("ExceptionCode %X\n", (int64_t)(pExceptionInfo&&pExceptionInfo->ExceptionRecord?pExceptionInfo->ExceptionRecord->ExceptionCode:0));
-	DWORD excCode = pExceptionInfo->ExceptionRecord->ExceptionCode;
+	DWORD excCode = pExceptionInfo && pExceptionInfo->ExceptionRecord ? pExceptionInfo->ExceptionRecord->ExceptionCode : 0;
 	if (handleFatalError(toErrorCode(excCode), static_cast<int32_t>(excCode))) {
 		return EXCEPTION_CONTINUE_EXECUTION;
 	}
 	log_out("Fatal exception: %s (0x%08X)\n", _exc_as_str(excCode), (int)excCode);
 	logStackTrace();
 	fataError = true;
-    return EXCEPTION_CONTINUE_SEARCH;
+    return EXCEPTION_EXECUTE_HANDLER;
 }
 #if defined(_MSC_VER)
 int __cdecl DebugReportHook(int nReportType, char*, int* pnRet)
@@ -183,7 +180,7 @@ void setExceptionHandler() {
 #endif
 #if defined(_MSC_VER)
 	//this is here to trigger a breakpoint when assert(0) is called using the ms c-runtime
-	//by default ms crt throws an exception on assert(0) and opens a dialog that interferes with out wndProc
+	//by default ms crt throws an exception on assert(0) and opens a dialog that interferes with our wndProc
 	_CrtSetReportHook2(_CRT_RPTHOOK_INSTALL, DebugReportHook);
 #endif
 	SetErrorMode(SEM_FAILCRITICALERRORS|SEM_NOALIGNMENTFAULTEXCEPT|SEM_NOGPFAULTERRORBOX|SEM_NOOPENFILEERRORBOX);
