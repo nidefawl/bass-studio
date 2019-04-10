@@ -30,11 +30,51 @@ String demangleName(String to_demangle)
 #include <assert.h>
 #include <ctime>
 #include <unordered_map>
+#include <assert.h>
+#include <vector>
 #include "math/seq_math.h"
 #include "fileio.h"
 #include "threads.h"
 #include "platform.h"
 
+
+class StdOutLogger : public Logger {
+public:
+	virtual ~StdOutLogger() { }
+	void log(const char* data, size_t len) {
+	    fwrite(data, len, 1, stdout);
+	    fflush(stdout);
+	}
+	void logStr(String s) {
+		fprintf(stdout, "%s", StringAsCStr(s));
+	    fflush(stdout);
+	}
+};
+class MultiLogger : public Logger {
+	std::vector<Logger*> loggers;
+public:
+	MultiLogger(Logger* handle) {
+		loggers.push_back(handle);
+	}
+	void addLogger(Logger* _logger) {
+		loggers.push_back(_logger);
+	}
+	void removeLogger(Logger* _logger) {
+		loggers.erase(std::remove(loggers.begin(), loggers.end(), _logger));
+		loggers.push_back(_logger);
+	}
+	virtual ~MultiLogger() { }
+	void log(const char* data, size_t len) {
+		for (auto* logger : loggers) {
+			logger->log(data, len);
+		}
+	}
+	void logStr(String s) {
+		for (auto* logger : loggers) {
+			logger->logStr(s);
+		}
+	}
+};
 class ThreadSafeFileLogger : public Logger {
 	std::recursive_mutex mutex;
 	IOFile* handle = nullptr;
@@ -87,20 +127,26 @@ public:
 		log(str, s.length());
 	}
 };
-static ThreadSafeFileLogger& getGlobalLoggerImpl() {
+static ThreadSafeFileLogger& getFileLogger() {
 	static ThreadSafeFileLogger gGlobalLogger;
 	return gGlobalLogger;
 }
+static MultiLogger& getMultiLogger() {
+	static MultiLogger gMultiLogger(new StdOutLogger());
+	return gMultiLogger;
+}
 Logger* getGlobalLogger() {
-	return &getGlobalLoggerImpl();
+	return &getMultiLogger();
 }
 void closeGlobalLog() {
-	getGlobalLoggerImpl().logStr("End of logfile\n");
-	getGlobalLoggerImpl().closeLog();
+	getFileLogger().logStr("End of logfile\n");
+	getFileLogger().closeLog();
+	getMultiLogger().removeLogger(&getFileLogger());
 }
 void openGlobalLog() {
-	getGlobalLoggerImpl().openFile("daw.log");
-	getGlobalLoggerImpl().logStr("Begin of logfile\n");
+	getFileLogger().openFile("daw.log");
+	getFileLogger().logStr("Begin of logfile\n");
+	getMultiLogger().addLogger(&getFileLogger());
 }
 #define MAX_LEN_MY_PRINTF 4096
 #define MAX_LEN_FILENAME 512
@@ -167,13 +213,8 @@ void global_log_format_impl(const char *file, int line, const char *func, const 
 		szLogStatement = szLogStr;
 	}
 	if (szLogStatement) {
-		fprintf(stdout, szLogStatement);
-		getGlobalLoggerImpl().log(szLogStatement, ret);
+		getGlobalLogger()->log(szLogStatement, ret);
 	}
-//	appendLog(szLogStatement);
-#ifndef _MSC_VER
-	fflush(stdout);
-#endif
 }
 namespace {
 
@@ -212,8 +253,6 @@ String getCurrentThreadName() {
 void logEveryMsec(int32_t nId, int32_t delayMs, String str) {
 	static std::recursive_mutex gLogMutex;
 	static std::unordered_map<int32_t, int32_t> gEntries;
-	if (str.back() != '\n')
-		str += "\n";
 	auto now = getTimeMillis();
 	bool shouldLog = false;
 	{
@@ -225,11 +264,6 @@ void logEveryMsec(int32_t nId, int32_t delayMs, String str) {
 		}
 	}
 	if (shouldLog) {
-		const char* szLogStatement = StringAsCStr(str);
-		fprintf(stdout, szLogStatement);
-		getGlobalLoggerImpl().log(szLogStatement, str.length());
-#ifndef _MSC_VER
-		fflush(stdout);
-#endif
+		getGlobalLogger()->logStr(str);
 	}
 }
