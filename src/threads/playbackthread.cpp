@@ -1,19 +1,19 @@
 #include "playbackthread.h"
-#include "threadlock.h"
-#include "threads.h"
 #include <chrono>
-
 #include <atomic>
 #include <queue>
-
 #include <assert.h>
 
+#include "error.h"
+#include "threadlock.h"
+#include "threads.h"
 #include "seq_time.h"
-#include "../host/mainctrl.h"
-#include "logging.h"
-#include "../util/readerwriterqueue.h"
-#include "../host/vst_host.h"
 #include "hires_timer.h"
+#include "util/readerwriterqueue.h"
+#include "host/mainctrl.h"
+#include "host/vst_host.h"
+#include "logging.h"
+
 #ifdef _WIN32
 #include <windows.h>
 #endif
@@ -132,6 +132,8 @@ private:
 		std::shared_ptr<PlaybackThreadReq> req;
 		int32_t samplePos = 0;
 		double tickPos = 0;
+
+		try {
         while (true){
         	samplerate_t sampleRate = host->lSampleRate;
         	int32_t blockSize = host->lBlockSize;
@@ -250,6 +252,9 @@ private:
 
 //	    	logEveryMsec(1, 5000, "audio thread loop");
         }
+		} catch (std::exception& e) {
+			handleStdException(e);
+		}
 	}
 };
 PlaybackThread::~PlaybackThread() {
