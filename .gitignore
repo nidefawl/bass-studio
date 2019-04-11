@@ -1,5 +1,6 @@
 # ignore everything
 build*/
 testing/
+.vscode/
 old-versions/
 CMakeCache.txt
