@@ -458,16 +458,25 @@ void AppCtrl::openAppMenu(int lvl, guictxtmenu_base *b, ivec2 pos) {
 	this->mainWindow->getPos(&windowPos);
 	entry.wnd->getCtrl()->open(b, windowPos+pos);
 }
-void AppCtrl::openContextMenu(guictxtmenu_base *b, ivec2 pos) {
+
+void AppCtrl::openOverlayGui(guictxtmenu_base *b, ivec2 pos, int flags) {
+	assert(!this->ctxtmenu);
 	 //move this in some garbageCollect() methdo and trigger garbage collection after every window-msg on win32 (linux?)
 	for (auto gui : garbageGuis) {
 		delete gui;
 	}
 	garbageGuis.clear();
-
 	this->ctxtmenu = b;
 	ivec2 windowPos;
+	ivec2 windowSize;
 	this->mainWindow->getPos(&windowPos);
+	this->mainWindow->getSize(&windowSize);
+	ivec2 wndPos = windowPos;
+	if (flags&1) {
+		wndPos = windowPos+pos;
+	} else {
+		wndPos = windowPos+(windowSize-b->size)/2;
+	}
 	if (!contextWindow) {
 		contextWindow = this->mainWindow->createOverlay();
 	}
@@ -475,8 +484,15 @@ void AppCtrl::openContextMenu(guictxtmenu_base *b, ivec2 pos) {
 		auto* ctxtWindowTheme = contextWindow->getCtrl()->getTheme();
 		//copy theme from this control to contextWindows control
 		*ctxtWindowTheme = *getTheme();
-		contextWindow->getCtrl()->open(b, windowPos+pos);
+		contextWindow->getCtrl()->open(b, wndPos);
 	}
+
+}
+void AppCtrl::openDialog(guictxtmenu_base *b) {
+	openOverlayGui(b, ivec2(0), 0);
+}
+void AppCtrl::openContextMenu(guictxtmenu_base *b, ivec2 pos) {
+	openOverlayGui(b, pos, 1);
 }
 void AppCtrl::closeContextMenu() {
 	if (this->ctxtmenu) {

@@ -247,6 +247,7 @@ void gui_ctr_debug::layout() {
 	auto posY = cs.y;
 	auto posX = 0;
 	for (auto gui : guis) {
+		gui->layout();
 		if (gui == knobTest)
 			continue;
 		gui->size = ivec2(size*5, size);

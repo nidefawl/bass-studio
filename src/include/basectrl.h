@@ -182,6 +182,7 @@ public:
 	virtual void relayout(int32_t w, int32_t h) override = 0;
 	void onChildOverlayWindowClose(window_overlay*);
 	void openContextMenu(guictxtmenu_base *b, ivec2 pos) override;
+	void openDialog(guictxtmenu_base *b);
 	void closeContextMenu() override;
 	void openAppMenu(int lvl, guictxtmenu_base *b, ivec2 pos) override;
 	void closeAppMenusAtLvl(int startlvl) override;
@@ -212,6 +213,8 @@ public:
 	virtual void postInit() = 0; /* OpenGL context exists in postInit */
 	virtual void destroy() = 0;
 	void destroyControl();
+protected:
+	void openOverlayGui(guictxtmenu_base *b, ivec2 pos, int flags);
 };
 class guictr_scrollbar;
 class PopupCtrl : public BaseCtrl

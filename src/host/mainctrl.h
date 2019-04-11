@@ -199,7 +199,7 @@ struct Menus {
 	ngui::Menu file;
 	ngui::Menu recent;
 	ngui::Menu edit;
-	ngui::Menu options;
+	ngui::Menu tools;
 };
 
 class MainCtrl : public AppCtrl, public delete_cb, public project_t

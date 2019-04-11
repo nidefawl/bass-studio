@@ -52,6 +52,7 @@
 #include "../gui/debugctr.h"
 #include "../gui/drawwaveform.h"
 #include "../gui/guishaderview.h"
+#include "../gui/about.h"
 
 #include "vst_host.h"
 #include "plugin/base_plugin.h"
@@ -497,6 +498,11 @@ void MainCtrl::menuCommand(int cmd) {
 		break;
 	case CMD_DUPLICATE:
 		break;
+	case CMD_ABOUT:
+		this->openDialog(new guidialog_about());
+		break;
+	case CMD_PREFERENCES:
+		break;
 	case CMD_EXIT:
 		mainWindow->requestClose();
 		break;
@@ -563,9 +569,14 @@ bool MainCtrl::init(window_main* window, NVGcontext* nanovg)
 	menus.edit.addSeperator();
 	menus.edit.addCommand(CMD_DELETE, menuName("Delete", KC_DELETE));
 	menus.edit.addCommand(CMD_SELECT_ALL, menuName("Select All", KC_SELECTALL));
+	menus.tools.type = ngui::menu_type::submenu;
+	menus.tools.title = "Tools";
+	menus.tools.addCommand(CMD_PREFERENCES, "Preferences");
+	menus.tools.addCommand(CMD_ABOUT, "About");
 
 	menubar.add(&menus.file);
 	menubar.add(&menus.edit);
+	menubar.add(&menus.tools);
 	this->updateMenubar();
 #if !USE_GUI_MENU
 	this->mainWindow->updateMenu();

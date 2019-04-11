@@ -13,5 +13,7 @@
 #define CMD_DELETE 15
 #define CMD_SELECT_ALL 16
 #define CMD_DUPLICATE 17
+#define CMD_PREFERENCES 18
+#define CMD_ABOUT 19
 
 
