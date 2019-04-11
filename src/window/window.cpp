@@ -59,6 +59,7 @@
 #include "fileio.h"
 #include "threads.h"
 #include "error.h"
+#include "buildinfo.h"
 
 
 volatile bool fataError = false;
@@ -1503,7 +1504,6 @@ void openGlobalLog(); // Forward declare from util/debug.cpp
 void closeGlobalLog(); // Forward declare from util/debug.cpp
 
 int startApplication(int argc, char* argv[]) {
-	log_out("mainthread\n", 0);
 	setCurrentThreadName("mainthread");
 #ifndef NDEBUG
     _dup2( 1, 2 ); //workaround: redirect stderr to stdout so stderr is visible when using gdb on eclipse (bug)
@@ -1527,6 +1527,10 @@ int startApplication(int argc, char* argv[]) {
 		allocConsole();
 	//}
 	openGlobalLog();
+	log_out("BUILD_BINARY_NAME %s\n", BuildInfo::BUILD_BINARY_NAME);
+	log_out("COMPILER_ID %s\n", BuildInfo::COMPILER_ID);
+	log_out("COMPILE_OPTIONS %s\n", BuildInfo::COMPILE_OPTIONS);
+	log_out("COMPILE_DEFS %s\n", BuildInfo::COMPILE_DEFS);
 	setMinimumResolutionTimer();
 	initColor();
 	loadSettings(settings);

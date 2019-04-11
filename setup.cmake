@@ -52,21 +52,21 @@ set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-SET(DAW_COMPILE_FLAGS -DVST_FORCE_DEPRECATED=0 -DUSE_GLAD_GL_HEADERS -DGLM_FORCE_CXX14=1 -DPA_ENABLE_DEBUG_OUTPUT=1)
+SET(DAW_COMPILE_FLAGS VST_FORCE_DEPRECATED=0 USE_GLAD_GL_HEADERS GLM_FORCE_CXX14=1 PA_ENABLE_DEBUG_OUTPUT=1)
 if (WIN32)
-  SET(DAW_COMPILE_FLAGS ${DAW_COMPILE_FLAGS} -DPA_USE_ASIO=1 -DPA_USE_DS=1 -DPA_USE_WASAPI=1 -DPA_USE_WDMKS=1)
+  SET(DAW_COMPILE_FLAGS ${DAW_COMPILE_FLAGS} PA_USE_ASIO=1 PA_USE_DS=1 PA_USE_WASAPI=1 PA_USE_WDMKS=1)
 endif(WIN32)
 if (UNIX)
-  SET(DAW_COMPILE_FLAGS ${DAW_COMPILE_FLAGS} -DPA_USE_ALSA=1)
-	set(DAW_COMPILE_FLAGS ${DAW_COMPILE_FLAGS} -D__cdecl="")
+  SET(DAW_COMPILE_FLAGS ${DAW_COMPILE_FLAGS} PA_USE_ALSA=1)
+	set(DAW_COMPILE_FLAGS ${DAW_COMPILE_FLAGS} __cdecl="")
 endif(UNIX)
 
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   add_compile_options(-Wall -Wno-inconsistent-missing-override)
   if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
-    # add_definitions(-D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC -DENABLE_MICHAELS_GLIBCXX_HACKS)
-    #add_definitions(-D_GLIBCXX_DEBUG -D_GLIBCXX_DEBUG_PEDANTIC)
+    # add_compile_definitions(_GLIBCXX_DEBUG _GLIBCXX_DEBUG_PEDANTIC ENABLE_MICHAELS_GLIBCXX_HACKS)
+    #add_compile_definitions(_GLIBCXX_DEBUG _GLIBCXX_DEBUG_PEDANTIC)
   endif()
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
   add_compile_options(-Wall -Wno-sign-compare)
@@ -82,12 +82,12 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" STRE
   else() 
     set(IS_MINGW_BUILD ON)
     add_compile_options(-gdwarf-3) #cv2pdb does not produce correct filenames/lines with dwarf > 3
-  #  add_compile_options(-D__MSVCRT_VERSION__=0x1200) #link against msvcr120 runtime
+  #  add_compile_definitions(_MSVCRT_VERSION__=0x1200) #link against msvcr120 runtime
   endif()
   add_compile_options(-fno-omit-frame-pointer)
 endif()
 
-add_definitions(${DAW_COMPILE_FLAGS})
+add_compile_definitions(${DAW_COMPILE_FLAGS})
 
 
 if (IS_MINGW_BUILD)
