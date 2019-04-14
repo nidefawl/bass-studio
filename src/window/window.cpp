@@ -851,17 +851,6 @@ public:
 
 	void show() {
 		appwindow::showWindow();
-		if (parent) {
-//		    SetForegroundWindow(parent->getHWND());
-//		    SetFocus(parent->getHWND());
-//		    SetActiveWindow(parent->getHWND());
-//		    SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOMOVE|SWP_NOSIZE|SWP_NOACTIVATE);
-//		    BringWindowToTop(getHWND());
-
-		}
-		ShowWindow(hwnd, SW_SHOW);
-//		if (parent)
-//		SetParent(hwnd, parent->getHWND());
 	}
 
 	void hide() {
@@ -1261,6 +1250,8 @@ void appwindow_overlay::createOverlayWindow(const char* title, int w, int h, voi
 	glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER , GL_TRUE);
 	appwindow::createBaseWindow(title, w, h, nullptr, parentHandle);
 	glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER , GL_FALSE);
+	glfwSetWindowAttrib(glfw, GLFW_FOCUS_ON_SHOW, 0);
+	SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, (__int3264) (LONG_PTR)parent->getHWND());
 #ifdef _WIN32
 	bool tooltip = false;
 	if (tooltip) {
@@ -1273,30 +1264,6 @@ void appwindow_overlay::createOverlayWindow(const char* title, int w, int h, voi
 		l = l | WS_EX_TOOLWINDOW;
 		SetWindowLong(hwnd, GWL_EXSTYLE, l);
 		SetWindowLong(hwnd, GWL_STYLE, WS_CHILD | WS_CLIPSIBLINGS);
-	}
-	RECT rcOwner;
-	RECT rcDlg;
-	RECT rc;
-	GetWindowRect(this->parent->getHWND(), &rcOwner);
-	GetWindowRect(hwnd, &rcDlg);
-	CopyRect(&rc, &rcOwner);
-	OffsetRect(&rcDlg, -rcDlg.left, -rcDlg.top);
-	OffsetRect(&rc, -rc.left, -rc.top);
-	OffsetRect(&rc, -rcDlg.right, -rcDlg.bottom);
-	if (tooltip) {
-		SetWindowPos(hwnd,
-			HWND_TOPMOST,
-			rcOwner.left + (rc.right / 2),
-			rcOwner.top + (rc.bottom / 2),
-			0, 0,          // Ignores size arguments.
-			SWP_NOSIZE|SWP_NOACTIVATE);
-	} else {
-		SetWindowPos(hwnd,
-			HWND_TOP,
-			rcOwner.left + (rc.right / 2),
-			rcOwner.top + (rc.bottom / 2),
-			0, 0,          // Ignores size arguments.
-			SWP_NOSIZE);
 	}
 #endif
 #if __linux__

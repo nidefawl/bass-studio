@@ -134,7 +134,7 @@ public:
 	virtual void closeContextMenu() { };
 	void closeAllAppMenus()  { closeAppMenusAtLvl(0); };
 	virtual void closeAppMenusAtLvl(int startlvl)  { };
-	void closeAllContextMenus() {
+	virtual void closeAllContextMenus() {
 		closeContextMenu();
 		closeAllAppMenus();
 	}

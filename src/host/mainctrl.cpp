@@ -620,7 +620,7 @@ void MainCtrl::onTick()
 //	}
 	if (!guiDragged && !guiCaptured && guiOver && (!this->ctxtmenu || ctxtmenu->isTransient())) {
 		int32_t hoverTicks = 0;
-		if (ctxtmenu && (ctxtmenu->canClose() || (lastTooltipSrc && guiOver && guiOver != lastTooltipSrc))) {
+		if (ctxtmenu && ctxtmenu->isTransient() && (lastTooltipSrc && guiOver && guiOver != lastTooltipSrc)) {
 			closeContextMenu();
 		}
 		if (!ctxtmenu && guiOver == lastHoveredTooltip) {
@@ -1041,8 +1041,17 @@ bool MainCtrl::isPlaying() {
 }
 bool MainCtrl::mouseDownPre() {
 	dragdropclip.reset();
+	if (this->ctxtmenu && this->ctxtmenu->isDialog()) {
+		return false;
+	}
 	closeAllContextMenus();
 	return true;
+}
+void MainCtrl::closeAllContextMenus() {
+	if (!this->ctxtmenu || !this->ctxtmenu->isDialog()) {
+		closeContextMenu();
+	}
+	closeAllAppMenus();
 }
 
 track_t* MainCtrl::insertNewTrack(int trackInsertPos, int trackType, int wasUserAction) {

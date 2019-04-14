@@ -23,6 +23,9 @@ public:
 	void determineSize(ivec2& prefSize) override {
 		prefSize = dialogSize;
 	}
+	virtual bool isDialog() {
+		return true;
+	}
 };
 class guidialog_about : public guidialog_base {
 	guibutton btnClose;

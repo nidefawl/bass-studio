@@ -20,7 +20,7 @@ template <typename T>
 class guitooltip : public guictxtmenu {
 protected:
 	T* ptr;
-	bool hadMouseMovement = false;
+	bool hadMouseFocus = false;
 	Table::tbl table;
 	gui_textfield textField;
 public:
@@ -37,19 +37,20 @@ public:
 		removeGuis();
 	}
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-		hadMouseMovement = true;
 		if (contains(mpos)) {
+			if (evt.type == MouseHitType::MOUSE_LEFT||evt.type == MouseHitType::MOUSE_RIGHT)
+				hadMouseFocus = true;
 			evt.requestFocus(this);
 			return true;
 		}
 		return false;
 	}
 	bool isTransient() override {
-		return true;
+		return !hadMouseFocus;
 	}
-	bool canClose() override {
-		return hadMouseMovement && !parentCtrl->isMouseInside();
-	}
+//	bool canClose() override {
+//		return !hadMouseFocus && !parentCtrl->isMouseInside();
+//	}
 	virtual void clicked(int _id) {
 		closeContextMenu();
 	}
