@@ -66,9 +66,8 @@ public:
 				GuiColor::constant_t c = (stateFlags&FLG_ENBL) ? GuiColor::COL_LABEL_ACTIVE : GuiColor::COL_LABEL_INACTIVE;
 				NVGcolor color = theme->getColor(c);
 				setFont(vg, fontScale, color, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-				float strWidth = nvgText(vg, renderPos.x + size.x / 2.0f, renderPos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(str), NULL);
-				if (strWidth*2 > size.x) {
-				}
+				nvgTextBox(vg, renderPos.x, renderPos.y + G_FONT_MIDDLE_OFFSET(size.y), size.x, StringAsCStr(str), NULL);
+
 			}
 
 			if (drawFn) {
@@ -77,6 +76,7 @@ public:
 			nvgRestore(vg);
 		}
 	}
+	guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
 };
 class guibutton : public guibuttonbase {
 	bool* enabledPtr = NULL;

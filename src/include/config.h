@@ -15,4 +15,4 @@
 #endif
 #define SETTINGS_NAME "data/settings.json"
 #define THEMEFILE_NAME "data/theme.json"
-#define CREATE_DEBUG_COMPANION_WINDOW 0
+#define CREATE_DEBUG_COMPANION_WINDOW 1

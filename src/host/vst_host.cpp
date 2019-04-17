@@ -29,6 +29,7 @@
 #include <stdlib.h>
 #include <memory.h>
 #include "track_impl.h"
+#include "projectcontroller.h"
 #include "threads/threadlock.h"
 
 #ifdef _WIN32
@@ -244,6 +245,11 @@ static int audioCallback(const void *inputBuffer, void *outputBuffer,
 //		inputs = host->blockTemp->f;
 //	}
 	dsp_util::fillSilence(outputs, framesPerBuffer);
+	if (!host) {
+		return paAbort;
+	}
+
+	//still a race condition on_terminate here
 	AudioBuffer* block;
 	if (host->audioQueue.try_dequeue(block)) {
 		if (framesPerBuffer == block->output->samples) {
@@ -423,17 +429,17 @@ void delayAudio(DelayLine* delayLine, AudioBlock* input, AudioBlock* output, sam
 
 }
 
-int32_t vsthost::processPlayback(int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround) {
+int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround) {
 	double since = timer.getTimeDoubleReset();
 	timer2.reset();
-	MainCtrl* ctrl = MainCtrl::get();
+//	MainCtrl* ctrl = MainCtrl::get();
 //	static AudioBuffer* master = allocateBuffer();
 //	master->input->realloc(lBlockSize);
 //	master->output->realloc(lBlockSize);
 	int32_t& readPos = ringbuffer.readPos;
 	int32_t& writePos = ringbuffer.writePos;
 	AudioBuffer** buffers = ringbuffer.buffers;
-	while (stream != NULL) {
+	while (ctrl) {
 		AudioBuffer* buffer = buffers[readPos];
 		if (!buffer->submitted || buffer->inUse) {
 			break;
@@ -448,7 +454,7 @@ int32_t vsthost::processPlayback(int32_t sample, double posDouble, playback_stat
 #ifndef NDEBUG
 
 #endif
-	if (stream != NULL) {
+	if (ctrl) {
 		/*
 		 * We try to stay 4 blocks ahead of the audiothread read position
 		 * This should be adjusted depending on samplerate and blocksize
@@ -569,6 +575,8 @@ int32_t vsthost::processPlayback(int32_t sample, double posDouble, playback_stat
 				continue;
 			trAudio->meter.update(&trAudio->output);
 		}
+		double blockPosSample = sample;
+		double blockPosTick = posDouble;
 		sample = samplePosBlockEnd;
 		posDouble += ticksPerBlock;
 #ifndef NDEBUG
@@ -577,16 +585,20 @@ int32_t vsthost::processPlayback(int32_t sample, double posDouble, playback_stat
 //		dsp_util::fillSqare(fSampleRate, 440, bufferWrite->master->f, bufferWrite->master->samples);
 		bufferWrite->submitted = true;
 		bufferWrite->inUse = true;
+		bufferWrite->blockPosSample = blockPosSample;
+		bufferWrite->blockPosTick = blockPosTick;
 		writePos++;
 		writePos &= RING_BUF_MASK;
 		audioQueue.enqueue(bufferWrite);
 		nBlocksProcessed++;
 		}
 	}
-	for (track_t* tr : ctrl->trackList) {
-		track_impl_t* trAudio = tr->audio;
-		if (trAudio) {
-			trAudio->onTick(since);
+	if (ctrl) {
+		for (track_t* tr : ctrl->trackList) {
+			track_impl_t* trAudio = tr->audio;
+			if (trAudio) {
+				trAudio->onTick(since);
+			}
 		}
 	}
 	int64_t timeTaken = timer2.getTime();
@@ -648,7 +660,6 @@ void vsthost::processAudio(audio_stage_t* stage, AudioBlock* input, AudioBlock* 
 		effectbase *current = NULL;
 		current = stage->effects[i];
 		if (!current->bIsSetup) {
-			my_printf("Skipping effect %d: bIsSetup == false\n", current->slot);
 			continue;
 		}
 		processing.pluginId = current->projectGlobalId;
@@ -872,6 +883,10 @@ void vsthost::removePlugin(effectbase* plugin) {
 	audioStage->removePlugin(plugin, true);
 	audioStage->pluginsChanged();
 }
+template<typename T>
+void removeErase(std::vector<T> t, T& t2) {
+
+}
 void vsthost::unloadPlugin(effectbase* plugin) {
 
 	//TODO: this shouldn't be here!
@@ -888,29 +903,27 @@ void vsthost::unloadPlugin(effectbase* plugin) {
 	plugin->close();
 	plugin->unload(this);
 
-//	PopupCtrl::get()->close(); // Make sure context controls do not reference vst
+	switch (plugin->getModuleType()) {
+	case PLUGIN_TYPE_DEFERRED:
+		assert(removeEntry(pluginsDeferred, plugin));
+		break;
+	case PLUGIN_TYPE_INTERNAL_EFFECT:
+	case PLUGIN_TYPE_VST:
+		assert(removeEntry(pluginInstancesVST2, plugin));
+		assert(removeEntry(pluginInstances, plugin));
+		break;
+	default:
+		assert(removeEntry(pluginInstancesInternal, plugin));
+		assert(removeEntry(pluginInstances, plugin));
+		break;
+	}
+
+	//	PopupCtrl::get()->close(); // Make sure context controls do not reference vst
 	if (plugin->getModuleType() == PLUGIN_TYPE_VST || plugin->getModuleType() == PLUGIN_TYPE_INTERNAL_EFFECT) {
 		vstplugin* vst = dynamic_cast<vstplugin*>(plugin);
-		assert(vst);
-		auto it = std::find(pluginInstancesVST2.begin(), pluginInstancesVST2.end(), plugin);
-		assert(it != pluginInstancesVST2.end());
-		if (it != pluginInstancesVST2.end()) {
-			pluginInstancesVST2.erase(it);
-		}
 		if (vst->internalModuleId <= 0) {
 			moduleMgr->releaseModule(vst->handle->hmodule);
 		}
-	} else {
-		auto it = std::find(pluginInstancesInternal.begin(), pluginInstancesInternal.end(), plugin);
-		assert(it != pluginInstancesInternal.end());
-		if (it != pluginInstancesInternal.end()) {
-			pluginInstancesInternal.erase(it);
-		}
-	}
-	auto it = std::find(pluginInstances.begin(), pluginInstances.end(), plugin);
-	assert(it != pluginInstances.end());
-	if (it != pluginInstances.end()) {
-		pluginInstances.erase(it);
 	}
 	delete plugin;
 }
@@ -1057,6 +1070,11 @@ bool vsthost::moveEffects(audio_stage_t* trp, int32_t src, int32_t dst, int32_t 
 		effect->setSlot(slot++);
 	}
 	return true;
+}
+
+bool vsthost::replacePlugin(audio_stage_t* trp, effectbase* plugin, int32_t dst, effectbase** prevPlugin) {
+	//TODO: call pluginsChanged, update latency
+	return trp->replaceEffect(dst, plugin, prevPlugin);
 }
 bool vsthost::insertNewPlugin(audio_stage_t* trp, effectbase* plugin, int32_t dst) {
 //	if (plugin->isSynth) {

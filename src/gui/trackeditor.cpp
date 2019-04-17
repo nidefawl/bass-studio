@@ -321,7 +321,7 @@ void guitrack_editor::trackViewDragBegin(guitrack_editor* view, MouseEvent& evt)
 	ivec2 local = evt.relMousepos;
 	int32_t tick = grid.screenToTickSnap(local.x, isAlt(evt.kbmods) ? SNAP_OFF : SNAP_ON);
 	track_t* tr = getTrackFromMouse(project, local, false);
-	gui_track_automationlane* subTr = getSubTrackFromMouse(project, local, false);
+	gui_track_subtrack* subTr = getSubTrackFromMouse(project, local, false);
 	if (subTr) {
 		tr = subTr->m_track;
 	}
@@ -347,7 +347,7 @@ void guitrack_editor::trackViewDragMove(guitrack_editor* view, MouseEvent& evt) 
 		Cursor& c = MainCtrl::get()->cursor;
 		ivec2 local = evt.relMousepos;
 		track_t* trNxtSelected = NULL;
-		gui_track_automationlane* subTr = getSubTrackFromMouse(project, local, true);
+		gui_track_subtrack* subTr = getSubTrackFromMouse(project, local, true);
 		if (subTrSelected) {
 			if (subTr)
 			my_printf("subTr hit %d\n", subTr->idx);
@@ -819,7 +819,7 @@ void guitrack_editor::render(NVGcontext* vg) {
 			nvgSave(vg);
 			g->content->render(vg);
 			nvgRestore(vg);
-			for (gui_track_automationlane* g2 : g->subtracks) {
+			for (gui_track_subtrack* g2 : g->subtracks) {
 				nvgSave(vg);
 				g2->render(vg);
 				nvgRestore(vg);
@@ -838,7 +838,7 @@ void guitrack_editor::render(NVGcontext* vg) {
 			//content
 			g->content->render(vg);
 			nvgRestore(vg);
-			for (gui_track_automationlane* g2 : g->subtracks) {
+			for (gui_track_subtrack* g2 : g->subtracks) {
 				nvgSave(vg);
 				g2->render(vg);
 				nvgRestore(vg);
@@ -949,14 +949,14 @@ int32_t getPosYFirstReturnTrack(project_t& project) {
 	return 0;
 }
 
-gui_track_automationlane *getSubTrackFromMouse(project_t& project, ivec2 mouse, bool isDragSnap) {
+gui_track_subtrack *getSubTrackFromMouse(project_t& project, ivec2 mouse, bool isDragSnap) {
 	int ySplit = getPosYFirstReturnTrack(project);
 	const trackbasecontainer_t& tracks = mouse.y < ySplit ? project.trackCtr : project.tracksBottom;
 	for (track_t *tr : tracks) {
 		if (!tr->subtracks.size()) {
 			continue;
 		}
-		for (gui_track_automationlane *atr : tr->subtracks) {
+		for (gui_track_subtrack *atr : tr->subtracks) {
 			int top = atr->top();
 			int bottom = atr->bottom();
 			if (mouse.y >= top && mouse.y < bottom) {

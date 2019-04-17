@@ -28,6 +28,7 @@ class vstplugin;
 struct track_impl_t;
 struct audio_stage_t;
 struct audio_stage_ref_t;
+class project_controller_t;
 typedef void PaStream;
 
 typedef AEffect*(VSTPluginMain_t)(audioMasterCallback audioMasterCB);
@@ -82,6 +83,7 @@ private:
 	std::vector<vstplugin*> pluginInstancesVST2;
 	std::vector<effectbase*> pluginInstancesInternal;
 	std::vector<effectbase*> pluginInstances;
+	std::vector<effectbase*> pluginsDeferred;
 
 	std::atomic<PaStream*> stream{NULL};
 	audiothread_ringbuffer_t ringbuffer;
@@ -111,7 +113,7 @@ public:
 	std::atomic<int32_t> pluginId{100};
 	std::atomic<int32_t> audioStageId{100};
 
-	int32_t processPlayback(int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround);
+	int32_t processPlayback(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround);
 	void processAudio(audio_stage_t* channel, AudioBlock* input, AudioBlock* output, unsigned long samples);
 	void setBlockSize(uint16_t blockSize);
 	VstTimeInfo* getTimeInfo() {
@@ -166,7 +168,15 @@ public:
 	bool movePlugins(audio_stage_t* dstTr, audio_stage_t* trp, int32_t src, int32_t len, int32_t dst);
 	bool moveEffects(audio_stage_t* trp, int32_t src, int32_t dst, int32_t len);
 	bool insertNewPlugin(audio_stage_t* trp, effectbase* plugin, int32_t dst);
+	bool replacePlugin(audio_stage_t* trp, effectbase* plugin, int32_t dst, effectbase** prevPlugin);
 	void getAllInstances(std::vector<effectbase*>& effects);
+	void addDeferredEffect(effectbase* plugin) {
+		pluginsDeferred.push_back(plugin);
+	}
+	void getDeferredEffects(std::vector<effectbase*>& effects) {
+		effects = pluginsDeferred;
+	}
+	void activateDeferred(effectbase* effect);
 	SafeRefStorage<effectbase>* getSafeRefStore() {
 		return &safeRefs;
 	}

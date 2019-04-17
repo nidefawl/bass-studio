@@ -7,6 +7,7 @@
 #include <assert.h>
 #include "note.h"
 #include "seq_time.h"
+#include "str_util.h"
 #include "logging.h"
 #include "platform.h"
 #include "automation.h"

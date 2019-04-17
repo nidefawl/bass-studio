@@ -108,7 +108,11 @@ int initDebugWindow() {
 void drawDebugWindow(NVGcontext* ctx, int winW, int winH, float pxratio) {
 
 	std::vector<TextureAtlas> rendered;
-	waveformrender::getInstance()->getRenderedTextures(rendered);
+	auto instance = waveformrender::getInstance();
+	if (!instance) {
+		return;
+	}
+	instance->getRenderedTextures(rendered);
 //	my_printf("nrendered: %d\n", rendered.size());
 //	auto* ptr = audiocache::getInstance()->get(0);
 //	if (ptr) {
@@ -148,6 +152,8 @@ void drawDebugWindow(NVGcontext* ctx, int winW, int winH, float pxratio) {
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
+	glStencilMask(~0);
+	glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	nvgBeginFrame(ctx, winW, winH, pxratio);
 
 //	nvgBeginFrame(ctx, winW, winH, pxratio);

@@ -4,6 +4,7 @@
 #include "exceptions.h"
 #include "seq_util.h"
 #include "seq_time.h"
+#include "str_util.h"
 
 
 #include "track.h"

@@ -17,6 +17,10 @@ constant_t COL_PLUG_TITLE("COL_PLUG_TITLE", 0xff151515);
 constant_t COL_PLUG_TITLE_SELECTED("COL_PLUG_TITLE_SELECTED", 0xff353535);
 constant_t COL_PLUG_TITLE_FOCUSED("COL_PLUG_TITLE_FOCUSED", 0xffff0000);
 }
+namespace GuiConstant {
+
+constant_t CONST_ROUND("CONST_ROUND", 20);
+}
 
 
 void guictr_base::setControl(BaseCtrl* parentCtrl) {
@@ -58,7 +62,7 @@ void guictr_base::renderBackground(NVGcontext* vg) {
 void guictr_base::renderFrameBase(NVGcontext* vg) {
 	ivec2 sizeContent = getSizeContent();
 	nvgBeginPath(vg);
-	nvgRoundedRect(vg, 0, 0, sizeContent.x, sizeContent.y, G_RND);
+	nvgRoundedRect(vg, 0, 0, sizeContent.x, sizeContent.y, theme->getFloat(GuiConstant::CONST_ROUND));
 	nvgFillColor(vg, theme->getFrameColorBase());
 	nvgFill(vg);
 }
@@ -67,7 +71,7 @@ void guictr_base::renderFrameOutline(NVGcontext* vg) {
 	ivec2 sizeContent = getSizeContent();
 	nvgRect(vg, 0, 0, sizeContent.x, sizeContent.y);
 	nvgStrokeColor(vg, theme->getFrameColorOutline());
-	nvgStrokeWidth(vg, G_STROKE);
+	nvgStrokeWidth(vg, 2.0);
 	nvgStroke(vg);
 	ivec2 sizeInset = getSizeContent();
 	nvgIntersectScissor(vg, 0, 0, sizeInset.x, sizeInset.y);
@@ -84,12 +88,13 @@ void guictr_base::renderTitleBar(NVGcontext* vg, String text, GuiConstant::const
 	}
 
 	//	ivec2 sizeContent = getSizeContent();
+	float fRnd = theme->getFloat(GuiConstant::CONST_ROUND);
 	const int32_t hpt = theme->get(constantHeight);
 	nvgBeginPath(vg);
 	if (isHorizontalTitle) {
-		nvgRoundedRectVarying(vg, 0, 0, size.x, hpt, G_RND, G_RND, 0, 0);
+		nvgRoundedRectVarying(vg, 0, 0, size.x, hpt, fRnd, fRnd, 0, 0);
 	} else {
-		nvgRoundedRectVarying(vg, 0, 0, hpt, size.y, G_RND, G_RND, 0, 0);
+		nvgRoundedRectVarying(vg, 0, 0, hpt, size.y, fRnd, fRnd, 0, 0);
 	}
 	nvgFillColor(vg, c);
 	nvgFill(vg);
@@ -100,7 +105,7 @@ void guictr_base::renderTitleBar(NVGcontext* vg, String text, GuiConstant::const
 		} else {
 			setFont(vg, (int) (hpt * 0.8), G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
 			nvgSave(vg);
-			nvgTranslate(vg, textOffsetX + hpt / 2, size.y);
+			nvgTranslate(vg, hpt / 2, textOffsetX);
 			nvgRotate(vg, -M_PI / 2.0);
 			//		nvgTranslate(vg, -HEIGHT_PLUGIN_TITLE, 0);
 			//		nvgText(vg, 0, 0, StringAsCStr(this->text), NULL);

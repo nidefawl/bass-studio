@@ -23,7 +23,8 @@ constant_t COL_BTN_BG_BYPASS_ACTIVE("COL_BTN_BG_BYPASS_ACTIVE", 0xff80ABC0);
 constant_t COL_BTN_BG_SHOW_ACTIVE("COL_BTN_BG_SHOW_ACTIVE", 0xff40ABC0);
 }
 namespace GuiConstant {
-constant_t CONST_GUI_FRAME_STROKE_WIDTH("CONST_GUI_FRAME_STROKE_WIDTH", 10);
+constant_t CONST_GUI_FRAME_STROKE_WIDTH("CONST_GUI_FRAME_STROKE_WIDTH", 10, 1, 50);
+constant_t CONST_GUI_INSET_WIDGET_BG("CONST_GUI_INSET_WIDGET_BG", 2, 0, 5);
 }
 //NVGcolor g_guiColors[NUM_GUI_COLORS];
 NVGcolor g_colorPalette[COLOR_PALETTE_LEN];
@@ -57,6 +58,11 @@ void setFont(NVGcontext* vg, float size, NVGcolor color, int alignment) {
 	nvgFontFace(vg, "sans");
 	nvgFillColor(vg, color);
 	nvgTextAlign(vg, alignment);
+}
+float textWidth(NVGcontext* vg, const String& str) {
+	float bounds[4]{0};
+	nvgTextBounds(vg, 0, 0, StringAsCStr(str), nullptr, bounds);
+	return bounds[2] - bounds[0]; // maxX - minX;
 }
 void renderText(NVGcontext* ctx, float x, float y, float maxWidth, const char* string)
 {
@@ -251,17 +257,25 @@ void guibase::renderWidgetBorderPosSize(NVGcontext* vg, int32_t flags, ivec2 pos
 	nvgStrokeColor(vg, theme->getBgStrokeColor(flags));
 	nvgStrokeWidth(vg, theme->getFloat(GuiConstant::CONST_GUI_FRAME_STROKE_WIDTH));
 	nvgStroke(vg);
-	auto color = getBackgroundColor(flags);
-	nvgFillColor(vg, color);
-	nvgFill(vg);
-
-	//		nvgBeginPath(vg);
-	//		nvgRect(vg, pos.x+1, pos.y+1, size.x-2, size.y-2);
-	//		nvgStrokeColor(vg, theme->getColor(GuiColor::COL_GUI_STROKE));
-	//		nvgStrokeWidth(vg, 3);
-	//		nvgStroke(vg);
-	//		nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_DRK));
-	//		nvgFill(vg);
+	int n = theme->get(GuiConstant::CONST_GUI_INSET_WIDGET_BG);
+	auto bgPos = pos+ivec2(n);
+	auto bgSize = size-ivec2(n*2);
+	if (bgSize.x > 0 && bgSize.y > 0) {
+		nvgBeginPath(vg);
+		nvgRect(vg, bgPos.x, bgPos.y, bgSize.x, bgSize.y);
+		auto color = getBackgroundColor(flags);
+		nvgFillColor(vg, color);
+		nvgFill(vg);
+	}
+//
+//	nvgBeginPath(vg);
+//	nvgRect(vg, pos.x-1, pos.y-1, size.x+2, size.y+2);
+//	nvgFillColor(vg, rgbToNvg(0x00FF00));
+//	nvgFill(vg);
+//	nvgBeginPath(vg);
+//	nvgRect(vg, pos.x, pos.y, size.x, size.y);
+//	nvgFillColor(vg, theme->getBgStrokeColor(flags));
+//	nvgFill(vg);
 }
 debugproperties* makeUniquePropertiesCtr();
 void guibase::handleMouseDownBegin(MouseEvent& evt) {
@@ -301,6 +315,7 @@ NVGcolor guibuttonbase::getBackgroundColor(int stateflags) const {
 	}
 	return theme->getBgColor(stateflags);
 }
+
 void guibuttontoggle::render(NVGcontext* vg) {
 	vec2 cen = vec2(size / 2);
 	cen.x += pos.x;

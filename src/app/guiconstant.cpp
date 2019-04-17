@@ -65,6 +65,21 @@ namespace GuiConstant {
 		my_printf("push %16s to %12X -> size %d\n", _name, (int64_t)&allconstants, allconstants.size());
 	  allconstants.push_back(this);
 	}
+	constant_t::constant_t(const char* _name, int32_t _defValue, int _rangeMin, int _rangeMax)
+	: idx(getNextId()),
+	  name(_name),
+	  defValue(_defValue),
+	  rangeMin(_rangeMin),
+	  rangeMax(_rangeMax) {
+		auto& allconstants = _getConstants();
+		my_printf("push %16s to %12X -> size %d\n", _name, (int64_t)&allconstants, allconstants.size());
+	  allconstants.push_back(this);
+	}
+	constant_t& constant_t::setMinMax(int iMin, int iMax) {
+		rangeMin = iMin;
+		rangeMax = iMax;
+		return *this;
+	}
 }
 
 namespace GuiConstant {

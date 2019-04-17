@@ -300,13 +300,17 @@ bool gui_track::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 	return false;
 }
 
-void gui_track_automationlane::updateVisibleTrackContents(scaled_grid& grid) {
+void gui_track_subtrack::updateVisibleTrackContents(scaled_grid& grid) {
 	automation.setData();
 	automation.updateVisibleTrackContents(grid);
 }
-
 gui_track_automationlane::gui_track_automationlane(track_t* _track, scaled_grid& _grid, automatable_t* _at, int32_t _param)
-  : guictr_base(), m_track(_track), automation(_track, _grid, at, param, idx), at(_at), param(_param)
+  : gui_track_subtrack(_track, _grid, _at, _param)
+{
+}
+
+gui_track_subtrack::gui_track_subtrack(track_t* _track, scaled_grid& _grid, automatable_t* _at, int32_t _param)
+  : guictr_base(), m_track(_track), automation(_track, _grid, this->at, param, idx), at(_at), param(_param)
 {
 	padding = 0;
 }
@@ -371,6 +375,9 @@ public:
 	}
 };
 void gui_track_automationlane::handleRightClick(MouseEvent& evt) {
+	MainCtrl::get()->openContextMenu(new guictxtmenu_trackcontent(this->m_track->idx), evt.mousepos);
+}
+void gui_track_subtrack::handleRightClick(MouseEvent& evt) {
 	MainCtrl::get()->openContextMenu(new guictxtmenu_trackcontent(this->m_track->idx), evt.mousepos);
 }
 void gui_track::handleRightClick(MouseEvent& evt) {

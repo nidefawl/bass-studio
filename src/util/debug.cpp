@@ -60,7 +60,7 @@ public:
 		loggers.push_back(_logger);
 	}
 	void removeLogger(Logger* _logger) {
-		loggers.erase(std::remove(loggers.begin(), loggers.end(), _logger));
+		loggers.erase(std::remove(loggers.begin(), loggers.end(), _logger), loggers.end());
 		loggers.push_back(_logger);
 	}
 	virtual ~MultiLogger() { }

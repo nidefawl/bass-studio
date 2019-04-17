@@ -10,6 +10,7 @@
 #include "samplerate.h"
 #include "note.h"
 #include "dsp_util.h"
+#include "str_util.h"
 #include "seq_time.h"
 #include "snapshot.h"
 
@@ -136,6 +137,7 @@ struct audio_stage_t {
 	const samplerate_t& sampleRate;
 	const uint16_t& blockSize;
 	std::vector<effectbase*> effects;
+	std::vector<effectbase*> deferredEffects;
 	std::vector<audio_stage_t*> children;
 	audio_stage_t(int32_t _id,/*track_t* _track, */const samplerate_t& _sampleRate, const uint16_t& _blockSize, int32_t nChannels, int _type = 1)
 	: id(_id), parent(nullptr), owner(nullptr),/*track(_track),*/
@@ -155,6 +157,7 @@ struct audio_stage_t {
 	void loadPlugins(const std::vector<plugin_snapshot_t>& trPluginList);
 	int32_t getLatency();
 	void insertEffect(int32_t idx, effectbase* _instrument);
+	bool replaceEffect(int32_t idx, effectbase* _effect, effectbase** _prevEffect);
 	void pluginsChanged();
 	void onTick(double since);
 	track_t* getTrack();

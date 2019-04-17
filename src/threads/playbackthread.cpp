@@ -75,13 +75,20 @@ class PlaybackThread::Impl {
     playback_state m_status = status_no_process;
 	std::recursive_mutex mutex;
 	int32_t threadid = 0;
+	project_controller_t* ctrl = nullptr;
+	bool exited = false;
 public:
     Impl() : q(128) {
 	}
+    ~Impl() {
+		assert(!t.joinable());
+    	assert(exited);
+    }
     int32_t getThreadId() {
     	return threadid;
     }
-	void start() {
+	void start(project_controller_t* ctrl) {
+		this->ctrl = ctrl;
 		t = std::thread([this]() {
 			this->run();
 		});
@@ -121,8 +128,7 @@ private:
 
 	void run() {
 		setCurrentThreadName("audiothread");
-
-		MainCtrl* ctrl = MainCtrl::get();
+		project_controller_t* const ctrl = this->ctrl;
 		vsthost* host = vsthost::getInstance();
 		double playbackDuration = 0;
 		hires_timer_t timer;
@@ -180,6 +186,7 @@ private:
     				std::this_thread::sleep_for(std::chrono::milliseconds(200));
 #endif
             		req->notify();
+            		exited = true;
         			return;
         		}
         		req->notify();
@@ -205,7 +212,8 @@ private:
             	inLoop = (tickPos >= projGlobals.loopStart
             			&& tickPos < projGlobals.loopStart+projGlobals.loopLen
 						&& m_status == status_play && projGlobals.loopEnabled);
-            	processedBlock = host->processPlayback(samplePos, tickPos, m_status, inLoop, isLoopAround);
+            	processedBlock = host->processPlayback(this->ctrl, samplePos, tickPos, m_status, inLoop, isLoopAround);
+//    			LOG("processedBlocks: %d, play: %d, tickpos: %f\n", processedBlock, (m_status==playback_state::status_play), tickPos);
             }
             /*
              * at sample rate 44100 and blocksize 512 the block duration is 1.xxms
@@ -231,7 +239,9 @@ private:
 					tickPos += ticksPerBlock;
 					if (inLoop) {
 						if (tickPos >= projGlobals.loopStart + projGlobals.loopLen) {
-							ctrl->setJumpFromTo(tickPos, projGlobals.loopStart);
+							if (MainCtrl::get()) {
+								MainCtrl::get()->setJumpFromTo(tickPos, projGlobals.loopStart);
+							}
 							LOG("JMP FROM %.2f to %d\n", tickPos, projGlobals.loopStart);
 							tickPos = projGlobals.loopStart;
 							samplePos = tickToSample(projGlobals.loopStart, bpm100, sampleRate);
@@ -279,8 +289,8 @@ void PlaybackThread::addRequest(int32_t _msgId, int32_t _param, bool wait) {
 		r->wait();
 	}
 }
-void PlaybackThread::startThread() {
-	_M_impl->start();
+void PlaybackThread::startThread(project_controller_t* ctrl) {
+	_M_impl->start(ctrl);
 }
 void PlaybackThread::stopThread() {
 	_M_impl->stop();

@@ -35,9 +35,6 @@ public:
 	~guimodule_empty() {
 		my_printf("DSTR!\n",0);
 	}
-	void render(NVGcontext* vg) override;
-	void buttonClicked(guibase* _button) override;
-	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
 	void layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) override {
 	}
 };
@@ -45,50 +42,6 @@ public:
 guimodule_empty::guimodule_empty(module_empty* _vst)
 : guiplugin(_vst),
   module(_vst) {
-}
-
-void guimodule_empty::render(NVGcontext* vg) {
-	renderBase(vg);
-	buttonBypass.render(vg);
-	buttonDelete.render(vg);
-
-	meter.render(vg);
-}
-bool guimodule_empty::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
-	if (contains(mpos)) {
-		if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
-			return false;
-		}
-		ivec2 localMouse = this->toContainerSpace(mpos);
-		if (buttonBypass.mouseHitTest(localMouse, evt)) {
-			return true;
-		}
-		if (buttonDelete.mouseHitTest(localMouse, evt)) {
-			return true;
-		}
-		if (isShift(evt.kbmods)) {
-			if (MainCtrl::get()->getPluginSel().pluginCtr != this->parent) {
-				return true;
-			}
-		}
-		evt.requestFocus(this);
-		return true;
-	}
-	return false;
-}
-
-void guimodule_empty::buttonClicked(guibase* _button) {
-	if (_button == &buttonBypass) {
-    	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-    	float f = effect->getParamValue(PARAM_ENABLE);
-    	float f2 = f > 0.5 ? 0 : 1;
-    	effect->setParamValue(PARAM_ENABLE, f2, 2);
-    	effect->postSetParameter(PARAM_ENABLE, f, f2, 2);
-
-	}
-	if (_button == &buttonDelete) {
-    	removePlugin(module);
-	}
 }
 
 

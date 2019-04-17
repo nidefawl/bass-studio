@@ -26,6 +26,7 @@
 
 #include "modules.h"
 #include "project.h"
+#include "snapshot.h"
 #include "mainctrl.h"
 #include "history.h"
 #include "plugindatabase.h"
@@ -60,7 +61,7 @@ void deleteTrack(track_t* tr, delete_cb *cb) {
 		delete (tr->content);
 	}
 	if (tr->subtracks.size()) {
-		for (gui_track_automationlane* al : tr->subtracks) {
+		for (gui_track_subtrack* al : tr->subtracks) {
 			delete al;
 		}
 		tr->subtracks.clear();
@@ -266,6 +267,22 @@ void audio_stage_t::removePlugin(effectbase* _effect, bool notifyUp) {
 	_effect->breakTrackLink();
 }
 
+bool audio_stage_t::replaceEffect(int32_t idx, effectbase* _effect, effectbase** _prevEffect) {
+	assert(idx >= 0 && idx < (int32_t)effects.size());
+	if (idx >= 0 && idx < (int32_t)effects.size()) {
+		auto cur = effects[idx];
+		cur->breakTrackLink();
+		*_prevEffect = cur;
+		effects[idx] = _effect;
+		_effect->setTrackLink(this);
+		int slot = 0;
+		for (effectbase* effect : effects) {
+			effect->setSlot(slot++);
+		}
+		return true;
+	}
+	return false;
+}
 void audio_stage_t::insertEffect(int32_t idx, effectbase* _effect) {
 	std::vector<effectbase*>::iterator it;
 	if (idx == -2 || idx >= (int32_t)effects.size()) {
@@ -407,12 +424,20 @@ void track_impl_t::getAutomatableTrackTargets(std::vector<automatable_t*>& targe
 void track_impl_t::saveAutomationLanes(std::vector<automationlane_snapshot_t>& atls)
 {
 	atls.reserve(track->subtracks.size());
-	for (gui_track_automationlane* atl : track->subtracks) {
-		automationlane_snapshot_t ref = atl->at->toRef();
+	for (gui_track_subtrack* atl : track->subtracks) {
+		automationlane_snapshot_t ref;
+		if (atl->subtrackType() == gui_track_subtrack::SUBTRACK_TYPE_AUTOMATION) {
+			assert(atl->at);
+			ref = atl->at->toRef();
+		} else {
+		}
 		ref.paramIdx = atl->param;
 		ref.height = atl->height;
+		ref.subtrackType = atl->subtrackType();
+		log_printf("save ref.type %d, ref.refId %d, ref.paramIdx %d\n", ref.type, ref.refId, ref.paramIdx);
 		atls.push_back(std::move(ref));
 	}
+
 }
 void track_impl_t::showAutomationLanes() {
 	bool hide = track->hideAutomation || track->hideTrack;
@@ -422,7 +447,7 @@ void track_impl_t::showAutomationLanes() {
 	if (hide) {
 		atl.clear();
 		saveAutomationLanes(atl);
-		MainCtrl::getGuiTrackCtr()->removeAllAutomationLanes(track);
+		MainCtrl::getGuiTrackCtr()->removeAllSubtracks(track);
 		Cursor& cursor = MainCtrl::get()->cursor;
 		if (cursor.inSubTrackAny(track->idx)) {
 			fixCursorSubRange(cursor, 0);
@@ -438,8 +463,8 @@ effectbase* loadEffectModule(const plugin_snapshot_t& pluginSnapshot) {
 	effectbase* effect = nullptr;
 	vstplugin* loadedPlugin = nullptr;
 	if (pluginSnapshot.pluginType == PLUGIN_TYPE_VST) {
-		plugindatabase_t& db = MainCtrl::get()->plugindb;
-		if (db.resolve(pluginSnapshot.name, pluginSnapshot.uId, &path)) {
+		plugindatabase_t* db = plugindatabase_t::getTls();
+		if (db->resolve(pluginSnapshot.name, pluginSnapshot.uId, &path)) {
 			vstpluginloadres res = host->loadPlugin(path, pluginSnapshot.projectGlobalId);
 			if (res.result==0&&res.plugin) {
 				loadedPlugin = res.plugin;
@@ -497,44 +522,81 @@ void loadEffectAutomationFromSnapshot(const plugin_snapshot_t& pluginSnapshot, e
 }
 void audio_stage_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginList)
 {
-	vsthost* host = vsthost::getInstance();
 	for (const plugin_snapshot_t& pluginSnapshot : trPluginList) {
-		effectbase* effect = loadEffectModule(pluginSnapshot);
+		auto effect = loadPluginDeferred(pluginSnapshot);
+//		effectbase* effect = loadEffectModule(pluginSnapshot);
+		//			loadEffectParamsFromSnapshot(pluginSnapshot, effect);
 		if (effect) {
 			vsthost* host = vsthost::getInstance();
-			loadEffectParamsFromSnapshot(pluginSnapshot, effect);
+
+			this->deferredEffects.push_back(effect);
+			host->addDeferredEffect(effect);
+//			loadEffectParamsFromSnapshot(pluginSnapshot, effect);
+			effect->load(host);
 			host->insertNewPlugin(this, effect, pluginSnapshot.slot);
-			effect->loadSnapshot(pluginSnapshot);
-			loadEffectAutomationFromSnapshot(pluginSnapshot, effect);
-			if (pluginSnapshot.enabled) {
-				effect->resume();
-			}
+			assert(effect->trackImpl == this);
+			assert(effects.size());
+//			effect->loadSnapshot(pluginSnapshot);
+//			loadEffectAutomationFromSnapshot(pluginSnapshot, effect);
+//			if (pluginSnapshot.enabled) {
+//				effect->resume();
+//			}
 		}
 	}
 
 
 }
+void vsthost::activateDeferred(effectbase* eff) {
+	assert(eff->trackImpl);
+	assert(eff->trackImpl->effects.size());
+	assert(eff->getSlot() >= 0);
+	auto defEffect = dynamic_cast<effect_deferred*>(eff);
+	plugin_snapshot_t pluginSnapshot = defEffect->getSnapshot();
+	effectbase* effect = loadEffectModule(pluginSnapshot);
+	if (!effect) {
+		assert(0);
+		return;
+	}
+	loadEffectParamsFromSnapshot(pluginSnapshot, effect);
+	effectbase* prevPlugin = nullptr;
+	assert(removeEntry(eff->trackImpl->deferredEffects, eff));
+	replacePlugin(eff->trackImpl, effect, defEffect->getSlot(), &prevPlugin);
+	assert(removeEntry(this->pluginsDeferred, eff));
+	effect->loadSnapshot(pluginSnapshot);
+	loadEffectAutomationFromSnapshot(pluginSnapshot, effect);
+	if (pluginSnapshot.enabled) {
+		effect->resume();
+	}
+
+}
 void track_impl_t::loadAutomationLanes(const std::vector<automationlane_snapshot_t>& atls)
 {
 	guictr_tracks* guiTracks = MainCtrl::getGuiTrackCtr();
-	for (const automationlane_snapshot_t& ref : atls) {
-		gui_track_automationlane* al = NULL;
-		if (ref.type == 0) {
-			effectbase* plugin = getPluginById(ref.refId);
-			if (!plugin) {
-				continue;
-			}
-			al = guiTracks->addAutomationLane(track, plugin, ref.paramIdx, false);
+	if (guiTracks) {
+		for (const automationlane_snapshot_t& ref : atls) {
+			gui_track_subtrack* al = NULL;
+			if (ref.subtrackType == gui_track_subtrack::SUBTRACK_TYPE_AUTOMATION) {
+				log_printf("loading ref.type %d, ref.refId %d, ref.paramIdx %d\n", ref.type, ref.refId, ref.paramIdx);
+				if (ref.type == AUTOMATABLE_EFFECT) {
+					effectbase* plugin = getPluginById(ref.refId);
+					if (!plugin) {
+						continue;
+					}
+					al = guiTracks->addAutomationLane(track, plugin, ref.paramIdx, false);
 
+				}
+				if (ref.type == AUTOMATABLE_MIXER) {
+					al = guiTracks->addAutomationLane(track, &mixer, ref.paramIdx, false);
+				}
+				if (ref.type == AUTOMATABLE_ARP) {
+					al = guiTracks->addAutomationLane(track, arp, ref.paramIdx, false);
+				}
+			} else if (ref.subtrackType == gui_track_subtrack::SUBTRACK_TYPE_AUTOMATION) {
+//				al = new gui
+			}
+			if (al)
+				al->height = ref.height;
 		}
-		if (ref.type == 1) {
-			al = guiTracks->addAutomationLane(track, &mixer, ref.paramIdx, false);
-		}
-		if (ref.type == 2) {
-			al = guiTracks->addAutomationLane(track, arp, ref.paramIdx, false);
-		}
-		if (al)
-			al->height = ref.height;
 	}
 }
 void audio_stage_t::onTick(double since) {

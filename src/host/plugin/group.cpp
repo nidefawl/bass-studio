@@ -144,11 +144,12 @@ bool guimodule_group::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 			evt.requestFocus(&this->ctr);
 			return true;
 		}
-		if (buttonBypass.mouseHitTest(localMouse, evt)) {
-			return true;
-		}
-		if (buttonDelete.mouseHitTest(localMouse, evt)) {
-			return true;
+		for (guibase* gui : guis) {
+			if (!gui->isVisible())
+				continue;
+			if (gui->mouseHitTest(localMouse, evt)) {
+				return true;
+			}
 		}
 		if (ctr.mouseHitTest(localMouse, evt)) {
 			return true;
@@ -164,17 +165,7 @@ bool guimodule_group::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 	return false;
 }
 void guimodule_group::buttonClicked(guibase* _button) {
-	if (_button == &buttonBypass) {
-    	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-    	float f = effect->getParamValue(PARAM_ENABLE);
-    	float f2 = f > 0.5 ? 0 : 1;
-    	effect->setParamValue(PARAM_ENABLE, f2, 2);
-    	effect->postSetParameter(PARAM_ENABLE, f, f2, 2);
-
-	}
-	if (_button == &buttonDelete) {
-    	removePlugin(module);
-	}
+	guiplugin::buttonClicked(_button);
 }
 
 

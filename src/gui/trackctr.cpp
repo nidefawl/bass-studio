@@ -5,11 +5,13 @@
 #include "guicontainer.h"
 #include "exceptions.h"
 #include "theme.h"
+#include "automation.h"
 #include "track.h"
 #include "trackcontent.h"
 #include "trackcontrols.h"
 #include "track.h"
 #include "track_impl.h"
+#include "basectrl.h"
 #include "host/mainctrl.h"
 #include "logging.h"
 
@@ -110,14 +112,18 @@ void guictr_tracks::showAutomationLane(track_t* tr, automatable_t* at, int32_t p
 	tr->audio->selectedAutomationParam = paramIdx;
 	updateVisibleTrackContents();
 }
+void guictr_tracks::addSubTrack(track_t* t, gui_track_subtrack* subtrack, bool insertFront) {
+	trackView.addSubtrack(t, subtrack, insertFront);
+	t->mixer->addSubtrackMixer(t, subtrack);
+}
 gui_track_automationlane* guictr_tracks::addAutomationLane(track_t* t, automatable_t* at, int32_t paramIdx, bool insertFront) {
 	gui_track_automationlane* al = trackView.addAutomationLane(t, at, paramIdx, insertFront);
-	t->mixer->addAutomationLane(t, al);
+	t->mixer->addSubtrackMixer(t, al);
 	return al;
 }
 void guictr_tracks::removeAutomationLane(gui_track_automationlane* al) {
-	al->m_track->mixer->removeAutomationLane(al);
-	trackView.removeAutomationLane(al);
+	al->m_track->mixer->removeSubtrackMixer(al);
+	trackView.removeSubtrack(al);
 }
 void guictr_tracks::removeAllAutomationLanes(track_t* t, automatable_t* at, int32_t paramIdx) {
 	t->mixer->removeAllAutomationLanes(at, paramIdx);
@@ -127,9 +133,9 @@ void guictr_tracks::removeAllAutomationLanes(track_t* t, automatable_t* at) {
 	t->mixer->removeAllAutomationLanes(at);
 	trackView.removeAllAutomationLanes(t, at);
 }
-void guictr_tracks::removeAllAutomationLanes(track_t* t) {
-	t->mixer->removeAllAutomationLanes();
-	trackView.removeAllAutomationLanes(t);
+void guictr_tracks::removeAllSubtracks(track_t* t) {
+	t->mixer->removeAllSubtracks();
+	trackView.removeAllSubtracks(t);
 }
 void guictr_tracks::scrollOffsetChanged(int dir, float offset) {
 //	trackView.pos.y = loophandles.bottom()-offset*(contentHeight-size.y);
@@ -327,10 +333,7 @@ void guictr_tracks::render(NVGcontext* vg) {
 //		}
 	}
 }
-gui_track_automationlane* guitrack_editor::addAutomationLane(track_t* t, automatable_t* at, int32_t paramIdx, bool insertFront) {
-	assert(t->audio);
-
-	gui_track_automationlane* al = new gui_track_automationlane(t, grid, at, paramIdx);
+void guitrack_editor::addSubtrack(track_t* t, gui_track_subtrack* al, bool insertFront) {
 	if (insertFront) {
 		t->subtracks.insert(t->subtracks.begin(), al);
 	} else {
@@ -342,18 +345,32 @@ gui_track_automationlane* guitrack_editor::addAutomationLane(track_t* t, automat
 	}
 	al->setZOrder(t->type >= TRACK_TYPE_MIDI ? 0 : 1);
 	add(al);
+}
+gui_track_automationlane* guitrack_editor::addAutomationLane(track_t* t, automatable_t* at, int32_t paramIdx, bool insertFront) {
+	assert(t->audio);
+
+	gui_track_automationlane* al = new gui_track_automationlane(t, grid, at, paramIdx);
+	addSubtrack(t, al, insertFront);
 	return al;
 }
 
-void guitrack_editor::removeAllAutomationLanes(track_t* t) {
-	removeAllAutomationLanes(t, NULL, -1);
+void guitrack_editor::removeAllSubtracks(track_t* t) {
+	auto& atLanes = t->subtracks;
+	for (auto at : atLanes) {
+		remove(at);
+		delete at;
+	}
+	atLanes.clear();
 }
 void guitrack_editor::removeAllAutomationLanes(track_t* t, automatable_t* at) {
 	removeAllAutomationLanes(t, at, -1);
 }
 void guitrack_editor::removeAllAutomationLanes(track_t* t, automatable_t* at, int32_t paramIdx) {
 	auto& atLanes = t->subtracks;
-	auto it = std::remove_if(atLanes.begin(), atLanes.end(), [this, at, paramIdx] (gui_track_automationlane* al) {
+	auto it = std::remove_if(atLanes.begin(), atLanes.end(), [this, at, paramIdx] (gui_track_subtrack* al) {
+		if (al->subtrackType() != gui_track_subtrack::SUBTRACK_TYPE_AUTOMATION) {
+			return false;
+		}
 		if ((at == NULL || al->at == at) && (paramIdx < 0 || al->param == paramIdx)) {
 			remove(al);
 			delete al;
@@ -368,7 +385,7 @@ void guitrack_editor::removeAllAutomationLanes(track_t* t, automatable_t* at, in
 		subTr->idx = idx++;
 	}
 }
-void guitrack_editor::removeAutomationLane(gui_track_automationlane* al) {
+void guitrack_editor::removeSubtrack(gui_track_automationlane* al) {
 	assert(al);
 	remove(al);
 	auto& atLanes = al->m_track->subtracks;
@@ -507,7 +524,7 @@ void guitrack_editor::updateVisibleTrackContents() {
 			continue;
 		}
 		g->content->updateVisibleTrackContents(project, grid);
-		for (gui_track_automationlane* au : g->subtracks) {
+		for (gui_track_subtrack* au : g->subtracks) {
 			au->updateVisibleTrackContents(grid);
 		}
 	}

@@ -16,8 +16,6 @@
 #define G_R(x) x
 #define G_G(x) x
 #define G_B(x) x
-#define G_RND 2.0
-#define G_STROKE 1.0
 #define GUI_COLOR_HEX(x) (0xff000000|(x<<16)|(x<<8)|x)
 #define GUI_COLOR(x) nvgRGBA(G_R(x), G_G(x), G_B(x), 255)
 #define GUI_COLORA(x, a) nvgRGBA(G_R(x), G_G(x), G_B(x), a)

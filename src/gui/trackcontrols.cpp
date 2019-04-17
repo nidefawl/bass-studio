@@ -24,6 +24,7 @@
 #include "color_util.h"
 #include "automation.h"
 #include "automatable.h"
+#include "subtrack.h"
 #include "meter.h"
 
 const int resizeHitY = 8;
@@ -228,26 +229,38 @@ public:
 		MainCtrl::get()->openContextMenu(new guictxtmenu_trackparam(m_track, &m_track->audio->mixer, PARAM_TRACK_ENABLED), evt.mousepos);
 	}
 };
+namespace GuiColor {
+
+constant_t COL_BTN_LOAD_DEF_PLUGINS("COL_BTN_LOAD_DEF_PLUGINS", 0xFFFFFFFF);
+}
+class gui_subtrack_waveview;
 class gui_trackcontrols_mixer: public guictr_base {
 	track_t* const m_track;
 	gui_trackmeter meter;
 public:
 	gui_trackgain gain;
 	guibutton_trackbypass btnBypass;
+	guibutton btnActivate;
+	guibutton btnShowSubtrack;
 	gui_trackcontrols_mixer(track_t* _track) :
 		guictr_base(), m_track(_track), meter(&_track->audio->meter), gain(_track), btnBypass(_track) {
 		padding = 0;
 //		btnBypass.setTint(nvgToRGB(theme->getFrameColorOutline()));
 		btnBypass.drawFn = drawTextureSymbol;
 		btnBypass.drawParm = ICON_BYPASS;
+		btnActivate.setButtonColor(GuiColor::COL_BTN_LOAD_DEF_PLUGINS);
 		add(&btnBypass);
+		add(&btnActivate);
 		add(&gain);
 		add(&meter);
+		add(&btnShowSubtrack);
 	}
 	~gui_trackcontrols_mixer() {
 		remove(&meter);
 		remove(&gain);
+		remove(&btnActivate);
 		remove(&btnBypass);
+		remove(&btnShowSubtrack);
 	}
 	void buttonClicked(guibase* button) override {
 		if (&btnBypass == button) {
@@ -255,10 +268,25 @@ public:
 			trackParams.deactivateAutomation(PARAM_ENABLE);
 			trackParams.setParamValue(PARAM_ENABLE, trackParams.isEnabled() ? 0.0f : 1.0f, 0);
 		}
+		if (&btnShowSubtrack == button) {
+			auto gui = makeGuiSubtrack(MainCtrl::get(), m_track, 1);
+			MainCtrl::getGuiTrackCtr()->addSubTrack(m_track, gui, true);
+		}
+		if (&btnActivate == button) {
+			ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+			vsthost* host = vsthost::getInstance();
+			std::vector<effectbase*> effects = m_track->audio->deferredEffects;
+			for (auto eff : effects) {
+				host->activateDeferred(eff);
+			}
+#ifndef NDEBUG
+			log_printf("deferredEffects post activateDeferred on track %s: %d\n", m_track->szName, m_track->audio->deferredEffects.size());
+#endif	
+		}
 	}
 	void layout() {
 		const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
-		int32_t inset = 4;
+		int32_t inset = 1;
 		int32_t i2 = inset * 2;
 		int32_t h = TRACK_HEIGHT_STEP-i2;
 
@@ -269,19 +297,30 @@ public:
 		gain.size = ivec2(gW - i2, h);
 		btnBypass.pos = ivec2(inset, inset);
 		gain.pos = ivec2(inset, TRACK_HEIGHT_STEP+inset);
+		btnActivate.pos = {inset, gain.bottom()+inset*2};
+		btnActivate.setFontSize(TRACK_HEIGHT_STEP-i2);
+		btnActivate.size = { TRACK_HEIGHT_STEP, TRACK_HEIGHT_STEP };
+		btnShowSubtrack.pos = {btnActivate.right()+inset*2, gain.bottom()+inset*2};
+		btnShowSubtrack.setFontSize(TRACK_HEIGHT_STEP-i2);
+		btnShowSubtrack.size = { TRACK_HEIGHT_STEP, TRACK_HEIGHT_STEP };
 
 		meter.size = ivec2(mW-i2, size.y-i2);
 		meter.pos = ivec2(size.x - mW+inset, inset);
-
+		for (auto gui : guis) {
+			gui->layout();
+		}
 	}
 
 	void render(NVGcontext* vg) {
 		if (!setScissorTransform(vg)) {
 			return;
 		}
-		meter.render(vg);
-		gain.render(vg);
-		btnBypass.render(vg);
+		int n = m_track->audio->deferredEffects.size();
+		btnActivate.setEnabled(n>0);
+		btnActivate.setText(n>9?"9+":(StringFormat("%d", n)));
+		for (auto gui : guis) {
+			gui->render(vg);
+		}
 	}
 	bool isStaticContainer() {
 		return false;
@@ -590,22 +629,22 @@ public:
 	}
 };
 
-class gui_trackcontrols_automation : public guictr_base {
+class gui_track_subtrack_mixer : public guictr_base {
 	track_t* const m_track;
 public:
-	gui_track_automationlane* const al;
+	gui_track_subtrack* const al;
 private:
 	guibuttontoggle removeLane;
 	int dragMode = -1;
 public:
-	gui_trackcontrols_automation(track_t* _track, gui_track_automationlane* _al) :
+	gui_track_subtrack_mixer(track_t* _track, gui_track_subtrack* _al) :
 		guictr_base(), m_track(_track), al(_al) {
 		removeLane.setRadius(10);
 		padding = 0;
 		removeLane.icon = ICON_MINUS;
 		add(&removeLane);
 	}
-	~gui_trackcontrols_automation() {
+	~gui_track_subtrack_mixer() {
 		remove(&removeLane);
 	}
 	bool isStaticContainer() {
@@ -623,7 +662,7 @@ public:
 			if (cursor.inSubTrack(m_track->idx, laneIdx)) {
 				fixCursorSubRange(cursor, m_track->subtracks.size()-1);
 			}
-			MainCtrl::getGuiTrackCtr()->removeAutomationLane(this->al);
+//			MainCtrl::getGuiTrackCtr()->removeSubtrack(this->al);
 			MainCtrl::getGuiTrackCtr()->layout();
 			MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
 		}
@@ -718,7 +757,7 @@ gui_track_controls::gui_track_controls(track_t* _track)
 	padding = 0;
 }
 gui_track_controls::~gui_track_controls() {
-	for (gui_trackcontrols_automation* ctrl : automationLaneControls) {
+	for (gui_track_subtrack_mixer* ctrl : automationLaneControls) {
 		remove(ctrl);
 		delete ctrl;
 	}
@@ -727,14 +766,14 @@ gui_track_controls::~gui_track_controls() {
 	delete mixer;
 	delete title;
 }
-void gui_track_controls::addAutomationLane(track_t* t, gui_track_automationlane* al) {
-	gui_trackcontrols_automation* al_ctrl = new gui_trackcontrols_automation(t, al);
+void gui_track_controls::addSubtrackMixer(track_t* t, gui_track_subtrack* al) {
+	gui_track_subtrack_mixer* al_ctrl = new gui_track_subtrack_mixer(t, al);
 	automationLaneControls.push_back(al_ctrl);
 	add(al_ctrl);
 }
-void gui_track_controls::removeAutomationLane(gui_track_automationlane* al) {
+void gui_track_controls::removeSubtrackMixer(gui_track_subtrack* al) {
 	auto& ctrls = automationLaneControls;
-	auto it = std::find_if(ctrls.begin(), ctrls.end(), [al] (const gui_trackcontrols_automation* ref) {
+	auto it = std::find_if(ctrls.begin(), ctrls.end(), [al] (const gui_track_subtrack_mixer* ref) {
 		return ref->al == al;
 	});
 	assert(it != ctrls.end());
@@ -744,7 +783,7 @@ void gui_track_controls::removeAutomationLane(gui_track_automationlane* al) {
 }
 void gui_track_controls::removeAllAutomationLanes(automatable_t* at, int32_t paramIdx) {
 	auto& ctrls = automationLaneControls;
-	auto it = std::remove_if(ctrls.begin(), ctrls.end(), [this, at, paramIdx] (gui_trackcontrols_automation* ref) {
+	auto it = std::remove_if(ctrls.begin(), ctrls.end(), [this, at, paramIdx] (gui_track_subtrack_mixer* ref) {
 		if ((at == NULL || ref->al->at == at) && (paramIdx < 0 || ref->al->param == paramIdx)) {
 			remove(ref);
 			delete ref;
@@ -757,8 +796,12 @@ void gui_track_controls::removeAllAutomationLanes(automatable_t* at, int32_t par
 void gui_track_controls::removeAllAutomationLanes(automatable_t* at) {
 	removeAllAutomationLanes(at, -1);
 }
-void gui_track_controls::removeAllAutomationLanes() {
-	removeAllAutomationLanes(NULL, -1);
+void gui_track_controls::removeAllSubtracks() {
+	for (auto at : automationLaneControls) {
+		remove(at);
+		delete at;
+	}
+	automationLaneControls.clear();
 }
 void gui_track_controls::render(NVGcontext* vg) {
 	if (!setScissorTransform(vg)) {
@@ -783,7 +826,7 @@ void gui_track_controls::render(NVGcontext* vg) {
 	nvgBeginPath(vg);
 	nvgMoveTo(vg, title->right(), 0);
 	nvgLineTo(vg, title->right(), size.y);
-	for (gui_trackcontrols_automation* g : automationLaneControls) {
+	for (gui_track_subtrack_mixer* g : automationLaneControls) {
 		nvgMoveTo(vg, g->left(), g->top()-TRACK_HEIGHT_SPACING_HALF);
 		nvgLineTo(vg, g->right(), g->top()-TRACK_HEIGHT_SPACING_HALF);
 	}
@@ -838,7 +881,7 @@ void gui_track_controls::layout() {
 	title->size = ivec2(titleW - TRACK_HEIGHT_SPACING, trH*TRACK_HEIGHT_STEP);
 	title->pos = ivec2(TRACK_HEIGHT_SPACING_HALF, 0);
 	mixer->pos = ivec2(size.x - mixer->size.x + TRACK_HEIGHT_SPACING_HALF, 0);
-	for (gui_trackcontrols_automation* ctrl : automationLaneControls) {
+	for (gui_track_subtrack_mixer* ctrl : automationLaneControls) {
 		ctrl->pos = ivec2(title->pos.x, ctrl->al->pos.y-pos.y);
 		ctrl->size = ivec2(title->size.x, ctrl->al->size.y);
 	}

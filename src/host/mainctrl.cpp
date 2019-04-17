@@ -53,6 +53,7 @@
 #include "../gui/drawwaveform.h"
 #include "../gui/guishaderview.h"
 #include "../gui/about.h"
+#include "../gui/dialogs.h"
 
 #include "vst_host.h"
 #include "plugin/base_plugin.h"
@@ -66,6 +67,7 @@
 #include "../threads/playbackthread.h"
 #include "plugindatabase.h"
 
+	const int FLAG_DEFER_LOAD = 0x1;
 
 std::shared_ptr<MainCtrl> mainctrl;
 MainCtrl* MainCtrl::get() {
@@ -369,6 +371,13 @@ void MainCtrl::unloadProject() {
 	}
 	hist.clear();
 
+	{
+
+		auto* host = vsthost::getInstance();
+		std::vector<effectbase*> pluginsDeferred;
+		host->getDeferredEffects(pluginsDeferred);
+		assert(pluginsDeferred.empty());
+	}
 }
 void MainCtrl::destroy()
 {
@@ -423,11 +432,21 @@ static SupportedFileType FILE_TYPE_PROJECT {"Project File", PROJECT_FILE_EXT};
 std::vector<SupportedFileType> vFILE_TYPE_PROJECT = { FILE_TYPE_PROJECT };
 
 void MainCtrl::loadFile(String path) {
-	std::shared_ptr<project_file> f = loadProjectFile(this, path);
+	timer.reset();
+	std::shared_ptr<project_file> f = loadProjectFile(path);
+	double l1 = timer.getTimeDoubleReset();
 	if (!f) {
 		setStatusText(StringFormat("Failed loading %s", StringAsCStr(FileNameFromPath(path))));
 	} else {
-		setLoadedProject(f);
+		guidialog_cb_yes_no* dlg = new guidialog_cb_yes_no();
+		dlg->cb = [&,projFile=f](int n) {
+			timer.reset();
+			setLoadedProject(projFile, n==0 ? FLAG_DEFER_LOAD : 0);
+			double l2 = timer.getTimeDoubleReset();
+			log_printf("Loading file %s took %f %f\n", StringAsCStr(path), l1, l2);
+		};
+		dlg->message = "Load plugins?";
+		openDialog(dlg);
 	}
 }
 void MainCtrl::setEmptyProject() {
@@ -529,8 +548,12 @@ bool MainCtrl::init(window_main* window, NVGcontext* nanovg)
 	this->window = window;
 	this->vg = nanovg;
 	plugindb.openDatabase();
-	this->playThread.startThread();
+	plugindatabase_t::setTlsInstance(&plugindb);
+	this->playThread.startThread(this);
 	this->workerThread.startThread();
+	this->workerThread.call([]() {
+		my_printf("WorkerThreadCallTest\n", 0);
+	})->wait();
 	themes.loadThemes();
 
 	getDefaultTheme()->initTheme();
@@ -589,16 +612,6 @@ bool MainCtrl::init(window_main* window, NVGcontext* nanovg)
 	updateGrid();
 	isOK = true;
 	return isOK;
-}
-int32_t MainCtrl::tickToSamples(tick_t ticks)
-{
-	vsthost* host = vsthost::getInstance();
-	return std::round(tickToSamplePrecise(ticks, tempo100, host->lSampleRate));
-}
-tick_t MainCtrl::samplesToTicks(int32_t sample)
-{
-	vsthost* host = vsthost::getInstance();
-	return std::round(sampleToTickPrecise(sample, tempo100, host->lSampleRate));
 }
 void MainCtrl::onTick()
 {
@@ -691,7 +704,9 @@ std::shared_ptr<project_file> MainCtrl::createProjectFile() {
 void MainCtrl::setDragged(guibase* g) {
 	guiDragged = g;
 }
-bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file) {
+//assuming current thread is main thread when this is called
+bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file, int flags) {
+
 	setAudioThreadState(playback_state::status_no_process);
 	ThreadLock lock = playThread.lockThread();
 	unloadProject();
@@ -701,20 +716,67 @@ bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file) {
 	for (track_t* tr : trackList) {
 		view->ctr_tracks.addTrack(tr);
 	}
+	auto* host = vsthost::getInstance();
 	trackList.loadPlugins(file->project);
-	//	for (track_t* tr : trackList) {
-	//		if (tr->audio) {
-	//			std::vector<automatable_t*> targets;
-	//			tr->audio->getAutomatableTargets(targets);
-	//			for (automatable_t* at : targets) {
-	//				std::vector<int32_t> targetsIdx;
-	//				at->getAutomated(targetsIdx);
-	//				for (int32_t idx : targetsIdx) {
-	//					view->ctr_tracks.addAutomationLane(tr, at, idx, false);
-	//				}
-	//			}
-	//		}
-	//	}
+
+
+	if ((flags&FLAG_DEFER_LOAD) == 0) {
+
+		class guictr_loading : public guictr_base {
+			public:
+			String text;
+	//		int64_t time;
+			guictr_loading() {
+				setLabel("LOADING ");
+	//			time = getTimeHPint64();
+			}
+			void render(NVGcontext* vg) override {
+				guictr_base::render(vg);
+				vec2 cs = getSizeContent();
+	//			float fSeconds = (getTimeHPint64()-time) / 1000000.0;
+	//			String fsince = StringFormat("Loading %.02fs", fSeconds);
+				setFont(vg, 32, G_WHITE, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
+				float w = textWidth(vg, "Loading 1234");
+				nvgText(vg, cs.x/2-w/2, cs.y/2, StringAsCStr(text), NULL);
+			}
+		};
+		guictr_loading ctr;
+		ctr.size = m_size;
+		ctr.setControl(this);
+		ctr.layout();
+		auto windowMain = dynamic_cast<window_main*>(window);
+		assert(windowMain);
+		std::vector<effectbase*> pluginsDeferred;
+		host->getDeferredEffects(pluginsDeferred);
+		int len = pluginsDeferred.size();
+		for (int i = 0; i < len; i++) {
+			auto plugin = dynamic_cast<effect_deferred*>(pluginsDeferred[i]);
+			windowMain->preRender();
+	//		render(0, 0, m_size.x, m_size.y, 1.0);
+			NVGcolor col = getTheme()->getColor(GuiColor::COL_CLEAR_COLOR);
+			glClearColor(col.r, col.g, col.b, col.a);
+			glClear(GL_COLOR_BUFFER_BIT);
+			static int test = 0;
+			float ratio = 1.0;
+			nvgBeginFrame(vg, m_size.x, m_size.y, ratio);
+			nvgLineJoin(vg, NVGlineCap::NVG_BEVEL);
+
+			nvgSave(vg);
+			ctr.text = plugin->getDfrdPluginName();
+			ctr.render(vg);
+			nvgRestore(vg);
+			nvgEndFrame(vg);
+			windowMain->postRender();
+			//sync to what?!!
+			threadSleep(16);
+			ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+			vsthost* host = vsthost::getInstance();
+			host->activateDeferred(plugin);
+		}
+		ctr.setControl(nullptr);
+	}
+
+
 	view->ctr_tracks.layout();
 	grid.setLayout(file->layout.layoutGrid);
 	view->ctr_tracks.setScrollOffset(file->layout.scrollOffsetX);
@@ -758,10 +820,12 @@ track_t* MainCtrl::getSelectedTrack() {
 	return selectedTrack;
 }
 guictr_plugins* MainCtrl::getPluginCtr() {
-	return &get()->view->ctr_plugins;
+	auto ctrlThis = get();
+	return ctrlThis ? &ctrlThis->view->ctr_plugins : nullptr;
 }
 guictr_tracks* MainCtrl::getGuiTrackCtr() {
-	return &get()->view->ctr_tracks;
+	auto ctrlThis = get();
+	return ctrlThis ? &ctrlThis->view->ctr_tracks : nullptr;
 }
 void MainCtrl::updateGrid() {
 	grid.update(view->ctr_tracks.trackView.getSizeContent());
@@ -984,7 +1048,7 @@ bool MainCtrl::processGlobalKeyevent(KeyEvent& event) {
 			return true;
 #endif
 		}
-		if (event.keyCode == KEY_S) {
+		if (!event.mods && event.keyCode == KEY_S) {
 			logStackTrace();
 			return true;
 		}
@@ -1263,4 +1327,15 @@ int handleFatalError(int type, int implSpecType) {
 		}
 	}
 	return 0;
+}
+
+int32_t project_controller_t::tickToSamples(tick_t ticks)
+{
+	vsthost* host = vsthost::getInstance();
+	return std::round(tickToSamplePrecise(ticks, tempo100, host->lSampleRate));
+}
+tick_t project_controller_t::samplesToTicks(int32_t sample)
+{
+	vsthost* host = vsthost::getInstance();
+	return std::round(sampleToTickPrecise(sample, tempo100, host->lSampleRate));
 }

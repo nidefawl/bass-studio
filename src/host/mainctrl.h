@@ -32,6 +32,7 @@
 #include "hires_timer.h"
 #include "../host/plugindatabase.h"
 #include "rand.h"
+#include "projectcontroller.h"
 
 struct NVGcontext;
 class guibase;
@@ -201,8 +202,7 @@ struct Menus {
 	ngui::Menu edit;
 	ngui::Menu tools;
 };
-
-class MainCtrl : public AppCtrl, public delete_cb, public project_t
+class MainCtrl : public AppCtrl, public delete_cb, public project_controller_t
 {
 	DawViewContainers* view = NULL;
 	Menus menus;
@@ -261,9 +261,6 @@ public:
 	trackallcontainer_t& getTracks() {
 		return trackList;
 	}
-	tick_t& getPlaybackPos() {
-		return playbackPos;
-	}
 	String& getProjectPath() {
 		return projectPath;
 	}
@@ -272,7 +269,7 @@ public:
 	}
 	std::shared_ptr<project_file> createProjectFile();
 	void loadFile(String path);
-	bool setLoadedProject(std::shared_ptr<project_file> file);
+	bool setLoadedProject(std::shared_ptr<project_file> file, int flags);
 	void setEmptyProject();
 	void pushHist(action_base* action);
 	void focusReceived() {
@@ -284,6 +281,7 @@ public:
 	void addDebug(String s);
 
 
+	void setTempo(int32_t _tempo100) override;
 	bool filesDropMove(ivec2 pos, int kbmods) override;
     bool filesDropBegin(std::vector<String>& files, ivec2 pos, int kbmods) override;
     bool filesDropFinal(std::vector<String>& files, ivec2 pos, int kbmods) override;
@@ -322,35 +320,6 @@ public:
 	void updateGrid();
 	void updateVisibleTrackContents();
 	void setStatusText(String s);
-	int32_t tickToSamples(tick_t ticks);
-	tick_t samplesToTicks(int32_t sample);
-	float getCurrentTempoBPM() {
-		return tempo100 / 100.0f;
-	}
-	int32_t getCurrentTempo() {
-		return tempo100;
-	}
-	void setTempo(int32_t _tempo100);
-	uint32_t sigNum() {
-		return signatureNum;
-	}
-	uint32_t sigDen() {
-		return 1<<signatureDenom;
-	}
-	uint32_t sigDenExp() {
-		return signatureDenom;
-	}
-	void setNum(uint32_t n) {
-		this->signatureNum = CLAMP_I(n, 1, 32);
-	}
-	void setDen(uint32_t d) {
-		for (int i = 0; i <= 4; i++) {
-			if (d < (1u << (i + 1u))) {
-				this->signatureDenom = i;
-				return;
-			}
-		}
-	}
 	double getProjectWorkingArea() {
 		return 1000.0;
 	}

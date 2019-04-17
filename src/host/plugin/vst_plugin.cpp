@@ -327,7 +327,6 @@ void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin, bool storePluginCh
 }
 }
 void vstplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
-
 }
 void vstplugin::makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) {
 	createSnapshot(ps, this, storePluginChunks);

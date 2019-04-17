@@ -5,6 +5,9 @@
 #include <queue>
 #include <assert.h>
 #include <exception>
+#include <functional>
+#include <memory>
+
 
 #include "logging.h"
 #define LOG(fmtString,...) printf(fmtString "\n", ##__VA_ARGS__); fflush(stdout)
@@ -21,6 +24,11 @@ public:
 	}
     virtual ~ThreadTaskImpl() {
     }
+    void reset() {
+    	m_finished = false;
+    	task->clearException();
+    	task->status = status_init;
+    }
     void run() {
     	task->run();
     }
@@ -35,6 +43,9 @@ public:
 	}
 	void setCompleted() {
 		task->status = status_complete;
+	}
+	bool isCompleted() {
+		return m_finished;
 	}
 	void wait() {
         std::unique_lock<std::mutex> lock(m_mtx);
@@ -56,6 +67,12 @@ WorkerThread::ThreadTask::ThreadTask()
 }
 void WorkerThread::ThreadTask::wait() {
 	this->_M_impl->wait();
+}
+void WorkerThread::ThreadTask::reset() {
+	this->_M_impl->reset();
+}
+bool WorkerThread::ThreadTask::isCompleted() {
+	return this->_M_impl->isCompleted();
 }
 class WorkerThread::Impl {
 	std::thread t;
@@ -142,4 +159,9 @@ void WorkerThread::joinThread() {
 }
 bool WorkerThread::pushTask(ThreadTask* task) {
 	return this->_M_impl->push(task->_M_impl);
+}
+std::shared_ptr<WorkerThread::ThreadTask> WorkerThread::call(std::function<void()>&& fn) {
+	std::shared_ptr<WorkerThread::ThreadTask> task = std::make_shared<ThreadTaskCallStdFn>(fn);
+	_M_impl->push(task->_M_impl);
+	return task;
 }

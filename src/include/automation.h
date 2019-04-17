@@ -66,6 +66,7 @@ struct automationlane_snapshot_t {
 	int32_t refId = -1;
 	int32_t paramIdx = -1;
 	int32_t height = 4;
+	int32_t subtrackType = 0;
 };
 class plugin_reference_t {
 public:

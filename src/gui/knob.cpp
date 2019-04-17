@@ -13,12 +13,18 @@
 #include "logging.h"
 #include "automation.h"
 
-using namespace Table;
 namespace GuiColor {
 constant_t COL_KNOB("COL_KNOB", 0xff00ddff);
 constant_t COL_KNOB_IND("COL_KNOB_IND", 0xffffffff);
 constant_t COL_AUTOMATED("COL_AUTOMATED", 0xFFEF62DF);
 }
+using Table::tbl;
+using Table::tbl_row_t;
+using Table::table_entry_t;
+using Table::tblint;
+using Table::tblfloat;
+using Table::tblstr;
+using Table::tblString;
 
 template <>
 void guitooltip<guiknob>::layout()  {
@@ -291,3 +297,4 @@ void guiknob_labeled_base::render(NVGcontext* vg) {
 
 	}
 }
+

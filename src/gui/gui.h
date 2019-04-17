@@ -31,6 +31,7 @@ struct guitheme_t;
 struct dragdrop_midifile;
 
 void setFont(NVGcontext* vg, float size, NVGcolor color, int alignment);
+float textWidth(NVGcontext* vg, const String& str);
 void renderText(NVGcontext* ctx, float x, float y, float maxWidth, const char* string);
 void renderDashedLineFrame(NVGcontext* vg, float x, float y, float w, float h, float thickness);
 void drawAttachedBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 posInset, ivec2 sizeInset, int margin);
@@ -356,6 +357,9 @@ public:
 	virtual void addProperties(Table::tbl* table);
 public:
 	virtual bool isSelected();
+	int32_t getAllocId() {
+		return allocId;
+	}
 protected:
 	virtual NVGcolor getBackgroundColor(int stateflags) const;
 	bool isChildOf(guibase* parentSearch);

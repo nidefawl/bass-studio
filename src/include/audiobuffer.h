@@ -13,7 +13,8 @@ struct AudioBuffer {
 	std::atomic<bool> inUse;
 	bool submitted;
 	int32_t nonce;
-	int64_t timestamp;
+	double blockPosSample;
+	double blockPosTick;
 };
 //static_assert(std::is_pod<AudioBuffer>::value, "AudioBuffer is not POD type.");
 

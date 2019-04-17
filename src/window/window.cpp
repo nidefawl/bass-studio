@@ -60,6 +60,7 @@
 #include "threads.h"
 #include "error.h"
 #include "buildinfo.h"
+#include "../threads/workerthread.h"
 
 
 volatile bool fataError = false;
@@ -104,13 +105,13 @@ void handleStdException(std::exception& e) {
 
 void on_terminate() {
 	getGlobalLogger()->logStr("on_terminate\n");
-	exit(1); // required on mingw (at least)
+//	exit(1); // required on mingw (at least)
 }
 void on_unexpected() {
 	getGlobalLogger()->logStr("on_unexpected\n");
 	logStackTrace();
 	fataError = true;
-	exit(1); // required on mingw (at least)
+//	exit(1); // required on mingw (at least)
 }
 
 namespace RenderResources {
@@ -566,6 +567,7 @@ public:
 class appwindow_main : public appwindow, public window_main  {
 	AppCtrl* const ctrl;
 	uint64_t dblclicktimer;
+//	WorkerThread workerThread;
 public:
 	std::vector<std::unique_ptr<appwindow_overlay>> overlayWindows;
 	appwindow_main(AppCtrl* _ctrl)
@@ -573,6 +575,26 @@ public:
 		  window_main(),
 		  ctrl(_ctrl) {
 		dblclicktimer = 0;
+	}
+//	WorkerThread* getWorkerThread() {
+//		return &workerThread;
+//	}
+	void postRender() override {
+		glfwMakeContextCurrent(glfw);
+		int winwidth, winheight;
+		int fbwidth, fbheight;
+		glfwGetWindowSize(glfw, &winwidth, &winheight);
+		glfwGetFramebufferSize(glfw, &fbwidth, &fbheight);
+		assert (winwidth>0&&winheight>0&&fbwidth>0&&fbheight>0);
+		float pxratio = fbwidth / (float)winwidth;
+		glViewport(0, 0, fbwidth, fbheight);
+		glEnable(GL_BLEND);
+		glDisable(GL_CULL_FACE);
+		glDisable(GL_DEPTH_TEST);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	}
+	void preRender() override {
+		glfwSwapBuffers(glfw);
 	}
 	void createMainWindow(const char* title, int w, int h, void* parentWindowHandle);
 	void updateMenu();
@@ -592,7 +614,10 @@ public:
 		glfwMakeContextCurrent(glfw);
 		ctrl->onTick();
 	}
-	void render()
+	void render() {
+		renderMain(ctrl);
+	}
+	void renderMain(AppCtrl* const ctrl)
 	{
 		glfwMakeContextCurrent(glfw);
 		int winwidth, winheight;
@@ -830,7 +855,15 @@ public:
 		if (!popupCtrl->isOk()) {
 			throw std::logic_error("invalid application state");
 		}
-		popupCtrl->render(0, 0, winwidth, winheight, pxratio);
+		ivec2 size = popupCtrl->m_size;
+		if (size.x < fbwidth || size.y < fbheight) {
+			int x = (fbwidth-size.x)/2;
+			int y = (fbheight-size.y)/2;
+			assert(x > 0 && y > 0);
+			glViewport(x, y, size.x, size.y);
+		}
+
+		popupCtrl->render(0, 0, size.x, size.y, pxratio);
 		glfwSwapBuffers(glfw);
 	}
 
@@ -1067,7 +1100,7 @@ public:
 		glfwGetFramebufferSize(glfw, &fbwidth, &fbheight);
 		float pxratio = fbwidth / (float)winwidth;
 		glViewport(0, 0, fbwidth, fbheight);
-		static const vec4 clearc = int32vec4(0x00000000);
+		static const vec4 clearc = int32vec4(0xFF000000);
 		glClearColor(clearc[0], clearc[1], clearc[2], clearc[3]);
 		glStencilMask(~0);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
@@ -1303,6 +1336,7 @@ LRESULT WIN32API_CALLBACK_TYPE appWndProc(HWND hwnd, UINT Msg, WPARAM wParam, LP
 	return 0;
 }
 #endif
+
 window_dialog* appwindow_main::createDialog() {
 	appwindow_dialog* popupWindow = new appwindow_dialog(this);
 	String sName = StringFormat("%s dialog", this->name);
@@ -1493,7 +1527,6 @@ int startApplication(int argc, char* argv[]) {
 	//if (!runConsoleMode) {
 		allocConsole();
 	//}
-	openGlobalLog();
 	log_out("BUILD_BINARY_NAME %s\n", BuildInfo::BUILD_BINARY_NAME);
 	log_out("COMPILER_ID %s\n", BuildInfo::COMPILER_ID);
 	log_out("COMPILE_OPTIONS %s\n", BuildInfo::COMPILE_OPTIONS);

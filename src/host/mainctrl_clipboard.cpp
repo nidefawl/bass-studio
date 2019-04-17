@@ -110,7 +110,7 @@ void MainCtrl::pasteClipboard(clip_clipboard* clipboard, Cursor& cursor) {
 			for (int i = 0; i <= clipboard->selTrackRange; i++) {
 				int32_t subTrackIdx = subTrackOffset + i;
 				if (tr->validSubtrack(subTrackIdx)) {
-					gui_track_automationlane* subtrack = tr->subtracks[subTrackIdx];
+					gui_track_subtrack* subtrack = tr->subtracks[subTrackIdx];
 					std::vector<automation_point_t>& data = clipboard->automationLanes[i];
 					automatable_t* automatable = subtrack->at;
 					automation_t* automation = NULL;
@@ -169,7 +169,7 @@ shared_ptr<clip_clipboard> MainCtrl::copySelection(const Cursor& _cursor) {
 			track_t* tr = trackList[trackBegin];
 			for (int i = trackSubBegin; i <= trackSubEnd; i++) {
 				if (tr->validSubtrack(i)) {
-					gui_track_automationlane* subtrack = tr->subtracks[i];
+					gui_track_subtrack* subtrack = tr->subtracks[i];
 					automatable_t* automatable = subtrack->at;
 					automation_t* automation = NULL;
 					if (automatable) {
@@ -268,7 +268,7 @@ void MainCtrl::cutSelection(const Cursor& _cursor) {
 			for (int i = 0; i <= trackSEnd-trackSBegin; i++) {
 				int32_t subTrackIdx = trackSBegin + i;
 				if (tr->validSubtrack(subTrackIdx)) {
-					gui_track_automationlane* subtrack = tr->subtracks[subTrackIdx];
+					gui_track_subtrack* subtrack = tr->subtracks[subTrackIdx];
 					automation_t* automation = subtrack->getAutomation();
 					if (automation) {
 						automation->setRange(tickBegin, tickEnd, empty);

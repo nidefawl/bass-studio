@@ -46,6 +46,88 @@ using Table::tblString;
 
 void setDraggedPluginsUI(guictr_dragged_plugins& gui, plugin_selection& sel);
 
+guiplugin::~guiplugin() {
+	remove(&buttonLayout);
+	remove(&buttonDelete);
+	remove(&buttonBypass);
+	remove(&buttonSave);
+	remove(&meter);
+	for (auto g : guiButtons) {
+		assert(!stl_contains(guis, g));
+	}
+}
+void guiplugin::addGuiBtn(guibuttontoggle* btn)  {
+	guiButtons.push_back(btn);
+	add(btn);
+}
+
+void guiplugin::render(NVGcontext* vg) {
+	renderBase(vg);
+	for (guibase* gui : guis) {
+		if (!gui->isVisible())
+			continue;
+		if (gui->size.x < 0) {
+			log_printf("gui size x %d %s\n", gui->size.x, StringAsCStr(gui->label));
+			continue;
+		}
+		gui->render(vg);
+	}
+}
+void guiplugin::determineSize(ivec2& prefSize) {
+	if (layoutMode == 1) {
+		//		assert(module->getAudioStage());
+		//
+			const int32_t hpt = theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT);
+		//		int32_t meterW = math::max(16, (int32_t)(theme->get(GuiConstant::CONST_METER_WIDTH)*hpt/32.0));
+		//		prefSize.x = hpt+ctr.size.x+meterW;
+			prefSize.x = hpt;
+	} else {
+
+		prefSize.x = prefSize.y;
+	}
+}
+void guiplugin::buttonClicked(guibase* _button) {
+	if (_button == &buttonLayout) {
+		layoutMode = (layoutMode+1)%2;
+		isHorizontalTitle = layoutMode == 0;
+		buttonLayout.icon = layoutMode == 0 ? ICON_ARR_RIGHT : ICON_ARR_DOWN;
+		dynamic_cast<guictr_plugins*>(this->parent)->relayout();
+	}
+	if (_button == &buttonBypass) {
+    	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+    	float f = effect->getParamValue(PARAM_ENABLE);
+    	float f2 = f > 0.5 ? 0 : 1;
+    	effect->setParamValue(PARAM_ENABLE, f2, 2);
+    	effect->postSetParameter(PARAM_ENABLE, f, f2, 2);
+
+	}
+	if (_button == &buttonDelete) {
+    	removePlugin(effect);
+	}
+}
+bool guiplugin::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
+	if (contains(mpos)) {
+		if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
+			return false;
+		}
+		ivec2 localMouse = this->toContainerSpace(mpos);
+		for (guibase* gui : guis) {
+			if (!gui->isVisible())
+				continue;
+			if (gui->mouseHitTest(localMouse, evt)) {
+				return true;
+			}
+		}
+		if (isShift(evt.kbmods)) {
+			if (MainCtrl::get()->getPluginSel().pluginCtr != this->parent) {
+				return true;
+			}
+		}
+		evt.requestFocus(this);
+		return true;
+	}
+	return false;
+}
 guiplugin::guiplugin(effectbase* _effect)
 : guictr_base(),
   effect(_effect),
@@ -53,30 +135,52 @@ guiplugin::guiplugin(effectbase* _effect)
 	padding = 0;
 	margin = 0;
 	text[0] = 0;
+	buttonBypass.setLabel("Bypass");
 	buttonBypass.colorActive = GuiColor::COL_BTN_BG_BYPASS_ACTIVE;
 	buttonBypass.icon = ICON_BYPASS;
 	buttonBypass.getState = [_effect]() {
 		return _effect->getParamValue(PARAM_ENABLE)>0;
 	};
-	buttonBypass.setParent(this);
 //	buttonBypass.setTint(0x80c040);
+	buttonDelete.setLabel("Remove");
 	buttonDelete.icon = ICON_CLOSE;
 	static bool closeEnabled = true;
 	buttonDelete.state = &closeEnabled;
-	buttonDelete.setParent(this);
+	buttonLayout.icon = ICON_ARR_RIGHT;
+	buttonLayout.setLabel("Hide");
+	buttonSave.icon = ICON_SAVE;
+	buttonSave.setLabel("Save");
+	add(&meter);
+	addGuiBtn(&buttonBypass);
+	addGuiBtn(&buttonLayout);
+	addGuiBtn(&buttonDelete);
+	addGuiBtn(&buttonSave);
 //	buttonDelete.setTint(0x404040);
 }
 void guiplugin::layout() {
 	const int32_t hpt = theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT);
 	int buttonSize = hpt * 0.8;
 	int32_t inset1 = (hpt - buttonSize) / 2;
-	buttonBypass.size = {buttonSize, buttonSize};
-	buttonDelete.size = {buttonSize, buttonSize};
-	buttonBypass.pos = {inset1, inset1};
-	buttonDelete.pos = {size.x - buttonDelete.size.x - inset1, inset1};
-	buttonBypass.setRadius(hpt/3.f);
-	buttonDelete.setRadius(hpt/3.f);
-
+	ivec2 btnPos = {inset1, inset1};
+	buttonLayout.pos = btnPos;
+	btnPos[isHorizontalTitle?0:1] += buttonSize;
+	for (auto btn : guiButtons) {
+		btn->size = {buttonSize, buttonSize};
+		btn->setRadius(hpt/3.f);
+		if (btn == &buttonLayout) {
+			continue;
+		}
+		if (btn == &buttonDelete) {
+			continue;
+		}
+		btn->pos = btnPos;
+		btnPos[isHorizontalTitle?0:1] += buttonSize;
+	}
+	if (isHorizontalTitle) {
+		buttonDelete.pos = {size.x - buttonDelete.size.x - inset1, inset1};
+	} else {
+		buttonDelete.pos = {inset1, size.y - buttonDelete.size.y - inset1};
+	}
 
 
 	int32_t meterW = math::max(16, (int32_t)(theme->get(GuiConstant::CONST_METER_WIDTH)*hpt/32.0));
@@ -85,18 +189,18 @@ void guiplugin::layout() {
 	if (isHorizontalTitle) {
 		contentP = ivec2(0, hpt);
 		contentS = ivec2(size.x - meterW, 		size.y - hpt);
-		titlePosX = buttonBypass.right();
+		titlePosX = btnPos.x;
 	} else {
 		contentP = ivec2(hpt, 0);
 		contentS = ivec2(size.x - hpt - meterW, size.y );
-		titlePosX = 0;
+		titlePosX = buttonDelete.top();
 	}
 	meter.pos = ivec2(size.x - meterW, hpt);
 	meter.size = ivec2(meterW, size.y - hpt);
 	layoutModule(contentP, contentS, inset1);
-	meter.layout();
-	buttonDelete.layout();
-	buttonBypass.layout();
+	for (auto btn : guis) {
+		btn->layout();
+	}
 }
 void guiplugin::renderBase(NVGcontext* vg) {
 	if (!setScissorTransformContainer(vg)) {
@@ -154,9 +258,6 @@ bool guiplugin::focusEvent(MouseHitEvt& evt, bool focused) {
 }
 void guiplugin::setControl(BaseCtrl* parentCtrl) {
 	guictr_base::setControl(parentCtrl);
-	buttonBypass.setControl(parentCtrl);
-	buttonDelete.setControl(parentCtrl);
-	meter.setControl(parentCtrl);
 }
 guibase* guiplugin::getDraggedControl() {
 	return this;
@@ -293,8 +394,8 @@ guivstplugin::guivstplugin(vstplugin * _vst)
 	buttonOpenEditor.state = &_vst->bEditOpen;
 	buttonOpenEditor.setParent(this);
 	buttonOpenEditor.colorActive = GuiColor::COL_BTN_BG_SHOW_ACTIVE;
+	addGuiBtn(&buttonOpenEditor);
 	params.setParent(this);
-	meter.setParent(this);
 	std::vector<gui_list_entry*> _newList;
 	for (automatable_param_t& param : _vst->params) {
 		if (param.internalIdx >= 0)
@@ -304,10 +405,10 @@ guivstplugin::guivstplugin(vstplugin * _vst)
 }
 
 guivstplugin::~guivstplugin() {
+	remove(&buttonOpenEditor);
 }
 void guivstplugin::setControl(BaseCtrl* parentCtrl) {
 	guiplugin::setControl(parentCtrl);
-	buttonOpenEditor.setControl(parentCtrl);
 	params.setControl(parentCtrl);
 	for (auto* ctr : viewCtrs) {
 		ctr->setControl(parentCtrl);
@@ -315,6 +416,10 @@ void guivstplugin::setControl(BaseCtrl* parentCtrl) {
 }
 
 void guivstplugin::determineSize(glm::ivec2& prefSize) {
+	if (layoutMode == 1) {
+		guiplugin::determineSize(prefSize);
+		return;
+	}
 	if (this->viewCtr) {
 		this->viewCtr->getFixedSize(&sizeCtrs.x, &sizeCtrs.y);
 		int width = (int)((sizeCtrs.x/(float)sizeCtrs.y)*size.y);
@@ -329,19 +434,26 @@ void guivstplugin::determineSize(glm::ivec2& prefSize) {
 }
 void guivstplugin::render(NVGcontext* vg) {
 	renderBase(vg);
-	buttonBypass.render(vg);
-	buttonOpenEditor.render(vg);
-	buttonDelete.render(vg);
-	for (auto* ctr : viewCtrs) {
-		nvgSave(vg);
-		ctr->render(vg);
-		nvgRestore(vg);
+	for (auto* btn : guiButtons) {
+		if (btn->isVisible())
+			btn->render(vg);
 	}
-	meter.render(vg);
-	if (params.isBackgroundRendered()){
-		params.renderBackground(vg);
+	if (layoutMode != 1) {
+		for (auto* ctr : viewCtrs) {
+			nvgSave(vg);
+			if (ctr->isVisible())
+				ctr->render(vg);
+			nvgRestore(vg);
+		}
+		if (meter.isVisible())
+			meter.render(vg);
+		if (params.isVisible()) {
+			if (params.isBackgroundRendered()){
+				params.renderBackground(vg);
+			}
+			params.render(vg);
+		}
 	}
-	params.render(vg);
 }
 bool guivstplugin::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 	if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
@@ -349,21 +461,17 @@ bool guivstplugin::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 	}
 	if (contains(mpos)) {
 		ivec2 localMouse = this->toContainerSpace(mpos);
-		if (buttonBypass.mouseHitTest(localMouse, evt)) {
-			return true;
-		}
-		if (buttonOpenEditor.mouseHitTest(localMouse, evt)) {
-			return true;
-		}
-		if (buttonDelete.mouseHitTest(localMouse, evt)) {
-			return true;
+		for (auto* btn : guiButtons) {
+			if (btn->isVisible() && btn->mouseHitTest(localMouse, evt)) {
+				return true;
+			}
 		}
 		for (auto* ctr : viewCtrs) {
 			if (ctr->mouseHitTest(localMouse, evt)) {
 				return true;
 			}
 		}
-		if (params.mouseHitTest(localMouse, evt)) {
+		if (params.isVisible() && params.mouseHitTest(localMouse, evt)) {
 			return true;
 		}
 		if (isShift(evt.kbmods)) {
@@ -377,13 +485,7 @@ bool guivstplugin::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 	return false;
 }
 void guivstplugin::buttonClicked(guibase* _button) {
-	if (_button == &buttonBypass) {
-    	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-    	float f = vst->getParamValue(PARAM_ENABLE);
-    	float f2 = f > 0.5 ? 0 : 1;
-    	vst->setParamValue(PARAM_ENABLE, f2, 2);
-		vst->postSetParameter(PARAM_ENABLE, f, f2, 2);
-	}
+	guiplugin::buttonClicked(_button);
 	if (_button == &buttonOpenEditor) {
 		if (vst->bEditOpen) {
 			vst->close();
@@ -391,17 +493,16 @@ void guivstplugin::buttonClicked(guibase* _button) {
 			vst->show();
 		}
 	}
-	if (_button == &buttonDelete) {
-    	removePlugin(vst);
-	}
+	params.setVisible(layoutMode == 0);
+	meter.setVisible(layoutMode == 0);
 }
 void guivstplugin::layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {
 	const int32_t hpt = theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT);
-	buttonOpenEditor.size = buttonBypass.size;
-	buttonOpenEditor.setRadius(buttonBypass.radius);
-	buttonOpenEditor.pos.y = inset1;
-	buttonOpenEditor.pos.x = buttonBypass.right();
-	titlePosX = buttonOpenEditor.right();
+//	buttonOpenEditor.size = buttonBypass.size;
+//	buttonOpenEditor.setRadius(buttonBypass.radius);
+//	buttonOpenEditor.pos.y = inset1;
+//	buttonOpenEditor.pos.x = buttonBypass.right();
+//	titlePosX = buttonOpenEditor.right();
 	int32_t insetCtrls = INSET_TITLE;
 	int rowHeight = 64;
 	while (contentS.y < rowHeight * 8 && rowHeight > 8) {

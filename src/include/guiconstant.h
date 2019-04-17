@@ -10,8 +10,12 @@ struct constant_t {
 	int32_t idx;
 	const char* name;
 	int32_t defValue;
+	int rangeMin = 1;
+	int rangeMax = 1000;
 	constant_t();
 	constant_t(const char* _name, int32_t _defValue);
+	constant_t(const char* _name, int32_t _defValue, int rangeMin, int rangeMax);
+	constant_t& setMinMax(int rangeMin, int rangeMax);
 };
 
 std::vector<constant_t> getAllConstants();

@@ -23,7 +23,8 @@
 #define ICON_MINUS 19
 #define ICON_AUTOMATION 20
 #define ICON_SAVE 21
-#define NUM_IMGS 22
+#define ICON_ARR_UP 22
+#define NUM_IMGS 23
 
 namespace RenderResources {
 	struct NvgImageTexture {

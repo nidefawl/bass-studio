@@ -43,7 +43,9 @@ int64_t getTimeHPint64()
 		::QueryPerformanceFrequency(&frequency);
 	LARGE_INTEGER now;
 	::QueryPerformanceCounter(&now);
+	//This overflowed after months of uptime
 //	now.QuadPart *= 1000000UL; //microseconds resolution
+
 
 	//prevent overflow, but keep some precision
 	now.QuadPart *= 10000UL;
@@ -164,7 +166,7 @@ static LONG WINAPI TopLevelExceptionHandler(PEXCEPTION_POINTERS pExceptionInfo)
 	log_out("Fatal exception: %s (0x%08X)\n", _exc_as_str(excCode), (int)excCode);
 	logStackTrace();
 	fataError = true;
-    return EXCEPTION_EXECUTE_HANDLER;
+    return EXCEPTION_CONTINUE_SEARCH;
 }
 #if defined(_MSC_VER)
 int __cdecl DebugReportHook(int nReportType, char*, int* pnRet)

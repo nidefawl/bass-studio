@@ -302,7 +302,7 @@ CEREAL_CLASS_VERSION( project_file, FILE_FORMAT_VERSION);
 CEREAL_CLASS_VERSION( plugin_snapshot_t, 3 );
 
 
-std::shared_ptr<project_file> loadProjectFile(MainCtrl* ctrl, String& path) {
+std::shared_ptr<project_file> loadProjectFile(String& path) {
 	try {
 		std::vector<uint8_t> vec;
 		ReadFileVector(path, vec);

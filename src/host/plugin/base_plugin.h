@@ -20,6 +20,8 @@ class guiplugin;
 class vsthost;
 struct audio_stage_t;
 struct plugin_snapshot_t;
+struct plugin_snapshot_t;
+class effect_deferred;
 
 class effectbase : public automatable_t {
 	SafeRef<effectbase> safeRef;
@@ -33,7 +35,7 @@ public:
 	rmsmeter<16000> meter;
 	AudioBlock* blockInputs = NULL; // guaranteed to have at least 2 channels
 	AudioBlock* blockOutputs = NULL; // guaranteed to have at least 2 channels
-	const int32_t pluginType = 0;
+	int32_t pluginType = 0;
 	int32_t projectGlobalId;
 	bool bIsEnabled = false;
 	bool bIsSetup = false;
@@ -46,6 +48,7 @@ public:
 	std::vector<automatable_param_t> mixerParams;
 	std::unique_ptr<DelayLine> delayLine;
 	double fTimePercentBlockProcess = 0;
+	effectbase();
 	effectbase(String _sName, int32_t _pluginType, int32_t _projectGlobalId);
 	virtual ~effectbase();
 	SafeRef<effectbase> makeSafeRef();
@@ -94,6 +97,39 @@ public:
 	virtual audio_stage_t* getTrackLink() {
 		return trackImpl;
 	}
+protected:
+	friend class effect_deferred;
+	effect_deferred* toDeferred();
 };
+struct effect_deferred_impl;
+class effect_deferred : public effectbase {
+public:
+	effect_deferred_impl* mImpl = nullptr;
+public:
+	//	deffered_effect();
+	~effect_deferred();
+	void loadSnapshot(const plugin_snapshot_t& snapshot) override;
+	int32_t getDelay() override;
+	String getInfo(std::vector<String>& list) override;
+	int getModuleType() override;
+	void makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) override;
+	guiplugin* makeGui() override;
+	guiplugin* getGui() override;
+	void process(AudioBlock* in, AudioBlock* out, int32_t samples) override;
+	bool show() override;
+	bool close() override;
+	void resume() override;
+	void sleep() override;
+	String getAutomatableName() override;
+	float getParamValue(int32_t idx) override;
+	void setParamValue(int32_t idx, float val, int flags) override;
+	automationlane_snapshot_t toRef() override;
+	static std::shared_ptr<effect_deferred> fromEffect(effectbase* eff);
+	String getDfrdPluginName();
+	plugin_snapshot_t getSnapshot() const;
+	void onPreUnload() override;
+};
+effect_deferred* loadPluginDeferred(const plugin_snapshot_t& snapshot);
+//std::shared_ptr<effect_deferred> loadPluginDeferred(const plugin_snapshot_t& snapshot);
 void removePlugin(effectbase* module);
 

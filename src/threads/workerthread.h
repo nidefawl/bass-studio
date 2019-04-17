@@ -1,6 +1,8 @@
 #pragma once
 #include <memory>
 #include <stdexcept>
+#include <functional>
+#include <assert.h>
 
 class WorkerThread
 {
@@ -26,8 +28,12 @@ public:
 		ThreadTask();
 		virtual ~ThreadTask();
 	    void setException(std::exception_ptr _eptr) {
+	    	assert(_eptr);
 	    	this->status = status_exception;
 			this->eptr = _eptr;
+	    }
+	    void clearException() {
+			this->eptr = nullptr;
 	    }
 	    std::exception_ptr getException() {
 	    	return this->eptr;
@@ -51,6 +57,8 @@ public:
 			this->status = status_complete;
 		}
 		void wait();
+		void reset();
+		bool isCompleted();
 	    virtual void run() = 0;
 
 	private:
@@ -67,11 +75,22 @@ public:
     void stopThread();
 	void joinThread();
     bool pushTask(ThreadTask* task);
+    std::shared_ptr<WorkerThread::ThreadTask> call(std::function<void()>&& fn);
+//    std::shared_ptr<WorkerThread::ThreadTask> WorkerThread::call(std::function<void()>&& fn)
 
 private:
 	Impl* _M_impl;
 };
 
+class ThreadTaskCallStdFn : public WorkerThread::ThreadTask {
+	std::function<void()> fn;
+public:
+	ThreadTaskCallStdFn(std::function<void()> _fn) : ThreadTask(), fn(_fn) {
+	}
+	void run() {
+		fn();
+	}
+};
 class ThreadTaskTest : public WorkerThread::ThreadTask {
 public:
 	ThreadTaskTest() : ThreadTask() {
@@ -88,3 +107,13 @@ public:
         	throw std::runtime_error("little error hihi");
 	}
 };
+//template<typename T>
+//class AsyncTask : public WorkerThread::ThreadTask {
+//	T* const handle;
+//public:
+//	AsyncTask(T* _handle) : ThreadTask(), handle(_handle) {
+//	}
+//	void run() {
+//		handle->doAsync(this);
+//	}
+//};

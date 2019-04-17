@@ -12,4 +12,4 @@ struct project_file {
 	samplefile_index_t sampleFileIndex;
 };
 bool saveProject(std::shared_ptr<project_file> f, String& path);
-std::shared_ptr<project_file> loadProjectFile(MainCtrl* ctrl, String& path);
+std::shared_ptr<project_file> loadProjectFile(String& path);

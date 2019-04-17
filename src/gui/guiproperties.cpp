@@ -268,8 +268,8 @@ public:
 							if (ctrl)
 								ctrl->relayout();
 						};
-						numberInput.fnClamp = [](int32_t i) {
-							return i > 1000 ? 1000 : i < 1 ? 1 : i;
+						numberInput.fnClamp = [constant](int32_t i) {
+							return i > constant.rangeMax ? constant.rangeMax : i < constant.rangeMin ? constant.rangeMin : i;
 						};
 						table->setActiveControl(&numberInput);
 						evt.guiDragged = &numberInput;

@@ -2,6 +2,7 @@
 #include "math/vec.h"
 #include "str_util.h"
 
+class BaseCtrl;
 class PopupCtrl;
 class window_base {
 public:
@@ -47,4 +48,6 @@ public:
 	virtual window_overlay* createOverlay() = 0;
 	virtual void requestClose() = 0;
 	virtual void updateMenu() = 0;
+	virtual void preRender() = 0;
+	virtual void postRender() = 0;
 };

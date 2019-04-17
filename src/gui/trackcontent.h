@@ -155,21 +155,22 @@ public:
 };
 
 
-
-class gui_track_automationlane : public guictr_base {
+class gui_track_subtrack : public guictr_base {
+public:
+	static constexpr int SUBTRACK_TYPE_EMPTY = 0;
+	static constexpr int SUBTRACK_TYPE_AUTOMATION = 1;
 public:
 	track_t* const m_track;
 protected:
+
 	gui_track_automation automation;
 public:
 	automatable_t* at;
 	int32_t param;
 	int32_t height = 4;
 	int32_t idx = -1;
-	gui_track_automationlane(track_t* _track, scaled_grid& _grid, automatable_t* _at, int32_t _param);
-	virtual ~gui_track_automationlane() {
-
-	}
+	gui_track_subtrack(track_t* _track, scaled_grid& _grid, automatable_t* _at, int32_t _param);
+	virtual int subtrackType() { return SUBTRACK_TYPE_EMPTY; }
 	automation_t* getAutomation() {
 		if (at) {
 			return at->getAutomation(param);
@@ -178,11 +179,11 @@ public:
 	}
 	void handleRightClick(MouseEvent& evt) override;
 	virtual void updateVisibleTrackContents(scaled_grid& grid);
-	bool isStaticContainer() {
-		return false;
-	}
 	bool handleKeyInput(KeyEvent& kevt) override {
 		return parent->handleKeyInput(kevt);
+	}
+	bool isStaticContainer() {
+		return false;
 	}
 	void handleDraggedBegin(MouseEvent& evt) override {
 		MainCtrl::get()->setSelectedTrack(m_track);
@@ -199,7 +200,6 @@ public:
 		evt.relMousepos += getPosContent();
 		parent->handleDraggedRelease(evt);
 	}
-
 
 	virtual void render(NVGcontext* vg) override {
 		if (MainCtrl::get()->getSelectedTrack() == m_track) {
@@ -250,6 +250,16 @@ public:
 		automation.destroyGuis();
 		guictr_base::destroyGuis();
 	}
+};
+class gui_track_automationlane : public gui_track_subtrack {
+public:
+	gui_track_automationlane(track_t* _track, scaled_grid& _grid, automatable_t* _at, int32_t _param);
+	int subtrackType() override { return gui_track_subtrack::SUBTRACK_TYPE_AUTOMATION; }
+	virtual ~gui_track_automationlane() {
+
+	}
+	void handleRightClick(MouseEvent& evt) override;
+
 };
 
 class gui_track : public guictr_base {

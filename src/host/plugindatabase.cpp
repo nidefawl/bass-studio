@@ -90,6 +90,16 @@ void plugindatabase_t::closeDatabase() {
 	delete _M_Impl;
 	_M_Impl = NULL;
 }
+thread_local static plugindatabase_t* tlm{0};
+thread_local static bool initialized{0};
+void plugindatabase_t::setTlsInstance(plugindatabase_t* db) {
+	tlm = db;
+	initialized = db != nullptr;
+}
+plugindatabase_t* plugindatabase_t::getTls() {
+	assert(initialized);
+	return tlm;
+}
 
 
 

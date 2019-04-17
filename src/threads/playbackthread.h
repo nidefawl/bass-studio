@@ -8,6 +8,7 @@
 
 #define REQ_STATE 1
 #define GUI_CALL 2
+class project_controller_t;
 class PlaybackThread : public seqthreads::thread_base
 {
 
@@ -17,7 +18,7 @@ private:
 public:
 	PlaybackThread();
 	~PlaybackThread();
-    void startThread();
+    void startThread(project_controller_t* ctrl);
     void stopThread();
 	void joinThread();
 	ThreadLock lockThread();

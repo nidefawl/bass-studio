@@ -74,6 +74,7 @@ namespace RenderResources {
 			load(vg, StringFormat("res/icons/arr_down.png"), imgIconsBuf[ICON_ARR_DOWN]);
 			load(vg, StringFormat("res/icons/arr_left.png"), imgIconsBuf[ICON_ARR_LEFT]);
 			load(vg, StringFormat("res/icons/arr_right.png"), imgIconsBuf[ICON_ARR_RIGHT]);
+			load(vg, StringFormat("res/icons/arr_up.png"), imgIconsBuf[ICON_ARR_UP]);
 			load(vg, StringFormat("res/icons/plus.png"), imgIconsBuf[ICON_PLUS]);
 			load(vg, StringFormat("res/icons/minus.png"), imgIconsBuf[ICON_MINUS]);
 			load(vg, StringFormat("res/icons/automation.png"), imgIconsBuf[ICON_AUTOMATION]);

@@ -1,14 +1,21 @@
 #include <nanovg.h>
+#include "math/vec.h"
 #include "scrollbar.h"
 
 #include "gui.h"
 #include "guicolors.h"
+#include "guiconstant.h"
 #include "theme.h"
 #include "basectrl.h"
+namespace GuiConstant {
+
+extern constant_t CONST_ROUND;
+}
 
 void gui_scrollbar::render(NVGcontext* vg) {
+	float fRnd = theme->getFloat(GuiConstant::CONST_ROUND);
 	nvgBeginPath(vg);
-	nvgRoundedRect(vg, pos.x, pos.y, size.x, size.y, G_RND);
+	nvgRoundedRect(vg, pos.x, pos.y, size.x, size.y, fRnd);
 	NVGcolor bg = theme->getColor(GuiColor::COL_BG_DRK);
 	nvgFillColor(vg, bg);
 	nvgFill(vg);
@@ -27,7 +34,7 @@ void gui_scrollbar::render(NVGcontext* vg) {
 			barOff[dir] -= h/2.0;
 			barS[dir] = h;
 		}
-		nvgRoundedRect(vg, pos.x + barOff.x + inset, pos.y + barOff.y + inset, barS.x - inset * 2, barS.y - inset * 2, G_RND);
+		nvgRoundedRect(vg, pos.x + barOff.x + inset, pos.y + barOff.y + inset, barS.x - inset * 2, barS.y - inset * 2, fRnd);
 
 		bool focused = parentCtrl->guiCtrFocused == this->parent || (parentCtrl->guiDragged == NULL && parentCtrl->guiOver == this);
 		if (focused) {

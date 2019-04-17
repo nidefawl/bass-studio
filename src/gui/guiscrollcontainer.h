@@ -12,7 +12,9 @@
 #define INSET_CTXT_MENU_Y 2
 static const ivec2 insetCtxtMenu = ivec2(INSET_CTXT_MENU_X, INSET_CTXT_MENU_Y);
 
+class PopupCtrl;
 class guictr_scrollbar : public guictr_base, public gui_scrollcontainer {
+	friend class PopupCtrl;
 	gui_scrollbar scrollbar;
 	int scrollOffset = 0;
 	int contentHeight = 0;

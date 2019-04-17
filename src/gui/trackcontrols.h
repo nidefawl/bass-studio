@@ -4,7 +4,7 @@
 #include "track.h"
 #include "../host/mainctrl.h"
 
-class gui_trackcontrols_automation;
+class gui_track_subtrack_mixer;
 class gui_trackcontrols_title;
 
 class gui_track_controls: public guictr_base {
@@ -13,7 +13,7 @@ public:
 private:
 	gui_trackcontrols_title* title;
 	guictr_base* mixer;
-	std::vector<gui_trackcontrols_automation*> automationLaneControls;
+	std::vector<gui_track_subtrack_mixer*> automationLaneControls;
 	int dragMode = -1;
 	const int resizeHitY = 8;
 	const int DRAG_RESIZE = 1;
@@ -23,11 +23,11 @@ public:
 	bool isStaticContainer() {
 		return false;
 	}
-	void addAutomationLane(track_t* t, gui_track_automationlane* al);
-	void removeAutomationLane(gui_track_automationlane* al);
+	void addSubtrackMixer(track_t* t, gui_track_subtrack* al);
+	void removeSubtrackMixer(gui_track_subtrack* al);
 	void removeAllAutomationLanes(automatable_t* at, int32_t paramIdx);
 	void removeAllAutomationLanes(automatable_t* at);
-	void removeAllAutomationLanes();
+	void removeAllSubtracks();
 	void render(NVGcontext* vg) override;
 	void handleDraggedBegin(MouseEvent& evt) {
 		MainCtrl::get()->setSelectedTrack(m_track);

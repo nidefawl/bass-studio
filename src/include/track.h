@@ -27,6 +27,7 @@
 const char* TrackTypeToName(int type);
 struct track_impl_t;
 class gui_track;
+class gui_track_subtrack;
 class gui_track_automationlane;
 class gui_track_controls;
 class delete_cb;
@@ -298,7 +299,8 @@ public:
 	int32_t idx = -1;
 	int32_t localIdx = -1;
 	gui_track* content = NULL;
-	std::vector<gui_track_automationlane*> subtracks;
+//	std::vector<gui_track_automationlane*> automationLanes;
+	std::vector<gui_track_subtrack*> subtracks;
 	gui_track_controls* mixer = NULL;
 	track_impl_t* audio = NULL;
 	int scrolloffset = 0;

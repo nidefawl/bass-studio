@@ -21,18 +21,23 @@ public:
 	String text;
 	guibuttontoggle buttonBypass; //TODO: use add() on controls
 	guibuttontoggle buttonDelete; //TODO: use add() on controls
+	guibuttontoggle buttonLayout; //TODO: use add() on controls
+	guibuttontoggle buttonSave; //TODO: use add() on controls
 	gui_trackmeter meter; //TODO: use add() on controls
 	float titlePosX = 0;
 	bool hasDragged=false;
 	bool isHorizontalTitle=true;
+	int layoutMode = 0;
+
+	std::vector<guibuttontoggle*> guiButtons;
 	guiplugin(effectbase* _effect);
-	virtual ~guiplugin() {
-		my_printf("DSTR!\n",0);
-	}
-	virtual void render(NVGcontext* vg) = 0;
-	virtual void buttonClicked(guibase* _button) = 0;
-	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) = 0;
+	~guiplugin();
+	void addGuiBtn(guibuttontoggle* btn);
+	virtual void render(NVGcontext* vg);
+	virtual void buttonClicked(guibase* _button);
+	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt);
 	virtual void layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) = 0;
+	void determineSize(ivec2& prefSize) override;
 	effectbase* getModule() {
 		return effect;
 	}

@@ -13,6 +13,7 @@
 #include "clip.h"
 #include "clipboard.h"
 #include "grid.h"
+#include "gui.h"
 #include "guicontainer.h"
 #include "scrollbar.h"
 #include "tracktimeline.h"
@@ -26,7 +27,7 @@
 int32_t getPosYFirstReturnTrack(project_t& project);
 track_t *getTrackFromMouse(project_t& project, ivec2 mouse, bool isDragSnap);
 
-gui_track_automationlane* getSubTrackFromMouse(project_t& project, ivec2 mouse, bool isDragSnap);
+gui_track_subtrack* getSubTrackFromMouse(project_t& project, ivec2 mouse, bool isDragSnap);
 gui_track* createTrackGui(track_t* t, scaled_grid&); // trackcontent.cpp
 gui_track_controls* createTrackGuiMixer(track_t* t); // trackcontrols.cpp
 void drawSeperator(NVGcontext* vg, const guitheme_t* theme, int32_t seperatorY, ivec2& cs);
@@ -41,7 +42,7 @@ public:
 	scaled_grid& grid;
 	dragdrop_midifile& dragdrop;
 	track_t *trSelected = NULL;
-	gui_track_automationlane* subTrSelected = NULL;
+	gui_track_subtrack* subTrSelected = NULL;
 	clip_dragaction action;
 	std::shared_ptr<clip_clipboard> clipboard;
 	tracklayout_t dragStartLayout;
@@ -108,12 +109,13 @@ public:
 		cursor.cursorSubTrack = -1;
 		cursor.selSubTrackRange = 0;
 	}
+	void addSubtrack(track_t* t, gui_track_subtrack* al, bool insertFront);
 
 	gui_track_automationlane* addAutomationLane(track_t* t, automatable_t* at, int32_t paramIdx, bool insertFront);
-	void removeAutomationLane(gui_track_automationlane* al);
+	void removeSubtrack(gui_track_automationlane* al);
 	void removeAllAutomationLanes(track_t* t, automatable_t* at, int32_t paramIdx);
 	void removeAllAutomationLanes(track_t* t, automatable_t* at);
-	void removeAllAutomationLanes(track_t* t);
+	void removeAllSubtracks(track_t* t);
 	virtual void trackEntryDragMove(gui_track* g, ivec2 mousepos);
 	virtual void trackEntryDragRelease(gui_track* g, ivec2 mousepos);
 	void addTrack(track_t* t);
@@ -453,7 +455,7 @@ public:
 		layout();
 	}
 	void removeSingleTrack(track_t* t) {
-		removeAllAutomationLanes(t);
+		removeAllSubtracks(t);
 		trackControls.removeTrack(t);
 		trackView.removeTrack(t);
 		layout();
@@ -463,13 +465,15 @@ public:
 		trackView.addTrack(t);
 	}
 	void showAutomationLane(track_t* tr, automatable_t* at, int32_t paramIdx);
+	void addSubTrack(track_t* t, gui_track_subtrack* subtrack, bool insertFront);
+
 	gui_track_automationlane* addAutomationLane(track_t* t, automatable_t* at, int32_t paramIdx, bool insertFront);
 	void removeAutomationLane(gui_track_automationlane* al);
 	void removeAllAutomationLanes(track_t* t, automatable_t* at, int32_t paramIdx);
 	void removeAllAutomationLanes(track_t* t, automatable_t* at);
-	void removeAllAutomationLanes(track_t* t);
+	void removeAllSubtracks(track_t* t);
 	void removeTrack(track_t* t) {
-		removeAllAutomationLanes(t);
+		removeAllSubtracks(t);
 		trackControls.removeTrack(t);
 		trackView.removeTrack(t);
 	}

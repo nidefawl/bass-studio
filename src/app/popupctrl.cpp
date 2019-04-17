@@ -78,9 +78,16 @@ void PopupCtrl::open(guictxtmenu_base *_ctxtmenu, ivec2 pos) {
 	popupCtrs->add(_ctxtmenu);
 	popupCtrs->determineSize(popupCtrs->size);
 	popupCtrs->layout();
-	window_overlay* appW = static_cast<window_overlay*>(this->window);
-	appW->positionOnScreen(pos-insetCtxtMenu, popupCtrs->size);
-	appW->show();
+
+	this->guiFocused = _ctxtmenu;
+	this->guiCtrFocused = _ctxtmenu;
+
+	if (this->window) {
+		window_overlay* appW = static_cast<window_overlay*>(this->window);
+		m_size = popupCtrs->size;
+		appW->positionOnScreen(pos-insetCtxtMenu-ivec2(2), popupCtrs->size+ivec2(4));
+		appW->show();
+	}
 	int32_t clearc = getTheme()->getColorInt32(GuiColor::COL_CLEAR_COLOR);
 	if (popupCtrs->isBackgroundRendered()) {
 		clearc |= 0xFF000000;
@@ -101,7 +108,19 @@ void PopupCtrl::destroy() {
 bool PopupCtrl::hasInputFocus() {
 	return guiFocused && canTakeInputFocus;
 }
+class guictr_scrollbar_outline : public guictr_scrollbar {
+public:
+	guictr_scrollbar_outline() : guictr_scrollbar() {
 
+	}
+	void render(NVGcontext* vg) {
+		renderFrameBase(vg);
+		nvgSave(vg);
+		guictr_scrollbar::render(vg);
+		nvgRestore(vg);
+		renderFrameOutline(vg);
+	}
+};
 bool PopupCtrl::init(window_overlay* _window, NVGcontext* nanovg)
 {
 	guitheme_t themeDefault;
@@ -110,7 +129,7 @@ bool PopupCtrl::init(window_overlay* _window, NVGcontext* nanovg)
 	themes.loadThemes();
 	this->window = _window;
 	this->vg = nanovg;
-	popupCtrs = new guictr_scrollbar();
+	popupCtrs = new guictr_scrollbar_outline();
 	this->containers.push_back(popupCtrs);
 	for (guictr_base *ctr : containers) {
 		ctr->setControl(this);

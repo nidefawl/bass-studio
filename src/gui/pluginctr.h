@@ -63,7 +63,8 @@ public:
 	}
 	void render(NVGcontext* vg) {
 		nvgBeginPath(vg);
-//		nvgRoundedRect(vg, pos.x, pos.y, size.x, size.y, G_RND);
+//		float fRnd = theme->getFloat(GuiConstant::CONST_ROUND);
+//		nvgRoundedRect(vg, pos.x, pos.y, size.x, size.y, fRnd);
 		NVGcolor c;
 		if (this == parentCtrl->guiOver) {
 			c = theme->getFrameColorHighlight();

@@ -15,7 +15,7 @@ protected:
 public:
 	guictxtmenu() : guictxtmenu_base() {
 		setCanMouseHit(true);
-		setBackgroundRendered(true);
+		setBackgroundRendered(false);
 		setBackgroundRenderedInset(false);
 		setSnapSides(ivec4(1));
 	}
