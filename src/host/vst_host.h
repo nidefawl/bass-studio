@@ -34,7 +34,6 @@ typedef void PaStream;
 typedef AEffect*(VSTPluginMain_t)(audioMasterCallback audioMasterCB);
 
 
-VstIntPtr VSTCALLBACK audioMaster(AEffect* effect, VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt);
 
 class vstpluginloadres {
 public:
@@ -71,6 +70,7 @@ public:
 	project_globals_t project;
 	samplerate_t lSampleRate;
 	uint16_t lBlockSize;
+	int32_t hostSlot = -1;
 private:
 	host_stats_t stats{0};
 	host_processing_stats_t processing{0};
@@ -90,6 +90,9 @@ private:
 	AudioBlock* blockZero = nullptr;
 	std::vector<audio_stage_t*> allAudioStages;
 	std::vector<track_impl_t*> trackAudioStages;
+
+
+	audioMasterCallback masterCallBackSlot = nullptr;
 	vstpluginloadres loadInternalPlugin(int32_t type, int32_t globalId = 0);
 	int32_t getNextGlobalModuleId(int32_t n);
 	int32_t getNextGlobalAudioStageId(int32_t as);
@@ -104,7 +107,7 @@ public:
 	~vsthost();
 	void operator=(vsthost const&) = delete;
 	static vsthost* getInstance();
-	static void setInstance(std::unique_ptr<vsthost> host);
+	static bool assignMasterCallback(vsthost* host);
 
 	uint32_t blockReads = 0;
 	uint32_t bufferUnderuns = 0;

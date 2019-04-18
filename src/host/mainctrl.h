@@ -320,23 +320,6 @@ public:
 	void updateGrid();
 	void updateVisibleTrackContents();
 	void setStatusText(String s);
-	double getProjectWorkingArea() {
-		return 1000.0;
-	}
-	beatbar16th_t toBeatBar16th(int32_t tick) {
-		beatbar16th_t t;
-		uint8_t denom = 4-signatureDenom;
-		uint8_t num = signatureNum;
-		tick = tick / TICKS_16TH;
-		t.th = tick & ((1<<denom) - 1);
-		int32_t quarters = (tick>>denom);
-		t.beat = uint32_t(quarters) % num;
-		t.bar = quarters / num;
-		if (tick < 0) {
-			t.bar -= 1;
-		}
-		return t;
-	}
 	std::shared_ptr<clip_clipboard> copySelection(const Cursor& cursor);
 	void pasteClipboard(clip_clipboard* c, int32_t trackOffset, tick_t tickOffset);
 	void pasteClipboard(clip_clipboard* c, Cursor& cursor);

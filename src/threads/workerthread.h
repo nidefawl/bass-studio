@@ -3,8 +3,10 @@
 #include <stdexcept>
 #include <functional>
 #include <assert.h>
+#include "thread.h"
+#include "tls.h"
 
-class WorkerThread
+class WorkerThread : public seqthreads::thread_base
 {
 public:
     enum task_status {
@@ -74,6 +76,8 @@ public:
     void startThread();
     void stopThread();
 	void joinThread();
+	int32_t getThreadId() override;
+	void setTls(daw_tls::tlsinstance tls) override;
     bool pushTask(ThreadTask* task);
     std::shared_ptr<WorkerThread::ThreadTask> call(std::function<void()>&& fn);
 //    std::shared_ptr<WorkerThread::ThreadTask> WorkerThread::call(std::function<void()>&& fn)

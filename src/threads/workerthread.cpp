@@ -80,19 +80,33 @@ class WorkerThread::Impl {
     std::mutex m_mtx;
     std::condition_variable m_cond;
     std::atomic<bool> m_stop;
+	int32_t threadid = 0;
+    daw_tls::tlsinstance threadTLS;
 public:
     Impl() {
 		std::atomic_init(&m_stop, false);
 	}
+    void setTls(daw_tls::tlsinstance tls) {
+    	assert(!t.joinable());
+    	threadTLS = tls;
+    }
 	void start() {
 		t = std::thread([this]() {
+			daw_tls::setTls(threadTLS);
 			setCurrentThreadName("workerthread");
 			this->run();
 		});
+	#ifdef _WIN32
+			this->threadid = static_cast<int32_t>(t.get_id().get());
+//			HANDLE h = reinterpret_cast<HANDLE*>(t.native_handle());
+	#endif
 	}
 	void join() {
 		t.join();
 	}
+    int32_t getThreadId() {
+    	return threadid;
+    }
     bool push(ThreadTaskImpl* task){
         std::unique_lock<std::mutex> lock(m_mtx);
         if (!m_stop) {
@@ -157,8 +171,14 @@ void WorkerThread::stopThread() {
 void WorkerThread::joinThread() {
 	_M_impl->join();
 }
+int32_t WorkerThread::getThreadId() {
+	return _M_impl->getThreadId();
+}
 bool WorkerThread::pushTask(ThreadTask* task) {
 	return this->_M_impl->push(task->_M_impl);
+}
+void WorkerThread::setTls(daw_tls::tlsinstance tls) {
+	_M_impl->setTls(tls);
 }
 std::shared_ptr<WorkerThread::ThreadTask> WorkerThread::call(std::function<void()>&& fn) {
 	std::shared_ptr<WorkerThread::ThreadTask> task = std::make_shared<ThreadTaskCallStdFn>(fn);

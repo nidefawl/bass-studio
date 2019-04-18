@@ -5,6 +5,7 @@
 #include <windows.h>
 #include "../host/vst_host.h"
 #include "../host/plugin/vst_plugin.h"
+#include "tls.h"
 #include "project.h"
 
 namespace {
@@ -93,7 +94,9 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 
 
 int main(int argc, char* argv[]) {
-	vsthost::setInstance(std::make_unique<vsthost>(44100, 256));
+    auto audiohost = std::make_unique<vsthost>();
+    daw_tls::tlsinstance& tls = daw_tls::getTls();
+    tls.host = audiohost.get();
     MSG msg;
     WNDCLASS wc;
 

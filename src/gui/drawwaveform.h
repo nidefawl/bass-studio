@@ -50,7 +50,6 @@ class waveformrender {
 	std::vector<audioclip_texture_t> prevRendered;
 public:
 	static waveformrender* getInstance();
-	static void setInstance(std::unique_ptr<waveformrender> host);
 	static void destroy();
 	void init();
 	void getRenderedTextures(std::vector<TextureAtlas>& rendered);

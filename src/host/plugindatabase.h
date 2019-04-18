@@ -19,6 +19,5 @@ public:
 	void query(String q, std::vector<pluginentry_t>& _out);
 	void openDatabase();
 	void closeDatabase();
-	static plugindatabase_t* getTls();
-	static void setTlsInstance(plugindatabase_t* db);
+	static plugindatabase_t* getInstance();
 };

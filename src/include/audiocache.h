@@ -30,8 +30,6 @@ public:
 		this->list.clear();
 	}
 	static audiocache* getInstance();
-	static void setInstance(std::unique_ptr<audiocache> host);
-	static void destroy();
 	void getLoaded(std::vector<cachedaudio_t*>& v);
 	cachedaudio_t* loadFile(String s, int id = -1);
 	void setSamplerate(int32_t samplerate);

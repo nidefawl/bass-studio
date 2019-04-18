@@ -199,7 +199,7 @@ struct tracksettings_t {
 	int height = -1;
 	int rgb = -1;
 	bool hideTrack = false;
-	bool hideAutomation = false;
+	bool hideSubtracks = false;
 };
 
 struct track_params_snapshot_t {

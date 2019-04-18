@@ -78,6 +78,7 @@ void effectbase::breakTrackLink() {
 	while (audioStage != nullptr) {
 		guictr_plugins* pluginCtr = audioStage->pluginCtr;
 		if (pluginCtr) {
+			assert(MainCtrl::get());
 			plugin_selection& sel = MainCtrl::get()->getPluginSel();
 			if (sel.pluginCtr == pluginCtr) {
 				sel.clear();

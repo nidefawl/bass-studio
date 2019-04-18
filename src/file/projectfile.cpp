@@ -141,7 +141,7 @@ void serialize(Archive & archive, tracksettings_t & m)
 			make_nvp("height", m.height),
 			make_nvp("rgb", m.rgb),
 			make_nvp("type", m.type));
-	make_optional_nvp(archive, "hideAutomation", m.hideAutomation);
+	make_optional_nvp(archive, "hideAutomation", m.hideSubtracks);
 	make_optional_nvp(archive, "hideTrack", m.hideTrack);
 }
 template<class Archive>

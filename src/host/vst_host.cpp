@@ -38,6 +38,7 @@
 #ifdef __linux__
 #include <dlfcn.h>
 #endif
+#include "../util/readerwriterqueue.h"
 
 #define DBG_PRINT_CALLBACKS
 #ifdef DBG_PRINT_CALLBACKS
@@ -73,17 +74,20 @@ void emptyPrinft(vstplugin* plugin, const char *fmt, ...) {
 #endif
 
 
+#define NUM_HOST_CB_SLOTS 4
 namespace
 {
-	std::unique_ptr<vsthost> g_instance;
+struct vst_internal_hostslot {
+	vsthost* g_instance = nullptr;
+};
+vst_internal_hostslot g_hostslots[4];
 }
 
-
-VstIntPtr VSTCALLBACK audioMaster(AEffect* effect, VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt) {
-	assert(g_instance.get());
-	if (!g_instance)
+VstIntPtr audioMasterHost(vsthost* host, AEffect* effect, VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt) {
+	assert(host);
+	if (!host)
 		return 0;
-	vstplugin* plugin = g_instance->getPlugin(effect);
+	vstplugin* plugin = host->getPlugin(effect);
 
 	switch (opcode)
 	{
@@ -215,6 +219,26 @@ VstIntPtr VSTCALLBACK audioMaster(AEffect* effect, VstInt32 opcode, VstInt32 ind
 	}
 	return 0L;
 }
+VstIntPtr VSTCALLBACK audioMaster1(AEffect* effect, VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt) {
+	vsthost* host = g_hostslots[0].g_instance;
+	assert(host);
+	return audioMasterHost(host, effect, opcode, index, value, ptr, opt);
+}
+VstIntPtr VSTCALLBACK audioMaster2(AEffect* effect, VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt) {
+	vsthost* host = g_hostslots[1].g_instance;
+	assert(host);
+	return audioMasterHost(host, effect, opcode, index, value, ptr, opt);
+}
+VstIntPtr VSTCALLBACK audioMaster3(AEffect* effect, VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt) {
+	vsthost* host = g_hostslots[2].g_instance;
+	assert(host);
+	return audioMasterHost(host, effect, opcode, index, value, ptr, opt);
+}
+VstIntPtr VSTCALLBACK audioMaster4(AEffect* effect, VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt) {
+	vsthost* host = g_hostslots[3].g_instance;
+	assert(host);
+	return audioMasterHost(host, effect, opcode, index, value, ptr, opt);
+}
 
 bool error(const char* msg, PaError err) {
 	my_printf("Error in %s\n", msg);
@@ -236,7 +260,7 @@ static int audioCallback(const void *inputBuffer, void *outputBuffer,
 	PaStreamCallbackFlags statusFlags,
 	void *userData)
 {
-	vsthost* host = vsthost::getInstance();
+	vsthost* host = static_cast<vsthost*>(userData);
 	float **inputs = (float**)inputBuffer;
 	UNUSED(inputs);
 	float **outputs = (float**)outputBuffer;
@@ -278,7 +302,7 @@ static int audioCallback(const void *inputBuffer, void *outputBuffer,
 */
 static void StreamFinished(void* userData)
 {
-	vsthost* host = vsthost::getInstance();
+	vsthost* host = static_cast<vsthost*>(userData);
 	host->onStreamEnd();
 }
 
@@ -755,15 +779,33 @@ void vsthost::unload() {
 }
 void vsthost::destroy() {
 	freeRingBuffer(ringbuffer);
-	g_instance.reset();
+	assert(hostSlot > -1);
+	assert(g_hostslots[hostSlot].g_instance);
+	g_hostslots[hostSlot].g_instance = nullptr;
 }
-vsthost* vsthost::getInstance()
+bool vsthost::assignMasterCallback(vsthost* host)
 {
-	return g_instance.get();
-}
-void vsthost::setInstance(std::unique_ptr<vsthost> host)
-{
-	g_instance = std::move(host);
+	for (int i = 0; i < NUM_HOST_CB_SLOTS; i++) {
+		if (g_hostslots[i].g_instance == nullptr) {
+			g_hostslots[i].g_instance = host;
+			host->hostSlot = i;
+			if (i == 0) {
+				host->masterCallBackSlot = audioMaster1;
+			}
+			if (i == 1) {
+				host->masterCallBackSlot = audioMaster2;
+			}
+			if (i == 2) {
+				host->masterCallBackSlot = audioMaster3;
+			}
+			if (i == 3) {
+				host->masterCallBackSlot = audioMaster4;
+			}
+			return true;
+		}
+	}
+	assert(0&&"Out of host slots");
+	return false;
 }
 bool vsthost::startAudio() {
 	my_printf("startAudio\n", 0);
@@ -836,7 +878,7 @@ bool vsthost::startAudio() {
 		this->lBlockSize,
 		paClipOff,      /* we won't output out of range samples so don't bother clipping them */
 		audioCallback,
-		NULL);
+		this);
 
 	if (err != paNoError) {
 		return error("Pa_OpenStream", err);
@@ -1157,6 +1199,7 @@ int32_t vsthost::getNextGlobalAudioStageId(int32_t globalId) {
 }
 
 vstpluginloadres vsthost::loadPlugin(String filepath, int32_t globalId) {
+	assert(masterCallBackSlot);
 	String path, name, nameWithoutExt;
 	SplitPath(filepath, &path, &nameWithoutExt, NULL, &name);
 	VSTPluginMain_t* fn = NULL;
@@ -1168,8 +1211,7 @@ vstpluginloadres vsthost::loadPlugin(String filepath, int32_t globalId) {
 	if (ret != 0) {
 		return vstpluginloadres(ret, NULL);
 	}
-
-	aeffect = fn(audioMaster);
+	aeffect = fn(masterCallBackSlot);
 	if (!aeffect) {
 		FreeLibrary(hmodule);
 		return vstpluginloadres(-5, NULL);

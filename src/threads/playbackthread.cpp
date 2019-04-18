@@ -77,6 +77,7 @@ class PlaybackThread::Impl {
 	int32_t threadid = 0;
 	project_controller_t* ctrl = nullptr;
 	bool exited = false;
+	daw_tls::tlsinstance threadTLS;
 public:
     Impl() : q(128) {
 	}
@@ -87,9 +88,14 @@ public:
     int32_t getThreadId() {
     	return threadid;
     }
+    void setTls(daw_tls::tlsinstance tls) {
+		assert(!t.joinable());
+		threadTLS = tls;
+    }
 	void start(project_controller_t* ctrl) {
 		this->ctrl = ctrl;
 		t = std::thread([this]() {
+			daw_tls::setTls(threadTLS);
 			this->run();
 		});
 #ifdef _WIN32
@@ -300,6 +306,9 @@ void PlaybackThread::joinThread() {
 }
 int32_t PlaybackThread::getThreadId() {
 	return _M_impl->getThreadId();
+}
+void PlaybackThread::setTls(daw_tls::tlsinstance tls) {
+	_M_impl->setTls(tls);
 }
 playback_state PlaybackThread::getState() {
 	return _M_impl->getState();

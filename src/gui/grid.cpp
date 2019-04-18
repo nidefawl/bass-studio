@@ -1,6 +1,6 @@
 #include "seq_time.h"
 #include "grid.h"
-#include "../host/mainctrl.h"
+#include "host/projectcontroller.h"
 
 void scaled_grid::makeTickVisible(tick_t tickTime) {
 	double tickBars = tickTime / (double)TICKS_BAR;
@@ -27,7 +27,7 @@ void scaled_grid::showRange(tick_t start, tick_t end) {
 void scaled_grid::setZoom(double fNewZoom) {
 	double newZoom = fNewZoom < MIN_ZOOM ? MIN_ZOOM : fNewZoom > 100 ? 100 : fNewZoom;
 	double length = toObjSpace(lastW, fNewZoom, 0);
-	double projectWorkingArea = MainCtrl::get()->getProjectWorkingArea();
+	double projectWorkingArea = project_controller_t::get()->getProjectWorkingArea();
 	if (length > projectWorkingArea) {
 		newZoom = 8.0 / (lastW / projectWorkingArea);
 	}
@@ -193,13 +193,13 @@ void scaled_grid::calcLen(int scrollOffsetX, double fzoom, int contentWidth) {
 		int firstBarLeftOfScreen = (int)floor(offset / (barSize));
 		firstBarLeftOfScreen = (firstBarLeftOfScreen / step)*step;
 		//TODO: very important: make sure grid is never empty
-		MainCtrl* main = MainCtrl::get();
+		auto* project = project_controller_t::get();
 		for (int bar = 0; bar < numBarsOnScreen; bar += step) {
 			const float_type pos = bar_offset + bar * barSize;
 			const tick_t timeBar = (firstBarLeftOfScreen + bar) * TICKS_BAR;
 			grid_div div = {};
 			div.time = timeBar;
-			div.pos = main->toBeatBar16th(timeBar);
+			div.pos = project->toBeatBar16th(timeBar);
 			div.screenpos = pos;
 			div.width = denum_step > 0 ? (denum_substep>0 ? denom_sub_size : denom_size) : barSize*step;
 			div.color = 0;
@@ -212,7 +212,7 @@ void scaled_grid::calcLen(int scrollOffsetX, double fzoom, int contentWidth) {
 				if (bar_denom > 0) {
 					grid_div div_quarter = {};
 					div_quarter.time = timeQuarter;
-					div_quarter.pos = main->toBeatBar16th(timeQuarter);
+					div_quarter.pos = project->toBeatBar16th(timeQuarter);
 					div_quarter.screenpos = pos_denom;
 					div_quarter.width = denum_substep > 0 ? denom_sub_size : denom_size;
 					div_quarter.color = 1;
@@ -223,7 +223,7 @@ void scaled_grid::calcLen(int scrollOffsetX, double fzoom, int contentWidth) {
 					tick_t timeSmall = timeQuarter + (bar_denom_sub*(32 / denum_substep)) * (TICKS_16TH>>3);
 					grid_div div_smaller = {};
 					div_smaller.time = timeSmall;
-					div_smaller.pos = main->toBeatBar16th(timeSmall);
+					div_smaller.pos = project->toBeatBar16th(timeSmall);
 
 					div_smaller.screenpos = bar_offset + bar * barSize + bar_denom * denom_size + bar_denom_sub * denom_sub_size;
 					div_smaller.width = denom_sub_size;

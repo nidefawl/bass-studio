@@ -16,6 +16,7 @@
 #include "audiocache.h"
 #include "audiowaveform.h"
 #include "gui/drawwaveform.h"
+#include "tls.h"
 #include "logging.h"
 
 
@@ -182,7 +183,9 @@ int main(int argc, char* argv[]) {
 		usleep(50000);
 		my_printf("usleep(50000) %lu\n", t.getTime());
 	}
-	audiocache::setInstance(std::make_unique<audiocache>(44100));
+	audiocache cache(44100);
+	daw_tls::tlsinstance& tls = daw_tls::getTls();
+	tls.audioCache = &cache;
 	cachedaudio_t* sample = audiocache::getInstance()->loadFile("PHFT_Drum Loop_130_099.wav");
 	if (!sample) {
 		puts("Failed loading sample");
@@ -217,7 +220,6 @@ int main(int argc, char* argv[]) {
 		}
 		my_printf(u8"packVertexDataTest per loop %luus\n", t.getTime()/NLOOPS);
 	}
-	audiocache::destroy();
 	ALEPH_TEST_END();
 	return 0;
 }

@@ -32,6 +32,7 @@
 #include "menu.h"
 #include "thread.h"
 #include "msgbox.h"
+#include "tls.h"
 
 #include "../gui/gui.h"
 #include "../gui/guicontainer.h"
@@ -69,18 +70,6 @@
 
 	const int FLAG_DEFER_LOAD = 0x1;
 
-std::shared_ptr<MainCtrl> mainctrl;
-MainCtrl* MainCtrl::get() {
-	return mainctrl.get();
-}
-std::shared_ptr<AppCtrl> makeApp() {
-	mainctrl = std::make_shared<MainCtrl>();
-	return mainctrl;
-}
-
-void deleteApp() {
-	mainctrl = nullptr;
-}
 
 void dragdrop_midifile::reset() {
 	if (isLoaded) {
@@ -379,30 +368,6 @@ void MainCtrl::unloadProject() {
 		assert(pluginsDeferred.empty());
 	}
 }
-void MainCtrl::destroy()
-{
-	if (!isOK) {
-		return;
-	}
-	setAudioThreadState(playback_state::status_no_process);
-	assert(playThread.getState() == playback_state::status_no_process); // should have been set by window close request
-	vsthost::getInstance()->stopAudio();
-	unloadProject();
-	vsthost::getInstance()->unload();
-	vsthost::getInstance()->destroy();
-	audiocache::destroy();
-	waveformrender::destroy();
-
-
-	settings.dens = grid.grid_dens;
-	isOK = false;
-	delete view;
-	plugindb.closeDatabase();
-	this->workerThread.stopThread();
-	this->workerThread.joinThread();
-	this->playThread.stopThread();
-	this->playThread.joinThread();
-}
 
 bool MainCtrl::onWindowCloseRequest() {
 	return true;
@@ -534,13 +499,51 @@ void MainCtrl::postInit() {
 	view->ctr_effectlib.update();
 	setAudioThreadState(playback_state::status_stop);
 }
-void MainCtrl::initApp(int argc, char* argv[]) {
 
-	vsthost::setInstance(std::make_unique<vsthost>(44100, 256));
-	audiocache::setInstance(std::make_unique<audiocache>(vsthost::getInstance()->lSampleRate));
-	audiocache::getInstance()->loadFile("PHFT_Drum Loop_130_099.wav");
-	audiocache::getInstance()->loadFile("C:\\Users\\Michael\\Desktop\\left right.wav");
-	waveformrender::setInstance(std::make_unique<waveformrender>());
+void MainCtrl::destroy()
+{
+	if (!isOK) {
+		return;
+	}
+	setAudioThreadState(playback_state::status_no_process);
+	assert(playThread.getState() == playback_state::status_no_process); // should have been set by window close request
+	vsthost::getInstance()->stopAudio();
+	unloadProject();
+	vsthost::getInstance()->unload();
+	vsthost::getInstance()->destroy();
+	settings.dens = grid.grid_dens;
+	isOK = false;
+	delete view;
+	plugindb.closeDatabase();
+	this->workerThread.stopThread();
+	this->workerThread.joinThread();
+	this->playThread.stopThread();
+	this->playThread.joinThread();
+	daw_tls::tlsinstance& tls = daw_tls::getTls();
+	delete tls.waveform;
+	delete tls.audioCache;
+	delete tls.host;
+	tls.host = nullptr;
+	tls.mainCtrl = nullptr;
+	tls.project = nullptr;
+	tls.pluginDatabase = nullptr;
+	tls.waveform = nullptr;
+	tls.audioCache = nullptr;
+}
+void MainCtrl::initApp(int argc, char* argv[]) {
+	daw_tls::tlsinstance& tls = daw_tls::getTls();
+	auto host = new vsthost(44100, 256);
+	if (!vsthost::assignMasterCallback(host)) {
+		delete host;
+		assert(0);
+		throw applogicexception("no empty vst callback slot");
+	}
+	tls.project = this;
+	tls.mainCtrl = this;
+	tls.host = host;
+	tls.pluginDatabase = &plugindb;
+	tls.audioCache = new audiocache(tls.host->lSampleRate);
+	tls.waveform = new waveformrender();
 }
 bool MainCtrl::init(window_main* window, NVGcontext* nanovg)
 {
@@ -548,8 +551,9 @@ bool MainCtrl::init(window_main* window, NVGcontext* nanovg)
 	this->window = window;
 	this->vg = nanovg;
 	plugindb.openDatabase();
-	plugindatabase_t::setTlsInstance(&plugindb);
+	this->playThread.setTls(daw_tls::getTls());
 	this->playThread.startThread(this);
+	this->workerThread.setTls(daw_tls::getTls());
 	this->workerThread.startThread();
 	this->workerThread.call([]() {
 		my_printf("WorkerThreadCallTest\n", 0);

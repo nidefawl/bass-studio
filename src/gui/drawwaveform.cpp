@@ -19,22 +19,6 @@
 
 bool checkGLError(const char* s);
 
-namespace waveformrender_impl
-{
-	std::unique_ptr<waveformrender> g_instance;
-}
-
-void waveformrender::destroy() {
-	waveformrender_impl::g_instance.reset();
-}
-waveformrender* waveformrender::getInstance()
-{
-	return waveformrender_impl::g_instance.get();
-}
-void waveformrender::setInstance(std::unique_ptr<waveformrender> host)
-{
-	waveformrender_impl::g_instance = std::move(host);
-}
 void waveformrender::init() {
 	renderer.init();
 }

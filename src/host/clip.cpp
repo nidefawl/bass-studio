@@ -8,8 +8,8 @@
 #include "logging.h"
 #include "seq_time.h"
 #include "audiocache.h"
-#include "mainctrl.h"
 #include "project.h"
+#include "projectcontroller.h"
 
 note_t& clip_notes_t::addSingle(note_t& t) {
 	assert(selection.empty());
@@ -442,6 +442,7 @@ std::pair<note_t*, note_t*> getMinMaxTime(std::vector<note_t>& notes) {
 }
 
 tick_t clip_audio_t::lenSamples() {
+	assert(audiocache::getInstance());
 	cachedaudio_t* audio = audiocache::getInstance()->get(this->id);
 	auto* sample = audio ? audio->sample.get() : nullptr;
 	if (sample)
@@ -450,7 +451,8 @@ tick_t clip_audio_t::lenSamples() {
 }
 
 void clip_t::adjustStartSamples(tick_t offset) {
-	int32_t tick = MainCtrl::get()->tickToSamples(offset);
+	assert(project_controller_t::get());
+	int32_t tick = project_controller_t::get()->tickToSamples(offset);
 //	if (loopEnabled && offsetStart < loopStart) {
 //		tick_t lenAdj = min(offset, loopStart - offsetStart);
 //		offsetStart += lenAdj;
@@ -470,8 +472,8 @@ void clip_t::adjustStartSamples(tick_t offset) {
 
 tick_t clip_t::getLen() const {
 
-	if (this->lenSamples>0&&this->clipType == CLIP_AUDIO) {
-		return MainCtrl::get()->samplesToTicks(this->lenSamples);
+	if (this->lenSamples>0&&this->clipType == CLIP_AUDIO && project_controller_t::get()) {
+		return project_controller_t::get()->samplesToTicks(this->lenSamples);
 	}
 //	tick_t
 	return len;
@@ -482,11 +484,11 @@ tick_t& clip_t::getLenRef() {
 }
 
 void clip_t::setLen(tick_t len) {
-	if (this->clipType == CLIP_AUDIO) {
-		this->lenSamples = MainCtrl::get()->tickToSamples(len);
+	if (this->clipType == CLIP_AUDIO && project_controller_t::get()) {
+		this->lenSamples = project_controller_t::get()->tickToSamples(len);
 	}
 	this->len = len;
-	assert(this->clipType != CLIP_AUDIO || MainCtrl::get()->samplesToTicks(this->lenSamples) == this->len);
+	assert(this->clipType != CLIP_AUDIO || (!project_controller_t::get()||project_controller_t::get()->samplesToTicks(this->lenSamples) == this->len));
 }
 
 void clip_t::adjustLen(tick_t offset) {
@@ -497,8 +499,8 @@ tick_t clip_t::getLenSamples() const {
 }
 
 void clip_t::setLenSamples(tick_t lenSamples) {
-	if (this->clipType == CLIP_AUDIO) {
-		this->len = MainCtrl::get()->samplesToTicks(len);
+	if (this->clipType == CLIP_AUDIO && project_controller_t::get()) {
+		this->len = project_controller_t::get()->samplesToTicks(len);
 	}
 	this->lenSamples = lenSamples;
 }

@@ -23,6 +23,7 @@
 #include "plugindatabase.h"
 #include "fileio.h"
 #include "wave/dr_wav.h"
+#include "basectrl.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -32,6 +33,13 @@
 #include <limits.h>
 #endif
 
+void deleteApp() {
+
+}
+
+std::shared_ptr<AppCtrl> makeApp() {
+	return nullptr;
+}
 
 #define LOG(fmtString,...) printf(fmtString "\n", ##__VA_ARGS__); fflush(stdout)
 
@@ -119,17 +127,25 @@ int main(int argc, char* argv[]) {
     try {
     	FileTimeGetter filetime(file);
     	time = filetime.getWriteTimeI64();
-    	vsthost::setInstance(std::make_unique<vsthost>());
-    	auto audiohost = vsthost::getInstance();
-    	audiocache::setInstance(std::make_unique<audiocache>(audiohost->lSampleRate));
-    	LOG("START");
+
+    	auto audiohost = std::make_unique<vsthost>(44100, 256);
+    	vsthost::assignMasterCallback(audiohost.get());
     	project_controller_t project;
     	plugindatabase_t plugindb;
+    	waveformrender renderer;
+    	audiocache cache(audiohost->lSampleRate);
+    	daw_tls::tlsinstance& tls = daw_tls::getTls();
+    	tls.mainCtrl = nullptr;
+    	tls.host = audiohost.get();
+    	tls.audioCache = &cache;
+    	tls.waveform = &renderer;
+    	tls.pluginDatabase = &plugindb;
     	plugindb.openDatabase();
-    	plugindatabase_t::setTlsInstance(&plugindb);
+    	LOG("START");
     	{
 
     		std::unique_ptr<PlaybackThread> playThread = std::make_unique<PlaybackThread>();
+    		playThread->setTls(tls);
     		playThread->startThread(&project);
     		playThread->addRequest(REQ_STATE, (int) playback_state::status_no_process, true);
     		auto pf = loadProjectFile(file);
@@ -148,20 +164,15 @@ int main(int argc, char* argv[]) {
     		project.trackList.loadPlugins(snapshot);
     		std::vector<effectbase*> pluginsDeferred;
     		audiohost->getDeferredEffects(pluginsDeferred);
+    		my_printf("loading %d plugins\n", pluginsDeferred.size());
     		for (auto plugin : pluginsDeferred) {
+        		my_printf("load %s\n", StringAsCStr(plugin->sName));
     			audiohost->activateDeferred(plugin);
     		}
-    		playThread->addRequest(REQ_STATE, (int) playback_state::status_play, true);
     		AudioBlock block(2, audiohost->lBlockSize);
     		AudioBlock blockFull(1, audiohost->lBlockSize*2);
     		double tLastMsg = getTimeMillis()/1000.0;
     		int64_t nBlocks = 0;
-    		String fOutPath = "test.dat";
-    		std::shared_ptr<IOFile> file = std::shared_ptr<IOFile>(IOFile::openFile(fOutPath, OpenFileMode::WRITE));
-    		if (!file) {
-    			log_printf("Cannot open output file %s\n", StringAsCStr(fOutPath));
-    			return 1;
-    		}
     		int64_t samplesWritten = 0;
 			 drwav_data_format format;
 			 format.container = drwav_container_riff;     // <-- drwav_container_riff = normal WAV files, drwav_container_w64 = Sony Wave64.
@@ -170,6 +181,8 @@ int main(int argc, char* argv[]) {
 			 format.sampleRate = audiohost->lSampleRate;
 			 format.bitsPerSample = 32;
 			 drwav* pWav = drwav_open_file_write(StringAsCStr(fOutWave), &format);
+	    		my_printf("start playback\n", 0);
+	    		playThread->addRequest(REQ_STATE, (int) playback_state::status_play, true);
     		while (!quit) {
     			dsp_util::fillSilence(block.buf, audiohost->lBlockSize);
     			//still a race condition on_terminate here
@@ -230,7 +243,6 @@ int main(int argc, char* argv[]) {
     		playThread->joinThread();
     	}
     	audiohost->destroy();
-    	audiocache::getInstance()->destroy();
     	LOG("END");
     } catch (std::exception& e) {
     	log_printf("exception %s\n", e.what());

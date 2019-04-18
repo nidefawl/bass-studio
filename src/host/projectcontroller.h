@@ -39,5 +39,23 @@ public:
 	}
 	int32_t tickToSamples(tick_t ticks);
 	tick_t samplesToTicks(int32_t sample);
+	beatbar16th_t toBeatBar16th(int32_t tick) {
+		beatbar16th_t t;
+		uint8_t denom = 4-signatureDenom;
+		uint8_t num = signatureNum;
+		tick = tick / TICKS_16TH;
+		t.th = tick & ((1<<denom) - 1);
+		int32_t quarters = (tick>>denom);
+		t.beat = uint32_t(quarters) % num;
+		t.bar = quarters / num;
+		if (tick < 0) {
+			t.bar -= 1;
+		}
+		return t;
+	}
 
+	static project_controller_t* get();
+	double getProjectWorkingArea() {
+		return 1000.0;
+	}
 };

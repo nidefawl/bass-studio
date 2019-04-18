@@ -77,7 +77,7 @@ int32_t guictr_tracks::setTrackPosition(track_t* t, int32_t y, bool isBottom) {
 	t->content->size = ivec2(trackView.size.x, trH * TRACK_HEIGHT_STEP);
 	int32_t x2 = t->content->left();
 	int32_t y2 = t->content->bottom();
-	if (!(t->hideTrack || t->hideAutomation)) {
+	if (!(t->hideTrack || t->hideSubtracks)) {
 		for (auto t2 : t->subtracks) {
 			int trackheight2 = t2->height * TRACK_HEIGHT_STEP;
 			t2->pos = ivec2(x2, y2);

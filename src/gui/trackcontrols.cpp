@@ -450,10 +450,10 @@ public:
 		addAutomationLane.setRadius(10);
 
 		hideTrack.state = &m_track->hideTrack;
-		hideAutomation.state = &m_track->hideAutomation;
+		hideAutomation.state = &m_track->hideSubtracks;
 		padding = 0;
 		hideTrack.getIcon = [this]{return m_track->hideTrack?ICON_ARR_RIGHT:ICON_ARR_DOWN;};
-		hideAutomation.getIcon = [this]{return m_track->hideAutomation?ICON_ARR_RIGHT:ICON_ARR_DOWN;};
+		hideAutomation.getIcon = [this]{return m_track->hideSubtracks?ICON_ARR_RIGHT:ICON_ARR_DOWN;};
 		addAutomationLane.icon = ICON_PLUS;
 		add(&hideTrack);
 	}
@@ -551,13 +551,13 @@ public:
 			m_track->hideTrack = !m_track->hideTrack;
 		}
 		if (button == &hideAutomation) {
-			m_track->hideAutomation = !m_track->hideAutomation;
+			m_track->hideSubtracks = !m_track->hideSubtracks;
 		}
 		if (button == &addAutomationLane) {
 			m_track->hideTrack = false;
-			m_track->hideAutomation = false;
+			m_track->hideSubtracks = false;
 		}
-		m_track->audio->showAutomationLanes();
+		m_track->audio->updateStoreLoadSubtracks();
 		if (button == &addAutomationLane) {
 			automatable_t* autom = m_track->audio->selectedAutomationCtr;
 			int32_t param = m_track->audio->selectedAutomationParam;
@@ -836,7 +836,7 @@ void gui_track_controls::render(NVGcontext* vg) {
 
 }
 bool canResizeTitleBar(track_t* tr) {
-	return !tr->hideTrack&&!tr->hideAutomation&&tr->subtracks.size();
+	return !tr->hideTrack&&!tr->hideSubtracks&&tr->subtracks.size();
 }
 bool gui_track_controls::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 	ivec2 local = this->toContainerSpace(mpos);
@@ -901,7 +901,7 @@ void gui_track_controls::handleDraggedMove(MouseEvent& evt) {
 		int32_t totalHeightSteps = math::min(128, math::max(1, (mouseDragDist) / TRACK_HEIGHT_STEP));
 		if ( m_track->hideTrack && totalHeightSteps > TRACK_MIN_HEIGHT) {
 			m_track->hideTrack = false;
-			m_track->audio->showAutomationLanes();
+			m_track->audio->updateStoreLoadSubtracks();
 		}
 		int nChanged = 0;
 		while (totalHeightSteps < trackHeight(m_track) && addTrHeight(m_track, -1)) {
@@ -912,7 +912,7 @@ void gui_track_controls::handleDraggedMove(MouseEvent& evt) {
 		}
 		if (!nChanged && m_track->height == TRACK_MIN_HEIGHT && totalHeightSteps == TRACK_MIN_HEIGHT) {
 			m_track->hideTrack = true;
-			m_track->audio->showAutomationLanes();
+			m_track->audio->updateStoreLoadSubtracks();
 		}
 		this->parent->onChildLayoutChanged(this);
 	}
@@ -964,8 +964,8 @@ public:
 			gui_track_automationlane* gtr_at = NULL;
 			if (tr) {
 				tr->hideTrack = false;
-				tr->hideAutomation = false;
-				tr->audio->showAutomationLanes();
+				tr->hideSubtracks = false;
+				tr->audio->updateStoreLoadSubtracks();
 				auto trCtr = MainCtrl::getGuiTrackCtr();
 				std::vector<automatable_t*> targets;
 				tr->audio->getAutomatableTrackTargets(targets);

@@ -13,6 +13,7 @@
 #include <memory>
 #include "ipc.h"
 #include "appsettings.h"
+#include "tls.h"
 #ifdef _WIN32
 #include <windows.h>
 #endif
@@ -361,8 +362,9 @@ int main(int argc, char* argv[]) {
 			LOG("Failed opening ipc_client: %d", ipcstatus);
 			return 1;
 		}
-	    vsthost::setInstance(std::make_unique<vsthost>());
-	    auto audiohost = vsthost::getInstance();
+	    auto audiohost = std::make_unique<vsthost>();
+	    daw_tls::tlsinstance& tls = daw_tls::getTls();
+	    tls.host = audiohost.get();
 		LOG("START");
 		pipe_msg_hdr hdr;
 		vst_metadata data;

@@ -19,15 +19,15 @@ vstpluginloadres vsthost::loadInternalPlugin(int32_t moduleId, int32_t globalId)
 	String name = "";
 	switch (moduleId) {
 	case PLUG_INT_STEREOWIDTH:
-		axeffect = PluginStereoWidth::createPlugin(audioMaster);
+		axeffect = PluginStereoWidth::createPlugin(masterCallBackSlot);
 		name = "StereoWidth";
 		break;
 	case PLUG_INT_TEST:
-		axeffect = PluginTestAdv::createPlugin(audioMaster);
+		axeffect = PluginTestAdv::createPlugin(masterCallBackSlot);
 		name = "TestAdv";
 		break;
 	case PLUG_INT_CRASHVST:
-		axeffect = PluginEmptyVST2::createPlugin(audioMaster);
+		axeffect = PluginEmptyVST2::createPlugin(masterCallBackSlot);
 		name = "CrashVST2";
 		break;
 	default:
