@@ -984,18 +984,18 @@ public:
 			}
 		} else if (_id == 1) {
 			if (tr) {
-				track_t* track = MainCtrl::get()->insertNewTrack(tr->localIdx+1, tr->type);
-				track->releaseTrackContent();
+				track_t* newTrack = MainCtrl::get()->createNewTrack(tr->type);
 				String strNewName = StringFormat("%s copy", StringAsCStr(tr->name));
 
 				track_snapshot_t trSnap(tr, true);
-				*track = trSnap;
-				track->loadSnapshot(trSnap);
-				track->name = makeUniqueTrackName(strNewName);
+				*newTrack = trSnap;
+				MainCtrl::get()->addTrackImpl(tr->localIdx+1, newTrack, FLG_TRK_CHANGE_USER);
+				newTrack->loadSnapshot(trSnap);
+				newTrack->name = makeUniqueTrackName(strNewName);
 
 				MainCtrl::getGuiTrackCtr()->layout();
 				MainCtrl::get()->updateVisibleTrackContents();
-				MainCtrl::getGuiTrackCtr()->scrollTo(track->content);
+				MainCtrl::getGuiTrackCtr()->scrollTo(newTrack->content);
 			}
 		} else if (_id == 2) {
 			MainCtrl::get()->removeTrackId(trackid);

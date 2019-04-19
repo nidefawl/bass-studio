@@ -61,6 +61,7 @@
 #include "error.h"
 #include "buildinfo.h"
 #include "../threads/workerthread.h"
+#include "window_impl.h"
 
 
 volatile bool fataError = false;
@@ -187,6 +188,8 @@ void saveWindowPos(HWND hwnd, windowsize* size);
 #endif
 
 class appwindow : protected DropTargetListener {
+protected:
+	appwindow* const parent;
 private:
 	std::vector<appwindow*> children;
 	uint64_t last = 0;
@@ -257,8 +260,7 @@ private:
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	}
 public:
-	appwindow() :
-	  tm_lastfps(getTimeMillis()) {
+	appwindow(appwindow* _parent) : parent(_parent), tm_lastfps(getTimeMillis()) {
 		name[0] = 0;
 #if HAS_APP_SETTINGS
 		noRawInput = settings.vmmode;
@@ -281,6 +283,43 @@ public:
 		return hwnd;
 	}
 #endif
+	void centerOnScreen(int screenIdx) {
+	    int monitors_length;
+	    GLFWmonitor **monitors = glfwGetMonitors(&monitors_length);
+	    if (monitors_length > screenIdx) {
+	        GLFWvidmode *monitor_vidmode = (GLFWvidmode*) glfwGetVideoMode(monitors[screenIdx]);
+	        if(monitor_vidmode != NULL) {
+	            int monitor_x, monitor_y;
+	            glfwGetMonitorPos(monitors[screenIdx], &monitor_x, &monitor_y);
+	    		int ww, wh;
+	    		glfwGetWindowSize(glfw, &ww, &wh);
+	            setPos(ivec2(
+	            		monitor_x + (monitor_vidmode->width * 0.5) - ww/2,
+						monitor_y + (monitor_vidmode->height * 0.5) - wh/2));
+	        }
+	    }
+	}
+	void centerWindowOnParent() {
+#ifdef _WIN32
+		if (parent) {
+			RECT rcOwner;
+			RECT rcDlg;
+			RECT rc;
+			GetWindowRect(this->parent->getHWND(), &rcOwner);
+			GetWindowRect(hwnd, &rcDlg);
+			CopyRect(&rc, &rcOwner);
+			OffsetRect(&rcDlg, -rcDlg.left, -rcDlg.top);
+			OffsetRect(&rc, -rc.left, -rc.top);
+			OffsetRect(&rc, -rcDlg.right, -rcDlg.bottom);
+			SetWindowPos(hwnd,
+				HWND_TOP,
+				rcOwner.left + (rc.right / 2),
+				rcOwner.top + (rc.bottom / 2),
+				0, 0,          // Ignores size arguments.
+				SWP_NOSIZE);
+		}
+#endif
+	}
 	void onRefresh()
 	{
 		PREVENT_REENTRANT("REENTRANT IN RENDER MAIN")
@@ -433,22 +472,6 @@ public:
 	void showWindow() {
 		glfwShowWindow(glfw);
 	}
-	void centerOnScreen(int screenIdx) {
-	    int monitors_length;
-	    GLFWmonitor **monitors = glfwGetMonitors(&monitors_length);
-	    if (monitors_length > screenIdx) {
-	        GLFWvidmode *monitor_vidmode = (GLFWvidmode*) glfwGetVideoMode(monitors[screenIdx]);
-	        if(monitor_vidmode != NULL) {
-	            int monitor_x, monitor_y;
-	            glfwGetMonitorPos(monitors[screenIdx], &monitor_x, &monitor_y);
-	    		int ww, wh;
-	    		glfwGetWindowSize(glfw, &ww, &wh);
-	            setPos(ivec2(
-	            		monitor_x + (monitor_vidmode->width * 0.5) - ww/2,
-						monitor_y + (monitor_vidmode->height * 0.5) - wh/2));
-	        }
-	    }
-	}
 	void hideWindow() {
 		glfwHideWindow(glfw);
 		//this->timer = SetTimer(hwnd, 0, 1, (TIMERPROC)NULL);
@@ -571,7 +594,7 @@ class appwindow_main : public appwindow, public window_main  {
 public:
 	std::vector<std::unique_ptr<appwindow_overlay>> overlayWindows;
 	appwindow_main(AppCtrl* _ctrl)
-		: appwindow(),
+		: appwindow(nullptr),
 		  window_main(),
 		  ctrl(_ctrl) {
 		dblclicktimer = 0;
@@ -612,7 +635,7 @@ public:
 		PREVENT_REENTRANT("REENTRANT IN onTick")
 //		flagNeedsRedraw();
 		glfwMakeContextCurrent(glfw);
-		ctrl->onTick();
+		ctrl->onAppTick();
 	}
 	void render() {
 		renderMain(ctrl);
@@ -772,7 +795,7 @@ public:
 		if (entered)
 			glfwSetCursor(glfw, MouseCursors::cursors[cursorIcon]);
 	}
-	window_dialog* createDialog();
+	window_dialog* createDialog(const String& sTitle,int w, int h) override;
 	bool isShown() {
 		return appwindow::isWindowNotHidden();
 	}
@@ -818,12 +841,10 @@ public:
 class appwindow_overlay : public appwindow, public window_overlay {
 	uint64_t dblclicktimer;
 public:
-	appwindow* const parent;
 	std::unique_ptr<PopupCtrl> popupCtrl;
 	appwindow_overlay(appwindow* _parent)
-		: appwindow(),
+		: appwindow(_parent),
 		  window_overlay(),
-		  parent(_parent),
 		  popupCtrl(std::make_unique<PopupCtrl>())
 	{
 		dblclicktimer = 0;
@@ -1044,11 +1065,12 @@ void appwindow_main::onChildOverlayClose(appwindow* child) {
 
 int initDebugWindow();
 class appwindow_dialog : public appwindow, public window_dialog {
+	std::function<void(NVGcontext*,int,int,float)> drawFn;
 public:
-	void (*drawFn)(NVGcontext*,int,int,float) = NULL;
-	appwindow *parent = NULL;
-	appwindow_dialog(appwindow* _parent) : appwindow() {
-		this->parent = _parent;
+	appwindow_dialog(appwindow* _parent) : appwindow(_parent) {
+	}
+	void setDrawFunction(const window_draw_fn& fn) {
+		this->drawFn = fn.drawCallback;
 	}
 	void createDialogWindow(const char* title, int w, int h, GLFWwindow* share = NULL) {
 		setAppWindowHints();
@@ -1056,35 +1078,20 @@ public:
 		glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
 		glfwWindowHint(GLFW_FOCUSED, GL_TRUE);
 		appwindow::createBaseWindow(title, w, h, share);
-		if (parent)
-		this->parent->onChildDialogCreate(this);
-
 #ifdef _WIN32
 		LONG l = GetWindowLong(hwnd, GWL_EXSTYLE);
-		if (parent)
-		SetWindowLong(hwnd, GWL_EXSTYLE, l & ~WS_EX_APPWINDOW);
-		SetWindowLong(hwnd, GWL_STYLE, WS_CAPTION | WS_POPUP | WS_CLIPSIBLINGS | WS_SYSMENU);
 		if (parent) {
-			RECT rcOwner;
-			RECT rcDlg;
-			RECT rc;
-			GetWindowRect(this->parent->getHWND(), &rcOwner);
-			GetWindowRect(hwnd, &rcDlg);
-			CopyRect(&rc, &rcOwner);
-			OffsetRect(&rcDlg, -rcDlg.left, -rcDlg.top);
-			OffsetRect(&rc, -rc.left, -rc.top);
-			OffsetRect(&rc, -rcDlg.right, -rcDlg.bottom);
-			SetWindowPos(hwnd,
-				HWND_TOP,
-				rcOwner.left + (rc.right / 2),
-				rcOwner.top + (rc.bottom / 2),
-				0, 0,          // Ignores size arguments.
-				SWP_NOSIZE);
+			SetWindowLong(hwnd, GWL_EXSTYLE, l & ~WS_EX_APPWINDOW);
 		}
+		SetWindowLong(hwnd, GWL_STYLE, WS_CAPTION | WS_POPUP | WS_CLIPSIBLINGS | WS_SYSMENU);
 #endif
-#if __linux__
+#ifdef __linux__
 		//TODO: implement linux
 #endif
+		if (parent) {
+			this->parent->onChildDialogCreate(this);
+		}
+
 	}
 	bool isInit = false;
 	void render()
@@ -1337,11 +1344,11 @@ LRESULT WIN32API_CALLBACK_TYPE appWndProc(HWND hwnd, UINT Msg, WPARAM wParam, LP
 }
 #endif
 
-window_dialog* appwindow_main::createDialog() {
-	appwindow_dialog* popupWindow = new appwindow_dialog(this);
-	String sName = StringFormat("%s dialog", this->name);
-	popupWindow->createDialogWindow(StringAsCStr(sName), 200, 200);
-	return popupWindow;
+window_dialog* appwindow_main::createDialog(const String& sTitle, int w, int h) {
+	appwindow_dialog* windowDialog = new appwindow_dialog(this);
+	GLFWwindow* const windowOpengCtxtShare = this->glfw;
+	windowDialog->createDialogWindow(StringAsCStr(sTitle), w, h, windowOpengCtxtShare);
+	return windowDialog;
 }
 static appwindow* getUserData(GLFWwindow *w) {
 	appwindow* impl = (appwindow*) glfwGetWindowUserPointer(w);
@@ -1429,6 +1436,9 @@ static void glfw_cb_framebuffersize(GLFWwindow *w, int width, int height) {
 }
 
 void printLeakedGuiBase();
+#ifndef BUILD_NO_DAWHOST
+void printClipAllocations();
+#endif
 
 static std::unique_ptr<appwindow_main> mainWindow;
 
@@ -1487,9 +1497,6 @@ int getHWNDCnt(int i) {
 	return it->second;
 }
 #ifndef DAWFRAMEWORK_PLUGIN
-#if CREATE_DEBUG_COMPANION_WINDOW
-void drawDebugWindow(NVGcontext* ctx, int winW, int winH, float pxratio);
-#endif
 #ifdef _WIN32
 #ifndef BUILD_NO_VST
 namespace vst_window_mgr {
@@ -1527,6 +1534,7 @@ int startApplication(int argc, char* argv[]) {
 	//if (!runConsoleMode) {
 		allocConsole();
 	//}
+		openGlobalLog();
 	log_out("BUILD_BINARY_NAME %s\n", BuildInfo::BUILD_BINARY_NAME);
 	log_out("COMPILER_ID %s\n", BuildInfo::COMPILER_ID);
 	log_out("COMPILE_OPTIONS %s\n", BuildInfo::COMPILE_OPTIONS);
@@ -1546,20 +1554,6 @@ int startApplication(int argc, char* argv[]) {
 	mainWindow->createMainWindow("main window", 1280, 720, nullptr);
 	mainWindow->showWindow();
 	enableGlDebugCallback();
-#if CREATE_DEBUG_COMPANION_WINDOW
-	{
-		appwindow_dialog* w = new appwindow_dialog(NULL);
-		w->drawFn=drawDebugWindow;
-		int winW = 1280;
-		int winH = 720;
-		GLFWwindow* contextWindow = mainWindow->getGLFW();
-		w->createDialogWindow("test window", winW, winH, contextWindow);
-//		glfwMakeContextCurrent(w->getGLFW());
-		w->centerOnScreen(0);
-		w->showWindow();
-//		glfwMakeContextCurrent(mainWindow->getGLFW());
-	}
-#endif
 	glfwSetErrorCallback(glfw_runtime_error_callback);
 	ctrl->postInit();
 	GLFWwindow* glfwHandle = mainWindow->getGLFW();
@@ -1643,6 +1637,9 @@ int startApplication(int argc, char* argv[]) {
 	}
 	deleteApp();
 	printLeakedGuiBase();
+#ifndef BUILD_NO_DAWHOST
+	printClipAllocations();
+#endif
 	if (fataError) {
 		my_printf("EXIT_FAILURE\n", 0);
 	} else {

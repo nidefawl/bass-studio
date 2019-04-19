@@ -1,4 +1,5 @@
 #include <vector>
+#include <assert.h>
 
 #include "error.h"
 #include "math/seq_math.h"
@@ -12,6 +13,7 @@
 #include "guicontainer.h"
 #include "guicolors.h"
 #include "guiconstant.h"
+#include "trackctr.h"
 #include "theme.h"
 #include "button.h"
 #include "track.h"
@@ -23,6 +25,7 @@
 #include "../host/plugin/vst_plugin_handles.h"
 #include "edithistory.h"
 #include "guiplugin.h"
+#include "util/debug_alloc.h"
 
 using namespace std;
 
@@ -52,6 +55,7 @@ constexpr int ID_BTN_INJECT_SEGFAULT_AUDIO_THREAD = 3;
 constexpr int ID_BTN_INJECT_BAD_MALLOC_AUDIO_THREAD = 4;
 constexpr int ID_BTN_INJECT_SEGFAULT_MAIN_THREAD = 5;
 constexpr int ID_BTN_INJECT_BAD_MALLOC_MAIN_THREAD = 6;
+constexpr int ID_BTN_TOGGLE_STACKTRACE = 8;
 constexpr int BTN_FONT_SIZE = 16;
 gui_ctr_debug::gui_ctr_debug() : guictr_base() {
 	setBackgroundRendered(true);
@@ -97,6 +101,11 @@ gui_ctr_debug::gui_ctr_debug() : guictr_base() {
 		btn3->setFontSize(BTN_FONT_SIZE);
 		debugGuis.push_back(btn3);
 	}
+		auto btn3 = new guibutton;
+		btn3->id = ID_BTN_TOGGLE_STACKTRACE;
+		btn3->setText("Enable Stacktraces");
+		btn3->setFontSize(BTN_FONT_SIZE);
+		debugGuis.push_back(btn3);
 	for (auto g : debugGuis) {
 		add(g);
 	}
@@ -256,10 +265,30 @@ void gui_ctr_debug::layout() {
 	}
 }
 
+int32_t getNumClipAllocations(); //clip.cpp
+void resetHistAndCheck() {
+	auto ctrl = MainCtrl::get();
+	auto& trackEditor = MainCtrl::getGuiTrackCtr()->trackView;
+	trackEditor.action.clipboard.reset();
+	trackEditor.clipboard.reset();
+	ctrl->getHist().clear(ctrl);
+
+	auto& tracks = ctrl->trackCtr.tracks;
+	int n = 0;
+	for (auto track : tracks) {
+		int nTrackClips = track->getMidi().getConstClips().size();
+		my_printf("track %s %d %s has %d clips\n", TrackTypeToName(track->type), track->idx, StringAsCStr(track->name), nTrackClips);
+		n += nTrackClips;
+	}
+
+	int nAlloc = getNumClipAllocations();
+
+	assert(n == nAlloc);
+}
 void gui_ctr_debug::buttonClicked(guibase* button) {
 	switch (button->id) {
 	case ID_BTN_RESET_HIST:
-		MainCtrl::get()->getHist().clear();
+		resetHistAndCheck();
 		break;
 	case ID_BTN_INJECT_SEGFAULT_AUDIO_THREAD:
 		MainCtrl::getPlayThread()->call([]() {
@@ -278,6 +307,11 @@ void gui_ctr_debug::buttonClicked(guibase* button) {
 		throw std::bad_alloc();
 		break;
 
+	case ID_BTN_TOGGLE_STACKTRACE:
+		auto tracker = DebugAlloc::getTracker<clip_t>();
+		tracker->setPrintAllocationStackTraces(!tracker->getPrintAllocationStackTraces());
+		static_cast<guibutton*>(button)->setText(String(tracker->getPrintAllocationStackTraces()?"Disable Stacktraces":"Enable Stacktraces"));
+		break;
 	}
 }
 bool gui_ctr_debug::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {

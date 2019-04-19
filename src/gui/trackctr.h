@@ -43,8 +43,8 @@ public:
 	dragdrop_midifile& dragdrop;
 	track_t *trSelected = NULL;
 	gui_track_subtrack* subTrSelected = NULL;
-	clip_dragaction action;
-	std::shared_ptr<clip_clipboard> clipboard;
+	clip_dragaction action;						 // move up in hierachy
+	std::shared_ptr<clip_clipboard> clipboard; // move up in hierachy
 	tracklayout_t dragStartLayout;
 	int32_t dragStartTick = 0;
 	int32_t dragStartTrackIdx = 0;
@@ -61,6 +61,9 @@ public:
 	{
 		padding = 0;
 		sortChildren = true;
+	}
+	~guitrack_editor() {
+		clipboard.reset();
 	}
 	bool mouseHitTest(ivec2 v, MouseHitEvt& evt) override;
 	bool handleKeyInput(KeyEvent& kevt);
@@ -449,20 +452,21 @@ public:
 		remove(&scrollbar);
 	}
 
-	void addSingleTrack(track_t* t) {
-		trackControls.addTrack(t);
-		trackView.addTrack(t);
-		layout();
-	}
-	void removeSingleTrack(track_t* t) {
+	void removeTrack(track_t* t, int flags) {
 		removeAllSubtracks(t);
 		trackControls.removeTrack(t);
 		trackView.removeTrack(t);
-		layout();
+		if (!(flags&FLG_TRK_CHANGE_LOAD)) {
+			layout();
+		}
 	}
-	void addTrack(track_t* t) {
+	void addTrack(track_t* t, int flags) {
 		trackControls.addTrack(t);
 		trackView.addTrack(t);
+		//TODO: restore subtracks
+		if (!(flags&FLG_TRK_CHANGE_LOAD)) {
+			layout();
+		}
 	}
 	void showAutomationLane(track_t* tr, automatable_t* at, int32_t paramIdx);
 	void addSubTrack(track_t* t, gui_track_subtrack* subtrack, bool insertFront);
@@ -472,11 +476,6 @@ public:
 	void removeAllAutomationLanes(track_t* t, automatable_t* at, int32_t paramIdx);
 	void removeAllAutomationLanes(track_t* t, automatable_t* at);
 	void removeAllSubtracks(track_t* t);
-	void removeTrack(track_t* t) {
-		removeAllSubtracks(t);
-		trackControls.removeTrack(t);
-		trackView.removeTrack(t);
-	}
 	int32_t setTrackPosition(track_t* t, int32_t y, bool isBottom);
 	void render(NVGcontext* vg);
 	void scrollTo(guibase* g);

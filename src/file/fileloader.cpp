@@ -77,7 +77,9 @@ void LoadMidiTask::loadFile() {
 						String filepath, name, ext;
 						SplitPath(path, &filepath, &name, &ext);
 //							my_printf("%s %s %s\n", StringAsCStr(path), StringAsCStr(name), StringAsCStr(ext));
-						clip_t clip(CLIP_MIDI, name);
+						clip_t clip;
+						clip.clipType = CLIP_MIDI;
+						clip.name = name;
 						//clip.notes = move(notes);
 						clip.notes = notes;
 						clip.time = 0;

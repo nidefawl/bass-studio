@@ -18,6 +18,7 @@
 #include "track.h"
 #include "threads/playbackthread.h"
 #include "audioblock.h"
+#include "audiocache.h"
 #include "audiobuffer.h"
 #include "projectcontroller.h"
 #include "plugindatabase.h"
@@ -80,7 +81,7 @@ BOOL WINAPI ConsoleHandler(DWORD dwType)
     return TRUE;
 }
 #endif
-void deleteTrack(track_t* tr, delete_cb *cb);
+void releaseTrackResources(track_t* tr, delete_cb *cb);
 static void on_terminate1() {
 	log_printf("on_terminate\n", 0);
 //	exit(1); // required on mingw (at least)
@@ -136,6 +137,7 @@ int main(int argc, char* argv[]) {
     	audiocache cache(audiohost->lSampleRate);
     	daw_tls::tlsinstance& tls = daw_tls::getTls();
     	tls.mainCtrl = nullptr;
+    	tls.project = &project;
     	tls.host = audiohost.get();
     	tls.audioCache = &cache;
     	tls.waveform = &renderer;
@@ -237,7 +239,8 @@ int main(int argc, char* argv[]) {
     		project.trackList.clear();
 
     		for (track_t* tr : _tracks) {
-    			deleteTrack(tr, nullptr);
+    			releaseTrackResources(tr, nullptr);
+    			delete tr;
     		}
     		playThread->stopThread();
     		playThread->joinThread();

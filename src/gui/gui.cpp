@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <typeinfo>
+#include "math/vec.h"
 #include "math/seq_math.h"
 #include "color_util.h"
 #include "basectrl.h"
@@ -400,38 +401,25 @@ String guibase::getClassName() {
 	return typeName(*this);
 }
 
-
-namespace {
-	DebugAlloc::Tracker<guibase> tracker;
-}
-
-template<>
-void DebugAlloc::Tracker<guibase>::throwUntrackked(guibase* g) {
-	my_printf("guibase with allocId %lld was not tracked\n", g->id);
-	assert(0);
-}
-template<>
-void DebugAlloc::Tracker<guibase>::printLeaked() {
-	my_printf("allocCount %lld\n", allocCount);
-	for (auto it = allocList.begin(); it != allocList.end(); it++) {
-		guibase* ctrl = *it;
-		my_printf("leaked %lld %s \n", ctrl->allocId, StringAsCStr(ctrl->getClassName()));
+namespace DebugAlloc {
+	Tracker<guibase> trackerGUIs;
+	template<>
+	void printLeaked(int64_t allocId, int64_t allocCount, std::vector<guibase*>& allocList, std::unordered_map<int64_t, DebugAlloc::AllocInfo>& allocInfo) {
+		my_printf("allocCount %lld\n", allocCount);
+		for (auto gui : allocList) {
+			my_printf("leaked %lld %s \n", gui->allocId, StringAsCStr(gui->getClassName())); // add debug info to clip instance (track/time )
+		}
 	}
-	allocList.clear();
-	allocList.shrink_to_fit();
-}
-template<>
-DebugAlloc::Tracker<guibase>* DebugAlloc::getTracker() {
-	return &tracker;
+	template<>
+	Tracker<guibase>* getTracker() {
+		return &trackerGUIs;
+	}
 }
 void printLeakedGuiBase() {
-	DebugAlloc::getTracker<guibase>()->printLeaked();
+	DebugAlloc::getTracker<guibase>()->onExit();
 }
 guibase::guibase()  {
 	allocId = DebugAlloc::getTracker<guibase>()->objConstructor(this);
-	if (allocId == 934) {
-
-	}
 }
 guibase::~guibase() {
 	DebugAlloc::getTracker<guibase>()->objDestructor(this);

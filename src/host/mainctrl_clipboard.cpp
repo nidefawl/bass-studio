@@ -97,7 +97,7 @@ void MainCtrl::pasteClipboard(clip_clipboard* clipboard, Cursor& cursor) {
 	if (clipboard->type == clip_clipboard::ClipboardFull) {
 		if (cursor.isSubtrackSelection())
 			return;
-		pasteClipboard(clipboard, cursor.cursorTrack, cursor.getTickBegin());
+		pasteClipboard(clipboard, cursor.getTrackBegin(), cursor.getTickBegin());
 	} else  if (clipboard->type == clip_clipboard::ClipboardAutomation) {
 		if (!cursor.isSubtrackSelection())
 			return;
@@ -127,7 +127,6 @@ void MainCtrl::pasteClipboard(clip_clipboard* clipboard, Cursor& cursor) {
 	}
 }
 void MainCtrl::pasteClipboard(clip_clipboard* clipboard, int32_t track, tick_t tick) {
-
 	tick_t tickOffset = tick - clipboard->srcPos;
 	tick_t trackOffset = track;
 	for (int i = 0; i <= clipboard->selTrackRange; i++) {
@@ -214,7 +213,8 @@ void cutIntersectingClips(trackdata_midi_t& midi, tick_t tickBegin, tick_t tickE
 		}
 		if (c->start() >= tickBegin && c->end() <= tickEnd) {
 			it = midi.removeClip(c);
-			deleteClip(c, cb);
+			releaseClipResources(c, cb);
+			delete c;
 			continue;
 		} else if (c->time >= tickBegin) {
 			//cut left
@@ -236,9 +236,7 @@ void cutIntersectingClips(trackdata_midi_t& midi, tick_t tickBegin, tick_t tickE
 	midi.sortClips();
 }
 void MainCtrl::cutIntersecting(track_t* tr, tick_t tickBegin, tick_t tickEnd) {
-//	if (tr->type == TRACK_TYPE_MIDI) {
-		cutIntersectingClips(tr->getMidi(), tickBegin, tickEnd, this);
-//	}
+	cutIntersectingClips(tr->getMidi(), tickBegin, tickEnd, this);
 }
 void MainCtrl::cutIntersecting(track_t* tr, clip_t* mask) {
 	tick_t tickBegin = mask->time;

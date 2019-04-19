@@ -23,9 +23,13 @@
 #define PARAM_TRACK_ENABLED 0
 #define PARAM_TRACK_GAIN 1
 
+#define FLG_TRK_CHANGE_USER 1
+#define FLG_TRK_CHANGE_LOAD 2
+#define FLG_TRK_CHANGE_HISTORY_UNDO 4
 
 const char* TrackTypeToName(int type);
 struct track_impl_t;
+struct track_clipboard_t;
 class gui_track;
 class gui_track_subtrack;
 class gui_track_automationlane;
@@ -35,13 +39,18 @@ class trackdata_midi_t;
 class track_t;
 using track_vector = std::vector<track_t*>;
 void deleteTrackContents(trackdata_midi_t* tr, delete_cb *cb);
-void deleteTrack(track_t* tr, delete_cb *cb);
-void deleteClip(clip_t* cl, delete_cb *cb);
+void releaseTrackResources(track_t* tr, delete_cb *cb);
+void releaseClipResources(clip_t* cl, delete_cb *cb);
 
 
 class trackdata_midi_t {
 public:
+	friend void resizeOtherClips(trackdata_midi_t& midi, clip_t* clip);
+	friend void copyClipsInRange(trackdata_midi_t& in, track_clipboard_t& out, int32_t srcPos, int32_t dstPos, int32_t len);
+	friend void cutIntersectingClips(trackdata_midi_t& midi, tick_t tickBegin, tick_t tickEnd, delete_cb *cb);
+private:
 	std::vector<clip_t*> clips;
+public:
 	trackdata_midi_t() {
 	}
 	trackdata_midi_t(const trackdata_midi_t &a) {
@@ -52,7 +61,13 @@ public:
 		return *this;
 	}
 	void deepcopy( const trackdata_midi_t &obj) {
+		//this shouldn't be down here
+		for (clip_t* clip : obj.clips) {
+			releaseClipResources(clip, nullptr);
+			delete clip;
+		}
 		clips.clear();
+		clips.reserve(obj.clips.size());
 		for (clip_t* clip : obj.clips) {
 			addClip(new clip_t(*clip));
 		}
@@ -60,6 +75,12 @@ public:
 	}
 	~trackdata_midi_t() {
 		assert(clips.empty());
+	}
+	const std::vector<clip_t*>& getConstClips() const {
+		return clips;
+	}
+	std::vector<clip_t*>& getClips() {
+		return clips;
 	}
 	std::vector<clip_t*>::iterator removeClip(clip_t* clip);
 	void addClip(clip_t* clip) {
@@ -118,7 +139,8 @@ public:
 		}
 		return NULL;
 	}
-	void deleteEmptyClips();
+	void deleteEmptyClips(delete_cb *cb);
+	void deleteClips(delete_cb *cb);
 	void getClipsInRange(tick_t start, tick_t end, std::vector<clip_t*>& clips);
 	void getNotesInRange(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, std::vector<note_t>& notes);
 };
@@ -163,7 +185,7 @@ public:
 	}
 	void copy(const trackdata_midi_t &a) {
 		clips.clear();
-		for (clip_t* clip : a.clips) {
+		for (clip_t* clip : a.getConstClips()) {
 			clips.emplace_back(clip, clip->time, clip->len, clip->lenSamples, clip->offsetStart, clip->offsetSamples, clip->loopLen);
 		}
 	}
@@ -221,7 +243,7 @@ struct track_impl_snapshot_t {
 };
 struct track_snapshot_t : public tracksettings_t {
 	int32_t localIdx = -1;
-	track_t* trackLoaded = NULL;
+	track_t* trackLoaded = NULL; // ref set in first phase of, cleared in second of 2-phase loading
 	track_impl_snapshot_t plugins;
 	std::vector<clip_t> clips;
 	std::vector<automationlane_snapshot_t> automationLanes;
@@ -254,22 +276,26 @@ public:
 				evtMax = minMax.second->end();
 			}
 		}
+		//TODO: go thru automation
 		return {evtMin, evtMax};
 	}
-	track_t(const track_t &a) : localIdx(a.localIdx) {
-		midi.deepcopy(a.midi);
-		copy(a);
-		content = NULL;
-		mixer = NULL;
-		audio = NULL;
-	}
+	track_t(const track_t &a) = delete;
+//	: localIdx(a.localIdx) {
+//		assert(midi.getConstClips().empty());
+//		copy(a);
+//		content = NULL;
+//		mixer = NULL;
+//		audio = NULL;
+//	}
 	track_t(const track_snapshot_t &a);
 	track_t &operator =(const track_snapshot_t &a);
-	track_t &operator =(const track_t &a) {
-		midi.deepcopy(a.midi);
-		copy(a);
-		return *this;
-	}
+	track_t &operator =(const track_t &a) = delete;
+//	{
+//		assert(midi.getConstClips().empty());
+//		midi.deepcopy(a.midi);
+//		copy(a);
+//		return *this;
+//	}
 	track_t(int _type, String _name, bool state) {
 		this->type = _type;
 		this->name = _name;

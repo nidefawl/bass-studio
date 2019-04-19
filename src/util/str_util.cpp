@@ -2,6 +2,7 @@
 #include <stdarg.h>
 #include <vector>
 #include <limits.h>
+#include "math/seq_math.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -116,3 +117,57 @@ String wcharToSring(const LPWSTR text) {
 #endif
 }
 #endif //_WIN32
+
+/* finds the path segment /src/ by reverse search on input
+ * then returns everything after /src/
+ *  C:\Users\Michael\daw\src\host\vst_host.cpp -> \host\vst_host.cpp
+ * */
+const char* relFileName(const char* input) {
+	if (input) {
+		size_t inLen = strlen(input);
+		const char* pos = input+inLen;
+		while (pos >= input) {
+			if (*pos == '\\' || *pos == '/') {
+				const char* pos2 = pos-1;
+				while (pos2 >= input) {
+					if (*pos2 == '\\' || *pos2 == '/') {
+						if (!strncmp(pos2+1, "src", 3))
+							return math::min(input+inLen-1, pos+1);
+						break;
+					}
+					pos2--;
+				}
+			}
+			pos--;
+		}
+	}
+	return input;
+}
+
+void replaceBackslashWithForwardslash(const char* filename, char* buf, size_t bufOutSize) {
+	size_t inLen = strlen(filename);
+	assert(inLen+1 < bufOutSize);
+	char* out = &buf[0];
+	const char* in = &filename[0];
+	size_t i = 0;
+	for (; i < inLen; i++) {
+		*out++ = (*in == '\\') ? '/' : *in;
+		in++;
+	}
+	buf[i] = '\0';
+}
+const char* removeLeadingPathSegments(const char* input, int maxPathSegs) {
+	if (input) {
+		size_t inLen = strlen(input);
+		const char* pos = input + inLen;
+		while (pos >= input) {
+			if (*pos == '\\' || *pos == '/') {
+				if (--maxPathSegs <= 0) {
+					return pos+1;
+				}
+			}
+			pos--;
+		}
+	}
+	return input;
+}

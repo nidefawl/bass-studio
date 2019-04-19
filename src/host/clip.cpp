@@ -2,6 +2,8 @@
 #include <vector>
 #include <assert.h>
 #include <stddef.h>
+#include <limits>
+#include "str_util.h"
 #include "math/seq_math.h"
 #include "exceptions.h"
 #include "clip.h"
@@ -10,7 +12,53 @@
 #include "audiocache.h"
 #include "project.h"
 #include "projectcontroller.h"
+#include "util/debug_alloc.h"
 
+namespace DebugAlloc {
+	Tracker<clip_t> trackerClips;
+	template<>
+	void printLeaked(int64_t allocId, int64_t allocCount, std::vector<clip_t*>& allocList, std::unordered_map<int64_t, DebugAlloc::AllocInfo>& allocInfo) {
+		assert(allocList.size() == allocCount);
+		my_printf("clip_t allocations: %lld\n", allocCount);
+		for (auto clip : allocList) {
+			auto it = allocInfo.find(clip->allocId);
+			if (it != allocInfo.end()) {
+				AllocInfo& info = it->second;
+
+				my_printf("leaked %lld %s\n", clip->allocId, StringAsCStr(clip->name)); // add debug info to clip instance (track/time )
+				for (String s : info.stacktrace) {
+					my_printf("%s\n", StringAsCStr(s));
+				}
+				break;
+			}
+		}
+	}
+	template<>
+	Tracker<clip_t>* getTracker() {
+		return &trackerClips;
+	}
+//	static auto test = []() {
+//		DebugAlloc::getTracker<clip_t>()->setRecordAllocationStackTraces(true);
+//		return 1;
+//	}();
+}
+int32_t getNumClipAllocations() {
+	auto tracker = DebugAlloc::getTracker<clip_t>();
+	assert(tracker->allocCount < (std::numeric_limits<int32_t>::max()));
+	return tracker->allocCount;
+}
+void printClipAllocations() {
+	DebugAlloc::getTracker<clip_t>()->printAllocations();
+}
+clip_t::clip_t() {
+	allocId = DebugAlloc::getTracker<clip_t>()->objConstructor(this);
+}
+clip_t::clip_t(const clip_t &a) : clip_t() {
+	copy(a);
+}
+clip_t::~clip_t() {
+	DebugAlloc::getTracker<clip_t>()->objDestructor(this);
+}
 note_t& clip_notes_t::addSingle(note_t& t) {
 	assert(selection.empty());
 	m_list.push_back(t);

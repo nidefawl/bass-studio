@@ -29,6 +29,7 @@
 #include "audiowaveform.h"
 #include "drawwaveform.h"
 #include "cliprenderer.h"
+#include "logging.h"
 
 class action_modify_track : public action_base {
 protected:
@@ -58,13 +59,14 @@ public:
 				if (initAfter) {
 					after.tracks.push_back(new track_snapshot_t(track, false));
 				}
+				track->getMidi().deleteClips(ctrl);
 				track->releaseTrackContent();
 //				if (track->type == TRACK_TYPE_MIDI)
-				my_printf("TRACKBeforeUndo[%d] HAS %d clips\n", track->idx, track->getMidi().clips.size());
+				my_printf("TRACKBeforeUndo[%d] HAS %d clips\n", track->idx, track->getMidi().getConstClips().size());
 				*track = *trackStored;
 //				track->loadPluginAutomationParameters(trackStored->plugins);
 //				if (track->type == TRACK_TYPE_MIDI)
-				my_printf("TRACKAfterUndo[%d] HAS %d clips\n", track->idx, track->getMidi().clips.size());
+				my_printf("TRACKAfterUndo[%d] HAS %d clips\n", track->idx, track->getMidi().getConstClips().size());
 			} else {
 
 				my_printf("idx is now invalid\n",0);
@@ -79,11 +81,12 @@ public:
 		for (track_snapshot_t* trackStored : after.tracks) {
 			if (trCtr.validTrackTypeIdx(trackStored->type, trackStored->localIdx)) {
 				track_t* track = trCtr.getTrackTypeIdx(trackStored->type, trackStored->localIdx);
+				track->getMidi().deleteClips(ctrl);
 				track->releaseTrackContent();
 				*track = *trackStored;
 //				track->loadPluginAutomationParameters(trackStored->plugins);
 //				if (track->type == TRACK_TYPE_MIDI)
-				my_printf("TRACK[%d] HAS %d clips\n", track->idx, track->getMidi().clips.size());
+				my_printf("TRACK[%d] HAS %d clips\n", track->idx, track->getMidi().getConstClips().size());
 			}
 		}
 		ctrl->cursor = after.cursor;
@@ -110,7 +113,6 @@ void resizeOtherClips(trackdata_midi_t& midi, clip_t* clip) {
 		}
 	}
 }
-
 bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 //	clip_t* clip = view.clip;
 //	if (!clip) {
@@ -151,7 +153,7 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 		return false;
 	}
 	if (kevt.type != K_RELEASE) {
-		trackstate_t resizePreModifyState;
+		trackstate_t preModifyState;
 		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 		bool modified = false;
 		bool handledKeyinput = false;
@@ -193,8 +195,8 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 //						ctrl->cutIntersecting(t, cursor.getTickBegin(), cursor.getTickEnd());
 //					}
 //				}.reserve(_tracks.size());
-				project.trackList.copyTracks(cursor.getTrackBegin(), cursor.getTrackEnd(), resizePreModifyState);
-				resizePreModifyState.cursor = cursor;
+				project.trackList.copyTracks(cursor.getTrackBegin(), cursor.getTrackEnd(), preModifyState);
+				preModifyState.cursor = cursor;
 				MainCtrl::get()->cutSelection(cursor);
 				handledKeyinput = true;
 				modified = true;
@@ -202,8 +204,8 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 			}
 			else if (isKC(KC_CUT, kevt) && cursor.getRange()) {
 				clipboard = MainCtrl::get()->copySelection(cursor);
-				project.trackList.copyTracks(cursor.getTrackBegin(), cursor.getTrackEnd(), resizePreModifyState);
-				resizePreModifyState.cursor = cursor;
+				project.trackList.copyTracks(cursor.getTrackBegin(), cursor.getTrackEnd(), preModifyState);
+				preModifyState.cursor = cursor;
 				MainCtrl::get()->cutSelection(cursor);
 				handledKeyinput = true;
 				modified = true;
@@ -214,20 +216,21 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 				handledKeyinput = true;
 			}
 			else if (isKC(KC_DUPLICATE, kevt) && cursor.getRange()) {
-				project.trackList.copyTracks(cursor.getTrackBegin(), cursor.getTrackEnd(), resizePreModifyState);
-				resizePreModifyState.cursor = cursor;
-				std::shared_ptr<clip_clipboard> clipboard = MainCtrl::get()->copySelection(cursor);
+				project.trackList.copyTracks(cursor.getTrackBegin(), cursor.getTrackEnd(), preModifyState);
+				preModifyState.cursor = cursor;
+				/* maybe do    this->clipboard = copy */
+				std::shared_ptr<clip_clipboard> newClipboard = MainCtrl::get()->copySelection(cursor);
 				cursor.setLeftAligned();
 				cursor.cursorPos += cursor.getRange();
-				MainCtrl::get()->pasteClipboard(clipboard.get(), cursor);
-				grid.makeTickVisible(cursor.cursorPos+clipboard->selRange);
+				MainCtrl::get()->pasteClipboard(newClipboard.get(), cursor);
+				grid.makeTickVisible(cursor.cursorPos+newClipboard->selRange);
 				handledKeyinput = true;
 				modified = true;
 				desc = "Duplicate clips";
 			}
 			else if (isKC(KC_PASTE, kevt) && clipboard) {
-				project.trackList.copyTracks(clipboard->srcTrack, clipboard->srcTrack+clipboard->selTrackRange, resizePreModifyState);
-				resizePreModifyState.cursor = cursor;
+				project.trackList.copyTracks(cursor.getTrackBegin(), cursor.getTrackBegin()+clipboard->selTrackRange, preModifyState);
+				preModifyState.cursor = cursor;
 				cursor.setLeftAligned();
 				if (clipboard->type == clip_clipboard::ClipboardFull)
 					MainCtrl::get()->cutSelection(cursor);
@@ -304,8 +307,9 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 //			desc = "Move notes";
 		}
 		if (modified) {
-			action_modify_track* track_action = new action_modify_track(desc, resizePreModifyState.copy());
+			action_modify_track* track_action = new action_modify_track(desc, preModifyState.copy()); // could be more efficient
 			MainCtrl::get()->pushHist(track_action);
+
 
 		}
 		if (handledKeyinput) {
@@ -594,7 +598,7 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
 			ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 			track_t* trackPtr = gui->m_track;
 			trackdata_midi_t& midi = trackPtr->getMidi();
-			midi.deleteEmptyClips();
+			midi.deleteEmptyClips(MainCtrl::get());
 			if (!midi.hasClip(clipPtr)) {
 				gui = NULL;
 				showclip = false;

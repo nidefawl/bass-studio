@@ -28,7 +28,7 @@ project_controller_t* project_controller_t::get()
 }
 waveformrender* waveformrender::getInstance()
 {
-	assert(daw_tls::tls.waveform);
+//	assert(daw_tls::tls.waveform);
 	return daw_tls::tls.waveform;
 }
 audiocache* audiocache::getInstance()

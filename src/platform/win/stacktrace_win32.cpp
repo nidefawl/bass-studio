@@ -1,26 +1,15 @@
 #include <windows.h>
 #include <DbgHelp.h>
 
+#include <vector>
 #include <stdio.h>
 #include <stdlib.h>
 #include "logging.h"
-extern "C" {
-	static const char* shortName(const char* input, int maxPathSegs=1) {
-		if (input) {
-			size_t inLen = strlen(input);
-			const char* pos = input + inLen;
-			while (pos >= input) {
-				if (*pos == '\\' || *pos == '/') {
-					if (--maxPathSegs <= 0) {
-						return pos+1;
-					}
-				}
-				pos--;
-			}
-		}
-		return input;
-	}
-	void logStackTrace() {
+#include "str_util.h"
+
+namespace Win32Stacktrace {
+
+	void getStacktraceImpl(std::vector<String>& stackTrace) {
 
 		HANDLE process = GetCurrentProcess();
 		HANDLE thread = GetCurrentThread();
@@ -67,6 +56,8 @@ extern "C" {
 		int stackPos = 0;
 		char bufPrefix[256];
 		char* symbolBuffer = (char*) calloc(1, sizeof(IMAGEHLP_SYMBOL) + (MAX_SYM_NAME+1) * sizeof(TCHAR));
+		char* tempBuffer = (char*) calloc(1, (MAX_SYM_NAME+1) * sizeof(TCHAR));
+
 		while (StackWalk64(image, process, thread,
 			&frame, &context,
 			NULL, SymFunctionTableAccess64, SymGetModuleBase64, NULL)) {
@@ -98,11 +89,13 @@ extern "C" {
 			int prefOffset = snprintf(bufPrefix, 128, "%08X ", frame.AddrPC.Offset);
 			if (prefOffset < 0) prefOffset = 0;
 			if (SymGetLineFromAddr(process, frame.AddrPC.Offset, &offset, &imgline)) {
-				snprintf(bufPrefix+prefOffset, 128, "%s:%d:%d", shortName(imgline.FileName, 2), (int)imgline.LineNumber, offset);
+				const char* shortName = removeLeadingPathSegments(imgline.FileName, 2);
+				replaceBackslashWithForwardslash(shortName, tempBuffer, MAX_SYM_NAME+1);
+				snprintf(bufPrefix+prefOffset, 128, "%s:%d:%d", tempBuffer, (int)imgline.LineNumber, offset);
 			} else {
-				snprintf(bufPrefix+prefOffset, 128, "%s:%d", shortName(moduleName, 0), (int)displacement);
+				snprintf(bufPrefix+prefOffset, 128, "%s:%d", removeLeadingPathSegments(moduleName, 0), (int)displacement);
 			}
-			log_out("%-42s %s\n", bufPrefix, functioName);
+			stackTrace.push_back(StringFormat("%-42s %s", bufPrefix, functioName));
 
 
 			stackPos++;
@@ -111,4 +104,15 @@ extern "C" {
 		free(symbolBuffer);
 		SymCleanup(process);
 	}
+}
+
+void logStackTrace() {
+	std::vector<String> stackTrace;
+	Win32Stacktrace::getStacktraceImpl(stackTrace);
+	for (String s : stackTrace) {
+		log_out("%s\n", StringAsCStr(s));
+	}
+}
+void getStackTrace(std::vector<String>& vec) {
+	Win32Stacktrace::getStacktraceImpl(vec);
 }

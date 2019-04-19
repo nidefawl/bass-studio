@@ -20,7 +20,7 @@ public:
 		btnYes.setFontSize(BTN_FONT_SIZE);
 		btnNo.setFontSize(BTN_FONT_SIZE);
 		setBackgroundRendered(true);
-		assert(getAllocId() > 0);
+		assert(getAllocId() > 0); // make sure we are heap allocated
 	}
 	~guidialog_cb_yes_no() {
 		remove(&btnNo);

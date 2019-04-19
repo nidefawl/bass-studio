@@ -300,10 +300,8 @@ public:
 	bool isZooming();
 	void uncaptureMouse();
 	void onUncaptureMouse();
-	void addTrack(int32_t trackInsertPos, track_t* t);
-	void removeTrack(track_t* t);
-	void addTrackImpl(int32_t trackInsertPos, track_t* t, int triggerupdate = 1);
-	void removeTrackImpl(track_t* t);
+	void addTrackImpl(int32_t trackInsertPos, track_t* t, int flags);
+	void removeTrackImpl(track_t* t, int flags);
 	track_t* getTrackId(uint32_t trackId);
 	void removeTrackId(uint32_t trackId);
 	void setEditClip(gui_clip* gclip);
@@ -316,7 +314,8 @@ public:
 	void showAutomation(track_t* tr, automatable_t* at, int32_t paramIdx);
 	bool isClipEditorVisible();
 	bool isPluginViewVisible();
-	track_t* insertNewTrack(int trackInsertPos, int trackType, int wasUserAction = 1);
+	track_t* createNewTrack(int trackType);
+	track_t* insertNewTrack(int trackInsertPos, int trackType, int flags = FLG_TRK_CHANGE_USER);
 	void updateGrid();
 	void updateVisibleTrackContents();
 	void setStatusText(String s);

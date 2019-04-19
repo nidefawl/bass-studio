@@ -4,6 +4,7 @@
 #include "seq_time.h"
 #include "dsp_util.h"
 
+#include "project.h"
 #include "vst_host.h"
 #include "fileio.h"
 #include "track.h"
@@ -1019,6 +1020,7 @@ void vsthost::createAudio(track_t* track) {
 void vsthost::releaseAudio(track_t* track) {
 	auto audioStage = track->audio;
 	assert(audioStage);
+	assert(audioStage->effects.empty());
 	track->audio = nullptr;
 	auto it = std::find(allAudioStages.begin(), allAudioStages.end(), audioStage);
 	assert(it != allAudioStages.end());

@@ -16,7 +16,9 @@
 #include "drawwaveform.h"
 #include "audiowaveform.h"
 #include "samplerate.h"
-#include "../host/vst_host.h"
+#include "basectrl.h"
+#include "host/mainctrl.h"
+#include "host/vst_host.h"
 #include "table.h"
 #include "guitooltip.h"
 
@@ -24,10 +26,10 @@
 #include "guicontextmenu_daw.h"
 
 void gui_midi_clip::handleRightClick(MouseEvent& evt) {
-	MainCtrl::get()->openContextMenu(new guictxtmenu_clip(this->m_clip), evt.mousepos);
+	parentCtrl->openContextMenu(new guictxtmenu_clip(this->m_clip), evt.mousepos);
 }
 void gui_audio_clip::handleRightClick(MouseEvent& evt) {
-	MainCtrl::get()->openContextMenu(new guictxtmenu_clip(this->m_clip), evt.mousepos);
+	parentCtrl->openContextMenu(new guictxtmenu_clip(this->m_clip), evt.mousepos);
 }
 void gui_audio_clip::releaseRendered() {
 //	my_printf("release %012x from releaseRendered()\n", &m_clip->audio.waveformRef);
@@ -132,7 +134,7 @@ void gui_audio_clip::updatePosition(project_t& project, scaled_grid& grid, ivec2
 					if (!canQueue) {
 						limit.x = waveform.size.x/4;
 					}
-					if (waveform.clipped || !MainCtrl::get()->isZooming()) {
+					if (waveform.clipped || (MainCtrl::get() && !MainCtrl::get()->isZooming())) {
 						limit = {0,0};
 					}
 					if (!equal || (sizeDiff.x > limit.x || sizeDiff.y > limit.y)) {
@@ -152,17 +154,18 @@ void gui_audio_clip::updatePosition(project_t& project, scaled_grid& grid, ivec2
 	}
 }
 void gui_audio_clip::prerender(NVGcontext* vg) {
-	cachedaudio_t* audio = audiocache::getInstance()->get(m_clip->audio.id);
-	if (!m_clip->audio.waveformRef.queued) {
+	auto& clipAudio = m_clip->audio;
+	cachedaudio_t* audio = audiocache::getInstance()->get(clipAudio.id);
+	if (!clipAudio.waveformRef.queued) {
 		if (!audio || this->updatedWaveform.size.x < 1 || this->updatedWaveform.size.y < 1) {
 			return;
 		}
-		if (!culled && (!m_clip->audio.waveformRef.rendered || (this->updatedWaveform != m_clip->audio.waveformRef.waveform))) {
+		if (!culled && (!clipAudio.waveformRef.rendered || (this->updatedWaveform != clipAudio.waveformRef.waveform))) {
 			releaseRendered();
-			m_clip->audio.waveformRef.waveform = this->updatedWaveform;
-			assert(!m_clip->audio.waveformRef.queued);
-			assert(m_clip->audio.waveformRef.waveform.size.x > 0 && m_clip->audio.waveformRef.waveform.size.y > 0);
-			waveformrender::getInstance()->queueUpdate(audio, &m_clip->audio.waveformRef);
+			clipAudio.waveformRef.waveform = this->updatedWaveform;
+			assert(!clipAudio.waveformRef.queued);
+			assert(clipAudio.waveformRef.waveform.size.x > 0 && clipAudio.waveformRef.waveform.size.y > 0);
+			waveformrender::getInstance()->queueUpdate(audio, &clipAudio.waveformRef);
 		}
 	}
 }
@@ -188,7 +191,7 @@ void guitooltip<clip_t>::layout()  {
 		if (c) {
 			path = StringFormat("%s.%s", StringAsCStr(c->name), StringAsCStr(c->ext));
 		} else {
-			path = "<MISSING SAMPLE>";
+			path = StringFormat("<MISSING SAMPLE %d>", ptr->audio.id);
 		}
 		my_printf("path %s\n", StringAsCStr(path));
 		tbl_rows vec{ tblString{StringFormat("Audio Clip (sample-id %d)", ptr->audio.id)}, tblString{path}};
@@ -250,7 +253,7 @@ void gui_clip::trackViewDragRelease(guitrack_editor* view, MouseEvent& evt) {
 }
 
 gui_track::gui_track(track_t* _track, scaled_grid& _grid)
-  : guictr_base(), m_track(_track), midi(_track->getMidi()), automation(_track, _grid, m_track->audio->selectedAutomationCtr, m_track->audio->selectedAutomationParam, subtrackIdx)
+  : guictr_base(), m_track(_track), automation(_track, _grid, m_track->audio->selectedAutomationCtr, m_track->audio->selectedAutomationParam, subtrackIdx)
 {
 	padding = 0;
 }
@@ -259,19 +262,27 @@ gui_track* createTrackGui(track_t* t, scaled_grid& grid) {
 	return new gui_track(t, grid);
 }
 
+gui_clip* createClipGui(guictr_base* parent, track_t* track, clip_t* clip) {
+	if (!clip->gClip) {
+		if (clip->clipType == CLIP_MIDI) {
+			clip->gClip = new gui_midi_clip(track, clip);
+		} else {
+			clip->gClip = new gui_audio_clip(track, clip);
+		}
+	}
+	return clip->gClip;
+}
 void gui_track::updateVisibleTrackContents(project_t& project, scaled_grid& grid) {
 	automation.setData();
 	automation.updateVisibleTrackContents(grid);
-	for (clip_t* clip : midi.clips) {
-		if (!clip->gClip) {
-			if (clip->clipType == CLIP_MIDI) {
-				clip->gClip = new gui_midi_clip(m_track, clip);
-			} else {
-				clip->gClip = new gui_audio_clip(m_track, clip);
-			}
-			add(clip->gClip);
+	std::vector<clip_t*> clips = m_track->getMidi().getClips();
+	for (clip_t* clip : clips) {
+		auto* gui = createClipGui(this, m_track, clip);
+		assert(gui);
+		if (gui->parent != this) {
+			add(gui);
 		}
-		clip->gClip->updatePosition(project, grid, size);
+		gui->updatePosition(project, grid, size);
 	}
 }
 bool gui_track::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
@@ -339,16 +350,17 @@ public:
 			Cursor cursor = MainCtrl::get()->cursor.getLeftAligned();
 			if (cursor.selRange) {
 				track_t* tr = ctrl->getTrackId(this->trackid);
+				clip_t* cl = nullptr;
 				if (tr && tr->type == TRACK_TYPE_MIDI) {
-					clip_t* cl = new clip_t(CLIP_MIDI, StringFormat("%s Clip", StringAsCStr(tr->name)));
-					cl->time = cursor.cursorPos;
-					cl->setLen(cursor.selRange);
-					cl->loopStart = 0;
-					cl->loopLen = cl->getLen();
-					tr->getMidi().addClipSort(cl);
+					cl = new clip_t();
+					cl->clipType = CLIP_MIDI;
 				}
 				if (tr && tr->type == TRACK_TYPE_AUDIO) {
-					clip_t* cl = new clip_t(CLIP_AUDIO, StringFormat("%s", StringAsCStr(tr->name)));
+					cl = new clip_t();
+					cl->clipType = CLIP_AUDIO;
+				}
+				if (cl) {
+					cl->name = StringFormat("%s Clip", StringAsCStr(tr->name));
 					cl->time = cursor.cursorPos;
 					cl->setLen(cursor.selRange);
 					cl->loopStart = 0;

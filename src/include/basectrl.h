@@ -212,6 +212,7 @@ public:
 	virtual bool init(window_main* window, NVGcontext* nanovg) = 0;
 	virtual void postInit() = 0; /* OpenGL context exists in postInit */
 	virtual void destroy() = 0;
+	void onAppTick();
 	void destroyControl();
 protected:
 	void openOverlayGui(guictxtmenu_base *b, ivec2 pos, int flags);

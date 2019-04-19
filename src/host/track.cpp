@@ -26,35 +26,36 @@
 
 #include "modules.h"
 #include "project.h"
+#include "projectcontroller.h"
 #include "snapshot.h"
 #include "mainctrl.h"
 #include "history.h"
 #include "plugindatabase.h"
+#include "gui/drawwaveform.h"
 
 
 const tick_t INVALID_TICK = 1 << 31;
 
-void deleteClip(clip_t* cl, delete_cb *cb) {
+void releaseClipResources(clip_t* cl, delete_cb *cb) {
 	if (cb)
 		cb->preClipDelete(cl);
+	if (waveformrender::getInstance()) {
+		waveformrender::getInstance()->assertWaveformRefIsUnbound(&cl->audio.waveformRef);
+	}
 	gui_clip* gClip = cl->gClip;
 	if (gClip) {
+		assert(gClip->parent);
 		gClip->m_track->content->remove(gClip);
 		DELETE_PTR(gClip);
 	}
-	delete cl;
 }
-void deleteTrack(track_t* tr, delete_cb *cb) {
-	assert(tr && !tr->audio);
+void releaseTrackResources(track_t* tr, delete_cb *cb) {
+	assert(tr && tr->audio);
 	if (cb)
 		cb->preTrackDelete(tr);
-	trackdata_midi_t& midi = tr->getMidi();
-	std::vector<clip_t*>& clips = midi.clips;
-	for (auto itClip = clips.begin(); itClip != clips.end(); itClip++) {
-		clip_t* cl = *itClip;
-		deleteClip(cl, cb);
-	}
-	clips.clear();
+	vsthost* host = vsthost::getInstance();
+	host->unloadTrack(tr);
+	tr->getMidi().deleteClips(cb);
 	if (tr->mixer) {
 		delete (tr->mixer);
 	}
@@ -67,8 +68,8 @@ void deleteTrack(track_t* tr, delete_cb *cb) {
 		}
 		tr->subtracks.clear();
 	}
-	my_printf("DELETE TRACK %08X\n", (uint64_t) tr);
-	delete tr;
+	host->releaseAudio(tr);
+	assert(tr && !tr->audio);
 }
 
 std::vector<clip_t*>::iterator trackdata_midi_t::removeClip(clip_t* clip) {
@@ -102,10 +103,9 @@ tick_t trackdata_midi_t::end() {
 }
 
 track_t &track_t::operator =(const track_snapshot_t &obj) {
-	std::vector<clip_t*>& clips = midi.clips;
-	clips.clear();
+	assert(midi.getConstClips().empty());
 	for (const clip_t& clip : obj.clips) {
-		clips.push_back(new clip_t(clip));
+		midi.addClip(new clip_t(clip));
 	}
 	midi.sortClips();
 	tracksettings_t& dst = *static_cast<tracksettings_t*>(this);
@@ -116,10 +116,9 @@ track_t &track_t::operator =(const track_snapshot_t &obj) {
 }
 track_t::track_t(const track_snapshot_t &a)
   : tracksettings_t(a), localIdx(a.localIdx) {
-	std::vector<clip_t*>& clips = midi.clips;
+	assert(midi.getConstClips().empty());
 	for (const clip_t& clip : a.clips) {
-		clip_t* clipInstance = new clip_t(clip);
-		clips.push_back(clipInstance);
+		midi.addClip(new clip_t(clip));
 	}
 	assert(this->mixer == NULL);
 	assert(this->content == NULL);
@@ -140,8 +139,8 @@ track_impl_snapshot_t::track_impl_snapshot_t(track_impl_t* p, bool storePluginCh
 track_snapshot_t::track_snapshot_t(track_t* track, bool storePluginChunks)
   : tracksettings_t(*track), localIdx(track->localIdx), plugins(track->audio, storePluginChunks)
 {
-	std::vector<clip_t*>& otherClips = track->getMidi().clips;
-	for (clip_t* clip : otherClips) {
+	auto& otherClips = track->getMidi().getConstClips();
+	for (auto clip : otherClips) {
 		clips.emplace_back(*clip);
 	}
 	track_impl_t* p = track->audio;
@@ -189,23 +188,25 @@ void track_t::loadPluginAutomationParameters(const track_impl_snapshot_t& trackS
 
 }
 void track_t::releaseTrackContent() {
-	for (clip_t* clip : midi.clips) {
-		gui_clip* gClip = clip->gClip;
-		if (gClip) {
-			if (this->content) {
-				this->content->remove(gClip);
-			}
-			DELETE_PTR(gClip);
-		}
-	}
 }
-void trackdata_midi_t::deleteEmptyClips() {
+void trackdata_midi_t::deleteClips(delete_cb *cb) {
+	std::vector<clip_t*>::iterator it = clips.begin();
+	for (auto clip : clips) {
+		releaseClipResources(clip, cb);
+	}
+	for (auto clip : clips) {
+		delete clip;
+	}
+	clips.clear();
+}
+void trackdata_midi_t::deleteEmptyClips(delete_cb *cb) {
 	std::vector<clip_t*>::iterator it = clips.begin();
 	while (it != clips.end()) {
 		clip_t* c = *it;
 		if (c->getLen() <= 0) {
 			it = removeClip(c);
-			deleteClip(c, MainCtrl::get());
+			releaseClipResources(c, cb);
+			delete c;
 		} else {
 			it++;
 		}

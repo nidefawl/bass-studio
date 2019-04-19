@@ -4,6 +4,8 @@
 
 class BaseCtrl;
 class PopupCtrl;
+struct window_draw_fn;
+
 class window_base {
 public:
 	window_base() {}
@@ -29,6 +31,7 @@ public:
 	window_dialog() : window_base() {}
 	virtual ~window_dialog() {}
 	virtual void show() = 0;
+	virtual void setDrawFunction(const window_draw_fn& fn) = 0;
 };
 
 class window_overlay : public window_base {
@@ -44,7 +47,7 @@ class window_main : public window_base {
 public:
 	window_main() : window_base() {}
 	virtual ~window_main() {}
-	virtual window_dialog* createDialog() = 0;
+	virtual window_dialog* createDialog(const String& sTitle, int w, int h) = 0;
 	virtual window_overlay* createOverlay() = 0;
 	virtual void requestClose() = 0;
 	virtual void updateMenu() = 0;

@@ -431,6 +431,14 @@ AppCtrl::AppCtrl() {
 }
 AppCtrl::~AppCtrl() {
 }
+void AppCtrl::onAppTick() {
+	onTick();
+	 //move this in some garbageCollect() methdo and trigger garbage collection after every window-msg on win32 (linux?)
+	for (auto gui : garbageGuis) {
+		delete gui;
+	}
+	garbageGuis.clear();
+}
 void AppCtrl::destroyControl() {
 	destroy();
 	for (auto gui : garbageGuis) {
@@ -461,11 +469,6 @@ void AppCtrl::openAppMenu(int lvl, guictxtmenu_base *b, ivec2 pos) {
 
 void AppCtrl::openOverlayGui(guictxtmenu_base *b, ivec2 pos, int flags) {
 	assert(!this->ctxtmenu);
-	 //move this in some garbageCollect() methdo and trigger garbage collection after every window-msg on win32 (linux?)
-	for (auto gui : garbageGuis) {
-		delete gui;
-	}
-	garbageGuis.clear();
 	this->ctxtmenu = b;
 	ivec2 windowPos;
 	ivec2 windowSize;

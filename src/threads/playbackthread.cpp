@@ -32,9 +32,18 @@ using namespace moodycamel;
 
 class ThreadLock::Impl {
 	std::recursive_mutex& mutex;
+	std::atomic<bool>& isLocked;
 public:
-	Impl(std::recursive_mutex& _mutex) : mutex(_mutex) {mutex.lock(); }
-	~Impl() {mutex.unlock(); }
+	Impl(std::recursive_mutex& _mutex, std::atomic<bool>& _isLocked)
+		: mutex(_mutex), isLocked(_isLocked)
+	{
+		isLocked = true;
+		mutex.lock();
+	}
+	~Impl() {
+		mutex.unlock();
+		isLocked = false;
+	}
 };
 
 class PlaybackThreadReq {
@@ -74,6 +83,7 @@ class PlaybackThread::Impl {
 	ReaderWriterQueue<std::shared_ptr<PlaybackThreadReq>> q;
     playback_state m_status = status_no_process;
 	std::recursive_mutex mutex;
+	std::atomic<bool> mIsLocked{false};
 	int32_t threadid = 0;
 	project_controller_t* ctrl = nullptr;
 	bool exited = false;
@@ -126,8 +136,11 @@ public:
     playback_state getState() const {
     	return m_status;
     }
+    bool isLocked() {
+    	return this->mIsLocked;
+    }
     ThreadLock lockThread() {
-    	ThreadLock t(new ThreadLock::Impl(mutex));
+    	ThreadLock t(new ThreadLock::Impl(mutex, this->mIsLocked));
     	return std::move(t); //CANNOT RELY ON RVO
     }
 private:
@@ -324,6 +337,9 @@ ThreadLock::~ThreadLock() {
 ThreadLock PlaybackThread::lockThread() {
 	ThreadLock t = _M_impl->lockThread();
 	return std::move(t); //CANNOT RELY ON RVO
+}
+bool PlaybackThread::isLocked() {
+	return _M_impl->isLocked();
 }
 
 ThreadLock& ThreadLock::operator=(ThreadLock&& other) noexcept {

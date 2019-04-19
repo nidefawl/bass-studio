@@ -53,10 +53,10 @@ void waveformrender::release(gui_waveform_texture_ref* waveformRef) {
 	});
 	assert(it != vec.end());
 	TextureAtlasEntry& entry = *it;
-//	assert(istIn(entry.ptrs, waveformRef));
-//	auto it2 = std::find(entry.ptrs.begin(), entry.ptrs.end(), waveformRef);
-//	assert(it2 != entry.ptrs.end());
-//	entry.ptrs.erase(it2);
+	assert(istIn(entry.ptrs, waveformRef));
+	auto it2 = std::find(entry.ptrs.begin(), entry.ptrs.end(), waveformRef);
+	assert(it2 != entry.ptrs.end());
+	entry.ptrs.erase(it2);
 	entry.refCount--;
 	if (entry.refCount <= 0) {
 //		my_printf("AtlasEntry refcount <= 0. erasing.\n",0);
@@ -172,13 +172,22 @@ struct _waveform_id {
 };
 
 void waveformrender::assertWaveformRefIsUnbound(gui_waveform_texture_ref* waveformRef) {
-//	for (TextureAtlas& _atlas : atlases) {
-//		std::vector<_pos> positions;
-//		TextureAtlasEntry a;
-//		for(auto& entry : _atlas.entries) {
-//			assert(!istIn(entry.ptrs, waveformRef));
-//		}
-//	}
+	std::vector<TextureAtlas> atlases;
+	std::vector<waveform_update_task_t> queuedTasks;
+	std::vector<audioclip_texture_t> prevRendered;
+	for (TextureAtlas& _atlas : atlases) {
+		std::vector<_pos> positions;
+		TextureAtlasEntry a;
+		for(auto& entry : _atlas.entries) {
+			assert(!istIn(entry.ptrs, waveformRef));
+		}
+	}
+	for (auto& updateTask: queuedTasks) {
+		if (updateTask.waveformRef == waveformRef) {
+			assert(0);
+		}
+		assert(!istIn(updateTask.queuedptrs, waveformRef));
+	}
 }
 ivec2 absvec2(const ivec2 a);
 inline bool isAlmostEqualWaveform(const audioclip_texture_t& lhs, const audioclip_texture_t& rhs){
@@ -211,8 +220,8 @@ bool waveformrender::findSimiliarWaveform(waveform_update_task_t& waveformQueueE
 				waveformRef->queued = false;
 				waveformRef->rendered = true;
 				entry.refCount++;
-//				assert(!istIn(entry.ptrs, waveformRef));
-//				entry.ptrs.push_back(waveformRef);
+				assert(!istIn(entry.ptrs, waveformRef));
+				entry.ptrs.push_back(waveformRef);
 				return true;
 			}
 //			else if (entry.props.audioId == waveformRef->waveform.audioId) {
@@ -228,8 +237,8 @@ bool waveformrender::findSimiliarWaveform(waveform_update_task_t& waveformQueueE
 				waveformRef->queued = false;
 				waveformRef->rendered = true;
 				entry.queuedRefCount++;
-//				assert(!istIn(entry.queuedptrs, waveformRef));
-//				entry.queuedptrs.push_back(waveformRef);
+				assert(!istIn(entry.queuedptrs, waveformRef));
+				entry.queuedptrs.push_back(waveformRef);
 				return true;
 			}
 //			else if (entry.audio->id == waveformRef->waveform.audioId) {
@@ -413,10 +422,10 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 //				my_printf("render q entry with queuedRefCount of %d\n", waveformQueueEntry.queuedRefCount);
 //			}
 			e.refCount = waveformQueueEntry.queuedRefCount;
-//			e.ptrs = waveformQueueEntry.queuedptrs;
-//			assert(!istIn(e.ptrs, waveformRef));
+			e.ptrs = waveformQueueEntry.queuedptrs;
+			assert(!istIn(e.ptrs, waveformRef));
 			e.refCount++;
-//			e.ptrs.push_back(waveformRef);
+			e.ptrs.push_back(waveformRef);
 			waveformRef->queued = false;
 			waveformRef->rendered = true;
 			_atlas.entries.push_back(e);

@@ -18,7 +18,6 @@
 
 #ifndef NANOVG_H
 #define NANOVG_H
-
 #include "nanovg_min.h"
 #ifdef __cplusplus
 extern "C" {

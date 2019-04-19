@@ -10,6 +10,8 @@ public:
 	virtual ~action_base(){ };
 	virtual void undo(MainCtrl* ctrl) = 0;
 	virtual void redo(MainCtrl* ctrl) = 0;
+
+	virtual void releaseResources(MainCtrl* ctrl) { };
 	String getDesc() {
 		return desc;
 	}
@@ -18,19 +20,22 @@ public:
 		this->errorDesc = err;
 	}
 };
+
 class edithistory {
 	std::vector<action_base*> m_undo;
 	std::vector<action_base*> m_redo;
 public:
-	void clear() {
+	void clear(MainCtrl* ctrl) {
 		while (!m_redo.empty()) {
 			action_base* redoAction = m_redo.back();
 			m_redo.pop_back();
+			redoAction->releaseResources(ctrl);
 			delete redoAction;
 		}
 		while (!m_undo.empty()) {
 			action_base* undoAction = m_undo.back();
 			m_undo.pop_back();
+			undoAction->releaseResources(ctrl);
 			delete undoAction;
 		}
 	}
@@ -46,13 +51,14 @@ public:
 		assert(!step->errored);
 		m_undo.push_back(step);
 	}
-	void push(action_base* action) {
+	void push(MainCtrl* ctrl, action_base* action) {
 		while (!m_redo.empty()) {
 			action_base* redoAction = m_redo.back();
 			m_redo.pop_back();
+			redoAction->releaseResources(ctrl);
 			delete redoAction;
 		}
-		m_redo.clear(); //TODO: DEALLOC FFS
+		m_redo.clear();
 		m_undo.push_back(action);
 	}
 	bool canUndo() {

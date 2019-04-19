@@ -60,10 +60,8 @@ template<typename T>
 class Tracker;
 }
 class guibase {
-	friend class DebugAlloc::Tracker<guibase>;
 private:
 	int flags = FLG_ENBL|FLG_VISIBLE|FLG_RENDER_BACKGROUND;
-	int allocId;
 public:
 	ivec2 pos{0};
 	ivec2 size{0};
@@ -75,6 +73,7 @@ public:
 	SafeRef<guibase> safeRef;
 	String label = "";
 public:
+	int allocId;
 	guibase();
 	virtual ~guibase();
 protected:

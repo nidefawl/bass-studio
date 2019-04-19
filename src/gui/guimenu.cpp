@@ -1,5 +1,4 @@
 #include "guimenu.h"
-#include "../host/mainctrl.h"
 #include "renderresources.h"
 
 guimenu_ctxtentry::guimenu_ctxtentry(ngui::Menu* _menu)

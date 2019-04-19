@@ -9,6 +9,7 @@
 
 class Splitter : public guictr_base {
 public:
+	static constexpr int SPLITTER_LAYOUT_THICKNESS = 10;
 	int type;
 	float scale;
 	float min, max;

@@ -67,9 +67,11 @@
 #include "../threads/workerthread.h"
 #include "../threads/playbackthread.h"
 #include "plugindatabase.h"
+#include "window_impl.h"
 
 	const int FLAG_DEFER_LOAD = 0x1;
 
+	int32_t getNumClipAllocations();
 
 void dragdrop_midifile::reset() {
 	if (isLoaded) {
@@ -339,6 +341,7 @@ void MainCtrl::addDebug(String s) {
 }
 
 void MainCtrl::unloadProject() {
+	assert(playThread.isLocked());
 	closeContextMenu();
 	resetMouseContext();
 	projectPath = "";
@@ -350,15 +353,18 @@ void MainCtrl::unloadProject() {
 	std::vector<track_t*> _tracks = trackList.vec();  // iterate a copy
 	my_printf("DELETE _tracks %d\n", _tracks.size());
 	for (track_t* tr : _tracks) {
-		my_printf("DELETE TRACK %s\n", StringAsCStr(tr->name));
-		vsthost::getInstance()->unloadTrack(tr);
-		removeTrackImpl(tr);
+		my_printf("REMOVE TRACK %s\n", StringAsCStr(tr->name));
+		removeTrackImpl(tr, FLG_TRK_CHANGE_LOAD);
 	}
 	trackList.clear();
 	for (track_t* tr : _tracks) {
-		deleteTrack(tr, this);
+		my_printf("DELETE TRACK %s\n", StringAsCStr(tr->name));
+		releaseTrackResources(tr, this);
+		delete tr;
 	}
-	hist.clear();
+	hist.clear(this);
+	this->view->ctr_tracks.trackView.clipboard.reset();
+	this->view->ctr_tracks.trackView.action.clipboard.reset();
 
 	{
 
@@ -367,6 +373,7 @@ void MainCtrl::unloadProject() {
 		host->getDeferredEffects(pluginsDeferred);
 		assert(pluginsDeferred.empty());
 	}
+
 }
 
 bool MainCtrl::onWindowCloseRequest() {
@@ -403,22 +410,39 @@ void MainCtrl::loadFile(String path) {
 	if (!f) {
 		setStatusText(StringFormat("Failed loading %s", StringAsCStr(FileNameFromPath(path))));
 	} else {
-		guidialog_cb_yes_no* dlg = new guidialog_cb_yes_no();
-		dlg->cb = [&,projFile=f](int n) {
-			timer.reset();
-			setLoadedProject(projFile, n==0 ? FLAG_DEFER_LOAD : 0);
-			double l2 = timer.getTimeDoubleReset();
-			log_printf("Loading file %s took %f %f\n", StringAsCStr(path), l1, l2);
-		};
-		dlg->message = "Load plugins?";
-		openDialog(dlg);
+		timer.reset();
+		setLoadedProject(f, FLAG_DEFER_LOAD);
+		double l2 = timer.getTimeDoubleReset();
+		log_printf("Loading file %s took %f %f\n", StringAsCStr(path), l1, l2);
+//		struct lambdatest {
+//			int dontoptimizeMe = 0;
+//			lambdatest() {
+//				log_printf("CSTR  lambdatest()\n", 0);
+//			}
+//			~lambdatest() {
+//				log_printf("DESTR lambdatest()\n", 0);
+//			}
+//		};
+//		auto shrdPtrThing = std::make_shared<lambdatest>();
+//		guidialog_cb_yes_no* dlg = new guidialog_cb_yes_no();
+//		dlg->cb = [this, path, l1, projFile=f,dummy=shrdPtrThing](int n) {
+//			timer.reset();
+//			setLoadedProject(projFile, n==0 ? FLAG_DEFER_LOAD : 0);
+//			double l2 = timer.getTimeDoubleReset();
+//			log_printf("Loading file %s took %f %f\n", StringAsCStr(path), l1, l2);
+//			log_printf("dontoptimizeMe %d\n", dummy->dontoptimizeMe);
+//		};
+//		dlg->message = "Load plugins?";
+//		openDialog(dlg);
 	}
 }
 void MainCtrl::setEmptyProject() {
 	ThreadLock lock = playThread.lockThread();
+	auto& tracks = trackCtr.tracks;
 	unloadProject();
-	insertNewTrack(-1, TRACK_TYPE_MIDI, false);
-	insertNewTrack(-1, TRACK_TYPE_MASTER, false);
+	assert(getNumClipAllocations() == 0);
+	insertNewTrack(-1, TRACK_TYPE_MIDI, FLG_TRK_CHANGE_LOAD);
+	insertNewTrack(-1, TRACK_TYPE_MASTER, FLG_TRK_CHANGE_LOAD);
 }
 void MainCtrl::menuCommand(int cmd) {
 	String path = projectPath;
@@ -493,11 +517,32 @@ void MainCtrl::menuCommand(int cmd) {
 
 	}
 }
+#if CREATE_DEBUG_COMPANION_WINDOW
+void drawDebugWindow(NVGcontext* ctx, int winW, int winH, float pxratio);
+#endif
 void MainCtrl::postInit() {
 	vsthost::getInstance()->postInit();
 	loadFile("empty.project");
 	view->ctr_effectlib.update();
 	setAudioThreadState(playback_state::status_stop);
+#if CREATE_DEBUG_COMPANION_WINDOW
+	{
+		window_main* mainwindow = dynamic_cast<window_main*>(this->window);
+		assert(mainwindow);
+		window_dialog* dialog = mainwindow->createDialog("waveform atlas cache", 1280, 720);
+		window_draw_fn drawFn;
+		drawFn.drawCallback = [](NVGcontext* ctx, int winW, int winH, float pxratio) {
+			drawDebugWindow(ctx, winW, winH, pxratio);
+		};
+		dialog->setDrawFunction(drawFn);
+//		GLFWwindow* contextWindow = mainWindow->getGLFW();
+//		w->createDialogWindow("test window", winW, winH, contextWindow);
+//		glfwMakeContextCurrent(w->getGLFW());
+//		w->centerOnScreen(0);
+//		w->showWindow();
+//		glfwMakeContextCurrent(mainWindow->getGLFW());
+	}
+#endif
 }
 
 void MainCtrl::destroy()
@@ -506,9 +551,11 @@ void MainCtrl::destroy()
 		return;
 	}
 	setAudioThreadState(playback_state::status_no_process);
-	assert(playThread.getState() == playback_state::status_no_process); // should have been set by window close request
+	assert(playThread.getState() == playback_state::status_no_process);
+	ThreadLock lock = playThread.lockThread();
 	vsthost::getInstance()->stopAudio();
 	unloadProject();
+	assert(getNumClipAllocations() == 0);
 	vsthost::getInstance()->unload();
 	vsthost::getInstance()->destroy();
 	settings.dens = grid.grid_dens;
@@ -694,7 +741,7 @@ void MainCtrl::onTick()
 }
 
 void MainCtrl::pushHist(action_base* action) {
-	hist.push(action);
+	hist.push(this, action);
 }
 std::shared_ptr<project_file> MainCtrl::createProjectFile() {
 	std::shared_ptr<project_file> file = std::make_shared<project_file>();
@@ -715,12 +762,18 @@ bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file, int flags) {
 	ThreadLock lock = playThread.lockThread();
 	unloadProject();
 	audiocache::getInstance()->load(file->sampleFileIndex);
+
 	copyFrom(file->project);
+
+	vsthost* host = vsthost::getInstance();
+	for (track_t* t : trackList) {
+		host->createAudio(t);
+	}
+
 	my_printf("NUM TRACKS: %d\n", trackList.size());
 	for (track_t* tr : trackList) {
-		view->ctr_tracks.addTrack(tr);
+		view->ctr_tracks.addTrack(tr, FLG_TRK_CHANGE_LOAD);
 	}
-	auto* host = vsthost::getInstance();
 	trackList.loadPlugins(file->project);
 
 
@@ -773,8 +826,6 @@ bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file, int flags) {
 			windowMain->postRender();
 			//sync to what?!!
 			threadSleep(16);
-			ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-			vsthost* host = vsthost::getInstance();
 			host->activateDeferred(plugin);
 		}
 		ctr.setControl(nullptr);
@@ -904,7 +955,9 @@ bool MainCtrl::filesDropBegin(std::vector<String>& files, ivec2 mousepos, int kb
 			if (audio) {
 				auto* sample = audio->sample.get();
 				if (sample) {
-					clip_t clip(CLIP_AUDIO, b);
+					clip_t clip;
+					clip.clipType = CLIP_AUDIO;
+					clip.name = b;
 					//clip.notes = move(notes);
 					clip.audio.id = audio->id;
 					clip.setLenSamples(sample->nSamples);
@@ -1122,9 +1175,8 @@ void MainCtrl::closeAllContextMenus() {
 	closeAllAppMenus();
 }
 
-track_t* MainCtrl::insertNewTrack(int trackInsertPos, int trackType, int wasUserAction) {
+track_t* MainCtrl::createNewTrack(int trackType) {
 	assert(trackType >= 0 && trackType < NUM_TRACK_TYPES);
-	ThreadLock lock = playThread.lockThread();
 	int32_t tryTypeOffset = trackTypeCtrs[trackType]->size();
 
 	String name = StringFormat("%s %d", TrackTypeToName(trackType), tryTypeOffset + 1);
@@ -1132,120 +1184,129 @@ track_t* MainCtrl::insertNewTrack(int trackInsertPos, int trackType, int wasUser
 	newTrack->rgb = colorPalette[rand.rng_rand(COLOR_PALETTE_LEN)];
 
 	switch (trackType) {
-	case TRACK_TYPE_MIDI:
-	{
-		clip_t* c = new clip_t(CLIP_MIDI, StringFormat("%s-clip", StringAsCStr(name)));
-		c->time = TICKS_BAR * 4;
-		c->setLen(TICKS_BAR * 10);
-		c->loopStart = 0;
-		c->loopLen = c->getLen();
-		for (int i = 0; i < 6 ; i++) {
-			note_t note;
-			note.pitch = 40+(((i%3)%2))*4+(i%3) + (i/3)*12*2;
-			note.time = (i+1+(i/3)*3)*TICKS_BAR;
-			note.len = TICKS_BAR;
-			c->notes.addSingle(note);
-		}
-		newTrack->getMidi().clips.push_back(c);
+		case TRACK_TYPE_MIDI:
+			break;
+		case TRACK_TYPE_RETURN:
+			break;
+		case TRACK_TYPE_MASTER:
+			break;
 	}
-		break;
-	case TRACK_TYPE_RETURN:
-		break;
-	case TRACK_TYPE_MASTER:
-		break;
-	}
-
-	if (wasUserAction) {
-		addTrack(trackInsertPos, newTrack);
-	} else {
-		addTrackImpl(trackInsertPos, newTrack, 0);
-	}
+	return newTrack;
+}
+track_t* MainCtrl::insertNewTrack(int trackInsertPos, int trackType, int flags) {
+	track_t* newTrack = createNewTrack(trackType);
+	ThreadLock lock = playThread.lockThread();
+	addTrackImpl(trackInsertPos, newTrack, flags);
 
 	return newTrack;
 }
 
-class action_modify_addtrack : public action_base {
-public:
-	int32_t trackIdx;
-	track_t* trackPtr = NULL;
-	action_modify_addtrack(String description, track_t* _trackPtr) : action_base() {
-		desc = description;
-		trackPtr = _trackPtr;
-		trackIdx = _trackPtr->idx;
-	}
-	void undo(MainCtrl* ctrl) {
-		ctrl->resetMouseContext();
-		ctrl->setEditClip(NULL);
-		trackallcontainer_t& trackListAll = ctrl->getTracks();
-		track_t* t = trackListAll[trackIdx];
-		if (t) {
-			ctrl->removeTrackImpl(t);
-		}
-		trackPtr = t;
-	}
-	void redo(MainCtrl* ctrl) {
-		ctrl->resetMouseContext();
-		ctrl->setEditClip(NULL);
-		ctrl->addTrackImpl(trackIdx, trackPtr);
-		trackPtr = NULL;
-	}
-};
-class action_modify_removetrack : public action_base {
+class action_modify_track_add : public action_base {
 public:
 	int32_t trackIdx = -1;
+	int32_t localIdx = -1;
 	track_t* trackPtr;
-	action_modify_removetrack(String description, track_t* _trackPtr) : action_base() {
+	action_modify_track_add() = delete;
+	action_modify_track_add(String description, track_t* _trackPtr) : action_base() {
 		desc = description;
-		trackPtr = _trackPtr;
+		trackPtr = nullptr;
 		trackIdx = _trackPtr->idx;
+		localIdx = _trackPtr->localIdx;
+		assert(MainCtrl::get()->getTrackId(trackIdx) == _trackPtr);
+	}
+	void releaseResources(MainCtrl* ctrl) override {
+		if (trackPtr) {
+			releaseTrackResources(trackPtr, ctrl);
+			delete trackPtr;
+			trackPtr = nullptr;
+		}
 	}
 	void undo(MainCtrl* ctrl) {
 		ctrl->resetMouseContext();
 		ctrl->setEditClip(NULL);
-		ctrl->addTrackImpl(trackIdx, trackPtr);
+		trackPtr = ctrl->getTrackId(trackIdx);
+		assert(trackPtr && trackPtr->audio && trackPtr->audio->blockSize%8==0); // see if pointer is valid
+		//SERIALIZE TRACK VSTs
+		ctrl->removeTrackImpl(trackPtr, FLG_TRK_CHANGE_HISTORY_UNDO);
+	}
+	void redo(MainCtrl* ctrl) {
+		assert(trackPtr);
+		ctrl->resetMouseContext();
+		ctrl->setEditClip(NULL);
+		ctrl->addTrackImpl(localIdx, trackPtr, FLG_TRK_CHANGE_HISTORY_UNDO);
+		trackPtr = nullptr;
+		//UNSERIALIZE TRACK VSTs
+	}
+};
+class action_modify_track_remove : public action_base {
+public:
+	int32_t trackIdx = -1;
+	int32_t localIdx = -1;
+	track_t* trackPtr;
+	action_modify_track_remove() = delete;
+	action_modify_track_remove(String description, track_t* _trackPtr) : action_base() {
+		desc = description;
+		trackPtr = _trackPtr;
+		trackIdx = _trackPtr->idx;
+		localIdx = _trackPtr->localIdx;
+		assert(MainCtrl::get()->getTrackId(trackIdx) != trackPtr);
+	}
+	~action_modify_track_remove() {
+	}
+	void releaseResources(MainCtrl* ctrl) override {
+		if (trackPtr) {
+			releaseTrackResources(trackPtr, ctrl);
+			delete trackPtr;
+			trackPtr = nullptr;
+		}
+	}
+
+	void undo(MainCtrl* ctrl) {
+		ctrl->resetMouseContext();
+		ctrl->setEditClip(NULL);
+		ctrl->addTrackImpl(localIdx, trackPtr, FLG_TRK_CHANGE_HISTORY_UNDO);
+		trackPtr = nullptr;
 		//UNSERIALIZE TRACK VSTs
 	}
 	void redo(MainCtrl* ctrl) {
 		ctrl->resetMouseContext();
 		ctrl->setEditClip(NULL);
+		trackPtr = ctrl->getTrackId(trackIdx);
+		assert(trackPtr);
 		//SERIALIZE TRACK VSTs
-		vsthost::getInstance()->unloadTrack(trackPtr);
-		ctrl->removeTrackImpl(trackPtr);
+		ctrl->removeTrackImpl(trackPtr, FLG_TRK_CHANGE_HISTORY_UNDO);
 	}
 };
-void MainCtrl::addTrackImpl(int32_t trackInsertPos, track_t* newTrack, int triggerupdate) {
+void MainCtrl::addTrackImpl(int32_t trackInsertPos, track_t* newTrack, int flags) {
 	trackList.addTrack(trackInsertPos, newTrack);
-	if (triggerupdate&1) {
-		view->ctr_tracks.addSingleTrack(newTrack);
+	if ((flags&FLG_TRK_CHANGE_HISTORY_UNDO) != 0) {
+		assert(newTrack->audio);
 	} else {
-		view->ctr_tracks.addTrack(newTrack);
+		assert(!newTrack->audio);
+		vsthost* host = vsthost::getInstance();
+		host->createAudio(newTrack);
+	}
+	view->ctr_tracks.addTrack(newTrack, flags);
+	if (flags&FLG_TRK_CHANGE_USER) {
+		pushHist(new action_modify_track_add(StringFormat("Add %s Track", TrackTypeToName(newTrack->type)), newTrack));
 	}
 
 }
-void MainCtrl::addTrack(int32_t trackInsertPos, track_t* newTrack) {
-	addTrackImpl(trackInsertPos, newTrack, 1);
-	pushHist(new action_modify_addtrack(StringFormat("Add %s Track", TrackTypeToName(newTrack->type)), newTrack));
+void MainCtrl::removeTrackId(uint32_t trackId) {
+	if (trackList.validTrackIdx(trackId)) {
+		removeTrackImpl(trackList[trackId], FLG_TRK_CHANGE_USER);
+	}
 }
-void MainCtrl::removeTrackImpl(track_t* track) {
+void MainCtrl::removeTrackImpl(track_t* track, int flags) {
 	guictr_plugins* plugins = MainCtrl::getPluginCtr();
 	plugins->hideTrack(track->audio);
 	if (clipView.gui && clipView.gui->m_track == track){
 		clipView.set(NULL);
 	}
-//	trackList.moveTrack(track);
 	trackList.removeTrack(track);
-	view->ctr_tracks.removeSingleTrack(track);
-}
-void MainCtrl::removeTrack(track_t* track) {
-	//SERIALIZE TRACK
-	vsthost::getInstance()->unloadTrack(track);
-	removeTrackImpl(track);
-	pushHist(new action_modify_removetrack(StringFormat("Remove %s Track", TrackTypeToName(track->type)), track));
-}
-void MainCtrl::removeTrackId(uint32_t trackId) {
-	if (trackList.validTrackIdx(trackId)) {
-		track_t* t = trackList[trackId]; // operator[] returns NULL on oob
-		removeTrack(t);
+	view->ctr_tracks.removeTrack(track, flags);
+	if (flags&FLG_TRK_CHANGE_USER) {
+		pushHist(new action_modify_track_remove(StringFormat("Remove %s Track", TrackTypeToName(track->type)), track));
 	}
 }
 track_t* MainCtrl::getTrackId(uint32_t trackId) {
@@ -1336,10 +1397,12 @@ int handleFatalError(int type, int implSpecType) {
 int32_t project_controller_t::tickToSamples(tick_t ticks)
 {
 	vsthost* host = vsthost::getInstance();
+	assert(host);
 	return std::round(tickToSamplePrecise(ticks, tempo100, host->lSampleRate));
 }
 tick_t project_controller_t::samplesToTicks(int32_t sample)
 {
 	vsthost* host = vsthost::getInstance();
+	assert(host);
 	return std::round(sampleToTickPrecise(sample, tempo100, host->lSampleRate));
 }

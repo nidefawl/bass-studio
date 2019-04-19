@@ -15,7 +15,7 @@ struct TextureAtlasEntry {
 	bool inuse = false;
 	int id;
 	int refCount = 0;
-//	std::vector<void*> ptrs;
+	std::vector<void*> ptrs;
 };
 struct gui_waveform_texture_ref {
 	audioclip_texture_t waveform;
@@ -28,11 +28,11 @@ struct gui_waveform_texture_ref {
 };
 struct waveform_update_task_t {
 	cachedaudio_t* audio;
-	gui_waveform_texture_ref* waveformRef;
+	gui_waveform_texture_ref* waveformRef; //lifetime defined by clip_t
 	ivec2 pos{0,0};
 	ivec2 size{0,0};
 	int queuedRefCount = 0;
-//	std::vector<void*> queuedptrs;
+	std::vector<void*> queuedptrs;
 };
 struct TextureAtlas {
 	std::vector<waveform_update_task_t> queuedTasks;

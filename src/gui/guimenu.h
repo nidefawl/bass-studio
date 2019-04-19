@@ -1,5 +1,5 @@
 #pragma once
-#include <nanovg.h>
+#include <nanovg_min.h>
 #include "math/seq_math.h"
 #include "basectrl.h"
 #include "gui.h"
@@ -8,6 +8,7 @@
 #include "mouse.h"
 #include "event.h"
 #include "guicontainer.h"
+#include "guicontextmenu_base.h"
 #include "guicontextmenu.h"
 #include "menu.h"
 #include <vector>

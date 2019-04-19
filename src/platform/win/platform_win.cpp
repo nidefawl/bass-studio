@@ -154,7 +154,7 @@ static int toErrorCode(DWORD excCode) {
 	}
 	return ERR_UNKNOWN;
 }
-extern "C" void logStackTrace();
+void logStackTrace();
 extern volatile bool fataError;
 #define WINAPI __stdcall
 static LONG WINAPI TopLevelExceptionHandler(PEXCEPTION_POINTERS pExceptionInfo)

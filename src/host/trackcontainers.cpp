@@ -15,9 +15,11 @@
 #include "../threads/playbackthread.h"
 
 trackbasecontainer_t::~trackbasecontainer_t() {
-	for (auto it = tracks.begin(); it != tracks.end(); it++) {
-		track_t* tr = *it;
-		deleteTrack(tr, NULL);
+	for (auto track : tracks) {
+		releaseTrackResources(track, NULL);
+	}
+	for (auto track : tracks) {
+		delete track;
 	}
 	tracks.clear();
 }
@@ -28,8 +30,6 @@ void trackallcontainer_t::addTrack(int trackInsertPos, track_t* newTrack) {
 		throw applogicexception("attempt to add track twice");
 	}
 	tracks.push_back(newTrack);
-	vsthost* host = vsthost::getInstance();
-	host->createAudio(newTrack);
 	tracksubcontainer_t* subCtr = trackTypeCtrs[newTrack->type];
 	track_vector& vec = subCtr->tracks;
 	if (trackInsertPos < 0 || trackInsertPos >= (int)vec.size()) {
@@ -54,6 +54,7 @@ void trackallcontainer_t::removeTrack(track_t* track) {
 		assert(0);
 		throw applogicexception("trackcontainer_t - attempt to remove non-present element");
 	}
+	assert(track->audio);
 	tracksubcontainer_t* subCtr = trackTypeCtrs[track->type];
 	track_vector& vec = subCtr->tracks;
 	removeEntry(vec, track);
@@ -68,8 +69,6 @@ void trackallcontainer_t::removeTrack(track_t* track) {
 	tracksBottom.tracks.clear();
 	addAll(tracksBottom.tracks, trackReturnCtr.tracks);
 	addAll(tracksBottom.tracks, trackMasterCtr.tracks);
-	vsthost* host = vsthost::getInstance();
-	host->releaseAudio(track);
 }
 
 void trackallcontainer_t::moveTrack(track_t* track, int32_t dst) {
@@ -143,10 +142,6 @@ void trackallcontainer_t::copyFrom(project_snapshot_t& project) {
 	tracksBottom.tracks.clear();
 	addAll(tracksBottom.tracks, trackReturnCtr.tracks);
 	addAll(tracksBottom.tracks, trackMasterCtr.tracks);
-	vsthost* host = vsthost::getInstance();
-	for (track_t* t : tracks) {
-		host->createAudio(t);
-	}
 }
 void trackallcontainer_t::loadPlugins(project_snapshot_t& project) {
 	trackCtr.loadPlugins(project.trackCtr);
@@ -176,9 +171,9 @@ void tracksubcontainer_t::copyTo(trackcontainer_snapshot_t& out) {
 void tracksubcontainer_t::copyFrom(trackcontainer_snapshot_t& in) {
 	assert(tracks.empty());
 	bool reassignIdx = false;
-	for (track_snapshot_t& trackStatic : in.tracks) {
-		track_t* trackCopy = new track_t(trackStatic);
-		trackStatic.trackLoaded = trackCopy;
+	for (track_snapshot_t& snapshot : in.tracks) {
+		track_t* trackCopy = new track_t(snapshot);
+		snapshot.trackLoaded = trackCopy;
 		reassignIdx |= trackCopy->localIdx < 0;
 		this->tracks.push_back(trackCopy);
 	}
@@ -198,6 +193,7 @@ void tracksubcontainer_t::loadPlugins(trackcontainer_snapshot_t& in) {
 	for (track_snapshot_t& trackStatic : in.tracks) {
 		track_t* trackLoaded = trackStatic.trackLoaded;
 		trackLoaded->loadSnapshot(trackStatic);
+		trackStatic.trackLoaded = nullptr;
 	}
 }
 bool trackallcontainer_t::validTrackTypeIdx(int32_t type, int32_t idx) const {
@@ -225,11 +221,11 @@ void trackstate_t::reset() {
 }
 trackstate_t trackstate_t::copy() {
 	trackstate_t t;
-	for (track_snapshot_t* track : tracks) {
-		track_snapshot_t* trackCopy = new track_snapshot_t(*track);
-		t.tracks.push_back(trackCopy);
+	for (track_snapshot_t* thisSnapshot : this->tracks) {
+		track_snapshot_t* snapshotCopy = new track_snapshot_t(*thisSnapshot);
+		assert(snapshotCopy->clips.size() == thisSnapshot->clips.size());
+		t.tracks.push_back(snapshotCopy);
 	}
-	tracks.clear();
 	return t;
 }
 

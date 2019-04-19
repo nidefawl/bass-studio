@@ -46,6 +46,8 @@ public:
 	    fflush(stdout);
 	}
 	void logStr(String s) {
+		if (s.length() && s.back() != '\n')
+			s+='\n';
 		fprintf(stdout, "%s", StringAsCStr(s));
 	    fflush(stdout);
 	}
@@ -53,8 +55,9 @@ public:
 class MultiLogger : public Logger {
 	std::vector<Logger*> loggers;
 public:
-	MultiLogger(Logger* handle) {
-		loggers.push_back(handle);
+	MultiLogger(Logger* handle = nullptr) {
+		if (handle)
+			loggers.push_back(handle);
 	}
 	void addLogger(Logger* _logger) {
 		loggers.push_back(_logger);
@@ -135,6 +138,13 @@ static MultiLogger& getMultiLogger() {
 	static MultiLogger gMultiLogger(new StdOutLogger());
 	return gMultiLogger;
 }
+static Logger& getExclusiveLoggerInstance() {
+	static StdOutLogger logger;
+	return logger;
+}
+Logger* getExclusiveLogger() {
+	return &getExclusiveLoggerInstance();
+}
 Logger* getGlobalLogger() {
 	return &getMultiLogger();
 }
@@ -150,43 +160,7 @@ void openGlobalLog() {
 }
 #define MAX_LEN_MY_PRINTF 4096
 #define MAX_LEN_FILENAME 512
-/* finds the path segment /src/ by reverse search on input
- * then returns everything after /src/
- *  C:\Users\Michael\daw\src\host\vst_host.cpp -> \host\vst_host.cpp
- * */
-inline const char* relFileName(const char* input) {
-	if (input) {
-		size_t inLen = strlen(input);
-		const char* pos = input+inLen;
-		while (pos >= input) {
-			if (*pos == '\\' || *pos == '/') {
-				const char* pos2 = pos-1;
-				while (pos2 >= input) {
-					if (*pos2 == '\\' || *pos2 == '/') {
-						if (!strncmp(pos2+1, "src", 3))
-							return math::min(input+inLen-1, pos+1);
-						break;
-					}
-					pos2--;
-				}
-			}
-			pos--;
-		}
-	}
-	return input;
-}
-void sanitizeFilename(char* buf, const char* filename) {
-	size_t inLen = strlen(filename);
-	assert(inLen+1 < MAX_LEN_FILENAME);
-	char* out = &buf[0];
-	const char* in = &filename[0];
-	size_t i = 0;
-	for (; i < inLen; i++) {
-		*out++ = (*in == '\\') ? '/' : *in;
-		in++;
-	}
-	buf[i] = '\0';
-}
+
 void global_log_format_impl(const char *file, int line, const char *func, const char *fmt, ...) {
 	char szLogStr[MAX_LEN_MY_PRINTF]{ 0 };
 	char szFileShort[MAX_LEN_FILENAME]{ 0 };
@@ -201,7 +175,7 @@ void global_log_format_impl(const char *file, int line, const char *func, const 
 	}
 	const char* szLogStatement = nullptr;
 	if (file && line && func) {
-		sanitizeFilename(szFileShort, relFileName(file));
+		replaceBackslashWithForwardslash(relFileName(file), szFileShort, MAX_LEN_FILENAME);
 		String threadName = getCurrentThreadName();
 		const char* szThreadName = StringAsCStr(threadName);
 		ret = sprintf_s(szLogBuf, MAX_LEN_MY_PRINTF - 1, "%s:%s:%d %s: %s", szThreadName, szFileShort, line, func, szLogStr);

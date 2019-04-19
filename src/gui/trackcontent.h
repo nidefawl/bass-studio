@@ -265,7 +265,6 @@ public:
 class gui_track : public guictr_base {
 protected:
 	track_t* const m_track;
-	trackdata_midi_t& midi;
 	gui_track_automation automation;
 	int subtrackIdx = -1;
 public:
@@ -307,11 +306,12 @@ public:
 		}
 		nvgSave(vg);
 		if (setScissorTransform(vg)) {
-			for (clip_t* clip : midi.clips) {
-				if(!clip->gClip) {
+			for (clip_t* clip : m_track->getMidi().getConstClips()) {
+				guibase* gui = clip->gClip;
+				if(!gui) {
 					continue;
 				}
-				clip->gClip->render(vg);
+				gui->render(vg);
 			}
 		}
 		nvgRestore(vg);

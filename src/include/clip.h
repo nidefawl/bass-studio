@@ -186,12 +186,13 @@ public:
 	bool loopEnabled = true;
 	bool noLayout = true;
 	clip_editor_layout_t editorLayout;
+public:
+	int64_t allocId;
 
-	clip_t(int _clipType, String _name) : clipType(_clipType) {
-		this->name = _name;
-	}
-	clip_t() {
-	}
+public:
+	clip_t();
+	clip_t(const clip_t &a);
+	~clip_t();
 	void setDirty() {
 		this->dirty = true;
 	}
@@ -201,9 +202,6 @@ public:
 	clip_t &operator =(const clip_t &a) {
 		copy(a);
 		return *this;
-	}
-	clip_t(const clip_t &a) {
-		copy(a);
 	}
 	void copy( const clip_t &obj) {
 		this->name = StringLimit(obj.name, 64);

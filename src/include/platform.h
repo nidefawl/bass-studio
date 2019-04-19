@@ -16,4 +16,5 @@ void setExceptionHandler();
 String getKeyName(int scancode);
 
 void threadSleep(int millis);
-extern "C" void logStackTrace();
+void logStackTrace();
+void getStackTrace(std::vector<String>& vec);

@@ -438,6 +438,7 @@ namespace {
 			MainCtrl::get()->trackList.moveTrack(track, destSlot);
 			MainCtrl::getGuiTrackCtr()->layout();
 			MainCtrl::get()->updateVisibleTrackContents();
+			//TODO: edithistory entry
 		}
 	}
 }

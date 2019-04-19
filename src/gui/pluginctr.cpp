@@ -165,15 +165,12 @@ bool guictr_plugins::handleKeyInput(KeyEvent& kevt) {
 			return false;
 		}
 		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-		bool modified = false;
 		bool handledKeyinput = false;
 		String desc = "???";
 		std::vector<effectbase*> effectChain;
 		sel.pluginCtr->getEffects(effectChain);
 		std::vector<effectbase*> selection;
 		getSelectedEffects(sel, selection);
-
-		bool clipboard = false;
 		if (kevt.type == K_PRESS) {
 			if (isKC(KC_SELECTALL, kevt)) {
 				sel.firstSelection = effectChain.front()->getSlot();
