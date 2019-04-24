@@ -213,6 +213,7 @@ if (BUILD_SCANNER)
 project("vstscanner" C CXX)
 add_executable("vstscanner" "src/host/main_scanner.cpp")
 SET_APP_BUILD("vstscanner")
+target_link_libraries("vstscanner" PUBLIC "dawlib")
 ADD_POST_BUILD_PDB_GEN("vstscanner")
 endif()
 

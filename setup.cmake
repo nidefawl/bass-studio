@@ -63,7 +63,7 @@ endif(UNIX)
 
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-  add_compile_options(-Wall -Wno-inconsistent-missing-override)
+  add_compile_options(-Wall -Wno-inconsistent-missing-override) # -Wshadow sadly no working option for warning on shadow local only
   if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
     # add_compile_definitions(_GLIBCXX_DEBUG _GLIBCXX_DEBUG_PEDANTIC ENABLE_MICHAELS_GLIBCXX_HACKS)
     #add_compile_definitions(_GLIBCXX_DEBUG _GLIBCXX_DEBUG_PEDANTIC)
