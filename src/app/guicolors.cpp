@@ -109,7 +109,6 @@ constant_t COL_BG_SELECTEDTRACK = constant_t("COL_BG_SELECTEDTRACK", 0xFF000000)
 constant_t COL_BG_SELECTEDTRACK_TITLE = constant_t("COL_BG_SELECTEDTRACK_TITLE", 0xFF000000);
 constant_t COL_BG_DRKER = constant_t("COL_BG_DRKER", 0xFF000000);
 constant_t COL_BG_DRKER2 = constant_t("COL_BG_DRKER2", 0xFF000000);
-constant_t COL_BG_DRK_SELECTED = constant_t("COL_BG_DRK_SELECTED", 0xFF000000);
 constant_t COL_CLEAR_COLOR = constant_t("COL_CLEAR_COLOR", 0xFF000000);
 constant_t COL_LABEL_ACTIVE = constant_t("COL_LABEL_ACTIVE", 0xFF000000);
 constant_t COL_LABEL_INACTIVE = constant_t("COL_LABEL_INACTIVE", 0xFF000000);
@@ -155,7 +154,6 @@ void initConstants(int colorVal) {
 	auto gridDark = rgbaToNvg(GuiColor::COL_GRID_DRK.defValue);
 	setConstant(GuiColor::COL_GUI_STROKE, nvgToRGBA(mulSatBright(gridDark, 1.3f, 1.4f)));
 	setConstant(GuiColor::COL_BG_DRK_FOCUSED, GUI_COLOR_HEXA(c3+48, 255));
-	setConstant(GuiColor::COL_BG_DRK_SELECTED, GUI_COLOR_HEXA(c3+40, 255));
 	setConstant(GuiColor::COL_CLEAR_COLOR, (0xff000000));
 
 	setConstant(GuiColor::COL_NOTE, (0xffff9933));
