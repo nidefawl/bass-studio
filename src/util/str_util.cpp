@@ -144,6 +144,15 @@ const char* relFileName(const char* input) {
 	return input;
 }
 
+void replaceBackslashInString(String& str) {
+	size_t inLen = str.length();
+	size_t i = 0;
+	for (; i < inLen; i++) {
+		auto& charAt = str.at(i);
+		if (charAt == '\\')
+			charAt = '/';
+	}
+}
 void replaceBackslashWithForwardslash(const char* filename, char* buf, size_t bufOutSize) {
 	size_t inLen = strlen(filename);
 	assert(inLen+1 < bufOutSize);

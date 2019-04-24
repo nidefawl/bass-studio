@@ -31,6 +31,14 @@
 #define CMD_PLUGIN_THREAD_QUIT 4
 #define NUM_BUFS 2048
 
+void deleteApp() {
+
+}
+
+std::shared_ptr<AppCtrl> makeApp() {
+	return nullptr;
+}
+
 struct pipe_msg_hdr {
 	uint32_t cmd;
 };
@@ -259,13 +267,14 @@ int main(int argc, char* argv[]) {
 					String arg1 = "-client";
 					String lastCmd = StringFormat("%s %s", StringAsCStr(exeName), StringAsCStr(arg1));
 
-					thread->startProcess(exeName, "-client");
+					thread->startProcess(exeName, "-client", "");
 					threadSleep(200);
 					if (!thread->isRunning()) {
-						thread->checkExcepetion();
+						thread->checkException();
 						LOG("Failed starting client");
 						break;
 					}
+					LOG("Thread is up");
 				}
 				if (!pipeConnected && (!launchProcess || (thread && thread->isRunning()))) {
 					LOG("ConnectNamedPipe()");

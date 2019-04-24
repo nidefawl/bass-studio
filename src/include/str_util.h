@@ -99,8 +99,7 @@ int ci_find_substr( const T& str1, const T& str2, const std::locale& loc = std::
     else return -1; // not found
 }
 
-std::wstring s2ws(const std::string& s);
-
+void replaceBackslashInString(String& str);
 void replaceBackslashWithForwardslash(const char* filename, char* buf, size_t bufOutSize);
 const char* relFileName(const char* input);
 const char* removeLeadingPathSegments(const char* input, int maxPathSegs=1);

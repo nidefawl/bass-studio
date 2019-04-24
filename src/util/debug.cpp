@@ -161,7 +161,7 @@ void openGlobalLog() {
 #define MAX_LEN_MY_PRINTF 4096
 #define MAX_LEN_FILENAME 512
 
-void global_log_format_impl(const char *file, int line, const char *func, const char *fmt, ...) {
+void log_format_to_logger(Logger* logger, const char *file, int line, const char *func, const char *fmt, ...) {
 	char szLogStr[MAX_LEN_MY_PRINTF]{ 0 };
 	char szFileShort[MAX_LEN_FILENAME]{ 0 };
 	char szLogBuf[MAX_LEN_MY_PRINTF]{ 0 };
@@ -187,7 +187,7 @@ void global_log_format_impl(const char *file, int line, const char *func, const 
 		szLogStatement = szLogStr;
 	}
 	if (szLogStatement) {
-		getGlobalLogger()->log(szLogStatement, ret);
+		logger->log(szLogStatement, ret);
 	}
 }
 namespace {

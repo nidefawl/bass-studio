@@ -34,6 +34,7 @@
 #include "gui/guimenu.h"
 #include "audiocache.h"
 #include "gui/drawwaveform.h"
+#include "gui/guicontainer_layout.h"
 
 int startApplication(int argc, char* argv[]);
 

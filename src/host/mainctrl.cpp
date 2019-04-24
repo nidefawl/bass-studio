@@ -55,6 +55,7 @@
 #include "../gui/guishaderview.h"
 #include "../gui/about.h"
 #include "../gui/dialogs.h"
+#include "../gui/guicontainer_layout.h"
 
 #include "vst_host.h"
 #include "plugin/base_plugin.h"
@@ -125,7 +126,7 @@ public:
 	guictr_base* const ctr_theme;
 	gui_shaderview shaderView;
 	guictr_side_tabs_daw_1() : guictr_tabbed(), ctr_properties(makeCtrProperties()), ctr_theme(makeCtrTheme()) {
-		setBackgroundRendered(false);
+		setBackgroundRendered(true);
 		ctr_dbg.setLabel("Debug 1");
 		ctr_properties->setLabel("Properties");
 		ctr_theme->setLabel("Theme");
@@ -216,9 +217,10 @@ public:
 	guictr_clipeditorview ctr_clipeditorview;
 	guictr_clipeditor ctr_clipeditor;
 	guictr_tracks ctr_tracks;
-	guictr_side_tabs_daw_1 ctr_tabbed;
-	guictr_side_tabs_daw_2 ctr_tabbed2;
-	Splitter splitterList;
+	guictr_side_tabs_daw_1 subctr_tabbed;
+	guictr_side_tabs_daw_2 subctr_tabbed2;
+	guictr_stacked ctr_stack_right;
+//	Splitter splitterList;
 	Splitter splitterCenter;
 	Splitter splitterRight;
 	DawViewContainers(ngui::MenuBar& menubar, Cursor& _cursor, project_t& project, scaled_grid& grid, clip_view& clipView, dragdrop_midifile& dragdropclip)
@@ -229,14 +231,23 @@ public:
 	  ctr_clipeditorview(noteeditor),
 	  ctr_clipeditor(noteeditor, clipView),
 	  ctr_tracks(_cursor, project, grid, dragdropclip),
-	  ctr_tabbed(),
-	  ctr_tabbed2(ctr_effectlib),
-	  splitterList(0, 0.5f),
+	  subctr_tabbed(),
+	  subctr_tabbed2(ctr_effectlib),
+	  ctr_stack_right(),
+//	  splitterList(0, 0.5f),
 	  splitterCenter(0, 0.7f),
 	  splitterRight(1, 0.8f)
 	{
+		ctr_stack_right.addEntry(&subctr_tabbed2, "Top");
+		ctr_stack_right.addEntry(&subctr_tabbed, "Bottom");
+		ctr_stack_right.setBackgroundRendered(false);
+		ctr_stack_right.padding = 0;
+		ctr_stack_right.margin = 0;
+		ivec2 inset = {guictr_stacked::STACK_ENTRY_BTN_SIZE+INSET_CTR_SPACING*3, INSET_CTR_SPACING};
+		subctr_tabbed.setTabMenuInset(inset);
+		subctr_tabbed2.setTabMenuInset(inset);
 		splitterCenter.setMinMax(0.25f, 0.9f);
-		splitterList.setMinMax(0.1f, 0.9f);
+//		splitterList.setMinMax(0.1f, 0.9f);
 		splitterRight.setMinMax(0.2f, 0.9f);
 	}
 	void layout(int32_t winW, int32_t winH) {
@@ -255,8 +266,8 @@ public:
 		int hRight = winH - hTopControls;
 		int hTrackCtr = splitterCenter.leftOrTop(hCenter);
 		int hEditor = splitterCenter.rightOrBottom(hCenter);
-		int heightList = splitterList.leftOrTop(hRight);
-		int heightDebug = splitterList.rightOrBottom(hRight);
+//		int heightList = splitterList.leftOrTop(hRight);
+//		int heightDebug = splitterList.rightOrBottom(hRight);
 		int width = splitterRight.leftOrTop(winW);
 		int wRight = splitterRight.rightOrBottom(winW);
 		ctr_tempo.size = { winW, hTopControls };
@@ -287,24 +298,24 @@ public:
 		ctr_pluginview.setSnapSides(ivec4(0, 1, 0, 0));
 		ctr_clipeditor.setSnapSides(ivec4(0, 1, 0, 0));
 		ctr_plugins.setSnapSides(ivec4(0, 1, 0, 0));
-		ctr_tabbed2.setSnapSides(ivec4(1, 0, 0, 1));
-//		ctr_pluginlist.setSnapSides(ivec4(1, 0, 0, 1));
-//		ctr_effectlist.setSnapSides(ivec4(1, 0, 0, 0));
-		ctr_tabbed.setSnapSides(ivec4(1, 0, 0, 0));
+		subctr_tabbed2.setSnapSides(ivec4(1, 0, 0, 1));
+		ctr_stack_right.setSnapSides(ivec4(1, 1, 1, 1));
+
+		subctr_tabbed.setSnapSides(ivec4(1, 0, 0, 0));
 
 
-		ctr_tabbed.pos = {width, winY+hTopControls+heightList};
-		ctr_tabbed.size = {wRight, heightDebug};
-		ctr_tabbed2.pos = {width, winY+hTopControls};
-		ctr_tabbed2.size = {wRight, heightList};
-//		ctr_pluginlist.pos = {width, winY+hTopControls};
-//		ctr_pluginlist.size = {wRight, heightList/2};
-//		ctr_effectlist.pos = {width, ctr_pluginlist.bottom()};
-//		ctr_effectlist.size = {wRight, heightList/2};
-		splitterRight.pos = ivec2(ctr_tabbed.pos.x - 5, hTopControls);
+//		ctr_tabbed.pos = {width, winY+hTopControls+heightList};
+//		ctr_tabbed.size = {wRight, heightDebug};
+//		ctr_tabbed2.pos = {width, winY+hTopControls};
+//		ctr_tabbed2.size = {wRight, heightList};
+		ctr_stack_right.pos = {width, winY+hTopControls};
+		ctr_stack_right.size = {wRight, hRight};
+
+
+		splitterRight.pos = ivec2(ctr_stack_right.pos.x - 5, hTopControls);
 		splitterRight.size = ivec2(10, hRight);
-		splitterList.pos = ivec2(ctr_tabbed.pos.x, ctr_tabbed2.bottom()-5);
-		splitterList.size = ivec2(wRight, 10);
+//		splitterList.pos = ivec2(ctr_tabbed.pos.x, ctr_tabbed2.bottom()-5);
+//		splitterList.size = ivec2(wRight, 10);
 	}
 	void addTo(std::vector<guictr_base*>& v) {
 		 v.push_back(&ctr_tracks);
@@ -312,14 +323,15 @@ public:
 		 v.push_back(&ctr_tempo);
 		 v.push_back(&ctr_pluginview);
 		 v.push_back(&ctr_clipeditorview);
-		 v.push_back(&ctr_tabbed2);
+		 v.push_back(&ctr_stack_right);
+//		 v.push_back(&ctr_tabbed2);
 		 v.push_back(&statusbar);
-		 v.push_back(&ctr_tabbed);
+//		 v.push_back(&ctr_tabbed);
 #if USE_GUI_MENU
 		 v.push_back(&ctr_menu);
 #endif
 		 v.push_back(&splitterCenter);
-		 v.push_back(&splitterList);
+//		 v.push_back(&splitterList);
 		 v.push_back(&splitterRight);
 	}
 };
@@ -337,7 +349,7 @@ bool MainCtrl::isPluginViewVisible() {
 }
 void MainCtrl::addDebug(String s) {
 
-	view->ctr_tabbed.ctr_dbg.addStr(s);
+	view->subctr_tabbed.ctr_dbg.addStr(s);
 }
 
 void MainCtrl::unloadProject() {
@@ -410,30 +422,30 @@ void MainCtrl::loadFile(String path) {
 	if (!f) {
 		setStatusText(StringFormat("Failed loading %s", StringAsCStr(FileNameFromPath(path))));
 	} else {
-		timer.reset();
-		setLoadedProject(f, FLAG_DEFER_LOAD);
-		double l2 = timer.getTimeDoubleReset();
-		log_printf("Loading file %s took %f %f\n", StringAsCStr(path), l1, l2);
-//		struct lambdatest {
-//			int dontoptimizeMe = 0;
-//			lambdatest() {
-//				log_printf("CSTR  lambdatest()\n", 0);
-//			}
-//			~lambdatest() {
-//				log_printf("DESTR lambdatest()\n", 0);
-//			}
-//		};
-//		auto shrdPtrThing = std::make_shared<lambdatest>();
-//		guidialog_cb_yes_no* dlg = new guidialog_cb_yes_no();
-//		dlg->cb = [this, path, l1, projFile=f,dummy=shrdPtrThing](int n) {
-//			timer.reset();
-//			setLoadedProject(projFile, n==0 ? FLAG_DEFER_LOAD : 0);
-//			double l2 = timer.getTimeDoubleReset();
-//			log_printf("Loading file %s took %f %f\n", StringAsCStr(path), l1, l2);
-//			log_printf("dontoptimizeMe %d\n", dummy->dontoptimizeMe);
-//		};
-//		dlg->message = "Load plugins?";
-//		openDialog(dlg);
+//		timer.reset();
+//		setLoadedProject(f, FLAG_DEFER_LOAD);
+//		double l2 = timer.getTimeDoubleReset();
+//		log_printf("Loading file %s took %f %f\n", StringAsCStr(path), l1, l2);
+		struct lambdatest {
+			int dontoptimizeMe = 0;
+			lambdatest() {
+				log_printf("CSTR  lambdatest()\n", 0);
+			}
+			~lambdatest() {
+				log_printf("DESTR lambdatest()\n", 0);
+			}
+		};
+		auto shrdPtrThing = std::make_shared<lambdatest>();
+		guidialog_cb_yes_no* dlg = new guidialog_cb_yes_no();
+		dlg->cb = [this, path, l1, projFile=f,dummy=shrdPtrThing](int n) {
+			timer.reset();
+			setLoadedProject(projFile, n==0 ? FLAG_DEFER_LOAD : 0);
+			double l2 = timer.getTimeDoubleReset();
+			log_printf("Loading file %s took %f %f\n", StringAsCStr(path), l1, l2);
+			log_printf("dontoptimizeMe %d\n", dummy->dontoptimizeMe);
+		};
+		dlg->message = "Load plugins?";
+		openDialog(dlg);
 	}
 }
 void MainCtrl::setEmptyProject() {
@@ -1226,7 +1238,9 @@ public:
 		ctrl->setEditClip(NULL);
 		trackPtr = ctrl->getTrackId(trackIdx);
 		assert(trackPtr && trackPtr->audio && trackPtr->audio->blockSize%8==0); // see if pointer is valid
+		assert(localIdx == trackPtr->localIdx);
 		//SERIALIZE TRACK VSTs
+		localIdx = trackPtr->localIdx;
 		ctrl->removeTrackImpl(trackPtr, FLG_TRK_CHANGE_HISTORY_UNDO);
 	}
 	void redo(MainCtrl* ctrl) {
@@ -1234,6 +1248,8 @@ public:
 		ctrl->resetMouseContext();
 		ctrl->setEditClip(NULL);
 		ctrl->addTrackImpl(localIdx, trackPtr, FLG_TRK_CHANGE_HISTORY_UNDO);
+		assert(localIdx == trackPtr->localIdx);
+		localIdx = trackPtr->localIdx;
 		trackPtr = nullptr;
 		//UNSERIALIZE TRACK VSTs
 	}
@@ -1265,6 +1281,8 @@ public:
 		ctrl->resetMouseContext();
 		ctrl->setEditClip(NULL);
 		ctrl->addTrackImpl(localIdx, trackPtr, FLG_TRK_CHANGE_HISTORY_UNDO);
+		assert(localIdx == trackPtr->localIdx);
+		localIdx = trackPtr->localIdx;
 		trackPtr = nullptr;
 		//UNSERIALIZE TRACK VSTs
 	}
@@ -1275,6 +1293,8 @@ public:
 		assert(trackPtr);
 		//SERIALIZE TRACK VSTs
 		ctrl->removeTrackImpl(trackPtr, FLG_TRK_CHANGE_HISTORY_UNDO);
+		assert(trackPtr && trackPtr->audio && trackPtr->audio->blockSize%8==0); // see if pointer is valid
+		assert(localIdx == trackPtr->localIdx);
 	}
 };
 void MainCtrl::addTrackImpl(int32_t trackInsertPos, track_t* newTrack, int flags) {
@@ -1317,7 +1337,8 @@ void MainCtrl::preClipDelete(clip_t* clip) {
 	if (clipView.clip() == clip) {
 		clipView.set(NULL);
 	}
-	resetMouseContext();
+	onGuiRemoved(clip);
+//	resetMouseContext();
 }
 void MainCtrl::preTrackDelete(track_t* track) {
 	if(clipView.gui && clipView.gui->m_track == track) {

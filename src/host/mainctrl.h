@@ -34,6 +34,10 @@
 #include "rand.h"
 #include "projectcontroller.h"
 
+struct automatable_t;
+struct KeyEvent;
+struct MouseEvent;
+
 struct NVGcontext;
 class guibase;
 class guictr_base;

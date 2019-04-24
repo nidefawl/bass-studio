@@ -28,6 +28,10 @@ namespace math {
 	inline T floor(T a) {
 		return std::floor(a);
 	}
+	template<typename T>
+	inline T round(T a) {
+		return std::round(a);
+	}
 	//using fmod = std::fmod;
 	//using ceil = std::ceil;
 	//using floor = std::floor;

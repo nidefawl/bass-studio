@@ -1,4 +1,5 @@
 #include <nanovg.h>
+#include "math/vec.h"
 #include "math/seq_math.h"
 #include "guiglobals.h"
 #include "guicolors.h"
@@ -10,6 +11,7 @@
 #include "exceptions.h"
 #include "mouse.h"
 #include "event.h"
+#include "renderresources.h"
 #include "button.h"
 
 namespace GuiColor {
@@ -188,82 +190,5 @@ void guictr_base::scissorClip(ivec2& vpos, ivec2& vsize) {
 		parent->scissorClip(vpos, vsize);
 	}
 	vpos = toContainerSpace(vpos);
-}
-struct guictr_tabbed::tabbed_entry
-{
-	guibutton tabButton;
-	guibase* tabCtr;
-	bool active = false;
-	tabbed_entry(guibase* _ctr, String title) : tabButton(), tabCtr(_ctr) {
-		tabButton.setText(title);
-		tabButton.setEnabledRef(&active);
-	}
-};
-int32_t guictr_tabbed::getNumEntries() {
-	return entries.size();
-}
-void guictr_tabbed::setActiveEntry(int32_t idx) {
-	if (idx >= 0 && idx < entries.size()) {
-		guictr_tabbed::tabbed_entry* entry = entries[idx];
-		if (this->activeEntry) {
-			this->activeEntry->active = false;
-			this->removeUNCHECKED(this->activeEntry->tabCtr);
-		}
-		this->activeEntry = entry;
-		this->activeEntry->active = true;
-		this->add(this->activeEntry->tabCtr);
-		if (this->parentCtrl) {
-			this->layout();
-		}
-	}
-
-}
-void guictr_tabbed::buttonClicked(guibase* button) {
-	auto it = std::find_if(entries.begin(), entries.end(), [button](const guictr_tabbed::tabbed_entry* entry) {
-		return &entry->tabButton == button;
-	});
-	if (it != entries.end()) {
-		size_t pos = it-entries.begin();
-		setActiveEntry((int32_t) pos);
-	}
-}
-guictr_tabbed::~guictr_tabbed() {
-	for (tabbed_entry* entry : entries) {
-		remove(&entry->tabButton);
-		delete entry;
-	}
-	// only this->activeEntry->tabCtr should be in this cointainer
-	// at this point. And it must be a valid pointer
-	assert(guis.size() <= 1);
-	removeGuis();
-}
-void guictr_tabbed::addEntry(guibase* ctr, String title) {
-	guictr_tabbed::tabbed_entry* entry = new guictr_tabbed::tabbed_entry{ctr, title};
-	guictr_base::add(&entry->tabButton);
-	this->entries.push_back(entry);
-}
-void guictr_tabbed::render(NVGcontext* vg) {
-	guictr_base::render(vg);
-}
-void guictr_tabbed::layout() {
-	ivec2 csize = getSizeContent();
-	int nEntries = entries.size();
-	int sizePer = nEntries ? csize.x / entries.size() : csize.x;
-	ivec2 sizeBar(0);
-	for (tabbed_entry* entry : entries) {
-		entry->tabButton.pos = ivec2(sizeBar.x, 0);
-		entry->tabButton.size = ivec2(sizePer, HEIGHT_DEFAULT_INPUT);
-		sizeBar.x = math::max(sizeBar.x, entry->tabButton.right()+INSET_CTR_SPACING);
-		sizeBar.y = math::max(sizeBar.y, entry->tabButton.bottom()+INSET_CTR_SPACING);
-		entry->tabButton.layout();
-	}
-	sizeContentTab = ivec2(csize.x, csize.y-sizeBar.y);
-	for (tabbed_entry* entry : entries) {
-		entry->tabCtr->pos = ivec2(0, sizeBar.y);
-		entry->tabCtr->size = sizeContentTab;
-		entry->tabCtr->determineSize(entry->tabCtr->size);
-		entry->tabCtr->layout();
-	}
-
 }
 

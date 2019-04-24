@@ -67,6 +67,9 @@ public:
 	virtual ivec2 getSizeContent() {
 		return size - (paddingTL(padding) + paddingBR(padding));
 	}
+	ivec2 getPadding() {
+		return (paddingTL(padding) + paddingBR(padding));
+	}
 	void renderTitleBar(NVGcontext* vg, String text, GuiConstant::constant_t& constantHeight, float textOffsetX, int flags, bool isHorizontalTitle);
 	void renderFrameBase(NVGcontext* vg);
 	void renderFrameOutline(NVGcontext* vg);
@@ -208,23 +211,5 @@ public:
 		nvgFill(vg);
 	}
 #endif
-};
-class guictr_tabbed : public guictr_base {
-
-	struct tabbed_entry;
-	std::vector<tabbed_entry*> entries;
-	tabbed_entry* activeEntry = nullptr;
-	ivec2 sizeContentTab;
-public:
-	guictr_tabbed() : guictr_base() {
-
-	}
-	int32_t getNumEntries();
-	void setActiveEntry(int32_t idx);
-	void addEntry(guibase* ctr, String title);
-	virtual void buttonClicked(guibase* button) override;
-	virtual ~guictr_tabbed();
-	void layout() override;
-	void render(NVGcontext* vg);
 };
 

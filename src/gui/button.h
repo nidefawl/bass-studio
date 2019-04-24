@@ -24,6 +24,7 @@ protected:
 	GuiColor::constant_t buttonColor;
 	String str = "";
 	int fontSize = 0;
+	float fFontScale = 1.0f;
 public:
 	void (*drawFn)(NVGcontext*, ivec2&, ivec2&, const NVGcolor&, int drawParm, int drawParm2) = NULL;
 	int drawParm = 0;
@@ -52,30 +53,13 @@ public:
 	void setFontSize(int fs) {
 		fontSize = fs;
 	}
+	void setFontScale(float fScale) {
+		fFontScale = fScale;
+	}
 	int getFontSize() {
 		return fontSize;
 	}
-	void renderButtonLabel(NVGcontext* vg, int32_t stateFlags) {
-		if (drawFn||str.length()) {
-			nvgSave(vg);
-			setScissorTransform(vg);
-			ivec2 renderPos(0);
-			if (str.length() > 0) {
-	//			nvgDawText(vg, this, pos, size, str, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-				int fontScale = this->fontSize > 0 ? this->fontSize : G_FONT_SCALE(size.y);
-				GuiColor::constant_t c = (stateFlags&FLG_ENBL) ? GuiColor::COL_LABEL_ACTIVE : GuiColor::COL_LABEL_INACTIVE;
-				NVGcolor color = theme->getColor(c);
-				setFont(vg, fontScale, color, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-				nvgTextBox(vg, renderPos.x, renderPos.y + G_FONT_MIDDLE_OFFSET(size.y), size.x, StringAsCStr(str), NULL);
-
-			}
-
-			if (drawFn) {
-				drawFn(vg, renderPos, size, getBackgroundColor(getStateFlags()), drawParm, isEnabled());
-			}
-			nvgRestore(vg);
-		}
-	}
+	void renderButtonLabel(NVGcontext* vg, int32_t stateFlags);
 	guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
 };
 class guibutton : public guibuttonbase {

@@ -63,7 +63,9 @@ void loadThemeData(theme_data& data, guitheme_t& out) {
 	for (auto it = data.mapColors.begin(); it != data.mapColors.end(); ++it) {
 		String key = it->first;
 		GuiColor::constant_t c = GuiColor::getConstantByName(key);
-		assert(c.idx > 0);
+		if (c.idx <= 0) {
+			continue;
+		}
 		out.mapColors[c.idx] = it->second;
 		if (c.idx < out.vecNVGColors.size()) {
 			out.vecNVGColors[c.idx] = rgbaToNvg(it->second);
