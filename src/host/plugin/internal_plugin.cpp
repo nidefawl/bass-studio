@@ -131,7 +131,6 @@ void internalplugin::onWindowDestroy() {
 //	my_printf("UNLOAD %s\n", StringAsCStr(this->sName));
 //}
 
-void storeAutomation(plugin_snapshot_t& ps, std::vector<automated_param_t>& automation);
 namespace {
 
 void createSnapshot(plugin_snapshot_t& ps, internalplugin* plugin, bool storePluginChunks) {
@@ -160,11 +159,11 @@ void createSnapshot(plugin_snapshot_t& ps, internalplugin* plugin, bool storePlu
 //			ps.dataChunk2.assign(ptrData, ptrData + pluginDataSize2);
 //			my_printf("Plugin %s: Save data2[%d]\n", StringAsCStr(plugin->sName), pluginDataSize2);
 //		}
-		auto& allParams = plugin->params;
+		const auto& allParams = plugin->params;
 		auto& mixerParams = plugin->mixerParams;
 		ps.params.reserve(allParams.size()-mixerParams.size());
 		ps.hostParams.reserve(mixerParams.size());
-		for (automatable_param_t& param : plugin->params) {
+		for (const automatable_param_t& param : allParams) {
 			float val = plugin->getParamValue(param.idx);
 			if (param.internalIdx < 0) {
 				ps.hostParams.push_back(param_snapshot_t{param.idx, val});
@@ -173,7 +172,7 @@ void createSnapshot(plugin_snapshot_t& ps, internalplugin* plugin, bool storePlu
 			}
 		}
 	}
-	storeAutomation(ps, plugin->automatedParams);
+	storeAutomation(ps.automatedParams, plugin);
 
 }
 }

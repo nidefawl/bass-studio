@@ -14,9 +14,6 @@ struct automation_point_t {
 	tick_t time;
 	float val;
 };
-int32_t indexOfTick(std::vector<automation_point_t>& dataPoints, tick_t tick);
-int32_t addPointAt(std::vector<automation_point_t>& dataPoints, tick_t tick, int32_t quantizationSteps);
-void simplifyData(std::vector<automation_point_t>& data);
 inline float quantizeFloat(float f, int32_t steps) {
 	if (!steps)
 		return f;
@@ -192,10 +189,10 @@ struct automatable_t {
 		return NULL;
 	}
 	automated_param_t* getRegisteredAutomationEffect(int32_t internalIdx) {
-		auto it = std::find_if(params.begin(), params.end(), [internalIdx](automatable_param_t& ap) {
+		auto it = std::find_if(params.cbegin(), params.cend(), [internalIdx](const auto& ap) {
 			return ap.internalIdx == internalIdx;
 		});
-		if (it != params.end()) {
+		if (it != params.cend()) {
 			return getRegisteredAutomation(it->idx);
 		}
 		return NULL;
@@ -211,3 +208,9 @@ struct automatable_t {
 	}
 };
 
+
+void loadAutomation(const std::vector<automation_view_t>& automatedParams, automatable_t* at);
+void storeAutomation(std::vector<automation_view_t>& automatedParams, automatable_t* at);
+int32_t indexOfTick(std::vector<automation_point_t>& dataPoints, tick_t tick);
+int32_t addPointAt(std::vector<automation_point_t>& dataPoints, tick_t tick, int32_t quantizationSteps);
+void simplifyData(std::vector<automation_point_t>& data);

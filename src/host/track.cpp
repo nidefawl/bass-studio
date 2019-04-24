@@ -509,37 +509,19 @@ void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effec
 	}
 
 }
-void loadEffectAutomationFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effectbase* effect) {
-	const std::vector<automation_view_t>& automatedParams = pluginSnapshot.automatedParams;
-	for (const automation_view_t& automatedParam : automatedParams) {
-		if (effect->hasParam(automatedParam.targetParam)) {
-			automation_t* autom = effect->getAutomation(automatedParam.targetParam);
-			autom->points = automatedParam.points;
-			autom->active = automatedParam.active;
-		}
-	}
-}
 void audio_stage_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginList)
 {
 	for (const plugin_snapshot_t& pluginSnapshot : trPluginList) {
 		auto effect = loadPluginDeferred(pluginSnapshot);
-//		effectbase* effect = loadEffectModule(pluginSnapshot);
-		//			loadEffectParamsFromSnapshot(pluginSnapshot, effect);
 		if (effect) {
 			vsthost* host = vsthost::getInstance();
 
 			this->deferredEffects.push_back(effect);
 			host->addDeferredEffect(effect);
-//			loadEffectParamsFromSnapshot(pluginSnapshot, effect);
 			effect->load(host);
 			host->insertNewPlugin(this, effect, pluginSnapshot.slot);
 			assert(effect->trackImpl == this);
 			assert(effects.size());
-//			effect->loadSnapshot(pluginSnapshot);
-//			loadEffectAutomationFromSnapshot(pluginSnapshot, effect);
-//			if (pluginSnapshot.enabled) {
-//				effect->resume();
-//			}
 		}
 	}
 
@@ -553,7 +535,8 @@ void vsthost::activateDeferred(effectbase* eff) {
 	plugin_snapshot_t pluginSnapshot = defEffect->getSnapshot();
 	effectbase* effect = loadEffectModule(pluginSnapshot);
 	if (!effect) {
-		assert(0);
+		log_printf("Failed loading %s\n", StringAsCStr(pluginSnapshot.name));
+//		assert(0);
 		return;
 	}
 	loadEffectParamsFromSnapshot(pluginSnapshot, effect);
@@ -562,7 +545,7 @@ void vsthost::activateDeferred(effectbase* eff) {
 	replacePlugin(eff->trackImpl, effect, defEffect->getSlot(), &prevPlugin);
 	assert(removeEntry(this->pluginsDeferred, eff));
 	effect->loadSnapshot(pluginSnapshot);
-	loadEffectAutomationFromSnapshot(pluginSnapshot, effect);
+	loadAutomation(pluginSnapshot.automatedParams, effect);
 	if (pluginSnapshot.enabled) {
 		effect->resume();
 	}
@@ -835,24 +818,27 @@ void track_params_t::createSnapshot(track_params_snapshot_t& snapshot) {
 		param_snapshot_t snapParam{i, val};
 		snapshot.params.push_back(std::move(snapParam));
 		automation_t* automation = getAutomation(i);
-		automation_view_t automationView;
-		if (automation) {
-			automationView.targetParam = i;
-			automationView.points = automation->points;
-			automationView.active = automation->active;
-		}
-		snapshot.automatedParams.push_back(std::move(automationView));
+		assert(automation);
+//		automation_view_t automationView;
+//		if (automation) {
+//			automationView.targetParam = i;
+//			automationView.points = automation->points;
+//			automationView.active = automation->active;
+//		}
+//		snapshot.automatedParams.push_back(std::move(automationView));
 	}
+	storeAutomation(snapshot.automatedParams, this);
 }
 void track_params_t::loadSnapshot(const track_params_snapshot_t& snapshot) {
 	for (auto p : snapshot.params) {
 		params[p.idx].value = p.val;
 	}
-	for (auto p : snapshot.automatedParams) {
-		automation_t* automation = getAutomation(p.targetParam);
-		automation->points = p.points;
-		automation->active = p.active;
-	}
+//	for (auto p : snapshot.automatedParams) {
+//		automation_t* automation = getAutomation(p.targetParam);
+//		automation->points = p.points;
+//		automation->active = p.active;
+//	}
+	loadAutomation(snapshot.automatedParams, this);
 }
 void track_params_t::postSetParameter(int32_t idx, float preVal, float val, int flags) {
 	if (flags != 2) {

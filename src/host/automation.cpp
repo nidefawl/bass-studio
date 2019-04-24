@@ -188,3 +188,25 @@ void automation_t::setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automa
 	points = std::move(pointsTmp);
 
 }
+
+void loadAutomation(const std::vector<automation_view_t>& automatedParams, automatable_t* at) {
+	for (const automation_view_t& automatedParam : automatedParams) {
+		if (at->hasParam(automatedParam.targetParam)) {
+			automation_t* autom = at->getAutomation(automatedParam.targetParam);
+			autom->points = automatedParam.points;
+			autom->active = automatedParam.active;
+		}
+	}
+}
+void storeAutomation(std::vector<automation_view_t>& automatedParams, automatable_t* at) {
+	std::vector<automated_param_t> out;
+	at->getAllAutomatedParams(out);
+	for (const automated_param_t& automatedParam : out) {
+		assert(!automatedParam.src.points.empty());
+		automation_view_t atv;
+		atv.targetParam = automatedParam.paramIdx;
+		atv.points = automatedParam.src.points;
+		atv.active = automatedParam.src.active;
+		automatedParams.push_back(atv);
+	}
+}

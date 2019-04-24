@@ -48,7 +48,6 @@ struct plugin_notes_t {
 struct plugin_snapshot_t;
 effectbase* loadEffectModule(const plugin_snapshot_t& pluginSnapshot);
 void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effectbase* effect);
-void loadEffectAutomationFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effectbase* effect);
 
 struct AudioBlock;
 struct host_stats_t {

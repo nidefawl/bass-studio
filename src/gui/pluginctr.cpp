@@ -133,7 +133,7 @@ void pastePluginClipboard(std::shared_ptr<plugin_clipboard_t>& clipboard, audio_
 			stage->insertEffect(pos, effect);
 //						host->insertNewPlugin(this, effect, pluginSnapshot.slot);
 			effect->loadSnapshot(pluginSnapshot);
-			loadEffectAutomationFromSnapshot(pluginSnapshot, effect);
+			loadAutomation(pluginSnapshot.automatedParams, effect);
 			if (pluginSnapshot.enabled) {
 				effect->resume();
 			}

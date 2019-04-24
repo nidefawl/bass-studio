@@ -265,18 +265,7 @@ void vstplugin::load(vsthost* host) {
 
 	this->bIsSetup = true;
 }
-void storeAutomation(plugin_snapshot_t& ps, std::vector<automated_param_t>& automation) {
-	for (automated_param_t& automatedParam : automation) {
-		if (automatedParam.src.points.empty()) {
-			continue;
-		}
-		automation_view_t automation;
-		automation.targetParam = automatedParam.paramIdx;
-		automation.points = automatedParam.src.points;
-		automation.active = automatedParam.src.active;
-		ps.automatedParams.push_back(automation);
-	}
-}
+
 namespace {
 
 void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin, bool storePluginChunks) {
@@ -310,11 +299,11 @@ void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin, bool storePluginCh
 			ps.dataChunk2.assign(ptrData, ptrData + pluginDataSize2);
 			my_printf("Plugin %s: Save data2[%d]\n", StringAsCStr(plugin->sName), pluginDataSize2);
 		}
-		auto& allParams = plugin->params;
+		const auto& allParams = plugin->params;
 		auto& mixerParams = plugin->mixerParams;
 		ps.params.reserve(allParams.size()-mixerParams.size());
 		ps.hostParams.reserve(mixerParams.size());
-		for (automatable_param_t& param : plugin->params) {
+		for (const automatable_param_t& param : allParams) {
 			float val = plugin->getParamValue(param.idx);
 			if (param.internalIdx < 0) {
 				ps.hostParams.push_back(param_snapshot_t{param.idx, val});
@@ -323,7 +312,7 @@ void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin, bool storePluginCh
 			}
 		}
 	}
-	storeAutomation(ps, plugin->automatedParams);
+	storeAutomation(ps.automatedParams, plugin);
 }
 }
 void vstplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
