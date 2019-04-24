@@ -112,9 +112,9 @@ void processScrollEvt(BaseCtrl* ctrl, guibase* gui, ivec2 mousePos, double xoffs
 	}
 }
 void BaseCtrl::mouseUp(ivec2 mousePos, int button) {
-	if (guiCaptured != NULL) {
+	if (guiCaptured != nullptr) {
 		this->window->releaseMouse();
-		guiCaptured = NULL;
+		guiCaptured = nullptr;
 	}
 	if (guiDragged) {
 		cursorIcon = CURSOR_DEFAULT;
@@ -125,7 +125,7 @@ void BaseCtrl::mouseUp(ivec2 mousePos, int button) {
 		cursorIcon = CURSOR_DEFAULT;
 		MouseEvent evt = mouseEvent(this, guiDragged, mousePos, button, M_EVT_BTN_UP);
 		guiDragged->handleDraggedRelease(evt);
-		guiDragged = NULL;
+		guiDragged = nullptr;
 	}
 }
 MouseHitEvt BaseCtrl::mouseHitEvt(MouseHitType _type) {
@@ -133,12 +133,12 @@ MouseHitEvt BaseCtrl::mouseHitEvt(MouseHitType _type) {
 
 }
 void BaseCtrl::focusGui(guibase* gui) {
-	if (guiCaptured != NULL) {
+	if (guiCaptured != nullptr) {
 		return;
 	}
 	guibase* oldFocused = guiFocused;
-	guibase* newFocus = gui != NULL ? gui->getFocusedControl() : NULL;
-	guiCtrFocused = gui != NULL ? gui->getFocusedContainer() : NULL;
+	guibase* newFocus = gui != nullptr ? gui->getFocusedControl() : nullptr;
+	guiCtrFocused = gui != nullptr ? gui->getFocusedContainer() : nullptr;
 	if (oldFocused != newFocus) {
 		MouseHitEvt evt(MouseHitType::MOUSE_LEFT, 0);
 		if (oldFocused) {
@@ -155,7 +155,7 @@ void BaseCtrl::mouseDown(ivec2 mousePos, int button, bool doubleclick) {
 	if (!mouseDownPre()) {
 		return;
 	}
-	if (guiCaptured != NULL) {
+	if (guiCaptured != nullptr) {
 		return;
 	}
 	MouseHitEvt evt = mouseHitEvt(fromButton(button));
@@ -168,8 +168,8 @@ void BaseCtrl::mouseDown(ivec2 mousePos, int button, bool doubleclick) {
 
 	guibase* gui = evt.getGuiHit();
 	guibase* oldFocused = guiFocused;
-	guibase* newFocus = gui != NULL ? gui->getFocusedControl() : NULL;
-	guiCtrFocused = gui != NULL ? gui->getFocusedContainer() : NULL;
+	guibase* newFocus = gui != nullptr ? gui->getFocusedControl() : nullptr;
+	guiCtrFocused = gui != nullptr ? gui->getFocusedContainer() : nullptr;
 	if (oldFocused != newFocus) {
 		if (oldFocused) {
 			oldFocused->focusEvent(evt,false);
@@ -187,7 +187,7 @@ void BaseCtrl::mouseDown(ivec2 mousePos, int button, bool doubleclick) {
 			//left button gets focus from mouse move only
 			guiDragged = !!(gui) ? gui->getDraggedControl() : nullptr;
 		}
-	if (gui != NULL) {
+	if (gui != nullptr) {
 		dragDistance = ivec2(0);
 		dragStart = mousePos;
 		dragOffset = gui->toScreenSpace(ivec2(0)) - mousePos;
@@ -214,7 +214,7 @@ bool BaseCtrl::isCtrOrChildFocused(guibase* gui) {
 	if (gui == this->guiCtrFocused)
 		return true;
 	guibase* p = this->guiFocused;
-	while (p != NULL) {
+	while (p != nullptr) {
 		if (p == gui)
 			return true;
 		p = p->parent;
@@ -227,14 +227,14 @@ void BaseCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos) {
 		return;
 	}
 	this->m_mousePos = mousePos;
-	if (ctxtmenu == NULL) {
-		if (guiCaptured != NULL) {
+	if (ctxtmenu == nullptr) {
+		if (guiCaptured != nullptr) {
 			dragDistance += deltaPos;
 			MouseEvent evt = mouseEvent(this, guiCaptured, mousePos, -1, M_EVT_CAPTURED_MOVE);
 			guiCaptured->handleDraggedMove(evt);
 			return;
 		}
-		if (guiDragged != NULL) {
+		if (guiDragged != nullptr) {
 			dragDistance += deltaPos;
 			MouseEvent evt = mouseEvent(this, guiDragged, mousePos, -1, M_EVT_MOVE);
 			guiDragged->handleDraggedMove(evt);
@@ -263,7 +263,7 @@ void BaseCtrl::onCharInput(unsigned int codepoint) {
 	if (guiCtrFocused && guiCtrFocused != guiFocused && guiCtrFocused->handleCharInput(codepoint)) {
 		return;
 	}
-	if (guiCtrFocused != NULL && guiCtrFocused != guiFocused) {
+	if (guiCtrFocused != nullptr && guiCtrFocused != guiFocused) {
 		if (guiCtrFocused->handleCharInput(codepoint)) {
 			return;
 		}
@@ -381,32 +381,32 @@ void BaseCtrl::render(int32_t x, int32_t y, int32_t w, int32_t h, float ratio) {
 // Only use this pointer for comparison!
 void BaseCtrl::onGuiRemoved(void* gui) {
 	if (this->guiOver == gui)  {
-		this->guiOver = NULL;
+		this->guiOver = nullptr;
 	}
 	if (this->guiCaptured == gui)  {
-		this->guiCaptured = NULL;
+		this->guiCaptured = nullptr;
 	}
 	if (this->guiFocused == gui)  {
-		this->guiFocused = NULL;
+		this->guiFocused = nullptr;
 	}
 	if (this->guiDragged == gui)  {
-		this->guiDragged = NULL;
+		this->guiDragged = nullptr;
 	}
 	if (this->guiCtrFocused == gui)  {
-		this->guiCtrFocused = NULL;
+		this->guiCtrFocused = nullptr;
 	}
 }	
 void BaseCtrl::resetMouseContext() {
 	if (guiCtrFocused) {
 		if (!guiCtrFocused->isStaticContainer()) {
-			guiCtrFocused = NULL;
+			guiCtrFocused = nullptr;
 		}
 	}
-	guiCaptured = guiFocused = guiOver = guiDragged = NULL;
+	guiCaptured = guiFocused = guiOver = guiDragged = nullptr;
 }
 
 bool BaseCtrl::captureMouse(guibase* gui) {
-	if (guiCaptured == NULL) {
+	if (guiCaptured == nullptr) {
 		guiCaptured = gui;
 		this->window->captureMouse();
 		return true;
@@ -559,7 +559,7 @@ void AppCtrl::onKeyInput(int key, int scancode, int keyState, int mods, const ch
 
 void AppCtrl::updateMenubar() {
 #if WINDOW_HAS_MENUBAR
-	menubar.disableAll = this->ctxtmenu != NULL;
+	menubar.disableAll = this->ctxtmenu != nullptr;
 #endif
 }
 void AppCtrl::onMenuOpen(ngui::Menu* menu) {
