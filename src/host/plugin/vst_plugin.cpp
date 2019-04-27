@@ -300,9 +300,8 @@ void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin, bool storePluginCh
 			my_printf("Plugin %s: Save data2[%d]\n", StringAsCStr(plugin->sName), pluginDataSize2);
 		}
 		const auto& allParams = plugin->params;
-		auto& mixerParams = plugin->mixerParams;
-		ps.params.reserve(allParams.size()-mixerParams.size());
-		ps.hostParams.reserve(mixerParams.size());
+		ps.params.reserve(allParams.size());
+		ps.hostParams.reserve(16);
 		for (const automatable_param_t& param : allParams) {
 			float val = plugin->getParamValue(param.idx);
 			if (param.internalIdx < 0) {

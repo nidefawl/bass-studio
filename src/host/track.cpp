@@ -493,18 +493,18 @@ effectbase* loadEffectModule(const plugin_snapshot_t& pluginSnapshot) {
 	return effect;
 }
 void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effectbase* effect) {
-
 	const std::vector<param_snapshot_t>& pluginSnapshotParams = pluginSnapshot.params;
 	for (const param_snapshot_t& param : pluginSnapshotParams) {
-		int32_t paramIdxEffect = effect->mixerParams.size() + param.idx;
-		if (effect->hasParam(paramIdxEffect)) {
-			effect->setParamValue(paramIdxEffect, param.val, 1);
+		automatable_param_t* atParam = effect->getEffectParam(param.idx);
+		if (atParam) {
+			effect->setParamValue(atParam->idx, param.val, 1);
 		}
 	}
 	const std::vector<param_snapshot_t>& pluginHostSideParams = pluginSnapshot.hostParams;
 	for (const param_snapshot_t& param : pluginHostSideParams) {
-		if (param.idx < (int32_t)effect->mixerParams.size() && effect->hasParam(param.idx)) {
-			effect->setParamValue(param.idx, param.val, 1);
+		automatable_param_t* atParam = effect->getParam(param.idx);
+		if (atParam) {
+			effect->setParamValue(atParam->idx, param.val, 1);
 		}
 	}
 

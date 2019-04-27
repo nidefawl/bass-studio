@@ -177,6 +177,30 @@ struct automatable_t {
 		}
 		return false;
 	}
+	/**
+	 * returns: null or temporary reference, do not keep around
+	 */
+	automatable_param_t* getEffectParam(int32_t internalIdx) {
+		auto it = std::find_if(params.begin(), params.end(), [internalIdx](const auto& ap) {
+			return ap.internalIdx == internalIdx;
+		});
+		if (it != params.end()) {
+			return &(*it);
+		}
+		return nullptr;
+	}
+	/**
+	 * returns: null or temporary reference, do not keep around
+	 */
+	automatable_param_t* getParam(int32_t internalIdx) {
+		auto it = std::find_if(params.begin(), params.end(), [internalIdx](const auto& ap) {
+			return ap.idx == internalIdx;
+		});
+		if (it != params.end()) {
+			return &(*it);
+		}
+		return nullptr;
+	}
 	automated_param_t* getRegisteredAutomation(int32_t idx) {
 		auto it = std::find_if(automatedParams.begin(), automatedParams.end(), [idx](automated_param_t& ap) {
 			return ap.paramIdx == idx;
@@ -197,7 +221,7 @@ struct automatable_t {
 		}
 		return NULL;
 	}
-	void getAllAutomatedParams(std::vector<automated_param_t> out) {
+	void getAllAutomatedParams(std::vector<automated_param_t>& out) {
 		for (automated_param_t& t : automatedParams) {
 			if (t.src.isAutomated()) {
 				out.push_back(t);

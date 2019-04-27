@@ -142,27 +142,9 @@ void createSnapshot(plugin_snapshot_t& ps, internalplugin* plugin, bool storePlu
 	ps.pluginType = plugin->pluginType;
 	ps.name = plugin->sName;
 	if (storePluginChunks) {
-//		void* pluginData;
-//		int32_t pluginDataSize = plugin->dispatch(effGetChunk, 0, 0, &pluginData, 0);
-//		if (pluginDataSize > 0 && pluginData) {
-//			uint8_t* ptrData = reinterpret_cast<uint8_t*>(pluginData);
-//			ps.dataChunk.reserve(pluginDataSize);
-//			ps.dataChunk.assign(ptrData, ptrData + pluginDataSize);
-//			my_printf("Plugin %s: Save data1[%d]\n", StringAsCStr(plugin->sName), pluginDataSize);
-//
-//		}
-//		void* pluginData2;
-//		int32_t pluginDataSize2 = plugin->dispatch(effGetChunk, 1, 0, &pluginData2, 0);
-//		if (pluginDataSize2 > 0 && pluginData2) {
-//			uint8_t* ptrData = reinterpret_cast<uint8_t*>(pluginData2);
-//			ps.dataChunk2.reserve(pluginDataSize2);
-//			ps.dataChunk2.assign(ptrData, ptrData + pluginDataSize2);
-//			my_printf("Plugin %s: Save data2[%d]\n", StringAsCStr(plugin->sName), pluginDataSize2);
-//		}
 		const auto& allParams = plugin->params;
-		auto& mixerParams = plugin->mixerParams;
-		ps.params.reserve(allParams.size()-mixerParams.size());
-		ps.hostParams.reserve(mixerParams.size());
+		ps.params.reserve(allParams.size());
+		ps.hostParams.reserve(16);
 		for (const automatable_param_t& param : allParams) {
 			float val = plugin->getParamValue(param.idx);
 			if (param.internalIdx < 0) {

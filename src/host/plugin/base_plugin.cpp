@@ -43,8 +43,9 @@ effectbase::effectbase(String _sName, int32_t _pluginType, int32_t _projectGloba
 		String name;
 		float val;
 	};
-	const std::array<effectbase_param_entry_t, 1> parameterTypes { {
+	const std::array<effectbase_param_entry_t, 2> parameterTypes { {
 		{"Enabled", 1.0f},
+//		{"Dummy", 1.0f},
 	} };
 	params.reserve(parameterTypes.size());
 	int32_t idx = 0;
@@ -57,7 +58,6 @@ effectbase::effectbase(String _sName, int32_t _pluginType, int32_t _projectGloba
 		automatable.label = paramEntry.name;
 		automatable.shortLabel = paramEntry.name;
 		params.push_back(automatable);
-		mixerParams.push_back(automatable);
 		idx++;
 	}
 }

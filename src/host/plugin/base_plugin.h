@@ -45,7 +45,6 @@ public:
 	String sProductName;
 	audio_stage_t* trackImpl = nullptr;
 	int32_t slot = -1;
-	std::vector<automatable_param_t> mixerParams;
 	std::unique_ptr<DelayLine> delayLine;
 	double fTimePercentBlockProcess = 0;
 	effectbase();
