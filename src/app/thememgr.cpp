@@ -7,7 +7,7 @@
 #include "basectrl.h"
 
 void saveThemeFile(themefile& _settings);
-bool loadThemeFile(themefile& _settings);
+themefile loadThemeFile();
 bool hasThemeWithName(const std::vector<guitheme_t>& themes, const String& themeName) {
 	auto it = std::find_if(begin(themes), end(themes),
 		[themeName]
@@ -53,7 +53,11 @@ void guitheme_mgr::saveThemes() {
 			++it;
 		}
 	}
-	saveThemeFile(themeFile);
+	try {
+		saveThemeFile(themeFile);
+	} catch (std::exception& e) {
+		getGlobalLogger()->logStr(StringFormat("Exception: %s\n", e.what()));
+	}
 }
 void guitheme_mgr::loadThemes() {
 	guitheme_t theme;
@@ -63,9 +67,12 @@ void guitheme_mgr::loadThemes() {
 	if (current.name.empty()) {
 		current.name = "default";
 	}
-
 	themefile themeFile;
-	loadThemeFile(themeFile);
+	try {
+		themeFile = loadThemeFile();
+	} catch (std::exception& e) {
+		getGlobalLogger()->logStr(StringFormat("Exception: %s\n", e.what()));
+	}
 	String selectedTheme = themeFile.theme.name;
 	auto it = themeFile.themes.begin();
 	while (it != themeFile.themes.end())

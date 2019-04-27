@@ -165,38 +165,25 @@ void serialize(Archive & archive, themefile & m)
 {
 	archive(make_nvp("current", m.theme), make_nvp("themes", m.themes));
 }
-bool loadThemeFile(themefile& _settings) {
-	try {
-		Stringstream ss;
-		ifstream file(THEMEFILE_NAME, ifstream::in);
-		if (file) {
-		    ss << file.rdbuf();
-		    std::streampos length = file.tellg();
-		    if (length > 10) {
-			    cereal::JSONInputArchive ar(ss);
-			    ar( _settings );
-			    return true;
-		    }
-		}
-		saveThemeFile(_settings);
-	} catch (std::exception& e) {
-	/*	ngui::show("Couldn't read config file.\nSome settings may have been reset", "Warning", ngui::Style::Warning, ngui::Buttons::OK);*/
-		std::cout << e.what();
-		std::cout << std::endl;
-		_settings = themefile();
+themefile loadThemeFile() {
+	Stringstream ss;
+	ifstream file(THEMEFILE_NAME, ifstream::in);
+	if (file) {
+	    ss << file.rdbuf();
+	    std::streampos length = file.tellg();
+	    if (length > 10) {
+	    	themefile tmpSettings;
+		    cereal::JSONInputArchive ar(ss);
+		    ar( tmpSettings );
+		    return tmpSettings;
+	    }
 	}
-	return false;
+	throw std::runtime_error("Failed reading file");
 }
 void saveThemeFile(themefile& _settings) {
 	ofstream file;
 	file.exceptions(~ofstream::goodbit);
-	try {
-		file.open(THEMEFILE_NAME, ofstream::out);
-	    cereal::JSONOutputArchive ar( file );
-	    ar( _settings );
-	} catch (std::exception& e) {
-		std::cout << "Failed writing settings\n";
-		std::cout << e.what();
-		std::cout << std::endl;
-	}
+	file.open(THEMEFILE_NAME, ofstream::out);
+    cereal::JSONOutputArchive ar( file );
+    ar( _settings );
 }

@@ -49,37 +49,25 @@ void serialize(Archive & ar, appsettings& settings) {
 	make_optional_nvp(ar, "vmmode", settings.vmmode);
 }
 
-bool loadSettings(appsettings& _settings) {
-	try {
-		Stringstream ss;
-		ifstream file(SETTINGS_NAME, ifstream::in);
-		if (file) {
-		    ss << file.rdbuf();
-		    std::streampos length = file.tellg();
-		    if (length > 10) {
-			    cereal::JSONInputArchive ar(ss);
-			    ar( _settings );
-			    return true;
-		    }
+appsettings loadSettings() {
+	Stringstream ss;
+	ifstream file(SETTINGS_NAME, ifstream::in);
+	if (file) {
+		ss << file.rdbuf();
+		std::streampos length = file.tellg();
+		if (length > 10) {
+			cereal::JSONInputArchive ar(ss);
+			appsettings tmpSettings;
+			ar( tmpSettings );
+			return tmpSettings;
 		}
-	} catch (std::exception& e) {
-		ngui::show("Couldn't read config file.\nSome settings may have been reset", "Warning", ngui::Style::Warning, ngui::Buttons::OK);
-		std::cout << e.what();
-		std::cout << std::endl;
-		_settings = appsettings();
 	}
-	return false;
+	throw std::runtime_error("Failed reading config");
 }
 void saveSettings(appsettings& _settings) {
 	ofstream file;
 	file.exceptions(~ofstream::goodbit);
-	try {
-		file.open(SETTINGS_NAME, ofstream::out);
-	    cereal::JSONOutputArchive ar( file );
-	    ar( _settings );
-	} catch (std::exception& e) {
-		std::cout << "Failed writing settings\n";
-		std::cout << e.what();
-		std::cout << std::endl;
-	}
+	file.open(SETTINGS_NAME, ofstream::out);
+    cereal::JSONOutputArchive ar( file );
+    ar( _settings );
 }

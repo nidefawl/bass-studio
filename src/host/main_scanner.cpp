@@ -125,8 +125,7 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 #endif
-    appsettings settings;
-    loadSettings(settings);
+    appsettings settings = loadSettings();
 	String vstPlugPath = settings.pluginPath;
 	LOG("pluginPath '%s'", StringAsCStr(vstPlugPath));
     if (vstPlugPath.empty()) {

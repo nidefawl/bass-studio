@@ -1245,7 +1245,7 @@ void appwindow_main::destroy() {
 #ifdef _WIN32
 	if (this->dropTarget)
 		UnregisterDropWindow(hwnd, this->dropTarget);
-	saveWindowPos(hwnd, settings.size);
+	saveWindowPos(hwnd, settings.size.get());
 #endif
 #if __linux__
 		//TODO: implement linux
@@ -1269,7 +1269,7 @@ void appwindow_main::createMainWindow(const char* title, int w, int h, void* par
 #ifndef DAWFRAMEWORK_PLUGIN
 #ifdef _WIN32
 	this->dropTarget = RegisterDropWindow(hwnd, this);
-	if (!restoreWindowPos(hwnd, settings.size)) {
+	if (!restoreWindowPos(hwnd, settings.size.get())) {
 		this->maximize();
 	}
 #endif
@@ -1541,7 +1541,13 @@ int startApplication(int argc, char* argv[]) {
 	log_out("COMPILE_DEFS %s\n", BuildInfo::COMPILE_DEFS);
 	setMinimumResolutionTimer();
 	initColor();
-	loadSettings(settings);
+	try {
+		settings = loadSettings();
+	} catch (std::exception& e) {
+		getGlobalLogger()->logStr(StringFormat("Exception: %s\n", e.what()));
+		settings = appsettings();
+		ngui::show("Couldn't read config file.\nSome settings may have been reset", "Warning", ngui::Style::Warning, ngui::Buttons::OK);
+	}
 	glfwSetErrorCallback(glfw_startup_error_callback);
 	if (!glfwInit("DAWWINDOW01")) {
 		showerror("Initialization failed. Couldn't initialize glfw");
@@ -1622,7 +1628,12 @@ int startApplication(int argc, char* argv[]) {
 
 	mainWindow->destroyOverlayWindows();
 	if (!fataError) {
-		saveSettings(settings);
+		try {
+			saveSettings(settings);
+		} catch (std::exception& e) {
+			getGlobalLogger()->logStr(StringFormat("Exception: %s\n", e.what()));
+			ngui::show("Couldn't write config file.", "Warning", ngui::Style::Warning, ngui::Buttons::OK);
+		}
 	}
 
 #ifndef BUILD_NO_VST

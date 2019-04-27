@@ -8,7 +8,7 @@ struct windowsize;
 struct appsettings
 {
 #ifdef _WIN32
-	windowsize* size;
+    std::unique_ptr<windowsize> size;
 #endif
 	grid_density dens;
 	String device_api;
@@ -17,9 +17,13 @@ struct appsettings
 	bool vmmode = false;
 	String pluginPath;
 public:
-	appsettings();
 	~appsettings();
+	appsettings();
+	appsettings(const appsettings& other);
+    appsettings& operator=(const appsettings& other);
+    appsettings(appsettings&& other);
+    appsettings& operator=(appsettings&& other);
 };
 extern appsettings settings;
 void saveSettings(appsettings& _settings);
-bool loadSettings(appsettings& _settings);
+appsettings loadSettings();
