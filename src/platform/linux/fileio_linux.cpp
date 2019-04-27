@@ -128,8 +128,6 @@ void ReadFileVector(const String& filename, vector<uint8_t>& out)
 		}
 		bytesRead += len;
 	}
-	cout << filename << " file size: " << filesize << ", bytesRead: " << bytesRead << endl;
-	cout << filename << " out.size: " << out.size() << endl;
 }
 
 void findFilesWithExt(

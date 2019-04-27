@@ -107,9 +107,6 @@ int32_t WriteFileVector(const String& filename, vector<uint8_t>& writebuffer)
 	BOOL result = WriteFile(fobj.GetHandle(), writebuffer.data(), writebuffer.size(),
 		&bytesWrite, nullptr);
 	ThrowLastErrorIf(result == FALSE, "WriteFile failed: " + filename);
-
-	cout << filename << "bytesWrite: " << bytesWrite << endl;
-
 	return (int32_t) bytesWrite;
 }
 
@@ -123,11 +120,8 @@ void ReadFileVector(const String& filename, vector<uint8_t>& out)
 
 	BOOL result = ReadFile(fobj.GetHandle(), out.data(), filesize, &bytesRead, nullptr);
 	ThrowLastErrorIf(result == FALSE, "ReadFile failed: " + filename);
-
-	cout << filename << " file size: " << filesize << ", bytesRead: " << bytesRead << endl;
-	cout << filename << " out.size: " << out.size() << endl;
-
 }
+
 int promptUserFilePath(window_base* w, int mode, std::vector<SupportedFileType> fileTypes, String& _out) {
 //	const char supportedFiles = "Text Files (*." fileExt ")\0*." fileExt "\0All Files (*.*)\0*.*\0";
 	char supportedFiles[MAX_PATH] = "";
