@@ -497,6 +497,7 @@ void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effec
 	const std::vector<param_snapshot_t>& pluginSnapshotParams = pluginSnapshot.params;
 	for (const param_snapshot_t& param : pluginSnapshotParams) {
 		automatable_param_t* atParam = effect->getParam(param.idx);
+		assert(atParam);
 		if (atParam) {
 			effect->setParamValue(atParam->idx, param.val, FLG_PAR_UPDATE_INIT);
 		}

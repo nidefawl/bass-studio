@@ -19,6 +19,7 @@
 #include "fileio.h"
 #include "layout.h"
 #include "project.h"
+#include "automation.h"
 #include "logging.h"
 
 using namespace cereal;
@@ -68,18 +69,18 @@ void load( Archive & archive, plugin_snapshot_t & m, const std::uint32_t version
 	archive(make_nvp("name", m.name), make_nvp("uId", m.uId), make_nvp("slot", m.slot), make_nvp("present", m.present));
 	if (version == 1)
 	make_optional_nvp(archive, "dataProgram", m.dataChunk2);
-	if (version < 3) {
+	if (version < 4) {
 		std::vector<param_snapshot_t> allParams;
 		std::vector<param_snapshot_t> nonHostParams;
-		make_optional_nvp(archive, "hostParams", allParams);
 		make_optional_nvp(archive, "parameters", nonHostParams);
+		make_optional_nvp(archive, "hostParams", allParams);
 		for (auto p : nonHostParams) {
 			p.idx += PARAM_OFFSET_EXTERNAL;
 			allParams.push_back(p);
 		}
 		m.params = allParams;
 	} else {
-		make_optional_nvp(archive, "parameters", m.params);
+		archive(make_nvp("parameters", m.params));
 	}
 	make_optional_nvp(archive, "automatedParams", m.automatedParams);
 	make_optional_nvp(archive, "globalId", m.projectGlobalId);
