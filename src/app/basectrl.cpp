@@ -440,10 +440,15 @@ void AppCtrl::onAppTick() {
 	garbageGuis.clear();
 }
 void AppCtrl::destroyControl() {
-	destroy();
+	if (this->ctxtmenu) {
+		assert(contextWindow);
+		contextWindow->getCtrl()->closePopup();
+	}
 	for (auto gui : garbageGuis) {
 		delete gui;
 	}
+	garbageGuis.clear();
+	destroy();
 }
 void AppCtrl::closeAppMenusAtLvl(int startlvl) {
 	for (int i = startlvl; i < (int)menuWindows.size(); i++) {

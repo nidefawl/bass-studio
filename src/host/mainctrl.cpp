@@ -426,23 +426,12 @@ void MainCtrl::loadFile(String path) {
 //		setLoadedProject(f, FLAG_DEFER_LOAD);
 //		double l2 = timer.getTimeDoubleReset();
 //		log_printf("Loading file %s took %f %f\n", StringAsCStr(path), l1, l2);
-		struct lambdatest {
-			int dontoptimizeMe = 0;
-			lambdatest() {
-				log_printf("CSTR  lambdatest()\n", 0);
-			}
-			~lambdatest() {
-				log_printf("DESTR lambdatest()\n", 0);
-			}
-		};
-		auto shrdPtrThing = std::make_shared<lambdatest>();
 		guidialog_cb_yes_no* dlg = new guidialog_cb_yes_no();
-		dlg->cb = [this, path, l1, projFile=f,dummy=shrdPtrThing](int n) {
+		dlg->cb = [this, path, l1, projFile=f](int n) {
 			timer.reset();
 			setLoadedProject(projFile, n==0 ? FLAG_DEFER_LOAD : 0);
 			double l2 = timer.getTimeDoubleReset();
 			log_printf("Loading file %s took %f %f\n", StringAsCStr(path), l1, l2);
-			log_printf("dontoptimizeMe %d\n", dummy->dontoptimizeMe);
 		};
 		dlg->message = "Load plugins?";
 		openDialog(dlg);
