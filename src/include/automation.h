@@ -135,7 +135,9 @@ public:
         	_out.push_back(&mapEntry.second);
         });
         std::sort(_out.begin(), _out.end(), [](const automatable_param_t* a, const automatable_param_t* b) {
-        	return a->idx < b->idx ? -1 : (a->idx == b->idx);
+        	if (a->idx == b->idx)
+        		return 0;
+        	return a->idx < b->idx ? -1 : 1;
         });
 	}
 
