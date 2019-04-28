@@ -556,7 +556,11 @@ void MainCtrl::destroy()
 	ThreadLock lock = playThread.lockThread();
 	vsthost::getInstance()->stopAudio();
 	unloadProject();
-	assert(getNumClipAllocations() == 0);
+	int totalAllocs = getNumClipAllocations();
+	if (totalAllocs != 0) {
+		log_printf("getNumClipAllocations == %d!\n", totalAllocs);
+		assert(getNumClipAllocations() == 0);
+	}
 	vsthost::getInstance()->unload();
 	vsthost::getInstance()->destroy();
 	settings.dens = grid.grid_dens;
