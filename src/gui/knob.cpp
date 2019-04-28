@@ -2,6 +2,7 @@
 #include "basectrl.h"
 #include "knoblabeled.h"
 #include "gui.h"
+#include "guicontainer.h"
 #include "guicolors.h"
 #include "guiconstant.h"
 #include "theme.h"

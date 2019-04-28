@@ -39,27 +39,23 @@ effectbase::~effectbase() {
 }
 effectbase::effectbase(String _sName, int32_t _pluginType, int32_t _projectGlobalId)
 : pluginType(_pluginType), projectGlobalId(_projectGlobalId), sName(_sName) {
+#define PARAM_PLUGIN_DUMMY 1
 	struct effectbase_param_entry_t {
+		int32_t id;
 		String name;
 		float val;
 	};
 	const std::array<effectbase_param_entry_t, 2> parameterTypes { {
-		{"Enabled", 1.0f},
-//		{"Dummy", 1.0f},
+		{PARAM_ENABLE, "Enabled", 1.0f},
+		{PARAM_PLUGIN_DUMMY, "Dummy", 1.0f},
 	} };
-	params.reserve(parameterTypes.size());
-	int32_t idx = 0;
-	for (const auto& paramEntry : parameterTypes) {
-		automatable_param_t automatable = {};
-		automatable.idx = idx;
-		automatable.internalIdx = -1;
-		automatable.category = 0;
-		automatable.value = paramEntry.val;
-		automatable.label = paramEntry.name;
-		automatable.shortLabel = paramEntry.name;
-		params.push_back(automatable);
-		idx++;
+	for (const effectbase_param_entry_t& paramEntry : parameterTypes) {
+		automatable_param_t* regparam = registerParam(paramEntry.id);
+		regparam->value = paramEntry.val;
+		regparam->label = paramEntry.name;
+		regparam->shortLabel = paramEntry.name;
 	}
+	getAutomation(PARAM_ENABLE)->quantizationSteps = 1;
 }
 effectbase::effectbase() : pluginType(0), projectGlobalId(0), sName("") {
 

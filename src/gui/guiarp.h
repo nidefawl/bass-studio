@@ -57,9 +57,10 @@ public:
 			return false;
 		};
 		guiknob* knobs[3] { &clock, &gate, &pattern };
+		int32_t params[3] { ARP_PARAM_CLOCK, ARP_PARAM_GATE, ARP_PARAM_PATTERN };
 		int idx = 0;
 		for (guiknob* knob : knobs) {
-			const int paramIdx = idx + ARP_PARAM_CLOCK;
+			const int32_t paramIdx = params[idx++];
 //
 			knob->fnSetValue = [this,paramIdx](float f, int flags) {
 				auto arp = getArp();
@@ -81,13 +82,14 @@ public:
 			knob->fnGetValue = [this, paramIdx](void) {
 				auto arp = getArp();
 				if (arp) {
-					return arp->params[paramIdx].value;
+					return arp->getParamValue(paramIdx);
 				}
 				return 0.0f;
 			};
-			knob->fnFocus = [this, paramIdx](MouseHitEvt& evt, bool focused) { MainCtrl::get()->showAutomation(clipview.track(), getArp(), paramIdx); };
-//
-			idx++;
+			knob->fnFocus = [this, paramIdx](MouseHitEvt& evt, bool focused) {
+				MainCtrl::get()->showAutomation(clipview.track(), getArp(), paramIdx);
+			};
+
 		}
 	}
 	void buttonClicked(guibase* _button);

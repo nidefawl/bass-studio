@@ -196,61 +196,58 @@ void vstplugin::load(vsthost* host) {
 
 	char buf[1024];
 	vst_param_category fallbackCat={0, 0, "Parameters"};
-	int paramIdx = params.size();
 	for (int i = 0; i < aeffect->numParams; i++) {
-		automatable_param_t param = {};
-		param.idx = paramIdx;
-		param.internalIdx = i;
+		int32_t paramIdentifier = PARAM_OFFSET_EXTERNAL + i;
+		automatable_param_t* param = registerParam(paramIdentifier);
+		param->internalIdx = i;
 		memset(buf, 0, sizeof(buf));
 		this->dispatch(effGetParamName, i, 0, buf);
 		String label = buf[0] ? buf : StringFormat("Parameter %d", i);
-		param.label = param.shortLabel = label;
+		param->label = param->shortLabel = label;
 		if (this->dispatch(effGetParameterProperties, i, 0, &properties, 0)) {
-			param.flags = properties.flags | (ParamIsAdvanced);
-			param.label = properties.label;
-			param.shortLabel = properties.shortLabel;
+			param->flags = properties.flags | (ParamIsAdvanced);
+			param->label = properties.label;
+			param->shortLabel = properties.shortLabel;
 			if (properties.label[0]) {
-				param.label = properties.label;
+				param->label = properties.label;
 			}
 			if (properties.shortLabel[0]) {
-				param.shortLabel = properties.shortLabel;
+				param->shortLabel = properties.shortLabel;
 			}
-			if (param.flags & ParamUsesFloatStep) {
-				param.min.valFloat = 0;
-				param.max.valFloat = 0;
-				param.step.valFloat = properties.stepFloat;
-				param.stepSmall.valFloat = properties.smallStepFloat;
-				param.stepLarge.valFloat = properties.largeStepFloat;
+			if (param->flags & ParamUsesFloatStep) {
+//				param.min.valFloat = 0.0f;
+//				param.max.valFloat = 1.0f;
+				param->step.valFloat = properties.stepFloat;
+				param->stepSmall.valFloat = properties.smallStepFloat;
+				param->stepLarge.valFloat = properties.largeStepFloat;
 			}
-			if (param.flags & ParamUsesIntStep) {
-				param.min.valInt = std::numeric_limits<int32_t>::min();
-				param.max.valInt = std::numeric_limits<int32_t>::max();
-				param.step.valInt = properties.stepInteger;
-				param.stepSmall.valInt = 1;
-				param.stepLarge.valInt = properties.largeStepInteger;
+			if (param->flags & ParamUsesIntStep) {
+				param->min.valInt = std::numeric_limits<int32_t>::min();
+				param->max.valInt = std::numeric_limits<int32_t>::max();
+				param->step.valInt = properties.stepInteger;
+				param->stepSmall.valInt = 1;
+				param->stepLarge.valInt = properties.largeStepInteger;
 			}
-			if (param.flags & ParamUsesIntegerMinMax) {
-				param.min.valInt = properties.minInteger;
-				param.max.valInt = properties.maxInteger;
+			if (param->flags & ParamUsesIntegerMinMax) {
+				param->min.valInt = properties.minInteger;
+				param->max.valInt = properties.maxInteger;
 			}
-			if (param.flags & ParamSupportsDisplayCategory) {
-				param.category = properties.category + 1;
-				if (getCategory(param.category) == 0 && properties.categoryLabel[0]) {
-					vst_param_category paramCat = { param.category, properties.numParametersInCategory, properties.categoryLabel };
+			if (param->flags & ParamSupportsDisplayCategory) {
+				param->category = properties.category + 1;
+				if (getCategory(param->category) == 0 && properties.categoryLabel[0]) {
+					vst_param_category paramCat = { param->category, properties.numParametersInCategory, properties.categoryLabel };
 					paramsCategories.push_back(paramCat);
 				}
 			}
-			if (param.flags & ParamSupportsDisplayIndex) {
-				param.displayIndex = properties.displayIndex;
+			if (param->flags & ParamSupportsDisplayIndex) {
+				param->displayIndex = properties.displayIndex;
 			}
 		} else {
-			param.flags = 0;
+			param->flags = 0;
 			fallbackCat.numParametersInCategory++;
 		}
 		//TODO: wrap getParameter call in exception handler
-		param.value = handle->aeffect->getParameter(handle->aeffect, param.internalIdx);
-		params.push_back(param);
-		paramIdx++;
+		param->value = handle->aeffect->getParameter(handle->aeffect, param->internalIdx);
 	}
 	paramsCategories.push_back(fallbackCat);
 	bIsEnabled = this->getParamValue(PARAM_ENABLE) > 0.5;
@@ -299,17 +296,11 @@ void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin, bool storePluginCh
 			ps.dataChunk2.assign(ptrData, ptrData + pluginDataSize2);
 			my_printf("Plugin %s: Save data2[%d]\n", StringAsCStr(plugin->sName), pluginDataSize2);
 		}
-		const auto& allParams = plugin->params;
-		ps.params.reserve(allParams.size());
-		ps.hostParams.reserve(16);
-		for (const automatable_param_t& param : allParams) {
-			float val = plugin->getParamValue(param.idx);
-			if (param.internalIdx < 0) {
-				ps.hostParams.push_back(param_snapshot_t{param.idx, val});
-			} else {
-				ps.params.push_back(param_snapshot_t{param.internalIdx, val});
-			}
-		}
+		ps.params.reserve(plugin->getNumParameters());
+		plugin->visitParams([&ps](auto& mapEntry) {
+			auto& param = mapEntry.second;
+			ps.params.push_back(param_snapshot_t{param.idx, param.value});
+		});
 	}
 	storeAutomation(ps.automatedParams, plugin);
 }
@@ -361,33 +352,31 @@ String vstplugin::getAutomatableName() {
 	return this->sName;
 }
 float vstplugin::getParamValue(int32_t idx) {
-	if (idx >= 0 && idx < (int32_t)params.size()) {
-		auto& param = params[idx];
-		if (param.internalIdx >= 0) {
-			param.value = vst_getParameter(this, handle->aeffect, param.internalIdx);
-		}
-		return param.value;
+	automatable_param_t* param = getParam(idx);
+	assert(param);
+	if (param->internalIdx >= 0) {
+		param->value = vst_getParameter(this, handle->aeffect, param->internalIdx);
 	}
-	return 0;
+	return param->value;
 }
 void vstplugin::setParamValue(int32_t idx, float val, int flags) {
-	if (idx >= 0 && idx < (int32_t)params.size()) {
-		auto& param = params[idx];
-		param.value = val;
-		if (param.internalIdx >= 0) {
-			vst_setParameter(this, handle->aeffect, param.internalIdx, val);
-		} else if (param.idx == PARAM_ENABLE) {
-			bool wasEnable = this->bIsEnabled;
-			this->bIsEnabled = val > 0;
-			if (this->bIsEnabled != wasEnable) {
-				if (this->bIsEnabled) {
-					onEnable();
-				} else {
-					onDisable();
-				}
+	automatable_param_t* param = getParam(idx);
+	assert(param);
+	param->value = val;
+	if (param->idx == PARAM_ENABLE) {
+		bool wasEnable = this->bIsEnabled;
+		this->bIsEnabled = val > 0;
+		if (this->bIsEnabled != wasEnable) {
+			if (this->bIsEnabled) {
+				onEnable();
+			} else {
+				onDisable();
 			}
 		}
-//		my_printf("set %s[%d] = %f\n", StringAsCStr(this->sName), idx, val);
+	} else {
+		if (param->internalIdx >= 0) {
+			vst_setParameter(this, handle->aeffect, param->internalIdx, val);
+		}
 	}
 }
 void vstplugin::postSetParameter(int32_t idx, float preVal, float val, int flags) {
@@ -400,13 +389,10 @@ void vstplugin::postSetParameter(int32_t idx, float preVal, float val, int flags
 	parameter_ref_t p = {track->idx,  ref.type, this->projectGlobalId, idx};
 	MainCtrl::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
 }
-void vstplugin::recvPluginEditParamUpdate(int32_t idx) {
-	if (idx >= 0 && idx < (int32_t)params.size()) {
-		auto& param = params[idx];
-		if (param.internalIdx >= 0) {
-			param.value = vst_getParameter(this, handle->aeffect, param.internalIdx);
-		}
-	}
+void vstplugin::recvPluginEditParamUpdate(int32_t internalIdx) {
+	automatable_param_t* param = getEffectParam(internalIdx);
+	assert(param && param->internalIdx >= 0);
+	param->value = vst_getParameter(this, handle->aeffect, param->internalIdx);
 }
 automationlane_snapshot_t vstplugin::toRef() {
 	automationlane_snapshot_t ref;

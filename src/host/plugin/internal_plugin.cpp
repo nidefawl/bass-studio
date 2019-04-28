@@ -142,17 +142,11 @@ void createSnapshot(plugin_snapshot_t& ps, internalplugin* plugin, bool storePlu
 	ps.pluginType = plugin->pluginType;
 	ps.name = plugin->sName;
 	if (storePluginChunks) {
-		const auto& allParams = plugin->params;
-		ps.params.reserve(allParams.size());
-		ps.hostParams.reserve(16);
-		for (const automatable_param_t& param : allParams) {
-			float val = plugin->getParamValue(param.idx);
-			if (param.internalIdx < 0) {
-				ps.hostParams.push_back(param_snapshot_t{param.idx, val});
-			} else {
-				ps.params.push_back(param_snapshot_t{param.internalIdx, val});
-			}
-		}
+		ps.params.reserve(plugin->getNumParameters());
+		plugin->visitParams([&ps](auto& mapEntry) {
+			auto& param = mapEntry.second;
+			ps.params.push_back(param_snapshot_t{param.idx, param.value});
+		});
 	}
 	storeAutomation(ps.automatedParams, plugin);
 
@@ -172,32 +166,30 @@ String internalplugin::getAutomatableName() {
 	return this->sName;
 }
 float internalplugin::getParamValue(int32_t idx) {
-	if (idx >= 0 && idx < (int32_t)params.size()) {
-		auto& param = params[idx];
-		if (param.internalIdx >= 0) {
-			param.value = dispatchGetParameter(param.internalIdx);
-		}
-		return param.value;
+	automatable_param_t* param = getParam(idx);
+	assert(param);
+	if (param->internalIdx >= 0) {
+		param->value = dispatchGetParameter(param->internalIdx);
 	}
-	return 0;
+	return param->value;
 }
 void internalplugin::setParamValue(int32_t idx, float val, int flags) {
-	if (idx >= 0 && idx < (int32_t)params.size()) {
-		auto& param = params[idx];
-		param.value = val;
-		if (param.idx == PARAM_ENABLE) {
-			bool wasEnable = this->bIsEnabled;
-			this->bIsEnabled = val > 0;
-			if (this->bIsEnabled != wasEnable) {
-				if (this->bIsEnabled) {
-					onEnable();
-				} else {
-					onDisable();
-				}
+	automatable_param_t* param = getParam(idx);
+	assert(param);
+	param->value = val;
+	if (param->idx == PARAM_ENABLE) {
+		bool wasEnable = this->bIsEnabled;
+		this->bIsEnabled = val > 0;
+		if (this->bIsEnabled != wasEnable) {
+			if (this->bIsEnabled) {
+				onEnable();
+			} else {
+				onDisable();
 			}
-		} else {
-			assert(param.internalIdx >= 0);
-			dispatchSetParameter(param.internalIdx, val);
+		}
+	} else {
+		if (param->internalIdx >= 0) {
+			dispatchSetParameter(param->internalIdx, val);
 		}
 	}
 }
@@ -211,11 +203,10 @@ void internalplugin::postSetParameter(int32_t idx, float preVal, float val, int 
 	parameter_ref_t p = {track->idx,  ref.type, this->projectGlobalId, idx};
 	MainCtrl::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
 }
-void internalplugin::recvPluginEditParamUpdate(int32_t idx) {
-	if (idx >= 0 && idx < (int32_t)params.size()) {
-		auto& param = params[idx];
-		param.value = dispatchGetParameter(param.idx);
-	}
+void internalplugin::recvPluginEditParamUpdate(int32_t internalIdx) {
+	automatable_param_t* param = getEffectParam(internalIdx);
+	assert(param && param->internalIdx >= 0);
+	param->value = dispatchGetParameter(param->internalIdx);
 }
 automationlane_snapshot_t internalplugin::toRef() {
 	automationlane_snapshot_t ref;

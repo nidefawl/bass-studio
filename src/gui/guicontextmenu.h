@@ -32,12 +32,15 @@ public:
 	virtual void clicked(int _id) {
 		closeContextMenu();
 	}
+	virtual void clickedElement(ctxtmenu_entry* e, int _id) {
+		clicked(_id);
+	}
 	virtual void handleDraggedBegin(MouseEvent& evt) {
 		ivec2 local = evt.relMousepos;
 		for (ctxtmenu_entry* e : entries) {
 			int n = e->getClicked(size, local);
 			if (n >= 0) {
-				clicked(n);
+				clickedElement(e, n);
 				return;
 			}
 		}

@@ -97,8 +97,8 @@ void guiplugin::buttonClicked(guibase* _button) {
     	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
     	float f = effect->getParamValue(PARAM_ENABLE);
     	float f2 = f > 0.5 ? 0 : 1;
-    	effect->setParamValue(PARAM_ENABLE, f2, 2);
-    	effect->postSetParameter(PARAM_ENABLE, f, f2, 2);
+    	effect->setParamValue(PARAM_ENABLE, f2, FLG_PAR_UPDATE_USER);
+    	effect->postSetParameter(PARAM_ENABLE, f, f2, FLG_PAR_UPDATE_USER);
 
 	}
 	if (_button == &buttonDelete) {
@@ -396,12 +396,15 @@ guivstplugin::guivstplugin(vstplugin * _vst)
 	buttonOpenEditor.colorActive = GuiColor::COL_BTN_BG_SHOW_ACTIVE;
 	addGuiBtn(&buttonOpenEditor);
 	params.setParent(this);
-	std::vector<gui_list_entry*> _newList;
-	for (automatable_param_t& param : _vst->params) {
-		if (param.internalIdx >= 0)
-			_newList.push_back(new gui_plugin_paramlist_entry(_vst, &param));
-	}
-	params.setList(_newList);
+	std::vector<automatable_param_t*> sortedParams;
+	_vst->getSortedParams(sortedParams);
+	std::vector<gui_list_entry*> listEntries;
+	listEntries.reserve(sortedParams.size());
+    std::for_each(sortedParams.begin(), sortedParams.end(), [&listEntries, _vst](auto* param) {
+		if (param->internalIdx >= 0)
+			listEntries.push_back(new gui_plugin_paramlist_entry(_vst, param));
+    });
+	params.setList(listEntries);
 }
 
 guivstplugin::~guivstplugin() {

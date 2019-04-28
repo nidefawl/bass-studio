@@ -66,7 +66,7 @@ public:
 		if (at) {
 			my_printf("undo(): set %s::%s (idx %d) from %f to %f\n", StringAsCStr(at->getAutomatableName()), StringAsCStr(at->getParamName(ref.paramIdx)), ref.paramIdx,  valBefore, valAfter);
 
-			at->setParamValue(ref.paramIdx, valBefore, 4);
+			at->setParamValue(ref.paramIdx, valBefore, FLG_PAR_UPDATE_UNDO);
 		}
 	}
 	void redo(MainCtrl* ctrl) {
@@ -74,7 +74,7 @@ public:
 		if (at) {
 			my_printf("redo(): set %s::%s (idx %d) from %f to %f\n", StringAsCStr(at->getAutomatableName()), StringAsCStr(at->getParamName(ref.paramIdx)), ref.paramIdx,  valBefore, valAfter);
 
-			at->setParamValue(ref.paramIdx, valAfter, 4);
+			at->setParamValue(ref.paramIdx, valAfter, FLG_PAR_UPDATE_UNDO);
 		}
 	}
 };

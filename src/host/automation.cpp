@@ -192,7 +192,8 @@ void automation_t::setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automa
 void loadAutomation(const std::vector<automation_view_t>& automatedParams, automatable_t* at) {
 	log_printf("Loading %d automation lanes for device %s\n", automatedParams.size(), StringAsCStr(at->getAutomatableName()));
 	for (const automation_view_t& automatedParam : automatedParams) {
-		if (at->hasParam(automatedParam.targetParam)) {
+		assert(at->getParam(automatedParam.targetParam));
+		if (at->getParam(automatedParam.targetParam)) {
 			automation_t* autom = at->getAutomation(automatedParam.targetParam);
 			autom->points = automatedParam.points;
 			autom->active = automatedParam.active;

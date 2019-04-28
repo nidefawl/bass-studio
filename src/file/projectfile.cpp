@@ -68,8 +68,19 @@ void load( Archive & archive, plugin_snapshot_t & m, const std::uint32_t version
 	archive(make_nvp("name", m.name), make_nvp("uId", m.uId), make_nvp("slot", m.slot), make_nvp("present", m.present));
 	if (version == 1)
 	make_optional_nvp(archive, "dataProgram", m.dataChunk2);
-	make_optional_nvp(archive, "parameters", m.params);
-	make_optional_nvp(archive, "hostParams", m.hostParams);
+	if (version < 3) {
+		std::vector<param_snapshot_t> allParams;
+		std::vector<param_snapshot_t> nonHostParams;
+		make_optional_nvp(archive, "hostParams", allParams);
+		make_optional_nvp(archive, "parameters", nonHostParams);
+		for (auto p : nonHostParams) {
+			p.idx += PARAM_OFFSET_EXTERNAL;
+			allParams.push_back(p);
+		}
+		m.params = allParams;
+	} else {
+		make_optional_nvp(archive, "parameters", m.params);
+	}
 	make_optional_nvp(archive, "automatedParams", m.automatedParams);
 	make_optional_nvp(archive, "globalId", m.projectGlobalId);
 	make_optional_nvp(archive, "enabled", m.enabled);
@@ -101,7 +112,6 @@ void save( Archive & archive, plugin_snapshot_t const & m, const std::uint32_t v
 	archive(make_nvp("pluginType", m.pluginType));
 	archive(make_nvp("name", m.name), make_nvp("uId", m.uId), make_nvp("slot", m.slot), make_nvp("present", m.present));
 	archive(make_nvp("parameters", m.params));
-	archive(make_nvp("hostParams", m.hostParams));
 	archive(make_nvp("automatedParams", m.automatedParams));
 	archive(make_nvp("globalId", m.projectGlobalId));
 	archive(make_nvp("enabled", m.enabled));
@@ -299,7 +309,7 @@ void save( Archive & archive, project_file const & file, const std::uint32_t ver
 	archive(cereal::make_nvp("samples", file.sampleFileIndex));
 }
 CEREAL_CLASS_VERSION( project_file, FILE_FORMAT_VERSION);
-CEREAL_CLASS_VERSION( plugin_snapshot_t, 3 );
+CEREAL_CLASS_VERSION( plugin_snapshot_t, 4 );
 
 
 std::shared_ptr<project_file> loadProjectFile(String& path) {

@@ -81,7 +81,7 @@ public:
     		MainCtrl* ctrl = dynamic_cast<MainCtrl*>(getControl());
 			assert(ctrl);
     		if (ctrl) {
-    			automatable_param_t* paramRef = &hostSidePlugin->params[paramIdx];
+    			automatable_param_t* paramRef = hostSidePlugin->getParam(paramIdx);
     			assert(paramRef);
         		ctrl->openContextMenu(new guictxtmenu_vstparam(this->hostSidePlugin, paramRef), evt.mousepos);
     		}

@@ -31,7 +31,7 @@ int exchandler(_In_ EXCEPTION_POINTERS *lpEP)
 
 void dealWithPluginException(effectbase* eff) {
 	if (!eff->isBypass()) {
-		eff->setParamValue(PARAM_ENABLE, 0, 0);
+		eff->setParamValue(PARAM_ENABLE, 0, FLG_PAR_UPDATE_INIT);
 		my_printf("segfault/fatal exception on %s\n", StringAsCStr(eff->getName()));
 	}
 	logEveryMsec(4, 1000, String("EXCEPTION_ACCESS_VIOLATION on " + eff->getName()));

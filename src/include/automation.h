@@ -4,7 +4,13 @@
 #include <memory>
 #include <assert.h>
 #include <vector>
+#include <unordered_map>
+#include "exceptions.h"
 
+#define FLG_PAR_UPDATE_INIT 1
+#define FLG_PAR_UPDATE_USER 2
+#define FLG_PAR_UPDATE_UNDO 4
+#define FLG_PAR_UPDATE_AUTOMATED 8
 #define PARAM_ENABLE 0
 #define AUTOMATABLE_MIXER 0
 #define AUTOMATABLE_ARP 1
@@ -83,38 +89,63 @@ union param_step_fi_u {
 	int32_t valInt;
 };
 struct automatable_param_t {
-	int32_t idx;
-	float value;
-	int32_t flags;
+	int32_t idx = -1;
+	float value = 0.0f;
+	int32_t flags = 0;
 
-	param_step_fi_u min;
-	param_step_fi_u max;
-	param_step_fi_u stepSmall;
-	param_step_fi_u step;
-	param_step_fi_u stepLarge;
+	param_step_fi_u min{0.0f};
+	param_step_fi_u max{1.0f};
+	param_step_fi_u stepSmall{0.0f};
+	param_step_fi_u step{0.0f};
+	param_step_fi_u stepLarge{0.0f};
 
 	String shortLabel;//8
 	String label;//64
 
 	//if kVstParameterSupportsDisplayIndex
-	int16_t displayIndex;		///< index where this parameter should be displayed (starting with 0)
+	int16_t displayIndex = 0;		///< index where this parameter should be displayed (starting with 0)
 
 	//if kVstParameterSupportsDisplayCategory
-	int16_t category;			///< 0: no category, else group index + 1
-	int32_t internalIdx;
+	int16_t category = 0;			///< 0: no category, else group index + 1
+	int32_t internalIdx = -1;
 };
 struct automatable_t {
-	std::vector<automatable_param_t> params;
-	std::vector<automated_param_t> automatedParams;
+private:
+//	std::vector<automatable_param_t> params;
+	std::unordered_map<int32_t, automatable_param_t> mapParams;
+	std::vector<automated_param_t> automatedParams; //TODO: make this a map
+public:
 	virtual ~automatable_t() {};
+	automatable_param_t* registerParam(int32_t identifier) {
+		if (mapParams.find(identifier) != mapParams.end()) {
+			throw applogicexception("Param with identical identifier already registered");
+		}
+		automatable_param_t newParam;
+		newParam.idx = identifier;
+		mapParams[identifier] = std::move(newParam);
+		return &mapParams[identifier];
+	}
+    template<typename Functor>
+    void visitParams(Functor f) {
+      std::for_each(mapParams.begin(), mapParams.end(), f);
+    }
+    void getSortedParams(std::vector<automatable_param_t*>& _out) {
+    	_out.reserve(mapParams.size());
+        std::for_each(mapParams.begin(), mapParams.end(), [&_out](auto& mapEntry) {
+        	_out.push_back(&mapEntry.second);
+        });
+        std::sort(_out.begin(), _out.end(), [](const automatable_param_t* a, const automatable_param_t* b) {
+        	return a->idx < b->idx ? -1 : (a->idx == b->idx);
+        });
+	}
+
 	virtual String getAutomatableName() = 0;
 	virtual float getParamValue(int32_t idx) = 0;
-	//TODO: describe and define flags
 	virtual void setParamValue(int32_t idx, float val, int flags) = 0;
 	virtual automationlane_snapshot_t toRef() = 0;
 
 	virtual void flipParamValue(int32_t idx) {
-		setParamValue(idx, 1.0f-getParamValue(idx), 2);
+		setParamValue(idx, 1.0f-getParamValue(idx), FLG_PAR_UPDATE_USER);
 	}
 	int32_t getQuantizationSteps(int32_t idx) {
 		automation_t* at = getAutomation(idx);
@@ -129,13 +160,12 @@ struct automatable_t {
 	}
 
 	int32_t getNumParameters() const {
-		return params.size();
+		return mapParams.size();
 	}
-	String getParamName(int32_t idx) {
-		if (idx >= 0 && idx < (int32_t)params.size()) {
-			return params[idx].label;
-		}
-		return "";
+	String getParamName(int32_t paramIdx) {
+		auto it = mapParams.find(paramIdx);
+		assert(it != mapParams.end());
+		return it->second.label;
 	}
 	void getAutomated(std::vector<int32_t>& targets) {
 		for (automated_param_t t : automatedParams) {
@@ -147,13 +177,13 @@ struct automatable_t {
 		for (automated_param_t& param : automatedParams) {
 			if (param.src.isActive()) {
 				float val = param.src.getValueAt(pos);
-				setParamValue(param.paramIdx, val, 1);
+				setParamValue(param.paramIdx, val, FLG_PAR_UPDATE_AUTOMATED);
 			}
 		}
 	}
 	automation_t* getAutomation(int32_t paramIdx) {
-		if (!hasParam(paramIdx)) {
-			return NULL;
+		if (mapParams.find(paramIdx) == mapParams.end()) {
+			return nullptr;
 		}
 		for (automated_param_t& param : automatedParams) {
 			if (paramIdx == param.paramIdx) {
@@ -171,33 +201,33 @@ struct automatable_t {
 			}
 		}
 	}
-	bool hasParam(int32_t idx) {
-		if (idx >= 0 && idx < (int32_t)params.size()) {
-			return true;
-		}
-		return false;
-	}
+//	bool hasParam(int32_t idx) {
+//		if (idx >= 0 && idx < (int32_t)params.size()) {
+//			return true;
+//		}
+//		return false;
+//	}
 	/**
 	 * returns: null or temporary reference, do not keep around
 	 */
 	automatable_param_t* getEffectParam(int32_t internalIdx) {
-		auto it = std::find_if(params.begin(), params.end(), [internalIdx](const auto& ap) {
-			return ap.internalIdx == internalIdx;
+		auto it = std::find_if(mapParams.begin(), mapParams.end(), [internalIdx](const auto& mapEntry) {
+			return mapEntry.second.internalIdx == internalIdx;
 		});
-		if (it != params.end()) {
-			return &(*it);
+		if (it != mapParams.end()) {
+			return &it->second;
 		}
 		return nullptr;
 	}
 	/**
 	 * returns: null or temporary reference, do not keep around
 	 */
-	automatable_param_t* getParam(int32_t internalIdx) {
-		auto it = std::find_if(params.begin(), params.end(), [internalIdx](const auto& ap) {
-			return ap.idx == internalIdx;
+	automatable_param_t* getParam(int32_t paramIdx) {
+		auto it = std::find_if(mapParams.begin(), mapParams.end(), [paramIdx](const auto& mapEntry) {
+			return mapEntry.second.idx == paramIdx;
 		});
-		if (it != params.end()) {
-			return &(*it);
+		if (it != mapParams.end()) {
+			return &it->second;
 		}
 		return nullptr;
 	}
@@ -209,15 +239,6 @@ struct automatable_t {
 			automated_param_t* ap = &(*it);
 			if (ap->src.isAutomated())
 				return ap;
-		}
-		return NULL;
-	}
-	automated_param_t* getRegisteredAutomationEffect(int32_t internalIdx) {
-		auto it = std::find_if(params.cbegin(), params.cend(), [internalIdx](const auto& ap) {
-			return ap.internalIdx == internalIdx;
-		});
-		if (it != params.cend()) {
-			return getRegisteredAutomation(it->idx);
 		}
 		return NULL;
 	}

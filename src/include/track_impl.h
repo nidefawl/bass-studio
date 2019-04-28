@@ -14,6 +14,8 @@
 #include "seq_time.h"
 #include "snapshot.h"
 
+#define PARAM_TRACK_GAIN 1
+
 struct VstEvent_t;
 
 class vstplugin;
@@ -26,6 +28,7 @@ struct track_params_t : public automatable_t {
 private:
 	audio_stage_t* audiostage;
 	struct track_param_entry_t {
+		int32_t id;
 		String name;
 		float val;
 	};
@@ -33,24 +36,17 @@ private:
 public:
 	track_params_t(audio_stage_t* _audiostage)
 	  : automatable_t(), audiostage(_audiostage) {
-		int32_t idx = 0;
 		const std::array<track_param_entry_t, 2> parameterTypes { {
-			track_param_entry_t{"Enabled", 1.0f},
-			track_param_entry_t{"Gain", 1.0f},
+			track_param_entry_t{PARAM_ENABLE, "Enabled", 1.0f},
+			track_param_entry_t{PARAM_TRACK_GAIN, "Gain", 1.0f},
 		} };
-		params.reserve(parameterTypes.size());
 		for (const track_param_entry_t& paramEntry : parameterTypes) {
-			automatable_param_t automatable = {};
-			automatable.idx = idx;
-			automatable.internalIdx = -1;
-			automatable.category = 0;
-			automatable.value = paramEntry.val;
-			automatable.label = paramEntry.name;
-			automatable.shortLabel = paramEntry.name;
-			params.push_back(std::move(automatable));
-			idx++;
+			automatable_param_t* regparam = registerParam(paramEntry.id);
+			regparam->value = paramEntry.val;
+			regparam->label = paramEntry.name;
+			regparam->shortLabel = paramEntry.name;
 		}
-		getAutomation(0)->quantizationSteps = 1;
+		getAutomation(PARAM_ENABLE)->quantizationSteps = 1;
 	}
 	const float lvlRange = dsp_util::DBFS_MUTE_POS - dsp_util::MTR_CEIL;
 	const float EXP = 2.0f;
@@ -82,16 +78,14 @@ public:
 		return "Mixer";
 	}
 	float getParamValue(int32_t idx) override {
-		if (idx >= 0 && idx < (int)params.size()) {
-			return convertValFrom(idx, params[idx].value);
-		}
-		return 0.0f;
+		automatable_param_t* param = getParam(idx);
+		assert(param);
+		return convertValFrom(idx, param->value);
 	}
 	void setParamValue(int32_t idx, float val, int flags) override {
-		if (idx >= 0 && idx < (int)params.size()) {
-//			float preVal = params[idx].value;
-			params[idx].value = convertValTo(idx, val);
-		}
+		automatable_param_t* param = getParam(idx);
+		assert(param);
+		param->value = convertValTo(idx, val);
 	}
 	automationlane_snapshot_t toRef() override {
 		automationlane_snapshot_t ref;
@@ -102,13 +96,13 @@ public:
 	void createSnapshot(track_params_snapshot_t& snapshot);
 	void loadSnapshot(const track_params_snapshot_t& snapshot);
 	float getGain() {
-		return params[1].value;
+		return getParamValue(PARAM_TRACK_GAIN);
 	}
 	void setGain(float f) {
-		params[1].value = f;
+		setParamValue(PARAM_TRACK_GAIN, f, FLG_PAR_UPDATE_USER);
 	}
 	bool isEnabled() {
-		return params[0].value >= 0.5f;
+		return getParamValue(PARAM_ENABLE) >= 0.5f;
 	}
 	void postSetParameter(int32_t idx, float preVal, float val, int flags);
 };

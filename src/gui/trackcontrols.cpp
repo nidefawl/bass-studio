@@ -226,7 +226,7 @@ public:
 		return trackenabled();
 	}
 	void handleRightClick(MouseEvent& evt) override {
-		MainCtrl::get()->openContextMenu(new guictxtmenu_trackparam(m_track, &m_track->audio->mixer, PARAM_TRACK_ENABLED), evt.mousepos);
+		MainCtrl::get()->openContextMenu(new guictxtmenu_trackparam(m_track, &m_track->audio->mixer, PARAM_ENABLE), evt.mousepos);
 	}
 };
 namespace GuiColor {
@@ -353,9 +353,9 @@ public:
 		} else {
 			_id--;
 			if (_id >= 0 && _id < (int)targets.size()) {
-				String str = targets[_id]->getAutomatableName();
-				m_track->audio->selectedAutomationCtr = targets[_id];
-				int32_t numParams = targets[_id]->getNumParameters();
+				auto* atDevice = targets[_id];
+				int32_t numParams = atDevice->getNumParameters();
+				m_track->audio->selectedAutomationCtr = atDevice;
 				m_track->audio->selectedAutomationParam = numParams?0:-1;
 			}
 		}
@@ -373,26 +373,23 @@ public:
 		automatable_t* autom = m_track->audio->selectedAutomationCtr;
 		if (autom) {
 			addEntry(new ctxtmenu_entry("None", 0));
-			int32_t numParams = autom->getNumParameters();
-			for (int i = 0; i < numParams; i++) {
-				String paramName = autom->getParamName(i);
-				addEntry(new ctxtmenu_entry(paramName, i+1));
-			}
+			std::vector<automatable_param_t*> sortedParams;
+			autom->getSortedParams(sortedParams);
+		    std::for_each(sortedParams.begin(), sortedParams.end(), [this](automatable_param_t* param) {
+				if (param->internalIdx >= 0)
+					addEntry(new ctxtmenu_entry(param->label, 1+param->idx));
+		    });
 		}
 	}
-	void clicked(int _id) {
-		std::vector<automatable_t*> targets;
-		m_track->audio->getAutomatableTrackTargets(targets);
+	void clickedElement(ctxtmenu_entry* e, int _id) override {
 		if (_id == 0) {
 			m_track->audio->selectedAutomationParam = -1;
 		} else {
 			automatable_t* autom = m_track->audio->selectedAutomationCtr;
 			if (autom) {
-				int32_t numParams = autom->getNumParameters();
-				_id--;
-				if (_id >= 0 && _id < numParams) {
-					m_track->audio->selectedAutomationParam = _id;
-				}
+				const int32_t paramIdx = _id - 1;
+				assert(autom->getParam(paramIdx));
+				m_track->audio->selectedAutomationParam = paramIdx;
 			}
 		}
 		MainCtrl::get()->updateVisibleTrackContents();

@@ -172,19 +172,20 @@ void track_t::loadSnapshot(const track_snapshot_t& snapshot) {
 }
 void track_t::loadPluginAutomationParameters(const track_impl_snapshot_t& trackStatic) {
 	assert(audio);
-	const std::vector<plugin_snapshot_t>& trPluginList = trackStatic.pluginSnapshots;
-	for (const plugin_snapshot_t& pluginSnapshot : trPluginList) {
-		effectbase* effect = audio->getPluginById(pluginSnapshot.projectGlobalId);
-		if (effect) {
-			const std::vector<automation_view_t>& automatedParams = pluginSnapshot.automatedParams;
-			for (const automation_view_t& automatedParam : automatedParams) {
-				if (effect->hasParam(automatedParam.targetParam)) {
-					automation_t* autom = effect->getAutomation(automatedParam.targetParam);
-					autom->points = automatedParam.points;
-				}
-			}
-		}
-	}
+	assert(0&&"NOT IMPLEMENTED");
+//	const std::vector<plugin_snapshot_t>& trPluginList = trackStatic.pluginSnapshots;
+//	for (const plugin_snapshot_t& pluginSnapshot : trPluginList) {
+//		effectbase* effect = audio->getPluginById(pluginSnapshot.projectGlobalId);
+//		if (effect) {
+//			const std::vector<automation_view_t>& automatedParams = pluginSnapshot.automatedParams;
+//			for (const automation_view_t& automatedParam : automatedParams) {
+//				if (effect->getParam(automatedParam.targetParam)) {
+//					automation_t* autom = effect->getAutomation(automatedParam.targetParam);
+//					autom->points = automatedParam.points;
+//				}
+//			}
+//		}
+//	}
 
 }
 void track_t::releaseTrackContent() {
@@ -495,18 +496,18 @@ effectbase* loadEffectModule(const plugin_snapshot_t& pluginSnapshot) {
 void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effectbase* effect) {
 	const std::vector<param_snapshot_t>& pluginSnapshotParams = pluginSnapshot.params;
 	for (const param_snapshot_t& param : pluginSnapshotParams) {
-		automatable_param_t* atParam = effect->getEffectParam(param.idx);
-		if (atParam) {
-			effect->setParamValue(atParam->idx, param.val, 1);
-		}
-	}
-	const std::vector<param_snapshot_t>& pluginHostSideParams = pluginSnapshot.hostParams;
-	for (const param_snapshot_t& param : pluginHostSideParams) {
 		automatable_param_t* atParam = effect->getParam(param.idx);
 		if (atParam) {
-			effect->setParamValue(atParam->idx, param.val, 1);
+			effect->setParamValue(atParam->idx, param.val, FLG_PAR_UPDATE_INIT);
 		}
 	}
+//	const std::vector<param_snapshot_t>& pluginHostSideParams = pluginSnapshot.hostParams;
+//	for (const param_snapshot_t& param : pluginHostSideParams) {
+//		automatable_param_t* atParam = effect->getParam(param.idx);
+//		if (atParam) {
+//			effect->setParamValue(atParam->idx, param.val, FLG_PAR_UPDATE_INIT);
+//		}
+//	}
 
 }
 void audio_stage_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginList)
@@ -813,31 +814,18 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 }
 
 void track_params_t::createSnapshot(track_params_snapshot_t& snapshot) {
-	for (int i = 0; i < getNumParameters(); i++) {
-		float val = params[i].value;
-		param_snapshot_t snapParam{i, val};
-		snapshot.params.push_back(std::move(snapParam));
-		automation_t* automation = getAutomation(i);
-		assert(automation);
-//		automation_view_t automationView;
-//		if (automation) {
-//			automationView.targetParam = i;
-//			automationView.points = automation->points;
-//			automationView.active = automation->active;
-//		}
-//		snapshot.automatedParams.push_back(std::move(automationView));
-	}
+	snapshot.params.reserve(getNumParameters());
+	visitParams([&snapshot](auto& mapEntry) {
+		auto& param = mapEntry.second;
+		snapshot.params.push_back(param_snapshot_t{param.idx, param.value});
+	});
 	storeAutomation(snapshot.automatedParams, this);
 }
 void track_params_t::loadSnapshot(const track_params_snapshot_t& snapshot) {
-	for (auto p : snapshot.params) {
-		params[p.idx].value = p.val;
+	for (const auto& param : snapshot.params) {
+		assert(getParam(param.idx));
+		setParamValue(param.idx, param.val, FLG_PAR_UPDATE_INIT);
 	}
-//	for (auto p : snapshot.automatedParams) {
-//		automation_t* automation = getAutomation(p.targetParam);
-//		automation->points = p.points;
-//		automation->active = p.active;
-//	}
 	loadAutomation(snapshot.automatedParams, this);
 }
 void track_params_t::postSetParameter(int32_t idx, float preVal, float val, int flags) {

@@ -6,16 +6,11 @@
 #include "mainctrl.h"
 
 void midiarp::loadSnapshot(const arp_snapshot& snapshot) {
-	for (auto p : snapshot.params) {
-		if (hasParam(p.idx)) {
-			setParamValue(p.idx, p.val, 1);
-		}
+	for (const auto& param : snapshot.params) {
+		assert(getParam(param.idx));
+		setParamValue(param.idx, param.val, FLG_PAR_UPDATE_INIT);
 	}
-	for (auto p : snapshot.automatedParams) {
-		automation_t* automation = getAutomation(p.targetParam);
-		automation->points = p.points;
-		automation->active = p.active;
-	}
+	loadAutomation(snapshot.automatedParams, this);
 }
 void midiarp::postSetParameter(int32_t idx, float preVal, float val, int flags) {
 	if (flags != 2) {
@@ -28,20 +23,12 @@ void midiarp::postSetParameter(int32_t idx, float preVal, float val, int flags) 
 	MainCtrl::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
 }
 void midiarp::createSnapshot(arp_snapshot& snapshot) {
-	for (int i = 0; i < getNumParameters(); i++) {
-		float val = params[i].value;
-		param_snapshot_t snapParam{i, val};
-		my_printf("VAL[%d] = %f\n", i, val);
-		snapshot.params.push_back(std::move(snapParam));
-		automation_t* automation = getAutomation(i);
-		automation_view_t automationView;
-		if (automation) {
-			automationView.targetParam = i;
-			automationView.points = automation->points;
-			automationView.active = automation->active;
-		}
-		snapshot.automatedParams.push_back(std::move(automationView));
-	}
+	snapshot.params.reserve(getNumParameters());
+	visitParams([&snapshot](auto& mapEntry) {
+		auto& param = mapEntry.second;
+		snapshot.params.push_back(param_snapshot_t{param.idx, param.value});
+	});
+	storeAutomation(snapshot.automatedParams, this);
 }
 
 

@@ -18,18 +18,18 @@ struct arp_snapshot;
 
 class midiarp : public automatable_t {
 public:
-	enum ResetMode
-		: int {NOTE, BEAT
+	enum ResetMode : int {
+		NOTE, BEAT
 	};
 private:
 	struct arp_param_entry_t {
+		int32_t id;
 		String name;
 		float val;
 	};
 //	struct arp_pattern_entry_t {
 //		std::vector<int32_t> pattern;
 //	};
-#define ARP_PARAM_ENABLED 0
 #define ARP_PARAM_CLOCK 1
 #define ARP_PARAM_GATE 2
 #define ARP_PARAM_PATTERN 3
@@ -65,31 +65,24 @@ public:
 			tickLength[i + 1] = tickLength[i + 0] + (tickLength[i + 0] >> 1);
 			assert(tickLength[i + 0] > 0);
 		}
-		int32_t idx = 0;
 		const std::array<arp_param_entry_t, 4> parameterTypes { {
-			arp_param_entry_t{"Enabled", 1.0f},
-			arp_param_entry_t{"Clock", 1.0f},
-			arp_param_entry_t{"Gate", 1.0f},
-			arp_param_entry_t{"Pattern", 1.0f},
+			arp_param_entry_t{PARAM_ENABLE, "Enabled", 0.0f},
+			arp_param_entry_t{ARP_PARAM_CLOCK, "Clock", 10/(double)NUM_ARP_STEPSIZE_OPTIONS},
+			arp_param_entry_t{ARP_PARAM_GATE, "Gate", 1/4.0f},
+			arp_param_entry_t{ARP_PARAM_PATTERN, "Pattern", 0.0f},
 		} };
-		params.reserve(parameterTypes.size());
 		for (const arp_param_entry_t& paramEntry : parameterTypes) {
-			automatable_param_t automatable = {};
-			automatable.idx = idx;
-			automatable.internalIdx = -1;
-			automatable.category = 0;
-			automatable.value = paramEntry.val;
-			automatable.label = paramEntry.name;
-			automatable.shortLabel = paramEntry.name;
-			params.push_back(std::move(automatable));
-			idx++;
+			automatable_param_t* regparam = registerParam(paramEntry.id);
+			regparam->value = paramEntry.val;
+			regparam->label = paramEntry.name;
+			regparam->shortLabel = paramEntry.name;
 		}
-		params[ARP_PARAM_ENABLED].value = 0;
-		params[ARP_PARAM_CLOCK].value = 10/(double)NUM_ARP_STEPSIZE_OPTIONS;
-		params[ARP_PARAM_GATE].value = 1/4.0f;
-		params[ARP_PARAM_PATTERN].value = 0;
-		getAutomation(0)->quantizationSteps = 1;
-		getAutomation(1)->quantizationSteps = NUM_ARP_STEPSIZE_OPTIONS-1;
+//		setParamValue(ARP_PARAM_ENABLED, 0, FLG_PAR_UPDATE_INIT);
+//		setParamValue(ARP_PARAM_CLOCK, 10/(double)NUM_ARP_STEPSIZE_OPTIONS, FLG_PAR_UPDATE_INIT);
+//		setParamValue(ARP_PARAM_GATE, 1/4.0f, FLG_PAR_UPDATE_INIT);
+//		setParamValue(ARP_PARAM_PATTERN, 0, FLG_PAR_UPDATE_INIT);
+		getAutomation(PARAM_ENABLE)->quantizationSteps = 1;
+		getAutomation(ARP_PARAM_CLOCK)->quantizationSteps = NUM_ARP_STEPSIZE_OPTIONS-1;
 	}
 	~midiarp() {
 
@@ -107,22 +100,13 @@ public:
 		markers.clear();
 	}
 	float getGateF() {
-		return params[ARP_PARAM_GATE].value;
-	}
-	void setGateF(float f) {
-		params[ARP_PARAM_GATE].value = f;
+		return getParamValue(ARP_PARAM_GATE);
 	}
 	float getPatternF() {
-		return params[ARP_PARAM_PATTERN].value;
-	}
-	void setPatternF(float f) {
-		params[ARP_PARAM_PATTERN].value = f;
+		return getParamValue(ARP_PARAM_PATTERN);
 	}
 	float getClockF() {
-		return params[ARP_PARAM_CLOCK].value;
-	}
-	void setClockF(float f) {
-		params[ARP_PARAM_CLOCK].value = math::max(0.0f, math::min(1.0f, f));
+		return getParamValue(ARP_PARAM_CLOCK);
 	}
 	tick_t getStepSize() {
 		int32_t option = (int32_t)std::floor(getClockF()*(NUM_ARP_STEPSIZE_OPTIONS-1));
@@ -183,10 +167,9 @@ public:
 		return f;
 	}
 	float getParamValue(int32_t idx) override {
-		if (idx >= 0 && idx < (int)params.size()) {
-			return convertValFrom(idx, params[idx].value);
-		}
-		return 0.0f;
+		automatable_param_t* param = getParam(idx);
+		assert(param);
+		return convertValFrom(idx, param->value);
 	}
 	void onEnable() {
 
@@ -195,21 +178,18 @@ public:
 
 	}
 	void setParamValue(int32_t idx, float val, int flags) override {
-		if (idx >= 0 && idx < (int)params.size()) {
-			auto& param = params[idx];
-			param.value = val;
-			if (param.idx == PARAM_ENABLE) {
-				bool wasEnable = this->enable;
-				this->enable = val > 0;
-				if (this->enable != wasEnable) {
-					if (this->enable) {
-						onEnable();
-					} else {
-						onDisable();
-					}
+		automatable_param_t* param = getParam(idx);
+		assert(param);
+		param->value = convertValTo(idx, val);
+		if (param->idx == PARAM_ENABLE) {
+			bool wasEnable = this->enable;
+			this->enable = val > 0;
+			if (this->enable != wasEnable) {
+				if (this->enable) {
+					onEnable();
+				} else {
+					onDisable();
 				}
-			} else {
-				params[idx].value = convertValTo(idx, val);
 			}
 		}
 	}
