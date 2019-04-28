@@ -204,7 +204,7 @@ public:
 				dbfs -= delta * disty;
 				float f = dsp_util::fromdBFS(dbfs);
 				float fNew = dsp_util::clampGain(f);
-				audio->mixer.deactivateAutomation(1);
+				audio->mixer.deactivateAutomation(PARAM_TRACK_GAIN);
 				audio->mixer.setGain(fNew);
 			}
 		}

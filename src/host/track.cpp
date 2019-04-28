@@ -830,7 +830,7 @@ void track_params_t::loadSnapshot(const track_params_snapshot_t& snapshot) {
 	loadAutomation(snapshot.automatedParams, this);
 }
 void track_params_t::postSetParameter(int32_t idx, float preVal, float val, int flags) {
-	if (flags != 2) {
+	if (flags != FLG_PAR_UPDATE_USER) {
 		return;
 	}
 	assert(this->audiostage->getTrack());
@@ -838,6 +838,43 @@ void track_params_t::postSetParameter(int32_t idx, float preVal, float val, int 
 	automationlane_snapshot_t ref = toRef();
 	parameter_ref_t p = {track->idx,  ref.type, 0, idx};
 	MainCtrl::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
+}
+
+track_params_t::track_params_t(audio_stage_t* _audiostage) : automatable_t(), audiostage(_audiostage) {
+	const std::array<track_param_entry_t, 2> parameterTypes {{
+		track_param_entry_t { PARAM_ENABLE, "Enabled", 1.0f },
+		track_param_entry_t { PARAM_TRACK_GAIN, "Gain", gainToLinScale(1.0f) },
+	}};
+	for (const track_param_entry_t& paramEntry : parameterTypes) {
+		automatable_param_t* regparam = registerParam(paramEntry.id);
+		regparam->value = paramEntry.val;
+		regparam->label = paramEntry.name;
+		regparam->shortLabel = paramEntry.name;
+	}
+	getAutomation(PARAM_ENABLE)->quantizationSteps = 1;
+}
+
+float track_params_t::getParamValue(int32_t idx) {
+	automatable_param_t* param = getParam(idx);
+	assert(param);
+	//		return convertValFrom(idx, param->value);
+	return param->value;
+}
+
+void track_params_t::setParamValue(int32_t idx, float val, int flags) {
+	automatable_param_t* param = getParam(idx);
+	assert(param);
+	param->value = val; //convertValTo(idx, val);
+}
+
+float track_params_t::getGain() {
+	assert(getParam(PARAM_TRACK_GAIN));
+	return linScaleToGain(getParam(PARAM_TRACK_GAIN)->value);
+}
+
+void track_params_t::setGain(float f) {
+	assert(getParam(PARAM_TRACK_GAIN));
+	getParam(PARAM_TRACK_GAIN)->value = gainToLinScale(f);
 }
 const char* trackTypeNames[5] = {
 	"Master", "Return", "Midi", "Audio", NULL

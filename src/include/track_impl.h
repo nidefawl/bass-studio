@@ -34,20 +34,7 @@ private:
 	};
 
 public:
-	track_params_t(audio_stage_t* _audiostage)
-	  : automatable_t(), audiostage(_audiostage) {
-		const std::array<track_param_entry_t, 2> parameterTypes { {
-			track_param_entry_t{PARAM_ENABLE, "Enabled", 1.0f},
-			track_param_entry_t{PARAM_TRACK_GAIN, "Gain", 1.0f},
-		} };
-		for (const track_param_entry_t& paramEntry : parameterTypes) {
-			automatable_param_t* regparam = registerParam(paramEntry.id);
-			regparam->value = paramEntry.val;
-			regparam->label = paramEntry.name;
-			regparam->shortLabel = paramEntry.name;
-		}
-		getAutomation(PARAM_ENABLE)->quantizationSteps = 1;
-	}
+	track_params_t(audio_stage_t* _audiostage);
 	const float lvlRange = dsp_util::DBFS_MUTE_POS - dsp_util::MTR_CEIL;
 	const float EXP = 2.0f;
 	float gainToLinScale(float f) {
@@ -61,49 +48,25 @@ public:
 		float f2 = (f1 * lvlRange)+dsp_util::MTR_CEIL;
 		return dsp_util::fromdBFS(f2);
 	}
-	float convertValFrom(int32_t idx, float f) {
-		if (idx == 1) {
-			float f2 = gainToLinScale(f);
-			return f2;
-		}
-		return f;
-	}
-	float convertValTo(int32_t idx, float f) {
-		if (idx == 1) {
-			return linScaleToGain(f);
-		}
-		return f;
-	}
 	String getAutomatableName() override {
 		return "Mixer";
 	}
-	float getParamValue(int32_t idx) override {
-		automatable_param_t* param = getParam(idx);
-		assert(param);
-		return convertValFrom(idx, param->value);
-	}
-	void setParamValue(int32_t idx, float val, int flags) override {
-		automatable_param_t* param = getParam(idx);
-		assert(param);
-		param->value = convertValTo(idx, val);
-	}
+	float getParamValue(int32_t idx) override;
+	void setParamValue(int32_t idx, float val, int flags) override;
 	automationlane_snapshot_t toRef() override {
 		automationlane_snapshot_t ref;
 		ref.type = AUTOMATABLE_MIXER;
 		ref.refId = 0;
 		return ref;
 	}
+	float getGain();
+	void setGain(float f);
+	bool isEnabled() {
+		assert(getParam(PARAM_ENABLE));
+		return getParam(PARAM_ENABLE)->value >= 0.5f;
+	}
 	void createSnapshot(track_params_snapshot_t& snapshot);
 	void loadSnapshot(const track_params_snapshot_t& snapshot);
-	float getGain() {
-		return getParamValue(PARAM_TRACK_GAIN);
-	}
-	void setGain(float f) {
-		setParamValue(PARAM_TRACK_GAIN, f, FLG_PAR_UPDATE_USER);
-	}
-	bool isEnabled() {
-		return getParamValue(PARAM_ENABLE) >= 0.5f;
-	}
 	void postSetParameter(int32_t idx, float preVal, float val, int flags);
 };
 struct audio_stage_ref_t {

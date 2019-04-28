@@ -160,16 +160,10 @@ public:
 	String getAutomatableName() override {
 		return "Arp";
 	}
-	float convertValFrom(int32_t idx, float f) {
-		return f;
-	}
-	float convertValTo(int32_t idx, float f) {
-		return f;
-	}
 	float getParamValue(int32_t idx) override {
 		automatable_param_t* param = getParam(idx);
 		assert(param);
-		return convertValFrom(idx, param->value);
+		return param->value;
 	}
 	void onEnable() {
 
@@ -180,7 +174,7 @@ public:
 	void setParamValue(int32_t idx, float val, int flags) override {
 		automatable_param_t* param = getParam(idx);
 		assert(param);
-		param->value = convertValTo(idx, val);
+		param->value = val;
 		if (param->idx == PARAM_ENABLE) {
 			bool wasEnable = this->enable;
 			this->enable = val > 0;

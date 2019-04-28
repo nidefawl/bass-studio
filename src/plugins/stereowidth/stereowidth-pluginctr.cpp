@@ -184,7 +184,7 @@ public:
 
 
 guicontainer_stereowidth::guicontainer_stereowidth()
-: guictr_base(), knobgain(1+kGain, kGain), knobwidth(1+kStereoWidth, kStereoWidth) {
+: guictr_base(), knobgain(PARAM_OFFSET_EXTERNAL+kGain, kGain), knobwidth(PARAM_OFFSET_EXTERNAL+kStereoWidth, kStereoWidth) {
 	setBackgroundRendered(true);
 	padding = 4;
 	margin = 4;

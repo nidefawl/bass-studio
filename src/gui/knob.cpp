@@ -209,7 +209,7 @@ void guiknob::setAutomationHandlers() {
 	};
 	fnValueEditFinish = [this](float preVal, float val) {
 		if (paramAutomatable) {
-			paramAutomatable->postSetParameter(paramIdx, preVal, val, 2);
+			paramAutomatable->postSetParameter(paramIdx, preVal, val, FLG_PAR_UPDATE_USER);
 		}
 	};
 }
