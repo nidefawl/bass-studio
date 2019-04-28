@@ -20,7 +20,6 @@ void guitooltip<guibuttonbase>::layout()  {
 	table.titleCols.clear();
 	table.colSizes.clear();
 //	row1.cols.push_back();
-	using tbl_rows = std::vector<table_entry_t>;
 	{
 
 		tbl_row_t row{};
