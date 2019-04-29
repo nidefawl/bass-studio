@@ -57,39 +57,8 @@ public:
 			return false;
 		};
 		guiknob* knobs[3] { &clock, &gate, &pattern };
-		int32_t params[3] { ARP_PARAM_CLOCK, ARP_PARAM_GATE, ARP_PARAM_PATTERN };
-		int idx = 0;
 		for (guiknob* knob : knobs) {
-			const int32_t paramIdx = params[idx++];
-//
-			knob->fnSetValue = [this,paramIdx](float f, int flags) {
-				auto arp = getArp();
-				if (arp) {
-			    	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-					automation_t* param = arp->getAutomation(paramIdx);
-					if (param) {
-						param->active = false;
-					}
-					arp->setParamValue(paramIdx, math::max(0.0f, math::min(1.0f, f)), flags);
-				}
-			};
-			knob->fnValueEditFinish = [this,paramIdx](float preVal, float val) {
-				auto arp = getArp();
-				if (arp) {
-					arp->postSetParameter(paramIdx, preVal, val, 2);
-				}
-			};
-			knob->fnGetValue = [this, paramIdx](void) {
-				auto arp = getArp();
-				if (arp) {
-					return arp->getParamValue(paramIdx);
-				}
-				return 0.0f;
-			};
-			knob->fnFocus = [this, paramIdx](MouseHitEvt& evt, bool focused) {
-				MainCtrl::get()->showAutomation(clipview.track(), getArp(), paramIdx);
-			};
-
+			knob->setAutomationHandlers();
 		}
 	}
 	void buttonClicked(guibase* _button);
@@ -132,11 +101,6 @@ public:
 		}
 	}
 
-//	virtual void renderDragged(NVGcontext* vg, ivec2 mousepos) {
-//		mousepos -= pos;
-//		nvgTranslate(vg, mousepos.x, mousepos.y);
-//		render(vg);
-//	}
 	String formatParameterValue(guiknob* knob) {
 		midiarp* arp = getArp();
 		if (!arp) return "";

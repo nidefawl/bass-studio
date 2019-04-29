@@ -55,7 +55,6 @@ public:
 			}
 		};
 #ifdef BUILD_BUILTIN_EFFECT
-		fnFocus = [this](MouseHitEvt& evt, bool focused) {focusEvent(evt, focused);};//dumb??
 		setAutomationHandlers();
 #endif
 	}
@@ -66,16 +65,6 @@ public:
 		hostSidePlugin = _hostSidePlugin;
 		paramAutomatable = _hostSidePlugin;
 	}
-    virtual bool focusEvent(MouseHitEvt& evt, bool focused) override {
-    	if (focused && paramAutomatable) {
-    		MainCtrl* ctrl = dynamic_cast<MainCtrl*>(getControl());
-			assert(ctrl);
-    		if (ctrl) {
-        		ctrl->showAutomation(hostSidePlugin->getTrack(), hostSidePlugin, paramIdx);
-    		}
-    	}
-    	return true;
-    }
 	void handleRightClick(MouseEvent& evt) override {
     	if (this->hostSidePlugin) {
     		MainCtrl* ctrl = dynamic_cast<MainCtrl*>(getControl());

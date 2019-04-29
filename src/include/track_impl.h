@@ -26,7 +26,7 @@ struct audio_stage_t;
 
 struct track_params_t : public automatable_t {
 private:
-	audio_stage_t* audiostage;
+	audio_stage_t* const audiostage;
 	struct track_param_entry_t {
 		int32_t id;
 		String name;
@@ -59,6 +59,7 @@ public:
 		ref.refId = 0;
 		return ref;
 	}
+	track_t* getTrack() override;
 	float getGain();
 	void setGain(float f);
 	bool isEnabled() {

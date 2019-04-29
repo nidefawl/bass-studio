@@ -55,7 +55,7 @@ effectbase::effectbase(String _sName, int32_t _pluginType, int32_t _projectGloba
 		regparam->label = paramEntry.name;
 		regparam->shortLabel = paramEntry.name;
 	}
-	getAutomation(PARAM_ENABLE)->quantizationSteps = 1;
+	getOrCreateAutomation(PARAM_ENABLE)->quantizationSteps = 1;
 }
 effectbase::effectbase() : pluginType(0), projectGlobalId(0), sName("") {
 

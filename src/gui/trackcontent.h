@@ -173,9 +173,9 @@ public:
 	virtual int subtrackType() { return SUBTRACK_TYPE_EMPTY; }
 	automation_t* getAutomation() {
 		if (at) {
-			return at->getAutomation(param);
+			return at->getRegisteredAutomation(param);
 		}
-		return NULL;
+		return nullptr;
 	}
 	void handleRightClick(MouseEvent& evt) override;
 	virtual void updateVisibleTrackContents(scaled_grid& grid);

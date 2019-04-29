@@ -73,7 +73,7 @@ public:
 	virtual void load(vsthost* host) { assert(nLoadCalls==0); nLoadCalls++; };
 	virtual int32_t getDelay() = 0;
 	virtual String getInfo(std::vector<String>& list) = 0;
-	track_t* getTrack();
+	track_t* getTrack() override;
 	virtual void onTick(double since);
 	virtual void getChildAudioStages(std::vector<audio_stage_t*>& targets) {
 

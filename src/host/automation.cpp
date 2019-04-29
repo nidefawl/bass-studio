@@ -199,7 +199,7 @@ void loadAutomation(const std::vector<automation_view_t>& automatedParams, autom
 
 		}
 		if (at->getParam(targetParam)) {
-			automation_t* autom = at->getAutomation(targetParam);
+			automation_t* autom = at->getOrCreateAutomation(targetParam);
 			autom->points = automatedParam.points;
 			autom->active = automatedParam.active;
 		}

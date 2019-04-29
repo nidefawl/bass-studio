@@ -257,7 +257,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 		automatable_t* automatable = this->at;
 		automation_t* automation = NULL;
 		if (automatable) {
-			automation = automatable->getAutomation(param);
+			automation = automatable->getOrCreateAutomation(param);
 		}
 		if (automation) {
 			bool activate = automation->points.empty() && !data.points.empty();

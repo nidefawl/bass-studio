@@ -15,7 +15,7 @@
 #define AUTOMATABLE_MIXER 0
 #define AUTOMATABLE_ARP 1
 #define AUTOMATABLE_EFFECT 2
-
+class track_t;
 struct automation_point_t {
 	tick_t time;
 	float val;
@@ -135,9 +135,7 @@ public:
         	_out.push_back(&mapEntry.second);
         });
         std::sort(_out.begin(), _out.end(), [](const automatable_param_t* a, const automatable_param_t* b) {
-        	if (a->idx == b->idx)
-        		return 0;
-        	return a->idx < b->idx ? -1 : 1;
+        	return a->idx < b->idx;
         });
 	}
 
@@ -145,17 +143,18 @@ public:
 	virtual float getParamValue(int32_t idx) = 0;
 	virtual void setParamValue(int32_t idx, float val, int flags) = 0;
 	virtual automationlane_snapshot_t toRef() = 0;
+	virtual track_t* getTrack() = 0;
 
 	virtual void flipParamValue(int32_t idx) {
 		setParamValue(idx, 1.0f-getParamValue(idx), FLG_PAR_UPDATE_USER);
 	}
 	int32_t getQuantizationSteps(int32_t idx) {
-		automation_t* at = getAutomation(idx);
+		automation_t* at = getOrCreateAutomation(idx);
 		assert(at);
 		return at->quantizationSteps;
 	}
 	float quantizeVal(int32_t idx, float f) {
-		automation_t* at = getAutomation(idx);
+		automation_t* at = getOrCreateAutomation(idx);
 		assert(at);
 		f = quantizeFloat(f, at->quantizationSteps);
 		return f;
@@ -182,18 +181,6 @@ public:
 				setParamValue(param.paramIdx, val, FLG_PAR_UPDATE_AUTOMATED);
 			}
 		}
-	}
-	automation_t* getAutomation(int32_t paramIdx) {
-		if (mapParams.find(paramIdx) == mapParams.end()) {
-			return nullptr;
-		}
-		for (automated_param_t& param : automatedParams) {
-			if (paramIdx == param.paramIdx) {
-				return &param.src;
-			}
-		}
-		automatedParams.emplace_back(paramIdx);
-		return &automatedParams.back().src;
 	}
 	void deactivateAutomation(int32_t paramIdx) {
 		for (automated_param_t& param : automatedParams) {
@@ -233,16 +220,28 @@ public:
 		}
 		return nullptr;
 	}
-	automated_param_t* getRegisteredAutomation(int32_t idx) {
-		auto it = std::find_if(automatedParams.begin(), automatedParams.end(), [idx](automated_param_t& ap) {
-			return ap.paramIdx == idx;
+	automation_t* getRegisteredAutomation(int32_t paramIdx) {
+		assert(mapParams.count(paramIdx));
+		auto it = std::find_if(automatedParams.begin(), automatedParams.end(), [paramIdx](automated_param_t& ap) {
+			return ap.paramIdx == paramIdx;
 		});
 		if (it != automatedParams.end()) {
 			automated_param_t* ap = &(*it);
 			if (ap->src.isAutomated())
-				return ap;
+				return &(*it).src;
 		}
-		return NULL;
+		return nullptr;
+	}
+	automation_t* getOrCreateAutomation(int32_t paramIdx) {
+		assert(mapParams.count(paramIdx));
+		auto it = std::find_if(automatedParams.begin(), automatedParams.end(), [paramIdx](automated_param_t& ap) {
+			return ap.paramIdx == paramIdx;
+		});
+		if (it != automatedParams.end()) {
+			return &(*it).src;
+		}
+		automatedParams.emplace_back(paramIdx);
+		return &automatedParams.back().src;
 	}
 	void getAllAutomatedParams(std::vector<automated_param_t>& out) {
 		for (automated_param_t& t : automatedParams) {

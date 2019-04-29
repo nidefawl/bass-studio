@@ -323,14 +323,8 @@ public:
 		icon = 0;
 		knobTest.setAutomationRef(effect, entry->idx);
 		knobTest.setAutomationHandlers();
-		knobTest.fnFocus = [this](MouseHitEvt& evt, bool focused) {focusEvent(evt, focused);};
 		knobTest.setParent(this);
 	}
-    virtual bool focusEvent(MouseHitEvt& evt, bool focused) override {
-    	if (focused)
-    		MainCtrl::get()->showAutomation(effect->getTrack(), effect, entry->idx);
-    	return true;
-    }
 	void handleRightClick(MouseEvent& evt) override {
 		guictxtmenu_base* ctxt = new guictxtmenu_vstparam(effect, entry);
 		MainCtrl::get()->openContextMenu(ctxt, evt.mousepos);

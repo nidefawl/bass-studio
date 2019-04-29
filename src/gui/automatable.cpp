@@ -13,7 +13,7 @@
 void addContextEntriesAutomation(guictxtmenu* ctxt, track_t* tr, automatable_t* atl, int paramIdx) {
 
 	MainCtrl::get()->showAutomation(tr, atl, paramIdx);
-	automation_t* at = atl->getAutomation(paramIdx);
+	automation_t* at = atl->getRegisteredAutomation(paramIdx);
 	if (at && at->isAutomated()) {
 		if (!at->active) {
 			ctxt->addEntry(new ctxtmenu_entry("Reenable Automation", ID_REENABLE));
@@ -24,7 +24,7 @@ void addContextEntriesAutomation(guictxtmenu* ctxt, track_t* tr, automatable_t* 
 	ctxt->addEntry(new ctxtmenu_entry("Show in new Automation Lane", ID_SHOW_NEW));
 }
 bool handleAutomatbleContextMenu(track_t* tr, automatable_t* at, int paramIdx, int _id) {
-	automation_t* param = at->getAutomation(paramIdx);
+	automation_t* param = at->getRegisteredAutomation(paramIdx);
 	switch (_id) {
 		case ID_SHOW_NEW: {
 			gui_track_automationlane* lane = MainCtrl::getGuiTrackCtr()->addAutomationLane(tr, at, paramIdx, true);

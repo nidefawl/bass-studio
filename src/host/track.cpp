@@ -191,7 +191,6 @@ void track_t::loadPluginAutomationParameters(const track_impl_snapshot_t& trackS
 void track_t::releaseTrackContent() {
 }
 void trackdata_midi_t::deleteClips(delete_cb *cb) {
-	std::vector<clip_t*>::iterator it = clips.begin();
 	for (auto clip : clips) {
 		releaseClipResources(clip, cb);
 	}
@@ -851,7 +850,12 @@ track_params_t::track_params_t(audio_stage_t* _audiostage) : automatable_t(), au
 		regparam->label = paramEntry.name;
 		regparam->shortLabel = paramEntry.name;
 	}
-	getAutomation(PARAM_ENABLE)->quantizationSteps = 1;
+	for (int i = 0; i < MAX_SEND_CHANNELS; i++) {
+		automatable_param_t* regparam = registerParam(PARAM_OFFSET_SEND+i);
+		regparam->label = StringFormat("Send %d", (i+1));
+		regparam->shortLabel = regparam->label;
+	}
+	getOrCreateAutomation(PARAM_ENABLE)->quantizationSteps = 1;
 }
 
 float track_params_t::getParamValue(int32_t idx) {
@@ -875,6 +879,9 @@ float track_params_t::getGain() {
 void track_params_t::setGain(float f) {
 	assert(getParam(PARAM_TRACK_GAIN));
 	getParam(PARAM_TRACK_GAIN)->value = gainToLinScale(f);
+}
+track_t* track_params_t::getTrack() {
+	return audiostage->getTrack();
 }
 const char* trackTypeNames[5] = {
 	"Master", "Return", "Midi", "Audio", NULL

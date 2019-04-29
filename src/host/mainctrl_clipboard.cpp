@@ -112,13 +112,11 @@ void MainCtrl::pasteClipboard(clip_clipboard* clipboard, Cursor& cursor) {
 				if (tr->validSubtrack(subTrackIdx)) {
 					gui_track_subtrack* subtrack = tr->subtracks[subTrackIdx];
 					std::vector<automation_point_t>& data = clipboard->automationLanes[i];
-					automatable_t* automatable = subtrack->at;
-					automation_t* automation = NULL;
-					if (automatable) {
-						automation = automatable->getAutomation(subtrack->param);
-					}
-					if (automation) {
-						automation->setRange(tickBegin, tickBegin+tickLen, data);
+					if (data.size() && subtrack->at) {
+						automation_t* automation = subtrack->at->getOrCreateAutomation(subtrack->param);
+						if (automation) {
+							automation->setRange(tickBegin, tickBegin+tickLen, data);
+						}
 					}
 				}
 
@@ -172,12 +170,13 @@ shared_ptr<clip_clipboard> MainCtrl::copySelection(const Cursor& _cursor) {
 					automatable_t* automatable = subtrack->at;
 					automation_t* automation = NULL;
 					if (automatable) {
-						automation = automatable->getAutomation(subtrack->param);
+						automation = automatable->getRegisteredAutomation(subtrack->param);
 					}
 
 					std::vector<automation_point_t> data;
-					if (automation)
-					automation->copyRange(tickBegin, tickEnd, data);
+					if (automation) {
+						automation->copyRange(tickBegin, tickEnd, data);
+					}
 					clipboard->automationLanes.push_back(std::move(data));
 
 				}

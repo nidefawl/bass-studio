@@ -13,6 +13,7 @@
 #include "table.h"
 #include "logging.h"
 #include "automation.h"
+#include "host/mainctrl.h"
 
 namespace GuiColor {
 constant_t COL_KNOB("COL_KNOB", 0xff00ddff);
@@ -53,7 +54,7 @@ bool guiknob::isAutomated() {
 #ifdef BUILD_BUILTIN_EFFECT
 	if (paramAutomatable) {
 		auto at = paramAutomatable->getRegisteredAutomation(paramIdx);
-		return at && at->src.isAutomated();
+		return at && at->isAutomated();
 	}
 #endif
 	return false;
@@ -199,7 +200,8 @@ void guiknob::setAutomationHandlers() {
 	};
 	fnSetValue = [this] (float f, int flags) {
 		if (paramAutomatable) {
-			automation_t* param = paramAutomatable->getAutomation(paramIdx);
+			ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+			automation_t* param = paramAutomatable->getRegisteredAutomation(paramIdx);
 			if (param) {
 				param->active = false;
 			}
@@ -209,6 +211,11 @@ void guiknob::setAutomationHandlers() {
 	fnValueEditFinish = [this](float preVal, float val) {
 		if (paramAutomatable) {
 			paramAutomatable->postSetParameter(paramIdx, preVal, val, FLG_PAR_UPDATE_USER);
+		}
+	};
+	fnFocus = [this](MouseHitEvt& evt, bool focused) {
+		if (paramAutomatable) {
+			MainCtrl::get()->showAutomation(paramAutomatable->getTrack(), paramAutomatable, paramIdx);
 		}
 	};
 }

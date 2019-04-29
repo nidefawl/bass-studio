@@ -133,7 +133,7 @@ public:
 	bool isAutomated() {
 		if (m_track->audio) {
 			auto at = m_track->audio->mixer.getRegisteredAutomation(PARAM_TRACK_GAIN);
-			return at && at->src.isAutomated();
+			return at && at->isAutomated();
 		}
 		return false;
 	}
@@ -249,6 +249,8 @@ public:
 		btnBypass.drawFn = drawTextureSymbol;
 		btnBypass.drawParm = ICON_BYPASS;
 		btnActivate.setButtonColor(GuiColor::COL_BTN_LOAD_DEF_PLUGINS);
+		btnActivate.setLabel("Load plugins");
+		btnShowSubtrack.setLabel("Add audio subtrack");
 		add(&btnBypass);
 		add(&btnActivate);
 		add(&gain);
@@ -371,20 +373,18 @@ public:
 		this->fontSize = FONT_SIZE_CTXT_SMALL;
 		this->paddingV = 0;
 		automatable_t* autom = m_track->audio->selectedAutomationCtr;
+		addEntry(new ctxtmenu_entry("None", 0));
 		if (autom) {
-			addEntry(new ctxtmenu_entry("None", 0));
 			std::vector<automatable_param_t*> sortedParams;
 			autom->getSortedParams(sortedParams);
 		    std::for_each(sortedParams.begin(), sortedParams.end(), [this](automatable_param_t* param) {
-				if (param->internalIdx >= 0)
-					addEntry(new ctxtmenu_entry(param->label, 1+param->idx));
+				addEntry(new ctxtmenu_entry(param->label, 1+param->idx));
 		    });
 		}
 	}
 	void clickedElement(ctxtmenu_entry* e, int _id) override {
-		if (_id == 0) {
-			m_track->audio->selectedAutomationParam = -1;
-		} else {
+		m_track->audio->selectedAutomationParam = -1;
+		if (_id > 0) {
 			automatable_t* autom = m_track->audio->selectedAutomationCtr;
 			if (autom) {
 				const int32_t paramIdx = _id - 1;
@@ -681,7 +681,7 @@ public:
 			target = StringFormat("%s %08X", StringAsCStr(ctr->getAutomatableName()), ctr);
 			int32_t idx = al->param;
 			if (idx >= 0) {
-				automation_t* automation = ctr->getAutomation(idx);
+				automation_t* automation = ctr->getRegisteredAutomation(idx);
 				if (automation) {
 					curvalue = StringFormat("%s (%d) %f", StringAsCStr(ctr->getParamName(idx)), idx, automation->getValueAt(ctrl->cursor.cursorPos));
 				} else {

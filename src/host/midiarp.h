@@ -56,7 +56,7 @@ private:
 	int noteIdx = 0;
 	std::array<tick_t, 16*3> tickLength;
 	int32_t numCalls = 0;
-	track_impl_t* trackImpl;
+	track_impl_t* const trackImpl;
 public:
 	bool enable = false;
 	midiarp(track_impl_t* _trImpl) : automatable_t(), trackImpl(_trImpl) {
@@ -81,8 +81,8 @@ public:
 //		setParamValue(ARP_PARAM_CLOCK, 10/(double)NUM_ARP_STEPSIZE_OPTIONS, FLG_PAR_UPDATE_INIT);
 //		setParamValue(ARP_PARAM_GATE, 1/4.0f, FLG_PAR_UPDATE_INIT);
 //		setParamValue(ARP_PARAM_PATTERN, 0, FLG_PAR_UPDATE_INIT);
-		getAutomation(PARAM_ENABLE)->quantizationSteps = 1;
-		getAutomation(ARP_PARAM_CLOCK)->quantizationSteps = NUM_ARP_STEPSIZE_OPTIONS-1;
+		getOrCreateAutomation(PARAM_ENABLE)->quantizationSteps = 1;
+		getOrCreateAutomation(ARP_PARAM_CLOCK)->quantizationSteps = NUM_ARP_STEPSIZE_OPTIONS-1;
 	}
 	~midiarp() {
 
@@ -192,6 +192,10 @@ public:
 		ref.type = AUTOMATABLE_ARP;
 		ref.refId = 0;
 		return ref;
+	}
+	track_t* getTrack() override {
+		assert(this->trackImpl);
+		return this->trackImpl->getTrack();
 	}
 	void createSnapshot(arp_snapshot& snapshot);
 	void loadSnapshot(const arp_snapshot& snapshot);
