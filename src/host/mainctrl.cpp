@@ -439,7 +439,6 @@ void MainCtrl::loadFile(String path) {
 }
 void MainCtrl::setEmptyProject() {
 	ThreadLock lock = playThread.lockThread();
-	auto& tracks = trackCtr.tracks;
 	unloadProject();
 	assert(getNumClipAllocations() == 0);
 	insertNewTrack(-1, TRACK_TYPE_MIDI, FLG_TRK_CHANGE_LOAD);
@@ -818,7 +817,6 @@ bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file, int flags) {
 			NVGcolor col = getTheme()->getColor(GuiColor::COL_CLEAR_COLOR);
 			glClearColor(col.r, col.g, col.b, col.a);
 			glClear(GL_COLOR_BUFFER_BIT);
-			static int test = 0;
 			float ratio = 1.0;
 			nvgBeginFrame(vg, m_size.x, m_size.y, ratio);
 			nvgLineJoin(vg, NVGlineCap::NVG_BEVEL);

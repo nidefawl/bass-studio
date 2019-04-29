@@ -332,7 +332,7 @@ int main(int argc, char* argv[]) {
 					queryInsertPlugin.bind(bndIdx++, file.path);
 					queryInsertPlugin.bind(bndIdx++, data.szName);
 					queryInsertPlugin.bind(bndIdx++, data.szVendorName);
-					int insertRowsAffected = queryInsertPlugin.exec();
+					/*int insertRowsAffected = */queryInsertPlugin.exec();
 //					LOG("insertRowsAffected %d",insertRowsAffected);
 				} catch (SQLite::Exception& e) {
 					std::cout << "queryInsertPlugin exception: " << e.getErrorStr() << std::endl;

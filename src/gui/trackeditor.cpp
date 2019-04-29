@@ -716,7 +716,7 @@ void guitrack_editor::prerender(NVGcontext* vg) {
 							waveformrender::getInstance()->release(&waveformRef);
 							if (waveform.size.x > 0 && waveform.size.y > 0) {
 								waveformRef.waveform = waveform;
-								int ret = waveformrender::getInstance()->queueUpdate(audio, &waveformRef);
+								/*int ret = */waveformrender::getInstance()->queueUpdate(audio, &waveformRef);
 							}
 
 	//						waveformRef.fbId = ret;

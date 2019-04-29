@@ -45,9 +45,8 @@ void guitooltip<guiknob>::layout()  {
 }
 
 guictxtmenu_base* guiknob::getTooltip(AppCtrl* appctrl) {
-	auto tooltip = new guitooltip<guiknob>(this); //why does casting m_clip to (clip_t*) break the ptr?
+	auto tooltip = new guitooltip<guiknob>(this);
 	return tooltip;
-//	appctrl->openContextMenu(tooltip, appctrl->m_mousePos);
 }
 
 bool guiknob::isAutomated() {

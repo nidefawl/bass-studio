@@ -399,7 +399,6 @@ void clip_notes_t::selectIdxRange(size_t start, size_t end) {
 	}
 }
 void clip_notes_t::updateBounds() {
-	bool first = true;
 	minNote = note_t();
 	maxNote = minNote;
 	firstNote = minNote;

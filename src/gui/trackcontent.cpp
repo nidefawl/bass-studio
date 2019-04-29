@@ -227,9 +227,8 @@ void guitooltip<clip_t>::layout()  {
 }
 
 guictxtmenu_base* gui_audio_clip::getTooltip(AppCtrl* appctrl) {
-	auto tooltip = new guitooltip<clip_t>(this->m_clip); //why does casting m_clip to (clip_t*) break the ptr?
+	auto tooltip = new guitooltip<clip_t>(this->m_clip);
 	return tooltip;
-//	appctrl->openContextMenu(tooltip, appctrl->m_mousePos);
 }
 void gui_audio_clip::onIdle() {
 //	cachedaudio_t* audio = audiocache::getInstance()->get(m_clip->audio.id);

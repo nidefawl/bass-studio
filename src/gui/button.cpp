@@ -84,9 +84,8 @@ void guibuttonbase::renderButtonLabel(NVGcontext* vg, int32_t stateFlags) {
 guictxtmenu_base* guibuttonbase::getTooltip(AppCtrl* appctrl) {
 	if (!label.empty()) {
 
-		auto tooltip = new guitooltip<guibuttonbase>(this); //why does casting m_clip to (clip_t*) break the ptr?
+		auto tooltip = new guitooltip<guibuttonbase>(this);
 		return tooltip;
 	}
-//	appctrl->openContextMenu(tooltip, appctrl->m_mousePos);
 	return nullptr;
 }
