@@ -440,7 +440,11 @@ void MainCtrl::loadFile(String path) {
 void MainCtrl::setEmptyProject() {
 	ThreadLock lock = playThread.lockThread();
 	unloadProject();
-	assert(getNumClipAllocations() == 0);
+	int totalAllocs = getNumClipAllocations();
+	if (totalAllocs != 0) {
+		log_printf("getNumClipAllocations == %d!\n", totalAllocs);
+		assert(getNumClipAllocations() == 0);
+	}
 	insertNewTrack(-1, TRACK_TYPE_MIDI, FLG_TRK_CHANGE_LOAD);
 	insertNewTrack(-1, TRACK_TYPE_MASTER, FLG_TRK_CHANGE_LOAD);
 }
