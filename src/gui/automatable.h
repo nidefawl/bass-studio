@@ -3,5 +3,6 @@
 #include "automation.h"
 #include "guicontextmenu.h"
 
-void addContextEntriesAutomation(guictxtmenu* ctxt, track_t* tr, automatable_t* atl, int paramIdx);
-bool handleAutomatbleContextMenu(track_t* tr, automatable_t* at, int paramIdx, int _id);
+void addContextEntriesAutomation(guictxtmenu* ctxt, automatable_t* atl, int paramIdx);
+bool handleAutomatbleContextMenu(automatable_t* at, int paramIdx, int _id);
+

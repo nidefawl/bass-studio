@@ -163,10 +163,11 @@ public:
 	}
 };
 
-class guictxtmenu_vstparam : public guictxtmenu {
-	effectbase* const effect;
-	automatable_param_t* const entry;
+
+class guictxtmenu_at_param : public guictxtmenu {
+	automatable_t* const atl;
+	int32_t const paramIdx;
 public:
-	guictxtmenu_vstparam(effectbase* _effect, automatable_param_t* _entry);
+	guictxtmenu_at_param(automatable_t* _atl, int32_t _paramIdx);
 	void clicked(int _id);
 };

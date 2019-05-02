@@ -99,49 +99,28 @@ void resize(track_t* m_track, T* al, int32_t mouseDragDist, int32_t heightStep) 
 }
 
 
-
-class guictxtmenu_trackparam : public guictxtmenu {
-	track_t* const track;
-	automatable_t* const atl;
-	int32_t const paramIdx;
-public:
-	guictxtmenu_trackparam(track_t* _track, automatable_t* _atl, int32_t _paramIdx) : track(_track), atl(_atl), paramIdx(_paramIdx)
-	{
-		this->size.x = 240;
-		addContextEntriesAutomation(this, track, _atl, paramIdx);
-	}
-	void clicked(int _id) {
-		handleAutomatbleContextMenu(track, atl, paramIdx, _id);
-		closeContextMenu();
-	}
-};
 class gui_trackgain: public guibase {
-	track_t* const m_track;
-	bool bEnabled = false;
+	automatable_t* paramAutomatable = nullptr;
+	int32_t paramIdx = -1;
 public:
-	gui_trackgain(track_t* _track) :
-		guibase(), m_track(_track) {
+	gui_trackgain() : guibase() {
 		setCanMouseHit(true);
 	}
-	void handleRightClick(MouseEvent& evt) override {
-		MainCtrl::get()->openContextMenu(new guictxtmenu_trackparam(m_track, &m_track->audio->mixer, PARAM_TRACK_GAIN), evt.mousepos);
+	void setAutomationRef(automatable_t* _paramAutomatable, int32_t _paramIdx) {
+		this->paramAutomatable = _paramAutomatable;
+		this->paramIdx = _paramIdx;
 	}
-	void (*drawFn)(NVGcontext*,ivec2&, ivec2&, const NVGcolor&) = NULL;
-	bool enabled() {
-		return bEnabled;
+	void handleRightClick(MouseEvent& evt) override {
+		assert(paramAutomatable && paramIdx > -1 && paramAutomatable->getParam(paramIdx));
+		MainCtrl::get()->openContextMenu(new guictxtmenu_at_param(paramAutomatable, paramIdx), evt.mousepos);
 	}
 	bool isAutomated() {
-		if (m_track->audio) {
-			auto at = m_track->audio->mixer.getRegisteredAutomation(PARAM_TRACK_GAIN);
-			return at && at->isAutomated();
-		}
-		return false;
+		assert(paramAutomatable && paramIdx > -1 && paramAutomatable->getParam(paramIdx));
+		auto at = paramAutomatable->getRegisteredAutomation(paramIdx);
+		return at && at->isAutomated();
 	}
 	void render(NVGcontext* vg) {
 		renderWidgetBorder(vg, getStateFlags());
-		if (drawFn) {
-			drawFn(vg, pos, size, getBackgroundColor(getStateFlags()));
-		}
 		GuiColor::constant_t valColor;
 		GuiColor::constant_t indColor;
 		if (isAutomated()) {
@@ -151,12 +130,11 @@ public:
 			indColor = GuiColor::COL_KNOB_IND;
 			valColor = GuiColor::COL_KNOB;
 		}
-		track_impl_t* audio = m_track->audio;
-		if (audio) {
+		if (paramAutomatable && paramIdx > -1) {
 			ivec2 insetP = pos+ivec2(1);
 			ivec2 insetS = size-ivec2(2);
-			float f = audio->mixer.getGain();
-			float f2 = (f-dsp_util::GAIN_DBFLOOR) / (dsp_util::GAIN_DB6-dsp_util::GAIN_DBFLOOR);
+			float gainDb = dsp_util::linScaleToGain(paramAutomatable->getParamValue(paramIdx));
+			float f2 = (gainDb-dsp_util::GAIN_DBFLOOR) / (dsp_util::GAIN_DB6-dsp_util::GAIN_DBFLOOR);
 			if (f2 <= 0) {
 				f2 = 0;
 			} else {
@@ -172,7 +150,7 @@ public:
 				nvgFill(vg);
 			}
 			setFont(vg, 20, theme->getContrastColor(valColor), NVG_ALIGN_CENTER|NVG_ALIGN_MIDDLE);
-			String strLvl = StringFormat("%.2f", dsp_util::dBFSClampInf6(audio->mixer.getGain()));
+			String strLvl = StringFormat("%.2f", dsp_util::dBFSClampInf6(gainDb));
 			nvgText(vg, insetP.x + insetS.x / 2.0f, insetP.y + G_FONT_MIDDLE_OFFSET(insetS.y), StringAsCStr(strLvl), NULL);
 		}
 	}
@@ -188,9 +166,8 @@ public:
 			if (!disty)
 				return;
 			evt.dragDistance->y = 0;
-			track_impl_t* audio = m_track->audio;
-			if (audio) {
-				float fGain = audio->mixer.getGain();
+			if (paramAutomatable && paramIdx > -1) {
+				float fGain = dsp_util::linScaleToGain(paramAutomatable->getParamValue(paramIdx));
 				if (fGain < dsp_util::GAIN_DBFLOOR) {
 					fGain = dsp_util::GAIN_DBFLOOR;
 				}
@@ -204,8 +181,8 @@ public:
 				dbfs -= delta * disty;
 				float f = dsp_util::fromdBFS(dbfs);
 				float fNew = dsp_util::clampGain(f);
-				audio->mixer.deactivateAutomation(PARAM_TRACK_GAIN);
-				audio->mixer.setGain(fNew);
+				paramAutomatable->deactivateAutomation(paramIdx);
+				paramAutomatable->getParam(paramIdx)->value = dsp_util::gainToLinScale(fNew);
 			}
 		}
 	}
@@ -226,7 +203,7 @@ public:
 		return trackenabled();
 	}
 	void handleRightClick(MouseEvent& evt) override {
-		MainCtrl::get()->openContextMenu(new guictxtmenu_trackparam(m_track, &m_track->audio->mixer, PARAM_ENABLE), evt.mousepos);
+		MainCtrl::get()->openContextMenu(new guictxtmenu_at_param(&m_track->audio->mixer, PARAM_ENABLE), evt.mousepos);
 	}
 };
 namespace GuiColor {
@@ -741,7 +718,7 @@ public:
 		}
 	}
 	void handleRightClick(MouseEvent& evt) override {
-		MainCtrl::get()->openContextMenu(new guictxtmenu_trackparam(m_track, al->at, al->param), evt.mousepos);
+		MainCtrl::get()->openContextMenu(new guictxtmenu_at_param(al->at, al->param), evt.mousepos);
 	}
 };
 gui_track_controls::gui_track_controls(track_t* _track)

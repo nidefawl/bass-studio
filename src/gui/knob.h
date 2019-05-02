@@ -59,10 +59,7 @@ public:
     	return true;
     }
 	virtual bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset);
-	void handleRightClick(MouseEvent& evt) override {
-		if (parent)
-			parent->rightClicked(evt, this);
-	}
+	void handleRightClick(MouseEvent& evt) override;
 	void renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS);
 	virtual void render(NVGcontext* vg);
 	float getValueInternal() {

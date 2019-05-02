@@ -326,8 +326,7 @@ public:
 		knobTest.setParent(this);
 	}
 	void handleRightClick(MouseEvent& evt) override {
-		guictxtmenu_base* ctxt = new guictxtmenu_vstparam(effect, entry);
-		MainCtrl::get()->openContextMenu(ctxt, evt.mousepos);
+		MainCtrl::get()->openContextMenu(new guictxtmenu_at_param(effect, entry->idx), evt.mousepos);
 	}
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
 		if (this->contains(mpos)) {

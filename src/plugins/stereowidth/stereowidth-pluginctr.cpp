@@ -65,17 +65,6 @@ public:
 		hostSidePlugin = _hostSidePlugin;
 		paramAutomatable = _hostSidePlugin;
 	}
-	void handleRightClick(MouseEvent& evt) override {
-    	if (this->hostSidePlugin) {
-    		MainCtrl* ctrl = dynamic_cast<MainCtrl*>(getControl());
-			assert(ctrl);
-    		if (ctrl) {
-    			automatable_param_t* paramRef = hostSidePlugin->getParam(paramIdx);
-    			assert(paramRef);
-        		ctrl->openContextMenu(new guictxtmenu_vstparam(this->hostSidePlugin, paramRef), evt.mousepos);
-    		}
-    	}
-	}
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
 		if (this->contains(mpos)) {
 			if (evt.type != MouseHitType::MOUSE_RIGHT)

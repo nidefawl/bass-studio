@@ -5,6 +5,7 @@
 #include "guicontainer.h"
 #include "guicolors.h"
 #include "guiconstant.h"
+#include "guicontextmenu_daw.h"
 #include "theme.h"
 #include "guitooltip.h"
 #include "str_util.h"
@@ -305,3 +306,18 @@ void guiknob_labeled_base::render(NVGcontext* vg) {
 	}
 }
 
+void guiknob::handleRightClick(MouseEvent& evt) {
+#ifdef BUILD_BUILTIN_EFFECT
+	if (paramAutomatable && paramIdx > -1) {
+		MainCtrl* ctrl = dynamic_cast<MainCtrl*>(getControl());
+		assert(ctrl);
+		if (ctrl) {
+			assert(paramAutomatable->getParam(paramIdx));
+			ctrl->openContextMenu(new guictxtmenu_at_param(paramAutomatable, paramIdx), evt.mousepos);
+		}
+		return;
+	}
+#endif
+	if (parent)
+		parent->rightClicked(evt, this);
+}

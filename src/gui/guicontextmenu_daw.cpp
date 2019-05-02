@@ -3,12 +3,14 @@
 #include "../host/plugin/base_plugin.h"
 #include "guicontextmenu_daw.h"
 
-guictxtmenu_vstparam::guictxtmenu_vstparam(effectbase* _effect, automatable_param_t* _entry) : effect(_effect), entry(_entry)
+guictxtmenu_at_param::guictxtmenu_at_param(automatable_t* _atl, int32_t _paramIdx)
+	: atl(_atl), paramIdx(_paramIdx)
 {
 	this->size.x = 240;
-	addContextEntriesAutomation(this, effect->getTrack(), effect, entry->idx);
+	addContextEntriesAutomation(this, _atl, paramIdx);
 }
-void guictxtmenu_vstparam::clicked(int _id) {
-	handleAutomatbleContextMenu(effect->getTrack(), effect, entry->idx, _id);
+void guictxtmenu_at_param::clicked(int _id) {
+	handleAutomatbleContextMenu(atl, paramIdx, _id);
 	closeContextMenu();
 }
+
