@@ -17,11 +17,12 @@ public:
 	float fPeak = 0;
 	float fLvl = 0;
 	float fPeakFalloffDelay = 0;
-	void update(float* fBuf, uint32_t samples) {
+	void update(float* fBuf, uint32_t samples, float fGain) {
 		uint32_t i;
 		float fMaxBlock = 0.0f;
 		for (i = 0; i < samples; i++) {
 			float f = *fBuf;
+			f *= fGain;
 			f = f * f;
 			fMaxBlock = math::max(fMaxBlock, f);
 			runningSum += f;
@@ -65,9 +66,9 @@ template <uint32_t N>
 class rmsmeter {
 public:
 	runningsum<N> channels[2];
-	void update(AudioBlock* block) {
+	void update(AudioBlock* block, float fTrackGain) {
 		for (uint32_t i = 0; i < math::min(block->channels, 2u); i++) {
-			channels[i].update(block->buf[i], block->samples);
+			channels[i].update(block->buf[i], block->samples, fTrackGain);
 		}
 	}
 	float getRms(int i) {

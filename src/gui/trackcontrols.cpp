@@ -219,13 +219,16 @@ public:
 	guibutton_trackbypass btnBypass;
 	guibutton btnActivate;
 	guibutton btnShowSubtrack;
+	std::vector<gui_trackgain*> sendGains;
 	gui_trackcontrols_mixer(track_t* _track) :
-		guictr_base(), m_track(_track), meter(&_track->audio->meter), gain(_track), btnBypass(_track) {
+		guictr_base(), m_track(_track), meter(&_track->audio->meter), btnBypass(_track) {
+		gain.setAutomationRef(&_track->audio->mixer, PARAM_TRACK_GAIN);
 		padding = 0;
 //		btnBypass.setTint(nvgToRGB(theme->getFrameColorOutline()));
 		btnBypass.drawFn = drawTextureSymbol;
 		btnBypass.drawParm = ICON_BYPASS;
 		btnActivate.setButtonColor(GuiColor::COL_BTN_LOAD_DEF_PLUGINS);
+		gain.setLabel("Gain Level");
 		btnActivate.setLabel("Load plugins");
 		btnShowSubtrack.setLabel("Add audio subtrack");
 		add(&btnBypass);
@@ -233,8 +236,22 @@ public:
 		add(&gain);
 		add(&meter);
 		add(&btnShowSubtrack);
+		if (m_track->type != TRACK_TYPE_MASTER && m_track->type != TRACK_TYPE_RETURN) {
+			sendGains.resize(MAX_SEND_CHANNELS);
+			for (int i = 0; i < MAX_SEND_CHANNELS; i++) {
+				sendGains[i] = new gui_trackgain();
+				sendGains[i]->setVisible(false);
+				sendGains[i]->setAutomationRef(&_track->audio->mixer, PARAM_OFFSET_SEND + i);
+				sendGains[i]->setLabel(_track->audio->mixer.getParamName(PARAM_OFFSET_SEND + i));
+				add(sendGains[i]);
+			}
+		}
 	}
 	~gui_trackcontrols_mixer() {
+		for (auto* sendGainCtrl : sendGains) {
+			remove(sendGainCtrl);
+			delete sendGainCtrl;
+		}
 		remove(&meter);
 		remove(&gain);
 		remove(&btnActivate);
@@ -276,15 +293,34 @@ public:
 		gain.size = ivec2(gW - i2, h);
 		btnBypass.pos = ivec2(inset, inset);
 		gain.pos = ivec2(inset, TRACK_HEIGHT_STEP+inset);
-		btnActivate.pos = {inset, gain.bottom()+inset*2};
+		btnActivate.pos = {inset, gain.bottom()+i2};
 		btnActivate.setFontSize(TRACK_HEIGHT_STEP-i2);
 		btnActivate.size = { TRACK_HEIGHT_STEP, TRACK_HEIGHT_STEP };
-		btnShowSubtrack.pos = {btnActivate.right()+inset*2, gain.bottom()+inset*2};
+		btnShowSubtrack.pos = {btnActivate.right()+inset*2, gain.bottom()+i2};
 		btnShowSubtrack.setFontSize(TRACK_HEIGHT_STEP-i2);
 		btnShowSubtrack.size = { TRACK_HEIGHT_STEP, TRACK_HEIGHT_STEP };
 
 		meter.size = ivec2(mW-i2, size.y-i2);
 		meter.pos = ivec2(size.x - mW+inset, inset);
+		if (sendGains.size()) {
+			const int32_t HEIGHT_SEND_GAIN = TRACK_HEIGHT_STEP*0.8;
+			const int32_t SEND_PER_ROW = 1;
+			ivec2 sendPos = {inset, btnShowSubtrack.bottom()+i2 };
+			auto project = project_controller_t::get();
+			int32_t numReturnChannels = project->trackReturnCtr.size();
+			int pos = 0;
+			for (auto sendGainCtrl : sendGains) {
+				sendGainCtrl->setVisible(pos < numReturnChannels);
+				sendGainCtrl->pos = sendPos;
+				sendGainCtrl->size = {gW/SEND_PER_ROW - i2, HEIGHT_SEND_GAIN};
+				if (++pos%SEND_PER_ROW == 0) {
+					sendPos.x = inset;
+					sendPos.y += HEIGHT_SEND_GAIN + i2;
+				} else {
+					sendPos.x = sendGainCtrl->right() + i2;
+				}
+			}
+		}
 		for (auto gui : guis) {
 			gui->layout();
 		}
@@ -298,7 +334,9 @@ public:
 		btnActivate.setEnabled(n>0);
 		btnActivate.setText(n>9?"9+":(StringFormat("%d", n)));
 		for (auto gui : guis) {
-			gui->render(vg);
+			if (gui->isVisible()) {
+				gui->render(vg);
+			}
 		}
 	}
 	bool isStaticContainer() {

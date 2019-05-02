@@ -64,10 +64,10 @@ struct AudioBlock {
 			memcpy(dstBufChannel+offsetOut, srcBufChannel+offsetIn, nSamples * sizeof(float));
 		}
 	}
-	void addFrom(AudioBlock* src) {
-		addFrom(src->buf, src->samples, src->channels);
+	void addFrom(AudioBlock* src, float gain) {
+		addFrom(src->buf, src->samples, src->channels, gain);
 	}
-	void addFrom(float **srcBuf, uint32_t srcSamples, uint32_t srcChannels) {
+	void addFrom(float **srcBuf, uint32_t srcSamples, uint32_t srcChannels, float gain) {
 		assert(srcSamples == samples);
 		assert(srcChannels == channels); //remove when adding sub-track mixers (between plugins)
 		uint32_t nChannels = math::max(srcChannels, channels);
@@ -78,7 +78,7 @@ struct AudioBlock {
 			float* dstBufChannel = buf[dstChannelIdx];
 			//TODO: this does 2 additions to the same destination when going from stereo to mono (MIX FIRST)
 			for (uint32_t j = 0; j < samples; j++) {
-				dstBufChannel[j] += srcBufChannel[j];
+				dstBufChannel[j] += srcBufChannel[j] * gain;
 			}
 		}
 	}

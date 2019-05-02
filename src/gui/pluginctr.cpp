@@ -726,6 +726,7 @@ void guictr_plugins::pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mou
 			vsthost::getInstance()->moveEffects(this->stage, first, targetslot, last-first+1);
 			audio_stage_ref_t ref = this->stage->toRef();
 			auto* track_action = new action_shift_modules("Move plugin", ref, targetslot, first, last-first+1);
+			//TODO: make this work
 //			MainCtrl::get()->pushHist(track_action);
 		}
 		if (this->parent) {

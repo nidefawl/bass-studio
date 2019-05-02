@@ -664,7 +664,7 @@ void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t 
 	}
 }
 void sortNoteEvents(std::vector<noteevent_t>& noteEvents) {
-	std::sort(noteEvents.begin(), noteEvents.end(), [](noteevent_t& a, noteevent_t& b) {
+	std::sort(noteEvents.begin(), noteEvents.end(), [](const noteevent_t& a, const noteevent_t& b) {
 		if (a.isNoteOn && !b.isNoteOn) {
 			return false;
 		}
@@ -842,7 +842,7 @@ void track_params_t::postSetParameter(int32_t idx, float preVal, float val, int 
 track_params_t::track_params_t(audio_stage_t* _audiostage) : automatable_t(), audiostage(_audiostage) {
 	const std::array<track_param_entry_t, 2> parameterTypes {{
 		track_param_entry_t { PARAM_ENABLE, "Enabled", 1.0f },
-		track_param_entry_t { PARAM_TRACK_GAIN, "Gain", gainToLinScale(1.0f) },
+		track_param_entry_t { PARAM_TRACK_GAIN, "Gain", dsp_util::gainToLinScale(1.0f) },
 	}};
 	for (const track_param_entry_t& paramEntry : parameterTypes) {
 		automatable_param_t* regparam = registerParam(paramEntry.id);
@@ -852,6 +852,7 @@ track_params_t::track_params_t(audio_stage_t* _audiostage) : automatable_t(), au
 	}
 	for (int i = 0; i < MAX_SEND_CHANNELS; i++) {
 		automatable_param_t* regparam = registerParam(PARAM_OFFSET_SEND+i);
+		regparam->value = 0.0f;
 		regparam->label = StringFormat("Send %d", (i+1));
 		regparam->shortLabel = regparam->label;
 	}
@@ -871,15 +872,6 @@ void track_params_t::setParamValue(int32_t idx, float val, int flags) {
 	param->value = val; //convertValTo(idx, val);
 }
 
-float track_params_t::getGain() {
-	assert(getParam(PARAM_TRACK_GAIN));
-	return linScaleToGain(getParam(PARAM_TRACK_GAIN)->value);
-}
-
-void track_params_t::setGain(float f) {
-	assert(getParam(PARAM_TRACK_GAIN));
-	getParam(PARAM_TRACK_GAIN)->value = gainToLinScale(f);
-}
 track_t* track_params_t::getTrack() {
 	return audiostage->getTrack();
 }

@@ -165,4 +165,18 @@ void fillSqare(samplerate_t samplerate, float freq, float** buffer, uint32_t sam
 	}
 }
 
+
+const float GAIN_SCALE_RANGE = DBFS_MUTE_POS - MTR_CEIL;
+const float GAIN_SCALE_EXP = 2.0f;
+float gainToLinScale(float f) {
+	float db = dBFS(f);
+	float f2 = ((math::max(DBFS_MUTE_POS, math::min(db, MTR_CEIL)) - MTR_CEIL) / GAIN_SCALE_RANGE);
+	return 1.0f - powf(f2, 1.0/GAIN_SCALE_EXP);
+}
+float linScaleToGain(float f) {
+	float f1 = (1.0f-f);
+	f1 = powf(f1, GAIN_SCALE_EXP);
+	float f2 = (f1 * GAIN_SCALE_RANGE)+MTR_CEIL;
+	return fromdBFS(f2);
+}
 }

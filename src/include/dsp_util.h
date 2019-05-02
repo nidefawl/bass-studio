@@ -26,5 +26,6 @@ namespace dsp_util {
 	extern const float GAIN_DBFLOOR;
 	extern const float GAIN_DBINF;
 	float scaledRange(float db, float lvlFloor, float lvlCeil);
-
+	float gainToLinScale(float f);
+	float linScaleToGain(float f);
 }

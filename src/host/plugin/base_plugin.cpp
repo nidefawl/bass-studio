@@ -65,7 +65,7 @@ void effectbase::onTick(double since) {
 }
 
 void effectbase::postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) {
-	meter.update(out);
+	meter.update(out, 1.0f);
 }
 
 void effectbase::breakTrackLink() {

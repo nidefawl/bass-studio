@@ -279,7 +279,9 @@ void module_group::getChildAudioStages(std::vector<audio_stage_t*>& targets) {
 	targets.push_back(this->audio);
 }
 void module_group::postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) {
-	meter.update(out);
+	float fGainGroup;
+	getGainLvl(audio->mixer.getParamValue(PARAM_TRACK_GAIN), fGainGroup);
+	meter.update(out, fGainGroup);
 	if (!hasProcessed) {
 		for (effectbase* effect : audio->effects) {
 			effect->postProcess(out, samples, hasProcessed);

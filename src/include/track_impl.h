@@ -24,6 +24,17 @@ class guictr_plugins;
 struct track_params_snapshot_t;
 struct audio_stage_t;
 
+/* Calculate mixer gain level from parameter
+ * returns: false if gain == -inf db */
+inline bool getGainLvl(float fLinGain, float& fGainOut) {
+	float fGainRaw = dsp_util::linScaleToGain(fLinGain);
+	if (fGainRaw  < dsp_util::GAIN_DBFLOOR) {
+		fGainOut = 0.0f;
+		return false;
+	}
+	fGainOut = dsp_util::clampReadGain(fGainRaw);
+	return true;
+}
 struct track_params_t : public automatable_t {
 private:
 	audio_stage_t* const audiostage;
@@ -35,19 +46,6 @@ private:
 
 public:
 	track_params_t(audio_stage_t* _audiostage);
-	const float lvlRange = dsp_util::DBFS_MUTE_POS - dsp_util::MTR_CEIL;
-	const float EXP = 2.0f;
-	float gainToLinScale(float f) {
-		float db = dsp_util::dBFS(f);
-		float f2 = ((math::max(dsp_util::DBFS_MUTE_POS, math::min(db, dsp_util::MTR_CEIL)) - dsp_util::MTR_CEIL) / lvlRange);
-		return 1.0f - powf(f2, 1.0/EXP);
-	}
-	float linScaleToGain(float f) {
-		float f1 = (1.0f-f);
-		f1 = powf(f1, EXP);
-		float f2 = (f1 * lvlRange)+dsp_util::MTR_CEIL;
-		return dsp_util::fromdBFS(f2);
-	}
 	String getAutomatableName() override {
 		return "Mixer";
 	}
@@ -60,8 +58,6 @@ public:
 		return ref;
 	}
 	track_t* getTrack() override;
-	float getGain();
-	void setGain(float f);
 	bool isEnabled() {
 		assert(getParam(PARAM_ENABLE));
 		return getParam(PARAM_ENABLE)->value >= 0.5f;

@@ -453,7 +453,6 @@ void delayAudio(DelayLine* delayLine, AudioBlock* input, AudioBlock* output, sam
 	}
 
 }
-
 int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround) {
 	double since = timer.getTimeDoubleReset();
 	timer2.reset();
@@ -512,17 +511,24 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 		 */
 		for (track_t* trackMaster : ctrl->trackMasterCtr) {
 			track_impl_t* audioMaster = trackMaster->audio;
-//			if (!audioMaster) {
-//				trackMaster->audio = audioMaster = vsthost::getInstance()->createAudio(trackMaster);
-//			}
 			audioMaster->input.realloc(lBlockSize);
 			audioMaster->output.realloc(lBlockSize);
 			dsp_util::fillSilence(audioMaster->input.buf, lBlockSize);
 			dsp_util::fillSilence(audioMaster->output.buf, lBlockSize);
 		}
+		/*
+		 * Clear all return channels
+		 */
+		for (track_t* trackReturn : ctrl->trackReturnCtr) {
+			track_impl_t* audioReturn = trackReturn->audio;
+			audioReturn->input.realloc(lBlockSize);
+			audioReturn->output.realloc(lBlockSize);
+			dsp_util::fillSilence(audioReturn->input.buf, lBlockSize);
+			dsp_util::fillSilence(audioReturn->output.buf, lBlockSize);
+		}
 
 		/*
-		 * Process all normal channels
+		 * determine max latency of all audio/midi tracks
 		 */
 		samplerate_t maxLatency = 0;
 		for (track_t* track : ctrl->trackCtr) {
@@ -537,6 +543,9 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			loopCutStart = project.loopStart;
 			loopCutEnd = project.loopStart+project.loopLen;
 		}
+		/*
+		 * Process audio/midi tracks
+		 */
 		for (track_t* track : ctrl->trackCtr) {
 			track_impl_t* trackImpl = track->audio;
 			trackImpl->input.realloc(lBlockSize);
@@ -552,27 +561,72 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			}
 
 
-			/* Processes a whole plugin chain */
+			/* Processes audio/midi tracks plugin chain */
 			processAudio(trackImpl, &trackImpl->input, &trackImpl->output, lBlockSize);
+
+			/* Compensate audio/midi tracks chain latency */
 			samplerate_t delay = maxLatency - trackImpl->getLatency();
 			delayAudio(&trackImpl->delayLine, &trackImpl->output, &trackImpl->output, delay);
+
 			if (trackImpl->mixer.isEnabled()) {
+
+				/* Feed audio/midi tracks output into masters input */
 				for (track_t* trackMaster : ctrl->trackMasterCtr) {
+
+					/* Calculate audio/midi tracks gain level */
+					float fGainTrack;
+					if (!getGainLvl(trackImpl->mixer.getParamValue(PARAM_TRACK_GAIN), fGainTrack)) {
+						continue;
+					}
+
 					track_impl_t* audioMaster = trackMaster->audio;
-					audioMaster->input.addFrom(&trackImpl->output);
+					audioMaster->input.addFrom(&trackImpl->output, fGainTrack);
 				}
+
+				/* Feed audio/midi tracks output into returns input */
+				for (track_t* trackReturn : ctrl->trackReturnCtr) {
+					/* Calculate send gain level */
+					float fGainReturn;
+					if (!getGainLvl(trackImpl->mixer.getParamValue(PARAM_OFFSET_SEND+trackReturn->localIdx), fGainReturn)) {
+						continue;
+					}
+
+					track_impl_t* audioReturn = trackReturn->audio;
+
+					/* Feed in return track send gain level */
+					audioReturn->input.addFrom(&trackImpl->output, fGainReturn);
+				}
+			}
+		}
+
+		for (track_t* trackReturn : ctrl->trackReturnCtr) {
+			track_impl_t* audioReturn = trackReturn->audio;
+
+			/* Processes return tracks plugin chain */
+			processAudio(audioReturn, &audioReturn->input, &audioReturn->output, lBlockSize);
+
+			/* Calculate return tracks gain level */
+			float fGainReturn;
+			if (!getGainLvl(audioReturn->mixer.getParamValue(PARAM_TRACK_GAIN), fGainReturn)) {
+				continue;
+			}
+
+			/* Feed return tracks output into masters input */
+			for (track_t* trackMaster : ctrl->trackMasterCtr) {
+				track_impl_t* audioMaster = trackMaster->audio;
+				audioMaster->input.addFrom(&audioReturn->output, fGainReturn);
 			}
 		}
 
 		for (track_t* trackMaster : ctrl->trackMasterCtr) {
 			track_impl_t* audioMaster = trackMaster->audio;
-//			audioMaster->mixer.setGain(0);
+			/* Processes master tracks plugin chain */
 			processAudio(audioMaster, &audioMaster->input, &audioMaster->output, lBlockSize);
 		}
 
 		/*
 		 * Output all masters
-		 * Right now only first, until I figured out configuring and streaming multiple audiostreams
+		 * Right now only first
 		 */
 		AudioBuffer* bufferWrite = buffers[writePos];
 		assert(!bufferWrite->inUse);
@@ -581,16 +635,23 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 		AudioBlock* bufOut = bufferWrite->output;
 		for (track_t* trackMaster : ctrl->trackMasterCtr) {
 			track_impl_t* audioMaster = trackMaster->audio;
+
+			/* Calculate master tracks gain level */
+			float fGainMaster;
+			getGainLvl(audioMaster->mixer.getParamValue(PARAM_TRACK_GAIN), fGainMaster);
+
+
 			if (audioMaster->mixer.isEnabled()) {
 				AudioBlock* bufMaster = &audioMaster->output;
 				for (int n = 0; n < OUTPUT_CHANNELS; n++) {
 					float* channelWriteBuffer = bufOut->buf[n];
 					float* channelMaster = bufMaster->buf[n];
 					for (int j = 0; j < lBlockSize; j++) {
-						channelWriteBuffer[j] += channelMaster[j];
+						channelWriteBuffer[j] += channelMaster[j] * fGainMaster;
 					}
 				}
 			}
+			//TODO: implement outputting multiple masters
 			break;
 		}
 		/* Update all track meters */
@@ -598,7 +659,9 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			track_impl_t* trAudio = track->audio;
 			if (!trAudio)
 				continue;
-			trAudio->meter.update(&trAudio->output);
+			float fGainTrack;
+			getGainLvl(trAudio->mixer.getParamValue(PARAM_TRACK_GAIN), fGainTrack);
+			trAudio->meter.update(&trAudio->output, fGainTrack);
 		}
 		double blockPosSample = sample;
 		double blockPosTick = posDouble;
@@ -716,15 +779,16 @@ void vsthost::processAudio(audio_stage_t* stage, AudioBlock* input, AudioBlock* 
 			input = blockOut;
 			blockPostProcess = blockOut;
 		}
-		current->postProcess(blockPostProcess, samples, isBypass);
+		current->postProcess(blockPostProcess, samples, !isBypass);
 		current->fTimePercentBlockProcess = ((current->fTimePercentBlockProcess*49.0)+(timer.getTime() / (double) microSecsPerBlock))/50.0;
 		processing.pluginId = 0;
 	}
 	//   If a plugin runs mono inputs or outputs we need to handle this manually here
 	output->copyFrom(input);
 
-	float gain = dsp_util::clampReadGain(stage->mixer.getGain());
-	mulGain(output, gain);
+//	float gainRaw = dsp_util::linScaleToGain(stage->mixer.getParamValue(PARAM_TRACK_GAIN));
+//	float gain = dsp_util::clampReadGain(gainRaw);
+//	mulGain(output, gain);
 
 }
 void vsthost::updatePluginWindows() {
