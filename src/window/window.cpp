@@ -1066,6 +1066,8 @@ void appwindow_main::onChildOverlayClose(appwindow* child) {
 int initDebugWindow();
 class appwindow_dialog : public appwindow, public window_dialog {
 	std::function<void(NVGcontext*,int,int,float)> drawFn;
+	bool isInit = false;
+	const bool disablesParent = false;
 public:
 	appwindow_dialog(appwindow* _parent) : appwindow(_parent) {
 	}
@@ -1093,7 +1095,6 @@ public:
 		}
 
 	}
-	bool isInit = false;
 	void render()
 	{
 		glfwMakeContextCurrent(glfw);
@@ -1122,8 +1123,8 @@ public:
 	}
 	void onWindowClose() override {
 #ifdef _WIN32
-		if (parent)
-		EnableWindow(parent->getHWND(), TRUE);
+		if (parent && disablesParent)
+			EnableWindow(parent->getHWND(), TRUE);
 #endif
 #if __linux__
 		//TODO: implement linux
@@ -1149,7 +1150,7 @@ public:
 	void show() {
 		appwindow::showWindow();
 #ifdef _WIN32
-		if (parent)
+		if (parent && disablesParent)
 			EnableWindow(parent->getHWND(), FALSE);
 #endif
 #if __linux__
