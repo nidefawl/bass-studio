@@ -838,6 +838,7 @@ bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file, int flags) {
 		ctr.setControl(nullptr);
 	}
 
+	trackList.loadSubtrackLayouts(file->project);
 
 	view->ctr_tracks.layout();
 	grid.setLayout(file->layout.layoutGrid);

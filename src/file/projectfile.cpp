@@ -41,6 +41,7 @@ void serialize(Archive & archive, automationlane_snapshot_t & m)
 	archive(make_nvp("type", m.type), make_nvp("paramIdx", m.paramIdx));
 	make_optional_nvp(archive, "height", m.height);
 	make_optional_nvp(archive, "refId", m.refId);
+	make_optional_nvp(archive, "subtrackType", m.subtrackType);
 }
 template<class Archive>
 void serialize(Archive & archive, automation_view_t & m)

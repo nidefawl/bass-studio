@@ -265,7 +265,7 @@ public:
 			trackParams.setParamValue(PARAM_ENABLE, trackParams.isEnabled() ? 0.0f : 1.0f, 0);
 		}
 		if (&btnShowSubtrack == button) {
-			auto gui = makeGuiSubtrack(MainCtrl::get(), m_track, 1);
+			auto gui = makeGuiSubtrack(MainCtrl::get(), m_track, gui_track_subtrack::SUBTRACK_TYPE_WAVE);
 			MainCtrl::getGuiTrackCtr()->addSubTrack(m_track, gui, true);
 		}
 		if (&btnActivate == button) {

@@ -317,6 +317,7 @@ public:
 	void releaseTrackContent();
 	void loadPluginAutomationParameters(const track_impl_snapshot_t& snap);
 	void loadSnapshot(const track_snapshot_t& snap);
+	void loadSubtrackLayout(const track_snapshot_t& snap);
 	bool validSubtrack(int32_t idx) {
 		return idx >= 0 && idx < (int32_t)subtracks.size();
 	}
@@ -371,6 +372,7 @@ public:
 	void copyTo(trackcontainer_snapshot_t& out);
 	void copyFrom(trackcontainer_snapshot_t& in);
 	void loadPlugins(trackcontainer_snapshot_t& in);
+	void loadSubtrackLayouts(trackcontainer_snapshot_t& in);
 
 };
 struct trackcontainer_snapshot_t {
@@ -414,6 +416,7 @@ public:
 	void copyFrom(project_snapshot_t& in);
 	void copyTracks(int32_t trackBegin, int32_t trackLen, trackstate_t& _out);
 	void loadPlugins(project_snapshot_t& project);
+	void loadSubtrackLayouts(project_snapshot_t& project);
 
 
 

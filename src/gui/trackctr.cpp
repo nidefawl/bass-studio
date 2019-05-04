@@ -117,8 +117,8 @@ void guictr_tracks::addSubTrack(track_t* t, gui_track_subtrack* subtrack, bool i
 	t->mixer->addSubtrackMixer(t, subtrack);
 }
 gui_track_automationlane* guictr_tracks::addAutomationLane(track_t* t, automatable_t* at, int32_t paramIdx, bool insertFront) {
-	gui_track_automationlane* al = trackView.addAutomationLane(t, at, paramIdx, insertFront);
-	t->mixer->addSubtrackMixer(t, al);
+	gui_track_automationlane* al = new gui_track_automationlane(t, grid, at, paramIdx);
+	addSubTrack(t, al, insertFront);
 	return al;
 }
 void guictr_tracks::removeAutomationLane(gui_track_automationlane* al) {
@@ -345,13 +345,6 @@ void guitrack_editor::addSubtrack(track_t* t, gui_track_subtrack* al, bool inser
 	}
 	al->setZOrder(t->type >= TRACK_TYPE_MIDI ? 0 : 1);
 	add(al);
-}
-gui_track_automationlane* guitrack_editor::addAutomationLane(track_t* t, automatable_t* at, int32_t paramIdx, bool insertFront) {
-	assert(t->audio);
-
-	gui_track_automationlane* al = new gui_track_automationlane(t, grid, at, paramIdx);
-	addSubtrack(t, al, insertFront);
-	return al;
 }
 
 void guitrack_editor::removeAllSubtracks(track_t* t) {

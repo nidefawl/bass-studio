@@ -114,7 +114,6 @@ public:
 	}
 	void addSubtrack(track_t* t, gui_track_subtrack* al, bool insertFront);
 
-	gui_track_automationlane* addAutomationLane(track_t* t, automatable_t* at, int32_t paramIdx, bool insertFront);
 	void removeSubtrack(gui_track_automationlane* al);
 	void removeAllAutomationLanes(track_t* t, automatable_t* at, int32_t paramIdx);
 	void removeAllAutomationLanes(track_t* t, automatable_t* at);

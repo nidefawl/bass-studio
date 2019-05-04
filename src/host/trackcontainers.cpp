@@ -148,6 +148,11 @@ void trackallcontainer_t::loadPlugins(project_snapshot_t& project) {
 	trackReturnCtr.loadPlugins(project.trackReturnCtr);
 	trackMasterCtr.loadPlugins(project.trackMasterCtr);
 }
+void trackallcontainer_t::loadSubtrackLayouts(project_snapshot_t& project) {
+	trackCtr.loadSubtrackLayouts(project.trackCtr);
+	trackReturnCtr.loadSubtrackLayouts(project.trackReturnCtr);
+	trackMasterCtr.loadSubtrackLayouts(project.trackMasterCtr);
+}
 void trackallcontainer_t::copyTracks(int32_t trackBegin, int32_t trackEnd, trackstate_t& _out) {
 	_out.reset();
 	for (track_t* t: tracks) {
@@ -193,6 +198,12 @@ void tracksubcontainer_t::loadPlugins(trackcontainer_snapshot_t& in) {
 	for (track_snapshot_t& trackStatic : in.tracks) {
 		track_t* trackLoaded = trackStatic.trackLoaded;
 		trackLoaded->loadSnapshot(trackStatic);
+	}
+}
+void tracksubcontainer_t::loadSubtrackLayouts(trackcontainer_snapshot_t& in) {
+	for (track_snapshot_t& trackStatic : in.tracks) {
+		track_t* trackLoaded = trackStatic.trackLoaded;
+		trackLoaded->loadSubtrackLayout(trackStatic);
 		trackStatic.trackLoaded = nullptr;
 	}
 }

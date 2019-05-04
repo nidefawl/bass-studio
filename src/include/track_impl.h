@@ -149,7 +149,7 @@ struct track_impl_t : public audio_stage_t {
 	void sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos);
 	void fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, float** buffer, int32_t samples);
 	VstEvent_t* reallocEvts(size_t size);
-	void loadSubtrackLayout(const std::vector<automationlane_snapshot_t>& atl);
+	int loadSubtrackLayout(const std::vector<automationlane_snapshot_t>& atl);
 	void saveSubtrackLayout(std::vector<automationlane_snapshot_t>& atl);
 	void updateStoreLoadSubtracks();
 	void removePlugin(effectbase* _vst, bool notifyUp) override;

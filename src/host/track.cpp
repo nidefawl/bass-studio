@@ -32,6 +32,7 @@
 #include "history.h"
 #include "plugindatabase.h"
 #include "gui/drawwaveform.h"
+#include "gui/subtrack.h"
 
 
 const tick_t INVALID_TICK = 1 << 31;
@@ -158,16 +159,18 @@ void track_t::loadSnapshot(const track_snapshot_t& snapshot) {
 	audio->arp->loadSnapshot(implSnapshot.trackArp);
 	const std::vector<plugin_snapshot_t>& trPluginList = implSnapshot.pluginSnapshots;
 	audio->loadPlugins(trPluginList);
+}
+void track_t::loadSubtrackLayout(const track_snapshot_t& snapshot) {
 	const std::vector<automationlane_snapshot_t>& atl = snapshot.automationLanes;
 	this->subtracks.clear();
-	bool showSubtracks = !this->hideSubtracks && !this->hideTrack;
-	if (!showSubtracks) {
+	bool hide = this->hideSubtracks || this->hideTrack;
+	if (hide) {
 		audio->atl = atl;
 		audio->wasInHide = true;
 	} else {
 		audio->wasInHide = false;
-		audio->atl.clear();
 		audio->loadSubtrackLayout(atl);
+		audio->atl.clear();
 	}
 }
 void track_t::loadPluginAutomationParameters(const track_impl_snapshot_t& trackStatic) {
@@ -424,17 +427,17 @@ void track_impl_t::saveSubtrackLayout(std::vector<automationlane_snapshot_t>& at
 {
 	atls.reserve(track->subtracks.size());
 	for (gui_track_subtrack* atl : track->subtracks) {
-		automationlane_snapshot_t ref;
+		automationlane_snapshot_t subtrackSnapshot;
 		if (atl->subtrackType() == gui_track_subtrack::SUBTRACK_TYPE_AUTOMATION) {
 			assert(atl->at);
-			ref = atl->at->toRef();
+			subtrackSnapshot = atl->at->toRef();
 		} else {
 		}
-		ref.paramIdx = atl->param;
-		ref.height = atl->height;
-		ref.subtrackType = atl->subtrackType();
-		log_printf("save ref.type %d, ref.refId %d, ref.paramIdx %d\n", ref.type, ref.refId, ref.paramIdx);
-		atls.push_back(std::move(ref));
+		subtrackSnapshot.paramIdx = atl->param;
+		subtrackSnapshot.height = atl->height;
+		subtrackSnapshot.subtrackType = atl->subtrackType();
+		log_printf("save ref.type %d, ref.refId %d, ref.paramIdx %d\n", subtrackSnapshot.type, subtrackSnapshot.refId, subtrackSnapshot.paramIdx);
+		atls.push_back(std::move(subtrackSnapshot));
 	}
 
 }
@@ -552,35 +555,40 @@ void vsthost::activateDeferred(effectbase* eff) {
 	}
 
 }
-void track_impl_t::loadSubtrackLayout(const std::vector<automationlane_snapshot_t>& atls)
+int track_impl_t::loadSubtrackLayout(const std::vector<automationlane_snapshot_t>& atls)
 {
+	int n = atls.size();
 	guictr_tracks* guiTracks = MainCtrl::getGuiTrackCtr();
 	if (guiTracks) {
+		n = 0;
 		for (const automationlane_snapshot_t& ref : atls) {
 			gui_track_subtrack* al = NULL;
 			if (ref.subtrackType == gui_track_subtrack::SUBTRACK_TYPE_AUTOMATION) {
-				log_printf("loading ref.type %d, ref.refId %d, ref.paramIdx %d\n", ref.type, ref.refId, ref.paramIdx);
 				if (ref.type == AUTOMATABLE_EFFECT) {
 					effectbase* plugin = getPluginById(ref.refId);
-					if (!plugin) {
+					if (!plugin || plugin->getModuleType() == PLUGIN_TYPE_DEFERRED) {
+						log_printf("skipping deferred ref.type %d, ref.refId %d, ref.paramIdx %d\n", ref.type, ref.refId, ref.paramIdx);
+						n++;
 						continue;
 					}
-					al = guiTracks->addAutomationLane(track, plugin, ref.paramIdx, false);
-
+					al = new gui_track_automationlane(track, guiTracks->grid, plugin, ref.paramIdx);
 				}
 				if (ref.type == AUTOMATABLE_MIXER) {
-					al = guiTracks->addAutomationLane(track, &mixer, ref.paramIdx, false);
+					al = new gui_track_automationlane(track, guiTracks->grid, &mixer, ref.paramIdx);
 				}
 				if (ref.type == AUTOMATABLE_ARP) {
-					al = guiTracks->addAutomationLane(track, arp, ref.paramIdx, false);
+					al = new gui_track_automationlane(track, guiTracks->grid, arp, ref.paramIdx);
 				}
-			} else if (ref.subtrackType == gui_track_subtrack::SUBTRACK_TYPE_AUTOMATION) {
-//				al = new gui
+			} else if (ref.subtrackType == gui_track_subtrack::SUBTRACK_TYPE_WAVE) {
+				al = makeGuiSubtrack(MainCtrl::get(), track, ref.subtrackType);
 			}
-			if (al)
+			if (al) {
 				al->height = ref.height;
+				guiTracks->addSubTrack(track, al, false);
+			}
 		}
 	}
+	return n;
 }
 void audio_stage_t::onTick(double since) {
 	meter.onTick(since);
