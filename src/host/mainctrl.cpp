@@ -539,6 +539,7 @@ void MainCtrl::postInit() {
 			drawDebugWindow(ctx, winW, winH, pxratio);
 		};
 		dialog->setDrawFunction(drawFn);
+		dialog->show();
 //		GLFWwindow* contextWindow = mainWindow->getGLFW();
 //		w->createDialogWindow("test window", winW, winH, contextWindow);
 //		glfwMakeContextCurrent(w->getGLFW());
