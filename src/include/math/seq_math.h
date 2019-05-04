@@ -1,6 +1,7 @@
 #pragma once
 #include <algorithm>
 #include <cmath>
+#include "vec.h"
 #define CLAMP_I(x, min, max) (x > max ? max : x < min ? min : x)
 #define CLAMP_F(x) (x > 1.f ? 1.f : x < 0.f ? 0.f : x)
 #ifndef M_PI
@@ -36,4 +37,11 @@ namespace math {
 	//using ceil = std::ceil;
 	//using floor = std::floor;
 	//using abs = std::abs;
+
+	inline ivec2 maxvec2(const ivec2& a, const ivec2& b) {
+		return {math::max(a.x, b.x), math::max(a.y, b.y)};
+	}
+	inline ivec2 absvec2(const ivec2 a) {
+		return {math::abs(a.x), math::abs(a.y)};
+	}
 }

@@ -21,3 +21,8 @@ struct audiosample_t {
 	std::vector<samplechannel_t> samples;
 	std::vector<std::vector<samplechannel_t>> downsampled;
 };
+
+struct samplesource_t {
+	virtual audiosample_t* getSample() = 0;
+	virtual ~samplesource_t() = default;
+};

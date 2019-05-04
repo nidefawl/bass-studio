@@ -3,6 +3,7 @@
 #include <algorithm>
 #include "vst_plugin.h"
 #include "str_util.h"
+#include "automation.h"
 #include "logging.h"
 #include "vst_plugin_handles.h"
 

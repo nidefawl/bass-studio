@@ -12,7 +12,10 @@
 #include "dsp_util.h"
 #include "str_util.h"
 #include "seq_time.h"
+#include "audiosample.h"
+#include "audiotrack.h"
 #include "snapshot.h"
+#include "host/vst_host.h"
 
 #define PARAM_TRACK_GAIN 1
 
@@ -133,6 +136,7 @@ inline bool isAudioStageChildOf(audio_stage_t* parent, audio_stage_t* child) {
 	}
 	return false;
 }
+
 class midiarp;
 struct track_impl_t : public audio_stage_t {
 	midiarp* arp = nullptr;
@@ -141,6 +145,7 @@ struct track_impl_t : public audio_stage_t {
 	VstEvent_t* midiEventsBuf = nullptr;
 	automatable_t* selectedAutomationCtr = nullptr;
 	int32_t selectedAutomationParam = -1;
+	audiotrack_t audioOutput;
 	std::vector<automationlane_snapshot_t> atl;
 	bool wasInHide = false;
 	track_impl_t(int32_t _id, track_t* _track, const samplerate_t& _sampleRate, const uint16_t& _blockSize, int32_t nChannels);

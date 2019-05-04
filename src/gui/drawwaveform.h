@@ -27,7 +27,7 @@ struct gui_waveform_texture_ref {
 	bool queued = false;
 };
 struct waveform_update_task_t {
-	cachedaudio_t* audio;
+	samplesource_t* audio;
 	gui_waveform_texture_ref* waveformRef; //lifetime defined by clip_t
 	ivec2 pos{0,0};
 	ivec2 size{0,0};
@@ -57,7 +57,7 @@ public:
 	bool findSimiliarWaveform(waveform_update_task_t& waveformQueueEntry);
 	void assertWaveformRefIsUnbound(gui_waveform_texture_ref* waveformRef);
 	int renderUpdates(NVGcontext* ctxt, float pxRatio);
-	int queueUpdate(cachedaudio_t* audio, gui_waveform_texture_ref* waveformRef);
+	int queueUpdate(samplesource_t* audio, gui_waveform_texture_ref* waveformRef);
 	void draw(NVGcontext* ctxt, const gui_waveform_texture_ref* waveformRef, ivec2 size);
 	void release(gui_waveform_texture_ref* waveformRef);
 	bool findFreeSpot(ivec2 size, int& atlasIdx, ivec2& pos);

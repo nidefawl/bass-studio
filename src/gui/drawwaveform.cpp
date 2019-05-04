@@ -1,5 +1,6 @@
 #include "glheaders.h"
 #include "drawwaveform.h"
+#include "gl/gl_path.h"
 
 #include <nanovg.h>
 #include <nanovg_gl.h>
@@ -70,7 +71,7 @@ void waveformrender::release(gui_waveform_texture_ref* waveformRef) {
 bool waveformrender::canQueueUpdate() {
 	return queuedTasks.size() < 4;
 }
-int waveformrender::queueUpdate(cachedaudio_t* audio, gui_waveform_texture_ref* waveformRef) {
+int waveformrender::queueUpdate(samplesource_t* audio, gui_waveform_texture_ref* waveformRef) {
 	if (waveformRef->queued) {
 		return 0;
 	}
@@ -189,7 +190,7 @@ void waveformrender::assertWaveformRefIsUnbound(gui_waveform_texture_ref* wavefo
 		assert(!istIn(updateTask.queuedptrs, waveformRef));
 	}
 }
-ivec2 absvec2(const ivec2 a);
+
 inline bool isAlmostEqualWaveform(const audioclip_texture_t& lhs, const audioclip_texture_t& rhs){
 	if ((lhs.sampleBeginOffset - lhs.sampleBegin) == (rhs.sampleBeginOffset - rhs.sampleBegin) &&
 			(lhs.sampleEnd - lhs.sampleBegin) == (rhs.sampleEnd - rhs.sampleBegin) &&
@@ -202,7 +203,7 @@ inline bool isAlmostEqualWaveform(const audioclip_texture_t& lhs, const audiocli
 
 		if (lhs.clipped || rhs.clipped)
 			return lhs.scaleX == rhs.scaleX && lhs.scaleY == rhs.scaleY && lhs.size == rhs.size && lhs.samplesPerPx == rhs.samplesPerPx;
-		ivec2 sd = absvec2(lhs.size-rhs.size);
+		ivec2 sd = math::absvec2(lhs.size-rhs.size);
 		ivec2 limit = lhs.size / 4;
 		return sd.x < limit.x && sd.y < limit.y;
 	}
@@ -366,7 +367,7 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 		for (waveform_update_task_t& waveformQueueEntry : _atlas.queuedTasks) {
 			gui_waveform_texture_ref* waveformRef = waveformQueueEntry.waveformRef;
 //			my_printf("render entry %012x\n", &waveformRef);
-			cachedaudio_t* audio = waveformQueueEntry.audio;
+			samplesource_t* audio = waveformQueueEntry.audio;
 			audioclip_texture_t& waveform = waveformRef->waveform;
 
 			SampleMethod method = waveform.method;
@@ -375,7 +376,7 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 			if (it != prevRendered.end()) {
 				my_printf("found prev rendered!\n", 0);
 			}
-			tesselateWaveform(audio->sample.get(), 0, 0, &waveform, method, tesselatedWaveForms);
+			tesselateWaveform(audio->getSample(), 0, 0, &waveform, method, tesselatedWaveForms);
 			prevRendered.push_back(waveform);
 			while (prevRendered.size() >= 1000) {
 				prevRendered.erase(prevRendered.begin(), prevRendered.begin()+10);

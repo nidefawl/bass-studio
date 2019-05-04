@@ -567,6 +567,9 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			/* Compensate audio/midi tracks chain latency */
 			samplerate_t delay = maxLatency - trackImpl->getLatency();
 			delayAudio(&trackImpl->delayLine, &trackImpl->output, &trackImpl->output, delay);
+			if (state == playback_state::status_play) {
+				trackImpl->audioOutput.store(&trackImpl->output, sample);
+			}
 
 			if (trackImpl->mixer.isEnabled()) {
 
@@ -681,6 +684,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 		nBlocksProcessed++;
 		}
 	}
+	bool convert = false;
 	if (ctrl) {
 		for (track_t* tr : ctrl->trackList) {
 			track_impl_t* trAudio = tr->audio;
@@ -688,11 +692,29 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 				trAudio->onTick(since);
 			}
 		}
+		static int throttleI = 0;//TODO: REMOVE ME. DEBUG
+		convert = throttleI++%32==0;
+		if (convert) {
+			int32_t bytesCopied = 0;
+			hires_timer_t timerConvert;
+			for (track_t* tr : ctrl->trackList) {
+				track_impl_t* trAudio = tr->audio;
+				if (trAudio) {
+					bytesCopied += trAudio->audioOutput.convertToSamples(this);
+				}
+			}
+			int64_t timeConvert = timerConvert.getTime();
+			stats.timings["convert"] = timeConvert;
+			stats.timings["convertBytes"] = bytesCopied;
+		}
 	}
 	int64_t timeTaken = timer2.getTime();
 
 	int64_t microSecsPerBlock = (int64_t)this->lBlockSize * 1000000L / (int64_t)this->lSampleRate;
 	stats.timeLastBlock = (stats.timeLastBlock*99 + timeTaken) / 100;
+	if (convert) {
+		stats.timings["convertBlockTime"] = timeTaken;
+	}
 	stats.usage = stats.timeLastBlock / (double) microSecsPerBlock;
 	stats.blocksProcessed += nBlocksProcessed;
 	stats.samplesProcessed += nBlocksProcessed*lBlockSize;
@@ -1262,6 +1284,15 @@ int32_t vsthost::getNextGlobalAudioStageId(int32_t globalId) {
 		update_maximum(audioStageId, globalId);
 	}
 	return globalId;
+}
+
+int32_t vsthost::getNextSampleId(int32_t id) {
+	if (id <= 0) {
+		return ++sampleId;
+	} else {
+		update_maximum(sampleId, id);
+	}
+	return id;
 }
 
 vstpluginloadres vsthost::loadPlugin(String filepath, int32_t globalId) {

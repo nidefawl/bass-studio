@@ -16,13 +16,15 @@
 #include "audiocache.h"
 #include "audiowaveform.h"
 #include "gui/drawwaveform.h"
+#include "gl/gl_path.h"
+
 #include "tls.h"
 #include "logging.h"
 
 
 String excDescription;
 GLPathRenderer renderer;
-int benchmark_waverender(cachedaudio_t* sample, BakeGLPath& bakedPath) {
+int benchmark_waverender(audiofile_t* sample, BakeGLPath& bakedPath) {
 	audiosample_t* audioSample = sample->sample.get();
 	ivec2 size = {700, 120};
 
@@ -77,7 +79,7 @@ int benchmark_waverender(cachedaudio_t* sample, BakeGLPath& bakedPath) {
 
 	return 0;
 }
-void tesselate(cachedaudio_t* sample, std::vector<std::vector<vec2>>& out) {
+void tesselate(audiofile_t* sample, std::vector<std::vector<vec2>>& out) {
 	audiosample_t* audioSample = sample->sample.get();
 	ivec2 size = {700, 120};
 
@@ -186,7 +188,7 @@ int main(int argc, char* argv[]) {
 	audiocache cache(44100);
 	daw_tls::tlsinstance& tls = daw_tls::getTls();
 	tls.audioCache = &cache;
-	cachedaudio_t* sample = audiocache::getInstance()->loadFile("PHFT_Drum Loop_130_099.wav");
+	audiofile_t* sample = audiocache::getInstance()->loadFile("PHFT_Drum Loop_130_099.wav");
 	if (!sample) {
 		puts("Failed loading sample");
 		return 1;

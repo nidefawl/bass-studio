@@ -168,6 +168,14 @@ public:
 		nvgTextAlign(vg, NVG_ALIGN_TOP | NVG_ALIGN_RIGHT);
 		nvgText(vg, x2, y, StringAsCStr(str), NULL);
 		y += lineh;
+		for (auto& entry : stats.timings) {
+			str = StringFormat("%lld", entry.second);
+			nvgTextAlign(vg, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
+			nvgText(vg, x, y, StringAsCStr(entry.first), NULL);
+			nvgTextAlign(vg, NVG_ALIGN_TOP | NVG_ALIGN_RIGHT);
+			nvgText(vg, x2, y, StringAsCStr(str), NULL);
+			y += lineh;
+		}
 
 		listCtr.render(vg);
 	}

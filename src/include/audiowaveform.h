@@ -39,6 +39,10 @@ inline bool isEqualWaveform(const audioclip_texture_t& lhs, const audioclip_text
 			lhs.scaleY == rhs.scaleY &&
 			lhs.audioId == rhs.audioId && lhs.quality == rhs.quality && lhs.method == rhs.method;
 }
+bool isEqualWaveform3(const audioclip_texture_t& lhs, const audioclip_texture_t& rhs);
+bool isEqualWaveform2(const audioclip_texture_t& lhs, const audioclip_texture_t& rhs);
+
+
 inline bool operator==(const audioclip_texture_t& lhs, const audioclip_texture_t& rhs){
 	return lhs.pos == rhs.pos && lhs.startOffset == rhs.startOffset &&
 			lhs.size == rhs.size && lhs.sampleBegin == rhs.sampleBegin &&

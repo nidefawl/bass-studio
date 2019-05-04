@@ -694,7 +694,7 @@ void guitrack_editor::prerender(NVGcontext* vg) {
 
 					ivec2 clipPos = ivec2();
 					ivec2 clipSize = tr->content->size; //TODO: get rid of *tr here, figure out size before and add default fallback
-					cachedaudio_t* audio = audiocache::getInstance()->get(cl->audio.id);
+					audiofile_t* audio = audiocache::getInstance()->get(cl->audio.id);
 					if (!audio || !getClipPosition(grid, tr->content->size, cl, clipPos, clipSize, 0)) {
 //						my_printf("release %012x from prerender() (clipped) \n", &cl->audio.waveformRef);
 						waveformrender::getInstance()->release(&cl->audio.waveformRef);

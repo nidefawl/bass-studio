@@ -23,7 +23,7 @@ class clip_audio_t {
 public:
 	int32_t id = -1;
 	gui_waveform_texture_ref waveformRef;
-	std::weak_ptr<cachedaudio_t> weakCachedAudio;
+	std::weak_ptr<audiofile_t> weakCachedAudio;
 
 	clip_audio_t() {
 	}

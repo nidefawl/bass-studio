@@ -960,7 +960,7 @@ bool MainCtrl::filesDropBegin(std::vector<String>& files, ivec2 mousepos, int kb
 		if (StrEndsWith(path, ".wav")) {
 			String a,b,c, d;
 			SplitPath(path, &a, &b, &c, &d);
-			cachedaudio_t* audio = audiocache::getInstance()->loadFile(path);
+			audiofile_t* audio = audiocache::getInstance()->loadFile(path);
 			if (audio) {
 				auto* sample = audio->sample.get();
 				if (sample) {

@@ -159,6 +159,7 @@ class gui_track_subtrack : public guictr_base {
 public:
 	static constexpr int SUBTRACK_TYPE_EMPTY = 0;
 	static constexpr int SUBTRACK_TYPE_AUTOMATION = 1;
+	static constexpr int SUBTRACK_TYPE_WAVE = 2;
 public:
 	track_t* const m_track;
 protected:
@@ -249,6 +250,9 @@ public:
 	void destroyGuis() override {
 		automation.destroyGuis();
 		guictr_base::destroyGuis();
+	}
+	virtual void updatePosition(project_t& project, scaled_grid& grid, ivec2& trackSize) {
+
 	}
 };
 class gui_track_automationlane : public gui_track_subtrack {

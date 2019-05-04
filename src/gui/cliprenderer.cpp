@@ -6,6 +6,7 @@
 #include "guicolors.h"
 #include "guiconstant.h"
 #include "drawwaveform.h"
+#include "audiowaveform.h"
 #include "trackcontent.h"
 
 namespace GuiColor {

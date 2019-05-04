@@ -11,20 +11,20 @@
 #include "logging.h"
 #include <soxr.h>
 
-void audiocache::getLoaded(std::vector<cachedaudio_t*>& v) {
+void audiocache::getLoaded(std::vector<audiofile_t*>& v) {
 	v.reserve(list.size());
 	for (auto& w : list) {
 		v.push_back(w.get());
 	}
 }
-cachedaudio_t* audiocache::get(int32_t i) {
+audiofile_t* audiocache::get(int32_t i) {
 	size_t count = this->mapId.count(i);
 	return count ? this->mapId.at(i) : nullptr;
 }
 void audiocache::setSamplerate(int32_t samplerate) {
 	this->samplerate = samplerate;
 }
-cachedaudio_t* audiocache::loadFile(String path, int id) {
+audiofile_t* audiocache::loadFile(String path, int id) {
 	drwav wav;
 	//satinize path so comparison matches, or ask os if path equals a file we already loaded before
 
@@ -136,7 +136,7 @@ cachedaudio_t* audiocache::loadFile(String path, int id) {
 //		int nDownSmplSteps = maxDownS-1;
 //		assert(sample->downsampled.size() == nDownSmplSteps);
 		int _id = id < 0 ? this->nextIdx++ : id;
-		std::unique_ptr<cachedaudio_t> cachedaudio = std::make_unique<cachedaudio_t>();
+		std::unique_ptr<audiofile_t> cachedaudio = std::make_unique<audiofile_t>();
 		cachedaudio->sample = std::move(sample);
 		cachedaudio->id = _id;
 		cachedaudio->path = path;
@@ -146,7 +146,7 @@ cachedaudio_t* audiocache::loadFile(String path, int id) {
 		cachedaudio->ext = c;
 		this->mapId[_id] = cachedaudio.get();
 		my_printf("%d\n", cachedaudio->id);
-		cachedaudio_t* audio = cachedaudio.get();
+		audiofile_t* audio = cachedaudio.get();
 		list.push_back(std::move(cachedaudio));
 		assert(mapId[_id] == audio);
 		return audio;

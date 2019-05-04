@@ -648,7 +648,7 @@ void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t 
 		if (srcStartOffset+blockSize <= 0)
 			continue;
 
-		cachedaudio_t* audio = audiocache::getInstance()->get(clip->audio.id);
+		audiofile_t* audio = audiocache::getInstance()->get(clip->audio.id);
 		if (audio) {
 			audiosample_t* sample = audio->sample.get();
 			if (srcStartOffset >= (int32_t)sample->nSamples)

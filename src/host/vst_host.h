@@ -6,6 +6,7 @@
 #include <vector>
 #include <atomic>
 #include <stdint.h>
+#include <unordered_map>
 #include <stdbool.h>
 #include "../vstsdk-host-2.4/aeffectx.h"
 #include "../util/readerwriterqueue.h"
@@ -54,6 +55,7 @@ struct host_stats_t {
 	int32_t samplesProcessed;
 	int32_t blocksProcessed;
 	int64_t timeLastBlock;
+	std::unordered_map<String, int64_t> timings;
 	double usage;
 
 };
@@ -98,6 +100,7 @@ private:
 	bool unloadAllPlugins();
 	void updateTime(int32_t samplePos, tick_t pos, playback_state state);
 public:
+	int32_t getNextSampleId(int32_t id);
 	void sendNotesOff(effectbase* plugin);
 	moodycamel::ReaderWriterQueue<AudioBuffer*> audioQueue;
 public:
@@ -114,6 +117,7 @@ public:
 	hires_timer_t timer2;
 	std::atomic<int32_t> pluginId{100};
 	std::atomic<int32_t> audioStageId{100};
+	std::atomic<int32_t> sampleId{(1<<30)}; //TODO: collides with audiocache::nextIdx
 
 	int32_t processPlayback(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround);
 	void processAudio(audio_stage_t* channel, AudioBlock* input, AudioBlock* output, unsigned long samples);

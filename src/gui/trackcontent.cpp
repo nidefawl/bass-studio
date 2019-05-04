@@ -38,7 +38,7 @@ void gui_audio_clip::releaseRendered() {
 	m_clip->audio.waveformRef.rendered = false;
 }
 
-inline bool isEqualWaveform2(const audioclip_texture_t& lhs, const audioclip_texture_t& rhs){
+bool isEqualWaveform2(const audioclip_texture_t& lhs, const audioclip_texture_t& rhs) {
 	return (lhs.sampleBeginOffset - lhs.sampleBegin) == (rhs.sampleBeginOffset - rhs.sampleBegin) &&
 			(lhs.sampleEnd - lhs.sampleBegin) == (rhs.sampleEnd - rhs.sampleBegin) &&
 			lhs.startOffset == rhs.startOffset &&
@@ -68,7 +68,7 @@ inline bool canReuse(const audioclip_texture_t& lhs, const audioclip_texture_t& 
 
 
 }
-inline bool isEqualWaveform3(const audioclip_texture_t& lhs, const audioclip_texture_t& rhs){
+bool isEqualWaveform3(const audioclip_texture_t& lhs, const audioclip_texture_t& rhs) {
 	if ((lhs.sampleBeginOffset - lhs.sampleBegin) != (rhs.sampleBeginOffset - rhs.sampleBegin)) {
 		return false;
 	}
@@ -84,16 +84,10 @@ inline bool isEqualWaveform3(const audioclip_texture_t& lhs, const audioclip_tex
 //			lhs.scaleX == rhs.scaleX &&
 			lhs.audioId == rhs.audioId && lhs.quality == rhs.quality && lhs.method == rhs.method;
 }
-ivec2 maxvec2(const ivec2& a, const ivec2& b) {
-	return {math::max(a.x, b.x), math::max(a.y, b.y)};
-}
-ivec2 absvec2(const ivec2 a) {
-	return {math::abs(a.x), math::abs(a.y)};
-}
 void gui_audio_clip::updatePosition(project_t& project, scaled_grid& grid, ivec2& trackSize) {
 	size = this->parent->size;
 	culled = !getClipPosition(grid, trackSize, m_clip, pos, size, 0);
-	cachedaudio_t* audio = audiocache::getInstance()->get(m_clip->audio.id);
+	audiofile_t* audio = audiocache::getInstance()->get(m_clip->audio.id);
 	if (culled || !audio) {
 //		my_printf("release %012x from updatePosition() (culled)\n", &m_clip->audio.waveformRef);
 		releaseRendered();
@@ -129,8 +123,8 @@ void gui_audio_clip::updatePosition(project_t& project, scaled_grid& grid, ivec2
 					bool equal = ((waveform.size.y > 0) == (m_clip->audio.waveformRef.waveform.size.y > 0)) && isEqualWaveform3(waveform, m_clip->audio.waveformRef.waveform);
 
 					bool canQueue = waveformrender::getInstance()->canQueueUpdate();
-					ivec2 sizeDiff = absvec2(waveform.size-m_clip->audio.waveformRef.waveform.size);
-					ivec2 limit = maxvec2(ivec2(1), ivec2(waveform.size.x/4, 16));
+					ivec2 sizeDiff = math::absvec2(waveform.size-m_clip->audio.waveformRef.waveform.size);
+					ivec2 limit = math::maxvec2(ivec2(1), ivec2(waveform.size.x/4, 16));
 					if (!canQueue) {
 						limit.x = waveform.size.x/4;
 					}
@@ -155,7 +149,7 @@ void gui_audio_clip::updatePosition(project_t& project, scaled_grid& grid, ivec2
 }
 void gui_audio_clip::prerender(NVGcontext* vg) {
 	auto& clipAudio = m_clip->audio;
-	cachedaudio_t* audio = audiocache::getInstance()->get(clipAudio.id);
+	audiofile_t* audio = audiocache::getInstance()->get(clipAudio.id);
 	if (!clipAudio.waveformRef.queued) {
 		if (!audio || this->updatedWaveform.size.x < 1 || this->updatedWaveform.size.y < 1) {
 			return;
@@ -185,7 +179,7 @@ void guitooltip<clip_t>::layout()  {
 	table.colSizes.clear();
 	using tbl_rows = std::vector<table_entry_t>;
 	{
-		cachedaudio_t* c = audiocache::getInstance()->get(ptr->audio.id);
+		audiofile_t* c = audiocache::getInstance()->get(ptr->audio.id);
 
 		String path;
 		if (c) {
@@ -281,6 +275,9 @@ void gui_track::updateVisibleTrackContents(project_t& project, scaled_grid& grid
 		if (gui->parent != this) {
 			add(gui);
 		}
+		gui->updatePosition(project, grid, size);
+	}
+	for (gui_track_subtrack* gui : m_track->subtracks) {
 		gui->updatePosition(project, grid, size);
 	}
 }

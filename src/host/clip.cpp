@@ -490,7 +490,7 @@ std::pair<note_t*, note_t*> getMinMaxTime(std::vector<note_t>& notes) {
 
 tick_t clip_audio_t::lenSamples() {
 	assert(audiocache::getInstance());
-	cachedaudio_t* audio = audiocache::getInstance()->get(this->id);
+	audiofile_t* audio = audiocache::getInstance()->get(this->id);
 	auto* sample = audio ? audio->sample.get() : nullptr;
 	if (sample)
 		return sample->nSamples;
