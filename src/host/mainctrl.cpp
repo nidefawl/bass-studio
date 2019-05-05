@@ -448,6 +448,26 @@ void MainCtrl::setEmptyProject() {
 	insertNewTrack(-1, TRACK_TYPE_MIDI, FLG_TRK_CHANGE_LOAD);
 	insertNewTrack(-1, TRACK_TYPE_MASTER, FLG_TRK_CHANGE_LOAD);
 }
+#if CREATE_DEBUG_COMPANION_WINDOW
+void drawDebugWindow(NVGcontext* ctx, int winW, int winH, float pxratio);
+void openDebugWindow(window_main* mainwindow) {
+	assert(mainwindow);
+	window_dialog* dialog = mainwindow->createDialog("waveform atlas cache", 1280, 720);
+	window_draw_fn drawFn;
+	drawFn.drawCallback = [](NVGcontext* ctx, int winW, int winH, float pxratio) {
+		drawDebugWindow(ctx, winW, winH, pxratio);
+	};
+	dialog->setDrawFunction(drawFn);
+	dialog->show();
+//		GLFWwindow* contextWindow = mainWindow->getGLFW();
+//		w->createDialogWindow("test window", winW, winH, contextWindow);
+//		glfwMakeContextCurrent(w->getGLFW());
+//		w->centerOnScreen(0);
+//		w->showWindow();
+//		glfwMakeContextCurrent(mainWindow->getGLFW());
+
+}
+#endif
 void MainCtrl::menuCommand(int cmd) {
 	String path = projectPath;
 	switch (cmd) {
@@ -513,6 +533,11 @@ void MainCtrl::menuCommand(int cmd) {
 	case CMD_ABOUT:
 		this->openDialog(new guidialog_about());
 		break;
+	case CMD_SHOW_DEBUG_WINDOW:
+#if CREATE_DEBUG_COMPANION_WINDOW
+		openDebugWindow(dynamic_cast<window_main*>(this->window));
+#endif
+		break;
 	case CMD_PREFERENCES:
 		break;
 	case CMD_EXIT:
@@ -521,33 +546,11 @@ void MainCtrl::menuCommand(int cmd) {
 
 	}
 }
-#if CREATE_DEBUG_COMPANION_WINDOW
-void drawDebugWindow(NVGcontext* ctx, int winW, int winH, float pxratio);
-#endif
 void MainCtrl::postInit() {
 	vsthost::getInstance()->postInit();
 	loadFile("empty.project");
 	view->ctr_effectlib.update();
 	setAudioThreadState(playback_state::status_stop);
-#if CREATE_DEBUG_COMPANION_WINDOW
-	{
-		window_main* mainwindow = dynamic_cast<window_main*>(this->window);
-		assert(mainwindow);
-		window_dialog* dialog = mainwindow->createDialog("waveform atlas cache", 1280, 720);
-		window_draw_fn drawFn;
-		drawFn.drawCallback = [](NVGcontext* ctx, int winW, int winH, float pxratio) {
-			drawDebugWindow(ctx, winW, winH, pxratio);
-		};
-		dialog->setDrawFunction(drawFn);
-		dialog->show();
-//		GLFWwindow* contextWindow = mainWindow->getGLFW();
-//		w->createDialogWindow("test window", winW, winH, contextWindow);
-//		glfwMakeContextCurrent(w->getGLFW());
-//		w->centerOnScreen(0);
-//		w->showWindow();
-//		glfwMakeContextCurrent(mainWindow->getGLFW());
-	}
-#endif
 }
 
 void MainCtrl::destroy()
@@ -655,6 +658,7 @@ bool MainCtrl::init(window_main* window, NVGcontext* nanovg)
 	menus.tools.type = ngui::menu_type::submenu;
 	menus.tools.title = "Tools";
 	menus.tools.addCommand(CMD_PREFERENCES, "Preferences");
+	menus.tools.addCommand(CMD_SHOW_DEBUG_WINDOW, "Show Debug Window");
 	menus.tools.addCommand(CMD_ABOUT, "About");
 
 	menubar.add(&menus.file);

@@ -15,5 +15,6 @@
 #define CMD_DUPLICATE 17
 #define CMD_PREFERENCES 18
 #define CMD_ABOUT 19
+#define CMD_SHOW_DEBUG_WINDOW 20
 
 
