@@ -353,23 +353,16 @@ void guitrack_editor::trackViewDragMove(guitrack_editor* view, MouseEvent& evt) 
 		track_t* trNxtSelected = NULL;
 		gui_track_subtrack* subTr = getSubTrackFromMouse(project, local, true);
 		if (subTrSelected) {
-			if (subTr)
-			my_printf("subTr hit %d\n", subTr->idx);
 			if (subTr && subTr->m_track != subTrSelected->m_track) {
 				subTr = NULL;
 			}
 			trNxtSelected = getTrackFromMouse(project, local, false);
-			if (trNxtSelected)
-			my_printf("trNxtSelected hit %d\n", trNxtSelected->idx);
-			my_printf("subTrSelected %d\n", subTrSelected->idx);
 			if (trNxtSelected && trNxtSelected->idx < subTrSelected->m_track->idx) {
 				subTr = subTrSelected->m_track->subtracks.front();
 			}
 			if (trNxtSelected && trNxtSelected->idx > subTrSelected->m_track->idx) {
 				subTr = subTrSelected->m_track->subtracks.back();
 			}
-			if (subTr)
-			my_printf("subTr fix %d\n", subTr->idx);
 		} else {
 			trNxtSelected = getTrackFromMouse(project, local, true);
 
