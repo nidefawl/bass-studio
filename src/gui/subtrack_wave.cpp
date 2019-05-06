@@ -4,6 +4,7 @@
 #include "host/mainctrl.h"
 #include "subtrack.h"
 #include <nanovg.h>
+#include "str_util.h"
 #include "math/vec.h"
 #include "math/seq_math.h"
 #include "gui/drawwaveform.h"
@@ -30,6 +31,7 @@ class gui_subtrack_waveview : public gui_track_subtrack {
 		wave_split_layout_t layout;
 	};
 	struct waveview_entry {
+		bool flagUpdated = false;
 		int64_t sampleVersion = -1;
 		gui_waveform_texture_ref waveformTex;
 		audioclip_texture_t waveformUpdated;
@@ -124,6 +126,7 @@ public:
 	}
 	void refreshWaveform(waveview_entry* wv) {
 		waveformrender::getInstance()->release(&wv->waveformTex);
+		wv->flagUpdated = false;
 		wv->waveformTex.rendered = false;
 		if (wv->waveformUpdated.size.x > 0) {
 			assert(wv->layoutUpdated.size.x > 0);
@@ -149,10 +152,7 @@ public:
 				if (!wv.sample || wv.waveformUpdated.size.x < 1 || wv.waveformUpdated.size.y < 1) {
 					continue;
 				}
-				if ((!waveformTex.rendered
-						|| (wv.waveformUpdated != waveformTex.waveform)
-						|| wv.layoutCurrent != wv.layoutUpdated
-						|| wv.sampleVersion != wv.sample->version)) {
+				if (wv.flagUpdated) {
 					refreshWaveform(&entry.second);
 				}
 			}
@@ -294,6 +294,7 @@ public:
 								|| updatedEntry.layout.size.x < 1
 								|| updatedEntry.layout.size.y < 1) {
 							waveformrender::getInstance()->release(&entry.waveformTex);
+							entry.flagUpdated = false;
 							entry.waveformTex.rendered = false;
 							entry.waveformTex.waveform = updatedEntry.waveform;
 							entry.layoutCurrent = updatedEntry.layout;
@@ -324,6 +325,7 @@ public:
 		//						}
 								entry.waveformUpdated = updatedEntry.waveform;
 								entry.layoutUpdated = updatedEntry.layout;
+								entry.flagUpdated = true;
 								if (sizeDiff.x > limit.x || sizeDiff.y > limit.y) {
 									waveformrender::getInstance()->release(&entry.waveformTex);
 									entry.waveformTex.rendered = false;
