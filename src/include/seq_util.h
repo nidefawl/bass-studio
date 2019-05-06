@@ -83,3 +83,10 @@ void update_maximum(std::atomic<T>& maximum_value, T const& value) noexcept
             !maximum_value.compare_exchange_weak(prev_value, value))
         ;
 }
+template< typename ContainerT, typename PredicateT >
+void erase_if( ContainerT& items, const PredicateT& predicate ) {
+  for( auto it = items.begin(); it != items.end(); ) {
+    if( predicate(*it) ) it = items.erase(it);
+    else ++it;
+  }
+}
