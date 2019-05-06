@@ -338,7 +338,7 @@ void GLPathRenderer::destroy() {
 }
 void GLPathRenderer::bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, BakeGLPath& out) {
 
-//	printf("sizeof(Uniforms) %d\n", sizeof(Uniforms));
+//	paths.clear();
 	std::vector<vert> outVdata;
 	vbuf bufFinal;
 	std::vector<float> bufUniforms;

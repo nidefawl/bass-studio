@@ -132,7 +132,12 @@ set(SRC_FILES_SUBDIR_FILES
     src/file/appsettingsfile.cpp
 )
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    #set_source_files_properties(${SRC_FILES_SUBDIR_FILES} PROPERTIES COMPILE_OPTIONS "-g0;-O2")
+    set_source_files_properties(${SRC_FILES_SUBDIR_FILES} PROPERTIES COMPILE_OPTIONS "-g0;-O2")
+    set(SRC_FILES_OPTIMIZE 
+        src/gl/gl_path.cpp
+        src/wave/wav_tesselate.cpp
+    )
+    set_source_files_properties(${SRC_FILES_OPTIMIZE} PROPERTIES COMPILE_OPTIONS "-O2")
 endif()
 
 set(CPP_SRC_FILES ${SRC_FILES_SUBDIR_FILES} ${CPP_SRC_FILES})
