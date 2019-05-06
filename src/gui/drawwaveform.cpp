@@ -251,7 +251,8 @@ bool waveformrender::findSimiliarWaveform(waveform_update_task_t& waveformQueueE
 	}
 	return false;
 }
-int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
+void preGLState() {
+
 	checkGLError("waveformrender::render start");
 
 	GLboolean b;
@@ -278,11 +279,11 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 	glBindTexture(GL_TEXTURE_2D, 0);
 
 	checkGLError("fb prerender");
+}
+int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
+	bool preGlSet = false;
 
 
-	//go over all waveforms that are queued up
-	//assign them to free spots in framebuffertextures
-	//go over all framebuffers: bind fb, go over all queue updates in that fb and tesselate + draw them
 //	std::vector<gui_waveform_texture_ref*> queuedTasksRefs;
 //
 //	for (waveform_update_task_t& waveformQueueEntry : this->queuedTasks) {
@@ -293,10 +294,13 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 //	std::sort(queuedTasksRefs.begin(), queuedTasksRefs.end());
 //	assert(adjacent_find(queuedTasksRefs.begin(), queuedTasksRefs.end()) == queuedTasksRefs.end());
 
+	//go over all waveforms that are queued up
 	for (waveform_update_task_t& waveformQueueEntry : this->queuedTasks) {
 		gui_waveform_texture_ref* waveformRef = waveformQueueEntry.waveformRef;
+		// see if we have already have an identical texture rendered or queued
+		// if so bind them together and continue with the next queue entry
 		if (findSimiliarWaveform(waveformQueueEntry)) {
-//			my_printf("bind to similiar %012x\n", &waveformQueueEntry.waveformRef);
+//			my_printf("bind to identical %012x\n", &waveformQueueEntry.waveformRef);
 			continue;
 		}
 		int atlasIdx = -1;
@@ -306,6 +310,7 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 //		v.x *= 1.0f/waveformRef->waveform.scaleX;
 		ivec2 sizeInternal = ivec2((int)std::ceil(v.x), (int)std::ceil(v.y));
 //		assert(waveformRef->waveform.size.x <= 512);
+		//assign texture to free spot in framebuffertextures
 		if (findFreeSpot(sizeInternal, atlasIdx, pos)) {
 //			my_printf("bind to new spot %012x\n", &waveformRef);
 			TextureAtlas& _atlas = this->atlases[atlasIdx];
@@ -339,10 +344,19 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 	this->queuedTasks.clear();
 	//
 
-	glUseProgram(renderer.program2dLines);
+	//go over all framebuffers (_atlas.fb)
 	for (TextureAtlas& _atlas : atlases) {
 		bool clearFB = false;
+		if (_atlas.queuedTasks.empty()) {
+			continue;
+		}
+		if (!preGlSet) {
+			preGlSet = true;
+			preGLState();
+			glUseProgram(renderer.program2dLines);
+		}
 		if (!_atlas.fb) {
+			preGlSet|=1;
 			_atlas.fb = nvgluCreateFramebuffer(ctxt, FBO_WIDTH, FBO_HEIGHT, 0);
 			if (!_atlas.fb) {
 				throw new appexception("nvgluCreateFramebuffer error");
@@ -351,9 +365,8 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 			_atlas.glTexture = nvgGetGLImageHandle(ctxt, _atlas.fb->image);
 			clearFB = true;
 		}
-		if (_atlas.queuedTasks.empty()) {
-			continue;
-		}
+
+		// bind fb
 		nvgluBindFramebuffer(_atlas.fb);
 //		GLboolean isScissor=0;
 //		glGetBooleanv(GL_SCISSOR_TEST, &isScissor);
@@ -364,6 +377,8 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 			glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 		}
 		glEnable(GL_SCISSOR_TEST);
+
+		// go over all queue updates in that fb and tesselate + draw them
 		for (waveform_update_task_t& waveformQueueEntry : _atlas.queuedTasks) {
 			gui_waveform_texture_ref* waveformRef = waveformQueueEntry.waveformRef;
 //			my_printf("render entry %012x\n", &waveformRef);
@@ -434,13 +449,16 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 		_atlas.queuedTasks.clear();
 
 	}
-	glClearColor(0, 0, 0, 0);
-	glDisable(GL_SCISSOR_TEST);
-	glDisable(GL_DEPTH_TEST);
+	if (preGlSet) {
 
-	glBindVertexArray(0);
-	nvgluBindFramebuffer(NULL);
-	checkGLError("fb postrender");
+		glClearColor(0, 0, 0, 0);
+		glDisable(GL_SCISSOR_TEST);
+		glDisable(GL_DEPTH_TEST);
+
+		glBindVertexArray(0);
+		checkGLError("fb postrender");
+		nvgluBindFramebuffer(NULL);
+	}
 	return 0;
 
 }
