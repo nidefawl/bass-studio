@@ -176,6 +176,9 @@ public:
 	bool insertNewPlugin(audio_stage_t* trp, effectbase* plugin, int32_t dst);
 	bool replacePlugin(audio_stage_t* trp, effectbase* plugin, int32_t dst, effectbase** prevPlugin);
 	void getAllInstances(std::vector<effectbase*>& effects);
+	std::vector<vstplugin*> getVst2Instances() {
+		return pluginInstancesVST2;
+	}
 	void addDeferredEffect(effectbase* plugin) {
 		pluginsDeferred.push_back(plugin);
 	}

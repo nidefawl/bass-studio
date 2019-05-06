@@ -423,10 +423,14 @@ void MainCtrl::loadFile(String path, int flags) {
 		setStatusText(StringFormat("Failed loading %s", StringAsCStr(FileNameFromPath(path))));
 	} else {
 		auto cb = [this, path, l1, projFile=f](int n) {
-			timer.reset();
-			setLoadedProject(projFile, n==0 ? FLAG_DEFER_LOAD : 0);
-			double l2 = timer.getTimeDoubleReset();
-			log_printf("Loading file %s took %f %f\n", StringAsCStr(path), l1, l2);
+			try {
+				timer.reset();
+				setLoadedProject(projFile, n==0 ? FLAG_DEFER_LOAD : 0);
+				double l2 = timer.getTimeDoubleReset();
+				log_printf("Loading file %s took %f %f\n", StringAsCStr(path), l1, l2);
+			} catch (std::exception& e) {
+				handleStdException(e);
+			}
 		};
 		if (!flags) {
 			cb(1);
@@ -470,6 +474,7 @@ void openDebugWindow(window_main* mainwindow) {
 }
 #endif
 void MainCtrl::menuCommand(int cmd) {
+	try {
 	String path = projectPath;
 	switch (cmd) {
 	case CMD_UNDO:
@@ -545,6 +550,9 @@ void MainCtrl::menuCommand(int cmd) {
 		mainWindow->requestClose();
 		break;
 
+	}
+	} catch (std::exception& e) {
+		handleStdException(e);
 	}
 }
 void MainCtrl::postInit() {
@@ -828,10 +836,14 @@ bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file, int flags) {
 		ctr.layout();
 		auto windowMain = dynamic_cast<window_main*>(window);
 		assert(windowMain);
+		assert(vsthost::getInstance()->getVst2Instances().empty());
 		std::vector<effectbase*> pluginsDeferred;
 		host->getDeferredEffects(pluginsDeferred);
 		int len = pluginsDeferred.size();
 		for (int i = 0; i < len; i++) {
+
+			assert(pluginsDeferred[i]->getModuleType() == PLUGIN_TYPE_DEFERRED);
+			//assert(pluginsDeferred[i]->get)
 			auto plugin = dynamic_cast<effect_deferred*>(pluginsDeferred[i]);
 			windowMain->preRender();
 	//		render(0, 0, m_size.x, m_size.y, 1.0);

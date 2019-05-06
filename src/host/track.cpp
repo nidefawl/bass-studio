@@ -33,6 +33,7 @@
 #include "plugindatabase.h"
 #include "gui/drawwaveform.h"
 #include "gui/subtrack.h"
+#include "assert_dbg.h"
 
 
 const tick_t INVALID_TICK = 1 << 31;
@@ -259,6 +260,7 @@ void track_impl_t::removePlugin(effectbase* _effect, bool notifyUp) {
 	audio_stage_t::removePlugin(_effect, notifyUp);
 }
 void audio_stage_t::removePlugin(effectbase* _effect, bool notifyUp) {
+	removeEntry(deferredEffects, _effect);
 	if (!removeEntry(effects, _effect)) {
 		return;
 	}
@@ -545,9 +547,9 @@ void vsthost::activateDeferred(effectbase* eff) {
 	}
 	loadEffectParamsFromSnapshot(pluginSnapshot, effect);
 	effectbase* prevPlugin = nullptr;
-	assert(removeEntry(eff->trackImpl->deferredEffects, eff));
+	always_assert(removeEntry(eff->trackImpl->deferredEffects, eff));
 	replacePlugin(eff->trackImpl, effect, defEffect->getSlot(), &prevPlugin);
-	assert(removeEntry(this->pluginsDeferred, eff));
+	always_assert(removeEntry(this->pluginsDeferred, eff));
 	effect->loadSnapshot(pluginSnapshot);
 	loadAutomation(pluginSnapshot.automatedParams, effect);
 	if (pluginSnapshot.enabled) {

@@ -27,6 +27,7 @@
 #include <stdlib.h>
 #include <algorithm>
 #include <assert.h>
+#include "assert_dbg.h"
 #include <stdlib.h>
 #include <memory.h>
 #include "track_impl.h"
@@ -1006,6 +1007,7 @@ void vsthost::unloadTrack(track_t* track) {
 	for (effectbase* effect : effects) {
 		unloadPlugin(effect);
 	}
+	assert(audio->deferredEffects.empty());
 }
 void vsthost::removePlugin(effectbase* plugin) {
 	audio_stage_t* audioStage = plugin->getTrackLink();
@@ -1034,16 +1036,16 @@ void vsthost::unloadPlugin(effectbase* plugin) {
 
 	switch (plugin->getModuleType()) {
 	case PLUGIN_TYPE_DEFERRED:
-		assert(removeEntry(pluginsDeferred, plugin));
+		always_assert(removeEntry(pluginsDeferred, plugin));
 		break;
 	case PLUGIN_TYPE_INTERNAL_EFFECT:
 	case PLUGIN_TYPE_VST:
-		assert(removeEntry(pluginInstancesVST2, plugin));
-		assert(removeEntry(pluginInstances, plugin));
+		always_assert(removeEntry(pluginInstancesVST2, plugin));
+		always_assert(removeEntry(pluginInstances, plugin));
 		break;
 	default:
-		assert(removeEntry(pluginInstancesInternal, plugin));
-		assert(removeEntry(pluginInstances, plugin));
+		always_assert(removeEntry(pluginInstancesInternal, plugin));
+		always_assert(removeEntry(pluginInstances, plugin));
 		break;
 	}
 
