@@ -225,6 +225,7 @@ class MainCtrl : public AppCtrl, public delete_cb, public project_controller_t
 	void* lastTooltipSrc = nullptr;
 	int32_t lastHoveredTooltipTicks = 0;
 	seq_rand rand;
+	String loadProject = "";
 public:
 	int32_t numCallsWaitEvents = 0;
 	std::shared_ptr<plugin_clipboard_t> pluginClipboard;
@@ -272,7 +273,7 @@ public:
 		return &workerThread;
 	}
 	std::shared_ptr<project_file> createProjectFile();
-	void loadFile(String path);
+	void loadFile(String path, int flags);
 	bool setLoadedProject(std::shared_ptr<project_file> file, int flags);
 	void setEmptyProject();
 	void pushHist(action_base* action);

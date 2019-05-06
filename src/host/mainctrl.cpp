@@ -415,26 +415,27 @@ void MainCtrl::updateMenubar() {
 static SupportedFileType FILE_TYPE_PROJECT {"Project File", PROJECT_FILE_EXT};
 std::vector<SupportedFileType> vFILE_TYPE_PROJECT = { FILE_TYPE_PROJECT };
 
-void MainCtrl::loadFile(String path) {
+void MainCtrl::loadFile(String path, int flags) {
 	timer.reset();
 	std::shared_ptr<project_file> f = loadProjectFile(path);
 	double l1 = timer.getTimeDoubleReset();
 	if (!f) {
 		setStatusText(StringFormat("Failed loading %s", StringAsCStr(FileNameFromPath(path))));
 	} else {
-//		timer.reset();
-//		setLoadedProject(f, FLAG_DEFER_LOAD);
-//		double l2 = timer.getTimeDoubleReset();
-//		log_printf("Loading file %s took %f %f\n", StringAsCStr(path), l1, l2);
-		guidialog_cb_yes_no* dlg = new guidialog_cb_yes_no();
-		dlg->cb = [this, path, l1, projFile=f](int n) {
+		auto cb = [this, path, l1, projFile=f](int n) {
 			timer.reset();
 			setLoadedProject(projFile, n==0 ? FLAG_DEFER_LOAD : 0);
 			double l2 = timer.getTimeDoubleReset();
 			log_printf("Loading file %s took %f %f\n", StringAsCStr(path), l1, l2);
 		};
-		dlg->message = "Load plugins?";
-		openDialog(dlg);
+		if (!flags) {
+			cb(1);
+		} else {
+			guidialog_cb_yes_no* dlg = new guidialog_cb_yes_no();
+			dlg->cb = cb;
+			dlg->message = "Load plugins?";
+			openDialog(dlg);
+		}
 	}
 }
 void MainCtrl::setEmptyProject() {
@@ -497,7 +498,7 @@ void MainCtrl::menuCommand(int cmd) {
 		{
 			String path;
 			if (promptUserFilePath(window, 0, vFILE_TYPE_PROJECT, path)) {
-				loadFile(path);
+				loadFile(path, FLAG_DEFER_LOAD);
 			}
 		}
 		break;
@@ -548,7 +549,12 @@ void MainCtrl::menuCommand(int cmd) {
 }
 void MainCtrl::postInit() {
 	vsthost::getInstance()->postInit();
-	loadFile("empty.project");
+	if (!loadProject.empty()) {
+		loadFile(loadProject, 0);
+	} else {
+		loadFile("empty.project", FLAG_DEFER_LOAD);
+	}
+
 	view->ctr_effectlib.update();
 	setAudioThreadState(playback_state::status_stop);
 }
@@ -590,6 +596,12 @@ void MainCtrl::destroy()
 	tls.audioCache = nullptr;
 }
 void MainCtrl::initApp(int argc, char* argv[]) {
+	for (int i = 1; i < argc; i++) {
+		String s = argv[i];
+		if (s == "--load" && i+1 < argc) {
+			loadProject = argv[i+1];
+		}
+	}
 	daw_tls::tlsinstance& tls = daw_tls::getTls();
 	auto host = new vsthost(44100, 256);
 	if (!vsthost::assignMasterCallback(host)) {
