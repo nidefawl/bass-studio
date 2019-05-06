@@ -63,17 +63,6 @@ public:
 		}
 		if (tickOffset++>60) {
 			tickOffset = 0;
-//			for (auto& entry : splits) {
-//				auto& waveformTex = entry.second.waveformTex;
-//				if (!waveformTex.queued && waveformTex.rendered) {
-//					waveformrender::getInstance()->release(&waveformTex);
-//					waveformTex.rendered = false;
-//				}
-//			}
-//			erase_if(splits, [](const auto& entry) {
-//				auto& waveformTex = entry.second.waveformTex;
-//				return !waveformTex.rendered && !waveformTex.queued;
-//			});
 			project_t& project = *project_controller_t::get();
 			ivec2 ts = { 0, 0 };
 			updatePosition(project, grid, ts);
@@ -256,9 +245,7 @@ public:
 
 //		size = this->parent->size;
 		culled = size.x < 1 || size.y < 1;//!getClipPosition(grid, trackSize, m_clip, pos, size, 0);
-//		audiofile_t* audio = this->m_track->audio->audioOutput.getSample()
 		if (culled) {
-	//		my_printf("release %012x from updatePosition() (culled)\n", &waveformRef);
 			for (auto& entry : splits) {
 				auto& waveformTex = entry.second.waveformTex;
 				if (!waveformTex.queued) {
@@ -267,17 +254,7 @@ public:
 				}
 			}
 		}
-	//test clipping
-	//	ivec2 prevSize = size;
-	//	ivec4 clippedP = ivec4(pos, size);
-	//	this->parent->scissorClip(clippedP);
-	//	pos.x = clippedP.x;
-	//	pos.y = clippedP.y;
-	//	size.x = clippedP.z;
-	//	size.y = clippedP.w;
-	//	if (size != prevSize) {
-	//		my_printf("%d %d -> %d %d\n", prevSize.x, prevSize.y, size.x, size.y);
-	//	}
+
 		if (!culled) {
 			assert(size.x > 0);
 			ivec2 clipSize = ivec2(size.x, size.y);
