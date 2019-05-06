@@ -356,7 +356,7 @@ struct VstEvent_t {
 		vstEvents->events[idx] = reinterpret_cast<VstEvent*>(&evt);
 		vstEvents->numEvents++;
 	}
-	void writeMessage(char c0, char c1, char c2, char c3, int32_t delta) {
+	void writeMessage(unsigned char c0, unsigned char c1, unsigned char c2, unsigned char c3, int32_t delta) {
 		int32_t idx = vstEvents->numEvents;
 		assert(idx < maxEvents);
 		VstMidiEvent& evt = evtArr[idx];
@@ -364,7 +364,7 @@ struct VstEvent_t {
 		evt.byteSize = sizeof(VstMidiEvent);
 		evt.flags = kVstMidiEventIsRealtime;
 		evt.deltaFrames = 0;
-		char* buf = evt.midiData;
+		unsigned char* buf = (unsigned char*)evt.midiData;
 		buf[0] = c0;
 		buf[1] = c1;
 		buf[2] = c2;

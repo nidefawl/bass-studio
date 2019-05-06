@@ -29,8 +29,8 @@ void buildIndices(int nV, int offset, std::vector<int>& _out) {
 }
 
 static inline float fast_atan2(float y, float x){
-	static const float c1 = M_PI / 4.0;
-	static const float c2 = M_PI * 3.0 / 4.0;
+	static const float c1 = (float)(M_PI / 4.0);
+	static const float c2 = (float)(M_PI * 3.0 / 4.0);
 	if (y == 0 && x == 0)
 		return 0;
 	float abs_y = fabsf(y);

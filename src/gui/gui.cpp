@@ -88,9 +88,9 @@ void renderDashedLineFrame(NVGcontext* vg, float x, float y, float w, float h, f
 	uint32_t texOffsetY = t*image.height;
 	int32_t imageId = image.perContextId[vg];
 	NVGpaint paintDown = nvgImagePattern(vg, 0, texOffsetY, image.width, image.height, 0, imageId, 1.0f);
-	NVGpaint paintRight = nvgImagePattern(vg, texOffsetX, 0, image.width, image.height, M_PI*0.5f, imageId, 1.0f);
+	NVGpaint paintRight = nvgImagePattern(vg, texOffsetX, 0, image.width, image.height, (float)(M_PI*0.5f), imageId, 1.0f);
 	NVGpaint paintUp = nvgImagePattern(vg, 0, image.height-texOffsetY, image.width, image.height, 0, imageId, 1.0f);
-	NVGpaint paintLeft = nvgImagePattern(vg, image.width-texOffsetX, 0, image.width, image.height, M_PI*0.5f, imageId, 1.0f);
+	NVGpaint paintLeft = nvgImagePattern(vg, image.width-texOffsetX, 0, image.width, image.height, (float)(M_PI*0.5f), imageId, 1.0f);
 
 	nvgShapeAntiAlias(vg, 0);
 	nvgStrokeWidth(vg, thickness);

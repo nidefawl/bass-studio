@@ -108,8 +108,7 @@ int main(int argc, char* argv[]) {
 #endif
 	std::set_terminate(on_terminate1);
 	std::set_unexpected(on_unexpected1);
-    appsettings settings;
-    loadSettings(settings);
+    appsettings settings = loadSettings();
 	String vstPlugPath = settings.pluginPath;
 	LOG("pluginPath '%s'", StringAsCStr(vstPlugPath));
     if (vstPlugPath.empty()) {

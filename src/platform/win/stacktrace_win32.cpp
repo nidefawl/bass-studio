@@ -86,7 +86,7 @@ namespace Win32Stacktrace {
 			DWORD  offset = 0;
 			IMAGEHLP_LINE imgline;
 			imgline.SizeOfStruct = sizeof(IMAGEHLP_LINE);
-			int prefOffset = snprintf(bufPrefix, 128, "%08X ", frame.AddrPC.Offset);
+			int prefOffset = snprintf(bufPrefix, 128, "%08X ", (int64_t)frame.AddrPC.Offset);
 			if (prefOffset < 0) prefOffset = 0;
 			if (SymGetLineFromAddr(process, frame.AddrPC.Offset, &offset, &imgline)) {
 				const char* shortName = removeLeadingPathSegments(imgline.FileName, 2);

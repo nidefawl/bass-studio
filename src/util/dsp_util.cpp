@@ -111,7 +111,7 @@ void fillSine(float** buffer, uint32_t samples) {
 		}
 		data->left_phase = data->right_phase = 0;
 	}
-	float gain = 0.1;
+	float gain = 0.1f;
 	float* input0 = buffer[0];
 	float* input1 = buffer[1];
 	for (uint32_t i = 0; i<samples; i++)

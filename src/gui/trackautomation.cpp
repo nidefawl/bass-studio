@@ -579,7 +579,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 			}
 			RenderResources::NvgImageTexture& image = RenderResources::imgDashedLine;
 			uint32_t texOffsetX = image.width - (grid.getOffset()%image.width);
-			NVGpaint paintDown = nvgImagePattern(vg, texOffsetX, 0, image.width, image.height, M_PI*0.5f, image.perContextId[vg], 0.6f);
+			NVGpaint paintDown = nvgImagePattern(vg, texOffsetX, 0, image.width, image.height, (float)(M_PI*0.5f), image.perContextId[vg], 0.6f);
 			nvgStrokePaint(vg, paintDown);
 			nvgStroke(vg);
 		}
