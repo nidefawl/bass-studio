@@ -10,6 +10,15 @@
 static constexpr int32_t PER_BLOCK_BYTES = (1024*1024*4);
 static constexpr int32_t PER_BLOCK_SAMPLES = (PER_BLOCK_BYTES/(sizeof(float)));
 
+std::shared_ptr<audiotrack_split_t> audiotrack_t::getSampleById(int32_t sampleId) {
+	//TODO: this lock could be narrowed
+	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+	for (const std::shared_ptr<audiotrack_split_t>& sample : samples) {
+		if (sample && sample->sampleId == sampleId)
+			return sample;
+	}
+	return nullptr;
+}
 std::shared_ptr<audiotrack_split_t> audiotrack_t::getSample(int32_t samplePos) {
 	//TODO: this lock could be narrowed
 	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
@@ -78,7 +87,7 @@ int32_t audiotrack_t::convertToSamples(vsthost* host) {
 				channels[j].resize(srcSize);
 				float* dstPtr = channels[j].data();
 				size_t dstSize = channels[j].size();
-				memcpy_s(dstPtr, dstSize, srcPtr, srcSize);
+				memcpy_s(dstPtr, dstSize*sizeof(float), srcPtr, srcSize*sizeof(float));
 				bytesCopied += sizeof(float)*srcSize;
 			}
 //			log_printf("block #%d copy %d bytes, present %d, resized %d, reused %d, version %d/%d\n", i, bytesCopied, present, resized, reused, preVersion, data[i]->version);
@@ -93,7 +102,7 @@ int32_t audiotrack_t::convertToSamples(vsthost* host) {
 
 void audiotrack_t::store(AudioBlock* input, int32_t samplePos) {
 	int32_t startBlock = (samplePos) / PER_BLOCK_SAMPLES;
-	int32_t endBlock = (samplePos + input->samples) / PER_BLOCK_SAMPLES;
+	int32_t endBlock = (samplePos + input->samples - 1) / PER_BLOCK_SAMPLES;
 	while (data.size() <= endBlock) {
 		data.push_back(nullptr);
 	}
