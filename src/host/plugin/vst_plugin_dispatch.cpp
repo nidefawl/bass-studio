@@ -127,7 +127,7 @@ void vst_setParameter(vstplugin* plugin, AEffect* aeffect, int32_t idx, float va
 #endif //ifdef _WIN32
 }
 
-void vstplugin::process(AudioBlock* in, AudioBlock* out, int32_t samples) {
+void vstplugin::process(AudioBlock* in, AudioBlock* out, int32_t samplePos, int32_t numSamples, playback_state state) {
 	if (handle->aeffect != NULL) {
 
 #ifdef _WIN32
@@ -140,9 +140,9 @@ void vstplugin::process(AudioBlock* in, AudioBlock* out, int32_t samples) {
 	    {
 
 			if (handle->aeffect->flags & effFlagsCanReplacing) {
-				handle->aeffect->processReplacing(handle->aeffect, in->buf, out->buf, samples);
+				handle->aeffect->processReplacing(handle->aeffect, in->buf, out->buf, numSamples);
 			} else {
-				handle->aeffect->process(handle->aeffect, in->buf, out->buf, samples);
+				handle->aeffect->process(handle->aeffect, in->buf, out->buf, numSamples);
 			}
 
 		}

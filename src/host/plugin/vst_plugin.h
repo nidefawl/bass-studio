@@ -132,6 +132,6 @@ public:
 	void loadSnapshot(const plugin_snapshot_t& pluginSnapshot) override;
 	guiplugin* makeGui() override;
 	guiplugin* getGui() override;
-	void process(AudioBlock* in, AudioBlock* out, int32_t samples) override;
+	void process(AudioBlock* in, AudioBlock* out, int32_t samplePos, int32_t numSamples, playback_state state) override;
 	int32_t getDelay() override;
 };

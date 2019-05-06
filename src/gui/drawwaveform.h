@@ -47,7 +47,7 @@ class waveformrender {
 	BakeGLPath bakedPath;
 	std::vector<TextureAtlas> atlases;
 	std::vector<waveform_update_task_t> queuedTasks;
-	std::vector<audioclip_texture_t> prevRendered;
+//	std::vector<audioclip_texture_t> prevRendered;
 public:
 	static waveformrender* getInstance();
 	static void destroy();

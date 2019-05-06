@@ -83,7 +83,7 @@ audioclip_texture_t makeWaveformFromClip(project_t& project, scaled_grid& grid,
 	constexpr float MAX_RES = 2048;
 	w.scaleX = 1.0f;
 	w.pos = pos;
-	w.startOffset = startOffset;
+//	w.startOffset = startOffset;
 	w.size = ivec2(math::min(sizeClipped.x, FBO_WIDTH), math::min(size.y, FBO_HEIGHT));
 	double nSamples = sampleEnd-sampleStartOffset;
 	if (nSamples * pxPerSample > FBO_WIDTH) {
@@ -124,7 +124,7 @@ audioclip_texture_t makeWaveformFromClip(project_t& project, scaled_grid& grid,
 
 }
 
-void renderAudioClip(NVGcontext* vg, const guitheme_t* theme, const track_t* tr, const clip_t* cl, const gui_waveform_texture_ref* waveformRef, ivec2 pos, ivec2 size, ivec2 sizeClipped) {
+void renderAudioClip(NVGcontext* vg, const guitheme_t* theme, const track_t* tr, const clip_t* cl, const gui_waveform_texture_ref* waveformRef, ivec2 pos, ivec2 size, ivec2 posClipped, ivec2 sizeClipped) {
 	if (cl->getLen() <= 0) {
 		return;
 	}
@@ -146,7 +146,7 @@ void renderAudioClip(NVGcontext* vg, const guitheme_t* theme, const track_t* tr,
 
 	}
 
-	ivec2 posContents = ivec2(pos.x, pos.y+HEIGHT_CLIP_TITLE+INSET_CLIP_CONTENT);
+	ivec2 posContents = ivec2(posClipped.x, pos.y+HEIGHT_CLIP_TITLE+INSET_CLIP_CONTENT);
 //	ivec2 sizeContents = ivec2(sizeClipped.x, sizeClipped.y-HEIGHT_CLIP_TITLE-INSET_CLIP_CONTENT*2);
 	tick_t clipLen = cl->getLen();
 	float numBars = clipLen / (float) TICKS_BAR;

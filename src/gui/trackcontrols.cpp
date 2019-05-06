@@ -644,13 +644,13 @@ public:
 class gui_track_subtrack_mixer : public guictr_base {
 	track_t* const m_track;
 public:
-	gui_track_subtrack* const al;
+	gui_track_subtrack* const subtrack;
 private:
 	guibuttontoggle removeLane;
 	int dragMode = -1;
 public:
-	gui_track_subtrack_mixer(track_t* _track, gui_track_subtrack* _al) :
-		guictr_base(), m_track(_track), al(_al) {
+	gui_track_subtrack_mixer(track_t* _track, gui_track_subtrack* _subtrack) :
+		guictr_base(), m_track(_track), subtrack(_subtrack) {
 		removeLane.setRadius(10);
 		padding = 0;
 		removeLane.icon = ICON_MINUS;
@@ -670,7 +670,7 @@ public:
 	void buttonClicked(guibase* button) override {
 		if (button == &removeLane) {
 			Cursor& cursor = MainCtrl::get()->cursor;
-			int32_t laneIdx = this->al->idx;
+			int32_t laneIdx = this->subtrack->idx;
 			if (cursor.inSubTrack(m_track->idx, laneIdx)) {
 				fixCursorSubRange(cursor, m_track->subtracks.size()-1);
 			}
@@ -688,33 +688,7 @@ public:
 			g->render(vg);
 		}
 
-		MainCtrl* ctrl = MainCtrl::get();
-		String curvalue = "UNDEF";
-		String target = "<NULL>";
-		automatable_t* ctr = al->at;
-		if (ctr) {
-			target = StringFormat("%s %08X", StringAsCStr(ctr->getAutomatableName()), ctr);
-			int32_t idx = al->param;
-			if (idx >= 0) {
-				automation_t* automation = ctr->getRegisteredAutomation(idx);
-				if (automation) {
-					curvalue = StringFormat("%s (%d) %f", StringAsCStr(ctr->getParamName(idx)), idx, automation->getValueAt(ctrl->cursor.cursorPos));
-				} else {
-					curvalue = StringFormat("%s (%d) UNDEF", StringAsCStr(ctr->getParamName(idx)), idx);
-				}
-			} else {
-				curvalue = StringFormat("<NULL> %d", idx);
-			}
-		}
-		const int htt = theme->get(GuiConstant::CONST_TRACK_HEIGHT_TITLE);
-		const int titleHeight = htt*4/5;
-		const int fontSize = titleHeight-4;
-		int32_t y = INSET_TITLE;
-		//debug
-		setFont(vg, fontSize, G_WHITE, G_TITLE_ALIGN);
-		renderText(vg, 0 + INSET_TITLE, y+titleHeight / 2, size.x, StringAsCStr(target));
-		y+=titleHeight;
-		renderText(vg, 0 + INSET_TITLE, y+titleHeight / 2, size.x, StringAsCStr(curvalue));
+		subtrack->renderMixerInfo(vg);
 	}
 	bool isResize(ivec2 mpos) {
 		int32_t resizeTopOrBottom = bottom();
@@ -751,12 +725,15 @@ public:
 		if (dragMode == DRAG_RESIZE) {
 			int32_t mouseDragDist = evt.relMousepos.y;
 			int32_t heightStep = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
-			resize(m_track, al, mouseDragDist, heightStep);
+			resize(m_track, subtrack, mouseDragDist, heightStep);
 			this->parent->onChildLayoutChanged(this);
 		}
 	}
 	void handleRightClick(MouseEvent& evt) override {
-		MainCtrl::get()->openContextMenu(new guictxtmenu_at_param(al->at, al->param), evt.mousepos);
+		if (subtrack->at) {
+			MainCtrl::get()->openContextMenu(new guictxtmenu_at_param(subtrack->at, subtrack->param), evt.mousepos);
+		}
+
 	}
 };
 gui_track_controls::gui_track_controls(track_t* _track)
@@ -786,7 +763,7 @@ void gui_track_controls::addSubtrackMixer(track_t* t, gui_track_subtrack* al) {
 void gui_track_controls::removeSubtrackMixer(gui_track_subtrack* al) {
 	auto& ctrls = automationLaneControls;
 	auto it = std::find_if(ctrls.begin(), ctrls.end(), [al] (const gui_track_subtrack_mixer* ref) {
-		return ref->al == al;
+		return ref->subtrack == al;
 	});
 	assert(it != ctrls.end());
 	remove(*it);
@@ -796,7 +773,7 @@ void gui_track_controls::removeSubtrackMixer(gui_track_subtrack* al) {
 void gui_track_controls::removeAllAutomationLanes(automatable_t* at, int32_t paramIdx) {
 	auto& ctrls = automationLaneControls;
 	auto it = std::remove_if(ctrls.begin(), ctrls.end(), [this, at, paramIdx] (gui_track_subtrack_mixer* ref) {
-		if ((at == NULL || ref->al->at == at) && (paramIdx < 0 || ref->al->param == paramIdx)) {
+		if ((at == NULL || ref->subtrack->at == at) && (paramIdx < 0 || ref->subtrack->param == paramIdx)) {
 			remove(ref);
 			delete ref;
 			return true;
@@ -894,8 +871,8 @@ void gui_track_controls::layout() {
 	title->pos = ivec2(TRACK_HEIGHT_SPACING_HALF, 0);
 	mixer->pos = ivec2(size.x - mixer->size.x + TRACK_HEIGHT_SPACING_HALF, 0);
 	for (gui_track_subtrack_mixer* ctrl : automationLaneControls) {
-		ctrl->pos = ivec2(title->pos.x, ctrl->al->pos.y-pos.y);
-		ctrl->size = ivec2(title->size.x, ctrl->al->size.y);
+		ctrl->pos = ivec2(title->pos.x, ctrl->subtrack->pos.y-pos.y);
+		ctrl->size = ivec2(title->size.x, ctrl->subtrack->size.y);
 	}
 	for (guibase* g : guis) {
 		g->layout();

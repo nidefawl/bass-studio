@@ -194,7 +194,7 @@ void waveformrender::assertWaveformRefIsUnbound(gui_waveform_texture_ref* wavefo
 inline bool isAlmostEqualWaveform(const audioclip_texture_t& lhs, const audioclip_texture_t& rhs){
 	if ((lhs.sampleBeginOffset - lhs.sampleBegin) == (rhs.sampleBeginOffset - rhs.sampleBegin) &&
 			(lhs.sampleEnd - lhs.sampleBegin) == (rhs.sampleEnd - rhs.sampleBegin) &&
-			lhs.startOffset == rhs.startOffset &&
+//			lhs.startOffset == rhs.startOffset &&
 //			lhs.size == rhs.size &&
 //			lhs.samplesPerPx == rhs.samplesPerPx &&
 //			lhs.scale == rhs.scale &&
@@ -372,15 +372,15 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 
 			SampleMethod method = waveform.method;
 			std::vector<std::vector<glm::vec2>> tesselatedWaveForms;
-			auto it = std::find(prevRendered.begin(), prevRendered.end(), waveform);
-			if (it != prevRendered.end()) {
-				my_printf("found prev rendered!\n", 0);
-			}
+//			auto it = std::find(prevRendered.begin(), prevRendered.end(), waveform);
+//			if (it != prevRendered.end()) {
+//				my_printf("found prev rendered!\n", 0);
+//			}
 			tesselateWaveform(audio->getSample(), 0, 0, &waveform, method, tesselatedWaveForms);
-			prevRendered.push_back(waveform);
-			while (prevRendered.size() >= 1000) {
-				prevRendered.erase(prevRendered.begin(), prevRendered.begin()+10);
-			}
+//			prevRendered.push_back(waveform);
+//			while (prevRendered.size() >= 1000) {
+//				prevRendered.erase(prevRendered.begin(), prevRendered.begin()+10);
+//			}
 			Uniforms bakeOpt;
 			bakeOpt.linecaps = vec2(LineCaps::none, LineCaps::none);
 			bakeOpt.linejoin = waveform.linewidth > 1.75 ? LineJoin::round : LineJoin::miter;
@@ -479,7 +479,7 @@ void waveformrender::draw(NVGcontext* ctxt, const gui_waveform_texture_ref* wave
 	auto& entry = *it;
 	const audioclip_texture_t* waveImage = &waveformRef->waveform;
 	ivec2 outputSize = !waveImage->clipped ? sizeClipped : waveImage->size;
-	drawImage(ctxt, atlas.fb->image, 1.0f, entry.pos.x, entry.pos.y, entry.size.x, entry.size.y, waveImage->startOffset.x, 0, sizeClipped.x , sizeClipped.y);
+	drawImage(ctxt, atlas.fb->image, 1.0f, entry.pos.x, entry.pos.y, entry.size.x, entry.size.y, 0, 0, sizeClipped.x , sizeClipped.y);
 
 //	for (auto& texture : textures) {
 //		if (texture.idx == fbId) {

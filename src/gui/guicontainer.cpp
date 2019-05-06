@@ -108,7 +108,7 @@ void guictr_base::renderTitleBar(NVGcontext* vg, String text, GuiConstant::const
 			setFont(vg, (int) (hpt * 0.8), G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
 			nvgSave(vg);
 			nvgTranslate(vg, hpt / 2, textOffsetX);
-			nvgRotate(vg, -M_PI / 2.0);
+			nvgRotate(vg, (float)(-M_PI / 2.0));
 			//		nvgTranslate(vg, -HEIGHT_PLUGIN_TITLE, 0);
 			//		nvgText(vg, 0, 0, StringAsCStr(this->text), NULL);
 			nvgText(vg, INSET_TITLE * 2, 0, StringAsCStr(text), NULL);

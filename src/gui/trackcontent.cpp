@@ -41,7 +41,7 @@ void gui_audio_clip::releaseRendered() {
 bool isEqualWaveform2(const audioclip_texture_t& lhs, const audioclip_texture_t& rhs) {
 	return (lhs.sampleBeginOffset - lhs.sampleBegin) == (rhs.sampleBeginOffset - rhs.sampleBegin) &&
 			(lhs.sampleEnd - lhs.sampleBegin) == (rhs.sampleEnd - rhs.sampleBegin) &&
-			lhs.startOffset == rhs.startOffset &&
+//			lhs.startOffset == rhs.startOffset &&
 //			lhs.size == rhs.size &&
 //			lhs.samplesPerPx == rhs.samplesPerPx &&
 //			lhs.scale == rhs.scale &&
@@ -58,7 +58,8 @@ inline bool canReuse(const audioclip_texture_t& lhs, const audioclip_texture_t& 
 		return false;
 	}
 //			(lhs.sampleEnd - lhs.sampleBegin) == (rhs.sampleEnd - rhs.sampleBegin) &&
-			return lhs.startOffset == rhs.startOffset &&
+			return
+//			lhs.startOffset == rhs.startOffset &&
 //			lhs.size == rhs.size &&
 //			lhs.samplesPerPx == rhs.samplesPerPx &&
 //			lhs.scale == rhs.scale &&
@@ -76,7 +77,8 @@ bool isEqualWaveform3(const audioclip_texture_t& lhs, const audioclip_texture_t&
 		return false;
 	}
 //			(lhs.sampleEnd - lhs.sampleBegin) == (rhs.sampleEnd - rhs.sampleBegin) &&
-			return lhs.startOffset == rhs.startOffset &&
+			return
+//					lhs.startOffset == rhs.startOffset &&
 //			lhs.size == rhs.size &&
 //			lhs.samplesPerPx == rhs.samplesPerPx &&
 //			lhs.scale == rhs.scale &&
@@ -209,7 +211,7 @@ void guitooltip<clip_t>::layout()  {
 		table.rows.push_back(tbl_row_t{tbl_rows{{tblstr{"waveform samplesPerPx"}, tblfloat{(float)waveform.samplesPerPx}}}});
 		table.rows.push_back(tbl_row_t{tbl_rows{{tblstr{"waveform pos"}, waveform.pos}}});
 		table.rows.push_back(tbl_row_t{tbl_rows{{tblstr{"waveform size"}, waveform.size}}});
-		table.rows.push_back(tbl_row_t{tbl_rows{{tblstr{"waveform startOffset"}, waveform.startOffset}}});
+//		table.rows.push_back(tbl_row_t{tbl_rows{{tblstr{"waveform startOffset"}, waveform.startOffset}}});
 		table.rows.push_back(tbl_row_t{tbl_rows{{tblstr{"waveform clipped"}, tblstr{(waveform.clipped?"yes":"no")}}}});
 		table.rows.push_back(tbl_row_t{tbl_rows{{tblstr{"waveform quality"}, tblint{waveform.quality}}}});
 		table.rows.push_back(tbl_row_t{tbl_rows{{tblstr{"waveform scaleX"}, tblfloat{waveform.scaleX}}}});
@@ -393,4 +395,36 @@ void gui_track::handleRightClick(MouseEvent& evt) {
 }
 void guitrack_editor::handleRightClick(MouseEvent& evt) {
 	MainCtrl::get()->openContextMenu(new guictxtmenu_trackcontent(-1), evt.mousepos);
+}
+
+
+void gui_track_subtrack::renderMixerInfo(NVGcontext* vg) {
+
+	MainCtrl* ctrl = MainCtrl::get();
+	String curvalue = "UNDEF";
+	String target = "<NULL>";
+	automatable_t* ctr = at;
+	if (ctr) {
+		target = StringFormat("%s %08X", StringAsCStr(ctr->getAutomatableName()), ctr);
+		int32_t idx = param;
+		if (idx >= 0) {
+			automation_t* automation = ctr->getRegisteredAutomation(idx);
+			if (automation) {
+				curvalue = StringFormat("%s (%d) %f", StringAsCStr(ctr->getParamName(idx)), idx, automation->getValueAt(ctrl->cursor.cursorPos));
+			} else {
+				curvalue = StringFormat("%s (%d) UNDEF", StringAsCStr(ctr->getParamName(idx)), idx);
+			}
+		} else {
+			curvalue = StringFormat("<NULL> %d", idx);
+		}
+	}
+	const int htt = theme->get(GuiConstant::CONST_TRACK_HEIGHT_TITLE);
+	const int titleHeight = htt*4/5;
+	const int fontSize = titleHeight-4;
+	int32_t y = INSET_TITLE;
+	//debug
+	setFont(vg, fontSize, G_WHITE, G_TITLE_ALIGN);
+	renderText(vg, 0 + INSET_TITLE, y+titleHeight / 2, size.x, StringAsCStr(target));
+	y+=titleHeight;
+	renderText(vg, 0 + INSET_TITLE, y+titleHeight / 2, size.x, StringAsCStr(curvalue));
 }

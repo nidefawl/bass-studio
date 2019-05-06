@@ -137,7 +137,7 @@ public:
 			ivec2 sizeClipped = clipSize;
 			this->parent->scissorClip(posClipped, sizeClipped);
 			sizeClipped.y = clipSize.y;
-			renderAudioClip(vg, theme, m_track, m_clip, &m_clip->audio.waveformRef, pos, size, sizeClipped);
+			renderAudioClip(vg, theme, m_track, m_clip, &m_clip->audio.waveformRef, pos, size, posClipped, sizeClipped);
 		}
 	}
 	void releaseRendered();
@@ -213,6 +213,7 @@ public:
 		automation.render(vg);
 		nvgRestore(vg);
 	}
+	virtual void renderMixerInfo(NVGcontext* vg);
 	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
 		if (automation.mouseHitTest(mpos, evt)) {
 			return true;
@@ -341,4 +342,3 @@ public:
 		return this->m_track;
 	}
 };
-

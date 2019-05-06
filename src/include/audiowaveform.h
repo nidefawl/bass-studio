@@ -13,7 +13,7 @@ enum SampleMethod {
 struct NVGLUframebuffer;
 struct audioclip_texture_t {
 	ivec2 pos{0};
-	ivec2 startOffset{0};
+//	ivec2 startOffset{0};
 	ivec2 size{0};
 	double sampleBegin{0};
 	double sampleBeginOffset{0};
@@ -31,7 +31,7 @@ struct audioclip_texture_t {
 inline bool isEqualWaveform(const audioclip_texture_t& lhs, const audioclip_texture_t& rhs){
 	return (lhs.sampleBeginOffset - lhs.sampleBegin) == (rhs.sampleBeginOffset - rhs.sampleBegin) &&
 			(lhs.sampleEnd - lhs.sampleBegin) == (rhs.sampleEnd - rhs.sampleBegin) &&
-			lhs.startOffset == rhs.startOffset &&
+//			lhs.startOffset == rhs.startOffset &&
 			lhs.size == rhs.size &&
 			lhs.samplesPerPx == rhs.samplesPerPx &&
 //			lhs.scale == rhs.scale &&
@@ -44,7 +44,8 @@ bool isEqualWaveform2(const audioclip_texture_t& lhs, const audioclip_texture_t&
 
 
 inline bool operator==(const audioclip_texture_t& lhs, const audioclip_texture_t& rhs){
-	return lhs.pos == rhs.pos && lhs.startOffset == rhs.startOffset &&
+	return lhs.pos == rhs.pos &&
+//			lhs.startOffset == rhs.startOffset &&
 			lhs.size == rhs.size && lhs.sampleBegin == rhs.sampleBegin &&
 			lhs.sampleBeginOffset == rhs.sampleBeginOffset && lhs.sampleEnd == rhs.sampleEnd &&
 			lhs.samplesPerPx == rhs.samplesPerPx &&

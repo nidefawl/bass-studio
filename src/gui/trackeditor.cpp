@@ -733,7 +733,7 @@ void guitrack_editor::renderClip(NVGcontext* vg, track_t* tr, const clip_t* cl, 
 			renderMidiClip(vg, theme, tr, cl, clipPos, clipSize);
 		} else if (cl->clipType == CLIP_AUDIO && tr->type == TRACK_TYPE_AUDIO) {
 			const gui_waveform_texture_ref * ptr = &cl->audio.waveformRef;
-			renderAudioClip(vg, theme, tr, cl, ptr, clipPos, clipSize, clipSize);
+			renderAudioClip(vg, theme, tr, cl, ptr, clipPos, clipSize, clipPos, clipSize);
 		}
 	}
 }

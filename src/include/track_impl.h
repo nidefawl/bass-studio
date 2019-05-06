@@ -89,6 +89,7 @@ struct audio_stage_t {
 	AudioBlock output; //guaranteed to have at least 2 channels
 	DelayLine delayLine;
 	track_params_t mixer;
+	audiotrack_t audioOutput;
 	int32_t latency = 0;
 	int type;
 	const samplerate_t& sampleRate;
@@ -145,7 +146,6 @@ struct track_impl_t : public audio_stage_t {
 	VstEvent_t* midiEventsBuf = nullptr;
 	automatable_t* selectedAutomationCtr = nullptr;
 	int32_t selectedAutomationParam = -1;
-	audiotrack_t audioOutput;
 	std::vector<automationlane_snapshot_t> atl;
 	bool wasInHide = false;
 	track_impl_t(int32_t _id, track_t* _track, const samplerate_t& _sampleRate, const uint16_t& _blockSize, int32_t nChannels);

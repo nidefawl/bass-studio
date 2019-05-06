@@ -198,7 +198,7 @@ int effect_deferred::getModuleType() {
 void effect_deferred::makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) {
 	ps = this->mImpl->snapshot;
 }
-void effect_deferred::process(AudioBlock* in, AudioBlock* out, int32_t samples) {
+void effect_deferred::process(AudioBlock* in, AudioBlock* out, int32_t samplePos, int32_t numSamples, playback_state state) {
 
 }
 bool effect_deferred::show() {

@@ -7,7 +7,7 @@
 #include <stdint.h>
 #include <memory>
 
-static constexpr int32_t PER_BLOCK_BYTES = (1024*1024*4);
+static constexpr int32_t PER_BLOCK_BYTES = (1024*512);
 static constexpr int32_t PER_BLOCK_SAMPLES = (PER_BLOCK_BYTES/(sizeof(float)));
 
 std::shared_ptr<audiotrack_split_t> audiotrack_t::getSampleById(int32_t sampleId) {
@@ -53,22 +53,24 @@ int32_t audiotrack_t::convertToSamples(vsthost* host) {
 		int32_t samplePos = i * PER_BLOCK_SAMPLES;
 		if (data[i]) {
 			auto& block = data[i]->data;
-			std::shared_ptr<audiotrack_split_t> split;
+			audiotrack_split_t* split;
 			bool present = false;
 			if (i >= nSamples || !this->samples[i]) {
-				split = std::make_shared<audiotrack_split_t>();
+				auto sharedSplit = std::make_shared<audiotrack_split_t>();
+				split = sharedSplit.get();
+				newSplits.push_back(std::move(sharedSplit));
 				split->samplePos = samplePos;
 				split->sample.sampleRate = host->lSampleRate;
 				split->sampleId = host->getNextSampleId(0);
 				split->sample.bitsPerSample = 32;
 			} else {
 				present = true;
-				split = this->samples[i];
+				split = this->samples[i].get();
+				newSplits.push_back(this->samples[i]);
 				assert(split->samplePos == samplePos);
 			}
 			split->sample.nChannels = block.channels;
 			split->sample.nSamples = block.samples;
-			newSplits.push_back(split);
 			if (split->version == data[i]->version) {
 				continue;
 			}
@@ -108,11 +110,11 @@ void audiotrack_t::store(AudioBlock* input, int32_t samplePos) {
 	}
 	auto split = std::make_shared<audiotrack_split_t>();
 	if (!data[startBlock]) {
-		log_printf("alloc new block #%d\n", startBlock);
+//		log_printf("alloc new block #%d\n", startBlock);
 		data[startBlock] = std::make_shared<audiotrack_block_t>(OUTPUT_CHANNELS, PER_BLOCK_SAMPLES);
 	}
 	if (!data[endBlock]) {
-		log_printf("alloc new block #%d\n", endBlock);
+//		log_printf("alloc new block #%d\n", endBlock);
 		data[endBlock] = std::make_shared<audiotrack_block_t>(OUTPUT_CHANNELS, PER_BLOCK_SAMPLES);
 	}
 	int32_t startOffsetBlock0 = samplePos - (startBlock * PER_BLOCK_SAMPLES);

@@ -98,7 +98,7 @@ void module_empty::load(vsthost* host) {
 		this->sleep();
 	}
 }
-void module_empty::process(AudioBlock* in, AudioBlock* out, int32_t samples) {
+void module_empty::process(AudioBlock* in, AudioBlock* out, int32_t samplePos, int32_t numSamples, playback_state state) {
 	out->copyFrom(in);
 }
 String module_empty::getInfo(std::vector<String>& list) {

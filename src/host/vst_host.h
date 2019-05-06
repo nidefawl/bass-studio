@@ -120,7 +120,7 @@ public:
 	std::atomic<int32_t> sampleId{(1<<30)}; //TODO: collides with audiocache::nextIdx
 
 	int32_t processPlayback(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround);
-	void processAudio(audio_stage_t* channel, AudioBlock* input, AudioBlock* output, unsigned long samples);
+	void processAudio(audio_stage_t* channel, AudioBlock* input, AudioBlock* output, int32_t sample, int32_t samples, playback_state state);
 	void setBlockSize(uint16_t blockSize);
 	VstTimeInfo* getTimeInfo() {
 		return &this->timeinfo;

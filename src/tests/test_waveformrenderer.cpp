@@ -45,7 +45,7 @@ int benchmark_waverender(audiofile_t* sample, BakeGLPath& bakedPath) {
 		samplesPerPx = MAX_RES;
 	}
 	w.pos = {0,0};
-	w.startOffset = {0,0};
+//	w.startOffset = {0,0};
 	w.size = size;
 	assert(w.size.x > 0);
 	w.sampleBegin = 0;
@@ -100,7 +100,7 @@ void tesselate(audiofile_t* sample, std::vector<std::vector<vec2>>& out) {
 		samplesPerPx = MAX_RES;
 	}
 	w.pos = {0,0};
-	w.startOffset = {0,0};
+//	w.startOffset = {0,0};
 	w.size = size;
 	assert(w.size.x > 0);
 	w.sampleBegin = 0;
