@@ -35,7 +35,7 @@ int32_t audiotrack_t::convertToSamples(vsthost* host) {
 		}
 		for (int32_t i = 0;i < data.size();i++) {
 			if (data[i]) {
-				if (!this->samples[i] || this->samples[i]->version != data[i]->version) {
+				if (!this->samples[i]/* || this->samples[i]->version != data[i]->version*/) {
 					return false;
 				}
 			}
@@ -102,6 +102,28 @@ int32_t audiotrack_t::convertToSamples(vsthost* host) {
 	return bytesCopied;
 }
 
+void copyFromToSample(audiosample_t *dstSample, float** srcBuf, uint32_t offsetIn, uint32_t offsetOut, uint32_t srcSamples, uint32_t srcChannels) {
+//		assert(srcSamples == samples);
+	uint32_t nChannels = math::max(srcChannels, (uint32_t)dstSample->nChannels);
+	uint32_t nSamples = math::min(srcSamples, (uint32_t)dstSample->nSamples);
+	for (uint32_t i = 0; i < nChannels; i++) {
+		uint32_t srcChannelIdx = math::min(srcChannels-1, i);
+		uint32_t dstChannelIdx = math::min((uint32_t)dstSample->nChannels-1, i);
+		float* srcBufChannel = srcBuf[srcChannelIdx];
+		float* dstBufChannel = dstSample->samples[dstChannelIdx].data();
+		//TODO: this does 2 copys to the same destination when going from stereo to mono (MIX FIRST)
+		memcpy(dstBufChannel+offsetOut, srcBufChannel+offsetIn, nSamples * sizeof(float));
+	}
+}
+void copyBlockChannelsToSample(audiosample_t *dstSample, AudioBlock* input, uint32_t offsetIn, uint32_t offsetOut, uint32_t len) {
+	assert(input->channels >= dstSample->nChannels);
+	for (uint32_t i = 0; i < dstSample->nChannels; i++) {
+		float* srcBufChannel = input->buf[i];
+		float* dstBufChannel = dstSample->samples[i].data();
+		//TODO: this does 2 copys to the same destination when going from stereo to mono (MIX FIRST)
+		memcpy(dstBufChannel+offsetOut, srcBufChannel+offsetIn, len * sizeof(float));
+	}
+}
 void audiotrack_t::store(AudioBlock* input, int32_t samplePos) {
 	int32_t startBlock = (samplePos) / PER_BLOCK_SAMPLES;
 	int32_t endBlock = (samplePos + input->samples - 1) / PER_BLOCK_SAMPLES;
@@ -122,15 +144,22 @@ void audiotrack_t::store(AudioBlock* input, int32_t samplePos) {
 	int32_t lenOver = input->samples - lenBlock0;
 	auto* blockStart = data[startBlock].get();
 //			log_printf("write %d samples to block #%d{%d:%d}\n", lenBlock0, startBlock, startOffsetBlock0, startOffsetBlock0+lenBlock0);
-	blockStart->data.copyFromPosToPos(input->buf, 0, startOffsetBlock0, lenBlock0, input->channels);
 	blockStart->version++;
+	blockStart->data.copyFromPosToPos(input->buf, 0, startOffsetBlock0, lenBlock0, input->channels);
+	if (samples.size() > startBlock && samples[startBlock]) {
+		samples[startBlock]->version++;
+		copyBlockChannelsToSample(samples[startBlock]->getSample(), input, 0, startOffsetBlock0, lenBlock0);
+	}
 	if (startBlock != endBlock) {
 		assert(lenOver > 0);
 		auto* blockEnd = data[endBlock].get();
 //					log_printf("write %d samples to block #%d{%d:%d}\n", lenOver, endBlock, 0, lenOver);
-
-		blockEnd->data.copyFromPosToPos(input->buf, lenBlock0, 0, lenOver, input->channels);
 		blockEnd->version++;
+		blockEnd->data.copyFromPosToPos(input->buf, lenBlock0, 0, lenOver, input->channels);
+		if (samples.size() > endBlock && samples[endBlock]) {
+			samples[endBlock]->version++;
+			copyBlockChannelsToSample(samples[endBlock]->getSample(), input, lenBlock0, 0, lenOver);
+		}
 	} else {
 		assert(lenOver == 0);
 	}
