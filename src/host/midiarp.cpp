@@ -4,7 +4,7 @@
 #include "color_util.h"
 #include "history.h"
 #include "mainctrl.h"
-
+//#define PLACE_MARKERS
 void midiarp::loadSnapshot(const arp_snapshot& snapshot) {
 	for (const auto& param : snapshot.params) {
 		assert(getParam(param.idx));
@@ -81,6 +81,7 @@ void midiarp::process(std::vector<noteevent_t>& noteEventsIn,
 		updateAutomatedParameters(tick);
 		if (this->enable != enabledBefore) {
 			for (noteevent_t& evt : this->heldInput) {
+#ifdef PLACE_MARKERS
 				String str;
 				if (this->enable) {
 					str = StringFormat("Note off %s", noteName(evt.pitch));
@@ -88,6 +89,7 @@ void midiarp::process(std::vector<noteevent_t>& noteEventsIn,
 					str = StringFormat("Note on %s", noteName(evt.pitch));
 				}
 				markers.push_back(marker_t{tick, col(5), str});
+#endif
 				noteevent_t evt2 = evt;
 				evt2.isNoteOn = !enable;
 				evt2.tickOffsetInBlock = tick - start;
@@ -106,6 +108,7 @@ void midiarp::process(std::vector<noteevent_t>& noteEventsIn,
 			while (TIME_STEP > nextStep+stepSize) {
 				step--;
 			}
+#ifdef PLACE_MARKERS
 			markers.push_back(marker_t{tick, col(1), ""});
 			String str = StringFormat("StepSize %d -> %d", lastStepSize, stepSize);
 			if (TIME_STEP<start||TIME_STEP>=end) {
@@ -116,6 +119,7 @@ void midiarp::process(std::vector<noteevent_t>& noteEventsIn,
 				markers.push_back(marker_t{TIME_STEP, col(3), str});
 //					reset(TIME_STEP);
 			}
+#endif
 			lastStepSize = stepSize;
 		}
 //				tick_t step = (start - resetTime + stepSize-1) / stepSize;
@@ -128,7 +132,9 @@ void midiarp::process(std::vector<noteevent_t>& noteEventsIn,
 				if (heldInput.empty()) {
 						if (resetMode == ResetMode::NOTE) {
 						reset(evt->tickOffsetInBlock+start);
+#ifdef PLACE_MARKERS
 						markers.push_back(marker_t{tick, col(4), "reset first note"});
+#endif
 					}
 				}
 				note_t note;
