@@ -47,9 +47,9 @@ ENABLE_IF_SUPPORTED( CMAKE_CXX_FLAGS "-Wunsafe-loop-optimization" )
 ENABLE_IF_SUPPORTED( CMAKE_CXX_FLAGS "-pedantic" )
 
 MACRO( DEFINE_TEST test_name )
-  ADD_EXECUTABLE( ${test_name} "${test_name}.cpp")
+  ADD_EXECUTABLE( ${test_name} "${test_name}.cpp" test_common.cpp)
   target_link_libraries(${test_name} PRIVATE "dawlib")
-  ADD_TEST(NAME ${test_name} COMMAND ${test_name} WORKING_DIRECTORY ../run)
+  ADD_TEST(NAME ${test_name} COMMAND ${test_name} WORKING_DIRECTORY ${DAW_WORKING_DIR})
 ENDMACRO()
 
 DEFINE_TEST(test_notes)

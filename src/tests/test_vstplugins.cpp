@@ -95,6 +95,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 
 int main(int argc, char* argv[]) {
     auto audiohost = std::make_unique<vsthost>();
+	vsthost::assignMasterCallback(audiohost.get());
     daw_tls::tlsinstance& tls = daw_tls::getTls();
     tls.host = audiohost.get();
     MSG msg;
