@@ -183,6 +183,31 @@ void DrawVBO::genBuffers() {
 	vboVertId = buffers[0];
 	vboIdxId = buffers[1];
 }
+
+#define MIN_BUF_SIZE (16384)
+void DrawVBO::uploadBuffer(uint32_t bufferType, void* ptr, size_t len) {
+	uint32_t buffer = (bufferType == GL_ARRAY_BUFFER) ? vboVertId : vboIdxId;
+	int32_t& vboSize = (bufferType == GL_ARRAY_BUFFER) ? vboVertSize : vboIdxSize;
+
+	glBindBuffer(bufferType, buffer);
+	const GLenum usage = GL_DYNAMIC_DRAW;
+    if (vboSize < MIN_BUF_SIZE && len < MIN_BUF_SIZE) {
+        glBufferData(bufferType, MIN_BUF_SIZE, nullptr, usage);
+        vboSize = MIN_BUF_SIZE;
+    }
+//	log_printf("Buffer type %s %d, vboSize %d, len %d, ptr %08X\n",
+//			(bufferType == GL_ARRAY_BUFFER) ? "GL_ARRAY_BUFFER" : "GL_ELEMENT_ARRAY_BUFFER",
+//			buffer, vboSize, len, ptr);
+    if (vboSize < len) {
+    	vboSize = len;
+//    	log_printf("len changed to %d, orphan buffer\n", len);
+        glBufferData(bufferType, len, nullptr, usage);//invalidate previous buffer ('handoff' to driver as explained by some guru)
+        glBufferData(bufferType, len, ptr, usage);
+    } else {
+        glBufferSubData(bufferType, 0, len, ptr);
+    }
+	checkGLError("DrawVBO::uploadBuffer");
+}
 DrawVBO::~DrawVBO() {
 	if (isGLContextPresent()) {
 		if (vaoId) {

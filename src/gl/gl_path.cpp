@@ -395,13 +395,14 @@ void GLPathRenderer::bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, Ba
 		newBuffer = true;
 	}
 	glBindVertexArray(vbo.vaoId);
-	glBindBuffer(GL_ARRAY_BUFFER, vbo.vboVertId);
-	glBufferData(GL_ARRAY_BUFFER, sizeof(float)*bufFinal.v.size(), bufFinal.v.data(), GL_STREAM_DRAW);
-	checkGLError("upload vertex data");
+	vbo.uploadBuffer(GL_ARRAY_BUFFER, bufFinal.v.data(), sizeof(float)*bufFinal.v.size());
+//	glBindBuffer(GL_ARRAY_BUFFER, vbo.vboVertId);
+//	glBufferData(GL_ARRAY_BUFFER, sizeof(float)*bufFinal.v.size(), bufFinal.v.data(), GL_DYNAMIC_DRAW);
 
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo.vboIdxId);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(int)*bufFinal.i.size(), bufFinal.i.data(), GL_STREAM_DRAW);
-	checkGLError("upload index data");
+	vbo.uploadBuffer(GL_ELEMENT_ARRAY_BUFFER, bufFinal.i.data(), sizeof(int)*bufFinal.i.size());
+//	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo.vboIdxId);
+//	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(int)*bufFinal.i.size(), bufFinal.i.data(), GL_DYNAMIC_DRAW);
+//	checkGLError("upload index data");
 
 	if (newBuffer) {
 		bindVertexAttributes(attributes, ATTR_STRIDE);

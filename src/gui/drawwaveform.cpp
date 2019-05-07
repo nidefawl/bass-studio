@@ -408,7 +408,11 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 			bakeOpt.linewidth = waveform.linewidth;
 			bakeOpt.antialias = 1.0f;
 			bakeOpt.scale = 1;
-			renderer.bakePaths(tesselatedWaveForms, bakeOpt, this->bakedPath);
+			BakeGLPath& bakedPath = this->bakedPaths[this->nextPathIdx++];
+			if (this->nextPathIdx >= this->bakedPaths.size()) {
+				this->nextPathIdx = 0;
+			}
+			renderer.bakePaths(tesselatedWaveForms, bakeOpt, bakedPath);
 			ivec2& pos = waveformQueueEntry.pos;
 			ivec2& size = waveformQueueEntry.size;
 			mat4x4 matView = mat4x4(1.0);

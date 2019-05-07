@@ -1,6 +1,7 @@
 #pragma once
 #include "math/vec.h"
 #include <vector>
+#include <array>
 #include "audiocache.h"
 #include "audiowaveform.h"
 #include "../gl/gl_path.h"
@@ -44,7 +45,8 @@ struct TextureAtlas {
 };
 class waveformrender {
 	GLPathRenderer renderer;
-	BakeGLPath bakedPath;
+	int32_t nextPathIdx = 0;
+	std::array<BakeGLPath, 32> bakedPaths;
 	std::vector<TextureAtlas> atlases;
 	std::vector<waveform_update_task_t> queuedTasks;
 //	std::vector<audioclip_texture_t> prevRendered;
