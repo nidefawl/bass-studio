@@ -159,7 +159,7 @@ void packVertexDataTest(vec2list& verticesIn, std::vector<vert>& outVdata, int i
 //		it2++->pos = v;
 //		it2++->pos = v;
 //	}
-	int idx = 0;
+	size_t idx = 0;
 	for (auto& v : verticesIn) {
 		outVdata[idx*4+0].pos = v;
 		outVdata[idx*4+1].pos = v;
@@ -172,11 +172,35 @@ template <typename F>
 void benchmark_packdata(F f, std::vector<std::vector<vec2>>& tesselatedWaveForms) {
 
 	std::vector<vert> outVdata;
-	int len = tesselatedWaveForms.size();
-	for (int i = 0; i < len; i++) {
-		f(tesselatedWaveForms[i], outVdata, i, false);
+	size_t len = tesselatedWaveForms.size();
+	for (size_t i = 0; i < len; i++) {
+		f(tesselatedWaveForms[i], outVdata, (int)i, false);
 	}
 //	f(tesselatedWaveForms[0], outVdata, 0, false);
+}
+template <typename F, typename F2>
+void assertEqual(F f, F2 f2, std::vector<std::vector<vec2>>& tesselatedWaveForms) {
+
+	size_t len = tesselatedWaveForms.size();
+	for (size_t i = 0; i < len; i++) {
+		std::vector<vert> outVdata1;
+		std::vector<vert> outVdata2;
+		f(tesselatedWaveForms[i], outVdata1, (int)i, false);
+		f2(tesselatedWaveForms[i], outVdata2, (int)i, false);
+		assert( outVdata1 == outVdata2 );
+	}
+}
+template <typename F, typename F2>
+void assertNonEqual(F f, F2 f2, std::vector<std::vector<vec2>>& tesselatedWaveForms, std::vector<std::vector<vec2>>& tesselatedWaveForms2) {
+
+	size_t len = tesselatedWaveForms.size();
+	for (size_t i = 0; i < len; i++) {
+		std::vector<vert> outVdata1;
+		std::vector<vert> outVdata2;
+		f(tesselatedWaveForms[i], outVdata1, (int)i, false);
+		f2(tesselatedWaveForms2[i], outVdata2, (int)i, false);
+		assert( outVdata1 != outVdata2 );
+	}
 }
 int main(int argc, char* argv[]) {
 	{
@@ -193,8 +217,27 @@ int main(int argc, char* argv[]) {
 		puts("Failed loading sample");
 		return 1;
 	}
+	audiofile_t* sampleWhiteNoise = audiocache::getInstance()->loadFile("whitenoise_44khz_16bit_1second.wav");
+	if (!sampleWhiteNoise) {
+		puts("Failed loading sample");
+		return 1;
+	}
 	ALEPH_TEST_BEGIN("testThreadWorkerTasks");
 #define NLOOPS 2111
+	{
+
+		std::vector<std::vector<vec2>> tesselatedWaveForms;
+		tesselate(sample, tesselatedWaveForms);
+		assertEqual(packVertexData, packVertexData2, tesselatedWaveForms);
+	}
+	{
+
+		std::vector<std::vector<vec2>> tesselatedWaveForms;
+		std::vector<std::vector<vec2>> tesselatedWaveForms2;
+		tesselate(sample, tesselatedWaveForms);
+		tesselate(sampleWhiteNoise, tesselatedWaveForms2);
+		assertNonEqual(packVertexData, packVertexData2, tesselatedWaveForms, tesselatedWaveForms2);
+	}
 	hires_timer_t t;
 	std::vector<std::vector<vec2>> tesselatedWaveForms;
 	t.reset();
