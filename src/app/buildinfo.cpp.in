@@ -1,8 +1,11 @@
-
+#ifndef __TIMESTAMP__
+#define __TIMESTAMP__ "Undefined"
+#endif
 namespace BuildInfo {
 const char* COMPILE_OPTIONS 	= "@BUILD_COMPILE_OPTIONS@";
 const char* COMPILE_DEFS 		= "@BUILD_COMPILE_DEFS@";
 const char* COMPILER_ID 		= "@CMAKE_CXX_COMPILER_ID@ @CMAKE_CXX_COMPILER_VERSION@";
 const char* COMPILER_PATH 		= "@CMAKE_CXX_COMPILER@";
 const char* BUILD_BINARY_NAME   = "Daw@CMAKE_CXX_COMPILER_ID@@CMAKE_BUILD_TYPE@";
+const char* BUILD_TIMESTAMP   = __TIMESTAMP__;
 }
