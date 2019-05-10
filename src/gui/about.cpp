@@ -5,9 +5,6 @@
 #include "guicontainer.h"
 #include "guicontextmenu_base.h"
 #include "buildinfo.h"
-#ifndef __TIMESTAMP__
-#define __TIMESTAMP__ ""
-#endif
 
 constexpr int ID_BTN_CLOSE = 1;
 constexpr int TITLE_FONT_SIZE = 30;
@@ -21,19 +18,7 @@ guidialog_about::guidialog_about() : guidialog_base(ivec2{440, 560}) {
 	btnClose.setFontSize(BTN_FONT_SIZE);
 	setLabel("About");
 }
-static String cutString(const String& s) {
-	if (s.length() > 32) {
-		auto pos = s.find_first_of(" ");
-		while (pos != String::npos && pos < 24) {
-			pos++;
-			pos = s.find_first_of(" ", pos);
-		}
-		if (pos != String::npos) {
-			return s.substr(0, pos);
-		}
-	}
-	return s;
-}
+
 void guidialog_about::render(NVGcontext* vg) {
 	if (isBackgroundRendered()){
 		renderBackground(vg);
@@ -47,7 +32,7 @@ void guidialog_about::render(NVGcontext* vg) {
 	std::vector<AboutLine> strings;
 	String str;
 	strings.emplace_back(String("Build: "), String(BuildInfo::BUILD_BINARY_NAME));
-	strings.emplace_back(String("Compiled: "), String(__TIMESTAMP__));
+	strings.emplace_back(String("Compiled: "), String(BuildInfo::BUILD_TIMESTAMP));
 	strings.emplace_back(String("Compiler ID: "), String(BuildInfo::COMPILER_ID));
 	int x = 0;
 	int y = 0;
