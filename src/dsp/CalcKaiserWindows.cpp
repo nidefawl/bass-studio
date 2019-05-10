@@ -4,14 +4,13 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stddef.h>
 #include <math.h>
 #include <malloc.h>
 #include <string.h>
-#include <cmath>
+#include <iostream>
 #include "CalcKaiserWindow.h"
-#ifndef M_PI
-#define M_PI        3.14159265358979323846264338327950288
-#endif
+#include "math/seq_math.h"
 
 double* calcLPF(double sampFreq, double transFreq, double rippleDB, double transWidth, int* kaiserWindowLength) {
 	double beta;

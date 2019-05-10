@@ -1,5 +1,4 @@
-#ifndef CALC_KAISER_H__
-#define CALC_KAISER_H__
+#pragma once
 // FIR filters by Windowing
 // A.Greensted - Feb 2010
 // http://www.labbookpages.co.uk
@@ -25,5 +24,3 @@ double *createKaiserWindow(double *in, double *out, int windowLength, double bet
 double modZeroBessel(double x);
 
 double* calcLPF(double sampleFreq, double transFreq, double rippleDB, double transWidth, int* kaiserWindowLength);
-
-#endif
