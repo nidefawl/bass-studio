@@ -67,7 +67,7 @@ void syncMenuEntry(bool disabledALL, HMENU menuParent, ngui::Menu* menu, int idx
 	if (needsDisable != (flags&MF_GRAYED)) {
 		EnableMenuItem(menuParent, hMenuIdx, MF_BYPOSITION | (needsDisable?MF_GRAYED:0));
 	}
-	if (menu->checked != (flags&MF_CHECKED)) {
+	if (menu->checked != ((flags&MF_CHECKED)!=0)) {
 		CheckMenuItem(menuParent, hMenuIdx, MF_BYPOSITION | (menu->checked?MF_CHECKED:0));
 	}
 	TCHAR strBuf[512];

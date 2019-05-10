@@ -3,6 +3,8 @@
 #include "../host/vst_host.h"
 #include "theme.h"
 #include "gui.h"
+#include "seq_time.h"
+#include "project.h"
 #include "guicolors.h"
 #include "guiconstant.h"
 #include "drawwaveform.h"

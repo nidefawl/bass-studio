@@ -1,5 +1,6 @@
 #include <nanovg.h>
 #include <algorithm>
+#include "math/vec.h"
 #include "list.h"
 #include "gui.h"
 #include "mouse.h"

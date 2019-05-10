@@ -6,7 +6,7 @@ struct ref {
 	T* ref;
 public:
 	void onDelete() {
-		ref = NULL;
+		ref = nullptr;
 	}
 	T get() {
 		return ref;

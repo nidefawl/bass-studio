@@ -231,7 +231,7 @@ public:
 	std::shared_ptr<plugin_clipboard_t> pluginClipboard;
 	static MainCtrl* get();
 	~MainCtrl() {
-		my_printf("~MainCtrl\n",0);
+		my_printf("~MainCtrl destructor\n",0);
 	}
 	static PlaybackThread* getPlayThread() {
 		MainCtrl* ctrl = MainCtrl::get();
