@@ -37,7 +37,18 @@ struct vert {
 	vec2 tex;
 	float index;
 	float pad[3];
+	auto fields() const {
+	  return std::tie(pos, seg, angles, tangent0, tangent1, tex, index);
+	}
+    bool operator==(const vert& other) const
+    {
+        return fields() == other.fields();
+    }
+    bool operator!=(const vert& other) const {
+    	return operator==(other);
+    }
 };
+
 #define ATTR_STRIDE ((2+2+2+2+2+2+1+3)*sizeof(float))
 struct Uniforms {
 	vec4 color{1.f,1.f,1.f,1.f};
