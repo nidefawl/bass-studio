@@ -353,7 +353,7 @@ void GLPathRenderer::bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, Ba
 	for (vec2list& list : paths) {
 		if (list.size() > 1) {
 //			timer.reset();
-			float len = packVertexData(list, outVdata, idx);
+			float len = packVertexData2(list, outVdata, idx);
 //			int64_t t = timer.getTime();
 //			assert(t);
 //			my_printf("%d\n", t+2);
