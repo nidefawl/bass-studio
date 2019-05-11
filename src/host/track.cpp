@@ -849,10 +849,32 @@ void track_params_t::postSetParameter(int32_t idx, float preVal, float val, int 
 	MainCtrl::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
 }
 
+//template <>
+//void guitooltip<guiplugin>::layout()  {
+//	size.x = 250;
+//	table.rowHeight = FONT_SIZE_TOOLTIP+INSET_TABLE_CELL_PADDING*2;
+//	table.rows.clear();
+//	table.titleCols.clear();
+//	table.colSizes.clear();
+//	{
+//		table.rows.push_back({{tblstr{"track"}, tblint{(int64_t)ptr->effect->getTrack(), "%12x"}}});
+//		table.rows.push_back({{tblstr{"tracklink"}, tblint{(int64_t)ptr->effect->getTrackLink(), "%12x"}}});
+//		table.rows.push_back({{tblstr{"bIsSetup"}, tblint{ptr->effect->bIsSetup}}});
+//		table.rows.push_back({{tblstr{"bIsEnabled"}, tblint{ptr->effect->bIsEnabled}}});
+//		table.rows.push_back({{tblstr{"PARAM_ENABLE"}, tblfloat{ptr->effect->getParamValue(PARAM_ENABLE)}}});
+//	}
+//	Table::AdjustColSizes(table, getSizeContent()-ivec2(INSET_TABLE<<1));
+//	size.y = table.rows.size()*table.rowHeight;
+//}
+//
+//guictxtmenu_base* guiplugin::getTooltip(AppCtrl* appctrl) {
+//	auto tooltip = new guitooltip<guiplugin>(this);
+//	return tooltip;
+//}
 track_params_t::track_params_t(audio_stage_t* _audiostage) : automatable_t(), audiostage(_audiostage) {
 	const std::array<track_param_entry_t, 2> parameterTypes {{
-		track_param_entry_t { PARAM_ENABLE, "Enabled", 1.0f },
-		track_param_entry_t { PARAM_TRACK_GAIN, "Gain", dsp_util::gainToLinScale(1.0f) },
+		{ PARAM_ENABLE, "Enabled", 1.0f },
+		{ PARAM_TRACK_GAIN, "Gain", dsp_util::gainToLinScale(1.0f) },
 	}};
 	for (const track_param_entry_t& paramEntry : parameterTypes) {
 		automatable_param_t* regparam = registerParam(paramEntry.id);
