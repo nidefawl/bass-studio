@@ -1536,6 +1536,10 @@ int startApplication(int argc, char* argv[]) {
 		allocConsole();
 	//}
 		openGlobalLog();
+		char* pPath;
+		pPath = getenv("PATH");
+		if (pPath != NULL)
+			log_printf ("getenv PATH: %s\n",pPath);
 	log_out("BUILD_BINARY_NAME %s\n", BuildInfo::BUILD_BINARY_NAME);
 	log_out("COMPILER_ID %s\n", BuildInfo::COMPILER_ID);
 	log_out("COMPILE_OPTIONS %s\n", BuildInfo::COMPILE_OPTIONS);
