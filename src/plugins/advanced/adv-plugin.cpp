@@ -241,4 +241,8 @@ BaseVST2_Program::BaseVST2_Program()
 	reportLatency = true;
 }
 
+
+const char* getName() {
+	return PLUGIN_EFFECT_NAME;
+}
 }

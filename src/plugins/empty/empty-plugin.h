@@ -106,5 +106,6 @@ private:
 	BaseVST2_Program programs[kNumPrograms];
 };
 AudioEffectX* createPlugin (audioMasterCallback audioMaster);
+const char* getName();
 }
 

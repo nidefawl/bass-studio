@@ -5,9 +5,10 @@
 #include "vstsdk-plugin-2.4/audioeffectx.h"
 
 
-namespace PluginStereoWidth {
+struct DelayLine;
+namespace PluginLatency {
 
-class PluginVST2_StereoWidth;
+class PluginVST2_Latency;
 
 enum
 {
@@ -19,53 +20,34 @@ enum
 
 enum
 {
-	kStereoWidth = 0,
-	kGain = 1,
+	kLatency = 0,
 	kNumParams
 };
-
-
-
-//------------------------------------------------------------------------------------------
-// ProgramParameters
-//------------------------------------------------------------------------------------------
 
 
 class ProgramParameters
 {
 public:
-	float width;
-	float gain;
+	int32_t latency = 0;
 };
 
-
-
-//------------------------------------------------------------------------------------------
-// FSM_VST_Program
-//------------------------------------------------------------------------------------------
-
-
-class BaseVST2_ProgramStereoWidth : public ProgramParameters
+class Program : public ProgramParameters
 {
-	friend class PluginVST2_StereoWidth;
+	friend class PluginVST2_Latency;
 public:
-	BaseVST2_ProgramStereoWidth ();
-	~BaseVST2_ProgramStereoWidth() {}
+	Program();
+	~Program() {}
 
 private:
 	char name[kVstMaxProgNameLen+1];
 };
 
 
-//------------------------------------------------------------------------------------------
-// FSM_VST_Plugin
-//------------------------------------------------------------------------------------------
-
-class PluginVST2_StereoWidth : public BasePluginVST2 {
+class PluginVST2_Latency : public BasePluginVST2 {
 
 public:
-	PluginVST2_StereoWidth (audioMasterCallback audioMaster);
-	~PluginVST2_StereoWidth ();
+	PluginVST2_Latency (audioMasterCallback audioMaster);
+	~PluginVST2_Latency ();
 
 	void processReplacing (float** inputs, float** outputs, VstInt32 sampleFrames) override;
 	PluginViewContainers* createView() override;
@@ -92,7 +74,7 @@ public:
 	virtual VstInt32 getVendorVersion ();
 	virtual VstInt32 canDo (char* text);
 
-	BaseVST2_ProgramStereoWidth* current() {
+	Program* current() {
 		return &singleProgram;
 	}
 
@@ -101,10 +83,14 @@ public:
 #endif // DEBUG
 
 private:
-	BaseVST2_ProgramStereoWidth singleProgram;
+	void setNewLatency(int32_t nSamplesLatency);
+	Program singleProgram;
+	DelayLine* delayLine = nullptr;
+	int32_t curLatency = 0;
+	int32_t newLatency = 0;
+	std::atomic<bool> latencyChanged{false};
 //	BaseVST2_Program programs[kNumPrograms];
 };
-
 AudioEffectX* createPlugin (audioMasterCallback audioMaster);
 const char* getName();
 }

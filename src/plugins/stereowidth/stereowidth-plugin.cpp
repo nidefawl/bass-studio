@@ -218,4 +218,8 @@ BaseVST2_ProgramStereoWidth::BaseVST2_ProgramStereoWidth()
 	width = 1.0f;
 }
 
+
+const char* getName() {
+	return PLUGIN_EFFECT_NAME;
+}
 }

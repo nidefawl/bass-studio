@@ -205,4 +205,8 @@ BaseVST2_Program::BaseVST2_Program()
 	vst_strncpy(name, "Init", kVstMaxProgNameLen);
 }
 
+
+const char* getName() {
+	return PLUGIN_EFFECT_NAME;
+}
 }

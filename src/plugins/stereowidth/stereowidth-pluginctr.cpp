@@ -15,7 +15,7 @@
 #include "gui/button.h"
 #include "gui/knob.h"
 #include "gui/guiinputfield.h"
-#include "gui/knoblabeled.h"
+#include "gui/knobpluginparam.h"
 #include "gui/guicontainer.h"
 #include "gui/guicontextmenu_daw.h"
 #include "basectrl.h"
@@ -36,76 +36,12 @@
 
 using namespace PluginStereoWidth;
 
-class guiknob_labeled : public guiknob_labeled_base {
-	AudioEffect* curEffect = nullptr;
-	int32_t internalEffectIdx = 0;
-#ifdef BUILD_BUILTIN_EFFECT
-	vstplugin* hostSidePlugin = nullptr;
-#endif
-public:
-	guiknob_labeled(int _paramIdx, int _internalEffectIdx) : guiknob_labeled_base(false) {
-#ifdef BUILD_BUILTIN_EFFECT
-		paramIdx = _paramIdx;
-#endif
-		internalEffectIdx = _internalEffectIdx;
-		fnValueEditChanged = [this](float preVal, float val) {
-			if (curEffect) {
-				curEffect->setParameterAutomated(internalEffectIdx, val);
-				setDisplayValueFromEffect();
-			}
-		};
-#ifdef BUILD_BUILTIN_EFFECT
-		setAutomationHandlers();
-#endif
-	}
-	virtual ~guiknob_labeled() {
-	}
-#ifdef BUILD_BUILTIN_EFFECT
-	void setEffectInstance(vstplugin* _hostSidePlugin) {
-		hostSidePlugin = _hostSidePlugin;
-		paramAutomatable = _hostSidePlugin;
-	}
-	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-		if (this->contains(mpos)) {
-			if (evt.type != MouseHitType::MOUSE_RIGHT)
-			{
-				if (guiknob::mouseHitTest(mpos, evt)) {
-					return true;
-				}
-			}
-			evt.requestFocus(this);
-			return true;
-		}
-		return false;
-	}
-#endif
-	void setAudioEffect(AudioEffect* eff) {
-		this->curEffect = eff;
-		if (eff) {
-			setValueInit(eff->getParameter(internalEffectIdx));
-			setLabel(eff->getParameterName(internalEffectIdx));
-		}
-		setDisplayValueFromEffect();
-	}
-	void setDisplayValueFromEffect() {
-		if (this->curEffect) {
-			String display = curEffect->getParameterDisplay(internalEffectIdx);
-			String displayUnit = curEffect->getParameterLabel(internalEffectIdx);
-			this->valueDisplay = display+displayUnit;
-		} else {
-
-			this->valueDisplay = "???";
-		}
-	}
-	virtual void setDisplayValue(float f) override {
-	}
-};
 
 class guicontainer_stereowidth : public guictr_base {
 	vstplugin* vstHostSide = nullptr;
 	AudioEffect* curEffect = nullptr;
-	guiknob_labeled knobgain;
-	guiknob_labeled knobwidth;
+	guiknob_pluginparam knobgain;
+	guiknob_pluginparam knobwidth;
 
 public:
 	guicontainer_stereowidth();
@@ -142,7 +78,7 @@ public:
 	void onGuiClose(AudioEffect* eff);
 	void setVSTPlugin(vstplugin* vstHostSide);
 
-	guiknob_labeled* getKnobFromParameter(int32_t index) {
+	guiknob_pluginparam* getKnobFromParameter(int32_t index) {
 		switch (index) {
 			case kGain:
 				return &knobgain;
@@ -152,7 +88,7 @@ public:
 		return nullptr;
 	}
 	void onSetParameter(int32_t index, float value) {
-		guiknob_labeled* knob = getKnobFromParameter(index);
+		guiknob_pluginparam* knob = getKnobFromParameter(index);
 		if (knob && curEffect) {
 			knob->setValueInit(value);
 			knob->setDisplayValueFromEffect();

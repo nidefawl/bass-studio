@@ -12,6 +12,7 @@
 #include "plugins/advanced/adv-plugin.h"
 #include "plugins/stereowidth/stereowidth-plugin.h"
 #include "plugins/empty/empty-plugin.h"
+#include "plugins/latency/latency-plugin.h"
 
 
 vstpluginloadres vsthost::loadInternalPlugin(int32_t moduleId, int32_t globalId) {
@@ -20,15 +21,19 @@ vstpluginloadres vsthost::loadInternalPlugin(int32_t moduleId, int32_t globalId)
 	switch (moduleId) {
 	case PLUG_INT_STEREOWIDTH:
 		axeffect = PluginStereoWidth::createPlugin(masterCallBackSlot);
-		name = "StereoWidth";
+		name = PluginStereoWidth::getName();
 		break;
 	case PLUG_INT_TEST:
 		axeffect = PluginTestAdv::createPlugin(masterCallBackSlot);
-		name = "TestAdv";
+		name = PluginTestAdv::getName();
 		break;
 	case PLUG_INT_CRASHVST:
 		axeffect = PluginEmptyVST2::createPlugin(masterCallBackSlot);
-		name = "CrashVST2";
+		name = PluginEmptyVST2::getName();
+		break;
+	case PLUG_INT_LATENCY:
+		axeffect = PluginLatency::createPlugin(masterCallBackSlot);
+		name = PluginLatency::getName();
 		break;
 	default:
 		assert(0);
