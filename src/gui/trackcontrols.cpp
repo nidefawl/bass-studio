@@ -26,6 +26,7 @@
 #include "automatable.h"
 #include "subtrack.h"
 #include "meter.h"
+#include "guitooltip.h"
 
 const int resizeHitY = 8;
 const int DRAG_RESIZE = 1;
@@ -97,8 +98,41 @@ void resize(track_t* m_track, T* al, int32_t mouseDragDist, int32_t heightStep) 
 		al->height = totalHeightSteps;
 	}
 }
+struct audio_info_t {
+	String name;
+	track_impl_t* audio;
+};
+template <>
+void guitooltip<audio_info_t>::layout()  {
 
-
+	using Table::tbl;
+	using Table::tbl_row_t;
+	using Table::table_entry_t;
+	using Table::tblint;
+	using Table::tblfloat;
+	using Table::tblstr;
+	using Table::tblString;
+	size.x = 250;
+	table.rowHeight = FONT_SIZE_TOOLTIP+INSET_TABLE_CELL_PADDING*2;
+	table.rows.clear();
+	table.titleCols.clear();
+	table.colSizes.clear();
+	{
+		table.rows.push_back({{tblstr{"track"}, tblString{ptr->name}}});
+		auto audio = ptr->audio;
+		table.rows.push_back({{tblstr{"Latency"}, tblint{audio->getLatency()}}});
+		table.rows.push_back({{tblstr{"delayToPreReturn"}, tblint{audio->latencyInfo.delayToPreReturn}}});
+		table.rows.push_back({{tblstr{"delayToPostReturn"}, tblint{audio->latencyInfo.delayToPostReturn}}});
+		table.rows.push_back({{tblstr{"sampleRate"}, tblint{audio->sampleRate}}});
+	}
+	Table::AdjustColSizes(table, getSizeContent()-ivec2(INSET_TABLE<<1));
+	size.y = table.rows.size()*table.rowHeight;
+}
+template <>
+guitooltip<audio_info_t>::~guitooltip()  {
+	removeGuis();
+	delete ptr;
+}
 class gui_trackgain: public guibase {
 	automatable_t* paramAutomatable = nullptr;
 	int32_t paramIdx = -1;
@@ -638,6 +672,13 @@ public:
 	}
 	void handleRightClick(MouseEvent& evt) {
 		parent->handleRightClick(evt);
+	}
+	guictxtmenu_base* getTooltip(AppCtrl* appctrl) {
+		if (this->m_track->audio) {
+			auto tooltip = new guitooltip<audio_info_t>(new audio_info_t{m_track->name, m_track->audio});
+			return tooltip;
+		}
+		return nullptr;
 	}
 };
 

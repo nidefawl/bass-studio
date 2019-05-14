@@ -1,16 +1,14 @@
 #pragma once
-
 #include "math/vec.h"
-#include <memory>
-#include <numeric>
-
-
 #include "gui.h"
 #include "guicontextmenu_base.h"
 #include "guicontextmenu.h"
 #include "guicontainer.h"
 #include "gui/textfield.h"
 #include "table.h"
+
+#include <memory>
+#include <numeric>
 
 #define FONT_SIZE_TOOLTIP_TITLE 18
 #define FONT_SIZE_TOOLTIP_BIG 15
