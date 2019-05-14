@@ -5,26 +5,34 @@
 #include <assert.h>
 #include "math/seq_math.h"
 #include "mem.h"
+#include "samplerate.h"
 
 struct AudioBlock {
 	const uint32_t channels{ 0 };
 	uint32_t samples{ 0 };
 	float** buf{ 0 };
+	bool externallyAlloced;
 	AudioBlock(uint32_t _channels, uint32_t _samples)
-		: channels(_channels), samples(0), buf(new float*[_channels])
+		: channels(_channels), samples(0), buf(new float*[_channels]), externallyAlloced(false)
 	{
 		for (uint32_t i = 0; i < _channels; i++) {
 			buf[i] = NULL;
 		}
 		realloc(_samples);
 	};
+	AudioBlock(float** buf, uint32_t _channels, uint32_t _samples)
+		: channels(_channels), samples(_samples), buf(buf), externallyAlloced(true)
+	{
+	};
 	~AudioBlock() {
-		for (uint32_t i = 0; i < channels; i++) {
-			if (buf[i]) {
-				free(buf[i]);
+		if (!externallyAlloced) {
+			for (uint32_t i = 0; i < channels; i++) {
+				if (buf[i]) {
+					free(buf[i]);
+				}
 			}
+			delete[] buf;
 		}
-		delete[] buf;
 	};
 	void clear() {
 		for (uint32_t i = 0; i < channels; i++) {
@@ -107,3 +115,4 @@ struct DelayLine {
 	  : block(_channels, _samples)
 	{ }
 };
+void delayAudio(DelayLine* delayLine, AudioBlock* input, AudioBlock* output, samplerate_t delay);
