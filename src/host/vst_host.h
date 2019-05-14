@@ -57,6 +57,9 @@ struct host_stats_t {
 	int64_t timeLastBlock;
 	std::unordered_map<String, int64_t> timings;
 	double usage;
+	int32_t maxLatencyAudioMidi = 0;
+	int32_t maxLatencyReturn = 0;
+	int32_t latencyToMaster = 0;
 
 };
 struct host_processing_stats_t {

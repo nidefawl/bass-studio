@@ -427,6 +427,8 @@ void vsthost::sendNotesOff(effectbase* plugin) {
 	}
 }
 void delayAudio(DelayLine* delayLine, AudioBlock* input, AudioBlock* output, samplerate_t delay) {
+	assert(delay >= 0 && delay < 1<<20);
+	assert(delayLine);
 	int32_t bufSize = (int32_t)input->samples;
 	int32_t bufDelay = delay;
 	int32_t numBlocks = 1;
@@ -531,13 +533,24 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 		/*
 		 * determine max latency of all audio/midi tracks
 		 */
-		samplerate_t maxLatency = 0;
+		int32_t maxLatencyAudioMidi = 0;
 		for (track_t* track : ctrl->trackCtr) {
 			track_impl_t* audioTrack = track->audio;
 			audioTrack->pluginsChanged();
-			samplerate_t latency = audioTrack->getLatency();
-			maxLatency = math::max(latency, maxLatency);
+			int32_t latency = audioTrack->getLatency();
+			maxLatencyAudioMidi = math::max(latency, maxLatencyAudioMidi);
 		}
+		int32_t maxLatencyReturn = 0;
+		for (track_t* track : ctrl->trackReturnCtr) {
+			track_impl_t* audioTrack = track->audio;
+			audioTrack->pluginsChanged();
+			int32_t latency = audioTrack->getLatency();
+			maxLatencyReturn = math::max(latency, maxLatencyReturn);
+		}
+		int32_t latencyToMaster = maxLatencyAudioMidi+maxLatencyReturn;
+		stats.maxLatencyAudioMidi = maxLatencyAudioMidi;
+		stats.maxLatencyReturn = maxLatencyReturn;
+		stats.latencyToMaster = latencyToMaster;
 		tick_t loopCutStart = -1;
 		tick_t loopCutEnd = -1;
 		if (inLoop) {
@@ -565,24 +578,13 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			/* Processes audio/midi tracks plugin chain */
 			processAudio(trackImpl, &trackImpl->input, &trackImpl->output, sample, lBlockSize, state);
 
-			/* Compensate audio/midi tracks chain latency */
-			samplerate_t delay = maxLatency - trackImpl->getLatency();
-			delayAudio(&trackImpl->delayLine, &trackImpl->output, &trackImpl->output, delay);
+			/* Compensate audio/midi track to pre-return latency */
+			samplerate_t delayToPreReturn = maxLatencyAudioMidi - trackImpl->getLatency();
+			assert(delayToPreReturn >= 0);
+			delayAudio(trackImpl->getDelayLine(0), &trackImpl->output, &trackImpl->output, delayToPreReturn);
+			trackImpl->latencyInfo.delayToPreReturn = delayToPreReturn;
 
 			if (trackImpl->mixer.isEnabled()) {
-
-				/* Feed audio/midi tracks output into masters input */
-				for (track_t* trackMaster : ctrl->trackMasterCtr) {
-
-					/* Calculate audio/midi tracks gain level */
-					float fGainTrack;
-					if (!getGainLvl(trackImpl->mixer.getParamValue(PARAM_TRACK_GAIN), fGainTrack)) {
-						continue;
-					}
-
-					track_impl_t* audioMaster = trackMaster->audio;
-					audioMaster->input.addFrom(&trackImpl->output, fGainTrack);
-				}
 
 				/* Feed audio/midi tracks output into returns input */
 				for (track_t* trackReturn : ctrl->trackReturnCtr) {
@@ -597,6 +599,24 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 					/* Feed in return track send gain level */
 					audioReturn->input.addFrom(&trackImpl->output, fGainReturn);
 				}
+
+				/* Compensate audio/midi track to post-return latency */
+				samplerate_t delayToPostReturn = maxLatencyReturn;
+				assert(delayToPostReturn >= 0);
+				delayAudio(trackImpl->getDelayLine(1), &trackImpl->output, &trackImpl->output, delayToPostReturn);
+				trackImpl->latencyInfo.delayToPostReturn = delayToPostReturn;
+				/* Feed audio/midi tracks output into masters input */
+				for (track_t* trackMaster : ctrl->trackMasterCtr) {
+
+					/* Calculate audio/midi tracks gain level */
+					float fGainTrack;
+					if (!getGainLvl(trackImpl->mixer.getParamValue(PARAM_TRACK_GAIN), fGainTrack)) {
+						continue;
+					}
+
+					track_impl_t* audioMaster = trackMaster->audio;
+					audioMaster->input.addFrom(&trackImpl->output, fGainTrack);
+				}
 			}
 		}
 
@@ -606,16 +626,24 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			/* Processes return tracks plugin chain */
 			processAudio(audioReturn, &audioReturn->input, &audioReturn->output, sample, lBlockSize, state);
 
-			/* Calculate return tracks gain level */
-			float fGainReturn;
-			if (!getGainLvl(audioReturn->mixer.getParamValue(PARAM_TRACK_GAIN), fGainReturn)) {
-				continue;
-			}
+			if (audioReturn->mixer.isEnabled()) {
+				/* Compensate return track to master latency */
+				samplerate_t delayToPostReturn = maxLatencyReturn - audioReturn->getLatency();
+				assert(delayToPostReturn >= 0);
+				delayAudio(audioReturn->getDelayLine(0), &audioReturn->output, &audioReturn->output, delayToPostReturn);
+				audioReturn->latencyInfo.delayToPostReturn = delayToPostReturn;
 
-			/* Feed return tracks output into masters input */
-			for (track_t* trackMaster : ctrl->trackMasterCtr) {
-				track_impl_t* audioMaster = trackMaster->audio;
-				audioMaster->input.addFrom(&audioReturn->output, fGainReturn);
+				/* Calculate return tracks gain level */
+				float fGainReturn;
+				if (!getGainLvl(audioReturn->mixer.getParamValue(PARAM_TRACK_GAIN), fGainReturn)) {
+					continue;
+				}
+
+				/* Feed return tracks output into masters input */
+				for (track_t* trackMaster : ctrl->trackMasterCtr) {
+					track_impl_t* audioMaster = trackMaster->audio;
+					audioMaster->input.addFrom(&audioReturn->output, fGainReturn);
+				}
 			}
 		}
 
@@ -637,12 +665,12 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 		for (track_t* trackMaster : ctrl->trackMasterCtr) {
 			track_impl_t* audioMaster = trackMaster->audio;
 
-			/* Calculate master tracks gain level */
-			float fGainMaster;
-			getGainLvl(audioMaster->mixer.getParamValue(PARAM_TRACK_GAIN), fGainMaster);
-
 
 			if (audioMaster->mixer.isEnabled()) {
+				/* Calculate master tracks gain level */
+				float fGainMaster;
+				getGainLvl(audioMaster->mixer.getParamValue(PARAM_TRACK_GAIN), fGainMaster);
+
 				AudioBlock* bufMaster = &audioMaster->output;
 				for (int n = 0; n < OUTPUT_CHANNELS; n++) {
 					float* channelWriteBuffer = bufOut->buf[n];

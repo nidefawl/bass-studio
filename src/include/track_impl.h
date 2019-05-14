@@ -87,26 +87,30 @@ struct audio_stage_t {
 	rmsmeter<16000> meter;
 	AudioBlock input; //guaranteed to have at least 2 channels
 	AudioBlock output; //guaranteed to have at least 2 channels
-	DelayLine delayLine;
 	track_params_t mixer;
 	audiotrack_t audioOutput;
 	int32_t latency = 0;
 	int type;
 	const samplerate_t& sampleRate;
 	const uint16_t& blockSize;
+	std::array<DelayLine, 2> delayLines;
 	std::vector<effectbase*> effects;
 	std::vector<effectbase*> deferredEffects;
 	std::vector<audio_stage_t*> children;
+	struct latency_info_t {
+		int32_t delayToPreReturn = 0;
+		int32_t delayToPostReturn = 0;
+	} latencyInfo;
 	audio_stage_t(int32_t _id,/*track_t* _track, */const samplerate_t& _sampleRate, const uint16_t& _blockSize, int32_t nChannels, int _type = 1)
 	: id(_id), parent(nullptr), owner(nullptr),/*track(_track),*/
 	  pluginCtr(nullptr),
 	  input(nChannels, _blockSize),
 	  output(nChannels, _blockSize),
-	  delayLine(nChannels, _blockSize),
 	  mixer(this),
 	  type(_type),
 	  sampleRate(_sampleRate),
-	  blockSize(_blockSize) {
+	  blockSize(_blockSize),
+	  delayLines{{DelayLine(nChannels, blockSize), DelayLine(nChannels, blockSize)}} {
 	}
 	virtual ~audio_stage_t() {
 
@@ -114,6 +118,10 @@ struct audio_stage_t {
 	virtual void removePlugin(effectbase* _vst, bool notifyUp);
 	void loadPlugins(const std::vector<plugin_snapshot_t>& trPluginList);
 	int32_t getLatency();
+	DelayLine* getDelayLine(int32_t idx) {
+		assert(idx >= 0 && idx < delayLines.size());
+		return &delayLines[idx];
+	}
 	void insertEffect(int32_t idx, effectbase* _instrument);
 	bool replaceEffect(int32_t idx, effectbase* _effect, effectbase** _prevEffect);
 	void pluginsChanged();
