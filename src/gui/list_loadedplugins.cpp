@@ -72,6 +72,7 @@ class gui_pluginsloaded_list : public guictr_base {
 	gui_list listCtr;
 	String curquery = "";
 	uint64_t lastUpdate = 0;
+	int32_t minHTop = 0;
 public:
 	gui_pluginsloaded_list() : guictr_base() {
 		setBackgroundRendered(true);
@@ -117,7 +118,7 @@ public:
 		ivec2 cs = getSizeContent();
 //		textField.size = ivec2(cs.x, heightTextField);
 //		textField.pos = ivec2(0, 0);
-		listCtr.pos = ivec2(0, cs.y/3);
+		listCtr.pos = ivec2(0, math::max(minHTop, cs.y/3));
 		listCtr.size = ivec2(cs.x, cs.y-listCtr.pos.y);
 		for (guibase* gui : guis) {
 			gui->layout();
@@ -139,43 +140,27 @@ public:
 			vsthost::getInstance()->getStats(stats);
 		}
 		float lineh;
-		String str;
 		setFont(vg, 26, G_WHITE, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
 		nvgTextMetrics(vg, NULL, NULL, &lineh);
 
-		str = StringFormat("%.2f%%", stats.usage*100.0);
-		nvgTextAlign(vg, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
-		nvgText(vg, x, y, "Usage", NULL);
-		nvgTextAlign(vg, NVG_ALIGN_TOP | NVG_ALIGN_RIGHT);
-		nvgText(vg, x2, y, StringAsCStr(str), NULL);
-		y += lineh;
-
-		str = StringFormat("%d", stats.blocksProcessed);
-		nvgTextAlign(vg, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
-		nvgText(vg, x, y, "blocksProcessed", NULL);
-		nvgTextAlign(vg, NVG_ALIGN_TOP | NVG_ALIGN_RIGHT);
-		nvgText(vg, x2, y, StringAsCStr(str), NULL);
-		y += lineh;
-		str = StringFormat("%d", stats.samplesProcessed);
-		nvgTextAlign(vg, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
-		nvgText(vg, x, y, "samplesProcessed", NULL);
-		nvgTextAlign(vg, NVG_ALIGN_TOP | NVG_ALIGN_RIGHT);
-		nvgText(vg, x2, y, StringAsCStr(str), NULL);
-		y += lineh;
-		str = StringFormat("%lld", stats.timeLastBlock);
-		nvgTextAlign(vg, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
-		nvgText(vg, x, y, "timeLastBlock", NULL);
-		nvgTextAlign(vg, NVG_ALIGN_TOP | NVG_ALIGN_RIGHT);
-		nvgText(vg, x2, y, StringAsCStr(str), NULL);
-		y += lineh;
-		for (auto& entry : stats.timings) {
-			str = StringFormat("%lld", entry.second);
+		auto printL = [&](const char* caption, const String& str) {
 			nvgTextAlign(vg, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
-			nvgText(vg, x, y, StringAsCStr(entry.first), NULL);
+			nvgText(vg, x, y, caption, NULL);
 			nvgTextAlign(vg, NVG_ALIGN_TOP | NVG_ALIGN_RIGHT);
 			nvgText(vg, x2, y, StringAsCStr(str), NULL);
 			y += lineh;
+		};
+		printL("Usage", StringFormat("%.2f%%", stats.usage*100.0));
+		printL("blocksProcessed", StringFormat("%d", stats.blocksProcessed));
+		printL("samplesProcessed", StringFormat("%d", stats.samplesProcessed));
+		printL("timeLastBlock", StringFormat("%lld", stats.timeLastBlock));
+		printL("maxLatencyAudioMidi", StringFormat("%lld", stats.maxLatencyAudioMidi));
+		printL("maxLatencyReturn", StringFormat("%lld", stats.maxLatencyReturn));
+		printL("latencyToMaster", StringFormat("%lld", stats.latencyToMaster));
+		for (auto& entry : stats.timings) {
+			printL(StringAsCStr(entry.first), StringFormat("%lld", entry.second));
 		}
+		minHTop = y;
 
 		listCtr.render(vg);
 	}
