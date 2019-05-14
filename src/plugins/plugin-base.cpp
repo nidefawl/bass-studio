@@ -71,6 +71,11 @@ BasePluginVST2::BasePluginVST2(audioMasterCallback audioMaster,
 	setProgram(0);
 
 	suspend ();
+	assert(this->curProgram = 0);
+	assert(this->numPrograms = numPrograms);
+	assert(this->numParams = numParams);
+	assert(cEffect.numInputs = numInputs);
+	assert(cEffect.numOutputs = numOutputs);
 }
 
 BasePluginVST2::~BasePluginVST2() {
