@@ -1,5 +1,5 @@
 #include <vector>
-#include <assert.h>
+#include "assert_dbg.h"
 
 #include "error.h"
 #include "math/seq_math.h"
@@ -283,7 +283,7 @@ void resetHistAndCheck() {
 
 	int nAlloc = getNumClipAllocations();
 
-	assert(n == nAlloc);
+	dbgassert(n == nAlloc);
 }
 void gui_ctr_debug::buttonClicked(guibase* button) {
 	switch (button->id) {

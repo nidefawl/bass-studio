@@ -10,7 +10,7 @@
 #include "layout.h"
 #include "audiocache.h"
 #include "../gui/drawwaveform.h"
-#include <assert.h>
+#include "assert_dbg.h"
 #include <memory>
 
 #define CLIP_MIDI 0
@@ -100,11 +100,11 @@ public:
 			auto it = std::find_if(m_list.begin(), m_list.end(),
 					[n] (const note_t& note) { return &note == n; });
 			if (it == m_list.end()) {
-				assert(0);
+				dbgassert(0);
 			}
 			selIdx.push_back(it - begin);
 		}
-		assert(selection.size() == selIdx.size());
+		dbgassert(selection.size() == selIdx.size());
 	}
 	bool hasDuplicates() const {
 		return any_duplicates(m_list);
@@ -303,13 +303,13 @@ inline void cutClipLeft(clip_t* c, tick_t len) {
 	c->time += len;
 //	c->len -= len;
 	c->setLen(c->getLen()-len);
-	assert(c->time>0);
-	assert(c->getLenRef()>0);
+	dbgassert(c->time>0);
+	dbgassert(c->getLenRef()>0);
 }
 inline void cutClipRight(clip_t* c, tick_t len) {
 //	c->len -= len;
 	c->setLen(c->getLen()-len);
-	assert(c->getLenRef()>0);
+	dbgassert(c->getLenRef()>0);
 }
 inline bool operator==(const clip_t& lhs, const clip_t& rhs){
 	return lhs.time == rhs.time; //TODO: watch out!!

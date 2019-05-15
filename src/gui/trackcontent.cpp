@@ -106,7 +106,7 @@ void gui_audio_clip::updatePosition(project_t& project, scaled_grid& grid, ivec2
 //		my_printf("%d %d -> %d %d\n", prevSize.x, prevSize.y, size.x, size.y);
 //	}
 	if (!culled) {
-		assert(size.x > 0);
+		dbgassert(size.x > 0);
 		if (audio) {
 			ivec2 clipSize = ivec2(size.x, size.y-(HEIGHT_CLIP_TITLE+INSET_CLIP_CONTENT*2));
 			ivec2 posClipped = pos;
@@ -159,8 +159,8 @@ void gui_audio_clip::prerender(NVGcontext* vg) {
 		if (!culled && (!clipAudio.waveformRef.rendered || (this->updatedWaveform != clipAudio.waveformRef.waveform))) {
 			releaseRendered();
 			clipAudio.waveformRef.waveform = this->updatedWaveform;
-			assert(!clipAudio.waveformRef.queued);
-			assert(clipAudio.waveformRef.waveform.size.x > 0 && clipAudio.waveformRef.waveform.size.y > 0);
+			dbgassert(!clipAudio.waveformRef.queued);
+			dbgassert(clipAudio.waveformRef.waveform.size.x > 0 && clipAudio.waveformRef.waveform.size.y > 0);
 			waveformrender::getInstance()->queueUpdate(audio, &clipAudio.waveformRef);
 		}
 	}
@@ -273,7 +273,7 @@ void gui_track::updateVisibleTrackContents(project_t& project, scaled_grid& grid
 	std::vector<clip_t*> clips = m_track->getMidi().getClips();
 	for (clip_t* clip : clips) {
 		auto* gui = createClipGui(this, m_track, clip);
-		assert(gui);
+		dbgassert(gui);
 		if (gui->parent != this) {
 			add(gui);
 		}

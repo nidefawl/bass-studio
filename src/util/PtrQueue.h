@@ -24,7 +24,7 @@ SOFTWARE.
 #pragma once
 
 #include <atomic>
-#include <cassert>
+#include "assert_dbg.h"
 #include <stdexcept>
 #include <type_traits>
 
@@ -44,8 +44,8 @@ public:
     if (capacity_ < 2) {
       throw std::invalid_argument("size < 2");
     }
-    assert(alignof(PointerQueueLockFree<T>) >= kCacheLineSize);
-    assert((size_t)(reinterpret_cast<char *>(&tail_) -
+    dbgassert(alignof(PointerQueueLockFree<T>) >= kCacheLineSize);
+    dbgassert((size_t)(reinterpret_cast<char *>(&tail_) -
                reinterpret_cast<char *>(&head_)) >=
            kCacheLineSize);
     memset(slots_, 0, sizeof(T) * (capacity_ + 2 * kPadding));
@@ -70,7 +70,7 @@ public:
       return false;
     }
     std::swap(slots_[head + kPadding], v);
-    assert(v == nullptr);
+    dbgassert(v == nullptr);
     head_.store(nextHead, std::memory_order_release);
     return true;
   }

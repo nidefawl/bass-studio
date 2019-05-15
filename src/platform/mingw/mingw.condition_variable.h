@@ -21,7 +21,7 @@
 #ifndef MINGW_CONDITIONAL_VARIABLE_H
 #define MINGW_CONDITIONAL_VARIABLE_H
 #include <atomic>
-#include <assert.h>
+#include "assert_dbg.h"
 #include "mingw.mutex.h"
 #include <chrono>
 #include <system_error>
@@ -120,7 +120,7 @@ public:
             if (ret == WAIT_FAILED || ret == WAIT_ABANDONED)
                 std::terminate();
         }
-        assert(mNumWaiters == 0);
+        dbgassert(mNumWaiters == 0);
 //in case some of the waiters timed out just after we released the
 //semaphore by mNumWaiters, it won't be zero now, because not all waiters
 //woke up by acquiring the semaphore. So we must zero the semaphore before
@@ -141,7 +141,7 @@ public:
             if (ret == WAIT_FAILED || ret == WAIT_ABANDONED)
                 std::terminate();
         }
-        assert(mNumWaiters == targetWaiters);
+        dbgassert(mNumWaiters == targetWaiters);
     }
     template <class M, class Rep, class Period>
     std::cv_status wait_for(M& lock,

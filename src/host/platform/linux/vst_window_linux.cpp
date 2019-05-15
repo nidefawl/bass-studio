@@ -45,7 +45,7 @@ vst_window* vst_window::make (vstplugin* plugin, const String& name, Size size, 
 }
 vst_window* vst_window::getVSTWindow(WINDOW_HANDLE handle)
 {
-	assert(handle);
+	dbgassert(handle);
 	vst_window* vstwinhandle = nullptr;
 	return vstwinhandle;
 }

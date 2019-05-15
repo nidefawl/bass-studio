@@ -19,7 +19,7 @@
 #include "mouse.h"
 #include "event.h"
 #include "commands.h"
-#include <assert.h>
+#include "assert_dbg.h"
 
 #include "project.h"
 
@@ -441,7 +441,7 @@ void AppCtrl::onAppTick() {
 }
 void AppCtrl::destroyControl() {
 	if (this->ctxtmenu) {
-		assert(contextWindow);
+		dbgassert(contextWindow);
 		contextWindow->getCtrl()->closePopup();
 	}
 	for (auto gui : garbageGuis) {
@@ -465,7 +465,7 @@ void AppCtrl::openAppMenu(int lvl, guictxtmenu_base *b, ivec2 pos) {
 	}
 	//TODO: menu change on same level will let his assertation fail
 	auto& entry = menuWindows[lvl];
-	assert(entry.wnd && !entry.ctxt);
+	dbgassert(entry.wnd && !entry.ctxt);
 	entry.ctxt = b;
 	ivec2 windowPos;
 	this->mainWindow->getPos(&windowPos);
@@ -473,7 +473,7 @@ void AppCtrl::openAppMenu(int lvl, guictxtmenu_base *b, ivec2 pos) {
 }
 
 void AppCtrl::openOverlayGui(guictxtmenu_base *b, ivec2 pos, int flags) {
-	assert(!this->ctxtmenu);
+	dbgassert(!this->ctxtmenu);
 	this->ctxtmenu = b;
 	ivec2 windowPos;
 	ivec2 windowSize;
@@ -504,13 +504,13 @@ void AppCtrl::openContextMenu(guictxtmenu_base *b, ivec2 pos) {
 }
 void AppCtrl::closeContextMenu() {
 	if (this->ctxtmenu) {
-		assert(contextWindow);
+		dbgassert(contextWindow);
 		contextWindow->getCtrl()->closePopup();
 	}
 }
 void AppCtrl::onChildOverlayWindowClose(window_overlay* ptr) {
 	if (ptr == this->contextWindow) {
-		assert(this->ctxtmenu);
+		dbgassert(this->ctxtmenu);
 		this->ctxtmenu->onParentWindowClose();
 		this->ctxtmenu->setControl(nullptr);
 		// ctxtmenu can't be deleted at this point, some point in the call chain may dereference it again
@@ -524,7 +524,7 @@ void AppCtrl::onChildOverlayWindowClose(window_overlay* ptr) {
 	if (it != menuWindows.end()) {
 		auto lvl = it-menuWindows.begin();
 		auto& menuWnd = *it;
-		assert(menuWnd.ctxt);
+		dbgassert(menuWnd.ctxt);
 		menuWnd.ctxt->onParentWindowClose();
 		menuWnd.ctxt->setControl(nullptr);
 		// ctxtmenu can't be deleted at this point, some point in the call chain may dereference it again
@@ -532,7 +532,7 @@ void AppCtrl::onChildOverlayWindowClose(window_overlay* ptr) {
 		menuWnd.ctxt = nullptr;
 		return;
 	}
-	assert(0);
+	dbgassert(0);
 }
 bool AppCtrl::hasContextMenu() {
 	return this->contextWindow && this->contextWindow->isShown();

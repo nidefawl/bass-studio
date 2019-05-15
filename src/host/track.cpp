@@ -46,13 +46,13 @@ void releaseClipResources(clip_t* cl, delete_cb *cb) {
 	}
 	gui_clip* gClip = cl->gClip;
 	if (gClip) {
-		assert(gClip->parent);
+		dbgassert(gClip->parent);
 		gClip->m_track->content->remove(gClip);
 		DELETE_PTR(gClip);
 	}
 }
 void releaseTrackResources(track_t* tr, delete_cb *cb) {
-	assert(tr && tr->audio);
+	dbgassert(tr && tr->audio);
 	if (cb)
 		cb->preTrackDelete(tr);
 	vsthost* host = vsthost::getInstance();
@@ -71,7 +71,7 @@ void releaseTrackResources(track_t* tr, delete_cb *cb) {
 		tr->subtracks.clear();
 	}
 	host->releaseAudio(tr);
-	assert(tr && !tr->audio);
+	dbgassert(tr && !tr->audio);
 }
 
 std::vector<clip_t*>::iterator trackdata_midi_t::removeClip(clip_t* clip) {
@@ -105,7 +105,7 @@ tick_t trackdata_midi_t::end() {
 }
 
 track_t &track_t::operator =(const track_snapshot_t &obj) {
-	assert(midi.getConstClips().empty());
+	dbgassert(midi.getConstClips().empty());
 	for (const clip_t& clip : obj.clips) {
 		midi.addClip(new clip_t(clip));
 	}
@@ -118,12 +118,12 @@ track_t &track_t::operator =(const track_snapshot_t &obj) {
 }
 track_t::track_t(const track_snapshot_t &a)
   : tracksettings_t(a), localIdx(a.localIdx) {
-	assert(midi.getConstClips().empty());
+	dbgassert(midi.getConstClips().empty());
 	for (const clip_t& clip : a.clips) {
 		midi.addClip(new clip_t(clip));
 	}
-	assert(this->mixer == NULL);
-	assert(this->content == NULL);
+	dbgassert(this->mixer == NULL);
+	dbgassert(this->content == NULL);
 }
 track_impl_snapshot_t::track_impl_snapshot_t(track_impl_t* p, bool storePluginChunks) {
 	if (p) {
@@ -154,7 +154,7 @@ track_snapshot_t::track_snapshot_t(track_t* track, bool storePluginChunks)
 
 void track_t::loadSnapshot(const track_snapshot_t& snapshot) {
 	auto audio = this->audio;
-	assert(audio);
+	dbgassert(audio);
 	const auto& implSnapshot = snapshot.plugins;
 	audio->mixer.loadSnapshot(implSnapshot.trackParams);
 	audio->arp->loadSnapshot(implSnapshot.trackArp);
@@ -175,8 +175,8 @@ void track_t::loadSubtrackLayout(const track_snapshot_t& snapshot) {
 	}
 }
 void track_t::loadPluginAutomationParameters(const track_impl_snapshot_t& trackStatic) {
-	assert(audio);
-	assert(0&&"NOT IMPLEMENTED");
+	dbgassert(audio);
+	dbgassert(0&&"NOT IMPLEMENTED");
 //	const std::vector<plugin_snapshot_t>& trPluginList = trackStatic.pluginSnapshots;
 //	for (const plugin_snapshot_t& pluginSnapshot : trPluginList) {
 //		effectbase* effect = audio->getPluginById(pluginSnapshot.projectGlobalId);
@@ -272,7 +272,7 @@ void audio_stage_t::removePlugin(effectbase* _effect, bool notifyUp) {
 }
 
 bool audio_stage_t::replaceEffect(int32_t idx, effectbase* _effect, effectbase** _prevEffect) {
-	assert(idx >= 0 && idx < (int32_t)effects.size());
+	dbgassert(idx >= 0 && idx < (int32_t)effects.size());
 	if (idx >= 0 && idx < (int32_t)effects.size()) {
 		auto cur = effects[idx];
 		cur->breakTrackLink();
@@ -341,13 +341,13 @@ struct VstEvent_t {
 	}
 	void writeVstMidiEvt(noteevent_t& nevt, double tickToSamples, int32_t blockSize) {
 		int32_t idx = vstEvents->numEvents;
-		assert(idx < maxEvents);
+		dbgassert(idx < maxEvents);
 		VstMidiEvent& evt = evtArr[idx];
 		evt.type = kVstMidiType;
 		evt.byteSize = sizeof(VstMidiEvent);
 		evt.flags = 0;//kVstMidiEventIsRealtime;
 		evt.deltaFrames = floor(nevt.tickOffsetInBlock*tickToSamples);
-		assert(evt.deltaFrames >= 0 && evt.deltaFrames < blockSize);
+		dbgassert(evt.deltaFrames >= 0 && evt.deltaFrames < blockSize);
 		if (nevt.isNoteOn) {
 			numOns++;
 			writeNoteOn((unsigned char*)evt.midiData, nevt.pitch, nevt.velocity);
@@ -360,7 +360,7 @@ struct VstEvent_t {
 	}
 	void writeMessage(unsigned char c0, unsigned char c1, unsigned char c2, unsigned char c3, int32_t delta) {
 		int32_t idx = vstEvents->numEvents;
-		assert(idx < maxEvents);
+		dbgassert(idx < maxEvents);
 		VstMidiEvent& evt = evtArr[idx];
 		evt.type = kVstMidiType;
 		evt.byteSize = sizeof(VstMidiEvent);
@@ -431,7 +431,7 @@ void track_impl_t::saveSubtrackLayout(std::vector<automationlane_snapshot_t>& at
 	for (gui_track_subtrack* atl : track->subtracks) {
 		automationlane_snapshot_t subtrackSnapshot;
 		if (atl->subtrackType() == gui_track_subtrack::SUBTRACK_TYPE_AUTOMATION) {
-			assert(atl->at);
+			dbgassert(atl->at);
 			subtrackSnapshot = atl->at->toRef();
 		} else {
 		}
@@ -501,7 +501,7 @@ void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effec
 	const std::vector<param_snapshot_t>& pluginSnapshotParams = pluginSnapshot.params;
 	for (const param_snapshot_t& param : pluginSnapshotParams) {
 		automatable_param_t* atParam = effect->getParam(param.idx);
-		assert(atParam);
+		dbgassert(atParam);
 		if (atParam) {
 			effect->setParamValue(atParam->idx, param.val, FLG_PAR_UPDATE_INIT);
 		}
@@ -526,23 +526,23 @@ void audio_stage_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginLi
 			host->addDeferredEffect(effect);
 			effect->load(host);
 			host->insertNewPlugin(this, effect, pluginSnapshot.slot);
-			assert(effect->trackImpl == this);
-			assert(effects.size());
+			dbgassert(effect->trackImpl == this);
+			dbgassert(effects.size());
 		}
 	}
 
 
 }
 void vsthost::activateDeferred(effectbase* eff) {
-	assert(eff->trackImpl);
-	assert(eff->trackImpl->effects.size());
-	assert(eff->getSlot() >= 0);
+	dbgassert(eff->trackImpl);
+	dbgassert(eff->trackImpl->effects.size());
+	dbgassert(eff->getSlot() >= 0);
 	auto defEffect = dynamic_cast<effect_deferred*>(eff);
 	plugin_snapshot_t pluginSnapshot = defEffect->getSnapshot();
 	effectbase* effect = loadEffectModule(pluginSnapshot);
 	if (!effect) {
 		log_printf("Failed loading %s\n", StringAsCStr(pluginSnapshot.name));
-//		assert(0);
+//		dbgassert(0);
 		return;
 	}
 	loadEffectParamsFromSnapshot(pluginSnapshot, effect);
@@ -624,7 +624,7 @@ track_t* audio_stage_t::getTrack() {
 	if (stage->type == 0) {
 		return static_cast<track_impl_t*>(stage)->track;
 	}
-//	assert(0); // to be expected when deleting effectgroups
+//	dbgassert(0); // to be expected when deleting effectgroups
 	return nullptr;
 }
 void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, float** buffer, int32_t blockSize) {
@@ -655,19 +655,19 @@ void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t 
 			audiosample_t* sample = audio->sample.get();
 			if (srcStartOffset >= (int32_t)sample->nSamples)
 				continue;
-			assert(sample->samples.size() > 0);
+			dbgassert(sample->samples.size() > 0);
 			for (int i = 0; i < 2; i++) {
 				float *dst = buffer[i];
 				auto& srcVector = i >= (int)sample->samples.size() ? sample->samples[sample->samples.size()-1] : sample->samples[i];
 				int32_t len = math::min((int32_t)blockSize-math::max(0, -srcStartOffset),
 								math::min(clipEndSampleLen, math::min(clipStartSampleLen, (int32_t)srcVector.size()-srcStartOffset)));
-				assert(len>=0);
+				dbgassert(len>=0);
 				if (len <= 0) { //TODO: could figure this out outside the loop
 					continue;
 				}
-				assert(dstStartOffset+len <= (int32_t)blockSize);
-				assert(srcStartOffset+len <= (int32_t)srcVector.size());
-				assert(dstStartOffset>=0);
+				dbgassert(dstStartOffset+len <= (int32_t)blockSize);
+				dbgassert(srcStartOffset+len <= (int32_t)srcVector.size());
+				dbgassert(dstStartOffset>=0);
 				memcpy(dst+dstStartOffset, srcVector.data()+math::max(0, srcStartOffset), len*sizeof(float));
 			}
 		}
@@ -724,7 +724,7 @@ void track_impl_t::sendNotesOff(int32_t bpm100, int32_t blockSamplePos) {
 	}
 }
 void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos) {
-	//assert(end != loopEnd); //if end equals loopEnd note off events will be on exact end
+	//dbgassert(end != loopEnd); //if end equals loopEnd note off events will be on exact end
 	if (std::any_of(effects.begin(), effects.end(), [](const effectbase* ref){
 			return ref->bCanReceiveMidi;
 	})) {
@@ -796,10 +796,10 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 			const double ticksPerBlock = toTickPrecise(blockSize/(double)sampleRate, bpm100);
 			const double tickToSamples = (60*sampleRate) / (bpm100/100.0*TICKS_QUARTER);
 			for (noteevent_t& evt : noteEventsProcessed) {
-				assert(evt.tickOffsetInBlock >= 0 && evt.tickOffsetInBlock < ticksPerBlock);
+				dbgassert(evt.tickOffsetInBlock >= 0 && evt.tickOffsetInBlock < ticksPerBlock);
 				midiEventsBuf->writeVstMidiEvt(evt, tickToSamples, blockSize);
 			}
-			assert(midiEventsBuf->vstEvents->numEvents == (int32_t) numEvents);
+			dbgassert(midiEventsBuf->vstEvents->numEvents == (int32_t) numEvents);
 			for (effectbase* effect : effects) {
 				vstplugin* vst = dynamic_cast<vstplugin*>(effect);
 				if (vst && vst->bCanReceiveMidi) {
@@ -833,7 +833,7 @@ void track_params_t::createSnapshot(track_params_snapshot_t& snapshot) {
 }
 void track_params_t::loadSnapshot(const track_params_snapshot_t& snapshot) {
 	for (const auto& param : snapshot.params) {
-		assert(getParam(param.idx));
+		dbgassert(getParam(param.idx));
 		setParamValue(param.idx, param.val, FLG_PAR_UPDATE_INIT);
 	}
 	loadAutomation(snapshot.automatedParams, this);
@@ -842,7 +842,7 @@ void track_params_t::postSetParameter(int32_t idx, float preVal, float val, int 
 	if (flags != FLG_PAR_UPDATE_USER) {
 		return;
 	}
-	assert(this->audiostage->getTrack());
+	dbgassert(this->audiostage->getTrack());
 	track_t* track = this->audiostage->getTrack();
 	automationlane_snapshot_t ref = toRef();
 	parameter_ref_t p = {track->idx,  ref.type, 0, idx};
@@ -871,14 +871,14 @@ track_params_t::track_params_t(audio_stage_t* _audiostage) : automatable_t(), au
 
 float track_params_t::getParamValue(int32_t idx) {
 	automatable_param_t* param = getParam(idx);
-	assert(param);
+	dbgassert(param);
 	//		return convertValFrom(idx, param->value);
 	return param->value;
 }
 
 void track_params_t::setParamValue(int32_t idx, float val, int flags) {
 	automatable_param_t* param = getParam(idx);
-	assert(param);
+	dbgassert(param);
 	param->value = val; //convertValTo(idx, val);
 }
 

@@ -3,7 +3,7 @@
 
 #include <atomic>
 #include <queue>
-#include <assert.h>
+#include "assert_dbg.h"
 #include <exception>
 #include <functional>
 #include <memory>
@@ -87,7 +87,7 @@ public:
 		std::atomic_init(&m_stop, false);
 	}
     void setTls(daw_tls::tlsinstance tls) {
-    	assert(!t.joinable());
+    	dbgassert(!t.joinable());
     	threadTLS = tls;
     }
 	void start() {

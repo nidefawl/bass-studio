@@ -44,7 +44,7 @@ struct testshader : gl_shader_pipeline {
 		const char* fnameFsh = "test.fsh";
 		int newprogram = compileShaderCombo(this, fnameVsh, fnameFsh);
 		if (newprogram < 0) {
-			assert(newprogram != -2);
+			dbgassert(newprogram != -2);
 			return -1;
 		}
 		program = newprogram;
@@ -156,7 +156,7 @@ void gui_shaderview::render(NVGcontext* vg) {
 		return;
 	}
 
-//		assert(fb);
+//		dbgassert(fb);
 	if (impl->fb) {
 		int w = math::min(size.x, size.y);
 		int h = w;

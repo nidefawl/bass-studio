@@ -8,6 +8,7 @@
 #include "theme.h"
 #include "event.h"
 #include "gui.h"
+#include "assert_dbg.h"
 
 namespace Table {
 
@@ -122,9 +123,9 @@ void drawTbl(const table_ctxt_t& ctxt, const glm::ivec2& obj) {
 }
 
 table_entry_t& GetCell(tbl& table, int32_t x, int32_t y) {
-	assert(y >= 0 && y < table.rows.size());
+	dbgassert(y >= 0 && y < table.rows.size());
 	tbl_row_t& rowRef = table.rows[y];
-	assert(x >= 0 && x < rowRef.cols.size());
+	dbgassert(x >= 0 && x < rowRef.cols.size());
 	return rowRef.cols[x];
 }
 

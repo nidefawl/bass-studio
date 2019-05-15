@@ -120,7 +120,7 @@ void internalplugin::onWindowDestroy() {
 //	this->dispatch(effMainsChanged, 0, 0);
 //	this->dispatch(effSetBypass, 0, 1);
 //	for (automated_param_t& ap : this->automatedParams) {
-//		assert(ap.ref);
+//		dbgassert(ap.ref);
 //		ap.ref->onDstDelete();
 //	}
 //	if (this->window) {
@@ -160,14 +160,14 @@ void internalplugin::makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks)
 //	this->makePresetSnapshot(ps, this);
 }
 void internalplugin::loadSnapshot(const plugin_snapshot_t& ps)  {
-	//assert(ps.slot == this->slot);
+	//dbgassert(ps.slot == this->slot);
 }
 String internalplugin::getAutomatableName() {
 	return this->sName;
 }
 float internalplugin::getParamValue(int32_t idx) {
 	automatable_param_t* param = getParam(idx);
-	assert(param);
+	dbgassert(param);
 	if (param->internalIdx >= 0) {
 		param->value = dispatchGetParameter(param->internalIdx);
 	}
@@ -175,7 +175,7 @@ float internalplugin::getParamValue(int32_t idx) {
 }
 void internalplugin::setParamValue(int32_t idx, float val, int flags) {
 	automatable_param_t* param = getParam(idx);
-	assert(param);
+	dbgassert(param);
 	param->value = val;
 	if (param->idx == PARAM_ENABLE) {
 		bool wasEnable = this->bIsEnabled;
@@ -197,7 +197,7 @@ void internalplugin::postSetParameter(int32_t idx, float preVal, float val, int 
 	if (flags != 2) {
 		return;
 	}
-	assert(this->trackImpl->getTrack());
+	dbgassert(this->trackImpl->getTrack());
 	track_t* track = this->trackImpl->getTrack();
 	automationlane_snapshot_t ref = toRef();
 	parameter_ref_t p = {track->idx,  ref.type, this->projectGlobalId, idx};
@@ -205,7 +205,7 @@ void internalplugin::postSetParameter(int32_t idx, float preVal, float val, int 
 }
 void internalplugin::recvPluginEditParamUpdate(int32_t internalIdx) {
 	automatable_param_t* param = getEffectParam(internalIdx);
-	assert(param && param->internalIdx >= 0);
+	dbgassert(param && param->internalIdx >= 0);
 	param->value = dispatchGetParameter(param->internalIdx);
 }
 automationlane_snapshot_t internalplugin::toRef() {

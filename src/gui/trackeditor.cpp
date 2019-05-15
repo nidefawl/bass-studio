@@ -376,13 +376,13 @@ void guitrack_editor::trackViewDragMove(guitrack_editor* view, MouseEvent& evt) 
 			c.selRange = tick - c.cursorPos;
 			if (c.isSubtrackSelection()) {
 				//c.isSubtrackSelection() guarantees subTrSelected to be non-null
-				assert(subTrSelected);
+				dbgassert(subTrSelected);
 				if (subTr) {
 					c.selSubTrackRange = (subTr->idx - subTrSelected->idx);
-					assert (c.getSubTrackEnd() > -1);
-					assert (c.getSubTrackBegin() <= c.getSubTrackEnd());
-					assert (c.getSubTrackBegin() < (int)subTr->m_track->subtracks.size());
-					assert (c.getSubTrackEnd() < (int)subTr->m_track->subtracks.size());
+					dbgassert (c.getSubTrackEnd() > -1);
+					dbgassert (c.getSubTrackBegin() <= c.getSubTrackEnd());
+					dbgassert (c.getSubTrackBegin() < (int)subTr->m_track->subtracks.size());
+					dbgassert (c.getSubTrackEnd() < (int)subTr->m_track->subtracks.size());
 				}
 
 			} else {
@@ -476,7 +476,7 @@ void guitrack_editor::dragSelectionMove(gui_clip* gui, MouseEvent& evt) {
 					clip->adjustStartOffset(offset);
 					my_printf("post clip->getLen() %d len %d samples %d\n", clip->getLen(), clip->len, clip->lenSamples);
 					int32_t postLen = clip->getLen();
-					assert(postLen == preLen - offset);
+					dbgassert(postLen == preLen - offset);
 				}
 			} else {
 				if (clip->end() != tick) {
@@ -704,7 +704,7 @@ void guitrack_editor::prerender(NVGcontext* vg) {
 					gui_waveform_texture_ref& waveformRef = cl->audio.waveformRef;
 					if (!waveformRef.queued) {
 						if (!waveformRef.rendered || waveform != waveformRef.waveform) {
-							assert(!waveformRef.queued);
+							dbgassert(!waveformRef.queued);
 	//						my_printf("release %012x from prerender() (refresh) \n", &waveformRef);
 							waveformrender::getInstance()->release(&waveformRef);
 							if (waveform.size.x > 0 && waveform.size.y > 0) {
@@ -883,7 +883,7 @@ void guitrack_editor::render(NVGcontext* vg) {
 					trackYMin = trB->subtracks[ssTrIdx]->top();
 					trackYMax = trB->subtracks[esTrIdx]->bottom();
 				} else {
-					assert(0);
+					dbgassert(0);
 				}
 			}
 
@@ -916,7 +916,7 @@ void guitrack_editor::render(NVGcontext* vg) {
 						trackYMin = tr->subtracks[ssTrIdx]->top();
 						trackYMax = tr->subtracks[esTrIdx]->bottom();
 					} else {
-						assert(0);
+						dbgassert(0);
 					}
 
 				}

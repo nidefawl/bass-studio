@@ -433,7 +433,7 @@ guibase::~guibase() {
 }
 
 SafeRef<guibase> guibase::makeSafeRef() {
-	assert(parentCtrl);
+	dbgassert(parentCtrl);
 	if (!safeRef.handler) {
 		safeRef.handler = parentCtrl;
 		safeRef.refId = safeRef.handler->safeRefCreate(this);

@@ -85,21 +85,21 @@ public:
 				if (strcpy_s(dstOffset, (dstEnd-dstOffset), StringAsCStr(entry.name)))
 					throw appexception("Failed processing env key");
 				dstOffset += entry.name.length();
-				assert((dstEnd-dstOffset) > 0);
+				dbgassert((dstEnd-dstOffset) > 0);
 				*dstOffset++ = '=';
 				if (strcpy_s(dstOffset, (dstEnd-dstOffset), StringAsCStr(entry.value)))
 					throw appexception("Failed processing env val");
 				dstOffset += entry.value.length();
-				assert((dstEnd-dstOffset) > 0);
+				dbgassert((dstEnd-dstOffset) > 0);
 				*dstOffset++ = '\0';
 			}
-			assert((dstEnd-dstOffset) == 1);
+			dbgassert((dstEnd-dstOffset) == 1);
 			*dstOffset++ = '\0';
-			assert((dstOffset-bufEnv.data()) == totalEnvLen);
+			dbgassert((dstOffset-bufEnv.data()) == totalEnvLen);
 			bufEnv.resize(totalEnvLen);
 		} else {
 
-			assert(bufEnv.size()==0);
+			dbgassert(bufEnv.size()==0);
 		}
 		std::vector<char> bufWorkingDir;
 		if (workingDir.length()) {
@@ -107,7 +107,7 @@ public:
 			if (strcpy_s(bufWorkingDir.data(), bufWorkingDir.size(), StringAsCStr(workingDir)))
 				throw appexception("Failed processing working dir");
 		} else {
-			assert(bufWorkingDir.size()==0);
+			dbgassert(bufWorkingDir.size()==0);
 		}
 		bool inheritHandles = pipeOutput;
 		// Create a pipe for the child process's STDOUT.
@@ -155,7 +155,7 @@ public:
 		}
 	}
 	bool waitTimeOut(int32_t timeoutMsec) {
-		assert(timeoutMsec > 0);
+		dbgassert(timeoutMsec > 0);
 		auto ret = WaitForSingleObject(processInformation.hProcess, timeoutMsec);
 		if (ret == WAIT_TIMEOUT){
 			return false;
@@ -225,7 +225,7 @@ public:
 				ProcessRunScope scopedProcess(argbinary, argparams, argwd, argenv, argpipe);
 				if (argpipe) {
 					while (!readFailed) {
-						assert(scopedProcess.handleStdOutRead);
+						dbgassert(scopedProcess.handleStdOutRead);
 						DWORD dwRead = 0;
 						if (!ReadFile( scopedProcess.handleStdOutRead, TEMP.data(), TEMP.size(), &dwRead, NULL)) {
 							readFailed = true;

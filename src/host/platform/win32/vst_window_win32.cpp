@@ -159,7 +159,7 @@ namespace vst_window_mgr {
 }
 vst_window* vst_window::getVSTWindow(HWND handle)
 {
-	assert(handle);
+	dbgassert(handle);
 	TCHAR clsName_v[512];
 	String sChain = "";
 	vst_window* vstwinhandle = nullptr;

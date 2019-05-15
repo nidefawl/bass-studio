@@ -32,7 +32,7 @@ int32_t addPointAt(std::vector<automation_point_t>& dataPoints, tick_t tick, int
 				v = pt1.val;
 			} else {
 				automation_point_t& pt2 = dataPoints[idx];
-				assert(tick >= pt1.time && tick <= pt2.time);
+				dbgassert(tick >= pt1.time && tick <= pt2.time);
 				tick_t tickDist = pt2.time - pt1.time;
 				if (tickDist == 0) {
 					v = pt2.val;
@@ -106,7 +106,7 @@ void simplifyData(std::vector<automation_point_t>& data) {
 float automation_t::getValueAt(tick_t tick) {
 	if (points.size()) {
 		int32_t idx = indexOfTick(points, tick);
-		assert(idx <= (int)points.size());
+		dbgassert(idx <= (int)points.size());
 		if (idx == (int)points.size())
 			return points.back().val;
 		if (idx > 0) {
@@ -115,7 +115,7 @@ float automation_t::getValueAt(tick_t tick) {
 				return pt1.val;
 			}
 			automation_point_t& pt2 = points[idx];
-			assert(tick>=pt1.time && tick <= pt2.time);
+			dbgassert(tick>=pt1.time && tick <= pt2.time);
 			tick_t tickDist = pt2.time-pt1.time;
 			if (!tickDist) {
 				return pt2.val;
@@ -210,7 +210,7 @@ void storeAutomation(std::vector<automation_view_t>& automatedParams, automatabl
 	at->getAllAutomatedParams(out);
 	int total = 0;
 	for (const automated_param_t& automatedParam : out) {
-		assert(!automatedParam.src.points.empty());
+		dbgassert(!automatedParam.src.points.empty());
 		automation_view_t atv;
 		atv.targetParam = automatedParam.paramIdx;
 		atv.points = automatedParam.src.points;

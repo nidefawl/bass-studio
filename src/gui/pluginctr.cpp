@@ -179,7 +179,7 @@ bool guictr_plugins::handleKeyInput(KeyEvent& kevt) {
 			}
 			if (isKC(KC_DELETE, kevt) && selection.size()) {
 				audio_stage_t* audioStage = selection[0]->getTrackLink();
-				assert(audioStage);
+				dbgassert(audioStage);
 				for (effectbase* eff : selection) {
 					eff->close();
 				}
@@ -195,7 +195,7 @@ bool guictr_plugins::handleKeyInput(KeyEvent& kevt) {
 				std::shared_ptr<plugin_clipboard_t> clipboard = copyPluginSelection(sel);
 				MainCtrl::get()->setPluginClipboard(clipboard);
 				audio_stage_t* audioStage = selection[0]->getTrackLink();
-				assert(audioStage);
+				dbgassert(audioStage);
 				for (effectbase* eff : selection) {
 					eff->close();
 				}
@@ -339,7 +339,7 @@ void guictr_plugins::showTrack(audio_stage_t* audio) {
 //	my_printf("showTrack %s\n", (isDefaultPluginCtr ? "default" : "group"));
 	if (audio && this->track) {
 		audio->pluginCtr = this;
-		assert(audio->parent || MainCtrl::getPluginCtr() == this);
+		dbgassert(audio->parent || MainCtrl::getPluginCtr() == this);
 		if (!audio->effects.empty()) {
 			for (effectbase* vst : audio->effects) {
 				addGui(vst);
@@ -503,7 +503,7 @@ void guictr_plugins::pluginMultiDragMove(guictr_dragged_plugins* g, ivec2 mousep
 	if (!this->stage) return;
 	audio_stage_t* srcStage = g->getTrackLink();
 	for (auto* ptr : g->effects) {
-		assert(ptr->getTrackLink() == srcStage);
+		dbgassert(ptr->getTrackLink() == srcStage);
 	}
 
 	int highlightSlot = slotFromCoord(mousepos);
@@ -549,7 +549,7 @@ void guictr_plugins::pluginDragMove(guiplugin* g, ivec2 mousepos) {
 	effectbase* effect = g->getModule();
 	audio_stage_t* trp = effect->getTrackLink();
 	if (!trp) {
-		assert(0&&"TRP WAS NULL");
+		dbgassert(0&&"TRP WAS NULL");
 		return;
 	}
 	int highlightSlot = slotFromCoord(mousepos);
@@ -649,7 +649,7 @@ class action_remove_module : public action_base {
 				return;
 			}
 			vsthost::getInstance()->insertNewPlugin(stage, effect, dstSlot);
-			assert(effect->getSlot() == dstSlot);
+			dbgassert(effect->getSlot() == dstSlot);
 			MainCtrl::getPluginCtr()->relayout();
 			weOwn = false;
 		}
@@ -660,7 +660,7 @@ class action_remove_module : public action_base {
 				setError("missing trackimpl");
 				return;
 			}
-			assert(effect->getSlot() == dstSlot);
+			dbgassert(effect->getSlot() == dstSlot);
 			effect->close();
 			vsthost::getInstance()->removePlugin(effect);
 			MainCtrl::getPluginCtr()->relayout();
@@ -671,7 +671,7 @@ class action_remove_module : public action_base {
 void removePlugin(effectbase* module) {
 	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 	audio_stage_t* audioStage = module->getTrackLink();
-	assert(audioStage);
+	dbgassert(audioStage);
 	module->close();
 	audioStage->removePlugin(module, true);
 	auto* actionRemove = new action_remove_module("Remove plugin", module, audioStage->toRef(), module->getSlot());
@@ -682,7 +682,7 @@ void guictr_plugins::pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mou
 	int32_t dstSlot = MainCtrl::get()->getDragDropTarget().idx;
 	MainCtrl::get()->getDragDropTarget().reset();
 	if (!this->stage) return;
-	assert(g->effects.size());
+	dbgassert(g->effects.size());
 	audio_stage_t* srcStage = g->getTrackLink();
 	audio_stage_t* p = this->stage;
 	while (p) {
@@ -742,7 +742,7 @@ void guictr_plugins::pluginDragRelease(guiplugin* g, ivec2 mousepos) {
 	effectbase* effect = g->getModule();
 	audio_stage_t* trp = effect->getTrackLink();
 	if (!trp) {
-		assert(0&&"TRP WAS NULL");
+		dbgassert(0&&"TRP WAS NULL");
 		return;
 	}
 	int curSlot = effect->getSlot();

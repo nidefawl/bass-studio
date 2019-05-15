@@ -145,11 +145,11 @@ public:
 		this->paramIdx = _paramIdx;
 	}
 	void handleRightClick(MouseEvent& evt) override {
-		assert(paramAutomatable && paramIdx > -1 && paramAutomatable->getParam(paramIdx));
+		dbgassert(paramAutomatable && paramIdx > -1 && paramAutomatable->getParam(paramIdx));
 		MainCtrl::get()->openContextMenu(new guictxtmenu_at_param(paramAutomatable, paramIdx), evt.mousepos);
 	}
 	bool isAutomated() {
-		assert(paramAutomatable && paramIdx > -1 && paramAutomatable->getParam(paramIdx));
+		dbgassert(paramAutomatable && paramIdx > -1 && paramAutomatable->getParam(paramIdx));
 		auto at = paramAutomatable->getRegisteredAutomation(paramIdx);
 		return at && at->isAutomated();
 	}
@@ -437,7 +437,7 @@ public:
 			automatable_t* autom = m_track->audio->selectedAutomationCtr;
 			if (autom) {
 				const int32_t paramIdx = _id - 1;
-				assert(autom->getParam(paramIdx));
+				dbgassert(autom->getParam(paramIdx));
 				m_track->audio->selectedAutomationParam = paramIdx;
 			}
 		}
@@ -806,7 +806,7 @@ void gui_track_controls::removeSubtrackMixer(gui_track_subtrack* al) {
 	auto it = std::find_if(ctrls.begin(), ctrls.end(), [al] (const gui_track_subtrack_mixer* ref) {
 		return ref->subtrack == al;
 	});
-	assert(it != ctrls.end());
+	dbgassert(it != ctrls.end());
 	remove(*it);
 	delete (*it);
 	ctrls.erase(it);

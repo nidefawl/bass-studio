@@ -23,7 +23,7 @@ SOFTWARE.
 #pragma once
 
 #include <atomic>
-#include <cassert>
+#include "assert_dbg.h"
 #include <stdexcept>
 #include <type_traits>
 
@@ -40,8 +40,8 @@ public:
     if (capacity_ < 2) {
       throw std::invalid_argument("size < 2");
     }
-    assert(alignof(SPSCQueue<T>) >= kCacheLineSize);
-    assert(reinterpret_cast<char *>(&tail_) -
+    dbgassert(alignof(SPSCQueue<T>) >= kCacheLineSize);
+    dbgassert(reinterpret_cast<char *>(&tail_) -
                reinterpret_cast<char *>(&head_) >=
            static_cast<ssize_t>(kCacheLineSize));
   }
@@ -128,7 +128,7 @@ public:
     static_assert(std::is_nothrow_destructible<T>::value,
                   "T must be nothrow destructible");
     auto const tail = tail_.load(std::memory_order_relaxed);
-    assert(head_.load(std::memory_order_acquire) != tail);
+    dbgassert(head_.load(std::memory_order_acquire) != tail);
     slots_[tail + kPadding].~T();
     auto nextTail = tail + 1;
     if (nextTail == capacity_) {

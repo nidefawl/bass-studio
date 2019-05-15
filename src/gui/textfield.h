@@ -3,6 +3,7 @@
 #include "gui.h"
 #include "theme.h"
 #include <functional>
+#include "assert_dbg.h"
 
 class input_filter {
 public:
@@ -72,7 +73,7 @@ public:
     void setValue(const std::string &value) { mValue = value; }
 	void setSelectionRange(int start, int end) {
 		if (this->mValue.empty()) {
-			assert(start < 0 && end < 0);
+			dbgassert(start < 0 && end < 0);
 			this->mSelectionPos = -1;
 			this->mCursorPos = -1;
 		} else {

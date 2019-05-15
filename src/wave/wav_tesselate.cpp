@@ -10,6 +10,7 @@
 #include "audiowaveform.h"
 #include "logging.h"
 #include "str_util.h"
+#include "assert_dbg.h"
 
 using vec2list = std::vector<vec2>;
 //constexpr float MAX_RES = 512;
@@ -39,7 +40,7 @@ void tesselateWaveform(audiosample_t* sample, float x, float y, audioclip_textur
 		waveformScaled.sampleBeginOffset /= downsampleScale;
 		waveformScaled.sampleBegin /= downsampleScale;
 		waveformScaled.sampleEnd /= downsampleScale;
-		assert (nLevel == 0 || nLevel-1 < (int)sample->downsampled.size());
+		dbgassert (nLevel == 0 || nLevel-1 < (int)sample->downsampled.size());
 		std::vector<samplechannel_t>& smpCh =sample->samples;// nLevel == 0 ? sample->samples : sample->downsampled[nLevel-1];
 		int upscale = 1;
 		double dres = samplesPerPx;
@@ -91,7 +92,7 @@ void tesselateWaveform(audiosample_t* sample, float x, float y, audioclip_textur
 					if (sampleIdxStart >= lenSamplesCh) {
 						break;
 					}
-					assert(sampleIdxStart >= 0);
+					dbgassert(sampleIdxStart >= 0);
 					float first = samplesChPtr[sampleIdxStart];
 
 					float fY = -first * channelHeight / 2.0f;
@@ -126,7 +127,7 @@ void tesselateWaveform(audiosample_t* sample, float x, float y, audioclip_textur
 							break;
 						}
 						int32_t sampleIdx = std::round(sampleOffset);
-						assert((int)sampleIdx%upscale==0);
+						dbgassert((int)sampleIdx%upscale==0);
 //						if ((int)sampleIdx%upscale==0) {
 							float fCurX = (sampleOffset-renderOffset) * samplesToPx;
 							if (fCurX >= lastPtX+vOffset) {
@@ -147,7 +148,7 @@ void tesselateWaveform(audiosample_t* sample, float x, float y, audioclip_textur
 									data /= (float)c;
 								}
 								float fY = -data * channelHeight / 2.0f;
-//								assert(px + fCurX>0);
+//								dbgassert(px + fCurX>0);
 								vec2 vec { px + fCurX, py + fY };
 								vecs.push_back(std::move(vec));
 								if (fCurX >= width) {
@@ -275,7 +276,7 @@ void tesselateWaveform(audiosample_t* sample, float x, float y, audioclip_textur
 						}
 						float fCurX = (sampleOffset-renderOffset)*samplesToPx;
 						if (samplesColl > 7) {
-							assert (fCurX > lastX);
+							dbgassert (fCurX > lastX);
 							lastX = fCurX;
 							float fY1 = -smin * channelHeight / 2.0f;
 							float fY2 = -smax * channelHeight / 2.0f;
@@ -285,14 +286,14 @@ void tesselateWaveform(audiosample_t* sample, float x, float y, audioclip_textur
 //							fCurX += vOffset/2.0f;
 							fCurX += samplesToPx*4;
 							vec2 v2 { px + fCurX, py + f2 };
-							assert(v2.x>v1.x);
+							dbgassert(v2.x>v1.x);
 //							my_printf("v1.x %f\n", v1.x);
 //							my_printf("v2.x %f\n", v2.x);
 //
 //							my_printf("fcurx %f, sampleoffset %f, renderoffset %f samplestopx %f\n", fCurX, sampleOffset, renderOffset, samplesToPx);
-							assert(vecs.empty() || vecs.back().x < v1.x);
+							dbgassert(vecs.empty() || vecs.back().x < v1.x);
 							vecs.push_back(std::move(v1));
-							assert(vecs.empty() || vecs.back().x < v2.x);
+							dbgassert(vecs.empty() || vecs.back().x < v2.x);
 							vecs.push_back(std::move(v2));
 							lastPtX = fCurX;
 							smin = 0; smax = 0;
@@ -334,7 +335,7 @@ void tesselateWaveform(audiosample_t* sample, float x, float y, audioclip_textur
 			nvecs += vecs.size();
 			if (vecs.size()) {
 				for (int i = 1; i < (int)vecs.size(); i++) {
-					assert(vecs[i].x > vecs[i-1].x);
+					dbgassert(vecs[i].x > vecs[i-1].x);
 				}
 //				auto it = vecs.begin();
 //				vec2 a = *it;

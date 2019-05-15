@@ -23,7 +23,7 @@ void readPacketToBlock(AudioBlock* block, std::vector<uint8_t>& buf, size_t offs
 	int32_t blockSamples = block->samples;
 	int32_t nSamples = block->channels * blockSamples;
 	size_t size = nSamples * sizeof(float);
-	assert(buf.size()-offset >= size);
+	dbgassert(buf.size()-offset >= size);
 	uint8_t* ptr = buf.data()+offset;
 	for (uint32_t i = 0; i < block->channels; i++) {
 		float* buf = block->buf[i];
@@ -47,5 +47,5 @@ void writeBlockToPacket(AudioBlock* block, std::vector<uint8_t>& buf, size_t off
 	}
 //	p.hdr.size = ptr-p.buf.data();
 //	p.hdr.type = PCKTYPE_DATA;
-	assert(buf.size() > 0 && buf.size() < 1<<16);
+	dbgassert(buf.size() > 0 && buf.size() < 1<<16);
 }

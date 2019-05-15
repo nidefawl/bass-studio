@@ -11,7 +11,7 @@
 // Also has a basic atomic type (limited to hardware-supported atomics with no memory ordering guarantees).
 // Uses the AE_* prefix for macros (historical reasons), and the "moodycamel" namespace for symbols.
 
-#include <cassert>
+#include "assert_dbg.h"
 #include <type_traits>
 #include <cerrno>
 #include <cstdint>
@@ -103,7 +103,7 @@ enum memory_order {
 
 #ifdef AE_VCPP
 #pragma warning(push)
-#pragma warning(disable: 4365)		// Disable erroneous 'conversion from long to unsigned int, signed/unsigned mismatch' error when using `assert`
+#pragma warning(disable: 4365)		// Disable erroneous 'conversion from long to unsigned int, signed/unsigned mismatch' error when using `dbgassert`
 #ifdef __cplusplus_cli
 #pragma managed(push, off)
 #endif
@@ -119,7 +119,7 @@ AE_FORCEINLINE void compiler_fence(memory_order order)
 		case memory_order_release: _WriteBarrier(); break;
 		case memory_order_acq_rel: _ReadWriteBarrier(); break;
 		case memory_order_seq_cst: _ReadWriteBarrier(); break;
-		default: assert(false);
+		default: dbgassert(false);
 	}
 }
 
@@ -139,7 +139,7 @@ AE_FORCEINLINE void fence(memory_order order)
 			AeFullSync();
 			_ReadWriteBarrier();
 			break;
-		default: assert(false);
+		default: dbgassert(false);
 	}
 }
 #else
@@ -169,7 +169,7 @@ AE_FORCEINLINE void fence(memory_order order)
 			AeFullSync();
 			_ReadWriteBarrier();
 			break;
-		default: assert(false);
+		default: dbgassert(false);
 	}
 }
 #endif
@@ -188,7 +188,7 @@ AE_FORCEINLINE void compiler_fence(memory_order order)
 		case memory_order_release: std::atomic_signal_fence(std::memory_order_release); break;
 		case memory_order_acq_rel: std::atomic_signal_fence(std::memory_order_acq_rel); break;
 		case memory_order_seq_cst: std::atomic_signal_fence(std::memory_order_seq_cst); break;
-		default: assert(false);
+		default: dbgassert(false);
 	}
 }
 
@@ -200,7 +200,7 @@ AE_FORCEINLINE void fence(memory_order order)
 		case memory_order_release: std::atomic_thread_fence(std::memory_order_release); break;
 		case memory_order_acq_rel: std::atomic_thread_fence(std::memory_order_acq_rel); break;
 		case memory_order_seq_cst: std::atomic_thread_fence(std::memory_order_seq_cst); break;
-		default: assert(false);
+		default: dbgassert(false);
 	}
 }
 
@@ -262,7 +262,7 @@ public:
 #else
 #error Unsupported platform
 #endif
-		assert(false && "T must be either a 32 or 64 bit type");
+		dbgassert(false && "T must be either a 32 or 64 bit type");
 		return value;
 	}
 	
@@ -276,7 +276,7 @@ public:
 #else
 #error Unsupported platform
 #endif
-		assert(false && "T must be either a 32 or 64 bit type");
+		dbgassert(false && "T must be either a 32 or 64 bit type");
 		return value;
 	}
 #else
@@ -379,7 +379,7 @@ namespace moodycamel
 		public:
 		    Semaphore(int initialCount = 0)
 		    {
-		        assert(initialCount >= 0);
+		        dbgassert(initialCount >= 0);
 		        const long maxLong = 0x7fffffff;
 		        m_hSema = CreateSemaphoreW(nullptr, initialCount, maxLong, nullptr);
 		    }
@@ -428,7 +428,7 @@ namespace moodycamel
 		public:
 		    Semaphore(int initialCount = 0)
 		    {
-		        assert(initialCount >= 0);
+		        dbgassert(initialCount >= 0);
 		        semaphore_create(mach_task_self(), &m_sema, SYNC_POLICY_FIFO, initialCount);
 		    }
 
@@ -487,7 +487,7 @@ namespace moodycamel
 		public:
 		    Semaphore(int initialCount = 0)
 		    {
-		        assert(initialCount >= 0);
+		        dbgassert(initialCount >= 0);
 		        sem_init(&m_sema, 0, initialCount);
 		    }
 
@@ -613,7 +613,7 @@ namespace moodycamel
 		public:
 		    LightweightSemaphore(ssize_t initialCount = 0) : m_count(initialCount)
 		    {
-		        assert(initialCount >= 0);
+		        dbgassert(initialCount >= 0);
 		    }
 
 		    bool tryWait()
@@ -639,9 +639,9 @@ namespace moodycamel
 
 		    void signal(ssize_t count = 1)
 		    {
-		    	assert(count >= 0);
+		    	dbgassert(count >= 0);
 		        ssize_t oldCount = m_count.fetch_add_release(count);
-		        assert(oldCount >= -1);
+		        dbgassert(oldCount >= -1);
 		        if (oldCount < 0)
 		        {
 		            m_sema.signal(1);

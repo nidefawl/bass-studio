@@ -22,6 +22,7 @@
 #include "theme.h"
 #include "thememgr.h"
 #include "saferef.h"
+#include "assert_dbg.h"
 
 struct NVGcontext;
 class guibase;
@@ -86,7 +87,7 @@ public:
 			refs.erase(it);
 			return;
 		}
-		assert(0);
+		dbgassert(0);
 	}
 
 	ivec2 dragStart;

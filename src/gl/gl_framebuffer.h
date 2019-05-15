@@ -4,6 +4,7 @@
 #include "math/seq_math.h"
 #include "math/vec.h"
 #include "gl_util.h"
+#include "assert_dbg.h"
 
 #define MAX_COLOR_ATT 8
 #define GL_ERROR_CHECKS true
@@ -112,7 +113,7 @@ public:
         if (hasDepth) {
             numTextures++;
         }
-        assert(numTextures > 0 && "No textures defined");
+        dbgassert(numTextures > 0 && "No textures defined");
 
         std::vector<GLuint> colorTextures(numTextures);
 
@@ -262,7 +263,7 @@ public:
 
 	void setColorAtt(int att, int fmt) {
 		att -= GL_COLOR_ATTACHMENT0;
-		assert(colorAttFormats[att] == 0 && "GL_COLOR_ATTACHMENT already set");
+		dbgassert(colorAttFormats[att] == 0 && "GL_COLOR_ATTACHMENT already set");
 		colorAttFormats[att] = fmt;
 		colorAttMinFilters[att] = GL_LINEAR;
 		colorAttMagFilters[att] = GL_LINEAR;
@@ -270,18 +271,18 @@ public:
 
 	void setFilter(int att, int filter, int magfilter) {
 		att -= GL_COLOR_ATTACHMENT0;
-		assert(colorAttFormats[att] != 0 && "GL_COLOR_ATTACHMENT not set");
+		dbgassert(colorAttFormats[att] != 0 && "GL_COLOR_ATTACHMENT not set");
 		colorAttMinFilters[att] = filter;
 		colorAttMagFilters[att] = magfilter;
 	}
 	void setClearColor(int att, vec4 v) {
 		att -= GL_COLOR_ATTACHMENT0;
-		assert(colorAttFormats[att] != 0 && "GL_COLOR_ATTACHMENT not set");
+		dbgassert(colorAttFormats[att] != 0 && "GL_COLOR_ATTACHMENT not set");
 		clearColor[att] = v;
 		hasCustomClearColor = att > 0;
 	}
 	GLuint detachColorTexture(int att) {
-		assert(colorAttFormats[att] != 0 && "GL_COLOR_ATTACHMENT not set");
+		dbgassert(colorAttFormats[att] != 0 && "GL_COLOR_ATTACHMENT not set");
         if (att == highestColorAtt) {
             highestColorAtt--;
         }
@@ -294,7 +295,7 @@ public:
     	setDrawMask(-1);
     }
     void setDrawMask(int mask) {
-		assert(lastBound == this && "trying to setDrawMask on unbound buffer");
+		dbgassert(lastBound == this && "trying to setDrawMask on unbound buffer");
 		std::vector<GLenum> drawBufAtt;
 		drawMask(drawBufAtt, mask);
 		glDrawBuffers(drawBufAtt.size(), drawBufAtt.data());
@@ -315,7 +316,7 @@ public:
         }
     }
     void clearFrameBuffer() {
-		assert(lastBound == this && "trying to clearFrameBuffer unbound buffer");
+		dbgassert(lastBound == this && "trying to clearFrameBuffer unbound buffer");
         if (!hasCustomClearColor) {
             setDrawAll();
             int flags = GL_COLOR_BUFFER_BIT;
@@ -338,14 +339,14 @@ public:
         if (GL_ERROR_CHECKS) checkGLError("clearFrameBuffer");
     }
 	void clearColorBuffer() {
-		assert(lastBound == this && "trying to clear unbound buffer");
+		dbgassert(lastBound == this && "trying to clear unbound buffer");
 		setDrawMask(1);
 		glClear(GL_COLOR_BUFFER_BIT);
 		setDrawMask(-1);
 	}
 
 	void clearColorBufferBlack() {
-		assert(lastBound == this && "trying to clear unbound buffer");
+		dbgassert(lastBound == this && "trying to clear unbound buffer");
 		setDrawMask(1);
 		glClearColor(0, 0, 0, 0);
 		glClear(GL_COLOR_BUFFER_BIT);
@@ -355,7 +356,7 @@ public:
 	}
 
     void clearDepth() {
-		assert(lastBound == this && "trying to clearFrameBuffer unbound buffer");
+		dbgassert(lastBound == this && "trying to clearFrameBuffer unbound buffer");
         if (hasDepth) {
             glClear(GL_DEPTH_BUFFER_BIT);
 

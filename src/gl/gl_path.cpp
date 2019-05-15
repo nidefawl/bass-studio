@@ -15,6 +15,7 @@
 #include "gl_vbo.h"
 #include "gl_tess2d.h"
 #include "hires_timer.h"
+#include "assert_dbg.h"
 #include <algorithm>
 
 using vec2list = std::vector<vec2>;
@@ -161,13 +162,13 @@ float packVertexData(vec2list& verticesIn, std::vector<vert>& outVdata, int inde
 		storeVertex(data, i, p2);
 	}
 	storeVertex(data, n - 1, vdata2[idxOut]);
-	assert(idxOut + 1 == (int)vdata2.size());
-	assert(idxOut + 1 == n * 2 - 2);
+	dbgassert(idxOut + 1 == (int)vdata2.size());
+	dbgassert(idxOut + 1 == n * 2 - 2);
 	vert& p = vdata2[idxOut];
 	p.seg = data.seg[n - 2];
 	p.angles = data.angles[n - 2];
 
-	assert((int)vdata2.size() % 2 == 0);
+	dbgassert((int)vdata2.size() % 2 == 0);
 	n = vdata2.size();
 	for (int i = 0; i < n; i += 2) {
 		vdata2[i].tex = {-1, -1};
@@ -252,7 +253,7 @@ float packVertexData2(vec2list& verticesIn, std::vector<vert>& outVdata, int ind
 	vert p = vdata[n-1];
 	p.seg = vdata[n-2].seg;
 	p.angles = vdata[n-2].angles;
-	assert((int)vdata2.size() == n*2-2);
+	dbgassert((int)vdata2.size() == n*2-2);
 	vdata2[n*2-3] = p;
 
 	n = vdata2.size();
@@ -342,7 +343,7 @@ void GLPathRenderer::bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, Ba
 	std::vector<vert> outVdata;
 	vbuf bufFinal;
 	std::vector<float> bufUniforms;
-	assert((int)sizeof(Uniforms) <= sizeUniforms);
+	dbgassert((int)sizeof(Uniforms) <= sizeUniforms);
 	bufUniforms.resize(paths.size()*sizeUniforms);
 	bufFinal.i.clear();
 	const int sizeFloatsVert = sizeof(vert)/sizeof(float);
@@ -355,7 +356,7 @@ void GLPathRenderer::bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, Ba
 //			timer.reset();
 			float len = packVertexData2(list, outVdata, idx);
 //			int64_t t = timer.getTime();
-//			assert(t);
+//			dbgassert(t);
 //			my_printf("%d\n", t+2);
 			size_t flBufPos = flBufVertsPos*sizeFloatsVert;
 			size_t flBakedSize = outVdata.size()*sizeFloatsVert;
@@ -384,7 +385,7 @@ void GLPathRenderer::bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, Ba
 
 //
 //	for (float f : bufFinal.v) {
-//		assert(!std::isnan(f) && !std::isinf(f));
+//		dbgassert(!std::isnan(f) && !std::isinf(f));
 //	}
 	bool newBuffer = false;
 	DrawVBO& vbo = out.vbo;

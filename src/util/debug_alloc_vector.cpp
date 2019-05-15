@@ -3,7 +3,7 @@
 #include <cstddef>
 #include <typeinfo>
 #include <functional>
-#include <assert.h>
+#include "assert_dbg.h"
 #include <stl-debug/vector-tracker.h>
 #include <utility>
 #include "str_util.h"
@@ -28,7 +28,7 @@ namespace STLVectorDebugTracking {
 		}
 		void add(void* ptr, const char* name, FnGetVecSize&& fn) {
 			std::lock_guard<std::recursive_mutex> lock(mutex);
-			assert(nTracked < nCapacity);
+			dbgassert(nTracked < nCapacity);
 			for (size_t i = 0; i < nCapacity; i++) {
 				if (!entries[i].ptr) {
 					nTracked++;
@@ -36,7 +36,7 @@ namespace STLVectorDebugTracking {
 					return;
 				}
 			}
-			assert(0);
+			dbgassert(0);
 		}
 		void remove(void* ptr) {
 			std::lock_guard<std::recursive_mutex> lock(mutex);
@@ -47,7 +47,7 @@ namespace STLVectorDebugTracking {
 					return;
 				}
 			}
-			assert(0);
+			dbgassert(0);
 		}
 		Tracker& getTracker() {
 			static Tracker tracker;

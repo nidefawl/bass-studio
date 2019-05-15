@@ -25,11 +25,11 @@ effectbase* vsthost::makeModuleInstance(int32_t moduleType, int32_t moduleId, in
 					effect = res.plugin;
 					break;
 				}
-				assert(0);
+				dbgassert(0);
 			}
 			break;
 		default:
-//			assert(0);
+//			dbgassert(0);
 			break;
 	}
 	switch (moduleType) {

@@ -36,7 +36,7 @@ vstpluginloadres vsthost::loadInternalPlugin(int32_t moduleId, int32_t globalId)
 		name = PluginLatency::getName();
 		break;
 	default:
-		assert(0);
+		dbgassert(0);
 		break;
 	}
 	if (!axeffect) {

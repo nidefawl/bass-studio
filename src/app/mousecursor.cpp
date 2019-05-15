@@ -13,7 +13,7 @@
 #include <GLFW/glfw3.h>
 #endif
 
-#include <assert.h>
+#include "assert_dbg.h"
 
 
 using ImgData = std::shared_ptr<uint8_t>;
@@ -145,11 +145,11 @@ struct AppMouseCursor {
 			ImageBuf imgCursors[NUM_CURSORS];
 			for (int i = 0; i < NUM_CURSORS; i++) {
 				ImageBuf& buf = imgCursors[i];
-				assert((int)buf.bytes.size() == buf.w*buf.h * 4);
+				dbgassert((int)buf.bytes.size() == buf.w*buf.h * 4);
 			}
 			for (int i = 0; i < NUM_CURSORS; i++) {
 				ImageBuf& buf = imgCursors[i];
-				assert((int)buf.bytes.size() == buf.w*buf.h * 4);
+				dbgassert((int)buf.bytes.size() == buf.w*buf.h * 4);
 			}
 			for (int i = 0; i < 6; i++) {
 				load(StringFormat("res/cursors/cursor%02d.png", i), imgCursors[i]);

@@ -143,7 +143,7 @@ void guictr_tracks::scrollOffsetChanged(int dir, float offset) {
 	int32_t scrOffset = math::max(0.0f, offset*(contentHeight-contentViewSize));
 	int y = TRACK_HEIGHT_SPACING-scrOffset;
 	for (track_t* t : project.trackCtr) {
-		assert(t->content != NULL);
+		dbgassert(t->content != NULL);
 		int32_t h = setTrackPosition(t, y, false);
 		y += h + TRACK_HEIGHT_SPACING;
 	}
@@ -178,7 +178,7 @@ void guictr_tracks::layout() {
 	ivec2 csTrackView = trackView.getSizeContent();
 	int y = TRACK_HEIGHT_SPACING;
 	for (track_t* t : project.trackCtr) {
-		assert(t->content != NULL);
+		dbgassert(t->content != NULL);
 		int32_t h = setTrackPosition(t, y, false);
 		y += h + TRACK_HEIGHT_SPACING;
 	}
@@ -191,7 +191,7 @@ void guictr_tracks::layout() {
 		track_t* t = *itMastersTracks;
 		int32_t h = setTrackPosition(t, y, true);
 		y -= h;
-		assert(t->content != NULL);
+		dbgassert(t->content != NULL);
 		y -= TRACK_HEIGHT_SPACING;
 		itMastersTracks++;
 	}
@@ -379,11 +379,11 @@ void guitrack_editor::removeAllAutomationLanes(track_t* t, automatable_t* at, in
 	}
 }
 void guitrack_editor::removeSubtrack(gui_track_automationlane* al) {
-	assert(al);
+	dbgassert(al);
 	remove(al);
 	auto& atLanes = al->m_track->subtracks;
 	auto it = std::find(atLanes.begin(), atLanes.end(), al);
-	assert(it != atLanes.end());
+	dbgassert(it != atLanes.end());
 	atLanes.erase(it);
 	delete al;
 	int32_t idx = 0;
@@ -477,14 +477,14 @@ void guitrack_mixers::trackEntryDragRelease(gui_track* g, ivec2 mousepos) {
 void guitrack_editor::addTrack(track_t* t) {
 	if (t->content)
 		throw applogicexception("expected t->content == NULL");
-	assert(t->audio);
+	dbgassert(t->audio);
 	t->content = createTrackGui(t, grid);
 	t->content->setZOrder(t->type >= TRACK_TYPE_MIDI ? 0 : 1);
 	add(t->content);
 //#ifndef NDEBUG
 //		for (guibase* child : guis) {
 //			gui_track* t = dynamic_cast<gui_track*>(child);
-//			assert(t);
+//			dbgassert(t);
 //		}
 //		int idx = 0;
 //		for (guibase* child : guis) {

@@ -42,13 +42,13 @@ public:
 	void undoStep(MainCtrl* ctrl) {
 		action_base* step = m_undo.back(); m_undo.pop_back();
 		step->undo(ctrl);
-		assert(!step->errored);
+		dbgassert(!step->errored);
 		m_redo.push_back(step);
 	}
 	void redoStep(MainCtrl* ctrl) {
 		action_base* step = m_redo.back(); m_redo.pop_back();
 		step->redo(ctrl);
-		assert(!step->errored);
+		dbgassert(!step->errored);
 		m_undo.push_back(step);
 	}
 	void push(MainCtrl* ctrl, action_base* action) {

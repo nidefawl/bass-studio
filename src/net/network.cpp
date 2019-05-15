@@ -8,7 +8,7 @@
 #include <vector>
 #include <algorithm>
 #include <atomic>
-#include <assert.h>
+#include "assert_dbg.h"
 
 #ifdef _WIN32
 //  #define _WIN32_WINNT 0x501
@@ -267,8 +267,8 @@ protected:
 		while (it != netSockets.end()) {
 			auto& sharedPtr = *it;
 			if (conn == sharedPtr.get()) {
-				assert(conn->handler);
-				assert(handler);
+				dbgassert(conn->handler);
+				dbgassert(handler);
 				if (!(conn->flags & SOCK_FLAG_ISLISTEN)) {
 					conn->handler->onDisconnect(sharedPtr);
 					handler->onDisconnect(sharedPtr);
@@ -428,12 +428,12 @@ void network_io::Impl::acceptPendingConnections(network_socket_t* netSocket) {
 		remote->state = SOCK_STATE_CONNECTED;
 		remote->flags |= SOCK_FLAG_ISREMOTE;
 		remote->initAddress();
-		assert(handler);
+		dbgassert(handler);
 		if (!handler->onAccept(remote)) {
 			close(sockfd);
 			return;
 		}
-		assert(remote->handler);
+		dbgassert(remote->handler);
 		this->netSockets.push_back(remote);
 	}
 }
@@ -677,7 +677,7 @@ size_t network_socket_t::handleRead() {
 		/* Update status */
 //    this->bytesReceived += size;
 //    this->lastActivity = dyad_getTime();
-		assert(this->handler);
+		dbgassert(this->handler);
 		if (this->handler) {
 			if (!this->handler->onReceive(data, size)) {
 				//TODO: set error/notitfy

@@ -29,7 +29,7 @@ void addContextEntriesAutomation(guictxtmenu* ctxt, automatable_t* atl, int para
 }
 bool handleAutomatbleContextMenu(automatable_t* atl, int paramIdx, int _id) {
 	auto* track = atl->getTrack();
-	assert(track);
+	dbgassert(track);
 	automation_t* param = atl->getRegisteredAutomation(paramIdx);
 	switch (_id) {
 		case ID_SHOW_NEW: {

@@ -74,7 +74,7 @@ void effectbase::breakTrackLink() {
 	while (audioStage != nullptr) {
 		guictr_plugins* pluginCtr = audioStage->pluginCtr;
 		if (pluginCtr) {
-			assert(MainCtrl::get());
+			dbgassert(MainCtrl::get());
 			plugin_selection& sel = MainCtrl::get()->getPluginSel();
 			if (sel.pluginCtr == pluginCtr) {
 				sel.clear();
@@ -124,7 +124,7 @@ public:
 		btnLoad.setText(String("Load\n")+module->getName());
 	}
 //	void determineSize(ivec2& prefSize) override {
-////		assert(module->getAudioStage());
+////		dbgassert(module->getAudioStage());
 ////
 //		const int32_t hpt = theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT);
 ////		int32_t meterW = math::max(16, (int32_t)(theme->get(GuiConstant::CONST_METER_WIDTH)*hpt/32.0));
@@ -244,7 +244,7 @@ void guideferred::buttonClicked(guibase* _button) {
 	}
 }
 guiplugin* effect_deferred::makeGui() {
-	assert(this->mImpl);
+	dbgassert(this->mImpl);
 	if (!this->mImpl->gui) {
 		this->mImpl->gui = std::make_unique<guideferred>(this);
 		this->mImpl->gui->setTitle(StringFormat("%s", StringAsCStr(this->sName)));
@@ -253,7 +253,7 @@ guiplugin* effect_deferred::makeGui() {
 }
 guiplugin* effect_deferred::getGui()
 {
-	assert(this->mImpl);
-	assert(this->mImpl->gui.get());
+	dbgassert(this->mImpl);
+	dbgassert(this->mImpl->gui.get());
 	return this->mImpl->gui.get();
 }

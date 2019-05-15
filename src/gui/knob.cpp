@@ -310,9 +310,9 @@ void guiknob::handleRightClick(MouseEvent& evt) {
 #ifdef BUILD_BUILTIN_EFFECT
 	if (paramAutomatable && paramIdx > -1) {
 		MainCtrl* ctrl = dynamic_cast<MainCtrl*>(getControl());
-		assert(ctrl);
+		dbgassert(ctrl);
 		if (ctrl) {
-			assert(paramAutomatable->getParam(paramIdx));
+			dbgassert(paramAutomatable->getParam(paramIdx));
 			ctrl->openContextMenu(new guictxtmenu_at_param(paramAutomatable, paramIdx), evt.mousepos);
 		}
 		return;

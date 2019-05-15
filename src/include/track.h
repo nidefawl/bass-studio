@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <list>
-#include <assert.h>
+#include "assert_dbg.h"
 #include "exceptions.h"
 #include "seq_time.h"
 #include "cursor.h"
@@ -72,7 +72,7 @@ public:
 		sortClips();
 	}
 	~trackdata_midi_t() {
-		assert(clips.empty());
+		dbgassert(clips.empty());
 	}
 	const std::vector<clip_t*>& getConstClips() const {
 		return clips;
@@ -98,7 +98,7 @@ public:
 					my_printf("clip[%d] = %d\n", i, clips[i]->start());
 				}
 			}
-			assert(clips[0]->start() < clips[1]->start());
+			dbgassert(clips[0]->start() < clips[1]->start());
 		}
 	}
 	void addClipSort(clip_t* clip) {
@@ -279,7 +279,7 @@ public:
 	}
 	track_t(const track_t &a) = delete;
 //	: localIdx(a.localIdx) {
-//		assert(midi.getConstClips().empty());
+//		dbgassert(midi.getConstClips().empty());
 //		copy(a);
 //		content = NULL;
 //		mixer = NULL;
@@ -289,7 +289,7 @@ public:
 	track_t &operator =(const track_snapshot_t &a);
 	track_t &operator =(const track_t &a) = delete;
 //	{
-//		assert(midi.getConstClips().empty());
+//		dbgassert(midi.getConstClips().empty());
 //		midi.deepcopy(a.midi);
 //		copy(a);
 //		return *this;

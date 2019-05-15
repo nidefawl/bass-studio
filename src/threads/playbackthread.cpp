@@ -2,7 +2,7 @@
 #include <chrono>
 #include <atomic>
 #include <queue>
-#include <assert.h>
+#include "assert_dbg.h"
 
 #include "error.h"
 #include "threadlock.h"
@@ -92,14 +92,14 @@ public:
     Impl() : q(128) {
 	}
     ~Impl() {
-		assert(!t.joinable());
-    	assert(exited);
+		dbgassert(!t.joinable());
+    	dbgassert(exited);
     }
     int32_t getThreadId() {
     	return threadid;
     }
     void setTls(daw_tls::tlsinstance tls) {
-		assert(!t.joinable());
+		dbgassert(!t.joinable());
 		threadTLS = tls;
     }
 	void start(project_controller_t* ctrl) {
@@ -115,21 +115,21 @@ public:
 #endif
 	}
 	void join() {
-		assert(t.joinable());
+		dbgassert(t.joinable());
 		t.join();
 	}
 	void addRequest(std::shared_ptr<PlaybackThreadReq>& req) {
-		assert(t.joinable());
+		dbgassert(t.joinable());
 		if (!q.enqueue(req)) {
-			assert(0&&"Failed enqeueing req");
+			dbgassert(0&&"Failed enqeueing req");
 		}
 	}
 
     void stop(){
-		assert(t.joinable());
+		dbgassert(t.joinable());
 		auto req = std::make_shared<PlaybackThreadReq>(PLAYBACK_THREAD_EXIT, 0);
 		if (!q.enqueue(req)) {
-			assert(0&&"Failed enqeueing req");
+			dbgassert(0&&"Failed enqeueing req");
 		}
         req->wait();
     }

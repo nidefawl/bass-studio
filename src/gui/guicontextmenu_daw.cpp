@@ -6,7 +6,7 @@
 guictxtmenu_at_param::guictxtmenu_at_param(automatable_t* _atl, int32_t _paramIdx)
 	: atl(_atl), paramIdx(_paramIdx)
 {
-	assert(_atl);
+	dbgassert(_atl);
 	this->size.x = 240;
 	addContextEntriesAutomation(this, _atl, paramIdx);
 }

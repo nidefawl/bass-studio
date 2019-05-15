@@ -88,7 +88,7 @@ public:
 	static bool reentrant = false; 				\
 	reentrantblocker block(reentrant); 			\
 	if (!block.check()) {						\
-		assert(0&&reentrant_err_msg);		    \
+		dbgassert(0&&reentrant_err_msg);		    \
 		throw new applogicexception(reentrant_err_msg); \
 	}
 #define EXC_TRY try {
@@ -608,7 +608,7 @@ public:
 		int fbwidth, fbheight;
 		glfwGetWindowSize(glfw, &winwidth, &winheight);
 		glfwGetFramebufferSize(glfw, &fbwidth, &fbheight);
-		assert (winwidth>0&&winheight>0&&fbwidth>0&&fbheight>0);
+		dbgassert (winwidth>0&&winheight>0&&fbwidth>0&&fbheight>0);
 		float pxratio = fbwidth / (float)winwidth;
 		glViewport(0, 0, fbwidth, fbheight);
 		glEnable(GL_BLEND);
@@ -880,7 +880,7 @@ public:
 		if (size.x < fbwidth || size.y < fbheight) {
 			int x = (fbwidth-size.x)/2;
 			int y = (fbheight-size.y)/2;
-			assert(x > 0 && y > 0);
+			dbgassert(x > 0 && y > 0);
 			glViewport(x, y, size.x, size.y);
 		}
 
@@ -1525,6 +1525,8 @@ int startApplication(int argc, char* argv[]) {
 #ifdef USE_WIN32_EXC_HOOKS
 	setExceptionHandler();
 #endif
+//	int64_t *segFaultDeref = static_cast<int64_t*>((void*)0xBAADF00DLL);
+//	int64_t a = *segFaultDeref;
 	try {
 	//bool runConsoleMode = false;
 	//for (int i = 0; i < argc; i++) {
@@ -1533,13 +1535,13 @@ int startApplication(int argc, char* argv[]) {
 	//	}
 	//}
 	//if (!runConsoleMode) {
-		allocConsole();
+	allocConsole();
 	//}
-		openGlobalLog();
-		char* pPath;
-		pPath = getenv("PATH");
-		if (pPath != NULL)
-			log_printf ("getenv PATH: %s\n",pPath);
+	openGlobalLog();
+	char* pPath;
+	pPath = getenv("PATH");
+	if (pPath != NULL)
+		log_printf ("getenv PATH: %s\n",pPath);
 	log_out("BUILD_BINARY_NAME %s\n", BuildInfo::BUILD_BINARY_NAME);
 	log_out("COMPILER_ID %s\n", BuildInfo::COMPILER_ID);
 	log_out("COMPILE_OPTIONS %s\n", BuildInfo::COMPILE_OPTIONS);
@@ -1742,9 +1744,9 @@ public:
 			setAppWindowHints();
 
 			createPluginWindow("plugin-window", _rect.right-_rect.left, _rect.bottom-_rect.top, ptr);
-			assert(hwnd);
-			assert(glfw);
-			assert(nanovgCtxt);
+			dbgassert(hwnd);
+			dbgassert(glfw);
+			dbgassert(nanovgCtxt);
 			if (!ctrlShared->init(this, this->nanovgCtxt)) {
 				throw appexception("Couldn't start application");
 			}
@@ -1786,10 +1788,10 @@ public:
 
 	virtual void guiOpen() {
 		setValid();
-		assert(hwnd);
-		assert(glfw);
-		assert(effect);
-		assert(ctrlShared.get());
+		dbgassert(hwnd);
+		dbgassert(glfw);
+		dbgassert(effect);
+		dbgassert(ctrlShared.get());
 	    RECT area;
 	    GetClientRect(hwnd, &area);
 	    onWindowSizeChanged(area.right-area.left, area.bottom-area.top);

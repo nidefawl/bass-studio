@@ -2,7 +2,7 @@
 #include <memory>
 #include <stdexcept>
 #include <functional>
-#include <assert.h>
+#include "assert_dbg.h"
 #include "thread.h"
 #include "tls.h"
 
@@ -30,7 +30,7 @@ public:
 		ThreadTask();
 		virtual ~ThreadTask();
 	    void setException(std::exception_ptr _eptr) {
-	    	assert(_eptr);
+	    	dbgassert(_eptr);
 	    	this->status = status_exception;
 			this->eptr = _eptr;
 	    }

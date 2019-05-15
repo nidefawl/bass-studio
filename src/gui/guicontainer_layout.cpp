@@ -65,7 +65,7 @@ guictr_tabbed::~guictr_tabbed() {
 	}
 	// only this->activeEntry->tabCtr should be in this cointainer
 	// at this point. And it must be a valid pointer
-	assert(guis.size() <= 1);
+	dbgassert(guis.size() <= 1);
 	removeGuis();
 }
 void guictr_tabbed::addEntry(guibase* ctr, String title) {
@@ -158,7 +158,7 @@ guictr_stacked::~guictr_stacked() {
 		entry->tabCtr->remove(&entry->btnHideEntry);
 		delete entry;
 	}
-	assert(guis.size() <= 1);
+	dbgassert(guis.size() <= 1);
 	removeGuis();
 }
 void guictr_stacked::addEntry(guictr_base* ctr, String title) {
@@ -234,7 +234,7 @@ void guictr_stacked::handleSplitterChanged(Splitter& splitter, float scale, int 
 		}
 		return;
 	}
-	assert(0&&"entry not found");
+	dbgassert(0&&"entry not found");
 }
 int32_t guictr_stacked::getCollapsedCtrHeight(guictr_base* ctr) {
 	ivec2 ctrPadding = ctr->getPadding();

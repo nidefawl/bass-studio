@@ -189,8 +189,9 @@ void PluginVST2_Latency::processReplacing(float** inputs, float** outputs, VstIn
 	if (this->latencyChanged) {
 		this->latencyChanged = false;
 		this->curLatency = this->newLatency;
+		this->getAeffect()->initialDelay = this->curLatency;
 	}
-	assert(this->curLatency >= 0 && this->curLatency <= (1<<20));
+	dbgassert(this->curLatency >= 0 && this->curLatency <= (1<<20));
 	int32_t nChannels = this->getAeffect()->numOutputs;
 	if (!this->delayLine) {
 		this->delayLine = new DelayLine(nChannels, sampleFrames);

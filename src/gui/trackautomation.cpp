@@ -234,7 +234,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 					if (maxPt) {
 						newTick = math::min(newTick, maxPt->time);
 					}
-					assert(tickOffset || newTick == dst.time);
+					dbgassert(tickOffset || newTick == dst.time);
 					dst.time = newTick;
 					float f = math::min(1.0f, math::max(0.0f, src.val));
 					if (at) {
@@ -277,13 +277,13 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 		std::vector<automation_point_t>& dataPoints = data.points;
 		if (clicked.mode == dragmode::drag_node) {
 			int32_t i = clicked.dataPt;
-			assert(i >= 0 && i < (int)dataPoints.size());
+			dbgassert(i >= 0 && i < (int)dataPoints.size());
 			dataPoints.erase(dataPoints.begin()+i);
 			postEdit();
 			return true;
 		} else {
 			 // this is true until we relayout UI and move mixers left or something
-			assert(trackEditorLocal.x == local.x);
+			dbgassert(trackEditorLocal.x == local.x);
 
 			ivec2 cs = getSizeContent();
 			scaled_grid& grid = view->grid;
@@ -294,7 +294,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 			}
 			val = math::min(1.0f, math::max(0.0f, val));
 			int32_t idx = indexOfTick(dataPoints, tick);
-			assert(idx >= 0 && idx <= (int)dataPoints.size());
+			dbgassert(idx >= 0 && idx <= (int)dataPoints.size());
 			automation_point_t pt{tick, val};
 			dataPoints.insert(dataPoints.begin()+idx, pt);
 			postEdit();
@@ -446,7 +446,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 		hit_result currentDragged = dragged.mode || !mouseIn ? dragged : hitTest(fmouse);
 		if (currentDragged.mode == dragmode::drag_node) {
 			int32_t ptIdx = currentDragged.dataPt;
-			assert(ptIdx >= 0 && ptIdx < (int)data.points.size());
+			dbgassert(ptIdx >= 0 && ptIdx < (int)data.points.size());
 			automation_point_t& pt = data.points[ptIdx];
 			vec2* point = getPathPointSafe(currentDragged.segidx);
 			mouseTick = pt.time;

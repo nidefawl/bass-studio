@@ -62,7 +62,7 @@ public:
 	}
 	track_t* getTrack() override;
 	bool isEnabled() {
-		assert(getParam(PARAM_ENABLE));
+		dbgassert(getParam(PARAM_ENABLE));
 		return getParam(PARAM_ENABLE)->value >= 0.5f;
 	}
 	void createSnapshot(track_params_snapshot_t& snapshot);
@@ -119,7 +119,7 @@ struct audio_stage_t {
 	void loadPlugins(const std::vector<plugin_snapshot_t>& trPluginList);
 	int32_t getLatency();
 	DelayLine* getDelayLine(int32_t idx) {
-		assert(idx >= 0 && idx < delayLines.size());
+		dbgassert(idx >= 0 && idx < delayLines.size());
 		return &delayLines[idx];
 	}
 	void insertEffect(int32_t idx, effectbase* _instrument);

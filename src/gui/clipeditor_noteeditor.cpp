@@ -43,8 +43,8 @@ void guictr_cliphandles::handleDraggedMove(MouseEvent& evt) {
 	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 	trackdata_midi_t& midi = track->getMidi();
 	clip_t* clNext = midi.getNextClip(clip);
-	assert(clNext == NULL || (clNext != clip));
-	assert(clNext == NULL || clNext->start() >= clip->end());
+	dbgassert(clNext == NULL || (clNext != clip));
+	dbgassert(clNext == NULL || clNext->start() >= clip->end());
 	int32_t mousePosX = evt.relMousepos.x;
 	if (dragHandle == drag_handle_loopbar) {
 		mousePosX -= dragOffset;

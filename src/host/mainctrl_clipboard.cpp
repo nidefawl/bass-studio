@@ -89,7 +89,7 @@ void copyClipsInRange(trackdata_midi_t& in, track_clipboard_t& out, int32_t srcP
 //				my_printf("clip[%d] = %d\n", i, clips[i]->start());
 //			}
 //		}
-//		assert(clips[0]->start() < clips[1]->start());
+//		dbgassert(clips[0]->start() < clips[1]->start());
 //	}
 //	out->sortClips();
 }

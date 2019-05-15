@@ -16,7 +16,7 @@ class gui_pluginsloaded_list_entry : public gui_list_entry {
 public:
 	gui_pluginsloaded_list_entry(SafeRef<effectbase> _ref) : gui_list_entry(), ref(_ref) {
 		auto* _entry = safeRefGet(ref);
-		assert(_entry);
+		dbgassert(_entry);
 		icon = _entry->isSynth ? ICON_SYNTH : ICON_EFFECT;
 	}
 	String getText() override {

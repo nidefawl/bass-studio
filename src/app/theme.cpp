@@ -6,6 +6,7 @@
 #include "color_util.h"
 #include "guicolors.h"
 #include "guiconstant.h"
+#include "assert_dbg.h"
 
 
 uint32_t nvgToRGB(NVGcolor c);
@@ -50,47 +51,47 @@ void guitheme_t::initTheme() {
 }
 
 NVGcolor& guitheme_t::getColorRef(GuiColor::constant_t _constant) {
-	assert(_constant.idx >= 0 && _constant.idx < this->vecNVGColors.size());
+	dbgassert(_constant.idx >= 0 && _constant.idx < this->vecNVGColors.size());
 #ifndef NDEBUG
 	//Make sure the 2 are in sync
 	auto it = mapColors.find(_constant.idx);
 	if (it != mapColors.end()) {
-		assert(nvgColorEqual(this->vecNVGColors[_constant.idx], rgbaToNvg(it->second)));
+		dbgassert(nvgColorEqual(this->vecNVGColors[_constant.idx], rgbaToNvg(it->second)));
 	}
 #endif
 	return this->vecNVGColors[_constant.idx];
 }
 NVGcolor guitheme_t::getColor(GuiColor::constant_t _constant) const {
-	assert(_constant.idx >= 0 && _constant.idx < this->vecNVGColors.size());
+	dbgassert(_constant.idx >= 0 && _constant.idx < this->vecNVGColors.size());
 #ifndef NDEBUG
 	//Make sure the 2 are in sync
 	auto it = mapColors.find(_constant.idx);
 	if (it != mapColors.end()) {
-		assert(nvgColorEqual(this->vecNVGColors[_constant.idx], rgbaToNvg(it->second)));
+		dbgassert(nvgColorEqual(this->vecNVGColors[_constant.idx], rgbaToNvg(it->second)));
 	}
 #endif
 	return this->vecNVGColors[_constant.idx];
 }
 NVGcolor guitheme_t::getContrastColor(GuiColor::constant_t _constant) const {
-	assert(_constant.idx >= 0 && _constant.idx < this->vecNVGColors.size());
+	dbgassert(_constant.idx >= 0 && _constant.idx < this->vecNVGColors.size());
 	return getContrastFontColor(nvgToRGBA(this->vecNVGColors[_constant.idx]));
 }
 int32_t guitheme_t::getColorInt32(GuiColor::constant_t _constant) {
     auto it = mapColors.find(_constant.idx);
     if (it == mapColors.end()) {
     	//Make sure the 2 are in sync
-    	assert(nvgColorEqual(this->vecNVGColors[_constant.idx], rgbaToNvg(_constant.defValue)));
+    	dbgassert(nvgColorEqual(this->vecNVGColors[_constant.idx], rgbaToNvg(_constant.defValue)));
 		return _constant.defValue;
     }
 	//Make sure the 2 are in sync
-	assert(nvgColorEqual(this->vecNVGColors[_constant.idx], rgbaToNvg(mapColors[_constant.idx])));
+	dbgassert(nvgColorEqual(this->vecNVGColors[_constant.idx], rgbaToNvg(mapColors[_constant.idx])));
 	return mapColors[_constant.idx];
 }
 void guitheme_t::setColor(GuiColor::constant_t _constant, int32_t _newValue) {
 	if (isDefault)
 		return;
-	assert(_constant.idx >= 0 && _constant.idx < this->vecNVGColors.size());
-	assert(_constant.idx < NUM_GUI_COLORS);
+	dbgassert(_constant.idx >= 0 && _constant.idx < this->vecNVGColors.size());
+	dbgassert(_constant.idx < NUM_GUI_COLORS);
 	mapColors[_constant.idx] = _newValue;
 	this->vecNVGColors[_constant.idx] = rgbaToNvg(_newValue);
 }
@@ -104,7 +105,7 @@ const int32_t guitheme_t::get(GuiConstant::constant_t _constant) {
     	return _constant.defValue;
     }
     int32_t val = mapProperties[_constant.idx];
-    assert(val >= 0 && val <= 10000);
+    dbgassert(val >= 0 && val <= 10000);
 	return mapProperties[_constant.idx];
 }
 void guitheme_t::set(GuiConstant::constant_t _constant, int32_t _value) {

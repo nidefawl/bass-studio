@@ -22,7 +22,7 @@ namespace {
 	//		int32_t blockPosI = (int32_t) rounded;
 	//		printf("blockStartTick %f tickToBlockPrecise %f, to int %d\n", blockStartTick, block, blockPosI);
 			ALEPH_ASSERT_THROW(almost_equal(static_cast<double>(blockPos), block, 2));
-	//		assert((double)blockPos == block);
+	//		dbgassert((double)blockPos == block);
 		}
 		ALEPH_TEST_END();
 	}

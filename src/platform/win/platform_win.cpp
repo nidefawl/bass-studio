@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <excpt.h>
-#include <assert.h>
+#include "assert_dbg.h"
 #include "msgbox.h"
 #include <Windows.h>
 #ifdef __MINGW32__
@@ -50,7 +50,7 @@ int64_t getTimeHPint64()
 	//prevent overflow, but keep some precision
 	now.QuadPart *= 10000UL;
 	int64_t val = now.QuadPart / frequency.QuadPart;
-	assert(val > 0);
+	dbgassert(val > 0);
 	val *= 100UL;
     return val;
 }
@@ -184,8 +184,8 @@ void setExceptionHandler() {
 	//	_set_abort_behavior(0, _WRITE_ABORT_MSG);
 #endif
 #if defined(_MSC_VER)
-	//this is here to trigger a breakpoint when assert(0) is called using the ms c-runtime
-	//by default ms crt throws an exception on assert(0) and opens a dialog that interferes with our wndProc
+	//this is here to trigger a breakpoint when dbgassert(0) is called using the ms c-runtime
+	//by default ms crt throws an exception on dbgassert(0) and opens a dialog that interferes with our wndProc
 	_CrtSetReportHook2(_CRT_RPTHOOK_INSTALL, DebugReportHook);
 #endif
 	SetErrorMode(SEM_FAILCRITICALERRORS|SEM_NOALIGNMENTFAULTEXCEPT|SEM_NOGPFAULTERRORBOX|SEM_NOOPENFILEERRORBOX);

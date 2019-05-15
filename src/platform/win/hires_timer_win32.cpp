@@ -3,14 +3,14 @@
 #include "exceptions.h"
 #include <windows.h>
 #include <profileapi.h>
-#include <assert.h>
+#include "assert_dbg.h"
 
 static double QPC_TOSECONDS(LARGE_INTEGER& iStart, LARGE_INTEGER& iStop, LARGE_INTEGER& freq) {
 	return ((double) iStop.QuadPart - (double) iStart.QuadPart) / (double) freq.QuadPart;
 }
 static int64_t QPC_TOMICROSECONDS(LARGE_INTEGER& iStart, LARGE_INTEGER& iStop, LARGE_INTEGER& freq) {
 	int64_t div = freq.QuadPart/1000000;
-	assert(div>0);
+	dbgassert(div>0);
 	return ((int64_t)iStop.QuadPart - (int64_t)iStart.QuadPart) / div;
 }
 class hires_timer_t::Impl {

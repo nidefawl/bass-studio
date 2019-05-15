@@ -2,6 +2,7 @@
 #include <vector>
 #include "math/vec.h"
 #include "gl_vbo.h"
+#include "assert_dbg.h"
 
 #define TESS_COLOR 1
 #define TESS_ATTR 2
@@ -35,31 +36,31 @@ public:
     }
     void setColor(vec4 color) {
         if (!(flags & TESS_COLOR)) {
-        	assert(0&&"tesselator flag TESS_COLOR not set!");
+        	dbgassert(0&&"tesselator flag TESS_COLOR not set!");
         }
     	this->rgba = color;
     }
     void setAttrs(vec4 i) {
         if (!(flags & TESS_ATTR)) {
-        	assert(0&&"tesselator flag TESS_ATTR not set!");
+        	dbgassert(0&&"tesselator flag TESS_ATTR not set!");
         }
     	this->attr = i;
     }
     void setAttrIdx(int idx, float f) {
         if (!(flags & TESS_ATTR)) {
-        	assert(0&&"tesselator flag TESS_ATTR not set!");
+        	dbgassert(0&&"tesselator flag TESS_ATTR not set!");
         }
     	this->attr[idx] = f;
     }
     void setAttrs2(vec4 i) {
         if (!(flags & TESS_ATTR2)) {
-        	assert(0&&"tesselator flag TESS_ATTR2 not set!");
+        	dbgassert(0&&"tesselator flag TESS_ATTR2 not set!");
         }
     	this->attr2 = i;
     }
     void setAttr2Idx(int idx, float f) {
         if (!(flags & TESS_ATTR2)) {
-        	assert(0&&"tesselator flag TESS_ATTR2 not set!");
+        	dbgassert(0&&"tesselator flag TESS_ATTR2 not set!");
         }
     	this->attr2[idx] = f;
     }

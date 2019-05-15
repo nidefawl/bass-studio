@@ -54,7 +54,7 @@ public:
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
 	void onChildLayoutChanged(guibase* g) override;
 	void determineSize(ivec2& prefSize) override {
-		assert(module->getAudioStage());
+		dbgassert(module->getAudioStage());
 
 		const int32_t hpt = theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT);
 		int32_t meterW = math::max(16, (int32_t)(theme->get(GuiConstant::CONST_METER_WIDTH)*hpt/32.0));
@@ -107,7 +107,7 @@ void guimodule_group::onChildLayoutChanged(guibase* g) {
 }
 
 void guimodule_group::render(NVGcontext* vg) {
-	assert(ctr.parent == this);
+	dbgassert(ctr.parent == this);
 	dragdrop_target_indicator& target = MainCtrl::get()->getDragDropTarget();
 	bool extend = target.ptr == &this->ctr;
 	int extX = 8;
@@ -197,7 +197,7 @@ void module_group::dispatchSetParameter(int32_t idx, float val) {
 }
 guiplugin* module_group::makeGui() {
 	if (!handle->gui) {
-		assert(this->audio);
+		dbgassert(this->audio);
 		handle->gui = std::make_unique<guimodule_group>(this);
 		handle->gui->setTitle(StringFormat("%s", StringAsCStr(this->sName)));
 		this->audio->pluginCtr = &this->handle->gui->ctr;
@@ -245,19 +245,19 @@ void module_group::load(vsthost* host) {
 }
 
 void module_group::breakTrackLink() {
-	assert(this->audio);
-	assert(this->audio->parent);
+	dbgassert(this->audio);
+	dbgassert(this->audio->parent);
 	this->audio->parent->removeAudioStage(this->audio);
-	assert(this->audio->parent == nullptr);
+	dbgassert(this->audio->parent == nullptr);
 	this->audio->owner = nullptr;
 	bIsSetup = false;
 	internalplugin::breakTrackLink();
 }
 void module_group::setTrackLink(audio_stage_t* trImpl) {
-	assert(this->audio);
-	assert(trImpl != this->audio);
+	dbgassert(this->audio);
+	dbgassert(trImpl != this->audio);
 	trImpl->addAudioStage(this->audio);
-	assert(this->audio->parent == trImpl);
+	dbgassert(this->audio->parent == trImpl);
 	this->audio->owner = this;
 	bIsSetup = true;
 	internalplugin::setTrackLink(trImpl);
@@ -290,11 +290,11 @@ void module_group::postProcess(AudioBlock* out, int32_t samples, bool hasProcess
 }
 
 void module_group::loadSnapshot(const plugin_snapshot_t& pluginSnapshot)  {
-	assert(audio);
+	dbgassert(audio);
 	this->audio->loadPlugins(pluginSnapshot.pluginSnapshots);
 }
 void module_group::makeSnapshot(plugin_snapshot_t& snapshot, bool storePluginChunks) {
-	assert(audio);
+	dbgassert(audio);
 	internalplugin::makeSnapshot(snapshot, storePluginChunks);
 	std::vector<effectbase*> effects = audio->effects;
 	snapshot.pluginSnapshots.reserve(effects.size());

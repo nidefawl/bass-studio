@@ -7,7 +7,7 @@
 //#define PLACE_MARKERS
 void midiarp::loadSnapshot(const arp_snapshot& snapshot) {
 	for (const auto& param : snapshot.params) {
-		assert(getParam(param.idx));
+		dbgassert(getParam(param.idx));
 		setParamValue(param.idx, param.val, FLG_PAR_UPDATE_INIT);
 	}
 	loadAutomation(snapshot.automatedParams, this);
@@ -16,7 +16,7 @@ void midiarp::postSetParameter(int32_t idx, float preVal, float val, int flags) 
 	if (flags != 2) {
 		return;
 	}
-	assert(this->trackImpl->getTrack());
+	dbgassert(this->trackImpl->getTrack());
 	track_t* track = this->trackImpl->getTrack();
 	automationlane_snapshot_t ref = toRef();
 	parameter_ref_t p = {track->idx,  ref.type, 0, idx};
@@ -47,7 +47,7 @@ int midiarp::writeOutputNotes(std::vector<noteevent_t>& noteEventsProcessed,
 			else i++;
 		}
 	}
-	assert(notesSpawnTime.size() == heldOutputAnimationNotes.size());
+	dbgassert(notesSpawnTime.size() == heldOutputAnimationNotes.size());
 	if (!heldOutputAnimationNotes.empty()) {
 		auto i = std::begin(heldOutputAnimationNotes);
 		auto j = std::begin(notesSpawnTime);
@@ -61,10 +61,10 @@ int midiarp::writeOutputNotes(std::vector<noteevent_t>& noteEventsProcessed,
 				i++;
 				j++;
 			}
-			assert(notesSpawnTime.size() == heldOutputAnimationNotes.size());
+			dbgassert(notesSpawnTime.size() == heldOutputAnimationNotes.size());
 		}
 	}
-	assert(notesSpawnTime.size() == heldOutputAnimationNotes.size());
+	dbgassert(notesSpawnTime.size() == heldOutputAnimationNotes.size());
 	return nSend;
 }
 void midiarp::process(std::vector<noteevent_t>& noteEventsIn,
@@ -175,7 +175,7 @@ void midiarp::process(std::vector<noteevent_t>& noteEventsIn,
 		}
 		if (enable) {
 			if (heldInput.size() && TIME_STEP < end) {
-				assert(TIME_STEP >= start-stepSize*10000);
+				dbgassert(TIME_STEP >= start-stepSize*10000);
 				while (TIME_STEP < start) {
 					step++;
 				}
@@ -183,7 +183,7 @@ void midiarp::process(std::vector<noteevent_t>& noteEventsIn,
 					if (timeStep == tick) {
 					note_t note;
 					note.time = timeStep;
-					assert(note.time >= start && note.time < end);
+					dbgassert(note.time >= start && note.time < end);
 					note.len = noteDuration;
 					if (isChordOutput()) {
 						for (int idx = 0; idx < (int)heldInput.size(); idx++) {
@@ -220,6 +220,6 @@ void midiarp::process(std::vector<noteevent_t>& noteEventsIn,
 	if (nSend)
 		sortNoteEvents(noteEventsProcessed);
 	numCalls++;
-	assert(notesSpawnTime.size() == heldOutputAnimationNotes.size());
+	dbgassert(notesSpawnTime.size() == heldOutputAnimationNotes.size());
 #undef TIME_STEP
 }

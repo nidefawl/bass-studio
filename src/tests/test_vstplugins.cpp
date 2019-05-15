@@ -116,7 +116,7 @@ int main(int argc, char* argv[]) {
     hwnd = CreateWindow(wc.lpszClassName, "Window",
                 WS_OVERLAPPEDWINDOW | WS_VISIBLE,
                 100, 100, 350, 250, NULL, NULL, wc.hInstance, NULL);
-    assert(hwnd != NULL);
+    dbgassert(hwnd != NULL);
 
     ShowWindow(hwnd, SW_SHOW);
     UpdateWindow(hwnd);

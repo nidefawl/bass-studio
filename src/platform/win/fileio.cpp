@@ -10,7 +10,7 @@
 #include <limits>
 #include <stdexcept>
 #include <stdint.h>
-#include <assert.h>
+#include "assert_dbg.h"
 
 HWND getMainHWND(); // window.cpp
 
@@ -293,11 +293,11 @@ void setCWDPath(String cwd) {
 }
 
 IOFile::IOFile(FileImpl* _impl) : impl(_impl) {
-	assert(impl->GetHandle());
+	dbgassert(impl->GetHandle());
 	this->validHandle = true;
 }
 IOFile::~IOFile() {
-	assert(impl->GetHandle());
+	dbgassert(impl->GetHandle());
 	delete impl;
 }
 void IOFile::write(const char* data, size_t len) {
@@ -309,7 +309,7 @@ void IOFile::write(const char* data, size_t len) {
 	}
 }
 void IOFile::flush() {
-	assert(impl->GetHandle());
+	dbgassert(impl->GetHandle());
 	if (!FlushFileBuffers(impl->GetHandle())) {
 		validHandle = false;
 	}

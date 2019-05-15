@@ -16,7 +16,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <dirent.h>
-#include <assert.h>
+#include "assert_dbg.h"
 #include <fts.h>
 
 
@@ -69,7 +69,7 @@ public:
 	~File() {
 		if (handle > -1) {
 			int ret = close(handle);
-			assert(ret == 0);
+			dbgassert(ret == 0);
 		}
 	}
 

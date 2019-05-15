@@ -974,7 +974,7 @@ NVGpaint nvgImagePattern(NVGcontext* ctx,
 // Scissoring
 void nvgScissor(NVGcontext* ctx, float x, float y, float w, float h)
 {
-	assert(w>=0&&h>=0);
+	dbgassert(w>=0&&h>=0);
 	NVGstate* state = nvg__getState(ctx);
 
 	w = nvg__maxf(0.0f, w);
@@ -1005,7 +1005,7 @@ static void nvg__isectRects(float* dst,
 
 void nvgIntersectScissor(NVGcontext* ctx, float x, float y, float w, float h)
 {
-	assert(w>0&&h>0);
+	dbgassert(w>0&&h>0);
 	NVGstate* state = nvg__getState(ctx);
 	float pxform[6], invxorm[6];
 	float rect[4];
@@ -1440,7 +1440,7 @@ void nvg__tesselateBezierAFD(NVGcontext* ctx, float x1, float y1, float x2, floa
 		t += dt;
 
 		// Ensure we don't overshoot.
-		assert(t <= AFD_ONE);
+		dbgassert(t <= AFD_ONE);
 
 	}
 
@@ -2264,7 +2264,7 @@ void nvgArc(NVGcontext* ctx, float cx, float cy, float r, float a0, float a1, in
 
 void nvgRect(NVGcontext* ctx, float x, float y, float w, float h)
 {
-	assert(w>=0&&h>=0);
+	dbgassert(w>=0&&h>=0);
 	float vals[] = {
 		NVG_MOVETO, x,y,
 		NVG_LINETO, x,y+h,

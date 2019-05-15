@@ -8,6 +8,7 @@
 #include "event.h"
 #include "guiconstant.h"
 #include "gui.h"
+#include "assert_dbg.h"
 
 class BaseCtrl;
 struct guitheme_t;
@@ -24,7 +25,7 @@ public:
 		setBackgroundRenderedInset(true);
 	}
 	virtual ~guictr_base() {
-		assert(guis.empty());
+		dbgassert(guis.empty());
 	}
 	virtual void destroyGuis() {
 		for (guibase* g : guis) {

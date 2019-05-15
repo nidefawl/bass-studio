@@ -26,7 +26,7 @@ trackbasecontainer_t::~trackbasecontainer_t() {
 void trackallcontainer_t::addTrack(int trackInsertPos, track_t* newTrack) {
 	auto it = std::find(tracks.begin(), tracks.end(), newTrack);
 	if (it != tracks.end()) {
-		assert(0);
+		dbgassert(0);
 		throw applogicexception("attempt to add track twice");
 	}
 	tracks.push_back(newTrack);
@@ -51,10 +51,10 @@ void trackallcontainer_t::addTrack(int trackInsertPos, track_t* newTrack) {
 }
 void trackallcontainer_t::removeTrack(track_t* track) {
 	if (!removeEntry(tracks, track)) {
-		assert(0);
+		dbgassert(0);
 		throw applogicexception("trackcontainer_t - attempt to remove non-present element");
 	}
-	assert(track->audio);
+	dbgassert(track->audio);
 	tracksubcontainer_t* subCtr = trackTypeCtrs[track->type];
 	track_vector& vec = subCtr->tracks;
 	removeEntry(vec, track);
@@ -76,8 +76,8 @@ void trackallcontainer_t::moveTrack(track_t* track, int32_t dst) {
 	tracksubcontainer_t* subCtr = trackTypeCtrs[track->type];
 	int32_t src = indexOfCtr(subCtr->tracks, track);
 	if ((int32_t)subCtr->tracks.size() == dst) dst--;
-	assert(src >= 0 && dst >= 0);
-	assert(src != dst);
+	dbgassert(src >= 0 && dst >= 0);
+	dbgassert(src != dst);
 
 	track_vector curOrder = subCtr->tracks;
 	track_vector newOrder;
@@ -119,15 +119,15 @@ void trackallcontainer_t::copyFrom(project_snapshot_t& project) {
 			project.trackCtr.tracks.size(),
 			project.trackReturnCtr.tracks.size(),
 			project.trackMasterCtr.tracks.size());
-	assert(tracks.empty());
+	dbgassert(tracks.empty());
 	trackCtr.copyFrom(project.trackCtr);
-	assert(trackCtr.size()==project.trackCtr.tracks.size());
+	dbgassert(trackCtr.size()==project.trackCtr.tracks.size());
 
 	trackReturnCtr.copyFrom(project.trackReturnCtr);
-	assert(trackReturnCtr.size()==project.trackReturnCtr.tracks.size());
+	dbgassert(trackReturnCtr.size()==project.trackReturnCtr.tracks.size());
 
 	trackMasterCtr.copyFrom(project.trackMasterCtr);
-	assert(trackMasterCtr.size()==project.trackMasterCtr.tracks.size());
+	dbgassert(trackMasterCtr.size()==project.trackMasterCtr.tracks.size());
 
 
 	addAll(tracks, trackCtr.tracks);
@@ -137,7 +137,7 @@ void trackallcontainer_t::copyFrom(project_snapshot_t& project) {
 	for (track_t* track : tracks) {
 		track->idx = idx++;
 	}
-	assert(tracks.size()==(project.trackCtr.tracks.size()+project.trackMasterCtr.tracks.size()+project.trackReturnCtr.tracks.size()));
+	dbgassert(tracks.size()==(project.trackCtr.tracks.size()+project.trackMasterCtr.tracks.size()+project.trackReturnCtr.tracks.size()));
 
 	tracksBottom.tracks.clear();
 	addAll(tracksBottom.tracks, trackReturnCtr.tracks);
@@ -174,7 +174,7 @@ void tracksubcontainer_t::copyTo(trackcontainer_snapshot_t& out) {
 	}
 }
 void tracksubcontainer_t::copyFrom(trackcontainer_snapshot_t& in) {
-	assert(tracks.empty());
+	dbgassert(tracks.empty());
 	bool reassignIdx = false;
 	for (track_snapshot_t& snapshot : in.tracks) {
 		track_t* trackCopy = new track_t(snapshot);
@@ -234,7 +234,7 @@ trackstate_t trackstate_t::copy() {
 	trackstate_t t;
 	for (track_snapshot_t* thisSnapshot : this->tracks) {
 		track_snapshot_t* snapshotCopy = new track_snapshot_t(*thisSnapshot);
-		assert(snapshotCopy->clips.size() == thisSnapshot->clips.size());
+		dbgassert(snapshotCopy->clips.size() == thisSnapshot->clips.size());
 		t.tracks.push_back(snapshotCopy);
 	}
 	return t;

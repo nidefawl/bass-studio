@@ -27,7 +27,7 @@ public:
 		desc = description;
 
 		automatable_t* at = tryGetAt(MainCtrl::get());
-		assert(at);
+		dbgassert(at);
 		my_printf("Undo modify parameter task: set %s::%s (idx %d) from %f to %f\n", StringAsCStr(at->getAutomatableName()), StringAsCStr(at->getParamName(_ref.paramIdx)), _ref.paramIdx,  _oldVal, _newVal);
 	}
 	//TODO: this shouldn't be here

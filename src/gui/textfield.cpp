@@ -522,7 +522,7 @@ bool gui_textfield::deleteSelection() {
         if (begin > end)
             std::swap(begin, end);
         if (mValueTemp.empty()) return false;
-        assert(!mValueTemp.empty());
+        dbgassert(!mValueTemp.empty());
         if (begin == end - 1)
             mValueTemp.erase(mValueTemp.begin() + begin);
         else

@@ -59,7 +59,7 @@ void PopupCtrl::relayout(int32_t w, int32_t h) {
 }
 
 void PopupCtrl::open(guictxtmenu_base *_ctxtmenu, ivec2 pos) {
-	assert(!isShown());
+	dbgassert(!isShown());
 	mouseInside = false;
 	this->m_mousePos = ivec2(-1111111);
 	popupCtrs->removeGuis();

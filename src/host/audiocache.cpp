@@ -1,7 +1,7 @@
 #include "audiocache.h"
 #include <unordered_map>
 #include <atomic>
-#include <assert.h>
+#include "assert_dbg.h"
 #include "math/seq_math.h"
 #include "str_util.h"
 #include "audiosample.h"
@@ -134,7 +134,7 @@ audiofile_t* audiocache::loadFile(String path, int id) {
 			sample->downsampled.push_back(std::move(downsampledChannels));
 		}
 //		int nDownSmplSteps = maxDownS-1;
-//		assert(sample->downsampled.size() == nDownSmplSteps);
+//		dbgassert(sample->downsampled.size() == nDownSmplSteps);
 		int _id = id < 0 ? this->nextIdx++ : id;
 		std::unique_ptr<audiofile_t> cachedaudio = std::make_unique<audiofile_t>();
 		cachedaudio->sample = std::move(sample);
@@ -148,7 +148,7 @@ audiofile_t* audiocache::loadFile(String path, int id) {
 		my_printf("%d\n", cachedaudio->id);
 		audiofile_t* audio = cachedaudio.get();
 		list.push_back(std::move(cachedaudio));
-		assert(mapId[_id] == audio);
+		dbgassert(mapId[_id] == audio);
 		return audio;
 	}
 	return NULL;

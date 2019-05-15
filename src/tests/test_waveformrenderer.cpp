@@ -47,7 +47,7 @@ int benchmark_waverender(audiofile_t* sample, BakeGLPath& bakedPath) {
 	w.pos = {0,0};
 //	w.startOffset = {0,0};
 	w.size = size;
-	assert(w.size.x > 0);
+	dbgassert(w.size.x > 0);
 	w.sampleBegin = 0;
 	w.sampleBeginOffset = 0;
 	w.sampleEnd = lenSamples;
@@ -102,7 +102,7 @@ void tesselate(audiofile_t* sample, std::vector<std::vector<vec2>>& out) {
 	w.pos = {0,0};
 //	w.startOffset = {0,0};
 	w.size = size;
-	assert(w.size.x > 0);
+	dbgassert(w.size.x > 0);
 	w.sampleBegin = 0;
 	w.sampleBeginOffset = 0;
 	w.sampleEnd = lenSamples;
@@ -187,7 +187,7 @@ void assertEqual(F f, F2 f2, std::vector<std::vector<vec2>>& tesselatedWaveForms
 		std::vector<vert> outVdata2;
 		f(tesselatedWaveForms[i], outVdata1, (int)i, false);
 		f2(tesselatedWaveForms[i], outVdata2, (int)i, false);
-		assert( outVdata1 == outVdata2 );
+		dbgassert( outVdata1 == outVdata2 );
 	}
 }
 template <typename F, typename F2>
@@ -199,7 +199,7 @@ void assertNonEqual(F f, F2 f2, std::vector<std::vector<vec2>>& tesselatedWaveFo
 		std::vector<vert> outVdata2;
 		f(tesselatedWaveForms[i], outVdata1, (int)i, false);
 		f2(tesselatedWaveForms2[i], outVdata2, (int)i, false);
-		assert( outVdata1 != outVdata2 );
+		dbgassert( outVdata1 != outVdata2 );
 	}
 }
 int main(int argc, char* argv[]) {

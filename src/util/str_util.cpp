@@ -3,6 +3,7 @@
 #include <vector>
 #include <limits.h>
 #include "math/seq_math.h"
+#include "assert_dbg.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -155,7 +156,7 @@ void replaceBackslashInString(String& str) {
 }
 void replaceBackslashWithForwardslash(const char* filename, char* buf, size_t bufOutSize) {
 	size_t inLen = strlen(filename);
-	assert(inLen+1 < bufOutSize);
+	dbgassert(inLen+1 < bufOutSize);
 	char* out = &buf[0];
 	const char* in = &filename[0];
 	size_t i = 0;

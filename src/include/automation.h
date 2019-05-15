@@ -2,7 +2,7 @@
 #include "str_util.h"
 #include "seq_time.h"
 #include <memory>
-#include <assert.h>
+#include "assert_dbg.h"
 #include <vector>
 #include <unordered_map>
 #include "exceptions.h"
@@ -150,12 +150,12 @@ public:
 	}
 	int32_t getQuantizationSteps(int32_t idx) {
 		automation_t* at = getOrCreateAutomation(idx);
-		assert(at);
+		dbgassert(at);
 		return at->quantizationSteps;
 	}
 	float quantizeVal(int32_t idx, float f) {
 		automation_t* at = getOrCreateAutomation(idx);
-		assert(at);
+		dbgassert(at);
 		f = quantizeFloat(f, at->quantizationSteps);
 		return f;
 	}
@@ -165,7 +165,7 @@ public:
 	}
 	String getParamName(int32_t paramIdx) {
 		auto it = mapParams.find(paramIdx);
-		assert(it != mapParams.end());
+		dbgassert(it != mapParams.end());
 		return it->second.label;
 	}
 	void getAutomated(std::vector<int32_t>& targets) {
@@ -221,7 +221,7 @@ public:
 		return nullptr;
 	}
 	automation_t* getRegisteredAutomation(int32_t paramIdx) {
-		assert(mapParams.count(paramIdx));
+		dbgassert(mapParams.count(paramIdx));
 		auto it = std::find_if(automatedParams.begin(), automatedParams.end(), [paramIdx](automated_param_t& ap) {
 			return ap.paramIdx == paramIdx;
 		});
@@ -233,7 +233,7 @@ public:
 		return nullptr;
 	}
 	automation_t* getOrCreateAutomation(int32_t paramIdx) {
-		assert(mapParams.count(paramIdx));
+		dbgassert(mapParams.count(paramIdx));
 		auto it = std::find_if(automatedParams.begin(), automatedParams.end(), [paramIdx](automated_param_t& ap) {
 			return ap.paramIdx == paramIdx;
 		});

@@ -5,7 +5,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdbool.h>
-#include <assert.h>
+#include "assert_dbg.h"
 
 struct AudioBlock;
 struct AudioBuffer {

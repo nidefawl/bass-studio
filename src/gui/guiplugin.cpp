@@ -53,7 +53,7 @@ guiplugin::~guiplugin() {
 	remove(&buttonSave);
 	remove(&meter);
 	for (auto g : guiButtons) {
-		assert(!stl_contains(guis, g));
+		dbgassert(!stl_contains(guis, g));
 	}
 }
 void guiplugin::addGuiBtn(guibuttontoggle* btn)  {
@@ -75,7 +75,7 @@ void guiplugin::render(NVGcontext* vg) {
 }
 void guiplugin::determineSize(ivec2& prefSize) {
 	if (layoutMode == 1) {
-		//		assert(module->getAudioStage());
+		//		dbgassert(module->getAudioStage());
 		//
 			const int32_t hpt = theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT);
 		//		int32_t meterW = math::max(16, (int32_t)(theme->get(GuiConstant::CONST_METER_WIDTH)*hpt/32.0));
@@ -263,7 +263,7 @@ guibase* guiplugin::getDraggedControl() {
 	return this;
 }
 bool guiplugin::isSelected() {
-	assert(this->parentCtrl);
+	dbgassert(this->parentCtrl);
 	if (!this->parentCtrl->guiCtrFocused) {
 		return false;
 	}
@@ -351,7 +351,7 @@ public:
 	}
 	virtual void setParent(guibase* parent) override {
 		guibase::setParent(parent);
-		assert(knobTest.parent == this);
+		dbgassert(knobTest.parent == this);
 	}
 	String getText() override {
 		return entry->label;

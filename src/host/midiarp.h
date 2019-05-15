@@ -4,7 +4,7 @@
 #include <array>
 #include <algorithm>
 #include <iterator>
-#include <assert.h>
+#include "assert_dbg.h"
 #include "note.h"
 #include "seq_time.h"
 #include "str_util.h"
@@ -63,7 +63,7 @@ public:
 		for (int i = 0; i < NUM_ARP_STEPSIZE_OPTIONS; i += 2) {
 			tickLength[i + 0] = (TICKS_16TH >> 3) << (i >> 1);
 			tickLength[i + 1] = tickLength[i + 0] + (tickLength[i + 0] >> 1);
-			assert(tickLength[i + 0] > 0);
+			dbgassert(tickLength[i + 0] > 0);
 		}
 		const std::array<arp_param_entry_t, 4> parameterTypes { {
 			arp_param_entry_t{PARAM_ENABLE, "Enabled", 0.0f},
@@ -110,26 +110,26 @@ public:
 	}
 	tick_t getStepSize() {
 		int32_t option = (int32_t)std::floor(getClockF()*(NUM_ARP_STEPSIZE_OPTIONS-1));
-		assert(option<NUM_ARP_STEPSIZE_OPTIONS);
+		dbgassert(option<NUM_ARP_STEPSIZE_OPTIONS);
 		int32_t len = tickLength[option];
-		assert(len>0);
+		dbgassert(len>0);
 		return len;
 	}
 	tick_t getDuration() {
 		const int minDuration = getStepSize()>>3;
 		const int maxDuration = getStepSize()<<1;
 		tick_t len = (tick_t)std::floor(minDuration+getGateF()*(maxDuration-minDuration));
-		assert(len>0);
+		dbgassert(len>0);
 		return len;
 	}
 	int isChordOutput() {
 		int32_t option = (int32_t) std::floor(getPatternF() * (NUM_PATTERNS - 1));
-		assert(option<NUM_PATTERNS);
+		dbgassert(option<NUM_PATTERNS);
 		return option == 0;
 	}
 	int getStepIdx(int step, int nNotes) {
 		int32_t option = (int32_t) std::floor(getPatternF() * (NUM_PATTERNS - 1));
-		assert(option<NUM_PATTERNS);
+		dbgassert(option<NUM_PATTERNS);
 		if (option > 0) {
 			option--;
 		}
@@ -153,7 +153,7 @@ public:
 		heldOutputNotes.push_back(note);
 		heldOutputAnimationNotes.push_back(note);
 		notesSpawnTime.push_back(time);
-		assert(notesSpawnTime.size() == heldOutputAnimationNotes.size());
+		dbgassert(notesSpawnTime.size() == heldOutputAnimationNotes.size());
 	}
 
 
@@ -162,7 +162,7 @@ public:
 	}
 	float getParamValue(int32_t idx) override {
 		automatable_param_t* param = getParam(idx);
-		assert(param);
+		dbgassert(param);
 		return param->value;
 	}
 	void onEnable() {
@@ -173,7 +173,7 @@ public:
 	}
 	void setParamValue(int32_t idx, float val, int flags) override {
 		automatable_param_t* param = getParam(idx);
-		assert(param);
+		dbgassert(param);
 		param->value = val;
 		if (param->idx == PARAM_ENABLE) {
 			bool wasEnable = this->enable;
@@ -194,7 +194,7 @@ public:
 		return ref;
 	}
 	track_t* getTrack() override {
-		assert(this->trackImpl);
+		dbgassert(this->trackImpl);
 		return this->trackImpl->getTrack();
 	}
 	void createSnapshot(arp_snapshot& snapshot);

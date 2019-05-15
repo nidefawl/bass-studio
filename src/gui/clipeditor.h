@@ -401,8 +401,8 @@ public:
 			int32_t distPitch = notes.maxNote.pitch - notes.minNote.pitch;
 			distPitch++;
 			lenTime = math::max(clip->getLen(), lenTime);
-			assert(distPitch >= 0);
-			assert(lenTime >= 0);
+			dbgassert(distPitch >= 0);
+			dbgassert(lenTime >= 0);
 			double noteScale = cs.y / (double)distPitch;
 			double tickScale = cs.x / (double)lenTime;
 			nvgBeginPath(vg);

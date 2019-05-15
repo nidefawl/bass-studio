@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <vector>
 #include <memory>
-#include <assert.h>
+#include "assert_dbg.h"
 #include <atomic>
 #include <algorithm>
 #include "logging.h"
@@ -26,7 +26,7 @@ struct packet_t {
 extern int64_t timeFix;
 template<typename T>
 void sendPacket(T& conn, packet_t& p) {
-	assert ((size_t)p.hdr.size == p.buf.size());
+	dbgassert ((size_t)p.hdr.size == p.buf.size());
 	p.hdr.timestamp = getTimeHPint64()+timeFix;
 	conn->write(&p.hdr, sizeof(header_t));
 	conn->write(p.buf.data(), p.hdr.size);
@@ -44,7 +44,7 @@ void serializeStruct(T& data, packet_t& p, size_t offset) {
 template<typename T>
 void deserializeStruct(T& data, packet_t& p, size_t offset) {
 	auto& buf = p.buf;
-	assert(buf.size() >= sizeof(T)+offset);
+	dbgassert(buf.size() >= sizeof(T)+offset);
 	void* ptr = buf.data()+offset;
 	memcpy(&data, ptr, sizeof(T));
 }
@@ -61,7 +61,7 @@ struct packetreader_t {
 	int maxStateSeen = 0;
 	int recvData(const void* data, size_t size) {
 		buf.resize(buf.size()+size);
-		assert(buf.data() != nullptr);
+		dbgassert(buf.data() != nullptr);
 		uint8_t* ptrData = buf.data()+buf.size()-size;
 		memcpy(ptrData, data, size);
 		while (1) {
@@ -72,7 +72,7 @@ struct packetreader_t {
 				memcpy(&readPacket.hdr, buf.data(), sizeof(header_t));
 				buf.erase(buf.begin(), buf.begin()+sizeof(header_t));
 				hasHeader = true;
-//				assert(readPacket.hdr.size >= 0 && readPacket.hdr.size < (1<<16));
+//				dbgassert(readPacket.hdr.size >= 0 && readPacket.hdr.size < (1<<16));
 				if (readPacket.hdr.size < 0 || readPacket.hdr.size >= (1<<16)) {
 					printf("received invalid packet header\n");
 					return -1;

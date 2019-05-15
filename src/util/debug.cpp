@@ -27,10 +27,10 @@ String demangleName(String to_demangle)
 }
 #endif
 #include "logging.h"
-#include <assert.h>
+#include "assert_dbg.h"
 #include <ctime>
 #include <unordered_map>
-#include <assert.h>
+#include "assert_dbg.h"
 #include <vector>
 #include "math/seq_math.h"
 #include "fileio.h"
@@ -170,7 +170,7 @@ void log_format_to_logger(Logger* logger, const char *file, int line, const char
 	int ret = vsnprintf(szLogStr, MAX_LEN_MY_PRINTF - 1, fmt, args);
 	va_end(args);
 	if (ret <= 0) {
-		assert(0);
+		dbgassert(0);
 		return;
 	}
 	const char* szLogStatement = nullptr;
@@ -180,7 +180,7 @@ void log_format_to_logger(Logger* logger, const char *file, int line, const char
 		const char* szThreadName = StringAsCStr(threadName);
 		ret = sprintf_s(szLogBuf, MAX_LEN_MY_PRINTF - 1, "%s:%s:%d %s: %s", szThreadName, szFileShort, line, func, szLogStr);
 		if (ret > 0) {
-			assert(ret+1 <= MAX_LEN_MY_PRINTF);
+			dbgassert(ret+1 <= MAX_LEN_MY_PRINTF);
 			szLogStatement = szLogBuf;
 		}
 	} else {
@@ -240,4 +240,11 @@ void logEveryMsec(int32_t nId, int32_t delayMs, String str) {
 	if (shouldLog) {
 		getGlobalLogger()->logStr(str);
 	}
+}
+extern "C" {
+void failedAssert(const char* expr, const char *file, int line) {
+	log_format_to_logger(getGlobalLogger(), file, line, "dbgassert", "Assertation failed: %s\n", expr);
+	asm("nop");
+	abort();
+}
 }

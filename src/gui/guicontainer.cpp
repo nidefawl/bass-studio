@@ -34,7 +34,7 @@ void guictr_base::setControl(BaseCtrl* parentCtrl) {
 void guictr_base::setParent(guibase* parent) {
 	guibase::setParent(parent);
 	for (guibase* g : guis) {
-		assert(g->parent == this);
+		dbgassert(g->parent == this);
 			g->setParent(this);
 	}
 }
@@ -57,7 +57,7 @@ void guictr_base::render(NVGcontext* vg) {
 	}
 }
 void guictr_base::renderBackground(NVGcontext* vg) {
-	assert(isBackgroundRendered());
+	dbgassert(isBackgroundRendered());
 	bool focused = parentCtrl->isCtrOrChildFocused(this);
 	drawBackground(vg, theme, getPosContent(), getSizeContent(), margin, focused, isBackgroundRenderedInset());
 }

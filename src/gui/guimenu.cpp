@@ -183,9 +183,9 @@ bool guimenu::mouseHitTest(ivec2 mpos, MouseHitEvt& evt)  {
 }
 
 void guimenu::clicked(int _id) {
-	assert(this->parentMenuBar);
+	dbgassert(this->parentMenuBar);
 	BaseCtrl* ctrlParentBar = this->parentMenuBar->getControl();
-	assert(ctrlParentBar);
+	dbgassert(ctrlParentBar);
 	AppCtrl* appCtrl = dynamic_cast<AppCtrl*>(ctrlParentBar);
 	if (appCtrl) {
 		if(_id > 0) {

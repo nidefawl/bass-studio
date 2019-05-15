@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <memory.h>
 #include <stdlib.h>
-#include <assert.h>
+#include "assert_dbg.h"
 #include "math/seq_math.h"
 #include "mem.h"
 #include "samplerate.h"
@@ -48,7 +48,7 @@ struct AudioBlock {
 		copyFrom(src->buf, src->samples, src->channels);
 	}
 	void copyFrom(float **srcBuf, uint32_t srcSamples, uint32_t srcChannels) {
-		assert(srcSamples == samples);
+		dbgassert(srcSamples == samples);
 		uint32_t nChannels = math::min(srcChannels, channels);
 		uint32_t nSamples = math::min(srcSamples, samples);
 		for (uint32_t i = 0; i < nChannels; i++) {
@@ -60,7 +60,7 @@ struct AudioBlock {
 		}
 	}
 	void copyFromPosToPos(float **srcBuf, uint32_t offsetIn, uint32_t offsetOut, uint32_t srcSamples, uint32_t srcChannels) {
-//		assert(srcSamples == samples);
+//		dbgassert(srcSamples == samples);
 		uint32_t nChannels = math::max(srcChannels, channels);
 		uint32_t nSamples = math::min(srcSamples, samples);
 		for (uint32_t i = 0; i < nChannels; i++) {
@@ -76,8 +76,8 @@ struct AudioBlock {
 		addFrom(src->buf, src->samples, src->channels, gain);
 	}
 	void addFrom(float **srcBuf, uint32_t srcSamples, uint32_t srcChannels, float gain) {
-		assert(srcSamples == samples);
-		assert(srcChannels == channels); //remove when adding sub-track mixers (between plugins)
+		dbgassert(srcSamples == samples);
+		dbgassert(srcChannels == channels); //remove when adding sub-track mixers (between plugins)
 		uint32_t nChannels = math::max(srcChannels, channels);
 		for (uint32_t i = 0; i < nChannels; i++) {
 			uint32_t srcChannelIdx = math::min(srcChannels-1, i);

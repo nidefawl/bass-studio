@@ -19,7 +19,7 @@
 #include <iostream>
 #include <sstream>
 #include <fstream>
-#include <assert.h>
+#include "assert_dbg.h"
 #include <algorithm>
 #include <map>
 using namespace std;
@@ -70,14 +70,14 @@ void loadThemeData(theme_data& data, guitheme_t& out) {
 		if (c.idx < out.vecNVGColors.size()) {
 			out.vecNVGColors[c.idx] = rgbaToNvg(it->second);
 		} else {
-			assert(0);
+			dbgassert(0);
 		}
 
 	}
 	for (auto it = data.mapProperties.begin(); it != data.mapProperties.end(); ++it) {
 		String key = it->first;
 		GuiConstant::constant_t c = GuiConstant::getConstantByName(key);
-		assert(c.idx > 0);
+		dbgassert(c.idx > 0);
 		out.mapProperties[c.idx] = it->second;
 	}
 }

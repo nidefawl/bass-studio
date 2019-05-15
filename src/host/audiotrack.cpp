@@ -67,7 +67,7 @@ int32_t audiotrack_t::convertToSamples(vsthost* host) {
 				present = true;
 				split = this->samples[i].get();
 				newSplits.push_back(this->samples[i]);
-				assert(split->samplePos == samplePos);
+				dbgassert(split->samplePos == samplePos);
 			}
 			split->sample.nChannels = block.channels;
 			split->sample.nSamples = block.samples;
@@ -103,7 +103,7 @@ int32_t audiotrack_t::convertToSamples(vsthost* host) {
 }
 
 void copyFromToSample(audiosample_t *dstSample, float** srcBuf, uint32_t offsetIn, uint32_t offsetOut, uint32_t srcSamples, uint32_t srcChannels) {
-//		assert(srcSamples == samples);
+//		dbgassert(srcSamples == samples);
 	uint32_t nChannels = math::max(srcChannels, (uint32_t)dstSample->nChannels);
 	uint32_t nSamples = math::min(srcSamples, (uint32_t)dstSample->nSamples);
 	for (uint32_t i = 0; i < nChannels; i++) {
@@ -116,7 +116,7 @@ void copyFromToSample(audiosample_t *dstSample, float** srcBuf, uint32_t offsetI
 	}
 }
 void copyBlockChannelsToSample(audiosample_t *dstSample, AudioBlock* input, uint32_t offsetIn, uint32_t offsetOut, uint32_t len) {
-	assert(input->channels >= dstSample->nChannels);
+	dbgassert(input->channels >= dstSample->nChannels);
 	for (uint32_t i = 0; i < dstSample->nChannels; i++) {
 		float* srcBufChannel = input->buf[i];
 		float* dstBufChannel = dstSample->samples[i].data();
@@ -151,7 +151,7 @@ void audiotrack_t::store(AudioBlock* input, int32_t samplePos) {
 		copyBlockChannelsToSample(samples[startBlock]->getSample(), input, 0, startOffsetBlock0, lenBlock0);
 	}
 	if (startBlock != endBlock) {
-		assert(lenOver > 0);
+		dbgassert(lenOver > 0);
 		auto* blockEnd = data[endBlock].get();
 //					log_printf("write %d samples to block #%d{%d:%d}\n", lenOver, endBlock, 0, lenOver);
 		blockEnd->version++;
@@ -161,6 +161,6 @@ void audiotrack_t::store(AudioBlock* input, int32_t samplePos) {
 			copyBlockChannelsToSample(samples[endBlock]->getSample(), input, lenBlock0, 0, lenOver);
 		}
 	} else {
-		assert(lenOver == 0);
+		dbgassert(lenOver == 0);
 	}
 }

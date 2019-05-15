@@ -123,7 +123,7 @@ bool vstplugin::onShow(vst_window* window) {
 }
 void vstplugin::unload(vsthost* host) {
 	effectbase::unload(host);
-	assert(this->bIsSetup);
+	dbgassert(this->bIsSetup);
 //	if (handle->aeffect != NULL) {
 //		float** pluginBufIn = blockInputs->buf;
 //		float** pluginBufOut = blockOutputs->buf;
@@ -143,7 +143,7 @@ void vstplugin::unload(vsthost* host) {
 //	this->dispatch(effMainsChanged, 0, 0);
 //	this->dispatch(effSetBypass, 0, 1);
 //	for (automated_param_t& ap : this->automatedParams) {
-//		assert(ap.ref);
+//		dbgassert(ap.ref);
 //		ap.ref->onDstDelete();
 //	}
 	this->dispatch(effClose);
@@ -156,9 +156,9 @@ void vstplugin::unload(vsthost* host) {
 
 void vstplugin::load(vsthost* host) {
 	effectbase::load(host);
-	assert(!this->bIsSetup);
+	dbgassert(!this->bIsSetup);
 	auto aeffect = handle->aeffect;
-	assert(aeffect->numOutputs > 0);
+	dbgassert(aeffect->numOutputs > 0);
 	this->blockInputs = new AudioBlock(math::max(2, aeffect->numInputs), host->lBlockSize);
 	this->blockOutputs = new AudioBlock(math::max(2, aeffect->numOutputs), host->lBlockSize);
 	aeffect->resvd2 = 0;
@@ -314,16 +314,16 @@ void vstplugin::makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) {
 
 guiplugin* vstplugin::makeGui() {
 
-	assert(handle->hmodule || handle->axEffect);
+	dbgassert(handle->hmodule || handle->axEffect);
 	if (!handle->gui) {
 		handle->gui = std::make_unique<guivstplugin>(this);
 		handle->gui->setTitle(StringFormat("%s", StringAsCStr(this->sName)));
 		if (handle->axEffect) {
 			guiplugin* pGuiPlugin = handle->gui.get();
 			guivstplugin* pGuiVstPlugin = dynamic_cast<guivstplugin*>(pGuiPlugin);
-			assert(pGuiVstPlugin);
+			dbgassert(pGuiVstPlugin);
 			BasePluginVST2* baseVst2 = dynamic_cast<BasePluginVST2*>(handle->axEffect);
-			assert(baseVst2);
+			dbgassert(baseVst2);
 			PluginViewContainers* viewCtr = baseVst2->createView();
 			if (viewCtr) {
 				pGuiVstPlugin->viewCtr = viewCtr;
@@ -353,7 +353,7 @@ String vstplugin::getAutomatableName() {
 }
 float vstplugin::getParamValue(int32_t idx) {
 	automatable_param_t* param = getParam(idx);
-	assert(param);
+	dbgassert(param);
 	if (param->internalIdx >= 0) {
 		param->value = vst_getParameter(this, handle->aeffect, param->internalIdx);
 	}
@@ -361,7 +361,7 @@ float vstplugin::getParamValue(int32_t idx) {
 }
 void vstplugin::setParamValue(int32_t idx, float val, int flags) {
 	automatable_param_t* param = getParam(idx);
-	assert(param);
+	dbgassert(param);
 	param->value = val;
 	if (param->idx == PARAM_ENABLE) {
 		bool wasEnable = this->bIsEnabled;
@@ -383,7 +383,7 @@ void vstplugin::postSetParameter(int32_t idx, float preVal, float val, int flags
 	if (flags != 2) {
 		return;
 	}
-	assert(this->trackImpl->getTrack());
+	dbgassert(this->trackImpl->getTrack());
 	track_t* track = this->trackImpl->getTrack();
 	automationlane_snapshot_t ref = toRef();
 	parameter_ref_t p = {track->idx,  ref.type, this->projectGlobalId, idx};
@@ -391,7 +391,7 @@ void vstplugin::postSetParameter(int32_t idx, float preVal, float val, int flags
 }
 void vstplugin::recvPluginEditParamUpdate(int32_t internalIdx) {
 	automatable_param_t* param = getEffectParam(internalIdx);
-	assert(param && param->internalIdx >= 0);
+	dbgassert(param && param->internalIdx >= 0);
 	param->value = vst_getParameter(this, handle->aeffect, param->internalIdx);
 }
 automationlane_snapshot_t vstplugin::toRef() {

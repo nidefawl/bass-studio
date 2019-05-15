@@ -1,6 +1,6 @@
 #include <algorithm>
 #include <vector>
-#include <assert.h>
+#include "assert_dbg.h"
 #include <stddef.h>
 #include <limits>
 #include "str_util.h"
@@ -18,7 +18,7 @@ namespace DebugAlloc {
 	Tracker<clip_t> trackerClips;
 	template<>
 	void printLeaked(int64_t allocId, int64_t allocCount, std::vector<clip_t*>& allocList, std::unordered_map<int64_t, DebugAlloc::AllocInfo>& allocInfo) {
-		assert(allocList.size() == allocCount);
+		dbgassert(allocList.size() == allocCount);
 		my_printf("clip_t allocations: %lld\n", allocCount);
 		for (auto clip : allocList) {
 			auto it = allocInfo.find(clip->allocId);
@@ -44,7 +44,7 @@ namespace DebugAlloc {
 }
 int32_t getNumClipAllocations() {
 	auto tracker = DebugAlloc::getTracker<clip_t>();
-	assert(tracker->allocCount < (std::numeric_limits<int32_t>::max()));
+	dbgassert(tracker->allocCount < (std::numeric_limits<int32_t>::max()));
 	return tracker->allocCount;
 }
 void printClipAllocations() {
@@ -60,13 +60,13 @@ clip_t::~clip_t() {
 	DebugAlloc::getTracker<clip_t>()->objDestructor(this);
 }
 note_t& clip_notes_t::addSingle(note_t& t) {
-	assert(selection.empty());
+	dbgassert(selection.empty());
 	m_list.push_back(t);
 	updateBounds();
 	return m_list.back();
 }
 note_t& clip_notes_t::add(note_t& t) {
-	assert(selection.empty());
+	dbgassert(selection.empty());
 	m_list.push_back(t);
 	return m_list.back();
 }
@@ -101,14 +101,14 @@ int cutIntersecting(std::vector<note_t>& m_list, note_t& n, bool eliminateDupes)
 	return nErased;
 }
 int32_t clip_notes_t::paste(note_t& t, bool eliminateDupes) {
-	assert(selection.empty());
+	dbgassert(selection.empty());
 	cutIntersecting(m_list, t, eliminateDupes);
 	add(t);
 	return 0;
 }
 
 void clip_notes_t::removeSingle(note_t& t) {
-	assert(selection.empty());
+	dbgassert(selection.empty());
 	auto it = std::find(m_list.begin(), m_list.end(), t);
 	if (it == m_list.end()) {
 
@@ -118,7 +118,7 @@ void clip_notes_t::removeSingle(note_t& t) {
 	updateBounds();
 }
 void clip_notes_t::remove(note_t& t) {
-	assert(selection.empty());
+	dbgassert(selection.empty());
 	auto it = std::find(m_list.begin(), m_list.end(), t);
 	if (it == m_list.end()) {
 
@@ -136,16 +136,16 @@ void clip_notes_t::mute(note_t& t) {
 	noteFound.enabled = !noteFound.enabled;
 }
 void clip_notes_t::addAll(std::vector<note_t>& list) {
-	assert(selection.empty());
+	dbgassert(selection.empty());
 	m_list.insert(std::end(m_list), std::begin(list), std::end(list));
 }
 void clip_notes_t::removeAllKeepDuplicates(std::vector<note_t>& a) {
-	assert(selection.empty());
+	dbgassert(selection.empty());
 	auto aBegin = a.begin();
 	auto aEnd = a.end();
 	while (aBegin != aEnd) {
 		auto itRemove = std::find(m_list.begin(), m_list.end(), *aBegin);
-//		assert(itRemove != m_list.end());
+//		dbgassert(itRemove != m_list.end());
 		if (itRemove != m_list.end()) {
 
 			m_list.erase(itRemove);
@@ -154,7 +154,7 @@ void clip_notes_t::removeAllKeepDuplicates(std::vector<note_t>& a) {
 	}
 }
 void clip_notes_t::removeAll(std::vector<note_t>& a) {
-	assert(selection.empty());
+	dbgassert(selection.empty());
 	m_list.erase(std::remove_if(m_list.begin(), m_list.end(), [&a](const note_t& x) {
 	  return std::find(a.begin(), a.end(), x) != a.end();
 	}), m_list.end());
@@ -191,7 +191,7 @@ void clip_notes_t::restoreSelection(std::vector<note_t>& selNotes) {
 	for (note_t& n : selNotes) {
 		auto it = std::find_if(m_list.begin(), m_list.end(),
 				[&n] (const note_t& note) { return note == n; });
-		assert(it != m_list.end());
+		dbgassert(it != m_list.end());
 		note_t& ref = *it;
 		selection.insert(&ref);
 	}
@@ -208,7 +208,7 @@ size_t clip_notes_t::removeDuplicates() {
 			auto it = std::find_if(m_list.begin(), m_list.end(),
 					[n] (const note_t& note) { return &note == n; });
 			if (it == m_list.end()) {
-				assert(0);
+				dbgassert(0);
 			}
 		}
 	} else {
@@ -219,7 +219,7 @@ size_t clip_notes_t::removeDuplicates() {
 }
 
 void clip_notes_t::copy( const clip_notes_t &obj) {
-	//assert(!obj.hasDuplicates());
+	//dbgassert(!obj.hasDuplicates());
 	m_list = obj.m_list;
 	selection.clear();
 	if (!obj.selection.empty()) {
@@ -231,7 +231,7 @@ void clip_notes_t::copy( const clip_notes_t &obj) {
 			selection.insert(ownPtr);
 		}
 	}
-	assert(obj.selection.size() == selection.size());
+	dbgassert(obj.selection.size() == selection.size());
 	firstNote = obj.firstNote;
 	lastNote = obj.lastNote;
 	minNote = obj.minNote;
@@ -385,7 +385,7 @@ int clip_t::getInTimeRange(tick_t absStart, tick_t absEnd, tick_t cutStart, tick
 	return list.size();
 }
 void clip_notes_t::selectLastN(size_t num) {
-	assert(num > 0 && num <= m_list.size());
+	dbgassert(num > 0 && num <= m_list.size());
 	size_t pos = m_list.size() - num;
 	size_t end = m_list.size();
 	for (; pos < end; ++pos) {
@@ -393,7 +393,7 @@ void clip_notes_t::selectLastN(size_t num) {
 	}
 }
 void clip_notes_t::selectIdxRange(size_t start, size_t end) {
-	assert(start < end && end <= m_list.size());
+	dbgassert(start < end && end <= m_list.size());
 	for (size_t p = start; p < end; ++p) {
 		selection.insert(&m_list[p]);
 	}
@@ -489,7 +489,7 @@ std::pair<note_t*, note_t*> getMinMaxTime(std::vector<note_t>& notes) {
 }
 
 tick_t clip_audio_t::lenSamples() {
-	assert(audiocache::getInstance());
+	dbgassert(audiocache::getInstance());
 	audiofile_t* audio = audiocache::getInstance()->get(this->id);
 	auto* sample = audio ? audio->sample.get() : nullptr;
 	if (sample)
@@ -498,7 +498,7 @@ tick_t clip_audio_t::lenSamples() {
 }
 
 void clip_t::adjustStartSamples(tick_t offset) {
-	assert(project_controller_t::get());
+	dbgassert(project_controller_t::get());
 	int32_t tick = project_controller_t::get()->tickToSamples(offset);
 //	if (loopEnabled && offsetStart < loopStart) {
 //		tick_t lenAdj = min(offset, loopStart - offsetStart);
@@ -535,7 +535,7 @@ void clip_t::setLen(tick_t len) {
 		this->lenSamples = project_controller_t::get()->tickToSamples(len);
 	}
 	this->len = len;
-	assert(this->clipType != CLIP_AUDIO || (!project_controller_t::get()||project_controller_t::get()->samplesToTicks(this->lenSamples) == this->len));
+	dbgassert(this->clipType != CLIP_AUDIO || (!project_controller_t::get()||project_controller_t::get()->samplesToTicks(this->lenSamples) == this->len));
 }
 
 void clip_t::adjustLen(tick_t offset) {

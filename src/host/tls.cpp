@@ -13,30 +13,30 @@ namespace daw_tls {
 }
 
 plugindatabase_t* plugindatabase_t::getInstance() {
-	assert(daw_tls::tls.pluginDatabase);
+	dbgassert(daw_tls::tls.pluginDatabase);
 	return daw_tls::tls.pluginDatabase;
 }
 vsthost* vsthost::getInstance()
 {
-	assert(daw_tls::tls.host);
+	dbgassert(daw_tls::tls.host);
 	return daw_tls::tls.host;
 }
 project_controller_t* project_controller_t::get()
 {
-	assert(daw_tls::tls.project);
+	dbgassert(daw_tls::tls.project);
 	return daw_tls::tls.project;
 }
 waveformrender* waveformrender::getInstance()
 {
-//	assert(daw_tls::tls.waveform);
+//	dbgassert(daw_tls::tls.waveform);
 	return daw_tls::tls.waveform;
 }
 audiocache* audiocache::getInstance()
 {
-	assert(daw_tls::tls.audioCache);
+	dbgassert(daw_tls::tls.audioCache);
 	return daw_tls::tls.audioCache;
 }
 MainCtrl* MainCtrl::get() {
-//	assert(daw_tls::tls.mainCtrl);
+//	dbgassert(daw_tls::tls.mainCtrl);
 	return daw_tls::tls.mainCtrl;
 }

@@ -9,7 +9,7 @@
 
 #include <GLFW/glfw3.h>
 
-#include <assert.h>
+#include "assert_dbg.h"
 
 
 using ImgData = std::shared_ptr<uint8_t>;
@@ -56,7 +56,7 @@ namespace RenderResources {
 			ImageBuf imgIconsBuf[NUM_IMGS];
 			for (int i = 0; i < NUM_IMGS; i++) {
 				ImageBuf& buf = imgIconsBuf[i];
-				assert((int)buf.bytes.size() == buf.w*buf.h * 4);
+				dbgassert((int)buf.bytes.size() == buf.w*buf.h * 4);
 			}
 			load(vg, StringFormat("res/icons/synth_32px.png"), imgIconsBuf[ICON_SYNTH]);
 			load(vg, StringFormat("res/icons/effect.png"), imgIconsBuf[ICON_EFFECT]);
@@ -86,7 +86,7 @@ namespace RenderResources {
 				if (buf.w*buf.h == 0) {
 					continue;
 				}
-				assert((int)buf.bytes.size() == buf.w*buf.h * 4);
+				dbgassert((int)buf.bytes.size() == buf.w*buf.h * 4);
 				NvgImageTexture& nvgTex = imgIcons[i];
 				int32_t nvgid = nvgCreateImageRGBA(vg, buf.w, buf.h, NVG_IMAGE_GENERATE_MIPMAPS, (const unsigned char*)buf.bytes.data());
 				nvgImageSize(vg, nvgid, &nvgTex.width, &nvgTex.height);

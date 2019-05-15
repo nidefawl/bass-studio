@@ -159,7 +159,7 @@ public:
 		add(g);
 	}
 	void setActiveControl(guibase* g) {
-		assert(!g || isControl(g));
+		dbgassert(!g || isControl(g));
 		for (guibase* g2 : controls) {
 			g2->setVisible(g2 == g);
 		}
@@ -291,11 +291,11 @@ public:
 						ctxtMenu->add(color);
 						ctxtMenu->layout();
 						ctxtMenu->canTakeInputFocus = true;
-						assert(!ctxtMenu->isBackgroundRendered());
+						dbgassert(!ctxtMenu->isBackgroundRendered());
 						ctxtMenu->setBackgroundRendered(false);
 						table->parentCtrl->openContextMenu(ctxtMenu, evt.mousepos);
 						table->setActiveControl(nullptr);
-						assert(!ctxtMenu->isBackgroundRendered());
+						dbgassert(!ctxtMenu->isBackgroundRendered());
 					}
 
 					void onClick(const click_ctxt_t& ctxt, NVGcolor& value) override {
@@ -311,11 +311,11 @@ public:
 						ctxtMenu->add(color);
 						ctxtMenu->layout();
 						ctxtMenu->canTakeInputFocus = true;
-						assert(!ctxtMenu->isBackgroundRendered());
+						dbgassert(!ctxtMenu->isBackgroundRendered());
 						ctxtMenu->setBackgroundRendered(false);
 						table->parentCtrl->openContextMenu(ctxtMenu, evt.mousepos);
 						table->setActiveControl(nullptr);
-						assert(!ctxtMenu->isBackgroundRendered());
+						dbgassert(!ctxtMenu->isBackgroundRendered());
 					}
 				};
 				click_handler_t handler( this, cell, evt );
@@ -763,6 +763,6 @@ guiproperties_table<guiproperties_t>::~guiproperties_table() {
 	removeGuis();
 	if (isGlobalInstance) {
 		bool b = removeEntry(propTableInstances, this);
-		assert(b);
+		dbgassert(b);
 	}
 }

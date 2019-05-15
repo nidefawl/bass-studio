@@ -129,14 +129,14 @@ public:
 		wv->flagUpdated = false;
 		wv->waveformTex.rendered = false;
 		if (wv->waveformUpdated.size.x > 0) {
-			assert(wv->layoutUpdated.size.x > 0);
+			dbgassert(wv->layoutUpdated.size.x > 0);
 		}
 		wv->sampleVersion = wv->sample->version;
 		wv->layoutCurrent = wv->layoutUpdated;
 		wv->waveformTex.waveform = wv->waveformUpdated;
-		assert(wv->sampleVersion == wv->sample->version);
-		assert(!wv->waveformTex.queued);
-		assert(wv->waveformTex.waveform.size.x > 0 && wv->waveformTex.waveform.size.y > 0);
+		dbgassert(wv->sampleVersion == wv->sample->version);
+		dbgassert(!wv->waveformTex.queued);
+		dbgassert(wv->waveformTex.waveform.size.x > 0 && wv->waveformTex.waveform.size.y > 0);
 		updateCalls++;
 		waveformrender::getInstance()->queueUpdate(wv->sample.get(), &wv->waveformTex);
 	}
@@ -167,7 +167,7 @@ public:
 
 
 		samplerate_t sr = vsthost::getInstance()->lSampleRate; //TODO: store in project_t
-		assert(pos.x==0);
+		dbgassert(pos.x==0);
 
 
 		double tickScreenStart = grid.screenToTickD(left());
@@ -192,7 +192,7 @@ public:
 
 		double nSamples = tickToSamplePrecise(grid.screenToTickD(posEnd), project.tempo100, sr) - tickToSamplePrecise(grid.screenToTickD(posStart), project.tempo100, sr);
 
-		assert(posEnd>posStart);
+		dbgassert(posEnd>posStart);
 
 
 		waveform_layout_updated_t newentry;
@@ -223,10 +223,10 @@ public:
 			samplesPerPx = MAX_RES;
 //			my_printf("w.scaleX %f  samplesPerPx = %f\n", w.scaleX, samplesPerPx);
 		}
-		assert(w.size.x <= FBO_WIDTH && w.size.y <= FBO_HEIGHT);
-//		assert(w.size.x > 0);
+		dbgassert(w.size.x <= FBO_WIDTH && w.size.y <= FBO_HEIGHT);
+//		dbgassert(w.size.x > 0);
 		if (w.size.x > 0) {
-//			assert(newentry.layout.size.x > 0);
+//			dbgassert(newentry.layout.size.x > 0);
 		}
 		w.sampleBegin = sampleBegin;
 		w.sampleBeginOffset = sampleBeginOffset;
@@ -256,7 +256,7 @@ public:
 		}
 
 		if (!culled) {
-			assert(size.x > 0);
+			dbgassert(size.x > 0);
 			ivec2 clipSize = ivec2(size.x, size.y);
 			ivec2 posClipped = pos;
 			ivec2 sizeClipped = clipSize;
@@ -287,7 +287,7 @@ public:
 					if (!texture.queued) {
 						entry.sample = this->m_track->audio->audioOutput.getSampleById(sample->sampleId);
 						waveform_layout_updated_t updatedEntry = makeWaveformFromClip(project, grid, entry, pos, clipSize, posClipped, sizeClipped);
-						assert(updatedEntry.waveform.audioId >= 0 || entry.sample.get() == nullptr);
+						dbgassert(updatedEntry.waveform.audioId >= 0 || entry.sample.get() == nullptr);
 						if (updatedEntry.waveform.audioId < 0
 								|| updatedEntry.waveform.size.x < 1
 								|| updatedEntry.waveform.size.y < 1

@@ -7,7 +7,7 @@
 #include "atomicops.h"
 #include <type_traits>
 #include <utility>
-#include <cassert>
+#include "assert_dbg.h"
 #include <stdexcept>
 #include <new>
 #include <cstdint>
@@ -83,9 +83,9 @@ public:
 		,dequeuing(false)
 #endif
 	{
-		assert(maxSize > 0);
-		assert(MAX_BLOCK_SIZE == ceilToPow2(MAX_BLOCK_SIZE) && "MAX_BLOCK_SIZE must be a power of 2");
-		assert(MAX_BLOCK_SIZE >= 2 && "MAX_BLOCK_SIZE must be at least 2");
+		dbgassert(maxSize > 0);
+		dbgassert(MAX_BLOCK_SIZE == ceilToPow2(MAX_BLOCK_SIZE) && "MAX_BLOCK_SIZE must be a power of 2");
+		dbgassert(MAX_BLOCK_SIZE >= 2 && "MAX_BLOCK_SIZE must be at least 2");
 		
 		Block* firstBlock = nullptr;
 		
@@ -308,7 +308,7 @@ public:
 
 			// Since the tailBlock is only ever advanced after being written to,
 			// we know there's for sure an element to dequeue on it
-			assert(nextBlockFront != nextBlockTail);
+			dbgassert(nextBlockFront != nextBlockTail);
 			AE_UNUSED(nextBlockTail);
 
 			// We're done with this block, let the producer use it if it needs
@@ -373,7 +373,7 @@ public:
 			size_t nextBlockFront = nextBlock->front.load();
 			fence(memory_order_acquire);
 
-			assert(nextBlockFront != nextBlock->tail.load());
+			dbgassert(nextBlockFront != nextBlock->tail.load());
 			return reinterpret_cast<T*>(nextBlock->data + nextBlockFront * sizeof(T));
 		}
 		
@@ -424,7 +424,7 @@ public:
 			size_t nextBlockTail = nextBlock->localTail = nextBlock->tail.load();
 			fence(memory_order_acquire);
 
-			assert(nextBlockFront != nextBlockTail);
+			dbgassert(nextBlockFront != nextBlockTail);
 			AE_UNUSED(nextBlockTail);
 
 			fence(memory_order_release);
@@ -515,7 +515,7 @@ private:
 
 				// This block must be empty since it's not the head block and we
 				// go through the blocks in a circle
-				assert(nextBlockFront == nextBlockTail);
+				dbgassert(nextBlockFront == nextBlockTail);
 				tailBlockNext->localFront = nextBlockFront;
 
 				char* location = tailBlockNext->data + nextBlockTail * sizeof(T);
@@ -538,7 +538,7 @@ private:
 
 				new (newBlock->data) T(std::forward<U>(element));
 
-				assert(newBlock->front == 0);
+				dbgassert(newBlock->front == 0);
 				newBlock->tail = newBlock->localTail = 1;
 
 				newBlock->next = tailBlock_->next.load();
@@ -558,7 +558,7 @@ private:
 				return false;
 			}
 			else {
-				assert(false && "Should be unreachable code");
+				dbgassert(false && "Should be unreachable code");
 				return false;
 			}
 		}
@@ -608,7 +608,7 @@ private:
 		ReentrantGuard(bool& _inSection)
 			: inSection(_inSection)
 		{
-			assert(!inSection && "ReaderWriterQueue does not support enqueuing or dequeuing elements from other elements' ctors and dtors");
+			dbgassert(!inSection && "ReaderWriterQueue does not support enqueuing or dequeuing elements from other elements' ctors and dtors");
 			inSection = true;
 		}
 
@@ -755,7 +755,7 @@ public:
 	{
 		if (sema.tryWait()) {
 			bool success = inner.try_dequeue(result);
-			assert(success);
+			dbgassert(success);
 			AE_UNUSED(success);
 			return true;
 		}
@@ -771,7 +771,7 @@ public:
 		sema.wait();
 		bool success = inner.try_dequeue(result);
 		AE_UNUSED(result);
-		assert(success);
+		dbgassert(success);
 		AE_UNUSED(success);
 	}
 
@@ -790,7 +790,7 @@ public:
 		}
 		bool success = inner.try_dequeue(result);
 		AE_UNUSED(result);
-		assert(success);
+		dbgassert(success);
 		AE_UNUSED(success);
 		return true;
 	}
@@ -828,7 +828,7 @@ public:
 	{
 		if (sema.tryWait()) {
 			bool result = inner.pop();
-			assert(result);
+			dbgassert(result);
 			AE_UNUSED(result);
 			return true;
 		}

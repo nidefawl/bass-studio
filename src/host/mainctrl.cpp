@@ -353,7 +353,7 @@ void MainCtrl::addDebug(String s) {
 }
 
 void MainCtrl::unloadProject() {
-	assert(playThread.isLocked());
+	dbgassert(playThread.isLocked());
 	closeContextMenu();
 	resetMouseContext();
 	projectPath = "";
@@ -383,7 +383,7 @@ void MainCtrl::unloadProject() {
 		auto* host = vsthost::getInstance();
 		std::vector<effectbase*> pluginsDeferred;
 		host->getDeferredEffects(pluginsDeferred);
-		assert(pluginsDeferred.empty());
+		dbgassert(pluginsDeferred.empty());
 	}
 
 }
@@ -448,7 +448,7 @@ void MainCtrl::setEmptyProject() {
 	int totalAllocs = getNumClipAllocations();
 	if (totalAllocs != 0) {
 		log_printf("getNumClipAllocations == %d!\n", totalAllocs);
-		assert(getNumClipAllocations() == 0);
+		dbgassert(getNumClipAllocations() == 0);
 	}
 	insertNewTrack(-1, TRACK_TYPE_MIDI, FLG_TRK_CHANGE_LOAD);
 	insertNewTrack(-1, TRACK_TYPE_MASTER, FLG_TRK_CHANGE_LOAD);
@@ -456,7 +456,7 @@ void MainCtrl::setEmptyProject() {
 #if CREATE_DEBUG_COMPANION_WINDOW
 void drawDebugWindow(NVGcontext* ctx, int winW, int winH, float pxratio);
 void openDebugWindow(window_main* mainwindow) {
-	assert(mainwindow);
+	dbgassert(mainwindow);
 	window_dialog* dialog = mainwindow->createDialog("waveform atlas cache", 1280, 720);
 	window_draw_fn drawFn;
 	drawFn.drawCallback = [](NVGcontext* ctx, int winW, int winH, float pxratio) {
@@ -573,14 +573,14 @@ void MainCtrl::destroy()
 		return;
 	}
 	setAudioThreadState(playback_state::status_no_process);
-	assert(playThread.getState() == playback_state::status_no_process);
+	dbgassert(playThread.getState() == playback_state::status_no_process);
 	ThreadLock lock = playThread.lockThread();
 	vsthost::getInstance()->stopAudio();
 	unloadProject();
 	int totalAllocs = getNumClipAllocations();
 	if (totalAllocs != 0) {
 		log_printf("getNumClipAllocations == %d!\n", totalAllocs);
-		assert(getNumClipAllocations() == 0);
+		dbgassert(getNumClipAllocations() == 0);
 	}
 	vsthost::getInstance()->unload();
 	vsthost::getInstance()->destroy();
@@ -614,7 +614,7 @@ void MainCtrl::initApp(int argc, char* argv[]) {
 	auto host = new vsthost(44100, 256);
 	if (!vsthost::assignMasterCallback(host)) {
 		delete host;
-		assert(0);
+		dbgassert(0);
 		throw applogicexception("no empty vst callback slot");
 	}
 	tls.project = this;
@@ -835,15 +835,15 @@ bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file, int flags) {
 		ctr.setControl(this);
 		ctr.layout();
 		auto windowMain = dynamic_cast<window_main*>(window);
-		assert(windowMain);
-		assert(vsthost::getInstance()->getVst2Instances().empty());
+		dbgassert(windowMain);
+		dbgassert(vsthost::getInstance()->getVst2Instances().empty());
 		std::vector<effectbase*> pluginsDeferred;
 		host->getDeferredEffects(pluginsDeferred);
 		int len = pluginsDeferred.size();
 		for (int i = 0; i < len; i++) {
 
-			assert(pluginsDeferred[i]->getModuleType() == PLUGIN_TYPE_DEFERRED);
-			//assert(pluginsDeferred[i]->get)
+			dbgassert(pluginsDeferred[i]->getModuleType() == PLUGIN_TYPE_DEFERRED);
+			//dbgassert(pluginsDeferred[i]->get)
 			auto plugin = dynamic_cast<effect_deferred*>(pluginsDeferred[i]);
 			windowMain->preRender();
 	//		render(0, 0, m_size.x, m_size.y, 1.0);
@@ -1213,7 +1213,7 @@ void MainCtrl::closeAllContextMenus() {
 }
 
 track_t* MainCtrl::createNewTrack(int trackType) {
-	assert(trackType >= 0 && trackType < NUM_TRACK_TYPES);
+	dbgassert(trackType >= 0 && trackType < NUM_TRACK_TYPES);
 	int32_t tryTypeOffset = trackTypeCtrs[trackType]->size();
 
 	String name = StringFormat("%s %d", TrackTypeToName(trackType), tryTypeOffset + 1);
@@ -1249,7 +1249,7 @@ public:
 		trackPtr = nullptr;
 		trackIdx = _trackPtr->idx;
 		localIdx = _trackPtr->localIdx;
-		assert(MainCtrl::get()->getTrackId(trackIdx) == _trackPtr);
+		dbgassert(MainCtrl::get()->getTrackId(trackIdx) == _trackPtr);
 	}
 	void releaseResources(MainCtrl* ctrl) override {
 		if (trackPtr) {
@@ -1262,18 +1262,18 @@ public:
 		ctrl->resetMouseContext();
 		ctrl->setEditClip(NULL);
 		trackPtr = ctrl->getTrackId(trackIdx);
-		assert(trackPtr && trackPtr->audio && trackPtr->audio->blockSize%8==0); // see if pointer is valid
-		assert(localIdx == trackPtr->localIdx);
+		dbgassert(trackPtr && trackPtr->audio && trackPtr->audio->blockSize%8==0); // see if pointer is valid
+		dbgassert(localIdx == trackPtr->localIdx);
 		//SERIALIZE TRACK VSTs
 		localIdx = trackPtr->localIdx;
 		ctrl->removeTrackImpl(trackPtr, FLG_TRK_CHANGE_HISTORY_UNDO);
 	}
 	void redo(MainCtrl* ctrl) {
-		assert(trackPtr);
+		dbgassert(trackPtr);
 		ctrl->resetMouseContext();
 		ctrl->setEditClip(NULL);
 		ctrl->addTrackImpl(localIdx, trackPtr, FLG_TRK_CHANGE_HISTORY_UNDO);
-		assert(localIdx == trackPtr->localIdx);
+		dbgassert(localIdx == trackPtr->localIdx);
 		localIdx = trackPtr->localIdx;
 		trackPtr = nullptr;
 		//UNSERIALIZE TRACK VSTs
@@ -1290,7 +1290,7 @@ public:
 		trackPtr = _trackPtr;
 		trackIdx = _trackPtr->idx;
 		localIdx = _trackPtr->localIdx;
-		assert(MainCtrl::get()->getTrackId(trackIdx) != trackPtr);
+		dbgassert(MainCtrl::get()->getTrackId(trackIdx) != trackPtr);
 	}
 	~action_modify_track_remove() {
 	}
@@ -1306,7 +1306,7 @@ public:
 		ctrl->resetMouseContext();
 		ctrl->setEditClip(NULL);
 		ctrl->addTrackImpl(localIdx, trackPtr, FLG_TRK_CHANGE_HISTORY_UNDO);
-		assert(localIdx == trackPtr->localIdx);
+		dbgassert(localIdx == trackPtr->localIdx);
 		localIdx = trackPtr->localIdx;
 		trackPtr = nullptr;
 		//UNSERIALIZE TRACK VSTs
@@ -1315,19 +1315,19 @@ public:
 		ctrl->resetMouseContext();
 		ctrl->setEditClip(NULL);
 		trackPtr = ctrl->getTrackId(trackIdx);
-		assert(trackPtr);
+		dbgassert(trackPtr);
 		//SERIALIZE TRACK VSTs
 		ctrl->removeTrackImpl(trackPtr, FLG_TRK_CHANGE_HISTORY_UNDO);
-		assert(trackPtr && trackPtr->audio && trackPtr->audio->blockSize%8==0); // see if pointer is valid
-		assert(localIdx == trackPtr->localIdx);
+		dbgassert(trackPtr && trackPtr->audio && trackPtr->audio->blockSize%8==0); // see if pointer is valid
+		dbgassert(localIdx == trackPtr->localIdx);
 	}
 };
 void MainCtrl::addTrackImpl(int32_t trackInsertPos, track_t* newTrack, int flags) {
 	trackList.addTrack(trackInsertPos, newTrack);
 	if ((flags&FLG_TRK_CHANGE_HISTORY_UNDO) != 0) {
-		assert(newTrack->audio);
+		dbgassert(newTrack->audio);
 	} else {
-		assert(!newTrack->audio);
+		dbgassert(!newTrack->audio);
 		vsthost* host = vsthost::getInstance();
 		host->createAudio(newTrack);
 	}
@@ -1420,7 +1420,7 @@ GLFWwindow* getTopLevelGlfwWindow() {
 	if (main) {
 		return getGlfwFromWindowBase(main->window);
 	}
-	assert(0);
+	dbgassert(0);
 	return nullptr;
 }
 
@@ -1443,12 +1443,12 @@ int handleFatalError(int type, int implSpecType) {
 int32_t project_controller_t::tickToSamples(tick_t ticks)
 {
 	vsthost* host = vsthost::getInstance();
-	assert(host);
+	dbgassert(host);
 	return std::round(tickToSamplePrecise(ticks, tempo100, host->lSampleRate));
 }
 tick_t project_controller_t::samplesToTicks(int32_t sample)
 {
 	vsthost* host = vsthost::getInstance();
-	assert(host);
+	dbgassert(host);
 	return std::round(sampleToTickPrecise(sample, tempo100, host->lSampleRate));
 }

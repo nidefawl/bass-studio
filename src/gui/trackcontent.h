@@ -115,7 +115,7 @@ public:
 		}
 	}
 	void onRemove() {
-		assert(m_clip->gClip == this);
+		dbgassert(m_clip->gClip == this);
 		m_clip->gClip = NULL;
 	}
 	void handleRightClick(MouseEvent& evt);
@@ -148,7 +148,7 @@ public:
 	guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
 	void onRemove() {
 		releaseRendered();
-		assert(m_clip->gClip == this);
+		dbgassert(m_clip->gClip == this);
 		m_clip->gClip = NULL;
 	}
 	void handleRightClick(MouseEvent& evt);

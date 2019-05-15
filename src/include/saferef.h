@@ -52,7 +52,8 @@ public:
 			refs.erase(it);
 			return;
 		}
-		assert(0);
+//		dbgassert(0);
+		return;
 	}
 };
 template <typename T>

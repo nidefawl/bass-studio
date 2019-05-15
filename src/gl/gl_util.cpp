@@ -176,8 +176,8 @@ void bindVertexAttributes(std::vector<VertexAttr>& attrs, int fixedStride) {
 	}
 }
 void DrawVBO::genBuffers() {
-	assert(!vboVertId);
-	assert(!vboIdxId);
+	dbgassert(!vboVertId);
+	dbgassert(!vboIdxId);
 	GLuint buffers[2];
 	glGenBuffers(2, buffers);
 	vboVertId = buffers[0];

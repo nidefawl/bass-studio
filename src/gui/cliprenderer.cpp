@@ -30,8 +30,8 @@ bool getClipPosition(scaled_grid& grid, const ivec2& trackSize, const clip_t* cl
 		return false;
 	}
 	double width = tickEndX - tickBeginX;
-	assert(FitsTypeRange<int32_t>(tickBeginX));
-	assert(FitsTypeRange<int32_t>(tickEndX));
+	dbgassert(FitsTypeRange<int32_t>(tickBeginX));
+	dbgassert(FitsTypeRange<int32_t>(tickEndX));
 	int32_t tickBeginPx = (int32_t) round(tickBeginX);
 	int32_t widthPx = (int32_t) round(width);
 	pos = ivec2(tickBeginPx, INSET_TRACK_CONTENT);
@@ -108,9 +108,9 @@ audioclip_texture_t makeWaveformFromClip(project_t& project, scaled_grid& grid,
 //	}
 //	pxPerSample = 1.0/samplesPerPx;
 //	double width = (sampleEnd-sampleStartOffset)*pxPerSample*w.scale;
-//	assert(width <= FBO_WIDTH);
-	assert(w.size.x <= FBO_WIDTH && w.size.y <= FBO_HEIGHT);
-	assert(w.size.x > 0);
+//	dbgassert(width <= FBO_WIDTH);
+	dbgassert(w.size.x <= FBO_WIDTH && w.size.y <= FBO_HEIGHT);
+	dbgassert(w.size.x > 0);
 	w.sampleBegin = sampleBegin;
 	w.sampleBeginOffset = sampleStartOffset;
 	w.sampleEnd = sampleEnd;
@@ -245,9 +245,9 @@ void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_t* tr, 
 					begin++;
 				}
 				float objPosNote = noteTime /(float) TICKS_BAR;
-	//			assert(objPosNote >= 0 && objPosNote < numBars);
+	//			dbgassert(objPosNote >= 0 && objPosNote < numBars);
 				float objLenNote = note.len /(float) TICKS_BAR;
-	//			assert(objPosNote+objLenNote >= 0);
+	//			dbgassert(objPosNote+objLenNote >= 0);
 				float ny = noteToScreen(note.pitch-minN.pitch, scale, 0, sizeContents.y);
 				float nx = math::max(0.0f, objPosNote * barSize);
 				float nw = math::min(objLenNote * barSize, sizeContents.x-nx);
@@ -268,8 +268,8 @@ void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_t* tr, 
 					for (const note_t* noteClipped : list) {
 						const note_t& note = *noteClipped;
 						tick_t noteTime = note.time;
-			//			assert(objPosNote >= 0 && objPosNote < numBars);
-			//			assert(objPosNote+objLenNote >= 0);
+			//			dbgassert(objPosNote >= 0 && objPosNote < numBars);
+			//			dbgassert(objPosNote+objLenNote >= 0);
 
 						float objPosNote = noteTime /(float) TICKS_BAR;
 						float objLenNote = note.len /(float) TICKS_BAR;

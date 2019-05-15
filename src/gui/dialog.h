@@ -19,7 +19,7 @@ public:
 		maxHeight = size.y;
 		canTakeInputFocus = true;
 	}
-	~guidialog_base() { assert(guis.empty()); }
+	~guidialog_base() { dbgassert(guis.empty()); }
 	void determineSize(ivec2& prefSize) override {
 		prefSize = dialogSize;
 	}

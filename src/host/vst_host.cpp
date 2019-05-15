@@ -26,7 +26,7 @@
 
 #include <stdlib.h>
 #include <algorithm>
-#include <assert.h>
+#include "assert_dbg.h"
 #include "assert_dbg.h"
 #include <stdlib.h>
 #include <memory.h>
@@ -86,7 +86,7 @@ vst_internal_hostslot g_hostslots[4];
 }
 
 VstIntPtr audioMasterHost(vsthost* host, AEffect* effect, VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt) {
-	assert(host);
+	dbgassert(host);
 	if (!host)
 		return 0;
 	vstplugin* plugin = host->getPlugin(effect);
@@ -223,22 +223,22 @@ VstIntPtr audioMasterHost(vsthost* host, AEffect* effect, VstInt32 opcode, VstIn
 }
 VstIntPtr VSTCALLBACK audioMaster1(AEffect* effect, VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt) {
 	vsthost* host = g_hostslots[0].g_instance;
-	assert(host);
+	dbgassert(host);
 	return audioMasterHost(host, effect, opcode, index, value, ptr, opt);
 }
 VstIntPtr VSTCALLBACK audioMaster2(AEffect* effect, VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt) {
 	vsthost* host = g_hostslots[1].g_instance;
-	assert(host);
+	dbgassert(host);
 	return audioMasterHost(host, effect, opcode, index, value, ptr, opt);
 }
 VstIntPtr VSTCALLBACK audioMaster3(AEffect* effect, VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt) {
 	vsthost* host = g_hostslots[2].g_instance;
-	assert(host);
+	dbgassert(host);
 	return audioMasterHost(host, effect, opcode, index, value, ptr, opt);
 }
 VstIntPtr VSTCALLBACK audioMaster4(AEffect* effect, VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt) {
 	vsthost* host = g_hostslots[3].g_instance;
-	assert(host);
+	dbgassert(host);
 	return audioMasterHost(host, effect, opcode, index, value, ptr, opt);
 }
 
@@ -419,7 +419,7 @@ void vsthost::updateTime(int32_t samplePos, tick_t pos, playback_state state) {
 void vsthost::sendNotesOff(effectbase* plugin) {
 	if (plugin && plugin->trackImpl) {
 		track_t* tr = plugin->trackImpl->getTrack();
-		assert(tr);
+		dbgassert(tr);
 		track_impl_t* audio = tr->audio;
 		if (audio) {
 			audio->sendNotesOff(project.tempo100, 0);
@@ -427,8 +427,8 @@ void vsthost::sendNotesOff(effectbase* plugin) {
 	}
 }
 void delayAudio(DelayLine* delayLine, AudioBlock* input, AudioBlock* output, samplerate_t delay) {
-	assert(delay >= 0 && delay < 1<<20);
-	assert(delayLine);
+	dbgassert(delay >= 0 && delay < 1<<20);
+	dbgassert(delayLine);
 	int32_t bufSize = (int32_t)input->samples;
 	int32_t bufDelay = delay;
 	int32_t numBlocks = 1;
@@ -490,12 +490,12 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 		if (readWriteDist < 8) {
 #ifndef NDEBUG
 		if (!isLoopAround&&state == playback_state::status_play && lastState == playback_state::status_play) {
-			assert(posDouble == lastTickEndPos);
+			dbgassert(posDouble == lastTickEndPos);
 		}
 		lastState = state;
 #endif
 		for (track_t* track : ctrl->trackCtr) {
-			assert(track->audio);
+			dbgassert(track->audio);
 		}
 		tick_t pos = floor(posDouble);
 		updateTime(sample, pos, state);
@@ -508,7 +508,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 		}
 		int32_t samplePosBlockEnd = sample + lBlockSize;
 		int32_t tickBlockEnd = floor(posDouble + ticksPerBlock);
-		assert(tickBlockEnd-pos < ceil(ticksPerBlock+1));
+		dbgassert(tickBlockEnd-pos < ceil(ticksPerBlock+1));
 		/*
 		 * Clear all master channels first
 		 */
@@ -580,7 +580,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 
 			/* Compensate audio/midi track to pre-return latency */
 			samplerate_t delayToPreReturn = maxLatencyAudioMidi - trackImpl->getLatency();
-			assert(delayToPreReturn >= 0);
+			dbgassert(delayToPreReturn >= 0);
 			delayAudio(trackImpl->getDelayLine(0), &trackImpl->output, &trackImpl->output, delayToPreReturn);
 			trackImpl->latencyInfo.delayToPreReturn = delayToPreReturn;
 
@@ -602,7 +602,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 
 				/* Compensate audio/midi track to post-return latency */
 				samplerate_t delayToPostReturn = maxLatencyReturn;
-				assert(delayToPostReturn >= 0);
+				dbgassert(delayToPostReturn >= 0);
 				delayAudio(trackImpl->getDelayLine(1), &trackImpl->output, &trackImpl->output, delayToPostReturn);
 				trackImpl->latencyInfo.delayToPostReturn = delayToPostReturn;
 				/* Feed audio/midi tracks output into masters input */
@@ -629,7 +629,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			if (audioReturn->mixer.isEnabled()) {
 				/* Compensate return track to master latency */
 				samplerate_t delayToPostReturn = maxLatencyReturn - audioReturn->getLatency();
-				assert(delayToPostReturn >= 0);
+				dbgassert(delayToPostReturn >= 0);
 				delayAudio(audioReturn->getDelayLine(0), &audioReturn->output, &audioReturn->output, delayToPostReturn);
 				audioReturn->latencyInfo.delayToPostReturn = delayToPostReturn;
 
@@ -658,7 +658,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 		 * Right now only first
 		 */
 		AudioBuffer* bufferWrite = buffers[writePos];
-		assert(!bufferWrite->inUse);
+		dbgassert(!bufferWrite->inUse);
 		bufferWrite->output->realloc(lBlockSize);
 		dsp_util::fillSilence(bufferWrite->output->buf, lBlockSize);
 		AudioBlock* bufOut = bufferWrite->output;
@@ -799,7 +799,7 @@ void vsthost::processAudio(audio_stage_t* stage, AudioBlock* input, AudioBlock* 
 			continue;
 		}
 		processing.pluginId = current->projectGlobalId;
-		assert(current->bIsSetup);
+		dbgassert(current->bIsSetup);
 		timer.reset();
 		bool isBypass = current->isBypass();
 		AudioBlock* blockPostProcess;
@@ -889,14 +889,14 @@ bool vsthost::stopAudio() {
 	return false;
 }
 void vsthost::unload() {
-	assert(this->stream==NULL&&"STOP STREAM BEFORE unload()!");
+	dbgassert(this->stream==NULL&&"STOP STREAM BEFORE unload()!");
 	Pa_Terminate();
 	unloadAllPlugins();
 }
 void vsthost::destroy() {
 	freeRingBuffer(ringbuffer);
-	assert(hostSlot > -1);
-	assert(g_hostslots[hostSlot].g_instance);
+	dbgassert(hostSlot > -1);
+	dbgassert(g_hostslots[hostSlot].g_instance);
 	g_hostslots[hostSlot].g_instance = nullptr;
 }
 bool vsthost::assignMasterCallback(vsthost* host)
@@ -920,7 +920,7 @@ bool vsthost::assignMasterCallback(vsthost* host)
 			return true;
 		}
 	}
-	assert(0&&"Out of host slots");
+	dbgassert(0&&"Out of host slots");
 	return false;
 }
 bool vsthost::startAudio() {
@@ -1029,13 +1029,13 @@ effectbase* vsthost::getPluginById(int32_t projectGlobalId) {
 	return nullptr;
 }
 void vsthost::unloadTrack(track_t* track) {
-	assert(track->audio);
+	dbgassert(track->audio);
 	auto audio = track->audio;
 	std::vector<effectbase*> effects = audio->effects; // make a copy before unloading plugins
 	for (effectbase* effect : effects) {
 		unloadPlugin(effect);
 	}
-	assert(audio->deferredEffects.empty());
+	dbgassert(audio->deferredEffects.empty());
 }
 void vsthost::removePlugin(effectbase* plugin) {
 	audio_stage_t* audioStage = plugin->getTrackLink();
@@ -1087,11 +1087,11 @@ void vsthost::unloadPlugin(effectbase* plugin) {
 	delete plugin;
 }
 bool vsthost::unloadAllPlugins() {
-	assert(pluginInstances.empty());
-	assert(pluginInstancesVST2.empty());
-	assert(pluginInstancesInternal.empty());
-	assert(allAudioStages.empty());
-	assert(trackAudioStages.empty());
+	dbgassert(pluginInstances.empty());
+	dbgassert(pluginInstancesVST2.empty());
+	dbgassert(pluginInstancesInternal.empty());
+	dbgassert(allAudioStages.empty());
+	dbgassert(trackAudioStages.empty());
 //	int count = list.size();
 //	for (int i = 0; i < count; ++i)
 //	{
@@ -1135,14 +1135,14 @@ void vsthost::createAudio(track_t* track) {
 }
 void vsthost::releaseAudio(track_t* track) {
 	auto audioStage = track->audio;
-	assert(audioStage);
-	assert(audioStage->effects.empty());
+	dbgassert(audioStage);
+	dbgassert(audioStage->effects.empty());
 	track->audio = nullptr;
 	auto it = std::find(allAudioStages.begin(), allAudioStages.end(), audioStage);
-	assert(it != allAudioStages.end());
+	dbgassert(it != allAudioStages.end());
 	allAudioStages.erase(it);
 	auto it2 = std::find(trackAudioStages.begin(), trackAudioStages.end(), audioStage);
-	assert(it2 != trackAudioStages.end());
+	dbgassert(it2 != trackAudioStages.end());
 	trackAudioStages.erase(it2);
 	delete audioStage;
 }
@@ -1153,14 +1153,14 @@ audio_stage_t* vsthost::createAudioStage() {
 }
 void vsthost::releaseAudioStage(audio_stage_t* audioStage) {
 	auto it = std::find(allAudioStages.begin(), allAudioStages.end(), audioStage);
-	assert(it != allAudioStages.end());
+	dbgassert(it != allAudioStages.end());
 	allAudioStages.erase(it);
 }
 audio_stage_t* vsthost::getAudioStage(const audio_stage_ref_t& ref) {
 	auto it = std::find_if(allAudioStages.begin(), allAudioStages.end(), [ref] (const audio_stage_t* ptr) {
 		return ptr->id == ref.id;
 	});
-	assert(it != allAudioStages.end());
+	dbgassert(it != allAudioStages.end());
 	if (it != allAudioStages.end()) {
 		return *it;
 	}
@@ -1168,11 +1168,11 @@ audio_stage_t* vsthost::getAudioStage(const audio_stage_ref_t& ref) {
 }
 bool vsthost::movePlugins(audio_stage_t* dstTr, audio_stage_t* trp, int32_t src, int32_t dst, int32_t len) {
 	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-	assert(dstTr);
-	assert(trp);
-	assert(src < (int)trp->effects.size());
-	assert(src+len <= (int)trp->effects.size());
-	assert(dst-1 <= (int)dstTr->effects.size());
+	dbgassert(dstTr);
+	dbgassert(trp);
+	dbgassert(src < (int)trp->effects.size());
+	dbgassert(src+len <= (int)trp->effects.size());
+	dbgassert(dst-1 <= (int)dstTr->effects.size());
 	std::vector<effectbase*> tmpEffects = trp->effects;
 	for (int32_t i = 0; i < len; i++) {
 		effectbase* tmpPlugin = tmpEffects[src + i];
@@ -1185,14 +1185,14 @@ bool vsthost::movePlugins(audio_stage_t* dstTr, audio_stage_t* trp, int32_t src,
 }
 bool vsthost::moveEffects(audio_stage_t* trp, int32_t src, int32_t dst, int32_t len) {
 	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-	assert(src >= 0 && dst >= 0);
-	assert(src != dst);
+	dbgassert(src >= 0 && dst >= 0);
+	dbgassert(src != dst);
 //	src--;
 //	dst--;
-	assert((int32_t)trp->effects.size() > src);
-	assert((int32_t)trp->effects.size() > dst);
+	dbgassert((int32_t)trp->effects.size() > src);
+	dbgassert((int32_t)trp->effects.size() > dst);
 	for (effectbase* effect : trp->effects) {
-		assert(effect->getSlot()>=0);
+		dbgassert(effect->getSlot()>=0);
 	}
 
 
@@ -1326,7 +1326,7 @@ int32_t vsthost::getNextSampleId(int32_t id) {
 }
 
 vstpluginloadres vsthost::loadPlugin(String filepath, int32_t globalId) {
-	assert(masterCallBackSlot);
+	dbgassert(masterCallBackSlot);
 	String path, name, nameWithoutExt;
 	SplitPath(filepath, &path, &nameWithoutExt, NULL, &name);
 	VSTPluginMain_t* fn = NULL;

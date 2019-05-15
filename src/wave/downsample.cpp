@@ -1,7 +1,7 @@
 #include <algorithm>
 #include <soxr.h>
 #include <vector>
-#include <assert.h>
+#include "assert_dbg.h"
 
 void downsample(float sampleRate, float* samplesIn, int len, std::vector<float>& samplesOut, int downsampleBits) {
 //	float srtDown = sampleRate / (float) (1 << downsampleBits);
@@ -39,5 +39,5 @@ void downsample(float sampleRate, float* samplesIn, int len, std::vector<float>&
 			samplesIn, len, NULL, /* Input. */
 			samplesOut.data(), olen, &odone, /* Output. */
 			&iospec, NULL, NULL); /* Default configuration.*/
-	assert(odone <= (samplesOut.size()));
+	dbgassert(odone <= (samplesOut.size()));
 }

@@ -59,7 +59,7 @@ public:
 					found = true; break;
 				}
 			}
-			if (!found) assert(0);
+			if (!found) dbgassert(0);
 		}
 		cursorBefore = oldCursor;
 		before.removeDuplicates();
@@ -964,7 +964,7 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
 			else if (isKC(KC_DUPLICATE, kevt) && !notes.selection.empty()) {
 				clip_notes_t tmpClipboard;
 				for (note_t* selPtr : notes.selection) {
-					assert(notes.has(selPtr));
+					dbgassert(notes.has(selPtr));
 				}
 				tmpClipboard.setTo(notes.selection, -cursor.start);
 				tick_t cursorRange = cursor.end - cursor.start;
@@ -979,7 +979,7 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
 				}
 				mergeDraggedNotes(dragmode::drag_notes_copy);
 				for (note_t* selPtr : notes.selection) {
-					assert(notes.has(selPtr));
+					dbgassert(notes.has(selPtr));
 				}
 //				setSelectionFrame(getMinMaxTime(notes.selection));
 				auto pair = getMinMaxTime(notes.selection);
