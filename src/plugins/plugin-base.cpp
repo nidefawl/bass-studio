@@ -13,6 +13,8 @@
 #include "exceptions.h"
 #include "handle-exceptions.h"
 #include "msgbox.h"
+#include "assert_dbg.h"
+
 #ifndef BUILD_BUILTIN_EFFECT
 #include <GLFW/glfw3.h>
 namespace MouseCursors {
@@ -71,11 +73,11 @@ BasePluginVST2::BasePluginVST2(audioMasterCallback audioMaster,
 	setProgram(0);
 
 	suspend ();
-	assert(this->curProgram = 0);
-	assert(this->numPrograms = numPrograms);
-	assert(this->numParams = numParams);
-	assert(cEffect.numInputs = numInputs);
-	assert(cEffect.numOutputs = numOutputs);
+	dbgassert(this->curProgram == 0);
+	dbgassert(this->numPrograms == numPrograms);
+	dbgassert(this->numParams == numParams);
+	dbgassert(cEffect.numInputs == numInputs);
+	dbgassert(cEffect.numOutputs == numOutputs);
 }
 
 BasePluginVST2::~BasePluginVST2() {
