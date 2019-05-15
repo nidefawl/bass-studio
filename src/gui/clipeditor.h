@@ -151,7 +151,7 @@ public:
 	void buttonClicked(guibase* button) override;
 	void showEditClip();
 };
-
+;
 class gui_clipcontent : public guictr_base, public piano_scale {
 public:
 	enum dragmode {
@@ -161,6 +161,7 @@ public:
 		drag_notes_copy,
 		drag_note_left,
 		drag_note_right,
+		drag_velocity,
 	};
 	clip_cursor_t dragStartCursor;
 	dragmode dragMode = drag_none;
@@ -170,10 +171,12 @@ public:
 	note_t beginDragNote;
 	scaled_grid& grid;
 	clip_view& view;
-	gui_clipcontent(scaled_grid& _grid, clip_view& _view, layout_pianoroll_t& _layout)
+	const bool isVelocity;
+	gui_clipcontent(scaled_grid& _grid, clip_view& _view, layout_pianoroll_t& _layout, bool _isVel)
 		: guictr_base(), piano_scale(_layout, _view, size.y),
 		grid(_grid),
-		view(_view)
+		view(_view),
+		isVelocity(_isVel)
 	{
 		padding = 0;
 	}
@@ -187,7 +190,6 @@ public:
 	void handleDraggedMove(MouseEvent& evt);
 	void handleDraggedRelease(MouseEvent& evt);
 	bool handleKeyInput(KeyEvent& kevt);
-	void render(NVGcontext* vg);
 
 	void layout() {
 		for (guibase* gui : guis) {
@@ -196,6 +198,23 @@ public:
 	}
 protected:
 	void setGlobalSelectionFromClipSelection();
+};
+class gui_clipcontent_notes : public gui_clipcontent {
+public:
+	gui_clipcontent_notes(scaled_grid& _grid, clip_view& _view, layout_pianoroll_t& _layout) : gui_clipcontent(_grid, _view, _layout, false)
+	{
+
+	}
+	void render(NVGcontext* vg);
+
+};
+class gui_clipcontent_velocities : public gui_clipcontent {
+public:
+	gui_clipcontent_velocities(scaled_grid& _grid, clip_view& _view, layout_pianoroll_t& _layout) : gui_clipcontent(_grid, _view, _layout, true)
+	{
+
+	}
+	void render(NVGcontext* vg);
 };
 class ce_constants {
 protected:
@@ -249,17 +268,18 @@ public:
 	}
 	void render(NVGcontext* vg);
 };
-
+class gui_velocities;
 class guictr_noteeditor : public guictr_base, public layout_pianoroll_t, grid_changed_cb, ce_constants {
 public:
 	scaled_grid grid;
 	gui_pianoroll piano;
-	gui_clipcontent content;
+	gui_clipcontent_notes content;
+	gui_clipcontent_velocities velocities;
 	guitrack_timeline timeline;
 	guictr_cliphandles clipHandles;
 	clip_view& view;
 	guibutton btnToggleFold;
-
+	int32_t velHeight = 120;
 public:
 	guictr_noteeditor(clip_view& _view);
 	~guictr_noteeditor();

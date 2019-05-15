@@ -6,6 +6,8 @@
 #include <vector>
 #include "str_util.h"
 
+#include "assert_dbg.h"
+
 struct marker_t {
 	tick_t time;
 	int32_t color;
@@ -14,6 +16,9 @@ struct marker_t {
 
 class track_t;
 class gui_clip;
+inline float velocityToFloat(int32_t velocity) {
+	return velocity / 127.0F;
+}
 struct note_t {
 public:
 	int32_t pitch = 0;
@@ -44,6 +49,9 @@ public:
 	}
 	bool isIntersectPitch(int32_t pitchL, int32_t pitchH) const {
 		return this->pitch >= pitchL && this->pitch <= pitchH;
+	}
+	bool isIntersectVel(int32_t velL, int32_t velH) const {
+		return this->velocity >= velL && this->velocity <= velH;
 	}
 };
 

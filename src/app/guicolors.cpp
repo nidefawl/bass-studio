@@ -4,6 +4,7 @@
 #include <algorithm>
 #include "math/seq_math.h"
 #include "logging.h"
+#include "str_util.h"
 
 
 uint32_t colorPalette[COLOR_PALETTE_LEN] = {

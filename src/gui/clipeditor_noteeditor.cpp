@@ -348,14 +348,16 @@ void guictr_cliphandles::render(NVGcontext* vg) {
 namespace GuiColor {
 constant_t COL_FOLD_BUTTON("COL_FOLD_BUTTON", 0xFFFF9933);
 }
+
 guictr_noteeditor::guictr_noteeditor(clip_view& _view) :
-		guictr_base(), layout_pianoroll_t(), piano(_view, *this), content(grid, _view, *this), timeline(grid), clipHandles(grid, _view), view(
+		guictr_base(), layout_pianoroll_t(), piano(_view, *this), content(grid, _view, *this), velocities(grid, _view, *this), timeline(grid), clipHandles(grid, _view), view(
 				_view) {
 	padding = 2;
 	grid.showRange(0, TICKS_BAR * 4);
 	grid.addCallback(this);
 	add(&piano);
 	add(&content);
+	add(&velocities);
 	add(&timeline);
 	add(&clipHandles);
 	add(&btnToggleFold);
@@ -368,6 +370,7 @@ guictr_noteeditor::guictr_noteeditor(clip_view& _view) :
 guictr_noteeditor::~guictr_noteeditor() {
 	remove(&btnToggleFold);
 	remove(&timeline);
+	remove(&velocities);
 	remove(&content);
 	remove(&piano);
 	remove(&clipHandles);
@@ -401,8 +404,11 @@ void guictr_noteeditor::layout() {
 	clipHandles.size = ivec2(timeline.size.x, heightClipIndicators);
 	btnToggleFold.pos = ivec2(padding, padding);
 	btnToggleFold.size = ivec2((piano.size.x) / 2, 18);
+	int32_t velHeight = this->velHeight;
 	content.pos = ivec2(timeline.left(), clipHandles.bottom());
-	content.size = ivec2(timeline.size.x, piano.size.y);
+	content.size = ivec2(timeline.size.x, piano.size.y-velHeight);
+	velocities.pos = ivec2(timeline.left(), content.bottom());
+	velocities.size = ivec2(timeline.size.x, velHeight);
 	clipHandles.clipViewSize = ivec2(content.size.x, content.size.y + clipHandles.size.y);
 	grid.update(content.size);
 	for (guibase* gui : guis) {
@@ -500,6 +506,9 @@ void guictr_noteeditor::render(NVGcontext* vg) {
 	nvgRestore(vg);
 	nvgSave(vg);
 	content.render(vg);
+	nvgRestore(vg);
+	nvgSave(vg);
+	velocities.render(vg);
 	nvgRestore(vg);
 	nvgSave(vg);
 	clipHandles.render(vg);

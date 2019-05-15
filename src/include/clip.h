@@ -84,6 +84,11 @@ public:
 	note_t* get(tick_t time, int32_t pitch);
 	size_t removeDuplicates();
 	int getInRange(tick_t timeS, tick_t timeE, int32_t pitchL, int32_t pitchH, std::vector<note_t*>& list);
+	int getStartsInRangeV(tick_t timeS, tick_t timeE, int32_t velL, int32_t velH, int32_t tickDist, std::vector<note_t*>& list);
+    template<typename Functor>
+    void visitNotes(Functor f) {
+    	std::for_each(m_list.begin(), m_list.end(), f);
+    }
 	void setTo(std::set<note_t*>& notePtrs, tick_t offset);
 	void addAll(std::vector<note_t>& list);
 	void removeAll(std::vector<note_t>& list);

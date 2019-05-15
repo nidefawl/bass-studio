@@ -250,6 +250,24 @@ note_t* clip_notes_t::get(tick_t time, int32_t pitch) {
 	return NULL;
 }
 
+int clip_notes_t::getStartsInRangeV(tick_t timeS, tick_t timeE, int32_t velL, int32_t velH, int32_t tickDist, std::vector<note_t*>& list) {
+	int count = 0;
+	std::vector<note_t>::iterator it = m_list.begin();
+	while (it != m_list.end()) {
+		note_t& note = *it;
+//		if (!note.isIntersectVel(velL, velH))
+//		log_printf("note vel %d intersect vel velLow %d, velHigh %d\n", note.velocity, velL, velH);
+//		if (note.isIntersectTime(timeS, timeE))
+//		log_printf("note isIntersectTime vel timeS %d, timeE %d\n", timeS, timeE);
+
+		if (note.isIntersectTime(timeS, timeE) && note.start() > timeS && note.isIntersectVel(velL, velH)) {
+			list.push_back(&note);
+			count++;
+		}
+		it++;
+	}
+	return count;
+}
 int clip_notes_t::getInRange(tick_t timeS, tick_t timeE, int32_t pitchL, int32_t pitchH, std::vector<note_t*>& list) {
 	int count = 0;
 	std::vector<note_t>::iterator it = m_list.begin();
@@ -480,6 +498,9 @@ std::pair<note_t*, note_t*> getMinMaxTime(std::set<note_t*>& notePtrs) {
     return std::make_pair(*min, *max);
 }
 std::pair<note_t*, note_t*> getMinMaxTime(std::vector<note_t>& notes) {
+	if (notes.empty()) {
+		return std::make_pair(nullptr, nullptr);
+	}
 	auto min = std::min_element(notes.begin(), notes.end(),
         [] (note_t const& lhs, note_t const& rhs) { return lhs.time < rhs.time; });
 	auto max = std::max_element(notes.begin(), notes.end(),

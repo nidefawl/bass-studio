@@ -244,7 +244,8 @@ void logEveryMsec(int32_t nId, int32_t delayMs, String str) {
 extern "C" {
 void failedAssert(const char* expr, const char *file, int line) {
 	log_format_to_logger(getGlobalLogger(), file, line, "dbgassert", "Assertation failed: %s\n", expr);
-	asm("nop");
+	auto nop = [](){};
+	nop();
 	abort();
 }
 }
