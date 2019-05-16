@@ -26,7 +26,7 @@ namespace GuiConstant {
 constant_t CONST_PIANOROLL_STROKE_WIDTH("CONST_PIANOROLL_STROKE_WIDTH", 10);
 constant_t CONST_CLIPEDITOR_HANDLES_STROKE_WIDTH("CONST_CLIPEDITOR_HANDLES_STROKE_WIDTH", 10);
 }
-
+constexpr int32_t VEL_SELECT_DISTANCE = 16;
 class action_modify_notes : public action_base {
 protected:
 public:
@@ -185,6 +185,31 @@ void renderGridLines(NVGcontext* vg, const guitheme_t* theme, const scaled_grid&
 		nvgStroke(vg);
 	}
 }
+
+inline int32_t screenToVel(int y, int h)
+{
+	dbgassert(h> 0);
+	return (int32_t)((h-1-y)*127/h);
+}
+
+note_t* getMinDistNoteVel(clip_notes_t& notes, int32_t tickExact, int32_t tickDist, int32_t velExact, int32_t velDist) {
+	int32_t minDist = 0;
+	int32_t minDistV = 0;
+	note_t* minDistNote = nullptr;
+	notes.visitNotes([&minDistNote, &minDist, &minDistV, tickExact, tickDist, velExact, velDist](note_t& note) {
+		int32_t dist = note.start()-tickExact;
+		int32_t distV = note.velocity-velExact;
+		if (dist > -tickDist && dist < tickDist && distV > -velDist && distV < velDist) {
+			if (minDistNote == nullptr || minDist > math::abs(dist) || minDistV > math::abs(distV)) {
+				minDistNote = &note;
+				minDist = math::abs(dist);
+				minDistV = math::abs(distV);
+			}
+		}
+	});
+	return minDistNote;
+
+}
 void gui_clipcontent_velocities::render(NVGcontext* vg) {
 	if (!setScissorTransform(vg)) {
 		return;
@@ -210,20 +235,19 @@ void gui_clipcontent_velocities::render(NVGcontext* vg) {
 			break;
 	}
 
-	float h = size.y;
-	clip_notes_t& notes = view.clip()->notes;
+	const float h = size.y;
+	const int32_t nw = 4;
+	const float r = 4;
+	const clip_notes_t& notes = view.clip()->notes;
 	if (!notes.empty()) {
 		for (int i = 0; i < 2; i++) {
 			nvgBeginPath(vg);
-			for (note_t& note : notes.m_list) {
+			for (const note_t& note : notes.m_list) {
 				if ((i==0) != note.enabled)
 					continue;
 				float nx = grid.tickToScreenD(note.time);
-				float nw = 4;//grid.tickLenToScreen(note.len);
-				if (nx + nw/2.0f < -4)
-					continue;
-				if (nx - nw/2.0f > w+4)
-					continue;
+				if (nx + nw/2.0f < -4) continue;
+				if (nx - nw/2.0f > w+4) continue;
 				float nh = velocityToFloat(note.velocity)*h;
 				float insetx = calcInset(1, nw);
 				float insety = calcInset(1, nh);
@@ -235,20 +259,15 @@ void gui_clipcontent_velocities::render(NVGcontext* vg) {
 			nvgStrokeColor(vg, theme->getColor(GuiColor::COL_NOTE_OUTLINE));
 			nvgStroke(vg);
 			nvgBeginPath(vg);
-			for (note_t& note : notes.m_list) {
+			for (const note_t& note : notes.m_list) {
 				if ((i==0) != note.enabled)
 					continue;
-				float r = 4;
 				float nx = grid.tickToScreenD(note.time);
-
-				if (nx + r < -4)
-					continue;
-				if (nx - r > w+4)
-					continue;
+				if (nx + r < -4) continue;
+				if (nx - r > w+4) continue;
 				float nh = velocityToFloat(note.velocity)*h;
 				nvgCircle(vg, nx, size.y-nh, r);
 //				nvgCircleFastNDivs(vg, nx+w/2.0f, size.y-nh, 4.0f, 6);
-//				nvgRect(vg, nx+insetx, size.y - nh+insety, nw-insetx*2, nh-insety*2);
 			}
 			nvgFillColor(vg, theme->getColor(i==0?GuiColor::COL_NOTE:GuiColor::COL_NOTE_MUTE));
 			nvgFill(vg);
@@ -257,43 +276,93 @@ void gui_clipcontent_velocities::render(NVGcontext* vg) {
 			nvgStroke(vg);
 		}
 	}
-	nvgBeginPath(vg);
-	for (note_t* pnote : notes.selection) {
-		float nx = grid.tickToScreenD(pnote->time);
-		float nw = 4;//grid.tickLenToScreen(note.len);
-		if (nx + nw/2.0f < -4)
-			continue;
-		if (nx - nw/2.0f > w+4)
-			continue;
-		float nh = velocityToFloat(pnote->velocity)*h;
-		float insetx = calcInset(1, nw);
-		float insety = calcInset(1, nh);
-		nvgRect(vg, nx-nw/2.0f+insetx, size.y - nh+insety, nw-insetx*2, nh-insety*2);
-	}
-	nvgFillColor(vg, theme->getColor(GuiColor::COL_NOTE));
-	nvgFill(vg);
-	nvgStrokeWidth(vg, 1.0f);
-	nvgStrokeColor(vg, GUI_COLOR(200));
-	nvgStroke(vg);
-	nvgBeginPath(vg);
-	for (note_t* pnote : notes.selection) {
-		float r = 4;
-		float nx = grid.tickToScreenD(pnote->time);
+	if (!notes.selection.empty()) {
+		for (int i = 0; i < 2; i++) {
+			nvgBeginPath(vg);
+			for (const note_t* pnote : notes.selection) {
+				if ((i==0) != pnote->enabled)
+					continue;
+				float nx = grid.tickToScreenD(pnote->time);
+				if (nx + nw/2.0f < -4) continue;
+				if (nx - nw/2.0f > w+4) continue;
+				float nh = velocityToFloat(pnote->velocity)*h;
+				float insetx = calcInset(1, nw);
+				float insety = calcInset(1, nh);
+				nvgRect(vg, nx-nw/2.0f+insetx, size.y - nh+insety, nw-insetx*2, nh-insety*2);
+			}
+			nvgFillColor(vg, theme->getColor(i==0?GuiColor::COL_NOTE:GuiColor::COL_NOTE_MUTE));
+			nvgFill(vg);
+			nvgStrokeWidth(vg, 1.0f);
+			nvgStrokeColor(vg, GUI_COLOR(200));
+			nvgStroke(vg);
 
-		if (nx + r < -4)
-			continue;
-		if (nx - r > w+4)
-			continue;
-		float nh = velocityToFloat(pnote->velocity)*h;
-		nvgCircle(vg, nx, size.y-nh, r);
-//				nvgCircleFastNDivs(vg, nx+w/2.0f, size.y-nh, 4.0f, 6);
-//				nvgRect(vg, nx+insetx, size.y - nh+insety, nw-insetx*2, nh-insety*2);
+			nvgBeginPath(vg);
+			for (const note_t* pnote : notes.selection) {
+				if ((i==0) != pnote->enabled)
+					continue;
+				float nx = grid.tickToScreenD(pnote->time);
+				if (nx + r < -4) continue;
+				if (nx - r > w+4) continue;
+				float nh = velocityToFloat(pnote->velocity)*h;
+				nvgCircle(vg, nx, size.y-nh, r);
+		//				nvgCircleFastNDivs(vg, nx+w/2.0f, size.y-nh, 4.0f, 6);
+			}
+			nvgFillColor(vg, theme->getColor(i==0?GuiColor::COL_NOTE:GuiColor::COL_NOTE_MUTE));
+			nvgFill(vg);
+			nvgStrokeWidth(vg, 1.0f);
+			nvgStrokeColor(vg, GUI_COLOR(200));
+			nvgStroke(vg);
+		}
 	}
-	nvgFillColor(vg, theme->getColor(GuiColor::COL_NOTE));
-	nvgFill(vg);
-	nvgStrokeWidth(vg, 1.0f);
-	nvgStrokeColor(vg, GUI_COLOR(200));
-	nvgStroke(vg);
+	if (dragMode <= drag_frame) {
+		ivec2 imouse = toControlsObjectSpace(MainCtrl::get()->m_mousePos, this);
+		bool mouseIn = MainCtrl::get()->guiOver == this && contains(imouse+getPosContent());
+		if (mouseIn) {
+			tick_t mouseTick = !mouseIn ? INVALID_TICK : grid.screenToTickSnap(imouse.x, SNAP_OFF);
+	//		vec2 fmouse = vec2(imouse);
+			int32_t velClicked = screenToVel(imouse.y, size.y);
+			int32_t velDist = VEL_SELECT_DISTANCE*127/size.y;
+	//		const tick_t tickExact = grid.screenToTickSnap(imouse.x, SNAP_OFF);
+			note_t* contextNote = getMinDistNoteVel(view.clip()->notes, mouseTick, grid.pixelsToTicks(VEL_SELECT_DISTANCE), velClicked, velDist);
+			if (contextNote) {
+
+
+
+				nvgBeginPath(vg);
+				float nx = grid.tickToScreenD(contextNote->time);
+				float nh = velocityToFloat(contextNote->velocity)*h;
+				float insetx = calcInset(1, nw);
+				float insety = calcInset(1, nh);
+				nvgRect(vg, nx-nw/2.0f+insetx, size.y - nh+insety, nw-insetx*2, nh-insety*2);
+
+//				nvgFillColor(vg, theme->getColor(GuiColor::COL_NOTE));
+//				nvgFill(vg);
+				nvgStrokeWidth(vg, 2.0f);
+				nvgStrokeColor(vg, GUI_COLOR(251));
+				nvgStroke(vg);
+
+				nvgBeginPath(vg);
+				nvgCircle(vg, nx, size.y-nh, r);
+
+//				nvgFillColor(vg, theme->getColor(i==0?GuiColor::COL_NOTE:GuiColor::COL_NOTE_MUTE));
+//				nvgFill(vg);
+
+				nvgStrokeWidth(vg, 2.0f);
+				nvgStrokeColor(vg, GUI_COLOR(251));
+				nvgStroke(vg);
+			}
+
+		}
+	}
+//	hit_result currentDragged = dragged.mode || !mouseIn ? dragged : hitTest(fmouse);
+//	if (currentDragged.mode == dragmode::drag_node) {
+//		int32_t ptIdx = currentDragged.dataPt;
+//		dbgassert(ptIdx >= 0 && ptIdx < (int)data.points.size());
+//		automation_point_t& pt = data.points[ptIdx];
+//		vec2* point = getPathPointSafe(currentDragged.segidx);
+//		mouseTick = pt.time;
+//		fmouse.x = point->x;
+//	}
 
 	x = (float)grid.tickToScreenD(view.cursor.start);
 	if (view.cursor.start == view.cursor.end) {
@@ -489,7 +558,9 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
 				float insety = calcInset(1, nh);
 				nvgRect(vg, nx+insetx, ny - scale+insety, nw-insetx*2, nh-insety*2);
 			}
-			nvgFillColor(vg, theme->getColor(i==0?GuiColor::COL_NOTE:GuiColor::COL_NOTE_MUTE));
+			auto noteColor = theme->getColor(i==0?GuiColor::COL_NOTE:GuiColor::COL_NOTE_MUTE);
+//			NVGcolor hslNoteColor = nvgToHSL(noteColor);
+			nvgFillColor(vg, noteColor);
 			nvgFill(vg);
 			nvgStrokeWidth(vg, 1.0f);
 			nvgStrokeColor(vg, theme->getColor(GuiColor::COL_NOTE_OUTLINE));
@@ -654,12 +725,6 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
 	}
 }
 
-inline int32_t screenToVel(int y, int h)
-{
-	dbgassert(h> 0);
-	return (int32_t)((h-1-y)*127/h);
-}
-
 void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
 	dragMode = drag_none;
 	clip_t* clip = view.clip();
@@ -668,28 +733,15 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
 	}
 	clip_notes_t& notes = clip->notes;
 	ivec2 local = evt.relMousepos;
-
 	int32_t pitch = toNoteF(local.y);
-	tick_t tickExact = grid.screenToTickSnap(local.x, SNAP_OFF);
+	int32_t velClicked = screenToVel(local.y, size.y);
+	const tick_t tickExact = grid.screenToTickSnap(local.x, SNAP_OFF);
 	note_t* contextNote = nullptr;
-	if (!isVelocity) {
-		contextNote = notes.get(tickExact, pitch);
+	if (isVelocity) {
+		int32_t velDist = VEL_SELECT_DISTANCE*127/size.y;
+		contextNote = getMinDistNoteVel(notes, tickExact, grid.pixelsToTicks(VEL_SELECT_DISTANCE), velClicked, velDist);
 	} else {
-		 int32_t velClicked = screenToVel(local.y, size.y);
-//		 int32_t timeS = tickExact;
-//		 int32_t timeE = tickExact;
-		int32_t tickDist = grid.pixelsToTicks(12);
-		int32_t minDist = 50;
-		notes.visitNotes([&contextNote, velClicked, tickExact, tickDist, &minDist](note_t& note) {
-			int32_t dist = note.start()-tickExact;
-			if (dist > - tickDist && dist < tickDist && note.isIntersectVel(velClicked - 4, velClicked + 4)) {
-				if (contextNote == nullptr || minDist > math::abs(dist)) {
-					contextNote = &note;
-					minDist = math::abs(dist);
-				}
-			}
-		});
-//		contextNote = notes.getInRangeV(tickExact, tickExact)
+		contextNote = notes.get(tickExact, pitch);
 	}
 
 	tick_t tickGridNearest = grid.screenToTickSnap(local.x, SNAP_ON);
@@ -737,8 +789,13 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
 			inSelection = stl_contains(notes.selection, contextNote);
 			if (!inSelection) {
 				notes.clearSelection();
-				contextNote = notes.get(tickExact, pitch);
-				if (contextNote != NULL) {
+				if (isVelocity) {
+					int32_t velDist = VEL_SELECT_DISTANCE*127/size.y;
+					contextNote = getMinDistNoteVel(notes, tickExact, grid.pixelsToTicks(VEL_SELECT_DISTANCE), velClicked, velDist);
+				} else {
+					contextNote = notes.get(tickExact, pitch);
+				}
+				if (contextNote) {
 					beginDragNote = *contextNote;
 					notes.selection.insert(contextNote);
 					view.copySelectedNoteList();
@@ -879,7 +936,7 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
 			int32_t velLow = screenToVel(yEnd, size.y);
 			int32_t velHigh = screenToVel(yStart, size.y);
 			std::vector<note_t*> inRangeList;
-			if (notes.getStartsInRangeV(tickStart, tickEnd, velLow, velHigh, grid.pixelsToTicks(12), inRangeList)) {
+			if (notes.getStartsInRangeV(tickStart, tickEnd, velLow, velHigh, grid.pixelsToTicks(VEL_SELECT_DISTANCE), inRangeList)) {
 				std::set<note_t*>& selection = notes.selection;
 				for (note_t* inSelRange : inRangeList) {
 					auto result = selection.insert(inSelRange);
