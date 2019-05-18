@@ -91,16 +91,19 @@ struct AudioBlock {
 		}
 	}
 	void realloc(uint32_t _samples) {
-		if (samples < _samples) {
-			for (uint32_t i = 0; i < channels; i++) {
-				float* newBuf = (float*)calloc(_samples,sizeof(float));
-				if (!newBuf) {
-					handleFailedAllocation(0x1000, _samples*sizeof(float));
-				} else if (buf[i]) {
-					memcpy(newBuf, buf[i], samples * sizeof(float));
-					free(buf[i]);
+		if (samples != _samples) {
+			if (!externallyAlloced) {
+				for (uint32_t i = 0; i < channels; i++) {
+					float* newBuf = (float*)calloc(_samples,sizeof(float));
+					if (!newBuf) {
+						handleFailedAllocation(0x1000, _samples*sizeof(float));
+					} else if (buf[i]) {
+						memset(newBuf, 0, sizeof(float)*_samples);
+						memcpy(newBuf, buf[i], math::min(_samples, samples) * sizeof(float));
+						free(buf[i]);
+					}
+					buf[i] = newBuf;
 				}
-				buf[i] = newBuf;
 			}
 			samples = _samples;
 		}
