@@ -1,4 +1,7 @@
 #pragma once
+#include <stdint.h>
+#include <vector>
+#include <algorithm>
 
 template <typename T>
 class SafeRefHandler {
