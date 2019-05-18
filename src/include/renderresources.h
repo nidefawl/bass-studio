@@ -26,6 +26,7 @@
 #define ICON_ARR_UP 22
 #define NUM_IMGS 23
 
+struct NVGcontext;
 namespace RenderResources {
 	struct NvgImageTexture {
 		std::unordered_map<NVGcontext*,int32_t> perContextId;
