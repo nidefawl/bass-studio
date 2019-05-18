@@ -57,6 +57,8 @@ extern constant_t COL_AUTOMATED;
 extern constant_t COL_PLUG_TITLE;
 extern constant_t COL_PLUG_TITLE_SELECTED;
 extern constant_t COL_PLUG_TITLE_FOCUSED;
+extern constant_t COL_ON;
+extern constant_t COL_OFF;
 }
 
 
