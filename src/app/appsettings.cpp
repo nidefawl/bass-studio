@@ -40,8 +40,7 @@ appsettings::appsettings(const appsettings& other)
 appsettings& appsettings::operator=(const appsettings& other) {
 	*this->size = *other.size;
 	this->dens = other.dens;
-	this->device_api = other.device_api;
-	this->device_selected = other.device_selected;
+	this->iosettings = other.iosettings;
 	this->startEngine = other.startEngine;
 	this->vmmode = other.vmmode;
 	this->pluginPath = other.pluginPath;

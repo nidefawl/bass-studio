@@ -363,6 +363,23 @@ vsthost::vsthost(uint32_t _sampleRate, uint16_t _blockSize)
 	updateTime(0, 0, playback_state::status_stop);
 	setBlockSize(_blockSize);
 }
+void vsthost::setSamplerateBlockSize(int32_t sampleRate, int32_t blockSize) {
+	if (sampleRate != this->lSampleRate || blockSize != this->lBlockSize) {
+		this->lBlockSize = blockSize;
+		this->lSampleRate = sampleRate;
+		setBlockSize(this->lBlockSize);
+		for (vstplugin* plugin : this->pluginInstancesVST2) {
+			plugin->sleep();
+			plugin->setBlockSize(this->lBlockSize);
+			plugin->setSampleRate(this->lSampleRate);
+			plugin->resume();
+		}
+		for (auto* stage: this->allAudioStages) {
+			stage->pluginsChanged();
+		}
+	}
+
+}
 void vsthost::setBlockSize(uint16_t _blockSize) {
 	if (blockZero)
 		delete blockZero;
@@ -747,6 +764,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 	return nBlocksProcessed;
 }
 void vsthost::onStreamEnd() {
+	my_printf("onStreamEnd.\n", 0);
 	stream = NULL;
 	AudioBuffer* block;
 	while (audioQueue.try_dequeue(block)) {
@@ -838,9 +856,8 @@ void vsthost::processAudio(audio_stage_t* stage, AudioBlock* input, AudioBlock* 
 //	float gain = dsp_util::clampReadGain(gainRaw);
 //	mulGain(output, gain);
 	if (state == playback_state::status_play) {
-		stage->audioOutput.store(&stage->output, samplePos);
+		stage->audioOutput.store(&stage->output, samplePos-stage->getLatency());
 	}
-
 }
 void vsthost::updatePluginWindows() {
 	for (auto* plugin : pluginInstancesVST2) {
@@ -869,9 +886,29 @@ bool vsthost::postInit() {
 		startAudio();
 	return true;
 }
+bool vsthost::initPa() {
+	if (!paIsInitalized) {
+		PaError err;
+		err = Pa_Initialize();
+		if (err != paNoError) {
+			Pa_Terminate();
+			error("Pa_Initialize", err);
+		} else {
+			paIsInitalized = true;
+		}
+	}
+	return paIsInitalized;
+}
+void vsthost::deinitPa() {
+	if (paIsInitalized) {
+		Pa_Terminate();
+		paIsInitalized = false;
+	}
+}
 bool vsthost::stopAudio() {
 	PaStream* stream = this->stream;
 	if (stream) {
+		my_printf("stopAudio.\n", 0);
 		PaError err;
 		err = Pa_StopStream(stream);
 		if (err != paNoError) {
@@ -890,7 +927,7 @@ bool vsthost::stopAudio() {
 }
 void vsthost::unload() {
 	dbgassert(this->stream==NULL&&"STOP STREAM BEFORE unload()!");
-	Pa_Terminate();
+	deinitPa();
 	unloadAllPlugins();
 }
 void vsthost::destroy() {
@@ -923,17 +960,16 @@ bool vsthost::assignMasterCallback(vsthost* host)
 	dbgassert(0&&"Out of host slots");
 	return false;
 }
+
 bool vsthost::startAudio() {
 	my_printf("startAudio\n", 0);
-	PaError err;
-	err = Pa_Initialize();
-	if (err != paNoError) {
-		Pa_Terminate();
-		return error("Pa_Initialize", err);
-	}
+	if (!initPa())
+		return false;
 	int apiCount = Pa_GetHostApiCount();
-	const char* selApiNameCStr = StringAsCStr(settings.device_api);
-	const char* selDevNameCStr = StringAsCStr(settings.device_selected);
+	const char* selApiNameCStr = StringAsCStr(settings.iosettings.device_api);
+	if (settings.iosettings.getConfig(settings.iosettings.device_api).outputs.size() < 1)
+		return error("settings.iosettings.outputs.size() < 1", 0);
+	const char* selDevNameCStr = StringAsCStr(settings.iosettings.getConfig(settings.iosettings.device_api).outputs[0].deviceName);
 	int32_t deviceApiIdxSelected = paNoDevice;
 	int32_t deviceIdxSelected = paNoDevice;
 	for (int i = 0; i < apiCount; i++) {
@@ -974,7 +1010,7 @@ bool vsthost::startAudio() {
 	PaStreamParameters outputParameters;
 	outputParameters.device = deviceIdxSelected;
 	if (outputParameters.device == paNoDevice) {
-		return error("outputParameters.device == paNoDevice", err);
+		return error("outputParameters.device == paNoDevice", 0);
 	}
 	outputParameters.channelCount = OUTPUT_CHANNELS;       /* stereo output */
 	outputParameters.sampleFormat = paFloat32 | paNonInterleaved; /* 32 bit floating point output */
@@ -986,7 +1022,8 @@ bool vsthost::startAudio() {
 	my_printf("channelCount %d\n", outputParameters.channelCount);
 	my_printf("lBlockSize %d\n", this->lBlockSize);
 	PaStream* paStream = NULL;
-	err = Pa_OpenStream(
+
+	PaError err = Pa_OpenStream(
 		&paStream,
 		NULL, /* no input */
 		&outputParameters,

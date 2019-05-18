@@ -5,6 +5,7 @@
 #include <cereal/archives/json.hpp>
 #include <cereal/types/vector.hpp>
 #include <cereal/types/polymorphic.hpp>
+#include <cereal/types/map.hpp>
 #include <cereal/cereal_optional_nvp.hpp>
 
 #include "config.h"
@@ -37,10 +38,28 @@ void serialize(Archive & ar, windowsize& settings) {
 #endif
 
 template<class Archive>
+void serialize(Archive & ar, app_io& cfg) {
+	ar(cereal::make_nvp("deviceName", cfg.deviceName),
+		cereal::make_nvp("idx", cfg.idx));
+}
+template<class Archive>
+void serialize(Archive & ar, app_ioconfig& cfg) {
+	ar(cereal::make_nvp("deviceAPI", cfg.device_api),
+		cereal::make_nvp("inputs", cfg.outputs),
+		cereal::make_nvp("inputs", cfg.inputs));
+}
+template<class Archive>
+void serialize(Archive & ar, app_iosettings& settings) {
+	using cereal::make_nvp;
+	ar(make_nvp("samplerate", settings.samplerate),
+		make_nvp("blocksize", settings.blocksize),
+		make_nvp("device_api", settings.device_api),
+		make_nvp("configs", settings.configs));
+}
+template<class Archive>
 void serialize(Archive & ar, appsettings& settings) {
 	ar(cereal::make_nvp("grid", settings.dens),
-		cereal::make_nvp("device_api", settings.device_api),
-		cereal::make_nvp("device_selected", settings.device_selected));
+		cereal::make_nvp("iosettings", settings.iosettings));
 	make_optional_nvp(ar, "startEngine", settings.startEngine);
 #ifdef _WIN32
 	make_optional_nvp(ar, "window", *(settings.size));

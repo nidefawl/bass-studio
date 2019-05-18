@@ -70,6 +70,7 @@ private:
 	class ModuleManager;
 	ModuleManager* moduleMgr;
 	SafeRefStorage<effectbase> safeRefs;
+	bool paIsInitalized = false;
 public:
 	project_globals_t project;
 	samplerate_t lSampleRate;
@@ -103,6 +104,8 @@ private:
 	bool unloadAllPlugins();
 	void updateTime(int32_t samplePos, tick_t pos, playback_state state);
 public:
+	bool initPa();
+	void deinitPa();
 	int32_t getNextSampleId(int32_t id);
 	void sendNotesOff(effectbase* plugin);
 	moodycamel::ReaderWriterQueue<AudioBuffer*> audioQueue;
@@ -110,6 +113,7 @@ public:
 	vsthost(uint32_t _sampleRate = 44100, uint16_t _blockSize = 512);
 	vsthost(vsthost const&) = delete;
 	~vsthost();
+	void setSamplerateBlockSize(int32_t sampleRate, int32_t blockSize);
 	void operator=(vsthost const&) = delete;
 	static vsthost* getInstance();
 	static bool assignMasterCallback(vsthost* host);
