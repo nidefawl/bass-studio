@@ -469,10 +469,13 @@ void AppCtrl::openAppMenu(int lvl, guictxtmenu_base *b, ivec2 pos) {
 	entry.ctxt = b;
 	ivec2 windowPos;
 	this->mainWindow->getPos(&windowPos);
-	entry.wnd->getCtrl()->open(b, windowPos+pos);
+	static_cast<PopupCtrl*>(entry.wnd->getCtrl())->open(b, windowPos+pos);
 }
 
 void AppCtrl::openOverlayGui(guictxtmenu_base *b, ivec2 pos, int flags) {
+	if (this->ctxtmenu) {
+		closeContextMenu();
+	}
 	dbgassert(!this->ctxtmenu);
 	this->ctxtmenu = b;
 	ivec2 windowPos;
@@ -492,7 +495,7 @@ void AppCtrl::openOverlayGui(guictxtmenu_base *b, ivec2 pos, int flags) {
 		auto* ctxtWindowTheme = contextWindow->getCtrl()->getTheme();
 		//copy theme from this control to contextWindows control
 		*ctxtWindowTheme = *getTheme();
-		contextWindow->getCtrl()->open(b, wndPos);
+		static_cast<PopupCtrl*>(contextWindow->getCtrl())->open(b, wndPos); //ugly cast
 	}
 
 }
@@ -508,8 +511,8 @@ void AppCtrl::closeContextMenu() {
 		contextWindow->getCtrl()->closePopup();
 	}
 }
-void AppCtrl::onChildOverlayWindowClose(window_overlay* ptr) {
-	if (ptr == this->contextWindow) {
+void AppCtrl::onChildOverlayWindowClose(window_main* ptr) {
+	if (ptr == this->contextWindow && this->ctxtmenu) {
 		dbgassert(this->ctxtmenu);
 		this->ctxtmenu->onParentWindowClose();
 		this->ctxtmenu->setControl(nullptr);
@@ -538,7 +541,7 @@ bool AppCtrl::hasContextMenu() {
 	return this->contextWindow && this->contextWindow->isShown();
 }
 void AppCtrl::onCharInput(unsigned int codepoint) {
-	window_overlay* wnd = this->contextWindow;
+	window_main* wnd = this->contextWindow;
 	if (wnd && wnd->isShown()) {
 		if (wnd->getCtrl()->hasInputFocus()) {
 			wnd->getCtrl()->onCharInput(codepoint);
@@ -550,7 +553,7 @@ void AppCtrl::onCharInput(unsigned int codepoint) {
 }
 void AppCtrl::onKeyInput(int key, int scancode, int keyState, int mods, const char* key_name)
 {
-	window_overlay* wnd = this->contextWindow;
+	window_main* wnd = this->contextWindow;
 	if (wnd && wnd->isShown()) {
 		if (wnd->getCtrl()->hasInputFocus()) {
 			wnd->getCtrl()->onKeyInput(key, scancode, keyState, mods, key_name);

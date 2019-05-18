@@ -285,7 +285,7 @@ void guibase::handleMouseDownBegin(MouseEvent& evt) {
 	} else if (evt.button == 1) {
 		handleRightClick(evt);
 	} else if (evt.button > 1) {
-#ifdef BUILD_BUILTIN_EFFECT
+#if BUILD_VSTHOST
 		{
 
 			setDebugPropertyHandle(this);

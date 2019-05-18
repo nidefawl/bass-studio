@@ -63,6 +63,10 @@ effectbase::effectbase() : pluginType(0), projectGlobalId(0), sName("") {
 void effectbase::onTick(double since) {
 	meter.onTick(since);
 }
+void effectbase::setBlockSize(int bs) {
+}
+void effectbase::setSampleRate(int32_t sampleRate) {
+}
 
 void effectbase::postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) {
 	meter.update(out, 1.0f);

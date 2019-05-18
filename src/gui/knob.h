@@ -23,7 +23,7 @@ protected:
 	bool changedValue = false;
 	float initialValue = 0.0f;
 	float lastVal = 0.0f;
-#ifdef BUILD_BUILTIN_EFFECT
+#if BUILD_VSTHOST
 	automatable_t* paramAutomatable = nullptr;
 	int32_t paramIdx = -1;
 #endif
@@ -39,7 +39,7 @@ public:
 		setBackgroundRendered(_renderBackground);
 		setCanMouseHit(true);
 	}
-#ifdef BUILD_BUILTIN_EFFECT
+#if BUILD_VSTHOST
 	void setAutomationRef(automatable_t* _paramAutomatable, int32_t _paramIdx) {
 		this->paramAutomatable = _paramAutomatable;
 		this->paramIdx = _paramIdx;

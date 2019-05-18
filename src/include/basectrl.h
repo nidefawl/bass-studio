@@ -63,6 +63,7 @@ public:
 	};
 	int32_t refIdNext = 1;
 	std::vector<stored_ref> refs;
+	bool canTakeInputFocus = false;//TODO: use flags
 	int safeRefCreate(guibase* gui) override {
 		stored_ref ref{gui, (int32_t)refIdNext++};
 		refs.push_back(ref);
@@ -113,6 +114,9 @@ public:
 	virtual bool mouseDownPre() {
 		return true;
 	}
+	bool hasInputFocus() {
+		return guiFocused && canTakeInputFocus;
+	}
 	MouseHitEvt mouseHitEvt(MouseHitType _type);
 	void focusGui(guibase* g);
 	void mouseDown(ivec2 mousePos, int button, bool doubleclick);
@@ -157,8 +161,8 @@ public:
 class AppCtrl : public BaseCtrl {
 protected:
 	struct appmenu_window_entry {
-		window_overlay* wnd;
-		guictxtmenu_base *ctxt;
+		window_main* wnd{nullptr};
+		guictxtmenu_base *ctxt{nullptr};
 	};
 	std::vector<appmenu_window_entry> menuWindows;
 	std::vector<guibase*> garbageGuis;
@@ -174,14 +178,14 @@ public:
 		return false;
 	}
 	window_main* mainWindow = NULL;
-	window_overlay* contextWindow = NULL;
+	window_main* contextWindow = NULL;
 #if WINDOW_HAS_MENUBAR
 	ngui::MenuBar menubar;
 #endif
 	AppCtrl();
 	virtual ~AppCtrl();
 	virtual void relayout(int32_t w, int32_t h) override = 0;
-	void onChildOverlayWindowClose(window_overlay*);
+	void onChildOverlayWindowClose(window_main*);
 	void openContextMenu(guictxtmenu_base *b, ivec2 pos) override;
 	void openDialog(guictxtmenu_base *b);
 	void closeContextMenu() override;
@@ -219,10 +223,9 @@ protected:
 	void openOverlayGui(guictxtmenu_base *b, ivec2 pos, int flags);
 };
 class guictr_scrollbar;
-class PopupCtrl : public BaseCtrl
+class PopupCtrl : public AppCtrl
 {
 	guictr_scrollbar* popupCtrs = nullptr;
-	bool canTakeInputFocus = false;
 public:
 	PopupCtrl();
 	~PopupCtrl();
@@ -233,10 +236,14 @@ public:
 	void closePopup() override;
 	void relayout(int32_t w, int32_t h) override;
 	void open(guictxtmenu_base *ctxtmenu, ivec2 pos);
-	bool init(window_overlay* window, NVGcontext* nanovg);
+	bool init(window_main* window, NVGcontext* nanovg);
+	virtual void initApp(int argc, char* argv[]) {};
+	bool initPopup(window_overlay* window, NVGcontext* nanovg);
 	void focusReceived() { };
 	void focusLost();
-	bool hasInputFocus();
 	void onWindowClose();
 	bool onWindowCloseRequest();
+	 void onTick() {};
+	 void postInit() {}; /* OpenGL context exists in postInit */
+	bool mouseDownPre();
 };

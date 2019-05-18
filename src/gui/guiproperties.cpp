@@ -355,7 +355,6 @@ public:
 	}
 };
 
-
 template<typename T>
 void addPropertiesFromGui(T& gui, Table::tbl* table);
 template<>

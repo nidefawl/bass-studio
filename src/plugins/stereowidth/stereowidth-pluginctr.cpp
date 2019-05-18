@@ -25,7 +25,7 @@
 #include "plugins/plugin-base.h"
 #include "host/plugin/base_plugin.h"
 #include "host/plugin/vst_plugin.h"
-#ifdef BUILD_BUILTIN_EFFECT
+#if BUILD_VSTHOST
 #include "host/mainctrl.h"
 #endif
 
@@ -115,7 +115,7 @@ void guicontainer_stereowidth::onGuiClose(AudioEffect* eff) {
 }
 void guicontainer_stereowidth::setVSTPlugin(vstplugin* vstHostSide)  {
 	this->vstHostSide = vstHostSide;
-#ifdef BUILD_BUILTIN_EFFECT
+#if BUILD_VSTHOST
 	knobwidth.setEffectInstance(vstHostSide);
 	knobgain.setEffectInstance(vstHostSide);
 #endif

@@ -214,6 +214,7 @@ bool vst_window::init(vstplugin* plugin, const String& name, ivec2 size, bool re
             0, 0, size.x, size.y, nullptr, nullptr, instance, nullptr);
 	if (parent) {
 
+//		SetParent(hwnd, parent);
 		RECT rcOwner;
 		RECT rcDlg;
 		RECT rc;
@@ -243,7 +244,7 @@ bool vst_window::init(vstplugin* plugin, const String& name, ivec2 size, bool re
 void vst_window::close()
 {
 	plugin->onClose();
-	ShowWindow(hwnd, false);
+	ShowWindow(hwnd, SW_HIDE);
 }
 
 //------------------------------------------------------------------------

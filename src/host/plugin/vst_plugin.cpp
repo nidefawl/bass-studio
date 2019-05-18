@@ -342,6 +342,12 @@ guiplugin* vstplugin::getGui() {
 int32_t vstplugin::getDelay() {
 	return handle->aeffect->initialDelay;
 }
+void vstplugin::setBlockSize(int32_t blockSize) {
+	this->dispatch(effSetBlockSize, 0, blockSize, 0, 0);
+}
+void vstplugin::setSampleRate(int32_t sampleRate) {
+	this->dispatch(effSetSampleRate, 0, 0, NULL, (float) sampleRate);
+}
 vst_param_category* vstplugin::getCategory(int idx) {
 	if (idx >= 0 && idx < (int)paramsCategories.size()) {
 		return &paramsCategories[idx];

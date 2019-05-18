@@ -1,6 +1,8 @@
 #pragma once
 #include <vector>
 #include "str_util.h"
+#include "assert_dbg.h"
+
 class MainCtrl;
 class action_base {
 public:

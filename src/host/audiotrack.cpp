@@ -125,8 +125,8 @@ void copyBlockChannelsToSample(audiosample_t *dstSample, AudioBlock* input, uint
 	}
 }
 void audiotrack_t::store(AudioBlock* input, int32_t samplePos) {
-	int32_t startBlock = (samplePos) / PER_BLOCK_SAMPLES;
-	int32_t endBlock = (samplePos + input->samples - 1) / PER_BLOCK_SAMPLES;
+	int32_t startBlock = math::max(0, (samplePos) / PER_BLOCK_SAMPLES);
+	int32_t endBlock = math::max(0, (samplePos + (int32_t)input->samples - 1) / PER_BLOCK_SAMPLES);
 	while (data.size() <= endBlock) {
 		data.push_back(nullptr);
 	}
@@ -139,13 +139,23 @@ void audiotrack_t::store(AudioBlock* input, int32_t samplePos) {
 //		log_printf("alloc new block #%d\n", endBlock);
 		data[endBlock] = std::make_shared<audiotrack_block_t>(OUTPUT_CHANNELS, PER_BLOCK_SAMPLES);
 	}
+	int32_t readLen = input->samples;
+	int32_t readOffset = 0;
+	if (samplePos < 0) {
+		if (samplePos < -PER_BLOCK_SAMPLES) {
+			return;
+		}
+		readLen = samplePos+input->samples;
+		readOffset = -samplePos;
+		samplePos = 0;
+	}
 	int32_t startOffsetBlock0 = samplePos - (startBlock * PER_BLOCK_SAMPLES);
-	int32_t lenBlock0 = math::min(PER_BLOCK_SAMPLES - startOffsetBlock0, (int32_t) (input->samples));
-	int32_t lenOver = input->samples - lenBlock0;
+	int32_t lenBlock0 = math::min(PER_BLOCK_SAMPLES - startOffsetBlock0, readLen);
+	int32_t lenOver = readLen - lenBlock0;
 	auto* blockStart = data[startBlock].get();
 //			log_printf("write %d samples to block #%d{%d:%d}\n", lenBlock0, startBlock, startOffsetBlock0, startOffsetBlock0+lenBlock0);
 	blockStart->version++;
-	blockStart->data.copyFromPosToPos(input->buf, 0, startOffsetBlock0, lenBlock0, input->channels);
+	blockStart->data.copyFromPosToPos(input->buf, readOffset, startOffsetBlock0, lenBlock0, input->channels);
 	if (samples.size() > startBlock && samples[startBlock]) {
 		samples[startBlock]->version++;
 		copyBlockChannelsToSample(samples[startBlock]->getSample(), input, 0, startOffsetBlock0, lenBlock0);

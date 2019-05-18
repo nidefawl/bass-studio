@@ -117,7 +117,7 @@ void PluginVST2_Latency::setParameter (VstInt32 index, float value)
 		setNewLatency(ap->latency);
 		break;
 	}
-#ifdef BUILD_BUILTIN_EFFECT
+#if BUILD_VSTHOST
 	for (PluginViewContainers* pviewctr : this->views) {
 		pviewctr->onSetParameter(index, value);
 	}
@@ -272,7 +272,7 @@ public:
 	}
 	void setVSTPlugin(vstplugin* vstHostSide)  {
 		this->vstHostSide = vstHostSide;
-	#ifdef BUILD_BUILTIN_EFFECT
+	#if BUILD_VSTHOST
 		knoblatency.setEffectInstance(vstHostSide);
 	#endif
 	}

@@ -52,7 +52,7 @@ guictxtmenu_base* guiknob::getTooltip(AppCtrl* appctrl) {
 }
 
 bool guiknob::isAutomated() {
-#ifdef BUILD_BUILTIN_EFFECT
+#if BUILD_VSTHOST
 	if (paramAutomatable) {
 		auto at = paramAutomatable->getRegisteredAutomation(paramIdx);
 		return at && at->isAutomated();
@@ -190,8 +190,8 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS) {
 
 
 }
-#ifndef BUILD_NO_VST
-#ifdef BUILD_BUILTIN_EFFECT
+
+#if BUILD_VSTHOST
 void guiknob::setAutomationHandlers() {
 	fnGetValue = [this] () {
 		if (paramAutomatable) {
@@ -220,8 +220,6 @@ void guiknob::setAutomationHandlers() {
 		}
 	};
 }
-
-#endif
 #endif
 
 
@@ -307,7 +305,7 @@ void guiknob_labeled_base::render(NVGcontext* vg) {
 }
 
 void guiknob::handleRightClick(MouseEvent& evt) {
-#ifdef BUILD_BUILTIN_EFFECT
+#if BUILD_VSTHOST
 	if (paramAutomatable && paramIdx > -1) {
 		MainCtrl* ctrl = dynamic_cast<MainCtrl*>(getControl());
 		dbgassert(ctrl);

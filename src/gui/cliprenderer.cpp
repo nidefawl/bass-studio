@@ -65,6 +65,7 @@ audioclip_texture_t makeWaveformFromClip(project_t& project, scaled_grid& grid,
 	ivec2 startOffset = posClipped - pos;
 	audioclip_texture_t w;
 	w.quality=4;
+
 	double pxPerSample = 1.0/samplesPerPx;
 //	if (samplesPerPx >= 256 && size.y * (w.scale*2) <= FBO_HEIGHT) {
 //		w.quality *= 2;

@@ -122,19 +122,6 @@ namespace MouseCursors {
 void initCursors(); // mousecursor.cpp
 }
 
-
-static void glfw_cb_mousepos(GLFWwindow *w, double x, double y);
-static void glfw_cb_mousebutton(GLFWwindow *w, int button, int action, int mods);
-static void glfw_cb_mousescroll(GLFWwindow *w, double xoffset, double yoffset);
-static void glfw_cb_cursorenter(GLFWwindow *w, int entered);
-static void glfw_cb_keyinput(GLFWwindow *w, int key, int scancode, int action, int mods);
-static void glfw_cb_charinput(GLFWwindow *w, unsigned int codepoint);
-static void glfw_cb_refresh(GLFWwindow *w);
-static void glfw_cb_windowclose(GLFWwindow *w);
-static void glfw_cb_windowfocus(GLFWwindow *w, int focused);
-static void glfw_cb_windowwize(GLFWwindow *w, int width, int height);
-static void glfw_cb_framebuffersize(GLFWwindow *w, int width, int height);
-
 static void glfw_startup_error_callback(int error, const char* description) {
 	my_printf("glfw-error %d: %s\n", error, description);
 }
@@ -164,11 +151,6 @@ void invalidateWindowContents(GLFWwindow* glfw) {
 #endif
 }
 
-#ifdef DAWFRAMEWORK_PLUGIN
-#define HAS_APP_SETTINGS 0
-#else
-#define HAS_APP_SETTINGS 1
-#endif
 
 #if HAS_APP_SETTINGS
 appsettings settings;
@@ -400,6 +382,7 @@ public:
 	/* not from glfw */
 	virtual void onWindowClose() = 0;
 	virtual void onWindowCloseRequest() = 0;
+	virtual void destroy() = 0;
 
 
 	virtual void onTick() = 0;
@@ -426,49 +409,7 @@ public:
 		return glfwGetInputMode(glfw, GLFW_CURSOR) != GLFW_CURSOR_NORMAL;
 	}
 
-	void createBaseWindow(const char* title, int w, int h, GLFWwindow* share = nullptr, void* parentWindowHandle = nullptr) {
-		strncpy(this->name, title, 32);
-		if (glfw)
-			throw appexception("window not null");
-		if (parentWindowHandle) {
-			glfw = glfwCreateChildWindow(parentWindowHandle, w, h, title, share);
-		} else {
-			glfw = glfwCreateWindow(w, h, title, NULL, share);
-		}
-		if (!glfw)
-			throw appexception("Couldn't create window");
-		glfwSetWindowUserPointer(glfw, this);
-		glfwSetWindowCloseCallback(glfw, glfw_cb_windowclose);
-		glfwSetWindowSizeCallback(glfw, glfw_cb_windowwize);
-		glfwSetWindowRefreshCallback(glfw, glfw_cb_refresh);
-		glfwSetWindowFocusCallback(glfw, glfw_cb_windowfocus);
-		glfwSetFramebufferSizeCallback(glfw, glfw_cb_framebuffersize);
-		glfwSetCursorPosCallback(glfw, glfw_cb_mousepos);
-		glfwSetMouseButtonCallback(glfw, glfw_cb_mousebutton);
-		glfwSetScrollCallback(glfw, glfw_cb_mousescroll);
-		glfwSetKeyCallback(glfw, glfw_cb_keyinput);
-		glfwSetCharCallback(glfw, glfw_cb_charinput);
-		glfwSetCursorEnterCallback(glfw, glfw_cb_cursorenter);
-		double mposx, mposy;
-		glfwGetCursorPos(glfw, &mposx, &mposy);
-		mousepos = ivec2((int)mposx, (int)mposy);
-#ifdef _WIN32
-		hwnd = glfwGetWin32Window(glfw);
-		if (!hwnd)
-			throw appexception("Couldn't get win32 window handle");
-#endif
-		glfwMakeContextCurrent(glfw);
-#ifdef _WIN32
-		defWndProc = (WNDPROC)GetWindowLongPtr(hwnd, GWLP_WNDPROC);
-		SetWindowLongPtr(hwnd, GWLP_WNDPROC, (LONG_PTR)appWndProc);
-#endif
-		initOGL();
-		initContext();
-#ifdef _WIN32
-		this->timer = SetTimer(hwnd, 0, 1, (TIMERPROC)timerProc);
-#endif
-		last = getTimeMillis();
-	}
+	void createBaseWindow(const char* title, int w, int h, GLFWwindow* share = nullptr, void* parentWindowHandle = nullptr);
 	void showWindow() {
 		glfwShowWindow(glfw);
 	}
@@ -592,9 +533,9 @@ class appwindow_main : public appwindow, public window_main  {
 	uint64_t dblclicktimer;
 //	WorkerThread workerThread;
 public:
-	std::vector<std::unique_ptr<appwindow_overlay>> overlayWindows;
-	appwindow_main(AppCtrl* _ctrl)
-		: appwindow(nullptr),
+	std::vector<std::shared_ptr<appwindow>> overlayWindows;
+	appwindow_main(appwindow* _parent, AppCtrl* _ctrl)
+		: appwindow(_parent),
 		  window_main(),
 		  ctrl(_ctrl) {
 		dblclicktimer = 0;
@@ -602,6 +543,10 @@ public:
 //	WorkerThread* getWorkerThread() {
 //		return &workerThread;
 //	}
+
+	AppCtrl* getCtrl() {
+		return ctrl;
+	}
 	void postRender() override {
 		glfwMakeContextCurrent(glfw);
 		int winwidth, winheight;
@@ -619,8 +564,20 @@ public:
 	void preRender() override {
 		glfwSwapBuffers(glfw);
 	}
-	void createMainWindow(const char* title, int w, int h, void* parentWindowHandle);
-	void updateMenu();
+#define WINDOW_BORDERLESS_POPUP 1
+	void createMainWindow(const char* title, int w, int h, void* parentWindowHandle, int flags = 0);
+
+	void updateMenu() {
+	#if WINDOW_HAS_MENUBAR
+		ngui::MenuBar& menubar = ctrl->getMenubar();
+	#ifdef _WIN32
+		syncMenu(hwnd, menubar);
+	#endif
+	#if __linux__
+			//TODO: implement linux
+	#endif
+	#endif
+	}
 	void flagNeedsRedraw() override {
 		appwindow::flagNeedsRedraw();
 		if (cursorIcon != ctrl->cursorIcon) {
@@ -628,7 +585,7 @@ public:
 			cursorIcon = ctrl->cursorIcon;
 		}
 	}
-	window_overlay* createOverlay();
+	window_main* createOverlay();
 	void destroyOverlayWindows();
 	void destroy();
 	void onTick() {
@@ -691,8 +648,10 @@ public:
 		flagNeedsRedraw();
 	}
 	void onWindowSizeChanged(int width, int height) {
-		ctrl->relayout(width, height);
-		flagNeedsRedraw();
+		if (ctrl->isOK) {
+			ctrl->relayout(width, height);
+			flagNeedsRedraw();
+		}
 	}
 	void onWindowFocusChanged(int focused) {
 		if (focused) {
@@ -712,6 +671,8 @@ public:
 	}
 	void onWindowClose() override {
 		ctrl->onWindowClose();
+		if (parent)
+			parent->onChildOverlayClose(this);
 	}
 	bool filesDropBegin(std::vector<String>& files, ivec2 pos, int kbmods) {
 		flagNeedsRedraw();
@@ -836,163 +797,6 @@ public:
 	void fireMouseMoved() override {
 		onMouseMoved(ivec2(0));
 	}
-};
-
-class appwindow_overlay : public appwindow, public window_overlay {
-	uint64_t dblclicktimer;
-public:
-	std::unique_ptr<PopupCtrl> popupCtrl;
-	appwindow_overlay(appwindow* _parent)
-		: appwindow(_parent),
-		  window_overlay(),
-		  popupCtrl(std::make_unique<PopupCtrl>())
-	{
-		dblclicktimer = 0;
-	}
-	~appwindow_overlay() {
-
-	}
-	void destroy() {
-		popupCtrl->destroy();
-		glfwMakeContextCurrent(glfw);
-		destroyGL();
-		killTimer();
-	}
-	void createOverlayWindow(const char* title, int w, int h, void* parentHandle);
-	void render()
-	{
-		glfwMakeContextCurrent(glfw);
-		int winwidth, winheight;
-		int fbwidth, fbheight;
-		glfwGetWindowSize(glfw, &winwidth, &winheight);
-		glfwGetFramebufferSize(glfw, &fbwidth, &fbheight);
-		float pxratio = fbwidth / (float)winwidth;
-		glViewport(0, 0, fbwidth, fbheight);
-		static const vec4 clearc = int32vec4(0xff126612);
-		glClearColor(clearc[0], clearc[1], clearc[2], clearc[3]);
-
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		if (!popupCtrl->isOk()) {
-			throw std::logic_error("invalid application state");
-		}
-		ivec2 size = popupCtrl->m_size;
-		if (size.x < fbwidth || size.y < fbheight) {
-			int x = (fbwidth-size.x)/2;
-			int y = (fbheight-size.y)/2;
-			dbgassert(x > 0 && y > 0);
-			glViewport(x, y, size.x, size.y);
-		}
-
-		popupCtrl->render(0, 0, size.x, size.y, pxratio);
-		glfwSwapBuffers(glfw);
-	}
-
-	PopupCtrl* getCtrl() {
-		return popupCtrl.get();
-	}
-
-	void onTick() {
-	//	uint64_t tm = getTimeMillis();
-	//	float f = (float)(tm / 1000.0);
-	//	this->rgb[1] = 0.2f + sin(f*2.0f)*0.1f;
-		//
-#ifdef _WIN32
-		UpdateWindow(this->hwnd);
-#endif
-		//TODO: implement linux
-	}
-
-	void show() {
-		appwindow::showWindow();
-	}
-
-	void hide() {
-		appwindow::hideWindow();
-	}
-
-	bool isShown() {
-		return appwindow::isWindowNotHidden();
-	}
-
-	void onWindowCloseRequest() override {
-		bool b = popupCtrl->onWindowCloseRequest();
-		glfwSetWindowShouldClose(glfw, b ? 1 : 0);
-		if (b) {
-			onWindowClose();
-		}
-	}
-	void onWindowClose() override {
-		popupCtrl->onWindowClose();
-		parent->onChildOverlayClose(this);
-	}
-
-	void onMouseMoved(ivec2 deltapos) {
-		if (math::abs(deltapos.x)+math::abs(deltapos.y) > 2)
-			this->dblclicktimer = 0;
-		popupCtrl->mouseMoved(getMousePos(), deltapos);
-		flagNeedsRedraw();
-	}
-	void onMouseButton(int button, int action, int mods) {
-		if (action == GLFW_PRESS) {
-			uint64_t timeMillis = getTimeMillis();
-			bool dblClick = this->dblclicktimer != 0 && timeMillis - this->dblclicktimer < 500;
-			dblClick &= glm::distance(lastclickpos, mousepos) < 4;
-			this->dblclicktimer = dblClick ? 0 : timeMillis;
-			popupCtrl->mouseDown(getMousePos(), button, dblClick);
-		} else if (action == GLFW_RELEASE) {
-			popupCtrl->mouseUp(getMousePos(), button);
-		}
-		lastclickpos = mousepos;
-		flagNeedsRedraw();
-	}
-	void onWindowFocusChanged(int focused) {
-		if (focused) {
-			popupCtrl->focusReceived();
-		} else {
-			popupCtrl->focusLost();
-		}
-		flagNeedsRedraw();
-	}
-	virtual void onMouseScrolled(double xoffset, double yoffset) {
-		popupCtrl->mouseScrolled(xoffset, yoffset);
-		flagNeedsRedraw();
-	}
-	void onWindowSizeChanged(int width, int height) {
-		flagNeedsRedraw();
-	}
-
-
-	void onCharInput(unsigned int codepoint) {
-//		my_printf("overlay onCharInput 0x%04X\n", codepoint);
-		popupCtrl->onCharInput(codepoint);
-		flagNeedsRedraw();
-	}
-	void onKeyInput(int key, int scancode, int action, int mods, const char* key_name)
-	{
-		/*if (action == GLFW_PRESS)*/
-//		my_printf("keyname %s, key %d, scancode %d\n", key_name, key, scancode);
-//		my_printf("mods %08X\n", mods);
-//		my_printf("overlay onKeyInput %d (%c) %d\n", key, key, scancode);
-		popupCtrl->onKeyInput(key, scancode, action, mods, key_name);
-		flagNeedsRedraw();
-	}
-
-	void getSize(ivec2* size) override {
-		return appwindow::getSize(size);
-	}
-	void getPos(ivec2* pos) {
-		return appwindow::getPos(pos);
-	}
-	void setPos(ivec2 pos) {
-		return appwindow::setPos(pos);
-	}
-	void setSize(ivec2 size) {
-		return appwindow::setSize(size);
-	}
-	void requestRedraw() {
-		flagNeedsRedraw();
-	}
 	void positionOnScreen(ivec2 pos, ivec2 size) {
 #ifdef _WIN32
 	    POINT p;
@@ -1016,63 +820,40 @@ public:
         appwindow::setPos(pos);
         appwindow::setSize(size);
 	}
-	void setClipboardText(String s) override {
-		glfwSetClipboardString(glfw, StringAsCStr(s));
-	}
-	String getClipboardText() override {
-		const char* text = glfwGetClipboardString(glfw);
-		String str;
-		if (text) {
-			str = text;
-		}
-		return str;
-	}
-	int getKeyMods() override {
-		return getKeyMods_();
-	}
-	void captureMouse() {
-		appwindow::captureMouse();
-	}
-	void releaseMouse() {
-		appwindow::releaseMouse();
-	}
-	void hideSystemCursor() {
-//		appwindow::hideSystemCursor();
-	}
-	bool isMouseCaptured() {
-		return appwindow::isMouseCaptured();
-	}
-	void onCursorEnter(int entered) {
-		popupCtrl->onCursorEnter(entered);
-		if (entered)
-			glfwSetCursor(glfw, MouseCursors::cursors[cursorIcon]);
-	}
-	void updateWindowFromDlg() {
-		onRefresh();
+
+	void show() {
+		appwindow::showWindow();
 	}
 
-	void fireMouseMoved() override {
-		onMouseMoved(ivec2(0));
+	void hide() {
+		appwindow::hideWindow();
 	}
 };
 
 
 void appwindow_main::onChildOverlayClose(appwindow* child) {
 	appwindow::onChildOverlayClose(child);
-	appwindow_overlay* wndOverlay = static_cast<appwindow_overlay*>(child);
-	this->ctrl->onChildOverlayWindowClose(static_cast<window_overlay*>(wndOverlay));
+	//TODO: add enum type field to appwindow
+	appwindow_main* wndOverlay = dynamic_cast<appwindow_main*>(child);
+	dbgassert(wndOverlay);
+	if (wndOverlay) {
+		this->ctrl->onChildOverlayWindowClose(wndOverlay);
+	}
 }
 
-int initDebugWindow();
 class appwindow_dialog : public appwindow, public window_dialog {
 	std::function<void(NVGcontext*,int,int,float)> drawFn;
-	bool isInit = false;
+	std::function<void()> initCallback;
 	const bool disablesParent = false;
+	bool init = false;
 public:
 	appwindow_dialog(appwindow* _parent) : appwindow(_parent) {
 	}
-	void setDrawFunction(const window_draw_fn& fn) {
+	void setDrawFunction(const window_draw_fn& fn) override {
 		this->drawFn = fn.drawCallback;
+	}
+	void setInitFunction(const window_init_fn& fn) override {
+		this->initCallback = fn.initCallback;
 	}
 	void createDialogWindow(const char* title, int w, int h, GLFWwindow* share = NULL) {
 		setAppWindowHints();
@@ -1095,13 +876,21 @@ public:
 		}
 
 	}
+	void destroy() override {
+		if (!glfw)
+			throw appexception("window null");
+		glfwMakeContextCurrent(glfw);
+		appwindow::destroyGL();
+	}
 	void render()
 	{
-		glfwMakeContextCurrent(glfw);
-		if (!isInit) {
-			isInit = true;
-			initDebugWindow();
+		if (!init) {
+			init = true;
+			if (initCallback) {
+				initCallback();
+			}
 		}
+		glfwMakeContextCurrent(glfw);
 		int winwidth, winheight;
 		int fbwidth, fbheight;
 		glfwGetWindowSize(glfw, &winwidth, &winheight);
@@ -1129,7 +918,6 @@ public:
 #if __linux__
 		//TODO: implement linux
 #endif
-		my_printf("glfwSetWindowUserPointer\n", 0);
 		glfwSetWindowUserPointer(glfw, NULL);
 		if (parent)
 		this->parent->onChildDialogClose(this);
@@ -1210,27 +998,18 @@ public:
 		onMouseMoved(ivec2(0));
 	}
 };
-void appwindow_main::updateMenu() {
-#if WINDOW_HAS_MENUBAR
-	ngui::MenuBar& menubar = ctrl->getMenubar();
-#ifdef _WIN32
-	syncMenu(hwnd, menubar);
-#endif
-#if __linux__
-		//TODO: implement linux
-#endif
-#endif
-}
-window_overlay* appwindow_main::createOverlay() {
-	std::unique_ptr<appwindow_overlay> ow = std::make_unique<appwindow_overlay>(this);
+window_main* appwindow_main::createOverlay() {
+//	std::unique_ptr<appwindow_overlay> ow = std::make_unique<appwindow_overlay>(this);
 	String sName = StringFormat("%s menu", this->name);
-	ow->createOverlayWindow(StringAsCStr(sName), 200, 200, nullptr);
-	window_overlay* ret = ow.get();
+	std::shared_ptr<appwindow_main> ow = std::make_shared<appwindow_main>(this, new PopupCtrl{}); //TODO: manage lifetime of control
+	ow->createMainWindow(StringAsCStr(sName), 200, 200, nullptr, WINDOW_BORDERLESS_POPUP);
+//	ow->createOverlayWindow(StringAsCStr(sName), 200, 200, nullptr);
+	auto* ret = ow.get();
 	this->overlayWindows.push_back(std::move(ow));
 	return ret;
 }
 void appwindow_main::destroyOverlayWindows() {
-	for (std::unique_ptr<appwindow_overlay>& ow : this->overlayWindows) {
+	for (std::shared_ptr<appwindow>& ow : this->overlayWindows) {
 		ow->destroy();
 		ow.reset();
 	}
@@ -1242,24 +1021,44 @@ void appwindow_main::destroy() {
 	glfwMakeContextCurrent(glfw);
 	appwindow::destroyGL();
 	appwindow::killTimer();
-#ifndef DAWFRAMEWORK_PLUGIN
+#if BUILD_VSTHOST
 #ifdef _WIN32
 	if (this->dropTarget)
 		UnregisterDropWindow(hwnd, this->dropTarget);
-	saveWindowPos(hwnd, settings.size.get());
+	if (!parent) {
+		saveWindowPos(hwnd, settings.size.get());
+	}
 #endif
 #if __linux__
 		//TODO: implement linux
 #endif
 #endif
 }
-void appwindow_main::createMainWindow(const char* title, int w, int h, void* parentWindowHandle) {
+void appwindow_main::createMainWindow(const char* title, int w, int h, void* parentWindowHandle, int flags) {
 	setAppWindowHints();
-	if (!parentWindowHandle)
+//	if (!parentWindowHandle)
 		glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
+	if (flags&WINDOW_BORDERLESS_POPUP) {
+		glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
+		glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
+		glfwWindowHint(GLFW_FOCUSED, GL_FALSE);
+		glfwWindowHint(GLFW_DECORATED, GL_FALSE);
+		glfwWindowHint(GLFW_UTILITY_WINDOW, GL_TRUE);
+		glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER , GL_TRUE);
+	}
 	appwindow::createBaseWindow(title, w, h, nullptr, parentWindowHandle);
-	if (!parentWindowHandle) {
+	if (!parent) {
 		glfwSetWindowSizeLimits(glfw, 640, 480, GLFW_DONT_CARE, GLFW_DONT_CARE);
+	}
+	if (flags&WINDOW_BORDERLESS_POPUP) {
+		glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER , GL_FALSE); //set global state back to default
+		glfwSetWindowAttrib(glfw, GLFW_FOCUS_ON_SHOW, 0);
+		SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, (__int3264) (LONG_PTR)parent->getHWND());
+		LONG l = GetWindowLong(hwnd, GWL_EXSTYLE);
+		l = l & ~WS_EX_APPWINDOW;
+		l = l | WS_EX_TOOLWINDOW;
+		SetWindowLong(hwnd, GWL_EXSTYLE, l);
+		SetWindowLong(hwnd, GWL_STYLE, WS_CHILD | WS_CLIPSIBLINGS);
 	}
 	RenderResources::initResources(nanovgCtxt);
 	MouseCursors::initCursors(); //TODO: call MouseCursors::destroy() on exit of last instance
@@ -1267,11 +1066,13 @@ void appwindow_main::createMainWindow(const char* title, int w, int h, void* par
 	if (!ctrl->init(this, this->nanovgCtxt)) {
 		throw appexception("Couldn't start application");
 	}
-#ifndef DAWFRAMEWORK_PLUGIN
+#if BUILD_VSTHOST
 #ifdef _WIN32
 	this->dropTarget = RegisterDropWindow(hwnd, this);
-	if (!restoreWindowPos(hwnd, settings.size.get())) {
-		this->maximize();
+	if (!parent) {
+		if (!restoreWindowPos(hwnd, settings.size.get())) {
+			this->maximize();
+		}
 	}
 #endif
 #if __linux__
@@ -1280,40 +1081,6 @@ void appwindow_main::createMainWindow(const char* title, int w, int h, void* par
 #endif
 	glfwGetWindowSize(glfw, &w, &h);
 	this->onWindowSizeChanged(w, h);
-}
-void appwindow_overlay::createOverlayWindow(const char* title, int w, int h, void* parentHandle) {
-	setAppWindowHints();
-	glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
-	glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
-	glfwWindowHint(GLFW_FOCUSED, GL_FALSE);
-	glfwWindowHint(GLFW_DECORATED, GL_FALSE);
-	glfwWindowHint(GLFW_UTILITY_WINDOW, GL_TRUE);
-	glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER , GL_TRUE);
-	appwindow::createBaseWindow(title, w, h, nullptr, parentHandle);
-	glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER , GL_FALSE);
-	glfwSetWindowAttrib(glfw, GLFW_FOCUS_ON_SHOW, 0);
-	SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, (__int3264) (LONG_PTR)parent->getHWND());
-#ifdef _WIN32
-	bool tooltip = false;
-	if (tooltip) {
-		SetWindowLong(hwnd, GWL_EXSTYLE, WS_EX_TOPMOST|WS_EX_NOACTIVATE|WS_EX_TOOLWINDOW);
-		SetWindowLong(hwnd, GWL_STYLE, WS_CHILDWINDOW | WS_VISIBLE | WS_BORDER | WS_CLIPSIBLINGS);
-	} else {
-
-		LONG l = GetWindowLong(hwnd, GWL_EXSTYLE);
-		l = l & ~WS_EX_APPWINDOW;
-		l = l | WS_EX_TOOLWINDOW;
-		SetWindowLong(hwnd, GWL_EXSTYLE, l);
-		SetWindowLong(hwnd, GWL_STYLE, WS_CHILD | WS_CLIPSIBLINGS);
-	}
-#endif
-#if __linux__
-	setIsTransientFor(this->parent->getGLFW(), this->getGLFW());
-#endif
-	RenderResources::initResources(nanovgCtxt);
-	if (!popupCtrl->init(this, this->nanovgCtxt)) {
-		throw appexception("Couldn't start application");
-	}
 }
 
 #ifdef _WIN32
@@ -1436,8 +1203,53 @@ static void glfw_cb_framebuffersize(GLFWwindow *w, int width, int height) {
 	EXC_CATCH
 }
 
+void appwindow::createBaseWindow(const char* title, int w, int h, GLFWwindow* share, void* parentWindowHandle) {
+	strncpy(this->name, title, 32);
+	if (glfw)
+		throw appexception("window not null");
+	if (parentWindowHandle) {
+		glfw = glfwCreateChildWindow(parentWindowHandle, w, h, title, share);
+	} else {
+		glfw = glfwCreateWindow(w, h, title, NULL, share);
+	}
+	if (!glfw)
+		throw appexception("Couldn't create window");
+	glfwSetWindowUserPointer(glfw, this);
+	glfwSetWindowCloseCallback(glfw, glfw_cb_windowclose);
+	glfwSetWindowSizeCallback(glfw, glfw_cb_windowwize);
+	glfwSetWindowRefreshCallback(glfw, glfw_cb_refresh);
+	glfwSetWindowFocusCallback(glfw, glfw_cb_windowfocus);
+	glfwSetFramebufferSizeCallback(glfw, glfw_cb_framebuffersize);
+	glfwSetCursorPosCallback(glfw, glfw_cb_mousepos);
+	glfwSetMouseButtonCallback(glfw, glfw_cb_mousebutton);
+	glfwSetScrollCallback(glfw, glfw_cb_mousescroll);
+	glfwSetKeyCallback(glfw, glfw_cb_keyinput);
+	glfwSetCharCallback(glfw, glfw_cb_charinput);
+	glfwSetCursorEnterCallback(glfw, glfw_cb_cursorenter);
+	double mposx, mposy;
+	glfwGetCursorPos(glfw, &mposx, &mposy);
+	mousepos = ivec2((int)mposx, (int)mposy);
+#ifdef _WIN32
+	hwnd = glfwGetWin32Window(glfw);
+	if (!hwnd)
+		throw appexception("Couldn't get win32 window handle");
+#endif
+	glfwMakeContextCurrent(glfw);
+#ifdef _WIN32
+	defWndProc = (WNDPROC)GetWindowLongPtr(hwnd, GWLP_WNDPROC);
+	SetWindowLongPtr(hwnd, GWLP_WNDPROC, (LONG_PTR)appWndProc);
+#endif
+	initOGL();
+	initContext();
+#ifdef _WIN32
+	this->timer = SetTimer(hwnd, 0, 1, (TIMERPROC)timerProc);
+#endif
+	last = getTimeMillis();
+}
+
+
 void printLeakedGuiBase();
-#ifndef BUILD_NO_DAWHOST
+#if BUILD_VSTHOST
 void printClipAllocations();
 #endif
 
@@ -1452,59 +1264,16 @@ HWND getMainHWND() {
 	return mainWindow ? mainWindow->getHWND() : NULL;
 }
 #endif
-#ifndef TEST_PROJECT
 
-struct data_t
-{
-	int id;
-	int count;
-};
-#define MSG_LEN 10000
-struct data_t messages[MSG_LEN] = {};
-int maxIdx = 0;
-void incrMessage(int id) {
-	for (int i = 0; i < maxIdx; i++) {
-		int storedId = messages[i].id;
-		if (storedId == id) {
-			messages[i].count++;
-			return;
-		}
-	}
-	messages[maxIdx].id = id;
-	messages[maxIdx].count++;
-	maxIdx++;
-}
-int getNumMsg() {
-	return maxIdx;
-}
-int getMsgId(int i) {
-	return messages[i].id;
-}
-int getMsgCnt(int i) {
-	return messages[i].count;
-}
-std::map<String, int> hwndPaints;
-int getHWNDMapSize() {
-	return hwndPaints.size();
-}
-String getHWNDName(int i) {
-	auto it = hwndPaints.begin();
-	for (int j = 0; j < i; j++, it++);
-	return it->first;
-}
-int getHWNDCnt(int i) {
-	auto it = hwndPaints.begin();
-	for (int j = 0; j < i; j++, it++);
-	return it->second;
-}
-#ifndef DAWFRAMEWORK_PLUGIN
-#ifdef _WIN32
-#ifndef BUILD_NO_VST
+#if HAS_MAIN_LOOP
+#include "platform/win/debug_msg_count.h"
+win32_hwnd_msg_counter_t msgCounter;
+
+#if defined(_WIN32) && BUILD_VSTHOST
 namespace vst_window_mgr {
 void destroyAllVSTWindows();
 bool isVstWindow(HWND hwnd);
 }
-#endif
 #endif
 std::shared_ptr<AppCtrl> makeApp();
 void initColor(); // Forward declare from gui/gui.cpp
@@ -1563,7 +1332,7 @@ int startApplication(int argc, char* argv[]) {
 	setAppWindowHints();
 	std::shared_ptr<AppCtrl> ctrl = makeApp();
 	ctrl->initApp(argc, argv);
-	mainWindow = std::make_unique<appwindow_main>(ctrl.get());
+	mainWindow = std::make_unique<appwindow_main>(nullptr, ctrl.get());
 	mainWindow->createMainWindow("main window", 1280, 720, nullptr);
 	mainWindow->showWindow();
 	enableGlDebugCallback();
@@ -1587,7 +1356,7 @@ int startApplication(int argc, char* argv[]) {
 	        {
 
 	            switch (msg.message) {
-#ifndef BUILD_NO_VST
+#if BUILD_VSTHOST
 	            	case WM_KEYDOWN:
 					case WM_SYSKEYDOWN:
 					case WM_KEYUP:
@@ -1605,21 +1374,17 @@ int startApplication(int argc, char* argv[]) {
 	            }
 
 
-				incrMessage(msg.message);
+	            msgCounter.incrMessage(msg.message);
 				if (msg.message == WM_PAINT)
 				{
 					char clsName_v[256];
 					GetClassNameA(msg.hwnd, clsName_v, 256);
-					if (hwndPaints.count(clsName_v)) {
-						hwndPaints[clsName_v] = hwndPaints.at(clsName_v)+1;
-					} else {
-						hwndPaints[clsName_v] = 1;
-					}
+					msgCounter.incrPaints(clsName_v);
 				}
 	        }
 	    }
 		glfwUpdateInternals();
-#endif
+#endif //_WIN32
 #ifdef __linux__
 		glfwWaitEventsTimeout(0.001);
 		mainWindow->onRefresh();
@@ -1643,7 +1408,7 @@ int startApplication(int argc, char* argv[]) {
 		}
 	}
 
-#ifndef BUILD_NO_VST
+#if defined(_WIN32) && BUILD_VSTHOST
 	vst_window_mgr::destroyAllVSTWindows();
 #endif
 
@@ -1655,7 +1420,7 @@ int startApplication(int argc, char* argv[]) {
 	}
 	deleteApp();
 	printLeakedGuiBase();
-#ifndef BUILD_NO_DAWHOST
+#if BUILD_VSTHOST
 	printClipAllocations();
 #endif
 	if (fataError) {
@@ -1670,12 +1435,10 @@ int startApplication(int argc, char* argv[]) {
 	return fataError ? 1 : 0;
 }
 
-#endif
+#endif // HAS_MAIN_LOOP
 
 
-#endif
-
-#ifndef BUILD_NO_VST
+#if (BUILD_VSTHOST || BUILD_EXTERNAL_PLUGIN)
 #include "plugins/plugin-window.h"
 #include "plugins/plugincontrol.h"
 #include "plugins/handle-exceptions.h"
@@ -1687,7 +1450,7 @@ class appwindow_plugin : public appwindow_main, public pluginwindow {
 public:
 	ERect _rect{ 0 };
 	appwindow_plugin(AudioEffect *_effect, std::shared_ptr<PluginControl> _ctrl, int w, int h)
-		: appwindow_main((AppCtrl*)_ctrl.get()),
+		: appwindow_main(nullptr, (AppCtrl*)_ctrl.get()),
 		  pluginwindow(_ctrl)
 	{
 		this->effect = _effect;

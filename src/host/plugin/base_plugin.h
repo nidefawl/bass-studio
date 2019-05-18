@@ -75,6 +75,8 @@ public:
 	virtual String getInfo(std::vector<String>& list) = 0;
 	track_t* getTrack() override;
 	virtual void onTick(double since);
+	virtual void setBlockSize(int32_t blockSize);
+	virtual void setSampleRate(int32_t sampleRate);
 	virtual void getChildAudioStages(std::vector<audio_stage_t*>& targets) {
 
 	}

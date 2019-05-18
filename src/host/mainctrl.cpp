@@ -54,6 +54,7 @@
 #include "../gui/drawwaveform.h"
 #include "../gui/guishaderview.h"
 #include "../gui/about.h"
+#include "../gui/dialog_io.h"
 #include "../gui/dialogs.h"
 #include "../gui/guicontainer_layout.h"
 
@@ -455,22 +456,21 @@ void MainCtrl::setEmptyProject() {
 }
 #if CREATE_DEBUG_COMPANION_WINDOW
 void drawDebugWindow(NVGcontext* ctx, int winW, int winH, float pxratio);
+void initDebugWindow();
 void openDebugWindow(window_main* mainwindow) {
 	dbgassert(mainwindow);
 	window_dialog* dialog = mainwindow->createDialog("waveform atlas cache", 1280, 720);
+	window_init_fn init;
 	window_draw_fn drawFn;
+	init.initCallback = []() {
+		initDebugWindow();
+	};
 	drawFn.drawCallback = [](NVGcontext* ctx, int winW, int winH, float pxratio) {
 		drawDebugWindow(ctx, winW, winH, pxratio);
 	};
 	dialog->setDrawFunction(drawFn);
+	dialog->setInitFunction(init);
 	dialog->show();
-//		GLFWwindow* contextWindow = mainWindow->getGLFW();
-//		w->createDialogWindow("test window", winW, winH, contextWindow);
-//		glfwMakeContextCurrent(w->getGLFW());
-//		w->centerOnScreen(0);
-//		w->showWindow();
-//		glfwMakeContextCurrent(mainWindow->getGLFW());
-
 }
 #endif
 void MainCtrl::menuCommand(int cmd) {
@@ -545,6 +545,7 @@ void MainCtrl::menuCommand(int cmd) {
 #endif
 		break;
 	case CMD_PREFERENCES:
+		this->openDialog(new guidialog_iosettings());
 		break;
 	case CMD_EXIT:
 		mainWindow->requestClose();
@@ -559,8 +560,6 @@ void MainCtrl::postInit() {
 	vsthost::getInstance()->postInit();
 	if (!loadProject.empty()) {
 		loadFile(loadProject, 0);
-	} else {
-		loadFile("empty.project", FLAG_DEFER_LOAD);
 	}
 
 	view->ctr_effectlib.update();
@@ -693,6 +692,8 @@ bool MainCtrl::init(window_main* window, NVGcontext* nanovg)
 	setEmptyProject();
 
 	grid.grid_dens = settings.dens;
+
+	vsthost::getInstance()->setSamplerateBlockSize(settings.iosettings.samplerate, settings.iosettings.blocksize);
 	updateGrid();
 	isOK = true;
 	return isOK;

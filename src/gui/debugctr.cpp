@@ -26,26 +26,24 @@
 #include "edithistory.h"
 #include "guiplugin.h"
 #include "util/debug_alloc.h"
-
+#ifdef _WIN32
+#include "platform/win/debug_msg_count.h"
+#endif
 using namespace std;
 
 #define DISPLAY_HWND_DRAWS 1
 #define DISPLAY_WIN_MSG_STATS 1
-
-struct win32_msg {
-	int id;
-	int cnt;
-};
-#if DISPLAY_WIN_MSG_STATS
-int getNumMsg();
-int getMsgId(int i);
-int getMsgCnt(int i);
-#endif
-#if DISPLAY_HWND_DRAWS
-int getHWNDMapSize();
-String getHWNDName(int i);
-int getHWNDCnt(int i);
-#endif
+//
+//#if DISPLAY_WIN_MSG_STATS
+//int getNumMsg();
+//int getMsgId(int i);
+//int getMsgCnt(int i);
+//#endif
+//#if DISPLAY_HWND_DRAWS
+//int getHWNDMapSize();
+//String getHWNDName(int i);
+//int getHWNDCnt(int i);
+//#endif
 namespace GuiColor {
 void initConstants(int colorVal);
 }
@@ -186,17 +184,21 @@ void gui_ctr_debug::render(NVGcontext* vg) {
 			vst->getInfo(strings);
 		}
 	}
+	struct win32_msg {
+		int id;
+		int cnt;
+	};
 #if DISPLAY_HWND_DRAWS
 	std::vector<win32_msg> wnd;
-	for (int i = 0; i < getHWNDMapSize(); i++) {
-		int cnt = getHWNDCnt(i);
+	for (int i = 0; i < msgCounter.getHWNDMapSize(); i++) {
+		int cnt = msgCounter.getHWNDCnt(i);
 		wnd.push_back( { i, cnt });
 	}
 	std::sort(wnd.begin(), wnd.end(), [](win32_msg const & a, win32_msg const & b) {
 		return a.cnt > b.cnt;
 	});
 	for (win32_msg& msg : wnd) {
-		String s = getHWNDName(msg.id);
+		String s = msgCounter.getHWNDName(msg.id);
 		strings.push_back(StringFormat("%s: %d", StringAsCStr(s), msg.cnt));
 
 	}
@@ -204,9 +206,9 @@ void gui_ctr_debug::render(NVGcontext* vg) {
 
 #if DISPLAY_WIN_MSG_STATS
 	std::vector<win32_msg> msgs;
-	for (int i = 0; i < getNumMsg(); i++) {
-		int id = getMsgId(i);
-		int cnt = getMsgCnt(i);
+	for (int i = 0; i < msgCounter.getNumMsg(); i++) {
+		int id = msgCounter.getMsgId(i);
+		int cnt = msgCounter.getMsgCnt(i);
 		msgs.push_back( { id, cnt });
 
 	}

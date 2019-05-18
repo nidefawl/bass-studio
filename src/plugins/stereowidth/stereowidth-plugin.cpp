@@ -114,7 +114,7 @@ void PluginVST2_StereoWidth::setParameter (VstInt32 index, float value)
 		ap->gain = value;
 		break;
 	}
-#ifdef BUILD_BUILTIN_EFFECT
+#if BUILD_VSTHOST
 	for (PluginViewContainers* pviewctr : this->views) {
 		pviewctr->onSetParameter(index, value);
 	}

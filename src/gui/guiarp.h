@@ -135,7 +135,7 @@ public:
 		}
 	}
 	void showEditClip() {
-#ifdef BUILD_BUILTIN_EFFECT
+#if BUILD_VSTHOST
 		auto arp = getArp();
 		clock.setAutomationRef(arp, ARP_PARAM_CLOCK);
 		gate.setAutomationRef(arp, ARP_PARAM_GATE);

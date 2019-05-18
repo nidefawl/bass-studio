@@ -21,12 +21,12 @@
 class guiknob_pluginparam : public guiknob_labeled_base {
 	AudioEffect* curEffect = nullptr;
 	int32_t internalEffectIdx = 0;
-#ifdef BUILD_BUILTIN_EFFECT
+#if BUILD_VSTHOST
 	vstplugin* hostSidePlugin = nullptr;
 #endif
 public:
 	guiknob_pluginparam(int _paramIdx, int _internalEffectIdx) : guiknob_labeled_base(false) {
-#ifdef BUILD_BUILTIN_EFFECT
+#if BUILD_VSTHOST
 		paramIdx = _paramIdx;
 #endif
 		internalEffectIdx = _internalEffectIdx;
@@ -36,13 +36,13 @@ public:
 				setDisplayValueFromEffect();
 			}
 		};
-#ifdef BUILD_BUILTIN_EFFECT
+#if BUILD_VSTHOST
 		setAutomationHandlers();
 #endif
 	}
 	virtual ~guiknob_pluginparam() {
 	}
-#ifdef BUILD_BUILTIN_EFFECT
+#if BUILD_VSTHOST
 	void setEffectInstance(vstplugin* _hostSidePlugin) {
 		hostSidePlugin = _hostSidePlugin;
 		paramAutomatable = _hostSidePlugin;

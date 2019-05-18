@@ -31,7 +31,7 @@ void PopupCtrl::focusLost() {
 
 void PopupCtrl::closePopup() {
 	if (isShown()) {
-		static_cast<window_overlay*>(this->window)->hide();
+		static_cast<window_main*>(this->window)->hide();
 	}
 }
 
@@ -57,9 +57,17 @@ void PopupCtrl::relayout(int32_t w, int32_t h) {
 //	popupCtrs->size = prefSize;
 	popupCtrs->layout();
 }
+bool PopupCtrl::mouseDownPre() {
+	if (this->ctxtmenu && this->ctxtmenu->isDialog()) {
+		return false;
+	}
+	closeAllContextMenus();
+	return true;
+}
+
 
 void PopupCtrl::open(guictxtmenu_base *_ctxtmenu, ivec2 pos) {
-	dbgassert(!isShown());
+//	dbgassert(!isShown());
 	mouseInside = false;
 	this->m_mousePos = ivec2(-1111111);
 	popupCtrs->removeGuis();
@@ -83,9 +91,9 @@ void PopupCtrl::open(guictxtmenu_base *_ctxtmenu, ivec2 pos) {
 	this->guiCtrFocused = _ctxtmenu;
 
 	if (this->window) {
-		window_overlay* appW = static_cast<window_overlay*>(this->window);
+		window_main* appW = static_cast<window_main*>(this->window);
 		m_size = popupCtrs->size;
-		appW->positionOnScreen(pos-insetCtxtMenu-ivec2(2), popupCtrs->size+ivec2(4));
+		appW->positionOnScreen(pos-insetCtxtMenu, popupCtrs->size);
 		appW->show();
 	}
 	int32_t clearc = getTheme()->getColorInt32(GuiColor::COL_CLEAR_COLOR);
@@ -105,13 +113,11 @@ void PopupCtrl::destroy() {
 	popupCtrs = nullptr;
 }
 
-bool PopupCtrl::hasInputFocus() {
-	return guiFocused && canTakeInputFocus;
-}
 class guictr_scrollbar_outline : public guictr_scrollbar {
 public:
 	guictr_scrollbar_outline() : guictr_scrollbar() {
-
+//		padding=0;
+//		margin=0;
 	}
 	void render(NVGcontext* vg) {
 		renderFrameBase(vg);
@@ -121,12 +127,12 @@ public:
 		renderFrameOutline(vg);
 	}
 };
-bool PopupCtrl::init(window_overlay* _window, NVGcontext* nanovg)
-{
+bool PopupCtrl::init(window_main* _window, NVGcontext* nanovg) {
 	guitheme_t themeDefault;
 	themeDefault.name = "default";
 	themes.setTheme(themeDefault);
 	themes.loadThemes();
+	this->mainWindow = _window;
 	this->window = _window;
 	this->vg = nanovg;
 	popupCtrs = new guictr_scrollbar_outline();
@@ -136,4 +142,9 @@ bool PopupCtrl::init(window_overlay* _window, NVGcontext* nanovg)
 	}
 	isOK = true;
 	return isOK;
+}
+bool PopupCtrl::initPopup(window_overlay* _window, NVGcontext* nanovg)
+{
+	dbgassert(0);
+	return false;
 }

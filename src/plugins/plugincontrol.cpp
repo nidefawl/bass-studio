@@ -151,8 +151,3 @@ void PluginControl::onSetParameter(int32_t index, float value) {
 	this->view->onSetParameter(index, value);
 }
 
-#ifndef BUILD_BUILTIN_EFFECT
-int initDebugWindow() {
-	return 0;
-}
-#endif
