@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include "plugin-base.h"
 #include "../vstsdk-plugin-2.4/audioeffectx.h"
+#include "config.h"
 #include "str_util.h"
 #include "logging.h"
 #include "fileio.h"
@@ -15,20 +16,20 @@
 #include "msgbox.h"
 #include "assert_dbg.h"
 
-#ifndef BUILD_BUILTIN_EFFECT
+#if BUILD_EXTERNAL_PLUGIN
 #include <GLFW/glfw3.h>
 namespace MouseCursors {
 void initCursors(); // mousecursor.cpp
 }
-#endif
+#endif //BUILD_EXTERNAL_PLUGIN
 
 
 
-#ifndef BUILD_BUILTIN_EFFECT
+#if BUILD_EXTERNAL_PLUGIN
 bool isFirstPluginLoad = false;
 extern HMODULE hInstance;
 String getModuleName(HMODULE module); //platform_win.cpp
-#endif
+#endif //BUILD_EXTERNAL_PLUGIN
 
 AEffEditor* createPluginWindow(AudioEffect *_effect, std::shared_ptr<PluginControl> _ctrl, int w, int h);
 
@@ -134,7 +135,7 @@ bool BasePluginVST2::getVendorString (char* text)
 }
 
 void BasePluginVST2::open () {
-#ifndef BUILD_BUILTIN_EFFECT
+#if BUILD_EXTERNAL_PLUGIN
 #ifdef _WIN32
 	if (!isFirstPluginLoad) {
 		return;
@@ -166,10 +167,10 @@ void BasePluginVST2::open () {
 	MouseCursors::initCursors(); //TODO: call MouseCursors::destroy() on exit of last instance
 
 
-#endif
+#endif //BUILD_EXTERNAL_PLUGIN
 
 }
-#ifndef BUILD_BUILTIN_EFFECT
+#if BUILD_EXTERNAL_PLUGIN
 static void glfw_plugin_error_callback(int error, const char* description) {
 	char errorCodeStr[1024] = { 0 };
 	_snprintf_s(errorCodeStr, 1024 - 1, _TRUNCATE, "Error %d: %s", error, description);
@@ -206,6 +207,6 @@ void onModuleUnload() {
 	glfwTerminate();
 	EXC_CATCH_NO_THROW_DIALOG
 }
-#endif
+#endif //BUILD_EXTERNAL_PLUGIN
 
 

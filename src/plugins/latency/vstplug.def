@@ -1,3 +1,2 @@
 LIBRARY     latency
-DESCRIPTION 'Latency'
 EXPORTS     main=VSTPluginMain

@@ -1317,6 +1317,7 @@ int startApplication(int argc, char* argv[]) {
 	log_out("COMPILE_DEFS %s\n", BuildInfo::COMPILE_DEFS);
 	setMinimumResolutionTimer();
 	initColor();
+#if HAS_APP_SETTINGS
 	try {
 		settings = loadSettings();
 	} catch (std::exception& e) {
@@ -1324,6 +1325,7 @@ int startApplication(int argc, char* argv[]) {
 		settings = appsettings();
 		ngui::show("Couldn't read config file.\nSome settings may have been reset", "Warning", ngui::Style::Warning, ngui::Buttons::OK);
 	}
+#endif
 	glfwSetErrorCallback(glfw_startup_error_callback);
 	if (!glfwInit("DAWWINDOW01")) {
 		showerror("Initialization failed. Couldn't initialize glfw");

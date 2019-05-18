@@ -24,7 +24,7 @@
 #define PLUGIN_PRODUCT_NAME "empty test plugin VST2.x "
 //
 
-#ifndef BUILD_BUILTIN_EFFECT
+#if BUILD_EXTERNAL_PLUGIN
 AudioEffect* createEffectInstance (audioMasterCallback audioMaster)
 {
 	return PluginEmptyVST2::createPlugin(audioMaster);
@@ -188,7 +188,7 @@ void EmptyPluginVST2::processReplacing(float** inputs, float** outputs, VstInt32
 		if (inputs)
 			dsp_util::fillSilence(inputs, sampleFrames);
 		dsp_util::fillSilence(outputs, sampleFrames);
-#if defined(PLUGIN_BUILD_CRASHVERSION) || defined(BUILD_BUILTIN_EFFECT)
+#if defined(PLUGIN_BUILD_CRASHVERSION) || defined(BUILD_VSTHOST)
 //		my_printf("producing segfault\n", 0);
 		int64_t* ptr = nullptr;
 		ptr = static_cast<int64_t*>((void*)0xBAADF00D);

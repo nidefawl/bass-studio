@@ -20,7 +20,7 @@
 #define PLUGIN_PRODUCT_NAME "advanced gui test plugin VST2.x "
 //
 
-#ifndef BUILD_BUILTIN_EFFECT
+#if BUILD_EXTERNAL_PLUGIN
 AudioEffect* createEffectInstance (audioMasterCallback audioMaster)
 {
 	return PluginTestAdv::createPlugin(audioMaster);

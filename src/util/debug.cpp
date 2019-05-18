@@ -4,7 +4,6 @@
 
 #include <cxxabi.h>
 
-using namespace __cxxabiv1;
 
 String demangleName(String to_demangle) {
 	int status = 0;

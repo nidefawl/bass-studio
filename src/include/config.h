@@ -31,15 +31,13 @@
 #error
 #endif
 
-#if BUILD_VSTHOST
-#define BUILD_BUILTIN_EFFECT 1
-#else
-#define BUILD_BUILTIN_EFFECT 0
+#if BUILD_EXTERNAL_PLUGIN && BUILD_VSTHOST
+#error "cant have both"
 #endif
 
-#define HAS_MAIN_LOOP !(TEST_PROJECT)
+#define HAS_MAIN_LOOP (!(TEST_PROJECT) && !BUILD_EXTERNAL_PLUGIN)
 
-#if BUILD_VSTHOST
+#if HAS_MAIN_LOOP
 #define HAS_APP_SETTINGS 1
 #else
 #define HAS_APP_SETTINGS 0

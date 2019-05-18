@@ -440,7 +440,7 @@ SafeRef<guibase> guibase::makeSafeRef() {
 	}
 	return safeRef;
 }
-#ifndef BUILD_BUILTIN_EFFECT
+#if !BUILD_VSTHOST
 void guibase::addProperties(Table::tbl* table) {
 }
 #else

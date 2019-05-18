@@ -1,3 +1,2 @@
 LIBRARY     stereowidth
-DESCRIPTION 'Stereo Width'
 EXPORTS     main=VSTPluginMain

@@ -26,7 +26,8 @@ set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "${CMAKE_COMMAND} -E time")
 include("setup.cmake")
 include("cotire.cmake")
 add_definitions("-DUSE_WIN32_EXC_HOOKS")
-add_definitions("-DBUILD_BUILTIN_EFFECT")
+add_definitions("-DBUILD_VSTHOST=1")
+add_definitions("-DBUILD_EXTERNAL_PLUGIN=0")
 
 
 file(GLOB_RECURSE HDR_ALL_FILES src/*.h)

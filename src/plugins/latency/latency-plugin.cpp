@@ -36,7 +36,7 @@
 #define PLUGIN_PRODUCT_NAME "Latency introducing plugin"
 #define MAX_LATENCY (1024*32)
 
-#ifndef BUILD_BUILTIN_EFFECT
+#if BUILD_EXTERNAL_PLUGIN
 AudioEffect* createEffectInstance (audioMasterCallback audioMaster)
 {
 	return PluginLatency::createPlugin (audioMaster);
