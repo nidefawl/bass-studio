@@ -110,7 +110,7 @@ struct audio_stage_t {
 	  type(_type),
 	  sampleRate(_sampleRate),
 	  blockSize(_blockSize),
-	  delayLines{{DelayLine(nChannels, blockSize), DelayLine(nChannels, blockSize)}} {
+	  delayLines{{DelayLine(nChannels, 0), DelayLine(nChannels, 0)}} {
 	}
 	virtual ~audio_stage_t() {
 
