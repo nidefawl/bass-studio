@@ -10,7 +10,7 @@
 #include "track.h"
 #include "track_impl.h"
 #include "guicolors.h"
-#include "clipeditor.h"
+//#include "clipeditor.h"
 
 class ctxtmenu_time_select : public ctxtmenu_entry {
 	struct _time_sel_entry {
