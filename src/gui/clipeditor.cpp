@@ -100,6 +100,64 @@ public:
 		clip->setDirty();
 	}
 };
+class action_modify_clip : public action_base {
+protected:
+public:
+	int32_t trackIdx = 0;
+	tick_t clipTime = 0;
+	clip_t before;
+	clip_t after;
+	clip_cursor_t cursorBefore;
+	clip_cursor_t cursorAfter;
+	action_modify_clip() : action_base() {
+	}
+	//desc, clip, notesBefore, cursorBefore
+	action_modify_clip(String description, const clip_view& view, const clip_t& oldC, const clip_cursor_t& oldCursor) : action_base() {
+		desc = description;
+//		clip = view.clip;
+		after = *view.clip();
+		trackIdx = view.track()->idx;
+		clipTime = view.clip()->time;
+		cursorAfter = view.cursor;
+		before = oldC;
+		cursorBefore = oldCursor;
+	}
+	void undo(MainCtrl* ctrl) {
+		track_t* tr = ctrl->getTracks()[trackIdx];
+		if (!tr)
+			return;
+		trackdata_midi_t& midi = tr->getMidi();
+		clip_t* clip = midi.getClipAt(clipTime);
+		if (!clip)
+			return;
+		*clip = before;
+		clip_view& view = ctrl->getClipView();
+		if (view.clip() == clip) {
+			view.cursor = cursorBefore;
+			view.copySelectedNoteList();
+			view.updateNotePitches(false);
+		}
+		clip->setDirty();
+	}
+	void redo(MainCtrl* ctrl) {
+		track_t* tr = ctrl->getTracks()[trackIdx];
+		if (!tr)
+			return;
+		trackdata_midi_t& midi = tr->getMidi();
+		clip_t* clip = midi.getClipAt(clipTime);
+		if (!clip)
+			return;
+		*clip = after;
+		clip_view& view = ctrl->getClipView();
+		if (view.clip() == clip) {
+			view.cursor = cursorAfter;
+			view.copySelectedNoteList();
+			view.updateNotePitches(false);
+		}
+		clip->setDirty();
+	}
+};
+
 class guictxtmenu_noteeditor : public guictxtmenu {
 	guictr_noteeditor* editor;
 public:
@@ -208,6 +266,58 @@ note_t* getMinDistNoteVel(clip_notes_t& notes, int32_t tickExact, int32_t tickDi
 		}
 	});
 	return minDistNote;
+
+}
+void duplicateClipLoop(clip_view& view) {
+	clip_t* clip = view.clip();
+	if (!clip) {
+		return ;
+	}
+
+	if (clip->loopLen > 0) {
+		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+		clip_t clipBefore = *clip;
+		clip_notes_t& notes = clip->notes;
+		clip_cursor_t& cursor = view.cursor;
+		clip_cursor_t cursorBefore = cursor; // copy
+		const clip_notes_t notesBefore = notes; // copy
+
+
+		int32_t loopStart = clip->loopStart;
+		int32_t loopEnd = loopStart + clip->loopLen;
+		int32_t offset = clip->loopLen;
+		{
+			{
+				clip_notes_t notesCopy = notes; // copy
+				std::vector<note_t> newNotes;
+				std::vector<note_t> selNotes;
+				notesCopy.storeSelection(selNotes);
+				notesCopy.clearSelection();
+				notesCopy.visitNotes([loopStart, loopEnd, offset, &newNotes](note_t& note) {
+					if (note.time >= loopStart && note.time < loopEnd) {
+						note_t noteCpy = note;
+						noteCpy.time += offset;
+						newNotes.push_back(noteCpy);
+					}
+					if (note.time >= loopEnd) {
+						note.time += offset;
+					}
+				});
+				notesCopy.addAll(newNotes);
+				notesCopy.restoreSelection(selNotes);
+				notesCopy.updateBounds();
+
+				notes = notesCopy;
+			}
+
+			clip->loopLen *= 2;
+
+			String desc = "Duplicate clip loop";
+			MainCtrl::get()->pushHist(new action_modify_clip(desc, view, clipBefore, cursorBefore));
+			clip->setDirty();
+			view.updateNotePitches(false);
+		}
+	}
 
 }
 void gui_clipcontent_velocities::render(NVGcontext* vg) {

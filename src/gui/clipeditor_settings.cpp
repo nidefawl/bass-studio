@@ -37,6 +37,8 @@ gui_clipsettings::gui_clipsettings(scaled_grid& _grid, clip_view& _view) :
 	clipTimeStartOffsetTicks.setLabel("Tick offset");
 	clipTimeStartOffsedSamples.setLabel("Sample offset");
 	clipAudioId.setLabel("Sample ID");
+	btnDuplicateLoop.setLabel("Duplicate Loop");
+	btnDuplicateLoop.setEnabledRef(nullptr);
 	add(&btnLoop);
 	add(&clipLoopStart);
 	add(&clipLoopLen);
@@ -45,6 +47,7 @@ gui_clipsettings::gui_clipsettings(scaled_grid& _grid, clip_view& _view) :
 	add(&clipTimeStartOffsetTicks);
 	add(&clipTimeStartOffsedSamples);
 	add(&clipAudioId);
+	add(&btnDuplicateLoop);
 }
 
 gui_clipsettings::~gui_clipsettings() {
@@ -55,12 +58,17 @@ void gui_clipsettings::renderBackground(NVGcontext* vg) {
 	drawInsetBackground(vg, theme, getPosContent(), getSizeContent());
 }
 
+void duplicateClipLoop(clip_view& view);//clipeditor.cpp;
 void gui_clipsettings::buttonClicked(guibase* button) {
 	if (&btnLoop == button) {
 		clip_t* clip = view.clip();
 		if (clip != NULL) {
 			clip->loopEnabled = !clip->loopEnabled;
 		}
+	}
+	if (&btnDuplicateLoop == button) {
+		duplicateClipLoop(view);
+
 	}
 	if (&btnLoop == button || &clipTimeStart == button || &clipLoopStart == button || &clipTimeLen == button
 			|| &clipTimeStartOffsedSamples == button || &clipTimeStartOffsetTicks == button || &clipLoopLen == button) {
@@ -147,12 +155,13 @@ void gui_clipsettings::render(NVGcontext* vg)  {
 void gui_clipsettings::layout() {
 	const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
 	int32_t inset = 4;
-	int32_t i2 = inset * 2;
-	int32_t w = size.x-i2;
+	int32_t w = getSizeContent().x;
 	int32_t btnW = math::max(math::min(w, 120), w/3);
-	int32_t btnH = TRACK_HEIGHT_STEP;
 	int32_t labelWidth = w-btnW;
-	int32_t btnX = labelWidth;
+
+	int32_t btnH = TRACK_HEIGHT_STEP;
+	int32_t btnX = labelWidth + inset;
+	btnW -= inset * 2;
 	btnLoop.size = ivec2(btnW, btnH);
 	btnLoop.pos = ivec2(btnX, inset+theme->get(GuiConstant::CONST_FIXED_TITLE_HEIGHT));
 	clipLoopStart.size = ivec2(btnW, btnH);
@@ -169,6 +178,8 @@ void gui_clipsettings::layout() {
 	clipTimeStartOffsedSamples.pos = ivec2(clipTimeStartOffsetTicks.left(), clipTimeStartOffsetTicks.bottom()+inset);
 	clipAudioId.size = ivec2(btnW, btnH);
 	clipAudioId.pos = ivec2(clipTimeStartOffsedSamples.left(), clipTimeStartOffsedSamples.bottom()+inset);
+	btnDuplicateLoop.pos = ivec2(inset, clipAudioId.bottom()+inset);
+	btnDuplicateLoop.size = ivec2(w-inset * 2, btnH);
 	for (guibase* gui : guis) {
 		gui->layout();
 	}
