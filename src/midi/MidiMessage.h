@@ -18,6 +18,7 @@
 #include <string>
 
 
+ //TODO: make this more memory friendly by not using std::vector
 class MidiMessage : public std::vector<unsigned char> {
 	public:
 		               MidiMessage          (void);
