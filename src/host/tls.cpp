@@ -1,6 +1,12 @@
 #include "tls.h"
-#include "mainctrl.h"
-#include "vst_host.h"
+#include "host/mainctrl.h"
+#include "host/vst_host.h"
+#include "host/audio_host.h"
+#include "host/plugindatabase.h"
+#include "host/projectcontroller.h"
+#include "audiocache.h"
+#include "gui/drawwaveform.h"
+
 namespace daw_tls {
 	static thread_local tlsinstance tls;
 
@@ -39,4 +45,9 @@ audiocache* audiocache::getInstance()
 MainCtrl* MainCtrl::get() {
 //	dbgassert(daw_tls::tls.mainCtrl);
 	return daw_tls::tls.mainCtrl;
+}
+audiohost* audiohost::getInstance()
+{
+	dbgassert(daw_tls::tls.audioHost);
+	return daw_tls::tls.audioHost;
 }

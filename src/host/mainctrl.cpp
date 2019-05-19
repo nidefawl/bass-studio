@@ -70,6 +70,7 @@
 #include "../threads/playbackthread.h"
 #include "plugindatabase.h"
 #include "window_impl.h"
+#include "audio_host.h"
 
 	const int FLAG_DEFER_LOAD = 0x1;
 
@@ -557,7 +558,17 @@ void MainCtrl::menuCommand(int cmd) {
 	}
 }
 void MainCtrl::postInit() {
-	vsthost::getInstance()->postInit();
+	if (settings.startEngine) {
+		vsthost* host = vsthost::getInstance();
+		audiohost* audioHost = audiohost::getInstance();
+		if (audioHost->startAudio()) {
+			host->setOutput(audioHost);
+		} else {
+			//notify user
+			log_printf("audioHost->startAudio() failed\n", 0);
+		}
+	}
+//	vsthost::getInstance()->postInit();
 	if (!loadProject.empty()) {
 		loadFile(loadProject, 0);
 	}
@@ -574,7 +585,7 @@ void MainCtrl::destroy()
 	setAudioThreadState(playback_state::status_no_process);
 	dbgassert(playThread.getState() == playback_state::status_no_process);
 	ThreadLock lock = playThread.lockThread();
-	vsthost::getInstance()->stopAudio();
+	audiohost::getInstance()->stopAudio();
 	unloadProject();
 	int totalAllocs = getNumClipAllocations();
 	if (totalAllocs != 0) {
@@ -595,7 +606,9 @@ void MainCtrl::destroy()
 	delete tls.waveform;
 	delete tls.audioCache;
 	delete tls.host;
+	delete tls.audioHost;
 	tls.host = nullptr;
+	tls.audioHost = nullptr;
 	tls.mainCtrl = nullptr;
 	tls.project = nullptr;
 	tls.pluginDatabase = nullptr;
@@ -610,6 +623,7 @@ void MainCtrl::initApp(int argc, char* argv[]) {
 		}
 	}
 	daw_tls::tlsinstance& tls = daw_tls::getTls();
+	auto audioHost = new audiohost(44100, 256);
 	auto host = new vsthost(44100, 256);
 	if (!vsthost::assignMasterCallback(host)) {
 		delete host;
@@ -618,6 +632,7 @@ void MainCtrl::initApp(int argc, char* argv[]) {
 	}
 	tls.project = this;
 	tls.mainCtrl = this;
+	tls.audioHost = audioHost;
 	tls.host = host;
 	tls.pluginDatabase = &plugindb;
 	tls.audioCache = new audiocache(tls.host->lSampleRate);

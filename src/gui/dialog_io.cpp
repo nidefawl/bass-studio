@@ -10,6 +10,7 @@
 #include "guicontextmenu.h"
 #include "portaudio.h"
 #include "host/vst_host.h"
+#include "host/audio_host.h"
 #include "host/mainctrl.h"
 #include "appsettings.h"
 #include "list.h"
@@ -175,9 +176,13 @@ void updateSrBs() {
 	{
 
 		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-		vsthost::getInstance()->stopAudio();
-		vsthost::getInstance()->setSamplerateBlockSize(settings.iosettings.samplerate, settings.iosettings.blocksize);
-		vsthost::getInstance()->startAudio();
+		vsthost* host = vsthost::getInstance();
+		audiohost* ahost = audiohost::getInstance();
+		ahost->stopAudio();
+		host->setOutput(nullptr);
+		if (ahost->startAudio()) {
+			host->setOutput(ahost);
+		}
 	}
 	if (b) {
 		mctrl->startPlaying();
@@ -232,7 +237,7 @@ guidialog_iosettings::guidialog_iosettings()
 	};
 	guidropdown_setting_options_t* api = new guidropdown_setting_options_t{};
 	auto updateOptions = [this]() {
-		if (vsthost::getInstance()->initPa()) {
+		if (audiohost::getInstance()->initPa()) {
 			String deviceAPIName = settings.iosettings.device_api;
 			int apiCount = Pa_GetHostApiCount();
 			int deviceApiIdxSelected = -1;
@@ -272,7 +277,7 @@ guidialog_iosettings::guidialog_iosettings()
 		}
 	};
 	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-	if (vsthost::getInstance()->initPa()) {
+	if (audiohost::getInstance()->initPa()) {
 		int apiCount = Pa_GetHostApiCount();
 		for (int i = 0; i < apiCount; i++) {
 			const PaHostApiInfo *info = Pa_GetHostApiInfo(i);
@@ -288,10 +293,15 @@ guidialog_iosettings::guidialog_iosettings()
 	api->cbOnOptionSelected = [api, updateOptions](int option) {
 		if (option >= 0 && option < api->options.size()) {
 			ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+			vsthost* host = vsthost::getInstance();
+			audiohost* ahost = audiohost::getInstance();
+			ahost->stopAudio();
+			host->setOutput(nullptr);
 			settings.iosettings.device_api = api->options[option];
 			updateOptions();
-			vsthost::getInstance()->stopAudio();
-			vsthost::getInstance()->startAudio();
+			if (ahost->startAudio()) {
+				host->setOutput(ahost);
+			}
 		}
 	};
 	api->fnGetCurrentVal = []() -> String {

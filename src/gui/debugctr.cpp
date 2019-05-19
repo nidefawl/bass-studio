@@ -21,6 +21,7 @@
 #include "clip.h"
 #include "../host/mainctrl.h"
 #include "../host/vst_host.h"
+#include "../host/audio_host.h"
 #include "../host/plugin/vst_plugin.h"
 #include "../host/plugin/vst_plugin_handles.h"
 #include "edithistory.h"
@@ -168,8 +169,8 @@ void gui_ctr_debug::render(NVGcontext* vg) {
 	}
 	strings.push_back(StringFormat("Samplerate: %u", vsthost::getInstance()->lSampleRate));
 	strings.push_back(StringFormat("BlockSize: %u", vsthost::getInstance()->lBlockSize));
-	strings.push_back(StringFormat("blockReads: %u", vsthost::getInstance()->blockReads));
-	strings.push_back(StringFormat("bufferUnderuns: %u", vsthost::getInstance()->bufferUnderuns));
+	strings.push_back(StringFormat("blockReads: %u", audiohost::getInstance()->blockReads));
+	strings.push_back(StringFormat("bufferUnderuns: %u", audiohost::getInstance()->bufferUnderuns));
 	strings.push_back(StringFormat("numCallsWaitEvents: %u", ctrl->numCallsWaitEvents));
 
 	track_t* track = ctrl->getTrackId(0);

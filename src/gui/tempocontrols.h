@@ -286,18 +286,6 @@ public:
 			gui->layout();
 		}
 	}
-	void buttonClicked(guibase* button) {
-		if (button == &this->btnPlay) {
-			MainCtrl::get()->startPlaying();
-		}
-		if (button == &this->btnStop) {
-			MainCtrl::get()->stopPlaying();
-		}
-		if (button == &this->btnLoop) {
-			project.loopEnabled = !project.loopEnabled;
-		}
-		if (button == &this->btnAudioOnOff) {
-			vsthost::getInstance()->toggleAudioEngineOnOff();
-		}
-	}
+	void buttonClicked(guibase* button);
 };
+

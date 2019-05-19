@@ -9,13 +9,13 @@
 #include <unordered_map>
 #include <stdbool.h>
 #include "../vstsdk-host-2.4/aeffectx.h"
-#include "../util/readerwriterqueue.h"
 #include "note.h"
 #include "rand.h"
 #include "hires_timer.h"
 #include "project.h"
 #include "audiobuffer.h"
 #include "saferef.h"
+
 #include <memory>
 #ifdef __linux__
 #define PLATFORM_PLUGIN_EXT "so"
@@ -24,13 +24,13 @@
 #define PLATFORM_PLUGIN_EXT "dll"
 #endif
 
+class audiohost;
 class effectbase;
 class vstplugin;
 struct track_impl_t;
 struct audio_stage_t;
 struct audio_stage_ref_t;
 class project_controller_t;
-typedef void PaStream;
 
 typedef AEffect*(VSTPluginMain_t)(audioMasterCallback audioMasterCB);
 
@@ -70,7 +70,7 @@ private:
 	class ModuleManager;
 	ModuleManager* moduleMgr;
 	SafeRefStorage<effectbase> safeRefs;
-	bool paIsInitalized = false;
+	audiohost* audioHost = nullptr;
 public:
 	project_globals_t project;
 	samplerate_t lSampleRate;
@@ -90,7 +90,6 @@ private:
 	std::vector<effectbase*> pluginInstances;
 	std::vector<effectbase*> pluginsDeferred;
 
-	std::atomic<PaStream*> stream{NULL};
 	audiothread_ringbuffer_t ringbuffer;
 	AudioBlock* blockZero = nullptr;
 	std::vector<audio_stage_t*> allAudioStages;
@@ -103,23 +102,20 @@ private:
 	int32_t getNextGlobalAudioStageId(int32_t as);
 	bool unloadAllPlugins();
 	void updateTime(int32_t samplePos, tick_t pos, playback_state state);
+	void setBlockSize(uint16_t blockSize);
 public:
-	bool initPa();
-	void deinitPa();
 	int32_t getNextSampleId(int32_t id);
 	void sendNotesOff(effectbase* plugin);
-	moodycamel::ReaderWriterQueue<AudioBuffer*> audioQueue;
 public:
 	vsthost(uint32_t _sampleRate = 44100, uint16_t _blockSize = 512);
 	vsthost(vsthost const&) = delete;
 	~vsthost();
 	void setSamplerateBlockSize(int32_t sampleRate, int32_t blockSize);
+	void setOutput(audiohost* host);
 	void operator=(vsthost const&) = delete;
 	static vsthost* getInstance();
 	static bool assignMasterCallback(vsthost* host);
 
-	uint32_t blockReads = 0;
-	uint32_t bufferUnderuns = 0;
 	hires_timer_t timer;
 	hires_timer_t timer2;
 	std::atomic<int32_t> pluginId{100};
@@ -128,7 +124,6 @@ public:
 
 	int32_t processPlayback(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround);
 	void processAudio(audio_stage_t* channel, AudioBlock* input, AudioBlock* output, int32_t sample, int32_t samples, playback_state state);
-	void setBlockSize(uint16_t blockSize);
 	VstTimeInfo* getTimeInfo() {
 		return &this->timeinfo;
 	}
@@ -138,20 +133,14 @@ public:
 	void getProcessingStats(host_processing_stats_t& stats) {
 		stats = this->processing;
 	}
-	bool startAudio();
-	bool stopAudio();
 	void updatePluginWindows();
 	void destroy();
 	void unload();
 	bool postInit();
 	bool onTick();
-	void onStreamEnd();
-	void onStartPlayback(int32_t block);
+	void onStartPlayback();
 	void onStopPlayback();
-	void toggleAudioEngineOnOff();
-	bool isStreaming() {
-		return this->stream != NULL;
-	}
+	bool isStreaming();
 
 	bool canDo(const char *ptr)
 	{

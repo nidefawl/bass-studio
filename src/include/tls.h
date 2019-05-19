@@ -1,4 +1,5 @@
 #pragma once
+class audiohost;
 class vsthost;
 class waveformrender;
 class MainCtrl;
@@ -9,6 +10,7 @@ namespace daw_tls {
 	struct tlsinstance {
 		bool tlsInitialized = false;
 		vsthost* host = nullptr;
+		audiohost* audioHost = nullptr;
 		waveformrender* waveform = nullptr;
 		MainCtrl* mainCtrl = nullptr;
 		audiocache* audioCache = nullptr;

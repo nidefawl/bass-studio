@@ -176,7 +176,7 @@ private:
 								int32_t bpm100 = ctrl->getCurrentTempo();
 								samplePos = tickToSample(startPos, bpm100, sampleRate);
 								LOG("START ON seconds: %.2f - sample %d\n", toSeconds(startPos, bpm100), samplePos);
-								host->onStartPlayback(0);
+								host->onStartPlayback();
 								timer.reset();
 								playbackDuration = 0;
 								firstBlock = true;

@@ -16,13 +16,13 @@
 #include "plugin/vst_plugin_handles.h"
 
 #include "../vstsdk-host-2.4/aeffectx.h"
-#include "portaudio.h"
 #include "appsettings.h"
 
 #include "logging.h"
 #include "audioblock.h"
 #include "audiobuffer.h"
 #include "platform.h"
+#include "audio_host.h"
 
 #include <stdlib.h>
 #include <algorithm>
@@ -40,7 +40,7 @@
 #ifdef __linux__
 #include <dlfcn.h>
 #endif
-#include "../util/readerwriterqueue.h"
+//#include "../util/readerwriterqueue.h"
 
 #define DBG_PRINT_CALLBACKS
 #ifdef DBG_PRINT_CALLBACKS
@@ -242,73 +242,6 @@ VstIntPtr VSTCALLBACK audioMaster4(AEffect* effect, VstInt32 opcode, VstInt32 in
 	return audioMasterHost(host, effect, opcode, index, value, ptr, opt);
 }
 
-bool error(const char* msg, PaError err) {
-	my_printf("Error in %s\n", msg);
-	my_printf("Error number: %d\n", err);
-	my_printf("Error message: %s\n", Pa_GetErrorText(err));
-	return false;
-}
-
-/* This routine will be called by the PortAudio engine when audio is needed.
-** It may called at interrupt level on some machines so don't do anything
-** that could mess up the system like calling malloc() or free().
-*/
-
-
-
-static int audioCallback(const void *inputBuffer, void *outputBuffer,
-	unsigned long framesPerBuffer,
-	const PaStreamCallbackTimeInfo* timeInfo,
-	PaStreamCallbackFlags statusFlags,
-	void *userData)
-{
-	vsthost* host = static_cast<vsthost*>(userData);
-	float **inputs = (float**)inputBuffer;
-	UNUSED(inputs);
-	float **outputs = (float**)outputBuffer;
-//	if (!inputs) {
-//		host->blockTemp->clear();
-//		inputs = host->blockTemp->f;
-//	}
-	dsp_util::fillSilence(outputs, framesPerBuffer);
-	if (!host) {
-		return paAbort;
-	}
-
-	//still a race condition on_terminate here
-	AudioBuffer* block;
-	if (host->audioQueue.try_dequeue(block)) {
-		if (framesPerBuffer == block->output->samples) {
-			block->output->copyTo(outputs);
-//			dsp_util::copyBuffer(outputs, block->output->f, block->output->samples);
-		}
-		block->inUse = false;
-	} else {
-		host->bufferUnderuns++;
-//		dsp_util::fillSilence(inputs, framesPerBuffer);
-	}
-//	dsp_util::fillSqare(host->fSampleRate, 440, inputs, framesPerBuffer);
-
-	if (framesPerBuffer == host->lBlockSize) {
-		//host->processAudio(inputs, outputs, framesPerBuffer);
-	}
-	else {
-	}
-
-	dsp_util::fillSaturate(outputs, framesPerBuffer);
-	host->blockReads++;
-	return paContinue;
-}
-/*
-* This routine is called by portaudio when playback is done.
-*/
-static void StreamFinished(void* userData)
-{
-	vsthost* host = static_cast<vsthost*>(userData);
-	host->onStreamEnd();
-}
-
-
 static const double fSmpteDiv[] =
 {
 	24.f,
@@ -381,9 +314,9 @@ void vsthost::setSamplerateBlockSize(int32_t sampleRate, int32_t blockSize) {
 
 }
 void vsthost::setBlockSize(uint16_t _blockSize) {
-	if (blockZero)
-		delete blockZero;
-	blockZero = new AudioBlock(numChannels, _blockSize);
+	if (!blockZero)
+		blockZero = new AudioBlock(numChannels, _blockSize);
+	this->blockZero->realloc(_blockSize);
 }
 //\note VstTimeInfo::samplesToNextClock :
 //MIDI Clock Resolution (24 per Quarter Note), can be negative the distance to the next midi clock
@@ -476,10 +409,7 @@ void delayAudio(DelayLine* delayLine, AudioBlock* input, AudioBlock* output, sam
 int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround) {
 	double since = timer.getTimeDoubleReset();
 	timer2.reset();
-//	MainCtrl* ctrl = MainCtrl::get();
-//	static AudioBuffer* master = allocateBuffer();
-//	master->input->realloc(lBlockSize);
-//	master->output->realloc(lBlockSize);
+
 	int32_t& readPos = ringbuffer.readPos;
 	int32_t& writePos = ringbuffer.writePos;
 	AudioBuffer** buffers = ringbuffer.buffers;
@@ -492,19 +422,20 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 		readPos++;
 		readPos &= RING_BUF_MASK;
 	}
+
+
 	int nBlocksProcessed = 0;
 	const double ticksPerBlock = toTickPrecise(lBlockSize/(double)lSampleRate, project.tempo100);
 
 #ifndef NDEBUG
 
 #endif
-	if (ctrl) {
-		/*
-		 * We try to stay 4 blocks ahead of the audiothread read position
-		 * This should be adjusted depending on samplerate and blocksize
-		 */
-		int readWriteDist = writePos >= readPos ? writePos-readPos : writePos-(readPos-RING_BUF_SIZE);
-		if (readWriteDist < 8) {
+	/*
+	 * We try to stay 4 blocks ahead of the audiothread read position
+	 * This should be adjusted depending on samplerate and blocksize
+	 */
+	int readWriteDist = writePos >= readPos ? writePos-readPos : writePos-(readPos-RING_BUF_SIZE);
+	if (ctrl && readWriteDist < 8) {
 #ifndef NDEBUG
 		if (!isLoopAround&&state == playback_state::status_play && lastState == playback_state::status_play) {
 			dbgassert(posDouble == lastTickEndPos);
@@ -700,6 +631,24 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			//TODO: implement outputting multiple masters
 			break;
 		}
+		double blockPosSample = sample;
+		double blockPosTick = posDouble;
+
+
+		//		dsp_util::fillSqare(fSampleRate, 440, bufferWrite->master->f, bufferWrite->master->samples);
+		bufferWrite->submitted = true;
+		bufferWrite->inUse = true;
+		bufferWrite->blockPosSample = blockPosSample;
+		bufferWrite->blockPosTick = blockPosTick;
+		writePos++;
+		writePos &= RING_BUF_MASK;
+		if (audioHost) {
+			audioHost->enqueue(bufferWrite);
+		} else {
+			bufferWrite->inUse = false;
+		}
+
+
 		/* Update all track meters */
 		for (track_t* track : ctrl->trackList) {
 			track_impl_t* trAudio = track->audio;
@@ -709,23 +658,13 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			getGainLvl(trAudio->mixer.getParamValue(PARAM_TRACK_GAIN), fGainTrack);
 			trAudio->meter.update(&trAudio->output, fGainTrack);
 		}
-		double blockPosSample = sample;
-		double blockPosTick = posDouble;
+
 		sample = samplePosBlockEnd;
 		posDouble += ticksPerBlock;
 #ifndef NDEBUG
 		lastTickEndPos = posDouble;
 #endif
-//		dsp_util::fillSqare(fSampleRate, 440, bufferWrite->master->f, bufferWrite->master->samples);
-		bufferWrite->submitted = true;
-		bufferWrite->inUse = true;
-		bufferWrite->blockPosSample = blockPosSample;
-		bufferWrite->blockPosTick = blockPosTick;
-		writePos++;
-		writePos &= RING_BUF_MASK;
-		audioQueue.enqueue(bufferWrite);
 		nBlocksProcessed++;
-		}
 	}
 	bool convert = false;
 	if (ctrl) {
@@ -763,32 +702,35 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 	stats.samplesProcessed += nBlocksProcessed*lBlockSize;
 	return nBlocksProcessed;
 }
-void vsthost::onStreamEnd() {
-	my_printf("onStreamEnd.\n", 0);
-	stream = NULL;
-	AudioBuffer* block;
-	while (audioQueue.try_dequeue(block)) {
-		block->inUse = false;
-	}
-}
-void vsthost::onStartPlayback(int32_t block) {
-	blockReads = block;
-	bufferUnderuns = 0;
+void vsthost::onStartPlayback() {
 	lastTickEndPos = 0;
 	lastState = playback_state::status_stop;
 }
 void vsthost::onStopPlayback() {
 }
-void vsthost::toggleAudioEngineOnOff() {
-	if (isStreaming()) {
-		stopAudio();
-		settings.startEngine = false;
-	} else {
-		if (startAudio()) {
-			settings.startEngine = true;
-		}
+void vsthost::setOutput(audiohost* audioHost) {
+//	assert (audioHost->lSampleRate == this->lSampleRate);
+//	assert (audioHost->lBlockSize == this->lBlockSize);
+	this->audioHost = audioHost;
+	if (audioHost) {
+		setSamplerateBlockSize(audioHost->lSampleRate, audioHost->lBlockSize);
 	}
+
 }
+
+bool vsthost::isStreaming() {
+	return this->audioHost && this->audioHost->isStreaming();
+}
+//void vsthost::toggleAudioEngineOnOff() {
+//	if (isStreaming()) {
+//		stopAudio();
+//		settings.startEngine = false;
+//	} else {
+//		if (startAudio()) {
+//			settings.startEngine = true;
+//		}
+//	}
+//}
 
 void mulGain(AudioBlock* block, float gain) {
 
@@ -881,53 +823,8 @@ bool vsthost::onTick() {
 	return false;
 }
 
-bool vsthost::postInit() {
-	if (settings.startEngine)
-		startAudio();
-	return true;
-}
-bool vsthost::initPa() {
-	if (!paIsInitalized) {
-		PaError err;
-		err = Pa_Initialize();
-		if (err != paNoError) {
-			Pa_Terminate();
-			error("Pa_Initialize", err);
-		} else {
-			paIsInitalized = true;
-		}
-	}
-	return paIsInitalized;
-}
-void vsthost::deinitPa() {
-	if (paIsInitalized) {
-		Pa_Terminate();
-		paIsInitalized = false;
-	}
-}
-bool vsthost::stopAudio() {
-	PaStream* stream = this->stream;
-	if (stream) {
-		my_printf("stopAudio.\n", 0);
-		PaError err;
-		err = Pa_StopStream(stream);
-		if (err != paNoError) {
-			return error("Pa_StopStream", err);
-		}
-		err = Pa_CloseStream(stream);
-		if (err != paNoError) {
-			return error("Pa_CloseStream", err);
-		}
-		while (this->stream) {
-			threadSleep(100);
-		}
-		return true;
-	}
-	return false;
-}
 void vsthost::unload() {
-	dbgassert(this->stream==NULL&&"STOP STREAM BEFORE unload()!");
-	deinitPa();
+	dbgassert(!isStreaming()&&"STOP STREAM BEFORE unload()!");
 	unloadAllPlugins();
 }
 void vsthost::destroy() {
@@ -959,94 +856,6 @@ bool vsthost::assignMasterCallback(vsthost* host)
 	}
 	dbgassert(0&&"Out of host slots");
 	return false;
-}
-
-bool vsthost::startAudio() {
-	my_printf("startAudio\n", 0);
-	if (!initPa())
-		return false;
-	int apiCount = Pa_GetHostApiCount();
-	const char* selApiNameCStr = StringAsCStr(settings.iosettings.device_api);
-	if (settings.iosettings.getConfig(settings.iosettings.device_api).outputs.size() < 1)
-		return error("settings.iosettings.outputs.size() < 1", 0);
-	const char* selDevNameCStr = StringAsCStr(settings.iosettings.getConfig(settings.iosettings.device_api).outputs[0].deviceName);
-	int32_t deviceApiIdxSelected = paNoDevice;
-	int32_t deviceIdxSelected = paNoDevice;
-	for (int i = 0; i < apiCount; i++) {
-		const PaHostApiInfo *info = Pa_GetHostApiInfo(i);
-		if (info) {
-			const char* pref = "[ ] ";
-			if (!strcmp(selApiNameCStr, info->name)) {
-				deviceApiIdxSelected = i;
-				pref = "[x] ";
-			}
-			my_printf("%sAPI[%d] = %s %d devices\n", pref, i, info->name, info->deviceCount);
-		}
-	}
-	if (deviceApiIdxSelected >= 0) {
-		int deviceCount = Pa_GetDeviceCount();
-		for (int i = 0; i < deviceCount; i++) {
-			const PaDeviceInfo *info = Pa_GetDeviceInfo(i);
-			const char* pref = "[ ] ";
-			if (info && info->hostApi == deviceApiIdxSelected && info->maxOutputChannels > 0) {
-				if (!strcmp(selDevNameCStr, info->name)) {
-					deviceIdxSelected = i;
-					pref = "[x] ";
-				}
-				my_printf("%sDEVICE[%d] = %s %d output channels\n", pref, i, info->name, info->maxOutputChannels);
-			}
-		}
-	}
-
-	if (deviceIdxSelected < 0) {
-		my_printf("Error: No output device.\n", 0);
-		return false;
-	}
-
-
-
-	const PaDeviceInfo* devInfo = Pa_GetDeviceInfo(deviceIdxSelected);
-	const PaHostApiInfo* apiInfo = Pa_GetHostApiInfo(deviceApiIdxSelected);
-	PaStreamParameters outputParameters;
-	outputParameters.device = deviceIdxSelected;
-	if (outputParameters.device == paNoDevice) {
-		return error("outputParameters.device == paNoDevice", 0);
-	}
-	outputParameters.channelCount = OUTPUT_CHANNELS;       /* stereo output */
-	outputParameters.sampleFormat = paFloat32 | paNonInterleaved; /* 32 bit floating point output */
-	outputParameters.suggestedLatency = Pa_GetDeviceInfo(outputParameters.device)->defaultLowOutputLatency;
-	outputParameters.hostApiSpecificStreamInfo = NULL;
-
-	my_printf("Open stream on device %s | %s\n", apiInfo->name, devInfo->name);
-	my_printf("samplerate %u\n", lSampleRate);
-	my_printf("channelCount %d\n", outputParameters.channelCount);
-	my_printf("lBlockSize %d\n", this->lBlockSize);
-	PaStream* paStream = NULL;
-
-	PaError err = Pa_OpenStream(
-		&paStream,
-		NULL, /* no input */
-		&outputParameters,
-		(double)this->lSampleRate,
-		this->lBlockSize,
-		paClipOff,      /* we won't output out of range samples so don't bother clipping them */
-		audioCallback,
-		this);
-
-	if (err != paNoError) {
-		return error("Pa_OpenStream", err);
-	}
-
-	err = Pa_SetStreamFinishedCallback(paStream, &StreamFinished);
-	if (err != paNoError)
-		return error("Pa_SetStreamFinishedCallback", err);
-
-	err = Pa_StartStream(paStream);
-	if (err != paNoError)
-		return error("Pa_StartStream", err);
-	this->stream = paStream;
-	this->blockZero->realloc(lBlockSize);
-	return true;
 }
 vstplugin* vsthost::getPlugin(AEffect* aeffect) {
 	for (auto* current : pluginInstancesVST2) {

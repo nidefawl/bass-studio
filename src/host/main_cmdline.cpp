@@ -25,6 +25,7 @@
 #include "fileio.h"
 #include "wave/dr_wav.h"
 #include "basectrl.h"
+#include "audio_host.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -128,16 +129,19 @@ int main(int argc, char* argv[]) {
     	FileTimeGetter filetime(file);
     	time = filetime.getWriteTimeI64();
 
-    	auto audiohost = std::make_unique<vsthost>(44100, 256);
-    	vsthost::assignMasterCallback(audiohost.get());
+    	auto audioHost = std::make_unique<audiohost>(44100, 256);
+    	auto host = std::make_unique<vsthost>(44100, 256);
+    	vsthost::assignMasterCallback(host.get());
+    	host->setOutput(audioHost.get());
     	project_controller_t project;
     	plugindatabase_t plugindb;
     	waveformrender renderer;
-    	audiocache cache(audiohost->lSampleRate);
+    	audiocache cache(host->lSampleRate);
     	daw_tls::tlsinstance& tls = daw_tls::getTls();
     	tls.mainCtrl = nullptr;
     	tls.project = &project;
-    	tls.host = audiohost.get();
+    	tls.host = host.get();
+    	tls.audioHost = audioHost.get();
     	tls.audioCache = &cache;
     	tls.waveform = &renderer;
     	tls.pluginDatabase = &plugindb;
@@ -164,14 +168,14 @@ int main(int argc, char* argv[]) {
     		my_printf("project.cursor.cursorPos: %d\n", project.cursor.cursorPos);
     		project.trackList.loadPlugins(snapshot);
     		std::vector<effectbase*> pluginsDeferred;
-    		audiohost->getDeferredEffects(pluginsDeferred);
+    		host->getDeferredEffects(pluginsDeferred);
     		my_printf("loading %d plugins\n", pluginsDeferred.size());
     		for (auto plugin : pluginsDeferred) {
         		my_printf("load %s\n", StringAsCStr(plugin->sName));
-    			audiohost->activateDeferred(plugin);
+    			host->activateDeferred(plugin);
     		}
-    		AudioBlock block(2, audiohost->lBlockSize);
-    		AudioBlock blockFull(1, audiohost->lBlockSize*2);
+    		AudioBlock block(2, host->lBlockSize);
+    		AudioBlock blockFull(1, host->lBlockSize*2);
     		double tLastMsg = getTimeMillis()/1000.0;
     		int64_t nBlocks = 0;
     		int64_t samplesWritten = 0;
@@ -179,17 +183,17 @@ int main(int argc, char* argv[]) {
 			 format.container = drwav_container_riff;     // <-- drwav_container_riff = normal WAV files, drwav_container_w64 = Sony Wave64.
 			 format.format = DR_WAVE_FORMAT_IEEE_FLOAT;          // <-- Any of the DR_WAVE_FORMAT_* codes.
 			 format.channels = 2;
-			 format.sampleRate = audiohost->lSampleRate;
+			 format.sampleRate = host->lSampleRate;
 			 format.bitsPerSample = 32;
 			 drwav* pWav = drwav_open_file_write(StringAsCStr(fOutWave), &format);
 	    		my_printf("start playback\n", 0);
 	    		playThread->addRequest(REQ_STATE, (int) playback_state::status_play, true);
     		while (!quit) {
-    			dsp_util::fillSilence(block.buf, audiohost->lBlockSize);
+    			dsp_util::fillSilence(block.buf, host->lBlockSize);
     			//still a race condition on_terminate here
     			AudioBuffer* buff;
-    			if (audiohost->audioQueue.try_dequeue(buff)) {
-    				if (audiohost->lBlockSize == buff->output->samples) {
+    			if (audioHost->audioQueue.try_dequeue(buff)) {
+    				if (host->lBlockSize == buff->output->samples) {
     					buff->output->copyTo(block.buf);
     					auto tNow = getTimeMillis()/1000.0;
     					if (tNow - tLastMsg > 1) {
@@ -244,7 +248,7 @@ int main(int argc, char* argv[]) {
     		playThread->stopThread();
     		playThread->joinThread();
     	}
-    	audiohost->destroy();
+    	host->destroy();
     	LOG("END");
     } catch (std::exception& e) {
     	log_printf("exception %s\n", e.what());

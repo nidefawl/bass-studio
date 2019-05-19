@@ -14,8 +14,10 @@
 #include "renderresources.h"
 #include "knob.h"
 #include "host/vst_host.h"
+#include "host/audio_host.h"
 #include "basectrl.h"
 #include "host/mainctrl.h"
+#include "appsettings.h"
 
 
 gui_timeinput_field::gui_timeinput_field(int _idx, int32_t* _time, const bool _isRelative) :
@@ -154,5 +156,25 @@ void gui_timeinput::render(NVGcontext* vg) {
 		nvgText(vg, this->beat.pos.x, this->beat.pos.y + G_FONT_MIDDLE_OFFSET(this->beat.size.y), StringAsCStr(str), NULL);
 		nvgText(vg, this->sixteenths.pos.x, this->sixteenths.pos.y + G_FONT_MIDDLE_OFFSET(this->sixteenths.size.y), StringAsCStr(str),
 				NULL);
+	}
+}
+
+void guictr_tempocontrols::buttonClicked(guibase* button) {
+	if (button == &this->btnPlay) {
+		MainCtrl::get()->startPlaying();
+	}
+	if (button == &this->btnStop) {
+		MainCtrl::get()->stopPlaying();
+	}
+	if (button == &this->btnLoop) {
+		project.loopEnabled = !project.loopEnabled;
+	}
+	if (button == &this->btnAudioOnOff) {
+		settings.startEngine = !settings.startEngine;
+		if (settings.startEngine) {
+			audiohost::getInstance()->startAudio();
+		} else {
+			audiohost::getInstance()->stopAudio();
+		}
 	}
 }
