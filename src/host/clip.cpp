@@ -137,6 +137,7 @@ void clip_notes_t::mute(note_t& t) {
 }
 void clip_notes_t::addAll(std::vector<note_t>& list) {
 	dbgassert(selection.empty());
+	//TODO: maybe add reserve here?
 	m_list.insert(std::end(m_list), std::begin(list), std::end(list));
 }
 void clip_notes_t::removeAllKeepDuplicates(std::vector<note_t>& a) {
@@ -392,6 +393,28 @@ int clip_t::getInTimeRange(tick_t absStart, tick_t absEnd, tick_t cutStart, tick
 			note_t noteOffset(note);
 			noteOffset.time += clipStart;
 			noteOffset.len = math::min(noteOffset.end(), clipEnd) - noteOffset.time;
+			if (!list.capacity()) {
+				list.reserve(128);
+			}
+			list.push_back(noteOffset);
+		}
+		itNote++;
+	}
+
+	return list.size();
+}
+
+int getClipNotesInTimeRange(tick_t absStart, tick_t absEnd, tick_t cutStart, tick_t cutEnd, const clip_notes_t notesView, std::vector<note_t>& list) {
+
+
+	auto itNote = notesView.m_list.begin();
+	auto itNotesEnd = notesView.m_list.end();
+	while (itNote != itNotesEnd) {
+		const note_t& note = *itNote;
+		if (note.isIntersectTimeIncludeEnds(absStart, absEnd)) {
+			note_t noteOffset(note);
+//			noteOffset.time += clipStart;
+//			noteOffset.len = math::min(noteOffset.end(), clipEnd) - noteOffset.time;
 			if (!list.capacity()) {
 				list.reserve(128);
 			}

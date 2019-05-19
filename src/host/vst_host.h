@@ -25,6 +25,7 @@
 #endif
 
 class audiohost;
+class clip_notes_t;
 class effectbase;
 class vstplugin;
 struct track_impl_t;
@@ -71,6 +72,7 @@ private:
 	ModuleManager* moduleMgr;
 	SafeRefStorage<effectbase> safeRefs;
 	audiohost* audioHost = nullptr;
+	clip_notes_t* midiRealtimeInput; //TODO: per device and channel
 public:
 	project_globals_t project;
 	samplerate_t lSampleRate;

@@ -33,6 +33,7 @@
 #include "plugindatabase.h"
 #include "gui/drawwaveform.h"
 #include "gui/subtrack.h"
+#include "midi-msg.h"
 #include "assert_dbg.h"
 
 
@@ -718,12 +719,14 @@ void track_impl_t::sendNotesOff(int32_t bpm100, int32_t blockSamplePos) {
 	for (effectbase* effect : effects) {
 		vstplugin* vst = dynamic_cast<vstplugin*>(effect);
 		if (vst && vst->bCanReceiveMidi) {
+			//TODO: use a copy here
 			//			VstEvent_t midiEventsBufTemp = *midiEventsBuf; // make a copy
 			vst->dispatch(effProcessEvents, 0, 0, midiEventsBuf->vstEvents);
 		}
 	}
 }
-void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos) {
+void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos,
+		clip_notes_t& midiRealtimeInput) {
 	//dbgassert(end != loopEnd); //if end equals loopEnd note off events will be on exact end
 	if (std::any_of(effects.begin(), effects.end(), [](const effectbase* ref){
 			return ref->bCanReceiveMidi;
@@ -737,6 +740,10 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 			heldEnd = math::max(heldEnd, note.end());
 		}
 		track->getMidi().getNotesInRange(heldBegin, heldEnd, -1, loopEnd, notes);
+//		int32_t clipNotes = notes.size();
+		getClipNotesInTimeRange(heldBegin, heldEnd, -1, loopEnd, midiRealtimeInput, notes);
+//		int32_t realtimeNotes = notes.size()-clipNotes;
+
 		if (loopStart > -1&&start<loopStart)
 			start = loopStart;
 		if (!notes.empty() || !heldNotes.empty() || arp != nullptr) {
@@ -811,7 +818,7 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 			for (effectbase* effect : effects) {
 				vstplugin* vst = dynamic_cast<vstplugin*>(effect);
 				if (vst && vst->bCanReceiveMidi) {
-					static VstEvents noEvData;
+					VstEvents noEvData;
 					noEvData = {  };
 					vst->dispatch(effProcessEvents, 0, 0, &noEvData);
 				}

@@ -146,6 +146,7 @@ inline bool isAudioStageChildOf(audio_stage_t* parent, audio_stage_t* child) {
 	return false;
 }
 
+class clip_notes_t;
 class midiarp;
 struct track_impl_t : public audio_stage_t {
 	midiarp* arp = nullptr;
@@ -159,7 +160,7 @@ struct track_impl_t : public audio_stage_t {
 	track_impl_t(int32_t _id, track_t* _track, const samplerate_t& _sampleRate, const uint16_t& _blockSize, int32_t nChannels);
 	~track_impl_t();
 	void sendNotesOff(int32_t bpm100, int32_t blockSamplePos);
-	void sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos);
+	void sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, clip_notes_t& midiRealtimeInput);
 	void fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, float** buffer, int32_t samples);
 	VstEvent_t* reallocEvts(size_t size);
 	int loadSubtrackLayout(const std::vector<automationlane_snapshot_t>& atl);

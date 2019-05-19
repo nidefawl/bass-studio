@@ -16,6 +16,9 @@
 #define CLIP_MIDI 0
 #define CLIP_AUDIO 1
 
+class clip_notes_t;
+int getClipNotesInTimeRange(tick_t absStart, tick_t absEnd, tick_t cutStart, tick_t cutEnd, const clip_notes_t notesView, std::vector<note_t>& list);
+
 class track_t;
 class gui_clip;
 //struct cachedaudio_t;

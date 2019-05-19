@@ -23,10 +23,12 @@
 #include "audiobuffer.h"
 #include "platform.h"
 #include "audio_host.h"
+#include "midi_host.h"
+#include "midi-defs.h"
+#include "midi-msg.h"
 
 #include <stdlib.h>
 #include <algorithm>
-#include "assert_dbg.h"
 #include "assert_dbg.h"
 #include <stdlib.h>
 #include <memory.h>
@@ -295,6 +297,7 @@ vsthost::vsthost(uint32_t _sampleRate, uint16_t _blockSize)
 	allocRingBuffer(ringbuffer);
 	updateTime(0, 0, playback_state::status_stop);
 	setBlockSize(_blockSize);
+	midiRealtimeInput = new clip_notes_t;
 }
 void vsthost::setSamplerateBlockSize(int32_t sampleRate, int32_t blockSize) {
 	if (sampleRate != this->lSampleRate || blockSize != this->lBlockSize) {
@@ -422,8 +425,98 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 		readPos++;
 		readPos &= RING_BUF_MASK;
 	}
+	std::vector<MidiIOEvent> msgs = midihost::getInstance()->getInputMessages();
+	bool notesProcessed = false;
+	//TODO: move this logic somewhere else
+	if (msgs.size()) {
+		int32_t minStamp = msgs[0].timestamp;
+		int32_t maxStamp = msgs[0].timestamp;
+		for (MidiIOEvent& msg : msgs) {
+			minStamp = math::min(minStamp, msg.timestamp);
+			maxStamp = math::max(maxStamp, msg.timestamp);
+		}
+		tick_t tickPosBlockStart = ceil(posDouble);
+		int32_t lenTicksInfinite = TICKS_BAR*16;
+		std::vector<note_t> newNotes;
+		for (MidiIOEvent& msg : msgs) {
 
+			int32_t command = MidiMsgStatus(msg.message) & MIDI_CODE_MASK;
+//			int32_t chan = MidiMsgStatus(msg.message) & MIDI_CHN_MASK;
+			int32_t midiMsgCmd = 0;
+			if (command == MIDI_ON_NOTE && MidiMsgData2(msg.message) != 0) {
+				midiMsgCmd = MIDI_ON_NOTE;
+		    } else if (command == MIDI_ON_NOTE || command == MIDI_OFF_NOTE) {
+				midiMsgCmd = MIDI_OFF_NOTE;
+		    }
+			if (midiMsgCmd == MIDI_ON_NOTE) {
+				int32_t relativeTimestampMillis = msg.timestamp - minStamp;
+				log_printf("MIDI_ON_NOTE relativeTimestampMillis %d\n", relativeTimestampMillis);
+				int32_t ticksOffsetBlockStart = millisToTick((double)relativeTimestampMillis, project.tempo100);
+				note_t note;
+				note.time = tickPosBlockStart + ticksOffsetBlockStart;
+				note.len = lenTicksInfinite;
+				note.pitch = MidiMsgData1(msg.message);
+				note.velocity = MidiMsgData2(msg.message);
+				newNotes.push_back(note);
+			}
+			if (midiMsgCmd == MIDI_OFF_NOTE) {
+				int32_t pitch = MidiMsgData1(msg.message);
+				int32_t relativeTimestampMillis = msg.timestamp - minStamp;
+				log_printf("MIDI_OFF_NOTE relativeTimestampMillis %d\n", relativeTimestampMillis);
+				int32_t ticksOffsetBlockStart = millisToTick((double)relativeTimestampMillis, project.tempo100);
+				int32_t tickEnd = tickPosBlockStart + ticksOffsetBlockStart;
+				// kill oldest (first) note
+				bool fnd = false;
+				for (note_t& noteHeld : midiRealtimeInput->m_list) {
+					if(noteHeld.pitch == pitch) {
+						if (noteHeld.start() >= tickEnd) {
+							if (noteHeld.start() == tickEnd) {
+								log_printf("noteHeld.start() == tickEnd %d\n", tickEnd);
+							}
+							continue;
+						}
+						if (noteHeld.len != lenTicksInfinite) {
+							continue;
+						}
+						noteHeld.len = tickEnd - noteHeld.start();
+						log_printf("noteHeld.len %f\n", noteHeld.len/(double)TICKS_BAR);
+						assert(noteHeld.len >= 0);
+						fnd = true;
+						notesProcessed = true;
+						break;
+					}
+				}
+				if (!fnd) {
+					log_printf("MIDI_OFF_NOTE note not found\n", 0);
+				}
 
+			}
+		}
+		if (newNotes.size()) {
+			midiRealtimeInput->addAll(newNotes);
+			midiRealtimeInput->removeDuplicates();
+			notesProcessed = true;
+		}
+	}
+	if (midiRealtimeInput->m_list.size()) {
+		auto it = midiRealtimeInput->m_list.begin();
+		while (it != midiRealtimeInput->m_list.end()) {
+			note_t& note = *it;
+			if (note.end()+TICKS_BAR < posDouble) {
+				notesProcessed = true;
+				it = midiRealtimeInput->m_list.erase(it);
+			} else {
+				it++;
+			}
+		}
+	}
+	if (notesProcessed) {
+		midiRealtimeInput->updateBounds();
+		log_printf("Realtime midi notes %d\n", midiRealtimeInput->m_list.size());
+	}
+	if (!midiRealtimeInput->m_list.empty()) {
+//		log_printf("Realtime midi notes %d\n", midiRealtimeInput->m_list.size());
+	}
 	int nBlocksProcessed = 0;
 	const double ticksPerBlock = toTickPrecise(lBlockSize/(double)lSampleRate, project.tempo100);
 
@@ -514,7 +607,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			trackImpl->output.realloc(lBlockSize);
 			dsp_util::fillSilence(trackImpl->input.buf, lBlockSize);
 			if (state == playback_state::status_play) {
-				trackImpl->sendNotes(pos, tickBlockEnd, loopCutStart, loopCutEnd, project.tempo100, sample);
+				trackImpl->sendNotes(pos, tickBlockEnd, loopCutStart, loopCutEnd, project.tempo100, sample, *midiRealtimeInput);
 			} else if (!trackImpl->heldNotes.empty()) {
 				trackImpl->sendNotesOff(project.tempo100, sample);
 			}
@@ -707,6 +800,7 @@ void vsthost::onStartPlayback() {
 	lastState = playback_state::status_stop;
 }
 void vsthost::onStopPlayback() {
+	midiRealtimeInput->m_list.clear();
 }
 void vsthost::setOutput(audiohost* audioHost) {
 //	assert (audioHost->lSampleRate == this->lSampleRate);
