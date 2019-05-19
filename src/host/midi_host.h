@@ -11,14 +11,18 @@ typedef void PmStream;
 typedef void PmQueue;
 typedef int32_t PmMessage;
 class midihost {
+public:
+	struct opened_device_t {
+		std::vector<MidiIOEvent> midiMsgs;
+		PmStream* stream{NULL};
+		String deviceName;
+		int32_t deviceIdx{0};
+		int32_t direction = 0; // 0 == input 1 == output
+	};
 private:
-	/* shared queues */
-	std::vector<MidiIOEvent> midiMsgsIn;
-	std::vector<MidiIOEvent> midiMsgsOut;
-	std::atomic<PmStream*> streamIn{NULL};
-	std::atomic<PmStream*> streamOut{NULL};
+	std::vector<opened_device_t> devicesInput;
+	std::vector<opened_device_t> devicesOutput;
 	bool pmIsInitalized = false;
-	//	audiothread_ringbuffer_t ringbuffer;
 	bool enableProcessing = true;
 	bool inputInSysex = false;
 	bool outputInSysex = false;
@@ -30,23 +34,30 @@ public:
 //	void enqueue(AudioBuffer*);
 	int32_t processMidi(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround);
 	bool hasInputMessages() {
-		return midiMsgsIn.size() > 0;
+		return std::any_of(devicesInput.cbegin(), devicesInput.cend(), [](auto& dev){
+			return dev.midiMsgs.size() > 0;
+		});
 	}
 	std::vector<MidiIOEvent> getInputMessages() {
-		std::vector<MidiIOEvent> ret = midiMsgsIn;
+		std::vector<MidiIOEvent> ret;
+		for (auto& dev : devicesInput) {
+			ret.insert(ret.end(), dev.midiMsgs.cbegin(), dev.midiMsgs.cend());
+			dev.midiMsgs.clear();
+		}
 		std::sort(ret.begin(), ret.end(), [](auto& a, auto& b){
 			return a.timestamp < b.timestamp;
 		});
-		midiMsgsIn.clear();
 		return ret;
 	}
+	void reopenAllConfiguredDevices(bool forceClose);
 	bool initPm();
 	void deinitPm();
 	void onStreamEnd();
 	bool startMidi();
 	bool stopMidi();
 	bool isStreaming() {
-		return this->streamIn != NULL || this->streamOut != NULL;
+		bool ret = !this->devicesInput.empty() || !this->devicesInput.empty();
+		return ret;
 	}
 };
 

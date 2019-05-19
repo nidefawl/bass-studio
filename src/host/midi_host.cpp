@@ -7,6 +7,7 @@
 #include <portmidi.h>
 #include <pmutil.h>
 #include <stdint.h>
+#include "appsettings.h"
 #include "midi-defs.h"
 
 #define IN_QUEUE_SIZE 1024
@@ -276,7 +277,9 @@ int32_t midihost::processMidi(project_controller_t* ctrl, int32_t sample, double
     }
 
 //    /* see if there is any midi input to process */
-    if (streamIn) {
+    for (auto& dev : devicesInput) {
+    	auto streamIn = dev.stream;
+    	assert(streamIn);
     	std::vector<MidiIOEvent> messages;
         do {
             result = Pm_Poll(streamIn);
@@ -328,48 +331,50 @@ int32_t midihost::processMidi(project_controller_t* ctrl, int32_t sample, double
         	for (auto& msg : messages) {
         		msg.timestamp = current_timestamp;
         	}
-        	this->midiMsgsIn.insert(this->midiMsgsIn.begin(), messages.cbegin(), messages.cend());
+        	dev.midiMsgs.insert(dev.midiMsgs.begin(), messages.cbegin(), messages.cend());
         	log_printf("insert %d messages to this->midiMsgsIn\n", messages.size());
         }
     }
 
 
-    /* see if there is application midi data to process */
-    while (!midiMsgsOut.empty()) {
-//        /* see if it is time to output the next message */
-    	MidiIOEvent& next = midiMsgsOut.back();
-        if (next.timestamp <= current_timestamp) {
-            /* time to send a message, first make sure it's not blocked */
-            int status = Pm_MessageStatus(next.message);
-            if ((status & 0xF8) == 0xF8) {
-                ; /* real-time messages are not blocked */
-            } else if (inputInSysex) {
-                /* maybe sysex has timed out (output becomes unblocked) */
-                if (last_timestamp + 5000 < current_timestamp) {
-                    inputInSysex = FALSE;
-                } else break; /* output is blocked, so exit loop */
-            }
-            midiMsgsOut.pop_back();
-//            Pm_Dequeue(out_queue, &buffer);
-            if (streamOut) {
-            	Pm_Write(streamOut, &buffer, 1);
-            }
+    for (auto& dev : devicesOutput) {
+    	assert(dev.stream);
+
+        /* see if there is application midi data to process */
+        while (!dev.midiMsgs.empty()) {
+    //        /* see if it is time to output the next message */
+        	MidiIOEvent& next = dev.midiMsgs.back();
+            if (next.timestamp <= current_timestamp) {
+                /* time to send a message, first make sure it's not blocked */
+                int status = Pm_MessageStatus(next.message);
+                if ((status & 0xF8) == 0xF8) {
+                    ; /* real-time messages are not blocked */
+                } else if (inputInSysex) {
+                    /* maybe sysex has timed out (output becomes unblocked) */
+                    if (last_timestamp + 5000 < current_timestamp) {
+                        inputInSysex = FALSE;
+                    } else break; /* output is blocked, so exit loop */
+                }
+                dev.midiMsgs.pop_back();
+    //            Pm_Dequeue(out_queue, &buffer);
+            	Pm_Write(dev.stream, &buffer, 1);
 
 
-            /* inspect message to update app_sysex_in_progress */
-            if (status == MIDI_SYSEX) outputInSysex = TRUE;
-            else if ((status & 0xF8) != 0xF8) {
-                /* not MIDI_SYSEX and not real-time, so */
-                outputInSysex = FALSE;
-            }
-            if (outputInSysex && /* look for EOX */
-                (((buffer.message & 0xFF) == MIDI_EOX) ||
-                 (((buffer.message >> 8) & 0xFF) == MIDI_EOX) ||
-                 (((buffer.message >> 16) & 0xFF) == MIDI_EOX) ||
-                 (((buffer.message >> 24) & 0xFF) == MIDI_EOX))) {
-                outputInSysex = FALSE;
-            }
-        } else break; /* wait until indicated timestamp */
+                /* inspect message to update app_sysex_in_progress */
+                if (status == MIDI_SYSEX) outputInSysex = TRUE;
+                else if ((status & 0xF8) != 0xF8) {
+                    /* not MIDI_SYSEX and not real-time, so */
+                    outputInSysex = FALSE;
+                }
+                if (outputInSysex && /* look for EOX */
+                    (((buffer.message & 0xFF) == MIDI_EOX) ||
+                     (((buffer.message >> 8) & 0xFF) == MIDI_EOX) ||
+                     (((buffer.message >> 16) & 0xFF) == MIDI_EOX) ||
+                     (((buffer.message >> 24) & 0xFF) == MIDI_EOX))) {
+                    outputInSysex = FALSE;
+                }
+            } else break; /* wait until indicated timestamp */
+        }
     }
 
 	return 0;
@@ -407,10 +412,108 @@ void midihost::deinitPm() {
 void midihost::onStreamEnd() {
 
 }
-bool midihost::startMidi() {
+template<typename T, typename T2>
+std::vector<app_io> syncOpenCloseDeviceList(T& cfg, T2& openedDevs) {
+	std::vector<app_io> toOpen;
+	for (auto& input : cfg) {
+		auto it = std::find_if(openedDevs.cbegin(), openedDevs.cend(), [devName = input.deviceName] (const midihost::opened_device_t& openedDevice) {
+			return openedDevice.deviceName == devName;
+		});
+		if (it == openedDevs.cend()) {
+			toOpen.push_back(input);
+		}
+	}
+	auto it = openedDevs.begin();
+	while (it != openedDevs.end()) {
+		midihost::opened_device_t& dev = *it;
+		auto it2 = std::find_if(cfg.cbegin(), cfg.cend(), [&dev] (const app_io& iocfg) {
+			return iocfg.deviceName == dev.deviceName;
+		});
+		if (it2 == cfg.cend()) {
+			assert(dev.stream);
+			Pm_Close(dev.stream);
+			dev.stream = nullptr;
+			it = openedDevs.erase(it);
+		} else {
+			it++;
+		}
+	}
+	return toOpen;
+}
+void midihost::reopenAllConfiguredDevices(bool forceClose) {
+	if (forceClose) {
+		std::vector<app_io> empty;
+		syncOpenCloseDeviceList(empty, this->devicesInput);
+		syncOpenCloseDeviceList(empty, this->devicesOutput);
+	}
+	app_ioconfig& midiSettings = settings.iosettings.getIOConfigMidi("stdmidi");
+	{
 
-	midiMsgsIn.clear();
-	midiMsgsOut.clear();
+		std::vector<app_io> toOpen = syncOpenCloseDeviceList(midiSettings.inputs, this->devicesInput);
+		for (app_io& port : toOpen) {
+		    for (int deviceIdx = 0; deviceIdx < Pm_CountDevices(); deviceIdx++) {
+		        const PmDeviceInfo *info = Pm_GetDeviceInfo(deviceIdx);
+		        if (info->input) {
+		        	if (port.deviceName == info->name) {
+		                log_printf("Opening input device %s %s\n", info->interf, info->name);
+		                PmStream* newStream = nullptr;
+		                auto err = Pm_OpenInput(&newStream,
+		                		deviceIdx,
+		                             NULL /* driver info */,
+		                             0 /* use default input size */,
+		                             &getMidiTime,
+		                             NULL /* time info */);
+		                if (err != pmNoError) {
+		        			error("Pm_OpenInput", err);
+		        			if (newStream) {
+		        				Pm_Close(newStream);
+		        			}
+		                } else {
+		                    /* Note: if you set a filter here, then this will filter what goes
+		                       to the MIDI THRU port. You may not want to do this.
+		                     */
+	                    	Pm_SetFilter(newStream, 0);
+		                	this->devicesInput.push_back(opened_device_t{{}, newStream, info->name, deviceIdx, 0});
+		                }
+		                break;
+		        	}
+		        }
+		    }
+		}
+	}
+	{
+
+		std::vector<app_io> toOpen = syncOpenCloseDeviceList(midiSettings.outputs, this->devicesOutput);
+		for (app_io& port : toOpen) {
+		    for (int deviceIdx = 0; deviceIdx < Pm_CountDevices(); deviceIdx++) {
+		        const PmDeviceInfo *info = Pm_GetDeviceInfo(deviceIdx);
+		        if (info->output) {
+		        	if (port.deviceName == info->name) {
+		                log_printf("Opening output device %s %s\n", info->interf, info->name);
+		                PmStream* newStream = nullptr;
+		                auto err = Pm_OpenOutput(&newStream,
+		                		deviceIdx,
+		                              NULL /* driver info */,
+		                              OUT_QUEUE_SIZE,
+		                              &getMidiTime,
+		                              NULL /* time info */,
+		                              0 /* Latency */);
+		                if (err != pmNoError) {
+		        			error("Pm_OpenOutput", err);
+		        			if (newStream) {
+		        				Pm_Close(newStream);
+		        			}
+		                } else {
+		                	this->devicesOutput.push_back(opened_device_t{{}, newStream, info->name, deviceIdx, 1});
+		                }
+		                break;
+		        	}
+		        }
+		    }
+		}
+	}
+}
+bool midihost::startMidi() {
     printf("MIDI input devices:\n");
     for (int i = 0; i < Pm_CountDevices(); i++) {
         const PmDeviceInfo *info = Pm_GetDeviceInfo(i);
@@ -421,82 +524,17 @@ bool midihost::startMidi() {
         const PmDeviceInfo *info = Pm_GetDeviceInfo(i);
         if (info->output) log_printf("%d: %s, %s\n", i, info->interf, info->name);
     }
-	PmError err;
-    const PmDeviceInfo *info;
-    int id;
-    id = 5 < Pm_CountDevices() ? 5 : Pm_GetDefaultOutputDeviceID();
-    info = Pm_GetDeviceInfo(id);
-    if (info == NULL) {
-    	log_printf("Could not open default output device (%d).", id);
-
-    } else {
-
-        log_printf("Opening output device %s %s\n", info->interf, info->name);
-        /* use zero latency because we want output to be immediate */
-        PmStream* newStream = nullptr;
-        err = Pm_OpenOutput(&newStream,
-                      id,
-                      NULL /* driver info */,
-                      OUT_QUEUE_SIZE,
-                      &getMidiTime,
-                      NULL /* time info */,
-                      0 /* Latency */);
-        if (err != pmNoError) {
-			error("Pm_OpenOutput", err);
-			if (newStream) {
-				Pm_Close(newStream);
-			}
-        } else {
-			this->streamOut = newStream;
-        }
-    }
-
-    id = 3 < Pm_CountDevices() ? 3 : Pm_GetDefaultInputDeviceID();
-    info = Pm_GetDeviceInfo(id);
-    if (info == NULL) {
-        log_printf("Could not open default input device (%d).", id);
-    } else {
-        log_printf("Opening input device %s %s\n", info->interf, info->name);
-        PmStream* newStream = nullptr;
-        err = Pm_OpenInput(&newStream,
-                     id,
-                     NULL /* driver info */,
-                     0 /* use default input size */,
-                     &getMidiTime,
-                     NULL /* time info */);
-        if (err != pmNoError) {
-			error("Pm_OpenOutput", err);
-			if (newStream) {
-				Pm_Close(newStream);
-			}
-        } else {
-			this->streamIn = newStream;
-        }
-    }
-    /* Note: if you set a filter here, then this will filter what goes
-       to the MIDI THRU port. You may not want to do this.
-     */
-    if (this->streamIn) {
-    	Pm_SetFilter(this->streamIn, 0);
-    }
+    assert(this->devicesInput.empty());
+    assert(this->devicesOutput.empty());
+    reopenAllConfiguredDevices(false);
     return isStreaming();
 }
 bool midihost::stopMidi() {
 	my_printf("stopMidi.\n", 0);
-	bool bRet = this->streamIn || this->streamOut;
-	if (this->streamIn) {
-		PmError err = Pm_Close(this->streamIn);
-		if (err != pmNoError) {
-			error("Pm_Close", err);
-		}
-	}
-	if (this->streamOut) {
-		PmError err = Pm_Close(this->streamOut);
-		if (err != pmNoError) {
-			error("Pm_Close", err);
-		}
-	}
-	return bRet;
-
+	bool ret = !this->devicesInput.empty() || !this->devicesInput.empty();
+	std::vector<app_io> empty;
+	syncOpenCloseDeviceList(empty, this->devicesInput);
+	syncOpenCloseDeviceList(empty, this->devicesOutput);
+	return ret;
 
 }

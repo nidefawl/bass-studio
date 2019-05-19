@@ -10,18 +10,23 @@
 
 class gui_list;
 class guidropdownbase;
-class guidialog_iosettings : public guidialog_base {
-	guidropdownbase* selectAPI;
-	gui_list* deviceListInput;
-	gui_list* deviceListOutput;
-	guidropdownbase* audioBlockSize;
-	guidropdownbase* audioSampleRate;
-	guibutton btnAdd;
+class setting_dialog : public guictr_base {
+public:
+	virtual void onDialogShow() = 0;
+};
+
+class guidialog_settings : public guidialog_base {
+	struct dialog_entry;
+	std::vector<dialog_entry*> entries;
+	dialog_entry* activeEntry = nullptr;
 	guibutton btnClose;
 public:
-	guidialog_iosettings();
-	~guidialog_iosettings();
+	guidialog_settings();
+	~guidialog_settings();
 	void render(NVGcontext* vg) override;
 	void layout() override;
 	void buttonClicked(guibase* button) override;
+	int32_t getNumEntries();
+	void setActiveEntry(int32_t idx);
+	void addEntry(setting_dialog* ctr, String title);
 };

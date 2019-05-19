@@ -548,7 +548,7 @@ void MainCtrl::menuCommand(int cmd) {
 #endif
 		break;
 	case CMD_PREFERENCES:
-		this->openDialog(new guidialog_iosettings());
+		this->openDialog(new guidialog_settings());
 		break;
 	case CMD_EXIT:
 		mainWindow->requestClose();

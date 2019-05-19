@@ -53,8 +53,9 @@ void serialize(Archive & ar, app_iosettings& settings) {
 	using cereal::make_nvp;
 	ar(make_nvp("samplerate", settings.samplerate),
 		make_nvp("blocksize", settings.blocksize),
-		make_nvp("device_api", settings.device_api),
-		make_nvp("configs", settings.configs));
+		make_nvp("device_api", settings.device_api));
+	make_optional_nvp(ar, "io_midi", settings.midiconfigs);
+	make_optional_nvp(ar, "io_audio", settings.configs);
 }
 template<class Archive>
 void serialize(Archive & ar, appsettings& settings) {

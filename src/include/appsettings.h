@@ -19,8 +19,15 @@ struct app_iosettings {
 	int32_t samplerate = 44100;
 	int32_t blocksize = 256;
 	std::map<String, app_ioconfig> configs;
+	std::map<String, app_ioconfig> midiconfigs;
 	String device_api;
 	app_ioconfig& getConfig(String devApi) {
+    	if (!configs.count(devApi)) {
+    		configs[devApi] = app_ioconfig();
+    	}
+    	return configs[devApi];
+    }
+	app_ioconfig& getIOConfigMidi(String devApi) {
     	if (!configs.count(devApi)) {
     		configs[devApi] = app_ioconfig();
     	}
