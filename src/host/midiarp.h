@@ -23,7 +23,6 @@ public:
 	};
 private:
 	struct arp_param_entry_t {
-		arp_param_entry_t() = default;
 		int32_t id = 0;
 		String name;
 		float val = 0.0f;
@@ -67,10 +66,10 @@ public:
 			dbgassert(tickLength[i + 0] > 0);
 		}
 		const std::array<arp_param_entry_t, 4> parameterTypes { {
-			arp_param_entry_t{{PARAM_ENABLE, "Enabled", 0.0f}},
-			arp_param_entry_t{{ARP_PARAM_CLOCK, "Clock", 10.0f/(float)NUM_ARP_STEPSIZE_OPTIONS}},
-			arp_param_entry_t{{ARP_PARAM_GATE, "Gate", 1/4.0f}},
-			arp_param_entry_t{{ARP_PARAM_PATTERN, "Pattern", 0.0f}},
+			arp_param_entry_t{PARAM_ENABLE, "Enabled", 0.0f},
+			arp_param_entry_t{ARP_PARAM_CLOCK, "Clock", 10.0f/(float)NUM_ARP_STEPSIZE_OPTIONS},
+			arp_param_entry_t{ARP_PARAM_GATE, "Gate", 1/4.0f},
+			arp_param_entry_t{ARP_PARAM_PATTERN, "Pattern", 0.0f},
 		} };
 		for (const arp_param_entry_t& paramEntry : parameterTypes) {
 			automatable_param_t* regparam = registerParam(paramEntry.id);
