@@ -12,6 +12,7 @@
 #include "util/readerwriterqueue.h"
 #include "host/mainctrl.h"
 #include "host/vst_host.h"
+#include "host/midi_host.h"
 #include "logging.h"
 
 #ifdef _WIN32
@@ -149,6 +150,7 @@ private:
 		setCurrentThreadName("audiothread");
 		project_controller_t* const ctrl = this->ctrl;
 		vsthost* host = vsthost::getInstance();
+		midihost* midiHost = midihost::getInstance();
 		double playbackDuration = 0;
 		hires_timer_t timer;
 
@@ -231,6 +233,7 @@ private:
             	inLoop = (tickPos >= projGlobals.loopStart
             			&& tickPos < projGlobals.loopStart+projGlobals.loopLen
 						&& m_status == status_play && projGlobals.loopEnabled);
+            	midiHost->processMidi(this->ctrl, samplePos, tickPos, m_status, inLoop, isLoopAround);
             	processedBlock = host->processPlayback(this->ctrl, samplePos, tickPos, m_status, inLoop, isLoopAround);
 //    			LOG("processedBlocks: %d, play: %d, tickpos: %f\n", processedBlock, (m_status==playback_state::status_play), tickPos);
             }

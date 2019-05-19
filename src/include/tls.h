@@ -1,5 +1,6 @@
 #pragma once
 class audiohost;
+class midihost;
 class vsthost;
 class waveformrender;
 class MainCtrl;
@@ -11,6 +12,7 @@ namespace daw_tls {
 		bool tlsInitialized = false;
 		vsthost* host = nullptr;
 		audiohost* audioHost = nullptr;
+		midihost* midiHost = nullptr;
 		waveformrender* waveform = nullptr;
 		MainCtrl* mainCtrl = nullptr;
 		audiocache* audioCache = nullptr;

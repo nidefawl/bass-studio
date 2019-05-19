@@ -58,7 +58,6 @@
 #include "../gui/dialogs.h"
 #include "../gui/guicontainer_layout.h"
 
-#include "vst_host.h"
 #include "plugin/base_plugin.h"
 #include "plugin/vst_plugin.h"
 #include "track_impl.h"
@@ -70,7 +69,10 @@
 #include "../threads/playbackthread.h"
 #include "plugindatabase.h"
 #include "window_impl.h"
+
+#include "vst_host.h"
 #include "audio_host.h"
+#include "midi_host.h"
 
 	const int FLAG_DEFER_LOAD = 0x1;
 
@@ -558,6 +560,8 @@ void MainCtrl::menuCommand(int cmd) {
 	}
 }
 void MainCtrl::postInit() {
+	audiohost::getInstance()->initPa();
+	midihost::getInstance()->initPm();
 	if (settings.startEngine) {
 		vsthost* host = vsthost::getInstance();
 		audiohost* audioHost = audiohost::getInstance();
@@ -568,6 +572,7 @@ void MainCtrl::postInit() {
 			log_printf("audioHost->startAudio() failed\n", 0);
 		}
 	}
+	midihost::getInstance()->startMidi();
 //	vsthost::getInstance()->postInit();
 	if (!loadProject.empty()) {
 		loadFile(loadProject, 0);
@@ -585,6 +590,7 @@ void MainCtrl::destroy()
 	setAudioThreadState(playback_state::status_no_process);
 	dbgassert(playThread.getState() == playback_state::status_no_process);
 	ThreadLock lock = playThread.lockThread();
+	midihost::getInstance()->stopMidi();
 	audiohost::getInstance()->stopAudio();
 	unloadProject();
 	int totalAllocs = getNumClipAllocations();
@@ -594,6 +600,8 @@ void MainCtrl::destroy()
 	}
 	vsthost::getInstance()->unload();
 	vsthost::getInstance()->destroy();
+	audiohost::getInstance()->deinitPa();
+	midihost::getInstance()->deinitPm();
 	settings.dens = grid.grid_dens;
 	isOK = false;
 	delete view;
@@ -605,9 +613,11 @@ void MainCtrl::destroy()
 	daw_tls::tlsinstance& tls = daw_tls::getTls();
 	delete tls.waveform;
 	delete tls.audioCache;
+	delete tls.midiHost;
 	delete tls.host;
 	delete tls.audioHost;
 	tls.host = nullptr;
+	tls.midiHost = nullptr;
 	tls.audioHost = nullptr;
 	tls.mainCtrl = nullptr;
 	tls.project = nullptr;
@@ -625,6 +635,7 @@ void MainCtrl::initApp(int argc, char* argv[]) {
 	daw_tls::tlsinstance& tls = daw_tls::getTls();
 	auto audioHost = new audiohost(44100, 256);
 	auto host = new vsthost(44100, 256);
+	auto midiHost = new midihost();
 	if (!vsthost::assignMasterCallback(host)) {
 		delete host;
 		dbgassert(0);
@@ -634,6 +645,7 @@ void MainCtrl::initApp(int argc, char* argv[]) {
 	tls.mainCtrl = this;
 	tls.audioHost = audioHost;
 	tls.host = host;
+	tls.midiHost = midiHost;
 	tls.pluginDatabase = &plugindb;
 	tls.audioCache = new audiocache(tls.host->lSampleRate);
 	tls.waveform = new waveformrender();
@@ -708,7 +720,7 @@ bool MainCtrl::init(window_main* window, NVGcontext* nanovg)
 
 	grid.grid_dens = settings.dens;
 
-	vsthost::getInstance()->setSamplerateBlockSize(settings.iosettings.samplerate, settings.iosettings.blocksize);
+//	vsthost::getInstance()->setSamplerateBlockSize(settings.iosettings.samplerate, settings.iosettings.blocksize);
 	updateGrid();
 	isOK = true;
 	return isOK;

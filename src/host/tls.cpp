@@ -2,6 +2,7 @@
 #include "host/mainctrl.h"
 #include "host/vst_host.h"
 #include "host/audio_host.h"
+#include "host/midi_host.h"
 #include "host/plugindatabase.h"
 #include "host/projectcontroller.h"
 #include "audiocache.h"
@@ -50,4 +51,9 @@ audiohost* audiohost::getInstance()
 {
 	dbgassert(daw_tls::tls.audioHost);
 	return daw_tls::tls.audioHost;
+}
+midihost* midihost::getInstance()
+{
+	dbgassert(daw_tls::tls.midiHost);
+	return daw_tls::tls.midiHost;
 }
