@@ -34,6 +34,11 @@ find_library(
     PATH_SUFFIXES lib
     NO_DEFAULT_PATH)
 find_library(
+    PORTMIDI_LIB_RELEASE NAMES "portmidi_s"
+    PATHS ${BUILD_PATH_LIB_RELEASE}/portmidi/
+    PATH_SUFFIXES lib
+    NO_DEFAULT_PATH)
+find_library(
     GLFW_LIB_DEBUG
     NAMES "glfw3" "glfw3dll"
     PATHS ${BUILD_PATH_LIB_DEBUG}/glfw/
@@ -54,6 +59,11 @@ find_library(
     PATHS ${BUILD_PATH_LIB_DEBUG}/portaudio/
     PATH_SUFFIXES lib
     NO_DEFAULT_PATH)
+find_library(
+    PORTMIDI_LIB_DEBUG NAMES "portmidi_s"
+    PATHS ${BUILD_PATH_LIB_DEBUG}/portmidi/
+    PATH_SUFFIXES lib
+    NO_DEFAULT_PATH)
 
 message (STATUS "glfw3 debug = ${GLFW_LIB_DEBUG}")
 message (STATUS "glfw3 release = ${GLFW_LIB_RELEASE}")
@@ -63,6 +73,8 @@ message (STATUS "soxr debug = ${SOXR_LIB_DEBUG}")
 message (STATUS "soxr release = ${SOXR_LIB_RELEASE}")
 message (STATUS "portaudio debug = ${PORTAUDIO_LIB_DEBUG}")
 message (STATUS "portaudio release = ${PORTAUDIO_LIB_RELEASE}")
+message (STATUS "portmidi debug = ${PORTMIDI_LIB_DEBUG}")
+message (STATUS "portmidi release = ${PORTMIDI_LIB_RELEASE}")
 
 FIND_PACKAGE ( Threads REQUIRED )
 if (UNIX)
