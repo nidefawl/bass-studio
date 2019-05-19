@@ -703,7 +703,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
 			nvgStrokeColor(vg, theme->getColor(GuiColor::COL_NOTE_OUTLINE));
 			nvgStroke(vg);
 		}
-		std::vector<note_t>& heldNotesArpIn = track->audio->getArpInputNotes();
+		std::vector<note_t>& heldNotesArpIn = track->audio->getArpInputNotes(); //TODO: NOT THREADSAFE
 		if (heldNotesArpIn.size()&&false) {
 			nvgBeginPath(vg);
 			for (note_t& note : heldNotesArpIn) {
@@ -722,8 +722,27 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
 			nvgStrokeColor(vg, theme->getColor(GuiColor::COL_NOTE_OUTLINE));
 			nvgStroke(vg);
 		}
+		std::vector<note_t> heldNotesAll = track->audio->heldNotes; //TODO: NOT THREADSAFE
+		if (heldNotesAll.size()) {
+			nvgBeginPath(vg);
+			for (note_t& note : heldNotesArpIn) {
+				tick_t pos = note.start() - clip->start() + clip->offsetStart;
+				if (clip->isLoopEnabled()) {
+					if (pos > clip->loopStart) {
+						pos = clip->loopStart + (pos - clip->loopStart) % clip->loopLen;
+					}
+				}
+				//TODO: CULL
+				renderNote(vg, this, &note, scale, -note.start() + pos);
+			}
+			nvgFillColor(vg, rgbToNvg(0xbbbb00));
+			nvgFill(vg);
+			nvgStrokeWidth(vg, 1.0f);
+			nvgStrokeColor(vg, theme->getColor(GuiColor::COL_NOTE_OUTLINE));
+			nvgStroke(vg);
+		}
 
-		std::vector<note_t>& heldNotesArp = track->audio->getArpHeldNotes();
+		std::vector<note_t>& heldNotesArp = track->audio->getArpHeldNotes(); //TODO: NOT THREADSAFE
 		if (heldNotesArp.size()) {
 			nvgBeginPath(vg);
 
@@ -743,7 +762,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
 			nvgStrokeColor(vg, theme->getColor(GuiColor::COL_NOTE_OUTLINE));
 			nvgStroke(vg);
 		}
-		std::vector<marker_t> markers = track->audio->getArpMarkers();
+		std::vector<marker_t> markers = track->audio->getArpMarkers(); //TODO: NOT THREADSAFE
 		if (markers.size()) {
 			for (marker_t& m : markers) {
 				tick_t pos = m.time - clip->start() + clip->offsetStart;
