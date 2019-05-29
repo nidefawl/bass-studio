@@ -84,7 +84,7 @@ void plugindatabase_t::query(String q, std::vector<pluginentry_t>& _out) {
 }
 void plugindatabase_t::openDatabase() {
 	dbgassert(!_M_Impl);
-	_M_Impl = new plugindatabase_t::Impl("data/plugins.db3");
+	_M_Impl = new plugindatabase_t::Impl{"data/plugins.db3"};
 }
 void plugindatabase_t::closeDatabase() {
 	dbgassert(_M_Impl);

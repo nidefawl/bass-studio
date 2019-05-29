@@ -213,7 +213,8 @@ void findFilesWithExt(
 		std::vector<String> subDirs;
 
 		do {
-			String curFilePath = file.cFileName;
+			String curFilePath;
+			curFilePath = file.cFileName;
 
 			if (file.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
 				if ((curFilePath != ".") && (curFilePath != "..") && (bRecursive)) {
