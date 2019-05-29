@@ -157,8 +157,11 @@ void BasePluginVST2::open () {
 		String moduleName = getModuleName(hInstance);
 		String modulePath = "";
 		SplitPath(moduleName, &modulePath, nullptr, nullptr, nullptr);
+		if (!FileExists(modulePath +"/res")) {
+			modulePath="C:/Users/Michael/daw/run";
+		}
 		setCWDPath(modulePath);
-		my_printf("setCWDPath: %s\n", StringAsCStr(moduleName));
+		my_printf("setCWDPath: %s\n", StringAsCStr(modulePath));
 	} else {
 		setCWDPath(strPath);// remember cwd, it _will_ change
 		my_printf("setCWDPath: %s\n", StringAsCStr(strPath));
