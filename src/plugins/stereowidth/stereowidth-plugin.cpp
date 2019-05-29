@@ -17,9 +17,9 @@
 #include "vstsdk-plugin-2.4/audioeffect.h"
 #include "vstsdk-plugin-2.4/audioeffectx.h"
 
-#define PLUGIN_EFFECT_NAME "NoneAdv"
-#define PLUGIN_UID "AGTP" //advanced gui test plugin
-#define PLUGIN_PRODUCT_NAME "advanced gui test plugin VST2.x "
+#define PLUGIN_EFFECT_NAME "StereoWidth"
+#define PLUGIN_UID "STWD"
+#define PLUGIN_PRODUCT_NAME "stereo width VST2.x "
 
 
 #if BUILD_EXTERNAL_PLUGIN

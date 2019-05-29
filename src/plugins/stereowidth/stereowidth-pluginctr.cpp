@@ -49,15 +49,11 @@ public:
 		remove(&knobgain);
 		remove(&knobwidth);
 	}
-	std::vector<String> g_debugStrings;
 	virtual void render(NVGcontext* vg);
 	virtual void prerender(NVGcontext* vg);
 	virtual void onTick(AppCtrl* ctrl) override;
 	void layout();
 	void buttonClicked(guibase* button) override;
-	void addStr(String str) {
-		g_debugStrings.push_back(std::move(str));
-	}
 	bool handleKeyInput(KeyEvent& kevt) override;
 	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
 		if (this->contains(mpos)) {

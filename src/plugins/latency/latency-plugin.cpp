@@ -229,10 +229,6 @@ public:
 	~guicontainer_plugin_latency() {
 		remove(&knoblatency);
 	}
-	std::vector<String> g_debugStrings;
-	void addStr(String str) {
-		g_debugStrings.push_back(std::move(str));
-	}
 	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
 		if (this->contains(mpos)) {
 			ivec2 localMouse = this->toContainerSpace(mpos);

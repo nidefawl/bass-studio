@@ -18,7 +18,12 @@
 #include <Windows.h>
 #endif
 
+#if defined(PLUGIN_BUILD_CRASHVERSION) || defined(BUILD_VSTHOST)
+#define PLUGIN_EFFECT_NAME "CrashVST2x"
+#else
 #define PLUGIN_EFFECT_NAME "Empty"
+#endif
+
 #define PLUGIN_VENDOR_NAME "MichaelH"
 #define PLUGIN_UID "EMPT" //advanced gui test plugin
 #define PLUGIN_PRODUCT_NAME "empty test plugin VST2.x "
