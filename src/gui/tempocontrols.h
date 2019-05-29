@@ -1,6 +1,7 @@
 #pragma once
 #include <stdbool.h>
 #include <stdint.h>
+#include <vector>
 
 #include "math/seq_math.h"
 #include "str_util.h"
@@ -263,13 +264,15 @@ public:
 //		btnStop.pos = ivec2(btnPlay.right() + spacingCtrls, 5);
 //		songPos.pos = ivec2(btnStop.right() + spacingCtrls, 5);
 //		btnLoop.pos = ivec2(songPos.right() + spacingCtrls, 5);
+		std::vector<guibase*> v{&btnPlay, &btnStop, &songPos};
+		std::vector<guibase*> v2{&btnLoop, &loopPos, &loopLen};
 		int posX = transportCtrls;
-		for (auto el :  (std::vector<guibase*>{&btnPlay, &btnStop, &songPos})) {
+		for (auto el :  v) {
 			el->pos = ivec2(posX, 5);
 			posX = el->right() + spacingCtrls;
 		}
 		posX += spacingCtrls*3;
-		for (auto el :  (std::vector<guibase*>{&btnLoop, &loopPos, &loopLen})) {
+		for (auto el :  v2) {
 			el->pos = ivec2(posX, 5);
 			posX = el->right() + spacingCtrls;
 		}
