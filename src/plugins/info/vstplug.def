@@ -1,0 +1,2 @@
+LIBRARY     info
+EXPORTS     main=VSTPluginMain
