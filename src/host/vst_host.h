@@ -32,10 +32,16 @@ struct track_impl_t;
 struct audio_stage_t;
 struct audio_stage_ref_t;
 class project_controller_t;
+class AudioEffectX;
 
 typedef AEffect*(VSTPluginMain_t)(audioMasterCallback audioMasterCB);
-
-
+typedef	AudioEffectX* (*FnCreateModule) (audioMasterCallback);
+struct builtin_module_reg_t {
+	int id = -1;
+	bool isSynth;
+	String name;
+	FnCreateModule fnNewInstance;
+};
 
 class vstpluginloadres {
 public:
@@ -73,6 +79,7 @@ private:
 	SafeRefStorage<effectbase> safeRefs;
 	audiohost* audioHost = nullptr;
 	clip_notes_t* midiRealtimeInput; //TODO: per device and channel
+	std::vector<builtin_module_reg_t> builtinModules;
 public:
 	project_globals_t project;
 	samplerate_t lSampleRate;
@@ -105,9 +112,13 @@ private:
 	bool unloadAllPlugins();
 	void updateTime(int32_t samplePos, tick_t pos, playback_state state);
 	void setBlockSize(uint16_t blockSize);
+	void registerPlugins();
 public:
 	int32_t getNextSampleId(int32_t id);
 	void sendNotesOff(effectbase* plugin);
+	std::vector<builtin_module_reg_t>& getBuiltinModuleRegistry() {
+		return builtinModules;
+	}
 public:
 	vsthost(uint32_t _sampleRate = 44100, uint16_t _blockSize = 512);
 	vsthost(vsthost const&) = delete;

@@ -13,32 +13,31 @@
 #include "plugins/stereowidth/stereowidth-plugin.h"
 #include "plugins/empty/empty-plugin.h"
 #include "plugins/latency/latency-plugin.h"
+#include "plugins/info/info-plugin.h"
+#include "plugins/synth/synth-plugin.h"
 
+typedef	AudioEffectX* (*FnCreateModule) (audioMasterCallback);
+void vsthost::registerPlugins() {
+	int moduleId = 1000;
+	builtinModules.clear();
+	builtinModules.push_back({moduleId++, false, PluginStereoWidth::getName(), PluginStereoWidth::createPlugin });
+	builtinModules.push_back({moduleId++, false, PluginTestAdv::getName(), PluginTestAdv::createPlugin });
+	builtinModules.push_back({moduleId++, false, PluginEmptyVST2::getName(), PluginEmptyVST2::createPlugin });
+	builtinModules.push_back({moduleId++, false, PluginLatency::getName(), PluginLatency::createPlugin });
+	builtinModules.push_back({moduleId++, false, PluginHostInfo::getName(), PluginHostInfo::createPlugin });
+	builtinModules.push_back({moduleId++, true, PluginSynth::getName(), PluginSynth::createPlugin });
+}
 
 vstpluginloadres vsthost::loadInternalPlugin(int32_t moduleId, int32_t globalId) {
 	AudioEffectX* axeffect = NULL;
-	String name = "";
-	switch (moduleId) {
-	case PLUG_INT_STEREOWIDTH:
-		axeffect = PluginStereoWidth::createPlugin(masterCallBackSlot);
-		name = PluginStereoWidth::getName();
-		break;
-	case PLUG_INT_TEST:
-		axeffect = PluginTestAdv::createPlugin(masterCallBackSlot);
-		name = PluginTestAdv::getName();
-		break;
-	case PLUG_INT_CRASHVST:
-		axeffect = PluginEmptyVST2::createPlugin(masterCallBackSlot);
-		name = PluginEmptyVST2::getName();
-		break;
-	case PLUG_INT_LATENCY:
-		axeffect = PluginLatency::createPlugin(masterCallBackSlot);
-		name = PluginLatency::getName();
-		break;
-	default:
-		dbgassert(0);
-		break;
-	}
+	auto it = std::find_if(builtinModules.begin(), builtinModules.end(), [moduleId](auto& reg) {
+		return reg.id == moduleId;
+	});
+	dbgassert (it != builtinModules.end());
+	if (it == builtinModules.end())
+		return vstpluginloadres(-2, NULL);
+	builtin_module_reg_t& reg = *it;
+	axeffect = reg.fnNewInstance(masterCallBackSlot);
 	if (!axeffect) {
 		return vstpluginloadres(-1, NULL);
 	}
@@ -46,7 +45,7 @@ vstpluginloadres vsthost::loadInternalPlugin(int32_t moduleId, int32_t globalId)
 	globalId = getNextGlobalModuleId(globalId);
 
 	AEffect* aeffect = axeffect->getAeffectHandle();
-	vstplugin* plugin = new vstplugin(new handles_t(axeffect, aeffect, moduleHandle), globalId, "", name, moduleId);
+	vstplugin* plugin = new vstplugin(new handles_t(axeffect, aeffect, moduleHandle), globalId, "", reg.name, moduleId);
 	pluginInstancesVST2.push_back(plugin);
 	pluginInstances.push_back(plugin);
 	plugin->load(this);

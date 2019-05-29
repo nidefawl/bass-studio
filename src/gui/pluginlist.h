@@ -9,6 +9,7 @@
 #include "textfield.h"
 #include "list.h"
 #include "../host/plugindatabase.h"
+#include "../host/vst_host.h"
 #include "modules.h"
 
 class effectbase;
@@ -139,10 +140,13 @@ public:
 		setBackgroundRendered(true);
 		effectEntries.push_back(module_desc_t{PLUGIN_TYPE_EMPTY, 0, "Empty", false});
 		effectEntries.push_back(module_desc_t{PLUGIN_TYPE_GROUP, 0, "Group", false});
-		effectEntries.push_back(module_desc_t{PLUGIN_TYPE_INTERNAL_EFFECT, PLUG_INT_STEREOWIDTH, "StereoWidth", false});
-		effectEntries.push_back(module_desc_t{PLUGIN_TYPE_INTERNAL_EFFECT, PLUG_INT_TEST, "TestAdv", false});
-		effectEntries.push_back(module_desc_t{PLUGIN_TYPE_INTERNAL_EFFECT, PLUG_INT_CRASHVST, "CrashVST2", false});
-		effectEntries.push_back(module_desc_t{PLUGIN_TYPE_INTERNAL_EFFECT, PLUG_INT_LATENCY, "Latency", false});
+		auto host = vsthost::getInstance();
+		if (host) {
+			std::vector<builtin_module_reg_t>& vecReg = host->getBuiltinModuleRegistry();
+			for (auto& reg : vecReg) {
+				effectEntries.push_back(module_desc_t{PLUGIN_TYPE_INTERNAL_EFFECT, reg.id, reg.name, reg.isSynth});
+			}
+		}
 		pluginListCtr.padding = 0;
 		add(&textField);
 		add(&pluginListCtr);

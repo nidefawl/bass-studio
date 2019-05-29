@@ -298,6 +298,7 @@ vsthost::vsthost(uint32_t _sampleRate, uint16_t _blockSize)
 	updateTime(0, 0, playback_state::status_stop);
 	setBlockSize(_blockSize);
 	midiRealtimeInput = new clip_notes_t;
+	registerPlugins();
 }
 void vsthost::setSamplerateBlockSize(int32_t sampleRate, int32_t blockSize) {
 	if (sampleRate != this->lSampleRate || blockSize != this->lBlockSize) {
