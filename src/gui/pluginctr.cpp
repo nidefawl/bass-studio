@@ -109,14 +109,6 @@ void guictr_plugins::onAdded() {
 	if (parent) {
 		theme = parent->theme;
 	}
-//	guibase* g = this;
-//	while (g != nullptr) {
-////		if (g->guiType == GUI_PLUGIN_VIEW) {
-////			guictr_pluginview* pv = static_cast<guictr_pluginview*>(g);
-//////			pv->pluginContainers.push_back(this);
-////		}
-//		g = g->parent;
-//	}
 }
 void guictr_plugins::addGui(effectbase* plugin) {
 	guiplugin* base = plugin->makeGui();
@@ -127,16 +119,15 @@ void guictr_plugins::addGui(effectbase* plugin) {
 
 void pastePluginClipboard(std::shared_ptr<plugin_clipboard_t>& clipboard, audio_stage_t* stage, int32_t pos) {
 	for (const plugin_snapshot_t& pluginSnapshot : clipboard->plugins) {
-		effectbase* effect = loadEffectModule(pluginSnapshot);
+		auto effect = loadPluginDeferred(pluginSnapshot);
 		if (effect) {
-			loadEffectParamsFromSnapshot(pluginSnapshot, effect);
-			stage->insertEffect(pos, effect);
-//						host->insertNewPlugin(this, effect, pluginSnapshot.slot);
-			effect->loadSnapshot(pluginSnapshot);
-			loadAutomation(pluginSnapshot.automatedParams, effect);
-			if (pluginSnapshot.enabled) {
-				effect->resume();
-			}
+			vsthost* host = vsthost::getInstance();
+
+			stage->deferredEffects.push_back(effect);
+			host->addDeferredEffect(effect);
+			effect->load(host);
+			host->insertNewPlugin(stage, effect, pluginSnapshot.slot);
+			host->activateDeferred(effect);
 		} else {
 			//TODO: handle
 		}
@@ -158,6 +149,85 @@ std::shared_ptr<plugin_clipboard_t> copyPluginSelection(plugin_selection& sel) {
 	}
 	return clipboard;
 }
+bool handlePluginCtrCommand(action_plugin_ctr action) {
+	plugin_selection& sel = MainCtrl::get()->getPluginSel();
+	if (!sel.pluginCtr) {
+		return false;
+	}
+	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+	bool handledKeyinput = false;
+	String desc = "???";
+	std::vector<effectbase*> effectChain;
+	sel.pluginCtr->getEffects(effectChain);
+	std::vector<effectbase*> selection;
+	getSelectedEffects(sel, selection);
+
+	switch (action) {
+		case action_plugin_ctr::PLUGINS_SELECTALL: {
+				sel.firstSelection = effectChain.front()->getSlot();
+				sel.lastSelection = effectChain.back()->getSlot();
+				handledKeyinput = true;
+			}
+			break;
+		case action_plugin_ctr::PLUGINS_DELETE:
+			if (selection.size()) {
+				audio_stage_t* audioStage = selection[0]->getTrackLink();
+				dbgassert(audioStage);
+				for (effectbase* eff : selection) {
+					eff->close();
+				}
+				int32_t slot = selection[0]->getSlot();
+				std::vector<effectbase*> effects;
+				for (effectbase* eff : selection) {
+					audioStage->removePlugin(eff, false);
+					effects.push_back(eff);
+				}
+				auto* actionRemove = new action_remove_modules("Remove plugins", std::move(effects), audioStage->toRef(), slot);
+				MainCtrl::get()->pushHist(actionRemove);
+				audioStage->pluginsChanged();
+				handledKeyinput = true;
+			}
+			break;
+		case action_plugin_ctr::PLUGINS_CUT:
+			if (selection.size()) {
+				std::shared_ptr<plugin_clipboard_t> clipboard = copyPluginSelection(sel);
+				MainCtrl::get()->setPluginClipboard(clipboard);
+				audio_stage_t* audioStage = selection[0]->getTrackLink();
+				dbgassert(audioStage);
+				for (effectbase* eff : selection) {
+					eff->close();
+				}
+				for (effectbase* eff : selection) {
+					audioStage->removePlugin(eff, false);
+				}
+				audioStage->pluginsChanged();
+				handledKeyinput = true;
+			}
+			break;
+		case action_plugin_ctr::PLUGINS_COPY:
+			if (selection.size()) {
+				std::shared_ptr<plugin_clipboard_t> clipboard = copyPluginSelection(sel);
+				MainCtrl::get()->setPluginClipboard(clipboard);
+				handledKeyinput = true;
+			}
+			break;
+		case action_plugin_ctr::PLUGINS_DUPLICATE:
+			if (selection.size()) {
+				std::shared_ptr<plugin_clipboard_t> clipboard = copyPluginSelection(sel);
+				pastePluginClipboard(clipboard, sel.pluginCtr->stage, selection.back()->getSlot()+1);
+				handledKeyinput = true;
+			}
+			break;
+		case action_plugin_ctr::PLUGINS_PASTE:
+			if (MainCtrl::get()->getPluginClipboard()) {
+				std::shared_ptr<plugin_clipboard_t> clipboard = MainCtrl::get()->getPluginClipboard();
+				pastePluginClipboard(clipboard, sel.pluginCtr->stage, selection.back()->getSlot()+1);
+				handledKeyinput = true;
+			}
+			break;
+	}
+	return handledKeyinput;
+}
 bool guictr_plugins::handleKeyInput(KeyEvent& kevt) {
 	if (kevt.type != K_RELEASE) {
 		plugin_selection& sel = MainCtrl::get()->getPluginSel();
@@ -166,61 +236,25 @@ bool guictr_plugins::handleKeyInput(KeyEvent& kevt) {
 		}
 		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 		bool handledKeyinput = false;
-		String desc = "???";
-		std::vector<effectbase*> effectChain;
-		sel.pluginCtr->getEffects(effectChain);
-		std::vector<effectbase*> selection;
-		getSelectedEffects(sel, selection);
 		if (kevt.type == K_PRESS) {
 			if (isKC(KC_SELECTALL, kevt)) {
-				sel.firstSelection = effectChain.front()->getSlot();
-				sel.lastSelection = effectChain.back()->getSlot();
-				handledKeyinput = true;
+				handledKeyinput = handlePluginCtrCommand(action_plugin_ctr::PLUGINS_SELECTALL);
 			}
-			if (isKC(KC_DELETE, kevt) && selection.size()) {
-				audio_stage_t* audioStage = selection[0]->getTrackLink();
-				dbgassert(audioStage);
-				for (effectbase* eff : selection) {
-					eff->close();
-				}
-				for (effectbase* eff : selection) {
-					audioStage->removePlugin(eff, false);
-				}
-				audioStage->pluginsChanged();
-//				auto* actionRemove = new action_remove_module("Remove plugin", module, audioStage->toRef(), module->getSlot());
-//				MainCtrl::get()->pushHist(actionRemove);
-				handledKeyinput = true;
+			if (isKC(KC_DELETE, kevt)) {
+				handledKeyinput = handlePluginCtrCommand(action_plugin_ctr::PLUGINS_DELETE);
 			}
-			else if (isKC(KC_CUT, kevt) && selection.size()) {
-				std::shared_ptr<plugin_clipboard_t> clipboard = copyPluginSelection(sel);
-				MainCtrl::get()->setPluginClipboard(clipboard);
-				audio_stage_t* audioStage = selection[0]->getTrackLink();
-				dbgassert(audioStage);
-				for (effectbase* eff : selection) {
-					eff->close();
-				}
-				for (effectbase* eff : selection) {
-					audioStage->removePlugin(eff, false);
-				}
-				audioStage->pluginsChanged();
-				handledKeyinput = true;
+			else if (isKC(KC_CUT, kevt)) {
+				handledKeyinput = handlePluginCtrCommand(action_plugin_ctr::PLUGINS_CUT);
 			}
-			else if (isKC(KC_COPY, kevt) && selection.size()) {
-				std::shared_ptr<plugin_clipboard_t> clipboard = copyPluginSelection(sel);
-				MainCtrl::get()->setPluginClipboard(clipboard);
-				handledKeyinput = true;
+			else if (isKC(KC_COPY, kevt)) {
+				handledKeyinput = handlePluginCtrCommand(action_plugin_ctr::PLUGINS_COPY);
 			}
-			else if (isKC(KC_DUPLICATE, kevt) && selection.size()) {
-				std::shared_ptr<plugin_clipboard_t> clipboard = copyPluginSelection(sel);
-				pastePluginClipboard(clipboard, sel.pluginCtr->stage, selection.back()->getSlot()+1);
-				handledKeyinput = true;
+			else if (isKC(KC_DUPLICATE, kevt)) {
+				handledKeyinput = handlePluginCtrCommand(action_plugin_ctr::PLUGINS_DUPLICATE);
 			}
 			else if (isKC(KC_PASTE, kevt) && MainCtrl::get()->getPluginClipboard()) {
-				std::shared_ptr<plugin_clipboard_t> clipboard = MainCtrl::get()->getPluginClipboard();
-				pastePluginClipboard(clipboard, sel.pluginCtr->stage, selection.back()->getSlot()+1);
-				handledKeyinput = true;
+				handledKeyinput = handlePluginCtrCommand(action_plugin_ctr::PLUGINS_PASTE);
 			}
-		} else {
 		}
 		if (isArrowKey(kevt.keyCode)) {
 			ivec2 dir;
@@ -239,16 +273,7 @@ bool guictr_plugins::handleKeyInput(KeyEvent& kevt) {
 				}
 			}
 			handledKeyinput = true;
-//			desc = "Move notes";
 		}
-//		if (modified) {
-//			action_modify_track* track_action = new action_modify_track(desc, resizePreModifyState.copy());
-//			MainCtrl::get()->pushHist(track_action);
-//
-//		}
-//		if (handledKeyinput) {
-//			updateVisibleTrackContents();
-//		}
 		return handledKeyinput;
 	}
 	return false;
@@ -625,48 +650,7 @@ class action_shift_modules : public action_base {
 		}
 };
 
-class action_remove_module : public action_base {
-	effectbase* effect;
-	audio_stage_ref_t ref;
-	int32_t dstSlot;
-	bool weOwn = true;
-	protected:
-	public:
-		action_remove_module(String s, effectbase* _effect, audio_stage_ref_t _ref, int32_t _dst)
-			: action_base(), effect(_effect), ref(_ref), dstSlot(_dst) {
-			desc = s;
-		}
-		~action_remove_module() {
-			if (weOwn) {
-				vsthost::getInstance()->unloadPlugin(this->effect);
-			}
-		}
-		void undo(MainCtrl* ctrl) override {
-			ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-			audio_stage_t* stage = vsthost::getInstance()->getAudioStage(ref);
-			if (!stage) {
-				setError("missing trackimpl");
-				return;
-			}
-			vsthost::getInstance()->insertNewPlugin(stage, effect, dstSlot);
-			dbgassert(effect->getSlot() == dstSlot);
-			MainCtrl::getPluginCtr()->relayout();
-			weOwn = false;
-		}
-		void redo(MainCtrl* ctrl) override {
-			ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-			audio_stage_t* stage = vsthost::getInstance()->getAudioStage(ref);
-			if (!stage) {
-				setError("missing trackimpl");
-				return;
-			}
-			dbgassert(effect->getSlot() == dstSlot);
-			effect->close();
-			vsthost::getInstance()->removePlugin(effect);
-			MainCtrl::getPluginCtr()->relayout();
-			weOwn = true;
-		}
-};
+
 
 void removePlugin(effectbase* module) {
 	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
@@ -674,7 +658,9 @@ void removePlugin(effectbase* module) {
 	dbgassert(audioStage);
 	module->close();
 	audioStage->removePlugin(module, true);
-	auto* actionRemove = new action_remove_module("Remove plugin", module, audioStage->toRef(), module->getSlot());
+	std::vector<effectbase*> effects;
+	effects.push_back(module);
+	auto* actionRemove = new action_remove_modules("Remove plugin", std::move(effects), audioStage->toRef(), module->getSlot());
 	MainCtrl::get()->pushHist(actionRemove);
 	audioStage->pluginsChanged();
 }
@@ -868,4 +854,50 @@ void guictr_plugins::determineSize(glm::ivec2& prefSize) {
 		}
 		prefSize.x = maxX;
 	}
+}
+action_remove_modules::action_remove_modules(String s, std::vector<effectbase*> &&_effects, audio_stage_ref_t _ref, int32_t _dst) :
+		action_base(), effects(_effects), ref(_ref), dstSlot(_dst) {
+	desc = s;
+	assert(effects.size());
+}
+
+action_remove_modules::~action_remove_modules() {
+	if (weOwn) {
+		for (effectbase *eff : effects) {
+			vsthost::getInstance()->unloadPlugin(eff);
+		}
+	}
+}
+
+void action_remove_modules::undo(MainCtrl *ctrl) {
+	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+	audio_stage_t *stage = vsthost::getInstance()->getAudioStage(ref);
+	if (!stage) {
+		setError("missing trackimpl");
+		return;
+	}
+	int32_t slot = 0;
+	for (effectbase *eff : effects) {
+		vsthost::getInstance()->insertNewPlugin(stage, eff, dstSlot+slot);
+		dbgassert(eff->getSlot() == dstSlot+slot);
+		slot++;
+	}
+	MainCtrl::getPluginCtr()->relayout();
+	weOwn = false;
+}
+
+void action_remove_modules::redo(MainCtrl *ctrl) {
+	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+	audio_stage_t *stage = vsthost::getInstance()->getAudioStage(ref);
+	if (!stage) {
+		setError("missing trackimpl");
+		return;
+	}
+	dbgassert(effects[0]->getSlot() == dstSlot);
+	for (effectbase *eff : effects) {
+		eff->close();
+		vsthost::getInstance()->removePlugin(eff);
+	}
+	MainCtrl::getPluginCtr()->relayout();
+	weOwn = true;
 }

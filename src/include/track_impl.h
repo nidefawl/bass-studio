@@ -15,6 +15,7 @@
 #include "audiosample.h"
 #include "audiotrack.h"
 #include "snapshot.h"
+#include "track.h"
 #include "host/vst_host.h"
 
 #define PARAM_TRACK_GAIN 1
@@ -68,9 +69,6 @@ public:
 	void createSnapshot(track_params_snapshot_t& snapshot);
 	void loadSnapshot(const track_params_snapshot_t& snapshot);
 	void postSetParameter(int32_t idx, float preVal, float val, int flags);
-};
-struct audio_stage_ref_t {
-	int id;
 };
 struct audio_stage_t;
 //class audio_stage_holder_t {

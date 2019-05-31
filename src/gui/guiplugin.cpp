@@ -23,6 +23,7 @@
 #include "guicontextmenu_daw.h"
 #include "pluginctr.h"
 #include "pluginlist.h"
+#include "trackcontent.h"
 
 #include "basectrl.h"
 
@@ -216,23 +217,22 @@ void guiplugin::renderBase(NVGcontext* vg) {
 }
 
 void guiplugin::handleDraggedMove(MouseEvent& evt) {
+	hasDragged = false;
 	if (isSelected()) {
 		auto& sel = MainCtrl::get()->getPluginSel();
 		if (sel.hasSelection()) {
 			setDraggedPluginsUI(sel.pluginCtr->dragged, sel);
 			MainCtrl::get()->setDragged(&sel.pluginCtr->dragged);
 			hasDragged = true;
-		} else {
-			hasDragged = false;
 		}
 	} else {
-		hasDragged = false;
 		MainCtrl::get()->objectDragMove(this, evt);
 	}
 }
 void guiplugin::handleDraggedRelease(MouseEvent& evt) {
 	MainCtrl::get()->objectDragRelease(this, evt);
 	if (hasDragged) {
+		assert(0);
 		return;
 	}
 	if (isSelected()) {
@@ -245,6 +245,94 @@ void guiplugin::handleDraggedBegin(MouseEvent& evt) {
 //		hasDragged = true;
 		static_cast<guictr_plugins*>(this->parent)->onSelected(evt, this);
 	}
+}
+
+//enum action_plugin_ctr {
+//	SELECTALL, DELETE, CUT, COPY, PASTE, DUPLICATE
+//};
+//bool handlePluginCtrCommand(action_plugin_ctr action);
+class guictxtmenu_plugin : public guictxtmenu {
+public:
+	static constexpr int CMD_SHOW_AUTOMATION = 1;
+	static constexpr int CMD_SHOW_PARAM_LIST = 2;
+	static constexpr int CMD_DUPLICATE = 3;
+	static constexpr int CMD_DELETE = 4;
+	effectbase* const effect;
+	guictxtmenu_plugin(effectbase* _effect) : effect(_effect) {
+		this->size.x = 260;
+		addEntry(new ctxtmenu_entry("Show all automation", CMD_SHOW_AUTOMATION));
+		addEntry(new ctxtmenu_entry("Show parameter list", CMD_SHOW_PARAM_LIST));
+		addEntry(new ctxtmenu_splitter());
+		addEntry(new ctxtmenu_entry("Duplicate", CMD_DUPLICATE));
+		addEntry(new ctxtmenu_entry("Delete", CMD_DELETE));
+	}
+	void clicked(int _id) {
+		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+		if (_id == CMD_SHOW_PARAM_LIST) {
+
+		}
+		if (_id == CMD_DELETE) {
+//			removePlugin(effect);
+			my_printf("delete %s\n", StringAsCStr(effect->sName));
+			handlePluginCtrCommand(action_plugin_ctr::PLUGINS_DELETE);
+		}
+		if (_id == CMD_DUPLICATE) {
+			my_printf("duplicate %s\n", StringAsCStr(effect->sName));
+			handlePluginCtrCommand(action_plugin_ctr::PLUGINS_DUPLICATE);
+//			auto trackstage = effect->getTrackLink();
+//			plugin_snapshot_t pluginSnapshot;
+//			effect->makeSnapshot(pluginSnapshot, true);
+//			auto effect = loadPluginDeferred(pluginSnapshot);
+//			if (effect) {
+//				vsthost* host = vsthost::getInstance();
+//
+//				trackstage->deferredEffects.push_back(effect);
+//				host->addDeferredEffect(effect);
+//				effect->load(host);
+//				host->insertNewPlugin(trackstage, effect, pluginSnapshot.slot);
+//				host->activateDeferred(effect);
+//			}
+		}
+		if (_id == CMD_SHOW_AUTOMATION) {
+			auto tr = effect->getTrack();
+			gui_track_automationlane* gtr_at = NULL;
+			if (tr) {
+				tr->hideTrack = false;
+				tr->hideSubtracks = false;
+				tr->audio->updateStoreLoadSubtracks();
+				auto trCtr = MainCtrl::getGuiTrackCtr();
+
+				std::vector<int32_t> automated;
+				effect->getAutomated(automated);
+				for (int32_t param : automated) {
+					auto lane = trCtr->addAutomationLane(tr, effect, param, true);
+					if (!gtr_at) {
+						gtr_at= lane;
+					}
+				}
+			}
+			if (gtr_at) {
+				MainCtrl::getGuiTrackCtr()->layout();
+				MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
+				MainCtrl::getGuiTrackCtr()->scrollTo(gtr_at);
+			}
+		}
+		closeContextMenu();
+	}
+};
+void guiplugin::handleRightClick(MouseEvent& evt) {
+	handleDraggedBegin(evt);
+	const int32_t hpt = theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT);
+	bool b = false;
+	if (isHorizontalTitle) {
+		b = evt.relMousepos.y < hpt;
+	} else {
+		b = evt.relMousepos.x < hpt;
+	}
+	if (b) {
+		MainCtrl::get()->openContextMenu(new guictxtmenu_plugin(effect), evt.mousepos);
+	}
+
 }
 void guiplugin::dragMoveOn(guibase* target, ivec2 mousepos) {
 	target->pluginDragMove(this, mousepos);

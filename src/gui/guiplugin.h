@@ -50,6 +50,8 @@ public:
 	virtual void renderBase(NVGcontext* vg);
 
 	virtual void layout() override;
+
+	void handleRightClick(MouseEvent& evt) override;
 	void handleDraggedBegin(MouseEvent& evt) override;
 	void handleDraggedMove(MouseEvent& evt) override;
 	void handleDraggedRelease(MouseEvent& evt) override;

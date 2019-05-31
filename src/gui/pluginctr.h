@@ -13,6 +13,15 @@
 class vstplugin;
 class effectbase;
 struct audio_stage_t;
+enum class action_plugin_ctr {
+	PLUGINS_SELECTALL,
+	PLUGINS_DELETE,
+	PLUGINS_CUT,
+	PLUGINS_COPY,
+	PLUGINS_PASTE,
+	PLUGINS_DUPLICATE
+};
+bool handlePluginCtrCommand(action_plugin_ctr action);
 
 class guictr_test : public guictr_base {
 public:
@@ -260,5 +269,18 @@ public:
 	}
 	void layout() {
 	}
+};
+
+class action_remove_modules : public action_base {
+	std::vector<effectbase*> effects;
+	audio_stage_ref_t ref;
+	int32_t dstSlot;
+	bool weOwn = true;
+	protected:
+	public:
+	action_remove_modules(String s, std::vector<effectbase*> &&_effects, audio_stage_ref_t _ref, int32_t _dst);
+	~action_remove_modules();
+	void undo(MainCtrl *ctrl) override;
+	void redo(MainCtrl *ctrl) override;
 };
 

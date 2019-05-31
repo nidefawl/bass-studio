@@ -40,6 +40,9 @@ void deleteTrackContents(trackdata_midi_t* tr, delete_cb *cb);
 void releaseTrackResources(track_t* tr, delete_cb *cb);
 void releaseClipResources(clip_t* cl, delete_cb *cb);
 
+struct audio_stage_ref_t {
+	int id;
+};
 
 class trackdata_midi_t {
 public:

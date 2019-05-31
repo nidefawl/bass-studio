@@ -33,6 +33,7 @@ SafeRef<effectbase> effectbase::makeSafeRef() {
 	return safeRef;
 }
 effectbase::~effectbase() {
+	assert(nLoadCalls == 0);
 	if (safeRef.handler) {
 		safeRef.handler->safeRefDestroy(safeRef.refId);
 	}
