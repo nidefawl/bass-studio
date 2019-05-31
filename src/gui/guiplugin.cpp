@@ -257,12 +257,18 @@ public:
 	static constexpr int CMD_SHOW_PARAM_LIST = 2;
 	static constexpr int CMD_DUPLICATE = 3;
 	static constexpr int CMD_DELETE = 4;
+	static constexpr int CMD_COPY = 5;
+	static constexpr int CMD_CUT = 6;
+	static constexpr int CMD_PASTE = 7;
 	effectbase* const effect;
 	guictxtmenu_plugin(effectbase* _effect) : effect(_effect) {
 		this->size.x = 260;
 		addEntry(new ctxtmenu_entry("Show all automation", CMD_SHOW_AUTOMATION));
 		addEntry(new ctxtmenu_entry("Show parameter list", CMD_SHOW_PARAM_LIST));
 		addEntry(new ctxtmenu_splitter());
+		addEntry(new ctxtmenu_entry("Copy", CMD_COPY));
+		addEntry(new ctxtmenu_entry("Cut", CMD_CUT));
+		addEntry(new ctxtmenu_entry("Paste", CMD_PASTE));
 		addEntry(new ctxtmenu_entry("Duplicate", CMD_DUPLICATE));
 		addEntry(new ctxtmenu_entry("Delete", CMD_DELETE));
 	}
@@ -272,26 +278,28 @@ public:
 
 		}
 		if (_id == CMD_DELETE) {
-//			removePlugin(effect);
-			my_printf("delete %s\n", StringAsCStr(effect->sName));
+			my_printf("CMD_DELETE %s\n", StringAsCStr(effect->sName));
 			handlePluginCtrCommand(action_plugin_ctr::PLUGINS_DELETE);
 		}
+		if (_id == CMD_COPY) {
+			my_printf("CMD_COPY %s\n", StringAsCStr(effect->sName));
+			handlePluginCtrCommand(action_plugin_ctr::PLUGINS_COPY);
+		}
+		if (_id == CMD_CUT) {
+			my_printf("CMD_CUT %s\n", StringAsCStr(effect->sName));
+			handlePluginCtrCommand(action_plugin_ctr::PLUGINS_CUT);
+		}
+		if (_id == CMD_PASTE) {
+			my_printf("CMD_PASTE %s\n", StringAsCStr(effect->sName));
+			handlePluginCtrCommand(action_plugin_ctr::PLUGINS_PASTE);
+		}
+		if (_id == CMD_PASTE) {
+			my_printf("CMD_COPY %s\n", StringAsCStr(effect->sName));
+			handlePluginCtrCommand(action_plugin_ctr::PLUGINS_COPY);
+		}
 		if (_id == CMD_DUPLICATE) {
-			my_printf("duplicate %s\n", StringAsCStr(effect->sName));
+			my_printf("CMD_DUPLICATE %s\n", StringAsCStr(effect->sName));
 			handlePluginCtrCommand(action_plugin_ctr::PLUGINS_DUPLICATE);
-//			auto trackstage = effect->getTrackLink();
-//			plugin_snapshot_t pluginSnapshot;
-//			effect->makeSnapshot(pluginSnapshot, true);
-//			auto effect = loadPluginDeferred(pluginSnapshot);
-//			if (effect) {
-//				vsthost* host = vsthost::getInstance();
-//
-//				trackstage->deferredEffects.push_back(effect);
-//				host->addDeferredEffect(effect);
-//				effect->load(host);
-//				host->insertNewPlugin(trackstage, effect, pluginSnapshot.slot);
-//				host->activateDeferred(effect);
-//			}
 		}
 		if (_id == CMD_SHOW_AUTOMATION) {
 			auto tr = effect->getTrack();

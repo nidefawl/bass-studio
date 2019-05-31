@@ -126,7 +126,7 @@ void pastePluginClipboard(std::shared_ptr<plugin_clipboard_t>& clipboard, audio_
 			stage->deferredEffects.push_back(effect);
 			host->addDeferredEffect(effect);
 			effect->load(host);
-			host->insertNewPlugin(stage, effect, pluginSnapshot.slot);
+			host->insertNewPlugin(stage, effect, pos++);
 			host->activateDeferred(effect);
 		} else {
 			//TODO: handle
