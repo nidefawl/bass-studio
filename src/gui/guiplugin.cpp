@@ -20,6 +20,7 @@
 #include "pluginviewcontainers.h"
 #include "guicontainer.h"
 #include "guicontextmenu.h"
+#include "guicontextmenu_base.h"
 #include "guicontextmenu_daw.h"
 #include "pluginctr.h"
 #include "pluginlist.h"
@@ -34,6 +35,7 @@
 #include "../host/plugin/vst_plugin.h"
 #include "../host/plugin/vst_plugin_handles.h"
 #include "automatable.h"
+#include "debugproperties.h"
 
 
 
@@ -251,6 +253,7 @@ void guiplugin::handleDraggedBegin(MouseEvent& evt) {
 //	SELECTALL, DELETE, CUT, COPY, PASTE, DUPLICATE
 //};
 //bool handlePluginCtrCommand(action_plugin_ctr action);
+debugproperties* makeUniquePropertiesCtr();
 class guictxtmenu_plugin : public guictxtmenu {
 public:
 	static constexpr int CMD_SHOW_AUTOMATION = 1;
@@ -275,7 +278,40 @@ public:
 	void clicked(int _id) {
 		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 		if (_id == CMD_SHOW_PARAM_LIST) {
-
+//			class guitable_params : public guictr_base {
+//				gui_ctr_
+//				guitable_params() {
+//
+//				}
+//
+//				void renderBackground(NVGcontext* vg) {
+//					dbgassert(isBackgroundRendered());
+//					bool focused = parentCtrl->isCtrOrChildFocused(this);
+//					drawBackground(vg, theme, getPosContent(), getSizeContent(), margin, focused, isBackgroundRenderedInset());
+//				}
+//				virtual void render(NVGcontext* vg)
+//				{
+//					guictr_base::render(vg);
+//				}
+//			};
+//			setDebugPropertyHandle(this);
+			auto* gui = effect->getGui();
+			if (gui) {
+				debugproperties* dbgPropertiesCtrPopup = makeUniquePropertiesCtr();
+				guictxtmenu_base* ctxtMenu = new guictxtmenu_base();
+				ctxtMenu->size = {240, 480};
+				ctxtMenu->add(static_cast<guibase*>(dbgPropertiesCtrPopup));
+				dbgPropertiesCtrPopup->setDebugPropertyHandle(gui);
+				ivec2 wndPos{0};
+				this->parentCtrl->window->getPos(&wndPos);
+				log_printf("opening at %d, %d\n", wndPos.x, wndPos.y);
+				closeContextMenu();
+				MainCtrl::get()->openContextMenu(ctxtMenu, wndPos, 2);
+				assert(ctxtMenu->parentCtrl);
+				ctxtMenu->parentCtrl->window->getPos(&wndPos);
+				log_printf("opened at %d, %d\n", wndPos.x, wndPos.y);
+				return;
+			}
 		}
 		if (_id == CMD_DELETE) {
 			my_printf("CMD_DELETE %s\n", StringAsCStr(effect->sName));
@@ -467,8 +503,15 @@ public:
 			nvgFill(vg);
 		}
 		nvgTranslate(vg, pos.x, pos.y);
-		setFont(vg, (int) (rowHeight * 0.8), G_WHITE, G_TITLE_ALIGN);
-		nvgText(vg, x, rowHeight / 2, StringAsCStr(getText()), NULL);
+		if (rowHeight > 32) {
+			setFont(vg, (int) (rowHeight*0.4), G_WHITE, G_TITLE_ALIGN);
+			nvgText(vg, x, rowHeight*0.25, StringAsCStr(getText()), NULL);
+			String sValue = effect->getParamValueDisplay(entry->idx);
+			nvgText(vg, x, rowHeight*0.5 + rowHeight*0.25, StringAsCStr(sValue), NULL);
+		} else {
+			setFont(vg, (int) (rowHeight * 0.8), G_WHITE, G_TITLE_ALIGN);
+			nvgText(vg, x, rowHeight / 2, StringAsCStr(getText()), NULL);
+		}
 		nvgTranslate(vg, -pos.x, -pos.y);
 
 		knobTest.render(vg);
@@ -662,4 +705,12 @@ void guitooltip<guivstplugin>::layout()  {
 guictxtmenu_base* guivstplugin::getTooltip(AppCtrl* appctrl) {
 	auto tooltip = new guitooltip<guivstplugin>(this);
 	return tooltip;
+}
+
+template<typename T>
+void addPropertiesFromGui(T& gui, Table::tbl* table);
+template<>
+void addPropertiesFromGui(guiplugin& gui, Table::tbl* table);
+void guiplugin::addProperties(Table::tbl* table) {
+	addPropertiesFromGui(*this, table);
 }

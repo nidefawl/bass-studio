@@ -7,6 +7,7 @@
 #include "color_util.h"
 #include "button.h"
 #include "list.h"
+#include "table.h"
 #include "guimeter.h"
 
 class effectbase;
@@ -71,6 +72,7 @@ public:
 	virtual guibase* getDraggedControl() override;
 	virtual void setControl(BaseCtrl* parentCtrl) override;
 	virtual bool isSelected() override;
+	virtual void addProperties(Table::tbl* table);
 };
 class guivstplugin : public guiplugin {
 public:

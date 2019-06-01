@@ -417,7 +417,7 @@ String BaseCtrl::getClipboardText()
 {
 	return this->window->getClipboardText();
 }
-void BaseCtrl::openContextMenu(guictxtmenu_base *b, ivec2 pos)
+void BaseCtrl::openContextMenu(guictxtmenu_base *b, ivec2 pos, int flags)
 {
 	delete b; //TODO: defer delete
 }
@@ -483,7 +483,9 @@ void AppCtrl::openOverlayGui(guictxtmenu_base *b, ivec2 pos, int flags) {
 	this->mainWindow->getPos(&windowPos);
 	this->mainWindow->getSize(&windowSize);
 	ivec2 wndPos = windowPos;
-	if (flags&1) {
+	if (flags&2) {
+		wndPos = pos;
+	} else if (flags&1) {
 		wndPos = windowPos+pos;
 	} else {
 		wndPos = windowPos+(windowSize-b->size)/2;
@@ -502,8 +504,8 @@ void AppCtrl::openOverlayGui(guictxtmenu_base *b, ivec2 pos, int flags) {
 void AppCtrl::openDialog(guictxtmenu_base *b) {
 	openOverlayGui(b, ivec2(0), 0);
 }
-void AppCtrl::openContextMenu(guictxtmenu_base *b, ivec2 pos) {
-	openOverlayGui(b, pos, 1);
+void AppCtrl::openContextMenu(guictxtmenu_base *b, ivec2 pos, int flags) {
+	openOverlayGui(b, pos, flags);
 }
 void AppCtrl::closeContextMenu() {
 	if (this->ctxtmenu) {

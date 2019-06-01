@@ -124,6 +124,7 @@ public:
 	//automatable_t
 	String getAutomatableName() override;
 	float getParamValue(int32_t idx) override;
+	String getParamValueDisplay(int32_t idx) override;
 	void setParamValue(int32_t idx, float val, int flags) override;
 	automationlane_snapshot_t toRef() override;
 	void postSetParameter(int32_t idx, float preVal, float val, int flags) override;

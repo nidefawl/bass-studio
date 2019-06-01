@@ -19,6 +19,7 @@
 #include "guiconstant.h"
 #include "guicontextmenu_base.h"
 #include "guicontextmenu.h"
+#include "guiplugin.h"
 #include "textfield.h"
 #include "button.h"
 #include "guicolorpick.h"
@@ -32,6 +33,9 @@
 #include "dropdown.h"
 #include "debugproperties.h"
 #include "guiinputfield.h"
+#include "automation.h"
+#include "host/plugin/base_plugin.h"
+#include "host/plugin/vst_plugin.h"
 #include "logging.h"
 
 namespace Table {
@@ -357,6 +361,54 @@ public:
 
 template<typename T>
 void addPropertiesFromGui(T& gui, Table::tbl* table);
+template<>
+void addPropertiesFromGui(guiplugin& gui, Table::tbl* table) {
+	SafeRef<guibase> ref = gui.makeSafeRef();
+	std::vector<tbl_row_t>& rows = table->rows;
+//	rows.push_back({{tblstr{"this"}, ref}});
+	auto effect = gui.effect;
+	std::vector<automatable_param_t*> sortedParams;
+	effect->getSortedParams(sortedParams);
+	rows.push_back({{tblString{"Name"}, tblString{"idx"}, tblString{"internalIdx"}, tblString{"flags"}, tblString{"category"}, tblString{"Step"}}});
+    for (automatable_param_t* param : sortedParams) {
+    	tbl_row_t row;
+    	row.cols.push_back(tblString{param->label});
+    	row.cols.push_back(tblint{1+param->idx});
+    	row.cols.push_back(tblint{param->internalIdx});
+    	row.cols.push_back(tblint{param->flags});
+    	row.cols.push_back(tblint{param->category});
+		if (param->flags & ParamUsesFloatStep) {
+	    	row.cols.push_back(tblString{StringFormat("Float %f %f %f", param->stepSmall.valFloat, param->step.valFloat, param->stepLarge.valFloat)});
+		} else if (param->flags & ParamUsesIntStep) {
+	    	row.cols.push_back(tblString{StringFormat("Int %d %d %d", param->stepSmall.valInt, param->step.valInt, param->stepLarge.valInt)});
+		} else {
+			row.cols.push_back(tblString{"None"});
+		}
+		rows.push_back(row);
+    }
+//	rows.push_back({{tblstr{"pos"}, tbltypesaferef<glm::ivec2>{ref, gui.pos, nullptr}}});
+//	rows.push_back({{tblstr{"size"}, tbltypesaferef<glm::ivec2>{ref, gui.size, nullptr}}});
+//
+//	rows.push_back({{tblstr{"FLG_VISIBLE"}, tbltype_gui_flags{ref, FLG_VISIBLE}}});
+//	rows.push_back({{tblstr{"FLG_RENDER_BACKGROUND"}, tbltype_gui_flags{ref, FLG_RENDER_BACKGROUND}}});
+//	rows.push_back({{tblstr{"FLG_RENDER_BACKGROUND_INSET"}, tbltype_gui_flags{ref, FLG_RENDER_BACKGROUND_INSET}}});
+//	rows.push_back({{tblstr{"FLG_ENBL"}, tbltype_gui_flags{ref, FLG_ENBL}}});
+//	rows.push_back({{tblstr{"FLG_HVRD"}, tbltype_gui_flags{ref, FLG_HVRD}}});
+//	rows.push_back({{tblstr{"FLG_FOC"}, tbltype_gui_flags{ref, FLG_FOC}}});
+//	rows.push_back({{tblstr{"FLG_ACT"}, tbltype_gui_flags{ref, FLG_ACT}}});
+//	rows.push_back({{tblstr{"FLG_DRG"}, tbltype_gui_flags{ref, FLG_DRG}}});
+//	rows.push_back({{tblstr{"FLG_HAS_COLOR_BG"}, tbltype_gui_flags{ref, FLG_HAS_COLOR_BG}}});
+//
+//	if (gui.parent) {
+//		SafeRef<guibase> parentSafeRef = gui.parent->makeSafeRef();
+//		rows.push_back({{tblstr{"parent"}, parentSafeRef}});
+//	} else {
+//		rows.push_back({{tblstr{"parent"}, tblstr{"<null>"}}});
+//	}
+//	String strTheme = gui.theme->name+StringFormat("[%7X]", (int64_t)gui.theme);
+//	rows.push_back({{tblstr{"theme"}, tblString{strTheme, 1}}});
+//	rows.push_back({{tblstr{"theme2"}, tblString{strTheme, 1}}});
+}
 template<>
 void addPropertiesFromGui(guibase& gui, Table::tbl* table) {
 	SafeRef<guibase> ref = gui.makeSafeRef();

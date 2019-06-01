@@ -141,6 +141,9 @@ public:
 
 	virtual String getAutomatableName() = 0;
 	virtual float getParamValue(int32_t idx) = 0;
+	virtual String getParamValueDisplay(int32_t idx) {
+		return StringFormat("%f", getParamValue(idx));
+	}
 	virtual void setParamValue(int32_t idx, float val, int flags) = 0;
 	virtual automationlane_snapshot_t toRef() = 0;
 	virtual track_t* getTrack() = 0;

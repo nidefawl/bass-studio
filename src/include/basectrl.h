@@ -135,7 +135,7 @@ public:
 	}
 	virtual void relayout() { relayout(m_size.x, m_size.y); };
 	virtual void relayout(int32_t w, int32_t h) { };
-	virtual void openContextMenu(guictxtmenu_base *b, ivec2 pos);
+	virtual void openContextMenu(guictxtmenu_base *b, ivec2 pos, int flags = 1);
 	virtual void closeContextMenu() { };
 	void closeAllAppMenus()  { closeAppMenusAtLvl(0); };
 	virtual void closeAppMenusAtLvl(int startlvl)  { };
@@ -186,7 +186,7 @@ public:
 	virtual ~AppCtrl();
 	virtual void relayout(int32_t w, int32_t h) override = 0;
 	void onChildOverlayWindowClose(window_main*);
-	void openContextMenu(guictxtmenu_base *b, ivec2 pos) override;
+	void openContextMenu(guictxtmenu_base *b, ivec2 pos, int flags = 1) override;
 	void openDialog(guictxtmenu_base *b);
 	void closeContextMenu() override;
 	void openAppMenu(int lvl, guictxtmenu_base *b, ivec2 pos) override;
