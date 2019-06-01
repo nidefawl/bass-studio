@@ -244,7 +244,7 @@ enum class FilterModes : int32_t
 	NumFilterModes
 };
 std::vector<String> stringsFilterMode = {
-	"TwoPole", "Svf", "FourPole"
+	"Off", "TwoPole", "Svf", "FourPole"
 };
 
 // fast trig //
@@ -606,11 +606,12 @@ struct SynthParam_Int : public SynthParamBase {
 		return valFloat;
 	}
 	void set(float f) override {
-		iValue = math::max(iMin, math::min(iMax, (int32_t) math::round(f*(iMax-iMin))));
+		iValue = math::max(iMin, math::min(iMax, (int32_t) math::round(f*(iMax-iMin)+iMin)));
+		setRangedValue(iValue);
 	}
 	void setRangedValue(int32_t i) {
 		iValue = math::max(iMin, math::min(iMax, i));
-		this->valFloat = math::max(0.0, math::min(1.0, math::round((iValue-iMin)/(double) (iMax-iMin))));
+		this->valFloat = math::max(0.0, math::min(1.0, (iValue-iMin)/(double) (iMax-iMin)));
 	}
 	void getValueDisplay(char* _out) override {
 
@@ -624,7 +625,7 @@ struct SynthParam_Enum : public SynthParam_Int {
 	std::vector<String> strings;
 	SynthParam_Enum* setStrings(std::vector<String> strings) {
 		this->strings = strings;
-		this->iMax = strings.size();
+		this->iMax = strings.size() - 1;
 		return this;
 	}
 	void getValueDisplay(char* _out) override {
@@ -669,6 +670,7 @@ class SynthImpl : public SynthState {
 	double dt = 1.0 / 44100.0;
 	seq_rand synthRand;
 	PluginVST2_Synth* instanceVst2 = nullptr;
+	double lastCutoffModulated = 0.0;
 public:
 	SynthImpl() : SynthState() {
 		auto now = getTimeMillis();
@@ -695,15 +697,15 @@ private:
 	}
 	SynthParam_Float* GetParamFloat(Parameters param) {
 		assert(instanceVst2);
-		return static_cast<SynthParam_Float*>(instanceVst2->getParam(param));
+		return dynamic_cast<SynthParam_Float*>(instanceVst2->getParam(param));
 	}
 	SynthParam_Int* GetParamInt(Parameters param) {
 		assert(instanceVst2);
-		return static_cast<SynthParam_Int*>(instanceVst2->getParam(param));
+		return dynamic_cast<SynthParam_Int*>(instanceVst2->getParam(param));
 	}
 	SynthParam_Enum* GetParamEnum(Parameters param) {
 		assert(instanceVst2);
-		return static_cast<SynthParam_Enum*>(instanceVst2->getParam(param));
+		return dynamic_cast<SynthParam_Enum*>(instanceVst2->getParam(param));
 	}
 	void FlushMidi(int sample)
 	{
@@ -911,6 +913,7 @@ private:
 		cutoff += GetParamFloat(Parameters::LfoCutoff)->Value() * delayedLfoValue;
 		cutoff += GetParamFloat(Parameters::FilterKeyTracking)->Value() * baseFrequency;
 		cutoff *= 1.0 - driftValue;
+		lastCutoffModulated = cutoff;
 		out = voice.filter.Process(dt, out, filterMode, cutoff, filterResonance);
 
 		return out;
@@ -985,6 +988,12 @@ public:
 		if (GetParam(parameter)->getType() == ParamType::FLOAT) {
 			value = GetParamFloat(parameter)->Value();
 		}
+		if (GetParam(parameter)->getType() == ParamType::INT) {
+			value = GetParamInt(parameter)->Value();
+		}
+		if (GetParam(parameter)->getType() == ParamType::ENUM) {
+			value = GetParamEnum(parameter)->Value();
+		}
 		switch (parameter)
 		{
 		case Parameters::Osc1Wave:
@@ -993,7 +1002,7 @@ public:
 		case Parameters::Osc1Coarse:
 		case Parameters::Osc1Fine:
 		{
-			auto coarse = GetParamFloat(Parameters::Osc1Coarse)->Value();
+			auto coarse = GetParamInt(Parameters::Osc1Coarse)->Value();
 			auto fine = GetParamFloat(Parameters::Osc1Fine)->Value();
 			osc1Tune = pitchFactor(coarse + fine);
 			break;
@@ -1009,7 +1018,7 @@ public:
 		case Parameters::Osc2Coarse:
 		case Parameters::Osc2Fine:
 		{
-			auto coarse = GetParamFloat(Parameters::Osc2Coarse)->Value();
+			auto coarse = GetParamInt(Parameters::Osc2Coarse)->Value();
 			auto fine = GetParamFloat(Parameters::Osc2Fine)->Value();
 			osc2Tune = pitchFactor(coarse + fine);
 			break;
@@ -1025,7 +1034,7 @@ public:
 		case Parameters::FmCoarse:
 		case Parameters::FmFine:
 		{
-			auto fmCoarse = GetParamFloat(Parameters::FmCoarse)->Value();
+			auto fmCoarse = GetParamInt(Parameters::FmCoarse)->Value();
 			auto fmFine = GetParamFloat(Parameters::FmFine)->Value();
 			baseFmAmount = fmCoarse + fmFine;
 			break;
@@ -1170,9 +1179,9 @@ PluginVST2_Synth::PluginVST2_Synth (audioMasterCallback audioMaster)
 	setParamName(getParam(Parameters::Osc1Split), "Oscillator 1 split", "OSC1 Split", "%f");
 	addFloatParam(Parameters::Osc2Split)->setRange(-1.0, 1.0)->setRangedValue(0.0);
 	setParamName(getParam(Parameters::Osc2Split), "Oscillator 2 split", "OSC2 Split", "%f");
-	addIntParam(Parameters::Osc1Coarse)->setRange(-24, 24)->setRangedValue(0);
+	addIntParam(Parameters::Osc1Coarse)->setRange(-24, 24)->setRangedValue(-5);
 	setParamName(getParam(Parameters::Osc1Coarse), "Oscillator 1 coarse", "OSC1 Semi", "%d");
-	addIntParam(Parameters::Osc2Coarse)->setRange(-24, 24)->setRangedValue(0);
+	addIntParam(Parameters::Osc2Coarse)->setRange(-24, 24)->setRangedValue(-5);
 	setParamName(getParam(Parameters::Osc2Coarse), "Oscillator 2 coarse", "OSC2 Semi", "%d");
 
 	addFloatParam(Parameters::VolEnvA)->setRange(0.0, 1.0)->setRangedValue(0.0);
@@ -1226,7 +1235,7 @@ PluginVST2_Synth::PluginVST2_Synth (audioMasterCallback audioMaster)
 	addEnumParam(Parameters::Osc1Wave)->setStrings(stringsWaveform)->setRangedValue(0);
 	setParamName(getParam(Parameters::Osc1Wave), "Osc1 Waveform", "Osc1 Waveform", "%d");
 	addEnumParam(Parameters::Osc2Wave)->setStrings(stringsWaveform)->setRangedValue(0);
-	setParamName(getParam(Parameters::Osc1Wave), "Osc2 Waveform", "Osc2 Waveform", "%d");
+	setParamName(getParam(Parameters::Osc2Wave), "Osc2 Waveform", "Osc2 Waveform", "%d");
 	addEnumParam(Parameters::VoiceMode)->setStrings(stringsVoiceMode)->setRangedValue(0);
 	setParamName(getParam(Parameters::VoiceMode), "Voice Mode", "Voice Mode", "%d");
 	addEnumParam(Parameters::FilterMode)->setStrings(stringsFilterMode)->setRangedValue(0);
@@ -1377,7 +1386,6 @@ VstInt32 PluginVST2_Synth::processEvents (VstEvents* events) {
 			auto pEvent = events->events[i];
 			if (pEvent->type == VstEventTypes::kVstMidiType) {
 			    VstMidiEvent* pME = (VstMidiEvent*) pEvent;
-				log_printf("process evt type %02X\n", pME->midiData[0]);
 			    IMidiMsg msg(pME->deltaFrames, pME->midiData[0], pME->midiData[1], pME->midiData[2]);
 	            impl->ProcessMidiMsg(msg);
 			}
