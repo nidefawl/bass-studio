@@ -748,6 +748,9 @@ void MainCtrl::onTick()
 		if (ctxtmenu && ctxtmenu->isTransient() && (lastTooltipSrc && guiOver && guiOver != lastTooltipSrc)) {
 			closeContextMenu();
 		}
+		if (ctxtmenu && !ctxtmenu->isTransient()) {
+			hoverTicks = 0;
+		}
 		if (!ctxtmenu && guiOver == lastHoveredTooltip) {
 			hoverTicks = lastHoveredTooltipTicks + 1;
 			if (lastHoveredTooltipTicks >= 12) {
