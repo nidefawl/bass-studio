@@ -76,7 +76,7 @@ void guiknob::handleDraggedBegin(MouseEvent& evt) {
 		if (evt.guiDragged == this) {
 			parentCtrl->captureMouse(this);
 		}
-		initialValue = getValue();
+		initialValue = lastVal = getValue();
 		changedValue = false;
 	}
 	void guiknob::handleDraggedMove(MouseEvent& evt) {
@@ -84,7 +84,7 @@ void guiknob::handleDraggedBegin(MouseEvent& evt) {
 			int disty = (int)evt.dragDistance->y;
 			if (math::abs(disty) < 1)
 				return;
-			float value = getValue();
+			float value = lastVal;
 			float scale = isCtrl(evt.kbmods) ? 2000.0f : 200.0f;
 			float delta = disty/scale;
 			if (math::abs(delta) > 1e-2f) {
