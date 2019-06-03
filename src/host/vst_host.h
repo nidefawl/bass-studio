@@ -110,7 +110,7 @@ private:
 	int32_t getNextGlobalModuleId(int32_t n);
 	int32_t getNextGlobalAudioStageId(int32_t as);
 	bool unloadAllPlugins();
-	void updateTime(int32_t samplePos, tick_t pos, playback_state state);
+	void updateTime(int32_t samplePos, double dTickPos, playback_state state);
 	void setBlockSize(uint16_t blockSize);
 	void registerPlugins();
 public:

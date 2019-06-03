@@ -295,7 +295,7 @@ vsthost::vsthost(uint32_t _sampleRate, uint16_t _blockSize)
 {
 	memset(&timeinfo, 0, sizeof(timeinfo));
 	allocRingBuffer(ringbuffer);
-	updateTime(0, 0, playback_state::status_stop);
+	updateTime(0, 0.0, playback_state::status_stop);
 	setBlockSize(_blockSize);
 	midiRealtimeInput = new clip_notes_t;
 	registerPlugins();
@@ -322,18 +322,38 @@ void vsthost::setBlockSize(uint16_t _blockSize) {
 		blockZero = new AudioBlock(numChannels, _blockSize);
 	this->blockZero->realloc(_blockSize);
 }
+
+inline tick_t blockToPPQ24TickRounded(int32_t block, int32_t bpm100, samplerate_t samplerate, int32_t blocksize) {
+	double seconds = (block * blocksize) / (double)samplerate;
+	return (tick_t) std::round((seconds*bpm100*24.0) / 6000.0);
+}
+inline tick_t tick4096ToPPQ24TickRounded(tick_t tick4096, int32_t bpm100, samplerate_t samplerate, int32_t blocksize) {
+	double seconds = toSeconds(tick4096, bpm100);
+	return (tick_t) std::round((seconds*bpm100*24.0) / 6000.0);
+}
+inline double tick4096ToPPQ24TickPrecise(tick_t tick4096, int32_t bpm100, samplerate_t samplerate, int32_t blocksize) {
+	double seconds = toSeconds(tick4096, bpm100);
+	return (seconds*bpm100*24.0) / 6000.0;
+}
+inline int32_t PPQ24TickSample(tick_t tick, int32_t bpm100, samplerate_t samplerate, int32_t blocksize) {
+	double seconds = ((tick)/(double)(bpm100*24.0)) * 100.0 * 60.0;
+	double samplePos = seconds * samplerate;
+	return (int32_t) floor(samplePos);
+}
+
+
 //\note VstTimeInfo::samplesToNextClock :
 //MIDI Clock Resolution (24 per Quarter Note), can be negative the distance to the next midi clock
 //		(24 ppq, pulses per quarter) in samples. unless samplePos falls precicely on a midi clock,
 //		this will either be negative such that the previous MIDI clock is addressed,
 //		or positive when referencing the following (future) MIDI clock.
-void vsthost::updateTime(int32_t samplePos, tick_t pos, playback_state state) {
+void vsthost::updateTime(int32_t samplePos, double dTickPos, playback_state state) {
 	timeinfo.samplePos = samplePos;
 	timeinfo.sampleRate = (double)lSampleRate;
 	timeinfo.nanoSeconds = (double)getTimeMillis() * 1000000.0L;
-	timeinfo.ppqPos = (pos/(double)TICKS_QUARTER);
+	timeinfo.ppqPos = (dTickPos/(double)TICKS_QUARTER);
 	timeinfo.tempo = project.tempo100/100.0;
-	timeinfo.barStartPos = floor(pos / (double) TICKS_BAR) * 4;
+	timeinfo.barStartPos = floor(dTickPos / (double) TICKS_BAR) * 4;
 	timeinfo.cycleStartPos = (project.loopStart/(double)TICKS_QUARTER);
 	timeinfo.cycleEndPos = ((project.loopStart+project.loopLen)/(double)TICKS_QUARTER);
 	timeinfo.timeSigNumerator = project.signatureNum;
@@ -343,30 +363,40 @@ void vsthost::updateTime(int32_t samplePos, tick_t pos, playback_state state) {
 		timeinfo.cycleStartPos = 0;
 		timeinfo.cycleEndPos = 0;
 	}
-	double dPos = timeinfo.samplePos / timeinfo.sampleRate;
-	/* offset in fractions of a second   */
-	double dOffsetInSecond = dPos - floor(dPos);
-	timeinfo.smpteFrameRate = VstSmpteFrameRate::kVstSmpte24fps;
-	timeinfo.smpteOffset = (long)(dOffsetInSecond * fSmpteDiv[timeinfo.smpteFrameRate] * 80.L);
-	tick_t midiTick = tick4096ToPPQ24TickRounded(samplePos, project.tempo100, lSampleRate, lBlockSize);
+	{
+
+		double dPosSeconds = timeinfo.samplePos / timeinfo.sampleRate;
+		/* offset in fractions of a second   */
+		double dOffsetInSecond = dPosSeconds - floor(dPosSeconds);
+		timeinfo.smpteFrameRate = VstSmpteFrameRate::kVstSmpte24fps;
+		timeinfo.smpteOffset = (long)(dOffsetInSecond * fSmpteDiv[timeinfo.smpteFrameRate] * 80.L);
+	}
+
+
+	double midiTickPPQ24 = timeinfo.ppqPos*24.0;
+	tick_t midiTick = std::round(midiTickPPQ24);
 	int32_t samplePosTick = PPQ24TickSample(midiTick, project.tempo100, lSampleRate, lBlockSize);
 	timeinfo.samplesToNextClock = samplePosTick - timeinfo.samplePos;
-//	my_printf("midi tick %d (%d offset %d)\n", midiTick, samplePosTick, timeinfo.samplesToNextClock);
-	bool changed;
-	changed = setFlag(timeinfo.flags, kVstTransportPlaying, state == playback_state::status_play);
-	changed |= setFlag(timeinfo.flags, kVstTransportCycleActive, project.loopEnabled);
-	changed |= setFlag(timeinfo.flags, kVstTransportRecording, false);
-	setFlag(timeinfo.flags, kVstTransportChanged, changed);
-	setFlag(timeinfo.flags, kVstAutomationWriting, false);
-	setFlag(timeinfo.flags, kVstAutomationReading, false);
-	setFlag(timeinfo.flags, kVstNanosValid, true);
-	setFlag(timeinfo.flags, kVstPpqPosValid, true);
-	setFlag(timeinfo.flags, kVstTempoValid, true);
-	setFlag(timeinfo.flags, kVstBarsValid, true);
-	setFlag(timeinfo.flags, kVstCyclePosValid, true); //project.loopEnabled
-	setFlag(timeinfo.flags, kVstTimeSigValid, true);
-	setFlag(timeinfo.flags, kVstSmpteValid, true);
-	setFlag(timeinfo.flags, kVstClockValid, true);
+
+	double a;
+	{
+
+		bool changed;
+		changed = setFlag(timeinfo.flags, kVstTransportPlaying, state == playback_state::status_play);
+		changed |= setFlag(timeinfo.flags, kVstTransportCycleActive, project.loopEnabled);
+		changed |= setFlag(timeinfo.flags, kVstTransportRecording, false);
+		setFlag(timeinfo.flags, kVstTransportChanged, changed);
+		setFlag(timeinfo.flags, kVstAutomationWriting, false);
+		setFlag(timeinfo.flags, kVstAutomationReading, false);
+		setFlag(timeinfo.flags, kVstNanosValid, true);
+		setFlag(timeinfo.flags, kVstPpqPosValid, true);
+		setFlag(timeinfo.flags, kVstTempoValid, true);
+		setFlag(timeinfo.flags, kVstBarsValid, true);
+		setFlag(timeinfo.flags, kVstCyclePosValid, true); //project.loopEnabled
+		setFlag(timeinfo.flags, kVstTimeSigValid, true);
+		setFlag(timeinfo.flags, kVstSmpteValid, true);
+		setFlag(timeinfo.flags, kVstClockValid, true);
+	}
 
 }
 
@@ -540,7 +570,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			dbgassert(track->audio);
 		}
 		tick_t pos = floor(posDouble);
-		updateTime(sample, pos, state);
+		updateTime(sample, posDouble, state);
 		for (track_t* tr : ctrl->trackList) {
 			std::vector<automatable_t*> targets;
 			tr->audio->getAutomatableTrackTargets(targets);

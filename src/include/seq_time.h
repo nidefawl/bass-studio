@@ -100,19 +100,6 @@ inline double blockToTickPrecise(double block, int32_t bpm100, samplerate_t samp
 	double seconds = (block * blocksize) / (double)samplerate;
 	return toTickPrecise(seconds, bpm100);
 }
-inline tick_t blockToPPQ24TickRounded(int32_t block, int32_t bpm100, samplerate_t samplerate, int32_t blocksize) {
-	double seconds = (block * blocksize) / (double)samplerate;
-	return (tick_t) std::round((seconds*bpm100*24.0) / 6000.0);
-}
-inline tick_t tick4096ToPPQ24TickRounded(tick_t tick4096, int32_t bpm100, samplerate_t samplerate, int32_t blocksize) {
-	double seconds = toSeconds(tick4096, bpm100);
-	return (tick_t) std::round((seconds*bpm100*24.0) / 6000.0);
-}
-inline int32_t PPQ24TickSample(tick_t tick, int32_t bpm100, samplerate_t samplerate, int32_t blocksize) {
-	double seconds = ((tick)/(double)(bpm100*24.0)) * 100.0 * 60.0;
-	double samplePos = seconds * samplerate;
-	return (int32_t) floor(samplePos);
-}
 enum playback_state {
 	status_stop,
 	status_play,
