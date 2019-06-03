@@ -78,6 +78,7 @@ public:
 	int uId = 0;
 	vst_window* window = NULL;
 	std::vector<vst_param_category> paramsCategories;
+	std::vector<String> programNames;
 //	std::vector<vst_param> vstParams;
 
 	std::vector<String> inputNames;

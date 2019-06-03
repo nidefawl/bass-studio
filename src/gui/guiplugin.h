@@ -9,6 +9,8 @@
 #include "list.h"
 #include "table.h"
 #include "guimeter.h"
+#include "dropdown.h"
+#include "guicontextmenu.h"
 
 class effectbase;
 class vstplugin;
@@ -74,11 +76,28 @@ public:
 	virtual bool isSelected() override;
 	virtual void addProperties(Table::tbl* table);
 };
+
+class guidropdown_select_program : public guictxtmenu {
+	vstplugin* const plugin;
+public:
+	guidropdown_select_program(vstplugin *_plugin);
+	void clicked(int _id);
+};
+class guidropdownprogram : public guidropdownbase {
+	vstplugin* plugin = nullptr;
+public:
+	guidropdownprogram(vstplugin* _plugin) : guidropdownbase(), plugin(_plugin) {
+
+	}
+	String getString();
+	virtual void handleDraggedRelease(MouseEvent &evt);
+};
 class guivstplugin : public guiplugin {
 public:
 	guivstplugin(vstplugin * _vst);
 	~guivstplugin();
 	vstplugin* const vst;
+	guidropdownprogram dropdownProgram;
 	gui_list params; //TODO: use add() on controls
 	guibuttontoggle buttonOpenEditor; //TODO: use add() on controls
 

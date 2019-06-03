@@ -250,6 +250,17 @@ void vstplugin::load(vsthost* host) {
 		param->value = handle->aeffect->getParameter(handle->aeffect, param->internalIdx);
 	}
 	paramsCategories.push_back(fallbackCat);
+
+
+	for (int i = 0; i < aeffect->numPrograms; i++) {
+		memset(buf, 0, sizeof(buf));
+		if (this->dispatch(effGetProgramNameIndexed, i, 0, &buf, 0)) {
+			buf[-1+sizeof(buf)]=0;
+			this->programNames.push_back(buf);
+		}
+	}
+
+
 	bIsEnabled = this->getParamValue(PARAM_ENABLE) > 0.5;
 	if (bIsEnabled) {
 		this->resume();

@@ -519,7 +519,7 @@ public:
 };
 
 guivstplugin::guivstplugin(vstplugin * _vst)
-  : guiplugin(_vst), vst(_vst)
+  : guiplugin(_vst), vst(_vst), dropdownProgram(_vst)
 {
 	params.setRowHeight(48);
 	buttonOpenEditor.icon = ICON_ADJUST;
@@ -528,6 +528,7 @@ guivstplugin::guivstplugin(vstplugin * _vst)
 	buttonOpenEditor.colorActive = GuiColor::COL_BTN_BG_SHOW_ACTIVE;
 	addGuiBtn(&buttonOpenEditor);
 	params.setParent(this);
+	dropdownProgram.setParent(this);
 	std::vector<automatable_param_t*> sortedParams;
 	_vst->getSortedParams(sortedParams);
 	std::vector<gui_list_entry*> listEntries;
@@ -545,6 +546,7 @@ guivstplugin::~guivstplugin() {
 void guivstplugin::setControl(BaseCtrl* parentCtrl) {
 	guiplugin::setControl(parentCtrl);
 	params.setControl(parentCtrl);
+	dropdownProgram.setControl(parentCtrl);
 	for (auto* ctr : viewCtrs) {
 		ctr->setControl(parentCtrl);
 	}
@@ -582,6 +584,9 @@ void guivstplugin::render(NVGcontext* vg) {
 		}
 		if (meter.isVisible())
 			meter.render(vg);
+		if (dropdownProgram.isVisible()) {
+			dropdownProgram.render(vg);
+		}
 		if (params.isVisible()) {
 			if (params.isBackgroundRendered()){
 				params.renderBackground(vg);
@@ -609,6 +614,9 @@ bool guivstplugin::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 		if (params.isVisible() && params.mouseHitTest(localMouse, evt)) {
 			return true;
 		}
+		if (dropdownProgram.isVisible() && dropdownProgram.mouseHitTest(localMouse, evt)) {
+			return true;
+		}
 		if (isShift(evt.kbmods)) {
 			if (MainCtrl::get()->getPluginSel().pluginCtr != this->parent) {
 				return true;
@@ -628,6 +636,7 @@ void guivstplugin::buttonClicked(guibase* _button) {
 			vst->show();
 		}
 	}
+	dropdownProgram.setVisible(layoutMode == 0 && vst->programNames.size());
 	params.setVisible(layoutMode == 0);
 	meter.setVisible(layoutMode == 0);
 }
@@ -643,11 +652,26 @@ void guivstplugin::layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {
 	while (contentS.y < rowHeight * 8 && rowHeight > 8) {
 		rowHeight -= 4;
 	}
-	int paramsW = contentS.x - sizeCtrs.x;
-	params.setRowHeight(rowHeight);
-	params.pos = ivec2(insetCtrls, insetCtrls + hpt);
-	params.size = ivec2(paramsW, contentS.y) - ivec2(insetCtrls*2);
-	params.layout();
+	dropdownProgram.setVisible(layoutMode == 0 && vst->programNames.size());
+	if (dropdownProgram.isVisible()) {
+
+		int hDropDown = hpt*0.7;
+		int paramsW = contentS.x - sizeCtrs.x;
+		params.setRowHeight(rowHeight);
+		params.pos = ivec2(insetCtrls, insetCtrls + hpt+hDropDown);
+		params.size = ivec2(paramsW, contentS.y-hDropDown) - ivec2(insetCtrls*2);
+		params.layout();
+		dropdownProgram.pos = ivec2(insetCtrls*2, insetCtrls+hpt);
+		dropdownProgram.size = ivec2(paramsW, hDropDown) - ivec2(insetCtrls*4, 0);
+		dropdownProgram.layout();
+	} else {
+
+		int paramsW = contentS.x - sizeCtrs.x;
+		params.setRowHeight(rowHeight);
+		params.pos = ivec2(insetCtrls, insetCtrls + hpt);
+		params.size = ivec2(paramsW, contentS.y) - ivec2(insetCtrls*2);
+		params.layout();
+	}
 	if (viewCtrs.size()) {
 		int left = params.right() + INSET_TITLE;
 		for (auto* ctr : viewCtrs) {
@@ -661,6 +685,48 @@ void guivstplugin::layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {
 	}
 }
 
+
+guidropdown_select_program::guidropdown_select_program(vstplugin *_plugin) :
+		plugin(_plugin) {
+	this->size.x = 120;
+	this->fontSize = FONT_SIZE_CTXT_SMALL;
+	this->paddingV = 0;
+	int32_t idx = 0;
+	for (auto str : plugin->programNames) {
+		addEntry(new ctxtmenu_entry(str, idx));
+		idx++;
+	}
+}
+
+void guidropdown_select_program::clicked(int _id) {
+	closeContextMenu();
+	if (_id >= 0 && _id < plugin->programNames.size()) {
+		String s = plugin->programNames[_id];
+		plugin->dispatch(effSetProgram, 0, _id, 0, 0);
+	}
+}
+
+String guidropdownprogram::getString() {
+	char buf[1024];
+	memset(buf, 0, sizeof(buf));
+	if (plugin->dispatch(effGetProgramName, 0, 0, buf, 0) && buf[0]) {
+		return String(buf);
+	}
+	int n = plugin->dispatch(effGetProgram, 0, 0, 0, 0);
+	if (n >= 0 && n < plugin->programNames.size()) {
+		return plugin->programNames[n];
+	}
+	return "";
+}
+
+void guidropdownprogram::handleDraggedRelease(MouseEvent &evt) {
+	if (plugin) {
+		guictxtmenu_base *popup = new guidropdown_select_program(plugin);
+		popup->size = size;
+		popup->setFontSize(size.y);
+		this->parentCtrl->openContextMenu(popup, toScreenSpace(ivec2(0, size.y)) - popup->pos + ivec2(1));
+	}
+}
 
 template <>
 void guitooltip<guivstplugin>::layout()  {
