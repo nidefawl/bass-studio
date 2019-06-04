@@ -136,6 +136,11 @@ bool BasePluginVST2::getVendorString (char* text)
 
 void BasePluginVST2::open () {
 #if BUILD_EXTERNAL_PLUGIN
+	AllocConsole();
+	AttachConsole(GetCurrentProcessId());
+	FILE* f;
+	freopen_s(&f, "CON", "w", stdout);
+	log_printf("open!\n", 0);
 #ifdef _WIN32
 	if (!isFirstPluginLoad) {
 		return;
