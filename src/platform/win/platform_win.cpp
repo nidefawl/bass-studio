@@ -16,6 +16,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <vector>
+#include <signal.h>
 
 #include "threads.h"
 #include "math/seq_math.h"
@@ -176,10 +177,23 @@ int __cdecl DebugReportHook(int nReportType, char*, int* pnRet)
 	return ret ? TRUE : FALSE;
 }
 #endif
+
+void SignalHandler(int signal)
+{
+    if (signal == SIGABRT) {
+    	if (!fataError&&/*isINit*/ 1) {
+    		logStackTrace();
+    	}
+    	(void)0;
+    } else {
+        // ...
+    }
+}
 void setExceptionHandler() {
 #if defined(_MSC_VER) || (defined(__MSVCRT_VERSION__) && __MSVCRT_VERSION__ > 0x800)
-//	_set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
-	_set_error_mode(_OUT_TO_STDERR);
+	_set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
+//	_set_error_mode(_OUT_TO_STDERR);
+	signal(SIGABRT, SignalHandler);
 
 	//	_set_abort_behavior(0, _WRITE_ABORT_MSG);
 #endif
