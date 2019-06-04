@@ -7,7 +7,7 @@
 #define ARR_SIZE(x) (sizeof(x)/sizeof(x[0]))
 #define DELETE_PTR(x) do { delete x; x = NULL; } while (0);
 
-#define STL_CONTAINS(x, y) std::find(x.begin(), x.end(), y) != x.end()
+#define STL_CONTAINS(x, y) (std::find(x.cbegin(), x.cend(), y) != x.cend())
 
 
 template<typename Container>
