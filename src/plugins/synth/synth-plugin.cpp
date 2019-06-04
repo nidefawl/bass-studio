@@ -686,6 +686,9 @@ public:
 	void ProcessMidiMsg(IMidiMsg& msg) {
 		midiQueue.Add(msg);
 	}
+	std::vector<int> getHeldNotes() {
+		return heldNotes;
+	}
 private:
 	float synthRandom() {
 		uint32_t rnd32Bits = synthRand.rng_rand();
@@ -713,8 +716,6 @@ private:
 		{
 			auto message = midiQueue.Peek();
 			if (message.mOffset > sample) break;
-
-		    log_printf("delta frames %d\n", message.mOffset);
 
 			auto voiceMode = GetParamEnum(Parameters::VoiceMode)->getEnumValue<VoiceModes>();
 			auto status = message.StatusMsg();
@@ -806,6 +807,7 @@ private:
 					for (auto &voice : voices) {
 						voice.Release();
 					}
+					heldNotes.clear();
 					break;
 				default:
 					break;
@@ -1260,6 +1262,9 @@ SynthParamBase* PluginVST2_Synth::getParam(Parameters enumParam) {
 	}
 	return nullptr;
 }
+SynthImpl* PluginVST2_Synth::getSynth() {
+	return this->impl;
+}
 
 void PluginVST2_Synth::setProgram (VstInt32 program)
 {
@@ -1383,6 +1388,7 @@ void PluginVST2_Synth::setBlockSize(VstInt32 blockSize) {
 VstInt32 PluginVST2_Synth::processEvents (VstEvents* events) {
 	assert(events);
 	if (events) {
+		ThreadLock lock(this->getMutex());
 		int32_t len = events->numEvents;
 		for (int i = 0; i < len; i++) {
 			auto pEvent = events->events[i];
@@ -1403,6 +1409,7 @@ void PluginVST2_Synth::processReplacing(float** inputs, float** outputs, VstInt3
 	if (sampleFrames != blockSize) {
 		return;
 	}
+	ThreadLock lock(this->getMutex());
 	if (this->getAeffect()->numOutputs == 1) {
 		if (inputs)
 			memset(inputs[0], 0, sizeof(float)*sampleFrames);
@@ -1428,7 +1435,7 @@ namespace PluginSynth {
 
 class guicontainer_plugin_synth : public guictr_base {
 	vstplugin* vstHostSide = nullptr;
-	AudioEffect* curEffect = nullptr;
+	PluginVST2_Synth* curEffect = nullptr;
 	struct _synth_gui_param_knob {
 		guiknob* knob;
 		Parameters param;
@@ -1479,7 +1486,8 @@ public:
 		}
 	}
 	void onGuiOpen(AudioEffect* eff) {
-		this->curEffect = eff;
+		this->curEffect = dynamic_cast<PluginVST2_Synth*>(eff);
+		assert(this->curEffect);
 //		knobParam0.setAudioEffect(eff);
 	}
 	void onGuiClose(AudioEffect* eff) {
@@ -1515,6 +1523,8 @@ public:
 			gui->render(vg);
 			nvgRestore(vg);
 		}
+		PluginVST2_Synth* thisImpl = this->curEffect;
+		PluginVST2_Synth::ThreadLock lock(thisImpl->getMutex());
 		std::vector<String> strings;
 //		this->curEffect->
 		String str;
@@ -1522,12 +1532,11 @@ public:
 		strings.push_back(str);
 		str = StringFormat("Samplerate %f", this->curEffect->getSampleRate());
 		strings.push_back(str);
-		AudioEffectX* effx = dynamic_cast<AudioEffectX*>(this->curEffect);
 		int flags = 0;
 		for (int i = 8; i < 16; i++) {
 			flags |= (1<<i);
 		}
-		VstTimeInfo* timeinfo = effx->getTimeInfo(flags);
+		VstTimeInfo* timeinfo = thisImpl->getTimeInfo(flags);
 		assert(timeinfo);
 		strings.push_back(StringFormat("samplePos %f", timeinfo->samplePos));
 		strings.push_back(StringFormat("sampleRate %f", timeinfo->sampleRate));
@@ -1543,6 +1552,7 @@ public:
 		strings.push_back(StringFormat("smpteFrameRate %d", timeinfo->smpteFrameRate));
 		strings.push_back(StringFormat("samplesToNextClock %d", timeinfo->samplesToNextClock));
 		strings.push_back(String("flags ")+FormatBinaryString<int16_t>(timeinfo->flags&0xFFFF));
+//		this->
 		setFont(vg, 16, G_WHITE, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
 		float lineh;
 		nvgTextMetrics(vg, NULL, NULL, &lineh);
@@ -1552,6 +1562,27 @@ public:
 		for (String& s : strings) {
 			nvgText(vg, x, y, StringAsCStr(s), NULL);
 			y += lineh;
+		}
+		std::vector<int> heldNotes = thisImpl->getSynth()->getHeldNotes(); //TODO: not threadsafe
+		String s = "Held notes: ";
+		for (int i : heldNotes) {
+			s += String(noteName(i))+",";
+			if (s.length() > 32) {
+				nvgText(vg, x, y, StringAsCStr(s), NULL);
+				s = "";
+				y += lineh;
+			}
+		}
+		if (heldNotes.empty())
+			s += "<empty>";
+		if (s.length() > 0) {
+			nvgText(vg, x, y, StringAsCStr(s), NULL);
+			s = "";
+			y += lineh;
+		}
+		//stress test thread safety
+		for (int i = 0; i < 10000; i++) {
+			std::vector<int> heldNotes = thisImpl->getSynth()->getHeldNotes(); //TODO: not threadsafe
 		}
 
 	}

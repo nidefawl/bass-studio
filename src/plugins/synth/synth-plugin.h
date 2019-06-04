@@ -4,6 +4,7 @@
 #include "../plugin-base.h"
 #include "../plugin-base.h"
 #include "vstsdk-plugin-2.4/audioeffectx.h"
+#include "threads.h"
 
 
 namespace PluginSynth {
@@ -155,8 +156,8 @@ private:
 struct SynthParamBase;
 class SynthImpl;
 class PluginVST2_Synth : public BasePluginVST2 {
-
 public:
+	using ThreadLock = std::lock_guard<std::recursive_mutex>;
 	PluginVST2_Synth (audioMasterCallback audioMaster);
 	~PluginVST2_Synth ();
 
@@ -189,15 +190,18 @@ public:
 	virtual VstInt32 canDo (char* text);
 
 	SynthParamBase* getParam(Parameters enumParam);
+	SynthImpl* getSynth();
 
 #ifdef DISPATCHER_DEBUG_TRACE
 	VstIntPtr dispatcher(VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt);
 #endif // DEBUG
-
+	std::recursive_mutex& getMutex() {
+		return mutex;
+	}
 private:
 	std::vector<SynthParamBase*> vecParams;
 	SynthImpl* impl;
-//	Program singleProgram;
+	std::recursive_mutex mutex;
 };
 AudioEffectX* createPlugin (audioMasterCallback audioMaster);
 const char* getName();
