@@ -68,10 +68,12 @@ public:
 //			guibase* g = ctr.guis[i];
 //			my_printf("%s guis[%d] %d %d %d %d\n", StringAsCStr(ctr.getClassName()), i, g->pos.x, g->pos.y, g->size.x, g->size.y);
 //		}
-		ivec2 prefSizeGrpContent = {prefSize.y, prefSize.y};
-		ctr.size = prefSizeGrpContent;
-//		ctr.determineSize(prefSizeGrpContent);
-		ctr.layout();
+		if (layoutMode == 0) {
+			ctr.size = {prefSize.y, prefSize.y};
+			ctr.layout();
+		} else {
+			ctr.size = {0, prefSize.y};
+		}
 		prefSize.x = hpt+ctr.size.x+meterW;
 	}
 	void layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) override {
@@ -115,14 +117,18 @@ void guimodule_group::render(NVGcontext* vg) {
 		size.x += extX;
 	}
 	renderBase(vg);
-	nvgSave(vg);
-	ctr.render(vg);
-	nvgRestore(vg);
-	buttonBypass.render(vg);
+	if (layoutMode == 0) {
+		nvgSave(vg);
+		ctr.render(vg);
+		nvgRestore(vg);
+	}
+	for (auto* btn : guiButtons) {
+		if (btn->isVisible())
+			btn->render(vg);
+	}
 	if (extend) {
 		nvgTranslate(vg, extX, 0);
 	}
-	buttonDelete.render(vg);
 
 	meter.render(vg);
 	if (extend) {
@@ -135,6 +141,9 @@ bool guimodule_group::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 			return false;
 		ivec2 localMouse = this->toContainerSpace(mpos);
 		if ( evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
+			if (layoutMode != 0) {
+				return false;
+			}
 			if (ctr.mouseHitTest(localMouse, evt)) {
 				return true;
 			}
@@ -165,13 +174,18 @@ bool guimodule_group::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 	return false;
 }
 void guimodule_group::buttonClicked(guibase* _button) {
+	if (_button == &buttonLayout) {
+		layoutMode = (layoutMode+1)%2;
+		buttonLayout.icon = layoutMode == 0 ? ICON_ARR_RIGHT : ICON_ARR_DOWN;
+		parent->onChildLayoutChanged(this);
+		return;
+	}
 	guiplugin::buttonClicked(_button);
 }
 
 
 struct module_group::internal_handles_t {
 	std::unique_ptr<guimodule_group> gui;
-//	guimodule_group * gui;
 };
 
 module_group::module_group(int32_t _projectGlobalId)

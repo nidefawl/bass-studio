@@ -306,17 +306,13 @@ void guictr_plugins::onSelected(MouseEvent& evt, guiplugin* plugin) {
 	}
 }
 void guictr_plugins::onChildLayoutChanged(guibase* g) {
-//	layout();
-	if (this->parent != NULL) {
-		this->parent->onChildLayoutChanged(this);
+	if (!isDefaultPluginCtr) {
+		parent->onChildLayoutChanged(this);
+	} else {
+		showTrack(this->stage);
 	}
 }
 void guictr_plugins::render(NVGcontext* vg) {
-//	if (isDefaultPluginCtr) {
-//		renderBackground(vg);
-//	} else {
-//		drawInsetBackground(vg, getPosContent(), getSizeContent());
-//	}
 	if (isBackgroundRendered()) {
 		renderBackground(vg);
 	}
@@ -360,8 +356,6 @@ void guictr_plugins::showTrack(audio_stage_t* audio) {
 	removeGuis();
 	this->track = audio ? audio->getTrack() : nullptr;
 	this->stage = audio;
-//	my_printf("%d %d\n", myNumber1, myNumber2);
-//	my_printf("showTrack %s\n", (isDefaultPluginCtr ? "default" : "group"));
 	if (audio && this->track) {
 		audio->pluginCtr = this;
 		dbgassert(audio->parent || MainCtrl::getPluginCtr() == this);

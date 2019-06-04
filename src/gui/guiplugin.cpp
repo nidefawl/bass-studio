@@ -94,7 +94,9 @@ void guiplugin::buttonClicked(guibase* _button) {
 		layoutMode = (layoutMode+1)%2;
 		isHorizontalTitle = layoutMode == 0;
 		buttonLayout.icon = layoutMode == 0 ? ICON_ARR_RIGHT : ICON_ARR_DOWN;
-		dynamic_cast<guictr_plugins*>(this->parent)->relayout();
+		parent->onChildLayoutChanged(this);
+//		dynamic_cast<guictr_plugins*>(this->parent)->relayout();
+		return;
 	}
 	if (_button == &buttonBypass) {
     	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();

@@ -92,25 +92,52 @@ void guictr_base::renderTitleBar(NVGcontext* vg, String text, GuiConstant::const
 	//	ivec2 sizeContent = getSizeContent();
 	float fRnd = theme->getFloat(GuiConstant::CONST_ROUND);
 	const int32_t hpt = theme->get(constantHeight);
+	if (hpt <= 0) {
+		return;
+	}
 	nvgBeginPath(vg);
+	float textMaxWidth;
 	if (isHorizontalTitle) {
 		nvgRoundedRectVarying(vg, 0, 0, size.x, hpt, fRnd, fRnd, 0, 0);
+		textMaxWidth = size.x-INSET_TITLE*2;
+		for (auto* gui : guis) {
+			if (gui->top() < hpt && gui->bottom() > 0) {
+				if (gui->left() > textOffsetX) {
+					textMaxWidth = math::min<float>(textMaxWidth, gui->left()-INSET_TITLE*2);
+				}
+			}
+		}
+		textMaxWidth -= textOffsetX;
 	} else {
 		nvgRoundedRectVarying(vg, 0, 0, hpt, size.y, fRnd, fRnd, 0, 0);
+		textMaxWidth = textOffsetX-INSET_TITLE*2;
+		for (auto* gui : guis) {
+			if (gui->left() < hpt && gui->right() > 0) {
+				if (gui->bottom() < textOffsetX) {
+					textMaxWidth = math::min<float>(textMaxWidth, (textOffsetX-gui->bottom())-INSET_TITLE*2);
+				}
+			}
+		}
 	}
 	nvgFillColor(vg, c);
 	nvgFill(vg);
+	if (textMaxWidth+4 <= 0) {
+		return;
+	}
 	if (text[0]) {
 		if (isHorizontalTitle) {
+			nvgSave(vg);
+			nvgIntersectScissor(vg, textOffsetX + INSET_TITLE-1, 0, textMaxWidth+2, hpt);
 			setFont(vg, (int) (hpt * 0.8), getContrastFontColorNvg(c), G_TITLE_ALIGN);
+//			text = StringFormat("%d %d %d", (int32_t)(textOffsetX + INSET_TITLE), (int32_t)textMaxWidth, size.x);
 			nvgText(vg, textOffsetX + INSET_TITLE, hpt / 2, StringAsCStr(text), NULL);
+			nvgRestore(vg);
 		} else {
 			setFont(vg, (int) (hpt * 0.8), G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
 			nvgSave(vg);
 			nvgTranslate(vg, hpt / 2, textOffsetX);
 			nvgRotate(vg, (float)(-M_PI / 2.0));
-			//		nvgTranslate(vg, -HEIGHT_PLUGIN_TITLE, 0);
-			//		nvgText(vg, 0, 0, StringAsCStr(this->text), NULL);
+			nvgIntersectScissor(vg, INSET_TITLE*2-1, -hpt / 2, textMaxWidth, hpt);
 			nvgText(vg, INSET_TITLE * 2, 0, StringAsCStr(text), NULL);
 			nvgRestore(vg);
 		}
