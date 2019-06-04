@@ -363,7 +363,6 @@ template<typename T>
 void addPropertiesFromGui(T& gui, Table::tbl* table);
 template<>
 void addPropertiesFromGui(guiplugin& gui, Table::tbl* table) {
-	SafeRef<guibase> ref = gui.makeSafeRef();
 	std::vector<tbl_row_t>& rows = table->rows;
 //	rows.push_back({{tblstr{"this"}, ref}});
 	auto effect = gui.effect;
@@ -615,11 +614,14 @@ void guiproperties_table<guitheme_t>::layout()  {
 			auto add = [this](tblstr&& x, const auto& y) {
 				table.rows.push_back({{x, y}});
 			};
+			std::string_view a;
 			std::vector<GuiColor::constant_t> vec = GuiColor::getAllConstants();
+			std::sort(vec.begin(), vec.end(), [](auto& a, auto& b){ return strcmp(a.name, b.name) < 0; });
 			for (auto _constant : vec) {
 				add(tblstr{ _constant.name }, tbltype_theme_color{ ptr, _constant });
 			}
 			std::vector<GuiConstant::constant_t> vec2 = GuiConstant::getAllConstants();
+			std::sort(vec2.begin(), vec2.end(), [](auto& a, auto& b){ return strcmp(a.name, b.name) < 0; });
 			for (auto _constant2 : vec2) {
 				add(tblstr{ _constant2.name }, tbltype_theme_constant{ ptr, _constant2 });
 			}
