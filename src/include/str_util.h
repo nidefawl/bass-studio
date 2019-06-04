@@ -49,7 +49,23 @@ String StringFormat(const char *fmt, ...);
 String FormatTempo(float tempo);
 String StringLimit(String s, int limit);
 void replaceString(String& s, String f, String r);
-const char* noteName(int note); //NOT THREAD SAFE; DONT KEEP REFERENCE
+const char* noteName(int note); //DONT KEEP REFERENCE
+
+template<typename T>
+String FormatBinaryString(T i) {
+	static const char *bit_rep[16] = {
+	    "0000", "0001", "0010", "0011",
+	    "0100", "0101", "0110", "0111",
+	    "1000", "1001", "1010", "1011",
+	    "1100", "1101", "1110", "1111",
+	};
+    std::string str;
+    int nibbles = sizeof(T)*2;
+    while (nibbles-- > 0) {
+        str += bit_rep[((i>>(nibbles*4))&0xF)];
+    }
+	return str;
+}
 inline bool StrEndsWith(String const & a, String const & b)
 {
     if (b.size() > a.size()) return false;
