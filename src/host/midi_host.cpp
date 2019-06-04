@@ -30,7 +30,7 @@ bool error(const char* msg, PmError err) {
 
 char nib_to_hex[] = "0123456789ABCDEF";
 
-void showbytes(PmMessage data, int len, bool newline)
+void showbytes(PmMessage data, int len)
 {
     int count = 0;
     int i;
@@ -52,8 +52,8 @@ void showbytes(PmMessage data, int len, bool newline)
         }
         data >>= 8;
     }
-    s+=' ';
-    log_out("%s\n", StringAsCStr(s));
+	s += '\t';
+    log_out("%s", StringAsCStr(s));
 }
 
 /****************************************************************************
@@ -80,11 +80,11 @@ char* getNoteName(int note)
 * Effect: format and print  midi data
 ****************************************************************************/
 
-char val_format[] = "    Val %d\n";
-char vel_format[] = "    Vel %d\n";
+char val_format[] = "    Val %d";
+char vel_format[] = "    Vel %d";
 
 void midihost::handleMessage(PmMessage data, std::vector<MidiIOEvent>& messages) {
-	bool verbose = true;
+	bool verbose = false;
     int command;    /* the current command */
     int chan;   /* the midi channel of the current event */
     int len;    /* used to get constant field width */
@@ -109,10 +109,10 @@ void midihost::handleMessage(PmMessage data, std::vector<MidiIOEvent>& messages)
             inputInSysex = false;
             i++; /* include the EOX byte in output */
         }
-        showbytes(data, i, verbose);
+        if (verbose) showbytes(data, i);
         if (verbose) log_printf("System Exclusive\n", 0);
     } else if (command == MIDI_ON_NOTE && Pm_MessageData2(data) != 0) {
-        showbytes(data, 3, verbose);
+        if (verbose) showbytes(data, 3);
         if (verbose) {
         	String s = StringFormat("NoteOn Chan %2d Key %3d %s %s", chan, Pm_MessageData1(data), getNoteName(Pm_MessageData1(data)), StringAsCStr(StringFormat(vel_format, Pm_MessageData2(data))));
         	log_out("%s\n", StringAsCStr(s));
@@ -120,14 +120,14 @@ void midihost::handleMessage(PmMessage data, std::vector<MidiIOEvent>& messages)
         messages.push_back({data, 0});
     } else if ((command == MIDI_ON_NOTE /* && Pm_MessageData2(data) == 0 */ ||
                command == MIDI_OFF_NOTE)) {
-        showbytes(data, 3, verbose);
+        if (verbose) showbytes(data, 3);
         if (verbose) {
         	String s = StringFormat("NoteOff Chan %2d Key %3d %s %s", chan, Pm_MessageData1(data), getNoteName(Pm_MessageData1(data)), StringAsCStr(StringFormat(vel_format, Pm_MessageData2(data))));
         	log_out("%s\n", StringAsCStr(s));
         }
         messages.push_back({data, 0});
     } else if (command == MIDI_CH_PROGRAM) {
-        showbytes(data, 2, verbose);
+        if (verbose) showbytes(data, 2);
         if (verbose) {
             log_printf("  ProgChg Chan %2d Prog %2d\n", chan, Pm_MessageData1(data) + 1);
         }
@@ -135,13 +135,13 @@ void midihost::handleMessage(PmMessage data, std::vector<MidiIOEvent>& messages)
                /* controls 121 (MIDI_RESET_CONTROLLER) to 127 are channel
                 * mode messages. */
         if (Pm_MessageData1(data) < MIDI_ALL_SOUND_OFF) {
-            showbytes(data, 3, verbose);
+            if (verbose) showbytes(data, 3);
             if (verbose) {
                 log_printf("CtrlChg Chan %2d Ctrl %2d Val %2d\n",
                        chan, Pm_MessageData1(data), Pm_MessageData2(data));
             }
         } else /* channel mode */ /*if (chmode)*/ {
-            showbytes(data, 3, verbose);
+            if (verbose) showbytes(data, 3);
             if (verbose) {
                 switch (Pm_MessageData1(data)) {
                   case MIDI_ALL_SOUND_OFF:
@@ -177,76 +177,76 @@ void midihost::handleMessage(PmMessage data, std::vector<MidiIOEvent>& messages)
             }
         }
     } else if (command == MIDI_POLY_TOUCH) {
-        showbytes(data, 3, verbose);
+        if (verbose) showbytes(data, 3);
         if (verbose) {
         	String s = StringFormat("P.Touch Chan %2d Key %3d %s %s", chan, Pm_MessageData1(data), getNoteName(Pm_MessageData1(data)), StringAsCStr(StringFormat(vel_format, Pm_MessageData2(data))));
         	log_out("%s\n", StringAsCStr(s));
         }
     } else if (command == MIDI_TOUCH) {
-        showbytes(data, 2, verbose);
+        if (verbose) showbytes(data, 2);
         if (verbose) {
             log_printf("  A.Touch Chan %2d Val %2d\n", chan, Pm_MessageData1(data));
         }
     } else if (command == MIDI_BEND) {
-        showbytes(data, 3, verbose);
+        if (verbose) showbytes(data, 3);
         if (verbose) {
             log_printf("P.Bend  Chan %2d Val %2d\n", chan,
                     (Pm_MessageData1(data) + (Pm_MessageData2(data)<<7)));
         }
         messages.push_back({data, 0});
     } else if (Pm_MessageStatus(data) == MIDI_SONG_POINTER) {
-        showbytes(data, 3, verbose);
+        if (verbose) showbytes(data, 3);
         if (verbose) {
             log_printf("    Song Position %d\n",
                     (Pm_MessageData1(data) + (Pm_MessageData2(data)<<7)));
         }
     } else if (Pm_MessageStatus(data) == MIDI_SONG_SELECT) {
-        showbytes(data, 2, verbose);
+        if (verbose) showbytes(data, 2);
         if (verbose) {
             log_printf("    Song Select %d\n", Pm_MessageData1(data));
         }
     } else if (Pm_MessageStatus(data) == MIDI_TUNE_REQ) {
-        showbytes(data, 1, verbose);
+        if (verbose) showbytes(data, 1);
         if (verbose) {
             log_printf("    Tune Request\n", 0);
         }
     } else if (Pm_MessageStatus(data) == MIDI_Q_FRAME/* && realdata */) {
-        showbytes(data, 2, verbose);
+        if (verbose) showbytes(data, 2);
         if (verbose) {
             log_printf("    Time Code Quarter Frame Type %d Values %d\n",
                     (Pm_MessageData1(data) & 0x70) >> 4, Pm_MessageData1(data) & 0xf);
         }
     } else if (Pm_MessageStatus(data) == MIDI_START/* && realdata */) {
-        showbytes(data, 1, verbose);
+        if (verbose) showbytes(data, 1);
         if (verbose) {
             log_printf("    Start\n", 0);
         }
     } else if (Pm_MessageStatus(data) == MIDI_CONTINUE/* && realdata */) {
-        showbytes(data, 1, verbose);
+        if (verbose) showbytes(data, 1);
         if (verbose) {
             log_printf("    Continue\n", 0);
         }
     } else if (Pm_MessageStatus(data) == MIDI_STOP/* && realdata */) {
-        showbytes(data, 1, verbose);
+        if (verbose) showbytes(data, 1);
         if (verbose) {
             log_printf("    Stop\n", 0);
         }
     } else if (Pm_MessageStatus(data) == MIDI_SYS_RESET/* && realdata */) {
-        showbytes(data, 1, verbose);
+        if (verbose) showbytes(data, 1);
         if (verbose) {
             log_printf("    System Reset\n", 0);
         }
     } else if (Pm_MessageStatus(data) == MIDI_TIME_CLOCK) {
-        showbytes(data, 1, verbose);
+        if (verbose) showbytes(data, 1);
         if (verbose) {
             log_printf("    Clock\n", 0);
         }
     } else if (Pm_MessageStatus(data) == MIDI_ACTIVE_SENSING) {
-        showbytes(data, 1, verbose);
+        if (verbose) showbytes(data, 1);
         if (verbose) {
             log_printf("    Active Sensing\n", 0);
         }
-    } else showbytes(data, 3, verbose);
+    } else if (verbose) showbytes(data, 3);
 //    fflush(stdout);
 }
 
