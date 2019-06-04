@@ -95,7 +95,6 @@ void guiplugin::buttonClicked(guibase* _button) {
 		isHorizontalTitle = layoutMode == 0;
 		buttonLayout.icon = layoutMode == 0 ? ICON_ARR_RIGHT : ICON_ARR_DOWN;
 		parent->onChildLayoutChanged(this);
-//		dynamic_cast<guictr_plugins*>(this->parent)->relayout();
 		return;
 	}
 	if (_button == &buttonBypass) {

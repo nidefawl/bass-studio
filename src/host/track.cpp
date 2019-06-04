@@ -313,20 +313,34 @@ struct VstEvent_t {
 	int32_t numOns = 0;
 	int32_t numOffs = 0;
 	VstEvent_t(size_t s) : maxEvents(s) {
-		size_t hdr = sizeof(VstEvents) + sizeof(VstEvents*) * (s-2);
-		size_t len = hdr + sizeof(VstMidiEvent) * (s);
-		vstEvents = (VstEvents*) malloc(len);
-		memset(vstEvents, 0, len);
-		uint8_t* bytePtr = reinterpret_cast<uint8_t*>(vstEvents) + hdr;
-		evtArr = reinterpret_cast<VstMidiEvent*>(bytePtr);
+		/**
+		 * Allocates following struct equivalent to:
+			struct VstEvents
+			{
+				VstInt32 numEvents;		///< number of Events in array
+				VstIntPtr reserved;		///< zero (Reserved for future use)
+				VstEvent* events[maxEvents];	///< event pointer array, variable size
+				VstMidiEvent midiEvents[maxEvents];
+			};
+		 */
+
+		size_t hdr = sizeof(VstEvents) + sizeof(VstEvent*) * (s-2);
+		size_t len = sizeof(VstMidiEvent) * (s);
+		vstEvents = static_cast<VstEvents*>(malloc(hdr));
+		evtArr = static_cast<VstMidiEvent*>(malloc(len));
+		memset(vstEvents, 0, hdr);
+		memset(evtArr, 0, len);
 	}
 	void reset() {
 		numOns = numOffs = 0;
-		vstEvents->numEvents = 0;
-		memset(vstEvents->events, 0, sizeof(VstMidiEvent*)*maxEvents);
+//		vstEvents->numEvents = 0;
+//		memset(vstEvents->events, 0, sizeof(VstEvent)*maxEvents);
+		memset(vstEvents, 0, sizeof(VstEvents) + sizeof(VstEvent*) * (maxEvents-2));
+		memset(evtArr, 0, sizeof(VstMidiEvent) * (maxEvents));
 	}
 	~VstEvent_t() {
 		free(vstEvents);
+		free(evtArr);
 	}
 	void writeNoteOn(unsigned char* buf, int32_t pitch, int32_t velocity) {
 		buf[0] = 0x90;
@@ -345,7 +359,7 @@ struct VstEvent_t {
 		dbgassert(idx < maxEvents);
 		VstMidiEvent& evt = evtArr[idx];
 		evt.type = kVstMidiType;
-		evt.byteSize = sizeof(VstMidiEvent);
+		evt.byteSize = 24;//sizeof(VstMidiEvent);
 		evt.flags = 0;//kVstMidiEventIsRealtime;
 		evt.deltaFrames = floor(nevt.tickOffsetInBlock*tickToSamples);
 		dbgassert(evt.deltaFrames >= 0 && evt.deltaFrames < blockSize);
@@ -364,8 +378,8 @@ struct VstEvent_t {
 		dbgassert(idx < maxEvents);
 		VstMidiEvent& evt = evtArr[idx];
 		evt.type = kVstMidiType;
-		evt.byteSize = sizeof(VstMidiEvent);
-		evt.flags = kVstMidiEventIsRealtime;
+		evt.byteSize = 24;//sizeof(VstMidiEvent);
+		evt.flags = 0;//kVstMidiEventIsRealtime
 		evt.deltaFrames = 0;
 		unsigned char* buf = (unsigned char*)evt.midiData;
 		buf[0] = c0;
@@ -377,9 +391,9 @@ struct VstEvent_t {
 	}
 	void writeInstantOff() {
 		writeMessage(0xB0, 123, 0, 0, 0); // ALL NOTES OFF
-		for (int32_t i = 0; i < vstEvents->numEvents; i++) {
-			evtArr[i].deltaFrames = 0;
-		}
+//		for (int32_t i = 0; i < vstEvents->numEvents; i++) {
+//			evtArr[i].deltaFrames = 0;
+//		}
 	}
 };
 
@@ -706,21 +720,32 @@ std::vector<note_t>& track_impl_t::getArpHeldNotes() {
 std::vector<marker_t>& track_impl_t::getArpMarkers() {
 	return this->arp->markers;
 }
-void track_impl_t::sendNotesOff() {
-	VstEvent_t* midiEventsBuf = reallocEvts(track->audio->heldNotes.size());
-	for (note_t& note : track->audio->heldNotes) {
-//		midiEventsBuf->writeVstMidiEvt(note, bpm100, blockSamplePos, sampleRate, blockSize, false);
-		my_printf("Send note off %d\n", note.pitch);
-	}
+void track_impl_t::sendNotesOff(int32_t bpm100) {
+	std::vector<note_t> heldNotes = track->audio->heldNotes;
+	track->audio->heldNotes.clear();
 	if (arp)
 		arp->allNotesOff();
+
+	std::vector<noteevent_t> noteEvents;
+	noteEvents.reserve(heldNotes.size());
+	for (note_t& noteHeld : heldNotes) {
+		noteEvents.emplace_back(noteHeld.pitch, 0, 0, false, false);
+	}
+	sortNoteEvents(noteEvents);
+	const double ticksPerBlock = toTickPrecise(blockSize/(double)sampleRate, bpm100);
+	const double tickToSamples = (60*sampleRate) / (bpm100/100.0*TICKS_QUARTER);
+	VstEvent_t* midiEventsBuf = reallocEvts(noteEvents.size());
+	for (noteevent_t& evt : noteEvents) {
+		dbgassert(evt.tickOffsetInBlock >= 0 && evt.tickOffsetInBlock < ticksPerBlock);
+		midiEventsBuf->writeVstMidiEvt(evt, tickToSamples, blockSize);
+	}
+	dbgassert(midiEventsBuf->vstEvents->numEvents == (int32_t) noteEvents.size());
 	midiEventsBuf->writeInstantOff();
-	track->audio->heldNotes.clear();
 	for (effectbase* effect : effects) {
 		vstplugin* vst = dynamic_cast<vstplugin*>(effect);
 		if (vst && vst->bCanReceiveMidi) {
-			//TODO: use a copy here
-			//			VstEvent_t midiEventsBufTemp = *midiEventsBuf; // make a copy
+//					VstEvent_t midiEventsBufTemp = *midiEventsBuf; //TODO: make a copy, plugin may manipulate data
+//			log_printf("send %d midi events to %s\n", midiEventsBuf->vstEvents->numEvents, StringAsCStr(vst->getName()));
 			vst->dispatch(effProcessEvents, 0, 0, midiEventsBuf->vstEvents);
 		}
 	}
@@ -743,12 +768,10 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 			track->getMidi().getNotesInRange(heldBegin, heldEnd, -1, loopEnd, notes);
 		}
 
-//		int32_t clipNotes = notes.size();
 		if (flags & MidiFlags::PROCESS_REALTIME) {
 			getClipNotesInTimeRange(heldBegin, heldEnd, -1, loopEnd, midiRealtimeInput, notes);
 		}
 
-//		int32_t realtimeNotes = notes.size()-clipNotes;
 
 		if (loopStart > -1&&start<loopStart)
 			start = loopStart;
@@ -786,22 +809,11 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 					noteEvents.emplace_back(noteHeld.pitch, 0, 0, false, false);
 				}
 			}
-//			for (note_t& note : heldNotes) {
-//				if (note.end() >= start && note.end() < end) {
-//					notesEnd.push_back(note);
-//					noteEvents.emplace_back(note, false);
-//					my_printf("%d END NOTE %d %d\n", blockSamplePos/blockSize, note.time, note.pitch);
-//				}
-//			}
+
 			addAll(heldNotes, notesBegin);
 			removeAll(heldNotes, notesEnd);
 			sortNoteEvents(noteEvents);
-//			if (noteEvents.size()) {
-//				my_printf("%d %d NOTES\n", start, noteEvents.size());
-//			}
-//			for (noteevent_t& note : noteEvents) {
-//				my_printf("NOTE_%s %d %d\n", note.isNoteOn?"ON":"OFF", note.tickOffsetInBlock, note.pitch);
-//			}
+
 			std::vector<noteevent_t> noteEventsProcessed;
 			if (flags & MidiFlags::PROCESS_ARP) {
 				arp->process(noteEvents, start, end, loopStart, loopEnd, noteEventsProcessed);
@@ -809,35 +821,35 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 				noteEventsProcessed = std::move(noteEvents);
 			}
 			size_t numEvents = noteEventsProcessed.size();
-			VstEvent_t* midiEventsBuf = reallocEvts(numEvents);
-			const double ticksPerBlock = toTickPrecise(blockSize/(double)sampleRate, bpm100);
-			const double tickToSamples = (60*sampleRate) / (bpm100/100.0*TICKS_QUARTER);
-			for (noteevent_t& evt : noteEventsProcessed) {
-				dbgassert(evt.tickOffsetInBlock >= 0 && evt.tickOffsetInBlock < ticksPerBlock);
-				midiEventsBuf->writeVstMidiEvt(evt, tickToSamples, blockSize);
-			}
-			dbgassert(midiEventsBuf->vstEvents->numEvents == (int32_t) numEvents);
-			for (effectbase* effect : effects) {
-				vstplugin* vst = dynamic_cast<vstplugin*>(effect);
-				if (vst && vst->bCanReceiveMidi) {
-//					VstEvent_t midiEventsBufTemp = *midiEventsBuf; //TODO: make a copy, plugin may manipulate data
-					vst->dispatch(effProcessEvents, 0, 0, midiEventsBuf->vstEvents);
+			if (numEvents > 0)
+			{
+				VstEvent_t* midiEventsBuf = reallocEvts(numEvents);
+				const double ticksPerBlock = toTickPrecise(blockSize/(double)sampleRate, bpm100);
+				const double tickToSamples = (60*sampleRate) / (bpm100/100.0*TICKS_QUARTER);
+				for (noteevent_t& evt : noteEventsProcessed) {
+					dbgassert(evt.tickOffsetInBlock >= 0 && evt.tickOffsetInBlock < ticksPerBlock);
+					midiEventsBuf->writeVstMidiEvt(evt, tickToSamples, blockSize);
+				}
+				dbgassert(midiEventsBuf->vstEvents->numEvents == (int32_t) numEvents);
+				for (effectbase* effect : effects) {
+					vstplugin* vst = dynamic_cast<vstplugin*>(effect);
+					if (vst && vst->bCanReceiveMidi) {
+	//					VstEvent_t midiEventsBufTemp = *midiEventsBuf; //TODO: make a copy, plugin may manipulate data
+						vst->dispatch(effProcessEvents, 0, 0, midiEventsBuf->vstEvents);
+					}
 				}
 			}
 		} else {
-			for (effectbase* effect : effects) {
-				vstplugin* vst = dynamic_cast<vstplugin*>(effect);
-				if (vst && vst->bCanReceiveMidi) {
-					VstEvents noEvData;
-					noEvData = {  };
-					vst->dispatch(effProcessEvents, 0, 0, &noEvData);
-				}
-			}
+//			for (effectbase* effect : effects) {
+//				vstplugin* vst = dynamic_cast<vstplugin*>(effect);
+//				if (vst && vst->bCanReceiveMidi) {
+//					VstEvents noEvData;
+//					noEvData = {  };
+//					vst->dispatch(effProcessEvents, 0, 0, &noEvData);
+//				}
+//			}
 		}
 	}
-
-//	return NULL;
-
 }
 
 void track_params_t::createSnapshot(track_params_snapshot_t& snapshot) {

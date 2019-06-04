@@ -400,12 +400,13 @@ void vsthost::updateTime(int32_t samplePos, double dTickPos, playback_state stat
 }
 
 void vsthost::sendNotesOff(effectbase* plugin) {
+	//TODO: check current thread, check if playthread is locked
 	if (plugin && plugin->trackImpl) {
 		track_t* tr = plugin->trackImpl->getTrack();
 		dbgassert(tr);
 		track_impl_t* audio = tr->audio;
 		if (audio) {
-			audio->sendNotesOff();
+			audio->sendNotesOff(project.tempo100);
 		}
 	}
 }
@@ -854,7 +855,7 @@ void vsthost::onStopPlayback(project_controller_t* ctrl) {
 		auto trackImpl = track->audio;
 		if (!trackImpl->heldNotes.empty())
 		{
-			trackImpl->sendNotesOff();
+			trackImpl->sendNotesOff(project.tempo100);
 		}
 	}
 }

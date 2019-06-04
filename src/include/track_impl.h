@@ -162,7 +162,7 @@ struct track_impl_t : public audio_stage_t {
 	bool wasInHide = false;
 	track_impl_t(int32_t _id, track_t* _track, const samplerate_t& _sampleRate, const uint16_t& _blockSize, int32_t nChannels);
 	~track_impl_t();
-	void sendNotesOff();
+	void sendNotesOff(int32_t bpm100);
 	void sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, clip_notes_t& midiRealtimeInput, int32_t flags);
 	void fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, float** buffer, int32_t samples);
 	VstEvent_t* reallocEvts(size_t size);

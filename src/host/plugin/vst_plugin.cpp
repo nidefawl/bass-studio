@@ -430,9 +430,11 @@ automationlane_snapshot_t vstplugin::toRef() {
 }
 
 void vstplugin::onEnable() {
+	//TODO: check current thread, check if playthread is locked
 	resume();
 }
 void vstplugin::onDisable() {
+	//TODO: check current thread, check if playthread is locked
 	sleep();
 	vsthost::getInstance()->sendNotesOff(this);
 }

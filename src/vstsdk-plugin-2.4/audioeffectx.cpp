@@ -37,6 +37,7 @@
 #include <exception>
 #include "str_util.h"
 #include "plugins/handle-exceptions.h"
+//#include "logging.h"
 
 
 //-----------------------------------------------------------------------------------------------------------------
@@ -52,6 +53,9 @@ AudioEffectX::AudioEffectX (audioMasterCallback audioMaster, VstInt32 numProgram
 //-----------------------------------------------------------------------------------------------------------------
 VstIntPtr AudioEffectX::dispatcher (VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt)
 {
+
+//	if (opcode != effEditIdle)
+//	log_printf("dispatch %d %d %012X %012X %f\n", opcode, index, value, ptr, opt);
 	VstIntPtr v = 0;
 	try {
 	switch (opcode)
