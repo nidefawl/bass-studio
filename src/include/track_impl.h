@@ -146,6 +146,11 @@ inline bool isAudioStageChildOf(audio_stage_t* parent, audio_stage_t* child) {
 
 class clip_notes_t;
 class midiarp;
+namespace MidiFlags {
+static constexpr int PROCESS_REALTIME = 1;
+static constexpr int PROCESS_CLIPS = 2;
+static constexpr int PROCESS_ARP = 4;
+}
 struct track_impl_t : public audio_stage_t {
 	midiarp* arp = nullptr;
 	track_t* track;
@@ -157,8 +162,8 @@ struct track_impl_t : public audio_stage_t {
 	bool wasInHide = false;
 	track_impl_t(int32_t _id, track_t* _track, const samplerate_t& _sampleRate, const uint16_t& _blockSize, int32_t nChannels);
 	~track_impl_t();
-	void sendNotesOff(int32_t bpm100, int32_t blockSamplePos);
-	void sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, clip_notes_t& midiRealtimeInput);
+	void sendNotesOff();
+	void sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, clip_notes_t& midiRealtimeInput, int32_t flags);
 	void fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, float** buffer, int32_t samples);
 	VstEvent_t* reallocEvts(size_t size);
 	int loadSubtrackLayout(const std::vector<automationlane_snapshot_t>& atl);

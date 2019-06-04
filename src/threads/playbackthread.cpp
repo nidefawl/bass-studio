@@ -178,7 +178,7 @@ private:
 								int32_t bpm100 = ctrl->getCurrentTempo();
 								samplePos = tickToSample(startPos, bpm100, sampleRate);
 								LOG("START ON seconds: %.2f - sample %d\n", toSeconds(startPos, bpm100), samplePos);
-								host->onStartPlayback();
+								host->onStartPlayback(this->ctrl);
 								timer.reset();
 								playbackDuration = 0;
 								firstBlock = true;
@@ -187,7 +187,7 @@ private:
 							}
 							case playback_state::status_stop:
 							{
-								host->onStopPlayback();
+								host->onStopPlayback(this->ctrl);
 								break;
 							}
 							case playback_state::status_no_process:
@@ -226,7 +226,7 @@ private:
 				std::unique_lock<std::recursive_mutex> lock(mutex);
 
 
-            	//ctrl may still alter project settings during copy here
+            	//ctrl may still alter project settings during copy here if not locked
             	project_globals_t& projGlobals = host->project;
             	projGlobals = *static_cast<project_globals_t*>(ctrl);
 
@@ -249,7 +249,7 @@ private:
 				std::this_thread::sleep_for(std::chrono::microseconds(10000));
 
 			}
-			if (m_status == status_play) {
+			{
             	project_globals_t& projGlobals = host->project;
             	int32_t bpm100 = projGlobals.tempo100;
 				double blocksPerS = sampleRate / (double) blockSize;
@@ -259,19 +259,21 @@ private:
 		            isLoopAround = false;
 					samplePos += blockSize*processedBlock;
 					tickPos += ticksPerBlock;
-					if (inLoop) {
-						if (tickPos >= projGlobals.loopStart + projGlobals.loopLen) {
-							if (MainCtrl::get()) {
-								MainCtrl::get()->setJumpFromTo(tickPos, projGlobals.loopStart);
+					if (m_status == status_play) {
+						if (inLoop) {
+							if (tickPos >= projGlobals.loopStart + projGlobals.loopLen) {
+								if (MainCtrl::get()) {
+									MainCtrl::get()->setJumpFromTo(tickPos, projGlobals.loopStart);
+								}
+								LOG("JMP FROM %.2f to %d\n", tickPos, projGlobals.loopStart);
+								tickPos = projGlobals.loopStart;
+								samplePos = tickToSample(projGlobals.loopStart, bpm100, sampleRate);
+								LOG("JMP LOOPBEGIN seconds: %.2f - BLOCK %d\n", toSeconds(projGlobals.loopStart, bpm100), samplePos / blockSize);
+								isLoopAround = true;
 							}
-							LOG("JMP FROM %.2f to %d\n", tickPos, projGlobals.loopStart);
-							tickPos = projGlobals.loopStart;
-							samplePos = tickToSample(projGlobals.loopStart, bpm100, sampleRate);
-							LOG("JMP LOOPBEGIN seconds: %.2f - BLOCK %d\n", toSeconds(projGlobals.loopStart, bpm100), samplePos / blockSize);
-							isLoopAround = true;
 						}
+						ctrl->getPlaybackPos() = (int32_t) floor(tickPos);
 					}
-					ctrl->getPlaybackPos() = (int32_t) floor(tickPos);
 					playbackDuration += msPerBlock;
 				}
 			}

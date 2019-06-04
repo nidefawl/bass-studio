@@ -119,6 +119,7 @@ public:
 	std::vector<builtin_module_reg_t>& getBuiltinModuleRegistry() {
 		return builtinModules;
 	}
+	std::vector<note_t> getRealtimeNotes();
 public:
 	vsthost(uint32_t _sampleRate = 44100, uint16_t _blockSize = 512);
 	vsthost(vsthost const&) = delete;
@@ -135,6 +136,8 @@ public:
 	std::atomic<int32_t> audioStageId{100};
 	std::atomic<int32_t> sampleId{(1<<30)}; //TODO: collides with audiocache::nextIdx
 
+	void onStartPlayback(project_controller_t* ctrl);
+	void onStopPlayback(project_controller_t* ctrl);
 	int32_t processPlayback(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround);
 	void processAudio(audio_stage_t* channel, AudioBlock* input, AudioBlock* output, int32_t sample, int32_t samples, playback_state state);
 	VstTimeInfo* getTimeInfo() {
@@ -151,8 +154,6 @@ public:
 	void unload();
 	bool postInit();
 	bool onTick();
-	void onStartPlayback();
-	void onStopPlayback();
 	bool isStreaming();
 
 	bool canDo(const char *ptr)

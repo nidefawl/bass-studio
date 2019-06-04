@@ -254,7 +254,44 @@ int32_t getMidiTime(void* userData) {
 	int32_t time = getTimeMillis()&(0x7fffffff);
 	return time;
 }
+#define TIMEOUT_TEMP_NOTES 2000
+//HACK: inject midi preview note
+int32_t midihost::triggerNote(int32_t deviceIdx, int32_t channel, int32_t pitch, int32_t velocity) {
+//	my_printf("trigger %d\n", pitch);
+	int32_t status = 0x90 | (channel & 0xF);
+	int32_t msg = Pm_Message(status, pitch, velocity);
+    int32_t current_timestamp = getMidiTime(nullptr);
+	MidiIOEvent evt {
+		msg,
+		current_timestamp
+	};
+    for (auto& dev : devicesInput) {
+    	if (deviceIdx < 0 || dev.deviceIdx == deviceIdx) {
+    		dev.temporaryNotes.push_back(evt);
+        	dev.midiMsgs.insert(dev.midiMsgs.begin(), evt);
+    	}
+    }
+    return current_timestamp;
 
+}
+int32_t midihost::killNote(int32_t deviceIdx, int32_t channel, int32_t pitch) {
+
+//	my_printf("kill %d\n", pitch);
+	int32_t status = 0x80 | (channel & 0xF);
+	int32_t msg = Pm_Message(status, pitch, 0);
+    int32_t current_timestamp = getMidiTime(nullptr);
+	MidiIOEvent evt {
+		msg,
+		current_timestamp
+	};
+    for (auto& dev : devicesInput) {
+    	if (deviceIdx < 0 || dev.deviceIdx == deviceIdx) {
+        	dev.midiMsgs.insert(dev.midiMsgs.begin(), evt);
+    	}
+    }
+
+    return current_timestamp;
+}
 /* timer interrupt for processing midi data.
    Incoming data is delivered to main program via in_queue.
    Outgoing data from main program is delivered via out_queue.
@@ -329,10 +366,34 @@ int32_t midihost::processMidi(project_controller_t* ctrl, int32_t sample, double
         } while (result);
         if (!messages.empty()) {
         	for (auto& msg : messages) {
-        		msg.timestamp = current_timestamp;
+        		assert(0==msg.timestamp);
+    			msg.timestamp = current_timestamp;
         	}
         	dev.midiMsgs.insert(dev.midiMsgs.begin(), messages.cbegin(), messages.cend());
-        	log_printf("insert %d messages to this->midiMsgsIn\n", messages.size());
+        }
+        //kill temporary notes after timeout
+        if (!dev.temporaryNotes.empty()) {
+        	auto it = dev.temporaryNotes.begin();
+        	while (it != dev.temporaryNotes.end()) {
+        		auto& msg = *it;
+        		if (current_timestamp - msg.timestamp >= TIMEOUT_TEMP_NOTES) {
+
+//        		    int32_t channel = Pm_MessageStatus(msg.message) & MIDI_CHN_MASK;
+//        			int32_t status = 0x80 | (channel & 0xF);
+//        			int32_t pitch = Pm_MessageData1(msg.message);
+//        			int32_t velocity = 0;
+//        			int32_t noteOffMessage = Pm_Message(status, pitch, velocity);
+//        			MidiIOEvent noteOffEvt {
+//        				noteOffMessage,
+//        				current_timestamp
+//        			};
+//                	dev.midiMsgs.insert(dev.midiMsgs.begin(), noteOffEvt);
+
+        			it = dev.temporaryNotes.erase(it);
+        		} else {
+        			it++;
+        		}
+        	}
         }
     }
 
@@ -473,7 +534,7 @@ void midihost::reopenAllConfiguredDevices(bool forceClose) {
 		                       to the MIDI THRU port. You may not want to do this.
 		                     */
 	                    	Pm_SetFilter(newStream, 0);
-		                	this->devicesInput.push_back(opened_device_t{{}, newStream, info->name, deviceIdx, 0});
+		                	this->devicesInput.push_back(opened_device_t{{}, {}, newStream, info->name, deviceIdx, 0});
 		                }
 		                break;
 		        	}
@@ -504,7 +565,7 @@ void midihost::reopenAllConfiguredDevices(bool forceClose) {
 		        				Pm_Close(newStream);
 		        			}
 		                } else {
-		                	this->devicesOutput.push_back(opened_device_t{{}, newStream, info->name, deviceIdx, 1});
+		                	this->devicesOutput.push_back(opened_device_t{{}, {}, newStream, info->name, deviceIdx, 1});
 		                }
 		                break;
 		        	}
@@ -537,4 +598,36 @@ bool midihost::stopMidi() {
 	syncOpenCloseDeviceList(empty, this->devicesOutput);
 	return ret;
 
+}
+
+std::vector<MidiIOEvent> midihost::getInputMessages() {
+	std::vector<MidiIOEvent> ret;
+	for (auto &dev : devicesInput) {
+		ret.insert(ret.end(), dev.midiMsgs.cbegin(), dev.midiMsgs.cend());
+		dev.midiMsgs.clear();
+	}
+	std::sort(ret.begin(), ret.end(), [](auto &a, auto &b) {
+
+		if (a.timestamp == b.timestamp) {
+			//Put note on before note off
+			bool isNoteOnA = (Pm_MessageStatus(a.message) & MIDI_CODE_MASK) == 0x90;
+			bool isNoteOnB = (Pm_MessageStatus(b.message) & MIDI_CODE_MASK) == 0x90;
+			if (isNoteOnA != isNoteOnB) {
+				return isNoteOnA;
+			}
+		}
+		return a.timestamp < b.timestamp;
+	}
+	);
+//	if (ret.size() > 0) {
+//		int idx = 0;
+//		for (auto &a : ret) {
+//			int32_t status = Pm_MessageStatus(a.message) & MIDI_CODE_MASK;
+//			if (status & 0x80) {
+//				log_printf("note[%d] %s %s %d\n", idx, (status==0x80)!=0?"kill":"trig", noteName(Pm_MessageData1(a.message)), a.timestamp);
+//			}
+//			idx++;
+//		}
+//	}
+	return ret;
 }

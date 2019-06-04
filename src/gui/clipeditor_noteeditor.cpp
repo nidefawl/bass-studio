@@ -122,7 +122,7 @@ guictr_cliphandles::dragmode guictr_cliphandles::getDragZone(ivec2 local) {
 			float dist = 0;
 			dragmode mode = drag_handle_none;
 		};
-		;
+
 		float dragTop = heightLoopInidicator / 2.0f;
 		float dragBottom = dragTop + heightLoopInidicator;
 		float distBar = std::numeric_limits<float>::max();

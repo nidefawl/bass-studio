@@ -14,6 +14,7 @@ class midihost {
 public:
 	struct opened_device_t {
 		std::vector<MidiIOEvent> midiMsgs;
+		std::vector<MidiIOEvent> temporaryNotes;
 		PmStream* stream{NULL};
 		String deviceName;
 		int32_t deviceIdx{0};
@@ -38,17 +39,7 @@ public:
 			return dev.midiMsgs.size() > 0;
 		});
 	}
-	std::vector<MidiIOEvent> getInputMessages() {
-		std::vector<MidiIOEvent> ret;
-		for (auto& dev : devicesInput) {
-			ret.insert(ret.end(), dev.midiMsgs.cbegin(), dev.midiMsgs.cend());
-			dev.midiMsgs.clear();
-		}
-		std::sort(ret.begin(), ret.end(), [](auto& a, auto& b){
-			return a.timestamp < b.timestamp;
-		});
-		return ret;
-	}
+	std::vector<MidiIOEvent> getInputMessages();
 	void reopenAllConfiguredDevices(bool forceClose);
 	bool initPm();
 	void deinitPm();
@@ -59,5 +50,8 @@ public:
 		bool ret = !this->devicesInput.empty() || !this->devicesInput.empty();
 		return ret;
 	}
-};
 
+	//HACK: inject midi preview note
+	int32_t triggerNote(int32_t deviceIdx, int32_t channel, int32_t pitch, int32_t velocity);
+	int32_t killNote(int32_t deviceIdx, int32_t channel, int32_t pitch);
+};

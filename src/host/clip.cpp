@@ -133,7 +133,7 @@ void clip_notes_t::mute(note_t& t) {
 		throw applogicexception("track - attempt to mute non-present note");
 	}
 	note_t& noteFound = *it;
-	noteFound.enabled = !noteFound.enabled;
+	noteFound.toggleFlag(NoteFlags::ENABLED);
 }
 void clip_notes_t::addAll(std::vector<note_t>& list) {
 	dbgassert(selection.empty());
@@ -303,7 +303,7 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
 	auto itNoteEnd = notes.m_list.cend();
 	for (;itNote != itNoteEnd; itNote++) {
 		const note_t& note = *itNote;
-		if (forPlayback && !note.enabled){
+		if (forPlayback && !note.isEnabled()){
 			continue;
 		}
 		if (note.isIntersectTime(loopStart, loopStart + loopLen)) {

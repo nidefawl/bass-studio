@@ -52,13 +52,13 @@ public:
 
 	}
 	float toNoteFNoFolding(int32_t y) {
-		int32_t rel = (sizeY) - y;
+		int32_t rel = (sizeY-1) - y;
 		float offsetKey = rel + layoutRoll.offset();
 		float note = offsetKey / layoutRoll.scale();
 		return note;
 	}
 	float toNoteFImpl(int32_t y, const bool clamp) {
-		int32_t rel = (sizeY) - y;
+		int32_t rel = (sizeY-1) - y;
 		float offsetKey = rel + layoutRoll.offset();
 		float note = offsetKey / layoutRoll.scale();
 		if (layoutRoll.fold) {
@@ -109,13 +109,19 @@ public:
 	}
 };
 class gui_pianoroll : public guibase, piano_scale {
+	enum class dragmode {
+		drag_none,
+		drag_move_resize,
+		drag_piano_key,
+	};
 	float keysX, widthKeys;
-
-
 	ivec2 startDrag;
 	int dragDirection = -1;
 	float dragPosObjSpace = 0;
 	clip_view& view;
+	dragmode dragMode = dragmode::drag_none;
+	int32_t lastNote = -1;
+	int32_t lastNoteTime = -1;
 public:
 	gui_pianoroll(clip_view& _view, layout_pianoroll_t& _layout);
 	~gui_pianoroll() {
@@ -128,6 +134,7 @@ public:
 	virtual void handleRightClick(MouseEvent& evt);
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
 	void layout();
+	vec2 getNoteFromPos(vec2 pos);
 };
 
 class gui_clipsettings : public guictr_base {

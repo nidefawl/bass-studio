@@ -378,7 +378,6 @@ void vsthost::updateTime(int32_t samplePos, double dTickPos, playback_state stat
 	int32_t samplePosTick = PPQ24TickSample(midiTick, project.tempo100, lSampleRate, lBlockSize);
 	timeinfo.samplesToNextClock = samplePosTick - timeinfo.samplePos;
 
-	double a;
 	{
 
 		bool changed;
@@ -406,9 +405,12 @@ void vsthost::sendNotesOff(effectbase* plugin) {
 		dbgassert(tr);
 		track_impl_t* audio = tr->audio;
 		if (audio) {
-			audio->sendNotesOff(project.tempo100, 0);
+			audio->sendNotesOff();
 		}
 	}
+}
+std::vector<note_t> vsthost::getRealtimeNotes() {
+	return this->midiRealtimeInput->m_list;
 }
 void delayAudio(DelayLine* delayLine, AudioBlock* input, AudioBlock* output, samplerate_t delay) {
 	dbgassert(delay >= 0 && delay < 1<<20);
@@ -459,13 +461,19 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 	std::vector<MidiIOEvent> msgs = midihost::getInstance()->getInputMessages();
 	bool notesProcessed = false;
 	//TODO: move this logic somewhere else
+	//TODO: This needs to be done per input and per track
 	if (msgs.size()) {
-		int32_t minStamp = msgs[0].timestamp;
-		int32_t maxStamp = msgs[0].timestamp;
-		for (MidiIOEvent& msg : msgs) {
-			minStamp = math::min(minStamp, msg.timestamp);
-			maxStamp = math::max(maxStamp, msg.timestamp);
-		}
+		//do we need to adjust time at all?
+//		auto getMidiTime = [state](int32_t timestamp) -> int32_t {
+//			if (state == playback_state::status_play) {
+//				return 0;
+//			} else {
+//				return 0;
+//			}
+//
+//		};
+
+
 		tick_t tickPosBlockStart = ceil(posDouble);
 		int32_t lenTicksInfinite = TICKS_BAR*16;
 		std::vector<note_t> newNotes;
@@ -473,58 +481,61 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 
 			int32_t command = MidiMsgStatus(msg.message) & MIDI_CODE_MASK;
 //			int32_t chan = MidiMsgStatus(msg.message) & MIDI_CHN_MASK;
-			int32_t midiMsgCmd = 0;
 			if (command == MIDI_ON_NOTE && MidiMsgData2(msg.message) != 0) {
-				midiMsgCmd = MIDI_ON_NOTE;
-		    } else if (command == MIDI_ON_NOTE || command == MIDI_OFF_NOTE) {
-				midiMsgCmd = MIDI_OFF_NOTE;
-		    }
-			if (midiMsgCmd == MIDI_ON_NOTE) {
-				int32_t relativeTimestampMillis = msg.timestamp - minStamp;
-				log_printf("MIDI_ON_NOTE relativeTimestampMillis %d\n", relativeTimestampMillis);
-				int32_t ticksOffsetBlockStart = millisToTick((double)relativeTimestampMillis, project.tempo100);
 				note_t note;
-				note.time = tickPosBlockStart + ticksOffsetBlockStart;
+				note.setRealtime(true);
+				note.time = tickPosBlockStart;
 				note.len = lenTicksInfinite;
 				note.pitch = MidiMsgData1(msg.message);
 				note.velocity = MidiMsgData2(msg.message);
 				newNotes.push_back(note);
 			}
-			if (midiMsgCmd == MIDI_OFF_NOTE) {
+		}
+		if (newNotes.size()) {
+//			for (auto& note : newNotes) {
+//				log_printf("%d note TRIG %s %d\n", noteName(note.pitch), note.start());
+//			}
+			midiRealtimeInput->addAll(newNotes);
+		}
+		for (MidiIOEvent& msg : msgs) {
+
+			int32_t command = MidiMsgStatus(msg.message) & MIDI_CODE_MASK;
+//			int32_t chan = MidiMsgStatus(msg.message) & MIDI_CHN_MASK;
+			if ((command == MIDI_ON_NOTE && MidiMsgData2(msg.message) == 0) || command == MIDI_OFF_NOTE) {
 				int32_t pitch = MidiMsgData1(msg.message);
-				int32_t relativeTimestampMillis = msg.timestamp - minStamp;
-				log_printf("MIDI_OFF_NOTE relativeTimestampMillis %d\n", relativeTimestampMillis);
-				int32_t ticksOffsetBlockStart = millisToTick((double)relativeTimestampMillis, project.tempo100);
-				int32_t tickEnd = tickPosBlockStart + ticksOffsetBlockStart;
+				int32_t tickEnd = tickPosBlockStart;
 				// kill oldest (first) note
 				bool fnd = false;
 				for (note_t& noteHeld : midiRealtimeInput->m_list) {
 					if(noteHeld.pitch == pitch) {
-						if (noteHeld.start() >= tickEnd) {
-							if (noteHeld.start() == tickEnd) {
-								log_printf("noteHeld.start() == tickEnd %d\n", tickEnd);
-							}
+						if (noteHeld.len != lenTicksInfinite) {
+							log_printf("%s note was released before, looking for next one\n", noteName(noteHeld.pitch));
 							continue;
 						}
-						if (noteHeld.len != lenTicksInfinite) {
+						if (noteHeld.start() > tickEnd) {
+							log_printf("%s note starts after this release (tickEnd %d, noteHeld.start() %d)\n",
+									noteName(noteHeld.pitch), tickEnd, noteHeld.start());
 							continue;
+						}
+						if (noteHeld.start() == tickEnd) {
+//							log_printf("%s noteHeld.start() == tickEnd %d, adding TICKS_16TH/4\n", noteName(noteHeld.pitch), tickEnd);
+							tickEnd += TICKS_16TH/4;
 						}
 						noteHeld.len = tickEnd - noteHeld.start();
-						log_printf("noteHeld.len %f\n", noteHeld.len/(double)TICKS_BAR);
 						assert(noteHeld.len >= 0);
 						fnd = true;
 						notesProcessed = true;
+//						log_printf("%d note KILL %s %d\n", noteName(noteHeld.pitch), noteHeld.start());
 						break;
 					}
 				}
 				if (!fnd) {
-					log_printf("MIDI_OFF_NOTE note not found\n", 0);
+					log_printf("MIDI_OFF_NOTE note not found %s tickEnd %d\n", noteName(pitch), tickEnd);
 				}
 
 			}
 		}
-		if (newNotes.size()) {
-			midiRealtimeInput->addAll(newNotes);
+		if (newNotes.size() || notesProcessed) {
 			midiRealtimeInput->removeDuplicates();
 			notesProcessed = true;
 		}
@@ -533,7 +544,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 		auto it = midiRealtimeInput->m_list.begin();
 		while (it != midiRealtimeInput->m_list.end()) {
 			note_t& note = *it;
-			if (note.end()+TICKS_BAR < posDouble) {
+			if (note.end() < posDouble) {
 				notesProcessed = true;
 				it = midiRealtimeInput->m_list.erase(it);
 			} else {
@@ -543,7 +554,6 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 	}
 	if (notesProcessed) {
 		midiRealtimeInput->updateBounds();
-		log_printf("Realtime midi notes %d\n", midiRealtimeInput->m_list.size());
 	}
 	if (!midiRealtimeInput->m_list.empty()) {
 //		log_printf("Realtime midi notes %d\n", midiRealtimeInput->m_list.size());
@@ -570,12 +580,14 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			dbgassert(track->audio);
 		}
 		tick_t pos = floor(posDouble);
-		updateTime(sample, posDouble, state);
-		for (track_t* tr : ctrl->trackList) {
-			std::vector<automatable_t*> targets;
-			tr->audio->getAutomatableTrackTargets(targets);
-			for (automatable_t* at : targets) {
-				at->updateAutomatedParameters(pos);
+		if (state == playback_state::status_play) {
+			updateTime(sample, posDouble, state);
+			for (track_t* tr : ctrl->trackList) {
+				std::vector<automatable_t*> targets;
+				tr->audio->getAutomatableTrackTargets(targets);
+				for (automatable_t* at : targets) {
+					at->updateAutomatedParameters(pos);
+				}
 			}
 		}
 		int32_t samplePosBlockEnd = sample + lBlockSize;
@@ -637,10 +649,15 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			trackImpl->input.realloc(lBlockSize);
 			trackImpl->output.realloc(lBlockSize);
 			dsp_util::fillSilence(trackImpl->input.buf, lBlockSize);
+
+			int32_t midiProcessFlags = MidiFlags::PROCESS_REALTIME|MidiFlags::PROCESS_ARP;
 			if (state == playback_state::status_play) {
-				trackImpl->sendNotes(pos, tickBlockEnd, loopCutStart, loopCutEnd, project.tempo100, sample, *midiRealtimeInput);
-			} else if (!trackImpl->heldNotes.empty()) {
-				trackImpl->sendNotesOff(project.tempo100, sample);
+				midiProcessFlags = MidiFlags::PROCESS_REALTIME|MidiFlags::PROCESS_CLIPS|MidiFlags::PROCESS_ARP;
+			}
+
+			trackImpl->sendNotes(pos, tickBlockEnd, loopCutStart, loopCutEnd, project.tempo100, sample, *midiRealtimeInput, midiProcessFlags);
+			if (state != playback_state::status_play) {
+				//
 			}
 			if (state == playback_state::status_play) {
 				trackImpl->fillAudio(pos, tickBlockEnd, loopCutStart, loopCutEnd, project.tempo100, sample, trackImpl->input.buf, (int32_t)lBlockSize);
@@ -826,12 +843,20 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 	stats.samplesProcessed += nBlocksProcessed*lBlockSize;
 	return nBlocksProcessed;
 }
-void vsthost::onStartPlayback() {
+void vsthost::onStartPlayback(project_controller_t* ctrl) {
 	lastTickEndPos = 0;
 	lastState = playback_state::status_stop;
 }
-void vsthost::onStopPlayback() {
+void vsthost::onStopPlayback(project_controller_t* ctrl) {
 	midiRealtimeInput->m_list.clear();
+
+	for (track_t* track : ctrl->trackList) {
+		auto trackImpl = track->audio;
+		if (!trackImpl->heldNotes.empty())
+		{
+			trackImpl->sendNotesOff();
+		}
+	}
 }
 void vsthost::setOutput(audiohost* audioHost) {
 //	assert (audioHost->lSampleRate == this->lSampleRate);

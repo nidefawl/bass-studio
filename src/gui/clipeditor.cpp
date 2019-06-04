@@ -12,7 +12,7 @@
 #include "cursor.h"
 #include "keyboard.h"
 #include "grid.h"
-
+#include "host/vst_host.h"
 #include "guicontextmenu_daw.h"
 
 namespace GuiColor {
@@ -21,6 +21,7 @@ constant_t COL_PIANOROLL_WHITE("COL_PIANOROLL_WHITE", 0xFFFFFFFF);
 constant_t COL_PIANOROLL_BLACK("COL_PIANOROLL_BLACK", 0xFF111111);
 constant_t COL_PIANOROLL_STROKE("COL_PIANOROLL_STROKE", 0xFF444444);
 constant_t COL_CLIPEDITOR_SHARP("COL_CLIPEDITOR_SHARP", 0x33111111);
+constant_t COL_NOTE_REALTIME("COL_NOTE_REALTIME", 0xFFFF00FF);
 }
 namespace GuiConstant {
 constant_t CONST_PIANOROLL_STROKE_WIDTH("CONST_PIANOROLL_STROKE_WIDTH", 10);
@@ -353,7 +354,7 @@ void gui_clipcontent_velocities::render(NVGcontext* vg) {
 		for (int i = 0; i < 2; i++) {
 			nvgBeginPath(vg);
 			for (const note_t& note : notes.m_list) {
-				if ((i==0) != note.enabled)
+				if ((i==0) != note.isEnabled())
 					continue;
 				float nx = grid.tickToScreenD(note.time);
 				if (nx + nw/2.0f < -4) continue;
@@ -370,7 +371,7 @@ void gui_clipcontent_velocities::render(NVGcontext* vg) {
 			nvgStroke(vg);
 			nvgBeginPath(vg);
 			for (const note_t& note : notes.m_list) {
-				if ((i==0) != note.enabled)
+				if ((i==0) != note.isEnabled())
 					continue;
 				float nx = grid.tickToScreenD(note.time);
 				if (nx + r < -4) continue;
@@ -390,7 +391,7 @@ void gui_clipcontent_velocities::render(NVGcontext* vg) {
 		for (int i = 0; i < 2; i++) {
 			nvgBeginPath(vg);
 			for (const note_t* pnote : notes.selection) {
-				if ((i==0) != pnote->enabled)
+				if ((i==0) != pnote->isEnabled())
 					continue;
 				float nx = grid.tickToScreenD(pnote->time);
 				if (nx + nw/2.0f < -4) continue;
@@ -408,7 +409,7 @@ void gui_clipcontent_velocities::render(NVGcontext* vg) {
 
 			nvgBeginPath(vg);
 			for (const note_t* pnote : notes.selection) {
-				if ((i==0) != pnote->enabled)
+				if ((i==0) != pnote->isEnabled())
 					continue;
 				float nx = grid.tickToScreenD(pnote->time);
 				if (nx + r < -4) continue;
@@ -532,23 +533,27 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
 	bool fold = layoutRoll.fold;
 	float offset = layoutRoll.offset();
 	float scale = layoutRoll.scale();
+	int32_t firstKey = math::max((int32_t)floorf(offset/scale), 0);
+	//render one extra key on top and bottom to fix antialiasing on edge of container
+	if (firstKey > 0) {
+		firstKey--;
+	}
+	float yOff = offset - firstKey*scale - scale;
 	if (fold) {
 		std::vector<int32_t> pitches;
 		this->view.getNotePitches(pitches);
-		float yOff = offset - scale;
 
 
-//		nvgSave(vg);
-//		nvgTranslate(vg, 0, yOff);
-		float yoct = 0;
-		float y = yoct;
+		nvgSave(vg);
+		nvgTranslate(vg, 0, yOff);
 		int numRowsSharp = 0;
 		nvgBeginPath(vg);
 		int len = (int) pitches.size();
-		for (int i = 0; i < len; i++) {
+		float y = 0;
+		for (int i = firstKey; i < len; i++) {
 			int32_t pitch = pitches[i];
 			if (isSharp(pitch)) {
-				nvgRect(vg, 0, h-y + yOff, w, scale);
+				nvgRect(vg, 0, h-y, w, scale);
 				numRowsSharp++;
 			}
 			y += scale;
@@ -570,11 +575,11 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
 //		}
 //		nvgStroke(vg);
 
-		y = yoct;
 		nvgBeginPath(vg);
-		for (int i = 0; i < len; i++) {
-			nvgMoveTo(vg, 0, h-y + yOff);
-			nvgLineTo(vg, w, h-y + yOff);
+		y = 0;
+		for (int i = firstKey; i < len; i++) {
+			nvgMoveTo(vg, 0, h-y);
+			nvgLineTo(vg, w, h-y);
 			y += scale;
 			if (y >= size.y+scale*2) {
 				break;
@@ -583,17 +588,11 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
 		nvgStrokeWidth(vg, theme->getFloat(GuiConstant::CONST_PIANOROLL_STROKE_WIDTH));
 		nvgStrokeColor(vg, theme->getColor(GuiColor::COL_PIANOROLL_STROKE));
 		nvgStroke(vg);
-		yoct = y;
+		nvgRestore(vg);
 //		if (yoct >= size.y+scale*2) {
 //			break;
 //		}
 	} else {
-		int32_t firstKey = math::max((int32_t)floorf(offset/scale), 0);
-		//render one extra key on top and bottom to fix antialiasing on edge of container
-		if (firstKey > 0) {
-			firstKey--;
-		}
-		float yOff = offset - firstKey*scale - scale;
 
 		int32_t firstOctave = floorf(firstKey/12.0f);
 		firstKey = firstKey % 12;
@@ -654,7 +653,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
 		for (int i = 0; i < 2; i++) {
 			nvgBeginPath(vg);
 			for (note_t& note : notes.m_list) {
-				if ((i==0) != note.enabled)
+				if ((i==0) != note.isEnabled())
 					continue;
 				float nx = grid.tickToScreenD(note.time);
 				float nw = grid.tickLenToScreen(note.len);
@@ -682,12 +681,38 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
 	gui_clip* guiClip = view.gui;
 	track_t* track = guiClip ? guiClip->m_track : NULL;
 	if (track && track->audio) {
+		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 		clip_t* clip = guiClip->m_clip;
+
+//		std::vector<note_t> heldRealtimeNotes = vsthost::getInstance()->getRealtimeNotes(); //TODO: NOT THREADSAFE
+//		if (heldRealtimeNotes.size() && 0) {
+//			nvgBeginPath(vg);
+//
+//			for (note_t& note : heldRealtimeNotes) {
+//				tick_t pos = note.start() - clip->start() + clip->offsetStart;
+//				if (clip->isLoopEnabled()) {
+//					if (pos > clip->loopStart) {
+//						pos = clip->loopStart + (pos - clip->loopStart) % clip->loopLen;
+//					}
+//				}
+//				//TODO: CULL
+//				renderNote(vg, this, &note, scale, -note.start() + pos);
+//			}
+//			nvgFillColor(vg, theme->getColor(GuiColor::COL_NOTE_REALTIME));
+//			nvgFill(vg);
+//			nvgStrokeWidth(vg, 1.0f);
+//			nvgStrokeColor(vg, theme->getColor(GuiColor::COL_NOTE_OUTLINE));
+//			nvgStroke(vg);
+//		}
+
 		std::vector<note_t>& heldNotes = track->audio->heldNotes;
 		if (heldNotes.size()) {
 			nvgBeginPath(vg);
 
 			for (note_t& note : heldNotes) {
+				if (note.isRealtime()) {
+					continue;
+				}
 				tick_t pos = note.start() - clip->start() + clip->offsetStart;
 				if (clip->isLoopEnabled()) {
 					if (pos > clip->loopStart) {
@@ -703,44 +728,26 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
 			nvgStrokeColor(vg, theme->getColor(GuiColor::COL_NOTE_OUTLINE));
 			nvgStroke(vg);
 		}
-		std::vector<note_t>& heldNotesArpIn = track->audio->getArpInputNotes(); //TODO: NOT THREADSAFE
-		if (heldNotesArpIn.size()&&false) {
-			nvgBeginPath(vg);
-			for (note_t& note : heldNotesArpIn) {
-				tick_t pos = note.start() - clip->start() + clip->offsetStart;
-				if (clip->isLoopEnabled()) {
-					if (pos > clip->loopStart) {
-						pos = clip->loopStart + (pos - clip->loopStart) % clip->loopLen;
-					}
-				}
-				//TODO: CULL
-				renderNote(vg, this, &note, scale, -note.start() + pos);
-			}
-			nvgFillColor(vg, rgbToNvg(0xbbbb00));
-			nvgFill(vg);
-			nvgStrokeWidth(vg, 1.0f);
-			nvgStrokeColor(vg, theme->getColor(GuiColor::COL_NOTE_OUTLINE));
-			nvgStroke(vg);
-		}
-		std::vector<note_t> heldNotesAll = track->audio->heldNotes; //TODO: NOT THREADSAFE
-		if (heldNotesAll.size()) {
-			nvgBeginPath(vg);
-			for (note_t& note : heldNotesArpIn) {
-				tick_t pos = note.start() - clip->start() + clip->offsetStart;
-				if (clip->isLoopEnabled()) {
-					if (pos > clip->loopStart) {
-						pos = clip->loopStart + (pos - clip->loopStart) % clip->loopLen;
-					}
-				}
-				//TODO: CULL
-				renderNote(vg, this, &note, scale, -note.start() + pos);
-			}
-			nvgFillColor(vg, rgbToNvg(0xbbbb00));
-			nvgFill(vg);
-			nvgStrokeWidth(vg, 1.0f);
-			nvgStrokeColor(vg, theme->getColor(GuiColor::COL_NOTE_OUTLINE));
-			nvgStroke(vg);
-		}
+
+//		std::vector<note_t>& heldNotesArpIn = track->audio->getArpInputNotes(); //TODO: NOT THREADSAFE
+//		if (heldNotesArpIn.size()&&false) {
+//			nvgBeginPath(vg);
+//			for (note_t& note : heldNotesArpIn) {
+//				tick_t pos = note.start() - clip->start() + clip->offsetStart;
+//				if (clip->isLoopEnabled()) {
+//					if (pos > clip->loopStart) {
+//						pos = clip->loopStart + (pos - clip->loopStart) % clip->loopLen;
+//					}
+//				}
+//				//TODO: CULL
+//				renderNote(vg, this, &note, scale, -note.start() + pos);
+//			}
+//			nvgFillColor(vg, rgbToNvg(0xbbbb00));
+//			nvgFill(vg);
+//			nvgStrokeWidth(vg, 1.0f);
+//			nvgStrokeColor(vg, theme->getColor(GuiColor::COL_NOTE_OUTLINE));
+//			nvgStroke(vg);
+//		}
 
 		std::vector<note_t>& heldNotesArp = track->audio->getArpHeldNotes(); //TODO: NOT THREADSAFE
 		if (heldNotesArp.size()) {
@@ -762,6 +769,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
 			nvgStrokeColor(vg, theme->getColor(GuiColor::COL_NOTE_OUTLINE));
 			nvgStroke(vg);
 		}
+
 		std::vector<marker_t> markers = track->audio->getArpMarkers(); //TODO: NOT THREADSAFE
 		if (markers.size()) {
 			for (marker_t& m : markers) {
@@ -891,7 +899,7 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
 				contextNote = NULL;
 				desc = "Delete Note";
 			} else {
-				contextNote->enabled = !contextNote->enabled;
+				contextNote->toggleFlag(NoteFlags::ENABLED);
 			}
 		} else {
 			if (!isVelocity) {

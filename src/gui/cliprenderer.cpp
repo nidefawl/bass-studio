@@ -236,7 +236,7 @@ void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_t* tr, 
 					notesClipped.push_back(&note);
 					continue;
 				}
-				if (!note.enabled) {
+				if (!note.isEnabled()) {
 					notesMuted.push_back(&note);
 					continue;
 				}

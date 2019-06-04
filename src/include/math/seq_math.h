@@ -33,6 +33,10 @@ namespace math {
 	inline T round(T a) {
 		return std::round(a);
 	}
+	template<typename T>
+	inline T clamp(T a, T tmin, T tmax) {
+		return a < tmin ? tmin : a > tmax ? tmax : a;
+	}
 	//using fmod = std::fmod;
 	//using ceil = std::ceil;
 	//using floor = std::floor;

@@ -19,13 +19,40 @@ class gui_clip;
 inline float velocityToFloat(int32_t velocity) {
 	return velocity / 127.0F;
 }
+namespace NoteFlags {
+static constexpr int32_t ENABLED = 1;
+static constexpr int32_t REALTIME = 2;
+}
 struct note_t {
 public:
 	int32_t pitch = 0;
 	int32_t velocity = 127;
 	tick_t time = 0;
 	tick_t len = 0;
-	bool enabled = true;
+	int32_t flags = NoteFlags::ENABLED;
+	inline void setEnabled(bool bIsEnabled) {
+		if (bIsEnabled) {
+			flags |= NoteFlags::ENABLED;
+		} else {
+			flags &= ~NoteFlags::ENABLED;
+		}
+	}
+	inline void setRealtime(bool bIsRealtime) {
+		if (bIsRealtime) {
+			flags |= NoteFlags::REALTIME;
+		} else {
+			flags &= ~NoteFlags::REALTIME;
+		}
+	}
+	inline bool isEnabled() const {
+		return flags & NoteFlags::ENABLED;
+	}
+	inline bool isRealtime() const {
+		return flags & NoteFlags::REALTIME;
+	}
+	inline void toggleFlag(int32_t flag) {
+		flags ^= flag;
+	}
 	inline tick_t start() const {
 		return time;
 	}
@@ -112,7 +139,7 @@ inline void changePitch(std::vector<note_t>& notesPtrs, int32_t semitones, bool 
 }
 inline void muteNotesToggle(std::vector<note_t>& notesPtrs) {
 	for (note_t& note : notesPtrs) {
-		note.enabled = !note.enabled;
+		note.toggleFlag(NoteFlags::ENABLED);
 	}
 }
 inline void offsetStartTime(std::vector<note_t>& notesPtrs, tick_t offset) {

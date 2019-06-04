@@ -706,7 +706,7 @@ std::vector<note_t>& track_impl_t::getArpHeldNotes() {
 std::vector<marker_t>& track_impl_t::getArpMarkers() {
 	return this->arp->markers;
 }
-void track_impl_t::sendNotesOff(int32_t bpm100, int32_t blockSamplePos) {
+void track_impl_t::sendNotesOff() {
 	VstEvent_t* midiEventsBuf = reallocEvts(track->audio->heldNotes.size());
 	for (note_t& note : track->audio->heldNotes) {
 //		midiEventsBuf->writeVstMidiEvt(note, bpm100, blockSamplePos, sampleRate, blockSize, false);
@@ -726,7 +726,7 @@ void track_impl_t::sendNotesOff(int32_t bpm100, int32_t blockSamplePos) {
 	}
 }
 void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos,
-		clip_notes_t& midiRealtimeInput) {
+		clip_notes_t& midiRealtimeInput, int32_t flags) {
 	//dbgassert(end != loopEnd); //if end equals loopEnd note off events will be on exact end
 	if (std::any_of(effects.begin(), effects.end(), [](const effectbase* ref){
 			return ref->bCanReceiveMidi;
@@ -739,9 +739,15 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 			heldBegin = math::min(heldBegin, note.start());
 			heldEnd = math::max(heldEnd, note.end());
 		}
-		track->getMidi().getNotesInRange(heldBegin, heldEnd, -1, loopEnd, notes);
+		if (flags & MidiFlags::PROCESS_CLIPS) {
+			track->getMidi().getNotesInRange(heldBegin, heldEnd, -1, loopEnd, notes);
+		}
+
 //		int32_t clipNotes = notes.size();
-		getClipNotesInTimeRange(heldBegin, heldEnd, -1, loopEnd, midiRealtimeInput, notes);
+		if (flags & MidiFlags::PROCESS_REALTIME) {
+			getClipNotesInTimeRange(heldBegin, heldEnd, -1, loopEnd, midiRealtimeInput, notes);
+		}
+
 //		int32_t realtimeNotes = notes.size()-clipNotes;
 
 		if (loopStart > -1&&start<loopStart)
@@ -797,7 +803,11 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 //				my_printf("NOTE_%s %d %d\n", note.isNoteOn?"ON":"OFF", note.tickOffsetInBlock, note.pitch);
 //			}
 			std::vector<noteevent_t> noteEventsProcessed;
-			arp->process(noteEvents, start, end, loopStart, loopEnd, noteEventsProcessed);
+			if (flags & MidiFlags::PROCESS_ARP) {
+				arp->process(noteEvents, start, end, loopStart, loopEnd, noteEventsProcessed);
+			} else {
+				noteEventsProcessed = std::move(noteEvents);
+			}
 			size_t numEvents = noteEventsProcessed.size();
 			VstEvent_t* midiEventsBuf = reallocEvts(numEvents);
 			const double ticksPerBlock = toTickPrecise(blockSize/(double)sampleRate, bpm100);
@@ -810,7 +820,7 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 			for (effectbase* effect : effects) {
 				vstplugin* vst = dynamic_cast<vstplugin*>(effect);
 				if (vst && vst->bCanReceiveMidi) {
-//					VstEvent_t midiEventsBufTemp = *midiEventsBuf; // make a copy
+//					VstEvent_t midiEventsBufTemp = *midiEventsBuf; //TODO: make a copy, plugin may manipulate data
 					vst->dispatch(effProcessEvents, 0, 0, midiEventsBuf->vstEvents);
 				}
 			}

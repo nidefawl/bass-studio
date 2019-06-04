@@ -236,13 +236,27 @@ void load(Archive & archive, clip_audio_t & m)
 {
 	make_optional_nvp(archive, "id", m.id);
 }
+//TODO: don't archive each note seperately
 template<class Archive>
-void serialize(Archive & archive, note_t & m)
+void save(Archive & archive, note_t const & m)
 {
 	archive(make_nvp("time", m.time),
 			make_nvp("len", m.len),
 			make_nvp("pitch", m.pitch),
-			make_nvp("enabled", m.enabled));
+			make_nvp("flags", m.flags));
+}
+template<class Archive>
+void load(Archive & archive, note_t & m)
+{
+	archive(make_nvp("time", m.time),
+			make_nvp("len", m.len),
+			make_nvp("pitch", m.pitch));
+	//handle old format, pre 2019/06/04
+	if (!make_optional_nvp(archive, "flags", m.flags)) {
+		bool b = true;
+		make_optional_nvp(archive, "enabled", b);
+		m.flags = b ? NoteFlags::ENABLED : 0;
+	}
 }
 template<class Archive>
 void serialize(Archive & archive, project_globals_t & m)
@@ -307,7 +321,7 @@ template <class Archive>
 void save( Archive & archive, project_file const & file, const std::uint32_t version)
 {
 	archive(cereal::make_nvp("projectdata", file.project));
-	make_optional_nvp(archive, "layout", file.layout);
+	archive(cereal::make_nvp("layout", file.layout));
 	archive(cereal::make_nvp("samples", file.sampleFileIndex));
 }
 CEREAL_CLASS_VERSION( project_file, FILE_FORMAT_VERSION);
