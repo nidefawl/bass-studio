@@ -758,7 +758,7 @@ void MainCtrl::onTick()
 				if (ctxtmenu) {
 					lastTooltipSrc = guiOver;
 					nextTooltipId++;
-					openContextMenu(ctxtmenu, m_mousePos+ivec2(0,6));
+					openContextMenu(ctxtmenu, m_mousePos+ivec2(-16,26));
 				}
 				hoverTicks = 0;
 			}
