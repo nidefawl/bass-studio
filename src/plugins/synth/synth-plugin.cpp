@@ -1580,10 +1580,10 @@ public:
 			s = "";
 			y += lineh;
 		}
-		//stress test thread safety
-		for (int i = 0; i < 10000; i++) {
-			std::vector<int> heldNotes = thisImpl->getSynth()->getHeldNotes(); //TODO: not threadsafe
-		}
+//		//stress test thread safety
+//		for (int i = 0; i < 10000; i++) {
+//			std::vector<int> heldNotes = thisImpl->getSynth()->getHeldNotes(); //TODO: not threadsafe
+//		}
 
 	}
 	void layout() {
