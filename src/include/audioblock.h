@@ -60,6 +60,8 @@ struct AudioBlock {
 		}
 	}
 	void copyFromPosToPos(float **srcBuf, uint32_t offsetIn, uint32_t offsetOut, uint32_t srcSamples, uint32_t srcChannels) {
+		assert(offsetIn >= 0);
+		assert(offsetOut >= 0);
 //		dbgassert(srcSamples == samples);
 		uint32_t nChannels = math::max(srcChannels, channels);
 		uint32_t nSamples = math::min(srcSamples, samples);
