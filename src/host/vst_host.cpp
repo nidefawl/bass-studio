@@ -948,7 +948,13 @@ void vsthost::processAudio(audio_stage_t* stage, AudioBlock* input, AudioBlock* 
 //	float gain = dsp_util::clampReadGain(gainRaw);
 //	mulGain(output, gain);
 	if (state == playback_state::status_play) {
-		stage->audioOutput.store(&stage->output, samplePos-stage->getLatency());
+		auto offset = samplePos - (stage->getLatency());
+		if (offset >= 0) {
+			stage->audioOutput.store(&stage->output, offset);
+		} else {
+			log_printf("cannot write to negative offset %d (samplepos %d - stage.latency %d)\n", offset, samplePos, stage->getLatency());
+		}
+
 	}
 }
 void vsthost::updatePluginWindows() {
