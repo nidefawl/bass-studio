@@ -714,6 +714,8 @@ private:
 			auto message = midiQueue.Peek();
 			if (message.mOffset > sample) break;
 
+		    log_printf("delta frames %d\n", message.mOffset);
+
 			auto voiceMode = GetParamEnum(Parameters::VoiceMode)->getEnumValue<VoiceModes>();
 			auto status = message.StatusMsg();
 			auto ctrl = message.ControlChangeIdx();
@@ -1518,7 +1520,7 @@ public:
 		String str;
 		str = StringFormat("Blocksize %d", this->curEffect->getBlockSize());
 		strings.push_back(str);
-		str = StringFormat("Samplerate %.0f", this->curEffect->getSampleRate());
+		str = StringFormat("Samplerate %f", this->curEffect->getSampleRate());
 		strings.push_back(str);
 		AudioEffectX* effx = dynamic_cast<AudioEffectX*>(this->curEffect);
 		int flags = 0;
@@ -1527,20 +1529,20 @@ public:
 		}
 		VstTimeInfo* timeinfo = effx->getTimeInfo(flags);
 		assert(timeinfo);
-		strings.push_back(StringFormat("samplePos %.0f", timeinfo->samplePos));
-		strings.push_back(StringFormat("sampleRate %.0f", timeinfo->sampleRate));
-		strings.push_back(StringFormat("nanoSeconds %.0f", timeinfo->nanoSeconds));
-		strings.push_back(StringFormat("ppqPos %.0f", timeinfo->ppqPos));
-		strings.push_back(StringFormat("tempo %.0f", timeinfo->tempo));
-		strings.push_back(StringFormat("barStartPos %.0f", timeinfo->barStartPos));
-		strings.push_back(StringFormat("cycleStartPos %.0f", timeinfo->cycleStartPos));
-		strings.push_back(StringFormat("cycleEndPos %.0f", timeinfo->cycleEndPos));
+		strings.push_back(StringFormat("samplePos %f", timeinfo->samplePos));
+		strings.push_back(StringFormat("sampleRate %f", timeinfo->sampleRate));
+		strings.push_back(StringFormat("nanoSeconds %f", timeinfo->nanoSeconds));
+		strings.push_back(StringFormat("ppqPos %f", timeinfo->ppqPos));
+		strings.push_back(StringFormat("tempo %f", timeinfo->tempo));
+		strings.push_back(StringFormat("barStartPos %f", timeinfo->barStartPos));
+		strings.push_back(StringFormat("cycleStartPos %f", timeinfo->cycleStartPos));
+		strings.push_back(StringFormat("cycleEndPos %f", timeinfo->cycleEndPos));
 		strings.push_back(StringFormat("timeSigNumerator %d", timeinfo->timeSigNumerator));
 		strings.push_back(StringFormat("timeSigDenominator %d", timeinfo->timeSigDenominator));
 		strings.push_back(StringFormat("smpteOffset %d", timeinfo->smpteOffset));
 		strings.push_back(StringFormat("smpteFrameRate %d", timeinfo->smpteFrameRate));
 		strings.push_back(StringFormat("samplesToNextClock %d", timeinfo->samplesToNextClock));
-		strings.push_back(StringFormat("flags %d", timeinfo->flags));
+		strings.push_back(String("flags ")+FormatBinaryString<int16_t>(timeinfo->flags&0xFFFF));
 		setFont(vg, 16, G_WHITE, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
 		float lineh;
 		nvgTextMetrics(vg, NULL, NULL, &lineh);
