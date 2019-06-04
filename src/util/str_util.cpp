@@ -94,9 +94,9 @@ static const char* const noteNames[12] {
 	"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"
 };
 
-const char* noteName(int note) { //NOT THREAD SAFE; DONT KEEP REFERENCE
+const char* noteName(int note) { //DONT KEEP REFERENCE
 	static const size_t buf_size = 32;
-	static char* const buf = (char*) malloc(buf_size);
+	static thread_local char* const buf = (char*) malloc(buf_size);
 	_snprintf_s(buf, buf_size, _TRUNCATE, "%s%d", noteNames[note%12], (note/12)-2);
 	return buf;
 }
