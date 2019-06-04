@@ -50,27 +50,31 @@ void gui_timeinput_field::handleDraggedMove(MouseEvent& evt) {
 		if (math::abs(disty) < 1)
 			return;
 		evt.dragDistance->y = 0;
+		int32_t curVal = *time;
 		switch (idx) {
 		case 0:
-			*time -= disty * TICKS_BAR;
+			curVal -= disty * TICKS_BAR;
 			break;
 		case 1:
-			*time -= disty * TICKS_QUARTER;
+			curVal -= disty * TICKS_QUARTER;
 			break;
 		case 2:
 			if (disty > 0) {
-				if (*time & TICK_MASK_16TH) {
-					*time &= ~TICK_MASK_16TH;
+				if (curVal & TICK_MASK_16TH) {
+					curVal &= ~TICK_MASK_16TH;
 					break;
 				}
 			}
 			if (disty < 0) {
-				if (*time & TICK_MASK_16TH) {
-					*time &= ~TICK_MASK_16TH;
+				if (curVal & TICK_MASK_16TH) {
+					curVal &= ~TICK_MASK_16TH;
 				}
 			}
-			*time -= disty * TICKS_16TH;
+			curVal -= disty * TICKS_16TH;
 			break;
+		}
+		if (!isRelative || curVal > 0) {
+			*time = curVal;
 		}
 		if (parent)
 			parent->buttonClicked(this);
