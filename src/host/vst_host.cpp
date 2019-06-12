@@ -98,8 +98,13 @@ VstIntPtr audioMasterHost(vsthost* host, AEffect* effect, VstInt32 opcode, VstIn
 	case audioMasterAutomate:
 		cbPrintf(plugin, "audioMasterAutomate %d %d %d\n", index, opcode, value);
 		if (plugin) {
-			plugin->deactivateAutomation(index);
-			plugin->recvPluginEditParamUpdate(index);
+			auto* effParam = plugin->getEffectParam(index);
+			if (!effParam) {
+				log_printf("%s audioMasterAutomate unknown param index %d\n", StringAsCStr(plugin->getName()), index);
+			} else {
+				plugin->deactivateAutomation(effParam->idx);
+				plugin->recvPluginEditParamUpdate(effParam->internalIdx);
+			}
 		}
 		//return OnSetParameterAutomated(nEffect, index, opt);
 		return 1;
