@@ -255,7 +255,7 @@ void vstplugin::load(vsthost* host) {
 	for (int i = 0; i < aeffect->numPrograms; i++) {
 		memset(buf, 0, sizeof(buf));
 		if (this->dispatch(effGetProgramNameIndexed, i, 0, &buf, 0)) {
-			buf[-1+sizeof(buf)]=0;
+			buf[sizeof(buf)-1]=0;
 			this->programNames.push_back(buf);
 		}
 	}
