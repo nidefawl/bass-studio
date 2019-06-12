@@ -322,14 +322,13 @@ void vstplugin::makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) {
 	createSnapshot(ps, this, storePluginChunks);
 	ps.slot = this->slot;
 }
-
 guiplugin* vstplugin::makeGui() {
 
 	dbgassert(handle->hmodule || handle->axEffect);
 	if (!handle->gui) {
 		handle->gui = std::make_unique<guivstplugin>(this);
 		handle->gui->setTitle(StringFormat("%s", StringAsCStr(this->sName)));
-		if (handle->axEffect) {
+		if (handle->axEffect) { //only provided by internal vst2 instance (not a DLL)
 			guiplugin* pGuiPlugin = handle->gui.get();
 			guivstplugin* pGuiVstPlugin = dynamic_cast<guivstplugin*>(pGuiPlugin);
 			dbgassert(pGuiVstPlugin);

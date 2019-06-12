@@ -30,6 +30,8 @@ struct testshader : gl_shader_pipeline {
 		};
 	}
 	~testshader() {
+		//TODO: we should check if gl context is still present
+		// or redesign shader resource management strategy so we don't have to do this here in the destructor
 		if (texture)
 			glDeleteTextures(1, &texture);
 	}
