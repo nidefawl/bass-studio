@@ -1303,12 +1303,21 @@ int startApplication(int argc, char* argv[]) {
 //	int64_t *segFaultDeref = static_cast<int64_t*>((void*)0xBAADF00DLL);
 //	int64_t a = *segFaultDeref;
 	try {
-	//bool runConsoleMode = false;
-	//for (int i = 0; i < argc; i++) {
-	//	if (strcmp(argv[i], "-console")) {
-	//		runConsoleMode = true;
-	//	}
-	//}
+	int centerScreenIdx = -1;
+//	bool runConsoleMode = false;
+	for (int i = 0; i < argc; i++) {
+		log_printf("%s\n", argv[i]);
+	}
+	for (int i = 0; i < argc; i++) {
+//		if (!strcmp(argv[i], "-console")) {
+//			runConsoleMode = true;
+//		}
+		if (strcmp(argv[i], "-center") == 0 && i + 1 < argc) {
+			log_printf("argv[i] %s argv[i+1] %s\n", argv[i], argv[i+1]);
+			char* a = argv[i+1];
+			centerScreenIdx = atoi(a);
+		}
+	}
 	//if (!runConsoleMode) {
 	allocConsole();
 	//}
@@ -1343,6 +1352,9 @@ int startApplication(int argc, char* argv[]) {
 	mainWindow = std::make_unique<appwindow_main>(nullptr, ctrl.get());
 	mainWindow->createMainWindow("main window", 1280, 720, nullptr);
 	mainWindow->showWindow();
+	if (centerScreenIdx >= 0) {
+		mainWindow->centerOnScreen(centerScreenIdx);
+	}
 	enableGlDebugCallback();
 	glfwSetErrorCallback(glfw_runtime_error_callback);
 	ctrl->postInit();
