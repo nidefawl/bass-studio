@@ -77,8 +77,13 @@ void loadThemeData(theme_data& data, guitheme_t& out) {
 	for (auto it = data.mapProperties.begin(); it != data.mapProperties.end(); ++it) {
 		String key = it->first;
 		GuiConstant::constant_t c = GuiConstant::getConstantByName(key);
-		dbgassert(c.idx > 0);
-		out.mapProperties[c.idx] = it->second;
+
+//		dbgassert(c.idx > 0);
+		 // some constants may not be defined, and thats ok
+		if (c.idx > 0) {
+			out.mapProperties[c.idx] = it->second;
+		}
+
 	}
 }
 
