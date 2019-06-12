@@ -85,7 +85,6 @@ public:
 	}
 };
 #define PREVENT_REENTRANT(reentrant_err_msg) 	\
-	static bool reentrant = false; 				\
 	reentrantblocker block(reentrant); 			\
 	if (!block.check()) {						\
 		dbgassert(0&&reentrant_err_msg);		    \
@@ -194,6 +193,7 @@ protected:
 	WNDPROC defWndProc = NULL;
 #endif
 	bool valid = true;
+	bool reentrant = false;
 public:
 	bool isValid() {
 		return valid;
