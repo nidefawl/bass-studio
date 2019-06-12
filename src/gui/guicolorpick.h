@@ -44,5 +44,11 @@ public:
 	void render(NVGcontext* vg) override;
 	void handleRightClick(MouseEvent& evt);
 	void setColor(int32_t rgba);
+	NVGcolor getNvg() {
+		return nvgColor;
+	}
+	int32_t getInt32() {
+		return colorInt32;
+	}
 };
 
