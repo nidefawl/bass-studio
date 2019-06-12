@@ -383,7 +383,8 @@ static NVGLUframebuffer* nvglu__CreateFramebuffer(NVGcontext* ctx, NVGLUframebuf
 	glGetIntegerv(GL_RENDERBUFFER_BINDING, &defaultRBO);
 
 
-	fb->image = nvgCreateImageRGBA(ctx, w, h, imageFlags | NVG_IMAGE_FLIPY | NVG_IMAGE_PREMULTIPLIED, NULL);
+//	fb->image = nvgCreateImageRGBA(ctx, w, h, imageFlags | NVG_IMAGE_FLIPY | NVG_IMAGE_PREMULTIPLIED, NULL);
+	fb->image = nvgCreateImageRGBA(ctx, w, h, imageFlags | NVG_IMAGE_FLIPY, NULL);
 
 #if defined NANOVG_GL2
 	fb->texture = nvglImageHandleGL2(ctx, fb->image);
