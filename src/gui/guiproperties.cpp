@@ -614,7 +614,6 @@ void guiproperties_table<guitheme_t>::layout()  {
 			auto add = [this](tblstr&& x, const auto& y) {
 				table.rows.push_back({{x, y}});
 			};
-			std::string_view a;
 			std::vector<GuiColor::constant_t> vec = GuiColor::getAllConstants();
 			std::sort(vec.begin(), vec.end(), [](auto& a, auto& b){ return strcmp(a.name, b.name) < 0; });
 			for (auto _constant : vec) {
