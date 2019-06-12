@@ -61,6 +61,8 @@ if (UNIX)
 	set(DAW_COMPILE_FLAGS ${DAW_COMPILE_FLAGS} __cdecl="")
 endif(UNIX)
 
+OPTION(DEBUG_STD_LIB "Enable standard library assertions" OFF) # Enabled by default
+
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   add_compile_options(-Wall -Wno-inconsistent-missing-override) # -Wshadow sadly no working option for warning on shadow local only
@@ -71,8 +73,10 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     #add_link_options(-fsanitize=address)
 
     # add_compile_definitions(_GLIBCXX_DEBUG _GLIBCXX_DEBUG_PEDANTIC ENABLE_MICHAELS_GLIBCXX_HACKS)
-    #add_compile_definitions(_GLIBCXX_DEBUG _GLIBCXX_DEBUG_PEDANTIC)
-    add_compile_definitions(_LIBCPP_DEBUG)
+    if (DEBUG_STD_LIB)
+      add_compile_definitions(_GLIBCXX_DEBUG _GLIBCXX_DEBUG_PEDANTIC)
+      add_compile_definitions(_LIBCPP_DEBUG)
+    endif (DEBUG_STD_LIB)
   endif()
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
   add_compile_options(-Wall -Wno-sign-compare)
