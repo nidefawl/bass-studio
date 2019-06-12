@@ -23,7 +23,6 @@ include_directories("${DAW_SRC_PATH}")
 include_directories("${DAW_SRC_PATH}/include")
 include_directories(SYSTEM "${DAW_SRC_PATH}/nanovg")
 include_directories(SYSTEM
-    #${DEPS_BUILD_FOLDER}/${DEPS_BUILD_FOLDER_LIBS}/portmidi/include
     ${DEPS_BUILD_FOLDER}/${DEPS_BUILD_FOLDER_LIBS}/glfw/include
     ${DEPS_BUILD_FOLDER}/${DEPS_BUILD_FOLDER_LIBS}/SQLiteCpp/include
     ${DEPS_BUILD_FOLDER}/${DEPS_BUILD_FOLDER_LIBS}/soxr/include
