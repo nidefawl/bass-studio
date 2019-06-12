@@ -14,14 +14,14 @@ class guidropdownbase : public guibuttonbase {
 public:
 	guidropdownbase() : guibuttonbase() {
 	}
-	void render(NVGcontext* vg) {
+	void render(NVGcontext* vg) override {
 //		nvgIntersectScissor(vg, pos.x, pos.y, size.x, size.y);
 		renderWidgetBorder(vg, getStateFlags());
 		int fontScale = math::round((this->fontSize > 0 ? this->fontSize : size.y) * fFontScale);
 		setFont(vg, fontScale, G_WHITE, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
 		nvgText(vg, pos.x + size.x / 2.0f, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(getString()), NULL);
 	}
-	virtual void handleDraggedRelease(MouseEvent& evt) {
+	void handleDraggedRelease(MouseEvent& evt) override {
 		if (parent)
 			parent->buttonClicked(this);
 	}
