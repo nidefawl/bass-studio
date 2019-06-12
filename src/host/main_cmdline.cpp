@@ -192,7 +192,7 @@ int main(int argc, char* argv[]) {
     			dsp_util::fillSilence(block.buf, host->lBlockSize);
     			//still a race condition on_terminate here
     			AudioBuffer* buff;
-    			if (audioHost->audioQueue.try_dequeue(buff)) {
+    			if (audioHost->try_dequeue(buff)) {
     				if (host->lBlockSize == buff->output->samples) {
     					buff->output->copyTo(block.buf);
     					auto tNow = getTimeMillis()/1000.0;
