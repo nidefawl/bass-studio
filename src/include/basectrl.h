@@ -139,10 +139,7 @@ public:
 	virtual void closeContextMenu() { };
 	void closeAllAppMenus()  { closeAppMenusAtLvl(0); };
 	virtual void closeAppMenusAtLvl(int startlvl)  { };
-	virtual void closeAllContextMenus() {
-		closeContextMenu();
-		closeAllAppMenus();
-	}
+	virtual void closeAllContextMenus();
 	virtual void openAppMenu(int lvl, guictxtmenu_base *b, ivec2 pos) { };
 	virtual void closePopup() { }; // close this window if its a popup window
 	virtual bool hasContextMenu() { return false; };
