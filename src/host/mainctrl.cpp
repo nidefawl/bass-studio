@@ -459,7 +459,7 @@ void MainCtrl::setEmptyProject() {
 }
 #if CREATE_DEBUG_COMPANION_WINDOW
 void drawDebugWindow(NVGcontext* ctx, int winW, int winH, float pxratio);
-void initDebugWindow();
+int initDebugWindow();
 void openDebugWindow(window_main* mainwindow) {
 	dbgassert(mainwindow);
 	window_dialog* dialog = mainwindow->createDialog("waveform atlas cache", 1280, 720);
