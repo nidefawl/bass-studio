@@ -372,7 +372,7 @@ void addPropertiesFromGui(guiplugin& gui, Table::tbl* table) {
     for (automatable_param_t* param : sortedParams) {
     	tbl_row_t row;
     	row.cols.push_back(tblString{param->label});
-    	row.cols.push_back(tblint{1+param->idx});
+    	row.cols.push_back(tblint{param->idx});
     	row.cols.push_back(tblint{param->internalIdx});
     	row.cols.push_back(tblint{param->flags});
     	row.cols.push_back(tblint{param->category});
