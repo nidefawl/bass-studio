@@ -5,10 +5,13 @@
 #include "guicontainer.h"
 #include "guicontextmenu_base.h"
 #include "buildinfo.h"
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 constexpr int ID_BTN_CLOSE = 1;
-constexpr int TITLE_FONT_SIZE = 30;
-constexpr int TEXT_FONT_SIZE = 20;
+constexpr int TITLE_FONT_SIZE = 26;
+constexpr int TEXT_FONT_SIZE = 18;
 constexpr int BTN_FONT_SIZE = 16;
 guidialog_about::guidialog_about() : guidialog_base(ivec2{440, 560}) {
 	setBackgroundRendered(true);
@@ -34,6 +37,9 @@ void guidialog_about::render(NVGcontext* vg) {
 	strings.emplace_back(String("Build: "), String(BuildInfo::BUILD_BINARY_NAME));
 	strings.emplace_back(String("Compiled: "), String(BuildInfo::BUILD_TIMESTAMP));
 	strings.emplace_back(String("Compiler ID: "), String(BuildInfo::COMPILER_ID));
+#if defined(_WIN32) && defined(WINVER)
+	strings.emplace_back(String("WINVER: "), StringFormat("0x%04X", WINVER));
+#endif
 	int x = 0;
 	int y = 0;
 	float lineh;
@@ -80,7 +86,6 @@ void guidialog_about::render(NVGcontext* vg) {
 	nvgTextBoxBounds(vg, xRight, y, width-xRight, BuildInfo::COMPILE_DEFS, nullptr, bounds);
 	nvgTextBox(vg, xRight, y, width-xRight, BuildInfo::COMPILE_DEFS, nullptr);
 	y = bounds[3];
-
 	for (auto c : guis) {
 		nvgSave(vg);
 		c->render(vg);
