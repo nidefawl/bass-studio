@@ -76,6 +76,17 @@ void guiplugin::render(NVGcontext* vg) {
 		gui->render(vg);
 	}
 }
+void guiplugin::prerender(NVGcontext* vg) {
+	guictr_base::prerender(vg);
+	if (effect->getParam(PARAM_ENABLE)) {
+		auto at = effect->getRegisteredAutomation(PARAM_ENABLE);
+		if (at && at->isAutomated()) {
+			buttonBypass.colorActive = GuiColor::COL_AUTOMATED;
+		} else {
+			buttonBypass.colorActive = GuiColor::COL_BTN_BG_BYPASS_ACTIVE;
+		}
+	}
+}
 void guiplugin::determineSize(ivec2& prefSize) {
 	if (layoutMode == 1) {
 		//		dbgassert(module->getAudioStage());
@@ -161,6 +172,17 @@ guiplugin::guiplugin(effectbase* _effect)
 	addGuiBtn(&buttonDelete);
 	addGuiBtn(&buttonSave);
 //	buttonDelete.setTint(0x404040);
+}
+void guiplugin::rightClicked(MouseEvent& evt, guibase* button) {
+	int32_t clickedParamIdx = -1;
+	if (button == &this->buttonBypass) {
+		clickedParamIdx = PARAM_ENABLE;
+	}
+	if (clickedParamIdx != -1) {
+		auto* ctxt = new guictxtmenu_at_param(effect, clickedParamIdx);
+		MainCtrl::get()->openContextMenu(ctxt, evt.mousepos);
+	}
+
 }
 void guiplugin::layout() {
 	const int32_t hpt = theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT);
