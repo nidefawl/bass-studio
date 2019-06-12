@@ -122,7 +122,7 @@ VstIntPtr audioMasterHost(vsthost* host, AEffect* effect, VstInt32 opcode, VstIn
 		return 0L;
 	case audioMasterGetTime:
 		//cbPrintf(plugin, "audioMasterGetTime %d %d %d\n", index, opcode, value);
-		return (VstIntPtr)vsthost::getInstance()->getTimeInfo();
+		return (VstIntPtr)host->getTimeInfo();
 	case audioMasterProcessEvents:
 //		cbPrintf(plugin, "audioMasterProcessEvents %d %d %d\n", index, opcode, value);
 		return 0;
@@ -137,10 +137,10 @@ VstIntPtr audioMasterHost(vsthost* host, AEffect* effect, VstInt32 opcode, VstIn
 		return 1;
 	case audioMasterGetSampleRate:
 		cbPrintf(plugin, "audioMasterGetSampleRate %d %d %d\n", index, opcode, value);
-		return (long)vsthost::getInstance()->lSampleRate;
+		return (long)host->lSampleRate;
 	case audioMasterGetBlockSize:
 		cbPrintf(plugin, "audioMasterGetBlockSize %d %d %d\n", index, opcode, value);
-		return vsthost::getInstance()->lBlockSize;
+		return host->lBlockSize;
 	case audioMasterGetInputLatency:
 		cbPrintf(plugin, "audioMasterGetInputLatency %d %d %d\n", index, opcode, value);
 		return 0;
@@ -184,7 +184,7 @@ VstIntPtr audioMasterHost(vsthost* host, AEffect* effect, VstInt32 opcode, VstIn
 		return 0;
 	case audioMasterCanDo:
 		cbPrintf(plugin, "audioMasterCanDo %d %d %d\n", index, opcode, value);
-		return vsthost::getInstance()->canDo((const char*)ptr);
+		return host->canDo((const char*)ptr);
 	case audioMasterGetLanguage:
 		cbPrintf(plugin, "audioMasterGetLanguage %d %d %d\n", index, opcode, value);
 		return 0;
