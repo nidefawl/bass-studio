@@ -282,7 +282,6 @@ public:
 	void focusLost() {
 //		closeContextMenu();
 	}
-	void closeAllContextMenus() override;
 	void addDebug(String s);
 
 

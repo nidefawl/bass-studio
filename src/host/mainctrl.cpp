@@ -1236,12 +1236,6 @@ bool MainCtrl::mouseDownPre() {
 	closeAllContextMenus();
 	return true;
 }
-void MainCtrl::closeAllContextMenus() {
-	if (!this->ctxtmenu || !this->ctxtmenu->isDialog()) {
-		closeContextMenu();
-	}
-	closeAllAppMenus();
-}
 
 track_t* MainCtrl::createNewTrack(int trackType) {
 	dbgassert(trackType >= 0 && trackType < NUM_TRACK_TYPES);

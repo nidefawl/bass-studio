@@ -421,6 +421,12 @@ void BaseCtrl::openContextMenu(guictxtmenu_base *b, ivec2 pos, int flags)
 {
 	delete b; //TODO: defer delete
 }
+void BaseCtrl::closeAllContextMenus() {
+	if (!this->ctxtmenu || !this->ctxtmenu->isDialog()) {
+		closeContextMenu();
+	}
+	closeAllAppMenus();
+}
 void BaseCtrl::setClipboardText(String s)
 {
 	this->window->setClipboardText(s);
