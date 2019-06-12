@@ -100,7 +100,8 @@ void guiplugin::buttonClicked(guibase* _button) {
 	if (_button == &buttonBypass) {
     	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
     	float f = effect->getParamValue(PARAM_ENABLE);
-    	float f2 = f > 0.5 ? 0 : 1;
+    	float f2 = f < 0.5 ? 1 : 0;
+		effect->deactivateAutomation(PARAM_ENABLE);
     	effect->setParamValue(PARAM_ENABLE, f2, FLG_PAR_UPDATE_USER);
     	effect->postSetParameter(PARAM_ENABLE, f, f2, FLG_PAR_UPDATE_USER);
 
