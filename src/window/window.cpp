@@ -1330,6 +1330,11 @@ int startApplication(int argc, char* argv[]) {
 	log_out("COMPILER_ID %s\n", BuildInfo::COMPILER_ID);
 	log_out("COMPILE_OPTIONS %s\n", BuildInfo::COMPILE_OPTIONS);
 	log_out("COMPILE_DEFS %s\n", BuildInfo::COMPILE_DEFS);
+#ifdef _ITERATOR_DEBUG_LEVEL
+	log_out("_ITERATOR_DEBUG_LEVEL %d\n", (int)_ITERATOR_DEBUG_LEVEL);
+#endif
+//	DWORD* pTest = (DWORD*)::HeapAlloc(GetProcessHeap(), 0, 20);
+
 	setMinimumResolutionTimer();
 	initColor();
 #if HAS_APP_SETTINGS
