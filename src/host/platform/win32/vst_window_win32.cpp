@@ -41,6 +41,99 @@ namespace {
 		return nullptr;
 	}
 
+	void captureWindow(HWND hwnd, ImageBuf& capturedFrame) {
+		if (!IsWindowVisible(hwnd)) {
+			capturedFrame.w = 0;
+			capturedFrame.h = 0;
+			capturedFrame.bytes.resize(0);
+			capturedFrame.bitdepth = 4;
+			return;
+		}
+		static hires_timer_t time2;
+		time2.reset();
+		HDC hdc = GetDCEx(hwnd, nullptr, DCX_CACHE);
+//		HDC hdc = GetDC(hwnd);
+		if (hdc) {
+			static hires_timer_t time;
+			RECT rectClientArea;
+			GetClientRect(hwnd, &rectClientArea);
+//			RECT rectClientArea;
+//
+//		    const int wBrd = GetSystemMetrics(SM_CXSIZEFRAME);
+//		    const int hBrd = GetSystemMetrics(SM_CYSIZEFRAME);
+//			if (!GetWindowRect(hwnd, &rectClientArea)) {
+//				return;
+//			}
+//			rectClientArea.left+=wBrd;
+//			rectClientArea.right-=wBrd;
+//			rectClientArea.bottom-=hBrd;
+
+			const int width = rectClientArea.right - rectClientArea.left;
+			const int height = rectClientArea.bottom - rectClientArea.top;
+			const int bytesPerPixel = 4;
+			const int bufSizeBitmap = width * height * bytesPerPixel;
+			BITMAPINFO info { };
+			info.bmiHeader.biSize = sizeof(info.bmiHeader);
+			info.bmiHeader.biWidth = width;
+			info.bmiHeader.biHeight = -height; // negative for top-down pixel array
+			info.bmiHeader.biPlanes = 1;
+			info.bmiHeader.biBitCount = bytesPerPixel * 8;
+			info.bmiHeader.biCompression = BI_RGB;
+			info.bmiHeader.biSizeImage = bufSizeBitmap;
+			void* pVoidBitmap;
+			HBITMAP bitmap = CreateDIBSection(hdc, &info, DIB_RGB_COLORS, &pVoidBitmap, nullptr, 0);
+			if (!bitmap) {
+				log_printf("Failed creating bitmap: %d\n", GetLastError());
+			}
+
+			HDC memDC = CreateCompatibleDC(hdc);
+			HBITMAP prevOBj = (HBITMAP)SelectObject(memDC, bitmap);
+//			if (!PrintWindow(hwnd, memDC, PW_CLIENTONLY)) {
+//				log_printf("PrintWindow failed: %d\n", GetLastError());
+//			}
+			time.reset();
+			if (!BitBlt(memDC, 0, 0, width, height, hdc, 0, 0, SRCCOPY)) {
+				log_printf("BitBlt failed: %d\n", GetLastError());
+			}
+			static int calls = 0;
+			static double total = 0.0;
+			total += time.getTimeDouble();
+			if (++calls%60==0) {
+				double perCall = total / calls;
+				log_printf("bitblt %f\n", perCall);
+				total = 0;
+				calls = 0;
+			}
+			SelectObject(memDC, prevOBj);
+			DeleteDC(memDC);
+			ReleaseDC(hwnd, hdc);
+
+			int64_t bufSize = width * height * 4;
+			capturedFrame.w = width;
+			capturedFrame.h = height;
+			capturedFrame.bitdepth = 4;
+			capturedFrame.bytes.resize(bufSize);
+			uint8_t* pBitmapData = reinterpret_cast<uint8_t*>(pVoidBitmap);
+			uint8_t* pOut = capturedFrame.bytes.data();
+//			capturedFrame.bytes.assign(bitmapData, bitmapData + bufSize);
+			for (int idx = 0; idx < bufSizeBitmap; idx += bytesPerPixel) {
+				*pOut++ = pBitmapData[idx + 2];
+				*pOut++ = pBitmapData[idx + 1];
+				*pOut++ = pBitmapData[idx + 0];
+				*pOut++ = 0xFF;
+			}
+		    DeleteObject(bitmap);
+		}
+		static int calls2 = 0;
+		static double total2 = 0.0;
+		total2 += time2.getTimeDouble();
+		if (++calls2%60==0) {
+			double perCall = total2 / calls2;
+			log_printf("total %f\n", perCall);
+			total2 = 0;
+			calls2 = 0;
+		}
+	}
 	LRESULT CALLBACK PluginWndProc (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
 	{
 		vst_window* window = reinterpret_cast<vst_window*> ((LONG_PTR)GetWindowLongPtr (hwnd, GWLP_USERDATA));
@@ -52,13 +145,13 @@ namespace {
 				{
 					return 1; // don't draw background
 				}
-				case WM_PAINT:
-				{
-					PAINTSTRUCT ps{};
-					BeginPaint(hwnd, &ps);
-					EndPaint(hwnd, &ps);
-					return 0;
-				}
+//				case WM_PAINT:
+//				{
+//					PAINTSTRUCT ps{};
+//					BeginPaint(hwnd, &ps);
+//					EndPaint(hwnd, &ps);
+//					return 0;
+//				}
 				case WM_SIZE:
 				{
 					plugin->onResize(window, window->getContentSize ());
@@ -202,38 +295,48 @@ std::vector<vst_window*>& vst_window::getWindows ()
 //------------------------------------------------------------------------
 bool vst_window::init(vstplugin* plugin, const String& name, ivec2 size, bool resizeable)
 {
+	HWND mainHWND = getMainHWND();
+	assert(mainHWND);
 	this->plugin = plugin;
 	HINSTANCE instance = GetModuleHandle(NULL);
 	registerWindowClass (instance);
-	DWORD exStyle = WS_EX_APPWINDOW;
-	DWORD dwStyle = WS_CAPTION | WS_SYSMENU | WS_CLIPSIBLINGS;
-	if (resizeable)
-		dwStyle |= WS_SIZEBOX | WS_MAXIMIZEBOX;
-	HWND parent = getMainHWND();
-	hwnd = CreateWindowEx (exStyle, gWindowClassName, StringAsCStr(name), dwStyle,
-            0, 0, size.x, size.y, nullptr, nullptr, instance, nullptr);
-	if (parent) {
-
-//		SetParent(hwnd, parent);
-		RECT rcOwner;
-		RECT rcDlg;
-		RECT rc;
-		GetWindowRect(parent, &rcOwner);
-		GetWindowRect(hwnd, &rcDlg);
-		CopyRect(&rc, &rcOwner);
-		OffsetRect(&rcDlg, -rcDlg.left, -rcDlg.top);
-		OffsetRect(&rc, -rc.left, -rc.top);
-		OffsetRect(&rc, -rcDlg.right, -rcDlg.bottom);
-		SetWindowPos(hwnd,
-			HWND_TOP,
-			rcOwner.left + (rc.right / 2),
-			rcOwner.top + (rc.bottom / 2),
-			0, 0,          // Ignores size arguments.
-			SWP_NOSIZE);
+	DWORD exStyle, dwStyle;
+	HWND parentHWND;
+	if (isChildWindow) {
+		parentHWND = mainHWND;
+		exStyle = 0;
+		dwStyle = WS_CHILDWINDOW | WS_CLIPSIBLINGS;
+	} else {
+		parentHWND = nullptr;
+		exStyle = WS_EX_APPWINDOW;
+		dwStyle = WS_CAPTION | WS_SYSMENU | WS_CLIPSIBLINGS;
+		if (resizeable) {
+			dwStyle |= WS_SIZEBOX | WS_MAXIMIZEBOX;
+		}
 	}
+	hwnd = CreateWindowEx (exStyle, gWindowClassName, StringAsCStr(name), dwStyle,
+            0, 0, size.x, size.y, parentHWND, nullptr, instance, nullptr);
+
 //	CreateWindowExA(DWORD dwExStyle,LPCSTR lpClassName,LPCSTR lpWindowName,DWORD dwStyle,int X,int Y,int nWidth,int nHeight,HWND hWndParent,HMENU hMenu,HINSTANCE hInstance,LPVOID lpParam);
 	if (hwnd)
 	{
+		if (!isChildWindow) {
+			RECT rcOwner;
+			RECT rcDlg;
+			RECT rc;
+			GetWindowRect(mainHWND, &rcOwner);
+			GetWindowRect(hwnd, &rcDlg);
+			CopyRect(&rc, &rcOwner);
+			OffsetRect(&rcDlg, -rcDlg.left, -rcDlg.top);
+			OffsetRect(&rc, -rc.left, -rc.top);
+			OffsetRect(&rc, -rcDlg.right, -rcDlg.bottom);
+			SetWindowPos(hwnd,
+				HWND_TOP,
+				rcOwner.left + (rc.right / 2),
+				rcOwner.top + (rc.bottom / 2),
+				0, 0,          // Ignores size arguments.
+				SWP_NOSIZE);
+		}
 		SetWindowLongPtr (hwnd, GWLP_USERDATA, (__int3264) (LONG_PTR)this);
 		addWindow (this);
 	}
@@ -243,6 +346,7 @@ bool vst_window::init(vstplugin* plugin, const String& name, ivec2 size, bool re
 //------------------------------------------------------------------------
 void vst_window::close()
 {
+	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 	plugin->onClose();
 	ShowWindow(hwnd, SW_HIDE);
 }
@@ -255,13 +359,16 @@ void vst_window::destroy()
 	DestroyWindow(hwnd);
 	removeWindow (this);
 }
+
 //------------------------------------------------------------------------
 void vst_window::show()
 {
-
 	SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOCOPYBITS | SWP_SHOWWINDOW);
-	SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, (__int3264) (LONG_PTR)getMainHWND());
-
+	if (isChildWindow) {
+//		ShowWindow(hwnd, SW_SHOWNA);
+	} else {
+		SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, (__int3264) (LONG_PTR)getMainHWND());
+	}
 	plugin->onShow(this);
 }
 
@@ -274,6 +381,11 @@ ivec2 vst_window::getContentSize ()
 }
 
 
+void vst_window::captureWindowFrame() {
+
+	captureWindow(hwnd, capturedFrame);
+
+}
 
 void vst_window::updateWindow() {
 //	InvalidateRect(hwnd, NULL, TRUE);
@@ -294,8 +406,13 @@ void vst_window::resize (ivec2 newSize)
 	clientRect.right = newSize.x;
 	clientRect.bottom = newSize.y;
 	AdjustWindowRectEx (&clientRect, windowInfo.dwStyle, false, windowInfo.dwExStyle);
-	SetWindowPos (hwnd, HWND_TOP, 0, 0, clientRect.right - clientRect.left,
-	              clientRect.bottom - clientRect.top, SWP_NOMOVE | SWP_NOCOPYBITS | SWP_NOACTIVATE);
+	if (isChildWindow) {
+		SetWindowPos (hwnd, nullptr, 0, 0, clientRect.right - clientRect.left,
+		              clientRect.bottom - clientRect.top, SWP_NOMOVE | SWP_NOCOPYBITS | SWP_NOACTIVATE);
+	} else {
+		SetWindowPos (hwnd, HWND_TOP, 0, 0, clientRect.right - clientRect.left,
+		              clientRect.bottom - clientRect.top, SWP_NOMOVE | SWP_NOCOPYBITS | SWP_NOACTIVATE);
+	}
 }
 
 //------------------------------------------------------------------------

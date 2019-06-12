@@ -34,6 +34,7 @@
 #include "../host/plugin/internal_plugin.h"
 #include "../host/plugin/vst_plugin.h"
 #include "../host/plugin/vst_plugin_handles.h"
+#include "../host/vst_window.h"
 #include "automatable.h"
 #include "debugproperties.h"
 
@@ -542,6 +543,94 @@ public:
 	}
 };
 
+void drawImage(NVGcontext* vg, int image, float alpha,
+		float sx, float sy, float sw, float sh, // sprite location on texture
+		float x, float y, float w, float h); // position and size of the sprite rectangle on screen
+class guivstplugin_preview : public guictr_base {
+	vstplugin* const plugin;
+	guivstplugin* const guivst;
+	int tex = -1;
+	ivec2 sizeTex;
+public:
+	guivstplugin_preview(vstplugin* _plugin, guivstplugin* _guivst)
+	: guictr_base(), plugin(_plugin), guivst(_guivst), sizeTex{0,0}
+	{
+		padding = 0;
+		margin = 0;
+	}
+	~guivstplugin_preview() {
+
+	}
+	void determineSize(ivec2& prefSize) override {
+//		if (sizeTex.x && sizeTex.y) {
+//			prefSize = sizeTex;
+//		}
+	}
+	int nFrame = 0;
+	void prerender(NVGcontext* vg) override {
+		//TODO: resource management
+//		if (nFrame++<20)
+//			return;
+//		nFrame = 0;
+		auto window = plugin->window;
+		if (window) {
+//			window->captureWindowFrame();
+			auto& frame = window->capturedFrame;
+			if (frame.w && frame.h) {
+				if (tex > 0 && (frame.w != sizeTex.x || frame.h != sizeTex.y)) {
+					nvgDeleteImage(vg, tex);
+					tex = -1;
+				}
+				if (tex < 0) {
+					tex = nvgCreateImageRGBA(vg, frame.w, frame.h, 0, (const unsigned char*)nullptr);
+					sizeTex = { frame.w, frame.h };
+				}
+//				std::vector<uint8_t> tmpData = frame.bytes;
+////				tmpData.resize(frame.w*frame.h*4);
+//				for (int _x = 0; _x < frame.w; _x++) {
+//
+//					for (int _y = 0; _y < frame.h; _y++) {
+//						int idx = _x*frame.h+_y;
+//						tmpData[idx*4+0] = 0xff;
+////						tmpData[idx*4+1] = 0xff;
+////						tmpData[idx*4+2] = 0xff;
+//						tmpData[idx*4+3] = 0xff;
+//					}
+//				}
+				nvgUpdateImage(vg, tex, frame.bytes.data());
+			} else if (tex > 0) {
+				nvgDeleteImage(vg, tex);
+				tex = -1;
+				sizeTex = { frame.w, frame.h };
+			}
+
+		}
+	}
+	void render(NVGcontext* vg) override {
+		if (isBackgroundRendered()) {
+			renderBackground(vg);
+		}
+		if (!setScissorTransform(vg)) {
+			return;
+		}
+		if (tex > 0) {
+			ivec2 sizePrev;
+			if (sizeTex.x > sizeTex.y) {
+				sizePrev.x = size.x;
+				sizePrev.y = (int)((sizeTex.y/(float)sizeTex.x)*sizePrev.x);
+			} else {
+				sizePrev.y = size.y;
+				sizePrev.x = (int)((sizeTex.x/(float)sizeTex.y)*sizePrev.y);
+			}
+			drawImage(vg, tex, 1.0f, 0, 0, sizeTex.x, sizeTex.y, 0, 0, sizePrev.x, sizePrev.y);
+		}
+		for (auto c : guis) {
+			nvgSave(vg);
+			c->render(vg);
+			nvgRestore(vg);
+		}
+	}
+};
 guivstplugin::guivstplugin(vstplugin * _vst)
   : guiplugin(_vst), vst(_vst), dropdownProgram(_vst)
 {
@@ -562,10 +651,15 @@ guivstplugin::guivstplugin(vstplugin * _vst)
 			listEntries.push_back(new gui_plugin_paramlist_entry(_vst, param));
     });
 	params.setList(listEntries);
+	ctrPreview = new guivstplugin_preview(this->vst, this);
+	viewCtrs.push_back(ctrPreview);
 }
 
 guivstplugin::~guivstplugin() {
 	remove(&buttonOpenEditor);
+	if (ctrPreview) {
+		delete ctrPreview;
+	}
 }
 void guivstplugin::setControl(BaseCtrl* parentCtrl) {
 	guiplugin::setControl(parentCtrl);
@@ -576,22 +670,37 @@ void guivstplugin::setControl(BaseCtrl* parentCtrl) {
 	}
 }
 
+void guivstplugin::prerender(NVGcontext* vg) {
+	guiplugin::prerender(vg);
+	for (auto* ctr : viewCtrs) {
+		assert(!ctr->parent);
+		ctr->prerender(vg);
+	}
+}
 void guivstplugin::determineSize(glm::ivec2& prefSize) {
 	if (layoutMode == 1) {
 		guiplugin::determineSize(prefSize);
 		return;
 	}
-	if (this->viewCtr) {
-		this->viewCtr->getFixedSize(&sizeCtrs.x, &sizeCtrs.y);
-		int width = (int)((sizeCtrs.x/(float)sizeCtrs.y)*size.y);
-		sizeCtrs.x = width;
-		sizeCtrs.y = size.y;
-		prefSize.y = math::max(sizeCtrs.y, prefSize.y);
-		prefSize.x += sizeCtrs.x;
-	} else {
-		sizeCtrs = {0, 0};
-		// we accept whatever prefSize
+	sizeCtrs = {0, size.y};
+	if (viewCtr) {
+		ivec2 sizeCtr;
+		viewCtr->getFixedSize(&sizeCtr.x, &sizeCtr.y);
+		sizeCtr.x = (int)((sizeCtr.x/(float)sizeCtr.y)*size.y);
+		sizeCtr.y = size.y;
+		viewCtr->layout(sizeCtr.x, sizeCtr.y);
+		sizeCtrs.x += sizeCtr.x;
 	}
+	if (ctrPreview) {
+		ivec2 sizeCtr{prefSize.y, prefSize.y};
+		ctrPreview->determineSize(sizeCtr);
+		sizeCtr.x = (int)((sizeCtr.x/(float)sizeCtr.y)*size.y);
+		sizeCtr.y = size.y;
+		ctrPreview->size = sizeCtr;
+		sizeCtrs.x += sizeCtr.x;
+	}
+	prefSize.y = math::max(sizeCtrs.y, prefSize.y);
+	prefSize.x += sizeCtrs.x;
 }
 void guivstplugin::render(NVGcontext* vg) {
 	renderBase(vg);
@@ -700,7 +809,7 @@ void guivstplugin::layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {
 		int left = params.right() + INSET_TITLE;
 		for (auto* ctr : viewCtrs) {
 			ctr->pos = ivec2(left, 0) + ivec2(insetCtrls, insetCtrls + hpt);
-			ivec2 prefSizeCtr = ivec2(sizeCtrs.x, contentS.y) - ivec2(insetCtrls*2);
+			ivec2 prefSizeCtr = ivec2(ctr->size.x, contentS.y) - ivec2(insetCtrls*2);
 			ctr->determineSize(prefSizeCtr);
 			ctr->size = prefSizeCtr;
 			ctr->layout();

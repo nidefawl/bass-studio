@@ -14,6 +14,7 @@
 #include "plugin/base_plugin.h"
 #include "plugin/vst_plugin.h"
 #include "plugin/vst_plugin_handles.h"
+#include "vst_window.h"
 
 #include "../vstsdk-host-2.4/aeffectx.h"
 #include "appsettings.h"
@@ -971,14 +972,19 @@ void vsthost::updatePluginWindows() {
 }
 bool vsthost::onTick() {
 	int iDispatched = 0;
+	int64_t now = getTimeMillis();
 	for (auto* current : pluginInstancesVST2) {
 		if (current->bEditOpen && !current->bInEditIdle) {
 			current->bInEditIdle = true;
 			current->dispatch(effEditIdle);
 			current->bInEditIdle = false;
-//			if (current->window) {
+			if (current->window) {
+				if (now - current->window->captureTime > 1000/25) {
+					current->window->captureTime = now;
+					current->window->captureWindowFrame();
+				}
 //				current->updateDisplay();
-//			}
+			}
 			iDispatched++;
 		}
 	}

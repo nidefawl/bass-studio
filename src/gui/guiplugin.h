@@ -36,7 +36,8 @@ public:
 	guiplugin(effectbase* _effect);
 	~guiplugin();
 	void addGuiBtn(guibuttontoggle* btn);
-	virtual void render(NVGcontext* vg);
+	virtual void render(NVGcontext* vg) override;
+	virtual void prerender(NVGcontext* vg) override;
 	virtual void buttonClicked(guibase* _button);
 	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt);
 	virtual void layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) = 0;
@@ -54,6 +55,7 @@ public:
 
 	virtual void layout() override;
 
+	void rightClicked(MouseEvent& evt, guibase* button) override;
 	void handleRightClick(MouseEvent& evt) override;
 	void handleDraggedBegin(MouseEvent& evt) override;
 	void handleDraggedMove(MouseEvent& evt) override;
@@ -108,6 +110,7 @@ public:
 	/* holds size for internal vstplugins with custom gui (non-steinberg api) */
 	ivec2 sizeCtrs;
 
+	guictr_base* ctrPreview = nullptr;
 
 	void layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1);
 	void render(NVGcontext* vg) override;
@@ -116,4 +119,5 @@ public:
 	guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
 	virtual void setControl(BaseCtrl* parentCtrl) override;
 	void determineSize(ivec2& prefSize) override;
+	void prerender(NVGcontext* vg) override;
 };

@@ -17,6 +17,7 @@
 #include <stdint.h>
 #include "math/vec.h"
 #include "str_util.h"
+#include "fileio.h"
 
 class vstplugin;
 
@@ -41,6 +42,7 @@ public:
 	ivec2 getContentSize ();
 
 	void updateWindow();
+	void captureWindowFrame();
 
 	std::vector<vst_window*>& getWindows ();
 	vstplugin* getPlugin() {
@@ -48,6 +50,10 @@ public:
 	}
 private:
 	vstplugin* plugin = NULL;
+	bool isChildWindow = false;
+public:
+	ImageBuf capturedFrame;
+	int64_t captureTime = 0;
 #ifdef _WIN32
 	LRESULT CALLBACK proc (UINT message, WPARAM wParam, LPARAM lParam);
 	WINDOW_HANDLE hwnd = NULL;
