@@ -651,8 +651,8 @@ guivstplugin::guivstplugin(vstplugin * _vst)
 			listEntries.push_back(new gui_plugin_paramlist_entry(_vst, param));
     });
 	params.setList(listEntries);
-	ctrPreview = new guivstplugin_preview(this->vst, this);
-	viewCtrs.push_back(ctrPreview);
+//	ctrPreview = new guivstplugin_preview(this->vst, this);
+//	viewCtrs.push_back(ctrPreview);
 }
 
 guivstplugin::~guivstplugin() {
