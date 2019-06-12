@@ -1258,6 +1258,12 @@ static std::unique_ptr<appwindow_main> mainWindow;
 GLFWwindow* getGlfwFromWindowBase(window_base* w) {
 	return dynamic_cast<appwindow*>(w)->getGLFW();
 }
+void makeWindowContextCurrent(window_base* w) {
+	auto glfw = getGlfwFromWindowBase(w);
+	if (glfw) {
+		glfwMakeContextCurrent(glfw);
+	}
+}
 
 #ifdef _WIN32
 HWND getMainHWND() {
