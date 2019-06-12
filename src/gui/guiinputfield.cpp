@@ -38,7 +38,17 @@ void gui_numberinput_field::render(NVGcontext* vg) {
 	setFont(vg, G_FONT_SCALE(size.y), G_WHITE, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
 	int32_t _number = number ? *number : 0;
 	String str = StringFormat("%d", _number);
-	nvgText(vg, pos.x + size.x - 3, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(str), NULL);
+	float pX = nvgText(vg, pos.x + size.x - 3, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(str), NULL);
+	if (!isEditing && this->label.length()) {
+		NVGcolor mDisabledTextColor = GUI_COLORA(255, 80);
+		setFont(vg, G_FONT_SCALE(size.y), mDisabledTextColor, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+		float bounds[4]{0};
+		nvgTextBounds(vg, pos.x + 3.0f, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(this->label), nullptr, bounds);
+		if (pX-3 > bounds[2]) {
+			nvgText(vg, pos.x + 3.0f, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(this->label), NULL);
+		}
+
+	}
 }
 
 bool gui_numberinput_field::focusEvent(MouseHitEvt& evt, bool focused) {
