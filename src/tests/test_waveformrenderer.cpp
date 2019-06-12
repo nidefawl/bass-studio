@@ -20,6 +20,7 @@
 
 #include "tls.h"
 #include "logging.h"
+#include "assert_dbg.h"
 
 
 String excDescription;
