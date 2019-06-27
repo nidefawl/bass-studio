@@ -1499,16 +1499,11 @@ static void glnvg__renderFlush(void* uptr)
 	for (int i = 0; i < gl->nframebuffers; i++) {
 		NVGLUTempFramebuffer* fb = &gl->framebuffers[i];
 		fb->idleframes++;
-		if (fb->setup) {
-			if (fb->idleframes==3) {
-				fb->inuse = 0;
-			}
-			if (fb->idleframes==300) {
-				fb->setup = 0;
-				fb->inuse = 0;
-				fb->idleframes = 0;
-				nvglu__DeleteFramebuffer(&fb->fb);
-			}
+		if (fb->setup && fb->idleframes>=3) {
+			fb->setup = 0;
+			fb->inuse = 0;
+			fb->idleframes = 0;
+			nvglu__DeleteFramebuffer(&fb->fb);
 		}
 	}
 }
