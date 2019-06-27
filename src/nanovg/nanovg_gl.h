@@ -108,6 +108,7 @@ struct NVGLUframebuffer {
 	GLuint fbo;
 	GLuint rbo;
 	GLuint texture;
+	int flags;
 	int image;
 	int w;
 	int h;
@@ -385,6 +386,7 @@ static NVGLUframebuffer* nvglu__CreateFramebuffer(NVGcontext* ctx, NVGLUframebuf
 
 //	fb->image = nvgCreateImageRGBA(ctx, w, h, imageFlags | NVG_IMAGE_FLIPY | NVG_IMAGE_PREMULTIPLIED, NULL);
 	fb->image = nvgCreateImageRGBA(ctx, w, h, imageFlags | NVG_IMAGE_FLIPY, NULL);
+	fb->flags = imageFlags;
 
 #if defined NANOVG_GL2
 	fb->texture = nvglImageHandleGL2(ctx, fb->image);
@@ -461,7 +463,9 @@ NVGLUframebuffer* nvgluCreateTempFramebuffer(NVGcontext* ctx, int w, int h, int 
 	GLNVGcontext* gl = (GLNVGcontext*)nvgInternalParams(ctx)->userPtr;
 	for (int i = 0; i < gl->nframebuffers; i++) {
 		NVGLUTempFramebuffer* fb = &gl->framebuffers[i];
-		if (fb->setup && !fb->inuse && fb->fb.w == w && fb->fb.h == h) {
+		if (fb->setup && !fb->inuse
+				&& fb->fb.w == w && fb->fb.h == h
+				&& fb->fb.flags == imageFlags) {
 			gl->framebuffers[i].idleframes = 0;
 			return &gl->framebuffers[i].fb;
 		}
@@ -975,7 +979,14 @@ static int glnvg__renderCreateTexture(void* uptr, int type, int w, int h, int im
 #endif
 
 	if (type == NVG_TEXTURE_RGBA)
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+		if (imageFlags & NVG_IMAGE_16BIT) {
+//        	int format = GL_RGBA16F;
+//        	int colorTexExtFmt = GL_BGRA;
+//        	int colorTexExtType = GL_UNSIGNED_INT_8_8_8_8_REV;
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA16F, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+		} else {
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+		}
 	else
 #if defined(NANOVG_GLES2) || defined (NANOVG_GL2)
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE, w, h, 0, GL_LUMINANCE, GL_UNSIGNED_BYTE, data);
