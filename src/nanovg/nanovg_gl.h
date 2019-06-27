@@ -481,9 +481,15 @@ NVGLUframebuffer* nvgluCreateTempFramebuffer(NVGcontext* ctx, int w, int h, int 
 	if (!fbTarget) {
 		fbTarget = glnvg__allocFB(gl);
 	}
-	nvglu__CreateFramebuffer(ctx, &fbTarget->fb, w, h, imageFlags);
-	fbTarget->setup = 1;
-	return &fbTarget->fb;
+	if (fbTarget) {
+		if (NULL == nvglu__CreateFramebuffer(ctx, &fbTarget->fb, w, h, imageFlags)) {
+			return NULL;
+		}
+		fbTarget->setup = 1;
+		return &fbTarget->fb;
+
+	}
+	return NULL;
 }
 
 void nvgluDeleteFramebuffer(NVGLUframebuffer* fb)
