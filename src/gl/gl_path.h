@@ -82,9 +82,6 @@ class GLPathRenderer {
 		{"a_index", 1, GL_FLOAT},
 	};
 public:
-	std::vector<vert> outVdata;
-	vbuf bufFinal;
-	std::vector<float> bufUniforms;
 	const int countUniforms = 32;
 	const int sizeUniforms = countUniforms*4;
 	uint32_t program2dLines;
@@ -94,7 +91,7 @@ public:
 	uint32_t u_projection;
 	uint32_t u_uniforms;
 	uint32_t u_uniforms_shape;
-	hires_timer_t timer;
+//	hires_timer_t timer;
 public:
 	int init();
 	void destroy();
