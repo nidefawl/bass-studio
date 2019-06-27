@@ -374,10 +374,14 @@ void GLPathRenderer::bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, Ba
 		}
 		idx++;
 	}
+	int nPaths = 0;
 	if (flBufVertsPos == 0) {
 		bufFinal.v.resize(0);
 		bufFinal.i.resize(0);
 		bufUniforms.resize(0);
+		nPaths = 0;
+	} else {
+		nPaths = paths.size();
 	}
 #ifdef NO_OPENGL
 	return;
@@ -412,8 +416,8 @@ void GLPathRenderer::bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, Ba
 
 	int texSize = bufUniforms.size()/4;
     glActiveTexture( GL_TEXTURE0 );
-    if (out.uniforms_texture && out.numPaths*countUniforms != texSize) {
-    	printf("tex shape changed %d %d\n", out.numPaths*countUniforms, texSize);
+    if (out.uniforms_texture && nPaths*countUniforms != texSize) {
+    	log_printf("tex shape changed %d %d\n", out.numPaths*countUniforms, texSize);
     	glDeleteTextures(1, &out.uniforms_texture);
     	out.uniforms_texture = 0;
     }
@@ -431,8 +435,8 @@ void GLPathRenderer::bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, Ba
 
 	glBindVertexArray(0);
 
+    out.numPaths = nPaths;
     out.vbo.nIndices = bufFinal.i.size();
-    out.numPaths = paths.size();
 //    printf("%d %d\n", out.nIndices, out.numPaths);
 }
 
