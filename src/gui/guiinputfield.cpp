@@ -15,20 +15,7 @@
 #include "basectrl.h"
 #include "textfield.h"
 
-
-gui_numberinput_field::gui_numberinput_field(int32_t* _number) :
-		guibuttonbase(), number(_number) {
-	field.setParent(this);
-}
-
-void gui_numberinput_field::layout() {
-	field.pos = pos;
-	field.size = size;
-	field.layout();
-	field.setFontSize(math::max(4, field.size.y - 2));
-}
-
-void gui_numberinput_field::render(NVGcontext* vg) {
+void gui_numberinput_field_base::render(NVGcontext* vg) {
 	int32_t fl = getStateFlags();
 	renderWidgetBorder(vg, fl);
 	if (isEditing) {
@@ -36,8 +23,9 @@ void gui_numberinput_field::render(NVGcontext* vg) {
 		return;
 	}
 	setFont(vg, G_FONT_SCALE(size.y), G_WHITE, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
-	int32_t _number = number ? *number : 0;
-	String str = StringFormat("%d", _number);
+//	int32_t _number = number ? *number : 0;
+//	String str = StringFormat("%d", _number);
+	String str = getAsStringLiteral();
 	float pX = nvgText(vg, pos.x + size.x - 3, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(str), NULL);
 	if (!isEditing && this->label.length()) {
 		NVGcolor mDisabledTextColor = GUI_COLORA(255, 80);
@@ -51,7 +39,7 @@ void gui_numberinput_field::render(NVGcontext* vg) {
 	}
 }
 
-bool gui_numberinput_field::focusEvent(MouseHitEvt& evt, bool focused) {
+bool gui_numberinput_field_base::focusEvent(MouseHitEvt& evt, bool focused) {
 	if (!focused) {
 		endEdit(true);
 	} else {
@@ -61,35 +49,21 @@ bool gui_numberinput_field::focusEvent(MouseHitEvt& evt, bool focused) {
 	return true;
 }
 
-void gui_numberinput_field::endEdit(bool success) {
+void gui_numberinput_field_base::endEdit(bool success) {
 	if (isEditing) {
 		this->field.endEdit();
-		if (success && this->number) {
-			const char* cstr = this->field.value().c_str();
-			int newVal = atoi(cstr);
-			if (fnClamp) {
-				newVal = fnClamp(newVal);
-			}
-			*number = newVal;
-			if (parent)
-				parent->buttonClicked(this);
-
-			if (fnValueEditChanged) {
-				fnValueEditChanged(this, newVal);
-			}
+		if (success) {
+			endEditImpl();
 		}
 	}
 	isEditing = false;
 }
 
-void gui_numberinput_field::startEdit(bool keepcontent) {
+void gui_numberinput_field_base::startEdit(bool keepcontent) {
 	if (!isEditing) {
 		//            mValueTemp = mValue;
 		if (keepcontent) {
-			if (this->number) {
-				String s = StringFormat("%d", *this->number);
-				this->field.setValue(s);
-			}
+			this->field.setValue(getAsStringLiteral());
 		} else {
 			this->field.setValue("");
 		}
@@ -100,7 +74,7 @@ void gui_numberinput_field::startEdit(bool keepcontent) {
 	isEditing = true;
 }
 
-void gui_numberinput_field::handleDraggedBegin(MouseEvent& evt) {
+void gui_numberinput_field_base::handleDraggedBegin(MouseEvent& evt) {
 	if (isEditing) {
 		this->field.handleDraggedBegin(evt);
 	} else {
@@ -114,12 +88,12 @@ void gui_numberinput_field::handleDraggedBegin(MouseEvent& evt) {
 	}
 }
 
-void gui_numberinput_field::handleDraggedMove(MouseEvent& evt) {
+void gui_numberinput_field_base::handleDraggedMove(MouseEvent& evt) {
 	if (isEditing) {
 		this->field.handleDraggedMove(evt);
 		return;
 	}
-	if (number && evt.guiDragged == this && evt.type == M_EVT_CAPTURED_MOVE) {
+	if (evt.guiDragged == this && evt.type == M_EVT_CAPTURED_MOVE) {
 		int disty = (int) (evt.dragDistance->y) / 2;
 		if (math::abs(disty) < 1)
 			return;
@@ -130,15 +104,7 @@ void gui_numberinput_field::handleDraggedMove(MouseEvent& evt) {
 			absy = 64;
 		else if (absy >= 2)
 			absy = 4;
-
-		int newVal = *number - ((disty < 0 ? -1 : 1) * absy);
-		if (fnClamp) {
-			newVal = fnClamp(newVal);
-		}
-		*number = newVal;
-		if (fnValueEditChanged) {
-			fnValueEditChanged(this, newVal);
-		}
+		onMouseDragValue(disty, absy);
 		if (parent)
 			parent->buttonClicked(this);
 
@@ -146,13 +112,13 @@ void gui_numberinput_field::handleDraggedMove(MouseEvent& evt) {
 	}
 }
 
-void gui_numberinput_field::handleDraggedRelease(MouseEvent& evt) {
+void gui_numberinput_field_base::handleDraggedRelease(MouseEvent& evt) {
 	if (isEditing) {
 		this->field.handleDraggedRelease(evt);
 	}
 }
 
-bool gui_numberinput_field::handleKeyInput(KeyEvent& kevt) {
+bool gui_numberinput_field_base::handleKeyInput(KeyEvent& kevt) {
 	if (kevt.type != K_RELEASE) {
 		if (kevt.keyCode == KEY_ENTER || kevt.keyCode == KEY_KP_ENTER || kevt.keyCode == KEY_ESCAPE) {
 			endEdit(kevt.keyCode == KEY_ENTER || kevt.keyCode == KEY_KP_ENTER);
@@ -171,7 +137,7 @@ bool gui_numberinput_field::handleKeyInput(KeyEvent& kevt) {
 				if ((kevt.mods & KB_MOD_SHIFT)) {
 					dir *= 12;
 				}
-				*number += dir.y;
+				onKeyInputChangeValue(dir);
 				handled = true;
 			}
 		}
@@ -180,7 +146,48 @@ bool gui_numberinput_field::handleKeyInput(KeyEvent& kevt) {
 	return handled;
 }
 
-bool gui_numberinput_field::handleCharInput(unsigned int codepoint) {
+bool gui_numberinput_field_base::handleCharInput(unsigned int codepoint) {
 	startEdit(false);
 	return this->field.handleCharInput(codepoint);
+}
+template<>
+int32_t gui_numberinput_field_generic<int32_t>::parseLiteral(const char* szNumber) {
+	return atoi(szNumber);
+}
+template<>
+String gui_numberinput_field_generic<int32_t>::valueToStringLiteral(int32_t val) {
+	return StringFormat("%d", val);
+}
+
+template<>
+void gui_numberinput_field_generic<int32_t>::onMouseDragValue(int32_t disty, int32_t absy) {
+	if (this->number) {
+		setValue(*number - ((disty < 0 ? -1 : 1) * absy));
+	}
+}
+template<>
+void gui_numberinput_field_generic<int32_t>::onKeyInputChangeValue(ivec2 direction) {
+	if (this->number) {
+		setValue(*number + direction.y);
+	}
+}
+template<>
+float gui_numberinput_field_generic<float>::parseLiteral(const char* szNumber) {
+	return atof(szNumber);
+}
+template<>
+String gui_numberinput_field_generic<float>::valueToStringLiteral(float val) {
+	return StringFormat("%f", val);
+}
+template<>
+void gui_numberinput_field_generic<float>::onMouseDragValue(int32_t disty, int32_t absy) {
+	if (this->number) {
+		setValue(*number - ((disty < 0 ? -1 : 1) * absy)*0.0001f);
+	}
+}
+template<>
+void gui_numberinput_field_generic<float>::onKeyInputChangeValue(ivec2 direction) {
+	if (this->number) {
+		setValue(*number + direction.y*0.01f);
+	}
 }

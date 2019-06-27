@@ -267,7 +267,7 @@ public:
 						numberInput.pos = clickedcell.pos;
 						numberInput.size = clickedcell.size;
 						BaseCtrl* const ctrl = table->parentCtrl;
-						numberInput.fnValueEditChanged = [theme, constant, ctrl](gui_numberinput_field*,int32_t rgba) {
+						numberInput.fnValueEditChanged = [theme, constant, ctrl](gui_numberinput_field_base*,int32_t rgba) {
 							theme->set(constant, rgba);
 							if (ctrl)
 								ctrl->relayout();

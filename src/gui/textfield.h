@@ -70,6 +70,11 @@ public:
     void setEditable(bool editable);
 
     const std::string &value() const { return mValue; }
+    std::string getEditValue() const {
+    	if (!mCommitted)
+    		return mValueTemp;
+    	return mValue;
+    }
     void setValue(const std::string &value) { mValue = value; }
 	void setSelectionRange(int start, int end) {
 		if (this->mValue.empty()) {
