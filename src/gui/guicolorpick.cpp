@@ -98,6 +98,14 @@ void gui_color_pick::render(NVGcontext* vg) {
 	nvgRect(vg, knH.left() - sizeQuad + inset, inset, sizeQuad - inset * 2, sizeQuad - inset * 2);
 	nvgFillColor(vg, this->nvgColor);
 	nvgFill(vg);
+	if (this->nvgColor.a < 1.0f) {
+		NVGcolor col = this->nvgColor;
+		col.a = 1.0f;
+		nvgBeginPath(vg);
+		nvgRect(vg, knH.left() - sizeQuad + inset, inset, (sizeQuad - inset * 2)/2.0f, sizeQuad - inset * 2);
+		nvgFillColor(vg, col);
+		nvgFill(vg);
+	}
 	for (auto* g : guis)
 		g->render(vg);
 }
