@@ -58,6 +58,16 @@ struct gl_shader_program_base_t {
 		}
 		return 0;
 	}
+	/* bindBuffer helper method
+Only needs to be called once per vbo and vao when using single DrawVBO instance
+Note that GL_ELEMENT_ARRAY_BUFFER is not state of vao!
+	 */
+	void bindBuffer(const DrawVBO& vbo) {
+		glBindVertexArray(vbo.vaoId);
+		glBindBuffer(GL_ARRAY_BUFFER, vbo.vboVertId);
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo.vboIdxId);
+		bindVertexAttributes(attributes);
+	}
 };
 struct gl_shader_pipeline : gl_shader_program_base_t {
 	DrawVBO vbo;
