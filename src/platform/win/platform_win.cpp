@@ -27,6 +27,9 @@
 uint64_t getTimeMillis() {
 	return (uint64_t) timeGetTime();
 }
+double getTimeMillisd() {
+	return (double) timeGetTime();
+}
 
 double getTimeHPC()
 {

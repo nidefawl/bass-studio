@@ -4,6 +4,7 @@
 #include "str_util.h"
 
 uint64_t getTimeMillis();
+double getTimeMillisd();
 double getTimeHPC();
 double getSince(double& d);
 int64_t getTimeHPint64();
