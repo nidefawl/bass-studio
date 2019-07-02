@@ -41,10 +41,11 @@ struct testshader : gl_shader_pipeline {
 		if (u_time >= 0)
 			glUniform1f(u_time, fTime);
 	}
-	int load() {
+	template<typename T>
+	int load(T* srcParser) {
 		const char* fnameVsh = "test.vsh";
 		const char* fnameFsh = "test.fsh";
-		int newprogram = compileShaderCombo(this, fnameVsh, fnameFsh);
+		int newprogram = compileShaderCombo(srcParser, fnameVsh, fnameFsh);
 		if (newprogram < 0) {
 			dbgassert(newprogram != -2);
 			return -1;
@@ -75,7 +76,6 @@ struct testshader : gl_shader_pipeline {
 	    return 0;
 	};
 };
-void preprocessSources(testshader* owner, std::vector<glshader_src>& srcList) { }
 struct gui_shaderview_impl_t {
 	NVGLUframebuffer* fb = nullptr;
 	std::shared_ptr<testshader> pipeTestShader;
@@ -90,7 +90,13 @@ gui_shaderview::~gui_shaderview() {
 void gui_shaderview::prerender(NVGcontext* vg) {
 	if (!impl->pipeTestShader) {
 		impl->pipeTestShader = std::make_shared<testshader>();
-		impl->pipeTestShader->load();
+		struct shader_src_parser_noise {
+			void preprocessSources(std::vector<glshader_src>& srcList) {
+
+			}
+		};
+		shader_src_parser_noise parser;
+		impl->pipeTestShader->load(&parser);
 	}
 	int w = math::min(size.x, size.y);
 	int h = w;

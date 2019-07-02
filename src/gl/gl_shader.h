@@ -28,7 +28,7 @@ int compileShaderCombo(T* owner, const char* fnameVsh, const char* fnameFsh) {
 		return -2;
 	if (!glSourceLoader->addStageSrc(GL_FRAGMENT_SHADER, fnameFsh))
 		return -2;
-	preprocessSources(owner, glSourceLoader->sources);
+	owner->preprocessSources(glSourceLoader->sources);
 	return buildShaderProgram(glSourceLoader->sources);
 }
 
