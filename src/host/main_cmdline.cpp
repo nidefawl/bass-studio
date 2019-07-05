@@ -189,10 +189,11 @@ int main(int argc, char* argv[]) {
 	    		my_printf("start playback\n", 0);
 	    		playThread->addRequest(REQ_STATE, (int) playback_state::status_play, true);
     		while (!quit) {
-    			dsp_util::fillSilence(block.buf, host->lBlockSize);
+    			dsp_util::fillBlock(block, 0.0f);
     			//still a race condition on_terminate here
-    			AudioBuffer* buff;
-    			if (audioHost->try_dequeue(buff)) {
+    			AudioBuffer* buff = nullptr;
+    			auto* stream = audioHost->getStream(0);
+    			if (stream->try_dequeue(buff)) {
     				if (host->lBlockSize == buff->output->samples) {
     					buff->output->copyTo(block.buf);
     					auto tNow = getTimeMillis()/1000.0;
