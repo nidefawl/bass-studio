@@ -30,7 +30,7 @@ void waveformrender::getRenderedTextures(std::vector<TextureAtlas>& rendered) {
 		}
 	}
 }
-bool istIn(const std::vector<void*>& ptrs, const void* ptr) {
+bool isIn(const std::vector<void*>& ptrs, const void* ptr) {
 	auto it2 = std::find_if(ptrs.cbegin(), ptrs.cend(), [ptr](const void* entry) {
 		return entry == ptr;
 	});
@@ -54,7 +54,7 @@ void waveformrender::release(gui_waveform_texture_ref* waveformRef) {
 	});
 	dbgassert(it != vec.end());
 	TextureAtlasEntry& entry = *it;
-	dbgassert(istIn(entry.ptrs, waveformRef));
+	dbgassert(isIn(entry.ptrs, waveformRef));
 	auto it2 = std::find(entry.ptrs.begin(), entry.ptrs.end(), waveformRef);
 	dbgassert(it2 != entry.ptrs.end());
 	entry.ptrs.erase(it2);
@@ -180,14 +180,14 @@ void waveformrender::assertWaveformRefIsUnbound(gui_waveform_texture_ref* wavefo
 		std::vector<_pos> positions;
 		TextureAtlasEntry a;
 		for(auto& entry : _atlas.entries) {
-			dbgassert(!istIn(entry.ptrs, waveformRef));
+			dbgassert(!isIn(entry.ptrs, waveformRef));
 		}
 	}
 	for (auto& updateTask: queuedTasks) {
 		if (updateTask.waveformRef == waveformRef) {
 			dbgassert(0);
 		}
-		dbgassert(!istIn(updateTask.queuedptrs, waveformRef));
+		dbgassert(!isIn(updateTask.queuedptrs, waveformRef));
 	}
 }
 
@@ -221,7 +221,7 @@ bool waveformrender::findSimiliarWaveform(waveform_update_task_t& waveformQueueE
 				waveformRef->queued = false;
 				waveformRef->rendered = true;
 				entry.refCount++;
-				dbgassert(!istIn(entry.ptrs, waveformRef));
+				dbgassert(!isIn(entry.ptrs, waveformRef));
 				entry.ptrs.push_back(waveformRef);
 				return true;
 			}
@@ -238,7 +238,7 @@ bool waveformrender::findSimiliarWaveform(waveform_update_task_t& waveformQueueE
 				waveformRef->queued = false;
 				waveformRef->rendered = true;
 				entry.queuedRefCount++;
-				dbgassert(!istIn(entry.queuedptrs, waveformRef));
+				dbgassert(!isIn(entry.queuedptrs, waveformRef));
 				entry.queuedptrs.push_back(waveformRef);
 				return true;
 			}
@@ -443,7 +443,7 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 //			}
 			e.refCount = waveformQueueEntry.queuedRefCount;
 			e.ptrs = waveformQueueEntry.queuedptrs;
-			dbgassert(!istIn(e.ptrs, waveformRef));
+			dbgassert(!isIn(e.ptrs, waveformRef));
 			e.refCount++;
 			e.ptrs.push_back(waveformRef);
 			waveformRef->queued = false;
