@@ -26,7 +26,7 @@ public:
 	guibuttontoggle buttonDelete; //TODO: use add() on controls
 	guibuttontoggle buttonLayout; //TODO: use add() on controls
 	guibuttontoggle buttonSave; //TODO: use add() on controls
-	gui_trackmeter meter; //TODO: use add() on controls
+	gui_trackmeter<16000,2> meter; //TODO: use add() on controls
 	float titlePosX = 0;
 	bool hasDragged=false;
 	bool isHorizontalTitle=true;

@@ -300,7 +300,7 @@ vsthost::vsthost(uint32_t _sampleRate, uint16_t _blockSize)
 	  numChannels(OUTPUT_CHANNELS)
 {
 	memset(&timeinfo, 0, sizeof(timeinfo));
-	allocRingBuffer(ringbuffer);
+	allocRingBuffer(ringbuffer, 32);
 	updateTime(0, 0.0, playback_state::status_stop);
 	setBlockSize(_blockSize);
 	midiRealtimeInput = new clip_notes_t;
@@ -453,17 +453,22 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 	double since = timer.getTimeDoubleReset();
 	timer2.reset();
 
-	int32_t& readPos = ringbuffer.readPos;
-	int32_t& writePos = ringbuffer.writePos;
-	AudioBuffer** buffers = ringbuffer.buffers;
-	while (ctrl) {
-		AudioBuffer* buffer = buffers[readPos];
-		if (!buffer->submitted || buffer->inUse) {
-			break;
-		}
-		buffer->submitted = false;
-		readPos++;
-		readPos &= RING_BUF_MASK;
+//	int32_t& readPos = ringbuffer.readPos;
+//	int32_t& writePos = ringbuffer.writePos;
+//	AudioBuffer** buffers = ringbuffer.buffers;
+//	while (ctrl) {
+//		AudioBuffer* buffer = buffers[readPos];
+//		if (!buffer->inUse && buffer->submitted) {
+//			buffer->submitted = false;
+//			break;
+//		}
+//		readPos++;
+//		readPos &= RING_BUF_MASK;
+//	}
+	int queueSizeOutput = 0;
+	auto *stream = audioHost ? audioHost->getStream(0) : nullptr;
+	if (stream) {
+		queueSizeOutput = stream->getOutputQueueSize();
 	}
 	std::vector<MidiIOEvent> msgs = midihost::getInstance()->getInputMessages();
 	bool notesProcessed = false;
@@ -575,14 +580,15 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 	 * We try to stay 4 blocks ahead of the audiothread read position
 	 * This should be adjusted depending on samplerate and blocksize
 	 */
-	int readWriteDist = writePos >= readPos ? writePos-readPos : writePos-(readPos-RING_BUF_SIZE);
-	if (ctrl && readWriteDist < 8) {
+//	int readWriteDist = writePos >= readPos ? writePos-readPos : writePos-(readPos-RING_BUF_SIZE);
+	if (ctrl && queueSizeOutput < 8) {
 #ifndef NDEBUG
 		if (!isLoopAround&&state == playback_state::status_play && lastState == playback_state::status_play) {
 			dbgassert(posDouble == lastTickEndPos);
 		}
 		lastState = state;
 #endif
+
 		for (track_t* track : ctrl->trackCtr) {
 			dbgassert(track->audio);
 		}
@@ -597,6 +603,25 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 				}
 			}
 		}
+
+		//still a race condition on_terminate here
+		AudioBuffer* bufInput = nullptr;
+		if (audioHost) {
+			if (stream && stream->getInputQueueSize() > 2) {
+				if (stream->try_dequeueInput(bufInput)) {
+					//TODO: build a buffer with input blocks and process at constant latency
+					dbgassert(bufInput);
+					if (lBlockSize != bufInput->output->samples) {
+						bufInput->inUse = false;
+						bufInput = nullptr;
+					}
+				} else {
+					stats.inputBufferUnderuns++;
+			//		dsp_util::fillSilence(inputs, framesPerBuffer);
+				}
+			}
+		}
+
 		int32_t samplePosBlockEnd = sample + lBlockSize;
 		int32_t tickBlockEnd = floor(posDouble + ticksPerBlock);
 		dbgassert(tickBlockEnd-pos < ceil(ticksPerBlock+1));
@@ -607,8 +632,8 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			track_impl_t* audioMaster = trackMaster->audio;
 			audioMaster->input.realloc(lBlockSize);
 			audioMaster->output.realloc(lBlockSize);
-			dsp_util::fillSilence(audioMaster->input.buf, lBlockSize);
-			dsp_util::fillSilence(audioMaster->output.buf, lBlockSize);
+			dsp_util::fillBlock(audioMaster->input, 0.0f);
+			dsp_util::fillBlock(audioMaster->output, 0.0f);
 		}
 		/*
 		 * Clear all return channels
@@ -617,8 +642,8 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			track_impl_t* audioReturn = trackReturn->audio;
 			audioReturn->input.realloc(lBlockSize);
 			audioReturn->output.realloc(lBlockSize);
-			dsp_util::fillSilence(audioReturn->input.buf, lBlockSize);
-			dsp_util::fillSilence(audioReturn->output.buf, lBlockSize);
+			dsp_util::fillBlock(audioReturn->input, 0.0f);
+			dsp_util::fillBlock(audioReturn->output, 0.0f);
 		}
 
 		/*
@@ -655,7 +680,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			track_impl_t* trackImpl = track->audio;
 			trackImpl->input.realloc(lBlockSize);
 			trackImpl->output.realloc(lBlockSize);
-			dsp_util::fillSilence(trackImpl->input.buf, lBlockSize);
+			dsp_util::fillBlock(trackImpl->input, 0.0f);
 
 			int32_t midiProcessFlags = MidiFlags::PROCESS_REALTIME|MidiFlags::PROCESS_ARP;
 			if (state == playback_state::status_play) {
@@ -669,7 +694,10 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			if (state == playback_state::status_play) {
 				trackImpl->fillAudio(pos, tickBlockEnd, loopCutStart, loopCutEnd, project.tempo100, sample, trackImpl->input.buf, (int32_t)lBlockSize);
 			}
-
+			if (bufInput) {
+				float fGainInput = 1.0f;
+				trackImpl->addAudio(bufInput->output, fGainInput);
+			}
 
 			/* Processes audio/midi tracks plugin chain */
 			processAudio(trackImpl, &trackImpl->input, &trackImpl->output, sample, lBlockSize, state);
@@ -753,11 +781,14 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 		 * Output all masters
 		 * Right now only first
 		 */
+		AudioBuffer** buffers = ringbuffer.buffers;
+		int32_t& writePos = ringbuffer.writePos;
 		AudioBuffer* bufferWrite = buffers[writePos];
 		dbgassert(!bufferWrite->inUse);
 		bufferWrite->output->realloc(lBlockSize);
-		dsp_util::fillSilence(bufferWrite->output->buf, lBlockSize);
+		dsp_util::fillBlock(*bufferWrite->output, 0.0f);
 		AudioBlock* bufOut = bufferWrite->output;
+		int32_t channelIdx = 0;
 		for (track_t* trackMaster : ctrl->trackMasterCtr) {
 			track_impl_t* audioMaster = trackMaster->audio;
 
@@ -769,15 +800,17 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 
 				AudioBlock* bufMaster = &audioMaster->output;
 				for (int n = 0; n < OUTPUT_CHANNELS; n++) {
-					float* channelWriteBuffer = bufOut->buf[n];
+					float* channelWriteBuffer = bufOut->buf[channelIdx+n];
 					float* channelMaster = bufMaster->buf[n];
 					for (int j = 0; j < lBlockSize; j++) {
 						channelWriteBuffer[j] += channelMaster[j] * fGainMaster;
 					}
 				}
 			}
-			//TODO: implement outputting multiple masters
-			break;
+			channelIdx += 2;
+			if (channelIdx + 1 >= bufOut->channels) {
+				break;
+			}
 		}
 		double blockPosSample = sample;
 		double blockPosTick = posDouble;
@@ -791,9 +824,14 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 		writePos++;
 		writePos &= RING_BUF_MASK;
 		if (audioHost) {
-			audioHost->enqueue(bufferWrite);
+			if (stream) {
+				stream->enqueue(bufferWrite);
+			}
 		} else {
 			bufferWrite->inUse = false;
+		}
+		if (bufInput) {
+			bufInput->inUse = false;
 		}
 
 

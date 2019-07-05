@@ -18,10 +18,12 @@ namespace GuiColor {
 constant_t COL_PLUG_TITLE("COL_PLUG_TITLE", 0xff151515);
 constant_t COL_PLUG_TITLE_SELECTED("COL_PLUG_TITLE_SELECTED", 0xff353535);
 constant_t COL_PLUG_TITLE_FOCUSED("COL_PLUG_TITLE_FOCUSED", 0xffff0000);
+constant_t COL_LABEL_CONTAINER("COL_LABEL_CONTAINER", 0xffd0d0d0);
 }
 namespace GuiConstant {
 
 constant_t CONST_ROUND("CONST_ROUND", 20);
+constant_t CTR_LABEL_FONT_SIZE("CTR_LABEL_FONT_SIZE", 14);
 }
 
 
@@ -60,6 +62,28 @@ void guictr_base::renderBackground(NVGcontext* vg) {
 	dbgassert(isBackgroundRendered());
 	bool focused = parentCtrl->isCtrOrChildFocused(this);
 	drawBackground(vg, theme, getPosContent(), getSizeContent(), margin, focused, isBackgroundRenderedInset());
+	if (label.length()) {
+		auto sizeF = theme->get(GuiConstant::CTR_LABEL_FONT_SIZE);
+		auto posInset = getPosContent() + ivec2(INSET_CTR_SPACING, 0);
+		auto sizeInset = ivec2(math::min(getSizeContent().x, static_cast<int32_t>(textWidth(vg, label))), sizeF);
+//		posInset -= ivec2(margin);
+		posInset.y -= sizeF;
+//		sizeInset += ivec2(margin) * 2;
+		if (sizeInset.y > 0 && sizeInset.x > 0) {
+			nvgBeginPath(vg);
+			nvgRoundedRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y, 4);
+			NVGcolor bg = theme->getColor(GuiColor::COL_BG_DRK);
+			if (focused) {
+				bg = theme->getColor(GuiColor::COL_BG_DRK_FOCUSED);
+			}
+			nvgFillColor(vg, bg);
+			nvgFill(vg);
+		}
+		float lineh;
+		setFont(vg, sizeF, theme->getColor(GuiColor::COL_LABEL_CONTAINER), NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
+		nvgTextMetrics(vg, NULL, NULL, &lineh);
+		nvgText(vg, posInset.x+INSET_CTR_SPACING, posInset.y, StringAsCStr(label), NULL);
+	}
 }
 void guictr_base::renderFrameBase(NVGcontext* vg) {
 	ivec2 sizeContent = getSizeContent();

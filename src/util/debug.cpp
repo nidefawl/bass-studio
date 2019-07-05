@@ -223,7 +223,7 @@ void setCurrentThreadName(String str) {
 String getCurrentThreadName() {
 	return getThreadNames().getCurrentsName();
 }
-void logEveryMsec(int32_t nId, int32_t delayMs, String str) {
+bool logEveryMsec(int32_t nId, int32_t delayMs, String str) {
 	static std::recursive_mutex gLogMutex;
 	static std::unordered_map<int32_t, int32_t> gEntries;
 	auto now = getTimeMillis();
@@ -239,6 +239,7 @@ void logEveryMsec(int32_t nId, int32_t delayMs, String str) {
 	if (shouldLog) {
 		getGlobalLogger()->logStr(str);
 	}
+	return shouldLog;
 }
 extern "C" {
 void failedAssert(const char* expr, const char *file, int line) {

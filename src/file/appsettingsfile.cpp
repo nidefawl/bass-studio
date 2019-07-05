@@ -38,15 +38,33 @@ void serialize(Archive & ar, windowsize& settings) {
 #endif
 
 template<class Archive>
-void serialize(Archive & ar, app_io& cfg) {
-	ar(cereal::make_nvp("deviceName", cfg.deviceName),
+void serialize(Archive & ar, io_channel& cfg) {
+	ar(cereal::make_nvp("channels", cfg.channels),
 		cereal::make_nvp("idx", cfg.idx));
 }
 template<class Archive>
-void serialize(Archive & ar, app_ioconfig& cfg) {
+void serialize(Archive & ar, midi_channel& cfg) {
+	ar(cereal::make_nvp("deviceName", cfg.deviceName),
+		cereal::make_nvp("channels", cfg.channels),
+		cereal::make_nvp("idx", cfg.idx));
+}
+template<class Archive>
+void serialize(Archive & ar, app_ioasioconfig& cfg) {
+	ar(cereal::make_nvp("deviceName", cfg.deviceName),
+		cereal::make_nvp("inputs", cfg.inputs),
+		cereal::make_nvp("outputs", cfg.outputs));
+}
+template<class Archive>
+void serialize(Archive & ar, app_ioaudioconfig& cfg) {
 	ar(cereal::make_nvp("deviceAPI", cfg.device_api),
-		cereal::make_nvp("inputs", cfg.outputs),
-		cereal::make_nvp("inputs", cfg.inputs));
+	cereal::make_nvp("deviceNameInput", cfg.deviceNameInput),
+	cereal::make_nvp("deviceNameOutput", cfg.deviceNameOutput));
+}
+template<class Archive>
+void serialize(Archive & ar, app_iomidiconfig& cfg) {
+	ar(cereal::make_nvp("deviceAPI", cfg.device_api),
+	cereal::make_nvp("inputs", cfg.inputs),
+	cereal::make_nvp("outputs", cfg.outputs));
 }
 template<class Archive>
 void serialize(Archive & ar, app_iosettings& settings) {
@@ -56,6 +74,7 @@ void serialize(Archive & ar, app_iosettings& settings) {
 		make_nvp("device_api", settings.device_api));
 	make_optional_nvp(ar, "io_midi", settings.midiconfigs);
 	make_optional_nvp(ar, "io_audio", settings.configs);
+	make_optional_nvp(ar, "io_asio", settings.asioConfig);
 }
 template<class Archive>
 void serialize(Archive & ar, appsettings& settings) {

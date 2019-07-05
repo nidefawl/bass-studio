@@ -6,33 +6,56 @@
 #ifdef _WIN32
 struct windowsize;
 #endif
-struct app_io {
+struct io_channel {
+	int idx;
+	std::vector<int32_t> channels;
+};
+struct midi_channel {
 	int idx;
 	String deviceName;
+	std::vector<int32_t> channels;
 };
-struct app_ioconfig {
+struct app_ioaudioconfig {
 	String device_api;
-	std::vector<app_io> outputs;
-	std::vector<app_io> inputs;
+	String deviceNameInput;
+	String deviceNameOutput;
+};
+struct app_ioasioconfig {
+	String device_api = "ASIO";
+	String deviceName;
+	std::vector<io_channel> outputs;
+	std::vector<io_channel> inputs;
+};
+struct app_iomidiconfig {
+	String device_api;
+	std::vector<midi_channel> outputs;
+	std::vector<midi_channel> inputs;
 };
 struct app_iosettings {
 	int32_t samplerate = 44100;
 	int32_t blocksize = 256;
-	std::map<String, app_ioconfig> configs;
-	std::map<String, app_ioconfig> midiconfigs;
+	app_ioasioconfig asioConfig;
+	std::map<String, app_ioaudioconfig> configs;
+	std::map<String, app_iomidiconfig> midiconfigs;
 	String device_api;
-	app_ioconfig& getConfig(String devApi) {
+	app_ioasioconfig& getAsioConfig() {
+    	return asioConfig;
+    }
+	app_ioaudioconfig& getConfig(String devApi) {
     	if (!configs.count(devApi)) {
-    		configs[devApi] = app_ioconfig();
+    		configs[devApi] = app_ioaudioconfig();
     	}
     	return configs[devApi];
     }
-	app_ioconfig& getIOConfigMidi(String devApi) {
-    	if (!configs.count(devApi)) {
-    		configs[devApi] = app_ioconfig();
+	app_iomidiconfig& getIOConfigMidi(String devApi) {
+    	if (!midiconfigs.count(devApi)) {
+    		midiconfigs[devApi] = app_iomidiconfig();
     	}
-    	return configs[devApi];
+    	return midiconfigs[devApi];
     }
+	bool isAsio() {
+		return device_api == asioConfig.device_api;
+	}
 };
 struct appsettings
 {

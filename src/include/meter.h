@@ -6,6 +6,11 @@
 #include "seq_time.h"
 
 //TODO: make samplerate dependent
+struct meter_lvls {
+	float fMax = 0;
+	float fPeak = 0;
+	float fLvl = 0;
+};
 #define RUNNING_SUM_BUF_SIZE (1024*1)
 template <uint32_t N>
 class runningsum {
@@ -60,14 +65,16 @@ public:
 		}
 
 	}
-
+	meter_lvls getLevels() {
+		return meter_lvls{fMax, fPeak, fLvl};
+	}
 };
-template <uint32_t N>
+template <uint32_t N, uint32_t C = 2>
 class rmsmeter {
 public:
-	runningsum<N> channels[2];
+	runningsum<N> channels[C];
 	void update(AudioBlock* block, float fTrackGain) {
-		for (uint32_t i = 0; i < math::min(block->channels, 2u); i++) {
+		for (uint32_t i = 0; i < math::min(block->channels, C); i++) {
 			channels[i].update(block->buf[i], block->samples, fTrackGain);
 		}
 	}
@@ -81,8 +88,15 @@ public:
 		return channels[i].fPeak;
 	}
 	void onTick(double since) {
-		for (uint32_t i = 0; i < 2; i++) {
+		for (uint32_t i = 0; i < C; i++) {
 			channels[i].onTick(since);
 		}
+	}
+	std::vector<meter_lvls> getLevels() {
+		std::vector<meter_lvls> v;
+		for (uint32_t i = 0; i < C; i++) {
+			v.push_back(std::move(channels[i].getLevels()));
+		}
+		return v;
 	}
 };

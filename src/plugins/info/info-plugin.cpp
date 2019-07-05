@@ -187,8 +187,8 @@ void PluginVST2_HostInfo::processReplacing(float** inputs, float** outputs, VstI
 		memset(outputs[0], 0, sizeof(float)*sampleFrames);
 	} else if (this->getAeffect()->numOutputs == 2) {
 		if (inputs)
-			dsp_util::fillSilence(inputs, sampleFrames);
-		dsp_util::fillSilence(outputs, sampleFrames);
+			dsp_util::fillChannels(inputs, this->getAeffect()->numInputs, sampleFrames, 0.0f);
+		dsp_util::fillChannels(outputs, this->getAeffect()->numOutputs, sampleFrames, 0.0f);
 	}
 //	numCalls2++;
 }

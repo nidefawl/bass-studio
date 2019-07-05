@@ -10,6 +10,7 @@
 #include "host/mainctrl.h"
 #include "host/vst_host.h"
 #include "platform.h"
+#include "audiobuffer.h"
 
 class gui_pluginsloaded_list_entry : public gui_list_entry {
 	SafeRef<effectbase> ref;
@@ -135,8 +136,10 @@ public:
 		int x2 = getSizeContent().x-x;
 		int y = 5;
 		host_stats_t stats;
+		playback_state state;
 		{
 			ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+			state = MainCtrl::getPlayThread()->getState();
 			vsthost::getInstance()->getStats(stats);
 		}
 		float lineh;
@@ -157,6 +160,11 @@ public:
 		printL("maxLatencyAudioMidi", StringFormat("%lld", stats.maxLatencyAudioMidi));
 		printL("maxLatencyReturn", StringFormat("%lld", stats.maxLatencyReturn));
 		printL("latencyToMaster", StringFormat("%lld", stats.latencyToMaster));
+		printL("playback_state", StringFormat("%lld", static_cast<int32_t>(state)));
+		audiothread_ringbuffer_t& ringbuffer = vsthost::getInstance()->getRingBuffer();
+		printL("rinbuffer.writepos", StringFormat("%lld", ringbuffer.writePos));
+		printL("rinbuffer.readpos", StringFormat("%lld", ringbuffer.readPos));
+		printL("inputBufferUnderuns", StringFormat("%lld", stats.inputBufferUnderuns));
 		for (auto& entry : stats.timings) {
 			printL(StringAsCStr(entry.first), StringFormat("%lld", entry.second));
 		}

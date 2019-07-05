@@ -16,6 +16,8 @@
 #include "list.h"
 #include "renderresources.h"
 #include "platform.h"
+#include "meter.h"
+#include "gui/guimeter.h"
 #include <portaudio.h>
 #include <portmidi.h>
 
@@ -23,6 +25,7 @@ constexpr int ID_BTN_CLOSE = 1;
 constexpr int TITLE_FONT_SIZE = 30;
 constexpr int TEXT_FONT_SIZE = 20;
 constexpr int BTN_FONT_SIZE = 16;
+constexpr int ROW_FONT_SIZE = 18;
 
 class guidropdown_setting_options_t;
 class guidropdown_setting_options_ctxt_t: public guictxtmenu {
@@ -84,16 +87,36 @@ void guidropdown_setting_options_ctxt_t::clicked(int _id) {
 }
 
 
-
-class gui_listentry_audiodevice : public gui_list_entry {
+class gui_listentry_audiochannel : public gui_list_entry {
 	String deviceAPI;
 	String deviceName;
+	int32_t numChannels;
+	int32_t nIndex;
 	const bool isInput;
 public:
-	gui_listentry_audiodevice(String _deviceAPI, String _deviceName, bool _isInput) : gui_list_entry(), deviceAPI(_deviceAPI), deviceName(_deviceName), isInput(_isInput) {
+	gui_listentry_audiochannel(String _deviceAPI, String _deviceName, int32_t _numChannels, int32_t _nIndex, bool _isInput)
+: gui_list_entry(), deviceAPI(_deviceAPI), deviceName(_deviceName), numChannels(_numChannels), nIndex(_nIndex), isInput(_isInput) {
 		icon = -1;
 	}
 	String getText() override {
+		String s;
+		if (isInput) {
+			s = "Input";
+		} else {
+			s = "Output";
+		}
+		if (numChannels == 1) {
+			s = "Mono "+s;
+		}
+		if (numChannels == 2) {
+			s = "Stereo "+s;
+		}
+		if (numChannels > 2) {
+			s = "MultiChannel "+s;
+		}
+		if (numChannels > 2) {
+			s = s + StringFormat("%d",nIndex);
+		}
 		return deviceName;
 	}
 	void dragMoveOn(guibase* target, ivec2 mousepos) override {
@@ -103,28 +126,17 @@ public:
 	void handleDraggedBegin(MouseEvent& evt) override {
 		toggle();
 	}
-	std::vector<app_io>& getCnf() {
-		return isInput ? settings.iosettings.getConfig(deviceAPI).inputs : settings.iosettings.getConfig(deviceAPI).outputs;
+	String& getDevName() {
+		return isInput ? settings.iosettings.getConfig(deviceAPI).deviceNameInput : settings.iosettings.getConfig(deviceAPI).deviceNameOutput;
 	}
 	bool enabled() {
-		auto& c = getCnf();
-		auto it = std::find_if(c.begin(), c.end(), [devN=deviceName](const app_io& config){
-			return config.deviceName == devN;
-		});
-		if (it != c.end()) {
-			return true;
-		}
-		return false;
+		const auto& c = getDevName();
+		return c == deviceName;
 	}
 	bool toggle() {
 		bool bEnbl = enabled();
-		auto& c = getCnf();
-		erase_if(c, [devN=deviceName](const app_io& config) {
-			return config.deviceName == devN;
-		});
-		if (!bEnbl) {
-			c.push_back({0, deviceName});
-		}
+		auto& c = getDevName();
+		c = deviceName;
 		if (parent && parent->parent) {
 			parent->parent->buttonClicked(this);
 		}
@@ -138,32 +150,148 @@ public:
 		if (icon > -1) {
 			x += rowHeight + spacing;
 		}
+		ivec2 inner = size;
 		if (ctrl->isCtrOrChildFocused(this)) {
 			nvgBeginPath(vg);
-			nvgRect(vg, pos.x, pos.y, size.x, size.y);
+			nvgRect(vg, pos.x, pos.y, inner.x, inner.y);
 			nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_DRKER));
 			nvgFill(vg);
 		}
 		nvgTranslate(vg, pos.x, pos.y);
 		if (icon > -1) {
 			RenderResources::NvgImageTexture& image = RenderResources::imgIcons[icon];
-			drawIcon(vg, size, &image);
+			drawIcon(vg, inner, &image);
 		}
-		setFont(vg, (int) (rowHeight * 0.8), G_WHITE, G_TITLE_ALIGN);
+		setFont(vg, (int) (ROW_FONT_SIZE), G_WHITE, G_TITLE_ALIGN);
 		nvgText(vg, x, rowHeight / 2, StringAsCStr(getText()), NULL);
 //		auto* _entry = safeRefGet(ref);
 //		if (_entry) {
 		bool enbl = enabled();
-			setFont(vg, (int) (rowHeight * 0.8), theme->getColor(enbl?GuiColor::COL_ON:GuiColor::COL_OFF), G_TITLE_ALIGN);
+			setFont(vg, (int) (ROW_FONT_SIZE), theme->getColor(enbl?GuiColor::COL_ON:GuiColor::COL_OFF), G_TITLE_ALIGN);
 			nvgTextAlign(vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
-			String str = enbl?"On":"Off";
-			nvgText(vg, size.x-spacing, rowHeight / 2, StringAsCStr(str), NULL);
+			RenderResources::NvgImageTexture& image = RenderResources::imgIcons[ICON_SPEAKER];
+			ivec2 sizeIcon = ivec2(inner.y - 4);
+			ivec2 posIcon = {inner.x-(int)spacing-sizeIcon.y, (inner.y-sizeIcon.y)/2};
+			nvgTranslate(vg, posIcon.x, posIcon.y);
+			nvgBeginPath(vg);
+			nvgRect(vg, 0, 0, sizeIcon.x, sizeIcon.y);
+			nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_DRKER2));
+			nvgFill(vg);
+//			nvgStrokeColor(vg, theme->getColor(GuiColor::COL_GUI_STROKE));
+//			nvgStrokeWidth(vg, theme->getFloat(GuiConstant::CONST_GUI_FRAME_STROKE_WIDTH));
+			nvgStrokeColor(vg, theme->getBgStrokeColor(parent->getFlags()));
+			nvgStrokeWidth(vg, theme->getFloat(GuiConstant::CONST_GUI_FRAME_STROKE_WIDTH));
+			nvgStroke(vg);
+			if (enbl) {
+				drawIcon(vg, sizeIcon, &image, 2);
+			}
+			nvgTranslate(vg, -posIcon.x, -posIcon.y);
+//			String str = enbl?"On":"Off";bypass
+//			nvgText(vg, size.x-spacing, rowHeight / 2, StringAsCStr(str), NULL);
 //		}
 //		nvgBeginPath(vg);
 //		int i2 = 4;
 //		nvgRect(vg, i2, i2, size.x-i2*2, size.y-i2*2);
 //		nvgFillColor(vg, rgbToNvg(0xFF11ff11));
 //		nvgFill(vg);
+
+		nvgTranslate(vg, -pos.x, -pos.y);
+	}
+};
+
+class gui_listentry_audiodevice : public gui_list_entry {
+	String deviceAPI;
+	String deviceName;
+	const bool isInput;
+	const int32_t nChannels;
+public:
+	gui_listentry_audiodevice(String _deviceAPI, String _deviceName, int32_t _nChannels, bool _isInput)
+	: gui_list_entry(), deviceAPI(_deviceAPI), deviceName(_deviceName), nChannels(_nChannels), isInput(_isInput) {
+		icon = -1;
+	}
+	String getText() override {
+		return deviceName;
+	}
+	void dragMoveOn(guibase* target, ivec2 mousepos) override {
+	}
+	void dragReleaseOn(guibase* target, ivec2 mousepos) override {
+	}
+	void handleDraggedBegin(MouseEvent& evt) override {
+		toggle();
+	}
+	app_ioaudioconfig& getCnf() {
+		return settings.iosettings.getConfig(deviceAPI);
+	}
+	bool enabled() {
+		const auto& c = getCnf();
+		return isInput ? c.deviceNameInput == deviceName : c.deviceNameOutput == deviceName;
+	}
+	bool toggle() {
+		bool bEnbl = enabled();
+		auto& c = getCnf();
+		String& cnf = isInput ? c.deviceNameInput : c.deviceNameOutput;
+		cnf = enabled() ? "" : deviceName;
+		if (parent && parent->parent) {
+			parent->parent->buttonClicked(this);
+		}
+		return false;
+	}
+	void render(NVGcontext* vg) override {
+		BaseCtrl* ctrl = parentCtrl;
+		float spacing = INSET_TITLE;
+		float x = spacing;
+		float rowHeight = size.y;
+		if (icon > -1) {
+			x += rowHeight + spacing;
+		}
+		ivec2 inner = size;
+		if (ctrl->isCtrOrChildFocused(this)) {
+			nvgBeginPath(vg);
+			nvgRect(vg, pos.x, pos.y, inner.x, inner.y);
+			nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_DRKER));
+			nvgFill(vg);
+		}
+		nvgTranslate(vg, pos.x, pos.y);
+		if (icon > -1) {
+			RenderResources::NvgImageTexture& image = RenderResources::imgIcons[icon];
+			drawIcon(vg, inner, &image);
+		}
+		setFont(vg, (int) (ROW_FONT_SIZE), G_WHITE, G_TITLE_ALIGN);
+		nvgText(vg, x, rowHeight / 2, StringAsCStr(getText()), NULL);
+		ivec2 sizeIcon = ivec2(inner.y - 4);
+		ivec2 posIcon = {inner.x-(int)spacing-sizeIcon.y, (inner.y-sizeIcon.y)/2};
+
+		nvgTextAlign(vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+		nvgText(vg, posIcon.x - 4, rowHeight / 2, StringAsCStr(StringFormat("%d CH", nChannels)), NULL);
+//		auto* _entry = safeRefGet(ref);
+//		if (_entry) {
+		bool enbl = enabled();
+			setFont(vg, (int) (ROW_FONT_SIZE), theme->getColor(enbl?GuiColor::COL_ON:GuiColor::COL_OFF), G_TITLE_ALIGN);
+			nvgTextAlign(vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
+			RenderResources::NvgImageTexture& image = RenderResources::imgIcons[ICON_SPEAKER];
+			nvgTranslate(vg, posIcon.x, posIcon.y);
+			nvgBeginPath(vg);
+			nvgRect(vg, 0, 0, sizeIcon.x, sizeIcon.y);
+			nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_DRKER2));
+			nvgFill(vg);
+//			nvgStrokeColor(vg, theme->getColor(GuiColor::COL_GUI_STROKE));
+//			nvgStrokeWidth(vg, theme->getFloat(GuiConstant::CONST_GUI_FRAME_STROKE_WIDTH));
+			nvgStrokeColor(vg, theme->getBgStrokeColor(parent->getFlags()));
+			nvgStrokeWidth(vg, theme->getFloat(GuiConstant::CONST_GUI_FRAME_STROKE_WIDTH));
+			nvgStroke(vg);
+			if (enbl) {
+				drawIcon(vg, sizeIcon, &image, 2);
+			}
+			nvgTranslate(vg, -posIcon.x, -posIcon.y);
+//			String str = enbl?"On":"Off";bypass
+//			nvgText(vg, size.x-spacing, rowHeight / 2, StringAsCStr(str), NULL);
+//		}
+//		nvgBeginPath(vg);
+//		int i2 = 4;
+//		nvgRect(vg, i2, i2, size.x-i2*2, size.y-i2*2);
+//		nvgFillColor(vg, rgbToNvg(0xFF11ff11));
+//		nvgFill(vg);
+
 		nvgTranslate(vg, -pos.x, -pos.y);
 	}
 };
@@ -190,13 +318,102 @@ void updateSrBs() {
 		mctrl->startPlaying();
 	}
 };
+class guictr_input_meters : public guictr_base {
+	using meterType = rmsmeter<16000, 1>;
+	using guimeterType = gui_trackmeter<16000,1>;
+	std::vector<guimeterType*> guiMeters;
+	const bool isInput;
+	std::vector<std::shared_ptr<meterType>> meters;
+	int32_t prevStream = 0;
 
+//
+//	void effectbase::postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) {
+//		meter.update(out, 1.0f);
+//	}
+public:
+	guictr_input_meters(const bool _isInput) : guictr_base(), isInput(_isInput) {
+
+	}
+	void render(NVGcontext* vg) {
+		if (isBackgroundRendered()) {
+			renderBackground(vg);
+		}
+		if (!setScissorTransform(vg)) {
+			return;
+		}
+		auto* stream = audiohost::getInstance()->getStream(0);
+		if (stream && prevStream && prevStream == stream->streamId) {
+			for (auto c : guis) {
+				if (c->isVisible()) {
+					c->render(vg);
+				}
+			}
+		}
+	}
+	void onTick(AppCtrl* ctrl) {
+		for (guibase* gui : guis) {
+			gui->onTick(ctrl);
+		}
+		auto* stream = audiohost::getInstance()->getStream(0);
+
+		logEveryMsec(128, 2000,
+				StringFormat("(%d) %X (%d)\n",prevStream,
+								(int64_t)stream, stream?stream->streamId:0));
+		if ((prevStream && !stream) || (stream && prevStream != stream->streamId)) {
+			log_printf("on stream change %X -> %X\n", (int64_t)prevStream, (int64_t)stream);
+			for (auto* gui : guiMeters) {
+				remove(gui);
+				delete gui;
+			}
+			guiMeters.clear();
+			if (stream) {
+				auto metersStream = isInput ? stream->metersInput : stream->metersOutput;
+				while (guiMeters.size() < metersStream.size()) {
+					int idx = guiMeters.size();
+					auto p = new guimeterType(metersStream[idx].get());
+					guiMeters.push_back(p);
+					add(p);
+				}
+				meters = metersStream;
+			} else {
+				meters.clear();
+			}
+			prevStream = stream ? stream->streamId : 0;
+			layout();
+		}
+
+	}
+	~guictr_input_meters() {
+		for (auto* g : guiMeters) {
+			remove(g);
+			delete g;
+		}
+	}
+	void layout() {
+		ivec2 cs = getSizeContent();
+		int32_t maxChannels = math::max<int32_t>(guiMeters.size(), 6);
+		int32_t nMeters = math::max<int32_t>(1, maxChannels);
+		ivec2 meterSize = {math::min(64, math::max(8, (cs.x)/nMeters)), cs.y-INSET_CTR_SPACING*2};
+		ivec2 meterPos = {INSET_CTR_SPACING, INSET_CTR_SPACING};
+		for (auto* meter : guiMeters) {
+			meter->pos = meterPos;
+			meter->size = meterSize;
+			meterPos.x += meterSize.x;
+		}
+		for (auto* gui : guis) {
+			gui->layout();
+		}
+	}
+};
 class guidialog_audio_io : public setting_dialog {
 	guidropdownbase* selectAPI;
+	guidropdownbase* asioDevice;
 	gui_list* deviceListInput;
 	gui_list* deviceListOutput;
 	guidropdownbase* audioBlockSize;
 	guidropdownbase* audioSampleRate;
+	guictr_input_meters metersInput;
+	guictr_input_meters metersOutput;
 public:
 	void onDialogShow() override {
 		updateOptions();
@@ -222,10 +439,10 @@ public:
 			for (int i = 0; i < deviceCount; i++) {
 				const PaDeviceInfo *info = Pa_GetDeviceInfo(i);
 				if (info && info->hostApi == deviceApiIdxSelected && info->maxOutputChannels > 0) {
-					_newListOut.push_back(new gui_listentry_audiodevice{deviceAPIName, info->name, false});
+					_newListOut.push_back(new gui_listentry_audiodevice{deviceAPIName, info->name, info->maxOutputChannels, false});
 				}
 				if (info && info->hostApi == deviceApiIdxSelected && info->maxInputChannels > 0) {
-					_newListIn.push_back(new gui_listentry_audiodevice{deviceAPIName, info->name, true});
+					_newListIn.push_back(new gui_listentry_audiodevice{deviceAPIName, info->name, info->maxInputChannels, true});
 				}
 			}
 			int idx = 0;
@@ -240,6 +457,10 @@ public:
 			deviceListOutput->setList(_newListOut);
 			deviceListInput->layout();
 			deviceListOutput->layout();
+			this->asioDevice->setVisible(settings.iosettings.device_api=="ASIO");
+			this->deviceListInput->setVisible(!this->asioDevice->isVisible());
+			this->deviceListOutput->setVisible(!this->asioDevice->isVisible());
+			this->layout();
 		}
 
 	}
@@ -248,13 +469,20 @@ public:
 		delete deviceListInput;
 		delete deviceListOutput;
 		delete selectAPI;
+		delete asioDevice;
 		delete audioBlockSize;
 		delete audioSampleRate;
 
 	}
 	guidialog_audio_io()
-	: setting_dialog()
+	: setting_dialog(),
+	  metersInput(true),
+	  metersOutput(false)
 	{
+		auto asio = new guidropdown_setting_options_t();
+		guidropdown_setting_options_t* api = new guidropdown_setting_options_t{};
+		selectAPI = api;
+		asioDevice = asio;
 		deviceListInput = new gui_list();
 		deviceListOutput = new gui_list();
 		auto audioBlockSize = new guidropdown_setting_options_t{};
@@ -290,17 +518,31 @@ public:
 		audioBlockSize->fnGetCurrentVal = []() -> String {
 			return StringFormat("%d", settings.iosettings.blocksize);
 		};
-		guidropdown_setting_options_t* api = new guidropdown_setting_options_t{};
+
+//
+
 		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 		if (audiohost::getInstance()->initPa()) {
-			int apiCount = Pa_GetHostApiCount();
-			for (int i = 0; i < apiCount; i++) {
-				const PaHostApiInfo *info = Pa_GetHostApiInfo(i);
+			int apiCnt = Pa_GetHostApiCount();
+			int apiIdxASIO = -1;
+			for (int i = 0; i < apiCnt; i++) {
+				auto info = Pa_GetHostApiInfo(i);
 				if (info) {
-					if (settings.iosettings.device_api.empty()) {
-						settings.iosettings.device_api = info->name;
+					if (info->type == PaHostApiTypeId::paASIO) {
+						apiIdxASIO = i;
+					} else {
+						if (settings.iosettings.device_api.empty()) {
+							settings.iosettings.device_api = info->name;
+						}
 					}
 					api->options.push_back(String{info->name});
+				}
+			}
+			int devCount = Pa_GetDeviceCount();
+			for (int i = 0; i < devCount; i++) {
+				auto info = Pa_GetDeviceInfo(i);
+				if (info && info->hostApi == apiIdxASIO) {
+					asio->options.push_back(String{info->name});
 				}
 			}
 		}
@@ -316,28 +558,80 @@ public:
 				updateOptions();
 				if (ahost->startAudio()) {
 					host->setOutput(ahost);
+				} else {
 				}
 			}
 		};
 		api->fnGetCurrentVal = []() -> String {
 			return settings.iosettings.device_api;
 		};
-		selectAPI = api;
+		asio->cbOnOptionSelected = [asio](int option) {
+			if (option >= 0 && option < asio->options.size()) {
+				auto devOption = asio->options[option];
+				ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+				vsthost* host = vsthost::getInstance();
+				audiohost* ahost = audiohost::getInstance();
+				ahost->stopAudio();
+				host->setOutput(nullptr);
+				app_ioasioconfig& asioconfig = settings.iosettings.asioConfig;
+				asioconfig.device_api = "ASIO";
+				asioconfig.deviceName = devOption;
+				if (asioconfig.outputs.empty() && asioconfig.inputs.empty()) {
+					io_channel channel;
+					channel.idx = 0;
+					channel.channels.push_back(0);
+					channel.channels.push_back(1);
+					asioconfig.outputs.push_back(channel);
+				}
+				if (ahost->startAudio()) {
+					host->setOutput(ahost);
+				} else {
+				}
+			}
+		};
+		asio->fnGetCurrentVal = []() -> String {
+			if (settings.iosettings.asioConfig.deviceName.length()) {
+				return settings.iosettings.asioConfig.deviceName;
+			}
+			return "None";
+		};
 
-		setBackgroundRendered(true);
-		add(selectAPI);
-		add(deviceListInput);
-		add(deviceListOutput);
-		add(audioBlockSize);
-		add(audioSampleRate);
 		selectAPI->setFontScale(0.77f);
+		asioDevice->setFontScale(0.77f);
 	//	selectDevice->setFontScale(0.77f);
+		deviceListInput->setRenderHR(true);
+		deviceListInput->setRowMargin(ivec4(0, 1, 0, 1));
+		deviceListOutput->setRenderHR(true);
+		deviceListOutput->setRowMargin(ivec4(0, 1, 0, 1));
+		deviceListInput->setBackgroundRendered(true);
+		deviceListOutput->setBackgroundRendered(true);
+		metersInput.setBackgroundRendered(true);
+		metersOutput.setBackgroundRendered(true);
+		metersInput.setBackgroundRenderedInset(false);
+		metersOutput.setBackgroundRenderedInset(true);
+		metersInput.setLabel("Input Channels");
+		metersOutput.setLabel("Output Channels");
 		selectAPI->setLabel("Audio API");
+		asioDevice->setLabel("ASIO Device");
 		audioBlockSize->setLabel("Blocksize");
 		audioSampleRate->setLabel("Samplerate");
 		deviceListInput->setLabel("Audio input device");
 		deviceListOutput->setLabel("Audio output device");
 		setLabel("Audio I/O");
+		setBackgroundRendered(true);
+		add(selectAPI);
+		add(asioDevice);
+		add(deviceListInput);
+		add(deviceListOutput);
+		add(audioBlockSize);
+		add(audioSampleRate);
+		add(&metersInput);
+		add(&metersOutput);
+	}
+	virtual void onTick(AppCtrl* ctrl) {
+		for (guibase* gui : guis) {
+			gui->onTick(ctrl);
+		}
 	}
 
 	void render(NVGcontext* vg) {
@@ -354,17 +648,39 @@ public:
 		nvgText(vg, 5, this->audioBlockSize->bottom(), StringAsCStr(this->audioBlockSize->label), NULL);
 		nvgText(vg, 5, this->audioSampleRate->bottom(), StringAsCStr(this->audioSampleRate->label), NULL);
 		nvgText(vg, 5, this->selectAPI->bottom(), StringAsCStr(this->selectAPI->label), NULL);
-		nvgText(vg, 5, this->deviceListInput->top()-2, StringAsCStr(this->deviceListInput->label), NULL);
-		nvgText(vg, 5, this->deviceListOutput->top()-2, StringAsCStr(this->deviceListOutput->label), NULL);
+		if (this->asioDevice->isVisible()) {
+			nvgText(vg, 5, this->asioDevice->bottom(), StringAsCStr(this->asioDevice->label), NULL);
+		}
+//		if (this->deviceListInput->isVisible()) {
+//			nvgText(vg, 5, this->deviceListInput->top()-2, StringAsCStr(this->deviceListInput->label), NULL);
+//		}
+//		if (this->deviceListOutput->isVisible()) {
+//			nvgText(vg, 5, this->deviceListOutput->top()-2, StringAsCStr(this->deviceListOutput->label), NULL);
+//		}
+
 
 		for (auto c : guis) {
 			nvgSave(vg);
 	//		if (c == this->selectAPI) {
 	//			nvgIntersectScissor(vg, c->pos.x, c->pos.y, c->size.x, c->size.y);
 	//		}
-			c->render(vg);
+			if (c->isVisible()) {
+				c->render(vg);
+			}
 			nvgRestore(vg);
 		}
+//		if (!this->asioDevice->isVisible()) {
+//
+//			auto stream = audiohost::getInstance()->getStream(0);
+//			if (stream) {
+//				int nChannels = stream->nInputChannels;
+//				nvgText(vg, 5, this->deviceListInput->bottom()+TEXT_FONT_SIZE+2, StringAsCStr(StringFormat("%d channels", nChannels)), NULL);
+//
+//				nChannels = stream->nOutputChannels;
+//				nvgText(vg, 5, this->deviceListOutput->bottom()+TEXT_FONT_SIZE+2, StringAsCStr(StringFormat("%d channels", nChannels)), NULL);
+//			}
+//		}
+
 	}
 	void layout() {
 		ivec2 cs = getSizeContent();
@@ -372,6 +688,11 @@ public:
 		int32_t inset = 5;
 		int32_t buttonW = math::max(120, cs.x*2/3);
 		int32_t heightList = math::max(230, cs.y*2/5);
+		int32_t h2 = (int)(heightList*0.6);
+		int32_t h3 = (int)(heightList*0.4);
+		if (asioDevice->isVisible()) {
+			h3 *= 2;
+		}
 		int32_t height = 20;
 		audioBlockSize->size = ivec2(buttonW, height);
 		audioBlockSize->pos = ivec2(cs.x-inset*2-buttonW, inset);
@@ -379,10 +700,32 @@ public:
 		audioSampleRate->pos = ivec2(cs.x-inset*2-buttonW, audioBlockSize->bottom()+inset);
 		selectAPI->size = ivec2(buttonW, height);
 		selectAPI->pos = ivec2(cs.x-inset*2-buttonW, audioSampleRate->bottom()+inset);
-		deviceListInput->pos = ivec2(inset, selectAPI->bottom()+inset+(int32_t)(TEXT_FONT_SIZE*1.2));
-		deviceListInput->size = ivec2((cs.x)-inset*2, heightList);
-		deviceListOutput->pos = ivec2(inset, deviceListInput->bottom()+inset+(int32_t)(TEXT_FONT_SIZE*1.2));
-		deviceListOutput->size = ivec2((cs.x)-inset*2, math::min(cs.y-deviceListOutput->pos.y, heightList));
+		guibase* pNextGui = selectAPI;
+		asioDevice->size = ivec2(buttonW, height);
+		asioDevice->pos = ivec2(cs.x-inset*2-buttonW, selectAPI->bottom()+inset);
+		if (asioDevice->isVisible()) {
+			pNextGui = asioDevice;
+		}
+		deviceListInput->pos = ivec2(inset, pNextGui->bottom()+inset);
+		deviceListInput->size = ivec2((cs.x)-inset*2, h2);
+		if (deviceListInput->isVisible()) {
+			pNextGui = deviceListInput;
+		}
+		metersInput.pos = ivec2(inset, pNextGui->bottom()+inset);
+		metersInput.size = ivec2((cs.x)-inset*2, h3);
+		if (metersInput.isVisible()) {
+			pNextGui = &metersInput;
+		}
+		deviceListOutput->pos = ivec2(inset, pNextGui->bottom()+inset);
+		deviceListOutput->size = ivec2((cs.x)-inset*2, math::min(cs.y-deviceListOutput->pos.y, h2));
+		if (deviceListOutput->isVisible()) {
+			pNextGui = deviceListOutput;
+		}
+		metersOutput.pos = ivec2(inset, pNextGui->bottom()+inset);
+		metersOutput.size = ivec2((cs.x)-inset*2, h3);
+		if (metersOutput.isVisible()) {
+			pNextGui = &metersOutput;
+		}
 		for (auto gui : guis) {
 			gui->layout();
 		}
@@ -417,12 +760,12 @@ public:
 	void handleDraggedBegin(MouseEvent& evt) override {
 		toggle();
 	}
-	std::vector<app_io>& getCnf() {
+	std::vector<midi_channel>& getCnf() {
 		return isInput ? settings.iosettings.getIOConfigMidi(deviceAPI).inputs : settings.iosettings.getIOConfigMidi(deviceAPI).outputs;
 	}
 	bool enabled() {
 		auto& c = getCnf();
-		auto it = std::find_if(c.begin(), c.end(), [devN=deviceName](const app_io& config){
+		auto it = std::find_if(c.begin(), c.end(), [devN=deviceName](const midi_channel& config){
 			return config.deviceName == devN;
 		});
 		if (it != c.end()) {
@@ -433,11 +776,14 @@ public:
 	bool toggle() {
 		bool bEnbl = enabled();
 		auto& c = getCnf();
-		erase_if(c, [devN=deviceName](const app_io& config) {
+		erase_if(c, [devN=deviceName](const midi_channel& config) {
 			return config.deviceName == devN;
 		});
 		if (!bEnbl) {
-			c.push_back({0, deviceName});
+			midi_channel ch;
+			ch.idx = 0;
+			ch.deviceName = "";
+			c.push_back(ch);
 		}
 		if (parent && parent->parent) {
 			parent->parent->buttonClicked(this);
@@ -463,12 +809,12 @@ public:
 			RenderResources::NvgImageTexture& image = RenderResources::imgIcons[icon];
 			drawIcon(vg, size, &image);
 		}
-		setFont(vg, (int) (rowHeight * 0.8), G_WHITE, G_TITLE_ALIGN);
+		setFont(vg, (int) (ROW_FONT_SIZE), G_WHITE, G_TITLE_ALIGN);
 		nvgText(vg, x, rowHeight / 2, StringAsCStr(getText()), NULL);
 //		auto* _entry = safeRefGet(ref);
 //		if (_entry) {
 		bool enbl = enabled();
-			setFont(vg, (int) (rowHeight * 0.8), theme->getColor(enbl?GuiColor::COL_ON:GuiColor::COL_OFF), G_TITLE_ALIGN);
+			setFont(vg, (int) (ROW_FONT_SIZE), theme->getColor(enbl?GuiColor::COL_ON:GuiColor::COL_OFF), G_TITLE_ALIGN);
 			nvgTextAlign(vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
 			String str = enbl?"On":"Off";
 			nvgText(vg, size.x-spacing, rowHeight / 2, StringAsCStr(str), NULL);
@@ -613,7 +959,7 @@ struct guidialog_settings::dialog_entry
 	}
 };
 guidialog_settings::guidialog_settings()
-: guidialog_base(ivec2{640, 660}) {
+: guidialog_base(ivec2{640, 760}) {
 	addEntry(new guidialog_audio_io(), "Audio I/O");
 	addEntry(new guidialog_midi_io(), "Midi I/O");
 	add(&btnClose);
@@ -659,7 +1005,7 @@ guidialog_settings::~guidialog_settings() {
 		delete entry;
 	}
 };
-
+;
 void guidialog_settings::render(NVGcontext* vg) {
 	guictr_base::render(vg);
 }

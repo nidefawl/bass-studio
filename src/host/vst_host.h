@@ -67,6 +67,7 @@ struct host_stats_t {
 	int32_t maxLatencyAudioMidi = 0;
 	int32_t maxLatencyReturn = 0;
 	int32_t latencyToMaster = 0;
+	int32_t inputBufferUnderuns = 0;
 
 };
 struct host_processing_stats_t {
@@ -114,6 +115,9 @@ private:
 	void setBlockSize(uint16_t blockSize);
 	void registerPlugins();
 public:
+	audiothread_ringbuffer_t& getRingBuffer() {
+		return ringbuffer;
+	}
 	int32_t getNextSampleId(int32_t id);
 	void sendNotesOff(effectbase* plugin);
 	std::vector<builtin_module_reg_t>& getBuiltinModuleRegistry() {

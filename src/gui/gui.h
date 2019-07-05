@@ -35,7 +35,7 @@ float textWidth(NVGcontext* vg, const String& str);
 void renderText(NVGcontext* ctx, float x, float y, float maxWidth, const char* string);
 void renderDashedLineFrame(NVGcontext* vg, float x, float y, float w, float h, float thickness);
 void drawAttachedBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 posInset, ivec2 sizeInset, int margin);
-void drawIcon(NVGcontext* vg, ivec2& size, RenderResources::NvgImageTexture* image);
+void drawIcon(NVGcontext* vg, const ivec2& size, RenderResources::NvgImageTexture* image, int32_t extImg = 2);
 void drawPlaySymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2);
 void drawStopSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2);
 void drawTextureSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2);
@@ -93,6 +93,9 @@ public:
 			flags &= ~FLG_VISIBLE;
 		else
 			flags |= FLG_VISIBLE;
+	}
+	int getFlags() const {
+		return flags;
 	}
 	virtual bool isBackgroundRendered() const {
 		return (flags & FLG_RENDER_BACKGROUND) != 0;

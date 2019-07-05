@@ -6,10 +6,10 @@
 #include "mouse.h"
 #include "event.h"
 #include "guicolors.h"
+#include "theme.h"
 #include "guicontainer.h"
 #include "renderresources.h"
 #include "basectrl.h"
-
 
 void gui_list_entry::handleDraggedMove(MouseEvent& evt) {
 	parentCtrl->objectDragMove(this, evt);
@@ -68,4 +68,47 @@ bool gui_list::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 		return true;
 	}
 	return false;
+}
+void gui_list::render(NVGcontext* vg) {
+	if (isBackgroundRendered()){
+		renderBackground(vg);
+	}
+	if (!setScissorTransform(vg)) {
+		return;
+	}
+	nvgSave(vg);
+	if (first < last) {
+		gui_list_entry *g = listGuis[first];
+		nvgTranslate(vg, 0, -g->top());
+	}
+	for (int32_t idx = first; idx < last; idx++) {
+		listGuis[idx]->render(vg);
+	}
+	if (renderHR && first < last) {
+		for (int32_t idx = first; idx < last; idx++) {
+			float y = rowHeight * idx;
+			nvgBeginPath(vg);
+			nvgMoveTo(vg, 0, y+rowHeight);
+			nvgLineTo(vg, size.x, y+rowHeight);
+			nvgStrokeColor(vg, theme->getColor(GuiColor::COL_GUI_STROKE));
+			nvgStrokeWidth(vg, theme->getFloat(GuiConstant::CONST_GUI_FRAME_STROKE_WIDTH));
+			nvgStroke(vg);
+		}
+	}
+	nvgRestore(vg);
+	//		int x = 0; int y = 0;
+	//		nvgBeginPath(vg);
+	//		for (int32_t idx = first; idx < last; idx++) {
+	//			if (y > 0) {
+	//				nvgMoveTo(vg, x, y);
+	//				nvgLineTo(vg, x+cs.x, y);
+	//			}
+	//			y += rowHeight;
+	//		}
+	//		nvgStrokeWidth(vg, 1.0f);
+	//		nvgStrokeColor(vg, G_BLACK);
+	//		nvgStroke(vg);
+	scrollbar.render(vg);
+	//		nvgResetScissor(vg);
+	//		nvgResetTransform(vg);
 }

@@ -642,6 +642,23 @@ track_t* audio_stage_t::getTrack() {
 //	dbgassert(0); // to be expected when deleting effectgroups
 	return nullptr;
 }
+int32_t track_impl_t::mapInput(int32_t nInputChannels, int32_t nChannel) {
+	return nChannel%nInputChannels;
+}
+void track_impl_t::addAudio(AudioBlock* bInput, float fGain) {
+	for (int channel = 0; channel < bInput->channels && channel < input.channels; channel++) {
+		int32_t idx = mapInput(bInput->samples, channel);
+		if (idx < 0) {
+			continue;
+		}
+		float* pChSrc = bInput->buf[idx];
+		float* pChDst = input.buf[channel];
+		const int32_t nSamples = math::min(bInput->samples, input.samples);
+		for (int sample = 0; sample < nSamples; sample++) {
+			*pChDst++ += (*pChSrc++)*fGain;
+		}
+	}
+}
 void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, float** buffer, int32_t blockSize) {
 
 	int32_t blockEnd = blockSamplePos+blockSize;
@@ -671,7 +688,7 @@ void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t 
 			if (srcStartOffset >= (int32_t)sample->nSamples)
 				continue;
 			dbgassert(sample->samples.size() > 0);
-			for (int i = 0; i < 2; i++) {
+			for (int i = 0; i < this->input.channels; i++) {
 				float *dst = buffer[i];
 				auto& srcVector = i >= (int)sample->samples.size() ? sample->samples[sample->samples.size()-1] : sample->samples[i];
 				int32_t len = math::min((int32_t)blockSize-math::max(0, -srcStartOffset),

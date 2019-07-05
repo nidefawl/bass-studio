@@ -7,10 +7,11 @@
 #include "dsp_util.h"
 #include "meter.h"
 
+template<uint32_t T, uint32_t C = 2>
 class gui_trackmeter : public guibase {
 public:
-	rmsmeter<16000>* const meter;
-	gui_trackmeter(rmsmeter<16000>* _meter) :
+	rmsmeter<T,C>* const meter;
+	gui_trackmeter(rmsmeter<T,C>* _meter) :
 		guibase(), meter(_meter) {
 	}
 	void render(NVGcontext* vg) {
@@ -18,16 +19,18 @@ public:
 		ivec2 inset(spacing);
 		ivec2 mtrPos = pos + inset;
 		ivec2 mtrSize = size - inset * 2;
-		float channelW = (mtrSize.x-(OUTPUT_CHANNELS+1)*spacing) / (float) OUTPUT_CHANNELS;
+		float channelW = (mtrSize.x-(C+1)*spacing) / (float) C;
 		const double scaledZero = dsp_util::scaledRange(0, dsp_util::MTR_FLOOR, dsp_util::MTR_CEIL);
 		float hZero = (1.0f - scaledZero) * mtrSize.y;
 		float yZero = mtrPos.y + mtrSize.y - hZero;
 
 		float x = mtrPos.x+spacing;
-		for (int i = 0; i < OUTPUT_CHANNELS; i++) {
-			float fMax = meter->getMax(i);
-			float fRms = meter->getRms(i);
-			float fPeak = meter->getStandingPeak(i);
+		auto lvls = meter->getLevels();
+		for (int i = 0; i < lvls.size(); i++) {
+			auto& chLvl = lvls[i];
+			float fMax = chLvl.fMax;
+			float fRms = chLvl.fLvl;
+			float fPeak = chLvl.fPeak;
 			float levels[3] = {fMax, fRms, fPeak};
 
 			nvgBeginPath(vg);
@@ -78,7 +81,7 @@ public:
 		}
 
 		x = mtrPos.x+spacing;
-		float x2 = mtrPos.x+(spacing+channelW)*2.0f;
+		float x2 = mtrPos.x+(spacing+channelW)*C;
 		nvgBeginPath(vg);
 		nvgMoveTo(vg, x, yZero);
 		nvgLineTo(vg, x2, yZero);

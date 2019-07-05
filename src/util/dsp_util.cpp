@@ -2,6 +2,7 @@
 #include "samplerate.h"
 #include "config.h"
 #include "math/seq_math.h"
+#include "audioblock.h"
 #include <stdlib.h>
 #include <stdint.h>
 #include <malloc.h>
@@ -32,27 +33,35 @@ float Saturate(float input, float fMax)
 	float x2 = fabsf(input - fMax);
 	return fGrdDiv * (x1 - x2);
 }
-void fillSaturate(float** buffer, uint32_t samples) {
-	float* output0 = buffer[0];
-	float* output1 = buffer[1];
-	float maxGain = 1.0;
-	for (uint32_t i = 0; i<samples; i++)
-	{
-		*output0 = dsp_util::Saturate(*output0, maxGain);
-		*output1 = dsp_util::Saturate(*output1, maxGain);
-		output0++;
-		output1++;
+void fillSaturate(float** buffer, int32_t channels, uint32_t samples) {
+	const float maxGain = 1.0;
+	for (int i = 0; i < (channels+1)/2; i++) {
+		float* output0 = buffer[i*2+0];
+		float* output1 = buffer[i*2+1];
+		for (uint32_t i = 0; i<samples; i++)
+		{
+			*output0 = dsp_util::Saturate(*output0, maxGain);
+			*output1 = dsp_util::Saturate(*output1, maxGain);
+			output0++;
+			output1++;
+		}
 	}
 }
-void fillSilence(float** buffer, uint32_t samples) {
-	float* input0 = buffer[0];
-	float* input1 = buffer[1];
-	for (uint32_t i = 0; i<samples; i++)
-	{
-		*input0 = 0.0f;  /* left */
-		*input1 = 0.0f;  /* right */
-		input0++;
-		input1++;
+void fillBlock(AudioBlock& block, float f) {
+	fillChannels(block.buf, block.channels, block.samples, f);
+}
+void fillChannels(float** buffer, int32_t channels, uint32_t samples, float f = 0.0f) {
+	const float maxGain = 1.0;
+	for (int i = 0; i < (channels+1)/2; i++) {
+		float* input0 = buffer[i*2+0];
+		float* input1 = buffer[i*2+1];
+		for (uint32_t i = 0; i<samples; i++)
+		{
+			*input0 = f;  /* left */
+			*input1 = f;  /* right */
+			input0++;
+			input1++;
+		}
 	}
 }
 float dBFS(float f) {

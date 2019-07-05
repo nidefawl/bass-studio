@@ -22,7 +22,7 @@ void log_format_to_logger(Logger* logger, const char *file, int line, const char
 #define my_printf(fmt, ...) log_format_to_logger(getGlobalLogger(), __FILE__, __LINE__, __FUNCTION__, fmt, __VA_ARGS__)
 #define log_out(fmt, ...) log_format_to_logger(getGlobalLogger(), nullptr, 0, nullptr, fmt, __VA_ARGS__)
 #define log_printf my_printf
-void logEveryMsec(int32_t nId, int32_t delayMs, String str);
+bool logEveryMsec(int32_t nId, int32_t delayMs, String str);
 #else
 #define my_printf(fmt, ...) 
 #define LOG_EVERY_MSEC(delay, str)

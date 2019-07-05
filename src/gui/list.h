@@ -32,10 +32,18 @@ class gui_list : public guictr_base, public gui_scrollcontainer {
 	int32_t first = 0;
 	int32_t last = 0;
 	int rowHeight = 30;
+	ivec4 rowMargin = {0, 0, 0, 0};
+	bool renderHR = false;
 public:
 	gui_list() : guictr_base(), scrollbar(1, 0.0f, *this) {
 		add(&scrollbar);
 		setBackgroundRendered(true);
+	}
+	void setRowMargin(ivec4 _rowMargin) {
+		rowMargin = _rowMargin;
+	}
+	void setRenderHR(bool _renderHR) {
+		renderHR = _renderHR;
 	}
 	~gui_list() {
 		remove(&scrollbar);
@@ -71,38 +79,7 @@ public:
 		updateVisible();
 	}
 
-	virtual void render(NVGcontext* vg) {
-//		guictr_base::renderBackground(vg);
-		if (!setScissorTransform(vg)) {
-			return;
-		}
-
-		nvgSave(vg);
-		if (first < last) {
-			gui_list_entry* g = listGuis[first];
-			nvgTranslate(vg, 0, -g->top());
-		}
-		for (int32_t idx = first; idx < last; idx++) {
-			listGuis[idx]->render(vg);
-		}
-		nvgRestore(vg);
-//		int x = 0; int y = 0;
-//		nvgBeginPath(vg);
-//		for (int32_t idx = first; idx < last; idx++) {
-//			if (y > 0) {
-//				nvgMoveTo(vg, x, y);
-//				nvgLineTo(vg, x+cs.x, y);
-//			}
-//			y += rowHeight;
-//		}
-//		nvgStrokeWidth(vg, 1.0f);
-//		nvgStrokeColor(vg, G_BLACK);
-//		nvgStroke(vg);
-
-		scrollbar.render(vg);
-//		nvgResetScissor(vg);
-//		nvgResetTransform(vg);
-	}
+	virtual void render(NVGcontext* vg);
 	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
 	void setList(std::vector<gui_list_entry*> _newList) {
 		for (gui_list_entry* g : listGuis) {
@@ -125,8 +102,9 @@ public:
 		for (guibase* gui : guis) {
 			if (gui == &scrollbar)
 				continue;
-			gui->pos = ivec2(x, y);
-			gui->size = ivec2(entryW, rowHeight);
+			gui->pos = ivec2(x+rowMargin.x, y+rowMargin.y);
+			gui->size = ivec2(entryW - (rowMargin.x+rowMargin.z), rowHeight - (rowMargin.y+rowMargin.w));
+
 			y += rowHeight;
 		}
 		for (guibase* gui : guis) {
@@ -138,4 +116,3 @@ public:
 		return scrollbar.handleMouseScroll(evt, xoffset, yoffset);
 	}
 };
-

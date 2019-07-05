@@ -247,7 +247,7 @@ constant_t COL_BTN_LOAD_DEF_PLUGINS("COL_BTN_LOAD_DEF_PLUGINS", 0xFFFFFFFF);
 class gui_subtrack_waveview;
 class gui_trackcontrols_mixer: public guictr_base {
 	track_t* const m_track;
-	gui_trackmeter meter;
+	gui_trackmeter<16000,2> meter;
 public:
 	gui_trackgain gain;
 	guibutton_trackbypass btnBypass;

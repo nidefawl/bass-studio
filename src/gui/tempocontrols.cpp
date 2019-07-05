@@ -174,11 +174,19 @@ void guictr_tempocontrols::buttonClicked(guibase* button) {
 		project.loopEnabled = !project.loopEnabled;
 	}
 	if (button == &this->btnAudioOnOff) {
-		settings.startEngine = !settings.startEngine;
-		if (settings.startEngine) {
-			audiohost::getInstance()->startAudio();
+		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+		vsthost* host = vsthost::getInstance();
+		audiohost* ahost = audiohost::getInstance();
+		if (ahost->isStreaming()) {
+			ahost->stopAudio();
+			host->setOutput(nullptr);
+			settings.startEngine = false;
 		} else {
-			audiohost::getInstance()->stopAudio();
+			settings.startEngine = true;
+		}
+		if (settings.startEngine && ahost->startAudio()) {
+			host->setOutput(ahost);
+		} else {
 		}
 	}
 }

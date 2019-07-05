@@ -474,8 +474,8 @@ void midihost::onStreamEnd() {
 
 }
 template<typename T, typename T2>
-std::vector<app_io> syncOpenCloseDeviceList(T& cfg, T2& openedDevs) {
-	std::vector<app_io> toOpen;
+std::vector<midi_channel> syncOpenCloseDeviceList(T& cfg, T2& openedDevs) {
+	std::vector<midi_channel> toOpen;
 	for (auto& input : cfg) {
 		auto it = std::find_if(openedDevs.cbegin(), openedDevs.cend(), [devName = input.deviceName] (const midihost::opened_device_t& openedDevice) {
 			return openedDevice.deviceName == devName;
@@ -487,7 +487,7 @@ std::vector<app_io> syncOpenCloseDeviceList(T& cfg, T2& openedDevs) {
 	auto it = openedDevs.begin();
 	while (it != openedDevs.end()) {
 		midihost::opened_device_t& dev = *it;
-		auto it2 = std::find_if(cfg.cbegin(), cfg.cend(), [&dev] (const app_io& iocfg) {
+		auto it2 = std::find_if(cfg.cbegin(), cfg.cend(), [&dev] (const midi_channel& iocfg) {
 			return iocfg.deviceName == dev.deviceName;
 		});
 		if (it2 == cfg.cend()) {
@@ -503,15 +503,15 @@ std::vector<app_io> syncOpenCloseDeviceList(T& cfg, T2& openedDevs) {
 }
 void midihost::reopenAllConfiguredDevices(bool forceClose) {
 	if (forceClose) {
-		std::vector<app_io> empty;
+		std::vector<midi_channel> empty;
 		syncOpenCloseDeviceList(empty, this->devicesInput);
 		syncOpenCloseDeviceList(empty, this->devicesOutput);
 	}
-	app_ioconfig& midiSettings = settings.iosettings.getIOConfigMidi("stdmidi");
+	app_iomidiconfig& midiSettings = settings.iosettings.getIOConfigMidi("stdmidi");
 	{
 
-		std::vector<app_io> toOpen = syncOpenCloseDeviceList(midiSettings.inputs, this->devicesInput);
-		for (app_io& port : toOpen) {
+		std::vector<midi_channel> toOpen = syncOpenCloseDeviceList(midiSettings.inputs, this->devicesInput);
+		for (midi_channel& port : toOpen) {
 		    for (int deviceIdx = 0; deviceIdx < Pm_CountDevices(); deviceIdx++) {
 		        const PmDeviceInfo *info = Pm_GetDeviceInfo(deviceIdx);
 		        if (info->input) {
@@ -544,8 +544,8 @@ void midihost::reopenAllConfiguredDevices(bool forceClose) {
 	}
 	{
 
-		std::vector<app_io> toOpen = syncOpenCloseDeviceList(midiSettings.outputs, this->devicesOutput);
-		for (app_io& port : toOpen) {
+		std::vector<midi_channel> toOpen = syncOpenCloseDeviceList(midiSettings.outputs, this->devicesOutput);
+		for (midi_channel& port : toOpen) {
 		    for (int deviceIdx = 0; deviceIdx < Pm_CountDevices(); deviceIdx++) {
 		        const PmDeviceInfo *info = Pm_GetDeviceInfo(deviceIdx);
 		        if (info->output) {
@@ -593,7 +593,7 @@ bool midihost::startMidi() {
 bool midihost::stopMidi() {
 	my_printf("stopMidi.\n", 0);
 	bool ret = !this->devicesInput.empty() || !this->devicesInput.empty();
-	std::vector<app_io> empty;
+	std::vector<midi_channel> empty;
 	syncOpenCloseDeviceList(empty, this->devicesInput);
 	syncOpenCloseDeviceList(empty, this->devicesOutput);
 	return ret;

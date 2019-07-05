@@ -1,15 +1,16 @@
 #pragma once
 #include <stdint.h>
 #include "samplerate.h"
-
+struct AudioBlock;
 namespace dsp_util {
 
 	float Saturate(float input, float fMax);
-	void fillSaturate(float** buffer, uint32_t samples);
+	void fillSaturate(float** buffer, int32_t channels, uint32_t samples);
 	void fillSine(float** buffer, uint32_t samples);
 	void fillNoise(float** buffer, uint32_t samples);
 	void fillSqare(samplerate_t samplerate, float freq, float** buffer, uint32_t samples);
-	void fillSilence(float** buffer, uint32_t samples);
+	void fillChannels(float** buffer, int32_t channels, uint32_t samples, float f);
+	void fillBlock(AudioBlock& block, float f);
 	void copyBuffer(float** dst, float** src, uint32_t samples);
 	float clampGain(float f);
 	float clampReadGain(float f);

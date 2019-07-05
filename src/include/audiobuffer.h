@@ -25,6 +25,6 @@ struct audiothread_ringbuffer_t {
 	int32_t writePos = 0;
 	AudioBuffer* buffers[RING_BUF_SIZE] = { 0 };
 };
-AudioBuffer* allocateBuffer();
-void allocRingBuffer(audiothread_ringbuffer_t&);
+AudioBuffer* allocateBuffer(int32_t nChannels=2);
+void allocRingBuffer(audiothread_ringbuffer_t&, int32_t nChannels=2);
 void freeRingBuffer(audiothread_ringbuffer_t&);
