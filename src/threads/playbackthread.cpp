@@ -153,6 +153,7 @@ private:
 		midihost* midiHost = midihost::getInstance();
 		double playbackDuration = 0;
 		hires_timer_t timer;
+		hires_timer_t timer2;
 
 		bool firstBlock = false;
 		bool isLoopAround = false;
@@ -221,6 +222,7 @@ private:
 //			}
             int32_t processedBlock = 0;
             bool inLoop = false;
+            int64_t processDuration = 0;
             if (m_status != playback_state::status_no_process)
             {
 				std::unique_lock<std::recursive_mutex> lock(mutex);
@@ -234,9 +236,14 @@ private:
             			&& tickPos < projGlobals.loopStart+projGlobals.loopLen
 						&& m_status == status_play && projGlobals.loopEnabled);
             	midiHost->processMidi(this->ctrl, samplePos, tickPos, m_status, inLoop, isLoopAround);
+            	timer2.reset();
             	processedBlock = host->processPlayback(this->ctrl, samplePos, tickPos, m_status, inLoop, isLoopAround);
+            	processDuration = timer.getTime();
 //    			LOG("processedBlocks: %d, play: %d, tickpos: %f\n", processedBlock, (m_status==playback_state::status_play), tickPos);
             }
+        	if (timer.getTimeDouble() < 100) {
+				std::this_thread::sleep_for(std::chrono::microseconds(100));
+        	}
             /*
              * at sample rate 44100 and blocksize 512 the block duration is 1.xxms
              * the producer side trys to stay 4 blocks ahead of the consumer (audio thread)
