@@ -549,20 +549,24 @@ public:
 	}
 	void postRender() override {
 		glfwMakeContextCurrent(glfw);
+		glfwSwapBuffers(glfw);
+	}
+	void preRender() override {
+		glfwMakeContextCurrent(glfw);
 		int winwidth, winheight;
 		int fbwidth, fbheight;
 		glfwGetWindowSize(glfw, &winwidth, &winheight);
 		glfwGetFramebufferSize(glfw, &fbwidth, &fbheight);
-		dbgassert (winwidth>0&&winheight>0&&fbwidth>0&&fbheight>0);
-		float pxratio = fbwidth / (float)winwidth;
+//		dbgassert (winwidth>0&&winheight>0&&fbwidth>0&&fbheight>0);
+		if (winwidth>0&&winheight>0&&fbwidth>0&&fbheight>0) {
+//			float pxratio = fbwidth / (float)winwidth;
+
+		}
 		glViewport(0, 0, fbwidth, fbheight);
 		glEnable(GL_BLEND);
 		glDisable(GL_CULL_FACE);
 		glDisable(GL_DEPTH_TEST);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	}
-	void preRender() override {
-		glfwSwapBuffers(glfw);
 	}
 #define WINDOW_BORDERLESS_POPUP 1
 	void createMainWindow(const char* title, int w, int h, void* parentWindowHandle, int flags = 0);
