@@ -467,6 +467,7 @@ NVGLUframebuffer* nvgluCreateTempFramebuffer(NVGcontext* ctx, int w, int h, int 
 				&& fb->fb.w == w && fb->fb.h == h
 				&& fb->fb.flags == imageFlags) {
 			gl->framebuffers[i].idleframes = 0;
+			fb->inuse = 1;
 			return &gl->framebuffers[i].fb;
 		}
 	}
@@ -486,6 +487,7 @@ NVGLUframebuffer* nvgluCreateTempFramebuffer(NVGcontext* ctx, int w, int h, int 
 			return NULL;
 		}
 		fbTarget->setup = 1;
+		fbTarget->inuse = 1;
 		return &fbTarget->fb;
 
 	}
