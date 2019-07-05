@@ -84,7 +84,7 @@ constant_t::constant_t(const char* _name, int32_t _defValue)
   name(_name),
   defValue(_defValue) {
 	auto& allconstants = _getConstants();
-	my_printf("push %16s to %12X -> size %d\n", _name, (int64_t)&allconstants, allconstants.size());
+//	my_printf("push %16s to %12X -> size %d\n", _name, (int64_t)&allconstants, allconstants.size());
   allconstants.push_back(this);
 }
 constant_t COL_GRID_DRK = constant_t("COL_GRID_DRK", 0xFF000000);
