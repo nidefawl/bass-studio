@@ -240,7 +240,7 @@ public:
 	void focusLost();
 	void onWindowClose();
 	bool onWindowCloseRequest();
-	 void onTick() {};
+	 void onTick();
 	 void postInit() {}; /* OpenGL context exists in postInit */
 	bool mouseDownPre();
 };

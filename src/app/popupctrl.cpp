@@ -148,3 +148,14 @@ bool PopupCtrl::initPopup(window_overlay* _window, NVGcontext* nanovg)
 	dbgassert(0);
 	return false;
 }
+
+void PopupCtrl::onTick()
+ {
+	for (guictr_base *ctr : containers) {
+		ctr->onTick(this);
+	}
+	for (guictr_base *ctr : containers) {
+		ctr->onIdle();
+	}
+	mainWindow->requestRedraw();
+}
