@@ -81,6 +81,8 @@ namespace RenderResources {
 			load(vg, StringFormat("res/led.png"), imgIconsBuf[IMG_LED]);
 			load(vg, StringFormat("res/led_off.png"), imgIconsBuf[IMG_LED_OFF]);
 			load(vg, StringFormat("res/led_glow.png"), imgIconsBuf[IMG_LED_GLOW]);
+			load(vg, StringFormat("res/icons/speaker.png"), imgIconsBuf[ICON_SPEAKER]);
+			load(vg, StringFormat("res/icons/x.png"), imgIconsBuf[ICON_X]);
 			for (int i = 0; i < NUM_IMGS; i++) {
 				ImageBuf& buf = imgIconsBuf[i];
 				if (buf.w*buf.h == 0) {

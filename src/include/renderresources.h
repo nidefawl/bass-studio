@@ -24,7 +24,9 @@
 #define ICON_AUTOMATION 20
 #define ICON_SAVE 21
 #define ICON_ARR_UP 22
-#define NUM_IMGS 23
+#define ICON_SPEAKER 23
+#define ICON_X 24
+#define NUM_IMGS 25
 
 struct NVGcontext;
 namespace RenderResources {
