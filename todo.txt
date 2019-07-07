@@ -3,7 +3,6 @@
 
 Bugs:
 clip loop gets notes stuck
-ctxt menus might leak, not getting deleted as intended
 status bar does not show text
 clipsettings labels overlap input fields
 ALT key sometimes stuck, wonderful
@@ -12,12 +11,10 @@ mousewheel scrolling on noteeditor not working
 ALT key to disable grid is not allowing note-resize below grid size
 
 
-TS-808 Stereo.dll only plays on left channel
 Reverb.dll crashes on mingw
 Freeverb3VST_ProG_Reverb.dll 2.66 (from 2012) crashes probably 
   because of some hack they do with static linking on mingw to 
   get rid of dynamic c-runtime dependency. 3.1.2 works
-FM8 is possible still not working
 
 Add tables for debugging:
 - all loaded plugins
@@ -37,12 +34,11 @@ replace: = {\1, \2};
 
 important:
 Solo buttons!
-velocity editor 
 randomize note velocity + offset (shuffle/humanize/groove)
 global midi pitch offset (and per track global offset bypass)
 per track velocity scaling (min max curve?!)
+
 quantize midi 
-duplicate loop button in midi clip
 legato button in midi editor
 duplicate plugin/plugin groups
 consolidate clips
