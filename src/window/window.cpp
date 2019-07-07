@@ -192,6 +192,8 @@ protected:
 	HWND hwnd = NULL;
 	WNDPROC defWndProc = NULL;
 #endif
+	bool bCanResize = false;
+	bool shown = false;
 	bool valid = true;
 	bool reentrant = false;
 public:
@@ -411,9 +413,15 @@ public:
 
 	void createBaseWindow(const char* title, int w, int h, GLFWwindow* share = nullptr, void* parentWindowHandle = nullptr);
 	void showWindow() {
+		if (shown)
+			return;
+		shown = true;
 		glfwShowWindow(glfw);
 	}
 	void hideWindow() {
+		if (!shown)
+			return;
+		shown = false;
 		glfwHideWindow(glfw);
 		//this->timer = SetTimer(hwnd, 0, 1, (TIMERPROC)NULL);
 		onWindowClose();
@@ -589,7 +597,23 @@ public:
 			cursorIcon = ctrl->cursorIcon;
 		}
 	}
-	window_main* createOverlay();
+	window_main* createOverlay(int flags) override;
+	void closeOverlay(window_main* wnd) override {
+		assert(wnd);
+		wnd->hide();
+		auto it = std::find_if(overlayWindows.begin(), overlayWindows.end(), [wnd](const auto& e) {
+			return dynamic_cast<window_base*>(e.get()) == dynamic_cast<window_base*>(wnd);
+		});
+		if (it != overlayWindows.end()) {
+			auto& sharedPtr = *it;
+			sharedPtr->destroy();
+			sharedPtr.reset();
+			overlayWindows.erase(it);
+		}
+	}
+	bool canResize() override {
+		return this->bCanResize;
+	}
 	void destroyOverlayWindows();
 	void destroy();
 	void onTick() {
@@ -668,9 +692,13 @@ public:
 
 	void onWindowCloseRequest() override {
 		bool b = ctrl->onWindowCloseRequest();
-		glfwSetWindowShouldClose(glfw, b ? 1 : 0);
 		if (b) {
 			onWindowClose();
+			if (!this->parent) {
+				glfwSetWindowShouldClose(glfw, b ? 1 : 0);
+			} else {
+				hideWindow();
+			}
 		}
 	}
 	void onWindowClose() override {
@@ -1002,11 +1030,11 @@ public:
 		onMouseMoved(ivec2(0));
 	}
 };
-window_main* appwindow_main::createOverlay() {
+window_main* appwindow_main::createOverlay(int flags) {
 //	std::unique_ptr<appwindow_overlay> ow = std::make_unique<appwindow_overlay>(this);
 	String sName = StringFormat("%s menu", this->name);
 	std::shared_ptr<appwindow_main> ow = std::make_shared<appwindow_main>(this, new PopupCtrl{}); //TODO: manage lifetime of control
-	ow->createMainWindow(StringAsCStr(sName), 200, 200, nullptr, WINDOW_BORDERLESS_POPUP);
+	ow->createMainWindow(StringAsCStr(sName), 200, 200, nullptr, flags);
 //	ow->createOverlayWindow(StringAsCStr(sName), 200, 200, nullptr);
 	auto* ret = ow.get();
 	this->overlayWindows.push_back(std::move(ow));
@@ -1041,14 +1069,19 @@ void appwindow_main::destroy() {
 void appwindow_main::createMainWindow(const char* title, int w, int h, void* parentWindowHandle, int flags) {
 	setAppWindowHints();
 //	if (!parentWindowHandle)
+
 		glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
+
 	if (flags&WINDOW_BORDERLESS_POPUP) {
+		bCanResize = false;
 		glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 		glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
 		glfwWindowHint(GLFW_FOCUSED, GL_FALSE);
 		glfwWindowHint(GLFW_DECORATED, GL_FALSE);
-		glfwWindowHint(GLFW_UTILITY_WINDOW, GL_TRUE);
+//		glfwWindowHint(GLFW_UTILITY_WINDOW, GL_TRUE);
 		glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER , GL_TRUE);
+	} else {
+		bCanResize = true;
 	}
 	appwindow::createBaseWindow(title, w, h, nullptr, parentWindowHandle);
 	if (!parent) {

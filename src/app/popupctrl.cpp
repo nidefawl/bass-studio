@@ -50,11 +50,20 @@ bool PopupCtrl::onWindowCloseRequest() {
 }
 
 void PopupCtrl::relayout(int32_t w, int32_t h) {
-
-	// Popup window shouldn't change its shape, just call layout
-//	ivec2 prefSize(w, h)
-//	popupCtrs->determineSize(prefSize);
-//	popupCtrs->size = prefSize;
+	if (bResizeable) {
+		closeAllAppMenus();
+		closeContextMenu();
+		m_size = ivec2(w, h);
+		if (popupCtrs->guis.size() == 1) {
+			auto singleCtr = popupCtrs->guis[0];
+			singleCtr->size = m_size;
+			singleCtr->determineSize(singleCtr->size);
+			singleCtr->layout();
+			popupCtrs->size = singleCtr->size;
+			popupCtrs->maxHeight = singleCtr->size.y;
+			popupCtrs->determineSize(popupCtrs->size);
+		}
+	}
 	popupCtrs->layout();
 }
 bool PopupCtrl::mouseDownPre() {
@@ -66,9 +75,10 @@ bool PopupCtrl::mouseDownPre() {
 }
 
 
-void PopupCtrl::open(guictxtmenu_base *_ctxtmenu, ivec2 pos) {
+void PopupCtrl::open(guictxtmenu_base *_ctxtmenu, ivec2 pos, bool bResizeable) {
 //	dbgassert(!isShown());
 	mouseInside = false;
+	this->bResizeable = bResizeable;
 	this->m_mousePos = ivec2(-1111111);
 	popupCtrs->removeGuis();
 	popupCtrs->pos = ivec2(0);
@@ -78,6 +88,8 @@ void PopupCtrl::open(guictxtmenu_base *_ctxtmenu, ivec2 pos) {
 	popupCtrs->scrollbarOutside = _ctxtmenu->scrollbarOutside;
 	popupCtrs->setBackgroundRendered(_ctxtmenu->isBackgroundRendered());
 	_ctxtmenu->determineSize(_ctxtmenu->size);
+	_ctxtmenu->setParent(popupCtrs);
+	_ctxtmenu->setControl(this);
 	_ctxtmenu->layout();
 
 

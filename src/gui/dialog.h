@@ -8,9 +8,11 @@
 #include <vector>
 
 class guidialog_base : public guictxtmenu_base {
+protected:
 	const ivec2 dialogSize;
+	const bool resizeable;
 public:
-	guidialog_base(ivec2 _dialogSize) : dialogSize(_dialogSize) {
+	guidialog_base(ivec2 _dialogSize, bool _resizeable = false) : dialogSize(_dialogSize), resizeable(_resizeable) {
 		setCanMouseHit(true);
 		padding = CONTENT_INSET;
 		margin = CTR_SPACING;
@@ -21,9 +23,17 @@ public:
 	}
 	~guidialog_base() { dbgassert(guis.empty()); }
 	void determineSize(ivec2& prefSize) override {
-		prefSize = dialogSize;
+		if (resizeable) {
+			prefSize = math::maxvec2(dialogSize, prefSize);
+		} else {
+			prefSize = dialogSize;
+		}
+
 	}
 	virtual bool isDialog() {
 		return true;
+	}
+	bool isDialogResizeable() {
+		return resizeable;
 	}
 };

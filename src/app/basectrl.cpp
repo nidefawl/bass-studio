@@ -19,6 +19,7 @@
 #include "mouse.h"
 #include "event.h"
 #include "commands.h"
+#include "gui/dialog.h"
 #include "assert_dbg.h"
 
 #include "project.h"
@@ -466,7 +467,7 @@ void AppCtrl::closeAppMenusAtLvl(int startlvl) {
 }
 void AppCtrl::openAppMenu(int lvl, guictxtmenu_base *b, ivec2 pos) {
 	if ((int)menuWindows.size() <= lvl) {
-		auto newWnd = this->mainWindow->createOverlay();
+		auto newWnd = this->mainWindow->createOverlay(WINDOW_BORDERLESS_POPUP);
 		menuWindows.push_back({ newWnd, nullptr });
 	}
 	//TODO: menu change on same level will let his assertation fail
@@ -475,7 +476,7 @@ void AppCtrl::openAppMenu(int lvl, guictxtmenu_base *b, ivec2 pos) {
 	entry.ctxt = b;
 	ivec2 windowPos;
 	this->mainWindow->getPos(&windowPos);
-	static_cast<PopupCtrl*>(entry.wnd->getCtrl())->open(b, windowPos+pos);
+	static_cast<PopupCtrl*>(entry.wnd->getCtrl())->open(b, windowPos+pos, false);
 }
 
 void AppCtrl::openOverlayGui(guictxtmenu_base *b, ivec2 pos, int flags) {
@@ -496,19 +497,23 @@ void AppCtrl::openOverlayGui(guictxtmenu_base *b, ivec2 pos, int flags) {
 	} else {
 		wndPos = windowPos+(windowSize-b->size)/2;
 	}
-	if (!contextWindow) {
-		contextWindow = this->mainWindow->createOverlay();
+	bool bResizeable = (flags&4);
+	if (!contextWindow || contextWindow->canResize() != bResizeable) {
+		if (contextWindow) {
+			this->mainWindow->closeOverlay(contextWindow);
+		}
+		contextWindow = this->mainWindow->createOverlay(bResizeable ? 0 : WINDOW_BORDERLESS_POPUP);
 	}
 	if (contextWindow) {
 		auto* ctxtWindowTheme = contextWindow->getCtrl()->getTheme();
 		//copy theme from this control to contextWindows control
 		*ctxtWindowTheme = *getTheme();
-		static_cast<PopupCtrl*>(contextWindow->getCtrl())->open(b, wndPos); //ugly cast
+		static_cast<PopupCtrl*>(contextWindow->getCtrl())->open(b, wndPos, bResizeable); //ugly cast
 	}
 
 }
-void AppCtrl::openDialog(guictxtmenu_base *b) {
-	openOverlayGui(b, ivec2(0), 0);
+void AppCtrl::openDialog(guidialog_base *b) {
+	openOverlayGui(b, ivec2(0), b->isDialogResizeable() ? 4 : 0);
 }
 void AppCtrl::openContextMenu(guictxtmenu_base *b, ivec2 pos, int flags) {
 	openOverlayGui(b, pos, flags);
@@ -520,13 +525,16 @@ void AppCtrl::closeContextMenu() {
 	}
 }
 void AppCtrl::onChildOverlayWindowClose(window_main* ptr) {
-	if (ptr == this->contextWindow && this->ctxtmenu) {
-		dbgassert(this->ctxtmenu);
-		this->ctxtmenu->onParentWindowClose();
-		this->ctxtmenu->setControl(nullptr);
-		// ctxtmenu can't be deleted at this point, some point in the call chain may dereference it again
-		garbageGuis.push_back(this->ctxtmenu);
-		this->ctxtmenu = nullptr;
+	log_printf("close ptr %X, contextWindow %X, this->ctxtmenu %X menuWindows.size() %d\n", (int64_t) ptr, (int64_t) contextWindow, this->ctxtmenu, menuWindows.size());
+	if (ptr == this->contextWindow) {
+		if (this->ctxtmenu) {
+			dbgassert(this->ctxtmenu);
+			this->ctxtmenu->onParentWindowClose();
+			this->ctxtmenu->setControl(nullptr);
+			// ctxtmenu can't be deleted at this point, some point in the call chain may dereference it again
+			garbageGuis.push_back(this->ctxtmenu);
+			this->ctxtmenu = nullptr;
+		}
 		return;
 	}
 	auto it = std::find_if(menuWindows.begin(), menuWindows.end(), [ptr](const auto& entry) {

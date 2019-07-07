@@ -46,12 +46,14 @@ public:
 	virtual void positionOnScreen(ivec2 pos, ivec2 size) = 0;
 	virtual PopupCtrl* getCtrl() = 0;
 };
+#define WINDOW_BORDERLESS_POPUP 1
 class window_main : public window_base {
 public:
 	window_main() : window_base() {}
 	virtual ~window_main() {}
 	virtual window_dialog* createDialog(const String& sTitle, int w, int h) = 0;
-	virtual window_main* createOverlay() = 0;
+	virtual window_main* createOverlay(int flags) = 0;
+	virtual void closeOverlay(window_main* wnd) = 0;
 	virtual void show() = 0;
 	virtual void hide() = 0;
 	virtual void requestClose() = 0;
@@ -60,4 +62,5 @@ public:
 	virtual void postRender() = 0;
 	virtual AppCtrl* getCtrl() = 0;
 	virtual void positionOnScreen(ivec2 pos, ivec2 size) = 0;
+	virtual bool canResize() = 0;
 };

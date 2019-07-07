@@ -12,7 +12,7 @@ public:
 	std::function<void(int)> cb;
 	String message;
 public:
-	guidialog_cb_yes_no() : guidialog_base(ivec2(360, 140)) {
+	guidialog_cb_yes_no() : guidialog_base(ivec2(360, 140), true) {
 		btnYes.setText("Yes");
 		btnNo.setText("No");
 		add(&btnYes);
