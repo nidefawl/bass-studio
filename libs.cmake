@@ -64,6 +64,8 @@ find_library(
     PATHS ${BUILD_PATH_LIB_DEBUG}/portmidi/
     PATH_SUFFIXES lib
     NO_DEFAULT_PATH)
+set(PYBIND11_CPP_STANDARD -std=c++14)
+find_package(pybind11 REQUIRED PATHS "${BUILD_PATH_LIB_DEBUG}/pybind11" "${BUILD_PATH_LIB_RELEASE}/pybind11") 
 
 message (STATUS "glfw3 debug = ${GLFW_LIB_DEBUG}")
 message (STATUS "glfw3 release = ${GLFW_LIB_RELEASE}")
