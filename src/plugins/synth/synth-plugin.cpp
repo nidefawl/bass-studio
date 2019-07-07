@@ -776,6 +776,7 @@ private:
 					voice->Start(osc1OutOfPhase, osc2OutOfPhase);
 					break;
 				}
+				default:
 				case VoiceModes::Mono:
 					voices[0].SetNote(note);
 					voices[0].SetVelocity(velocity);
