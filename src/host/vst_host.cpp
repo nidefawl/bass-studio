@@ -886,6 +886,11 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 	stats.usage = stats.timeLastBlock / (double) microSecsPerBlock;
 	stats.blocksProcessed += nBlocksProcessed;
 	stats.samplesProcessed += nBlocksProcessed*lBlockSize;
+	int32_t tickQuarterStart = static_cast<int32_t>(math::floor((posDouble) / (float) TICKS_QUARTER));
+	int32_t tickQuarterEnd = static_cast<int32_t>(math::floor((posDouble+ticksPerBlock) / (float) TICKS_QUARTER));
+	if (tickQuarterEnd > tickQuarterStart) {
+		stats.tickBar += tickQuarterStart - tickQuarterEnd;
+	}
 	return nBlocksProcessed;
 }
 void vsthost::onStartPlayback(project_controller_t* ctrl) {

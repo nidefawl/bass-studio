@@ -59,6 +59,7 @@ void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effec
 
 struct AudioBlock;
 struct host_stats_t {
+	int32_t tickBar = 0;
 	int32_t samplesProcessed;
 	int32_t blocksProcessed;
 	int64_t timeLastBlock;
