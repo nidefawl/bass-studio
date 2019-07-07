@@ -37,7 +37,7 @@ void guibuttonbase::renderButtonLabel(NVGcontext* vg, int32_t stateFlags) {
 		ivec2 renderPos(0);
 		if (str.length() > 0) {
 			//			nvgDawText(vg, this, pos, size, str, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-			int fontScale = math::round((this->fontSize > 0 ? this->fontSize : size.y) * fFontScale);
+			int fontScale = math::round((this->fontSize > 0 ? this->fontSize : math::min(size.y, size.x)) * fFontScale);
 			GuiColor::constant_t c = (stateFlags & FLG_ENBL) ? GuiColor::COL_LABEL_ACTIVE : GuiColor::COL_LABEL_INACTIVE;
 			NVGcolor color = theme->getColor(c);
 			setFont(vg, fontScale, color, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
