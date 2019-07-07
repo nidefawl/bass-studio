@@ -171,13 +171,21 @@ public:
 };
 
 class guibutton_audioengine : public guibutton {
-
+	int32_t lastNumBlocks = 0;
+	double lastT = 0;
+	double lastT2 = 0;
 public:
 	guibutton_audioengine() : guibutton() {
+		lastT2 = getTimeMillisd();
 	}
 	bool isEnabled() const override {
 		return vsthost::getInstance()->isStreaming();
 	}
+	void render(NVGcontext* vg);
+	virtual void onTick(AppCtrl* appctrl) {
+
+	}
+	NVGcolor getBackgroundColor(int stateflags) const override;
 };
 class guictr_tempocontrols : public guictr_base {
 	project_t& project;
@@ -292,4 +300,3 @@ public:
 	}
 	void buttonClicked(guibase* button);
 };
-
