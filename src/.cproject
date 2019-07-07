@@ -22,6 +22,8 @@
                     <extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
                     					
                     <extension id="org.eclipse.cdt.core.GLDErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+                    					
+                    <extension id="org.eclipse.cdt.core.CWDLocator" point="org.eclipse.cdt.core.ErrorParser"/>
                     				
                 </extensions>
                 			
@@ -29,7 +31,7 @@
             			
             <storageModule moduleId="cdtBuildSystem" version="4.0.0">
                 				
-                <configuration artifactName="${ProjName}" buildArtefactType="org.eclipse.cdt.build.core.buildArtefactType.exe" buildProperties="org.eclipse.cdt.build.core.buildArtefactType=org.eclipse.cdt.build.core.buildArtefactType.exe,org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.debug" cleanCommand="rm -rf" description="" errorParsers="org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GLDErrorParser;org.eclipse.cdt.core.GmakeErrorParser" id="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100" name="Default" optionalBuildProperties="org.eclipse.cdt.docker.launcher.containerbuild.property.selectedvolumes=,org.eclipse.cdt.docker.launcher.containerbuild.property.volumes=" parent="cdt.managedbuild.config.gnu.mingw.exe.debug">
+                <configuration artifactName="${ProjName}" buildArtefactType="org.eclipse.cdt.build.core.buildArtefactType.exe" buildProperties="org.eclipse.cdt.build.core.buildArtefactType=org.eclipse.cdt.build.core.buildArtefactType.exe,org.eclipse.cdt.build.core.buildType=org.eclipse.cdt.build.core.buildType.debug" cleanCommand="rm -rf" description="" errorParsers="org.eclipse.cdt.core.GCCErrorParser;org.eclipse.cdt.core.GLDErrorParser;org.eclipse.cdt.core.GmakeErrorParser" id="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100" name="Default" optionalBuildProperties="org.eclipse.cdt.docker.launcher.containerbuild.property.volumes=,org.eclipse.cdt.docker.launcher.containerbuild.property.selectedvolumes=" parent="cdt.managedbuild.config.gnu.mingw.exe.debug">
                     					
                     <folderInfo id="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100." name="/" resourcePath="">
                         						
@@ -37,7 +39,7 @@
                             							
                             <targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.PE" id="cdt.managedbuild.target.gnu.platform.mingw.base.1726461713" name="Debug Platform" osList="win32" superClass="cdt.managedbuild.target.gnu.platform.mingw.base"/>
                             							
-                            <builder arguments="" autoBuildTarget="" buildPath="" cleanBuildTarget="" command="" enableAutoBuild="false" enableCleanBuild="true" enabledIncrementalBuild="true" errorParsers="" id="org.eclipse.linuxtools.cdt.autotools.core.toolchain.builder.249103381" incrementalBuildTarget="" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Autotools Makefile Generator"/>
+                            <builder buildPath="${workspace_loc:/DAW}/Default" id="cdt.managedbuild.builder.gnu.cross.1029165071" keepEnvironmentInBuildfile="false" name="Gnu Make Builder" superClass="cdt.managedbuild.builder.gnu.cross"/>
                             							
                             <tool errorParsers="" id="cdt.managedbuild.tool.gnu.assembler.mingw.base.1952525854" name="GCC Assembler" superClass="cdt.managedbuild.tool.gnu.assembler.mingw.base">
                                 								
@@ -78,6 +80,8 @@
                                     <listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/glfw/include&quot;"/>
                                     									
                                     <listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/soxr/include&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/portmidi/pm_common&quot;"/>
                                     								
                                 </option>
                                 								
@@ -116,6 +120,10 @@
                                     <listOptionValue builtIn="false" value="BUILD_BUILTIN_EFFECT"/>
                                     									
                                     <listOptionValue builtIn="false" value="ENABLE_MICHAELS_GLIBCXX_HACKS=1"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="BUILD_VSTHOST=1"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="BUILD_EXTERNAL_PLUGIN=0"/>
                                     								
                                 </option>
                                 								
@@ -192,6 +200,10 @@
                                     <listOptionValue builtIn="false" value="NO_EXTEND_WINDOW_CPP"/>
                                     									
                                     <listOptionValue builtIn="false" value="ENABLE_MICHAELS_GLIBCXX_HACKS=1"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="BUILD_VSTHOST=1"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="BUILD_EXTERNAL_PLUGIN=0"/>
                                     								
                                 </option>
                                 								
@@ -290,6 +302,8 @@
                     <extension id="org.eclipse.cdt.core.GmakeErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
                     					
                     <extension id="org.eclipse.cdt.core.GLDErrorParser" point="org.eclipse.cdt.core.ErrorParser"/>
+                    					
+                    <extension id="org.eclipse.cdt.core.CWDLocator" point="org.eclipse.cdt.core.ErrorParser"/>
                     				
                 </extensions>
                 			
@@ -305,7 +319,7 @@
                             							
                             <targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.PE" id="cdt.managedbuild.target.gnu.platform.mingw.base.490019570" name="Debug Platform" osList="win32" superClass="cdt.managedbuild.target.gnu.platform.mingw.base"/>
                             							
-                            <builder arguments="-j 7" autoBuildTarget="" buildPath="${workspace_loc:/DAW}/../build/clang-ninja-test/" cleanBuildTarget="clean" command="ninja" enableAutoBuild="false" enableCleanBuild="true" enabledIncrementalBuild="true" errorParsers="" id="org.eclipse.linuxtools.cdt.autotools.core.toolchain.builder.575490672" incrementalBuildTarget="" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Autotools Makefile Generator"/>
+                            <builder arguments="-j6" buildPath="${workspace_loc:/DAW}/../build/clang-ninja-test/" command="ninja" id="cdt.managedbuild.builder.gnu.cross.297317349" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" superClass="cdt.managedbuild.builder.gnu.cross"/>
                             							
                             <tool errorParsers="" id="cdt.managedbuild.tool.gnu.assembler.mingw.base.1842075714" name="GCC Assembler" superClass="cdt.managedbuild.tool.gnu.assembler.mingw.base">
                                 								
@@ -350,6 +364,8 @@
                                     <listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/}&quot;"/>
                                     									
                                     <listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/soxr/include&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/portmidi/pm_common&quot;"/>
                                     								
                                 </option>
                                 								
@@ -385,9 +401,11 @@
                                     									
                                     <listOptionValue builtIn="false" value="USE_WIN32_EXC_HOOKS"/>
                                     									
-                                    <listOptionValue builtIn="false" value="BUILD_BUILTIN_EFFECT"/>
-                                    									
                                     <listOptionValue builtIn="false" value="ENABLE_MICHAELS_GLIBCXX_HACKS=1"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="BUILD_VSTHOST=1"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="BUILD_EXTERNAL_PLUGIN=0"/>
                                     								
                                 </option>
                                 								
@@ -464,6 +482,10 @@
                                     <listOptionValue builtIn="false" value="NO_EXTEND_WINDOW_CPP"/>
                                     									
                                     <listOptionValue builtIn="false" value="ENABLE_MICHAELS_GLIBCXX_HACKS=1"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="BUILD_VSTHOST=1"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="BUILD_EXTERNAL_PLUGIN=0"/>
                                     								
                                 </option>
                                 								
@@ -624,6 +646,8 @@
                                     <listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/}&quot;"/>
                                     									
                                     <listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/soxr/include&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/portmidi/pm_common&quot;"/>
                                     								
                                 </option>
                                 								
@@ -662,6 +686,10 @@
                                     <listOptionValue builtIn="false" value="BUILD_BUILTIN_EFFECT"/>
                                     									
                                     <listOptionValue builtIn="false" value="ENABLE_MICHAELS_GLIBCXX_HACKS=1"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="BUILD_VSTHOST=1"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="BUILD_EXTERNAL_PLUGIN=0"/>
                                     								
                                 </option>
                                 								
@@ -738,6 +766,10 @@
                                     <listOptionValue builtIn="false" value="NO_EXTEND_WINDOW_CPP"/>
                                     									
                                     <listOptionValue builtIn="false" value="ENABLE_MICHAELS_GLIBCXX_HACKS=1"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="BUILD_VSTHOST=1"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="BUILD_EXTERNAL_PLUGIN=0"/>
                                     								
                                 </option>
                                 								
@@ -851,7 +883,7 @@
                             							
                             <targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.PE" id="cdt.managedbuild.target.gnu.platform.mingw.base.1011075108" name="Debug Platform" osList="win32" superClass="cdt.managedbuild.target.gnu.platform.mingw.base"/>
                             							
-                            <builder arguments="-j 6 -O" autoBuildTarget="" buildPath="${workspace_loc:/DAW}/../build/clang-static-release/" cleanBuildTarget="" command="make" enableAutoBuild="false" enableCleanBuild="true" enabledIncrementalBuild="true" errorParsers="" id="org.eclipse.linuxtools.cdt.autotools.core.toolchain.builder.1337176666" incrementalBuildTarget="" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Autotools Makefile Generator"/>
+                            <builder arguments="-j6" autoBuildTarget="" buildPath="${workspace_loc:/DAW}/../build/clang-static-release/" cleanBuildTarget="clean" command="ninja" enableAutoBuild="false" enableCleanBuild="true" enabledIncrementalBuild="true" errorParsers="" id="org.eclipse.linuxtools.cdt.autotools.core.toolchain.builder.1337176666" incrementalBuildTarget="all" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Autotools Makefile Generator"/>
                             							
                             <tool errorParsers="" id="cdt.managedbuild.tool.gnu.assembler.mingw.base.121792730" name="GCC Assembler" superClass="cdt.managedbuild.tool.gnu.assembler.mingw.base">
                                 								
@@ -898,6 +930,8 @@
                                     <listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/}&quot;"/>
                                     									
                                     <listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/soxr/include&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/portmidi/pm_common&quot;"/>
                                     								
                                 </option>
                                 								
@@ -936,6 +970,10 @@
                                     <listOptionValue builtIn="false" value="BUILD_BUILTIN_EFFECT"/>
                                     									
                                     <listOptionValue builtIn="false" value="ENABLE_MICHAELS_GLIBCXX_HACKS=1"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="BUILD_VSTHOST=1"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="BUILD_EXTERNAL_PLUGIN=0"/>
                                     								
                                 </option>
                                 								
@@ -1012,6 +1050,10 @@
                                     <listOptionValue builtIn="false" value="NO_EXTEND_WINDOW_CPP"/>
                                     									
                                     <listOptionValue builtIn="false" value="ENABLE_MICHAELS_GLIBCXX_HACKS=1"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="BUILD_VSTHOST=1"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="BUILD_EXTERNAL_PLUGIN=0"/>
                                     								
                                 </option>
                                 								
@@ -1170,6 +1212,8 @@
                                     <listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/}&quot;"/>
                                     									
                                     <listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/soxr/include&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/portmidi/pm_common&quot;"/>
                                     								
                                 </option>
                                 								
@@ -1208,6 +1252,10 @@
                                     <listOptionValue builtIn="false" value="BUILD_BUILTIN_EFFECT"/>
                                     									
                                     <listOptionValue builtIn="false" value="ENABLE_MICHAELS_GLIBCXX_HACKS=1"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="BUILD_VSTHOST=1"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="BUILD_EXTERNAL_PLUGIN=0"/>
                                     								
                                 </option>
                                 								
@@ -1284,6 +1332,10 @@
                                     <listOptionValue builtIn="false" value="NO_EXTEND_WINDOW_CPP"/>
                                     									
                                     <listOptionValue builtIn="false" value="ENABLE_MICHAELS_GLIBCXX_HACKS=1"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="BUILD_VSTHOST=1"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="BUILD_EXTERNAL_PLUGIN=0"/>
                                     								
                                 </option>
                                 								
@@ -1442,6 +1494,8 @@
                                     <listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/}&quot;"/>
                                     									
                                     <listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/soxr/include&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/portmidi/pm_common&quot;"/>
                                     								
                                 </option>
                                 								
@@ -1480,6 +1534,10 @@
                                     <listOptionValue builtIn="false" value="BUILD_BUILTIN_EFFECT"/>
                                     									
                                     <listOptionValue builtIn="false" value="ENABLE_MICHAELS_GLIBCXX_HACKS=1"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="BUILD_VSTHOST=1"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="BUILD_EXTERNAL_PLUGIN=0"/>
                                     								
                                 </option>
                                 								
@@ -1556,6 +1614,10 @@
                                     <listOptionValue builtIn="false" value="NO_EXTEND_WINDOW_CPP"/>
                                     									
                                     <listOptionValue builtIn="false" value="ENABLE_MICHAELS_GLIBCXX_HACKS=1"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="BUILD_VSTHOST=1"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="BUILD_EXTERNAL_PLUGIN=0"/>
                                     								
                                 </option>
                                 								
@@ -1669,7 +1731,7 @@
                             							
                             <targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.PE" id="cdt.managedbuild.target.gnu.platform.mingw.base.405161629" name="Debug Platform" osList="win32" superClass="cdt.managedbuild.target.gnu.platform.mingw.base"/>
                             							
-                            <builder arguments="-j 7" autoBuildTarget="" buildPath="${workspace_loc:/DAW}/../build/clang-ninja-test/" cleanBuildTarget="clean" command="ninja" enableAutoBuild="false" enableCleanBuild="true" enabledIncrementalBuild="true" errorParsers="" id="org.eclipse.linuxtools.cdt.autotools.core.toolchain.builder.575490672.2082488734" incrementalBuildTarget="" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Autotools Makefile Generator"/>
+                            <builder arguments="-j 7" autoBuildTarget="" buildPath="${workspace_loc:/DAW}/../build/clang-test/" cleanBuildTarget="clean" command="ninja" enableAutoBuild="false" enableCleanBuild="true" enabledIncrementalBuild="true" errorParsers="" id="org.eclipse.linuxtools.cdt.autotools.core.toolchain.builder.575490672.2082488734" incrementalBuildTarget="" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Autotools Makefile Generator"/>
                             							
                             <tool errorParsers="" id="cdt.managedbuild.tool.gnu.assembler.mingw.base.2085857330" name="GCC Assembler" superClass="cdt.managedbuild.tool.gnu.assembler.mingw.base">
                                 								
@@ -1714,6 +1776,8 @@
                                     <listOptionValue builtIn="false" value="&quot;${workspace_loc:/${ProjName}/}&quot;"/>
                                     									
                                     <listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/soxr/include&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/portmidi/pm_common&quot;"/>
                                     								
                                 </option>
                                 								
@@ -1752,6 +1816,10 @@
                                     <listOptionValue builtIn="false" value="BUILD_BUILTIN_EFFECT"/>
                                     									
                                     <listOptionValue builtIn="false" value="ENABLE_MICHAELS_GLIBCXX_HACKS=1"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="BUILD_VSTHOST=1"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="BUILD_EXTERNAL_PLUGIN=0"/>
                                     								
                                 </option>
                                 								
@@ -1828,6 +1896,10 @@
                                     <listOptionValue builtIn="false" value="NO_EXTEND_WINDOW_CPP"/>
                                     									
                                     <listOptionValue builtIn="false" value="ENABLE_MICHAELS_GLIBCXX_HACKS=1"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="BUILD_VSTHOST=1"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="BUILD_EXTERNAL_PLUGIN=0"/>
                                     								
                                 </option>
                                 								
@@ -1918,6 +1990,8 @@
     <storageModule moduleId="org.eclipse.cdt.core.LanguageSettingsProviders"/>
     	
     <storageModule moduleId="refreshScope" versionNumber="2">
+        		
+        <configuration configurationName="clang-static-debug-053c581"/>
         		
         <configuration configurationName="gnu-static-debug">
             			
@@ -2037,7 +2111,19 @@
             		
         </scannerConfigBuildInfo>
         		
+        <scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.1677002235;cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.1677002235.;cdt.managedbuild.tool.gnu.c.compiler.mingw.base.1353910300;cdt.managedbuild.tool.gnu.c.compiler.input.941061148">
+            			
+            <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+            		
+        </scannerConfigBuildInfo>
+        		
         <scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100;cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.;cdt.managedbuild.tool.gnu.c.compiler.mingw.base.1533097334;cdt.managedbuild.tool.gnu.c.compiler.input.14326597">
+            			
+            <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+            		
+        </scannerConfigBuildInfo>
+        		
+        <scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.1012399357;cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.1012399357.;cdt.managedbuild.tool.gnu.c.compiler.mingw.base.1480213350;cdt.managedbuild.tool.gnu.c.compiler.input.50000982">
             			
             <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
             		
@@ -2080,6 +2166,18 @@
         </scannerConfigBuildInfo>
         		
         <scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.2063177661;cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.2063177661.;cdt.managedbuild.tool.gnu.c.compiler.mingw.base.2064514323;cdt.managedbuild.tool.gnu.c.compiler.input.790756213">
+            			
+            <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+            		
+        </scannerConfigBuildInfo>
+        		
+        <scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.1677002235;cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.1677002235.;cdt.managedbuild.tool.gnu.cpp.compiler.mingw.base.1994964731;cdt.managedbuild.tool.gnu.cpp.compiler.input.796779896">
+            			
+            <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+            		
+        </scannerConfigBuildInfo>
+        		
+        <scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.1012399357;cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.1012399357.;cdt.managedbuild.tool.gnu.cpp.compiler.mingw.base.2089074305;cdt.managedbuild.tool.gnu.cpp.compiler.input.103016907">
             			
             <autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
             		
