@@ -1,3 +1,4 @@
+#include "glheaders.h"
 #include "about.h"
 #include "math/vec.h"
 #include "str_util.h"
@@ -40,6 +41,9 @@ void guidialog_about::render(NVGcontext* vg) {
 #if defined(_WIN32) && defined(WINVER)
 	strings.emplace_back(String("WINVER: "), StringFormat("0x%04X", WINVER));
 #endif
+	strings.emplace_back(String("GL_RENDERER: "), StringFormat("%s",glGetString(GL_RENDERER)));
+	strings.emplace_back(String("GL_VERSION: "), StringFormat("%s",glGetString(GL_VERSION)));
+	strings.emplace_back(String("GL_VENDOR: "), StringFormat("%s",glGetString(GL_VENDOR)));
 	int x = 0;
 	int y = 0;
 	float lineh;
