@@ -190,3 +190,34 @@ void guictr_tempocontrols::buttonClicked(guibase* button) {
 		}
 	}
 }
+
+
+void guibutton_audioengine::render(NVGcontext* vg) {
+	host_stats_t stats;
+	vsthost::getInstance()->getStats(stats);
+	if (getTimeMillisd() - lastT2 >= 2000.0) {
+		lastT2 = getTimeMillisd();
+	}
+	if (stats.tickBar != lastNumBlocks) {
+		lastT = getTimeMillisd() + 300.0;
+		lastNumBlocks = stats.tickBar;
+	}
+	int32_t fl = getStateFlags();
+	renderWidgetBorder(vg, fl);
+	renderButtonLabel(vg, fl);
+}
+
+NVGcolor guibutton_audioengine::getBackgroundColor(int stateflags) const {
+	NVGcolor c = theme->getBgColor(stateflags);
+	if (lastT > getTimeMillisd()) {
+		double tFlash = lastT - getTimeMillisd();
+		vec4 v { c.r, c.g, c.b, c.a };
+		vec4 v2 = v;
+		v2.r = math::min(1.0, v.r*2.0);
+		v2.b = math::min(1.0, v.b*2.0);
+		float d = (float) (math::clamp(tFlash / 300.0, 0.0, 1.0));
+		v = v + d * (v2 - v);
+		return NVGcolor { v.x, v.y, v.z, v.w };
+	}
+	return c;
+}

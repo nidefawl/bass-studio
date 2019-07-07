@@ -14,6 +14,7 @@
 #include "knob.h"
 #include "host/vst_host.h"
 #include "host/mainctrl.h"
+#include "platform.h"
 
 void testTask();
 class gui_tempocontrol : public guibuttonbase {
