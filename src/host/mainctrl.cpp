@@ -575,7 +575,7 @@ void MainCtrl::postInit() {
 	midihost::getInstance()->startMidi();
 //	vsthost::getInstance()->postInit();
 	if (!loadProject.empty()) {
-		loadFile(loadProject, 0);
+		loadFile(loadProject, FLAG_DEFER_LOAD);
 	}
 
 	view->ctr_effectlib.update();
@@ -1207,6 +1207,10 @@ bool MainCtrl::processGlobalKeyevent(KeyEvent& event) {
 		}
 		if (isKC(KC_SAVEAS, event)) {
 			menuCommand(CMD_FILE_SAVEAS);
+			return true;
+		}
+		if (isKC({ 0, KEY_TAB, nullptr }, event)) {
+			menuCommand(CMD_PREFERENCES);
 			return true;
 		}
 	}
