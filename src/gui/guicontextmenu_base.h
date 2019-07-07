@@ -12,18 +12,16 @@ struct NvgImageTexture;
 }
 class ctxtmenu_entry {
 public:
+	int id = 0;
 	String title;
 	int width = -1;
 	int height = 0;
-	int id = 0;
 	int y = 0;
 	int fontSize = 0;
 	guitheme_t* theme = nullptr;
 	int fixedLeftOffset = -1;
 	RenderResources::NvgImageTexture* icon = nullptr;
-	ctxtmenu_entry(String _title, int _id) {
-		this->id = _id;
-		this->title = _title;
+	ctxtmenu_entry(String _title, int _id) : id(_id), title(_title) {
 	}
 	virtual ~ctxtmenu_entry() {
 

@@ -72,7 +72,7 @@ public:
 		}
 		renderFrameBase(vg);
 		int flags = parentCtrl->isCtrOrChildFocused(this) ? FLAG_FOCUSED : 0;
-		renderTitleBar(vg, this->text, GuiConstant::CONST_FIXED_TITLE_HEIGHT, buttonBypass.right(), flags, true);
+		renderTitleBar(vg, size, this->text, GuiConstant::CONST_FIXED_TITLE_HEIGHT, buttonBypass.right(), flags, true);
 		renderFrameOutline(vg);
 		buttonBypass.render(vg);
 		guiknob* knobs[3] = {&clock, &gate, &pattern};

@@ -97,6 +97,16 @@ public:
 	int getFlags() const {
 		return flags;
 	}
+	virtual bool isFlag(int32_t flag) const {
+		return (flags & flag) != 0;
+	}
+	virtual bool setFlag(int32_t flag, bool b) {
+		if (!b)
+			flags &= ~flag;
+		else
+			flags |= flag;
+		return (flags & flag) != 0;
+	}
 	virtual bool isBackgroundRendered() const {
 		return (flags & FLG_RENDER_BACKGROUND) != 0;
 	}

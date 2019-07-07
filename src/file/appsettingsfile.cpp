@@ -12,6 +12,7 @@
 #include "str_util.h"
 #include "exceptions.h"
 #include "msgbox.h"
+#include "host/audio_config.h"
 
 using namespace cereal;
 
@@ -36,7 +37,22 @@ void serialize(Archive & ar, windowsize& settings) {
 		  p.rcNormalPosition.bottom);
 }
 #endif
-
+namespace AudioIO {
+template<class Archive>
+void serialize(Archive & ar, io_cfg_tracks& cfg) {
+	ar(cereal::make_nvp("isInit", cfg.isInit),
+	cereal::make_nvp("inputs", cfg.input),
+	cereal::make_nvp("outputs", cfg.output));
+}
+template<class Archive>
+void serialize(Archive & ar, io_cfg_channel& settings) {
+	using cereal::make_nvp;
+	ar(make_nvp("idx", settings.idx),
+		make_nvp("channelOffset", settings.channelOffset),
+		make_nvp("name", settings.name),
+		make_nvp("type", settings.type));
+}
+}
 template<class Archive>
 void serialize(Archive & ar, io_channel& cfg) {
 	ar(cereal::make_nvp("channels", cfg.channels),
@@ -75,6 +91,7 @@ void serialize(Archive & ar, app_iosettings& settings) {
 	make_optional_nvp(ar, "io_midi", settings.midiconfigs);
 	make_optional_nvp(ar, "io_audio", settings.configs);
 	make_optional_nvp(ar, "io_asio", settings.asioConfig);
+	make_optional_nvp(ar, "io_channels", settings.channelConfigs);
 }
 template<class Archive>
 void serialize(Archive & ar, appsettings& settings) {

@@ -18,6 +18,7 @@
 #include "trackautomation.h"
 #include "trackcontent.h"
 #include "dropdown.h"
+#include "dropdown_generic.h"
 #include "dsp_util.h"
 #include "str_util.h"
 #include "guimeter.h"
@@ -27,6 +28,8 @@
 #include "subtrack.h"
 #include "meter.h"
 #include "guitooltip.h"
+#include "appsettings.h"
+#include "host/audio_host.h"
 
 const int resizeHitY = 8;
 const int DRAG_RESIZE = 1;
@@ -245,6 +248,149 @@ namespace GuiColor {
 constant_t COL_BTN_LOAD_DEF_PLUGINS("COL_BTN_LOAD_DEF_PLUGINS", 0xFFFFFFFF);
 }
 class gui_subtrack_waveview;
+
+std::shared_ptr<guibase> getMeter(int32_t t, rmsmeter<16000>* meter);
+class gui_trackcontrols_io: public guictr_base {
+
+	class guidropdown_select_channel : public guidropdownbase {
+		track_t* const m_track;
+		const bool isInput;
+
+
+		class guidropdown_select_channel_ctxt : public guictxtmenu {
+			track_t* const m_track;
+			const bool isInput;
+
+			class ctxtmenu_entry_channel : public ctxtmenu_entry {
+			public:
+				const AudioIO::io_cfg_channel channel;
+				const bool isInput;
+
+				ctxtmenu_entry_channel(int32_t _id, AudioIO::io_cfg_channel& _channel, bool _isInput)
+				: ctxtmenu_entry(_channel.name, _id), channel(_channel), isInput(_isInput) {
+				}
+				ctxtmenu_entry_channel(int32_t _id, String name, bool _isInput)
+				: ctxtmenu_entry(name, _id), channel(), isInput(_isInput) {
+				}
+//				virtual ~ctxtmenu_entry_channel() {
+//
+//				}
+				void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) override {
+					if (contains(ctxtSize, mouse)) {
+						nvgBeginPath(vg);
+						nvgRect(vg, 0, y, ctxtSize.x, height);
+						nvgFillColor(vg, theme->getColor(GuiColor::COL_CTXTMNU_HILIGHT));
+						nvgFill(vg);
+					}
+					setFont(vg, this->fontSize, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+					nvgText(vg, leftOffset(), y + height / 2, StringAsCStr(title), NULL);
+					if (channel.idx > -1) {
+						auto* stream = audiohost::getInstance()->getStream(0);
+						if (stream) {
+
+							auto& allMeters = isInput ? stream->metersInput : stream->metersOutput;
+							int32_t nChannels = AudioIO::getNumChannelsTrackType(channel.type);
+							auto rmsMtr = rmsmeter<16000>(allMeters.channels+channel.channelOffset, nChannels);
+							ivec2 sizeMeter{height-2, height-2};
+							renderMeterAt(vg, theme, {width-sizeMeter.x+1, y+1}, sizeMeter, &rmsMtr);
+						}
+					}
+				}
+			};
+		public:
+			guidropdown_select_channel_ctxt(track_t* _track, bool _isInput) : m_track(_track), isInput(_isInput) {
+				this->size.x = 120;
+				this->fontSize = FONT_SIZE_CTXT_SMALL;
+				this->paddingV = 0;
+				int32_t idx = 0;
+				auto& cfg = settings.iosettings.getChannelConfig(settings.iosettings.device_api);
+				auto& list = isInput ? cfg.input : cfg.output;
+				addEntry(new ctxtmenu_entry_channel(idx++, "None", isInput));
+				for (auto& channel : list) {
+					addEntry(new ctxtmenu_entry_channel(idx, channel, isInput));
+					idx++;
+				}
+			}
+			void clicked(int _id) {
+				closeContextMenu();
+				auto& cfg = settings.iosettings.getChannelConfig(settings.iosettings.device_api);
+				auto& list = isInput ? cfg.input : cfg.output;
+				if (_id == 0) {
+					if (isInput) {
+						m_track->audio->inputChannel = ChannelNone();
+					} else {
+						m_track->audio->outputChannel = ChannelNone();
+					}
+				} else if (_id - 1 >= 0 && _id - 1 < list.size()) {
+					_id--;
+					auto& ch = list[_id];
+					if (m_track->audio) {
+						auto chLink = ChannelAudioInput(ch.idx, ch.channelOffset, AudioIO::getTrackNameShort(ch.type, ch.idx, isInput), ch.type);
+						if (isInput) {
+							m_track->audio->inputChannel = chLink;
+						} else {
+							m_track->audio->outputChannel = chLink;
+						}
+					}
+				}
+			}
+		};
+	public:
+		guidropdown_select_channel(track_t* _track, bool _isInput) :
+			guidropdownbase(), m_track(_track), isInput(_isInput) {
+		}
+		String getString() {
+			return isInput ? m_track->audio->inputChannel.name : m_track->audio->outputChannel.name;
+		}
+		virtual void handleDraggedRelease(MouseEvent& evt) {
+			guictxtmenu_base *popup = new guidropdown_select_channel_ctxt(m_track, isInput);
+			popup->size = size;
+			popup->setFontSize(size.y);
+			popup->size.x = math::max(250, popup->size.x);
+			this->parentCtrl->openContextMenu(popup, toScreenSpace(ivec2(0, size.y))-popup->pos+ivec2(1));
+		}
+	};
+	track_t* const m_track;
+	guidropdown_select_channel selectInput;
+	guidropdown_select_channel selectOutput;
+public:
+	gui_trackcontrols_io(track_t* _track) :
+		guictr_base(), m_track(_track), selectInput(_track, true), selectOutput(_track, false) {
+		add(&selectInput);
+		add(&selectOutput);
+		padding = 0;
+	}
+	~gui_trackcontrols_io() {
+		remove(&selectOutput);
+		remove(&selectInput);
+	}
+	void layout() {
+		const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
+		int32_t inset = 1;
+		selectInput.pos = ivec2(inset, inset);
+		selectOutput.pos = ivec2(inset, TRACK_HEIGHT_STEP+inset);
+		selectInput.size = getSizeContent() - ivec2(inset*2);
+		selectInput.size.y = TRACK_HEIGHT_STEP-inset*2;
+		selectOutput.size = selectInput.size;
+		for (auto gui : guis) {
+			gui->layout();
+		}
+	}
+
+	void render(NVGcontext* vg) {
+		if (!setScissorTransform(vg)) {
+			return;
+		}
+		for (auto gui : guis) {
+			if (gui->isVisible()) {
+				gui->render(vg);
+			}
+		}
+	}
+	bool isStaticContainer() {
+		return false;
+	}
+};
 class gui_trackcontrols_mixer: public guictr_base {
 	track_t* const m_track;
 	gui_trackmeter<16000,2> meter;
@@ -781,9 +927,11 @@ gui_track_controls::gui_track_controls(track_t* _track)
 	: guictr_base(),
 	  m_track(_track),
 	  title(new gui_trackcontrols_title(_track)),
-	  mixer(new gui_trackcontrols_mixer(_track)) {
+	  mixer(new gui_trackcontrols_mixer(_track)),
+	  io(new gui_trackcontrols_io(_track)) {
 	add(title);
 	add(mixer);
+	add(io);
 	padding = 0;
 }
 gui_track_controls::~gui_track_controls() {
@@ -791,9 +939,11 @@ gui_track_controls::~gui_track_controls() {
 		remove(ctrl);
 		delete ctrl;
 	}
+	remove(io);
 	remove(mixer);
 	remove(title);
-	delete mixer;
+	delete mixer;;
+	delete io;
 	delete title;
 }
 void gui_track_controls::addSubtrackMixer(track_t* t, gui_track_subtrack* al) {
@@ -856,6 +1006,10 @@ void gui_track_controls::render(NVGcontext* vg) {
 	nvgBeginPath(vg);
 	nvgMoveTo(vg, title->right(), 0);
 	nvgLineTo(vg, title->right(), size.y);
+	if (io->isVisible()) {
+		nvgMoveTo(vg, io->right(), 0);
+		nvgLineTo(vg, io->right(), size.y);
+	}
 	for (gui_track_subtrack_mixer* g : automationLaneControls) {
 		nvgMoveTo(vg, g->left(), g->top()-TRACK_HEIGHT_SPACING_HALF);
 		nvgLineTo(vg, g->right(), g->top()-TRACK_HEIGHT_SPACING_HALF);
@@ -902,15 +1056,26 @@ bool gui_track_controls::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 	}
 	return contained; // always need to return true if contained, parent has z-order
 }
+namespace GuiConstant {
+GuiConstant::constant_t CONST_MIXER_WIDTH("CONST_MIXER_WIDTH", 160);
+GuiConstant::constant_t CONST_TRACK_IO_WIDTH("CONST_TRACK_IO_WIDTH", 180);
+}
 void gui_track_controls::layout() {
 	const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
-	int32_t mxW = 160;
-	int32_t titleW = size.x - mxW;
-	mixer->size = ivec2(mxW - TRACK_HEIGHT_SPACING, size.y);
+	const int32_t TRACK_IO_WIDTH = theme->get(GuiConstant::CONST_TRACK_IO_WIDTH);
+	const int32_t TRACK_MIXER_WIDTH = theme->get(GuiConstant::CONST_MIXER_WIDTH);
+	int32_t titleW = size.x - TRACK_MIXER_WIDTH;
+	if (io->isVisible()) {
+		titleW -= TRACK_IO_WIDTH;
+	}
+	mixer->size = ivec2(TRACK_MIXER_WIDTH - TRACK_HEIGHT_SPACING, size.y);
 	int32_t trH = m_track->hideTrack ? 1 : m_track->height;
 	title->size = ivec2(titleW - TRACK_HEIGHT_SPACING, trH*TRACK_HEIGHT_STEP);
 	title->pos = ivec2(TRACK_HEIGHT_SPACING_HALF, 0);
-	mixer->pos = ivec2(size.x - mixer->size.x + TRACK_HEIGHT_SPACING_HALF, 0);
+	mixer->pos = ivec2(size.x - TRACK_MIXER_WIDTH + TRACK_HEIGHT_SPACING_HALF, 0);
+
+	io->size = ivec2(TRACK_IO_WIDTH - TRACK_HEIGHT_SPACING, size.y);
+	io->pos = ivec2(size.x - TRACK_MIXER_WIDTH - TRACK_IO_WIDTH + TRACK_HEIGHT_SPACING_HALF, 0);
 	for (gui_track_subtrack_mixer* ctrl : automationLaneControls) {
 		ctrl->pos = ivec2(title->pos.x, ctrl->subtrack->pos.y-pos.y);
 		ctrl->size = ivec2(title->size.x, ctrl->subtrack->size.y);

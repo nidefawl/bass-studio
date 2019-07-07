@@ -15,6 +15,8 @@
 #include <numeric>
 //#include <memory>
 
+using namespace AudioIO;
+
 
 bool error(const char* msg, PaError err) {
 	log_printf("Error in %s\n", msg);
@@ -123,19 +125,25 @@ static void StreamFinished(void* userData)
 	stream->streamFinished = true;
 }
 
-audiohost::audiostream::audiostream(int32_t _nStreamId, int32_t _nOutputChannels, int32_t _nInputChannels)
-	: nInputChannels(_nInputChannels),
-	  streamId(_nStreamId),
+audiohost::audiostream::audiostream(int32_t _nStreamId, io_cfg_tracks cfg, int32_t _nOutputChannels, int32_t _nInputChannels)
+	: streamId(_nStreamId),
+	  nInputChannels(_nInputChannels),
 	  nOutputChannels(_nOutputChannels)
 {
 	allocRingBuffer(ringbuffer, nInputChannels);
-	metersInput.resize(nInputChannels);
-	metersOutput.resize(nOutputChannels);
-	for (int32_t i = 0; i < nInputChannels; i++) {
-		metersInput[i] = std::make_shared<meterType>();
+	tracksInput.resize(cfg.input.size());
+	tracksOutput.resize(cfg.output.size());
+	int32_t channelOffset = 0;
+	for (int32_t i = 0; i < cfg.input.size(); i++) {
+		io_cfg_channel& track = cfg.input[i];
+		tracksInput[i] = std::make_shared<audiotrack>(i, track.type, channelOffset, metersInput.channels + channelOffset);
+		channelOffset += getNumChannelsTrackType(track.type);
 	}
-	for (int32_t i = 0; i < nOutputChannels; i++) {
-		metersOutput[i] = std::make_shared<meterType>();
+	channelOffset = 0;
+	for (int32_t i = 0; i < cfg.output.size(); i++) {
+		io_cfg_channel& track = cfg.output[i];
+		tracksOutput[i] = std::make_shared<audiotrack>(i, track.type, channelOffset, metersOutput.channels + channelOffset);
+		channelOffset += getNumChannelsTrackType(track.type);
 	}
 }
 audiohost::audiostream::~audiostream() {
@@ -200,12 +208,17 @@ void audiohost::audiostream::enqueueInput(AudioBuffer* buf) {
 	if (streamFinished) {
 		return;
 	}
-	int32_t nChannels = math::min<int32_t>(buf->output->channels, this->nInputChannels);
-	for (int32_t i = 0; i < nChannels; i++) {
-		float* arr[1] = { buf->output->buf[i] };
-		AudioBlock bufTmp(arr, 1, buf->output->samples);
-		metersInput[i]->update(&bufTmp, 1.0f);
-		metersInput[i]->onTick(buf->output->samples/(double)this->host->lSampleRate);
+	AudioBlock* blockIn = buf->output;
+	metersInput.update(blockIn, 1.0f);
+	metersInput.onTick(blockIn->samples/(double)this->host->lSampleRate);
+	for (int32_t nTrack = 0; nTrack < tracksInput.size(); nTrack++) {
+		auto* track = tracksInput[nTrack].get();
+		assert(track->buf.channels <= buf->output->channels);
+		track->buf.realloc(blockIn->samples);
+		track->buf.copyFrom(blockIn, [offset=track->channelOffset](uint32_t dstIdx, uint32_t srcIdx) {
+			return offset+dstIdx;
+		});
+		track->meter.onTick(buf->output->samples/(double)this->host->lSampleRate);
 	}
 //	dbgassert(isStreaming());
 	this->audioQueueInput.enqueue(buf);
@@ -220,12 +233,16 @@ void audiohost::audiostream::enqueue(AudioBuffer* buf) {
 	if (streamFinished) {
 		return;
 	}
-	int32_t nChannels = math::min<int32_t>(buf->output->channels, this->nOutputChannels);
-	for (int32_t i = 0; i < nChannels; i++) {
-		float* arr[1] = { buf->output->buf[i] };
-		AudioBlock bufTmp(arr, 1, buf->output->samples);
-		metersOutput[i]->update(&bufTmp, 1.0f);
-		metersOutput[i]->onTick(buf->output->samples/(double)this->host->lSampleRate);
+	AudioBlock* blockIn = buf->output;
+	metersOutput.update(blockIn, 1.0f);
+	metersOutput.onTick(blockIn->samples/(double)this->host->lSampleRate);
+	for (int32_t nTrack = 0; nTrack < tracksOutput.size(); nTrack++) {
+		auto* track = tracksOutput[nTrack].get();
+		assert(track->buf.channels <= buf->output->channels);
+		track->buf.realloc(blockIn->samples);
+		track->buf.copyFrom(blockIn, [offset=track->channelOffset](uint32_t dstIdx, uint32_t srcIdx) {
+			return offset+dstIdx;
+		});
 	}
 //	dbgassert(isStreaming());
 	this->audioQueue.enqueue(buf);
@@ -246,6 +263,7 @@ bool audiohost::startAudio() {
 	const char* selApiNameCStr = StringAsCStr(settings.iosettings.device_api);
 	auto cfg = settings.iosettings.getConfig(settings.iosettings.device_api);
 	auto asioConfig = settings.iosettings.asioConfig;
+	auto& channelConfig = settings.iosettings.getChannelConfig(settings.iosettings.device_api);
 	using ptr_audiostream = std::shared_ptr<audiostream>;
 	std::vector<ptr_audiostream> vecStreams;
 
@@ -332,7 +350,42 @@ bool audiohost::startAudio() {
 	}
 	my_printf("With %d input channels\n", inputParams.channelCount);
 	int32_t streamId = ++nextStreamId;
-	auto stream = std::make_shared<audiostream>(streamId, outputParams.channelCount, inputParams.channelCount);
+	io_cfg_tracks chCfg;
+	if (channelConfig.isInit) {
+		chCfg = channelConfig;
+	} else {
+		int32_t chIdx = 0;
+		for (int i = 0; i < outputParams.channelCount;) {
+			io_cfg_channel channels;
+			channels.idx = chIdx++;
+			if (i+1 < outputParams.channelCount) {
+				channels.type = STEREO;
+			} else {
+				channels.type = MONO;
+			}
+			channels.name = AudioIO::getTrackName(channels.type, channels.idx, false);
+			channels.channelOffset = i;
+			i += getNumChannelsTrackType(channels.type);
+			chCfg.output.push_back(channels);
+		}
+		chIdx = 0;
+		for (int i = 0; devInfoInput && i < inputParams.channelCount;) {
+			io_cfg_channel channels;
+			channels.idx = chIdx++;
+			if (i+1 < outputParams.channelCount) {
+				channels.type = STEREO;
+			} else {
+				channels.type = MONO;
+			}
+			channels.name = AudioIO::getTrackName(channels.type, channels.idx, true);
+			channels.channelOffset = i;
+			i += getNumChannelsTrackType(channels.type);
+			chCfg.input.push_back(channels);
+		}
+		chCfg.isInit = true;
+		channelConfig = chCfg;
+	}
+	auto stream = std::make_shared<audiostream>(streamId, chCfg, outputParams.channelCount, inputParams.channelCount);
 	stream->idx = vecStreams.size();
 	stream->host = this;
 	stream->outputName = devInfo->name;
@@ -394,4 +447,85 @@ bool audiohost::stopAudio() {
 	}
 	assert(streams.empty());
 	return n > 0;
+}
+
+namespace AudioIO {
+
+tracktype getTrackTypeNumChannels(int32_t t) {
+	if (t < 2)
+		return MONO;
+
+	if (t < 3)
+		return STEREO;
+
+	if (t < 5)
+		return MULTI_CHANNEL_4;
+
+	return MULTI_CHANNEL_6;
+}
+
+int32_t getNumChannelsTrackType(tracktype t) {
+	switch (t) {
+	default:
+	case MONO:
+		return 1;
+	case STEREO:
+		return 2;
+	case MULTI_CHANNEL_4:
+		return 4;
+	case MULTI_CHANNEL_6:
+		return 6;
+	}
+}
+
+String getTrackNameShort(AudioIO::tracktype type, int32_t index, bool isInput) {
+	String s = StringFormat("%d", index);
+	if (isInput) {
+		s += " IN";
+	} else {
+		s += " OUT";
+	}
+	switch (type) {
+	default:
+	case AudioIO::MONO:
+		s = "Mono "+s;
+		break;
+	case AudioIO::STEREO:
+		s = "St. "+s;
+		break;
+	case AudioIO::MULTI_CHANNEL_4:
+		s = "4CH "+s;
+		break;
+	case AudioIO::MULTI_CHANNEL_6:
+		s = "6CH "+s;
+		break;
+	}
+	return s;
+
+
+}
+String getTrackName(AudioIO::tracktype type, int32_t index, bool isInput) {
+	String s = StringFormat("%d", index);
+	if (isInput) {
+		s += " Input";
+	} else {
+		s += " Output";
+	}
+	switch (type) {
+	default:
+	case AudioIO::MONO:
+		s = "Mono "+s;
+		break;
+	case AudioIO::STEREO:
+		s = "Stereo "+s;
+		break;
+	case AudioIO::MULTI_CHANNEL_4:
+		s = "4 Channel "+s;
+		break;
+	case AudioIO::MULTI_CHANNEL_6:
+		s = "6 Channel "+s;
+		break;
+	}
+	return s;
+}
 }

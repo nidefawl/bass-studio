@@ -16,7 +16,9 @@
 #include "logging.h"
 
 #include "guicontextmenu_daw.h"
-
+namespace GuiConstant {
+GuiConstant::constant_t CONST_TRACK_CONTROLS_WIDTH("CONST_TRACK_CONTROLS_WIDTH", 460);
+}
 
 void guitrack_mixers::render(NVGcontext* vg) {
 	if (!setScissorTransform(vg)) {
@@ -155,22 +157,22 @@ void guictr_tracks::scrollTo(guibase* g) {
 }
 void guictr_tracks::layout() {
 	bool trackCtrlsLeft = true;
-	const int mixerwidth = 380;
+	const int32_t trackControlsWidth = theme->get(GuiConstant::CONST_TRACK_CONTROLS_WIDTH);
 	int scrollW = gui_scrollbar::defaultW;
 
 	ivec2 cs = getSizeContent();
 	scrollbar.pos = ivec2(cs.x-scrollW, 0);
 	scrollbar.size = ivec2(scrollW, cs.y);
 	cs.x -= scrollW;
-	trackTimeline.pos = ivec2(trackCtrlsLeft?mixerwidth:0, 0);
-	trackTimeline.pos = ivec2(trackCtrlsLeft?mixerwidth:0, 0);
-	trackTimeline.size = ivec2(cs.x - mixerwidth, 32);
+	trackTimeline.pos = ivec2(trackCtrlsLeft?trackControlsWidth:0, 0);
+	trackTimeline.pos = ivec2(trackCtrlsLeft?trackControlsWidth:0, 0);
+	trackTimeline.size = ivec2(cs.x - trackControlsWidth, 32);
 	loophandles.pos = ivec2(trackTimeline.left(), trackTimeline.bottom());
 	loophandles.size = ivec2(trackTimeline.size.x, heightTimelineControls);
-	trackView.pos = ivec2(trackCtrlsLeft?mixerwidth:0, loophandles.bottom());
-	trackControls.pos = ivec2(trackCtrlsLeft?0:cs.x - mixerwidth, loophandles.bottom());
-	trackView.size = ivec2(cs.x - mixerwidth, cs.y - loophandles.bottom());
-	trackControls.size = ivec2(mixerwidth, trackView.size.y);
+	trackView.pos = ivec2(trackCtrlsLeft?trackControlsWidth:0, loophandles.bottom());
+	trackControls.pos = ivec2(trackCtrlsLeft?0:cs.x - trackControlsWidth, loophandles.bottom());
+	trackView.size = ivec2(cs.x - trackControlsWidth, cs.y - loophandles.bottom());
+	trackControls.size = ivec2(trackControlsWidth, trackView.size.y);
 
 	loophandles.clipViewSize = ivec2(trackView.size.x, trackView.size.y+loophandles.size.y);
 

@@ -26,6 +26,28 @@ constexpr int TITLE_FONT_SIZE = 30;
 constexpr int TEXT_FONT_SIZE = 20;
 constexpr int BTN_FONT_SIZE = 16;
 constexpr int ROW_FONT_SIZE = 18;
+namespace GuiConstant {
+
+extern constant_t CONST_SMALL_LABEL_HEIGHT;
+}
+using meterType = rmsmeter<16000>;
+using guimeterTypeMono = gui_trackmeter<16000,1>;
+using guimeterTypeStereo = gui_trackmeter<16000,2>;
+using guimeterType4Ch = gui_trackmeter<16000,4>;
+using guimeterType6Ch = gui_trackmeter<16000,6>;
+
+std::shared_ptr<guibase> getMeter(int32_t t, meterType* meter) {
+	if (t < 2)
+		return std::make_shared<guimeterTypeMono>(meter);
+
+	if (t < 3)
+		return std::make_shared<guimeterTypeStereo>(meter);
+
+	if (t < 5)
+		return std::make_shared<guimeterType4Ch>(meter);
+
+	return std::make_shared<guimeterType6Ch>(meter);
+}
 
 class guidropdown_setting_options_t;
 class guidropdown_setting_options_ctxt_t: public guictxtmenu {
@@ -202,8 +224,8 @@ public:
 class gui_listentry_audiodevice : public gui_list_entry {
 	String deviceAPI;
 	String deviceName;
-	const bool isInput;
 	const int32_t nChannels;
+	const bool isInput;
 public:
 	gui_listentry_audiodevice(String _deviceAPI, String _deviceName, int32_t _nChannels, bool _isInput)
 	: gui_list_entry(), deviceAPI(_deviceAPI), deviceName(_deviceName), nChannels(_nChannels), isInput(_isInput) {
@@ -318,12 +340,277 @@ void updateSrBs() {
 		mctrl->startPlaying();
 	}
 };
-class guictr_input_meters : public guictr_base {
-	using meterType = rmsmeter<16000, 1>;
-	using guimeterType = gui_trackmeter<16000,1>;
-	std::vector<guimeterType*> guiMeters;
+
+namespace AudioIO {
+tracktype getNextTrackType(tracktype type) {
+	switch (type) {
+	default:
+	case MONO:
+		return STEREO;
+	case STEREO:
+		return MONO;
+//	case MULTI_CHANNEL_4:
+//		return MULTI_CHANNEL_6;
+//	case MULTI_CHANNEL_6:
+//		return MONO;
+	}
+}
+String getTrackTypeStr(tracktype type) {
+	switch (type) {
+	default:
+	case MONO:
+		return "MONO";
+	case STEREO:
+		return "STEREO";
+	case MULTI_CHANNEL_4:
+		return "4CH";
+	case MULTI_CHANNEL_6:
+		return "6CH";
+	}
+}
+}
+class guictr_input_channel : public guictr_base {
+	std::shared_ptr<audiohost::audiostream::audiotrack> track;
 	const bool isInput;
-	std::vector<std::shared_ptr<meterType>> meters;
+	std::shared_ptr<guibase> guimeter;
+	guibutton btnTrackType;
+public:
+	guictr_input_channel(std::shared_ptr<audiohost::audiostream::audiotrack>& _track, bool _isInput) : track(_track), isInput(_isInput) {
+		add(&btnTrackType);
+		btnTrackType.setFontScale(0.3f);
+		btnTrackType.setText(AudioIO::getTrackTypeStr(_track->type));
+		int32_t nChannels = getNumChannelsTrackType(track->type);
+		guimeter = getMeter(nChannels, &track->meter);
+		add(guimeter.get());
+		setBackgroundRendered(false);
+		setBackgroundRenderedInset(false);
+		setFlag(FLG_RENDER_LABEL, true);
+		setFlagInternal(FLG_HAS_COLOR_BG);
+		setCanMouseHit(true);
+		setFlag(FLG_VERTICAL_LABEL, true);
+		padding = 3;
+	}
+	audiohost::audiostream::audiotrack* getTrack() {
+		return track.get();
+	}
+	~guictr_input_channel() {
+		remove(guimeter.get());
+		remove(&btnTrackType);
+	}
+	int32_t getNumChannels() {
+		return getNumChannelsTrackType(track->type);
+	}
+	void render(NVGcontext* vg) override {
+//		if (isBackgroundRendered()) {
+//			renderBackground(vg);
+//		}
+		if (!setScissorTransformContainer(vg)) {
+			return;
+		}
+		renderFrameBase(vg);
+		int flags = parentCtrl->isCtrOrChildFocused(this) ? FLAG_FOCUSED : 0;
+		renderTitleBar(vg, getSizeContent(), this->label, GuiConstant::CONST_SMALL_LABEL_HEIGHT, getSizeContent().y, flags, false);
+		renderFrameOutline(vg);
+//		renderWidgetBorderPosSize(vg, getStateFlags(), pos, size);
+//		nvgSave(vg);
+//		if (!setScissorTransform(vg)) {
+//			return;
+//		}
+		for (auto c : guis) {
+			nvgSave(vg);
+			c->render(vg);
+			nvgRestore(vg);
+		}
+//		setFont(vg, (int) (ROW_FONT_SIZE), G_WHITE, G_TITLE_ALIGN);
+//		auto str = StringFormat("%d %d %X", track->index, track->channelOffset, (int64_t)&track);
+//		nvgText(vg, 5, 5, StringAsCStr(str), nullptr);
+//		nvgRestore(vg);
+
+//		renderContainerLabel(vg);
+	}
+	void layout() override {
+		const int32_t htt = theme->get(GuiConstant::CONST_SMALL_LABEL_HEIGHT);
+		int32_t w = getSizeContent().x - htt;
+		int topH = math::min(getSizeContent().y/4, w);
+		guimeter->pos = {htt, topH};
+		guimeter->size = getSizeContent() - ivec2{htt, topH};
+		btnTrackType.pos = {htt, 0};
+		btnTrackType.size = {guimeter->size.x, topH};
+		for (guibase* gui : guis) {
+			gui->layout();
+		}
+	}
+	void buttonClicked(guibase* gui) override {
+		if (gui == &btnTrackType) {
+			log_printf("btnTrackType clicked\n", 0);
+			auto& cnf = settings.iosettings.getChannelConfig(settings.iosettings.device_api);
+			AudioIO::io_cfg_tracks newConfig = cnf;
+			auto& list = isInput ? cnf.input : cnf.output;
+			auto& newList = isInput ? newConfig.input : newConfig.output;
+			newList.clear();
+
+			const AudioIO::tracktype type = AudioIO::getNextTrackType(track->type);
+			const int32_t nChannelsPrev = AudioIO::getNumChannelsTrackType(track->type);
+			const int32_t nChannels = AudioIO::getNumChannelsTrackType(type);
+			const int32_t base = (track->channelOffset/nChannels);
+			const int32_t begin = base*nChannels;
+			const int32_t end = begin+nChannels;
+
+			int32_t ratio = math::max(1, nChannelsPrev/nChannels);
+			for (int32_t c = 0; c < ratio; c++) {
+				AudioIO::io_cfg_channel channels;
+				channels.idx = 0;
+				channels.type = type;
+				channels.channelOffset = (base + c) * nChannels;
+				newList.push_back(channels);
+			}
+			for (int i = 0; i < list.size(); i++) {
+				auto& cnf = list[i];
+				int32_t nChannels = AudioIO::getNumChannelsTrackType(cnf.type);
+				if (cnf.channelOffset>=end || cnf.channelOffset+nChannels<=begin) {
+					newList.push_back(cnf);
+				}
+			}
+			std::sort(newList.begin(), newList.end(), [](const AudioIO::io_cfg_channel& entryA, const AudioIO::io_cfg_channel& entryB) {
+				return entryA.channelOffset < entryB.channelOffset;
+			});
+			while (1) {
+				int32_t endPrevChannel = 0;
+				auto it = std::find_if(newList.begin(), newList.end(), [&endPrevChannel](const AudioIO::io_cfg_channel& entryA) {
+					if (entryA.channelOffset > endPrevChannel)
+						return true;
+					endPrevChannel = entryA.channelOffset+AudioIO::getNumChannelsTrackType(entryA.type);
+					return false;
+				});
+				if (it == newList.end()) {
+					break;
+				}
+				int32_t endChannel = it->channelOffset;
+				int32_t free = endChannel - endPrevChannel;
+				log_printf("found %d unassinged channels %d to %d\n", free, endPrevChannel, endChannel);
+				while (free > 0) {
+					const AudioIO::tracktype type = AudioIO::getTrackTypeNumChannels(free);
+					AudioIO::io_cfg_channel channel2;
+					channel2.idx = -1;
+					channel2.type = type;
+					channel2.channelOffset = endPrevChannel;
+					int32_t nChannels = AudioIO::getNumChannelsTrackType(channel2.type);
+					endPrevChannel += nChannels;
+					free -= nChannels;
+					newList.push_back(channel2);
+					log_printf("add track %s channels %d to %d\n", StringAsCStr(channel2.name), channel2.channelOffset, channel2.channelOffset+nChannels);
+				}
+				assert(free >= 0);
+				std::sort(newList.begin(), newList.end(), [](const AudioIO::io_cfg_channel& entryA, const AudioIO::io_cfg_channel& entryB) {
+					return entryA.channelOffset < entryB.channelOffset;
+				});
+			}
+
+			int32_t idx = 0;
+			for (AudioIO::io_cfg_channel& entry : newList) {
+				entry.idx = idx++;
+				entry.name = AudioIO::getTrackName(entry.type, entry.idx, isInput);
+			}
+//			assert(list.size() > index);
+//			auto currentChannel = list[index];
+//			AudioIO::tracktype type = AudioIO::getNextTrackType(track->type);
+//			int32_t currentChannels = AudioIO::getNumChannelsTrackType(track->type);
+//			int32_t channelOffset = 0;
+//			for (int i = 0; i < index; i++) {
+//				auto& channel = list[i];
+//				newList.push_back(channel);
+//				channelOffset = math::max(channelOffset, channel.channelOffset);
+//				channelOffset += AudioIO::getNumChannelsTrackType(channel.type);
+//			}
+//			assert(channelOffset == currentChannel.channelOffset);
+//			int32_t newIndex = index;
+//			AudioIO::io_cfg_channel channels;
+//			channels.idx = newIndex++;
+//			channels.type = type;
+//			channels.name = AudioIO::getTrackName(channels.type, channels.idx, isInput);
+//			channels.channelOffset = channelOffset;
+//			newList.push_back(channels);
+//			channelOffset += AudioIO::getNumChannelsTrackType(channels.type);
+//			int32_t free = currentChannel.channelOffset+currentChannels - channelOffset;
+//			if (free < 0) {
+//				for (; free < 0 && index < list.size(); index++) {
+//					auto& ref = list[index];
+//					free += AudioIO::getNumChannelsTrackType(ref.type);
+//				}
+//			}
+//			if (free < 0) {
+//				log_printf("cant switch channel %d to type %d, as it requires %d more free channels\n", -free);
+//				return;
+//			}
+//			if (free > 0) {
+//				bool addRightMono = channels.type == AudioIO::MONO;
+//				while (free > 0) {
+//					AudioIO::io_cfg_channel channel2;
+//					channel2.idx = newIndex++;
+//					channel2.type = free >= 2 && !addRightMono ? AudioIO::STEREO : AudioIO::MONO;
+//					channel2.name = AudioIO::getTrackName(channel2.type, channel2.idx, isInput);
+//					channel2.channelOffset = channelOffset;
+//					int32_t nChannels = AudioIO::getNumChannelsTrackType(channel2.type);
+//					channelOffset += nChannels;
+//					free -= nChannels;
+//					addRightMono = false;
+//					newList.push_back(channel2);
+//				}
+//			}
+//			for (; index < list.size(); index++) {
+//				if (list[index].channelOffset >= channelOffset) {
+//					auto cpy = list[index];
+//					cpy.idx = newIndex++;
+//					cpy.name = AudioIO::getTrackName(cpy.type, cpy.idx, isInput);
+//					newList.push_back(cpy);
+//				}
+//			}
+//
+			//make sure we have no channel double assignment
+			std::vector<int32_t> v;
+			int32_t offset = 0;
+			v.resize(32);
+			for (auto& i : v) i = -1;
+			for (int i = 0; i < newList.size(); i++) {
+				auto& ch = newList[i];
+				int32_t nChannels = AudioIO::getNumChannelsTrackType(ch.type);
+				for (int j = 0; j < nChannels; j++) {
+					assert(v[j+ch.channelOffset] < 0);
+					v[j+ch.channelOffset] = ch.idx;
+				}
+			}
+			//make sure we have no gaps
+			bool fndEnd = false;
+			for (auto& i : v) {
+				if (i < 0)
+					fndEnd = true;
+				else
+					assert(!fndEnd);
+			}
+			cnf = newConfig;
+
+			{
+
+				ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+				vsthost* host = vsthost::getInstance();
+				audiohost* ahost = audiohost::getInstance();
+				ahost->stopAudio();
+				host->setOutput(nullptr);
+				if (ahost->startAudio()) {
+					host->setOutput(ahost);
+				}
+			}
+		}
+	}
+	void onTick(AppCtrl* ctrl) override {
+		for (guibase* gui : guis) {
+			gui->onTick(ctrl);
+		}
+	}
+};
+class guictr_input_meters : public guictr_base {
+	std::vector<std::shared_ptr<guictr_input_channel>> guiMeters;
+	const bool isInput;
 	int32_t prevStream = 0;
 
 //
@@ -332,7 +619,6 @@ class guictr_input_meters : public guictr_base {
 //	}
 public:
 	guictr_input_meters(const bool _isInput) : guictr_base(), isInput(_isInput) {
-
 	}
 	void render(NVGcontext* vg) {
 		if (isBackgroundRendered()) {
@@ -345,10 +631,41 @@ public:
 		if (stream && prevStream && prevStream == stream->streamId) {
 			for (auto c : guis) {
 				if (c->isVisible()) {
+					nvgSave(vg);
 					c->render(vg);
+					nvgRestore(vg);
 				}
 			}
 		}
+	}
+	void updateChannels() {
+		auto* stream = audiohost::getInstance()->getStream(0);
+		for (auto& gui : guiMeters) {
+			remove(gui.get());
+		}
+		guiMeters.clear();
+		if (stream) {
+
+			auto& tracks = isInput ? stream->tracksInput : stream->tracksOutput;
+			String devName = isInput ? stream->inputName : stream->outputName;
+
+			int32_t trackSize = tracks.size();
+			while (guiMeters.size() < tracks.size()) {
+				int idx = guiMeters.size();
+				String trackName = audiohost::audiostream::getTrackName(tracks[idx].get(), isInput);
+				auto p = std::make_shared<guictr_input_channel>(tracks[idx], isInput);
+				p->setLabel(trackName);
+				guiMeters.push_back(p);
+				add(p.get());
+			}
+			String s = isInput ? "Input" : "Output";
+			s += " Channels ";
+			s += devName;
+			setLabel(s);
+		} else {
+		}
+		prevStream = stream ? stream->streamId : 0;
+		layout();
 	}
 	void onTick(AppCtrl* ctrl) {
 		for (guibase* gui : guis) {
@@ -361,46 +678,28 @@ public:
 								(int64_t)stream, stream?stream->streamId:0));
 		if ((prevStream && !stream) || (stream && prevStream != stream->streamId)) {
 			log_printf("on stream change %X -> %X\n", (int64_t)prevStream, (int64_t)stream);
-			for (auto* gui : guiMeters) {
-				remove(gui);
-				delete gui;
-			}
-			guiMeters.clear();
-			if (stream) {
-				auto metersStream = isInput ? stream->metersInput : stream->metersOutput;
-				while (guiMeters.size() < metersStream.size()) {
-					int idx = guiMeters.size();
-					auto p = new guimeterType(metersStream[idx].get());
-					guiMeters.push_back(p);
-					add(p);
-				}
-				meters = metersStream;
-			} else {
-				meters.clear();
-			}
-			prevStream = stream ? stream->streamId : 0;
-			layout();
+			updateChannels();
 		}
 
 	}
 	~guictr_input_meters() {
-		for (auto* g : guiMeters) {
-			remove(g);
-			delete g;
+		for (auto& g : guiMeters) {
+			remove(g.get());
 		}
 	}
 	void layout() {
 		ivec2 cs = getSizeContent();
 		int32_t maxChannels = math::max<int32_t>(guiMeters.size(), 6);
 		int32_t nMeters = math::max<int32_t>(1, maxChannels);
-		ivec2 meterSize = {math::min(64, math::max(8, (cs.x)/nMeters)), cs.y-INSET_CTR_SPACING*2};
+		ivec2 meterSize = {math::min(128, math::max(8, (cs.x)/nMeters)), cs.y-INSET_CTR_SPACING*2};
 		ivec2 meterPos = {INSET_CTR_SPACING, INSET_CTR_SPACING};
-		for (auto* meter : guiMeters) {
+
+		for (auto& meter : guiMeters) {
 			meter->pos = meterPos;
 			meter->size = meterSize;
 			meterPos.x += meterSize.x;
 		}
-		for (auto* gui : guis) {
+		for (auto& gui : guis) {
 			gui->layout();
 		}
 	}
@@ -460,7 +759,10 @@ public:
 			this->asioDevice->setVisible(settings.iosettings.device_api=="ASIO");
 			this->deviceListInput->setVisible(!this->asioDevice->isVisible());
 			this->deviceListOutput->setVisible(!this->asioDevice->isVisible());
-			this->layout();
+			if (this->parent && this->parentCtrl) {
+				this->layout();
+			}
+
 		}
 
 	}
@@ -608,7 +910,7 @@ public:
 		metersInput.setBackgroundRendered(true);
 		metersOutput.setBackgroundRendered(true);
 		metersInput.setBackgroundRenderedInset(false);
-		metersOutput.setBackgroundRenderedInset(true);
+		metersOutput.setBackgroundRenderedInset(false);
 		metersInput.setLabel("Input Channels");
 		metersOutput.setLabel("Output Channels");
 		selectAPI->setLabel("Audio API");
@@ -617,6 +919,14 @@ public:
 		audioSampleRate->setLabel("Samplerate");
 		deviceListInput->setLabel("Audio input device");
 		deviceListOutput->setLabel("Audio output device");
+		metersInput.setFlag(FLG_RENDER_LABEL, true);
+		metersOutput.setFlag(FLG_RENDER_LABEL, true);
+		selectAPI->setFlag(FLG_RENDER_LABEL, true);
+		asioDevice->setFlag(FLG_RENDER_LABEL, true);
+		audioBlockSize->setFlag(FLG_RENDER_LABEL, true);
+		audioSampleRate->setFlag(FLG_RENDER_LABEL, true);
+		deviceListInput->setFlag(FLG_RENDER_LABEL, true);
+		deviceListOutput->setFlag(FLG_RENDER_LABEL, true);
 		setLabel("Audio I/O");
 		setBackgroundRendered(true);
 		add(selectAPI);
@@ -688,11 +998,6 @@ public:
 		int32_t inset = 5;
 		int32_t buttonW = math::max(120, cs.x*2/3);
 		int32_t heightList = math::max(230, cs.y*2/5);
-		int32_t h2 = (int)(heightList*0.6);
-		int32_t h3 = (int)(heightList*0.4);
-		if (asioDevice->isVisible()) {
-			h3 *= 2;
-		}
 		int32_t height = 20;
 		audioBlockSize->size = ivec2(buttonW, height);
 		audioBlockSize->pos = ivec2(cs.x-inset*2-buttonW, inset);
@@ -700,6 +1005,9 @@ public:
 		audioSampleRate->pos = ivec2(cs.x-inset*2-buttonW, audioBlockSize->bottom()+inset);
 		selectAPI->size = ivec2(buttonW, height);
 		selectAPI->pos = ivec2(cs.x-inset*2-buttonW, audioSampleRate->bottom()+inset);
+		int32_t h = (cs.y-inset) - (selectAPI->bottom()+inset);
+		int32_t h1 = math::max((int)(h*0.2), 120);
+
 		guibase* pNextGui = selectAPI;
 		asioDevice->size = ivec2(buttonW, height);
 		asioDevice->pos = ivec2(cs.x-inset*2-buttonW, selectAPI->bottom()+inset);
@@ -707,28 +1015,36 @@ public:
 			pNextGui = asioDevice;
 		}
 		deviceListInput->pos = ivec2(inset, pNextGui->bottom()+inset);
-		deviceListInput->size = ivec2((cs.x)-inset*2, h2);
+		deviceListInput->size = ivec2((cs.x)-inset*2, h1);
 		if (deviceListInput->isVisible()) {
 			pNextGui = deviceListInput;
 		}
-		metersInput.pos = ivec2(inset, pNextGui->bottom()+inset);
-		metersInput.size = ivec2((cs.x)-inset*2, h3);
-		if (metersInput.isVisible()) {
-			pNextGui = &metersInput;
-		}
 		deviceListOutput->pos = ivec2(inset, pNextGui->bottom()+inset);
-		deviceListOutput->size = ivec2((cs.x)-inset*2, math::min(cs.y-deviceListOutput->pos.y, h2));
+		deviceListOutput->size = ivec2((cs.x)-inset*2, math::min(cs.y-deviceListOutput->pos.y, h1));
 		if (deviceListOutput->isVisible()) {
 			pNextGui = deviceListOutput;
 		}
+		h = (cs.y-inset) - (pNextGui->bottom()+inset);
+		int32_t h2 = math::max((int)(h*0.5), 150);
+		metersInput.pos = ivec2(inset, pNextGui->bottom()+inset);
+		metersInput.size = ivec2((cs.x)-inset*2, h2);
+		if (metersInput.isVisible()) {
+			pNextGui = &metersInput;
+		}
 		metersOutput.pos = ivec2(inset, pNextGui->bottom()+inset);
-		metersOutput.size = ivec2((cs.x)-inset*2, h3);
+		metersOutput.size = ivec2((cs.x)-inset*2, h2);
 		if (metersOutput.isVisible()) {
 			pNextGui = &metersOutput;
 		}
 		for (auto gui : guis) {
 			gui->layout();
 		}
+		int rowHeight = 30;
+		while (h1 < rowHeight * 6 && rowHeight > 8) {
+			rowHeight -= 4;
+		}
+		deviceListInput->setRowHeight(rowHeight);
+		deviceListOutput->setRowHeight(rowHeight);
 	}
 	void buttonClicked(guibase* button) {
 		if ((button->id&0x0F) == 0xF) {
@@ -959,7 +1275,7 @@ struct guidialog_settings::dialog_entry
 	}
 };
 guidialog_settings::guidialog_settings()
-: guidialog_base(ivec2{640, 760}) {
+: guidialog_base(ivec2{640, 760}, true) {
 	addEntry(new guidialog_audio_io(), "Audio I/O");
 	addEntry(new guidialog_midi_io(), "Midi I/O");
 	add(&btnClose);

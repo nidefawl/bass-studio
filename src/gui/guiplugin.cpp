@@ -239,7 +239,7 @@ void guiplugin::renderBase(NVGcontext* vg) {
 	if (isSelected()) {
 		flags |= FLAG_SELECTED;
 	}
-	renderTitleBar(vg, this->text, GuiConstant::CONST_PLUGIN_TITLE_HEIGHT, titlePosX, flags, isHorizontalTitle);
+	renderTitleBar(vg, size, this->text, GuiConstant::CONST_PLUGIN_TITLE_HEIGHT, titlePosX, flags, isHorizontalTitle);
 	renderFrameOutline(vg);
 }
 

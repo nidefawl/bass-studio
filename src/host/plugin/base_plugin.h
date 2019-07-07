@@ -32,7 +32,7 @@ class effectbase : public automatable_t {
 #endif
 	int nLoadCalls = 0;
 public:
-	rmsmeter<16000> meter;
+	rmsmeterimpl<16000> meter;
 	AudioBlock* blockInputs = NULL; // guaranteed to have at least 2 channels
 	AudioBlock* blockOutputs = NULL; // guaranteed to have at least 2 channels
 	int32_t pluginType = 0;

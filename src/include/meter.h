@@ -69,8 +69,39 @@ public:
 		return meter_lvls{fMax, fPeak, fLvl};
 	}
 };
+
+template <uint32_t N>
+struct rmsmeter {
+	runningsum<N>* channels;
+	int32_t numChannels;
+	rmsmeter(runningsum<N>* _channels, int32_t _numChannels)
+	: channels(_channels), numChannels(_numChannels) {
+
+	}
+	float getRms(int i) {
+		return channels[i].fLvl;
+	}
+	float getMax(int i) {
+		return channels[i].fMax;
+	}
+	float getStandingPeak(int i) {
+		return channels[i].fPeak;
+	}
+	void onTick(double since) {
+		for (uint32_t i = 0; i < numChannels; i++) {
+			channels[i].onTick(since);
+		}
+	}
+	std::vector<meter_lvls> getLevels() {
+		std::vector<meter_lvls> v;
+		for (uint32_t i = 0; i < numChannels; i++) {
+			v.push_back(std::move(channels[i].getLevels()));
+		}
+		return v;
+	}
+};
 template <uint32_t N, uint32_t C = 2>
-class rmsmeter {
+class rmsmeterimpl {
 public:
 	runningsum<N> channels[C];
 	void update(AudioBlock* block, float fTrackGain) {

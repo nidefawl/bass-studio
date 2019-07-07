@@ -17,6 +17,7 @@
 #include "snapshot.h"
 #include "track.h"
 #include "host/vst_host.h"
+#include "host/audio_config.h"
 
 #define PARAM_TRACK_GAIN 1
 
@@ -82,7 +83,7 @@ struct audio_stage_t {
 	audio_stage_t* parent;
 	effectbase* owner;
 	guictr_plugins* pluginCtr;
-	rmsmeter<16000> meter;
+	rmsmeterimpl<16000> meter;
 	AudioBlock input; //guaranteed to have at least 2 channels
 	AudioBlock output; //guaranteed to have at least 2 channels
 	track_params_t mixer;
@@ -151,6 +152,30 @@ static constexpr int PROCESS_REALTIME = 1;
 static constexpr int PROCESS_CLIPS = 2;
 static constexpr int PROCESS_ARP = 4;
 }
+struct channel_ref_t {
+	String name = "None";
+	audio_stage_ref_t stage{-1};
+	int32_t inputTrackIdx = -1;
+	int32_t inputChannelOffset = 0;
+	AudioIO::tracktype type;
+};
+inline bool isChannelConnected(channel_ref_t& ch) {
+	return ch.stage.id > -1 || ch.inputTrackIdx > -1;
+}
+inline channel_ref_t ChannelNone() {
+	return channel_ref_t{};
+}
+inline channel_ref_t ChannelAudioInput(int32_t idx, int32_t channelOffset, String name, AudioIO::tracktype type) {
+	return channel_ref_t{name, {-1}, idx, channelOffset, type};
+}
+inline channel_ref_t ChannelStage(audio_stage_t* stage) {
+	String str = "";
+	auto track = stage->getTrack();
+	if (track) {
+		str = track->name;
+	}
+	return channel_ref_t{str, stage->toRef(), -1, 0, AudioIO::getTrackTypeNumChannels(stage->input.channels)};
+}
 struct track_impl_t : public audio_stage_t {
 	midiarp* arp = nullptr;
 	track_t* track;
@@ -160,6 +185,8 @@ struct track_impl_t : public audio_stage_t {
 	int32_t selectedAutomationParam = -1;
 	std::vector<automationlane_snapshot_t> atl;
 	bool wasInHide = false;
+	channel_ref_t inputChannel;
+	channel_ref_t outputChannel;
 	track_impl_t(int32_t _id, track_t* _track, const samplerate_t& _sampleRate, const uint16_t& _blockSize, int32_t nChannels);
 	~track_impl_t();
 	void sendNotesOff(int32_t bpm100);

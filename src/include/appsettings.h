@@ -1,6 +1,7 @@
 #pragma once
 #include "str_util.h"
 #include "grid.h"
+#include "host/audio_config.h"
 #include <map>
 
 #ifdef _WIN32
@@ -37,9 +38,16 @@ struct app_iosettings {
 	app_ioasioconfig asioConfig;
 	std::map<String, app_ioaudioconfig> configs;
 	std::map<String, app_iomidiconfig> midiconfigs;
+	std::map<String, AudioIO::io_cfg_tracks> channelConfigs;
 	String device_api;
 	app_ioasioconfig& getAsioConfig() {
     	return asioConfig;
+    }
+	AudioIO::io_cfg_tracks& getChannelConfig(String devApi) {
+    	if (!channelConfigs.count(devApi)) {
+    		channelConfigs[devApi] = AudioIO::io_cfg_tracks();
+    	}
+    	return channelConfigs[devApi];
     }
 	app_ioaudioconfig& getConfig(String devApi) {
     	if (!configs.count(devApi)) {

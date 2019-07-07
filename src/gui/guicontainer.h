@@ -71,10 +71,11 @@ public:
 	ivec2 getPadding() {
 		return (paddingTL(padding) + paddingBR(padding));
 	}
-	void renderTitleBar(NVGcontext* vg, String text, GuiConstant::constant_t& constantHeight, float textOffsetX, int flags, bool isHorizontalTitle);
+	void renderTitleBar(NVGcontext* vg, const ivec2& sizeContent, String text, GuiConstant::constant_t& constantHeight, float textOffsetX, int flags, bool isHorizontalTitle);
 	void renderFrameBase(NVGcontext* vg);
 	void renderFrameOutline(NVGcontext* vg);
 	virtual void renderBackground(NVGcontext* vg);
+	virtual void renderContainerLabel(NVGcontext* vg);
 	virtual void render(NVGcontext* vg);
 	virtual bool setScissorTransformContainer(NVGcontext* vg);
 	virtual bool setScissorTransform(NVGcontext* vg);

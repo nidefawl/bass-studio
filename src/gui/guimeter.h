@@ -7,25 +7,20 @@
 #include "dsp_util.h"
 #include "meter.h"
 
-template<uint32_t T, uint32_t C = 2>
-class gui_trackmeter : public guibase {
-public:
-	rmsmeter<T,C>* const meter;
-	gui_trackmeter(rmsmeter<T,C>* _meter) :
-		guibase(), meter(_meter) {
-	}
-	void render(NVGcontext* vg) {
+template<typename METER>
+void renderMeterAt(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const ivec2& size, METER* meter) {
 		int32_t spacing = 1;
 		ivec2 inset(spacing);
 		ivec2 mtrPos = pos + inset;
 		ivec2 mtrSize = size - inset * 2;
-		float channelW = (mtrSize.x-(C+1)*spacing) / (float) C;
+		auto lvls = meter->getLevels();
+		int32_t nChannels = lvls.size();
+		float channelW = (mtrSize.x-(nChannels+1)*spacing) / (float) nChannels;
 		const double scaledZero = dsp_util::scaledRange(0, dsp_util::MTR_FLOOR, dsp_util::MTR_CEIL);
 		float hZero = (1.0f - scaledZero) * mtrSize.y;
 		float yZero = mtrPos.y + mtrSize.y - hZero;
 
 		float x = mtrPos.x+spacing;
-		auto lvls = meter->getLevels();
 		for (int i = 0; i < lvls.size(); i++) {
 			auto& chLvl = lvls[i];
 			float fMax = chLvl.fMax;
@@ -81,12 +76,29 @@ public:
 		}
 
 		x = mtrPos.x+spacing;
-		float x2 = mtrPos.x+(spacing+channelW)*C;
+		float x2 = mtrPos.x+(spacing+channelW)*nChannels;
 		nvgBeginPath(vg);
 		nvgMoveTo(vg, x, yZero);
 		nvgLineTo(vg, x2, yZero);
 		nvgStrokeColor(vg, theme->getColor(GuiColor::COL_GRID_BRT));
 		nvgStrokeWidth(vg, 1.5f);
 		nvgStroke(vg);
+	}
+template<uint32_t T, uint32_t C = 2>
+class gui_trackmeter : public guibase {
+public:
+	rmsmeter<T>* const meter;
+	rmsmeterimpl<T, C>* const meterImpl;
+	gui_trackmeter(rmsmeter<T>* _meter) :
+		guibase(), meter(_meter), meterImpl(nullptr) {
+	}
+	gui_trackmeter(rmsmeterimpl<T, C>* _meterImpl) :
+		guibase(), meter(nullptr), meterImpl(_meterImpl) {
+	}
+	void render(NVGcontext* vg) {
+		if (meter)
+		renderMeterAt(vg, theme, pos, size, meter);
+		else
+		renderMeterAt(vg, theme, pos, size, meterImpl);
 	}
 };

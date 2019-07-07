@@ -13,6 +13,7 @@ public:
 private:
 	gui_trackcontrols_title* title;
 	guictr_base* mixer;
+	guictr_base* io;
 	std::vector<gui_track_subtrack_mixer*> automationLaneControls;
 	int dragMode = -1;
 	const int resizeHitY = 8;

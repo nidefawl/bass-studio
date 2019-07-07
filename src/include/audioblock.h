@@ -47,17 +47,34 @@ struct AudioBlock {
 	void copyFrom(AudioBlock* src) {
 		copyFrom(src->buf, src->samples, src->channels);
 	}
-	void copyFrom(float **srcBuf, uint32_t srcSamples, uint32_t srcChannels) {
+	void copyFrom(float **srcBuf, uint32_t srcSamples, uint32_t srcChannels, uint32_t channelOffset = 0) {
 		dbgassert(srcSamples == samples);
 		uint32_t nChannels = math::min(srcChannels, channels);
 		uint32_t nSamples = math::min(srcSamples, samples);
 		for (uint32_t i = 0; i < nChannels; i++) {
-			uint32_t srcChannelIdx = math::min(srcChannels-1, i);
+			uint32_t srcChannelIdx = math::min(srcChannels-1, i+channelOffset);
 			uint32_t dstChannelIdx = math::min(channels-1, i);
 			float* srcBufChannel = srcBuf[srcChannelIdx];
 			float* dstBufChannel = buf[dstChannelIdx];
 			memcpy(dstBufChannel, srcBufChannel, nSamples * sizeof(float));
 		}
+	}
+	template<class T>
+	void copyFrom(float **srcBuf, uint32_t srcSamples, uint32_t srcChannels, T getMappedSrcChannel) {
+		dbgassert(srcSamples == samples);
+		uint32_t nChannels = math::min(srcChannels, channels);
+		uint32_t nSamples = math::min(srcSamples, samples);
+		for (uint32_t i = 0; i < nChannels; i++) {
+			uint32_t dstChannelIdx = math::min(channels-1, i);
+			uint32_t srcChannelIdx = math::min(srcChannels-1, getMappedSrcChannel(dstChannelIdx, i));
+			float* srcBufChannel = srcBuf[srcChannelIdx];
+			float* dstBufChannel = buf[dstChannelIdx];
+			memcpy(dstBufChannel, srcBufChannel, nSamples * sizeof(float));
+		}
+	}
+	template<class T>
+	void copyFrom(AudioBlock* src, T getMappedSrcChannel) {
+		copyFrom(src->buf, src->samples, src->channels, getMappedSrcChannel);
 	}
 	void copyFromPosToPos(float **srcBuf, uint32_t offsetIn, uint32_t offsetOut, uint32_t srcSamples, uint32_t srcChannels) {
 		assert(offsetIn >= 0);

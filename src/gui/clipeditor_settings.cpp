@@ -130,7 +130,7 @@ void gui_clipsettings::render(NVGcontext* vg)  {
 		text = clip->name;
 	}
 	int flags = parentCtrl->isCtrOrChildFocused(this) ? FLAG_FOCUSED : 0;
-	renderTitleBar(vg, text, GuiConstant::CONST_FIXED_TITLE_HEIGHT, 0, flags, true);
+	renderTitleBar(vg, size, text, GuiConstant::CONST_FIXED_TITLE_HEIGHT, 0, flags, true);
 	renderFrameOutline(vg);
 	for (guibase* gui : guis) {
 		nvgSave(vg);

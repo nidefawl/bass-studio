@@ -58,32 +58,48 @@ void guictr_base::render(NVGcontext* vg) {
 		nvgRestore(vg);
 	}
 }
+void guictr_base::renderContainerLabel(NVGcontext* vg) {
+	if (isFlag(FLG_RENDER_LABEL) && label.length()) {
+		bool focused = parentCtrl->isCtrOrChildFocused(this);
+			auto sizeF = theme->get(GuiConstant::CTR_LABEL_FONT_SIZE);
+			auto posInset = getPosContent() + ivec2(INSET_CTR_SPACING, 0);
+			setFont(vg, sizeF, theme->getColor(GuiColor::COL_LABEL_CONTAINER), NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
+			nvgFontSize(vg, sizeF);
+			nvgFontFace(vg, "sans");
+			nvgTextAlign(vg, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
+			auto sizeInset = ivec2(math::min(getSizeContent().x, static_cast<int32_t>(textWidth(vg, label)+sizeF/2)), sizeF);
+
+			if (isFlag(FLG_VERTICAL_LABEL)) {
+				std::swap(sizeInset.x, sizeInset.y);
+				posInset = getPosContent() + getSizeContent() - ivec2(0, INSET_CTR_SPACING+sizeInset.y);
+				posInset.x -= sizeF;
+			} else {
+				posInset.y -= sizeF;
+			}
+	//		posInset -= ivec2(margin);
+	//		sizeInset += ivec2(margin) * 2;
+			if (sizeInset.y > 0 && sizeInset.x > 0) {
+				nvgBeginPath(vg);
+				nvgRoundedRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y, 4);
+				NVGcolor bg = theme->getColor(GuiColor::COL_BG_DRK);
+				if (focused) {
+					bg = theme->getColor(GuiColor::COL_BG_DRK_FOCUSED);
+				}
+				nvgFillColor(vg, bg);
+				nvgFill(vg);
+			}
+			nvgFillColor(vg, theme->getColor(GuiColor::COL_LABEL_CONTAINER));
+			nvgText(vg, posInset.x+INSET_CTR_SPACING, posInset.y, StringAsCStr(label), NULL);
+			if (isFlag(FLG_VERTICAL_LABEL)) {
+
+			}
+		}
+}
 void guictr_base::renderBackground(NVGcontext* vg) {
 	dbgassert(isBackgroundRendered());
 	bool focused = parentCtrl->isCtrOrChildFocused(this);
 	drawBackground(vg, theme, getPosContent(), getSizeContent(), margin, focused, isBackgroundRenderedInset());
-	if (label.length()) {
-		auto sizeF = theme->get(GuiConstant::CTR_LABEL_FONT_SIZE);
-		auto posInset = getPosContent() + ivec2(INSET_CTR_SPACING, 0);
-		auto sizeInset = ivec2(math::min(getSizeContent().x, static_cast<int32_t>(textWidth(vg, label))), sizeF);
-//		posInset -= ivec2(margin);
-		posInset.y -= sizeF;
-//		sizeInset += ivec2(margin) * 2;
-		if (sizeInset.y > 0 && sizeInset.x > 0) {
-			nvgBeginPath(vg);
-			nvgRoundedRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y, 4);
-			NVGcolor bg = theme->getColor(GuiColor::COL_BG_DRK);
-			if (focused) {
-				bg = theme->getColor(GuiColor::COL_BG_DRK_FOCUSED);
-			}
-			nvgFillColor(vg, bg);
-			nvgFill(vg);
-		}
-		float lineh;
-		setFont(vg, sizeF, theme->getColor(GuiColor::COL_LABEL_CONTAINER), NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
-		nvgTextMetrics(vg, NULL, NULL, &lineh);
-		nvgText(vg, posInset.x+INSET_CTR_SPACING, posInset.y, StringAsCStr(label), NULL);
-	}
+	renderContainerLabel(vg);
 }
 void guictr_base::renderFrameBase(NVGcontext* vg) {
 	ivec2 sizeContent = getSizeContent();
@@ -103,7 +119,7 @@ void guictr_base::renderFrameOutline(NVGcontext* vg) {
 	nvgIntersectScissor(vg, 0, 0, sizeInset.x, sizeInset.y);
 }
 
-void guictr_base::renderTitleBar(NVGcontext* vg, String text, GuiConstant::constant_t& constantHeight, float textOffsetX, int flags, bool isHorizontalTitle) {
+void guictr_base::renderTitleBar(NVGcontext* vg, const ivec2& sizeContent, String text, GuiConstant::constant_t& constantHeight, float textOffsetX, int flags, bool isHorizontalTitle) {
 	NVGcolor c;
 	if (flags & FLAG_SELECTED) {
 		c = theme->getColor(GuiColor::COL_PLUG_TITLE_SELECTED);
@@ -112,8 +128,6 @@ void guictr_base::renderTitleBar(NVGcontext* vg, String text, GuiConstant::const
 	} else {
 		c = theme->getColor(GuiColor::COL_PLUG_TITLE);
 	}
-
-	//	ivec2 sizeContent = getSizeContent();
 	float fRnd = theme->getFloat(GuiConstant::CONST_ROUND);
 	const int32_t hpt = theme->get(constantHeight);
 	if (hpt <= 0) {
@@ -122,7 +136,7 @@ void guictr_base::renderTitleBar(NVGcontext* vg, String text, GuiConstant::const
 	nvgBeginPath(vg);
 	float textMaxWidth;
 	if (isHorizontalTitle) {
-		nvgRoundedRectVarying(vg, 0, 0, size.x, hpt, fRnd, fRnd, 0, 0);
+		nvgRoundedRectVarying(vg, 0, 0, sizeContent.x, hpt, fRnd, fRnd, 0, 0);
 		textMaxWidth = size.x-INSET_TITLE*2;
 		for (auto* gui : guis) {
 			if (gui->top() < hpt && gui->bottom() > 0) {
@@ -133,12 +147,12 @@ void guictr_base::renderTitleBar(NVGcontext* vg, String text, GuiConstant::const
 		}
 		textMaxWidth -= textOffsetX;
 	} else {
-		nvgRoundedRectVarying(vg, 0, 0, hpt, size.y, fRnd, fRnd, 0, 0);
-		textMaxWidth = textOffsetX-INSET_TITLE*2;
+		nvgRoundedRectVarying(vg, 0, 0, hpt, sizeContent.y, fRnd, fRnd, 0, 0);
+		textMaxWidth = textOffsetX - (INSET_TITLE*2.0f);
 		for (auto* gui : guis) {
 			if (gui->left() < hpt && gui->right() > 0) {
 				if (gui->bottom() < textOffsetX) {
-					textMaxWidth = math::min<float>(textMaxWidth, (textOffsetX-gui->bottom())-INSET_TITLE*2);
+					textMaxWidth = math::min<float>(textMaxWidth, math::max(0.0f, textOffsetX-(gui->bottom()+INSET_TITLE*2)));
 				}
 			}
 		}
