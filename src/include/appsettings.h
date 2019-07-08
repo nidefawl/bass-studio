@@ -1,4 +1,5 @@
 #pragma once
+#include "config.h"
 #include "str_util.h"
 #include "grid.h"
 #include "host/audio_config.h"
@@ -84,6 +85,8 @@ public:
     appsettings(appsettings&& other);
     appsettings& operator=(appsettings&& other);
 };
+#if HAS_APP_SETTINGS
 extern appsettings settings;
+#endif
 void saveSettings(appsettings& _settings);
 appsettings loadSettings();
