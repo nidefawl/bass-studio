@@ -189,7 +189,6 @@ void guitooltip<clip_t>::layout()  {
 		} else {
 			path = StringFormat("<MISSING SAMPLE %d>", ptr->audio.id);
 		}
-		my_printf("path %s\n", StringAsCStr(path));
 		tbl_rows vec{ tblString{StringFormat("Audio Clip (sample-id %d)", ptr->audio.id)}, tblString{path}};
 		table.rows.push_back(tbl_row_t{vec});
 	}
