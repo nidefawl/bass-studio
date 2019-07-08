@@ -100,7 +100,7 @@ void gui_shaderview::prerender(NVGcontext* vg) {
 	}
 	int w = math::min(size.x, size.y);
 	int h = w;
-	impl->fb = nvgluCreateTempFramebuffer(vg, w, h, 0);
+	impl->fb = nvgluCreateTempFramebuffer(vg, w, h, NVG_IMAGE_PREMULTIPLIED);
 	nvgluBindFramebuffer(impl->fb);
 	glViewport(0, 0, w, h);
 	glClearColor(0, 0, 0, 0);
