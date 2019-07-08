@@ -10,6 +10,7 @@
 #include "../util/readerwriterqueue.h"
 #include "meter.h"
 #include "audio_config.h"
+#include "appsettings.h"
 
 
 typedef void PaStream;
@@ -82,13 +83,12 @@ private:
 public:
 	uint32_t blockReads = 0;
 	uint32_t bufferUnderuns = 0;
-	samplerate_t lSampleRate;
-	uint16_t lBlockSize;
-	uint8_t numChannels;
+	samplerate_t lSampleRate = 0;
+	uint16_t lBlockSize = 0;
 	int32_t nextStreamId;
 private:
 public:
-	audiohost(uint32_t _sampleRate, uint16_t _blockSize);
+	audiohost();
 	~audiohost();
 	static audiohost* getInstance();
 	audiostream* getStream(int idx);
@@ -96,7 +96,7 @@ public:
 	void deinitPa();
 	void removeStream(audiostream* stream);
 public:
-	bool startAudio();
+	bool startAudio(app_iosettings& settings);
 	bool stopAudio();
 	bool isStreaming() {
 		return !streams.empty();

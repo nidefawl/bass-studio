@@ -184,7 +184,7 @@ void guictr_tempocontrols::buttonClicked(guibase* button) {
 		} else {
 			settings.startEngine = true;
 		}
-		if (settings.startEngine && ahost->startAudio()) {
+		if (settings.startEngine && ahost->startAudio(settings.iosettings)) {
 			host->setOutput(ahost);
 		} else {
 		}

@@ -12,6 +12,7 @@
 #include "platform.h"
 #include <portaudio.h>
 #include <vector>
+#include <stdint.h>
 #include <numeric>
 //#include <memory>
 
@@ -149,10 +150,7 @@ audiohost::audiostream::audiostream(int32_t _nStreamId, io_cfg_tracks cfg, int32
 audiohost::audiostream::~audiostream() {
 	freeRingBuffer(ringbuffer);
 }
-audiohost::audiohost(uint32_t _sampleRate, uint16_t _blockSize)
-	: lSampleRate(_sampleRate),
-	  lBlockSize(_blockSize),
-	  numChannels(OUTPUT_CHANNELS)
+audiohost::audiohost()
 {
 	nextStreamId = 0;
 }
@@ -254,16 +252,18 @@ bool audiohost::audiostream::try_dequeue(AudioBuffer*& buf) {
 	return this->audioQueue.try_dequeue(buf);
 }
 
-bool audiohost::startAudio() {
+bool audiohost::startAudio(app_iosettings& iosettings) {
 	my_printf("startAudio\n", 0);
 	if (!initPa())
 		return false;
 	stopAudio();
 	int apiCount = Pa_GetHostApiCount();
-	const char* selApiNameCStr = StringAsCStr(settings.iosettings.device_api);
-	auto cfg = settings.iosettings.getConfig(settings.iosettings.device_api);
-	auto asioConfig = settings.iosettings.asioConfig;
-	auto& channelConfig = settings.iosettings.getChannelConfig(settings.iosettings.device_api);
+	auto samplerate = iosettings.samplerate;
+	auto blocksize = iosettings.blocksize;
+	const char* selApiNameCStr = StringAsCStr(iosettings.device_api);
+	auto cfg = iosettings.getConfig(iosettings.device_api);
+	auto asioConfig = iosettings.asioConfig;
+	auto& channelConfig = iosettings.getChannelConfig(iosettings.device_api);
 	using ptr_audiostream = std::shared_ptr<audiostream>;
 	std::vector<ptr_audiostream> vecStreams;
 
@@ -308,34 +308,35 @@ bool audiohost::startAudio() {
 					deviceIdxSelectedInput = i;
 					pref = "[x] ";
 				}
-				my_printf("%sDEVICE[%d] = %s %d %s channels\n", pref, i, info->name, info->maxOutputChannels, info->maxInputChannels ? "input" : "output");
+				my_printf("%sDEVICE[%d] = %s %d %s channels\n", pref, i, info->name, info->maxInputChannels?info->maxInputChannels:info->maxOutputChannels, info->maxInputChannels ? "input" : "output");
 			}
 
 		}
 	}
 
-	if (deviceIdxSelectedOutput < 0) {
-		my_printf("Error: No output device.\n", 0);
+	if (deviceIdxSelectedOutput == paNoDevice && deviceIdxSelectedInput == paNoDevice) {
+		my_printf("Error: No input or output device.\n", 0);
 		return false;
 	}
 
 
-	const PaDeviceInfo* devInfo = Pa_GetDeviceInfo(deviceIdxSelectedOutput);
+	const PaDeviceInfo* devInfo = deviceIdxSelectedOutput == paNoDevice ? nullptr : Pa_GetDeviceInfo(deviceIdxSelectedOutput);
 	const PaDeviceInfo* devInfoInput = deviceIdxSelectedInput == paNoDevice ? nullptr : Pa_GetDeviceInfo(deviceIdxSelectedInput);
 	const PaHostApiInfo* apiInfo = Pa_GetHostApiInfo(deviceApiIdxSelected);
+
+	PaStreamParameters* pOutputParams = nullptr;
 	PaStreamParameters outputParams;
-	outputParams.device = deviceIdxSelectedOutput;
-	if (outputParams.device == paNoDevice) {
-		return error("outputParameters.device == paNoDevice", 0);
+	if (deviceIdxSelectedOutput != paNoDevice) {
+		pOutputParams = &outputParams;
+		outputParams.device = deviceIdxSelectedOutput;
+		outputParams.channelCount = devInfo->maxOutputChannels;       /* stereo output */
+		outputParams.sampleFormat = paFloat32 | paNonInterleaved; /* 32 bit floating point output */
+		outputParams.suggestedLatency = devInfo->defaultLowOutputLatency;
+		outputParams.hostApiSpecificStreamInfo = NULL;
+	} else {
+		outputParams.channelCount = 0;
 	}
-	outputParams.channelCount = devInfo->maxOutputChannels;       /* stereo output */
-	outputParams.sampleFormat = paFloat32 | paNonInterleaved; /* 32 bit floating point output */
-	outputParams.suggestedLatency = devInfo->defaultLowOutputLatency;
-	outputParams.hostApiSpecificStreamInfo = NULL;
-	my_printf("Open stream on device %s | %s\n", apiInfo->name, devInfo->name);
-	my_printf("samplerate %u\n", lSampleRate);
-	my_printf("channelCount %d\n", outputParams.channelCount);
-	my_printf("lBlockSize %d\n", this->lBlockSize);
+	my_printf("Open stream on device %s | %s\n", apiInfo->name, devInfo ? devInfo->name : devInfoInput->name);
 	PaStreamParameters* pInputParams = nullptr;
 	PaStreamParameters inputParams;
 	if (devInfoInput) {
@@ -348,6 +349,7 @@ bool audiohost::startAudio() {
 	} else {
 		inputParams.channelCount = 0;
 	}
+	my_printf("With %d output channels\n", outputParams.channelCount);
 	my_printf("With %d input channels\n", inputParams.channelCount);
 	int32_t streamId = ++nextStreamId;
 	io_cfg_tracks chCfg;
@@ -388,11 +390,11 @@ bool audiohost::startAudio() {
 	auto stream = std::make_shared<audiostream>(streamId, chCfg, outputParams.channelCount, inputParams.channelCount);
 	stream->idx = vecStreams.size();
 	stream->host = this;
-	stream->outputName = devInfo->name;
-	stream->nOutputChannels = devInfo->maxOutputChannels;
+	stream->outputName = devInfo ? devInfo->name : devInfoInput->name;
+	stream->nOutputChannels = outputParams.channelCount;
 	stream->device_api = selApiNameCStr;
 	if (devInfoInput) {
-		stream->nInputChannels = devInfoInput->maxInputChannels;
+		stream->nInputChannels = inputParams.channelCount;
 		stream->inputName = devInfoInput->name;
 	}
 	PaStream* paStream = NULL;
@@ -400,9 +402,9 @@ bool audiohost::startAudio() {
 	PaError err = Pa_OpenStream(
 		&paStream,
 		pInputParams,
-		&outputParams,
-		(double)this->lSampleRate,
-		this->lBlockSize,
+		pOutputParams,
+		(double)samplerate,
+		blocksize,
 		paClipOff,      /* we won't output out of range samples so don't bother clipping them */
 		audioCallback,
 		stream.get());
@@ -415,13 +417,14 @@ bool audiohost::startAudio() {
 	if (err != paNoError)
 		return error("Pa_SetStreamFinishedCallback", err);
 
-	err = Pa_StartStream(paStream);
-	if (err != paNoError)
-		return error("Pa_StartStream", err);
 	stream->stream = paStream;
 	log_printf("NEW STREAM HANDLE: %X (%d)\n", (int64_t)stream.get(), stream->streamId);
 	this->streams.push_back(stream);
-
+	this->lSampleRate = samplerate;
+	this->lBlockSize = blocksize;
+	err = Pa_StartStream(paStream);
+	if (err != paNoError)
+		return error("Pa_StartStream", err);
 	return true;
 }
 bool audiohost::stopAudio() {

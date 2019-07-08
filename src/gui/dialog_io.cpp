@@ -332,7 +332,7 @@ void updateSrBs() {
 		audiohost* ahost = audiohost::getInstance();
 		ahost->stopAudio();
 		host->setOutput(nullptr);
-		if (ahost->startAudio()) {
+		if (ahost->startAudio(settings.iosettings)) {
 			host->setOutput(ahost);
 		}
 	}
@@ -596,7 +596,7 @@ public:
 				audiohost* ahost = audiohost::getInstance();
 				ahost->stopAudio();
 				host->setOutput(nullptr);
-				if (ahost->startAudio()) {
+				if (ahost->startAudio(settings.iosettings)) {
 					host->setOutput(ahost);
 				}
 			}
@@ -672,10 +672,6 @@ public:
 			gui->onTick(ctrl);
 		}
 		auto* stream = audiohost::getInstance()->getStream(0);
-
-		logEveryMsec(128, 2000,
-				StringFormat("(%d) %X (%d)\n",prevStream,
-								(int64_t)stream, stream?stream->streamId:0));
 		if ((prevStream && !stream) || (stream && prevStream != stream->streamId)) {
 			log_printf("on stream change %X -> %X\n", (int64_t)prevStream, (int64_t)stream);
 			updateChannels();
@@ -858,7 +854,7 @@ public:
 				host->setOutput(nullptr);
 				settings.iosettings.device_api = api->options[option];
 				updateOptions();
-				if (ahost->startAudio()) {
+				if (ahost->startAudio(settings.iosettings)) {
 					host->setOutput(ahost);
 				} else {
 				}
@@ -885,7 +881,7 @@ public:
 					channel.channels.push_back(1);
 					asioconfig.outputs.push_back(channel);
 				}
-				if (ahost->startAudio()) {
+				if (ahost->startAudio(settings.iosettings)) {
 					host->setOutput(ahost);
 				} else {
 				}

@@ -84,8 +84,8 @@ private:
 	std::vector<builtin_module_reg_t> builtinModules;
 public:
 	project_globals_t project;
-	samplerate_t lSampleRate;
-	uint16_t lBlockSize;
+	samplerate_t lSampleRate = 0;
+	uint16_t lBlockSize = 0;
 	int32_t hostSlot = -1;
 private:
 	host_stats_t stats{0};
@@ -126,7 +126,7 @@ public:
 	}
 	std::vector<note_t> getRealtimeNotes();
 public:
-	vsthost(uint32_t _sampleRate = 44100, uint16_t _blockSize = 512);
+	vsthost();
 	vsthost(vsthost const&) = delete;
 	~vsthost();
 	void setSamplerateBlockSize(int32_t sampleRate, int32_t blockSize);

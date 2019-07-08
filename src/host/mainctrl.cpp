@@ -565,7 +565,7 @@ void MainCtrl::postInit() {
 	if (settings.startEngine) {
 		vsthost* host = vsthost::getInstance();
 		audiohost* audioHost = audiohost::getInstance();
-		if (audioHost->startAudio()) {
+		if (audioHost->startAudio(settings.iosettings)) {
 			host->setOutput(audioHost);
 		} else {
 			//notify user
@@ -633,21 +633,22 @@ void MainCtrl::initApp(int argc, char* argv[]) {
 		}
 	}
 	daw_tls::tlsinstance& tls = daw_tls::getTls();
-	auto audioHost = new audiohost(44100, 256);
-	auto host = new vsthost(44100, 256);
+	auto audioHost = new audiohost();
+	auto host = new vsthost();
 	auto midiHost = new midihost();
 	if (!vsthost::assignMasterCallback(host)) {
 		delete host;
 		dbgassert(0);
 		throw applogicexception("no empty vst callback slot");
 	}
+	host->setSamplerateBlockSize(settings.iosettings.samplerate, settings.iosettings.blocksize);
 	tls.project = this;
 	tls.mainCtrl = this;
 	tls.audioHost = audioHost;
 	tls.host = host;
 	tls.midiHost = midiHost;
 	tls.pluginDatabase = &plugindb;
-	tls.audioCache = new audiocache(tls.host->lSampleRate);
+	tls.audioCache = new audiocache(settings.iosettings.samplerate);
 	tls.waveform = new waveformrender();
 }
 bool MainCtrl::init(window_main* window, NVGcontext* nanovg)

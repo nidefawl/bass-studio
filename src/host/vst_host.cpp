@@ -293,28 +293,33 @@ vsthost::~vsthost() {
 	delete moduleMgr;
 	delete blockZero;
 }
-vsthost::vsthost(uint32_t _sampleRate, uint16_t _blockSize)
+vsthost::vsthost()
 	: moduleMgr{new vsthost::ModuleManager{}},
-	  lSampleRate(_sampleRate),
-	  lBlockSize(_blockSize),
 	  numChannels(OUTPUT_CHANNELS)
 {
 	memset(&timeinfo, 0, sizeof(timeinfo));
 	allocRingBuffer(ringbuffer, 32);
 	updateTime(0, 0.0, playback_state::status_stop);
-	setBlockSize(_blockSize);
 	midiRealtimeInput = new clip_notes_t;
 	registerPlugins();
 }
 void vsthost::setSamplerateBlockSize(int32_t sampleRate, int32_t blockSize) {
 	if (sampleRate != this->lSampleRate || blockSize != this->lBlockSize) {
-		this->lBlockSize = blockSize;
-		this->lSampleRate = sampleRate;
-		setBlockSize(this->lBlockSize);
 		for (vstplugin* plugin : this->pluginInstancesVST2) {
 			plugin->sleep();
-			plugin->setBlockSize(this->lBlockSize);
-			plugin->setSampleRate(this->lSampleRate);
+		}
+		this->lBlockSize = blockSize;
+		this->lSampleRate = sampleRate;
+		setBlockSize(blockSize);
+		for (auto* audio : this->allAudioStages) {
+			audio->input.realloc(blockSize);
+			audio->output.realloc(blockSize);
+		}
+		for (vstplugin* plugin : this->pluginInstancesVST2) {
+			plugin->setBlockSize(blockSize);
+			plugin->setSampleRate(sampleRate);
+		}
+		for (vstplugin* plugin : this->pluginInstancesVST2) {
 			plugin->resume();
 		}
 		for (auto* stage: this->allAudioStages) {
@@ -450,6 +455,8 @@ void delayAudio(DelayLine* delayLine, AudioBlock* input, AudioBlock* output, sam
 
 }
 int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround) {
+	assert(lBlockSize > 0);
+	assert(lSampleRate > 0);
 	double since = timer.getTimeDoubleReset();
 	timer2.reset();
 
@@ -914,6 +921,7 @@ void vsthost::setOutput(audiohost* audioHost) {
 	this->audioHost = audioHost;
 	if (audioHost) {
 		setSamplerateBlockSize(audioHost->lSampleRate, audioHost->lBlockSize);
+		audiocache::getInstance()->setSamplerate(audioHost->lSampleRate);
 	}
 
 }
