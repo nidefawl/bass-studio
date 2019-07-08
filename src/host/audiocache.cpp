@@ -21,16 +21,42 @@ audiofile_t* audiocache::get(int32_t i) {
 	size_t count = this->mapId.count(i);
 	return count ? this->mapId.at(i) : nullptr;
 }
+void audiocache::unloadSampleId(int32_t id) {
+	mapId.erase(id);
+	auto it = std::remove_if(list.begin(), list.end(), [id](std::unique_ptr<audiofile_t>& r) {
+		return r->id == id;
+	});
+	if (it != list.end()) {
+		list.erase(it, list.end());
+	}
+}
 void audiocache::setSamplerate(int32_t samplerate) {
 	this->samplerate = samplerate;
+	std::vector<audiofile_path_t> reloadFiles;
+	for (auto it = list.begin(); it != list.end();) {
+		auto& w = *it;
+		if (w->sample->sampleRate != samplerate) {
+			reloadFiles.push_back(w->getPath());
+			mapId.erase(w->id);
+			it = list.erase(it);
+		} else {
+			it++;
+		}
+	}
+	for (auto& f : reloadFiles) {
+		log_printf("reloading file %s with new samplerate %d\n", StringAsCStr(f.path), samplerate);
+		loadFile(f.path, f.id);
+	}
 }
 audiofile_t* audiocache::loadFile(String path, int id) {
 	drwav wav;
 	//satinize path so comparison matches, or ask os if path equals a file we already loaded before
 
 	for (auto& w : list) {
-		if (w.get()->path == path)
+		if (w.get()->path == path) {
+			log_printf("skipping file %s (requested id %d), already loaded (id %d)\n", StringAsCStr(path), id, w.get()->id);
 			return w.get();
+		}
 	}
 	if (drwav_init_file(&wav, StringAsCStr(path))) {
 		my_printf("%s\n", StringAsCStr(path));
