@@ -33,4 +33,4 @@ include_directories(SYSTEM
     ${DAW_DEPS_PATH}/portmidi/pm_common
     ${DAW_DEPS_PATH}/SplineLibrary/spline_library
     ${DAW_DEPS_PATH}/cereal
-    ${DAW_DEPS_PATH}/nvwa/nvwa)
+    ${DAW_DEPS_PATH}/kissfft)
