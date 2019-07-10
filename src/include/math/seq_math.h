@@ -1,6 +1,8 @@
 #pragma once
 #include <algorithm>
 #include <cmath>
+#include <assert.h>
+#include <limits>
 #include "vec.h"
 #define CLAMP_I(x, min, max) (x > max ? max : x < min ? min : x)
 #define CLAMP_F(x) (x > 1.f ? 1.f : x < 0.f ? 0.f : x)
@@ -32,6 +34,26 @@ namespace math {
 	template<typename T>
 	inline T round(T a) {
 		return std::round(a);
+	}
+	template<typename T>
+	inline T ceil(T a) {
+		return std::round(a);
+	}
+	template <typename T, typename U>
+	inline bool CheckFitsTypeRange(const U value) {
+		return value >= std::numeric_limits<T>::min()  && value <= std::numeric_limits<T>::max() ;
+	}
+	template<typename T>
+	inline int64_t ceilCast(T a) {
+		T val = std::ceil(a);
+		assert(CheckFitsTypeRange<int64_t>(a));
+		return val;
+	}
+	template<typename T>
+	inline int64_t floorCast(T a) {
+		T val = std::floor(a);
+		assert(CheckFitsTypeRange<int64_t>(a));
+		return val;
 	}
 	template<typename T>
 	inline T clamp(T a, T tmin, T tmax) {
