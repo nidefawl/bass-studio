@@ -145,11 +145,13 @@ audiofile_t* audiocache::loadFile(String path, int id) {
 			}
 		}
 		my_printf("copy done: %d\n", nSamples);
-		int maxDownS = 1;
+		int maxDownS = 3;
 		for (int step = 1; step < maxDownS; step++) {
 			std::vector<samplechannel_t> downsampledChannels(2);
 			for (int i = 0; i < wav.channels; i++) {
 				size_t len = sample->nSamples>>step;
+				if (len < 10)
+					break;
 				samplechannel_t chDownSmpld(len);
 				downsample(sample->sampleRate,
 						sample->samples.at(i).data(),
