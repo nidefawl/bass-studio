@@ -31,8 +31,8 @@ int benchmark_waverender(audiofile_t* sample, BakeGLPath& bakedPath) {
 
 	double zoom = 0.5;
 
-	double lenSamples = audioSample->nSamples;
-	double samplesPerPx = lenSamples/size.x;
+	auto lenSamples = audioSample->nSamples;
+	double samplesPerPx = lenSamples/(double)size.x;
 	audioclip_texture_t w;
 	w.quality=4;
 	if (samplesPerPx >= 256) {
@@ -86,8 +86,8 @@ void tesselate(audiofile_t* sample, std::vector<std::vector<vec2>>& out) {
 
 	double zoom = 0.5;
 
-	double lenSamples = audioSample->nSamples;
-	double samplesPerPx = lenSamples/size.x;
+	auto lenSamples = audioSample->nSamples;
+	double samplesPerPx = lenSamples/(double)size.x;
 	audioclip_texture_t w;
 	w.quality=4;
 	if (samplesPerPx >= 256) {

@@ -15,9 +15,9 @@ struct audioclip_texture_t {
 	ivec2 pos{0};
 //	ivec2 startOffset{0};
 	ivec2 size{0};
-	double sampleBegin{0};
-	double sampleBeginOffset{0};
-	double sampleEnd{0};
+	int64_t sampleBegin{0};
+	int64_t sampleBeginOffset{0};
+	int64_t sampleEnd{0};
 	double samplesPerPx = 0;
 	int quality = 1;
 //	int scale = 1;

@@ -56,10 +56,10 @@ audioclip_texture_t makeWaveformFromClip(project_t& project, scaled_grid& grid,
 		tickBegin = m_clip->start();
 		tickEnd = m_clip->end();
 	}
-	double sampleBegin = tickToSamplePrecise(tickBegin, project.tempo100, sr);
-	double sampleStartOffset = tickToSamplePrecise(tickBeginOffset, project.tempo100, sr);
+	int64_t sampleBegin = math::floorCast(tickToSamplePrecise(tickBegin, project.tempo100, sr));
+	int64_t sampleStartOffset = math::floorCast(tickToSamplePrecise(tickBeginOffset, project.tempo100, sr));
 
-	double sampleEnd = tickToSamplePrecise(tickEnd, project.tempo100, sr);
+	int64_t sampleEnd = math::floorCast(tickToSamplePrecise(tickEnd, project.tempo100, sr));
 	sampleStartOffset += m_clip->offsetSamples;
 	sampleEnd += m_clip->offsetSamples;
 	ivec2 startOffset = posClipped - pos;
@@ -88,7 +88,7 @@ audioclip_texture_t makeWaveformFromClip(project_t& project, scaled_grid& grid,
 	w.pos = pos;
 //	w.startOffset = startOffset;
 	w.size = ivec2(math::min(sizeClipped.x, FBO_WIDTH), math::min(size.y, FBO_HEIGHT));
-	double nSamples = sampleEnd-sampleStartOffset;
+	int64_t nSamples = sampleEnd-sampleStartOffset;
 	if (nSamples * pxPerSample > FBO_WIDTH) {
 		samplesPerPx = (nSamples / FBO_WIDTH);
 	}

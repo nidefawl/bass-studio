@@ -172,25 +172,26 @@ public:
 
 		double tickScreenStart = grid.screenToTickD(left());
 		double tickScreenEnd = grid.screenToTickD(right());
-		double samplesScreenLen = tickToSamplePrecise(tickScreenEnd-tickScreenStart, project.tempo100, sr);
+		int64_t samplesScreenLen = math::ceilCast(tickToSamplePrecise(tickScreenEnd-tickScreenStart, project.tempo100, sr));
 
 		double tickRenderStart = sampleToTickPrecise(entry.sample->samplePos, project.tempo100, sr);
 		double tickRenderLen = sampleToTickPrecise(entry.sample->sample.nSamples, project.tempo100, sr);
 
-		double samplesPerPx = samplesScreenLen/size.x;
+		double samplesPerPx = samplesScreenLen/(double)size.x;
 
 		double pxPerSample = 1.0/samplesPerPx;
-		constexpr float MAX_RES = 2048;
+		constexpr double MAX_RES = 2048;
 
 		double posStart = math::max(0.0, grid.tickToScreenD(tickRenderStart));
 		double posEnd = math::min((double)size.x, grid.tickToScreenD(tickRenderStart+tickRenderLen));
 		double renderSize = posEnd-posStart;
 
 
-		double sampleBegin = 0.0;
-		double sampleBeginOffset = math::max(0.0, tickToSamplePrecise(tickScreenStart-tickRenderStart, project.tempo100, sr));
+		int64_t sampleBegin = 0;
+		int64_t sampleBeginOffset = math::floorCast(math::max(0.0, tickToSamplePrecise(tickScreenStart-tickRenderStart, project.tempo100, sr)));
 
-		double nSamples = tickToSamplePrecise(grid.screenToTickD(posEnd), project.tempo100, sr) - tickToSamplePrecise(grid.screenToTickD(posStart), project.tempo100, sr);
+		int64_t nSamples = math::ceilCast(tickToSamplePrecise(grid.screenToTickD(posEnd), project.tempo100, sr) -
+				tickToSamplePrecise(grid.screenToTickD(posStart), project.tempo100, sr));
 
 		dbgassert(posEnd>posStart);
 
