@@ -379,6 +379,7 @@ void MainCtrl::unloadProject() {
 		delete tr;
 	}
 	hist.clear(this);
+	this->view->ctr_tracks.trackView.resizePreModifyState.reset();
 	this->view->ctr_tracks.trackView.clipboard.reset();
 	this->view->ctr_tracks.trackView.action.clipboard.reset();
 
