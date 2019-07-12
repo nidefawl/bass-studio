@@ -538,14 +538,17 @@ public:
 };
 class appwindow_main : public appwindow, public window_main  {
 	AppCtrl* const ctrl;
+	std::shared_ptr<AppCtrl> sharedCtrl;
 	uint64_t dblclicktimer;
 //	WorkerThread workerThread;
+	void destroyOverlayWindows();
 public:
 	std::vector<std::shared_ptr<appwindow>> overlayWindows;
-	appwindow_main(appwindow* _parent, AppCtrl* _ctrl)
+	appwindow_main(appwindow* _parent, std::shared_ptr<AppCtrl> _ctrl)
 		: appwindow(_parent),
 		  window_main(),
-		  ctrl(_ctrl) {
+		  ctrl(_ctrl.get()),
+		  sharedCtrl(_ctrl) {
 		dblclicktimer = 0;
 	}
 //	WorkerThread* getWorkerThread() {
@@ -614,7 +617,6 @@ public:
 	bool canResize() override {
 		return this->bCanResize;
 	}
-	void destroyOverlayWindows();
 	void destroy();
 	void onTick() {
 		PREVENT_REENTRANT("REENTRANT IN onTick")
@@ -1033,7 +1035,7 @@ public:
 window_main* appwindow_main::createOverlay(int flags) {
 //	std::unique_ptr<appwindow_overlay> ow = std::make_unique<appwindow_overlay>(this);
 	String sName = StringFormat("%s menu", this->name);
-	std::shared_ptr<appwindow_main> ow = std::make_shared<appwindow_main>(this, new PopupCtrl{}); //TODO: manage lifetime of control
+	std::shared_ptr<appwindow_main> ow = std::make_shared<appwindow_main>(this, std::make_shared<PopupCtrl>()); //TODO: manage lifetime of control
 	ow->createMainWindow(StringAsCStr(sName), 200, 200, nullptr, flags);
 //	ow->createOverlayWindow(StringAsCStr(sName), 200, 200, nullptr);
 	auto* ret = ow.get();
@@ -1049,10 +1051,8 @@ void appwindow_main::destroyOverlayWindows() {
 }
 void appwindow_main::destroy() {
 	if (!glfw)
-		throw appexception("window null");
-	glfwMakeContextCurrent(glfw);
-	appwindow::destroyGL();
-	appwindow::killTimer();
+		throw appexception("glfw null");
+	destroyOverlayWindows();
 #if BUILD_VSTHOST
 #ifdef _WIN32
 	if (this->dropTarget)
@@ -1065,6 +1065,13 @@ void appwindow_main::destroy() {
 		//TODO: implement linux
 #endif
 #endif
+	if (this->ctrl) {
+		glfwMakeContextCurrent(glfw);
+		this->ctrl->destroyControl();
+	}
+	glfwMakeContextCurrent(glfw);
+	appwindow::destroyGL();
+	appwindow::killTimer();
 }
 void appwindow_main::createMainWindow(const char* title, int w, int h, void* parentWindowHandle, int flags) {
 	setAppWindowHints();
@@ -1391,7 +1398,7 @@ int startApplication(int argc, char* argv[]) {
 	setAppWindowHints();
 	std::shared_ptr<AppCtrl> ctrl = makeApp();
 	ctrl->initApp(argc, argv);
-	mainWindow = std::make_unique<appwindow_main>(nullptr, ctrl.get());
+	mainWindow = std::make_unique<appwindow_main>(nullptr, ctrl);
 	mainWindow->createMainWindow("main window", 1280, 720, nullptr);
 	mainWindow->showWindow();
 	if (centerScreenIdx >= 0) {
@@ -1460,7 +1467,6 @@ int startApplication(int argc, char* argv[]) {
 	ctrl->destroyControl();
 	mainWindow->destroy();
 
-	mainWindow->destroyOverlayWindows();
 	if (!fataError) {
 		try {
 			saveSettings(settings);
@@ -1512,7 +1518,7 @@ class appwindow_plugin : public appwindow_main, public pluginwindow {
 public:
 	ERect _rect{ 0 };
 	appwindow_plugin(AudioEffect *_effect, std::shared_ptr<PluginControl> _ctrl, int w, int h)
-		: appwindow_main(nullptr, (AppCtrl*)_ctrl.get()),
+		: appwindow_main(nullptr, _ctrl),
 		  pluginwindow(_ctrl)
 	{
 		this->effect = _effect;
