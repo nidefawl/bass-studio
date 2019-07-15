@@ -1344,22 +1344,14 @@ int startApplication(int argc, char* argv[]) {
 #ifdef USE_WIN32_EXC_HOOKS
 	setExceptionHandler();
 #endif
-//	int64_t *segFaultDeref = static_cast<int64_t*>((void*)0xBAADF00DLL);
-//	int64_t a = *segFaultDeref;
 	try {
 	int centerScreenIdx = -1;
-//	bool runConsoleMode = false;
 	for (int i = 0; i < argc; i++) {
-		log_printf("%s\n", argv[i]);
-	}
-	for (int i = 0; i < argc; i++) {
-//		if (!strcmp(argv[i], "-console")) {
-//			runConsoleMode = true;
-//		}
-		if (strcmp(argv[i], "-center") == 0 && i + 1 < argc) {
-			log_printf("argv[i] %s argv[i+1] %s\n", argv[i], argv[i+1]);
+		if (argv[i] && strcmp(argv[i], "-center") == 0 && i + 1 < argc) {
 			char* a = argv[i+1];
 			centerScreenIdx = atoi(a);
+			argv[i] = nullptr;
+			argv[i+1] = nullptr;
 		}
 	}
 	//if (!runConsoleMode) {
