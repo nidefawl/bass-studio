@@ -77,7 +77,8 @@ struct overlap_buffer_t {
 		return processBlock;
 	}
 };
-struct audio_spectrum_t {
+class audio_spectrum {
+public:
 	const int32_t samplerate;
 	const int32_t blocksize;
 	const int32_t fftlen;
@@ -85,7 +86,7 @@ struct audio_spectrum_t {
 	int32_t numBands;
 	std::array<std::vector<float>, OUTPUT_CHANNELS> bands{};
 	std::array<std::vector<float>, OUTPUT_CHANNELS> mags{};
-	audio_spectrum_t(const audio_spectrum_t& ref) :
+	audio_spectrum(const audio_spectrum& ref) :
 		samplerate(ref.samplerate),
 		blocksize(ref.blocksize),
 		fftlen(ref.fftlen),
@@ -97,7 +98,7 @@ struct audio_spectrum_t {
 			bands[i] = ref.bands[i];
 		}
 	}
-	audio_spectrum_t(const int32_t _blocksize, const int32_t _samplerate, const int32_t _fftLen, const int32_t _numBands) :
+	audio_spectrum(const int32_t _blocksize, const int32_t _samplerate, const int32_t _fftLen, const int32_t _numBands) :
 		samplerate(_samplerate),
 		blocksize(_blocksize),
 		fftlen(_fftLen),
@@ -123,7 +124,7 @@ inline float lerp(float a, float b, float c) {
 
 	return a + (b-a)*c;
 }
-inline void mixSpectrum(audio_spectrum_t const *lf, audio_spectrum_t const *hf, audio_spectrum_t & out) {
+inline void mixSpectrum(audio_spectrum const *lf, audio_spectrum const *hf, audio_spectrum & out) {
 //	out.samplerate = a->samplerate;
 //	out.blocksize = a->blocksize;
 //	out.fftlen = a->fftlen;
@@ -162,7 +163,8 @@ inline void mixSpectrum(audio_spectrum_t const *lf, audio_spectrum_t const *hf, 
 //	}
 }
 template<int INPUTLEN, int T>
-struct audio_analyzer_t : audio_spectrum_t {
+class fft_processor : public audio_spectrum {
+public:
 	fft_ctxt_t<INPUTLEN>* fftctxt;
 	overlap_buffer_t<INPUTLEN> buffer;
 	int runs = 0;
@@ -230,8 +232,8 @@ struct audio_analyzer_t : audio_spectrum_t {
 			}
 		}
 	}
-	audio_analyzer_t(const int32_t _blocksize, const int32_t _samplerate) :
-		audio_spectrum_t(_blocksize, _samplerate, INPUTLEN*T, 64),
+	fft_processor(const int32_t _blocksize, const int32_t _samplerate) :
+		audio_spectrum(_blocksize, _samplerate, INPUTLEN*T, 64),
 			fftctxt(new fft_ctxt_t<INPUTLEN>(fftlen, srOverFFT))
 	{
 		setNumBands(64);
@@ -241,7 +243,7 @@ struct audio_analyzer_t : audio_spectrum_t {
 			this->mags[i].resize(this->fftlen);
 		}
 	}
-	~audio_analyzer_t() {
+	~fft_processor() {
 		delete fftctxt;
 	}
 	void onTick(double since) {
