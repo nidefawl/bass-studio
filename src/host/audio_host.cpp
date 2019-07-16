@@ -94,23 +94,27 @@ static int audioCallback(const void *inputBuffer, void *outputBuffer,
 	AudioBuffer** buffers = ringbuffer.buffers;
 
 	AudioBuffer* bufferWrite = buffers[writePos];
-	bufferWrite->output->realloc(framesPerBuffer);
-	if (inputs) {
-		bufferWrite->output->copyFrom(inputs, framesPerBuffer, stream->nInputChannels);
-//		logEveryMsec(124, 3000, StringFormat("stream IN:%s\n", StringAsCStr(stream->inputName)));
+	if (bufferWrite->inUse) {
+		host->inputBufferUnderuns++;
 	} else {
-		dsp_util::fillChannels(outputs, stream->nOutputChannels, framesPerBuffer, 0.0f);
-	}
-	bufferWrite->submitted = true;
-	bufferWrite->inUse = true;
-	bufferWrite->blockPosSample = timeInfo->inputBufferAdcTime;
-	bufferWrite->blockPosTick = 0;
-	writePos++;
-	writePos &= RING_BUF_MASK;
-	if (stream) {
-		stream->enqueueInput(bufferWrite);
-	} else {
-		bufferWrite->inUse = false;
+		bufferWrite->output->realloc(framesPerBuffer);
+		if (inputs) {
+			bufferWrite->output->copyFrom(inputs, framesPerBuffer, stream->nInputChannels);
+	//		logEveryMsec(124, 3000, StringFormat("stream IN:%s\n", StringAsCStr(stream->inputName)));
+		} else {
+			dsp_util::fillChannels(outputs, stream->nOutputChannels, framesPerBuffer, 0.0f);
+		}
+		bufferWrite->submitted = true;
+		bufferWrite->inUse = true;
+		bufferWrite->blockPosSample = timeInfo->inputBufferAdcTime;
+		bufferWrite->blockPosTick = 0;
+		writePos++;
+		writePos &= RING_BUF_MASK;
+		if (stream) {
+			stream->enqueueInput(bufferWrite);
+		} else {
+			bufferWrite->inUse = false;
+		}
 	}
 
 
