@@ -68,7 +68,7 @@ struct overlap_buffer_t {
 			}
 			processBlock = true;
 			std::swap(dst, dst2);
-			//copy second half from previous buffer to new current buffer
+			//copy second half from previous buffer to new current buffers first half
 			dst->copyFromPosToPos(dst2->buf, INPUTLEN >> 1, 0, INPUTLEN >> 1, OUTPUT_CHANNELS);
 			// write next block after copied half
 			blockOffset = INPUTLEN >> 1;
@@ -167,7 +167,7 @@ class fft_processor : public audio_spectrum {
 public:
 	fft_ctxt_t<INPUTLEN>* fftctxt;
 	overlap_buffer_t<INPUTLEN> buffer;
-	int runs = 0;
+	int blocksProcessed = 0;
 	double processedTime = 0;
 	int init = 0;
 	std::array<std::array<float, INPUTLEN>, OUTPUT_CHANNELS> ins{};
@@ -261,7 +261,7 @@ public:
 			fftctxt->processFFT(paddedInput, mags[i]);
 			fillbands(mags[i], freq, bands[i], fftlen, srOverFFT);
 		}
-		runs++;
+		blocksProcessed++;
 	}
 	void processBuffer(AudioBlock* block) {
 		assert(INPUTLEN%block->samples==0&&"blocksize must be multiple of INPUTLEN");
@@ -279,16 +279,13 @@ public:
 		if (processBlock) {
 			std::vector<float> paddedInput(this->fftlen);
 			for (int i = 0; i < OUTPUT_CHANNELS; i++) {
-				if (i > 0) {
-					memset(paddedInput.data(), 0, sizeof(float)*paddedInput.size());
-				}
 				assert(mags[i].size() == this->fftlen && "fftlen must not change at runtime");
 				memset(mags[i].data(), 0, sizeof(float)*this->fftlen);
 				applyWindowAndPadding(ins[i].data(), ins[i].size(), paddedInput, fftlen);
 				fftctxt->processFFT(paddedInput, mags[i]);
 				fillbands(mags[i], freq, bands[i], fftlen, srOverFFT);
 			}
-			runs++;
+			blocksProcessed++;
 		}
 
 	}
