@@ -22,7 +22,7 @@ public:
 	float fPeak = 0;
 	float fLvl = 0;
 	float fPeakFalloffDelay = 0;
-	void update(float* fBuf, uint32_t samples, float fGain) {
+	void update(const float* fBuf, uint32_t samples, float fGain) {
 		uint32_t i;
 		float fMaxBlock = 0.0f;
 		for (i = 0; i < samples; i++) {
@@ -104,7 +104,7 @@ template <uint32_t N, uint32_t C = 2>
 class rmsmeterimpl {
 public:
 	runningsum<N> channels[C];
-	void update(AudioBlock* block, float fTrackGain) {
+	void update(const AudioBlock* block, float fTrackGain) {
 		for (uint32_t i = 0; i < math::min(block->channels, C); i++) {
 			channels[i].update(block->buf[i], block->samples, fTrackGain);
 		}
