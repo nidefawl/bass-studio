@@ -7,8 +7,10 @@
 
 
 class gui_list_entry : public guibase {
+	friend class gui_list;
 protected:
 	int icon = 0;
+	bool selected = false;
 public:
 	gui_list_entry() : guibase() {
 		setCanMouseHit(true);
@@ -34,10 +36,14 @@ class gui_list : public guictr_base, public gui_scrollcontainer {
 	int rowHeight = 30;
 	ivec4 rowMargin = {0, 0, 0, 0};
 	bool renderHR = false;
+	int32_t selectedIdx = -1;
 public:
 	gui_list() : guictr_base(), scrollbar(1, 0.0f, *this) {
 		add(&scrollbar);
 		setBackgroundRendered(true);
+	}
+	int32_t getSelectedIdx() {
+		return selectedIdx;
 	}
 	void setRowMargin(ivec4 _rowMargin) {
 		rowMargin = _rowMargin;
@@ -115,4 +121,5 @@ public:
 	virtual bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
 		return scrollbar.handleMouseScroll(evt, xoffset, yoffset);
 	}
+	virtual void buttonClicked(guibase* button);
 };

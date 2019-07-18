@@ -27,10 +27,12 @@ void gui_list_entry::render(NVGcontext* vg) {
 	if (icon > -1) {
 		x += rowHeight + spacing;
 	}
-	if (ctrl->isCtrOrChildFocused(this)) {
+	bool focused = ctrl->isCtrOrChildFocused(this);
+	if (focused || selected) {
+		auto color = theme->getColor(focused ? GuiColor::COL_BG_DRKER : GuiColor::COL_BG_DRK);
 		nvgBeginPath(vg);
 		nvgRect(vg, pos.x, pos.y, size.x, size.y);
-		nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_DRKER));
+		nvgFillColor(vg, color);
 		nvgFill(vg);
 	}
 	nvgTranslate(vg, pos.x, pos.y);
@@ -44,6 +46,13 @@ void gui_list_entry::render(NVGcontext* vg) {
 }
 
 void gui_list_entry::handleDraggedBegin(MouseEvent& evt) {
+	if (parent) parent->buttonClicked(this);
+}
+void gui_list::buttonClicked(guibase* button) {
+	selectedIdx = indexOfCtr(this->listGuis, button);
+	if (selectedIdx > -1) {
+		if (parent) parent->buttonClicked(button);
+	}
 }
 bool gui_list::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 	if (this->contains(mpos)) {
@@ -82,6 +91,7 @@ void gui_list::render(NVGcontext* vg) {
 		nvgTranslate(vg, 0, -g->top());
 	}
 	for (int32_t idx = first; idx < last; idx++) {
+		listGuis[idx]->selected = selectedIdx == idx;
 		listGuis[idx]->render(vg);
 	}
 	if (renderHR && first < last) {
