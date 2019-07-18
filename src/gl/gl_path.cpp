@@ -371,8 +371,8 @@ void GLPathRenderer::bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, Ba
 			flBufVertsPos += outVdata.size();
 			packed++;
 			outVdata.clear();
+			idx++;
 		}
-		idx++;
 	}
 	int nPaths = 0;
 	if (flBufVertsPos == 0) {
