@@ -337,7 +337,6 @@ static unsigned int glnvg__nearestPow2(unsigned int num)
 #	endif
 #endif
 
-static GLint defaultFBO = -1;
 
 static NVGLUTempFramebuffer* glnvg__allocFB(GLNVGcontext* gl)
 {
@@ -504,8 +503,7 @@ void nvgluDeleteFramebuffer(NVGLUframebuffer* fb)
 void nvgluBindFramebuffer(NVGLUframebuffer* fb)
 {
 #ifdef NANOVG_FBO_VALID
-	if (defaultFBO == -1) glGetIntegerv(GL_FRAMEBUFFER_BINDING, &defaultFBO);
-	glBindFramebuffer(GL_FRAMEBUFFER, fb != NULL ? fb->fbo : defaultFBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, fb != NULL ? fb->fbo : 0);
 #else
 	NVG_NOTUSED(fb);
 #endif
