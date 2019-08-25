@@ -164,7 +164,7 @@ void fillSqare(samplerate_t samplerate, float freq, float** buffer, uint32_t sam
 	uint32_t intIncr = (uint32_t)((4294967296.0 / samplerate) * freq);
 //	static int lastSign = (intOver & 0x80000000);
 	// loop:
-	for (uint32_t i = 0; i<samples; i++)
+	for (uint32_t i = 0; i < samples; i++)
 	{
 		one.i &= 0x7FFFFFFF; // mask out sign bit
 		one.i |= (intOver & 0x80000000);
