@@ -85,7 +85,7 @@ struct AudioBlock {
 		for (uint32_t i = 0; i < nChannels; i++) {
 			uint32_t srcChannelIdx = math::min(srcChannels-1, i);
 			uint32_t dstChannelIdx = math::min(channels-1, i);
-			float* srcBufChannel = srcBuf[srcChannelIdx];
+			const float* srcBufChannel = srcBuf[srcChannelIdx];
 			float* dstBufChannel = buf[dstChannelIdx];
 			//TODO: this does 2 copys to the same destination when going from stereo to mono (MIX FIRST)
 			memcpy(dstBufChannel+offsetOut, srcBufChannel+offsetIn, nSamples * sizeof(float));
@@ -116,10 +116,12 @@ struct AudioBlock {
 					float* newBuf = (float*)calloc(_samples,sizeof(float));
 					if (!newBuf) {
 						handleFailedAllocation(0x1000, _samples*sizeof(float));
-					} else if (buf[i]) {
+					} else {
 						memset(newBuf, 0, sizeof(float)*_samples);
-						memcpy(newBuf, buf[i], math::min(_samples, samples) * sizeof(float));
-						free(buf[i]);
+						if (buf[i]) {
+							memcpy(newBuf, buf[i], math::min(_samples, samples) * sizeof(float));
+							free(buf[i]);
+						}
 					}
 					buf[i] = newBuf;
 				}
