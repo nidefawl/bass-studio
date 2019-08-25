@@ -2,6 +2,9 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <memory.h>
+#include <assert.h>
+#include "assert_dbg.h"
+#include "logging.h"
 
 inline void* aligned_malloc(size_t size, size_t align) {
     void *result;
@@ -23,5 +26,6 @@ inline void aligned_free(void *ptr) {
 }
 
 inline void handleFailedAllocation(int allocId, size_t allocSize) {
-
+	log_printf("Failed allocation of size %d at %d\n", allocSize, allocId);
+	assert(0);
 }
