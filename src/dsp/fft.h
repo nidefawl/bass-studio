@@ -11,7 +11,7 @@ constexpr float MAX_FREQ = 22000;
 
 
 
-void applyWindowAndPadding(float* in, size_t inLen, std::vector<float>& windowedPadded, int32_t fftlen);
+void applyWindowAndPadding(float* in, size_t inLen, std::vector<float>& windowedPadded, int32_t fftlen, float fGain = 1.0f);
 void fillbands(std::vector<float> const & mags, std::vector<float> const & freq, std::vector<float>& bands, int32_t fftlen, double srOverFFT);
 
 //using fft_input_array = std::array<float, INPUTLEN>;
@@ -281,7 +281,7 @@ public:
 			for (int i = 0; i < OUTPUT_CHANNELS; i++) {
 				assert(mags[i].size() == this->fftlen && "fftlen must not change at runtime");
 				memset(mags[i].data(), 0, sizeof(float)*this->fftlen);
-				applyWindowAndPadding(ins[i].data(), ins[i].size(), paddedInput, fftlen);
+				applyWindowAndPadding(ins[i].data(), ins[i].size(), paddedInput, fftlen, fGain);
 				fftctxt->processFFT(paddedInput, mags[i]);
 				fillbands(mags[i], freq, bands[i], fftlen, srOverFFT);
 			}

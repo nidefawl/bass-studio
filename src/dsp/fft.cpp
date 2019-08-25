@@ -14,11 +14,11 @@
 
 
 
-void applyWindowAndPadding(float* in, size_t inLen, std::vector<float>& windowedPadded, int32_t fftlen) {
+void applyWindowAndPadding(float* in, size_t inLen, std::vector<float>& windowedPadded, int32_t fftlen, float fGain) {
 	memset(windowedPadded.data(), 0, windowedPadded.size()*sizeof(float));
 	for (int i = 0; i < inLen; i++) {
 	    double multiplier = (1.0 - cos(2.0*M_PI*i/(double)(inLen-1)));
-	    windowedPadded[i] = multiplier * in[i];
+	    windowedPadded[i] = multiplier * in[i] * fGain;
 	}
 }
 void fillbands(std::vector<float> const & mags, std::vector<float> const & freq, std::vector<float>& bands, int32_t fftlen, double srOverFFT) {
