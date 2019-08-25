@@ -54,6 +54,7 @@ public:
 	guictr_pluginlibrary() : guictr_base() {
 		setBackgroundRendered(true);
 		pluginListCtr.padding = 0;
+		pluginListCtr.setBackgroundRendered(false);
 		add(&textField);
 		add(&pluginListCtr);
 		textField.setCallback([this](const String& str) {
@@ -148,6 +149,7 @@ public:
 			}
 		}
 		pluginListCtr.padding = 0;
+		pluginListCtr.setBackgroundRendered(false);
 		add(&textField);
 		add(&pluginListCtr);
 		textField.setCallback([this](const String& str) {
