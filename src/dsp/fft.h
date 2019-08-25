@@ -47,29 +47,30 @@ struct fft_ctxt_t {
 		}
 	}
 };
-template<size_t INPUTLEN>
+template<size_t INPUTLEN, int32_t NUM_CHANNELS=OUTPUT_CHANNELS>
 struct overlap_buffer_t {
 	AudioBlock blockA;
 	AudioBlock blockB;
 	AudioBlock* dst = &blockA;
 	AudioBlock* dst2 = &blockB;
 	int64_t blockOffset = 0;
+	const int32_t nChannels;
 	overlap_buffer_t() :
-		blockA(OUTPUT_CHANNELS, INPUTLEN),
-		blockB(OUTPUT_CHANNELS, INPUTLEN) {
+		blockA(NUM_CHANNELS, INPUTLEN),
+		blockB(NUM_CHANNELS, INPUTLEN), nChannels(NUM_CHANNELS) {
 	}
-	bool feed(AudioBlock* block, std::array<std::array<float, INPUTLEN>, OUTPUT_CHANNELS>& ins) {
+	bool feed(const AudioBlock* block, std::array<std::array<float, INPUTLEN>, NUM_CHANNELS>& ins) {
 		bool processBlock = false;
-		dst->copyFromPosToPos(block->buf, 0, blockOffset, block->samples, OUTPUT_CHANNELS);
+		dst->copyFromPosToPos(block->buf, 0, blockOffset, block->samples, NUM_CHANNELS);
 		blockOffset += block->samples;
 		if (blockOffset >= INPUTLEN) {
-			for (int i = 0; i < OUTPUT_CHANNELS; i++) {
+			for (int i = 0; i < NUM_CHANNELS; i++) {
 				memcpy(ins[i].data(), dst->buf[i], INPUTLEN*sizeof(float));
 			}
 			processBlock = true;
 			std::swap(dst, dst2);
 			//copy second half from previous buffer to new current buffers first half
-			dst->copyFromPosToPos(dst2->buf, INPUTLEN >> 1, 0, INPUTLEN >> 1, OUTPUT_CHANNELS);
+			dst->copyFromPosToPos(dst2->buf, INPUTLEN >> 1, 0, INPUTLEN >> 1, NUM_CHANNELS);
 			// write next block after copied half
 			blockOffset = INPUTLEN >> 1;
 			//next processing trigger will happen in second feed call after here
@@ -263,7 +264,7 @@ public:
 		}
 		blocksProcessed++;
 	}
-	void processBuffer(AudioBlock* block) {
+	void processBuffer(AudioBlock* block, float fGain = 1.0f) {
 		assert(INPUTLEN%block->samples==0&&"blocksize must be multiple of INPUTLEN");
 		assert(block->samples == this->blocksize&&"blocksize must not change during runtime");
 		meter.update(block, 1.0f);
