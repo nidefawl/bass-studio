@@ -7,6 +7,7 @@
 #include "audiosample.h"
 #include "../wave/dr_wav.h"
 #include "../gui/drawwaveform.h"
+#include "platform.h"
 #include "fileio.h"
 #include "logging.h"
 #include <soxr.h>
@@ -58,6 +59,7 @@ audiofile_t* audiocache::loadFile(String path, int id) {
 			return w.get();
 		}
 	}
+	log_printf("Loading %s...\n", path.c_str());
 	if (drwav_init_file(&wav, StringAsCStr(path))) {
 		my_printf("%s\n", StringAsCStr(path));
 		std::vector<float> pSamples(wav.totalSampleCount);
@@ -144,8 +146,9 @@ audiofile_t* audiocache::loadFile(String path, int id) {
 				sample->samples[i] = std::move(loadedSampleChannels[i]);
 			}
 		}
-		my_printf("copy done: %d\n", nSamples);
-		int maxDownS = 3;
+		int64_t timeBeginDownsample = getTimeHPint64();
+		int maxDownS = 2;
+		log_printf("Downsampling %s...\n", path.c_str());
 		for (int step = 1; step < maxDownS; step++) {
 			std::vector<samplechannel_t> downsampledChannels(2);
 			for (int i = 0; i < wav.channels; i++) {
@@ -161,6 +164,8 @@ audiofile_t* audiocache::loadFile(String path, int id) {
 			}
 			sample->downsampled.push_back(std::move(downsampledChannels));
 		}
+		int64_t timeDiffDownsample = getTimeHPint64() - timeBeginDownsample;
+		log_printf("Downsampling %s took %fsec\n", path.c_str(), timeDiffDownsample/1000000.0);
 //		int nDownSmplSteps = maxDownS-1;
 //		dbgassert(sample->downsampled.size() == nDownSmplSteps);
 		int _id = id < 0 ? this->nextIdx++ : id;
