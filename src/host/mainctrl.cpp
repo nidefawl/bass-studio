@@ -603,6 +603,7 @@ void MainCtrl::destroy()
 	vsthost::getInstance()->destroy();
 	audiohost::getInstance()->deinitPa();
 	midihost::getInstance()->deinitPm();
+	waveformrender::getInstance()->destroy();
 	settings.dens = grid.grid_dens;
 	isOK = false;
 	delete view;
