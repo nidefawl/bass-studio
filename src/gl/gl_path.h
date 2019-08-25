@@ -72,7 +72,13 @@ struct vbuf {
 	std::vector<float> v;
 	std::vector<int> i;
 };
-class GLPathRenderer {
+class IPathRenderer {
+public:
+	virtual ~IPathRenderer() {};
+	virtual void bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, BakeGLPath& out) = 0;
+	virtual void render(BakeGLPath& out, const glm::mat4x4& matProj, const glm::mat4x4& matView, const glm::mat4x4& matModel) = 0;
+};
+class GLPathRenderer : public IPathRenderer {
 	std::vector<VertexAttr> attributes {
 		{"a_position", 2, GL_FLOAT},
 		{"a_segment", 2, GL_FLOAT},
@@ -95,5 +101,21 @@ public:
 public:
 	int init();
 	void destroy();
-	void bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, BakeGLPath& out);
+	void bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, BakeGLPath& out) override;
+	void render(BakeGLPath& out, const glm::mat4x4& matProj, const glm::mat4x4& matView, const glm::mat4x4& matModel) override;
+};
+
+class GLPathRendererSimple : public IPathRenderer {
+	std::vector<VertexAttr> attributes {
+		{"a_position", 2, GL_FLOAT},
+	};
+public:
+	uint32_t program2dLines;
+	uint32_t u_mvp;
+	uint32_t u_color;
+public:
+	int init();
+	void destroy();
+	void bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, BakeGLPath& out) override;
+	void render(BakeGLPath& out, const glm::mat4x4& matProj, const glm::mat4x4& matView, const glm::mat4x4& matModel) override;
 };

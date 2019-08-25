@@ -5,6 +5,7 @@
 
 #include "math/seq_math.h"
 #include "math/vec.h"
+#include "math/mat.h"
 #include "str_util.h"
 #include "fileio.h"
 #include "audiocache.h"
@@ -439,4 +440,16 @@ void GLPathRenderer::bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, Ba
     out.vbo.nIndices = bufFinal.i.size();
 //    printf("%d %d\n", out.nIndices, out.numPaths);
 }
+void GLPathRenderer::render(BakeGLPath& bakedPath, const glm::mat4x4& matProj, const glm::mat4x4& matView, const glm::mat4x4& matModel) {
 
+
+	glUniformMatrix4fv(u_projection, 1, GL_FALSE, mat_ptr(matProj));
+	glUniformMatrix4fv(u_view, 1, GL_FALSE, mat_ptr(matView));
+	glUniformMatrix4fv(u_model, 1, GL_FALSE, mat_ptr(matModel));
+	glUniform3f ( u_uniforms_shape, 1, bakedPath.numPaths*countUniforms, countUniforms);
+
+	glBindTexture ( GL_TEXTURE_2D, bakedPath.uniforms_texture);
+	glBindBuffer ( GL_ELEMENT_ARRAY_BUFFER, bakedPath.vbo.vboIdxId);
+	glBindTexture ( GL_TEXTURE_2D, bakedPath.uniforms_texture);
+	glDrawElements ( GL_TRIANGLES, bakedPath.vbo.nIndices, GL_UNSIGNED_INT, NULL);
+}

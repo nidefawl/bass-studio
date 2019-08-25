@@ -44,7 +44,8 @@ struct TextureAtlas {
 	int nextIdx = 10;
 };
 class waveformrender {
-	GLPathRenderer renderer;
+	struct Impl;
+	Impl* const impl;
 	int32_t nextPathIdx = 0;
 	std::array<BakeGLPath, 32> bakedPaths;
 	std::vector<TextureAtlas> atlases;
@@ -52,7 +53,9 @@ class waveformrender {
 //	std::vector<audioclip_texture_t> prevRendered;
 public:
 	static waveformrender* getInstance();
-	static void destroy();
+	waveformrender();
+	~waveformrender();
+	void destroy();
 	void init();
 	void getRenderedTextures(std::vector<TextureAtlas>& rendered);
 //	int render(NVGcontext* ctxt, cachedaudio_t* audio, audioclip_texture_t* waveform);

@@ -19,9 +19,19 @@
 
 
 bool checkGLError(const char* s);
-
+struct waveformrender::Impl {
+	GLPathRenderer renderer;
+};
+waveformrender::~waveformrender() {
+	delete impl;
+}
+waveformrender::waveformrender() : impl(new waveformrender::Impl()) {
+}
 void waveformrender::init() {
-	renderer.init();
+	impl->renderer.init();
+}
+void waveformrender::destroy() {
+	impl->renderer.destroy();
 }
 void waveformrender::getRenderedTextures(std::vector<TextureAtlas>& rendered) {
 	for (auto& atlas : atlases) {
@@ -344,6 +354,7 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 	this->queuedTasks.clear();
 	//
 
+	auto& renderer = impl->renderer;
 	//go over all framebuffers (_atlas.fb)
 	for (TextureAtlas& _atlas : atlases) {
 		bool clearFB = false;
@@ -420,18 +431,12 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 			matModel[0][0] = waveform.scaleX;
 			matView = glm::translate(matView, glm::vec3(pos.x, pos.y, 0));
 			mat4x4 matProj = glm::ortho(0.f, (float) FBO_WIDTH, (float)FBO_HEIGHT, 0.f, 1.f, -1.f);
-			glUniformMatrix4fv(renderer.u_projection, 1, GL_FALSE, mat_ptr(matProj));
-			glUniformMatrix4fv(renderer.u_view, 1, GL_FALSE, mat_ptr(matView));
-			glUniformMatrix4fv(renderer.u_model, 1, GL_FALSE, mat_ptr(matModel));
-			glUniform3f ( renderer.u_uniforms_shape, 1, bakedPath.numPaths*renderer.countUniforms, renderer.countUniforms);
-			glBindTexture ( GL_TEXTURE_2D, bakedPath.uniforms_texture);
-			glBindVertexArray ( bakedPath.vbo.vaoId );
-			glBindBuffer ( GL_ELEMENT_ARRAY_BUFFER, bakedPath.vbo.vboIdxId);
 			dbgassert(pos.x+size.x<=FBO_WIDTH);
 			glScissor(pos.x, FBO_HEIGHT-pos.y-size.y, size.x, size.y);
+			glBindVertexArray ( bakedPath.vbo.vaoId );
 
 			glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-			glDrawElements ( GL_TRIANGLES, bakedPath.vbo.nIndices, GL_UNSIGNED_INT, NULL);
+			renderer.render(bakedPath, matProj, matView, matModel);
 			TextureAtlasEntry e;
 			e.inuse = true;
 			e.pos = pos;
