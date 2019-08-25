@@ -129,10 +129,12 @@ int main(int argc, char* argv[]) {
     	FileTimeGetter filetime(file);
     	time = filetime.getWriteTimeI64();
 
-    	auto audioHost = std::make_unique<audiohost>(44100, 256);
-    	auto host = std::make_unique<vsthost>(44100, 256);
+    	auto audioHost = std::make_unique<audiohost>();
+    	auto host = std::make_unique<vsthost>();
     	vsthost::assignMasterCallback(host.get());
+
     	host->setOutput(audioHost.get());
+		host->setSamplerateBlockSize(settings.iosettings.samplerate, settings.iosettings.blocksize);
     	project_controller_t project;
     	plugindatabase_t plugindb;
     	waveformrender renderer;
