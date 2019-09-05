@@ -182,7 +182,7 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 				if (evtMin != INVALID_TICK) {
 					cursor.cursorPos = evtMin;
 					cursor.selRange = evtMax-evtMin;
-					cursor.cursorTrack = trMin->idx;
+					cursor.setTrack(trMin->idx);
 					cursor.selTrackRange = (trMax->idx - cursor.cursorTrack);
 					cursor.cursorSubTrack = -1;
 					cursor.selSubTrackRange = 0;
@@ -266,12 +266,12 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 					//				cursor.selRange = 0;
 					//				cursor.selTrackRange = 0;
 					auto moveMainCursor = [this, &dir](){
-						cursor.cursorTrack = project.trackList.clampTrackIdx(cursor.cursorTrack - dir.y);
+						cursor.setTrack(project.trackList.clampTrackIdx(cursor.cursorTrack - dir.y));
 					};
 					auto moveCursor = [this, &dir, &moveMainCursor](){
 						if (cursor.isSubtrackSelection()) {
 							if (!project.trackList.validTrackIdx(cursor.cursorTrack)) {
-								cursor.cursorTrack = 0;
+								cursor.setTrack(0);
 								cursor.cursorSubTrack = -1;
 								cursor.selSubTrackRange = 0;
 								return;
@@ -332,14 +332,14 @@ void guitrack_editor::trackViewDragBegin(guitrack_editor* view, MouseEvent& evt)
 	trSelected = tr;
 	subTrSelected = subTr;
 	if (trSelected != NULL) {
-		MainCtrl::get()->setSelectedTrack(trSelected);
+//		MainCtrl::get()->setSelectedTrack(trSelected);
 		MainCtrl::get()->setEditClip(NULL);
 		if (evt.guiDragged == this) { // cursor move / range select
 			Cursor& c = MainCtrl::get()->cursor;
 			c.selRange = 0;
 			c.selTrackRange = 0;
 			c.cursorPos = tick;
-			c.cursorTrack = trSelected->idx;
+			c.setTrack(trSelected->idx);
 			c.cursorSubTrack = subTrSelected ? subTrSelected->idx : -1;
 			c.selSubTrackRange = 0;
 		}
@@ -366,7 +366,7 @@ void guitrack_editor::trackViewDragMove(guitrack_editor* view, MouseEvent& evt) 
 		} else {
 			trNxtSelected = getTrackFromMouse(project, local, true);
 
-			MainCtrl::get()->setSelectedTrack(trNxtSelected);
+//			MainCtrl::get()->setSelectedTrack(trNxtSelected);
 			if (!trNxtSelected)
 				return;
 		}
@@ -541,7 +541,7 @@ void guitrack_editor::dragClipboardMove(ivec2 local, int kbmods) {
 		}
 		cursor.cursorPos = timeOffset;
 		if (trNxtSelected) {
-			cursor.cursorTrack = cursorBegin.cursorTrack + (trNxtSelected->idx - dragStartTrackIdx);
+			cursor.setTrack(cursorBegin.cursorTrack + (trNxtSelected->idx - dragStartTrackIdx));
 		}
 	}
 }
@@ -617,7 +617,7 @@ bool guitrack_editor::clipDropBegin(dragdrop_midifile& clip, ivec2 mousepos, int
 		dragCursor.selRange = 0;
 		dragCursor.selTrackRange = 0;
 		dragCursor.cursorPos = tick;
-		dragCursor.cursorTrack = trackClicked->idx;
+		dragCursor.setTrack(trackClicked->idx);
 		cursor = dragCursor;
 
 		dragStartTick = tickExact;

@@ -108,7 +108,7 @@ public:
 		cursor.selRange = clicked->getLen();
 		cursor.selTrackRange = 0;
 		cursor.cursorPos = clicked->time;
-		cursor.cursorTrack = trackClicked->idx;
+		cursor.setTrack(trackClicked->idx);
 		cursor.cursorSubTrack = -1;
 		cursor.selSubTrackRange = 0;
 	}

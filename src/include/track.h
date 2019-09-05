@@ -362,16 +362,16 @@ public:
     track_vector::reference front() { return tracks.front(); }
 };
 class trackallcontainer_t;
-class tracksubcontainer_t : public trackbasecontainer_t {
+class trackcontainer_tracktype_t : public trackbasecontainer_t {
 public:
-	tracksubcontainer_t(trackbasecontainer_t *a = NULL) :
+	trackcontainer_tracktype_t(trackbasecontainer_t *a = NULL) :
 		trackbasecontainer_t()
 	{
 
 	}
-	~tracksubcontainer_t() = default;
-	tracksubcontainer_t(const tracksubcontainer_t &a) = delete;
-	tracksubcontainer_t &operator =(const tracksubcontainer_t &a) = delete;
+	~trackcontainer_tracktype_t() = default;
+	trackcontainer_tracktype_t(const trackcontainer_tracktype_t &a) = delete;
+	trackcontainer_tracktype_t &operator =(const trackcontainer_tracktype_t &a) = delete;
 	void copyTo(trackcontainer_snapshot_t& out);
 	void copyFrom(trackcontainer_snapshot_t& in);
 	void loadPlugins(trackcontainer_snapshot_t& in);
@@ -390,11 +390,11 @@ struct project_snapshot_t {
 };
 class trackallcontainer_t : public trackbasecontainer_t {
 	friend class project_t;
-	tracksubcontainer_t trackCtr;
-	tracksubcontainer_t trackReturnCtr;
-	tracksubcontainer_t trackMasterCtr;
+	trackcontainer_tracktype_t trackCtr;
+	trackcontainer_tracktype_t trackReturnCtr;
+	trackcontainer_tracktype_t trackMasterCtr;
 	trackbasecontainer_t tracksBottom;
-	tracksubcontainer_t* const trackTypeCtrs[4] = {&trackMasterCtr, &trackReturnCtr, &trackCtr, &trackCtr};
+	trackcontainer_tracktype_t* const trackTypeCtrs[4] = {&trackMasterCtr, &trackReturnCtr, &trackCtr, &trackCtr};
 public:
 	trackallcontainer_t(trackbasecontainer_t *a = NULL) :
 		trackbasecontainer_t()
@@ -457,11 +457,11 @@ struct project_layout_t {
 class project_t : public project_globals_t {
 public:
 	trackallcontainer_t trackList;
-	tracksubcontainer_t& trackCtr;
-	tracksubcontainer_t& trackReturnCtr;
-	tracksubcontainer_t& trackMasterCtr;
+	trackcontainer_tracktype_t& trackCtr;
+	trackcontainer_tracktype_t& trackReturnCtr;
+	trackcontainer_tracktype_t& trackMasterCtr;
 	trackbasecontainer_t& tracksBottom;
-	tracksubcontainer_t* const *trackTypeCtrs; //syntax win
+	trackcontainer_tracktype_t* const *trackTypeCtrs; //syntax win
 	project_t() :
 		trackCtr(trackList.trackCtr),
 		trackReturnCtr(trackList.trackReturnCtr),

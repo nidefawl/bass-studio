@@ -37,6 +37,9 @@ public:
 	tick_t getSubTrackEnd() const {
 		return math::max(cursorSubTrack, cursorSubTrack + selSubTrackRange);
 	}
+	void setTrack(int32_t track) {
+		cursorTrack = track;
+	}
 	tick_t getRange() {
 		if (cursorTrack < 0)
 			return 0;
@@ -133,7 +136,7 @@ inline void fixCursorSubRange(Cursor& cursor, int32_t size) {
 }
 inline void fixCursorTrackRange(Cursor& cursor, int32_t size) {
 	if (!size) {
-		cursor.cursorTrack = -1;
+		cursor.setTrack(-1);
 		cursor.selTrackRange = 0;
 		return;
 	}

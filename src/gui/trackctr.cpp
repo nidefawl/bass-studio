@@ -394,8 +394,8 @@ void guitrack_editor::removeSubtrack(gui_track_automationlane* al) {
 	}
 }
 int slotFromCoord(project_t& project, track_t* track, ivec2 _pos, ivec2& _posDrop) {
-	tracksubcontainer_t* ctrPtr = project.trackTypeCtrs[track->type];
-	tracksubcontainer_t& ctr = *ctrPtr;
+	trackcontainer_tracktype_t* ctrPtr = project.trackTypeCtrs[track->type];
+	trackcontainer_tracktype_t& ctr = *ctrPtr;
 	int slot = 0;
 	for (track_t* track : ctr) {
 		auto* gui = track->content;

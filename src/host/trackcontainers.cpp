@@ -55,7 +55,7 @@ void trackallcontainer_t::removeTrack(track_t* track) {
 		throw applogicexception("trackcontainer_t - attempt to remove non-present element");
 	}
 	dbgassert(track->audio);
-	tracksubcontainer_t* subCtr = trackTypeCtrs[track->type];
+	trackcontainer_tracktype_t* subCtr = trackTypeCtrs[track->type];
 	track_vector& vec = subCtr->tracks;
 	removeEntry(vec, track);
 	int32_t locIdx = 0;
@@ -73,7 +73,7 @@ void trackallcontainer_t::removeTrack(track_t* track) {
 
 void trackallcontainer_t::moveTrack(track_t* track, int32_t dst) {
 	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-	tracksubcontainer_t* subCtr = trackTypeCtrs[track->type];
+	trackcontainer_tracktype_t* subCtr = trackTypeCtrs[track->type];
 	int32_t src = indexOfCtr(subCtr->tracks, track);
 	if ((int32_t)subCtr->tracks.size() == dst) dst--;
 	dbgassert(src >= 0 && dst >= 0);
@@ -166,14 +166,14 @@ void trackallcontainer_t::copyTracks(int32_t trackBegin, int32_t trackEnd, track
 		}
 	}
 }
-void tracksubcontainer_t::copyTo(trackcontainer_snapshot_t& out) {
+void trackcontainer_tracktype_t::copyTo(trackcontainer_snapshot_t& out) {
 	out.tracks.reserve(tracks.size());
 	for (track_t* track : tracks) {
 		track_snapshot_t trackCopy(track, true);
 		out.tracks.push_back(std::move(trackCopy));
 	}
 }
-void tracksubcontainer_t::copyFrom(trackcontainer_snapshot_t& in) {
+void trackcontainer_tracktype_t::copyFrom(trackcontainer_snapshot_t& in) {
 	dbgassert(tracks.empty());
 	bool reassignIdx = false;
 	for (track_snapshot_t& snapshot : in.tracks) {
@@ -194,13 +194,13 @@ void tracksubcontainer_t::copyFrom(trackcontainer_snapshot_t& in) {
 		});
 	}
 }
-void tracksubcontainer_t::loadPlugins(trackcontainer_snapshot_t& in) {
+void trackcontainer_tracktype_t::loadPlugins(trackcontainer_snapshot_t& in) {
 	for (track_snapshot_t& trackStatic : in.tracks) {
 		track_t* trackLoaded = trackStatic.trackLoaded;
 		trackLoaded->loadSnapshot(trackStatic);
 	}
 }
-void tracksubcontainer_t::loadSubtrackLayouts(trackcontainer_snapshot_t& in) {
+void trackcontainer_tracktype_t::loadSubtrackLayouts(trackcontainer_snapshot_t& in) {
 	for (track_snapshot_t& trackStatic : in.tracks) {
 		track_t* trackLoaded = trackStatic.trackLoaded;
 		trackLoaded->loadSubtrackLayout(trackStatic);
@@ -209,7 +209,7 @@ void tracksubcontainer_t::loadSubtrackLayouts(trackcontainer_snapshot_t& in) {
 }
 bool trackallcontainer_t::validTrackTypeIdx(int32_t type, int32_t idx) const {
 	if (type >= TRACK_TYPE_MASTER && type <= TRACK_TYPE_AUDIO) {
-		const tracksubcontainer_t* trackTypeCtr = trackTypeCtrs[type];
+		const trackcontainer_tracktype_t* trackTypeCtr = trackTypeCtrs[type];
 		return idx >= 0 && idx < (int32_t) trackTypeCtr->size();
 	}
 	return false;
