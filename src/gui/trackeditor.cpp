@@ -395,6 +395,10 @@ void guitrack_editor::trackViewDragMove(guitrack_editor* view, MouseEvent& evt) 
 	}
 }
 void guitrack_editor::trackViewDragRelease(guitrack_editor* view, MouseEvent& evt) {
+	track_t* trNxtSelected = NULL;
+	ivec2 local = evt.relMousepos;
+	trNxtSelected = getTrackFromMouse(project, local, true);
+	MainCtrl::get()->setSelectedTrack(trNxtSelected);
 	trSelected = NULL;
 	subTrSelected = NULL;
 }

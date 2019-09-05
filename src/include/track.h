@@ -338,6 +338,7 @@ struct trackcontainer_snapshot_t;
 class project_t;
 class trackbasecontainer_t {
 public:
+	/** tracks are only ordered on track-type specific containers **/
 	track_vector tracks;
 	trackbasecontainer_t() = default;
 	~trackbasecontainer_t();
@@ -412,6 +413,9 @@ public:
 		tracks.clear();
 	}
 
+	/**
+	 * inserts a track at position trackInsertPos of its track-type specific container
+	 */
 	void addTrack(int trackInsertPos, track_t* newTrack);
 	void removeTrack(track_t* track);
 	void moveTrack(track_t* track, int32_t newIdx);

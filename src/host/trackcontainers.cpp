@@ -29,8 +29,12 @@ void trackallcontainer_t::addTrack(int trackInsertPos, track_t* newTrack) {
 		dbgassert(0);
 		throw applogicexception("attempt to add track twice");
 	}
+
 	tracks.push_back(newTrack);
-	tracksubcontainer_t* subCtr = trackTypeCtrs[newTrack->type];
+
+	trackcontainer_tracktype_t* subCtr = trackTypeCtrs[newTrack->type];
+
+	// insert in correct position on trackTypeCtr
 	track_vector& vec = subCtr->tracks;
 	if (trackInsertPos < 0 || trackInsertPos >= (int)vec.size()) {
 		vec.push_back(newTrack);
@@ -41,13 +45,23 @@ void trackallcontainer_t::addTrack(int trackInsertPos, track_t* newTrack) {
 	for (track_t* t : vec) {
 		t->localIdx = locIdx++;
 	}
-	int32_t idx = 0;
-	for (track_t* t : tracks) {
-		t->idx = idx++;
-	}
 	tracksBottom.tracks.clear();
 	addAll(tracksBottom.tracks, trackReturnCtr.tracks);
 	addAll(tracksBottom.tracks, trackMasterCtr.tracks);
+
+	// reassign global track indices in correct order
+	int32_t idx = 0;
+	for (track_t* t : trackCtr) {
+		t->idx = idx++;
+	}
+	for (track_t* t : tracksBottom) {
+		t->idx = idx++;
+	}
+
+	// reassing new order of all-types track container
+	std::stable_sort(tracks.begin(), tracks.end(), [](const track_t* trackLhs, const track_t* trackRhs) {
+		return trackLhs->idx < trackRhs->idx;
+	});
 }
 void trackallcontainer_t::removeTrack(track_t* track) {
 	if (!removeEntry(tracks, track)) {

@@ -480,9 +480,11 @@ void guitrack_editor::addTrack(track_t* t) {
 	if (t->content)
 		throw applogicexception("expected t->content == NULL");
 	dbgassert(t->audio);
+	//
 	t->content = createTrackGui(t, grid);
 	t->content->setZOrder(t->type >= TRACK_TYPE_MIDI ? 0 : 1);
 	add(t->content);
+	//TODO: sort and render guis by track->idx
 //#ifndef NDEBUG
 //		for (guibase* child : guis) {
 //			gui_track* t = dynamic_cast<gui_track*>(child);
