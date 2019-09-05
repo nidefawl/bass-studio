@@ -13,7 +13,7 @@
 /* Size of each input chunk to be
    read and allocate for. */
 #ifndef  READALL_CHUNK
-#define  READALL_CHUNK  262144
+#define  READALL_CHUNK  (1<<21) /* 2MB */
 #endif
 
 
