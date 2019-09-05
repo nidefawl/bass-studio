@@ -181,6 +181,8 @@ void log_format_to_logger(Logger* logger, const char *file, int line, const char
 		if (ret > 0) {
 			dbgassert(ret+1 <= MAX_LEN_MY_PRINTF);
 			szLogStatement = szLogBuf;
+		} else {
+			dbgassert(0&&"string was too long to log");
 		}
 	} else {
 		szLogStatement = szLogStr;
