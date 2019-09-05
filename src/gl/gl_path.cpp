@@ -16,6 +16,7 @@
 #include "gl_vbo.h"
 #include "gl_tess2d.h"
 #include "hires_timer.h"
+#include "logging.h"
 #include "assert_dbg.h"
 #include <algorithm>
 
@@ -272,28 +273,39 @@ float packVertexData2(vec2list& verticesIn, std::vector<vert>& outVdata, int ind
 
 	return fLength;
 }
-
-
+bool readShaderSrc(const String& filename, String& out) {
+	out = "";
+	int64_t ret = ReadFileText(filename, out);
+	if (ret <= 0) {
+		log_printf("%s: Failed reading file", StringAsCStr(filename));
+		return false;
+	}
+	if (out.empty()) {
+		log_printf("%s: File is empty", StringAsCStr(filename));
+		return false;
+	}
+	return true;
+}
 int GLPathRenderer::init() {
+
 	String srcVertex;
 	String srcFragment;
-	int64_t ret = ReadFileText("dash-lines-2D.vsh", srcVertex);
-	if (ret <= 0) {
+
+	if (!readShaderSrc("dash-lines-2D.vsh", srcVertex)) {
 		return 1;
 	}
-	ret = ReadFileText("dash-lines-2D.fsh", srcFragment);
-	if (ret <= 0) {
+	if (!readShaderSrc("dash-lines-2D.fsh", srcFragment)) {
 		return 1;
 	}
 
 	GLuint vertex_shader, fragment_shader;
 	vertex_shader = compileShader(GL_VERTEX_SHADER, srcVertex);
 	if (!vertex_shader) {
-		return 1;
+		return 2;
 	}
 	fragment_shader = compileShader(GL_FRAGMENT_SHADER, srcFragment);
 	if (!fragment_shader) {
-		return 1;
+		return 2;
 	}
 	GLuint program = glCreateProgram();
 	glAttachShader(program, vertex_shader);
@@ -305,7 +317,7 @@ int GLPathRenderer::init() {
 	if (getStatus(program, GL_LINK_STATUS) != 1) {
 		checkGLError("getStatus");
 		printf("Link error: %s\n", StringAsCStr(log));
-		return 1;
+		return 3;
 	} else if (!log.empty()) {
 		printf("Link log: %s\n", StringAsCStr(log));
 	}
