@@ -274,6 +274,7 @@ public:
 	}
 	std::shared_ptr<project_file> createProjectFile();
 	void loadFile(String path, int flags);
+	/** assuming current thread is main thread when this is called **/
 	bool setLoadedProject(std::shared_ptr<project_file> file, int flags);
 	void setEmptyProject();
 	void pushHist(action_base* action);
@@ -304,6 +305,10 @@ public:
 	bool isZooming();
 	void uncaptureMouse();
 	void onUncaptureMouse();
+	/**
+	 * addTrackImpl - adds track to trackCtr and creates gui
+	 * int32 trackInserPos - track-type-container local pos
+	 */
 	void addTrackImpl(int32_t trackInsertPos, track_t* t, int flags) override;
 	void removeTrackImpl(track_t* t, int flags);
 	track_t* getTrackId(uint32_t trackId);
@@ -337,6 +342,10 @@ public:
 	void preTrackDelete(track_t* clip);
 	void startPlaying();
 	void stopPlaying();
+	/**
+	 * setAudioThreadState - puts audio thread into requested state - synchronized
+	 * 						 does not return before audio thread is in requested state
+	 */
 	void setAudioThreadState(playback_state state);
 	bool isPlaying();
 	bool toggleLoop();

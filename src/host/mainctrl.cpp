@@ -822,30 +822,45 @@ std::shared_ptr<project_file> MainCtrl::createProjectFile() {
 void MainCtrl::setDragged(guibase* g) {
 	guiDragged = g;
 }
-//assuming current thread is main thread when this is called
 bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file, int flags) {
 
 	setAudioThreadState(playback_state::status_no_process);
+	my_printf("loading %s: %d tracks\n", StringAsCStr(file->path), trackList.size());
 	ThreadLock lock = playThread.lockThread();
 	unloadProject();
+	/** make sure call to unloadProject unloaded all vst2 instances **/
+	dbgassert(vsthost::getInstance()->getVst2Instances().empty());
 	audiocache::getInstance()->load(file->sampleFileIndex);
 
-	copyFrom(file->project);
+	/** populates trackList **/
+	project_t::copyFrom(file->project);
 
 	vsthost* host = vsthost::getInstance();
+	/** create all audio instances **/
 	for (track_t* t : trackList) {
 		host->createAudio(t);
 	}
 
-	my_printf("NUM TRACKS: %d\n", trackList.size());
+
+	/** create all gui instances **/
 	for (track_t* tr : trackList) {
 		view->ctr_tracks.addTrack(tr, FLG_TRK_CHANGE_LOAD);
 	}
+	/** pre-load all plugin instances **/
 	trackList.loadPlugins(file->project);
 
 
+	// is plugin loading not deferred?
 	if ((flags&FLAG_DEFER_LOAD) == 0) {
+		/**
+		 * plugin loading was not deferred.
+		 * handle request to load all plugins.
+		 * plugin loading can take a long time and will block the main thread.
+		 * so we have a rendering loop here to show progress and make the GUI feel responsive.
+		 * Ideally this would happen on another thread, but that might not work for all vst plugins.
+		 */
 
+		/** loading screen guictr class **/
 		class guictr_loading : public guictr_base {
 			public:
 			String text;
@@ -868,16 +883,18 @@ bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file, int flags) {
 		ctr.size = m_size;
 		ctr.setControl(this);
 		ctr.layout();
+
+
+		/** precondition: an existing with opengl+nanoVG context **/
 		auto windowMain = dynamic_cast<window_main*>(window);
 		dbgassert(windowMain);
-		dbgassert(vsthost::getInstance()->getVst2Instances().empty());
+
 		std::vector<effectbase*> pluginsDeferred;
 		host->getDeferredEffects(pluginsDeferred);
 		int len = pluginsDeferred.size();
 		for (int i = 0; i < len; i++) {
 
 			dbgassert(pluginsDeferred[i]->getModuleType() == PLUGIN_TYPE_DEFERRED);
-			//dbgassert(pluginsDeferred[i]->get)
 			auto plugin = dynamic_cast<effect_deferred*>(pluginsDeferred[i]);
 			windowMain->preRender();
 	//		render(0, 0, m_size.x, m_size.y, 1.0);
@@ -894,7 +911,7 @@ bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file, int flags) {
 			nvgRestore(vg);
 			nvgEndFrame(vg);
 			windowMain->postRender();
-			//sync to what?!!
+			/** TODO: vsync **/
 			threadSleep(16);
 			host->activateDeferred(plugin);
 		}
