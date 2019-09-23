@@ -683,8 +683,24 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 		/*
 		 * Process audio/midi tracks
 		 */
-		for (track_t* track : ctrl->trackCtr) {
-			track_impl_t* trackImpl = track->audio;
+		for (track_t* trackTop : ctrl->trackCtr) {
+			track_impl_t* trackImpl = trackTop->audio;
+
+			//pseudo code for processing tree-like project structure (groups with nested sub-groups)
+			/*
+			std::vector<track_t*> vecTracks;
+			std::queue<track_t*> qTracks;
+			qTracks.append(track);
+			while (!qTracks.empty()) {
+				track_t* t = qTracks.pop();
+				for (track_t* child : t->children) {
+					qTracks.append(child);
+				}
+				vecTracks.add(qTracks);
+			}
+			for (auto it = vecTracks.rbegin(); it != vecTracks.rend(); it++) {
+			}
+			*/
 			trackImpl->input.realloc(lBlockSize);
 			trackImpl->output.realloc(lBlockSize);
 			dsp_util::fillBlock(trackImpl->input, 0.0f);
@@ -702,7 +718,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 				trackImpl->fillAudio(pos, tickBlockEnd, loopCutStart, loopCutEnd, project.tempo100, sample, trackImpl->input.buf, (int32_t)lBlockSize);
 			}
 			if (bufInput) {
-				float fGainInput = 1.0f;
+				float fGainInput = 1.0f; //TODO: make track parameter
 				trackImpl->addAudio(bufInput->output, fGainInput);
 			}
 
@@ -736,6 +752,8 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 				dbgassert(delayToPostReturn >= 0);
 				delayAudio(trackImpl->getDelayLine(1), &trackImpl->output, &trackImpl->output, delayToPostReturn);
 				trackImpl->latencyInfo.delayToPostReturn = delayToPostReturn;
+
+				//TODO: feed into mapped output
 				/* Feed audio/midi tracks output into masters input */
 				for (track_t* trackMaster : ctrl->trackMasterCtr) {
 

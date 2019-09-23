@@ -85,8 +85,16 @@ struct audio_stage_t {
 	effectbase* owner;
 	guictr_plugins* pluginCtr;
 	rmsmeterimpl<16000> meter;
-	AudioBlock input; //guaranteed to have at least 2 channels
-	AudioBlock output; //guaranteed to have at least 2 channels
+	/**
+	 * Internal pre-process per-block input buffer
+	 * guaranteed to have at least 2 channels
+	 */
+	AudioBlock input;
+	/**
+	 * Internal post-process per-block output buffer
+	 * guaranteed to have at least 2 channels
+	 */
+	AudioBlock output;
 	track_params_t mixer;
 	audiotrack_t audioOutput;
 	int32_t latency = 0;
@@ -193,7 +201,7 @@ struct track_impl_t : public audio_stage_t {
 	void sendNotesOff(int32_t bpm100);
 	void sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, clip_notes_t& midiRealtimeInput, int32_t flags);
 	void fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, float** buffer, int32_t samples);
-	void addAudio(AudioBlock* output, float fGain);
+	void addAudio(const AudioBlock* const output, float fGain);
 	int32_t mapInput(int32_t nInputChannels, int32_t nChannel);
 	VstEvent_t* reallocEvts(size_t size);
 	int loadSubtrackLayout(const std::vector<automationlane_snapshot_t>& atl);
