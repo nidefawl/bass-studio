@@ -171,9 +171,8 @@ private:
 						switch (reqState) {
 							case playback_state::status_play:
 							{
-								if (host->lSampleRate == 0 || host->lBlockSize == 0) {
-									return;
-								}
+								dbgassert(host->lSampleRate != 0);
+								dbgassert(host->lBlockSize != 0);
 								tick_t startPos = ctrl->cursor.cursorPos;
 								tickPos = startPos;
 								ctrl->getPlaybackPos() = startPos;

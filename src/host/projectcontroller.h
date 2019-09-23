@@ -1,5 +1,7 @@
 #pragma once
 #include "track.h"
+#include "vst_host.h"
+
 class project_controller_t : public project_t {
 public:
 	virtual ~project_controller_t() {
@@ -57,5 +59,15 @@ public:
 	static project_controller_t* get();
 	double getProjectWorkingArea() {
 		return 1000.0;
+	}
+	virtual inline void addTrackImpl(int32_t trackInsertPos, track_t* newTrack, int flags) {
+		trackList.addTrack(trackInsertPos, newTrack);
+		if ((flags&FLG_TRK_CHANGE_HISTORY_UNDO) != 0) {
+			dbgassert(newTrack->audio);
+		} else {
+			dbgassert(!newTrack->audio);
+			vsthost* host = vsthost::getInstance();
+			host->createAudio(newTrack);
+		}
 	}
 };

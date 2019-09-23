@@ -26,6 +26,8 @@
 #include "wave/dr_wav.h"
 #include "basectrl.h"
 #include "audio_host.h"
+#include "midi_host.h"
+#include "track_impl.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -110,12 +112,6 @@ int main(int argc, char* argv[]) {
 	std::set_terminate(on_terminate1);
 	std::set_unexpected(on_unexpected1);
     appsettings settings = loadSettings();
-	String vstPlugPath = settings.pluginPath;
-	LOG("pluginPath '%s'", StringAsCStr(vstPlugPath));
-    if (vstPlugPath.empty()) {
-        fprintf(stderr, "Error: pluginPath not configured\n");
-        return EXIT_FAILURE;
-    }
     if (argc < 2) {
     	return 0;
     }
@@ -130,23 +126,35 @@ int main(int argc, char* argv[]) {
     	time = filetime.getWriteTimeI64();
 
     	auto audioHost = std::make_unique<audiohost>();
+    	auto midiHost = std::make_unique<midihost>();
     	auto host = std::make_unique<vsthost>();
     	vsthost::assignMasterCallback(host.get());
-
-    	host->setOutput(audioHost.get());
 		host->setSamplerateBlockSize(settings.iosettings.samplerate, settings.iosettings.blocksize);
+
     	project_controller_t project;
     	plugindatabase_t plugindb;
     	waveformrender renderer;
-    	audiocache cache(host->lSampleRate);
+    	audiocache cache(settings.iosettings.samplerate);
     	daw_tls::tlsinstance& tls = daw_tls::getTls();
     	tls.mainCtrl = nullptr;
     	tls.project = &project;
     	tls.host = host.get();
     	tls.audioHost = audioHost.get();
+    	tls.midiHost = midiHost.get();
     	tls.audioCache = &cache;
     	tls.waveform = &renderer;
     	tls.pluginDatabase = &plugindb;
+
+		audiohost::getInstance()->initPa();
+		midihost::getInstance()->initPm();
+		if (audioHost->startAudio(settings.iosettings)) {
+			host->setOutput(audioHost.get());
+		} else {
+			//notify user
+			log_printf("audioHost->startAudio() failed\n", 0);
+			return 1;
+		}
+		midihost::getInstance()->startMidi();
     	plugindb.openDatabase();
     	LOG("START");
     	{
@@ -155,27 +163,62 @@ int main(int argc, char* argv[]) {
     		playThread->setTls(tls);
     		playThread->startThread(&project);
     		playThread->addRequest(REQ_STATE, (int) playback_state::status_no_process, true);
-    		auto pf = loadProjectFile(file);
-    		if (!pf) {
-    			fprintf(stderr, "Error: failed loading file\n");
-    			return EXIT_FAILURE;
-    		}
+//    		auto pf = loadProjectFile(file);
+//    		if (!pf) {
+//    			fprintf(stderr, "Error: failed loading file\n");
+//    			return EXIT_FAILURE;
+//    		}
 
-    		project_snapshot_t& snapshot = pf->project;
-    		project.copyFrom(snapshot);
+//    		project_snapshot_t& snapshot = pf->project;
+//    		project.copyFrom(snapshot);
     		project.cursor.cursorPos = 0;
     		project.loopEnabled = false;
-    		audiocache::getInstance()->load(pf->sampleFileIndex);
+//    		audiocache::getInstance()->load(pf->sampleFileIndex);
     		my_printf("Tempo100: %d\n", project.tempo100);
     		my_printf("project.cursor.cursorPos: %d\n", project.cursor.cursorPos);
-    		project.trackList.loadPlugins(snapshot);
-    		std::vector<effectbase*> pluginsDeferred;
-    		host->getDeferredEffects(pluginsDeferred);
-    		my_printf("loading %d plugins\n", pluginsDeferred.size());
-    		for (auto plugin : pluginsDeferred) {
-        		my_printf("load %s\n", StringAsCStr(plugin->sName));
-    			host->activateDeferred(plugin);
-    		}
+    		track_t* track = new track_t(TRACK_TYPE_MIDI, "track1", true);
+    		project.addTrackImpl(-1, track, 0);
+    		track = new track_t(TRACK_TYPE_MIDI, "track2", true);
+    		project.addTrackImpl(-1, track, 0);
+    		track = new track_t(TRACK_TYPE_MASTER, "master", true);
+    		project.addTrackImpl(0, track, 0);
+        	String pathTracks = "test.tracks";
+        	trackcontainer_snapshot_t snapshot;
+        	std::shared_ptr<trackcontainer_snapshot_t> ctr = loadTrackContainer(pathTracks);
+        	dbgassert(ctr);
+        	if (ctr) {
+        		for (track_snapshot_t& ts : ctr->tracks) {
+        			track_t* tr = new track_t(ts);
+            		project.addTrackImpl(-1, tr, 0);
+            		ts.trackLoaded = tr;
+            		log_printf("add track %s\n", StringAsCStr(tr->name));
+        		}
+
+        		//load plugins
+        		for (track_snapshot_t& ts : ctr->tracks) {
+            		log_printf("track '%s' loading %d plugins\n", StringAsCStr(ts.trackLoaded->name), ts.plugins.pluginSnapshots.size());
+        			ts.trackLoaded->loadSnapshot(ts);
+        		}
+
+    			vsthost* host = vsthost::getInstance();
+        		//load plugins
+        		for (track_snapshot_t& ts : ctr->tracks) {
+            		log_printf("track '%s' loading %d plugins\n", StringAsCStr(ts.trackLoaded->name), ts.plugins.pluginSnapshots.size());
+        			ts.trackLoaded->loadSnapshot(ts);
+	    			std::vector<effectbase*> effects = ts.trackLoaded->audio->deferredEffects;
+	    			for (auto eff : effects) {
+	    				host->activateDeferred(eff);
+	    			}
+        		}
+        	}
+//    		project.trackList.loadPlugins(snapshot);
+//    		std::vector<effectbase*> pluginsDeferred;
+//    		host->getDeferredEffects(pluginsDeferred);
+//    		my_printf("loading %d plugins\n", pluginsDeferred.size());
+//    		for (auto plugin : pluginsDeferred) {
+//        		my_printf("load %s\n", StringAsCStr(plugin->sName));
+//    			host->activateDeferred(plugin);
+//    		}
     		AudioBlock block(2, host->lBlockSize);
     		AudioBlock blockFull(1, host->lBlockSize*2);
     		double tLastMsg = getTimeMillis()/1000.0;
@@ -187,45 +230,62 @@ int main(int argc, char* argv[]) {
 			 format.channels = 2;
 			 format.sampleRate = host->lSampleRate;
 			 format.bitsPerSample = 32;
-			 drwav* pWav = drwav_open_file_write(StringAsCStr(fOutWave), &format);
-	    		my_printf("start playback\n", 0);
-	    		playThread->addRequest(REQ_STATE, (int) playback_state::status_play, true);
+//			 drwav* pWav = drwav_open_file_write(StringAsCStr(fOutWave), &format);
+			my_printf("request playback start..\n", 0);
+			project.cursor.cursorPos = TICKS_BAR*4;
+			playThread->addRequest(REQ_STATE, (int) playback_state::status_play, true);
+			my_printf("start playback\n", 0);
     		while (!quit) {
-    			dsp_util::fillBlock(block, 0.0f);
-    			//still a race condition on_terminate here
-    			AudioBuffer* buff = nullptr;
-    			auto* stream = audioHost->getStream(0);
-    			if (stream->try_dequeue(buff)) {
-    				if (host->lBlockSize == buff->output->samples) {
-    					buff->output->copyTo(block.buf);
-    					auto tNow = getTimeMillis()/1000.0;
-    					if (tNow - tLastMsg > 1) {
-    						tLastMsg = tNow;
-    						log_printf("playbackPos %d, %d blocks\n", project.playbackPos, nBlocks);
-    						if (project.playbackPos > TICKS_BAR*4) {
-    							playThread->addRequest(REQ_STATE, (int) playback_state::status_no_process, true);
-    							quit = true;
-    							break;
-    						}
-    					}
-    					//    					float* in1 = block.buf[0];
-    					float* in1 = block.buf[0];
-    					float* in2 = block.buf[1];
-    					float* largeBuf = blockFull.buf[0];
-    					for (int i = 0; i < block.samples; i++) {
-    						*largeBuf++ = *in1++;
-    						*largeBuf++ = *in2++;
-    					}
-    					samplesWritten += drwav_write(pWav, blockFull.samples, blockFull.buf[0]);
-    				}
-    				buff->inUse = false;
-    			} else {
-    	//			host->bufferUnderuns++;
-    		//		dsp_util::fillSilence(inputs, framesPerBuffer);
-    			}
+//    			dsp_util::fillBlock(block, 0.0f);
+//    			//still a race condition on_terminate here
+//    			AudioBuffer* buff = nullptr;
+//    			auto* stream = audioHost->getStream(0);
+//    			if (stream->try_dequeue(buff)) {
+//    				dbgassert(host->lBlockSize == buff->output->samples);
+//    				if (host->lBlockSize == buff->output->samples) {
+//    					block.copyFrom(buff->output);
+//    					auto tNow = getTimeMillis()/1000.0;
+//    					if (tNow - tLastMsg > 1) {
+//    						tLastMsg = tNow;
+//    						log_printf("playbackPos %d, %d blocks\n", project.playbackPos, nBlocks);
+//    						if (project.playbackPos > TICKS_BAR*4) {
+//    							playThread->addRequest(REQ_STATE, (int) playback_state::status_no_process, true);
+//    							quit = true;
+//    							break;
+//    						}
+//    					}
+//    					//    					float* in1 = block.buf[0];
+//    					float* in1 = block.buf[0];
+//    					float* in2 = block.buf[1];
+//    					float* largeBuf = blockFull.buf[0];
+//    					for (int i = 0; i < block.samples; i++) {
+//    						*largeBuf++ = *in1++;
+//    						*largeBuf++ = *in2++;
+//    					}
+//    					samplesWritten += drwav_write(pWav, blockFull.samples, blockFull.buf[0]);
+//    				}
+//    				buff->inUse = false;
+//    			} else {
+//    	//			host->bufferUnderuns++;
+//    		//		dsp_util::fillSilence(inputs, framesPerBuffer);
+//    			}
+				auto tNow = getTimeMillis()/1000.0;
+				if (tNow - tLastMsg > 1) {
+					tLastMsg = tNow;
+					host_stats_t stats;
+					host->getStats(stats);
+
+
+					log_printf("playbackPos %d, %d blocks, %d samples\n", project.playbackPos, stats.blocksProcessed, stats.samplesProcessed);
+					if (project.playbackPos > TICKS_BAR*32) {
+						playThread->addRequest(REQ_STATE, (int) playback_state::status_no_process, true);
+						quit = true;
+						break;
+					}
+				}
     			threadSleep(10);
     		}
-    		drwav_close(pWav);
+//    		drwav_close(pWav);
 //    		file->flush();
 //    		file.reset();
     		if (quit) {

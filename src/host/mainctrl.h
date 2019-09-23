@@ -304,7 +304,7 @@ public:
 	bool isZooming();
 	void uncaptureMouse();
 	void onUncaptureMouse();
-	void addTrackImpl(int32_t trackInsertPos, track_t* t, int flags);
+	void addTrackImpl(int32_t trackInsertPos, track_t* t, int flags) override;
 	void removeTrackImpl(track_t* t, int flags);
 	track_t* getTrackId(uint32_t trackId);
 	void removeTrackId(uint32_t trackId);
