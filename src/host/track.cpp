@@ -34,6 +34,7 @@
 #include "gui/drawwaveform.h"
 #include "gui/subtrack.h"
 #include "midi-msg.h"
+#include "fileio.h"
 #include "assert_dbg.h"
 
 
@@ -948,3 +949,9 @@ const char* trackTypeNames[5] = {
 const char* TrackTypeToName(int type) {
 	return trackTypeNames[type];
 }
+
+//vFILE_TYPES_TRACKSNAPSHOT
+//const SupportedFileType FILE_TYPE_TRACKSNAPSHOT;
+
+const SupportedFileType FILE_TYPE_TRACKSNAPSHOT {"Track File", "tracks"};
+const std::vector<SupportedFileType> vFILE_TYPES_TRACKSNAPSHOT = { FILE_TYPE_TRACKSNAPSHOT };

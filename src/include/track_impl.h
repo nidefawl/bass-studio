@@ -16,6 +16,7 @@
 #include "audiotrack.h"
 #include "snapshot.h"
 #include "track.h"
+#include "fileio.h"
 #include "host/vst_host.h"
 #include "host/audio_config.h"
 
@@ -28,7 +29,7 @@ class effectbase;
 class guictr_plugins;
 struct track_params_snapshot_t;
 struct audio_stage_t;
-
+extern const std::vector<SupportedFileType> vFILE_TYPES_TRACKSNAPSHOT;
 /* Calculate mixer gain level from parameter
  * returns: false if gain == -inf db */
 inline bool getGainLvl(float fLinGain, float& fGainOut) {

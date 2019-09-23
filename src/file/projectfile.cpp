@@ -378,3 +378,51 @@ bool saveProject(std::shared_ptr<project_file> f, String& path) {
 	return false;
 }
 
+
+std::shared_ptr<trackcontainer_snapshot_t> loadTrackContainer(const String& path) {
+	try {
+		std::vector<uint8_t> vec;
+		ReadFileVector(path, vec);
+		Stringstream sstream(std::string(vec.begin(), vec.end()));
+		std::shared_ptr<trackcontainer_snapshot_t> snapshot = std::make_shared<trackcontainer_snapshot_t>();
+		{
+			JSONInputArchive ar(sstream);
+			ar(make_nvp("tracks", *snapshot.get()));
+		}
+		return snapshot;
+	}
+	catch (const FileIOException& e)
+	{
+		my_printf("loadTrackContainer File IO exception: %s (%d)\n", e.what(), e.GetErrorCode());
+	}
+	catch (const std::exception& e)
+	{
+		my_printf("loadTrackContainer exception: %s\n", e.what());
+	}
+    return nullptr;
+}
+bool saveTrackContainer(const trackcontainer_snapshot_t& container, const String& path) {
+
+	try {
+		Stringstream sstream;
+		{
+			JSONOutputArchive ar(sstream);
+			ar(make_nvp("tracks", container));
+		}
+		sstream.flush();
+		Stringstream::pos_type len = sstream.tellp();
+		std::vector<uint8_t> buf(len);
+		buf.assign(std::istreambuf_iterator<char>(sstream), std::istreambuf_iterator<char>());
+		WriteFileVector(path, buf);
+		return true;
+	}
+	catch (const FileIOException& e)
+	{
+		my_printf("saveTrackContainer File IO exception: %s (%d)\n", e.what(), e.GetErrorCode());
+	}
+	catch (const std::exception& e)
+	{
+		my_printf("saveTrackContainer exception: %s\n", e.what());
+	}
+	return false;
+}

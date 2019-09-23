@@ -1141,10 +1141,13 @@ public:
 		addEntry(new ctxtmenu_entry("Show all automation", 0));
 		addEntry(new ctxtmenu_entry("Duplicate track", 1));
 		addEntry(new ctxtmenu_entry("Delete track", 2));
+		addEntry(new ctxtmenu_entry("Save track", 3));
 		addEntry(new ctxtmenu_splitter());
 		addEntry(sel);
 		track_t* tr = MainCtrl::get()->getTrackId(trackid);
 		MainCtrl::get()->setSelectedTrack(tr);
+	}
+	~guictxtmenu_track() {
 	}
 	void clicked(int _id) {
 		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
@@ -1194,6 +1197,22 @@ public:
 			}
 		} else if (_id == 2) {
 			MainCtrl::get()->removeTrackId(trackid);
+		} else if (_id == 3) {
+			auto window = parentCtrl->window;
+
+			track_snapshot_t snapshot(tr, true);
+			trackcontainer_snapshot_t trackContainerSnapshot;
+			trackContainerSnapshot.tracks.push_back(snapshot);
+			// promptUserFilePath initiates a native dialog that would close this context menu
+			// so we do it ourself controlled here
+			closeContextMenu(); // deletes this
+			// now we make sure not to access heap (this) after this point
+
+			String path;
+			if (promptUserFilePath(window, 1, vFILE_TYPES_TRACKSNAPSHOT, path)) {
+				saveTrackContainer(trackContainerSnapshot, path);
+			}
+			return;
 		}
 		closeContextMenu();
 	}

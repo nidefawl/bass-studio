@@ -379,6 +379,7 @@ public:
 	void loadSubtrackLayouts(trackcontainer_snapshot_t& in);
 
 };
+
 struct trackcontainer_snapshot_t {
 	std::vector<track_snapshot_t> tracks;
 };
@@ -397,7 +398,7 @@ class trackallcontainer_t : public trackbasecontainer_t {
 	trackbasecontainer_t tracksBottom;
 	trackcontainer_tracktype_t* const trackTypeCtrs[4] = {&trackMasterCtr, &trackReturnCtr, &trackCtr, &trackCtr};
 public:
-	trackallcontainer_t(trackbasecontainer_t *a = NULL) :
+	trackallcontainer_t() :
 		trackbasecontainer_t()
 	{
 
@@ -467,6 +468,7 @@ public:
 	trackbasecontainer_t& tracksBottom;
 	trackcontainer_tracktype_t* const *trackTypeCtrs; //syntax win
 	project_t() :
+		trackList(),
 		trackCtr(trackList.trackCtr),
 		trackReturnCtr(trackList.trackReturnCtr),
 		trackMasterCtr(trackList.trackMasterCtr),
