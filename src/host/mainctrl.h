@@ -272,9 +272,27 @@ public:
 	WorkerThread* getWorkerThread() {
 		return &workerThread;
 	}
-	std::shared_ptr<project_file> createProjectFile();
+
+	/**
+	 * Loads project file at location path
+	 * @param path - path to a valid .project file
+	 * @param flags - 0 or FLAG_DEFER_LOAD (don't load vst plugins, use placeholders)
+	 */
 	void loadFile(String path, int flags);
+
+	/**
+	 * Locks audiothread and creates a copy of the project that can be used for serialization
+	 * @return shared_ptr to project_file instance
+	 */
+	std::shared_ptr<project_file> createProjectFile();
+
 	/** assuming current thread is main thread when this is called **/
+	/**
+	 * setLoadedProject - releases current project and resources and loads in new project from passed project_file
+	 * @param file - shared_ptr to project_file instance containg project data to load from
+	 * @param flags - 0 or FLAG_DEFER_LOAD (don't load vst plugins, use placeholders)
+	 * @return reserved - always true
+	 */
 	bool setLoadedProject(std::shared_ptr<project_file> file, int flags);
 	void setEmptyProject();
 	void pushHist(action_base* action);

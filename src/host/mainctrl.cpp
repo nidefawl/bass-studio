@@ -811,6 +811,7 @@ void MainCtrl::pushHist(action_base* action) {
 	hist.push(this, action);
 }
 std::shared_ptr<project_file> MainCtrl::createProjectFile() {
+	ThreadLock lock = playThread.lockThread();
 	std::shared_ptr<project_file> file = std::make_shared<project_file>();
 	file->path = projectPath;
 	copyTo(file->project);
@@ -822,14 +823,37 @@ std::shared_ptr<project_file> MainCtrl::createProjectFile() {
 void MainCtrl::setDragged(guibase* g) {
 	guiDragged = g;
 }
+/**
+ * setLoadedProject - releases current project and resources and loads in new project from passed project_file
+ *
+ * - puts audio thread into state playback_state::status_no_process
+ * - establishes lock against AudioThread
+ * - unloads project (freeing resources)
+ * - loads samplefile index
+ * - populates tracklist
+ * - creates audio instances for all tracks
+ * - adds tracks to MainCtrls guictr_tracks, creating gui instances
+ * - pre loads plugins
+ * - optionally fully loads plugin instances
+ * - loads track layouts
+ * - loads cursor state
+ * - sets project_file::path as current project path
+ * - puts audio thread into state playback_state::status_stop
+ *
+ * @param file - shared_ptr to project_file instance containg project data to load from
+ * @param flags - 0 or FLAG_DEFER_LOAD (don't load vst plugins, use placeholders)
+ * @return
+ */
 bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file, int flags) {
 
 	setAudioThreadState(playback_state::status_no_process);
 	my_printf("loading %s: %d tracks\n", StringAsCStr(file->path), trackList.size());
+
 	ThreadLock lock = playThread.lockThread();
 	unloadProject();
 	/** make sure call to unloadProject unloaded all vst2 instances **/
 	dbgassert(vsthost::getInstance()->getVst2Instances().empty());
+	//TODO: assert that audiocache is empty
 	audiocache::getInstance()->load(file->sampleFileIndex);
 
 	/** populates trackList **/
@@ -855,9 +879,6 @@ bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file, int flags) {
 		/**
 		 * plugin loading was not deferred.
 		 * handle request to load all plugins.
-		 * plugin loading can take a long time and will block the main thread.
-		 * so we have a rendering loop here to show progress and make the GUI feel responsive.
-		 * Ideally this would happen on another thread, but that might not work for all vst plugins.
 		 */
 
 		/** loading screen guictr class **/
@@ -889,8 +910,21 @@ bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file, int flags) {
 		auto windowMain = dynamic_cast<window_main*>(window);
 		dbgassert(windowMain);
 
+		/** get the list of all plugins in deferred loading state **/
 		std::vector<effectbase*> pluginsDeferred;
 		host->getDeferredEffects(pluginsDeferred);
+
+		/**
+		 * The following loop calls activateDeferred on all tracks, effectively doing the following sequence for each track:
+		 *  - load shared libraries
+		 *  - create audioeffect instance
+		 *  - load binary plugin snapshots
+		 *  - load plugin, mixer, arp parameter values
+		 *  - load plugin, mixer, arp automation
+		 *
+		 * plugin loading can take a long time and will block the main thread.
+		 * Ideally this would happen on another thread, but that might not work for all vst plugins.
+		 */
 		int len = pluginsDeferred.size();
 		for (int i = 0; i < len; i++) {
 
@@ -918,20 +952,27 @@ bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file, int flags) {
 		ctr.setControl(nullptr);
 	}
 
+	/** load layouts **/
 	trackList.loadSubtrackLayouts(file->project);
 
 	view->ctr_tracks.layout();
 	grid.setLayout(file->layout.layoutGrid);
 	view->ctr_tracks.setScrollOffset(file->layout.scrollOffsetX);
 	view->ctr_plugins.layout();
+
 	updateVisibleTrackContents();
+
+
+	/** load cursor state **/
 	if (cursor.isSubtrackSelection() && trackList.validTrackIdx(cursor.cursorTrack)) {
 		track_t* tr = trackList[cursor.cursorTrack];
 		fixCursorSubRange(cursor, tr->subtracks.size());
 	} else {
 		fixCursorTrackRange(cursor, trackList.size());
 	}
+	/** set as current project **/
 	this->projectPath = file->path;
+
 	setAudioThreadState(playback_state::status_stop);
 
 	return true;

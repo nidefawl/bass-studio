@@ -73,12 +73,7 @@ public:
 	void postSetParameter(int32_t idx, float preVal, float val, int flags);
 };
 struct audio_stage_t;
-//class audio_stage_holder_t {
-//public:
-//	std::vector<audio_stage_t*> stages;
-//	virtual ~audio_stage_holder_t() { };
-//	virtual void onStagesCreated();
-//};
+
 struct audio_stage_t {
 	int32_t id;
 	audio_stage_t* parent;
