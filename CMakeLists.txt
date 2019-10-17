@@ -31,7 +31,9 @@ add_definitions("-DBUILD_EXTERNAL_PLUGIN=0")
 
 
 file(GLOB_RECURSE HDR_ALL_FILES src/*.h)
+file(GLOB_RECURSE CXX_ALL_FILES src/*.cxx)
 file(GLOB_RECURSE CPP_ALL_FILES src/*.cpp)
+set(CPP_ALL_FILES ${CXX_ALL_FILES} ${CPP_ALL_FILES})
 file(GLOB_RECURSE C_SRC_FILES src/*.c)
 list(APPEND HDR_FILES "")
 list(APPEND CPP_SRC_FILES "")
@@ -123,6 +125,7 @@ foreach(f ${CPP_ALL_FILES})
 	  endif (MSVC)
     list(APPEND CPP_SRC_FILES ${f})
 endforeach()
+set(CPP_SRC_FILES ${SRC_FILES_SUBDIR_FILES} ${CPP_SRC_FILES})
 
 list(APPEND CPP_SRC_FILES ${CMAKE_BINARY_DIR}/buildinfo.cpp)
 
@@ -138,7 +141,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" STRE
         src/gl/gl_path.cpp
         src/wave/wav_tesselate.cpp
     )
-    set_source_files_properties(${SRC_FILES_OPTIMIZE} PROPERTIES COMPILE_OPTIONS "-O2")
+    # set_source_files_properties(${SRC_FILES_OPTIMIZE} PROPERTIES COMPILE_OPTIONS "-O2")
 endif()
 
 set(CPP_SRC_FILES ${SRC_FILES_SUBDIR_FILES} ${CPP_SRC_FILES})

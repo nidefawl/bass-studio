@@ -88,6 +88,12 @@
                                     <listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/portmidi/pm_common&quot;"/>
                                     									
                                     <listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/kissfft&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/DAW/js/duktape/include}&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/dukglue/include&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/DAW/cli/console/replxx/include}&quot;"/>
                                     								
                                 </option>
                                 								
@@ -378,6 +384,12 @@
                                     <listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/portmidi/pm_common&quot;"/>
                                     									
                                     <listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/kissfft&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/DAW/js/duktape/include}&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/dukglue/include&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/DAW/cli/console/replxx/include}&quot;"/>
                                     								
                                 </option>
                                 								
@@ -666,6 +678,12 @@
                                     <listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/portmidi/pm_common&quot;"/>
                                     									
                                     <listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/kissfft&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/DAW/js/duktape/include}&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/dukglue/include&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/DAW/cli/console/replxx/include}&quot;"/>
                                     								
                                 </option>
                                 								
@@ -956,6 +974,12 @@
                                     <listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/portmidi/pm_common&quot;"/>
                                     									
                                     <listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/kissfft&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/DAW/js/duktape/include}&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/dukglue/include&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/DAW/cli/console/replxx/include}&quot;"/>
                                     								
                                 </option>
                                 								
@@ -1244,6 +1268,12 @@
                                     <listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/portmidi/pm_common&quot;"/>
                                     									
                                     <listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/kissfft&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/DAW/js/duktape/include}&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/dukglue/include&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/DAW/cli/console/replxx/include}&quot;"/>
                                     								
                                 </option>
                                 								
@@ -1532,6 +1562,12 @@
                                     <listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/portmidi/pm_common&quot;"/>
                                     									
                                     <listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/kissfft&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/DAW/js/duktape/include}&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/dukglue/include&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/DAW/cli/console/replxx/include}&quot;"/>
                                     								
                                 </option>
                                 								
@@ -1820,6 +1856,12 @@
                                     <listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/portmidi/pm_common&quot;"/>
                                     									
                                     <listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/kissfft&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/DAW/js/duktape/include}&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${DEPS_PATH}/dukglue/include&quot;"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="&quot;${workspace_loc:/DAW/cli/console/replxx/include}&quot;"/>
                                     								
                                 </option>
                                 								

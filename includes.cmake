@@ -21,6 +21,8 @@ message(STATUS "BUILD_BINARY_SUFFIX ${BUILD_BINARY_SUFFIX}")
 
 include_directories("${DAW_SRC_PATH}")
 include_directories("${DAW_SRC_PATH}/include")
+include_directories("${DAW_SRC_PATH}/js/duktape/include")
+include_directories("${DAW_SRC_PATH}/cli/console/replxx/include")
 include_directories(SYSTEM "${DAW_SRC_PATH}/nanovg")
 include_directories(SYSTEM  
     ${DEPS_BUILD_FOLDER}/${DEPS_BUILD_FOLDER_LIBS}/glfw/include
@@ -29,6 +31,7 @@ include_directories(SYSTEM
     ${DAW_DEPS_PATH}/glad/include
     ${DAW_DEPS_PATH}/glad/src
     ${DAW_DEPS_PATH}/glm
+    ${DAW_DEPS_PATH}/dukglue/include
     ${DAW_DEPS_PATH}/portaudio/include
     ${DAW_DEPS_PATH}/portmidi/pm_common
     ${DAW_DEPS_PATH}/SplineLibrary/spline_library

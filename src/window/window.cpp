@@ -62,6 +62,8 @@
 #include "buildinfo.h"
 #include "../threads/workerthread.h"
 #include "window_impl.h"
+#include "cli/console/console_thread.h"
+#include "cli/console/commandline_rep.h"
 
 
 volatile bool fataError = false;
@@ -1399,6 +1401,13 @@ int startApplication(int argc, char* argv[]) {
 	enableGlDebugCallback();
 	glfwSetErrorCallback(glfw_runtime_error_callback);
 	ctrl->postInit();
+
+	NU::CONSOLE::CommandLineREP_TCP cli;
+	NU::CONSOLE::ConsoleThread threadCommandLine(cli);
+	daw_tls::tlsinstance& tls = daw_tls::getTls();
+	threadCommandLine.setTls(tls);
+	threadCommandLine.init();
+	threadCommandLine.startThread();
 	GLFWwindow* glfwHandle = mainWindow->getGLFW();
 	long start = getTimeMillis();
 	while (!fataError && !glfwWindowShouldClose(glfwHandle)) {
@@ -1454,7 +1463,10 @@ int startApplication(int argc, char* argv[]) {
 			mainWindow->flagNeedsRedraw();
 		}
 #endif
+		cli.executeCommands();
 	}
+	threadCommandLine.stopThread();
+	threadCommandLine.joinThread();
 	mainWindow->setInvalid();
 	ctrl->destroyControl();
 	mainWindow->destroy();

@@ -135,11 +135,15 @@ static void network_panic(const char *fmt, ...) {
 
 void network_init(void) {
 #ifdef _WIN32
-  WSADATA dat;
-  int err = WSAStartup(MAKEWORD(2, 2), &dat);
-  if (err != 0) {
-    network_panic("WSAStartup failed (%d)", err);
-  }
+	static bool once = false;
+	if (!once) {
+		once = true;
+	  WSADATA dat;
+	  int err = WSAStartup(MAKEWORD(2, 2), &dat);
+	  if (err != 0) {
+		network_panic("WSAStartup failed (%d)", err);
+	  }
+	}
 #else
   /* Stops the SIGPIPE signal being raised when writing to a closed socket */
   signal(SIGPIPE, SIG_IGN);
