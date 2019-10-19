@@ -9,6 +9,11 @@ namespace SCRIPTING {
 	void registerInterfaceToContext(duk_context* ctx) {
 
 		dukglue_register_method(ctx, &MainCtrl::setEmptyProject, "setEmptyProject");
+		dukglue_register_method(ctx, &MainCtrl::stopPlaying, "stop");
+		dukglue_register_method(ctx, &MainCtrl::startPlaying, "start");
+		dukglue_register_method(ctx, &MainCtrl::loadFile, "loadFile");
+		dukglue_register_method(ctx, &MainCtrl::loadFileCStr, "loadFileCStr");
+
 	}
 	void setGlobalInstance(duk_context* ctx, MainCtrl* pInterfaceInstance) {
 

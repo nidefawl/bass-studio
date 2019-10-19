@@ -25,6 +25,9 @@ public:
     Impl(NU::CONSOLE::CommandLineREP& _cli) : commandREP(_cli) {
 //		std::atomic_init(&m_stop, false);
 	}
+    ~Impl() {
+    	dbgassert(m_stop); // joining of thread must be handled by caller
+    }
     void setTls(daw_tls::tlsinstance tls) {
     	dbgassert(!t.joinable());
     	threadTLS = tls;

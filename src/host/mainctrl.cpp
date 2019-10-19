@@ -420,6 +420,9 @@ void MainCtrl::updateMenubar() {
 static SupportedFileType FILE_TYPE_PROJECT {"Project File", PROJECT_FILE_EXT};
 std::vector<SupportedFileType> vFILE_TYPE_PROJECT = { FILE_TYPE_PROJECT };
 
+void MainCtrl::loadFileCStr(const char* str) {
+	loadFile(str, 0);
+}
 void MainCtrl::loadFile(String path, int flags) {
 	timer.reset();
 	std::shared_ptr<project_file> f = loadProjectFile(path);

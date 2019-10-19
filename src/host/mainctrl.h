@@ -279,6 +279,7 @@ public:
 	 * @param flags - 0 or FLAG_DEFER_LOAD (don't load vst plugins, use placeholders)
 	 */
 	void loadFile(String path, int flags);
+	void loadFileCStr(const char* str);
 
 	/**
 	 * Locks audiothread and creates a copy of the project that can be used for serialization
