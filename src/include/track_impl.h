@@ -196,7 +196,7 @@ struct track_impl_t : public audio_stage_t {
 	void sendNotesOff(int32_t bpm100);
 	void sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, clip_notes_t& midiRealtimeInput, int32_t flags);
 	void fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, float** buffer, int32_t samples);
-	void addAudio(const AudioBlock* const output, float fGain);
+	void addAudio(const AudioBlock* const ptrExternalInputs, float fGain);
 	int32_t mapInput(int32_t nInputChannels, int32_t nChannel);
 	VstEvent_t* reallocEvts(size_t size);
 	int loadSubtrackLayout(const std::vector<automationlane_snapshot_t>& atl);

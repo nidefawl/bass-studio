@@ -655,17 +655,17 @@ int32_t track_impl_t::mapInput(int32_t nInputChannels, int32_t nChannel) {
 	}
 	return nChannel;
 }
-void track_impl_t::addAudio(const AudioBlock* const ptrInputAudioBlock, float fGain) {
+void track_impl_t::addAudio(const AudioBlock* const ptrExternalInputs, float fGain) {
 	if (isChannelConnected(inputChannel)) {
 		for (int channel = 0; channel < input.channels; channel++) {
-			int32_t idx = mapInput(ptrInputAudioBlock->channels, channel);
-			if (idx < 0 || idx >= ptrInputAudioBlock->channels) {
+			int32_t idx = mapInput(ptrExternalInputs->channels, channel);
+			if (idx < 0 || idx >= ptrExternalInputs->channels) {
 				continue;
 			}
-			float* pChSrc = ptrInputAudioBlock->buf[idx];
+			float* pChSrc = ptrExternalInputs->buf[idx];
 			float* pChDst = input.buf[channel];
-			dbgassert(ptrInputAudioBlock->samples == input.samples);
-			const int32_t nSamples = math::min(ptrInputAudioBlock->samples, input.samples);
+			dbgassert(ptrExternalInputs->samples == input.samples);
+			const int32_t nSamples = math::min(ptrExternalInputs->samples, input.samples);
 			for (int sample = 0; sample < nSamples; sample++) {
 				*pChDst++ += (*pChSrc++)*fGain;
 			}
