@@ -1,5 +1,13 @@
 
 
+IDEA: arpeggiator is per clip setting
+javascripted functions for plugin parameter automation
+return plugin state to last save-state of project file by right clicking right-click contextmenu on vst plugins
+rms/peak db info when hovering meters
+switch to audio view. replacing all tracks with their output buffer
+track editor vertical drag-move zooming like note-editor
+select all deactivated notes
+consider handling context menu ownership with shared_ptrs. I may require to use shared from this to solve issues with call close-context-menu from click handlers
 
 Bugs:
 clip loop gets notes stuck
