@@ -36,6 +36,7 @@
 #include "track_impl.h"
 #include "projectcontroller.h"
 #include "threads/threadlock.h"
+#include <deque>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -612,15 +613,15 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 		}
 
 		//still a race condition on_terminate here
-		AudioBuffer* bufInput = nullptr;
+		AudioBuffer* ptrExternalInputs = nullptr;
 		if (audioHost) {
 			if (stream && stream->getInputQueueSize() > 2) {
-				if (stream->try_dequeueInput(bufInput)) {
+				if (stream->try_dequeueInput(ptrExternalInputs)) {
 					//TODO: build a buffer with input blocks and process at constant latency
-					dbgassert(bufInput);
-					if (lBlockSize != bufInput->output->samples) {
-						bufInput->inUse = false;
-						bufInput = nullptr;
+					dbgassert(ptrExternalInputs);
+					if (lBlockSize != ptrExternalInputs->output->samples) {
+						ptrExternalInputs->inUse = false;
+						ptrExternalInputs = nullptr;
 					}
 				} else {
 					stats.inputBufferUnderuns++;
@@ -686,86 +687,92 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 		for (track_t* trackTop : ctrl->trackCtr) {
 			track_impl_t* trackImpl = trackTop->audio;
 
-			//pseudo code for processing tree-like project structure (groups with nested sub-groups)
-			/*
+			/** turn tree structure into linear pointer array with trackTop at the beginning and the deepest child at the end **/
 			std::vector<track_t*> vecTracks;
-			std::queue<track_t*> qTracks;
-			qTracks.append(track);
+			std::deque<track_t*> qTracks;
+			qTracks.push_back(trackTop);
+
+			//TODO: this should respect the audio mapping so we can determine audio stage latencies at each node in the tree
 			while (!qTracks.empty()) {
-				track_t* t = qTracks.pop();
+				track_t* t = qTracks.front();
+				qTracks.pop_front();
 				for (track_t* child : t->children) {
-					qTracks.append(child);
+					qTracks.push_back(child);
 				}
-				vecTracks.add(qTracks);
+				vecTracks.push_back(t);
 			}
+			/**
+			 * iterate in reverse order: first children, then parents
+			 */
 			for (auto it = vecTracks.rbegin(); it != vecTracks.rend(); it++) {
-			}
-			*/
-			trackImpl->input.realloc(lBlockSize);
-			trackImpl->output.realloc(lBlockSize);
-			dsp_util::fillBlock(trackImpl->input, 0.0f);
+				track_t* track = *it;
+				trackImpl->input.realloc(lBlockSize);
+				trackImpl->output.realloc(lBlockSize);
+				dsp_util::fillBlock(trackImpl->input, 0.0f);
 
-			int32_t midiProcessFlags = MidiFlags::PROCESS_REALTIME|MidiFlags::PROCESS_ARP;
-			if (state == playback_state::status_play) {
-				midiProcessFlags = MidiFlags::PROCESS_REALTIME|MidiFlags::PROCESS_CLIPS|MidiFlags::PROCESS_ARP;
-			}
-
-			trackImpl->sendNotes(pos, tickBlockEnd, loopCutStart, loopCutEnd, project.tempo100, sample, *midiRealtimeInput, midiProcessFlags);
-			if (state != playback_state::status_play) {
-				//
-			}
-			if (state == playback_state::status_play) {
-				trackImpl->fillAudio(pos, tickBlockEnd, loopCutStart, loopCutEnd, project.tempo100, sample, trackImpl->input.buf, (int32_t)lBlockSize);
-			}
-			if (bufInput) {
-				float fGainInput = 1.0f; //TODO: make track parameter
-				trackImpl->addAudio(bufInput->output, fGainInput);
-			}
-
-			/* Processes audio/midi tracks plugin chain */
-			processAudio(trackImpl, &trackImpl->input, &trackImpl->output, sample, lBlockSize, state);
-
-			/* Compensate audio/midi track to pre-return latency */
-			samplerate_t delayToPreReturn = maxLatencyAudioMidi - trackImpl->getLatency();
-			dbgassert(delayToPreReturn >= 0);
-			delayAudio(trackImpl->getDelayLine(0), &trackImpl->output, &trackImpl->output, delayToPreReturn);
-			trackImpl->latencyInfo.delayToPreReturn = delayToPreReturn;
-
-			if (trackImpl->mixer.isEnabled()) {
-
-				/* Feed audio/midi tracks output into returns input */
-				for (track_t* trackReturn : ctrl->trackReturnCtr) {
-					/* Calculate send gain level */
-					float fGainReturn;
-					if (!getGainLvl(trackImpl->mixer.getParamValue(PARAM_OFFSET_SEND+trackReturn->localIdx), fGainReturn)) {
-						continue;
-					}
-
-					track_impl_t* audioReturn = trackReturn->audio;
-
-					/* Feed in return track send gain level */
-					audioReturn->input.addFrom(&trackImpl->output, fGainReturn);
+				int32_t midiProcessFlags = MidiFlags::PROCESS_REALTIME|MidiFlags::PROCESS_ARP;
+				if (state == playback_state::status_play) {
+					midiProcessFlags = MidiFlags::PROCESS_REALTIME|MidiFlags::PROCESS_CLIPS|MidiFlags::PROCESS_ARP;
 				}
 
-				/* Compensate audio/midi track to post-return latency */
-				samplerate_t delayToPostReturn = maxLatencyReturn;
-				dbgassert(delayToPostReturn >= 0);
-				delayAudio(trackImpl->getDelayLine(1), &trackImpl->output, &trackImpl->output, delayToPostReturn);
-				trackImpl->latencyInfo.delayToPostReturn = delayToPostReturn;
+				trackImpl->sendNotes(pos, tickBlockEnd, loopCutStart, loopCutEnd, project.tempo100, sample, *midiRealtimeInput, midiProcessFlags);
+				if (state != playback_state::status_play) {
+					//
+				}
+				if (state == playback_state::status_play) {
+					trackImpl->fillAudio(pos, tickBlockEnd, loopCutStart, loopCutEnd, project.tempo100, sample, trackImpl->input.buf, (int32_t)lBlockSize);
+				}
+				if (ptrExternalInputs) {
+					float fGainInput = 1.0f; //TODO: make track parameter
+					trackImpl->addAudio(ptrExternalInputs->output, fGainInput);
+				}
 
-				//TODO: feed into mapped output
-				/* Feed audio/midi tracks output into masters input */
-				for (track_t* trackMaster : ctrl->trackMasterCtr) {
+				/* Processes audio/midi tracks plugin chain */
+				processAudio(trackImpl, &trackImpl->input, &trackImpl->output, sample, lBlockSize, state);
 
-					/* Calculate audio/midi tracks gain level */
-					float fGainTrack;
-					if (!getGainLvl(trackImpl->mixer.getParamValue(PARAM_TRACK_GAIN), fGainTrack)) {
-						continue;
+				/* Compensate audio/midi track to pre-return latency */
+				samplerate_t delayToPreReturn = maxLatencyAudioMidi - trackImpl->getLatency();
+				dbgassert(delayToPreReturn >= 0);
+				delayAudio(trackImpl->getDelayLine(0), &trackImpl->output, &trackImpl->output, delayToPreReturn);
+				trackImpl->latencyInfo.delayToPreReturn = delayToPreReturn;
+
+				if (trackImpl->mixer.isEnabled()) {
+
+					/* Feed audio/midi tracks output into returns input */
+					for (track_t* trackReturn : ctrl->trackReturnCtr) {
+						/* Calculate send gain level */
+						float fGainReturn;
+						if (!getGainLvl(trackImpl->mixer.getParamValue(PARAM_OFFSET_SEND+trackReturn->localIdx), fGainReturn)) {
+							continue;
+						}
+
+						track_impl_t* audioReturn = trackReturn->audio;
+
+						/* Feed in return track send gain level */
+						audioReturn->input.addFrom(&trackImpl->output, fGainReturn);
 					}
 
-					track_impl_t* audioMaster = trackMaster->audio;
-					audioMaster->input.addFrom(&trackImpl->output, fGainTrack);
+					/* Compensate audio/midi track to post-return latency */
+					samplerate_t delayToPostReturn = maxLatencyReturn;
+					dbgassert(delayToPostReturn >= 0);
+					delayAudio(trackImpl->getDelayLine(1), &trackImpl->output, &trackImpl->output, delayToPostReturn);
+					trackImpl->latencyInfo.delayToPostReturn = delayToPostReturn;
+
+					//TODO: feed into mapped output
+					//TODO: feed into parent
 				}
+			}
+			/* Feed audio/midi tracks output into masters input */
+			for (track_t* trackMaster : ctrl->trackMasterCtr) {
+
+				/* Calculate audio/midi tracks gain level */
+				float fGainTrack;
+				if (!getGainLvl(trackImpl->mixer.getParamValue(PARAM_TRACK_GAIN), fGainTrack)) {
+					continue;
+				}
+
+				track_impl_t* audioMaster = trackMaster->audio;
+				audioMaster->input.addFrom(&trackImpl->output, fGainTrack);
 			}
 		}
 
@@ -855,8 +862,8 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 		} else {
 			bufferWrite->inUse = false;
 		}
-		if (bufInput) {
-			bufInput->inUse = false;
+		if (ptrExternalInputs) {
+			ptrExternalInputs->inUse = false;
 		}
 
 
