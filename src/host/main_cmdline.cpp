@@ -154,87 +154,110 @@ int main(int argc, char* argv[]) {
 			log_printf("audioHost->startAudio() failed\n", 0);
 			return 1;
 		}
+
 		midihost::getInstance()->startMidi();
     	plugindb.openDatabase();
     	LOG("START");
     	{
-
     		std::unique_ptr<PlaybackThread> playThread = std::make_unique<PlaybackThread>();
     		playThread->setTls(tls);
     		playThread->startThread(&project);
     		playThread->addRequest(REQ_STATE, (int) playback_state::status_no_process, true);
-//    		auto pf = loadProjectFile(file);
-//    		if (!pf) {
-//    			fprintf(stderr, "Error: failed loading file\n");
-//    			return EXIT_FAILURE;
-//    		}
+			if (!file.empty()) {
+	    		auto pf = loadProjectFile(file);
+	    		if (!pf) {
+	    			fprintf(stderr, "Error: failed loading file\n");
+	    			return EXIT_FAILURE;
+	    		}
+				project_snapshot_t& snapshot = pf->project;
+				project.copyFrom(snapshot);
+				audiocache::getInstance()->load(pf->sampleFileIndex);
 
-//    		project_snapshot_t& snapshot = pf->project;
-//    		project.copyFrom(snapshot);
-    		project.cursor.cursorPos = 0;
-    		project.loopEnabled = false;
-//    		audiocache::getInstance()->load(pf->sampleFileIndex);
+				vsthost* host = vsthost::getInstance();
+				/** create all audio instances **/
+				for (track_t* t : project.trackList) {
+					host->createAudio(t);
+				}
+
+				/** pre-load all plugin instances **/
+        		project.trackList.loadPlugins(snapshot);
+
+
+				/** fully load all plugin instances **/
+        		std::vector<effectbase*> pluginsDeferred;
+        		host->getDeferredEffects(pluginsDeferred);
+        		my_printf("loading %d plugins\n", pluginsDeferred.size());
+        		for (auto plugin : pluginsDeferred) {
+            		my_printf("load %s\n", StringAsCStr(plugin->sName));
+        			host->activateDeferred(plugin);
+        		}
+
+			} else {
+	    		project.cursor.cursorPos = 0;
+	    		project.loopEnabled = false;
+	    		track_t* track1 = new track_t(TRACK_TYPE_MIDI, "track1", true);
+	    		project.addTrackImpl(-1, track1, 0);
+
+	    		track_t* track2 = new track_t(TRACK_TYPE_MIDI, "track2", true);
+	    		project.addTrackImpl(-1, track2, 0);
+
+	    		track_t* trackMaster = new track_t(TRACK_TYPE_MASTER, "master", true);
+	    		project.addTrackImpl(0, trackMaster, 0);
+	        	String pathTracks = "test.tracks";
+	        	std::shared_ptr<trackcontainer_snapshot_t> ctr = loadTrackContainer(pathTracks);
+	        	dbgassert(ctr);
+	        	if (ctr) {
+	        		for (track_snapshot_t& ts : ctr->tracks) {
+	        			track_t* tr = new track_t(ts);
+	        			track2->addChild(tr);
+	            		project.addTrackImpl(-1, tr, 0);
+	            		ts.trackLoaded = tr;
+	            		log_printf("add track %s\n", StringAsCStr(tr->name));
+	        		}
+
+	        		//load plugins
+	        		for (track_snapshot_t& ts : ctr->tracks) {
+	            		log_printf("track '%s' loading %d plugins\n", StringAsCStr(ts.trackLoaded->name), ts.plugins.pluginSnapshots.size());
+	        			ts.trackLoaded->loadSnapshot(ts);
+	        		}
+
+	    			vsthost* host = vsthost::getInstance();
+	        		//load plugins
+	        		for (track_snapshot_t& ts : ctr->tracks) {
+	            		log_printf("track '%s' loading %d plugins\n", StringAsCStr(ts.trackLoaded->name), ts.plugins.pluginSnapshots.size());
+	        			ts.trackLoaded->loadSnapshot(ts);
+		    			std::vector<effectbase*> effects = ts.trackLoaded->audio->deferredEffects;
+		    			for (auto eff : effects) {
+		    				host->activateDeferred(eff);
+		    			}
+	        		}
+	        	}
+			}
+
     		my_printf("Tempo100: %d\n", project.tempo100);
     		my_printf("project.cursor.cursorPos: %d\n", project.cursor.cursorPos);
-    		track_t* track = new track_t(TRACK_TYPE_MIDI, "track1", true);
-    		project.addTrackImpl(-1, track, 0);
-    		track = new track_t(TRACK_TYPE_MIDI, "track2", true);
-    		project.addTrackImpl(-1, track, 0);
-    		track = new track_t(TRACK_TYPE_MASTER, "master", true);
-    		project.addTrackImpl(0, track, 0);
-        	String pathTracks = "test.tracks";
-        	trackcontainer_snapshot_t snapshot;
-        	std::shared_ptr<trackcontainer_snapshot_t> ctr = loadTrackContainer(pathTracks);
-        	dbgassert(ctr);
-        	if (ctr) {
-        		for (track_snapshot_t& ts : ctr->tracks) {
-        			track_t* tr = new track_t(ts);
-            		project.addTrackImpl(-1, tr, 0);
-            		ts.trackLoaded = tr;
-            		log_printf("add track %s\n", StringAsCStr(tr->name));
-        		}
 
-        		//load plugins
-        		for (track_snapshot_t& ts : ctr->tracks) {
-            		log_printf("track '%s' loading %d plugins\n", StringAsCStr(ts.trackLoaded->name), ts.plugins.pluginSnapshots.size());
-        			ts.trackLoaded->loadSnapshot(ts);
-        		}
-
-    			vsthost* host = vsthost::getInstance();
-        		//load plugins
-        		for (track_snapshot_t& ts : ctr->tracks) {
-            		log_printf("track '%s' loading %d plugins\n", StringAsCStr(ts.trackLoaded->name), ts.plugins.pluginSnapshots.size());
-        			ts.trackLoaded->loadSnapshot(ts);
-	    			std::vector<effectbase*> effects = ts.trackLoaded->audio->deferredEffects;
-	    			for (auto eff : effects) {
-	    				host->activateDeferred(eff);
-	    			}
-        		}
-        	}
-//    		project.trackList.loadPlugins(snapshot);
-//    		std::vector<effectbase*> pluginsDeferred;
-//    		host->getDeferredEffects(pluginsDeferred);
-//    		my_printf("loading %d plugins\n", pluginsDeferred.size());
-//    		for (auto plugin : pluginsDeferred) {
-//        		my_printf("load %s\n", StringAsCStr(plugin->sName));
-//    			host->activateDeferred(plugin);
-//    		}
     		AudioBlock block(2, host->lBlockSize);
     		AudioBlock blockFull(1, host->lBlockSize*2);
     		double tLastMsg = getTimeMillis()/1000.0;
     		int64_t nBlocks = 0;
     		int64_t samplesWritten = 0;
-			 drwav_data_format format;
-			 format.container = drwav_container_riff;     // <-- drwav_container_riff = normal WAV files, drwav_container_w64 = Sony Wave64.
-			 format.format = DR_WAVE_FORMAT_IEEE_FLOAT;          // <-- Any of the DR_WAVE_FORMAT_* codes.
-			 format.channels = 2;
-			 format.sampleRate = host->lSampleRate;
-			 format.bitsPerSample = 32;
+			drwav_data_format format;
+			format.container = drwav_container_riff;     // <-- drwav_container_riff = normal WAV files, drwav_container_w64 = Sony Wave64.
+			format.format = DR_WAVE_FORMAT_IEEE_FLOAT;          // <-- Any of the DR_WAVE_FORMAT_* codes.
+			format.channels = 2;
+			format.sampleRate = host->lSampleRate;
+			format.bitsPerSample = 32;
 //			 drwav* pWav = drwav_open_file_write(StringAsCStr(fOutWave), &format);
+
 			my_printf("request playback start..\n", 0);
+
 			project.cursor.cursorPos = TICKS_BAR*4;
+
 			playThread->addRequest(REQ_STATE, (int) playback_state::status_play, true);
+
 			my_printf("start playback\n", 0);
+
     		while (!quit) {
 //    			dsp_util::fillBlock(block, 0.0f);
 //    			//still a race condition on_terminate here
@@ -270,13 +293,15 @@ int main(int argc, char* argv[]) {
 //    		//		dsp_util::fillSilence(inputs, framesPerBuffer);
 //    			}
 				auto tNow = getTimeMillis()/1000.0;
-				if (tNow - tLastMsg > 1) {
+				if (tNow - tLastMsg >= 1.0) {
 					tLastMsg = tNow;
 					host_stats_t stats;
 					host->getStats(stats);
 
 
 					log_printf("playbackPos %d, %d blocks, %d samples\n", project.playbackPos, stats.blocksProcessed, stats.samplesProcessed);
+
+
 					if (project.playbackPos > TICKS_BAR*32) {
 						playThread->addRequest(REQ_STATE, (int) playback_state::status_no_process, true);
 						quit = true;
