@@ -140,10 +140,10 @@ track_impl_snapshot_t::track_impl_snapshot_t(track_impl_t* p, bool storePluginCh
 		}
 	}
 }
-track_snapshot_t::track_snapshot_t(track_t* track, bool storePluginChunks)
+track_snapshot_t::track_snapshot_t(const track_t* track, bool storePluginChunks)
   : tracksettings_t(*track), localIdx(track->localIdx), plugins(track->audio, storePluginChunks)
 {
-	auto& otherClips = track->getMidi().getConstClips();
+	auto& otherClips = track->getConstMidi().getConstClips();
 	for (auto clip : otherClips) {
 		clips.emplace_back(*clip);
 	}

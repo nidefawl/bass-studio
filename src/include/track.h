@@ -249,7 +249,7 @@ struct track_snapshot_t : public tracksettings_t {
 	std::vector<clip_t> clips;
 	std::vector<automationlane_snapshot_t> automationLanes;
 	track_snapshot_t() = default;
-	track_snapshot_t(track_t* track, bool storePluginChunks);
+	track_snapshot_t(const track_t* track, bool storePluginChunks);
 };
 //namespace track_snapshot_flags {
 //constexpr int HAS_PLUGINS = 1;
@@ -265,6 +265,9 @@ public:
 	const char* szName = NULL;
 #endif
 	trackdata_midi_t& getMidi() {
+		return midi;
+	}
+	const trackdata_midi_t& getConstMidi() const {
 		return midi;
 	}
 	tick_minmax_t getMinMaxEvents() {
@@ -326,12 +329,26 @@ public:
 	}
 	int32_t idx = -1;
 	int32_t localIdx = -1;
-	gui_track* content = NULL;
+	gui_track* content = nullptr;
 //	std::vector<gui_track_automationlane*> automationLanes;
 	std::vector<gui_track_subtrack*> subtracks;
-	gui_track_controls* mixer = NULL;
-	track_impl_t* audio = NULL;
+	track_t* parent = nullptr;
+	std::vector<track_t*> children;
+	gui_track_controls* mixer = nullptr;
+	track_impl_t* audio = nullptr;
 	int scrolloffset = 0;
+	void addChild(track_t* track) {
+		dbgassert(!track->parent);
+		dbgassert(!STL_CONTAINS(children, track));
+		children.push_back(track);
+		track->parent = this;
+	}
+	void removeChild(track_t* track) {
+		dbgassert(track->parent == this);
+		dbgassert(STL_CONTAINS(children, track));
+		children.erase(std::remove(children.begin(), children.end(), track));
+		track->parent = nullptr;
+	}
 };
 struct trackcontainer_snapshot_t;
 
@@ -351,6 +368,10 @@ public:
 
 	size_t size() const {
 		return tracks.size();
+	}
+
+	bool empty() const {
+		return tracks.empty();
 	}
 
     track_vector::iterator begin() { return tracks.begin(); }
@@ -382,6 +403,7 @@ public:
 
 struct trackcontainer_snapshot_t {
 	std::vector<track_snapshot_t> tracks;
+	std::vector<int32_t> hierachy;
 };
 
 struct project_snapshot_t {
@@ -392,11 +414,13 @@ struct project_snapshot_t {
 };
 class trackallcontainer_t : public trackbasecontainer_t {
 	friend class project_t;
+	track_vector tracksRoot;
 	trackcontainer_tracktype_t trackCtr;
 	trackcontainer_tracktype_t trackReturnCtr;
 	trackcontainer_tracktype_t trackMasterCtr;
 	trackbasecontainer_t tracksBottom;
 	trackcontainer_tracktype_t* const trackTypeCtrs[4] = {&trackMasterCtr, &trackReturnCtr, &trackCtr, &trackCtr};
+	void rebuildTrackList();
 public:
 	trackallcontainer_t() :
 		trackbasecontainer_t()
@@ -416,6 +440,7 @@ public:
 
 	/**
 	 * inserts a track at position trackInsertPos of its track-type specific container
+	 * children have to have to set their parent reference outside
 	 */
 	void addTrack(int trackInsertPos, track_t* newTrack);
 	void removeTrack(track_t* track);
@@ -425,7 +450,7 @@ public:
 	void copyTracks(int32_t trackBegin, int32_t trackLen, trackstate_t& _out);
 	void loadPlugins(project_snapshot_t& project);
 	void loadSubtrackLayouts(project_snapshot_t& project);
-
+	void checkConsistency();
 
 
 	int32_t clampTrackIdx(int32_t idx) const {

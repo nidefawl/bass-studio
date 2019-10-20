@@ -29,6 +29,7 @@ template<class Archive>
 void serialize(Archive & archive, trackcontainer_snapshot_t & m)
 {
 	archive(make_nvp("tracklist", m.tracks));
+	make_optional_nvp(archive, "hierachy", m.hierachy);
 }
 template<class Archive>
 void serialize(Archive & archive, param_snapshot_t & m)
@@ -352,7 +353,7 @@ std::shared_ptr<project_file> loadProjectFile(String& path) {
 	}
     return nullptr;
 }
-bool saveProject(std::shared_ptr<project_file> f, String& path) {
+bool saveProject(std::shared_ptr<project_file> f, const String& path) {
 
 	try {
 		Stringstream sstream;
