@@ -156,15 +156,6 @@ void trackallcontainer_t::rebuildTrackList() {
 	addAll(tracksBottom.tracks, trackMasterCtr.tracks);
 
 
-	// reassign global track indices in correct order
-	int32_t idx = 0;
-	for (track_t* t : trackCtr) {
-		t->idx = idx++;
-	}
-	for (track_t* t : tracksBottom) {
-		t->idx = idx++;
-	}
-
 
 
 
@@ -183,6 +174,12 @@ void trackallcontainer_t::rebuildTrackList() {
 				stack.insert(stack.begin(), current->children.cbegin(), current->children.cend());
 			newTracks.push_back(current);
 		}
+	}
+
+	// reassign global track indices in correct order
+	int32_t idx = 0;
+	for (track_t* t : newTracks) {
+		t->idx = idx++;
 	}
 	tracks = newTracks;
 }
