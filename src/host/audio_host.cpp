@@ -215,7 +215,9 @@ void audiohost::audiostream::enqueueInput(AudioBuffer* buf) {
 	metersInput.onTick(blockIn->samples/(double)this->host->lSampleRate);
 	for (int32_t nTrack = 0; nTrack < tracksInput.size(); nTrack++) {
 		auto* track = tracksInput[nTrack].get();
-		assert(track->buf.channels <= buf->output->channels);
+//		if (track->buf.channels != buf->output->channels) {
+//			log_printf("mismatch! tracksInput.size %d, track.channels %d, input.channels %d\n", tracksInput.size(), track->buf.channels, buf->output->channels);
+//		}
 		track->buf.realloc(blockIn->samples);
 		track->buf.copyFrom(blockIn, [offset=track->channelOffset](uint32_t dstIdx, uint32_t srcIdx) {
 			return offset+dstIdx;
