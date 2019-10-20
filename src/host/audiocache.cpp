@@ -147,7 +147,7 @@ audiofile_t* audiocache::loadFile(String path, int id) {
 			}
 		}
 		int64_t timeBeginDownsample = getTimeHPint64();
-		int maxDownS = 2;
+		int maxDownS = 1;
 		log_printf("Downsampling %s...\n", path.c_str());
 		for (int step = 1; step < maxDownS; step++) {
 			std::vector<samplechannel_t> downsampledChannels(2);

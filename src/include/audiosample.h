@@ -18,7 +18,7 @@ struct audiosample_t {
     // The total number of samples making up the audio data. Use <totalSampleCount> * <bytesPerSample> to calculate
     // the required size of a buffer to hold the entire audio data.
     uint64_t nSamples;
-	std::vector<samplechannel_t> samples;
+	std::vector<samplechannel_t> samples;//TODO: rename to "channels"
 	std::vector<std::vector<samplechannel_t>> downsampled;
 };
 
