@@ -29,6 +29,7 @@ public:
 	}
 };
 class gui_list : public guictr_base, public gui_scrollcontainer {
+protected:
 	gui_scrollbar scrollbar;
 	std::vector<gui_list_entry*> listGuis;
 	int32_t first = 0;
@@ -44,6 +45,9 @@ public:
 	}
 	int32_t getSelectedIdx() {
 		return selectedIdx;
+	}
+	void setSelectedIdx(int32_t selectedIdx) {
+		this->selectedIdx = selectedIdx;
 	}
 	void setRowMargin(ivec4 _rowMargin) {
 		rowMargin = _rowMargin;

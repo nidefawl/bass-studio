@@ -123,20 +123,24 @@ void testTask() {
 }
 guictr_base* makeCtrProperties(); //guiproperties.cpp
 guictr_base* makeCtrTheme(); //guiproperties.cpp
+guictr_base* makeCtrHistory(); //guihistory.cpp
 
 class guictr_side_tabs_daw_1 : public guictr_tabbed {
 public:
 	gui_ctr_debug ctr_dbg;
 	guictr_base* const ctr_properties;
 	guictr_base* const ctr_theme;
+	guictr_base* const ctr_history;
 	gui_shaderview shaderView;
-	guictr_side_tabs_daw_1() : guictr_tabbed(), ctr_properties(makeCtrProperties()), ctr_theme(makeCtrTheme()) {
+	guictr_side_tabs_daw_1() : guictr_tabbed(), ctr_properties(makeCtrProperties()), ctr_theme(makeCtrTheme()), ctr_history(makeCtrHistory()) {
 		setBackgroundRendered(true);
 		ctr_dbg.setLabel("Debug 1");
 		ctr_properties->setLabel("Properties");
 		ctr_theme->setLabel("Theme");
+		ctr_history->setLabel("History");
 		shaderView.setLabel("Shader");
 		addEntry(&ctr_dbg, ctr_dbg.label);
+		addEntry(ctr_history, ctr_history->label);
 		addEntry(ctr_properties, ctr_properties->label);
 		addEntry(ctr_theme, ctr_theme->label);
 		addEntry(&shaderView, shaderView.label);
@@ -146,8 +150,10 @@ public:
 		//remove the entries we have to delete, base class would see dangling ptr otherwise
 		remove(ctr_properties);
 		remove(ctr_theme);
+		remove(ctr_history);
 		delete ctr_properties;
 		delete ctr_theme;
+		delete ctr_history;
 	}
 };
 class guictr_effectlibrary : public guictr_base {

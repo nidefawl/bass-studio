@@ -22,11 +22,14 @@ public:
 		this->errorDesc = err;
 	}
 };
-
 class edithistory {
 	std::vector<action_base*> m_undo;
 	std::vector<action_base*> m_redo;
+	int64_t revision = 0;
 public:
+	int64_t getRevision() const {
+		return revision;
+	}
 	void clear(MainCtrl* ctrl) {
 		while (!m_redo.empty()) {
 			action_base* redoAction = m_redo.back();
@@ -46,12 +49,14 @@ public:
 		step->undo(ctrl);
 		dbgassert(!step->errored);
 		m_redo.push_back(step);
+		revision--;
 	}
 	void redoStep(MainCtrl* ctrl) {
 		action_base* step = m_redo.back(); m_redo.pop_back();
 		step->redo(ctrl);
 		dbgassert(!step->errored);
 		m_undo.push_back(step);
+		revision++;
 	}
 	void push(MainCtrl* ctrl, action_base* action) {
 		while (!m_redo.empty()) {
@@ -62,6 +67,7 @@ public:
 		}
 		m_redo.clear();
 		m_undo.push_back(action);
+		revision++;
 	}
 	bool canUndo() {
 		return !m_undo.empty();
@@ -80,5 +86,10 @@ public:
 	}
 	int getNumRedoSteps() {
 		return m_redo.size();
+	}
+	void getActions(std::vector<action_base*>& outUndo,
+			std::vector<action_base*>& outRedo) {
+		outUndo = m_undo;
+		outRedo = m_redo;
 	}
 };
