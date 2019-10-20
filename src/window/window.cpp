@@ -64,6 +64,7 @@
 #include "window_impl.h"
 #include "cli/console/console_thread.h"
 #include "cli/console/commandline_rep.h"
+#include "js/scripting.h"
 
 
 volatile bool fataError = false;
@@ -1346,6 +1347,9 @@ int startApplication(int argc, char* argv[]) {
 #ifdef USE_WIN32_EXC_HOOKS
 	setExceptionHandler();
 #endif
+	//lifetime of thread must exceed try/catch because deconstruction of an unjoined std::thread terminates process
+	NU::CONSOLE::CommandLineREP_TCP cli;
+	NU::CONSOLE::ConsoleThread threadCommandLine(cli);
 	try {
 	int centerScreenIdx = -1;
 	for (int i = 0; i < argc; i++) {
@@ -1402,8 +1406,18 @@ int startApplication(int argc, char* argv[]) {
 	glfwSetErrorCallback(glfw_runtime_error_callback);
 	ctrl->postInit();
 
-	NU::CONSOLE::CommandLineREP_TCP cli;
-	NU::CONSOLE::ConsoleThread threadCommandLine(cli);
+	JSContext jsContext;
+	String srcJS;
+	int64_t ret = ReadFileText("daw_init.js", srcJS);
+	if (ret > 0) {
+		call_context_t ctxt;
+		String response = jsContext.eval(srcJS, ctxt);
+		if (response.length()) {
+			fwrite(response.c_str(), response.length(), 1, stdout);
+			fflush(stdout);
+		}
+	}
+
 	daw_tls::tlsinstance& tls = daw_tls::getTls();
 	threadCommandLine.setTls(tls);
 	threadCommandLine.init();
@@ -1465,8 +1479,6 @@ int startApplication(int argc, char* argv[]) {
 #endif
 		cli.executeCommands();
 	}
-	threadCommandLine.stopThread();
-	threadCommandLine.joinThread();
 	mainWindow->setInvalid();
 	ctrl->destroyControl();
 	mainWindow->destroy();
@@ -1490,6 +1502,8 @@ int startApplication(int argc, char* argv[]) {
 	} catch (std::exception& e) {
 		handleStdException(e);
 	}
+	threadCommandLine.stopThread();
+	threadCommandLine.joinThread();
 	deleteApp();
 	printLeakedGuiBase();
 #if BUILD_VSTHOST

@@ -11,7 +11,7 @@ struct project_file {
 	project_layout_t layout;
 	samplefile_index_t sampleFileIndex;
 };
-bool saveProject(std::shared_ptr<project_file> f, String& path);
+bool saveProject(std::shared_ptr<project_file> f, const String& path);
 std::shared_ptr<project_file> loadProjectFile(String& path);
 
 

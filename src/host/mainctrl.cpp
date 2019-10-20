@@ -75,6 +75,7 @@
 #include "midi_host.h"
 
 	const int FLAG_DEFER_LOAD = 0x1;
+	const int FLAG_INVOKE_USER_CB_DEFERLOAD = 0x2;
 
 	int32_t getNumClipAllocations();
 
@@ -423,6 +424,14 @@ std::vector<SupportedFileType> vFILE_TYPE_PROJECT = { FILE_TYPE_PROJECT };
 void MainCtrl::loadFileCStr(const char* str) {
 	loadFile(str, 0);
 }
+void MainCtrl::saveFile(const String& path) {
+	if (!path.empty())
+	{
+		std::shared_ptr<project_file> f = createProjectFile();
+		saveProject(f, path);
+		projectPath = path;
+	}
+}
 void MainCtrl::loadFile(String path, int flags) {
 	timer.reset();
 	std::shared_ptr<project_file> f = loadProjectFile(path);
@@ -430,18 +439,25 @@ void MainCtrl::loadFile(String path, int flags) {
 	if (!f) {
 		setStatusText(StringFormat("Failed loading %s", StringAsCStr(FileNameFromPath(path))));
 	} else {
-		auto cb = [this, path, l1, projFile=f](int n) {
+		const bool wasUserCallback = (flags&FLAG_INVOKE_USER_CB_DEFERLOAD) != 0;
+		auto cb = [this, path, l1, projFile=f, wasUserCallback](int n) {
 			try {
 				timer.reset();
-				setLoadedProject(projFile, n==0 ? FLAG_DEFER_LOAD : 0);
+				int loadFlags = 0;
+				if (wasUserCallback) {
+					loadFlags = n==0 ? FLAG_DEFER_LOAD : 0;
+				} else {
+					loadFlags = n;
+				}
+				setLoadedProject(projFile, loadFlags);
 				double l2 = timer.getTimeDoubleReset();
 				log_printf("Loading file %s took %f %f\n", StringAsCStr(path), l1, l2);
 			} catch (std::exception& e) {
 				handleStdException(e);
 			}
 		};
-		if (!flags) {
-			cb(1);
+		if ((flags&FLAG_INVOKE_USER_CB_DEFERLOAD) == 0) {
+			cb(flags&FLAG_DEFER_LOAD);
 		} else {
 			guidialog_cb_yes_no* dlg = new guidialog_cb_yes_no();
 			dlg->cb = cb;
@@ -521,12 +537,7 @@ void MainCtrl::menuCommand(int cmd) {
 					break;
 				}
 			}
-			if (!path.empty())
-			{
-				std::shared_ptr<project_file> f = createProjectFile();
-				saveProject(f, path);
-				projectPath = path;
-			}
+			saveFile(path);
 		}
 		break;
 	case CMD_FILE_CLOSE:
@@ -542,6 +553,16 @@ void MainCtrl::menuCommand(int cmd) {
 	case CMD_SELECT_ALL:
 		break;
 	case CMD_DUPLICATE:
+		break;
+	case CMD_INSERT_AUDIO_TRACK:
+	case CMD_INSERT_MIDI_TRACK:
+	case CMD_INSERT_RETURN_TRACK:
+	case CMD_INSERT_MASTER_TRACK:
+	{
+
+		int32_t trackType = (cmd-CMD_INSERT_AUDIO_TRACK)%NUM_TRACK_TYPES;
+		MainCtrl::get()->insertNewTrack(-1, trackType);
+	}
 		break;
 	case CMD_ABOUT:
 		this->openDialog(new guidialog_about());

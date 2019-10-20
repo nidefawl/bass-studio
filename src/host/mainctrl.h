@@ -273,10 +273,11 @@ public:
 		return &workerThread;
 	}
 
+	void saveFile(const String& path);
 	/**
 	 * Loads project file at location path
 	 * @param path - path to a valid .project file
-	 * @param flags - 0 or FLAG_DEFER_LOAD (don't load vst plugins, use placeholders)
+	 * @param flags - 0 or FLAG_INVOKE_USER_CB_DEFERLOAD or FLAG_INVOKE_USER_CB_DEFERLOAD
 	 */
 	void loadFile(String path, int flags);
 	void loadFileCStr(const char* str);

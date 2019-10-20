@@ -13,6 +13,8 @@ namespace SCRIPTING {
 		dukglue_register_method(ctx, &MainCtrl::startPlaying, "start");
 		dukglue_register_method(ctx, &MainCtrl::loadFile, "loadFile");
 		dukglue_register_method(ctx, &MainCtrl::loadFileCStr, "loadFileCStr");
+		dukglue_register_method(ctx, &MainCtrl::menuCommand, "menuCommand");
+		dukglue_register_method(ctx, &MainCtrl::saveFile, "saveFile");
 
 	}
 	void setGlobalInstance(duk_context* ctx, MainCtrl* pInterfaceInstance) {

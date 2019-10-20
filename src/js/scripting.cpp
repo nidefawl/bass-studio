@@ -4,6 +4,18 @@
 extern "C" {
 #include "duktape.h"
 }
+#define DUK_CMDLINE_CONSOLE_SUPPORT
+#define DUK_CMDLINE_LOGGING_SUPPORT
+#define DUK_CMDLINE_MODULE_SUPPORT
+#if defined(DUK_CMDLINE_CONSOLE_SUPPORT)
+#include "duk_console.h"
+#endif
+#if defined(DUK_CMDLINE_LOGGING_SUPPORT)
+#include "duk_logging.h"
+#endif
+#if defined(DUK_CMDLINE_MODULE_SUPPORT)
+#include "duk_module_duktape.h"
+#endif
 
 duk_int_t safeCall(duk_context* ctx, void* userdata);
 
@@ -12,8 +24,14 @@ static void cmdline_fatal_handler(void *udata, const char *msg) {
 	fprintf(stderr, "*** FATAL ERROR: %s\n", msg ? msg : "no message");
 	fprintf(stderr, "Causing intentional segfault...\n");
 	fflush(stderr);
-	*((volatile unsigned int *) 0) = (unsigned int) 0xdeadbeefUL;
-	abort();
+	dbgassert(0);
+}
+static duk_ret_t native_print(duk_context *ctx) {
+	duk_push_string(ctx, " ");
+	duk_insert(ctx, 0);
+	duk_join(ctx, duk_get_top(ctx) - 1);
+	log_printf("%s\n", duk_to_string(ctx, -1));
+	return 0;
 }
 /*
  *  String.fromBufferRaw()
@@ -46,6 +64,20 @@ public:
 		duk_push_c_function(ctx, string_frombufferraw, 1 /*nargs*/);
 		(void) duk_pcall(ctx, 1);
 		duk_pop(ctx);
+	/* Register console object. */
+#if defined(DUK_CMDLINE_CONSOLE_SUPPORT)
+	duk_console_init(ctx, DUK_CONSOLE_FLUSH /*flags*/);
+#endif
+
+	/* Register Duktape.Logger (removed in Duktape 2.x). */
+#if defined(DUK_CMDLINE_LOGGING_SUPPORT)
+	duk_logging_init(ctx, 0 /*flags*/);
+#endif
+
+	/* Register require() (removed in Duktape 2.x). */
+#if defined(DUK_CMDLINE_MODULE_SUPPORT)
+	duk_module_duktape_init(ctx);
+#endif
 
 		/* Stash a formatting function for evaluation results. */
 		duk_push_global_stash(ctx);
@@ -61,18 +93,19 @@ public:
 			"})(Duktape.enc)");
 		duk_put_prop_string(ctx, -2, "dukFormat");
 		duk_pop(ctx);
+		duk_push_c_function(ctx, native_print, DUK_VARARGS);
+		duk_put_global_string(ctx, "print");
+		using NU::SCRIPTING::DawInterface;
+		NU::SCRIPTING::registerInterfaceToContext(ctx);
 	}
 	~Impl() {
 		duk_destroy_heap(ctx);
 	}
 
 	void init() {
-		using NU::SCRIPTING::DawInterface;
-		NU::SCRIPTING::setGlobalInstance(ctx, MainCtrl::get());
-		NU::SCRIPTING::registerInterfaceToContext(ctx);
-		fflush(stdin);
 	}
 	String eval(const String& srcJS, call_context_t& ctxt) {
+		NU::SCRIPTING::setGlobalInstance(ctx, MainCtrl::get());
 
 		duk_push_pointer(ctx, (void *) StringAsCStr(srcJS));
 		duk_push_uint(ctx, (duk_uint_t) srcJS.length());
