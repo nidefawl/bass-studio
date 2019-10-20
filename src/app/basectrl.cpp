@@ -525,7 +525,7 @@ void AppCtrl::closeContextMenu() {
 	}
 }
 void AppCtrl::onChildOverlayWindowClose(window_main* ptr) {
-	log_printf("close ptr %X, contextWindow %X, this->ctxtmenu %X menuWindows.size() %d\n", (int64_t) ptr, (int64_t) contextWindow, this->ctxtmenu, menuWindows.size());
+//	log_printf("close ptr %X, contextWindow %X, this->ctxtmenu %X menuWindows.size() %d\n", (int64_t) ptr, (int64_t) contextWindow, this->ctxtmenu, menuWindows.size());
 	if (ptr == this->contextWindow) {
 		if (this->ctxtmenu) {
 			dbgassert(this->ctxtmenu);
