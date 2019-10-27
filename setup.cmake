@@ -10,7 +10,7 @@ FUNCTION(PREPEND var prefix)
    SET(${var} "${listVar}" PARENT_SCOPE)
 ENDFUNCTION(PREPEND)
 
-FUNCTION(ADD_POST_BUILD_PDB_GEN targetBuildName)
+FUNCTION(ADD_POST_BUILD_COMMANDS targetBuildName)
   if (IS_MINGW_BUILD)
     if (CV2PDB) 
       add_custom_command(
@@ -68,7 +68,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   add_compile_options(-Wall -Wno-inconsistent-missing-override) # -Wshadow sadly no working option for warning on shadow local only
   if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
 
-  #address sanitizer: Disable ADD_POST_BUILD_PDB_GEN and set ASAN_SYMBOLIZER_PATH=C:\dev\llvm-mingw-ca329c1-full\bin\llvm-symbolizer.exe
+  #address sanitizer: Disable ADD_POST_BUILD_COMMANDS and set ASAN_SYMBOLIZER_PATH=C:\dev\llvm-mingw-ca329c1-full\bin\llvm-symbolizer.exe
     #add_compile_options(-fsanitize=address)
     #add_link_options(-fsanitize=address)
 
