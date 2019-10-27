@@ -38,22 +38,12 @@ void guitrack_mixers::render(NVGcontext* vg) {
 	int ySplit = getPosYFirstReturnTrack(project);
 	if (ySplit > 0) {
 		nvgIntersectScissor(vg, 0, 0, cs.x, ySplit);
-		std::deque<track_t*> stack;
 		for (track_t* t : project.trackMidiAudioCtr) {
 			dbgassert(t->mixer != NULL);
-			stack.push_back(t);
-			while (!stack.empty()) {
-				track_t* current = stack.front(); stack.pop_front();
-				if (current->children.size())
-					stack.insert(stack.begin(), current->children.cbegin(), current->children.cend());
-				//content
-				int lvl = current->getChildLvl();
-
-				nvgSave(vg);
-				current->mixer->renderGroupHandle(vg);
-				current->mixer->render(vg);
-				nvgRestore(vg);
-			}
+			nvgSave(vg);
+			t->mixer->renderGroupHandle(vg);
+			t->mixer->render(vg);
+			nvgRestore(vg);
 		}
 	}
 
@@ -192,18 +182,10 @@ void guictr_tracks::layout() {
 	double f = scrollbar.toPixels();
 	ivec2 csTrackView = trackView.getSizeContent();
 	int y = TRACK_HEIGHT_SPACING;
-	std::deque<track_t*> stack;
 	for (track_t* t : project.trackList) {
 		dbgassert(t->content != NULL);
-		stack.push_back(t);
-		while (!stack.empty()) {
-			track_t* current = stack.front();
-			stack.pop_front();
-			if (current->children.size())
-				stack.insert(stack.begin(), current->children.cbegin(), current->children.cend());
-			int32_t h = setTrackPosition(current, y, false);
-			y += h + TRACK_HEIGHT_SPACING;
-		}
+		int32_t h = setTrackPosition(t, y, false);
+		y += h + TRACK_HEIGHT_SPACING;
 	}
 	contentHeight = y;
 	y = csTrackView.y-TRACK_HEIGHT_SPACING;
@@ -270,16 +252,9 @@ void guictr_tracks::render(NVGcontext* vg) {
 	if (ySplit > 0) {
 		nvgSave(vg);
 		nvgIntersectScissor(vg, 0, 0, cs.x, ySplit);
-		std::deque<track_t*> stack;
 		for (track_t* t : project.trackMidiAudioCtr) {
 			dbgassert(t->mixer != NULL);
-			stack.push_back(t);
-			while (!stack.empty()) {
-				track_t* current = stack.front(); stack.pop_front();
-				if (current->children.size()) stack.insert(stack.begin(), current->children.cbegin(), current->children.cend());
-
-				drawSeperator(vg, theme, current->mixer->bottom()+TRACK_HEIGHT_SPACING_HALF, cs);
-			}
+			drawSeperator(vg, theme, t->mixer->bottom()+TRACK_HEIGHT_SPACING_HALF, cs);
 		}
 		nvgRestore(vg);
 	}
@@ -294,8 +269,6 @@ void guictr_tracks::render(NVGcontext* vg) {
 		}
 	}
 	nvgRestore(vg);
-	bool renderIndicator = target.src == this;
-	ivec2 indicatorPos = target.targetPos;
 	if (target.src == this && target.dst) {
 		nvgSave(vg);
 		nvgTranslate(vg, 0, trackView.top());
@@ -321,7 +294,14 @@ void guictr_tracks::render(NVGcontext* vg) {
 				nvgGlobalAlpha(vg, 1.0f);
 			}
 		}
+		const int titleHeight = theme->get(GuiConstant::CONST_TRACK_HEIGHT_TITLE);
+		ivec2 indicatorPos = target.targetPos;
 		horizontalLineAt(this, vg, indicatorPos);
+
+		int fontScale = titleHeight;
+		String str = StringFormat("%s[%d]", StringAsCStr(static_cast<gui_track_controls*>(target.dst)->m_track->name), target.slotIdx);
+		renderCenteredMultilineText(vg, theme, str, fontScale, GuiColor::COL_LABEL_ACTIVE, indicatorPos+ivec2(size.x, 0), ivec2(titleHeight*30, titleHeight*2));
+
 		nvgRestore(vg);
 	}
 
@@ -483,10 +463,12 @@ gui_track_drop_position_t slotFromCoord(const project_t& project, track_t* const
 			minDistDragPoint = distDragPoint;
 			minSlot = {slotIdx, track, drop_type::track_on, {gui->pos.x, gui->pos.y+gui->size.y/2}};
 		}
-		distDragPoint = checkDropPoint(gui->pos.y + gui->size.y - dropMaxDistance, gui->pos.y + gui->size.y + dropMaxDistance, _pos.y);
-		if (distDragPoint >= 0 && distDragPoint < minDistDragPoint) {
-			minDistDragPoint = distDragPoint;
-			minSlot = {slotIdx, track, drop_type::track_after, {gui->pos.x, gui->pos.y+gui->size.y}};
+		if (track->children.empty()) {
+			distDragPoint = checkDropPoint(gui->pos.y + gui->size.y - dropMaxDistance, gui->pos.y + gui->size.y + dropMaxDistance, _pos.y);
+			if (distDragPoint >= 0 && distDragPoint < minDistDragPoint) {
+				minDistDragPoint = distDragPoint;
+				minSlot = {slotIdx, track, drop_type::track_after, {gui->pos.x, gui->pos.y+gui->size.y}};
+			}
 		}
 	}
 	return minSlot;
@@ -496,16 +478,52 @@ namespace {
 	void handleTrackEntryDragMove(guibase* parent, project_t& project, track_t* track, ivec2 mousepos) {
 		MainCtrl::get()->getDragDropTarget().reset();
 		gui_track_drop_position_t slot = slotFromCoord(project, track, mousepos);
+
+		track_tree_pos_t treePos{};
+		dbgassert(slot.droptype == drop_type::none || slot.droppedTrack);
+		switch (slot.droptype) {
+		case drop_type::none:
+			return;
+		case drop_type::track_on:
+			//insert into slot.droppedTrack at end
+			treePos.parent = slot.droppedTrack;
+			treePos.treeIdx = slot.droppedTrack->children.size() ? slot.droppedTrack->children.back()->childIdxTree : 0;
+			break;
+		case drop_type::track_before:
+			//insert into slot.droppedTrack->parent before slot.droppedTrack
+			treePos.parent = slot.droppedTrack->parent;
+			treePos.treeIdx = slot.droppedTrack->childIdxTree;
+			break;
+		case drop_type::track_after:
+			//insert into slot.droppedTrack->parent after slot.droppedTrack
+			treePos.parent = slot.droppedTrack->parent;
+			{
+				auto p = treePos.parent;
+				int idx = slot.droppedTrack->childIdxTree+1;
+				while (p && idx == p->children.size()) {
+					p = p->parent;
+					if (p)
+						idx = p->childIdxTree+1;
+				}
+				treePos.parent = p;
+				treePos.treeIdx = idx;
+			}
+			break;
+		default:
+			dbgassert(0);
+			return;
+		}
+
 		dragdrop_target_indicator_t target;
 		switch (slot.droptype) {
 		case drop_type::track_on:
-			target = { dragdrop_target_indicator_t::target_area, slot.slot, parent, slot.droppedTrack->mixer, slot.droppedTrack->mixer->pos+ivec2(0, slot.droppedTrack->mixer->size.y/2) };
+			target = { dragdrop_target_indicator_t::target_area, treePos.treeIdx, parent, treePos.parent ? treePos.parent->mixer : parent, slot.droppedTrack->mixer->pos+ivec2(0, slot.droppedTrack->mixer->size.y/2) };
 			break;
 		case drop_type::track_before:
-			target = { dragdrop_target_indicator_t::target_line, slot.slot, parent, slot.droppedTrack->mixer, slot.droppedTrack->mixer->pos+ivec2(0,2) };
+			target = { dragdrop_target_indicator_t::target_line, treePos.treeIdx, parent, treePos.parent ? treePos.parent->mixer : parent, slot.droppedTrack->mixer->pos+ivec2(0,2) };
 			break;
 		case drop_type::track_after:
-			target = { dragdrop_target_indicator_t::target_line, slot.slot, parent, slot.droppedTrack->mixer, slot.droppedTrack->mixer->pos+ivec2(0, slot.droppedTrack->mixer->size.y-2) };
+			target = { dragdrop_target_indicator_t::target_line, treePos.treeIdx, parent, treePos.parent ? treePos.parent->mixer : parent, slot.droppedTrack->mixer->pos+ivec2(0, slot.droppedTrack->mixer->size.y-2) };
 			break;
 		case drop_type::none:
 			return;
@@ -536,10 +554,24 @@ namespace {
 		case drop_type::track_after:
 			//insert into slot.droppedTrack->parent after slot.droppedTrack
 			treePos.parent = slot.droppedTrack->parent;
-			treePos.treeIdx = slot.droppedTrack->childIdxTree+1;
+			{
+				auto p = treePos.parent;
+				int idx = slot.droppedTrack->childIdxTree+1;
+				while (p && idx == p->children.size()) {
+					p = p->parent;
+					if (p)
+						idx = p->childIdxTree+1;
+				}
+				treePos.parent = p;
+				treePos.treeIdx = idx;
+			}
 			break;
 		default:
 			dbgassert(0);
+			return;
+		}
+		if (TRACKTYPE_TO_CTR(slot.droppedTrack->type) != TRACKTYPE_TO_CTR(track->type)) {
+			log_printf("Cannot move there\n", 0);
 			return;
 		}
 		treePos.trackTypeCtr = TRACKTYPE_TO_CTR(track->type);

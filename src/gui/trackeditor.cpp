@@ -834,26 +834,19 @@ void guitrack_editor::render(NVGcontext* vg) {
 	if (ySplit  > 0) {
 		nvgSave(vg);
 		nvgIntersectScissor(vg, 0, 0, cs.x, ySplit);
-		std::deque<track_t*> stack;
 		for (track_t* t : project.trackMidiAudioCtr) {
 			dbgassert(t->content != NULL);
-			stack.push_back(t);
-			while (!stack.empty()) {
-				track_t* current = stack.front(); stack.pop_front();
-				if (current->children.size()) stack.insert(stack.begin(), current->children.cbegin(), current->children.cend());
-
+			nvgSave(vg);
+			//content
+			t->content->render(vg);
+			nvgRestore(vg);
+			for (gui_track_subtrack* g2 : t->subtracks) {
 				nvgSave(vg);
-				//content
-				current->content->render(vg);
+				g2->render(vg);
 				nvgRestore(vg);
-				for (gui_track_subtrack* g2 : current->subtracks) {
-					nvgSave(vg);
-					g2->render(vg);
-					nvgRestore(vg);
-					drawSeperator(vg, theme, g2->top()-TRACK_HEIGHT_SPACING_HALF, cs);
-				}
-
+				drawSeperator(vg, theme, g2->top()-TRACK_HEIGHT_SPACING_HALF, cs);
 			}
+
 		}
 		if (action.dragtype) {
 			nvgSave(vg);

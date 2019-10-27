@@ -1278,7 +1278,7 @@ void gui_track_controls::renderGroupHandle(NVGcontext* vg) { //TODO: make const,
 	//	const int titleHeight = theme->get(GuiConstant::CONST_TRACK_HEIGHT_TITLE);
 	//	const int rectHeight = math::min(titleHeight, size.y);
 
-		ivec2 inset{0, 0};
+		ivec2 inset{2, 0};
 		int32_t width = 8*lvl;
 
 		nvgBeginPath(vg);
