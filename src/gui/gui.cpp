@@ -42,9 +42,24 @@ void initConstants(int colorVal);
 }
 void initColor() {
 	UNUSED(dbgcolors);
+	const int ROWS = COLOR_PALETTE_ROWS;
+	const int COLS = COLOR_PALETTE_COLS;
 	for (int i = 0; i < (int)ARR_SIZE(colorPalette); i++) {
-		colorPalette[i] |= 0xFF000000;
-		g_colorPalette[i] = rgbaToNvg(colorPalette[i]);
+//		colorPalette[i] |= 0xFF000000;
+	}
+	for (int col = 0; col < COLS; col++) {
+		for (int row = 0; row < ROWS; row++) {
+			int idx = col*ROWS+row;
+			float h, s, l;
+			h = col/(COLS-1.0f);
+			s = row/(ROWS-1.0f);
+			l = 1.0f;
+			g_colorPalette[idx] = HSLtoRGB(h*0.9f+0.1f, s, l);
+			colorPalette[idx] = nvgToRGBA(g_colorPalette[idx]);
+		}
+	}
+	for (int i = 0; i < (int)ARR_SIZE(colorPalette); i++) {
+//		colorPalette[i] |= 0xFF000000;
 	}
 	GuiColor::initConstants(22);
 
