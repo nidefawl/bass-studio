@@ -373,17 +373,27 @@ void MainCtrl::unloadProject() {
 	cursor.setEmptySelection();
 //	std::shared_ptr<clip_clipboard>& clipboard = view->ctr_tracks.trackView.clipboard;
 //	clipboard.reset();
-	std::vector<track_t*> _tracks = trackList.vec();  // iterate a copy
-	my_printf("DELETE _tracks %d\n", _tracks.size());
-	for (track_t* tr : _tracks) {
-		my_printf("REMOVE TRACK %s\n", StringAsCStr(tr->name));
-		removeTrackImpl(tr, FLG_TRK_CHANGE_LOAD);
+	std::vector<track_t*> _tracks = trackList.getAllTracksFlatVec();  // iterate a copy
+	std::vector<track_t*> _rootTracks = trackList.getAllTracksTreeVec();
+	my_printf("unloading project with %d tracks\n", _tracks.size());
+	for (auto it = _tracks.rbegin(); it != _tracks.rend(); it++) {
+		track_t* track = *it;
+
+		// no need to, this is done by trackcontainer_tracktype_t
+		//		if (track->parent != nullptr)  {
+		//			track->parent->removeChild(track);
+		//		}
+
+
+		my_printf("remove track %s\n", StringAsCStr(track->name));
+		removeTrackImpl(track, FLG_TRK_CHANGE_LOAD);
 	}
 	trackList.clear();
-	for (track_t* tr : _tracks) {
-		my_printf("DELETE TRACK %s\n", StringAsCStr(tr->name));
-		releaseTrackResources(tr, this);
-		delete tr;
+	for (auto it = _tracks.rbegin(); it != _tracks.rend(); it++) {
+		track_t* track = *it;
+		my_printf("delete track %s\n", StringAsCStr(track->name));
+		releaseTrackResources(track, this);
+		delete track;
 	}
 	hist.clear(this);
 	this->view->ctr_tracks.trackView.resizePreModifyState.reset();
@@ -1368,7 +1378,7 @@ public:
 		desc = description;
 		trackPtr = nullptr;
 		trackIdx = _trackPtr->idx;
-		localIdx = _trackPtr->localIdx;
+		localIdx = _trackPtr->localIdxFlat;
 		dbgassert(MainCtrl::get()->getTrackId(trackIdx) == _trackPtr);
 	}
 	void releaseResources(MainCtrl* ctrl) override {
@@ -1383,9 +1393,9 @@ public:
 		ctrl->setEditClip(NULL);
 		trackPtr = ctrl->getTrackId(trackIdx);
 		dbgassert(trackPtr && trackPtr->audio && trackPtr->audio->blockSize%8==0); // see if pointer is valid
-		dbgassert(localIdx == trackPtr->localIdx);
+		dbgassert(localIdx == trackPtr->localIdxFlat);
 		//SERIALIZE TRACK VSTs
-		localIdx = trackPtr->localIdx;
+		localIdx = trackPtr->localIdxFlat;
 		ctrl->removeTrackImpl(trackPtr, FLG_TRK_CHANGE_HISTORY_UNDO);
 	}
 	void redo(MainCtrl* ctrl) {
@@ -1393,8 +1403,8 @@ public:
 		ctrl->resetMouseContext();
 		ctrl->setEditClip(NULL);
 		ctrl->addTrackImpl(localIdx, trackPtr, FLG_TRK_CHANGE_HISTORY_UNDO);
-		dbgassert(localIdx == trackPtr->localIdx);
-		localIdx = trackPtr->localIdx;
+		dbgassert(localIdx == trackPtr->localIdxFlat);
+		localIdx = trackPtr->localIdxFlat;
 		trackPtr = nullptr;
 		//UNSERIALIZE TRACK VSTs
 	}
@@ -1409,7 +1419,7 @@ public:
 		desc = description;
 		trackPtr = _trackPtr;
 		trackIdx = _trackPtr->idx;
-		localIdx = _trackPtr->localIdx;
+		localIdx = _trackPtr->localIdxFlat;
 		dbgassert(MainCtrl::get()->getTrackId(trackIdx) != trackPtr);
 	}
 	~action_modify_track_remove() {
@@ -1426,8 +1436,8 @@ public:
 		ctrl->resetMouseContext();
 		ctrl->setEditClip(NULL);
 		ctrl->addTrackImpl(localIdx, trackPtr, FLG_TRK_CHANGE_HISTORY_UNDO);
-		dbgassert(localIdx == trackPtr->localIdx);
-		localIdx = trackPtr->localIdx;
+		dbgassert(localIdx == trackPtr->localIdxFlat);
+		localIdx = trackPtr->localIdxFlat;
 		trackPtr = nullptr;
 		//UNSERIALIZE TRACK VSTs
 	}
@@ -1439,7 +1449,7 @@ public:
 		//SERIALIZE TRACK VSTs
 		ctrl->removeTrackImpl(trackPtr, FLG_TRK_CHANGE_HISTORY_UNDO);
 		dbgassert(trackPtr && trackPtr->audio && trackPtr->audio->blockSize%8==0); // see if pointer is valid
-		dbgassert(localIdx == trackPtr->localIdx);
+		dbgassert(localIdx == trackPtr->localIdxFlat);
 	}
 };
 void MainCtrl::addTrackImpl(int32_t trackInsertPos, track_t* newTrack, int flags) {

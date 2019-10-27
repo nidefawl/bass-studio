@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <list>
+#include <deque>
 #include "assert_dbg.h"
 #include "exceptions.h"
 #include "seq_time.h"
@@ -20,6 +21,24 @@
 #define TRACK_TYPE_MIDI 2
 #define TRACK_TYPE_AUDIO 3
 #define NUM_TRACK_TYPES 4
+#define TRACK_CTR_MASTER 0
+#define TRACK_CTR_RETURN 1
+#define TRACK_CTR_MIDIAUDIO 2
+#define NUM_TRACK_TYPE_CTRS 4
+template<typename T>
+const T TRACKTYPE_TO_CTR(const T trackType) {
+	switch (trackType) {
+	case TRACK_TYPE_MASTER:
+		return TRACK_CTR_MASTER;
+	case TRACK_TYPE_RETURN:
+		return TRACK_CTR_RETURN;
+	case TRACK_TYPE_MIDI:
+	case TRACK_TYPE_AUDIO:
+		return TRACK_CTR_MIDIAUDIO;
+	}
+	dbgassert(0);
+	return -1;
+}
 
 #define FLG_TRK_CHANGE_USER 1
 #define FLG_TRK_CHANGE_LOAD 2
@@ -43,7 +62,25 @@ void releaseClipResources(clip_t* cl, delete_cb *cb);
 struct audio_stage_ref_t {
 	int id;
 };
+inline const audio_stage_ref_t AudioStageRefNULL() {
+	return {-1};
+}
 
+struct audio_channel_ref_t {
+	audio_stage_ref_t stageRef;
+	bool isInput;
+};
+inline const struct audio_channel_ref_t AudioChannelRefNULL() {
+	return {{-1}, false};
+}
+struct track_tree_pos_t {
+	int32_t trackTypeCtr;
+	track_t* parent;
+	int32_t treeIdx;
+};
+inline const struct track_tree_pos_t TrackTreePosNULL() {
+	return {-1, nullptr, -1};
+}
 class trackdata_midi_t {
 public:
 	friend void resizeOtherClips(trackdata_midi_t& midi, clip_t* clip);
@@ -294,6 +331,9 @@ public:
 	track_t(const track_snapshot_t &a);
 	track_t &operator =(const track_snapshot_t &a);
 	track_t &operator =(const track_t &a) = delete;
+	track_impl_t* getStage() {
+		return this->audio;
+	}
 //	{
 //		dbgassert(midi.getConstClips().empty());
 //		midi.deepcopy(a.midi);
@@ -327,8 +367,9 @@ public:
 	bool validSubtrack(int32_t idx) {
 		return idx >= 0 && idx < (int32_t)subtracks.size();
 	}
+	int32_t childIdxTree = -1; // treeidx
 	int32_t idx = -1;
-	int32_t localIdx = -1;
+	int32_t localIdxFlat = -1; // flatidx
 	gui_track* content = nullptr;
 //	std::vector<gui_track_automationlane*> automationLanes;
 	std::vector<gui_track_subtrack*> subtracks;
@@ -340,14 +381,40 @@ public:
 	void addChild(track_t* track) {
 		dbgassert(!track->parent);
 		dbgassert(!STL_CONTAINS(children, track));
-		children.push_back(track);
+//		children.push_back(track);
+		if (track->childIdxTree < 0 || track->childIdxTree >= (int)children.size()) {
+			children.push_back(track);
+			track->childIdxTree = children.size() - 1;
+		} else {
+			children.insert(children.begin() + static_cast<size_t>(track->childIdxTree), track);
+			int32_t childIdx = 0;
+			for (auto track : children) {
+				track->childIdxTree = childIdx++;
+			}
+		}
 		track->parent = this;
 	}
 	void removeChild(track_t* track) {
 		dbgassert(track->parent == this);
 		dbgassert(STL_CONTAINS(children, track));
+		dbgassert(track->childIdxTree < children.size());
+		dbgassert(children.at(track->childIdxTree) == track);
 		children.erase(std::remove(children.begin(), children.end(), track));
+		int32_t childIdx = 0;
+		for (auto track : children) {
+			track->childIdxTree = childIdx++;
+		}
+		track->childIdxTree = -1;
 		track->parent = nullptr;
+	}
+	int32_t getChildLvl() const {
+		int32_t lvl = 0;
+		auto p = parent;
+		while (p) {
+			lvl++;
+			p = p->parent;
+		}
+		return lvl;
 	}
 };
 struct trackcontainer_snapshot_t;
@@ -356,32 +423,129 @@ class project_t;
 class trackbasecontainer_t {
 public:
 	/** tracks are only ordered on track-type specific containers **/
-	track_vector tracks;
+	track_vector tracksFlat;
+	track_vector tracksTree;
 	trackbasecontainer_t() = default;
 	~trackbasecontainer_t();
 	trackbasecontainer_t(const trackbasecontainer_t &a) = delete;
 	trackbasecontainer_t &operator =(const trackbasecontainer_t &a) = delete;
 
-	track_vector& vec() {
-		return tracks;
+	const track_vector& getTracksFlatVec() {
+		return tracksFlat;
+	}
+	const track_vector& getTracksTreeVec() {
+		return tracksTree;
+	}
+	void setFromVectorTree(const track_vector& vecTree) {
+		/** turn tree structure into linear pointer array with trackTop at the beginning and the deepest child at the end **/
+		track_vector vecNewTracksFlat;
+		std::deque<track_t*> stack;
+		for (track_t* track : vecTree) {
+			dbgassert(stack.empty());
+	//		stack.clear();
+			stack.push_back(track);
+			while (!stack.empty()) {
+				track_t* current = stack.front();
+				stack.pop_front();
+				if (current->children.size())
+					stack.insert(stack.begin(), current->children.cbegin(), current->children.cend());
+				vecNewTracksFlat.push_back(current);
+			}
+		}
+		tracksTree = vecTree;
+		tracksFlat = vecNewTracksFlat;
 	}
 
 	size_t size() const {
-		return tracks.size();
+		return tracksFlat.size();
 	}
 
 	bool empty() const {
-		return tracks.empty();
+		return tracksTree.empty();
 	}
 
-    track_vector::iterator begin() { return tracks.begin(); }
-    track_vector::const_iterator begin() const { return tracks.cbegin(); }
-    track_vector::iterator end() { return tracks.end(); }
-    track_vector::const_iterator end() const { return tracks.cend(); }
-    track_vector::reverse_iterator rbegin() { return tracks.rbegin(); }
-    track_vector::reverse_iterator rend() { return tracks.rend(); }
-    track_vector::reference back() { return tracks.back(); }
-    track_vector::reference front() { return tracks.front(); }
+    track_vector::iterator begin() { return tracksFlat.begin(); }
+    track_vector::const_iterator begin() const { return tracksFlat.cbegin(); }
+    track_vector::const_iterator cbegin() const { return tracksFlat.cbegin(); }
+    track_vector::iterator end() { return tracksFlat.end(); }
+    track_vector::const_iterator end() const { return tracksFlat.cend(); }
+    track_vector::const_iterator cend() const { return tracksFlat.cend(); }
+    track_vector::reverse_iterator rbegin() { return tracksFlat.rbegin(); }
+    track_vector::reverse_iterator rend() { return tracksFlat.rend(); }
+    track_vector::const_reverse_iterator crbegin() const { return tracksFlat.crbegin(); }
+    track_vector::const_reverse_iterator crend() const { return tracksFlat.crend(); }
+    track_vector::reference back() { return tracksFlat.back(); }
+    track_vector::reference front() { return tracksFlat.front(); }
+	void clear() {
+		tracksFlat.clear();
+		tracksTree.clear();
+	}
+	track_t* operator [](const size_t i) {
+		if (i >= tracksFlat.size()) {
+			return NULL;
+		}
+		return tracksFlat[i];
+	}
+	void repopulateFlatTracks() {
+
+		tracksFlat.clear();
+		std::deque<track_t*> stack;
+		stack.insert(stack.begin(), tracksTree.cbegin(), tracksTree.cend());
+		while (!stack.empty()) {
+			auto* node = stack.front();
+			stack.pop_front();
+			if (node->children.size()) {
+				stack.insert(stack.begin(), node->children.cbegin(), node->children.cend());
+			}
+			tracksFlat.push_back(node);
+		}
+	}
+	void add(track_t* trackAdd) {
+		dbgassert(trackAdd);
+		dbgassert(trackAdd->childIdxTree >= -1);
+		//TODO: check that track isn't contained already;
+		if (!trackAdd->parent) {
+			if (trackAdd->childIdxTree < 0 || trackAdd->childIdxTree >= (int)tracksTree.size()) {
+				tracksTree.push_back(trackAdd);
+				trackAdd->childIdxTree = tracksTree.size() - 1;
+			} else {
+				tracksTree.insert(tracksTree.begin() + static_cast<size_t>(trackAdd->childIdxTree), trackAdd);
+				int32_t childIdx = 0;
+				for (auto track : tracksTree) {
+					track->childIdxTree = childIdx++;
+				}
+			}
+		} else {
+			// a child track is expected to get added to its parent by the caller
+			const bool trackInParent = STL_CONTAINS(trackAdd->parent->children, trackAdd);
+			dbgassert(trackInParent);
+			if (!trackInParent) {
+				throw applogicexception("failed adding track. track->parent != null but track not parents list");
+			}
+
+		}
+		repopulateFlatTracks();
+	}
+	bool remove(track_t* trackRemove) {
+		dbgassert(trackRemove);
+		dbgassert(trackRemove->childIdxTree >= 0);
+
+		if (trackRemove->parent) {
+			trackRemove->parent->removeChild(trackRemove);
+		} else {
+			dbgassert(trackRemove->childIdxTree < tracksTree.size());
+			auto itRemoveTreeRoot = std::find(tracksTree.cbegin(), tracksTree.cend(), trackRemove);
+			if (itRemoveTreeRoot != tracksTree.cend()) {
+				tracksTree.erase(itRemoveTreeRoot);
+			}
+			int32_t childIdx = 0;
+			for (auto track : tracksTree) {
+				track->childIdxTree = childIdx++;
+			}
+		}
+		repopulateFlatTracks();
+		return true;
+	}
 };
 class trackallcontainer_t;
 class trackcontainer_tracktype_t : public trackbasecontainer_t {
@@ -399,6 +563,7 @@ public:
 	void loadPlugins(trackcontainer_snapshot_t& in);
 	void loadSubtrackLayouts(trackcontainer_snapshot_t& in);
 
+
 };
 
 struct trackcontainer_snapshot_t {
@@ -412,18 +577,19 @@ struct project_snapshot_t {
 	trackcontainer_snapshot_t trackMasterCtr;
 	project_globals_t globals;
 };
-class trackallcontainer_t : public trackbasecontainer_t {
+class trackallcontainer_t {
 	friend class project_t;
-	track_vector tracksRoot;
-	trackcontainer_tracktype_t trackCtr;
+	trackbasecontainer_t trackAllCtr;
+	trackcontainer_tracktype_t trackMidiAudioCtr;
 	trackcontainer_tracktype_t trackReturnCtr;
 	trackcontainer_tracktype_t trackMasterCtr;
 	trackbasecontainer_t tracksBottom;
-	trackcontainer_tracktype_t* const trackTypeCtrs[4] = {&trackMasterCtr, &trackReturnCtr, &trackCtr, &trackCtr};
+	trackcontainer_tracktype_t* const trackTypeCtrs[4] = {&trackMasterCtr, &trackReturnCtr, &trackMidiAudioCtr, &trackMidiAudioCtr};
+	const std::array<trackcontainer_tracktype_t*,3> trackTypeUniqueCtrs = {&trackMasterCtr, &trackReturnCtr, &trackMidiAudioCtr};
 	void rebuildTrackList();
 public:
-	trackallcontainer_t() :
-		trackbasecontainer_t()
+	trackallcontainer_t()
+//:   trackbasecontainer_t()
 	{
 
 	}
@@ -431,11 +597,11 @@ public:
 	trackallcontainer_t(const trackallcontainer_t &a) = delete;
 	trackallcontainer_t &operator =(const trackallcontainer_t &a) = delete;
 	void clear() {
-		trackReturnCtr.tracks.clear();
-		trackMasterCtr.tracks.clear();
-		tracksBottom.tracks.clear();
-		trackCtr.tracks.clear();
-		tracks.clear();
+		trackReturnCtr.clear();
+		trackMasterCtr.clear();
+		tracksBottom.clear();
+		trackMidiAudioCtr.clear();
+		trackAllCtr.clear();
 	}
 
 	/**
@@ -445,6 +611,7 @@ public:
 	void addTrack(int trackInsertPos, track_t* newTrack);
 	void removeTrack(track_t* track);
 	void moveTrack(track_t* track, int32_t newIdx);
+	bool moveTracks(const std::vector<track_t*>& tracks, /*const*/ track_tree_pos_t& treePos);
 	void copyTo(project_snapshot_t& out);
 	void copyFrom(project_snapshot_t& in);
 	void copyTracks(int32_t trackBegin, int32_t trackLen, trackstate_t& _out);
@@ -454,31 +621,52 @@ public:
 
 
 	int32_t clampTrackIdx(int32_t idx) const {
-		return math::max(0, math::min((int32_t) this->tracks.size() - 1, idx));
+		return math::max(0, math::min((int32_t) trackAllCtr.size() - 1, idx));
 	}
 
 	bool validTrackIdx(int32_t idx) const {
-		return idx >= 0 && idx < (int32_t) this->tracks.size();
+		return idx >= 0 && idx < (int32_t) trackAllCtr.size();
 	}
 	bool validTrackTypeIdx(int32_t type, int32_t idx) const;
 	track_t* getTrackTypeIdx(int32_t type, int32_t idx);
 
 	void getTracks(const Cursor& cursor, std::vector<track_t*>& _out) const {
-		for (track_t* t : tracks) {
+		for (track_t* t : trackAllCtr) {
 			if (cursor.inTrackRange(t->idx)) {
 				_out.push_back(t);
 			}
 		}
 	}
+	size_t size() const {
+		return trackAllCtr.size();
+	}
+
+	bool empty() const {
+		return trackAllCtr.empty();
+	}
+
+    track_vector::iterator begin() { return trackAllCtr.begin(); }
+    track_vector::const_iterator begin() const { return trackAllCtr.cbegin(); }
+    track_vector::iterator end() { return trackAllCtr.end(); }
+    track_vector::const_iterator end() const { return trackAllCtr.cend(); }
+    track_vector::reverse_iterator rbegin() { return trackAllCtr.rbegin(); }
+    track_vector::reverse_iterator rend() { return trackAllCtr.rend(); }
+    track_vector::const_reverse_iterator crbegin() const { return trackAllCtr.crbegin(); }
+    track_vector::const_reverse_iterator crend() const { return trackAllCtr.crend(); }
+    track_vector::reference back() { return trackAllCtr.back(); }
+    track_vector::reference front() { return trackAllCtr.front(); }
 
 	track_t* operator [](size_t i) {
 		if (!validTrackIdx(i)) {
 			return NULL;
 		}
-		return tracks[i];
+		return trackAllCtr[i];
 	}
 
 
+    track_vector getMidiAudioTracksFlatVec() const { return trackMidiAudioCtr.tracksFlat; }
+    track_vector getAllTracksFlatVec() const { return trackAllCtr.tracksFlat; }
+    track_vector getAllTracksTreeVec() const { return trackAllCtr.tracksTree; }
 };
 struct project_layout_t {
 	layout_grid_t layoutGrid;
@@ -487,14 +675,14 @@ struct project_layout_t {
 class project_t : public project_globals_t {
 public:
 	trackallcontainer_t trackList;
-	trackcontainer_tracktype_t& trackCtr;
+	trackcontainer_tracktype_t& trackMidiAudioCtr;
 	trackcontainer_tracktype_t& trackReturnCtr;
 	trackcontainer_tracktype_t& trackMasterCtr;
 	trackbasecontainer_t& tracksBottom;
 	trackcontainer_tracktype_t* const *trackTypeCtrs; //syntax win
 	project_t() :
 		trackList(),
-		trackCtr(trackList.trackCtr),
+		trackMidiAudioCtr(trackList.trackMidiAudioCtr),
 		trackReturnCtr(trackList.trackReturnCtr),
 		trackMasterCtr(trackList.trackMasterCtr),
 		tracksBottom(trackList.tracksBottom),

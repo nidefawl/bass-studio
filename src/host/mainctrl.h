@@ -33,6 +33,7 @@
 #include "../host/plugindatabase.h"
 #include "rand.h"
 #include "projectcontroller.h"
+#include "dragdrop.h"
 
 struct automatable_t;
 struct KeyEvent;
@@ -88,22 +89,6 @@ public:
 	}
 };
 
-struct dragdrop_target_indicator {
-	int idx = -1;
-	void* ptr = nullptr;
-	ivec2 targetPos{ -1, -1 };
-	void reset() {
-		idx = -1;
-		ptr = nullptr;
-	}
-	void set(void* _ptr, int _idx) {
-		idx = _idx;
-		ptr = _ptr;
-	}
-	void setPos(ivec2 _targetPos) {
-		targetPos = _targetPos;
-	}
-};
 KeyEvent keyEvent(int key, int scancode, int keyState, int mods, const char* key_name);
 
 
@@ -241,7 +226,7 @@ public:
 	static guictr_tracks* getGuiTrackCtr();
 	String lastKey;
 	dragdrop_midifile dragdropclip;
-	dragdrop_target_indicator dragdropTarget;
+	dragdrop_target_indicator_t dragdropTarget;
 	plugin_selection pluginSel;
 	plugindatabase_t plugindb;
 	tick_t tickJmpFrom = 0;
@@ -254,7 +239,7 @@ public:
 	clip_view& getClipView() {
 		return clipView;
 	}
-	dragdrop_target_indicator& getDragDropTarget() {
+	dragdrop_target_indicator_t& getDragDropTarget() {
 		return dragdropTarget;
 	}
 	plugin_selection& getPluginSel() {

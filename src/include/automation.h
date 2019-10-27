@@ -144,6 +144,17 @@ public:
 	virtual String getParamValueDisplay(int32_t idx) {
 		return StringFormat("%f", getParamValue(idx));
 	}
+	/**
+	 * setParamValue
+	 * @param idx
+	 * @param val
+	 * @param flags valid flags are
+	 * #define FLG_PAR_UPDATE_INIT 1
+	 * #define FLG_PAR_UPDATE_USER 2
+	 * #define FLG_PAR_UPDATE_UNDO 4
+	 * #define FLG_PAR_UPDATE_AUTOMATED 8
+	 *
+	 */
 	virtual void setParamValue(int32_t idx, float val, int flags) = 0;
 	virtual automationlane_snapshot_t toRef() = 0;
 	virtual track_t* getTrack() = 0;

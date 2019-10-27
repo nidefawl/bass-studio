@@ -168,6 +168,7 @@ bool guimenu::mouseHitTest(ivec2 mpos, MouseHitEvt& evt)  {
 				guimenu *popup = new guimenu(entryHit->menu, lvl+1, entryHit);
 				popup->parentMenuBar = this->parentMenuBar;
 				popup->size.x = 250;
+
 				ivec2 vPos(right()+2, pos.y+entryHit->y);
 				appCtrlParent->openAppMenu(
 					popup->lvl,

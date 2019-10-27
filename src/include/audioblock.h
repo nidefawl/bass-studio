@@ -7,13 +7,16 @@
 #include "mem.h"
 #include "samplerate.h"
 
+enum alloc_type {
+	internal, external_channels_only, external_array
+};
 struct AudioBlock {
 	const uint32_t channels{ 0 };
 	uint32_t samples{ 0 };
 	float** buf{ 0 };
-	bool externallyAlloced;
+	alloc_type allocType;
 	AudioBlock(uint32_t _channels, uint32_t _samples)
-		: channels(_channels), samples(0), buf(new float*[_channels]), externallyAlloced(false)
+		: channels(_channels), samples(0), buf(new float*[_channels]), allocType(alloc_type::internal)
 	{
 		for (uint32_t i = 0; i < _channels; i++) {
 			buf[i] = NULL;
@@ -21,14 +24,25 @@ struct AudioBlock {
 		realloc(_samples);
 	};
 	AudioBlock(float** buf, uint32_t _channels, uint32_t _samples)
-		: channels(_channels), samples(_samples), buf(buf), externallyAlloced(true)
+		: channels(_channels), samples(_samples), buf(buf), allocType(alloc_type::external_array)
 	{
 	};
+	AudioBlock(const std::vector<float*>& channels, uint32_t _samples)
+		: channels(channels.size()),  samples(_samples), buf(new float*[channels.size()]), allocType(alloc_type::external_channels_only)
+	{
+		memcpy(buf, channels.data(), channels.size()*sizeof(decltype(channels[0])));
+		float** pBuf = buf;
+		for (float* channel : channels) {
+			*pBuf++ = channel;
+		}
+	};
 	~AudioBlock() {
-		if (!externallyAlloced) {
-			for (uint32_t i = 0; i < channels; i++) {
-				if (buf[i]) {
-					free(buf[i]);
+		if (allocType != alloc_type::external_array) {
+			if (allocType == alloc_type::internal) {
+				for (uint32_t i = 0; i < channels; i++) {
+					if (buf[i]) {
+						free(buf[i]);
+					}
 				}
 			}
 			delete[] buf;
@@ -111,7 +125,7 @@ struct AudioBlock {
 	}
 	void realloc(uint32_t _samples) {
 		if (samples != _samples) {
-			if (!externallyAlloced) {
+			if (allocType == alloc_type::internal) {
 				for (uint32_t i = 0; i < channels; i++) {
 					float* newBuf = (float*)calloc(_samples,sizeof(float));
 					if (!newBuf) {
@@ -125,8 +139,8 @@ struct AudioBlock {
 					}
 					buf[i] = newBuf;
 				}
+				samples = _samples;
 			}
-			samples = _samples;
 		}
 	}
 };

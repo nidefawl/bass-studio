@@ -37,12 +37,7 @@ void PopupCtrl::closePopup() {
 
 void PopupCtrl::onWindowClose() {
 	popupCtrs->removeGuis();
-	if (guiCtrFocused) {
-		if (!guiCtrFocused->isStaticContainer()) {
-			guiCtrFocused = NULL;
-		}
-	}
-	guiCaptured = guiFocused = guiOver = guiDragged = NULL;
+	resetMouseContext();
 }
 
 bool PopupCtrl::onWindowCloseRequest() {

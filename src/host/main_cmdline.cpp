@@ -27,6 +27,7 @@
 #include "basectrl.h"
 #include "audio_host.h"
 #include "midi_host.h"
+#include "track.h"
 #include "track_impl.h"
 
 #ifdef _WIN32
@@ -112,11 +113,11 @@ int main(int argc, char* argv[]) {
 	std::set_terminate(on_terminate1);
 	std::set_unexpected(on_unexpected1);
     appsettings settings = loadSettings();
-    if (argc < 2) {
-    	return 0;
-    }
-	String file = String(argv[1]);
+	String file = "";
 	String fOutWave = "out.wav";
+	if (argc > 1) {
+		file = String(argv[1]);
+	}
 	if (argc > 2) {
 		fOutWave = String(argv[2]);
 	}
@@ -159,6 +160,7 @@ int main(int argc, char* argv[]) {
     	plugindb.openDatabase();
     	LOG("START");
     	{
+    		bool activateDeferred = false;
     		std::unique_ptr<PlaybackThread> playThread = std::make_unique<PlaybackThread>();
     		playThread->setTls(tls);
     		playThread->startThread(&project);
@@ -184,12 +186,14 @@ int main(int argc, char* argv[]) {
 
 
 				/** fully load all plugin instances **/
-        		std::vector<effectbase*> pluginsDeferred;
-        		host->getDeferredEffects(pluginsDeferred);
-        		my_printf("loading %d plugins\n", pluginsDeferred.size());
-        		for (auto plugin : pluginsDeferred) {
-            		my_printf("load %s\n", StringAsCStr(plugin->sName));
-        			host->activateDeferred(plugin);
+        		if (activateDeferred) {
+            		std::vector<effectbase*> pluginsDeferred;
+            		host->getDeferredEffects(pluginsDeferred);
+            		my_printf("loading %d plugins\n", pluginsDeferred.size());
+            		for (auto plugin : pluginsDeferred) {
+                		my_printf("activate %s\n", StringAsCStr(plugin->sName));
+            			host->activateDeferred(plugin);
+            		}
         		}
 
 			} else {
@@ -205,10 +209,12 @@ int main(int argc, char* argv[]) {
 	    		project.addTrackImpl(0, trackMaster, 0);
 	        	String pathTracks = "test.tracks";
 	        	std::shared_ptr<trackcontainer_snapshot_t> ctr = loadTrackContainer(pathTracks);
+	        	std::vector<track_t*> loadedChildTracks;
 	        	dbgassert(ctr);
 	        	if (ctr) {
 	        		for (track_snapshot_t& ts : ctr->tracks) {
 	        			track_t* tr = new track_t(ts);
+	        			loadedChildTracks.push_back(tr);
 	        			track2->addChild(tr);
 	            		project.addTrackImpl(-1, tr, 0);
 	            		ts.trackLoaded = tr;
@@ -220,19 +226,28 @@ int main(int argc, char* argv[]) {
 	            		log_printf("track '%s' loading %d plugins\n", StringAsCStr(ts.trackLoaded->name), ts.plugins.pluginSnapshots.size());
 	        			ts.trackLoaded->loadSnapshot(ts);
 	        		}
+            		if (activateDeferred) {
+    	    			vsthost* host = vsthost::getInstance();
+    	        		//load plugins
+    	        		for (track_snapshot_t& ts : ctr->tracks) {
+    	            		log_printf("track '%s' loading %d plugins\n", StringAsCStr(ts.trackLoaded->name), ts.plugins.pluginSnapshots.size());
+    	        			ts.trackLoaded->loadSnapshot(ts);
 
-	    			vsthost* host = vsthost::getInstance();
-	        		//load plugins
-	        		for (track_snapshot_t& ts : ctr->tracks) {
-	            		log_printf("track '%s' loading %d plugins\n", StringAsCStr(ts.trackLoaded->name), ts.plugins.pluginSnapshots.size());
-	        			ts.trackLoaded->loadSnapshot(ts);
-		    			std::vector<effectbase*> effects = ts.trackLoaded->audio->deferredEffects;
-		    			for (auto eff : effects) {
-		    				host->activateDeferred(eff);
-		    			}
-	        		}
+    		    			std::vector<effectbase*> effects = ts.trackLoaded->audio->deferredEffects;
+    		    			for (auto eff : effects) {
+    		    				host->activateDeferred(eff);
+    		    			}
+    	        		}
+            		}
+
 	        	}
+	        	auto treePos = track_tree_pos_t{TRACK_CTR_MIDIAUDIO, nullptr, 0};
+	        	project.trackList.moveTracks(loadedChildTracks, treePos);
 			}
+			for (auto* trackMaster : project.trackMasterCtr) {
+				trackMaster->audio->mixer.setParamValue(PARAM_TRACK_GAIN, 0.0f, FLG_PAR_UPDATE_INIT);
+			}
+
 
     		my_printf("Tempo100: %d\n", project.tempo100);
     		my_printf("project.cursor.cursorPos: %d\n", project.cursor.cursorPos);
@@ -292,7 +307,17 @@ int main(int argc, char* argv[]) {
 //    	//			host->bufferUnderuns++;
 //    		//		dsp_util::fillSilence(inputs, framesPerBuffer);
 //    			}
+#define MAX_GAIN 0.0f
 				auto tNow = getTimeMillis()/1000.0;
+				auto since = tNow - tLastMsg;
+				{
+					ThreadLock lock = playThread->lockThread();
+					float gain = math::clamp<float>(since*MAX_GAIN, MAX_GAIN, 0.0f);
+					for (auto* trackMaster : project.trackMasterCtr) {
+						trackMaster->audio->mixer.setParamValue(PARAM_TRACK_GAIN, math::min(gain, MAX_GAIN), FLG_PAR_UPDATE_AUTOMATED);
+					}
+				}
+
 				if (tNow - tLastMsg >= 1.0) {
 					tLastMsg = tNow;
 					host_stats_t stats;
@@ -302,7 +327,7 @@ int main(int argc, char* argv[]) {
 					log_printf("playbackPos %d, %d blocks, %d samples\n", project.playbackPos, stats.blocksProcessed, stats.samplesProcessed);
 
 
-					if (project.playbackPos > TICKS_BAR*32) {
+					if (project.playbackPos > TICKS_BAR*4) {
 						playThread->addRequest(REQ_STATE, (int) playback_state::status_no_process, true);
 						quit = true;
 						break;
@@ -320,7 +345,7 @@ int main(int argc, char* argv[]) {
     //			return paAbort;
     //		}
     		playThread->addRequest(REQ_STATE, (int) playback_state::status_no_process, true);
-    		std::vector<track_t*> _tracks = project.trackList.vec();  // iterate a copy
+    		std::vector<track_t*> _tracks = project.trackList.getAllTracksFlatVec();
     		my_printf("DELETE _tracks %d\n", _tracks.size());
     		for (track_t* tr : _tracks) {
     			my_printf("DELETE TRACK %s\n", StringAsCStr(tr->name));

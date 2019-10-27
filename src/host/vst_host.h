@@ -30,6 +30,8 @@ class effectbase;
 class vstplugin;
 struct track_impl_t;
 struct audio_stage_t;
+struct track_audio_src;
+struct channel_ref_t;
 struct audio_stage_ref_t;
 class project_controller_t;
 class AudioEffectX;
@@ -74,6 +76,11 @@ struct host_stats_t {
 struct host_processing_stats_t {
 	int32_t pluginId;
 };
+namespace DAW {
+enum bus_type {
+	external, internal
+};
+}
 class vsthost {
 private:
 	class ModuleManager;

@@ -137,9 +137,9 @@ void gui_ctr_debug::render(NVGcontext* vg) {
 	str = ctrl->guiFocused ? ctrl->guiFocused->getClassName() : "<null>";
 	strings.push_back(String("guiFocused: ") + str);
 	str = "<null>";
-	if (ctrl->getDragDropTarget().ptr) {
-		str = static_cast<guibase*>(ctrl->getDragDropTarget().ptr)->getClassName();
-		str += StringFormat(" %d", ctrl->getDragDropTarget().idx);
+	if (ctrl->getDragDropTarget().src) {
+		str = static_cast<guibase*>(ctrl->getDragDropTarget().src)->getClassName();
+		str += StringFormat(" %d", ctrl->getDragDropTarget().src);
 	}
 	strings.push_back(String("target: ") + str);
 
@@ -276,7 +276,7 @@ void resetHistAndCheck() {
 	trackEditor.clipboard.reset();
 	ctrl->getHist().clear(ctrl);
 
-	auto& tracks = ctrl->trackCtr.tracks;
+	auto& tracks = ctrl->trackList;
 	int n = 0;
 	for (auto track : tracks) {
 		int nTrackClips = track->getMidi().getConstClips().size();

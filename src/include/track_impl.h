@@ -41,6 +41,33 @@ inline bool getGainLvl(float fLinGain, float& fGainOut) {
 	fGainOut = dsp_util::clampReadGain(fGainRaw);
 	return true;
 }
+enum channel_input_type {
+	INPUT_EMPTY, INPUT_EXTERNAL_AUDIO, INPUT_AUDIOSTAGE
+};
+
+struct channel_ref_t {
+	String name = "None";
+	audio_channel_ref_t stage{{-1}, false};
+	int32_t externalInputIdx = -1;
+	int32_t inputChannelOffset = 0;
+	AudioIO::tracktype externalInputType;
+	channel_input_type getType() const {
+		if (externalInputIdx != -1)
+			return channel_input_type::INPUT_EXTERNAL_AUDIO;
+		if (stage.stageRef.id != -1)
+			return channel_input_type::INPUT_AUDIOSTAGE;
+		return channel_input_type::INPUT_EMPTY;
+	}
+};
+struct track_audio_src {
+	std::vector<float*> channels;
+	uint32_t samples = 0;
+	AudioBlock toAudioBlock() const {
+		FitsTypeRange<uint32_t, decltype(channels.size())>(channels.size());
+		FitsTypeRange<uint32_t, decltype(samples)>(samples);
+		return AudioBlock(channels, static_cast<uint32_t>(samples));
+	}
+};
 struct track_params_t : public automatable_t {
 private:
 	audio_stage_t* const audiostage;
@@ -56,6 +83,17 @@ public:
 		return "Mixer";
 	}
 	float getParamValue(int32_t idx) override;
+	/**
+	 * setParamValue
+	 * @param idx
+	 * @param val
+	 * @param flags valid flags are
+	 * #define FLG_PAR_UPDATE_INIT 1
+	 * #define FLG_PAR_UPDATE_USER 2
+	 * #define FLG_PAR_UPDATE_UNDO 4
+	 * #define FLG_PAR_UPDATE_AUTOMATED 8
+	 *
+	 */
 	void setParamValue(int32_t idx, float val, int flags) override;
 	automationlane_snapshot_t toRef() override {
 		automationlane_snapshot_t ref;
@@ -72,8 +110,6 @@ public:
 	void loadSnapshot(const track_params_snapshot_t& snapshot);
 	void postSetParameter(int32_t idx, float preVal, float val, int flags);
 };
-struct audio_stage_t;
-
 struct audio_stage_t {
 	int32_t id;
 	audio_stage_t* parent;
@@ -156,29 +192,27 @@ static constexpr int PROCESS_REALTIME = 1;
 static constexpr int PROCESS_CLIPS = 2;
 static constexpr int PROCESS_ARP = 4;
 }
-struct channel_ref_t {
-	String name = "None";
-	audio_stage_ref_t stage{-1};
-	int32_t inputTrackIdx = -1;
-	int32_t inputChannelOffset = 0;
-	AudioIO::tracktype type;
-};
 inline bool isChannelConnected(channel_ref_t& ch) {
-	return ch.stage.id > -1 || ch.inputTrackIdx > -1;
+	return ch.stage.stageRef.id > -1 || ch.externalInputIdx > -1;
 }
 inline channel_ref_t ChannelNone() {
 	return channel_ref_t{};
 }
 inline channel_ref_t ChannelAudioInput(int32_t idx, int32_t channelOffset, String name, AudioIO::tracktype type) {
-	return channel_ref_t{name, {-1}, idx, channelOffset, type};
+	return channel_ref_t{name, {{-1}, false}, idx, channelOffset, type};
 }
-inline channel_ref_t ChannelStage(audio_stage_t* stage) {
+inline channel_ref_t ChannelStage(audio_stage_t* stage, bool isInput) {
 	String str = "";
 	auto track = stage->getTrack();
 	if (track) {
 		str = track->name;
 	}
-	return channel_ref_t{str, stage->toRef(), -1, 0, AudioIO::getTrackTypeNumChannels(stage->input.channels)};
+	if (isInput) {
+		str += " IN";
+	} else {
+		str += " OUT";
+	}
+	return channel_ref_t{str, {stage->toRef(), isInput}, -1, 0, AudioIO::getTrackTypeNumChannels(stage->input.channels)};
 }
 struct track_impl_t : public audio_stage_t {
 	midiarp* arp = nullptr;
@@ -196,7 +230,8 @@ struct track_impl_t : public audio_stage_t {
 	void sendNotesOff(int32_t bpm100);
 	void sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, clip_notes_t& midiRealtimeInput, int32_t flags);
 	void fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, float** buffer, int32_t samples);
-	void addAudio(const AudioBlock* const ptrExternalInputs, float fGain);
+	void addAudio(const AudioBlock&& src, float fGain);
+	track_audio_src getInput(const AudioBlock* const ptrExternalInputs, int32_t nChannel);
 	int32_t mapInput(int32_t nInputChannels, int32_t nChannel);
 	VstEvent_t* reallocEvts(size_t size);
 	int loadSubtrackLayout(const std::vector<automationlane_snapshot_t>& atl);

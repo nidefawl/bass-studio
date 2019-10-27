@@ -30,6 +30,7 @@ public:
 	void removeAllAutomationLanes(automatable_t* at);
 	void removeAllSubtracks();
 	void render(NVGcontext* vg) override;
+	void renderGroupHandle(NVGcontext* vg);
 	void handleDraggedBegin(MouseEvent& evt) {
 		MainCtrl::get()->setSelectedTrack(m_track);
 		if (isResize(evt.relMousepos+this->pos)) {

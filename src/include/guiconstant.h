@@ -28,6 +28,8 @@ extern constant_t CONST_TRACK_HEIGHT_TITLE;
 extern constant_t CONST_METER_WIDTH;
 extern constant_t CONST_FIXED_TITLE_HEIGHT;
 extern constant_t CONST_GUI_FRAME_STROKE_WIDTH;
-extern constant_t CONST_FONT_SCALE;
+extern constant_t CONST_FONT_SCALE;;
+extern constant_t CONST_GUI_FRAME_STROKE_WIDTH;;
+extern constant_t CONST_GUI_INSET_WIDGET_BG;
 
 }

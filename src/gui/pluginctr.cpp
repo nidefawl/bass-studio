@@ -38,6 +38,7 @@
 
 #include "guicontextmenu_daw.h"
 #include "guiplugin.h"
+#include "dragdrop.h"
 
 using Table::tbl;
 using Table::tbl_row_t;
@@ -322,9 +323,9 @@ void guictr_plugins::render(NVGcontext* vg) {
 	guibase * lastGui = NULL;
 	int32_t slot = 0;
 	nvgTranslate(vg, -scrolloffset, 0);
-	dragdrop_target_indicator& target = MainCtrl::get()->getDragDropTarget();
+	dragdrop_target_indicator_t& target = MainCtrl::get()->getDragDropTarget();
 	for (guibase* gui : guis) {
-		if (target.ptr == this && target.idx == slot) {
+		if (target.dst == this && target.slotIdx == slot) {
 			ivec2 posHL(gui->pos.x + (isDefaultPluginCtr?-4:4), 0);
 			verticalLineAt(vg, posHL);
 			nvgTranslate(vg, 8, 0);
@@ -336,8 +337,8 @@ void guictr_plugins::render(NVGcontext* vg) {
 		lastGui = gui;
 	}
 	nvgResetScissor(vg);
-	if (target.ptr == this) {
-		if (target.idx == slot) {
+	if (target.dst == this) {
+		if (target.slotIdx == slot) {
 
 			ivec2 posHL(4, 0);
 			if (lastGui) posHL.x += lastGui->right();
@@ -388,10 +389,11 @@ void guictr_plugins::pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 mousepos
 		if (track->type != TRACK_TYPE_MIDI) {
 			return;
 		}
-		MainCtrl::get()->getDragDropTarget().set(this, 0);
+		MainCtrl::get()->getDragDropTarget() = dragdrop_target_indicator_t{ dragdrop_target_indicator_t::slot_line_vertical, 0, this, this, this->pos } ;
 		return;
 	}
-	MainCtrl::get()->getDragDropTarget().set(this, slotFromCoord(mousepos));
+	auto slot = slotFromCoord(mousepos);
+	MainCtrl::get()->getDragDropTarget() = dragdrop_target_indicator_t{ dragdrop_target_indicator_t::slot_line_vertical, slot, this, this, this->pos } ;
 }
 int guictr_plugins::slotFromCoord(ivec2 _pos) {
 	if (stage->effects.empty())
@@ -455,7 +457,7 @@ class action_insert_effect : public action_base {
 };
 
 void guictr_plugins::pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mousepos) {
-	int32_t dstSlot = MainCtrl::get()->getDragDropTarget().idx;
+	int32_t dstSlot = MainCtrl::get()->getDragDropTarget().slotIdx;
 	MainCtrl::get()->getDragDropTarget().reset();
 	if (!this->stage) return;
 	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
@@ -524,6 +526,7 @@ void guictr_plugins::pluginMultiDragMove(guictr_dragged_plugins* g, ivec2 mousep
 	for (auto* ptr : g->effects) {
 		dbgassert(ptr->getTrackLink() == srcStage);
 	}
+	dbgassert(srcStage->pluginCtr);
 
 	int highlightSlot = slotFromCoord(mousepos);
 	if (this->stage == srcStage){
@@ -559,7 +562,10 @@ void guictr_plugins::pluginMultiDragMove(guictr_dragged_plugins* g, ivec2 mousep
 //		}
 	}
 //	if (abs((evt.dragStart - evt.mousepos).x) > getSizeContent().y / 4) {
-		MainCtrl::get()->getDragDropTarget().set(this, highlightSlot);
+		MainCtrl::get()->getDragDropTarget() = dragdrop_target_indicator_t{
+			dragdrop_target_indicator_t::target_area,
+			highlightSlot, srcStage->pluginCtr, this,  {-1, -1}} ;
+
 //	}
 }
 void guictr_plugins::pluginDragMove(guiplugin* g, ivec2 mousepos) {
@@ -567,17 +573,17 @@ void guictr_plugins::pluginDragMove(guiplugin* g, ivec2 mousepos) {
 	if (!this->stage) return;
 	effectbase* effect = g->getModule();
 	audio_stage_t* trp = effect->getTrackLink();
-	if (!trp) {
-		dbgassert(0&&"TRP WAS NULL");
-		return;
-	}
+	dbgassert(trp);
+	dbgassert(trp->pluginCtr);
 	int highlightSlot = slotFromCoord(mousepos);
 //	if (abs((evt.dragStart - evt.mousepos).x) > getSizeContent().y / 4) {
 		int curSlot = trp == stage ? (effect->getSlot()) : -2;
 		if (trp == this->stage && (curSlot == highlightSlot || curSlot + 1 == highlightSlot)) {
 			return;
 		}
-		MainCtrl::get()->getDragDropTarget().set(this, highlightSlot);
+		MainCtrl::get()->getDragDropTarget() = dragdrop_target_indicator_t{
+			dragdrop_target_indicator_t::target_area,
+			highlightSlot, trp->pluginCtr, this,  {-1, -1}} ;
 //	}
 }
 class action_move_modules : public action_base {

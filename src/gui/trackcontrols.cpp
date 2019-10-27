@@ -30,6 +30,7 @@
 #include "guitooltip.h"
 #include "appsettings.h"
 #include "host/audio_host.h"
+#include "host/projectcontroller.h"
 
 const int resizeHitY = 8;
 const int DRAG_RESIZE = 1;
@@ -250,112 +251,394 @@ constant_t COL_BTN_LOAD_DEF_PLUGINS("COL_BTN_LOAD_DEF_PLUGINS", 0xFFFFFFFF);
 class gui_subtrack_waveview;
 
 std::shared_ptr<guibase> getMeter(int32_t t, rmsmeter<16000>* meter);
-class gui_trackcontrols_io: public guictr_base {
 
-	class guidropdown_select_channel : public guidropdownbase {
-		track_t* const m_track;
-		const bool isInput;
+/* track io menus */
+class ctxtmenu_entry_track_io : public ctxtmenu_entry {
+public:
+	ctxtmenu_entry_track_io(int32_t _id, String name) : ctxtmenu_entry(name, _id) {
 
+	}
+	~ctxtmenu_entry_track_io() {
+	}
+	virtual bool isBus() = 0;
+};
+class ctxtmenu_entry_bus : public ctxtmenu_entry_track_io {
+public:
+	const DAW::bus_type busType;
+	const String busName;
+	const audio_channel_ref_t stageEndpoint;
+	bool isMenuOpen = false;
 
-		class guidropdown_select_channel_ctxt : public guictxtmenu {
-			track_t* const m_track;
-			const bool isInput;
-
-			class ctxtmenu_entry_channel : public ctxtmenu_entry {
-			public:
-				const AudioIO::io_cfg_channel channel;
-				const bool isInput;
-
-				ctxtmenu_entry_channel(int32_t _id, AudioIO::io_cfg_channel& _channel, bool _isInput)
-				: ctxtmenu_entry(_channel.name, _id), channel(_channel), isInput(_isInput) {
-				}
-				ctxtmenu_entry_channel(int32_t _id, String name, bool _isInput)
-				: ctxtmenu_entry(name, _id), channel(), isInput(_isInput) {
-				}
+	ctxtmenu_entry_bus(int32_t _id, String name, DAW::bus_type bustype, audio_channel_ref_t _stageEndpoint)
+	: ctxtmenu_entry_track_io(_id, name), busType(bustype), busName(name), stageEndpoint(_stageEndpoint) {
+	}
 //				virtual ~ctxtmenu_entry_channel() {
 //
 //				}
-				void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) override {
-					if (contains(ctxtSize, mouse)) {
-						nvgBeginPath(vg);
-						nvgRect(vg, 0, y, ctxtSize.x, height);
-						nvgFillColor(vg, theme->getColor(GuiColor::COL_CTXTMNU_HILIGHT));
-						nvgFill(vg);
-					}
-					setFont(vg, this->fontSize, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-					nvgText(vg, leftOffset(), y + height / 2, StringAsCStr(title), NULL);
-					if (channel.idx > -1) {
-						auto* stream = audiohost::getInstance()->getStream(0);
-						if (stream) {
+	void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) override {
+		if (contains(ctxtSize, mouse)) {
+			nvgBeginPath(vg);
+			nvgRect(vg, 0, y, ctxtSize.x, height);
+			nvgFillColor(vg, theme->getColor(GuiColor::COL_CTXTMNU_HILIGHT));
+			nvgFill(vg);
+		}
+		setFont(vg, this->fontSize, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+		nvgText(vg, leftOffset(), y + height / 2, StringAsCStr(title), NULL);
+//					if (channel.idx > -1) {
+//						auto* stream = audiohost::getInstance()->getStream(0);
+//						if (stream) {
+//
+//							auto& allMeters = isInput ? stream->metersInput : stream->metersOutput;
+//							int32_t nChannels = AudioIO::getNumChannelsTrackType(channel.type);
+//							auto rmsMtr = rmsmeter<16000>(allMeters.channels+channel.channelOffset, nChannels);
+//							ivec2 sizeMeter{height-2, height-2};
+//							renderMeterAt(vg, theme, {width-sizeMeter.x+1, y+1}, sizeMeter, &rmsMtr);
+//						}
+//					}
+	}
+	bool isBus() override {
+		return true;
+	}
+};
+class ctxtmenu_entry_bus_external : public ctxtmenu_entry_bus {
+	public:
+		ctxtmenu_entry_bus_external(int32_t _id, String name, audio_channel_ref_t _stageEndpoint)
+		: ctxtmenu_entry_bus(_id, name, DAW::bus_type::external, _stageEndpoint) {
+		}
 
-							auto& allMeters = isInput ? stream->metersInput : stream->metersOutput;
-							int32_t nChannels = AudioIO::getNumChannelsTrackType(channel.type);
-							auto rmsMtr = rmsmeter<16000>(allMeters.channels+channel.channelOffset, nChannels);
-							ivec2 sizeMeter{height-2, height-2};
-							renderMeterAt(vg, theme, {width-sizeMeter.x+1, y+1}, sizeMeter, &rmsMtr);
-						}
-					}
-				}
-			};
-		public:
-			guidropdown_select_channel_ctxt(track_t* _track, bool _isInput) : m_track(_track), isInput(_isInput) {
-				this->size.x = 120;
-				this->fontSize = FONT_SIZE_CTXT_SMALL;
-				this->paddingV = 0;
-				int32_t idx = 0;
-				auto& cfg = settings.iosettings.getChannelConfig(settings.iosettings.device_api);
-				auto& list = isInput ? cfg.input : cfg.output;
-				addEntry(new ctxtmenu_entry_channel(idx++, "None", isInput));
-				for (auto& channel : list) {
-					addEntry(new ctxtmenu_entry_channel(idx, channel, isInput));
+};
+class ctxtmenu_entry_bus_internal : public ctxtmenu_entry_bus {
+	const audio_stage_ref_t busStage;
+	public:
+		ctxtmenu_entry_bus_internal(int32_t _id, String name, audio_stage_ref_t _stageBus, audio_channel_ref_t _stageEndpoint)
+		: ctxtmenu_entry_bus(_id, name, DAW::bus_type::internal, _stageEndpoint), busStage(_stageBus) {
+		}
+	audio_stage_ref_t getStageRef() {
+		return busStage;
+	}
+};
+
+
+class ctxtmenu_entry_endpoint : public ctxtmenu_entry_track_io {
+public:
+	ctxtmenu_entry_endpoint(int32_t _id, String name) : ctxtmenu_entry_track_io(_id, name) {
+
+	}
+	virtual channel_ref_t getEndpoint() = 0;
+
+};
+class ctxtmenu_entry_external_channel : public ctxtmenu_entry_endpoint {
+public:
+	const AudioIO::io_cfg_channel channel;
+	const bool isInput;
+
+	explicit ctxtmenu_entry_external_channel(int32_t _id, const AudioIO::io_cfg_channel& _channel, bool _isInput)
+	: ctxtmenu_entry_endpoint(_id, _channel.name), channel(_channel), isInput(_isInput) {
+	}
+	explicit ctxtmenu_entry_external_channel(int32_t _id, String name, bool _isInput)
+	: ctxtmenu_entry_endpoint(_id, name), channel(), isInput(_isInput) {
+	}
+	void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) override {
+		if (contains(ctxtSize, mouse)) {
+			nvgBeginPath(vg);
+			nvgRect(vg, 0, y, ctxtSize.x, height);
+			nvgFillColor(vg, theme->getColor(GuiColor::COL_CTXTMNU_HILIGHT));
+			nvgFill(vg);
+		}
+		setFont(vg, this->fontSize, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+		nvgText(vg, leftOffset(), y + height / 2, StringAsCStr(title), NULL);
+		if (channel.idx > -1) {
+			auto* stream = audiohost::getInstance()->getStream(0);
+			if (stream) {
+
+				auto& allMeters = isInput ? stream->metersInput : stream->metersOutput;
+				int32_t nChannels = AudioIO::getNumChannelsTrackType(channel.type);
+				auto rmsMtr = rmsmeter<16000>(allMeters.channels+channel.channelOffset, nChannels);
+				ivec2 sizeMeter{height-2, height-2};
+				renderMeterAt(vg, theme, {width-sizeMeter.x+1, y+1}, sizeMeter, &rmsMtr);
+			}
+		}
+	}
+	bool isBus() override {
+		return false;
+	}
+	channel_ref_t getEndpoint() override {
+		if (id == 0)
+			return ChannelNone();
+		return ChannelAudioInput(channel.idx, channel.channelOffset, AudioIO::getTrackNameShort(channel.type, channel.idx, isInput), channel.type);
+	}
+};
+class ctxtmenu_entry_stage_channel : public ctxtmenu_entry_endpoint {
+public:
+	const audio_channel_ref_t endpoint;
+
+	ctxtmenu_entry_stage_channel(int32_t _id, String name, audio_channel_ref_t _endpoint)
+	: ctxtmenu_entry_endpoint(_id, name), endpoint(_endpoint) {
+	}
+	void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) override {
+		if (contains(ctxtSize, mouse)) {
+			nvgBeginPath(vg);
+			nvgRect(vg, 0, y, ctxtSize.x, height);
+			nvgFillColor(vg, theme->getColor(GuiColor::COL_CTXTMNU_HILIGHT));
+			nvgFill(vg);
+		}
+		setFont(vg, this->fontSize, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+		nvgText(vg, leftOffset(), y + height / 2, StringAsCStr(title), NULL);
+		audio_stage_t* stage = vsthost::getInstance()->getAudioStage(endpoint.stageRef);
+		if (stage) {
+			track_impl_t* trImpl = dynamic_cast<track_impl_t*>(stage);
+			dbgassert(trImpl);
+			if (trImpl) {
+				auto rmsMtr = rmsmeter<16000>(trImpl->meter.channels, trImpl->input.channels);
+				ivec2 sizeMeter{height-2, height-2};
+				renderMeterAt(vg, theme, {width-sizeMeter.x+1, y+1}, sizeMeter, &rmsMtr);
+			}
+		}
+
+	}
+	bool isBus() override {
+		return false;
+	}
+	channel_ref_t getEndpoint() override {
+		audio_stage_t* stage = vsthost::getInstance()->getAudioStage(endpoint.stageRef);
+		if (stage) {
+			track_impl_t* trImpl = dynamic_cast<track_impl_t*>(stage);
+			dbgassert(trImpl);
+			if (trImpl) {
+				return ChannelStage(trImpl, endpoint.isInput);
+
+			}
+		}
+		return ChannelNone();
+	}
+};
+
+/* top select menu */
+class guidropdown_select_bus_ctxt : public guictxtmenu {
+	const audio_stage_ref_t busStage;
+	const audio_channel_ref_t stageEndpoint;
+	void init() {
+		this->size.x = 120;
+		this->fontSize = FONT_SIZE_CTXT_SMALL;
+		this->paddingV = 0;
+	}
+public:
+	guidropdown_select_bus_ctxt(audio_stage_ref_t _busStage, audio_channel_ref_t _dstStage)
+		: busStage(_busStage), stageEndpoint(_dstStage) {
+
+		int32_t idx = 0;
+		if (!_dstStage.isInput) {
+			addEntry(new ctxtmenu_entry_stage_channel(idx++, "Input", audio_channel_ref_t{_busStage, true}));
+		} else {
+			addEntry(new ctxtmenu_entry_stage_channel(idx++, "Output", audio_channel_ref_t{_busStage, false}));
+		}
+		audio_stage_t* stage = vsthost::getInstance()->getAudioStage(stageEndpoint.stageRef);
+		if (stage) {
+			track_impl_t* trImpl = dynamic_cast<track_impl_t*>(stage);
+			dbgassert(trImpl);
+			if (trImpl) {
+				dbgassert(trImpl->getTrack());
+				auto& childTracks = trImpl->getTrack()->children;
+				for (track_t* childTrack : childTracks) {
+					dbgassert(childTrack->audio);
+					addEntry(new ctxtmenu_entry_bus_internal(idx, childTrack->name, childTrack->audio->toRef(), stageEndpoint));
 					idx++;
 				}
+
 			}
-			void clicked(int _id) {
-				closeContextMenu();
-				auto& cfg = settings.iosettings.getChannelConfig(settings.iosettings.device_api);
-				auto& list = isInput ? cfg.input : cfg.output;
-				if (_id == 0) {
-					if (isInput) {
-						m_track->audio->inputChannel = ChannelNone();
-					} else {
-						m_track->audio->outputChannel = ChannelNone();
-					}
-				} else if (_id - 1 >= 0 && _id - 1 < list.size()) {
-					_id--;
-					auto& ch = list[_id];
-					if (m_track->audio) {
-						auto chLink = ChannelAudioInput(ch.idx, ch.channelOffset, AudioIO::getTrackNameShort(ch.type, ch.idx, isInput), ch.type);
-						if (isInput) {
-							m_track->audio->inputChannel = chLink;
-						} else {
-							m_track->audio->outputChannel = chLink;
-						}
-					}
+		}
+
+	}
+	guidropdown_select_bus_ctxt(const AudioIO::io_cfg_tracks& cfg, audio_channel_ref_t _dstStage)
+		: busStage(AudioStageRefNULL()), stageEndpoint(_dstStage) {
+//		guidropdown_select_channel_ctxt
+		int32_t idx = 0;
+		auto& list = stageEndpoint.isInput ? cfg.input : cfg.output;
+		for (auto& channel : list) {
+			addEntry(new ctxtmenu_entry_external_channel(idx, channel, _dstStage.isInput));
+			idx++;
+		}
+	}
+	guidropdown_select_bus_ctxt(audio_channel_ref_t _stageEndpoint, int lvl = 0)
+		: busStage(AudioStageRefNULL()), stageEndpoint(_stageEndpoint) {
+		int32_t idx = 0;
+		String inputName = stageEndpoint.isInput ? "External input" : "External output";
+		addEntry(new ctxtmenu_entry_stage_channel(idx++, "None", AudioChannelRefNULL()));
+		addEntry(new ctxtmenu_entry_bus_external(idx++, inputName, stageEndpoint));
+//				auto& cfg = settings.iosettings.getChannelConfig(settings.iosettings.device_api);
+//				auto& list = isInput ? cfg.input : cfg.output;
+		project_controller_t* project = project_controller_t::get();
+		dbgassert(project);
+		if (project) {
+			auto& tracks = project->trackList;
+			for (track_t* track : tracks) {
+				dbgassert(track->audio);
+				addEntry(new ctxtmenu_entry_bus_internal(idx, track->name, track->audio->toRef(), stageEndpoint));
+				idx++;
+			}
+		}
+	}
+	void addEntry(ctxtmenu_entry* entry) = delete;
+	void addEntry(ctxtmenu_entry_track_io* entry) {
+		guictxtmenu::addEntry(entry);
+	}
+	virtual void clickedElement(ctxtmenu_entry* e, int _id) {
+		auto ctxtEndpointEntry = static_cast<ctxtmenu_entry_track_io*>(e);
+		if (ctxtEndpointEntry->isBus()) {
+			return;
+		}
+		closeContextMenu();
+		if (parentCtrl)
+			parentCtrl->closeAllContextMenus();
+		if (MainCtrl::get())
+			MainCtrl::get()->closeAllContextMenus();
+		dbgassert(dynamic_cast<ctxtmenu_entry_endpoint*>(e));
+		auto entry = static_cast<ctxtmenu_entry_endpoint*>(e);
+		audio_stage_t* stage = vsthost::getInstance()->getAudioStage(stageEndpoint.stageRef);
+		if (!stage)
+			return;
+
+		track_impl_t* trImpl = dynamic_cast<track_impl_t*>(stage);
+		dbgassert(trImpl);
+		if (!trImpl)
+		  return;
+		if (stageEndpoint.isInput) {
+			trImpl->inputChannel = entry->getEndpoint();
+		} else {
+			trImpl->outputChannel = entry->getEndpoint();
+		}
+
+	}
+	void closeAllSubmenus() {
+		BaseCtrl* appCtrlParent = getControl();
+		bool anyOpen = false;
+		for (ctxtmenu_entry* ctxtEntry : entries) {
+			auto entry = dynamic_cast<ctxtmenu_entry_bus*>(ctxtEntry);
+			if (entry) {
+				anyOpen |= entry->isMenuOpen;
+				entry->isMenuOpen = false;
+			}
+		}
+		if (anyOpen) {
+			//close all menus deeper than this menu
+			appCtrlParent->closeAppMenusAtLvl(1);
+		}
+	}
+	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
+		if (this->contains(mpos)) {
+			ivec2 localMouse = this->toContainerSpace(mpos);
+			ctxtmenu_entry* entryHit = NULL;
+			for (ctxtmenu_entry* e : entries) {
+				int n = e->getClicked(size, localMouse);
+				if (n >= 0) {
+					entryHit = e;
+					break;
 				}
 			}
-		};
-	public:
-		guidropdown_select_channel(track_t* _track, bool _isInput) :
-			guidropdownbase(), m_track(_track), isInput(_isInput) {
+			if (!entryHit) {
+				//TODO: maybe defer closing for usability
+				closeAllSubmenus();
+			}
+
+			auto entry = dynamic_cast<ctxtmenu_entry_bus*>(entryHit);
+			if (entry && !entry->isMenuOpen) {
+				//close other submenu at same level
+				closeAllSubmenus();
+
+				//and open new one
+				guictxtmenu_base *popup = nullptr;
+				if (entry->busType == DAW::bus_type::internal) {
+					auto stageEntry = dynamic_cast<ctxtmenu_entry_bus_internal*>(entry);
+					dbgassert(stageEntry);
+					if (stageEntry) {
+						popup = new guidropdown_select_bus_ctxt(stageEntry->getStageRef(), stageEndpoint);
+					}
+
+				}
+				if (entry->busType == DAW::bus_type::external) {
+					auto& cfg = settings.iosettings.getChannelConfig(settings.iosettings.device_api);
+					popup = new guidropdown_select_bus_ctxt(cfg, stageEndpoint);
+				}
+				dbgassert(popup);
+				if (popup) {
+					popup->size = size;
+					popup->setFontSize(entry->fontSize);
+					popup->size.x = math::max(250, popup->size.x);
+					ivec2 vPos(right() + 2, pos.y + entryHit->y);
+					parentCtrl->openAppMenu(1, popup, vPos);
+					entry->isMenuOpen = true;
+				}
+			}
+			for (guibase* gui : guis) {
+				if (!gui->isVisible())
+					continue;
+				if (gui->mouseHitTest(localMouse, evt)) {
+					return true;
+				}
+			}
+			if (canMouseHit()) {
+				evt.requestFocus(this);
+				return true;
+			}
 		}
-		String getString() {
-			return isInput ? m_track->audio->inputChannel.name : m_track->audio->outputChannel.name;
-		}
-		virtual void handleDraggedRelease(MouseEvent& evt) {
-			guictxtmenu_base *popup = new guidropdown_select_channel_ctxt(m_track, isInput);
-			popup->size = size;
-			popup->setFontSize(size.y);
-			popup->size.x = math::max(250, popup->size.x);
-			this->parentCtrl->openContextMenu(popup, toScreenSpace(ivec2(0, size.y))-popup->pos+ivec2(1));
-		}
-	};
-	track_t* const m_track;
-	guidropdown_select_channel selectInput;
-	guidropdown_select_channel selectOutput;
+		return false;
+	}
+};
+
+class guidropdown_select_bus : public guidropdownbase {
+	const audio_channel_ref_t stageEndpoint;
+public:
+	guidropdown_select_bus(audio_channel_ref_t _track) :
+		guidropdownbase(), stageEndpoint(_track) {
+	}
+	String getString() {
+		audio_stage_t* stage = vsthost::getInstance()->getAudioStage(stageEndpoint.stageRef);
+		if (!stage)
+			return "<Invalid Track>";
+
+		track_impl_t* trImpl = dynamic_cast<track_impl_t*>(stage);
+		dbgassert(trImpl);
+		if (!trImpl)
+			return "<Invalid Track>";
+		return stageEndpoint.isInput ? trImpl->inputChannel.name : trImpl->outputChannel.name;
+	}
+	virtual void handleDraggedRelease(MouseEvent& evt) {
+		guictxtmenu_base *popup = new guidropdown_select_bus_ctxt(stageEndpoint);
+		popup->size = size;
+		popup->setFontSize(size.y);
+		popup->size.x = math::max(250, popup->size.x);
+		this->parentCtrl->openContextMenu(popup, toScreenSpace(ivec2(0, size.y))-popup->pos+ivec2(1));
+	}
+};
+class gui_trackcontrols_io : public guictr_base {
+
+
+/* previous dropdown version. external channels only! */
+//	class guidropdown_select_channel : public guidropdownbase {
+//		track_t* const m_track;
+//		const bool isInput;
+//	public:
+//		guidropdown_select_channel(track_t* _track, bool _isInput) :
+//			guidropdownbase(), m_track(_track), isInput(_isInput) {
+//		}
+//		String getString() {
+//			return isInput ? m_track->audio->inputChannel.name : m_track->audio->outputChannel.name;
+//		}
+//		virtual void handleDraggedRelease(MouseEvent& evt) {
+//			guictxtmenu_base *popup = new guidropdown_select_channel_ctxt(m_track, isInput);
+//			popup->size = size;
+//			popup->setFontSize(size.y);
+//			popup->size.x = math::max(250, popup->size.x);
+//			this->parentCtrl->openContextMenu(popup, toScreenSpace(ivec2(0, size.y))-popup->pos+ivec2(1));
+//		}
+//	};
+	;
+//	track_t* const m_track;
+	guidropdown_select_bus selectInput;
+	guidropdown_select_bus selectOutput;
 public:
 	gui_trackcontrols_io(track_t* _track) :
-		guictr_base(), m_track(_track), selectInput(_track, true), selectOutput(_track, false) {
+		guictr_base(),/* m_track(_track), */selectInput(audio_channel_ref_t{_track->audio->toRef(), true}), selectOutput(audio_channel_ref_t{_track->audio->toRef(), false}) {
 		add(&selectInput);
 		add(&selectOutput);
 		padding = 0;
@@ -983,6 +1266,30 @@ void gui_track_controls::removeAllSubtracks() {
 	}
 	automationLaneControls.clear();
 }
+void gui_track_controls::renderGroupHandle(NVGcontext* vg) { //TODO: make const, have fun
+	auto lvl = m_track->getChildLvl();
+	auto p = m_track->parent;
+	while (p) {
+		dbgassert(lvl);
+
+		NVGcolor color = rgbToNvg(p->rgb);
+	//	ivec2 titleSize(size.x, size.y);
+	//	MainCtrl* ctrl = MainCtrl::get();
+	//	const int titleHeight = theme->get(GuiConstant::CONST_TRACK_HEIGHT_TITLE);
+	//	const int rectHeight = math::min(titleHeight, size.y);
+
+		ivec2 inset{0, 0};
+		int32_t width = 8*lvl;
+
+		nvgBeginPath(vg);
+		nvgRect(vg, lvl*8-8+inset.x, pos.y+inset.y, 8-inset.x*2, size.y-inset.y*2);
+		nvgFillColor(vg, color);
+		nvgFill(vg);
+		p = p->parent;
+		lvl--;
+	}
+
+}
 void gui_track_controls::render(NVGcontext* vg) {
 	if (!setScissorTransform(vg)) {
 		return;
@@ -1142,6 +1449,7 @@ public:
 		addEntry(new ctxtmenu_entry("Duplicate track", 1));
 		addEntry(new ctxtmenu_entry("Delete track", 2));
 		addEntry(new ctxtmenu_entry("Save track", 3));
+		addEntry(new ctxtmenu_entry("Add child MIDI Track", 4));
 		addEntry(new ctxtmenu_splitter());
 		addEntry(sel);
 		track_t* tr = MainCtrl::get()->getTrackId(trackid);
@@ -1187,7 +1495,7 @@ public:
 
 				track_snapshot_t trSnap(tr, true);
 				*newTrack = trSnap;
-				MainCtrl::get()->addTrackImpl(tr->localIdx+1, newTrack, FLG_TRK_CHANGE_USER);
+				MainCtrl::get()->addTrackImpl(tr->localIdxFlat+1, newTrack, FLG_TRK_CHANGE_USER);
 				newTrack->loadSnapshot(trSnap);
 				newTrack->name = makeUniqueTrackName(strNewName);
 
@@ -1212,6 +1520,17 @@ public:
 			if (promptUserFilePath(window, 1, vFILE_TYPES_TRACKSNAPSHOT, path)) {
 				saveTrackContainer(trackContainerSnapshot, path);
 			}
+			return;
+		} else if (_id == 4) {
+			track_t* newTrack = MainCtrl::get()->createNewTrack(tr->type);
+			tr->addChild(newTrack);
+			MainCtrl::get()->addTrackImpl(0, newTrack, FLG_TRK_CHANGE_USER);
+			newTrack->name = makeUniqueTrackName(tr->name);
+
+			MainCtrl::getGuiTrackCtr()->layout();
+			MainCtrl::get()->updateVisibleTrackContents();
+			MainCtrl::getGuiTrackCtr()->scrollTo(newTrack->content);
+			closeContextMenu(); // deletes this
 			return;
 		}
 		closeContextMenu();

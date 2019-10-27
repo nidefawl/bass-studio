@@ -834,19 +834,27 @@ void guitrack_editor::render(NVGcontext* vg) {
 	if (ySplit  > 0) {
 		nvgSave(vg);
 		nvgIntersectScissor(vg, 0, 0, cs.x, ySplit);
-		for (track_t* g : project.trackCtr) {
-			nvgSave(vg);
-			//content
-			g->content->render(vg);
-			nvgRestore(vg);
-			for (gui_track_subtrack* g2 : g->subtracks) {
+		std::deque<track_t*> stack;
+		for (track_t* t : project.trackMidiAudioCtr) {
+			dbgassert(t->content != NULL);
+			stack.push_back(t);
+			while (!stack.empty()) {
+				track_t* current = stack.front(); stack.pop_front();
+				if (current->children.size()) stack.insert(stack.begin(), current->children.cbegin(), current->children.cend());
+
 				nvgSave(vg);
-				g2->render(vg);
+				//content
+				current->content->render(vg);
 				nvgRestore(vg);
-				drawSeperator(vg, theme, g2->top()-TRACK_HEIGHT_SPACING_HALF, cs);
+				for (gui_track_subtrack* g2 : current->subtracks) {
+					nvgSave(vg);
+					g2->render(vg);
+					nvgRestore(vg);
+					drawSeperator(vg, theme, g2->top()-TRACK_HEIGHT_SPACING_HALF, cs);
+				}
+
 			}
 		}
-
 		if (action.dragtype) {
 			nvgSave(vg);
 			renderAction(vg, action);
@@ -939,7 +947,7 @@ void guitrack_editor::render(NVGcontext* vg) {
 	nvgRestore(vg);
 }
 int32_t getPosYFirstReturnTrack(project_t& project) {
-	track_t* lastMidi = project.trackCtr.size() ? project.trackCtr.back() : NULL;
+	track_t* lastMidi = project.trackMidiAudioCtr.size() ? project.trackMidiAudioCtr.back() : NULL;
 	track_t* firstReturn = project.tracksBottom.size() ? project.tracksBottom.front() : NULL;
 	if (firstReturn && firstReturn->content) {
 		return firstReturn->content->top() - TRACK_HEIGHT_SPACING_HALF;
@@ -952,7 +960,7 @@ int32_t getPosYFirstReturnTrack(project_t& project) {
 
 gui_track_subtrack *getSubTrackFromMouse(project_t& project, ivec2 mouse, bool isDragSnap) {
 	int ySplit = getPosYFirstReturnTrack(project);
-	const trackbasecontainer_t& tracks = mouse.y < ySplit ? project.trackCtr : project.tracksBottom;
+	const trackbasecontainer_t& tracks = mouse.y < ySplit ? project.trackMidiAudioCtr : project.tracksBottom;
 	for (track_t *tr : tracks) {
 		if (!tr->subtracks.size()) {
 			continue;
@@ -972,7 +980,7 @@ track_t *getTrackFromMouse(project_t& project, ivec2 mouse, bool isDragSnap) {
 	track_t *t = NULL;
 	track_t *tMin = NULL;
 	double minDist = 0;
-	const trackbasecontainer_t& tracks = mouse.y < ySplit ? project.trackCtr : project.tracksBottom;
+	const trackbasecontainer_t& tracks = mouse.y < ySplit ? project.trackMidiAudioCtr : project.tracksBottom;
 	for (track_t *tr : tracks) {
 		int top = tr->content->top();
 		int bottom = tr->content->bottom();
@@ -993,10 +1001,10 @@ track_t *getTrackFromMouse(project_t& project, ivec2 mouse, bool isDragSnap) {
 	}
 	if (isDragSnap && (mouse.y < ySplit || !project.tracksBottom.size())) {
 		if (t == NULL) {
-			if (project.trackCtr.back()->content->bottom() < mouse.y) {
-				t = project.trackCtr.back();
-			} else if (project.trackCtr.front()->content->top() > mouse.y) {
-				t = project.trackCtr.front();
+			if (project.trackList.back()->content->bottom() < mouse.y) {
+				t = project.trackList.back();
+			} else if (project.trackList.front()->content->top() > mouse.y) {
+				t = project.trackList.front();
 			}
 		}
 		if (t == NULL) {

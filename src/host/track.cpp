@@ -119,7 +119,7 @@ track_t &track_t::operator =(const track_snapshot_t &obj) {
 	return *this;
 }
 track_t::track_t(const track_snapshot_t &a)
-  : tracksettings_t(a), localIdx(a.localIdx) {
+  : tracksettings_t(a), localIdxFlat(a.localIdx) {
 	dbgassert(midi.getConstClips().empty());
 	for (const clip_t& clip : a.clips) {
 		midi.addClip(new clip_t(clip));
@@ -141,7 +141,7 @@ track_impl_snapshot_t::track_impl_snapshot_t(track_impl_t* p, bool storePluginCh
 	}
 }
 track_snapshot_t::track_snapshot_t(const track_t* track, bool storePluginChunks)
-  : tracksettings_t(*track), localIdx(track->localIdx), plugins(track->audio, storePluginChunks)
+  : tracksettings_t(*track), localIdx(track->localIdxFlat), plugins(track->audio, storePluginChunks)
 {
 	auto& otherClips = track->getConstMidi().getConstClips();
 	for (auto clip : otherClips) {
@@ -643,34 +643,17 @@ track_t* audio_stage_t::getTrack() {
 //	dbgassert(0); // to be expected when deleting effectgroups
 	return nullptr;
 }
-int32_t track_impl_t::mapInput(int32_t nInputChannels, int32_t nChannel) {
-	if (inputChannel.inputTrackIdx >= 0) {
-		if (inputChannel.type == AudioIO::MONO) {
-			return inputChannel.inputChannelOffset;
-		}
-		nChannel += inputChannel.inputChannelOffset;
-	}
-	if (nChannel >= nInputChannels) {
-		return -1;
-	}
-	return nChannel;
-}
-void track_impl_t::addAudio(const AudioBlock* const ptrExternalInputs, float fGain) {
-	if (isChannelConnected(inputChannel)) {
-		for (int channel = 0; channel < input.channels; channel++) {
-			int32_t idx = mapInput(ptrExternalInputs->channels, channel);
-			if (idx < 0 || idx >= ptrExternalInputs->channels) {
-				continue;
-			}
-			float* pChSrc = ptrExternalInputs->buf[idx];
-			float* pChDst = input.buf[channel];
-			dbgassert(ptrExternalInputs->samples == input.samples);
-			const int32_t nSamples = math::min(ptrExternalInputs->samples, input.samples);
-			for (int sample = 0; sample < nSamples; sample++) {
-				*pChDst++ += (*pChSrc++)*fGain;
-			}
+void track_impl_t::addAudio(const AudioBlock&& src, float fGain) {
+	for (int channel = 0; channel < src.channels; channel++) {
+		float* pChSrc = src.buf[channel];
+		float* pChDst = input.buf[channel];
+		dbgassert(src.samples == input.samples);
+		const int32_t nSamples = math::min(src.samples, input.samples);
+		for (int sample = 0; sample < nSamples; sample++) {
+			*pChDst++ += (*pChSrc++)*fGain;
 		}
 	}
+
 }
 void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, float** buffer, int32_t blockSize) {
 
