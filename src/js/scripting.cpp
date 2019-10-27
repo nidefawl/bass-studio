@@ -1,4 +1,5 @@
 #include "scripting.h"
+#include "fileio.h"
 #include "host/mainctrl.h"
 #include "js/interface/duk_daw_interface.h"
 extern "C" {
@@ -43,6 +44,7 @@ static duk_ret_t string_frombufferraw(duk_context *ctx) {
 }
 class JSContext::Impl {
 	duk_context *ctx;
+	bool hasInit = false;
 public:
 	Impl() {
 
@@ -103,10 +105,31 @@ public:
 	}
 
 	void init() {
+		if (!MainCtrl::get()) {
+			log_printf("WARN: MainCtrl::get() == nullptr\n", 0);
+			return;
+		}
+		if (!hasInit) {
+			hasInit = true;
+			NU::SCRIPTING::setGlobalInstance(ctx, MainCtrl::get());
+			String srcJS;
+			String contextInitScript = "daw_context_init.js";
+			int64_t ret = ReadFileText(contextInitScript, srcJS);
+			if (ret > 0) {
+				call_context_t ctxt;
+				String response = eval(srcJS, ctxt);
+				if (response.length()) {
+					fwrite(response.c_str(), response.length(), 1, stdout);
+					fflush(stdout);
+				}
+			} else {
+				my_printf("failed loading %s\n", StringAsCStr(contextInitScript));
+			}
+		}
 	}
 	String eval(const String& srcJS, call_context_t& ctxt) {
-		NU::SCRIPTING::setGlobalInstance(ctx, MainCtrl::get());
-
+		init();
+		dbgassert(hasInit);
 		duk_push_pointer(ctx, (void *) StringAsCStr(srcJS));
 		duk_push_uint(ctx, (duk_uint_t) srcJS.length());
 		duk_push_string(ctx, "input");

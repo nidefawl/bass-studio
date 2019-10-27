@@ -143,20 +143,6 @@ protected:
 public:
 	void init() {
 		network_init();
-		String srcJS;
-		String contextInitScript = "daw_context_init.js";
-		int64_t ret = ReadFileText(contextInitScript, srcJS);
-		if (ret > 0) {
-
-			call_context_t ctxt;
-			String response = jsContext.eval(srcJS, ctxt);
-			if (response.length()) {
-				fwrite(response.c_str(), response.length(), 1, stdout);
-				fflush(stdout);
-			}
-		} else {
-			my_printf("failed loading %s\n", StringAsCStr(contextInitScript));
-		}
 	}
 	int runConsole() {
 		threadState.isRunning = true;
