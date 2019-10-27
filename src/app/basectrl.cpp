@@ -379,8 +379,8 @@ void BaseCtrl::render(int32_t x, int32_t y, int32_t w, int32_t h, float ratio) {
 		test = 0;
 	}
 }
-// Only use this pointer for comparison!
 void BaseCtrl::onGuiRemoved(void* gui) {
+	// Only use gui pointer for comparison!
 	if (this->guiOver == gui)  {
 		this->guiOver = nullptr;
 	}
@@ -466,11 +466,13 @@ void AppCtrl::closeAppMenusAtLvl(int startlvl) {
 	}
 }
 void AppCtrl::openAppMenu(int lvl, guictxtmenu_base *b, ivec2 pos) {
-	if ((int)menuWindows.size() <= lvl) {
-		auto newWnd = this->mainWindow->createOverlay(WINDOW_BORDERLESS_POPUP);
-		menuWindows.push_back({ newWnd, nullptr });
+	while (menuWindows.size() <= lvl) {
+		menuWindows.push_back({ nullptr, nullptr });
 	}
-	//TODO: menu change on same level will let his assertation fail
+	if (!menuWindows[lvl].wnd) {
+		menuWindows[lvl].wnd = this->mainWindow->createOverlay(WINDOW_BORDERLESS_POPUP);
+	}
+	//TODO: menu change on same level will let this assertion fail
 	auto& entry = menuWindows[lvl];
 	dbgassert(entry.wnd && !entry.ctxt);
 	entry.ctxt = b;
