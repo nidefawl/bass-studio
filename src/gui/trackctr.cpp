@@ -31,19 +31,26 @@ void guitrack_mixers::render(NVGcontext* vg) {
 	nvgFill(vg);
 	for (track_t* g : project.tracksBottom) {
 		//content
-		nvgSave(vg);
-		g->mixer->render(vg);
-		nvgRestore(vg);
+		dbgassert(g->mixer->isVisible() == g->isVisible());
+		if (g->mixer->isVisible()) {
+			nvgSave(vg);
+			g->mixer->renderGroupHandle(vg);
+			g->mixer->render(vg);
+			nvgRestore(vg);
+		}
 	}
 	int ySplit = getPosYFirstReturnTrack(project);
 	if (ySplit > 0) {
 		nvgIntersectScissor(vg, 0, 0, cs.x, ySplit);
 		for (track_t* t : project.trackMidiAudioCtr) {
 			dbgassert(t->mixer != NULL);
-			nvgSave(vg);
-			t->mixer->renderGroupHandle(vg);
-			t->mixer->render(vg);
-			nvgRestore(vg);
+			dbgassert(t->mixer->isVisible() == t->isVisible());
+			if (t->mixer->isVisible()) {
+				nvgSave(vg);
+				t->mixer->renderGroupHandle(vg);
+				t->mixer->render(vg);
+				nvgRestore(vg);
+			}
 		}
 	}
 
@@ -59,6 +66,16 @@ void guitrack_mixers::removeTrack(track_t* t) {
 	if (t->mixer) {
 		this->remove(t->mixer);
 		DELETE_PTR(t->mixer)
+	}
+}
+void guitrack_mixers::updateVisibleTrackContents() {
+	for (track_t* g : project.trackList) {
+		if (!g->mixer) {
+			my_printf("NO MIXER ON %s\n", StringAsCStr(g->name));
+			continue;
+		}
+		const bool bVisible = g->isVisible();
+		g->mixer->setVisible(bVisible);
 	}
 }
 
@@ -149,8 +166,10 @@ void guictr_tracks::scrollOffsetChanged(int dir, float offset) {
 	int y = TRACK_HEIGHT_SPACING-scrOffset;
 	for (track_t* t : project.trackMidiAudioCtr) {
 		dbgassert(t->content != NULL);
-		int32_t h = setTrackPosition(t, y, false);
-		y += h + TRACK_HEIGHT_SPACING;
+		if (t->isVisible()) {
+			int32_t h = setTrackPosition(t, y, false);
+			y += h + TRACK_HEIGHT_SPACING;
+		}
 	}
 }
 void guictr_tracks::scrollTo(guibase* g) {
@@ -182,10 +201,12 @@ void guictr_tracks::layout() {
 	double f = scrollbar.toPixels();
 	ivec2 csTrackView = trackView.getSizeContent();
 	int y = TRACK_HEIGHT_SPACING;
-	for (track_t* t : project.trackList) {
+	for (track_t* t : project.tracksVisibleFlat) {
 		dbgassert(t->content != NULL);
-		int32_t h = setTrackPosition(t, y, false);
-		y += h + TRACK_HEIGHT_SPACING;
+		if (t->isVisible()) {
+			int32_t h = setTrackPosition(t, y, false);
+			y += h + TRACK_HEIGHT_SPACING;
+		}
 	}
 	contentHeight = y;
 	y = csTrackView.y-TRACK_HEIGHT_SPACING;
@@ -194,10 +215,12 @@ void guictr_tracks::layout() {
 	auto itMastersEnd = project.tracksBottom.rend();
 	while (itMastersTracks != itMastersEnd) {
 		track_t* t = *itMastersTracks;
-		int32_t h = setTrackPosition(t, y, true);
-		y -= h;
-		dbgassert(t->content != NULL);
-		y -= TRACK_HEIGHT_SPACING;
+		if (t->isVisible()) {
+			int32_t h = setTrackPosition(t, y, true);
+			y -= h;
+			dbgassert(t->content != NULL);
+			y -= TRACK_HEIGHT_SPACING;
+		}
 		itMastersTracks++;
 	}
 	contentViewSize = y;
@@ -498,12 +521,11 @@ namespace {
 			//insert into slot.droppedTrack->parent after slot.droppedTrack
 			treePos.parent = slot.droppedTrack->parent;
 			{
-				auto p = treePos.parent;
 				int idx = slot.droppedTrack->childIdxTree+1;
+				auto p = slot.droppedTrack->parent;
 				while (p && idx == p->children.size()) {
+					idx = p->childIdxTree+1;
 					p = p->parent;
-					if (p)
-						idx = p->childIdxTree+1;
 				}
 				treePos.parent = p;
 				treePos.treeIdx = idx;
@@ -555,12 +577,11 @@ namespace {
 			//insert into slot.droppedTrack->parent after slot.droppedTrack
 			treePos.parent = slot.droppedTrack->parent;
 			{
-				auto p = treePos.parent;
 				int idx = slot.droppedTrack->childIdxTree+1;
+				auto p = slot.droppedTrack->parent;
 				while (p && idx == p->children.size()) {
+					idx = p->childIdxTree+1;
 					p = p->parent;
-					if (p)
-						idx = p->childIdxTree+1;
 				}
 				treePos.parent = p;
 				treePos.treeIdx = idx;
@@ -673,9 +694,13 @@ void guitrack_editor::updateVisibleTrackContents() {
 			my_printf("NO CONTENT ON %s\n", StringAsCStr(g->name));
 			continue;
 		}
-		g->content->updateVisibleTrackContents(project, grid);
-		for (gui_track_subtrack* au : g->subtracks) {
-			au->updateVisibleTrackContents(grid);
+		const bool bVisible = g->isVisible();
+		g->content->setVisible(bVisible);
+		if (bVisible) {
+			g->content->updateVisibleTrackContents(project, grid);
+			for (gui_track_subtrack* au : g->subtracks) {
+				au->updateVisibleTrackContents(grid);
+			}
 		}
 	}
 }

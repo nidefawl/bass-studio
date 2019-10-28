@@ -820,7 +820,7 @@ void MainCtrl::onTick()
 		guictr_base& ctrMixers = view->ctr_tracks.trackControls;
 		if (ctrMixers.contains(trackViewLocalPos)) {
 			ivec2 posRelative = m_mousePos - ctrMixers.toScreenSpace(ivec2(0));
-			tr = getTrackFromMouse(*this, posRelative, false);
+			tr = getTrackFromMouse(this->view->ctr_tracks.trackView, *this, posRelative, false);
 			if (tr && tr == lastHoveredTrack && selectedTrack != tr) {
 				hoverTicks = lastHoveredTrackTicks + 1;
 				if (lastHoveredTrackTicks >= 6) {
@@ -1056,6 +1056,11 @@ void MainCtrl::updateGrid() {
 	view->ctr_tracks.updateVisibleTrackContents();
 }
 void MainCtrl::updateVisibleTrackContents() {
+	for (auto* ctr : trackTypeUniqueCtrs) {
+		ctr->updateTracksVisible();
+	}
+	trackList.rebuildTrackList();
+	trackList.checkConsistency();
 	view->ctr_tracks.updateVisibleTrackContents();
 }
 bool MainCtrl::isZooming() {

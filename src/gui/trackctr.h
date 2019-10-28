@@ -25,7 +25,7 @@
 #include "../host/mainctrl.h"
 
 int32_t getPosYFirstReturnTrack(project_t& project);
-track_t *getTrackFromMouse(project_t& project, ivec2 mouse, bool isDragSnap);
+track_t *getTrackFromMouse(const guitrack_editor& trackeditor, project_t& project, ivec2 mouse, bool isDragSnap);
 
 gui_track_subtrack* getSubTrackFromMouse(project_t& project, ivec2 mouse, bool isDragSnap);
 gui_track* createTrackGui(track_t* t, scaled_grid&); // trackcontent.cpp
@@ -178,6 +178,7 @@ public:
 			gui->layout();
 		}
 	}
+	void updateVisibleTrackContents();
 
 
 };
@@ -480,6 +481,7 @@ public:
 	void scrollTo(guibase* g);
 	void layout();
 	void updateVisibleTrackContents() {
+		trackControls.updateVisibleTrackContents();
 		trackView.updateVisibleTrackContents();
 	}
 

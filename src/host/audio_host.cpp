@@ -486,6 +486,7 @@ int32_t getNumChannelsTrackType(tracktype t) {
 		return 6;
 	}
 }
+//static_assert(getNumChannelsTrackType(AudioIO::tracktype::MULTI_CHANNEL_6) == 6);
 
 String getTrackNameShort(AudioIO::tracktype type, int32_t index, bool isInput) {
 	String s = StringFormat("%d", index);

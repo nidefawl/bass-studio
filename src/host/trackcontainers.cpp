@@ -169,6 +169,9 @@ void trackallcontainer_t::rebuildTrackList() {
 	addAll(tracksBottom.tracksTree, trackReturnCtr.tracksTree);
 	addAll(tracksBottom.tracksTree, trackMasterCtr.tracksTree);
 
+	addAll(tracksBottom.tracksVisibleFlat, trackReturnCtr.tracksVisibleFlat);
+	addAll(tracksBottom.tracksVisibleFlat, trackMasterCtr.tracksVisibleFlat);
+
 
 
 	// repopulate trackAllCtr
@@ -179,6 +182,9 @@ void trackallcontainer_t::rebuildTrackList() {
 
 	addAll(trackAllCtr.tracksTree, trackMidiAudioCtr.tracksTree);
 	addAll(trackAllCtr.tracksTree, tracksBottom.tracksTree);
+
+	addAll(trackAllCtr.tracksVisibleFlat, trackMidiAudioCtr.tracksVisibleFlat);
+	addAll(trackAllCtr.tracksVisibleFlat, tracksBottom.tracksVisibleFlat);
 
 	// reassign global track indices in correct order
 	int32_t idx = 0;
