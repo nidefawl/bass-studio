@@ -665,18 +665,27 @@ void removePlugin(effectbase* module) {
 	audioStage->pluginsChanged();
 }
 void guictr_plugins::pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mousepos) {
-	int32_t dstSlot = MainCtrl::get()->getDragDropTarget().idx;
+	// gui_ctr_plugins receiving list of effectbase
+	int32_t dstSlot = MainCtrl::get()->getDragDropTarget().slotIdx;
 	MainCtrl::get()->getDragDropTarget().reset();
 	if (!this->stage) return;
 	dbgassert(g->effects.size());
+
 	audio_stage_t* srcStage = g->getTrackLink();
-	audio_stage_t* p = this->stage;
-	while (p) {
-		if (std::find(g->effects.begin(), g->effects.end(), p->owner) != g->effects.end()) {
+	audio_stage_t* thisStageOrParent = this->stage;
+
+	// make sure this pluginctrs stage-owner and all parents stage-owners aren't in the list of dragged effectbase instances
+	while (thisStageOrParent) {
+		if (!thisStageOrParent->parent) {
+			dbgassert(thisStageOrParent->owner==nullptr);
+		}
+		if (thisStageOrParent->parent && std::find(g->effects.begin(), g->effects.end(), thisStageOrParent->owner) != g->effects.end()) {
 			return;
 		}
-		p = p->parent;
+		thisStageOrParent = thisStageOrParent->parent;
 	}
+
+
 	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 	int first = g->effects.front()->getSlot();
 	int last = g->effects.back()->getSlot();

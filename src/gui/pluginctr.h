@@ -116,6 +116,7 @@ public:
 	void dragMoveOn(guibase* target, ivec2 mousepos);
 	void dragReleaseOn(guibase* target, ivec2 mousepos);
 };
+
 class guictr_plugins : public guictr_base {
 public:
 	guiplaceholder placeholder;
