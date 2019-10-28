@@ -39,12 +39,17 @@
 #include "logging.h"
 
 namespace Table {
+	struct tbltype_gui_flags {
+		SafeRef<guibase> saferef;
+		int mask;
+	};
 
 	class click_type_handler {
 	public:
 		virtual void onClickNotImplemented(const click_ctxt_t& ctxt) = 0;
 		virtual void onClick(const click_ctxt_t& ctxt, glm::ivec2& value) = 0;
 		virtual void onClick(const click_ctxt_t& ctxt, NVGcolor& value) = 0;
+		virtual void onClick(const click_ctxt_t& ctxt, const tbltype_gui_flags& obj) {};
 		virtual void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, GuiColor::constant_t constant) = 0;
 		virtual void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, GuiConstant::constant_t constant) = 0;
 		virtual ~click_type_handler() {
@@ -57,11 +62,12 @@ namespace Table {
 		T& t;
 		const char* format = nullptr;
 	};
-	struct tbltype_gui_flags {
-		SafeRef<guibase> saferef;
-		int mask;
-	};
-
+	template <>
+	inline void cellClicked(const click_ctxt_t& ctxt, const tbltype_gui_flags& obj) {
+		if (ctxt.callback) {
+			ctxt.callback->onClick(ctxt, obj);
+		}
+	}
 	template <typename T>
 	inline void cellClicked(const click_ctxt_t& ctxt, const tbltyperef<T>& obj) {
 		if (ctxt.callback) {
@@ -239,6 +245,14 @@ public:
 					}
 					virtual void onClickNotImplemented(const click_ctxt_t& ctxt) override {
 						table->setActiveControl(nullptr);
+					}
+					void onClick(const click_ctxt_t& ctxt, const tbltype_gui_flags& obj) override {
+						guibase* ref = safeRefGet(obj.saferef);
+						if (ref) {
+							bool b = ref->isFlag(obj.mask);
+							ref->setFlag(obj.mask, !b);
+						}
+
 					}
 					void onClick(const click_ctxt_t& ctxt, glm::ivec2& value) override {
 						click();
