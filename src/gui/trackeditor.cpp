@@ -325,7 +325,7 @@ void guitrack_editor::trackViewDragBegin(guitrack_editor* view, MouseEvent& evt)
 	ivec2 local = evt.relMousepos;
 	int32_t tick = grid.screenToTickSnap(local.x, isAlt(evt.kbmods) ? SNAP_OFF : SNAP_ON);
 	track_t* tr = getTrackFromMouse(*this, project, local, false);
-	gui_track_subtrack* subTr = getSubTrackFromMouse(project, local, false);
+	gui_track_subtrack* subTr = getSubTrackFromMouse(*this, local, false);
 	if (subTr) {
 		tr = subTr->m_track;
 	}
@@ -351,7 +351,7 @@ void guitrack_editor::trackViewDragMove(guitrack_editor* view, MouseEvent& evt) 
 		Cursor& c = MainCtrl::get()->cursor;
 		ivec2 local = evt.relMousepos;
 		track_t* trNxtSelected = NULL;
-		gui_track_subtrack* subTr = getSubTrackFromMouse(project, local, true);
+		gui_track_subtrack* subTr = getSubTrackFromMouse(*this, local, true);
 		if (subTrSelected) {
 			if (subTr && subTr->m_track != subTrSelected->m_track) {
 				subTr = NULL;
@@ -369,6 +369,7 @@ void guitrack_editor::trackViewDragMove(guitrack_editor* view, MouseEvent& evt) 
 //			MainCtrl::get()->setSelectedTrack(trNxtSelected);
 			if (!trNxtSelected)
 				return;
+			//if track is folded get last child in linear layout
 		}
 		int32_t tick = grid.screenToTickSnap(local.x, isAlt(evt.kbmods) ? SNAP_OFF : SNAP_ON);
 		if (evt.guiDragged == this) { // cursor move / range select
@@ -810,13 +811,13 @@ void guitrack_editor::render(NVGcontext* vg) {
 		nvgStroke(vg);
 	}
 	ivec2 cs = getSizeContent();
-	int ySplit = getPosYFirstReturnTrack(project);
+	int ySplit = getPosYFirstReturnTrack(tracksVisibleFlat);
 
 	int32_t bottomHeight = cs.y-ySplit;
 	if (bottomHeight > 0) {
 		nvgSave(vg);
 		nvgIntersectScissor(vg, 0, ySplit, cs.x, bottomHeight);
-		for (track_t* g : project.tracksBottom) {
+		for (track_t* g : project.tracksBottom.tracksFlat) {
 			dbgassert(g->isVisible() == g->content->isVisible());
 			if (g->content->isVisible()) {
 				nvgSave(vg);
@@ -837,7 +838,7 @@ void guitrack_editor::render(NVGcontext* vg) {
 	if (ySplit  > 0) {
 		nvgSave(vg);
 		nvgIntersectScissor(vg, 0, 0, cs.x, ySplit);
-		for (track_t* t : project.trackMidiAudioCtr) {
+		for (track_t* t : project.trackMidiAudioCtr.tracksFlat) {
 			dbgassert(t->content != NULL);
 			if (t->content->isVisible()) {
 				nvgSave(vg);
@@ -850,7 +851,6 @@ void guitrack_editor::render(NVGcontext* vg) {
 					drawSeperator(vg, theme, g2->top()-TRACK_HEIGHT_SPACING_HALF, cs);
 				}
 			}
-
 		}
 		if (action.dragtype) {
 			nvgSave(vg);
@@ -943,18 +943,21 @@ void guitrack_editor::render(NVGcontext* vg) {
 	if (restore)
 	nvgRestore(vg);
 }
-int32_t getPosYFirstReturnTrack(project_t& project) {
-
+int32_t getPosYFirstReturnTrack(const track_vector& tracksVisibleFlat) {
 	track_t* trLastVisible = nullptr;
 	track_t* trFirstReturn = nullptr;
-	for (track_t* tr : project.trackMidiAudioCtr) {
-		if (tr->isVisible())
-			trLastVisible = tr;
-	}
-	for (track_t* tr : project.tracksBottom) {
-		if (tr->isVisible()) {
-			trFirstReturn = tr;
-			break;
+	for (track_t *tr : tracksVisibleFlat) {
+		auto trackTypeContainer = TRACKTYPE_TO_CTR(tr->type);
+		switch (trackTypeContainer) {
+			case TRACK_CTR_MIDIAUDIO:
+				trLastVisible = tr;
+				break;
+			case TRACK_CTR_RETURN:
+			case TRACK_CTR_MASTER:
+				if (!trFirstReturn) {
+					trFirstReturn = tr;
+				}
+				break;
 		}
 	}
 	if (trFirstReturn && trFirstReturn->content) {
@@ -966,10 +969,9 @@ int32_t getPosYFirstReturnTrack(project_t& project) {
 	return 0;
 }
 
-gui_track_subtrack *getSubTrackFromMouse(project_t& project, ivec2 mouse, bool isDragSnap) {
-	int ySplit = getPosYFirstReturnTrack(project);
-	const trackbasecontainer_t& tracks = mouse.y < ySplit ? project.trackMidiAudioCtr : project.tracksBottom;
-	for (track_t *tr : tracks) {
+gui_track_subtrack *getSubTrackFromMouse(const guitrack_editor& trackeditor, ivec2 mouse, bool isDragSnap) {
+	int ySplit = getPosYFirstReturnTrack(trackeditor.tracksVisibleFlat);
+	for (track_t *tr : trackeditor.tracksVisibleFlat) {
 		if (!tr->subtracks.size()) {
 			continue;
 		}
@@ -984,52 +986,32 @@ gui_track_subtrack *getSubTrackFromMouse(project_t& project, ivec2 mouse, bool i
 	return NULL;
 }
 track_t *getTrackFromMouse(const guitrack_editor& trackeditor, project_t& project, ivec2 mouse, bool isDragSnap) {
-	int ySplit = getPosYFirstReturnTrack(project);
-	track_t *t = NULL;
-	track_t *tMin = NULL;
+	track_t *trackInside = NULL;
+	track_t *trackClosest = NULL;
 	double minDist = 0;
-	const track_vector& tracks = mouse.y < ySplit ? project.trackMidiAudioCtr.tracksVisibleFlat : project.tracksBottom.tracksVisibleFlat;
+	const track_vector& tracks = trackeditor.tracksVisibleFlat;
 	for (track_t *tr : tracks) {
 		dbgassert(tr->content->isVisible());
 		int top = tr->content->top();
 		int bottom = tr->content->bottom();
-		if (tMin == NULL) {
+		if (trackClosest == NULL) {
 			minDist = math::min(math::abs(top - mouse.y), math::abs(bottom - mouse.y));
-			tMin = tr;
+			trackClosest = tr;
 		} else if (math::abs(top - mouse.y) < minDist) {
 			minDist = math::abs(top - mouse.y);
-			tMin = tr;
+			trackClosest = tr;
 		} else if (math::abs(bottom - mouse.y) < minDist) {
 			minDist = math::abs(bottom - mouse.y);
-			tMin = tr;
+			trackClosest = tr;
 		}
 		if (mouse.y >= top && mouse.y < bottom) {
-			t = tr;
+			trackInside = tr;
 			break;
 		}
 	}
-
-	if (isDragSnap && (mouse.y < ySplit || !project.tracksBottom.size())) {
-		if (t == NULL && project.tracksVisibleFlat.size()) {
-			int32_t minY = project.tracksVisibleFlat[0]->content->top();
-			int32_t maxY = project.tracksVisibleFlat[0]->content->bottom();
-			for (track_t* tr : project.tracksVisibleFlat) {
-				if (tr->isVisible()) {
-					minY = math::min(minY, tr->content->top());
-					maxY = math::max(maxY, tr->content->bottom());
-				}
-			}
-			if (maxY < mouse.y) {
-				t = project.tracksVisibleFlat.back();
-			} else if (minY > mouse.y) {
-				t = project.tracksVisibleFlat.front();
-			}
-		}
-		if (t == NULL) {
-			t = tMin;
-//				throw appexception("t == NULL");
-		}
+	if (isDragSnap && !trackInside) {
+		return trackClosest;
 	}
-	return t;
+	return trackInside;
 }
 

@@ -176,24 +176,24 @@ void track_t::loadSubtrackLayout(const track_snapshot_t& snapshot) {
 		audio->atl.clear();
 	}
 }
-void track_t::loadPluginAutomationParameters(const track_impl_snapshot_t& trackStatic) {
-	dbgassert(audio);
-	dbgassert(0&&"NOT IMPLEMENTED");
-//	const std::vector<plugin_snapshot_t>& trPluginList = trackStatic.pluginSnapshots;
-//	for (const plugin_snapshot_t& pluginSnapshot : trPluginList) {
-//		effectbase* effect = audio->getPluginById(pluginSnapshot.projectGlobalId);
-//		if (effect) {
-//			const std::vector<automation_view_t>& automatedParams = pluginSnapshot.automatedParams;
-//			for (const automation_view_t& automatedParam : automatedParams) {
-//				if (effect->getParam(automatedParam.targetParam)) {
-//					automation_t* autom = effect->getAutomation(automatedParam.targetParam);
-//					autom->points = automatedParam.points;
-//				}
-//			}
-//		}
-//	}
-
-}
+//void track_t::loadPluginAutomationParameters(const track_impl_snapshot_t& trackStatic) {
+//	dbgassert(audio);
+//	dbgassert(0&&"NOT IMPLEMENTED");
+////	const std::vector<plugin_snapshot_t>& trPluginList = trackStatic.pluginSnapshots;
+////	for (const plugin_snapshot_t& pluginSnapshot : trPluginList) {
+////		effectbase* effect = audio->getPluginById(pluginSnapshot.projectGlobalId);
+////		if (effect) {
+////			const std::vector<automation_view_t>& automatedParams = pluginSnapshot.automatedParams;
+////			for (const automation_view_t& automatedParam : automatedParams) {
+////				if (effect->getParam(automatedParam.targetParam)) {
+////					automation_t* autom = effect->getAutomation(automatedParam.targetParam);
+////					autom->points = automatedParam.points;
+////				}
+////			}
+////		}
+////	}
+//
+//}
 void track_t::releaseTrackContent() {
 }
 void trackdata_midi_t::deleteClips(delete_cb *cb) {
@@ -241,7 +241,7 @@ void trackdata_midi_t::getNotesInRange(tick_t start, tick_t end, tick_t cutStart
 }
 
 audio_stage_ref_t audio_stage_t::toRef() {
-	return {this->id};
+	return {this->stageId};
 }
 effectbase* audio_stage_t::getPluginById(int32_t projectGlobalId) {
 	for (effectbase* effect : effects) {
@@ -475,6 +475,14 @@ void track_impl_t::updateStoreLoadSubtracks() {
 	} else {
 		loadSubtrackLayout(atl);
 	}
+}
+void project_t::copyTo(project_snapshot_t& project) {
+	trackList.copyTo(project);
+	project.globals = *this;
+}
+void project_t::copyFrom(project_snapshot_t& project) {
+	trackList.copyFrom(project);
+	*this = project.globals;
 }
 
 effectbase* loadEffectModule(const plugin_snapshot_t& pluginSnapshot) {
@@ -715,7 +723,7 @@ void sortNoteEvents(std::vector<noteevent_t>& noteEvents) {
 		return a.tickOffsetInBlock < b.tickOffsetInBlock;
 	});
 }
-track_impl_t::track_impl_t(int32_t _id, track_t* _track, const samplerate_t& _sampleRate, const uint16_t& _blockSize, int32_t nChannels)
+track_impl_t::track_impl_t(audiostageid_i32 _id, track_t* _track, const samplerate_t& _sampleRate, const uint16_t& _blockSize, int32_t nChannels)
    : audio_stage_t(_id, /*_track, */_sampleRate, _blockSize, nChannels, 0)
   , track(_track)
 {

@@ -3,6 +3,7 @@
 #include "track.h"
 #include <memory>
 #include "samplefileidx.h"
+#include "project_snapshot.h"
 
 class MainCtrl;
 struct project_file {

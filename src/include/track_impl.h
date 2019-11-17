@@ -47,14 +47,14 @@ enum channel_input_type {
 
 struct channel_ref_t {
 	String name = "None";
-	audio_channel_ref_t stage{{-1}, false};
+	audio_channel_ref_t stage{{TRACKID_INVALID_I32}, false};
 	int32_t externalInputIdx = -1;
 	int32_t inputChannelOffset = 0;
 	AudioIO::tracktype externalInputType;
 	channel_input_type getType() const {
 		if (externalInputIdx != -1)
 			return channel_input_type::INPUT_EXTERNAL_AUDIO;
-		if (stage.stageRef.id != -1)
+		if (stage.stageRef.stageId != TRACKID_INVALID_I32)
 			return channel_input_type::INPUT_AUDIOSTAGE;
 		return channel_input_type::INPUT_EMPTY;
 	}
@@ -111,7 +111,7 @@ public:
 	void postSetParameter(int32_t idx, float preVal, float val, int flags);
 };
 struct audio_stage_t {
-	int32_t id;
+	const audiostageid_i32 stageId;
 	audio_stage_t* parent;
 	effectbase* owner;
 	guictr_plugins* pluginCtr;
@@ -140,8 +140,8 @@ struct audio_stage_t {
 		int32_t delayToPreReturn = 0;
 		int32_t delayToPostReturn = 0;
 	} latencyInfo;
-	audio_stage_t(int32_t _id,/*track_t* _track, */const samplerate_t& _sampleRate, const uint16_t& _blockSize, int32_t nChannels, int _type = 1)
-	: id(_id), parent(nullptr), owner(nullptr),/*track(_track),*/
+	audio_stage_t(const audiostageid_i32 _id,/*track_t* _track, */const samplerate_t& _sampleRate, const uint16_t& _blockSize, int32_t nChannels, int _type = 1)
+	: stageId(_id), parent(nullptr), owner(nullptr),/*track(_track),*/
 	  pluginCtr(nullptr),
 	  input(nChannels, _blockSize),
 	  output(nChannels, _blockSize),
@@ -193,13 +193,13 @@ static constexpr int PROCESS_CLIPS = 2;
 static constexpr int PROCESS_ARP = 4;
 }
 inline bool isChannelConnected(channel_ref_t& ch) {
-	return ch.stage.stageRef.id > -1 || ch.externalInputIdx > -1;
+	return ch.stage.stageRef.stageId != TRACKID_INVALID_I32 || ch.externalInputIdx > -1;
 }
 inline channel_ref_t ChannelNone() {
 	return channel_ref_t{};
 }
 inline channel_ref_t ChannelAudioInput(int32_t idx, int32_t channelOffset, String name, AudioIO::tracktype type) {
-	return channel_ref_t{name, {{-1}, false}, idx, channelOffset, type};
+	return channel_ref_t{name, {{TRACKID_INVALID_I32}, false}, idx, channelOffset, type};
 }
 inline channel_ref_t ChannelStage(audio_stage_t* stage, bool isInput) {
 	String str = "";
@@ -225,7 +225,7 @@ struct track_impl_t : public audio_stage_t {
 	bool wasInHide = false;
 	channel_ref_t inputChannel;
 	channel_ref_t outputChannel;
-	track_impl_t(int32_t _id, track_t* _track, const samplerate_t& _sampleRate, const uint16_t& _blockSize, int32_t nChannels);
+	track_impl_t(audiostageid_i32 _id, track_t* _track, const samplerate_t& _sampleRate, const uint16_t& _blockSize, int32_t nChannels);
 	~track_impl_t();
 	void sendNotesOff(int32_t bpm100);
 	void sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, clip_notes_t& midiRealtimeInput, int32_t flags);

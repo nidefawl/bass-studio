@@ -169,8 +169,8 @@ void trackallcontainer_t::rebuildTrackList() {
 	addAll(tracksBottom.tracksTree, trackReturnCtr.tracksTree);
 	addAll(tracksBottom.tracksTree, trackMasterCtr.tracksTree);
 
-	addAll(tracksBottom.tracksVisibleFlat, trackReturnCtr.tracksVisibleFlat);
-	addAll(tracksBottom.tracksVisibleFlat, trackMasterCtr.tracksVisibleFlat);
+//	addAll(tracksBottom.tracksVisibleFlat, trackReturnCtr.tracksVisibleFlat);
+//	addAll(tracksBottom.tracksVisibleFlat, trackMasterCtr.tracksVisibleFlat);
 
 
 
@@ -183,8 +183,8 @@ void trackallcontainer_t::rebuildTrackList() {
 	addAll(trackAllCtr.tracksTree, trackMidiAudioCtr.tracksTree);
 	addAll(trackAllCtr.tracksTree, tracksBottom.tracksTree);
 
-	addAll(trackAllCtr.tracksVisibleFlat, trackMidiAudioCtr.tracksVisibleFlat);
-	addAll(trackAllCtr.tracksVisibleFlat, tracksBottom.tracksVisibleFlat);
+//	addAll(trackAllCtr.tracksVisibleFlat, trackMidiAudioCtr.tracksVisibleFlat);
+//	addAll(trackAllCtr.tracksVisibleFlat, tracksBottom.tracksVisibleFlat);
 
 	// reassign global track indices in correct order
 	int32_t idx = 0;
@@ -459,6 +459,10 @@ void trackcontainer_tracktype_t::copyFrom(trackcontainer_snapshot_t& in) {
 //		});
 //	}
 	setFromVectorTree(std::move(newTrackVecTree));
+	int32_t idx = 0;
+	for (track_t* tr : tracksFlat) {
+		tr->localIdxFlat = idx++;
+	}
 }
 void trackcontainer_tracktype_t::loadPlugins(trackcontainer_snapshot_t& in) {
 	for (track_snapshot_t& trackStatic : in.tracks) {

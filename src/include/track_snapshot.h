@@ -1,0 +1,47 @@
+#pragma once
+#include <vector>
+#include "assert_dbg.h"
+#include "cursor.h"
+#include "clip.h"
+#include "str_util.h"
+#include "logging.h"
+#include "automation.h"
+#include "snapshot.h"
+#include "track.h"
+
+class track_t;
+struct track_impl_t;
+
+
+struct track_params_snapshot_t {
+	std::vector<param_snapshot_t> params;
+	std::vector<automation_view_t> automatedParams;
+};
+struct arp_snapshot {
+	std::vector<param_snapshot_t> params;
+	std::vector<automation_view_t> automatedParams;
+};
+struct audio_stage_t;
+struct plugin_snapshot_t;
+struct track_impl_snapshot_t {
+	arp_snapshot trackArp;
+	track_params_snapshot_t trackParams;
+	std::vector<plugin_snapshot_t> pluginSnapshots;
+	track_impl_snapshot_t() = default;
+	track_impl_snapshot_t(track_impl_t* p, bool storePluginChunks);
+};
+struct track_snapshot_t : public tracksettings_t {
+	int32_t localIdx = -1;
+	track_t* trackLoaded = NULL; // ref set in first phase of, cleared in second of 2-phase loading
+	track_impl_snapshot_t plugins;
+	std::vector<clip_t> clips;
+	std::vector<automationlane_snapshot_t> automationLanes;
+	track_snapshot_t() = default;
+	track_snapshot_t(const track_t* track, bool storePluginChunks);
+};
+
+
+struct trackcontainer_snapshot_t {
+	std::vector<track_snapshot_t> tracks;
+	std::vector<int32_t> hierachy;
+};

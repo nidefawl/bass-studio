@@ -399,6 +399,7 @@ void MainCtrl::unloadProject() {
 	this->view->ctr_tracks.trackView.resizePreModifyState.reset();
 	this->view->ctr_tracks.trackView.clipboard.reset();
 	this->view->ctr_tracks.trackView.action.clipboard.reset();
+	this->view->ctr_tracks.trackView.tracksVisibleFlat.clear();
 
 	{
 
@@ -1056,11 +1057,6 @@ void MainCtrl::updateGrid() {
 	view->ctr_tracks.updateVisibleTrackContents();
 }
 void MainCtrl::updateVisibleTrackContents() {
-	for (auto* ctr : trackTypeUniqueCtrs) {
-		ctr->updateTracksVisible();
-	}
-	trackList.rebuildTrackList();
-	trackList.checkConsistency();
 	view->ctr_tracks.updateVisibleTrackContents();
 }
 bool MainCtrl::isZooming() {

@@ -39,7 +39,7 @@ void guitrack_mixers::render(NVGcontext* vg) {
 			nvgRestore(vg);
 		}
 	}
-	int ySplit = getPosYFirstReturnTrack(project);
+	int ySplit = getPosYFirstReturnTrack(tracksVisibleFlat);
 	if (ySplit > 0) {
 		nvgIntersectScissor(vg, 0, 0, cs.x, ySplit);
 		for (track_t* t : project.trackMidiAudioCtr) {
@@ -69,13 +69,13 @@ void guitrack_mixers::removeTrack(track_t* t) {
 	}
 }
 void guitrack_mixers::updateVisibleTrackContents() {
-	for (track_t* g : project.trackList) {
-		if (!g->mixer) {
-			my_printf("NO MIXER ON %s\n", StringAsCStr(g->name));
+	for (track_t* tr : project.trackList) {
+		if (!tr->mixer) {
+			my_printf("NO MIXER ON %s\n", StringAsCStr(tr->name));
 			continue;
 		}
-		const bool bVisible = g->isVisible();
-		g->mixer->setVisible(bVisible);
+		const bool bVisible = tr->isVisible();
+		tr->mixer->setVisible(bVisible);
 	}
 }
 
@@ -177,7 +177,32 @@ void guictr_tracks::scrollTo(guibase* g) {
 	int32_t scrOffset = math::max(0.0f, scrollbar.scrollOffset*(contentHeight-contentViewSize));
 	scrollbar.scrollVisible(y+scrOffset, g->size.y);
 }
+void guictr_tracks::updateVisibleTracks() {
+	tracksVisibleFlat.clear();
+	/** turn tree structure into linear pointer array with trackTop at the beginning and the deepest child at the end **/
+	track_vector vecNewTracksFlat;
+	std::deque<track_t*> stack;
+	stack.insert(stack.begin(), project.trackList.cbegin(), project.trackList.cend());
+	while (!stack.empty()) {
+		track_t* current = stack.front();
+		stack.pop_front();
+		if (!current->hideTrack && current->children.size())
+			stack.insert(stack.begin(), current->children.cbegin(), current->children.cend());
+		vecNewTracksFlat.push_back(current);
+	}
+
+	tracksVisibleFlat = vecNewTracksFlat;
+}
+void guictr_tracks::updateVisibleTrackContents() {
+	updateVisibleTracks();
+	trackControls.updateVisibleTrackContents();
+	trackView.updateVisibleTrackContents();
+}
 void guictr_tracks::layout() {
+//	for (auto* ctr : project.trackTypeUniqueCtrs) {
+//		ctr->updateTracksVisible();
+//	}
+
 	bool trackCtrlsLeft = true;
 	const int32_t trackControlsWidth = theme->get(GuiConstant::CONST_TRACK_CONTROLS_WIDTH);
 	int scrollW = gui_scrollbar::defaultW;
@@ -201,7 +226,7 @@ void guictr_tracks::layout() {
 	double f = scrollbar.toPixels();
 	ivec2 csTrackView = trackView.getSizeContent();
 	int y = TRACK_HEIGHT_SPACING;
-	for (track_t* t : project.tracksVisibleFlat) {
+	for (track_t* t : tracksVisibleFlat) {
 		dbgassert(t->content != NULL);
 		if (t->isVisible()) {
 			int32_t h = setTrackPosition(t, y, false);
@@ -256,8 +281,10 @@ void guictr_tracks::render(NVGcontext* vg) {
 	if (cs.y <= 0 || cs.x <= 0) {
 		return;
 	}
+
 	nvgIntersectScissor(vg, cp.x, cp.y, cs.x, cs.y);
 	nvgTranslate(vg, cp.x, cp.y);
+
 	nvgSave(vg);
 		trackView.render(vg);
 	nvgRestore(vg);
@@ -271,13 +298,15 @@ void guictr_tracks::render(NVGcontext* vg) {
 	nvgSave(vg);
 	dragdrop_target_indicator_t& target = MainCtrl::get()->getDragDropTarget();
 	nvgTranslate(vg, 0, trackView.top());
-	int ySplit = getPosYFirstReturnTrack(project);
+	int ySplit = getPosYFirstReturnTrack(tracksVisibleFlat);
 	if (ySplit > 0) {
 		nvgSave(vg);
 		nvgIntersectScissor(vg, 0, 0, cs.x, ySplit);
 		for (track_t* t : project.trackMidiAudioCtr) {
 			dbgassert(t->mixer != NULL);
-			drawSeperator(vg, theme, t->mixer->bottom()+TRACK_HEIGHT_SPACING_HALF, cs);
+			if (t->isVisible()) {
+				drawSeperator(vg, theme, t->mixer->bottom()+TRACK_HEIGHT_SPACING_HALF, cs);
+			}
 		}
 		nvgRestore(vg);
 	}
@@ -287,8 +316,10 @@ void guictr_tracks::render(NVGcontext* vg) {
 		} else {
 			nvgIntersectScissor(vg, 0, 0, cs.x, trackView.size.y);
 		}
-		for (track_t* g : project.tracksBottom) {
-			drawSeperator(vg, theme, g->mixer->top()-TRACK_HEIGHT_SPACING_HALF, cs);
+		for (track_t* t : project.tracksBottom) {
+			if (t->isVisible()) {
+				drawSeperator(vg, theme, t->mixer->top()-TRACK_HEIGHT_SPACING_HALF, cs);
+			}
 		}
 	}
 	nvgRestore(vg);
@@ -605,6 +636,7 @@ namespace {
 			strTarget = treePos.parent->name;
 		}
 		log_printf("Moving %d tracks to %s[%d] %s\n", selectedTracks.size(), StringAsCStr(strTarget), treePos.treeIdx, failed ? "Failed" : "Success");
+		MainCtrl::getGuiTrackCtr()->updateVisibleTracks();
 		MainCtrl::getGuiTrackCtr()->layout();
 		MainCtrl::get()->updateVisibleTrackContents();
 //			//TODO: edithistory entry
@@ -655,7 +687,7 @@ void guitrack_editor::addTrack(track_t* t) {
 	dbgassert(t->audio);
 	//
 	t->content = createTrackGui(t, grid);
-	t->content->setZOrder(t->type >= TRACK_TYPE_MIDI ? 0 : 1);
+	t->content->setZOrder(TRACKTYPE_TO_CTR(t->type) == TRACK_CTR_MIDIAUDIO ? 0 : 1);
 	add(t->content);
 	//TODO: sort and render guis by track->idx
 //#ifndef NDEBUG

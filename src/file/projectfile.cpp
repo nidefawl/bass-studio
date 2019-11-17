@@ -16,6 +16,7 @@
 #include "str_util.h"
 #include "clip.h"
 #include "track.h"
+#include "track_snapshot.h"
 #include "fileio.h"
 #include "layout.h"
 #include "project.h"

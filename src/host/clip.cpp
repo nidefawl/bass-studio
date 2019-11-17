@@ -188,14 +188,18 @@ void clip_notes_t::storeSelection(std::vector<note_t>& selNotes) {
 		selNotes.push_back(*n); // copy;
 	}
 }
-void clip_notes_t::restoreSelection(std::vector<note_t>& selNotes) {
+size_t clip_notes_t::restoreSelection(std::vector<note_t>& selNotes) {
+	size_t numRestored = 0;
 	for (note_t& n : selNotes) {
 		auto it = std::find_if(m_list.begin(), m_list.end(),
 				[&n] (const note_t& note) { return note == n; });
-		dbgassert(it != m_list.end());
-		note_t& ref = *it;
-		selection.insert(&ref);
+		if (it != m_list.end()) {
+			note_t& ref = *it;
+			selection.insert(&ref);
+			numRestored++;
+		}
 	}
+	return numRestored;
 }
 size_t clip_notes_t::removeDuplicates() {
 	size_t nRemoved;
@@ -204,7 +208,8 @@ size_t clip_notes_t::removeDuplicates() {
 		storeSelection(selNotes);
 		selection.clear();
 		nRemoved = removeDuplicatesImpl(m_list);
-		restoreSelection(selNotes);
+		bool allRestored = restoreSelection(selNotes);
+		dbgassert(allRestored);
 		for (note_t* n : selection) {
 			auto it = std::find_if(m_list.begin(), m_list.end(),
 					[n] (const note_t& note) { return &note == n; });

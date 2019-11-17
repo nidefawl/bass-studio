@@ -15,6 +15,15 @@
 #define AUTOMATABLE_MIXER 0
 #define AUTOMATABLE_ARP 1
 #define AUTOMATABLE_EFFECT 2
+
+struct automationlane_snapshot_t {
+	int32_t type = -1;
+	int32_t refId = -1;
+	int32_t paramIdx = -1;
+	int32_t height = 4;
+	int32_t subtrackType = 0;
+};
+
 class track_t;
 struct automation_point_t {
 	tick_t time;
@@ -42,52 +51,28 @@ struct automation_t {
 	void copyRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data);
 	void setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data);
 };
+
 struct automation_view_t: public automation_t {
 	int32_t targetParam = -1;
 };
+
 struct automation_clipboard_t {
 	tick_t start;
 	tick_t len;
 	std::vector<automation_point_t> dataPoints;
 };
-class vstplugin;
-struct vstparam_automation_t: public automation_t {
-	int32_t paramIdx = -1;
 
-	vstparam_automation_t()
-	{
-	}
-	~vstparam_automation_t() {
-		//notify vstplugin
-	}
-	void setTarget(int32_t _paramIdx) {
-		paramIdx = _paramIdx;
-	}
-};
-struct automationlane_snapshot_t {
-	int32_t type = -1;
-	int32_t refId = -1;
-	int32_t paramIdx = -1;
-	int32_t height = 4;
-	int32_t subtrackType = 0;
-};
-class plugin_reference_t {
-public:
-	virtual ~plugin_reference_t() {};
-	virtual void onDstDelete() = 0;
-	virtual void onSrcDelete() = 0;
-	virtual void setDst(vstplugin* plugin, int32_t paramIdx) = 0;
-	virtual automationlane_snapshot_t serialize() = 0;
-};
 struct automated_param_t {
 	int32_t paramIdx = -1;
 	automation_t src;
 	automated_param_t(int32_t _paramIdx) : paramIdx(_paramIdx) { }
 };
+
 union param_step_fi_u {
 	float valFloat;
 	int32_t valInt;
 };
+
 struct automatable_param_t {
 	int32_t idx = -1;
 	float value = 0.0f;
@@ -109,6 +94,7 @@ struct automatable_param_t {
 	int16_t category = 0;			///< 0: no category, else group index + 1
 	int32_t internalIdx = -1;
 };
+
 struct automatable_t {
 private:
 //	std::vector<automatable_param_t> params;

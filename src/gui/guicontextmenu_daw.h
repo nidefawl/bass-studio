@@ -162,45 +162,7 @@ public:
 		idxImport = i;
 		addEntry(new ctxtmenu_entry("Import Track", i++));
 	}
-	void clicked(int _id) {
-		if (_id >= idxImport) {
-			auto window = parentCtrl->window;
-			// promptUserFilePath initiates a native dialog that would close this context menu
-			// so we do it ourself controlled here
-			closeContextMenu(); // deletes this
-			// now we make sure not to access heap (this) after this point
-			String path;
-			if (promptUserFilePath(window, 0, vFILE_TYPES_TRACKSNAPSHOT, path)) {
-	        	trackcontainer_snapshot_t snapshot;
-	        	std::shared_ptr<trackcontainer_snapshot_t> ctr = loadTrackContainer(path);
-	        	dbgassert(ctr);
-	        	if (ctr) {
-	        		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-	        		for (track_snapshot_t& ts : ctr->tracks) {
-	        			track_t* tr = new track_t(ts);
-	        			ts.trackLoaded = tr;
-	        			MainCtrl::get()->addTrackImpl(-1, tr, 0);
-	            		log_printf("add track %s\n", StringAsCStr(tr->name));
-	        		}
-
-	    			vsthost* host = vsthost::getInstance();
-	        		//load plugins
-	        		for (track_snapshot_t& ts : ctr->tracks) {
-	            		log_printf("track '%s' loading %d plugins\n", StringAsCStr(ts.trackLoaded->name), ts.plugins.pluginSnapshots.size());
-	        			ts.trackLoaded->loadSnapshot(ts);
-		    			std::vector<effectbase*> effects = ts.trackLoaded->audio->deferredEffects;
-		    			for (auto eff : effects) {
-		    				host->activateDeferred(eff);
-		    			}
-	        		}
-	        	}
-			}
-			return;
-		} else {
-			MainCtrl::get()->insertNewTrack(-1, _id);
-		}
-		closeContextMenu();
-	}
+	void clicked(int _id);
 };
 
 

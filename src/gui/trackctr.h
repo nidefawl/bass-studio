@@ -24,10 +24,10 @@
 #include "dsp_util.h"
 #include "../host/mainctrl.h"
 
-int32_t getPosYFirstReturnTrack(project_t& project);
+int32_t getPosYFirstReturnTrack(const track_vector& tracksVisibleFlat);
 track_t *getTrackFromMouse(const guitrack_editor& trackeditor, project_t& project, ivec2 mouse, bool isDragSnap);
 
-gui_track_subtrack* getSubTrackFromMouse(project_t& project, ivec2 mouse, bool isDragSnap);
+gui_track_subtrack* getSubTrackFromMouse(const guitrack_editor& project, ivec2 mouse, bool isDragSnap);
 gui_track* createTrackGui(track_t* t, scaled_grid&); // trackcontent.cpp
 gui_track_controls* createTrackGuiMixer(track_t* t); // trackcontrols.cpp
 void drawSeperator(NVGcontext* vg, const guitheme_t* theme, int32_t seperatorY, ivec2& cs);
@@ -39,6 +39,7 @@ class guitrack_editor : public guictr_base {
 public:
 	Cursor& cursor;
 	project_t& project;
+	track_vector& tracksVisibleFlat;
 	scaled_grid& grid;
 	dragdrop_midifile& dragdrop;
 	track_t *trSelected = NULL;
@@ -52,10 +53,11 @@ public:
 	trackstate_t resizePreModifyState;
 	bool selectionMoved = false;
 
-	guitrack_editor(Cursor& _cursor, project_t& _project, scaled_grid& _grid, dragdrop_midifile& _dragdropclip)
+	guitrack_editor(Cursor& _cursor, project_t& _project, track_vector& _tracksVisibleFlat, scaled_grid& _grid, dragdrop_midifile& _dragdropclip)
 		: guictr_base(), 
 		cursor(_cursor),
 		project(_project),
+		tracksVisibleFlat(_tracksVisibleFlat),
 		grid(_grid),
 		dragdrop(_dragdropclip)
 	{
@@ -129,10 +131,12 @@ public:
 
 class guitrack_mixers : public guictr_base {
 	project_t& project;
+	track_vector& tracksVisibleFlat;
 public:
-	guitrack_mixers(project_t& _project)
+	guitrack_mixers(project_t& _project, track_vector& _tracksVisibleFlat)
 		: guictr_base(),
-		  project(_project)
+		  project(_project),
+		  tracksVisibleFlat(_tracksVisibleFlat)
 	{
 		padding = 0;
 		sortChildren = true;
@@ -414,6 +418,7 @@ public:
 	}
 };
 class guictr_tracks : public guictr_base, grid_changed_cb, te_constants, public gui_scrollcontainer {
+	friend class guitrack_editor;
 public:
 	scaled_grid& grid;
 	project_t& project;
@@ -421,17 +426,18 @@ public:
 	guitrack_editor trackView;
 	guitrack_timeline trackTimeline;
 	guictr_tracks_loophandles loophandles;
-private:
+protected:
 	gui_scrollbar scrollbar;
 	int32_t contentHeight = 0;
 	int32_t contentViewSize = 0;
+	track_vector tracksVisibleFlat;
 public:
 	guictr_tracks(Cursor& _cursor, project_t& _project, scaled_grid& _grid, dragdrop_midifile& _dragdropclip)
 		: guictr_base(),
 		grid(_grid),
 		project(_project),
-		trackControls(_project),
-		trackView(_cursor, _project, _grid, _dragdropclip),
+		trackControls(_project, tracksVisibleFlat),
+		trackView(_cursor, _project, tracksVisibleFlat, _grid, _dragdropclip),
 		trackTimeline(_grid),
 		loophandles(_project, _grid),
 		scrollbar(1, 0.0f, *this)
@@ -457,6 +463,7 @@ public:
 		trackControls.removeTrack(t);
 		trackView.removeTrack(t);
 		if (!(flags&FLG_TRK_CHANGE_LOAD)) {
+			updateVisibleTracks();
 			layout();
 		}
 	}
@@ -465,6 +472,7 @@ public:
 		trackView.addTrack(t);
 		//TODO: restore subtracks
 		if (!(flags&FLG_TRK_CHANGE_LOAD)) {
+			updateVisibleTracks();
 			layout();
 		}
 	}
@@ -480,10 +488,8 @@ public:
 	void render(NVGcontext* vg);
 	void scrollTo(guibase* g);
 	void layout();
-	void updateVisibleTrackContents() {
-		trackControls.updateVisibleTrackContents();
-		trackView.updateVisibleTrackContents();
-	}
+	void updateVisibleTracks();
+	void updateVisibleTrackContents();
 
 	void onChildLayoutChanged(guibase* g) {
 		layout();

@@ -455,17 +455,20 @@ void delayAudio(DelayLine* delayLine, AudioBlock* input, AudioBlock* output, sam
 	}
 
 }
-track_audio_src resolveAudioChannel(vsthost* host, int32_t numChannelsTrack, channel_ref_t& inputChannel, const AudioBlock* const ptrExternalInputs) {
+bool resolveAudioChannel(vsthost* host, int32_t numChannelsTrack, channel_ref_t& inputChannel, const AudioBlock* const ptrExternalInputs, track_audio_src& out) {
 	if (inputChannel.getType() == channel_input_type::INPUT_EXTERNAL_AUDIO) {
-		int32_t idx = inputChannel.inputChannelOffset;
-		size_t size = math::min<uint32_t>(AudioIO::getNumChannelsTrackType(inputChannel.externalInputType), numChannelsTrack);
-		if (idx >= 0 && idx+size <= ptrExternalInputs->channels) {
-			track_audio_src src;
-			for (int i = 0; i < size; i++) {
-				src.channels.push_back(ptrExternalInputs->buf[idx+i]);
+		if (ptrExternalInputs != nullptr) {
+			int32_t idx = inputChannel.inputChannelOffset;
+			size_t size = math::min<uint32_t>(AudioIO::getNumChannelsTrackType(inputChannel.externalInputType), numChannelsTrack);
+			if (idx >= 0 && idx+size <= ptrExternalInputs->channels) {
+				track_audio_src src;
+				for (int i = 0; i < size; i++) {
+					src.channels.push_back(ptrExternalInputs->buf[idx+i]);
+				}
+				src.samples = ptrExternalInputs->samples;
+				out = std::move(src);
+				return true;
 			}
-			src.samples = ptrExternalInputs->samples;
-			return src;
 		}
 	}
 	if (inputChannel.getType() == channel_input_type::INPUT_AUDIOSTAGE) {
@@ -477,10 +480,11 @@ track_audio_src resolveAudioChannel(vsthost* host, int32_t numChannelsTrack, cha
 				src.channels.push_back(buff.buf[i]);
 			}
 			src.samples = buff.samples;
-			return src;
+			out = std::move(src);
+			return true;
 		}
 	}
-	return {{}, 0};
+	return false;
 };
 int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround) {
 	assert(lBlockSize > 0);
@@ -640,24 +644,6 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			}
 		}
 
-		//still a race condition on_terminate here
-		AudioBuffer* ptrExternalInputs = nullptr;
-		if (audioHost) {
-			if (stream && stream->getInputQueueSize() > 2) {
-				if (stream->try_dequeueInput(ptrExternalInputs)) {
-					//TODO: build a buffer with input blocks and process at constant latency
-					dbgassert(ptrExternalInputs);
-					if (lBlockSize != ptrExternalInputs->output->samples) {
-						ptrExternalInputs->inUse = false;
-						ptrExternalInputs = nullptr;
-					}
-				} else {
-					stats.inputBufferUnderuns++;
-			//		dsp_util::fillSilence(inputs, framesPerBuffer);
-				}
-			}
-		}
-
 		int32_t samplePosBlockEnd = sample + lBlockSize;
 		int32_t tickBlockEnd = floor(posDouble + ticksPerBlock);
 		dbgassert(tickBlockEnd-pos < ceil(ticksPerBlock+1));
@@ -716,6 +702,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 		/**
 		 * process in reverse order: first children, then parents
 		 */
+
 //
 //		/** turn tree structure into linear pointer array with parents followed by their children **/
 //		std::vector<track_t*> vecTracks;
@@ -730,6 +717,25 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 //			}
 //			vecTracks.push_back(t);
 //		}
+
+
+		//still a race condition on_terminate here
+		AudioBuffer* ptrExternalInputs = nullptr;
+		if (audioHost) {
+			if (stream && stream->getInputQueueSize() > 2) {
+				if (stream->try_dequeueInput(ptrExternalInputs)) {
+					//TODO: build a buffer with input blocks and process at constant latency
+					dbgassert(ptrExternalInputs);
+					if (lBlockSize != ptrExternalInputs->output->samples) {
+						ptrExternalInputs->inUse = false;
+						ptrExternalInputs = nullptr;
+					}
+				} else {
+					stats.inputBufferUnderuns++;
+			//		dsp_util::fillSilence(inputs, framesPerBuffer);
+				}
+			}
+		}
 		for (auto it = tracksFlat.rbegin(); it != tracksFlat.rend(); it++) {
 			track_t* const track = *it;
 			track_impl_t* const trackImpl = track->audio;
@@ -749,16 +755,14 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			if (state == playback_state::status_play) {
 				trackImpl->fillAudio(pos, tickBlockEnd, loopCutStart, loopCutEnd, project.tempo100, sample, trackImpl->input.buf, (int32_t)lBlockSize);
 			}
-			if (ptrExternalInputs) {
-				float fGainInput = 1.0f; //TODO: make track parameter
+			float fGainInput = 1.0f; //TODO: make track parameter
 
-
-				if (isChannelConnected(trackImpl->inputChannel)) {
-					const uint32_t numChannelsTrack = trackImpl->input.channels;
-					const track_audio_src src = resolveAudioChannel(this, numChannelsTrack, trackImpl->inputChannel, ptrExternalInputs->output);
+			if (isChannelConnected(trackImpl->inputChannel)) {
+				const uint32_t numChannelsTrack = trackImpl->input.channels;
+				track_audio_src src;
+				if (resolveAudioChannel(this, numChannelsTrack, trackImpl->inputChannel, ptrExternalInputs ? ptrExternalInputs->output : nullptr, src)) {
 					trackImpl->addAudio(src.toAudioBlock(), fGainInput);
 				}
-
 			}
 
 			/* Processes audio/midi tracks plugin chain */
@@ -1282,11 +1286,11 @@ void vsthost::releaseAudioStage(audio_stage_t* audioStage) {
 	allAudioStages.erase(it);
 }
 audio_stage_t* vsthost::getAudioStage(const audio_stage_ref_t& ref) {
-	if (ref.id == -1)
+	if (ref.stageId == TRACKID_INVALID_I32)
 		return nullptr;
-	dbgassert(ref.id > -1);
+	dbgassert((int32_t)ref.stageId > -1);
 	auto it = std::find_if(allAudioStages.begin(), allAudioStages.end(), [ref] (const audio_stage_t* ptr) {
-		return ptr->id == ref.id;
+		return ptr->stageId == ref.stageId;
 	});
 	dbgassert(it != allAudioStages.end());
 	if (it != allAudioStages.end()) {
@@ -1435,13 +1439,13 @@ int32_t vsthost::getNextGlobalModuleId(int32_t globalId) {
 	return globalId;
 }
 
-int32_t vsthost::getNextGlobalAudioStageId(int32_t globalId) {
+audiostageid_i32 vsthost::getNextGlobalAudioStageId(int32_t globalId) {
 	if (globalId <= 0) {
-		return ++audioStageId;
+		return (audiostageid_i32)++audioStageId;
 	} else {
 		update_maximum(audioStageId, globalId);
 	}
-	return globalId;
+	return (audiostageid_i32)globalId;
 }
 
 int32_t vsthost::getNextSampleId(int32_t id) {

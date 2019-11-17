@@ -15,6 +15,7 @@
 #include "project.h"
 #include "audiobuffer.h"
 #include "saferef.h"
+#include "track.h"
 
 #include <memory>
 #ifdef __linux__
@@ -117,7 +118,7 @@ private:
 	audioMasterCallback masterCallBackSlot = nullptr;
 	vstpluginloadres loadInternalPlugin(int32_t type, int32_t globalId = 0);
 	int32_t getNextGlobalModuleId(int32_t n);
-	int32_t getNextGlobalAudioStageId(int32_t as);
+	audiostageid_i32 getNextGlobalAudioStageId(int32_t as);
 	bool unloadAllPlugins();
 	void updateTime(int32_t samplePos, double dTickPos, playback_state state);
 	void setBlockSize(uint16_t blockSize);

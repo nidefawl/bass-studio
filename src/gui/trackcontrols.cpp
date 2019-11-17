@@ -1024,6 +1024,7 @@ public:
 	void buttonClicked(guibase* button) override {
 		if (button == &hideTrack) {
 			m_track->hideTrack = !m_track->hideTrack;
+			MainCtrl::getGuiTrackCtr()->updateVisibleTracks();
 		}
 		if (button == &hideAutomation) {
 			m_track->hideSubtracks = !m_track->hideSubtracks;

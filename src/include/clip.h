@@ -99,7 +99,7 @@ public:
 	void selectIdxRange(size_t start, size_t end);
 	void selectLastN(size_t num);
 	void storeSelection(std::vector<note_t>& selNotes);
-	void restoreSelection(std::vector<note_t>& selNotes);
+	size_t restoreSelection(std::vector<note_t>& selNotes);
 
 
 	void getSelectionIndices(std::vector<size_t>& selIdx) const {
