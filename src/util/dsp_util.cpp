@@ -87,14 +87,14 @@ float dBFSClampInf6(float f) {
 	f = 20.0f * std::log10(f);
 	return f > 6.0f ? 6.0f : f;
 }
-float fromdBFSClampInf6(float f) {
-	if (f <= DBFS_FLOOR)
+float fromdBFSClampInf6(float f_dBfs) {
+	if (f_dBfs <= DBFS_FLOOR)
 		return 0.0f;
-	f = pow(10.0f, f/-20.0f);
-	if (f > GAIN_DB6) {
+	float f_gain = pow(10.0f, f_dBfs/-20.0f);
+	if (f_gain > GAIN_DB6) {
 		return GAIN_DB6;
 	}
-	return f;
+	return f_gain;
 }
 float fromdBFS(float f) {
 	return pow(10.0f, f/20.0f);
