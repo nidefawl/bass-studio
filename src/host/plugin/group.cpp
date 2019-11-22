@@ -279,7 +279,8 @@ void module_group::setTrackLink(audio_stage_t* trImpl) {
 void module_group::process(AudioBlock* in, AudioBlock* out, int32_t samplePos, int32_t numSamples, playback_state state) {
 	audio->input.copyFrom(in);
 	vsthost::getInstance()->processAudio(audio, &audio->input, &audio->output, samplePos, numSamples, state);
-	out->copyFrom(&audio->output);
+	audio->outputPost.copyFrom(&audio->output);
+	out->copyFrom(&audio->outputPost);
 }
 String module_group::getInfo(std::vector<String>& list) {
 	return "";

@@ -177,26 +177,38 @@ void guictr_tracks::scrollTo(guibase* g) {
 	int32_t scrOffset = math::max(0.0f, scrollbar.scrollOffset*(contentHeight-contentViewSize));
 	scrollbar.scrollVisible(y+scrOffset, g->size.y);
 }
+void getTrackFromMouseTest();
 void guictr_tracks::updateVisibleTracks() {
-	tracksVisibleFlat.clear();
+//	tracksVisibleFlat.clear();
 	/** turn tree structure into linear pointer array with trackTop at the beginning and the deepest child at the end **/
 	track_vector vecNewTracksFlat;
 	std::deque<track_t*> stack;
-	stack.insert(stack.begin(), project.trackList.cbegin(), project.trackList.cend());
+	stack.insert(stack.begin(), project.trackList.cbeginTree(), project.trackList.cendTree());
 	while (!stack.empty()) {
 		track_t* current = stack.front();
 		stack.pop_front();
-		if (!current->hideTrack && current->children.size())
+		if (!current->hideTrack && current->children.size()) {
 			stack.insert(stack.begin(), current->children.cbegin(), current->children.cend());
+		}
+		dbgassert(current->isVisible());
 		vecNewTracksFlat.push_back(current);
 	}
 
 	tracksVisibleFlat = vecNewTracksFlat;
+	const track_vector& tracks = tracksVisibleFlat;
+	trackControls.updateVisibleTrackContents();
+	trackView.updateVisibleTrackContents();
+	for (track_t *tr : tracks) {
+		if (!tr->content->isVisible()) {
+			log_printf("track %s is not visible but is in in tracksVisibleFlat\n", StringAsCStr(tr->name));
+
+		}
+	}
+	getTrackFromMouseTest();
 }
 void guictr_tracks::updateVisibleTrackContents() {
 	updateVisibleTracks();
-	trackControls.updateVisibleTrackContents();
-	trackView.updateVisibleTrackContents();
+	getTrackFromMouseTest();
 }
 void guictr_tracks::layout() {
 //	for (auto* ctr : project.trackTypeUniqueCtrs) {
@@ -505,8 +517,11 @@ gui_track_drop_position_t slotFromCoord(const project_t& project, track_t* const
 	for (auto it = itcBegin; it != itcEnd; it++) {
 		int32_t slotIdx = itcEnd - it - 1;
 		track_t* track = *it;
+		if (!track->isVisible())
+			continue;
 		const int dropMaxDistance = 32;
 		auto* gui = track->content;
+		dbgassert(gui->isVisible());
 		int32_t distDragPoint = checkDropPoint(gui->pos.y - dropMaxDistance, gui->pos.y + dropMaxDistance, _pos.y);
 		if (distDragPoint >= 0 && distDragPoint < minDistDragPoint) {
 			minDistDragPoint = distDragPoint;
@@ -636,7 +651,7 @@ namespace {
 			strTarget = treePos.parent->name;
 		}
 		log_printf("Moving %d tracks to %s[%d] %s\n", selectedTracks.size(), StringAsCStr(strTarget), treePos.treeIdx, failed ? "Failed" : "Success");
-		MainCtrl::getGuiTrackCtr()->updateVisibleTracks();
+		MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
 		MainCtrl::getGuiTrackCtr()->layout();
 		MainCtrl::get()->updateVisibleTrackContents();
 //			//TODO: edithistory entry
@@ -654,7 +669,7 @@ bool guitrack_editor::mouseHitTest(ivec2 v, MouseHitEvt& evt) {
 		}
 		ivec2 localMouse = this->toContainerSpace(v);
 		for (guibase* gui : guis) {
-			if (gui->mouseHitTest(localMouse, evt)) {
+			if (gui->isVisible() && gui->mouseHitTest(localMouse, evt)) {
 
 				// respect z-order, not an actual hit
 				if (!evt.getGuiHit()) {

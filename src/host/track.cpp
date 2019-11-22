@@ -131,6 +131,7 @@ track_impl_snapshot_t::track_impl_snapshot_t(track_impl_t* p, bool storePluginCh
 	if (p) {
 		p->arp->createSnapshot(trackArp);
 		p->mixer.createSnapshot(trackParams);
+		p->createIOSnapshot(trackIO);
 		std::vector<effectbase*> effects = p->effects;
 		pluginSnapshots.reserve(p->effects.size());
 		for (effectbase* effect : p->effects) {
@@ -141,7 +142,7 @@ track_impl_snapshot_t::track_impl_snapshot_t(track_impl_t* p, bool storePluginCh
 	}
 }
 track_snapshot_t::track_snapshot_t(const track_t* track, bool storePluginChunks)
-  : tracksettings_t(*track), localIdx(track->localIdxFlat), plugins(track->audio, storePluginChunks)
+  : tracksettings_t(*track), stageId(track->audio ? static_cast<int32_t>(track->audio->stageId) : 0), localIdx(track->localIdxFlat), plugins(track->audio, storePluginChunks)
 {
 	auto& otherClips = track->getConstMidi().getConstClips();
 	for (auto clip : otherClips) {
@@ -158,10 +159,18 @@ void track_t::loadSnapshot(const track_snapshot_t& snapshot) {
 	auto audio = this->audio;
 	dbgassert(audio);
 	const auto& implSnapshot = snapshot.plugins;
+	//TODO: test if stageId is in use. Caller is responsible for generating new stageId
+	if (snapshot.stageId > 0) {
+		audio->stageId = static_cast<audiostageid_i32>(snapshot.stageId);
+	} else {
+		// corrupt snapshot, keep stage id
+	}
+
 	audio->mixer.loadSnapshot(implSnapshot.trackParams);
 	audio->arp->loadSnapshot(implSnapshot.trackArp);
 	const std::vector<plugin_snapshot_t>& trPluginList = implSnapshot.pluginSnapshots;
 	audio->loadPlugins(trPluginList);
+	audio->loadIOConfiguration(implSnapshot.trackIO);
 }
 void track_t::loadSubtrackLayout(const track_snapshot_t& snapshot) {
 	const std::vector<automationlane_snapshot_t>& atl = snapshot.automationLanes;
@@ -539,6 +548,32 @@ void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effec
 //	}
 
 }
+void track_impl_t::createIOSnapshot(track_io_configuration_snapshot_t& snapshot) {
+	for (int i = 0; i < 2; i++) {
+		DAW::channel_ref_t channel = i == 0 ? inputChannel : outputChannel;
+		io_configuration_snapshot_t& cfg = i == 0 ? snapshot.input : snapshot.output;
+		cfg.inputType = static_cast<int32_t>(channel.type);
+		cfg.channelOffset = channel.inputChannelOffset;
+		cfg.stageId = static_cast<int32_t>(channel.stage.stageRef.stageId);
+		cfg.stageEndPointType = channel.stage.isInput ? 0 : 1;
+		cfg.externalInputId = channel.externalInputIdx;
+		cfg.externalInputType = static_cast<int32_t>(channel.externalInputType);
+	}
+}
+void track_impl_t::loadIOConfiguration(const track_io_configuration_snapshot_t& snapshot)
+{
+	for (int i = 0; i < 2; i++) {
+		DAW::channel_ref_t& channel = i == 0 ? inputChannel : outputChannel;
+		io_configuration_snapshot_t cfg = i == 0 ? snapshot.input : snapshot.output;
+		channel.type = static_cast<DAW::channel_input_type>(cfg.inputType);
+		channel.inputChannelOffset = cfg.channelOffset;
+		channel.stage.stageRef.stageId = static_cast<audiostageid_i32>(cfg.stageId);
+		channel.stage.isInput = cfg.stageEndPointType != 0;
+		channel.externalInputIdx = cfg.externalInputId;
+		channel.externalInputType = static_cast<AudioIO::tracktype>(cfg.externalInputType);
+	}
+
+}
 void audio_stage_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginList)
 {
 	for (const plugin_snapshot_t& pluginSnapshot : trPluginList) {
@@ -725,7 +760,7 @@ void sortNoteEvents(std::vector<noteevent_t>& noteEvents) {
 }
 track_impl_t::track_impl_t(audiostageid_i32 _id, track_t* _track, const samplerate_t& _sampleRate, const uint16_t& _blockSize, int32_t nChannels)
    : audio_stage_t(_id, /*_track, */_sampleRate, _blockSize, nChannels, 0)
-  , track(_track)
+  , track(_track), inputChannel(DAW::ChannelDefaultNone()), outputChannel(DAW::ChannelDefaultNone())
 {
 	arp = new midiarp(this);
 }

@@ -332,6 +332,7 @@ public:
 	track_t* insertNewTrack(int trackInsertPos, int trackType, int flags = FLG_TRK_CHANGE_USER);
 	void updateGrid();
 	void updateVisibleTrackContents();
+	guitrack_editor& getTrackEditor();
 	void setStatusText(String s);
 	std::shared_ptr<clip_clipboard> copySelection(const Cursor& cursor);
 	void pasteClipboard(clip_clipboard* c, int32_t trackOffset, tick_t tickOffset);

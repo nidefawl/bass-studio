@@ -133,6 +133,7 @@ MouseHitEvt BaseCtrl::mouseHitEvt(MouseHitType _type) {
 	return {_type, window->getKeyMods()};
 
 }
+void getTrackFromMouseTest();
 void BaseCtrl::focusGui(guibase* gui) {
 	if (guiCaptured != nullptr) {
 		return;
@@ -194,6 +195,7 @@ void BaseCtrl::mouseDown(ivec2 mousePos, int button, bool doubleclick) {
 		dragOffset = gui->toScreenSpace(ivec2(0)) - mousePos;
 		MouseEvent evt = mouseEvent(this, gui, mousePos, button, doubleclick ? M_EVT_DOUBLECLICK : M_EVT_BTN_DOWN);
 		gui->handleMouseDownBegin(evt);
+		getTrackFromMouseTest();
 	}
 }
 
@@ -252,6 +254,7 @@ void BaseCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos) {
 		cursorIcon = evt.getCursor();
 //	}
 	guiOver = evt.getGuiHit();
+	getTrackFromMouseTest();
 }
 
 void BaseCtrl::onCharInput(unsigned int codepoint) {
@@ -515,7 +518,7 @@ void AppCtrl::openOverlayGui(guictxtmenu_base *b, ivec2 pos, int flags) {
 
 }
 void AppCtrl::openDialog(guidialog_base *b) {
-	openOverlayGui(b, ivec2(0), b->isDialogResizeable() ? 4 : 0);
+	openOverlayGui(b, ivec2(0), (b->isDialogResizeable()) ? 4 : 0);
 }
 void AppCtrl::openContextMenu(guictxtmenu_base *b, ivec2 pos, int flags) {
 	openOverlayGui(b, pos, flags);

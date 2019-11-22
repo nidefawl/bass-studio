@@ -2,6 +2,7 @@
 #include "str_util.h"
 #include <stdint.h>
 #include <vector>
+
 namespace AudioIO {
 	enum tracktype {
 		MONO, STEREO, MULTI_CHANNEL_4, MULTI_CHANNEL_6

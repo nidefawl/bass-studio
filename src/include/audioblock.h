@@ -11,6 +11,9 @@ enum alloc_type {
 	internal, external_channels_only, external_array
 };
 struct AudioBlock {
+	enum mix_op : int32_t {
+		MIX, ADD
+	};
 	const uint32_t channels{ 0 };
 	uint32_t samples{ 0 };
 	float** buf{ 0 };
@@ -18,6 +21,7 @@ struct AudioBlock {
 	AudioBlock(uint32_t _channels, uint32_t _samples)
 		: channels(_channels), samples(0), buf(new float*[_channels]), allocType(alloc_type::internal)
 	{
+		dbgassert(channels);
 		for (uint32_t i = 0; i < _channels; i++) {
 			buf[i] = NULL;
 		}
@@ -26,14 +30,16 @@ struct AudioBlock {
 	AudioBlock(float** buf, uint32_t _channels, uint32_t _samples)
 		: channels(_channels), samples(_samples), buf(buf), allocType(alloc_type::external_array)
 	{
+		dbgassert(channels);
 	};
-	AudioBlock(const std::vector<float*>& channels, uint32_t _samples)
-		: channels(channels.size()),  samples(_samples), buf(new float*[channels.size()]), allocType(alloc_type::external_channels_only)
+	AudioBlock(const std::vector<float*>& vecChannels, uint32_t _samples)
+		: channels(vecChannels.size()),  samples(_samples), buf(new float*[vecChannels.size()]), allocType(alloc_type::external_channels_only)
 	{
-		memcpy(buf, channels.data(), channels.size()*sizeof(decltype(channels[0])));
+		dbgassert(channels);
+		memcpy(buf, vecChannels.data(), vecChannels.size()*sizeof(decltype(vecChannels[0])));
 		float** pBuf = buf;
-		for (float* channel : channels) {
-			*pBuf++ = channel;
+		for (float* channel : vecChannels) {
+			dbgassert(*pBuf++ == channel);
 		}
 	};
 	~AudioBlock() {
@@ -120,6 +126,35 @@ struct AudioBlock {
 			//TODO: this does 2 additions to the same destination when going from stereo to mono (MIX FIRST)
 			for (uint32_t j = 0; j < samples; j++) {
 				dstBufChannel[j] += srcBufChannel[j] * gain;
+			}
+		}
+	}
+	void addFromOp(AudioBlock* src, const mix_op op, float gain) {
+		addFromOp(src->buf, src->samples, src->channels, op, gain);
+	}
+	void addFromOp(float **srcBuf, const uint32_t srcSamples, const uint32_t srcChannels, const mix_op op, float gain) {
+		dbgassert(srcSamples == samples);
+//		dbgassert(srcChannels == channels); //remove when adding sub-track mixers (between plugins)
+		uint32_t nChannels = math::max(srcChannels, channels);
+		float srcGain = 1.0f;
+		if (srcChannels > channels) {
+			if (srcChannels == 0 && channels == 1) {
+				srcGain = 0.5f; // mix the same way as multiple stereo channels
+			} else if (srcChannels == 2 && channels == 1) {
+				srcGain = 0.5f;
+			} else {
+				dbgassert(0&&"conversion not implemented");
+			}
+		}
+		for (uint32_t i = 0; i < nChannels; i++) {
+			uint32_t srcChannelIdx = math::min(srcChannels-1, i);
+			uint32_t dstChannelIdx = math::min(channels-1, i);
+			float* srcBufChannel = srcBuf[srcChannelIdx];
+			float* dstBufChannel = buf[dstChannelIdx];
+			for (uint32_t j = 0; j < samples; j++) {
+				const float fSrc = (srcBufChannel[j] * srcGain * gain);
+				const float fDst = dstBufChannel[j] * (op == MIX ? 1.0f-gain : 1.0f);
+				dstBufChannel[j] = fSrc + fDst;
 			}
 		}
 	}

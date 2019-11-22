@@ -142,11 +142,27 @@ void serialize(Archive & archive, arp_snapshot & m)
 	archive(make_nvp("params", m.params), make_nvp("automation", m.automatedParams));
 }
 template<class Archive>
+void serialize(Archive & archive, io_configuration_snapshot_t & m)
+{
+	archive(make_nvp("channelOffset", m.channelOffset),
+			make_nvp("externalInputId", m.externalInputId),
+			make_nvp("externalInputType", m.externalInputType),
+			make_nvp("inputType", m.inputType),
+			make_nvp("stageEndPointType", m.stageEndPointType),
+			make_nvp("stageId", m.stageId) );
+}
+template<class Archive>
+void serialize(Archive & archive, track_io_configuration_snapshot_t & m)
+{
+	archive(make_nvp("input", m.input), make_nvp("output", m.output));
+}
+template<class Archive>
 void serialize(Archive & archive, track_impl_snapshot_t & m)
 {
 	archive(make_nvp("plugins", m.pluginSnapshots));
 	make_optional_nvp(archive, "track", m.trackParams);
 	make_optional_nvp(archive, "arp", m.trackArp);
+	make_optional_nvp(archive, "io", m.trackIO);
 }
 template<class Archive>
 void serialize(Archive & archive, tracksettings_t & m)
@@ -164,6 +180,7 @@ void serialize(Archive & archive, track_snapshot_t & m)
 	make_optional_nvp(archive, "idx", m.localIdx);
 	archive(make_nvp("settings", base_class<tracksettings_t>(&m)), make_nvp("clips", m.clips), make_nvp("plugins", m.plugins));
 	make_optional_nvp(archive, "automation", m.automationLanes);
+	make_optional_nvp(archive, "stageId", m.stageId);
 }
 template<class Archive>
 void serialize(Archive & archive, layout_grid_t & m)

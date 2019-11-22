@@ -13,6 +13,18 @@ class track_t;
 struct track_impl_t;
 
 
+struct io_configuration_snapshot_t {
+	int32_t stageId;
+	int32_t stageEndPointType;
+	int32_t externalInputType;
+	int32_t externalInputId;
+	int32_t channelOffset;
+	int32_t inputType;
+};
+struct track_io_configuration_snapshot_t {
+	io_configuration_snapshot_t input;
+	io_configuration_snapshot_t output;
+};
 struct track_params_snapshot_t {
 	std::vector<param_snapshot_t> params;
 	std::vector<automation_view_t> automatedParams;
@@ -25,12 +37,14 @@ struct audio_stage_t;
 struct plugin_snapshot_t;
 struct track_impl_snapshot_t {
 	arp_snapshot trackArp;
+	track_io_configuration_snapshot_t trackIO;
 	track_params_snapshot_t trackParams;
 	std::vector<plugin_snapshot_t> pluginSnapshots;
 	track_impl_snapshot_t() = default;
 	track_impl_snapshot_t(track_impl_t* p, bool storePluginChunks);
 };
 struct track_snapshot_t : public tracksettings_t {
+	int32_t stageId = -1;
 	int32_t localIdx = -1;
 	track_t* trackLoaded = NULL; // ref set in first phase of, cleared in second of 2-phase loading
 	track_impl_snapshot_t plugins;

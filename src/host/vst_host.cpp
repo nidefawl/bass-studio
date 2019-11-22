@@ -36,6 +36,8 @@
 #include "track_impl.h"
 #include "projectcontroller.h"
 #include "threads/threadlock.h"
+#include "track_graph.h"
+
 #include <deque>
 
 #ifdef _WIN32
@@ -315,6 +317,7 @@ void vsthost::setSamplerateBlockSize(int32_t sampleRate, int32_t blockSize) {
 		for (auto* audio : this->allAudioStages) {
 			audio->input.realloc(blockSize);
 			audio->output.realloc(blockSize);
+			audio->outputPost.realloc(blockSize);
 		}
 		for (vstplugin* plugin : this->pluginInstancesVST2) {
 			plugin->setBlockSize(blockSize);
@@ -455,7 +458,33 @@ void delayAudio(DelayLine* delayLine, AudioBlock* input, AudioBlock* output, sam
 	}
 
 }
-bool resolveAudioChannel(vsthost* host, int32_t numChannelsTrack, channel_ref_t& inputChannel, const AudioBlock* const ptrExternalInputs, track_audio_src& out) {
+namespace DAW {
+
+bool resolveDefaultConnection(const vsthost* const host, const project_t* const project, track_impl_t* const trImpl, const bool isInput, channel_ref_t& out) {
+	if (!isInput && TRACKTYPE_TO_CTR(trImpl->track->type) == TRACK_CTR_MASTER) {
+		int32_t idx = 0;
+		auto type = AudioIO::getTrackTypeNumChannels(trImpl->outputPost.channels);
+		String name = "External "+AudioIO::getTrackNameShort(type, idx, isInput);
+		out = ChannelAudioInput(idx, 0, name, type);
+		return true;
+	}
+	const track_t* const firstMaster = project->trackMasterCtr.size() ? project->trackMasterCtr.front() : nullptr;
+	if (!isInput && TRACKTYPE_TO_CTR(trImpl->track->type) == TRACK_CTR_RETURN) {
+		if (firstMaster) {
+			out = ChannelStage(firstMaster->audio, true);
+			return true;
+		}
+	}
+	if (!isInput && TRACKTYPE_TO_CTR(trImpl->track->type) == TRACK_CTR_MIDIAUDIO) {
+		const track_t* const dstTrack = trImpl->track->parent ? trImpl->track->parent : firstMaster;
+		if (dstTrack) {
+			out = ChannelStage(dstTrack->audio, true);
+			return true;
+		}
+	}
+	return false;
+}
+bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, const channel_ref_t& inputChannel, const AudioBlock* const ptrExternalInputs, track_audio_src& out) {
 	if (inputChannel.getType() == channel_input_type::INPUT_EXTERNAL_AUDIO) {
 		if (ptrExternalInputs != nullptr) {
 			int32_t idx = inputChannel.inputChannelOffset;
@@ -466,6 +495,7 @@ bool resolveAudioChannel(vsthost* host, int32_t numChannelsTrack, channel_ref_t&
 					src.channels.push_back(ptrExternalInputs->buf[idx+i]);
 				}
 				src.samples = ptrExternalInputs->samples;
+				src.gain = 1.0f;
 				out = std::move(src);
 				return true;
 			}
@@ -474,18 +504,25 @@ bool resolveAudioChannel(vsthost* host, int32_t numChannelsTrack, channel_ref_t&
 	if (inputChannel.getType() == channel_input_type::INPUT_AUDIOSTAGE) {
 		audio_stage_t* stage = host->getAudioStage(inputChannel.stage.stageRef);
 		if (stage) {
+			/* Calculate audio/midi tracks gain level */
+			float fGainTrack;
+			if (!getGainLvl(stage->mixer.getParamValue(PARAM_TRACK_GAIN), fGainTrack)) {
+				fGainTrack = 0.0f;
+			}
 			track_audio_src src;
-			auto& buff = inputChannel.stage.isInput ? stage->input : stage->output;
+			auto& buff = inputChannel.stage.isInput ? stage->input : stage->outputPost;
 			for (int i = 0; i < buff.channels; i++) {
 				src.channels.push_back(buff.buf[i]);
 			}
 			src.samples = buff.samples;
+			src.gain = fGainTrack;
 			out = std::move(src);
 			return true;
 		}
 	}
 	return false;
 };
+}
 int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround) {
 	assert(lBlockSize > 0);
 	assert(lSampleRate > 0);
@@ -654,8 +691,10 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			track_impl_t* audioMaster = trackMaster->audio;
 			audioMaster->input.realloc(lBlockSize);
 			audioMaster->output.realloc(lBlockSize);
+			audioMaster->outputPost.realloc(lBlockSize);
 			dsp_util::fillBlock(audioMaster->input, 0.0f);
 			dsp_util::fillBlock(audioMaster->output, 0.0f);
+			dsp_util::fillBlock(audioMaster->outputPost, 0.0f);
 		}
 		/*
 		 * Clear all return channels
@@ -664,8 +703,10 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			track_impl_t* audioReturn = trackReturn->audio;
 			audioReturn->input.realloc(lBlockSize);
 			audioReturn->output.realloc(lBlockSize);
+			audioReturn->outputPost.realloc(lBlockSize);
 			dsp_util::fillBlock(audioReturn->input, 0.0f);
 			dsp_util::fillBlock(audioReturn->output, 0.0f);
+			dsp_util::fillBlock(audioReturn->outputPost, 0.0f);
 		}
 
 		/*
@@ -698,13 +739,21 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 		/*
 		 * Process audio/midi tracks
 		 */
-		auto tracksFlat = ctrl->trackList.getMidiAudioTracksFlatVec(); //TODO: get rid of copy
+//		auto tracksFlat = ctrl->trackList.getMidiAudioTracksFlatVec(); //TODO: get rid of copy
+		auto tracksFlatAll = ctrl->trackList.getAllTracksFlatVec(); //TODO: get rid of copy
 		/**
 		 * process in reverse order: first children, then parents
 		 */
 
 //
-//		/** turn tree structure into linear pointer array with parents followed by their children **/
+		/** turn tree structure into linear pointer array with parents followed by their children **/
+		DAW::track_graph_t graph;
+		DAW::processing_list_t processingList;
+		if (!DAW::buildProcessingGraph(this, ctrl, tracksFlatAll, graph, processingList)) {
+			log_printf("Failed building track graph\n", 0);
+		}
+		this->lastTrackGraph = graph;
+		this->lastProcessingList= processingList;
 //		std::vector<track_t*> vecTracks;
 //		std::deque<track_t*> qTracks;
 //		qTracks.push_back(trackTop);
@@ -736,9 +785,19 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 				}
 			}
 		}
-		for (auto it = tracksFlat.rbegin(); it != tracksFlat.rend(); it++) {
-			track_t* const track = *it;
+
+		static int32_t dbgStep = 0;
+		int32_t dbg = dbgStep++%330;
+		for (auto itAudioStage = processingList.nodes.rbegin(); itAudioStage != processingList.nodes.rend(); itAudioStage++) {
+			const DAW::processing_track_node_t& processingNode = *itAudioStage;
+			track_t* const track = processingNode.track;
 			track_impl_t* const trackImpl = track->audio;
+			const DAW::track_node_t& trackNode = processingNode.trackNode;
+			if (dbg == 0) {
+				log_printf("process track %s\n", StringAsCStr(track->name));
+				log_printf("process stage 1 %d\n", static_cast<int32_t>(track->audio->stageId));
+				log_printf("process stage 2 %d\n", static_cast<int32_t>(trackNode.stageId));
+			}
 			trackImpl->input.realloc(lBlockSize);
 			trackImpl->output.realloc(lBlockSize);
 			dsp_util::fillBlock(trackImpl->input, 0.0f);
@@ -755,132 +814,110 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			if (state == playback_state::status_play) {
 				trackImpl->fillAudio(pos, tickBlockEnd, loopCutStart, loopCutEnd, project.tempo100, sample, trackImpl->input.buf, (int32_t)lBlockSize);
 			}
-			float fGainInput = 1.0f; //TODO: make track parameter
 
-			if (isChannelConnected(trackImpl->inputChannel)) {
-				const uint32_t numChannelsTrack = trackImpl->input.channels;
-				track_audio_src src;
-				if (resolveAudioChannel(this, numChannelsTrack, trackImpl->inputChannel, ptrExternalInputs ? ptrExternalInputs->output : nullptr, src)) {
-					trackImpl->addAudio(src.toAudioBlock(), fGainInput);
+			const uint32_t numChannelsTrack = trackImpl->input.channels;
+
+
+			std::vector<DAW::track_source_t> allSources = trackNode.pulls; // copy
+			allSources.insert(allSources.end(), trackNode.pushs.begin(), trackNode.pushs.end()); // copy
+			for (const DAW::track_source_t& tracksrc : allSources)
+			{
+				if (DAW::isChannelConnected(tracksrc.channel)) {
+					track_audio_src src;
+					if (dbg == 0) {
+						log_printf("track %s has input %s\n", StringAsCStr(track->name), StringAsCStr(tracksrc.channel.name));
+					}
+					if (DAW::resolveAudioChannel(this, numChannelsTrack, tracksrc.channel, ptrExternalInputs ? ptrExternalInputs->output : nullptr, src)) {
+
+						/**
+						 * Mix routed tracks
+						 *
+						 * Mix level is fGainInput * src.gain * tracksrc.gain
+						 * src.gain:			block-wise automated track gain
+						 * tracksrc.gain:		block-wise automated send level, 1.0f for non-sends
+						 *
+						 * sends are with track gain applied (post-mixer)
+						 *
+						 */
+						 trackImpl->addAudio(src.toAudioBlock(), src.gain * tracksrc.gain);
+					}
+				} else {
+
+					if (dbg == 0) {
+						log_printf("track %s has no connected input %s\n", StringAsCStr(trackImpl->inputChannel.name));
+					}
 				}
 			}
+
 
 			/* Processes audio/midi tracks plugin chain */
 			processAudio(trackImpl, &trackImpl->input, &trackImpl->output, sample, lBlockSize, state);
 
-			/* Compensate audio/midi track to pre-return latency */
-			samplerate_t delayToPreReturn = maxLatencyAudioMidi - trackImpl->getLatency();
-			dbgassert(delayToPreReturn >= 0);
-			delayAudio(trackImpl->getDelayLine(0), &trackImpl->output, &trackImpl->output, delayToPreReturn);
-			trackImpl->latencyInfo.delayToPreReturn = delayToPreReturn;
+			trackImpl->outputPost.copyFrom(&trackImpl->output);
 
-			if (trackImpl->mixer.isEnabled()) {
-
-				/* Feed audio/midi tracks output into returns input */
-				for (track_t* trackReturn : ctrl->trackReturnCtr) {
-					/* Calculate send gain level */
-					float fGainReturn;
-					if (!getGainLvl(trackImpl->mixer.getParamValue(PARAM_OFFSET_SEND+trackReturn->localIdxFlat), fGainReturn)) {
-						continue;
-					}
-
-					track_impl_t* audioReturn = trackReturn->audio;
-
-					/* Feed in return track send gain level */
-					audioReturn->input.addFrom(&trackImpl->output, fGainReturn);
+			/* Store block in audioOutput memory */
+			if (state == playback_state::status_play) {
+				auto offset = sample - (trackImpl->getLatency());
+				if (offset >= 0) {
+					trackImpl->audioOutput.store(&trackImpl->outputPost, offset);
+				} else {
+					log_printf("cannot write to negative offset %d (samplepos %d - stage.latency %d)\n", offset, sample, trackImpl->getLatency());
 				}
 
-				/* Compensate audio/midi track to post-return latency */
-				samplerate_t delayToPostReturn = maxLatencyReturn;
-				dbgassert(delayToPostReturn >= 0);
-				delayAudio(trackImpl->getDelayLine(1), &trackImpl->output, &trackImpl->output, delayToPostReturn);
-				trackImpl->latencyInfo.delayToPostReturn = delayToPostReturn;
-
-				//TODO: feed into mapped output
-				//TODO: feed into parent
-
-
-				/* Feed audio/midi tracks output into masters input */
-				for (track_t* trackMaster : ctrl->trackMasterCtr) {
-
-					/* Calculate audio/midi tracks gain level */
-					float fGainTrack;
-					if (!getGainLvl(trackImpl->mixer.getParamValue(PARAM_TRACK_GAIN), fGainTrack)) {
-						continue;
-					}
-
-					track_impl_t* audioMaster = trackMaster->audio;
-					audioMaster->input.addFrom(&trackImpl->output, fGainTrack);
-				}
 			}
 		}
 
-		for (track_t* trackReturn : ctrl->trackReturnCtr) {
-			track_impl_t* audioReturn = trackReturn->audio;
-
-			/* Processes return tracks plugin chain */
-			processAudio(audioReturn, &audioReturn->input, &audioReturn->output, sample, lBlockSize, state);
-
-			if (audioReturn->mixer.isEnabled()) {
-				/* Compensate return track to master latency */
-				samplerate_t delayToPostReturn = maxLatencyReturn - audioReturn->getLatency();
-				dbgassert(delayToPostReturn >= 0);
-				delayAudio(audioReturn->getDelayLine(0), &audioReturn->output, &audioReturn->output, delayToPostReturn);
-				audioReturn->latencyInfo.delayToPostReturn = delayToPostReturn;
-
-				/* Calculate return tracks gain level */
-				float fGainReturn;
-				if (!getGainLvl(audioReturn->mixer.getParamValue(PARAM_TRACK_GAIN), fGainReturn)) {
-					continue;
-				}
-
-				/* Feed return tracks output into masters input */
-				for (track_t* trackMaster : ctrl->trackMasterCtr) {
-					track_impl_t* audioMaster = trackMaster->audio;
-					audioMaster->input.addFrom(&audioReturn->output, fGainReturn);
-				}
-			}
-		}
-
-		for (track_t* trackMaster : ctrl->trackMasterCtr) {
-			track_impl_t* audioMaster = trackMaster->audio;
-			/* Processes master tracks plugin chain */
-			processAudio(audioMaster, &audioMaster->input, &audioMaster->output, sample, lBlockSize, state);
-		}
 
 		/*
 		 * Output all masters
-		 * Right now only first
 		 */
 		AudioBuffer** buffers = ringbuffer.buffers;
 		int32_t& writePos = ringbuffer.writePos;
-		AudioBuffer* bufferWrite = buffers[writePos];
-		dbgassert(!bufferWrite->inUse);
-		bufferWrite->output->realloc(lBlockSize);
-		dsp_util::fillBlock(*bufferWrite->output, 0.0f);
-		AudioBlock* bufOut = bufferWrite->output;
-		int32_t channelIdx = 0;
-		for (track_t* trackMaster : ctrl->trackMasterCtr) {
-			track_impl_t* audioMaster = trackMaster->audio;
+		AudioBuffer* ptrExternalOutputs = buffers[writePos];
+		dbgassert(!ptrExternalOutputs->inUse);
+		ptrExternalOutputs->output->realloc(lBlockSize);
+		dsp_util::fillBlock(*ptrExternalOutputs->output, 0.0f);
+//		AudioBlock* bufOut = ptrExternalOutputs->output;
+//		int32_t channelIdx = 0;
 
-
-			if (audioMaster->mixer.isEnabled()) {
-				/* Calculate master tracks gain level */
-				float fGainMaster;
-				getGainLvl(audioMaster->mixer.getParamValue(PARAM_TRACK_GAIN), fGainMaster);
-
-				AudioBlock* bufMaster = &audioMaster->output;
-				for (int n = 0; n < OUTPUT_CHANNELS; n++) {
-					float* channelWriteBuffer = bufOut->buf[channelIdx+n];
-					float* channelMaster = bufMaster->buf[n];
-					for (int j = 0; j < lBlockSize; j++) {
-						channelWriteBuffer[j] += channelMaster[j] * fGainMaster;
+		for (auto itAudioStage = processingList.nodes.rbegin(); itAudioStage != processingList.nodes.rend(); itAudioStage++) {
+			const DAW::processing_track_node_t& processingNode = *itAudioStage;
+			track_t* const track = processingNode.track;
+			track_impl_t* const trackImpl = track->audio;
+			if (trackImpl->mixer.isEnabled()) {
+				auto outputChannel = trackImpl->outputChannel;
+				if (outputChannel.type == DAW::channel_input_type::INPUT_DEFAULT) {
+					DAW::channel_ref_t tmp;
+					if (DAW::resolveDefaultConnection(this, ctrl, trackImpl, false, tmp)) {
+						outputChannel = tmp;
 					}
 				}
-			}
-			channelIdx += 2;
-			if (channelIdx + 1 >= bufOut->channels) {
-				break;
+				if (DAW::isChannelConnected(outputChannel) && outputChannel.getType() == DAW::channel_input_type::INPUT_EXTERNAL_AUDIO) {
+					const uint32_t numChannelsTrack = trackImpl->output.channels;
+					if (dbg == 0) {
+						log_printf("Process External Audio routing from %s to %s\n", StringAsCStr(track->name), StringAsCStr(outputChannel.name));
+					}
+					track_audio_src src;
+					if (DAW::resolveAudioChannel(this, numChannelsTrack, outputChannel, ptrExternalOutputs ? ptrExternalOutputs->output : nullptr, src)) {
+
+						/* Calculate master tracks gain level */
+						float fGainMaster;
+						if (getGainLvl(trackImpl->mixer.getParamValue(PARAM_TRACK_GAIN), fGainMaster)) {
+							/**
+							 * Mix routed tracks
+							 *
+							 * Mix level is fGainInput * src.gain * tracksrc.gain
+							 * src.gain:			block-wise automated track gain
+							 * tracksrc.gain:		block-wise automated send level, 1.0f for non-sends
+							 *
+							 * sends are with track gain applied (post-mixer)
+							 *
+							 */
+							AudioBlock blockExternalOutputs = src.toAudioBlock();
+							blockExternalOutputs.addFromOp(&trackImpl->output, AudioBlock::mix_op::ADD, math::clamp(src.gain * fGainMaster, 0.0f, 1.0f));
+						}
+					}
+				}
 			}
 		}
 		double blockPosSample = sample;
@@ -888,18 +925,18 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 
 
 		//		dsp_util::fillSqare(fSampleRate, 440, bufferWrite->master->f, bufferWrite->master->samples);
-		bufferWrite->submitted = true;
-		bufferWrite->inUse = true;
-		bufferWrite->blockPosSample = blockPosSample;
-		bufferWrite->blockPosTick = blockPosTick;
+		ptrExternalOutputs->submitted = true;
+		ptrExternalOutputs->inUse = true;
+		ptrExternalOutputs->blockPosSample = blockPosSample;
+		ptrExternalOutputs->blockPosTick = blockPosTick;
 		writePos++;
 		writePos &= RING_BUF_MASK;
 		if (audioHost) {
 			if (stream) {
-				stream->enqueue(bufferWrite);
+				stream->enqueue(ptrExternalOutputs);
 			}
 		} else {
-			bufferWrite->inUse = false;
+			ptrExternalOutputs->inUse = false;
 		}
 		if (ptrExternalInputs) {
 			ptrExternalInputs->inUse = false;
@@ -1066,18 +1103,6 @@ void vsthost::processAudio(audio_stage_t* stage, AudioBlock* input, AudioBlock* 
 	//   If a plugin runs mono inputs or outputs we need to handle this manually here
 	output->copyFrom(input);
 
-//	float gainRaw = dsp_util::linScaleToGain(stage->mixer.getParamValue(PARAM_TRACK_GAIN));
-//	float gain = dsp_util::clampReadGain(gainRaw);
-//	mulGain(output, gain);
-	if (state == playback_state::status_play) {
-		auto offset = samplePos - (stage->getLatency());
-		if (offset >= 0) {
-			stage->audioOutput.store(&stage->output, offset);
-		} else {
-			log_printf("cannot write to negative offset %d (samplepos %d - stage.latency %d)\n", offset, samplePos, stage->getLatency());
-		}
-
-	}
 }
 void vsthost::updatePluginWindows() {
 	for (auto* plugin : pluginInstancesVST2) {
@@ -1285,17 +1310,18 @@ void vsthost::releaseAudioStage(audio_stage_t* audioStage) {
 	dbgassert(it != allAudioStages.end());
 	allAudioStages.erase(it);
 }
-audio_stage_t* vsthost::getAudioStage(const audio_stage_ref_t& ref) {
+audio_stage_t* vsthost::getAudioStage(const audio_stage_ref_t& ref) const {
 	if (ref.stageId == TRACKID_INVALID_I32)
 		return nullptr;
 	dbgassert((int32_t)ref.stageId > -1);
 	auto it = std::find_if(allAudioStages.begin(), allAudioStages.end(), [ref] (const audio_stage_t* ptr) {
 		return ptr->stageId == ref.stageId;
 	});
-	dbgassert(it != allAudioStages.end());
+//	dbgassert(it != allAudioStages.end());
 	if (it != allAudioStages.end()) {
 		return *it;
 	}
+	log_printf("null audio stage for %d\n", static_cast<int32_t>(ref.stageId));
 	return nullptr;
 }
 bool vsthost::movePlugins(audio_stage_t* dstTr, audio_stage_t* trp, int32_t src, int32_t dst, int32_t len) {
@@ -1446,6 +1472,13 @@ audiostageid_i32 vsthost::getNextGlobalAudioStageId(int32_t globalId) {
 		update_maximum(audioStageId, globalId);
 	}
 	return (audiostageid_i32)globalId;
+}
+void vsthost::updateMaximumStageId() {
+	int32_t maximumStageId = 0;
+	for (auto* stage : allAudioStages) {
+		maximumStageId = math::max<int32_t>(maximumStageId, static_cast<int32_t>(stage->stageId));
+	}
+	this->audioStageId = maximumStageId;
 }
 
 int32_t vsthost::getNextSampleId(int32_t id) {

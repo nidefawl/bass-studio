@@ -149,7 +149,7 @@ public:
 			}
 			ivec2 localMouse = this->toContainerSpace(v);
 			for (guibase* gui : guis) {
-				if (gui->mouseHitTest(localMouse, evt)) {
+				if (gui->isVisible() && gui->mouseHitTest(localMouse, evt)) {
 					if (!evt.getGuiHit()) // respect z-order, not an actual hit
 						break;
 					return true;
@@ -488,7 +488,9 @@ public:
 	void render(NVGcontext* vg);
 	void scrollTo(guibase* g);
 	void layout();
+private:
 	void updateVisibleTracks();
+public:
 	void updateVisibleTrackContents();
 
 	void onChildLayoutChanged(guibase* g) {

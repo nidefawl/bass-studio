@@ -991,7 +991,12 @@ track_t *getTrackFromMouse(const guitrack_editor& trackeditor, project_t& projec
 	double minDist = 0;
 	const track_vector& tracks = trackeditor.tracksVisibleFlat;
 	for (track_t *tr : tracks) {
+		if (!tr->content->isVisible()) {
+			log_printf("track %s is not visible but is in in tracksVisibleFlat\n", StringAsCStr(tr->name));
+			continue;
+		}
 		dbgassert(tr->content->isVisible());
+
 		int top = tr->content->top();
 		int bottom = tr->content->bottom();
 		if (trackClosest == NULL) {
@@ -1015,3 +1020,9 @@ track_t *getTrackFromMouse(const guitrack_editor& trackeditor, project_t& projec
 	return trackInside;
 }
 
+
+void getTrackFromMouseTest() {
+	project_t& project = *project_controller_t::get();
+	ivec2 local{0,0};
+	track_t* tr = getTrackFromMouse(MainCtrl::get()->getTrackEditor(), project, local, false);
+}

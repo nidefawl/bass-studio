@@ -885,6 +885,7 @@ void MainCtrl::setDragged(guibase* g) {
  * @param flags - 0 or FLAG_DEFER_LOAD (don't load vst plugins, use placeholders)
  * @return
  */
+void getTrackFromMouseTest();
 bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file, int flags) {
 
 	setAudioThreadState(playback_state::status_no_process);
@@ -913,6 +914,10 @@ bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file, int flags) {
 	}
 	/** pre-load all plugin instances **/
 	trackList.loadPlugins(file->project);
+
+	/** create all audio instances **/
+	host->updateMaximumStageId();
+	DAW::validateTrackRoutings(host, this->getTracksFlatVec());
 
 
 	// is plugin loading not deferred?
@@ -1015,7 +1020,7 @@ bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file, int flags) {
 	this->projectPath = file->path;
 
 	setAudioThreadState(playback_state::status_stop);
-
+	getTrackFromMouseTest();
 	return true;
 }
 
@@ -1056,8 +1061,12 @@ void MainCtrl::updateGrid() {
 	grid.update(view->ctr_tracks.trackView.getSizeContent());
 	view->ctr_tracks.updateVisibleTrackContents();
 }
+guitrack_editor& MainCtrl::getTrackEditor() {
+	return view->ctr_tracks.trackView;
+}
 void MainCtrl::updateVisibleTrackContents() {
 	view->ctr_tracks.updateVisibleTrackContents();
+	getTrackFromMouseTest();
 }
 bool MainCtrl::isZooming() {
 	return guiCaptured == &view->ctr_tracks.trackTimeline;
@@ -1481,6 +1490,7 @@ void MainCtrl::removeTrackImpl(track_t* track, int flags) {
 	}
 	trackList.removeTrack(track);
 	view->ctr_tracks.removeTrack(track, flags);
+	DAW::removeTrackRoutings(this->getTracksFlatVec(), track->audio->stageId);
 	if (flags&FLG_TRK_CHANGE_USER) {
 		pushHist(new action_modify_track_remove(StringFormat("Remove %s Track", TrackTypeToName(track->type)), track));
 	}

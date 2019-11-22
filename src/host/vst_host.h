@@ -16,6 +16,9 @@
 #include "audiobuffer.h"
 #include "saferef.h"
 #include "track.h"
+#include "track_graph.h"
+#include "daw_channel.h"
+
 
 #include <memory>
 #ifdef __linux__
@@ -32,7 +35,6 @@ class vstplugin;
 struct track_impl_t;
 struct audio_stage_t;
 struct track_audio_src;
-struct channel_ref_t;
 struct audio_stage_ref_t;
 class project_controller_t;
 class AudioEffectX;
@@ -60,6 +62,7 @@ struct plugin_snapshot_t;
 effectbase* loadEffectModule(const plugin_snapshot_t& pluginSnapshot);
 void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effectbase* effect);
 
+#define SYNCHRONIZED_RW
 struct AudioBlock;
 struct host_stats_t {
 	int32_t tickBar = 0;
@@ -77,45 +80,52 @@ struct host_stats_t {
 struct host_processing_stats_t {
 	int32_t pluginId;
 };
-namespace DAW {
-enum bus_type {
-	external, internal
-};
-}
 class vsthost {
-private:
-	class ModuleManager;
-	ModuleManager* moduleMgr;
-	SafeRefStorage<effectbase> safeRefs;
-	audiohost* audioHost = nullptr;
-	clip_notes_t* midiRealtimeInput; //TODO: per device and channel
-	std::vector<builtin_module_reg_t> builtinModules;
 public:
-	project_globals_t project;
 	samplerate_t lSampleRate = 0;
 	uint16_t lBlockSize = 0;
 	int32_t hostSlot = -1;
-private:
-	host_stats_t stats{0};
-	host_processing_stats_t processing{0};
-	seq_rand rnd;
-	double lastTickEndPos = 0;
-	playback_state lastState = playback_state::status_stop;
 	uint8_t numChannels;
-	VstTimeInfo timeinfo = {};
 
+	project_globals_t project;
+	audioMasterCallback masterCallBackSlot = nullptr;
+
+	std::atomic<int32_t> pluginId{100};
+	std::atomic<int32_t> audioStageId{100};
+	std::atomic<int32_t> sampleId{(1<<30)}; //TODO: collides with audiocache::nextIdx
+
+	SYNCHRONIZED_RW DAW::track_graph_t lastTrackGraph;
+	SYNCHRONIZED_RW DAW::processing_list_t lastProcessingList;
+
+	SYNCHRONIZED_RW hires_timer_t timer; // timer for cpu-time profiling
+	SYNCHRONIZED_RW hires_timer_t timer2;// timer for cpu-time profiling
+private:
+	SYNCHRONIZED_RW VstTimeInfo timeinfo = {};
+	SYNCHRONIZED_RW double lastTickEndPos = 0;
+	playback_state lastState = playback_state::status_stop;
+	SYNCHRONIZED_RW host_stats_t stats{0};
+	SYNCHRONIZED_RW host_processing_stats_t processing{0};
+
+
+	AudioBlock* blockZero = nullptr;
+	audiohost* audioHost = nullptr;
+	SYNCHRONIZED_RW audiothread_ringbuffer_t ringbuffer;
+	SYNCHRONIZED_RW clip_notes_t* midiRealtimeInput; //TODO: per device and channel
+
+
+	class ModuleManager;
+	ModuleManager* moduleMgr;
+	std::vector<audio_stage_t*> allAudioStages;
+	std::vector<track_impl_t*> trackAudioStages;
 	std::vector<vstplugin*> pluginInstancesVST2;
 	std::vector<effectbase*> pluginInstancesInternal;
 	std::vector<effectbase*> pluginInstances;
 	std::vector<effectbase*> pluginsDeferred;
+	std::vector<builtin_module_reg_t> builtinModules;
 
-	audiothread_ringbuffer_t ringbuffer;
-	AudioBlock* blockZero = nullptr;
-	std::vector<audio_stage_t*> allAudioStages;
-	std::vector<track_impl_t*> trackAudioStages;
-
-
-	audioMasterCallback masterCallBackSlot = nullptr;
+	SafeRefStorage<effectbase> safeRefs;
+	seq_rand rnd;
+private:
 	vstpluginloadres loadInternalPlugin(int32_t type, int32_t globalId = 0);
 	int32_t getNextGlobalModuleId(int32_t n);
 	audiostageid_i32 getNextGlobalAudioStageId(int32_t as);
@@ -123,16 +133,6 @@ private:
 	void updateTime(int32_t samplePos, double dTickPos, playback_state state);
 	void setBlockSize(uint16_t blockSize);
 	void registerPlugins();
-public:
-	audiothread_ringbuffer_t& getRingBuffer() {
-		return ringbuffer;
-	}
-	int32_t getNextSampleId(int32_t id);
-	void sendNotesOff(effectbase* plugin);
-	std::vector<builtin_module_reg_t>& getBuiltinModuleRegistry() {
-		return builtinModules;
-	}
-	std::vector<note_t> getRealtimeNotes();
 public:
 	vsthost();
 	vsthost(vsthost const&) = delete;
@@ -142,12 +142,15 @@ public:
 	void operator=(vsthost const&) = delete;
 	static vsthost* getInstance();
 	static bool assignMasterCallback(vsthost* host);
-
-	hires_timer_t timer;
-	hires_timer_t timer2;
-	std::atomic<int32_t> pluginId{100};
-	std::atomic<int32_t> audioStageId{100};
-	std::atomic<int32_t> sampleId{(1<<30)}; //TODO: collides with audiocache::nextIdx
+	audiothread_ringbuffer_t& getRingBuffer() {
+		return ringbuffer;
+	}
+	int32_t getNextSampleId(int32_t id);
+	void sendNotesOff(effectbase* plugin);
+	std::vector<builtin_module_reg_t>& getBuiltinModuleRegistry() {
+		return builtinModules;
+	}
+	std::vector<note_t> getRealtimeNotes();
 
 	void onStartPlayback(project_controller_t* ctrl);
 	void onStopPlayback(project_controller_t* ctrl);
@@ -193,7 +196,7 @@ public:
 	void releaseAudio(track_t* track);
 	audio_stage_t* createAudioStage();
 	void releaseAudioStage(audio_stage_t* audioStage);
-	audio_stage_t* getAudioStage(const audio_stage_ref_t& ref);
+	audio_stage_t* getAudioStage(const audio_stage_ref_t& ref) const;
 	bool movePlugins(audio_stage_t* dstTr, audio_stage_t* trp, int32_t src, int32_t len, int32_t dst);
 	bool moveEffects(audio_stage_t* trp, int32_t src, int32_t dst, int32_t len);
 	bool insertNewPlugin(audio_stage_t* trp, effectbase* plugin, int32_t dst);
@@ -212,4 +215,5 @@ public:
 	SafeRefStorage<effectbase>* getSafeRefStore() {
 		return &safeRefs;
 	}
+	void updateMaximumStageId();
 };

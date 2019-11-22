@@ -19,6 +19,7 @@
 #include "fileio.h"
 #include "host/vst_host.h"
 #include "host/audio_config.h"
+#include "host/daw_channel.h"
 
 #define PARAM_TRACK_GAIN 1
 
@@ -28,6 +29,7 @@ class vstplugin;
 class effectbase;
 class guictr_plugins;
 struct track_params_snapshot_t;
+struct track_io_configuration_snapshot_t;
 struct audio_stage_t;
 extern const std::vector<SupportedFileType> vFILE_TYPES_TRACKSNAPSHOT;
 /* Calculate mixer gain level from parameter
@@ -41,27 +43,10 @@ inline bool getGainLvl(float fLinGain, float& fGainOut) {
 	fGainOut = dsp_util::clampReadGain(fGainRaw);
 	return true;
 }
-enum channel_input_type {
-	INPUT_EMPTY, INPUT_EXTERNAL_AUDIO, INPUT_AUDIOSTAGE
-};
-
-struct channel_ref_t {
-	String name = "None";
-	audio_channel_ref_t stage{{TRACKID_INVALID_I32}, false};
-	int32_t externalInputIdx = -1;
-	int32_t inputChannelOffset = 0;
-	AudioIO::tracktype externalInputType;
-	channel_input_type getType() const {
-		if (externalInputIdx != -1)
-			return channel_input_type::INPUT_EXTERNAL_AUDIO;
-		if (stage.stageRef.stageId != TRACKID_INVALID_I32)
-			return channel_input_type::INPUT_AUDIOSTAGE;
-		return channel_input_type::INPUT_EMPTY;
-	}
-};
 struct track_audio_src {
 	std::vector<float*> channels;
 	uint32_t samples = 0;
+	float gain = 0.0f;
 	AudioBlock toAudioBlock() const {
 		FitsTypeRange<uint32_t, decltype(channels.size())>(channels.size());
 		FitsTypeRange<uint32_t, decltype(samples)>(samples);
@@ -111,7 +96,7 @@ public:
 	void postSetParameter(int32_t idx, float preVal, float val, int flags);
 };
 struct audio_stage_t {
-	const audiostageid_i32 stageId;
+	audiostageid_i32 stageId;
 	audio_stage_t* parent;
 	effectbase* owner;
 	guictr_plugins* pluginCtr;
@@ -126,6 +111,7 @@ struct audio_stage_t {
 	 * guaranteed to have at least 2 channels
 	 */
 	AudioBlock output;
+	AudioBlock outputPost;
 	track_params_t mixer;
 	audiotrack_t audioOutput;
 	int32_t latency = 0;
@@ -145,6 +131,7 @@ struct audio_stage_t {
 	  pluginCtr(nullptr),
 	  input(nChannels, _blockSize),
 	  output(nChannels, _blockSize),
+	  outputPost(nChannels, _blockSize),
 	  mixer(this),
 	  type(_type),
 	  sampleRate(_sampleRate),
@@ -192,14 +179,20 @@ static constexpr int PROCESS_REALTIME = 1;
 static constexpr int PROCESS_CLIPS = 2;
 static constexpr int PROCESS_ARP = 4;
 }
-inline bool isChannelConnected(channel_ref_t& ch) {
+namespace DAW {
+inline bool isChannelConnected(const DAW::channel_ref_t& ch) {
 	return ch.stage.stageRef.stageId != TRACKID_INVALID_I32 || ch.externalInputIdx > -1;
 }
 inline channel_ref_t ChannelNone() {
 	return channel_ref_t{};
 }
+inline channel_ref_t ChannelDefaultNone() {
+	channel_ref_t ref = ChannelNone();
+	ref.type = channel_input_type::INPUT_DEFAULT;
+	return ref;
+}
 inline channel_ref_t ChannelAudioInput(int32_t idx, int32_t channelOffset, String name, AudioIO::tracktype type) {
-	return channel_ref_t{name, {{TRACKID_INVALID_I32}, false}, idx, channelOffset, type};
+	return channel_ref_t{channel_input_type::INPUT_EXTERNAL_AUDIO, type, idx, channelOffset, {{TRACKID_INVALID_I32}, false}, name};
 }
 inline channel_ref_t ChannelStage(audio_stage_t* stage, bool isInput) {
 	String str = "";
@@ -212,7 +205,8 @@ inline channel_ref_t ChannelStage(audio_stage_t* stage, bool isInput) {
 	} else {
 		str += " OUT";
 	}
-	return channel_ref_t{str, {stage->toRef(), isInput}, -1, 0, AudioIO::getTrackTypeNumChannels(stage->input.channels)};
+	return channel_ref_t{channel_input_type::INPUT_AUDIOSTAGE, AudioIO::getTrackTypeNumChannels(stage->input.channels), -1, 0, {stage->toRef(), isInput}, str};
+}
 }
 struct track_impl_t : public audio_stage_t {
 	midiarp* arp = nullptr;
@@ -223,8 +217,8 @@ struct track_impl_t : public audio_stage_t {
 	int32_t selectedAutomationParam = -1;
 	std::vector<automationlane_snapshot_t> atl;
 	bool wasInHide = false;
-	channel_ref_t inputChannel;
-	channel_ref_t outputChannel;
+	DAW::channel_ref_t inputChannel;
+	DAW::channel_ref_t outputChannel;
 	track_impl_t(audiostageid_i32 _id, track_t* _track, const samplerate_t& _sampleRate, const uint16_t& _blockSize, int32_t nChannels);
 	~track_impl_t();
 	void sendNotesOff(int32_t bpm100);
@@ -242,4 +236,6 @@ struct track_impl_t : public audio_stage_t {
 	std::vector<note_t>& getArpInputNotes();
 	std::vector<marker_t>& getArpMarkers();
 	void getAutomatableTrackTargets(std::vector<automatable_t*>& targets);
+	void createIOSnapshot(track_io_configuration_snapshot_t& snapshot);
+	void loadIOConfiguration(const track_io_configuration_snapshot_t& trPluginList);
 };

@@ -15,6 +15,7 @@
 #include "project.h"
 #include "automation.h"
 #include "snapshot.h"
+#include "host/daw_channel.h"
 
 #define TRACK_TYPE_MASTER 0
 #define TRACK_TYPE_RETURN 1
@@ -62,23 +63,7 @@ using track_vector = std::vector<track_t*>;
 void deleteTrackContents(trackdata_midi_t* tr, delete_cb *cb);
 void releaseTrackResources(track_t* tr, delete_cb *cb);
 void releaseClipResources(clip_t* cl, delete_cb *cb);
-//using trackid_i32 = int32_t;
-enum class audiostageid_i32 : int32_t {};
-struct audio_stage_ref_t {
-	audiostageid_i32 stageId;
-};
-#define TRACKID_INVALID_I32 (audiostageid_i32)-1
-inline const audio_stage_ref_t AudioStageRefNULL() {
-	return {TRACKID_INVALID_I32};
-}
 
-struct audio_channel_ref_t {
-	audio_stage_ref_t stageRef;
-	bool isInput;
-};
-inline const struct audio_channel_ref_t AudioChannelRefNULL() {
-	return {{TRACKID_INVALID_I32}, false};
-}
 struct track_tree_pos_t {
 	int32_t trackTypeCtr;
 	track_t* parent;
@@ -639,6 +624,8 @@ public:
     track_vector::reference front() { return trackAllCtr.front(); }
     track_vector::const_iterator cbegin() const { return trackAllCtr.cbegin(); }
     track_vector::const_iterator cend() const { return trackAllCtr.cend(); }
+    track_vector::const_iterator cbeginTree() const { return trackAllCtr.tracksTree.cbegin(); }
+    track_vector::const_iterator cendTree() const { return trackAllCtr.tracksTree.cend(); }
 
 	track_t* operator [](size_t i) {
 		if (!validTrackIdx(i)) {
@@ -682,6 +669,9 @@ public:
 	void copyFrom(project_snapshot_t& project);
 	void operator=(project_globals_t const & globals) {
 		*static_cast<project_globals_t*>(this) = globals;
+	}
+	const track_vector& getTracksFlatVec() {
+		return trackList.trackAllCtr.getTracksFlatVec();
 	}
 };
 class delete_cb {
