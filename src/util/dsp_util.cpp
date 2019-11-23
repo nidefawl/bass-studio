@@ -105,10 +105,6 @@ float scaledRange(float db, float lvlFloor, float lvlCeil) {
 	float lvlRange = lvlFloor - lvlCeil;
 	return (math::max(lvlFloor, math::min(db, lvlCeil)) - lvlCeil) / lvlRange;
 }
-void copyBuffer(float** dst, float** src, uint32_t samples) {
-	memcpy(dst[0], src[0], sizeof(float)*samples);
-	memcpy(dst[1], src[1], sizeof(float)*samples);
-}
 void fillSine(float** buffer, uint32_t samples) {
 	static paTestData *data = NULL;
 	if (data == NULL) {
