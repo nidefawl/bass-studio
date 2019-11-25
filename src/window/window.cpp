@@ -62,9 +62,11 @@
 #include "buildinfo.h"
 #include "../threads/workerthread.h"
 #include "window_impl.h"
+#if HAS_JS_CONSOLE
 #include "cli/console/console_thread.h"
 #include "cli/console/commandline_rep.h"
 #include "js/scripting.h"
+#endif
 
 
 volatile bool fataError = false;
@@ -100,10 +102,10 @@ public:
 	}
 
 void handleStdException(std::exception& e) {
-	getGlobalLogger()->logStr(StringFormat("Exception: %s\n", e.what()));
+	getGlobalLogger()->logStr(StringFormat("std::exception:   %s\n", e.what()));
 	logStackTrace();
 	fataError = true;
-	std::terminate();
+//	std::terminate();
 }
 
 void on_terminate() {
@@ -1347,9 +1349,12 @@ int startApplication(int argc, char* argv[]) {
 #ifdef USE_WIN32_EXC_HOOKS
 	setExceptionHandler();
 #endif
+#if HAS_JS_CONSOLE
 	//lifetime of thread must exceed try/catch because deconstruction of an unjoined std::thread terminates process
 	NU::CONSOLE::CommandLineREP_TCP cli;
 	NU::CONSOLE::ConsoleThread threadCommandLine(cli);
+#endif
+	setExceptionHandler();
 	try {
 	int centerScreenIdx = -1;
 	for (int i = 0; i < argc; i++) {
@@ -1406,6 +1411,7 @@ int startApplication(int argc, char* argv[]) {
 	glfwSetErrorCallback(glfw_runtime_error_callback);
 	ctrl->postInit();
 
+#if HAS_JS_CONSOLE
 	JSContext jsContext;
 	String srcJS;
 	int64_t ret = ReadFileText("daw_init.js", srcJS);
@@ -1422,6 +1428,8 @@ int startApplication(int argc, char* argv[]) {
 	threadCommandLine.setTls(tls);
 	threadCommandLine.init();
 	threadCommandLine.startThread();
+#endif // HAS_JS_CONSOLE
+
 	GLFWwindow* glfwHandle = mainWindow->getGLFW();
 	long start = getTimeMillis();
 	while (!fataError && !glfwWindowShouldClose(glfwHandle)) {
@@ -1477,7 +1485,9 @@ int startApplication(int argc, char* argv[]) {
 			mainWindow->flagNeedsRedraw();
 		}
 #endif
+#if HAS_JS_CONSOLE
 		cli.executeCommands();
+#endif // HAS_JS_CONSOLE
 	}
 	mainWindow->setInvalid();
 	ctrl->destroyControl();
@@ -1502,8 +1512,10 @@ int startApplication(int argc, char* argv[]) {
 	} catch (std::exception& e) {
 		handleStdException(e);
 	}
+#if HAS_JS_CONSOLE
 	threadCommandLine.stopThread();
 	threadCommandLine.joinThread();
+#endif // HAS_JS_CONSOLE
 	deleteApp();
 	printLeakedGuiBase();
 #if BUILD_VSTHOST
