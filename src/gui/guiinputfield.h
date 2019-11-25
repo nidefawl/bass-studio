@@ -68,13 +68,16 @@ public:
 	void setRef(T* number) {
 		this->number = number;
 	}
-	T parseLiteral(const char* szNumber);
-	String valueToStringLiteral(T val);
+	virtual T getValue() {
+		return *number;
+	}
+	virtual T parseLiteral(const char* szNumber);
+	virtual String valueToStringLiteral(T val);
 	void onMouseDragValue(int32_t disty, int32_t absy) override;
 	void onKeyInputChangeValue(ivec2 direction) override;
 	String getAsStringLiteral() override {
 		if (this->number) {
-			return valueToStringLiteral(*this->number);
+			return valueToStringLiteral(getValue());
 		}
 		return "<undef>";
 	}
@@ -87,7 +90,7 @@ public:
 		}
 	}
 private:
-	void setValue(T newVal) {
+	virtual void setValue(T newVal) {
 		if (fnClamp) {
 			newVal = fnClamp(newVal);
 		}

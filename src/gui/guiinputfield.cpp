@@ -162,13 +162,34 @@ String gui_numberinput_field_generic<int32_t>::valueToStringLiteral(int32_t val)
 template<>
 void gui_numberinput_field_generic<int32_t>::onMouseDragValue(int32_t disty, int32_t absy) {
 	if (this->number) {
-		setValue(*number - ((disty < 0 ? -1 : 1) * absy));
+		setValue(getValue() - ((disty < 0 ? -1 : 1) * absy));
 	}
 }
 template<>
 void gui_numberinput_field_generic<int32_t>::onKeyInputChangeValue(ivec2 direction) {
 	if (this->number) {
-		setValue(*number + direction.y);
+		setValue(getValue() + direction.y);
+	}
+}
+template<>
+uint32_t gui_numberinput_field_generic<uint32_t>::parseLiteral(const char* szNumber) {
+	return atoi(szNumber);
+}
+template<>
+String gui_numberinput_field_generic<uint32_t>::valueToStringLiteral(uint32_t val) {
+	return StringFormat("%d", val);
+}
+
+template<>
+void gui_numberinput_field_generic<uint32_t>::onMouseDragValue(int32_t disty, int32_t absy) {
+	if (this->number) {
+		setValue(getValue() - ((disty < 0 ? -1 : 1) * absy));
+	}
+}
+template<>
+void gui_numberinput_field_generic<uint32_t>::onKeyInputChangeValue(ivec2 direction) {
+	if (this->number) {
+		setValue(getValue() + direction.y);
 	}
 }
 template<>
@@ -182,12 +203,15 @@ String gui_numberinput_field_generic<float>::valueToStringLiteral(float val) {
 template<>
 void gui_numberinput_field_generic<float>::onMouseDragValue(int32_t disty, int32_t absy) {
 	if (this->number) {
-		setValue(*number - ((disty < 0 ? -1 : 1) * absy)*0.0001f);
+		float number_local = getValue();
+		int32_t u = *reinterpret_cast<int32_t*>(&number_local) + (disty > 0 ? -1 : 1) * absy;
+		setValue(*reinterpret_cast<float*>(&u));
+//		setValue(*number - ((disty < 0 ? -1 : 1) * absy)*0.0001f);
 	}
 }
 template<>
 void gui_numberinput_field_generic<float>::onKeyInputChangeValue(ivec2 direction) {
 	if (this->number) {
-		setValue(*number + direction.y*0.01f);
+		setValue(getValue() + direction.y*0.01f);
 	}
 }
