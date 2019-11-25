@@ -34,6 +34,7 @@
 #include <memory>
 #include <vector>
 #include <string>
+#include <atomic>
 #include <functional>
 #ifndef REPLXX_STATIC
 #define REPLXX_STATIC
