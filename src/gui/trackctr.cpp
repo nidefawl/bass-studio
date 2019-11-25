@@ -204,12 +204,11 @@ void guictr_tracks::updateVisibleTracks() {
 
 		}
 	}
-	getTrackFromMouseTest();
 }
 void guictr_tracks::updateVisibleTrackContents() {
 	updateVisibleTracks();
-	getTrackFromMouseTest();
 }
+
 void guictr_tracks::layout() {
 //	for (auto* ctr : project.trackTypeUniqueCtrs) {
 //		ctr->updateTracksVisible();

@@ -195,7 +195,6 @@ void BaseCtrl::mouseDown(ivec2 mousePos, int button, bool doubleclick) {
 		dragOffset = gui->toScreenSpace(ivec2(0)) - mousePos;
 		MouseEvent evt = mouseEvent(this, gui, mousePos, button, doubleclick ? M_EVT_DOUBLECLICK : M_EVT_BTN_DOWN);
 		gui->handleMouseDownBegin(evt);
-		getTrackFromMouseTest();
 	}
 }
 
@@ -254,7 +253,6 @@ void BaseCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos) {
 		cursorIcon = evt.getCursor();
 //	}
 	guiOver = evt.getGuiHit();
-	getTrackFromMouseTest();
 }
 
 void BaseCtrl::onCharInput(unsigned int codepoint) {
