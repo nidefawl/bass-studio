@@ -6,6 +6,7 @@
 #include "str_util.h"
 #include "fileio.h"
 #include "renderresources.h"
+#include "exceptions.h"
 
 #include <GLFW/glfw3.h>
 
@@ -44,10 +45,14 @@ namespace RenderResources {
 	NvgImageTexture imgIcons[NUM_IMGS];
 	namespace {
 		void load(NVGcontext* vg, String path, ImageBuf& out) {
-			if (ReadImage(path, out) < 0) {
-				my_printf("Error loading image %s\n", StringAsCStr(path));
-			} else {
-//				my_printf("%s loaded: %dx%d %d-channel, bufsize: %d\n", StringAsCStr(path), out.w, out.h, out.bitdepth, out.bytes.size());
+			try {
+				if (ReadImage(path, out) < 0) {
+					my_printf("Error loading image %s\n", StringAsCStr(path));
+				} else {
+	//				my_printf("%s loaded: %dx%d %d-channel, bufsize: %d\n", StringAsCStr(path), out.w, out.h, out.bitdepth, out.bytes.size());
+				}
+			} catch (appexception& e) {
+				getGlobalLogger()->logStr(StringFormat("Exception: %s\n", e.what()));
 			}
 		}
 	}

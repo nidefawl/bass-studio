@@ -5,6 +5,7 @@
 #include "fileio.h"
 #include "mouse.h"
 #include "mousecursor.h"
+#include "exceptions.h"
 
 #ifdef _WIN32
 #include "windows.h"
@@ -133,10 +134,14 @@ struct AppMouseCursor {
 	MouseCursorIcon* cursors[NUM_CURSORS]{0};
 	namespace {
 	void load(String path, ImageBuf& out) {
-		if (ReadImage(path, out) < 0) {
-			my_printf("Error loading image %s\n", StringAsCStr(path));
-		} else {
-			my_printf("%s loaded: %dx%d %d-channel, bufsize: %d\n", StringAsCStr(path), out.w, out.h, out.bitdepth, out.bytes.size());
+		try {
+			if (ReadImage(path, out) < 0) {
+				my_printf("Error loading image %s\n", StringAsCStr(path));
+			} else {
+				my_printf("%s loaded: %dx%d %d-channel, bufsize: %d\n", StringAsCStr(path), out.w, out.h, out.bitdepth, out.bytes.size());
+			}
+		} catch (appexception& e) {
+			getGlobalLogger()->logStr(StringFormat("Exception: %s\n", e.what()));
 		}
 	}
 	}
