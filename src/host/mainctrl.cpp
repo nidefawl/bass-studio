@@ -1020,7 +1020,6 @@ bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file, int flags) {
 	this->projectPath = file->path;
 
 	setAudioThreadState(playback_state::status_stop);
-	getTrackFromMouseTest();
 	return true;
 }
 
@@ -1066,7 +1065,6 @@ guitrack_editor& MainCtrl::getTrackEditor() {
 }
 void MainCtrl::updateVisibleTrackContents() {
 	view->ctr_tracks.updateVisibleTrackContents();
-	getTrackFromMouseTest();
 }
 bool MainCtrl::isZooming() {
 	return guiCaptured == &view->ctr_tracks.trackTimeline;
