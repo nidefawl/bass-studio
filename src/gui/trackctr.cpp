@@ -650,6 +650,8 @@ namespace {
 			strTarget = treePos.parent->name;
 		}
 		log_printf("Moving %d tracks to %s[%d] %s\n", selectedTracks.size(), StringAsCStr(strTarget), treePos.treeIdx, failed ? "Failed" : "Success");
+
+		vsthost::getInstance()->onTrackLayoutChange();
 		MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
 		MainCtrl::getGuiTrackCtr()->layout();
 		MainCtrl::get()->updateVisibleTrackContents();

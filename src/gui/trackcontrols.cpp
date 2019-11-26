@@ -124,7 +124,7 @@ void guitooltip<audio_info_t>::layout()  {
 	{
 		table.rows.push_back({{tblstr{"track"}, tblString{ptr->name}}});
 		auto audio = ptr->audio;
-		table.rows.push_back({{tblstr{"Latency"}, tblint{audio->getLatency()}}});
+		table.rows.push_back({{tblstr{"Latency"}, tblint{(int32_t)audio->getLatency()}}});
 		table.rows.push_back({{tblstr{"delayToPreReturn"}, tblint{audio->latencyInfo.delayToPreReturn}}});
 		table.rows.push_back({{tblstr{"delayToPostReturn"}, tblint{audio->latencyInfo.delayToPostReturn}}});
 		table.rows.push_back({{tblstr{"sampleRate"}, tblint{audio->sampleRate}}});

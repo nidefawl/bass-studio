@@ -226,7 +226,7 @@ guiplugin* module_group::getGui() {
 //	return handle->gui;
 }
 int32_t module_group::getDelay() {
-	return audio->getLatency();
+	return static_cast<int32_t>(audio->getLatency());
 }
 void module_group::resume() {
 }

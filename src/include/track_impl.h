@@ -47,6 +47,7 @@ struct track_audio_src {
 	std::vector<float*> channels;
 	uint32_t samples = 0;
 	float gain = 0.0f;
+	int32_t latency = 0;
 	AudioBlock toAudioBlock() const {
 		FitsTypeRange<uint32_t, decltype(channels.size())>(channels.size());
 		FitsTypeRange<uint32_t, decltype(samples)>(samples);
@@ -114,7 +115,7 @@ struct audio_stage_t {
 	AudioBlock outputPost;
 	track_params_t mixer;
 	audiotrack_t audioOutput;
-	int32_t latency = 0;
+	samplerate_t latency = 0;
 	int type;
 	const samplerate_t& sampleRate;
 	const uint16_t& blockSize;
@@ -143,7 +144,7 @@ struct audio_stage_t {
 	}
 	virtual void removePlugin(effectbase* _vst, bool notifyUp);
 	void loadPlugins(const std::vector<plugin_snapshot_t>& trPluginList);
-	int32_t getLatency();
+	samplerate_t getLatency();
 	DelayLine* getDelayLine(int32_t idx) {
 		dbgassert(idx >= 0 && idx < delayLines.size());
 		return &delayLines[idx];
@@ -224,7 +225,7 @@ struct track_impl_t : public audio_stage_t {
 	void sendNotesOff(int32_t bpm100);
 	void sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, clip_notes_t& midiRealtimeInput, int32_t flags);
 	void fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, float** buffer, int32_t samples);
-	void addAudio(const AudioBlock&& src, float fGain);
+	void addAudio(const AudioBlock& src, float fGain);
 	track_audio_src getInput(const AudioBlock* const ptrExternalInputs, int32_t nChannel);
 	int32_t mapInput(int32_t nInputChannels, int32_t nChannel);
 	VstEvent_t* reallocEvts(size_t size);

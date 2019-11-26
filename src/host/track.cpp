@@ -422,7 +422,7 @@ VstEvent_t* track_impl_t::reallocEvts(size_t size) {
 	midiEventsBuf->reset();
 	return midiEventsBuf;
 }
-int32_t audio_stage_t::getLatency() {
+samplerate_t audio_stage_t::getLatency() {
 	return latency;
 }
 void audio_stage_t::pluginsChanged() {
@@ -686,8 +686,9 @@ track_t* audio_stage_t::getTrack() {
 //	dbgassert(0); // to be expected when deleting effectgroups
 	return nullptr;
 }
-void track_impl_t::addAudio(const AudioBlock&& src, float fGain) {
-	for (int channel = 0; channel < src.channels; channel++) {
+void track_impl_t::addAudio(const AudioBlock& src, float fGain) {
+	const auto numChannels = math::min(src.channels, input.channels);
+	for (auto channel = 0; channel < numChannels; channel++) {
 		float* pChSrc = src.buf[channel];
 		float* pChDst = input.buf[channel];
 		dbgassert(src.samples == input.samples);

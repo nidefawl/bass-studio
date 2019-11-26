@@ -496,6 +496,7 @@ bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, co
 				}
 				src.samples = ptrExternalInputs->samples;
 				src.gain = 1.0f;
+				src.latency = 0;
 				out = std::move(src);
 				return true;
 			}
@@ -516,6 +517,7 @@ bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, co
 			}
 			src.samples = buff.samples;
 			src.gain = fGainTrack;
+			src.latency = 0;
 			out = std::move(src);
 			return true;
 		}
@@ -712,24 +714,26 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 		/*
 		 * determine max latency of all audio/midi tracks
 		 */
-		int32_t maxLatencyAudioMidi = 0;
+		samplerate_t maxLatencyAudioMidi = 0;
+		samplerate_t maxLatencyReturn = 0;
+		for (track_t* track : ctrl->getTracksFlatVec()) {
+			track_impl_t* audioTrack = track->audio;
+			audioTrack->pluginsChanged();
+		}
 		for (track_t* track : ctrl->trackMidiAudioCtr) {
 			track_impl_t* audioTrack = track->audio;
-			audioTrack->pluginsChanged();
-			int32_t latency = audioTrack->getLatency();
+			samplerate_t latency = audioTrack->getLatency();
 			maxLatencyAudioMidi = math::max(latency, maxLatencyAudioMidi);
 		}
-		int32_t maxLatencyReturn = 0;
 		for (track_t* track : ctrl->trackReturnCtr) {
 			track_impl_t* audioTrack = track->audio;
-			audioTrack->pluginsChanged();
-			int32_t latency = audioTrack->getLatency();
+			samplerate_t latency = audioTrack->getLatency();
 			maxLatencyReturn = math::max(latency, maxLatencyReturn);
 		}
-		int32_t latencyToMaster = maxLatencyAudioMidi+maxLatencyReturn;
-		stats.maxLatencyAudioMidi = maxLatencyAudioMidi;
-		stats.maxLatencyReturn = maxLatencyReturn;
-		stats.latencyToMaster = latencyToMaster;
+		samplerate_t latencyToMaster = maxLatencyAudioMidi+maxLatencyReturn;
+		stats.maxLatencyAudioMidi = static_cast<int32_t>(maxLatencyAudioMidi);
+		stats.maxLatencyReturn = static_cast<int32_t>(maxLatencyReturn);
+		stats.latencyToMaster = static_cast<int32_t>(latencyToMaster);
 		tick_t loopCutStart = -1;
 		tick_t loopCutEnd = -1;
 		if (inLoop) {
@@ -788,18 +792,23 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 
 		static int32_t dbgStep = 0;
 		int32_t dbg = dbgStep++%330;
+		int32_t idxDelayLine = 0;
+		AudioBlock tempBlock(8, lBlockSize);
 		for (auto itAudioStage = processingList.nodes.rbegin(); itAudioStage != processingList.nodes.rend(); itAudioStage++) {
 			const DAW::processing_track_node_t& processingNode = *itAudioStage;
 			track_t* const track = processingNode.track;
 			track_impl_t* const trackImpl = track->audio;
 			const DAW::track_node_t& trackNode = processingNode.trackNode;
+
 			if (dbg == 0) {
 				log_printf("process track %s\n", StringAsCStr(track->name));
 				log_printf("process stage 1 %d\n", static_cast<int32_t>(track->audio->stageId));
 				log_printf("process stage 2 %d\n", static_cast<int32_t>(trackNode.stageId));
 			}
+
 			trackImpl->input.realloc(lBlockSize);
 			trackImpl->output.realloc(lBlockSize);
+
 			dsp_util::fillBlock(trackImpl->input, 0.0f);
 
 			int32_t midiProcessFlags = MidiFlags::PROCESS_REALTIME|MidiFlags::PROCESS_ARP;
@@ -817,9 +826,14 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 
 			const uint32_t numChannelsTrack = trackImpl->input.channels;
 
-
 			std::vector<DAW::track_source_t> allSources = trackNode.pulls; // copy
 			allSources.insert(allSources.end(), trackNode.pushs.begin(), trackNode.pushs.end()); // copy
+//			for (const DAW::track_source_t& tracksrc : allSources)
+//			{
+//
+//				/* Compensate audio/midi track to pre-return latency */
+//				samplerate_t delayToPreReturn = maxLatencyAudioMidi - trackImpl->getLatency();
+//			}
 			for (const DAW::track_source_t& tracksrc : allSources)
 			{
 				if (DAW::isChannelConnected(tracksrc.channel)) {
@@ -827,8 +841,8 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 					if (dbg == 0) {
 						log_printf("track %s has input %s\n", StringAsCStr(track->name), StringAsCStr(tracksrc.channel.name));
 					}
-					if (DAW::resolveAudioChannel(this, numChannelsTrack, tracksrc.channel, ptrExternalInputs ? ptrExternalInputs->output : nullptr, src)) {
 
+					if (DAW::resolveAudioChannel(this, numChannelsTrack, tracksrc.channel, ptrExternalInputs ? ptrExternalInputs->output : nullptr, src)) {
 						/**
 						 * Mix routed tracks
 						 *
@@ -839,7 +853,21 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 						 * sends are with track gain applied (post-mixer)
 						 *
 						 */
-						 trackImpl->addAudio(src.toAudioBlock(), src.gain * tracksrc.gain);
+						/* compensate at input stage */
+						/* figure out max latency of all inputs */
+						/* delay signal by maxLatency - trackImpl->getLatency() */
+						/* Compensate audio midi track to pre-return latency */
+						dbgassert(trackNode.inputLatency >= tracksrc.latency);
+						samplerate_t delayToMaxInputLatency = trackNode.inputLatency - tracksrc.latency;
+						dbgassert(delayToMaxInputLatency >= 0);
+						if (delayLines.size() <= idxDelayLine) {
+							delayLines.push_back(std::shared_ptr<DelayLine>(new DelayLine((uint32_t)src.channels.size(), 16)));
+//							delayLines[idxDelayLine]->block.realloc(lBlockSize*2+delayToMaxInputLatency);
+						}
+						AudioBlock srcBlock = src.toAudioBlock();
+						delayAudio(delayLines[idxDelayLine].get(), &srcBlock, &tempBlock, delayToMaxInputLatency);
+						trackImpl->addAudio(tempBlock, src.gain * tracksrc.gain);
+						idxDelayLine++;
 					}
 				} else {
 
@@ -857,7 +885,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 
 			/* Store block in audioOutput memory */
 			if (state == playback_state::status_play) {
-				auto offset = sample - (trackImpl->getLatency());
+				int32_t offset = sample - (int32_t)(trackImpl->getLatency());
 				if (offset >= 0) {
 					trackImpl->audioOutput.store(&trackImpl->outputPost, offset);
 				} else {
@@ -1015,6 +1043,9 @@ void vsthost::onStopPlayback(project_controller_t* ctrl) {
 			trackImpl->sendNotesOff(project.tempo100);
 		}
 	}
+}
+void vsthost::onTrackLayoutChange() {
+	delayLines.clear();
 }
 void vsthost::setOutput(audiohost* audioHost) {
 //	assert (audioHost->lSampleRate == this->lSampleRate);
@@ -1195,6 +1226,7 @@ void vsthost::removePlugin(effectbase* plugin) {
 	audio_stage_t* audioStage = plugin->getTrackLink();
 	audioStage->removePlugin(plugin, true);
 	audioStage->pluginsChanged();
+	onTrackLayoutChange();
 }
 template<typename T>
 void removeErase(std::vector<T> t, T& t2) {
@@ -1339,6 +1371,7 @@ bool vsthost::movePlugins(audio_stage_t* dstTr, audio_stage_t* trp, int32_t src,
 	}
 	trp->pluginsChanged();
 	dstTr->pluginsChanged();
+	onTrackLayoutChange();
 	return true;
 }
 bool vsthost::moveEffects(audio_stage_t* trp, int32_t src, int32_t dst, int32_t len) {
@@ -1387,12 +1420,15 @@ bool vsthost::moveEffects(audio_stage_t* trp, int32_t src, int32_t dst, int32_t 
 	for (effectbase* effect : trp->effects) {
 		effect->setSlot(slot++);
 	}
+	onTrackLayoutChange();
 	return true;
 }
 
 bool vsthost::replacePlugin(audio_stage_t* trp, effectbase* plugin, int32_t dst, effectbase** prevPlugin) {
 	//TODO: call pluginsChanged, update latency
-	return trp->replaceEffect(dst, plugin, prevPlugin);
+	bool retVal = trp->replaceEffect(dst, plugin, prevPlugin);
+	onTrackLayoutChange();
+	return retVal;
 }
 bool vsthost::insertNewPlugin(audio_stage_t* trp, effectbase* plugin, int32_t dst) {
 //	if (plugin->isSynth) {
@@ -1404,6 +1440,7 @@ bool vsthost::insertNewPlugin(audio_stage_t* trp, effectbase* plugin, int32_t ds
 		trp->insertEffect(dst, plugin);
 //	}
 	trp->pluginsChanged();
+	onTrackLayoutChange();
 	return true;
 }
 #ifdef _WIN32

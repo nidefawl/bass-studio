@@ -14,15 +14,22 @@ namespace DAW {
 struct track_source_t {
 	channel_ref_t channel;
 	float gain;
+	samplerate_t latency = 0U;
 };
 struct track_node_t {
-	audiostageid_i32 stageId;
+	audiostageid_i32 stageId = TRACKID_INVALID_I32;
 	std::vector<audiostageid_i32> dependencies;
-	std::vector<track_source_t> pulls;
-	std::vector<track_source_t> pushs;
-	int32_t numDependants;
-	uint64_t latencyBefore;
-	uint64_t latencyToMaster;
+	std::vector<track_source_t> pulls; // fill latency
+	std::vector<track_source_t> pushs; // fill latency
+	int32_t numDependants = 0;
+	samplerate_t internalLatency = 0U;
+	samplerate_t inputLatency = 0U;
+	track_node_t() = default;
+	track_node_t(audiostageid_i32 _stageId, samplerate_t _internalLatency)
+	: stageId(_stageId), internalLatency(_internalLatency)
+	{
+
+	}
 };
 /**
  * track_graph_t - represents the audio chain dependency graph build from I/O configuration of all loaded tracks
@@ -30,7 +37,7 @@ struct track_node_t {
  */
 struct track_graph_t {
 	std::vector<audiostageid_i32> roots; // outbut nodes (Master, )
-	std::vector<track_node_t> nodes;
+	std::vector<track_node_t> nodes; // fill latency
 	uint64_t maxLatency;
 };
 struct processing_track_node_t {

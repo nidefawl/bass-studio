@@ -106,6 +106,7 @@ namespace DAW {
 			}
 			dependencyList.push_back(processing_track_node_t{nodeIdx, trackNode, track});
 		}
+
 		for (processing_track_node_t processingNode : dependencyList) {
 			const audiostageid_i32 nodeIdx = processingNode.nodeIdx;
 			const DAW::track_node_t& trackNode = processingNode.trackNode;
@@ -125,6 +126,41 @@ namespace DAW {
 				//TODO: look thru whole dependency chain, compare all node iterators against itStageIdx
 			}
 		}
+		for (auto itNodes = dependencyList.rbegin(); itNodes != dependencyList.rend(); itNodes++) {
+			itNodes->trackNode.inputLatency = 0;
+			for (audiostageid_i32 nodeIdx : itNodes->trackNode.dependencies) {
+				auto itProcNode = std::find_if(dependencyList.begin(), dependencyList.end(), [nodeIdx] (const DAW::processing_track_node_t& ptn) {
+					return ptn.nodeIdx == nodeIdx;
+				});
+				dbgassert(itProcNode != dependencyList.end());
+				const DAW::processing_track_node_t childProcNode = *itProcNode;
+				itNodes->trackNode.inputLatency = std::max(itNodes->trackNode.inputLatency, childProcNode.trackNode.inputLatency + childProcNode.trackNode.internalLatency);
+
+			}
+		}
+		for (auto itNodes = dependencyList.rbegin(); itNodes != dependencyList.rend(); itNodes++) {
+			track_node_t& trackNode = itNodes->trackNode;
+			for (auto& push : trackNode.pushs) {
+				if (DAW::isChannelConnected(push.channel) && push.channel.getType() == DAW::channel_input_type::INPUT_AUDIOSTAGE) {
+					const auto nodeIdx = push.channel.stage.stageRef.stageId;
+					auto itStageIdx = std::find_if(dependencyList.begin(), dependencyList.end(), [nodeIdx] (const processing_track_node_t& n) {
+						return n.nodeIdx == nodeIdx;
+					});
+					dbgassert(itStageIdx != dependencyList.end());
+					push.latency = itStageIdx->trackNode.inputLatency + itStageIdx->trackNode.internalLatency;
+				}
+			}
+			for (auto& push : trackNode.pulls) {
+				if (DAW::isChannelConnected(push.channel) && push.channel.getType() == DAW::channel_input_type::INPUT_AUDIOSTAGE) {
+					const auto nodeIdx = push.channel.stage.stageRef.stageId;
+					auto itStageIdx = std::find_if(dependencyList.begin(), dependencyList.end(), [nodeIdx] (const processing_track_node_t& n) {
+						return n.nodeIdx == nodeIdx;
+					});
+					dbgassert(itStageIdx != dependencyList.end());
+					push.latency = itStageIdx->trackNode.inputLatency + itStageIdx->trackNode.internalLatency;
+				}
+			}
+		}
 		out_dependencyGraph = std::move(dependencyGraph);
 		out_processingList = processing_list_t{std::move(dependencyList)};
 		return true;
@@ -136,7 +172,7 @@ namespace DAW {
 		for (track_t* track : tracksFlat) {
 			track_impl_t* trackImpl = track->getStage();
 			if (!map.count(trackImpl->stageId)) {
-				map[trackImpl->stageId] = track_node_t{trackImpl->stageId, {}};
+				map[trackImpl->stageId] = track_node_t(trackImpl->stageId, trackImpl->getLatency());
 			}
 			track_node_t& trackCfg = map[trackImpl->stageId];
 
@@ -160,12 +196,12 @@ namespace DAW {
 					audio_stage_t* src = host->getAudioStage(inputChannel.stage.stageRef);
 					dbgassert(src);
 					if (!map.count(src->stageId)) {
-						map[src->stageId] = track_node_t{src->stageId, {}};
+						map[src->stageId] = track_node_t(src->stageId, src->getLatency());
 					}
 					track_node_t& trackSrcCfg = map[trackImpl->stageId];
 					trackSrcCfg.numDependants++;
 					trackCfg.dependencies.push_back(src->stageId);
-					trackCfg.pulls.push_back(DAW::track_source_t{inputChannel, 1.0f});
+					trackCfg.pulls.push_back(DAW::track_source_t{inputChannel, 1.0f, 0});
 				}
 			}
 			if (isChannelConnected(outputChannel)) {
@@ -173,12 +209,14 @@ namespace DAW {
 					audio_stage_t* dst = host->getAudioStage(outputChannel.stage.stageRef);
 					dbgassert(dst);
 					if (!map.count(dst->stageId)) {
-						map[dst->stageId] = track_node_t{dst->stageId, {}};
+						map[dst->stageId] = track_node_t(dst->stageId, dst->getLatency());
 					}
 					track_node_t& trackDstCfg = map[dst->stageId];
 					trackCfg.numDependants++;
 					trackDstCfg.dependencies.push_back(trackImpl->stageId);
-					trackDstCfg.pushs.push_back(DAW::track_source_t{ChannelStage(trackImpl, false), 1.0f});
+					// cannot set trackDstCfg.inputLatency here because map[trackImpl->stageId].inputLatency may not have been written yet
+//					trackDstCfg.inputLatency = std::max(trackDstCfg.inputLatency, map[trackImpl->stageId].inputLatency+map[trackImpl->stageId].internalLatency);
+					trackDstCfg.pushs.push_back(DAW::track_source_t{ChannelStage(trackImpl, false), 1.0f, 0});
 				}
 			}
 			if (TRACKTYPE_TO_CTR(track->type)  == TRACK_CTR_MIDIAUDIO && trackImpl->mixer.isEnabled()) {
@@ -194,12 +232,12 @@ namespace DAW {
 					dbgassert(audioReturn);
 
 					if (!map.count(audioReturn->stageId)) {
-						map[audioReturn->stageId] = track_node_t{audioReturn->stageId, {}};
+						map[audioReturn->stageId] = track_node_t(audioReturn->stageId, audioReturn->getLatency());
 					}
 					track_node_t& trackDstCfg = map[audioReturn->stageId];
 					trackCfg.numDependants++;
 					trackDstCfg.dependencies.push_back(audioReturn->stageId);
-					trackDstCfg.pushs.push_back(DAW::track_source_t{ChannelStage(audioReturn, false), fGainReturn});
+					trackDstCfg.pushs.push_back(DAW::track_source_t{ChannelStage(audioReturn, false), fGainReturn, 0});
 
 				}
 

@@ -18,8 +18,9 @@ struct AudioBlock {
 	uint32_t samples{ 0 };
 	float** buf{ 0 };
 	alloc_type allocType;
-	AudioBlock(uint32_t _channels, uint32_t _samples)
-		: channels(_channels), samples(0), buf(new float*[_channels]), allocType(alloc_type::internal)
+	bool debug = false;
+	AudioBlock(uint32_t _channels, uint32_t _samples, bool _bIsDebug = false)
+		: channels(_channels), samples(0), buf(new float*[_channels]), allocType(alloc_type::internal), debug(_bIsDebug)
 	{
 		dbgassert(channels);
 		for (uint32_t i = 0; i < _channels; i++) {
@@ -158,26 +159,7 @@ struct AudioBlock {
 			}
 		}
 	}
-	void realloc(uint32_t _samples) {
-		if (samples != _samples) {
-			if (allocType == alloc_type::internal) {
-				for (uint32_t i = 0; i < channels; i++) {
-					float* newBuf = (float*)calloc(_samples,sizeof(float));
-					if (!newBuf) {
-						handleFailedAllocation(0x1000, _samples*sizeof(float));
-					} else {
-						memset(newBuf, 0, sizeof(float)*_samples);
-						if (buf[i]) {
-							memcpy(newBuf, buf[i], math::min(_samples, samples) * sizeof(float));
-							free(buf[i]);
-						}
-					}
-					buf[i] = newBuf;
-				}
-				samples = _samples;
-			}
-		}
-	}
+	void realloc(uint32_t _samples);
 };
 
 
@@ -186,6 +168,6 @@ struct DelayLine {
 	int32_t blockOffset = 0;
 	DelayLine(uint32_t _channels, uint32_t _samples)
 	  : block(_channels, _samples)
-	{ }
+	{ block.debug=true; }
 };
 void delayAudio(DelayLine* delayLine, AudioBlock* input, AudioBlock* output, samplerate_t delay);

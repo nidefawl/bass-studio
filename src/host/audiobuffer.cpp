@@ -33,3 +33,33 @@ void freeRingBuffer(audiothread_ringbuffer_t& ringbuffer) {
 		}
 	}
 }
+
+void AudioBlock::realloc(uint32_t _samples) {
+
+	if (samples != _samples) {
+		if (allocType == alloc_type::internal) {
+			for (uint32_t i = 0; i < channels; i++) {
+	//					float* newBuf = (float*)calloc(_samples,sizeof(float));
+				float* const newBuf = new float[_samples];
+				if (debug) {
+					log_printf("AudioBlock buffer[%d] calloc 0x%08X\n", i, reinterpret_cast<int64_t>(newBuf));
+				}
+				if (!newBuf) {
+					handleFailedAllocation(0x1000, _samples*sizeof(float));
+				} else {
+					memset(newBuf, 0, sizeof(float)*_samples);
+					if (buf[i]) {
+						memcpy(newBuf, buf[i], math::min(_samples, samples) * sizeof(float));
+						if (debug) {
+							log_printf("AudioBlock buffer[%d] free 0x%08X\n", i, reinterpret_cast<int64_t>(newBuf));
+						}
+	//							free(buf[i]);
+						delete[] buf[i];
+					}
+				}
+				buf[i] = newBuf;
+			}
+			samples = _samples;
+		}
+	}
+}

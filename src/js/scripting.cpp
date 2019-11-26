@@ -140,10 +140,10 @@ int getAudioGraph(duk_context *ctx) {
 						duk_put_prop_string(ctx, -2, "stageId");
 						duk_push_int(ctx, n.numDependants);
 						duk_put_prop_string(ctx, -2, "numDependants");
-						duk_push_int(ctx, n.latencyBefore);
-						duk_put_prop_string(ctx, -2, "latencyBefore");
-						duk_push_int(ctx, n.latencyToMaster);
-						duk_put_prop_string(ctx, -2, "latencyToMaster");
+						duk_push_int(ctx, n.internalLatency);
+						duk_put_prop_string(ctx, -2, "internalLatency");
+						duk_push_int(ctx, n.inputLatency);
+						duk_put_prop_string(ctx, -2, "inputLatency");
 						duk_idx_t  arr_idx2 = duk_push_array(ctx);
 						duk_uarridx_t idx2 = 0;
 						for (auto n2 : n.dependencies) {

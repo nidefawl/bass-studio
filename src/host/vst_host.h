@@ -14,6 +14,7 @@
 #include "hires_timer.h"
 #include "project.h"
 #include "audiobuffer.h"
+#include "audioblock.h"
 #include "saferef.h"
 #include "track.h"
 #include "track_graph.h"
@@ -112,6 +113,8 @@ private:
 	SYNCHRONIZED_RW audiothread_ringbuffer_t ringbuffer;
 	SYNCHRONIZED_RW clip_notes_t* midiRealtimeInput; //TODO: per device and channel
 
+	std::vector<std::shared_ptr<DelayLine>> delayLines;
+
 
 	class ModuleManager;
 	ModuleManager* moduleMgr;
@@ -171,6 +174,7 @@ public:
 	bool postInit();
 	bool onTick();
 	bool isStreaming();
+	void onTrackLayoutChange();
 
 	bool canDo(const char *ptr)
 	{

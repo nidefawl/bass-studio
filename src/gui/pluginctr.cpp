@@ -607,6 +607,7 @@ class action_move_modules : public action_base {
 			}
 			vsthost::getInstance()->movePlugins(srcStage, dstStage, dst, src, len);
 			MainCtrl::getPluginCtr()->relayout();
+			vsthost::getInstance()->onTrackLayoutChange();
 		}
 		void redo(MainCtrl* ctrl) override {
 			audio_stage_t* dstStage = vsthost::getInstance()->getAudioStage(refdst);
@@ -617,6 +618,7 @@ class action_move_modules : public action_base {
 			}
 			vsthost::getInstance()->movePlugins(dstStage, srcStage, src, dst, len);
 			MainCtrl::getPluginCtr()->relayout();
+			vsthost::getInstance()->onTrackLayoutChange();
 		}
 };
 class action_shift_modules : public action_base {

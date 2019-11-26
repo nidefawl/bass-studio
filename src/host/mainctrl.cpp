@@ -918,6 +918,7 @@ bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file, int flags) {
 	/** create all audio instances **/
 	host->updateMaximumStageId();
 	DAW::validateTrackRoutings(host, this->getTracksFlatVec());
+	host->onTrackLayoutChange();
 
 
 	// is plugin loading not deferred?
@@ -1474,6 +1475,7 @@ void MainCtrl::addTrackImpl(int32_t trackInsertPos, track_t* newTrack, int flags
 		pushHist(new action_modify_track_add(StringFormat("Add %s Track", TrackTypeToName(newTrack->type)), newTrack));
 	}
 
+	vsthost::getInstance()->onTrackLayoutChange();
 }
 void MainCtrl::removeTrackId(uint32_t trackId) {
 	if (trackList.validTrackIdx(trackId)) {
@@ -1492,6 +1494,7 @@ void MainCtrl::removeTrackImpl(track_t* track, int flags) {
 	if (flags&FLG_TRK_CHANGE_USER) {
 		pushHist(new action_modify_track_remove(StringFormat("Remove %s Track", TrackTypeToName(track->type)), track));
 	}
+	vsthost::getInstance()->onTrackLayoutChange();
 }
 track_t* MainCtrl::getTrackId(uint32_t trackId) {
 	return trackList[trackId]; // operator[] returns NULL on oob

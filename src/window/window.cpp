@@ -102,7 +102,7 @@ public:
 	}
 
 void handleStdException(std::exception& e) {
-	getGlobalLogger()->logStr(StringFormat("std::exception:   %s\n", e.what()));
+	getGlobalLogger()->logStr(StringFormat("std::exception: %s\n", e.what()));
 	logStackTrace();
 	fataError = true;
 //	std::terminate();
