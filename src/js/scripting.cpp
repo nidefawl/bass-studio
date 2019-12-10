@@ -71,21 +71,21 @@ int getTrackInfo(duk_context *ctx) {
 	vsthost* host = daw_tls::getTls().host;
 	project_t* project = project_controller_t::get();
 	if (host && project) {
-		DAW::track_graph_t graph = host->lastTrackGraph;
-		{
-			duk_idx_t  arr_idx = duk_push_array(ctx);
-//			duk_uarridx_t idx = 0;
-			for (auto node : graph.nodes) {
-				audio_stage_t* stage = host->getAudioStage(audio_stage_ref_t{node.stageId});
-				if (stage && stage->type == 0) {
-					track_impl_t* trImpl = dynamic_cast<track_impl_t*>(stage);
-					duk_push_string(ctx, StringAsCStr(trImpl->track->name));
-					duk_put_prop_index(ctx, arr_idx, static_cast<int32_t>(node.stageId));
-//					duk_put_prop_index(ctx, arr_idx, idx++);
-				}
-			}
-			duk_put_prop_string(ctx, -2, "tracks");
-		}
+//		DAW::track_graph_t graph = host->lastTrackGraph;
+//		{
+//			duk_idx_t  arr_idx = duk_push_array(ctx);
+////			duk_uarridx_t idx = 0;
+//			for (auto node : graph.nodes) {
+//				audio_stage_t* stage = host->getAudioStage(audio_stage_ref_t{node.stageId});
+//				if (stage && stage->type == 0) {
+//					track_impl_t* trImpl = dynamic_cast<track_impl_t*>(stage);
+//					duk_push_string(ctx, StringAsCStr(trImpl->track->name));
+//					duk_put_prop_index(ctx, arr_idx, static_cast<int32_t>(node.stageId));
+////					duk_put_prop_index(ctx, arr_idx, idx++);
+//				}
+//			}
+//			duk_put_prop_string(ctx, -2, "tracks");
+//		}
 	}
 
 
@@ -130,44 +130,44 @@ int getAudioGraph(duk_context *ctx) {
 		duk_put_prop_string(ctx, -2, "nativeHandle");
 		if (daw_tls::getTls().host) {
 			auto graph = vsthost::getInstance()->lastTrackGraph;
-			{
+//			{
+//
+//				duk_idx_t  arr_idx = duk_push_array(ctx);
+//				duk_uarridx_t idx = 0;
+//				for (auto n : graph.nodes) {
+//					duk_idx_t  obj_idx = duk_push_object(ctx);
+//						duk_push_int(ctx, static_cast<int32_t>(n.stageId));
+//						duk_put_prop_string(ctx, -2, "stageId");
+//						duk_push_int(ctx, n.numDependants);
+//						duk_put_prop_string(ctx, -2, "numDependants");
+//						duk_push_int(ctx, n.internalLatency);
+//						duk_put_prop_string(ctx, -2, "internalLatency");
+//						duk_push_int(ctx, n.inputLatency);
+//						duk_put_prop_string(ctx, -2, "inputLatency");
+//						duk_idx_t  arr_idx2 = duk_push_array(ctx);
+//						duk_uarridx_t idx2 = 0;
+//						for (auto n2 : n.dependencies) {
+//							duk_push_int(ctx, static_cast<int32_t>(n2));
+//							duk_put_prop_index(ctx, arr_idx2, idx2++);
+//						}
+//						duk_put_prop_string(ctx, -2, "dependencies");
+//
+//	//				duk_put_prop_index(ctx, arr_idx, idx++);
+//					duk_put_prop_index(ctx, arr_idx, static_cast<int32_t>(n.stageId));
+//				}
+//				duk_put_prop_string(ctx, -2, "nodes");
+//			}
 
-				duk_idx_t  arr_idx = duk_push_array(ctx);
-				duk_uarridx_t idx = 0;
-				for (auto n : graph.nodes) {
-					duk_idx_t  obj_idx = duk_push_object(ctx);
-						duk_push_int(ctx, static_cast<int32_t>(n.stageId));
-						duk_put_prop_string(ctx, -2, "stageId");
-						duk_push_int(ctx, n.numDependants);
-						duk_put_prop_string(ctx, -2, "numDependants");
-						duk_push_int(ctx, n.internalLatency);
-						duk_put_prop_string(ctx, -2, "internalLatency");
-						duk_push_int(ctx, n.inputLatency);
-						duk_put_prop_string(ctx, -2, "inputLatency");
-						duk_idx_t  arr_idx2 = duk_push_array(ctx);
-						duk_uarridx_t idx2 = 0;
-						for (auto n2 : n.dependencies) {
-							duk_push_int(ctx, static_cast<int32_t>(n2));
-							duk_put_prop_index(ctx, arr_idx2, idx2++);
-						}
-						duk_put_prop_string(ctx, -2, "dependencies");
-
-	//				duk_put_prop_index(ctx, arr_idx, idx++);
-					duk_put_prop_index(ctx, arr_idx, static_cast<int32_t>(n.stageId));
-				}
-				duk_put_prop_string(ctx, -2, "nodes");
-			}
-
-			{
-
-				duk_idx_t  arr_idx = duk_push_array(ctx);
-				duk_uarridx_t idx = 0;
-				for (auto n : graph.roots) {
-					duk_push_int(ctx, static_cast<int32_t>(n));
-					duk_put_prop_index(ctx, arr_idx, idx++);
-				}
-				duk_put_prop_string(ctx, -2, "roots");
-			}
+//			{
+//
+//				duk_idx_t  arr_idx = duk_push_array(ctx);
+//				duk_uarridx_t idx = 0;
+//				for (auto n : graph.roots) {
+//					duk_push_int(ctx, static_cast<int32_t>(n));
+//					duk_put_prop_index(ctx, arr_idx, idx++);
+//				}
+//				duk_put_prop_string(ctx, -2, "roots");
+//			}
 		}
 
 

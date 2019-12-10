@@ -244,6 +244,28 @@ public:
 		MainCtrl::get()->openContextMenu(new guictxtmenu_at_param(&m_track->audio->mixer, PARAM_ENABLE), evt.mousepos);
 	}
 };
+
+class guibutton_track_solo : public guibutton {
+	track_t* const m_track;
+public:
+	guibutton_track_solo(track_t* _track) : guibutton(), m_track(_track) {
+		setText("S");
+	}
+	NVGcolor getBackgroundColor(int stateflags) const override {
+//		int fl = FLG_HAS_COLOR_BG|FLG_ENBL;
+		int fl = FLG_ENBL;
+		if ((stateflags&fl) == fl) {
+			return theme->getColor(GuiColor::COL_BTN_SOLO_BG_ENABLED);
+		}
+//		return theme->getColor(GuiColor::COL_BTN_SOLO_BG_DISABLED);
+		return theme->getBgColor(stateflags);
+	}
+	bool isEnabled() const override {
+		return m_track->audio && static_cast<bool>(m_track->audio->flags & audiostageflags_t::SOLO);
+	}
+	void handleRightClick(MouseEvent& evt) override {
+	}
+};
 namespace GuiColor {
 
 constant_t COL_BTN_LOAD_DEF_PLUGINS("COL_BTN_LOAD_DEF_PLUGINS", 0xFFFFFFFF);
@@ -729,11 +751,12 @@ class gui_trackcontrols_mixer: public guictr_base {
 public:
 	gui_trackgain gain;
 	guibutton_trackbypass btnBypass;
+	guibutton_track_solo btnSolo;
 	guibutton btnActivate;
 	guibutton btnShowSubtrack;
 	std::vector<gui_trackgain*> sendGains;
 	gui_trackcontrols_mixer(track_t* _track) :
-		guictr_base(), m_track(_track), meter(&_track->audio->meter), btnBypass(_track) {
+		guictr_base(), m_track(_track), meter(&_track->audio->meter), btnBypass(_track), btnSolo(_track) {
 		gain.setAutomationRef(&_track->audio->mixer, PARAM_TRACK_GAIN);
 		padding = 0;
 //		btnBypass.setTint(nvgToRGB(theme->getFrameColorOutline()));
@@ -744,6 +767,7 @@ public:
 		btnActivate.setLabel("Load plugins");
 		btnShowSubtrack.setLabel("Add audio subtrack");
 		add(&btnBypass);
+		add(&btnSolo);
 		add(&btnActivate);
 		add(&gain);
 		add(&meter);
@@ -767,10 +791,14 @@ public:
 		remove(&meter);
 		remove(&gain);
 		remove(&btnActivate);
+		remove(&btnSolo);
 		remove(&btnBypass);
 		remove(&btnShowSubtrack);
 	}
 	void buttonClicked(guibase* button) override {
+		if (&btnSolo == button) {
+			m_track->audio->flags ^= audiostageflags_t::SOLO;
+		}
 		if (&btnBypass == button) {
 			track_params_t& trackParams = m_track->audio->mixer;
 			trackParams.deactivateAutomation(PARAM_ENABLE);
@@ -801,9 +829,11 @@ public:
 		int32_t mW = TRACK_HEIGHT_STEP;
 		int32_t bW = size.x-mW;
 		int32_t gW = size.x-mW;
-		btnBypass.size = ivec2(bW - i2, h);
+		btnBypass.size = ivec2(bW - i2 - h, h);
 		gain.size = ivec2(gW - i2, h);
 		btnBypass.pos = ivec2(inset, inset);
+		btnSolo.pos = ivec2(bW - i2 - h, inset);
+		btnSolo.size = ivec2(h, h);
 		gain.pos = ivec2(inset, TRACK_HEIGHT_STEP+inset);
 		btnActivate.pos = {inset, gain.bottom()+i2};
 		btnActivate.setFontSize(TRACK_HEIGHT_STEP-i2);

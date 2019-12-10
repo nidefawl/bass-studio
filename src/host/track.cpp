@@ -592,13 +592,16 @@ void audio_stage_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginLi
 
 
 }
-void vsthost::activateDeferred(effectbase* eff) {
+void vsthost::activateDeferred(effectbase* const eff, effectbase** out_effectLoaded) {
 	dbgassert(eff->trackImpl);
 	dbgassert(eff->trackImpl->effects.size());
 	dbgassert(eff->getSlot() >= 0);
 	auto defEffect = dynamic_cast<effect_deferred*>(eff);
 	plugin_snapshot_t pluginSnapshot = defEffect->getSnapshot();
 	effectbase* effect = loadEffectModule(pluginSnapshot);
+	if (out_effectLoaded) {
+		*out_effectLoaded = effect;
+	}
 	if (!effect) {
 		log_printf("Failed loading %s\n", StringAsCStr(pluginSnapshot.name));
 //		dbgassert(0);

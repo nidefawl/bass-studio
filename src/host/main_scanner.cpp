@@ -15,6 +15,7 @@
 #include "appsettings.h"
 #include "tls.h"
 #ifdef _WIN32
+#include "../platform/win/platform_win.h"
 #include <windows.h>
 #endif
 #ifdef __linux__
@@ -114,6 +115,8 @@ BOOL WINAPI ConsoleHandler(DWORD dwType)
     return TRUE;
 }
 #endif
+
+
 int main(int argc, char* argv[]) {
 	LOG("ARGC %d", argc);
 	for (int i = 0; i < argc; i++) {

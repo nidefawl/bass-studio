@@ -24,6 +24,16 @@
 #include "logging.h"
 #include "error.h"
 
+static HWND mainHWND = NULL;
+extern "C" {
+HWND getMainHWND() {
+	return mainHWND;
+}
+void setMainHWND(HWND hwnd) {
+	mainHWND =hwnd;
+}
+}
+
 uint64_t getTimeMillis() {
 	return (uint64_t) timeGetTime();
 }

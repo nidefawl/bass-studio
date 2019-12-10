@@ -13,9 +13,9 @@
 #include <Windows.h>
 #include "math/vec.h"
 #include "math/seq_math.h"
+#include "../platform/win/platform_win.h"
 
 #define WIN32API_CALLBACK_TYPE __stdcall
-HWND getMainHWND(); // window.cpp
 LRESULT WIN32API_CALLBACK_TYPE appWndProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam); // window.cpp
 
 namespace {

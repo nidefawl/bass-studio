@@ -2,6 +2,7 @@
 #include <vector>
 #include <array>
 #include <memory>
+#include <type_traits>
 #include "config.h"
 #include "math/seq_math.h"
 #include "automation.h"
@@ -89,15 +90,39 @@ public:
 	}
 	track_t* getTrack() override;
 	bool isEnabled() {
-		dbgassert(getParam(PARAM_ENABLE));
 		return getParam(PARAM_ENABLE)->value >= 0.5f;
 	}
 	void createSnapshot(track_params_snapshot_t& snapshot);
 	void loadSnapshot(const track_params_snapshot_t& snapshot);
 	void postSetParameter(int32_t idx, float preVal, float val, int flags);
 };
+
+enum class audiostageflags_t : int32_t {
+    NONE 					= 0,
+    BYPASS 					= 1 << 0,
+    BYPASS_EFFECT_CHAIN 	= 1 << 1,
+	MUTE_INPUT 				= 1 << 2,
+	MUTE_OUTPUT 			= 1 << 3,
+    SOLO				 	= 1 << 4,
+};
+template<class T, typename = std::enable_if_t<std::is_same<T, audiostageflags_t>::value> >
+inline T operator~ (T a) { return (T)~(int)a; }
+template<class T, typename = std::enable_if_t<std::is_same<T, audiostageflags_t>::value> >
+inline T operator| (T a, T b) { return (T)((int)a | (int)b); }
+template<class T, typename = std::enable_if_t<std::is_same<T, audiostageflags_t>::value> >
+inline T operator& (T a, T b) { return (T)((int)a & (int)b); }
+template<class T, typename = std::enable_if_t<std::is_same<T, audiostageflags_t>::value> >
+inline T operator^ (T a, T b) { return (T)((int)a ^ (int)b); }
+template<class T, typename = std::enable_if_t<std::is_same<T, audiostageflags_t>::value> >
+inline T& operator|= (T& a, T b) { return (T&)((int&)a |= (int)b); }
+template<class T, typename = std::enable_if_t<std::is_same<T, audiostageflags_t>::value> >
+inline T& operator&= (T& a, T b) { return (T&)((int&)a &= (int)b); }
+template<class T, typename = std::enable_if_t<std::is_same<T, audiostageflags_t>::value> >
+inline T& operator^= (T& a, T b) { return (T&)((int&)a ^= (int)b); }
+
 struct audio_stage_t {
-	audiostageid_i32 stageId;
+	audiostageid_i32 stageId = TRACKID_INVALID_I32;
+	audiostageflags_t flags = audiostageflags_t::NONE;
 	audio_stage_t* parent;
 	effectbase* owner;
 	guictr_plugins* pluginCtr;
@@ -127,6 +152,7 @@ struct audio_stage_t {
 		int32_t delayToPreReturn = 0;
 		int32_t delayToPostReturn = 0;
 	} latencyInfo;
+
 	audio_stage_t(const audiostageid_i32 _id,/*track_t* _track, */const samplerate_t& _sampleRate, const uint16_t& _blockSize, int32_t nChannels, int _type = 1)
 	: stageId(_id), parent(nullptr), owner(nullptr),/*track(_track),*/
 	  pluginCtr(nullptr),

@@ -11,8 +11,7 @@
 #include <stdexcept>
 #include <stdint.h>
 #include "assert_dbg.h"
-
-HWND getMainHWND(); // window.cpp
+#include "platform_win.h"
 
 int64_t ReadImage( const String &Filename, ImageBuf& ref)
 {

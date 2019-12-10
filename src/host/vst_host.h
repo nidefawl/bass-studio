@@ -95,8 +95,8 @@ public:
 	std::atomic<int32_t> audioStageId{100};
 	std::atomic<int32_t> sampleId{(1<<30)}; //TODO: collides with audiocache::nextIdx
 
-	SYNCHRONIZED_RW DAW::track_graph_t lastTrackGraph;
-	SYNCHRONIZED_RW DAW::processing_list_t lastProcessingList;
+	SYNCHRONIZED_RW std::shared_ptr<DAW::track_graph_t> lastTrackGraph;
+	SYNCHRONIZED_RW std::shared_ptr<DAW::processing_graph_t> lastProcessingList;
 
 	SYNCHRONIZED_RW hires_timer_t timer; // timer for cpu-time profiling
 	SYNCHRONIZED_RW hires_timer_t timer2;// timer for cpu-time profiling
@@ -215,7 +215,7 @@ public:
 	void getDeferredEffects(std::vector<effectbase*>& effects) {
 		effects = pluginsDeferred;
 	}
-	void activateDeferred(effectbase* effect);
+	void activateDeferred(effectbase* const eff, effectbase** out_effectLoaded = nullptr);
 	SafeRefStorage<effectbase>* getSafeRefStore() {
 		return &safeRefs;
 	}

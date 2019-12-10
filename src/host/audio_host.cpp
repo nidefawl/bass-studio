@@ -424,7 +424,7 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
 		return error("Pa_SetStreamFinishedCallback", err);
 
 	stream->stream = paStream;
-	log_printf("NEW STREAM HANDLE: %X (%d)\n", (int64_t)stream.get(), stream->streamId);
+	log_printf("NEW STREAM HANDLE: %X (%d) %d %s channels %d %s channels blocksize %d samplerate %d\n", (int64_t)stream.get(), stream->streamId, pInputParams->channelCount, "input", pOutputParams->channelCount, "output", blocksize, samplerate);
 	this->streams.push_back(stream);
 	this->lSampleRate = samplerate;
 	this->lBlockSize = blocksize;

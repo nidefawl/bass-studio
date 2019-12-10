@@ -53,6 +53,8 @@ extern constant_t COL_LABEL_ACTIVE;
 extern constant_t COL_LABEL_INACTIVE;
 extern constant_t COL_KNOB;
 extern constant_t COL_KNOB_IND;
+extern constant_t COL_BTN_SOLO_BG_ENABLED;
+extern constant_t COL_BTN_SOLO_BG_DISABLED;
 extern constant_t COL_AUTOMATED;
 extern constant_t COL_PLUG_TITLE;
 extern constant_t COL_PLUG_TITLE_SELECTED;

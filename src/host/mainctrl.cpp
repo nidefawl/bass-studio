@@ -915,9 +915,13 @@ bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file, int flags) {
 	/** pre-load all plugin instances **/
 	trackList.loadPlugins(file->project);
 
-	/** create all audio instances **/
+	/** reset maximum stage id and determine new maximum stage id **/
 	host->updateMaximumStageId();
+
+	/** remove routings to missing track **/
 	DAW::validateTrackRoutings(host, this->getTracksFlatVec());
+
+	/** inform host about track layout changes so it resets and updates internal structures **/
 	host->onTrackLayoutChange();
 
 

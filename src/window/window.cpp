@@ -27,6 +27,7 @@
 #include <glm/geometric.hpp>
 
 #ifdef _WIN32
+#include "../platform/win/platform_win.h"
 #include "../platform/win/winheaders.h"
 #include "../platform/win/DropTarget.h"
 #endif
@@ -164,6 +165,7 @@ class appwindow_dialog;
 class appwindow_overlay;
 
 #ifdef _WIN32
+
 void syncMenu(HWND hwnd, ngui::MenuBar& menubar); // menu_win32.cpp
 ngui::Menu* getUserDataFromMenu(HMENU hmenu, UINT uPos); // menu_win32.cpp
 LRESULT WIN32API_CALLBACK_TYPE appWndProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam);
@@ -1302,7 +1304,6 @@ void printLeakedGuiBase();
 void printClipAllocations();
 #endif
 
-static std::unique_ptr<appwindow_main> mainWindow;
 
 GLFWwindow* getGlfwFromWindowBase(window_base* w) {
 	return dynamic_cast<appwindow*>(w)->getGLFW();
@@ -1313,12 +1314,6 @@ void makeWindowContextCurrent(window_base* w) {
 		glfwMakeContextCurrent(glfw);
 	}
 }
-
-#ifdef _WIN32
-HWND getMainHWND() {
-	return mainWindow ? mainWindow->getHWND() : NULL;
-}
-#endif
 
 #if HAS_MAIN_LOOP
 #include "platform/win/debug_msg_count.h"
@@ -1335,6 +1330,7 @@ void initColor(); // Forward declare from gui/gui.cpp
 void deleteApp(); // Forward declare from host/mainctrl.cpp
 void openGlobalLog(); // Forward declare from util/debug.cpp
 void closeGlobalLog(); // Forward declare from util/debug.cpp
+
 
 int startApplication(int argc, char* argv[]) {
 	setCurrentThreadName("mainthread");
@@ -1401,8 +1397,10 @@ int startApplication(int argc, char* argv[]) {
 	setAppWindowHints();
 	std::shared_ptr<AppCtrl> ctrl = makeApp();
 	ctrl->initApp(argc, argv);
-	mainWindow = std::make_unique<appwindow_main>(nullptr, ctrl);
+
+	std::unique_ptr<appwindow_main> mainWindow = std::make_unique<appwindow_main>(nullptr, ctrl);
 	mainWindow->createMainWindow("main window", 1280, 720, nullptr);
+    setMainHWND(mainWindow->getHWND());
 	mainWindow->showWindow();
 	if (centerScreenIdx >= 0) {
 		mainWindow->centerOnScreen(centerScreenIdx);

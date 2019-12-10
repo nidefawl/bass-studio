@@ -29,6 +29,7 @@
 #include "midi_host.h"
 #include "track.h"
 #include "track_impl.h"
+#include "../platform/win/platform_win.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -37,6 +38,7 @@
 #include <unistd.h>
 #include <limits.h>
 #endif
+
 
 void deleteApp() {
 
@@ -95,7 +97,42 @@ static  void on_unexpected1() {
 	logStackTrace();
 //	exit(1); // required on mingw (at least)
 }
+static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    switch(msg)
+    {
+	case WM_CREATE:
+		break;
+	case WM_DESTROY:
+		PostQuitMessage(0);
+		return 0;
+	}
+
+    return DefWindowProc(hwnd, msg, wParam, lParam);
+}
+
+
+extern volatile bool fataError;
 int main(int argc, char* argv[]) {
+//    auto audiohost = std::make_unique<vsthost>();
+//	vsthost::assignMasterCallback(audiohost.get());
+//    daw_tls::tlsinstance& tls = daw_tls::getTls();
+//    tls.host = audiohost.get();
+    MSG msg;
+    WNDCLASS wc;
+
+    wc.style         = CS_HREDRAW | CS_VREDRAW;
+    wc.cbClsExtra    = 0;
+    wc.cbWndExtra    = 0;
+    wc.lpszClassName = "Window";
+    wc.hInstance     = GetModuleHandle(NULL);
+    wc.hbrBackground = GetSysColorBrush(COLOR_3DFACE);
+    wc.lpszMenuName  = NULL;
+    wc.lpfnWndProc   = WndProc;
+    wc.hCursor       = LoadCursor(NULL, IDC_ARROW);
+    wc.hIcon         = LoadIcon(NULL, IDI_APPLICATION);
+
+    RegisterClass(&wc);
 	LOG("ARGC %d", argc);
 	for (int i = 0; i < argc; i++) {
 		LOG("argv[%d] %s", i, argv[i]);
@@ -151,16 +188,30 @@ int main(int argc, char* argv[]) {
 		if (audioHost->startAudio(settings.iosettings)) {
 			host->setOutput(audioHost.get());
 		} else {
-			//notify user
 			log_printf("audioHost->startAudio() failed\n", 0);
 			return 1;
 		}
 
 		midihost::getInstance()->startMidi();
     	plugindb.openDatabase();
+
+        HWND hwnd = CreateWindow(wc.lpszClassName, "Window",
+                    WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+                    100, 100, 350, 250, NULL, NULL, wc.hInstance, NULL);
+        dbgassert(hwnd != NULL);
+        setMainHWND(hwnd);
+        ShowWindow(hwnd, SW_SHOW);
+        UpdateWindow(hwnd);
+
+//        while  (GetMessage(&msg, NULL, 0, 0))
+//        {
+//            DispatchMessage(&msg);
+//        }
+
+
     	LOG("START");
     	{
-    		bool activateDeferred = false;
+    		bool activateDeferred = true;
     		std::unique_ptr<PlaybackThread> playThread = std::make_unique<PlaybackThread>();
     		playThread->setTls(tls);
     		playThread->startThread(&project);
@@ -175,7 +226,6 @@ int main(int argc, char* argv[]) {
 				project.copyFrom(snapshot);
 				audiocache::getInstance()->load(pf->sampleFileIndex);
 
-				vsthost* host = vsthost::getInstance();
 				/** create all audio instances **/
 				for (track_t* t : project.trackList) {
 					host->createAudio(t);
@@ -183,6 +233,15 @@ int main(int argc, char* argv[]) {
 
 				/** pre-load all plugin instances **/
         		project.trackList.loadPlugins(snapshot);
+
+        		/** reset maximum stage id and determine new maximum stage id **/
+        		host->updateMaximumStageId();
+
+        		/** remove routings to missing track **/
+        		DAW::validateTrackRoutings(host.get(), project.getTracksFlatVec());
+
+        		/** inform host about track layout changes so it resets and updates internal structures **/
+        		host->onTrackLayoutChange();
 
 
 				/** fully load all plugin instances **/
@@ -192,7 +251,11 @@ int main(int argc, char* argv[]) {
             		my_printf("loading %d plugins\n", pluginsDeferred.size());
             		for (auto plugin : pluginsDeferred) {
                 		my_printf("activate %s\n", StringAsCStr(plugin->sName));
-            			host->activateDeferred(plugin);
+                		effectbase* effectLoaded = nullptr;
+            			host->activateDeferred(plugin, &effectLoaded);
+//            			if (effectLoaded) {
+//            				effectLoaded->show();
+//            			}
             		}
         		}
 
@@ -241,13 +304,23 @@ int main(int argc, char* argv[]) {
             		}
 
 	        	}
+	        	/** reset maximum stage id and determine new maximum stage id **/
+	        	host->updateMaximumStageId();
+
+	        	/** remove routings to missing track **/
+	        	DAW::validateTrackRoutings(host.get(), project.getTracksFlatVec());
+
+	        	/** inform host about track layout changes so it resets and updates internal structures **/
+	        	host->onTrackLayoutChange();
+
 	        	auto treePos = track_tree_pos_t{TRACK_CTR_MIDIAUDIO, nullptr, 0};
 	        	project.trackList.moveTracks(loadedChildTracks, treePos);
 			}
 			for (auto* trackMaster : project.trackMasterCtr) {
-				trackMaster->audio->mixer.setParamValue(PARAM_TRACK_GAIN, 0.0f, FLG_PAR_UPDATE_INIT);
+				trackMaster->audio->mixer.setParamValue(PARAM_TRACK_GAIN, 0.4f, FLG_PAR_UPDATE_INIT);
 			}
-
+			/** inform host about track layout changes so it resets and updates internal structures */
+			host->onTrackLayoutChange();
 
     		my_printf("Tempo100: %d\n", project.tempo100);
     		my_printf("project.cursor.cursorPos: %d\n", project.cursor.cursorPos);
@@ -267,7 +340,7 @@ int main(int argc, char* argv[]) {
 
 			my_printf("request playback start..\n", 0);
 
-			project.cursor.cursorPos = TICKS_BAR*4;
+			project.cursor.cursorPos = project.loopStart;
 
 			playThread->addRequest(REQ_STATE, (int) playback_state::status_play, true);
 
@@ -307,16 +380,16 @@ int main(int argc, char* argv[]) {
 //    	//			host->bufferUnderuns++;
 //    		//		dsp_util::fillSilence(inputs, framesPerBuffer);
 //    			}
-#define MAX_GAIN 0.0f
+//#define MAX_GAIN 0.0f
 				auto tNow = getTimeMillis()/1000.0;
-				auto since = tNow - tLastMsg;
-				{
-					ThreadLock lock = playThread->lockThread();
-					float gain = math::clamp<float>(since*MAX_GAIN, MAX_GAIN, 0.0f);
-					for (auto* trackMaster : project.trackMasterCtr) {
-						trackMaster->audio->mixer.setParamValue(PARAM_TRACK_GAIN, math::min(gain, MAX_GAIN), FLG_PAR_UPDATE_AUTOMATED);
-					}
-				}
+//				auto since = tNow - tLastMsg;
+//				{
+//					ThreadLock lock = playThread->lockThread();
+//					float gain = math::clamp<float>(since*MAX_GAIN, MAX_GAIN, 0.0f);
+//					for (auto* trackMaster : project.trackMasterCtr) {
+//						trackMaster->audio->mixer.setParamValue(PARAM_TRACK_GAIN, math::min(gain, MAX_GAIN), FLG_PAR_UPDATE_AUTOMATED);
+//					}
+//				}
 
 				if (tNow - tLastMsg >= 1.0) {
 					tLastMsg = tNow;
@@ -327,13 +400,48 @@ int main(int argc, char* argv[]) {
 					log_printf("playbackPos %d, %d blocks, %d samples\n", project.playbackPos, stats.blocksProcessed, stats.samplesProcessed);
 
 
-					if (project.playbackPos > TICKS_BAR*4) {
-						playThread->addRequest(REQ_STATE, (int) playback_state::status_no_process, true);
-						quit = true;
-						break;
-					}
+//					if (project.playbackPos > TICKS_BAR*16) {
+//						playThread->addRequest(REQ_STATE, (int) playback_state::status_no_process, true);
+//						quit = true;
+//						break;
+//					}
 				}
-    			threadSleep(10);
+
+				DWORD timeout = 5;
+				MsgWaitForMultipleObjects(0, NULL, FALSE, timeout, QS_ALLEVENTS);
+			    MSG msg;
+			    while (!fataError && PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE))
+			    {
+		//	    	logEveryMsec(0, 5000, "Main msg loop");
+			        if (msg.message == WM_QUIT)
+			        {
+//			        	glfwSetWindowShouldClose(glfwHandle, 1);
+			        }
+			        else
+			        {
+
+//			            switch (msg.message) {
+//		#if BUILD_VSTHOST
+//			            	case WM_KEYDOWN:
+//							case WM_SYSKEYDOWN:
+//							case WM_KEYUP:
+//							case WM_SYSKEYUP: {
+//								if (vst_window_mgr::isVstWindow(msg.hwnd)) {
+//									msg.hwnd = hwnd;
+//								}
+//							}
+//		#endif
+//							//no break
+//							default:
+								TranslateMessage(&msg);
+					            DispatchMessageW(&msg);
+//								break;
+//			            }
+
+
+			        }
+			    }
+//    			threadSleep(10);
     		}
 //    		drwav_close(pWav);
 //    		file->flush();

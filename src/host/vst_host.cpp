@@ -751,13 +751,13 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 
 //
 		/** turn tree structure into linear pointer array with parents followed by their children **/
-		DAW::track_graph_t graph;
-		DAW::processing_list_t processingList;
-		if (!DAW::buildProcessingGraph(this, ctrl, tracksFlatAll, graph, processingList)) {
+		std::shared_ptr<DAW::processing_graph_t> processingGraph;
+		if (!DAW::buildProcessingGraph(this, ctrl, tracksFlatAll, processingGraph)) {
 			log_printf("Failed building track graph\n", 0);
 		}
-		this->lastTrackGraph = graph;
-		this->lastProcessingList= processingList;
+
+		this->lastTrackGraph = processingGraph->trackGraph;
+		this->lastProcessingList= processingGraph;
 //		std::vector<track_t*> vecTracks;
 //		std::deque<track_t*> qTracks;
 //		qTracks.push_back(trackTop);
@@ -794,11 +794,11 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 		int32_t dbg = dbgStep++%330;
 		int32_t idxDelayLine = 0;
 		AudioBlock tempBlock(8, lBlockSize);
-		for (auto itAudioStage = processingList.nodes.rbegin(); itAudioStage != processingList.nodes.rend(); itAudioStage++) {
-			const DAW::processing_track_node_t& processingNode = *itAudioStage;
-			track_t* const track = processingNode.track;
+		for (auto itAudioStage = processingGraph->nodesFlatOrdered.rbegin(); itAudioStage != processingGraph->nodesFlatOrdered.rend(); itAudioStage++) {
+			const DAW::processing_track_node_t* ptrProcessingNode = *itAudioStage;
+			const DAW::processing_track_node_t& trackNode = *ptrProcessingNode;
+			track_t* const track = trackNode.trackOptional;
 			track_impl_t* const trackImpl = track->audio;
-			const DAW::track_node_t& trackNode = processingNode.trackNode;
 
 			if (dbg == 0) {
 				log_printf("process track %s\n", StringAsCStr(track->name));
@@ -908,9 +908,10 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 //		AudioBlock* bufOut = ptrExternalOutputs->output;
 //		int32_t channelIdx = 0;
 
-		for (auto itAudioStage = processingList.nodes.rbegin(); itAudioStage != processingList.nodes.rend(); itAudioStage++) {
-			const DAW::processing_track_node_t& processingNode = *itAudioStage;
-			track_t* const track = processingNode.track;
+		for (auto itAudioStage = processingGraph->nodesFlatOrdered.rbegin(); itAudioStage != processingGraph->nodesFlatOrdered.rend(); itAudioStage++) {
+			const DAW::processing_track_node_t* ptrProcessingNode = *itAudioStage;
+			const DAW::processing_track_node_t& trackNode = *ptrProcessingNode;
+			track_t* const track = trackNode.trackOptional;
 			track_impl_t* const trackImpl = track->audio;
 			if (trackImpl->mixer.isEnabled()) {
 				auto outputChannel = trackImpl->outputChannel;
