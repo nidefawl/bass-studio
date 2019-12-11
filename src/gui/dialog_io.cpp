@@ -1094,7 +1094,7 @@ public:
 		if (!bEnbl) {
 			midi_channel ch;
 			ch.idx = 0;
-			ch.deviceName = "";
+			ch.deviceName = deviceName;
 			c.push_back(ch);
 		}
 		if (parent && parent->parent) {
