@@ -129,8 +129,7 @@ namespace DAW {
 			shrdPtrProcGraph->nodes.push_back(procTrackNode);
 		}
 		processing_graph_t& graph = *(shrdPtrProcGraph.get());
-//		std::deque<track_node_t*> stack;
-//		stack.insert(stack.begin(), dependencyGraph->roots.cbegin(), dependencyGraph->roots.cend());
+
 		for (const track_node_t* const ptrTrackNode : graphFlattened.resolved) {
 			const DAW::track_node_t& trackNode = *ptrTrackNode;
 			audiostageid_i32 nodeIdx = trackNode.stageId;
@@ -139,7 +138,7 @@ namespace DAW {
 			track_t* const track = audioStage->getTrack();
 			dbgassert(track);
 			if (STL_CONTAINS(tracksVisited, track)) {
-				log_printf("unexpected: visited node %s twice in flattened array.\n", StringAsCStr(track->name));
+				// expected
 				continue;
 			}
 			tracksVisited.push_back(track);
@@ -170,29 +169,30 @@ namespace DAW {
 				procTrackNode->parents.push_back(procTrackNodeParent);
 			}
 			if (trackNode.dependencies.empty()) {
-				graph.roots.push_back(procTrackNode);//.get());
+				graph.roots.push_back(procTrackNode);
 			}
-			graph.nodesFlatOrdered.push_back(procTrackNode);//.get());
+			graph.nodesFlatOrdered.push_back(procTrackNode);
 		}
 
+#ifndef NDEBUG
+		/* assert: dependency must lay before parent */
 		for (auto itStageIdx = graph.nodesFlatOrdered.begin(); itStageIdx < graph.nodesFlatOrdered.end(); ++itStageIdx) {
 			const DAW::track_node_t& trackNode = *(*itStageIdx);
 			for (auto depNodeIdx : trackNode.dependencies) {
 				auto itDependency = std::find_if(graph.nodesFlatOrdered.begin(), graph.nodesFlatOrdered.end(), [depNodeIdx] (const track_node_t* ptr) {
 					return ptr->stageId == depNodeIdx;
 				});
-				//we process in reverse, so dependency must lay after parent
+
 				if (itDependency >= itStageIdx) {
 					log_printf("unexpected: dependecy index >= this index!!\n", 0);
 				}
-
-				//TODO: look thru whole dependency chain, compare all node iterators against itStageIdx
 			}
 		}
 		for (auto itNodes = graph.nodes.begin(); itNodes != graph.nodes.end(); itNodes++) {
 			auto ptrNode = *itNodes;
 			ptrNode->inputLatency = INVALID_SAMPLE_OFFSET_U32;
 		}
+#endif
 
 		/* Determine nodes accumulated inputLatency (own internalLatency + max_latency(all_children)) */
 		/* This has to be done in bottom up/child first */
@@ -215,7 +215,9 @@ namespace DAW {
 				});
 				dbgassert(itProcNode != graph.nodesFlatOrdered.end());
 				auto ptrChNode = *itProcNode;
+#ifndef NDEBUG
 				dbgassert(ptrChNode->inputLatency != INVALID_SAMPLE_OFFSET_U32);
+#endif
 				ptrNode->inputLatency = std::max(ptrNode->inputLatency, ptrChNode->inputLatency + ptrChNode->internalLatency);
 
 			}
