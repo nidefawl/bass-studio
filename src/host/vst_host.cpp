@@ -794,7 +794,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 		int32_t dbg = dbgStep++%330;
 		int32_t idxDelayLine = 0;
 		AudioBlock tempBlock(8, lBlockSize);
-		for (auto itAudioStage = processingGraph->nodesFlatOrdered.rbegin(); itAudioStage != processingGraph->nodesFlatOrdered.rend(); itAudioStage++) {
+		for (auto itAudioStage = processingGraph->nodesFlatOrdered.begin(); itAudioStage != processingGraph->nodesFlatOrdered.end(); itAudioStage++) {
 			const DAW::processing_track_node_t* ptrProcessingNode = *itAudioStage;
 			const DAW::processing_track_node_t& trackNode = *ptrProcessingNode;
 			track_t* const track = trackNode.trackOptional;
@@ -908,7 +908,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 //		AudioBlock* bufOut = ptrExternalOutputs->output;
 //		int32_t channelIdx = 0;
 
-		for (auto itAudioStage = processingGraph->nodesFlatOrdered.rbegin(); itAudioStage != processingGraph->nodesFlatOrdered.rend(); itAudioStage++) {
+		for (auto itAudioStage = processingGraph->nodesFlatOrdered.begin(); itAudioStage != processingGraph->nodesFlatOrdered.end(); itAudioStage++) {
 			const DAW::processing_track_node_t* ptrProcessingNode = *itAudioStage;
 			const DAW::processing_track_node_t& trackNode = *ptrProcessingNode;
 			track_t* const track = trackNode.trackOptional;

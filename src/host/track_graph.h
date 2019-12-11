@@ -26,8 +26,8 @@ struct track_node_t {
 	std::vector<track_source_t> pushs;
 	std::vector<track_node_t*> parents;
 	std::vector<track_node_t*> children;
-	samplerate_t internalLatency = 0U;
-	samplerate_t inputLatency = 0U;
+	samplerate_t internalLatency = INVALID_SAMPLE_OFFSET_U32;
+	samplerate_t inputLatency = INVALID_SAMPLE_OFFSET_U32;
 
 	track_node_t() = default;
 	track_node_t(audiostageid_i32 _stageId, samplerate_t _internalLatency)

@@ -72,13 +72,37 @@ namespace DAW {
 		}
 		return numRemoved > 0;
 	}
+	struct dependency_graph_flattened_t {
+		std::vector<track_node_t*> resolved;
+		std::vector<track_node_t*> unresolved;
+	};
+	bool dep_resolve(dependency_graph_flattened_t& ctxt, track_node_t* node) {
+		ctxt.unresolved.push_back(node);
+		for (auto child : node->children) {
+			if (STL_CONTAINS(ctxt.unresolved, child)) {
+				return false;
+			}
+			if (!dep_resolve(ctxt, child)) {
+				return false;
+			}
+		}
+		if (node->stageId != TRACKID_INVALID_I32) {
+			ctxt.resolved.push_back(node);
+		}
 
+		removeEntry(ctxt.unresolved, node);
+		return true;
+	}
 	bool buildProcessingGraph(const vsthost* const host, const project_t* const project, const track_vector& tracksFlat, std::shared_ptr<processing_graph_t>& out_procgraph) {
 		std::shared_ptr<DAW::track_graph_t> dependencyGraph;
 		if (!DAW::buildTrackRoutingGraph(host, project, tracksFlat, dependencyGraph )) {
 			log_printf("Failed building track graph\n", 0);
 			return false;
 		}
+		track_node_t root;
+		root.children.insert(root.children.begin(), dependencyGraph->roots.begin(), dependencyGraph->roots.end());
+		dependency_graph_flattened_t graphFlattened;
+		dep_resolve(graphFlattened, &root);
 
 		track_vector tracksVisited;
 		std::shared_ptr<processing_graph_t> shrdPtrProcGraph = std::make_unique<processing_graph_t>();
@@ -90,8 +114,11 @@ namespace DAW {
 			track_t* const track = audioStage->getTrack();
 			dbgassert(track);
 			processing_track_node_ptr procTrackNode = new processing_track_node_t();//std::make_unique<processing_track_node_t>();
+
 //			procTrackNode->children = trackNode->children;
 //			procTrackNode->parents = trackNode->parents;
+
+
 			procTrackNode->pushs = trackNode->pushs;
 			procTrackNode->pulls = trackNode->pulls;
 			procTrackNode->dependencies = trackNode->dependencies;
@@ -102,11 +129,9 @@ namespace DAW {
 			shrdPtrProcGraph->nodes.push_back(procTrackNode);
 		}
 		processing_graph_t& graph = *(shrdPtrProcGraph.get());
-		std::deque<track_node_t*> stack;
-		stack.insert(stack.begin(), dependencyGraph->roots.cbegin(), dependencyGraph->roots.cend());
-		while (!stack.empty()) {
-			const track_node_t* const ptrTrackNode = stack.front();
-			stack.pop_front();
+//		std::deque<track_node_t*> stack;
+//		stack.insert(stack.begin(), dependencyGraph->roots.cbegin(), dependencyGraph->roots.cend());
+		for (const track_node_t* const ptrTrackNode : graphFlattened.resolved) {
 			const DAW::track_node_t& trackNode = *ptrTrackNode;
 			audiostageid_i32 nodeIdx = trackNode.stageId;
 			audio_stage_t* audioStage = host->getAudioStage(audio_stage_ref_t{nodeIdx});
@@ -114,13 +139,10 @@ namespace DAW {
 			track_t* const track = audioStage->getTrack();
 			dbgassert(track);
 			if (STL_CONTAINS(tracksVisited, track)) {
-				log_printf("loop in track graph\n", 0);
+				log_printf("unexpected: visited node %s twice in flattened array.\n", StringAsCStr(track->name));
 				continue;
 			}
 			tracksVisited.push_back(track);
-			if (trackNode.dependencies.size()) {
-				stack.insert(stack.begin(), trackNode.children.cbegin(), trackNode.children.cend());
-			}
 			auto itProcGraphNode = std::find_if(graph.nodes.begin(), graph.nodes.end(), [nodeIdx] (const processing_track_node_ptr& ptr) {
 				return ptr->stageId == nodeIdx;
 			});
@@ -160,19 +182,23 @@ namespace DAW {
 					return ptr->stageId == depNodeIdx;
 				});
 				//we process in reverse, so dependency must lay after parent
-				if (itDependency <= itStageIdx) {
-					log_printf("unexpected: dependecy index <= this index!!\n", 0);
+				if (itDependency >= itStageIdx) {
+					log_printf("unexpected: dependecy index >= this index!!\n", 0);
 				}
 
 				//TODO: look thru whole dependency chain, compare all node iterators against itStageIdx
 			}
 		}
+		for (auto itNodes = graph.nodes.begin(); itNodes != graph.nodes.end(); itNodes++) {
+			auto ptrNode = *itNodes;
+			ptrNode->inputLatency = INVALID_SAMPLE_OFFSET_U32;
+		}
 
 		/* Determine nodes accumulated inputLatency (own internalLatency + max_latency(all_children)) */
-		/* This has to be done in reverse/bottom up/child first */
-		for (auto itNodes = graph.nodesFlatOrdered.rbegin(); itNodes != graph.nodesFlatOrdered.rend(); itNodes++) {
+		/* This has to be done in bottom up/child first */
+		for (auto itNodes = graph.nodesFlatOrdered.begin(); itNodes != graph.nodesFlatOrdered.end(); itNodes++) {
 			auto ptrNode = *itNodes;
-			ptrNode->inputLatency = 1;
+			ptrNode->inputLatency = 0;
 			dbgassert(ptrNode->children.size() == ptrNode->dependencies.size());
 			for (DAW::track_node_t* trNodeChild : ptrNode->children) {
 				dbgassert(ptrNode->stageId != trNodeChild->stageId);
@@ -189,7 +215,7 @@ namespace DAW {
 				});
 				dbgassert(itProcNode != graph.nodesFlatOrdered.end());
 				auto ptrChNode = *itProcNode;
-				dbgassert(ptrChNode->inputLatency > 0);
+				dbgassert(ptrChNode->inputLatency != INVALID_SAMPLE_OFFSET_U32);
 				ptrNode->inputLatency = std::max(ptrNode->inputLatency, ptrChNode->inputLatency + ptrChNode->internalLatency);
 
 			}
@@ -208,7 +234,7 @@ namespace DAW {
 			}
 		}
 		/* Assign the resolved latencies to the previously populated push/pull inputs of each node */
-		for (auto itNodes = graph.nodesFlatOrdered.rbegin(); itNodes != graph.nodesFlatOrdered.rend(); itNodes++) {
+		for (auto itNodes = graph.nodesFlatOrdered.begin(); itNodes != graph.nodesFlatOrdered.end(); itNodes++) {
 			auto ptrNode = *itNodes;
 			for (auto& push : ptrNode->pushs) {
 				if (DAW::isChannelConnected(push.channel) && push.channel.getType() == DAW::channel_input_type::INPUT_AUDIOSTAGE) {
@@ -320,7 +346,7 @@ namespace DAW {
 					}
 					track_node_t& trackReturnCfg =  getNode(map, audioReturn->stageId);
 					trackReturnCfg.dependencies.push_back(trackImpl->stageId);
-					trackReturnCfg.pushs.push_back(DAW::track_source_t{ChannelStage(audioReturn, false), fGainReturn, 0});
+					trackReturnCfg.pushs.push_back(DAW::track_source_t{ChannelStage(trackImpl, false), fGainReturn, 0});
 					trackReturnCfg.children.push_back(&trackCfg);
 					trackCfg.parents.push_back(&trackReturnCfg);
 
