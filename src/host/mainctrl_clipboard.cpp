@@ -206,7 +206,13 @@ void cutIntersectingClips(trackdata_midi_t& midi, tick_t tickBegin, tick_t tickE
 
 	while (it != midi.clips.end()) {
 		clip_t* c = *it;
-		if (c->start() >= tickEnd || c->end() <= tickBegin) {
+		if (c->len == 0) {
+			it = midi.removeClip(c);
+			releaseClipResources(c, cb);
+			delete c;
+			continue;
+		}
+		if (c->start() >= tickEnd || c->end() < tickBegin) {
 			it++;
 			continue;
 		}
