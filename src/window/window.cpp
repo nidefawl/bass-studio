@@ -1463,14 +1463,14 @@ int startApplication(int argc, char* argv[]) {
 						break;
 	            }
 
-
-	            msgCounter.incrMessage(msg.message);
-				if (msg.message == WM_PAINT)
-				{
-					char clsName_v[256];
-					GetClassNameA(msg.hwnd, clsName_v, 256);
-					msgCounter.incrPaints(clsName_v);
-				}
+//
+//	            msgCounter.incrMessage(msg.message);
+//				if (msg.message == WM_PAINT)
+//				{
+//					char clsName_v[256];
+//					GetClassNameA(msg.hwnd, clsName_v, 256);
+//					msgCounter.incrPaints(clsName_v);
+//				}
 	        }
 	    }
 		glfwUpdateInternals();
