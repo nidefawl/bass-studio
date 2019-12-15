@@ -300,7 +300,7 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
 	notesView.m_list.clear();
 	std::vector<note_t> listLoop;
 	listLoop.reserve(128);
-	const tick_t preLoopLen = loopStart - offsetStart;
+	const tick_t preLoopLen = math::max(0, loopStart - offsetStart);
 	const tick_t clipEndPre = math::min(preLoopLen, localEnd);
 	const tick_t start = offsetStart+localStart;
 
