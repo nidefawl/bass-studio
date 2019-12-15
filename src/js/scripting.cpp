@@ -326,6 +326,8 @@ public:
 	}
 	String eval(const String& srcJS, call_context_t& ctxt) {
 		init();
+		if (!hasInit)
+			return "";
 		dbgassert(hasInit);
 		duk_push_pointer(ctx, (void *) StringAsCStr(srcJS));
 		duk_push_uint(ctx, (duk_uint_t) srcJS.length());
