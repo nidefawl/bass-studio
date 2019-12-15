@@ -12,6 +12,7 @@ struct project_globals_t {
 	uint32_t signatureDenom = 2;
 	tick_t playbackPos = 0;
 	Cursor cursor;
+	bool recordArmed = false;
 	void operator=(project_globals_t const & other) {
 		tempo100 = other.tempo100;
 		signatureNum = other.signatureNum;
@@ -21,5 +22,6 @@ struct project_globals_t {
 		loopEnabled = other.loopEnabled;
 		playbackPos = other.playbackPos;
 		cursor = other.cursor;
+		recordArmed = other.recordArmed;
 	}
 };

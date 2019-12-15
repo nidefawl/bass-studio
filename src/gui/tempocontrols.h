@@ -15,6 +15,10 @@
 #include "host/vst_host.h"
 #include "host/mainctrl.h"
 #include "platform.h"
+namespace GuiColor {
+
+extern constant_t COL_BTN_RECORD_ARM_BG;
+}
 
 void testTask();
 class gui_tempocontrol : public guibuttonbase {
@@ -194,6 +198,7 @@ class guictr_tempocontrols : public guictr_base {
 	gui_timeinput cursorPos;
 	gui_timeinput songPos;
 	guibutton_audioengine btnAudioOnOff;
+	guibutton btnRecord;
 	guibutton btnPlay;
 	guibutton btnStop;
 	guibutton btnLoop;
@@ -212,11 +217,14 @@ public:
 		songPos.setConnectedBG();
 		loopPos.setConnectedBG();
 		loopLen.setConnectedBG();
+		btnRecord.drawFn = drawRecordSymbol;
 		btnPlay.drawFn = drawPlaySymbol;
 		btnStop.drawFn = drawStopSymbol;
 		btnLoop.drawFn = drawTextureSymbol;
 		btnLoop.drawParm = ICON_LOOP;
 		btnLoop.setEnabledRef(&project.loopEnabled);
+		btnRecord.setEnabledRef(&project.recordArmed);
+		btnRecord.setButtonColor(GuiColor::COL_BTN_RECORD_ARM_BG);
 		add(&loopLen);
 		add(&loopPos);
 		add(&tempo);
@@ -225,6 +233,7 @@ public:
 		add(&btnLoop);
 		add(&btnStop);
 		add(&btnPlay);
+		add(&btnRecord);
 		add(&songPos);
 		add(&btnAudioOnOff);
 		padding = 8;
@@ -232,6 +241,7 @@ public:
 	~guictr_tempocontrols() {
 		remove(&btnAudioOnOff);
 		remove(&songPos);
+		remove(&btnRecord);
 		remove(&btnPlay);
 		remove(&btnStop);
 		remove(&btnLoop);
@@ -262,7 +272,7 @@ public:
 		cursorPos.size = ivec2(120, 28);
 
 		int32_t spacingCtrls = 5;
-		btnLoop.size = btnStop.size = btnPlay.size = ivec2(32, 32);
+		btnRecord.size = btnLoop.size = btnStop.size = btnPlay.size = ivec2(32, 32);
 		btnLoop.size.x = 48;
 		loopPos.size = ivec2(100, 32);
 		loopLen.size = ivec2(100, 32);
@@ -273,7 +283,7 @@ public:
 //		btnStop.pos = ivec2(btnPlay.right() + spacingCtrls, 5);
 //		songPos.pos = ivec2(btnStop.right() + spacingCtrls, 5);
 //		btnLoop.pos = ivec2(songPos.right() + spacingCtrls, 5);
-		std::vector<guibase*> v{&btnPlay, &btnStop, &songPos};
+		std::vector<guibase*> v{&btnRecord, &btnPlay, &btnStop, &songPos};
 		std::vector<guibase*> v2{&btnLoop, &loopPos, &loopLen};
 		int posX = transportCtrls;
 		for (auto el :  v) {

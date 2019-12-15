@@ -19,6 +19,10 @@
 #include "host/mainctrl.h"
 #include "appsettings.h"
 
+namespace GuiColor {
+
+constant_t COL_BTN_RECORD_ARM_BG("COL_BTN_RECORD_ARM_BG", 0xFF442222);
+}
 
 gui_timeinput_field::gui_timeinput_field(int _idx, int32_t* _time, const bool _isRelative) :
 		guibuttonbase(), idx(_idx), time(_time), isRelative(_isRelative) {
@@ -169,6 +173,9 @@ void guictr_tempocontrols::buttonClicked(guibase* button) {
 	}
 	if (button == &this->btnStop) {
 		MainCtrl::get()->stopPlaying();
+	}
+	if (button == &this->btnRecord) {
+		project.recordArmed = !project.recordArmed;
 	}
 	if (button == &this->btnLoop) {
 		project.loopEnabled = !project.loopEnabled;

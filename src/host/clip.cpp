@@ -328,6 +328,8 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
 					nnote.cutRight(clipEndPre);
 				}
 			}
+			dbgassert(nnote.time >= 0);
+			dbgassert(nnote.len >= 0);
 			notesView.m_list.push_back(nnote);
 		}
 	}
@@ -349,16 +351,20 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
 			note_t note = *itNote; // copy
 			note.time -= loopStart;
 			note.time += posCurLoopStart;
+			dbgassert(note.len >= 0);
 			if (note.end() > localStart && note.start() < localEnd) {
 				if (note.start() < clipStart) {
 					if (forPlayback) {
 						continue;
 					}
 					note.cutLeft(clipStart);
+					dbgassert(note.len >= 0);
 				}
 				if (note.end() > clipEnd) {
 					note.cutRight(clipEnd);
+					dbgassert(note.len >= 0);
 				}
+				dbgassert(note.time >= 0);
 				notesView.m_list.push_back(note);
 			}
 		}
@@ -394,10 +400,14 @@ int clip_t::getInTimeRange(tick_t absStart, tick_t absEnd, tick_t cutStart, tick
 	auto itNotesEnd = notesView.m_list.end();
 	while (itNote != itNotesEnd) {
 		note_t& note = *itNote;
+		dbgassert(note.time >= 0);
+		dbgassert(note.len >= 0);
 		if (note.isIntersectTimeIncludeEnds(relStart, relEnd)) {
 			note_t noteOffset(note);
 			noteOffset.time += clipStart;
 			noteOffset.len = math::min(noteOffset.end(), clipEnd) - noteOffset.time;
+			dbgassert(noteOffset.time >= 0);
+			dbgassert(noteOffset.len >= 0);
 			if (!list.capacity()) {
 				list.reserve(128);
 			}

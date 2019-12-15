@@ -146,6 +146,14 @@ void drawPlaySymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& col
     nvgFillColor(vg, getContrastFontColorNvg(color));
     nvgFill(vg);
 }
+void drawRecordSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2) {
+	float inset = math::max(2.0f, size.x/8.0f);
+    nvgBeginPath(vg);
+    nvgCircle(vg, pos.x + size.x / 2.0f, pos.y + size.y / 2.0f, (int)(size.y - inset*2.0)/2.5);
+    nvgClosePath(vg);
+    nvgFillColor(vg, !!drawParm2?rgbToNvg(0xFFDD3333):rgbToNvg(0xFF884444));
+    nvgFill(vg);
+}
 void drawTri(NVGcontext* vg, float x, float y, float h, const int dir, const NVGcolor& color, const NVGcolor& strokeColor, float strokeWidth) {
 	float x1 = x;
 	float y1 = y;

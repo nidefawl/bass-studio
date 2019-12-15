@@ -186,6 +186,10 @@ namespace DAW {
 				if (itDependency >= itStageIdx) {
 					log_printf("unexpected: dependecy index >= this index!!\n", 0);
 				}
+				auto itDependencyChildren = std::find_if(trackNode.children.begin(), trackNode.children.end(), [depNodeIdx] (const track_node_t* ptr) {
+					return ptr->stageId == depNodeIdx;
+				});
+				dbgassert(itDependencyChildren != trackNode.children.end());
 			}
 		}
 		for (auto itNodes = graph.nodes.begin(); itNodes != graph.nodes.end(); itNodes++) {

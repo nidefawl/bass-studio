@@ -543,7 +543,7 @@ void MainCtrl::menuCommand(int cmd) {
 		{
 			String path;
 			if (promptUserFilePath(window, 0, vFILE_TYPE_PROJECT, path)) {
-				loadFile(path, FLAG_DEFER_LOAD);
+				loadFile(path, FLAG_INVOKE_USER_CB_DEFERLOAD);
 			}
 		}
 		break;
@@ -771,6 +771,11 @@ bool MainCtrl::init(window_main* window, NVGcontext* nanovg)
 }
 void MainCtrl::onTick()
 {
+	const bool bWroteMidiData = vsthost::getInstance()->writeRecordedData();
+
+	if (bWroteMidiData) {
+		this->updateVisibleTrackContents();
+	}
 //	double since = timer.getTimeDoubleReset();
 	vsthost::getInstance()->onTick();
 	for (guictr_base *ctr : containers) {

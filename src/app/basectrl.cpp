@@ -441,6 +441,7 @@ AppCtrl::~AppCtrl() {
 }
 void AppCtrl::onAppTick() {
 	onTick();
+
 	 //move this in some garbageCollect() methdo and trigger garbage collection after every window-msg on win32 (linux?)
 	for (auto gui : garbageGuis) {
 		delete gui;

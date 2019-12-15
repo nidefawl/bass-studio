@@ -101,6 +101,9 @@ public:
 	SYNCHRONIZED_RW hires_timer_t timer; // timer for cpu-time profiling
 	SYNCHRONIZED_RW hires_timer_t timer2;// timer for cpu-time profiling
 private:
+	SYNCHRONIZED_RW clip_t* recordingClip = nullptr;
+	SYNCHRONIZED_RW std::atomic<bool> hasNewRecordedData{0};
+	SYNCHRONIZED_RW clip_t* recordDataProcessed = nullptr;
 	SYNCHRONIZED_RW VstTimeInfo timeinfo = {};
 	SYNCHRONIZED_RW double lastTickEndPos = 0;
 	playback_state lastState = playback_state::status_stop;
@@ -149,6 +152,7 @@ public:
 		return ringbuffer;
 	}
 	int32_t getNextSampleId(int32_t id);
+	bool writeRecordedData();
 	void sendNotesOff(effectbase* plugin);
 	std::vector<builtin_module_reg_t>& getBuiltinModuleRegistry() {
 		return builtinModules;
@@ -175,7 +179,6 @@ public:
 	bool onTick();
 	bool isStreaming();
 	void onTrackLayoutChange();
-
 	bool canDo(const char *ptr)
 	{
 		if ((!strcmp(ptr, HostCanDos::canDoSendVstEvents)) ||

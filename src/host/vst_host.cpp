@@ -528,6 +528,8 @@ bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, co
 int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround) {
 	assert(lBlockSize > 0);
 	assert(lSampleRate > 0);
+	const double ticksPerBlock = toTickPrecise(lBlockSize/(double)lSampleRate, project.tempo100);
+	tick_t tickPosBlockStart = ceil(posDouble);
 	double since = timer.getTimeDoubleReset();
 	timer2.reset();
 
@@ -552,6 +554,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 	bool notesProcessed = false;
 	//TODO: move this logic somewhere else
 	//TODO: This needs to be done per input and per track
+	int32_t lenTicksInfinite = TICKS_BAR*16;
 	if (msgs.size()) {
 		//do we need to adjust time at all?
 //		auto getMidiTime = [state](int32_t timestamp) -> int32_t {
@@ -564,8 +567,6 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 //		};
 
 
-		tick_t tickPosBlockStart = ceil(posDouble);
-		int32_t lenTicksInfinite = TICKS_BAR*16;
 		std::vector<note_t> newNotes;
 		for (MidiIOEvent& msg : msgs) {
 
@@ -644,12 +645,80 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 	}
 	if (notesProcessed) {
 		midiRealtimeInput->updateBounds();
+		if (state == playback_state::status_play && project.recordArmed) {
+			if (ctrl->trackMidiAudioCtr.size()) {
+				if (recordingClip == nullptr) {
+					recordingClip = new clip_t;
+					recordingClip->name = "Midi Input - Recorded";
+					recordingClip->time = tickPosBlockStart;
+					recordingClip->setLen(ticksPerBlock*4);
+					recordingClip->loopStart = 0;
+					recordingClip->loopLen = TICKS_BAR*4;
+				}
+				if (recordingClip) {
+					if (recordingClip->start() > tickPosBlockStart) {
+						recordingClip->time = tickPosBlockStart;
+					}
+					if (recordingClip->end() < tickPosBlockStart+ticksPerBlock) {
+						recordingClip->setLen((tickPosBlockStart+ticksPerBlock)-recordingClip->start());
+					}
+					for (auto& note : midiRealtimeInput->m_list) {
+						if (note.len != lenTicksInfinite) {
+
+							auto noteCopy = note;
+							noteCopy.time -= recordingClip->start();
+							noteCopy.setEnabled(true);
+							noteCopy.setRealtime(false);
+							recordingClip->notes.addSingle(noteCopy);
+						}
+					}
+					clip_t* cloned = recordingClip->clone();
+					cloned->setLen(tickPosBlockStart - recordingClip->time);
+					cloned->loopEnabled = false;
+					cloned->loopLen = ( ( math::max ( 1, cloned->getLen() / (TICKS_BAR*4) ) )   * (TICKS_BAR*4) );
+					cloned->notes.updateBounds();
+					cloned->setDirty();
+					std::swap(recordDataProcessed, cloned);
+					delete cloned;
+					hasNewRecordedData = true;
+				}
+
+			}
+		}
 	}
 	if (!midiRealtimeInput->m_list.empty()) {
 //		log_printf("Realtime midi notes %d\n", midiRealtimeInput->m_list.size());
 	}
+	if (recordingClip && !(state == playback_state::status_play && project.recordArmed)) {
+		for (auto& note : midiRealtimeInput->m_list) {
+			note_t noteCopy = note;
+			if (noteCopy.time < tickPosBlockStart && noteCopy.len == lenTicksInfinite) {
+				noteCopy.len = tickPosBlockStart - noteCopy.time;
+			}
+			if (noteCopy.len > 0 && noteCopy.len != lenTicksInfinite) {
+				noteCopy.time -= recordingClip->start();
+				noteCopy.setEnabled(true);
+				noteCopy.setRealtime(false);
+				recordingClip->notes.addSingle(noteCopy);
+			}
+		}
+		clip_t* cloned = recordingClip->clone();
+		tick_t clipLen = tickPosBlockStart - recordingClip->time + ticksPerBlock;
+		tick_t loopLen = ( ( math::max ( 1, clipLen / (TICKS_BAR*4) ) )   * (TICKS_BAR*4) );
+
+
+		cloned->loopEnabled = false;
+		cloned->setLen(clipLen);
+		cloned->loopLen = loopLen;
+		cloned->notes.updateBounds();
+		cloned->setDirty();
+		std::swap(recordDataProcessed, cloned);
+		delete cloned;
+		hasNewRecordedData = true;
+		delete recordingClip;
+		recordingClip = nullptr;
+	}
 	int nBlocksProcessed = 0;
-	const double ticksPerBlock = toTickPrecise(lBlockSize/(double)lSampleRate, project.tempo100);
 
 #ifndef NDEBUG
 
@@ -839,7 +908,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 				if (DAW::isChannelConnected(tracksrc.channel)) {
 					track_audio_src src;
 					if (dbg == 0) {
-						log_printf("track %s has input %s\n", StringAsCStr(track->name), StringAsCStr(tracksrc.channel.name));
+ 						log_printf("track %s has input %s\n", StringAsCStr(track->name), StringAsCStr(tracksrc.channel.name));
 					}
 
 					if (DAW::resolveAudioChannel(this, numChannelsTrack, tracksrc.channel, ptrExternalInputs ? ptrExternalInputs->output : nullptr, src)) {
@@ -1519,6 +1588,32 @@ void vsthost::updateMaximumStageId() {
 	this->audioStageId = maximumStageId;
 }
 
+bool vsthost::writeRecordedData() {
+	dbgassert(MainCtrl::get());
+	if (this->hasNewRecordedData) {
+		this->hasNewRecordedData = false;
+		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+		clip_t* pClip = nullptr;
+		std::swap(recordDataProcessed, pClip);
+		if (pClip) {
+			track_t* tr = MainCtrl::get()->trackMidiAudioCtr.front();
+			if (tr) {
+				String s = "Recorded notes: ";
+				for (note_t& note : pClip->notes.m_list) {
+					s += String(noteName(note.pitch))+",";
+				}
+				log_printf("%s\n", StringAsCStr(s));
+				tick_t tickBegin = pClip->time;
+				tick_t tickEnd = pClip->end();
+				MainCtrl::get()->cutIntersecting(tr, tickBegin, tickEnd);
+				tr->getMidi().addClip(pClip);
+				tr->getMidi().sortClips();
+				return true;
+			}
+		}
+	}
+	return false;
+}
 int32_t vsthost::getNextSampleId(int32_t id) {
 	if (id <= 0) {
 		return ++sampleId;
