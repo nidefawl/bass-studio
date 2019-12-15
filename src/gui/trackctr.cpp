@@ -177,7 +177,7 @@ void guictr_tracks::scrollTo(guibase* g) {
 	int32_t scrOffset = math::max(0.0f, scrollbar.scrollOffset*(contentHeight-contentViewSize));
 	scrollbar.scrollVisible(y+scrOffset, g->size.y);
 }
-void getTrackFromMouseTest();
+
 void guictr_tracks::updateVisibleTracks() {
 //	tracksVisibleFlat.clear();
 	/** turn tree structure into linear pointer array with trackTop at the beginning and the deepest child at the end **/
