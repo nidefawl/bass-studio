@@ -298,34 +298,44 @@ tick_t clip_t::getNumLoops() const {
 /* HOT CODEPATH */
 void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& notesView, bool forPlayback) const {
 	notesView.m_list.clear();
-	std::vector<note_t> listLoop;
-	listLoop.reserve(128);
-	const tick_t preLoopLen = math::max(0, loopStart - offsetStart);
-	const tick_t clipEndPre = math::min(preLoopLen, localEnd);
-	const tick_t start = offsetStart+localStart;
+	const tick_t preLoopLen = !loopEnabled?len:offsetStart >= loopStart ? math::max(0, (/*loopEnd*/ loopStart+loopLen) - offsetStart) : math::max(0, loopStart - offsetStart);
+
 
 	auto itNote = notes.m_list.cbegin();
 	auto itNoteEnd = notes.m_list.cend();
+
+	/** add all pre-loop notes */
+	bool fillLoop = loopEnabled && localStart < preLoopLen;
+
+	std::vector<note_t> listLoop;
 	for (;itNote != itNoteEnd; itNote++) {
 		const note_t& note = *itNote;
 		if (forPlayback && !note.isEnabled()){
 			continue;
 		}
-		if (note.isIntersectTime(loopStart, loopStart + loopLen)) {
+		if (fillLoop && note.isIntersectTime(loopStart, loopStart + loopLen)) {
+			if (listLoop.capacity()==0) {
+				listLoop.reserve(128);
+			}
 			listLoop.push_back(note);
 		}
-		if (start < loopStart && note.isIntersectTime(start, loopStart)) {
+		auto localEndMin = math::min(localEnd, preLoopLen);
+		if (note.isIntersectTime(offsetStart+localStart, offsetStart+localEndMin)) {
 			note_t nnote = note; // copy
 			nnote.time -= offsetStart;
 			if (nnote.start() < localStart) {
+				/** cut pre-loop note on the left for render, ignore for playback */
 				if (forPlayback) {
 					continue;
 				}
 				nnote.cutLeft(localStart);
+				dbgassert(nnote.len >= 0);
 			}
-			if (nnote.end() > clipEndPre) {
-				if (!forPlayback || localEnd==clipEndPre) {
-					nnote.cutRight(clipEndPre);
+			if (nnote.end() > localEndMin) {
+				/** always cut pre-loop note ends at pre-loop end */
+				if (!forPlayback || localEndMin==preLoopLen) {
+					nnote.cutRight(localEndMin);
+					dbgassert(nnote.len >= 0);
 				}
 			}
 			dbgassert(nnote.time >= 0);
@@ -333,41 +343,44 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
 			notesView.m_list.push_back(nnote);
 		}
 	}
+	if (fillLoop && listLoop.size()) {
 
-
-	const int loopLenProcessing = loopLen <= 0 ? 0 : loopLen;
-	const tick_t lenClipLoopSection = (localEnd - localStart) - preLoopLen;
-	const tick_t numLoops = loopEnabled && loopLenProcessing>0 ? (lenClipLoopSection+loopLen-1) / loopLenProcessing : 1;
-	if (notesView.m_list.capacity() < numLoops * listLoop.size())
-		notesView.m_list.reserve(numLoops * listLoop.size());
-	for (int i = 0; i < numLoops; i++) {
-		auto itNote = listLoop.cbegin();
-		auto itNoteEnd = listLoop.cend();
-		const tick_t posCurLoopStart = preLoopLen + (i * loopLenProcessing);
-		const tick_t posCurLoopEnd = posCurLoopStart + loopLenProcessing;
-		const tick_t clipStart = math::max(posCurLoopStart, localStart);
-		const tick_t clipEnd = math::min(posCurLoopEnd, localEnd);
-		for (;itNote != itNoteEnd; itNote++) {
-			note_t note = *itNote; // copy
-			note.time -= loopStart;
-			note.time += posCurLoopStart;
-			dbgassert(note.len >= 0);
-			if (note.end() > localStart && note.start() < localEnd) {
-				if (note.start() < clipStart) {
-					if (forPlayback) {
-						continue;
+		/** add all in-loop notes */
+		const tick_t lenClipLoopSection = (localEnd - localStart) - preLoopLen;
+		const int loopLenProcessing = loopEnabled ? ( loopLen <= 0 ? 0 : loopLen) : (localEnd - localStart);
+		const tick_t numLoops = loopEnabled && loopLenProcessing>0 ? (lenClipLoopSection+loopLen-1) / loopLenProcessing : 0;
+		if (notesView.m_list.capacity() < numLoops * listLoop.size())
+			notesView.m_list.reserve(numLoops * listLoop.size());
+		for (int i = 0; i < numLoops; i++) {
+			auto itNote = listLoop.cbegin();
+			auto itNoteEnd = listLoop.cend();
+			const tick_t posCurLoopStart = preLoopLen + (i * loopLenProcessing);
+			const tick_t posCurLoopEnd = posCurLoopStart + loopLenProcessing;
+			const tick_t clipStart = math::max(posCurLoopStart, localStart);
+			const tick_t clipEnd = math::min(posCurLoopEnd, localEnd);
+			for (;itNote != itNoteEnd; itNote++) {
+				note_t note = *itNote; // copy
+				note.time -= loopStart;
+				note.time += posCurLoopStart;
+				dbgassert(note.len >= 0);
+				if (note.end() > localStart && note.start() < localEnd) {
+					if (note.start() < clipStart) {
+						if (forPlayback) {
+							continue;
+						}
+						note.cutLeft(clipStart);
+						dbgassert(note.len >= 0);
 					}
-					note.cutLeft(clipStart);
-					dbgassert(note.len >= 0);
+					if (note.end() > clipEnd) {
+						note.cutRight(clipEnd);
+						dbgassert(note.len >= 0);
+					}
+					dbgassert(note.time >= 0);
+					notesView.m_list.push_back(note);
 				}
-				if (note.end() > clipEnd) {
-					note.cutRight(clipEnd);
-					dbgassert(note.len >= 0);
-				}
-				dbgassert(note.time >= 0);
-				notesView.m_list.push_back(note);
 			}
 		}
+
 	}
 	notesView.updateBounds();
 }
