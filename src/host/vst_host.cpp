@@ -1598,14 +1598,18 @@ bool vsthost::writeRecordedData() {
 		if (pClip) {
 			track_t* tr = MainCtrl::get()->trackMidiAudioCtr.front();
 			if (tr) {
-				String s = "Recorded notes: ";
-				for (note_t& note : pClip->notes.m_list) {
-					s += String(noteName(note.pitch))+",";
-				}
-				log_printf("%s\n", StringAsCStr(s));
+//				String s = "Recorded notes: ";
+//				for (note_t& note : pClip->notes.m_list) {
+//					s += String(noteName(note.pitch))+",";
+//				}
+//				log_printf("%s\n", StringAsCStr(s));
+				log_printf("Processing recorded clip with %d notes\n", pClip->notes.m_list.size());
+				log_printf("Processing recorded clip. Last note time %d\n", pClip->notes.lastNote.time);
 				tick_t tickBegin = pClip->time;
 				tick_t tickEnd = pClip->end();
 				MainCtrl::get()->cutIntersecting(tr, tickBegin, tickEnd);
+				pClip->setDirty();
+				pClip->notes.updateBounds();
 				tr->getMidi().addClip(pClip);
 				tr->getMidi().sortClips();
 				return true;
