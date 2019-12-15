@@ -88,13 +88,13 @@ struct rmsmeter {
 		return channels[i].fPeak;
 	}
 	void onTick(double since) {
-		for (uint32_t i = 0; i < numChannels; i++) {
+		for (decltype(numChannels) i = 0; i < numChannels; i++) {
 			channels[i].onTick(since);
 		}
 	}
 	std::vector<meter_lvls> getLevels() {
 		std::vector<meter_lvls> v;
-		for (uint32_t i = 0; i < numChannels; i++) {
+		for (decltype(numChannels) i = 0; i < numChannels; i++) {
 			v.push_back(std::move(channels[i].getLevels()));
 		}
 		return v;
