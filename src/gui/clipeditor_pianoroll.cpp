@@ -285,7 +285,8 @@ void gui_pianoroll::render(NVGcontext* vg) {
 		nvgStrokeColor(vg, theme->getColor(GuiColor::COL_PIANOROLL_STROKE));
 		y = 0;
 		int lastOctave = -1;
-		for (int i = firstKey; i <= len; i++) {
+		
+		for (int i = firstKey; len > 0 && i <= len; i++) {
 			int noteOctave = pitches[math::clamp(i, 0, len-1)] / 12;
 			if (i == firstKey || i == len || lastOctave != noteOctave) {
 				int wSep = 55;
@@ -305,7 +306,7 @@ void gui_pianoroll::render(NVGcontext* vg) {
 		setFont(vg, FONT_SIZE, G_BLACK, NVG_ALIGN_LEFT|NVG_ALIGN_MIDDLE);
 		y = 0;
 		lastOctave = -1;
-		for (int i = firstKey; i <= len; i++) {
+		for (int i = firstKey; len > 0 && i <= len; i++) {
 			int32_t pitch = pitches[math::clamp(i, 0, len-1)];
 			int32_t noteOctave = pitch / 12;
 			if (scale > FONT_SIZE || i == firstKey /*|| i == len*/ || lastOctave != noteOctave) {
