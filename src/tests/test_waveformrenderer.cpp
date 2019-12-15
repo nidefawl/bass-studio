@@ -224,7 +224,7 @@ int main(int argc, char* argv[]) {
 		return 1;
 	}
 	ALEPH_TEST_BEGIN("testThreadWorkerTasks");
-#define NLOOPS 2111
+#define NLOOPS 1024
 	{
 
 		std::vector<std::vector<vec2>> tesselatedWaveForms;
