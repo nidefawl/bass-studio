@@ -16,16 +16,25 @@ void renderMeterAt(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const iv
 		auto lvls = meter->getLevels();
 		int32_t nChannels = lvls.size();
 		float channelW = (mtrSize.x-(nChannels+1)*spacing) / (float) nChannels;
+		int textHeight = channelW;
+		if (mtrSize.y - textHeight < 20) {
+			textHeight = 0;
+		}
+		mtrSize.y-=textHeight;
 		const double scaledZero = dsp_util::scaledRange(0, dsp_util::MTR_FLOOR, dsp_util::MTR_CEIL);
 		float hZero = (1.0f - scaledZero) * mtrSize.y;
 		float yZero = mtrPos.y + mtrSize.y - hZero;
 
 		float x = mtrPos.x+spacing;
+		float mixedlevels[3] = {0, 0, 0};
 		for (int i = 0; i < lvls.size(); i++) {
 			auto& chLvl = lvls[i];
 			float fMax = chLvl.fMax;
 			float fRms = chLvl.fLvl;
 			float fPeak = chLvl.fPeak;
+			mixedlevels[0] = math::max(mixedlevels[0], fMax);
+			mixedlevels[1] = fRms;
+			mixedlevels[2] = math::max(mixedlevels[2], fPeak);
 			float levels[3] = {fMax, fRms, fPeak};
 
 			nvgBeginPath(vg);
@@ -74,6 +83,9 @@ void renderMeterAt(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const iv
 			x += channelW;
 			x += spacing;
 		}
+		if (nChannels > 0) {
+			mixedlevels[1] /= nChannels;
+		}
 
 		x = mtrPos.x+spacing;
 		float x2 = mtrPos.x+(spacing+channelW)*nChannels;
@@ -83,6 +95,18 @@ void renderMeterAt(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const iv
 		nvgStrokeColor(vg, theme->getColor(GuiColor::COL_GRID_BRT));
 		nvgStrokeWidth(vg, 1.5f);
 		nvgStroke(vg);
+		if (textHeight) {
+			setFont(vg, channelW*1.4, G_WHITE, NVG_ALIGN_TOP | NVG_ALIGN_RIGHT);
+			float fMaxAll = mixedlevels[0];
+			float lvl = dsp_util::dBFS(fMaxAll);
+			String strLevel = StringFormat("%0.2f", lvl);
+	//		nvgBeginPath(vg);
+	//		nvgRect(vg, mtrPos.x, mtrPos.y+mtrSize.y, mtrSize.x, textHeight);
+	//		nvgFillColor(vg, G_GREEN_DRK);
+	//		nvgFill(vg);
+	//		nvgFillColor(vg, G_WHITE);
+			nvgText(vg, mtrPos.x+mtrSize.x, mtrPos.y+mtrSize.y, StringAsCStr(strLevel), NULL);
+		}
 	}
 template<uint32_t T, uint32_t C = 2>
 class gui_trackmeter : public guibase {
