@@ -1578,7 +1578,7 @@ public:
 				track_snapshot_t trSnap(tr, true);
 				*newTrack = trSnap;
 				MainCtrl::get()->addTrackImpl(tr->localIdxFlat+1, newTrack, FLG_TRK_CHANGE_USER);
-				trSnap.stageId = static_cast<int32_t>(tr->audio->stageId);
+				trSnap.stageId = static_cast<int32_t>(newTrack->audio->stageId);
 				newTrack->loadSnapshot(trSnap);
 				newTrack->name = makeUniqueTrackName(strNewName);
 
