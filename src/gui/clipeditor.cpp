@@ -981,6 +981,7 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
 				selectionStart.clear();
 				notes.clearSelection();
 				view.cursor.start = view.cursor.end = tickGridNearest;
+				view.copySelectedNoteList();
 			}
 
 			dragMode = drag_frame;
