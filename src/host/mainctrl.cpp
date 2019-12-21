@@ -395,7 +395,9 @@ void MainCtrl::unloadProject() {
 		releaseTrackResources(track, this);
 		delete track;
 	}
-	hist.clear(this);
+
+	vsthost::getInstance()->releaseProjectResources();
+
 	this->view->ctr_tracks.trackView.resizePreModifyState.reset();
 	this->view->ctr_tracks.trackView.clipboard.reset();
 	this->view->ctr_tracks.trackView.action.clipboard.reset();

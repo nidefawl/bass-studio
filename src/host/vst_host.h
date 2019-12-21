@@ -173,6 +173,7 @@ public:
 		stats = this->processing;
 	}
 	void updatePluginWindows();
+	void releaseProjectResources();
 	void destroy();
 	void unload();
 	bool postInit();

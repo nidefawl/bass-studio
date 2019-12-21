@@ -1249,6 +1249,10 @@ bool vsthost::onTick() {
 	return false;
 }
 
+void vsthost::releaseProjectResources() {
+	lastProcessingList = nullptr;
+	lastTrackGraph = nullptr;
+}
 void vsthost::unload() {
 	dbgassert(!isStreaming()&&"STOP STREAM BEFORE unload()!");
 	unloadAllPlugins();
