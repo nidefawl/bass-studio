@@ -176,6 +176,7 @@ include("libs.cmake")
 
 
 set(DAW_WORKING_DIR "../../run/" CACHE PATH "output directory")
+message(STATUS "DAW_WORKING_DIR ${DAW_WORKING_DIR}")
 
 FUNCTION(SET_APP_BUILD appname)
     set(tmp1 "${appname}-${BUILD_BINARY_SUFFIX}")
@@ -236,11 +237,11 @@ ADD_POST_BUILD_COMMANDS("host")
 endif()
 
 if (BUILD_GUI_TEST) 
-project("test" C CXX)
-add_executable("test" "src/host/main_test.cpp")
-SET_APP_BUILD("test")
-target_link_libraries("test" PUBLIC "dawlib")
-ADD_POST_BUILD_COMMANDS("test")
+project("guitest" C CXX)
+add_executable("guitest" "src/host/main_test.cpp")
+SET_APP_BUILD("guitest")
+target_link_libraries("guitest" PUBLIC "dawlib")
+ADD_POST_BUILD_COMMANDS("guitest")
 endif()
 
 set(COTIRE_UNITY_SOURCE_EXCLUDE_EXTENSIONS "m;mm;c")
