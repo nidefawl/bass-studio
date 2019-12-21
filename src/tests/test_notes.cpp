@@ -406,8 +406,8 @@ void testTrackDataMidi() {
 	for (note_t& note : clipnotes.m_list) {
 		tick_t noteStart = note.start();
 		tick_t noteEnd = note.end();
-		ALEPH_ASSERT_THROW(noteStart >= clip->start());
-		ALEPH_ASSERT_THROW(noteEnd <= clip->end());
+		ALEPH_ASSERT_THROW(noteStart >= 0);
+		ALEPH_ASSERT_THROW(noteEnd <= clip->len);
 	}
 	midi.removeClip(clip);
 	delete clip;
