@@ -1,0 +1,57 @@
+#pragma once
+#include <vector>
+#include <stdint.h>
+#include "assert_dbg.h"
+
+#define TRACK_TYPE_MASTER 0
+#define TRACK_TYPE_RETURN 1
+#define TRACK_TYPE_MIDI 2
+#define TRACK_TYPE_AUDIO 3
+#define NUM_TRACK_TYPES 4
+#define TRACK_CTR_MASTER 0
+#define TRACK_CTR_RETURN 1
+#define TRACK_CTR_MIDIAUDIO 2
+#define NUM_TRACK_TYPE_CTRS 4
+template<typename T>
+const T TRACKTYPE_TO_CTR(const T trackType) {
+	switch (trackType) {
+	case TRACK_TYPE_MASTER:
+		return TRACK_CTR_MASTER;
+	case TRACK_TYPE_RETURN:
+		return TRACK_CTR_RETURN;
+	case TRACK_TYPE_MIDI:
+	case TRACK_TYPE_AUDIO:
+		return TRACK_CTR_MIDIAUDIO;
+	}
+	dbgassert(0);
+	return -1;
+}
+
+#define FLG_TRK_CHANGE_USER 1
+#define FLG_TRK_CHANGE_LOAD 2
+#define FLG_TRK_CHANGE_HISTORY_UNDO 4
+const char* TrackTypeToName(int type);
+
+
+enum class audiostageflags_t : int32_t {
+    NONE 					= 0,
+    BYPASS 					= 1 << 0,
+    BYPASS_EFFECT_CHAIN 	= 1 << 1,
+	MUTE_INPUT 				= 1 << 2,
+	MUTE_OUTPUT 			= 1 << 3,
+    SOLO				 	= 1 << 4,
+};
+template<class T, typename = std::enable_if_t<std::is_same<T, audiostageflags_t>::value> >
+inline T operator~ (T a) { return (T)~(int)a; }
+template<class T, typename = std::enable_if_t<std::is_same<T, audiostageflags_t>::value> >
+inline T operator| (T a, T b) { return (T)((int)a | (int)b); }
+template<class T, typename = std::enable_if_t<std::is_same<T, audiostageflags_t>::value> >
+inline T operator& (T a, T b) { return (T)((int)a & (int)b); }
+template<class T, typename = std::enable_if_t<std::is_same<T, audiostageflags_t>::value> >
+inline T operator^ (T a, T b) { return (T)((int)a ^ (int)b); }
+template<class T, typename = std::enable_if_t<std::is_same<T, audiostageflags_t>::value> >
+inline T& operator|= (T& a, T b) { return (T&)((int&)a |= (int)b); }
+template<class T, typename = std::enable_if_t<std::is_same<T, audiostageflags_t>::value> >
+inline T& operator&= (T& a, T b) { return (T&)((int&)a &= (int)b); }
+template<class T, typename = std::enable_if_t<std::is_same<T, audiostageflags_t>::value> >
+inline T& operator^= (T& a, T b) { return (T&)((int&)a ^= (int)b); }

@@ -16,36 +16,8 @@
 #include "automation.h"
 #include "snapshot.h"
 #include "host/daw_channel.h"
+#include "track_types.h"
 
-#define TRACK_TYPE_MASTER 0
-#define TRACK_TYPE_RETURN 1
-#define TRACK_TYPE_MIDI 2
-#define TRACK_TYPE_AUDIO 3
-#define NUM_TRACK_TYPES 4
-#define TRACK_CTR_MASTER 0
-#define TRACK_CTR_RETURN 1
-#define TRACK_CTR_MIDIAUDIO 2
-#define NUM_TRACK_TYPE_CTRS 4
-template<typename T>
-const T TRACKTYPE_TO_CTR(const T trackType) {
-	switch (trackType) {
-	case TRACK_TYPE_MASTER:
-		return TRACK_CTR_MASTER;
-	case TRACK_TYPE_RETURN:
-		return TRACK_CTR_RETURN;
-	case TRACK_TYPE_MIDI:
-	case TRACK_TYPE_AUDIO:
-		return TRACK_CTR_MIDIAUDIO;
-	}
-	dbgassert(0);
-	return -1;
-}
-
-#define FLG_TRK_CHANGE_USER 1
-#define FLG_TRK_CHANGE_LOAD 2
-#define FLG_TRK_CHANGE_HISTORY_UNDO 4
-
-const char* TrackTypeToName(int type);
 
 class track_t;
 struct track_impl_t;

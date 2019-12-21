@@ -48,6 +48,7 @@ class guiplugin;
 class guictr_test;
 class guictr_tempocontrols;
 class guictr_tracks;
+class guictr_nodes;
 class gui_statusbar;
 class guictr_clipeditor;
 class guictr_clipeditorview;
@@ -191,6 +192,9 @@ struct Menus {
 	ngui::Menu edit;
 	ngui::Menu tools;
 };
+enum view_mode_t {
+	TRACK_TIMELINE, NODE_EDITOR, MIXER
+};
 class MainCtrl : public AppCtrl, public delete_cb, public project_controller_t
 {
 	DawViewContainers* view = NULL;
@@ -211,6 +215,7 @@ class MainCtrl : public AppCtrl, public delete_cb, public project_controller_t
 	int32_t lastHoveredTooltipTicks = 0;
 	seq_rand rand;
 	String loadProject = "";
+	view_mode_t viewMode = view_mode_t::TRACK_TIMELINE;
 public:
 	int32_t numCallsWaitEvents = 0;
 	std::shared_ptr<plugin_clipboard_t> pluginClipboard;
@@ -368,4 +373,7 @@ public:
 		this->tickJmpTo = tickJmpTo;
 	}
 	void initApp(int argc, char* argv[]);
+	view_mode_t getViewMode();
+	void setViewMode(view_mode_t mode);
+	void resetMouseContext();
 };

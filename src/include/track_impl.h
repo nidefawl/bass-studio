@@ -50,8 +50,13 @@ struct track_audio_src {
 	float gain = 0.0f;
 	int32_t latency = 0;
 	AudioBlock toAudioBlock() const {
-		FitsTypeRange<uint32_t, decltype(channels.size())>(channels.size());
-		FitsTypeRange<uint32_t, decltype(samples)>(samples);
+
+		const bool bFitsNumChannels = FitsTypeRange<uint32_t, decltype(channels.size())>(channels.size());
+		const bool bFitsNumSamples = FitsTypeRange<uint32_t, decltype(samples)>(samples);
+		dbgassert(bFitsNumChannels && bFitsNumSamples);
+		if (!(bFitsNumChannels && bFitsNumSamples)) {
+			return AudioBlock(0, 0);
+		}
 		return AudioBlock(channels, static_cast<uint32_t>(samples));
 	}
 };
@@ -96,29 +101,6 @@ public:
 	void loadSnapshot(const track_params_snapshot_t& snapshot);
 	void postSetParameter(int32_t idx, float preVal, float val, int flags);
 };
-
-enum class audiostageflags_t : int32_t {
-    NONE 					= 0,
-    BYPASS 					= 1 << 0,
-    BYPASS_EFFECT_CHAIN 	= 1 << 1,
-	MUTE_INPUT 				= 1 << 2,
-	MUTE_OUTPUT 			= 1 << 3,
-    SOLO				 	= 1 << 4,
-};
-template<class T, typename = std::enable_if_t<std::is_same<T, audiostageflags_t>::value> >
-inline T operator~ (T a) { return (T)~(int)a; }
-template<class T, typename = std::enable_if_t<std::is_same<T, audiostageflags_t>::value> >
-inline T operator| (T a, T b) { return (T)((int)a | (int)b); }
-template<class T, typename = std::enable_if_t<std::is_same<T, audiostageflags_t>::value> >
-inline T operator& (T a, T b) { return (T)((int)a & (int)b); }
-template<class T, typename = std::enable_if_t<std::is_same<T, audiostageflags_t>::value> >
-inline T operator^ (T a, T b) { return (T)((int)a ^ (int)b); }
-template<class T, typename = std::enable_if_t<std::is_same<T, audiostageflags_t>::value> >
-inline T& operator|= (T& a, T b) { return (T&)((int&)a |= (int)b); }
-template<class T, typename = std::enable_if_t<std::is_same<T, audiostageflags_t>::value> >
-inline T& operator&= (T& a, T b) { return (T&)((int&)a &= (int)b); }
-template<class T, typename = std::enable_if_t<std::is_same<T, audiostageflags_t>::value> >
-inline T& operator^= (T& a, T b) { return (T&)((int&)a ^= (int)b); }
 
 struct audio_stage_t {
 	audiostageid_i32 stageId = TRACKID_INVALID_I32;

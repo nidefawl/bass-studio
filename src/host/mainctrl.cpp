@@ -45,8 +45,8 @@
 #include "../gui/pluginctr.h"
 #include "../gui/clipeditor.h"
 #include "../gui/trackctr.h"
+#include "../gui/trackctr_nodes.h"
 #include "../gui/trackcontent.h"
-#include "../gui/trackctr.h"
 #include "../gui/list.h"
 #include "../gui/pluginlist.h"
 #include "../gui/guimenu.h"
@@ -228,6 +228,7 @@ public:
 	guictr_clipeditorview ctr_clipeditorview;
 	guictr_clipeditor ctr_clipeditor;
 	guictr_tracks ctr_tracks;
+	guictr_nodes ctr_nodes;
 	guictr_side_tabs_daw_1 subctr_tabbed;
 	guictr_side_tabs_daw_2 subctr_tabbed2;
 	guictr_stacked ctr_stack_right;
@@ -242,6 +243,7 @@ public:
 	  ctr_clipeditorview(noteeditor),
 	  ctr_clipeditor(noteeditor, clipView),
 	  ctr_tracks(_cursor, project, grid, dragdropclip),
+	  ctr_nodes(_cursor, project, dragdropclip),
 	  subctr_tabbed(),
 	  subctr_tabbed2(ctr_effectlib),
 	  ctr_stack_right(),
@@ -283,6 +285,7 @@ public:
 		int wRight = splitterRight.rightOrBottom(winW);
 		ctr_tempo.size = { winW, hTopControls };
 		ctr_tracks.size = { width, hTrackCtr };
+		ctr_nodes.size = { width, hTrackCtr };
 		ctr_clipeditor.size = { width, hEditor };
 		ctr_plugins.size = { width, hEditor };
 		ctr_pluginview.size = { 300, hStatusBar };
@@ -295,6 +298,7 @@ public:
 
 		ctr_tempo.pos = { winX, winY };
 		ctr_tracks.pos = { winX, winY+hTopControls };
+		ctr_nodes.pos = { winX, winY+hTopControls };
 		statusbar.pos = { winX, winBottom - hStatusBar };
 		ctr_clipeditorview.pos = { statusbar.right(), winBottom - hStatusBar };
 		ctr_pluginview.pos = { ctr_clipeditorview.right(), winBottom - hStatusBar };
@@ -346,6 +350,25 @@ public:
 		 v.push_back(&splitterRight);
 	}
 };
+void MainCtrl::setViewMode(view_mode_t mode) {
+	this->viewMode = mode;
+	switch (mode) {
+	case MIXER:
+	case TRACK_TIMELINE:
+		containers[0] = &view->ctr_tracks;
+		break;
+	case NODE_EDITOR:
+		containers[0] = &view->ctr_nodes;
+		break;
+	}
+	view->ctr_tracks.setVisible(containers[0] == &view->ctr_tracks);
+	view->ctr_nodes.setVisible(containers[0] == &view->ctr_nodes);
+	view->ctr_nodes.refresh();
+	focusGui(containers[0]);
+}
+view_mode_t MainCtrl::getViewMode() {
+	return this->viewMode;
+}
 void MainCtrl::showPluginView() {
 	containers[1] = &view->ctr_plugins;
 }
@@ -363,6 +386,11 @@ void MainCtrl::addDebug(String s) {
 	view->subctr_tabbed.ctr_dbg.addStr(s);
 }
 
+void MainCtrl::resetMouseContext() {
+	BaseCtrl::resetMouseContext();
+	view->ctr_nodes.reset();
+}
+
 void MainCtrl::unloadProject() {
 	dbgassert(playThread.isLocked());
 	closeContextMenu();
@@ -371,6 +399,9 @@ void MainCtrl::unloadProject() {
 	setSelectedTrack(NULL);
 	clipView.set(NULL);
 	cursor.setEmptySelection();
+
+	hist.clear(this);
+
 //	std::shared_ptr<clip_clipboard>& clipboard = view->ctr_tracks.trackView.clipboard;
 //	clipboard.reset();
 	std::vector<track_t*> _tracks = trackList.getAllTracksFlatVec();  // iterate a copy
@@ -719,6 +750,9 @@ bool MainCtrl::init(window_main* window, NVGcontext* nanovg)
 		ctr->setControl(this);
 	}
 	view->ctr_plugins.setControl(this);
+	view->ctr_nodes.setControl(this);
+	view->ctr_tracks.setVisible(containers[0] == &view->ctr_tracks);
+	view->ctr_nodes.setVisible(containers[0] == &view->ctr_nodes);
 
 	menus.recent.type = ngui::menu_type::submenu;
 	menus.recent.title = "Open recent";
@@ -1045,10 +1079,16 @@ void MainCtrl::relayout(int32_t w, int32_t h) {
 
 	view->ctr_plugins.layout();
 	view->ctr_clipeditor.layout();
+	view->ctr_tracks.layout();
+	view->ctr_nodes.layout();
 	for (guictr_base *ctr : containers) {
+		if(ctr == &view->ctr_clipeditor)
+			continue;
 		if(ctr == &view->ctr_plugins)
 			continue;
-		if(ctr == &view->ctr_clipeditor)
+		if(ctr == &view->ctr_tracks)
+			continue;
+		if(ctr == &view->ctr_nodes)
 			continue;
 		ctr->layout();
 	}
@@ -1287,6 +1327,18 @@ bool MainCtrl::processGlobalKeyevent(KeyEvent& event) {
 		}
 	}
 	if (event.type != KeyEventType::K_RELEASE) {
+		if (event.keyCode == KEY_TAB) {
+			switch (this->viewMode) {
+			case view_mode_t::TRACK_TIMELINE:
+			case view_mode_t::MIXER:
+				this->setViewMode(view_mode_t::NODE_EDITOR);
+				return true;
+			case view_mode_t::NODE_EDITOR:
+				this->setViewMode(view_mode_t::TRACK_TIMELINE);
+				return true;
+			}
+			return true;
+		}
 		if (event.keyCode == KEY_M) {
 			ThreadLock lock = playThread.lockThread();
 #if defined(__GNUC__) && defined(ENABLE_MICHAELS_GLIBCXX_HACKS)

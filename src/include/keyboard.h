@@ -281,6 +281,7 @@ extern KeyCombo KC_DELETE;
 extern KeyCombo KC_DUPLICATE;
 extern KeyCombo KC_SELECTALL;
 extern KeyCombo KC_MUTE;
+extern KeyCombo KC_REFRESH;
 #include "logging.h"
 inline bool isKC(KeyCombo c, KeyEvent& kevt) {
 	if (kevt.mods != c.keyMod) {
