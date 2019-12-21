@@ -2,6 +2,7 @@
 #include "track.h"
 #include "daw_channel.h"
 #include "assert_dbg.h"
+#include "track_types.h"
 #include <vector>
 
 class track_t;
@@ -15,6 +16,7 @@ struct track_source_t {
 	channel_ref_t channel;
 	float gain;
 	samplerate_t latency = 0U;
+	audiostageflags_t flags;
 };
 enum track_node_type {
 	TRACK, GROUP
@@ -59,6 +61,7 @@ struct track_graph_t {
 	}
 };
 struct processing_graph_t {
+	std::vector<processing_track_node_t*> nodesSolo;
 	std::vector<processing_track_node_t*> nodesFlatOrdered;
 	std::vector<processing_track_node_t*> roots;
 	std::vector<processing_track_node_ptr> nodes;

@@ -903,8 +903,25 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 //				/* Compensate audio/midi track to pre-return latency */
 //				samplerate_t delayToPreReturn = maxLatencyAudioMidi - trackImpl->getLatency();
 //			}
+//			enum class audiostageflags_t : int32_t {
+//			    NONE 					= 0,
+//			    BYPASS 					= 1 << 0,
+//			    BYPASS_EFFECT_CHAIN 	= 1 << 1,
+//				MUTE_INPUT 				= 1 << 2,
+//				MUTE_OUTPUT 			= 1 << 3,
+//			    SOLO				 	= 1 << 4,
+//			};
+		    struct Func_CheckHasSolo {
+		        bool operator()(const DAW::track_source_t& src) const {
+		        	return (src.flags & audiostageflags_t::SOLO) != audiostageflags_t::NONE;
+		        }
+		    };
+		    Func_CheckHasSolo funcCheckSolo;
+			bool hasSolo = std::any_of(allSources.cbegin(), allSources.cend(), funcCheckSolo);
 			for (const DAW::track_source_t& tracksrc : allSources)
 			{
+				if (hasSolo && !funcCheckSolo(tracksrc))
+					continue;
 				if (DAW::isChannelConnected(tracksrc.channel)) {
 					track_audio_src src;
 					if (dbg == 0) {
