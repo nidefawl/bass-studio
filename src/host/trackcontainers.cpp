@@ -360,6 +360,36 @@ void trackallcontainer_t::loadPlugins(project_snapshot_t& project) {
 	trackMidiAudioCtr.loadPlugins(project.trackCtr);
 	trackReturnCtr.loadPlugins(project.trackReturnCtr);
 	trackMasterCtr.loadPlugins(project.trackMasterCtr);
+
+
+	/*
+	 * i/o track channel names are not included in serialized data.
+	 * re-resolve track input/output configuration to assign channel names
+	 */
+
+	for (track_t* tr : trackAllCtr.tracksFlat) {
+		track_impl_t* trImpl = tr->audio;
+		if (DAW::isChannelConnected(trImpl->inputChannel) && trImpl->inputChannel.getType() == DAW::channel_input_type::INPUT_AUDIOSTAGE) {
+			auto it = std::find_if(trackAllCtr.tracksFlat.begin(), trackAllCtr.tracksFlat.end(), [stageId = trImpl->inputChannel.stage.stageRef.stageId](track_t* trForStageId){
+				return trForStageId->audio->stageId == stageId;
+			});
+			if (it != trackAllCtr.tracksFlat.end()) {
+				trImpl->inputChannel = DAW::ChannelStage((*it)->audio, false);
+			} else {
+				trImpl->inputChannel = DAW::ChannelNone();
+			}
+		}
+		if (DAW::isChannelConnected(trImpl->outputChannel) && trImpl->outputChannel.getType() == DAW::channel_input_type::INPUT_AUDIOSTAGE) {
+			auto it = std::find_if(trackAllCtr.tracksFlat.begin(), trackAllCtr.tracksFlat.end(), [stageId = trImpl->outputChannel.stage.stageRef.stageId](track_t* trForStageId){
+				return trForStageId->audio->stageId == stageId;
+			});
+			if (it != trackAllCtr.tracksFlat.end()) {
+				trImpl->outputChannel = DAW::ChannelStage((*it)->audio, true);
+			} else {
+				trImpl->outputChannel = DAW::ChannelNone();
+			}
+		}
+	}
 }
 void trackallcontainer_t::loadSubtrackLayouts(project_snapshot_t& project) {
 	trackMidiAudioCtr.loadSubtrackLayouts(project.trackCtr);
