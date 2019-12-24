@@ -251,6 +251,7 @@ private:
 //            	processDuration = timer2.getTime();
 //    			LOG("processedBlocks: %d, play: %d, tickpos: %f\n", processedBlock, (m_status==playback_state::status_play), tickPos);
             }
+			std::this_thread::sleep_for(std::chrono::microseconds(1000));
 
             /*
              * at sample rate 44100 and blocksize 512 the block duration is 1.xxms
@@ -261,7 +262,7 @@ private:
 				LOG("processedBlock > 1: %d\n", processedBlock);
 			} else if (!processedBlock) {
 
-				std::this_thread::sleep_for(std::chrono::microseconds(500));
+				//std::this_thread::sleep_for(std::chrono::microseconds(500));
 
 			}
 			{
