@@ -32,4 +32,5 @@ extern constant_t CONST_FONT_SCALE;;
 extern constant_t CONST_GUI_FRAME_STROKE_WIDTH;;
 extern constant_t CONST_GUI_INSET_WIDGET_BG;
 extern constant_t CONST_TRACK_CONTROLS_WIDTH;
+extern constant_t CONST_LAYOUT_MARGIN;
 }

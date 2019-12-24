@@ -261,28 +261,56 @@ void gui_graph::render(NVGcontext* vg) {
 	if (!setScissorTransform(vg)) {
 		return;
 	}
+	const int stepLineSegments = 32;
+	const int stepStart = 1;
+	const vec4 colEdgeSignal = {0.1f, 0.6f, 0.1f, 1.0f};
 	for (gui_graph::guictr_graph_impl::edge_t& edge : impl->edgeList) {
 
 		gui_graph_n* graphNode = edge.a;
 		gui_graph_n* gTarget = edge.b;
+		const DAW::processing_track_node_t* node = gTarget->getProcessingNode();
 		auto portInputPos = graphNode->getPortInputPos();
 		auto portOutputPos = gTarget->getPortOutputPos();
+		const float fLineWidth = 4.0f;
+
+
+		if (node->trackOptional && node->trackOptional->audio) {
+			float maxRms = node->trackOptional->audio->meter.getMaxRMS();
+			if (maxRms > dsp_util::GAIN_DBFLOOR) {
+				nvgBeginPath(vg);
+				nvgMoveTo(vg, portInputPos.x, portInputPos.y);
+				const vec2 dInOut = vec2(portOutputPos) - vec2(portInputPos);
+				for (int i = stepStart; i < stepLineSegments-stepStart; i++) {
+					float t = i/(float)(stepLineSegments-1);
+					float f = t * t * (3.0 - 2.0 * t);
+					vec2 pos = vec2(portInputPos) + vec2(dInOut.x*t, dInOut.y*f);
+					nvgLineTo(vg, pos.x, pos.y);
+				}
+				nvgLineTo(vg, portOutputPos.x, portOutputPos.y);
+				nvgStrokeColor(vg, vec4ToNvg(colEdgeSignal));
+				nvgStrokeWidth(vg, fLineWidth+2.0f);
+				nvgStroke(vg);
+			}
+		}
+
+
 		nvgBeginPath(vg);
 		nvgMoveTo(vg, portInputPos.x, portInputPos.y);
 		vec2 dInOut = vec2(portOutputPos)-vec2(portInputPos);
-		int steps = 32;
-		bool b = false;
-		int d = 1;
-		for (int i = d; i < steps-d; i++) {
-			float t = i/(float)(steps-1);
+		vec4 colEdge = {0.05f, 0.05f, 0.05f, 1.0f};
+
+		for (int i = stepStart; i < stepLineSegments-stepStart; i++) {
+			float t = i/(float)(stepLineSegments-1);
 			float f = t * t * (3.0 - 2.0 * t);
 			vec2 pos = vec2(portInputPos) + vec2(dInOut.x*t, dInOut.y*f);
 			nvgLineTo(vg, pos.x, pos.y);
 		}
 		nvgLineTo(vg, portOutputPos.x, portOutputPos.y);
-		nvgStrokeColor(vg, theme->getFrameColorOutline());
-		nvgStrokeWidth(vg, 4.0);
+		nvgStrokeColor(vg, vec4ToNvg(colEdge));
+		nvgStrokeWidth(vg, fLineWidth);
 		nvgStroke(vg);
+
+
 	}
 	for (auto c : guis) {
 		nvgSave(vg);

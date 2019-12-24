@@ -359,7 +359,7 @@ void guictr_tracks::render(NVGcontext* vg) {
 				nvgGlobalAlpha(vg, 1.0f);
 			}
 		}
-		const int titleHeight = theme->get(GuiConstant::CONST_TRACK_HEIGHT_TITLE);
+		const int titleHeight = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
 		ivec2 indicatorPos = target.targetPos;
 		horizontalLineAt(this, vg, indicatorPos);
 

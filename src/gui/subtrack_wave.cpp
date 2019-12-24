@@ -346,7 +346,7 @@ public:
 	void renderMixerInfo(NVGcontext* vg) override {
 		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 		gui_track_subtrack::renderMixerInfo(vg);
-		const int htt = theme->get(GuiConstant::CONST_TRACK_HEIGHT_TITLE);
+		const int htt = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
 		const int titleHeight = htt*4/5;
 		const int fontSize = titleHeight-4;
 		int32_t y = INSET_TITLE;

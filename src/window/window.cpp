@@ -241,7 +241,14 @@ private:
 		if (!nanovgCtxt) {
 			throw appexception("Couldn't initialize nanovg");
 		}
-		int font = nvgCreateFont(nanovgCtxt, "sans", StringAsCStr(toCWDPath("res/fonts/Roboto-Regular.ttf")));
+
+		std::vector<FileFound> files;
+		findFilesWithExt("res/fonts/gui/", "ttf", false, files);
+		findFilesWithExt("res/fonts/gui/", "otf", false, files);
+		if (files.empty()) {
+			throw appexception("Please install ttf fonts to res/fonts/gui");
+		}
+		int font = nvgCreateFont(nanovgCtxt, "sans", StringAsCStr(toCWDPath(files[0].path)));
 		if (font == -1) {
 			throw appexception("Failed loading font");
 		}
@@ -632,6 +639,8 @@ public:
 		ctrl->onAppTick();
 	}
 	void render() {
+		/*std::vector<int64_t> test;
+		test.reserve(1<<31);*/
 		renderMain(ctrl);
 	}
 	void renderMain(AppCtrl* const ctrl)

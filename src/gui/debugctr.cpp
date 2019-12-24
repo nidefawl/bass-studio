@@ -175,7 +175,7 @@ void gui_ctr_debug::render(NVGcontext* vg) {
 
 	track_t* track = ctrl->getTrackId(0);
 	if (track && track->audio) {
-		strings.push_back(StringFormat("level: %.4f", track->audio->meter.getRms(0)));
+		strings.push_back(StringFormat("level: %.4f", track->audio->meter.getMaxRMS()));
 	}
 	if (ctrl->guiFocused && ctrl->guiFocused->parent == (guibase*)ctrl->getPluginCtr()) {
 		guiplugin* gplugin = dynamic_cast<guiplugin*>(ctrl->guiFocused);

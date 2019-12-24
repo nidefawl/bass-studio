@@ -276,10 +276,13 @@ void guibase::renderWidgetBorder(NVGcontext* vg, int32_t flags) const {
 }
 void guibase::renderWidgetBorderPosSize(NVGcontext* vg, int32_t flags, ivec2 pos, ivec2 size) const {
 	nvgBeginPath(vg);
+//	nvgRoundedRect(vg, pos.x, pos.y, size.x, size.y, 3.0f);
 	nvgRect(vg, pos.x, pos.y, size.x, size.y);
-	nvgStrokeColor(vg, theme->getBgStrokeColor(flags));
-	nvgStrokeWidth(vg, theme->getFloat(GuiConstant::CONST_GUI_FRAME_STROKE_WIDTH));
-	nvgStroke(vg);
+	nvgFillColor(vg, theme->getBgStrokeColor(flags));
+	nvgFill(vg);
+//	nvgStrokeColor(vg, theme->getBgStrokeColor(flags));
+//	nvgStrokeWidth(vg, theme->getFloat(GuiConstant::CONST_GUI_FRAME_STROKE_WIDTH));
+//	nvgStroke(vg);
 	int n = theme->get(GuiConstant::CONST_GUI_INSET_WIDGET_BG);
 	auto bgPos = pos+ivec2(n);
 	auto bgSize = size-ivec2(n*2);

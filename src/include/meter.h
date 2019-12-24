@@ -109,6 +109,26 @@ public:
 			channels[i].update(block->buf[i], block->samples, fTrackGain);
 		}
 	}
+	float getMaxRMS() {
+		float f = 0.0f;
+		if (C) {
+			f = channels[0].fLvl;
+			for (auto& cn : channels) {
+				f = std::max(f, cn.fLvl);
+			}
+		}
+		return f;
+	}
+	float getMaxPeak() {
+		float f = 0.0f;
+		if (C) {
+			f = channels[0].fMax;
+			for (auto& cn : channels) {
+				f = std::max(f, cn.fMax);
+			}
+		}
+		return f;
+	}
 	float getRms(int i) {
 		return channels[i].fLvl;
 	}

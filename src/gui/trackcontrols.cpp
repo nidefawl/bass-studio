@@ -720,7 +720,8 @@ public:
 	}
 	void layout() {
 		const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
-		int32_t inset = 1;
+		const int32_t CONST_LAYOUT_MARGIN = math::min(6, theme->get(GuiConstant::CONST_LAYOUT_MARGIN));
+		int32_t inset = CONST_LAYOUT_MARGIN;
 		selectInput.pos = ivec2(inset, inset);
 		selectOutput.pos = ivec2(inset, TRACK_HEIGHT_STEP+inset);
 		selectInput.size = getSizeContent() - ivec2(inset*2);
@@ -821,31 +822,32 @@ public:
 		}
 	}
 	void layout() {
+		const int32_t CONST_LAYOUT_MARGIN = math::min(6, theme->get(GuiConstant::CONST_LAYOUT_MARGIN));
 		const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
-		int32_t inset = 1;
+		int32_t inset = CONST_LAYOUT_MARGIN;
 		int32_t i2 = inset * 2;
 		int32_t h = TRACK_HEIGHT_STEP-i2;
 
 		int32_t mW = TRACK_HEIGHT_STEP;
 		int32_t bW = size.x-mW;
 		int32_t gW = size.x-mW;
-		btnBypass.size = ivec2(bW - i2 - h, h);
+		btnBypass.size = ivec2(bW - inset * 3 - h, h);
 		gain.size = ivec2(gW - i2, h);
 		btnBypass.pos = ivec2(inset, inset);
-		btnSolo.pos = ivec2(bW - i2 - h, inset);
+		btnSolo.pos = ivec2(bW - inset - h, inset);
 		btnSolo.size = ivec2(h, h);
 		gain.pos = ivec2(inset, TRACK_HEIGHT_STEP+inset);
 		btnActivate.pos = {inset, gain.bottom()+i2};
-		btnActivate.setFontSize(TRACK_HEIGHT_STEP-i2);
-		btnActivate.size = { TRACK_HEIGHT_STEP, TRACK_HEIGHT_STEP };
+		btnActivate.setFontSize(h-2);
+		btnActivate.size = { h, h };
 		btnShowSubtrack.pos = {btnActivate.right()+inset*2, gain.bottom()+i2};
-		btnShowSubtrack.setFontSize(TRACK_HEIGHT_STEP-i2);
-		btnShowSubtrack.size = { TRACK_HEIGHT_STEP, TRACK_HEIGHT_STEP };
+		btnShowSubtrack.setFontSize(h-2);
+		btnShowSubtrack.size = { h, h };
 
 		meter.size = ivec2(mW-i2, size.y-i2);
 		meter.pos = ivec2(size.x - mW+inset, inset);
 		if (sendGains.size()) {
-			const int32_t HEIGHT_SEND_GAIN = TRACK_HEIGHT_STEP*0.8;
+			const int32_t HEIGHT_SEND_GAIN = h;
 			const int32_t SEND_PER_ROW = 1;
 			ivec2 sendPos = {inset, btnShowSubtrack.bottom()+i2 };
 			auto project = project_controller_t::get();
@@ -1022,13 +1024,14 @@ public:
 		return false;
 	}
 	void layout() {
-		const int titleHeight = theme->get(GuiConstant::CONST_TRACK_HEIGHT_TITLE);
+		const int32_t CONST_LAYOUT_MARGIN = math::min(6, theme->get(GuiConstant::CONST_LAYOUT_MARGIN));
+		const int titleHeight = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
 		const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
 		removeUNCHECKED(&automationSelectParam);
 		removeUNCHECKED(&automationSelectDevice);
 		removeUNCHECKED(&hideAutomation);
 
-		int32_t inset = 4;
+		int32_t inset = CONST_LAYOUT_MARGIN;
 		int32_t i2 = inset * 2;
 		int32_t h = TRACK_HEIGHT_STEP-i2;
 		int32_t insetBtn = (TRACK_HEIGHT_STEP-hideTrack.size.y)/2;
@@ -1145,7 +1148,7 @@ public:
 		NVGcolor color = rgbToNvg(m_track->rgb);
 		ivec2 titleSize(size.x, size.y);
 		MainCtrl* ctrl = MainCtrl::get();
-		const int titleHeight = theme->get(GuiConstant::CONST_TRACK_HEIGHT_TITLE);
+		const int titleHeight = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
 		const int rectHeight = math::min(titleHeight, size.y);
 		nvgBeginPath(vg);
 		nvgRect(vg, 0, 0, titleSize.x, rectHeight);
@@ -1167,7 +1170,7 @@ public:
 			nvgFillColor(vg, color2);
 			nvgFill(vg);
 		}
-		setFont(vg, (int) (titleHeight * 0.8), getContrastFontColorNvg(color), G_TITLE_ALIGN);
+		setFont(vg, (int) (titleHeight * 0.9), getContrastFontColorNvg(color), G_TITLE_ALIGN);
 		renderText(vg, hideTrack.right() + INSET_TITLE*2, 0 + titleHeight / 2, titleSize.x-hideTrack.right(), StringAsCStr(m_track->name));
 
 		for (auto g : guis) {

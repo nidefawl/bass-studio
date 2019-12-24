@@ -663,7 +663,7 @@ void gui_track_subtrack::renderMixerInfo(NVGcontext* vg) {
 			curvalue = StringFormat("<NULL> %d", idx);
 		}
 	}
-	const int htt = theme->get(GuiConstant::CONST_TRACK_HEIGHT_TITLE);
+	const int htt = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
 	const int titleHeight = htt*4/5;
 	const int fontSize = titleHeight-4;
 	int32_t y = INSET_TITLE;
