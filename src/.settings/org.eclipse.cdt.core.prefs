@@ -58,6 +58,12 @@ environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.14147
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949/PATH/delimiter=;
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949/PATH/operation=replace
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949/PATH/value=${WORKSPACE_ENV_PATH}
+environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949/WORKSPACE_ENV_PATH/delimiter=;
+environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949/WORKSPACE_ENV_PATH/operation=replace
+environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949/WORKSPACE_ENV_PATH/value=D\:\\dev\\LLVM-9.0.0-stable\\bin;C\:\\dev\\llvm-mingw-git\\bin;C\:\\dev\\gdb\\bin;D\:\\dev\\WIN32PATH;C\:\\Windows\\System32;C\:\\Users\\Michael\\AppData\\Local\\Programs\\Python\\Python37
+environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949/_NO_DEBUG_HEAP/delimiter=;
+environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949/_NO_DEBUG_HEAP/operation=replace
+environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949/_NO_DEBUG_HEAP/value=1
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949/append=true
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949/appendContributed=true
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.2063177661/DEPS_PATH/delimiter=;

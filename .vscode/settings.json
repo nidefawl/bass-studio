@@ -1,3 +1,6 @@
 {
-    "workbench.colorTheme": "Monokai Dimmed"
+    "workbench.colorTheme": "Default Dark+",
+    "files.associations": {
+        "vector": "cpp"
+    }
 }

@@ -138,6 +138,8 @@
                                     <listOptionValue builtIn="false" value="BUILD_VSTHOST=1"/>
                                     									
                                     <listOptionValue builtIn="false" value="BUILD_EXTERNAL_PLUGIN=0"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="_LIBCPP_NO_EXCEPTIONS"/>
                                     								
                                 </option>
                                 								
@@ -222,6 +224,8 @@
                                     <listOptionValue builtIn="false" value="BUILD_VSTHOST=1"/>
                                     									
                                     <listOptionValue builtIn="false" value="BUILD_EXTERNAL_PLUGIN=0"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="_LIBCPP_NO_EXCEPTIONS"/>
                                     								
                                 </option>
                                 								
@@ -337,7 +341,7 @@
                             							
                             <targetPlatform archList="all" binaryParser="org.eclipse.cdt.core.PE" id="cdt.managedbuild.target.gnu.platform.mingw.base.490019570" name="Debug Platform" osList="win32" superClass="cdt.managedbuild.target.gnu.platform.mingw.base"/>
                             							
-                            <builder arguments="-j6" buildPath="${workspace_loc:/DAW}/../build/clang-ninja-test/" command="ninja" id="cdt.managedbuild.builder.gnu.cross.297317349" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" superClass="cdt.managedbuild.builder.gnu.cross"/>
+                            <builder arguments="-j6" buildPath="${workspace_loc:/DAW}/../build/clang-ninja-daw-build/" command="ninja" id="cdt.managedbuild.builder.gnu.cross.297317349" keepEnvironmentInBuildfile="false" managedBuildOn="false" name="Gnu Make Builder" superClass="cdt.managedbuild.builder.gnu.cross"/>
                             							
                             <tool errorParsers="" id="cdt.managedbuild.tool.gnu.assembler.mingw.base.1842075714" name="GCC Assembler" superClass="cdt.managedbuild.tool.gnu.assembler.mingw.base">
                                 								
@@ -436,6 +440,8 @@
                                     <listOptionValue builtIn="false" value="BUILD_VSTHOST=1"/>
                                     									
                                     <listOptionValue builtIn="false" value="BUILD_EXTERNAL_PLUGIN=0"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="_LIBCPP_NO_EXCEPTIONS"/>
                                     								
                                 </option>
                                 								
@@ -520,6 +526,8 @@
                                     <listOptionValue builtIn="false" value="BUILD_VSTHOST=1"/>
                                     									
                                     <listOptionValue builtIn="false" value="BUILD_EXTERNAL_PLUGIN=0"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="_LIBCPP_NO_EXCEPTIONS"/>
                                     								
                                 </option>
                                 								
@@ -736,6 +744,8 @@
                                     <listOptionValue builtIn="false" value="BUILD_VSTHOST=1"/>
                                     									
                                     <listOptionValue builtIn="false" value="BUILD_EXTERNAL_PLUGIN=0"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="_LIBCPP_NO_EXCEPTIONS"/>
                                     								
                                 </option>
                                 								
@@ -820,6 +830,8 @@
                                     <listOptionValue builtIn="false" value="BUILD_VSTHOST=1"/>
                                     									
                                     <listOptionValue builtIn="false" value="BUILD_EXTERNAL_PLUGIN=0"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="_LIBCPP_NO_EXCEPTIONS"/>
                                     								
                                 </option>
                                 								
@@ -1036,6 +1048,8 @@
                                     <listOptionValue builtIn="false" value="BUILD_VSTHOST=1"/>
                                     									
                                     <listOptionValue builtIn="false" value="BUILD_EXTERNAL_PLUGIN=0"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="_LIBCPP_NO_EXCEPTIONS"/>
                                     								
                                 </option>
                                 								
@@ -1120,6 +1134,8 @@
                                     <listOptionValue builtIn="false" value="BUILD_VSTHOST=1"/>
                                     									
                                     <listOptionValue builtIn="false" value="BUILD_EXTERNAL_PLUGIN=0"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="_LIBCPP_NO_EXCEPTIONS"/>
                                     								
                                 </option>
                                 								
@@ -1334,6 +1350,8 @@
                                     <listOptionValue builtIn="false" value="BUILD_VSTHOST=1"/>
                                     									
                                     <listOptionValue builtIn="false" value="BUILD_EXTERNAL_PLUGIN=0"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="_LIBCPP_NO_EXCEPTIONS"/>
                                     								
                                 </option>
                                 								
@@ -1418,6 +1436,8 @@
                                     <listOptionValue builtIn="false" value="BUILD_VSTHOST=1"/>
                                     									
                                     <listOptionValue builtIn="false" value="BUILD_EXTERNAL_PLUGIN=0"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="_LIBCPP_NO_EXCEPTIONS"/>
                                     								
                                 </option>
                                 								
@@ -1632,6 +1652,8 @@
                                     <listOptionValue builtIn="false" value="BUILD_VSTHOST=1"/>
                                     									
                                     <listOptionValue builtIn="false" value="BUILD_EXTERNAL_PLUGIN=0"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="_LIBCPP_NO_EXCEPTIONS"/>
                                     								
                                 </option>
                                 								
@@ -1716,6 +1738,8 @@
                                     <listOptionValue builtIn="false" value="BUILD_VSTHOST=1"/>
                                     									
                                     <listOptionValue builtIn="false" value="BUILD_EXTERNAL_PLUGIN=0"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="_LIBCPP_NO_EXCEPTIONS"/>
                                     								
                                 </option>
                                 								
@@ -1930,6 +1954,8 @@
                                     <listOptionValue builtIn="false" value="BUILD_VSTHOST=1"/>
                                     									
                                     <listOptionValue builtIn="false" value="BUILD_EXTERNAL_PLUGIN=0"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="_LIBCPP_NO_EXCEPTIONS"/>
                                     								
                                 </option>
                                 								
@@ -2014,6 +2040,8 @@
                                     <listOptionValue builtIn="false" value="BUILD_VSTHOST=1"/>
                                     									
                                     <listOptionValue builtIn="false" value="BUILD_EXTERNAL_PLUGIN=0"/>
+                                    									
+                                    <listOptionValue builtIn="false" value="_LIBCPP_NO_EXCEPTIONS"/>
                                     								
                                 </option>
                                 								
