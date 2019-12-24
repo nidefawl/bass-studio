@@ -15,6 +15,7 @@ struct AudioBlock {
 	enum mix_op : int32_t {
 		MIX, ADD
 	};
+	static std::atomic<int32_t> instanceCount;
     uint32_t channels{ 0 };
 	uint32_t samples{ 0 };
 	float** buf{ 0 };
@@ -23,6 +24,7 @@ struct AudioBlock {
 	AudioBlock() = delete;
 	AudioBlock(const AudioBlock&) = delete;
 	AudioBlock(AudioBlock&& other) {
+		instanceCount++;
 		if (buf) {
 			if (allocType != alloc_type::external_array) {
 				if (allocType == alloc_type::internal) {
@@ -52,6 +54,7 @@ struct AudioBlock {
 	explicit AudioBlock(uint32_t _channels, uint32_t _samples, bool _bIsDebug = false)
 		: channels(_channels), samples(0), buf(new float*[_channels]), allocType(alloc_type::internal), debug(_bIsDebug)
 	{
+		instanceCount++;
 		dbgassert(channels);
 		for (uint32_t i = 0; i < _channels; i++) {
 			buf[i] = NULL;
@@ -61,11 +64,13 @@ struct AudioBlock {
 	explicit AudioBlock(float** buf, uint32_t _channels, uint32_t _samples)
 		: channels(_channels), samples(_samples), buf(buf), allocType(alloc_type::external_array)
 	{
+		instanceCount++;
 		dbgassert(channels);
 	};
 	explicit AudioBlock(const std::vector<float*>& vecChannels, uint32_t _samples)
 		: channels(vecChannels.size()),  samples(_samples), buf(new float*[vecChannels.size()]), allocType(alloc_type::external_channels_only)
 	{
+		instanceCount++;
 		dbgassert(channels);
 		memcpy(buf, vecChannels.data(), vecChannels.size()*sizeof(decltype(vecChannels[0])));
 		float** pBuf = buf;
@@ -74,6 +79,7 @@ struct AudioBlock {
 		}
 	};
 	~AudioBlock() {
+		instanceCount--;
 		if (allocType != alloc_type::external_array) {
 			if (allocType == alloc_type::internal) {
 				for (uint32_t i = 0; i < channels; i++) {

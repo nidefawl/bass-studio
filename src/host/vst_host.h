@@ -107,6 +107,8 @@ public:
 
 	SYNCHRONIZED_RW hires_timer_t timer; // timer for cpu-time profiling
 	SYNCHRONIZED_RW hires_timer_t timer2;// timer for cpu-time profiling
+	SYNCHRONIZED_RW hires_timer_t timer3;// timer for cpu-time profiling
+	SYNCHRONIZED_RW hires_timer_t timer4;// timer for cpu-time profiling
 private:
 	SYNCHRONIZED_RW clip_t* recordingClip = nullptr;
 	SYNCHRONIZED_RW std::atomic<bool> hasNewRecordedData{0};

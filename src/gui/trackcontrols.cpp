@@ -797,6 +797,7 @@ public:
 		remove(&btnShowSubtrack);
 	}
 	void buttonClicked(guibase* button) override {
+		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 		if (&btnSolo == button) {
 			m_track->audio->flags ^= audiostageflags_t::SOLO;
 		}
@@ -810,7 +811,6 @@ public:
 			MainCtrl::getGuiTrackCtr()->addSubTrack(m_track, gui, true);
 		}
 		if (&btnActivate == button) {
-			ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 			vsthost* host = vsthost::getInstance();
 			std::vector<effectbase*> effects = m_track->audio->deferredEffects;
 			for (auto eff : effects) {

@@ -841,12 +841,15 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 #ifndef NDEBUG
 
 #endif
+	static int32_t dbgStep = 0;
 	/*
 	 * We try to stay 4 blocks ahead of the audiothread read position
 	 * This should be adjusted depending on samplerate and blocksize
 	 */
 //	int readWriteDist = writePos >= readPos ? writePos-readPos : writePos-(readPos-RING_BUF_SIZE);
+	int32_t dbg = 0;
 	if (ctrl && queueSizeOutput < 8) {
+		dbg = dbgStep++%50;
 
 #ifndef NDEBUG
 		if (!isLoopAround&&state == playback_state::status_play && lastState == playback_state::status_play) {
@@ -938,11 +941,14 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 		 */
 
 //
+		timer3.reset();
 		/** turn tree structure into linear pointer array with parents followed by their children **/
 		std::shared_ptr<DAW::processing_graph_t> processingGraph;
 		if (!DAW::buildProcessingGraph(this, ctrl, tracksFlatAll, processingGraph)) {
 			log_printf("Failed building track graph\n", 0);
 		}
+		if (dbg != 0)
+		stats.timings["buildProcessingGraph"] = timer3.getTime();
 
 		this->lastTrackGraph = processingGraph->trackGraph;
 		this->lastProcessingList= processingGraph;
@@ -978,13 +984,12 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			}
 		}
 
-		static int32_t dbgStep = 0;
-		int32_t dbg = dbgStep++%50;
 		int32_t idxDelayLine = 0;
 		AudioBlock tempBlock(8, lBlockSize);
 		if (dbg == 0) {
 			log_printf("DelayLine.instanceCount %d\n", DelayLine::instanceCount.load());
 		}
+		timer3.reset();
 		for (auto itAudioStage = processingGraph->nodesFlatOrdered.begin(); itAudioStage != processingGraph->nodesFlatOrdered.end(); itAudioStage++) {
 			const DAW::processing_track_node_t* ptrProcessingNode = *itAudioStage;
 			const DAW::processing_track_node_t& trackNode = *ptrProcessingNode;
@@ -1103,6 +1108,8 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 
 			}
 		}
+		if (dbg != 0)
+		stats.timings["process_tracks"] = timer3.getTime();
 
 
 		/*
@@ -1117,6 +1124,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 //		AudioBlock* bufOut = ptrExternalOutputs->output;
 //		int32_t channelIdx = 0;
 
+		timer3.reset();
 		for (auto itAudioStage = processingGraph->nodesFlatOrdered.begin(); itAudioStage != processingGraph->nodesFlatOrdered.end(); itAudioStage++) {
 			const DAW::processing_track_node_t* ptrProcessingNode = *itAudioStage;
 			const DAW::processing_track_node_t& trackNode = *ptrProcessingNode;
@@ -1158,6 +1166,8 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 				}
 			}
 		}
+		if (dbg != 0)
+		stats.timings["routeExternalOutputs"] = timer3.getTime();
 		double blockPosSample = sample;
 		double blockPosTick = posDouble;
 
@@ -1181,6 +1191,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 		}
 
 
+		timer3.reset();
 		/* Update all track meters */
 		for (track_t* track : ctrl->trackList) {
 			track_impl_t* trAudio = track->audio;
@@ -1190,6 +1201,8 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			getGainLvl(trAudio->mixer.getParamValue(PARAM_TRACK_GAIN), fGainTrack);
 			trAudio->meter.update(&trAudio->output, fGainTrack);
 		}
+		if (dbg != 0)
+		stats.timings["updateMeters"] = timer3.getTime();
 
 		sample = samplePosBlockEnd;
 		posDouble += ticksPerBlock;
@@ -1229,6 +1242,9 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 	if (convert) {
 		stats.timings["convertBlockTime"] = timeTaken;
 	}
+	if (dbg != 0)
+	stats.timings["block-time"] = timeTaken;
+	stats.timings["microSecsPerBlock"] = microSecsPerBlock;
 	stats.usage = stats.timeLastBlock / (double) microSecsPerBlock;
 	stats.blocksProcessed += nBlocksProcessed;
 	stats.samplesProcessed += nBlocksProcessed*lBlockSize;

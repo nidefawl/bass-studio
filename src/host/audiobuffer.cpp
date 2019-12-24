@@ -89,3 +89,4 @@ void AudioBlock::realloc(uint32_t _samples) {
 }
 
 std::atomic<int32_t> DelayLine::instanceCount{0};
+std::atomic<int32_t> AudioBlock::instanceCount{0};
