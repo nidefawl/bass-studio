@@ -6,6 +6,7 @@
 #include "automation.h"
 #include "logging.h"
 #include "vst_plugin_handles.h"
+#include "track_impl.h"
 
 
 #ifdef _WIN32
@@ -128,6 +129,7 @@ void vst_setParameter(vstplugin* plugin, AEffect* aeffect, int32_t idx, float va
 }
 
 void vstplugin::process(AudioBlock* in, AudioBlock* out, int32_t samplePos, int32_t numSamples, playback_state state) {
+	dbgassert(getTrackLink()->sampleFormat == this->format && in->samples == format.blockSize && out->samples == format.blockSize && format.blockSize > 0 && format.sampleRate > 0);
 	if (handle->aeffect != NULL) {
 
 #ifdef _WIN32

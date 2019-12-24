@@ -277,6 +277,7 @@ void module_group::setTrackLink(audio_stage_t* trImpl) {
 	internalplugin::setTrackLink(trImpl);
 }
 void module_group::process(AudioBlock* in, AudioBlock* out, int32_t samplePos, int32_t numSamples, playback_state state) {
+	dbgassert(getTrackLink()->sampleFormat == this->format && in->samples == format.blockSize && out->samples == format.blockSize && format.blockSize > 0 && format.sampleRate > 0);
 	audio->input.copyFrom(in);
 	vsthost::getInstance()->processAudio(audio, &audio->input, &audio->output, samplePos, numSamples, state);
 	audio->outputPost.copyFrom(&audio->output);

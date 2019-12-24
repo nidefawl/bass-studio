@@ -65,7 +65,10 @@ void AudioBlock::realloc(uint32_t _samples) {
 				} else {
 					memset(newBuf, 0, sizeof(float)*_samples);
 					if (buf[i]) {
-						memcpy(newBuf, buf[i], math::min(_samples, samples) * sizeof(float));
+						if (math::min(_samples, samples) > 0) {
+							memcpy(newBuf, buf[i], math::min(_samples, samples) * sizeof(float));
+						}
+
 						if (debug) {
 							log_printf("AudioBlock buffer[%d] release 0x%08X\n", i, reinterpret_cast<int64_t>(newBuf));
 						}
@@ -79,5 +82,10 @@ void AudioBlock::realloc(uint32_t _samples) {
 			fillNoise(nextSeed++);
 			samples = _samples;
 		}
+		else {
+			dbgassert(0 && "Cannot reallocate externally allocated audiobuffer");
+		}
 	}
 }
+
+std::atomic<int32_t> DelayLine::instanceCount{0};

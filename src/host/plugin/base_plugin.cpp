@@ -210,7 +210,7 @@ void effect_deferred::makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks
 	ps = this->mImpl->snapshot;
 }
 void effect_deferred::process(AudioBlock* in, AudioBlock* out, int32_t samplePos, int32_t numSamples, playback_state state) {
-
+	dbgassert(vsthost::getInstance()->sampleFormat == this->format && in->samples == format.blockSize && out->samples == format.blockSize && format.blockSize > 0 && format.sampleRate > 0);
 }
 bool effect_deferred::show() {
 	return false;

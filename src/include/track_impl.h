@@ -128,7 +128,6 @@ struct audio_stage_t {
 	sampleformat_t sampleFormat;
 //	samplerate_t sampleRate;
 //	uint16_t blockSize;
-	std::array<DelayLine, 2> delayLines;
 	std::vector<effectbase*> effects;
 	std::vector<effectbase*> deferredEffects;
 	std::vector<audio_stage_t*> children;
@@ -144,10 +143,8 @@ struct audio_stage_t {
 	  output(nChannels, _blockSize),
 	  outputPost(nChannels, _blockSize),
 	  mixer(this),
-	  type(_type),
-//	  sampleRate(_sampleRate),
-//	  blockSize(_blockSize),
-	  delayLines{{DelayLine(nChannels, 0), DelayLine(nChannels, 0)}} {
+	  type(_type)
+	{
 		  sampleFormat.blockSize = _blockSize;
 		  sampleFormat.sampleRate = _sampleRate;
 		  sampleFormat.sampleformat = sampleformat_bits_t::FLOAT_32;
@@ -158,10 +155,6 @@ struct audio_stage_t {
 	virtual void removePlugin(effectbase* _vst, bool notifyUp);
 	void loadPlugins(const std::vector<plugin_snapshot_t>& trPluginList);
 	samplerate_t getLatency();
-	DelayLine* getDelayLine(int32_t idx) {
-		dbgassert(idx >= 0 && idx < delayLines.size());
-		return &delayLines[idx];
-	}
 	void insertEffect(int32_t idx, effectbase* _instrument);
 	bool replaceEffect(int32_t idx, effectbase* _effect, effectbase** _prevEffect);
 	void pluginsChanged();

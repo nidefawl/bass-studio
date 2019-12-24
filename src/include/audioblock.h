@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <memory.h>
 #include <stdlib.h>
+#include <atomic>
 #include "assert_dbg.h"
 #include "math/seq_math.h"
 #include "mem.h"
@@ -14,12 +15,41 @@ struct AudioBlock {
 	enum mix_op : int32_t {
 		MIX, ADD
 	};
-	const uint32_t channels{ 0 };
+    uint32_t channels{ 0 };
 	uint32_t samples{ 0 };
 	float** buf{ 0 };
 	alloc_type allocType;
 	bool debug = false;
-	AudioBlock(uint32_t _channels, uint32_t _samples, bool _bIsDebug = false)
+	AudioBlock() = delete;
+	AudioBlock(const AudioBlock&) = delete;
+	AudioBlock(AudioBlock&& other) {
+		if (buf) {
+			if (allocType != alloc_type::external_array) {
+				if (allocType == alloc_type::internal) {
+					for (uint32_t i = 0; i < channels; i++) {
+						if (buf[i]) {
+							delete[] buf[i];
+							buf[i] = nullptr;
+						}
+					}
+				}
+				delete[] buf;
+				buf = nullptr;
+			}
+		}
+		channels = other.channels;
+		samples = other.samples;
+		allocType = other.allocType;
+		buf = other.buf;
+		debug = other.debug;
+		other.allocType = alloc_type::external_array;
+		other.buf = nullptr;
+		other.channels = 0;
+		other.samples = 0;
+	}
+	AudioBlock& operator=(const AudioBlock&) = delete;
+	AudioBlock& operator=(AudioBlock&&) = delete;
+	explicit AudioBlock(uint32_t _channels, uint32_t _samples, bool _bIsDebug = false)
 		: channels(_channels), samples(0), buf(new float*[_channels]), allocType(alloc_type::internal), debug(_bIsDebug)
 	{
 		dbgassert(channels);
@@ -28,12 +58,12 @@ struct AudioBlock {
 		}
 		realloc(_samples);
 	};
-	AudioBlock(float** buf, uint32_t _channels, uint32_t _samples)
+	explicit AudioBlock(float** buf, uint32_t _channels, uint32_t _samples)
 		: channels(_channels), samples(_samples), buf(buf), allocType(alloc_type::external_array)
 	{
 		dbgassert(channels);
 	};
-	AudioBlock(const std::vector<float*>& vecChannels, uint32_t _samples)
+	explicit AudioBlock(const std::vector<float*>& vecChannels, uint32_t _samples)
 		: channels(vecChannels.size()),  samples(_samples), buf(new float*[vecChannels.size()]), allocType(alloc_type::external_channels_only)
 	{
 		dbgassert(channels);
@@ -167,8 +197,25 @@ struct AudioBlock {
 struct DelayLine {
 	AudioBlock block;
 	int32_t blockOffset = 0;
+	static std::atomic<int32_t> instanceCount;
 	DelayLine(uint32_t _channels, uint32_t _samples)
 	  : block(_channels, _samples)
-	{ block.debug=true; }
+	{
+		block.debug=true;
+		instanceCount++;
+	}
+	DelayLine(const DelayLine& other)
+	  : block(other.block.channels, other.block.samples)
+	{
+		block.debug=true;
+		instanceCount++;
+	}
+	DelayLine() = delete;
+	DelayLine(DelayLine&& other) = delete;
+	DelayLine& operator=(const DelayLine& other) = delete;
+	DelayLine& operator=(DelayLine&& other) = delete;
+	~DelayLine() {
+		instanceCount--;
+	}
 };
 void delayAudio(DelayLine* delayLine, AudioBlock* input, AudioBlock* output, samplerate_t delay);

@@ -822,7 +822,10 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 	tick_t tickPosBlockStart = ceil(posDouble);
 	double since = timer.getTimeDoubleReset();
 	timer2.reset();
+
+#if 0
 	processMidiRealtimeInput(ctrl, posDouble, state);
+#endif
 
 	int queueSizeOutput = 0;
 	auto *stream = audioHost ? audioHost->getStream(0) : nullptr;
@@ -847,7 +850,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 
 #ifndef NDEBUG
 		if (!isLoopAround&&state == playback_state::status_play && lastState == playback_state::status_play) {
-			dbgassert(posDouble == lastTickEndPos);
+//			dbgassert(posDouble == lastTickEndPos);
 		}
 		lastState = state;
 #endif
@@ -871,33 +874,30 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 		int32_t samplePosBlockEnd = sample + lBlockSize;
 		int32_t tickBlockEnd = floor(posDouble + ticksPerBlock);
 		dbgassert(tickBlockEnd-pos < ceil(ticksPerBlock+1));
-//		/*
-//		 * Clear all master channels first
-//		 */
-		for (track_t* trackMaster : ctrl->trackMasterCtr) {
-			track_impl_t* audioMaster = trackMaster->audio;
-////			audioMaster->input.realloc(lBlockSize);
-////			audioMaster->output.realloc(lBlockSize);
-////			audioMaster->outputPost.realloc(lBlockSize);
-//			dsp_util::fillBlock(audioMaster->input, 0.0f);
-//			dsp_util::fillBlock(audioMaster->output, 0.0f);
-//			dsp_util::fillBlock(audioMaster->outputPost, 0.0f);
-			dsp_util::fillNoiseBlock(audioMaster->input);
-			dsp_util::fillNoiseBlock(audioMaster->output);
-			dsp_util::fillNoiseBlock(audioMaster->outputPost);
+		/*
+		 * Clear all master channels first
+		 */
+		for (track_t* trackMaster : ctrl->trackList) {
+			track_impl_t* audio = trackMaster->audio;
+			audio->input.realloc(lBlockSize);
+			audio->output.realloc(lBlockSize);
+			audio->outputPost.realloc(lBlockSize);
+			dsp_util::fillBlock(audio->input, 0.0f);
+			dsp_util::fillBlock(audio->output, 0.0f);
+			dsp_util::fillBlock(audio->outputPost, 0.0f);
 		}
 //		/*
 //		 * Clear all return channels
 //		 */
-		for (track_t* trackReturn : ctrl->trackReturnCtr) {
-			track_impl_t* audioReturn = trackReturn->audio;
-////			audioReturn->input.realloc(lBlockSize);
-////			audioReturn->output.realloc(lBlockSize);
-////			audioReturn->outputPost.realloc(lBlockSize);
-			dsp_util::fillNoiseBlock(audioReturn->input);
-			dsp_util::fillNoiseBlock(audioReturn->output);
-			dsp_util::fillNoiseBlock(audioReturn->outputPost);
-		}
+//		for (track_t* trackReturn : ctrl->trackReturnCtr) {
+//			track_impl_t* audioReturn = trackReturn->audio;
+//			audioReturn->input.realloc(lBlockSize);
+//			audioReturn->output.realloc(lBlockSize);
+//			audioReturn->outputPost.realloc(lBlockSize);
+//			dsp_util::fillBlock(audioReturn->input, 0.0f);
+//			dsp_util::fillBlock(audioReturn->output, 0.0f);
+//			dsp_util::fillBlock(audioReturn->outputPost, 0.0f);
+//		}
 
 		/*
 		 * determine max latency of all audio/midi tracks
@@ -979,9 +979,12 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 		}
 
 		static int32_t dbgStep = 0;
-		int32_t dbg = dbgStep++%330;
+		int32_t dbg = dbgStep++%50;
 		int32_t idxDelayLine = 0;
 		AudioBlock tempBlock(8, lBlockSize);
+		if (dbg == 0) {
+			log_printf("DelayLine.instanceCount %d\n", DelayLine::instanceCount.load());
+		}
 		for (auto itAudioStage = processingGraph->nodesFlatOrdered.begin(); itAudioStage != processingGraph->nodesFlatOrdered.end(); itAudioStage++) {
 			const DAW::processing_track_node_t* ptrProcessingNode = *itAudioStage;
 			const DAW::processing_track_node_t& trackNode = *ptrProcessingNode;
@@ -993,6 +996,9 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 				log_printf("process stage 1 %d\n", static_cast<int32_t>(track->audio->stageId));
 				log_printf("process stage 2 %d\n", static_cast<int32_t>(trackNode.stageId));
 			}
+
+			trackImpl->input.realloc(lBlockSize);
+			trackImpl->output.realloc(lBlockSize);
 
 			dsp_util::fillBlock(trackImpl->input, 0.0f);
 
@@ -1014,6 +1020,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			std::vector<DAW::track_source_t> allSources = trackNode.pulls; // copy
 			allSources.insert(allSources.end(), trackNode.pushs.begin(), trackNode.pushs.end()); // copy
 
+#if 1
 		    struct Func_CheckHasSolo {
 		        bool operator()(const DAW::track_source_t& src) const {
 		        	return (src.flags & audiostageflags_t::SOLO) != audiostageflags_t::NONE;
@@ -1053,17 +1060,12 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 							delayLines.push_back(std::shared_ptr<DelayLine>(new DelayLine((uint32_t)src.channels.size(), 16)));
 //							delayLines[idxDelayLine]->block.realloc(lBlockSize*2+delayToMaxInputLatency);
 						}
+						dbgassert(delayLines.size() > idxDelayLine);
 						AudioBlock srcBlock = src.toAudioBlock();
-						AudioBlock blockTemp(trackImpl->input.channels, trackImpl->input.samples);
-						AudioBlock* pSrc = &srcBlock;
-						if (src.sampleFormat != trackImpl->sampleFormat) {
-							log_printf("INCOMPATIBLE FORMATS:\n", 0);
-							log_printf("SRC SR %d,BLOCK %d,TYPE: %s\n", src.sampleFormat.sampleRate, src.sampleFormat.blockSize, sampleformat_bits_to_str(src.sampleFormat.sampleformat));
-							log_printf("DST SR %d,BLOCK %d,TYPE: %s\n", trackImpl->sampleFormat.sampleRate, trackImpl->sampleFormat.blockSize, sampleformat_bits_to_str(trackImpl->sampleFormat.sampleformat));
-							this->impl->oversampler->runResample(srcBlock, blockTemp);
-							pSrc = &blockTemp;
-						}
-						delayAudio(delayLines[idxDelayLine].get(), pSrc, &tempBlock, delayToMaxInputLatency);
+						dbgassert(srcBlock.samples == tempBlock.samples);
+						dbgassert(srcBlock.channels <= tempBlock.channels);
+						dbgassert(delayLines[idxDelayLine].get()->block.channels == srcBlock.channels);
+						delayAudio(delayLines[idxDelayLine].get(), &srcBlock, &tempBlock, delayToMaxInputLatency);
 						trackImpl->addAudio(tempBlock, src.gain * tracksrc.gain);
 						idxDelayLine++;
 					}
@@ -1074,10 +1076,19 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 					}
 				}
 			}
+#endif
 
+			dbgassert(vsthost::getInstance()->sampleFormat == trackImpl->sampleFormat
+					&& trackImpl->input.samples == trackImpl->sampleFormat.blockSize
+					&& trackImpl->output.samples == trackImpl->sampleFormat.blockSize
+					&& trackImpl->outputPost.samples == trackImpl->sampleFormat.blockSize
+					&& trackImpl->sampleFormat.blockSize > 0
+					&& trackImpl->sampleFormat.sampleRate > 0);
 
 			/* Processes audio/midi tracks plugin chain */
 			processAudio(trackImpl, &trackImpl->input, &trackImpl->output, sample, lBlockSize, state);
+
+
 
 			trackImpl->outputPost.copyFrom(&trackImpl->output);
 
@@ -1124,8 +1135,8 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 					if (dbg == 0) {
 						log_printf("Process External Audio routing from %s to %s\n", StringAsCStr(track->name), StringAsCStr(outputChannel.name));
 					}
-					track_audio_src dst;
-					if (DAW::resolveAudioChannel(this, numChannelsTrack, outputChannel, ptrExternalOutputs ? ptrExternalOutputs->output : nullptr, dst)) {
+					track_audio_src src;
+					if (DAW::resolveAudioChannel(this, numChannelsTrack, outputChannel, ptrExternalOutputs ? ptrExternalOutputs->output : nullptr, src)) {
 
 						/* Calculate master tracks gain level */
 						float fGainMaster;
@@ -1140,24 +1151,8 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 							 * sends are with track gain applied (post-mixer)
 							 *
 							 */
-//							if (src.sampleFormat != trackImpl->sampleFormat) {
-//								log_printf("INCOMPATIBLE FORMATS:\n", 0);
-//								log_printf("SRC SR %d,BLOCK %d,TYPE: %s\n", src.sampleFormat.sampleRate, src.sampleFormat.blockSize, sampleformat_bits_to_str(src.sampleFormat.sampleformat));
-//								log_printf("DST SR %d,BLOCK %d,TYPE: %s\n", trackImpl->sampleFormat.sampleRate, trackImpl->sampleFormat.blockSize, sampleformat_bits_to_str(trackImpl->sampleFormat.sampleformat));
-//							}
-							AudioBlock blockExternalOutputs = dst.toAudioBlock();
-
-							AudioBlock blockTemp(trackImpl->input.channels, trackImpl->input.samples);
-							AudioBlock* pSrc = &trackImpl->output;
-							if (dst.sampleFormat != trackImpl->sampleFormat) {
-								log_printf("INCOMPATIBLE FORMATS:\n", 0);
-								log_printf("DST SR %d,BLOCK %d,TYPE: %s\n", dst.sampleFormat.sampleRate, dst.sampleFormat.blockSize, sampleformat_bits_to_str(dst.sampleFormat.sampleformat));
-								log_printf("SRC SR %d,BLOCK %d,TYPE: %s\n", trackImpl->sampleFormat.sampleRate, trackImpl->sampleFormat.blockSize, sampleformat_bits_to_str(trackImpl->sampleFormat.sampleformat));
-								this->impl->oversampler->runResample(trackImpl->output, blockTemp);
-								pSrc = &blockTemp;
-							}
-							//TODO: do delay compensation
-							blockExternalOutputs.addFromOp(pSrc, AudioBlock::mix_op::ADD, math::clamp(dst.gain * fGainMaster, 0.0f, 1.0f));
+							AudioBlock blockExternalOutputs = src.toAudioBlock();
+							blockExternalOutputs.addFromOp(&trackImpl->output, AudioBlock::mix_op::ADD, math::clamp(src.gain * fGainMaster, 0.0f, 1.0f));
 						}
 					}
 				}
@@ -1212,7 +1207,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			}
 		}
 		static int throttleI = 0;//TODO: REMOVE ME. DEBUG
-		convert = true;//throttleI++%32==0;
+		convert = false;//throttleI++%32==0;
 		if (convert) {
 			int32_t bytesCopied = 0;
 			hires_timer_t timerConvert;
@@ -1266,7 +1261,12 @@ void vsthost::setOutput(audiohost* audioHost) {
 //	assert (audioHost->lSampleRate == this->lSampleRate);
 //	assert (audioHost->lBlockSize == this->lBlockSize);
 	this->audioHost = audioHost;
-	this->sampleFormatExternal = {audioHost->lSampleRate, audioHost->lBlockSize, sampleformat_bits_t::FLOAT_32};
+	if (audioHost) {
+		this->sampleFormatExternal = { audioHost->lSampleRate, audioHost->lBlockSize, sampleformat_bits_t::FLOAT_32 };
+	} else {
+		this->sampleFormatExternal = { 48000, 512, sampleformat_bits_t::FLOAT_32 };
+	}
+	
 	this->sampleFormat = {0, 0, sampleformat_bits_t::NONE};
 	if (audioHost) {
 		const int32_t internalSampleRate = sampleFormatExternal.sampleRate;

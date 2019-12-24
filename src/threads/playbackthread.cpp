@@ -181,6 +181,7 @@ private:
 								LOG("START ON seconds: %.2f - sample %d\n", toSeconds(startPos, bpm100), samplePos);
 								host->onStartPlayback(this->ctrl);
 								timer.reset();
+								timer2.reset();
 								playbackDuration = 0;
 								firstBlock = true;
 								isLoopAround = false;
@@ -236,14 +237,21 @@ private:
             			&& tickPos < projGlobals.loopStart+projGlobals.loopLen
 						&& m_status == status_play && projGlobals.loopEnabled);
             	midiHost->processMidi(this->ctrl, samplePos, tickPos, m_status, inLoop, isLoopAround);
-            	timer2.reset();
-            	processedBlock = host->processPlayback(this->ctrl, samplePos, tickPos, m_status, inLoop, isLoopAround);
-            	processDuration = timer.getTime();
+            	if (host->enableProcessing) {
+                	processedBlock = host->processPlayback(this->ctrl, samplePos, tickPos, m_status, inLoop, isLoopAround);
+					timer2.reset();
+            	} else {
+            		processedBlock = 0;
+                    double d = timer2.getTimeDouble();
+                    if (d > 1.0*host->sampleFormat.blockSize/host->sampleFormat.sampleRate) {
+                    	processedBlock = 1;
+                    	timer2.reset();
+                    }
+            	}
+//            	processDuration = timer2.getTime();
 //    			LOG("processedBlocks: %d, play: %d, tickpos: %f\n", processedBlock, (m_status==playback_state::status_play), tickPos);
             }
-        	if (timer.getTimeDouble() < 100) {
-				std::this_thread::sleep_for(std::chrono::microseconds(100));
-        	}
+
             /*
              * at sample rate 44100 and blocksize 512 the block duration is 1.xxms
              * the producer side trys to stay 4 blocks ahead of the consumer (audio thread)
@@ -253,7 +261,7 @@ private:
 				LOG("processedBlock > 1: %d\n", processedBlock);
 			} else if (!processedBlock) {
 
-				std::this_thread::sleep_for(std::chrono::microseconds(10000));
+				std::this_thread::sleep_for(std::chrono::microseconds(500));
 
 			}
 			{

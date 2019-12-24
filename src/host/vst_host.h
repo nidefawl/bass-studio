@@ -97,6 +97,7 @@ public:
 	project_globals_t project;
 	audioMasterCallback masterCallBackSlot = nullptr;
 
+	SYNCHRONIZED_RW std::atomic<int32_t> enableProcessing{false};
 	std::atomic<int32_t> pluginId{100};
 	std::atomic<int32_t> audioStageId{100};
 	std::atomic<int32_t> sampleId{(1<<30)}; //TODO: collides with audiocache::nextIdx

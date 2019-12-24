@@ -55,6 +55,7 @@ constexpr int ID_BTN_INJECT_BAD_MALLOC_AUDIO_THREAD = 4;
 constexpr int ID_BTN_INJECT_SEGFAULT_MAIN_THREAD = 5;
 constexpr int ID_BTN_INJECT_BAD_MALLOC_MAIN_THREAD = 6;
 constexpr int ID_BTN_TOGGLE_STACKTRACE = 8;
+constexpr int ID_BTN_TOGGLE_PROCESSING = 7;
 constexpr int BTN_FONT_SIZE = 16;
 gui_ctr_debug::gui_ctr_debug() : guictr_base() {
 	setBackgroundRendered(true);
@@ -100,11 +101,20 @@ gui_ctr_debug::gui_ctr_debug() : guictr_base() {
 		btn3->setFontSize(BTN_FONT_SIZE);
 		debugGuis.push_back(btn3);
 	}
+	{
 		auto btn3 = new guibutton;
 		btn3->id = ID_BTN_TOGGLE_STACKTRACE;
 		btn3->setText("Enable Stacktraces");
 		btn3->setFontSize(BTN_FONT_SIZE);
 		debugGuis.push_back(btn3);
+	}
+	{
+		auto btn3 = new guibutton;
+		btn3->id = ID_BTN_TOGGLE_PROCESSING;
+		btn3->setText("Enable Processing");
+		btn3->setFontSize(BTN_FONT_SIZE);
+		debugGuis.push_back(btn3);
+	}
 	for (auto g : debugGuis) {
 		add(g);
 	}
@@ -311,9 +321,17 @@ void gui_ctr_debug::buttonClicked(guibase* button) {
 		break;
 
 	case ID_BTN_TOGGLE_STACKTRACE:
-		auto tracker = DebugAlloc::getTracker<clip_t>();
-		tracker->setPrintAllocationStackTraces(!tracker->getPrintAllocationStackTraces());
-		static_cast<guibutton*>(button)->setText(String(tracker->getPrintAllocationStackTraces()?"Disable Stacktraces":"Enable Stacktraces"));
+		{
+			auto tracker = DebugAlloc::getTracker<clip_t>();
+			tracker->setPrintAllocationStackTraces(!tracker->getPrintAllocationStackTraces());
+			static_cast<guibutton*>(button)->setText(String(tracker->getPrintAllocationStackTraces()?"Disable Stacktraces":"Enable Stacktraces"));
+
+		}
+		break;
+	case ID_BTN_TOGGLE_PROCESSING:
+		vsthost::getInstance()->enableProcessing = !vsthost::getInstance()->enableProcessing;
+		static_cast<guibutton*>(button)->setText(String(vsthost::getInstance()->enableProcessing?"Disable Processing":"Enable Processing"));
+
 		break;
 	}
 }
