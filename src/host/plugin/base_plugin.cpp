@@ -64,10 +64,16 @@ effectbase::effectbase() : pluginType(0), projectGlobalId(0), sName("") {
 void effectbase::onTick(double since) {
 	meter.onTick(since);
 }
-void effectbase::setBlockSize(int bs) {
+sampleformat_t effectbase::getSampleFormat() {
+	return format;
 }
-void effectbase::setSampleRate(int32_t sampleRate) {
+void effectbase::setSampleFormat(sampleformat_t sampleFormat) {
+	format = sampleFormat;
 }
+void effectbase::load(vsthost* host) {
+	setSampleFormat(host->sampleFormat);
+	dbgassert(nLoadCalls==0); nLoadCalls++;
+};
 
 void effectbase::postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) {
 	meter.update(out, 1.0f);

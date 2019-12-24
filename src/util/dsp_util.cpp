@@ -50,6 +50,9 @@ void fillSaturate(float** buffer, int32_t channels, uint32_t samples) {
 void fillBlock(AudioBlock& block, float f) {
 	fillChannels(block.buf, block.channels, block.samples, f);
 }
+void fillNoiseBlock(AudioBlock& block) {
+	fillNoise(block.buf, block.channels, block.samples);
+}
 void fillChannels(float** buffer, int32_t channels, uint32_t samples, float f = 0.0f) {
 	const float maxGain = 1.0;
 	for (int i = 0; i < (channels+1)/2; i++) {
@@ -129,21 +132,23 @@ void fillSine(float** buffer, uint32_t samples) {
 		if (data->right_phase >= TABLE_SIZE) data->right_phase -= TABLE_SIZE;
 	}
 }
-void fillNoise(float** buffer, uint32_t samples) {
+void fillNoise(float** buffer, int32_t channels, uint32_t samples) {
 	float gain = 0.1f;
-	float* input0 = buffer[0];
-	float* input1 = buffer[1];
 
-	float g_fScale = 2.0f / 0xffffffff;
-	static int g_x1 = 0x67452301;
-	static int g_x2 = 0xefcdab89;
-	gain *= g_fScale;
-	for (uint32_t i = 0; i<samples; i++)
-	{
-		g_x1 ^= g_x2;
-		*input0++ = g_x2 * gain;
-		*input1++ = g_x2 * gain;
-		g_x2 += g_x1;
+
+	for (int channelIdx = 0; channelIdx < channels; channelIdx++) {
+		float* input0 = buffer[channelIdx];
+
+		float g_fScale = 2.0f / 0xffffffff;
+		static int g_x1 = 0x67452301;
+		static int g_x2 = 0xefcdab89;
+		gain *= g_fScale;
+		for (uint32_t i = 0; i<samples; i++)
+		{
+			g_x1 ^= g_x2;
+			*input0++ = g_x2 * gain;
+			g_x2 += g_x1;
+		}
 	}
 }
 void fillSqare(samplerate_t samplerate, float freq, float** buffer, uint32_t samples) {

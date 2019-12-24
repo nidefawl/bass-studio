@@ -60,7 +60,7 @@ int32_t audiotrack_t::convertToSamples(vsthost* host) {
 				split = sharedSplit.get();
 				newSplits.push_back(std::move(sharedSplit));
 				split->samplePos = samplePos;
-				split->sample.sampleRate = host->lSampleRate;
+				split->sample.sampleRate = vsthost::getInstance()->sampleFormat.sampleRate;
 				split->sampleId = host->getNextSampleId(0);
 				split->sample.bitsPerSample = 32;
 			} else {

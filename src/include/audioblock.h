@@ -48,7 +48,7 @@ struct AudioBlock {
 			if (allocType == alloc_type::internal) {
 				for (uint32_t i = 0; i < channels; i++) {
 					if (buf[i]) {
-						free(buf[i]);
+						delete[] buf[i];
 					}
 				}
 			}
@@ -159,6 +159,7 @@ struct AudioBlock {
 			}
 		}
 	}
+	void fillNoise(uint32_t seed);
 	void realloc(uint32_t _samples);
 };
 

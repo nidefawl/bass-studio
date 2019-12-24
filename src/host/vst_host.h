@@ -81,10 +81,16 @@ struct host_stats_t {
 struct host_processing_stats_t {
 	int32_t pluginId;
 };
+
+
 class vsthost {
+	class vsthost_impl;
+	vsthost_impl* const impl;
 public:
-	samplerate_t lSampleRate = 0;
-	uint16_t lBlockSize = 0;
+//	samplerate_t lSampleRate = 0;
+//	uint16_t lBlockSize = 0;
+	sampleformat_t sampleFormat = {0, 0, sampleformat_bits_t::NONE};
+	sampleformat_t sampleFormatExternal = {0, 0, sampleformat_bits_t::NONE};
 	int32_t hostSlot = -1;
 	uint8_t numChannels;
 
@@ -139,6 +145,7 @@ private:
 	void updateTime(int32_t samplePos, double dTickPos, playback_state state);
 	void setBlockSize(uint16_t blockSize);
 	void registerPlugins();
+	void processMidiRealtimeInput(project_controller_t* ctrl, double posDouble, playback_state state);
 public:
 	vsthost();
 	vsthost(vsthost const&) = delete;

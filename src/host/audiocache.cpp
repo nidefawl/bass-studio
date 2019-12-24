@@ -119,8 +119,7 @@ audiofile_t* audiocache::loadFile(String path, int id) {
 			if (!!error) {
 				my_printf("soxr_create failed: %d %s\n", error, soxr_strerror(error));
 			} else {
-				error = soxr_process(soxr,
-						channelPtrsIn.data(),numSamplesInput, NULL, channelPtrsOut.data(), numSamplesResampled, &offset);
+				error = soxr_process(soxr, channelPtrsIn.data(), numSamplesInput, NULL, channelPtrsOut.data(), numSamplesResampled, &offset);
 				my_printf("offset %d, pSamples.size: %d\n", offset, pSamples.size());
 
 

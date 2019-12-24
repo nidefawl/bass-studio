@@ -159,14 +159,14 @@ void vstplugin::load(vsthost* host) {
 	dbgassert(!this->bIsSetup);
 	auto aeffect = handle->aeffect;
 	dbgassert(aeffect->numOutputs > 0);
-	this->blockInputs = new AudioBlock(math::max(2, aeffect->numInputs), host->lBlockSize);
-	this->blockOutputs = new AudioBlock(math::max(2, aeffect->numOutputs), host->lBlockSize);
+	this->blockInputs = new AudioBlock(math::max(2, aeffect->numInputs), format.blockSize);
+	this->blockOutputs = new AudioBlock(math::max(2, aeffect->numOutputs), format.blockSize);
 	aeffect->resvd2 = 0;
 	this->vstVersion = dispatch(effGetVstVersion);
 	this->uId = aeffect->uniqueID;
 	this->dispatch(effIdentify, 0, 0, 0, 0);
-	this->dispatch(effSetSampleRate, 0, 0, NULL, (float) host->lSampleRate);
-	this->dispatch(effSetBlockSize, 0, host->lBlockSize, 0, 0);
+	this->dispatch(effSetSampleRate, 0, 0, NULL, (float) format.sampleRate);
+	this->dispatch(effSetBlockSize, 0, format.blockSize, 0, 0);
 	this->dispatch(effOpen);
 
 	VstPinProperties pin;
@@ -267,7 +267,7 @@ void vstplugin::load(vsthost* host) {
 	} else {
 		this->sleep();
 	}
-	this->dispatch(effSetBlockSize, 0, host->lBlockSize);
+	this->dispatch(effSetBlockSize, 0, format.blockSize);
 //	this->resume();
 
 
@@ -352,12 +352,7 @@ guiplugin* vstplugin::getGui() {
 int32_t vstplugin::getDelay() {
 	return handle->aeffect->initialDelay;
 }
-void vstplugin::setBlockSize(int32_t blockSize) {
-	this->dispatch(effSetBlockSize, 0, blockSize, 0, 0);
-}
-void vstplugin::setSampleRate(int32_t sampleRate) {
-	this->dispatch(effSetSampleRate, 0, 0, NULL, (float) sampleRate);
-}
+
 vst_param_category* vstplugin::getCategory(int idx) {
 	if (idx >= 0 && idx < (int)paramsCategories.size()) {
 		return &paramsCategories[idx];

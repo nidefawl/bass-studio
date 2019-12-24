@@ -33,6 +33,7 @@ class effectbase : public automatable_t {
 	int nLoadCalls = 0;
 public:
 	rmsmeterimpl<16000> meter;
+	sampleformat_t format;
 	AudioBlock* blockInputs = NULL; // guaranteed to have at least 2 channels
 	AudioBlock* blockOutputs = NULL; // guaranteed to have at least 2 channels
 	int32_t pluginType = 0;
@@ -70,13 +71,13 @@ public:
 	virtual void resume() = 0;
 	virtual void sleep() = 0;
 	virtual void unload(vsthost* host) { dbgassert(nLoadCalls==1); nLoadCalls--; };
-	virtual void load(vsthost* host) { dbgassert(nLoadCalls==0); nLoadCalls++; };
+	virtual void load(vsthost* host);;
 	virtual int32_t getDelay() = 0;
 	virtual String getInfo(std::vector<String>& list) = 0;
 	track_t* getTrack() override;
 	virtual void onTick(double since);
-	virtual void setBlockSize(int32_t blockSize);
-	virtual void setSampleRate(int32_t sampleRate);
+	virtual void setSampleFormat(sampleformat_t sampleFormat);
+	virtual sampleformat_t getSampleFormat();
 	virtual void getChildAudioStages(std::vector<audio_stage_t*>& targets) {
 
 	}

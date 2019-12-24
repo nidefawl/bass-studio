@@ -325,8 +325,8 @@ int main(int argc, char* argv[]) {
     		my_printf("Tempo100: %d\n", project.tempo100);
     		my_printf("project.cursor.cursorPos: %d\n", project.cursor.cursorPos);
 
-    		AudioBlock block(2, host->lBlockSize);
-    		AudioBlock blockFull(1, host->lBlockSize*2);
+    		AudioBlock block(2, host->sampleFormat.blockSize);
+    		AudioBlock blockFull(1, host->sampleFormat.blockSize*2);
     		double tLastMsg = getTimeMillis()/1000.0;
     		int64_t nBlocks = 0;
     		int64_t samplesWritten = 0;
@@ -334,7 +334,7 @@ int main(int argc, char* argv[]) {
 			format.container = drwav_container_riff;     // <-- drwav_container_riff = normal WAV files, drwav_container_w64 = Sony Wave64.
 			format.format = DR_WAVE_FORMAT_IEEE_FLOAT;          // <-- Any of the DR_WAVE_FORMAT_* codes.
 			format.channels = 2;
-			format.sampleRate = host->lSampleRate;
+			format.sampleRate = host->sampleFormat.sampleRate;
 			format.bitsPerSample = 32;
 //			 drwav* pWav = drwav_open_file_write(StringAsCStr(fOutWave), &format);
 

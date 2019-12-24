@@ -166,7 +166,7 @@ public:
 			const waveview_entry& entry, ivec2& pos, ivec2& size, ivec2& posClipped, ivec2& sizeClipped) {
 
 
-		samplerate_t sr = vsthost::getInstance()->lSampleRate; //TODO: store in project_t
+		samplerate_t sr = vsthost::getInstance()->sampleFormat.sampleRate; //TODO: store in project_t
 		dbgassert(pos.x==0);
 
 
@@ -265,7 +265,7 @@ public:
 			sizeClipped.y = clipSize.y;
 			double tickBegin = grid.screenToTickD(pos.x);
 			double tickEnd = grid.screenToTickD(pos.x + size.x);
-			samplerate_t sr = vsthost::getInstance()->lSampleRate; //TODO: store in project_t
+			samplerate_t sr = vsthost::getInstance()->sampleFormat.sampleRate; //TODO: store in project_t
 			double trackPosSampleStart = tickToSamplePrecise(tickBegin, project.tempo100, sr);
 			double trackPosSampleEnd = tickToSamplePrecise(tickEnd, project.tempo100, sr);
 			if (posClipped.x+sizeClipped.x <= 0 || sizeClipped.x <= 0) {

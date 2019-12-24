@@ -167,11 +167,11 @@ void gui_ctr_debug::render(NVGcontext* vg) {
 		strings.push_back(StringFormat("Notes: %d", clipView.clip()->notes.m_list.size()));
 		strings.push_back(StringFormat("Selection size: %d", clipView.clip()->notes.selection.size()));
 	}
-	strings.push_back(StringFormat("Samplerate: %u", vsthost::getInstance()->lSampleRate));
-	strings.push_back(StringFormat("BlockSize: %u", vsthost::getInstance()->lBlockSize));
-	strings.push_back(StringFormat("blockReads: %u", audiohost::getInstance()->blockReads));
-	strings.push_back(StringFormat("bufferUnderuns: %u", audiohost::getInstance()->bufferUnderuns));
-	strings.push_back(StringFormat("numCallsWaitEvents: %u", ctrl->numCallsWaitEvents));
+
+	strings.push_back("sample format");
+	strings.push_back(StringFormat(" samplerate: %u", vsthost::getInstance()->sampleFormat.sampleRate));
+	strings.push_back(StringFormat(" blockSize : %u", vsthost::getInstance()->sampleFormat.blockSize));
+	strings.push_back(StringFormat(" bit depth : %u", static_cast<int32_t>(vsthost::getInstance()->sampleFormat.sampleformat)));
 
 	track_t* track = ctrl->getTrackId(0);
 	if (track && track->audio) {

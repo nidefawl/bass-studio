@@ -49,6 +49,7 @@ struct track_audio_src {
 	uint32_t samples = 0;
 	float gain = 0.0f;
 	int32_t latency = 0;
+	sampleformat_t sampleFormat;
 	AudioBlock toAudioBlock() const {
 
 		const bool bFitsNumChannels = FitsTypeRange<uint32_t, decltype(channels.size())>(channels.size());
@@ -124,8 +125,9 @@ struct audio_stage_t {
 	audiotrack_t audioOutput;
 	samplerate_t latency = 0;
 	int type;
-	const samplerate_t& sampleRate;
-	const uint16_t& blockSize;
+	sampleformat_t sampleFormat;
+//	samplerate_t sampleRate;
+//	uint16_t blockSize;
 	std::array<DelayLine, 2> delayLines;
 	std::vector<effectbase*> effects;
 	std::vector<effectbase*> deferredEffects;
@@ -135,7 +137,7 @@ struct audio_stage_t {
 		int32_t delayToPostReturn = 0;
 	} latencyInfo;
 
-	audio_stage_t(const audiostageid_i32 _id,/*track_t* _track, */const samplerate_t& _sampleRate, const uint16_t& _blockSize, int32_t nChannels, int _type = 1)
+	audio_stage_t(const audiostageid_i32 _id,/*track_t* _track, */const samplerate_t _sampleRate, const uint16_t _blockSize, int32_t nChannels, int _type = 1)
 	: stageId(_id), parent(nullptr), owner(nullptr),/*track(_track),*/
 	  pluginCtr(nullptr),
 	  input(nChannels, _blockSize),
@@ -143,9 +145,12 @@ struct audio_stage_t {
 	  outputPost(nChannels, _blockSize),
 	  mixer(this),
 	  type(_type),
-	  sampleRate(_sampleRate),
-	  blockSize(_blockSize),
+//	  sampleRate(_sampleRate),
+//	  blockSize(_blockSize),
 	  delayLines{{DelayLine(nChannels, 0), DelayLine(nChannels, 0)}} {
+		  sampleFormat.blockSize = _blockSize;
+		  sampleFormat.sampleRate = _sampleRate;
+		  sampleFormat.sampleformat = sampleformat_bits_t::FLOAT_32;
 	}
 	virtual ~audio_stage_t() {
 
@@ -228,13 +233,12 @@ struct track_impl_t : public audio_stage_t {
 	bool wasInHide = false;
 	DAW::channel_ref_t inputChannel;
 	DAW::channel_ref_t outputChannel;
-	track_impl_t(audiostageid_i32 _id, track_t* _track, const samplerate_t& _sampleRate, const uint16_t& _blockSize, int32_t nChannels);
+	track_impl_t(audiostageid_i32 _id, track_t* _track, const samplerate_t _sampleRate, const uint16_t _blockSize, int32_t nChannels);
 	~track_impl_t();
 	void sendNotesOff(int32_t bpm100);
 	void sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, clip_notes_t& midiRealtimeInput, int32_t flags);
 	void fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, float** buffer, int32_t samples);
 	void addAudio(const AudioBlock& src, float fGain);
-	track_audio_src getInput(const AudioBlock* const ptrExternalInputs, int32_t nChannel);
 	int32_t mapInput(int32_t nInputChannels, int32_t nChannel);
 	VstEvent_t* reallocEvts(size_t size);
 	int loadSubtrackLayout(const std::vector<automationlane_snapshot_t>& atl);

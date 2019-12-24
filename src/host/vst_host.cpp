@@ -3,6 +3,7 @@
 #include "seq_util.h"
 #include "seq_time.h"
 #include "dsp_util.h"
+#include "samplerate.h"
 
 #include "project.h"
 #include "vst_host.h"
@@ -39,6 +40,7 @@
 #include "track_graph.h"
 
 #include <deque>
+#include <soxr.h>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -141,10 +143,22 @@ VstIntPtr audioMasterHost(vsthost* host, AEffect* effect, VstInt32 opcode, VstIn
 		return 1;
 	case audioMasterGetSampleRate:
 		cbPrintf(plugin, "audioMasterGetSampleRate %d %d %d\n", index, opcode, value);
-		return (long)host->lSampleRate;
+		if (plugin) {
+			return (long)plugin->format.sampleRate;
+		}
+		if (host) {
+			return (long)host->sampleFormat.sampleRate;
+		}
+		return 0;
 	case audioMasterGetBlockSize:
 		cbPrintf(plugin, "audioMasterGetBlockSize %d %d %d\n", index, opcode, value);
-		return host->lBlockSize;
+		if (plugin) {
+			return (long)plugin->format.blockSize;
+		}
+		if (host) {
+			return (long)host->sampleFormat.blockSize;
+		}
+		return 0;
 	case audioMasterGetInputLatency:
 		cbPrintf(plugin, "audioMasterGetInputLatency %d %d %d\n", index, opcode, value);
 		return 0;
@@ -291,14 +305,109 @@ public:
 	}
 };
 
+	struct oversample_config_t {
+		int32_t inputSampleRate = 0;
+		int32_t outputSampleRate = 0;
+		int32_t numChannels = 0;
+		int32_t numSamplesInput = 0;
+		int32_t numSamplesResampled = 0;
+		void setInputLength(int32_t numSamples) {
+			numSamplesInput = numSamples;
+			dbgassert(FitsTypeRange<int64_t>((int64_t)numSamplesInput * (int64_t)outputSampleRate / (double)inputSampleRate + .5));
+			numSamplesResampled = (int32_t) ((int64_t)numSamplesInput * (int64_t)outputSampleRate / (double)inputSampleRate + .5);
+		}
+	};
+	struct oversampler_t : public oversample_config_t {
+//		std::vector<std::vector<float>> dataIn;
+//		std::vector<std::vector<float>> dataOut;
+		std::vector<float*> channelPtrsOut;
+		std::vector<float*> channelPtrsIn;
+		soxr_t soxr = 0;
+		soxr_error_t soxrError = 0;
+		oversampler_t(oversample_config_t cfg) {
+			*static_cast<oversample_config_t*>(this) = cfg;
+//			dataIn.resize(numChannels);
+//			dataOut.resize(numChannels);
+			channelPtrsIn.resize(numChannels);
+			channelPtrsOut.resize(numChannels);
+//			float* dataInput = new float[numSamplesInput];
+//			float* dataOutput = new float[numSamplesResampled];
+//			for (int i = 0; i < numChannels; i++) {
+//				dataIn[i].clear();
+//				dataIn[i].insert(dataIn[i].begin(), dataInput, dataInput+numSamplesInput);
+//				dataOut[i].clear();
+//				dataOut[i].insert(dataOut[i].begin(), dataOutput, dataOutput+numSamplesResampled);
+//			}
+//			for (int i = 0; i < numChannels; i++) {
+//				channelPtrsIn[i] = dataIn[i].data();
+//				channelPtrsOut[i] = dataOut[i].data();
+//			}
+//			delete [] dataInput;
+//			delete [] dataOutput;
+			for (int i = 0; i < numChannels; i++) {
+				channelPtrsIn[i] = nullptr;
+				channelPtrsOut[i] = nullptr;
+			}
+
+			soxr_quality_spec_t q_spec = soxr_quality_spec(0, 0);
+			soxr_io_spec_t io_spec = soxr_io_spec(SOXR_FLOAT32_S, SOXR_FLOAT32_S);
+			soxr_runtime_spec_t const runtime_spec = soxr_runtime_spec(0);
+
+//			my_printf("soxr_oneshot from %d to %d, samples %d -> %d, channels %d\n", wav.sampleRate, this->samplerate, wav.totalSampleCount, olen, wav.channels);
+//			my_printf("pSamples.size %d\n", pSamples.size());
+//			my_printf("pSamples2.size %d\n", pSamples2.size());
+
+			soxr = soxr_create((double)inputSampleRate, (double)outputSampleRate, numChannels, &soxrError, &io_spec, &q_spec, &runtime_spec);
+
+
+		}
+		void runResample(AudioBlock& srcBlock, AudioBlock& dstBlock) {
+			dbgassert(srcBlock.samples == this->numSamplesInput);
+			dbgassert(srcBlock.channels == this->numChannels);
+			dbgassert(dstBlock.samples >= this->numSamplesResampled);
+
+			for (int i = 0; i < numChannels; i++) {
+				channelPtrsIn[i] = srcBlock.buf[i];
+				channelPtrsOut[i] = dstBlock.buf[i];
+			}
+			if (!!soxrError) {
+				my_printf("soxr_create failed: %d %s\n", soxrError, soxr_strerror(soxrError));
+			} else {
+				size_t offset = 0;
+				soxrError = soxr_process(soxr, channelPtrsIn.data(), numSamplesInput, NULL, channelPtrsOut.data(), numSamplesResampled, &offset);
+//				my_printf("offset %d, numSamplesInput: %d\n", offset, numSamplesInput);
+
+
+				if (!!soxrError) {
+					my_printf("soxr_process failed: %d %s\n", soxrError, soxr_strerror(soxrError));
+				} else {
+//					my_printf("soxr_process success %d\n", error);
+				}
+			}
+		}
+		~oversampler_t() {
+//			my_printf("%-26s\n", soxr_strerror(error));
+			soxr_delete(soxr);
+		}
+	};
+class vsthost::vsthost_impl {
+public:
+	std::shared_ptr<oversampler_t> oversampler;
+	vsthost_impl() {
+
+	}
+	~vsthost_impl() {
+
+	}
+};
 
 vsthost::~vsthost() {
 	delete moduleMgr;
 	delete blockZero;
+	delete impl;
 }
 vsthost::vsthost()
-	: moduleMgr{new vsthost::ModuleManager{}},
-	  numChannels(OUTPUT_CHANNELS)
+	: impl(new vsthost_impl{}), numChannels(OUTPUT_CHANNELS), moduleMgr{new vsthost::ModuleManager{}}
 {
 	memset(&timeinfo, 0, sizeof(timeinfo));
 	allocRingBuffer(ringbuffer, 32);
@@ -307,21 +416,28 @@ vsthost::vsthost()
 	registerPlugins();
 }
 void vsthost::setSamplerateBlockSize(int32_t sampleRate, int32_t blockSize) {
-	if (sampleRate != this->lSampleRate || blockSize != this->lBlockSize) {
+	sampleformat_t sampleFormat;
+	sampleFormat.blockSize = blockSize;
+	sampleFormat.sampleRate = sampleRate;
+	sampleFormat.sampleformat = sampleformat_bits_t::FLOAT_32;
+	if (this->sampleFormat != sampleFormat) {
+		this->sampleFormat = sampleFormat;
 		for (vstplugin* plugin : this->pluginInstancesVST2) {
 			plugin->sleep();
 		}
-		this->lBlockSize = blockSize;
-		this->lSampleRate = sampleRate;
 		setBlockSize(blockSize);
 		for (auto* audio : this->allAudioStages) {
+			audio->sampleFormat = sampleFormat;
 			audio->input.realloc(blockSize);
 			audio->output.realloc(blockSize);
 			audio->outputPost.realloc(blockSize);
 		}
+		for (effectbase* plugin : this->pluginInstances) {
+			plugin->setSampleFormat(sampleFormat);
+		}
 		for (vstplugin* plugin : this->pluginInstancesVST2) {
-			plugin->setBlockSize(blockSize);
-			plugin->setSampleRate(sampleRate);
+			plugin->dispatch(effSetBlockSize, 0, blockSize, 0, 0);
+			plugin->dispatch(effSetSampleRate, 0, 0, NULL, (float) sampleRate);
 		}
 		for (vstplugin* plugin : this->pluginInstancesVST2) {
 			plugin->resume();
@@ -364,7 +480,7 @@ inline int32_t PPQ24TickSample(tick_t tick, int32_t bpm100, samplerate_t sampler
 //		or positive when referencing the following (future) MIDI clock.
 void vsthost::updateTime(int32_t samplePos, double dTickPos, playback_state state) {
 	timeinfo.samplePos = samplePos;
-	timeinfo.sampleRate = (double)lSampleRate;
+	timeinfo.sampleRate = (double)sampleFormat.sampleRate;
 	timeinfo.nanoSeconds = (double)getTimeMillis() * 1000000.0L;
 	timeinfo.ppqPos = (dTickPos/(double)TICKS_QUARTER);
 	timeinfo.tempo = project.tempo100/100.0;
@@ -390,7 +506,7 @@ void vsthost::updateTime(int32_t samplePos, double dTickPos, playback_state stat
 
 	double midiTickPPQ24 = timeinfo.ppqPos*24.0;
 	tick_t midiTick = std::round(midiTickPPQ24);
-	int32_t samplePosTick = PPQ24TickSample(midiTick, project.tempo100, lSampleRate, lBlockSize);
+	int32_t samplePosTick = PPQ24TickSample(midiTick, project.tempo100, sampleFormat.sampleRate, sampleFormat.blockSize);
 	timeinfo.samplesToNextClock = samplePosTick - timeinfo.samplePos;
 
 	{
@@ -494,6 +610,7 @@ bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, co
 				for (int i = 0; i < size; i++) {
 					src.channels.push_back(ptrExternalInputs->buf[idx+i]);
 				}
+				src.sampleFormat = host->sampleFormatExternal;
 				src.samples = ptrExternalInputs->samples;
 				src.gain = 1.0f;
 				src.latency = 0;
@@ -515,6 +632,7 @@ bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, co
 			for (int i = 0; i < buff.channels; i++) {
 				src.channels.push_back(buff.buf[i]);
 			}
+			src.sampleFormat = stage->sampleFormat;
 			src.samples = buff.samples;
 			src.gain = fGainTrack;
 			src.latency = 0;
@@ -525,26 +643,12 @@ bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, co
 	return false;
 };
 }
-int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround) {
-	assert(lBlockSize > 0);
-	assert(lSampleRate > 0);
-	const double ticksPerBlock = toTickPrecise(lBlockSize/(double)lSampleRate, project.tempo100);
+void vsthost::processMidiRealtimeInput(project_controller_t* ctrl, double posDouble, playback_state state) {
+	const sampleformat_t sampleFormat = this->sampleFormat;
+	const int32_t lBlockSize = sampleFormat.blockSize;
+	const double ticksPerBlock = toTickPrecise(sampleFormat.blockSize/(double)sampleFormat.sampleRate, project.tempo100);
 	tick_t tickPosBlockStart = ceil(posDouble);
-	double since = timer.getTimeDoubleReset();
-	timer2.reset();
 
-//	int32_t& readPos = ringbuffer.readPos;
-//	int32_t& writePos = ringbuffer.writePos;
-//	AudioBuffer** buffers = ringbuffer.buffers;
-//	while (ctrl) {
-//		AudioBuffer* buffer = buffers[readPos];
-//		if (!buffer->inUse && buffer->submitted) {
-//			buffer->submitted = false;
-//			break;
-//		}
-//		readPos++;
-//		readPos &= RING_BUF_MASK;
-//	}
 	int queueSizeOutput = 0;
 	auto *stream = audioHost ? audioHost->getStream(0) : nullptr;
 	if (stream) {
@@ -552,19 +656,9 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 	}
 	std::vector<MidiIOEvent> msgs = midihost::getInstance()->getInputMessages();
 	bool notesProcessed = false;
-	//TODO: move this logic somewhere else
 	//TODO: This needs to be done per input and per track
 	int32_t lenTicksInfinite = TICKS_BAR*16;
 	if (msgs.size()) {
-		//do we need to adjust time at all?
-//		auto getMidiTime = [state](int32_t timestamp) -> int32_t {
-//			if (state == playback_state::status_play) {
-//				return 0;
-//			} else {
-//				return 0;
-//			}
-//
-//		};
 
 
 		std::vector<note_t> newNotes;
@@ -718,6 +812,27 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 		delete recordingClip;
 		recordingClip = nullptr;
 	}
+}
+int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround) {
+	assert(sampleFormat.blockSize > 0);
+	assert(sampleFormat.sampleRate > 0);
+	const sampleformat_t sampleFormat = this->sampleFormat;
+	const int32_t lBlockSize = sampleFormat.blockSize;
+	const double ticksPerBlock = toTickPrecise(sampleFormat.blockSize/(double)sampleFormat.sampleRate, project.tempo100);
+	tick_t tickPosBlockStart = ceil(posDouble);
+	double since = timer.getTimeDoubleReset();
+	timer2.reset();
+	processMidiRealtimeInput(ctrl, posDouble, state);
+
+	int queueSizeOutput = 0;
+	auto *stream = audioHost ? audioHost->getStream(0) : nullptr;
+	if (stream) {
+		queueSizeOutput = stream->getOutputQueueSize();
+	}
+	//TODO: move this logic somewhere else
+	//TODO: This needs to be done per input and per track
+	int32_t lenTicksInfinite = TICKS_BAR*16;
+
 	int nBlocksProcessed = 0;
 
 #ifndef NDEBUG
@@ -729,6 +844,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 	 */
 //	int readWriteDist = writePos >= readPos ? writePos-readPos : writePos-(readPos-RING_BUF_SIZE);
 	if (ctrl && queueSizeOutput < 8) {
+
 #ifndef NDEBUG
 		if (!isLoopAround&&state == playback_state::status_play && lastState == playback_state::status_play) {
 			dbgassert(posDouble == lastTickEndPos);
@@ -755,29 +871,32 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 		int32_t samplePosBlockEnd = sample + lBlockSize;
 		int32_t tickBlockEnd = floor(posDouble + ticksPerBlock);
 		dbgassert(tickBlockEnd-pos < ceil(ticksPerBlock+1));
-		/*
-		 * Clear all master channels first
-		 */
+//		/*
+//		 * Clear all master channels first
+//		 */
 		for (track_t* trackMaster : ctrl->trackMasterCtr) {
 			track_impl_t* audioMaster = trackMaster->audio;
-			audioMaster->input.realloc(lBlockSize);
-			audioMaster->output.realloc(lBlockSize);
-			audioMaster->outputPost.realloc(lBlockSize);
-			dsp_util::fillBlock(audioMaster->input, 0.0f);
-			dsp_util::fillBlock(audioMaster->output, 0.0f);
-			dsp_util::fillBlock(audioMaster->outputPost, 0.0f);
+////			audioMaster->input.realloc(lBlockSize);
+////			audioMaster->output.realloc(lBlockSize);
+////			audioMaster->outputPost.realloc(lBlockSize);
+//			dsp_util::fillBlock(audioMaster->input, 0.0f);
+//			dsp_util::fillBlock(audioMaster->output, 0.0f);
+//			dsp_util::fillBlock(audioMaster->outputPost, 0.0f);
+			dsp_util::fillNoiseBlock(audioMaster->input);
+			dsp_util::fillNoiseBlock(audioMaster->output);
+			dsp_util::fillNoiseBlock(audioMaster->outputPost);
 		}
-		/*
-		 * Clear all return channels
-		 */
+//		/*
+//		 * Clear all return channels
+//		 */
 		for (track_t* trackReturn : ctrl->trackReturnCtr) {
 			track_impl_t* audioReturn = trackReturn->audio;
-			audioReturn->input.realloc(lBlockSize);
-			audioReturn->output.realloc(lBlockSize);
-			audioReturn->outputPost.realloc(lBlockSize);
-			dsp_util::fillBlock(audioReturn->input, 0.0f);
-			dsp_util::fillBlock(audioReturn->output, 0.0f);
-			dsp_util::fillBlock(audioReturn->outputPost, 0.0f);
+////			audioReturn->input.realloc(lBlockSize);
+////			audioReturn->output.realloc(lBlockSize);
+////			audioReturn->outputPost.realloc(lBlockSize);
+			dsp_util::fillNoiseBlock(audioReturn->input);
+			dsp_util::fillNoiseBlock(audioReturn->output);
+			dsp_util::fillNoiseBlock(audioReturn->outputPost);
 		}
 
 		/*
@@ -875,9 +994,6 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 				log_printf("process stage 2 %d\n", static_cast<int32_t>(trackNode.stageId));
 			}
 
-			trackImpl->input.realloc(lBlockSize);
-			trackImpl->output.realloc(lBlockSize);
-
 			dsp_util::fillBlock(trackImpl->input, 0.0f);
 
 			int32_t midiProcessFlags = MidiFlags::PROCESS_REALTIME|MidiFlags::PROCESS_ARP;
@@ -897,20 +1013,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 
 			std::vector<DAW::track_source_t> allSources = trackNode.pulls; // copy
 			allSources.insert(allSources.end(), trackNode.pushs.begin(), trackNode.pushs.end()); // copy
-//			for (const DAW::track_source_t& tracksrc : allSources)
-//			{
-//
-//				/* Compensate audio/midi track to pre-return latency */
-//				samplerate_t delayToPreReturn = maxLatencyAudioMidi - trackImpl->getLatency();
-//			}
-//			enum class audiostageflags_t : int32_t {
-//			    NONE 					= 0,
-//			    BYPASS 					= 1 << 0,
-//			    BYPASS_EFFECT_CHAIN 	= 1 << 1,
-//				MUTE_INPUT 				= 1 << 2,
-//				MUTE_OUTPUT 			= 1 << 3,
-//			    SOLO				 	= 1 << 4,
-//			};
+
 		    struct Func_CheckHasSolo {
 		        bool operator()(const DAW::track_source_t& src) const {
 		        	return (src.flags & audiostageflags_t::SOLO) != audiostageflags_t::NONE;
@@ -951,7 +1054,16 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 //							delayLines[idxDelayLine]->block.realloc(lBlockSize*2+delayToMaxInputLatency);
 						}
 						AudioBlock srcBlock = src.toAudioBlock();
-						delayAudio(delayLines[idxDelayLine].get(), &srcBlock, &tempBlock, delayToMaxInputLatency);
+						AudioBlock blockTemp(trackImpl->input.channels, trackImpl->input.samples);
+						AudioBlock* pSrc = &srcBlock;
+						if (src.sampleFormat != trackImpl->sampleFormat) {
+							log_printf("INCOMPATIBLE FORMATS:\n", 0);
+							log_printf("SRC SR %d,BLOCK %d,TYPE: %s\n", src.sampleFormat.sampleRate, src.sampleFormat.blockSize, sampleformat_bits_to_str(src.sampleFormat.sampleformat));
+							log_printf("DST SR %d,BLOCK %d,TYPE: %s\n", trackImpl->sampleFormat.sampleRate, trackImpl->sampleFormat.blockSize, sampleformat_bits_to_str(trackImpl->sampleFormat.sampleformat));
+							this->impl->oversampler->runResample(srcBlock, blockTemp);
+							pSrc = &blockTemp;
+						}
+						delayAudio(delayLines[idxDelayLine].get(), pSrc, &tempBlock, delayToMaxInputLatency);
 						trackImpl->addAudio(tempBlock, src.gain * tracksrc.gain);
 						idxDelayLine++;
 					}
@@ -1012,8 +1124,8 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 					if (dbg == 0) {
 						log_printf("Process External Audio routing from %s to %s\n", StringAsCStr(track->name), StringAsCStr(outputChannel.name));
 					}
-					track_audio_src src;
-					if (DAW::resolveAudioChannel(this, numChannelsTrack, outputChannel, ptrExternalOutputs ? ptrExternalOutputs->output : nullptr, src)) {
+					track_audio_src dst;
+					if (DAW::resolveAudioChannel(this, numChannelsTrack, outputChannel, ptrExternalOutputs ? ptrExternalOutputs->output : nullptr, dst)) {
 
 						/* Calculate master tracks gain level */
 						float fGainMaster;
@@ -1028,8 +1140,24 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 							 * sends are with track gain applied (post-mixer)
 							 *
 							 */
-							AudioBlock blockExternalOutputs = src.toAudioBlock();
-							blockExternalOutputs.addFromOp(&trackImpl->output, AudioBlock::mix_op::ADD, math::clamp(src.gain * fGainMaster, 0.0f, 1.0f));
+//							if (src.sampleFormat != trackImpl->sampleFormat) {
+//								log_printf("INCOMPATIBLE FORMATS:\n", 0);
+//								log_printf("SRC SR %d,BLOCK %d,TYPE: %s\n", src.sampleFormat.sampleRate, src.sampleFormat.blockSize, sampleformat_bits_to_str(src.sampleFormat.sampleformat));
+//								log_printf("DST SR %d,BLOCK %d,TYPE: %s\n", trackImpl->sampleFormat.sampleRate, trackImpl->sampleFormat.blockSize, sampleformat_bits_to_str(trackImpl->sampleFormat.sampleformat));
+//							}
+							AudioBlock blockExternalOutputs = dst.toAudioBlock();
+
+							AudioBlock blockTemp(trackImpl->input.channels, trackImpl->input.samples);
+							AudioBlock* pSrc = &trackImpl->output;
+							if (dst.sampleFormat != trackImpl->sampleFormat) {
+								log_printf("INCOMPATIBLE FORMATS:\n", 0);
+								log_printf("DST SR %d,BLOCK %d,TYPE: %s\n", dst.sampleFormat.sampleRate, dst.sampleFormat.blockSize, sampleformat_bits_to_str(dst.sampleFormat.sampleformat));
+								log_printf("SRC SR %d,BLOCK %d,TYPE: %s\n", trackImpl->sampleFormat.sampleRate, trackImpl->sampleFormat.blockSize, sampleformat_bits_to_str(trackImpl->sampleFormat.sampleformat));
+								this->impl->oversampler->runResample(trackImpl->output, blockTemp);
+								pSrc = &blockTemp;
+							}
+							//TODO: do delay compensation
+							blockExternalOutputs.addFromOp(pSrc, AudioBlock::mix_op::ADD, math::clamp(dst.gain * fGainMaster, 0.0f, 1.0f));
 						}
 					}
 				}
@@ -1101,7 +1229,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 	}
 	int64_t timeTaken = timer2.getTime();
 
-	int64_t microSecsPerBlock = (int64_t)this->lBlockSize * 1000000L / (int64_t)this->lSampleRate;
+	int64_t microSecsPerBlock = (int64_t)lBlockSize * 1000000L / (int64_t)sampleFormat.sampleRate;
 	stats.timeLastBlock = (stats.timeLastBlock*99 + timeTaken) / 100;
 	if (convert) {
 		stats.timings["convertBlockTime"] = timeTaken;
@@ -1138,9 +1266,18 @@ void vsthost::setOutput(audiohost* audioHost) {
 //	assert (audioHost->lSampleRate == this->lSampleRate);
 //	assert (audioHost->lBlockSize == this->lBlockSize);
 	this->audioHost = audioHost;
+	this->sampleFormatExternal = {audioHost->lSampleRate, audioHost->lBlockSize, sampleformat_bits_t::FLOAT_32};
+	this->sampleFormat = {0, 0, sampleformat_bits_t::NONE};
 	if (audioHost) {
-		setSamplerateBlockSize(audioHost->lSampleRate, audioHost->lBlockSize);
-		audiocache::getInstance()->setSamplerate(audioHost->lSampleRate);
+		const int32_t internalSampleRate = sampleFormatExternal.sampleRate;
+		oversample_config_t config;
+		config.inputSampleRate = internalSampleRate;
+		config.outputSampleRate = audioHost->lSampleRate;
+		config.numChannels = this->numChannels;
+		config.setInputLength(audioHost->lBlockSize);
+		this->impl->oversampler = std::make_shared<oversampler_t>(config);
+		setSamplerateBlockSize(internalSampleRate, audioHost->lBlockSize);
+		audiocache::getInstance()->setSamplerate(sampleFormat.sampleRate);
 	}
 
 }
@@ -1176,7 +1313,7 @@ void vsthost::processAudio(audio_stage_t* stage, AudioBlock* input, AudioBlock* 
 		count += stage->effects.size();
 	}
 
-	int64_t microSecsPerBlock = (int64_t)this->lBlockSize * 1000000L / (int64_t)this->lSampleRate;
+	int64_t microSecsPerBlock = (int64_t)sampleFormat.blockSize * 1000000L / (int64_t)sampleFormat.sampleRate;
 	hires_timer_t timer;
 	for (int i = 0; i < count; ++i)
 	{
@@ -1194,7 +1331,7 @@ void vsthost::processAudio(audio_stage_t* stage, AudioBlock* input, AudioBlock* 
 			samplerate_t delay = current->getDelay();
 			if (delay > 0) {
 				if (!current->delayLine.get()) {
-					current->delayLine.reset(new DelayLine(this->numChannels, this->lBlockSize));
+					current->delayLine.reset(new DelayLine(this->numChannels, sampleFormat.blockSize));
 				}
 				AudioBlock* blockOut = current->blockOutputs;
 				delayAudio(current->delayLine.get(), input, blockOut, delay);
@@ -1205,8 +1342,8 @@ void vsthost::processAudio(audio_stage_t* stage, AudioBlock* input, AudioBlock* 
 			//blockIn/blockOut will always have 2 channels at least
 			AudioBlock* blockIn = current->blockInputs;
 			AudioBlock* blockOut = current->blockOutputs;
-			blockIn->realloc(lBlockSize);
-			blockOut->realloc(lBlockSize);
+			blockIn->realloc(sampleFormat.blockSize);
+			blockOut->realloc(sampleFormat.blockSize);
 			//TODO: respect pin configuration and mono plugins
 			blockIn->copyFrom(input);
 
@@ -1405,7 +1542,7 @@ void vsthost::getAllInstances(std::vector<effectbase*>& effects) {
 	effects = pluginInstances;
 }
 void vsthost::createAudio(track_t* track) {
-	auto audio = new track_impl_t(getNextGlobalAudioStageId(0), track, this->lSampleRate, this->lBlockSize, OUTPUT_CHANNELS);
+	auto audio = new track_impl_t(getNextGlobalAudioStageId(0), track, sampleFormat.sampleRate, sampleFormat.blockSize, OUTPUT_CHANNELS);
 	allAudioStages.push_back(audio);
 	trackAudioStages.push_back(audio);
 	track->audio = audio;
@@ -1424,7 +1561,7 @@ void vsthost::releaseAudio(track_t* track) {
 	delete audioStage;
 }
 audio_stage_t* vsthost::createAudioStage() {
-	auto audio = new audio_stage_t(getNextGlobalAudioStageId(0), this->lSampleRate, this->lBlockSize, OUTPUT_CHANNELS);
+	auto audio = new audio_stage_t(getNextGlobalAudioStageId(0), sampleFormat.sampleRate, sampleFormat.blockSize, OUTPUT_CHANNELS);
 	allAudioStages.push_back(audio);
 	return audio;
 }

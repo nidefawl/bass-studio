@@ -712,8 +712,8 @@ void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t 
 	for (clip_t* clip : clips) {
 		tick_t clipStartTick = clip->getOffsetStart();
 		tick_t clipEndTick = clip->end();
-		int32_t clipStartSample = tickToSample(clipStartTick, bpm100, sampleRate);
-		int32_t clipEndSample = tickToSample(clipEndTick, bpm100, sampleRate);
+		int32_t clipStartSample = tickToSample(clipStartTick, bpm100, sampleFormat.sampleRate);
+		int32_t clipEndSample = tickToSample(clipEndTick, bpm100, sampleFormat.sampleRate);
 		if (clipStartSample > blockEnd)
 			continue;
 		if (clipEndSample <= blockSamplePos)
@@ -762,7 +762,7 @@ void sortNoteEvents(std::vector<noteevent_t>& noteEvents) {
 		return a.tickOffsetInBlock < b.tickOffsetInBlock;
 	});
 }
-track_impl_t::track_impl_t(audiostageid_i32 _id, track_t* _track, const samplerate_t& _sampleRate, const uint16_t& _blockSize, int32_t nChannels)
+track_impl_t::track_impl_t(audiostageid_i32 _id, track_t* _track, const samplerate_t _sampleRate, const uint16_t _blockSize, int32_t nChannels)
    : audio_stage_t(_id, /*_track, */_sampleRate, _blockSize, nChannels, 0)
   , track(_track), inputChannel(DAW::ChannelDefaultNone()), outputChannel(DAW::ChannelDefaultNone())
 {
@@ -792,12 +792,12 @@ void track_impl_t::sendNotesOff(int32_t bpm100) {
 		noteEvents.emplace_back(noteHeld.pitch, 0, 0, false, false);
 	}
 	sortNoteEvents(noteEvents);
-	const double ticksPerBlock = toTickPrecise(blockSize/(double)sampleRate, bpm100);
-	const double tickToSamples = (60*sampleRate) / (bpm100/100.0*TICKS_QUARTER);
+	const double ticksPerBlock = toTickPrecise(sampleFormat.blockSize/(double)sampleFormat.sampleRate, bpm100);
+	const double tickToSamples = (60.0*sampleFormat.sampleRate) / (bpm100/100.0*TICKS_QUARTER);
 	VstEvent_t* midiEventsBuf = reallocEvts(noteEvents.size());
 	for (noteevent_t& evt : noteEvents) {
 		dbgassert(evt.tickOffsetInBlock >= 0 && evt.tickOffsetInBlock < ticksPerBlock);
-		midiEventsBuf->writeVstMidiEvt(evt, tickToSamples, blockSize);
+		midiEventsBuf->writeVstMidiEvt(evt, tickToSamples, sampleFormat.blockSize);
 	}
 	dbgassert(midiEventsBuf->vstEvents->numEvents == (int32_t) noteEvents.size());
 	midiEventsBuf->writeInstantOff();
@@ -884,11 +884,11 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 			if (numEvents > 0)
 			{
 				VstEvent_t* midiEventsBuf = reallocEvts(numEvents);
-				const double ticksPerBlock = toTickPrecise(blockSize/(double)sampleRate, bpm100);
-				const double tickToSamples = (60*sampleRate) / (bpm100/100.0*TICKS_QUARTER);
+				const double ticksPerBlock = toTickPrecise(sampleFormat.blockSize/(double)sampleFormat.sampleRate, bpm100);
+				const double tickToSamples = (60.0*sampleFormat.sampleRate) / (bpm100/100.0*TICKS_QUARTER);
 				for (noteevent_t& evt : noteEventsProcessed) {
 					dbgassert(evt.tickOffsetInBlock >= 0 && evt.tickOffsetInBlock < ticksPerBlock);
-					midiEventsBuf->writeVstMidiEvt(evt, tickToSamples, blockSize);
+					midiEventsBuf->writeVstMidiEvt(evt, tickToSamples, sampleFormat.blockSize);
 				}
 				dbgassert(midiEventsBuf->vstEvents->numEvents == (int32_t) numEvents);
 				for (effectbase* effect : effects) {

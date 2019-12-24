@@ -9,6 +9,7 @@
 #include "seq_util.h"
 #include "mem.h"
 #include "audioblock.h"
+#include "rand.h"
 
 AudioBuffer* allocateBuffer(int32_t nChannels) {
 	AudioBuffer* buffer = (AudioBuffer*) aligned_malloc(sizeof(AudioBuffer), 128);
@@ -33,16 +34,31 @@ void freeRingBuffer(audiothread_ringbuffer_t& ringbuffer) {
 		}
 	}
 }
+void AudioBlock::fillNoise(uint32_t seed) {
+	seq_rand rnd;
+	rnd.rng_seed(seed);
+	for (uint32_t i = 0; i < channels; i++) {
+		for (int s = 0; s < samples; s++) {
+			float f = 0.0f;
+			uint32_t rngBits = rnd.rng_rand();
+			uint32_t* floatAsU32 = reinterpret_cast<uint32_t*>(&f);
+			*floatAsU32 |= (rngBits&0x3F) << 24;
+			*floatAsU32 |= ((rngBits&(~0x3F))>>6) & 0x3FFFFF;
+			buf[i][s] = f;
+		}
+	}
+}
 
 void AudioBlock::realloc(uint32_t _samples) {
 
 	if (samples != _samples) {
 		if (allocType == alloc_type::internal) {
+			bool allN = true;
 			for (uint32_t i = 0; i < channels; i++) {
 	//					float* newBuf = (float*)calloc(_samples,sizeof(float));
 				float* const newBuf = new float[_samples];
 				if (debug) {
-					log_printf("AudioBlock buffer[%d] calloc 0x%08X\n", i, reinterpret_cast<int64_t>(newBuf));
+					log_printf("AudioBlock buffer[%d] allocate 0x%08X\n", i, reinterpret_cast<int64_t>(newBuf));
 				}
 				if (!newBuf) {
 					handleFailedAllocation(0x1000, _samples*sizeof(float));
@@ -51,7 +67,7 @@ void AudioBlock::realloc(uint32_t _samples) {
 					if (buf[i]) {
 						memcpy(newBuf, buf[i], math::min(_samples, samples) * sizeof(float));
 						if (debug) {
-							log_printf("AudioBlock buffer[%d] free 0x%08X\n", i, reinterpret_cast<int64_t>(newBuf));
+							log_printf("AudioBlock buffer[%d] release 0x%08X\n", i, reinterpret_cast<int64_t>(newBuf));
 						}
 	//							free(buf[i]);
 						delete[] buf[i];
@@ -59,6 +75,8 @@ void AudioBlock::realloc(uint32_t _samples) {
 				}
 				buf[i] = newBuf;
 			}
+			static uint32_t nextSeed = 0;
+			fillNoise(nextSeed++);
 			samples = _samples;
 		}
 	}

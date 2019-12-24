@@ -171,13 +171,13 @@ private:
 						switch (reqState) {
 							case playback_state::status_play:
 							{
-								dbgassert(host->lSampleRate != 0);
-								dbgassert(host->lBlockSize != 0);
+								dbgassert(host->sampleFormat.sampleRate != 0);
+								dbgassert(host->sampleFormat.blockSize != 0);
 								tick_t startPos = ctrl->cursor.cursorPos;
 								tickPos = startPos;
 								ctrl->getPlaybackPos() = startPos;
 								int32_t bpm100 = ctrl->getCurrentTempo();
-								samplePos = tickToSample(startPos, bpm100, host->lSampleRate);
+								samplePos = tickToSample(startPos, bpm100, host->sampleFormat.sampleRate);
 								LOG("START ON seconds: %.2f - sample %d\n", toSeconds(startPos, bpm100), samplePos);
 								host->onStartPlayback(this->ctrl);
 								timer.reset();
@@ -257,8 +257,8 @@ private:
 
 			}
 			{
-	        	samplerate_t sampleRate = host->lSampleRate;
-	        	int32_t blockSize = host->lBlockSize;
+	        	samplerate_t sampleRate = host->sampleFormat.sampleRate;
+	        	int32_t blockSize = host->sampleFormat.blockSize;
             	project_globals_t& projGlobals = host->project;
             	int32_t bpm100 = projGlobals.tempo100;
 				double blocksPerS = sampleRate / (double) blockSize;

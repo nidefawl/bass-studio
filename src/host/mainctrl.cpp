@@ -1464,7 +1464,7 @@ public:
 		ctrl->resetMouseContext();
 		ctrl->setEditClip(NULL);
 		trackPtr = ctrl->getTrackId(trackIdx);
-		dbgassert(trackPtr && trackPtr->audio && trackPtr->audio->blockSize%8==0); // see if pointer is valid
+		dbgassert(trackPtr && trackPtr->audio && trackPtr->audio->sampleFormat.blockSize%8==0); // see if pointer is valid
 		dbgassert(localIdx == trackPtr->localIdxFlat);
 		//SERIALIZE TRACK VSTs
 		localIdx = trackPtr->localIdxFlat;
@@ -1520,7 +1520,7 @@ public:
 		dbgassert(trackPtr);
 		//SERIALIZE TRACK VSTs
 		ctrl->removeTrackImpl(trackPtr, FLG_TRK_CHANGE_HISTORY_UNDO);
-		dbgassert(trackPtr && trackPtr->audio && trackPtr->audio->blockSize%8==0); // see if pointer is valid
+		dbgassert(trackPtr && trackPtr->audio && trackPtr->audio->sampleFormat.blockSize%8==0); // see if pointer is valid
 		dbgassert(localIdx == trackPtr->localIdxFlat);
 	}
 };
@@ -1649,11 +1649,11 @@ int32_t project_controller_t::tickToSamples(tick_t ticks)
 {
 	vsthost* host = vsthost::getInstance();
 	dbgassert(host);
-	return std::round(tickToSamplePrecise(ticks, tempo100, host->lSampleRate));
+	return std::round(tickToSamplePrecise(ticks, tempo100, vsthost::getInstance()->sampleFormat.sampleRate));
 }
 tick_t project_controller_t::samplesToTicks(int32_t sample)
 {
 	vsthost* host = vsthost::getInstance();
 	dbgassert(host);
-	return std::round(sampleToTickPrecise(sample, tempo100, host->lSampleRate));
+	return std::round(sampleToTickPrecise(sample, tempo100, vsthost::getInstance()->sampleFormat.sampleRate));
 }

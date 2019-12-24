@@ -248,8 +248,8 @@ void module_group::onPreUnload() {
 void module_group::load(vsthost* host) {
 	effectbase::load(host);
 	this->audio = host->createAudioStage();
-	this->blockInputs = new AudioBlock(2, host->lBlockSize);
-	this->blockOutputs = new AudioBlock(2, host->lBlockSize);
+	this->blockInputs = new AudioBlock(2, host->sampleFormat.blockSize);
+	this->blockOutputs = new AudioBlock(2, host->sampleFormat.blockSize);
 	bIsEnabled = this->getParamValue(PARAM_ENABLE) > 0.5;
 	if (bIsEnabled) {
 		this->resume();

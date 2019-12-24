@@ -42,7 +42,7 @@ audioclip_texture_t makeWaveformFromClip(project_t& project, scaled_grid& grid,
 		ivec2& trackSize, clip_t* m_clip, ivec2& pos, ivec2& size, ivec2& posClipped, ivec2& sizeClipped) {
 
 
-	samplerate_t sr = vsthost::getInstance()->lSampleRate; //TODO: store in project_t
+	samplerate_t sr = vsthost::getInstance()->sampleFormat.sampleRate; //TODO: store in project_t
 	double lenSamples = tickToSamplePrecise(m_clip->getLen(), project.tempo100, sr);
 	double samplesPerPx = lenSamples/size.x;
 
