@@ -78,9 +78,9 @@ void AudioBlock::realloc(uint32_t _samples) {
 				}
 				buf[i] = newBuf;
 			}
+			samples = _samples;
 			static uint32_t nextSeed = 0;
 			fillNoise(nextSeed++);
-			samples = _samples;
 		}
 		else {
 			dbgassert(0 && "Cannot reallocate externally allocated audiobuffer");
