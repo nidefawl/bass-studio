@@ -132,12 +132,22 @@ public:
 		prefSize.y = math::max(math::max(minHTop, 100), prefSize.y);
 	}
 };
+class gui_list_plugins : public gui_list {
+public:
+	gui_list_plugins() : gui_list() {
+
+	}
+	~gui_list_plugins() {
+
+	}
+};
 class gui_pluginsloaded_list : public guictr_base {
 //	const int32_t heightTextField = HEIGHT_DEFAULT_INPUT;
 //	gui_textfield textField;
 	gui_stats_list list;
 	guictr_scrollbar scrollTop;
-	gui_list listCtr;
+	gui_list_plugins listCtr;
+	gui_list_plugins listDeferredCtr;
 	String curquery = "";
 	uint64_t lastUpdate = 0;
 public:
@@ -147,12 +157,15 @@ public:
 		padding = 4;
 		listCtr.setRowHeight(14);
 		listCtr.padding = 0;
+		listDeferredCtr.setRowHeight(14);
+		listDeferredCtr.padding = 0;
 		list.padding = 0;
 		scrollTop.padding = 0;
 		scrollTop.maxHeight = -1;
 //		add(&textField);
 		add(&scrollTop);
 		add(&listCtr);
+		add(&listDeferredCtr);
 //		textField.setCallback([this](const String& str) {
 //			curquery = str;
 //			update();
@@ -172,8 +185,9 @@ public:
 		}
 	}
 	std::vector<gui_pluginsloaded_list_entry*> listEntriesLoadedPlugins;
+	std::vector<gui_pluginsloaded_list_entry*> listEntriesDef;
 	void buttonClicked(guibase* button) {
-		if (STL_CONTAINS(listEntriesLoadedPlugins, button)) {
+		if (STL_CONTAINS(listEntriesLoadedPlugins, button)||STL_CONTAINS(listEntriesDef, button)) {
 			gui_pluginsloaded_list_entry* entry = dynamic_cast<gui_pluginsloaded_list_entry*>(button);
 			auto* effectbase = safeRefGet(entry->getRef());
 			if (effectbase) {
@@ -188,14 +202,30 @@ public:
 		}
 	}
 	void update() {
+		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 		std::vector<effectbase*> effects;
 		vsthost::getInstance()->getAllInstances(effects);
 		std::stable_sort(effects.begin(), effects.end(), [](const effectbase* ptrA, const effectbase* ptrB){
 			return ptrA->fTimePercentBlockProcess > ptrB->fTimePercentBlockProcess;
 		});
 		std::vector<gui_list_entry*> _newList;
+		std::vector<gui_list_entry*> _newListDef;
 		std::vector<gui_pluginsloaded_list_entry*> _newListLoadedPlugins;
-
+		std::vector<gui_pluginsloaded_list_entry*> _newListDefPlugins;
+		std::vector<effectbase*> deferredEffects;
+		auto host = vsthost::getInstance();
+		host->getDeferredEffects(deferredEffects);
+		std::stable_sort(deferredEffects.begin(), deferredEffects.end(), [](const effectbase* ptrA, const effectbase* ptrB){
+			if (ptrA->sName == ptrB->sName)
+				return (size_t)ptrA > (size_t)ptrB;
+			return ptrA->sName > ptrB->sName;
+		});
+		for (effectbase* eff : deferredEffects) {
+			SafeRef<effectbase> safeRef = eff->makeSafeRef();
+			gui_pluginsloaded_list_entry* g = new gui_pluginsloaded_list_entry(safeRef);
+			_newListDef.push_back(g);
+			_newListDefPlugins.push_back(g);
+		}
 		//TODO: use saferef
 		for (effectbase* eff : effects) {
 			SafeRef<effectbase> safeRef = eff->makeSafeRef();
@@ -204,15 +234,19 @@ public:
 			_newListLoadedPlugins.push_back(g);
 		}
 		listCtr.setList(_newList);
+		listDeferredCtr.setList(_newListDef);
 		listEntriesLoadedPlugins = _newListLoadedPlugins;
+		listEntriesDef = _newListDefPlugins;
 		layout();
 	}
 	void layout() {
 		ivec2 cs = getSizeContent();
 		scrollTop.pos = ivec2(0, 0);
-		listCtr.pos = ivec2(0, cs.y/2);
-		scrollTop.size = ivec2(cs.x, cs.y/2);
-		listCtr.size = ivec2(cs.x, cs.y/2);
+		listCtr.pos = ivec2(0, cs.y/3);
+		listDeferredCtr.pos = ivec2(0, cs.y*2/3);
+		scrollTop.size = ivec2(cs.x, cs.y/3);
+		listCtr.size = ivec2(cs.x, cs.y/3);
+		listDeferredCtr.size = ivec2(cs.x, cs.y/3);
 		scrollTop.determineSize(scrollTop.size);
 		for (guibase* gui : guis) {
 			gui->layout();
