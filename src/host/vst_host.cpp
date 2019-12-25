@@ -1101,7 +1101,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			if (state == playback_state::status_play) {
 				int32_t offset = sample - (int32_t)(trackImpl->getLatency());
 				if (offset >= 0) {
-					trackImpl->audioOutput.store(&trackImpl->outputPost, offset);
+					//trackImpl->audioOutput.store(&trackImpl->outputPost, offset);
 				} else {
 					log_printf("cannot write to negative offset %d (samplepos %d - stage.latency %d)\n", offset, sample, trackImpl->getLatency());
 				}
