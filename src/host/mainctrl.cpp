@@ -717,7 +717,7 @@ void MainCtrl::initApp(int argc, char* argv[]) {
 		dbgassert(0);
 		throw applogicexception("no empty vst callback slot");
 	}
-	host->setSamplerateBlockSize(settings.iosettings.samplerate, settings.iosettings.blocksize);
+	host->setSampleFormat(sampleformat_t{static_cast<samplerate_t>(settings.iosettings.samplerate), settings.iosettings.blocksize, sampleformat_bits_t::FLOAT_32});
 	tls.project = this;
 	tls.mainCtrl = this;
 	tls.audioHost = audioHost;

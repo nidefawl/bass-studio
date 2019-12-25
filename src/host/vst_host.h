@@ -153,7 +153,7 @@ public:
 	vsthost();
 	vsthost(vsthost const&) = delete;
 	~vsthost();
-	void setSamplerateBlockSize(int32_t sampleRate, int32_t blockSize);
+	void setSampleFormat(const sampleformat_t& sampleFormat);
 	void setOutput(audiohost* host);
 	void operator=(vsthost const&) = delete;
 	static vsthost* getInstance();

@@ -415,29 +415,25 @@ vsthost::vsthost()
 	midiRealtimeInput = new clip_notes_t;
 	registerPlugins();
 }
-void vsthost::setSamplerateBlockSize(int32_t sampleRate, int32_t blockSize) {
-	sampleformat_t sampleFormat;
-	sampleFormat.blockSize = blockSize;
-	sampleFormat.sampleRate = sampleRate;
-	sampleFormat.sampleformat = sampleformat_bits_t::FLOAT_32;
+void vsthost::setSampleFormat(const sampleformat_t& sampleFormat) {
 	if (this->sampleFormat != sampleFormat) {
 		this->sampleFormat = sampleFormat;
 		for (vstplugin* plugin : this->pluginInstancesVST2) {
 			plugin->sleep();
 		}
-		setBlockSize(blockSize);
+		setBlockSize(sampleFormat.blockSize);
 		for (auto* audio : this->allAudioStages) {
 			audio->sampleFormat = sampleFormat;
-			audio->input.realloc(blockSize);
-			audio->output.realloc(blockSize);
-			audio->outputPost.realloc(blockSize);
+			audio->input.realloc(sampleFormat.blockSize);
+			audio->output.realloc(sampleFormat.blockSize);
+			audio->outputPost.realloc(sampleFormat.blockSize);
 		}
 		for (effectbase* plugin : this->pluginInstances) {
 			plugin->setSampleFormat(sampleFormat);
 		}
 		for (vstplugin* plugin : this->pluginInstancesVST2) {
-			plugin->dispatch(effSetBlockSize, 0, blockSize, 0, 0);
-			plugin->dispatch(effSetSampleRate, 0, 0, NULL, (float) sampleRate);
+			plugin->dispatch(effSetBlockSize, 0, sampleFormat.blockSize, 0, 0);
+			plugin->dispatch(effSetSampleRate, 0, 0, NULL, (float) sampleFormat.sampleRate);
 		}
 		for (vstplugin* plugin : this->pluginInstancesVST2) {
 			plugin->resume();
@@ -1274,27 +1270,25 @@ void vsthost::onTrackLayoutChange() {
 	delayLines.clear();
 }
 void vsthost::setOutput(audiohost* audioHost) {
-//	assert (audioHost->lSampleRate == this->lSampleRate);
-//	assert (audioHost->lBlockSize == this->lBlockSize);
 	this->audioHost = audioHost;
+	sampleformat_t sampleFormatExternal;
 	if (audioHost) {
-		this->sampleFormatExternal = { audioHost->lSampleRate, audioHost->lBlockSize, sampleformat_bits_t::FLOAT_32 };
+		sampleFormatExternal = { audioHost->lSampleRate, audioHost->lBlockSize, sampleformat_bits_t::FLOAT_32 };
 	} else {
-		this->sampleFormatExternal = { 48000, 512, sampleformat_bits_t::FLOAT_32 };
+		sampleFormatExternal = { 48000, 512, sampleformat_bits_t::FLOAT_32 };
 	}
 	
-	this->sampleFormat = {0, 0, sampleformat_bits_t::NONE};
-	if (audioHost) {
-		const int32_t internalSampleRate = sampleFormatExternal.sampleRate;
-		oversample_config_t config;
-		config.inputSampleRate = internalSampleRate;
-		config.outputSampleRate = audioHost->lSampleRate;
-		config.numChannels = this->numChannels;
-		config.setInputLength(audioHost->lBlockSize);
-		this->impl->oversampler = std::make_shared<oversampler_t>(config);
-		setSamplerateBlockSize(internalSampleRate, audioHost->lBlockSize);
-		audiocache::getInstance()->setSamplerate(sampleFormat.sampleRate);
-	}
+	sampleformat_t sampleFormat = {sampleFormatExternal.sampleRate, sampleFormatExternal.blockSize, sampleformat_bits_t::NONE};
+
+	oversample_config_t config;
+	config.inputSampleRate = sampleFormat.sampleRate;
+	config.outputSampleRate = sampleFormatExternal.sampleRate;
+	config.numChannels = this->numChannels;
+	config.setInputLength(sampleFormat.blockSize);
+	this->impl->oversampler = std::make_shared<oversampler_t>(config);
+	this->sampleFormatExternal = sampleFormatExternal;
+	setSampleFormat(sampleFormat);
+	audiocache::getInstance()->setSamplerate(sampleFormat.sampleRate);
 
 }
 
