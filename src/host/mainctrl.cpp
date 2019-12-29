@@ -926,7 +926,6 @@ void MainCtrl::setDragged(guibase* g) {
  * @param flags - 0 or FLAG_DEFER_LOAD (don't load vst plugins, use placeholders)
  * @return
  */
-void getTrackFromMouseTest();
 bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file, int flags) {
 
 	setAudioThreadState(playback_state::status_no_process);
