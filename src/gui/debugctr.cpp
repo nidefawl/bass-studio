@@ -111,7 +111,7 @@ gui_ctr_debug::gui_ctr_debug() : guictr_base() {
 	{
 		auto btn3 = new guibutton;
 		btn3->id = ID_BTN_TOGGLE_PROCESSING;
-		btn3->setText("Enable Processing");
+		btn3->setText("Disable Processing");
 		btn3->setFontSize(BTN_FONT_SIZE);
 		debugGuis.push_back(btn3);
 	}
