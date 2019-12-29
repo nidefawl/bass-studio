@@ -41,9 +41,9 @@ void gui_scrollbar::render(NVGcontext* vg) {
 			//				nvgStrokeWidth(vg, 1.0f);
 			//				nvgStrokeColor(vg, theme->getColor(GuiColor::COL_BG_DRK_FOCUSED));
 			//				nvgStroke(vg);
-			nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_DRK_FOCUSED));
+			nvgFillColor(vg, theme->getColor(GuiColor::COL_GUI_HANDLE_FOCUSED));
 		} else {
-			nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_DRKER));
+			nvgFillColor(vg, theme->getColor(GuiColor::COL_GUI_HANDLE));
 		}
 		nvgFill(vg);
 
