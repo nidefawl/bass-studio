@@ -1046,12 +1046,14 @@ bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file, int flags) {
 	/** load layouts **/
 	trackList.loadSubtrackLayouts(file->project);
 
-	view->ctr_tracks.layout();
+//	view->ctr_tracks.layout();
 	grid.setLayout(file->layout.layoutGrid);
-	view->ctr_tracks.setScrollOffset(file->layout.scrollOffsetX);
+	view->ctr_tracks.layout();
 	view->ctr_plugins.layout();
 
 	updateVisibleTrackContents();
+	view->ctr_tracks.layout();
+	view->ctr_tracks.setScrollOffset(file->layout.scrollOffsetX);
 
 
 	/** load cursor state **/
