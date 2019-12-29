@@ -82,7 +82,7 @@ class gui_stats_list : public guictr_base
 	int32_t minHTop = 66;
 public:
 	gui_stats_list() : guictr_base() {
-		padding = 0;
+		setBackgroundRendered(true);
 	}
 	~gui_stats_list() {
 
@@ -153,26 +153,29 @@ public:
 
 	guibutton btnLoadAll;
 	gui_list_plugins(std::vector<gui_pluginsloaded_list_entry*>& _entries) : guictr_base(), entries(_entries) {
-		add(&list);
-		padding = 0;
+
+		setBackgroundRendered(true);
 		list.padding = 0;
+		list.setBackgroundRendered(false);
 		list.setRowHeight(14);
-		btnLoadAll.setLabel("Load all");
+		add(&list);
 		add(&btnLoadAll);
+		btnLoadAll.setLabel("Load all");
 	}
 
 	void layout() {
 		int32_t rowHeight = 14;
-		int32_t w = size.x/128;
+		auto cs = getSizeContent();
+		int32_t w = cs.x/128;
 		rowHeight += w*4;
 		list.setRowHeight(rowHeight);
 //		const int32_t hpt = theme->get(GuiConstant::CONST_FIXED_TITLE_HEIGHT);
 		const int32_t inset = math::min(6, theme->get(GuiConstant::CONST_LAYOUT_MARGIN));
 		const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
 		list.pos = {inset, TRACK_HEIGHT_STEP+inset};
-		list.size = {size.x-inset*2, size.y-TRACK_HEIGHT_STEP-inset*2};
+		list.size = {cs.x-inset*2, cs.y-TRACK_HEIGHT_STEP-inset*2};
 		btnLoadAll.pos = {inset, inset};
-		btnLoadAll.size = {size.x-inset*2, TRACK_HEIGHT_STEP-inset*2};
+		btnLoadAll.size = {cs.x-inset*2, TRACK_HEIGHT_STEP-inset*2};
 		for (auto* g : guis) {
 			g->layout();
 		}
@@ -216,9 +219,11 @@ public:
 			return;
 		}
 		for (auto* g : guis) {
-			nvgSave(vg);
-			g->render(vg);
-			nvgRestore(vg);
+			if (g->isVisible()) {
+				nvgSave(vg);
+				g->render(vg);
+				nvgRestore(vg);
+			}
 		}
 
 	}
@@ -239,10 +244,10 @@ class gui_pluginsloaded_list : public guictr_base {
 	std::vector<gui_pluginsloaded_list_entry*> listEntriesDef;
 public:
 	gui_pluginsloaded_list() : guictr_base(), listCtr(listEntriesLoadedPlugins), listDeferredCtr(listEntriesDef) {
-		setBackgroundRendered(true);
+		setBackgroundRendered(false);
+		padding = 0;
+		margin = 0;
 		scrollTop.add(&textStats);
-		padding = 4;
-		scrollTop.padding = 0;
 		scrollTop.maxHeight = -1;
 		add(&scrollTop);
 		add(&listCtr);
