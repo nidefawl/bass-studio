@@ -12,6 +12,8 @@
 #include "platform.h"
 #include "audiobuffer.h"
 #include "guiscrollcontainer.h"
+#include "button.h"
+#include "host/audio_host.h"
 
 class gui_pluginsloaded_list_entry : public gui_list_entry {
 	SafeRef<effectbase> ref;
@@ -64,8 +66,12 @@ public:
 		nvgText(vg, x, rowHeight / 2, StringAsCStr(getText()), NULL);
 		auto* _entry = safeRefGet(ref);
 		if (_entry) {
+			host_stats_reducted_t stats;
+			auto host = vsthost::getInstance();
+			host->getShortStats(stats);
+			float fPercentLoad = stats.timeProcess <= 0 ? 0 : _entry->timeProcess*100.0f / stats.timeProcess;
 			nvgTextAlign(vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
-			String str = StringFormat("%.2f%%", _entry->fTimePercentBlockProcess*100.0);
+			String str = StringFormat("%.2f%%", fPercentLoad);
 			nvgText(vg, size.x-spacing, rowHeight / 2, StringAsCStr(str), NULL);
 		}
 		nvgTranslate(vg, -pos.x, -pos.y);
@@ -76,7 +82,7 @@ class gui_stats_list : public guictr_base
 	int32_t minHTop = 66;
 public:
 	gui_stats_list() : guictr_base() {
-
+		padding = 0;
 	}
 	~gui_stats_list() {
 
@@ -98,8 +104,12 @@ public:
 			state = MainCtrl::getPlayThread()->getState();
 			vsthost::getInstance()->getStats(stats);
 		}
+//		const int fontSize = 12;
+		int32_t fontSize = 14;
+		int32_t w = size.x/128;
+		fontSize += w*4;
 		float lineh;
-		setFont(vg, 12, G_WHITE, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
+		setFont(vg, fontSize, G_WHITE, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
 		nvgTextMetrics(vg, NULL, NULL, &lineh);
 
 		auto printL = [&](const char* caption, const String& str) {
@@ -113,14 +123,18 @@ public:
 		printL("blocksProcessed", StringFormat("%d", stats.blocksProcessed));
 		printL("samplesProcessed", StringFormat("%d", stats.samplesProcessed));
 		printL("timeLastBlock", StringFormat("%lld", stats.timeLastBlock));
-		printL("maxLatencyAudioMidi", StringFormat("%lld", stats.maxLatencyAudioMidi));
-		printL("maxLatencyReturn", StringFormat("%lld", stats.maxLatencyReturn));
-		printL("latencyToMaster", StringFormat("%lld", stats.latencyToMaster));
 		printL("playback_state", StringFormat("%lld", static_cast<int32_t>(state)));
 		audiothread_ringbuffer_t& ringbuffer = vsthost::getInstance()->getRingBuffer();
-		printL("rinbuffer.writepos", StringFormat("%lld", ringbuffer.writePos));
-		printL("rinbuffer.readpos", StringFormat("%lld", ringbuffer.readPos));
-		printL("inputBufferUnderuns", StringFormat("%lld", stats.inputBufferUnderuns));
+		printL("input q len", StringFormat("%d", stats.inputQueueLen));
+		printL("output q len", StringFormat("%d", stats.outputQueueLen));
+		printL("INPUT  resampler", StringFormat("%d samples|%d blocks", stats.resamplerInNumSamples, stats.resamplerInNumBlocks));
+		printL("OUTPUT resampler", StringFormat("%d samples|%d blocks", stats.resamplerOutNumSamples, stats.resamplerOutNumBlocks));
+		printL("output q len", StringFormat("%d", stats.outputQueueLen));
+		printL("inputBufferUnderuns", StringFormat("%d", stats.inputBufferUnderuns));
+		auto audioHost = audiohost::getInstance();
+		printL("outputBufferUnderuns", StringFormat("%u", audioHost ? audioHost->bufferUnderuns : 0));
+		printL("inputBufferOverrun", StringFormat("%u", audioHost ? audioHost->inputBufferUnderuns : 0));
+		printL("audioCallback tDelta usec", StringFormat("%d", audioHost ? audioHost->audioCallbackInvocationDelay_usec : 0));
 		for (auto& entry : stats.timings) {
 			printL(StringAsCStr(entry.first), StringFormat("%lld", entry.second));
 		}
@@ -132,37 +146,104 @@ public:
 		prefSize.y = math::max(math::max(minHTop, 100), prefSize.y);
 	}
 };
-class gui_list_plugins : public gui_list {
+class gui_list_plugins : public guictr_base {
+	std::vector<gui_pluginsloaded_list_entry*>& entries;
 public:
-	gui_list_plugins() : gui_list() {
+	gui_list list;
+
+	guibutton btnLoadAll;
+	gui_list_plugins(std::vector<gui_pluginsloaded_list_entry*>& _entries) : guictr_base(), entries(_entries) {
+		add(&list);
+		padding = 0;
+		list.padding = 0;
+		list.setRowHeight(14);
+		btnLoadAll.setLabel("Load all");
+		add(&btnLoadAll);
+	}
+
+	void layout() {
+		int32_t rowHeight = 14;
+		int32_t w = size.x/128;
+		rowHeight += w*4;
+		list.setRowHeight(rowHeight);
+//		const int32_t hpt = theme->get(GuiConstant::CONST_FIXED_TITLE_HEIGHT);
+		const int32_t inset = math::min(6, theme->get(GuiConstant::CONST_LAYOUT_MARGIN));
+		const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
+		list.pos = {inset, TRACK_HEIGHT_STEP+inset};
+		list.size = {size.x-inset*2, size.y-TRACK_HEIGHT_STEP-inset*2};
+		btnLoadAll.pos = {inset, inset};
+		btnLoadAll.size = {size.x-inset*2, TRACK_HEIGHT_STEP-inset*2};
+		for (auto* g : guis) {
+			g->layout();
+		}
+	}
+	void buttonClicked(guibase* button) {
+		if (&btnLoadAll == button) {
+
+			log_printf("load all deferred\n", 0);
+			ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+			auto* host = vsthost::getInstance();
+    		std::vector<effectbase*> pluginsDeferred;
+    		host->getDeferredEffects(pluginsDeferred);
+    		my_printf("loading %d plugins\n", pluginsDeferred.size());
+    		for (auto plugin : pluginsDeferred) {
+        		my_printf("activate %s\n", StringAsCStr(plugin->sName));
+        		effectbase* effectLoaded = nullptr;
+    			host->activateDeferred(plugin, &effectLoaded);
+//            			if (effectLoaded) {
+//            				effectLoaded->show();
+//            			}
+    		}
+		} else if (STL_CONTAINS(entries, button)) {
+			gui_pluginsloaded_list_entry* entry = dynamic_cast<gui_pluginsloaded_list_entry*>(button);
+			auto* effectbase = safeRefGet(entry->getRef());
+			if (effectbase) {
+				track_t* tr = effectbase->getTrack();
+				if (tr) {
+					MainCtrl::get()->setSelectedTrack(tr);
+					MainCtrl::get()->showPluginView();
+//					MainCtrl::get()->getPluginCtr()->makeVisibleTo(effectbase); //scrollTo
+				}
+			}
+
+		}
+	}
+	virtual void render(NVGcontext* vg) {
+		if (isBackgroundRendered()) {
+			renderBackground(vg);
+		}
+		if (!setScissorTransform(vg)) {
+			return;
+		}
+		for (auto* g : guis) {
+			nvgSave(vg);
+			g->render(vg);
+			nvgRestore(vg);
+		}
 
 	}
 	~gui_list_plugins() {
-
+		removeGuis();
 	}
 };
 class gui_pluginsloaded_list : public guictr_base {
 //	const int32_t heightTextField = HEIGHT_DEFAULT_INPUT;
 //	gui_textfield textField;
-	gui_stats_list list;
+	gui_stats_list textStats;
 	guictr_scrollbar scrollTop;
 	gui_list_plugins listCtr;
 	gui_list_plugins listDeferredCtr;
 	String curquery = "";
 	uint64_t lastUpdate = 0;
+	std::vector<gui_pluginsloaded_list_entry*> listEntriesLoadedPlugins;
+	std::vector<gui_pluginsloaded_list_entry*> listEntriesDef;
 public:
-	gui_pluginsloaded_list() : guictr_base() {
+	gui_pluginsloaded_list() : guictr_base(), listCtr(listEntriesLoadedPlugins), listDeferredCtr(listEntriesDef) {
 		setBackgroundRendered(true);
-		scrollTop.add(&list);
+		scrollTop.add(&textStats);
 		padding = 4;
-		listCtr.setRowHeight(14);
-		listCtr.padding = 0;
-		listDeferredCtr.setRowHeight(14);
-		listDeferredCtr.padding = 0;
-		list.padding = 0;
 		scrollTop.padding = 0;
 		scrollTop.maxHeight = -1;
-//		add(&textField);
 		add(&scrollTop);
 		add(&listCtr);
 		add(&listDeferredCtr);
@@ -184,29 +265,12 @@ public:
 			update();
 		}
 	}
-	std::vector<gui_pluginsloaded_list_entry*> listEntriesLoadedPlugins;
-	std::vector<gui_pluginsloaded_list_entry*> listEntriesDef;
-	void buttonClicked(guibase* button) {
-		if (STL_CONTAINS(listEntriesLoadedPlugins, button)||STL_CONTAINS(listEntriesDef, button)) {
-			gui_pluginsloaded_list_entry* entry = dynamic_cast<gui_pluginsloaded_list_entry*>(button);
-			auto* effectbase = safeRefGet(entry->getRef());
-			if (effectbase) {
-				track_t* tr = effectbase->getTrack();
-				if (tr) {
-					MainCtrl::get()->setSelectedTrack(tr);
-					MainCtrl::get()->showPluginView();
-//					MainCtrl::get()->getPluginCtr()->makeVisibleTo(effectbase); //scrollTo
-				}
-			}
-
-		}
-	}
 	void update() {
 		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 		std::vector<effectbase*> effects;
 		vsthost::getInstance()->getAllInstances(effects);
 		std::stable_sort(effects.begin(), effects.end(), [](const effectbase* ptrA, const effectbase* ptrB){
-			return ptrA->fTimePercentBlockProcess > ptrB->fTimePercentBlockProcess;
+			return ptrA->timeProcess > ptrB->timeProcess;
 		});
 		std::vector<gui_list_entry*> _newList;
 		std::vector<gui_list_entry*> _newListDef;
@@ -233,8 +297,8 @@ public:
 			_newList.push_back(g);
 			_newListLoadedPlugins.push_back(g);
 		}
-		listCtr.setList(_newList);
-		listDeferredCtr.setList(_newListDef);
+		listCtr.list.setList(_newList);
+		listDeferredCtr.list.setList(_newListDef);
 		listEntriesLoadedPlugins = _newListLoadedPlugins;
 		listEntriesDef = _newListDefPlugins;
 		layout();

@@ -126,4 +126,8 @@ public:
 		return scrollbar.handleMouseScroll(evt, xoffset, yoffset);
 	}
 	virtual void buttonClicked(guibase* button);
+
+	virtual guibase* getFocusedContainer() {
+		return this;
+	}
 };

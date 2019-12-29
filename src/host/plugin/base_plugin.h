@@ -48,6 +48,7 @@ public:
 	int32_t slot = -1;
 	std::unique_ptr<DelayLine> delayLine;
 	double fTimePercentBlockProcess = 0;
+	int64_t timeProcess = 0;
 	effectbase();
 	effectbase(String _sName, int32_t _pluginType, int32_t _projectGlobalId);
 	virtual ~effectbase();

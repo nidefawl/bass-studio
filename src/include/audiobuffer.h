@@ -10,6 +10,7 @@
 struct AudioBlock;
 struct AudioBuffer {
 	AudioBlock* output;
+	int32_t writeOffset;
 	std::atomic<bool> inUse;
 	bool submitted;
 	int32_t nonce;

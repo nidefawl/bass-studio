@@ -53,6 +53,7 @@ MACRO( DEFINE_TEST test_name )
   SET_TESTS_PROPERTIES( ${test_name} PROPERTIES ENVIRONMENT "PATH=${DAW_WORKING_DIR};$ENV{PATH}" )
 ENDMACRO()
 
+DEFINE_TEST(test_audioblock)
 DEFINE_TEST(test_notes)
 DEFINE_TEST(test_seqtime)
 DEFINE_TEST(test_threads)
