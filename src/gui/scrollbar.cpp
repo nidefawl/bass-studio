@@ -32,7 +32,7 @@ void gui_scrollbar::render(NVGcontext* vg) {
 		if (barS[dir] < minHandleHeight) {
 			float h = minHandleHeight-barS[dir];
 			barOff[dir] -= h/2.0;
-			barS[dir] = h;
+			barS[dir] = minHandleHeight;
 		}
 		nvgRoundedRect(vg, pos.x + barOff.x + inset, pos.y + barOff.y + inset, barS.x - inset * 2, barS.y - inset * 2, fRnd);
 
