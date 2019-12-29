@@ -35,18 +35,18 @@ void freeRingBuffer(audiothread_ringbuffer_t& ringbuffer) {
 	}
 }
 void AudioBlock::fillNoise(uint32_t seed) {
-	seq_rand rnd;
-	rnd.rng_seed(seed);
-	for (uint32_t i = 0; i < channels; i++) {
-		for (int s = 0; s < samples; s++) {
-			float f = 0.0f;
-			uint32_t rngBits = rnd.rng_rand();
-			uint32_t* floatAsU32 = reinterpret_cast<uint32_t*>(&f);
-			*floatAsU32 |= (rngBits&0x3F) << 24;
-			*floatAsU32 |= ((rngBits&(~0x3F))>>6) & 0x3FFFFF;
-			buf[i][s] = f;
-		}
-	}
+//	seq_rand rnd;
+//	rnd.rng_seed(seed);
+//	for (uint32_t i = 0; i < channels; i++) {
+//		for (int s = 0; s < samples; s++) {
+//			float f = 0.0f;
+//			uint32_t rngBits = rnd.rng_rand();
+////			uint32_t* floatAsU32 = reinterpret_cast<uint32_t*>(&f);
+////			*floatAsU32 |= (rngBits&0x3F) << 24;
+////			*floatAsU32 |= ((rngBits&(~0x3F))>>6) & 0x3FFFFF;
+//			buf[i][s] = (rand()/(float)RAND_MAX)*0.4f;
+//		}
+//	}
 }
 
 void AudioBlock::realloc(uint32_t _samples) {
