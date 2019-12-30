@@ -32,7 +32,7 @@ void gui_scrollbar::render(NVGcontext* vg) {
 		if (barS[dir] < minHandleHeight) {
 			float h = minHandleHeight-barS[dir];
 			barOff[dir] -= h/2.0;
-			barS[dir] = h;
+			barS[dir] = minHandleHeight;
 		}
 		nvgRoundedRect(vg, pos.x + barOff.x + inset, pos.y + barOff.y + inset, barS.x - inset * 2, barS.y - inset * 2, fRnd);
 
@@ -41,9 +41,9 @@ void gui_scrollbar::render(NVGcontext* vg) {
 			//				nvgStrokeWidth(vg, 1.0f);
 			//				nvgStrokeColor(vg, theme->getColor(GuiColor::COL_BG_DRK_FOCUSED));
 			//				nvgStroke(vg);
-			nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_DRK_FOCUSED));
+			nvgFillColor(vg, theme->getColor(GuiColor::COL_GUI_HANDLE_FOCUSED));
 		} else {
-			nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_DRKER));
+			nvgFillColor(vg, theme->getColor(GuiColor::COL_GUI_HANDLE));
 		}
 		nvgFill(vg);
 

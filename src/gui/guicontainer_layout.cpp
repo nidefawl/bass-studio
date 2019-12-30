@@ -91,10 +91,12 @@ void guictr_tabbed::layout() {
 	}
 	sizeContentTab = ivec2(csize.x, csize.y-sizeBar.y);
 	for (tabbed_entry* entry : entries) {
-		entry->tabCtr->pos = ivec2(0, sizeBar.y);
-		entry->tabCtr->size = sizeContentTab;
-		entry->tabCtr->determineSize(entry->tabCtr->size);
-		entry->tabCtr->layout();
+		if (entry->active && entry->tabCtr->parent) {
+			entry->tabCtr->pos = ivec2(0, sizeBar.y);
+			entry->tabCtr->size = sizeContentTab;
+			entry->tabCtr->determineSize(entry->tabCtr->size);
+			entry->tabCtr->layout();
+		}
 	}
 
 }

@@ -31,6 +31,7 @@ bool error(const char* msg, PaError err) {
 ** It may called at interrupt level on some machines so don't do anything
 ** that could mess up the system like calling malloc() or free().
 */
+static int32_t lastInvocationTime_i64 = 0;
 static int audioCallback(const void *inputBuffer, void *outputBuffer,
 	unsigned long framesPerBuffer,
 	const PaStreamCallbackTimeInfo* timeInfo,
@@ -56,12 +57,19 @@ static int audioCallback(const void *inputBuffer, void *outputBuffer,
 	if (!host) {
 		return paAbort;
 	}
+	auto timeNow_i64 = getTimeHPint64();
+	if (0 != lastInvocationTime_i64) {
+		host->audioCallbackInvocationDelay_usec = timeNow_i64 - lastInvocationTime_i64;
+	}
+	lastInvocationTime_i64 = timeNow_i64;
 	//TODO: still a race condition on_terminate here
 	AudioBuffer* block = nullptr;
 
 	if (stream->audioQueue.try_dequeue(block)) {
 		dbgassert(block);
 		if (framesPerBuffer == block->output->samples) {
+//			static uint32_t s22 = 0;
+//			block->output->fillNoise(++s22);
 			int32_t channels = math::min<int32_t>(block->output->channels, stream->nOutputChannels);
 			for (uint32_t i = 0; i < channels; i++) {
 				float* channel = block->output->buf[i];

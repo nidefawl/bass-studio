@@ -238,6 +238,7 @@ private:
 						&& m_status == status_play && projGlobals.loopEnabled);
             	midiHost->processMidi(this->ctrl, samplePos, tickPos, m_status, inLoop, isLoopAround);
             	if (host->enableProcessing) {
+
                 	processedBlock = host->processPlayback(this->ctrl, samplePos, tickPos, m_status, inLoop, isLoopAround);
 					timer2.reset();
             	} else {
@@ -251,7 +252,13 @@ private:
 //            	processDuration = timer2.getTime();
 //    			LOG("processedBlocks: %d, play: %d, tickpos: %f\n", processedBlock, (m_status==playback_state::status_play), tickPos);
             }
-			std::this_thread::sleep_for(std::chrono::microseconds(1000));
+            host_stats_t stats;
+            host->getStats(stats);
+            if (host->enableProcessing && stats.outputQueueLen < 2) {
+            } else {
+
+            	std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            }
 
             /*
              * at sample rate 44100 and blocksize 512 the block duration is 1.xxms
@@ -259,7 +266,7 @@ private:
              * We can expect processPlayback to only process one block under normal load
              */
 			if (processedBlock > 1) {
-				LOG("processedBlock > 1: %d\n", processedBlock);
+//				LOG("processedBlock > 1: %d\n", processedBlock);
 			} else if (!processedBlock) {
 
 				//std::this_thread::sleep_for(std::chrono::microseconds(500));
@@ -276,7 +283,7 @@ private:
 				if (processedBlock) {
 		            isLoopAround = false;
 					samplePos += blockSize*processedBlock;
-					tickPos += ticksPerBlock;
+					tickPos += ticksPerBlock*processedBlock;
 					if (m_status == status_play) {
 						if (inLoop) {
 							if (tickPos >= projGlobals.loopStart + projGlobals.loopLen) {

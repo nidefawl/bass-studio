@@ -25,32 +25,35 @@ struct AudioBlock {
 	AudioBlock(const AudioBlock&) = delete;
 	AudioBlock(AudioBlock&& other) {
 		instanceCount++;
-		if (buf) {
-			if (allocType != alloc_type::external_array) {
-				if (allocType == alloc_type::internal) {
-					for (uint32_t i = 0; i < channels; i++) {
-						if (buf[i]) {
-							delete[] buf[i];
-							buf[i] = nullptr;
-						}
-					}
-				}
-				delete[] buf;
-				buf = nullptr;
-			}
-		}
-		channels = other.channels;
-		samples = other.samples;
-		allocType = other.allocType;
-		buf = other.buf;
-		debug = other.debug;
-		other.allocType = alloc_type::external_array;
-		other.buf = nullptr;
-		other.channels = 0;
-		other.samples = 0;
+		std::swap(allocType, other.allocType);
+		std::swap(channels, other.channels);
+		std::swap(samples, other.samples);
+		std::swap(buf, other.buf);
+		std::swap(debug, other.debug);
 	}
 	AudioBlock& operator=(const AudioBlock&) = delete;
-	AudioBlock& operator=(AudioBlock&&) = delete;
+	AudioBlock& operator=(AudioBlock&& other) {
+		//if (buf) {
+		//	if (allocType != alloc_type::external_array) {
+		//		if (allocType == alloc_type::internal) {
+		//			for (uint32_t i = 0; i < channels; i++) {
+		//				if (buf[i]) {
+		//					delete[] buf[i];
+		//					buf[i] = nullptr;
+		//				}
+		//			}
+		//		}
+		//		delete[] buf;
+		//		buf = nullptr;
+		//	}
+		//}
+		std::swap(allocType, other.allocType);
+		std::swap(channels, other.channels);
+		std::swap(samples, other.samples);
+		std::swap(buf, other.buf);
+		std::swap(debug, other.debug);
+		return *this;
+	};
 	explicit AudioBlock(uint32_t _channels, uint32_t _samples, bool _bIsDebug = false)
 		: channels(_channels), samples(0), buf(new float*[_channels]), allocType(alloc_type::internal), debug(_bIsDebug)
 	{
@@ -78,6 +81,17 @@ struct AudioBlock {
 			dbgassert(*pBuf++ == channel);
 		}
 	};
+	explicit AudioBlock(const AudioBlock& src, const int32_t channelOffset, const int32_t numChannels, const int32_t sampleOffset, const int32_t numSamples)
+		: channels(numChannels), samples(numSamples), buf(new float*[numChannels]), allocType(alloc_type::external_channels_only)
+	{
+		instanceCount++;
+		dbgassert(channels);
+		dbgassert(samples);
+		for (uint32_t i = 0; i < channels; i++) {
+			dbgassert(src.buf[i]);
+			buf[i] = src.buf[channelOffset + i] + sampleOffset;
+		}
+	};
 	~AudioBlock() {
 		instanceCount--;
 		if (allocType != alloc_type::external_array) {
@@ -91,10 +105,25 @@ struct AudioBlock {
 			delete[] buf;
 		}
 	};
+	AudioBlock getOffsetBlock(const int32_t sampleOffset) const
+	{
+		return AudioBlock(*this, 0, this->channels, sampleOffset, this->samples - sampleOffset);
+	};
+	AudioBlock SubBlock(const int32_t channelOffset, const int32_t numChannels, const int32_t sampleOffset, const int32_t numSamples) const
+	{
+		return AudioBlock(*this, channelOffset, numChannels, sampleOffset, numSamples);
+	};
 	void clear() {
 		for (uint32_t i = 0; i < channels; i++) {
 			memset(buf[i], 0, samples * sizeof(float));
 		}
+	}
+	void shiftBegin(int32_t numSamples) {
+		dbgassert(numSamples < 0 || samples > static_cast<uint32_t>(numSamples));
+		for (uint32_t i = 0; i < channels; i++) {
+			buf[i] += numSamples;
+		}
+		samples -= numSamples;
 	}
 	void copyTo(float **outputs) {
 		for (uint32_t i = 0; i < channels; i++) {
@@ -170,9 +199,10 @@ struct AudioBlock {
 		addFromOp(src->buf, src->samples, src->channels, op, gain);
 	}
 	void addFromOp(float **srcBuf, const uint32_t srcSamples, const uint32_t srcChannels, const mix_op op, float gain) {
-		dbgassert(srcSamples == samples);
+		dbgassert(srcSamples <= samples);
 //		dbgassert(srcChannels == channels); //remove when adding sub-track mixers (between plugins)
 		uint32_t nChannels = math::max(srcChannels, channels);
+		uint32_t nSamples = math::min(srcSamples, samples);
 		float srcGain = 1.0f;
 		if (srcChannels > channels) {
 			if (srcChannels == 0 && channels == 1) {
@@ -183,17 +213,20 @@ struct AudioBlock {
 				dbgassert(0&&"conversion not implemented");
 			}
 		}
+		bool bdbgProcessed = false;
 		for (uint32_t i = 0; i < nChannels; i++) {
 			uint32_t srcChannelIdx = math::min(srcChannels-1, i);
 			uint32_t dstChannelIdx = math::min(channels-1, i);
 			float* srcBufChannel = srcBuf[srcChannelIdx];
 			float* dstBufChannel = buf[dstChannelIdx];
-			for (uint32_t j = 0; j < samples; j++) {
+			for (uint32_t j = 0; j < nSamples; j++) {
 				const float fSrc = (srcBufChannel[j] * srcGain * gain);
 				const float fDst = dstBufChannel[j] * (op == MIX ? 1.0f-gain : 1.0f);
 				dstBufChannel[j] = fSrc + fDst;
+				bdbgProcessed = true;
 			}
 		}
+		dbgassert(bdbgProcessed);
 	}
 	void fillNoise(uint32_t seed);
 	void realloc(uint32_t _samples);

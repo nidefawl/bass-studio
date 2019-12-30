@@ -48,6 +48,8 @@ extern constant_t COL_BG_SELECTEDTRACK;
 extern constant_t COL_BG_SELECTEDTRACK_TITLE;
 extern constant_t COL_BG_DRKER;
 extern constant_t COL_BG_DRKER2;
+extern constant_t COL_GUI_HANDLE;
+extern constant_t COL_GUI_HANDLE_FOCUSED;
 extern constant_t COL_CLEAR_COLOR;
 extern constant_t COL_LABEL_ACTIVE;
 extern constant_t COL_LABEL_INACTIVE;

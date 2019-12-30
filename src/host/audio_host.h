@@ -84,6 +84,7 @@ public:
 	uint32_t blockReads = 0;
 	uint32_t bufferUnderuns = 0;
 	uint32_t inputBufferUnderuns = 0;
+	int32_t audioCallbackInvocationDelay_usec = 0;
 	samplerate_t lSampleRate = 0;
 	uint16_t lBlockSize = 0;
 	int32_t nextStreamId;

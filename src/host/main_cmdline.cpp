@@ -15,6 +15,7 @@
 #include "appsettings.h"
 #include "projectfile.h"
 #include "project.h"
+#include "samplerate.h"
 #include "track.h"
 #include "threads/playbackthread.h"
 #include "audioblock.h"
@@ -167,7 +168,7 @@ int main(int argc, char* argv[]) {
     	auto midiHost = std::make_unique<midihost>();
     	auto host = std::make_unique<vsthost>();
     	vsthost::assignMasterCallback(host.get());
-		host->setSamplerateBlockSize(settings.iosettings.samplerate, settings.iosettings.blocksize);
+		host->setSampleFormat(sampleformat_t{static_cast<samplerate_t>(settings.iosettings.samplerate), settings.iosettings.blocksize, sampleformat_bits_t::FLOAT_32});
 
     	project_controller_t project;
     	plugindatabase_t plugindb;

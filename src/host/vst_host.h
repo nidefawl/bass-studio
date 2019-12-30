@@ -6,7 +6,7 @@
 #include <vector>
 #include <atomic>
 #include <stdint.h>
-#include <unordered_map>
+#include <map>
 #include <stdbool.h>
 #include "../vstsdk-host-2.4/aeffectx.h"
 #include "note.h"
@@ -65,17 +65,28 @@ void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effec
 
 #define SYNCHRONIZED_RW
 struct AudioBlock;
+struct host_stats_reducted_t {
+	double usage;
+	int64_t timeProcess;
+	int64_t timeLastBlock;
+	int64_t timePerBlock_usec;
+};
 struct host_stats_t {
 	int32_t tickBar = 0;
 	int32_t samplesProcessed;
 	int32_t blocksProcessed;
 	int64_t timeLastBlock;
-	std::unordered_map<String, int64_t> timings;
+	int64_t timeProcess;
+	std::map<String, int64_t> timings;
 	double usage;
-	int32_t maxLatencyAudioMidi = 0;
-	int32_t maxLatencyReturn = 0;
-	int32_t latencyToMaster = 0;
 	int32_t inputBufferUnderuns = 0;
+	int32_t lastInvocationTime_i64 = 0;
+	int32_t inputQueueLen = 0;
+	int32_t outputQueueLen = 0;
+	int32_t resamplerInNumBlocks = 0;
+	int32_t resamplerInNumSamples = 0;
+	int32_t resamplerOutNumBlocks = 0;
+	int32_t resamplerOutNumSamples = 0;
 
 };
 struct host_processing_stats_t {
@@ -97,7 +108,7 @@ public:
 	project_globals_t project;
 	audioMasterCallback masterCallBackSlot = nullptr;
 
-	SYNCHRONIZED_RW std::atomic<int32_t> enableProcessing{false};
+	SYNCHRONIZED_RW std::atomic<int32_t> enableProcessing{true};
 	std::atomic<int32_t> pluginId{100};
 	std::atomic<int32_t> audioStageId{100};
 	std::atomic<int32_t> sampleId{(1<<30)}; //TODO: collides with audiocache::nextIdx
@@ -153,7 +164,7 @@ public:
 	vsthost();
 	vsthost(vsthost const&) = delete;
 	~vsthost();
-	void setSamplerateBlockSize(int32_t sampleRate, int32_t blockSize);
+	void setSampleFormat(const sampleformat_t& sampleFormat);
 	void setOutput(audiohost* host);
 	void operator=(vsthost const&) = delete;
 	static vsthost* getInstance();
@@ -172,9 +183,16 @@ public:
 	void onStartPlayback(project_controller_t* ctrl);
 	void onStopPlayback(project_controller_t* ctrl);
 	int32_t processPlayback(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround);
+	int32_t processBlock(project_controller_t* ctrl, const DAW::processing_graph_t* const processingGraph, AudioBlock* const ptrExternalInputs, AudioBlock* const ptrExternalOutputs, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround);
 	void processAudio(audio_stage_t* channel, AudioBlock* input, AudioBlock* output, int32_t sample, int32_t samples, playback_state state);
 	VstTimeInfo* getTimeInfo() {
 		return &this->timeinfo;
+	}
+	void getShortStats(host_stats_reducted_t& stats) {
+		stats.usage = this->stats.usage;
+		stats.timeProcess = this->stats.timeProcess;
+		stats.timeLastBlock = this->stats.timeLastBlock;
+		stats.timePerBlock_usec = sampleFormatExternal.blockSize*1000000/ sampleFormatExternal.sampleRate;
 	}
 	void getStats(host_stats_t& stats) {
 		stats = this->stats;

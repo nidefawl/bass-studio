@@ -717,7 +717,7 @@ void MainCtrl::initApp(int argc, char* argv[]) {
 		dbgassert(0);
 		throw applogicexception("no empty vst callback slot");
 	}
-	host->setSamplerateBlockSize(settings.iosettings.samplerate, settings.iosettings.blocksize);
+	host->setSampleFormat(sampleformat_t{static_cast<samplerate_t>(settings.iosettings.samplerate), settings.iosettings.blocksize, sampleformat_bits_t::FLOAT_32});
 	tls.project = this;
 	tls.mainCtrl = this;
 	tls.audioHost = audioHost;
@@ -926,7 +926,6 @@ void MainCtrl::setDragged(guibase* g) {
  * @param flags - 0 or FLAG_DEFER_LOAD (don't load vst plugins, use placeholders)
  * @return
  */
-void getTrackFromMouseTest();
 bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file, int flags) {
 
 	setAudioThreadState(playback_state::status_no_process);
@@ -1047,12 +1046,14 @@ bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file, int flags) {
 	/** load layouts **/
 	trackList.loadSubtrackLayouts(file->project);
 
-	view->ctr_tracks.layout();
+//	view->ctr_tracks.layout();
 	grid.setLayout(file->layout.layoutGrid);
-	view->ctr_tracks.setScrollOffset(file->layout.scrollOffsetX);
+	view->ctr_tracks.layout();
 	view->ctr_plugins.layout();
 
 	updateVisibleTrackContents();
+	view->ctr_tracks.layout();
+	view->ctr_tracks.setScrollOffset(file->layout.scrollOffsetX);
 
 
 	/** load cursor state **/
