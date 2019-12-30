@@ -13,6 +13,7 @@
 #include <portaudio.h>
 #include <vector>
 #include <stdint.h>
+#include <memory>
 #include <numeric>
 //#include <memory>
 

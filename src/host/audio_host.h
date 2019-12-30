@@ -1,5 +1,6 @@
 #pragma once
 #include <stdint.h>
+#include <memory>
 #include "config.h"
 #include "samplerate.h"
 #include "str_util.h"

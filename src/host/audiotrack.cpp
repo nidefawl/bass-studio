@@ -89,7 +89,7 @@ int32_t audiotrack_t::convertToSamples(vsthost* host) {
 				channels[j].resize(srcSize);
 				float* dstPtr = channels[j].data();
 				size_t dstSize = channels[j].size();
-#ifdef __APPLE__
+#ifndef _WIN32
 				memcpy(dstPtr, srcPtr, math::min(dstSize*sizeof(float), srcSize*sizeof(float)));
 #else
 				memcpy_s(dstPtr, dstSize*sizeof(float), srcPtr, srcSize*sizeof(float));
