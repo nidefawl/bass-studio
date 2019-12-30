@@ -24,6 +24,7 @@ consider handling context menu ownership with shared_ptrs. I may require to use 
 /**********************************************/
 /*                   Bugs                     */
 /**********************************************/
+automation lanes are read in stopped mode 
 clip loop gets notes stuck
 status bar does not show text
 clipsettings labels overlap input fields
