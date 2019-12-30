@@ -210,9 +210,26 @@ target_link_libraries(${LINK_TARGET} PUBLIC optimized ${SOXR_LIB_RELEASE} debug 
 target_link_libraries(${LINK_TARGET} PUBLIC optimized ${PORTAUDIO_LIB_RELEASE} debug ${PORTAUDIO_LIB_DEBUG})
 target_link_libraries(${LINK_TARGET} PUBLIC optimized ${PORTMIDI_LIB_RELEASE} debug ${PORTMIDI_LIB_DEBUG})
 
-if (UNIX)
+if (LINUX)
 target_link_libraries(${LINK_TARGET} PRIVATE ${X11_X11_LIB} ${CMAKE_THREAD_LIBS_INIT} ${CMAKE_DL_LIBS} ${ALSA_LIBRARY} ${GTK3_LIBRARIES} rt m)
-endif(UNIX)
+endif(LINUX)
+if (APPLE)
+
+
+target_link_libraries(${LINK_TARGET} PRIVATE 
+	${CMAKE_THREAD_LIBS_INIT} 
+	${CMAKE_DL_LIBS} 
+	${APPLE_COREMIDI_LIBRARY}
+	${APPLE_COREVIDEO_LIBRARY}
+	${APPLE_OPENGL_LIBRARY}
+	${APPLE_IOKIT_LIBRARY}
+	${APPLE_COCOA_LIBRARY}
+	${APPLE_CARBON_LIBRARY}
+	${APPLE_AUDIOUNIT_LIBRARY}
+	${APPLE_AUDIOTOOLBOX_LIBRARY}
+	${APPLE_COREAUDIO_LIBRARY}
+	m)
+endif(APPLE)
 if (WIN32)
 target_link_libraries(${LINK_TARGET} PRIVATE dbghelp winmm opengl32 kernel32 gdi32 ole32 uuid comdlg32 setupapi mswsock ws2_32)
 endif(WIN32)
