@@ -9,6 +9,7 @@
    #define shareMode    _access_s
 #else
    #include <unistd.h>
+   #define shareMode    access
 #endif
 #include "logging.h"
 

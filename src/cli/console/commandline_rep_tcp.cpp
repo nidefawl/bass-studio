@@ -16,7 +16,9 @@
 #include "js/scripting.h"
 #include "js/interface/duk_daw_interface.h"
 
+#ifdef _WIN32
 #include <windows.h>
+#endif
 
 
 bool consumeLineFromVector(std::vector<uint8_t>& buffer, String& input) {
@@ -59,7 +61,9 @@ public:
 		return true;
 	}
 	void onConnect(std::shared_ptr<network_conn_t> conn) override {
+#if defined(IPPROTO_TCP) && defined(TCP_NODELAY)
 		conn->setSocketOpt(IPPROTO_TCP, TCP_NODELAY, 1);
+#endif
 		conn->parent->setSelectTimeout(0.0001);
 		my_printf("connected\n", 0);
 		connected = true;
@@ -106,7 +110,9 @@ public:
 		return 0;
 	}
 	void onConnect(std::shared_ptr<network_conn_t> conn) override {
+#if defined(IPPROTO_TCP) && defined(TCP_NODELAY)
 		conn->setSocketOpt(IPPROTO_TCP, TCP_NODELAY, 1);
+#endif
 		conn->parent->setSelectTimeout(0.0001);
 		my_printf("connected\n", 0);
 		connected = true;

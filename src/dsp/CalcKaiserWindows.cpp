@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <stddef.h>
 #include <math.h>
-#include <malloc.h>
 #include <string.h>
 #include <iostream>
 #include "CalcKaiserWindow.h"

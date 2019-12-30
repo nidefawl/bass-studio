@@ -38,7 +38,9 @@ appsettings::appsettings(const appsettings& other)
 	*this = other;
 }
 appsettings& appsettings::operator=(const appsettings& other) {
+#ifdef _WIN32
 	*this->size = *other.size;
+#endif
 	this->dens = other.dens;
 	this->iosettings = other.iosettings;
 	this->startEngine = other.startEngine;

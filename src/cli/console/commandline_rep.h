@@ -23,6 +23,7 @@ public:
 		return runState;
 	}
 };
+#ifdef _WIN32
 class CommandLineREP_Console : public CommandLineREP {
 	class CLIImpl;
 	CLIImpl* const m_impl;
@@ -33,6 +34,7 @@ public:
 	int executeCommands() override;
 	void init() override;
 };
+#endif
 class CommandLineREP_TCP : public CommandLineREP {
 	class CLIImpl;
 	CLIImpl* const m_impl;

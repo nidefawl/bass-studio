@@ -6,7 +6,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
-#include <malloc.h>
 #include <string.h>
 
 enum filterType {LOW_PASS, HIGH_PASS, BAND_PASS, BAND_STOP};

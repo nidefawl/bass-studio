@@ -86,7 +86,7 @@ audiofile_t* audiocache::loadFile(String path, int id) {
 				*out = pSamples[j];
 				out++;
 			}
-			numSamplesInput = i == 0 ? channel.size() : math::min(numSamplesInput, channel.size());
+			numSamplesInput = i == 0 ? channel.size() : math::min<uint64_t>(numSamplesInput, channel.size());
 			loadedSampleChannels.push_back(std::move(channel));
 		}
 		if ((int32_t)wav.sampleRate != this->samplerate) {

@@ -28,12 +28,15 @@
 #include "guiplugin.h"
 #include "util/debug_alloc.h"
 #ifdef _WIN32
+#define DISPLAY_WIN_MSG_STATS 1
+#define DISPLAY_HWND_DRAWS 1
 #include "platform/win/debug_msg_count.h"
+#else
+#define DISPLAY_WIN_MSG_STATS 0
+#define DISPLAY_HWND_DRAWS 0
 #endif
 using namespace std;
 
-#define DISPLAY_HWND_DRAWS 1
-#define DISPLAY_WIN_MSG_STATS 1
 //
 //#if DISPLAY_WIN_MSG_STATS
 //int getNumMsg();

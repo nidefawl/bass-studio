@@ -1,6 +1,9 @@
 if(NOT CMAKE_BUILD_TYPE) 
     set(CMAKE_BUILD_TYPE Debug)
 endif(NOT CMAKE_BUILD_TYPE)
+if(UNIX AND NOT APPLE)
+set(LINUX TRUE)
+endif()
 
 FUNCTION(PREPEND var prefix)
    SET(listVar "")

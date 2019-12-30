@@ -5,6 +5,15 @@
 #include <windows.h>
 #define WINDOW_HANDLE HWND
 #endif
+
+#ifdef __APPLE__
+	#if __x86_64__ || __ppc64__
+	#define WINDOW_HANDLE unsigned long
+	#else
+	#define WINDOW_HANDLE unsigned int
+	#endif
+#endif
+
 #ifdef __linux__
 //TODO: make this Window (XID) (requires include, requires namespaced Cursor or rename)
 #if __x86_64__ || __ppc64__
@@ -12,6 +21,9 @@
 #else
 #define WINDOW_HANDLE unsigned int
 #endif
+#endif
+#ifndef WINDOW_HANDLE
+	#error "Platform not supported"
 #endif
 #include <vector>
 #include <stdint.h>
@@ -25,7 +37,7 @@ class vstplugin;
 struct GLFWwindow;
 namespace vst_window_mgr {
 	void destroyAllVSTWindows();
-	bool isVstWindow(HWND hwnd);
+	bool isVstWindow(WINDOW_HANDLE);
 }
 class vst_window
 {

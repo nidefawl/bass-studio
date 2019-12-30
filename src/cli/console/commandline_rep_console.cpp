@@ -1,8 +1,8 @@
+#ifdef _WIN32
 #include <memory>
 #include <vector>
 #include <string>
 #include <iostream>
-#include <conio.h>
 #include "js/interface/duk_daw_interface.h"
 #include "commandline_rep.h"
 #include "fileio.h"
@@ -10,7 +10,10 @@
 #include "threads.h"
 #include "platform.h"
 #include "js/scripting.h"
+#ifdef _WIN32
+#include <conio.h>
 #include <windows.h>
+#endif
 #define  LINEBUF_SIZE       65536
 
 namespace NU {
@@ -108,3 +111,5 @@ int CommandLineREP_Console::executeCommands() {
 }
 }
 
+
+#endif
