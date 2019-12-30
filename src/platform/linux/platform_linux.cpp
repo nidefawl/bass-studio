@@ -18,6 +18,11 @@ uint64_t getTimeMillis() {
 	gettimeofday(&tp, NULL);
 	return tp.tv_sec * 1000L + tp.tv_usec / 1000L;
 }
+double getTimeMillisd() {
+	struct timeval tp;
+	gettimeofday(&tp, NULL);
+	return tp.tv_sec * 1000.0 + tp.tv_usec / 1000.0;
+}
 
 
 double getTimeHPC()

@@ -1,4 +1,4 @@
-#ifdef _WIN32
+
 #include <stdint.h>
 #include "plugin-base.h"
 #include "../vstsdk-plugin-2.4/audioeffectx.h"
@@ -6,8 +6,11 @@
 #include "str_util.h"
 #include "logging.h"
 #include "fileio.h"
+
+#ifdef _WIN32
 #include <windows.h> //this include SUCKS
 #include <direct.h> //_getcwd
+#endif
 
 #include "plugins/plugin.h"
 #include "plugins/plugincontrol.h"
@@ -218,5 +221,3 @@ void onModuleUnload() {
 }
 #endif //BUILD_EXTERNAL_PLUGIN
 
-
-#endif //_WIN32

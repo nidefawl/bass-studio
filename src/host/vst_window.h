@@ -70,7 +70,7 @@ public:
 	LRESULT CALLBACK proc (UINT message, WPARAM wParam, LPARAM lParam);
 	WINDOW_HANDLE hwnd = NULL;
 #endif
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
 	WINDOW_HANDLE hwnd = 0;
 	GLFWwindow* glfw = NULL;
 #endif
