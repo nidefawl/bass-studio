@@ -21,9 +21,11 @@
 
 
 #include <stdio.h>
+#ifdef __linux__
 #include <gtk/gtk.h>
 #include <gdk/gdk.h>
 #include <gdk/gdkx.h>
+#endif
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
 #include "window.h"
@@ -170,6 +172,10 @@ void findFilesWithExt(
 }
 
 
+#ifdef __linux__
+
+
+
 static void AddFiltersToDialog( GtkWidget *dialog, std::vector<SupportedFileType>& fileTypes )
 {
     for (SupportedFileType& ft : fileTypes)
@@ -305,6 +311,7 @@ int promptUserFilePath(window_base* w, int mode,
 	_out = "";
 	return 0;
 }
+#endif
 
 class FileTimeGetter::Impl {
 	struct stat fStat;
@@ -314,7 +321,11 @@ public:
     	if (!ok) {
     		return 0;
     	}
+#ifdef __APPLE__
+    	return fStat.st_mtimespec.tv_sec * 1000L + fStat.st_mtimespec.tv_nsec / 1000000L;
+#else
     	return fStat.st_mtim.tv_sec * 1000L + fStat.st_mtim.tv_nsec / 1000000L;
+#endif
     }
     Impl(String path) {
     	ok = stat(StringAsCStr(path), &fStat) == 0;
@@ -332,21 +343,21 @@ int64_t FileTimeGetter::getWriteTimeI64() {
 	return _M_Impl->getWriteTimeI64();
 }
 IOFile::IOFile(FileImpl* _impl) : impl(_impl) {
-#error implement me
+#pragma warn implement me
 	this->validHandle = true;
 }
 IOFile::~IOFile() {
-#error implement me
+#pragma warn implement me
 	delete impl;
 }
 void IOFile::write(const char* data, size_t len) {
-#error implement me
+#pragma warn implement me
 }
 void IOFile::flush() {
-#error implement me
+#pragma warn implement me
 }
 
 IOFile* IOFile::openFile(String filename, OpenFileMode mode) {
-#error implement me
+#pragma warn implement me
 }
 #endif
