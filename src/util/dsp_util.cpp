@@ -5,7 +5,6 @@
 #include "audioblock.h"
 #include <stdlib.h>
 #include <stdint.h>
-#include <malloc.h>
 #define _USE_MATH_DEFINES
 #include <cmath>
 #include <memory.h>

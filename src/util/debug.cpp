@@ -177,7 +177,11 @@ void log_format_to_logger(Logger* logger, const char *file, int line, const char
 		replaceBackslashWithForwardslash(relFileName(file), szFileShort, MAX_LEN_FILENAME);
 		String threadName = getCurrentThreadName();
 		const char* szThreadName = StringAsCStr(threadName);
+		#ifdef __APPLE__
+		ret = snprintf(szLogBuf, MAX_LEN_MY_PRINTF - 1, "%s:%s:%d %s: %s", szThreadName, szFileShort, line, func, szLogStr);
+		#else
 		ret = sprintf_s(szLogBuf, MAX_LEN_MY_PRINTF - 1, "%s:%s:%d %s: %s", szThreadName, szFileShort, line, func, szLogStr);
+		#endif
 		if (ret > 0) {
 			dbgassert(ret+1 <= MAX_LEN_MY_PRINTF);
 			szLogStatement = szLogBuf;

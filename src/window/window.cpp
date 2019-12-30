@@ -265,9 +265,11 @@ public:
 #endif
 	}
 	virtual ~appwindow() {
+#ifdef _WIN32
 		if (hwnd) {
 			RemovePropW(hwnd, L"GLFW");
 		}
+#endif
 		if (glfw) {
 			glfwSetWindowUserPointer(glfw, nullptr);
 			glfwDestroyWindow(glfw);
@@ -1113,12 +1115,14 @@ void appwindow_main::createMainWindow(const char* title, int w, int h, void* par
 	if (flags&WINDOW_BORDERLESS_POPUP) {
 		glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER , GL_FALSE); //set global state back to default
 		glfwSetWindowAttrib(glfw, GLFW_FOCUS_ON_SHOW, 0);
+#ifdef _WIN32
 		SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, (__int3264) (LONG_PTR)parent->getHWND());
 		LONG l = GetWindowLong(hwnd, GWL_EXSTYLE);
 		l = l & ~WS_EX_APPWINDOW;
 		l = l | WS_EX_TOOLWINDOW;
 		SetWindowLong(hwnd, GWL_EXSTYLE, l);
 		SetWindowLong(hwnd, GWL_STYLE, WS_CHILD | WS_CLIPSIBLINGS);
+#endif
 	}
 	RenderResources::initResources(nanovgCtxt);
 	MouseCursors::initCursors(); //TODO: call MouseCursors::destroy() on exit of last instance
@@ -1343,7 +1347,7 @@ void closeGlobalLog(); // Forward declare from util/debug.cpp
 
 int startApplication(int argc, char* argv[]) {
 	setCurrentThreadName("mainthread");
-#ifndef NDEBUG
+#if !defined(NDEBUG) && defined(_WIN32)
     _dup2( 1, 2 ); //workaround: redirect stderr to stdout so stderr is visible when using gdb on eclipse (bug)
 #endif
 #ifdef _WIN32
@@ -1409,7 +1413,9 @@ int startApplication(int argc, char* argv[]) {
 
 	std::unique_ptr<appwindow_main> mainWindow = std::make_unique<appwindow_main>(nullptr, ctrl);
 	mainWindow->createMainWindow("main window", 1280, 720, nullptr);
+#ifdef _WIN32
     setMainHWND(mainWindow->getHWND());
+#endif
 	mainWindow->showWindow();
 	if (centerScreenIdx >= 0) {
 		mainWindow->centerOnScreen(centerScreenIdx);
@@ -1612,7 +1618,9 @@ public:
 			setAppWindowHints();
 
 			createPluginWindow("plugin-window", _rect.right-_rect.left, _rect.bottom-_rect.top, ptr);
+#ifdef _WIN32
 			dbgassert(hwnd);
+#endif
 			dbgassert(glfw);
 			dbgassert(nanovgCtxt);
 			if (!ctrlShared->init(this, this->nanovgCtxt)) {
@@ -1656,13 +1664,15 @@ public:
 
 	virtual void guiOpen() {
 		setValid();
-		dbgassert(hwnd);
 		dbgassert(glfw);
 		dbgassert(effect);
 		dbgassert(ctrlShared.get());
+#ifdef _WIN32
+		dbgassert(hwnd);
 	    RECT area;
 	    GetClientRect(hwnd, &area);
 	    onWindowSizeChanged(area.right-area.left, area.bottom-area.top);
+#endif
 	    ctrlShared->onGuiOpen(effect);
 	}
 	virtual void guiClose() {
@@ -1675,7 +1685,9 @@ public:
 			my_printf("glfwDestroyWindow %012X\n", (int64_t)glfw);
 			glfwDestroyWindow(glfw);
 			glfw = nullptr;
+#ifdef _WIN32
 			hwnd = nullptr;
+#endif
 		}
 //		wglMakeCurrent(NULL, NULL);
 	}

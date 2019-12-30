@@ -285,8 +285,9 @@ bool setFlag(int& _out, int flag, bool state) {
 	}
 	return curState != state;
 }
-
+#ifdef _WIN32
 String getModuleName(HMODULE);
+#endif
 class vsthost::ModuleManager {
 public:
 	ModuleManager() {

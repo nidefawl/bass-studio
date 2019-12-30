@@ -216,6 +216,9 @@ public:
 	void startProcess(const String& binary, const String& params, const String& workingDir, const Env& env, bool pipedOutput) {
 		started = true;
 		isrunning = true;
+		#ifndef _WIN32
+		dbgassert(0&&"Not implemented on this platform");
+		#else
 		this->lastCmd = StringFormat("%s> %s %s", StringAsCStr(workingDir),  StringAsCStr(binary), StringAsCStr(params));
 		t = std::thread([this, argbinary=binary, argparams=params, argwd=workingDir, argenv=env, argpipe=pipedOutput]() {
 			setCurrentThreadName("childprocessthread");
@@ -251,6 +254,7 @@ public:
 			log_printf("END OF THREAD\n", 0);
 			isrunning = false;
 		});
+		#endif
 
 	}
 	bool isRunning() {

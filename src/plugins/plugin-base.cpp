@@ -1,3 +1,4 @@
+#ifdef _WIN32
 #include <stdint.h>
 #include "plugin-base.h"
 #include "../vstsdk-plugin-2.4/audioeffectx.h"
@@ -218,3 +219,4 @@ void onModuleUnload() {
 #endif //BUILD_EXTERNAL_PLUGIN
 
 
+#endif //_WIN32
