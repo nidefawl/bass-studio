@@ -1,17 +1,27 @@
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
 #include "../../vst_window.h"
 #include "../../vst_host.h"
 #include "../../plugin/vst_plugin.h"
 #include <vector>
 #include <GLFW/glfw3.h>
+#ifdef __linux__
+#define GLFW_EXPOSE_NATIVE_X11
+#endif
+#ifdef __APPLE__
+#define GLFW_EXPOSE_NATIVE_COCOA
+#endif
+#include <GLFW/glfw3native.h>
 
+GLFWwindow* getTopLevelGlfwWindow();
+
+#ifdef __linux__
 struct Display;
 void sendExposeEvent(GLFWwindow* glfw);
-GLFWwindow* getTopLevelGlfwWindow();
 extern "C" {
 WINDOW_HANDLE glfwGetX11Window(GLFWwindow* window);
 Display* glfwGetX11Display();
 }
+#endif
 
 namespace {
 	static std::vector<vst_window*> vst_window_list;
@@ -37,7 +47,7 @@ namespace {
 }
 
 
-vst_window* vst_window::make (vstplugin* plugin, const String& name, Size size, bool resizeable)
+vst_window* vst_window::make (vstplugin* plugin, const String& name, ivec2 size, bool resizeable)
 {
 	vst_window* vstWindow = new vst_window();
 	vstWindow->init(plugin, name, size, resizeable);
@@ -58,16 +68,23 @@ std::vector<vst_window*>& vst_window::getWindows ()
 }
 
 //------------------------------------------------------------------------
-bool vst_window::init(vstplugin* plugin, const String& name, Size size, bool resizeable)
+bool vst_window::init(vstplugin* plugin, const String& name, ivec2 size, bool resizeable)
 {
 	this->plugin = plugin;
 
 	GLFWwindow* window = getTopLevelGlfwWindow();
 	glfwDefaultWindowHints();
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	glfw = glfwCreateWindow(size.width, size.height, StringAsCStr(name), NULL, NULL);
+	glfw = glfwCreateWindow(size.x, size.y, StringAsCStr(name), NULL, NULL);
+	#ifdef __linux__
 	WINDOW_HANDLE x11Window = glfwGetX11Window(glfw);
 	hwnd = x11Window;
+	#endif
+	#ifdef __APPLE__
+	WINDOW_HANDLE x11Window = *reinterpret_cast<int32_t*>(glfwGetCocoaWindow(glfw));
+	hwnd = x11Window;
+	#endif
+	
 	//create native window
 	addWindow(this);
 	return hwnd != 0;
@@ -99,28 +116,30 @@ void vst_window::show()
 }
 
 //------------------------------------------------------------------------
-Size vst_window::getContentSize ()
+ivec2 vst_window::getContentSize ()
 {
-	Size s;
-	glfwGetWindowSize(glfw, &s.width, &s.height);
+	ivec2 s;
+	glfwGetWindowSize(glfw, &s.x, &s.y);
 //	RECT r;
 //	GetClientRect (hwnd, &r);
 //	return {r.right - r.left, r.bottom - r.top};
-	return {0, 0};
+	return s;//{0, 0};
 }
 
 
 
 void vst_window::updateWindow() {
 //	InvalidateRgn(hwnd, NULL, TRUE);
+#ifdef __linux__
 	sendExposeEvent(glfw);
+#endif
 }
 //------------------------------------------------------------------------
-void vst_window::resize (Size newSize)
+void vst_window::resize (ivec2 newSize)
 {
 	if (getContentSize () == newSize)
 		return;
-	glfwSetWindowSize(glfw, newSize.width, newSize.height);
+	glfwSetWindowSize(glfw, newSize.x, newSize.y);
 //	WINDOWINFO windowInfo;
 //	GetWindowInfo (hwnd, &windowInfo);
 //	RECT clientRect {};
@@ -137,4 +156,7 @@ WINDOW_HANDLE vst_window::getHWND () const
 	return hwnd;
 }
 
+void vst_window::captureWindowFrame() {
+	dbgassert(0&&"Not implemented on this platform");
+}
 #endif

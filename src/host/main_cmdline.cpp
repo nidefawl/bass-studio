@@ -30,9 +30,9 @@
 #include "midi_host.h"
 #include "track.h"
 #include "track_impl.h"
-#include "../platform/win/platform_win.h"
 
 #ifdef _WIN32
+#include "../platform/win/platform_win.h"
 #include <windows.h>
 #endif
 #ifdef __linux__
@@ -98,6 +98,7 @@ static  void on_unexpected1() {
 	logStackTrace();
 //	exit(1); // required on mingw (at least)
 }
+#ifdef _WIN32
 static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     switch(msg)
@@ -111,6 +112,7 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 
     return DefWindowProc(hwnd, msg, wParam, lParam);
 }
+#endif
 
 
 extern volatile bool fataError;
@@ -119,6 +121,7 @@ int main(int argc, char* argv[]) {
 //	vsthost::assignMasterCallback(audiohost.get());
 //    daw_tls::tlsinstance& tls = daw_tls::getTls();
 //    tls.host = audiohost.get();
+#ifdef _WIN32
     MSG msg;
     WNDCLASS wc;
 
@@ -138,7 +141,6 @@ int main(int argc, char* argv[]) {
 	for (int i = 0; i < argc; i++) {
 		LOG("argv[%d] %s", i, argv[i]);
 	}
-#ifdef _WIN32
     if (!SetConsoleCtrlHandler((PHANDLER_ROUTINE)ConsoleHandler,TRUE)) {
         fprintf(stderr, "Unable to install handler!\n");
         return EXIT_FAILURE;
@@ -196,6 +198,7 @@ int main(int argc, char* argv[]) {
 		midihost::getInstance()->startMidi();
     	plugindb.openDatabase();
 
+#ifdef _WIN32
         HWND hwnd = CreateWindow(wc.lpszClassName, "Window",
                     WS_OVERLAPPEDWINDOW | WS_VISIBLE,
                     100, 100, 350, 250, NULL, NULL, wc.hInstance, NULL);
@@ -208,6 +211,7 @@ int main(int argc, char* argv[]) {
 //        {
 //            DispatchMessage(&msg);
 //        }
+#endif
 
 
     	LOG("START");
@@ -408,6 +412,7 @@ int main(int argc, char* argv[]) {
 //					}
 				}
 
+#ifdef _WIN32
 				DWORD timeout = 5;
 				MsgWaitForMultipleObjects(0, NULL, FALSE, timeout, QS_ALLEVENTS);
 			    MSG msg;
@@ -443,6 +448,7 @@ int main(int argc, char* argv[]) {
 			        }
 			    }
 //    			threadSleep(10);
+#endif
     		}
 //    		drwav_close(pWav);
 //    		file->flush();

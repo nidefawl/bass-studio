@@ -1363,7 +1363,6 @@ int startApplication(int argc, char* argv[]) {
 	NU::CONSOLE::CommandLineREP_TCP cli;
 	NU::CONSOLE::ConsoleThread threadCommandLine(cli);
 #endif
-	setExceptionHandler();
 	try {
 	int centerScreenIdx = -1;
 	for (int i = 0; i < argc; i++) {
