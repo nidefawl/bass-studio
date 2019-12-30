@@ -1,4 +1,4 @@
-#ifdef __linux__
+#if defined(__linux__) || defined (__APPLE__)
 #include "hires_timer.h"
 #include "exceptions.h"
 #include <time.h>
