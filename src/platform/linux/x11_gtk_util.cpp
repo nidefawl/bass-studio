@@ -1,4 +1,4 @@
-#ifdef __linux__
+#if defined(__linux__) || defined (__APPLE__)
 #define GLFW_EXPOSE_NATIVE_X11 1
 #include <X11/Xlib.h>
 #include <X11/extensions/Xrandr.h>
