@@ -113,7 +113,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 		ivec2 local = toContainerSpace(trackEditorLocal);
 		scaled_grid& grid = view->grid;
 		tick_t tickAt = grid.screenToTick(trackEditorLocal.x);
-		Cursor& cursor = view->cursor;
+		DAW::Cursor& cursor = view->cursor;
 		dragged = hitTest(local);
 		if (dragged.mode != dragmode::drag_node && cursor.containsSubtrack(this->m_track->idx, this->idx, tickAt)) {
 			int32_t steps = at->getQuantizationSteps(param);

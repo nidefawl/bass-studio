@@ -37,7 +37,7 @@ void drawSeperator(NVGcontext* vg, const guitheme_t* theme, int32_t seperatorY, 
 class guitrack_editor : public guictr_base {
 
 public:
-	Cursor& cursor;
+	DAW::Cursor& cursor;
 	project_t& project;
 	track_vector& tracksVisibleFlat;
 	scaled_grid& grid;
@@ -53,7 +53,7 @@ public:
 	trackstate_t resizePreModifyState;
 	bool selectionMoved = false;
 
-	guitrack_editor(Cursor& _cursor, project_t& _project, track_vector& _tracksVisibleFlat, scaled_grid& _grid, dragdrop_midifile& _dragdropclip)
+	guitrack_editor(DAW::Cursor& _cursor, project_t& _project, track_vector& _tracksVisibleFlat, scaled_grid& _grid, dragdrop_midifile& _dragdropclip)
 		: guictr_base(), 
 		cursor(_cursor),
 		project(_project),
@@ -432,7 +432,7 @@ protected:
 	int32_t contentViewSize = 0;
 	track_vector tracksVisibleFlat;
 public:
-	guictr_tracks(Cursor& _cursor, project_t& _project, scaled_grid& _grid, dragdrop_midifile& _dragdropclip)
+	guictr_tracks(DAW::Cursor& _cursor, project_t& _project, scaled_grid& _grid, dragdrop_midifile& _dragdropclip)
 		: guictr_base(),
 		grid(_grid),
 		project(_project),

@@ -235,7 +235,7 @@ public:
 //	Splitter splitterList;
 	Splitter splitterCenter;
 	Splitter splitterRight;
-	DawViewContainers(ngui::MenuBar& menubar, Cursor& _cursor, project_t& project, scaled_grid& grid, clip_view& clipView, dragdrop_midifile& dragdropclip)
+	DawViewContainers(ngui::MenuBar& menubar, DAW::Cursor& _cursor, project_t& project, scaled_grid& grid, clip_view& clipView, dragdrop_midifile& dragdropclip)
 	  : noteeditor(clipView),
 	  ctr_menu(menubar),
 	  ctr_tempo(project),

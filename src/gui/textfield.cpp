@@ -46,7 +46,7 @@ gui_textfield::gui_textfield()
 
 void gui_textfield::setEditable(bool editable) {
     mEditable = editable;
-//    setCursor(editable ? Cursor::IBeam : Cursor::Arrow);
+//    setCursor(editable ? DAW::Cursor::IBeam : DAW::Cursor::Arrow);
 }
 
 

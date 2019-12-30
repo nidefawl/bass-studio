@@ -119,7 +119,7 @@ public:
 protected:
 	gui_scrollbar scrollbar;
 public:
-	guictr_nodes(Cursor& _cursor, project_t& _project, dragdrop_midifile& _dragdropclip);
+	guictr_nodes(DAW::Cursor& _cursor, project_t& _project, dragdrop_midifile& _dragdropclip);
 	~guictr_nodes() {
 		remove(&graph);
 		remove(&scrollbar);

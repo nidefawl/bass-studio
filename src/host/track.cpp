@@ -477,7 +477,7 @@ void track_impl_t::updateStoreLoadSubtracks() {
 		atl.clear();
 		saveSubtrackLayout(atl);
 		MainCtrl::getGuiTrackCtr()->removeAllSubtracks(track);
-		Cursor& cursor = project_controller_t::get()->cursor;
+		DAW::Cursor& cursor = project_controller_t::get()->cursor;
 		if (cursor.inSubTrackAny(track->idx)) {
 			fixCursorSubRange(cursor, 0);
 		}

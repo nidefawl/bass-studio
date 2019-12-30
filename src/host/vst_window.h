@@ -15,7 +15,7 @@
 #endif
 
 #ifdef __linux__
-//TODO: make this Window (XID) (requires include, requires namespaced Cursor or rename)
+//TODO: make this Window (XID) (requires include, requires namespaced DAW::Cursor or rename)
 #if __x86_64__ || __ppc64__
 #define WINDOW_HANDLE unsigned long
 #else

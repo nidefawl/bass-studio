@@ -999,7 +999,7 @@ void gui_clipcontent::setGlobalSelectionFromClipSelection() {
 	if (!clip) {
 		return;
 	}
-	Cursor& cursor = MainCtrl::get()->cursor;
+	DAW::Cursor& cursor = MainCtrl::get()->cursor;
 	cursor.cursorPos = view.cursor.start + clip->start() - clip->offsetStart;
 	cursor.selRange = view.cursor.end - view.cursor.start;
 }

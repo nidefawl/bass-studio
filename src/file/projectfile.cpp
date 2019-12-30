@@ -305,6 +305,7 @@ void serialize(Archive & archive, project_layout_t & m)
 			make_nvp("scrollOffsetX", m.scrollOffsetX));
 };
 
+namespace DAW {
 template<class Archive>
 void serialize(Archive & archive, Cursor & m)
 {
@@ -315,6 +316,8 @@ void serialize(Archive & archive, Cursor & m)
 			make_nvp("trackrange", m.selTrackRange),
 			make_nvp("subtrackrange", m.selSubTrackRange));
 };
+}
+
 template<class Archive>
 void serialize(Archive & archive, samplefile_index_t & m)
 {

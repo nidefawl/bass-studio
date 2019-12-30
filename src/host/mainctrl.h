@@ -67,7 +67,7 @@ enum clip_dragtype_t {
 struct clip_dragaction {
 	clip_dragtype_t dragtype = DRAG_NONE;
 	std::shared_ptr<clip_clipboard> clipboard;
-	Cursor cursorBegin;
+	DAW::Cursor cursorBegin;
 };
 struct dragdrop_midifile {
 	std::shared_ptr<clip_clipboard> clipboard;
@@ -339,10 +339,10 @@ public:
 	void updateVisibleTrackContents();
 	guitrack_editor& getTrackEditor();
 	void setStatusText(String s);
-	std::shared_ptr<clip_clipboard> copySelection(const Cursor& cursor);
+	std::shared_ptr<clip_clipboard> copySelection(const DAW::Cursor& cursor);
 	void pasteClipboard(clip_clipboard* c, int32_t trackOffset, tick_t tickOffset);
-	void pasteClipboard(clip_clipboard* c, Cursor& cursor);
-	void cutSelection(const Cursor& cursor);
+	void pasteClipboard(clip_clipboard* c, DAW::Cursor& cursor);
+	void cutSelection(const DAW::Cursor& cursor);
 	void cutIntersecting(track_t* tr, clip_t* mask);
 	void cutIntersecting(track_t* tr, tick_t tickBegin, tick_t tickEnd);
 //	void copyClipsInRange(trackcontents_t* in, trackcontents_t* out, int32_t srcPos, int32_t dstPos, int32_t len);

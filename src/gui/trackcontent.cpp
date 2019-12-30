@@ -347,7 +347,7 @@ public:
 		scaled_grid& grid = ctrl->getGrid();
 		if (_id == 21) {
 
-			Cursor cursor = MainCtrl::get()->cursor.getLeftAligned();
+			DAW::Cursor cursor = MainCtrl::get()->cursor.getLeftAligned();
 			track_t* tr = ctrl->getTrackId(this->trackid);
 			if (tr) {
 			clip_t* clip = new clip_t;
@@ -590,7 +590,7 @@ public:
 
 			}
 		} else if (_id == 20) {
-			Cursor cursor = MainCtrl::get()->cursor.getLeftAligned();
+			DAW::Cursor cursor = MainCtrl::get()->cursor.getLeftAligned();
 			if (cursor.selRange) {
 				track_t* tr = ctrl->getTrackId(this->trackid);
 				clip_t* cl = nullptr;

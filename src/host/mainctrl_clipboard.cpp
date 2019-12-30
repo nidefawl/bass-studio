@@ -93,7 +93,7 @@ void copyClipsInRange(trackdata_midi_t& in, track_clipboard_t& out, int32_t srcP
 //	}
 //	out->sortClips();
 }
-void MainCtrl::pasteClipboard(clip_clipboard* clipboard, Cursor& cursor) {
+void MainCtrl::pasteClipboard(clip_clipboard* clipboard, DAW::Cursor& cursor) {
 	if (clipboard->type == clip_clipboard::ClipboardFull) {
 		if (cursor.isSubtrackSelection())
 			return;
@@ -148,7 +148,7 @@ void MainCtrl::pasteClipboard(clip_clipboard* clipboard, int32_t track, tick_t t
 	}
 
 }
-shared_ptr<clip_clipboard> MainCtrl::copySelection(const Cursor& _cursor) {
+shared_ptr<clip_clipboard> MainCtrl::copySelection(const DAW::Cursor& _cursor) {
 	int32_t tickBegin = _cursor.getTickBegin();
 	int32_t tickEnd = _cursor.getTickEnd();
 	int32_t trackBegin = _cursor.getTrackBegin();
@@ -248,7 +248,7 @@ void MainCtrl::cutIntersecting(track_t* tr, clip_t* mask) {
 	tick_t tickEnd = mask->end();
 	cutIntersecting(tr, tickBegin, tickEnd);
 }
-void MainCtrl::cutSelection(const Cursor& _cursor) {
+void MainCtrl::cutSelection(const DAW::Cursor& _cursor) {
 	int32_t tickBegin = _cursor.getTickBegin();
 	int32_t tickEnd = _cursor.getTickEnd();
 	int32_t trackBegin = _cursor.getTrackBegin();

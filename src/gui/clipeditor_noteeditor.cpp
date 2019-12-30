@@ -225,7 +225,7 @@ void guictr_cliphandles::render(NVGcontext* vg) {
 	nvgRect(vg, -2, heightLoopInidicator * 2, cs.x + 2, heightSelIndicator);
 	nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_DRKER2));
 	nvgFill(vg);
-	Cursor& c = ctrl->cursor;
+	DAW::Cursor& c = ctrl->cursor;
 	if (view.clip()) {
 		const NVGcolor colLI = GUI_COLOR(120);
 		const NVGcolor colLIStroke = theme->getFrameColorOutline();

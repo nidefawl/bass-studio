@@ -1,6 +1,7 @@
 #pragma once
 #include "math/seq_math.h"
 #include "seq_time.h"
+namespace DAW {
 
 class Cursor {
 public:
@@ -112,7 +113,9 @@ public:
 		return tmp;
 	}
 };
-inline void fixCursorSubRange(Cursor& cursor, int32_t size) {
+
+}
+inline void fixCursorSubRange(DAW::Cursor& cursor, int32_t size) {
 	if (!size) {
 		cursor.cursorSubTrack = -1;
 		cursor.selSubTrackRange = 0;
@@ -134,7 +137,7 @@ inline void fixCursorSubRange(Cursor& cursor, int32_t size) {
 		cursor.cursorSubTrack--;
 	}
 }
-inline void fixCursorTrackRange(Cursor& cursor, int32_t size) {
+inline void fixCursorTrackRange(DAW::Cursor& cursor, int32_t size) {
 	if (!size) {
 		cursor.setTrack(-1);
 		cursor.selTrackRange = 0;

@@ -477,7 +477,7 @@ void gui_graph::setList(std::vector<gui_graph_entry*> _newList) {
 }
 void gui_graph::onTick(AppCtrl* appctrl) {
 }
-guictr_nodes::guictr_nodes(Cursor& _cursor, project_t& _project, dragdrop_midifile& _dragdropclip)
+guictr_nodes::guictr_nodes(DAW::Cursor& _cursor, project_t& _project, dragdrop_midifile& _dragdropclip)
 	: guictr_base(),
 	  impl(new guictr_nodes_impl),
 	project(_project),

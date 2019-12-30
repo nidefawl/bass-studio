@@ -1223,7 +1223,7 @@ public:
 	}
 	void buttonClicked(guibase* button) override {
 		if (button == &removeLane) {
-			Cursor& cursor = MainCtrl::get()->cursor;
+			DAW::Cursor& cursor = MainCtrl::get()->cursor;
 			int32_t laneIdx = this->subtrack->idx;
 			if (cursor.inSubTrack(m_track->idx, laneIdx)) {
 				fixCursorSubRange(cursor, m_track->subtracks.size()-1);

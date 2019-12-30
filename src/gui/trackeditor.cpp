@@ -335,7 +335,7 @@ void guitrack_editor::trackViewDragBegin(guitrack_editor* view, MouseEvent& evt)
 //		MainCtrl::get()->setSelectedTrack(trSelected);
 		MainCtrl::get()->setEditClip(NULL);
 		if (evt.guiDragged == this) { // cursor move / range select
-			Cursor& c = MainCtrl::get()->cursor;
+			DAW::Cursor& c = MainCtrl::get()->cursor;
 			c.selRange = 0;
 			c.selTrackRange = 0;
 			c.cursorPos = tick;
@@ -348,7 +348,7 @@ void guitrack_editor::trackViewDragBegin(guitrack_editor* view, MouseEvent& evt)
 
 void guitrack_editor::trackViewDragMove(guitrack_editor* view, MouseEvent& evt) {
 	if (trSelected != NULL) {
-		Cursor& c = MainCtrl::get()->cursor;
+		DAW::Cursor& c = MainCtrl::get()->cursor;
 		ivec2 local = evt.relMousepos;
 		track_t* trNxtSelected = NULL;
 		gui_track_subtrack* subTr = getSubTrackFromMouse(*this, local, true);
@@ -407,7 +407,7 @@ void guitrack_editor::dragSelectionBegin(gui_clip* gClip, MouseEvent& evt) {
 	selectionMoved = false;
 	ivec2 local = evt.relMousepos;
 	tick_t tickExact = grid.screenToTickSnap(local.x, SNAP_OFF);
-	Cursor& cursor = MainCtrl::get()->cursor;
+	DAW::Cursor& cursor = MainCtrl::get()->cursor;
 	track_t* track = gClip->m_track;
 	clip_t* clicked = gClip->m_clip;
 //		ghostCopy = new gui_clip(clip->m_clip->clone());
@@ -518,8 +518,8 @@ void guitrack_editor::dragClipboardMove(ivec2 local, int kbmods) {
 	if (action.dragtype) {
 		track_t *trNxtSelected = getTrackFromMouse(*this, project, local, true);
 
-		Cursor& cursor = MainCtrl::get()->cursor;
-		const Cursor& cursorBegin = action.cursorBegin;
+		DAW::Cursor& cursor = MainCtrl::get()->cursor;
+		const DAW::Cursor& cursorBegin = action.cursorBegin;
 		tick_t dragMousePos = grid.screenToTick(local.x);
 		tick_t dragMouseTicks = dragMousePos - dragStartTick;
 
@@ -554,8 +554,8 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
 	if (action.dragtype) {
 		bool showclip = true;
 		if (action.dragtype == DRAG_CLIPS_MOVE || action.dragtype == DRAG_CLIPS_COPY) {
-			const Cursor& cursor = MainCtrl::get()->cursor;
-			const Cursor& cursorBegin = action.cursorBegin;
+			const DAW::Cursor& cursor = MainCtrl::get()->cursor;
+			const DAW::Cursor& cursorBegin = action.cursorBegin;
 			selectionMoved |= cursorBegin.cursorPos != cursor.cursorPos;
 			selectionMoved |= cursorBegin.cursorTrack != cursor.cursorTrack;
 			ivec2 local = evt.relMousepos;
@@ -565,7 +565,7 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
 			}
 			if (selectionMoved && trNxtSelected) {
 				ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-				Cursor target = cursor + cursorBegin;
+				DAW::Cursor target = cursor + cursorBegin;
 				int32_t trackOffset = dragStartTrackIdx - cursorBegin.cursorTrack;
 				tick_t dstPos = cursor.cursorPos;
 				int32_t dstTrack = trNxtSelected->idx;
@@ -618,7 +618,7 @@ bool guitrack_editor::clipDropBegin(dragdrop_midifile& clip, ivec2 mousepos, int
 	tick_t tickExact = grid.screenToTickSnap(mousepos.x, SNAP_OFF);
 	track_t *trackClicked = getTrackFromMouse(*this, project, mousepos, false);
 	if (trackClicked != NULL) {
-		Cursor dragCursor;
+		DAW::Cursor dragCursor;
 		dragCursor.selRange = 0;
 		dragCursor.selTrackRange = 0;
 		dragCursor.cursorPos = tick;
@@ -676,7 +676,7 @@ void guitrack_editor::prerender(NVGcontext* vg) {
 	}
 	if (action.dragtype) {
 
-		Cursor& cursor = MainCtrl::get()->cursor;
+		DAW::Cursor& cursor = MainCtrl::get()->cursor;
 		clip_clipboard* _clipboard = action.clipboard.get();
 		for (int i = 0; _clipboard && i <= _clipboard->selTrackRange; i++) {
 			track_clipboard_t* trClipboard = _clipboard->tracks[i].get();
@@ -744,7 +744,7 @@ void guitrack_editor::renderClip(NVGcontext* vg, track_t* tr, const clip_t* cl, 
 }
 
 void guitrack_editor::renderAction(NVGcontext* vg, clip_dragaction& action) {
-	Cursor& cursor = MainCtrl::get()->cursor;
+	DAW::Cursor& cursor = MainCtrl::get()->cursor;
 	clip_clipboard* _clipboard = action.clipboard.get();
 	for (int i = 0; _clipboard && i <= _clipboard->selTrackRange; i++) {
 		track_clipboard_t* trClipboard = _clipboard->tracks[i].get();
@@ -865,7 +865,7 @@ void guitrack_editor::render(NVGcontext* vg) {
 //		nvgRestore(vg);
 //	}
 
-	Cursor& c = MainCtrl::get()->cursor;
+	DAW::Cursor& c = MainCtrl::get()->cursor;
 	trackallcontainer_t& trackList = project.trackList;
 	if (trackList.validTrackIdx(c.cursorTrack)) {
 		track_t* tr = trackList[c.cursorTrack];

@@ -162,7 +162,7 @@ struct track_snapshot_t;
 struct trackstate_t {
 //	track_vector tracks;
 	std::vector<track_snapshot_t*> tracks;
-	Cursor cursor;
+	DAW::Cursor cursor;
 	trackstate_t copy();
 	trackstate_t() = default;
 	trackstate_t(const trackstate_t& ref) = delete;
@@ -569,7 +569,7 @@ public:
 	bool validTrackTypeIdx(int32_t type, int32_t idx) const;
 	track_t* getTrackTypeIdx(int32_t type, int32_t idx);
 
-	void getTracks(const Cursor& cursor, std::vector<track_t*>& _out) const {
+	void getTracks(const DAW::Cursor& cursor, std::vector<track_t*>& _out) const {
 		for (track_t* t : trackAllCtr) {
 			if (cursor.inTrackRange(t->idx)) {
 				_out.push_back(t);
