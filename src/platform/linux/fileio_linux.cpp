@@ -359,6 +359,8 @@ void IOFile::flush() {
 
 IOFile* IOFile::openFile(String filename, OpenFileMode mode) {
 #pragma warn implement me
+
+return nullptr;
 }
 #ifdef __linux__
 
