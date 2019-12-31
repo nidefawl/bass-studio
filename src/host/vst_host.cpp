@@ -1205,16 +1205,14 @@ void vsthost::onTrackLayoutChange() {
 void vsthost::setOutput(audiohost* audioHost) {
 	this->audioHost = audioHost;
 	sampleformat_t sampleFormatExternal;
-	if (audioHost) {
-		sampleFormatExternal = { audioHost->lSampleRate, audioHost->lBlockSize, sampleformat_bits_t::FLOAT_32 };
-	} else {
-		sampleFormatExternal = { 48000, 512, sampleformat_bits_t::FLOAT_32 };
-	}
+	samplerate_t extSampleRate = audioHost && audioHost->lSampleRate > 0 ? audioHost->lSampleRate : 48000;
+	int32_t extBlockSize = audioHost && audioHost->lBlockSize > 0 ? audioHost->lBlockSize : 512;
+	sampleFormatExternal = { extSampleRate, extBlockSize, sampleformat_bits_t::FLOAT_32 };
 	
 //	sampleformat_t sampleFormat = {sampleFormatExternal.sampleRate, sampleFormatExternal.blockSize, sampleformat_bits_t::FLOAT_32};
 //	sampleformat_t sampleFormat = {audioHost->lSampleRate*2, sampleFormatExternal.blockSize, sampleformat_bits_t::FLOAT_32};
 	//sampleformat_t sampleFormat = { 96000, sampleFormatExternal.blockSize, sampleformat_bits_t::FLOAT_32};
-	sampleformat_t sampleFormat = {audioHost->lSampleRate, sampleFormatExternal.blockSize, sampleformat_bits_t::FLOAT_32};
+	sampleformat_t sampleFormat = {extSampleRate, sampleFormatExternal.blockSize, sampleformat_bits_t::FLOAT_32};
 
 	oversample_config_t config;
 	config.inputSampleRate = sampleFormat.sampleRate;
