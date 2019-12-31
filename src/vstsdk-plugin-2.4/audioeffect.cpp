@@ -436,7 +436,7 @@ void AudioEffect::ms2string (float samples, char* text, VstInt32 maxLen)
 */
 void AudioEffect::float2string (float value, char* text, VstInt32 maxLen)
 {
-	#if __APPLE__
+	#ifndef _WIN32
 	snprintf(text, maxLen, "%.2f", value);
 	#else
 	sprintf_s(text, maxLen, "%.2f", value);

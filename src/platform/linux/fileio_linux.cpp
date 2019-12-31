@@ -360,4 +360,17 @@ void IOFile::flush() {
 IOFile* IOFile::openFile(String filename, OpenFileMode mode) {
 #pragma warn implement me
 }
+#ifdef __linux__
+
+String cwdPath = "";
+String toCWDPath(String relPath) {
+	return cwdPath + relPath;
+}
+void setCWDPath(String cwd) {
+	if (cwd.length() && (!StrEndsWith(cwd, "/") && !StrEndsWith(cwd, "\\")))
+		cwd += "/";
+	cwdPath = cwd;
+}
+
+#endif
 #endif

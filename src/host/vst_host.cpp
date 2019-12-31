@@ -1765,7 +1765,7 @@ vstpluginloadres vsthost::loadPlugin(String filepath, int32_t globalId) {
 		return vstpluginloadres(ret, NULL);
 	}
 
-	aeffect = fn(audioMaster);
+	aeffect = fn(masterCallBackSlot);
 	if (!aeffect) {
 		dlclose(hmodule);
 		return vstpluginloadres(-5, NULL);

@@ -15,11 +15,11 @@
 GLFWwindow* getTopLevelGlfwWindow();
 
 #ifdef __linux__
-struct Display;
+//struct Display;
 void sendExposeEvent(GLFWwindow* glfw);
 extern "C" {
 WINDOW_HANDLE glfwGetX11Window(GLFWwindow* window);
-Display* glfwGetX11Display();
+//Display* glfwGetX11Display();
 }
 #endif
 
