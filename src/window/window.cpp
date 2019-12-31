@@ -4,7 +4,7 @@
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
 #endif
-#define NANOVG_GL3 1
+#define NANOVG_GL2 1
 #include <nanovg.h>
 #include <nanovg_gl.h>
 #include <nanovg_gl_utils.h>
@@ -135,12 +135,12 @@ static void glfw_runtime_error_callback(int error, const char* description) {
 }
 static void setAppWindowHints() {
 	glfwDefaultWindowHints();
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
 	glfwWindowHint(GLFW_STENCIL_BITS, 8);
 	glfwWindowHint(GLFW_DEPTH_BITS, 24);
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_API);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
 }
 static void showerror(const char* description) {
@@ -237,7 +237,8 @@ private:
 	}
 	void initContext() {
 //		glfwSwapInterval(-1);
-		nanovgCtxt = nvgCreateGL3(NVG_ANTIALIAS | NVG_DEBUG);
+		// nanovgCtxt = nvgCreateGL3(NVG_ANTIALIAS | NVG_DEBUG);
+		nanovgCtxt = nvgCreateGL2(NVG_ANTIALIAS | NVG_DEBUG);
 		if (!nanovgCtxt) {
 			throw appexception("Couldn't initialize nanovg");
 		}
@@ -365,7 +366,8 @@ public:
 	}
 	void destroyGL() {
 		if (nanovgCtxt) {
-			nvgDeleteGL3(nanovgCtxt);
+			// nvgDeleteGL3(nanovgCtxt);
+			nvgDeleteGL2(nanovgCtxt);
 			nanovgCtxt = nullptr;
 		}
 	}
