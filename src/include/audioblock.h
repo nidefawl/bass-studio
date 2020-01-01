@@ -58,7 +58,7 @@ struct AudioBlock {
 		: channels(_channels), samples(0), buf(new float*[_channels]), allocType(alloc_type::internal), debug(_bIsDebug)
 	{
 		instanceCount++;
-		dbgassert(channels);
+//		dbgassert(channels);
 		for (uint32_t i = 0; i < _channels; i++) {
 			buf[i] = NULL;
 		}
@@ -68,13 +68,13 @@ struct AudioBlock {
 		: channels(_channels), samples(_samples), buf(buf), allocType(alloc_type::external_array)
 	{
 		instanceCount++;
-		dbgassert(channels);
+//		dbgassert(channels);
 	};
 	explicit AudioBlock(const std::vector<float*>& vecChannels, uint32_t _samples)
 		: channels(vecChannels.size()),  samples(_samples), buf(new float*[vecChannels.size()]), allocType(alloc_type::external_channels_only)
 	{
 		instanceCount++;
-		dbgassert(channels);
+//		dbgassert(channels);
 		memcpy(buf, vecChannels.data(), vecChannels.size()*sizeof(decltype(vecChannels[0])));
 		float** pBuf = buf;
 		for (float* channel : vecChannels) {
@@ -85,7 +85,7 @@ struct AudioBlock {
 		: channels(numChannels), samples(numSamples), buf(new float*[numChannels]), allocType(alloc_type::external_channels_only)
 	{
 		instanceCount++;
-		dbgassert(channels);
+//		dbgassert(channels);
 		dbgassert(samples);
 		for (uint32_t i = 0; i < channels; i++) {
 			dbgassert(src.buf[i]);
