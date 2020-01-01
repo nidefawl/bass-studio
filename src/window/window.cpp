@@ -321,7 +321,7 @@ public:
 		}
 #endif
 	}
-	void onRefresh()
+	virtual void onRefresh()
 	{
 		PREVENT_REENTRANT("REENTRANT IN RENDER MAIN")
 		double delay = getSince(secondsLastDraw);
@@ -642,6 +642,14 @@ public:
 		glfwMakeContextCurrent(glfw);
 		ctrl->onAppTick();
 	}
+	void onRefresh() override {
+		appwindow::onRefresh();
+
+		#ifdef __APPLE__
+		for (auto& w : overlayWindows)
+			w->onRefresh();
+		#endif
+	}
 	void render() {
 		/*std::vector<int64_t> test;
 		test.reserve(1<<31);*/
@@ -935,6 +943,7 @@ public:
 			throw appexception("window null");
 		glfwMakeContextCurrent(glfw);
 		appwindow::destroyGL();
+		glfw = nullptr;
 	}
 	void render()
 	{
@@ -1092,6 +1101,7 @@ void appwindow_main::destroy() {
 	glfwMakeContextCurrent(glfw);
 	appwindow::destroyGL();
 	appwindow::killTimer();
+	glfw = nullptr;
 }
 void appwindow_main::createMainWindow(const char* title, int w, int h, void* parentWindowHandle, int flags) {
 	setAppWindowHints();
