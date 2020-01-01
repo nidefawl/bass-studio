@@ -58,7 +58,7 @@
                 "6"
             ],
             "options": {
-                "cwd": "/Users/mac-user/dev/build"
+                "cwd": "/Users/mac-user/dev/build2"
             },
             "group": {
                 "kind": "build",
