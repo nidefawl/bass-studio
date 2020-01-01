@@ -1,6 +1,7 @@
 {
     "workbench.colorTheme": "Default Dark+",
     "files.associations": {
-        "vector": "cpp"
+        "vector": "cpp",
+        "exception": "cpp"
     }
 }

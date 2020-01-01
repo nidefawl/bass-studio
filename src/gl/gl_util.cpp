@@ -29,8 +29,10 @@ void enableGlDebugCallback() {
 
 	glEnable(GL_DEBUG_OUTPUT);
 	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-	glDebugMessageCallback(debugCB, NULL);
+	if (glDebugMessageCallback)
+		glDebugMessageCallback(debugCB, NULL);
 	GLuint unusedIds = 0;
+	if (glDebugMessageControl)
 	glDebugMessageControl(GL_DONT_CARE,
 	    GL_DONT_CARE,
 	    GL_DONT_CARE,

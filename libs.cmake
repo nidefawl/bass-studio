@@ -65,6 +65,7 @@ find_library(
     PATH_SUFFIXES lib
     NO_DEFAULT_PATH)
 set(PYBIND11_CPP_STANDARD -std=c++14)
+message(STATUS "Looking in ${BUILD_PATH_LIB_DEBUG}")
 find_package(pybind11 REQUIRED PATHS "${BUILD_PATH_LIB_DEBUG}/pybind11" "${BUILD_PATH_LIB_RELEASE}/pybind11") 
 
 message (STATUS "glfw3 debug = ${GLFW_LIB_DEBUG}")

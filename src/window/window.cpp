@@ -1491,7 +1491,7 @@ int startApplication(int argc, char* argv[]) {
 	    }
 		glfwUpdateInternals();
 #endif //_WIN32
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
 		glfwWaitEventsTimeout(0.001);
 		mainWindow->onRefresh();
 #else
