@@ -141,8 +141,9 @@ void findFilesWithExt(
     FTS* file_system = NULL;
     FTSENT* child = NULL;
     FTSENT* parent = NULL;
-
-    char* args[] = {(char*)StringAsCStr(strPath)};
+	String localCopy = strPath;
+	const char* ptr = StringAsCStr(localCopy);
+    char* args[2] = { (char*)ptr, NULL };
     file_system = fts_open(args, FTS_LOGICAL | FTS_COMFOLLOW | FTS_NOCHDIR, NULL);
 
     if (NULL != file_system)
