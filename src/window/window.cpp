@@ -862,10 +862,10 @@ public:
 	    mi.cbSize = sizeof(mi);
 	    GetMonitorInfo(hMonitor, &mi);
 		if (pos.x + size.x > mi.rcWork.right) {
-			pos.x -= size.x;
+			pos.x -= (pos.x + size.x) - mi.rcWork.right;
 		}
 		if (pos.y + size.y > mi.rcWork.bottom) {
-			pos.y -= size.y;
+			pos.y -= (pos.y + size.y) - mi.rcWork.bottom;
 		}
 #endif
 #if __linux__
