@@ -125,10 +125,15 @@ public:
     	if (s == -1) {
     		return IPC_SOCKET_ERROR;
     	}
+
+
     	struct sockaddr_un remote{0};
     	remote.sun_family = AF_UNIX;
-    	strcpy(remote.sun_path, StringAsCStr(path));
-    	unsigned int len = strlen(remote.sun_path) + sizeof(remote.sun_family);
+		strncpy (remote.sun_path, StringAsCStr(path), sizeof (remote.sun_path));
+		remote.sun_path[sizeof (remote.sun_path) - 1] = '\0';
+
+		unsigned int len = (offsetof (struct sockaddr_un, sun_path) + strlen (remote.sun_path));
+
     	if (connect(s, (struct sockaddr *)&remote, len) == -1) {
     		return IPC_CONNECT_FAILED;
     	}
