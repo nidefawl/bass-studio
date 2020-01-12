@@ -17,6 +17,11 @@
 #include <vector>
 #include <sstream>
 #include <stdio.h>
+
+extern "C" {
+extern char **environ;
+}
+
 class ProcessRunScope {
 	pid_t pid = 0;
 public:

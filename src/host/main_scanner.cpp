@@ -34,7 +34,18 @@
 #include <unistd.h>
 #include <limits.h>
 #endif
-
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+inline String APPLE_getExecutablePath() {
+  String ret = "plugin_scan";
+  char path[1024];
+  uint32_t size = sizeof(path);
+  if (_NSGetExecutablePath(path, &size) == 0) {
+    ret = path;
+  }
+  return ret;
+}
+#endif
 
 #define LOG(fmtString,...) printf(fmtString "\n", ##__VA_ARGS__); fflush(stdout)
 
@@ -191,7 +202,10 @@ int main(int argc, char* argv[]) {
 			GetModuleFileName(NULL, szFileName, MAX_PATH + 1);
 			String exeName = szFileName;
 #endif
-#if defined(__linux__) || defined(__APPLE__)
+#ifdef __APPLE__
+			String exeName = APPLE_getExecutablePath();
+#endif
+#ifdef __linux__
 			String exeName = "plugin_scan";
 		    char buff[4096];
 		    ssize_t len = ::readlink("/proc/self/exe", buff, sizeof(buff)-1);
@@ -284,9 +298,9 @@ int main(int argc, char* argv[]) {
 					pipeConnected = false;
 					thread = std::make_unique<ProcessThread>();
 					LOG("!thread.isRunning(), last recv state: %s", lastRecvState ?"GOOD":"BAD");
-					String arg1 = "-client";
+					String arg1 = "-client"; 
 					String lastCmd = StringFormat("%s %s", StringAsCStr(exeName), StringAsCStr(arg1));
-
+                                        printf("binary at %s\n", StringAsCStr(exeName));
 					thread->startProcess(exeName, "-client", "");
 					threadSleep(200);
 					if (!thread->isRunning()) {
