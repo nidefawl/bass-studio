@@ -15,6 +15,7 @@ void createTables(SQLite::Database& db) {
     if (!db.tableExists("plugins")) {
     	const char* queryCreate = "CREATE TABLE `plugins` (\n"
 				"	`id`	INTEGER PRIMARY KEY AUTOINCREMENT,\n"
+				"	`moduleFormat`	INTEGER DEFAULT 0,\n"
 				"	`isSynth`	INTEGER DEFAULT 0,\n"
 				"	`uid`	INTEGER NOT NULL,\n"
 				"	`version`	INTEGER NOT NULL,\n"
@@ -64,6 +65,7 @@ public:
 		pluginentry_t entry;
 		while (queryPlugin.executeStep()) {
 			entry.id = queryPlugin.getColumn("id").getInt();
+			entry.moduleFormat = queryPlugin.getColumn("moduleFormat").getInt();
 			entry.uid = queryPlugin.getColumn("uid").getInt();
 			entry.isSynth = queryPlugin.getColumn("isSynth").getInt() != 0;
 			entry.name = queryPlugin.getColumn("name").getString();

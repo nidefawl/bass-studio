@@ -1,3 +1,15 @@
+/**
+ *  (VST) Plugin Scanner
+ *
+ *	vstPlugPath is user configuration: Right now system paths are ignored and have to be configured manually (data/settings.json)
+ *
+ *  server scans for vst files and launches client processes.
+ *  client processes load single plugins and return status and plugin information.
+ *  server monitors client processes for status response and possible crashes.
+ *  server writes information about plugin and its status (valid, invalid) to SQLite database.
+ *
+ */
+
 #include "str_util.h"
 #include "../vstsdk-host-2.4/aeffectx.h"
 #include "../host/vst_host.h"
@@ -18,7 +30,7 @@
 #include "../platform/win/platform_win.h"
 #include <windows.h>
 #endif
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
 #include <unistd.h>
 #include <limits.h>
 #endif
@@ -31,7 +43,7 @@
 #define CMD_PLUGIN_LOAD_REQUEST 1
 #define CMD_PLUGIN_THREAD_QUIT 4
 #define NUM_BUFS 2048
-
+#define SCAN_IPC_PIPE_NAME "DAW1pipc"
 void deleteApp() {
 
 }
@@ -116,7 +128,6 @@ BOOL WINAPI ConsoleHandler(DWORD dwType)
 }
 #endif
 
-
 int main(int argc, char* argv[]) {
 	LOG("ARGC %d", argc);
 	for (int i = 0; i < argc; i++) {
@@ -140,7 +151,8 @@ int main(int argc, char* argv[]) {
 	if (argc > 1 && !strcmp("-server", argv[1])) {
 		bool launchProcess = true;
 		bool dryRun = false;
-		String rescanPattern = "";
+		String updatePattern = "";
+		bool fullRescan = false;
 	    for (int i = 2; i < argc; i++) {
 	    	if (argv[i] && strlen(argv[i]) > 2 && argv[i][0] == '-') {
 	    		if (!strcmp(argv[i], "-wait")) {
@@ -149,13 +161,16 @@ int main(int argc, char* argv[]) {
 	    		if (!strcmp(argv[i], "-dry")) {
 	    			dryRun = true;
 	    		}
-	    		if (!strcmp(argv[i], "-rescan") && i+1 < argc) {
-	    			rescanPattern = argv[i+1];
+	    		if (!strcmp(argv[i], "-update") && i+1 < argc) {
+	    			updatePattern = argv[i+1];
+	    		}
+	    		if (!strcmp(argv[i], "-rescan")) {
+	    			fullRescan = true;
 	    		}
 	    	}
 	    }
-	    if (rescanPattern != "") {
-	    	LOG("RESCAN *%s*", StringAsCStr(rescanPattern));
+	    if (updatePattern != "") {
+	    	LOG("Update *%s*", StringAsCStr(updatePattern));
 	    }
 	    try {
 			SQLite::Database    db("data/plugins.db3", SQLite::OPEN_READWRITE | SQLite::OPEN_CREATE);
@@ -176,7 +191,7 @@ int main(int argc, char* argv[]) {
 			GetModuleFileName(NULL, szFileName, MAX_PATH + 1);
 			String exeName = szFileName;
 #endif
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
 			String exeName = "plugin_scan";
 		    char buff[4096];
 		    ssize_t len = ::readlink("/proc/self/exe", buff, sizeof(buff)-1);
@@ -187,7 +202,7 @@ int main(int argc, char* argv[]) {
 #endif
 
 			ipc_server server;
-			int ipc_status = server.server_open("vst_scanner_pipe");
+			int ipc_status = server.server_open(SCAN_IPC_PIPE_NAME);
 			if (ipc_status) {
 				LOG("Failed opening ipc_server: %d", ipc_status);
 				return 1;
@@ -245,16 +260,19 @@ int main(int argc, char* argv[]) {
 						needScan = false;
 					}
 				}
-				if (rescanPattern.length()) {
-					needScan = false;
-					needScan = file.name.find(rescanPattern) != String::npos;
-					if (!needScan) {
-						continue;
-					}
-				} else {
-					if (!needScan && !dryRun) {
-						continue;
-					}
+				if (!needScan && fullRescan) {
+					needScan = true;
+				}
+				if (!needScan && updatePattern.length()) {
+					needScan = file.name.find(updatePattern) != String::npos;
+				}
+				if (!needScan) {
+					LOG("%s is up to date", StringAsCStr(file.name));
+					continue;
+				}
+				LOG("%s needs update", StringAsCStr(file.name));
+				if (dryRun) {
+					continue;
 				}
 				if (launchProcess&& (!thread || !thread->isRunning())) {
 					if (thread)
@@ -368,7 +386,7 @@ int main(int argc, char* argv[]) {
 	    // Open the named pipe
 	    // Most of these parameters aren't very relevant for pipes.
 		ipc_client client;
-		int ipcstatus = client.client_connect("vst_scanner_pipe");
+		int ipcstatus = client.client_connect(SCAN_IPC_PIPE_NAME);
 		if (ipcstatus) {
 			LOG("Failed opening ipc_client: %d", ipcstatus);
 			return 1;

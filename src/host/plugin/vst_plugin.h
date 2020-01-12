@@ -107,7 +107,7 @@ public:
 		long value = 0,
 		void *ptr = 0,
 		float opt = 0);
-	bool getNameString(const char* szBuf);
+	bool getNameString(char* szBuf);
 	void printNames();
 	bool onClose();
 	void onWindowDestroy();

@@ -8,11 +8,14 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include "logging.h"
+
 
 class ipc_server::Impl
 {
 	unsigned int s = 0, s2 = 0;
 	struct sockaddr_un remote{0};
+	String pathUnlink;
 public:
 	Impl() {
 
@@ -25,15 +28,27 @@ public:
     	if (s == -1) {
     		return IPC_SOCKET_ERROR;
     	}
+    	int ret = unlink(StringAsCStr(path));
+		log_printf("unlink %s returned %d.\n", StringAsCStr(path), ret);
 
     	struct sockaddr_un local{0};
     	local.sun_family = AF_UNIX;
-    	strcpy(local.sun_path, StringAsCStr(path));
-    	unlink(local.sun_path);
-    	unsigned int len = strlen(local.sun_path) + sizeof(local.sun_family);
-
-    	if (0 != bind(s, (struct sockaddr *)&local, len))
-    		return 1;
+    	  strncpy (local.sun_path, StringAsCStr(path), sizeof (local.sun_path));
+    	  local.sun_path[sizeof (local.sun_path) - 1] = '\0';
+    	  unsigned int len = (offsetof (struct sockaddr_un, sun_path)
+    	           + strlen (local.sun_path));
+    	 ret = bind(s, (struct sockaddr *)&local, len);
+    	if (0 != ret) {
+    		log_printf("bind returned %d. Unlinking unix socket %s\n", ret, StringAsCStr(path));
+    		ret = unlink(StringAsCStr(path));
+    		log_printf("second unlink %s returned %d.\n", StringAsCStr(path), ret);
+        	ret = bind(s, (struct sockaddr *)&local, len);
+			log_printf("second bind returned %d\n", ret);
+        	if (0 != ret) {
+        		return 1;
+        	}
+    	}
+    	pathUnlink = path;
 
     	listen(s, 5);
 		return IPC_OK;
@@ -54,6 +69,9 @@ public:
     	if (s > 0) {
     		close(s);
 			s =  0;
+    	}
+    	if (pathUnlink.length()) {
+    		unlink(StringAsCStr(pathUnlink));
     	}
 
     }

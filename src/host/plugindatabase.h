@@ -2,7 +2,9 @@
 #include "str_util.h"
 #include <stdlib.h>
 #include <vector>
+
 struct pluginentry_t {
+	int moduleFormat;
 	int id;
 	int uid;
 	bool isSynth;

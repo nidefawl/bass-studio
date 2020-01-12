@@ -70,7 +70,7 @@ void internalplugin::onWindowDestroy() {
 //		printf("effGetEffectName: %s\n", buf);
 //	}
 //}
-//bool internalplugin::getNameString(const char* szBuf) {
+//bool internalplugin::getNameString(char* szBuf) {
 //	if (this->dispatch(effGetProductString, 0, 0, (void*)szBuf) && szBuf[0] != 0) {
 //		return true;
 //	}

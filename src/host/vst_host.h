@@ -28,6 +28,9 @@
 #ifdef _WIN32
 #define PLATFORM_PLUGIN_EXT "dll"
 #endif
+#ifdef __APPLE__
+#define PLATFORM_PLUGIN_EXT "vst"
+#endif
 
 class audiohost;
 class clip_notes_t;

@@ -91,7 +91,7 @@ void vstplugin::printNames() {
 		printf("effGetEffectName: %s\n", buf);
 	}
 }
-bool vstplugin::getNameString(const char* szBuf) {
+bool vstplugin::getNameString(char* szBuf) {
 	if (this->dispatch(effGetProductString, 0, 0, (void*)szBuf) && szBuf[0] != 0) {
 		return true;
 	}

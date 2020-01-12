@@ -20,7 +20,11 @@
 class ProcessRunScope {
 public:
 	int exitCode = 0;
-	ProcessRunScope(String binary, String params) {
+	ProcessRunScope(const String& binary, const String& params, const String& workingDir, const ProcessThread::Env& env, bool pipeOutput) {
+
+		if (env.size()) {
+			dbgassert(0&&"Custom environment not yet implemented on this platform");
+		}
 		pid_t pid;
 //		char *argv[] = { "ls", (char *) 0 };
 	    std::vector<String> strings;
@@ -216,9 +220,6 @@ public:
 	void startProcess(const String& binary, const String& params, const String& workingDir, const Env& env, bool pipedOutput) {
 		started = true;
 		isrunning = true;
-		#ifndef _WIN32
-		dbgassert(0&&"Not implemented on this platform");
-		#else
 		this->lastCmd = StringFormat("%s> %s %s", StringAsCStr(workingDir),  StringAsCStr(binary), StringAsCStr(params));
 		t = std::thread([this, argbinary=binary, argparams=params, argwd=workingDir, argenv=env, argpipe=pipedOutput]() {
 			setCurrentThreadName("childprocessthread");
@@ -228,6 +229,9 @@ public:
 				ProcessRunScope scopedProcess(argbinary, argparams, argwd, argenv, argpipe);
 				if (argpipe) {
 					while (!readFailed) {
+#ifndef _WIN32
+dbgassert(0&&"Not implemented on this platform");
+#else
 						dbgassert(scopedProcess.handleStdOutRead);
 						DWORD dwRead = 0;
 						if (!ReadFile( scopedProcess.handleStdOutRead, TEMP.data(), TEMP.size(), &dwRead, NULL)) {
@@ -240,6 +244,7 @@ public:
 							buf.insert(buf.end(), TEMP.begin(), TEMP.begin()+ dwRead);
 							flushOutputBuffer(buf);
 						}
+#endif
 						threadSleep(25);
 					}
 					if (buf.size() > 0) {
@@ -254,7 +259,6 @@ public:
 			log_printf("END OF THREAD\n", 0);
 			isrunning = false;
 		});
-		#endif
 
 	}
 	bool isRunning() {
