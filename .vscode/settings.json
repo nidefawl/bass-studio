@@ -2,6 +2,8 @@
     "workbench.colorTheme": "Default Dark+",
     "files.associations": {
         "vector": "cpp",
-        "exception": "cpp"
+        "exception": "cpp",
+        "__functional_03": "cpp",
+        "functional": "cpp"
     }
 }

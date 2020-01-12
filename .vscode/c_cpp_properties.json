@@ -35,7 +35,7 @@
             "cStandard": "c11",
             "cppStandard": "c++14",
             "intelliSenseMode": "clang-x64",
-            "compileCommands": "/Users/mac-user/dev/build/compile_commands.json"
+            "compileCommands": "/Users/mac-user/dev/build2/compile_commands.json"
         },
         {
             "name": "Mac2",

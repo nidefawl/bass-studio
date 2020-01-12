@@ -452,6 +452,7 @@ void AppCtrl::destroyControl() {
 	if (this->ctxtmenu) {
 		dbgassert(contextWindow);
 		contextWindow->getCtrl()->closePopup();
+		dbgassert(!this->ctxtmenu);
 	}
 	for (auto gui : garbageGuis) {
 		delete gui;
