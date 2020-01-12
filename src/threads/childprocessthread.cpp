@@ -10,7 +10,7 @@
 #include "fileio.h"
 #include "exceptions.h"
 
-#if __linux__
+#if defined(__linux__) || defined(__APPLE__)
 #include <unistd.h>
 #include <spawn.h>
 #include <sys/wait.h>
