@@ -1,3 +1,4 @@
+#ifndef _WIN32
 #include "ipc.h"
 #include "str_util.h"
 
@@ -164,3 +165,4 @@ int ipc_client::sendData(char* buf, unsigned int len) {
 int ipc_client::readData(char* buf, unsigned int len) {
 	return _M_impl->client_read(buf, len);
 }
+#endif
