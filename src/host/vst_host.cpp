@@ -1658,6 +1658,10 @@ int32_t loadLib(String filepath, VSTPluginMain_t** out_fn, void** out_hmodule) {
 	VSTPluginMain_t *fn = (VSTPluginMain_t*) dlsym(module, "VSTPluginMain");
 	if (fn == NULL)
 	{
+		fn = (VSTPluginMain_t*) dlsym(module, "main");
+	}
+	if (fn == NULL)
+	{
 		dlclose(module);
 		return -4;
 	}

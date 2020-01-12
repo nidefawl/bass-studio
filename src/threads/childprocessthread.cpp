@@ -18,14 +18,15 @@
 #include <sstream>
 #include <stdio.h>
 class ProcessRunScope {
+	pid_t pid = 0;
 public:
 	int exitCode = 0;
+	int procSpawnStatus = 0;
 	ProcessRunScope(const String& binary, const String& params, const String& workingDir, const ProcessThread::Env& env, bool pipeOutput) {
 
 		if (env.size()) {
 			dbgassert(0&&"Custom environment not yet implemented on this platform");
 		}
-		pid_t pid;
 //		char *argv[] = { "ls", (char *) 0 };
 	    std::vector<String> strings;
 	    std::istringstream f(params);
@@ -39,18 +40,22 @@ public:
 	    }
 	    argv[strings.size()] = 0;
 	    const char* bin = StringAsCStr(binary);
-		int status = posix_spawn(&pid, bin, NULL, NULL, (char* const*)argv, environ);
-		if (status == 0) {
-			int waitRet = waitpid(pid, &status, 0);
-			if (waitRet == -1) {
-				throw SystemException(errno,
-						"Process did not exit normally");
-			}
-		} else {
+		procSpawnStatus = posix_spawn(&pid, bin, NULL, NULL, (char* const*)argv, environ);
+		if (procSpawnStatus != 0) {
 			String errmsg = StringFormat("posix_spawn(%s, %s) failed",
 					StringAsCStr(binary), StringAsCStr(params));
-			throw SystemException(status, errmsg);
+			throw SystemException(procSpawnStatus, errmsg);
 		}
+	}
+	void waitForever() {
+		dbgassert(0 == procSpawnStatus);
+		int procStatus = 0;
+		exitCode = -1;
+		int waitRet = waitpid(pid, &procStatus, 0);
+		if (waitRet == -1 || !(WIFEXITED(procStatus))) {
+			throw SystemException(errno, "Process did not exit normally");
+		}
+		exitCode = WEXITSTATUS(procStatus);
 	}
 	~ProcessRunScope() {
 

@@ -391,9 +391,30 @@ int main(int argc, char* argv[]) {
 			LOG("Failed opening ipc_client: %d", ipcstatus);
 			return 1;
 		}
-	    auto audiohost = std::make_unique<vsthost>();
-	    daw_tls::tlsinstance& tls = daw_tls::getTls();
-	    tls.host = audiohost.get();
+    	// auto audioHost = std::make_unique<audiohost>();
+    	// auto midiHost = std::make_unique<midihost>();
+    	auto vsthostInstance = std::make_unique<vsthost>();
+    	vsthost::assignMasterCallback(vsthostInstance.get());
+		vsthostInstance->setSampleFormat(sampleformat_t{static_cast<samplerate_t>(48000), 512, sampleformat_bits_t::FLOAT_32});
+
+    	// project_controller_t project;
+    	// plugindatabase_t plugindb;
+    	// waveformrender renderer;
+    	// audiocache cache(settings.iosettings.samplerate);
+    	daw_tls::tlsinstance& tls = daw_tls::getTls();
+    	// tls.mainCtrl = nullptr;
+    	// tls.project = &project;
+    	tls.host = vsthostInstance.get();
+    	// tls.audioHost = audioHost.get();
+    	// tls.midiHost = midiHost.get();
+    	// tls.audioCache = &cache;
+    	// tls.waveform = &renderer;
+    	// tls.pluginDatabase = &plugindb;
+
+
+	    // auto vsthostInstance = std::make_unique<vsthost>();
+	    // daw_tls::tlsinstance& tls = daw_tls::getTls();
+	    // tls.host = vsthostInstance.get();
 		LOG("START");
 		pipe_msg_hdr hdr;
 		vst_metadata data;
@@ -411,7 +432,7 @@ int main(int argc, char* argv[]) {
 				LOG("loadPlugin: %s", data.szPath);
 				try {
 
-					vstpluginloadres res = audiohost->loadPlugin(data.szPath);
+					vstpluginloadres res = vsthostInstance->loadPlugin(data.szPath);
 					LOG("result: %d", res.result);
 					if (res.result == 0) {
 						vstplugin* plugin = res.plugin;
@@ -456,7 +477,7 @@ int main(int argc, char* argv[]) {
 //							printf("categories[%d] = %s (%d params)\n", cat.idx, StringAsCStr(cat.label), cat.numParametersInCategory);
 //						}
 						getPluginData(res.plugin, &data);
-						audiohost->unloadPlugin(plugin);
+						vsthostInstance->unloadPlugin(plugin);
 						hdr.cmd = CMD_PLUGIN_LOAD_SUCCESS;
 					}
 				} catch (...) {
