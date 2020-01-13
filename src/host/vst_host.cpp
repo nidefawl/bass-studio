@@ -45,7 +45,7 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
 #include <dlfcn.h>
 #endif
 //#include "../util/readerwriterqueue.h"
@@ -300,7 +300,7 @@ public:
 		my_printf("Unload %s\n", StringAsCStr(moduleName));
 		FreeLibrary((HMODULE)module);
 #endif
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
 		dlclose(module);
 #endif
 	}
@@ -1644,8 +1644,12 @@ int32_t loadLib(String filepath, VSTPluginMain_t** out_fn, HMODULE* out_hmodule)
 	return 0;
 }
 #endif
-#ifdef __linux__
+#if defined(__APPLE__)
 
+int32_t loadLib(String filepath, VSTPluginMain_t** out_fn, void** out_hmodule);
+
+#endif
+#if defined(__linux__)
 int32_t loadLib(String filepath, VSTPluginMain_t** out_fn, void** out_hmodule) {
 	if (!FileExists(filepath)) {
 		return -2;
@@ -1760,7 +1764,7 @@ vstpluginloadres vsthost::loadPlugin(String filepath, int32_t globalId) {
 	moduleHandle = hmodule;
 #endif
 
-#ifdef __linux__
+#if defined(__linux__) || defined(__APPLE__)
 	void* hmodule = NULL;
 	int32_t ret = loadLib(filepath, &fn, &hmodule);
 	if (ret != 0) {
