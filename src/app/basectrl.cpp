@@ -318,6 +318,7 @@ void BaseCtrl::render(int32_t x, int32_t y, int32_t w, int32_t h, float ratio) {
 	glClear(GL_COLOR_BUFFER_BIT);
 	static int test = 0;
 	nvgBeginFrame(vg, w, h, ratio);
+	nvgScale(vg, m_scale, m_scale);
 	nvgLineJoin(vg, NVGlineCap::NVG_BEVEL);
 
 
@@ -498,7 +499,7 @@ void AppCtrl::openOverlayGui(guictxtmenu_base *b, ivec2 pos, int flags) {
 	if (flags&2) {
 		wndPos = pos;
 	} else if (flags&1) {
-		wndPos = windowPos+pos;
+		wndPos = windowPos+ivec2(pos.x*m_scale, pos.y*m_scale);
 	} else {
 		wndPos = windowPos+(windowSize-b->size)/2;
 	}
@@ -605,3 +606,10 @@ ngui::MenuBar& AppCtrl::getMenubar() {
 	return menubar;
 }
 #endif
+
+void BaseCtrl::relayout() { relayout(m_size.x*1.0/m_scale, m_size.y*1.0/m_scale); };
+void BaseCtrl::relayout(int32_t w, int32_t h) { };
+void BaseCtrl::windowSizeChanged(int32_t w, int32_t h) {
+	m_size = ivec2(w, h);
+	relayout(m_size.x*1.0/m_scale, m_size.y*1.0/m_scale);
+}

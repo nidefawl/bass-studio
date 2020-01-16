@@ -69,12 +69,15 @@ gui_ctr_debug::gui_ctr_debug() : guictr_base() {
 	btn->setFontSize(BTN_FONT_SIZE);
 	knob->id = ID_KNOB_SET_COLOR;
 	knob->fnSetValue = [this](float f, int flags) {
-		curVal = 0+math::max(0, math::min(255, (int32_t)math::floor(f*255)));
-		GuiColor::initConstants(curVal);
-		parentCtrl->getTheme()->initTheme();
+		float guiScale = math::max(0.05f, f*2.0f);
+		parentCtrl->m_scale = guiScale;
+		parentCtrl->relayout();
+//		curVal = 0+math::max(0, math::min(255, (int32_t)math::floor(f*255)));
+//		GuiColor::initConstants(curVal);
+//		parentCtrl->getTheme()->initTheme();
 	};
 	knob->fnGetValue = [this](void) {
-		return math::max(0.0f, math::min(1.0f, curVal/255.0f));
+		return math::max(0.05f, math::min(1.0f, parentCtrl->m_scale*0.5f));
 	};
 	debugGuis.push_back(btn);
 	debugGuis.push_back(knob);

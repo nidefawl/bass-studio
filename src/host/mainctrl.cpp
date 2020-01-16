@@ -604,6 +604,14 @@ void MainCtrl::menuCommand(int cmd) {
 		break;
 	case CMD_DUPLICATE:
 		break;
+	case CMD_GUI_GLOBAL_ZOOM_DECREASE:
+		m_scale = math::max(0.05f, m_scale - 0.05f);
+		BaseCtrl::relayout();
+		break;
+	case CMD_GUI_GLOBAL_ZOOM_INCREASE:
+		m_scale = math::min(10.0f-0.05f, m_scale + 0.05f);
+		BaseCtrl::relayout();
+		break;
 	case CMD_INSERT_AUDIO_TRACK:
 	case CMD_INSERT_MIDI_TRACK:
 	case CMD_INSERT_RETURN_TRACK:
@@ -1075,7 +1083,6 @@ void MainCtrl::relayout(int32_t w, int32_t h) {
 	closeContextMenu();
 	w = math::max(640, w);
 	h = math::max(480, h);
-	m_size = ivec2(w, h);
 	view->layout(w, h);
 
 	view->ctr_plugins.layout();
@@ -1381,6 +1388,14 @@ bool MainCtrl::processGlobalKeyevent(KeyEvent& event) {
 		}
 		if (isKC(KC_SAVEAS, event)) {
 			menuCommand(CMD_FILE_SAVEAS);
+			return true;
+		}
+		if (isKC(KC_ZOOM_IN, event)) {
+			menuCommand(CMD_GUI_GLOBAL_ZOOM_INCREASE);
+			return true;
+		}
+		if (isKC(KC_ZOOM_OUT, event)) {
+			menuCommand(CMD_GUI_GLOBAL_ZOOM_DECREASE);
 			return true;
 		}
 		if (isKC({ 0, KEY_TAB, nullptr }, event)) {

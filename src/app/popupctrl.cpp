@@ -48,7 +48,6 @@ void PopupCtrl::relayout(int32_t w, int32_t h) {
 	if (bResizeable) {
 		closeAllAppMenus();
 		closeContextMenu();
-		m_size = ivec2(w, h);
 		if (popupCtrs->guis.size() == 1) {
 			auto singleCtr = popupCtrs->guis[0];
 			singleCtr->size = m_size;

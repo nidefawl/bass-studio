@@ -50,6 +50,7 @@ public:
 	int cursorIcon = CURSOR_DEFAULT;
 	ivec2 m_size = { -1, -1 };
 	ivec2 m_mousePos = { -1, -1 };
+	float m_scale = 1.0f;
 	guibase *guiOver = NULL;		//updates on mouse move "current mouseover"
 	guibase *guiDragged = NULL;		//updates on mouse click "currently dragged", set from guiOver
 	guibase *guiCaptured = NULL;	//updates when cursor is hidden, set from guiDragged
@@ -134,8 +135,9 @@ public:
 	virtual void onCursorEnter(int entered) {
 		mouseInside = entered;
 	}
-	virtual void relayout() { relayout(m_size.x, m_size.y); };
-	virtual void relayout(int32_t w, int32_t h) { };
+	virtual void relayout();
+	virtual void relayout(int32_t w, int32_t h);
+	virtual void windowSizeChanged(int32_t w, int32_t h);
 	virtual void openContextMenu(guictxtmenu_base *b, ivec2 pos, int flags = 1);
 	virtual void closeContextMenu() { };
 	void closeAllAppMenus()  { closeAppMenusAtLvl(0); };

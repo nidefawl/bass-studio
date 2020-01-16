@@ -89,7 +89,6 @@ void PluginControl::mouseMoved(ivec2 mousePos, ivec2 deltaPos) {
 void PluginControl::relayout(int32_t w, int32_t h) {
 	closeAllAppMenus();
 	closeContextMenu();
-	m_size = ivec2(w, h);
 	view->layout(w, h);
 
 	for (guictr_base *ctr : containers) {

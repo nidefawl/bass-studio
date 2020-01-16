@@ -282,6 +282,8 @@ extern KeyCombo KC_DUPLICATE;
 extern KeyCombo KC_SELECTALL;
 extern KeyCombo KC_MUTE;
 extern KeyCombo KC_REFRESH;
+extern KeyCombo KC_ZOOM_IN;
+extern KeyCombo KC_ZOOM_OUT;
 #include "logging.h"
 inline bool isKC(KeyCombo c, KeyEvent& kevt) {
 	if (kevt.mods != c.keyMod) {

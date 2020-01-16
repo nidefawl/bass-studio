@@ -516,8 +516,8 @@ public:
 	}
 	virtual void onChildOverlayClose(appwindow* child) {
 	}
-	ivec2 getMousePos() {
-		return ivec2((int)mousepos.x, (int)mousepos.y);
+	ivec2 getMousePos(float scale) {
+		return ivec2((int)mousepos.x*scale, (int)mousepos.y*scale);
 	}
 	void setPos(ivec2 pos) {
 		glfwSetWindowPos(glfw, pos.x, pos.y);
@@ -685,7 +685,7 @@ public:
 	void onMouseMoved(ivec2 deltapos) {
 		if (math::abs(deltapos.x)+math::abs(deltapos.y) > 2)
 			this->dblclicktimer = 0;
-		ctrl->mouseMoved(getMousePos(), deltapos);
+		ctrl->mouseMoved(getMousePos(1.0f/ctrl->m_scale), deltapos);
 		flagNeedsRedraw();
 	}
 	virtual void onMouseScrolled(double xoffset, double yoffset) {
@@ -698,16 +698,16 @@ public:
 			bool dblClick = this->dblclicktimer != 0 && timeMillis - this->dblclicktimer < 500;
 			dblClick &= glm::distance(lastclickpos, mousepos) < 4;
 			this->dblclicktimer = dblClick ? 0 : timeMillis;
-			ctrl->mouseDown(getMousePos(), button, dblClick);
+			ctrl->mouseDown(getMousePos(1.0f/ctrl->m_scale), button, dblClick);
 		} else if (action == GLFW_RELEASE) {
-			ctrl->mouseUp(getMousePos(), button);
+			ctrl->mouseUp(getMousePos(1.0f/ctrl->m_scale), button);
 		}
 		lastclickpos = mousepos;
 		flagNeedsRedraw();
 	}
 	void onWindowSizeChanged(int width, int height) {
 		if (ctrl->isOK) {
-			ctrl->relayout(width, height);
+			ctrl->windowSizeChanged(width, height);
 			flagNeedsRedraw();
 		}
 	}
