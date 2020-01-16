@@ -1,4 +1,3 @@
-#pragma once
 #ifdef __APPLE__
 #endif
 #include <stdint.h>
@@ -16,7 +15,7 @@ void auplugin::resume(){ }
 void auplugin::sleep(){ }
 
 //	bool updateWindow();
-String auplugin::getInfo(std::vector<String>& list){ }
+String auplugin::getInfo(std::vector<String>& list) { return "NOT IMPLEMENTED"; }
 //	long dispatch(
 //		long opcode = 0,
 //		long index = 0,
