@@ -141,7 +141,7 @@ void renderAudioClip(NVGcontext* vg, const guitheme_t* theme, const track_t* tr,
 	nvgStroke(vg);
 
 	if (cl->name.length()) {
-		setFont(vg, (int) (HEIGHT_CLIP_TITLE * 0.95), getContrastFontColor(cl->rgb), G_TITLE_ALIGN);
+		UTIL_setFont(vg, theme, (int) (HEIGHT_CLIP_TITLE * 0.95), getContrastFontColor(cl->rgb), G_TITLE_ALIGN);
 		renderText(vg, pos.x + INSET_TITLE, pos.y + HEIGHT_CLIP_TITLE / 2, size.x-INSET_TITLE*3, StringAsCStr(cl->name));
 //		setFont(vg, (int) (HEIGHT_CLIP_TITLE * 0.95), rgbaToNvg(-1), G_TITLE_ALIGN);
 //		String text = StringFormat("%d", pos.x);
@@ -199,7 +199,7 @@ void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_t* tr, 
 	nvgStrokeWidth(vg, 1.f);
 	nvgStroke(vg);
 	if (cl->name.length()) {
-		setFont(vg, (int) (HEIGHT_CLIP_TITLE * 0.95), getContrastFontColor(cl->rgb), G_TITLE_ALIGN);
+		UTIL_setFont(vg, theme, (int) (HEIGHT_CLIP_TITLE * 0.95), getContrastFontColor(cl->rgb), G_TITLE_ALIGN);
 		renderText(vg, pos.x + INSET_TITLE, pos.y + HEIGHT_CLIP_TITLE / 2, size.x-INSET_TITLE*3, StringAsCStr(cl->name));
 	}
 	ivec2 posContents = ivec2(pos.x, pos.y+HEIGHT_CLIP_TITLE+INSET_CLIP_CONTENT);

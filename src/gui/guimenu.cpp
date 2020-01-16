@@ -33,7 +33,7 @@ void guimenu_ctxtentry::render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mo
 		t1 = title.substr(0, p);
 		t2 = title.substr(p + 1);
 	}
-	setFont(vg, this->fontSize, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+	UTIL_setFont(vg, theme, this->fontSize, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
 	nvgText(vg, leftOffset(), y + height / 2, StringAsCStr(t1), NULL);
 	int32_t defoffset = (int32_t) round(this->fontSize/2.4f);
 	if (t2.length()) {

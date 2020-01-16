@@ -304,7 +304,7 @@ public:
 			nvgFillColor(vg, theme->getColor(GuiColor::COL_CTXTMNU_HILIGHT));
 			nvgFill(vg);
 		}
-		setFont(vg, this->fontSize, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+		UTIL_setFont(vg, theme, this->fontSize, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
 		nvgText(vg, leftOffset(), y + height / 2, StringAsCStr(title), NULL);
 //					if (channel.idx > -1) {
 //						auto* stream = audiohost::getInstance()->getStream(0);
@@ -367,7 +367,7 @@ public:
 			nvgFillColor(vg, theme->getColor(GuiColor::COL_CTXTMNU_HILIGHT));
 			nvgFill(vg);
 		}
-		setFont(vg, this->fontSize, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+		UTIL_setFont(vg, theme, this->fontSize, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
 		nvgText(vg, leftOffset(), y + height / 2, StringAsCStr(title), NULL);
 		if (channel.idx > -1) {
 			auto* stream = audiohost::getInstance()->getStream(0);
@@ -404,7 +404,7 @@ public:
 			nvgFillColor(vg, theme->getColor(GuiColor::COL_CTXTMNU_HILIGHT));
 			nvgFill(vg);
 		}
-		setFont(vg, this->fontSize, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+		UTIL_setFont(vg, theme, this->fontSize, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
 		nvgText(vg, leftOffset(), y + height / 2, StringAsCStr(title), NULL);
 		audio_stage_t* stage = vsthost::getInstance()->getAudioStage(endpoint.stageRef);
 		if (stage) {
@@ -446,7 +446,7 @@ public:
 			nvgFillColor(vg, theme->getColor(GuiColor::COL_CTXTMNU_HILIGHT));
 			nvgFill(vg);
 		}
-		setFont(vg, this->fontSize, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+		UTIL_setFont(vg, theme, this->fontSize, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
 		nvgText(vg, leftOffset(), y + height / 2, StringAsCStr(title), NULL);
 		//TODO: resolve actual dst/src and show name and levels
 //		audio_stage_t* stage = vsthost::getInstance()->getAudioStage(endpoint.stageRef);

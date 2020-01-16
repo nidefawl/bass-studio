@@ -13,6 +13,7 @@
 #include "guiconstant.h"
 #include "guicolors.h"
 #include "msgbox.h"
+#include "renderresources.h"
 #include <math.h>
 #include <chrono>
 #include <vector>
@@ -38,6 +39,7 @@ constant_t getConstantByName(String name);
 struct theme_data {
 	std::unordered_map<String,int32_t> mapColors;
 	std::unordered_map<String,int32_t> mapProperties;
+	std::unordered_map<String,String> mapFonts;
 };
 
 void storeThemeData(guitheme_t const & m, theme_data& out) {
@@ -55,11 +57,16 @@ void storeThemeData(guitheme_t const & m, theme_data& out) {
 			continue;
 		out.mapProperties[c.name] = it->second;
 	}
+	for (auto it = m.mapFonts.begin(); it != m.mapFonts.end(); ++it) {
+		int32_t key = it->first;
+		UIFont::font_type_t c = UIFont::getConstantById(key);
+		if (c.idx <= 0)
+			continue;
+		out.mapFonts[c.name] = it->second.name;
+	}
 
 }
 void loadThemeData(theme_data& data, guitheme_t& out) {
-	out.mapColors.clear();
-	out.mapProperties.clear();
 	for (auto it = data.mapColors.begin(); it != data.mapColors.end(); ++it) {
 		String key = it->first;
 		GuiColor::constant_t c = GuiColor::getConstantByName(key);
@@ -85,6 +92,14 @@ void loadThemeData(theme_data& data, guitheme_t& out) {
 		}
 
 	}
+	for (auto it = data.mapFonts.begin(); it != data.mapFonts.end(); ++it) {
+		String key = it->first;
+		UIFont::font_type_t c = UIFont::getConstantByName(key);
+		 // some constants may not be defined, and thats ok
+		if (c.idx > 0) {
+			out.mapFonts[c.idx] = UIFont::font_instance{it->second};
+		}
+	}
 }
 
 template<class Archive>
@@ -98,6 +113,7 @@ void serialize(Archive & archive, theme_data & m)
 {
 	archive(make_nvp("colors", m.mapColors));
 	archive(make_nvp("properties", m.mapProperties));
+	make_optional_nvp(archive, "fonts", m.mapFonts);
 }
 template<class Archive>
 void save(Archive & archive, guitheme_t const & m)
@@ -122,6 +138,12 @@ void save(Archive & archive, guitheme_t const & m)
 template<class Archive>
 void load(Archive & archive, guitheme_t & m)
 {
+	m.mapColors.clear();
+	m.mapProperties.clear();
+	m.mapFonts.clear();
+	m.initTheme();
+	m.mapColors.clear();
+	m.mapProperties.clear();
 	archive(make_nvp("name", m.name));
 	archive(make_nvp("colorBg", m.colorBg));
 	archive(make_nvp("colorBgStroke", m.colorBgStroke));

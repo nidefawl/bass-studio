@@ -51,7 +51,7 @@ public:
 			nvgFillColor(vg, theme->getColor(GuiColor::COL_CTXTMNU_HILIGHT));
 			nvgFill(vg);
 		}
-		setFont(vg, this->fontSize, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+		UTIL_setFont(vg, theme, this->fontSize, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
 		nvgText(vg, leftOffset(), y + height / 2, StringAsCStr(title), NULL);
 	}
 	bool contains(ivec2& ctxtSize, ivec2& mouse) {

@@ -15,6 +15,7 @@
 #include "mouse.h"
 #include "gui.h"
 #include "guicolors.h"
+#include "guifonts.h"
 #include "guicontainer.h"
 #include "guiconstant.h"
 #include "guicontextmenu_base.h"
@@ -37,6 +38,7 @@
 #include "host/plugin/base_plugin.h"
 #include "host/plugin/vst_plugin.h"
 #include "logging.h"
+#include "renderresources.h"
 
 namespace Table {
 	struct tbltype_gui_flags {
@@ -52,6 +54,7 @@ namespace Table {
 		virtual void onClick(const click_ctxt_t& ctxt, const tbltype_gui_flags& obj) {};
 		virtual void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, GuiColor::constant_t constant) = 0;
 		virtual void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, GuiConstant::constant_t constant) = 0;
+		virtual void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, UIFont::font_type_t fonttype) = 0;
 		virtual ~click_type_handler() {
 
 		}
@@ -113,6 +116,59 @@ struct guiproperties_t {
 #define FONT_SIZE_TOOLTIP_TITLE 24
 #define FONT_SIZE_TOOLTIP 20
 
+class guidropdown_selectfont_ctxt : public guictxtmenu {
+	guitheme_mgr* themeMgr;
+	std::vector<String> strFontNames;
+	UIFont::font_type_t fonttype;
+public:
+	guidropdown_selectfont_ctxt(guitheme_mgr* _themeMgr, UIFont::font_type_t _fonttype)
+	: themeMgr(_themeMgr),
+	  fonttype(_fonttype)
+	{
+		this->size.x = 120;
+		this->fontSize = FONT_SIZE_CTXT_SMALL;
+		this->paddingV = 0;
+		int32_t idx = 0;
+		strFontNames.reserve(RenderResources::fontsInstalled.size());
+		for (auto& fontInstalled : RenderResources::fontsInstalled) {
+			strFontNames.push_back(fontInstalled.name);
+			addEntry(new ctxtmenu_entry(fontInstalled.name, idx));
+			idx++;
+		}
+	}
+	void clicked(int _id) {
+		closeContextMenu();
+		if (_id >= 0 && _id < strFontNames.size()) {
+			themeMgr->getRef().setFont(fonttype, strFontNames[_id]);
+			//TODO: reload fonts (repopulate RenderResources::fontsLoaded
+
+			themeMgr->getRef().bindFonts();
+		}
+	}
+};
+	class guidropdown_selectfont : public guidropdownbase {
+	public:
+		String current;
+		UIFont::font_type_t fonttype;
+		guidropdown_selectfont() :
+			guidropdownbase() {
+		}
+		String getString() {
+			guitheme_mgr* themeMgr = this->parentCtrl->getThemeMgr();
+			if (this->parentCtrl) {
+				return themeMgr->getRef().getFont(fonttype).name;
+			}
+
+			return current;
+		}
+		virtual void handleDraggedRelease(MouseEvent& evt) {
+			guitheme_mgr* themeMgr = this->parentCtrl->getThemeMgr();
+			guictxtmenu_base *popup = new guidropdown_selectfont_ctxt(themeMgr, fonttype);
+			popup->size = size;
+			popup->setFontSize(size.y);
+			this->parentCtrl->openContextMenu(popup, toScreenSpace(ivec2(0, size.y))-popup->pos+ivec2(1));
+		}
+	};
 template <typename T>
 class guiproperties_table : public debugproperties {
 protected:
@@ -123,9 +179,11 @@ protected:
 	};
 	T* ptr;
 	Table::tbl table;
+	float curFontSize = 20;
 	gui_textfield textField;
 	gui_numberinput_field numberInput;
 	gui_color_pick colorPick;
+	guidropdown_selectfont selectFont;
 	bool mouseDown = false;
 	cellclicked_t lastClicked;
 	std::vector<guibase*> controls;
@@ -142,9 +200,9 @@ public:
 		setBackgroundRenderedInset(false);
 		setSnapSides(ivec4(1));
 		addControl(&textField);
+		addControl(&selectFont);
 		addControl(&numberInput);
 		addControl(&colorPick);
-
 		textField.fnFocus = [this](MouseHitEvt& evt, bool focused) {
 			if (!focused) {
 				setActiveControl(nullptr);
@@ -293,6 +351,46 @@ public:
 						evt.guiDragged = &numberInput;
 						numberInput.handleDraggedBegin(evt);
 					}
+					//Textfield example
+//					void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, UIFont::font_type_t fonttype) override {
+//						click();
+//						gui_textfield& textField = table->textField;
+//						textField.pos = clickedcell.pos;
+//						textField.size = clickedcell.size;
+//						auto t = theme->getFont(fonttype);
+//						textField.setValue(t.name);
+//						textField.setCallback([theme,ft=fonttype,&textField](const String& str) {
+//
+//							textField.setCallback(nullptr);
+//							theme->setFont(ft, str);
+//							return true;
+//						});
+//						evt.guiDragged = &textField;
+//						table->setActiveControl(&textField);
+//						textField.handleDraggedBegin(evt);
+//					/textField.handleDraggedRelease(evt);
+//					}
+					void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, UIFont::font_type_t fonttype) override {
+						click();
+						guidropdown_selectfont& selectFont = table->selectFont;
+						selectFont.pos = clickedcell.pos;
+						selectFont.size = clickedcell.size;
+						auto t = theme->getFont(fonttype);
+						selectFont.current = t.name;
+						selectFont.fonttype = fonttype;
+//						selectFont.fonttype = fonttype;
+//						textField.setValue(t.name);
+//						textField.setCallback([theme,ft=fonttype,&textField](const String& str) {
+//
+//							textField.setCallback(nullptr);
+//							theme->setFont(ft, str);
+//							return true;
+//						});
+						evt.guiDragged = &selectFont;
+						table->setActiveControl(&selectFont);
+						selectFont.handleDraggedBegin(evt);
+						selectFont.handleDraggedRelease(evt);
+					}
 					void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, GuiColor::constant_t constant) override {
 						click();
 						gui_color_pick* color = new gui_color_pick();
@@ -360,7 +458,7 @@ public:
 			return;
 		}
 		setFont(vg, FONT_SIZE_TOOLTIP_TITLE, G_WHITE, NVG_ALIGN_LEFT|NVG_ALIGN_BOTTOM);
-		Table::DrawTableNVG(table, vg, theme, ivec2(INSET_TABLE), getSizeContent()-ivec2(INSET_TABLE<<1), FONT_SIZE_TOOLTIP);
+		Table::DrawTableNVG(table, vg, theme, ivec2(INSET_TABLE), getSizeContent()-ivec2(INSET_TABLE<<1), curFontSize);
 		for (guibase* ctrl : controls) {
 			if (ctrl->isVisible()) {
 				ctrl->render(vg);
@@ -455,7 +553,10 @@ template <>
 void guiproperties_table<guiproperties_t>::layout()  {
 	if (size.x == 0)
 		size.x = 450;
-	table.rowHeight = FONT_SIZE_TOOLTIP+INSET_TABLE_CELL_PADDING*2;
+	curFontSize = G_FONT_SCALE(theme->getFloat(GuiConstant::CONST_FONT_SIZE_TABLE));
+	selectFont.setFontSize(curFontSize);
+	textField.setFontSize(curFontSize);
+	table.rowHeight = curFontSize+INSET_TABLE_CELL_PADDING*2;
 	table.rows.clear();
 	table.titleCols.clear();
 	table.colSizes.clear();
@@ -521,6 +622,10 @@ struct tbltype_theme_color {
 struct tbltype_theme_constant {
 	guitheme_t* theme;
 	GuiConstant::constant_t constant;
+};
+struct tbltype_theme_font {
+	guitheme_t* theme;
+	UIFont::font_type_t fonttype;
 };
 
 namespace Table {
@@ -603,10 +708,22 @@ template <>
 inline void cellClicked(const click_ctxt_t& ctxt, const tbltype_theme_constant& obj) {
 	ctxt.callback->onClick(ctxt, obj.theme, obj.constant);
 }
+template <>
+void drawTbl(const table_ctxt_t& ctxt, const tbltype_theme_font& obj) {
+	auto t = obj.theme->getFont(obj.fonttype);
+	drawTbl(ctxt, t.name);
+}
+template <>
+inline void cellClicked(const click_ctxt_t& ctxt, const tbltype_theme_font& obj) {
+	ctxt.callback->onClick(ctxt, obj.theme, obj.fonttype);
+}
 }
 template <>
 void guiproperties_table<guitheme_t>::layout()  {
 	//	size.x = 250;
+
+	selectFont.setFontSize(G_FONT_SCALE(FONT_SIZE_TOOLTIP));
+	textField.setFontSize(G_FONT_SCALE(FONT_SIZE_TOOLTIP));
 		table.rowHeight = FONT_SIZE_TOOLTIP+INSET_TABLE_CELL_PADDING*2;
 		table.rows.clear();
 		table.titleCols.clear();
@@ -637,6 +754,11 @@ void guiproperties_table<guitheme_t>::layout()  {
 			std::sort(vec2.begin(), vec2.end(), [](auto& a, auto& b){ return strcmp(a.name, b.name) < 0; });
 			for (auto _constant2 : vec2) {
 				add(tblstr{ _constant2.name }, tbltype_theme_constant{ ptr, _constant2 });
+			}
+			std::vector<UIFont::font_type_t> vec3 = UIFont::getAllConstants();
+			std::sort(vec3.begin(), vec3.end(), [](auto& a, auto& b){ return strcmp(a.name, b.name) < 0; });
+			for (auto _constant3 : vec3) {
+				add(tblstr{ _constant3.name }, tbltype_theme_font{ ptr, _constant3 });
 			}
 		} else {
 		}

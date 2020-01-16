@@ -17,6 +17,7 @@
 #include "platform.h"
 #include "trackctr.h"
 #include "basectrl.h"
+#include "guifonts.h"
 #include "../host/mainctrl.h"
 
 void guitrack_timeline::handleDraggedBegin(MouseEvent& evt) {
@@ -78,8 +79,12 @@ void guitrack_timeline::render(NVGcontext* vg) {
 	int printoffset = 1;
 //		grid_div& first = gridList[0];
 	int gap = 16;
-	///String text = String.format("%d.%d.%d", first.bar + printoffset, first.bar_sub + printoffset, first.bar_sub_sub + printoffset);
-	float textWidth = 34;
+	String textTmp = StringFormat("%d.%d.%d", 333, 4, 4);
+	///
+	UIFont::font_instance instance = theme->getFont(UIFont::FONT_DECIMAL);
+	UIFont::bindFont(vg, instance);
+	float textWidth = nvgTextBounds(vg, 0, 0, StringAsCStr(textTmp), nullptr, nullptr);
+//	float textWidth = 34;
 	float barSize = grid.bar_size;
 	int step = 1;
 	while (barSize < textWidth) {
@@ -107,7 +112,6 @@ void guitrack_timeline::render(NVGcontext* vg) {
 	String text;
 	int fontSize;
 
-	nvgFontFace(vg, "sans");
 	nvgTextAlign(vg, NVG_ALIGN_BOTTOM | NVG_ALIGN_LEFT);
 	float scale = 1.33f;
 	for (int a = 0; a < 2; a++) {
@@ -152,7 +156,10 @@ void guitrack_timeline::render(NVGcontext* vg) {
 						}
 						nvgFontSize(vg, fontSize*scale);
 						nvgFillColor(vg, rgbToNvg(color));
-						nvgText(vg, n.screenpos + gap / 2, this->size.y, StringAsCStr(text), NULL);
+						float posXTimeCode = n.screenpos + gap / 2;
+						float posX = nvgText(vg, posXTimeCode, this->size.y, StringAsCStr(text), NULL);
+						float width = posX-posXTimeCode;
+
 //						if (this->size.y > 28) {
 //							text = StringFormat("%d", n.time);
 //							nvgFontSize(vg, fontSize*scale*0.66f);

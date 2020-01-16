@@ -27,9 +27,20 @@
 #define ICON_SPEAKER 23
 #define ICON_X 24
 #define NUM_IMGS 25
+#define MAX_FONTS 8
 
 struct NVGcontext;
 namespace RenderResources {
+	struct FontDesc {
+		String name;
+		String path;
+	};
+	struct LoadedFont {
+		bool loaded;
+		int nvgId;
+		String name;
+		FontDesc font;
+	};
 	struct NvgImageTexture {
 		std::unordered_map<NVGcontext*,int32_t> perContextId;
 		int width;
@@ -37,4 +48,6 @@ namespace RenderResources {
 	};
 	extern NvgImageTexture imgDashedLine;
 	extern NvgImageTexture imgIcons[NUM_IMGS];
+	extern std::vector<FontDesc> fontsInstalled;
+	extern LoadedFont fontsLoaded[MAX_FONTS];
 };

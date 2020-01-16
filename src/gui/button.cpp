@@ -31,7 +31,7 @@ void guitooltip<guibuttonbase>::layout()  {
 }
 void renderCenteredMultilineText(NVGcontext* vg, const guitheme_t* const theme, const String& str, int fontScale,  GuiColor::constant_t c, ivec2 renderPos, ivec2 size) {
 	NVGcolor color = theme->getColor(c);
-	setFont(vg, fontScale, color, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+	UTIL_setFont(vg, theme, fontScale, color, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
 	float lineh = 0;
 	nvgTextMetrics(vg, NULL, NULL, &lineh);
 	//TODO: move this into layout (needs vg ctxt tho)

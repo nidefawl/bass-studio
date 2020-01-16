@@ -6,6 +6,7 @@
 #include "str_util.h"
 #include "fileio.h"
 #include "renderresources.h"
+#include "guifonts.h"
 #include "exceptions.h"
 
 #include <GLFW/glfw3.h>
@@ -43,6 +44,8 @@ namespace {
 namespace RenderResources {
 	NvgImageTexture imgDashedLine;
 	NvgImageTexture imgIcons[NUM_IMGS];
+	std::vector<FontDesc> fontsInstalled;
+	LoadedFont fontsLoaded[MAX_FONTS];
 	namespace {
 		void load(NVGcontext* vg, String path, ImageBuf& out) {
 			try {
@@ -106,6 +109,42 @@ namespace RenderResources {
 			int32_t nvgid = nvgCreateImageRGBA(vg, texSize, texSize, NVG_IMAGE_REPEATX | NVG_IMAGE_REPEATY | NVG_IMAGE_NEAREST, (const unsigned char*)dataB.get());
 			nvgImageSize(vg, nvgid, &imgDashedLine.width, &imgDashedLine.height);
 			imgDashedLine.perContextId[vg] = nvgid;
+		}
+		{
+
+			std::vector<FileFound> files;
+			findFilesWithExt("res/fonts/gui/", "ttf", false, files);
+			findFilesWithExt("res/fonts/gui/", "otf", false, files);
+			if (files.empty()) {
+				throw appexception("Please install ttf fonts to res/fonts/gui");
+			}
+			fontsInstalled.clear();
+			fontsInstalled.resize(files.size());
+			for (int i = 0; i < files.size(); i++) {
+				fontsInstalled[i].name = files[i].name;
+				fontsInstalled[i].path = files[i].path;
+			}
+			for (int i = 0; i < MAX_FONTS && i < files.size(); i++) {
+				fontsLoaded[i].loaded = false;
+			}
+			String fntList = "";
+			int loaded = 0;
+			for (int i = 0; i < MAX_FONTS && i < files.size(); i++) {
+				LoadedFont& lf = fontsLoaded[i];
+				String fntKey = StringFormat("font%d", i);
+				log_printf("loading font %s %s\n", StringAsCStr(fntKey), StringAsCStr(lf.font.path));
+				lf.nvgId = nvgCreateFont(vg, StringAsCStr(fntKey), StringAsCStr(toCWDPath(files[i].path)));
+				lf.loaded = lf.nvgId >= 0;
+				lf.name = files[i].name;
+				lf.font.name = files[i].name;
+				lf.font.path = files[i].path;
+				if (lf.loaded) {
+					loaded++;
+					fntList += fntKey+":"+lf.name+",";
+				}
+
+			}
+			log_printf("loaded %d fonts: %s\n", loaded, StringAsCStr(fntList));
 		}
 	}
 

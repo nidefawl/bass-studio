@@ -17,6 +17,7 @@
 #include "guicontextmenu.h"
 #include "pluginlist.h"
 #include "edithistory.h"
+#include "guifonts.h"
 
 #include "../host/mainctrl.h"
 #include "../host/vst_host.h"
@@ -502,7 +503,8 @@ void guictr_dragged_plugins::renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2
 	nvgTranslate(vg, mousepos.x, mousepos.y);
 	drawBackground(vg, theme, pos, size, 0, true, false);
 	ivec2 inset = { 2, 2 };
-	nvgFontFace(vg, "sans");
+	UIFont::font_instance instance = theme->getFont(UIFont::FONT_DEFAULT);
+	UIFont::bindFont(vg, instance);
 	nvgFillColor(vg, G_WHITE);
 	Table::DrawTableNVG(this->table, vg, theme, pos + inset, size - inset * 2, HEIGHT_ENTRY - 4);
 }

@@ -1,10 +1,12 @@
 #include "guicolors.h"
-#include <nanovg_min.h>
 #include <vector>
 #include <algorithm>
 #include "math/seq_math.h"
 #include "logging.h"
 #include "str_util.h"
+#include "renderresources.h"
+#include "guifonts.h"
+#include <nanovg.h>
 
 
 uint32_t colorPalette[COLOR_PALETTE_LEN] = {
@@ -173,5 +175,80 @@ void initConstants(int colorVal) {
 	setConstant(GuiColor::COL_LABEL_ACTIVE, GUI_COLOR_HEXA(255, 255));
 	setConstant(GuiColor::COL_LABEL_INACTIVE, GUI_COLOR_HEXA(128, 255));
 
+}
+}
+
+namespace UIFont {
+static std::vector<font_type_t*>& _getConstants() {
+	static std::vector<font_type_t*> allconstants;
+	return allconstants;
+}
+font_type_t getConstantById(int32_t id) {
+	auto& v =_getConstants();
+	for (auto* c : v) {
+		if (c->idx == id) {
+			return *c;
+		}
+	}
+	return font_type_t();
+}
+font_type_t getConstantByName(String name) {
+	auto& v =_getConstants();
+	for (auto* c : v) {
+		if (c->name == name) {
+			return *c;
+		}
+	}
+	return font_type_t();
+}
+std::vector<font_type_t> getAllConstants() {
+	std::vector<font_type_t> v;
+	auto constants = _getConstants();
+	v.reserve(constants.size());
+	for (auto it = constants.begin(); it != constants.end();) {
+		v.push_back(*(*it++));
+	}
+	return v;
+}
+int32_t getNextId() {
+	static int32_t constantsNextId = 1;
+	return constantsNextId++;
+}
+
+font_type_t::font_type_t()
+: idx(0),
+  name(nullptr),
+  defValue("") {
+//  allconstants.push_back(*this);
+}
+font_type_t::font_type_t(const char* _name, const char* _defValue)
+: idx(getNextId()),
+  name(_name),
+  defValue(_defValue) {
+	auto& allconstants = _getConstants();
+//	my_printf("push %16s to %12X -> size %d\n", _name, (int64_t)&allconstants, allconstants.size());
+  allconstants.push_back(this);
+}
+font_type_t FONT_DEFAULT = font_type_t("FONT_DEFAULT", "Roboto-Medium.ttf");
+font_type_t FONT_LABEL = font_type_t("FONT_LABEL", "Roboto-Medium.ttf");
+font_type_t FONT_TEXFIELD = font_type_t("FONT_TEXFIELD", "Roboto-Medium.ttf");
+font_type_t FONT_CONTEXT_MENU = font_type_t("FONT_CONTEXT_MENU", "Roboto-Medium.ttf");
+font_type_t FONT_DECIMAL = font_type_t("FONT_DECIMAL", "Roboto-Medium.ttf");
+void bindFont(NVGcontext* ctx, UIFont::font_instance font) {
+	if (font.fontInstanceIdx == -1) {
+		font.fontInstanceIdx = -2;
+		for (int i = 0; i < MAX_FONTS; i++) {
+			if (RenderResources::fontsLoaded[i].name == font.name) {
+				font.fontInstanceIdx = i;
+				break;
+			}
+		}
+	}
+	const int fontIdx = math::clamp(font.fontInstanceIdx, 0, MAX_FONTS);
+	nvgFontFaceId(ctx, RenderResources::fontsLoaded[fontIdx].nvgId);
+}
+String getFontName(int fontInstanceIdx) {
+	const int fontIdx = math::clamp(fontInstanceIdx, 0, MAX_FONTS);
+	return RenderResources::fontsLoaded[fontIdx].name;
 }
 }

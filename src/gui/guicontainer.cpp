@@ -26,7 +26,6 @@ constant_t CONST_ROUND("CONST_ROUND", 20);
 constant_t CTR_LABEL_FONT_SIZE("CTR_LABEL_FONT_SIZE", 14);
 }
 
-
 void guictr_base::setControl(BaseCtrl* parentCtrl) {
 	guibase::setControl(parentCtrl);
 	for (guibase* g : guis) {
@@ -65,7 +64,8 @@ void guictr_base::renderContainerLabel(NVGcontext* vg) {
 			auto posInset = getPosContent() + ivec2(INSET_CTR_SPACING, 0);
 			setFont(vg, sizeF, theme->getColor(GuiColor::COL_LABEL_CONTAINER), NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
 			nvgFontSize(vg, sizeF);
-			nvgFontFace(vg, "sans");
+			UIFont::font_instance instance = theme->getFont(UIFont::FONT_LABEL);
+			UIFont::bindFont(vg, instance);
 			nvgTextAlign(vg, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
 			auto sizeInset = ivec2(math::min(getSizeContent().x, static_cast<int32_t>(textWidth(vg, label)+sizeF/2)), sizeF);
 

@@ -6,6 +6,7 @@
 #include "color_util.h"
 #include "guicolors.h"
 #include "guiconstant.h"
+#include "renderresources.h"
 #include "assert_dbg.h"
 
 
@@ -37,6 +38,7 @@ void guitheme_t::initTheme() {
 	vecNVGColors.resize(NUM_GUI_COLORS);
 	mapColors.clear();
 	mapProperties.clear();
+	mapFonts.clear();
 	std::vector<GuiColor::constant_t> v = GuiColor::getAllConstants();
 	for (auto c : v) {
 		mapColors[c.idx] = c.defValue;
@@ -45,6 +47,10 @@ void guitheme_t::initTheme() {
 	std::vector<GuiConstant::constant_t> v2 = GuiConstant::getAllConstants();
 	for (auto c : v2) {
 		mapProperties[c.idx] = c.defValue;
+	}
+	auto v3 = UIFont::getAllConstants();
+	for (auto c : v3) {
+		mapFonts[c.idx] = UIFont::font_instance{c.defValue};
 	}
 	uint32_t rgb = nvgToRGB(getColor(GuiColor::COL_BG_DRK));
 	setTint(rgb);
@@ -107,6 +113,41 @@ const int32_t guitheme_t::get(GuiConstant::constant_t _constant) {
     int32_t val = mapProperties[_constant.idx];
     dbgassert(val >= 0 && val <= 10000);
 	return mapProperties[_constant.idx];
+}
+UIFont::font_instance guitheme_t::getFont(UIFont::font_type_t _fonttype) const {
+    auto it = mapFonts.find(_fonttype.idx);
+    if (it == mapFonts.end()) {
+    	return UIFont::font_instance{_fonttype.defValue};
+    }
+    return mapFonts.at(_fonttype.idx);
+}
+void bindFont(NVGcontext* ctx, UIFont::font_instance font) {
+	for (int i = 0; i < MAX_FONTS; i++) {
+		if (RenderResources::fontsLoaded[i].name == font.name) {
+			nvgFontFaceId(ctx, RenderResources::fontsLoaded[i].nvgId);
+			return;
+		}
+	}
+	nvgFontFaceId(ctx, RenderResources::fontsLoaded[0].nvgId);
+}
+void guitheme_t::bindFonts() {
+	for (auto it = mapFonts.begin(); it != mapFonts.end(); ++it) {
+		int32_t key = it->first;
+		UIFont::font_type_t c = UIFont::getConstantById(key);
+		if (c.idx <= 0)
+			continue;
+		it->second.fontInstanceIdx = -2;
+		for (int i = 0; i < MAX_FONTS; i++) {
+			if (RenderResources::fontsLoaded[i].name == it->second.name) {
+				it->second.fontInstanceIdx = i;
+				return;
+			}
+		}
+	}
+}
+UIFont::font_instance guitheme_t::setFont(UIFont::font_type_t _fonttype, String s) {
+	mapFonts[_fonttype.idx] = UIFont::font_instance{s};
+	return mapFonts[_fonttype.idx];
 }
 void guitheme_t::set(GuiConstant::constant_t _constant, int32_t _value) {
 	mapProperties[_constant.idx] = _value;

@@ -16,6 +16,7 @@
 #include "guicontextmenu_base.h"
 #include "renderresources.h"
 #include "util/debug_alloc.h"
+#include "guifonts.h"
 
 namespace GuiColor {
 constant_t COL_BTN_BG_DEFAULT_INACTIVE("COL_BTN_BG_DEFAULT_INACTIVE", 0xff202020);
@@ -69,9 +70,10 @@ void initColor() {
 
 }
 
-void setFont(NVGcontext* vg, float size, NVGcolor color, int alignment) {
+void UTIL_setFont(NVGcontext* vg, const guitheme_t* const theme, float size, NVGcolor color, int alignment) {
 	nvgFontSize(vg, size);
-	nvgFontFace(vg, "sans");
+	UIFont::font_instance instance = theme->getFont(UIFont::FONT_DEFAULT);
+	UIFont::bindFont(vg, instance);
 	nvgFillColor(vg, color);
 	nvgTextAlign(vg, alignment);
 }
@@ -332,6 +334,10 @@ guitheme_t* getDefaultTheme() {
 bool guibase::isChildOf(guibase* g) {
 	if (this == g) return true;
 	return parent && parent->isChildOf(g);
+}
+void guibase::setFont(NVGcontext* vg, float size, NVGcolor color, int alignment) {
+	dbgassert(theme);
+	UTIL_setFont(vg, theme, size, color, alignment);
 }
 
 NVGcolor guibuttonbase::getBackgroundColor(int stateflags) const {

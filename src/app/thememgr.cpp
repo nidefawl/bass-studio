@@ -108,6 +108,7 @@ void guitheme_mgr::setTheme(guitheme_t setTheme) {
 	}
 //	if (current != setTheme) {
 		current = setTheme;
+		current.bindFonts();
 		if (parent && parent->isOk()) {
 			parent->relayout();
 		}

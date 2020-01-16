@@ -96,7 +96,7 @@ void renderMeterAt(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const iv
 		nvgStrokeWidth(vg, 1.5f);
 		nvgStroke(vg);
 		if (textHeight) {
-			setFont(vg, channelW*1.4, G_WHITE, NVG_ALIGN_TOP | NVG_ALIGN_RIGHT);
+			UTIL_setFont(vg, theme, channelW*1.4, G_WHITE, NVG_ALIGN_TOP | NVG_ALIGN_RIGHT);
 			float fMaxAll = mixedlevels[0];
 			float lvl = dsp_util::dBFS(fMaxAll);
 			String strLevel = StringFormat("%0.2f", lvl);

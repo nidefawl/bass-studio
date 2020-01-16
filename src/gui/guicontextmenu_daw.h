@@ -86,7 +86,7 @@ public:
 	}
 	void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) {
 		const int h = this->fontSize;
-		setFont(vg, h, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+		UTIL_setFont(vg, theme, h, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
 		nvgText(vg, leftOffset(), y+h/2, StringAsCStr(title), NULL);
 		nvgFontSize(vg, this->fontSize-4);
 		int n = 0;

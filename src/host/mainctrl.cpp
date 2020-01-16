@@ -193,6 +193,7 @@ public:
 	guictr_effectlibrary& ctr_effectlib;
 	guictr_base* const ctr_properties;
 	guictr_base* const ctr_loadedplugins;
+	gui_ctr_debug ctr_dbg;
 	guictr_side_tabs_daw_2(guictr_effectlibrary& _ctr_effectlib)
 	: guictr_tabbed(),
 	  ctr_effectlib(_ctr_effectlib),
@@ -202,6 +203,8 @@ public:
 		ctr_effectlib.setLabel("Plugins");
 		ctr_loadedplugins->setLabel("Instances");
 		ctr_properties->setLabel("Properties");
+		ctr_dbg.setLabel("Debug 1");
+		addEntry(&ctr_dbg, ctr_dbg.label);
 		addEntry(&ctr_effectlib, ctr_effectlib.label);
 		addEntry(ctr_loadedplugins, ctr_loadedplugins->label);
 		addEntry(ctr_properties, ctr_properties->label);
@@ -751,6 +754,7 @@ bool MainCtrl::init(window_main* window, NVGcontext* nanovg)
 	themes.loadThemes();
 
 	getDefaultTheme()->initTheme();
+	getDefaultTheme()->bindFonts();
 
 	view = new DawViewContainers(menubar, cursor, *this, grid, clipView, dragdropclip);
 	view->addTo(this->containers);

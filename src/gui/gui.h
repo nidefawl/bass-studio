@@ -30,7 +30,7 @@ class gui_track;
 struct guitheme_t;
 struct dragdrop_midifile;
 
-void setFont(NVGcontext* vg, float size, NVGcolor color, int alignment);
+void UTIL_setFont(NVGcontext* vg, const guitheme_t* const theme, float size, NVGcolor color, int alignment);
 float textWidth(NVGcontext* vg, const String& str);
 void renderText(NVGcontext* ctx, float x, float y, float maxWidth, const char* string);
 void renderCenteredMultilineText(NVGcontext* vg, const guitheme_t* const theme, const String& str, int fontScale,  GuiColor::constant_t c, ivec2 renderPos, ivec2 size);
@@ -379,5 +379,5 @@ public:
 protected:
 	virtual NVGcolor getBackgroundColor(int stateflags) const;
 	bool isChildOf(guibase* parentSearch);
-
+	void setFont(NVGcontext* vg, float size, NVGcolor color, int alignment);
 };

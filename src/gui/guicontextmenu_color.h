@@ -28,7 +28,7 @@ public:
 		height = _fontSize + pad * 2 + (WH + padCell) * ROWS - padCell;
 	}
 	void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) {
-		setFont(vg, this->fontSize, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+		UTIL_setFont(vg, theme, this->fontSize, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
 		nvgText(vg, leftOffset(), y+this->fontSize/2, StringAsCStr(title), NULL);
 		nvgFontSize(vg, this->fontSize-4);
 		int focusIdx = -1;

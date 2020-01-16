@@ -10,6 +10,7 @@
 #include "guicolors.h"
 #include "platform.h"
 #include "keyboard.h"
+#include "guifonts.h"
 
 #define TEXTFIELD_USE_REGEX_PATTERN 0
 #if TEXTFIELD_USE_REGEX_PATTERN
@@ -113,7 +114,8 @@ void gui_textfield::handleDraggedRelease(MouseEvent& evt) {
 }
 void setTfFont(NVGcontext* ctx, const gui_textfield* tf) {
 	nvgFontSize(ctx, tf->fontSize());
-	nvgFontFace(ctx, "sans");
+	UIFont::font_instance instance = tf->theme->getFont(UIFont::FONT_TEXFIELD);
+	UIFont::bindFont(ctx, instance);
 	switch (tf->alignment()) {
 		case gui_textfield::Alignment::Left:
 			nvgTextAlign(ctx, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
@@ -188,6 +190,7 @@ void gui_textfield::renderTextField(NVGcontext* ctx) const {
 		nvgFillColor(ctx, mValidFormat ? theme->getColor(GuiColor::COL_BG_DRK_FOCUSED) : nvgRGBA(200, 90, 90, 255));
 	else
 		nvgFillColor(ctx, theme->getColor(GuiColor::COL_BG_DRK));
+//	nvgFillColor(ctx, rgbaToNvg(0xFFDD3333));
 
 	nvgFill(ctx);
 
@@ -196,7 +199,8 @@ void gui_textfield::renderTextField(NVGcontext* ctx) const {
 	if (clipSize.x < 1 || clipSize.y < 1)
 		return;
 	nvgFontSize(ctx, fontSize());
-	nvgFontFace(ctx, "sans");
+	UIFont::font_instance instance = theme->getFont(UIFont::FONT_TEXFIELD);
+	UIFont::bindFont(ctx, instance);
 	if (!mUnits.empty()) {
 		nvgFillColor(ctx, GUI_COLORA(255, mEnabled ? 64 : 32));
 		nvgTextAlign(ctx, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
