@@ -1,4 +1,4 @@
-#if defined(__GNUC__) && defined(ENABLE_MICHAELS_GLIBCXX_HACKS)
+#if 0 && defined(__GNUC__) && defined(ENABLE_MICHAELS_GLIBCXX_HACKS) && ENABLE_MICHAELS_GLIBCXX_HACKS == 1
 #include <cxxabi.h>
 #include <cstddef>
 #include <typeinfo>
