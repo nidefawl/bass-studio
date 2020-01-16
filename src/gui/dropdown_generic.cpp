@@ -51,6 +51,7 @@ void guidropdown_generic<String>::handleDraggedRelease(MouseEvent& evt) {
 	}
 	guictxtmenu_base *popup = new guidropdown_generic_ctxt(this, std::move(strOptions));
 	popup->size = size;
-	popup->setFontSize(size.y);
+	int fontScale = math::round((this->fontSize > 0 ? this->fontSize : size.y) * fFontScale);
+	popup->setFontSize(fontScale);
 	this->parentCtrl->openContextMenu(popup, toScreenSpace(ivec2(0, size.y))-popup->pos+ivec2(1));
 }
