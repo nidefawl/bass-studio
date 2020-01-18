@@ -52,6 +52,7 @@
 #define NVG_KAPPA90 0.5522847493f	// Length proportional to radius of a cubic bezier handle for 90deg arcs.
 
 #define NVG_COUNTOF(arr) (sizeof(arr) / sizeof(0[arr]))
+#define NVG_USE_FAST_BEZIER_TESSELATION
 
 
 enum NVGcommands {
@@ -657,7 +658,11 @@ void nvgReset(NVGcontext* ctx)
 	state->miterLimit = 10.0f;
 	state->lineCap = NVG_BUTT;
 	state->lineJoin = NVG_MITER;
+#ifdef NVG_USE_FAST_BEZIER_TESSELATION
+	state->tess = NVG_TESS_AFD;
+#else
 	state->tess = NVG_TESS_SUBDIVISION;
+#endif
 	state->alpha = 1.0f;
 	nvgTransformIdentity(state->xform);
 
