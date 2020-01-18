@@ -766,9 +766,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 	std::shared_ptr<resampler_t> resamplerOutput = impl->getResampler(sampleFormat, sampleFormatExternal, 0);
 	std::shared_ptr<resampler_t> resamplerInput = impl->getResampler(sampleFormatExternal, sampleFormat, 1);
 
-#if 0
 	processMidiRealtimeInput(ctrl, posDouble, state);
-#endif
 
 	int queueSizeInput = 0;
 	int queueSizeOutput = 0;
@@ -1296,8 +1294,11 @@ void vsthost::processAudio(audio_stage_t* stage, AudioBlock* input, AudioBlock* 
 		}
 		current->postProcess(blockPostProcess, numSamples, !isBypass);
 		auto timePassed = timer.getTime();
-		current->timeProcess += timePassed;
-		stats.timeProcess += timePassed;
+		constexpr int NUM_BINS_VST_STATS=64;
+		current->timeProcess -= current->timeProcess/NUM_BINS_VST_STATS;
+		current->timeProcess += timePassed/NUM_BINS_VST_STATS;
+		stats.timeProcess -= current->timeProcess/NUM_BINS_VST_STATS;
+		stats.timeProcess += timePassed/NUM_BINS_VST_STATS;
 		//current->fTimePercentBlockProcess = ((current->fTimePercentBlockProcess*49.0)+(timer.getTime() / (double) microSecsPerBlock))/50.0;^^
 		processing.pluginId = 0;
 	}
