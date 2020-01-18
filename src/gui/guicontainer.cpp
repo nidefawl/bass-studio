@@ -23,7 +23,7 @@ constant_t COL_LABEL_CONTAINER("COL_LABEL_CONTAINER", 0xffd0d0d0);
 namespace GuiConstant {
 
 constant_t CONST_ROUND("CONST_ROUND", 20);
-constant_t CTR_LABEL_FONT_SIZE("CTR_LABEL_FONT_SIZE", 14);
+constant_t CONST_FONT_SIZE_CTR_LABEL("CONST_FONT_SIZE_CTR_LABEL", 14);
 }
 
 void guictr_base::setControl(BaseCtrl* parentCtrl) {
@@ -60,7 +60,7 @@ void guictr_base::render(NVGcontext* vg) {
 void guictr_base::renderContainerLabel(NVGcontext* vg) {
 	if (isFlag(FLG_RENDER_LABEL) && label.length()) {
 		bool focused = parentCtrl->isCtrOrChildFocused(this);
-			auto sizeF = theme->get(GuiConstant::CTR_LABEL_FONT_SIZE);
+			auto sizeF = theme->get(GuiConstant::CONST_FONT_SIZE_CTR_LABEL);
 			auto posInset = getPosContent() + ivec2(INSET_CTR_SPACING, 0);
 			setFont(vg, sizeF, theme->getColor(GuiColor::COL_LABEL_CONTAINER), NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
 			nvgFontSize(vg, sizeF);

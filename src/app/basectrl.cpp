@@ -489,6 +489,7 @@ void AppCtrl::openOverlayGui(guictxtmenu_base *b, ivec2 pos, int flags) {
 	if (this->ctxtmenu) {
 		closeContextMenu();
 	}
+	b->setFontSize(getTheme()->getFloat(GuiConstant::CONST_FONT_SIZE_CONTEXT_MENU));
 	dbgassert(!this->ctxtmenu);
 	this->ctxtmenu = b;
 	ivec2 windowPos;
