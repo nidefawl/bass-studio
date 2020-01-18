@@ -326,15 +326,15 @@ public:
 				guictxtmenu_base* ctxtMenu = new guictxtmenu_base();
 				ctxtMenu->size = {240, 480};
 				ctxtMenu->add(static_cast<guibase*>(dbgPropertiesCtrPopup));
-				dbgPropertiesCtrPopup->setDebugPropertyHandle(gui);
+				dbgPropertiesCtrPopup->setDebugPropertyHandle(nullptr);
 				ivec2 wndPos{0};
 				this->parentCtrl->window->getPos(&wndPos);
-				log_printf("opening at %d, %d\n", wndPos.x, wndPos.y);
 				closeContextMenu();
 				MainCtrl::get()->openContextMenu(ctxtMenu, wndPos, 2);
+				dbgPropertiesCtrPopup->setDebugPropertyHandle(gui);
 				assert(ctxtMenu->parentCtrl);
 				ctxtMenu->parentCtrl->window->getPos(&wndPos);
-				log_printf("opened at %d, %d\n", wndPos.x, wndPos.y);
+				dbgPropertiesCtrPopup->setDebugPropertyHandle(gui);
 				return;
 			}
 		}

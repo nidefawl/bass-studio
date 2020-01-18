@@ -44,8 +44,8 @@ namespace {
 namespace RenderResources {
 	NvgImageTexture imgDashedLine;
 	NvgImageTexture imgIcons[NUM_IMGS];
+	std::unordered_map<NVGcontext*,NvgFonts> perContextFonts;
 	std::vector<FontDesc> fontsInstalled;
-	LoadedFont fontsLoaded[MAX_FONTS];
 	namespace {
 		void load(NVGcontext* vg, String path, ImageBuf& out) {
 			try {
@@ -111,29 +111,33 @@ namespace RenderResources {
 			imgDashedLine.perContextId[vg] = nvgid;
 		}
 		{
-
+			NvgFonts fonts;
 			std::vector<FileFound> files;
 			findFilesWithExt("res/fonts/gui/", "ttf", false, files);
 			findFilesWithExt("res/fonts/gui/", "otf", false, files);
 			if (files.empty()) {
 				throw appexception("Please install ttf fonts to res/fonts/gui");
 			}
-			fontsInstalled.clear();
-			fontsInstalled.resize(files.size());
+			fonts.fontsInstalled.clear();
+			fonts.fontsInstalled.resize(files.size());
 			for (int i = 0; i < files.size(); i++) {
-				fontsInstalled[i].name = files[i].name;
-				fontsInstalled[i].path = files[i].path;
+				fonts.fontsInstalled[i].name = files[i].name;
+				fonts.fontsInstalled[i].path = files[i].path;
 			}
-			for (int i = 0; i < MAX_FONTS && i < files.size(); i++) {
-				fontsLoaded[i].loaded = false;
-			}
+			if (fontsInstalled.empty())
+				fontsInstalled = fonts.fontsInstalled;
+			fonts.fontsLoaded.clear();
 			String fntList = "";
 			int loaded = 0;
 			for (int i = 0; i < MAX_FONTS && i < files.size(); i++) {
-				LoadedFont& lf = fontsLoaded[i];
+				LoadedFont lf;
 				String fntKey = StringFormat("font%d", i);
 				log_printf("loading font %s %s\n", StringAsCStr(fntKey), StringAsCStr(lf.font.path));
-				lf.nvgId = nvgCreateFont(vg, StringAsCStr(fntKey), StringAsCStr(toCWDPath(files[i].path)));
+				if (i == 0) {
+					lf.nvgId = nvgCreateFont(vg, StringAsCStr(fntKey), StringAsCStr(toCWDPath(files[i].path)));
+				} else {
+					lf.nvgId = -999;
+				}
 				lf.loaded = lf.nvgId >= 0;
 				lf.name = files[i].name;
 				lf.font.name = files[i].name;
@@ -142,9 +146,11 @@ namespace RenderResources {
 					loaded++;
 					fntList += fntKey+":"+lf.name+",";
 				}
+				fonts.fontsLoaded.push_back(lf);
 
 			}
 			log_printf("loaded %d fonts: %s\n", loaded, StringAsCStr(fntList));
+			perContextFonts[vg] = fonts;
 		}
 	}
 

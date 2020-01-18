@@ -235,20 +235,31 @@ font_type_t FONT_TEXFIELD = font_type_t("FONT_TEXFIELD", "Roboto-Medium.ttf");
 font_type_t FONT_CONTEXT_MENU = font_type_t("FONT_CONTEXT_MENU", "Roboto-Medium.ttf");
 font_type_t FONT_DECIMAL = font_type_t("FONT_DECIMAL", "Roboto-Medium.ttf");
 void bindFont(NVGcontext* ctx, UIFont::font_instance font) {
+	RenderResources::NvgFonts& fonts = RenderResources::perContextFonts[ctx];
 	if (font.fontInstanceIdx == -1) {
 		font.fontInstanceIdx = -2;
-		for (int i = 0; i < MAX_FONTS; i++) {
-			if (RenderResources::fontsLoaded[i].name == font.name) {
+		int i = 0;
+		for (auto& f : fonts.fontsLoaded) {
+			if (f.name == font.name) {
 				font.fontInstanceIdx = i;
 				break;
 			}
+			i++;
 		}
 	}
-	const int fontIdx = math::clamp(font.fontInstanceIdx, 0, MAX_FONTS);
-	nvgFontFaceId(ctx, RenderResources::fontsLoaded[fontIdx].nvgId);
+	if (!fonts.fontsLoaded.size()) {
+		return;
+	}
+	const int fontIdx = math::clamp<int32_t>(font.fontInstanceIdx, 0, fonts.fontsLoaded.size());
+	auto& fontloaded = fonts.fontsLoaded[fontIdx];
+	if (fontloaded.nvgId == -999) {
+		log_printf("loading font %s %s\n", StringAsCStr(fontloaded.font.name), StringAsCStr(fontloaded.font.path));
+		fontloaded.nvgId = nvgCreateFont(ctx, StringAsCStr(fontloaded.font.name), StringAsCStr(fontloaded.font.path));
+	}
+	nvgFontFaceId(ctx, fontloaded.nvgId);
 }
-String getFontName(int fontInstanceIdx) {
-	const int fontIdx = math::clamp(fontInstanceIdx, 0, MAX_FONTS);
-	return RenderResources::fontsLoaded[fontIdx].name;
-}
+//String getFontName(int fontInstanceIdx) {
+//	const int fontIdx = math::clamp(fontInstanceIdx, 0, MAX_FONTS);
+//	return RenderResources::fontsLoaded[fontIdx].name;
+//}
 }

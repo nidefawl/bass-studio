@@ -315,14 +315,19 @@ void guibase::handleMouseDownBegin(MouseEvent& evt) {
 #if BUILD_VSTHOST
 		{
 
-			setDebugPropertyHandle(this);
 
 			debugproperties* dbgPropertiesCtrPopup = makeUniquePropertiesCtr();
 			guictxtmenu_base* ctxtMenu = new guictxtmenu_base();
 			ctxtMenu->size = {240, 480};
 			ctxtMenu->add(static_cast<guibase*>(dbgPropertiesCtrPopup));
 			dbgPropertiesCtrPopup->setDebugPropertyHandle(this);
+			dbgPropertiesCtrPopup->theme = theme;
+			dbgPropertiesCtrPopup->layout();
+			dbgPropertiesCtrPopup->theme = nullptr;
 			this->parentCtrl->openContextMenu(ctxtMenu, evt.mousepos);
+			dbgPropertiesCtrPopup->setDebugPropertyHandle(this);
+			dbgPropertiesCtrPopup->layout();
+			setDebugPropertyHandle(this);
 		}
 #endif
 	}

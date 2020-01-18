@@ -121,28 +121,19 @@ UIFont::font_instance guitheme_t::getFont(UIFont::font_type_t _fonttype) const {
     }
     return mapFonts.at(_fonttype.idx);
 }
-void bindFont(NVGcontext* ctx, UIFont::font_instance font) {
-	for (int i = 0; i < MAX_FONTS; i++) {
-		if (RenderResources::fontsLoaded[i].name == font.name) {
-			nvgFontFaceId(ctx, RenderResources::fontsLoaded[i].nvgId);
-			return;
-		}
-	}
-	nvgFontFaceId(ctx, RenderResources::fontsLoaded[0].nvgId);
-}
 void guitheme_t::bindFonts() {
 	for (auto it = mapFonts.begin(); it != mapFonts.end(); ++it) {
 		int32_t key = it->first;
 		UIFont::font_type_t c = UIFont::getConstantById(key);
 		if (c.idx <= 0)
 			continue;
-		it->second.fontInstanceIdx = -2;
-		for (int i = 0; i < MAX_FONTS; i++) {
-			if (RenderResources::fontsLoaded[i].name == it->second.name) {
-				it->second.fontInstanceIdx = i;
-				return;
-			}
-		}
+		it->second.fontInstanceIdx = -1;
+//		for (int i = 0; i < MAX_FONTS; i++) {
+//			if (RenderResources::fontsLoaded[i].name == it->second.name) {
+//				it->second.fontInstanceIdx = i;
+//				return;
+//			}
+//		}
 	}
 }
 UIFont::font_instance guitheme_t::setFont(UIFont::font_type_t _fonttype, String s) {

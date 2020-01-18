@@ -604,15 +604,20 @@ void guiproperties_table<guiproperties_t>::onTick(AppCtrl* appctrl) {
 template <>
 void guiproperties_table<guiproperties_t>::setDebugPropertyHandle(void *vPtr)  {
 	guibase* ref = safeRefGet(ptr->safeRef);
-	guibase* pGui = static_cast<guibase*>(vPtr);
-	if (ref != pGui) {
-		if (pGui) {
-			ptr->safeRef = pGui->makeSafeRef();
-		} else {
-			ptr->safeRef = SafeRef<guibase>();
+	if (!vPtr) {
+		table.rows.clear();
+		table.titleCols.clear();
+		table.colSizes.clear();
+		ptr->safeRef = SafeRef<guibase>();
+	} else {
+		guibase* pGui = static_cast<guibase*>(vPtr);
+		if (ref != pGui) {
+			if (pGui) {
+				ptr->safeRef = pGui->makeSafeRef();
+			} else {
+				ptr->safeRef = SafeRef<guibase>();
+			}
 		}
-		layout();
-		this->onChildLayoutChanged(this);
 	}
 }
 struct tbltype_theme_color {
@@ -721,10 +726,12 @@ inline void cellClicked(const click_ctxt_t& ctxt, const tbltype_theme_font& obj)
 template <>
 void guiproperties_table<guitheme_t>::layout()  {
 	//	size.x = 250;
+	curFontSize = G_FONT_SCALE(theme->getFloat(GuiConstant::CONST_FONT_SIZE_TABLE));
+	curFontSize = math::max(8.0f, curFontSize);
 
-	selectFont.setFontSize(G_FONT_SCALE(FONT_SIZE_TOOLTIP));
-	textField.setFontSize(G_FONT_SCALE(FONT_SIZE_TOOLTIP));
-		table.rowHeight = FONT_SIZE_TOOLTIP+INSET_TABLE_CELL_PADDING*2;
+	selectFont.setFontSize(curFontSize);
+	textField.setFontSize(curFontSize);
+		table.rowHeight = curFontSize+INSET_TABLE_CELL_PADDING*2;
 		table.rows.clear();
 		table.titleCols.clear();
 		table.colSizes.clear();
@@ -784,8 +791,14 @@ void guiproperties_table<guitheme_t>::onTick(AppCtrl* appctrl) {
 }
 template <>
 void guiproperties_table<guitheme_t>::setDebugPropertyHandle(void *vPtr) {
-	ptr = static_cast<guitheme_t*>(vPtr);
-	layout();
+	if (!vPtr) {
+		ptr = nullptr;
+		table.rows.clear();
+		table.titleCols.clear();
+		table.colSizes.clear();
+	} else {
+		ptr = static_cast<guitheme_t*>(vPtr);
+	}
 }
 
 
@@ -934,7 +947,10 @@ guictr_base* makeCtrTheme() {
 std::vector<guiproperties_table<guiproperties_t>*> propTableInstances;
 void setDebugPropertyHandle(void* ptr) {
 	for (auto* instance : propTableInstances) {
-		instance->setDebugPropertyHandle(ptr);
+		if (instance->parentCtrl) {
+			instance->setDebugPropertyHandle(ptr);
+		}
+
 	}
 }
 debugproperties* makeUniquePropertiesCtr() {
