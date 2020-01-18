@@ -92,7 +92,7 @@ void guitrack_timeline::render(NVGcontext* vg) {
 		barSize *= 2;
 	}
 	int substeps = -1;
-	if (barSize > textWidth) {
+	if (step == 1 && barSize > textWidth) {
 		substeps = 4;
 		while (substeps > 1 && barSize > textWidth * 2) {
 			substeps /= 2;
@@ -100,9 +100,9 @@ void guitrack_timeline::render(NVGcontext* vg) {
 		}
 	}
 	int subsubsteps = -1;
-	if (barSize > textWidth) {
-		subsubsteps = 8;
-		while ((subsubsteps > 1 && barSize > textWidth*subsubsteps * 2 * 2)) {
+	if (substeps == 1 && barSize > textWidth) {
+		subsubsteps = 4;
+		while (subsubsteps > 1 && barSize > textWidth* 2) {
 			subsubsteps /= 2;
 			barSize /= 2;
 		}
