@@ -108,7 +108,7 @@ public:
 		}
 	}
 };
-class gui_pianoroll : public guibase, piano_scale {
+class gui_pianoroll : public guibase, public piano_scale {
 	enum class dragmode {
 		drag_none,
 		drag_move_resize,
@@ -303,6 +303,7 @@ public:
 	void showEditClip();
 	void storeLayout();
 	bool handleKeyInput(KeyEvent& kevt);
+	bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset);
 };
 class guictr_clipeditor : public guictr_base {
 	clip_view& view;

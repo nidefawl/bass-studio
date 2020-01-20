@@ -481,6 +481,10 @@ void guictr_noteeditor::storeLayout() {
 bool guictr_noteeditor::handleKeyInput(KeyEvent& kevt) {
 	return content.handleKeyInput(kevt);
 }
+bool guictr_noteeditor::handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
+	piano.setOffset(offset() + yoffset * 1.05* scale());
+	return true;
+}
 
 void guictr_noteeditor::setLayout(layout_pianoroll_t& layout) {
 	yscale = layout.yscale;
