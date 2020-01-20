@@ -119,6 +119,19 @@ public:
 		gui->setControl(getControl());
 		gui->onAdded();
 	}
+	template<typename Container>
+	void sortChildrenByList(Container& container) {
+		//TODO: very inefficient
+		std::sort(guis.begin(), guis.end(), [&container](guibase* a, guibase* b) {
+			int indexA = indexOfCtr(container, a);
+			int indexB = indexOfCtr(container, b);
+			if (indexA < 0)
+				return true;
+			if (indexB < 0)
+				return false;
+			return indexA < indexB;
+		});
+	}
 	bool hasGui(guibase* gui) {
 		auto it = std::find(guis.begin(), guis.end(), gui);
 		return it != guis.end();

@@ -851,11 +851,11 @@ void MainCtrl::onTick()
 		if (!ctxtmenu && guiOver == lastHoveredTooltip) {
 			hoverTicks = lastHoveredTooltipTicks + 1;
 			if (lastHoveredTooltipTicks >= 12) {
-				auto ctxtmenu = guiOver->getTooltip(this);
-				if (ctxtmenu) {
+				auto newContextMenu = guiOver->getTooltip(this);
+				if (newContextMenu) {
 					lastTooltipSrc = guiOver;
 					nextTooltipId++;
-					openContextMenu(ctxtmenu, m_mousePos+ivec2(-16,26));
+					openContextMenu(newContextMenu, m_mousePos+ivec2(-16,26));
 				}
 				hoverTicks = 0;
 			}
@@ -1620,6 +1620,9 @@ void MainCtrl::setEditClip(gui_clip* gclip) {
 }
 
 void MainCtrl::prerender(int32_t x, int32_t y, int32_t w, int32_t h, float pixelRatio) {
+
+	daw_tls::getTls().renderStats.clipsRendered=0;
+	daw_tls::getTls().renderStats.notesRendered=0;
 //	my_printf("prerender %d\n", std::this_thread::get_id());
 	for (guictr_base *ctr : containers) {
 		ctr->prerender(vg);

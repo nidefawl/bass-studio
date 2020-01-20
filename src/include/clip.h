@@ -170,6 +170,14 @@ public:
 		}
 	}
 };
+struct noteview_cache_impl_t;
+class noteview_render_t : public clip_notes_t {
+public:
+	~noteview_render_t();
+	int32_t reqRevision = -1;
+	int32_t curRevision = -1;
+	noteview_cache_impl_t* data = nullptr;
+};
 inline bool operator==(const clip_notes_t& lhs, const clip_notes_t& rhs){
 	return lhs.m_list == rhs.m_list;
 }
@@ -242,7 +250,7 @@ public:
 	}
 	int getInTimeRange(tick_t timeS, tick_t timeE, tick_t loopStart, tick_t loopEnd, std::vector<note_t>& list);
 	void getNotesView(tick_t timeS, tick_t timeE, clip_notes_t& notesView, bool forPlayback) const;
-	clip_notes_t& getNoteViewRender() const {
+	noteview_render_t& getNoteViewRender() const {
 		updateNoteView();
 		return this->noteViewRender;
 	}
@@ -293,9 +301,10 @@ public:
 private:
 	mutable bool dirty = true;
 	mutable clip_notes_t noteViewPlayback;
-	mutable clip_notes_t noteViewRender;
+	mutable noteview_render_t noteViewRender;
 	void updateNoteView() const {
 		if (dirty) {
+			noteViewRender.reqRevision++;
 			dirty = false;
 			getNotesView(0, getLen(), noteViewPlayback, true);
 			getNotesView(0, getLen(), noteViewRender, false);

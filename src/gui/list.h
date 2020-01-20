@@ -4,6 +4,7 @@
 #include "gui.h"
 #include "guicontainer.h"
 #include "scrollbar.h"
+#include "seq_util.h"
 
 
 class gui_list_entry : public guibase {
@@ -42,6 +43,11 @@ public:
 	gui_list() : guictr_base(), scrollbar(1, 0.0f, *this) {
 		add(&scrollbar);
 		setBackgroundRendered(true);
+	}
+	template<typename Comparator>
+	void sort(Comparator comparator) {
+		std::stable_sort(listGuis.begin(), listGuis.end(), comparator);
+		guictr_base::sortChildrenByList(listGuis);
 	}
 	int32_t getSelectedIdx() {
 		return selectedIdx;
@@ -92,12 +98,27 @@ public:
 	virtual void render(NVGcontext* vg);
 	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
 	void setList(std::vector<gui_list_entry*> _newList) {
-		for (gui_list_entry* g : listGuis) {
+		//newList may contain pointers that are already added
+
+		//make a copy of current loaded guis
+		std::vector<gui_list_entry*> listGuisDelete = listGuis;
+
+		//remove all existing from that copy
+		removeAll(listGuisDelete, _newList);
+
+		//remove exisiting from new list
+		removeAll(_newList, listGuis);
+
+		removeAll(listGuis, listGuisDelete);
+		//delete entries that are gone
+		for (gui_list_entry* g : listGuisDelete) {
 			remove(g);
 			delete g;
 		}
-		listGuis = _newList;
-		for (gui_list_entry* g : listGuis) {
+
+		//add entries that are new
+		addAll(listGuis, _newList);
+		for (gui_list_entry* g : _newList) {
 			add(g);
 		}
 		layout();

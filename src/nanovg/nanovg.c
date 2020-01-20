@@ -90,6 +90,7 @@ struct NVGstate {
 	float fontBlur;
 	int textAlign;
 	int fontId;
+	NVGCachingStructure commandCache;
 };
 typedef struct NVGstate NVGstate;
 
@@ -115,6 +116,16 @@ struct NVGpathCache {
 	float bounds[4];
 };
 typedef struct NVGpathCache NVGpathCache;
+struct nvg_path_cache_storage_t {
+	int type;
+	float strokeWidth;
+	NVGpaint fillPaint;
+	NVGstate state;
+	NVGpath* arrPath;
+	int len;
+	float bounds[4];
+};
+typedef struct nvg_path_cache_storage_t nvg_path_cache_storage_t;
 
 struct NVGcontext {
 	NVGparams params;
@@ -136,6 +147,8 @@ struct NVGcontext {
 	int fillTriCount;
 	int strokeTriCount;
 	int textTriCount;
+	int cacheNextPath;
+	nvg_path_cache_storage_t* cachedPathFill;
 };
 
 static float nvg__sqrtf(float a) { return sqrtf(a); }
@@ -2417,6 +2430,75 @@ void nvgDebugDumpPathCache(NVGcontext* ctx)
 	}
 }
 
+
+void nvgCachePath(NVGcontext* ctx, int enabled)
+{
+	ctx->cacheNextPath = enabled;
+}
+void nvgFillFromCache(NVGcontext* ctx, nvg_path_cache_storage_t* cache)
+{
+	dbgassert(cache);
+	if (ctx->ncommands == 0) {
+		return;
+	}
+	int i;
+	NVGstate* state = nvg__getState(ctx);
+	const NVGpath* path;
+	NVGpaint fillPaint = cache->fillPaint;
+	fillPaint.innerColor.a *= state->alpha;
+	fillPaint.outerColor.a *= state->alpha;
+//	printf("nvgFillFromCache size %d NVGpath (%d bytes)\n", cache->len, cache->len*sizeof(NVGpath));
+
+	if (cache->type == 0) {
+		ctx->params.renderFill(ctx->params.userPtr, &fillPaint, state->compositeOperation, &state->scissor, ctx->fringeWidth,
+						   cache->bounds, cache->arrPath, cache->len);
+		// Count triangles
+		for (i = 0; i < cache->len; i++) {
+			path = &cache->arrPath[i];
+			ctx->fillTriCount += path->nfill-2;
+			ctx->fillTriCount += path->nstroke-2;
+			ctx->drawCallCount += 2;
+		}
+	} else {
+		ctx->params.renderStroke(ctx->params.userPtr, &fillPaint, state->compositeOperation, &state->scissor, ctx->fringeWidth,
+							 cache->strokeWidth, ctx->cache->paths, ctx->cache->npaths);
+		// Count triangles
+		for (i = 0; i < ctx->cache->npaths; i++) {
+			path = &ctx->cache->paths[i];
+			ctx->strokeTriCount += path->nstroke-2;
+			ctx->drawCallCount++;
+		}
+	}
+
+
+}
+void nvgGetLastCacheResult(NVGcontext* ctx, nvg_path_cache_storage_t** ppCache)
+{
+//	printf("nvgGetLastCacheResult: return nvg_path_fill_cache_t 0x%06X\n", (uint64_t)&ctx->cachedPathFill);
+	dbgassert(ctx->cachedPathFill);
+	*ppCache = ctx->cachedPathFill;
+	ctx->cachedPathFill = NULL;
+}
+void nvgReleaseCacheResult(nvg_path_cache_storage_t* ppCache)
+{
+	for (int i = 0; i < ppCache->len; i++) {
+		NVGpath* path = &ppCache->arrPath[i];
+		if (path->nfill) {
+			dbgassert(path->fill);
+			free(path->fill); path->fill = NULL;
+		} else {
+			dbgassert(NULL == path->fill);
+		}
+		if (path->nstroke) {
+			dbgassert(path->stroke);
+			free(path->stroke); path->stroke = NULL;
+		} else {
+			dbgassert(NULL == path->stroke);
+		}
+	}
+	free(ppCache->arrPath);
+	free(ppCache);
+}
 void nvgFill(NVGcontext* ctx)
 {
 	if (ctx->ncommands == 0) {
@@ -2434,9 +2516,38 @@ void nvgFill(NVGcontext* ctx)
 		nvg__expandFill(ctx, 0.0f, NVG_MITER, 2.4f);
 
 	// Apply global alpha
+	if (ctx->cacheNextPath) {
+		ctx->cachedPathFill = malloc(sizeof(nvg_path_cache_storage_t));
+		ctx->cachedPathFill->type = 0;
+		ctx->cachedPathFill->strokeWidth = 0;
+		ctx->cachedPathFill->fillPaint = fillPaint;
+		ctx->cachedPathFill->state = *state;
+		ctx->cachedPathFill->len = ctx->cache->npaths;
+		ctx->cachedPathFill->arrPath = malloc(sizeof(NVGpath)*(ctx->cachedPathFill->len+1));
+		memcpy(ctx->cachedPathFill->arrPath, ctx->cache->paths, sizeof(NVGpath)*ctx->cachedPathFill->len);
+		for (int i = 0; i < ctx->cachedPathFill->len; i++) {
+			NVGpath* path = &ctx->cachedPathFill->arrPath[i];
+			if (path->nfill) {
+				NVGvertex *fill = malloc(sizeof(NVGvertex)*(path->nfill+1));
+				memcpy(fill, path->fill, sizeof(NVGvertex)*path->nfill);
+				path->fill = fill;
+			} else {
+				dbgassert(NULL == path->fill);
+			}
+			if (path->nstroke) {
+				NVGvertex *stroke = malloc(sizeof(NVGvertex)*(path->nstroke+1));
+				memcpy(stroke, path->stroke, sizeof(NVGvertex)*path->nstroke);
+				path->stroke = stroke;
+			} else {
+				dbgassert(NULL == path->stroke);
+			}
+		}
+//		ctx->cachedPathFill->arrPath[ctx->cachedPathFill->len] = NULL;
+		memcpy(ctx->cachedPathFill->bounds, ctx->cache->bounds, sizeof(float)*4);
+//		printf("cache path size %d NVGpath (%d bytes)\n", ctx->cachedPathFill->len, ctx->cachedPathFill->len*sizeof(NVGpath));
+	}
 	fillPaint.innerColor.a *= state->alpha;
 	fillPaint.outerColor.a *= state->alpha;
-
 	ctx->params.renderFill(ctx->params.userPtr, &fillPaint, state->compositeOperation, &state->scissor, ctx->fringeWidth,
 						   ctx->cache->bounds, ctx->cache->paths, ctx->cache->npaths);
 
@@ -2470,9 +2581,6 @@ void nvgStroke(NVGcontext* ctx)
 		strokeWidth = ctx->fringeWidth;
 	}
 
-	// Apply global alpha
-	strokePaint.innerColor.a *= state->alpha;
-	strokePaint.outerColor.a *= state->alpha;
 
 	nvg__flattenPaths(ctx);
 
@@ -2480,6 +2588,40 @@ void nvgStroke(NVGcontext* ctx)
 		nvg__expandStroke(ctx, strokeWidth*0.5f, ctx->fringeWidth, state->lineCap, state->lineJoin, state->miterLimit);
 	else
 		nvg__expandStroke(ctx, strokeWidth*0.5f, 0.0f, state->lineCap, state->lineJoin, state->miterLimit);
+
+	if (ctx->cacheNextPath) {
+		ctx->cachedPathFill = malloc(sizeof(nvg_path_cache_storage_t));
+		ctx->cachedPathFill->type = 1;
+		ctx->cachedPathFill->strokeWidth = strokeWidth;
+		ctx->cachedPathFill->fillPaint = strokePaint;
+		ctx->cachedPathFill->state = *state;
+		ctx->cachedPathFill->len = ctx->cache->npaths;
+		ctx->cachedPathFill->arrPath = malloc(sizeof(NVGpath)*(ctx->cachedPathFill->len+1));
+		memcpy(ctx->cachedPathFill->arrPath, ctx->cache->paths, sizeof(NVGpath)*ctx->cachedPathFill->len);
+		for (int i = 0; i < ctx->cachedPathFill->len; i++) {
+			NVGpath* path = &ctx->cachedPathFill->arrPath[i];
+			if (path->nfill) {
+				NVGvertex *fill = malloc(sizeof(NVGvertex)*(path->nfill+1));
+				memcpy(fill, path->fill, sizeof(NVGvertex)*path->nfill);
+				path->fill = fill;
+			} else {
+				dbgassert(NULL == path->fill);
+			}
+			if (path->nstroke) {
+				NVGvertex *stroke = malloc(sizeof(NVGvertex)*(path->nstroke+1));
+				memcpy(stroke, path->stroke, sizeof(NVGvertex)*path->nstroke);
+				path->stroke = stroke;
+			} else {
+				dbgassert(NULL == path->stroke);
+			}
+		}
+//		ctx->cachedPathFill->arrPath[ctx->cachedPathFill->len] = NULL;
+		memcpy(ctx->cachedPathFill->bounds, ctx->cache->bounds, sizeof(float)*4);
+//		printf("cache path size %d NVGpath (%d bytes)\n", ctx->cachedPathFill->len, ctx->cachedPathFill->len*sizeof(NVGpath));
+	}
+	// Apply global alpha
+	strokePaint.innerColor.a *= state->alpha;
+	strokePaint.outerColor.a *= state->alpha;
 
 	ctx->params.renderStroke(ctx->params.userPtr, &strokePaint, state->compositeOperation, &state->scissor, ctx->fringeWidth,
 							 strokeWidth, ctx->cache->paths, ctx->cache->npaths);

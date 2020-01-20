@@ -1,4 +1,5 @@
 #pragma once
+#include "profiling.h"
 class audiohost;
 class midihost;
 class vsthost;
@@ -9,6 +10,7 @@ class plugindatabase_t;
 class project_controller_t;
 namespace daw_tls {
 	struct tlsinstance {
+		render_stats_t renderStats;
 		bool tlsInitialized = false;
 		vsthost* host = nullptr;
 		audiohost* audioHost = nullptr;

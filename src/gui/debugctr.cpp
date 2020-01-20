@@ -59,6 +59,7 @@ constexpr int ID_BTN_INJECT_SEGFAULT_MAIN_THREAD = 5;
 constexpr int ID_BTN_INJECT_BAD_MALLOC_MAIN_THREAD = 6;
 constexpr int ID_BTN_TOGGLE_STACKTRACE = 8;
 constexpr int ID_BTN_TOGGLE_PROCESSING = 7;
+constexpr int ID_BTN_TOGGLE_CLIP_RENDER_CACHE = 9;
 constexpr int BTN_FONT_SIZE = 16;
 gui_ctr_debug::gui_ctr_debug() : guictr_base() {
 	setBackgroundRendered(true);
@@ -118,6 +119,13 @@ gui_ctr_debug::gui_ctr_debug() : guictr_base() {
 		auto btn3 = new guibutton;
 		btn3->id = ID_BTN_TOGGLE_PROCESSING;
 		btn3->setText("Disable Processing");
+		btn3->setFontSize(BTN_FONT_SIZE);
+		debugGuis.push_back(btn3);
+	}
+	{
+		auto btn3 = new guibutton;
+		btn3->id = ID_BTN_TOGGLE_CLIP_RENDER_CACHE;
+		btn3->setText("Disable clip render cache");
 		btn3->setFontSize(BTN_FONT_SIZE);
 		debugGuis.push_back(btn3);
 	}
@@ -337,6 +345,12 @@ void gui_ctr_debug::buttonClicked(guibase* button) {
 	case ID_BTN_TOGGLE_PROCESSING:
 		vsthost::getInstance()->enableProcessing = !vsthost::getInstance()->enableProcessing;
 		static_cast<guibutton*>(button)->setText(String(vsthost::getInstance()->enableProcessing?"Disable Processing":"Enable Processing"));
+
+		break;
+	case ID_BTN_TOGGLE_CLIP_RENDER_CACHE:
+
+		daw_tls::getTls().renderStats.enableCache = !daw_tls::getTls().renderStats.enableCache;
+		static_cast<guibutton*>(button)->setText(String(daw_tls::getTls().renderStats.enableCache?"Disable clip render cache":"Enable clip render cache"));
 
 		break;
 	}

@@ -11,6 +11,7 @@
 #include "meter.h"
 #include "snapshot.h"
 #include "modules.h"
+#include "profiling.h"
 #include "saferef.h"
 
 struct AudioBlock;
@@ -22,6 +23,7 @@ struct audio_stage_t;
 struct plugin_snapshot_t;
 struct plugin_snapshot_t;
 class effect_deferred;
+
 
 class effectbase : public automatable_t {
 	SafeRef<effectbase> safeRef;
@@ -47,8 +49,8 @@ public:
 	audio_stage_t* trackImpl = nullptr;
 	int32_t slot = -1;
 	std::unique_ptr<DelayLine> delayLine;
-	double fTimePercentBlockProcess = 0;
-	int64_t timeProcess = 0;
+	stats_processing_timings_t procStats;
+
 	effectbase();
 	effectbase(String _sName, int32_t _pluginType, int32_t _projectGlobalId);
 	virtual ~effectbase();

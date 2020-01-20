@@ -1180,6 +1180,16 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const DAW::processing_
 
 		}
 	}
+	/* Profiling/Timings: Accumulate timings */
+	int64_t timeTotal = 0;
+	for (track_t* track : ctrl->trackList) {
+		timeTotal += track->getStage()->procStats.timeProcessRaw;
+	}
+	stats.timeProcessRaw = timeTotal;
+	auto curTimeProcess = stats.timeProcess;
+	curTimeProcess -= curTimeProcess/NUM_BINS_STATS;
+	curTimeProcess += timeTotal/NUM_BINS_STATS;
+	stats.timeProcess = curTimeProcess;
 	return 1;
 }
 void vsthost::onStartPlayback(project_controller_t* ctrl) {
@@ -1256,6 +1266,7 @@ void vsthost::processAudio(audio_stage_t* stage, AudioBlock* input, AudioBlock* 
 	}
 
 	hires_timer_t timer;
+	int64_t timeTotal = 0;
 	for (int i = 0; i < count; ++i)
 	{
 		effectbase *current = NULL;
@@ -1293,15 +1304,29 @@ void vsthost::processAudio(audio_stage_t* stage, AudioBlock* input, AudioBlock* 
 			blockPostProcess = blockOut;
 		}
 		current->postProcess(blockPostProcess, numSamples, !isBypass);
-		auto timePassed = timer.getTime();
-		constexpr int NUM_BINS_VST_STATS=64;
-		current->timeProcess -= current->timeProcess/NUM_BINS_VST_STATS;
-		current->timeProcess += timePassed/NUM_BINS_VST_STATS;
-		stats.timeProcess -= current->timeProcess/NUM_BINS_VST_STATS;
-		stats.timeProcess += timePassed/NUM_BINS_VST_STATS;
+		const auto timePassed = timer.getTime();
+
+		auto& plugStats = current->procStats;
+		if (plugStats.statsProcStep%STATS_PROCESSING_INTERVAL_STEP == 0) {
+			plugStats.statsProcSamples[(plugStats.statsWriteOffset+1)%STATS_PROCESSING_MAX_SAMPLES] = timePassed;
+			plugStats.statsWriteOffset++;
+		}
+		auto curTimeProcess = plugStats.timeProcess;
+		curTimeProcess -= curTimeProcess/NUM_BINS_STATS;
+		curTimeProcess += timePassed/NUM_BINS_STATS;
+		plugStats.timeProcess = curTimeProcess;
+		plugStats.timeProcessRaw = timePassed;
+		timeTotal += timePassed;
 		//current->fTimePercentBlockProcess = ((current->fTimePercentBlockProcess*49.0)+(timer.getTime() / (double) microSecsPerBlock))/50.0;^^
 		processing.pluginId = 0;
 	}
+	auto curTotalTimeProc = stage->procStats.timeProcess;
+	curTotalTimeProc -= curTotalTimeProc/NUM_BINS_STATS;
+	curTotalTimeProc += timeTotal/NUM_BINS_STATS;
+	stage->procStats.timeProcessRaw = timeTotal;
+	stage->procStats.timeProcess = curTotalTimeProc;
+
+
 	//   If a plugin runs mono inputs or outputs we need to handle this manually here
 	output->copyFrom(input);
 

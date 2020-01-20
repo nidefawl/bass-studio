@@ -21,6 +21,7 @@
 #include "host/vst_host.h"
 #include "host/audio_config.h"
 #include "host/daw_channel.h"
+#include "profiling.h"
 
 #define PARAM_TRACK_GAIN 1
 
@@ -131,6 +132,7 @@ struct audio_stage_t {
 	std::vector<effectbase*> effects;
 	std::vector<effectbase*> deferredEffects;
 	std::vector<audio_stage_t*> children;
+	stats_processing_timings_t procStats;
 	struct latency_info_t {
 		int32_t delayToPreReturn = 0;
 		int32_t delayToPostReturn = 0;

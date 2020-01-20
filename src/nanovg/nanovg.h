@@ -247,6 +247,13 @@ void nvgFillColor(NVGcontext* ctx, NVGcolor color);
 // Sets current fill style to a paint, which can be a one of the gradients or a pattern.
 void nvgFillPaint(NVGcontext* ctx, NVGpaint paint);
 
+typedef struct nvg_path_cache_storage_t nvg_path_cache_storage_t;
+
+void nvgCachePath(NVGcontext* ctx, int enabled);
+void nvgReleaseCacheResult(nvg_path_cache_storage_t* ppCache);
+void nvgGetLastCacheResult(NVGcontext* ctx, nvg_path_cache_storage_t** ppCache);
+void nvgFillFromCache(NVGcontext* ctx, nvg_path_cache_storage_t* cache);
+
 // Sets the miter limit of the stroke style.
 // Miter limit controls when a sharp corner is beveled.
 void nvgMiterLimit(NVGcontext* ctx, float limit);
@@ -630,6 +637,10 @@ struct NVGscissor {
 	float extent[2];
 };
 typedef struct NVGscissor NVGscissor;
+struct NVGCachingStructure {
+	int enabled;
+};
+typedef struct NVGCachingStructure NVGCachingStructure;
 
 struct NVGvertex {
 	float x,y,u,v;

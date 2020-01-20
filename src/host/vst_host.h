@@ -19,6 +19,7 @@
 #include "track.h"
 #include "track_graph.h"
 #include "daw_channel.h"
+#include "profiling.h"
 
 
 #include <memory>
@@ -68,30 +69,6 @@ void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effec
 
 #define SYNCHRONIZED_RW
 struct AudioBlock;
-struct host_stats_reducted_t {
-	double usage;
-	int64_t timeProcess;
-	int64_t timeLastBlock;
-	int64_t timePerBlock_usec;
-};
-struct host_stats_t {
-	int32_t tickBar = 0;
-	int32_t samplesProcessed;
-	int32_t blocksProcessed;
-	int64_t timeLastBlock;
-	int64_t timeProcess;
-	std::map<String, int64_t> timings;
-	double usage;
-	int32_t inputBufferUnderuns = 0;
-	int32_t lastInvocationTime_i64 = 0;
-	int32_t inputQueueLen = 0;
-	int32_t outputQueueLen = 0;
-	int32_t resamplerInNumBlocks = 0;
-	int32_t resamplerInNumSamples = 0;
-	int32_t resamplerOutNumBlocks = 0;
-	int32_t resamplerOutNumSamples = 0;
-
-};
 struct host_processing_stats_t {
 	int32_t pluginId;
 };

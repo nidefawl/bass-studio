@@ -297,7 +297,10 @@ void guictr_tracks::render(NVGcontext* vg) {
 	nvgTranslate(vg, cp.x, cp.y);
 
 	nvgSave(vg);
+	hires_timer_t timer;
+	timer.reset();
 		trackView.render(vg);
+		daw_tls::getTls().renderStats.timeRenderEditor=timer.getTime();
 	nvgRestore(vg);
 	nvgSave(vg);
 		trackControls.render(vg);

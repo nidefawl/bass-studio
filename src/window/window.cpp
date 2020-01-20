@@ -338,7 +338,9 @@ public:
 		if (calls > 0 && since >= 1.0) {
 			double fps = calls / since;
 			fpsStats = StringFormat("%.2f fps", fps);
-			glfwSetWindowTitle(glfw, StringAsCStr(fpsStats));
+			daw_tls::tlsinstance& tls = daw_tls::getTls();
+			tls.renderStats.fps = fps;
+//			glfwSetWindowTitle(glfw, StringAsCStr(fpsStats));
 			tm_lastfps = tm;
 			calls = 0;
 		}
@@ -656,6 +658,8 @@ public:
 			if (!ctrl->isOk()) {
 				throw std::logic_error("invalid application state");
 			}
+			hires_timer_t timer;
+			timer.reset();
 			float pxratio = fbwidth / (float)winwidth;
 			glViewport(0, 0, fbwidth, fbheight);
 			glEnable(GL_BLEND);
@@ -669,6 +673,11 @@ public:
 			glStencilMask(~0);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 			ctrl->render(0, 0, winwidth, winheight, pxratio);
+			if (!this->parent) {
+
+				daw_tls::tlsinstance& tls = daw_tls::getTls();
+				tls.renderStats.timeRender=timer.getTime();
+			}
 			glfwSwapBuffers(glfw);
 		}
 	}
