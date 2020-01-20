@@ -89,6 +89,10 @@ public:
 		pluginCtr = nullptr;
 	}
 };
+namespace DAW {
+std::shared_ptr<clip_clipboard> copySelection(const trackallcontainer_t& trackList, const DAW::Cursor& _cursor);
+std::shared_ptr<clip_clipboard> consolidateClipboard(std::shared_ptr<clip_clipboard>& clipboardIn, const DAW::Cursor& _cursor);
+}
 
 KeyEvent keyEvent(int key, int scancode, int keyState, int mods, const char* key_name);
 
@@ -199,7 +203,6 @@ class MainCtrl : public AppCtrl, public delete_cb, public project_controller_t
 {
 	DawViewContainers* view = NULL;
 	Menus menus;
-
 	edithistory hist;
 	scaled_grid grid;
 	clip_view clipView;

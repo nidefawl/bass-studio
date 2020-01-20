@@ -71,9 +71,9 @@ public:
 			return;
 		data.targetParam = param;
 		automatable_t* automatable = this->at;
-		automation_t* automation = NULL;
+		const automation_t* automation = NULL;
 		if (automatable && param > -1) {
-			automation = automatable->getRegisteredAutomation(param);
+			automation = automatable->getRegisteredConstAutomation(param);
 		}
 		if (automation) {
 			data.points = automation->points;
@@ -83,7 +83,7 @@ public:
 	}
 	bool isActive() {
 		if (this->at) {
-			automation_t* automation = this->at->getRegisteredAutomation(param);
+			const automation_t* automation = this->at->getRegisteredConstAutomation(param);
 			return automation && automation->isActive();
 		}
 		return false;

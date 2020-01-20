@@ -2,10 +2,10 @@
 #include "plugin/vst_plugin.h"
 #include "../gui/automatable.h"
 
-int32_t indexOfTick(std::vector<automation_point_t>& dataPoints, tick_t tick) {
+int32_t indexOfTick(const std::vector<automation_point_t>& dataPoints, tick_t tick) {
 	int32_t idx;
 	for (idx = 0; idx < (int)dataPoints.size(); idx++) {
-		automation_point_t& pt = dataPoints[idx];
+		const automation_point_t& pt = dataPoints[idx];
 		if (pt.time > tick) {
 			break;
 		}
@@ -103,18 +103,18 @@ void simplifyData(std::vector<automation_point_t>& data) {
 //float automation_t::getEventsInRange(tick_t tick) {
 //
 //}
-float automation_t::getValueAt(tick_t tick) {
+float automation_t::getValueAt(tick_t tick) const {
 	if (points.size()) {
 		int32_t idx = indexOfTick(points, tick);
 		dbgassert(idx <= (int)points.size());
 		if (idx == (int)points.size())
 			return points.back().val;
 		if (idx > 0) {
-			automation_point_t& pt1 = points[idx-1];
+			const automation_point_t& pt1 = points[idx-1];
 			if (quantizationSteps) {
 				return pt1.val;
 			}
-			automation_point_t& pt2 = points[idx];
+			const automation_point_t& pt2 = points[idx];
 			dbgassert(tick>=pt1.time && tick <= pt2.time);
 			tick_t tickDist = pt2.time-pt1.time;
 			if (!tickDist) {
@@ -127,7 +127,7 @@ float automation_t::getValueAt(tick_t tick) {
 	}
 	return 0.5f;
 }
-void automation_t::copyRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data) {
+void automation_t::copyRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data) const {
 	if (points.size()) {
 		int32_t idxStart = indexOfTick(points, tickBegin);
 		int32_t idxEnd = indexOfTick(points, tickEnd) + 1;

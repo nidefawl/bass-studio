@@ -41,14 +41,14 @@ struct automation_t {
 	std::vector<automation_point_t> points;
 	automation_t() = default;
 	virtual ~automation_t() {};
-	virtual bool isActive() {
+	virtual bool isActive() const {
 		return active && points.size() > 0;
 	}
-	virtual bool isAutomated() {
+	virtual bool isAutomated() const {
 		return points.size() > 0;
 	}
-	virtual float getValueAt(tick_t tick);
-	void copyRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data);
+	virtual float getValueAt(tick_t tick) const;
+	void copyRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data) const;
 	void setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data);
 };
 
@@ -220,6 +220,18 @@ public:
 		}
 		return nullptr;
 	}
+	const automation_t* getRegisteredConstAutomation(int32_t paramIdx) const {
+		dbgassert(mapParams.count(paramIdx));
+		auto it = std::find_if(automatedParams.cbegin(), automatedParams.cend(), [paramIdx](const automated_param_t& ap) {
+			return ap.paramIdx == paramIdx;
+		});
+		if (it != automatedParams.end()) {
+			const automated_param_t* ap = &(*it);
+			if (ap->src.isAutomated())
+				return &(*it).src;
+		}
+		return nullptr;
+	}
 	automation_t* getRegisteredAutomation(int32_t paramIdx) {
 		dbgassert(mapParams.count(paramIdx));
 		auto it = std::find_if(automatedParams.begin(), automatedParams.end(), [paramIdx](automated_param_t& ap) {
@@ -257,6 +269,6 @@ public:
 
 void loadAutomation(const std::vector<automation_view_t>& automatedParams, automatable_t* at);
 void storeAutomation(std::vector<automation_view_t>& automatedParams, automatable_t* at);
-int32_t indexOfTick(std::vector<automation_point_t>& dataPoints, tick_t tick);
+int32_t indexOfTick(const std::vector<automation_point_t>& dataPoints, tick_t tick);
 int32_t addPointAt(std::vector<automation_point_t>& dataPoints, tick_t tick, int32_t quantizationSteps);
 void simplifyData(std::vector<automation_point_t>& data);

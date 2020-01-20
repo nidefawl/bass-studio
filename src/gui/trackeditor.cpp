@@ -215,6 +215,21 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 				clipboard = MainCtrl::get()->copySelection(cursor);
 				handledKeyinput = true;
 			}
+			else if (isKC(KC_CONSOLIDATE, kevt) && cursor.getRange() && !cursor.isSubtrackSelection()) {
+				project.trackList.copyTracks(cursor.getTrackBegin(), cursor.getTrackEnd(), preModifyState);
+				preModifyState.cursor = cursor;
+				/* maybe do    this->clipboard = copy */
+				std::shared_ptr<clip_clipboard> clipboardCopy = MainCtrl::get()->copySelection(cursor);
+				std::shared_ptr<clip_clipboard> clipboardConsolidated = DAW::consolidateClipboard(clipboardCopy, cursor);
+				cursor.setLeftAligned();
+//				cursor.cursorPos += cursor.getRange();
+				MainCtrl::get()->cutSelection(cursor);
+				MainCtrl::get()->pasteClipboard(clipboardConsolidated.get(), cursor);
+				grid.makeTickVisible(cursor.cursorPos+clipboardConsolidated->selRange);
+				handledKeyinput = true;
+				modified = true;
+				desc = "Consolidate selection";
+			}
 			else if (isKC(KC_DUPLICATE, kevt) && cursor.getRange()) {
 				project.trackList.copyTracks(cursor.getTrackBegin(), cursor.getTrackEnd(), preModifyState);
 				preModifyState.cursor = cursor;

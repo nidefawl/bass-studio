@@ -62,7 +62,8 @@
 
 using namespace std;
 
-void copyClipsInRange(trackdata_midi_t& in, track_clipboard_t& out, int32_t srcPos, int32_t dstPos, int32_t len) {
+
+void copyClipsInRange(const trackdata_midi_t& in, track_clipboard_t& out, int32_t srcPos, int32_t dstPos, int32_t len) {
 
 	auto it = in.clips.cbegin();
 	while (it != in.clips.cend()) {
@@ -148,7 +149,56 @@ void MainCtrl::pasteClipboard(clip_clipboard* clipboard, int32_t track, tick_t t
 	}
 
 }
-shared_ptr<clip_clipboard> MainCtrl::copySelection(const DAW::Cursor& _cursor) {
+namespace DAW {
+std::shared_ptr<clip_clipboard> consolidateClipboard(std::shared_ptr<clip_clipboard>& clipboardIn, const DAW::Cursor& _cursor) {
+	int32_t tickBegin = _cursor.getTickBegin();
+	int32_t tickEnd = _cursor.getTickEnd();
+	int32_t trackBegin = _cursor.getTrackBegin();
+	int32_t trackEnd = _cursor.getTrackEnd();
+	int32_t trackSubBegin = _cursor.getSubTrackBegin();
+	int32_t trackSubEnd = _cursor.getSubTrackEnd();
+	clip_clipboard* const pClipboardIn = clipboardIn.get();
+	shared_ptr<clip_clipboard> clipboard = make_shared<clip_clipboard>();
+	clipboard->srcPos = tickBegin;
+	clipboard->srcTrack = trackBegin;
+	clipboard->selRange = tickEnd - tickBegin;
+	if (_cursor.isSubtrackSelection()) {
+	} else {
+		clipboard->selTrackRange = trackEnd - trackBegin;
+		clipboard->selRange = tickEnd - tickBegin;
+		clipboard->type = clip_clipboard::ClipboardFull;
+		for (auto& shPtrClipboard : pClipboardIn->tracks) {
+			track_clipboard_t trackClipboardOut;
+			clip_t clip;
+			clip.clipType = CLIP_MIDI;
+			clip.time = tickBegin;
+			clip.offsetStart = 0;
+			clip.setLen(tickEnd - tickBegin);
+			clip.loopEnabled = false;
+//			consolidated.time = tickBegin;
+//			consolidated.setLen(tickEnd - tickBegin);
+			std::vector<std::shared_ptr<clip_t>>& clips = shPtrClipboard.get()->clips;
+			std::vector<note_t> notes;
+			for (auto& shPtrClip : clips) {
+
+				if (shPtrClip->end() <= tickBegin || shPtrClip->start() > tickEnd) {
+					continue;
+				}
+				notes.clear();
+				shPtrClip->getInTimeRange(tickBegin, tickEnd, tickBegin, tickEnd, notes);
+				clip.notes.addAll(notes);
+			}
+			clip.notes.removeDuplicates();
+			clip.notes.visitNotes([tickBegin](note_t& note) {
+				note.time -= tickBegin;
+			});
+			trackClipboardOut.clips.push_back(make_shared<clip_t>(move(clip)));
+			clipboard->tracks.push_back(make_shared<track_clipboard_t>(move(trackClipboardOut)));
+		}
+	}
+	return clipboard;
+}
+shared_ptr<clip_clipboard> copySelection(const trackallcontainer_t& trackList, const DAW::Cursor& _cursor) {
 	int32_t tickBegin = _cursor.getTickBegin();
 	int32_t tickEnd = _cursor.getTickEnd();
 	int32_t trackBegin = _cursor.getTrackBegin();
@@ -163,14 +213,14 @@ shared_ptr<clip_clipboard> MainCtrl::copySelection(const DAW::Cursor& _cursor) {
 		clipboard->selTrackRange = trackSubEnd - trackSubBegin;
 		clipboard->type = clip_clipboard::ClipboardAutomation;
 		if (trackList.validTrackIdx(trackBegin)) {
-			track_t* tr = trackList[trackBegin];
+			const track_t* const tr = trackList.at(trackBegin);
 			for (int i = trackSubBegin; i <= trackSubEnd; i++) {
 				if (tr->validSubtrack(i)) {
-					gui_track_subtrack* subtrack = tr->subtracks[i];
-					automatable_t* automatable = subtrack->at;
-					automation_t* automation = NULL;
+					const gui_track_subtrack* subtrack = tr->subtracks[i];
+					const automatable_t* automatable = subtrack->at;
+					const automation_t* automation = NULL;
 					if (automatable) {
-						automation = automatable->getRegisteredAutomation(subtrack->param);
+						automation = automatable->getRegisteredConstAutomation(subtrack->param);
 					}
 
 					std::vector<automation_point_t> data;
@@ -189,15 +239,19 @@ shared_ptr<clip_clipboard> MainCtrl::copySelection(const DAW::Cursor& _cursor) {
 		for (int i = 0; i <= clipboard->selTrackRange; i++) {
 			track_clipboard_t trackClipboard;
 			if (trackList.validTrackIdx(trackBegin + i)) {
-				track_t* tr = trackList[trackBegin + i];
+				const track_t* tr = trackList.at(trackBegin + i);
 //				if (tr->type == TRACK_TYPE_MIDI) {
-					copyClipsInRange(tr->getMidi(), trackClipboard, clipboard->srcPos, 0, clipboard->selRange);
+					copyClipsInRange(tr->getConstMidi(), trackClipboard, clipboard->srcPos, 0, clipboard->selRange);
 //				}
 			}
 			clipboard->tracks.push_back(make_shared<track_clipboard_t>(move(trackClipboard)));
 		}
 	}
 	return clipboard;
+}
+}
+shared_ptr<clip_clipboard> MainCtrl::copySelection(const DAW::Cursor& _cursor) {
+	return DAW::copySelection(this->trackList, _cursor);
 }
 
 
