@@ -51,7 +51,7 @@ public:
 	virtual void handleDraggedBegin(MouseEvent& evt) {
 	}
 	virtual void handleDraggedMove(MouseEvent& evt) {
-		ivec2 windowSize = parentCtrl->m_size;
+		ivec2 windowSize = parentCtrl->getScaledSize();
 		float sc = type == 0  ? (evt.mousepos.y/(float)windowSize.y) : (evt.mousepos.x/(float)windowSize.x);
 		int clampedAt = 0;
 		if (sc < scaleMin) {

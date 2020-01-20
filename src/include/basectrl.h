@@ -108,6 +108,9 @@ public:
 	guitheme_mgr* getThemeMgr() {
 		return &themes;
 	}
+	ivec2 getScaledSize() {
+		return ivec2(m_size.x*1.0 / m_scale, m_size.y*1.0 / m_scale);
+	}
 	virtual void prerender(int32_t x, int32_t y, int32_t w, int32_t h, float ratio);
 	void render(int32_t x, int32_t y, int32_t w, int32_t h, float ratio);
 	virtual bool processGlobalKeyevent(KeyEvent& event) {

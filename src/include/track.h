@@ -47,7 +47,7 @@ inline const struct track_tree_pos_t TrackTreePosNULL() {
 class trackdata_midi_t {
 public:
 	friend void resizeOtherClips(trackdata_midi_t& midi, clip_t* clip);
-	friend void copyClipsInRange(trackdata_midi_t& in, track_clipboard_t& out, int32_t srcPos, int32_t dstPos, int32_t len);
+	friend void copyClipsInRange(const trackdata_midi_t& in, track_clipboard_t& out, int32_t srcPos, int32_t dstPos, int32_t len);
 	friend void cutIntersectingClips(trackdata_midi_t& midi, tick_t tickBegin, tick_t tickEnd, delete_cb *cb);
 private:
 	std::vector<clip_t*> clips;
@@ -236,6 +236,9 @@ public:
 	trackdata_midi_t& getMidi() {
 		return midi;
 	}
+	const trackdata_midi_t& getConstMidi() {
+		return midi;
+	}
 	const trackdata_midi_t& getConstMidi() const {
 		return midi;
 	}
@@ -296,7 +299,7 @@ public:
 //	void loadPluginAutomationParameters(const track_impl_snapshot_t& snap);
 	void loadSnapshot(const track_snapshot_t& snap);
 	void loadSubtrackLayout(const track_snapshot_t& snap);
-	bool validSubtrack(int32_t idx) {
+	bool validSubtrack(int32_t idx) const {
 		return idx >= 0 && idx < (int32_t)subtracks.size();
 	}
 	int32_t childIdxTree = -1; // treeidx
@@ -412,6 +415,12 @@ public:
 			return NULL;
 		}
 		return tracksFlat[i];
+	}
+	const track_t* at(const size_t i) const {
+		if (i >= tracksFlat.size()) {
+			return NULL;
+		}
+		return tracksFlat.at(i);
 	}
 
 //	void updateTracksVisible() {
@@ -604,6 +613,12 @@ public:
 			return NULL;
 		}
 		return trackAllCtr[i];
+	}
+	const track_t* at(const size_t i) const {
+		if (!validTrackIdx(i)) {
+			return NULL;
+		}
+		return trackAllCtr.at(i);
 	}
 
 

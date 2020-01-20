@@ -8,6 +8,8 @@
 #define DELETE_PTR(x) do { delete x; x = NULL; } while (0);
 
 #define STL_CONTAINS(x, y) (std::find(x.cbegin(), x.cend(), y) != x.cend())
+#define STL_RANGE(ctr) ctr.begin(), ctr.end()
+#define STL_RANGE_CONST(ctr) ctr.cbegin(), ctr.cend()
 
 
 template<typename Container>

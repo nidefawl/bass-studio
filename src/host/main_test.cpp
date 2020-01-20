@@ -618,7 +618,6 @@ namespace MiniApp {
 		void relayout(int32_t w, int32_t h) {
 			closeAllAppMenus();
 			closeContextMenu();
-			m_size = ivec2(w, h);
 			view->layout(w, h);
 
 			for (guictr_base *ctr : containers) {

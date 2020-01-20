@@ -50,7 +50,7 @@ void PopupCtrl::relayout(int32_t w, int32_t h) {
 		closeContextMenu();
 		if (popupCtrs->guis.size() == 1) {
 			auto singleCtr = popupCtrs->guis[0];
-			singleCtr->size = m_size;
+			singleCtr->size = getScaledSize();
 			singleCtr->determineSize(singleCtr->size);
 			singleCtr->layout();
 			popupCtrs->size = singleCtr->size;
@@ -99,7 +99,7 @@ void PopupCtrl::open(guictxtmenu_base *_ctxtmenu, ivec2 pos, bool bResizeable) {
 	if (this->window) {
 		window_main* appW = static_cast<window_main*>(this->window);
 		m_size = popupCtrs->size;
-		appW->positionOnScreen(pos-insetCtxtMenu, popupCtrs->size);
+		appW->positionOnScreen(pos-insetCtxtMenu, ivec2(popupCtrs->size.x*m_scale, popupCtrs->size.y*m_scale));
 		appW->show();
 #ifndef _WIN32
 		appW->positionOnScreen(pos-insetCtxtMenu, popupCtrs->size);

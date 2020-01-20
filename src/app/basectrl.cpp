@@ -482,6 +482,7 @@ void AppCtrl::openAppMenu(int lvl, guictxtmenu_base *b, ivec2 pos) {
 	entry.ctxt = b;
 	ivec2 windowPos;
 	this->mainWindow->getPos(&windowPos);
+	entry.wnd->getCtrl()->m_scale = m_scale;
 	static_cast<PopupCtrl*>(entry.wnd->getCtrl())->open(b, windowPos+pos, false);
 }
 
@@ -515,6 +516,7 @@ void AppCtrl::openOverlayGui(guictxtmenu_base *b, ivec2 pos, int flags) {
 		auto* ctxtWindowTheme = contextWindow->getCtrl()->getTheme();
 		//copy theme from this control to contextWindows control
 		*ctxtWindowTheme = *getTheme();
+		contextWindow->getCtrl()->m_scale = m_scale;
 		static_cast<PopupCtrl*>(contextWindow->getCtrl())->open(b, wndPos, bResizeable); //ugly cast
 	}
 

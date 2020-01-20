@@ -17,7 +17,7 @@ void addContextEntriesAutomation(guictxtmenu* ctxt, automatable_t* atl, int para
 	if (track) {
 		MainCtrl::get()->showAutomation(track, atl, paramIdx);
 	}
-	automation_t* at = atl->getRegisteredAutomation(paramIdx);
+	const automation_t* at = atl->getRegisteredAutomation(paramIdx);
 	if (at && at->isAutomated()) {
 		if (!at->active) {
 			ctxt->addEntry(new ctxtmenu_entry("Reenable Automation", ID_REENABLE));

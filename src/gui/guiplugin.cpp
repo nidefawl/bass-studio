@@ -780,6 +780,8 @@ void guivstplugin::layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {
 //	buttonOpenEditor.pos.y = inset1;
 //	buttonOpenEditor.pos.x = buttonBypass.right();
 //	titlePosX = buttonOpenEditor.right();
+	contentS.x = math::max(64, contentS.x);
+	contentS.y = math::max(64, contentS.y);
 	int32_t insetCtrls = INSET_TITLE;
 	int rowHeight = 64;
 	while (contentS.y < rowHeight * 8 && rowHeight > 8) {
