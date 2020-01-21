@@ -1029,23 +1029,20 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const DAW::processing_
 		dsp_util::fillBlock(audio->outputPost, 0.0f);
 		audio->pluginsChanged(); // determine max latency so getLatency() is correct
 	}
-
+//
 	tick_t pos = floor(posDouble);
-	if (state == playback_state::status_play) {
-		//TODO: latency compensate automation
-		updateTime(sample, posDouble, state);
-		for (track_t* tr : ctrl->trackList) {
-			std::vector<automatable_t*> targets;
-			tr->audio->getAutomatableTrackTargets(targets);
-			for (automatable_t* at : targets) {
-				at->updateAutomatedParameters(pos);
-			}
-		}
-	}
+//	if (state == playback_state::status_play) {
+//		//TODO: latency compensate automation
+//		updateTime(sample, posDouble, state);
+//		for (track_t* tr : ctrl->trackList) {
+//			std::vector<automatable_t*> targets;
+//			tr->audio->getAutomatableTrackTargets(targets);
+//			for (automatable_t* at : targets) {
+//				at->updateAutomatedParameters(pos);
+//			}
+//		}
+//	}
 
-	int32_t samplePosBlockEnd = sample + lBlockSize;
-	int32_t tickBlockEnd = floor(posDouble + ticksPerBlock);
-	dbgassert(tickBlockEnd-pos < ceil(ticksPerBlock+1));
 
 	tick_t loopCutStart = -1;
 	tick_t loopCutEnd = -1;
@@ -1066,6 +1063,22 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const DAW::processing_
 		track_t* const track = trackNode.trackOptional;
 		track_impl_t* const trackImpl = track->audio;
 
+		const double ticksLatency = toTickPrecise(trackNode.inputLatency/(double)sampleFormat.sampleRate, project.tempo100);
+		const double sampleLatencyCompensated = sample - trackNode.inputLatency;
+		const double tickLatencyCompensated = posDouble-ticksLatency;
+		tick_t processingPos = floor(tickLatencyCompensated);
+		if (state == playback_state::status_play) {
+			//TODO: latency compensate automation
+			updateTime(sampleLatencyCompensated, tickLatencyCompensated, state);
+			std::vector<automatable_t*> targets;
+			trackImpl->getAutomatableTrackTargets(targets);
+			for (automatable_t* at : targets) {
+				at->updateAutomatedParameters(processingPos);
+			}
+		}
+		int32_t samplePosBlockEnd = sampleLatencyCompensated + lBlockSize;
+		int32_t tickBlockEnd = floor(tickLatencyCompensated + ticksPerBlock);
+		dbgassert(tickBlockEnd-processingPos < ceil(ticksPerBlock+1));
 //			if (dbg == 0) {
 //				log_printf("process track %s\n", StringAsCStr(track->name));
 //				log_printf("process stage 1 %d\n", static_cast<int32_t>(track->audio->stageId));
@@ -1082,12 +1095,12 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const DAW::processing_
 			midiProcessFlags = MidiFlags::PROCESS_REALTIME|MidiFlags::PROCESS_CLIPS|MidiFlags::PROCESS_ARP;
 		}
 
-		trackImpl->sendNotes(pos, tickBlockEnd, loopCutStart, loopCutEnd, project.tempo100, sample, *midiRealtimeInput, midiProcessFlags);
+		trackImpl->sendNotes(processingPos, tickBlockEnd, loopCutStart, loopCutEnd, project.tempo100, sampleLatencyCompensated, *midiRealtimeInput, midiProcessFlags);
 		if (state != playback_state::status_play) {
 			//
 		}
 		if (state == playback_state::status_play) {
-			trackImpl->fillAudio(pos, tickBlockEnd, loopCutStart, loopCutEnd, project.tempo100, sample, trackImpl->input.buf, (int32_t)lBlockSize);
+			trackImpl->fillAudio(processingPos, tickBlockEnd, loopCutStart, loopCutEnd, project.tempo100, sampleLatencyCompensated, trackImpl->input.buf, (int32_t)lBlockSize);
 		}
 
 		const uint32_t numChannelsTrack = trackImpl->input.channels;
@@ -1139,6 +1152,8 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const DAW::processing_
 					dbgassert(srcBlock.samples == tempBlock.samples);
 					dbgassert(srcBlock.channels <= tempBlock.channels);
 					dbgassert(delayLines[idxDelayLine].get()->block.channels == srcBlock.channels);
+
+					//todo: one of the delay lines will always be 0 samples delay
 					delayAudio(delayLines[idxDelayLine].get(), &srcBlock, &tempBlock, delayToMaxInputLatency);
 					trackImpl->addAudio(tempBlock, src.gain * tracksrc.gain);
 					idxDelayLine++;
@@ -1161,7 +1176,7 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const DAW::processing_
 				&& trackImpl->sampleFormat.sampleRate > 0);
 
 		/* Processes audio/midi tracks plugin chain */
-		processAudio(trackImpl, &trackImpl->input, &trackImpl->output, sample, lBlockSize, state);
+		processAudio(trackImpl, &trackImpl->input, &trackImpl->output, sampleLatencyCompensated, lBlockSize, state);
 
 
 
