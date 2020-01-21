@@ -1428,10 +1428,6 @@ void vsthost::removePlugin(effectbase* plugin) {
 	audioStage->pluginsChanged();
 	onTrackLayoutChange();
 }
-template<typename T>
-void removeErase(std::vector<T> t, T& t2) {
-
-}
 void vsthost::unloadPlugin(effectbase* plugin) {
 
 	//TODO: this shouldn't be here!
