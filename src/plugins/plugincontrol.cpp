@@ -42,7 +42,11 @@ void PluginControl::destroy()
 		return;
 	}
 	isOK = false;
-	delete view;
+	if (view) {
+		delete view;
+		view = nullptr;
+	}
+	
 }
 
 void PluginControl::menuCommand(int cmd) {
@@ -59,7 +63,10 @@ void PluginControl::initApp(int argc, char* argv[]) {
 PluginControl::PluginControl(PluginViewContainersImpl* _view) : AppCtrl(), view(_view) {
 }
 PluginControl::~PluginControl() {
-	delete view;
+	if (view) {
+		delete view;
+		view = nullptr;
+	}
 }
 void PluginControl::postInit() {
 }
