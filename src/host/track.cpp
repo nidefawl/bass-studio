@@ -518,15 +518,15 @@ effectbase* loadEffectModule(const plugin_snapshot_t& pluginSnapshot) {
 			loadedPlugin = dynamic_cast<vstplugin*>(effect);
 		}
 	}
-	if (loadedPlugin) {
+	if (loadedPlugin && (loadedPlugin->getFlagsVST() & effFlagsProgramChunks) != 0) {
 		if (pluginSnapshot.dataChunk.size() > 0) {
 			my_printf("Plugin %s: Load data1[%d]\n", StringAsCStr(loadedPlugin->sName), pluginSnapshot.dataChunk.size());
 			loadedPlugin->dispatch(effSetChunk, 0, pluginSnapshot.dataChunk.size(), (void*)pluginSnapshot.dataChunk.data());
 		}
-		if (pluginSnapshot.dataChunk2.size() > 0) {
-			my_printf("Plugin %s: Load data2[%d]\n", StringAsCStr(loadedPlugin->sName), pluginSnapshot.dataChunk2.size());
-			loadedPlugin->dispatch(effSetChunk, 1, pluginSnapshot.dataChunk2.size(), (void*)pluginSnapshot.dataChunk2.data());
-		}
+//		if (pluginSnapshot.dataChunk2.size() > 0) {
+//			my_printf("Plugin %s: Load data2[%d]\n", StringAsCStr(loadedPlugin->sName), pluginSnapshot.dataChunk2.size());
+//			loadedPlugin->dispatch(effSetChunk, 1, pluginSnapshot.dataChunk2.size(), (void*)pluginSnapshot.dataChunk2.data());
+//		}
 	}
 	return effect;
 }
@@ -536,6 +536,7 @@ void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effec
 		automatable_param_t* atParam = effect->getParam(param.idx);
 		dbgassert(atParam);
 		if (atParam) {
+			dbgassert(param.val >= 0.0f && param.val <= 1.0f);
 			effect->setParamValue(atParam->idx, param.val, FLG_PAR_UPDATE_INIT);
 		}
 	}

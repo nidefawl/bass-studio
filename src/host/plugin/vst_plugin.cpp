@@ -289,7 +289,7 @@ void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin, bool storePluginCh
 		ps.uId = plugin->uId;
 	}
 	ps.name = plugin->sName;
-	if (storePluginChunks) {
+	if (storePluginChunks && (plugin->getFlagsVST()&effFlagsProgramChunks)) {
 		void* pluginData;
 		int32_t pluginDataSize = plugin->dispatch(effGetChunk, 0, 0, &pluginData, 0);
 		if (pluginDataSize > 0 && pluginData) {
@@ -299,14 +299,14 @@ void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin, bool storePluginCh
 			my_printf("Plugin %s: Save data1[%d]\n", StringAsCStr(plugin->sName), pluginDataSize);
 
 		}
-		void* pluginData2;
-		int32_t pluginDataSize2 = plugin->dispatch(effGetChunk, 1, 0, &pluginData2, 0);
-		if (pluginDataSize2 > 0 && pluginData2) {
-			uint8_t* ptrData = reinterpret_cast<uint8_t*>(pluginData2);
-			ps.dataChunk2.reserve(pluginDataSize2);
-			ps.dataChunk2.assign(ptrData, ptrData + pluginDataSize2);
-			my_printf("Plugin %s: Save data2[%d]\n", StringAsCStr(plugin->sName), pluginDataSize2);
-		}
+//		void* pluginData2;
+//		int32_t pluginDataSize2 = plugin->dispatch(effGetChunk, 1, 0, &pluginData2, 0);
+//		if (pluginDataSize2 > 0 && pluginData2) {
+//			uint8_t* ptrData = reinterpret_cast<uint8_t*>(pluginData2);
+//			ps.dataChunk2.reserve(pluginDataSize2);
+//			ps.dataChunk2.assign(ptrData, ptrData + pluginDataSize2);
+//			my_printf("Plugin %s: Save data2[%d]\n", StringAsCStr(plugin->sName), pluginDataSize2);
+//		}
 		ps.params.reserve(plugin->getNumParameters());
 		plugin->visitParams([&ps](auto& mapEntry) {
 			auto& param = mapEntry.second;
@@ -351,6 +351,9 @@ guiplugin* vstplugin::getGui() {
 }
 int32_t vstplugin::getDelay() {
 	return handle->aeffect->initialDelay;
+}
+int32_t vstplugin::getFlagsVST() {
+	return handle->aeffect->flags;
 }
 
 vst_param_category* vstplugin::getCategory(int idx) {

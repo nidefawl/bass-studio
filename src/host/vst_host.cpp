@@ -1073,6 +1073,7 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const DAW::processing_
 			std::vector<automatable_t*> targets;
 			trackImpl->getAutomatableTrackTargets(targets);
 			for (automatable_t* at : targets) {
+				//at->getLatency();
 				at->updateAutomatedParameters(processingPos);
 			}
 		}
@@ -1825,5 +1826,6 @@ vstpluginloadres vsthost::loadPlugin(String filepath, int32_t globalId) {
 	pluginInstancesVST2.push_back(plugin);
 	pluginInstances.push_back(plugin);
 	plugin->load(this);
+	dbgassert(plugin->handle&&plugin->handle->aeffect);
 	return vstpluginloadres(0, plugin);
 };
