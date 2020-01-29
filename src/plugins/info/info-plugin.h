@@ -42,8 +42,17 @@ private:
 };
 
 
-class PluginVST2_HostInfo : public BasePluginVST2 {
+struct PluginVST2_HostInfo_impl_t {
 
+	std::vector<uint8_t> dataPlugin;
+
+	std::vector<uint8_t> dataPreset;
+	PluginVST2_HostInfo_impl_t() {
+
+	}
+};
+class PluginVST2_HostInfo : public BasePluginVST2 {
+	PluginVST2_HostInfo_impl_t* const impl;
 public:
 	PluginVST2_HostInfo (audioMasterCallback audioMaster);
 	~PluginVST2_HostInfo ();
@@ -63,6 +72,9 @@ public:
 	virtual void getParameterLabel (VstInt32 index, char* label) override;
 	virtual void getParameterDisplay (VstInt32 index, char* text) override;
 	virtual void getParameterName (VstInt32 index, char* text) override;
+	virtual VstInt32 getChunk (void** data, bool isPreset = false) override;
+	virtual VstInt32 setChunk (void* data, VstInt32 byteSize, bool isPreset = false) override;
+
 
 	virtual bool getEffectName (char* name);
 	virtual bool getProductString (char* text);

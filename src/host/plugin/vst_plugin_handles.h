@@ -7,7 +7,7 @@
 struct audio_stage_t;
 class AudioEffectX;
 struct handles_t {
-	AudioEffectX* axEffect = NULL;
+	AudioEffectX* axEffect = NULL; // Optional/Internal plugin only: handle to plugin implementation instance
 	AEffect* aeffect = NULL; // hmodule owns if axEffect == null
 	void* hmodule = NULL; // we dont own
 	std::unique_ptr<guiplugin> gui;

@@ -47,14 +47,17 @@ AudioEffect* createEffectInstance (audioMasterCallback audioMaster)
 namespace PluginHostInfo {
 
 PluginVST2_HostInfo::PluginVST2_HostInfo (audioMasterCallback audioMaster)
-	: BasePluginVST2(audioMaster, PLUGIN_UID, kNumPrograms, kNumParams, kNumInputs, kNumOutputs)
+	: BasePluginVST2(audioMaster, PLUGIN_UID, kNumPrograms, kNumParams, kNumInputs, kNumOutputs), impl(new PluginVST2_HostInfo_impl_t())
 {
+	programsAreChunks(true);
 	createEditorWindow(static_cast<PluginViewContainersImpl*>(createView()));
+
 }
 
 
 PluginVST2_HostInfo::~PluginVST2_HostInfo ()
 {
+	delete impl;
 }
 
 void PluginVST2_HostInfo::setProgram (VstInt32 program)
@@ -170,6 +173,40 @@ VstInt32 PluginVST2_HostInfo::canDo (char* text)
 	if (!strcmp(text, "receiveVstTimeInfo"))
 		return 1;
 	return -1;	// explicitly can't do; 0 => don't know
+}
+///< Host stores plug-in state. Returns the size in bytes of the chunk (plug-in allocates the data array)
+VstInt32 PluginVST2_HostInfo::getChunk (void** data, bool isPreset) {
+	log_printf("getChunk isPreset = %d: PTR %08X\n", isPreset, (uint64_t)(data));
+	if (isPreset) {
+		impl->dataPreset.resize(1000);
+		std::fill(impl->dataPreset.begin(), impl->dataPreset.end(), 0xAA);
+		*data = impl->dataPreset.data();
+		return impl->dataPreset.size();
+	} else {
+		impl->dataPlugin.resize(2000);
+		std::fill(impl->dataPlugin.begin(), impl->dataPlugin.end(), 0x11);
+		*data = impl->dataPlugin.data();
+		return impl->dataPlugin.size();
+	}
+
+	return 0;
+}
+///< Host restores plug-in state
+VstInt32 PluginVST2_HostInfo::setChunk (void* data, VstInt32 byteSize, bool isPreset) {
+	log_printf("setChunk size %d, isPreset = %d: PTR %08X\n", byteSize, isPreset, (uint64_t)(data));
+	if (isPreset && byteSize == 1000) {
+		impl->dataPreset.resize(1000);
+		memcpy(impl->dataPreset.data(), data, byteSize);
+		return byteSize;
+	} else if (!isPreset && byteSize == 2000) {
+		impl->dataPreset.resize(1000);
+		memcpy(impl->dataPreset.data(), data, byteSize);
+		return byteSize;
+	} else {
+		log_printf("mismatch :( \n", 0);
+	}
+
+	return 0;
 }
 
 void PluginVST2_HostInfo::processReplacing(float** inputs, float** outputs, VstInt32 sampleFrames)

@@ -338,8 +338,10 @@ public:
 		if (calls > 0 && since >= 1.0) {
 			double fps = calls / since;
 			fpsStats = StringFormat("%.2f fps", fps);
+#if BUILD_VSTHOST
 			daw_tls::tlsinstance& tls = daw_tls::getTls();
 			tls.renderStats.fps = fps;
+#endif
 //			glfwSetWindowTitle(glfw, StringAsCStr(fpsStats));
 			tm_lastfps = tm;
 			calls = 0;
@@ -673,11 +675,12 @@ public:
 			glStencilMask(~0);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 			ctrl->render(0, 0, winwidth, winheight, pxratio);
+#if BUILD_VSTHOST
 			if (!this->parent) {
-
 				daw_tls::tlsinstance& tls = daw_tls::getTls();
 				tls.renderStats.timeRender=timer.getTime();
 			}
+#endif
 			glfwSwapBuffers(glfw);
 		}
 	}
