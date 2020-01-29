@@ -1084,7 +1084,9 @@ bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file, int flags) {
 
 void MainCtrl::relayout(int32_t w, int32_t h) {
 	closeAllAppMenus();
-	closeContextMenu();
+	if (ctxtmenu && !ctxtmenu->isDialog()) {
+		closeContextMenu();
+	}
 	w = math::max(640, w);
 	h = math::max(480, h);
 	view->layout(w, h);

@@ -535,6 +535,12 @@ void AppCtrl::closeContextMenu() {
 }
 void AppCtrl::onChildOverlayWindowClose(window_main* ptr) {
 //	log_printf("close ptr %X, contextWindow %X, this->ctxtmenu %X menuWindows.size() %d\n", (int64_t) ptr, (int64_t) contextWindow, this->ctxtmenu, menuWindows.size());
+//	std::vector<String> vecStrStacktrace;
+//	getStackTrace(vecStrStacktrace);
+//	int len = vecStrStacktrace.size();
+//	for (int i = 0; i < len; i++) {
+//		log_printf("%s\n", StringAsCStr(vecStrStacktrace[i]));
+//	}
 	if (ptr == this->contextWindow) {
 		if (this->ctxtmenu) {
 			dbgassert(this->ctxtmenu);
