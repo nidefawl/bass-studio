@@ -189,35 +189,333 @@ float noteToScreen(float note, float scale, float offset, float sizeY) {
 
 struct noteview_cache_impl_t {
 	bool valid = false;
-	int64_t notesRendered;
-	ivec2 pos;
-	ivec2 size;
-	nvg_path_cache_storage_t* cache1 = nullptr;
-	nvg_path_cache_storage_t* cache2 = nullptr;
-	nvg_path_cache_storage_t* cache3 = nullptr;
-	nvg_path_cache_storage_t* cache4 = nullptr;
+	int64_t notesRendered=-1;
+	ivec2 pos={-1,-1};
+	ivec2 size={-1,-1};
+	std::array<nvg_path_cache_storage_t*,4> arr;
+	noteview_cache_impl_t() {
+		std::for_each(arr.begin(), arr.end(), [](nvg_path_cache_storage_t*& ptr) {
+			ptr = nullptr;
+		});
+	}
 	~noteview_cache_impl_t() {
 		reset();
 	}
+	void SaveFill(NVGcontext* vg, int n) {
+		dbgassert(n < arr.size());
+		dbgassert(arr[n] == nullptr);
+		arr[n] = nullptr;
+		nvgGetLastCacheResult(vg, &arr[n]);
+		NVGCacheEntryInfo cacheEntryInfo;
+		nvgCacheEntryInfo(NULL, arr[n], &cacheEntryInfo);
+		nvg_path_cache_storage_t* entry = arr[n];
+		dbgassert(entry);
+		daw_tls::tlsinstance& tls = daw_tls::getTls();
+		tls.renderClipCacheStats.sizeCacheAllocatedMemBytes+= cacheEntryInfo.allocationSizeBytes;
+	}
+	bool isCacheValid(int n) {
+		return valid && n < arr.size() && arr[n] != nullptr;
+	}
 	void reset() {
 		valid = false;
-		if (cache1) {
-			nvgReleaseCacheResult(cache1); cache1 = nullptr;
-		}
-		if (cache2) {
-			nvgReleaseCacheResult(cache2); cache2 = nullptr;
-		}
-		if (cache3) {
-			nvgReleaseCacheResult(cache3); cache3 = nullptr;
-		}
-		if (cache4) {
-			nvgReleaseCacheResult(cache4); cache4 = nullptr;
-		}
+		std::for_each(arr.begin(), arr.end(), [](nvg_path_cache_storage_t*& ptr) {
+			if (ptr) {
+				NVGCacheEntryInfo cacheEntryInfo;
+				nvgCacheEntryInfo(NULL, ptr, &cacheEntryInfo);
+				daw_tls::tlsinstance& tls = daw_tls::getTls();
+				tls.renderClipCacheStats.sizeCacheAllocatedMemBytes -= cacheEntryInfo.allocationSizeBytes;
+
+				nvgReleaseCacheResult(ptr);
+				ptr = nullptr;
+			}
+		});
 	}
 };
 noteview_render_t::~noteview_render_t() {
 	if (data) {
 		delete data;
+	}
+}
+
+struct gui_midi_clip::midi_clip_render_cache_t : public noteview_cache_impl_t {
+public:
+	midi_clip_render_cache_t() : noteview_cache_impl_t() {
+
+	}
+};
+gui_midi_clip::gui_midi_clip(track_t* _track, clip_t* _clip)
+	: gui_clip(_track, _clip), impl(new midi_clip_render_cache_t)  {
+
+}
+gui_midi_clip::~gui_midi_clip() {
+	delete impl;
+}
+void gui_midi_clip::updatePosition(project_t& project, scaled_grid& grid, ivec2& trackSize) {
+	size = this->parent->size;
+	culled = !getClipPosition(grid, trackSize, m_clip, pos, size, 0);
+	//bool resetCache = false;
+	//if (!culled && impl->valid) {
+	//	ivec2 posContents = ivec2(pos.x, pos.y + HEIGHT_CLIP_TITLE + INSET_CLIP_CONTENT);
+	//	ivec2 sizeContents = ivec2(size.x, size.y - HEIGHT_CLIP_TITLE - INSET_CLIP_CONTENT * 2);
+	//	const bool useCaching = true;// daw_tls::getTls().renderStats.enableCache;
+	//	noteview_render_t& notesView = m_clip->getNoteViewRender();
+	//	bool cacheValid = notesView.reqRevision == notesView.curRevision;
+	//	cacheValid &= impl->cache1 != nullptr;
+	//	cacheValid &= impl->pos == posContents;
+	//	cacheValid &= impl->size == sizeContents;
+	//	cacheValid &= useCaching;
+	//	if (!cacheValid) {
+	//		resetCache;
+	//	}
+	//} else if (culled && impl->valid) {
+	//	resetCache = true;
+	//}
+	//if (resetCache) {
+		impl->reset();
+	//}
+}
+void gui_midi_clip::prerender(NVGcontext* vg) {
+	if (culled) {
+		return;
+	}
+
+
+	clip_t* const cl = m_clip;
+	track_t* const tr = m_track;
+	if (cl->getLen() <= 0) {
+		return;
+	}
+
+	ivec2 posContents = ivec2(pos.x, pos.y+HEIGHT_CLIP_TITLE+INSET_CLIP_CONTENT);
+	ivec2 sizeContents = ivec2(size.x, size.y-HEIGHT_CLIP_TITLE-INSET_CLIP_CONTENT*2);
+
+	tick_t clipLen = cl->getLen();
+	float numBars = clipLen / (float) TICKS_BAR;
+	float barSize = sizeContents.x / (float) numBars;
+	int64_t notesRendered=0;
+	noteview_render_t& notesView = cl->getNoteViewRender();
+	bool cacheValid = notesView.reqRevision == notesView.curRevision;
+	cacheValid &= impl->valid;
+	cacheValid &= impl->pos == posContents;
+	cacheValid &= impl->size == sizeContents;
+	if (!cacheValid) {
+		notesView.curRevision = -1;
+		impl->reset();
+
+
+		//TODO: move this up in hierachy so its called once
+	//	NVGcolor col = getTheme()->getColor(GuiColor::COL_CLEAR_COLOR);
+	//	glClearColor(col.r, col.g, col.b, col.a);
+	//	glClear(GL_COLOR_BUFFER_BIT);
+	//	static int test = 0;
+		nvgBeginFrame(vg, 1024, 1024, 1.0);
+		nvgScale(vg, parentCtrl->m_scale, parentCtrl->m_scale);
+		nvgLineJoin(vg, NVGlineCap::NVG_BEVEL);
+		NVGcolor rgbNote = theme->getColor(GuiColor::COL_CLIP_NOTE);
+		NVGcolor rgbNoteOverlap = theme->getColor(GuiColor::COL_CLIP_NOTE_OVERLAP);
+		NVGcolor rgbNoteMuted = theme->getColor(GuiColor::COL_CLIP_NOTE_MUTED);
+
+		nvgSave(vg);
+		ivec2 clipPosScreen = toScreenSpace(ivec2(0, 0));
+		nvgTranslate(vg, clipPosScreen.x, clipPosScreen.y);
+		nvgCachePath(vg, 1);
+		nvgSave(vg);
+		nvgTranslate(vg, 0, HEIGHT_CLIP_TITLE+INSET_CLIP_CONTENT);
+		if (sizeContents.x > 0 && sizeContents.y > 0) {
+			clip_notes_t& notes = notesView;
+			if (!notes.empty()) {
+				note_t minN = notesView.minNote;
+				note_t maxN = notesView.maxNote;
+				int32_t numNotes = math::max((int32_t)8, maxN.pitch - minN.pitch);
+				float scale = sizeContents.y / (float) numNotes;
+				std::vector<const note_t*> notesClipped;
+				std::vector<const note_t*> notesMuted;
+				int begin = 0;
+				for (const note_t& note : notes.m_list) {
+					tick_t noteTime = note.time;
+					if (noteTime >= clipLen) {
+						notesClipped.push_back(&note);
+						continue;
+					}
+					if (noteTime < 0) {
+						notesClipped.push_back(&note);
+						continue;
+					}
+					if (!note.isEnabled()) {
+						notesMuted.push_back(&note);
+						continue;
+					}
+					if (!begin) {
+
+	//					void nvgCachePath(NVGcontext* ctx, int enabled);
+						nvgBeginPath(vg);
+						begin++;
+					}
+					float objPosNote = noteTime /(float) TICKS_BAR;
+		//			dbgassert(objPosNote >= 0 && objPosNote < numBars);
+					float objLenNote = note.len /(float) TICKS_BAR;
+		//			dbgassert(objPosNote+objLenNote >= 0);
+					float ny = noteToScreen(note.pitch-minN.pitch, scale, 0, sizeContents.y);
+					float nx = math::max(0.0f, objPosNote * barSize);
+					float nw = math::min(objLenNote * barSize, sizeContents.x-nx);
+					float nh = scale;
+					float insetx = calcInset(1, nw);
+					float insety = calcInset(1, nh);
+					nvgRect(vg, nx+insetx, ny+insety, nw-insetx*2, nh-insety*2);
+					notesRendered++;
+	//				if (notesRendered % 1000 == 0) {
+	//					nvgFillColor(vg, rgbNote);
+	//					nvgFill(vg);
+	//					begin = 0;
+	//				}
+				}
+				if (begin) {
+					nvgFillColor(vg, rgbNote);
+					nvgFill(vg);
+					impl->SaveFill(vg, 0);
+				}
+
+				for (int j = 0; j < 2; j++) {
+					auto& list = j == 0 ? notesClipped : notesMuted;
+					if (!list.empty()) {
+						nvgBeginPath(vg);
+						for (const note_t* noteClipped : list) {
+							const note_t& note = *noteClipped;
+							tick_t noteTime = note.time;
+				//			dbgassert(objPosNote >= 0 && objPosNote < numBars);
+				//			dbgassert(objPosNote+objLenNote >= 0);
+
+							float objPosNote = noteTime /(float) TICKS_BAR;
+							float objLenNote = note.len /(float) TICKS_BAR;
+							float ny = noteToScreen(note.pitch-minN.pitch, scale, 0, sizeContents.y);
+							float nx = objPosNote * barSize;
+							float nw = objLenNote * barSize;
+							float nh = scale;
+							float insetx = calcInset(1, nw);
+							float insety = calcInset(1, nh);
+							nvgRect(vg, nx+insetx, ny+insety, nw-insetx*2, nh-insety*2);
+							notesRendered++;
+						}
+						nvgFillColor(vg, j == 0 ? rgbNoteOverlap : rgbNoteMuted);
+						nvgFill(vg);
+						if (j == 0) {
+//							nvgGetLastCacheResult(vg, &impl->cache2);
+							impl->SaveFill(vg, 1);
+						} else {
+//							nvgGetLastCacheResult(vg, &impl->cache3);
+							impl->SaveFill(vg, 2);
+						}
+
+					}
+				}
+			}
+		}
+		nvgRestore(vg);
+
+		if (cl->isLoopEnabled()) {
+			tick_t posLoopIndicator = cl->getLoopBegin();
+			int n = 0;
+			while (posLoopIndicator < clipLen) {
+				if (posLoopIndicator >= 0) {
+					float objPos = posLoopIndicator /(float) TICKS_BAR;
+					float nx = barSize*objPos;
+					if (n == 0) {
+						nvgBeginPath(vg);
+					}
+					nvgMoveTo(vg, pos.x+nx, pos.y);
+					nvgLineTo(vg, pos.x+nx, pos.y+HEIGHT_CLIP_TITLE/4);
+					nvgMoveTo(vg, pos.x+nx, pos.y+HEIGHT_CLIP_TITLE*3/4);
+					nvgLineTo(vg, pos.x+nx, pos.y+HEIGHT_CLIP_TITLE);
+					n++;
+				}
+				posLoopIndicator += cl->loopLen;
+			}
+			if (n) {
+				nvgStrokeColor(vg, tr->content->theme->getFrameColorBase());
+				nvgStrokeWidth(vg, 1.f);
+				nvgStroke(vg);
+//				nvgGetLastCacheResult(vg, &impl->cache4);
+				impl->SaveFill(vg, 3);
+			}
+		}
+		nvgRestore(vg);
+		nvgCachePath(vg, 0);
+		impl->valid = true;
+		impl->pos = posContents;
+		impl->size = sizeContents;
+		impl->notesRendered = notesRendered;
+		notesView.curRevision = notesView.reqRevision;
+
+
+		nvgEndFrame(vg);
+	}
+}
+
+void gui_midi_clip::render(NVGcontext* vg) {
+	if (!culled) {
+		clip_t* const cl = m_clip;
+		track_t* const tr = m_track;
+		if (cl->getLen() <= 0) {
+			return;
+		}
+		NVGcolor color = rgbToNvg(cl->rgb);
+		nvgBeginPath(vg);
+		nvgRect(vg, pos.x, pos.y, size.x, HEIGHT_CLIP_TITLE);
+		nvgFillColor(vg, color);
+		nvgFill(vg);
+		nvgStrokeColor(vg, theme->getColor(GuiColor::COL_CLIP_OUTLINE));
+		nvgStrokeWidth(vg, 1.f);
+		nvgStroke(vg);
+		if (cl->name.length() && size.x-INSET_TITLE*3 >= 5) {
+			UTIL_setFont(vg, theme, (int) (HEIGHT_CLIP_TITLE * 0.95), getContrastFontColor(cl->rgb), G_TITLE_ALIGN);
+			renderText(vg, pos.x + INSET_TITLE, pos.y + HEIGHT_CLIP_TITLE / 2, size.x-INSET_TITLE*3, StringAsCStr(cl->name));
+		}
+		ivec2 posContents = ivec2(pos.x, pos.y+HEIGHT_CLIP_TITLE+INSET_CLIP_CONTENT);
+		ivec2 sizeContents = ivec2(size.x, size.y-HEIGHT_CLIP_TITLE-INSET_CLIP_CONTENT*2);
+
+		tick_t clipLen = cl->getLen();
+		float numBars = clipLen / (float) TICKS_BAR;
+		float barSize = sizeContents.x / (float) numBars;
+		int64_t notesRendered=0;
+		const bool useCaching = true;
+		noteview_render_t& notesView = cl->getNoteViewRender();
+		bool cacheValid = notesView.reqRevision == notesView.curRevision;
+		cacheValid &= impl->valid;
+		cacheValid &= impl->pos == posContents;
+		cacheValid &= impl->size == sizeContents;
+		cacheValid &= useCaching;
+
+		NVGcolor rgbNote = theme->getColor(GuiColor::COL_CLIP_NOTE);
+		NVGcolor rgbNoteOverlap = theme->getColor(GuiColor::COL_CLIP_NOTE_OVERLAP);
+		NVGcolor rgbNoteMuted = theme->getColor(GuiColor::COL_CLIP_NOTE_MUTED);
+		if (cacheValid) {
+			nvgSave(vg);
+//			nvgTranslate(vg, posContents.x, posContents.y);
+			if (impl->isCacheValid(0)) {
+				nvgFillFromCache(vg, impl->arr[0]);
+			}
+			if (impl->isCacheValid(1)) {
+				nvgFillFromCache(vg, impl->arr[1]);
+			}
+			if (impl->isCacheValid(2)) {
+				nvgFillFromCache(vg, impl->arr[2]);
+			}
+			notesRendered += impl->notesRendered;
+			nvgRestore(vg);
+			if (impl->isCacheValid(3)) {
+				nvgFillFromCache(vg, impl->arr[3]);
+			}
+		}
+//
+//		if (useCaching && impl) {
+//			impl->pos = posContents;
+//			impl->size = sizeContents;
+//			impl->notesRendered = notesRendered;
+//			notesView.curRevision = notesView.reqRevision;
+//		}
+		daw_tls::getTls().renderStats.clipsRendered++;
+		daw_tls::getTls().renderStats.notesRendered+=notesRendered;
+
 	}
 }
 void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_t* tr, const clip_t* cl, ivec2 pos, ivec2 size) {
@@ -246,7 +544,7 @@ void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_t* tr, 
 	const bool useCaching = daw_tls::getTls().renderStats.enableCache;
 	noteview_render_t& notesView = cl->getNoteViewRender();
 	bool cacheValid = notesView.reqRevision == notesView.curRevision;
-	cacheValid &= notesView.data != nullptr && notesView.data->cache1 != nullptr;
+	cacheValid &= notesView.data != nullptr && notesView.data->valid;
 	cacheValid &= notesView.data != nullptr && notesView.data->pos == posContents;
 	cacheValid &= notesView.data != nullptr && notesView.data->size == sizeContents;
 	cacheValid &= useCaching;
@@ -266,19 +564,19 @@ void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_t* tr, 
 	if (cacheValid) {
 		nvgSave(vg);
 		nvgTranslate(vg, posContents.x, posContents.y);
-		if (notesView.data->cache1) {
-			nvgFillFromCache(vg, notesView.data->cache1);
+		if (notesView.data->isCacheValid(0)) {
+			nvgFillFromCache(vg, notesView.data->arr[0]);
 		}
-		if (notesView.data->cache2) {
-			nvgFillFromCache(vg, notesView.data->cache2);
+		if (notesView.data->isCacheValid(1)) {
+			nvgFillFromCache(vg, notesView.data->arr[1]);
 		}
-		if (notesView.data->cache3) {
-			nvgFillFromCache(vg, notesView.data->cache3);
+		if (notesView.data->isCacheValid(2)) {
+			nvgFillFromCache(vg, notesView.data->arr[2]);
 		}
 		notesRendered += notesView.data->notesRendered;
 		nvgRestore(vg);
-		if (notesView.data->cache4) {
-			nvgFillFromCache(vg, notesView.data->cache4);
+		if (notesView.data->isCacheValid(3)) {
+			nvgFillFromCache(vg, notesView.data->arr[3]);
 		}
 	} else {
 		nvgCachePath(vg, useCaching);
@@ -336,7 +634,7 @@ void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_t* tr, 
 					nvgFillColor(vg, rgbNote);
 					nvgFill(vg);
 					if (useCaching) {
-						nvgGetLastCacheResult(vg, &notesView.data->cache1);
+						notesView.data->SaveFill(vg, 0);
 					}
 				}
 
@@ -365,9 +663,9 @@ void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_t* tr, 
 						nvgFill(vg);
 						if (useCaching) {
 							if (j == 0) {
-								nvgGetLastCacheResult(vg, &notesView.data->cache2);
+								notesView.data->SaveFill(vg, 1);
 							} else {
-								nvgGetLastCacheResult(vg, &notesView.data->cache3);
+								notesView.data->SaveFill(vg, 2);
 							}
 						}
 
@@ -400,7 +698,7 @@ void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_t* tr, 
 				nvgStrokeWidth(vg, 1.f);
 				nvgStroke(vg);
 				if (useCaching) {
-					nvgGetLastCacheResult(vg, &notesView.data->cache4);
+					notesView.data->SaveFill(vg, 3);
 				}
 			}
 		}

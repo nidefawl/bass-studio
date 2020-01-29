@@ -661,6 +661,12 @@ struct NVGpath {
 };
 typedef struct NVGpath NVGpath;
 
+struct NVGCacheEntryInfo {
+	int allocationSizeBytes;
+};
+typedef struct NVGCacheEntryInfo NVGCacheEntryInfo;
+void nvgCacheEntryInfo(NVGcontext* ctx, nvg_path_cache_storage_t* ppCache, NVGCacheEntryInfo* info);
+
 struct NVGparams {
 	void* userPtr;
 	int edgeAntiAlias;

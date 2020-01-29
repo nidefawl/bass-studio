@@ -40,6 +40,11 @@ struct host_stats_t {
 
 };
 
+struct render_clip_cache_stats_t {
+	int64_t timeRender;
+	int64_t clipsCached;
+	int64_t sizeCacheAllocatedMemBytes;
+};
 struct render_stats_t {
 	float fps;
 	int64_t timeRender;

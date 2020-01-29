@@ -98,27 +98,23 @@ public:
 	virtual void updatePosition(project_t& project, scaled_grid& grid, ivec2& trackSize) = 0;
 };
 class gui_midi_clip : public gui_clip {
+	struct midi_clip_render_cache_t;
+	midi_clip_render_cache_t * const impl;
 public:
-	gui_midi_clip(track_t* _track, clip_t* _clip)
-		: gui_clip(_track, _clip)  {
-	}
+	gui_midi_clip(track_t* _track, clip_t* _clip);
+	~gui_midi_clip();
 	int getClipType() {
 		return CLIP_MIDI;
 	}
-	void updatePosition(project_t& project, scaled_grid& grid, ivec2& trackSize) {
-		size = this->parent->size;
-		culled = !getClipPosition(grid, trackSize, m_clip, pos, size, 0);
-	}
-	void render(NVGcontext* vg) {
-		if (!culled) {
-			renderMidiClip(vg, theme, m_track, m_clip, pos, size);
-		}
-	}
+	void updatePosition(project_t& project, scaled_grid& grid, ivec2& trackSize) ;
+	void render(NVGcontext* vg) override;
 	void onRemove() {
 		dbgassert(m_clip->gClip == this);
 		m_clip->gClip = NULL;
 	}
 	void handleRightClick(MouseEvent& evt);
+
+	void prerender(NVGcontext* vg) override;
 };
 class gui_audio_clip : public gui_clip {
 	audioclip_texture_t updatedWaveform;

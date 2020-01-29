@@ -39,6 +39,8 @@
 #pragma warning(disable: 4706)  // assignment within conditional expression
 #endif
 
+#include <stdint.h>
+
 #define NVG_INIT_FONTIMAGE_SIZE  512
 #define NVG_MAX_FONTIMAGE_SIZE   2048
 #define NVG_MAX_FONTIMAGES       4
@@ -124,6 +126,7 @@ struct nvg_path_cache_storage_t {
 	NVGpath* arrPath;
 	int len;
 	float bounds[4];
+	int allocationSizeBytes;
 };
 typedef struct nvg_path_cache_storage_t nvg_path_cache_storage_t;
 
@@ -2472,6 +2475,12 @@ void nvgFillFromCache(NVGcontext* ctx, nvg_path_cache_storage_t* cache)
 
 
 }
+void nvgCacheEntryInfo(NVGcontext* ctx, nvg_path_cache_storage_t* ppCache, NVGCacheEntryInfo* info) {
+	dbgassert(ppCache && info);
+	if (ppCache && info) {
+		info->allocationSizeBytes = ppCache->allocationSizeBytes;
+	}
+}
 void nvgGetLastCacheResult(NVGcontext* ctx, nvg_path_cache_storage_t** ppCache)
 {
 //	printf("nvgGetLastCacheResult: return nvg_path_fill_cache_t 0x%06X\n", (uint64_t)&ctx->cachedPathFill);
@@ -2518,17 +2527,20 @@ void nvgFill(NVGcontext* ctx)
 	// Apply global alpha
 	if (ctx->cacheNextPath) {
 		ctx->cachedPathFill = malloc(sizeof(nvg_path_cache_storage_t));
+		ctx->cachedPathFill->allocationSizeBytes = sizeof(nvg_path_cache_storage_t);
 		ctx->cachedPathFill->type = 0;
 		ctx->cachedPathFill->strokeWidth = 0;
 		ctx->cachedPathFill->fillPaint = fillPaint;
 		ctx->cachedPathFill->state = *state;
 		ctx->cachedPathFill->len = ctx->cache->npaths;
 		ctx->cachedPathFill->arrPath = malloc(sizeof(NVGpath)*(ctx->cachedPathFill->len+1));
+		ctx->cachedPathFill->allocationSizeBytes += sizeof(NVGpath)*(ctx->cachedPathFill->len+1);
 		memcpy(ctx->cachedPathFill->arrPath, ctx->cache->paths, sizeof(NVGpath)*ctx->cachedPathFill->len);
 		for (int i = 0; i < ctx->cachedPathFill->len; i++) {
 			NVGpath* path = &ctx->cachedPathFill->arrPath[i];
 			if (path->nfill) {
 				NVGvertex *fill = malloc(sizeof(NVGvertex)*(path->nfill+1));
+				ctx->cachedPathFill->allocationSizeBytes += sizeof(NVGvertex)*(path->nfill+1);
 				memcpy(fill, path->fill, sizeof(NVGvertex)*path->nfill);
 				path->fill = fill;
 			} else {
@@ -2536,6 +2548,7 @@ void nvgFill(NVGcontext* ctx)
 			}
 			if (path->nstroke) {
 				NVGvertex *stroke = malloc(sizeof(NVGvertex)*(path->nstroke+1));
+				ctx->cachedPathFill->allocationSizeBytes += sizeof(NVGvertex)*(path->nstroke+1);
 				memcpy(stroke, path->stroke, sizeof(NVGvertex)*path->nstroke);
 				path->stroke = stroke;
 			} else {
@@ -2591,17 +2604,20 @@ void nvgStroke(NVGcontext* ctx)
 
 	if (ctx->cacheNextPath) {
 		ctx->cachedPathFill = malloc(sizeof(nvg_path_cache_storage_t));
+		ctx->cachedPathFill->allocationSizeBytes = sizeof(nvg_path_cache_storage_t);
 		ctx->cachedPathFill->type = 1;
 		ctx->cachedPathFill->strokeWidth = strokeWidth;
 		ctx->cachedPathFill->fillPaint = strokePaint;
 		ctx->cachedPathFill->state = *state;
 		ctx->cachedPathFill->len = ctx->cache->npaths;
 		ctx->cachedPathFill->arrPath = malloc(sizeof(NVGpath)*(ctx->cachedPathFill->len+1));
+		ctx->cachedPathFill->allocationSizeBytes += sizeof(NVGpath)*(ctx->cachedPathFill->len+1);
 		memcpy(ctx->cachedPathFill->arrPath, ctx->cache->paths, sizeof(NVGpath)*ctx->cachedPathFill->len);
 		for (int i = 0; i < ctx->cachedPathFill->len; i++) {
 			NVGpath* path = &ctx->cachedPathFill->arrPath[i];
 			if (path->nfill) {
 				NVGvertex *fill = malloc(sizeof(NVGvertex)*(path->nfill+1));
+				ctx->cachedPathFill->allocationSizeBytes += sizeof(NVGvertex)*(path->nfill+1);
 				memcpy(fill, path->fill, sizeof(NVGvertex)*path->nfill);
 				path->fill = fill;
 			} else {
@@ -2609,6 +2625,7 @@ void nvgStroke(NVGcontext* ctx)
 			}
 			if (path->nstroke) {
 				NVGvertex *stroke = malloc(sizeof(NVGvertex)*(path->nstroke+1));
+				ctx->cachedPathFill->allocationSizeBytes += sizeof(NVGvertex)*(path->nstroke+1);
 				memcpy(stroke, path->stroke, sizeof(NVGvertex)*path->nstroke);
 				path->stroke = stroke;
 			} else {

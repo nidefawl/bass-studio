@@ -260,6 +260,18 @@ public:
 
 		printL("timeRender", StringFormat("%d", daw_tls::getTls().renderStats.timeRender));
 		printL("timeRenderEditor", StringFormat("%d", daw_tls::getTls().renderStats.timeRenderEditor));
+		{
+			size_t clipSufIdx = 0;
+			const char *sufArr[3] = { "B", "KB", "MB" };
+			int64_t clipCacheSize = daw_tls::getTls().renderClipCacheStats.sizeCacheAllocatedMemBytes;
+			double clipCacheSizeAsDouble = clipCacheSize;
+			while (clipCacheSizeAsDouble >= 1024.0 && clipSufIdx < 2) {
+				clipCacheSizeAsDouble /= 1024.0;
+				clipSufIdx++;
+			}
+			printL("clip_render_cache size", StringFormat("%f %s", clipCacheSizeAsDouble, sufArr[clipSufIdx%3]));
+		}
+
 		printL("clips in view", StringFormat("%d", daw_tls::getTls().renderStats.clipsRendered));
 		printL("notes in view", StringFormat("%d", daw_tls::getTls().renderStats.notesRendered));
 

@@ -10,6 +10,7 @@ class plugindatabase_t;
 class project_controller_t;
 namespace daw_tls {
 	struct tlsinstance {
+		render_clip_cache_stats_t renderClipCacheStats;
 		render_stats_t renderStats;
 		bool tlsInitialized = false;
 		vsthost* host = nullptr;
