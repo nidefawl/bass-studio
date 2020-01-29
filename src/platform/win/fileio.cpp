@@ -157,7 +157,7 @@ int promptUserFilePath(window_base* w, int mode, std::vector<SupportedFileType> 
 		ofn.lpstrFilter = supportedFiles;
 		ofn.lpstrFile = szFileName;
 		ofn.nMaxFile = MAX_PATH;
-		ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
+		ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY | OFN_NOCHANGEDIR;
 		ofn.lpstrDefExt = StringAsCStr(fileTypes[0].ext);
 
 		if (GetOpenFileName(&ofn)) {
@@ -177,7 +177,7 @@ int promptUserFilePath(window_base* w, int mode, std::vector<SupportedFileType> 
 		ofn.lpstrFilter = supportedFiles;
 		ofn.lpstrFile = szFileName;
 		ofn.nMaxFile = MAX_PATH;
-	    ofn.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT;
+	    ofn.Flags = OFN_EXPLORER | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT | OFN_NOCHANGEDIR;
 		ofn.lpstrDefExt = StringAsCStr(fileTypes[0].ext);
 
 		if (GetSaveFileName(&ofn)) {
