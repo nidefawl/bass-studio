@@ -166,7 +166,11 @@ public:
 //					});
 					for (size_t i = 0; i < STATS_PROCESSING_MAX_SAMPLES; i++) {
 						size_t idx = i + procStatsCopy.statsWriteOffset;
-						if (idx > 0) idx - 1;
+						if (idx == 0) {
+							idx = STATS_PROCESSING_MAX_SAMPLES - 1;
+						} else {
+							idx = idx - 1;
+						}
 						int64_t sample = procStatsCopy.statsProcSamples[idx%STATS_PROCESSING_MAX_SAMPLES];
 						float y = ((float)sample);
 						vecOut[i] = vec2{i, y} * scale;
