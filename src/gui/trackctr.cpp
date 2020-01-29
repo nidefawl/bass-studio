@@ -171,6 +171,7 @@ void guictr_tracks::scrollOffsetChanged(int dir, float offset) {
 			y += h + TRACK_HEIGHT_SPACING;
 		}
 	}
+	trackView.updateVisibleTrackContents();
 }
 void guictr_tracks::scrollTo(guibase* g) {
 	int32_t y = g->pos.y;
