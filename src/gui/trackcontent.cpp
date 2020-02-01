@@ -86,6 +86,9 @@ bool isEqualWaveform3(const audioclip_texture_t& lhs, const audioclip_texture_t&
 //			lhs.scaleX == rhs.scaleX &&
 			lhs.audioId == rhs.audioId && lhs.quality == rhs.quality && lhs.method == rhs.method;
 }
+void gui_audio_clip::updateClipRenderCache(NVGcontext* vg) {
+
+}
 void gui_audio_clip::updatePosition(project_t& project, scaled_grid& grid, ivec2& trackSize) {
 	size = this->parent->size;
 	culled = !getClipPosition(grid, trackSize, m_clip, pos, size, 0);
@@ -148,6 +151,22 @@ void gui_audio_clip::updatePosition(project_t& project, scaled_grid& grid, ivec2
 			}
 		}
 	}
+}
+
+void gui_track::prerender(NVGcontext* vg) {
+	nvgBeginFrame(vg, 1024, 1024, 1.0);
+	nvgScale(vg, parentCtrl->m_scale, parentCtrl->m_scale);
+	nvgLineJoin(vg, NVGlineCap::NVG_BEVEL);
+	nvgCachePath(vg, 1);
+	for (clip_t* clip : m_track->getMidi().getConstClips()) {
+		guibase* gui = clip->gClip;
+		if(!gui) {
+			continue;
+		}
+		clip->gClip->updateClipRenderCache(vg);
+	}
+	nvgCachePath(vg, 0);
+	nvgEndFrame(vg);
 }
 void gui_audio_clip::prerender(NVGcontext* vg) {
 	auto& clipAudio = m_clip->audio;

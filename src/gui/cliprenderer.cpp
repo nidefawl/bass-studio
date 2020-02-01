@@ -275,6 +275,9 @@ void gui_midi_clip::updatePosition(project_t& project, scaled_grid& grid, ivec2&
 	//}
 }
 void gui_midi_clip::prerender(NVGcontext* vg) {
+	gui_clip::prerender(vg);
+}
+void gui_midi_clip::updateClipRenderCache(NVGcontext* vg) {
 	if (culled) {
 		return;
 	}
@@ -308,9 +311,6 @@ void gui_midi_clip::prerender(NVGcontext* vg) {
 	//	glClearColor(col.r, col.g, col.b, col.a);
 	//	glClear(GL_COLOR_BUFFER_BIT);
 	//	static int test = 0;
-		nvgBeginFrame(vg, 1024, 1024, 1.0);
-		nvgScale(vg, parentCtrl->m_scale, parentCtrl->m_scale);
-		nvgLineJoin(vg, NVGlineCap::NVG_BEVEL);
 		NVGcolor rgbNote = theme->getColor(GuiColor::COL_CLIP_NOTE);
 		NVGcolor rgbNoteOverlap = theme->getColor(GuiColor::COL_CLIP_NOTE_OVERLAP);
 		NVGcolor rgbNoteMuted = theme->getColor(GuiColor::COL_CLIP_NOTE_MUTED);
@@ -318,7 +318,6 @@ void gui_midi_clip::prerender(NVGcontext* vg) {
 		nvgSave(vg);
 		ivec2 clipPosScreen = toScreenSpace(ivec2(0, 0));
 		nvgTranslate(vg, clipPosScreen.x, clipPosScreen.y);
-		nvgCachePath(vg, 1);
 		nvgSave(vg);
 		nvgTranslate(vg, 0, HEIGHT_CLIP_TITLE+INSET_CLIP_CONTENT);
 		if (sizeContents.x > 0 && sizeContents.y > 0) {
@@ -439,7 +438,6 @@ void gui_midi_clip::prerender(NVGcontext* vg) {
 			}
 		}
 		nvgRestore(vg);
-		nvgCachePath(vg, 0);
 		impl->valid = true;
 		impl->pos = posContents;
 		impl->size = sizeContents;
@@ -447,7 +445,6 @@ void gui_midi_clip::prerender(NVGcontext* vg) {
 		notesView.curRevision = notesView.reqRevision;
 
 
-		nvgEndFrame(vg);
 	}
 }
 

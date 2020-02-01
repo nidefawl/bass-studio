@@ -2558,11 +2558,12 @@ void nvgFill(NVGcontext* ctx)
 //		ctx->cachedPathFill->arrPath[ctx->cachedPathFill->len] = NULL;
 		memcpy(ctx->cachedPathFill->bounds, ctx->cache->bounds, sizeof(float)*4);
 //		printf("cache path size %d NVGpath (%d bytes)\n", ctx->cachedPathFill->len, ctx->cachedPathFill->len*sizeof(NVGpath));
+	} else {
+		fillPaint.innerColor.a *= state->alpha;
+		fillPaint.outerColor.a *= state->alpha;
+		ctx->params.renderFill(ctx->params.userPtr, &fillPaint, state->compositeOperation, &state->scissor, ctx->fringeWidth,
+							   ctx->cache->bounds, ctx->cache->paths, ctx->cache->npaths);
 	}
-	fillPaint.innerColor.a *= state->alpha;
-	fillPaint.outerColor.a *= state->alpha;
-	ctx->params.renderFill(ctx->params.userPtr, &fillPaint, state->compositeOperation, &state->scissor, ctx->fringeWidth,
-						   ctx->cache->bounds, ctx->cache->paths, ctx->cache->npaths);
 
 	// Count triangles
 	for (i = 0; i < ctx->cache->npaths; i++) {
@@ -2635,13 +2636,15 @@ void nvgStroke(NVGcontext* ctx)
 //		ctx->cachedPathFill->arrPath[ctx->cachedPathFill->len] = NULL;
 		memcpy(ctx->cachedPathFill->bounds, ctx->cache->bounds, sizeof(float)*4);
 //		printf("cache path size %d NVGpath (%d bytes)\n", ctx->cachedPathFill->len, ctx->cachedPathFill->len*sizeof(NVGpath));
-	}
-	// Apply global alpha
-	strokePaint.innerColor.a *= state->alpha;
-	strokePaint.outerColor.a *= state->alpha;
+	} else {
 
-	ctx->params.renderStroke(ctx->params.userPtr, &strokePaint, state->compositeOperation, &state->scissor, ctx->fringeWidth,
-							 strokeWidth, ctx->cache->paths, ctx->cache->npaths);
+		// Apply global alpha
+		strokePaint.innerColor.a *= state->alpha;
+		strokePaint.outerColor.a *= state->alpha;
+
+		ctx->params.renderStroke(ctx->params.userPtr, &strokePaint, state->compositeOperation, &state->scissor, ctx->fringeWidth,
+								 strokeWidth, ctx->cache->paths, ctx->cache->npaths);
+	}
 
 	// Count triangles
 	for (i = 0; i < ctx->cache->npaths; i++) {

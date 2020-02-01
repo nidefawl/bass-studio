@@ -96,6 +96,7 @@ public:
 	}
 	virtual int getClipType() = 0;
 	virtual void updatePosition(project_t& project, scaled_grid& grid, ivec2& trackSize) = 0;
+	virtual void updateClipRenderCache(NVGcontext* vg) = 0;
 };
 class gui_midi_clip : public gui_clip {
 	struct midi_clip_render_cache_t;
@@ -115,6 +116,7 @@ public:
 	void handleRightClick(MouseEvent& evt);
 
 	void prerender(NVGcontext* vg) override;
+	void updateClipRenderCache(NVGcontext* vg) override;
 };
 class gui_audio_clip : public gui_clip {
 	audioclip_texture_t updatedWaveform;
@@ -125,7 +127,8 @@ public:
 	int getClipType() {
 		return CLIP_AUDIO;
 	}
-	void updatePosition(project_t& project, scaled_grid& grid, ivec2& trackSize);
+	void updatePosition(project_t& project, scaled_grid& grid, ivec2& trackSize) override;
+	void updateClipRenderCache(NVGcontext* vg) override;
 	void render(NVGcontext* vg) override {
 		if (!culled) {
 			ivec2 clipSize = ivec2(size.x, size.y-(HEIGHT_CLIP_TITLE+INSET_CLIP_CONTENT*2));
@@ -298,6 +301,7 @@ public:
 	}
 
 
+	void prerender(NVGcontext* vg) override;
 	virtual void render(NVGcontext* vg) override {
 		if (MainCtrl::get()->getSelectedTrack() == m_track) {
 			nvgBeginPath(vg);
