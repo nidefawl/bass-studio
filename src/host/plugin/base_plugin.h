@@ -24,6 +24,8 @@ struct plugin_snapshot_t;
 struct plugin_snapshot_t;
 class effect_deferred;
 
+extern bool storePluginPresetWithSnapshot;// = true;
+extern bool loadPluginPresetWithSnapshot;// = false;
 
 class effectbase : public automatable_t {
 	SafeRef<effectbase> safeRef;

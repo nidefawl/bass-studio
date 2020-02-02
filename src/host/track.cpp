@@ -523,10 +523,10 @@ effectbase* loadEffectModule(const plugin_snapshot_t& pluginSnapshot) {
 			my_printf("Plugin %s: Load data1[%d]\n", StringAsCStr(loadedPlugin->sName), pluginSnapshot.dataChunk.size());
 			loadedPlugin->dispatch(effSetChunk, 0, pluginSnapshot.dataChunk.size(), (void*)pluginSnapshot.dataChunk.data());
 		}
-//		if (pluginSnapshot.dataChunk2.size() > 0) {
-//			my_printf("Plugin %s: Load data2[%d]\n", StringAsCStr(loadedPlugin->sName), pluginSnapshot.dataChunk2.size());
-//			loadedPlugin->dispatch(effSetChunk, 1, pluginSnapshot.dataChunk2.size(), (void*)pluginSnapshot.dataChunk2.data());
-//		}
+		if (loadPluginPresetWithSnapshot && pluginSnapshot.dataChunk2.size() > 0) {
+			my_printf("Plugin %s: Load data2[%d]\n", StringAsCStr(loadedPlugin->sName), pluginSnapshot.dataChunk2.size());
+			loadedPlugin->dispatch(effSetChunk, 1, pluginSnapshot.dataChunk2.size(), (void*)pluginSnapshot.dataChunk2.data());
+		}
 	}
 	return effect;
 }
@@ -987,3 +987,6 @@ const char* TrackTypeToName(int type) {
 
 const SupportedFileType FILE_TYPE_TRACKSNAPSHOT {"Track File", "tracks"};
 const std::vector<SupportedFileType> vFILE_TYPES_TRACKSNAPSHOT = { FILE_TYPE_TRACKSNAPSHOT };
+
+bool storePluginPresetWithSnapshot = true;
+bool loadPluginPresetWithSnapshot = false;

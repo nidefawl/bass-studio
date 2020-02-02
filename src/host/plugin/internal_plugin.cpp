@@ -145,7 +145,9 @@ void createSnapshot(plugin_snapshot_t& ps, internalplugin* plugin, bool storePlu
 		ps.params.reserve(plugin->getNumParameters());
 		plugin->visitParams([&ps](auto& mapEntry) {
 			auto& param = mapEntry.second;
-			ps.params.push_back(param_snapshot_t{param.idx, param.value});
+			if (param.inUse) {
+				ps.params.push_back(param_snapshot_t{ param.idx, param.value });
+			}
 		});
 	}
 	storeAutomation(ps.automatedParams, plugin);

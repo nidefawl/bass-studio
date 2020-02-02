@@ -289,28 +289,35 @@ void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin, bool storePluginCh
 		ps.uId = plugin->uId;
 	}
 	ps.name = plugin->sName;
-	if (storePluginChunks && (plugin->getFlagsVST()&effFlagsProgramChunks)) {
-		void* pluginData;
-		int32_t pluginDataSize = plugin->dispatch(effGetChunk, 0, 0, &pluginData, 0);
-		if (pluginDataSize > 0 && pluginData) {
-			uint8_t* ptrData = reinterpret_cast<uint8_t*>(pluginData);
-			ps.dataChunk.reserve(pluginDataSize);
-			ps.dataChunk.assign(ptrData, ptrData + pluginDataSize);
-			my_printf("Plugin %s: Save data1[%d]\n", StringAsCStr(plugin->sName), pluginDataSize);
+	if (storePluginChunks && (plugin->getFlagsVST() & effFlagsProgramChunks)) {
+		{
+			void* pluginData = nullptr;
+			int32_t pluginDataSize = plugin->dispatch(effGetChunk, 0, 0, &pluginData, 0);
+			if (pluginDataSize > 0 && pluginData) {
+				uint8_t* ptrData = reinterpret_cast<uint8_t*>(pluginData);
+				ps.dataChunk.reserve(pluginDataSize);
+				ps.dataChunk.assign(ptrData, ptrData + pluginDataSize);
+				my_printf("Plugin %s: Save data1[%d]\n", StringAsCStr(plugin->sName), pluginDataSize);
 
+			}
 		}
-//		void* pluginData2;
-//		int32_t pluginDataSize2 = plugin->dispatch(effGetChunk, 1, 0, &pluginData2, 0);
-//		if (pluginDataSize2 > 0 && pluginData2) {
-//			uint8_t* ptrData = reinterpret_cast<uint8_t*>(pluginData2);
-//			ps.dataChunk2.reserve(pluginDataSize2);
-//			ps.dataChunk2.assign(ptrData, ptrData + pluginDataSize2);
-//			my_printf("Plugin %s: Save data2[%d]\n", StringAsCStr(plugin->sName), pluginDataSize2);
-//		}
+		if (storePluginPresetWithSnapshot) {
+			void* pluginData2 = nullptr;
+			int32_t pluginDataSize2 = plugin->dispatch(effGetChunk, 1, 0, &pluginData2, 0);
+			if (pluginDataSize2 > 0 && pluginData2) {
+				uint8_t* ptrData = reinterpret_cast<uint8_t*>(pluginData2);
+				ps.dataChunk2.reserve(pluginDataSize2);
+				ps.dataChunk2.assign(ptrData, ptrData + pluginDataSize2);
+				my_printf("Plugin %s: Save data2[%d]\n", StringAsCStr(plugin->sName), pluginDataSize2);
+			}
+		}
+
 		ps.params.reserve(plugin->getNumParameters());
 		plugin->visitParams([&ps](auto& mapEntry) {
 			auto& param = mapEntry.second;
-			ps.params.push_back(param_snapshot_t{param.idx, param.value});
+			if (param.inUse) {
+				ps.params.push_back(param_snapshot_t{ param.idx, param.value });
+			}
 		});
 	}
 	storeAutomation(ps.automatedParams, plugin);
@@ -400,6 +407,9 @@ void vstplugin::setParamValue(int32_t idx, float val, int flags) {
 		}
 	} else {
 		if (param->internalIdx >= 0) {
+			if (!(flags & FLG_PAR_UPDATE_INIT)) {
+				param->inUse = true;
+			}
 			vst_setParameter(this, handle->aeffect, param->internalIdx, val);
 		}
 	}
@@ -418,6 +428,7 @@ void vstplugin::recvPluginEditParamUpdate(int32_t internalIdx) {
 	automatable_param_t* param = getEffectParam(internalIdx);
 	dbgassert(param && param->internalIdx >= 0);
 	param->value = vst_getParameter(this, handle->aeffect, param->internalIdx);
+	param->inUse = true;
 }
 automationlane_snapshot_t vstplugin::toRef() {
 	automationlane_snapshot_t ref;
