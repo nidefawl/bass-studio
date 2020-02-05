@@ -101,6 +101,13 @@ void guiplugin::determineSize(ivec2& prefSize) {
 		prefSize.x = prefSize.y;
 	}
 }
+void pluginUpdateParamBypass(effectbase* effect, int state = 2) {
+	float f = effect->getParamValue(PARAM_ENABLE);
+	float f2 = state == 2 ? (f < 0.5 ? 1 : 0) : (float)(state&1);
+	effect->deactivateAutomation(PARAM_ENABLE);
+	effect->setParamValue(PARAM_ENABLE, f2, FLG_PAR_UPDATE_USER);
+	effect->postSetParameter(PARAM_ENABLE, f, f2, FLG_PAR_UPDATE_USER);
+}
 void guiplugin::buttonClicked(guibase* _button) {
 	if (_button == &buttonLayout) {
 		layoutMode = (layoutMode+1)%2;
@@ -111,12 +118,7 @@ void guiplugin::buttonClicked(guibase* _button) {
 	}
 	if (_button == &buttonBypass) {
     	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-    	float f = effect->getParamValue(PARAM_ENABLE);
-    	float f2 = f < 0.5 ? 1 : 0;
-		effect->deactivateAutomation(PARAM_ENABLE);
-    	effect->setParamValue(PARAM_ENABLE, f2, FLG_PAR_UPDATE_USER);
-    	effect->postSetParameter(PARAM_ENABLE, f, f2, FLG_PAR_UPDATE_USER);
-
+		pluginUpdateParamBypass(effect, 2);
 	}
 	if (_button == &buttonDelete) {
     	removePlugin(effect);

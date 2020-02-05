@@ -500,6 +500,7 @@ effectbase* loadEffectModule(const plugin_snapshot_t& pluginSnapshot) {
 	effectbase* effect = nullptr;
 	vstplugin* loadedPlugin = nullptr;
 	if (pluginSnapshot.pluginType == PLUGIN_TYPE_VST) {
+		my_printf("Next loading plugin %s, uId %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId);
 		plugindatabase_t* db = plugindatabase_t::getInstance();
 		if (db->resolve(pluginSnapshot.name, pluginSnapshot.uId, &path)) {
 			vstpluginloadres res = host->loadPlugin(path, pluginSnapshot.projectGlobalId);
@@ -593,6 +594,7 @@ void audio_stage_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginLi
 
 
 }
+void pluginUpdateParamBypass(effectbase* effect, int state);
 void vsthost::activateDeferred(effectbase* const eff, effectbase** out_effectLoaded) {
 	dbgassert(eff->trackImpl);
 	dbgassert(eff->trackImpl->effects.size());
@@ -614,6 +616,8 @@ void vsthost::activateDeferred(effectbase* const eff, effectbase** out_effectLoa
 	replacePlugin(eff->trackImpl, effect, defEffect->getSlot(), &prevPlugin);
 	always_assert(removeEntry(this->pluginsDeferred, eff));
 	effect->loadSnapshot(pluginSnapshot);
+	effect->sName = pluginSnapshot.name;
+	pluginUpdateParamBypass(effect, pluginSnapshot.enabled);
 	loadAutomation(pluginSnapshot.automatedParams, effect);
 	if (pluginSnapshot.enabled) {
 		effect->resume();
