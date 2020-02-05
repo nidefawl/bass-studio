@@ -263,6 +263,8 @@ void save(Archive & archive, note_t const & m)
 			make_nvp("len", m.len),
 			make_nvp("pitch", m.pitch),
 			make_nvp("flags", m.flags));
+	float fVel = m.velocity;
+	archive(make_nvp("velocity", fVel));
 }
 template<class Archive>
 void load(Archive & archive, note_t & m)
@@ -275,6 +277,10 @@ void load(Archive & archive, note_t & m)
 		bool b = true;
 		make_optional_nvp(archive, "enabled", b);
 		m.flags = b ? NoteFlags::ENABLED : 0;
+	}
+	float fVel = 0;
+	if (make_optional_nvp(archive, "velocity", fVel)) {
+		m.velocity = CLAMP_I(static_cast<int32_t>(fVel), 0, 127);
 	}
 }
 template<class Archive>
