@@ -121,6 +121,8 @@ bool vstplugin::onShow(vst_window* window) {
 	}
 	return true;
 }
+void AppWndProc_disableBlockReentrant();
+void AppWndProc_enableBlockReentrant();
 void vstplugin::unload(vsthost* host) {
 	effectbase::unload(host);
 	dbgassert(this->bIsSetup);
@@ -146,7 +148,9 @@ void vstplugin::unload(vsthost* host) {
 //		dbgassert(ap.ref);
 //		ap.ref->onDstDelete();
 //	}
+	AppWndProc_enableBlockReentrant();
 	this->dispatch(effClose);
+	AppWndProc_disableBlockReentrant();
 	if (this->window) {
 		this->window->destroy();
 	}
