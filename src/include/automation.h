@@ -76,6 +76,7 @@ union param_step_fi_u {
 struct automatable_param_t {
 	int32_t idx = -1;
 	float value = 0.0f;
+	bool inUse = false;
 	int32_t flags = 0;
 
 	param_step_fi_u min{0.0f};
