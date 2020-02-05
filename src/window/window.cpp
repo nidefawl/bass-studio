@@ -1166,7 +1166,12 @@ void appwindow_main::createMainWindow(const char* title, int w, int h, void* par
 	glfwGetWindowSize(glfw, &w, &h);
 	this->onWindowSizeChanged(w, h);
 }
-
+#if defined(__linux__) or defined(__APPLE__)
+void AppWndProc_enableBlockReentrant() {
+}
+void AppWndProc_disableBlockReentrant() {
+}
+#endif
 #ifdef _WIN32
 static VOID WIN32API_CALLBACK_TYPE timerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime) {
 	EXC_TRY
