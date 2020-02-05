@@ -1295,6 +1295,11 @@ void vsthost::processAudio(audio_stage_t* stage, AudioBlock* input, AudioBlock* 
 		timer.reset();
 		bool isBypass = current->isBypass();
 		AudioBlock* blockPostProcess;
+		//blockIn/blockOut will always have 2 channels at least
+		AudioBlock* blockIn = current->blockInputs;
+		AudioBlock* blockOut = current->blockOutputs;
+		blockIn->realloc(sampleFormat.blockSize);
+		blockOut->realloc(sampleFormat.blockSize);
 		if (isBypass || bypassEffectProcessing) {
 			samplerate_t delay = current->getDelay();
 			if (delay > 0) {
@@ -1307,12 +1312,6 @@ void vsthost::processAudio(audio_stage_t* stage, AudioBlock* input, AudioBlock* 
 			}
 			blockPostProcess = blockZero;
 		} else {
-			//blockIn/blockOut will always have 2 channels at least
-			AudioBlock* blockIn = current->blockInputs;
-			AudioBlock* blockOut = current->blockOutputs;
-			blockIn->realloc(sampleFormat.blockSize);
-			blockOut->realloc(sampleFormat.blockSize);
-			//TODO: respect pin configuration and mono plugins
 			blockIn->copyFrom(input);
 
 			current->process(blockIn, blockOut, samplePos, numSamples, state);
