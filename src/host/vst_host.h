@@ -88,7 +88,8 @@ public:
 	project_globals_t project;
 	audioMasterCallback masterCallBackSlot = nullptr;
 
-	SYNCHRONIZED_RW std::atomic<int32_t> enableProcessing{true};
+	SYNCHRONIZED_RW std::atomic<int32_t> bypassEffectProcessing{false};
+	SYNCHRONIZED_RW std::atomic<int32_t> bypassPlaybackProcessing{false};
 	std::atomic<int32_t> pluginId{100};
 	std::atomic<int32_t> audioStageId{100};
 	std::atomic<int32_t> sampleId{(1<<30)}; //TODO: collides with audiocache::nextIdx
@@ -171,7 +172,7 @@ public:
 	void getShortStats(host_stats_reducted_t& stats) {
 		stats.usage = this->stats.usage;
 		stats.timeProcess = this->stats.timeProcess;
-		stats.timeLastBlock = this->stats.timeLastBlock;
+		stats.timeProcessRaw = this->stats.timeProcessRaw;
 		stats.timePerBlock_usec = sampleFormatExternal.blockSize*1000000/ sampleFormatExternal.sampleRate;
 	}
 	void getStats(host_stats_t& stats) {

@@ -8,6 +8,10 @@
 struct stats_processing_timings_t {
 	int64_t timeProcessRaw = 0;
 	int64_t timeProcess = 0;
+	int64_t timeUpdateParameters = 0;
+	int64_t timeGetNotesInRange = 0;
+	int64_t timeMixInputs = 0;
+	int64_t timeSendNotes = 0;
 	int64_t statsProcSamples[STATS_PROCESSING_MAX_SAMPLES];
 	int32_t statsProcStep = 0;
 	int64_t statsWriteOffset=0;
@@ -17,18 +21,18 @@ struct stats_processing_timings_t {
 struct host_stats_reducted_t {
 	double usage;
 	int64_t timeProcess;
-	int64_t timeLastBlock;
+	int64_t timeProcessRaw;
 	int64_t timePerBlock_usec;
 };
 struct host_stats_t {
 	int32_t tickBar = 0;
 	int32_t samplesProcessed;
 	int32_t blocksProcessed;
-	int64_t timeLastBlock;
 	int64_t timeProcessRaw;
 	int64_t timeProcess;
 	std::map<String, int64_t> timings;
 	double usage;
+	double usageRaw;
 	int32_t inputBufferUnderuns = 0;
 	int32_t lastInvocationTime_i64 = 0;
 	int32_t inputQueueLen = 0;

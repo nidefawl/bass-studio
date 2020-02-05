@@ -822,6 +822,7 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 			return ref->bCanReceiveMidi;
 	})) {
 		std::vector<note_t> notes;
+		hires_timer_t tmr;
 
 		tick_t heldBegin = start;
 		tick_t heldEnd = end;
@@ -829,13 +830,25 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 			heldBegin = math::min(heldBegin, note.start());
 			heldEnd = math::max(heldEnd, note.end());
 		}
+		static int64_t time1=0;
+		static int64_t time2=0;
+		static int64_t time3=0;
+		static int64_t time4=0;
+		static int64_t time5=0;
+		static int64_t time6=0;
+		static int64_t time7=0;
+		tmr.reset();
 		if (flags & MidiFlags::PROCESS_CLIPS) {
 			track->getMidi().getNotesInRange(heldBegin, heldEnd, -1, loopEnd, notes);
 		}
+		time1 = (time1 * 19 + tmr.getTime()) / 20;
+		track->getStage()->procStats.timeGetNotesInRange = time1;
 
+		tmr.reset();
 		if (flags & MidiFlags::PROCESS_REALTIME) {
 			getClipNotesInTimeRange(heldBegin, heldEnd, -1, loopEnd, midiRealtimeInput, notes);
 		}
+		time2 = (time2 * 19 + tmr.getTime()) / 20;
 
 
 		if (loopStart > -1&&start<loopStart)
@@ -846,6 +859,7 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 			std::vector<noteevent_t> noteEvents;
 			notesBegin.reserve(notes.size());
 			notesEnd.reserve(heldNotes.size()+6);
+			tmr.reset();
 			for (note_t& note : notes) {
 				if (note.start() >= start && note.start() < end) {
 					notesBegin.push_back(note);
@@ -857,7 +871,9 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 					noteEvents.emplace_back(note.pitch, note.velocity, note.end()-start-1, false, note.end() == loopEnd);
 				}
 			}
+			time3 = (time3 * 19 + tmr.getTime()) / 20;
 
+			tmr.reset();
 			//revalidate note ends to end notes after loop or clip modifactions
 			for (const note_t& noteHeld : heldNotes) {
 				bool found = false;
@@ -874,17 +890,23 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 					noteEvents.emplace_back(noteHeld.pitch, 0, 0, false, false);
 				}
 			}
+			time4 = (time4 * 19 + tmr.getTime()) / 20;
 
+			tmr.reset();
 			addAll(heldNotes, notesBegin);
 			removeAll(heldNotes, notesEnd);
 			sortNoteEvents(noteEvents);
+			time5 = (time5 * 19 + tmr.getTime()) / 20;
 
+			tmr.reset();
 			std::vector<noteevent_t> noteEventsProcessed;
 			if (flags & MidiFlags::PROCESS_ARP) {
 				arp->process(noteEvents, start, end, loopStart, loopEnd, noteEventsProcessed);
 			} else {
 				noteEventsProcessed = std::move(noteEvents);
 			}
+			time6 = (time6 * 19 + tmr.getTime()) / 20;
+			tmr.reset();
 			size_t numEvents = noteEventsProcessed.size();
 			if (numEvents > 0)
 			{
@@ -904,6 +926,7 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 					}
 				}
 			}
+			time7 = (time7 * 19 + tmr.getTime()) / 20;
 		} else {
 //			for (effectbase* effect : effects) {
 //				vstplugin* vst = dynamic_cast<vstplugin*>(effect);

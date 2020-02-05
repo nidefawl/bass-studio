@@ -71,10 +71,17 @@ public:
 			host_stats_reducted_t stats;
 			auto host = vsthost::getInstance();
 			host->getShortStats(stats);
-			float fPercentLoad = stats.timeProcess <= 0 ? 0 : _entry->procStats.timeProcess*100.0f / stats.timeProcess;
+			float fPercentLoad = stats.timePerBlock_usec <= 0 ? 0 : _entry->procStats.timeProcess*100.0f / stats.timePerBlock_usec;
 			nvgTextAlign(vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
 			String str = StringFormat("%.2f%%", fPercentLoad);
-			nvgText(vg, size.x-spacing, rowHeight / 2, StringAsCStr(str), NULL);
+			float x2 = size.x-spacing;
+			float x1 = nvgText(vg, size.x-spacing, rowHeight / 2, StringAsCStr(str), NULL);
+			float xw = x2 - x1;
+			if (size.x/4>xw) {
+				String str = StringFormat("%dmicsec", _entry->procStats.timeProcess);
+				nvgText(vg, size.x*3/4, rowHeight / 2, StringAsCStr(str), NULL);
+			}
+
 		}
 		nvgTranslate(vg, -pos.x, -pos.y);
 	}
@@ -255,7 +262,15 @@ public:
 			nvgText(vg, x2, y, StringAsCStr(str), NULL);
 			y += lineh;
 		};
+		auto audioHost = audiohost::getInstance();
+
+		if (stats.usageRaw >= 1.0) {
+			nvgFillColor(vg, theme->getColor(GuiColor::COL_LEVEL_IND_YELLOW_DRKER));
+		} else {
+			nvgFillColor(vg, G_WHITE);
+		}
 		printL("Usage", StringFormat("%.2f%%", stats.usage*100.0));
+		nvgFillColor(vg, G_WHITE);
 		printL("FPS", StringFormat("%.2f", daw_tls::getTls().renderStats.fps));
 
 		printL("timeRender", StringFormat("%d", daw_tls::getTls().renderStats.timeRender));
@@ -277,7 +292,9 @@ public:
 
 		printL("blocksProcessed", StringFormat("%d", stats.blocksProcessed));
 		printL("samplesProcessed", StringFormat("%d", stats.samplesProcessed));
-		printL("timeLastBlock", StringFormat("%lld", stats.timeLastBlock));
+		printL("audioCallback tDelta usec", StringFormat("%d", audioHost ? audioHost->audioCallbackInvocationDelay_usec : 0));
+		printL("timeProcess", StringFormat("%lld", stats.timeProcess));
+		printL("timeProcessRaw", StringFormat("%lld", stats.timeProcessRaw));
 		printL("playback_state", StringFormat("%lld", static_cast<int32_t>(state)));
 		audiothread_ringbuffer_t& ringbuffer = vsthost::getInstance()->getRingBuffer();
 		printL("input q len", StringFormat("%d", stats.inputQueueLen));
@@ -286,10 +303,8 @@ public:
 		printL("OUTPUT resampler", StringFormat("%d samples|%d blocks", stats.resamplerOutNumSamples, stats.resamplerOutNumBlocks));
 		printL("output q len", StringFormat("%d", stats.outputQueueLen));
 		printL("inputBufferUnderuns", StringFormat("%d", stats.inputBufferUnderuns));
-		auto audioHost = audiohost::getInstance();
 		printL("outputBufferUnderuns", StringFormat("%u", audioHost ? audioHost->bufferUnderuns : 0));
 		printL("inputBufferOverrun", StringFormat("%u", audioHost ? audioHost->inputBufferUnderuns : 0));
-		printL("audioCallback tDelta usec", StringFormat("%d", audioHost ? audioHost->audioCallbackInvocationDelay_usec : 0));
 		for (auto& entry : stats.timings) {
 			printL(StringAsCStr(entry.first), StringFormat("%lld", entry.second));
 		}

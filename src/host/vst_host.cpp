@@ -981,14 +981,19 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 		int64_t microSecsPerBlock = (int64_t)sampleFormatExternal.blockSize * 1000000L / (int64_t)sampleFormatExternal.sampleRate;
 
 		int64_t timeTaken = timer2.getTime();
-		if (dbg != 0)
-			stats.timings["block-time"] = timeTaken;
-		stats.timeLastBlock = (stats.timeLastBlock*99 + timeTaken) / 100;
+		if (dbg != 0) {
+			auto curTimeProcess = stats.timings["blocktime"];
+			curTimeProcess -= curTimeProcess/NUM_BINS_STATS;
+			curTimeProcess += timeTaken/NUM_BINS_STATS;
+			stats.timings["blocktime"] = curTimeProcess;
+			stats.timings["blocktimeRaw"] = timeTaken;
+		}
 		if (convert) {
 			stats.timings["convertBlockTime"] = timeTaken;
 		}
 		stats.timings["microSecsPerBlock"] = microSecsPerBlock;
-		stats.usage = stats.timeLastBlock / (double) microSecsPerBlock;
+		stats.usage = stats.timings["blocktime"] / (double) microSecsPerBlock;
+		stats.usageRaw = stats.timings["blocktimeRaw"] / (double) microSecsPerBlock;
 	}
 	return nBlocksProcessed;
 }
@@ -1067,6 +1072,7 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const DAW::processing_
 		const double sampleLatencyCompensated = sample - trackNode.inputLatency;
 		const double tickLatencyCompensated = posDouble-ticksLatency;
 		tick_t processingPos = floor(tickLatencyCompensated);
+		timer4.reset();
 		if (state == playback_state::status_play) {
 			//TODO: latency compensate automation
 			updateTime(sampleLatencyCompensated, tickLatencyCompensated, state);
@@ -1077,6 +1083,7 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const DAW::processing_
 				at->updateAutomatedParameters(processingPos);
 			}
 		}
+		track->getStage()->procStats.timeUpdateParameters = timer4.getTime();
 		int32_t samplePosBlockEnd = sampleLatencyCompensated + lBlockSize;
 		int32_t tickBlockEnd = floor(tickLatencyCompensated + ticksPerBlock);
 		dbgassert(tickBlockEnd-processingPos < ceil(ticksPerBlock+1));
@@ -1096,7 +1103,9 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const DAW::processing_
 			midiProcessFlags = MidiFlags::PROCESS_REALTIME|MidiFlags::PROCESS_CLIPS|MidiFlags::PROCESS_ARP;
 		}
 
+		timer4.reset();
 		trackImpl->sendNotes(processingPos, tickBlockEnd, loopCutStart, loopCutEnd, project.tempo100, sampleLatencyCompensated, *midiRealtimeInput, midiProcessFlags);
+		track->getStage()->procStats.timeSendNotes = timer4.getTime();
 		if (state != playback_state::status_play) {
 			//
 		}
@@ -1117,6 +1126,8 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const DAW::processing_
 		};
 		Func_CheckHasSolo funcCheckSolo;
 		bool hasSolo = std::any_of(allSources.cbegin(), allSources.cend(), funcCheckSolo);
+
+		timer4.reset();
 		for (const DAW::track_source_t& tracksrc : allSources)
 		{
 			if (hasSolo && !funcCheckSolo(tracksrc))
@@ -1166,6 +1177,7 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const DAW::processing_
 				}
 			}
 		}
+		track->getStage()->procStats.timeMixInputs = timer4.getTime();
 #endif
 
 		dbgassert(
@@ -1197,10 +1209,19 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const DAW::processing_
 		}
 	}
 	/* Profiling/Timings: Accumulate timings */
-	int64_t timeTotal = 0;
+	int64_t timeProcessingArr[5] = {0, 0, 0, 0, 0};
 	for (track_t* track : ctrl->trackList) {
-		timeTotal += track->getStage()->procStats.timeProcessRaw;
+		timeProcessingArr[0] += track->getStage()->procStats.timeProcessRaw;
+		timeProcessingArr[1] += track->getStage()->procStats.timeMixInputs;
+		timeProcessingArr[2] += track->getStage()->procStats.timeUpdateParameters;
+		timeProcessingArr[3] += track->getStage()->procStats.timeSendNotes;
+		timeProcessingArr[4] += track->getStage()->procStats.timeGetNotesInRange;
 	}
+	int64_t timeTotal = timeProcessingArr[0];
+	stats.timings["timeMixInputs"] = timeProcessingArr[1];
+	stats.timings["timeUpdateParameters"] = timeProcessingArr[2];
+	stats.timings["timeSendNotes"] = timeProcessingArr[3];
+	stats.timings["timeGetNotesInRange"] = timeProcessingArr[4];
 	stats.timeProcessRaw = timeTotal;
 	auto curTimeProcess = stats.timeProcess;
 	curTimeProcess -= curTimeProcess/NUM_BINS_STATS;
