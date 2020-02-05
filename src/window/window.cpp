@@ -1180,7 +1180,17 @@ static VOID WIN32API_CALLBACK_TYPE timerProc(HWND hwnd, UINT uMsg, UINT_PTR idEv
 	}
 	EXC_CATCH
 }
+int32_t AppWndProc_BlockReentrantEnabled = 0;
+void AppWndProc_enableBlockReentrant() {
+	AppWndProc_BlockReentrantEnabled++;
+}
+void AppWndProc_disableBlockReentrant() {
+	AppWndProc_BlockReentrantEnabled--;
+}
 LRESULT WIN32API_CALLBACK_TYPE appWndProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
+	if (AppWndProc_BlockReentrantEnabled > 0) {
+		return DefWindowProc(hwnd, Msg, wParam, lParam);
+	}
 	EXC_TRY
 	appwindow* impl = NULL;
 	GLFWwindow* glfwWindow = (GLFWwindow*) GetPropW(hwnd, L"GLFW");

@@ -979,6 +979,7 @@ bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file, int flags) {
 
 	// is plugin loading not deferred?
 	if ((flags&FLAG_DEFER_LOAD) == 0) {
+		AppWndProc_enableBlockReentrant();
 		/**
 		 * plugin loading was not deferred.
 		 * handle request to load all plugins.
@@ -1053,6 +1054,7 @@ bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file, int flags) {
 			host->activateDeferred(plugin);
 		}
 		ctr.setControl(nullptr);
+		AppWndProc_disableBlockReentrant();
 	}
 
 	/** load layouts **/
