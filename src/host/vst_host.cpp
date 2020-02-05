@@ -1295,7 +1295,7 @@ void vsthost::processAudio(audio_stage_t* stage, AudioBlock* input, AudioBlock* 
 		timer.reset();
 		bool isBypass = current->isBypass();
 		AudioBlock* blockPostProcess;
-		if (isBypass) {
+		if (isBypass || bypassEffectProcessing) {
 			samplerate_t delay = current->getDelay();
 			if (delay > 0) {
 				if (!current->delayLine.get()) {

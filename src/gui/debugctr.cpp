@@ -58,7 +58,8 @@ constexpr int ID_BTN_INJECT_BAD_MALLOC_AUDIO_THREAD = 4;
 constexpr int ID_BTN_INJECT_SEGFAULT_MAIN_THREAD = 5;
 constexpr int ID_BTN_INJECT_BAD_MALLOC_MAIN_THREAD = 6;
 constexpr int ID_BTN_TOGGLE_STACKTRACE = 8;
-constexpr int ID_BTN_TOGGLE_PROCESSING = 7;
+constexpr int ID_BTN_TOGGLE_PLAYBACKPROCESSING = 7;
+constexpr int ID_BTN_TOGGLE_EFFECTPROCESSING = 10;
 constexpr int ID_BTN_TOGGLE_CLIP_RENDER_CACHE = 9;
 constexpr int BTN_FONT_SIZE = 16;
 gui_ctr_debug::gui_ctr_debug() : guictr_base() {
@@ -117,8 +118,15 @@ gui_ctr_debug::gui_ctr_debug() : guictr_base() {
 	}
 	{
 		auto btn3 = new guibutton;
-		btn3->id = ID_BTN_TOGGLE_PROCESSING;
-		btn3->setText("Disable Processing");
+		btn3->id = ID_BTN_TOGGLE_EFFECTPROCESSING;
+		btn3->setText("Bypass Eff. Proc. (OFF)");
+		btn3->setFontSize(BTN_FONT_SIZE);
+		debugGuis.push_back(btn3);
+	}
+	{
+		auto btn3 = new guibutton;
+		btn3->id = ID_BTN_TOGGLE_PLAYBACKPROCESSING;
+		btn3->setText("Bypass Playback Proc. (OFF)");
 		btn3->setFontSize(BTN_FONT_SIZE);
 		debugGuis.push_back(btn3);
 	}
@@ -342,9 +350,14 @@ void gui_ctr_debug::buttonClicked(guibase* button) {
 
 		}
 		break;
-	case ID_BTN_TOGGLE_PROCESSING:
-		vsthost::getInstance()->enableProcessing = !vsthost::getInstance()->enableProcessing;
-		static_cast<guibutton*>(button)->setText(String(vsthost::getInstance()->enableProcessing?"Disable Processing":"Enable Processing"));
+	case ID_BTN_TOGGLE_PLAYBACKPROCESSING:
+		vsthost::getInstance()->bypassPlaybackProcessing = !vsthost::getInstance()->bypassPlaybackProcessing;
+		static_cast<guibutton*>(button)->setText(String(vsthost::getInstance()->bypassPlaybackProcessing?"Bypass Playback Proc. (ON)":"Bypass Playback Proc. (OFF)"));
+
+		break;
+	case ID_BTN_TOGGLE_EFFECTPROCESSING:
+		vsthost::getInstance()->bypassEffectProcessing = !vsthost::getInstance()->bypassEffectProcessing;
+		static_cast<guibutton*>(button)->setText(String(vsthost::getInstance()->bypassEffectProcessing?"Bypass Effect Processing (ON)":"Bypass Effect Processing (OFF)"));
 
 		break;
 	case ID_BTN_TOGGLE_CLIP_RENDER_CACHE:

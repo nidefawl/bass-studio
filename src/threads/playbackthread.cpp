@@ -237,7 +237,7 @@ private:
             			&& tickPos < projGlobals.loopStart+projGlobals.loopLen
 						&& m_status == status_play && projGlobals.loopEnabled);
             	midiHost->processMidi(this->ctrl, samplePos, tickPos, m_status, inLoop, isLoopAround);
-            	if (host->enableProcessing) {
+            	if (!host->bypassPlaybackProcessing) {
 
                 	processedBlock = host->processPlayback(this->ctrl, samplePos, tickPos, m_status, inLoop, isLoopAround);
 					timer2.reset();
@@ -254,7 +254,10 @@ private:
             }
             host_stats_t stats;
             host->getStats(stats);
-            if (host->enableProcessing && stats.outputQueueLen < 2) {
+            if (!host->bypassPlaybackProcessing && stats.outputQueueLen < 2) {
+            	if (stats.outputQueueLen != 0) {
+                	std::this_thread::sleep_for(std::chrono::microseconds(500));
+            	}
             } else {
 
             	std::this_thread::sleep_for(std::chrono::milliseconds(1));
