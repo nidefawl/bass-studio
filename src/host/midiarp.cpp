@@ -76,6 +76,16 @@ void midiarp::process(std::vector<noteevent_t>& noteEventsIn,
 	int64_t time = getTimeMillis()/100ULL;
 	std::vector<noteevent_t> noteEvents = noteEventsIn;
 	std::reverse(noteEvents.begin(), noteEvents.end());
+	if (noteEventsIn.empty()
+			&& this->heldInput.empty()
+			&& this->heldOutput.empty()
+			&& this->heldOutputNotes.empty()
+			&& this->heldInputAnimationNotes.empty()
+			&& this->heldOutputAnimationNotes.empty()) {
+		noteEventsProcessed = noteEventsIn;
+		numCalls++;
+		return;
+	}
 	for (tick_t tick = start; tick < end; tick++) {
 		bool enabledBefore = this->enable;
 		updateAutomatedParameters(tick);
@@ -153,7 +163,7 @@ void midiarp::process(std::vector<noteevent_t>& noteEventsIn,
 					return evt->pitch == evt2.pitch;
 				});
 				if (it == heldInput.end()) {
-//					// arp received a note off with the correspondending note_on missing -> pass through
+//					// arp received a note off with the corresponding note_on missing -> pass through
 //					noteEventsProcessed.push_back(*evt);
 //					nSend++;
 				} else {
