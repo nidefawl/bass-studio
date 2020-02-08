@@ -4,7 +4,6 @@
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
 #endif
-#define NANOVG_GL2 1
 #include <nanovg.h>
 #include <nanovg_gl.h>
 #include <nanovg_gl_utils.h>
@@ -237,8 +236,11 @@ private:
 	}
 	void initContext() {
 //		glfwSwapInterval(-1);
-		// nanovgCtxt = nvgCreateGL3(NVG_ANTIALIAS | NVG_DEBUG);
+#ifdef NANOVG_GL2
 		nanovgCtxt = nvgCreateGL2(NVG_ANTIALIAS | NVG_DEBUG);
+#elif defined(NANOVG_GL3)
+		nanovgCtxt = nvgCreateGL3(NVG_ANTIALIAS | NVG_DEBUG);
+#endif
 		if (!nanovgCtxt) {
 			throw appexception("Couldn't initialize nanovg");
 		}
@@ -360,8 +362,11 @@ public:
 	}
 	void destroyGL() {
 		if (nanovgCtxt) {
-			// nvgDeleteGL3(nanovgCtxt);
+#ifdef NANOVG_GL2
 			nvgDeleteGL2(nanovgCtxt);
+#elif defined(NANOVG_GL3)
+			nvgDeleteGL3(nanovgCtxt);
+#endif
 			nanovgCtxt = nullptr;
 		}
 	}

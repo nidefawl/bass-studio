@@ -65,7 +65,6 @@ GLuint nvglImageHandleGL2(NVGcontext* ctx, int image);
 #endif
 
 #if defined NANOVG_GL3
-
 NVGcontext* nvgCreateGL3(int flags);
 void nvgDeleteGL3(NVGcontext* ctx);
 
