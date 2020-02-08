@@ -346,7 +346,7 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
 	if (fillLoop && listLoop.size()) {
 
 		/** add all in-loop notes */
-		const tick_t lenClipLoopSection = (localEnd - localStart) - preLoopLen;
+		const tick_t lenClipLoopSection = math::max(0, (localEnd - localStart) - preLoopLen);
 		const int loopLenProcessing = loopEnabled ? ( loopLen <= 0 ? 0 : loopLen) : (localEnd - localStart);
 		const tick_t numLoops = loopEnabled && loopLenProcessing>0 ? (lenClipLoopSection+loopLen-1) / loopLenProcessing : 0;
 		if (notesView.m_list.capacity() < numLoops * listLoop.size())
