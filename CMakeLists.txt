@@ -28,6 +28,8 @@ include("cotire.cmake")
 add_definitions("-DUSE_WIN32_EXC_HOOKS")
 add_definitions("-DBUILD_VSTHOST=1")
 add_definitions("-DBUILD_EXTERNAL_PLUGIN=0")
+add_definitions("-DNANOVG_GL2=1")
+# add_definitions("-DNANOVG_GL3=1")
 
 
 file(GLOB_RECURSE HDR_ALL_FILES src/*.h)
