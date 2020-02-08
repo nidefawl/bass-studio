@@ -76,6 +76,14 @@ void midiarp::process(std::vector<noteevent_t>& noteEventsIn,
 	int64_t time = getTimeMillis()/100ULL;
 	std::vector<noteevent_t> noteEvents = noteEventsIn;
 	std::reverse(noteEvents.begin(), noteEvents.end());
+	numCalls++;
+	if (!this->enable) {
+		const automation_t* automatEnable = getRegisteredConstAutomation(PARAM_ENABLE);
+		if (!automatEnable || !automatEnable->active) {
+			noteEventsProcessed = noteEventsIn;
+			return;
+		}
+	}
 	if (noteEventsIn.empty()
 			&& this->heldInput.empty()
 			&& this->heldOutput.empty()
@@ -83,7 +91,6 @@ void midiarp::process(std::vector<noteevent_t>& noteEventsIn,
 			&& this->heldInputAnimationNotes.empty()
 			&& this->heldOutputAnimationNotes.empty()) {
 		noteEventsProcessed = noteEventsIn;
-		numCalls++;
 		return;
 	}
 	for (tick_t tick = start; tick < end; tick++) {
@@ -229,7 +236,6 @@ void midiarp::process(std::vector<noteevent_t>& noteEventsIn,
 	nSend += writeOutputNotes(noteEventsProcessed, start, end, loopStart, loopEnd, time);
 	if (nSend)
 		sortNoteEvents(noteEventsProcessed);
-	numCalls++;
 	dbgassert(notesSpawnTime.size() == heldOutputAnimationNotes.size());
 #undef TIME_STEP
 }
