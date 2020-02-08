@@ -197,7 +197,7 @@ public:
 	tick_t loopLen = 0;
 	int clipType = CLIP_MIDI;
 	String name;
-	int rgb = 0x2B82AD;
+	uint32_t rgb = 0x2B82AD;
 	bool enabled = true;
 	bool loopEnabled = true;
 	bool noLayout = true;
