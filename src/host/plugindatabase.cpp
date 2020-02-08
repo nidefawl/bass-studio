@@ -14,19 +14,21 @@ void createTables(SQLite::Database& db) {
 
     if (!db.tableExists("plugins")) {
     	const char* queryCreate = "CREATE TABLE `plugins` (\n"
-				"	`id`	INTEGER PRIMARY KEY AUTOINCREMENT,\n"
-				"	`moduleFormat`	INTEGER DEFAULT 0,\n"
-				"	`isSynth`	INTEGER DEFAULT 0,\n"
-				"	`uid`	INTEGER NOT NULL,\n"
-				"	`version`	INTEGER NOT NULL,\n"
-				"	`vstVersion`	INTEGER NOT NULL,\n"
-				"	`category`	INTEGER NOT NULL,\n"
-				"	`moddate`	INTEGER NOT NULL,\n"
-				"	`ok`	INTEGER DEFAULT 0,\n"
-				"	`path`	TEXT NOT NULL,\n"
-				"	`name`	TEXT NOT NULL,\n"
-				"	`vendorName`	TEXT NOT NULL\n"
-				");";
+    			"	`id`	INTEGER PRIMARY KEY AUTOINCREMENT,\n"
+    			"	`moduleFormat`	INTEGER DEFAULT 0,\n"
+    			"	`isSynth`	INTEGER DEFAULT 0,\n"
+    			"	`uid`	INTEGER NOT NULL,\n"
+    			"	`version`	INTEGER NOT NULL,\n"
+    			"	`vstVersion`	INTEGER NOT NULL,\n"
+    			"	`category`	TEXT NOT NULL,\n"
+    			"	`moddate`	TEXT NOT NULL,\n"
+    			"	`state`	INTEGER DEFAULT 0,\n"
+    			"	`path`	TEXT NOT NULL,\n"
+    			"	`name`	TEXT NOT NULL,\n"
+    			"	`vendorName`	TEXT NOT NULL,\n"
+    			"	`state`	INTEGER DEFAULT 0,\n"
+    			"	`forcedisable`	INTEGER DEFAULT 0\n"
+    			");";
     	db.exec(queryCreate);
     }
 }
@@ -42,7 +44,7 @@ public:
 
 	}
 	bool resolve(String name, int32_t uId, String* _outPath) {
-		SQLite::Statement   queryPlugin(db, "SELECT path FROM plugins where ok == 1 and name = ? ");
+		SQLite::Statement   queryPlugin(db, "SELECT path FROM plugins where state == 1 and name == ? and forcedisable == 0 ");
 		queryPlugin.bind(1, name);
 		if (queryPlugin.executeStep()) {
 			*_outPath = queryPlugin.getColumn("path").getString();
@@ -60,7 +62,7 @@ public:
 			replaceString(str, "_", "#_");
 			str = StringFormat("%%%s%%", StringAsCStr(str));
 		}
-		SQLite::Statement   queryPlugin(db, "SELECT * FROM plugins where ok == 1 and name like ? ESCAPE '#' ORDER by name COLLATE NOCASE ASC");
+		SQLite::Statement   queryPlugin(db, "SELECT * FROM plugins where state == 1 and forcedisable == 0 and name like ? ESCAPE '#' ORDER by name COLLATE NOCASE ASC");
 		queryPlugin.bind(1, str);
 		pluginentry_t entry;
 		while (queryPlugin.executeStep()) {

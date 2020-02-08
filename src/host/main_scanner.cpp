@@ -229,8 +229,8 @@ int main(int argc, char* argv[]) {
 //			db.exec("delete from plugins where 1");
 			SQLite::Statement   queryPlugin(db, "SELECT id, moddate FROM plugins where path == ?");
 			SQLite::Statement   queryInsertPlugin(db, "INSERT INTO "
-					"plugins(isSynth, uid, version, vstVersion, category, moddate, ok, path, name, vendorName) "
-					"VALUES(?,?,?,?,?,?,?,?,?,?)");
+					"plugins(isSynth, uid, version, vstVersion, category, moddate, state, path, name, vendorName, reqState, forcedisable) "
+					"VALUES(?,?,?,?,?,?,?,?,?,?,?,?)");
 			SQLite::Statement   queryDelete(db, "DELETE from plugins where id = ?");
 			if (!dryRun) {
 				SQLite::Statement   queryAll(db, "SELECT id, path from plugins");
@@ -363,10 +363,12 @@ int main(int argc, char* argv[]) {
 					queryInsertPlugin.bind(bndIdx++, data.vstVersion);
 					queryInsertPlugin.bind(bndIdx++, data.pluginCategory);
 					queryInsertPlugin.bind(bndIdx++, (long long int)timeDisk);
-					queryInsertPlugin.bind(bndIdx++, status);
+					queryInsertPlugin.bind(bndIdx++, status ? 1 : 0);
 					queryInsertPlugin.bind(bndIdx++, file.path);
 					queryInsertPlugin.bind(bndIdx++, data.szName);
 					queryInsertPlugin.bind(bndIdx++, data.szVendorName);
+					queryInsertPlugin.bind(bndIdx++, 0);
+					queryInsertPlugin.bind(bndIdx++, 0);
 					/*int insertRowsAffected = */queryInsertPlugin.exec();
 //					LOG("insertRowsAffected %d",insertRowsAffected);
 				} catch (SQLite::Exception& e) {
