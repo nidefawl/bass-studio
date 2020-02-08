@@ -507,10 +507,12 @@ effectbase* loadEffectModule(const plugin_snapshot_t& pluginSnapshot) {
 			if (res.result==0&&res.plugin) {
 				loadedPlugin = res.plugin;
 				effect = res.plugin;
+			} else {
+				my_printf("Failed loading: Error loading plugin %s, uId %d. Res: %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId, res.result);
+
 			}
 		} else {
-			//TODO: handle failed plugin loading
-			my_printf("Failed loading plugin %s, uId %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId);
+			my_printf("Failed loading: Unknown plugin %s, uId %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId);
 
 		}
 	} else {

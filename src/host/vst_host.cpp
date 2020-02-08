@@ -50,7 +50,7 @@
 #endif
 //#include "../util/readerwriterqueue.h"
 
-#define DBG_PRINT_CALLBACKS
+//#define DBG_PRINT_CALLBACKS
 #ifdef DBG_PRINT_CALLBACKS
 #define MAX_LEN_MY_DBF 512
 bool filterOpCode(int opcode) {

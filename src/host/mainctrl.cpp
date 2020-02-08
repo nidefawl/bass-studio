@@ -1029,6 +1029,7 @@ bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file, int flags) {
 		 * plugin loading can take a long time and will block the main thread.
 		 * Ideally this would happen on another thread, but that might not work for all vst plugins.
 		 */
+		log_printf("begin plugin list loading\n", 0);
 		int len = pluginsDeferred.size();
 		for (int i = 0; i < len; i++) {
 
@@ -1051,8 +1052,11 @@ bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file, int flags) {
 			windowMain->postRender();
 			/** TODO: vsync **/
 			threadSleep(16);
+			log_printf("pre activateDeferred %s\n", StringAsCStr(ctr.text));
 			host->activateDeferred(plugin);
+			log_printf("post activateDeferred %s\n", StringAsCStr(ctr.text));
 		}
+		log_printf("end plugin list loading\n", 0);
 		ctr.setControl(nullptr);
 		AppWndProc_disableBlockReentrant();
 	}
