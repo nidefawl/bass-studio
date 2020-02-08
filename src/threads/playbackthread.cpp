@@ -31,21 +31,6 @@ using namespace moodycamel;
 
 #define PLAYBACK_THREAD_EXIT 255
 
-class ThreadLock::Impl {
-	std::recursive_mutex& mutex;
-	std::atomic<bool>& isLocked;
-public:
-	Impl(std::recursive_mutex& _mutex, std::atomic<bool>& _isLocked)
-		: mutex(_mutex), isLocked(_isLocked)
-	{
-		isLocked = true;
-		mutex.lock();
-	}
-	~Impl() {
-		mutex.unlock();
-		isLocked = false;
-	}
-};
 
 class PlaybackThreadReq {
     std::mutex m_mtx;
@@ -141,7 +126,7 @@ public:
     	return this->mIsLocked;
     }
     ThreadLock lockThread() {
-    	ThreadLock t(new ThreadLock::Impl(mutex, this->mIsLocked));
+    	ThreadLock t = ThreadLock::MakeThreadLock(mutex, this->mIsLocked);
     	return std::move(t); //CANNOT RELY ON RVO
     }
 private:
@@ -360,13 +345,6 @@ playback_state PlaybackThread::getState() {
 	return _M_impl->getState();
 }
 
-ThreadLock::ThreadLock(ThreadLock::Impl* impl) :
-	_M_impl(impl) {
-}
-ThreadLock::~ThreadLock() {
-	if (_M_impl)
-		delete _M_impl;
-}
 ThreadLock PlaybackThread::lockThread() {
 	ThreadLock t = _M_impl->lockThread();
 	return std::move(t); //CANNOT RELY ON RVO

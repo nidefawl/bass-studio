@@ -1,4 +1,6 @@
 #pragma once
+#include <atomic>
+#include "threads.h"
 
 class ThreadLock {
 public:
@@ -13,5 +15,6 @@ public:
 	ThreadLock& operator= (const ThreadLock&) = delete;
 	ThreadLock& operator=(ThreadLock&& other) noexcept;
 	ThreadLock(ThreadLock&& other) noexcept;
-
+	static ThreadLock MakeThreadLock(std::recursive_mutex& _mutex, std::atomic<bool>& _isLocked);
 };
+
