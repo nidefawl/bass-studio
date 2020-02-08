@@ -1478,18 +1478,31 @@ int startApplication(int argc, char* argv[]) {
 #endif // HAS_JS_CONSOLE
 
 	GLFWwindow* glfwHandle = mainWindow->getGLFW();
-	long start = getTimeMillis();
+	int64_t start = getTimeMillis();
+	int64_t tmLastCheck = getTimeMillis();
+	int64_t tmMsgSent = 0;
+	int64_t cntMessages = 0;
+	static char* const data = "TEST";
 	while (!fataError && !glfwWindowShouldClose(glfwHandle)) {
 #ifdef _WIN32
+		int64_t maxMsgProcess = 1024;
 		DWORD timeout = 5;
 		MsgWaitForMultipleObjects(0, NULL, FALSE, timeout, QS_ALLEVENTS);
 	    MSG msg;
-	    while (!fataError && PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE))
+	    while (!fataError && PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE) && maxMsgProcess-- > 0)
 	    {
+	    	cntMessages++;
 //	    	logEveryMsec(0, 5000, "Main msg loop");
 	        if (msg.message == WM_QUIT)
 	        {
 	        	glfwSetWindowShouldClose(glfwHandle, 1);
+	        }
+	        else if (msg.message == WM_APP + 42) {
+			    if (tmMsgSent != 0) {
+			    	int64_t tmDuration = (getTimeMillis() - tmMsgSent);
+			    	log_printf("MSG took %d ms to get through, %d messages since sent\n", tmDuration, cntMessages);
+			    	tmMsgSent = 0;
+			    }
 	        }
 	        else
 	        {
@@ -1528,8 +1541,19 @@ int startApplication(int argc, char* argv[]) {
 		glfwWaitEventsTimeout(0.001);
 		mainWindow->onRefresh();
 #else
-		if (getTimeMillis() - start > 0) {
+		if (tmMsgSent > 0 && getTimeMillis() - tmMsgSent >= 1000)
+		{
+			tmMsgSent = 0;
+		}
+		if (getTimeMillis() - tmLastCheck >= 1000 && tmMsgSent == 0) {
+			tmLastCheck = tmMsgSent = getTimeMillis();
+			cntMessages = 0;
+			PostMessage(mainWindow->getHWND(), WM_APP + 42, 0, 0);
+
+		}
+		if (getTimeMillis() - start >= 16) {
 			mainWindow->flagNeedsRedraw();
+			start = getTimeMillis();
 		}
 #endif
 #if HAS_JS_CONSOLE
