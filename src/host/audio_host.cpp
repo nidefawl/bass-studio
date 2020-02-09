@@ -33,12 +33,16 @@ bool error(const char* msg, PaError err) {
 ** that could mess up the system like calling malloc() or free().
 */
 static int32_t lastInvocationTime_i64 = 0;
+static int DBG_AaudioCallbacks=0;
+static int DBG_AaudioCallbackInEnqueued=0;
+static int DBG_AaudioCallbackOutDequeued=0;
 static int audioCallback(const void *inputBuffer, void *outputBuffer,
 	unsigned long framesPerBuffer,
 	const PaStreamCallbackTimeInfo* timeInfo,
 	PaStreamCallbackFlags statusFlags,
 	void *userData)
 {
+	DBG_AaudioCallbacks++;
 	if (!userData) {
 		return paComplete;
 	}
@@ -65,8 +69,9 @@ static int audioCallback(const void *inputBuffer, void *outputBuffer,
 	lastInvocationTime_i64 = timeNow_i64;
 	//TODO: still a race condition on_terminate here
 	AudioBuffer* block = nullptr;
-
+	int numOutChannelsWritten = 0;
 	if (stream->audioQueue.try_dequeue(block)) {
+		DBG_AaudioCallbackOutDequeued++;
 		dbgassert(block);
 		if (framesPerBuffer == block->output->samples) {
 //			static uint32_t s22 = 0;
@@ -76,6 +81,7 @@ static int audioCallback(const void *inputBuffer, void *outputBuffer,
 				float* channel = block->output->buf[i];
 				memcpy(outputs[i], channel, framesPerBuffer * sizeof(float));
 			}
+			numOutChannelsWritten = channels;
 
 
 //			if (logEveryMsec(123, 3000, StringFormat("stream %d samples %d channels OUT:%s\n", framesPerBuffer, channels, StringAsCStr(stream->outputName)))) {
@@ -95,6 +101,9 @@ static int audioCallback(const void *inputBuffer, void *outputBuffer,
 		host->bufferUnderuns++;
 //		dsp_util::fillSilence(inputs, framesPerBuffer);
 	}
+	for (uint32_t i = numOutChannelsWritten; i < stream->nOutputChannels; i++) {
+		memset(outputs[i], 0, framesPerBuffer * sizeof(float));
+	}
 	dsp_util::fillSaturate(outputs, stream->nOutputChannels, framesPerBuffer);
 	host->blockReads++;
 	//	dsp_util::fillSqare(host->fSampleRate, 440, inputs, framesPerBuffer);
@@ -108,7 +117,11 @@ static int audioCallback(const void *inputBuffer, void *outputBuffer,
 	} else {
 		bufferWrite->output->realloc(framesPerBuffer);
 		if (inputs) {
-			bufferWrite->output->copyFrom(inputs, framesPerBuffer, stream->nInputChannels);
+			uint32_t nChannels = math::min<int32_t>(bufferWrite->output->channels, stream->nInputChannels);
+			bufferWrite->output->copyFrom(inputs, framesPerBuffer, nChannels);
+			for (uint32_t i = nChannels; i < stream->nInputChannels; i++) {
+				memset(bufferWrite->output->buf[i], 0, bufferWrite->output->samples * sizeof(float));
+			}
 	//		logEveryMsec(124, 3000, StringFormat("stream IN:%s\n", StringAsCStr(stream->inputName)));
 		} else {
 			dsp_util::fillChannels(outputs, stream->nOutputChannels, framesPerBuffer, 0.0f);
@@ -121,6 +134,7 @@ static int audioCallback(const void *inputBuffer, void *outputBuffer,
 		writePos &= RING_BUF_MASK;
 		if (stream) {
 			stream->enqueueInput(bufferWrite);
+			DBG_AaudioCallbackInEnqueued++;
 		} else {
 			bufferWrite->inUse = false;
 		}
