@@ -142,12 +142,15 @@ set(SRC_FILES_SUBDIR_FILES
     src/file/appsettingsfile.cpp
 )
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-    set_source_files_properties(${SRC_FILES_SUBDIR_FILES} PROPERTIES COMPILE_OPTIONS "-g0;-O2")
+    set_source_files_properties(${SRC_FILES_SUBDIR_FILES} PROPERTIES COMPILE_OPTIONS "-g;-O")
     set(SRC_FILES_OPTIMIZE 
         src/gl/gl_path.cpp
         src/wave/wav_tesselate.cpp
+        src/wave/clip.cpp
+        src/host/vsthost.cpp
+        src/host/track_graph.cpp
     )
-    # set_source_files_properties(${SRC_FILES_OPTIMIZE} PROPERTIES COMPILE_OPTIONS "-O2")
+    set_source_files_properties(${SRC_FILES_OPTIMIZE} PROPERTIES COMPILE_OPTIONS "-g;-O")
 endif()
 
 set(CPP_SRC_FILES ${SRC_FILES_SUBDIR_FILES} ${CPP_SRC_FILES} ${MM_SRC_FILES})
@@ -294,6 +297,11 @@ set(NANOVG_HDR_PATH "${DAW_SRC_PATH}/nanovg/")
 if (BUILD_TESTS)
   ENABLE_TESTING()
   ADD_SUBDIRECTORY( src/tests )
+endif()
+include(CheckCXXCompilerFlag)
+CHECK_CXX_COMPILER_FLAG("-march=native" COMPILER_SUPPORTS_MARCH_NATIVE)
+if(COMPILER_SUPPORTS_MARCH_NATIVE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
 endif()
 
 get_property(BUILD_COMPILE_OPTIONS        DIRECTORY  PROPERTY COMPILE_OPTIONS)
