@@ -228,7 +228,7 @@ public:
 	void getDeferredEffects(std::vector<effectbase*>& effects) {
 		effects = pluginsDeferred;
 	}
-	void activateDeferred(effectbase* const eff, effectbase** out_effectLoaded = nullptr);
+	void activateDeferred(effectbase* const eff, effectbase** out_effectLoaded = nullptr, bool forceLoad=false);
 	SafeRefStorage<effectbase>* getSafeRefStore() {
 		return &safeRefs;
 	}

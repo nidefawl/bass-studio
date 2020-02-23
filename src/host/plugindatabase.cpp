@@ -43,8 +43,14 @@ public:
 	~Impl() {
 
 	}
-	bool resolve(String name, int32_t uId, String* _outPath) {
-		SQLite::Statement   queryPlugin(db, "SELECT path FROM plugins where state == 1 and name == ? and forcedisable == 0 ");
+	bool resolve(String name, int32_t uId, String* _outPath, int loadFlags) {
+		static const char* queryDefault = "SELECT path FROM plugins where state == 1 and name == ? and forcedisable == 0";
+		static const char* queryForceLoad = "SELECT path FROM plugins where state == 1 and name == ?";
+		const char* query = queryDefault;
+		if ((loadFlags&1)!=0) {
+			query = queryForceLoad;
+		}
+		SQLite::Statement   queryPlugin(db, query);
 		queryPlugin.bind(1, name);
 		if (queryPlugin.executeStep()) {
 			*_outPath = queryPlugin.getColumn("path").getString();
@@ -80,8 +86,8 @@ plugindatabase_t::plugindatabase_t() {
 }
 plugindatabase_t::~plugindatabase_t() {
 }
-bool plugindatabase_t::resolve(String name, int32_t uId, String* _outPath) {
-	return _M_Impl->resolve(name, uId, _outPath);
+bool plugindatabase_t::resolve(String name, int32_t uId, String* _outPath, int loadFlags) {
+	return _M_Impl->resolve(name, uId, _outPath, loadFlags);
 }
 void plugindatabase_t::query(String q, std::vector<pluginentry_t>& _out) {
 	_M_Impl->query(q, _out);

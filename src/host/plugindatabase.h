@@ -17,7 +17,7 @@ class plugindatabase_t {
 public:
 	plugindatabase_t();
 	~plugindatabase_t();
-	bool resolve(String name, int32_t uId, String* _outPath);
+	bool resolve(String name, int32_t uId, String* _outPath, int loadFlags);
 	void query(String q, std::vector<pluginentry_t>& _out);
 	void openDatabase();
 	void closeDatabase();

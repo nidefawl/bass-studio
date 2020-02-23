@@ -251,7 +251,7 @@ void guideferred::buttonClicked(guibase* _button) {
 	if (_button == &btnLoad) {
 		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 		vsthost* host = vsthost::getInstance();
-		host->activateDeferred(module);
+		host->activateDeferred(module, nullptr, true);
 	}
 }
 guiplugin* effect_deferred::makeGui() {
