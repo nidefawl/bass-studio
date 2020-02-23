@@ -268,6 +268,15 @@ target_link_libraries("guitest" PUBLIC "dawlib")
 ADD_POST_BUILD_COMMANDS("guitest")
 endif()
 
+
+if (BUILD_RGB_MASTER) 
+project("rgbmaster" C CXX)
+add_executable("rgbmaster" "src/host/main_rgb_master.cpp")
+SET_APP_BUILD("rgbmaster")
+target_link_libraries("rgbmaster" PUBLIC "dawlib")
+ADD_POST_BUILD_COMMANDS("rgbmaster")
+endif()
+
 set(COTIRE_UNITY_SOURCE_EXCLUDE_EXTENSIONS "m;mm;c")
 message(STATUS "COTIRE_UNITY_SOURCE_EXCLUDE_EXTENSIONS: ${COTIRE_UNITY_SOURCE_EXCLUDE_EXTENSIONS}")
 set_source_files_properties("${DAW_SRC_PATH}/platform/win/DropTarget.cpp" PROPERTIES COTIRE_EXCLUDED TRUE)
