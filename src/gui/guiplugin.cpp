@@ -883,6 +883,8 @@ void guitooltip<guivstplugin>::layout()  {
 		table.rows.push_back({{tblstr{"uniqueID"}, tblint{aeffect->uniqueID, "%8X"}}});
 		table.rows.push_back({{tblstr{"version"}, tblint{aeffect->version}}});
 		table.rows.push_back({{tblstr{"bIsEnabled"}, tblint{ptr->vst->bIsEnabled}}});
+		table.rows.push_back({{String("bCanReceiveMidi"), (int)ptr->vst->bCanReceiveMidi}});
+		table.rows.push_back({{String("midiEventsDispatched"), (int)ptr->vst->midiEventsDispatched}});
 		table.rows.push_back({{tblstr{"PARAM_ENABLE"}, tblfloat{ptr->vst->getParamValue(PARAM_ENABLE)}}});
 		table.rows.push_back({{tblstr{"flags"}, tblint{aeffect->flags}}});
 		table.rows.push_back({{tblstr{"initialDelay"}, tblint{aeffect->initialDelay}}});

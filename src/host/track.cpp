@@ -923,8 +923,9 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 				dbgassert(midiEventsBuf->vstEvents->numEvents == (int32_t) numEvents);
 				for (effectbase* effect : effects) {
 					vstplugin* vst = dynamic_cast<vstplugin*>(effect);
-					if (vst && vst->bCanReceiveMidi) {
+					if (vst && vst->isSynth) {
 	//					VstEvent_t midiEventsBufTemp = *midiEventsBuf; //TODO: make a copy, plugin may manipulate data
+						vst->midiEventsDispatched += midiEventsBuf->vstEvents->numEvents;
 						vst->dispatch(effProcessEvents, 0, 0, midiEventsBuf->vstEvents);
 					}
 				}

@@ -52,6 +52,7 @@ public:
 	int32_t slot = -1;
 	std::unique_ptr<DelayLine> delayLine;
 	stats_processing_timings_t procStats;
+	int midiEventsDispatched = 0;
 
 	effectbase();
 	effectbase(String _sName, int32_t _pluginType, int32_t _projectGlobalId);
