@@ -205,6 +205,7 @@ public:
 			(!strcmp(ptr, HostCanDos::canDoReceiveVstEvents)) ||
 			(!strcmp(ptr, HostCanDos::canDoReceiveVstMidiEvent)) ||
 			(!strcmp(ptr, HostCanDos::canDoSizeWindow)) ||
+			(!strcmp(ptr, HostCanDos::canDoAcceptIOChanges)) ||
 			(!strcmp(ptr, HostCanDos::canDoSendVstMidiEventFlagIsRealtime)) ||
 			(!strcmp(ptr, HostCanDos::canDoStartStopProcess)) ||
 			0)
