@@ -2464,7 +2464,7 @@ void nvgFillFromCache(NVGcontext* ctx, nvg_path_cache_storage_t* cache)
 		}
 	} else {
 		ctx->params.renderStroke(ctx->params.userPtr, &fillPaint, state->compositeOperation, &state->scissor, ctx->fringeWidth,
-							 cache->strokeWidth, ctx->cache->paths, ctx->cache->npaths);
+							 cache->strokeWidth, cache->arrPath, cache->len);
 		// Count triangles
 		for (i = 0; i < ctx->cache->npaths; i++) {
 			path = &ctx->cache->paths[i];
