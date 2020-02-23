@@ -494,20 +494,14 @@ void MainCtrl::loadFile(String path, int flags) {
 	} else {
 		const bool wasUserCallback = (flags&FLAG_INVOKE_USER_CB_DEFERLOAD) != 0;
 		auto cb = [this, path, l1, projFile=f, wasUserCallback](int n) {
-			try {
-				timer.reset();
-				int loadFlags = 0;
-				if (wasUserCallback) {
-					loadFlags = n==0 ? FLAG_DEFER_LOAD : 0;
-				} else {
-					loadFlags = n;
-				}
-				setLoadedProject(projFile, loadFlags);
-				double l2 = timer.getTimeDoubleReset();
-				log_printf("Loading file %s took %f %f\n", StringAsCStr(path), l1, l2);
-			} catch (std::exception& e) {
-				handleStdException(e);
+			int loadFlags = 0;
+			if (wasUserCallback) {
+				loadFlags = n==0 ? FLAG_DEFER_LOAD : 0;
+			} else {
+				loadFlags = n;
 			}
+			setProjectToLoad(projFile, loadFlags);
+			closeContextMenu();
 		};
 		if ((flags&FLAG_INVOKE_USER_CB_DEFERLOAD) == 0) {
 			cb(flags&FLAG_DEFER_LOAD);
@@ -899,6 +893,17 @@ void MainCtrl::onTick()
 		lastHoveredTrackTicks = hoverTicks;
 		lastHoveredTrack = tr;
 	}
+	if (!guiDragged && !guiCaptured && !ctxtmenu) {
+		if (projectToLoad) {
+			std::shared_ptr<project_to_load_t> projectToLoadCpy = projectToLoad;
+			projectToLoad = nullptr;
+			try {
+				setLoadedProject(projectToLoadCpy->projectfile, projectToLoadCpy->loadflags);
+			} catch (std::exception& e) {
+				handleStdException(e);
+			}
+		}
+	}
 }
 
 void MainCtrl::pushHist(action_base* action) {
@@ -916,6 +921,10 @@ std::shared_ptr<project_file> MainCtrl::createProjectFile() {
 }
 void MainCtrl::setDragged(guibase* g) {
 	guiDragged = g;
+}
+bool MainCtrl::setProjectToLoad(std::shared_ptr<project_file> file, int flags) {
+	projectToLoad = std::make_shared<project_to_load_t>(project_to_load_t{std::move(file), flags});
+	return true;
 }
 /**
  * setLoadedProject - releases current project and resources and loads in new project from passed project_file

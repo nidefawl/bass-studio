@@ -89,7 +89,9 @@ public:
 		return !b;
 	}
 };
+
 #define PREVENT_REENTRANT(reentrant_err_msg) 	\
+	static bool reentrant = false;				\
 	reentrantblocker block(reentrant); 			\
 	if (!block.check()) {						\
 		dbgassert(0&&reentrant_err_msg);		    \
@@ -201,7 +203,6 @@ protected:
 	bool bCanResize = false;
 	bool shown = false;
 	bool valid = true;
-	bool reentrant = false;
 public:
 	bool isValid() {
 		return valid;
@@ -636,7 +637,11 @@ public:
 	}
 	void destroy();
 	void onTick() {
-		PREVENT_REENTRANT("REENTRANT IN onTick")
+		static bool reentrant = false;
+		reentrantblocker block(reentrant);
+	    if (!block.check()) {
+	    	return;
+	    }
 //		flagNeedsRedraw();
 		glfwMakeContextCurrent(glfw);
 		ctrl->onAppTick();

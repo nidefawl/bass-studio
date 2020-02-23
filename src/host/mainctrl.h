@@ -219,6 +219,12 @@ class MainCtrl : public AppCtrl, public delete_cb, public project_controller_t
 	seq_rand rand;
 	String loadProject = "";
 	view_mode_t viewMode = view_mode_t::TRACK_TIMELINE;
+	struct project_to_load_t {
+
+		std::shared_ptr<project_file> projectfile;
+		int loadflags;
+	};
+	std::shared_ptr<project_to_load_t> projectToLoad;
 public:
 	int32_t numCallsWaitEvents = 0;
 	std::shared_ptr<plugin_clipboard_t> pluginClipboard;
@@ -289,6 +295,7 @@ public:
 	 * @return reserved - always true
 	 */
 	bool setLoadedProject(std::shared_ptr<project_file> file, int flags);
+	bool setProjectToLoad(std::shared_ptr<project_file> file, int flags);
 	void setEmptyProject();
 	void pushHist(action_base* action);
 	void focusReceived() {
