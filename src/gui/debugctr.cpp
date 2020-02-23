@@ -60,15 +60,12 @@ constexpr int ID_BTN_INJECT_BAD_MALLOC_MAIN_THREAD = 6;
 constexpr int ID_BTN_TOGGLE_STACKTRACE = 8;
 constexpr int ID_BTN_TOGGLE_PLAYBACKPROCESSING = 7;
 constexpr int ID_BTN_TOGGLE_EFFECTPROCESSING = 10;
+constexpr int ID_BTN_TOGGLE_THREADING = 11;
 constexpr int ID_BTN_TOGGLE_CLIP_RENDER_CACHE = 9;
 constexpr int BTN_FONT_SIZE = 16;
-gui_ctr_debug::gui_ctr_debug() : guictr_base() {
+gui_ctr_debug::gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType) : guictr_base(), dgbCtrType(debugCtrType) {
 	setBackgroundRendered(true);
 	auto knob = new guiknob;
-	auto btn = new guibutton;
-	btn->id = ID_BTN_RESET_HIST;
-	btn->setText("Reset history");
-	btn->setFontSize(BTN_FONT_SIZE);
 	knob->id = ID_KNOB_SET_COLOR;
 	knob->fnSetValue = [this](float f, int flags) {
 		float guiScale = math::max(0.05f, f*2.0f);
@@ -81,61 +78,77 @@ gui_ctr_debug::gui_ctr_debug() : guictr_base() {
 	knob->fnGetValue = [this](void) {
 		return math::max(0.05f, math::min(1.0f, parentCtrl->m_scale*0.5f));
 	};
-	debugGuis.push_back(btn);
 	debugGuis.push_back(knob);
-	{
+	if (dgbCtrType == gui_ctr_debug_type_i32::TYPE_0) {
+		{
 
-		auto btn2 = new guibutton;
-		btn2->id = ID_BTN_INJECT_SEGFAULT_AUDIO_THREAD;
-		btn2->setText("Segfault on Audiothread");
-		btn2->setFontSize(BTN_FONT_SIZE);
-		debugGuis.push_back(btn2);
-		auto btn3 = new guibutton;
-		btn3->id = ID_BTN_INJECT_BAD_MALLOC_AUDIO_THREAD;
-		btn3->setText("BadAlloc on Audiothread");
-		btn3->setFontSize(BTN_FONT_SIZE);
-		debugGuis.push_back(btn3);
-	}
-	{
+			auto btn = new guibutton;
+			btn->id = ID_BTN_RESET_HIST;
+			btn->setText("Reset history");
+			btn->setFontSize(BTN_FONT_SIZE);
+			debugGuis.push_back(btn);
+		}
+		{
 
-		auto btn2 = new guibutton;
-		btn2->id = ID_BTN_INJECT_SEGFAULT_MAIN_THREAD;
-		btn2->setText("Segfault on Mainthread");
-		btn2->setFontSize(BTN_FONT_SIZE);
-		debugGuis.push_back(btn2);
-		auto btn3 = new guibutton;
-		btn3->id = ID_BTN_INJECT_BAD_MALLOC_MAIN_THREAD;
-		btn3->setText("BadAlloc on Mainthread");
-		btn3->setFontSize(BTN_FONT_SIZE);
-		debugGuis.push_back(btn3);
-	}
-	{
-		auto btn3 = new guibutton;
-		btn3->id = ID_BTN_TOGGLE_STACKTRACE;
-		btn3->setText("Enable Stacktraces");
-		btn3->setFontSize(BTN_FONT_SIZE);
-		debugGuis.push_back(btn3);
-	}
-	{
-		auto btn3 = new guibutton;
-		btn3->id = ID_BTN_TOGGLE_EFFECTPROCESSING;
-		btn3->setText("Bypass Eff. Proc. (OFF)");
-		btn3->setFontSize(BTN_FONT_SIZE);
-		debugGuis.push_back(btn3);
-	}
-	{
-		auto btn3 = new guibutton;
-		btn3->id = ID_BTN_TOGGLE_PLAYBACKPROCESSING;
-		btn3->setText("Bypass Playback Proc. (OFF)");
-		btn3->setFontSize(BTN_FONT_SIZE);
-		debugGuis.push_back(btn3);
-	}
-	{
-		auto btn3 = new guibutton;
-		btn3->id = ID_BTN_TOGGLE_CLIP_RENDER_CACHE;
-		btn3->setText("Disable clip render cache");
-		btn3->setFontSize(BTN_FONT_SIZE);
-		debugGuis.push_back(btn3);
+			auto btn2 = new guibutton;
+			btn2->id = ID_BTN_INJECT_SEGFAULT_AUDIO_THREAD;
+			btn2->setText("Segfault on Audiothread");
+			btn2->setFontSize(BTN_FONT_SIZE);
+			debugGuis.push_back(btn2);
+			auto btn3 = new guibutton;
+			btn3->id = ID_BTN_INJECT_BAD_MALLOC_AUDIO_THREAD;
+			btn3->setText("BadAlloc on Audiothread");
+			btn3->setFontSize(BTN_FONT_SIZE);
+			debugGuis.push_back(btn3);
+		}
+		{
+
+			auto btn2 = new guibutton;
+			btn2->id = ID_BTN_INJECT_SEGFAULT_MAIN_THREAD;
+			btn2->setText("Segfault on Mainthread");
+			btn2->setFontSize(BTN_FONT_SIZE);
+			debugGuis.push_back(btn2);
+			auto btn3 = new guibutton;
+			btn3->id = ID_BTN_INJECT_BAD_MALLOC_MAIN_THREAD;
+			btn3->setText("BadAlloc on Mainthread");
+			btn3->setFontSize(BTN_FONT_SIZE);
+			debugGuis.push_back(btn3);
+		}
+		{
+			auto btn3 = new guibutton;
+			btn3->id = ID_BTN_TOGGLE_STACKTRACE;
+			btn3->setText("Enable Stacktraces");
+			btn3->setFontSize(BTN_FONT_SIZE);
+			debugGuis.push_back(btn3);
+		}
+		{
+			auto btn3 = new guibutton;
+			btn3->id = ID_BTN_TOGGLE_EFFECTPROCESSING;
+			btn3->setText("Bypass Eff. Proc. (OFF)");
+			btn3->setFontSize(BTN_FONT_SIZE);
+			debugGuis.push_back(btn3);
+		}
+		{
+			auto btn3 = new guibutton;
+			btn3->id = ID_BTN_TOGGLE_PLAYBACKPROCESSING;
+			btn3->setText("Bypass Playback Proc. (OFF)");
+			btn3->setFontSize(BTN_FONT_SIZE);
+			debugGuis.push_back(btn3);
+		}
+		{
+			auto btn3 = new guibutton;
+			btn3->id = ID_BTN_TOGGLE_CLIP_RENDER_CACHE;
+			btn3->setText("Disable clip render cache");
+			btn3->setFontSize(BTN_FONT_SIZE);
+			debugGuis.push_back(btn3);
+		}
+		{
+			auto btn3 = new guibutton;
+			btn3->id = ID_BTN_TOGGLE_THREADING;
+			btn3->setText("Multithreaded processing (ON)");
+			btn3->setFontSize(BTN_FONT_SIZE);
+			debugGuis.push_back(btn3);
+		}
 	}
 	for (auto g : debugGuis) {
 		add(g);
@@ -148,6 +161,7 @@ void gui_ctr_debug::render(NVGcontext* vg) {
 	if (!setScissorTransform(vg)) {
 		return;
 	}
+	if (dgbCtrType == gui_ctr_debug_type_i32::TYPE_1) {
 	MainCtrl *ctrl = MainCtrl::get();
 
 	vector<String> strings;
@@ -275,6 +289,8 @@ void gui_ctr_debug::render(NVGcontext* vg) {
 		nvgText(vg, x, y, StringAsCStr(s), NULL);
 		y += lineh;
 	}
+
+	}
 	for (auto c : guis) {
 		nvgSave(vg);
 		c->render(vg);
@@ -294,7 +310,7 @@ void gui_ctr_debug::layout() {
 		gui->layout();
 		if (gui == knobTest)
 			continue;
-		gui->size = ivec2(size*5, size);
+		gui->size = ivec2(max(size*6, cs.x-size*3), size);
 		gui->pos = ivec2(posX, posY-gui->size.y);
 		posY = gui->top()-INSET_TRACK_CONTENT;
 	}
@@ -361,9 +377,19 @@ void gui_ctr_debug::buttonClicked(guibase* button) {
 
 		break;
 	case ID_BTN_TOGGLE_CLIP_RENDER_CACHE:
-
-		daw_tls::getTls().renderStats.enableCache = !daw_tls::getTls().renderStats.enableCache;
+		MainCtrl::getPlayThread()->call([]() {
+			daw_tls::getTls().renderStats.enableCache = !daw_tls::getTls().renderStats.enableCache;
+				}, true);
 		static_cast<guibutton*>(button)->setText(String(daw_tls::getTls().renderStats.enableCache?"Disable clip render cache":"Enable clip render cache"));
+
+		break;
+	case ID_BTN_TOGGLE_THREADING:
+		auto h = vsthost::getInstance();
+		MainCtrl::getPlayThread()->call([]() {
+			auto h = vsthost::getInstance();
+			h->multithreadedProcessing = 1 - h->multithreadedProcessing;
+				}, true);
+		static_cast<guibutton*>(button)->setText(String(h->multithreadedProcessing?"Multithreaded processing (ON)":"Multithreaded processing (OFF)"));
 
 		break;
 	}

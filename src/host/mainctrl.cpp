@@ -132,7 +132,12 @@ public:
 	guictr_base* const ctr_theme;
 	guictr_base* const ctr_history;
 	gui_shaderview shaderView;
-	guictr_side_tabs_daw_1() : guictr_tabbed(), ctr_properties(makeCtrProperties()), ctr_theme(makeCtrTheme()), ctr_history(makeCtrHistory()) {
+	guictr_side_tabs_daw_1() :
+		guictr_tabbed(),
+		ctr_dbg(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_0),
+		ctr_properties(makeCtrProperties()),
+		ctr_theme(makeCtrTheme()),
+		ctr_history(makeCtrHistory()) {
 		setBackgroundRendered(true);
 		ctr_dbg.setLabel("Debug 1");
 		ctr_properties->setLabel("Properties");
@@ -193,18 +198,27 @@ public:
 	guictr_effectlibrary& ctr_effectlib;
 	guictr_base* const ctr_properties;
 	guictr_base* const ctr_loadedplugins;
-	gui_ctr_debug ctr_dbg;
+	gui_ctr_debug ctr_dbg0;
+	gui_ctr_debug ctr_dbg1;
+	gui_ctr_debug ctr_dbg2;
 	guictr_side_tabs_daw_2(guictr_effectlibrary& _ctr_effectlib)
 	: guictr_tabbed(),
 	  ctr_effectlib(_ctr_effectlib),
 	  ctr_properties(makeCtrProperties()),
-	  ctr_loadedplugins(makeGuiPluginsLoadedList()) {
+	  ctr_loadedplugins(makeGuiPluginsLoadedList()),
+		ctr_dbg0(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_0),
+		ctr_dbg1(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_1),
+		ctr_dbg2(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_2) {
 		setBackgroundRendered(true);
 		ctr_effectlib.setLabel("Plugins");
 		ctr_loadedplugins->setLabel("Instances");
 		ctr_properties->setLabel("Properties");
-		ctr_dbg.setLabel("Debug 1");
-		addEntry(&ctr_dbg, ctr_dbg.label);
+		ctr_dbg0.setLabel("Debug 0");
+		addEntry(&ctr_dbg0, ctr_dbg0.label);
+		ctr_dbg1.setLabel("Debug 1");
+		addEntry(&ctr_dbg1, ctr_dbg1.label);
+		ctr_dbg2.setLabel("Debug 2");
+		addEntry(&ctr_dbg2, ctr_dbg2.label);
 		addEntry(&ctr_effectlib, ctr_effectlib.label);
 		addEntry(ctr_loadedplugins, ctr_loadedplugins->label);
 		addEntry(ctr_properties, ctr_properties->label);

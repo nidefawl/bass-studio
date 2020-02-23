@@ -6,13 +6,19 @@
 #include "button.h"
 #include <vector>
 
-class gui_ctr_debug : public guictr_base {
 
+class gui_ctr_debug : public guictr_base {
+public:
+	enum class gui_ctr_debug_type_i32 : int32_t {
+		TYPE_0, TYPE_1, TYPE_2
+	};
+private:
+	const gui_ctr_debug_type_i32 dgbCtrType;
 	int32_t curVal = 0;
 	std::vector<guibase*> debugGuis;
 	std::vector<String> g_debugStrings;
 public:
-	gui_ctr_debug();
+	gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType);
 	~gui_ctr_debug() {
 		removeGuis();
 		for (auto* g : debugGuis) {
