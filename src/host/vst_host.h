@@ -64,7 +64,7 @@ struct plugin_notes_t {
 	std::vector<note_t> notes;
 };
 struct plugin_snapshot_t;
-effectbase* loadEffectModule(const plugin_snapshot_t& pluginSnapshot);
+effectbase* loadEffectModule(const plugin_snapshot_t& pluginSnapshot, bool isForceRequest);
 void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effectbase* effect);
 
 #define SYNCHRONIZED_RW
