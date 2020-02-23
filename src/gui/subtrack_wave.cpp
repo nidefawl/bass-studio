@@ -358,8 +358,10 @@ public:
 		y+=titleHeight;
 		renderText(vg, 0 + INSET_TITLE, y+titleHeight / 2, size.x, StringAsCStr(StringFormat("Splits: %d", splits.size())));
 		y+=titleHeight;
+		//TODO: Next line is not thread-safe
 		renderText(vg, 0 + INSET_TITLE, y+titleHeight / 2, size.x, StringAsCStr(StringFormat("samples.size: %d", this->m_track->audio->audioOutput.samples.size())));
 		y+=titleHeight;
+		//TODO: Next line is not thread-safe
 		renderText(vg, 0 + INSET_TITLE, y+titleHeight / 2, size.x, StringAsCStr(StringFormat("data.size: %d", this->m_track->audio->audioOutput.data.size())));
 
 
