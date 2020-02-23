@@ -422,6 +422,7 @@ void vstplugin::postSetParameter(int32_t idx, float preVal, float val, int flags
 	if (flags != 2) {
 		return;
 	}
+	dbgassert(MainCtrl::get()); // this code path is called by user edit, which is only supported on MainCtrl as of now (2020-02-09)
 	dbgassert(this->trackImpl->getTrack());
 	track_t* track = this->trackImpl->getTrack();
 	automationlane_snapshot_t ref = toRef();
