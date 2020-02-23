@@ -150,6 +150,7 @@ void MainCtrl::pasteClipboard(clip_clipboard* clipboard, int32_t track, tick_t t
 
 }
 namespace DAW {
+
 std::shared_ptr<clip_clipboard> consolidateClipboard(std::shared_ptr<clip_clipboard>& clipboardIn, const DAW::Cursor& _cursor) {
 	int32_t tickBegin = _cursor.getTickBegin();
 	int32_t tickEnd = _cursor.getTickEnd();
@@ -255,6 +256,14 @@ shared_ptr<clip_clipboard> MainCtrl::copySelection(const DAW::Cursor& _cursor) {
 }
 
 
+void muteIntersectingClips(trackdata_midi_t& midi, tick_t tickBegin, tick_t tickEnd) {
+	for (clip_t* c : midi.clips) {
+		if (c->start() < tickEnd && c->end() >= tickBegin) {
+			c->enabled = !c->enabled;
+			c->setDirty();
+		}
+	}
+}
 void cutIntersectingClips(trackdata_midi_t& midi, tick_t tickBegin, tick_t tickEnd, delete_cb *cb) {
 	vector<clip_t*>::iterator it = midi.clips.begin();
 
@@ -301,6 +310,21 @@ void MainCtrl::cutIntersecting(track_t* tr, clip_t* mask) {
 	tick_t tickBegin = mask->time;
 	tick_t tickEnd = mask->end();
 	cutIntersecting(tr, tickBegin, tickEnd);
+}
+void MainCtrl::muteIntersecting(const DAW::Cursor& _cursor) {
+	int32_t tickBegin = _cursor.getTickBegin();
+	int32_t tickEnd = _cursor.getTickEnd();
+	int32_t trackBegin = _cursor.getTrackBegin();
+	int32_t trackEnd = _cursor.getTrackEnd();
+	if (!cursor.isSubtrackSelection()) {
+		for (int i = trackBegin; i <= trackEnd; i++) {
+			if (trackList.validTrackIdx(i)) {
+				track_t* tr = trackList[i];
+				muteIntersectingClips(tr->getMidi(), tickBegin, tickEnd);
+			}
+		}
+	}
+
 }
 void MainCtrl::cutSelection(const DAW::Cursor& _cursor) {
 	int32_t tickBegin = _cursor.getTickBegin();

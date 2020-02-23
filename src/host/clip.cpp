@@ -298,6 +298,10 @@ tick_t clip_t::getNumLoops() const {
 /* HOT CODEPATH */
 void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& notesView, bool forPlayback) const {
 	notesView.m_list.clear();
+	if (!enabled) {
+		notesView.updateBounds();
+		return;
+	}
 	const tick_t preLoopLen = !loopEnabled?len:offsetStart >= loopStart ? math::max(0, (/*loopEnd*/ loopStart+loopLen) - offsetStart) : math::max(0, loopStart - offsetStart);
 
 

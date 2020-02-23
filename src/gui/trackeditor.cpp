@@ -211,6 +211,16 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 				modified = true;
 				desc = "Cut clips";
 			}
+			else if (isKC(KC_MUTE, kevt) && cursor.getRange()) {
+				clipboard = MainCtrl::get()->copySelection(cursor);
+				project.trackList.copyTracks(cursor.getTrackBegin(), cursor.getTrackEnd(), preModifyState);
+				preModifyState.cursor = cursor;
+				MainCtrl::get()->muteIntersecting(cursor);
+				grid.makeTickVisible(cursor.cursorPos+cursor.selRange/2);
+				handledKeyinput = true;
+				modified = true;
+				desc = "Mute clips";
+			}
 			else if (isKC(KC_COPY, kevt) && cursor.getRange()) {
 				clipboard = MainCtrl::get()->copySelection(cursor);
 				handledKeyinput = true;

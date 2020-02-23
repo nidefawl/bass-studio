@@ -348,6 +348,8 @@ public:
 	void cutSelection(const DAW::Cursor& cursor);
 	void cutIntersecting(track_t* tr, clip_t* mask);
 	void cutIntersecting(track_t* tr, tick_t tickBegin, tick_t tickEnd);
+
+	void muteIntersecting(const DAW::Cursor& _cursor);
 //	void copyClipsInRange(trackcontents_t* in, trackcontents_t* out, int32_t srcPos, int32_t dstPos, int32_t len);
 
 	void objectDragMove(guibase* g, MouseEvent& evt);

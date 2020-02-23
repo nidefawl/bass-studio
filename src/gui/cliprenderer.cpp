@@ -291,6 +291,7 @@ void gui_midi_clip::updateClipRenderCache(NVGcontext* vg) {
 
 	ivec2 posContents = ivec2(pos.x, pos.y+HEIGHT_CLIP_TITLE+INSET_CLIP_CONTENT);
 	ivec2 sizeContents = ivec2(size.x, size.y-HEIGHT_CLIP_TITLE-INSET_CLIP_CONTENT*2);
+	ivec2 clipPosScreen = toScreenSpace(ivec2(0, 0));
 
 	tick_t clipLen = cl->getLen();
 	float numBars = clipLen / (float) TICKS_BAR;
@@ -316,7 +317,6 @@ void gui_midi_clip::updateClipRenderCache(NVGcontext* vg) {
 		NVGcolor rgbNoteMuted = theme->getColor(GuiColor::COL_CLIP_NOTE_MUTED);
 
 		nvgSave(vg);
-		ivec2 clipPosScreen = toScreenSpace(ivec2(0, 0));
 		nvgTranslate(vg, clipPosScreen.x, clipPosScreen.y);
 		nvgSave(vg);
 		nvgTranslate(vg, 0, HEIGHT_CLIP_TITLE+INSET_CLIP_CONTENT);
@@ -421,10 +421,10 @@ void gui_midi_clip::updateClipRenderCache(NVGcontext* vg) {
 					if (n == 0) {
 						nvgBeginPath(vg);
 					}
-					nvgMoveTo(vg, pos.x+nx, pos.y);
-					nvgLineTo(vg, pos.x+nx, pos.y+HEIGHT_CLIP_TITLE/4);
-					nvgMoveTo(vg, pos.x+nx, pos.y+HEIGHT_CLIP_TITLE*3/4);
-					nvgLineTo(vg, pos.x+nx, pos.y+HEIGHT_CLIP_TITLE);
+					nvgMoveTo(vg, nx, 0);
+					nvgLineTo(vg, nx, 0+HEIGHT_CLIP_TITLE/4);
+					nvgMoveTo(vg, nx, 0+HEIGHT_CLIP_TITLE*3/4);
+					nvgLineTo(vg, nx, 0+HEIGHT_CLIP_TITLE);
 					n++;
 				}
 				posLoopIndicator += cl->loopLen;
@@ -456,6 +456,9 @@ void gui_midi_clip::render(NVGcontext* vg) {
 			return;
 		}
 		NVGcolor color = rgbToNvg(cl->rgb);
+		if (!cl->enabled) {
+			color = rgbToNvg(0x333333);
+		}
 		nvgBeginPath(vg);
 		nvgRect(vg, pos.x, pos.y, size.x, HEIGHT_CLIP_TITLE);
 		nvgFillColor(vg, color);
@@ -463,9 +466,10 @@ void gui_midi_clip::render(NVGcontext* vg) {
 		nvgStrokeColor(vg, theme->getColor(GuiColor::COL_CLIP_OUTLINE));
 		nvgStrokeWidth(vg, 1.f);
 		nvgStroke(vg);
-		if (cl->name.length() && size.x-INSET_TITLE*3 >= 5) {
+		if (cl->name.length() && size.x - INSET_TITLE*3 >= 5) {
 			UTIL_setFont(vg, theme, (int) (HEIGHT_CLIP_TITLE * 0.95), getContrastFontColor(cl->rgb), G_TITLE_ALIGN);
 			renderText(vg, pos.x + INSET_TITLE, pos.y + HEIGHT_CLIP_TITLE / 2, size.x-INSET_TITLE*3, StringAsCStr(cl->name));
+//			return;
 		}
 		ivec2 posContents = ivec2(pos.x, pos.y+HEIGHT_CLIP_TITLE+INSET_CLIP_CONTENT);
 		ivec2 sizeContents = ivec2(size.x, size.y-HEIGHT_CLIP_TITLE-INSET_CLIP_CONTENT*2);
@@ -487,6 +491,9 @@ void gui_midi_clip::render(NVGcontext* vg) {
 		NVGcolor rgbNoteMuted = theme->getColor(GuiColor::COL_CLIP_NOTE_MUTED);
 		if (cacheValid) {
 			nvgSave(vg);
+			nvgTranslate(vg, pos.x, pos.y);
+			nvgSave(vg);
+			nvgTranslate(vg, 0, HEIGHT_CLIP_TITLE+INSET_CLIP_CONTENT);
 //			nvgTranslate(vg, posContents.x, posContents.y);
 			if (impl->isCacheValid(0)) {
 				nvgFillFromCache(vg, impl->arr[0]);
@@ -499,9 +506,12 @@ void gui_midi_clip::render(NVGcontext* vg) {
 			}
 			notesRendered += impl->notesRendered;
 			nvgRestore(vg);
-			if (impl->isCacheValid(3)) {
-				nvgFillFromCache(vg, impl->arr[3]);
+			if (cl->isLoopEnabled()) {
+				if (impl->isCacheValid(3)) {
+					nvgFillFromCache(vg, impl->arr[3]);
+				}
 			}
+			nvgRestore(vg);
 		}
 //
 //		if (useCaching && impl) {
@@ -520,6 +530,9 @@ void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_t* tr, 
 		return;
 	}
 	NVGcolor color = rgbToNvg(cl->rgb);
+	if (!cl->enabled) {
+		color = rgbToNvg(0x333333);
+	}
 	nvgBeginPath(vg);
 	nvgRect(vg, pos.x, pos.y, size.x, HEIGHT_CLIP_TITLE);
 	nvgFillColor(vg, color);
@@ -560,7 +573,9 @@ void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_t* tr, 
 	NVGcolor rgbNoteMuted = theme->getColor(GuiColor::COL_CLIP_NOTE_MUTED);
 	if (cacheValid) {
 		nvgSave(vg);
-		nvgTranslate(vg, posContents.x, posContents.y);
+		nvgTranslate(vg, pos.x, pos.y);
+		nvgSave(vg);
+		nvgTranslate(vg, 0, HEIGHT_CLIP_TITLE+INSET_CLIP_CONTENT);
 		if (notesView.data->isCacheValid(0)) {
 			nvgFillFromCache(vg, notesView.data->arr[0]);
 		}
@@ -570,11 +585,12 @@ void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_t* tr, 
 		if (notesView.data->isCacheValid(2)) {
 			nvgFillFromCache(vg, notesView.data->arr[2]);
 		}
-		notesRendered += notesView.data->notesRendered;
 		nvgRestore(vg);
+		notesRendered += notesView.data->notesRendered;
 		if (notesView.data->isCacheValid(3)) {
 			nvgFillFromCache(vg, notesView.data->arr[3]);
 		}
+		nvgRestore(vg);
 	} else {
 		nvgCachePath(vg, useCaching);
 		nvgSave(vg);
