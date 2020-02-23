@@ -88,6 +88,7 @@ elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
   # using Intel C++
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   add_definitions(-D_CRT_SECURE_NO_WARNINGS -DNOMINMAX /wd4067 /wd4267 /wd4244)
+  add_definitions(/MP14)
 endif()
 set(IS_MINGW_BUILD OFF)
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
