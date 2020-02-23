@@ -105,8 +105,8 @@ void pluginUpdateParamBypass(effectbase* effect, int state = 2) {
 	float f = effect->getParamValue(PARAM_ENABLE);
 	float f2 = state == 2 ? (f < 0.5 ? 1 : 0) : (float)(state&1);
 	effect->deactivateAutomation(PARAM_ENABLE);
-	effect->setParamValue(PARAM_ENABLE, f2, FLG_PAR_UPDATE_USER);
-	effect->postSetParameter(PARAM_ENABLE, f, f2, FLG_PAR_UPDATE_USER);
+	effect->setParamValue(PARAM_ENABLE, f2, state == 2 ? FLG_PAR_UPDATE_USER : FLG_PAR_UPDATE_INIT);
+	effect->postSetParameter(PARAM_ENABLE, f, f2, state == 2 ? FLG_PAR_UPDATE_USER : FLG_PAR_UPDATE_INIT);
 }
 void guiplugin::buttonClicked(guibase* _button) {
 	if (_button == &buttonLayout) {
