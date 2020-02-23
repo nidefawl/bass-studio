@@ -32,6 +32,10 @@ struct audiotrack_t {
     	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
     	std::for_each(samples.begin(), samples.end(), f);
     }
+    template<typename Functor>
+    void visitSamples_NoLock(Functor f) {
+    	std::for_each(samples.begin(), samples.end(), f);
+    }
 	int32_t convertToSamples(vsthost* host);
 	void store(AudioBlock* input, int32_t samplePos);
 	~audiotrack_t() {
