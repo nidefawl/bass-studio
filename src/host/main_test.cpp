@@ -484,6 +484,170 @@ namespace MiniApp {
 			 v.push_back(&ctrMain);
 		}
 	};
+	class guictr_TestNanoVGRenderCache : public guictr_base {
+
+		struct testview_cache_impl_t {
+			bool valid = false;
+			int64_t notesRendered=-1;
+			ivec2 pos={-1,-1};
+			ivec2 size={-1,-1};
+			std::array<nvg_path_cache_storage_t*,4> arr;
+			testview_cache_impl_t() {
+				std::for_each(arr.begin(), arr.end(), [](nvg_path_cache_storage_t*& ptr) {
+					ptr = nullptr;
+				});
+			}
+			~testview_cache_impl_t() {
+				reset();
+			}
+			void SaveFill(NVGcontext* vg, int n) {
+				dbgassert(n < arr.size());
+				dbgassert(arr[n] == nullptr);
+				arr[n] = nullptr;
+				nvgGetLastCacheResult(vg, &arr[n]);
+				NVGCacheEntryInfo cacheEntryInfo;
+				nvgCacheEntryInfo(NULL, arr[n], &cacheEntryInfo);
+				nvg_path_cache_storage_t* entry = arr[n];
+				dbgassert(entry);
+				daw_tls::tlsinstance& tls = daw_tls::getTls();
+				tls.renderClipCacheStats.sizeCacheAllocatedMemBytes+= cacheEntryInfo.allocationSizeBytes;
+			}
+			bool isCacheValid(int n) {
+				return valid && n < arr.size() && arr[n] != nullptr;
+			}
+			void reset() {
+				valid = false;
+				std::for_each(arr.begin(), arr.end(), [](nvg_path_cache_storage_t*& ptr) {
+					if (ptr) {
+						NVGCacheEntryInfo cacheEntryInfo;
+						nvgCacheEntryInfo(NULL, ptr, &cacheEntryInfo);
+						daw_tls::tlsinstance& tls = daw_tls::getTls();
+						tls.renderClipCacheStats.sizeCacheAllocatedMemBytes -= cacheEntryInfo.allocationSizeBytes;
+
+						nvgReleaseCacheResult(ptr);
+						ptr = nullptr;
+					}
+				});
+			}
+		};
+		testview_cache_impl_t* const impl;
+	public:
+		guictr_TestNanoVGRenderCache() : guictr_base(), impl(new testview_cache_impl_t{}) {
+
+		}
+		~guictr_TestNanoVGRenderCache() {
+			delete impl;
+		}
+
+		void render(NVGcontext* vg) {
+			if (isBackgroundRendered()) {
+				renderBackground(vg);
+			}
+			if (!setScissorTransform(vg)) {
+				return;
+			}
+			int mode = 0;
+//			if ((uint64_t)(getTimeMillisd()/1000)%4 < 2) {
+//				mode++;
+//			}
+			nvgSave(vg);
+			if (mode == 0) {
+				nvgSave(vg);
+				nvgTranslate(vg, 5, 5);
+				if (impl->isCacheValid(0)) {
+					nvgFillFromCache(vg, impl->arr[0]);
+				}
+				if (impl->isCacheValid(1)) {
+					nvgFillFromCache(vg, impl->arr[1]);
+				}
+				nvgRestore(vg);
+			} else {
+				draw0(vg);
+				draw1(vg);
+				draw2(vg);
+			}
+			nvgRestore(vg);
+			for (auto c : guis) {
+				nvgSave(vg);
+				c->render(vg);
+				nvgRestore(vg);
+			}
+			String strMode = StringFormat("Mode: %d", mode);
+			nvgText(vg, 5, 150, StringAsCStr(strMode), nullptr);
+
+		}
+		void draw0(NVGcontext* vg) {
+			nvgSave(vg);
+			nvgTranslate(vg, 5, 5);
+			nvgBeginPath(vg);
+			nvgRect(vg, 0, 0, 102, 102);
+			nvgFillColor(vg, rgbToNvg(0x666699));
+			nvgFill(vg);
+		}
+		void draw1(NVGcontext* vg) {
+			nvgMoveTo(vg, 0, 5);
+			nvgLineTo(vg, 102, 5);
+			nvgMoveTo(vg, 0, 15);
+			nvgLineTo(vg, 102, 15);
+			nvgStrokeColor(vg, rgbToNvg(0x33ff33));
+			nvgStrokeWidth(vg, 1.f);
+			nvgStroke(vg);
+		}
+		void draw2(NVGcontext* vg) {
+			nvgRestore(vg);
+		}
+		void prerender(NVGcontext* vg) {
+			nvgBeginFrame(vg, 1024, 1024, 1.0);
+			nvgScale(vg, parentCtrl->m_scale, parentCtrl->m_scale);
+			nvgLineJoin(vg, NVGlineCap::NVG_BEVEL);
+			nvgCachePath(vg, 1);
+			updateClipRenderCache(vg);
+			nvgCachePath(vg, 0);
+			nvgEndFrame(vg);
+		}
+		void updateClipRenderCache(NVGcontext* vg) {
+			ivec2 posContents = {0,0};
+			ivec2 sizeContents = {110,110};
+			ivec2 clipPosScreen = {4,4};
+			bool cacheValid = impl->valid;
+			cacheValid &= impl->pos == posContents;
+			cacheValid &= impl->size == sizeContents;
+			if (!cacheValid) {
+				impl->reset();
+				ivec2 clipPosScreen = toScreenSpace(ivec2(0, 0));
+				nvgTranslate(vg, clipPosScreen.x, clipPosScreen.y);
+				draw0(vg);
+				impl->SaveFill(vg, 0);
+				draw1(vg);
+				impl->SaveFill(vg, 1);
+				draw2(vg);
+				impl->valid = true;
+				impl->pos = posContents;
+				impl->size = sizeContents;
+				impl->notesRendered = 1;
+			}
+		}
+	};
+	class ViewContainers_TestNanoVGRenderCache {
+	public:
+		guictr_TestNanoVGRenderCache ctrMain;
+		ViewContainers_TestNanoVGRenderCache(/*const*/ AppCtrl* const ctrl) : ctrMain()
+		{
+		}
+#if USE_GUI_MENU
+		guictr_base* getMenuCtr() {
+			return nullptr;
+		}
+#endif
+		void layout(int32_t winW, int32_t winH) {
+			int winX = 0; int winY = 0;
+			ctrMain.pos = {winX, winY};
+			ctrMain.size = {winW, winH};
+		}
+		void addTo(std::vector<guictr_base*>& v) {
+			 v.push_back(&ctrMain);
+		}
+	};
 	class guictr_main : public guictr_base {
 	public:
 		guictr_main() : guictr_base() {
@@ -670,7 +834,8 @@ namespace MiniApp {
 
 std::shared_ptr<AppCtrl> makeApp() {
 //	MiniApp::appctrl = std::make_shared<MiniApp::MiniAppCtrl<MiniApp::ViewContainersGuiTest>>();
-	MiniApp::appctrl = std::make_shared<MiniApp::MiniAppCtrl<MiniApp::ViewContainersProfile>>();
+//	MiniApp::appctrl = std::make_shared<MiniApp::MiniAppCtrl<MiniApp::ViewContainersProfile>>();
+	MiniApp::appctrl = std::make_shared<MiniApp::MiniAppCtrl<MiniApp::ViewContainers_TestNanoVGRenderCache>>();
 	return MiniApp::appctrl;
 }
 
