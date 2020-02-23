@@ -227,9 +227,9 @@ int main(int argc, char* argv[]) {
 			int a = 0;
 			bool pipeConnected = false;
 //			db.exec("delete from plugins where 1");
-			SQLite::Statement   queryPlugin(db, "SELECT id, moddate FROM plugins where path == ?");
+			SQLite::Statement   queryPlugin(db, "SELECT id, moddate, forcedisable, requestState FROM plugins where path == ?");
 			SQLite::Statement   queryInsertPlugin(db, "INSERT INTO "
-					"plugins(isSynth, uid, version, vstVersion, category, moddate, state, path, name, vendorName, reqState, forcedisable) "
+					"plugins(isSynth, uid, version, vstVersion, category, moddate, state, path, name, vendorName, requestState, forcedisable) "
 					"VALUES(?,?,?,?,?,?,?,?,?,?,?,?)");
 			SQLite::Statement   queryDelete(db, "DELETE from plugins where id = ?");
 			if (!dryRun) {
@@ -263,11 +263,13 @@ int main(int argc, char* argv[]) {
 				int64_t timeDisk = filetime.getWriteTimeI64();
 				int id = -1;
 				bool needScan = true;
+				bool forcedisable = false;
 				queryPlugin.reset();
 				queryPlugin.bind(1, file.path);
 				if (queryPlugin.executeStep())
 				{
 					id = queryPlugin.getColumn(0).getInt();
+					forcedisable = queryPlugin.getColumn(2).getInt();
 					int64_t timeDB = queryPlugin.getColumn(1).getInt64();
 //					LOG("id %d timeDisk %016llX %016llX", id, timeDisk, timeDB);
 					if (timeDisk == timeDB) {
@@ -368,7 +370,7 @@ int main(int argc, char* argv[]) {
 					queryInsertPlugin.bind(bndIdx++, data.szName);
 					queryInsertPlugin.bind(bndIdx++, data.szVendorName);
 					queryInsertPlugin.bind(bndIdx++, 0);
-					queryInsertPlugin.bind(bndIdx++, 0);
+					queryInsertPlugin.bind(bndIdx++, forcedisable?1:0);
 					/*int insertRowsAffected = */queryInsertPlugin.exec();
 //					LOG("insertRowsAffected %d",insertRowsAffected);
 				} catch (SQLite::Exception& e) {
@@ -388,6 +390,7 @@ int main(int argc, char* argv[]) {
 			thread.reset();
 	    } catch (SQLite::Exception& e) {
 			std::cout << "SQLite exception: " << e.getErrorStr() << std::endl;
+			std::cout <<  e.what() << std::endl;
 		} catch (std::exception& e) {
 			std::cout << "exception: " << e.what() << std::endl;
 		} catch (...) {
@@ -452,6 +455,9 @@ int main(int argc, char* argv[]) {
 					LOG("result: %d", res.result);
 					if (res.result == 0) {
 						vstplugin* plugin = res.plugin;
+						bool bCanDoOffline = plugin->dispatch(effCanDo, 0, 0, (void*)PlugCanDos::canDoOffline) > 0;
+						LOG("%s canDoOffline: %d", data.szPath, bCanDoOffline);
+
 //						printf("%d params in %d categories\n", plugin->params.size(), plugin->paramsCategories.size());
 //
 //						for (vst_param& cat : plugin->params) {
