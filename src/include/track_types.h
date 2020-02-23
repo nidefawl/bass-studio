@@ -40,6 +40,9 @@ enum class audiostageflags_t : int32_t {
 	MUTE_INPUT 				= 1 << 2,
 	MUTE_OUTPUT 			= 1 << 3,
     SOLO				 	= 1 << 4,
+    ARMED_OUTPUT		 	= 1 << 5,
+    WRITE_OUTPUT		 	= 1 << 6,
+    CONVERT_OUTPUT		 	= 1 << 7,
 };
 template<class T, typename = std::enable_if_t<std::is_same<T, audiostageflags_t>::value> >
 inline T operator~ (T a) { return (T)~(int)a; }

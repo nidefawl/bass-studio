@@ -40,6 +40,7 @@
 #include <limits.h>
 #endif
 
+#include <stdlib.h>
 
 void deleteApp() {
 
@@ -116,6 +117,88 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 
 
 extern volatile bool fataError;
+bool hasCmdOption(int argc, char* argv[], const String& option)
+{
+	for (int i = 0; i < argc; ++i) {
+		String arg = argv[i];
+		if (0 == arg.find(option)) {
+			std::size_t found = arg.find_last_of(option);
+			if (found != String::npos) {
+				return true;
+			}
+		}
+	}
+    return false;
+}
+String getCmdOption(int argc, char* argv[], const String& option, String defaultVal)
+{
+     for( int i = 0; i < argc; ++i)
+     {
+    	 String arg = argv[i];
+          if(0 == arg.find(option))
+          {
+               std::size_t found = arg.find_last_of(option);
+               if (found != String::npos)
+               {
+            	   if (found+2 < arg.length() && arg[found+1] == '=') {
+                       return arg.substr(found + 2);
+            	   } else if (i + 1 < argc) {
+            		   return argv[i+1];
+            	   } else {
+            		   return defaultVal;
+            	   }
+               }
+          }
+     }
+     return defaultVal;
+}
+float StringToFloat(String s) {
+	return atof(s.c_str());
+}
+#ifdef _WIN32
+void processWindowMessages() {
+				DWORD timeout = 5;
+				MsgWaitForMultipleObjects(0, NULL, FALSE, timeout, QS_ALLEVENTS);
+			    MSG msg;
+			    int maxProcess = 500;
+			    while (!fataError && PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE) && maxProcess-- > 0)
+			    {
+		//	    	logEveryMsec(0, 5000, "Main msg loop");
+			        if (msg.message == WM_QUIT)
+			        {
+//			        	glfwSetWindowShouldClose(glfwHandle, 1);
+			        }
+			        else
+			        {
+
+//			            switch (msg.message) {
+//		#if BUILD_VSTHOST
+//			            	case WM_KEYDOWN:
+//							case WM_SYSKEYDOWN:
+//							case WM_KEYUP:
+//							case WM_SYSKEYUP: {
+//								if (vst_window_mgr::isVstWindow(msg.hwnd)) {
+//									msg.hwnd = hwnd;
+//								}
+//							}
+//		#endif
+//							//no break
+//							default:
+								TranslateMessage(&msg);
+					            DispatchMessageW(&msg);
+//								break;
+//			            }
+
+
+			        }
+			    }
+//    			threadSleep(10);
+}
+#else
+void processWindowMessages() {
+
+}
+#endif
 int main(int argc, char* argv[]) {
 //    auto audiohost = std::make_unique<vsthost>();
 //	vsthost::assignMasterCallback(audiohost.get());
@@ -152,22 +235,25 @@ int main(int argc, char* argv[]) {
 #endif
 	std::set_terminate(on_terminate1);
 	std::set_unexpected(on_unexpected1);
+
     appsettings settings = loadSettings();
-	String file = "";
-	String fOutWave = "out.wav";
-	if (argc > 1) {
-		file = String(argv[1]);
+	String file = getCmdOption(argc, argv, "-f", "");
+	String fOutWave = getCmdOption(argc, argv, "-o", "");
+	bool bRenderOnly = hasCmdOption(argc, argv, "--render");
+	float fStart = StringToFloat(getCmdOption(argc, argv, "-s", "-1.0"));
+	float fLength = StringToFloat(getCmdOption(argc, argv, "-l", "-1.0"));
+	bool activateDeferred = !(getCmdOption(argc, argv, "-d", "false")!="false");
+
+	if (bRenderOnly && fOutWave.empty()) {
+		log_printf("--render requires -o <file>\n", 0);
+		return 1;
 	}
-	if (argc > 2) {
-		fOutWave = String(argv[2]);
-	}
+
 	int64_t time;
     try {
     	FileTimeGetter filetime(file);
     	time = filetime.getWriteTimeI64();
 
-    	auto audioHost = std::make_unique<audiohost>();
-    	auto midiHost = std::make_unique<midihost>();
     	auto host = std::make_unique<vsthost>();
     	vsthost::assignMasterCallback(host.get());
 		host->setSampleFormat(sampleformat_t{static_cast<samplerate_t>(settings.iosettings.samplerate), settings.iosettings.blocksize, sampleformat_bits_t::FLOAT_32});
@@ -180,22 +266,30 @@ int main(int argc, char* argv[]) {
     	tls.mainCtrl = nullptr;
     	tls.project = &project;
     	tls.host = host.get();
+    	std::unique_ptr<audiohost> audioHost;
+    	std::unique_ptr<midihost> midiHost;
+		if (!bRenderOnly) {
+			audioHost = std::make_unique<audiohost>();
+			midiHost = std::make_unique<midihost>();
+		}
     	tls.audioHost = audioHost.get();
     	tls.midiHost = midiHost.get();
     	tls.audioCache = &cache;
     	tls.waveform = &renderer;
     	tls.pluginDatabase = &plugindb;
 
-		audiohost::getInstance()->initPa();
-		midihost::getInstance()->initPm();
-		if (audioHost->startAudio(settings.iosettings)) {
-			host->setOutput(audioHost.get());
-		} else {
-			log_printf("audioHost->startAudio() failed\n", 0);
-			return 1;
+		if (!bRenderOnly) {
+			tls.audioHost->initPa();
+			tls.midiHost->initPm();
+			if (tls.audioHost->startAudio(settings.iosettings)) {
+				host->setOutput(tls.audioHost);
+			} else {
+				log_printf("audioHost->startAudio() failed\n", 0);
+				return 1;
+			}
+			midihost::getInstance()->startMidi();
 		}
 
-		midihost::getInstance()->startMidi();
     	plugindb.openDatabase();
 
 #ifdef _WIN32
@@ -216,11 +310,13 @@ int main(int argc, char* argv[]) {
 
     	LOG("START");
     	{
-    		bool activateDeferred = true;
-    		std::unique_ptr<PlaybackThread> playThread = std::make_unique<PlaybackThread>();
-    		playThread->setTls(tls);
-    		playThread->startThread(&project);
-    		playThread->addRequest(REQ_STATE, (int) playback_state::status_no_process, true);
+    		std::unique_ptr<PlaybackThread> playThread;
+    		if (!bRenderOnly) {
+        		playThread = std::make_unique<PlaybackThread>();
+    			playThread->setTls(tls);
+    			playThread->startThread(&project);
+    			playThread->addRequest(REQ_STATE, (int) playback_state::status_no_process, true);
+    		}
 			if (!file.empty()) {
 	    		auto pf = loadProjectFile(file);
 	    		if (!pf) {
@@ -321,6 +417,12 @@ int main(int argc, char* argv[]) {
 	        	auto treePos = track_tree_pos_t{TRACK_CTR_MIDIAUDIO, nullptr, 0};
 	        	project.trackList.moveTracks(loadedChildTracks, treePos);
 			}
+			if (!fOutWave.empty()) {
+				for (auto* trackMaster : project.trackMasterCtr) {
+					trackMaster->getStage()->flags |= audiostageflags_t::WRITE_OUTPUT;
+					trackMaster->getStage()->flags |= audiostageflags_t::CONVERT_OUTPUT;
+	    		}
+			}
 			for (auto* trackMaster : project.trackMasterCtr) {
 				trackMaster->audio->mixer.setParamValue(PARAM_TRACK_GAIN, 0.4f, FLG_PAR_UPDATE_INIT);
 			}
@@ -335,131 +437,220 @@ int main(int argc, char* argv[]) {
     		double tLastMsg = getTimeMillis()/1000.0;
     		int64_t nBlocks = 0;
     		int64_t samplesWritten = 0;
-			drwav_data_format format;
-			format.container = drwav_container_riff;     // <-- drwav_container_riff = normal WAV files, drwav_container_w64 = Sony Wave64.
-			format.format = DR_WAVE_FORMAT_IEEE_FLOAT;          // <-- Any of the DR_WAVE_FORMAT_* codes.
-			format.channels = 2;
-			format.sampleRate = host->sampleFormat.sampleRate;
-			format.bitsPerSample = 32;
-//			 drwav* pWav = drwav_open_file_write(StringAsCStr(fOutWave), &format);
 
-			my_printf("request playback start..\n", 0);
+
 
 			project.cursor.cursorPos = project.loopStart;
+			if (fStart >= 0.0f) {
+				project.cursor.cursorPos = math::round(fStart*TICKS_BAR);
+				project.loopStart = math::round(fStart*TICKS_BAR);
+			}
+			if (fStart >= 0.0f && fLength >= 0.0f) {
+				project.loopEnabled = false;
+//				project.loopLen = math::round(fLength*TICKS_BAR);
+			}
+			if (bRenderOnly) {
 
-			playThread->addRequest(REQ_STATE, (int) playback_state::status_play, true);
+			}
 
-			my_printf("start playback\n", 0);
+			my_printf("playback start...\n", 0);
 
+    		std::shared_ptr<DAW::processing_graph_t> processingGraph;
+			AudioBlock blockIn(host->numChannels, host->sampleFormat.blockSize);
+			AudioBlock blockOut(host->numChannels, host->sampleFormat.blockSize);
+			host->project = project;
+			bool firstBlock = false;
+			bool isLoopAround = false;
+			int32_t samplePos = 0;
+			double tickPos = 0;
+			if (!bRenderOnly) {
+				playThread->addRequest(REQ_STATE, (int) playback_state::status_play, true);
+			} else {
+	    		/*
+	    		 * Process audio/midi tracks
+	    		 */
+	    		auto tracksFlatAll = project.trackList.getAllTracksFlatVec();
+	    		/**
+	    		 * process in reverse order: first children, then parents
+	    		 */
+
+	    		/** turn tree structure into linear pointer array with parents followed by their children **/
+	    		if (!DAW::buildProcessingGraph(host.get(), &project, tracksFlatAll, processingGraph)) {
+	    			log_printf("Failed building track graph\n", 0);
+	    			return -1;
+	    		}
+				dbgassert(host->sampleFormat.sampleRate != 0);
+				dbgassert(host->sampleFormat.blockSize != 0);
+				tick_t startPos = project.cursor.cursorPos;
+				tickPos = startPos;
+				project.getPlaybackPos() = startPos;
+				int32_t bpm100 = project.getCurrentTempo();
+				samplePos = tickToSample(startPos, bpm100, host->sampleFormat.sampleRate);
+				LOG("START ON seconds: %.2f - sample %d\n", toSeconds(startPos, bpm100), samplePos);
+				host->onStartPlayback(&project);
+			}
+			host->project = project;
     		while (!quit) {
-//    			dsp_util::fillBlock(block, 0.0f);
-//    			//still a race condition on_terminate here
-//    			AudioBuffer* buff = nullptr;
-//    			auto* stream = audioHost->getStream(0);
-//    			if (stream->try_dequeue(buff)) {
-//    				dbgassert(host->lBlockSize == buff->output->samples);
-//    				if (host->lBlockSize == buff->output->samples) {
-//    					block.copyFrom(buff->output);
-//    					auto tNow = getTimeMillis()/1000.0;
-//    					if (tNow - tLastMsg > 1) {
-//    						tLastMsg = tNow;
-//    						log_printf("playbackPos %d, %d blocks\n", project.playbackPos, nBlocks);
-//    						if (project.playbackPos > TICKS_BAR*4) {
-//    							playThread->addRequest(REQ_STATE, (int) playback_state::status_no_process, true);
-//    							quit = true;
-//    							break;
-//    						}
-//    					}
-//    					//    					float* in1 = block.buf[0];
-//    					float* in1 = block.buf[0];
-//    					float* in2 = block.buf[1];
-//    					float* largeBuf = blockFull.buf[0];
-//    					for (int i = 0; i < block.samples; i++) {
-//    						*largeBuf++ = *in1++;
-//    						*largeBuf++ = *in2++;
-//    					}
-//    					samplesWritten += drwav_write(pWav, blockFull.samples, blockFull.buf[0]);
-//    				}
-//    				buff->inUse = false;
-//    			} else {
-//    	//			host->bufferUnderuns++;
-//    		//		dsp_util::fillSilence(inputs, framesPerBuffer);
-//    			}
-//#define MAX_GAIN 0.0f
 				auto tNow = getTimeMillis()/1000.0;
-//				auto since = tNow - tLastMsg;
-//				{
-//					ThreadLock lock = playThread->lockThread();
-//					float gain = math::clamp<float>(since*MAX_GAIN, MAX_GAIN, 0.0f);
-//					for (auto* trackMaster : project.trackMasterCtr) {
-//						trackMaster->audio->mixer.setParamValue(PARAM_TRACK_GAIN, math::min(gain, MAX_GAIN), FLG_PAR_UPDATE_AUTOMATED);
-//					}
-//				}
-
 				if (tNow - tLastMsg >= 1.0) {
 					tLastMsg = tNow;
 					host_stats_t stats;
 					host->getStats(stats);
+					String strProgress = "x";
+					if (fStart >= 0.0f && fLength >= 0.0f) {
+						float fProgress = ((project.playbackPos)/(float)TICKS_BAR - fStart)/fLength;
+						strProgress = StringFormat("%0.2f%%", fProgress*100.0f);
+					}
+					log_printf("PROCESS[render=%d,sr=%0.1fk,bs=%d] %s playbackPos %d/%.0f, %d blocks, %d samples\n", bRenderOnly, host->sampleFormat.sampleRate/1000.0f, host->sampleFormat.blockSize,
+							StringAsCStr(strProgress),
+							project.playbackPos, (fStart+fLength)*TICKS_BAR, stats.blocksProcessed, stats.samplesProcessed);
 
 
-					log_printf("playbackPos %d, %d blocks, %d samples\n", project.playbackPos, stats.blocksProcessed, stats.samplesProcessed);
-
-
-//					if (project.playbackPos > TICKS_BAR*16) {
-//						playThread->addRequest(REQ_STATE, (int) playback_state::status_no_process, true);
-//						quit = true;
-//						break;
-//					}
 				}
 
-#ifdef _WIN32
-				DWORD timeout = 5;
-				MsgWaitForMultipleObjects(0, NULL, FALSE, timeout, QS_ALLEVENTS);
-			    MSG msg;
-			    while (!fataError && PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE))
-			    {
-		//	    	logEveryMsec(0, 5000, "Main msg loop");
-			        if (msg.message == WM_QUIT)
-			        {
-//			        	glfwSetWindowShouldClose(glfwHandle, 1);
-			        }
-			        else
-			        {
+    				//#define MAX_GAIN 0.0f
+    //				auto since = tNow - tLastMsg;
+    //				{
+    //					ThreadLock lock = playThread->lockThread();
+    //					float gain = math::clamp<float>(since*MAX_GAIN, MAX_GAIN, 0.0f);
+    //					for (auto* trackMaster : project.trackMasterCtr) {
+    //						trackMaster->audio->mixer.setParamValue(PARAM_TRACK_GAIN, math::min(gain, MAX_GAIN), FLG_PAR_UPDATE_AUTOMATED);
+    //					}
+    //				}
+    			if (bRenderOnly) {
 
-//			            switch (msg.message) {
-//		#if BUILD_VSTHOST
-//			            	case WM_KEYDOWN:
-//							case WM_SYSKEYDOWN:
-//							case WM_KEYUP:
-//							case WM_SYSKEYUP: {
-//								if (vst_window_mgr::isVstWindow(msg.hwnd)) {
-//									msg.hwnd = hwnd;
+    	            //this is stupid
+    	//			if (state != status_play) {
+    	//				tickPos = ctrl->cursor.cursorPos;
+    	//			}
+
+
+
+	            	//ctrl may still alter project settings during copy here if not locked
+	            	project_globals_t& projGlobals = host->project;
+    	            bool inLoop = (tickPos >= projGlobals.loopStart
+	            			&& tickPos < projGlobals.loopStart+projGlobals.loopLen
+							&& projGlobals.loopEnabled);
+
+	            	int32_t processedBlock = host->processBlock(tls.project, processingGraph.get(), &blockIn, &blockOut, samplePos, tickPos, playback_state::status_play, inLoop, isLoopAround);
+
+	            	dbgassert(processedBlock > 0);
+
+    				{
+    		        	samplerate_t sampleRate = host->sampleFormat.sampleRate;
+    		        	int32_t blockSize = host->sampleFormat.blockSize;
+    	            	project_globals_t& projGlobals = host->project;
+    	            	int32_t bpm100 = projGlobals.tempo100;
+    					double blocksPerS = sampleRate / (double) blockSize;
+    					double msPerBlock = 1000.0 / blocksPerS;
+    					const double ticksPerBlock = toTickPrecise(blockSize/(double)sampleRate, bpm100);
+    					if (processedBlock) {
+    						//copy away output data...
+    			            isLoopAround = false;
+    						samplePos += blockSize*processedBlock;
+    						tickPos += ticksPerBlock*processedBlock;
+							if (inLoop) {
+								if (tickPos >= projGlobals.loopStart + projGlobals.loopLen) {
+									if (MainCtrl::get()) {
+										MainCtrl::get()->setJumpFromTo(tickPos, projGlobals.loopStart);
+									}
+									LOG("JMP FROM %.2f to %d\n", tickPos, projGlobals.loopStart);
+									tickPos = projGlobals.loopStart;
+									samplePos = tickToSample(projGlobals.loopStart, bpm100, sampleRate);
+									LOG("JMP LOOPBEGIN seconds: %.2f - BLOCK %d\n", toSeconds(projGlobals.loopStart, bpm100), samplePos / blockSize);
+									isLoopAround = true;
+								}
+							}
+							project.getPlaybackPos() = (int32_t) floor(tickPos);
+
+    					}
+    				}
+    			}
+				if (fStart >= 0.0f && fLength >= 0.0f) {
+	//				project.loopEnabled = false;
+	//				project.loopLen = math::round(fLength*TICKS_BAR);
+					if ((project.playbackPos)/(float)TICKS_BAR - fStart >= fLength) {
+						if (playThread) {
+							playThread->addRequest(REQ_STATE, (int) playback_state::status_no_process, true);
+						}
+
+						quit = true;
+					}
+				}
+
+				processWindowMessages();
+    		}
+			my_printf("playback end..\n", 0);
+			if (playThread) {
+				playThread->addRequest(REQ_STATE, (int) playback_state::status_no_process, true);
+			}
+
+
+
+
+    		int64_t bytesCopied = 0;
+    		int trackIndex = 0;
+			for (auto* trackMaster : project.trackMasterCtr) {
+				auto* trImpl = trackMaster->getStage();
+				if (static_cast<bool>(trImpl->flags & audiostageflags_t::CONVERT_OUTPUT)
+						&& static_cast<bool>(trImpl->flags & audiostageflags_t::WRITE_OUTPUT)) {
+					bytesCopied += trImpl->audioOutput.convertToSamples(tls.host);
+					std::vector<audiotrack_split_t*> samples;
+					trImpl->audioOutput.visitSamples_NoLock([&samples](std::shared_ptr<audiotrack_split_t>& split) {
+						auto* ptrSplit = split.get();
+						if (ptrSplit) {
+							samples.push_back(ptrSplit);
+						}
+					});
+					if (!samples.empty()) {
+						static constexpr int32_t PER_BLOCK_BYTES = (1024*512);
+						static constexpr int32_t PER_BLOCK_SAMPLES = (PER_BLOCK_BYTES/(sizeof(float)));
+			    		AudioBlock blockFull(1, PER_BLOCK_SAMPLES*trImpl->output.channels);
+						std::sort(samples.begin(), samples.end(), [](audiotrack_split_t* lhs, audiotrack_split_t* rhs) {
+							return lhs->samplePos < rhs->samplePos;
+						});
+
+						drwav_data_format format;
+						format.container = drwav_container_riff; // <-- drwav_container_riff = normal WAV files, drwav_container_w64 = Sony Wave64.
+						format.format = DR_WAVE_FORMAT_IEEE_FLOAT;          // <-- Any of the DR_WAVE_FORMAT_* codes.
+						format.channels = trImpl->output.channels;
+						format.sampleRate = trImpl->sampleFormat.sampleRate;
+						format.bitsPerSample = 32;
+						drwav *pWav;
+						if (!fOutWave.empty()) {
+							String nameWaveFileTrack = fOutWave+"_"+std::to_string(trackIndex)+"_"+trackMaster->name+"_f32.wav";
+							pWav = drwav_open_file_write(StringAsCStr(nameWaveFileTrack), &format);
+							for (audiotrack_split_t* split : samples) {
+								auto* sample = split->getSample();
+								dbgassert(sample->nChannels==trImpl->output.channels);
+								dbgassert(sample->nChannels==sample->samples.size());
+								dbgassert(sample->nSamples==sample->samples[0].size());
+								dbgassert(sample->nSamples==sample->samples[1].size());
+		    					dbgassert(blockFull.samples == sample->nSamples*2);
+		    					dbgassert(blockFull.samples >= sample->nSamples*2);
+		    					float* in1 = sample->samples[0].data();
+		    					float* in2 = sample->samples[1].data();
+		    					float* largeBuf = blockFull.buf[0];
+								for (uint64_t nSample = 0; nSample < sample->nSamples; nSample++) {
+									*largeBuf++ = *in1++;
+									*largeBuf++ = *in2++;
+								}
+//								for (uint16_t nChannel = 0; nChannel < sample->nChannels; nChannel++) {
 //								}
-//							}
-//		#endif
-//							//no break
-//							default:
-								TranslateMessage(&msg);
-					            DispatchMessageW(&msg);
-//								break;
-//			            }
+								samplesWritten += drwav_write(pWav, blockFull.samples, blockFull.buf[0]);
+							};
+			    			log_printf("wrote %lld samples to %s\n", samplesWritten, StringAsCStr(nameWaveFileTrack));
+							drwav_close(pWav);
+
+						}
+					}
+				}
+				trackIndex++;
+    		}
 
 
-			        }
-			    }
-//    			threadSleep(10);
-#endif
-    		}
-//    		drwav_close(pWav);
-//    		file->flush();
-//    		file.reset();
-    		if (quit) {
-    			log_printf("wrote %lld samples to %s\n", samplesWritten, StringAsCStr(fOutWave));
-    		}
-    //		if (!host) {
-    //			return paAbort;
-    //		}
-    		playThread->addRequest(REQ_STATE, (int) playback_state::status_no_process, true);
+
+
     		std::vector<track_t*> _tracks = project.trackList.getAllTracksFlatVec();
     		my_printf("DELETE _tracks %d\n", _tracks.size());
     		for (track_t* tr : _tracks) {
@@ -473,9 +664,18 @@ int main(int argc, char* argv[]) {
     			releaseTrackResources(tr, nullptr);
     			delete tr;
     		}
-    		playThread->stopThread();
-    		playThread->joinThread();
+			if (playThread) {
+	    		playThread->stopThread();
+	    		playThread->joinThread();
+			}
     	}
+		if (!bRenderOnly) {
+			host->setOutput(nullptr);
+			tls.midiHost->stopMidi();
+			tls.audioHost->stopAudio();
+			tls.midiHost->deinitPm();
+			tls.audioHost->deinitPa();
+		}
     	host->destroy();
     	LOG("END");
     } catch (std::exception& e) {

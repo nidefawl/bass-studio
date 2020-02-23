@@ -894,7 +894,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 	stats.resamplerOutNumSamples = resamplerOutput->getNumSamplesOutputBuffer();
 	int32_t dbg = dbgStep%333;
 	int32_t nBlocksProcessed = 0;
-	bool convert = false;
+	bool convert = true;
 	bool canProcess = audioHost && queueSizeOutput < 8 && queueSizeInput > 2;
 	int32_t blockSizeResampled = DAW::NumSamplesResampled(sampleFormat.blockSize, sampleFormat.sampleRate, sampleFormatExternal.sampleRate);
 	int32_t numBlocksInternal = math::max(1, sampleFormatExternal.blockSize/blockSizeResampled);
@@ -1070,7 +1070,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			hires_timer_t timerConvert;
 			for (track_t* tr : ctrl->trackList) {
 				track_impl_t* trAudio = tr->audio;
-				if (trAudio) {
+				if (static_cast<bool>(trAudio->flags & audiostageflags_t::CONVERT_OUTPUT)) {
 					bytesCopied += trAudio->audioOutput.convertToSamples(this);
 				}
 			}
