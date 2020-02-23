@@ -366,24 +366,61 @@ public:
 		int fs = (int)(hpt*0.8);
 		int posY = fs*1.2;
 		setFont(vg, fs, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM);
-		String latency;
-		latency = StringFormat("Stage #%d", static_cast<int32_t>(node->stageId));
-		nvgText(vg, INSET_TITLE, posY, StringAsCStr(latency), NULL);
+		String str;
+		str = StringFormat("Stage #%d", static_cast<int32_t>(node->stageId));
+		nvgText(vg, INSET_TITLE, posY, StringAsCStr(str), NULL);
 		posY += fs * 1.2;
-		latency = StringFormat("inputs: %d", static_cast<int32_t>(node->children.size()));
-		nvgText(vg, INSET_TITLE, posY, StringAsCStr(latency), NULL);
+		str = StringFormat("inputs: %d", static_cast<int32_t>(node->children.size()));
+		nvgText(vg, INSET_TITLE, posY, StringAsCStr(str), NULL);
 		posY += fs * 1.2;
-		latency = StringFormat("outputs: %d", static_cast<int32_t>(node->parents.size()));
-		nvgText(vg, INSET_TITLE, posY, StringAsCStr(latency), NULL);
+		str = StringFormat("outputs: %d", static_cast<int32_t>(node->parents.size()));
+		nvgText(vg, INSET_TITLE, posY, StringAsCStr(str), NULL);
 		posY += fs * 1.2;
-		latency = StringFormat("Latency");
-		nvgText(vg, INSET_TITLE, posY, StringAsCStr(latency), NULL);
+		str = StringFormat("Latency");
+		nvgText(vg, INSET_TITLE, posY, StringAsCStr(str), NULL);
 		posY += fs * 1.2;
-		latency = StringFormat("Input: %d", node->inputLatency);
-		nvgText(vg, INSET_TITLE, posY, StringAsCStr(latency), NULL);
+		str = StringFormat("Input: %d", node->inputLatency);
+		nvgText(vg, INSET_TITLE, posY, StringAsCStr(str), NULL);
 		posY+=fs*1.2;
-		latency = StringFormat("Internal: %d", node->internalLatency);
-		nvgText(vg, INSET_TITLE, posY, StringAsCStr(latency), NULL);
+		str = StringFormat("Internal: %d", node->internalLatency);
+		nvgText(vg, INSET_TITLE, posY, StringAsCStr(str), NULL);
+		posY+=fs*1.2;
+
+
+
+		if (node->trackOptional && node->trackOptional->audio) {
+			float maxRmsOut = node->trackOptional->audio->meter.getMaxRMS();
+			float maxRmsIn = node->trackOptional->audio->meterInput.getMaxRMS();
+			str = StringFormat("Input max rms: %f", maxRmsIn);
+			if (maxRmsIn > dsp_util::GAIN_DBFLOOR) {
+				setFont(vg, fs, G_GREEN, NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM);
+			}
+			nvgText(vg, INSET_TITLE, posY, StringAsCStr(str), NULL);
+			posY+=fs*1.2;
+			str = StringFormat("Output max rms: %f", maxRmsOut);
+			if (maxRmsOut > dsp_util::GAIN_DBFLOOR) {
+				setFont(vg, fs, G_GREEN, NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM);
+			} else {
+				setFont(vg, fs, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM);
+			}
+			nvgText(vg, INSET_TITLE, posY, StringAsCStr(str), NULL);
+			posY+=fs*1.2;
+			setFont(vg, fs, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM);
+//			int64_t timeProcessRaw = 0;
+//			int64_t timeProcess = 0;
+//			int64_t timeUpdateParameters = 0;
+//			int64_t timeGetNotesInRange = 0;
+//			int64_t timeMixInputs = 0;
+//			int64_t timeSendNotes = 0;
+//			int64_t statsProcSamples[STATS_PROCESSING_MAX_SAMPLES];
+//			int32_t statsProcStep = 0;
+//			int64_t statsWriteOffset=0;
+//			int64_t statsBlocksProcessed=0;
+			auto numBlocks = node->trackOptional->audio->procStats.numBlocksProcessed;
+			str = StringFormat("Blocks processed: %d", numBlocks);
+			nvgText(vg, INSET_TITLE, posY, StringAsCStr(str), NULL);
+			posY+=fs*1.2;
+		}
 	}
 };
 void gui_graph::updateList(bool resetPositions) {
@@ -416,16 +453,23 @@ void gui_graph::updateList(bool resetPositions) {
 			const int32_t hpt = theme->get(GuiConstant::CONST_FIXED_TITLE_HEIGHT);
 
 			if (node->trackOptional) {
+				int32_t meterWidth = fontScale;
 				gui_trackmeter<16000,2>* meter = new gui_trackmeter<16000,2>(&node->trackOptional->audio->meter);
-				meter->size = {fontScale, entry->getSizeContent().y-hpt};
+				meter->size = {meterWidth, entry->getSizeContent().y-hpt};
 				meter->pos = {entry->getSizeContent().x-meter->size.x, hpt};
-
 				entry->add(meter);
+				gui_trackmeter<16000,2>* guimeterInput = new gui_trackmeter<16000,2>(&node->trackOptional->audio->meterInput);
+				guimeterInput->size = {meterWidth, entry->getSizeContent().y-hpt};
+				guimeterInput->pos = {0, hpt};
+				entry->add(guimeterInput);
+
+
 				auto g = new guinodeinfo_text{node};
-				g->size = {cs.x-meter->size.x, cs.y-hpt};
-				g->pos = {0, hpt};
+				g->size = {cs.x-meterWidth*2, cs.y-hpt};
+				g->pos = {guimeterInput->size.x, hpt};
 				entry->add(g);
 			}
+
 			auto it = std::find_if(impl->listNodes.cbegin(), impl->listNodes.cend(), [stageId = node->stageId](gui_graph_n* gn) {
 				return gn->getProcessingNode()->stageId == stageId;
 			});
