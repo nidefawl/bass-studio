@@ -111,6 +111,7 @@ struct audio_stage_t {
 	effectbase* owner;
 	guictr_plugins* pluginCtr;
 	rmsmeterimpl<16000> meter;
+	rmsmeterimpl<16000> meterInput;
 	/**
 	 * Internal pre-process per-block input buffer
 	 * guaranteed to have at least 2 channels

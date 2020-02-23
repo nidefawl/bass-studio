@@ -938,6 +938,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			float fGainTrack;
 			getGainLvl(trAudio->mixer.getParamValue(PARAM_TRACK_GAIN), fGainTrack);
 			trAudio->meter.update(&trAudio->output, fGainTrack);
+			trAudio->meterInput.update(&trAudio->input, 1.0f);
 		}
 		if (dbg != 0)
 		stats.timings["meters.update"] = timer3.getTime();
