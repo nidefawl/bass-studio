@@ -15,6 +15,7 @@ struct stats_processing_timings_t {
 	int64_t statsProcSamples[STATS_PROCESSING_MAX_SAMPLES];
 	int32_t statsProcStep = 0;
 	int64_t statsWriteOffset=0;
+	int64_t numBlocksProcessed=0;
 };
 
 #define NUM_BINS_STATS 64

@@ -72,9 +72,12 @@ struct AudioBlock;
 struct host_processing_stats_t {
 	int32_t pluginId;
 };
-
+struct process_scratch_buf_t;
 
 class vsthost {
+public:
+	struct track_block_processing_task_t;
+private:
 	class vsthost_impl;
 	vsthost_impl* const impl;
 public:
@@ -88,7 +91,9 @@ public:
 	project_globals_t project;
 	audioMasterCallback masterCallBackSlot = nullptr;
 
+
 	SYNCHRONIZED_RW std::atomic<int32_t> bypassEffectProcessing{false};
+	SYNCHRONIZED_RW std::atomic<int32_t> multithreadedProcessing{1};
 	SYNCHRONIZED_RW std::atomic<int32_t> bypassPlaybackProcessing{false};
 	std::atomic<int32_t> pluginId{100};
 	std::atomic<int32_t> audioStageId{100};
@@ -100,7 +105,7 @@ public:
 	SYNCHRONIZED_RW hires_timer_t timer; // timer for cpu-time profiling
 	SYNCHRONIZED_RW hires_timer_t timer2;// timer for cpu-time profiling
 	SYNCHRONIZED_RW hires_timer_t timer3;// timer for cpu-time profiling
-	SYNCHRONIZED_RW hires_timer_t timer4;// timer for cpu-time profiling
+//	SYNCHRONIZED_RW hires_timer_t timer4;// timer for cpu-time profiling
 private:
 	SYNCHRONIZED_RW clip_t* recordingClip = nullptr;
 	SYNCHRONIZED_RW std::atomic<bool> hasNewRecordedData{0};
@@ -117,7 +122,7 @@ private:
 	SYNCHRONIZED_RW audiothread_ringbuffer_t ringbuffer;
 	SYNCHRONIZED_RW clip_notes_t* midiRealtimeInput; //TODO: per device and channel
 
-	std::vector<std::shared_ptr<DelayLine>> delayLines;
+//	std::vector<std::shared_ptr<DelayLine>> delayLines;
 
 
 	class ModuleManager;
@@ -137,10 +142,12 @@ private:
 	int32_t getNextGlobalModuleId(int32_t n);
 	audiostageid_i32 getNextGlobalAudioStageId(int32_t as);
 	bool unloadAllPlugins();
-	void updateTime(int32_t samplePos, double dTickPos, playback_state state);
+	void updateTime(VstTimeInfo& timeinfo, int32_t samplePos, double dTickPos, playback_state state) const;
 	void setBlockSize(uint16_t blockSize);
 	void registerPlugins();
 	void processMidiRealtimeInput(project_controller_t* ctrl, double posDouble, playback_state state);
+
+	void finishTreadTasks(std::vector<audiostageid_i32>& processFinishedStageIds, const std::vector<audiostageid_i32>& reqFinishWaitStageIds, bool isFinalInvocation);
 public:
 	vsthost();
 	vsthost(vsthost const&) = delete;
@@ -165,7 +172,9 @@ public:
 	void onStopPlayback(project_controller_t* ctrl);
 	int32_t processPlayback(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround);
 	int32_t processBlock(project_controller_t* ctrl, const DAW::processing_graph_t* const processingGraph, AudioBlock* const ptrExternalInputs, AudioBlock* const ptrExternalOutputs, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround);
-	void processAudio(audio_stage_t* channel, AudioBlock* input, AudioBlock* output, int32_t sample, int32_t samples, playback_state state);
+
+
+	void processAudio(audio_stage_t* channel, AudioBlock* input, AudioBlock* output, int32_t sample, int32_t samples, playback_state state) const;
 	VstTimeInfo* getTimeInfo() {
 		return &this->timeinfo;
 	}
@@ -233,4 +242,6 @@ public:
 		return &safeRefs;
 	}
 	void updateMaximumStageId();
+	void initThreads();
+	int32_t processBlockTrack(process_scratch_buf_t& tmp, track_block_processing_task_t task) const;
 };

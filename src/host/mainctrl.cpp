@@ -738,6 +738,7 @@ bool MainCtrl::init(window_main* window, NVGcontext* nanovg)
 	this->window = window;
 	this->vg = nanovg;
 	plugindb.openDatabase();
+	vsthost::getInstance()->initThreads();
 	this->playThread.setTls(daw_tls::getTls());
 	this->playThread.startThread(this);
 	this->workerThread.setTls(daw_tls::getTls());

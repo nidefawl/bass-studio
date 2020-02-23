@@ -280,6 +280,7 @@ namespace DAW {
 		return *map[idx];
 	}
 	bool buildTrackRoutingGraph(const vsthost* const host, const project_t* const project, const track_vector& tracksFlat, std::shared_ptr<track_graph_t>& out_graph) {
+		uint32_t trackEdgeId = 0;
 		std::map<audiostageid_i32, track_node_ptr> map;
 		for (track_t* track : tracksFlat) {
 			track_impl_t* trackImpl = track->getStage();
@@ -312,7 +313,7 @@ namespace DAW {
 					}
 					track_node_t& trackSrcCfg = getNode(map, src->stageId);
 					trackCfg.dependencies.push_back(src->stageId);
-					trackCfg.pulls.push_back(DAW::track_source_t{inputChannel, 1.0f, 0, src->flags});
+					trackCfg.pulls.push_back(DAW::track_source_t{trackEdgeId++, inputChannel, 1.0f, 0, src->flags});
 					trackCfg.children.push_back(&trackSrcCfg);
 					trackSrcCfg.parents.push_back(&trackCfg);
 				}
@@ -329,7 +330,7 @@ namespace DAW {
 					trackDstCfg.dependencies.push_back(trackImpl->stageId);
 					// cannot set trackDstCfg.inputLatency here because map[trackImpl->stageId].inputLatency may not have been written yet
 //					trackDstCfg.inputLatency = std::max(trackDstCfg.inputLatency, map[trackImpl->stageId].inputLatency+map[trackImpl->stageId].internalLatency);
-					trackDstCfg.pushs.push_back(DAW::track_source_t{ChannelStage(trackImpl, false), 1.0f, 0, trackImpl->flags});
+					trackDstCfg.pushs.push_back(DAW::track_source_t{trackEdgeId++, ChannelStage(trackImpl, false), 1.0f, 0, trackImpl->flags});
 					trackDstCfg.children.push_back(&trackCfg);
 					trackCfg.parents.push_back(&trackDstCfg);
 				}
@@ -352,7 +353,7 @@ namespace DAW {
 					}
 					track_node_t& trackReturnCfg =  getNode(map, audioReturn->stageId);
 					trackReturnCfg.dependencies.push_back(trackImpl->stageId);
-					trackReturnCfg.pushs.push_back(DAW::track_source_t{ChannelStage(trackImpl, false), fGainReturn, 0, trackImpl->flags});
+					trackReturnCfg.pushs.push_back(DAW::track_source_t{trackEdgeId++, ChannelStage(trackImpl, false), fGainReturn, 0, trackImpl->flags});
 					trackReturnCfg.children.push_back(&trackCfg);
 					trackCfg.parents.push_back(&trackReturnCfg);
 
