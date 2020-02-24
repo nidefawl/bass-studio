@@ -1339,7 +1339,7 @@ void vsthost::finishTreadTasks(std::vector<audiostageid_i32>& processFinishedSta
 //			return !STL_CONTAINS(processFinishedStageIds, stageId);
 //		});
 		if (allBusyFlag) {
-			std::this_thread::sleep_for(std::chrono::microseconds( 500 ));
+//			std::this_thread::sleep_for(std::chrono::microseconds( 500 ));
 		}
 	}
 }
