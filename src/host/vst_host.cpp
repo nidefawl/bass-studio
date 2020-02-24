@@ -373,7 +373,6 @@ public:
 		return blockProcTask;
 	}
 };
-#define MAX_THREADS 4
 
 class vsthost::vsthost_impl {
 public:
@@ -381,13 +380,14 @@ public:
 	std::shared_ptr<oversampler_t> oversampler;
 
 	process_scratch_buf_t singleThreadedBuf;
-	WorkerThread threads[MAX_THREADS];
-	TrackBlockProcessTask tasks[MAX_THREADS];
+	WorkerThread threads[MAX_AUDIOPROCESSING_THREADS];
+	TrackBlockProcessTask tasks[MAX_AUDIOPROCESSING_THREADS];
     std::map<uint32_t, std::shared_ptr<DelayLine>> delayLines;
-	std::vector<TrackBlockProcessTask::process_task_stats_t> blockThreadStats;
-	std::vector<TrackBlockProcessTask::process_task_stats_t> lastBlockThreadStats;
+	std::vector<thread_stats_process_timings_t> blockThreadStats;
+	std::vector<thread_stats_process_timings_t> lastBlockThreadStats;
     std::mutex mtx;
-	int32_t threadsRunningCount = 0;
+    uint32_t threadsRunningCount = 0;
+	uint32_t threadCount = 4;
 	vsthost_impl() {
 		uint32_t u = 0;
 		for (TrackBlockProcessTask& task : tasks) {
@@ -431,20 +431,34 @@ public:
 		this->blockThreadStats.clear();
 	}
 	void startThreads() {
-		for (size_t i = 0; i < MAX_THREADS; i++) {
-			threads[i].startThread();
+		uint32_t countStarted = 0;
+		for (WorkerThread& thread : threads) {
+			thread.startThread();
+			countStarted++;
 		}
-		threadsRunningCount = MAX_THREADS;
+		threadsRunningCount = countStarted;
 	}
 	void stopThreads() {
-		for (size_t i = 0; i < MAX_THREADS; i++) {
-			threads[i].stopThread();
+		for (WorkerThread& thread : threads) {
+			thread.stopThread();
 		}
-		for (size_t i = 0; i < MAX_THREADS; i++) {
-			threads[i].joinThread();
+		for (WorkerThread& thread : threads) {
+			thread.joinThread();
 		}
 	}
 };
+void vsthost::getBlockThreadStats(std::vector<thread_stats_process_timings_t>& stats) {
+	stats = impl->lastBlockThreadStats;
+}
+void vsthost::setThreadCount(uint32_t threadCount) {
+	impl->threadCount = math::clamp<uint32_t>(threadCount, 1U, math::min<uint32_t>(MAX_AUDIOPROCESSING_THREADS, impl->threadsRunningCount));
+}
+uint32_t vsthost::getThreadCount() {
+	return impl->threadCount;
+}
+uint32_t vsthost::getMaxThreadCount() {
+	return impl->threadsRunningCount;
+}
 
 vsthost::~vsthost() {
 	delete moduleMgr;
@@ -1283,7 +1297,7 @@ void vsthost::finishTreadTasks(std::vector<audiostageid_i32>& processFinishedSta
 	while (allBusyFlag) {
 		allBusyFlag = true;
 		waiting.clear();
-		for (size_t i = 0; i < MAX_THREADS; i++) {
+		for (size_t i = 0; i < impl->threadCount; i++) {
 			TrackBlockProcessTask& task = impl->tasks[i];
 			if (task.isInUse()) {
 				auto taskStageId = task.getTask().trackNode->stageId;
@@ -1312,10 +1326,11 @@ void vsthost::finishTreadTasks(std::vector<audiostageid_i32>& processFinishedSta
 				} else if (task.isGood()) {
 					vsthost::track_block_processing_task_t procTask = task.getTask();
 					processFinishedStageIds.push_back(procTask.trackNode->stageId);
+					thread_stats_process_timings_t thrdProcStats = {static_cast<uint32_t>(i), procTask.trackNode->stageId, task.stats.timeStart, task.stats.timeEnd};
+					impl->blockThreadStats.push_back(thrdProcStats);
 				} else {
 					dbgassert(0);
 				}
-				impl->blockThreadStats.push_back(task.stats);
 				task.resetTask();
 			}
 			allBusyFlag = false;
@@ -1418,7 +1433,7 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const DAW::processing_
 		audiostageid_i32 stageId;
 		uint32_t threadIdx;
 	};
-	const bool useThreading = this->multithreadedProcessing && impl->threadsRunningCount > 0;
+	const bool useThreading = this->multithreadedProcessing && impl->threadsRunningCount > 0 && impl->threadCount > 1;
 	if (!useThreading) {
 		for (auto itAudioStage = processingGraph->nodesFlatOrdered.begin(); itAudioStage != processingGraph->nodesFlatOrdered.end(); itAudioStage++) {
 			const DAW::processing_track_node_t* ptrProcessingNode = *itAudioStage;
@@ -1436,7 +1451,12 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const DAW::processing_
 			blockProcTask.state = state;
 			blockProcTask.inLoop = inLoop;
 			blockProcTask.dbg = dbg;
+			auto timeStart = getTimeHPint64();
 			processBlockTrack(impl->singleThreadedBuf, blockProcTask);
+			auto timeEnd = getTimeHPint64();
+
+			thread_stats_process_timings_t thrdProcStats = {0, blockProcTask.trackNode->stageId, timeStart, timeEnd};
+			impl->blockThreadStats.push_back(thrdProcStats);
 		}
 	} else {
 		std::vector<stageId_threadIdx_pair> tasksQueued;
@@ -1444,6 +1464,7 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const DAW::processing_
 		Func_CheckUnprocessed funcCheckNodeUnprocessed;
 		funcCheckNodeUnprocessed.stagesProcessed.reserve(processingGraph->nodesFlatOrdered.size());
 		bool outOfOrderProcessing = true;
+		auto timeEnd = getTimeHPint64();
 		for (bool unprocessed=true; unprocessed; unprocessed=outOfOrderProcessing && tasksQueued.size() != processingGraph->nodesFlatOrdered.size()) {
 			for (auto itAudioStage = processingGraph->nodesFlatOrdered.begin(); itAudioStage != processingGraph->nodesFlatOrdered.end(); itAudioStage++) {
 				const DAW::processing_track_node_t* ptrProcessingNode = *itAudioStage;
@@ -1468,12 +1489,16 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const DAW::processing_
 				if (!outOfOrderProcessing) {
 					tasksToFinish = trackNode.dependencies;
 				}
+				auto timeStart = getTimeHPint64();
 				finishTreadTasks(funcCheckNodeUnprocessed.stagesProcessed, tasksToFinish, false);
+				timeEnd = getTimeHPint64();
+				thread_stats_process_timings_t thrdProcStats = {static_cast<uint32_t>(impl->threadCount), TRACKID_INVALID_I32, timeStart, timeEnd};
+				impl->blockThreadStats.push_back(thrdProcStats);
 				bool hasUnprocessedInputs = /*!outOfOrderProcessing || */std::any_of(trackNode.children.cbegin(), trackNode.children.cend(), funcCheckNodeUnprocessed);
 				if (!hasUnprocessedInputs) {
 
 					bool pushd=false;
-					for (size_t i = 0; i < MAX_THREADS; i++) {
+					for (size_t i = 0; i < impl->threadCount; i++) {
 						TrackBlockProcessTask& task = impl->tasks[i];
 						if (!task.isInUse()) {
 
@@ -1495,7 +1520,7 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const DAW::processing_
 							pushd = true;
 							break;
 						}
-						dbgassert(i+1 != MAX_THREADS);
+						dbgassert(i+1 != MAX_AUDIOPROCESSING_THREADS);
 					}
 					dbgassert(pushd);
 				}
@@ -1531,7 +1556,7 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const DAW::processing_
 	return 1;
 }
 void vsthost::initThreads() {
-	for (size_t i = 0; i < MAX_THREADS; i++) {
+	for (size_t i = 0; i < MAX_AUDIOPROCESSING_THREADS; i++) {
 		impl->threads[i].setTls(daw_tls::getTls());
 	}
 	impl->startThreads();

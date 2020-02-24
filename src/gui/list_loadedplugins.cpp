@@ -270,6 +270,7 @@ public:
 			nvgFillColor(vg, G_WHITE);
 		}
 		printL("Usage", StringFormat("%.2f%%", stats.usage*100.0));
+		printL("Usage raw", StringFormat("%.2f%%", stats.usageRaw*100.0));
 		nvgFillColor(vg, G_WHITE);
 		printL("FPS", StringFormat("%.2f", daw_tls::getTls().renderStats.fps));
 

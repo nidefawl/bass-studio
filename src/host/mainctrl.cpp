@@ -127,24 +127,32 @@ guictr_base* makeCtrHistory(); //guihistory.cpp
 
 class guictr_side_tabs_daw_1 : public guictr_tabbed {
 public:
-	gui_ctr_debug ctr_dbg;
+	gui_ctr_debug ctr_dbg0;
+	gui_ctr_debug ctr_dbg1;
+	gui_ctr_debug ctr_dbg2;
 	guictr_base* const ctr_properties;
 	guictr_base* const ctr_theme;
 	guictr_base* const ctr_history;
 	gui_shaderview shaderView;
 	guictr_side_tabs_daw_1() :
 		guictr_tabbed(),
-		ctr_dbg(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_0),
+		ctr_dbg0(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_0),
+		ctr_dbg1(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_1),
+		ctr_dbg2(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_2),
 		ctr_properties(makeCtrProperties()),
 		ctr_theme(makeCtrTheme()),
 		ctr_history(makeCtrHistory()) {
 		setBackgroundRendered(true);
-		ctr_dbg.setLabel("Debug 1");
+		ctr_dbg0.setLabel("Debug 0");
+		ctr_dbg1.setLabel("Debug 1");
+		ctr_dbg2.setLabel("Debug 2");
 		ctr_properties->setLabel("Properties");
 		ctr_theme->setLabel("Theme");
 		ctr_history->setLabel("History");
 		shaderView.setLabel("Shader");
-		addEntry(&ctr_dbg, ctr_dbg.label);
+		addEntry(&ctr_dbg0, ctr_dbg0.label);
+		addEntry(&ctr_dbg1, ctr_dbg1.label);
+		addEntry(&ctr_dbg2, ctr_dbg2.label);
 		addEntry(ctr_history, ctr_history->label);
 		addEntry(ctr_properties, ctr_properties->label);
 		addEntry(ctr_theme, ctr_theme->label);
@@ -400,7 +408,7 @@ bool MainCtrl::isPluginViewVisible() {
 }
 void MainCtrl::addDebug(String s) {
 
-	view->subctr_tabbed.ctr_dbg.addStr(s);
+	view->subctr_tabbed.ctr_dbg0.addStr(s);
 }
 
 void MainCtrl::resetMouseContext() {

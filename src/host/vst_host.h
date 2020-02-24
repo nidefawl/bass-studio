@@ -73,7 +73,13 @@ struct host_processing_stats_t {
 	int32_t pluginId;
 };
 struct process_scratch_buf_t;
-
+struct thread_stats_process_timings_t {
+	uint32_t threadIdx;
+	audiostageid_i32 stageId;
+	int64_t timeStart;
+	int64_t timeEnd;
+};
+#define MAX_AUDIOPROCESSING_THREADS 32
 class vsthost {
 public:
 	struct track_block_processing_task_t;
@@ -172,8 +178,7 @@ public:
 	void onStopPlayback(project_controller_t* ctrl);
 	int32_t processPlayback(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround);
 	int32_t processBlock(project_controller_t* ctrl, const DAW::processing_graph_t* const processingGraph, AudioBlock* const ptrExternalInputs, AudioBlock* const ptrExternalOutputs, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround);
-
-
+	void getBlockThreadStats(std::vector<thread_stats_process_timings_t>&);
 	void processAudio(audio_stage_t* channel, AudioBlock* input, AudioBlock* output, int32_t sample, int32_t samples, playback_state state) const;
 	VstTimeInfo* getTimeInfo() {
 		return &this->timeinfo;
@@ -245,4 +250,7 @@ public:
 	void updateMaximumStageId();
 	void initThreads();
 	int32_t processBlockTrack(process_scratch_buf_t& tmp, track_block_processing_task_t task) const;
+	void setThreadCount(uint32_t threadCount);
+	uint32_t getThreadCount();
+	uint32_t getMaxThreadCount();
 };

@@ -53,6 +53,7 @@ void initConstants(int colorVal);
 }
 constexpr int ID_BTN_RESET_HIST = 1;
 constexpr int ID_KNOB_SET_COLOR = 2;
+constexpr int ID_KNOB_SET_THREAD_COUNT = 3;
 constexpr int ID_BTN_INJECT_SEGFAULT_AUDIO_THREAD = 3;
 constexpr int ID_BTN_INJECT_BAD_MALLOC_AUDIO_THREAD = 4;
 constexpr int ID_BTN_INJECT_SEGFAULT_MAIN_THREAD = 5;
@@ -63,22 +64,57 @@ constexpr int ID_BTN_TOGGLE_EFFECTPROCESSING = 10;
 constexpr int ID_BTN_TOGGLE_THREADING = 11;
 constexpr int ID_BTN_TOGGLE_CLIP_RENDER_CACHE = 9;
 constexpr int BTN_FONT_SIZE = 16;
-gui_ctr_debug::gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType) : guictr_base(), dgbCtrType(debugCtrType) {
+struct gui_ctr_debug::ctr_debug_impl_t {
+	std::vector<guibase*> debugGuis;
+	std::vector<thread_stats_process_timings_t> lastProcessingList;
+	sampleformat_t sampleformat;
+};
+gui_ctr_debug::~gui_ctr_debug() {
+	removeGuis();
+	for (auto* g : impl->debugGuis) {
+		delete g;
+	}
+}
+gui_ctr_debug::gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType) :
+		guictr_base(),
+		impl(new gui_ctr_debug::ctr_debug_impl_t{}),
+		dgbCtrType(debugCtrType) {
 	setBackgroundRendered(true);
-	auto knob = new guiknob;
-	knob->id = ID_KNOB_SET_COLOR;
-	knob->fnSetValue = [this](float f, int flags) {
-		float guiScale = math::max(0.05f, f*2.0f);
-		parentCtrl->m_scale = guiScale;
-		parentCtrl->relayout();
-//		curVal = 0+math::max(0, math::min(255, (int32_t)math::floor(f*255)));
-//		GuiColor::initConstants(curVal);
-//		parentCtrl->getTheme()->initTheme();
-	};
-	knob->fnGetValue = [this](void) {
-		return math::max(0.05f, math::min(1.0f, parentCtrl->m_scale*0.5f));
-	};
-	debugGuis.push_back(knob);
+	std::vector<guibase*>& debugGuis = impl->debugGuis;
+	if (dgbCtrType != gui_ctr_debug_type_i32::TYPE_2) {
+		auto knob = new guiknob;
+		knob->id = ID_KNOB_SET_COLOR;
+		knob->fnSetValue = [this](float f, int flags) {
+			float guiScale = math::max(0.05f, f*2.0f);
+			parentCtrl->m_scale = guiScale;
+			parentCtrl->relayout();
+	//		curVal = 0+math::max(0, math::min(255, (int32_t)math::floor(f*255)));
+	//		GuiColor::initConstants(curVal);
+	//		parentCtrl->getTheme()->initTheme();
+		};
+		knob->fnGetValue = [this](void) {
+			return math::max(0.05f, math::min(1.0f, parentCtrl->m_scale*0.5f));
+		};
+		debugGuis.push_back(knob);
+	}
+	if (dgbCtrType == gui_ctr_debug_type_i32::TYPE_2) {
+		auto knob = new guiknob;
+		knob->id = ID_KNOB_SET_THREAD_COUNT;
+		knob->fnSetValue = [knob](float f, int flags) {
+			uint32_t thrdCntMax = vsthost::getInstance()->getMaxThreadCount();
+			uint32_t thrdCnt = math::clamp<uint32_t>(math::round(f*thrdCntMax), 1U, thrdCntMax);
+			ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+			vsthost::getInstance()->setThreadCount(thrdCnt);
+			String strThrdCnt = StringFormat("Number of Threads: %d", vsthost::getInstance()->getThreadCount());
+			knob->setLabel(strThrdCnt);
+		};
+		String strThrdCnt = StringFormat("Number of Threads: %d", vsthost::getInstance()->getThreadCount());
+		knob->setLabel(strThrdCnt);
+		knob->fnGetValue = [](void) {
+			return vsthost::getInstance()->getThreadCount()/(float)vsthost::getInstance()->getMaxThreadCount();
+		};
+		debugGuis.push_back(knob);
+	}
 	if (dgbCtrType == gui_ctr_debug_type_i32::TYPE_0) {
 		{
 
@@ -161,6 +197,79 @@ void gui_ctr_debug::render(NVGcontext* vg) {
 	if (!setScissorTransform(vg)) {
 		return;
 	}
+	if (dgbCtrType == gui_ctr_debug_type_i32::TYPE_2 && impl->sampleformat.sampleRate > 0) {
+		auto mikrosPerBlock = (impl->sampleformat.blockSize*1E6)/impl->sampleformat.sampleRate;
+		int inset = 10;
+		auto cs = getSizeContent();
+		vec2 graphSize = vec2(cs.x, cs.y-40) - inset*2.0f;
+		vec2 graphPos = vec2(inset, inset);
+		auto& list = this->impl->lastProcessingList;
+		nvgSave(vg);
+		nvgTranslate(vg, graphPos.x, graphPos.y);
+		nvgBeginPath(vg);
+		float legendX = 60;
+		float legendY = 20;
+		float graphOnlyWidth = graphSize.x-legendX;
+		float graphOnlyHeight = graphSize.y-legendY;
+		nvgMoveTo(vg, legendX, 0);
+		nvgLineTo(vg, legendX, graphOnlyHeight);
+		nvgLineTo(vg, legendX+graphOnlyWidth, graphOnlyHeight);
+		nvgStrokeColor(vg, rgbToNvg(0x33ff33));
+		nvgStrokeWidth(vg, 1.f);
+		nvgStroke(vg);
+		if (list.size()) {
+			int32_t maxThread = -1;
+			float yStep = 16.0f;
+			int64_t minTimeStart = list[0].timeStart;
+			for (auto entry : list) {
+				minTimeStart = math::min(minTimeStart, entry.timeStart);
+			}
+			nvgSave(vg);
+			nvgTranslate(vg, legendX, 0);
+			for (auto entry : list) {
+				auto duration = entry.timeEnd-entry.timeStart;
+				auto posX1 = graphOnlyWidth*(entry.timeStart - minTimeStart) / (float) mikrosPerBlock;
+				auto posX2 = graphOnlyWidth*(entry.timeEnd - minTimeStart) / (float) mikrosPerBlock;
+				float posY = graphOnlyHeight-1-(entry.threadIdx+1)*yStep;
+				float hGraph = yStep*0.8f;
+				nvgBeginPath(vg);
+				nvgStrokeColor(vg, rgbToNvg(0xffffff));
+				nvgMoveTo(vg, posX1, posY+yStep/2.0f);
+				nvgLineTo(vg, posX2, posY+yStep/2.0f);
+				nvgStrokeWidth(vg, 2.0f);
+				nvgStroke(vg);
+				nvgBeginPath(vg);
+				nvgMoveTo(vg, posX1, posY+yStep/2.0f-yStep/4.0f);
+				nvgLineTo(vg, posX1, posY+yStep/2.0f+hGraph/2.0f);
+				nvgMoveTo(vg, posX2, posY+yStep/2.0f-hGraph/2.0f);
+				nvgLineTo(vg, posX2, posY+yStep/2.0f+hGraph/2.0f);
+				nvgStrokeWidth(vg, 1.0f);
+				nvgStroke(vg);
+				maxThread = math::max(maxThread, static_cast<int32_t>(entry.threadIdx));
+			}
+			nvgRestore(vg);
+			setFont(vg, 14, G_WHITE, NVG_ALIGN_MIDDLE | NVG_ALIGN_LEFT);
+			float lineh;
+			nvgTextMetrics(vg, NULL, NULL, &lineh);
+			for (int i = 0; i <= maxThread; i++) {
+				float posX = 0;
+				float posY = graphOnlyHeight-1-(i+1)*yStep+yStep/2.0f;
+				String proj = StringFormat("Thread #%d", i);
+				nvgText(vg, posX, posY, StringAsCStr(proj), NULL);
+			}
+		}
+		nvgRestore(vg);
+		auto knobTestThreadCnt = getByID(ID_KNOB_SET_THREAD_COUNT);
+		if (knobTestThreadCnt) {
+			setFont(vg, 14, G_WHITE, NVG_ALIGN_MIDDLE | NVG_ALIGN_LEFT);
+			String strThrdCnt = StringFormat("Number of Threads: %d", vsthost::getInstance()->getThreadCount());
+			ivec2 lblPos{knobTestThreadCnt->right(), knobTestThreadCnt->bottom()-knobTestThreadCnt->size.y/2};
+			nvgText(vg, lblPos.x, lblPos.y, StringAsCStr(strThrdCnt), NULL);
+		}
+
+
+	}
+
 	if (dgbCtrType == gui_ctr_debug_type_i32::TYPE_1) {
 	MainCtrl *ctrl = MainCtrl::get();
 
@@ -302,13 +411,22 @@ void gui_ctr_debug::layout() {
 	ivec2 cs = getSizeContent();
 	int32_t size = 32;
 	auto knobTest = getByID(ID_KNOB_SET_COLOR);
-	knobTest->size = ivec2(size);
-	knobTest->pos = ivec2(cs.x-knobTest->size.x, cs.y-knobTest->size.y);
+	if (knobTest) {
+		knobTest->size = ivec2(size);
+		knobTest->pos = ivec2(cs.x-knobTest->size.x, cs.y-knobTest->size.y);
+	}
+	auto knobTestThreadCnt = getByID(ID_KNOB_SET_THREAD_COUNT);
+	if (knobTestThreadCnt) {
+		knobTestThreadCnt->size = ivec2(size);
+		knobTestThreadCnt->pos = ivec2(0, cs.y-knobTestThreadCnt->size.y);
+	}
 	auto posY = cs.y;
 	auto posX = 0;
 	for (auto gui : guis) {
 		gui->layout();
 		if (gui == knobTest)
+			continue;
+		if (gui == knobTestThreadCnt)
 			continue;
 		gui->size = ivec2(max(size*6, cs.x-size*3), size);
 		gui->pos = ivec2(posX, posY-gui->size.y);
@@ -404,4 +522,15 @@ bool gui_ctr_debug::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 		}
 	}
 	return false;
+}
+
+void gui_ctr_debug::onTick(AppCtrl* ctrl) {
+	for (guibase* gui : guis) {
+		gui->onTick(ctrl);
+	}
+	{
+		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+		vsthost::getInstance()->getBlockThreadStats(impl->lastProcessingList);
+		impl->sampleformat = vsthost::getInstance()->sampleFormat;
+	}
 }
