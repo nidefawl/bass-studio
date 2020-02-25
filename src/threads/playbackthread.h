@@ -22,6 +22,7 @@ public:
     void stopThread();
 	void joinThread();
 	ThreadLock lockThread();
+	ThreadLock tryLockThread();
 	void addRequest(int32_t msgId, int32_t param, bool wait);
 	void call(std::function<void()> fn, bool wait);
 	playback_state getState();

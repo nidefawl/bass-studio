@@ -69,7 +69,7 @@ class PlaybackThread::Impl {
 	ReaderWriterQueue<std::shared_ptr<PlaybackThreadReq>> q;
     playback_state m_status = status_no_process;
 	std::recursive_mutex mutex;
-	std::atomic<bool> mIsLocked{false};
+	std::atomic<int32_t> mLockCount{0};
 	int32_t threadid = 0;
 	project_controller_t* ctrl = nullptr;
 	bool exited = false;
@@ -123,12 +123,16 @@ public:
     	return m_status;
     }
     bool isLocked() {
-    	return this->mIsLocked;
+    	return this->mLockCount > 0;
     }
-    ThreadLock lockThread() {
-    	ThreadLock t = ThreadLock::MakeThreadLock(mutex, this->mIsLocked);
-    	return std::move(t); //CANNOT RELY ON RVO
-    }
+	ThreadLock lockThread() {
+		ThreadLock t = ThreadLock::MakeThreadLock(mutex, this->mLockCount, false);
+		return std::move(t); //CANNOT RELY ON RVO
+	}
+	ThreadLock tryLockThread() {
+		ThreadLock t = ThreadLock::MakeThreadLock(mutex, this->mLockCount, true);
+		return std::move(t); //CANNOT RELY ON RVO
+	}
 private:
 
 	void run() {
@@ -344,10 +348,17 @@ void PlaybackThread::setTls(daw_tls::tlsinstance tls) {
 playback_state PlaybackThread::getState() {
 	return _M_impl->getState();
 }
-
 ThreadLock PlaybackThread::lockThread() {
 	daw_tls::getTls().renderStats.playThreadLockCount++;
 	ThreadLock t = _M_impl->lockThread();
+	return std::move(t); //CANNOT RELY ON RVO
+}
+
+ThreadLock PlaybackThread::tryLockThread() {
+	ThreadLock t = _M_impl->tryLockThread();
+	if (t.isLocked()) {
+		daw_tls::getTls().renderStats.playThreadLockCount++;
+	}
 	return std::move(t); //CANNOT RELY ON RVO
 }
 bool PlaybackThread::isLocked() {

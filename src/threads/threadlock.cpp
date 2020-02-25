@@ -14,27 +14,39 @@
 #endif
 
 class ThreadLock::Impl {
-	std::recursive_mutex* mutex;
-	std::atomic<bool>* isLocked;
+	std::recursive_mutex* m_mutex;
+	std::atomic<int32_t>* m_extLockCount;
+	bool m_isLocked;
 public:
 	Impl() = delete;
-	Impl(std::recursive_mutex& _mutex, std::atomic<bool>& _isLocked)
-		: mutex(&_mutex), isLocked(&_isLocked)
+	Impl(std::recursive_mutex& _mutex, std::atomic<int32_t>& _extLockCount, const bool bTryLock)
+		: m_mutex(&_mutex), m_extLockCount(&_extLockCount), m_isLocked(false)
 	{
-		*isLocked = true;
-		mutex->lock();
+		m_isLocked = !bTryLock || m_mutex->try_lock();
+		if (!bTryLock) {
+			m_mutex->lock();
+		}
+		if (m_isLocked) {
+			(*m_extLockCount)++;
+		}
 	}
 	~Impl() {
-		mutex->unlock();
-		*isLocked = false;
+		if (m_isLocked) {
+			m_mutex->unlock();
+			(*m_extLockCount)--;
+		}
+		//m_isLocked = false;
 	}
     Impl ( Impl && ) = default;
     Impl &  operator= ( Impl && ) = default;
     Impl ( const Impl & ) = delete;
     Impl & operator= ( const Impl & ) = delete;
+	bool isLocked() const {
+		return this->m_isLocked;
+	}
 };
-/*static*/ ThreadLock ThreadLock::MakeThreadLock(std::recursive_mutex& _mutex, std::atomic<bool>& _isLocked) {
-	return ThreadLock(new Impl(_mutex, _isLocked));
+/*static*/ ThreadLock ThreadLock::MakeThreadLock(std::recursive_mutex& _mutex, std::atomic<int32_t>& _isLocked, const bool bTryLock) {
+	return ThreadLock(new Impl(_mutex, _isLocked, bTryLock));
 //	return ThreadLock(nullptr);
 }
 
@@ -45,6 +57,9 @@ ThreadLock::ThreadLock(ThreadLock::Impl* impl) :
 ThreadLock::~ThreadLock() {
 	if (_M_impl)
 		delete _M_impl;
+}
+bool ThreadLock::isLocked() const noexcept {
+	return this->_M_impl->isLocked();
 }
 
 #ifndef _MSC_VER

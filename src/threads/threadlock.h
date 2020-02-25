@@ -15,6 +15,7 @@ public:
 	ThreadLock& operator= (const ThreadLock&) = delete;
 	ThreadLock& operator=(ThreadLock&& other) noexcept;
 	ThreadLock(ThreadLock&& other) noexcept;
-	static ThreadLock MakeThreadLock(std::recursive_mutex& _mutex, std::atomic<bool>& _isLocked);
+	bool isLocked() const noexcept;
+	static ThreadLock MakeThreadLock(std::recursive_mutex& _mutex, std::atomic<int32_t>& _isLocked, const bool bTryLock);
 };
 

@@ -223,6 +223,9 @@ public:
 class gui_stats_list : public guictr_base
 {
 	int32_t minHTop = 66;
+	host_stats_t stats{ 0 };
+	int64_t timeLastUpdate = 0L;
+	playback_state state{ status_stop };
 public:
 	gui_stats_list() : guictr_base() {
 		setBackgroundRendered(true);
@@ -240,9 +243,16 @@ public:
 		int x = 5;
 		int x2 = getSizeContent().x-x;
 		int y = 5;
-		host_stats_t stats;
-		playback_state state;
 		{
+			ThreadLock lock = MainCtrl::getPlayThread()->tryLockThread();
+			if (lock.isLocked()) {
+				timeLastUpdate = getTimeHPint64();
+				state = MainCtrl::getPlayThread()->getState();
+				vsthost::getInstance()->getStats(stats);
+			}
+		}
+		if (getTimeHPint64() - timeLastUpdate >= 250000) {
+			timeLastUpdate = getTimeHPint64();
 			ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 			state = MainCtrl::getPlayThread()->getState();
 			vsthost::getInstance()->getStats(stats);
