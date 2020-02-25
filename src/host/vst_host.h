@@ -78,6 +78,18 @@ struct thread_stats_process_timings_t {
 	audiostageid_i32 stageId;
 	int64_t timeStart;
 	int64_t timeEnd;
+	thread_stats_process_timings_t(
+			uint32_t _threadIdx,
+			audiostageid_i32 _stageId,
+			int64_t _timeStart,
+			int64_t _timeEnd
+		) : threadIdx(_threadIdx),
+			stageId(_stageId),
+			timeStart(_timeStart),
+			timeEnd(_timeEnd)
+	{
+
+	}
 };
 #define MAX_AUDIOPROCESSING_THREADS 32
 class vsthost {

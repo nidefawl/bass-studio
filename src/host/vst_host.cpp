@@ -6,6 +6,7 @@
 #include "samplerate.h"
 
 #include "project.h"
+#include "profiling.h"
 #include "vst_host.h"
 #include "fileio.h"
 #include "track.h"
