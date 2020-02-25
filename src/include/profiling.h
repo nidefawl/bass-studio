@@ -18,7 +18,7 @@ struct stats_processing_timings_t {
 	int64_t numBlocksProcessed=0;
 };
 
-#define NUM_BINS_STATS 64
+#define NUM_BINS_STATS 16
 struct host_stats_reducted_t {
 	double usage;
 	int64_t timeProcess;
