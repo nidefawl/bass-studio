@@ -45,7 +45,7 @@ void guitrack_mixers::render(NVGcontext* vg) {
 		for (track_t* t : project.trackMidiAudioCtr) {
 			dbgassert(t->mixer != NULL);
 			dbgassert(t->mixer->isVisible() == t->isVisible());
-			if (t->mixer->isVisible()) {
+			if (t->mixer->isVisible() && t->mixer->pos.y < ySplit && t->mixer->bottom() > 0) {
 				nvgSave(vg);
 				t->mixer->renderGroupHandle(vg);
 				t->mixer->render(vg);

@@ -865,7 +865,12 @@ void guitrack_editor::render(NVGcontext* vg) {
 		nvgIntersectScissor(vg, 0, 0, cs.x, ySplit);
 		for (track_t* t : project.trackMidiAudioCtr.tracksFlat) {
 			dbgassert(t->content != NULL);
-			if (t->content->isVisible()) {
+			auto totalHeight = t->content->size.y;
+			if (t->subtracks.size()) {
+				totalHeight = t->subtracks.back()->bottom() - t->content->top();
+			}
+			auto contentPos = t->content->pos.y;
+			if (t->content->isVisible() && contentPos < ySplit && contentPos+totalHeight > 0) {
 				nvgSave(vg);
 				t->content->render(vg);
 				nvgRestore(vg);
