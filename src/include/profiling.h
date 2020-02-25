@@ -56,5 +56,6 @@ struct render_stats_t {
 	int64_t clipsRendered;
 	int64_t notesRendered;
 	int64_t timeRenderEditor;
+	int64_t playThreadLockCount;
 	bool enableCache = true;
 };

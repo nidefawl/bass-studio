@@ -276,6 +276,7 @@ public:
 
 		printL("timeRender", StringFormat("%d", daw_tls::getTls().renderStats.timeRender));
 		printL("timeRenderEditor", StringFormat("%d", daw_tls::getTls().renderStats.timeRenderEditor));
+		printL("playThreadLockCount (frame)", StringFormat("%d", daw_tls::getTls().renderStats.playThreadLockCount));
 		{
 			size_t clipSufIdx = 0;
 			const char *sufArr[3] = { "B", "KB", "MB" };

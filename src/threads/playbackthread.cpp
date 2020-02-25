@@ -346,6 +346,7 @@ playback_state PlaybackThread::getState() {
 }
 
 ThreadLock PlaybackThread::lockThread() {
+	daw_tls::getTls().renderStats.playThreadLockCount++;
 	ThreadLock t = _M_impl->lockThread();
 	return std::move(t); //CANNOT RELY ON RVO
 }

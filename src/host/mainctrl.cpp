@@ -1661,6 +1661,7 @@ void MainCtrl::setEditClip(gui_clip* gclip) {
 
 void MainCtrl::prerender(int32_t x, int32_t y, int32_t w, int32_t h, float pixelRatio) {
 
+	daw_tls::getTls().renderStats.playThreadLockCount=0;
 	daw_tls::getTls().renderStats.clipsRendered=0;
 	daw_tls::getTls().renderStats.notesRendered=0;
 //	my_printf("prerender %d\n", std::this_thread::get_id());
