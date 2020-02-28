@@ -503,6 +503,7 @@ effectbase* loadEffectModule(const plugin_snapshot_t& pluginSnapshot, bool force
 		my_printf("Next loading plugin %s, uId %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId);
 		plugindatabase_t* db = plugindatabase_t::getInstance();
 		if (db->resolve(pluginSnapshot.name, pluginSnapshot.uId, &path, forceLoad ? 1 : 0)) {
+			my_printf("Plugin is registered... loading %s, uId %d, forceLoad %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId, forceLoad);
 			vstpluginloadres res = host->loadPlugin(path, pluginSnapshot.projectGlobalId);
 			if (res.result==0&&res.plugin) {
 				loadedPlugin = res.plugin;
@@ -603,6 +604,7 @@ void vsthost::activateDeferred(effectbase* const eff, effectbase** out_effectLoa
 	dbgassert(eff->getSlot() >= 0);
 	auto defEffect = dynamic_cast<effect_deferred*>(eff);
 	plugin_snapshot_t pluginSnapshot = defEffect->getSnapshot();
+	log_printf("activating deferred plugin loadEffectModule %s\n", StringAsCStr(pluginSnapshot.name));
 	effectbase* effect = loadEffectModule(pluginSnapshot, forceLoad);
 	if (out_effectLoaded) {
 		*out_effectLoaded = effect;
@@ -612,6 +614,7 @@ void vsthost::activateDeferred(effectbase* const eff, effectbase** out_effectLoa
 //		dbgassert(0);
 		return;
 	}
+	log_printf("activating deferred plugin loadEffectParamsFromSnapshot %s\n", StringAsCStr(pluginSnapshot.name));
 	loadEffectParamsFromSnapshot(pluginSnapshot, effect);
 	effectbase* prevPlugin = nullptr;
 	always_assert(removeEntry(eff->trackImpl->deferredEffects, eff));
@@ -624,6 +627,7 @@ void vsthost::activateDeferred(effectbase* const eff, effectbase** out_effectLoa
 	if (pluginSnapshot.enabled) {
 		effect->resume();
 	}
+	log_printf("done activating deferred plugin %s\n", StringAsCStr(pluginSnapshot.name));
 
 }
 int track_impl_t::loadSubtrackLayout(const std::vector<automationlane_snapshot_t>& atls)
