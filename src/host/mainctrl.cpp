@@ -922,9 +922,10 @@ void MainCtrl::onTick()
 			projectToLoad = nullptr;
 			try {
 				setLoadedProject(projectToLoadCpy->projectfile, projectToLoadCpy->loadflags);
-			} catch (std::exception& e) {
-				handleStdException(e);
+			} catch (...) {
+				log_printf("Failed loading project\n", 0);
 			}
+			log_printf("end of setLoadedProject\n", 0);
 		}
 	}
 }
