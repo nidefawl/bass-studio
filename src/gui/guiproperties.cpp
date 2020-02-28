@@ -327,6 +327,7 @@ public:
 							numberInput.size.x = 100;
 							numberInput.setRef(&value.x);
 						}
+						numberInput.layout();
 						table->setActiveControl(&numberInput);
 						evt.guiDragged = &numberInput;
 						numberInput.handleDraggedBegin(evt);
@@ -338,6 +339,7 @@ public:
 						numberInput.setRef(&table->number);
 						numberInput.pos = clickedcell.pos;
 						numberInput.size = clickedcell.size;
+						numberInput.layout();
 						BaseCtrl* const ctrl = table->parentCtrl;
 						numberInput.fnValueEditChanged = [theme, constant, ctrl](gui_numberinput_field_base*,int32_t rgba) {
 							theme->set(constant, rgba);
