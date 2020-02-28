@@ -361,10 +361,13 @@ guiplugin* vstplugin::getGui() {
 	return handle->gui.get();
 }
 int32_t vstplugin::getDelay() {
-	return handle->aeffect->initialDelay;
+	return handle && handle->aeffect ? handle->aeffect->initialDelay : 0;
 }
 int32_t vstplugin::getFlagsVST() {
-	return handle->aeffect->flags;
+	return handle && handle->aeffect ? handle->aeffect->flags : 0;
+}
+VstTimeInfo* vstplugin::getLocalTimeInfoPtr() {
+	return handle ? &handle->localTimeInfo : nullptr;
 }
 
 vst_param_category* vstplugin::getCategory(int idx) {
