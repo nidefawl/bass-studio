@@ -165,3 +165,31 @@ void vstplugin::process(AudioBlock* in, AudioBlock* out, int32_t samplePos, int3
 #endif //ifdef _WIN32
 	}
 }
+
+#ifdef _WIN32
+HMODULE safeLoadLib(const char* szLibName) {
+	HMODULE hmodule = NULL;
+#if defined(_MSC_VER)
+		__try
+#elif defined(__MINGW32__)
+		__mingw_try("ehvstload", exchandler)
+#endif
+	{
+		hmodule = LoadLibrary(szLibName);
+	}
+#if defined(_MSC_VER)
+__except(isHandledExc(GetExceptionCode()) ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
+{
+	hmodule = NULL;
+}
+#elif defined(__MINGW32__)
+__mingw_except_begin("ehvstload")
+{
+	hmodule = NULL;
+}
+__mingw_except_end("ehvstload")
+#endif //defined(__MINGW32__)
+
+return hmodule;
+}
+#endif //_WIN32
