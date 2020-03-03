@@ -92,6 +92,8 @@ void serialize(Archive & ar, app_iosettings& settings) {
 	make_optional_nvp(ar, "io_audio", settings.configs);
 	make_optional_nvp(ar, "io_asio", settings.asioConfig);
 	make_optional_nvp(ar, "io_channels", settings.channelConfigs);
+	make_optional_nvp(ar, "internalSamplerate", settings.internalSamplerate);
+	make_optional_nvp(ar, "internalBlocksize", settings.internalBlocksize);
 }
 template<class Archive>
 void serialize(Archive & ar, appsettings& settings) {

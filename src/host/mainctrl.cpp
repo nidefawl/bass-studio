@@ -134,6 +134,7 @@ public:
 	guictr_base* const ctr_theme;
 	guictr_base* const ctr_history;
 	gui_shaderview shaderView;
+	guidialog_settings settings;
 	guictr_side_tabs_daw_1() :
 		guictr_tabbed(),
 		ctr_dbg0(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_0),
@@ -150,6 +151,7 @@ public:
 		ctr_theme->setLabel("Theme");
 		ctr_history->setLabel("History");
 		shaderView.setLabel("Shader");
+		settings.setLabel("settings");
 		addEntry(&ctr_dbg0, ctr_dbg0.label);
 		addEntry(&ctr_dbg1, ctr_dbg1.label);
 		addEntry(&ctr_dbg2, ctr_dbg2.label);
@@ -157,6 +159,7 @@ public:
 		addEntry(ctr_properties, ctr_properties->label);
 		addEntry(ctr_theme, ctr_theme->label);
 		addEntry(&shaderView, shaderView.label);
+		addEntry(&settings, settings.label);
 		setActiveEntry(0);
 	}
 	virtual ~guictr_side_tabs_daw_1() {
@@ -744,7 +747,7 @@ void MainCtrl::initApp(int argc, char* argv[]) {
 		dbgassert(0);
 		throw applogicexception("no empty vst callback slot");
 	}
-	host->setSampleFormat(sampleformat_t{static_cast<samplerate_t>(settings.iosettings.samplerate), settings.iosettings.blocksize, sampleformat_bits_t::FLOAT_32});
+	host->setSampleFormat(sampleformat_t{static_cast<samplerate_t>(settings.iosettings.internalSamplerate), settings.iosettings.internalBlocksize, sampleformat_bits_t::FLOAT_32});
 	tls.project = this;
 	tls.mainCtrl = this;
 	tls.audioHost = audioHost;

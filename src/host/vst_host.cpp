@@ -217,6 +217,11 @@ public:
 	void resetBlock() {
 		this->lastBlockThreadStats = std::move(this->blockThreadStats);
 		this->blockThreadStats.clear();
+		for (auto i = threadsRunningCount; i < threadCount && i < MAX_AUDIOPROCESSING_THREADS; i++) {
+			threads[i].startThread();
+			threadsRunningCount++;
+			break;
+		}
 	}
 	void startThreads() {
 		uint32_t countStarted = 0;
@@ -492,13 +497,13 @@ void vsthost::getBlockThreadStats(std::vector<thread_stats_process_timings_t>& s
 	stats = impl->lastBlockThreadStats;
 }
 void vsthost::setThreadCount(uint32_t threadCount) {
-	impl->threadCount = math::clamp<uint32_t>(threadCount, 1U, math::min<uint32_t>(MAX_AUDIOPROCESSING_THREADS, impl->threadsRunningCount));
+	impl->threadCount = math::clamp<uint32_t>(threadCount, 1U, MAX_AUDIOPROCESSING_THREADS);
 }
 uint32_t vsthost::getThreadCount() {
 	return impl->threadCount;
 }
 uint32_t vsthost::getMaxThreadCount() {
-	return impl->threadsRunningCount;
+	return MAX_AUDIOPROCESSING_THREADS;
 }
 
 vsthost::~vsthost() {
@@ -1651,7 +1656,6 @@ void vsthost::setOutput(audiohost* audioHost) {
 	config.setInputLength(sampleFormat.blockSize);
 	this->impl->oversampler = std::make_shared<oversampler_t>(config);
 	this->sampleFormatExternal = sampleFormatExternal;
-	setSampleFormat(sampleFormat);
 	audiocache::getInstance()->setSamplerate(sampleFormat.sampleRate);
 
 }

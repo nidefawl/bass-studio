@@ -22,6 +22,7 @@ class guidialog_settings : public guidialog_base {
 	guibutton btnClose;
 public:
 	guidialog_settings();
+	guidialog_settings(ivec2 _dialogSize, bool _resizeable = false);
 	~guidialog_settings();
 	void render(NVGcontext* vg) override;
 	void layout() override;

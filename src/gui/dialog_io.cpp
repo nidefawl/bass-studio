@@ -332,6 +332,7 @@ void updateSrBs() {
 		audiohost* ahost = audiohost::getInstance();
 		ahost->stopAudio();
 		host->setOutput(nullptr);
+		host->setSampleFormat(sampleformat_t{static_cast<samplerate_t>(settings.iosettings.internalSamplerate), settings.iosettings.internalBlocksize, sampleformat_bits_t::FLOAT_32});
 		if (ahost->startAudio(settings.iosettings)) {
 			host->setOutput(ahost);
 		}
@@ -707,6 +708,8 @@ class guidialog_audio_io : public setting_dialog {
 	gui_list* deviceListOutput;
 	guidropdownbase* audioBlockSize;
 	guidropdownbase* audioSampleRate;
+	guidropdownbase* audioInternalBlockSize;
+	guidropdownbase* audioInternalSampleRate;
 	guictr_input_meters metersInput;
 	guictr_input_meters metersOutput;
 public:
@@ -770,6 +773,8 @@ public:
 		delete asioDevice;
 		delete audioBlockSize;
 		delete audioSampleRate;
+		delete audioInternalSampleRate;
+		delete audioInternalBlockSize;
 
 	}
 	guidialog_audio_io()
@@ -787,11 +792,21 @@ public:
 		this->audioBlockSize = audioBlockSize;
 		auto audioSampleRate = new guidropdown_setting_options_t{};
 		this->audioSampleRate = audioSampleRate;
+		auto audioIntBlockSize = new guidropdown_setting_options_t{};
+		this->audioInternalBlockSize = audioIntBlockSize;
+		auto audioIntSampleRate = new guidropdown_setting_options_t{};
+		this->audioInternalSampleRate = audioIntSampleRate;
 		int srates[] = {
+				44100, 48000, 96000, 192000
+		};
+		int sratesInternal[] = {
 				44100, 48000, 96000, 192000
 		};
 		for (int i = 0; i < 4; i++) {
 			audioSampleRate->options.push_back(StringFormat("%d", srates[i]));
+		}
+		for (int i = 0; i < 4; i++) {
+			audioIntSampleRate->options.push_back(StringFormat("%d", sratesInternal[i]));
 		}
 		audioSampleRate->cbOnOptionSelected = [srates](int option) {
 			if (option >= 0 && option < 4) {
@@ -802,9 +817,19 @@ public:
 		audioSampleRate->fnGetCurrentVal = []() -> String {
 			return StringFormat("%d", settings.iosettings.samplerate);
 		};
+		audioIntSampleRate->cbOnOptionSelected = [srates](int option) {
+			if (option >= 0 && option < 4) {
+				settings.iosettings.internalSamplerate = srates[option];
+				updateSrBs();
+			}
+		};
+		audioIntSampleRate->fnGetCurrentVal = []() -> String {
+			return StringFormat("%d", settings.iosettings.internalSamplerate);
+		};
 		for (int i = 0; i < 10; i++) {
 			int blockSize = 1<<(4+i);
 			audioBlockSize->options.push_back(StringFormat("%d", blockSize));
+			audioIntBlockSize->options.push_back(StringFormat("%d", blockSize));
 		}
 		audioBlockSize->cbOnOptionSelected = [](int option) {
 			if (option >= 0 && option < 10) {
@@ -815,6 +840,16 @@ public:
 		};
 		audioBlockSize->fnGetCurrentVal = []() -> String {
 			return StringFormat("%d", settings.iosettings.blocksize);
+		};
+		audioIntBlockSize->cbOnOptionSelected = [](int option) {
+			if (option >= 0 && option < 10) {
+				int blockSize = 1<<(4+option);
+				settings.iosettings.internalBlocksize = blockSize;
+				updateSrBs();
+			}
+		};
+		audioIntBlockSize->fnGetCurrentVal = []() -> String {
+			return StringFormat("%d", settings.iosettings.internalBlocksize);
 		};
 
 //
@@ -911,8 +946,10 @@ public:
 		metersOutput.setLabel("Output Channels");
 		selectAPI->setLabel("Audio API");
 		asioDevice->setLabel("ASIO Device");
-		audioBlockSize->setLabel("Blocksize");
-		audioSampleRate->setLabel("Samplerate");
+		audioBlockSize->setLabel("Ext. Blocksize");
+		audioSampleRate->setLabel("Ext. Samplerate");
+		audioIntBlockSize->setLabel("Int. Blocksize");
+		audioIntSampleRate->setLabel("Int. Samplerate");
 		deviceListInput->setLabel("Audio input device");
 		deviceListOutput->setLabel("Audio output device");
 		metersInput.setFlag(FLG_RENDER_LABEL, true);
@@ -921,6 +958,8 @@ public:
 		asioDevice->setFlag(FLG_RENDER_LABEL, true);
 		audioBlockSize->setFlag(FLG_RENDER_LABEL, true);
 		audioSampleRate->setFlag(FLG_RENDER_LABEL, true);
+		audioIntBlockSize->setFlag(FLG_RENDER_LABEL, true);
+		audioIntSampleRate->setFlag(FLG_RENDER_LABEL, true);
 		deviceListInput->setFlag(FLG_RENDER_LABEL, true);
 		deviceListOutput->setFlag(FLG_RENDER_LABEL, true);
 		setLabel("Audio I/O");
@@ -931,6 +970,8 @@ public:
 		add(deviceListOutput);
 		add(audioBlockSize);
 		add(audioSampleRate);
+		add(audioIntBlockSize);
+		add(audioIntSampleRate);
 		add(&metersInput);
 		add(&metersOutput);
 	}
@@ -953,6 +994,8 @@ public:
 		nvgTextMetrics(vg, NULL, NULL, &lineh);
 		nvgText(vg, 5, this->audioBlockSize->bottom(), StringAsCStr(this->audioBlockSize->label), NULL);
 		nvgText(vg, 5, this->audioSampleRate->bottom(), StringAsCStr(this->audioSampleRate->label), NULL);
+		nvgText(vg, 5, this->audioInternalBlockSize->bottom(), StringAsCStr(this->audioInternalBlockSize->label), NULL);
+		nvgText(vg, 5, this->audioInternalSampleRate->bottom(), StringAsCStr(this->audioInternalSampleRate->label), NULL);
 		nvgText(vg, 5, this->selectAPI->bottom(), StringAsCStr(this->selectAPI->label), NULL);
 		if (this->asioDevice->isVisible()) {
 			nvgText(vg, 5, this->asioDevice->bottom(), StringAsCStr(this->asioDevice->label), NULL);
@@ -995,8 +1038,12 @@ public:
 		int32_t buttonW = math::max(120, cs.x*2/3);
 		int32_t heightList = math::max(230, cs.y*2/5);
 		int32_t height = 20;
+		audioInternalBlockSize->size = ivec2(buttonW, height);
+		audioInternalBlockSize->pos = ivec2(cs.x-inset*2-buttonW, inset);
+		audioInternalSampleRate->size = ivec2(buttonW, height);
+		audioInternalSampleRate->pos = ivec2(cs.x-inset*2-buttonW, audioInternalBlockSize->bottom()+inset);
 		audioBlockSize->size = ivec2(buttonW, height);
-		audioBlockSize->pos = ivec2(cs.x-inset*2-buttonW, inset);
+		audioBlockSize->pos = ivec2(cs.x-inset*2-buttonW, inset+audioInternalSampleRate->bottom());
 		audioSampleRate->size = ivec2(buttonW, height);
 		audioSampleRate->pos = ivec2(cs.x-inset*2-buttonW, audioBlockSize->bottom()+inset);
 		selectAPI->size = ivec2(buttonW, height);
@@ -1269,6 +1316,17 @@ struct guidialog_settings::dialog_entry
 		tabButton.setEnabledRef(&active);
 		tabButton.setFontScale(0.7f);
 	}
+};
+guidialog_settings::guidialog_settings(ivec2 _dialogSize, bool _resizeable) : guidialog_base(_dialogSize,_resizeable)
+{
+	addEntry(new guidialog_audio_io(), "Audio I/O");
+	addEntry(new guidialog_midi_io(), "Midi I/O");
+	add(&btnClose);
+	btnClose.id = ID_BTN_CLOSE;
+	btnClose.setText("Close");
+	btnClose.setFontSize(BTN_FONT_SIZE);
+	setLabel("Settings");
+	setActiveEntry(0);
 };
 guidialog_settings::guidialog_settings()
 : guidialog_base(ivec2{640, 760}, true) {
