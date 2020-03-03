@@ -52,7 +52,7 @@ VOID CALLBACK TimerCallback(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime
 			return;
 		}
 	    String f = files[rIdx];
-		res = audiohost->loadPlugin(f);
+		res = audiohost->loadPlugin(f, 0);
 	    LOG("loadPlugin: %s %d\n", StringAsCStr(f), res.result);
 	    if (res.result != 0) {
 			res = vstpluginloadres(0, NULL);

@@ -52,13 +52,18 @@ struct builtin_module_reg_t {
 	String name;
 	FnCreateModule fnNewInstance;
 };
-
+struct handles_t;
 class vstpluginloadres {
 public:
 	vstpluginloadres(int32_t _result, vstplugin* _plugin) :
-		result(_result), plugin(_plugin) { };
+		result(_result), plugin(_plugin), shellPluginHandle(nullptr) { };
+	vstpluginloadres(int32_t _result, vstplugin* _plugin, handles_t* _shellHandle, String _path, String _name) :
+		result(_result), plugin(_plugin), shellPluginHandle(_shellHandle), path(_path), name(_name) { };
 	int32_t result;
 	vstplugin* plugin;
+	handles_t* shellPluginHandle;
+	String path;
+	String name;
 };
 struct plugin_notes_t {
 	std::vector<note_t> notes;
@@ -92,11 +97,12 @@ struct thread_stats_process_timings_t {
 	}
 };
 #define MAX_AUDIOPROCESSING_THREADS 32
+class vsthost;
 class vsthost {
 public:
+	class vsthost_impl;
 	struct track_block_processing_task_t;
 private:
-	class vsthost_impl;
 	vsthost_impl* const impl;
 public:
 //	samplerate_t lSampleRate = 0;
@@ -225,6 +231,7 @@ public:
 			(!strcmp(ptr, HostCanDos::canDoAcceptIOChanges)) ||
 			(!strcmp(ptr, HostCanDos::canDoSendVstMidiEventFlagIsRealtime)) ||
 			(!strcmp(ptr, HostCanDos::canDoStartStopProcess)) ||
+			(!strcmp(ptr, HostCanDos::canDoShellCategory)) ||
 			0)
 			return true;
 		return false;
@@ -235,7 +242,7 @@ public:
 	void removePlugin(effectbase* plugin);
 	void unloadTrack(track_t* track);
 	effectbase* makeModuleInstance(int32_t moduleType, int32_t moduleId, int32_t globalid = -1);
-	vstpluginloadres loadPlugin(String filepath, int32_t globalId = 0);
+	vstpluginloadres loadPlugin(String filepath, int32_t uId, int32_t globalId = 0);
 	void createAudio(track_t* track);
 	void releaseAudio(track_t* track);
 	audio_stage_t* createAudioStage();
@@ -265,4 +272,5 @@ public:
 	void setThreadCount(uint32_t threadCount);
 	uint32_t getThreadCount();
 	uint32_t getMaxThreadCount();
+	int32_t getPlayThreadId();
 };

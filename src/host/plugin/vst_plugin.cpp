@@ -189,7 +189,7 @@ void vstplugin::load(vsthost* host) {
 		}
 	}
 
-	this->pluginCategory = this->dispatch(effGetPlugCategory) > 0;
+	this->pluginCategory = this->dispatch(effGetPlugCategory);
 	this->isSynth = (handle->aeffect->flags & effFlagsIsSynth) != 0;
 	this->bCanReceiveMidi = this->isSynth || this->dispatch(effCanDo, 0, 0, (void*)PlugCanDos::canDoReceiveVstMidiEvent) > 0;
 	char szBuf[256] = "";
@@ -368,6 +368,9 @@ int32_t vstplugin::getFlagsVST() {
 }
 VstTimeInfo* vstplugin::getLocalTimeInfoPtr() {
 	return handle ? &handle->localTimeInfo : nullptr;
+}
+int32_t vstplugin::getLocalCurrentUniqueId() {
+	return handle ? handle->localCurrentUniqueId : 0;
 }
 
 vst_param_category* vstplugin::getCategory(int idx) {

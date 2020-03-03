@@ -86,227 +86,6 @@ void emptyPrinft(vstplugin* plugin, const char *fmt, ...) {
 #endif
 
 
-#define NUM_HOST_CB_SLOTS 4
-namespace
-{
-struct vst_internal_hostslot {
-	vsthost* g_instance = nullptr;
-};
-vst_internal_hostslot g_hostslots[4];
-}
-
-VstIntPtr audioMasterHost(vsthost* host, AEffect* effect, VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt) {
-	dbgassert(host);
-	if (!host)
-		return 0;
-	vstplugin* plugin = host->getPlugin(effect);
-
-	switch (opcode)
-	{
-	case audioMasterAutomate:
-		cbPrintf(plugin, "audioMasterAutomate %d %d %d\n", index, opcode, value);
-		if (plugin) {
-			auto* effParam = plugin->getEffectParam(index);
-			if (!effParam) {
-				log_printf("%s audioMasterAutomate unknown param index %d\n", StringAsCStr(plugin->getName()), index);
-			} else {
-				plugin->deactivateAutomation(effParam->idx);
-				plugin->recvPluginEditParamUpdate(effParam->internalIdx);
-			}
-		}
-		//return OnSetParameterAutomated(nEffect, index, opt);
-		return 1;
-	case audioMasterVersion:
-		cbPrintf(plugin, "audioMasterVersion %d %d %d\n", index, opcode, value);
-		//return OnGetVersion(nEffect);
-		return 2400L;
-	case audioMasterCurrentId:
-		cbPrintf(plugin, "audioMasterCurrentId %d %d %d\n", index, opcode, value);
-		//return OnGetCurrentUniqueId(nEffect);
-		return 0L;
-	case audioMasterIdle:
-//		cbPrintf(plugin, "audioMasterIdle %d %d %d\n", index, opcode, value);
-		//return OnIdle(nEffect);
-		return 0L;
-	case audioMasterGetTime:
-		//cbPrintf(plugin, "audioMasterGetTime %d %d %d\n", index, opcode, value);
-		return (VstIntPtr)host->getTimeInfo();
-	case audioMasterProcessEvents:
-//		cbPrintf(plugin, "audioMasterProcessEvents %d %d %d\n", index, opcode, value);
-		return 0;
-	case audioMasterIOChanged:
-		cbPrintf(plugin, "audioMasterIOChanged %d %d %d\n", index, opcode, value);
-		return 0;
-	case audioMasterSizeWindow:
-		cbPrintf(plugin, "audioMasterSizeWindow %d %d %d\n", index, opcode, value);
-		if (plugin) {
-			plugin->updateWindowSize();
-		}
-		return 1;
-	case audioMasterGetSampleRate:
-		cbPrintf(plugin, "audioMasterGetSampleRate %d %d %d\n", index, opcode, value);
-		if (plugin) {
-			return (long)plugin->format.sampleRate;
-		}
-		if (host) {
-			return (long)host->sampleFormat.sampleRate;
-		}
-		return 0;
-	case audioMasterGetBlockSize:
-		cbPrintf(plugin, "audioMasterGetBlockSize %d %d %d\n", index, opcode, value);
-		if (plugin) {
-			return (long)plugin->format.blockSize;
-		}
-		if (host) {
-			return (long)host->sampleFormat.blockSize;
-		}
-		return 0;
-	case audioMasterGetInputLatency:
-		cbPrintf(plugin, "audioMasterGetInputLatency %d %d %d\n", index, opcode, value);
-		return 0;
-	case audioMasterGetOutputLatency:
-		cbPrintf(plugin, "audioMasterGetOutputLatency %d %d %d\n", index, opcode, value);
-		return 0;
-	case audioMasterGetCurrentProcessLevel:
-//		cbPrintf(plugin, "audioMasterGetCurrentProcessLevel %d %d %d\n", index, opcode, value);
-		return VstProcessLevels::kVstProcessLevelRealtime;
-	case audioMasterGetAutomationState:
-		cbPrintf(plugin, "audioMasterGetAutomationState %d %d %d\n", index, opcode, value);
-		return kVstAutomationReadWrite;
-	case audioMasterOfflineStart:
-		cbPrintf(plugin, "audioMasterOfflineStart %d %d %d\n", index, opcode, value);
-		return 0;
-	case audioMasterOfflineRead:
-		cbPrintf(plugin, "audioMasterOfflineRead %d %d %d\n", index, opcode, value);
-		return 0;
-	case audioMasterOfflineWrite:
-		cbPrintf(plugin, "audioMasterOfflineWrite %d %d %d\n", index, opcode, value);
-		return 0;
-	case audioMasterOfflineGetCurrentPass:
-		cbPrintf(plugin, "audioMasterOfflineGetCurrentPass %d %d %d\n", index, opcode, value);
-		return 0;
-	case audioMasterOfflineGetCurrentMetaPass:
-		cbPrintf(plugin, "audioMasterOfflineGetCurrentMetaPass %d %d %d\n", index, opcode, value);
-		return 0;
-	case audioMasterGetVendorString:
-		cbPrintf(plugin, "audioMasterGetVendorString %d %d %d\n", index, opcode, value);
-		 strcpy((char *)ptr, "Seib");
-		return 1L;
-	case audioMasterGetProductString:
-		cbPrintf(plugin, "audioMasterGetProductString %d %d %d\n", index, opcode, value);
-		strcpy((char *)ptr, "Default CVSTHost");
-		return 1L;
-	case audioMasterGetVendorVersion:
-		cbPrintf(plugin, "audioMasterGetVendorVersion %d %d %d\n", index, opcode, value);
-		return 1L;
-	case audioMasterVendorSpecific:
-		cbPrintf(plugin, "audioMasterVendorSpecific %d %d %d\n", index, opcode, value);
-		return 0;
-	case audioMasterCanDo:
-		cbPrintf(plugin, "audioMasterCanDo %d %d %d\n", index, opcode, value);
-		return host->canDo((const char*)ptr);
-	case audioMasterGetLanguage:
-		cbPrintf(plugin, "audioMasterGetLanguage %d %d %d\n", index, opcode, value);
-		return 0;
-	case audioMasterGetDirectory:
-		if (plugin == NULL) {
-			cbPrintf(plugin, "audioMasterGetDirectory plugin == NULL %d %d %d\n", index, opcode, value);
-			return 0;
-		}
-		cbPrintf(plugin, "audioMasterGetDirectory %d %d %d\n", index, opcode, value);
-		return (VstIntPtr)plugin->getDir();
-	case audioMasterUpdateDisplay:
-		if (plugin == NULL) {
-			cbPrintf(plugin, "audioMasterUpdateDisplay plugin == NULL %d %d %d\n", index, opcode, value);
-			return 0;
-		}
-		cbPrintf(plugin, "audioMasterUpdateDisplay %d %d %d\n", index, opcode, value);
-
-		return (VstIntPtr)plugin->updateWindow();
-#ifdef VST_2_1_EXTENSIONS
-	case audioMasterBeginEdit:
-		cbPrintf(plugin, "audioMasterBeginEdit %d %d %d\n", index, opcode, value);
-		return 1;
-	case audioMasterEndEdit:
-		cbPrintf(plugin, "audioMasterEndEdit %d %d %d\n", index, opcode, value);
-		return 1;
-	case audioMasterOpenFileSelector:
-		cbPrintf(plugin, "audioMasterOpenFileSelector %d %d %d\n", index, opcode, value);
-		return 0;
-#endif
-#ifdef VST_2_2_EXTENSIONS
-	case audioMasterCloseFileSelector:
-		cbPrintf(plugin, "audioMasterCloseFileSelector %d %d %d\n", index, opcode, value);
-		return 0;
-#endif
-	case audioMasterWantMidi:
-		cbPrintf(plugin, "depr audioMasterWantMidi %d %d %d\n", index, opcode, value);
-		return 0;
-	default:
-		cbPrintf(plugin, "unhandled %d %d %d\n", index, opcode, value);
-
-	}
-	return 0L;
-}
-VstIntPtr VSTCALLBACK audioMaster1(AEffect* effect, VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt) {
-	vsthost* host = g_hostslots[0].g_instance;
-	dbgassert(host);
-	return audioMasterHost(host, effect, opcode, index, value, ptr, opt);
-}
-VstIntPtr VSTCALLBACK audioMaster2(AEffect* effect, VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt) {
-	vsthost* host = g_hostslots[1].g_instance;
-	dbgassert(host);
-	return audioMasterHost(host, effect, opcode, index, value, ptr, opt);
-}
-VstIntPtr VSTCALLBACK audioMaster3(AEffect* effect, VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt) {
-	vsthost* host = g_hostslots[2].g_instance;
-	dbgassert(host);
-	return audioMasterHost(host, effect, opcode, index, value, ptr, opt);
-}
-VstIntPtr VSTCALLBACK audioMaster4(AEffect* effect, VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt) {
-	vsthost* host = g_hostslots[3].g_instance;
-	dbgassert(host);
-	return audioMasterHost(host, effect, opcode, index, value, ptr, opt);
-}
-
-static const double fSmpteDiv[] =
-{
-	24.f,
-	25.f,
-	24.f,
-	30.f,
-	29.97f,
-	30.f
-};
-bool setFlag(int& _out, int flag, bool state) {
-	bool curState = _out&flag;
-	if (state) {
-		_out |= flag;
-	} else {
-		_out &= ~flag;
-	}
-	return curState != state;
-}
-#ifdef _WIN32
-String getModuleName(HMODULE);
-#endif
-class vsthost::ModuleManager {
-public:
-	ModuleManager() {
-
-	}
-
-	void releaseModule(void* module) {
-#ifdef _WIN32
-		String moduleName = getModuleName((HMODULE)module);
-		my_printf("Unload %s\n", StringAsCStr(moduleName));
-		FreeLibrary((HMODULE)module);
-#endif
-#if defined(__linux__) || defined(__APPLE__)
-		dlclose(module);
-#endif
-	}
-};
 struct vsthost::track_block_processing_task_t {
 	const DAW::processing_track_node_t* trackNode;
 	AudioBlock* ptrExternalInputs;
@@ -375,6 +154,11 @@ public:
 	}
 };
 
+
+/**
+ * VST Host implementation internals
+ */
+
 class vsthost::vsthost_impl {
 public:
 	std::vector<std::shared_ptr<resampler_t>> resamplers;
@@ -389,6 +173,9 @@ public:
     std::mutex mtx;
     uint32_t threadsRunningCount = 0;
 	uint32_t threadCount = 4;
+	uint32_t playThreadId = 0;
+
+	VstInt32 vstShellCurrentUniqueId = 0;
 	vsthost_impl() {
 		uint32_t u = 0;
 		for (TrackBlockProcessTask& task : tasks) {
@@ -436,16 +223,269 @@ public:
 		for (WorkerThread& thread : threads) {
 			thread.startThread();
 			countStarted++;
+			if (countStarted == this->threadCount) {
+				break;
+			}
 		}
 		threadsRunningCount = countStarted;
 	}
 	void stopThreads() {
+		uint32_t countStopped = 0;
 		for (WorkerThread& thread : threads) {
+			if (countStopped == this->threadsRunningCount) {
+				break;
+			}
 			thread.stopThread();
+			countStopped++;
 		}
+		countStopped = 0;
 		for (WorkerThread& thread : threads) {
+			if (countStopped == this->threadsRunningCount) {
+				break;
+			}
 			thread.joinThread();
+			countStopped++;
 		}
+	}
+};
+
+/**
+ * VST Host AudioMasterCallback
+ */
+
+
+#define NUM_HOST_CB_SLOTS 4
+namespace
+{
+struct vst_internal_hostslot {
+	vsthost* g_instance = nullptr;
+	vsthost::vsthost_impl* g_instanceImpl = nullptr;
+};
+vst_internal_hostslot g_hostslots[4];
+}
+
+VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* effect, VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt) {
+	dbgassert(host);
+	if (!host)
+		return 0;
+	vstplugin* plugin = host->getPlugin(effect);
+
+	switch (opcode)
+	{
+	case audioMasterAutomate:
+		cbPrintf(plugin, "audioMasterAutomate %d %d %d\n", index, opcode, value);
+		if (plugin) {
+			auto* effParam = plugin->getEffectParam(index);
+			if (!effParam) {
+				log_printf("%s audioMasterAutomate unknown param index %d\n", StringAsCStr(plugin->getName()), index);
+			} else {
+				plugin->deactivateAutomation(effParam->idx);
+				plugin->recvPluginEditParamUpdate(effParam->internalIdx);
+			}
+		}
+		return 1;
+	case audioMasterVersion:
+		cbPrintf(plugin, "audioMasterVersion %d %d %d\n", index, opcode, value);
+		return 2400L; //VST 2.4
+	case audioMasterCurrentId:
+		cbPrintf(plugin, "audioMasterCurrentId %d %d %d\n", index, opcode, value);
+		//return OnGetCurrentUniqueId(nEffect);
+		if (plugin) {
+			return (VstIntPtr)plugin->getLocalCurrentUniqueId();
+		}
+		return impl->vstShellCurrentUniqueId;
+	case audioMasterIdle:
+//		cbPrintf(plugin, "audioMasterIdle %d %d %d\n", index, opcode, value);
+		//return OnIdle(nEffect);
+		return 0L;
+	case audioMasterGetTime:
+		//{
+		//	int32_t playThreadId = host->getPlayThreadId();
+		//	int32_t localThreadId = std::this_thread::get_id().get();
+		//	if (localThreadId == playThreadId) {
+		//		return (VstIntPtr)plugin->getLocalTimeInfoPtr();
+		//	}
+		//}
+		//cbPrintf(plugin, "audioMasterGetTime %d %d %d\n", index, opcode, value);
+		if (plugin) {
+			return (VstIntPtr)plugin->getLocalTimeInfoPtr();
+		}
+		return (VstIntPtr)host->getTimeInfo();
+		
+	case audioMasterProcessEvents:
+//		cbPrintf(plugin, "audioMasterProcessEvents %d %d %d\n", index, opcode, value);
+		return 0;
+	case audioMasterIOChanged:
+		cbPrintf(plugin, "audioMasterIOChanged %d %d %d\n", index, opcode, value);
+		return 0;
+	case audioMasterSizeWindow:
+		cbPrintf(plugin, "audioMasterSizeWindow %d %d %d\n", index, opcode, value);
+		if (plugin) {
+			plugin->updateWindowSize();
+		}
+		return 1;
+	case audioMasterGetSampleRate:
+		cbPrintf(plugin, "audioMasterGetSampleRate %d %d %d\n", index, opcode, value);
+		if (plugin) {
+			return (long)plugin->format.sampleRate;
+		}
+		if (host) {
+			return (long)host->sampleFormat.sampleRate;
+		}
+		return 0;
+	case audioMasterGetBlockSize:
+		cbPrintf(plugin, "audioMasterGetBlockSize %d %d %d\n", index, opcode, value);
+		if (plugin) {
+			return (long)plugin->format.blockSize;
+		}
+		if (host) {
+			return (long)host->sampleFormat.blockSize;
+		}
+		return 0;
+	case audioMasterGetInputLatency:
+		cbPrintf(plugin, "audioMasterGetInputLatency %d %d %d\n", index, opcode, value);
+		return 0;
+	case audioMasterGetOutputLatency:
+		cbPrintf(plugin, "audioMasterGetOutputLatency %d %d %d\n", index, opcode, value);
+		return 0;
+	case audioMasterGetCurrentProcessLevel:
+//		cbPrintf(plugin, "audioMasterGetCurrentProcessLevel %d %d %d\n", index, opcode, value);
+		return VstProcessLevels::kVstProcessLevelRealtime;
+	case audioMasterGetAutomationState:
+		cbPrintf(plugin, "audioMasterGetAutomationState %d %d %d\n", index, opcode, value);
+		return kVstAutomationReadWrite;
+	case audioMasterOfflineStart:
+		cbPrintf(plugin, "audioMasterOfflineStart %d %d %d\n", index, opcode, value);
+		return 0;
+	case audioMasterOfflineRead:
+		cbPrintf(plugin, "audioMasterOfflineRead %d %d %d\n", index, opcode, value);
+		return 0;
+	case audioMasterOfflineWrite:
+		cbPrintf(plugin, "audioMasterOfflineWrite %d %d %d\n", index, opcode, value);
+		return 0;
+	case audioMasterOfflineGetCurrentPass:
+		cbPrintf(plugin, "audioMasterOfflineGetCurrentPass %d %d %d\n", index, opcode, value);
+		return 0;
+	case audioMasterOfflineGetCurrentMetaPass:
+		cbPrintf(plugin, "audioMasterOfflineGetCurrentMetaPass %d %d %d\n", index, opcode, value);
+		return 0;
+	case audioMasterGetVendorString:
+		cbPrintf(plugin, "audioMasterGetVendorString %d %d %d\n", index, opcode, value);
+		 strcpy((char *)ptr, "NFMH");
+		return 1L;
+	case audioMasterGetProductString:
+		cbPrintf(plugin, "audioMasterGetProductString %d %d %d\n", index, opcode, value);
+		strcpy((char *)ptr, "DAW");
+		return 1L;
+	case audioMasterGetVendorVersion:
+		cbPrintf(plugin, "audioMasterGetVendorVersion %d %d %d\n", index, opcode, value);
+		return 1L;
+	case audioMasterVendorSpecific:
+		cbPrintf(plugin, "audioMasterVendorSpecific %d %d %d\n", index, opcode, value);
+		return 0;
+	case audioMasterCanDo:
+		cbPrintf(plugin, "audioMasterCanDo %d %d %d\n", index, opcode, value);
+		return host->canDo((const char*)ptr);
+	case audioMasterGetLanguage:
+		cbPrintf(plugin, "audioMasterGetLanguage %d %d %d\n", index, opcode, value);
+		return 0;
+	case audioMasterGetDirectory:
+		if (plugin == NULL) {
+			cbPrintf(plugin, "audioMasterGetDirectory plugin == NULL %d %d %d\n", index, opcode, value);
+			return 0;
+		}
+		cbPrintf(plugin, "audioMasterGetDirectory %d %d %d\n", index, opcode, value);
+		return (VstIntPtr)plugin->getDir();
+	case audioMasterUpdateDisplay:
+		if (plugin == NULL) {
+			cbPrintf(plugin, "audioMasterUpdateDisplay plugin == NULL %d %d %d\n", index, opcode, value);
+			return 0;
+		}
+		cbPrintf(plugin, "audioMasterUpdateDisplay %d %d %d\n", index, opcode, value);
+
+		return (VstIntPtr)plugin->updateWindow();
+#ifdef VST_2_1_EXTENSIONS
+	case audioMasterBeginEdit:
+		cbPrintf(plugin, "audioMasterBeginEdit %d %d %d\n", index, opcode, value);
+		return 1;
+	case audioMasterEndEdit:
+		cbPrintf(plugin, "audioMasterEndEdit %d %d %d\n", index, opcode, value);
+		return 1;
+	case audioMasterOpenFileSelector:
+		cbPrintf(plugin, "audioMasterOpenFileSelector %d %d %d\n", index, opcode, value);
+		return 0;
+#endif
+#ifdef VST_2_2_EXTENSIONS
+	case audioMasterCloseFileSelector:
+		cbPrintf(plugin, "audioMasterCloseFileSelector %d %d %d\n", index, opcode, value);
+		return 0;
+#endif
+	case audioMasterWantMidi:
+		cbPrintf(plugin, "depr audioMasterWantMidi %d %d %d\n", index, opcode, value);
+		return 0;
+	default:
+		cbPrintf(plugin, "unhandled %d %d %d\n", index, opcode, value);
+
+	}
+	return 0L;
+}
+VstIntPtr VSTCALLBACK audioMaster1(AEffect* effect, VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt) {
+	dbgassert(g_hostslots[0].g_instance);
+	dbgassert(g_hostslots[0].g_instanceImpl);
+	return audioMasterHost(g_hostslots[0].g_instance, g_hostslots[0].g_instanceImpl, effect, opcode, index, value, ptr, opt);
+}
+VstIntPtr VSTCALLBACK audioMaster2(AEffect* effect, VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt) {
+	dbgassert(g_hostslots[1].g_instance);
+	dbgassert(g_hostslots[1].g_instanceImpl);
+	return audioMasterHost(g_hostslots[1].g_instance, g_hostslots[1].g_instanceImpl, effect, opcode, index, value, ptr, opt);
+}
+VstIntPtr VSTCALLBACK audioMaster3(AEffect* effect, VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt) {
+	dbgassert(g_hostslots[2].g_instance);
+	dbgassert(g_hostslots[2].g_instanceImpl);
+	return audioMasterHost(g_hostslots[2].g_instance, g_hostslots[2].g_instanceImpl, effect, opcode, index, value, ptr, opt);
+}
+VstIntPtr VSTCALLBACK audioMaster4(AEffect* effect, VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt) {
+	dbgassert(g_hostslots[3].g_instance);
+	dbgassert(g_hostslots[3].g_instanceImpl);
+	return audioMasterHost(g_hostslots[3].g_instance, g_hostslots[3].g_instanceImpl, effect, opcode, index, value, ptr, opt);
+}
+
+static const double fSmpteDiv[] =
+{
+	24.f,
+	25.f,
+	24.f,
+	30.f,
+	29.97f,
+	30.f
+};
+bool setFlag(int& _out, int flag, bool state) {
+	bool curState = _out&flag;
+	if (state) {
+		_out |= flag;
+	} else {
+		_out &= ~flag;
+	}
+	return curState != state;
+}
+#ifdef _WIN32
+String getModuleName(HMODULE);
+#endif
+class vsthost::ModuleManager {
+public:
+	ModuleManager() {
+
+	}
+
+	void releaseModule(void* module) {
+#ifdef _WIN32
+		String moduleName = getModuleName((HMODULE)module);
+		my_printf("Unload %s\n", StringAsCStr(moduleName));
+		FreeLibrary((HMODULE)module);
+#endif
+#if defined(__linux__) || defined(__APPLE__)
+		dlclose(module);
+#endif
 	}
 };
 void vsthost::getBlockThreadStats(std::vector<thread_stats_process_timings_t>& stats) {
@@ -892,6 +932,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 	std::shared_ptr<resampler_t> resamplerOutput = impl->getResampler(sampleFormat, sampleFormatExternal, 0);
 	std::shared_ptr<resampler_t> resamplerInput = impl->getResampler(sampleFormatExternal, sampleFormat, 1);
 
+	updateTime(timeinfo, sample, posDouble, state);
 	processMidiRealtimeInput(ctrl, posDouble, state);
 
 	int queueSizeInput = 0;
@@ -1153,6 +1194,15 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
 	if (state == playback_state::status_play) {
 		//TODO: latency compensate automation
 		updateTime(tmp.timeinfo, sampleLatencyCompensated, tickLatencyCompensated, state);
+//		trackImpl->
+		for (effectbase* plugin : trackImpl->effects) {
+			if (plugin->pluginType == PLUGIN_TYPE_VST) {
+				auto* ptr = dynamic_cast<vstplugin*>(plugin)->getLocalTimeInfoPtr();
+				if (ptr) {
+					*ptr = tmp.timeinfo;
+				}
+			}
+		}
 		std::vector<automatable_t*> targets;
 		trackImpl->getAutomatableTrackTargets(targets);
 		for (automatable_t* at : targets) {
@@ -1434,6 +1484,7 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const DAW::processing_
 		audiostageid_i32 stageId;
 		uint32_t threadIdx;
 	};
+	impl->playThreadId = std::this_thread::get_id().get();
 	const bool useThreading = this->multithreadedProcessing && impl->threadsRunningCount > 0 && impl->threadCount > 1;
 	if (!useThreading) {
 		for (auto itAudioStage = processingGraph->nodesFlatOrdered.begin(); itAudioStage != processingGraph->nodesFlatOrdered.end(); itAudioStage++) {
@@ -1749,6 +1800,7 @@ bool vsthost::assignMasterCallback(vsthost* host)
 	for (int i = 0; i < NUM_HOST_CB_SLOTS; i++) {
 		if (g_hostslots[i].g_instance == nullptr) {
 			g_hostslots[i].g_instance = host;
+			g_hostslots[i].g_instanceImpl = host->impl;
 			host->hostSlot = i;
 			if (i == 0) {
 				host->masterCallBackSlot = audioMaster1;
@@ -2011,64 +2063,6 @@ bool vsthost::insertNewPlugin(audio_stage_t* trp, effectbase* plugin, int32_t ds
 	onTrackLayoutChange();
 	return true;
 }
-#ifdef _WIN32
-
-int32_t loadLib(String filepath, VSTPluginMain_t** out_fn, HMODULE* out_hmodule) {
-	if (!FileExists(filepath)) {
-		return -2;
-	}
-	HMODULE hmodule = LoadLibrary(StringAsCStr(filepath));
-	if (!hmodule) {
-		return -3;
-	}
-
-	VSTPluginMain_t *fn = (VSTPluginMain_t*) GetProcAddress(hmodule, "VSTPluginMain");
-	if (fn == NULL)
-	{
-		fn = (VSTPluginMain_t*) GetProcAddress(hmodule, "main");
-	}
-	if (fn == NULL)
-	{
-		FreeLibrary(hmodule);
-		return -4;
-	}
-	*out_hmodule = hmodule;
-	*out_fn = fn;
-
-	return 0;
-}
-#endif
-#if defined(__APPLE__)
-
-int32_t loadLib(String filepath, VSTPluginMain_t** out_fn, void** out_hmodule);
-
-#endif
-#if defined(__linux__)
-int32_t loadLib(String filepath, VSTPluginMain_t** out_fn, void** out_hmodule) {
-	if (!FileExists(filepath)) {
-		return -2;
-	}
-	void* module = dlopen(StringAsCStr(filepath), RTLD_NOW);
-	if (!module) {
-		return -3;
-	}
-
-	VSTPluginMain_t *fn = (VSTPluginMain_t*) dlsym(module, "VSTPluginMain");
-	if (fn == NULL)
-	{
-		fn = (VSTPluginMain_t*) dlsym(module, "main");
-	}
-	if (fn == NULL)
-	{
-		dlclose(module);
-		return -4;
-	}
-	*out_hmodule = module;
-	*out_fn = fn;
-
-	return 0;
-}
-#endif
 int32_t vsthost::getNextGlobalModuleId(int32_t globalId) {
 	if (globalId <= 0) {
 		return ++pluginId;
@@ -2132,31 +2126,117 @@ int32_t vsthost::getNextSampleId(int32_t id) {
 	}
 	return id;
 }
+int32_t vsthost::getPlayThreadId() {
+	return impl->playThreadId;
+}
 
-vstpluginloadres vsthost::loadPlugin(String filepath, int32_t globalId) {
+HMODULE safeLoadLib(const char* szLibName);
+int32_t loadLib(String filepath, VSTPluginMain_t** out_fn, HMODULE* out_hmodule) {
+	if (!FileExists(filepath)) {
+		return -2;
+	}
+	HMODULE hmodule = safeLoadLib(StringAsCStr(filepath));
+	if (!hmodule) {
+		return -3;
+	}
+
+	VSTPluginMain_t* fn = (VSTPluginMain_t*)GetProcAddress(hmodule, "VSTPluginMain");
+	if (fn == NULL)
+	{
+		fn = (VSTPluginMain_t*)GetProcAddress(hmodule, "main");
+	}
+	if (fn == NULL)
+	{
+		FreeLibrary(hmodule);
+		return -4;
+	}
+	*out_hmodule = hmodule;
+	*out_fn = fn;
+
+	return 0;
+}
+#if defined(__APPLE__)
+
+int32_t loadLib(String filepath, VSTPluginMain_t** out_fn, void** out_hmodule);
+
+#endif
+#if defined(__linux__)
+int32_t loadLib(String filepath, VSTPluginMain_t** out_fn, void** out_hmodule) {
+	if (!FileExists(filepath)) {
+		return -2;
+	}
+	void* module = dlopen(StringAsCStr(filepath), RTLD_NOW);
+	if (!module) {
+		return -3;
+	}
+
+	VSTPluginMain_t* fn = (VSTPluginMain_t*)dlsym(module, "VSTPluginMain");
+	if (fn == NULL)
+	{
+		fn = (VSTPluginMain_t*)dlsym(module, "main");
+	}
+	if (fn == NULL)
+	{
+		dlclose(module);
+		return -4;
+	}
+	*out_hmodule = module;
+	*out_fn = fn;
+
+	return 0;
+}
+#endif
+
+vstpluginloadres vsthost::loadPlugin(String filepath, int32_t uId, int32_t globalId) {
 	dbgassert(masterCallBackSlot);
 	String path, name, nameWithoutExt;
 	SplitPath(filepath, &path, &nameWithoutExt, NULL, &name);
 	VSTPluginMain_t* fn = NULL;
 	void* moduleHandle = NULL;
 	AEffect* aeffect = NULL;
+
+
+
+	this->impl->vstShellCurrentUniqueId = static_cast<VstInt32>(0);
 #ifdef _WIN32
+
 	HMODULE hmodule = NULL;
-	int32_t ret = loadLib(filepath, &fn, &hmodule);
-	if (ret != 0) {
-		return vstpluginloadres(ret, NULL);
+	int32_t ret = 0;
+	{
+		ret = loadLib(filepath, &fn, &hmodule);
+		if (ret != 0) {
+			return vstpluginloadres(ret, NULL);
+		}
+		if (uId != 0) {
+			this->impl->vstShellCurrentUniqueId = static_cast<VstInt32>(uId);
+		}
+		aeffect = fn(masterCallBackSlot);
+		if (uId != 0) {
+			this->impl->vstShellCurrentUniqueId = static_cast<VstInt32>(0);
+		}
+		
+		if (uId == 0) {
+			// this branch is only reached by the vst scanner application when passing uId == 0
+			VstIntPtr vstIntPtr = aeffect->dispatcher(aeffect, effGetPlugCategory, 0, 0, 0, 0);
+			VstPlugCategory pluginCategory = static_cast<VstPlugCategory>(vstIntPtr);
+			if (pluginCategory == VstPlugCategory::kPlugCategShell) {
+				return vstpluginloadres(1, nullptr, new handles_t(nullptr, aeffect, moduleHandle), filepath, nameWithoutExt);
+			}
+		}
+		if (!aeffect) {
+			FreeLibrary(hmodule);
+			return vstpluginloadres(-5, NULL);
+		}
+		if (aeffect->magic != kEffectMagic) {
+			FreeLibrary(hmodule);
+			return vstpluginloadres(-6, NULL);
+		}
+		moduleHandle = hmodule;
 	}
-	aeffect = fn(masterCallBackSlot);
-	if (!aeffect) {
-		FreeLibrary(hmodule);
-		return vstpluginloadres(-5, NULL);
-	}
-	if (aeffect->magic != kEffectMagic) {
-		FreeLibrary(hmodule);
-		return vstpluginloadres(-6, NULL);
-	}
-	moduleHandle = hmodule;
-#endif
+
+#endif //_WIN32
+
+
 
 #if defined(__linux__) || defined(__APPLE__)
 	void* hmodule = NULL;
@@ -2181,7 +2261,8 @@ vstpluginloadres vsthost::loadPlugin(String filepath, int32_t globalId) {
 	vstplugin* plugin = new vstplugin(new handles_t(nullptr, aeffect, moduleHandle), globalId, path, nameWithoutExt, -1);
 	pluginInstancesVST2.push_back(plugin);
 	pluginInstances.push_back(plugin);
+
 	plugin->load(this);
-	dbgassert(plugin->handle&&plugin->handle->aeffect);
+	dbgassert(plugin->handle && plugin->handle->aeffect);
 	return vstpluginloadres(0, plugin);
 };

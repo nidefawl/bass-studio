@@ -47,13 +47,32 @@ inline String APPLE_getExecutablePath() {
 }
 #endif
 
-#define LOG(fmtString,...) printf(fmtString "\n", ##__VA_ARGS__); fflush(stdout)
+//#define LOG_SERVER(fmtString,...) printf("SRV:" fmtString "\n", ##__VA_ARGS__); fflush(stdout)
+//#define LOG(fmtString,...) printf(fmtString "\n", ##__VA_ARGS__); fflush(stdout)
+static const char* szLogPrefixes[2] = {
+	"SRV: ",
+	"CLI: ",
+};
+static int logPrefixIdx = 0;
+#define LOG_MSG(prefix, fmtString,...) printf("%s" fmtString "\n", prefix, ##__VA_ARGS__);
+#define LOG(fmtString,...) LOG_MSG(szLogPrefixes[logPrefixIdx], fmtString, ##__VA_ARGS__); fflush(stdout)
 
-#define CMD_PLUGIN_LOAD_ERROR 3
-#define CMD_PLUGIN_LOAD_SUCCESS 2
-#define CMD_PLUGIN_LOAD_REQUEST 1
-#define CMD_PLUGIN_THREAD_QUIT 4
-#define NUM_BUFS 2048
+#define E_WRITE_OK 0
+#define E_WRITE_ERR_PIPE 1
+#define E_WRITE_ERR_BUF_SIZE 2
+#define E_READ_OK 0
+#define E_READ_ERR_PIPE 1
+#define E_READ_ERR_BUF_SIZE 2
+
+
+#define CMD_PLUGIN_LOAD_ERROR 1
+#define CMD_PLUGIN_LOAD_REQUEST 2
+#define CMD_PLUGIN_THREAD_QUIT 3
+#define CMD_PLUGIN_LOAD_SUCCESS_PLUGIN 4
+#define CMD_PLUGIN_LOAD_SUCCESS_PLUGINSHELL_SHELL 5
+#define CMD_PLUGIN_LOAD_SUCCESS_PLUGINSHELL_PLUGIN 6
+#define CMD_PLUGIN_END_SUCCESS 7
+#define NUM_BUFS (16*1024)
 #define SCAN_IPC_PIPE_NAME "DAW1pipc"
 void deleteApp() {
 
@@ -66,50 +85,108 @@ std::shared_ptr<AppCtrl> makeApp() {
 struct pipe_msg_hdr {
 	uint32_t cmd;
 };
-struct vst_metadata {
-	uint32_t id;
-	uint32_t version;
-	uint32_t vstVersion;
-	uint32_t pluginCategory;
-	bool isSynth;
-	char szPath[1024];
-	char szName[256];
-	char szVendorName[256];
+enum vst_metadata_flags_e : int32_t {
+	VST_FLAGS_NONE = 0,
+	VST_FLAGS_LOADED_PLUGIN = 1,
+	VST_FLAGS_IS_SHELL_PLUGIN = 2
 };
-char buf[NUM_BUFS];
-bool sendData(ipc_connection* conn, pipe_msg_hdr* hdr, vst_metadata* data) {
-    memset(buf, 0, NUM_BUFS);
-    char* bufPos = buf;
-    memcpy(bufPos, hdr, sizeof(pipe_msg_hdr));
-    bufPos += sizeof(pipe_msg_hdr);
-    memcpy(bufPos, data, sizeof(vst_metadata));
-    bufPos += sizeof(vst_metadata);
-    int len = conn->sendData(buf, NUM_BUFS);
-    if (len == NUM_BUFS) {
-    	return true;
-    }
+struct response_type_t  {
+	char szPath[1024]{0};
+	char szName[256]{0};
+};
+struct request_type_vst24_t : response_type_t  {
+	uint32_t uniqueID{0};
+};
+struct response_type_vst24_t : response_type_t  {
+	vst_metadata_flags_e flags{VST_FLAGS_NONE};
+	uint32_t uniqueID{0};
+	uint32_t version{0};
+	uint32_t vstVersion{0};
+	uint32_t pluginCategory{0};
+	bool isSynth{0};
+	char szVendorName[256]{0};
+	char szShellPluginName[256]{0};
+};
+struct response_type_vst24_plugin_t : response_type_vst24_t {
+};
+struct response_type_vst24_shell_plugin_t : response_type_t {
+	int numPlugins;
+};
+struct recvbuf_t {
+	char buf[NUM_BUFS];
+	char* pos = nullptr;
+	char* end = nullptr;
+};
+template<typename T>
+bool writeToBuffer(recvbuf_t& buf, T& hdr) {
+	dbgassert(buf.pos);
+	if (static_cast<size_t>(buf.pos-buf.buf)+sizeof(hdr) <= NUM_BUFS) {
+	    memcpy(buf.pos, &hdr, sizeof(T));
+	    buf.pos += sizeof(hdr);
+	    return true;
+	}
     return false;
 }
-bool recvData(ipc_connection* conn, pipe_msg_hdr* hdr, vst_metadata* data) {
-    memset(buf, 0, NUM_BUFS);
-    int len = conn->readData(buf, NUM_BUFS);
-    if (len == NUM_BUFS) {
-//    	printf("Read %d bytes, expected %d\n", (int32_t)bytesSent, (int32_t)BUF_SIZE);
-		char* bufPos = buf;
-		memcpy(hdr, bufPos, sizeof(pipe_msg_hdr));
-		bufPos += sizeof(pipe_msg_hdr);
-		if (data) {
-			memcpy(data, bufPos, sizeof(vst_metadata));
-			bufPos += sizeof(vst_metadata);
-		}
-    	return true;
-    }
+template<typename T>
+bool readFromBuffer(recvbuf_t& buf, T& hdr) {
+	dbgassert(nullptr != buf.end);
+	dbgassert(buf.pos < buf.end);
+	if (buf.pos+sizeof(hdr) <= buf.end) {
+	    memcpy(&hdr, buf.pos, sizeof(T));
+	    buf.pos += sizeof(hdr);
+	    return true;
+	}
     return false;
+}
+template<typename IPC>
+bool IPCrecvBuffer(IPC& conn, recvbuf_t& bufferRecv) {
+	bufferRecv.pos = bufferRecv.buf;
+	auto lenRcvd = conn.readData(bufferRecv.pos, NUM_BUFS);
+	bufferRecv.end = bufferRecv.pos+lenRcvd;
+	return NUM_BUFS == lenRcvd;
+}
+template<typename IPC>
+bool IPCsendBuffer(IPC& conn, recvbuf_t& bufferRecv) {
+	bufferRecv.pos = bufferRecv.buf;
+	auto lenRcvd = conn.sendData(bufferRecv.pos, NUM_BUFS);
+	bufferRecv.end = bufferRecv.pos+lenRcvd;
+	return NUM_BUFS == lenRcvd;
+}
+/** uses function scope static buffer: NOT THREADSAFE */
+template<typename IPC, typename T>
+int readFromIPC(IPC& ipcConnection, T& hdr) {
+	static recvbuf_t recvBuf;
+	recvBuf.pos = recvBuf.buf; recvBuf.end = nullptr;
+	if (!IPCrecvBuffer(ipcConnection, recvBuf)) {
+		LOG("IPCrecvBuffer failed");
+	    return E_READ_ERR_PIPE;
+	}
+    if (!readFromBuffer(recvBuf, hdr)) {
+
+    	return E_READ_ERR_BUF_SIZE;
+    }
+    return E_READ_OK;
+}
+/** uses function scope static buffer: NOT THREADSAFE */
+template<typename IPC, typename T>
+int writeToIPC(IPC& ipcConnection, T& hdr) {
+	static recvbuf_t sendBuffer;
+	sendBuffer.pos = sendBuffer.buf; sendBuffer.end = nullptr;
+	writeToBuffer(sendBuffer, hdr);
+	if (!writeToBuffer(sendBuffer, hdr)) {
+		LOG("writeToBuffer failed");
+	    return E_WRITE_ERR_BUF_SIZE;
+	}
+	if (!IPCsendBuffer(ipcConnection, sendBuffer)) {
+		LOG("IPCsendBuffer failed");
+	    return E_WRITE_ERR_PIPE;
+	}
+	return E_WRITE_OK;
 }
 
-void getPluginData(vstplugin* plugin, vst_metadata* _out) {
+void getPluginData(vstplugin* plugin, response_type_vst24_t* _out) {
 	AEffect* aeffect = plugin->handle->aeffect;
-	_out->id = aeffect->uniqueID;
+	_out->uniqueID = aeffect->uniqueID;
 	_out->version = aeffect->version;
 	_out->vstVersion = plugin->vstVersion;
 	_out->pluginCategory = plugin->pluginCategory;
@@ -139,6 +216,17 @@ BOOL WINAPI ConsoleHandler(DWORD dwType)
 }
 #endif
 
+bool vstplugin__getNameString(handles_t* handles, char* szBuf) {
+	szBuf[0] = 0;
+	if (handles->aeffect->dispatcher(handles->aeffect, effGetProductString, 0, 0, (void*)szBuf, 0) && szBuf[0] != 0) {
+		return true;
+	}
+	szBuf[0] = 0;
+	if (handles->aeffect->dispatcher(handles->aeffect, effGetEffectName, 0, 0, (void*)szBuf, 0) && szBuf[0] != 0) {
+		return true;
+	}
+	return false;
+}
 int main(int argc, char* argv[]) {
 	LOG("ARGC %d", argc);
 	for (int i = 0; i < argc; i++) {
@@ -164,6 +252,7 @@ int main(int argc, char* argv[]) {
 		bool dryRun = false;
 		String updatePattern = "";
 		bool fullRescan = false;
+		bool checkDiskTimestamp = true;
 	    for (int i = 2; i < argc; i++) {
 	    	if (argv[i] && strlen(argv[i]) > 2 && argv[i][0] == '-') {
 	    		if (!strcmp(argv[i], "-wait")) {
@@ -174,6 +263,7 @@ int main(int argc, char* argv[]) {
 	    		}
 	    		if (!strcmp(argv[i], "-update") && i+1 < argc) {
 	    			updatePattern = argv[i+1];
+	    			checkDiskTimestamp = false;
 	    		}
 	    		if (!strcmp(argv[i], "-rescan")) {
 	    			fullRescan = true;
@@ -215,23 +305,22 @@ int main(int argc, char* argv[]) {
 		    }
 #endif
 
+			recvbuf_t bufferRecv;
 			ipc_server server;
 			int ipc_status = server.server_open(SCAN_IPC_PIPE_NAME);
 			if (ipc_status) {
 				LOG("Failed opening ipc_server: %d", ipc_status);
 				return 1;
 			}
-			pipe_msg_hdr hdr;
-			vst_metadata data;
 			std::unique_ptr<ProcessThread> thread;
 			int a = 0;
 			bool pipeConnected = false;
 //			db.exec("delete from plugins where 1");
-			SQLite::Statement   queryPlugin(db, "SELECT id, moddate, forcedisable, requestState FROM plugins where path == ?");
+			SQLite::Statement   queryPlugin(db, "SELECT id, moddate, forcedisable, requestState, uid, shellplugin FROM plugins where path == ?");
 			SQLite::Statement   queryInsertPlugin(db, "INSERT INTO "
-					"plugins(isSynth, uid, version, vstVersion, category, moddate, state, path, name, vendorName, requestState, forcedisable) "
-					"VALUES(?,?,?,?,?,?,?,?,?,?,?,?)");
-			SQLite::Statement   queryDelete(db, "DELETE from plugins where id = ?");
+					"plugins(isSynth, uid, version, vstVersion, category, moddate, state, path, name, vendorName, requestState, forcedisable, shellplugin) "
+					"VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)");
+			SQLite::Statement   queryDelete(db, "DELETE from plugins where id == ? or path == ?");
 			if (!dryRun) {
 				SQLite::Statement   queryAll(db, "SELECT id, path from plugins");
 				while (queryAll.executeStep())
@@ -247,6 +336,7 @@ int main(int argc, char* argv[]) {
 					}
 					queryDelete.reset();
 					queryDelete.bind(1, queryAll.getColumn(0).getInt());
+					queryDelete.bind(2, path);
 					queryDelete.exec();
 				}
 			}
@@ -262,6 +352,8 @@ int main(int argc, char* argv[]) {
 				FileTimeGetter filetime(file.path);
 				int64_t timeDisk = filetime.getWriteTimeI64();
 				int id = -1;
+				int32_t uid = -1;
+				bool isShellPlugin = false;
 				bool needScan = true;
 				bool forcedisable = false;
 				queryPlugin.reset();
@@ -269,21 +361,30 @@ int main(int argc, char* argv[]) {
 				if (queryPlugin.executeStep())
 				{
 					id = queryPlugin.getColumn(0).getInt();
-					forcedisable = queryPlugin.getColumn(2).getInt();
-					int64_t timeDB = queryPlugin.getColumn(1).getInt64();
-//					LOG("id %d timeDisk %016llX %016llX", id, timeDisk, timeDB);
-					if (timeDisk == timeDB) {
+					uid = queryPlugin.getColumn(4).getInt();
+					isShellPlugin = queryPlugin.getColumn(5).getInt()>0;
+					forcedisable = queryPlugin.getColumn(2).getInt()>0;
+					if (checkDiskTimestamp) {
+
+						int64_t timeDB = queryPlugin.getColumn(1).getInt64();
+	//					LOG("id %d timeDisk %016llX %016llX", id, timeDisk, timeDB);
+						if (timeDisk == timeDB) {
+							needScan = false;
+						}
+					} else {
+
 						needScan = false;
 					}
 				}
 				if (!needScan && fullRescan) {
 					needScan = true;
 				}
-				if (!needScan && updatePattern.length()) {
+				if (updatePattern.length()) {
 					needScan = file.name.find(updatePattern) != String::npos;
 				}
 				if (!needScan) {
-					LOG("%s is up to date", StringAsCStr(file.name));
+					if (updatePattern.empty())
+						LOG("%s is up to date", StringAsCStr(file.name));
 					continue;
 				}
 				LOG("%s needs update", StringAsCStr(file.name));
@@ -324,66 +425,143 @@ int main(int argc, char* argv[]) {
 					}
 					pipeConnected = true;
 				}
-				memset(&data, 0, sizeof(data));
-				memset(&hdr, 0, sizeof(hdr));
-				hdr.cmd = CMD_PLUGIN_LOAD_REQUEST;
-				strncpy(data.szPath, StringAsCStr(file.path), file.path.length());
-				//			LOG("SCAN %s   %s", StringAsCStr(file.path), data.szPath);
-				//			LOG("server sendData()");
-				bool ok = sendData(&server, &hdr, &data);
-				if (!ok) {
-					LOG("sendData failed");
-					server.server_disconnect();
-					pipeConnected = false;
-					continue;
+				int ret;
+				pipe_msg_hdr hdr = {CMD_PLUGIN_LOAD_REQUEST};
+				ret = writeToIPC(server, hdr);
+				dbgassert(ret != E_WRITE_ERR_BUF_SIZE);
+				request_type_vst24_t req;
+				strncpy(req.szPath, StringAsCStr(file.path), file.path.length());
+				ret = writeToIPC(server, req);
+				dbgassert(ret != E_WRITE_ERR_BUF_SIZE);
+				if (ret != E_WRITE_OK) {
+					LOG("error writeToIPC request_type_vst24_t");
+					break;
 				}
-				threadSleep(50);
-				ok = recvData(&server, &hdr, &data);
-				lastRecvState = ok;
-				bool status = false;
-				if (!ok) {
-					LOG("recvData failed");
-					server.server_disconnect();
-					pipeConnected = false;
-				} else {
-					status = hdr.cmd == CMD_PLUGIN_LOAD_SUCCESS;
-				}
-				printf("%s %s\n", data.szPath, status ?"GOOD":"BAD");
 				if (dryRun)
 					continue;
 				if (id > 0) {
 					queryDelete.reset();
 					queryDelete.bind(1, id);
+					queryDelete.bind(2, req.szPath);
 					queryDelete.exec();
 				}
-				try {
-					queryInsertPlugin.reset();
-					int bndIdx = 1;
-					queryInsertPlugin.bind(bndIdx++, data.isSynth);
-					queryInsertPlugin.bind(bndIdx++, data.id);
-					queryInsertPlugin.bind(bndIdx++, data.version);
-					queryInsertPlugin.bind(bndIdx++, data.vstVersion);
-					queryInsertPlugin.bind(bndIdx++, data.pluginCategory);
-					queryInsertPlugin.bind(bndIdx++, (long long int)timeDisk);
-					queryInsertPlugin.bind(bndIdx++, status ? 1 : 0);
-					queryInsertPlugin.bind(bndIdx++, file.path);
-					queryInsertPlugin.bind(bndIdx++, data.szName);
-					queryInsertPlugin.bind(bndIdx++, data.szVendorName);
-					queryInsertPlugin.bind(bndIdx++, 0);
-					queryInsertPlugin.bind(bndIdx++, forcedisable?1:0);
-					/*int insertRowsAffected = */queryInsertPlugin.exec();
-//					LOG("insertRowsAffected %d",insertRowsAffected);
-				} catch (SQLite::Exception& e) {
-					std::cout << "queryInsertPlugin exception: " << e.getErrorStr() << std::endl;
+
+				if (ret == E_WRITE_OK) {
+					bool finished = false;
+					while (!finished) {
+						int responseType = 0;
+						if (E_READ_OK != readFromIPC(server, responseType)) {
+							LOG("failed reading responseType");
+							finished = true;
+							break;
+						}
+						switch (responseType) {
+						case CMD_PLUGIN_LOAD_SUCCESS_PLUGIN:
+						{
+							response_type_vst24_plugin_t respShellPlugin;
+							LOG("READ response_type_vst24_plugin_t");
+							ret = readFromIPC(server, respShellPlugin);
+							if (E_READ_OK != ret) {
+								LOG("failed reading response_type_vst24_plugin_t");
+								finished = true;
+							} else {
+
+								printf("%s %s\n", respShellPlugin.szPath, "GOOD");
+								auto& data = respShellPlugin;
+								try {
+									queryInsertPlugin.reset();
+									int bndIdx = 1;
+									queryInsertPlugin.bind(bndIdx++, data.isSynth);
+									queryInsertPlugin.bind(bndIdx++, data.uniqueID);
+									queryInsertPlugin.bind(bndIdx++, data.version);
+									queryInsertPlugin.bind(bndIdx++, data.vstVersion);
+									queryInsertPlugin.bind(bndIdx++, data.pluginCategory);
+									queryInsertPlugin.bind(bndIdx++, (long long int)timeDisk);
+									queryInsertPlugin.bind(bndIdx++, 1);
+									queryInsertPlugin.bind(bndIdx++, file.path);
+									queryInsertPlugin.bind(bndIdx++, data.szName);
+									queryInsertPlugin.bind(bndIdx++, data.szVendorName);
+									queryInsertPlugin.bind(bndIdx++, 0);
+									queryInsertPlugin.bind(bndIdx++, forcedisable?1:0);
+									queryInsertPlugin.bind(bndIdx++, 0);
+									/*int insertRowsAffected = */queryInsertPlugin.exec();
+				//					LOG("insertRowsAffected %d",insertRowsAffected);
+								} catch (SQLite::Exception& e) {
+									std::cout << "queryInsertPlugin exception: " << e.getErrorStr() << std::endl;
+								}
+							}
+							break;
+						}
+						case CMD_PLUGIN_LOAD_SUCCESS_PLUGINSHELL_SHELL:
+						{
+							LOG("READ response_type_vst24_shell_plugin_t");
+							response_type_vst24_shell_plugin_t respShellPlugin;
+							ret = readFromIPC(server, respShellPlugin);
+							if (E_READ_OK != ret) {
+								LOG("failed reading response_type_vst24_shell_plugin_t");
+								finished = true;
+							}
+							break;
+						}
+							break;
+						case CMD_PLUGIN_LOAD_SUCCESS_PLUGINSHELL_PLUGIN:
+						{
+							LOG("READ response_type_vst24_t");
+							response_type_vst24_t respShellPluginEntry;
+							ret = readFromIPC(server, respShellPluginEntry);
+							if (E_READ_OK != ret) {
+								LOG("failed reading response_type_vst24_t");
+								finished = true;
+							} else {
+
+
+								auto& data = respShellPluginEntry;
+								printf("%s %s %s isSynth: %d, uid %08X\n", StringAsCStr(file.path), data.szName, "GOOD", data.isSynth, data.uniqueID);
+								try {
+									queryInsertPlugin.reset();
+									int bndIdx = 1;
+									queryInsertPlugin.bind(bndIdx++, data.isSynth);
+									queryInsertPlugin.bind(bndIdx++, data.uniqueID);
+									queryInsertPlugin.bind(bndIdx++, data.version);
+									queryInsertPlugin.bind(bndIdx++, data.vstVersion);
+									queryInsertPlugin.bind(bndIdx++, data.pluginCategory);
+									queryInsertPlugin.bind(bndIdx++, (long long int)timeDisk);
+									queryInsertPlugin.bind(bndIdx++, 1);
+									queryInsertPlugin.bind(bndIdx++, file.path);
+									queryInsertPlugin.bind(bndIdx++, data.szName);
+									queryInsertPlugin.bind(bndIdx++, data.szVendorName);
+									queryInsertPlugin.bind(bndIdx++, 0);
+									queryInsertPlugin.bind(bndIdx++, forcedisable?1:0);
+									queryInsertPlugin.bind(bndIdx++, 1);
+									/*int insertRowsAffected = */queryInsertPlugin.exec();
+				//					LOG("insertRowsAffected %d",insertRowsAffected);
+								} catch (SQLite::Exception& e) {
+									std::cout << "queryInsertPlugin exception: " << e.getErrorStr() << std::endl;
+								}
+							}
+							break;
+						}
+							break;
+						case CMD_PLUGIN_LOAD_ERROR:
+							finished = true;
+							break;
+						case CMD_PLUGIN_END_SUCCESS:
+							finished = true;
+							break;
+						}
+					}
 				}
-				threadSleep(200);
+				if (ret == E_WRITE_ERR_PIPE) {
+					LOG("SERVER E_WRITE_ERR_PIPE");
+					server.server_disconnect();
+					pipeConnected = false;
+					continue;
+				}
 			}
 			if (thread && thread->isRunning() && pipeConnected) {
 
-				memset(&data, 0, sizeof(data));
-				memset(&hdr, 0, sizeof(hdr));
-				hdr.cmd = CMD_PLUGIN_THREAD_QUIT;
-				sendData(&server, &hdr, &data);
+				pipe_msg_hdr hdr = {CMD_PLUGIN_THREAD_QUIT};
+				writeToIPC(server, hdr);
 				server.server_disconnect();
 				thread->joinProcess();
 			}
@@ -399,120 +577,167 @@ int main(int argc, char* argv[]) {
 
 		LOG("Done.");
 		threadSleep(500);
-	} else if (argc > 0 && !strcmp("-client", argv[argc-1])) {
+	} else if (argc > 0 && !strcmp("-test", argv[argc-1])) {
 		setExceptionHandler();
 		threadSleep(120);
+    	auto vsthostInstance = std::make_unique<vsthost>();
+    	vsthost::assignMasterCallback(vsthostInstance.get());
+		vsthostInstance->setSampleFormat(sampleformat_t{static_cast<samplerate_t>(48000), 512, sampleformat_bits_t::FLOAT_32});
+
+    	daw_tls::tlsinstance& tls = daw_tls::getTls();
+    	tls.host = vsthostInstance.get();
+		LOG("START");
+		request_type_vst24_t type;
+		static const char* testPath = "C:\\PluginManager\\configs\\default\\hosts\\Ableton\\categories\\WaveShell-VST 9.6_x64.dll";
+		strncpy(type.szPath, testPath, math::min<size_t>(1023U, strlen(testPath)+1));
+
+		LOG("loadPlugin: %s", type.szPath);
+
+//		response_type_vst24_t
+//		tryLoadPlugin(vsthostInstance.get(), type);
+
+		threadSleep(500);
+		vsthost::getInstance()->destroy();
+	} else if (argc > 0 && !strcmp("-client", argv[argc-1])) {
+		logPrefixIdx = 1;
+		setExceptionHandler();
+		threadSleep(120);
+
 	    // Open the named pipe
-	    // Most of these parameters aren't very relevant for pipes.
 		ipc_client client;
+		LOG("client_connect");
 		int ipcstatus = client.client_connect(SCAN_IPC_PIPE_NAME);
 		if (ipcstatus) {
 			LOG("Failed opening ipc_client: %d", ipcstatus);
 			return 1;
 		}
-    	// auto audioHost = std::make_unique<audiohost>();
-    	// auto midiHost = std::make_unique<midihost>();
+
     	auto vsthostInstance = std::make_unique<vsthost>();
     	vsthost::assignMasterCallback(vsthostInstance.get());
 		vsthostInstance->setSampleFormat(sampleformat_t{static_cast<samplerate_t>(48000), 512, sampleformat_bits_t::FLOAT_32});
 
-    	// project_controller_t project;
-    	// plugindatabase_t plugindb;
-    	// waveformrender renderer;
-    	// audiocache cache(settings.iosettings.samplerate);
+
     	daw_tls::tlsinstance& tls = daw_tls::getTls();
     	// tls.mainCtrl = nullptr;
-    	// tls.project = &project;
+
     	tls.host = vsthostInstance.get();
-    	// tls.audioHost = audioHost.get();
-    	// tls.midiHost = midiHost.get();
-    	// tls.audioCache = &cache;
-    	// tls.waveform = &renderer;
-    	// tls.pluginDatabase = &plugindb;
 
-
-	    // auto vsthostInstance = std::make_unique<vsthost>();
-	    // daw_tls::tlsinstance& tls = daw_tls::getTls();
-	    // tls.host = vsthostInstance.get();
-		LOG("START");
 		pipe_msg_hdr hdr;
-		vst_metadata data;
+		recvbuf_t bufferRecv;
+		LOG("listening...");
 		while (!quit) {
-//			LOG("client recvData()");
-			if (!recvData(&client, &hdr, &data)) {
-				LOG("recvData failed");
+			int retRead = readFromIPC(client, hdr);
+			dbgassert(E_READ_ERR_BUF_SIZE != retRead);
+			if (E_READ_OK != retRead) {
+				LOG("hdr readFromIPC E_READ_ERR_PIPE");
 				break;
 			}
 			if (hdr.cmd == CMD_PLUGIN_THREAD_QUIT) {
+				LOG("CMD_PLUGIN_THREAD_QUIT");
 				break;
 			}
 			if (hdr.cmd == CMD_PLUGIN_LOAD_REQUEST) {
-				hdr.cmd = CMD_PLUGIN_LOAD_ERROR;
-				LOG("loadPlugin: %s", data.szPath);
+				LOG("CMD_PLUGIN_LOAD_REQUEST");
+				request_type_vst24_t req;
+				if (E_READ_OK != readFromIPC(client, req)) {
+					LOG("req readFromIPC failed");
+					break;
+				}
+
+				LOG("tryLoadPlugin %s", req.szPath);
 				try {
 
-					vstpluginloadres res = vsthostInstance->loadPlugin(data.szPath);
+					vstpluginloadres res = vsthostInstance->loadPlugin(req.szPath, 0);
 					LOG("result: %d", res.result);
-					if (res.result == 0) {
-						vstplugin* plugin = res.plugin;
-						bool bCanDoOffline = plugin->dispatch(effCanDo, 0, 0, (void*)PlugCanDos::canDoOffline) > 0;
-						LOG("%s canDoOffline: %d", data.szPath, bCanDoOffline);
+					if (res.result < 0) {
+						int response = CMD_PLUGIN_LOAD_ERROR;
+						writeToIPC(client, response);
+					} else {
+						if (res.result == 1) {
+							handles_t* handles = res.shellPluginHandle;
+							String nameShellPlugin = res.name;
+							log_printf("loading shell plugin: %s\n", StringAsCStr(nameShellPlugin));
 
-//						printf("%d params in %d categories\n", plugin->params.size(), plugin->paramsCategories.size());
-//
-//						for (vst_param& cat : plugin->params) {
-//							printf("param[%d] (%s) flags: ", cat.idx, StringAsCStr(cat.label));
-//							if (cat.flags & ParamIsSwitch) {
-//								printf("ParamIsSwitch ");
-//							}
-//							if (cat.flags & ParamUsesIntegerMinMax) {
-//								printf("ParamUsesIntegerMinMax ");
-//							}
-//							if (cat.flags & ParamUsesFloatStep) {
-//								printf("ParamUsesFloatStep ");
-//							}
-//							if (cat.flags & ParamUsesIntStep) {
-//								printf("ParamUsesIntStep ");
-//							}
-//							if (cat.flags & ParamSupportsDisplayIndex) {
-//								printf("ParamSupportsDisplayIndex ");
-//							}
-//							if (cat.flags & ParamSupportsDisplayCategory) {
-//								printf("ParamSupportsDisplayCategory ");
-//							}
-//							if (cat.flags & ParamSupportsDisplayIndex) {
-//								printf("ParamSupportsDisplayIndex ");
-//							}
-//							if (cat.flags & ParamCanRamp) {
-//								printf("ParamCanRamp ");
-//							}
-//							if (cat.flags & ParamIsAdvanced) {
-//								printf("ParamIsAdvanced ");
-//							}
-//							if (!cat.flags) {
-//								printf("0");
-//							}
-//							printf("\n");
-//
-//						}
-//						for (vst_param_category& cat : plugin->paramsCategories) {
-//							printf("categories[%d] = %s (%d params)\n", cat.idx, StringAsCStr(cat.label), cat.numParametersInCategory);
-//						}
-						getPluginData(res.plugin, &data);
-						vsthostInstance->unloadPlugin(plugin);
-						hdr.cmd = CMD_PLUGIN_LOAD_SUCCESS;
+							char tempName[64] = {0};
+							VstInt32 plugUniqueID = 0;
+							struct shell_plugin_entry_t {
+								String name;
+								int32_t pluginUID;
+							};
+
+							std::vector<shell_plugin_entry_t> entries;
+
+							response_type_vst24_shell_plugin_t respShellPlugin;
+							strncpy(respShellPlugin.szName, StringAsCStr(res.name), math::min<size_t>(255, res.name.length()+1));
+							respShellPlugin.szName[255] = 0;
+							// loop over all shell plugin entries
+							while ((plugUniqueID = handles->aeffect->dispatcher (handles->aeffect, effShellGetNextPlugin, 0, 0, tempName, 0)) != 0)
+							{
+								// subplug needs a name
+								if (tempName[0] != 0) {
+									log_printf("plugUniqueID %d\t%s\n", plugUniqueID, tempName);
+									entries.push_back(shell_plugin_entry_t{tempName, plugUniqueID});
+								} else {
+									log_printf("plugUniqueID %d\tNAME == NULL!\n", plugUniqueID);
+								}
+								tempName[0] = 0;
+							}
+							int response = CMD_PLUGIN_LOAD_SUCCESS_PLUGINSHELL_SHELL;
+							writeToIPC(client, response);
+							respShellPlugin.numPlugins = entries.size();
+							writeToIPC(client, respShellPlugin);
+							LOG("-- begin of shell plugin list --");
+							for (auto& entry: entries) {
+								LOG("load shell entry: %08X", entry.pluginUID);
+
+								vstpluginloadres resShellPluginEntry = vsthostInstance->loadPlugin(req.szPath, entry.pluginUID);
+								if (resShellPluginEntry.result != 0) {
+									LOG("FAILED LOADING SHELL PLUGIN: %d", resShellPluginEntry.result);
+								} else {
+									dbgassert(resShellPluginEntry.plugin);
+									response = CMD_PLUGIN_LOAD_SUCCESS_PLUGINSHELL_PLUGIN;
+									writeToIPC(client, response);
+									response_type_vst24_t respShellPluginEntry;
+									getPluginData(resShellPluginEntry.plugin, &respShellPluginEntry);
+									strncpy(respShellPluginEntry.szName, StringAsCStr(entry.name), math::min<size_t>(255U, entry.name.length()+1));
+									writeToIPC(client, respShellPluginEntry);
+									LOG("unload shell entry: %08X", entry.pluginUID);
+									vsthostInstance->unloadPlugin(resShellPluginEntry.plugin);
+
+								}
+							}
+							LOG("-- end of shell plugin list --");
+#ifdef _WIN32
+							FreeLibrary((HMODULE)handles->hmodule);
+#endif
+							response = CMD_PLUGIN_END_SUCCESS;
+							writeToIPC(client, response);
+						} else if (res.result == 0) {
+							dbgassert(res.plugin);
+							int response = CMD_PLUGIN_LOAD_SUCCESS_PLUGIN;
+							writeToIPC(client, response);
+							response_type_vst24_plugin_t respPlugin;
+							getPluginData(res.plugin, &respPlugin);
+							writeToIPC(client, respPlugin);
+							vsthostInstance->unloadPlugin(res.plugin);
+							response = CMD_PLUGIN_END_SUCCESS;
+							writeToIPC(client, response);
+						}
 					}
 				} catch (...) {
-					LOG("exception while loading %s", data.szPath);
+					LOG("exception while loading %s", req.szPath);
+					int response = -1;
+					writeToIPC(client, response);
 				}
 			}
 //			LOG("client sendData()");
-			if (!sendData(&client, &hdr, &data)) {
-				LOG("sendData failed");
-				break;
-			}
+//			if (!sendData(&client, &hdr, &data)) {
+//				LOG("sendData failed");
+//				break;
+//			}
 			threadSleep(50);
 		}
+		LOG("client_close()");
 		client.client_close();
 		threadSleep(500);
 		vsthost::getInstance()->destroy();

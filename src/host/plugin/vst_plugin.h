@@ -20,6 +20,7 @@ class track_t;
 class guibase;
 struct track_impl_t;
 class vst_window;
+struct VstTimeInfo;
 //-------------------------------------------------------------------------------------------------------
 /** Flags used in #VstParameterProperties. */
 //-------------------------------------------------------------------------------------------------------
@@ -137,4 +138,6 @@ public:
 	void process(AudioBlock* in, AudioBlock* out, int32_t samplePos, int32_t numSamples, playback_state state) override;
 	int32_t getDelay() override;
 	int32_t getFlagsVST();
+	VstTimeInfo* getLocalTimeInfoPtr();
+	int32_t getLocalCurrentUniqueId();
 };
