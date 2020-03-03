@@ -1510,8 +1510,10 @@ int startApplication(int argc, char* argv[]) {
 	        else if (msg.message == WM_APP + 42) {
 			    if (tmMsgSent != 0) {
 			    	int64_t tmDuration = (getTimeMillis() - tmMsgSent);
-			    	log_printf("MSG took %d ms to get through, %d messages since sent\n", tmDuration, cntMessages);
 			    	tmMsgSent = 0;
+			    	if (tmDuration > 0) {
+			    		log_printf("MSG took %d ms to get through, %d messages since sent\n", tmDuration, cntMessages);
+			    	}
 			    }
 	        }
 	        else
