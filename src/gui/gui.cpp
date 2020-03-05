@@ -454,6 +454,22 @@ namespace DebugAlloc {
 void printLeakedGuiBase() {
 	DebugAlloc::getTracker<guibase>()->onExit();
 }
+void guibase::renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2 dragOffset) {
+	//		mousepos += dragOffset;
+	if (isDragRendered()) {
+
+		mousepos -= pos;
+		mousepos.x -= size.x / 2;
+		nvgTranslate(vg, mousepos.x, mousepos.y);
+	//		drawBackground(vg, theme, pos, size, 0, true, false);
+	//		ivec2 inset = { 2, 2 };
+	//		UIFont::font_instance instance = theme->getFont(UIFont::FONT_DEFAULT);
+	//		UIFont::bindFont(vg, instance);
+	//		nvgFillColor(vg, G_WHITE);
+	//		Table::DrawTableNVG(this->table, vg, theme, pos + inset, size - inset * 2, HEIGHT_ENTRY - 4);
+		render(vg);
+	}
+}
 guibase::guibase()  {
 	allocId = DebugAlloc::getTracker<guibase>()->objConstructor(this);
 }

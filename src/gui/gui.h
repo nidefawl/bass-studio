@@ -114,6 +114,15 @@ public:
 	virtual bool isBackgroundRendered() const {
 		return (flags & FLG_RENDER_BACKGROUND) != 0;
 	}
+	virtual bool isDragRendered() const {
+		return (flags & FLG_RENDER_DRAGGED) != 0;
+	}
+	void setDragRendered(bool b) {
+		if (!b)
+			flags &= ~FLG_RENDER_DRAGGED;
+		else
+			flags |= FLG_RENDER_DRAGGED;
+	}
 	void setBackgroundRendered(bool b) {
 		if (!b)
 			flags &= ~FLG_RENDER_BACKGROUND;
@@ -197,9 +206,7 @@ public:
 	virtual guictxtmenu_base* getTooltip(AppCtrl* appctrl) {
 		return nullptr;
 	}
-	virtual void renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2 dragOffset) {
-
-	}
+	virtual void renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2 dragOffset);
 	virtual void layout() {
 	}
 	virtual void onRemove() {

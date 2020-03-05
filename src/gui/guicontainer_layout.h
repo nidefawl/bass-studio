@@ -41,8 +41,11 @@ class guictr_tabbed : public guictr_base {
 	tabbed_entry* activeEntry = nullptr;
 	ivec2 sizeContentTab{0};
 	ivec2 insetMenuBar{0};
+	bool hasDragged = false;
 public:
 	guictr_tabbed() : guictr_base() {
+		setCanMouseHit(true);
+		setDragRendered(true);
 	}
 	~guictr_tabbed();
 	void setTabMenuInset(ivec2 offset) {
@@ -54,5 +57,8 @@ public:
 	void buttonClicked(guibase* button) override;
 	void layout() override;
 	void render(NVGcontext* vg) override;
+	void handleDraggedBegin(MouseEvent& evt);
+	void handleDraggedMove(MouseEvent& evt);
+//	void handleDraggedRelease(MouseEvent& evt);
 };
 

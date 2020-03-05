@@ -15,6 +15,7 @@
 #include "renderresources.h"
 #include "button.h"
 #include "splitter.h"
+#include "host/mainctrl.h"
 
 struct guictr_tabbed::tabbed_entry
 {
@@ -72,6 +73,16 @@ void guictr_tabbed::addEntry(guibase* ctr, String title) {
 	guictr_tabbed::tabbed_entry* entry = new guictr_tabbed::tabbed_entry{ctr, title};
 	guictr_base::add(&entry->tabButton);
 	this->entries.push_back(entry);
+}
+
+void guictr_tabbed::handleDraggedBegin(MouseEvent& evt) {
+	hasDragged = false;
+}
+void guictr_tabbed::handleDraggedMove(MouseEvent& evt) {
+	if (!hasDragged && (evt.dragDistance->x != 0 || evt.dragDistance->y != 0)) {
+		MainCtrl::get()->setDragged(this);
+		hasDragged = true;
+	}
 }
 void guictr_tabbed::render(NVGcontext* vg) {
 	guictr_base::render(vg);
