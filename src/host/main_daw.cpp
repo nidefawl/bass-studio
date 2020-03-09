@@ -1,11 +1,27 @@
 #include "mainctrl.h"
+#include <memory>
+#include <vector>
 
 int startApplication(int argc, char* argv[]);
 
 std::shared_ptr<MainCtrl> mainctrl;
+std::shared_ptr<CompanionCtrl> companion;
+std::shared_ptr<DawInstance> dawInstance;
+std::vector<std::shared_ptr<AppCtrl>> companions;
 std::shared_ptr<AppCtrl> makeApp() {
-	mainctrl = std::make_shared<MainCtrl>();
+	if (!mainctrl) {
+		dawInstance = std::make_shared<DawInstance>();
+		DawInstance& dawRef = *dawInstance.get();
+		mainctrl = std::make_shared<MainCtrl>(dawRef);
+		companion = std::make_shared<CompanionCtrl>(dawRef);
+		dawRef.setControls(mainctrl.get(), companion.get());
+		companions.push_back(companion);
+	}
 	return mainctrl;
+}
+void makeAppCompanions(std::vector<std::shared_ptr<AppCtrl>>& out_Companions) {
+
+	out_Companions = companions;
 }
 
 

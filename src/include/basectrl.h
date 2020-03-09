@@ -4,6 +4,7 @@
 #include <set>
 #include <stdint.h>
 #include <memory>
+#include <map>
 
 #include "math/vec.h"
 #include "config.h"
@@ -111,8 +112,8 @@ public:
 	ivec2 getScaledSize() {
 		return ivec2(m_size.x*1.0 / m_scale, m_size.y*1.0 / m_scale);
 	}
-	virtual void prerender(int32_t x, int32_t y, int32_t w, int32_t h, float ratio);
-	void render(int32_t x, int32_t y, int32_t w, int32_t h, float ratio);
+	virtual void prerender(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float ratio);
+	void render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float ratio);
 	virtual bool processGlobalKeyevent(KeyEvent& event) {
 		return false;
 	}
@@ -159,7 +160,7 @@ public:
 	}
 	// Only use this pointer for comparison!
 	void onGuiRemoved(void* gui);
-	void resetMouseContext();
+	virtual void resetMouseContext();
 };
 class AppCtrl : public BaseCtrl {
 protected:
@@ -182,6 +183,8 @@ public:
 	}
 	window_main* mainWindow = NULL;
 	window_main* contextWindow = NULL;
+	std::map<window_main*,window_main*> contextWindows;
+	std::map<window_main*,guictxtmenu_base*> ctxtmenus;
 #if WINDOW_HAS_MENUBAR
 	ngui::MenuBar menubar;
 #endif
@@ -222,6 +225,9 @@ public:
 	virtual void destroy() = 0;
 	void onAppTick();
 	void destroyControl();
+	virtual void setActiveWindow(window_main* wnd) {
+		window = wnd;
+	}
 protected:
 	void openOverlayGui(guictxtmenu_base *b, ivec2 pos, int flags);
 };

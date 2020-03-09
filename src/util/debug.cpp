@@ -209,13 +209,14 @@ struct threadnames_t {
 		gThreadNames[threadId] = str;
 	}
 	String getCurrentsName() {
-		auto threadId = std::this_thread::get_id();
-		std::lock_guard<std::mutex> lock(gThreadMutex);
-		auto it = gThreadNames.find(threadId);
-		if (it == gThreadNames.end()) {
-			return StringFormat("thread-%X", static_cast<int32_t>(threadId.get()));
-		}
-		return it->second+StringFormat("-%X", static_cast<int32_t>(threadId.get()));
+		return "thread";
+		//auto threadId = std::this_thread::get_id();
+		//std::lock_guard<std::mutex> lock(gThreadMutex);
+		//auto it = gThreadNames.find(threadId);
+		//if (it == gThreadNames.end()) {
+		//	return StringFormat("thread-%X", static_cast<int32_t>(threadId.get()));
+		//}
+		//return it->second+StringFormat("-%X", static_cast<int32_t>(threadId.get()));
 	}
 };
 threadnames_t& getThreadNames() {

@@ -136,7 +136,7 @@ public:
 	virtual void handleDraggedBegin(MouseEvent& evt) {
 		gui_graph_entry::handleDraggedBegin(evt);
 		if (node->trackOptional)
-			MainCtrl::get()->setSelectedTrack(node->trackOptional);
+			DawInstance::get()->setSelectedTrack(node->trackOptional);
 	}
 	virtual void handleDraggedRelease(MouseEvent& evt) {
 		parentCtrl->objectDragRelease(this, evt);

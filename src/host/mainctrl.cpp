@@ -243,7 +243,50 @@ public:
 		delete ctr_loadedplugins;
 	}
 };
-class DawViewContainers {
+class DawViewContainersCompanion : public DawViewContainers {
+public:
+	guictr_menubar ctr_menu;
+	gui_statusbar statusbar;
+
+	guictr_nodes ctr_nodes;
+	DawViewContainersCompanion(ngui::MenuBar& menubar, DAW::Cursor& _cursor, project_t& project, scaled_grid& grid, clip_view& clipView, dragdrop_midifile& dragdropclip)
+	  :
+	  ctr_menu(menubar),
+	  ctr_nodes(_cursor, project, dragdropclip)
+	{
+	}
+	void layout(int32_t winW, int32_t winH) {
+		int winX = 0; int winY = 0;
+		int winBottom = winH;
+#if USE_GUI_MENU
+		int hMenu = 28;
+		winH -= hMenu;
+		winY += hMenu;
+		ctr_menu.pos = vec2(0, 0);
+		ctr_menu.size = vec2(winW, hMenu);
+#endif
+		int hTopControls = 0;
+		int hStatusBar = 60;
+		int hTrackCtr = winH;
+		ctr_nodes.size = { winW, hTrackCtr };
+		statusbar.size = { winW, hStatusBar };
+
+		ctr_nodes.pos = { winX, winY };
+		statusbar.pos = { winX, winBottom - hStatusBar };
+//		ctr_test.setSnapSides(ivec4(0, 0, 0, 1));
+//		statusbar.setSnapSides(ivec4(0, 1, 0, 0));
+	}
+	void addTo(std::vector<guictr_base*>& v) {
+		 v.push_back(&ctr_nodes);
+//		 v.push_back(&ctr_tabbed2);
+		 v.push_back(&statusbar);
+//		 v.push_back(&ctr_tabbed);
+#if USE_GUI_MENU
+		 v.push_back(&ctr_menu);
+#endif
+	}
+};
+class DawViewContainersMain : public DawViewContainers {
 	guictr_noteeditor noteeditor;
 public:
 	guictr_effectlibrary ctr_effectlib;
@@ -263,7 +306,7 @@ public:
 //	Splitter splitterList;
 	Splitter splitterCenter;
 	Splitter splitterRight;
-	DawViewContainers(ngui::MenuBar& menubar, DAW::Cursor& _cursor, project_t& project, scaled_grid& grid, clip_view& clipView, dragdrop_midifile& dragdropclip)
+	DawViewContainersMain(ngui::MenuBar& menubar, DAW::Cursor& _cursor, project_t& project, scaled_grid& grid, clip_view& clipView, dragdrop_midifile& dragdropclip)
 	  : noteeditor(clipView),
 	  ctr_menu(menubar),
 	  ctr_tempo(project),
@@ -378,6 +421,29 @@ public:
 		 v.push_back(&splitterRight);
 	}
 };
+void CompanionCtrl::setupView() {
+	view = new DawViewContainersCompanion(menubar, daw.cursor, daw, grid, clipView, daw.dragdropclip);
+	view->addTo(this->containers);
+	viewContainers = view;
+	for (guictr_base *ctr : containers) {
+		ctr->setControl(this);
+	}
+
+
+}
+void MainCtrl::setupView() {
+	view = new DawViewContainersMain(menubar, daw.cursor, daw, grid, clipView, daw.dragdropclip);
+	view->addTo(this->containers);
+	viewContainers = view;
+	for (guictr_base *ctr : containers) {
+		ctr->setControl(this);
+	}
+	view->ctr_plugins.setControl(this);
+	view->ctr_nodes.setControl(this);
+	view->ctr_tracks.setVisible(containers[0] == &view->ctr_tracks);
+	view->ctr_nodes.setVisible(containers[0] == &view->ctr_nodes);
+
+}
 void MainCtrl::setViewMode(view_mode_t mode) {
 	this->viewMode = mode;
 	switch (mode) {
@@ -410,22 +476,56 @@ bool MainCtrl::isPluginViewVisible() {
 	return containers[1] == &view->ctr_plugins;
 }
 void MainCtrl::addDebug(String s) {
-
 	view->subctr_tabbed.ctr_dbg0.addStr(s);
 }
 
-void MainCtrl::resetMouseContext() {
+void DawCtrl::setActiveWindow(window_main* wnd) {
+	dbgassert(wnd->getCtrl() == this);
+	if (this->ctxtmenu) {
+		ctxtmenus[this->mainWindow] = this->ctxtmenu;
+	} else {
+		ctxtmenus[this->mainWindow] = nullptr;
+	}
+	this->mainWindow = wnd;
+	this->window = wnd;
+	if (contextWindows.count(this->mainWindow)) {
+		this->contextWindow = contextWindows[this->mainWindow];
+	} else {
+		this->contextWindow = nullptr;
+	}
+	if (ctxtmenus.count(this->mainWindow)) {
+		this->ctxtmenu = ctxtmenus[this->mainWindow];
+	} else {
+		this->ctxtmenu = nullptr;
+	}
+
+}
+void DawCtrl::resetMouseContext() {
 	BaseCtrl::resetMouseContext();
-	view->ctr_nodes.reset();
+}
+void MainCtrl::resetMouseContext() {
+	DawCtrl::resetMouseContext();
+	if (view)
+		view->ctr_nodes.reset();
+}
+void CompanionCtrl::resetMouseContext() {
+	DawCtrl::resetMouseContext();
+	if (view)
+		view->ctr_nodes.reset();
 }
 
-void MainCtrl::unloadProject() {
+void DawInstance::unloadProject() {
 	dbgassert(playThread.isLocked());
-	closeContextMenu();
-	resetMouseContext();
+	for (auto* ctrl : dawCtrls) {
+		ctrl->closeContextMenu();
+		ctrl->resetMouseContext();
+	}
 	projectPath = "";
 	setSelectedTrack(NULL);
-	clipView.set(NULL);
+	for (auto* dawctrl : dawCtrls) {
+		dawctrl->clipView.set(NULL);
+	}
+
 	cursor.setEmptySelection();
 
 	hist.clear(this);
@@ -457,10 +557,14 @@ void MainCtrl::unloadProject() {
 
 	vsthost::getInstance()->releaseProjectResources();
 
-	this->view->ctr_tracks.trackView.resizePreModifyState.reset();
-	this->view->ctr_tracks.trackView.clipboard.reset();
-	this->view->ctr_tracks.trackView.action.clipboard.reset();
-	this->view->ctr_tracks.trackView.tracksVisibleFlat.clear();
+	auto* ctrl = mainCtrl;
+	if (ctrl) {
+		auto& trackView = ctrl->view->ctr_tracks.trackView;
+		trackView.resizePreModifyState.reset();
+		trackView.clipboard.reset();
+		trackView.action.clipboard.reset();
+		trackView.tracksVisibleFlat.clear();
+	}
 
 	{
 
@@ -472,24 +576,24 @@ void MainCtrl::unloadProject() {
 
 }
 
-bool MainCtrl::onWindowCloseRequest() {
+bool DawCtrl::onWindowCloseRequest() {
 	return true;
 }
 
-void MainCtrl::updateMenubar() {
+void DawCtrl::updateMenubar() {
 	menubar.disableAll = this->ctxtmenu != NULL;
 	ngui::Menu* undo = menus.edit.getByCmd(CMD_UNDO);
 	ngui::Menu* redo = menus.edit.getByCmd(CMD_REDO);
-	if (hist.canUndo()) {
+	if (daw.hist.canUndo()) {
 		undo->disabled = false;
-		undo->title = menuName(StringFormat("Undo %s", StringAsCStr(hist.getUndoStep())), KC_UNDO);
+		undo->title = menuName(StringFormat("Undo %s", StringAsCStr(daw.hist.getUndoStep())), KC_UNDO);
 	} else {
 		undo->disabled = true;
 		undo->title = menuName("Undo", KC_UNDO);
 	}
-	if (hist.canRedo()) {
+	if (daw.hist.canRedo()) {
 		redo->disabled = false;
-		redo->title = menuName(StringFormat("Redo %s", StringAsCStr(hist.getRedoStep())), KC_REDO);
+		redo->title = menuName(StringFormat("Redo %s", StringAsCStr(daw.hist.getRedoStep())), KC_REDO);
 	} else {
 		redo->disabled = true;
 		redo->title = menuName("Redo", KC_REDO);
@@ -499,10 +603,10 @@ void MainCtrl::updateMenubar() {
 static SupportedFileType FILE_TYPE_PROJECT {"Project File", PROJECT_FILE_EXT};
 std::vector<SupportedFileType> vFILE_TYPE_PROJECT = { FILE_TYPE_PROJECT };
 
-void MainCtrl::loadFileCStr(const char* str) {
+void DawInstance::loadFileCStr(const char* str) {
 	loadFile(str, 0);
 }
-void MainCtrl::saveFile(const String& path) {
+void DawInstance::saveFile(const String& path) {
 	if (!path.empty())
 	{
 		std::shared_ptr<project_file> f = createProjectFile();
@@ -510,12 +614,12 @@ void MainCtrl::saveFile(const String& path) {
 		projectPath = path;
 	}
 }
-void MainCtrl::loadFile(String path, int flags) {
+void DawInstance::loadFile(String path, int flags) {
 	timer.reset();
 	std::shared_ptr<project_file> f = loadProjectFile(path);
 	double l1 = timer.getTimeDoubleReset();
 	if (!f) {
-		setStatusText(StringFormat("Failed loading %s", StringAsCStr(FileNameFromPath(path))));
+		mainCtrl->setStatusText(StringFormat("Failed loading %s", StringAsCStr(FileNameFromPath(path))));
 	} else {
 		const bool wasUserCallback = (flags&FLAG_INVOKE_USER_CB_DEFERLOAD) != 0;
 		auto cb = [this, path, l1, projFile=f, wasUserCallback](int n) {
@@ -526,7 +630,7 @@ void MainCtrl::loadFile(String path, int flags) {
 				loadFlags = n;
 			}
 			setProjectToLoad(projFile, loadFlags);
-			closeContextMenu();
+			closeContextMenus();
 		};
 		if ((flags&FLAG_INVOKE_USER_CB_DEFERLOAD) == 0) {
 			cb(flags&FLAG_DEFER_LOAD);
@@ -534,11 +638,11 @@ void MainCtrl::loadFile(String path, int flags) {
 			guidialog_cb_yes_no* dlg = new guidialog_cb_yes_no();
 			dlg->cb = cb;
 			dlg->message = "Load plugins?";
-			openDialog(dlg);
+			mainCtrl->openDialog(dlg);
 		}
 	}
 }
-void MainCtrl::setEmptyProject() {
+void DawInstance::setEmptyProject() {
 	ThreadLock lock = playThread.lockThread();
 	unloadProject();
 	int totalAllocs = getNumClipAllocations();
@@ -568,7 +672,7 @@ void openDebugWindow(window_main* mainwindow) {
 	dialog->show();
 }
 #endif
-void MainCtrl::menuCommand(int cmd) {
+void DawInstance::menuCommand(int cmd) {
 	try {
 	String path = projectPath;
 	switch (cmd) {
@@ -576,14 +680,19 @@ void MainCtrl::menuCommand(int cmd) {
 		if (hist.canUndo()) {
 			ThreadLock lock = playThread.lockThread();
 			hist.undoStep(this);
-			updateVisibleTrackContents();
+			for (auto* ctrl : dawCtrls) {
+				ctrl->updateVisibleTrackContents();
+			}
+
 		}
 		break;
 	case CMD_REDO:
 		if (hist.canRedo()) {
 			ThreadLock lock = playThread.lockThread();
 			hist.redoStep(this);
-			updateVisibleTrackContents();
+			for (auto* ctrl : dawCtrls) {
+				ctrl->updateVisibleTrackContents();
+			}
 		}
 		break;
 	case CMD_FILE_NEW:
@@ -591,13 +700,15 @@ void MainCtrl::menuCommand(int cmd) {
 		//TODO: stop playback here
 		setEmptyProject();
 		MainCtrl::getGuiTrackCtr()->layout();
-		MainCtrl::get()->updateVisibleTrackContents();
+		for (auto* ctrl : dawCtrls) {
+			ctrl->updateVisibleTrackContents();
+		}
 	}
 		break;
 	case CMD_FILE_OPEN:
 		{
 			String path;
-			if (promptUserFilePath(window, 0, vFILE_TYPE_PROJECT, path)) {
+			if (promptUserFilePath(mainCtrl->window, 0, vFILE_TYPE_PROJECT, path)) {
 				loadFile(path, FLAG_INVOKE_USER_CB_DEFERLOAD);
 			}
 		}
@@ -605,7 +716,7 @@ void MainCtrl::menuCommand(int cmd) {
 	case CMD_FILE_SAVEAS:
 	case CMD_FILE_SAVE: {
 			if (cmd == CMD_FILE_SAVEAS || path.empty()) {
-				if (!promptUserFilePath(window, 1, vFILE_TYPE_PROJECT, path)) {
+				if (!promptUserFilePath(mainCtrl->window, 1, vFILE_TYPE_PROJECT, path)) {
 					break;
 				}
 			}
@@ -626,14 +737,6 @@ void MainCtrl::menuCommand(int cmd) {
 		break;
 	case CMD_DUPLICATE:
 		break;
-	case CMD_GUI_GLOBAL_ZOOM_DECREASE:
-		m_scale = math::max(0.05f, m_scale - 0.05f);
-		BaseCtrl::relayout();
-		break;
-	case CMD_GUI_GLOBAL_ZOOM_INCREASE:
-		m_scale = math::min(10.0f-0.05f, m_scale + 0.05f);
-		BaseCtrl::relayout();
-		break;
 	case CMD_INSERT_AUDIO_TRACK:
 	case CMD_INSERT_MIDI_TRACK:
 	case CMD_INSERT_RETURN_TRACK:
@@ -641,30 +744,55 @@ void MainCtrl::menuCommand(int cmd) {
 	{
 
 		int32_t trackType = (cmd-CMD_INSERT_AUDIO_TRACK)%NUM_TRACK_TYPES;
-		MainCtrl::get()->insertNewTrack(-1, trackType);
+		insertNewTrack(-1, trackType);
 	}
 		break;
 	case CMD_ABOUT:
-		this->openDialog(new guidialog_about());
+		mainCtrl->openDialog(new guidialog_about());
 		break;
 	case CMD_SHOW_DEBUG_WINDOW:
 #if CREATE_DEBUG_COMPANION_WINDOW
-		openDebugWindow(dynamic_cast<window_main*>(this->window));
+		openDebugWindow(dynamic_cast<window_main*>(mainCtrl->window));
 #endif
 		break;
 	case CMD_PREFERENCES:
-		this->openDialog(new guidialog_settings());
+		mainCtrl->openDialog(new guidialog_settings());
 		break;
 	case CMD_EXIT:
-		mainWindow->requestClose();
+		mainCtrl->mainWindow->requestClose();
 		break;
 
 	}
 	} catch (std::exception& e) {
 		handleStdException(e);
 	}
+
+
+}
+void DawCtrl::menuCommand(int cmd) {
+	switch (cmd) {
+
+	case CMD_GUI_GLOBAL_ZOOM_DECREASE:
+		m_scale = math::max(0.05f, m_scale - 0.05f);
+		BaseCtrl::relayout();
+		return;
+	case CMD_GUI_GLOBAL_ZOOM_INCREASE:
+		m_scale = math::min(10.0f-0.05f, m_scale + 0.05f);
+		BaseCtrl::relayout();
+		return;
+	}
+	daw.menuCommand(cmd);
+}
+void DawCtrl::postInit() {
 }
 void MainCtrl::postInit() {
+	DawCtrl::postInit();
+	view->ctr_effectlib.update();
+	daw.postInit();
+}
+void DawInstance::postInit() {
+	dbgassert(initState == 2);
+	initState++;
 	audiohost::getInstance()->initPa();
 	midihost::getInstance()->initPm();
 	if (settings.startEngine) {
@@ -678,20 +806,27 @@ void MainCtrl::postInit() {
 		}
 	}
 	midihost::getInstance()->startMidi();
-//	vsthost::getInstance()->postInit();
 	if (!loadProject.empty()) {
 		loadFile(loadProject, FLAG_DEFER_LOAD);
 	}
 
-	view->ctr_effectlib.update();
 	setAudioThreadState(playback_state::status_stop);
 }
 
-void MainCtrl::destroy()
-{
-	if (!isOK) {
-		return;
+void DawInstance::updateClipViews(clip_t* notifyClip, clip_cursor_t cursor) {
+	for (auto* ctrl : dawCtrls) {
+		clip_view& view = ctrl->getClipView();
+		if (view.clip() == notifyClip) {
+			view.cursor = cursor;
+			view.copySelectedNoteList();
+			view.updateNotePitches(false);
+		}
 	}
+}
+void DawInstance::destroy()
+{
+	dbgassert(initState == 3);
+	initState = 4;
 	setAudioThreadState(playback_state::status_no_process);
 	dbgassert(playThread.getState() == playback_state::status_no_process);
 	ThreadLock lock = playThread.lockThread();
@@ -708,9 +843,6 @@ void MainCtrl::destroy()
 	audiohost::getInstance()->deinitPa();
 	midihost::getInstance()->deinitPm();
 	waveformrender::getInstance()->destroy();
-	settings.dens = grid.grid_dens;
-	isOK = false;
-	delete view;
 	plugindb.closeDatabase();
 	this->workerThread.stopThread();
 	this->workerThread.joinThread();
@@ -731,7 +863,35 @@ void MainCtrl::destroy()
 	tls.waveform = nullptr;
 	tls.audioCache = nullptr;
 }
-void MainCtrl::initApp(int argc, char* argv[]) {
+void DawCtrl::destroy()
+{
+	if (!isOK) {
+		return;
+	}
+	settings.dens = grid.grid_dens;
+	isOK = false;
+	if (viewContainers) {
+		delete viewContainers;
+		viewContainers = nullptr;
+	}
+}
+
+void DawInstance::startDaw() {
+	dbgassert(initState == 1);
+	initState++;
+	plugindb.openDatabase();
+	vsthost::getInstance()->initThreads();
+	this->playThread.setTls(daw_tls::getTls());
+	this->playThread.startThread(this);
+	this->workerThread.setTls(daw_tls::getTls());
+	this->workerThread.startThread();
+	this->workerThread.call([]() {
+		my_printf("WorkerThreadCallTest\n", 0);
+	})->wait();
+}
+void DawInstance::initDaw(int argc, char* argv[]) {
+	dbgassert(initState == 0);
+	initState++;
 	for (int i = 1; i < argc; i++) {
 		String s = argv[i];
 		if (s == "--load" && i+1 < argc) {
@@ -749,7 +909,7 @@ void MainCtrl::initApp(int argc, char* argv[]) {
 	}
 	host->setSampleFormat(sampleformat_t{static_cast<samplerate_t>(settings.iosettings.internalSamplerate), settings.iosettings.internalBlocksize, sampleformat_bits_t::FLOAT_32});
 	tls.project = this;
-	tls.mainCtrl = this;
+//	tls.mainCtrl = this;
 	tls.audioHost = audioHost;
 	tls.host = host;
 	tls.midiHost = midiHost;
@@ -757,34 +917,35 @@ void MainCtrl::initApp(int argc, char* argv[]) {
 	tls.audioCache = new audiocache(settings.iosettings.samplerate);
 	tls.waveform = new waveformrender();
 }
+void DawCtrl::initApp(int argc, char* argv[]) {
+}
+MainCtrl::MainCtrl(DawInstance& _daw) : DawCtrl(_daw) {
+	my_printf("MainCtrl constructor\n",0);
+}
+void MainCtrl::initApp(int argc, char* argv[]) {
+	daw.initDaw(argc, argv);
+	daw_tls::tlsinstance& tls = daw_tls::getTls();
+	tls.mainCtrl = this;
+}
 bool MainCtrl::init(window_main* window, NVGcontext* nanovg)
+{
+	daw.startDaw();
+	bool b = DawCtrl::init(window, nanovg);
+
+	waveformrender::getInstance()->init();
+	daw.setEmptyProject();
+	return b;
+}
+bool DawCtrl::init(window_main* window, NVGcontext* nanovg)
 {
 	this->mainWindow = window;
 	this->window = window;
 	this->vg = nanovg;
-	plugindb.openDatabase();
-	vsthost::getInstance()->initThreads();
-	this->playThread.setTls(daw_tls::getTls());
-	this->playThread.startThread(this);
-	this->workerThread.setTls(daw_tls::getTls());
-	this->workerThread.startThread();
-	this->workerThread.call([]() {
-		my_printf("WorkerThreadCallTest\n", 0);
-	})->wait();
 	themes.loadThemes();
 
 	getDefaultTheme()->initTheme();
 	getDefaultTheme()->bindFonts();
-
-	view = new DawViewContainers(menubar, cursor, *this, grid, clipView, dragdropclip);
-	view->addTo(this->containers);
-	for (guictr_base *ctr : containers) {
-		ctr->setControl(this);
-	}
-	view->ctr_plugins.setControl(this);
-	view->ctr_nodes.setControl(this);
-	view->ctr_tracks.setVisible(containers[0] == &view->ctr_tracks);
-	view->ctr_nodes.setVisible(containers[0] == &view->ctr_nodes);
+	setupView();
 
 	menus.recent.type = ngui::menu_type::submenu;
 	menus.recent.title = "Open recent";
@@ -827,8 +988,6 @@ bool MainCtrl::init(window_main* window, NVGcontext* nanovg)
 	this->mainWindow->updateMenu();
 #endif
 
-	waveformrender::getInstance()->init();
-	setEmptyProject();
 
 	grid.grid_dens = settings.dens;
 
@@ -837,29 +996,23 @@ bool MainCtrl::init(window_main* window, NVGcontext* nanovg)
 	isOK = true;
 	return isOK;
 }
-void MainCtrl::onTick()
+void DawCtrl::onTick()
 {
-	const bool bWroteMidiData = vsthost::getInstance()->writeRecordedData();
-
-	if (bWroteMidiData) {
-		this->updateVisibleTrackContents();
-	}
-//	double since = timer.getTimeDoubleReset();
-	vsthost::getInstance()->onTick();
 	for (guictr_base *ctr : containers) {
 		ctr->onTick(this);
 	}
 	for (guictr_base *ctr : containers) {
 		ctr->onIdle();
 	}
-//	if (rand.rng_rand(100000) == 0) {
-//		throw std::bad_alloc();
-//	}
-//	my_printf("onTick %d\n", std::this_thread::get_id());
-//	waveformrender::getInstance()->renderUpdates(vg, 0);
-//	if (isPlaying()) {
-		mainWindow->requestRedraw();
-//	}
+	//	if (rand.rng_rand(100000) == 0) {
+	//		throw std::bad_alloc();
+	//	}
+	//	my_printf("onTick %d\n", std::this_thread::get_id());
+	//	waveformrender::getInstance()->renderUpdates(vg, 0);
+	//	if (isPlaying()) {
+			mainWindow->requestRedraw();
+	//	}
+
 	if (!guiDragged && !guiCaptured && guiOver && (!this->ctxtmenu || ctxtmenu->isTransient())) {
 		int32_t hoverTicks = 0;
 		if (ctxtmenu && ctxtmenu->isTransient() && (lastTooltipSrc && guiOver && guiOver != lastTooltipSrc)) {
@@ -874,7 +1027,7 @@ void MainCtrl::onTick()
 				auto newContextMenu = guiOver->getTooltip(this);
 				if (newContextMenu) {
 					lastTooltipSrc = guiOver;
-					nextTooltipId++;
+					daw.nextTooltipId++;
 					openContextMenu(newContextMenu, m_mousePos+ivec2(-16,26));
 				}
 				hoverTicks = 0;
@@ -887,6 +1040,11 @@ void MainCtrl::onTick()
 			closeContextMenu();
 		}
 	}
+}
+void MainCtrl::onTick() {
+	daw.onTick();
+	DawCtrl::onTick();
+
 	if (guiDragged && !guiCaptured && guiDragged->isDragMoveable()) {
 		track_t *tr = NULL;
 		int32_t hoverTicks = 0;
@@ -894,11 +1052,11 @@ void MainCtrl::onTick()
 		guictr_base& ctrMixers = view->ctr_tracks.trackControls;
 		if (ctrMixers.contains(trackViewLocalPos)) {
 			ivec2 posRelative = m_mousePos - ctrMixers.toScreenSpace(ivec2(0));
-			tr = getTrackFromMouse(this->view->ctr_tracks.trackView, *this, posRelative, false);
-			if (tr && tr == lastHoveredTrack && selectedTrack != tr) {
+			tr = getTrackFromMouse(this->view->ctr_tracks.trackView, daw, posRelative, false);
+			if (tr && tr == lastHoveredTrack && daw.getSelectedTrack() != tr) {
 				hoverTicks = lastHoveredTrackTicks + 1;
 				if (lastHoveredTrackTicks >= 6) {
-					setSelectedTrack(tr);
+					daw.setSelectedTrack(tr);
 					showPluginView();
 					hoverTicks = 0;
 				}
@@ -919,37 +1077,60 @@ void MainCtrl::onTick()
 		lastHoveredTrackTicks = hoverTicks;
 		lastHoveredTrack = tr;
 	}
-	if (!guiDragged && !guiCaptured && !ctxtmenu) {
-		if (projectToLoad) {
-			std::shared_ptr<project_to_load_t> projectToLoadCpy = projectToLoad;
-			projectToLoad = nullptr;
-			try {
-				setLoadedProject(projectToLoadCpy->projectfile, projectToLoadCpy->loadflags);
-			} catch (...) {
-				log_printf("Failed loading project\n", 0);
-			}
-			log_printf("end of setLoadedProject\n", 0);
+}
+
+void DawInstance::setControls(MainCtrl* mainCtrl, CompanionCtrl* companionCtrl) {
+	this->mainCtrl = mainCtrl;
+	this->companionCtrl = companionCtrl;
+	this->dawCtrls.push_back(mainCtrl);
+	this->dawCtrls.push_back(companionCtrl);
+}
+void DawInstance::onTick()
+{
+	const bool bWroteMidiData = vsthost::getInstance()->writeRecordedData();
+
+	if (bWroteMidiData) {
+		for (auto ctrl : dawCtrls) {
+			ctrl->updateVisibleTrackContents();
 		}
+
+	}
+//	double since = timer.getTimeDoubleReset();
+	vsthost::getInstance()->onTick();
+
+	bool noPopups = true;
+	for (auto* ctrl : dawCtrls) {
+		noPopups &= !ctrl->guiDragged && !ctrl->guiCaptured && !ctrl->ctxtmenu;
+	}
+	if (noPopups && projectToLoad) {
+		std::shared_ptr<project_to_load_t> projectToLoadCpy = projectToLoad;
+		projectToLoad = nullptr;
+		try {
+			setLoadedProject(projectToLoadCpy->projectfile, projectToLoadCpy->loadflags);
+		} catch (...) {
+			log_printf("Failed loading project\n", 0);
+		}
+		log_printf("end of setLoadedProject\n", 0);
 	}
 }
 
-void MainCtrl::pushHist(action_base* action) {
+void DawInstance::pushHist(action_base* action) {
 	hist.push(this, action);
 }
-std::shared_ptr<project_file> MainCtrl::createProjectFile() {
+std::shared_ptr<project_file> DawInstance::createProjectFile() {
 	ThreadLock lock = playThread.lockThread();
 	std::shared_ptr<project_file> file = std::make_shared<project_file>();
 	file->path = projectPath;
 	copyTo(file->project);
 	audiocache::getInstance()->store(file->sampleFileIndex);
-	file->layout.layoutGrid = grid;
-	file->layout.scrollOffsetX = view->ctr_tracks.getScrollOffset();
+	file->layout.layoutGrid = mainCtrl->grid;
+	file->layout.scrollOffsetX = mainCtrl->view->ctr_tracks.getScrollOffset();
 	return file;
 }
-void MainCtrl::setDragged(guibase* g) {
+void DawCtrl::setDragged(guibase* g) {
 	guiDragged = g;
 }
-bool MainCtrl::setProjectToLoad(std::shared_ptr<project_file> file, int flags) {
+bool DawInstance::setProjectToLoad(std::shared_ptr<project_file> file, int flags) {
 	projectToLoad = std::make_shared<project_to_load_t>(project_to_load_t{std::move(file), flags});
 	return true;
 }
@@ -974,7 +1155,7 @@ bool MainCtrl::setProjectToLoad(std::shared_ptr<project_file> file, int flags) {
  * @param flags - 0 or FLAG_DEFER_LOAD (don't load vst plugins, use placeholders)
  * @return
  */
-bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file, int flags) {
+bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags) {
 
 	setAudioThreadState(playback_state::status_no_process);
 	my_printf("loading %s: %d tracks\n", StringAsCStr(file->path), trackList.size());
@@ -998,7 +1179,7 @@ bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file, int flags) {
 
 	/** create all gui instances **/
 	for (track_t* tr : trackList) {
-		view->ctr_tracks.addTrack(tr, FLG_TRK_CHANGE_LOAD);
+		mainCtrl->view->ctr_tracks.addTrack(tr, FLG_TRK_CHANGE_LOAD);
 	}
 	/** pre-load all plugin instances **/
 	trackList.loadPlugins(file->project);
@@ -1012,7 +1193,7 @@ bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file, int flags) {
 	/** inform host about track layout changes so it resets and updates internal structures **/
 	host->onTrackLayoutChange();
 
-
+	MainCtrl* renderCtrl = this->mainCtrl;
 	// is plugin loading not deferred?
 	if ((flags&FLAG_DEFER_LOAD) == 0) {
 		AppWndProc_enableBlockReentrant();
@@ -1041,13 +1222,13 @@ bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file, int flags) {
 			}
 		};
 		guictr_loading ctr;
-		ctr.size = m_size;
-		ctr.setControl(this);
+		ctr.size = renderCtrl->m_size;
+		ctr.setControl(renderCtrl);
 		ctr.layout();
 
 
 		/** precondition: an existing with opengl+nanoVG context **/
-		auto windowMain = dynamic_cast<window_main*>(window);
+		auto windowMain = dynamic_cast<window_main*>(renderCtrl->window);
 		dbgassert(windowMain);
 
 		/** get the list of all plugins in deferred loading state **/
@@ -1068,16 +1249,16 @@ bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file, int flags) {
 		log_printf("begin plugin list loading\n", 0);
 		int len = pluginsDeferred.size();
 		for (int i = 0; i < len; i++) {
-
 			dbgassert(pluginsDeferred[i]->getModuleType() == PLUGIN_TYPE_DEFERRED);
 			auto plugin = dynamic_cast<effect_deferred*>(pluginsDeferred[i]);
 			windowMain->preRender();
 	//		render(0, 0, m_size.x, m_size.y, 1.0);
-			NVGcolor col = getTheme()->getColor(GuiColor::COL_CLEAR_COLOR);
+			NVGcolor col = renderCtrl->getTheme()->getColor(GuiColor::COL_CLEAR_COLOR);
 			glClearColor(col.r, col.g, col.b, col.a);
 			glClear(GL_COLOR_BUFFER_BIT);
 			float ratio = 1.0;
-			nvgBeginFrame(vg, m_size.x, m_size.y, ratio);
+			auto vg = renderCtrl->vg;
+			nvgBeginFrame(vg, renderCtrl->m_size.x, renderCtrl->m_size.y, ratio);
 			nvgLineJoin(vg, NVGlineCap::NVG_BEVEL);
 
 			nvgSave(vg);
@@ -1100,14 +1281,18 @@ bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file, int flags) {
 	/** load layouts **/
 	trackList.loadSubtrackLayouts(file->project);
 
-//	view->ctr_tracks.layout();
-	grid.setLayout(file->layout.layoutGrid);
-	view->ctr_tracks.layout();
-	view->ctr_plugins.layout();
+	auto ctrl = mainCtrl;
+	if (ctrl)
+	{
+		//	view->ctr_tracks.layout();
+		ctrl->grid.setLayout(file->layout.layoutGrid);
+		ctrl->view->ctr_tracks.layout();
+		ctrl->view->ctr_plugins.layout();
 
-	updateVisibleTrackContents();
-	view->ctr_tracks.layout();
-	view->ctr_tracks.setScrollOffset(file->layout.scrollOffsetX);
+		ctrl->updateVisibleTrackContents();
+		ctrl->view->ctr_tracks.layout();
+		ctrl->view->ctr_tracks.setScrollOffset(file->layout.scrollOffsetX);
+	}
 
 
 	/** load cursor state **/
@@ -1124,14 +1309,10 @@ bool MainCtrl::setLoadedProject(std::shared_ptr<project_file> file, int flags) {
 	return true;
 }
 
-void MainCtrl::relayout(int32_t w, int32_t h) {
-	closeAllAppMenus();
-	if (ctxtmenu && !ctxtmenu->isDialog()) {
-		closeContextMenu();
-	}
+void MainCtrl::layoutView(int32_t w, int32_t h) {
 	w = math::max(640, w);
 	h = math::max(480, h);
-	view->layout(w, h);
+	viewContainers->layout(w, h);
 
 	view->ctr_plugins.layout();
 	view->ctr_clipeditor.layout();
@@ -1149,11 +1330,29 @@ void MainCtrl::relayout(int32_t w, int32_t h) {
 		ctr->layout();
 	}
 }
-void MainCtrl::setSelectedTrack(track_t* track) {
-	selectedTrack = track;
-	view->ctr_plugins.showTrack(track ? track->audio : nullptr);
+
+
+void CompanionCtrl::layoutView(int32_t w, int32_t h) {
+	w = math::max(640, w);
+	h = math::max(480, h);
+	viewContainers->layout(w, h);
+	for (guictr_base *ctr : containers) {
+		ctr->layout();
+	}
 }
-track_t* MainCtrl::getSelectedTrack() {
+
+void DawCtrl::relayout(int32_t w, int32_t h) {
+	closeAllAppMenus();
+	if (ctxtmenu && !ctxtmenu->isDialog()) {
+		closeContextMenu();
+	}
+	layoutView(w, h);
+}
+void DawInstance::setSelectedTrack(track_t* track) {
+	selectedTrack = track;
+	mainCtrl->view->ctr_plugins.showTrack(track ? track->audio : nullptr);
+}
+track_t* DawInstance::getSelectedTrack() {
 	return selectedTrack;
 }
 guictr_plugins* MainCtrl::getPluginCtr() {
@@ -1177,18 +1376,18 @@ void MainCtrl::updateVisibleTrackContents() {
 bool MainCtrl::isZooming() {
 	return guiCaptured == &view->ctr_tracks.trackTimeline;
 }
-void MainCtrl::uncaptureMouse() {
+void DawCtrl::uncaptureMouse() {
 	this->mainWindow->releaseMouse();
 }
-void MainCtrl::onUncaptureMouse() {
+void DawCtrl::onUncaptureMouse() {
 	guiCaptured = NULL;
 }
-void MainCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos) {
-	dragdropTarget.reset();
+void DawCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos) {
+	daw.dragdropTarget.reset();
 #if USE_GUI_MENU
-	if (ctxtmenu && !ctxtmenu->isTransient()) {
+	if (ctxtmenu && !ctxtmenu->isTransient() && viewContainers->getMenu()) {
 		MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_OVER);
-		if (view->ctr_menu.mouseHitTest(mousePos, evt)) {
+		if (viewContainers->getMenu()->mouseHitTest(mousePos, evt)) {
 		}
 		return;
 	}
@@ -1196,7 +1395,7 @@ void MainCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos) {
 	BaseCtrl::mouseMoved(mousePos, deltaPos);
 }
 
-void MainCtrl::objectDragMove(guibase* g, MouseEvent& mevt) {
+void DawCtrl::objectDragMove(guibase* g, MouseEvent& mevt) {
 	MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_OBJECT);
 	evt.setDraggedThing(g);
 	for (guictr_base *ctr : containers) {
@@ -1211,7 +1410,7 @@ void MainCtrl::objectDragMove(guibase* g, MouseEvent& mevt) {
 	} else {
 	}
 }
-void MainCtrl::objectDragRelease(guibase* g, MouseEvent& mevt) {
+void DawCtrl::objectDragRelease(guibase* g, MouseEvent& mevt) {
 	MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_OBJECT);
 	evt.setDraggedThing(g);
 	for (guictr_base *ctr : containers) {
@@ -1225,9 +1424,9 @@ void MainCtrl::objectDragRelease(guibase* g, MouseEvent& mevt) {
 		g->dragReleaseOn(gui, mposObj);
 	}
 }
-bool MainCtrl::filesDropBegin(std::vector<String>& files, ivec2 mousepos, int kbmods) {
-	my_printf("filesDropBegin %d %d isdragging=%d\n", mousepos.x, mousepos.y, dragdropclip.isLoaded);
-	dragdropclip.reset();
+bool DawCtrl::filesDropBegin(std::vector<String>& files, ivec2 mousepos, int kbmods) {
+	my_printf("filesDropBegin %d %d isdragging=%d\n", mousepos.x, mousepos.y, daw.dragdropclip.isLoaded);
+	daw.dragdropclip.reset();
 	if (guiDragged || guiCaptured) {
 		return false;
 	}
@@ -1246,15 +1445,15 @@ bool MainCtrl::filesDropBegin(std::vector<String>& files, ivec2 mousepos, int kb
 					//clip.notes = move(notes);
 					clip.audio.id = audio->id;
 					clip.setLenSamples(sample->nSamples);
-					clip.setLen(samplesToTicks(sample->nSamples));
+					clip.setLen(daw.samplesToTicks(sample->nSamples));
 					clip.loopEnabled = false;
 					std::shared_ptr<track_clipboard_t> trClipboard = std::make_shared<track_clipboard_t>();
 					trClipboard->clips.push_back(std::make_shared<clip_t>(std::move(clip)));
 					std::shared_ptr<clip_clipboard> fileClipboard = std::make_shared<clip_clipboard>();
 					fileClipboard->tracks.push_back(trClipboard);
-					dragdropclip.reset();
-					dragdropclip.clipboard = fileClipboard;
-					dragdropclip.isLoaded = true;
+					daw.dragdropclip.reset();
+					daw.dragdropclip.clipboard = fileClipboard;
+					daw.dragdropclip.isLoaded = true;
 				}
 			}
 		}
@@ -1268,9 +1467,9 @@ bool MainCtrl::filesDropBegin(std::vector<String>& files, ivec2 mousepos, int kb
 				if (task.isGood()) {
 					std::shared_ptr<clip_clipboard> fileloadedClipboard = task.getClipboard();
 					if (fileloadedClipboard) {
-						dragdropclip.reset();
-						dragdropclip.clipboard = fileloadedClipboard;
-						dragdropclip.isLoaded = true;
+						daw.dragdropclip.reset();
+						daw.dragdropclip.clipboard = fileloadedClipboard;
+						daw.dragdropclip.isLoaded = true;
 						my_printf("got clip\n",0);
 					} else {
 						my_printf("FAIL: no clip\n",0);
@@ -1278,9 +1477,9 @@ bool MainCtrl::filesDropBegin(std::vector<String>& files, ivec2 mousepos, int kb
 				}
 			}
 		}
-		if (dragdropclip.isLoaded) {
+		if (daw.dragdropclip.isLoaded) {
 			MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_CLIP);
-			evt.setDraggedThing(&dragdropclip);
+			evt.setDraggedThing(&daw.dragdropclip);
 			for (guictr_base *ctr : containers) {
 				if (ctr->mouseHitTest(mousepos, evt)) {
 					break;
@@ -1289,7 +1488,7 @@ bool MainCtrl::filesDropBegin(std::vector<String>& files, ivec2 mousepos, int kb
 			guibase* gui = evt.getGuiHit();
 			if (gui) {
 				ivec2 mposObj = toControlsObjectSpace(mousepos, gui);
-				bool result = gui->clipDropBegin(dragdropclip, mposObj, kbmods);
+				bool result = gui->clipDropBegin(daw.dragdropclip, mposObj, kbmods);
 				if (!result) {
 
 				}
@@ -1304,16 +1503,16 @@ bool MainCtrl::filesDropBegin(std::vector<String>& files, ivec2 mousepos, int kb
 	}
 	return false;
 }
-bool MainCtrl::filesDropMove(ivec2 mousepos, int kbmods) {
+bool DawCtrl::filesDropMove(ivec2 mousepos, int kbmods) {
 	if (guiDragged || guiCaptured) {
-		dragdropclip.reset();
+		daw.dragdropclip.reset();
 		return false;
 	}
-	if (dragdropclip.isLoaded) {
-		dragdropclip.isValidTarget = false;
+	if (daw.dragdropclip.isLoaded) {
+		daw.dragdropclip.isValidTarget = false;
 //		my_printf("filesDropMove %d %d isdragging=%d\n", pos.x, pos.y, dragdropclip.isDragging);
 		MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_CLIP);
-		evt.setDraggedThing(&dragdropclip);
+		evt.setDraggedThing(&daw.dragdropclip);
 		for (guictr_base *ctr : containers) {
 			if (ctr->mouseHitTest(mousepos, evt)) {
 				break;
@@ -1322,7 +1521,7 @@ bool MainCtrl::filesDropMove(ivec2 mousepos, int kbmods) {
 		guibase* gui = evt.getGuiHit();
 		if (gui) {
 			ivec2 mposObj = toControlsObjectSpace(mousepos, gui);
-			bool result = gui->clipDropMove(dragdropclip, mposObj, kbmods);
+			bool result = gui->clipDropMove(daw.dragdropclip, mposObj, kbmods);
 			if (!result) {
 
 			}
@@ -1341,15 +1540,15 @@ public:
 		clip.reset();
 	}
 };
-bool MainCtrl::filesDropFinal(std::vector<String>& files, ivec2 mousepos, int kbmods) {
-	clipreset rst(dragdropclip);
+bool DawCtrl::filesDropFinal(std::vector<String>& files, ivec2 mousepos, int kbmods) {
+	clipreset rst(daw.dragdropclip);
 	if (guiDragged || guiCaptured) {
 		return false;
 	}
-	if (dragdropclip.isLoaded && dragdropclip.isValidTarget) {
-		my_printf("filesDropFinal %d %d isdragging=%d\n", mousepos.x, mousepos.y, dragdropclip.isLoaded);
+	if (daw.dragdropclip.isLoaded && daw.dragdropclip.isValidTarget) {
+		my_printf("filesDropFinal %d %d isdragging=%d\n", mousepos.x, mousepos.y, daw.dragdropclip.isLoaded);
 		MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_CLIP);
-		evt.setDraggedThing(&dragdropclip);
+		evt.setDraggedThing(&daw.dragdropclip);
 		for (guictr_base *ctr : containers) {
 			if (ctr->mouseHitTest(mousepos, evt)) {
 				break;
@@ -1358,7 +1557,7 @@ bool MainCtrl::filesDropFinal(std::vector<String>& files, ivec2 mousepos, int kb
 		guibase* gui = evt.getGuiHit();
 		if (gui) {
 			ivec2 mposObj = toControlsObjectSpace(mousepos, gui);
-			bool result = gui->clipDropFinal(dragdropclip, mposObj, kbmods);
+			bool result = gui->clipDropFinal(daw.dragdropclip, mposObj, kbmods);
 			return result;
 		}
 	}
@@ -1371,17 +1570,6 @@ namespace STLVectorDebugTracking {
 #endif
 
 bool MainCtrl::processGlobalKeyevent(KeyEvent& event) {
-
-	if (event.type == KeyEventType::K_PRESS) {
-		lastKey = getKeyName(event.scancode);
-		if (!lastKey.length()) {
-			const char* ca = glfwGetKeyName(event.keyCode, event.scancode);
-			if (ca) {
-				lastKey = ca;
-
-			}
-		}
-	}
 	if (event.type != KeyEventType::K_RELEASE) {
 		if (event.keyCode == KEY_TAB) {
 			switch (this->viewMode) {
@@ -1395,8 +1583,25 @@ bool MainCtrl::processGlobalKeyevent(KeyEvent& event) {
 			}
 			return true;
 		}
+	}
+	return DawCtrl::processGlobalKeyevent(event);
+
+}
+bool DawCtrl::processGlobalKeyevent(KeyEvent& event) {
+
+	if (event.type == KeyEventType::K_PRESS) {
+		lastKey = getKeyName(event.scancode);
+		if (!lastKey.length()) {
+			const char* ca = glfwGetKeyName(event.keyCode, event.scancode);
+			if (ca) {
+				lastKey = ca;
+
+			}
+		}
+	}
+	if (event.type != KeyEventType::K_RELEASE) {
 		if (event.keyCode == KEY_M) {
-			ThreadLock lock = playThread.lockThread();
+			ThreadLock lock = daw.playThread.lockThread();
 #if defined(__GNUC__) && defined(ENABLE_MICHAELS_GLIBCXX_HACKS)
 			STLVectorDebugTracking::dbgPrintVectorAllocs();
 			return true;
@@ -1407,10 +1612,10 @@ bool MainCtrl::processGlobalKeyevent(KeyEvent& event) {
 			return true;
 		}
 		if (event.keyCode == KEY_SPACE) {
-			if (isPlaying()) {
-				stopPlaying();
+			if (daw.isPlaying()) {
+				daw.stopPlaying();
 			} else {
-				startPlaying();
+				daw.startPlaying();
 			}
 			return true;
 		}
@@ -1453,24 +1658,24 @@ bool MainCtrl::processGlobalKeyevent(KeyEvent& event) {
 	}
 	return false;
 }
-void MainCtrl::startPlaying() {
+void DawInstance::startPlaying() {
 	setAudioThreadState(playback_state::status_play);
 }
-void MainCtrl::stopPlaying() {
+void DawInstance::stopPlaying() {
 	setAudioThreadState(playback_state::status_stop);
 }
-void MainCtrl::setAudioThreadState(playback_state state) {
+void DawInstance::setAudioThreadState(playback_state state) {
 	playThread.addRequest(REQ_STATE, (int) state, true);
 }
-bool MainCtrl::toggleLoop() {
+bool DawInstance::toggleLoop() {
 	loopEnabled = !loopEnabled;
 	return loopEnabled;
 }
-bool MainCtrl::isPlaying() {
+bool DawInstance::isPlaying() {
 	return playThread.getState() == playback_state::status_play;
 }
-bool MainCtrl::mouseDownPre() {
-	dragdropclip.reset();
+bool DawCtrl::mouseDownPre() {
+	daw.dragdropclip.reset();
 	if (this->ctxtmenu && this->ctxtmenu->isDialog()) {
 		return false;
 	}
@@ -1478,7 +1683,7 @@ bool MainCtrl::mouseDownPre() {
 	return true;
 }
 
-track_t* MainCtrl::createNewTrack(int trackType) {
+track_t* DawInstance::createNewTrack(int trackType) {
 	dbgassert(trackType >= 0 && trackType < NUM_TRACK_TYPES);
 	int32_t tryTypeOffset = trackTypeCtrs[trackType]->size();
 
@@ -1496,7 +1701,7 @@ track_t* MainCtrl::createNewTrack(int trackType) {
 	}
 	return newTrack;
 }
-track_t* MainCtrl::insertNewTrack(int trackInsertPos, int trackType, int flags) {
+track_t* DawInstance::insertNewTrack(int trackInsertPos, int trackType, int flags) {
 	track_t* newTrack = createNewTrack(trackType);
 	ThreadLock lock = playThread.lockThread();
 	addTrackImpl(trackInsertPos, newTrack, flags);
@@ -1515,18 +1720,18 @@ public:
 		trackPtr = nullptr;
 		trackIdx = _trackPtr->idx;
 		localIdx = _trackPtr->localIdxFlat;
-		dbgassert(MainCtrl::get()->getTrackId(trackIdx) == _trackPtr);
+		dbgassert(DawInstance::get()->getTrackId(trackIdx) == _trackPtr);
 	}
-	void releaseResources(MainCtrl* ctrl) override {
+	void releaseResources(DawInstance* ctrl) override {
 		if (trackPtr) {
 			releaseTrackResources(trackPtr, ctrl);
 			delete trackPtr;
 			trackPtr = nullptr;
 		}
 	}
-	void undo(MainCtrl* ctrl) {
+	void undo(DawInstance* ctrl) {
 		ctrl->resetMouseContext();
-		ctrl->setEditClip(NULL);
+		ctrl->resetEditClip();
 		trackPtr = ctrl->getTrackId(trackIdx);
 		dbgassert(trackPtr && trackPtr->audio && trackPtr->audio->sampleFormat.blockSize%8==0); // see if pointer is valid
 		dbgassert(localIdx == trackPtr->localIdxFlat);
@@ -1534,10 +1739,10 @@ public:
 		localIdx = trackPtr->localIdxFlat;
 		ctrl->removeTrackImpl(trackPtr, FLG_TRK_CHANGE_HISTORY_UNDO);
 	}
-	void redo(MainCtrl* ctrl) {
+	void redo(DawInstance* ctrl) {
 		dbgassert(trackPtr);
 		ctrl->resetMouseContext();
-		ctrl->setEditClip(NULL);
+		ctrl->resetEditClip();
 		ctrl->addTrackImpl(localIdx, trackPtr, FLG_TRK_CHANGE_HISTORY_UNDO);
 		dbgassert(localIdx == trackPtr->localIdxFlat);
 		localIdx = trackPtr->localIdxFlat;
@@ -1556,11 +1761,11 @@ public:
 		trackPtr = _trackPtr;
 		trackIdx = _trackPtr->idx;
 		localIdx = _trackPtr->localIdxFlat;
-		dbgassert(MainCtrl::get()->getTrackId(trackIdx) != trackPtr);
+		dbgassert(DawInstance::get()->getTrackId(trackIdx) != trackPtr);
 	}
 	~action_modify_track_remove() {
 	}
-	void releaseResources(MainCtrl* ctrl) override {
+	void releaseResources(DawInstance* ctrl) override {
 		if (trackPtr) {
 			releaseTrackResources(trackPtr, ctrl);
 			delete trackPtr;
@@ -1568,18 +1773,18 @@ public:
 		}
 	}
 
-	void undo(MainCtrl* ctrl) {
+	void undo(DawInstance* ctrl) {
 		ctrl->resetMouseContext();
-		ctrl->setEditClip(NULL);
+		ctrl->resetEditClip();
 		ctrl->addTrackImpl(localIdx, trackPtr, FLG_TRK_CHANGE_HISTORY_UNDO);
 		dbgassert(localIdx == trackPtr->localIdxFlat);
 		localIdx = trackPtr->localIdxFlat;
 		trackPtr = nullptr;
 		//UNSERIALIZE TRACK VSTs
 	}
-	void redo(MainCtrl* ctrl) {
+	void redo(DawInstance* ctrl) {
 		ctrl->resetMouseContext();
-		ctrl->setEditClip(NULL);
+		ctrl->resetEditClip();
 		trackPtr = ctrl->getTrackId(trackIdx);
 		dbgassert(trackPtr);
 		//SERIALIZE TRACK VSTs
@@ -1588,7 +1793,7 @@ public:
 		dbgassert(localIdx == trackPtr->localIdxFlat);
 	}
 };
-void MainCtrl::addTrackImpl(int32_t trackInsertPos, track_t* newTrack, int flags) {
+void DawInstance::addTrackImpl(int32_t trackInsertPos, track_t* newTrack, int flags) {
 	trackList.addTrack(trackInsertPos, newTrack);
 	if ((flags&FLG_TRK_CHANGE_HISTORY_UNDO) != 0) {
 		dbgassert(newTrack->audio);
@@ -1597,55 +1802,59 @@ void MainCtrl::addTrackImpl(int32_t trackInsertPos, track_t* newTrack, int flags
 		vsthost* host = vsthost::getInstance();
 		host->createAudio(newTrack);
 	}
-	view->ctr_tracks.addTrack(newTrack, flags);
+	mainCtrl->view->ctr_tracks.addTrack(newTrack, flags);
 	if (flags&FLG_TRK_CHANGE_USER) {
 		pushHist(new action_modify_track_add(StringFormat("Add %s Track", TrackTypeToName(newTrack->type)), newTrack));
 	}
 
 	vsthost::getInstance()->onTrackLayoutChange();
 }
-void MainCtrl::removeTrackId(uint32_t trackId) {
+void DawInstance::removeTrackId(uint32_t trackId) {
 	if (trackList.validTrackIdx(trackId)) {
 		removeTrackImpl(trackList[trackId], FLG_TRK_CHANGE_USER);
 	}
 }
-void MainCtrl::removeTrackImpl(track_t* track, int flags) {
+void DawInstance::removeTrackImpl(track_t* track, int flags) {
 	guictr_plugins* plugins = MainCtrl::getPluginCtr();
 	plugins->hideTrack(track->audio);
-	if (clipView.gui && clipView.gui->m_track == track){
-		clipView.set(NULL);
+	if (mainCtrl->clipView.gui && mainCtrl->clipView.gui->m_track == track){
+		mainCtrl->clipView.set(NULL);
 	}
 	trackList.removeTrack(track);
-	view->ctr_tracks.removeTrack(track, flags);
+	mainCtrl->view->ctr_tracks.removeTrack(track, flags);
 	DAW::removeTrackRoutings(this->getTracksFlatVec(), track->audio->stageId);
 	if (flags&FLG_TRK_CHANGE_USER) {
 		pushHist(new action_modify_track_remove(StringFormat("Remove %s Track", TrackTypeToName(track->type)), track));
 	}
 	vsthost::getInstance()->onTrackLayoutChange();
 }
-track_t* MainCtrl::getTrackId(uint32_t trackId) {
+track_t* DawInstance::getTrackId(uint32_t trackId) {
 	return trackList[trackId]; // operator[] returns NULL on oob
 }
 
-void MainCtrl::preClipDelete(clip_t* clip) {
-	if (clipView.clip() == clip) {
-		clipView.set(NULL);
+void DawInstance::preClipDelete(clip_t* clip) {
+	for (auto* ctrl : this->dawCtrls) {
+		if (ctrl->clipView.clip() == clip) {
+			ctrl->clipView.set(NULL);
+		}
+		ctrl->onGuiRemoved(clip);
 	}
-	onGuiRemoved(clip);
 //	resetMouseContext();
 }
-void MainCtrl::preTrackDelete(track_t* track) {
-	if(clipView.gui && clipView.gui->m_track == track) {
-		clipView.set(NULL);
+void DawInstance::preTrackDelete(track_t* track) {
+	for (auto* ctrl : this->dawCtrls) {
+		if (ctrl->clipView.gui && ctrl->clipView.gui->m_track == track) {
+			ctrl->clipView.set(NULL);
+		}
 	}
 	resetMouseContext();
 }
 void MainCtrl::showAutomation(track_t* tr, automatable_t* at, int32_t paramIdx) {
 	view->ctr_tracks.showAutomationLane(tr, at, paramIdx);
 }
-void MainCtrl::setTempo(int32_t _tempo100) {
+void DawInstance::setTempo(int32_t _tempo100) {
 	std::function<void()> fn2 = [this, _tempo100]() {
-		this->tempo100 = CLAMP_I(_tempo100, 100, 99900);
+		tempo100 = CLAMP_I(_tempo100, 100, 99900);
 	};
 	playThread.call(fn2, true);
 
@@ -1654,8 +1863,30 @@ void MainCtrl::setTempo(int32_t _tempo100) {
 //		this->tempo100 = CLAMP_I(_tempo100, 100, 99900);
 //	}, true);
 }
+void MainCtrl::destroy() {
+	daw.destroy();
+	DawCtrl::destroy();
+}
 void MainCtrl::setStatusText(String s) {
 	view->statusbar.setTitle(s);
+}
+void DawInstance::resetMouseContext() {
+	for (auto* ctrl : this->dawCtrls) {
+		ctrl->resetMouseContext();
+	}
+}
+void DawInstance::closeContextMenus() {
+	for (auto* ctrl : this->dawCtrls) {
+		ctrl->closeContextMenu();
+	}
+}
+void DawInstance::resetEditClip() {
+	for (auto* ctrl : this->dawCtrls) {
+		ctrl->setEditClip(nullptr);
+	}
+}
+void DawCtrl::setEditClip(gui_clip* gclip) {
+	clipView.set(gclip);
 }
 void MainCtrl::setEditClip(gui_clip* gclip) {
 	view->ctr_clipeditor.storeLayout();
@@ -1663,16 +1894,16 @@ void MainCtrl::setEditClip(gui_clip* gclip) {
 	view->ctr_clipeditor.showEditClip();
 }
 
-void MainCtrl::prerender(int32_t x, int32_t y, int32_t w, int32_t h, float pixelRatio) {
+void DawCtrl::prerender(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float pixelRatio) {
 
 	daw_tls::getTls().renderStats.playThreadLockCount=0;
 	daw_tls::getTls().renderStats.clipsRendered=0;
 	daw_tls::getTls().renderStats.notesRendered=0;
 //	my_printf("prerender %d\n", std::this_thread::get_id());
 	for (guictr_base *ctr : containers) {
-		ctr->prerender(vg);
+		ctr->prerender(nanovgCtxt);
 	}
-	waveformrender::getInstance()->renderUpdates(vg, 0);
+	waveformrender::getInstance()->renderUpdates(nanovgCtxt, 0);
 }
 track_t* clip_view::track() const {
 	if (!this->gui)

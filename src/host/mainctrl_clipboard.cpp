@@ -94,7 +94,7 @@ void copyClipsInRange(const trackdata_midi_t& in, track_clipboard_t& out, int32_
 //	}
 //	out->sortClips();
 }
-void MainCtrl::pasteClipboard(clip_clipboard* clipboard, DAW::Cursor& cursor) {
+void DawInstance::pasteClipboard(clip_clipboard* clipboard, DAW::Cursor& cursor) {
 	if (clipboard->type == clip_clipboard::ClipboardFull) {
 		if (cursor.isSubtrackSelection())
 			return;
@@ -125,7 +125,7 @@ void MainCtrl::pasteClipboard(clip_clipboard* clipboard, DAW::Cursor& cursor) {
 		}
 	}
 }
-void MainCtrl::pasteClipboard(clip_clipboard* clipboard, int32_t track, tick_t tick) {
+void DawInstance::pasteClipboard(clip_clipboard* clipboard, int32_t track, tick_t tick) {
 	tick_t tickOffset = tick - clipboard->srcPos;
 	tick_t trackOffset = track;
 	for (int i = 0; i <= clipboard->selTrackRange; i++) {
@@ -251,7 +251,7 @@ shared_ptr<clip_clipboard> copySelection(const trackallcontainer_t& trackList, c
 	return clipboard;
 }
 }
-shared_ptr<clip_clipboard> MainCtrl::copySelection(const DAW::Cursor& _cursor) {
+shared_ptr<clip_clipboard> DawInstance::copySelection(const DAW::Cursor& _cursor) {
 	return DAW::copySelection(this->trackList, _cursor);
 }
 
@@ -303,15 +303,15 @@ void cutIntersectingClips(trackdata_midi_t& midi, tick_t tickBegin, tick_t tickE
 	}
 	midi.sortClips();
 }
-void MainCtrl::cutIntersecting(track_t* tr, tick_t tickBegin, tick_t tickEnd) {
+void DawInstance::cutIntersecting(track_t* tr, tick_t tickBegin, tick_t tickEnd) {
 	cutIntersectingClips(tr->getMidi(), tickBegin, tickEnd, this);
 }
-void MainCtrl::cutIntersecting(track_t* tr, clip_t* mask) {
+void DawInstance::cutIntersecting(track_t* tr, clip_t* mask) {
 	tick_t tickBegin = mask->time;
 	tick_t tickEnd = mask->end();
 	cutIntersecting(tr, tickBegin, tickEnd);
 }
-void MainCtrl::muteIntersecting(const DAW::Cursor& _cursor) {
+void DawInstance::muteIntersecting(const DAW::Cursor& _cursor) {
 	int32_t tickBegin = _cursor.getTickBegin();
 	int32_t tickEnd = _cursor.getTickEnd();
 	int32_t trackBegin = _cursor.getTrackBegin();
@@ -326,7 +326,7 @@ void MainCtrl::muteIntersecting(const DAW::Cursor& _cursor) {
 	}
 
 }
-void MainCtrl::cutSelection(const DAW::Cursor& _cursor) {
+void DawInstance::cutSelection(const DAW::Cursor& _cursor) {
 	int32_t tickBegin = _cursor.getTickBegin();
 	int32_t tickEnd = _cursor.getTickEnd();
 	int32_t trackBegin = _cursor.getTrackBegin();

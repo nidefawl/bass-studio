@@ -971,7 +971,7 @@ void track_params_t::postSetParameter(int32_t idx, float preVal, float val, int 
 	track_t* track = this->audiostage->getTrack();
 	automationlane_snapshot_t ref = toRef();
 	parameter_ref_t p = {track->idx,  ref.type, 0, idx};
-	MainCtrl::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
+	DawInstance::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
 }
 
 track_params_t::track_params_t(audio_stage_t* _audiostage) : automatable_t(), audiostage(_audiostage) {

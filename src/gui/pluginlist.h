@@ -71,10 +71,9 @@ public:
 		remove(&textField);
 	}
 	void update() {
-		MainCtrl *ctrl = MainCtrl::get();
 		std::vector<gui_list_entry*> _newList;
 		pluginsLibList.clear();
-		ctrl->plugindb.query(curquery, pluginsLibList);
+		DawInstance::get()->getPluginDatabase().query(curquery, pluginsLibList);
 
 		for (pluginentry_t& entry : pluginsLibList) {
 			gui_pluginlist_entry* g = new gui_vstpluginlist_entry(entry);

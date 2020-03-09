@@ -47,6 +47,10 @@ MainCtrl* MainCtrl::get() {
 //	dbgassert(daw_tls::tls.mainCtrl);
 	return daw_tls::tls.mainCtrl;
 }
+DawInstance* DawInstance::get() {
+//	dbgassert(daw_tls::tls.mainCtrl);
+	return &daw_tls::tls.mainCtrl->daw;
+}
 audiohost* audiohost::getInstance()
 {
 	dbgassert(daw_tls::tls.audioHost);

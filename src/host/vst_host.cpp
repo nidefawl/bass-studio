@@ -220,7 +220,6 @@ public:
 		for (auto i = threadsRunningCount; i < threadCount && i < MAX_AUDIOPROCESSING_THREADS; i++) {
 			threads[i].startThread();
 			threadsRunningCount++;
-			break;
 		}
 	}
 	void startThreads() {
@@ -1607,8 +1606,8 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const DAW::processing_
 	stats.timings["timeGetNotesInRange"] = timeProcessingArr[4];
 	stats.timeProcessRaw = timeTotal;
 	auto curTimeProcess = stats.timeProcess;
-	curTimeProcess -= curTimeProcess/NUM_BINS_STATS;
-	curTimeProcess += timeTotal/NUM_BINS_STATS;
+	curTimeProcess -= curTimeProcess / NUM_BINS_STATS;
+	curTimeProcess += timeTotal / NUM_BINS_STATS;
 	stats.timeProcess = curTimeProcess;
 	return 1;
 }
@@ -2100,7 +2099,7 @@ bool vsthost::writeRecordedData() {
 		clip_t* pClip = nullptr;
 		std::swap(recordDataProcessed, pClip);
 		if (pClip) {
-			track_t* tr = MainCtrl::get()->trackMidiAudioCtr.front();
+			track_t* tr = DawInstance::get()->trackMidiAudioCtr.front();
 			if (tr) {
 //				String s = "Recorded notes: ";
 //				for (note_t& note : pClip->notes.m_list) {
@@ -2111,7 +2110,7 @@ bool vsthost::writeRecordedData() {
 				log_printf("Processing recorded clip. Last note time %d\n", pClip->notes.lastNote.time);
 				tick_t tickBegin = pClip->time;
 				tick_t tickEnd = pClip->end();
-				MainCtrl::get()->cutIntersecting(tr, tickBegin, tickEnd);
+				DawInstance::get()->cutIntersecting(tr, tickBegin, tickEnd);
 				pClip->setDirty();
 				pClip->notes.updateBounds();
 				tr->getMidi().addClip(pClip);

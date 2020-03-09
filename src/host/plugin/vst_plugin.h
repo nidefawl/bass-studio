@@ -78,6 +78,7 @@ public:
 	int vstVersion = 0;
 	int uId = 0;
 	vst_window* window = NULL;
+	bool isInSuspend = true;
 	std::vector<vst_param_category> paramsCategories;
 	std::vector<String> programNames;
 //	std::vector<vst_param> vstParams;

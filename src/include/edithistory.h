@@ -3,17 +3,17 @@
 #include "str_util.h"
 #include "assert_dbg.h"
 
-class MainCtrl;
+class DawInstance;
 class action_base {
 public:
 	std::string desc;
 	bool errored = false;
 	std::string errorDesc;
 	virtual ~action_base(){ };
-	virtual void undo(MainCtrl* ctrl) = 0;
-	virtual void redo(MainCtrl* ctrl) = 0;
+	virtual void undo(DawInstance* ctrl) = 0;
+	virtual void redo(DawInstance* ctrl) = 0;
 
-	virtual void releaseResources(MainCtrl* ctrl) { };
+	virtual void releaseResources(DawInstance* ctrl) { };
 	String getDesc() {
 		return desc;
 	}
@@ -30,7 +30,7 @@ public:
 	int64_t getRevision() const {
 		return revision;
 	}
-	void clear(MainCtrl* ctrl) {
+	void clear(DawInstance* ctrl) {
 		while (!m_redo.empty()) {
 			action_base* redoAction = m_redo.back();
 			m_redo.pop_back();
@@ -44,21 +44,21 @@ public:
 			delete undoAction;
 		}
 	}
-	void undoStep(MainCtrl* ctrl) {
+	void undoStep(DawInstance* ctrl) {
 		action_base* step = m_undo.back(); m_undo.pop_back();
 		step->undo(ctrl);
 		dbgassert(!step->errored);
 		m_redo.push_back(step);
 		revision--;
 	}
-	void redoStep(MainCtrl* ctrl) {
+	void redoStep(DawInstance* ctrl) {
 		action_base* step = m_redo.back(); m_redo.pop_back();
 		step->redo(ctrl);
 		dbgassert(!step->errored);
 		m_undo.push_back(step);
 		revision++;
 	}
-	void push(MainCtrl* ctrl, action_base* action) {
+	void push(DawInstance* ctrl, action_base* action) {
 		while (!m_redo.empty()) {
 			action_base* redoAction = m_redo.back();
 			m_redo.pop_back();

@@ -185,7 +185,7 @@ bool handlePluginCtrCommand(action_plugin_ctr action) {
 					effects.push_back(eff);
 				}
 				auto* actionRemove = new action_remove_modules("Remove plugins", std::move(effects), audioStage->toRef(), slot);
-				MainCtrl::get()->pushHist(actionRemove);
+				DawInstance::get()->pushHist(actionRemove);
 				audioStage->pluginsChanged();
 				handledKeyinput = true;
 			}
@@ -193,7 +193,7 @@ bool handlePluginCtrCommand(action_plugin_ctr action) {
 		case action_plugin_ctr::PLUGINS_CUT:
 			if (selection.size()) {
 				std::shared_ptr<plugin_clipboard_t> clipboard = copyPluginSelection(sel);
-				MainCtrl::get()->setPluginClipboard(clipboard);
+				DawInstance::get()->setPluginClipboard(clipboard);
 				audio_stage_t* audioStage = selection[0]->getTrackLink();
 				dbgassert(audioStage);
 				for (effectbase* eff : selection) {
@@ -209,7 +209,7 @@ bool handlePluginCtrCommand(action_plugin_ctr action) {
 		case action_plugin_ctr::PLUGINS_COPY:
 			if (selection.size()) {
 				std::shared_ptr<plugin_clipboard_t> clipboard = copyPluginSelection(sel);
-				MainCtrl::get()->setPluginClipboard(clipboard);
+				DawInstance::get()->setPluginClipboard(clipboard);
 				handledKeyinput = true;
 			}
 			break;
@@ -221,8 +221,8 @@ bool handlePluginCtrCommand(action_plugin_ctr action) {
 			}
 			break;
 		case action_plugin_ctr::PLUGINS_PASTE:
-			if (MainCtrl::get()->getPluginClipboard()) {
-				std::shared_ptr<plugin_clipboard_t> clipboard = MainCtrl::get()->getPluginClipboard();
+			if (DawInstance::get()->getPluginClipboard()) {
+				std::shared_ptr<plugin_clipboard_t> clipboard = DawInstance::get()->getPluginClipboard();
 				pastePluginClipboard(clipboard, sel.pluginCtr->stage, selection.back()->getSlot()+1);
 				handledKeyinput = true;
 			}
@@ -254,7 +254,7 @@ bool guictr_plugins::handleKeyInput(KeyEvent& kevt) {
 			else if (isKC(KC_DUPLICATE, kevt)) {
 				handledKeyinput = handlePluginCtrCommand(action_plugin_ctr::PLUGINS_DUPLICATE);
 			}
-			else if (isKC(KC_PASTE, kevt) && MainCtrl::get()->getPluginClipboard()) {
+			else if (isKC(KC_PASTE, kevt) && DawInstance::get()->getPluginClipboard()) {
 				handledKeyinput = handlePluginCtrCommand(action_plugin_ctr::PLUGINS_PASTE);
 			}
 		}
@@ -432,7 +432,7 @@ class action_insert_effect : public action_base {
 				vsthost::getInstance()->unloadPlugin(this->effect);
 			}
 		}
-		void undo(MainCtrl* ctrl) override {
+		void undo(DawInstance* ctrl) override {
 			ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 			audio_stage_t* stage = vsthost::getInstance()->getAudioStage(ref);
 			if (!stage) {
@@ -444,7 +444,7 @@ class action_insert_effect : public action_base {
 			MainCtrl::getPluginCtr()->relayout();
 			weOwn = true;
 		}
-		void redo(MainCtrl* ctrl) override {
+		void redo(DawInstance* ctrl) override {
 			ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 			audio_stage_t* stage = vsthost::getInstance()->getAudioStage(ref);
 			if (!stage) {
@@ -471,7 +471,7 @@ void guictr_plugins::pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mouse
 		effect->resume();
 		audio_stage_ref_t refdst = stage->toRef();
 		auto* track_action = new action_insert_effect("Insert plugin", effect, refdst, dstSlot);
-		MainCtrl::get()->pushHist(track_action);
+		DawInstance::get()->pushHist(track_action);
 //	if (res.result == 0 && res.plugin) {
 //		res.plugin->resume();
 //	}
@@ -600,7 +600,7 @@ class action_move_modules : public action_base {
 			: action_base(), refdst(_refdst), refsrc(_refsrc), dst(_dst), src(_src), len(_len) {
 			desc = s;
 		}
-		void undo(MainCtrl* ctrl) override {
+		void undo(DawInstance* ctrl) override {
 			audio_stage_t* dstStage = vsthost::getInstance()->getAudioStage(refdst);
 			audio_stage_t* srcStage = vsthost::getInstance()->getAudioStage(refsrc);
 			if (!dstStage || !srcStage) {
@@ -611,7 +611,7 @@ class action_move_modules : public action_base {
 			MainCtrl::getPluginCtr()->relayout();
 			vsthost::getInstance()->onTrackLayoutChange();
 		}
-		void redo(MainCtrl* ctrl) override {
+		void redo(DawInstance* ctrl) override {
 			audio_stage_t* dstStage = vsthost::getInstance()->getAudioStage(refdst);
 			audio_stage_t* srcStage = vsthost::getInstance()->getAudioStage(refsrc);
 			if (!dstStage || !srcStage) {
@@ -634,7 +634,7 @@ class action_shift_modules : public action_base {
 			: action_base(), ref(_ref), dst(_dst), src(_src), len(_len) {
 			desc = s;
 		}
-		void undo(MainCtrl* ctrl) override {
+		void undo(DawInstance* ctrl) override {
 			audio_stage_t* stage = vsthost::getInstance()->getAudioStage(ref);
 			if (!stage) {
 				setError("missing trackimpl");
@@ -643,7 +643,7 @@ class action_shift_modules : public action_base {
 			vsthost::getInstance()->moveEffects(stage, dst, src, len);
 			MainCtrl::getPluginCtr()->relayout();
 		}
-		void redo(MainCtrl* ctrl) override {
+		void redo(DawInstance* ctrl) override {
 			audio_stage_t* stage = vsthost::getInstance()->getAudioStage(ref);
 			if (!stage) {
 				setError("missing trackimpl");
@@ -665,7 +665,7 @@ void removePlugin(effectbase* module) {
 	std::vector<effectbase*> effects;
 	effects.push_back(module);
 	auto* actionRemove = new action_remove_modules("Remove plugin", std::move(effects), audioStage->toRef(), module->getSlot());
-	MainCtrl::get()->pushHist(actionRemove);
+	DawInstance::get()->pushHist(actionRemove);
 	audioStage->pluginsChanged();
 }
 void guictr_plugins::pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mousepos) {
@@ -714,7 +714,7 @@ void guictr_plugins::pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mou
 			audio_stage_ref_t refsrc = srcStage->toRef();
 			audio_stage_ref_t refdst = stage->toRef();
 			auto* track_action = new action_move_modules("Move plugin", refdst, refsrc, targetslot, first, last-first+1);
-			MainCtrl::get()->pushHist(track_action);
+			DawInstance::get()->pushHist(track_action);
 		} else {
 			int first = g->effects.front()->getSlot();
 			int last = g->effects.back()->getSlot();
@@ -726,7 +726,7 @@ void guictr_plugins::pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mou
 			audio_stage_ref_t ref = this->stage->toRef();
 			auto* track_action = new action_shift_modules("Move plugin", ref, targetslot, first, last-first+1);
 			//TODO: make this work
-//			MainCtrl::get()->pushHist(track_action);
+//			DawInstance::get()->pushHist(track_action);
 		}
 		if (this->parent) {
 			this->parent->onChildLayoutChanged(this);
@@ -756,14 +756,14 @@ void guictr_plugins::pluginDragRelease(guiplugin* g, ivec2 mousepos) {
 			audio_stage_ref_t refsrc = trp->toRef();
 			audio_stage_ref_t refdst = stage->toRef();
 			auto* track_action = new action_move_modules("Move plugin", refdst, refsrc, targetslot, curSlot, 1);
-			MainCtrl::get()->pushHist(track_action);
+			DawInstance::get()->pushHist(track_action);
 
 		} else {
 			if (targetslot > curSlot) targetslot--;
 			vsthost::getInstance()->moveEffects(trp, curSlot, targetslot, 1);
 			audio_stage_ref_t ref = trp->toRef();
 			auto* track_action = new action_shift_modules("Move plugin", ref, targetslot, curSlot, 1);
-			MainCtrl::get()->pushHist(track_action);
+			DawInstance::get()->pushHist(track_action);
 		}
 		if (this->parent) {
 			this->parent->onChildLayoutChanged(this);
@@ -882,7 +882,7 @@ action_remove_modules::~action_remove_modules() {
 	}
 }
 
-void action_remove_modules::undo(MainCtrl *ctrl) {
+void action_remove_modules::undo(DawInstance *ctrl) {
 	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 	audio_stage_t *stage = vsthost::getInstance()->getAudioStage(ref);
 	if (!stage) {
@@ -899,7 +899,7 @@ void action_remove_modules::undo(MainCtrl *ctrl) {
 	weOwn = false;
 }
 
-void action_remove_modules::redo(MainCtrl *ctrl) {
+void action_remove_modules::redo(DawInstance *ctrl) {
 	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 	audio_stage_t *stage = vsthost::getInstance()->getAudioStage(ref);
 	if (!stage) {

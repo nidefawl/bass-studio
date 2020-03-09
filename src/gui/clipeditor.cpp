@@ -66,7 +66,7 @@ public:
 		before.removeDuplicates();
 		after.removeDuplicates();
 	}
-	void undo(MainCtrl* ctrl) {
+	void undo(DawInstance* ctrl) {
 		track_t* tr = ctrl->getTracks()[trackIdx];
 		if (!tr)
 			return;
@@ -75,15 +75,10 @@ public:
 		if (!clip)
 			return;
 		clip->notes = before;
-		clip_view& view = ctrl->getClipView();
-		if (view.clip() == clip) {
-			view.cursor = cursorBefore;
-			view.copySelectedNoteList();
-			view.updateNotePitches(false);
-		}
 		clip->setDirty();
+		ctrl->updateClipViews(clip, cursorBefore);
 	}
-	void redo(MainCtrl* ctrl) {
+	void redo(DawInstance* ctrl) {
 		track_t* tr = ctrl->getTracks()[trackIdx];
 		if (!tr)
 			return;
@@ -92,13 +87,8 @@ public:
 		if (!clip)
 			return;
 		clip->notes = after;
-		clip_view& view = ctrl->getClipView();
-		if (view.clip() == clip) {
-			view.cursor = cursorAfter;
-			view.copySelectedNoteList();
-			view.updateNotePitches(false);
-		}
 		clip->setDirty();
+		ctrl->updateClipViews(clip, cursorAfter);
 	}
 };
 class action_modify_clip : public action_base {
@@ -123,7 +113,7 @@ public:
 		before = oldC;
 		cursorBefore = oldCursor;
 	}
-	void undo(MainCtrl* ctrl) {
+	void undo(DawInstance* ctrl) {
 		track_t* tr = ctrl->getTracks()[trackIdx];
 		if (!tr)
 			return;
@@ -132,15 +122,10 @@ public:
 		if (!clip)
 			return;
 		*clip = before;
-		clip_view& view = ctrl->getClipView();
-		if (view.clip() == clip) {
-			view.cursor = cursorBefore;
-			view.copySelectedNoteList();
-			view.updateNotePitches(false);
-		}
 		clip->setDirty();
+		ctrl->updateClipViews(clip, cursorBefore);
 	}
-	void redo(MainCtrl* ctrl) {
+	void redo(DawInstance* ctrl) {
 		track_t* tr = ctrl->getTracks()[trackIdx];
 		if (!tr)
 			return;
@@ -149,13 +134,8 @@ public:
 		if (!clip)
 			return;
 		*clip = after;
-		clip_view& view = ctrl->getClipView();
-		if (view.clip() == clip) {
-			view.cursor = cursorAfter;
-			view.copySelectedNoteList();
-			view.updateNotePitches(false);
-		}
 		clip->setDirty();
+		ctrl->updateClipViews(clip, cursorAfter);
 	}
 };
 
@@ -314,7 +294,7 @@ void duplicateClipLoop(clip_view& view) {
 			clip->loopLen *= 2;
 
 			String desc = "Duplicate clip loop";
-			MainCtrl::get()->pushHist(new action_modify_clip(desc, view, clipBefore, cursorBefore));
+			DawInstance::get()->pushHist(new action_modify_clip(desc, view, clipBefore, cursorBefore));
 			clip->setDirty();
 			view.updateNotePitches(false);
 		}
@@ -916,7 +896,7 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
 				setSelectionFrame(getMinMaxTime(view.draggedSelection));
 			}
 		}
-		MainCtrl::get()->pushHist(new action_modify_notes(desc, view, notesBefore, cursorBefore));
+		DawInstance::get()->pushHist(new action_modify_notes(desc, view, notesBefore, cursorBefore));
 		clip->setDirty();
 		view.updateNotePitches(false);
 	} else {
@@ -999,7 +979,7 @@ void gui_clipcontent::setGlobalSelectionFromClipSelection() {
 	if (!clip) {
 		return;
 	}
-	DAW::Cursor& cursor = MainCtrl::get()->cursor;
+	DAW::Cursor& cursor = DawInstance::get()->cursor;
 	cursor.cursorPos = view.cursor.start + clip->start() - clip->offsetStart;
 	cursor.selRange = view.cursor.end - view.cursor.start;
 }
@@ -1290,7 +1270,7 @@ void gui_clipcontent::handleDraggedRelease(MouseEvent& evt) {
 			} else {
 				action = "Move notes";
 			}
-			MainCtrl::get()->pushHist(new action_modify_notes(action, view, view.dragStartNotes, dragStartCursor));
+			DawInstance::get()->pushHist(new action_modify_notes(action, view, view.dragStartNotes, dragStartCursor));
 			view.copySelectedNoteList();
 			clip->setDirty();
 			view.updateNotePitches(false);
@@ -1481,7 +1461,7 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
 		}
 		if (edit) {
 			notes.updateBounds();
-			MainCtrl::get()->pushHist(new action_modify_notes(desc, view, notesBefore, cursorBefore));
+			DawInstance::get()->pushHist(new action_modify_notes(desc, view, notesBefore, cursorBefore));
 			clip->setDirty();
 			view.updateNotePitches(false);
 		}

@@ -399,7 +399,7 @@ public:
 			if (effectbase) {
 				track_t* tr = effectbase->getTrack();
 				if (tr) {
-					MainCtrl::get()->setSelectedTrack(tr);
+					DawInstance::get()->setSelectedTrack(tr);
 					MainCtrl::get()->showPluginView();
 //					MainCtrl::get()->getPluginCtr()->makeVisibleTo(effectbase); //scrollTo
 				}

@@ -217,7 +217,6 @@ public:
 	void releaseProjectResources();
 	void destroy();
 	void unload();
-	bool postInit();
 	bool onTick();
 	bool isStreaming();
 	void onTrackLayoutChange();

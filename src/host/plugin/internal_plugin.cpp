@@ -203,7 +203,7 @@ void internalplugin::postSetParameter(int32_t idx, float preVal, float val, int 
 	track_t* track = this->trackImpl->getTrack();
 	automationlane_snapshot_t ref = toRef();
 	parameter_ref_t p = {track->idx,  ref.type, this->projectGlobalId, idx};
-	MainCtrl::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
+	DawInstance::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
 }
 void internalplugin::recvPluginEditParamUpdate(int32_t internalIdx) {
 	automatable_param_t* param = getEffectParam(internalIdx);

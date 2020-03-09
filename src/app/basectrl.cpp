@@ -307,12 +307,12 @@ void BaseCtrl::onKeyInput(int key, int scancode, int keyState, int mods, const c
 //		return;
 //	}
 }
-void BaseCtrl::prerender(int32_t x, int32_t y, int32_t w, int32_t h, float pixelRatio) {
+void BaseCtrl::prerender(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float pixelRatio) {
 	for (guictr_base *ctr : containers) {
 		ctr->prerender(vg);
 	}
 }
-void BaseCtrl::render(int32_t x, int32_t y, int32_t w, int32_t h, float ratio) {
+void BaseCtrl::render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float ratio) {
 	NVGcolor col = getTheme()->getColor(GuiColor::COL_CLEAR_COLOR);
 	glClearColor(col.r, col.g, col.b, col.a);
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -493,6 +493,7 @@ void AppCtrl::openOverlayGui(guictxtmenu_base *b, ivec2 pos, int flags) {
 	b->setFontSize(getTheme()->getFloat(GuiConstant::CONST_FONT_SIZE_CONTEXT_MENU));
 	dbgassert(!this->ctxtmenu);
 	this->ctxtmenu = b;
+	this->ctxtmenus[this->mainWindow] = b;
 	ivec2 windowPos;
 	ivec2 windowSize;
 	this->mainWindow->getPos(&windowPos);
@@ -511,6 +512,7 @@ void AppCtrl::openOverlayGui(guictxtmenu_base *b, ivec2 pos, int flags) {
 			this->mainWindow->closeOverlay(contextWindow);
 		}
 		contextWindow = this->mainWindow->createOverlay(bResizeable ? 0 : WINDOW_BORDERLESS_POPUP);
+		contextWindows[this->mainWindow] = contextWindow;
 	}
 	if (contextWindow) {
 		auto* ctxtWindowTheme = contextWindow->getCtrl()->getTheme();
@@ -534,7 +536,7 @@ void AppCtrl::closeContextMenu() {
 	}
 }
 void AppCtrl::onChildOverlayWindowClose(window_main* ptr) {
-//	log_printf("close ptr %X, contextWindow %X, this->ctxtmenu %X menuWindows.size() %d\n", (int64_t) ptr, (int64_t) contextWindow, this->ctxtmenu, menuWindows.size());
+	log_printf("close ptr %X, contextWindow %X, this->ctxtmenu %X menuWindows.size() %d\n", (int64_t) ptr, (int64_t) contextWindow, this->ctxtmenu, menuWindows.size());
 //	std::vector<String> vecStrStacktrace;
 //	getStackTrace(vecStrStacktrace);
 //	int len = vecStrStacktrace.size();
@@ -549,8 +551,25 @@ void AppCtrl::onChildOverlayWindowClose(window_main* ptr) {
 			// ctxtmenu can't be deleted at this point, some point in the call chain may dereference it again
 			garbageGuis.push_back(this->ctxtmenu);
 			this->ctxtmenu = nullptr;
+			this->ctxtmenus[this->mainWindow] = nullptr;
 		}
 		return;
+	}
+	for (const auto& entry : contextWindows) {
+		if (entry.second == ptr) {
+			dbgassert(ctxtmenus.count(entry.first));
+			guictxtmenu_base* ctxt = ctxtmenus[entry.first];
+			if (ctxt) {
+				dbgassert(ctxt);
+				ctxt->onParentWindowClose();
+				ctxt->setControl(nullptr);
+				// ctxtmenu can't be deleted at this point, some point in the call chain may dereference it again
+				garbageGuis.push_back(ctxt);
+				ctxt = nullptr;
+				ctxtmenus[entry.first] = nullptr;
+			}
+			return;
+		}
 	}
 	auto it = std::find_if(menuWindows.begin(), menuWindows.end(), [ptr](const auto& entry) {
 		return entry.wnd == ptr;

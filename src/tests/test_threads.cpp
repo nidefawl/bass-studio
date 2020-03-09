@@ -46,8 +46,6 @@ static void test() {
 		wthread.pushTask(&task);
 
 	}
-	WorkerThread wthread;
-	wthread.startThread();
 	wthread.stopThread();
 	for (TestTask& task : tasks) {
 		if (task.id != 2) {

@@ -35,7 +35,7 @@ void guictxtmenu_notrack::clicked(int _id) {
 	        		for (track_snapshot_t& ts : ctr->tracks) {
 	        			track_t* tr = new track_t(ts);
 	        			ts.trackLoaded = tr;
-	        			MainCtrl::get()->addTrackImpl(-1, tr, 0);
+	        			DawInstance::get()->addTrackImpl(-1, tr, 0);
 	            		log_printf("add track %s\n", StringAsCStr(tr->name));
 	        		}
 
@@ -54,7 +54,7 @@ void guictxtmenu_notrack::clicked(int _id) {
 			}
 			return;
 		} else {
-			MainCtrl::get()->insertNewTrack(-1, _id);
+			DawInstance::get()->insertNewTrack(-1, _id);
 		}
 		closeContextMenu();
 	}

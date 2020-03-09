@@ -13,16 +13,16 @@ namespace SCRIPTING {
 //	return &vsthost::getInstance()->lastTrackGraph;
 //}
 void registerInterfaceToContext(duk_context* ctx) {
-	dukglue_register_method(ctx, &MainCtrl::setEmptyProject, "setEmptyProject");
-	dukglue_register_method(ctx, &MainCtrl::stopPlaying, "stop");
-	dukglue_register_method(ctx, &MainCtrl::startPlaying, "start");
-	dukglue_register_method(ctx, &MainCtrl::loadFile, "loadFile");
-	dukglue_register_method(ctx, &MainCtrl::loadFileCStr, "loadFileCStr");
-	dukglue_register_method(ctx, &MainCtrl::menuCommand, "menuCommand");
-	dukglue_register_method(ctx, &MainCtrl::saveFile, "saveFile");
+	dukglue_register_method(ctx, &DawInstance::setEmptyProject, "setEmptyProject");
+	dukglue_register_method(ctx, &DawInstance::stopPlaying, "stop");
+	dukglue_register_method(ctx, &DawInstance::startPlaying, "start");
+	dukglue_register_method(ctx, &DawInstance::loadFile, "loadFile");
+	dukglue_register_method(ctx, &DawInstance::loadFileCStr, "loadFileCStr");
+	dukglue_register_method(ctx, &DawInstance::menuCommand, "menuCommand");
+	dukglue_register_method(ctx, &DawInstance::saveFile, "saveFile");
 //	dukglue_register_function(ctx, &getAudioGraph, "getAudioGraph");
 }
-void setGlobalInstance(duk_context* ctx, MainCtrl* pInterfaceInstance) {
+void setGlobalInstance(duk_context* ctx, DawInstance* pInterfaceInstance) {
 
 //		dukglue_register_method(ctx, &MainCtrl::getPlaybackPos, "getPlaybackPos");7
 	dukglue_register_global(ctx, pInterfaceInstance, "dawInstance");

@@ -26,12 +26,12 @@ public:
 		valAfter(_newVal) {
 		desc = description;
 
-		automatable_t* at = tryGetAt(MainCtrl::get());
+		automatable_t* at = tryGetAt(DawInstance::get());
 		dbgassert(at);
 		my_printf("Undo modify parameter task: set %s::%s (idx %d) from %f to %f\n", StringAsCStr(at->getAutomatableName()), StringAsCStr(at->getParamName(_ref.paramIdx)), _ref.paramIdx,  _oldVal, _newVal);
 	}
 	//TODO: this shouldn't be here
-	automatable_t* tryGetAt(MainCtrl* ctrl) {
+	automatable_t* tryGetAt(DawInstance* ctrl) {
 		track_t* tr = ctrl->getTracks()[ref.trackIdx];
 		if (!tr) {
 			setError("track missing");
@@ -60,7 +60,7 @@ public:
 		}
 		return at;
 	}
-	void undo(MainCtrl* ctrl) {
+	void undo(DawInstance* ctrl) {
 
 		automatable_t* at = tryGetAt(ctrl);
 		if (at) {
@@ -69,7 +69,7 @@ public:
 			at->setParamValue(ref.paramIdx, valBefore, FLG_PAR_UPDATE_UNDO);
 		}
 	}
-	void redo(MainCtrl* ctrl) {
+	void redo(DawInstance* ctrl) {
 		automatable_t* at = tryGetAt(ctrl);
 		if (at) {
 			my_printf("redo(): set %s::%s (idx %d) from %f to %f\n", StringAsCStr(at->getAutomatableName()), StringAsCStr(at->getParamName(ref.paramIdx)), ref.paramIdx,  valBefore, valAfter);

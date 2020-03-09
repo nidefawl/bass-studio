@@ -186,7 +186,7 @@ public:
 		return false;
 	}
 	void handleDraggedBegin(MouseEvent& evt) override {
-		MainCtrl::get()->setSelectedTrack(m_track);
+		DawInstance::get()->setSelectedTrack(m_track);
 		evt.relMousepos += getPosContent();
 		parent->handleDraggedBegin(evt);
 	}
@@ -202,7 +202,7 @@ public:
 	}
 
 	virtual void render(NVGcontext* vg) override {
-		if (MainCtrl::get()->getSelectedTrack() == m_track) {
+		if (DawInstance::get()->getSelectedTrack() == m_track) {
 			nvgBeginPath(vg);
 			nvgRect(vg, pos.x, pos.y, size.x, size.y);
 			nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_SELECTEDTRACK));
@@ -228,7 +228,7 @@ public:
 				MainCtrl* ctrl = MainCtrl::get();
 				scaled_grid& grid = ctrl->getGrid();
 				tick_t tick = grid.screenToTickSnap(mpos.x, SNAP_OFF);
-				if (ctrl->cursor.containsSubtrack(this->m_track->idx, this->idx, tick)) {
+				if (DawInstance::get()->cursor.containsSubtrack(this->m_track->idx, this->idx, tick)) {
 					evt.requestFocus(this);
 					return true;
 				}
@@ -285,7 +285,7 @@ public:
 		return parent->handleKeyInput(kevt);
 	}
 	void handleDraggedBegin(MouseEvent& evt) override {
-		MainCtrl::get()->setSelectedTrack(m_track);
+		DawInstance::get()->setSelectedTrack(m_track);
 		evt.relMousepos += getPosContent();
 		parent->handleDraggedBegin(evt);
 	}
@@ -303,7 +303,7 @@ public:
 
 	void prerender(NVGcontext* vg) override;
 	virtual void render(NVGcontext* vg) override {
-		if (MainCtrl::get()->getSelectedTrack() == m_track) {
+		if (DawInstance::get()->getSelectedTrack() == m_track) {
 			nvgBeginPath(vg);
 			nvgRect(vg, pos.x, pos.y, size.x, size.y);
 			nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_SELECTEDTRACK));

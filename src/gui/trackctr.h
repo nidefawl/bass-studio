@@ -397,8 +397,8 @@ public:
 
 			}
 		}
-		float xJmpFrom = grid.tickToScreenD(MainCtrl::get()->tickJmpFrom);
-		float xJmpTo = grid.tickToScreenD(MainCtrl::get()->tickJmpTo);
+		float xJmpFrom = grid.tickToScreenD(DawInstance::get()->tickJmpFrom);
+		float xJmpTo = grid.tickToScreenD(DawInstance::get()->tickJmpTo);
 		nvgBeginPath(vg);
 		nvgMoveTo(vg, xJmpFrom, yOffset);
 		nvgLineTo(vg, xJmpFrom, cs.y-yOffset+1);

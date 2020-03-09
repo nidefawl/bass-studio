@@ -304,7 +304,8 @@ void gui_ctr_debug::render(NVGcontext* vg) {
 	}
 
 	if (dgbCtrType == gui_ctr_debug_type_i32::TYPE_1) {
-	MainCtrl *ctrl = MainCtrl::get();
+		MainCtrl *ctrl = MainCtrl::get();
+		DawInstance *daw = DawInstance::get();
 
 	vector<String> strings;
 	String str;
@@ -347,8 +348,8 @@ void gui_ctr_debug::render(NVGcontext* vg) {
 	}
 
 	strings.push_back(String("lastKey: ") + ctrl->lastKey);
-	strings.push_back(StringFormat("undo size: %d", ctrl->getHist().getNumUndoSteps()));
-	strings.push_back(StringFormat("redo size: %d", ctrl->getHist().getNumRedoSteps()));
+	strings.push_back(StringFormat("undo size: %d", daw->getHist().getNumUndoSteps()));
+	strings.push_back(StringFormat("redo size: %d", daw->getHist().getNumRedoSteps()));
 	clip_view& clipView = ctrl->getClipView();
 	if (clipView.clip()) {
 		strings.push_back(StringFormat("Clip: %s", StringAsCStr(clipView.clip()->name)));
@@ -361,7 +362,7 @@ void gui_ctr_debug::render(NVGcontext* vg) {
 	strings.push_back(StringFormat(" blockSize : %u", vsthost::getInstance()->sampleFormat.blockSize));
 	strings.push_back(StringFormat(" bit depth : %u", static_cast<int32_t>(vsthost::getInstance()->sampleFormat.sampleformat)));
 
-	track_t* track = ctrl->getTrackId(0);
+	track_t* track = daw->getTrackId(0);
 	if (track && track->audio) {
 		strings.push_back(StringFormat("level: %.4f", track->audio->meter.getMaxRMS()));
 	}
@@ -470,12 +471,13 @@ void gui_ctr_debug::layout() {
 int32_t getNumClipAllocations(); //clip.cpp
 void resetHistAndCheck() {
 	auto ctrl = MainCtrl::get();
+	auto daw = DawInstance::get();
 	auto& trackEditor = MainCtrl::getGuiTrackCtr()->trackView;
 	trackEditor.action.clipboard.reset();
 	trackEditor.clipboard.reset();
-	ctrl->getHist().clear(ctrl);
+	daw->getHist().clear(daw);
 
-	auto& tracks = ctrl->trackList;
+	auto& tracks = daw->trackList;
 	int n = 0;
 	for (auto track : tracks) {
 		int nTrackClips = track->getMidi().getConstClips().size();

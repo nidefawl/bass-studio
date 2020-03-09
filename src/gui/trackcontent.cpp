@@ -313,10 +313,11 @@ bool gui_track::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 			}
 		}
 		if (evt.type == MouseHitType::MOUSE_RIGHT) { // righclick in selection (create clip etc.)
+			DawInstance* daw = DawInstance::get();
 			MainCtrl* ctrl = MainCtrl::get();
 			scaled_grid& grid = ctrl->getGrid();
 			tick_t tick = grid.screenToTickSnap(mpos.x, SNAP_OFF);
-			if (ctrl->cursor.contains(this->m_track->idx, tick)) {
+			if (daw->cursor.contains(this->m_track->idx, tick)) {
 				evt.requestFocus(this);
 				return true;
 			}
@@ -362,12 +363,15 @@ public:
 		addEntry(fixed);
 	}
 	void clicked(int _id) {
+		DawInstance* daw = DawInstance::get();
 		MainCtrl* ctrl = MainCtrl::get();
+
 		scaled_grid& grid = ctrl->getGrid();
 		if (_id == 20) {
-			DAW::Cursor cursor = MainCtrl::get()->cursor.getLeftAligned();
+
+			DAW::Cursor cursor = daw->cursor.getLeftAligned();
 			if (cursor.selRange) {
-				track_t* tr = ctrl->getTrackId(this->trackid);
+				track_t* tr = daw->getTrackId(this->trackid);
 				clip_t* cl = nullptr;
 				if (tr && tr->type == TRACK_TYPE_MIDI) {
 					cl = new clip_t();
@@ -422,7 +426,7 @@ void guitrack_editor::handleRightClick(MouseEvent& evt) {
 
 void gui_track_subtrack::renderMixerInfo(NVGcontext* vg) {
 
-	MainCtrl* ctrl = MainCtrl::get();
+	DawInstance* daw = DawInstance::get();
 	String curvalue = "UNDEF";
 	String target = "<NULL>";
 	automatable_t* ctr = at;
@@ -432,7 +436,7 @@ void gui_track_subtrack::renderMixerInfo(NVGcontext* vg) {
 		if (idx >= 0) {
 			automation_t* automation = ctr->getRegisteredAutomation(idx);
 			if (automation) {
-				curvalue = StringFormat("%s (%d) %f", StringAsCStr(ctr->getParamName(idx)), idx, automation->getValueAt(ctrl->cursor.cursorPos));
+				curvalue = StringFormat("%s (%d) %f", StringAsCStr(ctr->getParamName(idx)), idx, automation->getValueAt(daw->cursor.cursorPos));
 			} else {
 				curvalue = StringFormat("%s (%d) UNDEF", StringAsCStr(ctr->getParamName(idx)), idx);
 			}

@@ -20,7 +20,7 @@ void midiarp::postSetParameter(int32_t idx, float preVal, float val, int flags) 
 	track_t* track = this->trackImpl->getTrack();
 	automationlane_snapshot_t ref = toRef();
 	parameter_ref_t p = {track->idx,  ref.type, 0, idx};
-	MainCtrl::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
+	DawInstance::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
 }
 void midiarp::createSnapshot(arp_snapshot& snapshot) {
 	snapshot.params.reserve(getNumParameters());

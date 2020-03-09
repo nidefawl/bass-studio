@@ -1079,7 +1079,7 @@ public:
 				&& mpos.y < resizeTopOrBottom + resizeHitY;
 	}
 	void handleDraggedBegin(MouseEvent& evt) override {
-		MainCtrl::get()->setSelectedTrack(m_track);
+		DawInstance::get()->setSelectedTrack(m_track);
 		if (isResize(evt.relMousepos+this->pos)) {
 			dragMode = DRAG_RESIZE;
 		}
@@ -1148,7 +1148,7 @@ public:
 		}
 		NVGcolor color = rgbToNvg(m_track->rgb);
 		ivec2 titleSize(size.x, size.y);
-		MainCtrl* ctrl = MainCtrl::get();
+		DawInstance* daw = DawInstance::get();
 		const int titleHeight = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
 		const int rectHeight = math::min(titleHeight, size.y);
 		nvgBeginPath(vg);
@@ -1163,7 +1163,7 @@ public:
 //			nvgFillColor(vg, color);
 //			nvgFill(vg);
 //		}
-		if (ctrl->getSelectedTrack() == m_track) {
+		if (daw->getSelectedTrack() == m_track) {
 			NVGcolor color2 = theme->getColor(GuiColor::COL_BG_SELECTEDTRACK_TITLE);
 			int right = hideTrack.right() + (hideTrack.pos.x)/*inset*/;
 			nvgBeginPath(vg);
@@ -1224,7 +1224,7 @@ public:
 	}
 	void buttonClicked(guibase* button) override {
 		if (button == &removeLane) {
-			DAW::Cursor& cursor = MainCtrl::get()->cursor;
+			DAW::Cursor& cursor = DawInstance::get()->cursor;
 			int32_t laneIdx = this->subtrack->idx;
 			if (cursor.inSubTrack(m_track->idx, laneIdx)) {
 				fixCursorSubRange(cursor, m_track->subtracks.size()-1);
@@ -1270,7 +1270,7 @@ public:
 		return false;
 	}
 	void handleDraggedBegin(MouseEvent& evt) {
-		MainCtrl::get()->setSelectedTrack(m_track);
+		DawInstance::get()->setSelectedTrack(m_track);
 		if (isResize(evt.relMousepos+this->pos)) {
 			dragMode = DRAG_RESIZE;
 		}
@@ -1383,8 +1383,8 @@ void gui_track_controls::render(NVGcontext* vg) {
 	nvgRect(vg, 0, 0, size.x, size.y);
 	nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_BRT));
 	nvgFill(vg);
-	MainCtrl* ctrl = MainCtrl::get();
-	if (ctrl->getSelectedTrack() == m_track) {
+	DawInstance* daw = DawInstance::get();
+	if (daw->getSelectedTrack() == m_track) {
 		nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_SELECTEDTRACK));
 		nvgFill(vg);
 	}
@@ -1506,8 +1506,8 @@ void gui_track_controls::handleDraggedMove(MouseEvent& evt) {
 	}
 }
 String makeUniqueTrackName(const String& strNewName) {
-
-	auto& trackCtr = MainCtrl::get()->getTracks();
+	DawInstance* daw = DawInstance::get();
+	auto& trackCtr = daw->getTracks();
 	int offset = 0;
 	while (offset < 100) {
 		String test = strNewName;
@@ -1538,14 +1538,14 @@ public:
 		addEntry(new ctxtmenu_entry("Add child MIDI Track", 4));
 		addEntry(new ctxtmenu_splitter());
 		addEntry(sel);
-		track_t* tr = MainCtrl::get()->getTrackId(trackid);
-		MainCtrl::get()->setSelectedTrack(tr);
+		track_t* tr = DawInstance::get()->getTrackId(trackid);
+		DawInstance::get()->setSelectedTrack(tr);
 	}
 	~guictxtmenu_track() {
 	}
 	void clicked(int _id) {
 		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-		track_t* tr = MainCtrl::get()->getTrackId(trackid);
+		track_t* tr = DawInstance::get()->getTrackId(trackid);
 		if (_id >= sel->id) {
 			_id -= sel->id;
 			if (tr) {
@@ -1576,12 +1576,12 @@ public:
 			}
 		} else if (_id == 1) {
 			if (tr) {
-				track_t* newTrack = MainCtrl::get()->createNewTrack(tr->type);
+				track_t* newTrack = DawInstance::get()->createNewTrack(tr->type);
 				String strNewName = StringFormat("%s copy", StringAsCStr(tr->name));
 
 				track_snapshot_t trSnap(tr, true);
 				*newTrack = trSnap;
-				MainCtrl::get()->addTrackImpl(tr->localIdxFlat+1, newTrack, FLG_TRK_CHANGE_USER);
+				DawInstance::get()->addTrackImpl(tr->localIdxFlat+1, newTrack, FLG_TRK_CHANGE_USER);
 				trSnap.stageId = static_cast<int32_t>(newTrack->audio->stageId);
 				newTrack->loadSnapshot(trSnap);
 				newTrack->name = makeUniqueTrackName(strNewName);
@@ -1591,7 +1591,7 @@ public:
 				MainCtrl::getGuiTrackCtr()->scrollTo(newTrack->content);
 			}
 		} else if (_id == 2) {
-			MainCtrl::get()->removeTrackId(trackid);
+			DawInstance::get()->removeTrackId(trackid);
 		} else if (_id == 3) {
 			auto window = parentCtrl->window;
 
@@ -1609,9 +1609,9 @@ public:
 			}
 			return;
 		} else if (_id == 4) {
-			track_t* newTrack = MainCtrl::get()->createNewTrack(tr->type);
+			track_t* newTrack = DawInstance::get()->createNewTrack(tr->type);
 			tr->addChild(newTrack);
-			MainCtrl::get()->addTrackImpl(0, newTrack, FLG_TRK_CHANGE_USER);
+			DawInstance::get()->addTrackImpl(0, newTrack, FLG_TRK_CHANGE_USER);
 			newTrack->name = makeUniqueTrackName(tr->name);
 
 			MainCtrl::getGuiTrackCtr()->layout();

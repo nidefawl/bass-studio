@@ -70,6 +70,8 @@ typedef int sock_type_t;
 	std::shared_ptr<AppCtrl> makeApp() {
 		return nullptr;
 	}
+	void makeAppCompanions(std::vector<std::shared_ptr<AppCtrl>>& out_Companions) {
+	}
 void network_init(void);
 void network_cleanup(void);
 

@@ -838,6 +838,8 @@ std::shared_ptr<AppCtrl> makeApp() {
 	MiniApp::appctrl = std::make_shared<MiniApp::MiniAppCtrl<MiniApp::ViewContainers_TestNanoVGRenderCache>>();
 	return MiniApp::appctrl;
 }
+void makeAppCompanions(std::vector<std::shared_ptr<AppCtrl>>& out_Companions) {
+}
 
 void deleteApp() {
 	MiniApp::appctrl.reset();

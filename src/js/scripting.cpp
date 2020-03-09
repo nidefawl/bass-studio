@@ -308,7 +308,7 @@ public:
 		}
 		if (!hasInit) {
 			hasInit = true;
-			NU::SCRIPTING::setGlobalInstance(ctx, MainCtrl::get());
+			NU::SCRIPTING::setGlobalInstance(ctx, DawInstance::get());
 			String srcJS;
 			String contextInitScript = "daw_context_init.js";
 			int64_t ret = ReadFileText(contextInitScript, srcJS);

@@ -112,7 +112,7 @@ public:
 	bool trackViewDoubleClick(guitrack_editor* view, MouseEvent& evt) override;
 	void postEdit();
 	void handleDraggedBegin(MouseEvent& evt) override {
-		MainCtrl::get()->setSelectedTrack(m_track);
+		DawInstance::get()->setSelectedTrack(m_track);
 		evt.relMousepos += getPosContent();
 		parent->handleDraggedBegin(evt);
 	}

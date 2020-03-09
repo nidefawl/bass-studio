@@ -33,7 +33,7 @@ void gui_timeinput_field::render(NVGcontext* vg) {
 	renderWidgetBorder(vg, flags);
 	setFont(vg, G_FONT_SCALE(size.y), G_WHITE, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
 	int32_t _time = time ? *time : 0;
-	beatbar16th_t step = MainCtrl::get()->toBeatBar16th(_time);
+	beatbar16th_t step = project_controller_t::get()->toBeatBar16th(_time);
 	int32_t val = step[idx];
 	if (val >= 0 && !isRelative) {
 		val++;
@@ -169,10 +169,10 @@ void gui_timeinput::render(NVGcontext* vg) {
 
 void guictr_tempocontrols::buttonClicked(guibase* button) {
 	if (button == &this->btnPlay) {
-		MainCtrl::get()->startPlaying();
+		DawInstance::get()->startPlaying();
 	}
 	if (button == &this->btnStop) {
-		MainCtrl::get()->stopPlaying();
+		DawInstance::get()->stopPlaying();
 	}
 	if (button == &this->btnRecord) {
 		project.recordArmed = !project.recordArmed;

@@ -648,7 +648,7 @@ namespace {
 		std::vector<track_t*> selectedTracks;
 		selectedTracks.push_back(track);
 		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-		bool failed = !MainCtrl::get()->trackList.moveTracks(selectedTracks, treePos);
+		bool failed = !DawInstance::get()->trackList.moveTracks(selectedTracks, treePos);
 		String strTarget = "<root>";
 		if (treePos.parent) {
 			strTarget = treePos.parent->name;

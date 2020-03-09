@@ -28,7 +28,7 @@ public:
 	}
 	void render(NVGcontext* vg) {
 		renderWidgetBorder(vg, getStateFlags());
-		String tempo = FormatTempo(MainCtrl::get()->getCurrentTempoBPM());
+		String tempo = FormatTempo(project_controller_t::get()->getCurrentTempoBPM());
 		setFont(vg, G_FONT_SCALE(size.y), G_WHITE, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
 		nvgText(vg, pos.x + size.x / 2.0f, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(tempo), NULL);
 	}
@@ -43,8 +43,8 @@ public:
 			if (math::abs(disty) < 1)
 				return;
 			evt.dragDistance->y = 0;
-			int tempo = MainCtrl::get()->getCurrentTempo();
-			MainCtrl::get()->setTempo(tempo - disty*100);
+			int tempo = project_controller_t::get()->getCurrentTempo();
+			DawInstance::get()->setTempo(tempo - disty*100);
 			MainCtrl::get()->updateVisibleTrackContents();
 		}
 	}
@@ -65,9 +65,9 @@ public:
 		setFont(vg, G_FONT_SCALE(size.y), G_WHITE, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
 		int n;
 		if (idx == 0) {
-			n = MainCtrl::get()->sigNum();
+			n = project_controller_t::get()->sigNum();
 		} else {
-			n = MainCtrl::get()->sigDen();
+			n = project_controller_t::get()->sigDen();
 		}
 		String str = StringFormat("%d", n);
 		nvgText(vg, pos.x + size.x / 2.0f, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(str), NULL);
@@ -84,15 +84,15 @@ public:
 				return;
 			evt.dragDistance->y = 0;
 			if (idx == 0) {
-				int n = MainCtrl::get()->sigNum();
+				int n = project_controller_t::get()->sigNum();
 				n = CLAMP_I(n - disty, 0, 32);
-				MainCtrl::get()->setNum(n);
+				project_controller_t::get()->setNum(n);
 				MainCtrl::get()->updateGrid();
 			} else {
-				int prev = MainCtrl::get()->sigDen();
+				int prev = project_controller_t::get()->sigDen();
 				int now = 1<<CLAMP_I((int)log2(prev) - disty, 0, 4);
 				printf("old %d new %d\n", prev, now);
-				MainCtrl::get()->setDen(now);
+				project_controller_t::get()->setDen(now);
 				MainCtrl::get()->updateGrid();
 			}
 		}
@@ -208,10 +208,10 @@ public:
 	guictr_tempocontrols(project_t& _project)
 		: guictr_base(),
 		  project(_project),
-		  cursorPos(&MainCtrl::get()->cursor.cursorPos),
-		  songPos(&MainCtrl::get()->playbackPos),
-		  loopPos(&MainCtrl::get()->loopStart),
-		  loopLen(&MainCtrl::get()->loopLen, true)
+		  cursorPos(&project_controller_t::get()->cursor.cursorPos),
+		  songPos(&project_controller_t::get()->playbackPos),
+		  loopPos(&project_controller_t::get()->loopStart),
+		  loopLen(&project_controller_t::get()->loopLen, true)
 	{
 //		btnAudioOnOff.setTint(0x00ddff);
 		songPos.setConnectedBG();

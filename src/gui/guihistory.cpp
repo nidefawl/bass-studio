@@ -71,10 +71,10 @@ public:
 	}
 	void rebuildList() {
 		std::vector<gui_list_entry*> _newList;
-		MainCtrl *mainctrl = MainCtrl::get();
+		DawInstance *daw = DawInstance::get();
 		int32_t selectedIdx = -1;
-		if (mainctrl) {
-			auto& editHistory = mainctrl->getHist();
+		if (daw) {
+			auto& editHistory = daw->getHist();
 			std::vector<action_base*> m_undo;
 			std::vector<action_base*> m_redo;
 			editHistory.getActions(m_undo, m_redo);
@@ -96,9 +96,9 @@ public:
 		layout();
 	}
 	void onTick(AppCtrl* ctrl) override {
-		MainCtrl *mainctrl = MainCtrl::get();
-		if (mainctrl) {
-			if (histRevision != mainctrl->getHist().getRevision()) {
+		DawInstance *daw = DawInstance::get();
+		if (daw) {
+			if (histRevision != daw->getHist().getRevision()) {
 				rebuildList();
 			}
 		}

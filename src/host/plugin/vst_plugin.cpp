@@ -71,10 +71,18 @@ void vstplugin::onWindowDestroy() {
 	this->window = NULL;
 }
 void vstplugin::resume() {
+	if (!isInSuspend) {
+		return;
+	}
+	isInSuspend = false;
 	this->dispatch(effMainsChanged, 0, true);
 	this->dispatch(effStartProcess);
 }
 void vstplugin::sleep() {
+	if (isInSuspend) {
+		return;
+	}
+	isInSuspend = true;
 	this->dispatch(effStopProcess);
 	this->dispatch(effMainsChanged, 0, false);
 }
@@ -168,10 +176,13 @@ void vstplugin::load(vsthost* host) {
 	aeffect->resvd2 = 0;
 	this->vstVersion = dispatch(effGetVstVersion);
 	this->uId = aeffect->uniqueID;
-	this->dispatch(effIdentify, 0, 0, 0, 0);
-	this->dispatch(effSetSampleRate, 0, 0, NULL, (float) format.sampleRate);
-	this->dispatch(effSetBlockSize, 0, format.blockSize, 0, 0);
-	this->dispatch(effOpen);
+
+	long l0 = this->dispatch(effIdentify, 0, 0, 0, 0);
+	long l1 = this->dispatch(effStopProcess);
+	long l2 = this->dispatch(effMainsChanged, 0, false);
+	long l3 = this->dispatch(effSetSampleRate, 0, 0, NULL, (float) format.sampleRate);
+	long l4 = this->dispatch(effSetBlockSize, 0, format.blockSize, 0, 0);
+	long l5 = this->dispatch(effOpen);
 
 	VstPinProperties pin;
 	for (int32_t i = 0; i < aeffect->numInputs; i++) {
@@ -266,12 +277,12 @@ void vstplugin::load(vsthost* host) {
 
 
 	bIsEnabled = this->getParamValue(PARAM_ENABLE) > 0.5;
-	if (bIsEnabled) {
-		this->resume();
-	} else {
-		this->sleep();
-	}
-	this->dispatch(effSetBlockSize, 0, format.blockSize);
+//	if (bIsEnabled) {
+//		this->resume();
+//	} else {
+//		this->sleep();
+//	}
+//	this->dispatch(effSetBlockSize, 0, format.blockSize);
 //	this->resume();
 
 
@@ -433,7 +444,7 @@ void vstplugin::postSetParameter(int32_t idx, float preVal, float val, int flags
 	track_t* track = this->trackImpl->getTrack();
 	automationlane_snapshot_t ref = toRef();
 	parameter_ref_t p = {track->idx,  ref.type, this->projectGlobalId, idx};
-	MainCtrl::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
+	DawInstance::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
 }
 void vstplugin::recvPluginEditParamUpdate(int32_t internalIdx) {
 	automatable_param_t* param = getEffectParam(internalIdx);

@@ -49,6 +49,8 @@ void deleteApp() {
 std::shared_ptr<AppCtrl> makeApp() {
 	return nullptr;
 }
+void makeAppCompanions(std::vector<std::shared_ptr<AppCtrl>>& out_Companions) {
+}
 
 #define LOG(fmtString,...) printf(fmtString "\n", ##__VA_ARGS__); fflush(stdout)
 
@@ -551,9 +553,6 @@ int main(int argc, char* argv[]) {
     						tickPos += ticksPerBlock*processedBlock;
 							if (inLoop) {
 								if (tickPos >= projGlobals.loopStart + projGlobals.loopLen) {
-									if (MainCtrl::get()) {
-										MainCtrl::get()->setJumpFromTo(tickPos, projGlobals.loopStart);
-									}
 									LOG("JMP FROM %.2f to %d\n", tickPos, projGlobals.loopStart);
 									tickPos = projGlobals.loopStart;
 									samplePos = tickToSample(projGlobals.loopStart, bpm100, sampleRate);

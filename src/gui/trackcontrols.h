@@ -32,7 +32,7 @@ public:
 	void render(NVGcontext* vg) override;
 	void renderGroupHandle(NVGcontext* vg);
 	void handleDraggedBegin(MouseEvent& evt) {
-		MainCtrl::get()->setSelectedTrack(m_track);
+		DawInstance::get()->setSelectedTrack(m_track);
 		if (isResize(evt.relMousepos+this->pos)) {
 			dragMode = DRAG_RESIZE;
 		}

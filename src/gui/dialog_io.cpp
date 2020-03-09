@@ -318,7 +318,7 @@ public:
 	}
 };
 void updateSrBs() {
-	auto mctrl = MainCtrl::get();
+	auto mctrl = DawInstance::get();
 	bool b = mctrl->isPlaying();
 	if (b) {
 

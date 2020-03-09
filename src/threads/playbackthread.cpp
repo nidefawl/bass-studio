@@ -279,8 +279,8 @@ private:
 					if (m_status == status_play) {
 						if (inLoop) {
 							if (tickPos >= projGlobals.loopStart + projGlobals.loopLen) {
-								if (MainCtrl::get()) {
-									MainCtrl::get()->setJumpFromTo(tickPos, projGlobals.loopStart);
+								if (DawInstance::get()) {
+									DawInstance::get()->setJumpFromTo(tickPos, projGlobals.loopStart);
 								}
 								LOG("JMP FROM %.2f to %d\n", tickPos, projGlobals.loopStart);
 								tickPos = projGlobals.loopStart;

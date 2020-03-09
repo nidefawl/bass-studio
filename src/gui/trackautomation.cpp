@@ -314,12 +314,13 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 				}
 			}
 			if (evt.type == MouseHitType::MOUSE_RIGHT) { // righclick in selection (create clip etc.)
+				DawInstance* daw = DawInstance::get();
 				MainCtrl* ctrl = MainCtrl::get();
 				scaled_grid& grid = ctrl->getGrid();
 				tick_t tick = grid.screenToTickSnap(mpos.x, SNAP_OFF);
 
 				// automation subtracks have priority over parent if they are in the selection range
-				if (this->idx >= 0 && ctrl->cursor.containsSubtrack(this->m_track->idx, this->idx, tick)) {
+				if (this->idx >= 0 && daw->cursor.containsSubtrack(this->m_track->idx, this->idx, tick)) {
 					evt.requestFocus(this);
 					return true;
 				} else if (this->idx < 0) {

@@ -81,6 +81,8 @@ public:
 		layout();
 	}
 	void layout() {
+		dbgassert(parentCtrl);
+		dbgassert(parentCtrl->vg);
 		parentCtrl->closeAllAppMenus();
 		destroyGuis();
 		NVGcontext* vg = parentCtrl->vg;

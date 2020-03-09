@@ -1,6 +1,6 @@
 #pragma once
 #include "duktape.h"
-class MainCtrl;
+class DawInstance;
 namespace NU {
 namespace SCRIPTING {
 	class DawInterface {
@@ -23,7 +23,7 @@ namespace SCRIPTING {
 	};
 
 	void registerInterfaceToContext(duk_context* ctx);
-	void setGlobalInstance(duk_context* ctx, MainCtrl*);
+	void setGlobalInstance(duk_context* ctx, DawInstance*);
 }
 
 }

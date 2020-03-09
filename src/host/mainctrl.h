@@ -55,6 +55,8 @@ class guictr_clipeditorview;
 class guictxtmenu_base;
 class appwindow_main;
 class DawViewContainers;
+class DawViewContainersMain;
+class DawViewContainersCompanion;
 
 enum clip_dragtype_t {
 	DRAG_NONE,
@@ -199,79 +201,103 @@ struct Menus {
 enum view_mode_t {
 	TRACK_TIMELINE, NODE_EDITOR, MIXER
 };
-class MainCtrl : public AppCtrl, public delete_cb, public project_controller_t
-{
-	DawViewContainers* view = NULL;
-	Menus menus;
+class MainCtrl;
+class CompanionCtrl;
+class DawCtrl;
+class guictr_menubar;
+
+class DawViewContainers {
+public:
+	DawViewContainers() = default;
+	virtual ~DawViewContainers() {
+	}
+	virtual void addTo(std::vector<guictr_base*>& v) {
+
+	}
+	virtual void layout(int32_t winW, int32_t winH) {
+	}
+	guictr_menubar* getMenu() {
+		return nullptr;
+	}
+};
+class DawInstance : public project_controller_t, public delete_cb {
+	friend class MainCtrl;
+	friend class CompanionCtrl;
+	friend class DawCtrl;
+	int initState = 0;
+	MainCtrl* mainCtrl = nullptr;
+	CompanionCtrl* companionCtrl = nullptr;
+	std::vector<DawCtrl*> dawCtrls;
 	edithistory hist;
-	scaled_grid grid;
-	clip_view clipView;
 	WorkerThread workerThread;
 	PlaybackThread playThread;
+	plugindatabase_t plugindb;
 	String projectPath;
-	hires_timer_t timer;
 	track_t* selectedTrack = NULL;
-	track_t* lastHoveredTrack = NULL;
-	int32_t lastHoveredTrackTicks = 0;
-	void* lastHoveredTooltip = nullptr;
-	void* lastTooltipSrc = nullptr;
-	int32_t lastHoveredTooltipTicks = 0;
-	seq_rand rand;
 	String loadProject = "";
-	view_mode_t viewMode = view_mode_t::TRACK_TIMELINE;
 	struct project_to_load_t {
-
 		std::shared_ptr<project_file> projectfile;
 		int loadflags;
 	};
 	std::shared_ptr<project_to_load_t> projectToLoad;
-public:
-	int32_t numCallsWaitEvents = 0;
 	std::shared_ptr<plugin_clipboard_t> pluginClipboard;
-	static MainCtrl* get();
-	~MainCtrl() {
-		my_printf("~MainCtrl destructor\n",0);
-	}
-	static PlaybackThread* getPlayThread() {
-		MainCtrl* ctrl = MainCtrl::get();
-		return ctrl ? &ctrl->playThread : nullptr;
-	}
-	static guictr_plugins* getPluginCtr();
-	static guictr_tracks* getGuiTrackCtr();
-	String lastKey;
 	dragdrop_midifile dragdropclip;
 	dragdrop_target_indicator_t dragdropTarget;
-	plugin_selection pluginSel;
-	plugindatabase_t plugindb;
+public:
 	tick_t tickJmpFrom = 0;
 	tick_t tickJmpTo = 0;
+	plugin_selection pluginSel;
 	int nextTooltipId = 0;
+private:
+	hires_timer_t timer;
+	seq_rand rand;
 //	int curTooltip = 0;
-	scaled_grid& getGrid() {
-		return grid;
-	}
-	clip_view& getClipView() {
-		return clipView;
-	}
-	dragdrop_target_indicator_t& getDragDropTarget() {
-		return dragdropTarget;
-	}
-	plugin_selection& getPluginSel() {
-		return pluginSel;
+public:
+	DawInstance() {
+
 	}
 	edithistory& getHist() {
 		return hist;
 	}
+	plugindatabase_t& getPluginDatabase() {
+		return plugindb;
+	}
+	static DawInstance* get();
+
+	void postInit();
+	void initDaw(int argc, char* argv[]);
+	void startDaw();
+
+	void setTempo(int32_t _tempo100) override;
+	/**
+	 * addTrackImpl - adds track to trackCtr and creates gui
+	 * int32 trackInserPos - track-type-container local pos
+	 */
+	void addTrackImpl(int32_t trackInsertPos, track_t* t, int flags) override;
+
+	void pushHist(action_base* action);
+	void removeTrackImpl(track_t* t, int flags);
+	track_t* getTrackId(uint32_t trackId);
+	void removeTrackId(uint32_t trackId);
+	void unloadProject();
+	void setSelectedTrack(track_t* track);
+	void preClipDelete(clip_t* clip);
+	void preTrackDelete(track_t* clip);
+	void setPluginClipboard(std::shared_ptr<plugin_clipboard_t> clipboard) {
+		pluginClipboard = clipboard;
+	}
+	std::shared_ptr<plugin_clipboard_t> getPluginClipboard() {
+		return pluginClipboard;
+	}
+
+	void setJumpFromTo(tick_t tickJmpFrom, tick_t tickJmpTo) {
+		this->tickJmpFrom = tickJmpFrom;
+		this->tickJmpTo = tickJmpTo;
+	}
 	trackallcontainer_t& getTracks() {
 		return trackList;
 	}
-	String& getProjectPath() {
-		return projectPath;
-	}
-	WorkerThread* getWorkerThread() {
-		return &workerThread;
-	}
-
+	void setEmptyProject();
 	void saveFile(const String& path);
 	/**
 	 * Loads project file at location path
@@ -296,73 +322,6 @@ public:
 	 */
 	bool setLoadedProject(std::shared_ptr<project_file> file, int flags);
 	bool setProjectToLoad(std::shared_ptr<project_file> file, int flags);
-	void setEmptyProject();
-	void pushHist(action_base* action);
-	void focusReceived() {
-	}
-	void focusLost() {
-//		closeContextMenu();
-	}
-	void addDebug(String s);
-
-
-	void setTempo(int32_t _tempo100) override;
-	bool filesDropMove(ivec2 pos, int kbmods) override;
-    bool filesDropBegin(std::vector<String>& files, ivec2 pos, int kbmods) override;
-    bool filesDropFinal(std::vector<String>& files, ivec2 pos, int kbmods) override;
-    void mouseMoved(ivec2 mousePos, ivec2 deltaPos) override;
-	void menuCommand(int cmd) override;
-	bool onWindowCloseRequest() override;
-	void updateMenubar() override;
-	void onTick();
-	bool init(window_main* window, NVGcontext* nanovg);
-	void postInit();
-	void destroy();
-	void unloadProject();
-	void relayout(int32_t w, int32_t h);
-	bool processGlobalKeyevent(KeyEvent& event) override;
-	bool mouseDownPre() override;
-	bool isZooming();
-	void uncaptureMouse();
-	void onUncaptureMouse();
-	/**
-	 * addTrackImpl - adds track to trackCtr and creates gui
-	 * int32 trackInserPos - track-type-container local pos
-	 */
-	void addTrackImpl(int32_t trackInsertPos, track_t* t, int flags) override;
-	void removeTrackImpl(track_t* t, int flags);
-	track_t* getTrackId(uint32_t trackId);
-	void removeTrackId(uint32_t trackId);
-	void setEditClip(gui_clip* gclip);
-	void setSelectedTrack(track_t* track);
-	track_t* getSelectedTrack();
-	void showPluginView();
-	void showClipEditor();
-	void prerender(int32_t x, int32_t y, int32_t w, int32_t h, float pixelRatio);
-
-	void showAutomation(track_t* tr, automatable_t* at, int32_t paramIdx);
-	bool isClipEditorVisible();
-	bool isPluginViewVisible();
-	track_t* createNewTrack(int trackType);
-	track_t* insertNewTrack(int trackInsertPos, int trackType, int flags = FLG_TRK_CHANGE_USER);
-	void updateGrid();
-	void updateVisibleTrackContents();
-	guitrack_editor& getTrackEditor();
-	void setStatusText(String s);
-	std::shared_ptr<clip_clipboard> copySelection(const DAW::Cursor& cursor);
-	void pasteClipboard(clip_clipboard* c, int32_t trackOffset, tick_t tickOffset);
-	void pasteClipboard(clip_clipboard* c, DAW::Cursor& cursor);
-	void cutSelection(const DAW::Cursor& cursor);
-	void cutIntersecting(track_t* tr, clip_t* mask);
-	void cutIntersecting(track_t* tr, tick_t tickBegin, tick_t tickEnd);
-
-	void muteIntersecting(const DAW::Cursor& _cursor);
-//	void copyClipsInRange(trackcontents_t* in, trackcontents_t* out, int32_t srcPos, int32_t dstPos, int32_t len);
-
-	void objectDragMove(guibase* g, MouseEvent& evt);
-	void objectDragRelease(guibase* g, MouseEvent& evt);
-	void preClipDelete(clip_t* clip);
-	void preTrackDelete(track_t* clip);
 	void startPlaying();
 	void stopPlaying();
 	/**
@@ -372,20 +331,168 @@ public:
 	void setAudioThreadState(playback_state state);
 	bool isPlaying();
 	bool toggleLoop();
-	void setDragged(guibase* g);
-	void setPluginClipboard(std::shared_ptr<plugin_clipboard_t> clipboard) {
-		pluginClipboard = clipboard;
-	}
-	std::shared_ptr<plugin_clipboard_t> getPluginClipboard() {
-		return pluginClipboard;
-	}
+	void resetMouseContext();
+	void resetEditClip();
+	void closeContextMenus();
+	std::shared_ptr<clip_clipboard> copySelection(const DAW::Cursor& cursor);
+	void pasteClipboard(clip_clipboard* c, int32_t trackOffset, tick_t tickOffset);
+	void pasteClipboard(clip_clipboard* c, DAW::Cursor& cursor);
+	void cutSelection(const DAW::Cursor& cursor);
+	void cutIntersecting(track_t* tr, clip_t* mask);
+	void cutIntersecting(track_t* tr, tick_t tickBegin, tick_t tickEnd);
+	track_t* createNewTrack(int trackType);
+	track_t* insertNewTrack(int trackInsertPos, int trackType, int flags = FLG_TRK_CHANGE_USER);
 
-	void setJumpFromTo(tick_t tickJmpFrom, tick_t tickJmpTo) {
-		this->tickJmpFrom = tickJmpFrom;
-		this->tickJmpTo = tickJmpTo;
+
+	void muteIntersecting(const DAW::Cursor& _cursor);
+//	void copyClipsInRange(trackcontents_t* in, trackcontents_t* out, int32_t srcPos, int32_t dstPos, int32_t len);
+
+	track_t* getSelectedTrack();
+	void menuCommand(int cmd);
+	void destroy();
+	void updateClipViews(clip_t* notifyClip, clip_cursor_t cursor);
+	void onTick();
+	void setControls(MainCtrl*, CompanionCtrl*);
+};
+class DawCtrl : public AppCtrl {
+	Menus menus;
+protected:
+	hires_timer_t timer;
+	seq_rand rand;
+	int32_t numCallsWaitEvents = 0;
+
+	track_t* lastHoveredTrack = NULL;
+	int32_t lastHoveredTrackTicks = 0;
+	void* lastHoveredTooltip = nullptr;
+	void* lastTooltipSrc = nullptr;
+	int32_t lastHoveredTooltipTicks = 0;
+public:
+	String lastKey;
+	DawViewContainers* viewContainers = NULL;
+	DawInstance& daw;
+	scaled_grid grid;
+	clip_view clipView;
+	view_mode_t viewMode = view_mode_t::TRACK_TIMELINE;
+	DawCtrl(DawInstance& _daw) : AppCtrl(), daw(_daw) {
+
 	}
-	void initApp(int argc, char* argv[]);
+	scaled_grid& getGrid() {
+		return grid;
+	}
+	clip_view& getClipView() {
+		return clipView;
+	}
+	dragdrop_target_indicator_t& getDragDropTarget() {
+		return daw.dragdropTarget;
+	}
+	plugin_selection& getPluginSel() {
+		return daw.pluginSel;
+	}
+	String& getProjectPath() {
+		return daw.projectPath;
+	}
+	WorkerThread* getWorkerThread() {
+		return &daw.workerThread;
+	}
+	virtual void setEditClip(gui_clip* gclip);
+	virtual void resetMouseContext();
+
+	bool filesDropMove(ivec2 pos, int kbmods) override;
+    bool filesDropBegin(std::vector<String>& files, ivec2 pos, int kbmods) override;
+    bool filesDropFinal(std::vector<String>& files, ivec2 pos, int kbmods) override;
+    void mouseMoved(ivec2 mousePos, ivec2 deltaPos) override;
+	void menuCommand(int cmd) override;
+	bool onWindowCloseRequest() override;
+	void updateMenubar() override;
+	void onTick() override;
+	void postInit() override;
+	void destroy() override;
+	void relayout(int32_t w, int32_t h);
+	bool processGlobalKeyevent(KeyEvent& event) override;
+	bool mouseDownPre() override;
+	void uncaptureMouse();
+	void onUncaptureMouse();
+	void prerender(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float pixelRatio);
+
+
+
+	void objectDragMove(guibase* g, MouseEvent& evt);
+	void objectDragRelease(guibase* g, MouseEvent& evt);
+	void setDragged(guibase* g);
+	void initApp(int argc, char* argv[]) override;
+	bool init(window_main* window, NVGcontext* nanovg) override;
+	void setActiveWindow(window_main* wnd) override;
+
+	void focusReceived() {
+	}
+	void focusLost() {
+//		closeContextMenu();
+	}
+	virtual void setupView() = 0;
+	virtual void layoutView(int32_t w, int32_t h) = 0;
+	virtual void updateVisibleTrackContents() {
+
+	}
+	virtual void updateGrid() {
+
+	}
+	virtual void setStatusText(String s) {
+
+	}
+};
+class MainCtrl : public DawCtrl
+{
+	friend class DawInstance;
+	DawViewContainersMain* view = NULL;
+public:
+	static MainCtrl* get();
+	MainCtrl(DawInstance& _daw);
+	~MainCtrl() {
+		//my_printf("~MainCtrl destructor\n",0);
+	}
+	static PlaybackThread* getPlayThread() {
+		MainCtrl* ctrl = MainCtrl::get();
+		return ctrl ? &ctrl->daw.playThread : nullptr;
+	}
+	static guictr_plugins* getPluginCtr();
+	static guictr_tracks* getGuiTrackCtr();
+
+	void initApp(int argc, char* argv[]) override;
+	bool init(window_main* window, NVGcontext* nanovg) override;
+	void postInit() override;
+	void onTick() override;
 	view_mode_t getViewMode();
 	void setViewMode(view_mode_t mode);
-	void resetMouseContext();
+	void setupView() override;
+	bool isClipEditorVisible();
+	bool isPluginViewVisible();
+	void showPluginView();
+	void showClipEditor();
+	void updateGrid() override;
+	void updateVisibleTrackContents() override;
+	bool processGlobalKeyevent(KeyEvent& event) override;
+	bool isZooming();
+	guitrack_editor& getTrackEditor();
+	void addDebug(String s);
+	void resetMouseContext() override;
+	void setEditClip(gui_clip* gclip) override;
+	void layoutView(int32_t w, int32_t h) override;
+	void showAutomation(track_t* tr, automatable_t* at, int32_t paramIdx);
+	void setStatusText(String s) override;
+	void destroy() override;
+};
+
+class CompanionCtrl : public DawCtrl
+{
+	DawViewContainersCompanion* view = NULL;
+public:
+	CompanionCtrl(DawInstance& _daw) : DawCtrl(_daw) {
+		//my_printf("CompanionCtrl constructor\n",0);
+	}
+	~CompanionCtrl() {
+		//my_printf("~CompanionCtrl destructor\n",0);
+	}
+	void setupView() override;
+	void layoutView(int32_t w, int32_t h) override;
+	void resetMouseContext() override;
 };
