@@ -31,6 +31,7 @@
 #include "appsettings.h"
 #include "host/audio_host.h"
 #include "host/projectcontroller.h"
+#include "guimeter_render.h"
 
 const int resizeHitY = 8;
 const int DRAG_RESIZE = 1;
