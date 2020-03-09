@@ -29,6 +29,7 @@ extern constant_t CONST_METER_WIDTH;
 extern constant_t CONST_FIXED_TITLE_HEIGHT;
 extern constant_t CONST_GUI_FRAME_STROKE_WIDTH;
 extern constant_t CONST_FONT_SCALE;
+extern constant_t CONST_NODES_SCALE;
 extern constant_t CONST_FONT_SIZE_CONTEXT_MENU;
 extern constant_t CONST_FONT_SIZE_TABLE;
 extern constant_t CONST_GUI_FRAME_STROKE_WIDTH;;

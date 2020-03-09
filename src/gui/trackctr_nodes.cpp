@@ -439,8 +439,8 @@ void gui_graph::updateList(bool resetPositions) {
 	}
 	if (lastProcessingList) {
 		const DAW::processing_graph_t& procGraph = *lastProcessingList.get();
-		float fontScale = 14;
-		int32_t nodeWidth = 180;
+		float fontScale = 14*theme->getFloat(GuiConstant::CONST_NODES_SCALE);
+		int32_t nodeWidth = 180*theme->getFloat(GuiConstant::CONST_NODES_SCALE);
 		int32_t nodeHeight = fontScale*2;
 		ivec2 nodeSize = ivec2(nodeWidth, nodeWidth);
 		int32_t posGridStepX = nodeWidth+fontScale*4;
