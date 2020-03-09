@@ -194,6 +194,9 @@ FUNCTION(SET_APP_BUILD appname)
     set_target_properties(${appname} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ${DAW_WORKING_DIR})
     set_target_properties(${appname} PROPERTIES OUTPUT_NAME_DEBUG "${appname}-${CMAKE_CXX_COMPILER_ID}-debug${OUTPUT_BINARY_SUFFIX}" )
     set_target_properties(${appname} PROPERTIES OUTPUT_NAME_RELEASE "${appname}-${CMAKE_CXX_COMPILER_ID}-release${OUTPUT_BINARY_SUFFIX}" )
+    set_target_properties(${appname} PROPERTIES OUTPUT_NAME_MINSIZEREL "${appname}-${CMAKE_CXX_COMPILER_ID}-minsizerel${OUTPUT_BINARY_SUFFIX}" )
+    set_target_properties(${appname} PROPERTIES OUTPUT_NAME_RELWITHDEBINFO "${appname}-${CMAKE_CXX_COMPILER_ID}-relwithdebinfo${OUTPUT_BINARY_SUFFIX}" )
+
 ENDFUNCTION(SET_APP_BUILD)
 
 if (BUILD_DAW_LIB) 
