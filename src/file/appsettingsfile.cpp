@@ -97,12 +97,14 @@ void serialize(Archive & ar, app_iosettings& settings) {
 }
 template<class Archive>
 void serialize(Archive & ar, appsettings& settings) {
-	ar(cereal::make_nvp("grid", settings.dens),
+	ar(cereal::make_nvp("grid", settings.wndMain.dens),
 		cereal::make_nvp("iosettings", settings.iosettings));
 	make_optional_nvp(ar, "startEngine", settings.startEngine);
 #ifdef _WIN32
-	make_optional_nvp(ar, "window", *(settings.size));
+	make_optional_nvp(ar, "window", *(settings.wndMain.size));
+	make_optional_nvp(ar, "window2", *(settings.wndCompanion.size));
 #endif
+	make_optional_nvp(ar, "window2grid", settings.wndCompanion.dens);
 	make_optional_nvp(ar, "pluginPath", settings.pluginPath);
 	make_optional_nvp(ar, "vmmode", settings.vmmode);
 }

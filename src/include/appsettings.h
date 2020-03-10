@@ -68,12 +68,23 @@ struct app_iosettings {
 		return device_api == asioConfig.device_api;
 	}
 };
-struct appsettings
+struct appwindowsettings
 {
 #ifdef _WIN32
     std::unique_ptr<windowsize> size;
 #endif
 	grid_density dens;
+	~appwindowsettings();
+	appwindowsettings();
+	appwindowsettings(const appwindowsettings& other);
+	appwindowsettings& operator=(const appwindowsettings& other);
+	appwindowsettings(appwindowsettings&& other);
+	appwindowsettings& operator=(appwindowsettings&& other);
+};
+struct appsettings
+{
+	appwindowsettings wndMain;
+	appwindowsettings wndCompanion;
 //	String device_selected;
 	bool startEngine = false;
 	bool vmmode = false;

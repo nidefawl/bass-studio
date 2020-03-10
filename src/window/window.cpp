@@ -563,6 +563,7 @@ class appwindow_main : public appwindow, public window_main  {
 	AppCtrl* const ctrl;
 	std::shared_ptr<AppCtrl> sharedCtrl;
 	uint64_t dblclicktimer;
+	int32_t windowCreationFlags = 0;
 //	WorkerThread workerThread;
 	void destroyOverlayWindows();
 public:
@@ -1136,7 +1137,11 @@ void appwindow_main::destroy() {
 	if (this->dropTarget)
 		UnregisterDropWindow(hwnd, this->dropTarget);
 	if (!parent) {
-		saveWindowPos(hwnd, settings.size.get());
+		if (windowCreationFlags & WINDOW_IS_MAINWINDOW_SLAVE) {
+			saveWindowPos(hwnd, settings.wndCompanion.size.get());
+		} else {
+			saveWindowPos(hwnd, settings.wndMain.size.get());
+		}
 	}
 #endif
 #if __linux__
@@ -1158,6 +1163,7 @@ void appwindow_main::destroy() {
 }
 void appwindow_main::createMainWindow(const char* title, int w, int h, void* handle, int flags) {
 	nameDbg=title;
+	windowCreationFlags = flags;
 	setAppWindowHints();
 //	if (!parentWindowHandle)
 
@@ -1212,8 +1218,15 @@ void appwindow_main::createMainWindow(const char* title, int w, int h, void* han
 #ifdef _WIN32
 	this->dropTarget = RegisterDropWindow(hwnd, this);
 	if (!parent) {
-		if (!restoreWindowPos(hwnd, settings.size.get())) {
-			this->maximize();
+		if (flags & WINDOW_IS_MAINWINDOW_SLAVE) {
+			if (!restoreWindowPos(hwnd, settings.wndCompanion.size.get())) {
+				this->maximize();
+			}
+		} else {
+
+			if (!restoreWindowPos(hwnd, settings.wndMain.size.get())) {
+				this->maximize();
+			}
 		}
 	}
 #endif

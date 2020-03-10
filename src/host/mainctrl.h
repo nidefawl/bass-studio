@@ -439,6 +439,9 @@ public:
 	virtual void setStatusText(String s) {
 
 	}
+	virtual bool isCompanion() const {
+		return false;
+	}
 };
 class MainCtrl : public DawCtrl
 {
@@ -495,4 +498,8 @@ public:
 	void setupView() override;
 	void layoutView(int32_t w, int32_t h) override;
 	void resetMouseContext() override;
+	void destroy() override;
+	bool isCompanion() const override {
+		return true;
+	}
 };
