@@ -328,15 +328,20 @@ public:
 				guictxtmenu_base* ctxtMenu = new guictxtmenu_base();
 				ctxtMenu->size = {240, 480};
 				ctxtMenu->add(static_cast<guibase*>(dbgPropertiesCtrPopup));
-				dbgPropertiesCtrPopup->setDebugPropertyHandle(nullptr);
 				ivec2 wndPos{0};
 				this->parentCtrl->window->getPos(&wndPos);
+				auto ctrl = MainCtrl::get();
 				closeContextMenu();
-				MainCtrl::get()->openContextMenu(ctxtMenu, wndPos, 2);
 				dbgPropertiesCtrPopup->setDebugPropertyHandle(gui);
-				assert(ctxtMenu->parentCtrl);
-				ctxtMenu->parentCtrl->window->getPos(&wndPos);
-				dbgPropertiesCtrPopup->setDebugPropertyHandle(gui);
+				dbgPropertiesCtrPopup->theme = ctrl->getTheme();
+				dbgPropertiesCtrPopup->layout();
+				ctrl->openContextMenu(ctxtMenu, wndPos, 2);
+//				dbgPropertiesCtrPopup->layout();
+//				dbgPropertiesCtrPopup->setDebugPropertyHandle(nullptr);
+//				closeContextMenu();
+//				MainCtrl::get()->openContextMenu(ctxtMenu, wndPos, 2);
+//				dbgPropertiesCtrPopup->setDebugPropertyHandle(gui);
+//				assert(ctxtMenu->parentCtrl);
 				return;
 			}
 		}
