@@ -246,14 +246,16 @@ public:
 class DawViewContainersCompanion : public DawViewContainers {
 public:
 	guictr_menubar ctr_menu;
-	gui_statusbar statusbar;
-
 	guictr_nodes ctr_nodes;
+	guictr_plugins ctr_plugins;
+	Splitter splitterCenter;
 	DawViewContainersCompanion(ngui::MenuBar& menubar, DAW::Cursor& _cursor, project_t& project, scaled_grid& grid, clip_view& clipView, dragdrop_midifile& dragdropclip)
 	  :
 	  ctr_menu(menubar),
-	  ctr_nodes(_cursor, project, dragdropclip)
+	  ctr_nodes(_cursor, project, dragdropclip),
+	  splitterCenter(0, 0.8f)
 	{
+		splitterCenter.setMinMax(0.2f, 0.86f);
 	}
 	void layout(int32_t winW, int32_t winH) {
 		int winX = 0; int winY = 0;
@@ -266,24 +268,31 @@ public:
 		ctr_menu.size = vec2(winW, hMenu);
 #endif
 		int hTopControls = 0;
-		int hStatusBar = 60;
-		int hTrackCtr = winH;
+		int hStatusBar = 0;
+//		int hTrackCtr = winH;
+		int hCenter = winH - hTopControls - hStatusBar;
+		int hRight = winH - hTopControls;
+		int hTrackCtr = splitterCenter.leftOrTop(hCenter);
+		int hPlugins = splitterCenter.rightOrBottom(hCenter);
+		splitterCenter.pos = ivec2(winX, winY+hTrackCtr-5);
+		splitterCenter.size = ivec2(winW, 10);
 		ctr_nodes.size = { winW, hTrackCtr };
-		statusbar.size = { winW, hStatusBar };
+		ctr_plugins.size = { winW, hPlugins };
 
 		ctr_nodes.pos = { winX, winY };
-		statusbar.pos = { winX, winBottom - hStatusBar };
+		ctr_plugins.pos = { winX, ctr_nodes.bottom() };
 //		ctr_test.setSnapSides(ivec4(0, 0, 0, 1));
 //		statusbar.setSnapSides(ivec4(0, 1, 0, 0));
 	}
 	void addTo(std::vector<guictr_base*>& v) {
 		 v.push_back(&ctr_nodes);
 //		 v.push_back(&ctr_tabbed2);
-		 v.push_back(&statusbar);
+		 v.push_back(&ctr_plugins);
 //		 v.push_back(&ctr_tabbed);
 #if USE_GUI_MENU
 		 v.push_back(&ctr_menu);
 #endif
+		 v.push_back(&splitterCenter);
 	}
 };
 class DawViewContainersMain : public DawViewContainers {
@@ -868,7 +877,12 @@ void DawCtrl::destroy()
 	if (!isOK) {
 		return;
 	}
-	settings.dens = grid.grid_dens;
+	if (isCompanion()) {
+		settings.wndCompanion.dens = grid.grid_dens;
+	} else {
+		settings.wndMain.dens = grid.grid_dens;
+	}
+
 	isOK = false;
 	if (viewContainers) {
 		delete viewContainers;
