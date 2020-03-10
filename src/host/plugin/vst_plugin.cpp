@@ -326,7 +326,8 @@ void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin, bool storePluginCh
 				my_printf("Plugin %s: Save data2[%d]\n", StringAsCStr(plugin->sName), pluginDataSize2);
 			}
 		}
-
+	}
+	if (storePluginChunks) {
 		ps.params.reserve(plugin->getNumParameters());
 		plugin->visitParams([&ps](auto& mapEntry) {
 			auto& param = mapEntry.second;
@@ -334,8 +335,8 @@ void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin, bool storePluginCh
 				ps.params.push_back(param_snapshot_t{ param.idx, param.value });
 			}
 		});
+		storeAutomation(ps.automatedParams, plugin);
 	}
-	storeAutomation(ps.automatedParams, plugin);
 }
 }
 void vstplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
