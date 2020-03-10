@@ -988,8 +988,11 @@ bool DawCtrl::init(window_main* window, NVGcontext* nanovg)
 	this->mainWindow->updateMenu();
 #endif
 
-
-	grid.grid_dens = settings.dens;
+	if (isCompanion()) {
+		grid.grid_dens = settings.wndCompanion.dens;
+	} else {
+		grid.grid_dens = settings.wndMain.dens;
+	}
 
 //	vsthost::getInstance()->setSamplerateBlockSize(settings.iosettings.samplerate, settings.iosettings.blocksize);
 	updateGrid();
@@ -1864,7 +1867,12 @@ void DawInstance::setTempo(int32_t _tempo100) {
 //	}, true);
 }
 void MainCtrl::destroy() {
+	settings.wndMain.dens = grid.grid_dens;
 	daw.destroy();
+	DawCtrl::destroy();
+}
+void CompanionCtrl::destroy() {
+	settings.wndCompanion.dens = grid.grid_dens;
 	DawCtrl::destroy();
 }
 void MainCtrl::setStatusText(String s) {
