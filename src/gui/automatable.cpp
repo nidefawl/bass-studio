@@ -31,17 +31,23 @@ bool handleAutomatbleContextMenu(automatable_t* atl, int paramIdx, int _id) {
 	auto* track = atl->getTrack();
 	dbgassert(track);
 	automation_t* param = atl->getRegisteredAutomation(paramIdx);
+	auto* guiTrackCtr = MainCtrl::getGuiTrackCtr();
 	switch (_id) {
 		case ID_SHOW_NEW: {
-			gui_track_automationlane* lane = MainCtrl::getGuiTrackCtr()->addAutomationLane(track, atl, paramIdx, true);
-			MainCtrl::getGuiTrackCtr()->layout();
-			MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
-			MainCtrl::getGuiTrackCtr()->scrollTo(lane);
+			track_gui_entry_t entry;
+			dbgassert(guiTrackCtr->getTrackEntry(track, entry));
+			gui_track_automationlane* lane = MainCtrl::getGuiTrackCtr()->addAutomationLane(entry, atl, paramIdx, true);
+			guiTrackCtr->layout();
+			guiTrackCtr->updateVisibleTrackContents();
+			guiTrackCtr->scrollTo(lane);
 			return true;
 		}
 		case ID_SHOW: {
 			MainCtrl::get()->showAutomation(track, atl, paramIdx);
-			MainCtrl::getGuiTrackCtr()->scrollTo(track->content);
+			track_gui_entry_t entry;
+			if (guiTrackCtr->getTrackEntry(track, entry)) {
+				guiTrackCtr->scrollTo(entry.content);
+			}
 			return true;
 		}
 		case ID_DELETE: {

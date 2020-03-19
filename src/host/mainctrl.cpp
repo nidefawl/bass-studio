@@ -524,6 +524,8 @@ void CompanionCtrl::resetMouseContext() {
 }
 
 void DawInstance::unloadProject() {
+//	try {
+		AppWndProc_enableBlockReentrant();
 	dbgassert(playThread.isLocked());
 	for (auto* ctrl : dawCtrls) {
 		ctrl->closeContextMenu();
@@ -582,6 +584,11 @@ void DawInstance::unloadProject() {
 		host->getDeferredEffects(pluginsDeferred);
 		dbgassert(pluginsDeferred.empty());
 	}
+//
+//	} catch(...) {
+//
+//	}
+	AppWndProc_disableBlockReentrant();
 
 }
 
@@ -660,7 +667,8 @@ void DawInstance::setEmptyProject() {
 		dbgassert(getNumClipAllocations() == 0);
 	}
 	insertNewTrack(-1, TRACK_TYPE_MIDI, FLG_TRK_CHANGE_LOAD);
-	insertNewTrack(-1, TRACK_TYPE_MASTER, FLG_TRK_CHANGE_LOAD);
+	insertNewTrack(-1, TRACK_TYPE_MASTER, 0);
+
 }
 #if CREATE_DEBUG_COMPANION_WINDOW
 void drawDebugWindow(NVGcontext* ctx, int winW, int winH, float pxratio);
@@ -1063,17 +1071,17 @@ void MainCtrl::onTick() {
 	DawCtrl::onTick();
 
 	if (guiDragged && !guiCaptured && guiDragged->isDragMoveable()) {
-		track_t *tr = NULL;
+		track_gui_entry_t *tr = NULL;
 		int32_t hoverTicks = 0;
 		ivec2 trackViewLocalPos = toControlsObjectSpace(m_mousePos, &view->ctr_tracks);
 		guictr_base& ctrMixers = view->ctr_tracks.trackControls;
 		if (ctrMixers.contains(trackViewLocalPos)) {
 			ivec2 posRelative = m_mousePos - ctrMixers.toScreenSpace(ivec2(0));
 			tr = getTrackFromMouse(this->view->ctr_tracks.trackView, daw, posRelative, false);
-			if (tr && tr == lastHoveredTrack && daw.getSelectedTrack() != tr) {
+			if (tr && tr == lastHoveredTrack && daw.getSelectedTrack() != tr->track) {
 				hoverTicks = lastHoveredTrackTicks + 1;
 				if (lastHoveredTrackTicks >= 6) {
-					daw.setSelectedTrack(tr);
+					daw.setSelectedTrackEntry(tr);
 					showPluginView();
 					hoverTicks = 0;
 				}
@@ -1096,6 +1104,10 @@ void MainCtrl::onTick() {
 	}
 }
 
+
+guictr_tracks* DawInstance::getTrackContainer(int idx) {
+	return idx == 0 ? &mainCtrl->view->ctr_tracks : nullptr;
+}
 void DawInstance::setControls(MainCtrl* mainCtrl, CompanionCtrl* companionCtrl) {
 	this->mainCtrl = mainCtrl;
 	this->companionCtrl = companionCtrl;
@@ -1296,11 +1308,14 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
 	}
 
 	/** load layouts **/
-	trackList.loadSubtrackLayouts(file->project);
+//	trackList.loadSubtrackLayouts(file->project);
 
 	auto ctrl = mainCtrl;
 	if (ctrl)
 	{
+		ctrl->view->ctr_tracks.loadTrackLayouts(file->project.trackCtr);
+		ctrl->view->ctr_tracks.loadTrackLayouts(file->project.trackReturnCtr);
+		ctrl->view->ctr_tracks.loadTrackLayouts(file->project.trackMasterCtr);
 		//	view->ctr_tracks.layout();
 		ctrl->grid.setLayout(file->layout.layoutGrid);
 		ctrl->view->ctr_tracks.layout();
@@ -1364,6 +1379,10 @@ void DawCtrl::relayout(int32_t w, int32_t h) {
 		closeContextMenu();
 	}
 	layoutView(w, h);
+}
+void DawInstance::setSelectedTrackEntry(track_gui_entry_t* trackEntry) {
+	selectedTrack = trackEntry ? trackEntry->track : nullptr;
+	mainCtrl->view->ctr_plugins.showTrack(trackEntry&&trackEntry->track ? trackEntry->track->audio : nullptr);
 }
 void DawInstance::setSelectedTrack(track_t* track) {
 	selectedTrack = track;
@@ -1867,7 +1886,10 @@ void DawInstance::preTrackDelete(track_t* track) {
 	resetMouseContext();
 }
 void MainCtrl::showAutomation(track_t* tr, automatable_t* at, int32_t paramIdx) {
-	view->ctr_tracks.showAutomationLane(tr, at, paramIdx);
+	track_gui_entry_t entry;
+	if (view->ctr_tracks.getTrackEntry(tr, entry)) {
+		view->ctr_tracks.showAutomationLane(entry, at, paramIdx);
+	}
 }
 void DawInstance::setTempo(int32_t _tempo100) {
 	std::function<void()> fn2 = [this, _tempo100]() {
@@ -1900,6 +1922,11 @@ void DawInstance::resetMouseContext() {
 void DawInstance::closeContextMenus() {
 	for (auto* ctrl : this->dawCtrls) {
 		ctrl->closeContextMenu();
+	}
+}
+void DawInstance::resetAutomationContext() {
+	for (auto* ctrl : this->dawCtrls) {
+		ctrl->resetAutomationContext();
 	}
 }
 void DawInstance::resetEditClip() {

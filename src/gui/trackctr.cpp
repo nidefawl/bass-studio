@@ -14,6 +14,7 @@
 #include "basectrl.h"
 #include "host/mainctrl.h"
 #include "logging.h"
+#include "subtrack.h"
 
 #include "guicontextmenu_daw.h"
 namespace GuiConstant {
@@ -30,51 +31,49 @@ void guitrack_mixers::render(NVGcontext* vg) {
 	nvgFillColor(vg, theme->getColor(GuiColor::COL_GRID_BRT));
 	nvgFill(vg);
 	for (track_t* g : project.tracksBottom) {
-		//content
-		dbgassert(g->mixer->isVisible() == g->isVisible());
-		if (g->mixer->isVisible()) {
+
+		track_gui_entry_t entry;
+		if (!iGuiMgr.getTrackEntry(g, entry)) {
+			dbgassert(0);
+			continue;
+		}
+		bool trackVisible = iGuiMgr.isVisible(entry);
+		dbgassert(entry.mixer->isVisible() == trackVisible);
+		if (entry.mixer->isVisible()) {
 			nvgSave(vg);
-			g->mixer->renderGroupHandle(vg);
-			g->mixer->render(vg);
+			entry.mixer->renderGroupHandle(vg);
+			entry.mixer->render(vg);
 			nvgRestore(vg);
 		}
 	}
 	int ySplit = getPosYFirstReturnTrack(tracksVisibleFlat);
 	if (ySplit > 0) {
 		nvgIntersectScissor(vg, 0, 0, cs.x, ySplit);
-		for (track_t* t : project.trackMidiAudioCtr) {
-			dbgassert(t->mixer != NULL);
-			dbgassert(t->mixer->isVisible() == t->isVisible());
-			if (t->mixer->isVisible() && t->mixer->pos.y < ySplit && t->mixer->bottom() > 0) {
+		for (track_gui_entry_t* t : tracksVisibleFlat) {
+			track_gui_entry_t entry = *t;
+			bool trackVisible = iGuiMgr.isVisible(entry);
+			dbgassert(entry.mixer->isVisible() == trackVisible);
+			auto& mixer = entry.mixer;
+			if (mixer->isVisible() && mixer->pos.y < ySplit && mixer->bottom() > 0) {
 				nvgSave(vg);
-				t->mixer->renderGroupHandle(vg);
-				t->mixer->render(vg);
+				mixer->renderGroupHandle(vg);
+				mixer->render(vg);
 				nvgRestore(vg);
 			}
 		}
 	}
 
 }
-void guitrack_mixers::addTrack(track_t* t) {
-	if (t->mixer)
-		throw applogicexception("expected t->mixer == NULL");
-	t->mixer = createTrackGuiMixer(t);
-	t->mixer->setZOrder(t->type >= TRACK_TYPE_MIDI ? 0 : 1);
-	this->add(t->mixer);
+void guitrack_mixers::addTrackEntry(track_gui_entry_t& e) {
+	this->add(e.mixer);
 }
-void guitrack_mixers::removeTrack(track_t* t) {
-	if (t->mixer) {
-		this->remove(t->mixer);
-		DELETE_PTR(t->mixer)
-	}
+void guitrack_mixers::removeTrackEntry(track_gui_entry_t& e) {
+	this->remove(e.mixer);
+//	DELETE_PTR(e.mixer) //TODO: fix mem leak
 }
 void guitrack_mixers::updateVisibleTrackContents() {
-	for (track_t* tr : project.trackList) {
-		if (!tr->mixer) {
-			my_printf("NO MIXER ON %s\n", StringAsCStr(tr->name));
-			continue;
-		}
-		const bool bVisible = tr->isVisible();
+	for (auto* tr : tracksVisibleFlat) {
+		const bool bVisible = iGuiMgr.isVisible(*tr);
 		tr->mixer->setVisible(bVisible);
 	}
 }
@@ -87,77 +86,114 @@ void drawSeperator(NVGcontext* vg, const guitheme_t* theme, int32_t seperatorY, 
 	nvgStrokeWidth(vg, TRACK_HEIGHT_SPACING);
 	nvgStroke(vg);
 }
-int32_t guictr_tracks::setTrackPosition(track_t* t, int32_t y, bool isBottom) {
+int32_t guictr_tracks::setTrackPosition(track_gui_entry_t& e, int32_t y, bool isBottom) {
+//	get
 	const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
-	ivec2& cntPos = t->content->pos;
-	ivec2& mxrPos = t->mixer->pos;
+	ivec2& cntPos = e.content->pos;
+	ivec2& mxrPos = e.mixer->pos;
 	cntPos = ivec2(0, y);
-	int lvl = t->getChildLvl();
+	int lvl = e.track->getChildLvl();
 	int32_t childTrackInsetX = lvl*8;
 	mxrPos = ivec2(childTrackInsetX, y);
-	int32_t trH = t->hideTrack ? 1 : t->height;
-	t->content->size = ivec2(trackView.size.x, trH * TRACK_HEIGHT_STEP);
-	int32_t x2 = t->content->left();
-	int32_t y2 = t->content->bottom();
-	if (!(t->hideTrack || t->hideSubtracks)) {
-		for (auto t2 : t->subtracks) {
+	int32_t trH = e.layout.hideTrack ? 1 : e.layout.height;
+	e.content->size = ivec2(trackView.size.x, trH * TRACK_HEIGHT_STEP);
+	int32_t x2 = e.content->left();
+	int32_t y2 = e.content->bottom();
+	if (!(e.layout.hideTrack || e.layout.hideSubtracks)) {
+		for (auto t2 : e.subtracks) {
 			int trackheight2 = t2->height * TRACK_HEIGHT_STEP;
 			t2->pos = ivec2(x2, y2);
-			t2->size = ivec2(t->content->size.x, trackheight2);
+			t2->size = ivec2(e.content->size.x, trackheight2);
 			y2 = t2->bottom() + TRACK_HEIGHT_SPACING;
 		}
 	} else {
-		for (auto t2 : t->subtracks) {
+		for (auto t2 : e.subtracks) {
 			t2->pos = ivec2(x2, y2);
 			t2->size = ivec2(0, 0);
 		}
 	}
 	int32_t totalHeight = y2-y;
-	t->mixer->size = ivec2(trackControls.size.x-childTrackInsetX, y2-y);
+	e.mixer->size = ivec2(trackControls.size.x-childTrackInsetX, y2-y);
 
 	if (isBottom) {
 		cntPos.y -= totalHeight;
 		mxrPos.y -= totalHeight;
-		for (auto t2 : t->subtracks) {
+		for (auto t2 : e.subtracks) {
 			t2->pos.y -= totalHeight;
 		}
 	}
-	t->content->positionChanged();
-	for (auto t2 : t->subtracks) {
+	e.content->positionChanged();
+	for (auto t2 : e.subtracks) {
 		t2->positionChanged();
 	}
 	return totalHeight;
 }
 
-void guictr_tracks::showAutomationLane(track_t* tr, automatable_t* at, int32_t paramIdx) {
-	tr->audio->selectedAutomationCtr = at;
-	tr->audio->selectedAutomationParam = paramIdx;
+void guictr_tracks::showAutomationLane(track_gui_entry_t& entry, automatable_t* at, int32_t paramIdx) {
+	entry.state.selectedAutomationCtr = at;
+	entry.state.selectedAutomationParam = paramIdx;
 	updateVisibleTrackContents();
 }
-void guictr_tracks::addSubTrack(track_t* t, gui_track_subtrack* subtrack, bool insertFront) {
-	trackView.addSubtrack(t, subtrack, insertFront);
-	t->mixer->addSubtrackMixer(t, subtrack);
+void guictr_tracks::addSubTrack(track_gui_entry_t& entry, gui_track_subtrack* subtrack, bool insertFront) {
+	trackView.addSubtrack(entry, subtrack, insertFront);
+	entry.mixer->addSubtrackMixer(entry, subtrack);
 }
-gui_track_automationlane* guictr_tracks::addAutomationLane(track_t* t, automatable_t* at, int32_t paramIdx, bool insertFront) {
-	gui_track_automationlane* al = new gui_track_automationlane(t, grid, at, paramIdx);
-	addSubTrack(t, al, insertFront);
+gui_track_automationlane* guictr_tracks::addAutomationLane(track_gui_entry_t& entry, automatable_t* at, int32_t paramIdx, bool insertFront) {
+	gui_track_automationlane* al = new gui_track_automationlane(entry, grid, at, paramIdx);
+	addSubTrack(entry, al, insertFront);
 	return al;
 }
 void guictr_tracks::removeAutomationLane(gui_track_automationlane* al) {
-	al->m_track->mixer->removeSubtrackMixer(al);
-	trackView.removeSubtrack(al);
+	track_gui_entry_t entry;
+	dbgassert(guiMgr.getTrackEntry(al->m_track, entry));
+	entry.mixer->removeSubtrackMixer(al);
+	trackView.removeSubtrack(entry, al);
 }
-void guictr_tracks::removeAllAutomationLanes(track_t* t, automatable_t* at, int32_t paramIdx) {
-	t->mixer->removeAllAutomationLanes(at, paramIdx);
-	trackView.removeAllAutomationLanes(t, at, paramIdx);
+void guictr_tracks::removeAllAutomationLanes(track_gui_entry_t& entry, automatable_t* at, int32_t paramIdx) {
+	entry.mixer->removeAllAutomationLanes(at, paramIdx);
+	trackView.removeAllAutomationLanes(entry, at, paramIdx);
 }
-void guictr_tracks::removeAllAutomationLanes(track_t* t, automatable_t* at) {
-	t->mixer->removeAllAutomationLanes(at);
-	trackView.removeAllAutomationLanes(t, at);
+void guictr_tracks::removeAllAutomationLanes(track_gui_entry_t& entry, automatable_t* at) {
+	entry.mixer->removeAllAutomationLanes(at);
+	trackView.removeAllAutomationLanes(entry, at);
 }
-void guictr_tracks::removeAllSubtracks(track_t* t) {
-	t->mixer->removeAllSubtracks();
-	trackView.removeAllSubtracks(t);
+void guictr_tracks::removeAllSubtracks(track_gui_entry_t& entry) {
+	entry.mixer->removeAllSubtracks();
+	trackView.removeAllSubtracks(entry);
+}
+
+//	int loadSubtrackLayout(const std::vector<automationlane_snapshot_t>& atl);
+//	void saveSubtrackLayout(std::vector<automationlane_snapshot_t>& atl);
+
+
+int loadSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t& entry, const track_layout_snapshot_t& snapshot);
+
+void loadTrackLayout(guictr_tracks* guiTracks, track_gui_entry_t& entry, const track_layout_snapshot_t& snapshot) {
+	const std::vector<automationlane_snapshot_t>& atl = snapshot.automationLanes;
+	entry.subtracks.clear();
+	bool hide = entry.layout.hideSubtracks || entry.layout.hideTrack;
+	if (hide) {
+		entry.state.layoutSaved = snapshot;
+		entry.state.wasInHide = true;
+	} else {
+		entry.state.wasInHide = false;
+		loadSubtrackLayout(guiTracks, entry, snapshot);
+		entry.state.layoutSaved = track_layout_snapshot_t();
+	}
+}
+
+void guictr_tracks::loadTrackLayouts(trackcontainer_snapshot_t& in) {
+	for (track_snapshot_t& trackStatic : in.tracks) {
+		dbgassert(trackStatic.trackLoaded);
+		if (!trackStatic.layouts.count(globalIndex)) {
+			continue;
+		}
+		auto layout = trackStatic.layouts.at(globalIndex);
+		track_gui_entry_t entry;
+		dbgassert(guiMgr.getTrackEntry(trackStatic.trackLoaded, entry));
+		loadTrackLayout(this, entry, layout);
+		trackStatic.trackLoaded = nullptr;
+	}
 }
 void guictr_tracks::scrollOffsetChanged(int dir, float offset) {
 //	trackView.pos.y = loophandles.bottom()-offset*(contentHeight-size.y);
@@ -165,9 +201,9 @@ void guictr_tracks::scrollOffsetChanged(int dir, float offset) {
 	int32_t scrOffset = math::max(0.0f, offset*(contentHeight-contentViewSize));
 	int y = TRACK_HEIGHT_SPACING-scrOffset;
 	for (track_t* t : project.trackMidiAudioCtr) {
-		dbgassert(t->content != NULL);
-		if (t->isVisible()) {
-			int32_t h = setTrackPosition(t, y, false);
+		track_gui_entry_t entry;
+		if (guiMgr.getTrackEntry(t, entry) && guiMgr.isVisible(entry)) {
+			int32_t h = setTrackPosition(entry, y, false);
 			y += h + TRACK_HEIGHT_SPACING;
 		}
 	}
@@ -182,26 +218,37 @@ void guictr_tracks::scrollTo(guibase* g) {
 void guictr_tracks::updateVisibleTracks() {
 //	tracksVisibleFlat.clear();
 	/** turn tree structure into linear pointer array with trackTop at the beginning and the deepest child at the end **/
-	track_vector vecNewTracksFlat;
+	track_gui_vector_td vecNewTracksFlat;
 	std::deque<track_t*> stack;
 	stack.insert(stack.begin(), project.trackList.cbeginTree(), project.trackList.cendTree());
+	trackEntriesTop.clear();
+	trackEntriesBottom.clear();
 	while (!stack.empty()) {
 		track_t* current = stack.front();
 		stack.pop_front();
-		if (!current->hideTrack && current->children.size()) {
-			stack.insert(stack.begin(), current->children.cbegin(), current->children.cend());
+		track_gui_entry_t* entry;
+		if (guiMgr.getPointerEntry(current, &entry)) {
+			if (!entry->layout.hideTrack && current->children.size()) {
+				stack.insert(stack.begin(), current->children.cbegin(), current->children.cend());
+			}
+			dbgassert(guiMgr.isVisible(*entry));
+			dbgassert(entry->track == current);
+			if (TRACKTYPE_TO_CTR(entry->track->type)  == TRACK_CTR_MIDIAUDIO) {
+				trackEntriesTop.push_back(entry);
+			} else {
+				trackEntriesBottom.push_back(entry);
+			}
+			vecNewTracksFlat.push_back(entry);
 		}
-		dbgassert(current->isVisible());
-		vecNewTracksFlat.push_back(current);
 	}
 
 	tracksVisibleFlat = vecNewTracksFlat;
-	const track_vector& tracks = tracksVisibleFlat;
+	const track_gui_vector_td& tracks = tracksVisibleFlat;
 	trackControls.updateVisibleTrackContents();
 	trackView.updateVisibleTrackContents();
-	for (track_t *tr : tracks) {
-		if (!tr->content->isVisible()) {
-			log_printf("track %s is not visible but is in in tracksVisibleFlat\n", StringAsCStr(tr->name));
+	for (auto *trEntry : tracks) {
+		if (!trEntry->content->isVisible()) {
+			log_printf("track %s is not visible but is in in tracksVisibleFlat\n", StringAsCStr(trEntry->track->name));
 
 		}
 	}
@@ -238,26 +285,32 @@ void guictr_tracks::layout() {
 	double f = scrollbar.toPixels();
 	ivec2 csTrackView = trackView.getSizeContent();
 	int y = TRACK_HEIGHT_SPACING;
-	for (track_t* t : tracksVisibleFlat) {
-		dbgassert(t->content != NULL);
-		if (t->isVisible()) {
-			int32_t h = setTrackPosition(t, y, false);
+	for (auto* t : trackEntriesTop) {
+		auto& entry = *t;
+		if (guiMgr.isVisible(entry)) {
+			int32_t h = setTrackPosition(entry, y, false);
 			y += h + TRACK_HEIGHT_SPACING;
+		} else {
+			dbgassert(0);
 		}
 	}
 	contentHeight = y;
 	y = csTrackView.y-TRACK_HEIGHT_SPACING;
 //		y = 0;
-	auto itMastersTracks = project.tracksBottom.rbegin();
-	auto itMastersEnd = project.tracksBottom.rend();
+	auto itMastersTracks = trackEntriesBottom.rbegin();
+	auto itMastersEnd = trackEntriesBottom.rend();
 	while (itMastersTracks != itMastersEnd) {
-		track_t* t = *itMastersTracks;
-		if (t->isVisible()) {
-			int32_t h = setTrackPosition(t, y, true);
+		auto& entry = *(*itMastersTracks);
+		if (guiMgr.isVisible(entry)) {
+			dbgassert(entry.content != NULL);
+			int32_t h = setTrackPosition(entry, y, true);
 			y -= h;
-			dbgassert(t->content != NULL);
 			y -= TRACK_HEIGHT_SPACING;
+		} else {
+			dbgassert(0);
 		}
+
+
 		itMastersTracks++;
 	}
 	contentViewSize = y;
@@ -318,22 +371,23 @@ void guictr_tracks::render(NVGcontext* vg) {
 		nvgSave(vg);
 		nvgIntersectScissor(vg, 0, 0, cs.x, ySplit);
 		for (track_t* t : project.trackMidiAudioCtr) {
-			dbgassert(t->mixer != NULL);
-			if (t->isVisible()) {
-				drawSeperator(vg, theme, t->mixer->bottom()+TRACK_HEIGHT_SPACING_HALF, cs);
+			track_gui_entry_t entry;
+			if (guiMgr.getTrackEntry(t, entry) && guiMgr.isVisible(entry)) {
+				drawSeperator(vg, theme, entry.mixer->bottom()+TRACK_HEIGHT_SPACING_HALF, cs);
 			}
 		}
 		nvgRestore(vg);
 	}
-	if (project.tracksBottom.size()) {
+	if (project.tracksBottom.size() && (ySplit <= 0 || trackView.size.y>ySplit)) {
 		if (ySplit > 0) {
 			nvgIntersectScissor(vg, 0, ySplit, cs.x, trackView.size.y-ySplit);
 		} else {
 			nvgIntersectScissor(vg, 0, 0, cs.x, trackView.size.y);
 		}
 		for (track_t* t : project.tracksBottom) {
-			if (t->isVisible()) {
-				drawSeperator(vg, theme, t->mixer->top()-TRACK_HEIGHT_SPACING_HALF, cs);
+			track_gui_entry_t entry;
+			if (guiMgr.getTrackEntry(t, entry) && guiMgr.isVisible(entry)) {
+				drawSeperator(vg, theme, entry.mixer->top()-TRACK_HEIGHT_SPACING_HALF, cs);
 			}
 		}
 	}
@@ -435,33 +489,35 @@ void guictr_tracks::render(NVGcontext* vg) {
 //		}
 	}
 }
-void guitrack_editor::addSubtrack(track_t* t, gui_track_subtrack* al, bool insertFront) {
+void guitrack_editor::addSubtrack(track_gui_entry_t& entry, gui_track_subtrack* al, bool insertFront) {
+
 	if (insertFront) {
-		t->subtracks.insert(t->subtracks.begin(), al);
+		entry.subtracks.insert(entry.subtracks.begin(), al);
 	} else {
-		t->subtracks.push_back(al);
+		entry.subtracks.push_back(al);
 	}
 	int32_t idx = 0;
-	for (auto subTr : t->subtracks) {
+	for (auto subTr : entry.subtracks) {
 		subTr->idx = idx++;
 	}
-	al->setZOrder(t->type >= TRACK_TYPE_MIDI ? 0 : 1);
+	al->setZOrder(entry.track->type >= TRACK_TYPE_MIDI ? 0 : 1);
 	add(al);
 }
 
-void guitrack_editor::removeAllSubtracks(track_t* t) {
-	auto& atLanes = t->subtracks;
+void guitrack_editor::removeAllSubtracks(track_gui_entry_t& entry) {
+	auto& atLanes = entry.subtracks;
 	for (auto at : atLanes) {
 		remove(at);
 		delete at;
 	}
 	atLanes.clear();
 }
-void guitrack_editor::removeAllAutomationLanes(track_t* t, automatable_t* at) {
-	removeAllAutomationLanes(t, at, -1);
+void guitrack_editor::removeAllAutomationLanes(track_gui_entry_t& entry, automatable_t* at) {
+	removeAllAutomationLanes(entry, at, -1);
 }
-void guitrack_editor::removeAllAutomationLanes(track_t* t, automatable_t* at, int32_t paramIdx) {
-	auto& atLanes = t->subtracks;
+void guitrack_editor::removeAllAutomationLanes(track_gui_entry_t& entry, automatable_t* at, int32_t paramIdx) {
+
+	auto& atLanes = entry.subtracks;
 	auto it = std::remove_if(atLanes.begin(), atLanes.end(), [this, at, paramIdx] (gui_track_subtrack* al) {
 		if (al->subtrackType() != gui_track_subtrack::SUBTRACK_TYPE_AUTOMATION) {
 			return false;
@@ -480,10 +536,10 @@ void guitrack_editor::removeAllAutomationLanes(track_t* t, automatable_t* at, in
 		subTr->idx = idx++;
 	}
 }
-void guitrack_editor::removeSubtrack(gui_track_automationlane* al) {
+void guitrack_editor::removeSubtrack(track_gui_entry_t& entry, gui_track_automationlane* al) {
 	dbgassert(al);
 	remove(al);
-	auto& atLanes = al->m_track->subtracks;
+	auto& atLanes = entry.subtracks;
 	auto it = std::find(atLanes.begin(), atLanes.end(), al);
 	dbgassert(it != atLanes.end());
 	atLanes.erase(it);
@@ -499,14 +555,14 @@ public:
 		none, track_on, track_before, track_after
 	};
 	int slot = 0;
-	track_t *droppedTrack;
+	track_gui_entry_t* droppedTrack;
 	drop_type droptype=none;
 	ivec2 pos{};
 };
-gui_track_drop_position_t slotFromCoord(const project_t& project, track_t* const track, const ivec2 _pos) {
+gui_track_drop_position_t slotFromCoord(guictr_tracks* parent, track_gui_entry_t& trackEntryDragged, const ivec2 _pos) {
 	using drop_type = gui_track_drop_position_t::drop_type;
 
-	auto& trackList = project.trackList;
+	auto& trackList = parent->tracksVisibleFlat;
 	int minDistDragPoint = std::numeric_limits<int32_t>::max();
 	gui_track_drop_position_t minSlot{0, nullptr, drop_type::none, {0, 0}};
 	auto checkDropPoint = [](int32_t minY, int32_t maxY, int mouseY) -> int32_t {
@@ -517,29 +573,35 @@ gui_track_drop_position_t slotFromCoord(const project_t& project, track_t* const
 	};
 	const auto itcBegin = trackList.crbegin();
 	const auto itcEnd = trackList.crend();
+
 	for (auto it = itcBegin; it != itcEnd; it++) {
 		int32_t slotIdx = itcEnd - it - 1;
-		track_t* track = *it;
-		if (!track->isVisible())
-			continue;
+//		track_t* track = *it;
+//		track_gui_entry_t trackEntryNeighbour;
+//		if (!trackEntryDragged.parent->getTrackEntry(track, trackEntryNeighbour)) {
+//			continue;
+//		}
+//		if (!trackEntryDragged.parent->isTrackEntryVisible(trackEntryNeighbour))
+//			continue;
+		track_gui_entry_t* pTrackEntryNeighbour = *it;
 		const int dropMaxDistance = 32;
-		auto* gui = track->content;
+		auto* gui = pTrackEntryNeighbour->content;
 		dbgassert(gui->isVisible());
 		int32_t distDragPoint = checkDropPoint(gui->pos.y - dropMaxDistance, gui->pos.y + dropMaxDistance, _pos.y);
 		if (distDragPoint >= 0 && distDragPoint < minDistDragPoint) {
 			minDistDragPoint = distDragPoint;
-			minSlot = {slotIdx, track, drop_type::track_before, {gui->pos.x, gui->pos.y}};
+			minSlot = {slotIdx, pTrackEntryNeighbour, drop_type::track_before, {gui->pos.x, gui->pos.y}};
 		}
 		distDragPoint = checkDropPoint(gui->pos.y + dropMaxDistance, gui->pos.y + gui->size.y - dropMaxDistance, _pos.y);
 		if (distDragPoint >= 0 && distDragPoint < minDistDragPoint) {
 			minDistDragPoint = distDragPoint;
-			minSlot = {slotIdx, track, drop_type::track_on, {gui->pos.x, gui->pos.y+gui->size.y/2}};
+			minSlot = {slotIdx, pTrackEntryNeighbour, drop_type::track_on, {gui->pos.x, gui->pos.y+gui->size.y/2}};
 		}
-		if (track->children.empty()) {
+		if (pTrackEntryNeighbour->track->children.empty()) {
 			distDragPoint = checkDropPoint(gui->pos.y + gui->size.y - dropMaxDistance, gui->pos.y + gui->size.y + dropMaxDistance, _pos.y);
 			if (distDragPoint >= 0 && distDragPoint < minDistDragPoint) {
 				minDistDragPoint = distDragPoint;
-				minSlot = {slotIdx, track, drop_type::track_after, {gui->pos.x, gui->pos.y+gui->size.y}};
+				minSlot = {slotIdx, pTrackEntryNeighbour, drop_type::track_after, {gui->pos.x, gui->pos.y+gui->size.y}};
 			}
 		}
 	}
@@ -547,37 +609,38 @@ gui_track_drop_position_t slotFromCoord(const project_t& project, track_t* const
 }
 namespace {
 	using drop_type = gui_track_drop_position_t::drop_type;
-	void handleTrackEntryDragMove(guibase* parent, project_t& project, track_t* track, ivec2 mousepos) {
+	void handleTrackEntryDragMove(guictr_tracks* parent, track_gui_entry_t& entry, ivec2 mousepos) {
 		MainCtrl::get()->getDragDropTarget().reset();
-		gui_track_drop_position_t slot = slotFromCoord(project, track, mousepos);
+		gui_track_drop_position_t slot = slotFromCoord(parent, entry, mousepos);
 
-		track_tree_pos_t treePos{};
 		dbgassert(slot.droptype == drop_type::none || slot.droppedTrack);
+		int32_t treeIdx = 0;
+		track_gui_entry_t* targetTrack = nullptr;
 		switch (slot.droptype) {
 		case drop_type::none:
 			return;
 		case drop_type::track_on:
 			//insert into slot.droppedTrack at end
-			treePos.parent = slot.droppedTrack;
-			treePos.treeIdx = slot.droppedTrack->children.size() ? slot.droppedTrack->children.back()->childIdxTree : 0;
+			targetTrack = slot.droppedTrack;
+			treeIdx = slot.droppedTrack->track->children.size() ? slot.droppedTrack->track->children.back()->childIdxTree : 0;
 			break;
 		case drop_type::track_before:
 			//insert into slot.droppedTrack->parent before slot.droppedTrack
-			treePos.parent = slot.droppedTrack->parent;
-			treePos.treeIdx = slot.droppedTrack->childIdxTree;
+			targetTrack = getParentOf(slot.droppedTrack);
+			treeIdx = slot.droppedTrack->track->childIdxTree;
 			break;
 		case drop_type::track_after:
 			//insert into slot.droppedTrack->parent after slot.droppedTrack
-			treePos.parent = slot.droppedTrack->parent;
+			targetTrack = getParentOf(slot.droppedTrack);
 			{
-				int idx = slot.droppedTrack->childIdxTree+1;
-				auto p = slot.droppedTrack->parent;
-				while (p && idx == p->children.size()) {
-					idx = p->childIdxTree+1;
-					p = p->parent;
+				int idx = slot.droppedTrack->track->childIdxTree+1;
+				auto* p = getParentOf(slot.droppedTrack);
+				while (p && idx == p->track->children.size()) {
+					idx = p->track->childIdxTree+1;
+					p = getParentOf(p);
 				}
-				treePos.parent = p;
-				treePos.treeIdx = idx;
+				targetTrack = p;
+				treeIdx = idx;
 			}
 			break;
 		default:
@@ -586,15 +649,16 @@ namespace {
 		}
 
 		dragdrop_target_indicator_t target;
+		guibase* parentGui = targetTrack ? (guibase*)targetTrack->mixer : (guibase*)parent;
 		switch (slot.droptype) {
 		case drop_type::track_on:
-			target = { dragdrop_target_indicator_t::target_area, treePos.treeIdx, parent, treePos.parent ? treePos.parent->mixer : parent, slot.droppedTrack->mixer->pos+ivec2(0, slot.droppedTrack->mixer->size.y/2) };
+			target = { dragdrop_target_indicator_t::target_area, treeIdx, parent, parentGui, slot.droppedTrack->mixer->pos+ivec2(0, slot.droppedTrack->mixer->size.y/2) };
 			break;
 		case drop_type::track_before:
-			target = { dragdrop_target_indicator_t::target_line, treePos.treeIdx, parent, treePos.parent ? treePos.parent->mixer : parent, slot.droppedTrack->mixer->pos+ivec2(0,2) };
+			target = { dragdrop_target_indicator_t::target_line, treeIdx, parent, parentGui, slot.droppedTrack->mixer->pos+ivec2(0,2) };
 			break;
 		case drop_type::track_after:
-			target = { dragdrop_target_indicator_t::target_line, treePos.treeIdx, parent, treePos.parent ? treePos.parent->mixer : parent, slot.droppedTrack->mixer->pos+ivec2(0, slot.droppedTrack->mixer->size.y-2) };
+			target = { dragdrop_target_indicator_t::target_line, treeIdx, parent, parentGui, slot.droppedTrack->mixer->pos+ivec2(0, slot.droppedTrack->mixer->size.y-2) };
 			break;
 		case drop_type::none:
 			return;
@@ -604,46 +668,51 @@ namespace {
 		}
 		MainCtrl::get()->getDragDropTarget() = target;
 	}
-	void handleTrackEntryDragRelease(project_t& project, track_t* track, ivec2 mousepos) {
-		dbgassert(project.trackList.size());
-		gui_track_drop_position_t slot = slotFromCoord(project, track, mousepos);
-		track_tree_pos_t treePos{};
+	void handleTrackEntryDragRelease(guictr_tracks* parent, track_gui_entry_t& entry, ivec2 mousepos) {
+		dbgassert(parent->tracksVisibleFlat.size());
+		gui_track_drop_position_t slot = slotFromCoord(parent, entry, mousepos);
+		int32_t treeIdx = 0;
+		track_gui_entry_t* targetTrack = nullptr;
 		dbgassert(slot.droptype == drop_type::none || slot.droppedTrack);
 		switch (slot.droptype) {
 		case drop_type::none:
 			return;
 		case drop_type::track_on:
 			//insert into slot.droppedTrack at end
-			treePos.parent = slot.droppedTrack;
-			treePos.treeIdx = slot.droppedTrack->children.size() ? slot.droppedTrack->children.back()->childIdxTree : 0;
+			targetTrack = slot.droppedTrack;
+			treeIdx = slot.droppedTrack->track->children.size() ? slot.droppedTrack->track->children.back()->childIdxTree : 0;
 			break;
 		case drop_type::track_before:
 			//insert into slot.droppedTrack->parent before slot.droppedTrack
-			treePos.parent = slot.droppedTrack->parent;
-			treePos.treeIdx = slot.droppedTrack->childIdxTree;
+			targetTrack = getParentOf(slot.droppedTrack);
+			treeIdx = slot.droppedTrack->track->childIdxTree;
 			break;
 		case drop_type::track_after:
 			//insert into slot.droppedTrack->parent after slot.droppedTrack
-			treePos.parent = slot.droppedTrack->parent;
+			targetTrack = getParentOf(slot.droppedTrack);
 			{
-				int idx = slot.droppedTrack->childIdxTree+1;
-				auto p = slot.droppedTrack->parent;
-				while (p && idx == p->children.size()) {
-					idx = p->childIdxTree+1;
-					p = p->parent;
+				int idx = slot.droppedTrack->track->childIdxTree+1;
+				auto* p = getParentOf(slot.droppedTrack);
+				while (p && idx == p->track->children.size()) {
+					idx = p->track->childIdxTree+1;
+					p = getParentOf(p);
 				}
-				treePos.parent = p;
-				treePos.treeIdx = idx;
+				targetTrack = p;
+				treeIdx = idx;
 			}
 			break;
 		default:
 			dbgassert(0);
 			return;
 		}
-		if (TRACKTYPE_TO_CTR(slot.droppedTrack->type) != TRACKTYPE_TO_CTR(track->type)) {
+		track_t* track = entry.track;
+		if (TRACKTYPE_TO_CTR(slot.droppedTrack->track->type) != TRACKTYPE_TO_CTR(track->type)) {
 			log_printf("Cannot move there\n", 0);
 			return;
 		}
+		track_tree_pos_t treePos{};
+		treePos.treeIdx = treeIdx;
+		treePos.parent = targetTrack ? targetTrack->track : nullptr;
 		treePos.trackTypeCtr = TRACKTYPE_TO_CTR(track->type);
 		std::vector<track_t*> selectedTracks;
 		selectedTracks.push_back(track);
@@ -690,25 +759,21 @@ bool guitrack_editor::mouseHitTest(ivec2 v, MouseHitEvt& evt) {
 	return false;
 }
 void guitrack_editor::trackEntryDragMove(gui_track* g, ivec2 mousepos) {
-	handleTrackEntryDragMove(parent, project, g->getTrack(), mousepos);
+	handleTrackEntryDragMove(static_cast<guictr_tracks*>(parent), g->getTrackEntry(), mousepos);
 }
 void guitrack_mixers::trackEntryDragMove(gui_track* g, ivec2 mousepos) {
-	handleTrackEntryDragMove(parent, project, g->getTrack(), mousepos);
+	handleTrackEntryDragMove(static_cast<guictr_tracks*>(parent), g->getTrackEntry(), mousepos);
 }
 void guitrack_editor::trackEntryDragRelease(gui_track* g, ivec2 mousepos) {
-	handleTrackEntryDragRelease(project, g->getTrack(), mousepos);
+	handleTrackEntryDragRelease(static_cast<guictr_tracks*>(parent), g->getTrackEntry(), mousepos);
 }
 void guitrack_mixers::trackEntryDragRelease(gui_track* g, ivec2 mousepos) {
-	handleTrackEntryDragRelease(project, g->getTrack(), mousepos);
+	handleTrackEntryDragRelease(static_cast<guictr_tracks*>(parent), g->getTrackEntry(), mousepos);
 }
-void guitrack_editor::addTrack(track_t* t) {
-	if (t->content)
-		throw applogicexception("expected t->content == NULL");
-	dbgassert(t->audio);
-	//
-	t->content = createTrackGui(t, grid);
-	t->content->setZOrder(TRACKTYPE_TO_CTR(t->type) == TRACK_CTR_MIDIAUDIO ? 0 : 1);
-	add(t->content);
+void guitrack_editor::addTrackEntry(track_gui_entry_t& e) {
+
+	add(e.content);
+
 	//TODO: sort and render guis by track->idx
 //#ifndef NDEBUG
 //		for (guibase* child : guis) {
@@ -723,14 +788,39 @@ void guitrack_editor::addTrack(track_t* t) {
 //		}
 //#endif
 }
-void guitrack_editor::removeTrack(track_t* t) {
-	if (t->content) {
-		t->content->destroyGuis();
-		remove(t->content);
-		DELETE_PTR(t->content)
+bool track_gui_manager_t::getPointerEntry(track_t* t, track_gui_entry_t** out) {
+	*out = nullptr;
+	auto it = std::find_if(entries.begin(), entries.end(), [t](track_gui_entry_t* entry) {
+		return entry->track == t;
+	});
+	if (it != entries.end()) {
+		track_gui_entry_t* pEntry = *it;
+		*out = pEntry;
+		return true;
 	}
-	if (t->subtracks.size()) {
-		for (auto str : t->subtracks) {
+	return false;
+}
+bool track_gui_manager_t::getTrackEntry(const track_t* t, track_gui_entry_t& out) {
+	auto it = std::find_if(entries.begin(), entries.end(), [t](track_gui_entry_t* entry) {
+		return entry->track == t;
+	});
+	if (it != entries.end()) {
+		track_gui_entry_t* pEntry = *it;
+		out = *pEntry;
+		return true;
+	}
+	return false;
+}
+void guitrack_editor::removeTrackEntry(track_gui_entry_t& entry) {
+	if (entry.content) {
+		entry.content->destroyGuis();
+		remove(entry.content);
+//		DELETE_PTR(entry.content) //TODO: fix mem leak on removeTrackEntry calls site
+	} else {
+		dbgassert(0);
+	}
+	if (entry.subtracks.size()) {
+		for (auto str : entry.subtracks) {
 			remove(str);
 		}
 	}
@@ -741,21 +831,77 @@ void guitrack_editor::layout() {
 	}
 }
 void guitrack_editor::updateVisibleTrackContents() {
-	for (track_t* g : project.trackList) {
-		if (!g->content) {
-			my_printf("NO CONTENT ON %s\n", StringAsCStr(g->name));
+	for (track_t* tr : project.trackList) {
+		track_gui_entry_t entry;
+		dbgassert(iGuiMgr.getTrackEntry(tr, entry));
+		if (!entry.content) {
+			my_printf("NO CONTENT ON %s\n", StringAsCStr(entry.track->name));
 			continue;
 		}
-		const bool bVisible = g->isVisible();
-		g->content->setVisible(bVisible);
+		const bool bVisible = iGuiMgr.isVisible(entry);
+		entry.content->setVisible(bVisible);
 		if (bVisible) {
-			g->content->updateVisibleTrackContents(project, grid);
-			for (gui_track_subtrack* au : g->subtracks) {
+			entry.content->updateVisibleTrackContents(project, grid);
+			for (gui_track_subtrack* au : entry.subtracks) {
 				au->updateVisibleTrackContents(grid);
 			}
 		}
 	}
 }
+void guictr_tracks::removeTrack(track_t* track, int flags) {
+	dbgassert(track->audio);
+	track_gui_entry_t *entry = nullptr;
+	dbgassert(guiMgr.getPointerEntry(track, &entry));
+	removeAllSubtracks(*entry);
+	trackControls.removeTrackEntry(*entry);
+	trackView.removeTrackEntry(*entry);
+	removeEntry(track->audio->guiInstances, entry);
+	removeEntry(this->trackEntriesTop, entry);
+	removeEntry(this->trackEntriesBottom, entry);
+	removeEntry(this->tracksVisibleFlat, entry);
+	dbgassert(entry->content);
+	dbgassert(entry->mixer);
+	delete entry->content;
+	delete entry->mixer;
+	entry->content = nullptr;
+	entry->mixer = nullptr;
+	guiMgr.removeTrack(*entry);// does delete entry;
+	//		trackView.addTrack(entry.content);
+}
+
+void guictr_tracks::addTrack(track_t* track, int flags) {
+	dbgassert(track->audio);
+	track_gui_entry_t *entry = new track_gui_entry_t { 0 };
+	entry->track = track;
+	entry->idx = track->idx; //TODO: keep this field in sync
+	entry->parent = this;
+	entry->mixer = createTrackGuiMixer(*entry);
+	entry->content = createTrackGui(*entry, grid);
+	guiMgr.addTrack(entry);
+	trackControls.addTrackEntry(*entry);
+	trackView.addTrackEntry(*entry);
+	track->content = entry->content;
+	track->audio->guiInstances.push_back(entry);
+	//TODO: restore subtracks
+	if (!(flags & FLG_TRK_CHANGE_LOAD)) {
+		updateVisibleTracks();
+		layout();
+	}
+}
 void guitrack_mixers::handleRightClick(MouseEvent& evt) {
 	MainCtrl::get()->openContextMenu(new guictxtmenu_notrack(), evt.mousepos);
+}
+
+track_gui_entry_t* getParentOf(track_gui_entry_t* t) {
+
+	dbgassert(t);
+	dbgassert(t->track);
+	dbgassert(t->parent);
+	if (t->track->parent) {
+		track_gui_entry_t* out = nullptr;
+		if (t->parent->getPointerEntry(t->track->parent, &out)) {
+			return out;
+		}
+	}
+	return nullptr;
 }

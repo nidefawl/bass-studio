@@ -168,18 +168,28 @@ template<class Archive>
 void serialize(Archive & archive, tracksettings_t & m)
 {
 	archive(make_nvp("name", m.name),
-			make_nvp("height", m.height),
 			make_nvp("rgb", m.rgb),
 			make_nvp("type", m.type));
-	make_optional_nvp(archive, "hideAutomation", m.hideSubtracks);
-	make_optional_nvp(archive, "hideTrack", m.hideTrack);
+}
+template<class Archive>
+void serialize(Archive & archive, tracklayout_settings_t & m)
+{
+	archive(make_nvp("height", m.height),
+			make_nvp("hideSubtracks", m.hideSubtracks),
+			make_nvp("hideTrack", m.hideTrack));
+}
+template<class Archive>
+void serialize(Archive & archive, track_layout_snapshot_t & m)
+{
+//	archive(make_nvp("layout", m.layout),
+//			make_nvp("subtracks", m.automationLanes));
 }
 template<class Archive>
 void serialize(Archive & archive, track_snapshot_t & m)
 {
 	make_optional_nvp(archive, "idx", m.localIdx);
 	archive(make_nvp("settings", base_class<tracksettings_t>(&m)), make_nvp("clips", m.clips), make_nvp("plugins", m.plugins));
-	make_optional_nvp(archive, "automation", m.automationLanes);
+//	make_optional_nvp(archive, "automation", m.layouts);
 	make_optional_nvp(archive, "stageId", m.stageId);
 }
 template<class Archive>

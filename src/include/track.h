@@ -221,8 +221,10 @@ public:
 struct tracksettings_t {
 	String name = "INVALID";
 	int type = -1; //CONST!
-	int height = -1;
 	int rgb = -1;
+};
+struct tracklayout_settings_t {
+	int height = 4;
 	bool hideTrack = false;
 	bool hideSubtracks = false;
 };
@@ -281,7 +283,7 @@ public:
 		this->type = _type;
 		this->name = _name;
 		rgb = 0;
-		height = 4;
+//		height = 4;
 #ifndef NDEBUG
 		this->szName = this->name.c_str();
 #endif
@@ -290,7 +292,7 @@ public:
 //		idx = obj.idx;
 		name = obj.name;
 		type = obj.type;
-		height = obj.height;
+//		height = obj.height;
 		rgb = obj.rgb;
 		scrolloffset = 0;
 #ifndef NDEBUG
@@ -304,15 +306,14 @@ public:
 	bool validSubtrack(int32_t idx) const {
 		return idx >= 0 && idx < (int32_t)subtracks.size();
 	}
-	int32_t childIdxTree = -1; // treeidx
 	int32_t idx = -1;
+	int32_t childIdxTree = -1; // treeidx
 	int32_t localIdxFlat = -1; // flatidx
 	gui_track* content = nullptr;
 //	std::vector<gui_track_automationlane*> automationLanes;
 	std::vector<gui_track_subtrack*> subtracks;
 	track_t* parent = nullptr;
 	std::vector<track_t*> children;
-	gui_track_controls* mixer = nullptr;
 	track_impl_t* audio = nullptr;
 	int scrolloffset = 0;
 	void addChild(track_t* track) {
@@ -352,15 +353,6 @@ public:
 			p = p->parent;
 		}
 		return lvl;
-	}
-	bool isVisible() const {
-		bool bHidden = false;
-		auto p = parent;
-		while (!bHidden && p) {
-			bHidden |= p->hideTrack;
-			p = p->parent;
-		}
-		return !bHidden;
 	}
 };
 struct trackcontainer_snapshot_t;
@@ -522,8 +514,6 @@ public:
 	void copyTo(trackcontainer_snapshot_t& out);
 	void copyFrom(trackcontainer_snapshot_t& in);
 	void loadPlugins(trackcontainer_snapshot_t& in);
-	void loadSubtrackLayouts(trackcontainer_snapshot_t& in);
-
 
 };
 struct project_snapshot_t;

@@ -218,17 +218,15 @@ inline channel_ref_t ChannelStage(audio_stage_t* stage, bool isInput) {
 	return channel_ref_t{channel_input_type::INPUT_AUDIOSTAGE, AudioIO::getTrackTypeNumChannels(stage->input.channels), -1, 0, {stage->toRef(), isInput}, str};
 }
 }
+struct track_gui_entry_t;
 struct track_impl_t : public audio_stage_t {
 	midiarp* arp = nullptr;
 	track_t* track;
 	std::vector<note_t> heldNotes;
 	VstEvent_t* midiEventsBuf = nullptr;
-	automatable_t* selectedAutomationCtr = nullptr;
-	int32_t selectedAutomationParam = -1;
-	std::vector<automationlane_snapshot_t> atl;
-	bool wasInHide = false;
 	DAW::channel_ref_t inputChannel;
 	DAW::channel_ref_t outputChannel;
+	std::vector<track_gui_entry_t*> guiInstances;
 	track_impl_t(audiostageid_i32 _id, track_t* _track, const samplerate_t _sampleRate, const uint16_t _blockSize, int32_t nChannels);
 	~track_impl_t();
 	void sendNotesOff(int32_t bpm100);
@@ -237,9 +235,9 @@ struct track_impl_t : public audio_stage_t {
 	void addAudio(const AudioBlock& src, float fGain);
 	int32_t mapInput(int32_t nInputChannels, int32_t nChannel);
 	VstEvent_t* reallocEvts(size_t size);
-	int loadSubtrackLayout(const std::vector<automationlane_snapshot_t>& atl);
-	void saveSubtrackLayout(std::vector<automationlane_snapshot_t>& atl);
-	void updateStoreLoadSubtracks();
+	//	int loadSubtrackLayout(const std::vector<automationlane_snapshot_t>& atl);
+	//	void saveSubtrackLayout(std::vector<automationlane_snapshot_t>& atl);
+//	void updateStoreLoadSubtracks();
 	void removePlugin(effectbase* _vst, bool notifyUp) override;
 	std::vector<note_t>& getArpHeldNotes();
 	std::vector<note_t>& getArpInputNotes();

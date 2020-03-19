@@ -243,7 +243,7 @@ public:
 
 	}
 };
-gui_midi_clip::gui_midi_clip(track_t* _track, clip_t* _clip)
+gui_midi_clip::gui_midi_clip(track_gui_entry_t* _track, clip_t* _clip)
 	: gui_clip(_track, _clip), impl(new midi_clip_render_cache_t)  {
 
 }

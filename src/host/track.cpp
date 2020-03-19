@@ -60,12 +60,13 @@ void releaseTrackResources(track_t* tr, delete_cb *cb) {
 	vsthost* host = vsthost::getInstance();
 	host->unloadTrack(tr);
 	tr->getMidi().deleteClips(cb);
-	if (tr->mixer) {
-		delete (tr->mixer);
-	}
-	if (tr->content) {
-		delete (tr->content);
-	}
+//	if (tr->mixer) {
+//		delete (tr->mixer);
+//	}
+//	if (tr->content) {
+//		delete (tr->content);
+//	}
+	dbgassert(tr->audio->guiInstances.empty());
 	if (tr->subtracks.size()) {
 		for (gui_track_subtrack* al : tr->subtracks) {
 			delete al;
@@ -124,8 +125,6 @@ track_t::track_t(const track_snapshot_t &a)
 	for (const clip_t& clip : a.clips) {
 		midi.addClip(new clip_t(clip));
 	}
-	dbgassert(this->mixer == NULL);
-	dbgassert(this->content == NULL);
 }
 track_impl_snapshot_t::track_impl_snapshot_t(track_impl_t* p, bool storePluginChunks) {
 	if (p) {
@@ -141,6 +140,9 @@ track_impl_snapshot_t::track_impl_snapshot_t(track_impl_t* p, bool storePluginCh
 		}
 	}
 }
+
+void saveSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t& entry, track_layout_snapshot_t& snapshot);
+
 track_snapshot_t::track_snapshot_t(const track_t* track, bool storePluginChunks)
   : tracksettings_t(*track), stageId(track->audio ? static_cast<int32_t>(track->audio->stageId) : 0), localIdx(track->localIdxFlat), plugins(track->audio, storePluginChunks)
 {
@@ -150,7 +152,18 @@ track_snapshot_t::track_snapshot_t(const track_t* track, bool storePluginChunks)
 	}
 	track_impl_t* p = track->audio;
 	if (p) {
-		p->saveSubtrackLayout(automationLanes);
+
+		for (int i = 0; i < 32; i++) {
+			guictr_tracks* ctr = DawInstance::get()->getTrackContainer(i);
+			if (ctr) {
+				track_gui_entry_t out;
+				if (ctr->guiMgr.getTrackEntry(track, out)) {
+					track_layout_snapshot_t snapshot;
+					saveSubtrackLayout(ctr, out, snapshot);
+					layouts[i] = snapshot;
+				}
+			}
+		}
 	}
 }
 
@@ -171,19 +184,6 @@ void track_t::loadSnapshot(const track_snapshot_t& snapshot) {
 	const std::vector<plugin_snapshot_t>& trPluginList = implSnapshot.pluginSnapshots;
 	audio->loadPlugins(trPluginList);
 	audio->loadIOConfiguration(implSnapshot.trackIO);
-}
-void track_t::loadSubtrackLayout(const track_snapshot_t& snapshot) {
-	const std::vector<automationlane_snapshot_t>& atl = snapshot.automationLanes;
-	this->subtracks.clear();
-	bool hide = this->hideSubtracks || this->hideTrack;
-	if (hide) {
-		audio->atl = atl;
-		audio->wasInHide = true;
-	} else {
-		audio->wasInHide = false;
-		audio->loadSubtrackLayout(atl);
-		audio->atl.clear();
-	}
 }
 //void track_t::loadPluginAutomationParameters(const track_impl_snapshot_t& trackStatic) {
 //	dbgassert(audio);
@@ -265,9 +265,9 @@ effectbase* audio_stage_t::getPluginById(int32_t projectGlobalId) {
 	return nullptr;
 }
 void track_impl_t::removePlugin(effectbase* _effect, bool notifyUp) {
-//	if (track->audio->selectedAutomationCtr == _effect) {
-		track->audio->selectedAutomationCtr = NULL;
-//	}
+	for (auto gui : track->audio->guiInstances) {
+		gui->state.selectedAutomationCtr = nullptr;
+	}
 	audio_stage_t::removePlugin(_effect, notifyUp);
 }
 void audio_stage_t::removePlugin(effectbase* _effect, bool notifyUp) {
@@ -450,41 +450,7 @@ void track_impl_t::getAutomatableTrackTargets(std::vector<automatable_t*>& targe
 	targets.push_back(arp);
 	getStageTargets(targets);
 }
-void track_impl_t::saveSubtrackLayout(std::vector<automationlane_snapshot_t>& atls)
-{
-	atls.reserve(track->subtracks.size());
-	for (gui_track_subtrack* atl : track->subtracks) {
-		automationlane_snapshot_t subtrackSnapshot;
-		if (atl->subtrackType() == gui_track_subtrack::SUBTRACK_TYPE_AUTOMATION) {
-			dbgassert(atl->at);
-			subtrackSnapshot = atl->at->toRef();
-		} else {
-		}
-		subtrackSnapshot.paramIdx = atl->param;
-		subtrackSnapshot.height = atl->height;
-		subtrackSnapshot.subtrackType = atl->subtrackType();
-		log_printf("save ref.type %d, ref.refId %d, ref.paramIdx %d\n", subtrackSnapshot.type, subtrackSnapshot.refId, subtrackSnapshot.paramIdx);
-		atls.push_back(std::move(subtrackSnapshot));
-	}
 
-}
-void track_impl_t::updateStoreLoadSubtracks() {
-	bool hide = track->hideSubtracks || track->hideTrack;
-	if (this->wasInHide == hide)
-		return;
-	this->wasInHide = hide;
-	if (hide) {
-		atl.clear();
-		saveSubtrackLayout(atl);
-		MainCtrl::getGuiTrackCtr()->removeAllSubtracks(track);
-		DAW::Cursor& cursor = project_controller_t::get()->cursor;
-		if (cursor.inSubTrackAny(track->idx)) {
-			fixCursorSubRange(cursor, 0);
-		}
-	} else {
-		loadSubtrackLayout(atl);
-	}
-}
 void project_t::copyTo(project_snapshot_t& project) {
 	trackList.copyTo(project);
 	project.globals = *this;
@@ -630,40 +596,77 @@ void vsthost::activateDeferred(effectbase* const eff, effectbase** out_effectLoa
 	log_printf("done activating deferred plugin %s\n", StringAsCStr(pluginSnapshot.name));
 
 }
-int track_impl_t::loadSubtrackLayout(const std::vector<automationlane_snapshot_t>& atls)
+int loadSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t& entry, const track_layout_snapshot_t& snapshot)
 {
+	const std::vector<automationlane_snapshot_t>& atls = snapshot.automationLanes;
+	track_t* const track = entry.track;
 	int n = atls.size();
-	guictr_tracks* guiTracks = MainCtrl::getGuiTrackCtr();
-	if (guiTracks) {
-		n = 0;
-		for (const automationlane_snapshot_t& ref : atls) {
-			gui_track_subtrack* al = NULL;
-			if (ref.subtrackType == gui_track_subtrack::SUBTRACK_TYPE_AUTOMATION) {
-				if (ref.type == AUTOMATABLE_EFFECT) {
-					effectbase* plugin = getPluginById(ref.refId);
-					if (!plugin || plugin->getModuleType() == PLUGIN_TYPE_DEFERRED) {
-						log_printf("skipping deferred ref.type %d, ref.refId %d, ref.paramIdx %d\n", ref.type, ref.refId, ref.paramIdx);
-						n++;
-						continue;
-					}
-					al = new gui_track_automationlane(track, guiTracks->grid, plugin, ref.paramIdx);
+	n = 0;
+	for (const automationlane_snapshot_t& ref : atls) {
+		gui_track_subtrack* al = NULL;
+		if (ref.subtrackType == gui_track_subtrack::SUBTRACK_TYPE_AUTOMATION) {
+			if (ref.type == AUTOMATABLE_EFFECT) {
+				effectbase* plugin = track->getStage()->getPluginById(ref.refId);
+				if (!plugin || plugin->getModuleType() == PLUGIN_TYPE_DEFERRED) {
+					log_printf("skipping deferred ref.type %d, ref.refId %d, ref.paramIdx %d\n", ref.type, ref.refId, ref.paramIdx);
+					n++;
+					continue;
 				}
-				if (ref.type == AUTOMATABLE_MIXER) {
-					al = new gui_track_automationlane(track, guiTracks->grid, &mixer, ref.paramIdx);
-				}
-				if (ref.type == AUTOMATABLE_ARP) {
-					al = new gui_track_automationlane(track, guiTracks->grid, arp, ref.paramIdx);
-				}
-			} else if (ref.subtrackType == gui_track_subtrack::SUBTRACK_TYPE_WAVE) {
-				al = makeGuiSubtrack(MainCtrl::get(), track, ref.subtrackType);
+				al = new gui_track_automationlane(entry, guiTracks->grid, plugin, ref.paramIdx);
 			}
-			if (al) {
-				al->height = ref.height;
-				guiTracks->addSubTrack(track, al, false);
+			if (ref.type == AUTOMATABLE_MIXER) {
+				al = new gui_track_automationlane(entry, guiTracks->grid, &track->getStage()->mixer, ref.paramIdx);
 			}
+			if (ref.type == AUTOMATABLE_ARP) {
+				al = new gui_track_automationlane(entry, guiTracks->grid, track->getStage()->arp, ref.paramIdx);
+			}
+		} else if (ref.subtrackType == gui_track_subtrack::SUBTRACK_TYPE_WAVE) {
+			al = makeGuiSubtrack(entry, MainCtrl::get(), ref.subtrackType);
+		}
+		if (al) {
+			al->height = ref.height;
+			guiTracks->addSubTrack(entry, al, false);
 		}
 	}
+
 	return n;
+}
+
+void saveSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t& entry, track_layout_snapshot_t& snapshot)
+{
+	snapshot.automationLanes.reserve(entry.subtracks.size());
+	for (gui_track_subtrack* atl : entry.subtracks) {
+		automationlane_snapshot_t subtrackSnapshot;
+		if (atl->subtrackType() == gui_track_subtrack::SUBTRACK_TYPE_AUTOMATION) {
+			dbgassert(atl->at);
+			subtrackSnapshot = atl->at->toRef();
+		} else {
+		}
+		subtrackSnapshot.paramIdx = atl->param;
+		subtrackSnapshot.height = atl->height;
+		subtrackSnapshot.subtrackType = atl->subtrackType();
+		log_printf("save ref.type %d, ref.refId %d, ref.paramIdx %d\n", subtrackSnapshot.type, subtrackSnapshot.refId, subtrackSnapshot.paramIdx);
+		snapshot.automationLanes.push_back(std::move(subtrackSnapshot));
+	}
+
+}
+
+void updateStoreLoadSubtracks(guictr_tracks* guiTracks, track_gui_entry_t& entry) {
+	bool hide = entry.layout.hideSubtracks || entry.layout.hideTrack;
+	if (entry.state.wasInHide == hide)
+		return;
+	entry.state.wasInHide = hide;
+	if (hide) {
+		entry.state.layoutSaved = track_layout_snapshot_t();
+		saveSubtrackLayout(guiTracks, entry, entry.state.layoutSaved);
+		guiTracks->removeAllSubtracks(entry);
+		DAW::Cursor& cursor = project_controller_t::get()->cursor;
+		if (cursor.inSubTrackAny(entry.track->idx)) {
+			fixCursorSubRange(cursor, 0);
+		}
+	} else {
+		loadSubtrackLayout(guiTracks, entry, entry.state.layoutSaved);
+	}
 }
 void audio_stage_t::onTick(double since) {
 	meter.onTick(since);

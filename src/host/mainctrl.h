@@ -205,7 +205,7 @@ class MainCtrl;
 class CompanionCtrl;
 class DawCtrl;
 class guictr_menubar;
-
+struct track_gui_entry_t;
 class DawViewContainers {
 public:
 	DawViewContainers() = default;
@@ -280,6 +280,7 @@ public:
 	track_t* getTrackId(uint32_t trackId);
 	void removeTrackId(uint32_t trackId);
 	void unloadProject();
+	void setSelectedTrackEntry(track_gui_entry_t* trackEntry);
 	void setSelectedTrack(track_t* track);
 	void preClipDelete(clip_t* clip);
 	void preTrackDelete(track_t* clip);
@@ -333,6 +334,7 @@ public:
 	bool toggleLoop();
 	void resetMouseContext();
 	void resetEditClip();
+	void resetAutomationContext();
 	void closeContextMenus();
 	std::shared_ptr<clip_clipboard> copySelection(const DAW::Cursor& cursor);
 	void pasteClipboard(clip_clipboard* c, int32_t trackOffset, tick_t tickOffset);
@@ -353,6 +355,7 @@ public:
 	void updateClipViews(clip_t* notifyClip, clip_cursor_t cursor);
 	void onTick();
 	void setControls(MainCtrl*, CompanionCtrl*);
+	guictr_tracks* getTrackContainer(int idx);
 };
 class DawCtrl : public AppCtrl {
 	Menus menus;
@@ -361,7 +364,7 @@ protected:
 	seq_rand rand;
 	int32_t numCallsWaitEvents = 0;
 
-	track_t* lastHoveredTrack = NULL;
+	track_gui_entry_t* lastHoveredTrack = NULL;
 	int32_t lastHoveredTrackTicks = 0;
 	void* lastHoveredTooltip = nullptr;
 	void* lastTooltipSrc = nullptr;
@@ -441,6 +444,8 @@ public:
 	}
 	virtual bool isCompanion() const {
 		return false;
+	}
+	virtual void resetAutomationContext() {
 	}
 };
 class MainCtrl : public DawCtrl

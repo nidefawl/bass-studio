@@ -265,22 +265,25 @@ void gui_clip::trackViewDragRelease(guitrack_editor* view, MouseEvent& evt) {
 	//!CLIP COULD BE DELETED AT THIS POINT
 }
 
-gui_track::gui_track(track_t* _track, scaled_grid& _grid)
-  : guictr_base(), m_track(_track), automation(_track, _grid, m_track->audio->selectedAutomationCtr, m_track->audio->selectedAutomationParam, subtrackIdx)
+gui_track::gui_track(track_gui_entry_t& _entry, scaled_grid& _grid)
+  : guictr_base(), m_track(_entry.track), m_trackentry(&_entry), automation(_entry, _grid, _entry.state.selectedAutomationCtr, _entry.state.selectedAutomationParam, subtrackIdx)
 {
 	padding = 0;
 }
 
-gui_track* createTrackGui(track_t* t, scaled_grid& grid) {
-	return new gui_track(t, grid);
+gui_track* createTrackGui(track_gui_entry_t& _entry, scaled_grid& grid) {
+	track_t* const t = _entry.track;
+	gui_track * const guitrack = new gui_track(_entry, grid);
+	guitrack->setZOrder(TRACKTYPE_TO_CTR(t->type) == TRACK_CTR_MIDIAUDIO ? 0 : 1);
+	return guitrack;
 }
 
-gui_clip* createClipGui(guictr_base* parent, track_t* track, clip_t* clip) {
+gui_clip* createClipGui(guictr_base* parent, track_gui_entry_t* trackentry, clip_t* clip) {
 	if (!clip->gClip) {
 		if (clip->clipType == CLIP_MIDI) {
-			clip->gClip = new gui_midi_clip(track, clip);
+			clip->gClip = new gui_midi_clip(trackentry, clip);
 		} else {
-			clip->gClip = new gui_audio_clip(track, clip);
+			clip->gClip = new gui_audio_clip(trackentry, clip);
 		}
 	}
 	return clip->gClip;
@@ -290,7 +293,7 @@ void gui_track::updateVisibleTrackContents(project_t& project, scaled_grid& grid
 	automation.updateVisibleTrackContents(grid);
 	std::vector<clip_t*> clips = m_track->getMidi().getClips();
 	for (clip_t* clip : clips) {
-		auto* gui = createClipGui(this, m_track, clip);
+		auto* gui = createClipGui(this, m_trackentry, clip);
 		dbgassert(gui);
 		if (gui->parent != this) {
 			add(gui);
@@ -332,13 +335,13 @@ void gui_track_subtrack::updateVisibleTrackContents(scaled_grid& grid) {
 	automation.setData();
 	automation.updateVisibleTrackContents(grid);
 }
-gui_track_automationlane::gui_track_automationlane(track_t* _track, scaled_grid& _grid, automatable_t* _at, int32_t _param)
-  : gui_track_subtrack(_track, _grid, _at, _param)
+gui_track_automationlane::gui_track_automationlane(track_gui_entry_t& _entry, scaled_grid& _grid, automatable_t* _at, int32_t _param)
+  : gui_track_subtrack(_entry, _grid, _at, _param)
 {
 }
 
-gui_track_subtrack::gui_track_subtrack(track_t* _track, scaled_grid& _grid, automatable_t* _at, int32_t _param)
-  : guictr_base(), m_track(_track), automation(_track, _grid, this->at, param, idx), at(_at), param(_param)
+gui_track_subtrack::gui_track_subtrack(track_gui_entry_t& _entry, scaled_grid& _grid, automatable_t* _at, int32_t _param)
+  : guictr_base(), m_track(_entry.track), m_trackentry(&_entry), automation(_entry, _grid, this->at, param, idx), at(_at), param(_param)
 {
 	padding = 0;
 }

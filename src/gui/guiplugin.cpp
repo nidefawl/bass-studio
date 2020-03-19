@@ -371,26 +371,31 @@ public:
 		}
 		if (_id == CMD_SHOW_AUTOMATION) {
 			auto tr = effect->getTrack();
+			auto trCtr = MainCtrl::getGuiTrackCtr();
 			gui_track_automationlane* gtr_at = NULL;
 			if (tr) {
-				tr->hideTrack = false;
-				tr->hideSubtracks = false;
-				tr->audio->updateStoreLoadSubtracks();
-				auto trCtr = MainCtrl::getGuiTrackCtr();
+				track_gui_entry_t entry;
+				if (!trCtr->getTrackEntry(tr, entry)) {
+					dbgassert(0);
+				} else {
+					entry.layout.hideTrack = false;
+					entry.layout.hideSubtracks = false;
+					updateStoreLoadSubtracks(trCtr, entry);
 
-				std::vector<int32_t> automated;
-				effect->getAutomated(automated);
-				for (int32_t param : automated) {
-					auto lane = trCtr->addAutomationLane(tr, effect, param, true);
-					if (!gtr_at) {
-						gtr_at= lane;
+					std::vector<int32_t> automated;
+					effect->getAutomated(automated);
+					for (int32_t param : automated) {
+						auto lane = trCtr->addAutomationLane(entry, effect, param, true);
+						if (!gtr_at) {
+							gtr_at= lane;
+						}
 					}
 				}
 			}
-			if (gtr_at) {
-				MainCtrl::getGuiTrackCtr()->layout();
-				MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
-				MainCtrl::getGuiTrackCtr()->scrollTo(gtr_at);
+			if (trCtr && gtr_at) {
+				trCtr->layout();
+				trCtr->updateVisibleTrackContents();
+				trCtr->scrollTo(gtr_at);
 			}
 		}
 		closeContextMenu();

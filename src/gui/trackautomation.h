@@ -34,6 +34,7 @@ public:
 	};
 protected:
 	track_t* const m_track;
+	track_gui_entry_t* const m_trackentry;
 private:
 	GuiColor::constant_t color = GuiColor::COL_KNOB;
 	GuiColor::constant_t colorInactive = GuiColor::COL_LABEL_INACTIVE;
@@ -60,8 +61,8 @@ private:
 	hit_result hitTest(vec2 mpos);
 
 public:
-	gui_track_automation(track_t* _track, scaled_grid& _grid, automatable_t*& _at, int32_t& _param, int32_t& _idx)
-	  : guictr_base(), m_track(_track), grid(_grid), at(_at), param(_param), idx(_idx) {
+	gui_track_automation(track_gui_entry_t& _entry, scaled_grid& _grid, automatable_t*& _at, int32_t& _param, int32_t& _idx)
+	  : guictr_base(), m_track(_entry.track), m_trackentry(&_entry), grid(_grid), at(_at), param(_param), idx(_idx) {
 		padding = 8;
 	}
 	float getDstVal();

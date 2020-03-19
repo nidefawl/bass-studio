@@ -21,11 +21,13 @@ class guictxtmenu_base;
 class gui_clip : public guibase {
 public:
 	track_t* const m_track;
+	track_gui_entry_t* const m_trackentry;
 	clip_t* const m_clip;
 	bool culled = true;
-	gui_clip(track_t* _track, clip_t* _clip)
+	gui_clip(track_gui_entry_t* _entry, clip_t* _clip)
 		: guibase(),
-		  m_track(_track),
+		  m_track(_entry->track),
+		  m_trackentry(_entry),
 		  m_clip(_clip) {
 	}
 	virtual ~gui_clip() {
@@ -102,7 +104,7 @@ class gui_midi_clip : public gui_clip {
 	struct midi_clip_render_cache_t;
 	midi_clip_render_cache_t * const impl;
 public:
-	gui_midi_clip(track_t* _track, clip_t* _clip);
+	gui_midi_clip(track_gui_entry_t* _track, clip_t* _clip);
 	~gui_midi_clip();
 	int getClipType() {
 		return CLIP_MIDI;
@@ -121,7 +123,7 @@ public:
 class gui_audio_clip : public gui_clip {
 	audioclip_texture_t updatedWaveform;
 public:
-	gui_audio_clip(track_t* _track, clip_t* _clip)
+	gui_audio_clip(track_gui_entry_t* _track, clip_t* _clip)
 		: gui_clip(_track, _clip)  {
 	}
 	int getClipType() {
@@ -161,15 +163,17 @@ public:
 	static constexpr int SUBTRACK_TYPE_WAVE = 2;
 public:
 	track_t* const m_track;
+	track_gui_entry_t* const m_trackentry;
 protected:
 
 	gui_track_automation automation;
 public:
 	automatable_t* at;
 	int32_t param;
+//	tracklayout_settings_t layout;
 	int32_t height = 4;
 	int32_t idx = -1;
-	gui_track_subtrack(track_t* _track, scaled_grid& _grid, automatable_t* _at, int32_t _param);
+	gui_track_subtrack(track_gui_entry_t& _entry, scaled_grid& _grid, automatable_t* _at, int32_t _param);
 	virtual int subtrackType() { return SUBTRACK_TYPE_EMPTY; }
 	automation_t* getAutomation() {
 		if (at) {
@@ -257,7 +261,7 @@ public:
 };
 class gui_track_automationlane : public gui_track_subtrack {
 public:
-	gui_track_automationlane(track_t* _track, scaled_grid& _grid, automatable_t* _at, int32_t _param);
+	gui_track_automationlane(track_gui_entry_t& _entry, scaled_grid& _grid, automatable_t* _at, int32_t _param);
 	int subtrackType() override { return gui_track_subtrack::SUBTRACK_TYPE_AUTOMATION; }
 	virtual ~gui_track_automationlane() {
 
@@ -269,10 +273,11 @@ public:
 class gui_track : public guictr_base {
 protected:
 	track_t* const m_track;
+	track_gui_entry_t* const m_trackentry;
 	gui_track_automation automation;
 	int subtrackIdx = -1;
 public:
-	gui_track(track_t* _track, scaled_grid& _grid);
+	gui_track(track_gui_entry_t& _entry, scaled_grid& _grid);
 	virtual ~gui_track() {
 
 	}
@@ -340,5 +345,8 @@ public:
 	}
 	track_t* getTrack() {
 		return this->m_track;
+	}
+	track_gui_entry_t& getTrackEntry() {
+		return *this->m_trackentry;
 	}
 };

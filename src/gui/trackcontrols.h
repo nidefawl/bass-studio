@@ -2,6 +2,8 @@
 #include <stdint.h>
 #include "guicontainer.h"
 #include "track.h"
+#include "trackctr_types.h"
+#include "trackctr.h"
 #include "../host/mainctrl.h"
 
 class gui_track_subtrack_mixer;
@@ -10,6 +12,7 @@ class gui_trackcontrols_title;
 class gui_track_controls: public guictr_base {
 public:
 	track_t* const m_track;
+	track_gui_entry_t* const m_trackentry;
 private:
 	gui_trackcontrols_title* title;
 	guictr_base* mixer;
@@ -19,12 +22,12 @@ private:
 	const int resizeHitY = 8;
 	const int DRAG_RESIZE = 1;
 public:
-	gui_track_controls(track_t* _track);
+	gui_track_controls(track_gui_entry_t& _entry);
 	~gui_track_controls();
 	bool isStaticContainer() {
 		return false;
 	}
-	void addSubtrackMixer(track_t* t, gui_track_subtrack* al);
+	void addSubtrackMixer(track_gui_entry_t& entry, gui_track_subtrack* al);
 	void removeSubtrackMixer(gui_track_subtrack* al);
 	void removeAllAutomationLanes(automatable_t* at, int32_t paramIdx);
 	void removeAllAutomationLanes(automatable_t* at);

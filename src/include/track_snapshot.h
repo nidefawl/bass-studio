@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <map>
 #include "assert_dbg.h"
 #include "cursor.h"
 #include "clip.h"
@@ -43,13 +44,17 @@ struct track_impl_snapshot_t {
 	track_impl_snapshot_t() = default;
 	track_impl_snapshot_t(track_impl_t* p, bool storePluginChunks);
 };
+struct track_layout_snapshot_t {
+	tracklayout_settings_t layout;
+	std::vector<automationlane_snapshot_t> automationLanes;
+};
 struct track_snapshot_t : public tracksettings_t {
 	int32_t stageId = -1;
 	int32_t localIdx = -1;
 	track_t* trackLoaded = NULL; // ref set in first phase of, cleared in second of 2-phase loading
 	track_impl_snapshot_t plugins;
 	std::vector<clip_t> clips;
-	std::vector<automationlane_snapshot_t> automationLanes;
+	std::map<int32_t, track_layout_snapshot_t> layouts;
 	track_snapshot_t() = default;
 	track_snapshot_t(const track_t* track, bool storePluginChunks);
 };
