@@ -152,8 +152,8 @@ void closeGlobalLog() {
 	getFileLogger().closeLog();
 	getMultiLogger().removeLogger(&getFileLogger());
 }
-void openGlobalLog() {
-	getFileLogger().openFile("daw.log");
+void openGlobalLog(const String& logFileName) {
+	getFileLogger().openFile(logFileName);
 	getFileLogger().logStr("Begin of logfile\n");
 	getMultiLogger().addLogger(&getFileLogger());
 }

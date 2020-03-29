@@ -80,7 +80,7 @@ void getPluginData(vstplugin* plugin, vst_metadata* _out) {
 }
 bool quit = false;
 #ifdef _WIN32
-BOOL WINAPI ConsoleHandler(DWORD dwType)
+static BOOL WINAPI ConsoleHandler(DWORD dwType)
 {
     switch(dwType) {
     case CTRL_C_EVENT:

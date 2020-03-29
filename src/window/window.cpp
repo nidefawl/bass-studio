@@ -1451,7 +1451,7 @@ void makeAppCompanions(std::vector<std::shared_ptr<AppCtrl>>& out_Companions);
 std::shared_ptr<AppCtrl> makeApp();
 void initColor(); // Forward declare from gui/gui.cpp
 void deleteApp(); // Forward declare from host/mainctrl.cpp
-void openGlobalLog(); // Forward declare from util/debug.cpp
+void openGlobalLog(const String& logFileName); // Forward declare from util/debug.cpp
 void closeGlobalLog(); // Forward declare from util/debug.cpp
 
 #define OPEN_SECOND_WINDOW BUILD_VSTHOST
@@ -1486,7 +1486,8 @@ int startApplication(int argc, char* argv[]) {
 	//if (!runConsoleMode) {
 	allocConsole();
 	//}
-	openGlobalLog();
+	String logFileName = String(BuildInfo::BUILD_BINARY_NAME)+".log";
+	openGlobalLog(logFileName);
 	char* pPath;
 	pPath = getenv("PATH");
 	if (pPath != NULL)
