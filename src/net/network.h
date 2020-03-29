@@ -12,6 +12,9 @@
 #include <memory>
 #include <atomic>
 
+enum protocol_type_i32 : int32_t {
+	TCP, UDP
+};
 using String = std::string;
 extern std::atomic<int32_t> connId;
 class network_conn_t;
@@ -54,6 +57,8 @@ public:
 	virtual void disconnect() = 0;
 	virtual void closeSocket() = 0;
 	virtual void flush() = 0;
+	virtual int sendTo(String host, int port, uint8_t* data, size_t size) = 0;
+
 };
 class network_io {
 	friend class network_conn_t;
@@ -71,7 +76,7 @@ public:
 	};
 	network_io(inetwork_handler* handler);
 	~network_io();
-	bool listenAt(const char *host, int port, std::shared_ptr<network_conn_t>& out);
+	bool listenAt(const char *host, int port, protocol_type_i32 protocol, std::shared_ptr<network_conn_t>& out);
 	bool connectTo(const char *host, int port, std::shared_ptr<network_conn_t>& out);
 	void update();
 	void setSelectTimeout(double dSeconds);

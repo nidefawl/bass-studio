@@ -237,6 +237,7 @@ public:
 	void initAddress();
 	void setSocketOpt(int a, int b, int opt) override;
 	void write(void* data, size_t size) override;
+	int sendTo(String host, int port, uint8_t* data, size_t size) override;
 	void closeSocket() override;
 	void disconnect() override;
 	void flush() override;
@@ -252,7 +253,7 @@ struct network_io::Impl {
     Impl(network_io* _io, inetwork_handler* _handler) : io(_io), handler(_handler) {
     }
     ~Impl();
-	bool listenAt(const char *host, int port, std::shared_ptr<network_conn_t>& out);
+	bool listenAt(const char *host, int port, protocol_type_i32 protocol, std::shared_ptr<network_conn_t>& out);
 	bool connectTo(const char *host, int port, std::shared_ptr<network_conn_t>& out);
 	void update();
 	void setSelectTimeout(double dSeconds);
@@ -298,8 +299,8 @@ network_io::~network_io() {
 	delete _M_impl;
 }
 
-bool network_io::listenAt(const char *host, int port, std::shared_ptr<network_conn_t>& out) {
-	return _M_impl->listenAt(host, port, out);
+bool network_io::listenAt(const char *host, int port, protocol_type_i32 protocol, std::shared_ptr<network_conn_t>& out) {
+	return _M_impl->listenAt(host, port, protocol, out);
 }
 bool network_io::connectTo(const char *host, int port, std::shared_ptr<network_conn_t>& out) {
 	return _M_impl->connectTo(host, port, out);
@@ -441,7 +442,7 @@ void network_io::Impl::acceptPendingConnections(network_socket_t* netSocket) {
 		this->netSockets.push_back(remote);
 	}
 }
-bool network_io::Impl::listenAt(const char *host, int port, std::shared_ptr<network_conn_t>& out) {
+bool network_io::Impl::listenAt(const char *host, int port, protocol_type_i32 protocol, std::shared_ptr<network_conn_t>& out) {
 	struct addrinfo hints, *ai = NULL;
 	std::unique_ptr<addrinfo, addrinfo_deleter> deleter(ai);
 	int err, optval;
@@ -449,9 +450,19 @@ bool network_io::Impl::listenAt(const char *host, int port, std::shared_ptr<netw
 
 	/* Get addrinfo */
 	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = AF_UNSPEC;
-	hints.ai_socktype = SOCK_STREAM;
-	hints.ai_flags = AI_PASSIVE;
+	switch (protocol) {
+	case TCP:
+		hints.ai_family = AF_UNSPEC;
+		hints.ai_socktype = SOCK_STREAM;
+		hints.ai_flags = AI_PASSIVE;
+		break;
+	case UDP:
+		hints.ai_family = AF_UNSPEC;
+		hints.ai_socktype = SOCK_DGRAM;
+		hints.ai_flags = AI_PASSIVE;
+		hints.ai_protocol = 0;
+		break;
+	}
 	snprintf(buf, 64, "%d", port);
 	err = getaddrinfo(host, buf, &hints, &ai);
 	if (err) {
@@ -459,9 +470,17 @@ bool network_io::Impl::listenAt(const char *host, int port, std::shared_ptr<netw
 		return false;
 	}
 	/* Init socket */
-	  printf("ai_family: %d\n", ai->ai_family);
-	  printf("ai_socktype: %d\n", ai->ai_socktype);
-	  printf("ai_protocol: %d\n", ai->ai_protocol);
+	printf("ai_family: %d\n", ai->ai_family);
+	printf("ai_socktype: %d\n", ai->ai_socktype);
+	printf("ai_protocol: %d\n", ai->ai_protocol);
+	switch (protocol) {
+		case TCP:
+			break;
+		case UDP:
+			ai->ai_socktype = SOCK_DGRAM;
+			ai->ai_protocol = IPPROTO_UDP;
+			break;
+	}
 	sock_type_t rawSocket = socket(ai->ai_family, ai->ai_socktype, ai->ai_protocol);
 	if (rawSocket == INVALID_SOCKET) {
 		setError(NET_ERROR_CREATE_SOCKET, errnoToStr("failed resolving host", getImplErrno()));
@@ -490,17 +509,30 @@ bool network_io::Impl::listenAt(const char *host, int port, std::shared_ptr<netw
 		setError(NET_ERROR_BIND, errnoToStr("could not bind socket", getImplErrno()));
 		return false;
 	}
-	err = listen(rawSocket, 511);
-	if (err) {
-		setError(NET_ERROR_LISTEN, errnoToStr("socket failed on listen", getImplErrno()));
-		return false;
+	switch (protocol) {
+		case TCP:
+			err = listen(rawSocket, 511);
+			if (err) {
+				setError(NET_ERROR_LISTEN, errnoToStr("socket failed on listen", getImplErrno()));
+				return false;
+			}
+			break;
+		case UDP:
+			break;
 	}
 	std::shared_ptr<network_socket_t> mainSocket = std::make_shared<network_socket_t>(io, rawSocket);
 	mainSocket->handler = this->handler;
 	mainSocket->flags |= SOCK_FLAG_ISLISTEN;
 	mainSocket->port = port;
 	mainSocket->initAddress();
-	mainSocket->state = SOCK_STATE_LISTENING;
+	switch (protocol) {
+		case TCP:
+			mainSocket->state = SOCK_STATE_LISTENING;
+			break;
+		case UDP:
+			mainSocket->state = SOCK_STATE_CONNECTED;
+			break;
+	}
 	this->netSockets.push_back(mainSocket);
 	out = mainSocket;
 	return true;
@@ -608,7 +640,7 @@ void network_socket_t::flush() {
 	handleWrite();
 }
 void network_socket_t::setSocketOpt(int a, int b, int opt) {
-//	setsockopt(sockfd, a, b, &opt, sizeof(opt));
+	setsockopt(sockfd, a, b, &opt, sizeof(opt));
 }
 void network_socket_t::disconnect() {
 	if (this->state != SOCK_STATE_CONNECTED) {
@@ -629,6 +661,22 @@ void network_socket_t::closeSocket() {
 		this->sockfd = INVALID_SOCKET;
 	}
 	this->writeBuffer.clear();
+}
+int network_socket_t::sendTo(String host, int port, uint8_t* data, size_t size) {
+
+
+	struct sockaddr_in si_dest;
+	int slen = sizeof(si_dest);
+	si_dest.sin_family = AF_INET;
+	si_dest.sin_port = htons(port);
+	si_dest.sin_addr.S_un.S_addr = inet_addr(StringAsCStr(host));
+	int ret = sendto(sockfd, (char*)data, size, 0, (struct sockaddr*)&si_dest, sizeof(si_dest));
+	if (ret <= 0) {
+		if (errno != EWOULDBLOCK) {
+			this->closeSocket();
+		}
+	}
+	return ret;
 }
 int network_socket_t::handleWrite() {
 	if (this->writeBuffer.size() > 0) {

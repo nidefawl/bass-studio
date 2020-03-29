@@ -278,7 +278,7 @@ endif()
 
 if (BUILD_RGB_MASTER) 
 project("rgbmaster" C CXX)
-add_executable("rgbmaster" "src/host/main_rgb_master.cpp")
+add_executable("rgbmaster" "src/rgb/main_rgb_master.cpp")
 SET_APP_BUILD("rgbmaster")
 target_link_libraries("rgbmaster" PUBLIC "dawlib")
 ADD_POST_BUILD_COMMANDS("rgbmaster")
