@@ -73,12 +73,12 @@ int main(int argc, char **argv)
 
 
 // MASTER SIDE PARAMETERS
-#define FRAME_DURATION 12
 #define FB_LEN 16
 #define HB_INTERVAL 2000
 #define FRAME_BUF_LEN 6
 #define RESYNC_FRAMES (FRAME_ARRAY_LEN*8)
 
+static uint32_t globalFrameDurationMillis = 16;
 
 
 class rgbprotocol_net_handler_client : public inetwork_handler {
@@ -207,6 +207,8 @@ struct RGBNetworkController {
 	uint8_t writeBuf[RGB_PROTOCOL_WRITE_BUF_SIZE];
 	uint32_t arr[NUM_TOTAL_LEDS];
 	uint32_t curProgram = 0;
+	uint32_t brightness = 80;
+	uint32_t opMode = OPMODE_DISPLAY;
 	void runProgram0(frame_render_ctxt_t& renderCtxt, frame_rgb_buffer_t& buffer) {
 		if (0 == renderCtxt.frameStep) {
 			memset(arr, 0, sizeof(uint32_t)*NUM_TOTAL_LEDS);
@@ -446,10 +448,10 @@ struct RGBNetworkController {
 					hdr.packetType = PKT_TYPE_SET_CFG;
 
 					lamp_config_t cfg;
-					cfg.opMode = OPMODE_DISPLAY;
-					cfg.brightness = 64;
+					cfg.opMode = opMode;
+					cfg.brightness = brightness;
 					cfg.heartBeatInterval_millis = HB_INTERVAL;
-					cfg.frameDuration_millis = FRAME_DURATION;
+					cfg.frameDuration_millis = globalFrameDurationMillis;
 					cfg.frameBufferUpdateLen = FB_LEN;
 					cfg.showDebug = 0;
 					uint32_t mask = (1<<(int)CFG_ID_OPMODE)
@@ -564,6 +566,9 @@ struct RGBNetworkController {
 RGBMasterController::RGBMasterController()
 	: WorkerThread::ThreadTask(), controller(new RGBNetworkController{}), handler(new rgbprotocol_net_handler_server{}) {
 }
+RGBNetworkController* RGBMasterController::getController() {
+	return controller;
+}
 RGBMasterController::~RGBMasterController() {
 	delete controller;
 	delete handler;
@@ -597,7 +602,7 @@ void RGBMasterController::run() {
 //						controller.curProgram++;
 				}
 //					millisSinceBegin += 10;
-				int64_t resyncCycle = (millisSinceBegin / FRAME_DURATION)/RESYNC_FRAMES;
+				int64_t resyncCycle = (millisSinceBegin / globalFrameDurationMillis)/RESYNC_FRAMES;
 				if (resyncCycle != controller->lastResyncCycle) {
 					controller->lastResyncCycle = resyncCycle;
 					auto since = getTimeHPint64()-controller->tmLastSync;
@@ -660,11 +665,11 @@ int mainApp(int argc, char **argv)
 	  log_printf("sizeof(struct uint32_t) %d\n", sizeof(uint32_t));
 
 	/* Check for arguments - hostname and portnumber required */
-	if (argc<3) {
-		log_printf("Too few arguments\n", 0);
-		log_printf("Usage: %s <hostname> <port>\n\n", argv[0]);
-		return 1;
-	}
+//	if (argc<3) {
+//		log_printf("Too few arguments\n", 0);
+//		log_printf("Usage: %s <hostname> <port>\n\n", argv[0]);
+//		return 1;
+//	}
 	{
 
 	    if (!SetConsoleCtrlHandler((PHANDLER_ROUTINE)ConsoleHandler,TRUE)) {
@@ -672,16 +677,33 @@ int mainApp(int argc, char **argv)
 	        return EXIT_FAILURE;
 	    }
 		log_printf("\n== START OF THREAD TEST ==\n", 0);
+		if (argc > 1 && (strcmp("-h", argv[1]) == 0||strcmp("--help", argv[1]) == 0)) {
+			log_printf("Usage: ./rgbmaster <program> <frame-time in milliseconds> <brightness (0-255)> <opMode>",0);
+			return 0;
+		}
 		static RGBMasterController rgbmaster;
+		if (argc > 1) {
+			rgbmaster.getController()->curProgram = atoi(argv[1]);
+		}
+		if (argc > 2) {
+			globalFrameDurationMillis = atoi(argv[2]);
+		}
+		if (argc > 3) {
+			rgbmaster.getController()->brightness = atoi(argv[3]);
+		}
+		if (argc > 4) {
+			rgbmaster.getController()->opMode = atoi(argv[4]);
+		}
 		static WorkerThread thread;
 		static WorkerThread thread2;
-		WorkerThread* threads[] = { &thread, &thread2};
+//		WorkerThread* threads[] = { &thread, &thread2};
+		WorkerThread* threads[] = { &thread};
 		std::shared_ptr<WorkerThread::ThreadTask> udpServerTask = createUDPServer();
 		for (auto* t : threads) {
 			t->startThread();
 		}
 		threads[0]->pushTask(&rgbmaster);
-		threads[1]->pushTask(udpServerTask.get());
+//		threads[1]->pushTask(udpServerTask.get());
 		while (!quitServer) {
 			std::this_thread::sleep_for(std::chrono::milliseconds(1000));
 		}
@@ -696,8 +718,6 @@ int mainApp(int argc, char **argv)
 			log_printf("thread.joinThread\n", 0);
 			t->joinThread();
 		}
-		thread.stopThread();
-		thread.joinThread();
 		log_printf("== END OF THREAD TEST ==\n\n", 0);
 	}
 

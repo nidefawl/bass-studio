@@ -38,5 +38,6 @@ public:
 	NetServerState threadState;
 	RGBMasterController();
 	~RGBMasterController();
+	RGBNetworkController* getController();
 	void run() override;
 };
