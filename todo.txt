@@ -5,6 +5,7 @@
 /**********************************************/
 /*                Recent ideas                */
 /**********************************************/
+Performance: reduce sizeof(clip_t)
 todo: render group contents into folded group track background
 midi arpeggiator freeze function (drag from arp to new clip on timeline)
 add list of all inputs to track, so one can navigate to connected track based on input routing
