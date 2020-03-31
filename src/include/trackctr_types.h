@@ -29,6 +29,7 @@ struct track_gui_entry_t {
 	gui_track_controls* mixer = nullptr;
 	tracklayout_settings_t layout;
 	tracklayout_state_t state;
+	std::map<clip_t*,gui_clip*> clipsGuis;
 };
 track_gui_entry_t* getParentOf(track_gui_entry_t* t);
 using track_gui_vector_td = std::vector<track_gui_entry_t*>;

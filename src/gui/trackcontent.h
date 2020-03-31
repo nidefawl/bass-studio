@@ -112,8 +112,13 @@ public:
 	void updatePosition(project_t& project, scaled_grid& grid, ivec2& trackSize) ;
 	void render(NVGcontext* vg) override;
 	void onRemove() {
-		dbgassert(m_clip->gClip == this);
-		m_clip->gClip = NULL;
+		dbgassert(STL_CONTAINS(m_clip->trackEntries, this->m_trackentry));
+	    removeEntry(this->m_clip->trackEntries, this->m_trackentry);
+	    auto it1 = m_trackentry->clipsGuis.find(m_clip);
+		dbgassert(it1 != m_trackentry->clipsGuis.end());
+		m_trackentry->clipsGuis.erase(it1);
+//		dbgassert(m_clip->gClip == this);
+//		m_clip->gClip = NULL;
 	}
 	void handleRightClick(MouseEvent& evt);
 
@@ -149,8 +154,12 @@ public:
 	guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
 	void onRemove() {
 		releaseRendered();
-		dbgassert(m_clip->gClip == this);
-		m_clip->gClip = NULL;
+		dbgassert(STL_CONTAINS(m_clip->trackEntries, this->m_trackentry));
+	    removeEntry(this->m_clip->trackEntries, this->m_trackentry);
+	    auto it2 = m_trackentry->clipsGuis.find(m_clip);
+		dbgassert(it2 != m_trackentry->clipsGuis.end());
+		m_trackentry->clipsGuis.erase(it2);
+//		m_clip->gClip = NULL;
 	}
 	void handleRightClick(MouseEvent& evt);
 };
@@ -316,8 +325,8 @@ public:
 		}
 		nvgSave(vg);
 		if (setScissorTransform(vg)) {
-			for (clip_t* clip : m_track->getMidi().getConstClips()) {
-				guibase* gui = clip->gClip;
+			for (auto& entry : m_trackentry->clipsGuis) {
+				guibase* gui = entry.second;
 				if(!gui) {
 					continue;
 				}

@@ -7,6 +7,7 @@
 #include "guicolors.h"
 #include "track.h"
 #include "track_impl.h"
+#include "trackctr_types.h"
 #include "trackctr.h"
 #include "note.h"
 #include "cursor.h"
@@ -73,13 +74,15 @@ void gui_clipsettings::buttonClicked(guibase* button) {
 	if (&btnLoop == button || &clipTimeStart == button || &clipLoopStart == button || &clipTimeLen == button
 			|| &clipTimeStartOffsedSamples == button || &clipTimeStartOffsetTicks == button || &clipLoopLen == button) {
 		clip_t* clip = view.clip();
-		if (clip && clip->gClip) {
+		if (clip) {
 			clip->setDirty();
-			track_t* track = clip->gClip->m_track;
-			if (track) {
-				resizeOtherClips(track->getMidi(), clip);
-				MainCtrl::getGuiTrackCtr()->layout();
-				MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
+			for (track_gui_entry_t* entry : clip->trackEntries) {
+				track_t* track = entry->track;
+				if (track) {
+					resizeOtherClips(track->getMidi(), clip);
+					MainCtrl::getGuiTrackCtr()->layout();
+					MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
+				}
 			}
 		}
 	}

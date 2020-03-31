@@ -24,6 +24,7 @@
 
 
 #include "guicontextmenu_daw.h"
+struct track_gui_entry_t;
 
 void gui_midi_clip::handleRightClick(MouseEvent& evt) {
 	parentCtrl->openContextMenu(new guictxtmenu_clip(this->m_clip), evt.mousepos);
@@ -158,12 +159,12 @@ void gui_track::prerender(NVGcontext* vg) {
 	nvgScale(vg, parentCtrl->m_scale, parentCtrl->m_scale);
 	nvgLineJoin(vg, NVGlineCap::NVG_BEVEL);
 	nvgCachePath(vg, 1);
-	for (clip_t* clip : m_track->getMidi().getConstClips()) {
-		guibase* gui = clip->gClip;
+	for (auto& entry : m_trackentry->clipsGuis) {
+		guibase* gui = entry.second;
 		if(!gui) {
 			continue;
 		}
-		clip->gClip->updateClipRenderCache(vg);
+		entry.second->updateClipRenderCache(vg);
 	}
 	nvgCachePath(vg, 0);
 	nvgEndFrame(vg);
@@ -279,14 +280,15 @@ gui_track* createTrackGui(track_gui_entry_t& _entry, scaled_grid& grid) {
 }
 
 gui_clip* createClipGui(guictr_base* parent, track_gui_entry_t* trackentry, clip_t* clip) {
-	if (!clip->gClip) {
+	if (0 == trackentry->clipsGuis.count(clip)) {
 		if (clip->clipType == CLIP_MIDI) {
-			clip->gClip = new gui_midi_clip(trackentry, clip);
+			trackentry->clipsGuis[clip] = new gui_midi_clip(trackentry, clip);
 		} else {
-			clip->gClip = new gui_audio_clip(trackentry, clip);
+			trackentry->clipsGuis[clip] = new gui_audio_clip(trackentry, clip);
 		}
+		clip->trackEntries.push_back(trackentry);
 	}
-	return clip->gClip;
+	return trackentry->clipsGuis[clip];
 }
 void gui_track::updateVisibleTrackContents(project_t& project, scaled_grid& grid) {
 	automation.setData();
@@ -300,7 +302,7 @@ void gui_track::updateVisibleTrackContents(project_t& project, scaled_grid& grid
 		}
 		gui->updatePosition(project, grid, size);
 	}
-	for (gui_track_subtrack* gui : m_track->subtracks) {
+	for (gui_track_subtrack* gui : m_trackentry->subtracks) {
 		gui->updatePosition(project, grid, size);
 	}
 }

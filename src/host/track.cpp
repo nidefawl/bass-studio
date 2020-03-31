@@ -46,12 +46,26 @@ void releaseClipResources(clip_t* cl, delete_cb *cb) {
 	if (waveformrender::getInstance()) {
 		waveformrender::getInstance()->assertWaveformRefIsUnbound(&cl->audio.waveformRef);
 	}
-	gui_clip* gClip = cl->gClip;
-	if (gClip) {
-		dbgassert(gClip->parent);
-		gClip->m_track->content->remove(gClip);
-		DELETE_PTR(gClip);
+	std::vector<track_gui_entry_t*> copyEntries = cl->trackEntries;
+	for (track_gui_entry_t* entry : copyEntries) {
+		track_t* track = entry->track;
+		if (track) {
+			if (entry->clipsGuis.count(cl)) {
+				auto* pGui = entry->clipsGuis[cl];
+				dbgassert(pGui);
+				entry->track->content->remove(pGui);
+				DELETE_PTR(pGui);
+			} else {
+				dbgassert(0);
+			}
+		}
 	}
+//	gui_clip* gClip = cl->gClip;
+//	if (gClip) {
+//		dbgassert(gClip->parent);
+//		gClip->m_track->content->remove(gClip);
+//		DELETE_PTR(gClip);
+//	}
 }
 void releaseTrackResources(track_t* tr, delete_cb *cb) {
 	dbgassert(tr && tr->audio);
