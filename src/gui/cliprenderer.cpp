@@ -19,6 +19,57 @@ constant_t COL_CLIP_NOTE_OVERLAP("COL_CLIP_NOTE_OVERLAP", 0xFF0000FF);
 constant_t COL_CLIP_NOTE_MUTED("COL_CLIP_NOTE_MUTED", 0xFF121212);
 }
 
+struct noteview_cache_impl_t {
+	bool valid = false;
+	int64_t notesRendered=-1;
+	ivec2 pos={-1,-1};
+	ivec2 size={-1,-1};
+	std::array<nvg_path_cache_storage_t*,4> arr;
+	noteview_cache_impl_t() {
+		std::for_each(arr.begin(), arr.end(), [](nvg_path_cache_storage_t*& ptr) {
+			ptr = nullptr;
+		});
+	}
+	~noteview_cache_impl_t() {
+		reset();
+	}
+	void SaveFill(NVGcontext* vg, int n) {
+		dbgassert(n < arr.size());
+		dbgassert(arr[n] == nullptr);
+		arr[n] = nullptr;
+		nvgGetLastCacheResult(vg, &arr[n]);
+		NVGCacheEntryInfo cacheEntryInfo;
+		nvgCacheEntryInfo(NULL, arr[n], &cacheEntryInfo);
+		nvg_path_cache_storage_t* entry = arr[n];
+		dbgassert(entry);
+		daw_tls::tlsinstance& tls = daw_tls::getTls();
+		tls.renderClipCacheStats.sizeCacheAllocatedMemBytes+= cacheEntryInfo.allocationSizeBytes;
+	}
+	bool isCacheValid(int n) {
+		return valid && n < arr.size() && arr[n] != nullptr;
+	}
+	void reset() {
+		valid = false;
+		std::for_each(arr.begin(), arr.end(), [](nvg_path_cache_storage_t*& ptr) {
+			if (ptr) {
+				NVGCacheEntryInfo cacheEntryInfo;
+				nvgCacheEntryInfo(NULL, ptr, &cacheEntryInfo);
+				daw_tls::tlsinstance& tls = daw_tls::getTls();
+				tls.renderClipCacheStats.sizeCacheAllocatedMemBytes -= cacheEntryInfo.allocationSizeBytes;
+
+				nvgReleaseCacheResult(ptr);
+				ptr = nullptr;
+			}
+		});
+	}
+};
+struct midi_clip_render_cache_t : public noteview_cache_impl_t {
+public:
+	midi_clip_render_cache_t() : noteview_cache_impl_t() {
+
+	}
+};
+
 bool getClipPosition(scaled_grid& grid, const ivec2& trackSize, const clip_t* cl, ivec2& pos, ivec2& size, tick_t offset) {
 	tick_t tickBegin = cl->time + offset;
 	tick_t tickEnd = cl->time + offset + cl->getLen();
@@ -187,62 +238,13 @@ float noteToScreen(float note, float scale, float offset, float sizeY) {
 	return (sizeY) - rel;
 }
 
-struct noteview_cache_impl_t {
-	bool valid = false;
-	int64_t notesRendered=-1;
-	ivec2 pos={-1,-1};
-	ivec2 size={-1,-1};
-	std::array<nvg_path_cache_storage_t*,4> arr;
-	noteview_cache_impl_t() {
-		std::for_each(arr.begin(), arr.end(), [](nvg_path_cache_storage_t*& ptr) {
-			ptr = nullptr;
-		});
-	}
-	~noteview_cache_impl_t() {
-		reset();
-	}
-	void SaveFill(NVGcontext* vg, int n) {
-		dbgassert(n < arr.size());
-		dbgassert(arr[n] == nullptr);
-		arr[n] = nullptr;
-		nvgGetLastCacheResult(vg, &arr[n]);
-		NVGCacheEntryInfo cacheEntryInfo;
-		nvgCacheEntryInfo(NULL, arr[n], &cacheEntryInfo);
-		nvg_path_cache_storage_t* entry = arr[n];
-		dbgassert(entry);
-		daw_tls::tlsinstance& tls = daw_tls::getTls();
-		tls.renderClipCacheStats.sizeCacheAllocatedMemBytes+= cacheEntryInfo.allocationSizeBytes;
-	}
-	bool isCacheValid(int n) {
-		return valid && n < arr.size() && arr[n] != nullptr;
-	}
-	void reset() {
-		valid = false;
-		std::for_each(arr.begin(), arr.end(), [](nvg_path_cache_storage_t*& ptr) {
-			if (ptr) {
-				NVGCacheEntryInfo cacheEntryInfo;
-				nvgCacheEntryInfo(NULL, ptr, &cacheEntryInfo);
-				daw_tls::tlsinstance& tls = daw_tls::getTls();
-				tls.renderClipCacheStats.sizeCacheAllocatedMemBytes -= cacheEntryInfo.allocationSizeBytes;
 
-				nvgReleaseCacheResult(ptr);
-				ptr = nullptr;
-			}
-		});
-	}
-};
 noteview_render_t::~noteview_render_t() {
 	if (data) {
 		delete data;
 	}
 }
 
-struct gui_midi_clip::midi_clip_render_cache_t : public noteview_cache_impl_t {
-public:
-	midi_clip_render_cache_t() : noteview_cache_impl_t() {
-
-	}
-};
 gui_midi_clip::gui_midi_clip(track_gui_entry_t* _track, clip_t* _clip)
 	: gui_clip(_track, _clip), impl(new midi_clip_render_cache_t)  {
 
@@ -281,7 +283,6 @@ void gui_midi_clip::updateClipRenderCache(NVGcontext* vg) {
 	if (culled) {
 		return;
 	}
-
 
 	clip_t* const cl = m_clip;
 	track_t* const tr = m_track;

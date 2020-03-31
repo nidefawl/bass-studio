@@ -26,7 +26,6 @@ class gui_clip;
 class clip_audio_t {
 public:
 	int32_t id = -1;
-	gui_waveform_texture_ref waveformRef;
 	std::weak_ptr<audiofile_t> weakCachedAudio;
 
 	clip_audio_t() {
@@ -39,12 +38,6 @@ public:
 		copy(a);
 	}
 	~clip_audio_t() {
-		if (waveformRef.rendered) {
-			waveformrender* renderer = waveformrender::getInstance();
-			if (renderer) {
-				waveformrender::getInstance()->release(&waveformRef);
-			}
-		}
 	}
 	void copy( const clip_audio_t &obj) {
 		this->id = obj.id;

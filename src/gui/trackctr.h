@@ -98,7 +98,7 @@ public:
 
 	void handleRightClick(MouseEvent& evt);
 
-	void renderClip(NVGcontext* vg, track_t* tr, const clip_t* cl, tick_t offset);
+	void renderClip(NVGcontext* vg, track_t* tr, clip_t* cl, tick_t offset);
 	void renderAction(NVGcontext* vg, clip_dragaction& action);
 	void render(NVGcontext* vg);
 	void prerender(NVGcontext* vg) override;

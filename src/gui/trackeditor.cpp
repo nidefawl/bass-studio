@@ -716,7 +716,7 @@ void guitrack_editor::prerender(NVGcontext* vg) {
 			for (auto it = trClipboard->clips.begin(); it != trClipboard->clips.end(); it++) {
 				clip_t* cl = (*it).get();
 				if (cl->clipType == CLIP_AUDIO) {
-
+#ifdef TODO_AUDIO_CLIP_DRAGGED_RENDER_WAVEFORM
 					ivec2 clipPos = ivec2();
 					ivec2 clipSize = tr->content->size; //TODO: get rid of *tr here, figure out size before and add default fallback
 					audiofile_t* audio = audiocache::getInstance()->get(cl->audio.id);
@@ -748,6 +748,7 @@ void guitrack_editor::prerender(NVGcontext* vg) {
 	//						waveformRef.rendered = true;
 						}
 					}
+#endif
 				}
 
 			}
@@ -755,7 +756,7 @@ void guitrack_editor::prerender(NVGcontext* vg) {
 	}
 }
 
-void guitrack_editor::renderClip(NVGcontext* vg, track_t* tr, const clip_t* cl, tick_t offset) {
+void guitrack_editor::renderClip(NVGcontext* vg, track_t* tr, clip_t* cl, tick_t offset) {
 	ivec2 clipPos = ivec2();
 	ivec2 clipSize = tr->content->size; //TODO: get rid of *tr here, figure out size before and add default fallback
 
@@ -764,8 +765,18 @@ void guitrack_editor::renderClip(NVGcontext* vg, track_t* tr, const clip_t* cl, 
 		if (cl->clipType == CLIP_MIDI && tr->type == TRACK_TYPE_MIDI) {
 			renderMidiClip(vg, theme, tr, cl, clipPos, clipSize);
 		} else if (cl->clipType == CLIP_AUDIO && tr->type == TRACK_TYPE_AUDIO) {
-			const gui_waveform_texture_ref * ptr = &cl->audio.waveformRef;
-			renderAudioClip(vg, theme, tr, cl, ptr, clipPos, clipSize, clipPos, clipSize);
+			static int logOnce = 0;
+			if (!logOnce) {
+				logOnce = 1;
+				log_printf("dragged waveform rendering not implemented\n", 0);
+			}
+#ifdef TODO_IMPLEMENT_DRAGGED_WAVE_FORM_RENDERING
+//			track_gui_entry_t entry;
+//			dbgassert(iGuiMgr.getTrackEntry(tr, entry));
+//			dbgassert(entry.clipsGuis.count(cl));
+//			const gui_waveform_texture_ref * ptr = dynamic_cast<gui_audio_clip*>(entry.clipsGuis[cl])->waveformRef;
+//			renderAudioClip(vg, theme, tr, cl, ptr, clipPos, clipSize, clipPos, clipSize);
+#endif
 		}
 	}
 }

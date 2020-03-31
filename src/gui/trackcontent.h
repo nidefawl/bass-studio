@@ -100,8 +100,8 @@ public:
 	virtual void updatePosition(project_t& project, scaled_grid& grid, ivec2& trackSize) = 0;
 	virtual void updateClipRenderCache(NVGcontext* vg) = 0;
 };
+struct midi_clip_render_cache_t;
 class gui_midi_clip : public gui_clip {
-	struct midi_clip_render_cache_t;
 	midi_clip_render_cache_t * const impl;
 public:
 	gui_midi_clip(track_gui_entry_t* _track, clip_t* _clip);
@@ -111,13 +111,7 @@ public:
 	}
 	void updatePosition(project_t& project, scaled_grid& grid, ivec2& trackSize) ;
 	void render(NVGcontext* vg) override;
-	void onRemove() {
-		dbgassert(STL_CONTAINS(m_clip->trackEntries, this->m_trackentry));
-	    removeEntry(this->m_clip->trackEntries, this->m_trackentry);
-	    auto it1 = m_trackentry->clipsGuis.find(m_clip);
-		dbgassert(it1 != m_trackentry->clipsGuis.end());
-		m_trackentry->clipsGuis.erase(it1);
-	}
+	void onRemove() override;
 	void handleRightClick(MouseEvent& evt);
 
 	void prerender(NVGcontext* vg) override;
@@ -125,39 +119,24 @@ public:
 };
 class gui_audio_clip : public gui_clip {
 	audioclip_texture_t updatedWaveform;
+	gui_waveform_texture_ref* waveformRef;
 public:
-	gui_audio_clip(track_gui_entry_t* _track, clip_t* _clip)
-		: gui_clip(_track, _clip)  {
-	}
+	gui_audio_clip(track_gui_entry_t* _track, clip_t* _clip);
+	~gui_audio_clip();
+
 	int getClipType() {
 		return CLIP_AUDIO;
 	}
 	void updatePosition(project_t& project, scaled_grid& grid, ivec2& trackSize) override;
 	void updateClipRenderCache(NVGcontext* vg) override;
-	void render(NVGcontext* vg) override {
-		if (!culled) {
-			ivec2 clipSize = ivec2(size.x, size.y-(HEIGHT_CLIP_TITLE+INSET_CLIP_CONTENT*2));
-			ivec2 posClipped = ivec2(pos.x, pos.y+(HEIGHT_CLIP_TITLE+INSET_CLIP_CONTENT*2));
-			ivec2 sizeClipped = clipSize;
-			this->parent->scissorClip(posClipped, sizeClipped);
-			sizeClipped.y = clipSize.y;
-			renderAudioClip(vg, theme, m_track, m_clip, &m_clip->audio.waveformRef, pos, size, posClipped, sizeClipped);
-		}
-	}
+	void render(NVGcontext* vg) override;
 	void releaseRendered();
 	void prerender(NVGcontext* vg) override;
 	void onIdle() override;
 
 	void onTick(AppCtrl* appctrl) override;
 	guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
-	void onRemove() {
-		releaseRendered();
-		dbgassert(STL_CONTAINS(m_clip->trackEntries, this->m_trackentry));
-	    removeEntry(this->m_clip->trackEntries, this->m_trackentry);
-	    auto it2 = m_trackentry->clipsGuis.find(m_clip);
-		dbgassert(it2 != m_trackentry->clipsGuis.end());
-		m_trackentry->clipsGuis.erase(it2);
-	}
+	void onRemove() override;
 	void handleRightClick(MouseEvent& evt);
 };
 

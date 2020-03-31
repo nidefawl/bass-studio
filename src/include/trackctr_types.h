@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <vector>
 #include <memory>
+#include <map>
 #include "config.h"
 #include "math/vec.h"
 #include "seq_util.h"
