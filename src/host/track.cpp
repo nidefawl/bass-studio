@@ -60,12 +60,6 @@ void releaseClipResources(clip_t* cl, delete_cb *cb) {
 			}
 		}
 	}
-//	gui_clip* gClip = cl->gClip;
-//	if (gClip) {
-//		dbgassert(gClip->parent);
-//		gClip->m_track->content->remove(gClip);
-//		DELETE_PTR(gClip);
-//	}
 }
 void releaseTrackResources(track_t* tr, delete_cb *cb) {
 	dbgassert(tr && tr->audio);

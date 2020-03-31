@@ -117,8 +117,6 @@ public:
 	    auto it1 = m_trackentry->clipsGuis.find(m_clip);
 		dbgassert(it1 != m_trackentry->clipsGuis.end());
 		m_trackentry->clipsGuis.erase(it1);
-//		dbgassert(m_clip->gClip == this);
-//		m_clip->gClip = NULL;
 	}
 	void handleRightClick(MouseEvent& evt);
 
@@ -159,7 +157,6 @@ public:
 	    auto it2 = m_trackentry->clipsGuis.find(m_clip);
 		dbgassert(it2 != m_trackentry->clipsGuis.end());
 		m_trackentry->clipsGuis.erase(it2);
-//		m_clip->gClip = NULL;
 	}
 	void handleRightClick(MouseEvent& evt);
 };

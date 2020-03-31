@@ -237,7 +237,6 @@ public:
 		audio = obj.audio;
 		noLayout = obj.noLayout;
 		editorLayout = obj.editorLayout;
-		gClip = NULL;
 		dirty = true;
 	}
 	tick_t start() const {
@@ -298,8 +297,6 @@ public:
 	}
 
 	std::vector<track_gui_entry_t*> trackEntries;
-	gui_clip* gClip = NULL;
-//	track_t* tr = NULL;
 private:
 	mutable bool dirty = true;
 	mutable clip_notes_t noteViewPlayback;
