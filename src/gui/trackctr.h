@@ -441,15 +441,18 @@ public:
 	bool getPointerEntry(track_t* t, track_gui_entry_t** out);
 
 	void removeTrack(track_gui_entry_t& entry) {
-		auto it = std::remove_if( begin(entries),end(entries), [&entry](track_gui_entry_t* e) {
-			return e->track == entry.track;
+		auto it = std::remove_if(begin(entries), end(entries), [&entry](track_gui_entry_t* e) {
+			if (e->track == entry.track) {
+				delete e;
+				return true;
+			}
+			return false;
 		});
 		if (it == entries.end()) {
 			dbgassert(0);
 			return;
-		}
-		delete *it;
-		entries.erase(it);
+		};
+		entries.erase(it, entries.end());
 	}
 	void addTrack(track_gui_entry_t* entry) {
 		entries.push_back(entry);
