@@ -34,7 +34,7 @@ void gui_arp::rightClicked(MouseEvent& evt, guibase* button) {
 //	}
 	if (clickedParamIdx != -1) {
 		auto* ctxt = new guictxtmenu_at_param(this->getArp(), clickedParamIdx);
-		MainCtrl::get()->openContextMenu(ctxt, evt.mousepos);
+		parentCtrl->openContextMenu(ctxt, evt.mousepos);
 	}
 
 }

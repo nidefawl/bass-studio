@@ -98,7 +98,7 @@ public:
 
 	void handleRightClick(MouseEvent& evt);
 
-	void renderClip(NVGcontext* vg, track_t* tr, clip_t* cl, tick_t offset);
+	void renderClip(NVGcontext* vg, const track_gui_entry_t* const entry, clip_t* cl, tick_t offset);
 	void renderAction(NVGcontext* vg, clip_dragaction& action);
 	void render(NVGcontext* vg);
 	void prerender(NVGcontext* vg) override;
@@ -265,7 +265,7 @@ public:
 			tick_t tickDelta = (tickAt - curLoopStart);
 			project.loopStart += tickDelta;
 		}
-//		MainCtrl::get()->updateVisibleTrackContents();
+//		DawInstance::get()->updateVisibleTrackContents();
 	}
 	void handleDraggedRelease(MouseEvent& evt) {
 		dragHandle = drag_handle_none;
@@ -476,6 +476,7 @@ public:
 class guictr_tracks : public guictr_base, grid_changed_cb, te_constants, public gui_scrollcontainer {
 	friend class guitrack_editor;
 	int32_t globalIndex = 0;
+	DawCtrl* const dawCtrl;
 public:
 	scaled_grid& grid;
 	project_t& project;
@@ -493,8 +494,9 @@ public:
 	track_gui_vector_td trackEntriesBottom;
 	track_gui_vector_td tracksVisibleFlat;
 public:
-	guictr_tracks(DAW::Cursor& _cursor, project_t& _project, scaled_grid& _grid, dragdrop_midifile& _dragdropclip)
+	guictr_tracks(DawCtrl* _dawCtrl, DAW::Cursor& _cursor, project_t& _project, scaled_grid& _grid, dragdrop_midifile& _dragdropclip)
 		: guictr_base(),
+		dawCtrl(_dawCtrl),
 		grid(_grid),
 		project(_project),
 		guiMgr(),
@@ -533,7 +535,7 @@ public:
 		layout();
 	}
 	void gridChanged(scaled_grid& _grid) override {
-		MainCtrl::get()->updateGrid();
+		dawCtrl->updateGrid();
 	}
 	bool handleKeyInput(KeyEvent& kevt) {
 		return trackView.handleKeyInput(kevt);

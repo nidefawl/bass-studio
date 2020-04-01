@@ -80,8 +80,9 @@ void gui_clipsettings::buttonClicked(guibase* button) {
 				track_t* track = entry->track;
 				if (track) {
 					resizeOtherClips(track->getMidi(), clip);
-					MainCtrl::getGuiTrackCtr()->layout();
-					MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
+
+					DawInstance::get()->layoutTrackEditors();
+					DawInstance::get()->updateVisibleTrackContents();
 				}
 			}
 		}

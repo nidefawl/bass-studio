@@ -22,7 +22,7 @@
 
 void guitrack_timeline::handleDraggedBegin(MouseEvent& evt) {
 	if (evt.guiDragged == this) {
-		MainCtrl::get()->captureMouse(this);
+		parentCtrl->captureMouse(this);
 		startDrag = evt.relMousepos;
 		dragDirection = -1;
 		float anchor_dragposx = (float)(startDrag.x < 50 ? 0 : evt.relMousepos.x);
@@ -67,7 +67,7 @@ void guitrack_timeline::handleDraggedMove(MouseEvent& evt) {
 	}
 }
 void guitrack_timeline::handleDraggedRelease(MouseEvent& evt) {
-	MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
+	DawInstance::get()->updateVisibleTrackContents();
 }
 void guitrack_timeline::render(NVGcontext* vg) {
 	if (!setScissorTransform(vg)) {

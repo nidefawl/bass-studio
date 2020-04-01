@@ -125,10 +125,10 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 			if ((action.dragtype == DRAG_CLIPS_COPY) != isCtrl(kevt.mods)) {
 				if (action.dragtype == DRAG_CLIPS_MOVE) {
 					action.dragtype = DRAG_CLIPS_COPY;
-					MainCtrl::get()->cursorIcon = CURSOR_DUPLICATE;
+					parentCtrl->cursorIcon = CURSOR_DUPLICATE;
 				} else {
 					action.dragtype = DRAG_CLIPS_MOVE;
-					MainCtrl::get()->cursorIcon = CURSOR_DEFAULT;
+					parentCtrl->cursorIcon = CURSOR_DEFAULT;
 				}
 			}
 			return false;
@@ -468,7 +468,7 @@ void guitrack_editor::dragSelectionBegin(gui_clip* gClip, MouseEvent& evt) {
 		dragStartTrackIdx = trackClicked->idx;
 		if (isCtrl(evt.kbmods)) {
 			action.dragtype = DRAG_CLIPS_COPY;
-			MainCtrl::get()->cursorIcon = CURSOR_DUPLICATE;
+			parentCtrl->cursorIcon = CURSOR_DUPLICATE;
 		} else {
 			action.dragtype = DRAG_CLIPS_MOVE;
 		}

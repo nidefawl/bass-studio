@@ -309,7 +309,7 @@ public:
 	int32_t idx = -1; // global flat idx (skips invisible tracks)
 	int32_t childIdxTree = -1; // index in parent child list (position in parents child list)
 	int32_t localIdxFlat = -1; // index in type-container (midi/return/master group)
-	gui_track* content = nullptr;
+	gui_track* content = nullptr;//GET RID
 //	std::vector<gui_track_automationlane*> automationLanes;
 	std::vector<gui_track_subtrack*> subtracks;
 	track_t* parent = nullptr;

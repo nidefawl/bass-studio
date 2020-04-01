@@ -555,7 +555,7 @@ void vsthost::setBlockSize(uint16_t _blockSize) {
 }
 
 inline tick_t blockToPPQ24TickRounded(int32_t block, int32_t bpm100, samplerate_t samplerate, int32_t blocksize) {
-	double seconds = (block * blocksize) / (double)samplerate;
+	double seconds = ((int64_t)block * blocksize) / (double)samplerate;
 	return (tick_t) std::round((seconds*bpm100*24.0) / 6000.0);
 }
 inline tick_t tick4096ToPPQ24TickRounded(tick_t tick4096, int32_t bpm100, samplerate_t samplerate, int32_t blocksize) {

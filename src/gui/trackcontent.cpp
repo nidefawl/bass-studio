@@ -452,16 +452,16 @@ public:
 	}
 };
 void gui_track_automationlane::handleRightClick(MouseEvent& evt) {
-	MainCtrl::get()->openContextMenu(new guictxtmenu_trackcontent(this->m_track->idx), evt.mousepos);
+	parentCtrl->openContextMenu(new guictxtmenu_trackcontent(this->m_track->idx), evt.mousepos);
 }
 void gui_track_subtrack::handleRightClick(MouseEvent& evt) {
-	MainCtrl::get()->openContextMenu(new guictxtmenu_trackcontent(this->m_track->idx), evt.mousepos);
+	parentCtrl->openContextMenu(new guictxtmenu_trackcontent(this->m_track->idx), evt.mousepos);
 }
 void gui_track::handleRightClick(MouseEvent& evt) {
-	MainCtrl::get()->openContextMenu(new guictxtmenu_trackcontent(this->m_track->idx), evt.mousepos);
+	parentCtrl->openContextMenu(new guictxtmenu_trackcontent(this->m_track->idx), evt.mousepos);
 }
 void guitrack_editor::handleRightClick(MouseEvent& evt) {
-	MainCtrl::get()->openContextMenu(new guictxtmenu_trackcontent(-1), evt.mousepos);
+	parentCtrl->openContextMenu(new guictxtmenu_trackcontent(-1), evt.mousepos);
 }
 
 

@@ -118,7 +118,7 @@ void BaseCtrl::mouseUp(ivec2 mousePos, int button) {
 		guiCaptured = nullptr;
 	}
 	if (guiDragged) {
-		cursorIcon = CURSOR_DEFAULT;
+//		cursorIcon = CURSOR_DEFAULT;
 //		if (guiDragged!=guiFocused&&guiFocused) {
 //			MouseEvent evt = mouseEvent(this, guiFocused, mousePos, button, M_EVT_BTN_UP);
 //			guiFocused->handleDraggedRelease(evt);

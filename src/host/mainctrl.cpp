@@ -250,11 +250,11 @@ public:
 	guictr_tracks ctr_tracks2;
 	guictr_plugins ctr_plugins;
 	Splitter splitterCenter;
-	DawViewContainersCompanion(ngui::MenuBar& menubar, DAW::Cursor& _cursor, project_t& project, scaled_grid& grid, clip_view& clipView, dragdrop_midifile& dragdropclip)
+	DawViewContainersCompanion(DawCtrl* const _dawCtrl, ngui::MenuBar& menubar, DAW::Cursor& _cursor, project_t& project, scaled_grid& grid, clip_view& clipView, dragdrop_midifile& dragdropclip)
 	  :
 	  ctr_menu(menubar),
 //	  ctr_nodes(_cursor, project, dragdropclip),
-	  ctr_tracks2(_cursor, project, grid, dragdropclip),
+	  ctr_tracks2(_dawCtrl, _cursor, project, grid, dragdropclip),
 	  splitterCenter(0, 0.8f)
 	{
 		splitterCenter.setMinMax(0.2f, 0.86f);
@@ -319,14 +319,14 @@ public:
 //	Splitter splitterList;
 	Splitter splitterCenter;
 	Splitter splitterRight;
-	DawViewContainersMain(ngui::MenuBar& menubar, DAW::Cursor& _cursor, project_t& project, scaled_grid& grid, clip_view& clipView, dragdrop_midifile& dragdropclip)
+	DawViewContainersMain(MainCtrl* const _mainCtrl, ngui::MenuBar& menubar, DAW::Cursor& _cursor, project_t& project, scaled_grid& grid, clip_view& clipView, dragdrop_midifile& dragdropclip)
 	  : noteeditor(clipView),
 	  ctr_menu(menubar),
 	  ctr_tempo(project),
 	  ctr_pluginview(&ctr_plugins),
 	  ctr_clipeditorview(noteeditor),
 	  ctr_clipeditor(noteeditor, clipView),
-	  ctr_tracks(_cursor, project, grid, dragdropclip),
+	  ctr_tracks(_mainCtrl, _cursor, project, grid, dragdropclip),
 	  ctr_nodes(_cursor, project, dragdropclip),
 	  subctr_tabbed(),
 	  subctr_tabbed2(ctr_effectlib),
@@ -435,7 +435,7 @@ public:
 	}
 };
 void CompanionCtrl::setupView() {
-	view = new DawViewContainersCompanion(menubar, daw.cursor, daw, grid, clipView, daw.dragdropclip);
+	view = new DawViewContainersCompanion(this, menubar, daw.cursor, daw, grid, clipView, daw.dragdropclip);
 	view->addTo(this->containers);
 	viewContainers = view;
 	for (guictr_base *ctr : containers) {
@@ -445,7 +445,7 @@ void CompanionCtrl::setupView() {
 
 }
 void MainCtrl::setupView() {
-	view = new DawViewContainersMain(menubar, daw.cursor, daw, grid, clipView, daw.dragdropclip);
+	view = new DawViewContainersMain(this, menubar, daw.cursor, daw, grid, clipView, daw.dragdropclip);
 	view->addTo(this->containers);
 	viewContainers = view;
 	for (guictr_base *ctr : containers) {
@@ -708,9 +708,7 @@ void DawInstance::menuCommand(int cmd) {
 		if (hist.canUndo()) {
 			ThreadLock lock = playThread.lockThread();
 			hist.undoStep(this);
-			for (auto* ctrl : dawCtrls) {
-				ctrl->updateVisibleTrackContents();
-			}
+			updateVisibleTrackContents();
 
 		}
 		break;
@@ -718,19 +716,15 @@ void DawInstance::menuCommand(int cmd) {
 		if (hist.canRedo()) {
 			ThreadLock lock = playThread.lockThread();
 			hist.redoStep(this);
-			for (auto* ctrl : dawCtrls) {
-				ctrl->updateVisibleTrackContents();
-			}
+			updateVisibleTrackContents();
 		}
 		break;
 	case CMD_FILE_NEW:
 	{
 		//TODO: stop playback here
 		setEmptyProject();
-		MainCtrl::getGuiTrackCtr()->layout();
-		for (auto* ctrl : dawCtrls) {
-			ctrl->updateVisibleTrackContents();
-		}
+		layoutTrackEditors();
+		updateVisibleTrackContents();
 	}
 		break;
 	case CMD_FILE_OPEN:
@@ -900,11 +894,6 @@ void DawCtrl::destroy()
 {
 	if (!isOK) {
 		return;
-	}
-	if (isCompanion()) {
-		settings.wndCompanion.dens = grid.grid_dens;
-	} else {
-		settings.wndMain.dens = grid.grid_dens;
 	}
 
 	isOK = false;
@@ -1115,9 +1104,33 @@ void MainCtrl::onTick() {
 	}
 }
 
+void DawInstance::updateGrid() {
+	if (companionCtrl && companionCtrl->view) {
+		companionCtrl->updateGrid();
+	}
+	mainCtrl->updateGrid();
+}
 
+void DawInstance::updateVisibleTrackContents() {
+	if (companionCtrl && companionCtrl->view) {
+		companionCtrl->updateVisibleTrackContents();
+	}
+	mainCtrl->updateVisibleTrackContents();
+}
+void DawInstance::layoutTrackEditors() {
+	if (companionCtrl && companionCtrl->view) {
+		companionCtrl->view->ctr_tracks2.layout();
+	}
+	mainCtrl->view->ctr_tracks.layout();
+}
 guictr_tracks* DawInstance::getTrackContainer(int idx) {
-	return idx == 0 ? &mainCtrl->view->ctr_tracks : nullptr;
+	switch (idx) {
+	case 0:
+		return &mainCtrl->view->ctr_tracks;
+	case 1:
+		return &companionCtrl->view->ctr_tracks2;
+	}
+	return nullptr;
 }
 void DawInstance::setControls(MainCtrl* mainCtrl, CompanionCtrl* companionCtrl) {
 	this->mainCtrl = mainCtrl;
@@ -1566,7 +1579,7 @@ bool DawCtrl::filesDropBegin(std::vector<String>& files, ivec2 mousepos, int kbm
 			}
 //
 ////					MainCtrl::get()->getTrackId(0)->add(clip);
-////					MainCtrl::get()->updateVisibleTrackContents();
+////					DawInstance::get()->updateVisibleTrackContents();
 ////					MainCtrl::get()->requestRedraw();
 //				return true;
 		}
@@ -1953,6 +1966,10 @@ void CompanionCtrl::destroy() {
 }
 
 void CompanionCtrl::updateVisibleTrackContents() {
+	view->ctr_tracks2.updateVisibleTrackContents();
+}
+void CompanionCtrl::updateGrid() {
+	grid.update(view->ctr_tracks2.trackView.getSizeContent());
 	view->ctr_tracks2.updateVisibleTrackContents();
 }
 void MainCtrl::setStatusText(String s) {

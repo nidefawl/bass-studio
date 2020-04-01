@@ -356,6 +356,9 @@ public:
 	void onTick();
 	void setControls(MainCtrl*, CompanionCtrl*);
 	guictr_tracks* getTrackContainer(int idx);
+	void updateGrid();
+	void updateVisibleTrackContents();
+	void layoutTrackEditors();
 };
 class DawCtrl : public AppCtrl {
 	Menus menus;
@@ -509,4 +512,5 @@ public:
 		return true;
 	}
 	void updateVisibleTrackContents() override;
+	void updateGrid() override;
 };

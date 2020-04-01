@@ -34,7 +34,7 @@ public:
 	}
 	void handleDraggedBegin(MouseEvent& evt) {
 		if (evt.guiDragged == this) {
-			MainCtrl::get()->captureMouse(this);
+			parentCtrl->captureMouse(this);
 		}
 	}
 	void handleDraggedMove(MouseEvent& evt) {
@@ -45,7 +45,7 @@ public:
 			evt.dragDistance->y = 0;
 			int tempo = project_controller_t::get()->getCurrentTempo();
 			DawInstance::get()->setTempo(tempo - disty*100);
-			MainCtrl::get()->updateVisibleTrackContents();
+			DawInstance::get()->updateVisibleTrackContents();
 		}
 	}
 	void handleDraggedRelease(MouseEvent& evt) {
@@ -74,7 +74,7 @@ public:
 	}
 	void handleDraggedBegin(MouseEvent& evt) {
 		if (evt.guiDragged == this) {
-			MainCtrl::get()->captureMouse(this);
+			parentCtrl->captureMouse(this);
 		}
 	}
 	void handleDraggedMove(MouseEvent& evt) {

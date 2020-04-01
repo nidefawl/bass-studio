@@ -324,7 +324,7 @@ void guictr_tracks::layout() {
 	for (guibase* gui : guis) {
 		gui->layout();
 	}
-	MainCtrl::get()->updateGrid();
+	dawCtrl->updateGrid();
 }
 void horizontalLineAt(guictr_base* gui, NVGcontext* vg, ivec2 posHL) {
 	nvgLineCap(vg, NVGlineCap::NVG_ROUND);
@@ -364,7 +364,7 @@ void guictr_tracks::render(NVGcontext* vg) {
 	nvgRestore(vg);
 
 	nvgSave(vg);
-	dragdrop_target_indicator_t& target = MainCtrl::get()->getDragDropTarget();
+	dragdrop_target_indicator_t& target = dawCtrl->getDragDropTarget();
 	nvgTranslate(vg, 0, trackView.top());
 	int ySplit = getPosYFirstReturnTrack(tracksVisibleFlat);
 	if (ySplit > 0) {
@@ -395,7 +395,7 @@ void guictr_tracks::render(NVGcontext* vg) {
 	if (target.src == this && target.dst) {
 		nvgSave(vg);
 		nvgTranslate(vg, 0, trackView.top());
-		auto& dragDropTarget = MainCtrl::get()->getDragDropTarget();
+		auto& dragDropTarget = dawCtrl->getDragDropTarget();
 		if (dragDropTarget.src) {
 			guitrack_mixers* trackMixers = static_cast<guitrack_mixers*>(dragDropTarget.src);
 //			dragDropTarget.src->renderWidgetBorderPosSize(vg, flags, pos, size)
@@ -472,7 +472,7 @@ void guictr_tracks::render(NVGcontext* vg) {
 //		nvgIntersectScissor(vg, 0, 0, trackView.size.x, trackView.size.y);
 //		nvgTranslate(vg, 0, trackTimeline.bottom());
 
-//		double playBackX = grid.tickToScreenD(MainCtrl::get()->playbackPos);
+//		double playBackX = grid.tickToScreenD(dawCtrl->playbackPos);
 //		if (playBackX > -4 && playBackX < cs.x+4) {
 //			nvgBeginPath(vg);
 //			nvgMoveTo(vg, playBackX, 0);
@@ -725,9 +725,8 @@ namespace {
 		log_printf("Moving %d tracks to %s[%d] %s\n", selectedTracks.size(), StringAsCStr(strTarget), treePos.treeIdx, failed ? "Failed" : "Success");
 
 		vsthost::getInstance()->onTrackLayoutChange();
-		MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
-		MainCtrl::getGuiTrackCtr()->layout();
-		MainCtrl::get()->updateVisibleTrackContents();
+		DawInstance::get()->layoutTrackEditors();
+		DawInstance::get()->updateVisibleTrackContents();
 //			//TODO: edithistory entry
 	}
 }
@@ -873,6 +872,7 @@ void guictr_tracks::removeTrack(track_t* track, int flags) {
 void guictr_tracks::addTrack(track_t* track, int flags) {
 	dbgassert(track->audio);
 	track_gui_entry_t *entry = new track_gui_entry_t { 0 };
+	entry->parentCtrl = this->dawCtrl;
 	entry->track = track;
 	entry->idx = track->idx; //TODO: keep this field in sync
 	entry->parent = this;
@@ -890,7 +890,7 @@ void guictr_tracks::addTrack(track_t* track, int flags) {
 	}
 }
 void guitrack_mixers::handleRightClick(MouseEvent& evt) {
-	MainCtrl::get()->openContextMenu(new guictxtmenu_notrack(), evt.mousepos);
+	parentCtrl->openContextMenu(new guictxtmenu_notrack(), evt.mousepos);
 }
 
 track_gui_entry_t* getParentOf(track_gui_entry_t* t) {

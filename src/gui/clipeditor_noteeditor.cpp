@@ -109,7 +109,7 @@ void guictr_cliphandles::handleDraggedMove(MouseEvent& evt) {
 		}
 	}
 	clip->setDirty();
-	MainCtrl::get()->updateVisibleTrackContents();
+	DawInstance::get()->updateVisibleTrackContents();
 }
 
 void guictr_cliphandles::handleDraggedRelease(MouseEvent& evt) {

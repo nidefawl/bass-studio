@@ -44,7 +44,7 @@ void gui_pianoroll::handleDraggedBegin(MouseEvent& evt) {
 				return;
 			}
 			dragMode = dragmode::drag_move_resize;
-			MainCtrl::get()->captureMouse(this);
+			parentCtrl->captureMouse(this);
 			startDrag = evt.relMousepos;
 			dragDirection = -1;
 			dragPosObjSpace = toNoteF(evt.relMousepos.y);

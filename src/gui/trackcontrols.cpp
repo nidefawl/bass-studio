@@ -151,7 +151,7 @@ public:
 	}
 	void handleRightClick(MouseEvent& evt) override {
 		dbgassert(paramAutomatable && paramIdx > -1 && paramAutomatable->getParam(paramIdx));
-		MainCtrl::get()->openContextMenu(new guictxtmenu_at_param(paramAutomatable, paramIdx), evt.mousepos);
+		parentCtrl->openContextMenu(new guictxtmenu_at_param(paramAutomatable, paramIdx), evt.mousepos);
 	}
 	bool isAutomated() {
 		dbgassert(paramAutomatable && paramIdx > -1 && paramAutomatable->getParam(paramIdx));
@@ -195,7 +195,7 @@ public:
 	}
 	void handleDraggedBegin(MouseEvent& evt) {
 		if (evt.guiDragged == this) {
-			MainCtrl::get()->captureMouse(this);
+			parentCtrl->captureMouse(this);
 		}
 	}
 	void handleDraggedMove(MouseEvent& evt) {
@@ -243,7 +243,7 @@ public:
 		return trackenabled();
 	}
 	void handleRightClick(MouseEvent& evt) override {
-		MainCtrl::get()->openContextMenu(new guictxtmenu_at_param(&m_track->audio->mixer, PARAM_ENABLE), evt.mousepos);
+		parentCtrl->openContextMenu(new guictxtmenu_at_param(&m_track->audio->mixer, PARAM_ENABLE), evt.mousepos);
 	}
 };
 
@@ -925,7 +925,7 @@ public:
 				m_trackentry->state.selectedAutomationParam = numParams?0:-1;
 			}
 		}
-		MainCtrl::get()->updateVisibleTrackContents();
+		DawInstance::get()->updateVisibleTrackContents();
 		closeContextMenu();
 	}
 };
@@ -956,7 +956,7 @@ public:
 				m_trackentry->state.selectedAutomationParam = paramIdx;
 			}
 		}
-		MainCtrl::get()->updateVisibleTrackContents();
+		DawInstance::get()->updateVisibleTrackContents();
 		closeContextMenu();
 	}
 };
@@ -973,7 +973,7 @@ public:
 	virtual void handleDraggedRelease(MouseEvent& evt) {
 		guictxtmenu_base *popup =new guidropdown_popup_sel_automation_device(m_trackentry);
 		popup->size.x = 250;
-		MainCtrl::get()->openContextMenu(popup, toScreenSpace(ivec2(0, size.y))-popup->pos+ivec2(1));
+		m_trackentry->parentCtrl->openContextMenu(popup, toScreenSpace(ivec2(0, size.y))-popup->pos+ivec2(1));
 	}
 };
 class guidropdown_automation_param : public guidropdownbase {
@@ -990,7 +990,7 @@ public:
 	virtual void handleDraggedRelease(MouseEvent& evt) {
 		guictxtmenu_base *popup =new guidropdown_popup_sel_automation_param(m_trackentry);
 		popup->size.x = 250;
-		MainCtrl::get()->openContextMenu(popup, toScreenSpace(ivec2(0, size.y))-popup->pos+ivec2(1));
+		m_trackentry->parentCtrl->openContextMenu(popup, toScreenSpace(ivec2(0, size.y))-popup->pos+ivec2(1));
 	}
 };
 class gui_trackcontrols_title : public guictr_base {
@@ -1112,7 +1112,7 @@ public:
 	void buttonClicked(guibase* button) override {
 		if (button == &hideTrack) {
 			m_trackentry->layout.hideTrack = !m_trackentry->layout.hideTrack;
-			MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
+			DawInstance::get()->updateVisibleTrackContents();
 		}
 		if (button == &hideAutomation) {
 			m_trackentry->layout.hideSubtracks = !m_trackentry->layout.hideSubtracks;
@@ -1120,7 +1120,7 @@ public:
 		if (button == &addAutomationLane) {
 			m_trackentry->layout.hideTrack = false;
 			m_trackentry->layout.hideSubtracks = false;
-			MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
+			DawInstance::get()->updateVisibleTrackContents();
 		}
 		updateStoreLoadSubtracks(m_trackentry->parent, *m_trackentry);
 		if (button == &addAutomationLane) {
@@ -1236,8 +1236,8 @@ public:
 				fixCursorSubRange(cursor, m_track->subtracks.size()-1);
 			}
 //			MainCtrl::getGuiTrackCtr()->removeSubtrack(this->al);
-			MainCtrl::getGuiTrackCtr()->layout();
-			MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
+			DawInstance::get()->layoutTrackEditors();
+			DawInstance::get()->updateVisibleTrackContents();
 		}
 	}
 	void render(NVGcontext* vg) {
@@ -1292,7 +1292,7 @@ public:
 	}
 	void handleRightClick(MouseEvent& evt) override {
 		if (subtrack->at) {
-			MainCtrl::get()->openContextMenu(new guictxtmenu_at_param(subtrack->at, subtrack->param), evt.mousepos);
+			parentCtrl->openContextMenu(new guictxtmenu_at_param(subtrack->at, subtrack->param), evt.mousepos);
 		}
 
 	}
@@ -1509,7 +1509,7 @@ void gui_track_controls::handleDraggedMove(MouseEvent& evt) {
 			updateStoreLoadSubtracks(m_trackentry->parent, *m_trackentry);
 		}
 		this->parent->onChildLayoutChanged(this);
-		MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
+		DawInstance::get()->updateVisibleTrackContents();
 	}
 }
 String makeUniqueTrackName(const String& strNewName) {
@@ -1592,7 +1592,7 @@ public:
 				newTrack->name = makeUniqueTrackName(strNewName);
 
 				m_trackentry->parent->layout();
-				MainCtrl::get()->updateVisibleTrackContents();
+				DawInstance::get()->updateVisibleTrackContents();
 				track_gui_entry_t entry;
 				if (m_trackentry->parent->getTrackEntry(tr, entry)) {
 					m_trackentry->parent->scrollTo(entry.content);
@@ -1623,7 +1623,7 @@ public:
 			newTrack->name = makeUniqueTrackName(tr->name);
 
 			m_trackentry->parent->layout();
-			MainCtrl::get()->updateVisibleTrackContents();
+			DawInstance::get()->updateVisibleTrackContents();
 			track_gui_entry_t entry;
 			if (m_trackentry->parent->getTrackEntry(newTrack, entry)) {
 				m_trackentry->parent->scrollTo(entry.content);
@@ -1635,7 +1635,7 @@ public:
 	}
 };
 void gui_track_controls::handleRightClick(MouseEvent& evt) {
-	MainCtrl::get()->openContextMenu(new guictxtmenu_track(this->m_trackentry), evt.mousepos);
+	m_trackentry->parentCtrl->openContextMenu(new guictxtmenu_track(this->m_trackentry), evt.mousepos);
 }
 gui_track_controls* createTrackGuiMixer(track_gui_entry_t& _entry) {
 	gui_track_controls* const guicontrols = new gui_track_controls(_entry);

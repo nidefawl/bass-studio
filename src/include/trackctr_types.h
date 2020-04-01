@@ -15,6 +15,7 @@ class gui_track;
 class guictr_tracks;
 class gui_track_subtrack;
 class gui_track_controls;
+class DawCtrl;
 struct tracklayout_state_t {
 	automatable_t* selectedAutomationCtr = nullptr;
 	int32_t selectedAutomationParam = -1;
@@ -22,14 +23,15 @@ struct tracklayout_state_t {
 	bool wasInHide = false;
 };
 struct track_gui_entry_t {
+	DawCtrl* parentCtrl;
 	int32_t idx = -1;
 	track_t* track;
 	gui_track* content;
 	guictr_tracks* parent;
-	std::vector<gui_track_subtrack*> subtracks;
 	gui_track_controls* mixer = nullptr;
 	tracklayout_settings_t layout;
 	tracklayout_state_t state;
+	std::vector<gui_track_subtrack*> subtracks;
 	std::map<clip_t*,gui_clip*> clipsGuis;
 };
 track_gui_entry_t* getParentOf(track_gui_entry_t* t);

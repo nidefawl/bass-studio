@@ -122,7 +122,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 			int32_t idx2 = addPointAt(data.points, cursor.getTickEnd(), steps);
 			addPointAt(data.points, cursor.getTickEnd(), steps);
 //			updateVisibleTrackContents(view->grid);
-			MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
+			DawInstance::get()->updateVisibleTrackContents();
 			dragged = hitTest(local);
 			dragged.mode = dragmode::drag_selection;
 			dragged.dataPt = idx;
@@ -266,7 +266,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 				automation->active = true;
 		}
 //		updateVisibleTrackContents(grid);
-		MainCtrl::getGuiTrackCtr()->updateVisibleTrackContents();
+		DawInstance::get()->updateVisibleTrackContents();
 	}
 	bool gui_track_automation::trackViewDoubleClick(guitrack_editor* view, MouseEvent& evt) {
 		dragged = hit_result(dragmode::drag_none, -1, -1, 0.0f);

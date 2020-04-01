@@ -933,7 +933,7 @@ void gui_clipcontent::handleDraggedBegin(MouseEvent& evt) {
 					dragMode = drag_note_right;
 				} else {
 					if (isCtrl(evt.kbmods)) {
-						MainCtrl::get()->cursorIcon = CURSOR_DUPLICATE;
+						parentCtrl->cursorIcon = CURSOR_DUPLICATE;
 						dragMode = drag_notes_copy;
 					} else {
 						dragMode = drag_notes_move;
@@ -1292,10 +1292,10 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
 			if ((dragMode == drag_notes_copy) != isCtrl(kevt.mods)) {
 				if (dragMode == drag_notes_move) {
 					dragMode = drag_notes_copy;
-					MainCtrl::get()->cursorIcon = CURSOR_DUPLICATE;
+					parentCtrl->cursorIcon = CURSOR_DUPLICATE;
 				} else {
 					dragMode = drag_notes_move;
-					MainCtrl::get()->cursorIcon = CURSOR_DEFAULT;
+					parentCtrl->cursorIcon = CURSOR_DEFAULT;
 				}
 				mergeDraggedNotes(dragMode);
 			}

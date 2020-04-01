@@ -183,7 +183,7 @@ void guiplugin::rightClicked(MouseEvent& evt, guibase* button) {
 	}
 	if (clickedParamIdx != -1) {
 		auto* ctxt = new guictxtmenu_at_param(effect, clickedParamIdx);
-		MainCtrl::get()->openContextMenu(ctxt, evt.mousepos);
+		parentCtrl->openContextMenu(ctxt, evt.mousepos);
 	}
 
 }
@@ -411,7 +411,7 @@ void guiplugin::handleRightClick(MouseEvent& evt) {
 		b = evt.relMousepos.x < hpt;
 	}
 	if (b) {
-		MainCtrl::get()->openContextMenu(new guictxtmenu_plugin(effect), evt.mousepos);
+		parentCtrl->openContextMenu(new guictxtmenu_plugin(effect), evt.mousepos);
 	}
 
 }
@@ -495,7 +495,7 @@ public:
 		knobTest.setParent(this);
 	}
 	void handleRightClick(MouseEvent& evt) override {
-		MainCtrl::get()->openContextMenu(new guictxtmenu_at_param(effect, entry->idx), evt.mousepos);
+		parentCtrl->openContextMenu(new guictxtmenu_at_param(effect, entry->idx), evt.mousepos);
 	}
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
 		if (this->contains(mpos)) {
