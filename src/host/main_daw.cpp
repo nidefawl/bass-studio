@@ -14,7 +14,8 @@ std::shared_ptr<AppCtrl> makeApp() {
 		DawInstance& dawRef = *dawInstance.get();
 		mainctrl = std::make_shared<MainCtrl>(dawRef);
 		companion = std::make_shared<CompanionCtrl>(dawRef);
-		dawRef.setControls(mainctrl.get(), companion.get());
+		//dawRef.setControls(mainctrl.get(), companion.get());
+		dawRef.setControls(mainctrl.get(), nullptr);
 		companions.push_back(companion);
 	}
 	return mainctrl;

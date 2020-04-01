@@ -608,7 +608,7 @@ public:
 #define WINDOW_IS_MAINWINDOW_MASTER 2
 #define WINDOW_IS_MAINWINDOW_SLAVE 4
 	void createMainWindow(const char* title, int w, int h, void* parentWindowHandle, int flags = 0);
-
+	void initControl();
 	void updateMenu() {
 	#if WINDOW_HAS_MENUBAR
 		ngui::MenuBar& menubar = ctrl->getMenubar();
@@ -1116,6 +1116,7 @@ window_main* appwindow_main::createOverlay(int flags) {
 	String sName = StringFormat("%s menu", this->name);
 	std::shared_ptr<appwindow_main> ow = std::make_shared<appwindow_main>(this, std::make_shared<PopupCtrl>()); //TODO: manage lifetime of control
 	ow->createMainWindow(StringAsCStr(sName), 200, 200, nullptr, flags);
+	ow->initControl();
 //	ow->createOverlayWindow(StringAsCStr(sName), 200, 200, nullptr);
 	auto* ret = ow.get();
 	this->overlayWindows.push_back(std::move(ow));
@@ -1161,6 +1162,36 @@ void appwindow_main::destroy() {
 	appwindow::killTimer();
 	glfw = nullptr;
 }
+void appwindow_main::initControl() {
+	if (!ctrl->init(this, this->nanovgCtxt)) {
+		throw appexception("Couldn't start application");
+	}
+#if BUILD_VSTHOST
+#ifdef _WIN32
+	this->dropTarget = RegisterDropWindow(hwnd, this);
+	if (!parent) {
+		if (windowCreationFlags & WINDOW_IS_MAINWINDOW_SLAVE) {
+			if (!restoreWindowPos(hwnd, settings.wndCompanion.size.get())) {
+				this->maximize();
+			}
+		}
+		else {
+
+			if (!restoreWindowPos(hwnd, settings.wndMain.size.get())) {
+				this->maximize();
+			}
+		}
+	}
+#endif
+#if __linux__
+	//TODO: implement linux window pos
+#endif
+#endif
+	int w, h;
+	glfwGetWindowSize(glfw, &w, &h);
+	this->onWindowSizeChanged(w, h);
+}
+
 void appwindow_main::createMainWindow(const char* title, int w, int h, void* handle, int flags) {
 	nameDbg=title;
 	windowCreationFlags = flags;
@@ -1210,32 +1241,7 @@ void appwindow_main::createMainWindow(const char* title, int w, int h, void* han
 		RenderResources::initResources(nanovgCtxt);
 		MouseCursors::initCursors(); //TODO: call MouseCursors::destroy() on exit of last instance
 
-		if (!ctrl->init(this, this->nanovgCtxt)) {
-			throw appexception("Couldn't start application");
-		}
 //	}
-#if BUILD_VSTHOST
-#ifdef _WIN32
-	this->dropTarget = RegisterDropWindow(hwnd, this);
-	if (!parent) {
-		if (flags & WINDOW_IS_MAINWINDOW_SLAVE) {
-			if (!restoreWindowPos(hwnd, settings.wndCompanion.size.get())) {
-				this->maximize();
-			}
-		} else {
-
-			if (!restoreWindowPos(hwnd, settings.wndMain.size.get())) {
-				this->maximize();
-			}
-		}
-	}
-#endif
-#if __linux__
-		//TODO: implement linux window pos
-#endif
-#endif
-	glfwGetWindowSize(glfw, &w, &h);
-	this->onWindowSizeChanged(w, h);
 }
 #if defined(__linux__) or defined(__APPLE__)
 void AppWndProc_enableBlockReentrant() {
@@ -1454,7 +1460,7 @@ void deleteApp(); // Forward declare from host/mainctrl.cpp
 void openGlobalLog(const String& logFileName); // Forward declare from util/debug.cpp
 void closeGlobalLog(); // Forward declare from util/debug.cpp
 
-#define OPEN_SECOND_WINDOW BUILD_VSTHOST
+#define OPEN_SECOND_WINDOW BUILD_VSTHOST&&0
 int startApplication(int argc, char* argv[]) {
 	setCurrentThreadName("mainthread");
 #if !defined(NDEBUG) && defined(_WIN32)
@@ -1536,6 +1542,10 @@ int startApplication(int argc, char* argv[]) {
 		mainWindow2 = std::make_unique<appwindow_main>(nullptr, companions[0]);
 		mainWindow2->createMainWindow("main window clone", 1280, 720, mainWindow.get(), WINDOW_IS_MAINWINDOW_SLAVE);
      }
+#endif
+	mainWindow->initControl();
+#if OPEN_SECOND_WINDOW
+	mainWindow2->initControl();
 #endif
 	mainWindow->showWindow();
 	if (centerScreenIdx >= 0) {

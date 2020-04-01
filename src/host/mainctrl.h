@@ -467,6 +467,7 @@ public:
 
 	void initApp(int argc, char* argv[]) override;
 	bool init(window_main* window, NVGcontext* nanovg) override;
+
 	void postInit() override;
 	void onTick() override;
 	view_mode_t getViewMode();
@@ -492,8 +493,8 @@ public:
 
 class CompanionCtrl : public DawCtrl
 {
-	DawViewContainersCompanion* view = NULL;
 public:
+	DawViewContainersCompanion* view = NULL;
 	CompanionCtrl(DawInstance& _daw) : DawCtrl(_daw) {
 		//my_printf("CompanionCtrl constructor\n",0);
 	}
@@ -507,4 +508,5 @@ public:
 	bool isCompanion() const override {
 		return true;
 	}
+	void updateVisibleTrackContents() override;
 };

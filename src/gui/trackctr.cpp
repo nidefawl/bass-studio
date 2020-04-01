@@ -815,6 +815,7 @@ void guitrack_editor::removeTrackEntry(track_gui_entry_t& entry) {
 	if (entry.content) {
 		entry.content->destroyGuis();
 		remove(entry.content);
+		dbgassert(entry.clipsGuis.size() == 0);
 //		DELETE_PTR(entry.content) //TODO: fix mem leak on removeTrackEntry calls site
 	} else {
 		dbgassert(0);

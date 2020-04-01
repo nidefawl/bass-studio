@@ -246,18 +246,21 @@ public:
 class DawViewContainersCompanion : public DawViewContainers {
 public:
 	guictr_menubar ctr_menu;
-	guictr_nodes ctr_nodes;
+//	guictr_nodes ctr_nodes;
+	guictr_tracks ctr_tracks2;
 	guictr_plugins ctr_plugins;
 	Splitter splitterCenter;
 	DawViewContainersCompanion(ngui::MenuBar& menubar, DAW::Cursor& _cursor, project_t& project, scaled_grid& grid, clip_view& clipView, dragdrop_midifile& dragdropclip)
 	  :
 	  ctr_menu(menubar),
-	  ctr_nodes(_cursor, project, dragdropclip),
+//	  ctr_nodes(_cursor, project, dragdropclip),
+	  ctr_tracks2(_cursor, project, grid, dragdropclip),
 	  splitterCenter(0, 0.8f)
 	{
 		splitterCenter.setMinMax(0.2f, 0.86f);
 	}
 	void layout(int32_t winW, int32_t winH) {
+		auto& centerCtr = ctr_tracks2;
 		int winX = 0; int winY = 0;
 		int winBottom = winH;
 #if USE_GUI_MENU
@@ -276,16 +279,17 @@ public:
 		int hPlugins = splitterCenter.rightOrBottom(hCenter);
 		splitterCenter.pos = ivec2(winX, winY+hTrackCtr-5);
 		splitterCenter.size = ivec2(winW, 10);
-		ctr_nodes.size = { winW, hTrackCtr };
+		centerCtr.size = { winW, hTrackCtr };
 		ctr_plugins.size = { winW, hPlugins };
 
-		ctr_nodes.pos = { winX, winY };
-		ctr_plugins.pos = { winX, ctr_nodes.bottom() };
+		centerCtr.pos = { winX, winY };
+		ctr_plugins.pos = { winX, centerCtr.bottom() };
 //		ctr_test.setSnapSides(ivec4(0, 0, 0, 1));
 //		statusbar.setSnapSides(ivec4(0, 1, 0, 0));
 	}
 	void addTo(std::vector<guictr_base*>& v) {
-		 v.push_back(&ctr_nodes);
+		auto& centerCtr = ctr_tracks2;
+		 v.push_back(&centerCtr);
 //		 v.push_back(&ctr_tabbed2);
 		 v.push_back(&ctr_plugins);
 //		 v.push_back(&ctr_tabbed);
@@ -519,8 +523,8 @@ void MainCtrl::resetMouseContext() {
 }
 void CompanionCtrl::resetMouseContext() {
 	DawCtrl::resetMouseContext();
-	if (view)
-		view->ctr_nodes.reset();
+//	if (view)
+//		view->ctr_nodes.reset();
 }
 
 void DawInstance::unloadProject() {
@@ -571,6 +575,13 @@ void DawInstance::unloadProject() {
 	auto* ctrl = mainCtrl;
 	if (ctrl) {
 		auto& trackView = ctrl->view->ctr_tracks.trackView;
+		trackView.resizePreModifyState.reset();
+		trackView.clipboard.reset();
+		trackView.action.clipboard.reset();
+		trackView.tracksVisibleFlat.clear();
+	}
+	if (companionCtrl && companionCtrl->view) {
+		auto& trackView = companionCtrl->view->ctr_tracks2.trackView;
 		trackView.resizePreModifyState.reset();
 		trackView.clipboard.reset();
 		trackView.action.clipboard.reset();
@@ -801,11 +812,16 @@ void DawCtrl::menuCommand(int cmd) {
 	daw.menuCommand(cmd);
 }
 void DawCtrl::postInit() {
+	BaseCtrl::relayout();
+	updateVisibleTrackContents();
 }
 void MainCtrl::postInit() {
-	DawCtrl::postInit();
+	daw.startDaw();
+	waveformrender::getInstance()->init();
 	view->ctr_effectlib.update();
+	daw.setEmptyProject();
 	daw.postInit();
+	DawCtrl::postInit();
 }
 void DawInstance::postInit() {
 	dbgassert(initState == 2);
@@ -951,12 +967,7 @@ void MainCtrl::initApp(int argc, char* argv[]) {
 }
 bool MainCtrl::init(window_main* window, NVGcontext* nanovg)
 {
-	daw.startDaw();
-	bool b = DawCtrl::init(window, nanovg);
-
-	waveformrender::getInstance()->init();
-	daw.setEmptyProject();
-	return b;
+	return DawCtrl::init(window, nanovg);
 }
 bool DawCtrl::init(window_main* window, NVGcontext* nanovg)
 {
@@ -1112,7 +1123,10 @@ void DawInstance::setControls(MainCtrl* mainCtrl, CompanionCtrl* companionCtrl) 
 	this->mainCtrl = mainCtrl;
 	this->companionCtrl = companionCtrl;
 	this->dawCtrls.push_back(mainCtrl);
-	this->dawCtrls.push_back(companionCtrl);
+	if (companionCtrl) {
+		this->dawCtrls.push_back(companionCtrl);
+	}
+	
 }
 void DawInstance::onTick()
 {
@@ -1209,6 +1223,11 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
 	/** create all gui instances **/
 	for (track_t* tr : trackList) {
 		mainCtrl->view->ctr_tracks.addTrack(tr, FLG_TRK_CHANGE_LOAD);
+	}
+	if (companionCtrl) {
+		for (track_t* tr : trackList) {
+			companionCtrl->view->ctr_tracks2.addTrack(tr, FLG_TRK_CHANGE_LOAD);
+		}
 	}
 	/** pre-load all plugin instances **/
 	trackList.loadPlugins(file->project);
@@ -1324,6 +1343,21 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
 		ctrl->updateVisibleTrackContents();
 		ctrl->view->ctr_tracks.layout();
 		ctrl->view->ctr_tracks.setScrollOffset(file->layout.scrollOffsetX);
+	}
+	auto ctrl2 = companionCtrl;
+	if (ctrl2 && ctrl2->view)
+	{
+		ctrl2->view->ctr_tracks2.loadTrackLayouts(file->project.trackCtr);
+		ctrl2->view->ctr_tracks2.loadTrackLayouts(file->project.trackReturnCtr);
+		ctrl2->view->ctr_tracks2.loadTrackLayouts(file->project.trackMasterCtr);
+		//	view->ctr_tracks.layout();
+		ctrl2->grid.setLayout(file->layout.layoutGrid);
+		ctrl2->view->ctr_tracks2.layout();
+//		ctrl->view->ctr_plugins.layout();
+
+		ctrl2->updateVisibleTrackContents();
+		ctrl2->view->ctr_tracks2.layout();
+		ctrl2->view->ctr_tracks2.setScrollOffset(file->layout.scrollOffsetX);
 	}
 
 
@@ -1839,6 +1873,9 @@ void DawInstance::addTrackImpl(int32_t trackInsertPos, track_t* newTrack, int fl
 		host->createAudio(newTrack);
 	}
 	mainCtrl->view->ctr_tracks.addTrack(newTrack, flags);
+	if (companionCtrl) {
+		companionCtrl->view->ctr_tracks2.addTrack(newTrack, flags);
+	}
 	if (flags&FLG_TRK_CHANGE_USER) {
 		pushHist(new action_modify_track_add(StringFormat("Add %s Track", TrackTypeToName(newTrack->type)), newTrack));
 	}
@@ -1858,6 +1895,9 @@ void DawInstance::removeTrackImpl(track_t* track, int flags) {
 	}
 	trackList.removeTrack(track);
 	mainCtrl->view->ctr_tracks.removeTrack(track, flags);
+	if (companionCtrl) {
+		companionCtrl->view->ctr_tracks2.removeTrack(track, flags);
+	}
 	DAW::removeTrackRoutings(this->getTracksFlatVec(), track->audio->stageId);
 	if (flags&FLG_TRK_CHANGE_USER) {
 		pushHist(new action_modify_track_remove(StringFormat("Remove %s Track", TrackTypeToName(track->type)), track));
@@ -1910,6 +1950,10 @@ void MainCtrl::destroy() {
 void CompanionCtrl::destroy() {
 	settings.wndCompanion.dens = grid.grid_dens;
 	DawCtrl::destroy();
+}
+
+void CompanionCtrl::updateVisibleTrackContents() {
+	view->ctr_tracks2.updateVisibleTrackContents();
 }
 void MainCtrl::setStatusText(String s) {
 	view->statusbar.setTitle(s);
