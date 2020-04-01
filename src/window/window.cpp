@@ -1460,7 +1460,7 @@ void deleteApp(); // Forward declare from host/mainctrl.cpp
 void openGlobalLog(const String& logFileName); // Forward declare from util/debug.cpp
 void closeGlobalLog(); // Forward declare from util/debug.cpp
 
-#define OPEN_SECOND_WINDOW BUILD_VSTHOST&&0
+#define OPEN_SECOND_WINDOW BUILD_VSTHOST&&1
 int startApplication(int argc, char* argv[]) {
 	setCurrentThreadName("mainthread");
 #if !defined(NDEBUG) && defined(_WIN32)
@@ -1560,6 +1560,11 @@ int startApplication(int argc, char* argv[]) {
 	enableGlDebugCallback();
 	glfwSetErrorCallback(glfw_runtime_error_callback);
 	ctrl->postInit();
+#if OPEN_SECOND_WINDOW
+	if (companions.size()) {
+		companions[0]->postInit();
+	}
+#endif
 
 #if HAS_JS_CONSOLE
 	JSContext jsContext;
