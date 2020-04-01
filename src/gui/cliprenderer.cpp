@@ -70,14 +70,14 @@ public:
 	}
 };
 
-bool getClipPosition(scaled_grid& grid, const ivec2& trackSize, const clip_t* cl, ivec2& pos, ivec2& size, tick_t offset) {
+bool getClipPosition(scaled_grid& grid, const ivec2& scissorSize, const clip_t* cl, ivec2& pos, ivec2& size, tick_t offset) {
 	tick_t tickBegin = cl->time + offset;
 	tick_t tickEnd = cl->time + offset + cl->getLen();
 	grid.debug = true;
 	double tickBeginX = grid.tickToScreenD(tickBegin);
 	grid.debug = false;
 	double tickEndX = grid.tickToScreenD(tickEnd);
-	if (tickEndX < -4 || tickBeginX > trackSize.x + 4) {
+	if (tickEndX < -4 || tickBeginX > scissorSize.x + 4) {
 		return false;
 	}
 	double width = tickEndX - tickBeginX;
@@ -227,7 +227,7 @@ void renderAudioClip(NVGcontext* vg, const guitheme_t* theme, const track_t* tr,
 			}
 			posLoopIndicator += cl->loopLen;
 		}
-		nvgStrokeColor(vg, tr->content->theme->getFrameColorBase());
+		nvgStrokeColor(vg, theme->getFrameColorBase());
 		nvgStrokeWidth(vg, 1.f);
 		nvgStroke(vg);
 	}
@@ -431,7 +431,7 @@ void gui_midi_clip::updateClipRenderCache(NVGcontext* vg) {
 				posLoopIndicator += cl->loopLen;
 			}
 			if (n) {
-				nvgStrokeColor(vg, tr->content->theme->getFrameColorBase());
+				nvgStrokeColor(vg, theme->getFrameColorBase());
 				nvgStrokeWidth(vg, 1.f);
 				nvgStroke(vg);
 //				nvgGetLastCacheResult(vg, &impl->cache4);
@@ -526,7 +526,7 @@ void gui_midi_clip::render(NVGcontext* vg) {
 
 	}
 }
-void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_t* tr, const clip_t* cl, ivec2 pos, ivec2 size) {
+void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_gui_entry_t* const entry, const clip_t* cl, ivec2 pos, ivec2 size) {
 	if (cl->getLen() <= 0) {
 		return;
 	}
@@ -708,7 +708,7 @@ void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_t* tr, 
 				posLoopIndicator += cl->loopLen;
 			}
 			if (n) {
-				nvgStrokeColor(vg, tr->content->theme->getFrameColorBase());
+				nvgStrokeColor(vg, theme->getFrameColorBase());
 				nvgStrokeWidth(vg, 1.f);
 				nvgStroke(vg);
 				if (useCaching) {

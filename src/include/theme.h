@@ -44,13 +44,13 @@ struct guitheme_t {
 	const NVGcolor getFrameColorOutline() {
 		return this->colorBgFrameOutline;
 	}
-	const NVGcolor getFrameColorBase() {
+	const NVGcolor getFrameColorBase() const {
 		return this->colorBgFrameBase;
 	}
-	const NVGcolor getFrameColorHighlight() {
+	const NVGcolor getFrameColorHighlight() const {
 		return this->colorBgFrameHighlight;
 	}
-	const NVGcolor getFrameColorBright() {
+	const NVGcolor getFrameColorBright() const {
 		return this->colorBgFrameBright;
 	}
 	NVGcolor& getColorRef(GuiColor::constant_t _constant);

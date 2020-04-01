@@ -756,15 +756,16 @@ void guitrack_editor::prerender(NVGcontext* vg) {
 	}
 }
 
-void guitrack_editor::renderClip(NVGcontext* vg, track_t* tr, clip_t* cl, tick_t offset) {
+void guitrack_editor::renderClip(NVGcontext* vg, const track_gui_entry_t* const entry, clip_t* cl, tick_t offset) {
 	ivec2 clipPos = ivec2();
-	ivec2 clipSize = tr->content->size; //TODO: get rid of *tr here, figure out size before and add default fallback
+	ivec2 scissorSize = entry->content->size;
+	ivec2 clipSize = entry->content->size;
 
-	if (getClipPosition(grid, tr->content->size, cl, clipPos, clipSize, offset)) {
-		clipPos.y += tr->content->pos.y;
-		if (cl->clipType == CLIP_MIDI && tr->type == TRACK_TYPE_MIDI) {
-			renderMidiClip(vg, theme, tr, cl, clipPos, clipSize);
-		} else if (cl->clipType == CLIP_AUDIO && tr->type == TRACK_TYPE_AUDIO) {
+	if (getClipPosition(grid, scissorSize, cl, clipPos, clipSize, offset)) {
+		clipPos.y += entry->content->pos.y;
+		if (cl->clipType == CLIP_MIDI && entry->track->type == TRACK_TYPE_MIDI) {
+			renderMidiClip(vg, theme, entry, cl, clipPos, clipSize);
+		} else if (cl->clipType == CLIP_AUDIO && entry->track->type == TRACK_TYPE_AUDIO) {
 			static int logOnce = 0;
 			if (!logOnce) {
 				logOnce = 1;
@@ -792,9 +793,12 @@ void guitrack_editor::renderAction(NVGcontext* vg, clip_dragaction& action) {
 		}
 		trackIdx = project.trackList.clampTrackIdx(trackIdx);
 		track_t* tr = project.trackList[trackIdx];
+		track_gui_entry_t entry;
+		dbgassert(iGuiMgr.getTrackEntry(tr, entry));
+		dbgassert(entry.content != NULL);
 		for (auto it = trClipboard->clips.begin(); it != trClipboard->clips.end(); it++) {
 			clip_t* cl = (*it).get();
-			renderClip(vg, tr, cl, (cursor.cursorPos - _clipboard->srcPos));
+			renderClip(vg, &entry, cl, (cursor.cursorPos - _clipboard->srcPos));
 		}
 	}
 }
@@ -883,17 +887,19 @@ void guitrack_editor::render(NVGcontext* vg) {
 		nvgSave(vg);
 		nvgIntersectScissor(vg, 0, 0, cs.x, ySplit);
 		for (track_t* t : project.trackMidiAudioCtr.tracksFlat) {
-			dbgassert(t->content != NULL);
-			auto totalHeight = t->content->size.y;
-			if (t->subtracks.size()) {
-				totalHeight = t->subtracks.back()->bottom() - t->content->top();
+			track_gui_entry_t entry;
+			dbgassert(iGuiMgr.getTrackEntry(t, entry));
+			dbgassert(entry.content != NULL);
+			auto totalHeight = entry.content->size.y;
+			if (entry.subtracks.size()) {
+				totalHeight = entry.subtracks.back()->bottom() - entry.content->top();
 			}
-			auto contentPos = t->content->pos.y;
-			if (t->content->isVisible() && contentPos < ySplit && contentPos+totalHeight > 0) {
+			auto contentPos = entry.content->pos.y;
+			if (entry.content->isVisible() && contentPos < ySplit && contentPos+totalHeight > 0) {
 				nvgSave(vg);
-				t->content->render(vg);
+				entry.content->render(vg);
 				nvgRestore(vg);
-				for (gui_track_subtrack* g2 : t->subtracks) {
+				for (gui_track_subtrack* g2 : entry.subtracks) {
 					nvgSave(vg);
 					g2->render(vg);
 					nvgRestore(vg);
