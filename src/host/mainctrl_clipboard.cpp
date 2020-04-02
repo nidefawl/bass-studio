@@ -331,7 +331,7 @@ void DawInstance::cutSelection(const DAW::Cursor& _cursor) {
 	int32_t tickEnd = _cursor.getTickEnd();
 	int32_t trackBegin = _cursor.getTrackBegin();
 	int32_t trackEnd = _cursor.getTrackEnd();
-	if (!cursor.isSubtrackSelection()) {
+	if (!_cursor.isSubtrackSelection()) {
 		for (int i = trackBegin; i <= trackEnd; i++) {
 			if (trackList.validTrackIdx(i)) {
 				track_t* tr = trackList[i];
