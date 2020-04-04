@@ -235,9 +235,6 @@ struct track_impl_t : public audio_stage_t {
 	void addAudio(const AudioBlock& src, float fGain);
 	int32_t mapInput(int32_t nInputChannels, int32_t nChannel);
 	VstEvent_t* reallocEvts(size_t size);
-	//	int loadSubtrackLayout(const std::vector<automationlane_snapshot_t>& atl);
-	//	void saveSubtrackLayout(std::vector<automationlane_snapshot_t>& atl);
-//	void updateStoreLoadSubtracks();
 	void removePlugin(effectbase* _vst, bool notifyUp) override;
 	std::vector<note_t>& getArpHeldNotes();
 	std::vector<note_t>& getArpInputNotes();
