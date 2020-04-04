@@ -303,15 +303,13 @@ public:
 //	void loadPluginAutomationParameters(const track_impl_snapshot_t& snap);
 	void loadSnapshot(const track_snapshot_t& snap);
 	void loadSubtrackLayout(const track_snapshot_t& snap);
-	bool validSubtrack(int32_t idx) const {
-		return idx >= 0 && idx < (int32_t)subtracks.size();
-	}
+
 	int32_t idx = -1; // global flat idx (skips invisible tracks)
 	int32_t childIdxTree = -1; // index in parent child list (position in parents child list)
 	int32_t localIdxFlat = -1; // index in type-container (midi/return/master group)
-	gui_track* content = nullptr;//GET RID
+//	gui_track* content = nullptr;//GET RID
 //	std::vector<gui_track_automationlane*> automationLanes;
-	std::vector<gui_track_subtrack*> subtracks;
+//	std::vector<gui_track_subtrack*> subtracks;
 	track_t* parent = nullptr;
 	std::vector<track_t*> children;
 	track_impl_t* audio = nullptr;
@@ -556,7 +554,7 @@ public:
 	void copyFrom(project_snapshot_t& in);
 	void copyTracks(int32_t trackBegin, int32_t trackLen, trackstate_t& _out);
 	void loadPlugins(project_snapshot_t& project);
-	void loadSubtrackLayouts(project_snapshot_t& project);
+//	void loadSubtrackLayouts(project_snapshot_t& project);
 	void checkConsistency();
 
 
@@ -622,7 +620,7 @@ struct project_layout_t {
 	layout_grid_t layoutGrid;
 	float scrollOffsetX;
 };
-class project_t : public project_globals_t {
+class project_t {
 public:
 	trackallcontainer_t trackList;
 	trackcontainer_tracktype_t& trackMidiAudioCtr;
@@ -646,9 +644,9 @@ public:
 	}
 	void copyTo(project_snapshot_t& project);
 	void copyFrom(project_snapshot_t& project);
-	void operator=(project_globals_t const & globals) {
-		*static_cast<project_globals_t*>(this) = globals;
-	}
+//	void operator=(project_globals_t const & globals) {
+//		*static_cast<project_globals_t*>(this) = globals;
+//	}
 	const track_vector& getTracksFlatVec() {
 		return trackList.trackAllCtr.getTracksFlatVec();
 	}

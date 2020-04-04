@@ -33,7 +33,11 @@ struct track_gui_entry_t {
 	tracklayout_state_t state;
 	std::vector<gui_track_subtrack*> subtracks;
 	std::map<clip_t*,gui_clip*> clipsGuis;
+	bool validSubtrack(int32_t idx) const {
+		return idx >= 0 && idx < (int32_t)subtracks.size();
+	}
 };
 track_gui_entry_t* getParentOf(track_gui_entry_t* t);
 using track_gui_vector_td = std::vector<track_gui_entry_t*>;
+using const_track_gui_vector_td = std::vector<const track_gui_entry_t*>;
 

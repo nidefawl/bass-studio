@@ -477,7 +477,7 @@ void resetHistAndCheck() {
 	trackEditor.clipboard.reset();
 	daw->getHist().clear(daw);
 
-	auto& tracks = daw->trackList;
+	auto& tracks = daw->getTracks();
 	int n = 0;
 	for (auto track : tracks) {
 		int nTrackClips = track->getMidi().getConstClips().size();

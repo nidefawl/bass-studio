@@ -527,7 +527,7 @@ public:
 		addEntry(new ctxtmenu_entry_bus_external(idx++, inputName, stageEndpoint));
 //				auto& cfg = settings.iosettings.getChannelConfig(settings.iosettings.device_api);
 //				auto& list = isInput ? cfg.input : cfg.output;
-		project_controller_t* project = project_controller_t::get();
+		project_t* project = project_controller_t::get()->getProject();
 		dbgassert(project);
 		if (project) {
 			auto& tracks = project->trackList;
@@ -652,25 +652,28 @@ public:
 	guidropdown_select_bus(track_gui_entry_t& _entry, const bool _isInput) : guidropdownbase(), track(_entry.track), isInput(_isInput) {
 	}
 	String getString() {
-		vsthost* const host = vsthost::getInstance();
-		project_controller_t* const project = project_controller_t::get();
-
 		track_impl_t* trImpl = track->audio;
 		dbgassert(trImpl);
-		if (!trImpl)
-			return "<Invalid Track>";
-		auto& channel = isInput ? trImpl->inputChannel : trImpl->outputChannel;
-		if (channel.type == DAW::channel_input_type::INPUT_DEFAULT) {
-			DAW::channel_ref_t out;
-			if (DAW::resolveDefaultConnection(host, project, trImpl, isInput, out)) {
-				return out.name;
+		if (trImpl) {
+			auto& channel = isInput ? trImpl->inputChannel : trImpl->outputChannel;
+			project_t* project = project_controller_t::get()->getProject();
+			dbgassert(project);
+			if (project) {
+				vsthost* const host = vsthost::getInstance();
+				if (channel.type == DAW::channel_input_type::INPUT_DEFAULT) {
+					DAW::channel_ref_t out;
+					if (DAW::resolveDefaultConnection(host, project, trImpl, isInput, out)) {
+						return out.name;
+					}
+		//			if (stageEndpoint.isInput) {
+		//				return "Default";
+		//			}
+					return "Default";
+				}
 			}
-//			if (stageEndpoint.isInput) {
-//				return "Default";
-//			}
-			return "Default";
+			return channel.name;
 		}
-		return channel.name;
+		return "<Invalid Track>";
 	}
 	virtual void handleDraggedRelease(MouseEvent& evt) {
 		track_impl_t* trImpl = track->audio;
@@ -854,7 +857,8 @@ public:
 			const int32_t HEIGHT_SEND_GAIN = h;
 			const int32_t SEND_PER_ROW = 1;
 			ivec2 sendPos = {inset, btnShowSubtrack.bottom()+i2 };
-			auto project = project_controller_t::get();
+			project_t* project = project_controller_t::get()->getProject();
+			dbgassert(project);
 			int32_t numReturnChannels = project->trackReturnCtr.size();
 			int pos = 0;
 			for (auto sendGainCtrl : sendGains) {
@@ -1230,10 +1234,10 @@ public:
 	}
 	void buttonClicked(guibase* button) override {
 		if (button == &removeLane) {
-			DAW::Cursor& cursor = DawInstance::get()->cursor;
+			DAW::Cursor& cursor = m_trackentry->parentCtrl->getCursor();
 			int32_t laneIdx = this->subtrack->idx;
-			if (cursor.inSubTrack(m_track->idx, laneIdx)) {
-				fixCursorSubRange(cursor, m_track->subtracks.size()-1);
+			if (cursor.inSubTrack(m_trackentry->idx, laneIdx)) {
+				fixCursorSubRange(cursor, m_trackentry->subtracks.size()-1);
 			}
 //			MainCtrl::getGuiTrackCtr()->removeSubtrack(this->al);
 			DawInstance::get()->layoutTrackEditors();

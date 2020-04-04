@@ -323,7 +323,6 @@ void updateSrBs() {
 	if (b) {
 
 		mctrl->stopPlaying();
-		mctrl->cursor.cursorPos = mctrl->getPlaybackPos();
 	}
 	{
 

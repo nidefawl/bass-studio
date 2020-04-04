@@ -32,14 +32,22 @@ public:
 	track_gui_manager_i() = default;
 	virtual ~track_gui_manager_i() { };
 	virtual bool getTrackEntry(const track_t* t, track_gui_entry_t& out) = 0;
+	virtual bool getPointerEntry(track_t* t, track_gui_entry_t** out) = 0;
 
 	virtual bool isVisible(const track_gui_entry_t& entry) = 0;
+	virtual bool validTrackIdx(int32_t idx) const = 0;
+	virtual const track_gui_entry_t* at(const size_t i) const = 0;
+	virtual track_gui_entry_t* atNC(const size_t i) = 0;
+	virtual int32_t clampTrackIdx(int32_t idx) const  = 0;
+	virtual const track_gui_vector_td& getTracksVisibleFlat() = 0;
+	virtual void reset() = 0;
+	virtual int32_t getTrackProjectIndex(int32_t guiIdx) const  = 0;
 };
 
 int32_t getPosYFirstReturnTrack(const track_gui_vector_td& tracksVisibleFlat);
-track_gui_entry_t *getTrackFromMouse(const guitrack_editor& trackeditor, project_t& project, ivec2 mouse, bool isDragSnap);
+track_gui_entry_t *getTrackFromMouse(track_gui_manager_i& iGuiMgr, ivec2 mouse, bool isDragSnap);
 
-gui_track_subtrack* getSubTrackFromMouse(const guitrack_editor& project, ivec2 mouse, bool isDragSnap);
+gui_track_subtrack* getSubTrackFromMouse(track_gui_manager_i& iGuiMgr, ivec2 mouse, bool isDragSnap);
 gui_track* createTrackGui(track_gui_entry_t& _entry, scaled_grid&); // trackcontent.cpp
 gui_track_controls* createTrackGuiMixer(track_gui_entry_t& _entry); // trackcontrols.cpp
 void drawSeperator(NVGcontext* vg, const guitheme_t* theme, int32_t seperatorY, ivec2& cs);
@@ -47,12 +55,13 @@ void drawSeperator(NVGcontext* vg, const guitheme_t* theme, int32_t seperatorY, 
 
 
 class guitrack_editor : public guictr_base {
+	DawCtrl* const dawCtrl;
 
 public:
 	track_gui_manager_i& iGuiMgr;
 	DAW::Cursor& cursor;
 	project_t& project;
-	track_gui_vector_td& tracksVisibleFlat;
+	project_globals_t& projectGlobals;
 	scaled_grid& grid;
 	dragdrop_midifile& dragdrop;
 	track_gui_entry_t *trSelected = NULL;
@@ -65,12 +74,13 @@ public:
 
 	trackstate_t resizePreModifyState;
 	bool selectionMoved = false;
-	guitrack_editor(track_gui_manager_i& _iGuiMgr, DAW::Cursor& _cursor, project_t& _project, track_gui_vector_td& _tracksVisibleFlat, scaled_grid& _grid, dragdrop_midifile& _dragdropclip)
+	guitrack_editor(DawCtrl* const _dawCtrl, track_gui_manager_i& _iGuiMgr, DAW::Cursor& _cursor, project_t& _project, project_globals_t& _projectGlobals, scaled_grid& _grid, dragdrop_midifile& _dragdropclip)
 		: guictr_base(), 
+	    dawCtrl(_dawCtrl),
 		iGuiMgr(_iGuiMgr),
 		cursor(_cursor),
 		project(_project),
-		tracksVisibleFlat(_tracksVisibleFlat),
+		projectGlobals(_projectGlobals),
 		grid(_grid),
 		dragdrop(_dragdropclip)
 	{
@@ -147,13 +157,11 @@ public:
 class guitrack_mixers : public guictr_base {
 	track_gui_manager_i& iGuiMgr;
 	project_t& project;
-	track_gui_vector_td& tracksVisibleFlat;
 public:
-	guitrack_mixers(track_gui_manager_i& _iGuiMgr, project_t& _project, track_gui_vector_td& _tracksVisibleFlat)
+	guitrack_mixers(track_gui_manager_i& _iGuiMgr, project_t& _project)
 		: guictr_base(),
 		  iGuiMgr(_iGuiMgr),
-		  project(_project),
-		  tracksVisibleFlat(_tracksVisibleFlat)
+		  project(_project)
 	{
 		padding = 0;
 		sortChildren = true;
@@ -212,6 +220,7 @@ protected:
 };
 class guictr_tracks_loophandles : public guibase, te_constants {
 	project_t& project;
+	project_globals_t& projectGlobals;
 	scaled_grid& grid;
 	enum dragmode {
 		drag_handle_none,
@@ -222,8 +231,8 @@ class guictr_tracks_loophandles : public guibase, te_constants {
 	dragmode dragHandle = drag_handle_none;
 public:
 	ivec2 clipViewSize{ 0, 0 };
-	guictr_tracks_loophandles(project_t& _project, scaled_grid& _grid) :
-			guibase(), project(_project), grid(_grid) {
+	guictr_tracks_loophandles(project_t& _project, project_globals_t& _projectGlobals, scaled_grid& _grid) :
+			guibase(), project(_project), projectGlobals(_projectGlobals), grid(_grid) {
 
 	}
 	int32_t dragOffset = 0;
@@ -231,7 +240,7 @@ public:
 		dragHandle = drag_handle_none;
 		ivec2 local = evt.relMousepos;
 		dragHandle = getDragZone(local);
-		dragOffset = local.x-(int32_t)grid.tickToScreenD(project.loopStart);
+		dragOffset = local.x-(int32_t)grid.tickToScreenD(projectGlobals.loopStart);
 	}
 	void handleDraggedMove(MouseEvent& evt) {
 		if (dragHandle == drag_handle_none) {
@@ -242,28 +251,28 @@ public:
 			mousePosX -= dragOffset;
 		}
 		tick_t tickAt = grid.screenToTickSnap(mousePosX, isAlt(evt.kbmods) ? SNAP_OFF : SNAP_ON);
-		tick_t curLoopEnd = project.loopStart + project.loopLen;
+		tick_t curLoopEnd = projectGlobals.loopStart + projectGlobals.loopLen;
 
 		if (dragHandle == drag_handle_loopright) {
 			tick_t tickDelta = (tickAt - curLoopEnd);
-			tick_t newLen = project.loopLen + tickDelta;
+			tick_t newLen = projectGlobals.loopLen + tickDelta;
 			if (newLen > 0) {
-				project.loopLen = newLen;
+				projectGlobals.loopLen = newLen;
 			}
 		}
 		if (dragHandle == drag_handle_loopleft) {
-			tick_t curLoopStart = project.loopStart;
+			tick_t curLoopStart = projectGlobals.loopStart;
 			tick_t tickDelta = (tickAt - curLoopStart);
-			tick_t newStart = project.loopStart + tickDelta;
+			tick_t newStart = projectGlobals.loopStart + tickDelta;
 			if (newStart < curLoopEnd) {
-				project.loopStart = newStart;
-				project.loopLen = curLoopEnd - newStart;
+				projectGlobals.loopStart = newStart;
+				projectGlobals.loopLen = curLoopEnd - newStart;
 			}
 		}
 		if (dragHandle == drag_handle_loopbar) {
-			tick_t curLoopStart = project.loopStart;
+			tick_t curLoopStart = projectGlobals.loopStart;
 			tick_t tickDelta = (tickAt - curLoopStart);
-			project.loopStart += tickDelta;
+			projectGlobals.loopStart += tickDelta;
 		}
 //		DawInstance::get()->updateVisibleTrackContents();
 	}
@@ -327,10 +336,10 @@ public:
 		return false;
 	}
 	float clipLoopStartScrX() {
-		return (float)grid.tickToScreenD(project.loopStart);
+		return (float)grid.tickToScreenD(projectGlobals.loopStart);
 	}
 	float clipLoopEndScrX() {
-		return (float)grid.tickToScreenD(project.loopStart + project.loopLen);
+		return (float)grid.tickToScreenD(projectGlobals.loopStart + projectGlobals.loopLen);
 	}
 	void render(NVGcontext* vg) {
 		ivec2 cs = clipViewSize;
@@ -435,14 +444,21 @@ public:
 	}
 };
 class track_gui_manager_t : public track_gui_manager_i {
+	friend class guictr_tracks;
 	track_gui_vector_td entries;
+	track_gui_vector_td trackEntriesTop;
+	track_gui_vector_td trackEntriesBottom;
+	track_gui_vector_td tracksVisibleFlat;
 public:
 	bool getTrackEntry(const track_t* t, track_gui_entry_t& out) override;
-	bool getPointerEntry(track_t* t, track_gui_entry_t** out);
+	bool getPointerEntry(track_t* t, track_gui_entry_t** out) override;
 
 	void removeTrack(track_gui_entry_t& entry) {
-		auto it = std::remove_if(begin(entries), end(entries), [&entry](track_gui_entry_t* e) {
+		auto it = std::remove_if(begin(entries), end(entries), [this, &entry](track_gui_entry_t* e) {
 			if (e->track == entry.track) {
+				removeEntry(trackEntriesTop, e);
+				removeEntry(trackEntriesBottom, e);
+				removeEntry(tracksVisibleFlat, e);
 				delete e;
 				return true;
 			}
@@ -458,7 +474,7 @@ public:
 		entries.push_back(entry);
 
 	}
-	bool isVisible(const track_gui_entry_t& entry) {
+	bool isVisible(const track_gui_entry_t& entry) override {
 		bool bHidden = false;
 		track_t* p = entry.track->parent;
 		while (!bHidden && p) {
@@ -471,7 +487,72 @@ public:
 		}
 		return !bHidden;
 	}
+	bool validTrackIdx(int32_t idx) const override {
+		return idx >= 0 && idx < (int32_t) tracksVisibleFlat.size();
+	}
+	const track_gui_entry_t* at(const size_t i) const override {
+		if (!validTrackIdx(i)) {
+			return nullptr;
+		}
+		return tracksVisibleFlat.at(i);
+	}
+	track_gui_entry_t* atNC(const size_t i) override {
+		if (!validTrackIdx(i)) {
+			return nullptr;
+		}
+		return tracksVisibleFlat.at(i);
+	}
+	int32_t clampTrackIdx(int32_t idx) const override {
+		return math::max(0, math::min((int32_t) tracksVisibleFlat.size() - 1, idx));
+	}
+	void updateVisibleTracks(trackallcontainer_t& trackList) {
+		/** turn tree structure into linear pointer array with trackTop at the beginning and the deepest child at the end **/
+		track_gui_vector_td vecNewTracksFlat;
+		std::deque<track_t*> stack;
+		stack.insert(stack.begin(), trackList.cbeginTree(), trackList.cendTree());
+		trackEntriesTop.clear();
+		trackEntriesBottom.clear();
+		while (!stack.empty()) {
+			track_t* current = stack.front();
+			stack.pop_front();
+			track_gui_entry_t* entry;
 
+			if (assert_expr(getPointerEntry(current, &entry))) {
+				if (!entry->layout.hideTrack && current->children.size()) {
+					stack.insert(stack.begin(), current->children.cbegin(), current->children.cend());
+				}
+				dbgassert(isVisible(*entry));
+				dbgassert(entry->track == current);
+				if (TRACKTYPE_TO_CTR(entry->track->type)  == TRACK_CTR_MIDIAUDIO) {
+					trackEntriesTop.push_back(entry);
+				} else {
+					trackEntriesBottom.push_back(entry);
+				}
+				if (entry->idx != vecNewTracksFlat.size()) {
+					log_printf("entry idx changed from %d to %d (track_t idx: %d)\n", entry->idx, vecNewTracksFlat.size(), current->idx);
+				}
+				entry->idx = vecNewTracksFlat.size();
+				vecNewTracksFlat.push_back(entry);
+			}
+		}
+
+		tracksVisibleFlat = vecNewTracksFlat;
+	}
+	const track_gui_vector_td& getTracksVisibleFlat() override {
+		return tracksVisibleFlat;
+	}
+	void reset() override {
+		dbgassert(entries.empty());
+		tracksVisibleFlat.clear();
+		trackEntriesTop.clear();
+		trackEntriesBottom.clear();
+	}
+	int32_t getTrackProjectIndex(int32_t guiIdx) const override {
+		if (assert_expr(validTrackIdx(guiIdx))) {
+			return at(guiIdx)->track->idx;
+		}
+		return -1;
+	}
 };
 class guictr_tracks : public guictr_base, grid_changed_cb, te_constants, public gui_scrollcontainer {
 	friend class guitrack_editor;
@@ -480,6 +561,7 @@ class guictr_tracks : public guictr_base, grid_changed_cb, te_constants, public 
 public:
 	scaled_grid& grid;
 	project_t& project;
+	project_globals_t& projectGlobals;
 	track_gui_manager_t guiMgr;
 	guitrack_mixers trackControls;
 	guitrack_editor trackView;
@@ -490,20 +572,18 @@ protected:
 	int32_t contentHeight = 0;
 	int32_t contentViewSize = 0;
 public:
-	track_gui_vector_td trackEntriesTop;
-	track_gui_vector_td trackEntriesBottom;
-	track_gui_vector_td tracksVisibleFlat;
 public:
-	guictr_tracks(DawCtrl* _dawCtrl, DAW::Cursor& _cursor, project_t& _project, scaled_grid& _grid, dragdrop_midifile& _dragdropclip)
+	guictr_tracks(DawCtrl* _dawCtrl, DAW::Cursor& _cursor, project_t& _project, project_globals_t& _projectGlobals, scaled_grid& _grid, dragdrop_midifile& _dragdropclip)
 		: guictr_base(),
 		dawCtrl(_dawCtrl),
 		grid(_grid),
 		project(_project),
+		projectGlobals(_projectGlobals),
 		guiMgr(),
-		trackControls(guiMgr, _project, tracksVisibleFlat),
-		trackView(guiMgr, _cursor, _project, tracksVisibleFlat, _grid, _dragdropclip),
+		trackControls(guiMgr, _project),
+		trackView(_dawCtrl, guiMgr, _cursor, _project, _projectGlobals, _grid, _dragdropclip),
 		trackTimeline(_grid),
-		loophandles(_project, _grid),
+		loophandles(_project, _projectGlobals, _grid),
 		scrollbar(1, 0.0f, *this)
 	{
 		setBackgroundRendered(true);

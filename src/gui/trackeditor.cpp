@@ -18,6 +18,7 @@
 #include "grid.h"
 #include "guicontainer.h"
 #include "trackctr.h"
+#include "trackctr_types.h"
 #include "trackcontent.h"
 #include "tracktimeline.h"
 #include "theme.h"
@@ -50,7 +51,7 @@ public:
 		ctrl->resetEditClip();
 		bool initAfter = after.tracks.empty();
 		if (initAfter) {
-			after.cursor = ctrl->cursor;
+			after.cursor = MainCtrl::get()->getCursor();
 		}
 		trackallcontainer_t& trCtr = ctrl->getTracks();
 		for (track_snapshot_t* trackStored : before.tracks) {
@@ -73,7 +74,7 @@ public:
 				my_printf("idx is now invalid\n",0);
 			}
 		}
-		ctrl->cursor = before.cursor;
+		MainCtrl::get()->getCursor() = before.cursor;
 	}
 	void redo(DawInstance* ctrl) {
 		ctrl->resetMouseContext();
@@ -90,7 +91,7 @@ public:
 				my_printf("TRACK[%d] HAS %d clips\n", track->idx, track->getMidi().getConstClips().size());
 			}
 		}
-		ctrl->cursor = after.cursor;
+		MainCtrl::get()->getCursor() = after.cursor;
 	}
 };
 
@@ -163,11 +164,11 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 			if (isKC(KC_SELECTALL, kevt)) {
 				tick_t evtMin = INVALID_TICK;
 				tick_t evtMax = INVALID_TICK;
-				track_t* trMin = NULL;
-				track_t* trMax = NULL;
+				track_gui_entry_t* trMin = NULL;
+				track_gui_entry_t* trMax = NULL;
 				int idx = 0;
-				for (track_t* t: project.trackList) {
-					auto minMax = t->getMinMaxEvents();
+				for (track_gui_entry_t* t: iGuiMgr.getTracksVisibleFlat()) {
+					auto minMax = t->track->getMinMaxEvents();
 					if (minMax.min != INVALID_TICK) {
 						evtMin = evtMin == INVALID_TICK ? minMax.min : math::min(evtMin, minMax.min);
 						if (!trMin || trMin->idx > t->idx) {
@@ -198,44 +199,44 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 //				}.reserve(_tracks.size());
 				project.trackList.copyTracks(cursor.getTrackBegin(), cursor.getTrackEnd(), preModifyState);
 				preModifyState.cursor = cursor;
-				DawInstance::get()->cutSelection(cursor);
+				DAW::cutSelection(iGuiMgr, cursor);
 				handledKeyinput = true;
 				modified = true;
 				desc = "Delete clips";
 			}
 			else if (isKC(KC_CUT, kevt) && cursor.getRange()) {
-				clipboard = DawInstance::get()->copySelection(cursor);
+				clipboard = DAW::copySelection(iGuiMgr, cursor);
 				project.trackList.copyTracks(cursor.getTrackBegin(), cursor.getTrackEnd(), preModifyState);
 				preModifyState.cursor = cursor;
-				DawInstance::get()->cutSelection(cursor);
+				DAW::cutSelection(iGuiMgr, cursor);
 				handledKeyinput = true;
 				modified = true;
 				desc = "Cut clips";
 			}
 			else if (isKC(KC_MUTE, kevt) && cursor.getRange()) {
-				clipboard = DawInstance::get()->copySelection(cursor);
+				clipboard = DAW::copySelection(iGuiMgr, cursor);
 				project.trackList.copyTracks(cursor.getTrackBegin(), cursor.getTrackEnd(), preModifyState);
 				preModifyState.cursor = cursor;
-				DawInstance::get()->muteIntersecting(cursor);
+				DAW::muteIntersecting(iGuiMgr, cursor);
 				grid.makeTickVisible(cursor.cursorPos+cursor.selRange/2);
 				handledKeyinput = true;
 				modified = true;
 				desc = "Mute clips";
 			}
 			else if (isKC(KC_COPY, kevt) && cursor.getRange()) {
-				clipboard = DawInstance::get()->copySelection(cursor);
+				clipboard = DAW::copySelection(iGuiMgr, cursor);
 				handledKeyinput = true;
 			}
 			else if (isKC(KC_CONSOLIDATE, kevt) && cursor.getRange() && !cursor.isSubtrackSelection()) {
 				project.trackList.copyTracks(cursor.getTrackBegin(), cursor.getTrackEnd(), preModifyState);
 				preModifyState.cursor = cursor;
 				/* maybe do    this->clipboard = copy */
-				std::shared_ptr<clip_clipboard> clipboardCopy = DawInstance::get()->copySelection(cursor);
+				std::shared_ptr<clip_clipboard> clipboardCopy = DAW::copySelection(iGuiMgr, cursor);
 				std::shared_ptr<clip_clipboard> clipboardConsolidated = DAW::consolidateClipboard(clipboardCopy, cursor);
 				cursor.setLeftAligned();
 //				cursor.cursorPos += cursor.getRange();
-				DawInstance::get()->cutSelection(cursor);
-				DawInstance::get()->pasteClipboard(clipboardConsolidated.get(), cursor);
+				DAW::cutSelection(iGuiMgr, cursor);
+				DAW::pasteClipboard(iGuiMgr, clipboardConsolidated.get(), cursor);
 				grid.makeTickVisible(cursor.cursorPos+clipboardConsolidated->selRange);
 				handledKeyinput = true;
 				modified = true;
@@ -245,10 +246,10 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 				project.trackList.copyTracks(cursor.getTrackBegin(), cursor.getTrackEnd(), preModifyState);
 				preModifyState.cursor = cursor;
 				/* maybe do    this->clipboard = copy */
-				std::shared_ptr<clip_clipboard> newClipboard = DawInstance::get()->copySelection(cursor);
+				std::shared_ptr<clip_clipboard> newClipboard = DAW::copySelection(iGuiMgr, cursor);
 				cursor.setLeftAligned();
 				cursor.cursorPos += cursor.getRange();
-				DawInstance::get()->pasteClipboard(newClipboard.get(), cursor);
+				DAW::pasteClipboard(iGuiMgr, newClipboard.get(), cursor);
 				grid.makeTickVisible(cursor.cursorPos+newClipboard->selRange);
 				handledKeyinput = true;
 				modified = true;
@@ -259,8 +260,8 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 				preModifyState.cursor = cursor;
 				cursor.setLeftAligned();
 				if (clipboard->type == clip_clipboard::ClipboardFull)
-					DawInstance::get()->cutSelection(cursor);
-				DawInstance::get()->pasteClipboard(clipboard.get(), cursor);
+					DAW::cutSelection(iGuiMgr, cursor);
+				DAW::pasteClipboard(iGuiMgr, clipboard.get(), cursor);
 				cursor.selTrackRange = clipboard->selTrackRange;
 				cursor.selRange = clipboard->selRange;
 				grid.makeTickVisible(cursor.getTickEnd());
@@ -276,15 +277,15 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 			if (dir.y) {
 				if (isShift(kevt.mods)) {
 					if (cursor.isSubtrackSelection()) {
-						if (project.trackList.validTrackIdx(cursor.cursorTrack)) {
+						if (iGuiMgr.validTrackIdx(cursor.cursorTrack)) {
 							cursor.selSubTrackRange += -dir.y;
-							track_t* tr = project.trackList[cursor.cursorTrack];
+							const track_gui_entry_t* tr = iGuiMgr.at(cursor.cursorTrack);
 							fixCursorSubRange(cursor, tr->subtracks.size());
 
 						}
 					} else {
 						cursor.selTrackRange += -dir.y;
-						fixCursorTrackRange(cursor, project.trackList.size());
+						fixCursorTrackRange(cursor, iGuiMgr.getTracksVisibleFlat().size());
 					}
 				} else {
 
@@ -296,13 +297,13 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 					};
 					auto moveCursor = [this, &dir, &moveMainCursor](){
 						if (cursor.isSubtrackSelection()) {
-							if (!project.trackList.validTrackIdx(cursor.cursorTrack)) {
+							if (!iGuiMgr.validTrackIdx(cursor.cursorTrack)) {
 								cursor.setTrack(0);
 								cursor.cursorSubTrack = -1;
 								cursor.selSubTrackRange = 0;
 								return;
 							}
-							track_t* tr = project.trackList[cursor.cursorTrack];
+							const track_gui_entry_t* tr = iGuiMgr.at(cursor.cursorTrack);
 							cursor.cursorSubTrack -= dir.y;
 							fixCursorSubRange(cursor, tr->subtracks.size());
 							return;
@@ -350,8 +351,8 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 void guitrack_editor::trackViewDragBegin(guitrack_editor* view, MouseEvent& evt) {
 	ivec2 local = evt.relMousepos;
 	int32_t tick = grid.screenToTickSnap(local.x, isAlt(evt.kbmods) ? SNAP_OFF : SNAP_ON);
-	track_gui_entry_t* tr = getTrackFromMouse(*this, project, local, false);
-	gui_track_subtrack* subTr = getSubTrackFromMouse(*this, local, false);
+	track_gui_entry_t* tr = getTrackFromMouse(iGuiMgr, local, false);
+	gui_track_subtrack* subTr = getSubTrackFromMouse(iGuiMgr, local, false);
 	if (subTr) {
 		tr = subTr->m_trackentry;
 	}
@@ -361,11 +362,11 @@ void guitrack_editor::trackViewDragBegin(guitrack_editor* view, MouseEvent& evt)
 //		MainCtrl::get()->setSelectedTrack(trSelected);
 		MainCtrl::get()->setEditClip(NULL);
 		if (evt.guiDragged == this) { // cursor move / range select
-			DAW::Cursor& c = DawInstance::get()->cursor;
+			DAW::Cursor& c = dawCtrl->getCursor();
 			c.selRange = 0;
 			c.selTrackRange = 0;
 			c.cursorPos = tick;
-			c.setTrack(trSelected->track->idx);
+			c.setTrack(trSelected->idx);
 			c.cursorSubTrack = subTrSelected ? subTrSelected->idx : -1;
 			c.selSubTrackRange = 0;
 		}
@@ -374,23 +375,23 @@ void guitrack_editor::trackViewDragBegin(guitrack_editor* view, MouseEvent& evt)
 
 void guitrack_editor::trackViewDragMove(guitrack_editor* view, MouseEvent& evt) {
 	if (trSelected != NULL) {
-		DAW::Cursor& c = DawInstance::get()->cursor;
+		DAW::Cursor& c = dawCtrl->getCursor();
 		ivec2 local = evt.relMousepos;
 		track_gui_entry_t* trNxtSelected = NULL;
-		gui_track_subtrack* subTr = getSubTrackFromMouse(*this, local, true);
+		gui_track_subtrack* subTr = getSubTrackFromMouse(iGuiMgr, local, true);
 		if (subTrSelected) {
 			if (subTr && subTr->m_track != subTrSelected->m_track) {
 				subTr = NULL;
 			}
-			trNxtSelected = getTrackFromMouse(*this, project, local, false);
-			if (trNxtSelected && trNxtSelected->idx < subTrSelected->m_track->idx) {
-				subTr = subTrSelected->m_track->subtracks.front();
+			trNxtSelected = getTrackFromMouse(iGuiMgr, local, false);
+			if (trNxtSelected && trNxtSelected->idx < subTrSelected->m_trackentry->idx) {
+				subTr = subTrSelected->m_trackentry->subtracks.front();
 			}
-			if (trNxtSelected && trNxtSelected->idx > subTrSelected->m_track->idx) {
-				subTr = subTrSelected->m_track->subtracks.back();
+			if (trNxtSelected && trNxtSelected->idx > subTrSelected->m_trackentry->idx) {
+				subTr = subTrSelected->m_trackentry->subtracks.back();
 			}
 		} else {
-			trNxtSelected = getTrackFromMouse(*this, project, local, true);
+			trNxtSelected = getTrackFromMouse(iGuiMgr, local, true);
 
 //			MainCtrl::get()->setSelectedTrack(trNxtSelected);
 			if (!trNxtSelected)
@@ -408,8 +409,8 @@ void guitrack_editor::trackViewDragMove(guitrack_editor* view, MouseEvent& evt) 
 					c.selSubTrackRange = (subTr->idx - subTrSelected->idx);
 					dbgassert (c.getSubTrackEnd() > -1);
 					dbgassert (c.getSubTrackBegin() <= c.getSubTrackEnd());
-					dbgassert (c.getSubTrackBegin() < (int)subTr->m_track->subtracks.size());
-					dbgassert (c.getSubTrackEnd() < (int)subTr->m_track->subtracks.size());
+					dbgassert (c.getSubTrackBegin() < (int)subTr->m_trackentry->subtracks.size());
+					dbgassert (c.getSubTrackEnd() < (int)subTr->m_trackentry->subtracks.size());
 				}
 
 			} else {
@@ -424,7 +425,7 @@ void guitrack_editor::trackViewDragMove(guitrack_editor* view, MouseEvent& evt) 
 void guitrack_editor::trackViewDragRelease(guitrack_editor* view, MouseEvent& evt) {
 	track_gui_entry_t* trNxtSelected = NULL;
 	ivec2 local = evt.relMousepos;
-	trNxtSelected = getTrackFromMouse(*this, project, local, true);
+	trNxtSelected = getTrackFromMouse(iGuiMgr, local, true);
 	DawInstance::get()->setSelectedTrackEntry(trNxtSelected);
 	trSelected = NULL;
 	subTrSelected = NULL;
@@ -433,12 +434,12 @@ void guitrack_editor::dragSelectionBegin(gui_clip* gClip, MouseEvent& evt) {
 	selectionMoved = false;
 	ivec2 local = evt.relMousepos;
 	tick_t tickExact = grid.screenToTickSnap(local.x, SNAP_OFF);
-	DAW::Cursor& cursor = DawInstance::get()->cursor;
+	DAW::Cursor& cursor = dawCtrl->getCursor();
 	track_t* track = gClip->m_track;
 	clip_t* clicked = gClip->m_clip;
 //		ghostCopy = new gui_clip(clip->m_clip->clone());
 //		ghostCopy->m_clip->gClip = ghostCopy;
-	track_gui_entry_t *trackClicked = getTrackFromMouse(*this, project, local, false);
+	track_gui_entry_t *trackClicked = getTrackFromMouse(iGuiMgr, local, false);
 	if (trackClicked) {
 		DawInstance::get()->setSelectedTrackEntry(trackClicked);
 	}
@@ -455,7 +456,9 @@ void guitrack_editor::dragSelectionBegin(gui_clip* gClip, MouseEvent& evt) {
 		dragStartLayout = track->getMidi(); //copy
 		action.cursorBegin = cursor;
 		resizePreModifyState.reset();
-		project.trackList.copyTracks(cursor.getTrackBegin(), cursor.getTrackEnd(), resizePreModifyState);
+		int32_t idxBegin = iGuiMgr.getTrackProjectIndex(cursor.getTrackBegin());
+		int32_t idxEnd = iGuiMgr.getTrackProjectIndex(cursor.getTrackEnd());
+		project.trackList.copyTracks(idxBegin, idxEnd, resizePreModifyState);
 		resizePreModifyState.cursor = cursor;
 		return;
 	}
@@ -473,7 +476,7 @@ void guitrack_editor::dragSelectionBegin(gui_clip* gClip, MouseEvent& evt) {
 			action.dragtype = DRAG_CLIPS_MOVE;
 		}
 		action.cursorBegin = cursor;
-		action.clipboard = DawInstance::get()->copySelection(action.cursorBegin);
+		action.clipboard = DAW::copySelection(iGuiMgr, action.cursorBegin);
 	}
 }
 void guitrack_editor::dragSelectionMove(gui_clip* gui, MouseEvent& evt) {
@@ -543,9 +546,9 @@ void guitrack_editor::dragSelectionMove(gui_clip* gui, MouseEvent& evt) {
 
 void guitrack_editor::dragClipboardMove(ivec2 local, int kbmods) {
 	if (action.dragtype) {
-		track_gui_entry_t *trNxtSelected = getTrackFromMouse(*this, project, local, true);
+		track_gui_entry_t *trNxtSelected = getTrackFromMouse(iGuiMgr, local, true);
 
-		DAW::Cursor& cursor = DawInstance::get()->cursor;
+		DAW::Cursor& cursor = dawCtrl->getCursor();
 		const DAW::Cursor& cursorBegin = action.cursorBegin;
 		tick_t dragMousePos = grid.screenToTick(local.x);
 		tick_t dragMouseTicks = dragMousePos - dragStartTick;
@@ -581,12 +584,12 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
 	if (action.dragtype) {
 		bool showclip = true;
 		if (action.dragtype == DRAG_CLIPS_MOVE || action.dragtype == DRAG_CLIPS_COPY) {
-			const DAW::Cursor& cursor = DawInstance::get()->cursor;
+			const DAW::Cursor& cursor = dawCtrl->getCursor();
 			const DAW::Cursor& cursorBegin = action.cursorBegin;
 			selectionMoved |= cursorBegin.cursorPos != cursor.cursorPos;
 			selectionMoved |= cursorBegin.cursorTrack != cursor.cursorTrack;
 			ivec2 local = evt.relMousepos;
-			track_gui_entry_t *trNxtSelected = getTrackFromMouse(*this, project, local, true);
+			track_gui_entry_t *trNxtSelected = getTrackFromMouse(iGuiMgr, local, true);
 			if (trNxtSelected) {
 				DawInstance::get()->setSelectedTrackEntry(trNxtSelected);
 			}
@@ -607,11 +610,11 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
 				resizePreModifyState.cursor = target;
 
 				resizePreModifyState.cursor = cursorBegin;
-				std::shared_ptr<clip_clipboard> clipboard = DawInstance::get()->copySelection(cursorBegin);
+				std::shared_ptr<clip_clipboard> clipboard = DAW::copySelection(iGuiMgr, cursorBegin);
 				if (!isCtrl(evt.kbmods)) {
-					DawInstance::get()->cutSelection(cursorBegin);
+					DAW::cutSelection(iGuiMgr, cursorBegin);
 				}
-				DawInstance::get()->pasteClipboard(clipboard.get(), dstTrack - trackOffset, dstPos);
+				DAW::pasteClipboard(iGuiMgr, clipboard.get(), dstTrack - trackOffset, dstPos);
 				updateVisibleTrackContents();
 				showclip = false;
 				action_modify_track* track_action = new action_modify_track("Move clips", std::move(resizePreModifyState));
@@ -643,7 +646,7 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
 bool guitrack_editor::clipDropBegin(dragdrop_midifile& clip, ivec2 mousepos, int kbmods) {
 	tick_t tick = grid.screenToTickSnap(mousepos.x, SNAP_ON);
 	tick_t tickExact = grid.screenToTickSnap(mousepos.x, SNAP_OFF);
-	track_gui_entry_t *trackClicked = getTrackFromMouse(*this, project, mousepos, false);
+	track_gui_entry_t *trackClicked = getTrackFromMouse(iGuiMgr, mousepos, false);
 	if (trackClicked != NULL) {
 		DAW::Cursor dragCursor;
 		dragCursor.selRange = 0;
@@ -683,11 +686,11 @@ bool guitrack_editor::clipDropFinal(dragdrop_midifile& clip, ivec2 mousepos, int
 //			dragClipboardMove(mousepos); //TODO: maybe call move again to set final pos?
 
 		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-		track_gui_entry_t *trNxtSelected = getTrackFromMouse(*this, project, mousepos, true);
+		track_gui_entry_t *trNxtSelected = getTrackFromMouse(iGuiMgr, mousepos, true);
 		int32_t tick = grid.screenToTickSnap(mousepos.x, SNAP_ON);
 		tick_t dstPos = tick;
 		int32_t dstTrack = trNxtSelected->idx;
-		DawInstance::get()->pasteClipboard(action.clipboard.get(), dstTrack, dstPos);
+		DAW::pasteClipboard(iGuiMgr, action.clipboard.get(), dstTrack, dstPos);
 		updateVisibleTrackContents();
 		action.clipboard = NULL;
 		action.dragtype = DRAG_NONE;
@@ -703,7 +706,7 @@ void guitrack_editor::prerender(NVGcontext* vg) {
 	}
 	if (action.dragtype) {
 
-		DAW::Cursor& cursor = DawInstance::get()->cursor;
+		DAW::Cursor& cursor = dawCtrl->getCursor();
 		clip_clipboard* _clipboard = action.clipboard.get();
 		for (int i = 0; _clipboard && i <= _clipboard->selTrackRange; i++) {
 			track_clipboard_t* trClipboard = _clipboard->tracks[i].get();
@@ -783,7 +786,7 @@ void guitrack_editor::renderClip(NVGcontext* vg, const track_gui_entry_t* const 
 }
 
 void guitrack_editor::renderAction(NVGcontext* vg, clip_dragaction& action) {
-	DAW::Cursor& cursor = DawInstance::get()->cursor;
+	DAW::Cursor& cursor = dawCtrl->getCursor();
 	clip_clipboard* _clipboard = action.clipboard.get();
 	for (int i = 0; _clipboard && i <= _clipboard->selTrackRange; i++) {
 		track_clipboard_t* trClipboard = _clipboard->tracks[i].get();
@@ -853,7 +856,7 @@ void guitrack_editor::render(NVGcontext* vg) {
 		nvgStroke(vg);
 	}
 	ivec2 cs = getSizeContent();
-	int ySplit = getPosYFirstReturnTrack(tracksVisibleFlat);
+	int ySplit = getPosYFirstReturnTrack(iGuiMgr.getTracksVisibleFlat());
 
 	int32_t bottomHeight = cs.y-ySplit;
 	if (bottomHeight > 0) {
@@ -920,39 +923,37 @@ void guitrack_editor::render(NVGcontext* vg) {
 //		nvgRestore(vg);
 //	}
 
-	DAW::Cursor& c = DawInstance::get()->cursor;
-	trackallcontainer_t& trackList = project.trackList;
-	if (trackList.validTrackIdx(c.cursorTrack)) {
-		track_t* tr = trackList[c.cursorTrack];
+	DAW::Cursor& c = dawCtrl->getCursor();
+	if (iGuiMgr.validTrackIdx(c.cursorTrack)) {
+		const track_gui_entry_t* trEntry = iGuiMgr.at(c.cursorTrack);
 		if (c.selRange) {
 			int32_t trackBegin = c.getTrackBegin();
 			int32_t trackEnd = c.getTrackEnd();
-			trackBegin = trackList.clampTrackIdx(trackBegin);
-			trackEnd = trackList.clampTrackIdx(trackEnd);
-			track_t* trB = trackList[trackBegin];
-			track_t* trE = trackList[trackEnd];
+			trackBegin = iGuiMgr.clampTrackIdx(trackBegin);
+			trackEnd = iGuiMgr.clampTrackIdx(trackEnd);
+			const track_gui_entry_t* trBEntry = iGuiMgr.at(trackBegin);
+			const track_gui_entry_t* trEEntry = iGuiMgr.at(trackEnd);
 			int32_t tickBegin = c.getTickBegin();
 			int32_t tickEnd = c.getTickEnd();
 //			double tickBeginX = max(-2, (int) grid.tickToScreenD(tickBegin));
 //			double tickEndX = min(size.x + 2, (int) grid.tickToScreenD(tickEnd));
 			double tickBeginX = grid.tickToScreenD(tickBegin);
 			double tickEndX = grid.tickToScreenD(tickEnd);
-
-			float trackYMin = math::min(trB->content->top(), trE->content->top());
-			float trackYMax = math::max(trB->content->bottom(), trE->content->bottom());
+			float trackYMin = math::min(trBEntry->content->top(), trEEntry->content->top());
+			float trackYMax = math::max(trBEntry->content->bottom(), trEEntry->content->bottom());
 			if (c.isSubtrackSelection()) {
 				int32_t ssTrIdx = c.getSubTrackBegin();
 				int32_t esTrIdx = c.getSubTrackEnd();
-				if (trB->validSubtrack(ssTrIdx) && trB->validSubtrack(esTrIdx)) {
-					trackYMin = trB->subtracks[ssTrIdx]->top();
-					trackYMax = trB->subtracks[esTrIdx]->bottom();
+				if (trBEntry->validSubtrack(ssTrIdx) && trBEntry->validSubtrack(esTrIdx)) {
+					trackYMin = trBEntry->subtracks[ssTrIdx]->top();
+					trackYMax = trBEntry->subtracks[esTrIdx]->bottom();
 				} else {
 					dbgassert(0);
 				}
 			}
 
 			if (tickEndX > -4.0 && tickBeginX < cs.x + 4.0) {
-				if (indexOfCtr(project.tracksBottom, trE) > -1) {
+				if (TRACK_CTR_MIDIAUDIO != TRACKTYPE_TO_CTR(trEEntry->track->type)) {
 					restore = false;
 					nvgRestore(vg);
 				}
@@ -971,14 +972,14 @@ void guitrack_editor::render(NVGcontext* vg) {
 		} else  {
 			float cursorScreenX = (float)grid.tickToScreenD(c.cursorPos);
 			if (cursorScreenX >= -2 && cursorScreenX < size.x+2) {
-				float trackYMin = tr->content->top();
-				float trackYMax = tr->content->bottom();
+				float trackYMin = trEntry->content->top();
+				float trackYMax = trEntry->content->bottom();
 				if (c.isSubtrackSelection()) {
 					int32_t ssTrIdx = c.getSubTrackBegin();
 					int32_t esTrIdx = c.getSubTrackEnd();
-					if (tr->validSubtrack(ssTrIdx) && tr->validSubtrack(esTrIdx)) {
-						trackYMin = tr->subtracks[ssTrIdx]->top();
-						trackYMax = tr->subtracks[esTrIdx]->bottom();
+					if (trEntry->validSubtrack(ssTrIdx) && trEntry->validSubtrack(esTrIdx)) {
+						trackYMin = trEntry->subtracks[ssTrIdx]->top();
+						trackYMax = trEntry->subtracks[esTrIdx]->bottom();
 					} else {
 						dbgassert(0);
 					}
@@ -1023,9 +1024,9 @@ int32_t getPosYFirstReturnTrack(const track_gui_vector_td& tracksVisibleFlat) {
 	}
 	return 0;
 }
-
-gui_track_subtrack *getSubTrackFromMouse(const guitrack_editor& trackeditor, ivec2 mouse, bool isDragSnap) {
-	for (auto *tr : trackeditor.tracksVisibleFlat) {
+//track_gui_entry_t
+gui_track_subtrack *getSubTrackFromMouse(track_gui_manager_i& iGuiMgr, ivec2 mouse, bool isDragSnap) {
+	for (auto *tr : iGuiMgr.getTracksVisibleFlat()) {
 		if (!tr->subtracks.size()) {
 			continue;
 		}
@@ -1039,11 +1040,11 @@ gui_track_subtrack *getSubTrackFromMouse(const guitrack_editor& trackeditor, ive
 	}
 	return NULL;
 }
-track_gui_entry_t *getTrackFromMouse(const guitrack_editor& trackeditor, project_t& project, ivec2 mouse, bool isDragSnap) {
+track_gui_entry_t *getTrackFromMouse(track_gui_manager_i& iGuiMgr, ivec2 mouse, bool isDragSnap) {
 	track_gui_entry_t *trackInside = NULL;
 	track_gui_entry_t *trackClosest = NULL;
 	double minDist = 0;
-	const track_gui_vector_td& tracks = trackeditor.tracksVisibleFlat;
+	const track_gui_vector_td& tracks = iGuiMgr.getTracksVisibleFlat();
 	for (track_gui_entry_t *tr : tracks) {
 		if (!tr->content->isVisible()) {
 			log_printf("track %s is not visible but is in in tracksVisibleFlat\n", StringAsCStr(tr->track->name));

@@ -162,7 +162,7 @@ private:
 							{
 								dbgassert(host->sampleFormat.sampleRate != 0);
 								dbgassert(host->sampleFormat.blockSize != 0);
-								tick_t startPos = ctrl->cursor.cursorPos;
+								tick_t startPos = ctrl->getCursorPos();
 								tickPos = startPos;
 								ctrl->getPlaybackPos() = startPos;
 								int32_t bpm100 = ctrl->getCurrentTempo();
@@ -219,8 +219,8 @@ private:
 
 
             	//ctrl may still alter project settings during copy here if not locked
-            	project_globals_t& projGlobals = host->project;
-            	projGlobals = *static_cast<project_globals_t*>(ctrl);
+            	project_globals_t& projGlobals = host->prjGlobals;
+            	projGlobals = ctrl->getGlobals();
 
             	inLoop = (tickPos >= projGlobals.loopStart
             			&& tickPos < projGlobals.loopStart+projGlobals.loopLen
@@ -267,7 +267,7 @@ private:
 			{
 	        	samplerate_t sampleRate = host->sampleFormat.sampleRate;
 	        	int32_t blockSize = host->sampleFormat.blockSize;
-            	project_globals_t& projGlobals = host->project;
+            	project_globals_t& projGlobals = host->prjGlobals;
             	int32_t bpm100 = projGlobals.tempo100;
 				double blocksPerS = sampleRate / (double) blockSize;
 				double msPerBlock = 1000.0 / blocksPerS;

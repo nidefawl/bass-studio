@@ -585,13 +585,13 @@ void vsthost::updateTime(VstTimeInfo& timeinfo, int32_t samplePos, double dTickP
 	timeinfo.sampleRate = (double)sampleFormat.sampleRate;
 	timeinfo.nanoSeconds = (double)getTimeMillis() * 1000000.0L;
 	timeinfo.ppqPos = (dTickPos/(double)TICKS_QUARTER);
-	timeinfo.tempo = project.tempo100/100.0;
+	timeinfo.tempo = prjGlobals.tempo100/100.0;
 	timeinfo.barStartPos = floor(dTickPos / (double) TICKS_BAR) * 4;
-	timeinfo.cycleStartPos = (project.loopStart/(double)TICKS_QUARTER);
-	timeinfo.cycleEndPos = ((project.loopStart+project.loopLen)/(double)TICKS_QUARTER);
-	timeinfo.timeSigNumerator = project.signatureNum;
-	timeinfo.timeSigDenominator = 1 << project.signatureDenom;
-	if (project.loopEnabled) {
+	timeinfo.cycleStartPos = (prjGlobals.loopStart/(double)TICKS_QUARTER);
+	timeinfo.cycleEndPos = ((prjGlobals.loopStart+prjGlobals.loopLen)/(double)TICKS_QUARTER);
+	timeinfo.timeSigNumerator = prjGlobals.signatureNum;
+	timeinfo.timeSigDenominator = 1 << prjGlobals.signatureDenom;
+	if (prjGlobals.loopEnabled) {
 	} else {
 		timeinfo.cycleStartPos = 0;
 		timeinfo.cycleEndPos = 0;
@@ -608,14 +608,14 @@ void vsthost::updateTime(VstTimeInfo& timeinfo, int32_t samplePos, double dTickP
 
 	double midiTickPPQ24 = timeinfo.ppqPos*24.0;
 	tick_t midiTick = std::round(midiTickPPQ24);
-	int32_t samplePosTick = PPQ24TickSample(midiTick, project.tempo100, sampleFormat.sampleRate, sampleFormat.blockSize);
+	int32_t samplePosTick = PPQ24TickSample(midiTick, prjGlobals.tempo100, sampleFormat.sampleRate, sampleFormat.blockSize);
 	timeinfo.samplesToNextClock = samplePosTick - timeinfo.samplePos;
 
 	{
 
 		bool changed;
 		changed = setFlag(timeinfo.flags, kVstTransportPlaying, state == playback_state::status_play);
-		changed |= setFlag(timeinfo.flags, kVstTransportCycleActive, project.loopEnabled);
+		changed |= setFlag(timeinfo.flags, kVstTransportCycleActive, prjGlobals.loopEnabled);
 		changed |= setFlag(timeinfo.flags, kVstTransportRecording, false);
 		setFlag(timeinfo.flags, kVstTransportChanged, changed);
 		setFlag(timeinfo.flags, kVstAutomationWriting, false);
@@ -639,7 +639,7 @@ void vsthost::sendNotesOff(effectbase* plugin) {
 		dbgassert(tr);
 		track_impl_t* audio = tr->audio;
 		if (audio) {
-			audio->sendNotesOff(project.tempo100);
+			audio->sendNotesOff(prjGlobals.tempo100);
 		}
 	}
 }
@@ -747,7 +747,7 @@ bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, co
 }
 void vsthost::processMidiRealtimeInput(project_controller_t* ctrl, double posDouble, playback_state state) {
 	const sampleformat_t sampleFormat = this->sampleFormat;
-	const double ticksPerBlock = toTickPrecise(sampleFormat.blockSize/(double)sampleFormat.sampleRate, project.tempo100);
+	const double ticksPerBlock = toTickPrecise(sampleFormat.blockSize/(double)sampleFormat.sampleRate, prjGlobals.tempo100);
 	tick_t tickPosBlockStart = ceil(posDouble);
 
 	int queueSizeOutput = 0;
@@ -840,51 +840,50 @@ void vsthost::processMidiRealtimeInput(project_controller_t* ctrl, double posDou
 	}
 	if (notesProcessed) {
 		midiRealtimeInput->updateBounds();
-		if (state == playback_state::status_play && project.recordArmed) {
-			if (ctrl->trackMidiAudioCtr.size()) {
-				if (recordingClip == nullptr) {
-					recordingClip = new clip_t;
-					recordingClip->name = "Midi Input - Recorded";
-					recordingClip->time = tickPosBlockStart;
-					recordingClip->setLen(ticksPerBlock*4);
-					recordingClip->loopStart = 0;
-					recordingClip->loopLen = TICKS_BAR*4;
-				}
-				if (recordingClip) {
-					if (recordingClip->start() > tickPosBlockStart) {
-						recordingClip->time = tickPosBlockStart;
-					}
-					if (recordingClip->end() < tickPosBlockStart+ticksPerBlock) {
-						recordingClip->setLen((tickPosBlockStart+ticksPerBlock)-recordingClip->start());
-					}
-					for (auto& note : midiRealtimeInput->m_list) {
-						if (note.len != lenTicksInfinite) {
-
-							auto noteCopy = note;
-							noteCopy.time -= recordingClip->start();
-							noteCopy.setEnabled(true);
-							noteCopy.setRealtime(false);
-							recordingClip->notes.addSingle(noteCopy);
-						}
-					}
-					clip_t* cloned = recordingClip->clone();
-					cloned->setLen(tickPosBlockStart - recordingClip->time);
-					cloned->loopEnabled = false;
-					cloned->loopLen = ( ( math::max ( 1, cloned->getLen() / (TICKS_BAR*4) ) )   * (TICKS_BAR*4) );
-					cloned->notes.updateBounds();
-					cloned->setDirty();
-					std::swap(recordDataProcessed, cloned);
-					delete cloned;
-					hasNewRecordedData = true;
-				}
-
+		if (state == playback_state::status_play && prjGlobals.recordArmed) {
+			if (recordingClip == nullptr) {
+				recordingClip = new clip_t;
+				recordingClip->name = "Midi Input - Recorded";
+				recordingClip->time = tickPosBlockStart;
+				recordingClip->setLen(ticksPerBlock*4);
+				recordingClip->loopStart = 0;
+				recordingClip->loopLen = TICKS_BAR*4;
 			}
+			if (recordingClip) {
+				if (recordingClip->start() > tickPosBlockStart) {
+					recordingClip->time = tickPosBlockStart;
+				}
+				if (recordingClip->end() < tickPosBlockStart+ticksPerBlock) {
+					recordingClip->setLen((tickPosBlockStart+ticksPerBlock)-recordingClip->start());
+				}
+				for (auto& note : midiRealtimeInput->m_list) {
+					if (note.len != lenTicksInfinite) {
+
+						auto noteCopy = note;
+						noteCopy.time -= recordingClip->start();
+						noteCopy.setEnabled(true);
+						noteCopy.setRealtime(false);
+						recordingClip->notes.addSingle(noteCopy);
+					}
+				}
+				clip_t* cloned = recordingClip->clone();
+				cloned->setLen(tickPosBlockStart - recordingClip->time);
+				cloned->loopEnabled = false;
+				cloned->loopLen = ( ( math::max ( 1, cloned->getLen() / (TICKS_BAR*4) ) )   * (TICKS_BAR*4) );
+				cloned->notes.updateBounds();
+				cloned->setDirty();
+				std::swap(recordDataProcessed, cloned);
+				delete cloned;
+				hasNewRecordedData = true;
+			}
+
+
 		}
 	}
 	if (!midiRealtimeInput->m_list.empty()) {
 //		log_printf("Realtime midi notes %d\n", midiRealtimeInput->m_list.size());
 	}
-	if (recordingClip && !(state == playback_state::status_play && project.recordArmed)) {
+	if (recordingClip && !(state == playback_state::status_play && prjGlobals.recordArmed)) {
 		for (auto& note : midiRealtimeInput->m_list) {
 			note_t noteCopy = note;
 			if (noteCopy.time < tickPosBlockStart && noteCopy.len == lenTicksInfinite) {
@@ -920,6 +919,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 	dbgassert(ctrl);
 	dbgassert(sampleFormat.blockSize > 0);
 	dbgassert(sampleFormat.sampleRate > 0);
+	project_t* project = ctrl->getProject();
 
 	stats.lastInvocationTime_i64 = 0;
 	auto timeNow_i64 = getTimeHPint64();
@@ -932,7 +932,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 
 	timer2.reset();
 	const sampleformat_t sampleFormat = this->sampleFormat;
-	const double ticksPerBlock = toTickPrecise(sampleFormat.blockSize/(double)sampleFormat.sampleRate, project.tempo100);
+	const double ticksPerBlock = toTickPrecise(sampleFormat.blockSize/(double)sampleFormat.sampleRate, prjGlobals.tempo100);
 	std::shared_ptr<resampler_t> resamplerOutput = impl->getResampler(sampleFormat, sampleFormatExternal, 0);
 	std::shared_ptr<resampler_t> resamplerInput = impl->getResampler(sampleFormatExternal, sampleFormat, 1);
 
@@ -996,7 +996,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 		/*
 		 * Process audio/midi tracks
 		 */
-		auto tracksFlatAll = ctrl->trackList.getAllTracksFlatVec(); //TODO: get rid of copy
+		auto tracksFlatAll = project->trackList.getAllTracksFlatVec(); //TODO: get rid of copy
 		/**
 		 * process in reverse order: first children, then parents
 		 */
@@ -1004,7 +1004,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 		timer3.reset();
 		/** turn tree structure into linear pointer array with parents followed by their children **/
 		std::shared_ptr<DAW::processing_graph_t> processingGraph;
-		if (!DAW::buildProcessingGraph(this, ctrl, tracksFlatAll, processingGraph)) {
+		if (!DAW::buildProcessingGraph(this, project, tracksFlatAll, processingGraph)) {
 			log_printf("Failed building track graph\n", 0);
 		}
 		if (dbg != 0)
@@ -1038,7 +1038,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 					auto outputChannel = trackImpl->outputChannel;
 					if (outputChannel.type == DAW::channel_input_type::INPUT_DEFAULT) {
 						DAW::channel_ref_t tmp;
-						if (DAW::resolveDefaultConnection(this, ctrl, trackImpl, false, tmp)) {
+						if (DAW::resolveDefaultConnection(this, project, trackImpl, false, tmp)) {
 							outputChannel = tmp;
 						}
 					}
@@ -1102,7 +1102,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 	if (nBlocksProcessed) {
 		timer3.reset();
 		/* Update all track meters */
-		for (track_t* track : ctrl->trackList) {
+		for (track_t* track : project->trackList) {
 			track_impl_t* trAudio = track->audio;
 			if (!trAudio)
 				continue;
@@ -1118,7 +1118,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 		lastTickEndPos = posDouble + ticksPerBlock*nBlocksProcessed;
 #endif
 		double since = timer.getTimeDoubleReset();
-		for (track_t* tr : ctrl->trackList) {
+		for (track_t* tr : project->trackList) {
 			track_impl_t* trAudio = tr->audio;
 			if (trAudio) {
 				trAudio->onTick(since);
@@ -1128,7 +1128,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 		if (convert) {
 			int32_t bytesCopied = 0;
 			hires_timer_t timerConvert;
-			for (track_t* tr : ctrl->trackList) {
+			for (track_t* tr : project->trackList) {
 				track_impl_t* trAudio = tr->audio;
 				if (static_cast<bool>(trAudio->flags & audiostageflags_t::CONVERT_OUTPUT)) {
 					bytesCopied += trAudio->audioOutput.convertToSamples(this);
@@ -1172,14 +1172,14 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_processing_task_t req) const {
 	const sampleformat_t sampleFormat = this->sampleFormat;
 	const int32_t lBlockSize = sampleFormat.blockSize;
-	const double ticksPerBlock = toTickPrecise(sampleFormat.blockSize/(double)sampleFormat.sampleRate, project.tempo100);
+	const double ticksPerBlock = toTickPrecise(sampleFormat.blockSize/(double)sampleFormat.sampleRate, prjGlobals.tempo100);
 
 	int32_t sample = req.sample;
 	const DAW::processing_track_node_t& trackNode = *req.trackNode;
 	track_t* const track = trackNode.trackOptional;
 	track_impl_t* const trackImpl = track->audio;
 	const auto state = req.state;
-	const double ticksLatency = toTickPrecise(trackNode.inputLatency/(double)sampleFormat.sampleRate, project.tempo100);
+	const double ticksLatency = toTickPrecise(trackNode.inputLatency/(double)sampleFormat.sampleRate, prjGlobals.tempo100);
 	const double sampleLatencyCompensated = sample - trackNode.inputLatency;
 	const double tickLatencyCompensated = req.posDouble-ticksLatency;
 	tick_t processingPos = floor(tickLatencyCompensated);
@@ -1189,8 +1189,8 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
 	tick_t loopCutStart = -1;
 	tick_t loopCutEnd = -1;
 	if (req.inLoop) {
-		loopCutStart = project.loopStart;
-		loopCutEnd = project.loopStart+project.loopLen;
+		loopCutStart = prjGlobals.loopStart;
+		loopCutEnd = prjGlobals.loopStart+prjGlobals.loopLen;
 	}
 
 
@@ -1233,13 +1233,13 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
 	}
 
 	tmp.timer.reset();
-	trackImpl->sendNotes(processingPos, tickBlockEnd, loopCutStart, loopCutEnd, project.tempo100, sampleLatencyCompensated, *midiRealtimeInput, midiProcessFlags);
+	trackImpl->sendNotes(processingPos, tickBlockEnd, loopCutStart, loopCutEnd, prjGlobals.tempo100, sampleLatencyCompensated, *midiRealtimeInput, midiProcessFlags);
 	track->getStage()->procStats.timeSendNotes = tmp.timer.getTime();
 	if (state != playback_state::status_play) {
 		//
 	}
 	if (state == playback_state::status_play) {
-		trackImpl->fillAudio(processingPos, tickBlockEnd, loopCutStart, loopCutEnd, project.tempo100, sampleLatencyCompensated, trackImpl->input.buf, (int32_t)lBlockSize);
+		trackImpl->fillAudio(processingPos, tickBlockEnd, loopCutStart, loopCutEnd, prjGlobals.tempo100, sampleLatencyCompensated, trackImpl->input.buf, (int32_t)lBlockSize);
 	}
 
 	const uint32_t numChannelsTrack = trackImpl->input.channels;
@@ -1399,10 +1399,11 @@ void vsthost::finishTreadTasks(std::vector<audiostageid_i32>& processFinishedSta
 	}
 }
 int32_t vsthost::processBlock(project_controller_t* ctrl, const DAW::processing_graph_t* const processingGraph, AudioBlock* const ptrExternalInputs, AudioBlock* const ptrExternalOutputs, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround) {
-
+	dbgassert(ctrl);
+	project_t* project = ctrl->getProject();
 	const sampleformat_t sampleFormat = this->sampleFormat;
 	const int32_t lBlockSize = sampleFormat.blockSize;
-	const double ticksPerBlock = toTickPrecise(sampleFormat.blockSize/(double)sampleFormat.sampleRate, project.tempo100);
+	const double ticksPerBlock = toTickPrecise(sampleFormat.blockSize/(double)sampleFormat.sampleRate, prjGlobals.tempo100);
 
 
 
@@ -1424,7 +1425,7 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const DAW::processing_
 	/*
 	 * Clear all channels
 	 */
-	for (track_t* track : ctrl->trackList) {
+	for (track_t* track : project->trackList) {
 		dbgassert(track->audio);
 		track_impl_t* audio = track->audio;
 		audio->input.realloc(lBlockSize);
@@ -1452,8 +1453,8 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const DAW::processing_
 	tick_t loopCutStart = -1;
 	tick_t loopCutEnd = -1;
 	if (inLoop) {
-		loopCutStart = project.loopStart;
-		loopCutEnd = project.loopStart+project.loopLen;
+		loopCutStart = prjGlobals.loopStart;
+		loopCutEnd = prjGlobals.loopStart+prjGlobals.loopLen;
 	}
 
 
@@ -1592,7 +1593,7 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const DAW::processing_
 	}
 	/* Profiling/Timings: Accumulate timings */
 	int64_t timeProcessingArr[5] = {0, 0, 0, 0, 0};
-	for (track_t* track : ctrl->trackList) {
+	for (track_t* track : project->trackList) {
 		timeProcessingArr[0] += track->getStage()->procStats.timeProcessRaw;
 		timeProcessingArr[1] += track->getStage()->procStats.timeMixInputs;
 		timeProcessingArr[2] += track->getStage()->procStats.timeUpdateParameters;
@@ -1622,13 +1623,14 @@ void vsthost::onStartPlayback(project_controller_t* ctrl) {
 	lastState = playback_state::status_stop;
 }
 void vsthost::onStopPlayback(project_controller_t* ctrl) {
+	project_t* project = ctrl->getProject();
 	midiRealtimeInput->m_list.clear();
 
-	for (track_t* track : ctrl->trackList) {
+	for (track_t* track : project->trackList) {
 		auto trackImpl = track->audio;
 		if (!trackImpl->heldNotes.empty())
 		{
-			trackImpl->sendNotesOff(project.tempo100);
+			trackImpl->sendNotesOff(prjGlobals.tempo100);
 		}
 	}
 }
@@ -2091,7 +2093,7 @@ void vsthost::updateMaximumStageId() {
 	this->audioStageId = maximumStageId;
 }
 
-bool vsthost::writeRecordedData() {
+bool vsthost::writeRecordedData(project_t* project) {
 	dbgassert(MainCtrl::get());
 	if (this->hasNewRecordedData) {
 		this->hasNewRecordedData = false;
@@ -2099,7 +2101,7 @@ bool vsthost::writeRecordedData() {
 		clip_t* pClip = nullptr;
 		std::swap(recordDataProcessed, pClip);
 		if (pClip) {
-			track_t* tr = DawInstance::get()->trackMidiAudioCtr.front();
+			track_t* tr = project->trackMidiAudioCtr.front();
 			if (tr) {
 //				String s = "Recorded notes: ";
 //				for (note_t& note : pClip->notes.m_list) {

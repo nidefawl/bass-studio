@@ -46,10 +46,10 @@ void guitrack_mixers::render(NVGcontext* vg) {
 			nvgRestore(vg);
 		}
 	}
-	int ySplit = getPosYFirstReturnTrack(tracksVisibleFlat);
+	int ySplit = getPosYFirstReturnTrack(iGuiMgr.getTracksVisibleFlat());
 	if (ySplit > 0) {
 		nvgIntersectScissor(vg, 0, 0, cs.x, ySplit);
-		for (track_gui_entry_t* t : tracksVisibleFlat) {
+		for (track_gui_entry_t* t : iGuiMgr.getTracksVisibleFlat()) {
 			track_gui_entry_t entry = *t;
 			bool trackVisible = iGuiMgr.isVisible(entry);
 			dbgassert(entry.mixer->isVisible() == trackVisible);
@@ -72,10 +72,6 @@ void guitrack_mixers::removeTrackEntry(track_gui_entry_t& e) {
 //	DELETE_PTR(e.mixer) //TODO: fix mem leak
 }
 void guitrack_mixers::updateVisibleTrackContents() {
-	for (auto* tr : tracksVisibleFlat) {
-		const bool bVisible = iGuiMgr.isVisible(*tr);
-		tr->mixer->setVisible(bVisible);
-	}
 }
 
 void drawSeperator(NVGcontext* vg, const guitheme_t* theme, int32_t seperatorY, ivec2& cs) {
@@ -216,36 +212,29 @@ void guictr_tracks::scrollTo(guibase* g) {
 }
 
 void guictr_tracks::updateVisibleTracks() {
-//	tracksVisibleFlat.clear();
-	/** turn tree structure into linear pointer array with trackTop at the beginning and the deepest child at the end **/
-	track_gui_vector_td vecNewTracksFlat;
-	std::deque<track_t*> stack;
-	stack.insert(stack.begin(), project.trackList.cbeginTree(), project.trackList.cendTree());
-	trackEntriesTop.clear();
-	trackEntriesBottom.clear();
-	while (!stack.empty()) {
-		track_t* current = stack.front();
-		stack.pop_front();
+	guiMgr.updateVisibleTracks(project.trackList);
+
+	track_gui_vector_td& tracks = guiMgr.tracksVisibleFlat;
+	for (track_t* tr : project.trackList) {
 		track_gui_entry_t* entry;
-		if (guiMgr.getPointerEntry(current, &entry)) {
-			if (!entry->layout.hideTrack && current->children.size()) {
-				stack.insert(stack.begin(), current->children.cbegin(), current->children.cend());
+		if (!assert_expr(guiMgr.getPointerEntry(tr, &entry))) {
+			continue;
+		}
+		if (!assert_expr(entry->content)) {
+			continue;
+		}
+		const bool bVisible = STL_CONTAINS(tracks, entry);
+		entry->content->setVisible(bVisible);
+		entry->mixer->setVisible(bVisible);
+		if (bVisible) {
+			entry->content->updateVisibleTrackContents(projectGlobals, grid);
+			for (gui_track_subtrack* au : entry->subtracks) {
+				au->updateVisibleTrackContents(grid);
 			}
-			dbgassert(guiMgr.isVisible(*entry));
-			dbgassert(entry->track == current);
-			if (TRACKTYPE_TO_CTR(entry->track->type)  == TRACK_CTR_MIDIAUDIO) {
-				trackEntriesTop.push_back(entry);
-			} else {
-				trackEntriesBottom.push_back(entry);
-			}
-			vecNewTracksFlat.push_back(entry);
 		}
 	}
-
-	tracksVisibleFlat = vecNewTracksFlat;
-	const track_gui_vector_td& tracks = tracksVisibleFlat;
-	trackControls.updateVisibleTrackContents();
-	trackView.updateVisibleTrackContents();
+//	trackControls.updateVisibleTrackContents();
+//	trackView.updateVisibleTrackContents();
 	for (auto *trEntry : tracks) {
 		if (!trEntry->content->isVisible()) {
 			log_printf("track %s is not visible but is in in tracksVisibleFlat\n", StringAsCStr(trEntry->track->name));
@@ -285,7 +274,7 @@ void guictr_tracks::layout() {
 	double f = scrollbar.toPixels();
 	ivec2 csTrackView = trackView.getSizeContent();
 	int y = TRACK_HEIGHT_SPACING;
-	for (auto* t : trackEntriesTop) {
+	for (auto* t : guiMgr.trackEntriesTop) {
 		auto& entry = *t;
 		if (guiMgr.isVisible(entry)) {
 			int32_t h = setTrackPosition(entry, y, false);
@@ -297,8 +286,8 @@ void guictr_tracks::layout() {
 	contentHeight = y;
 	y = csTrackView.y-TRACK_HEIGHT_SPACING;
 //		y = 0;
-	auto itMastersTracks = trackEntriesBottom.rbegin();
-	auto itMastersEnd = trackEntriesBottom.rend();
+	auto itMastersTracks = guiMgr.trackEntriesBottom.rbegin();
+	auto itMastersEnd = guiMgr.trackEntriesBottom.rend();
 	while (itMastersTracks != itMastersEnd) {
 		auto& entry = *(*itMastersTracks);
 		if (guiMgr.isVisible(entry)) {
@@ -366,7 +355,7 @@ void guictr_tracks::render(NVGcontext* vg) {
 	nvgSave(vg);
 	dragdrop_target_indicator_t& target = dawCtrl->getDragDropTarget();
 	nvgTranslate(vg, 0, trackView.top());
-	int ySplit = getPosYFirstReturnTrack(tracksVisibleFlat);
+	int ySplit = getPosYFirstReturnTrack(guiMgr.tracksVisibleFlat);
 	if (ySplit > 0) {
 		nvgSave(vg);
 		nvgIntersectScissor(vg, 0, 0, cs.x, ySplit);
@@ -448,7 +437,7 @@ void guictr_tracks::render(NVGcontext* vg) {
 	if (trackView.size.x > 0) {
 		nvgIntersectScissor(vg, trackView.pos.x, 0, trackView.size.x, cs.y);
 		nvgTranslate(vg, trackView.pos.x, 0);
-		tick_t pos = project.playbackPos;
+		tick_t pos = DawInstance::get()->getPlaybackPos();
 //		if (project.loopEnabled) {
 //			if (pos > project.loopStart) {
 //				pos = project.loopStart + (pos - project.loopStart) % project.loopLen;
@@ -562,7 +551,7 @@ public:
 gui_track_drop_position_t slotFromCoord(guictr_tracks* parent, track_gui_entry_t& trackEntryDragged, const ivec2 _pos) {
 	using drop_type = gui_track_drop_position_t::drop_type;
 
-	auto& trackList = parent->tracksVisibleFlat;
+	auto& trackList = parent->guiMgr.getTracksVisibleFlat();
 	int minDistDragPoint = std::numeric_limits<int32_t>::max();
 	gui_track_drop_position_t minSlot{0, nullptr, drop_type::none, {0, 0}};
 	auto checkDropPoint = [](int32_t minY, int32_t maxY, int mouseY) -> int32_t {
@@ -669,7 +658,7 @@ namespace {
 		MainCtrl::get()->getDragDropTarget() = target;
 	}
 	void handleTrackEntryDragRelease(guictr_tracks* parent, track_gui_entry_t& entry, ivec2 mousepos) {
-		dbgassert(parent->tracksVisibleFlat.size());
+//		dbgassert(parent->guiMgr.tracksVisibleFlat.size());
 		gui_track_drop_position_t slot = slotFromCoord(parent, entry, mousepos);
 		int32_t treeIdx = 0;
 		track_gui_entry_t* targetTrack = nullptr;
@@ -717,7 +706,7 @@ namespace {
 		std::vector<track_t*> selectedTracks;
 		selectedTracks.push_back(track);
 		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-		bool failed = !DawInstance::get()->trackList.moveTracks(selectedTracks, treePos);
+		bool failed = !DawInstance::get()->getTracks().moveTracks(selectedTracks, treePos);
 		String strTarget = "<root>";
 		if (treePos.parent) {
 			strTarget = treePos.parent->name;
@@ -822,7 +811,9 @@ void guitrack_editor::removeTrackEntry(track_gui_entry_t& entry) {
 	if (entry.subtracks.size()) {
 		for (auto str : entry.subtracks) {
 			remove(str);
+			delete str;
 		}
+		entry.subtracks.clear();
 	}
 }
 void guitrack_editor::layout() {
@@ -841,7 +832,7 @@ void guitrack_editor::updateVisibleTrackContents() {
 		const bool bVisible = iGuiMgr.isVisible(entry);
 		entry.content->setVisible(bVisible);
 		if (bVisible) {
-			entry.content->updateVisibleTrackContents(project, grid);
+			entry.content->updateVisibleTrackContents(projectGlobals, grid);
 			for (gui_track_subtrack* au : entry.subtracks) {
 				au->updateVisibleTrackContents(grid);
 			}
@@ -856,9 +847,6 @@ void guictr_tracks::removeTrack(track_t* track, int flags) {
 	trackControls.removeTrackEntry(*entry);
 	trackView.removeTrackEntry(*entry);
 	removeEntry(track->audio->guiInstances, entry);
-	removeEntry(this->trackEntriesTop, entry);
-	removeEntry(this->trackEntriesBottom, entry);
-	removeEntry(this->tracksVisibleFlat, entry);
 	dbgassert(entry->content);
 	dbgassert(entry->mixer);
 	delete entry->content;
@@ -881,7 +869,7 @@ void guictr_tracks::addTrack(track_t* track, int flags) {
 	guiMgr.addTrack(entry);
 	trackControls.addTrackEntry(*entry);
 	trackView.addTrackEntry(*entry);
-	track->content = entry->content;
+//	track->content = entry->content;
 	track->audio->guiInstances.push_back(entry);
 	//TODO: restore subtracks
 	if (!(flags & FLG_TRK_CHANGE_LOAD)) {

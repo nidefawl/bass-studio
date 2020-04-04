@@ -76,12 +76,6 @@ void releaseTrackResources(track_t* tr, delete_cb *cb) {
 //		delete (tr->content);
 //	}
 	dbgassert(tr->audio->guiInstances.empty());
-	if (tr->subtracks.size()) {
-		for (gui_track_subtrack* al : tr->subtracks) {
-			delete al;
-		}
-		tr->subtracks.clear();
-	}
 	host->releaseAudio(tr);
 	dbgassert(tr && !tr->audio);
 }
@@ -462,11 +456,9 @@ void track_impl_t::getAutomatableTrackTargets(std::vector<automatable_t*>& targe
 
 void project_t::copyTo(project_snapshot_t& project) {
 	trackList.copyTo(project);
-	project.globals = *this;
 }
 void project_t::copyFrom(project_snapshot_t& project) {
 	trackList.copyFrom(project);
-	*this = project.globals;
 }
 
 effectbase* loadEffectModule(const plugin_snapshot_t& pluginSnapshot, bool forceLoad) {
@@ -669,7 +661,7 @@ void updateStoreLoadSubtracks(guictr_tracks* guiTracks, track_gui_entry_t& entry
 		entry.state.layoutSaved = track_layout_snapshot_t();
 		saveSubtrackLayout(guiTracks, entry, entry.state.layoutSaved);
 		guiTracks->removeAllSubtracks(entry);
-		DAW::Cursor& cursor = project_controller_t::get()->cursor;
+		DAW::Cursor& cursor = entry.parentCtrl->getCursor();
 		if (cursor.inSubTrackAny(entry.track->idx)) {
 			fixCursorSubRange(cursor, 0);
 		}

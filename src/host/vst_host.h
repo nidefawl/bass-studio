@@ -43,6 +43,7 @@ struct track_audio_src;
 struct audio_stage_ref_t;
 class project_controller_t;
 class AudioEffectX;
+class DawInstance;
 
 typedef AEffect*(VSTPluginMain_t)(audioMasterCallback audioMasterCB);
 typedef	AudioEffectX* (*FnCreateModule) (audioMasterCallback);
@@ -112,7 +113,7 @@ public:
 	int32_t hostSlot = -1;
 	uint8_t numChannels;
 
-	project_globals_t project;
+	project_globals_t prjGlobals;
 	audioMasterCallback masterCallBackSlot = nullptr;
 
 
@@ -185,7 +186,7 @@ public:
 		return ringbuffer;
 	}
 	int32_t getNextSampleId(int32_t id);
-	bool writeRecordedData();
+	bool writeRecordedData(project_t* project);
 	void sendNotesOff(effectbase* plugin);
 	std::vector<builtin_module_reg_t>& getBuiltinModuleRegistry() {
 		return builtinModules;

@@ -175,7 +175,7 @@ void guictr_cliphandles::render(NVGcontext* vg) {
 		return;
 	}
 	MainCtrl* ctrl = MainCtrl::get();
-	DawInstance* daw = DawInstance::get();
+//	DawInstance* daw = DawInstance::get();
 	tick_t clipOffset = (view.clip()) ? view.clip()->getOffsetStart() : 0;
 	nvgIntersectScissor(vg, pos.x, pos.y, cs.x, cs.y);
 	nvgTranslate(vg, pos.x, pos.y);
@@ -226,7 +226,6 @@ void guictr_cliphandles::render(NVGcontext* vg) {
 	nvgRect(vg, -2, heightLoopInidicator * 2, cs.x + 2, heightSelIndicator);
 	nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_DRKER2));
 	nvgFill(vg);
-	DAW::Cursor& c = daw->cursor;
 	if (view.clip()) {
 		const NVGcolor colLI = GUI_COLOR(120);
 		const NVGcolor colLIStroke = theme->getFrameColorOutline();
@@ -305,6 +304,9 @@ void guictr_cliphandles::render(NVGcontext* vg) {
 		}
 		yOffset += heightLoopInidicator;
 	}
+
+	/* render track-editor selection range in clipview */
+	DAW::Cursor& c = MainCtrl::get()->getCursor();
 	if (c.selRange) {
 		int32_t tickBegin = c.getTickBegin() - clipOffset;
 		int32_t tickEnd = c.getTickEnd() - clipOffset;
@@ -323,7 +325,7 @@ void guictr_cliphandles::render(NVGcontext* vg) {
 	//		-view.clip->start()+view.clip->offsetStart
 	clip_t* clip = view.clip();
 	if (clip) {
-		tick_t pos = daw->playbackPos - clip->time + clip->offsetStart;
+		tick_t pos = DawInstance::get()->getPlaybackPos() - clip->time + clip->offsetStart;
 		if (clip->loopEnabled && clip->loopLen > 0) {
 			if (pos > clip->loopStart) {
 				pos = clip->loopStart + (pos - clip->loopStart) % clip->loopLen;

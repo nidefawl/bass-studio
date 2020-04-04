@@ -57,6 +57,7 @@ class appwindow_main;
 class DawViewContainers;
 class DawViewContainersMain;
 class DawViewContainersCompanion;
+class track_gui_manager_i;
 
 enum clip_dragtype_t {
 	DRAG_NONE,
@@ -92,8 +93,12 @@ public:
 	}
 };
 namespace DAW {
-std::shared_ptr<clip_clipboard> copySelection(const trackallcontainer_t& trackList, const DAW::Cursor& _cursor);
+std::shared_ptr<clip_clipboard> copySelection(const track_gui_manager_i& trackList, const DAW::Cursor& _cursor);
 std::shared_ptr<clip_clipboard> consolidateClipboard(std::shared_ptr<clip_clipboard>& clipboardIn, const DAW::Cursor& _cursor);
+void pasteClipboard(track_gui_manager_i& trackList, clip_clipboard* clipboard, int32_t track, tick_t tick);
+void pasteClipboard(track_gui_manager_i& trackList, clip_clipboard* clipboard, DAW::Cursor& cursor);
+void cutSelection(track_gui_manager_i& trackList, const DAW::Cursor& cursor);
+void muteIntersecting(track_gui_manager_i& trackList, const DAW::Cursor& _cursor);
 }
 
 KeyEvent keyEvent(int key, int scancode, int keyState, int mods, const char* key_name);
@@ -224,6 +229,8 @@ class DawInstance : public project_controller_t, public delete_cb {
 	friend class MainCtrl;
 	friend class CompanionCtrl;
 	friend class DawCtrl;
+	project_t project;
+	project_globals_t projectGlobals;
 	int initState = 0;
 	MainCtrl* mainCtrl = nullptr;
 	CompanionCtrl* companionCtrl = nullptr;
@@ -253,7 +260,7 @@ private:
 	seq_rand rand;
 //	int curTooltip = 0;
 public:
-	DawInstance() {
+	DawInstance() : project_controller_t(&project, &projectGlobals) {
 
 	}
 	edithistory& getHist() {
@@ -295,9 +302,6 @@ public:
 		this->tickJmpFrom = tickJmpFrom;
 		this->tickJmpTo = tickJmpTo;
 	}
-	trackallcontainer_t& getTracks() {
-		return trackList;
-	}
 	void setEmptyProject();
 	void saveFile(const String& path);
 	/**
@@ -336,17 +340,12 @@ public:
 	void resetEditClip();
 	void resetAutomationContext();
 	void closeContextMenus();
-	std::shared_ptr<clip_clipboard> copySelection(const DAW::Cursor& cursor);
-	void pasteClipboard(clip_clipboard* c, int32_t trackOffset, tick_t tickOffset);
-	void pasteClipboard(clip_clipboard* c, DAW::Cursor& cursor);
-	void cutSelection(const DAW::Cursor& cursor);
 	void cutIntersecting(track_t* tr, clip_t* mask);
 	void cutIntersecting(track_t* tr, tick_t tickBegin, tick_t tickEnd);
 	track_t* createNewTrack(int trackType);
 	track_t* insertNewTrack(int trackInsertPos, int trackType, int flags = FLG_TRK_CHANGE_USER);
 
-
-	void muteIntersecting(const DAW::Cursor& _cursor);
+//	void muteIntersecting(const DAW::Cursor& _cursor);
 //	void copyClipsInRange(trackcontents_t* in, trackcontents_t* out, int32_t srcPos, int32_t dstPos, int32_t len);
 
 	track_t* getSelectedTrack();
@@ -450,6 +449,10 @@ public:
 	}
 	virtual void resetAutomationContext() {
 	}
+	virtual DAW::Cursor& getCursor() = 0;
+	DawInstance* getDaw() {
+		return &daw;
+	}
 };
 class MainCtrl : public DawCtrl
 {
@@ -492,10 +495,14 @@ public:
 	void showAutomation(track_t* tr, automatable_t* at, int32_t paramIdx);
 	void setStatusText(String s) override;
 	void destroy() override;
+	DAW::Cursor& getCursor() override {
+		return daw.projectGlobals.cursor;
+	}
 };
 
 class CompanionCtrl : public DawCtrl
 {
+	DAW::Cursor cursor;
 public:
 	DawViewContainersCompanion* view = NULL;
 	CompanionCtrl(DawInstance& _daw) : DawCtrl(_daw) {
@@ -513,4 +520,7 @@ public:
 	}
 	void updateVisibleTrackContents() override;
 	void updateGrid() override;
+	DAW::Cursor& getCursor() override {
+		return cursor;
+	}
 };

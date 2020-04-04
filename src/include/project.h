@@ -3,6 +3,9 @@
 #include "cursor.h"
 #include "logging.h"
 
+struct project_globals_i {
+
+};
 struct project_globals_t {
 	tick_t loopStart = 0;
 	tick_t loopLen = TICKS_BAR*4;

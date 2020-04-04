@@ -94,11 +94,38 @@ void copyClipsInRange(const trackdata_midi_t& in, track_clipboard_t& out, int32_
 //	}
 //	out->sortClips();
 }
-void DawInstance::pasteClipboard(clip_clipboard* clipboard, DAW::Cursor& cursor) {
+namespace DAW {
+
+void pasteClipboard(track_gui_manager_i& trackList, clip_clipboard* clipboard, int32_t track, tick_t tick) {
+	tick_t tickOffset = tick - clipboard->srcPos;
+	tick_t trackOffset = track;
+	for (int i = 0; i <= clipboard->selTrackRange; i++) {
+		track_clipboard_t* trClipboard = clipboard->tracks[i].get();
+		if (!trackList.validTrackIdx(i + trackOffset)) {
+			continue;
+		}
+		int32_t trackIdx = trackList.clampTrackIdx(i + trackOffset);
+		track_gui_entry_t* tr = trackList.atNC(trackIdx);
+//		if (tr->type == TRACK_TYPE_MIDI) {
+			trackdata_midi_t& midi = tr->track->getMidi();
+			for (auto it = trClipboard->clips.begin(); it != trClipboard->clips.end(); it++) {
+				clip_t* cl = (*it).get();
+				clip_t* cloned = cl->clone();
+				cloned->time += tickOffset;
+				tick_t tickBegin = cloned->time;
+				tick_t tickEnd = cloned->end();
+				cutIntersectingClips(tr->track->getMidi(), tickBegin, tickEnd, DawInstance::get());
+				midi.addClip(cloned);
+			}
+			midi.sortClips();
+//		}
+	}
+}
+void pasteClipboard(track_gui_manager_i& trackList, clip_clipboard* clipboard, DAW::Cursor& cursor) {
 	if (clipboard->type == clip_clipboard::ClipboardFull) {
 		if (cursor.isSubtrackSelection())
 			return;
-		pasteClipboard(clipboard, cursor.getTrackBegin(), cursor.getTickBegin());
+		pasteClipboard(trackList, clipboard, cursor.getTrackBegin(), cursor.getTickBegin());
 	} else  if (clipboard->type == clip_clipboard::ClipboardAutomation) {
 		if (!cursor.isSubtrackSelection())
 			return;
@@ -106,7 +133,7 @@ void DawInstance::pasteClipboard(clip_clipboard* clipboard, DAW::Cursor& cursor)
 		int32_t tickLen = clipboard->selRange;
 		int32_t trackBegin = cursor.getTrackBegin();
 		if (trackList.validTrackIdx(trackBegin)) {
-			track_t* tr = trackList[trackBegin];
+			track_gui_entry_t* tr = trackList.atNC(trackBegin);
 			int32_t subTrackOffset = cursor.getSubTrackBegin();
 			for (int i = 0; i <= clipboard->selTrackRange; i++) {
 				int32_t subTrackIdx = subTrackOffset + i;
@@ -125,32 +152,21 @@ void DawInstance::pasteClipboard(clip_clipboard* clipboard, DAW::Cursor& cursor)
 		}
 	}
 }
-void DawInstance::pasteClipboard(clip_clipboard* clipboard, int32_t track, tick_t tick) {
-	tick_t tickOffset = tick - clipboard->srcPos;
-	tick_t trackOffset = track;
-	for (int i = 0; i <= clipboard->selTrackRange; i++) {
-		track_clipboard_t* trClipboard = clipboard->tracks[i].get();
-		if (!trackList.validTrackIdx(i + trackOffset)) {
-			continue;
-		}
-		int32_t trackIdx = trackList.clampTrackIdx(i + trackOffset);
-		track_t* tr = trackList[trackIdx];
-//		if (tr->type == TRACK_TYPE_MIDI) {
-			trackdata_midi_t& midi = tr->getMidi();
-			for (auto it = trClipboard->clips.begin(); it != trClipboard->clips.end(); it++) {
-				clip_t* cl = (*it).get();
-				clip_t* cloned = cl->clone();
-				cloned->time += tickOffset;
-				cutIntersecting(tr, cloned);
-				midi.addClip(cloned);
+void muteIntersecting(track_gui_manager_i& trackList, const DAW::Cursor& _cursor) {
+	int32_t tickBegin = _cursor.getTickBegin();
+	int32_t tickEnd = _cursor.getTickEnd();
+	int32_t trackBegin = _cursor.getTrackBegin();
+	int32_t trackEnd = _cursor.getTrackEnd();
+	if (!_cursor.isSubtrackSelection()) {
+		for (int i = trackBegin; i <= trackEnd; i++) {
+			if (trackList.validTrackIdx(i)) {
+				track_gui_entry_t* tr = trackList.atNC(i);
+				muteIntersectingClips(tr->track->getMidi(), tickBegin, tickEnd);
 			}
-			midi.sortClips();
-//		}
+		}
 	}
 
 }
-namespace DAW {
-
 std::shared_ptr<clip_clipboard> consolidateClipboard(std::shared_ptr<clip_clipboard>& clipboardIn, const DAW::Cursor& _cursor) {
 	int32_t tickBegin = _cursor.getTickBegin();
 	int32_t tickEnd = _cursor.getTickEnd();
@@ -199,7 +215,8 @@ std::shared_ptr<clip_clipboard> consolidateClipboard(std::shared_ptr<clip_clipbo
 	}
 	return clipboard;
 }
-shared_ptr<clip_clipboard> copySelection(const trackallcontainer_t& trackList, const DAW::Cursor& _cursor) {
+
+shared_ptr<clip_clipboard> copySelection(const track_gui_manager_i& trackList, const DAW::Cursor& _cursor) {
 	int32_t tickBegin = _cursor.getTickBegin();
 	int32_t tickEnd = _cursor.getTickEnd();
 	int32_t trackBegin = _cursor.getTrackBegin();
@@ -214,7 +231,7 @@ shared_ptr<clip_clipboard> copySelection(const trackallcontainer_t& trackList, c
 		clipboard->selTrackRange = trackSubEnd - trackSubBegin;
 		clipboard->type = clip_clipboard::ClipboardAutomation;
 		if (trackList.validTrackIdx(trackBegin)) {
-			const track_t* const tr = trackList.at(trackBegin);
+			const track_gui_entry_t* const tr = trackList.at(trackBegin);
 			for (int i = trackSubBegin; i <= trackSubEnd; i++) {
 				if (tr->validSubtrack(i)) {
 					const gui_track_subtrack* subtrack = tr->subtracks[i];
@@ -240,9 +257,9 @@ shared_ptr<clip_clipboard> copySelection(const trackallcontainer_t& trackList, c
 		for (int i = 0; i <= clipboard->selTrackRange; i++) {
 			track_clipboard_t trackClipboard;
 			if (trackList.validTrackIdx(trackBegin + i)) {
-				const track_t* tr = trackList.at(trackBegin + i);
+				const track_gui_entry_t* tr = trackList.at(trackBegin + i);
 //				if (tr->type == TRACK_TYPE_MIDI) {
-					copyClipsInRange(tr->getConstMidi(), trackClipboard, clipboard->srcPos, 0, clipboard->selRange);
+					copyClipsInRange(tr->track->getConstMidi(), trackClipboard, clipboard->srcPos, 0, clipboard->selRange);
 //				}
 			}
 			clipboard->tracks.push_back(make_shared<track_clipboard_t>(move(trackClipboard)));
@@ -250,9 +267,40 @@ shared_ptr<clip_clipboard> copySelection(const trackallcontainer_t& trackList, c
 	}
 	return clipboard;
 }
+void cutSelection(track_gui_manager_i& trackList, const DAW::Cursor& _cursor) {
+	int32_t tickBegin = _cursor.getTickBegin();
+	int32_t tickEnd = _cursor.getTickEnd();
+	int32_t trackBegin = _cursor.getTrackBegin();
+	int32_t trackEnd = _cursor.getTrackEnd();
+	if (!_cursor.isSubtrackSelection()) {
+		for (int i = trackBegin; i <= trackEnd; i++) {
+			if (trackList.validTrackIdx(i)) {
+				track_gui_entry_t* tr = trackList.atNC(i);
+//				if (tr->type == TRACK_TYPE_MIDI) {
+				cutIntersectingClips(tr->track->getMidi(), tickBegin, tickEnd, DawInstance::get());
+//				}
+			}
+		}
+	} else {
+		int32_t trackSBegin = _cursor.getSubTrackBegin();
+		int32_t trackSEnd = _cursor.getSubTrackEnd();
+		if (trackList.validTrackIdx(trackBegin)) {
+			track_gui_entry_t* tr = trackList.atNC(trackBegin);
+			std::vector<automation_point_t> empty(0);
+			for (int i = 0; i <= trackSEnd-trackSBegin; i++) {
+				int32_t subTrackIdx = trackSBegin + i;
+				if (tr->validSubtrack(subTrackIdx)) {
+					gui_track_subtrack* subtrack = tr->subtracks[subTrackIdx];
+					automation_t* automation = subtrack->getAutomation();
+					if (automation) {
+						automation->setRange(tickBegin, tickEnd, empty);
+					}
+				}
+
+			}
+		}
+	}
 }
-shared_ptr<clip_clipboard> DawInstance::copySelection(const DAW::Cursor& _cursor) {
-	return DAW::copySelection(this->trackList, _cursor);
 }
 
 
@@ -303,60 +351,15 @@ void cutIntersectingClips(trackdata_midi_t& midi, tick_t tickBegin, tick_t tickE
 	}
 	midi.sortClips();
 }
+//TODO: rename
 void DawInstance::cutIntersecting(track_t* tr, tick_t tickBegin, tick_t tickEnd) {
 	cutIntersectingClips(tr->getMidi(), tickBegin, tickEnd, this);
 }
+//TODO: rename
 void DawInstance::cutIntersecting(track_t* tr, clip_t* mask) {
 	tick_t tickBegin = mask->time;
 	tick_t tickEnd = mask->end();
 	cutIntersecting(tr, tickBegin, tickEnd);
 }
-void DawInstance::muteIntersecting(const DAW::Cursor& _cursor) {
-	int32_t tickBegin = _cursor.getTickBegin();
-	int32_t tickEnd = _cursor.getTickEnd();
-	int32_t trackBegin = _cursor.getTrackBegin();
-	int32_t trackEnd = _cursor.getTrackEnd();
-	if (!cursor.isSubtrackSelection()) {
-		for (int i = trackBegin; i <= trackEnd; i++) {
-			if (trackList.validTrackIdx(i)) {
-				track_t* tr = trackList[i];
-				muteIntersectingClips(tr->getMidi(), tickBegin, tickEnd);
-			}
-		}
-	}
 
-}
-void DawInstance::cutSelection(const DAW::Cursor& _cursor) {
-	int32_t tickBegin = _cursor.getTickBegin();
-	int32_t tickEnd = _cursor.getTickEnd();
-	int32_t trackBegin = _cursor.getTrackBegin();
-	int32_t trackEnd = _cursor.getTrackEnd();
-	if (!_cursor.isSubtrackSelection()) {
-		for (int i = trackBegin; i <= trackEnd; i++) {
-			if (trackList.validTrackIdx(i)) {
-				track_t* tr = trackList[i];
-//				if (tr->type == TRACK_TYPE_MIDI) {
-					cutIntersecting(tr, tickBegin, tickEnd);
-//				}
-			}
-		}
-	} else {
-		int32_t trackSBegin = _cursor.getSubTrackBegin();
-		int32_t trackSEnd = _cursor.getSubTrackEnd();
-		if (trackList.validTrackIdx(trackBegin)) {
-			track_t* tr = trackList[trackBegin];
-			std::vector<automation_point_t> empty(0);
-			for (int i = 0; i <= trackSEnd-trackSBegin; i++) {
-				int32_t subTrackIdx = trackSBegin + i;
-				if (tr->validSubtrack(subTrackIdx)) {
-					gui_track_subtrack* subtrack = tr->subtracks[subTrackIdx];
-					automation_t* automation = subtrack->getAutomation();
-					if (automation) {
-						automation->setRange(tickBegin, tickEnd, empty);
-					}
-				}
 
-			}
-		}
-	}
-}

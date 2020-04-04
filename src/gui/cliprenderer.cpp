@@ -89,7 +89,7 @@ bool getClipPosition(scaled_grid& grid, const ivec2& scissorSize, const clip_t* 
 	size = ivec2(widthPx, size.y-INSET_TRACK_CONTENT*2);
 	return size.x > 0 && size.y > 0;
 }
-audioclip_texture_t makeWaveformFromClip(project_t& project, scaled_grid& grid,
+audioclip_texture_t makeWaveformFromClip(const project_globals_t& project, scaled_grid& grid,
 		ivec2& trackSize, clip_t* m_clip, ivec2& pos, ivec2& size, ivec2& posClipped, ivec2& sizeClipped) {
 
 
@@ -252,7 +252,7 @@ gui_midi_clip::gui_midi_clip(track_gui_entry_t* _track, clip_t* _clip)
 gui_midi_clip::~gui_midi_clip() {
 	delete impl;
 }
-void gui_midi_clip::updatePosition(project_t& project, scaled_grid& grid, ivec2& trackSize) {
+void gui_midi_clip::updatePosition(project_globals_t& project, scaled_grid& grid, ivec2& trackSize) {
 	size = this->parent->size;
 	culled = !getClipPosition(grid, trackSize, m_clip, pos, size, 0);
 	//bool resetCache = false;

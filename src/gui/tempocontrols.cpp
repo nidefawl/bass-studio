@@ -175,10 +175,10 @@ void guictr_tempocontrols::buttonClicked(guibase* button) {
 		DawInstance::get()->stopPlaying();
 	}
 	if (button == &this->btnRecord) {
-		project.recordArmed = !project.recordArmed;
+		projectGlobals.recordArmed = !projectGlobals.recordArmed;
 	}
 	if (button == &this->btnLoop) {
-		project.loopEnabled = !project.loopEnabled;
+		projectGlobals.loopEnabled = !projectGlobals.loopEnabled;
 	}
 	if (button == &this->btnAudioOnOff) {
 		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();

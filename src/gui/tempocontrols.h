@@ -193,6 +193,7 @@ public:
 };
 class guictr_tempocontrols : public guictr_base {
 	project_t& project;
+	project_globals_t& projectGlobals;
 	gui_tempocontrol tempo;
 	gui_signaturecontrol signature;
 	gui_timeinput cursorPos;
@@ -205,13 +206,14 @@ class guictr_tempocontrols : public guictr_base {
 	gui_timeinput loopPos;
 	gui_timeinput loopLen;
 public:
-	guictr_tempocontrols(project_t& _project)
+	guictr_tempocontrols(project_t& _project, project_globals_t& _projectGlobals)
 		: guictr_base(),
 		  project(_project),
-		  cursorPos(&project_controller_t::get()->cursor.cursorPos),
-		  songPos(&project_controller_t::get()->playbackPos),
-		  loopPos(&project_controller_t::get()->loopStart),
-		  loopLen(&project_controller_t::get()->loopLen, true)
+		  projectGlobals(_projectGlobals),
+		  cursorPos(&projectGlobals.cursor.cursorPos),
+		  songPos(&projectGlobals.playbackPos),
+		  loopPos(&projectGlobals.loopStart),
+		  loopLen(&projectGlobals.loopLen, true)
 	{
 //		btnAudioOnOff.setTint(0x00ddff);
 		songPos.setConnectedBG();
@@ -222,8 +224,8 @@ public:
 		btnStop.drawFn = drawStopSymbol;
 		btnLoop.drawFn = drawTextureSymbol;
 		btnLoop.drawParm = ICON_LOOP;
-		btnLoop.setEnabledRef(&project.loopEnabled);
-		btnRecord.setEnabledRef(&project.recordArmed);
+		btnLoop.setEnabledRef(&projectGlobals.loopEnabled);
+		btnRecord.setEnabledRef(&projectGlobals.recordArmed);
 		btnRecord.setButtonColor(GuiColor::COL_BTN_RECORD_ARM_BG);
 		add(&loopLen);
 		add(&loopPos);

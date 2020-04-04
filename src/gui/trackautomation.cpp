@@ -115,7 +115,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 		tick_t tickAt = grid.screenToTick(trackEditorLocal.x);
 		DAW::Cursor& cursor = view->cursor;
 		dragged = hitTest(local);
-		if (dragged.mode != dragmode::drag_node && cursor.containsSubtrack(this->m_track->idx, this->idx, tickAt)) {
+		if (dragged.mode != dragmode::drag_node && cursor.containsSubtrack(this->m_trackentry->idx, this->idx, tickAt)) {
 			int32_t steps = at->getQuantizationSteps(param);
 			addPointAt(data.points, cursor.getTickBegin(), steps);
 			int32_t idx = addPointAt(data.points, cursor.getTickBegin(), steps);
@@ -320,7 +320,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 				tick_t tick = grid.screenToTickSnap(mpos.x, SNAP_OFF);
 
 				// automation subtracks have priority over parent if they are in the selection range
-				if (this->idx >= 0 && daw->cursor.containsSubtrack(this->m_track->idx, this->idx, tick)) {
+				if (this->idx >= 0 && m_trackentry->parentCtrl->getCursor().containsSubtrack(this->m_trackentry->idx, this->idx, tick)) {
 					evt.requestFocus(this);
 					return true;
 				} else if (this->idx < 0) {

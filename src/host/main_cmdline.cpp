@@ -260,13 +260,15 @@ int main(int argc, char* argv[]) {
     	vsthost::assignMasterCallback(host.get());
 		host->setSampleFormat(sampleformat_t{static_cast<samplerate_t>(settings.iosettings.samplerate), settings.iosettings.blocksize, sampleformat_bits_t::FLOAT_32});
 
-    	project_controller_t project;
+		project_t project;
+		project_globals_t projectGlobals;
+    	project_controller_t projectController{&project, &projectGlobals};
     	plugindatabase_t plugindb;
     	waveformrender renderer;
     	audiocache cache(settings.iosettings.samplerate);
     	daw_tls::tlsinstance& tls = daw_tls::getTls();
     	tls.mainCtrl = nullptr;
-    	tls.project = &project;
+    	tls.project = &projectController;
     	tls.host = host.get();
     	std::unique_ptr<audiohost> audioHost;
     	std::unique_ptr<midihost> midiHost;
@@ -316,7 +318,7 @@ int main(int argc, char* argv[]) {
     		if (!bRenderOnly) {
         		playThread = std::make_unique<PlaybackThread>();
     			playThread->setTls(tls);
-    			playThread->startThread(&project);
+    			playThread->startThread(&projectController);
     			playThread->addRequest(REQ_STATE, (int) playback_state::status_no_process, true);
     		}
 			if (!file.empty()) {
@@ -330,12 +332,12 @@ int main(int argc, char* argv[]) {
 				audiocache::getInstance()->load(pf->sampleFileIndex);
 
 				/** create all audio instances **/
-				for (track_t* t : project.trackList) {
+				for (track_t* t : projectController.getTracks()) {
 					host->createAudio(t);
 				}
 
 				/** pre-load all plugin instances **/
-        		project.trackList.loadPlugins(snapshot);
+				project.trackList.loadPlugins(snapshot);
 
         		/** reset maximum stage id and determine new maximum stage id **/
         		host->updateMaximumStageId();
@@ -363,16 +365,16 @@ int main(int argc, char* argv[]) {
         		}
 
 			} else {
-	    		project.cursor.cursorPos = 0;
-	    		project.loopEnabled = false;
+	    		projectGlobals.cursor.cursorPos = 0;
+	    		projectGlobals.loopEnabled = false;
 	    		track_t* track1 = new track_t(TRACK_TYPE_MIDI, "track1", true);
-	    		project.addTrackImpl(-1, track1, 0);
+	    		projectController.addTrackImpl(-1, track1, 0);
 
 	    		track_t* track2 = new track_t(TRACK_TYPE_MIDI, "track2", true);
-	    		project.addTrackImpl(-1, track2, 0);
+	    		projectController.addTrackImpl(-1, track2, 0);
 
 	    		track_t* trackMaster = new track_t(TRACK_TYPE_MASTER, "master", true);
-	    		project.addTrackImpl(0, trackMaster, 0);
+	    		projectController.addTrackImpl(0, trackMaster, 0);
 	        	String pathTracks = "test.tracks";
 	        	std::shared_ptr<trackcontainer_snapshot_t> ctr = loadTrackContainer(pathTracks);
 	        	std::vector<track_t*> loadedChildTracks;
@@ -382,7 +384,7 @@ int main(int argc, char* argv[]) {
 	        			track_t* tr = new track_t(ts);
 	        			loadedChildTracks.push_back(tr);
 	        			track2->addChild(tr);
-	            		project.addTrackImpl(-1, tr, 0);
+	        			projectController.addTrackImpl(-1, tr, 0);
 	            		ts.trackLoaded = tr;
 	            		log_printf("add track %s\n", StringAsCStr(tr->name));
 	        		}
@@ -431,8 +433,8 @@ int main(int argc, char* argv[]) {
 			/** inform host about track layout changes so it resets and updates internal structures */
 			host->onTrackLayoutChange();
 
-    		my_printf("Tempo100: %d\n", project.tempo100);
-    		my_printf("project.cursor.cursorPos: %d\n", project.cursor.cursorPos);
+    		my_printf("Tempo100: %d\n", projectGlobals.tempo100);
+    		my_printf("project.cursor.cursorPos: %d\n", projectGlobals.cursor.cursorPos);
 
     		AudioBlock block(2, host->sampleFormat.blockSize);
     		AudioBlock blockFull(1, host->sampleFormat.blockSize*2);
@@ -442,13 +444,13 @@ int main(int argc, char* argv[]) {
 
 
 
-			project.cursor.cursorPos = project.loopStart;
+			projectGlobals.cursor.cursorPos = projectGlobals.loopStart;
 			if (fStart >= 0.0f) {
-				project.cursor.cursorPos = math::round(fStart*TICKS_BAR);
-				project.loopStart = math::round(fStart*TICKS_BAR);
+				projectGlobals.cursor.cursorPos = math::round(fStart*TICKS_BAR);
+				projectGlobals.loopStart = math::round(fStart*TICKS_BAR);
 			}
 			if (fStart >= 0.0f && fLength >= 0.0f) {
-				project.loopEnabled = false;
+				projectGlobals.loopEnabled = false;
 //				project.loopLen = math::round(fLength*TICKS_BAR);
 			}
 			if (bRenderOnly) {
@@ -460,7 +462,7 @@ int main(int argc, char* argv[]) {
     		std::shared_ptr<DAW::processing_graph_t> processingGraph;
 			AudioBlock blockIn(host->numChannels, host->sampleFormat.blockSize);
 			AudioBlock blockOut(host->numChannels, host->sampleFormat.blockSize);
-			host->project = project;
+			host->prjGlobals = projectGlobals;
 			bool firstBlock = false;
 			bool isLoopAround = false;
 			int32_t samplePos = 0;
@@ -483,15 +485,15 @@ int main(int argc, char* argv[]) {
 	    		}
 				dbgassert(host->sampleFormat.sampleRate != 0);
 				dbgassert(host->sampleFormat.blockSize != 0);
-				tick_t startPos = project.cursor.cursorPos;
+				tick_t startPos = projectController.getCursorPos();
 				tickPos = startPos;
-				project.getPlaybackPos() = startPos;
-				int32_t bpm100 = project.getCurrentTempo();
+				projectController.getPlaybackPos() = startPos;
+				int32_t bpm100 = projectController.getCurrentTempo();
 				samplePos = tickToSample(startPos, bpm100, host->sampleFormat.sampleRate);
 				LOG("START ON seconds: %.2f - sample %d\n", toSeconds(startPos, bpm100), samplePos);
-				host->onStartPlayback(&project);
+				host->onStartPlayback(&projectController);
 			}
-			host->project = project;
+			host->prjGlobals = projectGlobals;
     		while (!quit) {
 				auto tNow = getTimeMillis()/1000.0;
 				if (tNow - tLastMsg >= 1.0) {
@@ -500,12 +502,12 @@ int main(int argc, char* argv[]) {
 					host->getStats(stats);
 					String strProgress = "x";
 					if (fStart >= 0.0f && fLength >= 0.0f) {
-						float fProgress = ((project.playbackPos)/(float)TICKS_BAR - fStart)/fLength;
+						float fProgress = ((projectGlobals.playbackPos)/(float)TICKS_BAR - fStart)/fLength;
 						strProgress = StringFormat("%0.2f%%", fProgress*100.0f);
 					}
 					log_printf("PROCESS[render=%d,sr=%0.1fk,bs=%d] %s playbackPos %d/%.0f, %d blocks, %d samples\n", bRenderOnly, host->sampleFormat.sampleRate/1000.0f, host->sampleFormat.blockSize,
 							StringAsCStr(strProgress),
-							project.playbackPos, (fStart+fLength)*TICKS_BAR, stats.blocksProcessed, stats.samplesProcessed);
+							projectGlobals.playbackPos, (fStart+fLength)*TICKS_BAR, stats.blocksProcessed, stats.samplesProcessed);
 
 
 				}
@@ -529,10 +531,9 @@ int main(int argc, char* argv[]) {
 
 
 	            	//ctrl may still alter project settings during copy here if not locked
-	            	project_globals_t& projGlobals = host->project;
-    	            bool inLoop = (tickPos >= projGlobals.loopStart
-	            			&& tickPos < projGlobals.loopStart+projGlobals.loopLen
-							&& projGlobals.loopEnabled);
+    	            bool inLoop = (tickPos >= projectGlobals.loopStart
+	            			&& tickPos < projectGlobals.loopStart+projectGlobals.loopLen
+							&& projectGlobals.loopEnabled);
 
 	            	int32_t processedBlock = host->processBlock(tls.project, processingGraph.get(), &blockIn, &blockOut, samplePos, tickPos, playback_state::status_play, inLoop, isLoopAround);
 
@@ -541,8 +542,7 @@ int main(int argc, char* argv[]) {
     				{
     		        	samplerate_t sampleRate = host->sampleFormat.sampleRate;
     		        	int32_t blockSize = host->sampleFormat.blockSize;
-    	            	project_globals_t& projGlobals = host->project;
-    	            	int32_t bpm100 = projGlobals.tempo100;
+    	            	int32_t bpm100 = projectGlobals.tempo100;
     					double blocksPerS = sampleRate / (double) blockSize;
     					double msPerBlock = 1000.0 / blocksPerS;
     					const double ticksPerBlock = toTickPrecise(blockSize/(double)sampleRate, bpm100);
@@ -552,15 +552,15 @@ int main(int argc, char* argv[]) {
     						samplePos += blockSize*processedBlock;
     						tickPos += ticksPerBlock*processedBlock;
 							if (inLoop) {
-								if (tickPos >= projGlobals.loopStart + projGlobals.loopLen) {
-									LOG("JMP FROM %.2f to %d\n", tickPos, projGlobals.loopStart);
-									tickPos = projGlobals.loopStart;
-									samplePos = tickToSample(projGlobals.loopStart, bpm100, sampleRate);
-									LOG("JMP LOOPBEGIN seconds: %.2f - BLOCK %d\n", toSeconds(projGlobals.loopStart, bpm100), samplePos / blockSize);
+								if (tickPos >= projectGlobals.loopStart + projectGlobals.loopLen) {
+									LOG("JMP FROM %.2f to %d\n", tickPos, projectGlobals.loopStart);
+									tickPos = projectGlobals.loopStart;
+									samplePos = tickToSample(projectGlobals.loopStart, bpm100, sampleRate);
+									LOG("JMP LOOPBEGIN seconds: %.2f - BLOCK %d\n", toSeconds(projectGlobals.loopStart, bpm100), samplePos / blockSize);
 									isLoopAround = true;
 								}
 							}
-							project.getPlaybackPos() = (int32_t) floor(tickPos);
+							projectController.getPlaybackPos() = (int32_t) floor(tickPos);
 
     					}
     				}
@@ -568,7 +568,7 @@ int main(int argc, char* argv[]) {
 				if (fStart >= 0.0f && fLength >= 0.0f) {
 	//				project.loopEnabled = false;
 	//				project.loopLen = math::round(fLength*TICKS_BAR);
-					if ((project.playbackPos)/(float)TICKS_BAR - fStart >= fLength) {
+					if ((projectGlobals.playbackPos)/(float)TICKS_BAR - fStart >= fLength) {
 						if (playThread) {
 							playThread->addRequest(REQ_STATE, (int) playback_state::status_no_process, true);
 						}

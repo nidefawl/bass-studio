@@ -7,11 +7,19 @@ extern "C" {
 
 void failedAssert(const char* expr, const char *file, int line);
 
+#ifdef NDEBUG
+#error TODO
+#define assert_expr(_Expression) (!!(_Expression))
+#else
 #define dbgassert(_Expression) \
  (void) \
  ((!!(_Expression)) || \
   (failedAssert(#_Expression,__FILE__,__LINE__),0))
+#define assert_expr(_Expression) \
+ ((!!(_Expression)) || \
+  (failedAssert(#_Expression,__FILE__,__LINE__),0))
 
+#endif
 #ifdef __cplusplus
 }
 #endif

@@ -250,11 +250,11 @@ public:
 	guictr_tracks ctr_tracks2;
 	guictr_plugins ctr_plugins;
 	Splitter splitterCenter;
-	DawViewContainersCompanion(DawCtrl* const _dawCtrl, ngui::MenuBar& menubar, DAW::Cursor& _cursor, project_t& project, scaled_grid& grid, clip_view& clipView, dragdrop_midifile& dragdropclip)
+	DawViewContainersCompanion(DawCtrl* const _dawCtrl, ngui::MenuBar& menubar, DAW::Cursor& _cursor, project_t& _project, project_globals_t& _projectGlobals, scaled_grid& grid, clip_view& clipView, dragdrop_midifile& dragdropclip)
 	  :
 	  ctr_menu(menubar),
 //	  ctr_nodes(_cursor, project, dragdropclip),
-	  ctr_tracks2(_dawCtrl, _cursor, project, grid, dragdropclip),
+	  ctr_tracks2(_dawCtrl, _cursor, _project, _projectGlobals, grid, dragdropclip),
 	  splitterCenter(0, 0.8f)
 	{
 		splitterCenter.setMinMax(0.2f, 0.86f);
@@ -319,15 +319,15 @@ public:
 //	Splitter splitterList;
 	Splitter splitterCenter;
 	Splitter splitterRight;
-	DawViewContainersMain(MainCtrl* const _mainCtrl, ngui::MenuBar& menubar, DAW::Cursor& _cursor, project_t& project, scaled_grid& grid, clip_view& clipView, dragdrop_midifile& dragdropclip)
+	DawViewContainersMain(MainCtrl* const _mainCtrl, ngui::MenuBar& menubar, DAW::Cursor& _cursor, project_t& _project, project_globals_t& _projectGlobals, scaled_grid& grid, clip_view& clipView, dragdrop_midifile& dragdropclip)
 	  : noteeditor(clipView),
 	  ctr_menu(menubar),
-	  ctr_tempo(project),
+	  ctr_tempo(_project, _projectGlobals),
 	  ctr_pluginview(&ctr_plugins),
 	  ctr_clipeditorview(noteeditor),
 	  ctr_clipeditor(noteeditor, clipView),
-	  ctr_tracks(_mainCtrl, _cursor, project, grid, dragdropclip),
-	  ctr_nodes(_cursor, project, dragdropclip),
+	  ctr_tracks(_mainCtrl, _cursor, _project, _projectGlobals, grid, dragdropclip),
+	  ctr_nodes(_cursor, _project, dragdropclip),
 	  subctr_tabbed(),
 	  subctr_tabbed2(ctr_effectlib),
 	  ctr_stack_right(),
@@ -435,7 +435,7 @@ public:
 	}
 };
 void CompanionCtrl::setupView() {
-	view = new DawViewContainersCompanion(this, menubar, daw.cursor, daw, grid, clipView, daw.dragdropclip);
+	view = new DawViewContainersCompanion(this, menubar, cursor, daw.project, daw.projectGlobals, grid, clipView, daw.dragdropclip);
 	view->addTo(this->containers);
 	viewContainers = view;
 	for (guictr_base *ctr : containers) {
@@ -445,7 +445,7 @@ void CompanionCtrl::setupView() {
 
 }
 void MainCtrl::setupView() {
-	view = new DawViewContainersMain(this, menubar, daw.cursor, daw, grid, clipView, daw.dragdropclip);
+	view = new DawViewContainersMain(this, menubar, daw.projectGlobals.cursor, daw.project, daw.projectGlobals, grid, clipView, daw.dragdropclip);
 	view->addTo(this->containers);
 	viewContainers = view;
 	for (guictr_base *ctr : containers) {
@@ -541,14 +541,14 @@ void DawInstance::unloadProject() {
 		dawctrl->clipView.set(NULL);
 	}
 
-	cursor.setEmptySelection();
+	projectGlobals.cursor.setEmptySelection();
 
 	hist.clear(this);
 
 //	std::shared_ptr<clip_clipboard>& clipboard = view->ctr_tracks.trackView.clipboard;
 //	clipboard.reset();
-	std::vector<track_t*> _tracks = trackList.getAllTracksFlatVec();  // iterate a copy
-	std::vector<track_t*> _rootTracks = trackList.getAllTracksTreeVec();
+	std::vector<track_t*> _tracks = project.trackList.getAllTracksFlatVec();  // iterate a copy
+	std::vector<track_t*> _rootTracks = project.trackList.getAllTracksTreeVec();
 	my_printf("unloading project with %d tracks\n", _tracks.size());
 	for (auto it = _tracks.rbegin(); it != _tracks.rend(); it++) {
 		track_t* track = *it;
@@ -562,7 +562,7 @@ void DawInstance::unloadProject() {
 		my_printf("remove track %s\n", StringAsCStr(track->name));
 		removeTrackImpl(track, FLG_TRK_CHANGE_LOAD);
 	}
-	trackList.clear();
+	project.trackList.clear();
 	for (auto it = _tracks.rbegin(); it != _tracks.rend(); it++) {
 		track_t* track = *it;
 		my_printf("delete track %s\n", StringAsCStr(track->name));
@@ -578,14 +578,14 @@ void DawInstance::unloadProject() {
 		trackView.resizePreModifyState.reset();
 		trackView.clipboard.reset();
 		trackView.action.clipboard.reset();
-		trackView.tracksVisibleFlat.clear();
+		trackView.iGuiMgr.reset();
 	}
 	if (companionCtrl && companionCtrl->view) {
 		auto& trackView = companionCtrl->view->ctr_tracks2.trackView;
 		trackView.resizePreModifyState.reset();
 		trackView.clipboard.reset();
 		trackView.action.clipboard.reset();
-		trackView.tracksVisibleFlat.clear();
+		trackView.iGuiMgr.reset();
 	}
 
 	{
@@ -1077,7 +1077,7 @@ void MainCtrl::onTick() {
 		guictr_base& ctrMixers = view->ctr_tracks.trackControls;
 		if (ctrMixers.contains(trackViewLocalPos)) {
 			ivec2 posRelative = m_mousePos - ctrMixers.toScreenSpace(ivec2(0));
-			tr = getTrackFromMouse(this->view->ctr_tracks.trackView, daw, posRelative, false);
+			tr = getTrackFromMouse(this->view->ctr_tracks.guiMgr, posRelative, false);
 			if (tr && tr == lastHoveredTrack && daw.getSelectedTrack() != tr->track) {
 				hoverTicks = lastHoveredTrackTicks + 1;
 				if (lastHoveredTrackTicks >= 6) {
@@ -1143,7 +1143,7 @@ void DawInstance::setControls(MainCtrl* mainCtrl, CompanionCtrl* companionCtrl) 
 }
 void DawInstance::onTick()
 {
-	const bool bWroteMidiData = vsthost::getInstance()->writeRecordedData();
+	const bool bWroteMidiData = vsthost::getInstance()->writeRecordedData(&project);
 
 	if (bWroteMidiData) {
 		for (auto ctrl : dawCtrls) {
@@ -1177,7 +1177,8 @@ std::shared_ptr<project_file> DawInstance::createProjectFile() {
 	ThreadLock lock = playThread.lockThread();
 	std::shared_ptr<project_file> file = std::make_shared<project_file>();
 	file->path = projectPath;
-	copyTo(file->project);
+	project.copyTo(file->project);
+	file->project.globals = projectGlobals;
 	audiocache::getInstance()->store(file->sampleFileIndex);
 	file->layout.layoutGrid = mainCtrl->grid;
 	file->layout.scrollOffsetX = mainCtrl->view->ctr_tracks.getScrollOffset();
@@ -1214,7 +1215,7 @@ bool DawInstance::setProjectToLoad(std::shared_ptr<project_file> file, int flags
 bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags) {
 
 	setAudioThreadState(playback_state::status_no_process);
-	my_printf("loading %s: %d tracks\n", StringAsCStr(file->path), trackList.size());
+	my_printf("loading %s: %d tracks\n", StringAsCStr(file->path), project.trackList.size());
 
 	ThreadLock lock = playThread.lockThread();
 	unloadProject();
@@ -1224,32 +1225,34 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
 	audiocache::getInstance()->load(file->sampleFileIndex);
 
 	/** populates trackList **/
-	project_t::copyFrom(file->project);
+	project.copyFrom(file->project);
+	projectGlobals = file->project.globals;
 
-	vsthost* host = vsthost::getInstance();
+
 	/** create all audio instances **/
-	for (track_t* t : trackList) {
+	vsthost* host = vsthost::getInstance();
+	for (track_t* t : project.trackList) {
 		host->createAudio(t);
 	}
 
 
 	/** create all gui instances **/
-	for (track_t* tr : trackList) {
+	for (track_t* tr : project.trackList) {
 		mainCtrl->view->ctr_tracks.addTrack(tr, FLG_TRK_CHANGE_LOAD);
 	}
 	if (companionCtrl) {
-		for (track_t* tr : trackList) {
+		for (track_t* tr : project.trackList) {
 			companionCtrl->view->ctr_tracks2.addTrack(tr, FLG_TRK_CHANGE_LOAD);
 		}
 	}
 	/** pre-load all plugin instances **/
-	trackList.loadPlugins(file->project);
+	project.trackList.loadPlugins(file->project);
 
 	/** reset maximum stage id and determine new maximum stage id **/
 	host->updateMaximumStageId();
 
 	/** remove routings to missing track **/
-	DAW::validateTrackRoutings(host, this->getTracksFlatVec());
+	DAW::validateTrackRoutings(host, project.getTracksFlatVec());
 
 	/** inform host about track layout changes so it resets and updates internal structures **/
 	host->onTrackLayoutChange();
@@ -1342,6 +1345,7 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
 	/** load layouts **/
 //	trackList.loadSubtrackLayouts(file->project);
 
+	/** validate cursor state **/
 	auto ctrl = mainCtrl;
 	if (ctrl)
 	{
@@ -1356,6 +1360,14 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
 		ctrl->updateVisibleTrackContents();
 		ctrl->view->ctr_tracks.layout();
 		ctrl->view->ctr_tracks.setScrollOffset(file->layout.scrollOffsetX);
+		auto& cursor = ctrl->getCursor();
+		auto& guiMgr = ctrl->view->ctr_tracks.guiMgr;
+		if (cursor.isSubtrackSelection() && guiMgr.validTrackIdx(cursor.cursorTrack)) {
+			const track_gui_entry_t* tr = guiMgr.at(cursor.cursorTrack);
+			fixCursorSubRange(cursor, tr->subtracks.size());
+		} else {
+			fixCursorTrackRange(cursor, guiMgr.getTracksVisibleFlat().size());
+		}
 	}
 	auto ctrl2 = companionCtrl;
 	if (ctrl2 && ctrl2->view)
@@ -1371,16 +1383,16 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
 		ctrl2->updateVisibleTrackContents();
 		ctrl2->view->ctr_tracks2.layout();
 		ctrl2->view->ctr_tracks2.setScrollOffset(file->layout.scrollOffsetX);
+		auto& cursor = ctrl2->getCursor();
+		auto& guiMgr = ctrl2->view->ctr_tracks2.guiMgr;
+		if (cursor.isSubtrackSelection() && guiMgr.validTrackIdx(cursor.cursorTrack)) {
+			const track_gui_entry_t* tr = guiMgr.at(cursor.cursorTrack);
+			fixCursorSubRange(cursor, tr->subtracks.size());
+		} else {
+			fixCursorTrackRange(cursor, guiMgr.getTracksVisibleFlat().size());
+		}
 	}
 
-
-	/** load cursor state **/
-	if (cursor.isSubtrackSelection() && trackList.validTrackIdx(cursor.cursorTrack)) {
-		track_t* tr = trackList[cursor.cursorTrack];
-		fixCursorSubRange(cursor, tr->subtracks.size());
-	} else {
-		fixCursorTrackRange(cursor, trackList.size());
-	}
 	/** set as current project **/
 	this->projectPath = file->path;
 
@@ -1751,8 +1763,8 @@ void DawInstance::setAudioThreadState(playback_state state) {
 	playThread.addRequest(REQ_STATE, (int) state, true);
 }
 bool DawInstance::toggleLoop() {
-	loopEnabled = !loopEnabled;
-	return loopEnabled;
+	projectGlobals.loopEnabled = !projectGlobals.loopEnabled;
+	return projectGlobals.loopEnabled;
 }
 bool DawInstance::isPlaying() {
 	return playThread.getState() == playback_state::status_play;
@@ -1768,7 +1780,7 @@ bool DawCtrl::mouseDownPre() {
 
 track_t* DawInstance::createNewTrack(int trackType) {
 	dbgassert(trackType >= 0 && trackType < NUM_TRACK_TYPES);
-	int32_t tryTypeOffset = trackTypeCtrs[trackType]->size();
+	int32_t tryTypeOffset = project.trackTypeCtrs[trackType]->size();
 
 	String name = StringFormat("%s %d", TrackTypeToName(trackType), tryTypeOffset + 1);
 	track_t* newTrack = new track_t(trackType, name, true);
@@ -1877,7 +1889,7 @@ public:
 	}
 };
 void DawInstance::addTrackImpl(int32_t trackInsertPos, track_t* newTrack, int flags) {
-	trackList.addTrack(trackInsertPos, newTrack);
+	project.trackList.addTrack(trackInsertPos, newTrack);
 	if ((flags&FLG_TRK_CHANGE_HISTORY_UNDO) != 0) {
 		dbgassert(newTrack->audio);
 	} else {
@@ -1896,8 +1908,8 @@ void DawInstance::addTrackImpl(int32_t trackInsertPos, track_t* newTrack, int fl
 	vsthost::getInstance()->onTrackLayoutChange();
 }
 void DawInstance::removeTrackId(uint32_t trackId) {
-	if (trackList.validTrackIdx(trackId)) {
-		removeTrackImpl(trackList[trackId], FLG_TRK_CHANGE_USER);
+	if (project.trackList.validTrackIdx(trackId)) {
+		removeTrackImpl(project.trackList[trackId], FLG_TRK_CHANGE_USER);
 	}
 }
 void DawInstance::removeTrackImpl(track_t* track, int flags) {
@@ -1906,19 +1918,21 @@ void DawInstance::removeTrackImpl(track_t* track, int flags) {
 	if (mainCtrl->clipView.gui && mainCtrl->clipView.gui->m_track == track){
 		mainCtrl->clipView.set(NULL);
 	}
-	trackList.removeTrack(track);
+	track_layout_snapshot_t layoutsnapshot;
+//	track->audio->
+	project.trackList.removeTrack(track);
 	mainCtrl->view->ctr_tracks.removeTrack(track, flags);
 	if (companionCtrl) {
 		companionCtrl->view->ctr_tracks2.removeTrack(track, flags);
 	}
-	DAW::removeTrackRoutings(this->getTracksFlatVec(), track->audio->stageId);
+	DAW::removeTrackRoutings(project.getTracksFlatVec(), track->audio->stageId);
 	if (flags&FLG_TRK_CHANGE_USER) {
 		pushHist(new action_modify_track_remove(StringFormat("Remove %s Track", TrackTypeToName(track->type)), track));
 	}
 	vsthost::getInstance()->onTrackLayoutChange();
 }
 track_t* DawInstance::getTrackId(uint32_t trackId) {
-	return trackList[trackId]; // operator[] returns NULL on oob
+	return project.trackList[trackId]; // operator[] returns NULL on oob
 }
 
 void DawInstance::preClipDelete(clip_t* clip) {
@@ -1946,7 +1960,7 @@ void MainCtrl::showAutomation(track_t* tr, automatable_t* at, int32_t paramIdx) 
 }
 void DawInstance::setTempo(int32_t _tempo100) {
 	std::function<void()> fn2 = [this, _tempo100]() {
-		tempo100 = CLAMP_I(_tempo100, 100, 99900);
+		projectGlobals.tempo100 = CLAMP_I(_tempo100, 100, 99900);
 	};
 	playThread.call(fn2, true);
 
@@ -2058,11 +2072,11 @@ int32_t project_controller_t::tickToSamples(tick_t ticks)
 {
 	vsthost* host = vsthost::getInstance();
 	dbgassert(host);
-	return std::round(tickToSamplePrecise(ticks, tempo100, vsthost::getInstance()->sampleFormat.sampleRate));
+	return std::round(tickToSamplePrecise(ticks, projectGlobals->tempo100, vsthost::getInstance()->sampleFormat.sampleRate));
 }
 tick_t project_controller_t::samplesToTicks(int32_t sample)
 {
 	vsthost* host = vsthost::getInstance();
 	dbgassert(host);
-	return std::round(sampleToTickPrecise(sample, tempo100, vsthost::getInstance()->sampleFormat.sampleRate));
+	return std::round(sampleToTickPrecise(sample, projectGlobals->tempo100, vsthost::getInstance()->sampleFormat.sampleRate));
 }

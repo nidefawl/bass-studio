@@ -68,9 +68,8 @@ int getTrackInfo(duk_context *ctx) {
 	//set this.nativeHandle = 12345
 	duk_push_number(ctx, 12345);
 	duk_put_prop_string(ctx, -2, "nativeHandle");
-	vsthost* host = daw_tls::getTls().host;
-	project_t* project = project_controller_t::get();
-	if (host && project) {
+//	vsthost* host = daw_tls::getTls().host;
+//	if (host && project) {
 //		DAW::track_graph_t graph = host->lastTrackGraph;
 //		{
 //			duk_idx_t  arr_idx = duk_push_array(ctx);
@@ -86,7 +85,7 @@ int getTrackInfo(duk_context *ctx) {
 //			}
 //			duk_put_prop_string(ctx, -2, "tracks");
 //		}
-	}
+//	}
 
 
 

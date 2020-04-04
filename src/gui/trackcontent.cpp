@@ -124,7 +124,7 @@ bool isEqualWaveform3(const audioclip_texture_t& lhs, const audioclip_texture_t&
 void gui_audio_clip::updateClipRenderCache(NVGcontext* vg) {
 
 }
-void gui_audio_clip::updatePosition(project_t& project, scaled_grid& grid, ivec2& trackSize) {
+void gui_audio_clip::updatePosition(project_globals_t& project, scaled_grid& grid, ivec2& trackSize) {
 	size = this->parent->size;
 	culled = !getClipPosition(grid, trackSize, m_clip, pos, size, 0);
 	audiofile_t* audio = audiocache::getInstance()->get(m_clip->audio.id);
@@ -326,7 +326,7 @@ gui_clip* createClipGui(guictr_base* parent, track_gui_entry_t* trackentry, clip
 	}
 	return trackentry->clipsGuis[clip];
 }
-void gui_track::updateVisibleTrackContents(project_t& project, scaled_grid& grid) {
+void gui_track::updateVisibleTrackContents(project_globals_t& project, scaled_grid& grid) {
 	automation.setData();
 	automation.updateVisibleTrackContents(grid);
 	std::vector<clip_t*> clips = m_track->getMidi().getClips();
@@ -354,11 +354,9 @@ bool gui_track::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 			}
 		}
 		if (evt.type == MouseHitType::MOUSE_RIGHT) { // righclick in selection (create clip etc.)
-			DawInstance* daw = DawInstance::get();
-			MainCtrl* ctrl = MainCtrl::get();
-			scaled_grid& grid = ctrl->getGrid();
+			scaled_grid& grid = m_trackentry->parentCtrl->getGrid();
 			tick_t tick = grid.screenToTickSnap(mpos.x, SNAP_OFF);
-			if (daw->cursor.contains(this->m_track->idx, tick)) {
+			if (m_trackentry->parentCtrl->getCursor().contains(this->m_trackentry->idx, tick)) {
 				evt.requestFocus(this);
 				return true;
 			}
@@ -385,17 +383,23 @@ gui_track_subtrack::gui_track_subtrack(track_gui_entry_t& _entry, scaled_grid& _
 }
 
 class guictxtmenu_trackcontent : public guictxtmenu {
+	DawCtrl* const m_dawCtrl;
+	track_gui_entry_t* const m_trackentry;
 public:
-	int32_t trackid;
-	guictxtmenu_trackcontent(int32_t _trackid) {
-		this->trackid = _trackid;
+
+	//TODO make this take a safe reference to a track
+	guictxtmenu_trackcontent(DawCtrl* const _dawCtrl, track_gui_entry_t* const _trackentry)
+	  : m_dawCtrl(_dawCtrl), m_trackentry(_trackentry) {
 		this->size.x = 320;
-		auto newClip = new ctxtmenu_entry("Create empty clip", 20);
-		addEntry(newClip);
-		auto newClip2 = new ctxtmenu_entry("Consolidate selection", 21);
-		addEntry(newClip2);
-		addEntry(new ctxtmenu_splitter());
-		scaled_grid& grid = MainCtrl::get()->getGrid();
+		if (_trackentry) {
+
+			auto newClip = new ctxtmenu_entry("Create empty clip", 20);
+			addEntry(newClip);
+			auto newClip2 = new ctxtmenu_entry("Consolidate selection", 21);
+			addEntry(newClip2);
+			addEntry(new ctxtmenu_splitter());
+		}
+		scaled_grid& grid = _dawCtrl->getGrid();
 		auto adaptive = new ctxtmenu_time_select(grid, "Adaptive Grid", 0);
 		adaptive->initAdaptive();
 		addEntry(adaptive);
@@ -404,15 +408,12 @@ public:
 		addEntry(fixed);
 	}
 	void clicked(int _id) {
-		DawInstance* daw = DawInstance::get();
-		MainCtrl* ctrl = MainCtrl::get();
-
-		scaled_grid& grid = ctrl->getGrid();
+		scaled_grid& grid = m_dawCtrl->getGrid();
 		if (_id == 20) {
-
-			DAW::Cursor cursor = daw->cursor.getLeftAligned();
+			dbgassert(m_trackentry);
+			DAW::Cursor cursor = m_dawCtrl->getCursor().getLeftAligned();
 			if (cursor.selRange) {
-				track_t* tr = daw->getTrackId(this->trackid);
+				track_t* tr = m_trackentry->track;
 				clip_t* cl = nullptr;
 				if (tr && tr->type == TRACK_TYPE_MIDI) {
 					cl = new clip_t();
@@ -452,22 +453,22 @@ public:
 	}
 };
 void gui_track_automationlane::handleRightClick(MouseEvent& evt) {
-	parentCtrl->openContextMenu(new guictxtmenu_trackcontent(this->m_track->idx), evt.mousepos);
+	parentCtrl->openContextMenu(new guictxtmenu_trackcontent(m_trackentry->parentCtrl, m_trackentry), evt.mousepos);
 }
 void gui_track_subtrack::handleRightClick(MouseEvent& evt) {
-	parentCtrl->openContextMenu(new guictxtmenu_trackcontent(this->m_track->idx), evt.mousepos);
+	parentCtrl->openContextMenu(new guictxtmenu_trackcontent(m_trackentry->parentCtrl, m_trackentry), evt.mousepos);
 }
 void gui_track::handleRightClick(MouseEvent& evt) {
-	parentCtrl->openContextMenu(new guictxtmenu_trackcontent(this->m_track->idx), evt.mousepos);
+	parentCtrl->openContextMenu(new guictxtmenu_trackcontent(m_trackentry->parentCtrl, m_trackentry), evt.mousepos);
 }
 void guitrack_editor::handleRightClick(MouseEvent& evt) {
-	parentCtrl->openContextMenu(new guictxtmenu_trackcontent(-1), evt.mousepos);
+	parentCtrl->openContextMenu(new guictxtmenu_trackcontent(dawCtrl, nullptr), evt.mousepos);
 }
 
 
 void gui_track_subtrack::renderMixerInfo(NVGcontext* vg) {
 
-	DawInstance* daw = DawInstance::get();
+	DAW::Cursor& cursor = m_trackentry->parentCtrl->getCursor();
 	String curvalue = "UNDEF";
 	String target = "<NULL>";
 	automatable_t* ctr = at;
@@ -477,7 +478,7 @@ void gui_track_subtrack::renderMixerInfo(NVGcontext* vg) {
 		if (idx >= 0) {
 			automation_t* automation = ctr->getRegisteredAutomation(idx);
 			if (automation) {
-				curvalue = StringFormat("%s (%d) %f", StringAsCStr(ctr->getParamName(idx)), idx, automation->getValueAt(daw->cursor.cursorPos));
+				curvalue = StringFormat("%s (%d) %f", StringAsCStr(ctr->getParamName(idx)), idx, automation->getValueAt(cursor.cursorPos));
 			} else {
 				curvalue = StringFormat("%s (%d) UNDEF", StringAsCStr(ctr->getParamName(idx)), idx);
 			}

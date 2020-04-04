@@ -32,7 +32,12 @@ public:
 	}
 	//TODO: this shouldn't be here
 	automatable_t* tryGetAt(DawInstance* ctrl) {
-		track_t* tr = ctrl->getTracks()[ref.trackIdx];
+		auto& tracks = ctrl->getTracks();
+		if (!tracks.validTrackIdx(ref.trackIdx)) {
+			setError("track missing");
+			return nullptr;
+		}
+		track_t* tr = tracks[ref.trackIdx];
 		if (!tr) {
 			setError("track missing");
 			return nullptr;

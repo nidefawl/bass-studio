@@ -97,7 +97,7 @@ public:
 		return true;
 	}
 	virtual int getClipType() = 0;
-	virtual void updatePosition(project_t& project, scaled_grid& grid, ivec2& trackSize) = 0;
+	virtual void updatePosition(project_globals_t& project, scaled_grid& grid, ivec2& trackSize) = 0;
 	virtual void updateClipRenderCache(NVGcontext* vg) = 0;
 };
 struct midi_clip_render_cache_t;
@@ -109,7 +109,7 @@ public:
 	int getClipType() {
 		return CLIP_MIDI;
 	}
-	void updatePosition(project_t& project, scaled_grid& grid, ivec2& trackSize) ;
+	void updatePosition(project_globals_t& project, scaled_grid& grid, ivec2& trackSize) ;
 	void render(NVGcontext* vg) override;
 	void onRemove() override;
 	void handleRightClick(MouseEvent& evt);
@@ -127,7 +127,7 @@ public:
 	int getClipType() {
 		return CLIP_AUDIO;
 	}
-	void updatePosition(project_t& project, scaled_grid& grid, ivec2& trackSize) override;
+	void updatePosition(project_globals_t& project, scaled_grid& grid, ivec2& trackSize) override;
 	void updateClipRenderCache(NVGcontext* vg) override;
 	void render(NVGcontext* vg) override;
 	void releaseRendered();
@@ -214,10 +214,9 @@ public:
 				}
 			}
 			if (evt.type == MouseHitType::MOUSE_RIGHT) { // righclick in selection (create clip etc.)
-				MainCtrl* ctrl = MainCtrl::get();
-				scaled_grid& grid = ctrl->getGrid();
+				scaled_grid& grid = m_trackentry->parentCtrl->getGrid();
 				tick_t tick = grid.screenToTickSnap(mpos.x, SNAP_OFF);
-				if (DawInstance::get()->cursor.containsSubtrack(this->m_track->idx, this->idx, tick)) {
+				if (m_trackentry->parentCtrl->getCursor().contains(this->m_trackentry->idx, tick)) {
 					evt.requestFocus(this);
 					return true;
 				}
@@ -240,7 +239,7 @@ public:
 		automation.destroyGuis();
 		guictr_base::destroyGuis();
 	}
-	virtual void updatePosition(project_t& project, scaled_grid& grid, ivec2& trackSize) {
+	virtual void updatePosition(const project_globals_t& globals, scaled_grid& grid, ivec2& trackSize) {
 
 	}
 };
@@ -267,7 +266,7 @@ public:
 
 	}
 	void handleRightClick(MouseEvent& evt) override;
-	virtual void updateVisibleTrackContents(project_t& project, scaled_grid& grid);
+	virtual void updateVisibleTrackContents(project_globals_t& project, scaled_grid& grid);
 	bool isStaticContainer() {
 		return false;
 	}
