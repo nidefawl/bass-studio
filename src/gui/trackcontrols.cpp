@@ -234,7 +234,7 @@ class guibutton_trackbypass : public guibutton {
 	track_t* const m_track;
 	track_gui_entry_t* const m_trackentry;
 public:
-	guibutton_trackbypass(track_gui_entry_t& _entry) : guibutton(), m_track(_entry.track), m_trackentry(&_entry) {
+	guibutton_trackbypass(track_gui_entry_t* _entry) : guibutton(), m_track(_entry->track), m_trackentry(_entry) {
 	}
 	bool trackenabled() const {
 		return m_track->audio && m_track->audio->mixer.isEnabled();
@@ -251,7 +251,7 @@ class guibutton_track_solo : public guibutton {
 	track_t* const m_track;
 	track_gui_entry_t* const m_trackentry;
 public:
-	guibutton_track_solo(track_gui_entry_t& _entry) : guibutton(), m_track(_entry.track), m_trackentry(&_entry) {
+	guibutton_track_solo(track_gui_entry_t* _entry) : guibutton(), m_track(_entry->track), m_trackentry(_entry) {
 		setText("S");
 	}
 	NVGcolor getBackgroundColor(int stateflags) const override {
@@ -649,7 +649,7 @@ class guidropdown_select_bus : public guidropdownbase {
 	track_t* const track;
 	const bool isInput;
 public:
-	guidropdown_select_bus(track_gui_entry_t& _entry, const bool _isInput) : guidropdownbase(), track(_entry.track), isInput(_isInput) {
+	guidropdown_select_bus(track_gui_entry_t* _entry, const bool _isInput) : guidropdownbase(), track(_entry->track), isInput(_isInput) {
 	}
 	String getString() {
 		track_impl_t* trImpl = track->audio;
@@ -714,7 +714,7 @@ class gui_trackcontrols_io : public guictr_base {
 	guidropdown_select_bus selectInput;
 	guidropdown_select_bus selectOutput;
 public:
-	gui_trackcontrols_io(track_gui_entry_t& _entry) :
+	gui_trackcontrols_io(track_gui_entry_t* _entry) :
 		guictr_base(),/* m_track(_track), */selectInput(_entry, true), selectOutput(_entry, false) {
 		add(&selectInput);
 		add(&selectOutput);
@@ -763,8 +763,8 @@ public:
 	guibutton btnActivate;
 	guibutton btnShowSubtrack;
 	std::vector<gui_trackgain*> sendGains;
-	gui_trackcontrols_mixer(track_gui_entry_t& _entry) :
-		guictr_base(), m_track(_entry.track), m_trackentry(&_entry), meter(&_entry.track->audio->meter), btnBypass(_entry), btnSolo(_entry) {
+	gui_trackcontrols_mixer(track_gui_entry_t* _entry) :
+		guictr_base(), m_track(_entry->track), m_trackentry(_entry), meter(&_entry->track->audio->meter), btnBypass(_entry), btnSolo(_entry) {
 		gain.setAutomationRef(&m_track->audio->mixer, PARAM_TRACK_GAIN);
 		padding = 0;
 //		btnBypass.setTint(nvgToRGB(theme->getFrameColorOutline()));
@@ -814,8 +814,8 @@ public:
 			trackParams.setParamValue(PARAM_ENABLE, trackParams.isEnabled() ? 0.0f : 1.0f, 0);
 		}
 		if (&btnShowSubtrack == button) {
-			auto gui = makeGuiSubtrack(*m_trackentry, MainCtrl::get(), gui_track_subtrack::SUBTRACK_TYPE_WAVE);
-			MainCtrl::getGuiTrackCtr()->addSubTrack(*m_trackentry, gui, true);
+			auto gui = makeGuiSubtrack(m_trackentry, MainCtrl::get(), gui_track_subtrack::SUBTRACK_TYPE_WAVE);
+			MainCtrl::getGuiTrackCtr()->addSubTrack(m_trackentry, gui, true);
 		}
 		if (&btnActivate == button) {
 			vsthost* host = vsthost::getInstance();
@@ -1007,19 +1007,19 @@ class gui_trackcontrols_title : public guictr_base {
 	guibuttontoggle addAutomationLane;
 	int dragMode = -1;
 public:
-	gui_trackcontrols_title(track_gui_entry_t& _entry)
-      :	guictr_base(), m_track(_entry.track), m_trackentry(&_entry), automationSelectDevice(&_entry),
-		automationSelectParam(&_entry) {
+	gui_trackcontrols_title(track_gui_entry_t* _entry)
+      :	guictr_base(), m_track(_entry->track), m_trackentry(_entry), automationSelectDevice(_entry),
+		automationSelectParam(_entry) {
 		setCanMouseHit(true);
 		hideTrack.setRadius(12);
 		hideAutomation.setRadius(10);
 		addAutomationLane.setRadius(10);
 
-		hideTrack.state = &_entry.layout.hideTrack;
-		hideAutomation.state = &_entry.layout.hideSubtracks;
+		hideTrack.state = &_entry->layout.hideTrack;
+		hideAutomation.state = &_entry->layout.hideSubtracks;
 		padding = 0;
-		hideTrack.getIcon = [e=&_entry]{return e->layout.hideTrack?ICON_ARR_RIGHT:ICON_ARR_DOWN;};
-		hideAutomation.getIcon = [e=&_entry]{return e->layout.hideSubtracks?ICON_ARR_RIGHT:ICON_ARR_DOWN;};
+		hideTrack.getIcon = [e=_entry]{return e->layout.hideTrack?ICON_ARR_RIGHT:ICON_ARR_DOWN;};
+		hideAutomation.getIcon = [e=_entry]{return e->layout.hideSubtracks?ICON_ARR_RIGHT:ICON_ARR_DOWN;};
 		addAutomationLane.icon = ICON_PLUS;
 		add(&hideTrack);
 	}
@@ -1126,12 +1126,12 @@ public:
 			m_trackentry->layout.hideSubtracks = false;
 			DawInstance::get()->updateVisibleTrackContents();
 		}
-		updateStoreLoadSubtracks(m_trackentry->parent, *m_trackentry);
+		updateStoreLoadSubtracks(m_trackentry->parent, m_trackentry);
 		if (button == &addAutomationLane) {
 			automatable_t* autom = m_trackentry->state.selectedAutomationCtr;
 			int32_t param = m_trackentry->state.selectedAutomationParam;
 			if (autom && param > -1) {
-				m_trackentry->parent->addAutomationLane(*m_trackentry, autom, param, true);
+				m_trackentry->parent->addAutomationLane(m_trackentry, autom, param, true);
 			}
 		}
 		m_trackentry->parent->layout();
@@ -1214,8 +1214,8 @@ private:
 	guibuttontoggle removeLane;
 	int dragMode = -1;
 public:
-	gui_track_subtrack_mixer(track_gui_entry_t& _entry, gui_track_subtrack* _subtrack) :
-		guictr_base(), m_track(_entry.track), m_trackentry(&_entry), subtrack(_subtrack) {
+	gui_track_subtrack_mixer(track_gui_entry_t* _entry, gui_track_subtrack* _subtrack) :
+		guictr_base(), m_track(_entry->track), m_trackentry(_entry), subtrack(_subtrack) {
 		removeLane.setRadius(10);
 		padding = 0;
 		removeLane.icon = ICON_MINUS;
@@ -1301,10 +1301,10 @@ public:
 
 	}
 };
-gui_track_controls::gui_track_controls(track_gui_entry_t& _entry)
+gui_track_controls::gui_track_controls(track_gui_entry_t* _entry)
 	: guictr_base(),
-	  m_track(_entry.track),
-	  m_trackentry(&_entry),
+	  m_track(_entry->track),
+	  m_trackentry(_entry),
 	  title(new gui_trackcontrols_title(_entry)),
 	  mixer(new gui_trackcontrols_mixer(_entry)),
 	  io(new gui_trackcontrols_io(_entry)) {
@@ -1325,7 +1325,7 @@ gui_track_controls::~gui_track_controls() {
 	delete io;
 	delete title;
 }
-void gui_track_controls::addSubtrackMixer(track_gui_entry_t& entry, gui_track_subtrack* al) {
+void gui_track_controls::addSubtrackMixer(track_gui_entry_t* entry, gui_track_subtrack* al) {
 	gui_track_subtrack_mixer* al_ctrl = new gui_track_subtrack_mixer(entry, al);
 	automationLaneControls.push_back(al_ctrl);
 	add(al_ctrl);
@@ -1499,7 +1499,7 @@ void gui_track_controls::handleDraggedMove(MouseEvent& evt) {
 		int32_t totalHeightSteps = math::min(128, math::max(1, (mouseDragDist) / TRACK_HEIGHT_STEP));
 		if (m_trackentry->layout.hideTrack && totalHeightSteps > TRACK_MIN_HEIGHT) {
 			m_trackentry->layout.hideTrack = false;
-			updateStoreLoadSubtracks(m_trackentry->parent, *m_trackentry);
+			updateStoreLoadSubtracks(m_trackentry->parent, m_trackentry);
 		}
 		int nChanged = 0;
 		while (totalHeightSteps < trackHeight(m_trackentry) && addTrHeight(m_trackentry, -1)) {
@@ -1510,7 +1510,7 @@ void gui_track_controls::handleDraggedMove(MouseEvent& evt) {
 		}
 		if (!nChanged && m_trackentry->layout.height == TRACK_MIN_HEIGHT && totalHeightSteps == TRACK_MIN_HEIGHT) {
 			m_trackentry->layout.hideTrack = true;
-			updateStoreLoadSubtracks(m_trackentry->parent, *m_trackentry);
+			updateStoreLoadSubtracks(m_trackentry->parent, m_trackentry);
 		}
 		this->parent->onChildLayoutChanged(this);
 		DawInstance::get()->updateVisibleTrackContents();
@@ -1566,7 +1566,7 @@ public:
 			if (tr) {
 				m_trackentry->layout.hideTrack = false;
 				m_trackentry->layout.hideSubtracks = false;
-				updateStoreLoadSubtracks(m_trackentry->parent, *m_trackentry);
+				updateStoreLoadSubtracks(m_trackentry->parent, m_trackentry);
 				auto trCtr = m_trackentry->parent;
 				std::vector<automatable_t*> targets;
 				tr->audio->getAutomatableTrackTargets(targets);
@@ -1574,7 +1574,7 @@ public:
 					std::vector<int32_t> automated;
 					atl->getAutomated(automated);
 					for (int32_t param : automated) {
-						gtr_at = trCtr->addAutomationLane(*m_trackentry, atl, param, true);
+						gtr_at = trCtr->addAutomationLane(m_trackentry, atl, param, true);
 					}
 				}
 			}
@@ -1597,9 +1597,9 @@ public:
 
 				m_trackentry->parent->layout();
 				DawInstance::get()->updateVisibleTrackContents();
-				track_gui_entry_t entry;
-				if (m_trackentry->parent->getTrackEntry(tr, entry)) {
-					m_trackentry->parent->scrollTo(entry.content);
+				track_gui_entry_t* entry;
+				if (m_trackentry->parent->getTrackEntry(tr, &entry)) {
+					m_trackentry->parent->scrollTo(entry->content);
 				}
 			}
 		} else if (_id == 2) {
@@ -1628,9 +1628,9 @@ public:
 
 			m_trackentry->parent->layout();
 			DawInstance::get()->updateVisibleTrackContents();
-			track_gui_entry_t entry;
-			if (m_trackentry->parent->getTrackEntry(newTrack, entry)) {
-				m_trackentry->parent->scrollTo(entry.content);
+			track_gui_entry_t* entry;
+			if (m_trackentry->parent->getTrackEntry(newTrack, &entry)) {
+				m_trackentry->parent->scrollTo(entry->content);
 			}
 			closeContextMenu(); // deletes this
 			return;
@@ -1641,8 +1641,8 @@ public:
 void gui_track_controls::handleRightClick(MouseEvent& evt) {
 	m_trackentry->parentCtrl->openContextMenu(new guictxtmenu_track(this->m_trackentry), evt.mousepos);
 }
-gui_track_controls* createTrackGuiMixer(track_gui_entry_t& _entry) {
+gui_track_controls* createTrackGuiMixer(track_gui_entry_t* _entry) {
 	gui_track_controls* const guicontrols = new gui_track_controls(_entry);
-	guicontrols->setZOrder(_entry.track->type >= TRACK_TYPE_MIDI ? 0 : 1);
+	guicontrols->setZOrder(_entry->track->type >= TRACK_TYPE_MIDI ? 0 : 1);
 	return guicontrols;
 }

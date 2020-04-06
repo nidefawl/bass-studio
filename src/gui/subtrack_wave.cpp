@@ -43,7 +43,7 @@ class gui_subtrack_waveview : public gui_track_subtrack {
 	int32_t tickOffset = 0;
 	int32_t updateCalls = 0;
 public:
-	gui_subtrack_waveview(track_gui_entry_t& _entry, DawCtrl* ctrl) : gui_track_subtrack(_entry, ctrl->getGrid(), nullptr, 0), grid(ctrl->getGrid()) {
+	gui_subtrack_waveview(track_gui_entry_t* _entry, DawCtrl* ctrl) : gui_track_subtrack(_entry, ctrl->getGrid(), nullptr, 0), grid(ctrl->getGrid()) {
 
 	}
 	~gui_subtrack_waveview() {
@@ -367,7 +367,7 @@ public:
 	}
 };
 
-gui_track_subtrack* makeGuiSubtrack(track_gui_entry_t& entry, DawCtrl* ctrl, int type) {
+gui_track_subtrack* makeGuiSubtrack(track_gui_entry_t* entry, DawCtrl* ctrl, int type) {
 
 	return new gui_subtrack_waveview(entry, ctrl);
 }

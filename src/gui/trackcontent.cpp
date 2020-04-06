@@ -302,14 +302,14 @@ void gui_clip::trackViewDragRelease(guitrack_editor* view, MouseEvent& evt) {
 	//!CLIP COULD BE DELETED AT THIS POINT
 }
 
-gui_track::gui_track(track_gui_entry_t& _entry, scaled_grid& _grid)
-  : guictr_base(), m_track(_entry.track), m_trackentry(&_entry), automation(_entry, _grid, _entry.state.selectedAutomationCtr, _entry.state.selectedAutomationParam, subtrackIdx)
+gui_track::gui_track(track_gui_entry_t* _entry, scaled_grid& _grid)
+  : guictr_base(), m_track(_entry->track), m_trackentry(_entry), automation(_entry, _grid, _entry->state.selectedAutomationCtr, _entry->state.selectedAutomationParam, subtrackIdx)
 {
 	padding = 0;
 }
 
-gui_track* createTrackGui(track_gui_entry_t& _entry, scaled_grid& grid) {
-	track_t* const t = _entry.track;
+gui_track* createTrackGui(track_gui_entry_t* _entry, scaled_grid& grid) {
+	track_t* const t = _entry->track;
 	gui_track * const guitrack = new gui_track(_entry, grid);
 	guitrack->setZOrder(TRACKTYPE_TO_CTR(t->type) == TRACK_CTR_MIDIAUDIO ? 0 : 1);
 	return guitrack;
@@ -371,13 +371,13 @@ void gui_track_subtrack::updateVisibleTrackContents(scaled_grid& grid) {
 	automation.setData();
 	automation.updateVisibleTrackContents(grid);
 }
-gui_track_automationlane::gui_track_automationlane(track_gui_entry_t& _entry, scaled_grid& _grid, automatable_t* _at, int32_t _param)
+gui_track_automationlane::gui_track_automationlane(track_gui_entry_t* _entry, scaled_grid& _grid, automatable_t* _at, int32_t _param)
   : gui_track_subtrack(_entry, _grid, _at, _param)
 {
 }
 
-gui_track_subtrack::gui_track_subtrack(track_gui_entry_t& _entry, scaled_grid& _grid, automatable_t* _at, int32_t _param)
-  : guictr_base(), m_track(_entry.track), m_trackentry(&_entry), automation(_entry, _grid, this->at, param, idx), at(_at), param(_param)
+gui_track_subtrack::gui_track_subtrack(track_gui_entry_t* _entry, scaled_grid& _grid, automatable_t* _at, int32_t _param)
+  : guictr_base(), m_track(_entry->track), m_trackentry(_entry), automation(_entry, _grid, this->at, param, idx), at(_at), param(_param)
 {
 	padding = 0;
 }

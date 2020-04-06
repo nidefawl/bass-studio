@@ -34,8 +34,8 @@ bool handleAutomatbleContextMenu(automatable_t* atl, int paramIdx, int _id) {
 	auto* guiTrackCtr = MainCtrl::getGuiTrackCtr();
 	switch (_id) {
 		case ID_SHOW_NEW: {
-			track_gui_entry_t entry;
-			dbgassert(guiTrackCtr->getTrackEntry(track, entry));
+			track_gui_entry_t* entry;
+			dbgassert(guiTrackCtr->getPointerEntry(track, &entry));
 			gui_track_automationlane* lane = MainCtrl::getGuiTrackCtr()->addAutomationLane(entry, atl, paramIdx, true);
 			guiTrackCtr->layout();
 			guiTrackCtr->updateVisibleTrackContents();
@@ -44,9 +44,9 @@ bool handleAutomatbleContextMenu(automatable_t* atl, int paramIdx, int _id) {
 		}
 		case ID_SHOW: {
 			MainCtrl::get()->showAutomation(track, atl, paramIdx);
-			track_gui_entry_t entry;
-			if (guiTrackCtr->getTrackEntry(track, entry)) {
-				guiTrackCtr->scrollTo(entry.content);
+			track_gui_entry_t* entry;
+			if (guiTrackCtr->getTrackEntry(track, &entry)) {
+				guiTrackCtr->scrollTo(entry->content);
 			}
 			return true;
 		}

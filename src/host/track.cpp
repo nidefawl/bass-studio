@@ -144,7 +144,7 @@ track_impl_snapshot_t::track_impl_snapshot_t(track_impl_t* p, bool storePluginCh
 	}
 }
 
-void saveSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t& entry, track_layout_snapshot_t& snapshot);
+void saveSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, track_layout_snapshot_t& snapshot);
 
 track_snapshot_t::track_snapshot_t(const track_t* track, bool storePluginChunks)
   : tracksettings_t(*track), stageId(track->audio ? static_cast<int32_t>(track->audio->stageId) : 0), localIdx(track->localIdxFlat), plugins(track->audio, storePluginChunks)
@@ -159,8 +159,8 @@ track_snapshot_t::track_snapshot_t(const track_t* track, bool storePluginChunks)
 		for (int i = 0; i < 32; i++) {
 			guictr_tracks* ctr = DawInstance::get()->getTrackContainer(i);
 			if (ctr) {
-				track_gui_entry_t out;
-				if (ctr->guiMgr.getTrackEntry(track, out)) {
+				track_gui_entry_t* out;
+				if (ctr->guiMgr.getTrackEntry(track, &out)) {
 					track_layout_snapshot_t snapshot;
 					saveSubtrackLayout(ctr, out, snapshot);
 					layouts[i] = snapshot;
@@ -597,10 +597,10 @@ void vsthost::activateDeferred(effectbase* const eff, effectbase** out_effectLoa
 	log_printf("done activating deferred plugin %s\n", StringAsCStr(pluginSnapshot.name));
 
 }
-int loadSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t& entry, const track_layout_snapshot_t& snapshot)
+int loadSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, const track_layout_snapshot_t& snapshot)
 {
 	const std::vector<automationlane_snapshot_t>& atls = snapshot.automationLanes;
-	track_t* const track = entry.track;
+	track_t* const track = entry->track;
 	int n = atls.size();
 	n = 0;
 	for (const automationlane_snapshot_t& ref : atls) {
@@ -633,10 +633,10 @@ int loadSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t& entry, const
 	return n;
 }
 
-void saveSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t& entry, track_layout_snapshot_t& snapshot)
+void saveSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, track_layout_snapshot_t& snapshot)
 {
-	snapshot.automationLanes.reserve(entry.subtracks.size());
-	for (gui_track_subtrack* atl : entry.subtracks) {
+	snapshot.automationLanes.reserve(entry->subtracks.size());
+	for (gui_track_subtrack* atl : entry->subtracks) {
 		automationlane_snapshot_t subtrackSnapshot;
 		if (atl->subtrackType() == gui_track_subtrack::SUBTRACK_TYPE_AUTOMATION) {
 			dbgassert(atl->at);
@@ -652,21 +652,21 @@ void saveSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t& entry, trac
 
 }
 
-void updateStoreLoadSubtracks(guictr_tracks* guiTracks, track_gui_entry_t& entry) {
-	bool hide = entry.layout.hideSubtracks || entry.layout.hideTrack;
-	if (entry.state.wasInHide == hide)
+void updateStoreLoadSubtracks(guictr_tracks* guiTracks, track_gui_entry_t* entry) {
+	bool hide = entry->layout.hideSubtracks || entry->layout.hideTrack;
+	if (entry->state.wasInHide == hide)
 		return;
-	entry.state.wasInHide = hide;
+	entry->state.wasInHide = hide;
 	if (hide) {
-		entry.state.layoutSaved = track_layout_snapshot_t();
-		saveSubtrackLayout(guiTracks, entry, entry.state.layoutSaved);
+		entry->state.layoutSaved = track_layout_snapshot_t();
+		saveSubtrackLayout(guiTracks, entry, entry->state.layoutSaved);
 		guiTracks->removeAllSubtracks(entry);
-		DAW::Cursor& cursor = entry.parentCtrl->getCursor();
-		if (cursor.inSubTrackAny(entry.track->idx)) {
+		DAW::Cursor& cursor = entry->parentCtrl->getCursor();
+		if (cursor.inSubTrackAny(entry->track->idx)) {
 			fixCursorSubRange(cursor, 0);
 		}
 	} else {
-		loadSubtrackLayout(guiTracks, entry, entry.state.layoutSaved);
+		loadSubtrackLayout(guiTracks, entry, entry->state.layoutSaved);
 	}
 }
 void audio_stage_t::onTick(double since) {

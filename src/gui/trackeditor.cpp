@@ -796,12 +796,12 @@ void guitrack_editor::renderAction(NVGcontext* vg, clip_dragaction& action) {
 		}
 		trackIdx = project.trackList.clampTrackIdx(trackIdx);
 		track_t* tr = project.trackList[trackIdx];
-		track_gui_entry_t entry;
-		dbgassert(iGuiMgr.getTrackEntry(tr, entry));
-		dbgassert(entry.content != NULL);
+		track_gui_entry_t* entry;
+		dbgassert(iGuiMgr.getPointerEntry(tr, &entry));
+		dbgassert(entry->content != NULL);
 		for (auto it = trClipboard->clips.begin(); it != trClipboard->clips.end(); it++) {
 			clip_t* cl = (*it).get();
-			renderClip(vg, &entry, cl, (cursor.cursorPos - _clipboard->srcPos));
+			renderClip(vg, entry, cl, (cursor.cursorPos - _clipboard->srcPos));
 		}
 	}
 }
@@ -863,18 +863,18 @@ void guitrack_editor::render(NVGcontext* vg) {
 		nvgSave(vg);
 		nvgIntersectScissor(vg, 0, ySplit, cs.x, bottomHeight);
 		for (track_t* g : project.tracksBottom.tracksFlat) {
-			track_gui_entry_t entry;
-			if (!iGuiMgr.getTrackEntry(g, entry)) {
+			track_gui_entry_t* entry;
+			if (!iGuiMgr.getPointerEntry(g, &entry)) {
 				dbgassert(0);
 				continue;
 			}
 			bool trackVisible = iGuiMgr.isVisible(entry);
-			dbgassert(entry.content->isVisible() == trackVisible);
-			if (entry.content->isVisible()) {
+			dbgassert(entry->content->isVisible() == trackVisible);
+			if (entry->content->isVisible()) {
 				nvgSave(vg);
-				entry.content->render(vg);
+				entry->content->render(vg);
 				nvgRestore(vg);
-				for (gui_track_subtrack* g2 : entry.subtracks) {
+				for (gui_track_subtrack* g2 : entry->subtracks) {
 					nvgSave(vg);
 					g2->render(vg);
 					nvgRestore(vg);
@@ -890,19 +890,19 @@ void guitrack_editor::render(NVGcontext* vg) {
 		nvgSave(vg);
 		nvgIntersectScissor(vg, 0, 0, cs.x, ySplit);
 		for (track_t* t : project.trackMidiAudioCtr.tracksFlat) {
-			track_gui_entry_t entry;
-			dbgassert(iGuiMgr.getTrackEntry(t, entry));
-			dbgassert(entry.content != NULL);
-			auto totalHeight = entry.content->size.y;
-			if (entry.subtracks.size()) {
-				totalHeight = entry.subtracks.back()->bottom() - entry.content->top();
+			track_gui_entry_t* entry;
+			dbgassert(iGuiMgr.getPointerEntry(t, &entry));
+			dbgassert(entry->content != NULL);
+			auto totalHeight = entry->content->size.y;
+			if (entry->subtracks.size()) {
+				totalHeight = entry->subtracks.back()->bottom() - entry->content->top();
 			}
-			auto contentPos = entry.content->pos.y;
-			if (entry.content->isVisible() && contentPos < ySplit && contentPos+totalHeight > 0) {
+			auto contentPos = entry->content->pos.y;
+			if (entry->content->isVisible() && contentPos < ySplit && contentPos+totalHeight > 0) {
 				nvgSave(vg);
-				entry.content->render(vg);
+				entry->content->render(vg);
 				nvgRestore(vg);
-				for (gui_track_subtrack* g2 : entry.subtracks) {
+				for (gui_track_subtrack* g2 : entry->subtracks) {
 					nvgSave(vg);
 					g2->render(vg);
 					nvgRestore(vg);

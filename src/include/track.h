@@ -284,7 +284,7 @@ public:
 	}
 	void releaseTrackContent();
 	void loadSnapshot(const track_snapshot_t& snap);
-	void loadSubtrackLayout(const track_snapshot_t& snap);
+//	void loadSubtrackLayout(const track_snapshot_t* snap);
 
 	int32_t idx = -1; // global flat idx (skips invisible tracks)
 	int32_t childIdxTree = -1; // index in parent child list (position in parents child list)

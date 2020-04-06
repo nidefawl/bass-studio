@@ -26,15 +26,15 @@
 #include "../host/mainctrl.h"
 #include "trackctr_types.h"
 
-void updateStoreLoadSubtracks(guictr_tracks* guiTracks, track_gui_entry_t& entry) ;
+void updateStoreLoadSubtracks(guictr_tracks* guiTracks, track_gui_entry_t* entry) ;
 class track_gui_manager_i {
 public:
 	track_gui_manager_i() = default;
 	virtual ~track_gui_manager_i() { };
-	virtual bool getTrackEntry(const track_t* t, track_gui_entry_t& out) = 0;
-	virtual bool getPointerEntry(track_t* t, track_gui_entry_t** out) = 0;
+	virtual bool getTrackEntryCopy(const track_t* t, track_gui_entry_t& out) = 0;
+	virtual bool getPointerEntry(const track_t* t, track_gui_entry_t** out) = 0;
 
-	virtual bool isVisible(const track_gui_entry_t& entry) = 0;
+	virtual bool isVisible(const track_gui_entry_t* entry) = 0;
 	virtual bool validTrackIdx(int32_t idx) const = 0;
 	virtual const track_gui_entry_t* at(const size_t i) const = 0;
 	virtual track_gui_entry_t* atNC(const size_t i) = 0;
@@ -48,8 +48,8 @@ int32_t getPosYFirstReturnTrack(const track_gui_vector_td& tracksVisibleFlat);
 track_gui_entry_t *getTrackFromMouse(track_gui_manager_i& iGuiMgr, ivec2 mouse, bool isDragSnap);
 
 gui_track_subtrack* getSubTrackFromMouse(track_gui_manager_i& iGuiMgr, ivec2 mouse, bool isDragSnap);
-gui_track* createTrackGui(track_gui_entry_t& _entry, scaled_grid&); // trackcontent.cpp
-gui_track_controls* createTrackGuiMixer(track_gui_entry_t& _entry); // trackcontrols.cpp
+gui_track* createTrackGui(track_gui_entry_t* _entry, scaled_grid&); // trackcontent.cpp
+gui_track_controls* createTrackGuiMixer(track_gui_entry_t* _entry); // trackcontrols.cpp
 void drawSeperator(NVGcontext* vg, const guitheme_t* theme, int32_t seperatorY, ivec2& cs);
 
 
@@ -137,12 +137,12 @@ public:
 		cursor.cursorSubTrack = -1;
 		cursor.selSubTrackRange = 0;
 	}
-	void addSubtrack(track_gui_entry_t& entry, gui_track_subtrack* al, bool insertFront);
+	void addSubtrack(track_gui_entry_t* entry, gui_track_subtrack* al, bool insertFront);
 
-	void removeSubtrack(track_gui_entry_t& entry, gui_track_automationlane* al);
-	void removeAllAutomationLanes(track_gui_entry_t& entry, automatable_t* at, int32_t paramIdx);
-	void removeAllAutomationLanes(track_gui_entry_t& entry, automatable_t* at);
-	void removeAllSubtracks(track_gui_entry_t& entry);
+	void removeSubtrack(track_gui_entry_t* entry, gui_track_automationlane* al);
+	void removeAllAutomationLanes(track_gui_entry_t* entry, automatable_t* at, int32_t paramIdx);
+	void removeAllAutomationLanes(track_gui_entry_t* entry, automatable_t* at);
+	void removeAllSubtracks(track_gui_entry_t* entry);
 	virtual void trackEntryDragMove(gui_track* g, ivec2 mousepos);
 	virtual void trackEntryDragRelease(gui_track* g, ivec2 mousepos);
 //	void addTrack(gui_track* t);
@@ -450,8 +450,9 @@ class track_gui_manager_t : public track_gui_manager_i {
 	track_gui_vector_td trackEntriesBottom;
 	track_gui_vector_td tracksVisibleFlat;
 public:
-	bool getTrackEntry(const track_t* t, track_gui_entry_t& out) override;
-	bool getPointerEntry(track_t* t, track_gui_entry_t** out) override;
+	bool getTrackEntryCopy(const track_t* t, track_gui_entry_t& out) override;
+	bool getPointerEntry(const track_t* t, track_gui_entry_t** out) override;
+	bool getTrackEntry(const track_t* t, track_gui_entry_t** out) ;
 
 	void removeTrack(track_gui_entry_t& entry) {
 		auto it = std::remove_if(begin(entries), end(entries), [this, &entry](track_gui_entry_t* e) {
@@ -474,15 +475,15 @@ public:
 		entries.push_back(entry);
 
 	}
-	bool isVisible(const track_gui_entry_t& entry) override {
+	bool isVisible(const track_gui_entry_t* entry) override {
 		bool bHidden = false;
-		track_t* p = entry.track->parent;
+		track_t* p = entry->track->parent;
 		while (!bHidden && p) {
-			track_gui_entry_t parentEntry;
-			if (!getTrackEntry(p, parentEntry)) {
+			track_gui_entry_t* parentEntry;
+			if (!getPointerEntry(p, &parentEntry)) {
 				return false;
 			}
-			bHidden |= parentEntry.layout.hideTrack;
+			bHidden |= parentEntry->layout.hideTrack;
 			p = p->parent;
 		}
 		return !bHidden;
@@ -521,7 +522,7 @@ public:
 				if (!entry->layout.hideTrack && current->children.size()) {
 					stack.insert(stack.begin(), current->children.cbegin(), current->children.cend());
 				}
-				dbgassert(isVisible(*entry));
+				dbgassert(isVisible(entry));
 				dbgassert(entry->track == current);
 				if (TRACKTYPE_TO_CTR(entry->track->type)  == TRACK_CTR_MIDIAUDIO) {
 					trackEntriesTop.push_back(entry);
@@ -602,7 +603,7 @@ public:
 		remove(&scrollbar);
 	}
 
-	int32_t setTrackPosition(track_gui_entry_t& e, int32_t y, bool isBottom);
+	int32_t setTrackPosition(track_gui_entry_t* e, int32_t y, bool isBottom);
 	void render(NVGcontext* vg);
 	void scrollTo(guibase* g);
 	void layout();
@@ -642,22 +643,22 @@ public:
 	}
 	void removeTrack(track_t* track, int flags);
 	void addTrack(track_t* track, int flags);
-	void showAutomationLane(track_gui_entry_t& entry, automatable_t* at, int32_t paramIdx);
-	void addSubTrack(track_gui_entry_t& entry, gui_track_subtrack* subtrack, bool insertFront);
+	void showAutomationLane(track_gui_entry_t* entry, automatable_t* at, int32_t paramIdx);
+	void addSubTrack(track_gui_entry_t* entry, gui_track_subtrack* subtrack, bool insertFront);
 
-	gui_track_automationlane* addAutomationLane(track_gui_entry_t& entry, automatable_t* at, int32_t paramIdx, bool insertFront);
+	gui_track_automationlane* addAutomationLane(track_gui_entry_t* entry, automatable_t* at, int32_t paramIdx, bool insertFront);
 	void removeAutomationLane(gui_track_automationlane* al);
-	void removeAllAutomationLanes(track_gui_entry_t& entry, automatable_t* at, int32_t paramIdx);
-	void removeAllAutomationLanes(track_gui_entry_t& entry, automatable_t* at);
-	void removeAllSubtracks(track_gui_entry_t& entry);
+	void removeAllAutomationLanes(track_gui_entry_t* entry, automatable_t* at, int32_t paramIdx);
+	void removeAllAutomationLanes(track_gui_entry_t* entry, automatable_t* at);
+	void removeAllSubtracks(track_gui_entry_t* entry);
 	void loadTrackLayouts(trackcontainer_snapshot_t& in);
-	bool getTrackEntry(track_t* t, track_gui_entry_t& out) {
+	bool getTrackEntry(track_t* t, track_gui_entry_t** out) {
 		return guiMgr.getTrackEntry(t, out);
 	}
 	bool getPointerEntry(track_t* t, track_gui_entry_t** out) {
 		return guiMgr.getPointerEntry(t, out);
 	}
-	bool isTrackEntryVisible(const track_gui_entry_t& entry) {
+	bool isTrackEntryVisible(const track_gui_entry_t* entry) {
 		return guiMgr.isVisible(entry);
 	}
 

@@ -374,12 +374,12 @@ public:
 			auto trCtr = MainCtrl::getGuiTrackCtr();
 			gui_track_automationlane* gtr_at = NULL;
 			if (tr) {
-				track_gui_entry_t entry;
-				if (!trCtr->getTrackEntry(tr, entry)) {
+				track_gui_entry_t* entry;
+				if (!trCtr->getTrackEntry(tr, &entry)) {
 					dbgassert(0);
 				} else {
-					entry.layout.hideTrack = false;
-					entry.layout.hideSubtracks = false;
+					entry->layout.hideTrack = false;
+					entry->layout.hideSubtracks = false;
 					updateStoreLoadSubtracks(trCtr, entry);
 
 					std::vector<int32_t> automated;

@@ -158,7 +158,7 @@ public:
 //	tracklayout_settings_t layout;
 	int32_t height = 4;
 	int32_t idx = -1;
-	gui_track_subtrack(track_gui_entry_t& _entry, scaled_grid& _grid, automatable_t* _at, int32_t _param);
+	gui_track_subtrack(track_gui_entry_t* _entry, scaled_grid& _grid, automatable_t* _at, int32_t _param);
 	virtual int subtrackType() { return SUBTRACK_TYPE_EMPTY; }
 	automation_t* getAutomation() {
 		if (at) {
@@ -245,7 +245,7 @@ public:
 };
 class gui_track_automationlane : public gui_track_subtrack {
 public:
-	gui_track_automationlane(track_gui_entry_t& _entry, scaled_grid& _grid, automatable_t* _at, int32_t _param);
+	gui_track_automationlane(track_gui_entry_t* _entry, scaled_grid& _grid, automatable_t* _at, int32_t _param);
 	int subtrackType() override { return gui_track_subtrack::SUBTRACK_TYPE_AUTOMATION; }
 	virtual ~gui_track_automationlane() {
 
@@ -261,7 +261,7 @@ protected:
 	gui_track_automation automation;
 	int subtrackIdx = -1;
 public:
-	gui_track(track_gui_entry_t& _entry, scaled_grid& _grid);
+	gui_track(track_gui_entry_t* _entry, scaled_grid& _grid);
 	virtual ~gui_track() {
 
 	}
@@ -330,7 +330,7 @@ public:
 	track_t* getTrack() {
 		return this->m_track;
 	}
-	track_gui_entry_t& getTrackEntry() {
-		return *this->m_trackentry;
+	track_gui_entry_t* getTrackEntry() {
+		return this->m_trackentry;
 	}
 };

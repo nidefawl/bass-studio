@@ -22,12 +22,12 @@ private:
 	const int resizeHitY = 8;
 	const int DRAG_RESIZE = 1;
 public:
-	gui_track_controls(track_gui_entry_t& _entry);
+	gui_track_controls(track_gui_entry_t* _entry);
 	~gui_track_controls();
 	bool isStaticContainer() {
 		return false;
 	}
-	void addSubtrackMixer(track_gui_entry_t& entry, gui_track_subtrack* al);
+	void addSubtrackMixer(track_gui_entry_t* entry, gui_track_subtrack* al);
 	void removeSubtrackMixer(gui_track_subtrack* al);
 	void removeAllAutomationLanes(automatable_t* at, int32_t paramIdx);
 	void removeAllAutomationLanes(automatable_t* at);

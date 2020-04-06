@@ -1953,8 +1953,8 @@ void DawInstance::preTrackDelete(track_t* track) {
 	resetMouseContext();
 }
 void MainCtrl::showAutomation(track_t* tr, automatable_t* at, int32_t paramIdx) {
-	track_gui_entry_t entry;
-	if (view->ctr_tracks.getTrackEntry(tr, entry)) {
+	track_gui_entry_t* entry;
+	if (view->ctr_tracks.getTrackEntry(tr, &entry)) {
 		view->ctr_tracks.showAutomationLane(entry, at, paramIdx);
 	}
 }
