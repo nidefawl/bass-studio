@@ -503,13 +503,19 @@ effectbase* loadEffectModule(const plugin_snapshot_t& pluginSnapshot, bool force
 }
 void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effectbase* effect) {
 	const std::vector<param_snapshot_t>& pluginSnapshotParams = pluginSnapshot.params;
+	uint32_t missingParams = 0;
 	for (const param_snapshot_t& param : pluginSnapshotParams) {
 		automatable_param_t* atParam = effect->getParam(param.idx);
-		dbgassert(atParam);
 		if (atParam) {
 			dbgassert(param.val >= 0.0f && param.val <= 1.0f);
 			effect->setParamValue(atParam->idx, param.val, FLG_PAR_UPDATE_INIT);
+		} else {
+			missingParams++;
 		}
+	}
+	if (missingParams) {
+		//TODO: notify users thru UI
+		log_printf("Some parameters could not be mapped: %s has %d missing parameters\n", StringAsCStr(effect->getName()), missingParams);
 	}
 //	const std::vector<param_snapshot_t>& pluginHostSideParams = pluginSnapshot.hostParams;
 //	for (const param_snapshot_t& param : pluginHostSideParams) {
