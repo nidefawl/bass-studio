@@ -156,6 +156,12 @@ void guictr_tracks::removeAllSubtracks(track_gui_entry_t* entry) {
 	entry->mixer->removeAllSubtracks();
 	trackView.removeAllSubtracks(entry);
 }
+void guictr_tracks::resetView() {
+	trackView.resizePreModifyState.reset();
+	trackView.clipboard.reset();
+	trackView.action.clipboard.reset();
+	trackView.iGuiMgr.reset();
+}
 
 //	int loadSubtrackLayout(const std::vector<automationlane_snapshot_t>& atl);
 //	void saveSubtrackLayout(std::vector<automationlane_snapshot_t>& atl);
@@ -216,7 +222,7 @@ void guictr_tracks::updateVisibleTracks() {
 	track_gui_vector_td& tracks = guiMgr.tracksVisibleFlat;
 	for (track_t* tr : project.trackList) {
 		track_gui_entry_t* entry;
-		if (!assert_expr(guiMgr.getPointerEntry(tr, &entry))) {
+		if (!(guiMgr.getPointerEntry(tr, &entry))) {
 			continue;
 		}
 		if (!assert_expr(entry->content)) {
@@ -825,7 +831,9 @@ void guitrack_editor::layout() {
 void guitrack_editor::updateVisibleTrackContents() {
 	for (track_t* tr : project.trackList) {
 		track_gui_entry_t* entry;
-		dbgassert(iGuiMgr.getPointerEntry(tr, &entry));
+		if (!iGuiMgr.getPointerEntry(tr, &entry)) {
+			continue;
+		}
 		if (!entry->content) {
 			my_printf("NO CONTENT ON %s\n", StringAsCStr(entry->track->name));
 			continue;
@@ -840,10 +848,19 @@ void guitrack_editor::updateVisibleTrackContents() {
 		}
 	}
 }
+void guictr_tracks::removeAllTracks() {
+	track_gui_vector_td tracksCopy = guiMgr.getTracksVisibleFlat();
+	for (auto* entry : tracksCopy) {
+		removeTrack(entry->track, FLG_TRK_CHANGE_LOAD);
+	}
+}
 void guictr_tracks::removeTrack(track_t* track, int flags) {
-	dbgassert(track->audio);
 	track_gui_entry_t *entry = nullptr;
-	dbgassert(guiMgr.getPointerEntry(track, &entry));
+	if (!guiMgr.getPointerEntry(track, &entry)) {
+		log_printf("attempt to double remove track from container\n", 0);
+		return;
+	}
+	dbgassert(track->audio);
 	removeAllSubtracks(entry);
 	trackControls.removeTrackEntry(*entry);
 	trackView.removeTrackEntry(*entry);

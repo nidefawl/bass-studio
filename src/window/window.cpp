@@ -604,10 +604,7 @@ public:
 		glDisable(GL_DEPTH_TEST);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	}
-#define WINDOW_BORDERLESS_POPUP 1
-#define WINDOW_IS_MAINWINDOW_MASTER 2
-#define WINDOW_IS_MAINWINDOW_SLAVE 4
-	void createMainWindow(const char* title, int w, int h, void* parentWindowHandle, int flags = 0);
+	void createMainWindow(const char* title, int w, int h, appwindow_main* parentWindowHandle, int flags = 0);
 	void initControl();
 	void updateMenu() {
 	#if WINDOW_HAS_MENUBAR
@@ -627,7 +624,7 @@ public:
 			cursorIcon = ctrl->cursorIcon;
 		}
 	}
-	window_main* createOverlay(int flags) override;
+	window_main* createOverlay(std::shared_ptr<AppCtrl> ctrl, int flags) override;
 	void closeOverlay(window_main* wnd) override {
 		assert(wnd);
 		wnd->hide();
@@ -757,10 +754,13 @@ public:
 	void onWindowCloseRequest() override {
 		ctrl->setActiveWindow(this);
 		bool b = ctrl->onWindowCloseRequest();
+		if (!b) {
+			glfwSetWindowShouldClose(glfw, 0);
+		}
+
 		if (b) {
-			onWindowClose();
 			if (!this->parent) {
-				glfwSetWindowShouldClose(glfw, b ? 1 : 0);
+				onWindowClose();
 			} else {
 				hideWindow();
 			}
@@ -792,7 +792,7 @@ public:
     }
     void requestClose() override {
 		glfwSetWindowShouldClose(glfw, 1);
-		onWindowClose();
+//		onWindowClose();
     }
     void menuCommand(int cmd) {
 #if WINDOW_HAS_MENUBAR
@@ -967,11 +967,12 @@ public:
 	void setInitFunction(const window_init_fn& fn) override {
 		this->initCallback = fn.initCallback;
 	}
-	void createDialogWindow(const char* title, int w, int h, GLFWwindow* share = NULL) {
+	void createDialogWindow(const char* title, int w, int h, GLFWwindow* share = nullptr, NVGcontext* nanovgCtxt = nullptr) {
 		setAppWindowHints();
 		glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 		glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
 		glfwWindowHint(GLFW_FOCUSED, GL_TRUE);
+		this->nanovgCtxt = nanovgCtxt;
 		appwindow::createBaseWindow(title, w, h, share);
 #ifdef _WIN32
 		LONG l = GetWindowLong(hwnd, GWL_EXSTYLE);
@@ -1111,12 +1112,18 @@ public:
 		onMouseMoved(ivec2(0));
 	}
 };
-window_main* appwindow_main::createOverlay(int flags) {
+window_main* appwindow_main::createOverlay(std::shared_ptr<AppCtrl> ctrl, int flags) {
 //	std::unique_ptr<appwindow_overlay> ow = std::make_unique<appwindow_overlay>(this);
 	String sName = StringFormat("%s menu", this->name);
-	std::shared_ptr<appwindow_main> ow = std::make_shared<appwindow_main>(this, std::make_shared<PopupCtrl>()); //TODO: manage lifetime of control
-	ow->createMainWindow(StringAsCStr(sName), 200, 200, nullptr, flags);
-	ow->initControl();
+	std::shared_ptr<appwindow_main> ow = std::make_shared<appwindow_main>(this, ctrl); //TODO: manage lifetime of control
+
+	//pass down parent window handle if ctrl is companion ctrl of daw (signaled by WINDOW_IS_MAINWINDOW_SLAVE)
+	appwindow_main* parentHandle = ((flags&WINDOW_IS_MAINWINDOW_SLAVE) != 0) ? this : nullptr;
+
+	ow->createMainWindow(StringAsCStr(sName), 200, 200, parentHandle, flags);
+	if (((flags&WINDOW_IS_MAINWINDOW_SLAVE) == 0)) {
+		ow->initControl();
+	}
 //	ow->createOverlayWindow(StringAsCStr(sName), 200, 200, nullptr);
 	auto* ret = ow.get();
 	this->overlayWindows.push_back(std::move(ow));
@@ -1192,7 +1199,7 @@ void appwindow_main::initControl() {
 	this->onWindowSizeChanged(w, h);
 }
 
-void appwindow_main::createMainWindow(const char* title, int w, int h, void* handle, int flags) {
+void appwindow_main::createMainWindow(const char* title, int w, int h, appwindow_main* parentWindowHandle, int flags) {
 	nameDbg=title;
 	windowCreationFlags = flags;
 	setAppWindowHints();
@@ -1211,16 +1218,11 @@ void appwindow_main::createMainWindow(const char* title, int w, int h, void* han
 	} else {
 		bCanResize = true;
 	}
-	void* parentWindowHandle = handle;
-	appwindow_main* appWindowMain = nullptr;
-	if (flags&WINDOW_IS_MAINWINDOW_SLAVE) {
-		appWindowMain = static_cast<appwindow_main*>(parentWindowHandle);
-		parentWindowHandle = nullptr;
-	}
-	appwindow::createBaseWindow(title, w, h, appWindowMain ? appWindowMain->glfw : nullptr, parentWindowHandle);
+
+	appwindow::createBaseWindow(title, w, h, parentWindowHandle ? parentWindowHandle->glfw : nullptr, nullptr);
 
 	if (flags&WINDOW_IS_MAINWINDOW_SLAVE) {
-		this->nanovgCtxt = appWindowMain->nanovgCtxt;
+		this->nanovgCtxt = parentWindowHandle->nanovgCtxt;
 	}
 	if (!parent) {
 		glfwSetWindowSizeLimits(glfw, 640, 480, GLFW_DONT_CARE, GLFW_DONT_CARE);
@@ -1291,7 +1293,7 @@ LRESULT WIN32API_CALLBACK_TYPE appWndProc(HWND hwnd, UINT Msg, WPARAM wParam, LP
 window_dialog* appwindow_main::createDialog(const String& sTitle, int w, int h) {
 	appwindow_dialog* windowDialog = new appwindow_dialog(this);
 	GLFWwindow* const windowOpengCtxtShare = this->glfw;
-	windowDialog->createDialogWindow(StringAsCStr(sTitle), w, h, windowOpengCtxtShare);
+	windowDialog->createDialogWindow(StringAsCStr(sTitle), w, h, windowOpengCtxtShare, this->nanovgCtxt);
 	return windowDialog;
 }
 static appwindow* getUserData(GLFWwindow *w) {
@@ -1442,7 +1444,14 @@ void makeWindowContextCurrent(window_base* w) {
 		glfwMakeContextCurrent(glfw);
 	}
 }
-
+void initWindowControl(window_main* windowInitialize) {
+	dynamic_cast<appwindow_main*>(windowInitialize)->initControl();
+	dynamic_cast<appwindow_main*>(windowInitialize)->showWindow();
+}
+void destroyWindowControl(window_main* windowInitialize) {
+	dynamic_cast<appwindow_main*>(windowInitialize)->setInvalid();
+//	dynamic_cast<appwindow_main*>(windowInitialize)->destroy();
+}
 #if HAS_MAIN_LOOP
 #include "platform/win/debug_msg_count.h"
 win32_hwnd_msg_counter_t msgCounter;
@@ -1452,7 +1461,6 @@ namespace vst_window_mgr {
 void destroyAllVSTWindows();
 bool isVstWindow(HWND hwnd);
 }
-void makeAppCompanions(std::vector<std::shared_ptr<AppCtrl>>& out_Companions);
 #endif
 std::shared_ptr<AppCtrl> makeApp();
 void initColor(); // Forward declare from gui/gui.cpp
@@ -1460,7 +1468,6 @@ void deleteApp(); // Forward declare from host/mainctrl.cpp
 void openGlobalLog(const String& logFileName); // Forward declare from util/debug.cpp
 void closeGlobalLog(); // Forward declare from util/debug.cpp
 
-#define OPEN_SECOND_WINDOW BUILD_VSTHOST&&1
 int startApplication(int argc, char* argv[]) {
 	setCurrentThreadName("mainthread");
 #if !defined(NDEBUG) && defined(_WIN32)
@@ -1533,38 +1540,17 @@ int startApplication(int argc, char* argv[]) {
     setMainHWND(mainWindow->getHWND());
 #endif
 
-#if OPEN_SECOND_WINDOW
-	std::vector<std::shared_ptr<AppCtrl>> companions;
-     makeAppCompanions(companions);
-     std::unique_ptr<appwindow_main> mainWindow2;
-
-     if (companions.size()) {
-		mainWindow2 = std::make_unique<appwindow_main>(nullptr, companions[0]);
-		mainWindow2->createMainWindow("main window clone", 1280, 720, mainWindow.get(), WINDOW_IS_MAINWINDOW_SLAVE);
-     }
-#endif
 	mainWindow->initControl();
-#if OPEN_SECOND_WINDOW
-	mainWindow2->initControl();
-#endif
+
 	mainWindow->showWindow();
 	if (centerScreenIdx >= 0) {
 		mainWindow->centerOnScreen(centerScreenIdx);
 	}
-#if OPEN_SECOND_WINDOW
-	mainWindow2->showWindow();
-	if (centerScreenIdx >= 0) {
-		mainWindow2->centerOnScreen(centerScreenIdx);
-	}
-#endif
+
 	enableGlDebugCallback();
 	glfwSetErrorCallback(glfw_runtime_error_callback);
 	ctrl->postInit();
-#if OPEN_SECOND_WINDOW
-	if (companions.size()) {
-		companions[0]->postInit();
-	}
-#endif
+
 
 #if HAS_JS_CONSOLE
 	JSContext jsContext;
@@ -1663,9 +1649,6 @@ int startApplication(int argc, char* argv[]) {
 		}
 		if (getTimeMillis() - start >= 16) {
 			mainWindow->flagNeedsRedraw();
-#if OPEN_SECOND_WINDOW
-			mainWindow2->flagNeedsRedraw();
-#endif
 			start = getTimeMillis();
 		}
 #endif
@@ -1674,13 +1657,7 @@ int startApplication(int argc, char* argv[]) {
 #endif // HAS_JS_CONSOLE
 	}
 	mainWindow->setInvalid();
-#if OPEN_SECOND_WINDOW
-	mainWindow2->setInvalid();
-#endif
 	mainWindow->destroy();
-#if OPEN_SECOND_WINDOW
-	mainWindow2->destroy();
-#endif
 
 	if (!fataError) {
 		try {
@@ -1696,9 +1673,7 @@ int startApplication(int argc, char* argv[]) {
 #endif
 
 	mainWindow.reset();
-#if OPEN_SECOND_WINDOW
-	mainWindow2.reset();
-#endif
+
 	glfwTerminate();
 
 	} catch (std::exception& e) {

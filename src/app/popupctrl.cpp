@@ -40,10 +40,6 @@ void PopupCtrl::onWindowClose() {
 	resetMouseContext();
 }
 
-bool PopupCtrl::onWindowCloseRequest() {
-	return true;
-}
-
 void PopupCtrl::relayout(int32_t w, int32_t h) {
 	if (bResizeable) {
 		closeAllAppMenus();

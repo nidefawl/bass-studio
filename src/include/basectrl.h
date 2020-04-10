@@ -36,6 +36,10 @@ KeyEvent keyEvent(int key, int scancode, int keyState, int mods, const char* key
 String getModKeyName(int modKey);
 String menuName(String s, KeyCombo combo);
 
+#define BASECTRL_WND_POS_RELATIVE 1
+#define BASECTRL_WND_POS_ABSOLUTE 2
+#define BASECTRL_WND_RESIZEABLE 4
+
 class BaseCtrl : public SafeRefHandler<guibase> {
 protected:
 	guitheme_mgr themes;
@@ -170,6 +174,7 @@ protected:
 	};
 	std::vector<appmenu_window_entry> menuWindows;
 	std::vector<guibase*> garbageGuis;
+	bool closed = false;
 public:
 	bool hasCtxtMenu() {
 		return this->ctxtmenu!=NULL;
@@ -191,7 +196,7 @@ public:
 	AppCtrl();
 	virtual ~AppCtrl();
 	virtual void relayout(int32_t w, int32_t h) override = 0;
-	void onChildOverlayWindowClose(window_main*);
+	virtual void onChildOverlayWindowClose(window_main*);
 	void openContextMenu(guictxtmenu_base *b, ivec2 pos, int flags = 1) override;
 	void openDialog(guidialog_base *b);
 	void closeContextMenu() override;
@@ -216,7 +221,14 @@ public:
 	virtual bool filesDropFinal(std::vector<String>& files, ivec2 pos, int kbmods) { return false; };
 	virtual void menuCommand(int cmd) { };
 	virtual void onWindowClose() { };
-	virtual bool onWindowCloseRequest() { return true; };
+
+	bool onWindowCloseRequest() {
+		if (!closed) {
+			closed = true;
+			return true;
+		}
+		return false;
+	};
 
 	virtual void onTick() = 0;
 	virtual void initApp(int argc, char* argv[]) = 0;
@@ -229,6 +241,12 @@ public:
 		window = wnd;
 	}
 protected:
+	/**
+	 * openOverlayGui
+	 * @param b
+	 * @param pos
+	 * @param flags @see BASECTRL_WND_* defines
+	 */
 	void openOverlayGui(guictxtmenu_base *b, ivec2 pos, int flags);
 };
 class guictr_scrollbar;
@@ -252,7 +270,6 @@ public:
 	void focusReceived() { };
 	void focusLost();
 	void onWindowClose();
-	bool onWindowCloseRequest();
 	 void onTick();
 	 void postInit() {}; /* OpenGL context exists in postInit */
 	bool mouseDownPre();

@@ -518,7 +518,7 @@ public:
 			stack.pop_front();
 			track_gui_entry_t* entry;
 
-			if (assert_expr(getPointerEntry(current, &entry))) {
+			if ((getPointerEntry(current, &entry))) {
 				if (!entry->layout.hideTrack && current->children.size()) {
 					stack.insert(stack.begin(), current->children.cbegin(), current->children.cend());
 				}
@@ -643,6 +643,7 @@ public:
 	}
 	void removeTrack(track_t* track, int flags);
 	void addTrack(track_t* track, int flags);
+	void removeAllTracks();
 	void showAutomationLane(track_gui_entry_t* entry, automatable_t* at, int32_t paramIdx);
 	void addSubTrack(track_gui_entry_t* entry, gui_track_subtrack* subtrack, bool insertFront);
 
@@ -661,6 +662,6 @@ public:
 	bool isTrackEntryVisible(const track_gui_entry_t* entry) {
 		return guiMgr.isVisible(entry);
 	}
-
+	void resetView();
 };
 

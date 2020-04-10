@@ -49,8 +49,6 @@ void deleteApp() {
 std::shared_ptr<AppCtrl> makeApp() {
 	return nullptr;
 }
-void makeAppCompanions(std::vector<std::shared_ptr<AppCtrl>>& out_Companions) {
-}
 
 #define LOG(fmtString,...) printf(fmtString "\n", ##__VA_ARGS__); fflush(stdout)
 

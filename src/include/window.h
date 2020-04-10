@@ -2,6 +2,10 @@
 #include "math/vec.h"
 #include "str_util.h"
 
+#define WINDOW_BORDERLESS_POPUP 1
+#define WINDOW_IS_MAINWINDOW_MASTER 2
+#define WINDOW_IS_MAINWINDOW_SLAVE 4
+
 class BaseCtrl;
 class AppCtrl;
 class PopupCtrl;
@@ -46,13 +50,12 @@ public:
 	virtual void positionOnScreen(ivec2 pos, ivec2 size) = 0;
 	virtual PopupCtrl* getCtrl() = 0;
 };
-#define WINDOW_BORDERLESS_POPUP 1
 class window_main : public window_base {
 public:
 	window_main() : window_base() {}
 	virtual ~window_main() {}
 	virtual window_dialog* createDialog(const String& sTitle, int w, int h) = 0;
-	virtual window_main* createOverlay(int flags) = 0;
+	virtual window_main* createOverlay(std::shared_ptr<AppCtrl> ctrl, int flags) = 0;
 	virtual void closeOverlay(window_main* wnd) = 0;
 	virtual void show() = 0;
 	virtual void hide() = 0;

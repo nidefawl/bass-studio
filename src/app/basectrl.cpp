@@ -482,7 +482,7 @@ void AppCtrl::openAppMenu(int lvl, guictxtmenu_base *b, ivec2 pos) {
 		menuWindows.push_back({ nullptr, nullptr });
 	}
 	if (!menuWindows[lvl].wnd) {
-		menuWindows[lvl].wnd = this->mainWindow->createOverlay(WINDOW_BORDERLESS_POPUP);
+		menuWindows[lvl].wnd = this->mainWindow->createOverlay(std::make_shared<PopupCtrl>(), WINDOW_BORDERLESS_POPUP);
 	}
 	//TODO: menu change on same level will let this assertion fail
 	auto& entry = menuWindows[lvl];
@@ -507,19 +507,19 @@ void AppCtrl::openOverlayGui(guictxtmenu_base *b, ivec2 pos, int flags) {
 	this->mainWindow->getPos(&windowPos);
 	this->mainWindow->getSize(&windowSize);
 	ivec2 wndPos = windowPos;
-	if (flags&2) {
+	if (flags&BASECTRL_WND_POS_ABSOLUTE) {
 		wndPos = pos;
-	} else if (flags&1) {
+	} else if (flags&BASECTRL_WND_POS_RELATIVE) {
 		wndPos = windowPos+ivec2(pos.x*m_scale, pos.y*m_scale);
 	} else {
 		wndPos = windowPos+(windowSize-b->size)/2;
 	}
-	bool bResizeable = (flags&4);
+	bool bResizeable = (flags&BASECTRL_WND_RESIZEABLE);
 	if (!contextWindow || contextWindow->canResize() != bResizeable) {
 		if (contextWindow) {
 			this->mainWindow->closeOverlay(contextWindow);
 		}
-		contextWindow = this->mainWindow->createOverlay(bResizeable ? 0 : WINDOW_BORDERLESS_POPUP);
+		contextWindow = this->mainWindow->createOverlay(std::make_shared<PopupCtrl>(), bResizeable ? 0 : WINDOW_BORDERLESS_POPUP);
 		contextWindows[this->mainWindow] = contextWindow;
 	}
 	if (contextWindow) {
@@ -532,7 +532,7 @@ void AppCtrl::openOverlayGui(guictxtmenu_base *b, ivec2 pos, int flags) {
 
 }
 void AppCtrl::openDialog(guidialog_base *b) {
-	openOverlayGui(b, ivec2(0), (b->isDialogResizeable()) ? 4 : 0);
+	openOverlayGui(b, ivec2(0), (b->isDialogResizeable()) ? BASECTRL_WND_RESIZEABLE : 0);
 }
 void AppCtrl::openContextMenu(guictxtmenu_base *b, ivec2 pos, int flags) {
 	openOverlayGui(b, pos, flags);

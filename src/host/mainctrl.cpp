@@ -580,12 +580,10 @@ void DawInstance::unloadProject() {
 		trackView.action.clipboard.reset();
 		trackView.iGuiMgr.reset();
 	}
-	if (companionCtrl && companionCtrl->view) {
-		auto& trackView = companionCtrl->view->ctr_tracks2.trackView;
-		trackView.resizePreModifyState.reset();
-		trackView.clipboard.reset();
-		trackView.action.clipboard.reset();
-		trackView.iGuiMgr.reset();
+	for (DawCtrl* pDawCtrl : dawCtrls) {
+		if (pDawCtrl->isOk()) {
+			pDawCtrl->resetView();
+		}
 	}
 
 	{
@@ -601,10 +599,6 @@ void DawInstance::unloadProject() {
 //	}
 	AppWndProc_disableBlockReentrant();
 
-}
-
-bool DawCtrl::onWindowCloseRequest() {
-	return true;
 }
 
 void DawCtrl::updateMenubar() {
@@ -700,10 +694,65 @@ void openDebugWindow(window_main* mainwindow) {
 	dialog->show();
 }
 #endif
+void initWindowControl(window_main* windowInitialize);
+void destroyWindowControl(window_main* windowInitialize);
+void DawInstance::onDawCompanionWindowClose(DawWindowCompanion& entry) {
+	auto it = std::find_if(dawCtrls.begin(), dawCtrls.end(), [pDawCtrlClosing=entry.ctrl.get()](auto* pDawCtrl) {
+		return pDawCtrl == pDawCtrlClosing;
+	});
+	if (it != dawCtrls.end()) {
+		dawCtrls.erase(it);
+	}
+	destroyWindowControl(entry.wnd);
+}
+bool DawInstance::onChildOverlayWindowClose(window_main* window) {
+	auto it = std::find_if(companionWindows.begin(), companionWindows.end(), [this, window](auto& wndEntry) {
+		if (wndEntry.wnd == window) {
+			this->onDawCompanionWindowClose(wndEntry);
+			return true;
+		}
+		return false;
+	});
+	if (it != companionWindows.end()) {
+		companionWindows.erase(it);
+		return true;
+	}
+	return false;
+}
+void MainCtrl::onChildOverlayWindowClose(window_main* window) {
+	if (daw.onChildOverlayWindowClose(window)) {
+		this->mainWindow->closeOverlay(window);
+	} else {
+		DawCtrl::onChildOverlayWindowClose(window);
+	}
+}
 void DawInstance::menuCommand(int cmd) {
 	try {
 	String path = projectPath;
 	switch (cmd) {
+	case CMD_OPEN_SECOND_WINDOW:
+		if (companionWindows.empty()) {
+			auto companionCtrlStdPtr = std::make_shared<CompanionCtrl>(*this);
+			auto compWindowNew = mainCtrl->mainWindow->createOverlay(companionCtrlStdPtr, WINDOW_IS_MAINWINDOW_SLAVE);
+			dbgassert(compWindowNew);
+			companionWindows.push_back(DawWindowCompanion{compWindowNew, companionCtrlStdPtr});
+			initWindowControl(compWindowNew);
+			if (companionCtrlStdPtr->isOk()) {
+				for (track_t* tr : project.trackList) {
+					companionCtrlStdPtr->view->ctr_tracks2.addTrack(tr, FLG_TRK_CHANGE_LOAD);
+				}
+				companionCtrlStdPtr->updateVisibleTrackContents();
+				companionCtrlStdPtr->layoutView();
+				companionCtrlStdPtr->fixCursor();
+			}
+			if (companionCtrlStdPtr->isOk())
+			{
+				this->dawCtrls.push_back(companionCtrlStdPtr.get());
+			}
+		} else if (companionWindows.size() && companionWindows[0].ctrl && companionWindows[0].ctrl->isOk()) {
+			companionWindows[0].wnd->show();
+		}
+		return;
 	case CMD_UNDO:
 		if (hist.canUndo()) {
 			ThreadLock lock = playThread.lockThread();
@@ -865,6 +914,12 @@ void DawInstance::destroy()
 		log_printf("getNumClipAllocations == %d!\n", totalAllocs);
 		dbgassert(getNumClipAllocations() == 0);
 	}
+
+
+	for (auto& companion : companionWindows) {
+		dbgassert(!companion.ctrl->isOk());
+	}
+	companionWindows.clear();
 	vsthost::getInstance()->unload();
 	vsthost::getInstance()->destroy();
 	audiohost::getInstance()->deinitPa();
@@ -960,6 +1015,7 @@ bool MainCtrl::init(window_main* window, NVGcontext* nanovg)
 }
 bool DawCtrl::init(window_main* window, NVGcontext* nanovg)
 {
+	dbgassert(!this->mainWindow);
 	this->mainWindow = window;
 	this->window = window;
 	this->vg = nanovg;
@@ -1000,6 +1056,7 @@ bool DawCtrl::init(window_main* window, NVGcontext* nanovg)
 	menus.tools.title = "Tools";
 	menus.tools.addCommand(CMD_PREFERENCES, "Preferences");
 	menus.tools.addCommand(CMD_SHOW_DEBUG_WINDOW, "Show Debug Window");
+	menus.tools.addCommand(CMD_OPEN_SECOND_WINDOW, "Show Second Window");
 	menus.tools.addCommand(CMD_ABOUT, "About");
 
 	menubar.add(&menus.file);
@@ -1105,41 +1162,43 @@ void MainCtrl::onTick() {
 }
 
 void DawInstance::updateGrid() {
-	if (companionCtrl && companionCtrl->view) {
-		companionCtrl->updateGrid();
+	for (DawCtrl* pDawCtrl : dawCtrls) {
+		dbgassert(pDawCtrl->isOk());
+		pDawCtrl->updateGrid();
 	}
-	mainCtrl->updateGrid();
 }
 
 void DawInstance::updateVisibleTrackContents() {
-	if (companionCtrl && companionCtrl->view) {
-		companionCtrl->updateVisibleTrackContents();
+	for (DawCtrl* pDawCtrl : dawCtrls) {
+		dbgassert(pDawCtrl->isOk());
+		pDawCtrl->updateVisibleTrackContents();
 	}
-	mainCtrl->updateVisibleTrackContents();
 }
 void DawInstance::layoutTrackEditors() {
-	if (companionCtrl && companionCtrl->view) {
-		companionCtrl->view->ctr_tracks2.layout();
+	for (DawCtrl* pDawCtrl : dawCtrls) {
+		dbgassert(pDawCtrl->isOk());
+		pDawCtrl->layoutView();
 	}
-	mainCtrl->view->ctr_tracks.layout();
 }
 guictr_tracks* DawInstance::getTrackContainer(int idx) {
 	switch (idx) {
 	case 0:
 		return &mainCtrl->view->ctr_tracks;
 	case 1:
-		return &companionCtrl->view->ctr_tracks2;
+		if (companionWindows.size() > idx-1 && companionWindows[idx-1].ctrl->isOk()) {
+			return &companionWindows[idx-1].ctrl->view->ctr_tracks2;
+		}
+		//return null
+		break;
+	default:
+		break;
 	}
 	return nullptr;
 }
-void DawInstance::setControls(MainCtrl* mainCtrl, CompanionCtrl* companionCtrl) {
+void DawInstance::setMainControl(MainCtrl* mainCtrl) {
+	dbgassert(!this->mainCtrl);
 	this->mainCtrl = mainCtrl;
-	this->companionCtrl = companionCtrl;
 	this->dawCtrls.push_back(mainCtrl);
-	if (companionCtrl) {
-		this->dawCtrls.push_back(companionCtrl);
-	}
-	
 }
 void DawInstance::onTick()
 {
@@ -1238,11 +1297,8 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
 
 	/** create all gui instances **/
 	for (track_t* tr : project.trackList) {
-		mainCtrl->view->ctr_tracks.addTrack(tr, FLG_TRK_CHANGE_LOAD);
-	}
-	if (companionCtrl) {
-		for (track_t* tr : project.trackList) {
-			companionCtrl->view->ctr_tracks2.addTrack(tr, FLG_TRK_CHANGE_LOAD);
+		for (DawCtrl* pDawCtrl : dawCtrls) {
+			pDawCtrl->addTrackToView(tr, FLG_TRK_CHANGE_LOAD);
 		}
 	}
 	/** pre-load all plugin instances **/
@@ -1369,28 +1425,12 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
 			fixCursorTrackRange(cursor, guiMgr.getTracksVisibleFlat().size());
 		}
 	}
-	auto ctrl2 = companionCtrl;
-	if (ctrl2 && ctrl2->view)
-	{
-		ctrl2->view->ctr_tracks2.loadTrackLayouts(file->project.trackCtr);
-		ctrl2->view->ctr_tracks2.loadTrackLayouts(file->project.trackReturnCtr);
-		ctrl2->view->ctr_tracks2.loadTrackLayouts(file->project.trackMasterCtr);
-		//	view->ctr_tracks.layout();
-		ctrl2->grid.setLayout(file->layout.layoutGrid);
-		ctrl2->view->ctr_tracks2.layout();
-//		ctrl->view->ctr_plugins.layout();
-
-		ctrl2->updateVisibleTrackContents();
-		ctrl2->view->ctr_tracks2.layout();
-		ctrl2->view->ctr_tracks2.setScrollOffset(file->layout.scrollOffsetX);
-		auto& cursor = ctrl2->getCursor();
-		auto& guiMgr = ctrl2->view->ctr_tracks2.guiMgr;
-		if (cursor.isSubtrackSelection() && guiMgr.validTrackIdx(cursor.cursorTrack)) {
-			const track_gui_entry_t* tr = guiMgr.at(cursor.cursorTrack);
-			fixCursorSubRange(cursor, tr->subtracks.size());
-		} else {
-			fixCursorTrackRange(cursor, guiMgr.getTracksVisibleFlat().size());
-		}
+	for (DawCtrl* pDawCtrl : dawCtrls) {
+		if (pDawCtrl == mainCtrl)
+			continue;
+		pDawCtrl->updateVisibleTrackContents();
+		pDawCtrl->layoutView();
+		pDawCtrl->fixCursor();
 	}
 
 	/** set as current project **/
@@ -1897,9 +1937,10 @@ void DawInstance::addTrackImpl(int32_t trackInsertPos, track_t* newTrack, int fl
 		vsthost* host = vsthost::getInstance();
 		host->createAudio(newTrack);
 	}
-	mainCtrl->view->ctr_tracks.addTrack(newTrack, flags);
-	if (companionCtrl) {
-		companionCtrl->view->ctr_tracks2.addTrack(newTrack, flags);
+	for (DawCtrl* pDawCtrl : dawCtrls) {
+		if (pDawCtrl->isOk()) {
+			pDawCtrl->addTrackToView(newTrack, flags);
+		}
 	}
 	if (flags&FLG_TRK_CHANGE_USER) {
 		pushHist(new action_modify_track_add(StringFormat("Add %s Track", TrackTypeToName(newTrack->type)), newTrack));
@@ -1918,12 +1959,11 @@ void DawInstance::removeTrackImpl(track_t* track, int flags) {
 	if (mainCtrl->clipView.gui && mainCtrl->clipView.gui->m_track == track){
 		mainCtrl->clipView.set(NULL);
 	}
-	track_layout_snapshot_t layoutsnapshot;
-//	track->audio->
 	project.trackList.removeTrack(track);
-	mainCtrl->view->ctr_tracks.removeTrack(track, flags);
-	if (companionCtrl) {
-		companionCtrl->view->ctr_tracks2.removeTrack(track, flags);
+	for (DawCtrl* pDawCtrl : dawCtrls) {
+		if (pDawCtrl->isOk()) {
+			pDawCtrl->removeTrackFromView(track, flags);
+		}
 	}
 	DAW::removeTrackRoutings(project.getTracksFlatVec(), track->audio->stageId);
 	if (flags&FLG_TRK_CHANGE_USER) {
@@ -1976,6 +2016,7 @@ void MainCtrl::destroy() {
 }
 void CompanionCtrl::destroy() {
 	settings.wndCompanion.dens = grid.grid_dens;
+	view->ctr_tracks2.removeAllTracks();
 	DawCtrl::destroy();
 }
 
@@ -1986,6 +2027,54 @@ void CompanionCtrl::updateGrid() {
 	grid.update(view->ctr_tracks2.trackView.getSizeContent());
 	view->ctr_tracks2.updateVisibleTrackContents();
 }
+void MainCtrl::addTrackToView(track_t* track, int flags) {
+	view->ctr_tracks.addTrack(track, flags);
+}
+void MainCtrl::removeTrackFromView(track_t* track, int flags) {
+	view->ctr_tracks.removeTrack(track, flags);
+}
+void CompanionCtrl::addTrackToView(track_t* track, int flags) {
+	view->ctr_tracks2.addTrack(track, flags);
+}
+void CompanionCtrl::removeTrackFromView(track_t* track, int flags) {
+	view->ctr_tracks2.removeTrack(track, flags);
+}
+void CompanionCtrl::resetView() {
+	view->ctr_tracks2.resetView();
+}
+void MainCtrl::resetView() {
+	view->ctr_tracks.resetView();
+}
+void CompanionCtrl::layoutView() {
+	view->ctr_tracks2.layout();
+
+}
+void MainCtrl::layoutView() {
+	view->ctr_tracks.layout();
+
+}
+void CompanionCtrl::fixCursor() {
+	auto& cursor = getCursor();
+	auto& guiMgr = view->ctr_tracks2.guiMgr;
+	if (cursor.isSubtrackSelection() && guiMgr.validTrackIdx(cursor.cursorTrack)) {
+		const track_gui_entry_t* tr = guiMgr.at(cursor.cursorTrack);
+		fixCursorSubRange(cursor, tr->subtracks.size());
+	} else {
+		fixCursorTrackRange(cursor, guiMgr.getTracksVisibleFlat().size());
+	}
+
+}
+void MainCtrl::fixCursor() {
+	auto& cursor = getCursor();
+	auto& guiMgr = view->ctr_tracks.guiMgr;
+	if (cursor.isSubtrackSelection() && guiMgr.validTrackIdx(cursor.cursorTrack)) {
+		const track_gui_entry_t* tr = guiMgr.at(cursor.cursorTrack);
+		fixCursorSubRange(cursor, tr->subtracks.size());
+	} else {
+		fixCursorTrackRange(cursor, guiMgr.getTracksVisibleFlat().size());
+	}
+}
+
 void MainCtrl::setStatusText(String s) {
 	view->statusbar.setTitle(s);
 }

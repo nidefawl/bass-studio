@@ -233,7 +233,13 @@ class DawInstance : public project_controller_t, public delete_cb {
 	project_globals_t projectGlobals;
 	int initState = 0;
 	MainCtrl* mainCtrl = nullptr;
-	CompanionCtrl* companionCtrl = nullptr;
+//	CompanionCtrl* companionCtrl = nullptr;
+//	std::shared_ptr<CompanionCtrl> companionCtrlStdPtr{nullptr};
+	struct DawWindowCompanion {
+		window_main* wnd{nullptr};
+		std::shared_ptr<CompanionCtrl> ctrl{nullptr};
+	};
+	std::vector<DawWindowCompanion> companionWindows;
 	std::vector<DawCtrl*> dawCtrls;
 	edithistory hist;
 	WorkerThread workerThread;
@@ -353,11 +359,14 @@ public:
 	void destroy();
 	void updateClipViews(clip_t* notifyClip, clip_cursor_t cursor);
 	void onTick();
-	void setControls(MainCtrl*, CompanionCtrl*);
+	void setMainControl(MainCtrl*);
 	guictr_tracks* getTrackContainer(int idx);
 	void updateGrid();
 	void updateVisibleTrackContents();
 	void layoutTrackEditors();
+	bool onChildOverlayWindowClose(window_main*);
+private:
+	void onDawCompanionWindowClose(DawWindowCompanion& entry);
 };
 class DawCtrl : public AppCtrl {
 	Menus menus;
@@ -407,7 +416,6 @@ public:
     bool filesDropFinal(std::vector<String>& files, ivec2 pos, int kbmods) override;
     void mouseMoved(ivec2 mousePos, ivec2 deltaPos) override;
 	void menuCommand(int cmd) override;
-	bool onWindowCloseRequest() override;
 	void updateMenubar() override;
 	void onTick() override;
 	void postInit() override;
@@ -453,6 +461,11 @@ public:
 	DawInstance* getDaw() {
 		return &daw;
 	}
+	virtual void addTrackToView(track_t* track, int flags) = 0;
+	virtual void removeTrackFromView(track_t* track, int flags) = 0;
+	virtual void resetView() = 0;
+	virtual void layoutView() = 0;
+	virtual void fixCursor() = 0;
 };
 class MainCtrl : public DawCtrl
 {
@@ -498,6 +511,12 @@ public:
 	DAW::Cursor& getCursor() override {
 		return daw.projectGlobals.cursor;
 	}
+	void onChildOverlayWindowClose(window_main*) override;
+	void addTrackToView(track_t* track, int flags) override;
+	void removeTrackFromView(track_t* track, int flags) override;
+	void resetView() override;
+	void layoutView() override;
+	void fixCursor() override;
 };
 
 class CompanionCtrl : public DawCtrl
@@ -523,4 +542,9 @@ public:
 	DAW::Cursor& getCursor() override {
 		return cursor;
 	}
+	void addTrackToView(track_t* track, int flags) override;
+	void removeTrackFromView(track_t* track, int flags) override;
+	void resetView() override;
+	void layoutView() override;
+	void fixCursor() override;
 };
