@@ -363,12 +363,27 @@ guiplugin* vstplugin::makeGui() {
 				viewCtr->addTo(pGuiVstPlugin->viewCtrs);
 				viewCtr->onGuiOpen(handle->axEffect);
 				viewCtr->setVSTPlugin(this);
+				handle->viewForInternalVst2 = viewCtr;
 			}
 		}
 	}
 
 	return handle->gui.get();
 }
+
+vstplugin::~vstplugin() {
+	if (blockInputs) {
+		delete blockInputs;
+	}
+	if (blockOutputs) {
+		delete blockOutputs;
+	}
+	if (handle->viewForInternalVst2) {
+		delete handle->viewForInternalVst2;
+	}
+	delete handle;
+}
+
 guiplugin* vstplugin::getGui() {
 	return handle->gui.get();
 }

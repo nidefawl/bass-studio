@@ -1923,15 +1923,6 @@ bool vsthost::unloadAllPlugins() {
 //	list.clear();
 	return true;
 }
-
-vstplugin::~vstplugin() {
-	if (blockInputs)
-		delete blockInputs;
-	if (blockOutputs)
-		delete blockOutputs;
-	delete handle;
-}
-
 void vsthost::getAllInstances(std::vector<effectbase*>& effects) {
 //	for (auto* as : allAudioStages) {
 //		effects.insert( effects.end(), as->effects.begin(), as->effects.end() );

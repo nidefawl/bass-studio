@@ -6,6 +6,7 @@
 
 struct audio_stage_t;
 class AudioEffectX;
+class PluginViewContainers;
 struct handles_t {
 	int32_t localCurrentUniqueId = 0;
 	VstTimeInfo localTimeInfo{0};
@@ -13,6 +14,7 @@ struct handles_t {
 	AEffect* aeffect = NULL; // hmodule owns if axEffect == null
 	void* hmodule = NULL; // we dont own
 	std::unique_ptr<guiplugin> gui;
+	PluginViewContainers* viewForInternalVst2 = nullptr;
 	handles_t(AudioEffectX* ex, AEffect* e, void* m) {
 		axEffect = ex;
 		aeffect = e;

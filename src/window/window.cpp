@@ -1712,6 +1712,7 @@ int startApplication(int argc, char* argv[]) {
 #include "../vstsdk-plugin-2.4/aeffeditor.h"
 
 class appwindow_plugin : public appwindow_main, public pluginwindow {
+	bool isInitialized = false;
 public:
 	ERect _rect{ 0 };
 	appwindow_plugin(AudioEffect *_effect, std::shared_ptr<PluginControl> _ctrl, int w, int h)
@@ -1725,10 +1726,12 @@ public:
 	}
 
 	virtual ~appwindow_plugin() {
-		my_printf("~pluginwindow_main()\n", 0);
-		try {
-			destroyContextAndWindow();
-		EXC_CATCH_NO_THROW_DIALOG
+		if (isInitialized) {
+			my_printf("~pluginwindow_main()\n", 0);
+			try {
+				destroyContextAndWindow();
+			EXC_CATCH_NO_THROW_DIALOG
+		}
 	}
 
 	void onSetParameter(int32_t index, float value) override {
@@ -1766,14 +1769,13 @@ public:
 		glfwGetWindowSize(glfw, &w, &h);
 		this->onWindowSizeChanged(w, h);
 	}
-	bool once = false;
 	bool open(void *ptr) override {
 		try {
 			AEffEditor::open(ptr);
 			if (ptr)
 			{
-				if (!once) {
-					once = true;
+				if (!isInitialized) {
+					isInitialized = true;
 					setAppWindowHints();
 					createPluginWindow("plugin-window", _rect.right-_rect.left, _rect.bottom-_rect.top, ptr);
 				}
