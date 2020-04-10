@@ -52,9 +52,13 @@ void guictr_base::render(NVGcontext* vg) {
 		return;
 	}
 	for (auto c : guis) {
-		nvgSave(vg);
-		c->render(vg);
-		nvgRestore(vg);
+		if (c->size == ivec2{0, 0}) {
+			log_printf("warning, rendering container with size 0 0\n", 0);
+		} else {
+			nvgSave(vg);
+			c->render(vg);
+			nvgRestore(vg);
+		}
 	}
 }
 void guictr_base::renderContainerLabel(NVGcontext* vg) {

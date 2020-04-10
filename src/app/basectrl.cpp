@@ -323,14 +323,22 @@ void BaseCtrl::render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, i
 
 
 	for (guictr_base *ctr : containers) {
+		if (ctr->size == ivec2{0, 0}) {
+			log_printf("warning, rendering container with size 0 0\n", 0);
+			continue;
+		}
 		nvgSave(vg);
 		ctr->render(vg);
 		nvgRestore(vg);
 	}
 	if (guiDragged) {
-		nvgSave(vg);
-		guiDragged->renderDragged(vg, this->m_mousePos, dragOffset);
-		nvgRestore(vg);
+		if (guiDragged->size == ivec2{0, 0}) {
+			log_printf("warning, rendering container with size 0 0\n", 0);
+		} else {
+			nvgSave(vg);
+			guiDragged->renderDragged(vg, this->m_mousePos, dragOffset);
+			nvgRestore(vg);
+		}
 	}
 #if RENDER_DBG_BRD
 	int colorIdx = 0;

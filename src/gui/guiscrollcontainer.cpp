@@ -17,8 +17,12 @@ void guictr_scrollbar::render(NVGcontext* vg) {
 	for (guibase* gui : guis) {
 		if (gui == &scrollbar)
 			continue;
+		if (gui->size == ivec2{0, 0}) {
+			log_printf("warning, rendering container with size 0 0\n", 0);
+		} else {
+			gui->render(vg);
+		}
 
-		gui->render(vg);
 	}
 	if (scrollbar.isVisible()) {
 		nvgRestore(vg);
