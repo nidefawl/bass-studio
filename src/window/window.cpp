@@ -1726,6 +1726,9 @@ public:
 
 	virtual ~appwindow_plugin() {
 		my_printf("~pluginwindow_main()\n", 0);
+		try {
+			destroyContextAndWindow();
+		EXC_CATCH_NO_THROW_DIALOG
 	}
 
 	void onSetParameter(int32_t index, float value) override {
@@ -1763,30 +1766,28 @@ public:
 		glfwGetWindowSize(glfw, &w, &h);
 		this->onWindowSizeChanged(w, h);
 	}
+	bool once = false;
 	bool open(void *ptr) override {
 		try {
-		AEffEditor::open(ptr);
-		if (ptr)
-		{
-
-			setAppWindowHints();
-
-			createPluginWindow("plugin-window", _rect.right-_rect.left, _rect.bottom-_rect.top, ptr);
+			AEffEditor::open(ptr);
+			if (ptr)
+			{
+				if (!once) {
+					once = true;
+					setAppWindowHints();
+					createPluginWindow("plugin-window", _rect.right-_rect.left, _rect.bottom-_rect.top, ptr);
+				}
 #ifdef _WIN32
-			dbgassert(hwnd);
+				dbgassert(hwnd);
 #endif
-			dbgassert(glfw);
-			dbgassert(nanovgCtxt);
-			if (!ctrlShared->init(this, this->nanovgCtxt)) {
-				throw appexception("Couldn't start application");
+				dbgassert(glfw);
+				dbgassert(nanovgCtxt);
+				showWindow();
+				guiOpen();
+				return true;
 			}
-			showWindow();
-			guiOpen();
-			return true;
-		}
 		EXC_CATCH_NO_THROW_DIALOG
 		AEffEditor::close();
-		destroyContextAndWindow();
 		return false;
 	}
 	void close() override
@@ -1795,7 +1796,7 @@ public:
 			glfwMakeContextCurrent(glfw);
 			guiClose();
 			hideWindow();
-			destroyContextAndWindow();
+		//	destroyContextAndWindow();
 			AEffEditor::close();
 		}
 	}
