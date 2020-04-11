@@ -975,4 +975,6 @@ guiproperties_table<guiproperties_t>::~guiproperties_table() {
 		bool b = removeEntry(propTableInstances, this);
 		dbgassert(b);
 	}
+	if (ownsPtr)
+		delete ptr;
 }
