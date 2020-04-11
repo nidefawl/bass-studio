@@ -4,6 +4,7 @@
         "vector": "cpp",
         "exception": "cpp",
         "__functional_03": "cpp",
-        "functional": "cpp"
+        "functional": "cpp",
+        "internal.h": "c"
     }
 }

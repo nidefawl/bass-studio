@@ -25,6 +25,18 @@
             "compileCommands": "${workspaceFolder}/build/clang-static-debug/compile_commands_NoRSP.json"
         },
         {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/clang-9",
+            "cStandard": "c11",
+            "cppStandard": "c++14",
+            "intelliSenseMode": "clang-x64",
+            "compileCommands": "/home/michael/dev/build/compile_commands.json"
+        },
+        {
             "name": "Mac",
             "includePath": [
                 "${workspaceFolder}/**"

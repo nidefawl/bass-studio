@@ -4,9 +4,46 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
-
         {
-            "name": "(lldb) Launch",
+            "type": "gdb",
+            "request": "launch",
+            "name": "Launch Program",
+            "target": "/home/michael/run/DAW-Clang-debug",
+            "cwd": "/home/michael/run/",
+            "valuesFormatting": "parseText"
+        },
+        {
+            "name": "(gdb) Launch",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "/home/michael/run/DAW-Clang-debug",
+            "args": [],
+            "stopAtEntry": true,
+            "cwd": "/home/michael/run/",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "type": "lldb-mi",
+            "request": "launch",
+            "name": "Linux (lldb) DAW-Clang-debug",
+            "target": "/home/michael/run/DAW-Clang-debug",
+            "cwd": "/home/michael/run/",
+            "valuesFormatting": "parseText",
+            "env": {
+                "DISPLAY" : "0.0",
+            },            
+        },
+        {
+            "name": "MacOS (lldb) Launch",
             "type": "cppdbg",
             "request": "launch",
             "program": "/Users/mac-user/run/DAW-Clang-debug",
