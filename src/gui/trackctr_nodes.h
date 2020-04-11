@@ -62,6 +62,7 @@ protected:
 	int32_t selectedIdx = -1;
 public:
 	gui_graph();
+	~gui_graph();
 	void onTick(AppCtrl* appctrl) override;
 	int32_t getSelectedIdx() {
 		return selectedIdx;
@@ -74,9 +75,6 @@ public:
 	}
 	void setRenderHR(bool _renderHR) {
 		renderHR = _renderHR;
-	}
-	~gui_graph() {
-		destroyGuis();
 	}
 	void setRowHeight(int h) {
 		rowHeight = h;
@@ -120,10 +118,7 @@ protected:
 	gui_scrollbar scrollbar;
 public:
 	guictr_nodes(DAW::Cursor& _cursor, project_t& _project, dragdrop_midifile& _dragdropclip);
-	~guictr_nodes() {
-		remove(&graph);
-		remove(&scrollbar);
-	}
+	~guictr_nodes();
 	void render(NVGcontext* vg);
 	void scrollTo(guibase* g);
 	void layout();

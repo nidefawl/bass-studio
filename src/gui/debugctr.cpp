@@ -76,6 +76,7 @@ gui_ctr_debug::~gui_ctr_debug() {
 	for (auto* g : impl->debugGuis) {
 		delete g;
 	}
+	delete impl;
 }
 gui_ctr_debug::gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType) :
 		guictr_base(),

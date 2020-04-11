@@ -509,6 +509,7 @@ vsthost::~vsthost() {
 	delete moduleMgr;
 	delete blockZero;
 	delete impl;
+	delete midiRealtimeInput;
 }
 vsthost::vsthost()
 	: impl(new vsthost_impl{}), numChannels(OUTPUT_CHANNELS), moduleMgr{new vsthost::ModuleManager{}}

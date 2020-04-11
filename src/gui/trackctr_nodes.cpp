@@ -242,6 +242,10 @@ public:
 gui_graph::gui_graph() : guictr_base(), impl(new gui_graph::guictr_graph_impl) {
 	setBackgroundRendered(true);
 }
+gui_graph::~gui_graph() {
+	destroyGuis();
+	delete impl;
+}
 void gui_graph::refresh() {
 	reset();
 	updateList(false);
@@ -532,6 +536,11 @@ guictr_nodes::guictr_nodes(DAW::Cursor& _cursor, project_t& _project, dragdrop_m
 	setCanMouseHit(true);
 	add(&scrollbar);
 	add(&graph);
+	delete impl;
+}
+guictr_nodes::~guictr_nodes() {
+	remove(&graph);
+	remove(&scrollbar);
 }
 void guictr_nodes::render(NVGcontext* vg) {
 	if (isBackgroundRendered()){
