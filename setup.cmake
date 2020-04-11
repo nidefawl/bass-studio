@@ -81,7 +81,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
       add_compile_definitions(_GLIBCXX_DEBUG _GLIBCXX_DEBUG_PEDANTIC)
       add_compile_definitions(_LIBCPP_DEBUG)
     endif (DEBUG_STD_LIB)
-    add_compile_definitions(_LIBCPP_NO_EXCEPTIONS) 
+    add_definitions(-D_LIBCPP_NO_EXCEPTIONS) 
   endif()
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
   add_compile_options(-Wall -Wno-sign-compare)
@@ -103,7 +103,21 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" STRE
   add_compile_options(-fno-omit-frame-pointer)
 endif()
 
-add_compile_definitions(${DAW_COMPILE_FLAGS})
+string(REPLACE " " ";" DAW_FLAG_LIST ${DAW_COMPILE_FLAGS})
+message(STATUS "DAW_COMPILE_FLAGS = ${DAW_COMPILE_FLAGS}")
+message(STATUS "DAW_FLAG_LIST = ${DAW_FLAG_LIST}")
+
+   SET(listVarTmp "")
+   FOREACH(f ${DAW_COMPILE_FLAGS})
+      LIST(APPEND listVarTmp "-D${f}")
+   ENDFOREACH(f)
+   SET(DAW_COMPILE_FLAGS ${listVarTmp})
+message(STATUS "listVarTmp ${listVarTmp}")
+
+message(STATUS "DAW_FLAG_LIST = ${DAW_FLAG_LIST}")
+message(STATUS "DAW_COMPILE_FLAGS = ${DAW_COMPILE_FLAGS}")
+
+add_definitions(${DAW_COMPILE_FLAGS})
 
 
 if (IS_MINGW_BUILD)
