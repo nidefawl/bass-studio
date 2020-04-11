@@ -669,7 +669,11 @@ int network_socket_t::sendTo(String host, int port, uint8_t* data, size_t size) 
 	int slen = sizeof(si_dest);
 	si_dest.sin_family = AF_INET;
 	si_dest.sin_port = htons(port);
+#ifdef _WIN32
 	si_dest.sin_addr.S_un.S_addr = inet_addr(StringAsCStr(host));
+#else
+	si_dest.sin_addr.s_addr = inet_addr(StringAsCStr(host));
+#endif
 	int ret = sendto(sockfd, (char*)data, size, 0, (struct sockaddr*)&si_dest, sizeof(si_dest));
 	if (ret <= 0) {
 		if (errno != EWOULDBLOCK) {

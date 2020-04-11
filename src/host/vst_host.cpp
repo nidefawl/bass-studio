@@ -2126,6 +2126,7 @@ int32_t vsthost::getPlayThreadId() {
 	return impl->playThreadId;
 }
 
+#ifdef _WIN32
 HMODULE safeLoadLib(const char* szLibName);
 int32_t loadLib(String filepath, VSTPluginMain_t** out_fn, HMODULE* out_hmodule) {
 	if (!FileExists(filepath)) {
@@ -2151,6 +2152,7 @@ int32_t loadLib(String filepath, VSTPluginMain_t** out_fn, HMODULE* out_hmodule)
 
 	return 0;
 }
+#endif
 #if defined(__APPLE__)
 
 int32_t loadLib(String filepath, VSTPluginMain_t** out_fn, void** out_hmodule);

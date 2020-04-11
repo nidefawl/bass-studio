@@ -24,7 +24,7 @@
 #ifdef _WIN32
 #include <windows.h>
 #endif
-#include "C:/dev/esp8266/projects/UPD_RGB_DISPLAY/app/rgb_network_types.h"
+#include "rgb_network_types.h"
 #include "udp_sync_server.h"
 
 

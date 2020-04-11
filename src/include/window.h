@@ -1,6 +1,7 @@
 #pragma once
 #include "math/vec.h"
 #include "str_util.h"
+#include <memory>
 
 #define WINDOW_BORDERLESS_POPUP 1
 #define WINDOW_IS_MAINWINDOW_MASTER 2
