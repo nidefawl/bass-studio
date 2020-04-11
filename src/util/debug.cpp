@@ -134,7 +134,8 @@ static ThreadSafeFileLogger& getFileLogger() {
 	return gGlobalLogger;
 }
 static MultiLogger& getMultiLogger() {
-	static MultiLogger gMultiLogger(new StdOutLogger());
+	static StdOutLogger gMultiLoggerStdOutInstance;
+	static MultiLogger gMultiLogger(&gMultiLoggerStdOutInstance);
 	return gMultiLogger;
 }
 static Logger& getExclusiveLoggerInstance() {

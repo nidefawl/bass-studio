@@ -189,12 +189,14 @@ protected:
 	std::vector<guibase*> controls;
 	int32_t number = 0;
 	const bool isGlobalInstance;
+	const bool ownsPtr;
 public:
-	guiproperties_table(T* _ptr, bool _isGlobalInstance)
+	guiproperties_table(T* _ptr, bool _isGlobalInstance, bool _ownsPtr)
 		: debugproperties(),
 		  ptr(_ptr),
 		  numberInput(nullptr),
-		  isGlobalInstance(_isGlobalInstance)
+		  isGlobalInstance(_isGlobalInstance),
+		  ownsPtr(_ownsPtr)
 	{
 		setBackgroundRendered(true);
 		setBackgroundRenderedInset(false);
@@ -220,6 +222,8 @@ public:
 	}
 	~guiproperties_table() {
 		removeGuis();
+		if (ownsPtr)
+			delete ptr;
 	}
 	void addControl(guibase* g) {
 		controls.push_back(g);
@@ -855,7 +859,7 @@ class guictr_theme_settings : public guictr_base {
 	guibutton buttonRemove;
 	guibutton buttonSave;
 public:
-	guictr_theme_settings() : guictr_base(), themeProperties(nullptr, false), scrollContainer(), selectTheme() {
+	guictr_theme_settings() : guictr_base(), themeProperties(nullptr, false, false), scrollContainer(), selectTheme() {
 		padding = 0;
 		margin = 0;
 		buttonAdd.setText("+");
@@ -956,10 +960,10 @@ void setDebugPropertyHandle(void* ptr) {
 	}
 }
 debugproperties* makeUniquePropertiesCtr() {
-	return new guiproperties_table<guiproperties_t>(new guiproperties_t(), false);
+	return new guiproperties_table<guiproperties_t>(new guiproperties_t(), false, true);
 }
 guictr_base* makeCtrProperties() {
-	auto* ptr = new guiproperties_table<guiproperties_t>(new guiproperties_t(), true);
+	auto* ptr = new guiproperties_table<guiproperties_t>(new guiproperties_t(), true, true);
 	propTableInstances.push_back(ptr);
 	return ptr;
 }
