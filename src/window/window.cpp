@@ -268,10 +268,6 @@ public:
 			RemovePropW(hwnd, L"GLFW");
 		}
 #endif
-		if (glfw) {
-			glfwSetWindowUserPointer(glfw, nullptr);
-			glfwDestroyWindow(glfw);
-		}
 	}
 	GLFWwindow* getGLFW() {
 		return glfw;
@@ -994,6 +990,8 @@ public:
 			throw appexception("window null");
 		glfwMakeContextCurrent(glfw);
 		appwindow::destroyGL();
+		glfwSetWindowUserPointer(glfw, nullptr);
+		glfwDestroyWindow(glfw);
 		glfw = nullptr;
 	}
 	void render()
@@ -1140,6 +1138,7 @@ void appwindow_main::destroy() {
 	if (!glfw)
 		throw appexception("glfw null");
 	destroyOverlayWindows();
+	appwindow::killTimer();
 #if BUILD_VSTHOST
 #ifdef _WIN32
 	if (this->dropTarget)
@@ -1166,7 +1165,7 @@ void appwindow_main::destroy() {
 	} else {
 		nanovgCtxt = nullptr;
 	}
-	appwindow::killTimer();
+	glfwDestroyWindow(glfw);
 	glfw = nullptr;
 }
 void appwindow_main::initControl() {

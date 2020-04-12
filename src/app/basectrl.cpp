@@ -467,6 +467,7 @@ void AppCtrl::destroyControl() {
 		delete gui;
 	}
 	garbageGuis.clear();
+	dbgassert(isOk());
 	destroy();
 }
 void AppCtrl::closeAppMenusAtLvl(int startlvl) {

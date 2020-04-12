@@ -450,23 +450,27 @@ public:
 	bool getTrackEntry(const track_t* t, track_gui_entry_t** out) ;
 
 	void removeTrack(track_gui_entry_t& entry) {
-		auto it = std::remove_if(begin(entries), end(entries), [this, &entry](track_gui_entry_t* e) {
-			if (e->track == entry.track) {
-				removeEntry(trackEntriesTop, e);
-				removeEntry(trackEntriesBottom, e);
-				removeEntry(tracksVisibleFlat, e);
-				delete e;
-				return true;
-			}
-			return false;
+		auto it = std::remove_if(begin(entries), end(entries), [&entry](track_gui_entry_t* e) {
+			return e->track == entry.track;
 		});
 		if (it == entries.end()) {
 			dbgassert(0);
 			return;
 		};
+		removeEntry(trackEntriesTop, &entry);
+		removeEntry(trackEntriesBottom, &entry);
+		removeEntry(tracksVisibleFlat, &entry);
+		delete &entry;
 		entries.erase(it, entries.end());
 	}
 	void addTrack(track_gui_entry_t* entry) {
+		auto it = std::find_if(begin(entries), end(entries), [this, entry](track_gui_entry_t* e) {
+			if (e->track == entry->track) {
+				return true;
+			}
+			return false;
+		});
+		dbgassert(it == entries.end() && "Attempt to add track_gui_entry_t twice");
 		entries.push_back(entry);
 
 	}
