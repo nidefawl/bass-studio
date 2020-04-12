@@ -178,12 +178,12 @@ void vstplugin::load(vsthost* host) {
 	this->uId = aeffect->uniqueID;
 
 	long l0 = this->dispatch(effIdentify, 0, 0, 0, 0);
+	long l5 = this->dispatch(effOpen);
 	long l1 = this->dispatch(effStopProcess);
 	long l2 = this->dispatch(effMainsChanged, 0, false);
-	long l3 = this->dispatch(effSetSampleRate, 0, 0, NULL, (float) format.sampleRate);
-	long l4 = this->dispatch(effSetBlockSize, 0, format.blockSize, 0, 0);
-	long l5 = this->dispatch(effOpen);
 
+	long l3 = this->dispatch(effSetSampleRate, 0, 0, NULL, (float)format.sampleRate);
+	long l4 = this->dispatch(effSetBlockSize, 0, format.blockSize, 0, 0);
 	VstPinProperties pin;
 	for (int32_t i = 0; i < aeffect->numInputs; i++) {
 		if (this->dispatch(effGetInputProperties, i, 0, &pin)) {
