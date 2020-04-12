@@ -105,7 +105,7 @@ public:
 	{
 		Cursor tmp;
 		tmp.cursorTrack = math::min(getTrackBegin(), c2.getTrackBegin());
-		tmp.selTrackRange = math::max(getTrackEnd(), c2.getTrackEnd()) - tmp.selTrackRange;
+		tmp.selTrackRange = math::max(getTrackEnd(), c2.getTrackEnd()) - tmp.cursorTrack;
 		tmp.cursorPos = math::min(getTickBegin(), c2.getTickBegin());
 		tmp.selRange = math::max(getTickEnd(), c2.getTickEnd()) - tmp.cursorPos;
 		tmp.cursorSubTrack = math::min(getSubTrackBegin(), c2.getSubTrackBegin());
