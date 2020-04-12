@@ -124,7 +124,7 @@ void trackallcontainer_t::checkConsistency() {
 
 	treeIdx = 0;
 	for (track_t* t : trackAllCtr.tracksFlat) {
-		dbgassert(t->idx == treeIdx);
+		dbgassert(t->projectIdx == treeIdx);
 		treeIdx++;
 	}
 }
@@ -189,7 +189,7 @@ void trackallcontainer_t::rebuildTrackList() {
 	// reassign global track indices in correct order
 	int32_t idx = 0;
 	for (track_t* t : trackAllCtr) {
-		t->idx = idx++;
+		t->projectIdx = idx++;
 	}
 }
 void trackallcontainer_t::removeTrack(track_t* track) {
@@ -401,12 +401,12 @@ void trackallcontainer_t::copyTracks(int32_t trackBegin, int32_t trackEnd, track
 	for (track_t* t: trackMidiAudioCtr) {
 
 		//TODO: convert trackBegin (gui idx) to track list idx
-		if (t->idx >= trackBegin && t->idx <= trackEnd) {
-			my_printf("copy track %d\n", t->idx);
+		if (t->projectIdx >= trackBegin && t->projectIdx <= trackEnd) {
+			my_printf("copy track %d\n", t->projectIdx);
 			track_snapshot_t* trackCopy = new track_snapshot_t(t, false);
 			_out.tracks.push_back(trackCopy);
 		} else {
-			my_printf("NOT copy track %d\n", t->idx);
+			my_printf("NOT copy track %d\n", t->projectIdx);
 		}
 	}
 }

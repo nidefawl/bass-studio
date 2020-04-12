@@ -19,13 +19,13 @@ void midiarp::postSetParameter(int32_t idx, float preVal, float val, int flags) 
 	dbgassert(this->trackImpl->getTrack());
 	track_t* track = this->trackImpl->getTrack();
 	automationlane_snapshot_t ref = toRef();
-	parameter_ref_t p = {track->idx,  ref.type, 0, idx};
+	parameter_ref_t p = {track->projectIdx,  ref.type, 0, idx};
 	DawInstance::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
 }
 void midiarp::createSnapshot(arp_snapshot& snapshot) {
 	snapshot.params.reserve(getNumParameters());
 	visitParams([&snapshot](auto& mapEntry) {
-		auto& param = mapEntry.second;
+		automatable_param_t& param = mapEntry.second;
 		snapshot.params.push_back(param_snapshot_t{param.idx, param.value});
 	});
 	storeAutomation(snapshot.automatedParams, this);

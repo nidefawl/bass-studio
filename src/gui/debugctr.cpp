@@ -482,7 +482,7 @@ void resetHistAndCheck() {
 	int n = 0;
 	for (auto track : tracks) {
 		int nTrackClips = track->getMidi().getConstClips().size();
-		my_printf("track %s %d %s has %d clips\n", TrackTypeToName(track->type), track->idx, StringAsCStr(track->name), nTrackClips);
+		my_printf("track %s %d %s has %d clips\n", TrackTypeToName(track->type), track->projectIdx, StringAsCStr(track->name), nTrackClips);
 		n += nTrackClips;
 	}
 

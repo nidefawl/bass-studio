@@ -1603,7 +1603,7 @@ public:
 				}
 			}
 		} else if (_id == 2) {
-			DawInstance::get()->removeTrackId(m_trackentry->track->idx);
+			DawInstance::get()->removeTrackId(m_trackentry->track->projectIdx);
 		} else if (_id == 3) {
 			auto window = parentCtrl->window;
 

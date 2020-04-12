@@ -286,7 +286,7 @@ public:
 	void loadSnapshot(const track_snapshot_t& snap);
 //	void loadSubtrackLayout(const track_snapshot_t* snap);
 
-	int32_t idx = -1; // global flat idx (skips invisible tracks)
+	int32_t projectIdx = -1; // global flat idx (skips invisible tracks)
 	int32_t childIdxTree = -1; // index in parent child list (position in parents child list)
 	int32_t localIdxFlat = -1; // index in type-container (midi/return/master group)
 
@@ -524,7 +524,7 @@ public:
 
 	void getTracks(const DAW::Cursor& cursor, std::vector<track_t*>& _out) const {
 		for (track_t* t : trackAllCtr) {
-			if (cursor.inTrackRange(t->idx)) {
+			if (cursor.inTrackRange(t->projectIdx)) {
 				_out.push_back(t);
 			}
 		}

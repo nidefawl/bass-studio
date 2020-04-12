@@ -44,7 +44,7 @@ public:
 		desc = description;
 //		clip = view.clip;
 		after = view.clip()->notes;
-		trackIdx = view.track()->idx;
+		trackIdx = view.track()->projectIdx;
 		clipTime = view.clip()->time;
 		cursorAfter = view.cursor;
 		before = oldNotes;
@@ -107,7 +107,7 @@ public:
 		desc = description;
 //		clip = view.clip;
 		after = *view.clip();
-		trackIdx = view.track()->idx;
+		trackIdx = view.track()->projectIdx;
 		clipTime = view.clip()->time;
 		cursorAfter = view.cursor;
 		before = oldC;

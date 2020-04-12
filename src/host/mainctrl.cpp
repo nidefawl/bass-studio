@@ -1853,7 +1853,7 @@ public:
 	action_modify_track_add(String description, track_t* _trackPtr) : action_base() {
 		desc = description;
 		trackPtr = nullptr;
-		trackIdx = _trackPtr->idx;
+		trackIdx = _trackPtr->projectIdx;
 		localIdx = _trackPtr->localIdxFlat;
 		dbgassert(DawInstance::get()->getTrackId(trackIdx) == _trackPtr);
 	}
@@ -1894,7 +1894,7 @@ public:
 	action_modify_track_remove(String description, track_t* _trackPtr) : action_base() {
 		desc = description;
 		trackPtr = _trackPtr;
-		trackIdx = _trackPtr->idx;
+		trackIdx = _trackPtr->projectIdx;
 		localIdx = _trackPtr->localIdxFlat;
 		dbgassert(DawInstance::get()->getTrackId(trackIdx) != trackPtr);
 	}

@@ -207,8 +207,6 @@ public:
 			gui->layout();
 		}
 	}
-	void updateVisibleTrackContents();
-
 
 };
 
@@ -475,6 +473,12 @@ public:
 		entries.push_back(entry);
 
 	}
+	/**
+	 * checks if entry is visible.
+	 * A track_gui_entry_t is visible if
+	 * all of its parents have the field
+	 * this->layout.hideTrack == true
+	 */
 	bool isVisible(const track_gui_entry_t* entry) override {
 		bool bHidden = false;
 		track_t* p = entry->track->parent;
@@ -530,7 +534,7 @@ public:
 					trackEntriesBottom.push_back(entry);
 				}
 				if (entry->idx != vecNewTracksFlat.size()) {
-					log_printf("entry idx changed from %d to %d (track_t idx: %d)\n", entry->idx, vecNewTracksFlat.size(), current->idx);
+					log_printf("entry idx changed from %d to %d (track_t idx: %d)\n", entry->idx, vecNewTracksFlat.size(), current->projectIdx);
 				}
 				entry->idx = vecNewTracksFlat.size();
 				vecNewTracksFlat.push_back(entry);
@@ -550,7 +554,7 @@ public:
 	}
 	int32_t getTrackProjectIndex(int32_t guiIdx) const override {
 		if (assert_expr(validTrackIdx(guiIdx))) {
-			return at(guiIdx)->track->idx;
+			return at(guiIdx)->track->projectIdx;
 		}
 		return -1;
 	}

@@ -668,7 +668,7 @@ void updateStoreLoadSubtracks(guictr_tracks* guiTracks, track_gui_entry_t* entry
 		saveSubtrackLayout(guiTracks, entry, entry->state.layoutSaved);
 		guiTracks->removeAllSubtracks(entry);
 		DAW::Cursor& cursor = entry->parentCtrl->getCursor();
-		if (cursor.inSubTrackAny(entry->track->idx)) {
+		if (cursor.inSubTrackAny(entry->track->projectIdx)) {
 			fixCursorSubRange(cursor, 0);
 		}
 	} else {
@@ -961,7 +961,7 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 void track_params_t::createSnapshot(track_params_snapshot_t& snapshot) {
 	snapshot.params.reserve(getNumParameters());
 	visitParams([&snapshot](auto& mapEntry) {
-		auto& param = mapEntry.second;
+		automatable_param_t& param = mapEntry.second;
 		snapshot.params.push_back(param_snapshot_t{param.idx, param.value});
 	});
 	storeAutomation(snapshot.automatedParams, this);
@@ -980,7 +980,7 @@ void track_params_t::postSetParameter(int32_t idx, float preVal, float val, int 
 	dbgassert(this->audiostage->getTrack());
 	track_t* track = this->audiostage->getTrack();
 	automationlane_snapshot_t ref = toRef();
-	parameter_ref_t p = {track->idx,  ref.type, 0, idx};
+	parameter_ref_t p = {track->projectIdx,  ref.type, 0, idx};
 	DawInstance::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
 }
 

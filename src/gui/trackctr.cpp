@@ -68,9 +68,6 @@ void guitrack_mixers::addTrackEntry(track_gui_entry_t& e) {
 }
 void guitrack_mixers::removeTrackEntry(track_gui_entry_t& e) {
 	this->remove(e.mixer);
-//	DELETE_PTR(e.mixer) //TODO: fix mem leak
-}
-void guitrack_mixers::updateVisibleTrackContents() {
 }
 
 void drawSeperator(NVGcontext* vg, const guitheme_t* theme, int32_t seperatorY, ivec2& cs) {
@@ -238,8 +235,6 @@ void guictr_tracks::updateVisibleTracks() {
 			}
 		}
 	}
-//	trackControls.updateVisibleTrackContents();
-//	trackView.updateVisibleTrackContents();
 	for (auto *trEntry : tracks) {
 		if (!trEntry->content->isVisible()) {
 			log_printf("track %s is not visible but is in in tracksVisibleFlat\n", StringAsCStr(trEntry->track->name));
@@ -880,7 +875,6 @@ void guictr_tracks::addTrack(track_t* track, int flags) {
 	track_gui_entry_t *entry = new track_gui_entry_t { 0 };
 	entry->parentCtrl = this->dawCtrl;
 	entry->track = track;
-	entry->idx = track->idx; //TODO: keep this field in sync
 	entry->parent = this;
 	entry->mixer = createTrackGuiMixer(entry);
 	entry->content = createTrackGui(entry, grid);

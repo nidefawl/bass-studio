@@ -330,7 +330,7 @@ void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin, bool storePluginCh
 	if (storePluginChunks) {
 		ps.params.reserve(plugin->getNumParameters());
 		plugin->visitParams([&ps](auto& mapEntry) {
-			auto& param = mapEntry.second;
+			automatable_param_t& param = mapEntry.second;
 			if (param.inUse) {
 				ps.params.push_back(param_snapshot_t{ param.idx, param.value });
 			}
@@ -459,7 +459,7 @@ void vstplugin::postSetParameter(int32_t idx, float preVal, float val, int flags
 	dbgassert(this->trackImpl->getTrack());
 	track_t* track = this->trackImpl->getTrack();
 	automationlane_snapshot_t ref = toRef();
-	parameter_ref_t p = {track->idx,  ref.type, this->projectGlobalId, idx};
+	parameter_ref_t p = {track->projectIdx,  ref.type, this->projectGlobalId, idx};
 	DawInstance::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
 }
 void vstplugin::recvPluginEditParamUpdate(int32_t internalIdx) {

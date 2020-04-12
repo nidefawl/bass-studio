@@ -64,11 +64,11 @@ public:
 				track->getMidi().deleteClips(ctrl);
 				track->releaseTrackContent();
 //				if (track->type == TRACK_TYPE_MIDI)
-				my_printf("TRACKBeforeUndo[%d] HAS %d clips\n", track->idx, track->getMidi().getConstClips().size());
+				my_printf("TRACKBeforeUndo[%d] HAS %d clips\n", track->projectIdx, track->getMidi().getConstClips().size());
 				*track = *trackStored;
 //				track->loadPluginAutomationParameters(trackStored->plugins);
 //				if (track->type == TRACK_TYPE_MIDI)
-				my_printf("TRACKAfterUndo[%d] HAS %d clips\n", track->idx, track->getMidi().getConstClips().size());
+				my_printf("TRACKAfterUndo[%d] HAS %d clips\n", track->projectIdx, track->getMidi().getConstClips().size());
 			} else {
 
 				my_printf("idx is now invalid\n",0);
@@ -88,7 +88,7 @@ public:
 				*track = *trackStored;
 //				track->loadPluginAutomationParameters(trackStored->plugins);
 //				if (track->type == TRACK_TYPE_MIDI)
-				my_printf("TRACK[%d] HAS %d clips\n", track->idx, track->getMidi().getConstClips().size());
+				my_printf("TRACK[%d] HAS %d clips\n", track->projectIdx, track->getMidi().getConstClips().size());
 			}
 		}
 		MainCtrl::get()->getCursor() = after.cursor;
