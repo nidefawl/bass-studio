@@ -145,11 +145,8 @@ public:
 	void removeAllSubtracks(track_gui_entry_t* entry);
 	virtual void trackEntryDragMove(gui_track* g, ivec2 mousepos);
 	virtual void trackEntryDragRelease(gui_track* g, ivec2 mousepos);
-//	void addTrack(gui_track* t);
-//	void removeTrack(gui_track* t);
 	void addTrackEntry(track_gui_entry_t& e);
 	void removeTrackEntry(track_gui_entry_t& e);
-	void updateVisibleTrackContents();
 	void layout();
 };
 

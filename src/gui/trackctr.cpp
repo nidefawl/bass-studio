@@ -205,7 +205,7 @@ void guictr_tracks::scrollOffsetChanged(int dir, float offset) {
 			y += h + TRACK_HEIGHT_SPACING;
 		}
 	}
-	trackView.updateVisibleTrackContents();
+	updateVisibleTrackContents();
 }
 void guictr_tracks::scrollTo(guibase* g) {
 	int32_t y = g->pos.y;
@@ -823,6 +823,7 @@ void guitrack_editor::layout() {
 		gui->layout();
 	}
 }
+#if 0&&OLD_CODE
 void guitrack_editor::updateVisibleTrackContents() {
 	for (track_t* tr : project.trackList) {
 		track_gui_entry_t* entry;
@@ -843,6 +844,8 @@ void guitrack_editor::updateVisibleTrackContents() {
 		}
 	}
 }
+#endif
+
 void guictr_tracks::removeAllTracks() {
 	track_gui_vector_td tracksCopy = guiMgr.getTracksVisibleFlat();
 	for (auto* entry : tracksCopy) {
