@@ -94,7 +94,7 @@ struct vsthost::track_block_processing_task_t {
 	double posDouble;
 	playback_state state;
 	bool inLoop;
-	int dbg;
+	int debugLogProcessing;
 };
 struct process_scratch_buf_t {
 	VstTimeInfo timeinfo;
@@ -1303,7 +1303,7 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
 			}
 		} else {
 
-			if (req.dbg == 0) {
+			if (req.debugLogProcessing) {
 				log_printf("track %s has no connected input %s\n", StringAsCStr(trackImpl->inputChannel.name));
 			}
 		}
@@ -1413,7 +1413,7 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const DAW::processing_
 	 * This should be adjusted depending on samplerate and blocksize
 	 */
 //	int readWriteDist = writePos >= readPos ? writePos-readPos : writePos-(readPos-RING_BUF_SIZE);
-	int32_t dbg = dbgStep%333;
+	bool debugLogProcessing = false;
 
 #ifndef NDEBUG
 	if (!isLoopAround&&state == playback_state::status_play && lastState == playback_state::status_play) {
@@ -1459,7 +1459,7 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const DAW::processing_
 	}
 
 
-	if (dbg == 0) {
+	if (debugLogProcessing) {
 		log_printf("DelayLine.instanceCount %d\n", DelayLine::instanceCount.load());
 	}
 	/**
@@ -1475,10 +1475,6 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const DAW::processing_
 	 * 4.		push task to free thread
 	 * 5. after loop wait for all tasks to be finished
 	 */
-	if (dbg == 0) {
-		log_printf("DelayLine.instanceCount %d\n", DelayLine::instanceCount.load());
-	}
-
 
 	struct Func_CheckUnprocessed {
 		std::vector<audiostageid_i32> stagesProcessed; //TODO: use a tree, unsorted search scales badly
@@ -1508,7 +1504,7 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const DAW::processing_
 			blockProcTask.posDouble = posDouble;
 			blockProcTask.state = state;
 			blockProcTask.inLoop = inLoop;
-			blockProcTask.dbg = dbg;
+			blockProcTask.debugLogProcessing = debugLogProcessing;
 			auto timeStart = getTimeHPint64();
 			processBlockTrack(impl->singleThreadedBuf, blockProcTask);
 			auto timeEnd = getTimeHPint64();
@@ -1569,7 +1565,7 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const DAW::processing_
 							blockProcTask.posDouble = posDouble;
 							blockProcTask.state = state;
 							blockProcTask.inLoop = inLoop;
-							blockProcTask.dbg = dbg;
+							blockProcTask.debugLogProcessing = debugLogProcessing;
 
 
 							tasksQueued.push_back({ ptrProcessingNode->stageId, static_cast<uint32_t>(i) });
