@@ -1,17 +1,19 @@
 
-#ifdef _WIN32
 #include "str_util.h"
 #include "test_common.h"
-#include <windows.h>
 #include "../host/vst_host.h"
 #include "../host/plugin/vst_plugin.h"
 #include "tls.h"
 #include "project.h"
+#ifdef _WIN32
+#include <windows.h>
+static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+#endif
 
 namespace {
 
 
-static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
+#if defined(_WIN32) 
 
 static const std::vector<String> files{"mdaLimiter.dll", "mdaPiano.dll"};
 int rIdx = 0;
@@ -90,7 +92,10 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 
     return DefWindowProc(hwnd, msg, wParam, lParam);
 }
+#endif
+
 }
+
 
 
 int main(int argc, char* argv[]) {
@@ -98,6 +103,7 @@ int main(int argc, char* argv[]) {
 	vsthost::assignMasterCallback(audiohost.get());
     daw_tls::tlsinstance& tls = daw_tls::getTls();
     tls.host = audiohost.get();
+#if defined(_WIN32) 
     MSG msg;
     WNDCLASS wc;
 
@@ -125,7 +131,7 @@ int main(int argc, char* argv[]) {
     {
         DispatchMessage(&msg);
     }
+#endif
 	vsthost::getInstance()->unload();
 	vsthost::getInstance()->destroy();
 }
-#endif
