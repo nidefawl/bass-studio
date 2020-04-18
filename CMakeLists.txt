@@ -328,6 +328,13 @@ string(REPLACE ";" " -D" BUILD_COMPILE_DEFS "-D${BUILD_COMPILE_DEFS}")
 CONFIGURE_FILE( src/app/buildinfo.cpp.in ${CMAKE_BINARY_DIR}/buildinfo.cpp ESCAPE_QUOTES)
 
 set(FILE_DAW_PROFILE_DATA "${CMAKE_CURRENT_BINARY_DIR}/daw-code-profile.profdata")
+#llvm-cov interface is a bit awkward, not acceptiong libraries, only binary or .o
+if (WIN32)
+    set(TEST_BINARY_NAME ${CMAKE_CURRENT_BINARY_DIR}/src/tests/test_notes.exe)
+else()
+    set(TEST_BINARY_NAME ${CMAKE_CURRENT_BINARY_DIR}/src/tests/test_notes)
+endif (WIN32)
+
 add_custom_command(
   OUTPUT ${FILE_DAW_PROFILE_DATA}
   POST_BUILD 
@@ -335,7 +342,7 @@ add_custom_command(
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
   #COMMAND python ${CMAKE_SOURCE_DIR}/../test/generate-report.py
   COMMAND llvm-profdata merge -output=${FILE_DAW_PROFILE_DATA} ${CMAKE_CURRENT_BINARY_DIR}/src/tests/*.profraw
-  DEPENDS test
+  DEPENDS src/tests
 )
 
 add_custom_command(
@@ -344,7 +351,7 @@ add_custom_command(
   COMMENT "generate coverage report"
   WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
   #COMMAND python ${CMAKE_SOURCE_DIR}/../test/generate-report.py
-  COMMAND llvm-cov report ${CMAKE_CURRENT_BINARY_DIR}/src/tests/test_notes.exe -instr-profile=${FILE_DAW_PROFILE_DATA} ${CMAKE_SOURCE_DIR}/src/ > "coverage-report.txt"
+  COMMAND llvm-cov report ${TEST_BINARY_NAME} -instr-profile=${FILE_DAW_PROFILE_DATA} ${CMAKE_SOURCE_DIR}/src/ > "coverage-report.txt"
   DEPENDS ${FILE_DAW_PROFILE_DATA}
 )
 add_custom_target(report DEPENDS coverage-report.txt)
