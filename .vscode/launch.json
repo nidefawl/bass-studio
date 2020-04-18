@@ -4,6 +4,8 @@
     // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
+
+
         {
             "type": "gdb",
             "request": "launch",
@@ -18,7 +20,8 @@
             "request": "launch",
             "program": "/home/michael/run/DAW-Clang-debug",
             "args": [],
-            "stopAtEntry": true,
+            "preLaunchTask": "Linux make ~/dev/build",
+            "stopAtEntry": false,
             "cwd": "/home/michael/run/",
             "environment": [],
             "externalConsole": false,

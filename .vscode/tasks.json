@@ -51,7 +51,7 @@
             ]
         },
         {
-            "label": "make ~/dev/build",
+            "label": "MacOS make ~/dev/build",
             "command": "make",
             "args": [
                 "-j",
@@ -60,9 +60,27 @@
             "options": {
                 "cwd": "/Users/mac-user/dev/build2"
             },
+            "problemMatcher": []
+        },
+        {
+            "label": "Linux make ~/dev/build",
+            "command": "make",
+            "args": [
+                "-j",
+                "6"
+            ],
+            "options": {
+                "cwd": "/home/michael/dev/build"
+            },
             "group": {
                 "kind": "build",
                 "isDefault": true
+            },
+            "problemMatcher": {
+                "base": "$gcc",
+                "fileLocation": [
+                    "absolute"
+                ]
             }
         }
     ]

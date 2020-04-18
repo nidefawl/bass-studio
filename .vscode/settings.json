@@ -5,6 +5,16 @@
         "exception": "cpp",
         "__functional_03": "cpp",
         "functional": "cpp",
-        "internal.h": "c"
+        "internal.h": "c",
+        "array": "cpp",
+        "*.tcc": "cpp",
+        "chrono": "cpp",
+        "deque": "cpp",
+        "list": "cpp",
+        "string": "cpp",
+        "memory_resource": "cpp",
+        "shared_mutex": "cpp",
+        "regex": "cpp",
+        "optional": "cpp"
     }
 }
