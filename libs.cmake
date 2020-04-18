@@ -50,7 +50,8 @@ find_library(
     PATH_SUFFIXES lib
     NO_DEFAULT_PATH)
 find_library(
-    SOXR_LIB_DEBUG NAMES "soxrd"
+    SOXR_LIB_DEBUG
+    NAMES "soxrd.dll" "soxrd"
     PATHS ${BUILD_PATH_LIB_DEBUG}/soxr/
     PATH_SUFFIXES lib
     NO_DEFAULT_PATH)
