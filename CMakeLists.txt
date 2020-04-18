@@ -19,14 +19,11 @@ else()
 set(BUILD_DAW_LIB OFF)
 endif ()
 
-# add_compile_options("-fprofile-arcs")
-# link_libraries("-fprofile-arcs")
-# add_compile_options("-ftest-coverage")
-# link_libraries("-ftest-coverage")
-
-add_compile_options("-fprofile-instr-generate")
-add_compile_options("-fcoverage-mapping")
-link_libraries("-fprofile-instr-generate")
+if (BUILD_TESTS)
+    add_compile_options("-fprofile-instr-generate")
+    add_compile_options("-fcoverage-mapping")
+    link_libraries("-fprofile-instr-generate")
+endif (BUILD_TESTS)
 
 #set(BUILD_DAW_LIB ON) #override
 
