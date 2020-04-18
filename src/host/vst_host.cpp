@@ -1772,7 +1772,7 @@ bool vsthost::onTick() {
 			if (current->window) {
 				if (now - current->window->captureTime > 1000/25) {
 					current->window->captureTime = now;
-					current->window->captureWindowFrame();
+					//current->window->captureWindowFrame();
 				}
 //				current->updateDisplay();
 			}
