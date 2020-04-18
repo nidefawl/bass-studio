@@ -406,7 +406,6 @@ int clip_t::getInTimeRange(tick_t absStart, tick_t absEnd, tick_t cutStart, tick
 	tick_t relEnd = math::min(clipEnd, absEnd);
 	relStart -= clipStart;
 	relEnd -= clipStart;
-	clip_notes_t notesView;
 	tick_t cutLeft = 0;
 	tick_t cutRight = getLen();
 	if (cutStart > -1) {
@@ -423,72 +422,11 @@ int clip_t::getInTimeRange(tick_t absStart, tick_t absEnd, tick_t cutStart, tick
 //	cutRight = math::min(cutRight, relEnd);
 	if (cutRight <= cutLeft)
 		return 0;
-	getNotesView(cutLeft, cutRight, notesView, true);
-	clip_notes_t notesView2;
-	getNotesView(math::max(cutLeft, relStart), math::min(cutRight, relEnd)+1, notesView2, true);
-//	{
-//
-//		auto itNote = notesView.m_list.begin();
-//		auto itNotesEnd = notesView.m_list.end();
-//		while (itNote != itNotesEnd) {
-//
-//			note_t& note = *itNote;
-//			dbgassert(note.end() >= cutLeft);
-//			dbgassert(note.start() < cutRight);
-//			dbgassert(note.start() >= cutLeft);
-//			dbgassert(note.end() <= cutRight);
-//			itNote++;
-//		}
-//	}
-	size_t lenGet = notesView.m_list.size();
-	for (int o = 0; o < 2; o++) {
-		std::vector<note_t> list2;
-		list.clear();
-		size_t lenCopied = 0;
 
-		auto itNote = notesView.m_list.begin();
-		auto itNotesEnd = notesView.m_list.end();
-		while (itNote != itNotesEnd) {
-			note_t& note = *itNote;
-//			dbgassert(note.time >= 0);
-			dbgassert(note.len >= 0);
-			if (note.isIntersectTimeIncludeEnds(relStart, relEnd)) {
-				note_t noteOffset(note);
-				noteOffset.len = math::min(noteOffset.end(), clipEnd) - noteOffset.time;
-				list2.push_back(noteOffset);
-				noteOffset.time += clipStart;
-//				dbgassert(noteOffset.time >= 0);
-				dbgassert(noteOffset.len >= 0);
-				if (!list.capacity()) {
-					list.reserve(128);
-				}
-				list.push_back(noteOffset);
-				lenCopied++;
-			}
-			itNote++;
-		}
-		if (notesView2.m_list.size() == lenCopied) {
-			break;
-		} else {
-			clip_notes_t notesView3;
-			getNotesView(math::max(cutLeft, relStart), math::min(cutRight, relEnd)+1, notesView3, true);
-			dbgassert(0);
-			continue;
-		}
-	}
-//	if (lenCopied*20 < lenGet) {
-//		log_printf("inefficient: lenGet %d, lenCopied %d\n", lenGet, lenCopied);
-//		log_printf("old window: cutLeft %d, cutRight %d\n", cutLeft, cutRight);
-//		cutLeft = math::max(cutLeft, relStart);
-//		cutRight = math::min(cutRight, relEnd);
-//		log_printf("new window: cutLeft %d, cutRight %d\n", cutLeft, cutRight);
-//		getNotesView(math::max(cutLeft, relStart, math::min(cutRight, relEnd)+1, notesView2, true);
-//		if (!(notesView2.m_list.size() == lenCopied)) {
-//
-//			clip_notes_t notesView3;
-//			getNotesView(cutLeft, cutRight+1, notesView3, true);
-//		}
-//	}
+	clip_notes_t notesView;
+	getNotesView(math::max(cutLeft, relStart), math::min(cutRight, relEnd), notesView, true);
+
+	list = notesView.m_list;
 
 	return list.size();
 }
