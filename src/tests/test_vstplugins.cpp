@@ -7,7 +7,6 @@
 #include "project.h"
 #ifdef _WIN32
 #include <windows.h>
-static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam);
 #endif
 
 namespace {
