@@ -98,7 +98,7 @@ void PopupCtrl::open(guictxtmenu_base *_ctxtmenu, ivec2 pos, bool bResizeable) {
 		appW->positionOnScreen(pos-insetCtxtMenu, ivec2(popupCtrs->size.x*m_scale, popupCtrs->size.y*m_scale));
 		appW->show();
 #ifndef _WIN32
-		appW->positionOnScreen(pos-insetCtxtMenu, popupCtrs->size);
+		appW->positionOnScreen(pos-insetCtxtMenu, ivec2(popupCtrs->size.x*m_scale, popupCtrs->size.y*m_scale));
 #endif
 	}
 	int32_t clearc = getTheme()->getColorInt32(GuiColor::COL_CLEAR_COLOR);

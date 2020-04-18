@@ -68,6 +68,15 @@
 #include "js/scripting.h"
 #endif
 
+class appwindow;
+static std::vector<appwindow*> windowTimerHandleList;
+void registerWindowTimer(appwindow* wnd) {
+	windowTimerHandleList.push_back(wnd);
+}
+void unregisterWindowTimer(appwindow* wnd) {
+	removeEntry(windowTimerHandleList, wnd);
+}
+void windowTickTimerRun();
 
 volatile bool fataError = false;
 void enableGlDebugCallback();
@@ -359,6 +368,8 @@ public:
 			KillTimer(hwnd, this->timer);
 			my_printf("KillTimer\n", 0);
 		}
+#else
+		unregisterWindowTimer(this);
 #endif
 	}
 	void destroyGL() {
@@ -608,7 +619,7 @@ public:
 	#ifdef _WIN32
 		syncMenu(hwnd, menubar);
 	#endif
-	#if __linux__
+	#ifdef __linux__
 			//TODO: implement linux
 	#endif
 	#endif
@@ -919,11 +930,17 @@ public:
 			pos.y -= (pos.y + size.y) - mi.rcWork.bottom;
 		}
 #endif
-#if __linux__
-		//TODO: implement linux
-#endif
         appwindow::setPos(pos);
-        appwindow::setSize(size);
+#ifdef __linux__
+		/* calling setSize on a hidden window makes the window visible (at the wrong location!)
+		 * As workaround on linux positionOnScreen is must bee called twice:
+		 * Once before and once after appwindow::show() */ 
+		if (shown) {
+			appwindow::setSize(size);
+		}
+#else
+		appwindow::setSize(size);
+#endif
 	}
 
 	void show() {
@@ -1027,7 +1044,7 @@ public:
 		if (parent && disablesParent)
 			EnableWindow(parent->getHWND(), TRUE);
 #endif
-#if __linux__
+#ifdef __linux__
 		//TODO: implement linux
 #endif
 		glfwSetWindowUserPointer(glfw, NULL);
@@ -1053,7 +1070,7 @@ public:
 		if (parent && disablesParent)
 			EnableWindow(parent->getHWND(), FALSE);
 #endif
-#if __linux__
+#ifdef __linux__
 		//TODO: implement linux
 #endif
 	}
@@ -1151,7 +1168,7 @@ void appwindow_main::destroy() {
 		}
 	}
 #endif
-#if __linux__
+#ifdef __linux__
 		//TODO: implement linux
 #endif
 #endif
@@ -1189,7 +1206,7 @@ void appwindow_main::initControl() {
 		}
 	}
 #endif
-#if __linux__
+#ifdef __linux__
 	//TODO: implement linux window pos
 #endif
 #endif
@@ -1423,6 +1440,8 @@ void appwindow::createBaseWindow(const char* title, int w, int h, GLFWwindow* sh
 	initContext();
 #ifdef _WIN32
 	this->timer = SetTimer(hwnd, 0, 1, (TIMERPROC)timerProc);
+#else
+	registerWindowTimer(this);
 #endif
 	last = getTimeMillis();
 }
@@ -1635,6 +1654,10 @@ int startApplication(int argc, char* argv[]) {
 #if defined(__linux__) || defined(__APPLE__)
 		glfwWaitEventsTimeout(0.001);
 		mainWindow->onRefresh();
+		if (getTimeMillis() - start > 0) {
+			windowTickTimerRun();
+			start = getTimeMillis();
+		}
 #else
 		if (tmMsgSent > 0 && getTimeMillis() - tmMsgSent >= 1000)
 		{
@@ -1701,6 +1724,12 @@ int startApplication(int argc, char* argv[]) {
 
 #endif // HAS_MAIN_LOOP
 
+void windowTickTimerRun() {
+	std::vector<appwindow*> localWindowTimerHandleList = windowTimerHandleList;
+	for (appwindow* window : localWindowTimerHandleList) {
+		window->onTick();
+	}
+}
 
 #if (BUILD_VSTHOST || BUILD_EXTERNAL_PLUGIN)
 #include "plugins/plugin-window.h"
@@ -1761,7 +1790,7 @@ public:
 #ifdef _WIN32
 		this->dropTarget = RegisterDropWindow(hwnd, this);
 #endif
-#if __linux__
+#ifdef __linux__
 		//TODO: implement linux
 #endif
 
