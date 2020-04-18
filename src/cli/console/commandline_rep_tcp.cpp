@@ -155,7 +155,12 @@ public:
 		network_io netio(&handler);
 		std::shared_ptr<network_conn_t> conn;
 		std::shared_ptr<network_conn_t> listenSocket;
-		if (netio.listenAt(nullptr, 2123, protocol_type_i32::TCP, listenSocket)) {
+		if (!netio.listenAt(nullptr, 2123, protocol_type_i32::TCP, listenSocket)) {
+			log_printf("Could not open listening socket on TCP port 2123\n", 0);
+			while (!threadState.shouldQuit) {
+				std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+			}
+		} else {
 			netio.setSelectTimeout(0.0001);
 			while (netio.hasOpenSockets() && !threadState.shouldQuit) {
 				netio.update();
