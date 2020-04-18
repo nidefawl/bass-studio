@@ -536,11 +536,11 @@ guictr_nodes::guictr_nodes(DAW::Cursor& _cursor, project_t& _project, dragdrop_m
 	setCanMouseHit(true);
 	add(&scrollbar);
 	add(&graph);
-	delete impl;
 }
 guictr_nodes::~guictr_nodes() {
 	remove(&graph);
 	remove(&scrollbar);
+	delete impl;
 }
 void guictr_nodes::render(NVGcontext* vg) {
 	if (isBackgroundRendered()){
