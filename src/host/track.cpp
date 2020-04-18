@@ -841,12 +841,6 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 		std::vector<note_t> notes;
 		hires_timer_t tmr;
 
-		tick_t heldBegin = start;
-		tick_t heldEnd = end;
-		for (const note_t& note : heldNotes) {
-			heldBegin = math::min(heldBegin, note.start());
-			heldEnd = math::max(heldEnd, note.end());
-		}
 		static int64_t time1=0;
 		static int64_t time2=0;
 		static int64_t time3=0;
@@ -856,6 +850,12 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 		static int64_t time7=0;
 		tmr.reset();
 		if (flags & MidiFlags::PROCESS_CLIPS) {
+			tick_t heldBegin = start;
+			tick_t heldEnd = end;
+//			for (const note_t& note : heldNotes) {
+//				heldBegin = math::min(heldBegin, note.start());
+//				heldEnd = math::max(heldEnd, note.end());
+//			}
 			track->getMidi().getNotesInRange(heldBegin, heldEnd, -1, loopEnd, notes);
 		}
 		time1 = (time1 * 19 + tmr.getTime()) / 20;
@@ -863,6 +863,12 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 
 		tmr.reset();
 		if (flags & MidiFlags::PROCESS_REALTIME) {
+			tick_t heldBegin = start;
+			tick_t heldEnd = end;
+			for (const note_t& note : heldNotes) {
+				heldBegin = math::min(heldBegin, note.start());
+				heldEnd = math::max(heldEnd, note.end());
+			}
 			getClipNotesInTimeRange(heldBegin, heldEnd, -1, loopEnd, midiRealtimeInput, notes);
 		}
 		time2 = (time2 * 19 + tmr.getTime()) / 20;
