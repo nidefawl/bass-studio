@@ -239,7 +239,7 @@ public:
 		automation.destroyGuis();
 		guictr_base::destroyGuis();
 	}
-	virtual void updatePosition(const project_globals_t& globals, scaled_grid& grid, ivec2& trackSize) {
+	virtual void updatePosition(const project_globals_t& globals, scaled_grid& grid, ivec2& trackSize, bool throttleRefresh) {
 
 	}
 };

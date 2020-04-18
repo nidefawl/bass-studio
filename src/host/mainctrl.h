@@ -466,6 +466,7 @@ public:
 	virtual void resetView() = 0;
 	virtual void layoutView() = 0;
 	virtual void fixCursor() = 0;
+	virtual bool isZooming() = 0;
 };
 class MainCtrl : public DawCtrl
 {
@@ -499,7 +500,6 @@ public:
 	void updateGrid() override;
 	void updateVisibleTrackContents() override;
 	bool processGlobalKeyevent(KeyEvent& event) override;
-	bool isZooming();
 	guitrack_editor& getTrackEditor();
 	void addDebug(String s);
 	void resetMouseContext() override;
@@ -517,6 +517,7 @@ public:
 	void resetView() override;
 	void layoutView() override;
 	void fixCursor() override;
+	bool isZooming() override;
 };
 
 class CompanionCtrl : public DawCtrl
@@ -547,4 +548,5 @@ public:
 	void resetView() override;
 	void layoutView() override;
 	void fixCursor() override;
+	bool isZooming() override;
 };
