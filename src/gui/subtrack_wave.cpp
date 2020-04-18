@@ -66,7 +66,7 @@ public:
 		if (tickOffset++>60) {
 			tickOffset = 0;
 			ivec2 ts = { 0, 0 };
-			updatePosition(DawInstance::get()->getGlobals(), grid, ts);
+			updatePosition(DawInstance::get()->getGlobals(), grid, ts, false);
 		}
 	}
 	void render(NVGcontext* vg) override {
@@ -241,7 +241,7 @@ public:
 		return newentry;
 
 	}
-	void updatePosition(const project_globals_t& globals, scaled_grid& grid, ivec2& trackSize) override {
+	void updatePosition(const project_globals_t& globals, scaled_grid& grid, ivec2& trackSize, bool throttleRefresh) override {
 
 //		size = this->parent->size;
 		culled = size.x < 1 || size.y < 1;//!getClipPosition(grid, trackSize, m_clip, pos, size, 0);
@@ -314,7 +314,7 @@ public:
 							if (!canQueue) {
 								limit.x = updatedEntry.waveform.size.x/4;
 							}
-							if (updatedEntry.waveform.clipped || (MainCtrl::get() && !MainCtrl::get()->isZooming())) {
+							if (updatedEntry.waveform.clipped || !throttleRefresh) {
 								limit = {0,0};
 							}
 							if (!equal || (sizeDiff.x > limit.x || sizeDiff.y > limit.y)) {

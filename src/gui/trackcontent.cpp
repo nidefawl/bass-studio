@@ -339,7 +339,8 @@ void gui_track::updateVisibleTrackContents(project_globals_t& project, scaled_gr
 		gui->updatePosition(project, grid, size);
 	}
 	for (gui_track_subtrack* gui : m_trackentry->subtracks) {
-		gui->updatePosition(project, grid, size);
+		const bool throttleRefresh = m_trackentry->parentCtrl->isZooming();
+		gui->updatePosition(project, grid, size, throttleRefresh);
 	}
 }
 bool gui_track::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {

@@ -1040,7 +1040,10 @@ public:
 		removeUNCHECKED(&automationSelectParam);
 		removeUNCHECKED(&automationSelectDevice);
 		removeUNCHECKED(&hideAutomation);
-
+		const int buttonRadius = (TRACK_HEIGHT_STEP-INSET_TRACK_CONTENT*2)/2;
+		hideTrack.setRadius(buttonRadius);
+		hideAutomation.setRadius(buttonRadius-2);
+		addAutomationLane.setRadius(buttonRadius-2);
 		int32_t inset = CONST_LAYOUT_MARGIN;
 		int32_t i2 = inset * 2;
 		int32_t h = TRACK_HEIGHT_STEP-i2;
@@ -1229,6 +1232,8 @@ public:
 	}
 	void layout() {
 		const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
+		const int buttonRadius = (TRACK_HEIGHT_STEP-INSET_TRACK_CONTENT*2)/2;
+		removeLane.setRadius(buttonRadius-2);
 		int32_t insetBtn2 = (TRACK_HEIGHT_STEP-removeLane.size.y)/2;
 		removeLane.pos = ivec2(size.x-removeLane.size.x-insetBtn2, insetBtn2);
 	}

@@ -3,7 +3,6 @@ message (STATUS "CMake version: ${CMAKE_VERSION}")
 
 set(DAW_SRC_PATH "${CMAKE_SOURCE_DIR}/src")
 set(BUILD_NAME "DAW")
-
 set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT ${BUILD_NAME})
 # set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${BUILD_NAME})
 project(${BUILD_NAME} C CXX)
@@ -19,6 +18,15 @@ set(BUILD_DAW_LIB ON)
 else()
 set(BUILD_DAW_LIB OFF)
 endif ()
+
+# add_compile_options("-fprofile-arcs")
+# link_libraries("-fprofile-arcs")
+# add_compile_options("-ftest-coverage")
+# link_libraries("-ftest-coverage")
+
+add_compile_options("-fprofile-instr-generate")
+add_compile_options("-fcoverage-mapping")
+link_libraries("-fprofile-instr-generate")
 
 #set(BUILD_DAW_LIB ON) #override
 
@@ -318,3 +326,25 @@ list(APPEND BUILD_COMPILE_OPTIONS -std=c++${BUILD_CXX_STANDARD})
 string(REPLACE ";" " " BUILD_COMPILE_OPTIONS "${BUILD_COMPILE_OPTIONS}")
 string(REPLACE ";" " -D" BUILD_COMPILE_DEFS "-D${BUILD_COMPILE_DEFS}")
 CONFIGURE_FILE( src/app/buildinfo.cpp.in ${CMAKE_BINARY_DIR}/buildinfo.cpp ESCAPE_QUOTES)
+
+set(FILE_DAW_PROFILE_DATA "${CMAKE_CURRENT_BINARY_DIR}/daw-code-profile.profdata")
+add_custom_command(
+  OUTPUT ${FILE_DAW_PROFILE_DATA}
+  POST_BUILD 
+  COMMENT "generate test report"
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+  #COMMAND python ${CMAKE_SOURCE_DIR}/../test/generate-report.py
+  COMMAND llvm-profdata merge -output=${FILE_DAW_PROFILE_DATA} ${CMAKE_CURRENT_BINARY_DIR}/src/tests/*.profraw
+  DEPENDS test
+)
+
+add_custom_command(
+  OUTPUT coverage-report.txt
+  POST_BUILD 
+  COMMENT "generate coverage report"
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+  #COMMAND python ${CMAKE_SOURCE_DIR}/../test/generate-report.py
+  COMMAND llvm-cov report ${CMAKE_CURRENT_BINARY_DIR}/src/tests/test_notes.exe -instr-profile=${FILE_DAW_PROFILE_DATA} ${CMAKE_SOURCE_DIR}/src/ > "coverage-report.txt"
+  DEPENDS ${FILE_DAW_PROFILE_DATA}
+)
+add_custom_target(report DEPENDS coverage-report.txt)

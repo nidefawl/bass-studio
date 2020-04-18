@@ -2053,6 +2053,10 @@ void MainCtrl::layoutView() {
 	view->ctr_tracks.layout();
 
 }
+
+bool CompanionCtrl::isZooming() {
+	return guiCaptured == &view->ctr_tracks2.trackTimeline;
+}
 void CompanionCtrl::fixCursor() {
 	auto& cursor = getCursor();
 	auto& guiMgr = view->ctr_tracks2.guiMgr;
