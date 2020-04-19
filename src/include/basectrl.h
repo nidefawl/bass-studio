@@ -246,9 +246,6 @@ public:
 	virtual void destroy() = 0;
 	void onAppTick();
 	void destroyControl();
-	virtual void setActiveWindow(window_main* wnd) {
-		window = wnd;
-	}
 protected:
 	/**
 	 * openOverlayGui

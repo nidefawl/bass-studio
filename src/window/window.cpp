@@ -660,7 +660,6 @@ public:
 	    if (!block.check()) {
 	    	return;
 	    }
-		ctrl->setActiveWindow(this);
 //		flagNeedsRedraw();
 		glfwMakeContextCurrent(glfw);
 		ctrl->onAppTick();
@@ -680,7 +679,6 @@ public:
 	}
 	void renderMain(AppCtrl* const ctrl)
 	{
-		ctrl->setActiveWindow(this);
 		glfwMakeContextCurrent(glfw);
 		int winwidth, winheight;
 		int fbwidth, fbheight;
@@ -715,19 +713,16 @@ public:
 		}
 	}
 	void onMouseMoved(ivec2 deltapos) {
-		ctrl->setActiveWindow(this);
 		if (math::abs(deltapos.x)+math::abs(deltapos.y) > 2)
 			this->dblclicktimer = 0;
 		ctrl->mouseMoved(getMousePos(1.0f/ctrl->m_scale), deltapos);
 		flagNeedsRedraw();
 	}
 	virtual void onMouseScrolled(double xoffset, double yoffset) {
-		ctrl->setActiveWindow(this);
 		ctrl->mouseScrolled(xoffset, yoffset);
 		flagNeedsRedraw();
 	}
 	void onMouseButton(int button, int action, int mods) {
-		ctrl->setActiveWindow(this);
 		if (action == GLFW_PRESS) {
 			uint64_t timeMillis = getTimeMillis();
 			bool dblClick = this->dblclicktimer != 0 && timeMillis - this->dblclicktimer < 500;
@@ -741,7 +736,6 @@ public:
 		flagNeedsRedraw();
 	}
 	void onWindowSizeChanged(int width, int height) {
-		ctrl->setActiveWindow(this);
 		if (ctrl->isOK) {
 
 			if (ctrl->m_size.x != width || ctrl->m_size.y != height) {
@@ -754,7 +748,6 @@ public:
 		}
 	}
 	void onWindowFocusChanged(int focused) {
-		ctrl->setActiveWindow(this);
 		if (focused) {
 			ctrl->focusReceived();
 		} else {
@@ -764,7 +757,6 @@ public:
 	}
 
 	void onWindowCloseRequest() override {
-		ctrl->setActiveWindow(this);
 		bool b = ctrl->onWindowCloseRequest();
 		if (!b) {
 			glfwSetWindowShouldClose(glfw, 0);
@@ -780,25 +772,20 @@ public:
 	}
 	void onWindowClose() override {
 		log_printf("onWindowClose ptr %s\n", StringAsCStr(nameDbg));
-
-		ctrl->setActiveWindow(this);
 		ctrl->onWindowClose();
 		if (parent) {
 			parent->onChildOverlayClose(this);
 		}
 	}
 	bool filesDropBegin(std::vector<String>& files, ivec2 pos, int kbmods) {
-		ctrl->setActiveWindow(this);
 		flagNeedsRedraw();
 		return ctrl->filesDropBegin(files, pos, kbmods);
     }
 	bool filesDropMove(ivec2 pos, int kbmods) {
-		ctrl->setActiveWindow(this);
 		flagNeedsRedraw();
 		return ctrl->filesDropMove(pos, kbmods);
     }
 	bool filesDropFinal(std::vector<String>& files, ivec2 pos, int kbmods) {
-		ctrl->setActiveWindow(this);
 		flagNeedsRedraw();
 		return ctrl->filesDropFinal(files, pos, kbmods);
     }
@@ -840,7 +827,6 @@ public:
 
 	void onCharInput(unsigned int codepoint) {
 //		my_printf("main onCharInput 0x%04X\n", codepoint);
-		ctrl->setActiveWindow(this);
 		ctrl->onCharInput(codepoint);
 		flagNeedsRedraw();
 	}
@@ -850,7 +836,6 @@ public:
 //		my_printf("keyname %s, key %d, scancode %d\n", key_name, key, scancode);
 //		my_printf("mods %08X\n", mods);
 //		my_printf("main onKeyInput %d (%c) %d\n", key, key, scancode);
-		ctrl->setActiveWindow(this);
 		ctrl->onKeyInput(key, scancode, action, mods, key_name);
 		flagNeedsRedraw();
 	}
@@ -872,7 +857,6 @@ public:
 		return appwindow::isMouseCaptured();
 	}
 	void onCursorEnter(int entered) {
-		ctrl->setActiveWindow(this);
 		ctrl->onCursorEnter(entered);
 		if (entered)
 			glfwSetCursor(glfw, MouseCursors::cursors[cursorIcon]);
@@ -966,7 +950,6 @@ void appwindow_main::onChildOverlayClose(appwindow* child) {
 	dbgassert(wndOverlay);
 	if (wndOverlay) {
 		log_printf("onChildOverlayClose ptr %s\n", StringAsCStr(wndOverlay->nameDbg));
-		this->ctrl->setActiveWindow(this);
 		this->ctrl->onChildOverlayWindowClose(wndOverlay);
 	}
 }

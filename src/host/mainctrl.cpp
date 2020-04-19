@@ -492,27 +492,6 @@ void MainCtrl::addDebug(String s) {
 	view->subctr_tabbed.ctr_dbg0.addStr(s);
 }
 
-void DawCtrl::setActiveWindow(window_main* wnd) {
-	dbgassert(wnd->getCtrl() == this);
-	/*if (this->ctxtmenu) {
-		ctxtmenus[this->mainWindow] = this->ctxtmenu;
-	} else {
-		ctxtmenus[this->mainWindow] = nullptr;
-	}
-	this->mainWindow = wnd;
-	this->window = wnd;
-	if (contextWindows.count(this->mainWindow)) {
-		this->contextWindow = contextWindows[this->mainWindow];
-	} else {
-		this->contextWindow = nullptr;
-	}
-	if (ctxtmenus.count(this->mainWindow)) {
-		this->ctxtmenu = ctxtmenus[this->mainWindow];
-	} else {
-		this->ctxtmenu = nullptr;
-	}*/
-
-}
 void DawCtrl::resetMouseContext() {
 	BaseCtrl::resetMouseContext();
 }

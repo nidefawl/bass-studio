@@ -434,7 +434,6 @@ public:
 	void setDragged(guibase* g);
 	void initApp(int argc, char* argv[]) override;
 	bool init(window_main* window, NVGcontext* nanovg) override;
-	void setActiveWindow(window_main* wnd) override;
 
 	void focusReceived() {
 	}
