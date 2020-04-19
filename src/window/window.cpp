@@ -1235,6 +1235,10 @@ void appwindow_main::createMainWindow(const char* title, int w, int h, appwindow
 		bCanResize = true;
 	}
 
+	glfwWindowHint(GLFW_FLOATING, GL_FALSE);
+	if (parent) {
+		glfwWindowHint(GLFW_FLOATING, GL_TRUE);
+	}
 	appwindow::createBaseWindow(title, w, h, parentWindowHandle ? parentWindowHandle->glfw : nullptr, nullptr);
 
 	if (flags&WINDOW_IS_MAINWINDOW_SLAVE) {
