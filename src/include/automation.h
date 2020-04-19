@@ -50,6 +50,7 @@ struct automation_t {
 	virtual float getValueAt(tick_t tick) const;
 	void copyRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data) const;
 	void setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data);
+	std::pair<float , float> getMinMax();
 };
 
 struct automation_view_t: public automation_t {
@@ -264,6 +265,20 @@ public:
 		}
 	}
 	virtual void postSetParameter(int32_t idx, float preVal, float val, int flags) {
+	}
+	std::pair<float , float> getParamMinMaxAutomated(int32_t paramIdx) {
+		auto it = std::find_if(automatedParams.begin(), automatedParams.end(), [paramIdx](automated_param_t& ap) {
+			return ap.paramIdx == paramIdx;
+		});
+		if (it != automatedParams.end()) {
+			auto& param = *it;
+			if (param.src.isActive()) {
+				return param.src.getMinMax();
+			}
+		}
+		automatable_param_t* param = getParam(paramIdx);
+		dbgassert(param);
+		return {param->value, param->value};
 	}
 };
 

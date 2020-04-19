@@ -152,6 +152,17 @@ void automation_t::copyRange(tick_t tickBegin, tick_t tickEnd, std::vector<autom
 		data.push_back(std::move(ptEnd));
 	}
 }
+std::pair<float , float> automation_t::getMinMax() {
+	float defaultVal = getValueAt(0);
+	std::pair<float , float> res = {defaultVal, defaultVal};
+	int32_t idx1 = 0;
+	for (; idx1 < (int)points.size(); idx1++) {
+		auto& pt = points[idx1];
+		res.first = math::min(res.first, pt.val);
+		res.second = math::max(res.second, pt.val);
+	}
+	return res;
+}
 void automation_t::setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data) {
 	std::vector<automation_point_t> pointsTmp;
 	pointsTmp.reserve(data.size()+points.size());

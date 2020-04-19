@@ -338,11 +338,13 @@ namespace DAW {
 			if (TRACKTYPE_TO_CTR(track->type)  == TRACK_CTR_MIDIAUDIO && trackImpl->mixer.isEnabled()) {
 				/* Feed audio/midi tracks output into returns input */
 				for (track_t* trackReturn : project->trackReturnCtr) {
+					auto retGainMinMax = trackImpl->mixer.getParamMinMaxAutomated(PARAM_OFFSET_SEND+trackReturn->localIdxFlat);
 					/* Calculate send gain level */
-					float fGainReturn;
-					if (!getGainLvl(trackImpl->mixer.getParamValue(PARAM_OFFSET_SEND+trackReturn->localIdxFlat), fGainReturn)) {
+					float fGainRaw = dsp_util::linScaleToGain(retGainMinMax.second);
+					if (fGainRaw  < dsp_util::GAIN_DBFLOOR) {
 						continue;
 					}
+					float fGainReturn = dsp_util::clampReadGain(fGainRaw);
 
 					track_impl_t* audioReturn = trackReturn->audio;
 					dbgassert(audioReturn);
