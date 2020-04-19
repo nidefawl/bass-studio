@@ -36,6 +36,7 @@ void PopupCtrl::closePopup() {
 }
 
 void PopupCtrl::onWindowClose() {
+	AppCtrl::onWindowClose();
 	popupCtrs->removeGuis();
 	resetMouseContext();
 }
@@ -66,6 +67,7 @@ bool PopupCtrl::mouseDownPre() {
 
 
 void PopupCtrl::open(guictxtmenu_base *_ctxtmenu, ivec2 pos, bool bResizeable) {
+	this->closed = false;
 //	dbgassert(!isShown());
 	mouseInside = false;
 	this->bResizeable = bResizeable;

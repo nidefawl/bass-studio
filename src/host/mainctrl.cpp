@@ -494,7 +494,7 @@ void MainCtrl::addDebug(String s) {
 
 void DawCtrl::setActiveWindow(window_main* wnd) {
 	dbgassert(wnd->getCtrl() == this);
-	if (this->ctxtmenu) {
+	/*if (this->ctxtmenu) {
 		ctxtmenus[this->mainWindow] = this->ctxtmenu;
 	} else {
 		ctxtmenus[this->mainWindow] = nullptr;
@@ -510,7 +510,7 @@ void DawCtrl::setActiveWindow(window_main* wnd) {
 		this->ctxtmenu = ctxtmenus[this->mainWindow];
 	} else {
 		this->ctxtmenu = nullptr;
-	}
+	}*/
 
 }
 void DawCtrl::resetMouseContext() {

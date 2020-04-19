@@ -445,12 +445,17 @@ public:
 		if (shown)
 			return;
 		shown = true;
+		log_printf("show window %s\n", this->name);
 		glfwShowWindow(glfw);
+#ifdef __linux__
+		glfwFocusWindow(glfw);
+#endif
 	}
 	void hideWindow() {
 		if (!shown)
 			return;
 		shown = false;
+		log_printf("hide window %s\n", this->name);
 		glfwHideWindow(glfw);
 		//this->timer = SetTimer(hwnd, 0, 1, (TIMERPROC)NULL);
 		onWindowClose();
@@ -986,6 +991,7 @@ public:
 		glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
 		glfwWindowHint(GLFW_FOCUSED, GL_TRUE);
 		this->nanovgCtxt = nanovgCtxt;
+		//glfwWindowHint(GLFW_FLOATING, 1);
 		appwindow::createBaseWindow(title, w, h, share);
 #ifdef _WIN32
 		LONG l = GetWindowLong(hwnd, GWL_EXSTYLE);
@@ -999,7 +1005,9 @@ public:
 #endif
 		if (parent) {
 			this->parent->onChildDialogCreate(this);
+		//	glfwSetWindowAttrib(glfw, GLFW_FLOATING, GL_TRUE);
 		}
+		//glfwWindowHint(GLFW_FLOATING, 0);
 
 	}
 	void destroy() override {
@@ -1071,7 +1079,7 @@ public:
 			EnableWindow(parent->getHWND(), FALSE);
 #endif
 #ifdef __linux__
-		//TODO: implement linux
+		//TODO: implement linux window enable/disable
 #endif
 	}
 	bool isShown() {
@@ -1129,7 +1137,7 @@ public:
 };
 window_main* appwindow_main::createOverlay(std::shared_ptr<AppCtrl> ctrl, int flags) {
 //	std::unique_ptr<appwindow_overlay> ow = std::make_unique<appwindow_overlay>(this);
-	String sName = StringFormat("%s menu", this->name);
+	String sName = StringFormat("%s.child", this->name);
 	std::shared_ptr<appwindow_main> ow = std::make_shared<appwindow_main>(this, ctrl); //TODO: manage lifetime of control
 
 	//pass down parent window handle if ctrl is companion ctrl of daw (signaled by WINDOW_IS_MAINWINDOW_SLAVE)
@@ -1235,10 +1243,7 @@ void appwindow_main::createMainWindow(const char* title, int w, int h, appwindow
 		bCanResize = true;
 	}
 
-	glfwWindowHint(GLFW_FLOATING, GL_FALSE);
-	if (parent) {
-		glfwWindowHint(GLFW_FLOATING, GL_TRUE);
-	}
+	//glfwWindowHint(GLFW_FLOATING, parent != nullptr);
 	appwindow::createBaseWindow(title, w, h, parentWindowHandle ? parentWindowHandle->glfw : nullptr, nullptr);
 
 	if (flags&WINDOW_IS_MAINWINDOW_SLAVE) {
@@ -1246,6 +1251,10 @@ void appwindow_main::createMainWindow(const char* title, int w, int h, appwindow
 	}
 	if (!parent) {
 		glfwSetWindowSizeLimits(glfw, 640, 480, GLFW_DONT_CARE, GLFW_DONT_CARE);
+	} else {
+
+
+		//glfwSetWindowAttrib(glfw, GLFW_FLOATING, GL_TRUE);
 	}
 	if (flags&WINDOW_BORDERLESS_POPUP) {
 		glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER , GL_FALSE); //set global state back to default

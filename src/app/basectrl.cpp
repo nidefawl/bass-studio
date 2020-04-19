@@ -502,7 +502,7 @@ void AppCtrl::openOverlayGui(guictxtmenu_base *b, ivec2 pos, int flags) {
 	b->setFontSize(getTheme()->getFloat(GuiConstant::CONST_FONT_SIZE_CONTEXT_MENU));
 	dbgassert(!this->ctxtmenu);
 	this->ctxtmenu = b;
-	this->ctxtmenus[this->mainWindow] = b;
+	//this->ctxtmenus[this->mainWindow] = b;
 	ivec2 windowPos;
 	ivec2 windowSize;
 	this->mainWindow->getPos(&windowPos);
@@ -521,7 +521,7 @@ void AppCtrl::openOverlayGui(guictxtmenu_base *b, ivec2 pos, int flags) {
 			this->mainWindow->closeOverlay(contextWindow);
 		}
 		contextWindow = this->mainWindow->createOverlay(std::make_shared<PopupCtrl>(), bResizeable ? 0 : WINDOW_BORDERLESS_POPUP);
-		contextWindows[this->mainWindow] = contextWindow;
+		//contextWindows[this->mainWindow] = contextWindow;
 	}
 	if (contextWindow) {
 		auto* ctxtWindowTheme = contextWindow->getCtrl()->getTheme();
@@ -560,11 +560,11 @@ void AppCtrl::onChildOverlayWindowClose(window_main* ptr) {
 			// ctxtmenu can't be deleted at this point, some point in the call chain may dereference it again
 			garbageGuis.push_back(this->ctxtmenu);
 			this->ctxtmenu = nullptr;
-			this->ctxtmenus[this->mainWindow] = nullptr;
+			//this->ctxtmenus[this->mainWindow] = nullptr;
 		}
 		return;
 	}
-	for (const auto& entry : contextWindows) {
+/*	for (const auto& entry : contextWindows) {
 		if (entry.second == ptr) {
 			dbgassert(ctxtmenus.count(entry.first));
 			guictxtmenu_base* ctxt = ctxtmenus[entry.first];
@@ -579,7 +579,7 @@ void AppCtrl::onChildOverlayWindowClose(window_main* ptr) {
 			}
 			return;
 		}
-	}
+	}*/
 	auto it = std::find_if(menuWindows.begin(), menuWindows.end(), [ptr](const auto& entry) {
 		return entry.wnd == ptr;
 	});

@@ -188,8 +188,8 @@ public:
 	}
 	window_main* mainWindow = NULL;
 	window_main* contextWindow = NULL;
-	std::map<window_main*,window_main*> contextWindows;
-	std::map<window_main*,guictxtmenu_base*> ctxtmenus;
+	//std::map<window_main*,window_main*> contextWindows;
+	//std::map<window_main*,guictxtmenu_base*> ctxtmenus;
 #if WINDOW_HAS_MENUBAR
 	ngui::MenuBar menubar;
 #endif
@@ -220,7 +220,16 @@ public:
 	virtual bool filesDropBegin(std::vector<String>& files, ivec2 pos, int kbmods) { return false; };
 	virtual bool filesDropFinal(std::vector<String>& files, ivec2 pos, int kbmods) { return false; };
 	virtual void menuCommand(int cmd) { };
-	virtual void onWindowClose() { };
+	virtual void onWindowClose() { 
+		// if (contextWindow && this->ctxtmenu) {
+		// 	this->mainWindow->closeOverlay(contextWindow);
+		// }
+		if (this->ctxtmenu) {
+			dbgassert(contextWindow);
+			contextWindow->getCtrl()->closePopup();
+			dbgassert(!this->ctxtmenu);
+		}
+	};
 
 	bool onWindowCloseRequest() {
 		if (!closed) {
