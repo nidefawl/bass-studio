@@ -31,7 +31,10 @@ public:
 	guimenu(ngui::Menu* _menu, int _lvl = 0, guimenu_ctxtentry* parent = nullptr);
 	~guimenu() {
 	}
+
 	void clicked(int _id);
+
+	void clickedElement(ctxtmenu_entry* e, int _id) override;
 	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
 	virtual void onRemove() override;
 	virtual void onParentWindowClose() override;
@@ -112,6 +115,7 @@ public:
 	void openMenu(guictr_menubar_entry* entry) {
 		parentCtrl->closeAllAppMenus();
 		parentCtrl->closeContextMenu();
+    	parentCtrl->onMenuOpen(entry->menu);
 		guimenu *popup = new guimenu(entry->menu, 0);
 		popup->parentMenuBar = this;
 		popup->size.x = 250;

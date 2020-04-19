@@ -3,7 +3,7 @@
 #include "renderresources.h"
 
 guimenu_ctxtentry::guimenu_ctxtentry(ngui::Menu* _menu)
-	: ctxtmenu_entry(_menu->title, _menu->command), menu(_menu)
+	: ctxtmenu_entry(_menu->title, _menu->command.command), menu(_menu)
 {
 	int32_t iconId = menu->icon;
 	if (iconId > -1) {
@@ -168,12 +168,13 @@ bool guimenu::mouseHitTest(ivec2 mpos, MouseHitEvt& evt)  {
 				guimenu *popup = new guimenu(entryHit->menu, lvl+1, entryHit);
 				popup->parentMenuBar = this->parentMenuBar;
 				popup->size.x = 250;
-
-				ivec2 vPos(right()+2, pos.y+entryHit->y);
+				ivec2 screenPosThis = this->parentCtrl->toScreenSpace(ivec2(0, 0));
+				ivec2 screenPosParent = appCtrlParent->toScreenSpace(ivec2(0, 0));
+				ivec2 screenPos = screenPosThis - screenPosParent + ivec2(size.x+2, entryHit->y);
 				appCtrlParent->openAppMenu(
 					popup->lvl,
 					popup,
-					vPos);
+					screenPos);
 				entryHit->isMenuOpen = true;
 			}
 		}
@@ -183,15 +184,19 @@ bool guimenu::mouseHitTest(ivec2 mpos, MouseHitEvt& evt)  {
 	return false;
 }
 
-void guimenu::clicked(int _id) {
+void guimenu::clickedElement(ctxtmenu_entry* e, int _id) {
 	dbgassert(this->parentMenuBar);
 	BaseCtrl* ctrlParentBar = this->parentMenuBar->getControl();
 	dbgassert(ctrlParentBar);
 	AppCtrl* appCtrl = dynamic_cast<AppCtrl*>(ctrlParentBar);
 	if (appCtrl) {
 		if(_id > 0) {
-			appCtrl->menuCommand(_id);//possibly deletes this
+			guimenu_ctxtentry* entry = static_cast<guimenu_ctxtentry*>(e);
+			auto e = entry->menu->command;
+			appCtrl->menuCommand(std::move(e));//possibly deletes this
 		}
 		appCtrl->closeAllAppMenus();
 	}
+}
+void guimenu::clicked(int _id) {
 }

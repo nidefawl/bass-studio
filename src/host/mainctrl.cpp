@@ -598,6 +598,14 @@ void DawCtrl::updateMenubar() {
 		redo->disabled = true;
 		redo->title = menuName("Redo", KC_REDO);
 	}
+	menus.recent.clear();
+
+	for (auto& strFileRecentPath : settings.recentfiles.sortedEntries) {
+		String a,b,c, d; //path, name, ext, nameExt
+		SplitPath(strFileRecentPath, &a, &b, &c, &d);
+		menus.recent.addCommand(menucmd_t{CMD_FILE_OPEN, strFileRecentPath}, d);
+	}
+
 }
 
 static SupportedFileType FILE_TYPE_PROJECT {"Project File", PROJECT_FILE_EXT};
@@ -705,10 +713,10 @@ void MainCtrl::onChildOverlayWindowClose(window_main* window) {
 		DawCtrl::onChildOverlayWindowClose(window);
 	}
 }
-void DawInstance::menuCommand(int cmd) {
+void DawInstance::menuCommand(const menucmd_t&& command) {
 	try {
 	String path = projectPath;
-	switch (cmd) {
+	switch (command.command) {
 	case CMD_OPEN_SECOND_WINDOW:
 		if (companionWindows.empty()) {
 			auto companionCtrlStdPtr = std::make_shared<CompanionCtrl>(*this);
@@ -757,15 +765,20 @@ void DawInstance::menuCommand(int cmd) {
 		break;
 	case CMD_FILE_OPEN:
 		{
-			String path;
-			if (promptUserFilePath(mainCtrl->window, 0, vFILE_TYPE_PROJECT, path)) {
-				loadFile(path, FLAG_INVOKE_USER_CB_DEFERLOAD);
+			if (command.arg1.empty()) {
+				String path;
+				if (promptUserFilePath(mainCtrl->window, 0, vFILE_TYPE_PROJECT, path)) {
+					settings.recentfiles.add(path);
+					loadFile(path, FLAG_INVOKE_USER_CB_DEFERLOAD);
+				}
+			} else {
+				loadFile(command.arg1, FLAG_INVOKE_USER_CB_DEFERLOAD);
 			}
 		}
 		break;
 	case CMD_FILE_SAVEAS:
 	case CMD_FILE_SAVE: {
-			if (cmd == CMD_FILE_SAVEAS || path.empty()) {
+			if (command.command == CMD_FILE_SAVEAS || path.empty()) {
 				if (!promptUserFilePath(mainCtrl->window, 1, vFILE_TYPE_PROJECT, path)) {
 					break;
 				}
@@ -793,7 +806,7 @@ void DawInstance::menuCommand(int cmd) {
 	case CMD_INSERT_MASTER_TRACK:
 	{
 
-		int32_t trackType = (cmd-CMD_INSERT_AUDIO_TRACK)%NUM_TRACK_TYPES;
+		int32_t trackType = (command.command-CMD_INSERT_AUDIO_TRACK)%NUM_TRACK_TYPES;
 		insertNewTrack(-1, trackType);
 	}
 		break;
@@ -819,8 +832,8 @@ void DawInstance::menuCommand(int cmd) {
 
 
 }
-void DawCtrl::menuCommand(int cmd) {
-	switch (cmd) {
+void DawCtrl::menuCommand(const menucmd_t&& command) {
+	switch (command.command) {
 
 	case CMD_GUI_GLOBAL_ZOOM_DECREASE:
 		m_scale = math::max(0.05f, m_scale - 0.05f);
@@ -831,7 +844,7 @@ void DawCtrl::menuCommand(int cmd) {
 		BaseCtrl::relayout();
 		return;
 	}
-	daw.menuCommand(cmd);
+	daw.menuCommand(std::move(command));
 }
 void DawCtrl::postInit() {
 	BaseCtrl::relayout();
@@ -1006,37 +1019,37 @@ bool DawCtrl::init(window_main* window, NVGcontext* nanovg)
 
 	menus.recent.type = ngui::menu_type::submenu;
 	menus.recent.title = "Open recent";
-	menus.recent.addCommand(CMD_FILE_OPEN, "File 1");
-	menus.recent.addCommand(CMD_FILE_OPEN, "File 2");
-	menus.recent.addCommand(CMD_FILE_OPEN, "File 4");
-	menus.recent.addCommand(CMD_FILE_OPEN, "File 5");
+	menus.recent.addCommand(CMD_NOARG(CMD_FILE_OPEN), "File 1");
+	menus.recent.addCommand(CMD_NOARG(CMD_FILE_OPEN), "File 2");
+	menus.recent.addCommand(CMD_NOARG(CMD_FILE_OPEN), "File 4");
+	menus.recent.addCommand(CMD_NOARG(CMD_FILE_OPEN), "File 5");
 	menus.file.type = ngui::menu_type::submenu;
 	menus.file.title = "File";
-	menus.file.addCommand(CMD_FILE_NEW, menuName("New", KC_NEW), ICON_FILE);
-	menus.file.addCommand(CMD_FILE_OPEN, menuName("Open", KC_OPEN), ICON_FOLDER);
+	menus.file.addCommand(CMD_NOARG(CMD_FILE_NEW), menuName("New", KC_NEW), ICON_FILE);
+	menus.file.addCommand(CMD_NOARG(CMD_FILE_OPEN), menuName("Open", KC_OPEN), ICON_FOLDER);
 	menus.file.add(&menus.recent);
-	menus.file.addCommand(CMD_FILE_SAVE, menuName("Save", KC_SAVE), ICON_SAVE);
-	menus.file.addCommand(CMD_FILE_SAVEAS, "Save As");
+	menus.file.addCommand(CMD_NOARG(CMD_FILE_SAVE), menuName("Save", KC_SAVE), ICON_SAVE);
+	menus.file.addCommand(CMD_NOARG(CMD_FILE_SAVEAS), "Save As");
 	menus.file.addSeperator();
-	menus.file.addCommand(CMD_EXIT, "Quit");
+	menus.file.addCommand(CMD_NOARG(CMD_EXIT), "Quit");
 	menus.edit.type = ngui::menu_type::submenu;
 	menus.edit.title = "Edit";
-	menus.edit.addCommand(CMD_UNDO, menuName("Undo", KC_UNDO));
-	menus.edit.addCommand(CMD_REDO, menuName("Redo", KC_REDO));
+	menus.edit.addCommand(CMD_NOARG(CMD_UNDO), menuName("Undo", KC_UNDO));
+	menus.edit.addCommand(CMD_NOARG(CMD_REDO), menuName("Redo", KC_REDO));
 	menus.edit.addSeperator();
-	menus.edit.addCommand(CMD_CUT, menuName("Cut", KC_CUT));
-	menus.edit.addCommand(CMD_COPY, menuName("Copy", KC_COPY));
-	menus.edit.addCommand(CMD_PASTE, menuName("Paste", KC_PASTE));
-	menus.edit.addCommand(CMD_DUPLICATE, menuName("Duplicate", KC_DUPLICATE));
+	menus.edit.addCommand(CMD_NOARG(CMD_CUT), menuName("Cut", KC_CUT));
+	menus.edit.addCommand(CMD_NOARG(CMD_COPY), menuName("Copy", KC_COPY));
+	menus.edit.addCommand(CMD_NOARG(CMD_PASTE), menuName("Paste", KC_PASTE));
+	menus.edit.addCommand(CMD_NOARG(CMD_DUPLICATE), menuName("Duplicate", KC_DUPLICATE));
 	menus.edit.addSeperator();
-	menus.edit.addCommand(CMD_DELETE, menuName("Delete", KC_DELETE));
-	menus.edit.addCommand(CMD_SELECT_ALL, menuName("Select All", KC_SELECTALL));
+	menus.edit.addCommand(CMD_NOARG(CMD_DELETE), menuName("Delete", KC_DELETE));
+	menus.edit.addCommand(CMD_NOARG(CMD_SELECT_ALL), menuName("Select All", KC_SELECTALL));
 	menus.tools.type = ngui::menu_type::submenu;
 	menus.tools.title = "Tools";
-	menus.tools.addCommand(CMD_PREFERENCES, "Preferences");
-	menus.tools.addCommand(CMD_SHOW_DEBUG_WINDOW, "Show Debug Window");
-	menus.tools.addCommand(CMD_OPEN_SECOND_WINDOW, "Show Second Window");
-	menus.tools.addCommand(CMD_ABOUT, "About");
+	menus.tools.addCommand(CMD_NOARG(CMD_PREFERENCES), "Preferences");
+	menus.tools.addCommand(CMD_NOARG(CMD_SHOW_DEBUG_WINDOW), "Show Debug Window");
+	menus.tools.addCommand(CMD_NOARG(CMD_OPEN_SECOND_WINDOW), "Show Second Window");
+	menus.tools.addCommand(CMD_NOARG(CMD_ABOUT), "About");
 
 	menubar.add(&menus.file);
 	menubar.add(&menus.edit);
@@ -1254,7 +1267,6 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
 
 	setAudioThreadState(playback_state::status_no_process);
 	my_printf("loading %s: %d tracks\n", StringAsCStr(file->path), project.trackList.size());
-
 	ThreadLock lock = playThread.lockThread();
 	unloadProject();
 	/** make sure call to unloadProject unloaded all vst2 instances **/
@@ -1734,39 +1746,39 @@ bool DawCtrl::processGlobalKeyevent(KeyEvent& event) {
 			return true;
 		}
 		if (isKC(KC_UNDO, event)) {
-			menuCommand(CMD_UNDO);
+			menuCommand(CMD_NOARG(CMD_UNDO));
 			return true;
 		}
 		if (isKC(KC_REDO, event)) {
-			menuCommand(CMD_REDO);
+			menuCommand(CMD_NOARG(CMD_REDO));
 			return true;
 		}
 		if (isKC(KC_NEW, event)) {
-			menuCommand(CMD_FILE_NEW);
+			menuCommand(CMD_NOARG(CMD_FILE_NEW));
 			return true;
 		}
 		if (isKC(KC_OPEN, event)) {
-			menuCommand(CMD_FILE_OPEN);
+			menuCommand(CMD_NOARG(CMD_FILE_OPEN));
 			return true;
 		}
 		if (isKC(KC_SAVE, event)) {
-			menuCommand(CMD_FILE_SAVE);
+			menuCommand(CMD_NOARG(CMD_FILE_SAVE));
 			return true;
 		}
 		if (isKC(KC_SAVEAS, event)) {
-			menuCommand(CMD_FILE_SAVEAS);
+			menuCommand(CMD_NOARG(CMD_FILE_SAVEAS));
 			return true;
 		}
 		if (isKC(KC_ZOOM_IN, event)) {
-			menuCommand(CMD_GUI_GLOBAL_ZOOM_INCREASE);
+			menuCommand(CMD_NOARG(CMD_GUI_GLOBAL_ZOOM_INCREASE));
 			return true;
 		}
 		if (isKC(KC_ZOOM_OUT, event)) {
-			menuCommand(CMD_GUI_GLOBAL_ZOOM_DECREASE);
+			menuCommand(CMD_NOARG(CMD_GUI_GLOBAL_ZOOM_DECREASE));
 			return true;
 		}
 		if (isKC({ 0, KEY_TAB, nullptr }, event)) {
-			menuCommand(CMD_PREFERENCES);
+			menuCommand(CMD_NOARG(CMD_PREFERENCES));
 			return true;
 		}
 	}

@@ -49,8 +49,8 @@ void PluginControl::destroy()
 	
 }
 
-void PluginControl::menuCommand(int cmd) {
-	switch (cmd) {
+void PluginControl::menuCommand(const menucmd_t&& command) {
+	switch (command.command) {
 	case CMD_EXIT:
 		mainWindow->requestClose();
 		break;
@@ -106,27 +106,27 @@ void PluginControl::relayout(int32_t w, int32_t h) {
 bool PluginControl::processGlobalKeyevent(KeyEvent& event) {
 	if (event.type != KeyEventType::K_RELEASE) {
 		if (isKC(KC_UNDO, event)) {
-			menuCommand(CMD_UNDO);
+			menuCommand(CMD_NOARG(CMD_UNDO));
 			return true;
 		}
 		if (isKC(KC_REDO, event)) {
-			menuCommand(CMD_REDO);
+			menuCommand(CMD_NOARG(CMD_REDO));
 			return true;
 		}
 		if (isKC(KC_NEW, event)) {
-			menuCommand(CMD_FILE_NEW);
+			menuCommand(CMD_NOARG(CMD_FILE_NEW));
 			return true;
 		}
 		if (isKC(KC_OPEN, event)) {
-			menuCommand(CMD_FILE_OPEN);
+			menuCommand(CMD_NOARG(CMD_FILE_OPEN));
 			return true;
 		}
 		if (isKC(KC_SAVE, event)) {
-			menuCommand(CMD_FILE_SAVE);
+			menuCommand(CMD_NOARG(CMD_FILE_SAVE));
 			return true;
 		}
 		if (isKC(KC_SAVEAS, event)) {
-			menuCommand(CMD_FILE_SAVEAS);
+			menuCommand(CMD_NOARG(CMD_FILE_SAVEAS));
 			return true;
 		}
 	}

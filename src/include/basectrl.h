@@ -25,6 +25,7 @@
 #include "saferef.h"
 #include "assert_dbg.h"
 
+
 struct NVGcontext;
 class guibase;
 class guictr_base;
@@ -165,6 +166,10 @@ public:
 	// Only use this pointer for comparison!
 	void onGuiRemoved(void* gui);
 	virtual void resetMouseContext();
+	virtual void onMenuOpen(ngui::Menu* menu) {
+
+	}
+	virtual ivec2 toScreenSpace(ivec2 p) = 0;
 };
 class AppCtrl : public BaseCtrl {
 protected:
@@ -219,7 +224,8 @@ public:
 	virtual bool filesDropMove(ivec2 pos, int kbmods) { return false; };
 	virtual bool filesDropBegin(std::vector<String>& files, ivec2 pos, int kbmods) { return false; };
 	virtual bool filesDropFinal(std::vector<String>& files, ivec2 pos, int kbmods) { return false; };
-	virtual void menuCommand(int cmd) { };
+
+	virtual void menuCommand(const menucmd_t&& command) { };
 	virtual void onWindowClose() { 
 		// if (contextWindow && this->ctxtmenu) {
 		// 	this->mainWindow->closeOverlay(contextWindow);
@@ -254,6 +260,11 @@ protected:
 	 * @param flags @see BASECTRL_WND_* defines
 	 */
 	void openOverlayGui(guictxtmenu_base *b, ivec2 pos, int flags);
+	ivec2 toScreenSpace(ivec2 p) override {
+		ivec2 windowPos;
+		this->mainWindow->getPos(&windowPos);
+		return windowPos + ivec2(vec2(p) * (1.0f / m_scale));
+	}
 };
 class guictr_scrollbar;
 class PopupCtrl : public AppCtrl

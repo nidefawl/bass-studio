@@ -96,6 +96,17 @@ void serialize(Archive & ar, app_iosettings& settings) {
 	make_optional_nvp(ar, "internalBlocksize", settings.internalBlocksize);
 }
 template<class Archive>
+void serialize(Archive & ar, recentfilelistentry& f) {
+	ar(cereal::make_nvp("path", f.path),
+		cereal::make_nvp("date", f.date));
+
+}
+template<class Archive>
+void serialize(Archive & ar, recentfilelist& recentfiles) {
+	ar(cereal::make_nvp("sorted", recentfiles.sortedEntries),
+		cereal::make_nvp("files", recentfiles.recentFilesMeta));
+}
+template<class Archive>
 void serialize(Archive & ar, appsettings& settings) {
 	ar(cereal::make_nvp("grid", settings.wndMain.dens),
 		cereal::make_nvp("iosettings", settings.iosettings));
@@ -107,6 +118,7 @@ void serialize(Archive & ar, appsettings& settings) {
 	make_optional_nvp(ar, "window2grid", settings.wndCompanion.dens);
 	make_optional_nvp(ar, "pluginPath", settings.pluginPath);
 	make_optional_nvp(ar, "vmmode", settings.vmmode);
+	make_optional_nvp(ar, "recentfiles", settings.recentfiles);
 }
 
 appsettings loadSettings() {

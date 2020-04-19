@@ -39,7 +39,7 @@ public:
 	void focusLost() override { };
 
     void mouseMoved(ivec2 mousePos, ivec2 deltaPos) override;
-	void menuCommand(int cmd) override;
+	void menuCommand(const menucmd_t&& command) override;
 	void onTick() override;
 	bool init(window_main* window, NVGcontext* nanovg) override;
 	void postInit() override;

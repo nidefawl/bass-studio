@@ -484,7 +484,7 @@ public:
     virtual bool filesDropFinal(std::vector<String>& files, ivec2 pos, int kbmods) {
     	return true;
     }
-    virtual void menuCommand(int cmd) {
+    virtual void menuCommand(const menucmd_t&& command) {
     }
     virtual void onMenuOpen(ngui::Menu* menu) {
     }
@@ -492,7 +492,7 @@ public:
 	virtual LRESULT windowProc(HWND _hwnd, UINT Msg, WPARAM wParam, LPARAM lParam) {
 		switch (Msg) {
 		case WM_COMMAND:
-			menuCommand(LOWORD(wParam));
+			menuCommand(menucmd_t{LOWORD(wParam), ""});
 			return 0;
 #if WINDOW_HAS_MENUBAR
 		case WM_INITMENUPOPUP:
@@ -803,9 +803,9 @@ public:
 		glfwSetWindowShouldClose(glfw, 1);
 //		onWindowClose();
     }
-    void menuCommand(int cmd) {
+    void menuCommand(const menucmd_t&& command) {
 #if WINDOW_HAS_MENUBAR
-    	ctrl->menuCommand(cmd);
+    	ctrl->menuCommand(std::move(command));
 #endif
     }
     virtual void onMenuOpen(ngui::Menu* menu) {

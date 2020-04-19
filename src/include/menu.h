@@ -3,6 +3,14 @@
 #include "str_util.h"
 #include "exceptions.h"
 
+struct menucmd_t {
+	int command;
+	String arg1 = "";
+};
+inline struct menucmd_t CMD_NOARG(int cmd) {
+	return menucmd_t{cmd, ""};
+}
+
 namespace ngui {
 
 	enum menu_type {
@@ -13,7 +21,7 @@ namespace ngui {
 	struct Menu {
 	public:
 		menu_type type;
-		int command;
+		menucmd_t command;
 		String title;
 		std::vector<Menu> entries;
 		std::vector<Menu*> children;
@@ -33,7 +41,7 @@ namespace ngui {
 			return entries.back();
 		}
 	public:
-		void addCommand(int cmd, String title, int icon = -1) {
+		void addCommand(menucmd_t cmd, String title, int icon = -1) {
 			Menu& m = makeChild_();
 			m.type = menu_type::command;
 			m.command = cmd;
@@ -51,7 +59,7 @@ namespace ngui {
 		void addSeperator() {
 			Menu& m = makeChild_();
 			m.type = menu_type::seperator;
-			m.command = 0;
+			m.command.command = 0;
 			m.title = "";
 			add(&m);
 		}
@@ -69,12 +77,16 @@ namespace ngui {
 		Menu* getByCmd(int cmd) {
 			for (Menu* m : children){
 				if (m->type == menu_type::command) {
-					if (m->command == cmd) {
+					if (m->command.command == cmd) {
 						return m;
 					}
 				}
 			}
 			return NULL;
+		}
+		void clear() {
+			children.clear();
+			entries.clear();
 		}
 	};
 	struct MenuBar : Menu {

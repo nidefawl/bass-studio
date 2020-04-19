@@ -724,8 +724,8 @@ namespace MiniApp {
 			tls.audioCache = nullptr;
 		}
 
-		void menuCommand(int cmd) {
-			switch (cmd) {
+		void menuCommand(const menucmd_t&& command) {
+			switch (command.command) {
 			case CMD_EXIT:
 				mainWindow->requestClose();
 				break;
@@ -755,7 +755,7 @@ namespace MiniApp {
 
 			menus.file.type = ngui::menu_type::submenu;
 			menus.file.title = "File";
-			menus.file.addCommand(CMD_EXIT, "Quit");
+			menus.file.addCommand(CMD_NOARG(CMD_EXIT), "Quit");
 
 			menubar.add(&menus.file);
 			this->updateMenubar();

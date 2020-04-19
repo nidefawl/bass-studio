@@ -4,6 +4,9 @@
 #include "grid.h"
 #include "host/audio_config.h"
 #include <map>
+#include <ctime>
+#include <iostream>
+
 
 #ifdef _WIN32
 struct windowsize;
@@ -81,6 +84,33 @@ struct appwindowsettings
 	appwindowsettings(appwindowsettings&& other);
 	appwindowsettings& operator=(appwindowsettings&& other);
 };
+struct recentfilelistentry {
+	String path;
+	String date;
+};
+class recentfilelist {
+public:
+	std::vector<String> sortedEntries;
+	std::map<String, recentfilelistentry> recentFilesMeta;
+	void add(const String& path) {
+		while (sortedEntries.size() > 31) {
+			String s = sortedEntries.back();
+			auto it = recentFilesMeta.find(s);
+			if (it != recentFilesMeta.end()) {
+				recentFilesMeta.erase(it);
+			}
+			sortedEntries.pop_back();
+		}
+		sortedEntries.insert(sortedEntries.begin(), path);
+	    std::time_t t = std::time(0);   // get time now
+	    std::tm* now = std::localtime(&t);
+	    auto strDate = std::to_string(now->tm_year + 1900) + "-"
+	         + std::to_string(now->tm_mon + 1) + "-"
+	         + std::to_string(now->tm_mday)
+	         + "\n";
+		recentFilesMeta[path] = recentfilelistentry{path, strDate};
+	}
+};
 struct appsettings
 {
 	appwindowsettings wndMain;
@@ -90,6 +120,7 @@ struct appsettings
 	bool vmmode = false;
 	String pluginPath;
 	app_iosettings iosettings;
+	recentfilelist recentfiles;
 public:
 	~appsettings();
 	appsettings();

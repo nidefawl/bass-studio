@@ -48,7 +48,7 @@ void syncMenuEntry(bool disabledALL, HMENU menuParent, ngui::Menu* menu, int idx
 			if (menu->type == ngui::menu_type::seperator) {
 				AppendMenu(menuParent, MF_SEPARATOR, 0, NULL);
 			} else {
-				AppendMenu(menuParent, MF_STRING, menu->command, StringAsCStr(menu->title));
+				AppendMenu(menuParent, MF_STRING, menu->command.command, StringAsCStr(menu->title));
 			}
     		MENUITEMINFO menuInfo;
     		menuInfo.cbSize = sizeof(MENUITEMINFO);

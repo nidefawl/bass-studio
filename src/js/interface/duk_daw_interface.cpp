@@ -18,7 +18,7 @@ void registerInterfaceToContext(duk_context* ctx) {
 	dukglue_register_method(ctx, &DawInstance::startPlaying, "start");
 	dukglue_register_method(ctx, &DawInstance::loadFile, "loadFile");
 	dukglue_register_method(ctx, &DawInstance::loadFileCStr, "loadFileCStr");
-	dukglue_register_method(ctx, &DawInstance::menuCommand, "menuCommand");
+//	dukglue_register_method(ctx, &DawInstance::menuCommand, "menuCommand");
 	dukglue_register_method(ctx, &DawInstance::saveFile, "saveFile");
 //	dukglue_register_function(ctx, &getAudioGraph, "getAudioGraph");
 }

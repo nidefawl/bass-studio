@@ -67,5 +67,6 @@ appsettings& appsettings::operator=(const appsettings& other) {
 	this->startEngine = other.startEngine;
 	this->vmmode = other.vmmode;
 	this->pluginPath = other.pluginPath;
+	this->recentfiles = other.recentfiles;
 	return *this;
 }
