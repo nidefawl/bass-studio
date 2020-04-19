@@ -8,8 +8,8 @@ extern "C" {
 void failedAssert(const char* expr, const char *file, int line);
 
 #ifdef NDEBUG
-#error TODO
 #define assert_expr(_Expression) (!!(_Expression))
+#define dbgassert (void)
 #else
 #define dbgassert(_Expression) \
  (void) \
