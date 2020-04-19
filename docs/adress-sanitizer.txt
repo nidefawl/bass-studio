@@ -1,0 +1,1 @@
+cmake -D CMAKE_CXX_FLAGS="-fsanitize=address" 
