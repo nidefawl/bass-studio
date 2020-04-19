@@ -324,7 +324,7 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
 			}
 			listLoop.push_back(note);
 		}
-		if (inPreLoop)
+		if (!inPreLoop)
 			continue;
 		auto localEndMin = math::min(localEnd, preLoopLen);
 		if (note.isIntersectTime(offsetStart+localStart, offsetStart+localEndMin)) {
@@ -425,10 +425,14 @@ int clip_t::getInTimeRange(tick_t absStart, tick_t absEnd, tick_t cutStart, tick
 
 	clip_notes_t notesView;
 	getNotesView(math::max(cutLeft, relStart), math::min(cutRight, relEnd), notesView, true);
-
-	list = notesView.m_list;
-
-	return list.size();
+	size_t posOld = list.size();
+	list.insert(list.end(), notesView.m_list.begin(), notesView.m_list.end());
+	size_t posNew = list.size();
+	for (size_t pos = posOld; pos < posNew; pos++) {
+		list[pos].time += clipStart;
+		list[pos].len = math::min(list[pos].end(), clipEnd) - list[pos].time;
+	}
+	return posNew - posOld;
 }
 
 int getClipNotesInTimeRange(tick_t absStart, tick_t absEnd, tick_t cutStart, tick_t cutEnd, const clip_notes_t notesView, std::vector<note_t>& list) {
