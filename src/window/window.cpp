@@ -272,6 +272,8 @@ public:
 #endif
 	}
 	virtual ~appwindow() {
+		dbgassert(std::find(windowTimerHandleList.begin(), windowTimerHandleList.end(), this) == windowTimerHandleList.end());
+
 #ifdef _WIN32
 		if (hwnd) {
 			RemovePropW(hwnd, L"GLFW");
@@ -643,12 +645,17 @@ public:
 		auto it = std::find_if(overlayWindows.begin(), overlayWindows.end(), [wnd](const auto& e) {
 			return dynamic_cast<window_base*>(e.get()) == dynamic_cast<window_base*>(wnd);
 		});
+		auto handlerListSize = windowTimerHandleList.size();
 		if (it != overlayWindows.end()) {
 			auto& sharedPtr = *it;
 			sharedPtr->destroy();
+			dbgassert(std::find(windowTimerHandleList.begin(), windowTimerHandleList.end(), sharedPtr.get()) == windowTimerHandleList.end());
 			sharedPtr.reset();
 			overlayWindows.erase(it);
 		}
+
+		dbgassert(handlerListSize != windowTimerHandleList.size());
+
 	}
 	bool canResize() override {
 		return this->bCanResize;
@@ -1723,7 +1730,8 @@ int startApplication(int argc, char* argv[]) {
 void windowTickTimerRun() {
 	std::vector<appwindow*> localWindowTimerHandleList = windowTimerHandleList;
 	for (appwindow* window : localWindowTimerHandleList) {
-		window->onTick();
+		if (STL_CONTAINS(windowTimerHandleList, window))
+			window->onTick();
 	}
 }
 
