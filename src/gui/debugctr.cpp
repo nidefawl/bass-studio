@@ -200,6 +200,7 @@ void gui_ctr_debug::render(NVGcontext* vg) {
 	if (!setScissorTransform(vg)) {
 		return;
 	}
+	int framesSkip = 30;
 	if (dgbCtrType == gui_ctr_debug_type_i32::TYPE_2 && impl->sampleformat.sampleRate > 0) {
 		auto mikrosPerBlock = (impl->sampleformat.blockSize*1E6)/impl->sampleformat.sampleRate;
 		int inset = 30;
@@ -209,6 +210,8 @@ void gui_ctr_debug::render(NVGcontext* vg) {
 		auto& list = this->impl->lastProcessingList;
 		nvgSave(vg);
 		nvgTranslate(vg, graphPos.x, graphPos.y);
+
+
 		nvgBeginPath(vg);
 		float legendX = 70;
 		float legendY = 20;
@@ -257,29 +260,39 @@ void gui_ctr_debug::render(NVGcontext* vg) {
 			}
 			nvgSave(vg);
 			nvgTranslate(vg, legendX, 0);
-			for (auto entry : list) {
-				int32_t stageIdInt = static_cast<int32_t>(entry.stageId);
-				uint64_t stageColorIdx = stageIdInt*1047299;
-				auto graphColor = colorPalette[(stageColorIdx>>3)%COLOR_PALETTE_LEN];
-				auto duration = entry.timeEnd-entry.timeStart;
-				auto posX1 = graphOnlySize.x*(entry.timeStart - minTimeStart) / (float) mikrosPerBlock;
-				auto posX2 = graphOnlySize.x*(entry.timeEnd - minTimeStart) / (float) mikrosPerBlock;
-				float posY = graphOnlySize.y-1-(entry.threadIdx+1)*yStep;
-				float hGraph = yStep*0.8f;
+			for (int pass = 0; pass < 2; pass++) {
 				nvgBeginPath(vg);
-				nvgStrokeColor(vg, rgbToNvg(graphColor));
-				nvgMoveTo(vg, posX1, posY+yStep/2.0f);
-				nvgLineTo(vg, posX2, posY+yStep/2.0f);
-				nvgStrokeWidth(vg, 2.0f);
-				nvgStroke(vg);
-				nvgBeginPath(vg);
-				nvgMoveTo(vg, posX1, posY+yStep/2.0f-yStep/4.0f);
-				nvgLineTo(vg, posX1, posY+yStep/2.0f+hGraph/2.0f);
-				nvgMoveTo(vg, posX2, posY+yStep/2.0f-hGraph/2.0f);
-				nvgLineTo(vg, posX2, posY+yStep/2.0f+hGraph/2.0f);
-				nvgStrokeWidth(vg, 1.0f);
-				nvgStroke(vg);
-				maxThread = math::max(maxThread, static_cast<int32_t>(entry.threadIdx));
+				for (auto entry : list) {
+					int32_t stageIdInt = static_cast<int32_t>(entry.stageId);
+					uint64_t stageColorIdx = stageIdInt*1047299;
+					auto graphColor = colorPalette[(stageColorIdx>>3)%COLOR_PALETTE_LEN];
+					auto duration = entry.timeEnd-entry.timeStart;
+					auto posX1 = graphOnlySize.x*(entry.timeStart - minTimeStart) / (float) mikrosPerBlock;
+					auto posX2 = graphOnlySize.x*(entry.timeEnd - minTimeStart) / (float) mikrosPerBlock;
+					float posY = graphOnlySize.y-1-(entry.threadIdx+1)*yStep;
+					float hGraph = yStep*0.8f;
+					if (pass == 0) {
+
+						nvgMoveTo(vg, posX1, posY+yStep/2.0f);
+						nvgLineTo(vg, posX2, posY+yStep/2.0f);
+					} else {
+						nvgMoveTo(vg, posX1, posY+yStep/2.0f-yStep/4.0f);
+						nvgLineTo(vg, posX1, posY+yStep/2.0f+hGraph/2.0f);
+						nvgMoveTo(vg, posX2, posY+yStep/2.0f-hGraph/2.0f);
+						nvgLineTo(vg, posX2, posY+yStep/2.0f+hGraph/2.0f);
+					}
+					maxThread = math::max(maxThread, static_cast<int32_t>(entry.threadIdx));
+				}
+				if (pass == 0) {
+					auto graphColor = colorPalette[(pass)%COLOR_PALETTE_LEN];
+					nvgStrokeColor(vg, rgbToNvg(graphColor));
+					nvgStrokeWidth(vg, 2.0f);
+					nvgStroke(vg);
+				} else {
+
+					nvgStrokeWidth(vg, 1.0f);
+					nvgStroke(vg);
+				}
 			}
 			nvgRestore(vg);
 			setFont(vg, 14, G_WHITE, NVG_ALIGN_MIDDLE | NVG_ALIGN_LEFT);
@@ -292,6 +305,7 @@ void gui_ctr_debug::render(NVGcontext* vg) {
 				nvgText(vg, posX, posY, StringAsCStr(proj), NULL);
 			}
 		}
+
 		nvgRestore(vg);
 		auto knobTestThreadCnt = getByID(ID_KNOB_SET_THREAD_COUNT);
 		if (knobTestThreadCnt) {
