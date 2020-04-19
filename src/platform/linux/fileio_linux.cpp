@@ -343,25 +343,63 @@ FileTimeGetter::~FileTimeGetter() {
 int64_t FileTimeGetter::getWriteTimeI64() {
 	return _M_Impl->getWriteTimeI64();
 }
+class FileImpl
+{
+private:
+	FILE* m_handle;
+
+	// Declared but not defined, to avoid double closing.
+	FileImpl& operator=(const FileImpl&);
+	FileImpl(const FileImpl&);
+public:
+	explicit FileImpl(const String& filename, OpenFileMode mode)
+	{
+		String strFileOpenMode = "";
+		switch (mode) {
+			case OpenFileMode::READ:
+				strFileOpenMode = "rb";
+				break;
+			case OpenFileMode::WRITE:
+				strFileOpenMode = "wb";
+				break;
+			case OpenFileMode::READWRITE:
+				strFileOpenMode = "wb";
+				break;
+		}
+		m_handle = fopen64(filename.c_str(), strFileOpenMode.c_str());
+
+		ThrowLastErrorIf(m_handle == NULL,
+			"fopen64 call failed on file named " + filename);
+	}
+
+	~FileImpl() { fclose(m_handle); }
+
+	FILE* GetHandle() { return m_handle; }
+};
 IOFile::IOFile(FileImpl* _impl) : impl(_impl) {
-#pragma warn implement me
 	this->validHandle = true;
 }
 IOFile::~IOFile() {
-#pragma warn implement me
 	delete impl;
 }
 void IOFile::write(const char* data, size_t len) {
-#pragma warn implement me
+	if (this->validHandle) {
+		fwrite(data, len, 1, impl->GetHandle());
+	}
 }
 void IOFile::flush() {
-#pragma warn implement me
+	if (this->validHandle) {
+		fflush(impl->GetHandle());
+	}
 }
 
 IOFile* IOFile::openFile(String filename, OpenFileMode mode) {
-#pragma warn implement me
-
-return nullptr;
+	FileImpl* impl = new FileImpl(filename, mode);
+	if (!impl->GetHandle()) {
+		delete impl;
+		return nullptr;
+	}
+	return new IOFile(impl);
 }
 #ifdef __linux__
 
