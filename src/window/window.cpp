@@ -205,7 +205,7 @@ protected:
 	bool isSharedContextSlave = false;
 	bool noRawInput = false;
 #ifdef _WIN32
-	UINT_PTR timer = 0;
+//	UINT_PTR timer = 0;
 	DropTarget* dropTarget = NULL;
 	HWND hwnd = NULL;
 	WNDPROC defWndProc = NULL;
@@ -365,7 +365,7 @@ public:
 		redrawFlagged = false;
 	}
 	void killTimer() {
-#ifdef _WIN32
+#ifdef TIMER_WIN32_DEPRECATED
 		if (timer && hwnd) {
 			KillTimer(hwnd, this->timer);
 			my_printf("KillTimer\n", 0);
@@ -459,7 +459,6 @@ public:
 		shown = false;
 		log_printf("hide window %s\n", this->name);
 		glfwHideWindow(glfw);
-		//this->timer = SetTimer(hwnd, 0, 1, (TIMERPROC)NULL);
 		onWindowClose();
 	}
 	bool isWindowNotHidden() {
@@ -648,13 +647,17 @@ public:
 		auto handlerListSize = windowTimerHandleList.size();
 		if (it != overlayWindows.end()) {
 			auto& sharedPtr = *it;
+			dbgassert(std::find(windowTimerHandleList.begin(), windowTimerHandleList.end(), sharedPtr.get()) != windowTimerHandleList.end());
 			sharedPtr->destroy();
 			dbgassert(std::find(windowTimerHandleList.begin(), windowTimerHandleList.end(), sharedPtr.get()) == windowTimerHandleList.end());
 			sharedPtr.reset();
 			overlayWindows.erase(it);
+			dbgassert(handlerListSize != windowTimerHandleList.size());
+		} else {
+			dbgassert(0);
 		}
 
-		dbgassert(handlerListSize != windowTimerHandleList.size());
+
 
 	}
 	bool canResize() override {
@@ -1441,7 +1444,7 @@ void appwindow::createBaseWindow(const char* title, int w, int h, GLFWwindow* sh
 #endif
 	initOGL();
 	initContext();
-#ifdef _WIN32
+#ifdef TIMER_WIN32_DEPRECATED
 	this->timer = SetTimer(hwnd, 0, 1, (TIMERPROC)timerProc);
 #else
 	registerWindowTimer(this);
@@ -1593,6 +1596,7 @@ int startApplication(int argc, char* argv[]) {
 #endif // HAS_JS_CONSOLE
 
 	GLFWwindow* glfwHandle = mainWindow->getGLFW();
+	int64_t lastTick = getTimeMillis();
 	int64_t start = getTimeMillis();
 	int64_t tmLastCheck = getTimeMillis();
 	int64_t tmMsgSent = 0;
@@ -1654,13 +1658,13 @@ int startApplication(int argc, char* argv[]) {
 	    }
 		glfwUpdateInternals();
 #endif //_WIN32
+		if (getTimeMillis() - lastTick > 0) {
+			windowTickTimerRun();
+			lastTick = getTimeMillis();
+		}
 #if defined(__linux__) || defined(__APPLE__)
 		glfwWaitEventsTimeout(0.001);
 		mainWindow->onRefresh();
-		if (getTimeMillis() - start > 0) {
-			windowTickTimerRun();
-			start = getTimeMillis();
-		}
 #else
 		if (tmMsgSent > 0 && getTimeMillis() - tmMsgSent >= 1000)
 		{
