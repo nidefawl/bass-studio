@@ -2254,6 +2254,7 @@ vstpluginloadres vsthost::loadPlugin(String filepath, int32_t uId, int32_t globa
 
 	globalId = getNextGlobalModuleId(globalId);
 	vstplugin* plugin = new vstplugin(new handles_t(nullptr, aeffect, moduleHandle), globalId, path, nameWithoutExt, -1);
+	plugin->handle->localCurrentUniqueId = this->impl->vstShellCurrentUniqueId;
 	pluginInstancesVST2.push_back(plugin);
 	pluginInstances.push_back(plugin);
 

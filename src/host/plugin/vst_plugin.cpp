@@ -304,6 +304,7 @@ void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin, bool storePluginCh
 		ps.uId = plugin->uId;
 	}
 	ps.name = plugin->sName;
+
 	if (storePluginChunks && (plugin->getFlagsVST() & effFlagsProgramChunks)) {
 		{
 			void* pluginData = nullptr;
