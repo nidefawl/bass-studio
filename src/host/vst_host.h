@@ -256,9 +256,7 @@ public:
 	std::vector<vstplugin*> getVst2Instances() {
 		return pluginInstancesVST2;
 	}
-	void addDeferredEffect(effectbase* plugin) {
-		pluginsDeferred.push_back(plugin);
-	}
+	void addDeferredEffect(effectbase* plugin);
 	void getDeferredEffects(std::vector<effectbase*>& effects) {
 		effects = pluginsDeferred;
 	}
