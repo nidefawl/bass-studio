@@ -5,7 +5,10 @@
 /**********************************************/
 /*                Recent ideas                */
 /**********************************************/
+track_t::projectIdx should be constant (UID): when restoring track contents using trackstate_t the resolution of tracks should be done using the UID for robustness reasons
+
 Performance: reduce sizeof(clip_t)
+Performance regression: midi clip processing runtime scales linear to number of loops (expected to scale with loop length mostly)
 todo: render group contents into folded group track background
 midi arpeggiator freeze function (drag from arp to new clip on timeline)
 add list of all inputs to track, so one can navigate to connected track based on input routing
