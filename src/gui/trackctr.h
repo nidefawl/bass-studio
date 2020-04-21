@@ -214,7 +214,7 @@ protected:
 	const uint32_t heightTimelineControls = heightLoopIndicators + heightSeperator;
 };
 class guictr_tracks_loophandles : public guibase, te_constants {
-	project_t& project;
+//	project_t& project;
 	project_globals_t& projectGlobals;
 	scaled_grid& grid;
 	enum dragmode {
@@ -226,8 +226,8 @@ class guictr_tracks_loophandles : public guibase, te_constants {
 	dragmode dragHandle = drag_handle_none;
 public:
 	ivec2 clipViewSize{ 0, 0 };
-	guictr_tracks_loophandles(project_t& _project, project_globals_t& _projectGlobals, scaled_grid& _grid) :
-			guibase(), project(_project), projectGlobals(_projectGlobals), grid(_grid) {
+	guictr_tracks_loophandles(project_t&, project_globals_t& _projectGlobals, scaled_grid& _grid) :
+			guibase(), /*project(_project),*/ projectGlobals(_projectGlobals), grid(_grid) {
 
 	}
 	int32_t dragOffset = 0;
