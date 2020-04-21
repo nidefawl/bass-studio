@@ -1142,7 +1142,6 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 
 	}
 	if (nBlocksProcessed) {
-		bool convert = false;
 
 		stats.blocksProcessed += nBlocksProcessed;
 		stats.samplesProcessed += nBlocksProcessed*sampleFormatExternal.blockSize;
@@ -1331,7 +1330,7 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
 	if (state == playback_state::status_play) {
 		int32_t offset = sample - (int32_t)(trackImpl->getLatency());
 		if (offset >= 0) {
-#if 0
+#if 1
 			trackImpl->audioOutput.store(&trackImpl->outputPost, offset);
 #endif
 		} else {

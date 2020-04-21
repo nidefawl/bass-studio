@@ -160,20 +160,20 @@ void audiotrack_t::store(AudioBlock* input, int32_t samplePos) {
 //			log_printf("write %d samples to block #%d{%d:%d}\n", lenBlock0, startBlock, startOffsetBlock0, startOffsetBlock0+lenBlock0);
 	blockStart->version++;
 	blockStart->data.copyFromPosToPos(input->buf, readOffset, startOffsetBlock0, lenBlock0, input->channels);
-	if (samples.size() > startBlock && samples[startBlock]) {
-		samples[startBlock]->version++;
-		copyBlockChannelsToSample(samples[startBlock]->getSample(), input, 0, startOffsetBlock0, lenBlock0);
-	}
+//	if (samples.size() > startBlock && samples[startBlock]) {
+//		samples[startBlock]->version++;
+//		copyBlockChannelsToSample(samples[startBlock]->getSample(), input, 0, startOffsetBlock0, lenBlock0);
+//	}
 	if (startBlock != endBlock) {
 		dbgassert(lenOver > 0);
 		auto* blockEnd = data[endBlock].get();
 //					log_printf("write %d samples to block #%d{%d:%d}\n", lenOver, endBlock, 0, lenOver);
 		blockEnd->version++;
 		blockEnd->data.copyFromPosToPos(input->buf, lenBlock0, 0, lenOver, input->channels);
-		if (samples.size() > endBlock && samples[endBlock]) {
-			samples[endBlock]->version++;
-			copyBlockChannelsToSample(samples[endBlock]->getSample(), input, lenBlock0, 0, lenOver);
-		}
+//		if (samples.size() > endBlock && samples[endBlock]) {
+//			samples[endBlock]->version++;
+//			copyBlockChannelsToSample(samples[endBlock]->getSample(), input, lenBlock0, 0, lenOver);
+//		}
 	} else {
 		dbgassert(lenOver == 0);
 	}
