@@ -37,10 +37,10 @@ struct app_iomidiconfig {
 	std::vector<midi_channel> inputs;
 };
 struct app_iosettings {
-	int32_t samplerate = 44100;
-	int32_t blocksize = 256;
-	int32_t internalSamplerate = 44100;
-	int32_t internalBlocksize = 256;
+	uint32_t samplerate = 44100;
+	uint32_t blocksize = 256;
+	uint32_t internalSamplerate = 44100;
+	uint32_t internalBlocksize = 256;
 	app_ioasioconfig asioConfig;
 	std::map<String, app_ioaudioconfig> configs;
 	std::map<String, app_iomidiconfig> midiconfigs;

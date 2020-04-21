@@ -54,9 +54,7 @@ void AudioBlock::realloc(uint32_t _samples) {
 
 	if (samples != _samples) {
 		if (allocType == alloc_type::internal) {
-			bool allN = true;
 			for (uint32_t i = 0; i < channels; i++) {
-	//					float* newBuf = (float*)calloc(_samples,sizeof(float));
 				float* const newBuf = new float[_samples];
 				if (debug) {
 					log_printf("AudioBlock buffer[%d] allocate 0x%08X\n", i, reinterpret_cast<int64_t>(newBuf));
@@ -73,7 +71,7 @@ void AudioBlock::realloc(uint32_t _samples) {
 						if (debug) {
 							log_printf("AudioBlock buffer[%d] release 0x%08X\n", i, reinterpret_cast<int64_t>(newBuf));
 						}
-	//							free(buf[i]);
+
 						delete[] buf[i];
 					}
 				}

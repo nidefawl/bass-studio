@@ -71,7 +71,7 @@ struct AudioBlock {
 //		dbgassert(channels);
 	};
 	explicit AudioBlock(const std::vector<float*>& vecChannels, uint32_t _samples)
-		: channels(vecChannels.size()),  samples(_samples), buf(new float*[vecChannels.size()]), allocType(alloc_type::external_channels_only)
+		: channels(static_cast<uint32_t>(vecChannels.size())),  samples(_samples), buf(new float*[vecChannels.size()]), allocType(alloc_type::external_channels_only)
 	{
 		instanceCount++;
 //		dbgassert(channels);
@@ -81,7 +81,7 @@ struct AudioBlock {
 			dbgassert(*pBuf++ == channel);
 		}
 	};
-	explicit AudioBlock(const AudioBlock& src, const int32_t channelOffset, const int32_t numChannels, const int32_t sampleOffset, const int32_t numSamples)
+	explicit AudioBlock(const AudioBlock& src, const uint32_t channelOffset, const uint32_t numChannels, const uint32_t sampleOffset, const uint32_t numSamples)
 		: channels(numChannels), samples(numSamples), buf(new float*[numChannels]), allocType(alloc_type::external_channels_only)
 	{
 		instanceCount++;
@@ -105,11 +105,11 @@ struct AudioBlock {
 			delete[] buf;
 		}
 	};
-	AudioBlock getOffsetBlock(const int32_t sampleOffset) const
+	AudioBlock getOffsetBlock(const uint32_t sampleOffset) const
 	{
 		return AudioBlock(*this, 0, this->channels, sampleOffset, this->samples - sampleOffset);
 	};
-	AudioBlock SubBlock(const int32_t channelOffset, const int32_t numChannels, const int32_t sampleOffset, const int32_t numSamples) const
+	AudioBlock SubBlock(const uint32_t channelOffset, const uint32_t numChannels, const uint32_t sampleOffset, const uint32_t numSamples) const
 	{
 		return AudioBlock(*this, channelOffset, numChannels, sampleOffset, numSamples);
 	};
@@ -118,8 +118,8 @@ struct AudioBlock {
 			memset(buf[i], 0, samples * sizeof(float));
 		}
 	}
-	void shiftBegin(int32_t numSamples) {
-		dbgassert(numSamples < 0 || samples > static_cast<uint32_t>(numSamples));
+	void shiftBegin(uint32_t numSamples) {
+		dbgassert(numSamples < 0 || samples > numSamples);
 		for (uint32_t i = 0; i < channels; i++) {
 			buf[i] += numSamples;
 		}

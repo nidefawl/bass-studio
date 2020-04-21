@@ -22,15 +22,15 @@
 
 
 struct oversample_config_t {
-	int32_t inputSampleRate = 0;
-	int32_t outputSampleRate = 0;
-	int32_t numChannels = 0;
-	int32_t numSamplesInput = 0;
-	int32_t numSamplesResampled = 0;
-	void setInputLength(int32_t numSamples) {
+	uint32_t inputSampleRate = 0;
+	uint32_t outputSampleRate = 0;
+	uint32_t numChannels = 0;
+	uint32_t numSamplesInput = 0;
+	uint32_t numSamplesResampled = 0;
+	void setInputLength(uint32_t numSamples) {
 		numSamplesInput = numSamples;
-		dbgassert(FitsTypeRange<int64_t>((int64_t)numSamplesInput * (int64_t)outputSampleRate / (double)inputSampleRate + .5));
-		numSamplesResampled = (int32_t) ((int64_t)numSamplesInput * (int64_t)outputSampleRate / (double)inputSampleRate + .5);
+		dbgassert(FitsTypeRange<uint32_t>((int64_t)numSamplesInput * (int64_t)outputSampleRate / (double)inputSampleRate + .5));
+		numSamplesResampled = (uint32_t) ((int64_t)numSamplesInput * (int64_t)outputSampleRate / (double)inputSampleRate + .5);
 	}
 };
 struct oversampler_t : public oversample_config_t {
@@ -60,7 +60,7 @@ struct oversampler_t : public oversample_config_t {
 //			}
 //			delete [] dataInput;
 //			delete [] dataOutput;
-		for (int i = 0; i < numChannels; i++) {
+		for (uint32_t i = 0; i < numChannels; i++) {
 			channelPtrsIn[i] = nullptr;
 			channelPtrsOut[i] = nullptr;
 		}
@@ -83,7 +83,7 @@ struct oversampler_t : public oversample_config_t {
 		dbgassert(dstBlock.samples >= this->numSamplesResampled);
 		dbgassert(dstBlock.channels <= this->numChannels);
 
-		for (int i = 0; i < numChannels; i++) {
+		for (uint32_t i = 0; i < numChannels; i++) {
 			if (i < srcBlock.channels) {
 				channelPtrsIn[i] = srcBlock.buf[i];
 			} else {
@@ -117,8 +117,8 @@ struct oversampler_t : public oversample_config_t {
 };
 #define resampler_buffer_block_cnt 32
 struct resampler_t {
-	const int32_t idx;
-	const int32_t numChannels;
+	const uint32_t idx;
+	const uint32_t numChannels;
 	oversampler_t resampler;
 	sampleformat_t in;
 	sampleformat_t out;
@@ -130,7 +130,7 @@ struct resampler_t {
 	int32_t readOffset = 0;
 	std::vector<buf_t*> outputBuffers;
 	std::deque<buf_t*> outputQueue;
-	resampler_t(const int32_t _idx, sampleformat_t _in, sampleformat_t _out, oversample_config_t config) :
+	resampler_t(const uint32_t _idx, sampleformat_t _in, sampleformat_t _out, oversample_config_t config) :
 		idx(_idx), numChannels(config.numChannels), resampler(config), in(_in), out(_out), bufScratch(config.numChannels, _in.blockSize) {
 	}
 	~resampler_t() {
@@ -169,7 +169,7 @@ struct resampler_t {
 		while (writeOffset < out.blockSize) {
 			buf_t* b = outputQueue.front();
 			auto* ptrBlockResampled = b->block;
-			auto maxCopy = math::min<int32_t>(resampler.numSamplesResampled-readOffset, blockOut.samples-writeOffset);
+			auto maxCopy = math::min<uint32_t>(resampler.numSamplesResampled-readOffset, blockOut.samples-writeOffset);
 			//b.block->fillNoise(nNoise++);
 			auto srcBlock = ptrBlockResampled->SubBlock(0, ptrBlockResampled->channels, readOffset, maxCopy);
 			blockOut.SubBlock(0, numChannels, writeOffset, maxCopy)
@@ -188,8 +188,8 @@ struct resampler_t {
 
 		return blockOut;
 	}
-	int32_t getNumSamplesOutputBuffer() {
-		int32_t numSamples;
+	uint32_t getNumSamplesOutputBuffer() {
+		uint32_t numSamples;
 		if (readOffset) {
 			dbgassert(outputQueue.size() > 0);
 			buf_t* b = outputQueue.front();
@@ -201,9 +201,9 @@ struct resampler_t {
 		}
 		return numSamples;
 	}
-	int32_t numBlocksToPop() {
-		int32_t numSamples = getNumSamplesOutputBuffer();
-		int32_t numBlocks = numSamples / out.blockSize;
+	uint32_t numBlocksToPop() {
+		uint32_t numSamples = getNumSamplesOutputBuffer();
+		uint32_t numBlocks = numSamples / out.blockSize;
 		dbgassert(numBlocks == 0 || outputQueue.size() > 0);
 		return numBlocks;
 	}

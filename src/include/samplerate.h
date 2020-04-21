@@ -15,7 +15,7 @@ enum class sampleformat_bits_t : int32_t {
 };
 struct sampleformat_t {
 	samplerate_t sampleRate;
-	int32_t blockSize;
+	uint32_t blockSize;
 	sampleformat_bits_t sampleformat = sampleformat_bits_t::NONE;
 };
 inline const char* sampleformat_bits_to_str(sampleformat_bits_t t) {

@@ -957,9 +957,9 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 	int32_t nBlocksProcessed = 0;
 	bool convert = true;
 	bool canProcess = audioHost && queueSizeOutput < 8 && queueSizeInput > 2;
-	int32_t blockSizeResampled = DAW::NumSamplesResampled(sampleFormat.blockSize, sampleFormat.sampleRate, sampleFormatExternal.sampleRate);
-	int32_t numBlocksInternal = math::max(1, sampleFormatExternal.blockSize/blockSizeResampled);
-	int32_t numBlocksExternal = (blockSizeResampled + sampleFormatExternal.blockSize - 1)/sampleFormatExternal.blockSize;
+	uint32_t blockSizeResampled = DAW::NumSamplesResampled(sampleFormat.blockSize, sampleFormat.sampleRate, sampleFormatExternal.sampleRate);
+	uint32_t numBlocksInternal = math::max<uint32_t>(1U, sampleFormatExternal.blockSize/blockSizeResampled);
+	uint32_t numBlocksExternal = (blockSizeResampled + sampleFormatExternal.blockSize - 1)/sampleFormatExternal.blockSize;
 	std::vector<AudioBlock> blocksTempInput;
 //	std::vector<AudioBuffer> buffersInput;
 	blocksTempInput.reserve(numBlocksExternal*numBlocksInternal);
@@ -1373,7 +1373,7 @@ void vsthost::finishTreadTasks(std::vector<audiostageid_i32>& processFinishedSta
 							std::rethrow_exception(eptr);
 						}
 						catch(const std::exception &ex) {
-							printf("task[%u] had exception: %s\n", i, ex.what());
+							printf("task[%d] had exception: %s\n", i, ex.what());
 						}
 					}
 					vsthost::track_block_processing_task_t procTask = task.getTask();
@@ -1637,8 +1637,8 @@ void vsthost::onTrackLayoutChange() {
 void vsthost::setOutput(audiohost* audioHost) {
 	this->audioHost = audioHost;
 	sampleformat_t sampleFormatExternal;
-	samplerate_t extSampleRate = audioHost && audioHost->lSampleRate > 0 ? audioHost->lSampleRate : 48000;
-	int32_t extBlockSize = audioHost && audioHost->lBlockSize > 0 ? audioHost->lBlockSize : 512;
+	samplerate_t extSampleRate = audioHost && audioHost->lSampleRate > 0 ? audioHost->lSampleRate : 48000U;
+	uint32_t extBlockSize = audioHost && audioHost->lBlockSize > 0 ? audioHost->lBlockSize : 512U;
 	sampleFormatExternal = { extSampleRate, extBlockSize, sampleformat_bits_t::FLOAT_32 };
 	
 //	sampleformat_t sampleFormat = {sampleFormatExternal.sampleRate, sampleFormatExternal.blockSize, sampleformat_bits_t::FLOAT_32};
