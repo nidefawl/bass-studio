@@ -44,31 +44,24 @@ public:
 
 	}
 	bool resolve(String name, int32_t uId, String* _outPath, int loadFlags) {
-		static const char* queryDefault = "SELECT path FROM plugins where state == 1 and name == ? and forcedisable == 0";
-		static const char* queryForceLoad = "SELECT path FROM plugins where state == 1 and name == ?";
-		static const char* queryByUidDefault = "SELECT path FROM plugins where state == 1 and uid == ? and forcedisable == 0";
-		static const char* queryByUidForce = "SELECT path FROM plugins where state == 1 and uid == ?";
-		const char* query = queryDefault;
-		if ((loadFlags&1)!=0) {
-			query = queryForceLoad;
+		static const char* queryByName = "SELECT path FROM plugins where state == 1 and name == ?";
+		static const char* queryByUidD = "SELECT path FROM plugins where state == 1 and uid == ?";
+		for (int i = 0; i < 2; i++) {
+			String query = String();
+			SQLite::Statement   queryPlugin(db, i == 0 ? queryByUidD : queryByName);
+			if (i == 0) {
+				queryPlugin.bind(1, uId);
+			} else {
+				queryPlugin.bind(1, name);
+			}
+			if ((loadFlags&1)==0) {
+				query += " and forcedisable == 0";
+			}
+			if (queryPlugin.executeStep()) {
+				*_outPath = queryPlugin.getColumn("path").getString();
+				return true;
+			}
 		}
-		SQLite::Statement   queryPlugin(db, query);
-		queryPlugin.bind(1, name);
-		if (queryPlugin.executeStep()) {
-			*_outPath = queryPlugin.getColumn("path").getString();
-			return true;
-		}
-		const char* query2 = queryByUidDefault;
-		if ((loadFlags&1)!=0) {
-			query2 = queryByUidForce;
-		}
-		SQLite::Statement   queryPlugin2(db, query2);
-		queryPlugin2.bind(1, uId);
-		if (queryPlugin2.executeStep()) {
-			*_outPath = queryPlugin2.getColumn("path").getString();
-			return true;
-		}
-
 		return false;
 	}
 	void query(String str, std::vector<pluginentry_t>& _out) {

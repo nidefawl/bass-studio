@@ -61,6 +61,7 @@ public:
 	String getName() { return sName; };
 	String getProductName() { return sProductName; };
 	void setProductName(String sName) {
+		this->sName = sName;
 		this->sProductName = sName;
 	#ifndef NDEBUG
 		this->szName = this->sName.c_str();

@@ -204,8 +204,14 @@ void vstplugin::load(vsthost* host) {
 	this->isSynth = (handle->aeffect->flags & effFlagsIsSynth) != 0;
 	this->bCanReceiveMidi = this->isSynth || this->dispatch(effCanDo, 0, 0, (void*)PlugCanDos::canDoReceiveVstMidiEvent) > 0;
 	char szBuf[256] = "";
-	if (this->getNameString(szBuf) && szBuf[0]) {
+	szBuf[0] = 0;
+	if (this->dispatch(effGetProductString, 0, 0, (void*)szBuf) && szBuf[0] != 0) {
 		setProductName(szBuf);
+	} else {
+		szBuf[0] = 0;
+		if (this->dispatch(effGetEffectName, 0, 0, (void*)szBuf) && szBuf[0] != 0) {
+			setProductName(szBuf);
+		}
 	}
 	VstParameterProperties properties = {};
 
