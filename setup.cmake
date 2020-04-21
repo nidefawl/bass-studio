@@ -69,7 +69,7 @@ OPTION(DEBUG_STD_LIB "Enable standard library assertions" OFF) # Enabled by defa
 
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
-  add_compile_options(-Wall -Wno-inconsistent-missing-override) # -Wshadow sadly no working option for warning on shadow local only
+  add_compile_options(-Wall -Wno-inconsistent-missing-override -Wno-unused-parameter) # -Wshadow sadly no working option for warning on shadow local only
   if ("${CMAKE_BUILD_TYPE}" STREQUAL "Debug")
 
   #address sanitizer: Disable ADD_POST_BUILD_COMMANDS and set ASAN_SYMBOLIZER_PATH=C:\dev\llvm-mingw-ca329c1-full\bin\llvm-symbolizer.exe
