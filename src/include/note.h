@@ -116,8 +116,8 @@ std::pair<note_t*, note_t*> getMinMaxTime(std::set<note_t*>& notePtrs);
 std::pair<note_t*, note_t*> getMinMaxTime(std::vector<note_t>& notes);
 
 inline int32_t getFoldedOffsetPitch(std::vector<int32_t>& notesFolded, int32_t curPitch, int32_t direction) {
-	int len = (int) notesFolded.size();
-	for (int i = 0; i < len; i++) {
+	uint32_t len = (uint32_t) notesFolded.size();
+	for (uint32_t i = 0; i < len; i++) {
 		int32_t pitch = notesFolded[i];
 		if (pitch >= curPitch) {
 			return direction > 0 ? notesFolded[i+1 >= len ? len-1 : i+1] : notesFolded[i-1 <= 0 ? 0 : i-1];

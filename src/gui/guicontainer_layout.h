@@ -17,7 +17,6 @@ struct guitheme_t;
 class guictr_stacked : public guictr_base, public splitter_cb {
 	struct stacked_entry;
 	std::vector<stacked_entry*> entries;
-	ivec2 sizeContentTab;
 public:
 	static constexpr int32_t STACK_ENTRY_BTN_SIZE = 24;
 	guictr_stacked() : guictr_base() {

@@ -104,7 +104,7 @@ public:
 			if (it == m_list.end()) {
 				dbgassert(0);
 			}
-			selIdx.push_back(it - begin);
+			selIdx.push_back(static_cast<size_t>(it - begin));
 		}
 		dbgassert(selection.size() == selIdx.size());
 	}

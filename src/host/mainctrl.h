@@ -164,8 +164,8 @@ public:
 		return unfoldNoteClamped(f+dir);
 	}
 	float unfoldNoteClamped(float note) {
-		int32_t iNote = floor(note);
-		int len = (int) notePitches.size();
+		int32_t iNote = math::floorF32toS32(note);
+		auto len = notePitches.size();
 		if (!len) {
 			return 0;
 		}
@@ -177,8 +177,8 @@ public:
 		return notePitches[iNote];
 	}
 	float unfoldNote(float note) {
-		int32_t iNote = floor(note);
-		int len = (int) notePitches.size();
+		int32_t iNote = math::floorF32toS32(note);
+		auto len = notePitches.size();
 		if (!len) {
 			return 0;
 		}

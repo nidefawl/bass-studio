@@ -23,7 +23,7 @@
 #define RGB_PROTOCOL_WRITE_BUF_SIZE (4U*1024U)
 
 struct RGBNetworkController;
-struct rgbprotocol_net_handler_server;
+class rgbprotocol_net_handler_server;
 struct NetServerState {
 
 	std::atomic<bool> isRunning{true};

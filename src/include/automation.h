@@ -32,7 +32,7 @@ struct automation_point_t {
 inline float quantizeFloat(float f, int32_t steps) {
 	if (!steps)
 		return f;
-	int32_t val = steps * f;
+	int32_t val = static_cast<int32_t>(steps * f);
 	return val / (float) steps;
 }
 struct automation_t {
@@ -162,7 +162,7 @@ public:
 		return f;
 	}
 
-	int32_t getNumParameters() const {
+	size_t getNumParameters() const {
 		return mapParams.size();
 	}
 	String getParamName(int32_t paramIdx) {

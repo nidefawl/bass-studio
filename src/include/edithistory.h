@@ -81,10 +81,10 @@ public:
 	String getUndoStep() {
 		return (m_undo.back()?m_undo.back()->getDesc():"??");
 	}
-	int getNumUndoSteps() {
+	size_t getNumUndoSteps() {
 		return m_undo.size();
 	}
-	int getNumRedoSteps() {
+	size_t getNumRedoSteps() {
 		return m_redo.size();
 	}
 	void getActions(std::vector<action_base*>& outUndo,

@@ -127,7 +127,7 @@ struct resampler_t {
 		AudioBlock* block{ nullptr };
 		bool inUse{ false };
 	};
-	int32_t readOffset = 0;
+	uint32_t readOffset = 0;
 	std::vector<buf_t*> outputBuffers;
 	std::deque<buf_t*> outputQueue;
 	resampler_t(const uint32_t _idx, sampleformat_t _in, sampleformat_t _out, oversample_config_t config) :
@@ -163,8 +163,8 @@ struct resampler_t {
 	AudioBlock pop() {
 		dbgassert(outputQueue.size() > 0);
 		AudioBlock blockOut(numChannels, out.blockSize);
-		int32_t writeOffset = 0;
-		int32_t numSamplesBegin = getNumSamplesOutputBuffer();
+		uint32_t writeOffset = 0;
+		uint32_t numSamplesBegin = getNumSamplesOutputBuffer();
 		dbgassert(numSamplesBegin >= out.blockSize);
 		while (writeOffset < out.blockSize) {
 			buf_t* b = outputQueue.front();
@@ -183,7 +183,7 @@ struct resampler_t {
 			b->inUse = false;
 			outputQueue.pop_front();
 		}
-		int32_t numSamplesEnd = getNumSamplesOutputBuffer();
+		uint32_t numSamplesEnd = getNumSamplesOutputBuffer();
 		dbgassert(numSamplesEnd < numSamplesBegin);
 
 		return blockOut;
@@ -194,10 +194,10 @@ struct resampler_t {
 			dbgassert(outputQueue.size() > 0);
 			buf_t* b = outputQueue.front();
 			numSamples = b->block->samples - readOffset;
-			numSamples += (outputQueue.size() - 1) * resampler.numSamplesResampled;
+			numSamples += (static_cast<uint32_t>(outputQueue.size()) - 1) * resampler.numSamplesResampled;
 		}
 		else {
-			numSamples = (outputQueue.size()) * resampler.numSamplesResampled;
+			numSamples = static_cast<uint32_t>(outputQueue.size()) * resampler.numSamplesResampled;
 		}
 		return numSamples;
 	}

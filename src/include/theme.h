@@ -61,7 +61,7 @@ struct guitheme_t {
 	void bindFonts();
 	UIFont::font_instance setFont(UIFont::font_type_t _fonttype, String s);
 	void setColor(GuiColor::constant_t _constant, int32_t _newValue);
-	const int32_t get(GuiConstant::constant_t _constant);
-	const float getFloat(GuiConstant::constant_t _constant);
+	int32_t get(GuiConstant::constant_t _constant);
+	float getFloat(GuiConstant::constant_t _constant);
 	void set(GuiConstant::constant_t _constant, int32_t _newValue);
 };

@@ -138,7 +138,7 @@ private:
 	SYNCHRONIZED_RW VstTimeInfo timeinfo = {};
 	SYNCHRONIZED_RW double lastTickEndPos = 0;
 	playback_state lastState = playback_state::status_stop;
-	SYNCHRONIZED_RW host_stats_t stats{0};
+	SYNCHRONIZED_RW host_stats_t stats{};
 	SYNCHRONIZED_RW host_processing_stats_t processing{0};
 
 

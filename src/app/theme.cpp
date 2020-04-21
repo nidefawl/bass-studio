@@ -102,10 +102,10 @@ void guitheme_t::setColor(GuiColor::constant_t _constant, int32_t _newValue) {
 	this->vecNVGColors[_constant.idx] = rgbaToNvg(_newValue);
 }
 
-const float guitheme_t::getFloat(GuiConstant::constant_t _constant) {
+float guitheme_t::getFloat(GuiConstant::constant_t _constant) {
 	return get(_constant)/10.0f;
 }
-const int32_t guitheme_t::get(GuiConstant::constant_t _constant) {
+int32_t guitheme_t::get(GuiConstant::constant_t _constant) {
     auto it = mapProperties.find(_constant.idx);
     if (it == mapProperties.end()) {
     	return _constant.defValue;

@@ -98,11 +98,6 @@ public:
 			return a->time < b->time;
 		});
 		if (clips.size() > 1) {
-			if (!(clips[0]->start() < clips[1]->start())) {
-				for (int i = 0; i < (int)clips.size(); i++) {
-					my_printf("clip[%d] = %d\n", i, clips[i]->start());
-				}
-			}
 			dbgassert(clips[0]->start() < clips[1]->start());
 		}
 	}
@@ -299,9 +294,9 @@ public:
 		dbgassert(!STL_CONTAINS(children, track));
 		if (track->childIdxTree < 0 || track->childIdxTree >= (int)children.size()) {
 			children.push_back(track);
-			track->childIdxTree = children.size() - 1;
+			track->childIdxTree = checkedCastInt32(children.size()) - 1;
 		} else {
-			children.insert(children.begin() + static_cast<size_t>(track->childIdxTree), track);
+			children.insert(children.begin() + track->childIdxTree, track);
 			int32_t childIdx = 0;
 			for (auto track : children) {
 				track->childIdxTree = childIdx++;
@@ -312,8 +307,8 @@ public:
 	void removeChild(track_t* track) {
 		dbgassert(track->parent == this);
 		dbgassert(STL_CONTAINS(children, track));
-		dbgassert(track->childIdxTree < children.size());
-		dbgassert(children.at(track->childIdxTree) == track);
+		dbgassert(track->childIdxTree < checkedCastInt32(children.size()));
+		dbgassert(children.at(checkedCastUint32(track->childIdxTree)) == track);
 		children.erase(std::remove(children.begin(), children.end(), track));
 		int32_t childIdx = 0;
 		for (auto track : children) {
@@ -414,9 +409,9 @@ public:
 		if (!trackAdd->parent) {
 			if (trackAdd->childIdxTree < 0 || trackAdd->childIdxTree >= (int)tracksTree.size()) {
 				tracksTree.push_back(trackAdd);
-				trackAdd->childIdxTree = tracksTree.size() - 1;
+				trackAdd->childIdxTree = static_cast<int32_t>(tracksTree.size()) - 1;
 			} else {
-				tracksTree.insert(tracksTree.begin() + static_cast<size_t>(trackAdd->childIdxTree), trackAdd);
+				tracksTree.insert(tracksTree.begin() + trackAdd->childIdxTree, trackAdd);
 				int32_t childIdx = 0;
 				for (auto track : tracksTree) {
 					track->childIdxTree = childIdx++;
@@ -440,7 +435,7 @@ public:
 		if (trackRemove->parent) {
 			trackRemove->parent->removeChild(trackRemove);
 		} else {
-			dbgassert(trackRemove->childIdxTree < tracksTree.size());
+			dbgassert(trackRemove->childIdxTree < static_cast<int32_t>(tracksTree.size()));
 			auto itRemoveTreeRoot = std::find(tracksTree.cbegin(), tracksTree.cend(), trackRemove);
 			if (itRemoveTreeRoot != tracksTree.cend()) {
 				tracksTree.erase(itRemoveTreeRoot);
@@ -553,13 +548,13 @@ public:
     track_vector::const_iterator cendTree() const { return trackAllCtr.tracksTree.cend(); }
 
 	track_t* operator [](size_t i) {
-		if (!validTrackIdx(i)) {
+		if (!validTrackIdx(checkedCastInt32(i))) {
 			return NULL;
 		}
 		return trackAllCtr[i];
 	}
 	const track_t* at(const size_t i) const {
-		if (!validTrackIdx(i)) {
+		if (!validTrackIdx(checkedCastInt32(i))) {
 			return NULL;
 		}
 		return trackAllCtr.at(i);

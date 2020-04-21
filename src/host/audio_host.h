@@ -71,10 +71,10 @@ public:
 		void enqueueInput(AudioBuffer*);
 		bool try_dequeueInput(AudioBuffer*&);
 		int32_t getOutputQueueSize() {
-			return audioQueue.size_approx();
+			return static_cast<int32_t>(audioQueue.size_approx());
 		}
 		int32_t getInputQueueSize() {
-			return audioQueueInput.size_approx();
+			return static_cast<int32_t>(audioQueueInput.size_approx());
 		}
 	};
 private:

@@ -22,10 +22,10 @@ public:
 		return projectGlobals->tempo100 / 100.0f;
 	}
 	int32_t getCurrentTempo() {
-		return projectGlobals->tempo100;
+		return static_cast<int32_t>(projectGlobals->tempo100);
 	}
 	virtual void setTempo(int32_t _tempo100) {
-		projectGlobals->tempo100 = _tempo100;
+		projectGlobals->tempo100 = static_cast<uint32_t>(_tempo100);
 	}
 	tick_t& getPlaybackPos() {
 		return projectGlobals->playbackPos;
@@ -43,7 +43,7 @@ public:
 		projectGlobals->signatureNum = CLAMP_I(n, 1, 32);
 	}
 	void setDen(uint32_t d) {
-		for (int i = 0; i <= 4; i++) {
+		for (uint32_t i = 0; i <= 4; i++) {
 			if (d < (1u << (i + 1u))) {
 				projectGlobals->signatureDenom = i;
 				return;
@@ -54,12 +54,12 @@ public:
 	tick_t samplesToTicks(int32_t sample);
 	beatbar16th_t toBeatBar16th(int32_t tick) {
 		beatbar16th_t t;
-		uint8_t denom = 4-projectGlobals->signatureDenom;
-		uint8_t num = projectGlobals->signatureNum;
+		uint32_t denom = 4-math::clamp<uint32_t>(projectGlobals->signatureDenom, 0, 4);
+		uint32_t num = projectGlobals->signatureNum;
 		tick = tick / TICKS_16TH;
 		t.th = tick & ((1<<denom) - 1);
-		int32_t quarters = (tick>>denom);
-		t.beat = uint32_t(quarters) % num;
+		uint32_t quarters = (static_cast<uint32_t>(tick)>>denom);
+		t.beat = quarters % num;
 		t.bar = quarters / num;
 		if (tick < 0) {
 			t.bar -= 1;

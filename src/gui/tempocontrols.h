@@ -192,7 +192,6 @@ public:
 	NVGcolor getBackgroundColor(int stateflags) const override;
 };
 class guictr_tempocontrols : public guictr_base {
-	project_t& project;
 	project_globals_t& projectGlobals;
 	gui_tempocontrol tempo;
 	gui_signaturecontrol signature;
@@ -208,7 +207,6 @@ class guictr_tempocontrols : public guictr_base {
 public:
 	guictr_tempocontrols(project_t& _project, project_globals_t& _projectGlobals)
 		: guictr_base(),
-		  project(_project),
 		  projectGlobals(_projectGlobals),
 		  cursorPos(&projectGlobals.cursor.cursorPos),
 		  songPos(&projectGlobals.playbackPos),

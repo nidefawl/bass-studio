@@ -266,7 +266,7 @@ void gui_ctr_debug::render(NVGcontext* vg) {
 					int32_t stageIdInt = static_cast<int32_t>(entry.stageId);
 					uint64_t stageColorIdx = stageIdInt*1047299;
 					auto graphColor = colorPalette[(stageColorIdx>>3)%COLOR_PALETTE_LEN];
-					auto duration = entry.timeEnd-entry.timeStart;
+					auto duration = entry.timeEnd - entry.timeStart;
 					auto posX1 = graphOnlySize.x*(entry.timeStart - minTimeStart) / (float) mikrosPerBlock;
 					auto posX2 = graphOnlySize.x*(entry.timeEnd - minTimeStart) / (float) mikrosPerBlock;
 					float posY = graphOnlySize.y-1-(entry.threadIdx+1)*yStep;

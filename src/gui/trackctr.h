@@ -464,7 +464,7 @@ public:
 		entries.erase(it, entries.end());
 	}
 	void addTrack(track_gui_entry_t* entry) {
-		auto it = std::find_if(begin(entries), end(entries), [this, entry](track_gui_entry_t* e) {
+		auto it = std::find_if(begin(entries), end(entries), [entry](track_gui_entry_t* e) {
 			if (e->track == entry->track) {
 				return true;
 			}

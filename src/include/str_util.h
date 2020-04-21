@@ -69,7 +69,7 @@ String FormatBinaryString(T i) {
 inline bool StrEndsWith(String const & a, String const & b)
 {
     if (b.size() > a.size()) return false;
-    return std::equal(a.begin() + (a.size() - b.size()), a.end(), b.begin());
+    return std::equal(a.begin() + static_cast<uint32_t>(a.size() - b.size()), a.end(), b.begin());
 }
 inline String StringTrim(String str) {
 	// trim trailing spaces

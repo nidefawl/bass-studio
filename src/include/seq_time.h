@@ -26,10 +26,10 @@ struct beatbar16th_t {
 	uint32_t th;
 	int32_t operator[](const int nIndex) {
 		if (nIndex == 2)
-			return th;
+			return static_cast<int32_t>(th);
 		if (nIndex == 1)
-			return beat;
-		return bar;
+			return static_cast<int32_t>(beat);
+		return static_cast<int32_t>(bar);
 	}
 };
 inline tick_t sgn(tick_t val) {

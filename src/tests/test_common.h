@@ -13,9 +13,10 @@ public:
 	uint32_t randI() {
 
 		bit = ((lfsr >> 0) ^ (lfsr >> 2) ^ (lfsr >> 3) ^ (lfsr >> 5)) & 1;
-		return lfsr = (lfsr >> 1) | (bit << 15);
+		lfsr = static_cast<uint16_t>((lfsr >> 1) | (bit << 15));
+		return lfsr;
 	}
 	uint32_t randInt(int range) {
-		return randI() % range;
+		return randI() % static_cast<uint32_t>(range);
 	}
 };

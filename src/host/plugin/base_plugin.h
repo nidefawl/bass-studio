@@ -78,7 +78,7 @@ public:
 	virtual void resume() = 0;
 	virtual void sleep() = 0;
 	virtual void unload(vsthost* host) { dbgassert(nLoadCalls==1); nLoadCalls--; };
-	virtual void load(vsthost* host);;
+	virtual void load(vsthost* host);
 	virtual int32_t getDelay() = 0;
 	virtual String getInfo(std::vector<String>& list) = 0;
 	track_t* getTrack() override;
