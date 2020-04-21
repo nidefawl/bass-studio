@@ -28,6 +28,7 @@ include_directories(SYSTEM
     ${DEPS_BUILD_FOLDER}/${DEPS_BUILD_FOLDER_LIBS}/glfw/include
     ${DEPS_BUILD_FOLDER}/${DEPS_BUILD_FOLDER_LIBS}/SQLiteCpp/include
     ${DEPS_BUILD_FOLDER}/${DEPS_BUILD_FOLDER_LIBS}/soxr/include
+    ${DEPS_BUILD_FOLDER}/${DEPS_BUILD_FOLDER_LIBS}/duktape/include
     ${DAW_DEPS_PATH}/glad/include
     ${DAW_DEPS_PATH}/glad/src
     ${DAW_DEPS_PATH}/glm

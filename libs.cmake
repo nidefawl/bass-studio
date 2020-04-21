@@ -39,6 +39,11 @@ find_library(
     PATH_SUFFIXES lib
     NO_DEFAULT_PATH)
 find_library(
+    DUKTAPE_LIB_RELEASE NAMES "duktape"
+    PATHS ${BUILD_PATH_LIB_RELEASE}/duktape/
+    PATH_SUFFIXES lib
+    NO_DEFAULT_PATH)
+find_library(
     GLFW_LIB_DEBUG
     NAMES "glfw3" "glfw3dll"
     PATHS ${BUILD_PATH_LIB_DEBUG}/glfw/
@@ -63,6 +68,11 @@ find_library(
 find_library(
     PORTMIDI_LIB_DEBUG NAMES "portmidi_s"
     PATHS ${BUILD_PATH_LIB_DEBUG}/portmidi/
+    PATH_SUFFIXES lib
+    NO_DEFAULT_PATH)
+find_library(
+    DUKTAPE_LIB_DEBUG NAMES "duktape"
+    PATHS ${BUILD_PATH_LIB_DEBUG}/duktape/
     PATH_SUFFIXES lib
     NO_DEFAULT_PATH)
 set(PYBIND11_CPP_STANDARD -std=c++14)

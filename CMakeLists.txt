@@ -227,6 +227,7 @@ target_link_libraries(${LINK_TARGET} PUBLIC optimized ${SQLITECPP_LIB_RELEASE} d
 target_link_libraries(${LINK_TARGET} PUBLIC optimized ${SOXR_LIB_RELEASE} debug ${SOXR_LIB_DEBUG})
 target_link_libraries(${LINK_TARGET} PUBLIC optimized ${PORTAUDIO_LIB_RELEASE} debug ${PORTAUDIO_LIB_DEBUG})
 target_link_libraries(${LINK_TARGET} PUBLIC optimized ${PORTMIDI_LIB_RELEASE} debug ${PORTMIDI_LIB_DEBUG})
+target_link_libraries(${LINK_TARGET} PUBLIC optimized ${DUKTAPE_LIB_RELEASE} debug ${DUKTAPE_LIB_DEBUG})
 
 if (LINUX)
 target_link_libraries(${LINK_TARGET} PRIVATE ${X11_X11_LIB} ${CMAKE_THREAD_LIBS_INIT} ${CMAKE_DL_LIBS} ${ALSA_LIBRARY} ${GTK3_LIBRARIES} GL rt m)
