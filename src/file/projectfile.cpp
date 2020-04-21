@@ -365,7 +365,29 @@ void save( Archive & archive, project_file const & file, const std::uint32_t ver
 CEREAL_CLASS_VERSION( project_file, FILE_FORMAT_VERSION);
 CEREAL_CLASS_VERSION( plugin_snapshot_t, 4 );
 
+/**
+ * @param projectfile
+ * @return true if project file is valid
+ */
+bool validateProjectFile(std::shared_ptr<project_file> projectfile) {
+	auto trackArr = {projectfile->project.trackCtr, projectfile->project.trackReturnCtr, projectfile->project.trackMasterCtr};
+	for (const trackcontainer_snapshot_t& trackcontainersnapshot : trackArr) {
+		std::vector<int32_t> vec;
+		vec.reserve(128);
+		for (const track_snapshot_t& tracksnapshot : trackcontainersnapshot.tracks) {
+			for (const plugin_snapshot_t& pluginsnapshot : tracksnapshot.plugins.pluginSnapshots) {
+				int32_t globalId = pluginsnapshot.projectGlobalId;
+				if (std::binary_search(vec.begin(), vec.end(), globalId)) {
+					log_printf("invalid project: duplicate plugin global id %d found\n", globalId);
+					return false;
+				}
+				vec.push_back(globalId);
+			}
 
+		}
+	}
+	return true;
+}
 std::shared_ptr<project_file> loadProjectFile(String& path) {
 	try {
 		std::vector<uint8_t> vec;
@@ -378,6 +400,9 @@ std::shared_ptr<project_file> loadProjectFile(String& path) {
 			ar(make_nvp("project", f));
 		}
 		f->path = path;
+		if (!validateProjectFile(f)) {
+			f.reset();
+		}
 		return f;
 	}
 	catch (const FileIOException& e)

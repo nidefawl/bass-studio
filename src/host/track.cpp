@@ -571,6 +571,12 @@ void audio_stage_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginLi
 
 }
 void pluginUpdateParamBypass(effectbase* effect, int state);
+void vsthost::addDeferredEffect(effectbase* plugin) {
+	plugin->projectGlobalId = getNextGlobalModuleId(0);
+	auto it = std::find_if(pluginsDeferred.begin(), pluginsDeferred.end(), [plugin](auto* eff) {return eff->projectGlobalId == plugin->projectGlobalId;});
+	dbgassert(it == pluginsDeferred.end());
+	pluginsDeferred.push_back(plugin);
+}
 void vsthost::activateDeferred(effectbase* const eff, effectbase** out_effectLoaded, bool forceLoad) {
 	dbgassert(eff->trackImpl);
 	dbgassert(eff->trackImpl->effects.size());
