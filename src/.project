@@ -24,4 +24,10 @@
 		<nature>org.eclipse.cdt.managedbuilder.core.managedBuildNature</nature>
 		<nature>org.eclipse.cdt.managedbuilder.core.ScannerConfigNature</nature>
 	</natures>
+	<variableList>
+		<variable>
+			<name>ESP8266_WIFIRGB_LOC</name>
+			<value>file:/C:/dev/esp8266/projects/UPD_RGB_DISPLAY/app</value>
+		</variable>
+	</variableList>
 </projectDescription>

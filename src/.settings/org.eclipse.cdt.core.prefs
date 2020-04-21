@@ -6,7 +6,7 @@ environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.11128
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.111289801/appendContributed=true
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.1012399357/DEPS_PATH/delimiter=;
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.1012399357/DEPS_PATH/operation=replace
-environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.1012399357/DEPS_PATH/value=C\:/dev/daw-deps
+environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.1012399357/DEPS_PATH/value=D\:/dev/daw-deps
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.1012399357/MSYS_HOME/delimiter=;
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.1012399357/MSYS_HOME/operation=remove
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.1012399357/PATH/delimiter=;
@@ -19,7 +19,7 @@ environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.14147
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.1012399357/appendContributed=true
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.1677002235/DEPS_PATH/delimiter=;
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.1677002235/DEPS_PATH/operation=replace
-environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.1677002235/DEPS_PATH/value=C\:/dev/daw-deps
+environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.1677002235/DEPS_PATH/value=D\:/dev/daw-deps
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.1677002235/MSYS_HOME/delimiter=;
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.1677002235/MSYS_HOME/operation=remove
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.1677002235/PATH/delimiter=;
@@ -31,8 +31,8 @@ environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.14147
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.1677002235/append=true
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.1677002235/appendContributed=true
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.700633768/DEPS_PATH/delimiter=;
-environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.700633768/DEPS_PATH/operation=replace
-environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.700633768/DEPS_PATH/value=C\:/dev/daw-deps
+environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.700633768/DEPS_PATH/operation=append
+environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.700633768/DEPS_PATH/value=D\:/dev/daw-deps
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.700633768/MSYS_HOME/delimiter=;
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.700633768/MSYS_HOME/operation=remove
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.700633768/PATH/delimiter=;
@@ -41,8 +41,8 @@ environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.14147
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.700633768/append=true
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.700633768/appendContributed=true
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.779292911/DEPS_PATH/delimiter=;
-environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.779292911/DEPS_PATH/operation=replace
-environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.779292911/DEPS_PATH/value=C\:/dev/daw-deps
+environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.779292911/DEPS_PATH/operation=append
+environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.779292911/DEPS_PATH/value=D\:/dev/daw-deps
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.779292911/MSYS_HOME/delimiter=;
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.779292911/MSYS_HOME/operation=remove
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.779292911/PATH/delimiter=;
@@ -52,7 +52,7 @@ environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.14147
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.779292911/appendContributed=true
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949/DEPS_PATH/delimiter=;
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949/DEPS_PATH/operation=replace
-environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949/DEPS_PATH/value=C\:/dev/daw-deps
+environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949/DEPS_PATH/value=D\:/dev/daw-deps
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949/MSYS_HOME/delimiter=;
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949/MSYS_HOME/operation=remove
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949/PATH/delimiter=;
@@ -60,7 +60,7 @@ environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.14147
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949/PATH/value=${WORKSPACE_ENV_PATH}
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949/WORKSPACE_ENV_PATH/delimiter=;
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949/WORKSPACE_ENV_PATH/operation=replace
-environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949/WORKSPACE_ENV_PATH/value=C\:\\Program Files\\LLVM9.0-r355397\\bin\\;C\:\\dev\\llvm-mingw-git\\bin\\;C\:\\dev\\gdb\\bin\\;C\:\\dev\\WIN32PATH\\;C\:\\Windows\\System32;C\:\\Users\\Michael\\AppData\\Local\\Programs\\Python\\Python37
+environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949/WORKSPACE_ENV_PATH/value=D\:\\dev\\LLVM-9.0.0-stable\\bin;C\:\\dev\\llvm-mingw-git\\bin;C\:\\dev\\gdb\\bin;D\:\\dev\\WIN32PATH;C\:\\Windows\\System32;C\:\\Users\\Michael\\AppData\\Local\\Programs\\Python\\Python37
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949/_NO_DEBUG_HEAP/delimiter=;
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949/_NO_DEBUG_HEAP/operation=replace
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949/_NO_DEBUG_HEAP/value=1
@@ -68,7 +68,7 @@ environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.14147
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949/appendContributed=true
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.2063177661/DEPS_PATH/delimiter=;
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.2063177661/DEPS_PATH/operation=replace
-environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.2063177661/DEPS_PATH/value=C\:/dev/daw-deps
+environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.2063177661/DEPS_PATH/value=D\:/dev/daw-deps
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.2063177661/MSYS_HOME/delimiter=;
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.2063177661/MSYS_HOME/operation=remove
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.2063177661/PATH/delimiter=;
@@ -80,8 +80,8 @@ environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.14147
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.2063177661/append=true
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.2063177661/appendContributed=true
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100/DEPS_PATH/delimiter=;
-environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100/DEPS_PATH/operation=replace
-environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100/DEPS_PATH/value=C\:/dev/daw-deps
+environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100/DEPS_PATH/operation=append
+environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100/DEPS_PATH/value=D\:/dev/daw-deps
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100/MSYS_HOME/delimiter=;
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100/MSYS_HOME/operation=remove
 environment/project/cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100/PATH/delimiter=;
