@@ -78,6 +78,21 @@ public:
 		}
 		return false;
 	}
+	void setTrackBegin(int32_t track) {
+		this->selTrackRange = getTrackEnd() - track;
+		this->cursorTrack = track;
+	}
+	void setTrackEnd(int32_t track) {
+		dbgassert(track >= getTrackBegin());
+		this->selTrackRange = track - getTrackBegin();
+	}
+	void setBegin(tick_t t) {
+		this->selRange = t - getTickBegin();
+		this->cursorPos = t;
+	}
+	void setEnd(tick_t t) {
+		this->selRange = t - getTickBegin();
+	}
 	void setLeftAligned() {
 		int32_t stick = getTickBegin();
 		int32_t etick = getTickEnd();
@@ -95,12 +110,26 @@ public:
 	void setEmptySelection() {
 		*this = Cursor();
 	}
-	Cursor getLeftAligned() {
+	Cursor getLeftAligned() const {
 		Cursor cursor;
 		cursor = *this;
 		cursor.setLeftAligned();
 		return cursor;
 	}
+	Cursor expandTo(const Cursor& c) const {
+		dbgassert(!isSubtrackSelection());
+		dbgassert(!c.isSubtrackSelection());
+		Cursor cursor = *this;
+		Cursor cursor2 = c;
+		cursor.setLeftAligned();
+		cursor2.setLeftAligned();
+		cursor.setTrackBegin(math::min(cursor.getTrackBegin(), cursor2.getTrackBegin()));
+		cursor.setTrackEnd(math::max(cursor.getTrackEnd(), cursor2.getTrackEnd()));
+		cursor.setBegin(math::max(cursor.getTickBegin(), cursor2.getTickBegin()));
+		cursor.setEnd(math::max(cursor.getTickEnd(), cursor2.getTickEnd()));
+		return cursor;
+	}
+#if 0
 	Cursor operator+(const Cursor &c2) const
 	{
 		Cursor tmp;
@@ -112,6 +141,7 @@ public:
 		tmp.selSubTrackRange = math::max(getSubTrackEnd(), c2.getSubTrackEnd()) - tmp.cursorSubTrack;
 		return tmp;
 	}
+#endif
 };
 
 }

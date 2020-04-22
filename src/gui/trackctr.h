@@ -27,6 +27,12 @@
 #include "trackctr_types.h"
 
 void updateStoreLoadSubtracks(guictr_tracks* guiTracks, track_gui_entry_t* entry) ;
+struct track_selection_t {
+	int32_t trackIdxMin;
+	int32_t trackIdxMax;
+	bool isContinuous;
+	std::vector<track_t*> tracks;
+};
 class track_gui_manager_i {
 public:
 	track_gui_manager_i() = default;
@@ -42,6 +48,7 @@ public:
 	virtual const track_gui_vector_td& getTracksVisibleFlat() = 0;
 	virtual void reset() = 0;
 	virtual int32_t getTrackProjectIndex(int32_t guiIdx) const  = 0;
+	virtual bool getTrackSelection(const DAW::Cursor& cursor, track_selection_t& sel) const  = 0;
 };
 
 int32_t getPosYFirstReturnTrack(const track_gui_vector_td& tracksVisibleFlat);
@@ -558,6 +565,27 @@ public:
 			return at(guiIdx)->track->projectIdx;
 		}
 		return -1;
+	}
+	bool getTrackSelection(const DAW::Cursor& cursor, track_selection_t& sel) const override {
+		track_selection_t t;
+		t.isContinuous = true;
+		t.trackIdxMin = 0;
+		t.trackIdxMax = tracksVisibleFlat.size();
+		if (validTrackIdx(cursor.getTrackBegin())) {
+			t.trackIdxMin = at(cursor.getTrackBegin())->track->projectIdx;
+		}
+		if (validTrackIdx(cursor.getTrackEnd())) {
+			t.trackIdxMax = at(cursor.getTrackEnd())->track->projectIdx;
+		}
+		if (t.trackIdxMax-t.trackIdxMin>=0) {
+			t.tracks.reserve(math::max(1, t.trackIdxMax - t.trackIdxMin + 1));
+			for (uint32_t i = cursor.getTrackBegin(); i <= cursor.getTrackEnd() && i < tracksVisibleFlat.size(); i++) {
+				const track_gui_entry_t* const entry = tracksVisibleFlat[i];
+				t.tracks.push_back(entry->track);
+			}
+		}
+		sel = t;
+		return true;
 	}
 };
 class guictr_tracks : public guictr_base, grid_changed_cb, te_constants, public gui_scrollcontainer {

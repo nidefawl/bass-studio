@@ -266,9 +266,14 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 				desc = "Duplicate clips";
 			}
 			else if (isKC(KC_PASTE, kevt) && clipboard) {
-				int32_t idxBegin = iGuiMgr.getTrackProjectIndex(cursor.getTrackBegin());
-				int32_t idxEnd = iGuiMgr.getTrackProjectIndex(cursor.getTrackBegin()+clipboard->selTrackRange);
-				project.trackList.copyTracks(idxBegin, idxEnd, preModifyState);
+//				int32_t idxBegin = iGuiMgr.getTrackProjectIndex(cursor.getTrackBegin());
+//				int32_t idxEnd = iGuiMgr.getTrackProjectIndex(cursor.getTrackEnd() + clipboard->selTrackRange);
+//				project.trackList.copyTracks(idxBegin, idxEnd, preModifyState);
+				DAW::Cursor pasteRange = cursor;
+				track_selection_t pasteSelection;
+				pasteRange.selTrackRange = clipboard->selTrackRange;
+				iGuiMgr.getTrackSelection(pasteRange, pasteSelection);
+				project.trackList.copyTracks(pasteSelection.trackIdxMin, pasteSelection.trackIdxMax, preModifyState);
 				preModifyState.cursor = cursor;
 				cursor.setLeftAligned();
 				if (clipboard->type == clip_clipboard::ClipboardFull)
@@ -607,28 +612,27 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
 			}
 			if (selectionMoved && trNxtSelected) {
 				ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-				DAW::Cursor target = cursor + cursorBegin;
+
+				//TODO: make this more efficient: right now tracks get copied that are not modified
+				DAW::Cursor allAffected = cursor.expandTo(cursorBegin);
+
+				track_selection_t selection;
+				iGuiMgr.getTrackSelection(allAffected, selection);
+
 				int32_t trackOffset = dragStartTrackIdx - cursorBegin.cursorTrack;
 				tick_t dstPos = cursor.cursorPos;
 				int32_t dstTrack = trNxtSelected->idx;
 
-				int32_t minTrack = math::min(target.getTrackBegin(), dstTrack-trackOffset);
-				int32_t maxTrack = math::max(target.getTrackEnd(), dstTrack-trackOffset+(target.getTrackEnd()-target.getTrackBegin()));
-				//TODO: make this more efficient: dont use a bounding box on copy
-				target.cursorPos = minTrack;
-				target.selTrackRange = maxTrack - minTrack;
 				trackstate_t resizePreModifyState;
-				int32_t idxBegin = iGuiMgr.getTrackProjectIndex(target.getTrackBegin());
-				int32_t idxEnd = iGuiMgr.getTrackProjectIndex(target.getTrackEnd());
-				project.trackList.copyTracks(idxBegin, idxEnd, resizePreModifyState);
-				resizePreModifyState.cursor = target;
+				project.trackList.copyTracks(selection.trackIdxMin, selection.trackIdxMax, resizePreModifyState);
 
 				resizePreModifyState.cursor = cursorBegin;
 				std::shared_ptr<clip_clipboard> clipboard = DAW::copySelection(iGuiMgr, cursorBegin);
 				if (!isCtrl(evt.kbmods)) {
 					DAW::cutSelection(iGuiMgr, cursorBegin);
 				}
-				DAW::pasteClipboard(iGuiMgr, clipboard.get(), dstTrack - trackOffset, dstPos);
+				int32_t trackGuiIdx = dstTrack - trackOffset;
+				DAW::pasteClipboard(iGuiMgr, clipboard.get(), trackGuiIdx, dstPos);
 				DawInstance::get()->updateVisibleTrackContents();
 				showclip = false;
 				action_modify_track* track_action = new action_modify_track("Move clips", std::move(resizePreModifyState));
