@@ -53,7 +53,7 @@ void testAudioBlock() {
 	ALEPH_ASSERT_THROW(ptr.get() != nullptr);
 	AudioBlock block(numChannels, blockSize);
 
-	int32_t noiseSeed = 13;
+	uint32_t noiseSeed = 13;
 	int32_t popped = 0;
 	int32_t pushed = 0;
 	while (ptr->numBlocksToPop() < 4) {

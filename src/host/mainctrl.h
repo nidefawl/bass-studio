@@ -145,9 +145,9 @@ public:
 		out = notePitches;
 	}
 	float toFoldNote(float note) {
-		int len = (int) notePitches.size();
-		for (int i = 0; i < len; i++) {
-			if (notePitches[i] >= (int)note) {
+		auto len = notePitches.size();
+		for (uint32_t i = 0; i < len; i++) {
+			if (notePitches[i] >= (int32_t)note) {
 				return i;
 			}
 		}
@@ -164,7 +164,7 @@ public:
 		return unfoldNoteClamped(f+dir);
 	}
 	float unfoldNoteClamped(float note) {
-		int32_t iNote = math::floorF32toS32(note);
+		uint32_t iNote = math::floorF32toU32(note);
 		auto len = notePitches.size();
 		if (!len) {
 			return 0;
@@ -177,7 +177,7 @@ public:
 		return notePitches[iNote];
 	}
 	float unfoldNote(float note) {
-		int32_t iNote = math::floorF32toS32(note);
+		uint32_t iNote = math::floorF32toU32(note);
 		auto len = notePitches.size();
 		if (!len) {
 			return 0;

@@ -488,7 +488,7 @@ namespace moodycamel
 		    Semaphore(int initialCount = 0)
 		    {
 		        dbgassert(initialCount >= 0);
-		        sem_init(&m_sema, 0, initialCount);
+		        sem_init(&m_sema, 0, static_cast<unsigned int>(initialCount));
 		    }
 
 		    ~Semaphore()
@@ -591,7 +591,7 @@ namespace moodycamel
 					m_sema.wait();
 					return true;
 				}
-				if (m_sema.timed_wait(timeout_usecs))
+				if (m_sema.timed_wait(static_cast<uint64_t>(timeout_usecs)))
 					return true;
 				// At this point, we've timed out waiting for the semaphore, but the
 				// count is still decremented indicating we may still be waiting on

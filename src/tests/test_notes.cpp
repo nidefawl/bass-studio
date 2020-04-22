@@ -14,15 +14,15 @@ void testDuplicates() {
 	test_rng rng;
 	clip_t clip;
 	clip_notes_t& notes = clip.notes;
-	int nNotes = 20;
-	int nDuplicates = 3;
+	uint32_t nNotes = 20;
+	uint32_t nDuplicates = 3;
 
-	for (int i = 0; i < nNotes; i++) {
+	for (uint32_t i = 0; i < nNotes; i++) {
 		note_t note;
-		note.time = (2 + i*4) * TICKS_16TH;
+		note.time = static_cast<tick_t>(2 + i*4) * TICKS_16TH;
 		note.len = 6 * TICKS_16TH;
 		note.pitch = 36 + (rng.randI() & 0x3F);
-		for (int j = 0; j < nDuplicates; j++) {
+		for (uint32_t j = 0; j < nDuplicates; j++) {
 			notes.add(note);
 		}
 	}

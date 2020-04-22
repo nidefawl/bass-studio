@@ -29,7 +29,7 @@ public:
 };
 static void test() {
 	std::vector<TestTask> tasks(10);
-	int i = 0;
+	uint32_t i = 0;
 	for (TestTask& task : tasks) {
 		task.id = i;
 		task.a = i << 2;

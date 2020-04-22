@@ -62,6 +62,12 @@ namespace math {
 		return static_cast<int32_t>(val);
 	}
 	template<typename T>
+	inline uint32_t floorF32toU32(T a) {
+		T val = std::floor(a);
+		assert(CheckFitsTypeRange<uint32_t>(val));
+		return static_cast<uint32_t>(val);
+	}
+	template<typename T>
 	inline T clamp(T a, T tmin, T tmax) {
 		return a < tmin ? tmin : a > tmax ? tmax : a;
 	}

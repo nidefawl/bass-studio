@@ -42,7 +42,7 @@ int benchmark_waverender(audiofile_t* sample, BakeGLPath& bakedPath) {
 	constexpr float MAX_RES = 512;
 	w.scaleX = 1.0f;
 	if (samplesPerPx > MAX_RES) {
-		w.scaleX = MAX_RES/samplesPerPx;
+		w.scaleX = static_cast<float>(MAX_RES/samplesPerPx);
 		samplesPerPx = MAX_RES;
 	}
 	w.pos = {0,0};
@@ -51,9 +51,9 @@ int benchmark_waverender(audiofile_t* sample, BakeGLPath& bakedPath) {
 	dbgassert(w.size.x > 0);
 	w.sampleBegin = 0;
 	w.sampleBeginOffset = 0;
-	w.sampleEnd = lenSamples;
+	w.sampleEnd = static_cast<int64_t>(lenSamples);
 	w.samplesPerPx = samplesPerPx;
-	w.linewidth = 1.50f+math::min(0.75, math::max(0.0, zoom*32.0));
+	w.linewidth = 1.50f+math::min<float>(0.75f, math::max<float>(0.0f, static_cast<float>(zoom)*32.0f));
 	w.method = SampleMethod::sample_straight;
 	w.audioId = sample->id;
 
@@ -97,7 +97,7 @@ void tesselate(audiofile_t* sample, std::vector<std::vector<vec2>>& out) {
 	constexpr float MAX_RES = 512;
 	w.scaleX = 1.0f;
 	if (samplesPerPx > MAX_RES) {
-		w.scaleX = MAX_RES/samplesPerPx;
+		w.scaleX = static_cast<float>(MAX_RES/samplesPerPx);
 		samplesPerPx = MAX_RES;
 	}
 	w.pos = {0,0};
@@ -106,9 +106,9 @@ void tesselate(audiofile_t* sample, std::vector<std::vector<vec2>>& out) {
 	dbgassert(w.size.x > 0);
 	w.sampleBegin = 0;
 	w.sampleBeginOffset = 0;
-	w.sampleEnd = lenSamples;
+	w.sampleEnd = static_cast<int64_t>(lenSamples);
 	w.samplesPerPx = samplesPerPx;
-	w.linewidth = 1.50f+math::min(0.75, math::max(0.0, zoom*32.0));
+	w.linewidth = 1.50f+math::min<float>(0.75, math::max<float>(0.0f, static_cast<float>(zoom)*32.0f));
 	w.method = SampleMethod::sample_straight;
 	w.audioId = sample->id;
 
