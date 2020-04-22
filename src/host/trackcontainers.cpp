@@ -398,7 +398,7 @@ void trackallcontainer_t::loadPlugins(project_snapshot_t& project) {
 //}
 void trackallcontainer_t::copyTracks(int32_t trackBegin, int32_t trackEnd, trackstate_t& _out) {
 	_out.reset();
-	for (track_t* t: trackMidiAudioCtr) {
+	for (track_t* t: trackAllCtr) {
 
 		//TODO: convert trackBegin (gui idx) to track list idx
 		if (t->projectIdx >= trackBegin && t->projectIdx <= trackEnd) {
