@@ -179,7 +179,6 @@ class appwindow_overlay;
 void syncMenu(HWND hwnd, ngui::MenuBar& menubar); // menu_win32.cpp
 ngui::Menu* getUserDataFromMenu(HMENU hmenu, UINT uPos); // menu_win32.cpp
 LRESULT WIN32API_CALLBACK_TYPE appWndProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam);
-static VOID WIN32API_CALLBACK_TYPE timerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime);
 bool restoreWindowPos(HWND hwnd, windowsize* size);
 void saveWindowPos(HWND hwnd, windowsize* size);
 #define IDT_TIMER1 0
@@ -205,7 +204,6 @@ protected:
 	bool isSharedContextSlave = false;
 	bool noRawInput = false;
 #ifdef _WIN32
-//	UINT_PTR timer = 0;
 	DropTarget* dropTarget = NULL;
 	HWND hwnd = NULL;
 	WNDPROC defWndProc = NULL;
@@ -365,14 +363,7 @@ public:
 		redrawFlagged = false;
 	}
 	void killTimer() {
-#ifdef TIMER_WIN32_DEPRECATED
-		if (timer && hwnd) {
-			KillTimer(hwnd, this->timer);
-			my_printf("KillTimer\n", 0);
-		}
-#else
 		unregisterWindowTimer(this);
-#endif
 	}
 	void destroyGL() {
 		if (nanovgCtxt) {
@@ -1274,18 +1265,7 @@ void AppWndProc_disableBlockReentrant() {
 }
 #endif
 #ifdef _WIN32
-static VOID WIN32API_CALLBACK_TYPE timerProc(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime) {
-	EXC_TRY
-	appwindow* impl = NULL;
-	GLFWwindow* glfwWindow = (GLFWwindow*) GetPropW(hwnd, L"GLFW");
-	if (glfwWindow != NULL) {
-		impl = (appwindow*)glfwGetWindowUserPointer(glfwWindow);
-	}
-	if (impl != NULL && impl->isValid()) {
-		impl->onTick();
-	}
-	EXC_CATCH
-}
+
 int32_t AppWndProc_BlockReentrantEnabled = 0;
 void AppWndProc_enableBlockReentrant() {
 	AppWndProc_BlockReentrantEnabled++;
@@ -1444,11 +1424,7 @@ void appwindow::createBaseWindow(const char* title, int w, int h, GLFWwindow* sh
 #endif
 	initOGL();
 	initContext();
-#ifdef TIMER_WIN32_DEPRECATED
-	this->timer = SetTimer(hwnd, 0, 1, (TIMERPROC)timerProc);
-#else
 	registerWindowTimer(this);
-#endif
 	last = getTimeMillis();
 }
 
