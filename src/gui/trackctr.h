@@ -646,6 +646,7 @@ public:
 	void updateVisibleTrackContents();
 
 	void onChildLayoutChanged(guibase* g) {
+		updateVisibleTracks();
 		layout();
 	}
 	void gridChanged(scaled_grid& _grid) override {
