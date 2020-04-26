@@ -133,7 +133,6 @@ MouseHitEvt BaseCtrl::mouseHitEvt(MouseHitType _type) {
 	return {_type, window->getKeyMods()};
 
 }
-void getTrackFromMouseTest();
 void BaseCtrl::focusGui(guibase* gui) {
 	if (guiCaptured != nullptr) {
 		return;
