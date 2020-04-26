@@ -37,17 +37,6 @@
 #endif
 using namespace std;
 
-//
-//#if DISPLAY_WIN_MSG_STATS
-//int getNumMsg();
-//int getMsgId(int i);
-//int getMsgCnt(int i);
-//#endif
-//#if DISPLAY_HWND_DRAWS
-//int getHWNDMapSize();
-//String getHWNDName(int i);
-//int getHWNDCnt(int i);
-//#endif
 namespace GuiColor {
 void initConstants(int colorVal);
 }
@@ -82,6 +71,8 @@ gui_ctr_debug::gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType) :
 		guictr_base(),
 		impl(new gui_ctr_debug::ctr_debug_impl_t{}),
 		dgbCtrType(debugCtrType) {
+
+	msgCounterEnabled=true;
 	setBackgroundRendered(true);
 	std::vector<guibase*>& debugGuis = impl->debugGuis;
 	if (dgbCtrType != gui_ctr_debug_type_i32::TYPE_2) {

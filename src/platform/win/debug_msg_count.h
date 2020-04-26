@@ -56,3 +56,4 @@ struct win32_hwnd_msg_counter_t {
 	}
 };
 extern win32_hwnd_msg_counter_t msgCounter;
+extern bool msgCounterEnabled;

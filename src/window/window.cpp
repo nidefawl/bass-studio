@@ -1455,6 +1455,7 @@ void destroyWindowControl(window_main* windowInitialize) {
 #if HAS_MAIN_LOOP
 #include "platform/win/debug_msg_count.h"
 win32_hwnd_msg_counter_t msgCounter;
+bool msgCounterEnabled=false;
 
 #if defined(_WIN32) && BUILD_VSTHOST
 namespace vst_window_mgr {
@@ -1622,14 +1623,15 @@ int startApplication(int argc, char* argv[]) {
 						break;
 	            }
 
-//
-//	            msgCounter.incrMessage(msg.message);
-//				if (msg.message == WM_PAINT)
-//				{
-//					char clsName_v[256];
-//					GetClassNameA(msg.hwnd, clsName_v, 256);
-//					msgCounter.incrPaints(clsName_v);
-//				}
+	            if (msgCounterEnabled) {
+		            msgCounter.incrMessage(msg.message);
+					if (msg.message == WM_PAINT)
+					{
+						char clsName_v[256];
+						GetClassNameA(msg.hwnd, clsName_v, 256);
+						msgCounter.incrPaints(clsName_v);
+					}
+	            }
 	        }
 	    }
 		glfwUpdateInternals();
