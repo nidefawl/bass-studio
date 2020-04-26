@@ -251,7 +251,7 @@ void guiplugin::handleDraggedMove(MouseEvent& evt) {
 		auto& sel = MainCtrl::get()->getPluginSel();
 		if (sel.hasSelection()) {
 			setDraggedPluginsUI(sel.pluginCtr->dragged, sel);
-			MainCtrl::get()->setDragged(&sel.pluginCtr->dragged);
+			parentCtrl->setDragged(&sel.pluginCtr->dragged);
 			hasDragged = true;
 		}
 	} else {

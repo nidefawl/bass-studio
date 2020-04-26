@@ -80,7 +80,7 @@ void guictr_tabbed::handleDraggedBegin(MouseEvent& evt) {
 }
 void guictr_tabbed::handleDraggedMove(MouseEvent& evt) {
 	if (!hasDragged && (evt.dragDistance->x != 0 || evt.dragDistance->y != 0)) {
-		MainCtrl::get()->setDragged(this);
+		parentCtrl->setDragged(this);
 		hasDragged = true;
 	}
 }

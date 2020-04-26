@@ -1235,9 +1235,6 @@ std::shared_ptr<project_file> DawInstance::createProjectFile() {
 	file->layout.scrollOffsetX = mainCtrl->view->ctr_tracks.getScrollOffset();
 	return file;
 }
-void DawCtrl::setDragged(guibase* g) {
-	guiDragged = g;
-}
 bool DawInstance::setProjectToLoad(std::shared_ptr<project_file> file, int flags) {
 	projectToLoad = std::make_shared<project_to_load_t>(project_to_load_t{std::move(file), flags});
 	return true;

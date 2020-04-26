@@ -431,7 +431,6 @@ public:
 
 	void objectDragMove(guibase* g, MouseEvent& evt);
 	void objectDragRelease(guibase* g, MouseEvent& evt);
-	void setDragged(guibase* g);
 	void initApp(int argc, char* argv[]) override;
 	bool init(window_main* window, NVGcontext* nanovg) override;
 

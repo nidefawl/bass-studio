@@ -170,6 +170,9 @@ public:
 
 	}
 	virtual ivec2 toScreenSpace(ivec2 p) = 0;
+	void setDragged(guibase* g) {
+		guiDragged = g;
+	}
 };
 class AppCtrl : public BaseCtrl {
 protected:
