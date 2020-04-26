@@ -32,7 +32,7 @@ namespace ngui {
 	private:
 		Menu& makeChild_() {
 			if (entries.size() == 0) {
-				entries.reserve(16);
+				entries.reserve(128);
 			} else if (entries.capacity()-entries.size() < 1) {
 				throw new applogicexception("out of menu space");
 			}
