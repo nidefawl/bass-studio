@@ -27,7 +27,6 @@ void guictxtmenu_notrack::clicked(int _id) {
 			// now we make sure not to access heap (this) after this point
 			String path;
 			if (promptUserFilePath(window, 0, vFILE_TYPES_TRACKSNAPSHOT, path)) {
-	        	trackcontainer_snapshot_t snapshot;
 	        	std::shared_ptr<trackcontainer_snapshot_t> ctr = loadTrackContainer(path);
 	        	dbgassert(ctr);
 	        	if (ctr) {
