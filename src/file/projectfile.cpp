@@ -1,4 +1,5 @@
 #include "projectfile.h"
+#include "projectfile-snapshot.h"
 #include <vector>
 #include <fstream>
 #include <sstream>
@@ -25,7 +26,7 @@
 
 using namespace cereal;
 #define LOG_EX(x) \
-	my_printf("Exc while loading/saving: %s\n", x)
+	log_printf("Exc while loading/saving: %s\n", x)
 template<class Archive>
 void serialize(Archive & archive, trackcontainer_snapshot_t & m)
 {
@@ -407,11 +408,11 @@ std::shared_ptr<project_file> loadProjectFile(String& path) {
 	}
 	catch (const FileIOException& e)
 	{
-		my_printf("loadProject File IO exception: %s (%d)\n", e.what(), e.GetErrorCode());
+		log_printf("loadProject File IO exception: %s (%d)\n", e.what(), e.GetErrorCode());
 	}
 	catch (const std::exception& e)
 	{
-		my_printf("loadProject exception: %s\n", e.what());
+		log_printf("loadProject exception: %s\n", e.what());
 	}
     return nullptr;
 }
@@ -432,11 +433,11 @@ bool saveProject(std::shared_ptr<project_file> f, const String& path) {
 	}
 	catch (const FileIOException& e)
 	{
-		my_printf("saveProject File IO exception: %s (%d)\n", e.what(), e.GetErrorCode());
+		log_printf("saveProject File IO exception: %s (%d)\n", e.what(), e.GetErrorCode());
 	}
 	catch (const std::exception& e)
 	{
-		my_printf("saveProject exception: %s\n", e.what());
+		log_printf("saveProject exception: %s\n", e.what());
 	}
 	return false;
 }
@@ -456,13 +457,21 @@ std::shared_ptr<trackcontainer_snapshot_t> loadTrackContainer(const String& path
 	}
 	catch (const FileIOException& e)
 	{
-		my_printf("loadTrackContainer File IO exception: %s (%d)\n", e.what(), e.GetErrorCode());
+		log_printf("loadTrackContainer File IO exception: %s (%d)\n", e.what(), e.GetErrorCode());
 	}
 	catch (const std::exception& e)
 	{
-		my_printf("loadTrackContainer exception: %s\n", e.what());
+		log_printf("loadTrackContainer exception: %s\n", e.what());
 	}
     return nullptr;
+}
+
+void writeStringStream(const String& path, Stringstream& sstream) {
+
+	Stringstream::pos_type len = sstream.tellp();
+	std::vector<uint8_t> buf(len);
+	buf.assign(std::istreambuf_iterator<char>(sstream), std::istreambuf_iterator<char>());
+	WriteFileVector(path, buf);
 }
 bool saveTrackContainer(const trackcontainer_snapshot_t& container, const String& path) {
 
@@ -473,19 +482,62 @@ bool saveTrackContainer(const trackcontainer_snapshot_t& container, const String
 			ar(make_nvp("tracks", container));
 		}
 		sstream.flush();
-		Stringstream::pos_type len = sstream.tellp();
-		std::vector<uint8_t> buf(len);
-		buf.assign(std::istreambuf_iterator<char>(sstream), std::istreambuf_iterator<char>());
-		WriteFileVector(path, buf);
+		writeStringStream(path, sstream);
 		return true;
 	}
 	catch (const FileIOException& e)
 	{
-		my_printf("saveTrackContainer File IO exception: %s (%d)\n", e.what(), e.GetErrorCode());
+		log_printf("saveTrackContainer File IO exception: %s (%d)\n", e.what(), e.GetErrorCode());
 	}
 	catch (const std::exception& e)
 	{
-		my_printf("saveTrackContainer exception: %s\n", e.what());
+		log_printf("saveTrackContainer exception: %s\n", e.what());
 	}
 	return false;
+}
+
+bool savePluginSnapshot(const plugin_snapshot_t& snapshot, const String& path) {
+
+	try {
+		Stringstream sstream;
+		{
+			JSONOutputArchive ar(sstream);
+			ar(make_nvp("plugin", snapshot));
+		}
+		sstream.flush();
+		writeStringStream(path, sstream);
+		return true;
+	}
+	catch (const FileIOException& e)
+	{
+		log_printf("savePluginSnapshot File IO exception: %s (%d)\n", e.what(), e.GetErrorCode());
+	}
+	catch (const std::exception& e)
+	{
+		log_printf("savePluginSnapshot exception: %s\n", e.what());
+	}
+	return false;
+}
+
+std::shared_ptr<plugin_snapshot_t> loadPluginSnapshot(const String& path) {
+	try {
+		std::vector<uint8_t> vec;
+		ReadFileVector(path, vec);
+		Stringstream sstream(std::string(vec.begin(), vec.end()));
+		std::shared_ptr<plugin_snapshot_t> snapshot = std::make_shared<plugin_snapshot_t>();
+		{
+			JSONInputArchive ar(sstream);
+			ar(make_nvp("plugin", *snapshot.get()));
+		}
+		return snapshot;
+	}
+	catch (const FileIOException& e)
+	{
+		log_printf("loadPluginSnapshot File IO exception: %s (%d)\n", e.what(), e.GetErrorCode());
+	}
+	catch (const std::exception& e)
+	{
+		log_printf("loadPluginSnapshot exception: %s\n", e.what());
+	}
+    return nullptr;
 }

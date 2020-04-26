@@ -225,6 +225,7 @@ public:
 	virtual guibase* getDraggedControl() override;
 	void getEffects(std::vector<effectbase*>& out);
 	virtual bool isSelected() override;
+	void handleRightClick(MouseEvent& evt);
 };
 class guictr_pluginview : public guictr_base {
 public:

@@ -14,7 +14,10 @@ struct project_file {
 };
 bool saveProject(std::shared_ptr<project_file> f, const String& path);
 std::shared_ptr<project_file> loadProjectFile(String& path);
+void writeStringStream(const String& path, Stringstream& sstream);
 
 
 bool saveTrackContainer(const trackcontainer_snapshot_t& container, const String& path);
 std::shared_ptr<trackcontainer_snapshot_t> loadTrackContainer(const String& path);
+
+

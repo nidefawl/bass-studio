@@ -40,6 +40,7 @@
 #include "guicontextmenu_daw.h"
 #include "guiplugin.h"
 #include "dragdrop.h"
+#include "projectfile-snapshot.h"
 
 using Table::tbl;
 using Table::tbl_row_t;
@@ -93,7 +94,7 @@ bool guictr_plugins::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 				return true;
 			}
 		}
-		if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
+		if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT || evt.type == MouseHitType::MOUSE_RIGHT) {
 			evt.requestFocus(this);
 			return true;
 		}
@@ -106,6 +107,62 @@ bool guictr_plugins::isSelected() {
 	return parent && parent->isSelected();
 }
 
+effect_deferred* loadPluginDeferred(const plugin_snapshot_t& snapshot);
+class guictxtmenu_pluginctr : public guictxtmenu {
+public:
+	static constexpr int CMD_LOAD_PLUGIN = 1;
+	audio_stage_t* const stage;
+	guictxtmenu_pluginctr(audio_stage_t* _stage) : stage(_stage) {
+		this->size.x = 260;
+		addEntry(new ctxtmenu_entry("Load plugin", CMD_LOAD_PLUGIN));
+	}
+	void clicked(int _id) {
+		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+		if (_id == CMD_LOAD_PLUGIN) {
+
+			auto window = parentCtrl->window;
+			// promptUserFilePath initiates a native dialog that would close this context menu
+			// so we do it ourself controlled here
+			closeContextMenu(); // deletes this
+			// now we make sure not to access heap (this) after this point
+			String path;
+			if (promptUserFilePath(window, 0, vFILE_TYPE_PLUGINSNAPSHOT, path)) {
+	        	std::shared_ptr<plugin_snapshot_t> pluginSnapshot = loadPluginSnapshot(path);
+	        	dbgassert(pluginSnapshot);
+	        	if (pluginSnapshot) {
+	        		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+
+	        		auto effect = loadPluginDeferred(*pluginSnapshot.get());
+	        		if (effect) {
+	        			vsthost* host = vsthost::getInstance();
+
+	        			stage->deferredEffects.push_back(effect);
+	        			host->addDeferredEffect(effect);
+	        			effect->load(host);
+	        			host->insertNewPlugin(stage, effect, -2); // insert at end
+	        			dbgassert(effect->trackImpl == stage);
+	        			dbgassert(stage->effects.size());
+	        		}
+	        	}
+        	}
+		}
+		closeContextMenu();
+	}
+};
+void guictr_plugins::handleRightClick(MouseEvent& evt) {
+//	handleDraggedBegin(evt);
+//	const int32_t hpt = theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT);
+//	bool b = false;
+//	if (isHorizontalTitle) {
+//		b = evt.relMousepos.y < hpt;
+//	} else {
+//		b = evt.relMousepos.x < hpt;
+//	}
+	if (this->stage) {
+		parentCtrl->openContextMenu(new guictxtmenu_pluginctr(this->stage), evt.mousepos);
+	}
+
+}
 
 void guictr_plugins::onAdded() {
 	if (parent) {
@@ -914,3 +971,4 @@ void action_remove_modules::redo(DawInstance *ctrl) {
 	MainCtrl::getPluginCtr()->relayout();
 	weOwn = true;
 }
+

@@ -22,11 +22,11 @@ class guiplugin : public guictr_base {
 public:
 	effectbase* const effect;
 	String text;
-	guibuttontoggle buttonBypass; //TODO: use add() on controls
-	guibuttontoggle buttonDelete; //TODO: use add() on controls
-	guibuttontoggle buttonLayout; //TODO: use add() on controls
-	guibuttontoggle buttonSave; //TODO: use add() on controls
-	gui_trackmeter<16000,2> meter; //TODO: use add() on controls
+	guibuttontoggle buttonBypass;
+	guibuttontoggle buttonDelete;
+	guibuttontoggle buttonLayout;
+	guibuttontoggle buttonSave;
+	gui_trackmeter<16000,2> meter;
 	float titlePosX = 0;
 	bool hasDragged=false;
 	bool isHorizontalTitle=true;
@@ -100,7 +100,7 @@ public:
 	~guivstplugin();
 	vstplugin* const vst;
 	guidropdownprogram dropdownProgram;
-	gui_list params; //TODO: use add() on controls
+	gui_list params; //TODO: use add() on control
 	guibuttontoggle buttonOpenEditor; //TODO: use add() on controls
 
 	/* holds view controller for internal vstplugins with custom gui (non-steinberg api) */

@@ -37,8 +37,7 @@
 #include "../host/vst_window.h"
 #include "automatable.h"
 #include "debugproperties.h"
-
-
+#include "projectfile-snapshot.h"
 
 using Table::tbl;
 using Table::tbl_row_t;
@@ -119,6 +118,19 @@ void guiplugin::buttonClicked(guibase* _button) {
 	if (_button == &buttonBypass) {
     	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 		pluginUpdateParamBypass(effect, 2);
+	}
+	if (_button == &buttonSave) {
+    	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+
+		plugin_snapshot_t ps;
+		effect->makeSnapshot(ps, true);
+		String path;
+		auto window = MainCtrl::get()->window; // hacky
+		if (promptUserFilePath(window, 1, vFILE_TYPE_PLUGINSNAPSHOT, path)) {
+			savePluginSnapshot(ps, path);
+		}
+		return;
+
 	}
 	if (_button == &buttonDelete) {
     	removePlugin(effect);
