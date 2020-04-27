@@ -380,7 +380,7 @@ bool validateProjectFile(std::shared_ptr<project_file> projectfile) {
 				int32_t globalId = pluginsnapshot.projectGlobalId;
 				if (std::binary_search(vec.begin(), vec.end(), globalId)) {
 					log_printf("invalid project: duplicate plugin global id %d found\n", globalId);
-					return false;
+//					return false;
 				}
 				vec.push_back(globalId);
 			}
