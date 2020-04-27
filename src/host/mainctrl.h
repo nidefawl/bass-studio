@@ -465,6 +465,8 @@ public:
 	virtual void layoutView() = 0;
 	virtual void fixCursor() = 0;
 	virtual bool isZooming() = 0;
+	view_mode_t getViewMode();
+	virtual void setViewMode(view_mode_t mode) = 0;
 };
 class MainCtrl : public DawCtrl
 {
@@ -488,8 +490,6 @@ public:
 
 	void postInit() override;
 	void onTick() override;
-	view_mode_t getViewMode();
-	void setViewMode(view_mode_t mode);
 	void setupView() override;
 	bool isClipEditorVisible();
 	bool isPluginViewVisible();
@@ -516,6 +516,7 @@ public:
 	void layoutView() override;
 	void fixCursor() override;
 	bool isZooming() override;
+	void setViewMode(view_mode_t mode) override;
 };
 
 class CompanionCtrl : public DawCtrl
@@ -547,4 +548,5 @@ public:
 	void layoutView() override;
 	void fixCursor() override;
 	bool isZooming() override;
+	void setViewMode(view_mode_t mode) override;
 };

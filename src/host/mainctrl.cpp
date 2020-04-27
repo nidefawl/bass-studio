@@ -246,15 +246,15 @@ public:
 class DawViewContainersCompanion : public DawViewContainers {
 public:
 	guictr_menubar ctr_menu;
-//	guictr_nodes ctr_nodes;
+	guictr_nodes ctr_nodes;
 	guictr_tracks ctr_tracks2;
 	guictr_plugins ctr_plugins;
 	Splitter splitterCenter;
 	DawViewContainersCompanion(DawCtrl* const _dawCtrl, ngui::MenuBar& menubar, DAW::Cursor& _cursor, project_t& _project, project_globals_t& _projectGlobals, scaled_grid& grid, clip_view& clipView, dragdrop_midifile& dragdropclip)
 	  :
 	  ctr_menu(menubar),
-//	  ctr_nodes(_cursor, project, dragdropclip),
 	  ctr_tracks2(_dawCtrl, _cursor, _project, _projectGlobals, grid, dragdropclip),
+	  ctr_nodes(_cursor, _project, dragdropclip),
 	  splitterCenter(0, 0.8f)
 	{
 		splitterCenter.setMinMax(0.2f, 0.86f);
@@ -279,10 +279,10 @@ public:
 		int hPlugins = splitterCenter.rightOrBottom(hCenter);
 		splitterCenter.pos = ivec2(winX, winY+hTrackCtr-5);
 		splitterCenter.size = ivec2(winW, 10);
-		centerCtr.size = { winW, hTrackCtr };
+		ctr_nodes.size = centerCtr.size = { winW, hTrackCtr };
 		ctr_plugins.size = { winW, hPlugins };
 
-		centerCtr.pos = { winX, winY };
+		ctr_nodes.pos = centerCtr.pos = { winX, winY };
 		ctr_plugins.pos = { winX, centerCtr.bottom() };
 //		ctr_test.setSnapSides(ivec4(0, 0, 0, 1));
 //		statusbar.setSnapSides(ivec4(0, 1, 0, 0));
@@ -441,7 +441,11 @@ void CompanionCtrl::setupView() {
 	for (guictr_base *ctr : containers) {
 		ctr->setControl(this);
 	}
-
+	view->ctr_plugins.setControl(this);
+	view->ctr_tracks2.setControl(this);
+	view->ctr_nodes.setControl(this);
+	view->ctr_tracks2.setVisible(containers[0] == &view->ctr_tracks2);
+	view->ctr_nodes.setVisible(containers[0] == &view->ctr_nodes);
 
 }
 void MainCtrl::setupView() {
@@ -473,7 +477,23 @@ void MainCtrl::setViewMode(view_mode_t mode) {
 	view->ctr_nodes.refresh();
 	focusGui(containers[0]);
 }
-view_mode_t MainCtrl::getViewMode() {
+void CompanionCtrl::setViewMode(view_mode_t mode) {
+	this->viewMode = mode;
+	switch (mode) {
+	case MIXER:
+	case TRACK_TIMELINE:
+		containers[0] = &view->ctr_tracks2;
+		break;
+	case NODE_EDITOR:
+		containers[0] = &view->ctr_nodes;
+		break;
+	}
+	view->ctr_tracks2.setVisible(containers[0] == &view->ctr_tracks2);
+	view->ctr_nodes.setVisible(containers[0] == &view->ctr_nodes);
+	view->ctr_nodes.refresh();
+	focusGui(containers[0]);
+}
+view_mode_t DawCtrl::getViewMode() {
 	return this->viewMode;
 }
 void MainCtrl::showPluginView() {
@@ -502,8 +522,8 @@ void MainCtrl::resetMouseContext() {
 }
 void CompanionCtrl::resetMouseContext() {
 	DawCtrl::resetMouseContext();
-//	if (view)
-//		view->ctr_nodes.reset();
+	if (view)
+		view->ctr_nodes.reset();
 }
 
 void DawInstance::unloadProject() {
@@ -1455,9 +1475,18 @@ void CompanionCtrl::layoutView(int32_t w, int32_t h) {
 	w = math::max(640, w);
 	h = math::max(480, h);
 	viewContainers->layout(w, h);
+
+	view->ctr_tracks2.layout();
+	view->ctr_nodes.layout();
 	for (guictr_base *ctr : containers) {
+		if(ctr == &view->ctr_tracks2)
+			continue;
+		if(ctr == &view->ctr_nodes)
+			continue;
 		ctr->layout();
 	}
+
+
 }
 
 void DawCtrl::relayout(int32_t w, int32_t h) {
@@ -1693,6 +1722,11 @@ namespace STLVectorDebugTracking {
 #endif
 
 bool MainCtrl::processGlobalKeyevent(KeyEvent& event) {
+	return DawCtrl::processGlobalKeyevent(event);
+
+}
+bool DawCtrl::processGlobalKeyevent(KeyEvent& event) {
+
 	if (event.type != KeyEventType::K_RELEASE) {
 		if (event.keyCode == KEY_TAB) {
 			switch (this->viewMode) {
@@ -1707,11 +1741,6 @@ bool MainCtrl::processGlobalKeyevent(KeyEvent& event) {
 			return true;
 		}
 	}
-	return DawCtrl::processGlobalKeyevent(event);
-
-}
-bool DawCtrl::processGlobalKeyevent(KeyEvent& event) {
-
 	if (event.type == KeyEventType::K_PRESS) {
 		lastKey = getKeyName(event.scancode);
 		if (!lastKey.length()) {
@@ -1756,8 +1785,8 @@ bool DawCtrl::processGlobalKeyevent(KeyEvent& event) {
 		}
 		if (isKC(KC_OPEN, event)) {
 			menuCommand(CMD_NOARG(CMD_FILE_OPEN));
-			return true;
-		}
+				return true;
+			}
 		if (isKC(KC_SAVE, event)) {
 			menuCommand(CMD_NOARG(CMD_FILE_SAVE));
 			return true;
@@ -1774,7 +1803,7 @@ bool DawCtrl::processGlobalKeyevent(KeyEvent& event) {
 			menuCommand(CMD_NOARG(CMD_GUI_GLOBAL_ZOOM_DECREASE));
 			return true;
 		}
-		if (isKC({ 0, KEY_TAB, nullptr }, event)) {
+		if (isKC({ 0, KEY_F2, nullptr }, event)) {
 			menuCommand(CMD_NOARG(CMD_PREFERENCES));
 			return true;
 		}
