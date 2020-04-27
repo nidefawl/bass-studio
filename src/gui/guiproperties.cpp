@@ -449,6 +449,7 @@ public:
 		}
 	}
 	void onTick(AppCtrl* appctrl) {
+		dbgassert(0);
 //		layout();
 	}
 	void layout();
@@ -596,16 +597,16 @@ void guiproperties_table<guiproperties_t>::validateReferences()  {
 }
 template <>
 void guiproperties_table<guiproperties_t>::onTick(AppCtrl* appctrl) {
-//	guibase* ref = ptr->safeRef.handler ? ptr->safeRef.handler->safeRefGet(ptr->safeRef.refId) : nullptr;
-//	auto ptrNew = appctrl->getGuiFocused();
-//	if (ref != ptrNew) {
-//		if (ptrNew) {
-//			ptr->safeRef = ptrNew->makeSafeRef();
-//		} else {
-//			ptr->safeRef = SafeRef<guibase>();
-//		}
-//		layout();
-//	}
+	guibase* ref = safeRefGet(ptr->safeRef);
+	auto ptrNew = appctrl->getGuiFocused();
+	if (ref != ptrNew) {
+		if (ptrNew) {
+			ptr->safeRef = ptrNew->makeSafeRef();
+		} else {
+			ptr->safeRef = SafeRef<guibase>();
+		}
+	}
+	layout();
 }
 template <>
 void guiproperties_table<guiproperties_t>::setDebugPropertyHandle(void *vPtr)  {
