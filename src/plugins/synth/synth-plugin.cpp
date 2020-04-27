@@ -1456,19 +1456,18 @@ class guicontainer_plugin_synth : public guictr_base {
 		Parameters param;
 	};
 	std::vector<_synth_gui_param_knob> knobs;
-//	guiknob_pluginparam knobParam0;
-
+	guiknob_pluginparam knobParam0;
 public:
 	guicontainer_plugin_synth()
-	: guictr_base() {
+	: guictr_base(),
+		 knobParam0(PARAM_OFFSET_EXTERNAL+(int)Parameters::FilterCutoff, (int)Parameters::FilterCutoff) {
 		setBackgroundRendered(true);
 		padding = 4;
 		margin = 4;
-//		 knobParam0(PARAM_OFFSET_EXTERNAL+Parameters::FilterCutoff, Parameters::FilterCutoff)
-//		add(&knobParam0);
+		add(&knobParam0);
 	}
 	~guicontainer_plugin_synth() {
-//		remove(&knobParam0);
+		remove(&knobParam0);
 	}
 	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
 		if (this->contains(mpos)) {
@@ -1488,8 +1487,8 @@ public:
 
 	guiknob_pluginparam* getKnobFromParameter(int32_t index) {
 		switch (index) {
-//			case Parameters::FilterCutoff:
-//				return &knobParam0;
+			case Parameters::FilterCutoff:
+				return &knobParam0;
 		}
 		return nullptr;
 	}
@@ -1503,16 +1502,16 @@ public:
 	void onGuiOpen(AudioEffect* eff) {
 		this->curEffect = dynamic_cast<PluginVST2_Synth*>(eff);
 		assert(this->curEffect);
-//		knobParam0.setAudioEffect(eff);
+		knobParam0.setAudioEffect(eff);
 	}
 	void onGuiClose(AudioEffect* eff) {
 		this->curEffect = nullptr;
 	}
 	void setVSTPlugin(vstplugin* vstHostSide)  {
 		this->vstHostSide = vstHostSide;
-//	#if BUILD_VSTHOST
-//		knobParam0.setEffectInstance(vstHostSide);
-//	#endif
+	#if BUILD_VSTHOST
+		knobParam0.setEffectInstance(vstHostSide);
+	#endif
 	}
 	void onTick(AppCtrl* ctrl) {
 		for (guibase* gui : guis) {
@@ -1572,8 +1571,8 @@ public:
 		float lineh;
 		nvgTextMetrics(vg, NULL, NULL, &lineh);
 		int y = INSET_CTR_SPACING;
-//		int x = this->knobParam0.right()+INSET_CTR_SPACING;
-		int x = INSET_CTR_SPACING;
+		int x = this->knobParam0.right()+INSET_CTR_SPACING;
+//		int x = INSET_CTR_SPACING;
 		for (String& s : strings) {
 			nvgText(vg, x, y, StringAsCStr(s), NULL);
 			y += lineh;
@@ -1602,11 +1601,11 @@ public:
 
 	}
 	void layout() {
-////		ivec2 cs = getSizeContent();
-//		const int inset = 4;
-//		const int knobSize = math::max(32, (cs.x-inset*3)/2);
-//		knobParam0.size = ivec2(64, 90);
-//		knobParam0.pos = ivec2(inset);
+		ivec2 cs = getSizeContent();
+		const int inset = 4;
+		const int knobSize = math::max(32, (cs.x-inset*3)/2);
+		knobParam0.size = ivec2(64, 90);
+		knobParam0.pos = ivec2(inset);
 		for (guibase* gui : guis) {
 			gui->layout();
 		}

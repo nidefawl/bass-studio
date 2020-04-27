@@ -21,6 +21,7 @@ constant_t COL_KNOB("COL_KNOB", 0xff00ddff);
 constant_t COL_KNOB_IND("COL_KNOB_IND", 0xffffffff);
 constant_t COL_AUTOMATED("COL_AUTOMATED", 0xFFEF62DF);
 }
+
 using Table::tbl;
 using Table::tbl_row_t;
 using Table::table_entry_t;
@@ -52,12 +53,12 @@ guictxtmenu_base* guiknob::getTooltip(AppCtrl* appctrl) {
 }
 
 bool guiknob::isAutomated() {
-#if BUILD_VSTHOST
+//#if BUILD_VSTHOST
 	if (paramAutomatable) {
 		auto at = paramAutomatable->getRegisteredAutomation(paramIdx);
 		return at && at->isAutomated();
 	}
-#endif
+//#endif
 	return false;
 }
 void guiknob::render(NVGcontext* vg) {
@@ -191,8 +192,8 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS) {
 
 }
 
-#if BUILD_VSTHOST
 void guiknob::setAutomationHandlers() {
+	#if BUILD_VSTHOST
 	fnGetValue = [this] () {
 		if (paramAutomatable) {
 			return paramAutomatable->getParamValue(paramIdx);
@@ -219,8 +220,8 @@ void guiknob::setAutomationHandlers() {
 			MainCtrl::get()->showAutomation(paramAutomatable->getTrack(), paramAutomatable, paramIdx);
 		}
 	};
+	#endif
 }
-#endif
 
 
 void guiknob_labeled_base::layout() {
