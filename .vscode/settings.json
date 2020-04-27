@@ -16,5 +16,6 @@
         "shared_mutex": "cpp",
         "regex": "cpp",
         "optional": "cpp"
-    }
+    },
+    "cmake.configureOnOpen": false
 }
