@@ -732,7 +732,7 @@ bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, co
 			}
 			track_audio_src src;
 			auto& buff = inputChannel.stage.isInput ? stage->input : stage->outputPost;
-			for (int i = 0; i < buff.channels; i++) {
+			for (uint32_t i = 0; i < buff.channels; i++) {
 				src.channels.push_back(buff.buf[i]);
 			}
 			src.sampleFormat = stage->sampleFormat;
@@ -1017,7 +1017,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 		int64_t timeProcessing = 0;
 
 
-		for (int i = 0; i < numBlocksInternal; i++) {
+		for (uint32_t i = 0; i < numBlocksInternal; i++) {
 			int32_t samplePosProcess = sample + sampleFormat.blockSize*i;
 			double tickPosProcess = posDouble + ticksPerBlock*i;
 			int32_t pre = resamplerInput->numBlocksToPop();
@@ -1373,7 +1373,7 @@ void vsthost::finishTreadTasks(std::vector<audiostageid_i32>& processFinishedSta
 							std::rethrow_exception(eptr);
 						}
 						catch(const std::exception &ex) {
-							printf("task[%d] had exception: %s\n", i, ex.what());
+							printf("task[%d] had exception: %s\n", (int)i, ex.what());
 						}
 					}
 					vsthost::track_block_processing_task_t procTask = task.getTask();

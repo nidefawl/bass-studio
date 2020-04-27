@@ -77,7 +77,7 @@ static int audioCallback(const void *inputBuffer, void *outputBuffer,
 //			static uint32_t s22 = 0;
 //			block->output->fillNoise(++s22);
 			int32_t channels = math::min<int32_t>(block->output->channels, stream->nOutputChannels);
-			for (uint32_t i = 0; i < channels; i++) {
+			for (int32_t i = 0; i < channels; i++) {
 				float* channel = block->output->buf[i];
 				memcpy(outputs[i], channel, framesPerBuffer * sizeof(float));
 			}
@@ -101,7 +101,7 @@ static int audioCallback(const void *inputBuffer, void *outputBuffer,
 		host->bufferUnderuns++;
 //		dsp_util::fillSilence(inputs, framesPerBuffer);
 	}
-	for (uint32_t i = numOutChannelsWritten; i < stream->nOutputChannels; i++) {
+	for (int32_t i = numOutChannelsWritten; i < stream->nOutputChannels; i++) {
 		memset(outputs[i], 0, framesPerBuffer * sizeof(float));
 	}
 	dsp_util::fillSaturate(outputs, stream->nOutputChannels, framesPerBuffer);
@@ -117,9 +117,9 @@ static int audioCallback(const void *inputBuffer, void *outputBuffer,
 	} else {
 		bufferWrite->output->realloc(framesPerBuffer);
 		if (inputs) {
-			uint32_t nChannels = math::min<int32_t>(bufferWrite->output->channels, stream->nInputChannels);
+			int32_t nChannels = math::min<int32_t>(bufferWrite->output->channels, stream->nInputChannels);
 			bufferWrite->output->copyFrom(inputs, framesPerBuffer, nChannels);
-			for (uint32_t i = nChannels; i < stream->nInputChannels; i++) {
+			for (int32_t i = nChannels; i < stream->nInputChannels; i++) {
 				memset(bufferWrite->output->buf[i], 0, bufferWrite->output->samples * sizeof(float));
 			}
 	//		logEveryMsec(124, 3000, StringFormat("stream IN:%s\n", StringAsCStr(stream->inputName)));

@@ -197,7 +197,6 @@ int runCommandLineHost(int argc, const char* argv[]) {
 //    daw_tls::tlsinstance& tls = daw_tls::getTls();
 //    tls.host = audiohost.get();
 #ifdef _WIN32
-    MSG msg;
     WNDCLASS wc;
 
     wc.style         = CS_HREDRAW | CS_VREDRAW;

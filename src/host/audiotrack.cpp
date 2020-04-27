@@ -83,7 +83,7 @@ int32_t audiotrack_t::convertToSamples(vsthost* host) {
 				resized = true;
 			}
 			bool reused = false;
-			for (int j = 0; j < block.channels; j++) {
+			for (uint32_t j = 0; j < block.channels; j++) {
 				float *srcPtr = block.buf[j];
 				size_t srcSize = block.samples;
 				channels[j].resize(srcSize);

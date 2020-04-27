@@ -579,7 +579,7 @@ public:
 		}
 		if (t.trackIdxMax-t.trackIdxMin>=0) {
 			t.tracks.reserve(math::max(1, t.trackIdxMax - t.trackIdxMin + 1));
-			for (uint32_t i = cursor.getTrackBegin(); i <= cursor.getTrackEnd() && i < tracksVisibleFlat.size(); i++) {
+			for (int32_t i = math::max<int32_t>(0, cursor.getTrackBegin()); i <= cursor.getTrackEnd() && i < tracksVisibleFlat.size(); i++) {
 				const track_gui_entry_t* const entry = tracksVisibleFlat[i];
 				t.tracks.push_back(entry->track);
 			}

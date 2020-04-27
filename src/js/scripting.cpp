@@ -41,7 +41,6 @@ duk_ret_t js_testClass_dtor(duk_context *ctx)
 }
 
 int getTrackInfo(duk_context *ctx) {
-	int i;
 	const char* arg0 = 0;
 	//int n = duk_get_top(ctx);  //arg count
 
@@ -98,7 +97,6 @@ int getTrackInfo(duk_context *ctx) {
 int getAudioGraph(duk_context *ctx) {
 
 	try {
-		int i;
 		const char* arg0 = 0;
 		//int n = duk_get_top(ctx);  //arg count
 

@@ -719,7 +719,7 @@ track_t* audio_stage_t::getTrack() {
 }
 void track_impl_t::addAudio(const AudioBlock& src, float fGain) {
 	const auto numChannels = math::min(src.channels, input.channels);
-	for (auto channel = 0; channel < numChannels; channel++) {
+	for (auto channel = 0U; channel < numChannels; channel++) {
 		float* pChSrc = src.buf[channel];
 		float* pChDst = input.buf[channel];
 		dbgassert(src.samples == input.samples);
@@ -759,7 +759,7 @@ void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t 
 			if (srcStartOffset >= (int32_t)sample->nSamples)
 				continue;
 			dbgassert(sample->samples.size() > 0);
-			for (int i = 0; i < this->input.channels; i++) {
+			for (uint32_t i = 0; i < this->input.channels; i++) {
 				float *dst = buffer[i];
 				auto& srcVector = i >= (int)sample->samples.size() ? sample->samples[sample->samples.size()-1] : sample->samples[i];
 				int32_t len = math::min((int32_t)blockSize-math::max(0, -srcStartOffset),

@@ -26,16 +26,16 @@ public:
 	tick_t getTickEnd() const {
 		return math::max(cursorPos, cursorPos + selRange);
 	}
-	tick_t getTrackBegin() const {
+	int32_t getTrackBegin() const {
 		return math::min(cursorTrack, cursorTrack + selTrackRange);
 	}
-	tick_t getTrackEnd() const {
+	int32_t getTrackEnd() const {
 		return math::max(cursorTrack, cursorTrack + selTrackRange);
 	}
-	tick_t getSubTrackBegin() const {
+	int32_t getSubTrackBegin() const {
 		return math::min(cursorSubTrack, cursorSubTrack + selSubTrackRange);
 	}
-	tick_t getSubTrackEnd() const {
+	int32_t getSubTrackEnd() const {
 		return math::max(cursorSubTrack, cursorSubTrack + selSubTrackRange);
 	}
 	void setTrack(int32_t track) {
