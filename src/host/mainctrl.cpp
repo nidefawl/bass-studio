@@ -2000,11 +2000,13 @@ void DawInstance::setTempo(int32_t _tempo100) {
 void MainCtrl::destroy() {
 	settings.wndMain.dens = grid.grid_dens;
 	daw.destroy();
+	view = nullptr;
 	DawCtrl::destroy();
 }
 void CompanionCtrl::destroy() {
 	settings.wndCompanion.dens = grid.grid_dens;
 	view->ctr_tracks2.removeAllTracks();
+	view = nullptr;
 	DawCtrl::destroy();
 }
 
