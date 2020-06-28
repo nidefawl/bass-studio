@@ -33,7 +33,7 @@ public:
 	virtual bool isDialog() {
 		return true;
 	}
-	bool isDialogResizeable() {
+	bool isDialogResizeable() const {
 		return resizeable;
 	}
 };
