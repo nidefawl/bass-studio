@@ -30,6 +30,7 @@
 #include "midi_host.h"
 #include "track.h"
 #include "track_impl.h"
+#include "track_snapshot.h"
 
 #ifdef _WIN32
 #include "../platform/win/platform_win.h"

@@ -10,6 +10,7 @@
 #include "mem.h"
 #include "audioblock.h"
 #include "rand.h"
+#include "math/seq_math.h"
 
 AudioBuffer* allocateBuffer(int32_t nChannels) {
 	AudioBuffer* buffer = (AudioBuffer*) aligned_malloc(sizeof(AudioBuffer), 128);

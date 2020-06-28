@@ -867,14 +867,14 @@ public:
 							settings.iosettings.device_api = info->name;
 						}
 					}
-					api->options.push_back(String{info->name});
+					api->options.push_back({info->name});
 				}
 			}
 			int devCount = Pa_GetDeviceCount();
 			for (int i = 0; i < devCount; i++) {
 				auto info = Pa_GetDeviceInfo(i);
 				if (info && info->hostApi == apiIdxASIO) {
-					asio->options.push_back(String{info->name});
+					asio->options.push_back({info->name});
 				}
 			}
 		}

@@ -1578,7 +1578,6 @@ int startApplication(int argc, char* argv[]) {
 	int64_t tmLastCheck = getTimeMillis();
 	int64_t tmMsgSent = 0;
 	int64_t cntMessages = 0;
-	static char* const data = "TEST";
 	while (!fataError && !glfwWindowShouldClose(glfwHandle)) {
 #ifdef _WIN32
 		int64_t maxMsgProcess = 1024;
