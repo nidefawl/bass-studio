@@ -174,10 +174,6 @@ public:
 	}
 	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
 		if (this->contains(mpos)) {
-//			if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
-//				evt.requestFocus(this);
-//				return true;
-//			}
 			ivec2 localMouse = this->toContainerSpace(mpos);
 			for (guibase* gui : guis) {
 				if (!gui->isVisible())
@@ -185,6 +181,10 @@ public:
 				if (gui->mouseHitTest(localMouse, evt)) {
 					return true;
 				}
+			}
+			if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
+				evt.requestFocus(this);
+				return true;
 			}
 			if (canMouseHit()) {
 				evt.requestFocus(this);

@@ -175,6 +175,9 @@ public:
 			mpos.x < pos.x + size.x &&
 			mpos.y < pos.y + size.y;
 	}
+	ivec2 getLeftTop() {
+		return pos;
+	}
 	ivec2 getRightTop() {
 		return pos + ivec2(size.x, 0);
 	}

@@ -82,4 +82,8 @@ namespace math {
 	inline ivec2 absvec2(const ivec2 a) {
 		return {math::abs(a.x), math::abs(a.y)};
 	}
+	inline float distvec2(const ivec2 a, const ivec2 b) {
+		auto vLen = vec2(b - a);
+		return glm::length(vLen);
+	}
 }

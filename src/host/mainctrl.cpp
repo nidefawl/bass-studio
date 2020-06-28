@@ -124,6 +124,7 @@ void testTask() {
 guictr_base* makeCtrProperties(); //guiproperties.cpp
 guictr_base* makeCtrTheme(); //guiproperties.cpp
 guictr_base* makeCtrHistory(); //guihistory.cpp
+guictr_base* makeDnDTestCtr(); //apps/drag-drop.cpp
 
 class guictr_side_tabs_daw_1 : public guictr_tabbed {
 public:
@@ -249,15 +250,20 @@ public:
 	guictr_nodes ctr_nodes;
 	guictr_tracks ctr_tracks2;
 	guictr_plugins ctr_plugins;
+	guictr_base* ctr_dnd_test;
 	Splitter splitterCenter;
 	DawViewContainersCompanion(DawCtrl* const _dawCtrl, ngui::MenuBar& menubar, DAW::Cursor& _cursor, project_t& _project, project_globals_t& _projectGlobals, scaled_grid& grid, clip_view& clipView, dragdrop_midifile& dragdropclip)
 	  :
 	  ctr_menu(menubar),
 	  ctr_tracks2(_dawCtrl, _cursor, _project, _projectGlobals, grid, dragdropclip),
 	  ctr_nodes(_cursor, _project, dragdropclip),
+	  ctr_dnd_test(makeDnDTestCtr()),
 	  splitterCenter(0, 0.8f)
 	{
 		splitterCenter.setMinMax(0.2f, 0.86f);
+	}
+	guictr_menubar* getMenu() {
+		return &ctr_menu;
 	}
 	void layout(int32_t winW, int32_t winH) {
 		auto& centerCtr = ctr_tracks2;
@@ -279,10 +285,9 @@ public:
 		int hPlugins = splitterCenter.rightOrBottom(hCenter);
 		splitterCenter.pos = ivec2(winX, winY+hTrackCtr-5);
 		splitterCenter.size = ivec2(winW, 10);
-		ctr_nodes.size = centerCtr.size = { winW, hTrackCtr };
+		ctr_dnd_test->size = ctr_nodes.size = centerCtr.size = { winW, hTrackCtr };
 		ctr_plugins.size = { winW, hPlugins };
-
-		ctr_nodes.pos = centerCtr.pos = { winX, winY };
+		ctr_dnd_test->pos = ctr_nodes.pos = centerCtr.pos = { winX, winY };
 		ctr_plugins.pos = { winX, centerCtr.bottom() };
 //		ctr_test.setSnapSides(ivec4(0, 0, 0, 1));
 //		statusbar.setSnapSides(ivec4(0, 1, 0, 0));
@@ -346,6 +351,9 @@ public:
 		splitterCenter.setMinMax(0.25f, 0.9f);
 //		splitterList.setMinMax(0.1f, 0.9f);
 		splitterRight.setMinMax(0.2f, 0.9f);
+	}
+	guictr_menubar* getMenu() {
+		return &ctr_menu;
 	}
 	void layout(int32_t winW, int32_t winH) {
 		int winX = 0; int winY = 0;
@@ -444,8 +452,10 @@ void CompanionCtrl::setupView() {
 	view->ctr_plugins.setControl(this);
 	view->ctr_tracks2.setControl(this);
 	view->ctr_nodes.setControl(this);
+	view->ctr_dnd_test->setControl(this);
 	view->ctr_tracks2.setVisible(containers[0] == &view->ctr_tracks2);
 	view->ctr_nodes.setVisible(containers[0] == &view->ctr_nodes);
+	view->ctr_dnd_test->setVisible(containers[0] == view->ctr_dnd_test);
 
 }
 void MainCtrl::setupView() {
@@ -481,6 +491,8 @@ void CompanionCtrl::setViewMode(view_mode_t mode) {
 	this->viewMode = mode;
 	switch (mode) {
 	case MIXER:
+		containers[0] = view->ctr_dnd_test;
+		break;
 	case TRACK_TIMELINE:
 		containers[0] = &view->ctr_tracks2;
 		break;
@@ -488,6 +500,7 @@ void CompanionCtrl::setViewMode(view_mode_t mode) {
 		containers[0] = &view->ctr_nodes;
 		break;
 	}
+	view->ctr_dnd_test->setVisible(containers[0] == view->ctr_dnd_test);
 	view->ctr_tracks2.setVisible(containers[0] == &view->ctr_tracks2);
 	view->ctr_nodes.setVisible(containers[0] == &view->ctr_nodes);
 	view->ctr_nodes.refresh();
@@ -1478,10 +1491,13 @@ void CompanionCtrl::layoutView(int32_t w, int32_t h) {
 
 	view->ctr_tracks2.layout();
 	view->ctr_nodes.layout();
+	view->ctr_dnd_test->layout();
 	for (guictr_base *ctr : containers) {
 		if(ctr == &view->ctr_tracks2)
 			continue;
 		if(ctr == &view->ctr_nodes)
+			continue;
+		if(ctr == view->ctr_dnd_test)
 			continue;
 		ctr->layout();
 	}
@@ -1547,35 +1563,6 @@ void DawCtrl::mouseMoved(ivec2 mousePos, ivec2 deltaPos) {
 	BaseCtrl::mouseMoved(mousePos, deltaPos);
 }
 
-void DawCtrl::objectDragMove(guibase* g, MouseEvent& mevt) {
-	MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_OBJECT);
-	evt.setDraggedThing(g);
-	for (guictr_base *ctr : containers) {
-		if (ctr->mouseHitTest(mevt.mousepos, evt)) {
-			break;
-		}
-	}
-	guibase* gui = evt.getGuiHit();
-	if (gui) {
-		ivec2 mposObj = toControlsObjectSpace(mevt.mousepos, gui);
-		g->dragMoveOn(gui, mposObj);
-	} else {
-	}
-}
-void DawCtrl::objectDragRelease(guibase* g, MouseEvent& mevt) {
-	MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_OBJECT);
-	evt.setDraggedThing(g);
-	for (guictr_base *ctr : containers) {
-		if (ctr->mouseHitTest(mevt.mousepos, evt)) {
-			break;
-		}
-	}
-	guibase* gui = evt.getGuiHit();
-	if (gui) {
-		ivec2 mposObj = toControlsObjectSpace(mevt.mousepos, gui);
-		g->dragReleaseOn(gui, mposObj);
-	}
-}
 bool DawCtrl::filesDropBegin(std::vector<String>& files, ivec2 mousepos, int kbmods) {
 	my_printf("filesDropBegin %d %d isdragging=%d\n", mousepos.x, mousepos.y, daw.dragdropclip.isLoaded);
 	daw.dragdropclip.reset();
@@ -1731,6 +1718,8 @@ bool DawCtrl::processGlobalKeyevent(KeyEvent& event) {
 		if (event.keyCode == KEY_TAB) {
 			switch (this->viewMode) {
 			case view_mode_t::TRACK_TIMELINE:
+				this->setViewMode(view_mode_t::MIXER);
+				return true;
 			case view_mode_t::MIXER:
 				this->setViewMode(view_mode_t::NODE_EDITOR);
 				return true;
@@ -1801,6 +1790,10 @@ bool DawCtrl::processGlobalKeyevent(KeyEvent& event) {
 		}
 		if (isKC(KC_ZOOM_OUT, event)) {
 			menuCommand(CMD_NOARG(CMD_GUI_GLOBAL_ZOOM_DECREASE));
+			return true;
+		}
+		if (isKC({ 0, KEY_F1, nullptr }, event)) {
+			menuCommand(CMD_NOARG(CMD_OPEN_SECOND_WINDOW));
 			return true;
 		}
 		if (isKC({ 0, KEY_F2, nullptr }, event)) {

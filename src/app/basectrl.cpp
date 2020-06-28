@@ -330,6 +330,27 @@ void BaseCtrl::render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, i
 		ctr->render(vg);
 		nvgRestore(vg);
 	}
+	if (dragDropTargets_ContainerMove.size()) {
+		for (std::weak_ptr<i_ctr_drop_area>& weakPtrTarget : dragDropTargets_ContainerMove) {
+
+			if (!weakPtrTarget.expired()) {
+				//TODO: I don't even want to lock here, BaseCtrl::render() is considered const, not changing state of objects.
+				// Thus the lifetime of a i_ctr_drop_area is not allowed to end within BaseCtrl::render() or asynchronously on another thread.
+				auto shrdPtrTarget = weakPtrTarget.lock();
+				if (shrdPtrTarget.get()) {
+					if (shrdPtrTarget->size == ivec2{0, 0}) {
+						log_printf("warning, rendering container with size 0 0\n", 0);
+						continue;
+					}
+
+					nvgSave(vg);
+					shrdPtrTarget->render(vg);
+					nvgRestore(vg);
+				}
+			}
+
+		}
+	}
 	if (guiDragged) {
 		if (guiDragged->size == ivec2{0, 0}) {
 			log_printf("warning, rendering container with size 0 0\n", 0);
@@ -648,4 +669,63 @@ void BaseCtrl::relayout(int32_t w, int32_t h) { };
 void BaseCtrl::windowSizeChanged(int32_t w, int32_t h) {
 	m_size = ivec2(w, h);
 	relayout(m_size.x*1.0/m_scale, m_size.y*1.0/m_scale);
+}
+
+void BaseCtrl::objectDragMove(guibase* g, MouseEvent& mevt) {
+	MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_OBJECT);
+	evt.setDraggedThing(g);
+	for (guictr_base *ctr : containers) {
+		if (ctr->mouseHitTest(mevt.mousepos, evt)) {
+			break;
+		}
+	}
+	guibase* gui = evt.getGuiHit();
+	if (gui) {
+		ivec2 mposObj = toControlsObjectSpace(mevt.mousepos, gui);
+		g->dragMoveOn(gui, mposObj);
+	} else {
+	}
+}
+void BaseCtrl::objectDragRelease(guibase* g, MouseEvent& mevt) {
+	MouseHitEvt evt = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_OBJECT);
+	evt.setDraggedThing(g);
+	for (guictr_base *ctr : containers) {
+		if (ctr->mouseHitTest(mevt.mousepos, evt)) {
+			break;
+		}
+	}
+	guibase* gui = evt.getGuiHit();
+	if (gui) {
+		ivec2 mposObj = toControlsObjectSpace(mevt.mousepos, gui);
+		g->dragReleaseOn(gui, mposObj);
+	}
+}
+
+
+void guictr_dragged_container_instance::handleDraggedMove(MouseEvent& evt) {
+	parentCtrl->dragContainerMove(evt);
+}
+
+void guictr_dragged_container_instance::handleDraggedRelease(MouseEvent& evt) {
+	parentCtrl->dragContainerRelease(evt);
+}
+
+void guictr_dragged_container_instance::renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2 dragOffset) {
+//	pos = dummyPreview.pos;
+//	size = dummyPreview.size;
+//	nvgSave(vg);
+//	render(vg);
+//	nvgRestore(vg);
+	renderContainerLabel(vg);
+	if (isDragRendered() && validPreview) {
+		nvgLineCap(vg, NVGlineCap::NVG_ROUND);
+//		for (ivec4& box : boxes) {
+//			nvgBeginPath(vg);
+//			nvgRect(vg, box.x, box.y, box.z, box.w);
+//			nvgStrokeColor(vg, G_MOVE_HIGHLIGHT);
+//			nvgStrokeWidth(vg, 4.0);
+//			nvgStroke(vg);
+//		}
+		nvgLineCap(vg, NVGlineCap::NVG_BUTT);
+	}
 }

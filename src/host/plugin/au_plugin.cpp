@@ -117,5 +117,5 @@ void auplugin::onEnable() {
 void auplugin::onDisable() {
 	//TODO: check current thread, check if playthread is locked
 	sleep();
-	vsthost::getInstance()->sendNotesOff(this);
+//	vsthost::getInstance()->sendNotesOff(this);
 }

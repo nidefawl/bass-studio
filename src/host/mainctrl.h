@@ -44,6 +44,7 @@ class guibase;
 class guictr_base;
 class guictr_plugins;
 class guictr_pluginview;
+class guitrack_editor;
 class guiplugin;
 class guictr_test;
 class guictr_tempocontrols;
@@ -429,8 +430,6 @@ public:
 
 
 
-	void objectDragMove(guibase* g, MouseEvent& evt);
-	void objectDragRelease(guibase* g, MouseEvent& evt);
 	void initApp(int argc, char* argv[]) override;
 	bool init(window_main* window, NVGcontext* nanovg) override;
 
