@@ -531,8 +531,8 @@ void AppCtrl::openOverlayGui(guictxtmenu_base *b, ivec2 pos, int flags) {
 	}
 
 }
-void AppCtrl::openDialog(guidialog_base *b) {
-	openOverlayGui(b, ivec2(0), (b->isDialogResizeable()) ? BASECTRL_WND_RESIZEABLE : 0);
+void AppCtrl::openDialog(guidialog_base *_guidialog) {
+	openOverlayGui(_guidialog, ivec2(0), (_guidialog->isDialogResizeable()) ? BASECTRL_WND_RESIZEABLE : 0);
 }
 void AppCtrl::openContextMenu(guictxtmenu_base *b, ivec2 pos, int flags) {
 	openOverlayGui(b, pos, flags);
