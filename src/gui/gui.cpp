@@ -321,7 +321,7 @@ void guibase::handleMouseDownBegin(MouseEvent& evt) {
 			ctxtMenu->size = {240, 480};
 			ctxtMenu->add(static_cast<guibase*>(dbgPropertiesCtrPopup));
 			dbgPropertiesCtrPopup->setDebugPropertyHandle(this);
-			dbgPropertiesCtrPopup->theme = theme;
+			dbgPropertiesCtrPopup->setTheme(theme);
 			dbgPropertiesCtrPopup->layout();
 			dbgPropertiesCtrPopup->theme = nullptr;
 			this->parentCtrl->openContextMenu(ctxtMenu, evt.mousepos);
@@ -343,6 +343,9 @@ bool guibase::isChildOf(guibase* g) {
 void guibase::setFont(NVGcontext* vg, float size, NVGcolor color, int alignment) {
 	dbgassert(theme);
 	UTIL_setFont(vg, theme, size, color, alignment);
+}
+void guibase::setTheme(guitheme_t* theme) {
+	this->theme = theme;
 }
 
 NVGcolor guibuttonbase::getBackgroundColor(int stateflags) const {
@@ -420,14 +423,15 @@ int32_t guibase::getStateFlags() const {
 }
 void guibase::setControl(BaseCtrl* parentCtrl) {
 	this->parentCtrl = parentCtrl;
-	if (parentCtrl)
-		this->theme = parentCtrl->getTheme();
+	if (parentCtrl) {
+		setTheme(parentCtrl->getTheme());
+	}
 }
 
 void guibase::setParent(guibase* parent) {
 	this->parent = parent;
 	if (!parentCtrl && parent) {
-		theme = parent->theme;
+		setTheme(parent->theme);
 	}
 }
 NVGcolor guibase::getBackgroundColor(int stateflags) const {

@@ -166,7 +166,7 @@ void guictr_plugins::handleRightClick(MouseEvent& evt) {
 
 void guictr_plugins::onAdded() {
 	if (parent) {
-		theme = parent->theme;
+		setTheme(parent->theme);
 	}
 }
 void guictr_plugins::addGui(effectbase* plugin) {

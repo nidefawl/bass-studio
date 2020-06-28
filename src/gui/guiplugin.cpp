@@ -345,8 +345,8 @@ public:
 				auto ctrl = MainCtrl::get();
 				closeContextMenu();
 				dbgPropertiesCtrPopup->setDebugPropertyHandle(gui);
-				dbgPropertiesCtrPopup->theme = ctrl->getTheme();
-				dbgPropertiesCtrPopup->layout();
+//				dbgPropertiesCtrPopup->setTheme(ctrl->getTheme());
+//				dbgPropertiesCtrPopup->layout();
 				ctrl->openContextMenu(ctxtMenu, wndPos, 2);
 //				dbgPropertiesCtrPopup->layout();
 //				dbgPropertiesCtrPopup->setDebugPropertyHandle(nullptr);

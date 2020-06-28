@@ -213,7 +213,7 @@ public:
 	}
 	virtual void onAdded() {
 		if (parent) {
-			theme = parent->theme;
+			setTheme(parent->theme);
 		}
 	}
 	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
@@ -387,4 +387,5 @@ protected:
 	virtual NVGcolor getBackgroundColor(int stateflags) const;
 	bool isChildOf(guibase* parentSearch);
 	void setFont(NVGcontext* vg, float size, NVGcolor color, int alignment);
+	void setTheme(guitheme_t* theme);
 };
