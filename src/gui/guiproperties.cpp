@@ -191,6 +191,7 @@ protected:
 	const bool isGlobalInstance;
 	const bool ownsPtr;
 public:
+	bool autoUpdate = false;
 	guiproperties_table(T* _ptr, bool _isGlobalInstance, bool _ownsPtr)
 		: debugproperties(),
 		  ptr(_ptr),
@@ -198,6 +199,7 @@ public:
 		  isGlobalInstance(_isGlobalInstance),
 		  ownsPtr(_ownsPtr)
 	{
+		autoUpdate = _isGlobalInstance;
 		setBackgroundRendered(true);
 		setBackgroundRenderedInset(false);
 		setSnapSides(ivec4(1));
@@ -597,16 +599,19 @@ void guiproperties_table<guiproperties_t>::validateReferences()  {
 }
 template <>
 void guiproperties_table<guiproperties_t>::onTick(AppCtrl* appctrl) {
-	guibase* ref = safeRefGet(ptr->safeRef);
-	auto ptrNew = appctrl->getGuiFocused();
-	if (ref != ptrNew) {
-		if (ptrNew) {
-			ptr->safeRef = ptrNew->makeSafeRef();
-		} else {
-			ptr->safeRef = SafeRef<guibase>();
+	if (autoUpdate) {
+
+		guibase* ref = safeRefGet(ptr->safeRef);
+		auto ptrNew = appctrl->getGuiFocused();
+		if (ref != ptrNew) {
+			if (ptrNew) {
+				ptr->safeRef = ptrNew->makeSafeRef();
+			} else {
+				ptr->safeRef = SafeRef<guibase>();
+			}
 		}
+		layout();
 	}
-	layout();
 }
 template <>
 void guiproperties_table<guiproperties_t>::setDebugPropertyHandle(void *vPtr)  {
