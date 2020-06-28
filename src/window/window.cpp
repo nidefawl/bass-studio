@@ -1126,8 +1126,9 @@ window_main* appwindow_main::createOverlay(std::shared_ptr<AppCtrl> ctrl, int fl
 
 	//pass down parent window handle if ctrl is companion ctrl of daw (signaled by WINDOW_IS_MAINWINDOW_SLAVE)
 	appwindow_main* parentHandle = ((flags&WINDOW_IS_MAINWINDOW_SLAVE) != 0) ? this : nullptr;
-
-	ow->createMainWindow(StringAsCStr(sName), 200, 200, parentHandle, flags);
+	ivec2 windowSize;
+	getSize(&windowSize);
+	ow->createMainWindow(StringAsCStr(sName), windowSize.x, windowSize.y, parentHandle, flags);
 	if (((flags&WINDOW_IS_MAINWINDOW_SLAVE) == 0)) {
 		ow->initControl();
 	}
