@@ -45,6 +45,10 @@ void guictr_base::onRemove() {
 void guictr_base::onAdded() {
 }
 void guictr_base::render(NVGcontext* vg) {
+	if (!isVisible()) {
+		log_printf("warning, skip rendering container with state !isVisible()\n", 0);
+		return;
+	}
 	if (isBackgroundRendered()) {
 		renderBackground(vg);
 	}
@@ -52,9 +56,15 @@ void guictr_base::render(NVGcontext* vg) {
 		return;
 	}
 	for (auto c : guis) {
+		if (!c->isVisible()) {
+//			log_printf("warning, skip rendering child container with state !isVisible()\n", 0);
+			continue;
+		}
 		if (c->size == ivec2{0, 0}) {
-			log_printf("warning, rendering container with size 0 0\n", 0);
-		} else {
+			log_printf("warning, skip rendering child container with size 0 0\n", 0);
+			continue;
+		}
+		{
 			nvgSave(vg);
 			c->render(vg);
 			nvgRestore(vg);
