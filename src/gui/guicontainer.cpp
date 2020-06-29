@@ -60,8 +60,8 @@ void guictr_base::render(NVGcontext* vg) {
 //			log_printf("warning, skip rendering child container with state !isVisible()\n", 0);
 			continue;
 		}
-		if (c->size == ivec2{0, 0}) {
-			log_printf("warning, skip rendering child container with size 0 0\n", 0);
+		if (c->size.x <= 0 || c->size.y <= 0) {
+			log_printf("warning, skip rendering child container with size <= 0 0\n", 0);
 			continue;
 		}
 		{
