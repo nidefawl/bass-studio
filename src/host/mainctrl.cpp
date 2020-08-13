@@ -57,6 +57,8 @@
 #include "../gui/dialog_io.h"
 #include "../gui/dialogs.h"
 #include "../gui/guicontainer_layout.h"
+#include "../gui/container/guicontainer_dnd_tabbed.h"
+#include "../gui/container/guicontainer_dnd_layout.h"
 
 #include "plugin/base_plugin.h"
 #include "plugin/vst_plugin.h"
@@ -126,7 +128,7 @@ guictr_base* makeCtrTheme(); //guiproperties.cpp
 guictr_base* makeCtrHistory(); //guihistory.cpp
 guictr_base* makeDnDTestCtr(); //apps/drag-drop.cpp
 
-class guictr_side_tabs_daw_1 : public guictr_tabbed {
+class guictr_side_tabs_daw_1 : public guictr_tabbed_draggable {
 public:
 	gui_ctr_debug ctr_dbg0;
 	gui_ctr_debug ctr_dbg1;
@@ -136,8 +138,16 @@ public:
 	guictr_base* const ctr_history;
 	gui_shaderview shaderView;
 	guidialog_settings settings;
+	std::vector<std::shared_ptr<guictr_layout_entry>> entriesContainers;
+    void addLayoutEntry(guictr_base* ctr, String title) {
+
+		std::shared_ptr<guictr_layout_entry> entry1 = std::make_shared<my_test_ctr>(ctr);
+		ctr->setLabel(title);
+        entriesContainers.push_back(entry1);
+		addEntry(entry1, ctr->label);
+    }
 	guictr_side_tabs_daw_1() :
-		guictr_tabbed(),
+		guictr_tabbed_draggable(),
 		ctr_dbg0(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_0),
 		ctr_dbg1(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_1),
 		ctr_dbg2(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_2),
@@ -153,21 +163,29 @@ public:
 		ctr_history->setLabel("History");
 		shaderView.setLabel("Shader");
 		settings.setLabel("settings");
-		addEntry(&ctr_dbg0, ctr_dbg0.label);
-		addEntry(&ctr_dbg1, ctr_dbg1.label);
-		addEntry(&ctr_dbg2, ctr_dbg2.label);
-		addEntry(ctr_history, ctr_history->label);
-		addEntry(ctr_properties, ctr_properties->label);
-		addEntry(ctr_theme, ctr_theme->label);
-		addEntry(&shaderView, shaderView.label);
-		addEntry(&settings, settings.label);
+
+		addLayoutEntry(&ctr_dbg0, ctr_dbg0.label);
+		addLayoutEntry(&ctr_dbg1, ctr_dbg1.label);
+		addLayoutEntry(&ctr_dbg2, ctr_dbg2.label);
+		addLayoutEntry(ctr_history, ctr_history->label);
+		addLayoutEntry(ctr_properties, ctr_properties->label);
+		addLayoutEntry(ctr_theme, ctr_theme->label);
+		addLayoutEntry(&shaderView, shaderView.label);
+		addLayoutEntry(&settings, settings.label);
 		setActiveEntry(0);
 	}
 	virtual ~guictr_side_tabs_daw_1() {
-		//remove the entries we have to delete, base class would see dangling ptr otherwise
-		remove(ctr_properties);
-		remove(ctr_theme);
-		remove(ctr_history);
+		std::vector<tabbed_entry*> entries = getEntries();
+		for (tabbed_entry* ctr : entries) {
+			remove(ctr->tabCtr->getGui());
+			if (ctr->tabbedEntryHandle) {
+				remove(ctr->tabbedEntryHandle);
+			}
+		}
+//		//remove the entries we have to delete, base class would see dangling ptr otherwise
+//		remove(ctr_properties);
+//		remove(ctr_theme);
+//		remove(ctr_history);
 		delete ctr_properties;
 		delete ctr_theme;
 		delete ctr_history;
@@ -204,7 +222,7 @@ public:
 	}
 };
 guictr_base* makeGuiPluginsLoadedList();
-class guictr_side_tabs_daw_2 : public guictr_tabbed {
+class guictr_side_tabs_daw_2 : public guictr_tabbed_draggable {
 public:
 
 	guictr_effectlibrary& ctr_effectlib;
@@ -213,8 +231,16 @@ public:
 	gui_ctr_debug ctr_dbg0;
 	gui_ctr_debug ctr_dbg1;
 	gui_ctr_debug ctr_dbg2;
+	std::vector<std::shared_ptr<guictr_layout_entry>> entriesContainers;
+    void addLayoutEntry(guictr_base* ctr, String title) {
+
+		std::shared_ptr<guictr_layout_entry> entry1 = std::make_shared<my_test_ctr>(ctr);
+		ctr->setLabel(title);
+        entriesContainers.push_back(entry1);
+		addEntry(entry1, ctr->label);
+    }
 	guictr_side_tabs_daw_2(guictr_effectlibrary& _ctr_effectlib)
-	: guictr_tabbed(),
+	: guictr_tabbed_draggable(),
 	  ctr_effectlib(_ctr_effectlib),
 	  ctr_properties(makeCtrProperties()),
 	  ctr_loadedplugins(makeGuiPluginsLoadedList()),
@@ -226,20 +252,27 @@ public:
 		ctr_loadedplugins->setLabel("Instances");
 		ctr_properties->setLabel("Properties");
 		ctr_dbg0.setLabel("Debug 0");
-		addEntry(&ctr_dbg0, ctr_dbg0.label);
+		addLayoutEntry(&ctr_dbg0, ctr_dbg0.label);
 		ctr_dbg1.setLabel("Debug 1");
-		addEntry(&ctr_dbg1, ctr_dbg1.label);
+		addLayoutEntry(&ctr_dbg1, ctr_dbg1.label);
 		ctr_dbg2.setLabel("Debug 2");
-		addEntry(&ctr_dbg2, ctr_dbg2.label);
-		addEntry(&ctr_effectlib, ctr_effectlib.label);
-		addEntry(ctr_loadedplugins, ctr_loadedplugins->label);
-		addEntry(ctr_properties, ctr_properties->label);
+		addLayoutEntry(&ctr_dbg2, ctr_dbg2.label);
+		addLayoutEntry(&ctr_effectlib, ctr_effectlib.label);
+		addLayoutEntry(ctr_loadedplugins, ctr_loadedplugins->label);
+		addLayoutEntry(ctr_properties, ctr_properties->label);
 		setActiveEntry(0);
 	}
 	virtual ~guictr_side_tabs_daw_2() {
-		//remove the entries we have to delete, base class would see dangling ptr otherwise
-		remove(ctr_properties);
-		remove(ctr_loadedplugins);
+		std::vector<tabbed_entry*> entries = getEntries();
+		for (tabbed_entry* ctr : entries) {
+			remove(ctr->tabCtr->getGui());
+			if (ctr->tabbedEntryHandle) {
+				remove(ctr->tabbedEntryHandle);
+			}
+		}
+//		//remove the entries we have to delete, base class would see dangling ptr otherwise
+//		remove(ctr_properties);
+//		remove(ctr_loadedplugins);
 		delete ctr_properties;
 		delete ctr_loadedplugins;
 	}
@@ -316,14 +349,19 @@ public:
 	guictr_pluginview ctr_pluginview;
 	guictr_clipeditorview ctr_clipeditorview;
 	guictr_clipeditor ctr_clipeditor;
+	guictr_layout ctr_layoutLeft;
 	guictr_tracks ctr_tracks;
 	guictr_nodes ctr_nodes;
 	guictr_side_tabs_daw_1 subctr_tabbed;
 	guictr_side_tabs_daw_2 subctr_tabbed2;
 	guictr_stacked ctr_stack_right;
+	std::vector<std::shared_ptr<Splitter>> splitters;
 //	Splitter splitterList;
-	Splitter splitterCenter;
-	Splitter splitterRight;
+//	Splitter splitterCenter;
+//	Splitter splitterRight;
+	enum class SplitterPos : uint32_t {
+		LEFT = 0, CENTER, RIGHT
+	};
 	DawViewContainersMain(MainCtrl* const _mainCtrl, ngui::MenuBar& menubar, DAW::Cursor& _cursor, project_t& _project, project_globals_t& _projectGlobals, scaled_grid& grid, clip_view& clipView, dragdrop_midifile& dragdropclip)
 	  : noteeditor(clipView),
 	  ctr_menu(menubar),
@@ -331,29 +369,36 @@ public:
 	  ctr_pluginview(&ctr_plugins),
 	  ctr_clipeditorview(noteeditor),
 	  ctr_clipeditor(noteeditor, clipView),
+	  ctr_layoutLeft(),
 	  ctr_tracks(_mainCtrl, _cursor, _project, _projectGlobals, grid, dragdropclip),
 	  ctr_nodes(_cursor, _project, dragdropclip),
 	  subctr_tabbed(),
 	  subctr_tabbed2(ctr_effectlib),
-	  ctr_stack_right(),
+	  ctr_stack_right()//,
 //	  splitterList(0, 0.5f),
-	  splitterCenter(0, 0.7f),
-	  splitterRight(1, 0.8f)
+//	  splitterCenter(0, 0.7f),
+//	  splitterRight(1, 0.8f)
 	{
+		splitters.push_back(std::make_shared<Splitter>(1, 0.02f));//left
+		splitters.push_back(std::make_shared<Splitter>(0, 0.5f));//center
+		splitters.push_back(std::make_shared<Splitter>(1, 0.8f));//right
 		ctr_stack_right.addEntry(&subctr_tabbed2, "Top");
 		ctr_stack_right.addEntry(&subctr_tabbed, "Bottom");
 		ctr_stack_right.setBackgroundRendered(false);
 		ctr_stack_right.padding = 0;
 		ctr_stack_right.margin = 0;
+		ctr_layoutLeft.padding = CONTENT_INSET;
+		ctr_layoutLeft.margin = CTR_SPACING;
+		ctr_layoutLeft.setBackgroundRendered(true);
 		ivec2 inset = {guictr_stacked::STACK_ENTRY_BTN_SIZE+INSET_CTR_SPACING*3, INSET_CTR_SPACING};
 		subctr_tabbed.setTabMenuInset(inset);
 		subctr_tabbed2.setTabMenuInset(inset);
-		splitterCenter.setMinMax(0.25f, 0.9f);
-//		splitterList.setMinMax(0.1f, 0.9f);
-		splitterRight.setMinMax(0.2f, 0.9f);
+		splitters[0]->setMinMax(0.05f, 0.9f);
+		splitters[1]->setMinMax(0.25f, 0.9f);
+		splitters[2]->setMinMax(0.05f, 0.9f);
 	}
-	guictr_menubar* getMenu() {
-		return &ctr_menu;
+	Splitter* getSplitter(SplitterPos pos) {
+		return splitters[static_cast<uint32_t>(pos)].get();
 	}
 	void layout(int32_t winW, int32_t winH) {
 		int winX = 0; int winY = 0;
@@ -368,36 +413,42 @@ public:
 		int hTopControls = 48;
 		int hStatusBar = 60;
 		int hCenter = winH - hTopControls - hStatusBar;
-		int hRight = winH - hTopControls;
-		int hTrackCtr = splitterCenter.leftOrTop(hCenter);
-		int hEditor = splitterCenter.rightOrBottom(hCenter);
-//		int heightList = splitterList.leftOrTop(hRight);
+		int hContent = winH - hTopControls;
+		int hTrackCtr = getSplitter(SplitterPos::CENTER)->leftOrTop(hCenter);
+		int hEditor = getSplitter(SplitterPos::CENTER)->rightOrBottom(hCenter);
+		int widthLeft = getSplitter(SplitterPos::LEFT)->leftOrTop(winW);
+		int widthCenterAndRight = getSplitter(SplitterPos::LEFT)->rightOrBottom(winW);
 //		int heightDebug = splitterList.rightOrBottom(hRight);
-		int width = splitterRight.leftOrTop(winW);
-		int wRight = splitterRight.rightOrBottom(winW);
+		int widthCenter = getSplitter(SplitterPos::RIGHT)->leftOrTop(widthCenterAndRight);
+		int widthRight = getSplitter(SplitterPos::RIGHT)->rightOrBottom(widthCenterAndRight);
 		ctr_tempo.size = { winW, hTopControls };
-		ctr_tracks.size = { width, hTrackCtr };
-		ctr_nodes.size = { width, hTrackCtr };
-		ctr_clipeditor.size = { width, hEditor };
-		ctr_plugins.size = { width, hEditor };
+		ctr_tracks.size = { widthCenter, hTrackCtr };
+		ctr_nodes.size = { widthCenter, hTrackCtr };
+		ctr_clipeditor.size = { widthCenter, hEditor };
+		ctr_plugins.size = { widthCenter, hEditor };
 		ctr_pluginview.size = { 300, hStatusBar };
 		ctr_clipeditorview.size = { 300, hStatusBar };
-		int wbottom = width;
+		int wbottom = widthCenter;
 		wbottom -= 60; //rightmost part
 		wbottom -= ctr_pluginview.size.x;
 		wbottom -= ctr_clipeditorview.size.x;
 		statusbar.size = { wbottom, hStatusBar };
 
-		ctr_tempo.pos = { winX, winY };
-		ctr_tracks.pos = { winX, winY+hTopControls };
-		ctr_nodes.pos = { winX, winY+hTopControls };
-		statusbar.pos = { winX, winBottom - hStatusBar };
+		ctr_tempo.pos = { widthLeft, winY };
+
+		ctr_tracks.pos = { widthLeft, winY+hTopControls };
+		ctr_nodes.pos = { widthLeft, winY+hTopControls };
+		statusbar.pos = { widthLeft, winBottom - hStatusBar };
 		ctr_clipeditorview.pos = { statusbar.right(), winBottom - hStatusBar };
 		ctr_pluginview.pos = { ctr_clipeditorview.right(), winBottom - hStatusBar };
-		ctr_plugins.pos = { winX, winBottom - hStatusBar - hEditor};
-		ctr_clipeditor.pos = { winX, winBottom - hStatusBar - hEditor };
-		splitterCenter.pos = ivec2(winX, ctr_clipeditor.pos.y - 5);
-		splitterCenter.size = ivec2(width, 10);
+		ctr_plugins.pos = { widthLeft, winBottom - hStatusBar - hEditor};
+		ctr_clipeditor.pos = { widthLeft, winBottom - hStatusBar - hEditor };
+		ctr_layoutLeft.pos = { winX, winY+hTopControls };
+		ctr_layoutLeft.size = { widthLeft, hContent };
+		getSplitter(SplitterPos::LEFT)->pos = ivec2(widthLeft - 5, hTopControls);
+		getSplitter(SplitterPos::LEFT)->size = ivec2(10, hContent);
+		getSplitter(SplitterPos::CENTER)->pos = ivec2(widthLeft, ctr_clipeditor.pos.y - 5);
+		getSplitter(SplitterPos::CENTER)->size = ivec2(widthCenter, 10);
 
 		ctr_tempo.setSnapSides(ivec4(0, 0, 0, 1));
 		statusbar.setSnapSides(ivec4(0, 1, 0, 0));
@@ -406,6 +457,7 @@ public:
 		ctr_clipeditor.setSnapSides(ivec4(0, 1, 0, 0));
 		ctr_plugins.setSnapSides(ivec4(0, 1, 0, 0));
 		subctr_tabbed2.setSnapSides(ivec4(1, 0, 0, 1));
+		ctr_layoutLeft.setSnapSides(ivec4(0, 0, 1, 0));
 		ctr_stack_right.setSnapSides(ivec4(1, 1, 1, 1));
 
 		subctr_tabbed.setSnapSides(ivec4(1, 0, 0, 0));
@@ -415,12 +467,12 @@ public:
 //		ctr_tabbed.size = {wRight, heightDebug};
 //		ctr_tabbed2.pos = {width, winY+hTopControls};
 //		ctr_tabbed2.size = {wRight, heightList};
-		ctr_stack_right.pos = {width, winY+hTopControls};
-		ctr_stack_right.size = {wRight, hRight};
+		ctr_stack_right.pos = {widthLeft+widthCenter, winY+hTopControls};
+		ctr_stack_right.size = {widthRight, hContent};
 
 
-		splitterRight.pos = ivec2(ctr_stack_right.pos.x - 5, hTopControls);
-		splitterRight.size = ivec2(10, hRight);
+		getSplitter(SplitterPos::RIGHT)->pos = ivec2(ctr_stack_right.pos.x - 5, hTopControls);
+		getSplitter(SplitterPos::RIGHT)->size = ivec2(10, hContent);
 //		splitterList.pos = ivec2(ctr_tabbed.pos.x, ctr_tabbed2.bottom()-5);
 //		splitterList.size = ivec2(wRight, 10);
 	}
@@ -430,6 +482,7 @@ public:
 		 v.push_back(&ctr_tempo);
 		 v.push_back(&ctr_pluginview);
 		 v.push_back(&ctr_clipeditorview);
+		 v.push_back(&ctr_layoutLeft);
 		 v.push_back(&ctr_stack_right);
 //		 v.push_back(&ctr_tabbed2);
 		 v.push_back(&statusbar);
@@ -437,9 +490,11 @@ public:
 #if USE_GUI_MENU
 		 v.push_back(&ctr_menu);
 #endif
-		 v.push_back(&splitterCenter);
-//		 v.push_back(&splitterList);
-		 v.push_back(&splitterRight);
+		 for (auto& s : splitters)
+			 v.push_back(s.get());
+	}
+	void updateLayout() {
+
 	}
 };
 void CompanionCtrl::setupView() {

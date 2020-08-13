@@ -270,4 +270,11 @@ void guictr_base::scissorClip(ivec2& vpos, ivec2& vsize) {
 	}
 	vpos = toContainerSpace(vpos);
 }
+template<typename T>
+void addPropertiesFromGui(T& gui, Table::tbl* table);
+template<>
+void addPropertiesFromGui(guictr_base& gui, Table::tbl* table);
+void guictr_base::addProperties(Table::tbl* table) {
+	addPropertiesFromGui(*this, table);
+}
 

@@ -81,7 +81,7 @@ struct gui_shaderview_impl_t {
 	std::shared_ptr<testshader> pipeTestShader;
 	int64_t initTime = 0;
 };
-gui_shaderview::gui_shaderview() : guibase(), impl(new gui_shaderview_impl_t) {
+gui_shaderview::gui_shaderview() : guictr_base(), impl(new gui_shaderview_impl_t) {
 	setBackgroundRendered(false);
 }
 gui_shaderview::~gui_shaderview() {

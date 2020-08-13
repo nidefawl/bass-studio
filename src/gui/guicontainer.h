@@ -215,6 +215,7 @@ public:
 		}
 		return this;
 	}
+	void addProperties(Table::tbl* table) override;
 #if RENDER_DBG_BRD
 	void renderDebug(NVGcontext* vg, NVGcolor color) {
 		nvgBeginPath(vg);
