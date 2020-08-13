@@ -77,7 +77,7 @@ public:
 		int h = ctxt->h;
 		glUseProgram(program);
 		setCommonUniforms(ctxt);
-		mat4x4 matProj = glm::ortho(0.f, (float) w, (float)h, 0.f, 1.f, -1.f);
+		mat4x4 matProj = glm::ortho(0.f, (float) w, (float)h, 0.f, 1.0f, -1.0f);
 		tess2d tess(0);
 		tess2d::fullscreenQuad(tess, w, h);
 		glBindVertexArray(vbo.vaoId);

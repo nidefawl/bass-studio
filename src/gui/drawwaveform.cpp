@@ -430,7 +430,7 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 			mat4x4 matModel = mat4x4(1.0);
 			matModel[0][0] = waveform.scaleX;
 			matView = glm::translate(matView, glm::vec3(pos.x, pos.y, 0));
-			mat4x4 matProj = glm::ortho(0.f, (float) FBO_WIDTH, (float)FBO_HEIGHT, 0.f, 1.f, -1.f);
+			mat4x4 matProj = glm::ortho(0.f, (float) FBO_WIDTH, (float)FBO_HEIGHT, 0.f, 1.0f, -1.0f);
 			dbgassert(pos.x+size.x<=FBO_WIDTH);
 			glScissor(pos.x, FBO_HEIGHT-pos.y-size.y, size.x, size.y);
 			glBindVertexArray ( bakedPath.vbo.vaoId );

@@ -134,7 +134,7 @@ void drawDebugWindow(NVGcontext* ctx, int winW, int winH, float pxratio) {
 	for (TextureAtlas& e : rendered) {
 		int n = e.glTexture;
 		if (n > 0 && e.entries.size()) {
-			glm::mat4 matProj = glm::ortho(0.f, (float) winW, (float) winH, 0.f, 1.f, -1.f);
+			glm::mat4 matProj = glm::ortho(0.f, (float) winW, (float) winH, 0.f, 1.0f, -1.0f);
 			glm::mat4 mvp = matProj * glm::translate(glm::mat4(1.0), glm::vec3(x, y, 0));
 //			glDisable(GL_DEPTH_TEST);
 			glUniformMatrix4fv(u_mvp, 1, GL_FALSE, value_ptr(mvp));
