@@ -17,6 +17,7 @@
 #include "guicolors.h"
 #include "guifonts.h"
 #include "guicontainer.h"
+#include "container/guicontainer_dnd_layout.h"
 #include "guiconstant.h"
 #include "guicontextmenu_base.h"
 #include "guicontextmenu.h"
@@ -566,7 +567,25 @@ void addPropertiesFromGui(guictr_base& gui, Table::tbl* table) {
 	rows.push_back({{tblstr{"this"}, ref}});
 	rows.push_back({{tblstr{"pos"}, tbltypesaferef<glm::ivec2>{ref, gui.pos, nullptr}}});
 	rows.push_back({{tblstr{"size"}, tbltypesaferef<glm::ivec2>{ref, gui.size, nullptr}}});
-
+	guictr_layout* ctrlayout;
+	if ((ctrlayout = dynamic_cast<guictr_layout*>(&gui))) {
+		String layoutName = "";
+		switch (ctrlayout->getLayout()) {
+		case container_layout::SOLE:
+			layoutName = "SOLE";
+			break;
+		case container_layout::SPLIT_H:
+			layoutName = "SPLIT_H";
+			break;
+		case container_layout::SPLIT_V:
+			layoutName = "SPLIT_V";
+			break;
+		case container_layout::TABBED:
+			layoutName = "TABBED";
+			break;
+		}
+		rows.push_back({{tblstr{"layout"}, tblString{layoutName, 1}}});
+	}
 //	int padding = CONTENT_INSET;
 //	int margin = CTR_SPACING;
 //	ivec4 snapSides{ 0, 0, 0, 0 };

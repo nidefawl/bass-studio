@@ -17,7 +17,6 @@
 
 #include "basectrl.h"
 
-#include "gui/container/guicontainer_dnd_tabbed.h"
 #include "gui/container/guicontainer_dnd_layout.h"
 
 /**
@@ -51,7 +50,7 @@
  */
 guictr_base* makeCtrTheme();
 guictr_base* makeCtrProperties();
-class guictr_drag_test : public guictr_tabbed_draggable {
+class guictr_drag_test : public guictr_layout {
 public:
 	guictr_base* const ctr_properties;
 	guictr_base* const ctr_theme;
@@ -62,15 +61,15 @@ public:
 	gui_ctr_debug ctrDebug;
 #endif
 	guictr_layout ctrLayout;
-    std::vector<std::shared_ptr<guictr_layout_entry>> entriesContainers;
+//    std::vector<std::shared_ptr<guictr_layout_entry>> entriesContainers;
     void addLayoutEntry(guictr_base* ctr, String title) {
 
 		std::shared_ptr<guictr_layout_entry> entry1 = std::make_shared<my_test_ctr>(ctr);
 		ctr->setLabel(title);
-        entriesContainers.push_back(entry1);
-		addEntry(entry1, ctr->label);
+//        entriesContainers.push_back(entry1);
+		addEntry(entry1);
     }
-	guictr_drag_test() : guictr_tabbed_draggable(),
+	guictr_drag_test() : guictr_layout(),
 		ctr_properties(makeCtrProperties()),
 		ctr_theme(makeCtrTheme()),
 		ctr_theme2(makeCtrTheme()),
@@ -79,6 +78,7 @@ public:
 		,ctrDebug(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_2)
 #endif
 	{
+		this->setLayout(container_layout::TABBED);
 		addLayoutEntry(ctr_theme, "Theme 1");
 		addLayoutEntry(ctr_properties, "Properties");
 		addLayoutEntry(ctr_theme2, "Theme 2");
@@ -91,13 +91,6 @@ public:
 		setActiveEntry(0);
 	}
 	virtual ~guictr_drag_test() {
-		std::vector<tabbed_entry*> entries = getEntries();
-		for (tabbed_entry* ctr : entries) {
-			remove(ctr->tabCtr->getGui());
-			if (ctr->tabbedEntryHandle) {
-				remove(ctr->tabbedEntryHandle);
-			}
-		}
 		delete ctr_properties;
 		delete ctr_theme;
 		delete ctr_theme2;
@@ -105,14 +98,14 @@ public:
 	}
 };
 class guictr_dnd_test : public guictr_base {
-	guictr_drag_test ctrDragTest;
-	guictr_layout ctrLayoutTest;
+	guictr_drag_test ctrLayoutTest1;
+	guictr_layout ctrLayoutTest2;
 public:
 	guictr_dnd_test() {
-		ctrDragTest.setLabel("Tabbed Ctr");
-		ctrLayoutTest.setLabel("Layout Ctr");
-		add(&ctrDragTest);
-		add(&ctrLayoutTest);
+		ctrLayoutTest1.setLabel("Layout Ctr 1");
+		ctrLayoutTest2.setLabel("Layout Ctr 2");
+		add(&ctrLayoutTest1);
+		add(&ctrLayoutTest2);
 		padding = 0;
 		margin = 0;
 	}
@@ -183,12 +176,12 @@ public:
 	}
 	void layout() {
 		ivec2 cs = getSizeContent();
-		ctrDragTest.pos = { cs.x*2 / 3, 0 };
-		ctrDragTest.size.x = cs.x/3;
-		ctrDragTest.size.y = cs.y;
-		ctrLayoutTest.pos = { cs.x*1/3, 0 };
-		ctrLayoutTest.size.x = cs.x/3;
-		ctrLayoutTest.size.y = cs.y;
+		ctrLayoutTest1.pos = { cs.x*2 / 3, 0 };
+		ctrLayoutTest1.size.x = cs.x/3;
+		ctrLayoutTest1.size.y = cs.y;
+		ctrLayoutTest2.pos = { cs.x*1/3, 0 };
+		ctrLayoutTest2.size.x = cs.x/3;
+		ctrLayoutTest2.size.y = cs.y;
 		for (auto* gui : guis) {
 			gui->layout();
 		}

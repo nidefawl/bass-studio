@@ -57,7 +57,6 @@
 #include "../gui/dialog_io.h"
 #include "../gui/dialogs.h"
 #include "../gui/guicontainer_layout.h"
-#include "../gui/container/guicontainer_dnd_tabbed.h"
 #include "../gui/container/guicontainer_dnd_layout.h"
 
 #include "plugin/base_plugin.h"
@@ -128,7 +127,7 @@ guictr_base* makeCtrTheme(); //guiproperties.cpp
 guictr_base* makeCtrHistory(); //guihistory.cpp
 guictr_base* makeDnDTestCtr(); //apps/drag-drop.cpp
 
-class guictr_side_tabs_daw_1 : public guictr_tabbed_draggable {
+class guictr_side_tabs_daw_1 : public guictr_layout {
 public:
 	gui_ctr_debug ctr_dbg0;
 	gui_ctr_debug ctr_dbg1;
@@ -138,22 +137,23 @@ public:
 	guictr_base* const ctr_history;
 	gui_shaderview shaderView;
 	guidialog_settings settings;
-	std::vector<std::shared_ptr<guictr_layout_entry>> entriesContainers;
+//	std::vector<std::shared_ptr<guictr_layout_entry>> entriesContainers;
     void addLayoutEntry(guictr_base* ctr, String title) {
 
 		std::shared_ptr<guictr_layout_entry> entry1 = std::make_shared<my_test_ctr>(ctr);
 		ctr->setLabel(title);
-        entriesContainers.push_back(entry1);
-		addEntry(entry1, ctr->label);
+//        entriesContainers.push_back(entry1);
+		addEntry(entry1);
     }
 	guictr_side_tabs_daw_1() :
-		guictr_tabbed_draggable(),
+		guictr_layout(),
 		ctr_dbg0(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_0),
 		ctr_dbg1(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_1),
 		ctr_dbg2(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_2),
 		ctr_properties(makeCtrProperties()),
 		ctr_theme(makeCtrTheme()),
 		ctr_history(makeCtrHistory()) {
+		setLayout(container_layout::TABBED);
 		setBackgroundRendered(true);
 		ctr_dbg0.setLabel("Debug 0");
 		ctr_dbg1.setLabel("Debug 1");
@@ -175,13 +175,13 @@ public:
 		setActiveEntry(0);
 	}
 	virtual ~guictr_side_tabs_daw_1() {
-		std::vector<tabbed_entry*> entries = getEntries();
-		for (tabbed_entry* ctr : entries) {
-			remove(ctr->tabCtr->getGui());
-			if (ctr->tabbedEntryHandle) {
-				remove(ctr->tabbedEntryHandle);
-			}
-		}
+//		std::vector<tabbed_entry*> entries = getEntries();
+//		for (tabbed_entry* ctr : entries) {
+//			remove(ctr->tabCtr->getGui());
+//			if (ctr->tabbedEntryHandle) {
+//				remove(ctr->tabbedEntryHandle);
+//			}
+//		}
 //		//remove the entries we have to delete, base class would see dangling ptr otherwise
 //		remove(ctr_properties);
 //		remove(ctr_theme);
@@ -222,7 +222,7 @@ public:
 	}
 };
 guictr_base* makeGuiPluginsLoadedList();
-class guictr_side_tabs_daw_2 : public guictr_tabbed_draggable {
+class guictr_side_tabs_daw_2 : public guictr_layout {
 public:
 
 	guictr_effectlibrary& ctr_effectlib;
@@ -231,22 +231,23 @@ public:
 	gui_ctr_debug ctr_dbg0;
 	gui_ctr_debug ctr_dbg1;
 	gui_ctr_debug ctr_dbg2;
-	std::vector<std::shared_ptr<guictr_layout_entry>> entriesContainers;
+//	std::vector<std::shared_ptr<guictr_layout_entry>> entriesContainers;
     void addLayoutEntry(guictr_base* ctr, String title) {
 
 		std::shared_ptr<guictr_layout_entry> entry1 = std::make_shared<my_test_ctr>(ctr);
 		ctr->setLabel(title);
-        entriesContainers.push_back(entry1);
-		addEntry(entry1, ctr->label);
+//        entriesContainers.push_back(entry1);
+		addEntry(entry1);
     }
 	guictr_side_tabs_daw_2(guictr_effectlibrary& _ctr_effectlib)
-	: guictr_tabbed_draggable(),
+	: guictr_layout(),
 	  ctr_effectlib(_ctr_effectlib),
 	  ctr_properties(makeCtrProperties()),
 	  ctr_loadedplugins(makeGuiPluginsLoadedList()),
 		ctr_dbg0(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_0),
 		ctr_dbg1(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_1),
 		ctr_dbg2(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_2) {
+		setLayout(container_layout::TABBED);
 		setBackgroundRendered(true);
 		ctr_effectlib.setLabel("Plugins");
 		ctr_loadedplugins->setLabel("Instances");
@@ -263,13 +264,13 @@ public:
 		setActiveEntry(0);
 	}
 	virtual ~guictr_side_tabs_daw_2() {
-		std::vector<tabbed_entry*> entries = getEntries();
-		for (tabbed_entry* ctr : entries) {
-			remove(ctr->tabCtr->getGui());
-			if (ctr->tabbedEntryHandle) {
-				remove(ctr->tabbedEntryHandle);
-			}
-		}
+//		std::vector<tabbed_entry*> entries = getEntries();
+//		for (tabbed_entry* ctr : entries) {
+//			remove(ctr->tabCtr->getGui());
+//			if (ctr->tabbedEntryHandle) {
+//				remove(ctr->tabbedEntryHandle);
+//			}
+//		}
 //		//remove the entries we have to delete, base class would see dangling ptr otherwise
 //		remove(ctr_properties);
 //		remove(ctr_loadedplugins);
@@ -354,7 +355,8 @@ public:
 	guictr_nodes ctr_nodes;
 	guictr_side_tabs_daw_1 subctr_tabbed;
 	guictr_side_tabs_daw_2 subctr_tabbed2;
-	guictr_stacked ctr_stack_right;
+//	guictr_stacked ctr_stack_right;
+	guictr_layout ctr_stack_right;
 	std::vector<std::shared_ptr<Splitter>> splitters;
 //	Splitter splitterList;
 //	Splitter splitterCenter;
@@ -382,8 +384,13 @@ public:
 		splitters.push_back(std::make_shared<Splitter>(1, 0.02f));//left
 		splitters.push_back(std::make_shared<Splitter>(0, 0.5f));//center
 		splitters.push_back(std::make_shared<Splitter>(1, 0.8f));//right
-		ctr_stack_right.addEntry(&subctr_tabbed2, "Top");
-		ctr_stack_right.addEntry(&subctr_tabbed, "Bottom");
+		std::shared_ptr<guictr_layout_entry> entry1 = std::make_shared<my_test_ctr>(&subctr_tabbed2);
+		subctr_tabbed2.setLabel("Top");
+		std::shared_ptr<guictr_layout_entry> entry2 = std::make_shared<my_test_ctr>(&subctr_tabbed);
+		subctr_tabbed.setLabel("Bottom");
+		ctr_stack_right.setLayout(container_layout::SPLIT_H);
+		ctr_stack_right.addEntry(entry1);
+		ctr_stack_right.addEntry(entry2);
 		ctr_stack_right.setBackgroundRendered(false);
 		ctr_stack_right.padding = 0;
 		ctr_stack_right.margin = 0;
@@ -391,8 +398,8 @@ public:
 		ctr_layoutLeft.margin = CTR_SPACING;
 		ctr_layoutLeft.setBackgroundRendered(true);
 		ivec2 inset = {guictr_stacked::STACK_ENTRY_BTN_SIZE+INSET_CTR_SPACING*3, INSET_CTR_SPACING};
-		subctr_tabbed.setTabMenuInset(inset);
-		subctr_tabbed2.setTabMenuInset(inset);
+//		subctr_tabbed.setTabMenuInset(inset);
+//		subctr_tabbed2.setTabMenuInset(inset);
 		splitters[0]->setMinMax(0.05f, 0.9f);
 		splitters[1]->setMinMax(0.25f, 0.9f);
 		splitters[2]->setMinMax(0.05f, 0.9f);
@@ -434,7 +441,7 @@ public:
 		wbottom -= ctr_clipeditorview.size.x;
 		statusbar.size = { wbottom, hStatusBar };
 
-		ctr_tempo.pos = { widthLeft, winY };
+		ctr_tempo.pos = { winX, winY };
 
 		ctr_tracks.pos = { widthLeft, winY+hTopControls };
 		ctr_nodes.pos = { widthLeft, winY+hTopControls };

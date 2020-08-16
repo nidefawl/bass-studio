@@ -364,7 +364,7 @@ public:
 	}
 	void renderWidgetBorder(NVGcontext* vg, int32_t flags) const;
 	void renderWidgetBorderPosSize(NVGcontext* vg, int32_t flags, ivec2 pos, ivec2 size) const;
-	virtual ivec2 toScreenSpace(ivec2 in) {
+	virtual ivec2 toScreenSpace(ivec2 in) const {
 		in += this->pos;
 		if (this->parent != NULL) {
 			in = this->parent->toScreenSpace(in);

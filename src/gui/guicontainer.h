@@ -55,13 +55,13 @@ public:
 	virtual void onAdded() override;
 	virtual void determineSize(ivec2& prefSize) override {
 	}
-	virtual ivec2 paddingTL(int _padding) {
+	virtual ivec2 paddingTL(int _padding) const {
 		return ivec2(_padding - margin*snapSides.x, _padding - margin*snapSides.y);
 	}
-	virtual ivec2 paddingBR(int _padding) {
+	virtual ivec2 paddingBR(int _padding) const {
 		return ivec2(_padding - margin*snapSides.z, _padding - margin*snapSides.w);
 	}
-	virtual ivec2 getPosContent() {
+	virtual ivec2 getPosContent() const {
 		return pos + paddingTL(padding);
 	}
 	virtual ivec2 getSizeContent() {
@@ -88,7 +88,7 @@ public:
 	virtual ivec2 toParentSpace(ivec2 in) {
 		return getPosContent() + in;
 	}
-	virtual ivec2 toScreenSpace(ivec2 in) {
+	virtual ivec2 toScreenSpace(ivec2 in) const {
 		in += getPosContent();
 		if (this->parent != NULL) {
 			in = this->parent->toScreenSpace(in);

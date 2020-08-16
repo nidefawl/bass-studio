@@ -166,7 +166,7 @@ public:
 		ivec2 offsetPos = getPosContent() + in;
 		return offsetPos;
 	}
-	virtual ivec2 toScreenSpace(ivec2 in) {
+	virtual ivec2 toScreenSpace(ivec2 in) const {
 		in += getPosContent();
 		in.x -= scrolloffset;
 		if (this->parent != NULL) {

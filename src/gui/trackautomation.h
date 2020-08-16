@@ -89,10 +89,10 @@ public:
 		}
 		return false;
 	}
-	ivec2 paddingTL(int _padding) override {
+	ivec2 paddingTL(int _padding) const override {
 		return ivec2(0, _padding);
 	}
-	ivec2 paddingBR(int _padding) override {
+	ivec2 paddingBR(int _padding) const override {
 		return ivec2(0, _padding);
 	}
 	path_segment_t* getSegmentSafe(int32_t idx) {
