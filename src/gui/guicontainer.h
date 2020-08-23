@@ -206,7 +206,9 @@ public:
 	}
 	virtual void onTick(AppCtrl* ctrl) {
 		for (guibase* gui : guis) {
-			gui->onTick(ctrl);
+			if (gui->isVisible()) {
+				gui->onTick(ctrl);
+			}
 		}
 	}
 	virtual guibase* getFocusedContainer() {

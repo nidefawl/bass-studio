@@ -1636,7 +1636,7 @@ int startApplication(int argc, char* argv[]) {
 	    }
 		glfwUpdateInternals();
 #endif //_WIN32
-		if (getTimeMillis() - lastTick > 0) {
+		if (getTimeMillis() - lastTick >= 20) { //TODO: figure out good tick rate
 			windowTickTimerRun();
 			lastTick = getTimeMillis();
 		}
