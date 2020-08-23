@@ -127,70 +127,6 @@ guictr_base* makeCtrTheme(); //guiproperties.cpp
 guictr_base* makeCtrHistory(); //guihistory.cpp
 guictr_base* makeDnDTestCtr(); //apps/drag-drop.cpp
 
-class guictr_side_tabs_daw_1 : public guictr_layout {
-public:
-	gui_ctr_debug ctr_dbg0;
-	gui_ctr_debug ctr_dbg1;
-	gui_ctr_debug ctr_dbg2;
-	guictr_base* const ctr_properties;
-	guictr_base* const ctr_theme;
-	guictr_base* const ctr_history;
-	gui_shaderview shaderView;
-	guidialog_settings settings;
-//	std::vector<std::shared_ptr<guictr_layout_entry>> entriesContainers;
-    void addLayoutEntry(guictr_base* ctr, String title) {
-
-		std::shared_ptr<guictr_layout_entry> entry1 = std::make_shared<my_test_ctr>(ctr);
-		ctr->setLabel(title);
-//        entriesContainers.push_back(entry1);
-		addEntry(entry1);
-    }
-	guictr_side_tabs_daw_1() :
-		guictr_layout(),
-		ctr_dbg0(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_0),
-		ctr_dbg1(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_1),
-		ctr_dbg2(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_2),
-		ctr_properties(makeCtrProperties()),
-		ctr_theme(makeCtrTheme()),
-		ctr_history(makeCtrHistory()) {
-		setLayout(container_layout::TABBED);
-		setBackgroundRendered(true);
-		ctr_dbg0.setLabel("Debug 0");
-		ctr_dbg1.setLabel("Debug 1");
-		ctr_dbg2.setLabel("Debug 2");
-		ctr_properties->setLabel("Properties");
-		ctr_theme->setLabel("Theme");
-		ctr_history->setLabel("History");
-		shaderView.setLabel("Shader");
-		settings.setLabel("settings");
-
-		addLayoutEntry(&ctr_dbg0, ctr_dbg0.label);
-		addLayoutEntry(&ctr_dbg1, ctr_dbg1.label);
-		addLayoutEntry(&ctr_dbg2, ctr_dbg2.label);
-		addLayoutEntry(ctr_history, ctr_history->label);
-		addLayoutEntry(ctr_properties, ctr_properties->label);
-		addLayoutEntry(ctr_theme, ctr_theme->label);
-		addLayoutEntry(&shaderView, shaderView.label);
-		addLayoutEntry(&settings, settings.label);
-		setActiveEntry(0);
-	}
-	virtual ~guictr_side_tabs_daw_1() {
-//		std::vector<tabbed_entry*> entries = getEntries();
-//		for (tabbed_entry* ctr : entries) {
-//			remove(ctr->tabCtr->getGui());
-//			if (ctr->tabbedEntryHandle) {
-//				remove(ctr->tabbedEntryHandle);
-//			}
-//		}
-//		//remove the entries we have to delete, base class would see dangling ptr otherwise
-//		remove(ctr_properties);
-//		remove(ctr_theme);
-//		remove(ctr_history);
-		delete ctr_properties;
-		delete ctr_theme;
-		delete ctr_history;
-	}
-};
 class guictr_effectlibrary : public guictr_base {
 public:
 	guictr_pluginlibrary ctr_pluginlist;
@@ -222,62 +158,83 @@ public:
 	}
 };
 guictr_base* makeGuiPluginsLoadedList();
-class guictr_side_tabs_daw_2 : public guictr_layout {
-public:
 
-	guictr_effectlibrary& ctr_effectlib;
-	guictr_base* const ctr_properties;
-	guictr_base* const ctr_loadedplugins;
-	gui_ctr_debug ctr_dbg0;
-	gui_ctr_debug ctr_dbg1;
-	gui_ctr_debug ctr_dbg2;
-//	std::vector<std::shared_ptr<guictr_layout_entry>> entriesContainers;
-    void addLayoutEntry(guictr_base* ctr, String title) {
+template<typename T>
+void addLayoutEntry(T& t, std::shared_ptr<guictr_base> ctr, String title) {
 
-		std::shared_ptr<guictr_layout_entry> entry1 = std::make_shared<my_test_ctr>(ctr);
-		ctr->setLabel(title);
-//        entriesContainers.push_back(entry1);
-		addEntry(entry1);
-    }
-	guictr_side_tabs_daw_2(guictr_effectlibrary& _ctr_effectlib)
-	: guictr_layout(),
-	  ctr_effectlib(_ctr_effectlib),
-	  ctr_properties(makeCtrProperties()),
-	  ctr_loadedplugins(makeGuiPluginsLoadedList()),
-		ctr_dbg0(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_0),
-		ctr_dbg1(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_1),
-		ctr_dbg2(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_2) {
-		setLayout(container_layout::TABBED);
-		setBackgroundRendered(true);
-		ctr_effectlib.setLabel("Plugins");
-		ctr_loadedplugins->setLabel("Instances");
-		ctr_properties->setLabel("Properties");
-		ctr_dbg0.setLabel("Debug 0");
-		addLayoutEntry(&ctr_dbg0, ctr_dbg0.label);
-		ctr_dbg1.setLabel("Debug 1");
-		addLayoutEntry(&ctr_dbg1, ctr_dbg1.label);
-		ctr_dbg2.setLabel("Debug 2");
-		addLayoutEntry(&ctr_dbg2, ctr_dbg2.label);
-		addLayoutEntry(&ctr_effectlib, ctr_effectlib.label);
-		addLayoutEntry(ctr_loadedplugins, ctr_loadedplugins->label);
-		addLayoutEntry(ctr_properties, ctr_properties->label);
-		setActiveEntry(0);
-	}
-	virtual ~guictr_side_tabs_daw_2() {
-//		std::vector<tabbed_entry*> entries = getEntries();
-//		for (tabbed_entry* ctr : entries) {
-//			remove(ctr->tabCtr->getGui());
-//			if (ctr->tabbedEntryHandle) {
-//				remove(ctr->tabbedEntryHandle);
-//			}
-//		}
-//		//remove the entries we have to delete, base class would see dangling ptr otherwise
-//		remove(ctr_properties);
-//		remove(ctr_loadedplugins);
-		delete ctr_properties;
-		delete ctr_loadedplugins;
-	}
-};
+	ctr->setLabel(title);
+	std::shared_ptr<guictr_layout_entry> entry1 = std::make_shared<my_test_ctr>(ctr);
+	t->addEntry(entry1);
+}
+std::shared_ptr<guictr_layout> makeTabListCtr1() {
+	auto ctr = std::make_shared<guictr_layout>();
+
+	auto ctr_dbg0 = std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_0);
+	auto ctr_dbg1 = std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_1);
+	auto ctr_dbg2 = std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_2);
+	auto ctr_properties = std::shared_ptr<guictr_base>(makeCtrProperties());
+	auto ctr_theme = std::shared_ptr<guictr_base>(makeCtrTheme());
+	auto ctr_history = std::shared_ptr<guictr_base>(makeCtrHistory());
+	auto shaderView = std::make_shared<gui_shaderview>();
+	auto settings = std::make_shared<guidialog_settings>();
+	auto layout = std::make_shared<guictr_layout>();
+
+	ctr->setLayout(container_layout::TABBED);
+//	ctr->setBackgroundRendered(true);
+	ctr_dbg0->setLabel("Debug 0");
+	ctr_dbg1->setLabel("Debug 1");
+	ctr_dbg2->setLabel("Debug 2");
+	ctr_properties->setLabel("Properties");
+	ctr_theme->setLabel("Theme");
+	ctr_history->setLabel("History");
+	shaderView->setLabel("Shader");
+	settings->setLabel("settings");
+
+	addLayoutEntry(ctr, ctr_dbg0, ctr_dbg0->label);
+	addLayoutEntry(ctr, ctr_dbg1, ctr_dbg1->label);
+	addLayoutEntry(ctr, ctr_dbg2, ctr_dbg2->label);
+	addLayoutEntry(ctr, ctr_history, ctr_history->label);
+	addLayoutEntry(ctr, ctr_properties, ctr_properties->label);
+	addLayoutEntry(ctr, ctr_theme, ctr_theme->label);
+	addLayoutEntry(ctr, shaderView, shaderView->label);
+	addLayoutEntry(ctr, settings, settings->label);
+	addLayoutEntry(ctr, layout, "Empty layoutctr");
+	ctr->setActiveEntry(0);
+
+	return ctr;
+}
+
+std::shared_ptr<guictr_layout> makeTabListCtr2(std::shared_ptr<guictr_effectlibrary>& shrdPtrEffectList_out) {
+	auto ctr = std::make_shared<guictr_layout>();
+
+	auto ctr_effectlib = std::make_shared<guictr_effectlibrary>();
+	auto ctr_properties = std::shared_ptr<guictr_base>(makeCtrProperties());
+	auto ctr_loadedplugins = std::shared_ptr<guictr_base>(makeGuiPluginsLoadedList());
+	auto settings = std::make_shared<guidialog_settings>();
+
+	auto ctr_dbg0 = std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_0);
+	auto ctr_dbg1 = std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_1);
+	auto ctr_dbg2 = std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_2);
+
+	ctr->setLayout(container_layout::TABBED);
+//	ctr->setBackgroundRendered(true);
+	ctr_effectlib->setLabel("Plugins");
+	ctr_loadedplugins->setLabel("Instances");
+	ctr_properties->setLabel("Properties");
+	ctr_dbg0->setLabel("Debug 0");
+	addLayoutEntry(ctr, ctr_dbg0, ctr_dbg0->label);
+	ctr_dbg1->setLabel("Debug 1");
+	addLayoutEntry(ctr, ctr_dbg1, ctr_dbg1->label);
+	ctr_dbg2->setLabel("Debug 2");
+	addLayoutEntry(ctr, ctr_dbg2, ctr_dbg2->label);
+	addLayoutEntry(ctr, ctr_effectlib, ctr_effectlib->label);
+	addLayoutEntry(ctr, ctr_loadedplugins, ctr_loadedplugins->label);
+	addLayoutEntry(ctr, ctr_properties, ctr_properties->label);
+	ctr->setActiveEntry(0);
+	shrdPtrEffectList_out = ctr_effectlib;
+
+	return ctr;
+}
 class DawViewContainersCompanion : public DawViewContainers {
 public:
 	guictr_menubar ctr_menu;
@@ -341,7 +298,7 @@ public:
 class DawViewContainersMain : public DawViewContainers {
 	guictr_noteeditor noteeditor;
 public:
-	guictr_effectlibrary ctr_effectlib;
+	std::shared_ptr<guictr_effectlibrary> ctr_effectlib;
 	guictr_menubar ctr_menu;
 	guictr_tempocontrols ctr_tempo;
 	guictr_plugins ctr_plugins;
@@ -353,14 +310,8 @@ public:
 	guictr_layout ctr_layoutLeft;
 	guictr_tracks ctr_tracks;
 	guictr_nodes ctr_nodes;
-	guictr_side_tabs_daw_1 subctr_tabbed;
-	guictr_side_tabs_daw_2 subctr_tabbed2;
-//	guictr_stacked ctr_stack_right;
 	guictr_layout ctr_stack_right;
 	std::vector<std::shared_ptr<Splitter>> splitters;
-//	Splitter splitterList;
-//	Splitter splitterCenter;
-//	Splitter splitterRight;
 	enum class SplitterPos : uint32_t {
 		LEFT = 0, CENTER, RIGHT
 	};
@@ -374,35 +325,41 @@ public:
 	  ctr_layoutLeft(),
 	  ctr_tracks(_mainCtrl, _cursor, _project, _projectGlobals, grid, dragdropclip),
 	  ctr_nodes(_cursor, _project, dragdropclip),
-	  subctr_tabbed(),
-	  subctr_tabbed2(ctr_effectlib),
-	  ctr_stack_right()//,
-//	  splitterList(0, 0.5f),
-//	  splitterCenter(0, 0.7f),
-//	  splitterRight(1, 0.8f)
+	  ctr_stack_right()
 	{
+		auto subctr_tabbed = makeTabListCtr1();
+		auto subctr_tabbed2 = makeTabListCtr2(ctr_effectlib);
 		splitters.push_back(std::make_shared<Splitter>(1, 0.02f));//left
 		splitters.push_back(std::make_shared<Splitter>(0, 0.5f));//center
 		splitters.push_back(std::make_shared<Splitter>(1, 0.8f));//right
-		std::shared_ptr<guictr_layout_entry> entry1 = std::make_shared<my_test_ctr>(&subctr_tabbed2);
-		subctr_tabbed2.setLabel("Top");
-		std::shared_ptr<guictr_layout_entry> entry2 = std::make_shared<my_test_ctr>(&subctr_tabbed);
-		subctr_tabbed.setLabel("Bottom");
+		subctr_tabbed2->setLabel("Top");
+		subctr_tabbed->setLabel("Bottom");
+		std::shared_ptr<guictr_layout_entry> entry1 = std::make_shared<my_test_ctr>(subctr_tabbed2);
+		std::shared_ptr<guictr_layout_entry> entry2 = std::make_shared<my_test_ctr>(subctr_tabbed);
 		ctr_stack_right.setLayout(container_layout::SPLIT_H);
 		ctr_stack_right.addEntry(entry1);
 		ctr_stack_right.addEntry(entry2);
 		ctr_stack_right.setBackgroundRendered(false);
 		ctr_stack_right.padding = 0;
 		ctr_stack_right.margin = 0;
-		ctr_layoutLeft.padding = CONTENT_INSET;
-		ctr_layoutLeft.margin = CTR_SPACING;
-		ctr_layoutLeft.setBackgroundRendered(true);
-		ivec2 inset = {guictr_stacked::STACK_ENTRY_BTN_SIZE+INSET_CTR_SPACING*3, INSET_CTR_SPACING};
-//		subctr_tabbed.setTabMenuInset(inset);
-//		subctr_tabbed2.setTabMenuInset(inset);
+		ctr_layoutLeft.setBackgroundRendered(false);
+		ctr_layoutLeft.padding = 0;
+		ctr_layoutLeft.margin = 0;
 		splitters[0]->setMinMax(0.05f, 0.9f);
 		splitters[1]->setMinMax(0.25f, 0.9f);
 		splitters[2]->setMinMax(0.05f, 0.9f);
+
+		ctr_tempo.setSnapSides(ivec4(0, 0, 0, 1));
+		statusbar.setSnapSides(ivec4(0, 1, 0, 0));
+		ctr_clipeditorview.setSnapSides(ivec4(0, 1, 0, 0));
+		ctr_pluginview.setSnapSides(ivec4(0, 1, 0, 0));
+		ctr_clipeditor.setSnapSides(ivec4(0, 1, 0, 0));
+		ctr_plugins.setSnapSides(ivec4(0, 1, 0, 0));
+		subctr_tabbed2->setSnapSides(ivec4(1, 0, 0, 1));
+		ctr_layoutLeft.setSnapSides(ivec4(0, 0, 1, 0));
+		ctr_stack_right.setSnapSides(ivec4(1, 1, 1, 1));
+
+		subctr_tabbed->setSnapSides(ivec4(1, 0, 0, 0));
 	}
 	Splitter* getSplitter(SplitterPos pos) {
 		return splitters[static_cast<uint32_t>(pos)].get();
@@ -457,17 +414,6 @@ public:
 		getSplitter(SplitterPos::CENTER)->pos = ivec2(widthLeft, ctr_clipeditor.pos.y - 5);
 		getSplitter(SplitterPos::CENTER)->size = ivec2(widthCenter, 10);
 
-		ctr_tempo.setSnapSides(ivec4(0, 0, 0, 1));
-		statusbar.setSnapSides(ivec4(0, 1, 0, 0));
-		ctr_clipeditorview.setSnapSides(ivec4(0, 1, 0, 0));
-		ctr_pluginview.setSnapSides(ivec4(0, 1, 0, 0));
-		ctr_clipeditor.setSnapSides(ivec4(0, 1, 0, 0));
-		ctr_plugins.setSnapSides(ivec4(0, 1, 0, 0));
-		subctr_tabbed2.setSnapSides(ivec4(1, 0, 0, 1));
-		ctr_layoutLeft.setSnapSides(ivec4(0, 0, 1, 0));
-		ctr_stack_right.setSnapSides(ivec4(1, 1, 1, 1));
-
-		subctr_tabbed.setSnapSides(ivec4(1, 0, 0, 0));
 
 
 //		ctr_tabbed.pos = {width, winY+hTopControls+heightList};
@@ -584,7 +530,6 @@ bool MainCtrl::isPluginViewVisible() {
 	return containers[1] == &view->ctr_plugins;
 }
 void MainCtrl::addDebug(String s) {
-	view->subctr_tabbed.ctr_dbg0.addStr(s);
 }
 
 void DawCtrl::resetMouseContext() {
@@ -948,7 +893,7 @@ void DawCtrl::postInit() {
 void MainCtrl::postInit() {
 	daw.startDaw();
 	waveformrender::getInstance()->init();
-	view->ctr_effectlib.update();
+	view->ctr_effectlib->update();
 	daw.setEmptyProject();
 	daw.postInit();
 	DawCtrl::postInit();

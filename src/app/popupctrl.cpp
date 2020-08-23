@@ -79,9 +79,9 @@ void PopupCtrl::open(guictxtmenu_base *_ctxtmenu, ivec2 pos, bool bResizeable) {
 	popupCtrs->maxHeight = _ctxtmenu->maxHeight;
 	popupCtrs->scrollbarOutside = _ctxtmenu->scrollbarOutside;
 	popupCtrs->setBackgroundRendered(_ctxtmenu->isBackgroundRendered());
-	_ctxtmenu->determineSize(_ctxtmenu->size);
 	_ctxtmenu->setParent(popupCtrs);
 	_ctxtmenu->setControl(this);
+	_ctxtmenu->determineSize(_ctxtmenu->size);
 	_ctxtmenu->layout();
 
 

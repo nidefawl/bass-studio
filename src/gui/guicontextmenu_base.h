@@ -122,6 +122,11 @@ public:
 		guictr_base::render(vg);
 	}
 	void determineSize(ivec2& prefSize) override {
+		for (guibase* gui : guis) {
+			auto prefSizeCpy = prefSize;
+			gui->determineSize(prefSizeCpy);
+			gui->size = prefSizeCpy;
+		}
 		ivec2 maxSize = ivec2(0);
 		for (guibase* gui : guis) {
 			maxSize.x = math::max(maxSize.x, gui->right());

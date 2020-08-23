@@ -164,6 +164,9 @@ public:
 	void setLabel(String _str) {
 		label = _str;
 	}
+	String getLabel() const {
+		return label;
+	}
 
 	String getClassName();
 	guibase(const guibase&) = default; guibase& operator=(const guibase&) = default;

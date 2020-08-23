@@ -79,6 +79,9 @@ namespace math {
 	inline ivec2 maxvec2(const ivec2& a, const ivec2& b) {
 		return {math::max(a.x, b.x), math::max(a.y, b.y)};
 	}
+	inline vec2 maxvec2f(const vec2& a, const vec2& b) {
+		return {math::max(a.x, b.x), math::max(a.y, b.y)};
+	}
 	inline ivec2 absvec2(const ivec2 a) {
 		return {math::abs(a.x), math::abs(a.y)};
 	}

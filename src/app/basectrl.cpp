@@ -11,6 +11,7 @@
 #include "../gui/gui.h"
 #include "../gui/guicontainer.h"
 #include "../gui/guicontextmenu_base.h"
+#include "../gui/container/guicontainer_dnd_layout.h"
 
 #include "window.h"
 #include "platform.h"
@@ -700,7 +701,190 @@ void BaseCtrl::objectDragRelease(guibase* g, MouseEvent& mevt) {
 		g->dragReleaseOn(gui, mposObj);
 	}
 }
+void BaseCtrl::dragContainerBegin(MouseEvent& evt, guictr_layout_entry* ctrDragSrc)
+{
+//			ctrDragContent = ctrDragSrc;
+	dbgassert(!ctrContent.get());
+	// get a shared pointer reference to ctrDragSrc, this is a bit awkward, as are all interfaces using shared_ptr
+	// stores the reference to ctrDragSrc in shared_ptr ctrContent.
+	// extends the lifetime of that container so we can safely access it in render and mouse move callbacks.
 
+	if (ctrDragSrc->getContainerRef(ctrContent, false)) {
+		dbgassert(ctrContent.get());
+		auto* szLabel1 = StringAsCStr(ctrContent->getGui()->label);
+		log_printf("dragContainerBegin %s\n", szLabel1);
+//            ctrDragHandler.pos = ctrContent->getGui()->pos;
+		auto vecSizeScaled = vec2(ctrContent->getGui()->size)*0.3f;
+		ctrDragHandler.size = math::maxvec2(ivec2(32, 12), vecSizeScaled);
+		ctrDragHandler.setLabel("Move " + ctrDragSrc->getGui()->label);
+		setDragged(&ctrDragHandler);
+//            ctrDragHandler.validPreview = false;
+		dragContainerMove(evt);
+	}
+}
+void BaseCtrl::dragContainerMove(MouseEvent& evt)
+{
+    //		dbgassert(ctrDragContent);
+	std::vector<i_ctr_layout*> list = getContainers(evt);
+	std::vector<std::weak_ptr<i_ctr_drop_area>> targets = getTargets(evt, list);
+//    	log_printf("targets: %d\n", targets.size());
+	dragDropTargets_ContainerMove = targets;
+	ctrDragHandler.pos = evt.mousepos;
+}
+void BaseCtrl::dragContainerRelease(MouseEvent& evt)
+{
+	bool hasRemovedContainer = false;
+	bool hasPlacedContainer = false;
+	i_ctr_drop_area* area = determineDropCtrArea(evt);
+	if (area && ctrContent) {
+//			std::shared_ptr<guictr_layout_entry> ctrContent2;
+		auto* szLabel1 = StringAsCStr(ctrContent->getGui()->label);
+		auto layoutCtr = dynamic_cast<guictr_layout*>(area->getLayoutCtr());
+		if (ctrContent->parentLayoutContainer == layoutCtr) {
+			log_printf("attempt to move container %s from parent to same parent\n", szLabel1);
+		} else
+//				if (ctrContent->getContainerRef(ctrContent2, true))
+		{
+			auto prevParent = ctrContent->parentLayoutContainer;
+//				dbgassert(ctrContent2);
+//				dbgassert(ctrContent == ctrContent2);
+			auto* parentCtr = dynamic_cast<guictr_base*>(layoutCtr);
+			auto* szLabel2 = parentCtr ? StringAsCStr(parentCtr->label) : "<null>";
+
+			dock_pos dockPos = area->getDockPos();
+			container_layout ctrLayout = layoutCtr->getLayout();
+			container_layout updatedCtrLayout = dock_pos_to_container_layout(dockPos);
+			if (ctrLayout != updatedCtrLayout && ctrLayout != container_layout::SOLE) {
+				/* create a new guictr_layout with layout type 'updatedCtrtLayout'
+				 * if updatedCtrLayout is TABBED:
+				 *     determine which entry area is referring to.
+				 *     Entry is in layoutCtr->entries, and drop location was either left or right of an entry
+				 *     replace that entry with the new guictr_layout instance and insert entry and ctrContent
+				 * else: (updatedCtrLayout was SPLIT_V or SPLIT_H)
+				 *     replace layoutCtr in layoutCtr->parent with newContainer
+				 *     insert 'ctrContent' at area->dockPos
+				 *     insert 'layoutCtr' at mirror location of area->dockPos
+				 */
+
+				auto newContainer = std::make_shared<guictr_layout>();
+				newContainer->setLayout(updatedCtrLayout);
+				log_printf("replace guictr_layout container\n", 0);
+//					dynamic_cast<guictr_layout*>(layoutCtr->parent)->getContainerRef(ctr, out, remove)
+				if (updatedCtrLayout == container_layout::TABBED) {
+					auto& ctrEntries = layoutCtr->getEntries();
+					dbgassert(area->dockPosOffset >= 0 && area->dockPosOffset < ctrEntries.size());
+					auto entryToReplace = ctrEntries[area->dockPosOffset];
+					auto oldEntryThatIsNowTabEntry = layoutCtr->replaceContainerWith(entryToReplace->getGui(), newContainer);
+					//todo figure out order here
+					newContainer->placeContainer(ctrContent, area);
+					newContainer->placeContainer(oldEntryThatIsNowTabEntry, area);
+					newContainer->postContentChanged();
+					layoutCtr->layout();
+					layoutCtr->postContentChanged();
+
+				} else { // SPLIT_V or SPLIT_H
+					if (!layoutCtr->parent) {
+						log_printf("replace top level container\n", 0);
+	//					layoutCtr->parentCtrl->replaceContainerWith(layoutCtr, newContainer);
+					} else {
+						dbgassert(dynamic_cast<guictr_layout*>(layoutCtr->parent) != nullptr);
+						auto parentLayoutCtr = dynamic_cast<guictr_layout*>(layoutCtr->parent);
+						auto layoutCtrEntry = parentLayoutCtr->replaceContainerWith(layoutCtr, newContainer);
+
+						newContainer->placeContainer(ctrContent, area);
+						switch (area->dockPos) {
+						case dock_pos::LEFT:
+							area->dockPos = dock_pos::RIGHT;
+							break;
+						case dock_pos::RIGHT:
+							area->dockPos = dock_pos::LEFT;
+							break;
+						case dock_pos::TOP:
+							area->dockPos = dock_pos::BOTTOM;
+							break;
+						case dock_pos::BOTTOM:
+							area->dockPos = dock_pos::TOP;
+							break;
+						}
+						newContainer->placeContainer(layoutCtrEntry, area);
+						newContainer->postContentChanged();
+						parentLayoutCtr->layout();
+						parentLayoutCtr->postContentChanged();
+					}
+				}
+				if (updatedCtrLayout == container_layout::TABBED) {
+//					newContainer.
+//					layoutCtr->entries
+				} else { // SPLIT_V or SPLIT_H
+
+				}
+//				placeContainerUpdateLayout(ctrContent)
+//				dynamic_cast<guictr_layout*>(area->getLayoutCtr());
+				//relayout...
+				log_printf("cannot directly insert into %s. need to change layout from %d to %d first\n", szLabel2, ctrLayout, updatedCtrLayout);
+
+			} else {
+				hasRemovedContainer = true;
+				hasPlacedContainer = area->getLayoutCtr()->placeContainer(ctrContent, area);
+				log_printf("attempt to place container %s on %s result %d\n", szLabel1, szLabel2, hasPlacedContainer);
+			}
+			prevParent->postContentChanged();
+		}
+	}
+	if (hasRemovedContainer && !hasPlacedContainer) {
+		log_printf("Container was removed from its parent could not be placed on target. Container is now dangling %s\n", StringAsCStr(ctrContent->getGui()->label));
+	}
+	// end the extension of the dragged containers lifetime
+	ctrContent = nullptr;
+	ctrDragHandler.validPreview = false;
+	dragDropTargets_ContainerMove.clear();
+}
+std::vector<std::weak_ptr<i_ctr_drop_area>> BaseCtrl::getTargets(MouseEvent& mevt, std::vector<i_ctr_layout*> ifMatches) {
+	std::vector<std::weak_ptr<i_ctr_drop_area>> targets;
+	for (i_ctr_layout* ctr : ifMatches) {
+		std::vector<std::weak_ptr<i_ctr_drop_area>> ctrtargets;
+		ctr->getOverlays(mevt, ctrtargets);
+//    		log_printf("ctrtargets %X %d\n", reinterpret_cast<int64_t>(ctr), ctrtargets.size());
+		targets.insert(targets.begin(), ctrtargets.begin(), ctrtargets.end());
+	}
+	return targets;
+}
+std::vector<i_ctr_layout*> BaseCtrl::getContainers(MouseEvent& mevt) {
+		MouseHitEvt evtDragObj = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_OBJECT);
+		evtDragObj.setDraggedThing(nullptr);
+		evtDragObj.requestFocus(nullptr);
+		auto mpos = mevt.mousepos;
+		std::vector<i_ctr_layout*> ifMatches;
+		std::deque<guictr_base*> stack;
+		std::vector<guictr_base*> ctrMatches;
+		dbgassert(stack.empty());
+		stack.insert(stack.begin(), containers.begin(), containers.end());
+		while (!stack.empty()) {
+			guictr_base* current = stack.front();
+			stack.pop_front();
+			if (current->guis.size()) {
+				ctrMatches.clear();
+				for (auto* tChildTest : current->guis) {
+					guictr_base* ctrMatch = dynamic_cast<guictr_base*>(tChildTest);
+					if (ctrMatch) {
+						ctrMatches.push_back(ctrMatch);
+					}
+				}
+				if (ctrMatches.size()) {
+					stack.insert(stack.begin(), ctrMatches.begin(), ctrMatches.end());
+				}
+			}
+			if (current->contains(mpos)) {
+			}
+			i_ctr_layout* ifMatch = dynamic_cast<i_ctr_layout*>(current);
+			if (ifMatch) {
+				ifMatches.push_back(ifMatch);
+			}
+		}
+//		log_printf("matched %d instances\n", ifMatches.size());
+
+		return ifMatches;
+	}
 
 void guictr_dragged_container_instance::handleDraggedMove(MouseEvent& evt) {
 	parentCtrl->dragContainerMove(evt);

@@ -52,49 +52,27 @@ guictr_base* makeCtrTheme();
 guictr_base* makeCtrProperties();
 class guictr_drag_test : public guictr_layout {
 public:
-	guictr_base* const ctr_properties;
-	guictr_base* const ctr_theme;
-	guictr_base* const ctr_theme2;
-	guictr_base* const ctr_theme3;
-
-#if BUILD_VSTHOST
-	gui_ctr_debug ctrDebug;
-#endif
-	guictr_layout ctrLayout;
-//    std::vector<std::shared_ptr<guictr_layout_entry>> entriesContainers;
-    void addLayoutEntry(guictr_base* ctr, String title) {
+    void addLayoutEntry(std::shared_ptr<guictr_base> ctr, String title) {
 
 		std::shared_ptr<guictr_layout_entry> entry1 = std::make_shared<my_test_ctr>(ctr);
 		ctr->setLabel(title);
-//        entriesContainers.push_back(entry1);
 		addEntry(entry1);
     }
-	guictr_drag_test() : guictr_layout(),
-		ctr_properties(makeCtrProperties()),
-		ctr_theme(makeCtrTheme()),
-		ctr_theme2(makeCtrTheme()),
-		ctr_theme3(makeCtrTheme())
-#if BUILD_VSTHOST
-		,ctrDebug(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_2)
-#endif
+	guictr_drag_test() : guictr_layout()
 	{
 		this->setLayout(container_layout::TABBED);
-		addLayoutEntry(ctr_theme, "Theme 1");
-		addLayoutEntry(ctr_properties, "Properties");
-		addLayoutEntry(ctr_theme2, "Theme 2");
-		addLayoutEntry(ctr_theme3, "Theme 3");
-#if BUILD_VSTHOST
-		addLayoutEntry(&ctrDebug, "Debug");
-#endif
-		addLayoutEntry(&ctrLayout, "Layout");
+		addLayoutEntry(std::shared_ptr<guictr_base>(makeCtrTheme()), "Theme 1");
+		addLayoutEntry(std::shared_ptr<guictr_base>(makeCtrProperties()), "Properties");
+		addLayoutEntry(std::shared_ptr<guictr_base>(makeCtrTheme()), "Theme 2");
+		addLayoutEntry(std::shared_ptr<guictr_base>(makeCtrTheme()), "Theme 3");
+		#if BUILD_VSTHOST
+		addLayoutEntry(std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_2), "Theme 3");
+		#endif
+		addLayoutEntry(std::make_shared<guictr_layout>(), "Theme 3");
 
 		setActiveEntry(0);
 	}
 	virtual ~guictr_drag_test() {
-		delete ctr_properties;
-		delete ctr_theme;
-		delete ctr_theme2;
-		delete ctr_theme3;
 	}
 };
 class guictr_dnd_test : public guictr_base {

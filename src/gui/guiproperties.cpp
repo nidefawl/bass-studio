@@ -186,6 +186,7 @@ protected:
 	gui_color_pick colorPick;
 	guidropdown_selectfont selectFont;
 	bool mouseDown = false;
+	bool needsRelayout = false;
 	cellclicked_t lastClicked;
 	std::vector<guibase*> controls;
 	int32_t number = 0;
@@ -201,9 +202,9 @@ public:
 		  ownsPtr(_ownsPtr)
 	{
 		autoUpdate = _isGlobalInstance;
-		setBackgroundRendered(true);
-		setBackgroundRenderedInset(false);
-		setSnapSides(ivec4(1));
+//		setBackgroundRendered(true);
+//		setBackgroundRenderedInset(false);
+//		setSnapSides(ivec4(1));
 		addControl(&textField);
 		addControl(&selectFont);
 		addControl(&numberInput);
@@ -218,8 +219,8 @@ public:
 				setActiveControl(nullptr);
 			}
 		};
-		padding = 0;
-		margin = 0;
+//		padding = 0;
+//		margin = 0;
 //		scrollbarOutside=true;
 //		maxHeight = 220;
 	}
@@ -464,7 +465,10 @@ public:
 		if (isBackgroundRendered()){
 			renderBackground(vg);
 		}
-		if (!setScissorTransformContainer(vg)) {
+//		if (!setScissorTransformContainer(vg)) {
+//			return;
+//		}
+		if (!setScissorTransform(vg)) {
 			return;
 		}
 		setFont(vg, FONT_SIZE_TOOLTIP_TITLE, G_WHITE, NVG_ALIGN_LEFT|NVG_ALIGN_BOTTOM);
@@ -476,9 +480,7 @@ public:
 		}
 	}
 	void setDebugPropertyHandle(void *ptr) override;
-	void determineSize(glm::ivec2& prefSize) override {
-
-	}
+	void determineSize(glm::ivec2& prefSize) override;
 };
 
 template<typename T>
@@ -617,9 +619,18 @@ void addPropertiesFromGui(guictr_base& gui, Table::tbl* table) {
 }
 
 template <>
-void guiproperties_table<guiproperties_t>::layout()  {
-	if (size.x == 0)
-		size.x = 450;
+void guiproperties_table<guiproperties_t>::layout() {
+	ivec2 tableSize = getSizeContent()-ivec2(INSET_TABLE<<1);
+	AdjustColSizes(table, tableSize);
+	if (table.colSizes.size() == 2) {
+		table.colSizes[0] = math::max(100.0f, math::min(250.0f, 0.25f*tableSize.x));
+		table.colSizes[1] = tableSize.x - table.colSizes[0];
+	}
+}
+template <>
+void guiproperties_table<guiproperties_t>::determineSize(glm::ivec2& prefSize) {
+//	if (size.x == 0)
+	prefSize.x = math::max(450, prefSize.x);
 	curFontSize = G_FONT_SCALE(theme->getFloat(GuiConstant::CONST_FONT_SIZE_TABLE));
 	selectFont.setFontSize(curFontSize);
 	textField.setFontSize(curFontSize);
@@ -632,13 +643,7 @@ void guiproperties_table<guiproperties_t>::layout()  {
 	{
 		ref->addProperties(&table);
 	}
-	ivec2 tableSize = getSizeContent()-ivec2(INSET_TABLE<<1);
-	AdjustColSizes(table, tableSize);
-	if (table.colSizes.size() == 2) {
-		table.colSizes[0] = math::max(100.0f, math::min(250.0f, 0.25f*tableSize.x));
-		table.colSizes[1] = tableSize.x - table.colSizes[0];
-	}
-	size.y = table.rows.size()*table.rowHeight+table.rowHeight;
+	prefSize.y = table.rows.size()*table.rowHeight+table.rowHeight;
 
 }
 template <>
@@ -667,18 +672,26 @@ void guiproperties_table<guiproperties_t>::onTick(AppCtrl* appctrl) {
 			} else {
 				ptr->safeRef = SafeRef<guibase>();
 			}
+			needsRelayout = true;
 		}
-		layout();
+	}
+	if (needsRelayout) {
+		needsRelayout = false;
+		onChildLayoutChanged(this);
+//		layout();
 	}
 }
 template <>
 void guiproperties_table<guiproperties_t>::setDebugPropertyHandle(void *vPtr)  {
 	guibase* ref = safeRefGet(ptr->safeRef);
 	if (!vPtr) {
-		table.rows.clear();
-		table.titleCols.clear();
-		table.colSizes.clear();
-		ptr->safeRef = SafeRef<guibase>();
+		if (ref) {
+			table.rows.clear();
+			table.titleCols.clear();
+			table.colSizes.clear();
+			ptr->safeRef = SafeRef<guibase>();
+			needsRelayout = true;
+		}
 	} else {
 		guibase* pGui = static_cast<guibase*>(vPtr);
 		if (ref != pGui) {
@@ -687,6 +700,7 @@ void guiproperties_table<guiproperties_t>::setDebugPropertyHandle(void *vPtr)  {
 			} else {
 				ptr->safeRef = SafeRef<guibase>();
 			}
+			needsRelayout = true;
 		}
 	}
 }
@@ -794,62 +808,62 @@ inline void cellClicked(const click_ctxt_t& ctxt, const tbltype_theme_font& obj)
 }
 }
 template <>
-void guiproperties_table<guitheme_t>::layout()  {
+void guiproperties_table<guitheme_t>::layout() {
+	ivec2 tableSize = getSizeContent()-ivec2(INSET_TABLE<<1);
+	AdjustColSizes(table, tableSize);
+	if (table.colSizes.size() == 2) {
+		table.colSizes[0] = math::max(220.0f, math::min(450.0f, 0.25f*tableSize.x));
+		table.colSizes[1] = tableSize.x - table.colSizes[0];
+	}
+}
+template <>
+void guiproperties_table<guitheme_t>::determineSize(glm::ivec2& prefSize) {
+	//TODO: only fully repopulate table if necessary.
 	//	size.x = 250;
 	curFontSize = G_FONT_SCALE(theme->getFloat(GuiConstant::CONST_FONT_SIZE_TABLE));
 	curFontSize = math::max(8.0f, curFontSize);
 
 	selectFont.setFontSize(curFontSize);
 	textField.setFontSize(curFontSize);
-		table.rowHeight = curFontSize+INSET_TABLE_CELL_PADDING*2;
-		table.rows.clear();
-		table.titleCols.clear();
-		table.colSizes.clear();
-		table.rows.push_back({{tblstr{"this"}, tblint{(int64_t)ptr, "%08X"}}});
-		if (ptr)
-		{
+	table.rowHeight = curFontSize+INSET_TABLE_CELL_PADDING*2;
+	table.rows.clear();
+	table.titleCols.clear();
+	table.colSizes.clear();
+	table.rows.push_back({{tblstr{"this"}, tblint{(int64_t)ptr, "%08X"}}});
+	if (ptr)
+	{
 
-			table.rows.push_back({{tblstr{"colorBg"}, tbltyperef<NVGcolor>{ptr->colorBg, "%08X"}}});
-			table.rows.push_back({{tblstr{"colorBgHover"}, tbltyperef<NVGcolor>{ ptr->colorBgHover, "%08X"}}});
-			table.rows.push_back({{tblstr{"colorBgPressed"}, tbltyperef<NVGcolor>{ptr->colorBgPressed, "%08X"}}});
-			table.rows.push_back({{tblstr{"colorBgFocused"}, tbltyperef<NVGcolor>{ptr->colorBgFocused, "%08X0"}}});
-			table.rows.push_back({{tblstr{"colorBgDisabled"}, tbltyperef<NVGcolor>{ptr->colorBgDisabled, "%08X"}}});
-			table.rows.push_back({{tblstr{"colorBgFrameBase"}, tbltyperef<NVGcolor>{ptr->colorBgFrameBase, "%08X"}}});
-			table.rows.push_back({{tblstr{"colorBgFrameBright"}, tbltyperef<NVGcolor>{ptr->colorBgFrameBright, "%08X"}}});
-			table.rows.push_back({{tblstr{"colorBgFrameOutline"}, tbltyperef<NVGcolor>{ptr->colorBgFrameOutline, "%08X"}}});
-			table.rows.push_back({{tblstr{"colorBgFrameHighlight"}, tbltyperef<NVGcolor>{ptr->colorBgFrameHighlight, "%08X"}}});
-			table.rows.push_back({{tblstr{"colorBgStroke"}, tbltyperef<NVGcolor>{ptr->colorBgStroke, "%08X"}}});
-			auto add = [this](tblstr&& x, const auto& y) {
-				table.rows.push_back({{x, y}});
-			};
-			std::vector<GuiColor::constant_t> vec = GuiColor::getAllConstants();
-			std::sort(vec.begin(), vec.end(), [](auto& a, auto& b){ return strcmp(a.name, b.name) < 0; });
-			for (auto _constant : vec) {
-				add(tblstr{ _constant.name }, tbltype_theme_color{ ptr, _constant });
-			}
-			std::vector<GuiConstant::constant_t> vec2 = GuiConstant::getAllConstants();
-			std::sort(vec2.begin(), vec2.end(), [](auto& a, auto& b){ return strcmp(a.name, b.name) < 0; });
-			for (auto _constant2 : vec2) {
-				add(tblstr{ _constant2.name }, tbltype_theme_constant{ ptr, _constant2 });
-			}
-			std::vector<UIFont::font_type_t> vec3 = UIFont::getAllConstants();
-			std::sort(vec3.begin(), vec3.end(), [](auto& a, auto& b){ return strcmp(a.name, b.name) < 0; });
-			for (auto _constant3 : vec3) {
-				add(tblstr{ _constant3.name }, tbltype_theme_font{ ptr, _constant3 });
-			}
-		} else {
+		table.rows.push_back({{tblstr{"colorBg"}, tbltyperef<NVGcolor>{ptr->colorBg, "%08X"}}});
+		table.rows.push_back({{tblstr{"colorBgHover"}, tbltyperef<NVGcolor>{ ptr->colorBgHover, "%08X"}}});
+		table.rows.push_back({{tblstr{"colorBgPressed"}, tbltyperef<NVGcolor>{ptr->colorBgPressed, "%08X"}}});
+		table.rows.push_back({{tblstr{"colorBgFocused"}, tbltyperef<NVGcolor>{ptr->colorBgFocused, "%08X0"}}});
+		table.rows.push_back({{tblstr{"colorBgDisabled"}, tbltyperef<NVGcolor>{ptr->colorBgDisabled, "%08X"}}});
+		table.rows.push_back({{tblstr{"colorBgFrameBase"}, tbltyperef<NVGcolor>{ptr->colorBgFrameBase, "%08X"}}});
+		table.rows.push_back({{tblstr{"colorBgFrameBright"}, tbltyperef<NVGcolor>{ptr->colorBgFrameBright, "%08X"}}});
+		table.rows.push_back({{tblstr{"colorBgFrameOutline"}, tbltyperef<NVGcolor>{ptr->colorBgFrameOutline, "%08X"}}});
+		table.rows.push_back({{tblstr{"colorBgFrameHighlight"}, tbltyperef<NVGcolor>{ptr->colorBgFrameHighlight, "%08X"}}});
+		table.rows.push_back({{tblstr{"colorBgStroke"}, tbltyperef<NVGcolor>{ptr->colorBgStroke, "%08X"}}});
+		auto add = [this](tblstr&& x, const auto& y) {
+			table.rows.push_back({{x, y}});
+		};
+		std::vector<GuiColor::constant_t> vec = GuiColor::getAllConstants();
+		std::sort(vec.begin(), vec.end(), [](auto& a, auto& b){ return strcmp(a.name, b.name) < 0; });
+		for (auto _constant : vec) {
+			add(tblstr{ _constant.name }, tbltype_theme_color{ ptr, _constant });
 		}
-		ivec2 tableSize = getSizeContent()-ivec2(INSET_TABLE<<1);
-		AdjustColSizes(table, tableSize);
-	if (table.colSizes.size() == 2) {
-		table.colSizes[0] = math::max(220.0f, math::min(450.0f, 0.25f*tableSize.x));
-		table.colSizes[1] = tableSize.x - table.colSizes[0];
+		std::vector<GuiConstant::constant_t> vec2 = GuiConstant::getAllConstants();
+		std::sort(vec2.begin(), vec2.end(), [](auto& a, auto& b){ return strcmp(a.name, b.name) < 0; });
+		for (auto _constant2 : vec2) {
+			add(tblstr{ _constant2.name }, tbltype_theme_constant{ ptr, _constant2 });
+		}
+		std::vector<UIFont::font_type_t> vec3 = UIFont::getAllConstants();
+		std::sort(vec3.begin(), vec3.end(), [](auto& a, auto& b){ return strcmp(a.name, b.name) < 0; });
+		for (auto _constant3 : vec3) {
+			add(tblstr{ _constant3.name }, tbltype_theme_font{ ptr, _constant3 });
+		}
 	}
 
-		size.y = table.rows.size()*table.rowHeight;
-		ivec2 padTL = paddingTL(padding);
-		ivec2 padBR = paddingBR(padding);
-		size -= (padTL + padBR);
+	prefSize.y = table.rows.size()*table.rowHeight;
 }
 template <>
 void guiproperties_table<guitheme_t>::render(NVGcontext* vg)  {
@@ -857,7 +871,11 @@ void guiproperties_table<guitheme_t>::render(NVGcontext* vg)  {
 }
 template <>
 void guiproperties_table<guitheme_t>::onTick(AppCtrl* appctrl) {
-
+	if (needsRelayout) {
+		needsRelayout = false;
+		onChildLayoutChanged(this);
+//		layout();
+	}
 }
 template <>
 void guiproperties_table<guitheme_t>::setDebugPropertyHandle(void *vPtr) {
