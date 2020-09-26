@@ -440,6 +440,7 @@ class gui_pluginsloaded_list : public guictr_base {
 	std::vector<gui_pluginsloaded_list_entry*> listEntriesDef;
 public:
 	gui_pluginsloaded_list() : guictr_base(), listCtr(listEntriesLoadedPlugins), listDeferredCtr(listEntriesDef) {
+		ctrType = CTR_TYPE_PLUGINSLOADED;
 		setBackgroundRendered(false);
 		padding = 0;
 		margin = 0;

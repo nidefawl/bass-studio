@@ -201,6 +201,7 @@ public:
 		  isGlobalInstance(_isGlobalInstance),
 		  ownsPtr(_ownsPtr)
 	{
+		ctrType = CTR_TYPE_PROPERTIES;
 		autoUpdate = _isGlobalInstance;
 //		setBackgroundRendered(true);
 //		setBackgroundRenderedInset(false);
@@ -695,6 +696,7 @@ void guiproperties_table<guiproperties_t>::setDebugPropertyHandle(void *vPtr)  {
 	} else {
 		guibase* pGui = static_cast<guibase*>(vPtr);
 		if (ref != pGui) {
+			pGui->id |= (1<<16);
 			if (pGui) {
 				ptr->safeRef = pGui->makeSafeRef();
 			} else {
@@ -942,6 +944,7 @@ class guictr_theme_settings : public guictr_base {
 	guibutton buttonSave;
 public:
 	guictr_theme_settings() : guictr_base(), themeProperties(nullptr, false, false), scrollContainer(), selectTheme() {
+		ctrType = CTR_TYPE_THEME;
 		padding = 0;
 		margin = 0;
 		buttonAdd.setText("+");

@@ -34,6 +34,7 @@
 #include "rand.h"
 #include "projectcontroller.h"
 #include "dragdrop.h"
+#include "../gui/container/guicontainer_dnd_layout.h"
 
 struct automatable_t;
 struct KeyEvent;
@@ -212,6 +213,11 @@ class CompanionCtrl;
 class DawCtrl;
 class guictr_menubar;
 struct track_gui_entry_t;
+struct dawview_layout_t {
+	std::shared_ptr<guictrlayout_snapshot_t> left;
+	std::shared_ptr<guictrlayout_snapshot_t> right;
+	std::vector<float> splitterPositions;
+};
 class DawViewContainers {
 public:
 	DawViewContainers() = default;
@@ -224,6 +230,9 @@ public:
 	}
 	guictr_menubar* getMenu() {
 		return nullptr;
+	}
+	virtual void dragContainerRelayout(BaseCtrl::drag_ctr_event evt) {
+
 	}
 };
 class DawInstance : public project_controller_t, public delete_cb {
@@ -467,10 +476,12 @@ public:
 	view_mode_t getViewMode();
 	virtual void setViewMode(view_mode_t mode) = 0;
 };
+
 class MainCtrl : public DawCtrl
 {
 	friend class DawInstance;
 	DawViewContainersMain* view = NULL;
+	std::array<dawview_layout_t, 10> layouts;
 public:
 	static MainCtrl* get();
 	MainCtrl(DawInstance& _daw);
@@ -516,6 +527,9 @@ public:
 	void fixCursor() override;
 	bool isZooming() override;
 	void setViewMode(view_mode_t mode) override;
+    std::shared_ptr<guictr_layout> replaceContainerWith(guictr_base* ctr,
+    		std::shared_ptr<guictr_layout> newContainer) override;
+    void dragContainerRelayout(drag_ctr_event evt) override;
 };
 
 class CompanionCtrl : public DawCtrl

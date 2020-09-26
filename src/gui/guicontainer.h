@@ -12,7 +12,25 @@
 
 class BaseCtrl;
 struct guitheme_t;
+
+enum container_type : int32_t {
+	CTR_TYPE_LAYOUT,
+	CTR_TYPE_BASE,
+	CTR_TYPE_PROPERTIES,
+	CTR_TYPE_THEME,
+	CTR_TYPE_HISTORY,
+	CTR_TYPE_SHADERVIEW,
+	CTR_TYPE_SETTINGS,
+	CTR_TYPE_EFFECTLIBRARY,
+	CTR_TYPE_PLUGINSLOADED,
+	CTR_TYPE_DEBUG_0,
+	CTR_TYPE_DEBUG_1,
+	CTR_TYPE_DEBUG_2,
+};
+
 class guictr_base : public guibase {
+protected:
+	container_type ctrType;
 public:
 	int padding = CONTENT_INSET;
 	int margin = CTR_SPACING;
@@ -21,6 +39,7 @@ public:
 	bool sortChildren = false;
 public:
 	guictr_base() : guibase() {
+		ctrType = CTR_TYPE_BASE;
 		setBackgroundRendered(false);
 		setBackgroundRenderedInset(true);
 	}
@@ -232,5 +251,8 @@ public:
 		nvgFill(vg);
 	}
 #endif
+	container_type getContainerType() const {
+		return ctrType;
+	}
 };
 

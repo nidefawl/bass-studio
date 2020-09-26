@@ -12,6 +12,7 @@
 #include "../gui/guicontainer.h"
 #include "../gui/guicontextmenu_base.h"
 #include "../gui/container/guicontainer_dnd_layout.h"
+#include "../gui/container/guicontainer_layout_types.h"
 
 #include "window.h"
 #include "platform.h"
@@ -343,10 +344,12 @@ void BaseCtrl::render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, i
 						log_printf("warning, rendering container with size 0 0\n", 0);
 						continue;
 					}
-
-					nvgSave(vg);
-					shrdPtrTarget->render(vg);
-					nvgRestore(vg);
+					if (shrdPtrTarget->contains(ctrDragHandler.pos)) {
+						nvgSave(vg);
+						shrdPtrTarget->render(vg);
+						nvgRestore(vg);
+						break;
+					}
 				}
 			}
 
@@ -703,12 +706,10 @@ void BaseCtrl::objectDragRelease(guibase* g, MouseEvent& mevt) {
 }
 void BaseCtrl::dragContainerBegin(MouseEvent& evt, guictr_layout_entry* ctrDragSrc)
 {
-//			ctrDragContent = ctrDragSrc;
 	dbgassert(!ctrContent.get());
 	// get a shared pointer reference to ctrDragSrc, this is a bit awkward, as are all interfaces using shared_ptr
 	// stores the reference to ctrDragSrc in shared_ptr ctrContent.
 	// extends the lifetime of that container so we can safely access it in render and mouse move callbacks.
-
 	if (ctrDragSrc->getContainerRef(ctrContent, false)) {
 		dbgassert(ctrContent.get());
 		auto* szLabel1 = StringAsCStr(ctrContent->getGui()->label);
@@ -720,14 +721,14 @@ void BaseCtrl::dragContainerBegin(MouseEvent& evt, guictr_layout_entry* ctrDragS
 		setDragged(&ctrDragHandler);
 //            ctrDragHandler.validPreview = false;
 		dragContainerMove(evt);
+		dragContainerRelayout(drag_ctr_event{drag_ctr_event_type::DRAG_BEGIN});
 	}
 }
 void BaseCtrl::dragContainerMove(MouseEvent& evt)
 {
-    //		dbgassert(ctrDragContent);
-	std::vector<i_ctr_layout*> list = getContainers(evt);
+	dragContainerRelayout(drag_ctr_event{drag_ctr_event_type::DRAG_MOVE});
+	std::vector<i_ctr_layout*> list = getContainers();
 	std::vector<std::weak_ptr<i_ctr_drop_area>> targets = getTargets(evt, list);
-//    	log_printf("targets: %d\n", targets.size());
 	dragDropTargets_ContainerMove = targets;
 	ctrDragHandler.pos = evt.mousepos;
 }
@@ -737,98 +738,73 @@ void BaseCtrl::dragContainerRelease(MouseEvent& evt)
 	bool hasPlacedContainer = false;
 	i_ctr_drop_area* area = determineDropCtrArea(evt);
 	if (area && ctrContent) {
-//			std::shared_ptr<guictr_layout_entry> ctrContent2;
 		auto* szLabel1 = StringAsCStr(ctrContent->getGui()->label);
 		auto layoutCtr = dynamic_cast<guictr_layout*>(area->getLayoutCtr());
-		if (ctrContent->parentLayoutContainer == layoutCtr) {
-			log_printf("attempt to move container %s from parent to same parent\n", szLabel1);
-		} else
-//				if (ctrContent->getContainerRef(ctrContent2, true))
-		{
-			auto prevParent = ctrContent->parentLayoutContainer;
-//				dbgassert(ctrContent2);
-//				dbgassert(ctrContent == ctrContent2);
-			auto* parentCtr = dynamic_cast<guictr_base*>(layoutCtr);
-			auto* szLabel2 = parentCtr ? StringAsCStr(parentCtr->label) : "<null>";
+		auto* szLabel2 = StringAsCStr(layoutCtr->label);
 
-			dock_pos dockPos = area->getDockPos();
-			container_layout ctrLayout = layoutCtr->getLayout();
-			container_layout updatedCtrLayout = dock_pos_to_container_layout(dockPos);
-			if (ctrLayout != updatedCtrLayout && ctrLayout != container_layout::SOLE) {
-				/* create a new guictr_layout with layout type 'updatedCtrtLayout'
-				 * if updatedCtrLayout is TABBED:
-				 *     determine which entry area is referring to.
-				 *     Entry is in layoutCtr->entries, and drop location was either left or right of an entry
-				 *     replace that entry with the new guictr_layout instance and insert entry and ctrContent
-				 * else: (updatedCtrLayout was SPLIT_V or SPLIT_H)
-				 *     replace layoutCtr in layoutCtr->parent with newContainer
-				 *     insert 'ctrContent' at area->dockPos
-				 *     insert 'layoutCtr' at mirror location of area->dockPos
-				 */
+		dock_pos dockPos = area->getDockPos();
+		container_layout ctrLayout = layoutCtr->getLayout();
+		container_layout updatedCtrLayout = dock_pos_to_container_layout(dockPos);
+		if (area->childContainerIndex > -1 || (ctrLayout != updatedCtrLayout && ctrLayout != container_layout::SOLE)) {
 
-				auto newContainer = std::make_shared<guictr_layout>();
-				newContainer->setLayout(updatedCtrLayout);
-				log_printf("replace guictr_layout container\n", 0);
-//					dynamic_cast<guictr_layout*>(layoutCtr->parent)->getContainerRef(ctr, out, remove)
-				if (updatedCtrLayout == container_layout::TABBED) {
-					auto& ctrEntries = layoutCtr->getEntries();
-					dbgassert(area->dockPosOffset >= 0 && area->dockPosOffset < ctrEntries.size());
-					auto entryToReplace = ctrEntries[area->dockPosOffset];
-					auto oldEntryThatIsNowTabEntry = layoutCtr->replaceContainerWith(entryToReplace->getGui(), newContainer);
-					//todo figure out order here
-					newContainer->placeContainer(ctrContent, area);
-					newContainer->placeContainer(oldEntryThatIsNowTabEntry, area);
-					newContainer->postContentChanged();
-					layoutCtr->layout();
-					layoutCtr->postContentChanged();
+			auto newContainer = std::make_shared<guictr_layout>();
+			newContainer->setLayout(updatedCtrLayout);
+			log_printf("replace guictr_layout container\n", 0);
+			if (updatedCtrLayout == container_layout::TABBED) {
+				auto& ctrEntries = layoutCtr->getEntries();
+				dbgassert(area->dockPosOffset >= 0 && area->dockPosOffset < ctrEntries.size());
+				auto entryToReplace = ctrEntries[area->dockPosOffset];
+				auto oldEntryThatIsNowTabEntry = layoutCtr->replaceContainerWith(entryToReplace->getGui(), newContainer);
 
-				} else { // SPLIT_V or SPLIT_H
-					if (!layoutCtr->parent) {
-						log_printf("replace top level container\n", 0);
-	//					layoutCtr->parentCtrl->replaceContainerWith(layoutCtr, newContainer);
-					} else {
-						dbgassert(dynamic_cast<guictr_layout*>(layoutCtr->parent) != nullptr);
-						auto parentLayoutCtr = dynamic_cast<guictr_layout*>(layoutCtr->parent);
-						auto layoutCtrEntry = parentLayoutCtr->replaceContainerWith(layoutCtr, newContainer);
+				newContainer->placeContainer(ctrContent, area);
+				newContainer->placeContainer(oldEntryThatIsNowTabEntry, area);
 
+			} else { // SPLIT_V or SPLIT_H
+				auto newDockPos = dock_pos::NONE;
+
+				switch (area->dockPos) {
+				case dock_pos::LEFT:
+					newDockPos = dock_pos::RIGHT;
+					break;
+				case dock_pos::RIGHT:
+					newDockPos = dock_pos::LEFT;
+					break;
+				case dock_pos::TOP:
+					newDockPos = dock_pos::BOTTOM;
+					break;
+				case dock_pos::BOTTOM:
+					newDockPos = dock_pos::TOP;
+					break;
+				default:
+					dbgassert(0);
+					break;
+				}
+				auto containerToReplace = area->childContainerIndex > -1 ? layoutCtr->getEntries()[area->childContainerIndex]->getGui() : layoutCtr;
+				auto parentLayoutCtr = dynamic_cast<guictr_layout*>(containerToReplace->parent);
+				if (!parentLayoutCtr) {
+					log_printf("replace top level container\n", 0);
+					std::shared_ptr<guictr_layout> prevCtr = this->replaceContainerWith(containerToReplace, newContainer);
+					if (prevCtr) {
+						std::shared_ptr<guictr_layout_entry> entry1 = createGuiCtrLayoutEntry(prevCtr);
 						newContainer->placeContainer(ctrContent, area);
-						switch (area->dockPos) {
-						case dock_pos::LEFT:
-							area->dockPos = dock_pos::RIGHT;
-							break;
-						case dock_pos::RIGHT:
-							area->dockPos = dock_pos::LEFT;
-							break;
-						case dock_pos::TOP:
-							area->dockPos = dock_pos::BOTTOM;
-							break;
-						case dock_pos::BOTTOM:
-							area->dockPos = dock_pos::TOP;
-							break;
-						}
-						newContainer->placeContainer(layoutCtrEntry, area);
-						newContainer->postContentChanged();
-						parentLayoutCtr->layout();
-						parentLayoutCtr->postContentChanged();
+						area->dockPos = newDockPos;
+						newContainer->placeContainer(entry1, area);
 					}
-				}
-				if (updatedCtrLayout == container_layout::TABBED) {
-//					newContainer.
-//					layoutCtr->entries
-				} else { // SPLIT_V or SPLIT_H
 
-				}
-//				placeContainerUpdateLayout(ctrContent)
-//				dynamic_cast<guictr_layout*>(area->getLayoutCtr());
-				//relayout...
-				log_printf("cannot directly insert into %s. need to change layout from %d to %d first\n", szLabel2, ctrLayout, updatedCtrLayout);
+				} else {
+					auto layoutCtrEntry = parentLayoutCtr->replaceContainerWith(containerToReplace, newContainer);
 
-			} else {
-				hasRemovedContainer = true;
-				hasPlacedContainer = area->getLayoutCtr()->placeContainer(ctrContent, area);
-				log_printf("attempt to place container %s on %s result %d\n", szLabel1, szLabel2, hasPlacedContainer);
+					newContainer->placeContainer(ctrContent, area);
+					area->dockPos = newDockPos;
+					newContainer->placeContainer(layoutCtrEntry, area);
+				}
 			}
-			prevParent->postContentChanged();
+			log_printf("cannot directly insert into %s. need to change layout from %d to %d first\n", szLabel2, ctrLayout, updatedCtrLayout);
+
+		} else {
+			hasRemovedContainer = true;
+			hasPlacedContainer = area->getLayoutCtr()->placeContainer(ctrContent, area);
+			log_printf("attempt to place container %s on %s result %d\n", szLabel1, szLabel2, hasPlacedContainer);
 		}
 	}
 	if (hasRemovedContainer && !hasPlacedContainer) {
@@ -838,6 +814,7 @@ void BaseCtrl::dragContainerRelease(MouseEvent& evt)
 	ctrContent = nullptr;
 	ctrDragHandler.validPreview = false;
 	dragDropTargets_ContainerMove.clear();
+	dragContainerRelayout(drag_ctr_event{drag_ctr_event_type::DRAG_END});
 }
 std::vector<std::weak_ptr<i_ctr_drop_area>> BaseCtrl::getTargets(MouseEvent& mevt, std::vector<i_ctr_layout*> ifMatches) {
 	std::vector<std::weak_ptr<i_ctr_drop_area>> targets;
@@ -849,42 +826,42 @@ std::vector<std::weak_ptr<i_ctr_drop_area>> BaseCtrl::getTargets(MouseEvent& mev
 	}
 	return targets;
 }
-std::vector<i_ctr_layout*> BaseCtrl::getContainers(MouseEvent& mevt) {
-		MouseHitEvt evtDragObj = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_OBJECT);
-		evtDragObj.setDraggedThing(nullptr);
-		evtDragObj.requestFocus(nullptr);
-		auto mpos = mevt.mousepos;
-		std::vector<i_ctr_layout*> ifMatches;
-		std::deque<guictr_base*> stack;
-		std::vector<guictr_base*> ctrMatches;
-		dbgassert(stack.empty());
-		stack.insert(stack.begin(), containers.begin(), containers.end());
-		while (!stack.empty()) {
-			guictr_base* current = stack.front();
-			stack.pop_front();
-			if (current->guis.size()) {
-				ctrMatches.clear();
-				for (auto* tChildTest : current->guis) {
+std::vector<i_ctr_layout*> BaseCtrl::getContainers() {
+	MouseHitEvt evtDragObj = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_OBJECT);
+	evtDragObj.setDraggedThing(nullptr);
+	evtDragObj.requestFocus(nullptr);
+	std::vector<i_ctr_layout*> ifMatches;
+	std::deque<guictr_base*> stack;
+	std::vector<guictr_base*> ctrMatches;
+	dbgassert(stack.empty());
+	stack.insert(stack.begin(), containers.begin(), containers.end());
+	while (!stack.empty()) {
+		guictr_base* current = stack.front();
+		stack.pop_front();
+		if (current->guis.size()) {
+			ctrMatches.clear();
+			for (auto* tChildTest : current->guis) {
+				//TODO: check for visibility, or redesing guiyctr_layout in tabbed mode to not have inactive containers in its guis list
+				if (tChildTest->isVisible()) {
 					guictr_base* ctrMatch = dynamic_cast<guictr_base*>(tChildTest);
 					if (ctrMatch) {
 						ctrMatches.push_back(ctrMatch);
 					}
 				}
-				if (ctrMatches.size()) {
-					stack.insert(stack.begin(), ctrMatches.begin(), ctrMatches.end());
-				}
 			}
-			if (current->contains(mpos)) {
-			}
-			i_ctr_layout* ifMatch = dynamic_cast<i_ctr_layout*>(current);
-			if (ifMatch) {
-				ifMatches.push_back(ifMatch);
+			if (ctrMatches.size()) {
+				stack.insert(stack.begin(), ctrMatches.begin(), ctrMatches.end());
 			}
 		}
+		i_ctr_layout* ifMatch = dynamic_cast<i_ctr_layout*>(current);
+		if (ifMatch) {
+			ifMatches.push_back(ifMatch);
+		}
+	}
 //		log_printf("matched %d instances\n", ifMatches.size());
 
-		return ifMatches;
-	}
+	return ifMatches;
+}
 
 void guictr_dragged_container_instance::handleDraggedMove(MouseEvent& evt) {
 	parentCtrl->dragContainerMove(evt);
@@ -913,3 +890,4 @@ void guictr_dragged_container_instance::renderDragged(NVGcontext* vg, ivec2 mous
 		nvgLineCap(vg, NVGlineCap::NVG_BUTT);
 	}
 }
+

@@ -60,6 +60,7 @@ class guictr_history_view : public guictr_base {
 	int64_t histRevision = -1;
 public:
 	guictr_history_view() : guictr_base(), scrollContainer() {
+		ctrType = CTR_TYPE_HISTORY;
 		padding = 0;
 		margin = 0;
 		add(&scrollContainer);

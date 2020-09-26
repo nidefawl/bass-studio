@@ -33,32 +33,27 @@
 #include "gui/debugctr.h"
 #endif
 #include "gui/splitter.h"
+#include "gui/container/guicontainer_layout_types.h"
 
 
 class guictr_layout;
-class g_layout_ctr_drop_area : public i_ctr_drop_area {
-public:
-	g_layout_ctr_drop_area(i_ctr_layout* _parent)
-	  : i_ctr_drop_area(_parent) {
-	}
-	~g_layout_ctr_drop_area() {
+struct dawview_layout_t;
 
-	}
-};
 class guictr_layout : public guictr_base, public i_ctr_layout {
-	bool setOverlayPos(g_layout_ctr_drop_area* area, const dock_pos dockPos);
-	bool setOverlayPosForTab(g_layout_ctr_drop_area* area, const dock_pos dockPos, const int32_t dockOffset, const bool rightSideHandle);
-	g_layout_ctr_drop_area* makeDropArea(int32_t idx);
+    bool setOverlayPos(i_ctr_drop_area* area, const dock_pos dockPos, ivec2 overlayPos, ivec2 overlaySize, int32_t dockPosOfffset, int32_t childContainerIndex);
+	bool setOverlayPosForTab(i_ctr_drop_area* area, const dock_pos dockPos, const int32_t dockOffset, const bool rightSideHandle);
+	i_ctr_drop_area* makeDropArea(int32_t idx);
 public:
 private:
 	container_layout ctrLayout = container_layout::SOLE;
 	int32_t activePosition = -1;
 	std::vector<std::shared_ptr<guictr_layout_entry>> entries;
 	std::vector<guibase*> handles;
-	std::vector<std::shared_ptr<g_layout_ctr_drop_area>> dragdropContainerAreaHelpers;
+	std::vector<std::shared_ptr<i_ctr_drop_area>> dragdropContainerAreaHelpers;
 public:
 	guictr_layout() : guictr_base() {
-		setBackgroundRendered(false);
+		ctrType = CTR_TYPE_LAYOUT;
+//		setBackgroundRendered(true);
 //		setBackgroundRenderedInset(true);
 		this->setCanMouseHit(true);
 //		dragdropContainerAreaHelpers.resize(16);
@@ -69,19 +64,50 @@ public:
 		removeGuis();
 		entries.clear();
 	}
+	void removeAllEntries() {
+		for (auto &entry : entries) {
+			guictr_base::remove(entry->getGui());
+			auto *guiHandle = entry->getHandle();
+			if (guiHandle) {
+				removeEntry(handles, guiHandle);
+				guictr_base::remove(guiHandle);
+			}
+			entry->parentLayoutContainer = nullptr;
+		}
+		entries.clear();
+		activePosition = -1;
+	}
+	int32_t getActivePosition() const {
+		return activePosition;
+	}
 	std::vector<std::shared_ptr<guictr_layout_entry>>& getEntries() {
 		return entries;
 	}
 	void simplify() {
+		struct InlineEntry {
+			int32_t index;
+			std::shared_ptr<guictr_layout_entry> entry;
+		};
 		std::vector<std::shared_ptr<guictr_layout_entry>> entriesToRemove;
+		std::vector<InlineEntry> entriesInsert;
+		int32_t index = 0;
 		for (auto entry : entries) {
 			auto guiCtrLayout = dynamic_cast<guictr_layout*>(entry->getGui());
 			if (guiCtrLayout) {
 				guiCtrLayout->simplify();
-				if (guiCtrLayout->getEntries().empty()) {
+				auto& childEntries = guiCtrLayout->getEntries();
+				if (childEntries.empty()) {
 					entriesToRemove.push_back(entry);
+				} else if (childEntries.size() == 1){
+					auto& childEntry = childEntries[0];
+					InlineEntry inlineEntry;
+					guiCtrLayout->getContainerRef(childEntry.get(), inlineEntry.entry, true);
+					inlineEntry.index = index;
+					entriesToRemove.push_back(entry);
+					entriesInsert.push_back(inlineEntry);
 				}
 			}
+			index++;
 		}
 		if (entriesToRemove.size()) {
 			log_printf("remove %d container entries\n", entriesToRemove.size());
@@ -90,8 +116,12 @@ public:
 			std::shared_ptr<guictr_layout_entry> out;
 			getContainerRef(entry.get(), out, true);
 		}
-		if (entries.size() < 2)
+		for (auto entry : entriesInsert) {
+			addEntry(entry.entry, entry.index);
+		}
+		if (entries.size() < 2) {
 			setLayout(container_layout::SOLE);
+		}
 //		if (this->ctrLayout != container_layout::TABBED) {
 //			for (auto handle : handles) {
 //				handle->setVisible(false);
@@ -104,8 +134,10 @@ public:
 	}
 	void postContentChanged() {
 		simplify();
-		updateVisible();
-		layout();
+        updateVisible();
+        if (this->parent) {
+            layout();
+        }
 	}
 	void setActiveEntry(int32_t idx) {
 		this->activePosition = idx;
@@ -123,7 +155,7 @@ public:
 	}
 
 	void onChildLayoutChanged(guibase* g) override {
-		postContentChanged();
+//		postContentChanged();
 		if (this->parent) {
 			this->parent->onChildLayoutChanged(g);
 		}
@@ -155,62 +187,36 @@ public:
 //	void replaceContentWith(guictr_layout* ctr);
 
 	std::shared_ptr<guictr_layout_entry> replaceContainerWith(guictr_base* ctr, std::shared_ptr<guictr_layout> newContainer);
+	void render(NVGcontext* vg);
 };
-struct my_test_ctr;
-class guictr_layout_entry_handle : public guibutton {
-	my_test_ctr* const parentCtr;
-	guictr_base* const ctr;
-	bool hasDragged = false;
-	bool hasClicked = false;
-public:
-	guictr_layout_entry_handle(my_test_ctr* _parentCtr, guictr_base* _ctr) : parentCtr(_parentCtr), ctr(_ctr) {
-		setText(_ctr->getLabel());
-	}
-	~guictr_layout_entry_handle() = default;
-	void handleDraggedBegin(MouseEvent &evt) override;
-	void handleDraggedMove(MouseEvent &evt) override;
-	void handleDraggedRelease(MouseEvent& evt) override;
-	int32_t getStateFlags() const override {
-		int32_t state = guibuttonbase::getStateFlags();
-//		if (active()) {
-//			state |= FLG_ACT;
-//		}
-		return state;
-	}
-	void render(NVGcontext* vg) override;
-};
-struct my_test_ctr : public guictr_layout_entry {
-	std::shared_ptr<guictr_base> ctr; /* non-owning */ //TODO: make this owning, unique ptr
-	guictr_layout_entry_handle* ctrHandle;
-	my_test_ctr(std::shared_ptr<guictr_base> _ctr)
-	    : ctr(_ctr) {
-		ctrHandle = new guictr_layout_entry_handle(this, _ctr.get());
-//		if (dynamic_cast<guictr_layout*>(_ctr.get()) == nullptr) {
-//			ctrHandle->setLabel("...");
-//		} else {
-//			ctrHandle = nullptr;
-//		}
-	}
-	~my_test_ctr() {
-		delete ctrHandle;
-	}
-	guictr_base* getGui() override {
-		return ctr.get();
-	}
-	guibase* getHandle() override {
-		return ctrHandle;
-	}
-	std::shared_ptr<guictr_layout_entry> duplicateContainer() override {
-		return nullptr;
-	}
-	bool getContainerRef(std::shared_ptr<guictr_layout_entry>& out, bool remove) override {
-        return parentLayoutContainer->getContainerRef(this, out, remove);
-	}
-};
-class guibutton_drag: public guibutton {
-public:
-	guibutton_drag() :
-			guibutton() {
+
+struct guictrlayout_snapshot_t;
+//TODO: guictrlayout_snapshot_t should not derive from guictrlayout_entry_snapshot_t
+// instead add field to guictrlayout_entry_snapshot_t
+struct guictrlayout_entry_snapshot_t {
+	container_type type;
+	String label;
+	virtual ~guictrlayout_entry_snapshot_t() {
 
 	}
+	//guictrlayout_entry_snapshot_data_t data;
+//	template<class Archive>
+//	void serialize(Archive &ar) {
+//	}
 };
+struct guictrlayout_snapshot_t : public virtual guictrlayout_entry_snapshot_t {
+	container_layout ctrLayout = container_layout::SOLE;
+	int32_t activePosition = -1;
+	std::vector<std::shared_ptr<guictrlayout_entry_snapshot_t>> entries;
+//	template<class Archive>
+//	void serialize(Archive &ar) {
+//	}
+};
+
+
+void loadContainerSnapshot(guictr_layout* ctrlayout, guictrlayout_snapshot_t* snapshot);
+void storeContainerSnapshot(guictr_layout* ctrlayout, guictrlayout_snapshot_t* snapshot);
+
+
+bool saveDawViewLayoutSnapshot(dawview_layout_t& snapshot, const String& path);
+std::shared_ptr<dawview_layout_t> loadDawViewLayoutSnapshot(const String& path);

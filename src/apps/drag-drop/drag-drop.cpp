@@ -18,6 +18,7 @@
 #include "basectrl.h"
 
 #include "gui/container/guicontainer_dnd_layout.h"
+#include "gui/container/guicontainer_dnd_layout.h"
 
 /**
  * TODO:
@@ -50,40 +51,39 @@
  */
 guictr_base* makeCtrTheme();
 guictr_base* makeCtrProperties();
-class guictr_drag_test : public guictr_layout {
-public:
-    void addLayoutEntry(std::shared_ptr<guictr_base> ctr, String title) {
 
-		std::shared_ptr<guictr_layout_entry> entry1 = std::make_shared<my_test_ctr>(ctr);
-		ctr->setLabel(title);
-		addEntry(entry1);
-    }
-	guictr_drag_test() : guictr_layout()
-	{
-		this->setLayout(container_layout::TABBED);
-		addLayoutEntry(std::shared_ptr<guictr_base>(makeCtrTheme()), "Theme 1");
-		addLayoutEntry(std::shared_ptr<guictr_base>(makeCtrProperties()), "Properties");
-		addLayoutEntry(std::shared_ptr<guictr_base>(makeCtrTheme()), "Theme 2");
-		addLayoutEntry(std::shared_ptr<guictr_base>(makeCtrTheme()), "Theme 3");
-		#if BUILD_VSTHOST
-		addLayoutEntry(std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_2), "Theme 3");
-		#endif
-		addLayoutEntry(std::make_shared<guictr_layout>(), "Theme 3");
+template<typename T>
+void addLayoutEntry(T& t, std::shared_ptr<guictr_base> ctr, String title) {
+	ctr->setLabel(title);
+	std::shared_ptr<guictr_layout_entry> entry1 = createGuiCtrLayoutEntry(ctr);
+	t->addEntry(entry1);
+}
+std::shared_ptr<guictr_layout> makeDragTestCtr() {
+	auto ctr = std::make_shared<guictr_layout>();
+	ctr->setLayout(container_layout::TABBED);
+	addLayoutEntry(ctr, std::shared_ptr<guictr_base>(makeCtrTheme()), "Theme 1");
+	addLayoutEntry(ctr, std::shared_ptr<guictr_base>(makeCtrProperties()), "Properties");
+	addLayoutEntry(ctr, std::shared_ptr<guictr_base>(makeCtrTheme()), "Theme 2");
+	addLayoutEntry(ctr, std::shared_ptr<guictr_base>(makeCtrTheme()), "Theme 3");
+	#if BUILD_VSTHOST
+	addLayoutEntry(ctr, std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_2), "Theme 3");
+	#endif
+//	addLayoutEntry(ctr, std::make_shared<guictr_layout>(), "guictr_layout");
 
-		setActiveEntry(0);
-	}
-	virtual ~guictr_drag_test() {
-	}
-};
+	ctr->setActiveEntry(0);
+	return ctr;
+}
 class guictr_dnd_test : public guictr_base {
-	guictr_drag_test ctrLayoutTest1;
-	guictr_layout ctrLayoutTest2;
+	std::shared_ptr<guictr_layout> ctrLayoutTest1;
+	std::shared_ptr<guictr_layout> ctrLayoutTest2;
 public:
 	guictr_dnd_test() {
-		ctrLayoutTest1.setLabel("Layout Ctr 1");
-		ctrLayoutTest2.setLabel("Layout Ctr 2");
-		add(&ctrLayoutTest1);
-		add(&ctrLayoutTest2);
+		ctrLayoutTest1 = makeDragTestCtr();
+		ctrLayoutTest2 = makeDragTestCtr();
+		ctrLayoutTest1->setLabel("Layout Ctr 1");
+		ctrLayoutTest2->setLabel("Layout Ctr 2");
+		add(ctrLayoutTest1.get());
+		add(ctrLayoutTest2.get());
 		padding = 0;
 		margin = 0;
 	}
@@ -154,12 +154,12 @@ public:
 	}
 	void layout() {
 		ivec2 cs = getSizeContent();
-		ctrLayoutTest1.pos = { cs.x*2 / 3, 0 };
-		ctrLayoutTest1.size.x = cs.x/3;
-		ctrLayoutTest1.size.y = cs.y;
-		ctrLayoutTest2.pos = { cs.x*1/3, 0 };
-		ctrLayoutTest2.size.x = cs.x/3;
-		ctrLayoutTest2.size.y = cs.y;
+		ctrLayoutTest1->pos = { cs.x*2 / 3, 0 };
+		ctrLayoutTest1->size.x = cs.x/3;
+		ctrLayoutTest1->size.y = cs.y;
+		ctrLayoutTest2->pos = { cs.x*1/3, 0 };
+		ctrLayoutTest2->size.x = cs.x/3;
+		ctrLayoutTest2->size.y = cs.y;
 		for (auto* gui : guis) {
 			gui->layout();
 		}

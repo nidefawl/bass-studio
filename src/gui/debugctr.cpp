@@ -71,9 +71,20 @@ gui_ctr_debug::gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType) :
 		guictr_base(),
 		impl(new gui_ctr_debug::ctr_debug_impl_t{}),
 		dgbCtrType(debugCtrType) {
-
+	switch (dgbCtrType) {
+		case gui_ctr_debug_type_i32::TYPE_0:
+			ctrType = CTR_TYPE_DEBUG_0;
+			break;
+		case gui_ctr_debug_type_i32::TYPE_1:
+			ctrType = CTR_TYPE_DEBUG_1;
+			break;
+		case gui_ctr_debug_type_i32::TYPE_2:
+			ctrType = CTR_TYPE_DEBUG_2;
+			break;
+	}
 	msgCounterEnabled=true;
 	setBackgroundRendered(true);
+	setCanMouseHit(true);
 	std::vector<guibase*>& debugGuis = impl->debugGuis;
 	if (dgbCtrType != gui_ctr_debug_type_i32::TYPE_2) {
 		auto knob = new guiknob;

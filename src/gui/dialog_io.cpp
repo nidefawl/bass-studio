@@ -1329,6 +1329,7 @@ guidialog_settings::guidialog_settings(ivec2 _dialogSize, bool _resizeable) : gu
 };
 guidialog_settings::guidialog_settings()
 : guidialog_base(ivec2{640, 760}, true) {
+	ctrType = CTR_TYPE_SETTINGS;
 	addEntry(new guidialog_audio_io(), "Audio I/O");
 	addEntry(new guidialog_midi_io(), "Midi I/O");
 	add(&btnClose);

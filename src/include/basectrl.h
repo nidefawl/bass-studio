@@ -33,6 +33,7 @@ struct NVGcontext;
 class guidialog_base;
 class guictxtmenu_base;
 class appwindow_main;
+class guictr_layout;
 
 KeyEvent keyEvent(int key, int scancode, int keyState, int mods, const char* key_name);
 String getModKeyName(int modKey);
@@ -46,20 +47,8 @@ ivec2 toControlsObjectSpace(ivec2& pos, guibase* gui);
 enum class dock_pos : int32_t { NONE=0, CENTER, LEFT, RIGHT, TOP, BOTTOM, STACK };
 enum class container_layout : int32_t { SOLE, SPLIT_H, SPLIT_V, TABBED };
 class i_ctr_layout;
-struct guictr_layout_entry {
-	bool hasHandle = true;
-    i_ctr_layout* parentLayoutContainer = nullptr;
-    guictr_layout_entry()
-    {
-    }
-    virtual ~guictr_layout_entry()
-    {
-    }
-    virtual guictr_base* getGui() = 0;
-    virtual guibase* getHandle() = 0;
-    virtual std::shared_ptr<guictr_layout_entry> duplicateContainer() = 0;
-    virtual bool getContainerRef(std::shared_ptr<guictr_layout_entry>& out, bool remove) = 0;
-};
+
+class guictr_layout_entry_handle;
 class guictr_dragged_container_instance;
 class i_ctr_layout;
 class i_ctr_drop_area {
@@ -70,25 +59,57 @@ public:
 	int32_t priority = 0;
 	dock_pos dockPos = dock_pos::NONE;
 	int32_t dockPosOffset = -1;
+	int32_t childContainerIndex = -1;
+	String label;
 	i_ctr_drop_area(i_ctr_layout* _parent)
 	  : parent(_parent) {
 
 	}
-    virtual ~i_ctr_drop_area(){};
-    virtual void render(NVGcontext* vg);
+    ~i_ctr_drop_area(){};
+    void render(NVGcontext* vg);
 	bool contains(ivec2 mpos) {
 		return mpos.x >= pos.x &&
 			mpos.y >= pos.y &&
 			mpos.x < pos.x + size.x &&
 			mpos.y < pos.y + size.y;
 	}
-	virtual i_ctr_layout* getLayoutCtr() {
+	i_ctr_layout* getLayoutCtr() {
 		return parent;
 	}
 	dock_pos getDockPos() {
 		return dockPos;
 	}
 };
+enum layout_ctr_type {
+	GUICTR_LAYOUT,
+	GUICTR_BASE
+};
+struct guictr_layout_entry {
+	const container_type type;
+	const layout_ctr_type frameType;
+	ivec2 pos{0};
+	ivec2 size{0};
+	std::shared_ptr<guictr_base> ctr; /* non-owning */ //TODO: make this owning, unique ptr
+	guictr_layout_entry_handle* ctrHandle;
+	String label;
+	bool hasHandle = true;
+    i_ctr_layout* parentLayoutContainer = nullptr;
+    guictr_layout_entry(String label, std::shared_ptr<guictr_base> _ctr);
+    ~guictr_layout_entry();
+	guictr_base* getGui();
+	guibase* getHandle();
+	container_type getType() const {
+		return type;
+	}
+	layout_ctr_type getFrameType() const {
+		return frameType;
+	}
+	String getLabel() {
+		return label;
+	}
+	bool getContainerRef(std::shared_ptr<guictr_layout_entry>& out, bool remove);
+};
+
 class i_ctr_layout {
 public:
     virtual ~i_ctr_layout(){};
@@ -155,8 +176,14 @@ public:
     std::vector<std::weak_ptr<i_ctr_drop_area>> dragDropTargets_ContainerMove;
     guictr_dragged_container_instance ctrDragHandler;
     std::shared_ptr<guictr_layout_entry> ctrContent;
-    std::vector<i_ctr_layout*> getContainers(MouseEvent& mevt);
+    std::vector<i_ctr_layout*> getContainers();
     std::vector<std::weak_ptr<i_ctr_drop_area>> getTargets(MouseEvent& mevt, std::vector<i_ctr_layout*> ifMatches);
+	enum drag_ctr_event_type {
+		DRAG_BEGIN, DRAG_MOVE, DRAG_END
+	};
+    struct drag_ctr_event {
+		drag_ctr_event_type evtType;
+    };
     i_ctr_layout* determineTarget(MouseEvent& mevt)
 	{
 		MouseHitEvt evtDragObj = mouseHitEvt(MouseHitType::MOUSE_DRAGDROP_OBJECT);
@@ -202,6 +229,7 @@ public:
 						evtDragObj.requestFocus(nullptr);
 						if (shrdPtrTarget->contains(mevt.mousepos)) {
 							gui = shrdPtrTarget.get();
+                            break;
 						}
 					}
 				}
@@ -219,6 +247,10 @@ public:
     void dragContainerBegin(MouseEvent& evt, guictr_layout_entry* ctrDragSrc);
     void dragContainerMove(MouseEvent& evt);
     void dragContainerRelease(MouseEvent& evt);
+    virtual void dragContainerRelayout(drag_ctr_event evt) = 0;
+    bool isDraggingContainer() const {
+    	return ctrContent.get() != nullptr;
+    }
     guictxtmenu_base* ctxtmenu = NULL;
     //	guictxtmenu_base *ctxtmenuOld = NULL;
     int cursorIcon = CURSOR_DEFAULT;
@@ -360,6 +392,10 @@ public:
     {
         guiDragged = g;
     }
+    virtual std::shared_ptr<guictr_layout> replaceContainerWith(guictr_base* ctr,
+    		std::shared_ptr<guictr_layout> newContainer) {
+    	return nullptr;
+    }
 };
 class AppCtrl : public BaseCtrl {
 protected:
@@ -470,6 +506,8 @@ protected:
         ivec2 windowPos;
         this->mainWindow->getPos(&windowPos);
         return windowPos + ivec2(vec2(p) * (1.0f / m_scale));
+    }
+    void dragContainerRelayout(drag_ctr_event evt) override {
     }
 };
 class guictr_scrollbar;
