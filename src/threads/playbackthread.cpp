@@ -104,20 +104,26 @@ public:
 		dbgassert(t.joinable());
 		t.join();
 	}
-	void addRequest(std::shared_ptr<PlaybackThreadReq>& req) {
-		dbgassert(t.joinable());
-		if (!q.enqueue(req)) {
-			dbgassert(0&&"Failed enqeueing req");
-		}
+	bool addRequest(std::shared_ptr<PlaybackThreadReq>& req) {
+        if (!exited) { 
+			dbgassert(t.joinable());
+            if (q.enqueue(req)) {
+                return true;
+			}
+            dbgassert(0 && "Failed enqeueing req");
+        }
+        return false;
 	}
 
     void stop(){
 		dbgassert(t.joinable());
-		auto req = std::make_shared<PlaybackThreadReq>(PLAYBACK_THREAD_EXIT, 0);
-		if (!q.enqueue(req)) {
-			dbgassert(0&&"Failed enqeueing req");
-		}
-        req->wait();
+        if (!exited) {
+            auto req = std::make_shared<PlaybackThreadReq>(PLAYBACK_THREAD_EXIT, 0);
+            if (!q.enqueue(req)) {
+                dbgassert(0 && "Failed enqeueing req");
+            }
+            req->wait();
+        }
     }
     playback_state getState() const {
     	return m_status;
@@ -305,7 +311,8 @@ private:
         }
 		} catch (std::exception& e) {
 			handleStdException(e);
-		}
+        }
+        exited = true;
 	}
 };
 PlaybackThread::~PlaybackThread() {
@@ -318,15 +325,15 @@ PlaybackThread::PlaybackThread() :
 
 void PlaybackThread::call(std::function<void()> fn, bool wait) {
 	auto r = std::make_shared<PlaybackThreadReq>(GUI_CALL, 0, fn);
-	_M_impl->addRequest(r);
-	if (wait) {
+    bool s = _M_impl->addRequest(r);
+	if (s && wait) {
 		r->wait();
 	}
 }
 void PlaybackThread::addRequest(int32_t _msgId, int32_t _param, bool wait) {
 	auto r = std::make_shared<PlaybackThreadReq>(_msgId, _param);
-	_M_impl->addRequest(r);
-	if (wait) {
+    bool s = _M_impl->addRequest(r);
+    if (s && wait) {
 		r->wait();
 	}
 }

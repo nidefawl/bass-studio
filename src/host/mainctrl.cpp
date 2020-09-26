@@ -1015,7 +1015,7 @@ void DawInstance::destroy()
 	dbgassert(initState == 3);
 	initState = 4;
 	setAudioThreadState(playback_state::status_no_process);
-	dbgassert(playThread.getState() == playback_state::status_no_process);
+	//dbgassert(playThread.getState() == playback_state::status_no_process);
 	ThreadLock lock = playThread.lockThread();
 	midihost::getInstance()->stopMidi();
 	audiohost::getInstance()->stopAudio();
@@ -1844,7 +1844,7 @@ bool DawCtrl::processGlobalKeyevent(KeyEvent& event) {
 		}
 	}
 	if (event.type != KeyEventType::K_RELEASE) {
-		if (event.keyCode == KEY_M) {
+		if (!event.mods && event.keyCode == KEY_M) {
 			ThreadLock lock = daw.playThread.lockThread();
 #if defined(__GNUC__) && defined(ENABLE_MICHAELS_GLIBCXX_HACKS)
 			STLVectorDebugTracking::dbgPrintVectorAllocs();
