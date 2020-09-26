@@ -137,9 +137,7 @@ foreach(f ${CPP_ALL_FILES})
 	  endif (MSVC)
     list(APPEND CPP_SRC_FILES ${f})
 endforeach()
-set(CPP_SRC_FILES ${SRC_FILES_SUBDIR_FILES} ${CPP_SRC_FILES})
 
-list(APPEND CPP_SRC_FILES ${CMAKE_BINARY_DIR}/buildinfo.cpp)
 
 set(SRC_FILES_SUBDIR_FILES 
     src/file/fileloader.cpp
@@ -166,8 +164,15 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" STRE
 endif()
 
 set(CPP_SRC_FILES ${SRC_FILES_SUBDIR_FILES} ${CPP_SRC_FILES} ${MM_SRC_FILES})
-source_group("Sources" FILES ${CPP_SRC_FILES})
-source_group("Headers" FILES ${HDR_FILES})
+set(ALL_SRC_FILES ${CPP_SRC_FILES})
+list(APPEND ALL_SRC_FILES ${C_SRC_FILES})
+list(APPEND ALL_SRC_FILES ${HDR_FILES})
+source_group(TREE ${DAW_SRC_PATH} PREFIX "src" FILES ${ALL_SRC_FILES})
+
+set(GENERATED_SRC_FILES "${CMAKE_BINARY_DIR}/buildinfo.cpp")
+source_group("generated" FILES ${GENERATED_SRC_FILES})
+
+list(APPEND CPP_SRC_FILES ${GENERATED_SRC_FILES})
 
 #build a fat library only when tests are enabled
 #if tests are disabled we link objects directly to output executable (faster)
