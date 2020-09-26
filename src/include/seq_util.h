@@ -70,6 +70,15 @@ inline bool removeEntry(C1& a, const V1& b) {
   }), a.end());
   return curSize != a.size();
 }
+template<typename C1, typename V1>
+inline bool replaceEntry(C1& a, const V1& b, const V1& c) {
+  auto it = std::find(a.begin(), a.end(), b);
+  if (it != a.end()) {
+	  *it = c;
+	  return true;
+  }
+  return false;
+}
 
 template<typename C1, typename V1>
 inline int32_t indexOfCtr(C1& a, const V1& b){
