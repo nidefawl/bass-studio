@@ -202,9 +202,10 @@ void gui_ctr_debug::render(NVGcontext* vg) {
 	if (!setScissorTransform(vg)) {
 		return;
 	}
+
 	int framesSkip = 30;
 	if (dgbCtrType == gui_ctr_debug_type_i32::TYPE_2 && impl->sampleformat.sampleRate > 0) {
-		auto mikrosPerBlock = (impl->sampleformat.blockSize*1E6)/impl->sampleformat.sampleRate;
+		auto mikrosPerBlock = (impl->sampleformat.blockSize*1000000)/impl->sampleformat.sampleRate;
 		int inset = 30;
 		auto cs = getSizeContent();
 		vec2 graphSize = vec2(cs.x-20, cs.y) - inset*2.0f;
@@ -514,12 +515,12 @@ void gui_ctr_debug::buttonClicked(guibase* button) {
 	case ID_BTN_INJECT_SEGFAULT_AUDIO_THREAD:
 		MainCtrl::getPlayThread()->call([]() {
 			debugRaiseSegFault();
-		}, true);
+		}, false);
 		break;
 	case ID_BTN_INJECT_BAD_MALLOC_AUDIO_THREAD:
 		MainCtrl::getPlayThread()->call([]() {
 			throw std::bad_alloc();
-		}, true);
+		}, false);
 		break;
 	case ID_BTN_INJECT_SEGFAULT_MAIN_THREAD:
 		debugRaiseSegFault();
@@ -564,17 +565,17 @@ void gui_ctr_debug::buttonClicked(guibase* button) {
 		break;
 	}
 }
-bool gui_ctr_debug::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
-	if (this->contains(mpos)) {
-		ivec2 localMouse = this->toContainerSpace(mpos);
-		for (guibase* gui : guis) {
-			if (gui->mouseHitTest(localMouse, evt)) {
-				return true;
-			}
-		}
-	}
-	return false;
-}
+//bool gui_ctr_debug::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
+//	if (this->contains(mpos)) {
+//		ivec2 localMouse = this->toContainerSpace(mpos);
+//		for (guibase* gui : guis) {
+//			if (gui->mouseHitTest(localMouse, evt)) {
+//				return true;
+//			}
+//		}
+//	}
+//	return false;
+//}
 
 void gui_ctr_debug::onTick(AppCtrl* ctrl) {
 	for (guibase* gui : guis) {
