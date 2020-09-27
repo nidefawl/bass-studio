@@ -114,6 +114,12 @@ void guictr_base::renderBackground(NVGcontext* vg) {
 	bool focused = parentCtrl->isCtrOrChildFocused(this);
 	drawBackground(vg, theme, getPosContent(), getSizeContent(), margin, focused, isBackgroundRenderedInset());
 	renderContainerLabel(vg);
+	if (this->id&(1<<16) && size.x>0 && size.y > 0) {
+		nvgBeginPath(vg);
+		nvgRect(vg, pos.x, pos.y, size.x, size.y);
+		nvgFillColor(vg, rgbaToNvg(0x7fff00ff));
+		nvgFill(vg);
+	}
 }
 void guictr_base::renderFrameBase(NVGcontext* vg) {
 	ivec2 sizeContent = getSizeContent();

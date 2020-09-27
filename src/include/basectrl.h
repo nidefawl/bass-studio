@@ -97,6 +97,9 @@ struct guictr_layout_entry {
     guictr_layout_entry(String label, std::shared_ptr<guictr_base> _ctr);
     ~guictr_layout_entry();
 	guictr_base* getGui();
+	std::shared_ptr<guictr_base> getSharedGui() {
+		return ctr;
+	}
 	guibase* getHandle();
 	container_type getType() const {
 		return type;
@@ -106,8 +109,8 @@ struct guictr_layout_entry {
 	}
 	String getLabel() {
 		return label;
-	}
-	bool getContainerRef(std::shared_ptr<guictr_layout_entry>& out, bool remove);
+    }
+    bool getContainerRef(std::shared_ptr<guictr_layout_entry>& out, bool remove);
 };
 
 class i_ctr_layout {
@@ -249,8 +252,9 @@ public:
     void dragContainerRelease(MouseEvent& evt);
     virtual void dragContainerRelayout(drag_ctr_event evt) = 0;
     bool isDraggingContainer() const {
-    	return ctrContent.get() != nullptr;
+    	return ctrContent.get() != nullptr || bShowDebugFrames;
     }
+    bool bShowDebugFrames = true;
     guictxtmenu_base* ctxtmenu = NULL;
     //	guictxtmenu_base *ctxtmenuOld = NULL;
     int cursorIcon = CURSOR_DEFAULT;

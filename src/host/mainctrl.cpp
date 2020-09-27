@@ -348,12 +348,12 @@ public:
 		ctr_stack_right->setLayout(container_layout::SPLIT_H);
 		ctr_stack_right->addEntry(entry1);
 		ctr_stack_right->addEntry(entry2);
-		ctr_stack_right->setBackgroundRendered(false);
-		ctr_stack_right->padding = 0;
-		ctr_stack_right->margin = 0;
-		ctr_layoutLeft->setBackgroundRendered(false);
-		ctr_layoutLeft->padding = 0;
-		ctr_layoutLeft->margin = 0;
+//		ctr_stack_right->setBackgroundRendered(false);
+//		ctr_stack_right->padding = 0;
+//		ctr_stack_right->margin = 0;
+//		ctr_layoutLeft->setBackgroundRendered(false);
+//		ctr_layoutLeft->padding = 0;
+//		ctr_layoutLeft->margin = 0;
 		splitters[0]->setMinMax(0.05f, 0.9f);
 		splitters[1]->setMinMax(0.25f, 0.9f);
 		splitters[2]->setMinMax(0.05f, 0.9f);
@@ -366,7 +366,7 @@ public:
 		ctr_plugins.setSnapSides(ivec4(0, 1, 0, 0));
 		subctr_tabbed2->setSnapSides(ivec4(1, 0, 0, 1));
 		ctr_layoutLeft->setSnapSides(ivec4(0, 0, 1, 0));
-		ctr_stack_right->setSnapSides(ivec4(1, 1, 1, 1));
+		ctr_stack_right->setSnapSides(ivec4(1, 0, 0, 0));
 
 		subctr_tabbed->setSnapSides(ivec4(1, 0, 0, 0));
 	}
@@ -465,13 +465,35 @@ public:
 			 v.push_back(s.get());
 	}
 
-	void dragContainerRelayout(BaseCtrl::drag_ctr_event evt) override {
+	void dragContainerRelayout(MainCtrl* ctrl, BaseCtrl::drag_ctr_event evt) override {
         if (evt.evtType != BaseCtrl::drag_ctr_event_type::DRAG_MOVE) {
             ctr_stack_right->postContentChanged();
             ctr_layoutLeft->postContentChanged();
             ctr_stack_right->layout();
             ctr_layoutLeft->layout();
 		}
+    	if (evt.evtType == BaseCtrl::drag_ctr_event_type::DRAG_END) {
+            bool bRelayout = false;
+    		guictr_layout* layoutCtrs[2] = {ctr_layoutLeft.get(), ctr_stack_right.get()};
+    		for (auto* layoutCtr : layoutCtrs) {
+        	    if (layoutCtr->getLayout() == container_layout::SOLE
+        	    		&& layoutCtr->getEntries().size() == 1
+    					&& layoutCtr->getEntries().front()->getFrameType() == layout_ctr_type::GUICTR_LAYOUT) {
+        			std::shared_ptr<guictr_layout_entry> out;
+        			layoutCtr->getContainerRef(layoutCtr->getEntries().front().get(), out, true);
+        			dbgassert(out);
+        			std::shared_ptr<guictr_layout> shrdLayoutCtr;
+                    dbgassert(out->getSharedGui());
+                    shrdLayoutCtr = std::dynamic_pointer_cast<guictr_layout>(out->getSharedGui());
+                    ctrl->replaceContainerWith(layoutCtr, shrdLayoutCtr);
+                    bRelayout = true;
+        	    }
+    		}
+            if (bRelayout) {
+				//TODO: rename relayout(void)
+                static_cast<BaseCtrl*>(ctrl)->relayout();
+            }
+    	}
 	}
 
 	void loadLayout(const dawview_layout_t* viewLayout) {
@@ -481,13 +503,15 @@ public:
 			loadContainerSnapshot(ctr_stack_right.get(), viewLayout->right.get());
 			loadContainerSnapshot(ctr_layoutLeft.get(), viewLayout->left.get());
 		}
-		ctr_stack_right->postContentChanged();
-		ctr_layoutLeft->postContentChanged();
 		if (viewLayout->splitterPositions.size() == splitters.size()) {
 			for (int i = 0; i < splitters.size(); i++) {
 				splitters[i]->setScale(viewLayout->splitterPositions[i]);
 			}
 		}
+//		ctr_stack_right->postContentChanged();
+//		ctr_layoutLeft->postContentChanged();
+//        ctr_stack_right->layout();
+//        ctr_layoutLeft->layout();
 	}
 	void storeLayout(dawview_layout_t* layout) {
 		layout->left = std::make_shared<guictrlayout_snapshot_t>();
@@ -975,6 +999,7 @@ void MainCtrl::postInit() {
 		}
     }
     view->loadLayout(&layouts[1]);
+    dragContainerRelayout(BaseCtrl::drag_ctr_event{BaseCtrl::drag_ctr_event_type::DRAG_END});
     BaseCtrl::relayout();
 }
 void DawInstance::postInit() {
@@ -1548,7 +1573,11 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
 }
 
 void MainCtrl::dragContainerRelayout(drag_ctr_event evt) {
-	viewContainers->dragContainerRelayout(evt);
+	viewContainers->dragContainerRelayout(this, evt);
+	if (evt.evtType == BaseCtrl::drag_ctr_event_type::DRAG_END) {
+		BaseCtrl::relayout();
+	}
+
 }
 void MainCtrl::layoutView(int32_t w, int32_t h) {
 	w = math::max(640, w);
@@ -1808,7 +1837,15 @@ bool MainCtrl::processGlobalKeyevent(KeyEvent& event) {
 			} else {
 				view->loadLayout(&layouts[index]);
 				BaseCtrl::relayout();
+			    dragContainerRelayout(BaseCtrl::drag_ctr_event{BaseCtrl::drag_ctr_event_type::DRAG_END});
 			}
+			return true;
+		}
+	}
+	if (event.type == KeyEventType::K_PRESS) {
+		if (event.keyCode == KEY_L) {
+			bShowDebugFrames = !bShowDebugFrames;
+			dragContainerRelayout(drag_ctr_event{drag_ctr_event_type::DRAG_END});
 			return true;
 		}
 	}

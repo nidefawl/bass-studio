@@ -231,7 +231,7 @@ public:
 	guictr_menubar* getMenu() {
 		return nullptr;
 	}
-	virtual void dragContainerRelayout(BaseCtrl::drag_ctr_event evt) {
+	virtual void dragContainerRelayout(MainCtrl* ctrl, BaseCtrl::drag_ctr_event evt) {
 
 	}
 };

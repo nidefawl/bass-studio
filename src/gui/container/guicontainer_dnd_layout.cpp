@@ -39,6 +39,7 @@ bool guictr_layout::setOverlayPos(i_ctr_drop_area* area, const dock_pos dockPos,
 		dbgassert(0);
 		return false;
 	default:
+		dbgassert(0);
 		return false;
 //		layoutGui->validPreview = false;
 //		layoutGui->boxes.clear();
@@ -101,12 +102,21 @@ void guictr_layout::getOverlays(MouseEvent& evt, std::vector<std::weak_ptr<i_ctr
                 setOverlayPosForTab(makeDropArea(areaOffset), dock_pos::STACK, i, false);
                 vecHandles.push_back(dragdropContainerAreaHelpers[areaOffset]);
                 areaOffset++;
+                // for non tabbed always emit droparea for left and right side of handle
                 if ((size_t)i + 1 == entries.size() || this->ctrLayout != container_layout::TABBED) {
                     setOverlayPosForTab(makeDropArea(areaOffset), dock_pos::STACK, i, true);
                     vecHandles.push_back(dragdropContainerAreaHelpers[areaOffset]);
                     areaOffset++;
                 }
             }
+        }
+        if (!parent && ctrLayout == container_layout::TABBED) {
+            // return overlays for all 4 sides of each container entry that is not of type guictr_layout
+			for (int j = 0; j < 4; j++) {
+				setOverlayPos(makeDropArea(areaOffset), static_cast<dock_pos>(static_cast<int32_t>(dock_pos::LEFT) + j), vec2(0), size, -1, -1);
+				vecHandles.push_back(dragdropContainerAreaHelpers[areaOffset]);
+				areaOffset++;
+			}
         }
         if (ctrLayout == container_layout::SPLIT_H || ctrLayout == container_layout::SPLIT_V || ctrLayout == container_layout::SOLE) {
             // return overlays for all 4 sides of each container entry that is not of type guictr_layout
@@ -119,33 +129,67 @@ void guictr_layout::getOverlays(MouseEvent& evt, std::vector<std::weak_ptr<i_ctr
             }
         }
         if (ctrLayout == container_layout::SPLIT_V) {
+        	//subdivide by attaching to top or bottom
+            setOverlayPos(makeDropArea(areaOffset), static_cast<dock_pos>(static_cast<int32_t>(dock_pos::TOP)), ivec2(0), size, -1, -1);
+            vecHandles.push_back(dragdropContainerAreaHelpers[areaOffset++]);
+            setOverlayPos(makeDropArea(areaOffset), static_cast<dock_pos>(static_cast<int32_t>(dock_pos::BOTTOM)), ivec2(0), size, -1, -1);
+            vecHandles.push_back(dragdropContainerAreaHelpers[areaOffset++]);
+
+        	//keep layout, add new child
             setOverlayPos(makeDropArea(areaOffset), static_cast<dock_pos>(static_cast<int32_t>(dock_pos::LEFT)), ivec2(0), size, -1, -1);
-            vecHandles.push_back(dragdropContainerAreaHelpers[areaOffset]);
-            areaOffset++;
+            vecHandles.push_back(dragdropContainerAreaHelpers[areaOffset++]);
             setOverlayPos(makeDropArea(areaOffset), static_cast<dock_pos>(static_cast<int32_t>(dock_pos::RIGHT)), ivec2(0), size, entries.size(), -1);
-            vecHandles.push_back(dragdropContainerAreaHelpers[areaOffset]);
-            areaOffset++;
+            vecHandles.push_back(dragdropContainerAreaHelpers[areaOffset++]);
         }
         if (ctrLayout == container_layout::SPLIT_H) {
+        	//subdivide by attaching to left and right
+            setOverlayPos(makeDropArea(areaOffset), static_cast<dock_pos>(static_cast<int32_t>(dock_pos::LEFT)), ivec2(0), size, -1, -1);
+            vecHandles.push_back(dragdropContainerAreaHelpers[areaOffset++]);
+            setOverlayPos(makeDropArea(areaOffset), static_cast<dock_pos>(static_cast<int32_t>(dock_pos::RIGHT)), ivec2(0), size, -1, -1);
+            vecHandles.push_back(dragdropContainerAreaHelpers[areaOffset++]);
+
+
+        	//keep layout, add new child
             setOverlayPos(makeDropArea(areaOffset), static_cast<dock_pos>(static_cast<int32_t>(dock_pos::TOP)), ivec2(0), size, -1, -1);
-            vecHandles.push_back(dragdropContainerAreaHelpers[areaOffset]);
-            areaOffset++;
+            vecHandles.push_back(dragdropContainerAreaHelpers[areaOffset++]);
             setOverlayPos(makeDropArea(areaOffset), static_cast<dock_pos>(static_cast<int32_t>(dock_pos::BOTTOM)), ivec2(0), size, entries.size(), -1);
-            vecHandles.push_back(dragdropContainerAreaHelpers[areaOffset]);
-            areaOffset++;
+            vecHandles.push_back(dragdropContainerAreaHelpers[areaOffset++]);
         }
 	}
 }
 
+
+guictr_layout::guictr_layout() : guictr_base() {
+	ctrType = CTR_TYPE_LAYOUT;
+//		setBackgroundRendered(true);
+//		setBackgroundRenderedInset(true);
+	this->setCanMouseHit(true);
+//		dragdropContainerAreaHelpers.resize(16);
+	margin = 0;
+	padding = 0;
+	//padding = 6;
+	//margin = padding-4;
+}
 void guictr_layout::layout() {
-	ivec2 cs = getSizeContent();
+    ivec2 cs = getSizeContent();
+    switch (this->ctrLayout) {
+    case container_layout::SPLIT_V:
+        cs = ivec2(size.x, cs.y);
+        break;
+    case container_layout::SPLIT_H:
+        cs = ivec2(cs.x, size.y);
+        break;
+    default:
+        break;
+    }
 	int32_t entryIdx = 0;
-	int padding = cs != size ? 0 : 0;
-	if (parentCtrl && parentCtrl->isDraggingContainer()) {
-		padding = 4;
-	}
-	vec2 segSizeF = vec2(cs);
-	vec2 axis = vec2(0);
+    int padding = 2;
+    //if (parentCtrl && parentCtrl->isDraggingContainer()) {
+    //    padding =32;
+    //}
+    vec2 segSizeF = vec2(cs);
+    vec2 axis = vec2(0);
+    vec2 iaxis = vec2(0);
 	int32_t nEntries = math::max<int32_t>(1, entries.size());
 	bool showHandles = true;
 	switch (this->ctrLayout) {
@@ -155,17 +199,20 @@ void guictr_layout::layout() {
 	case container_layout::SOLE:
 		break;
 	case container_layout::SPLIT_V:
-		segSizeF = vec2(cs.x / (float)nEntries, cs.y);
-		axis.x = 1.0f;
+        segSizeF = vec2(cs.x / (float)nEntries, cs.y);
+        axis.x = 1.0f;
+        iaxis.y = 1.0f;
 		break;
 	case container_layout::SPLIT_H:
 		segSizeF = vec2(cs.x, cs.y / (float)nEntries);
 		axis.y = 1.0f;
+        iaxis.x = 1.0f;
 		break;
 	}
+    static const uint8_t handleHeight = 20;
 	if (this->ctrLayout == container_layout::TABBED) {
 		int paddingHandle = 1;
-		int controlHeight = FONT_SIZE_CTXT;
+        int controlHeight = handleHeight;
 		vec2 handleInset(0);
 		vec2 segSizeF = vec2((vec2(cs)-handleInset*2.0f).x / (float)nEntries, (float)controlHeight);
 		axis.x = 1;
@@ -184,16 +231,19 @@ void guictr_layout::layout() {
 	} else {
 
 		for (auto &entry : entries) {
-			int paddingHandle = padding;
-			int controlHeight = entry->hasHandle ? FONT_SIZE_CTXT_SMALL : 0;
+			int paddingHandle = 1;
+            int controlHeight = entry->hasHandle ? handleHeight : 0;
 			auto *gui = entry->getGui();
-			entry->pos = gui->pos = ivec2(vec2((float)entryIdx * segSizeF * axis) + vec2(0, controlHeight) + vec2(padding));
-			entry->size = gui->size = ivec2(math::maxvec2f(segSizeF - vec2(padding * 2) - vec2(0, controlHeight), vec2(4, 4)));
 			auto *guiHandle = entry->getHandle();
 			if (guiHandle && entry->hasHandle) {
-				guiHandle->pos = ivec2(vec2((float)entryIdx * segSizeF * axis) + vec2(paddingHandle));
-				guiHandle->size = ivec2(vec2(segSizeF.x, controlHeight) - vec2(paddingHandle*2));
-			}
+                entry->pos = gui->pos = ivec2(vec2((float)entryIdx * segSizeF * axis) + vec2(0, controlHeight) + vec2(padding));
+                entry->size = gui->size = ivec2(math::maxvec2f(segSizeF - vec2(padding * 2) - vec2(0, controlHeight), vec2(4, 4)));
+				guiHandle->pos = ivec2(vec2((float)entryIdx * segSizeF * axis) + vec2(paddingHandle, 0));
+                guiHandle->size = ivec2(vec2(segSizeF.x, controlHeight) - vec2(paddingHandle * 2, 0));
+            } else {
+                entry->pos = gui->pos = ivec2(vec2((float)entryIdx * segSizeF * axis) + vec2(0, controlHeight) + vec2(0));
+                entry->size = gui->size = ivec2(math::maxvec2f(segSizeF - vec2(0) - vec2(0, controlHeight), vec2(4, 4)));
+            }
 			entryIdx++;
 		}
 	}
@@ -347,7 +397,7 @@ void guictr_layout::addEntry(std::shared_ptr<guictr_layout_entry> ctr, int32_t p
 	// a handle is present if the child is not a guictr_layout, or if this container is using tabbed layout
 	ctr->hasHandle = dynamic_cast<guictr_layout*>(guiCtr) == nullptr || this->ctrLayout == container_layout::TABBED;
 	guictr_base::add(guiCtr);
-	guiCtr->snapSides = ivec4(1);
+	//guiCtr->snapSides = ivec4(1);
 	auto* guiHandle = ctr->getHandle();
 	if (guiHandle && ctr->hasHandle) {
 		guictr_base::add(guiHandle);
@@ -435,7 +485,7 @@ bool guictr_layout::placeContainer(std::shared_ptr<guictr_layout_entry> ctr, i_c
 	auto guiCtr = ctr->getGui();
 	ctr->hasHandle = dynamic_cast<guictr_layout*>(guiCtr) == nullptr || this->ctrLayout == container_layout::TABBED;
 	guictr_base::add(guiCtr);
-	guiCtr->snapSides = ivec4(1);
+	//guiCtr->snapSides = ivec4(1);
 	auto* guiHandle = ctr->getHandle();
 
 	if (guiHandle && ctr->hasHandle) {
@@ -451,59 +501,57 @@ bool guictr_layout::placeContainer(std::shared_ptr<guictr_layout_entry> ctr, i_c
 }
 void guictr_layout::render(NVGcontext* vg)
 {
-		if (!isVisible()) {
-			log_printf("warning, skip rendering container with state !isVisible()\n", 0);
-			return;
-		}
-		if (isBackgroundRendered()) {
-			renderBackground(vg);
-		}
-		if (parentCtrl->isDraggingContainer()) {
+	if (!isVisible()) {
+		log_printf("warning, skip rendering container with state !isVisible()\n", 0);
+		return;
+	}
+	if (isBackgroundRendered()) {
+		renderBackground(vg);
+	}
+	if (parentCtrl->isDraggingContainer()) {
+		nvgBeginPath(vg);
+		nvgRect(vg, pos.x, pos.y, size.x, size.y);
+		nvgStrokeWidth(vg, 1.0f);
+		nvgStrokeColor(vg, G_WHITE);
+		nvgStroke(vg);
+	}
+	if (!setScissorTransform(vg)) {
+		return;
+	}
+	if (this->id&(1<<16)) {
+		for (auto h : handles) {
+			int32_t stateFlags = getStateFlags();
 			nvgBeginPath(vg);
-			nvgRect(vg, pos.x, pos.y, size.x, size.y);
-			nvgStrokeWidth(vg, 1.0f);
-			nvgStrokeColor(vg, G_WHITE);
-			nvgStroke(vg);
+			nvgRect(vg, h->pos.x, h->pos.y, h->size.x, h->size.y);
+			nvgFillColor(vg, rgbaToNvg(0x7f00ff00));
+			nvgFill(vg);
 		}
-		if (!setScissorTransform(vg)) {
-			return;
-		}
-		if (this->id&(1<<16)) {
-			for (auto h : handles) {
-				int32_t stateFlags = getStateFlags();
-				nvgBeginPath(vg);
-			//	nvgRoundedRect(vg, pos.x, pos.y, size.x, size.y, 3.0f);
-				nvgRect(vg, h->pos.x, h->pos.y, h->size.x, h->size.y);
-				nvgFillColor(vg, rgbaToNvg(0x7f00ff00));
-				nvgFill(vg);
-			}
-			for (auto e : entries) {
-				auto h = e->getGui();
-				if (!h) continue;
-				int32_t stateFlags = getStateFlags();
-				nvgBeginPath(vg);
-			//	nvgRoundedRect(vg, pos.x, pos.y, size.x, size.y, 3.0f);
-				nvgRect(vg, h->pos.x, h->pos.y, h->size.x, h->size.y);
-				nvgFillColor(vg, rgbaToNvg(0x7fffff00));
-				nvgFill(vg);
-			}
-		}
-		for (auto c : guis) {
-			if (!c->isVisible()) {
-	//			log_printf("warning, skip rendering child container with state !isVisible()\n", 0);
-				continue;
-			}
-			if (c->size.x <= 0 || c->size.y <= 0) {
-				log_printf("warning, skip rendering child container with size <= 0 0\n", 0);
-				continue;
-			}
-			{
-				nvgSave(vg);
-				c->render(vg);
-				nvgRestore(vg);
-			}
+		for (auto e : entries) {
+			auto h = e->getGui();
+			if (!h) continue;
+			int32_t stateFlags = getStateFlags();
+			nvgBeginPath(vg);
+			nvgRect(vg, h->pos.x, h->pos.y, h->size.x, h->size.y);
+			nvgFillColor(vg, rgbaToNvg(0x7fffff00));
+			nvgFill(vg);
 		}
 	}
+	for (auto c : guis) {
+		if (!c->isVisible()) {
+//			log_printf("warning, skip rendering child container with state !isVisible()\n", 0);
+			continue;
+		}
+		if (c->size.x <= 0 || c->size.y <= 0) {
+			log_printf("warning, skip rendering child container with size <= 0 0\n", 0);
+			continue;
+		}
+		{
+			nvgSave(vg);
+			c->render(vg);
+			nvgRestore(vg);
+		}
+	}
+}
 std::shared_ptr<guictr_layout_entry> guictr_layout::replaceContainerWith(guictr_base* ctr,
 		std::shared_ptr<guictr_layout> newContainer) {
 	std::shared_ptr<guictr_layout> retCtr;
@@ -534,7 +582,7 @@ std::shared_ptr<guictr_layout_entry> guictr_layout::replaceContainerWith(guictr_
 	auto guiCtr = entry1->getGui();
 	entry1->hasHandle = dynamic_cast<guictr_layout*>(guiCtr) == nullptr || this->ctrLayout == container_layout::TABBED;
 	guictr_base::add(guiCtr);
-	guiCtr->snapSides = ivec4(1);
+	//guiCtr->snapSides = ivec4(1);
 	guiHandle = entry1->getHandle();
 	if (guiHandle && entry1->hasHandle) {
 		guictr_base::add(guiHandle);

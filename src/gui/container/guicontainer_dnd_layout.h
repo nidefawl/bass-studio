@@ -51,18 +51,26 @@ private:
 	std::vector<guibase*> handles;
 	std::vector<std::shared_ptr<i_ctr_drop_area>> dragdropContainerAreaHelpers;
 public:
-	guictr_layout() : guictr_base() {
-		ctrType = CTR_TYPE_LAYOUT;
-//		setBackgroundRendered(true);
-//		setBackgroundRenderedInset(true);
-		this->setCanMouseHit(true);
-//		dragdropContainerAreaHelpers.resize(16);
-		margin = 0;
-		padding = 0;
-	}
+	guictr_layout();
 	virtual ~guictr_layout() {
 		removeGuis();
 		entries.clear();
+	}
+	ivec2 paddingTL(int _padding) const override {
+	    if (parentCtrl && parentCtrl->isDraggingContainer()) {
+	        return ivec2(8);
+	    }
+//		return ivec2(0, _padding);
+//		return ivec2(_padding - margin*snapSides.x, _padding - margin*snapSides.y);
+		return ivec2(_padding - margin*snapSides.x, 0);
+	}
+	ivec2 paddingBR(int _padding) const override {
+	    if (parentCtrl && parentCtrl->isDraggingContainer()) {
+	        return ivec2(8);
+	    }
+//		return ivec2(0, _padding);
+//		return ivec2(_padding - margin*snapSides.z, _padding - margin*snapSides.w);
+		return ivec2(_padding - margin*snapSides.z, 0);
 	}
 	void removeAllEntries() {
 		for (auto &entry : entries) {
