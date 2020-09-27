@@ -126,15 +126,14 @@ void drawTbl(const table_ctxt_t& ctxt, const glm::ivec4& obj) {
 	const vec2& size = ctxt.size;
 	nvgTextAlign(ctxt.vg, NVG_ALIGN_RIGHT|NVG_ALIGN_BOTTOM);
 
-
-	String str = StringFormat("%d %d %d %d", obj.x, obj.y, obj.z, obj.w);
-	int w = 100;
-//	if(strX.length() > 5) {
-//		w = 180;
-//	}
-	nvgText(ctxt.vg,
-			pos.x+size.x-(w+INSET_TABLE_CELL_PADDING)*1-INSET_TABLE_CELL_PADDING,
-			pos.y+size.y-INSET_TABLE_CELL_PADDING, StringAsCStr(str), nullptr);
+	const char* pref[4] = {"X", "Y", "Z", "W"};
+	int w = 50;
+	for (int i = 0; i < 4; i++) {
+		String strX = StringFormat("%s %d", pref[i], obj[i]);
+		nvgText(ctxt.vg,
+				pos.x+size.x-(w+INSET_TABLE_CELL_PADDING)*(3-i)-INSET_TABLE_CELL_PADDING,
+				pos.y+size.y-INSET_TABLE_CELL_PADDING, StringAsCStr(strX), nullptr);
+	}
 }
 
 table_entry_t& GetCell(tbl& table, int32_t x, int32_t y) {

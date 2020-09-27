@@ -51,6 +51,7 @@ namespace Table {
 	public:
 		virtual void onClickNotImplemented(const click_ctxt_t& ctxt) = 0;
 		virtual void onClick(const click_ctxt_t& ctxt, glm::ivec2& value) = 0;
+		virtual void onClick(const click_ctxt_t& ctxt, glm::ivec4& value) = 0;
 		virtual void onClick(const click_ctxt_t& ctxt, NVGcolor& value) = 0;
 		virtual void onClick(const click_ctxt_t& ctxt, const tbltype_gui_flags& obj) {};
 		virtual void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, GuiColor::constant_t constant) = 0;
@@ -86,6 +87,14 @@ namespace Table {
 	}
 	template <>
 	inline void cellClicked(const click_ctxt_t& ctxt, const tbltypesaferef<glm::ivec2>& obj) {
+		if (safeRefOk(obj.saferef)) {
+			if (ctxt.callback) {
+				ctxt.callback->onClick(ctxt, obj.t);
+			}
+		}
+	}
+	template <>
+	inline void cellClicked(const click_ctxt_t& ctxt, const tbltypesaferef<glm::ivec4>& obj) {
 		if (safeRefOk(obj.saferef)) {
 			if (ctxt.callback) {
 				ctxt.callback->onClick(ctxt, obj.t);
@@ -340,6 +349,26 @@ public:
 						table->setActiveControl(&numberInput);
 						evt.guiDragged = &numberInput;
 						numberInput.handleDraggedBegin(evt);
+					}
+					void onClick(const click_ctxt_t& ctxt, glm::ivec4& value) override {
+						click();
+						int w = 50;
+						for (int i = 0; i < 4; i++) {
+							int32_t posLeft = clickedcell.pos.x+clickedcell.size.x-(w*((3-i)+1));
+							int32_t posRight = clickedcell.pos.x+clickedcell.size.x-(w*(3-i));
+							bool inside = evt.relMousepos.x >= posLeft && evt.relMousepos.x < posRight;
+							if (inside) {
+								gui_numberinput_field& numberInput = table->numberInput;
+								numberInput.size = clickedcell.size;
+								numberInput.pos = ivec2(posLeft, clickedcell.pos.y);
+								numberInput.size.x = w;
+								numberInput.setRef(&value[i]);
+								numberInput.layout();
+								table->setActiveControl(&numberInput);
+								evt.guiDragged = &numberInput;
+								numberInput.handleDraggedBegin(evt);
+							}
+						}
 					}
 					void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, GuiConstant::constant_t constant) override {
 						click();

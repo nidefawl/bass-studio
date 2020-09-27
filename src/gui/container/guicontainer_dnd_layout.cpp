@@ -474,7 +474,7 @@ void guictr_layout::render(NVGcontext* vg)
 				nvgBeginPath(vg);
 			//	nvgRoundedRect(vg, pos.x, pos.y, size.x, size.y, 3.0f);
 				nvgRect(vg, h->pos.x, h->pos.y, h->size.x, h->size.y);
-				nvgFillColor(vg, rgbToNvg(0xff00ff00));
+				nvgFillColor(vg, rgbaToNvg(0x7f00ff00));
 				nvgFill(vg);
 			}
 			for (auto e : entries) {
@@ -484,7 +484,7 @@ void guictr_layout::render(NVGcontext* vg)
 				nvgBeginPath(vg);
 			//	nvgRoundedRect(vg, pos.x, pos.y, size.x, size.y, 3.0f);
 				nvgRect(vg, h->pos.x, h->pos.y, h->size.x, h->size.y);
-				nvgFillColor(vg, rgbToNvg(0xffffff00));
+				nvgFillColor(vg, rgbaToNvg(0x7fffff00));
 				nvgFill(vg);
 			}
 		}
