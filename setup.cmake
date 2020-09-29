@@ -31,19 +31,21 @@ FUNCTION(ADD_POST_BUILD_COMMANDS targetBuildName)
   endif()
 ENDFUNCTION()
 
-set(NO_TEMP_OBJECT_A On)
-# By default cmake generates a temporary object.a archive on windows-gnu
-# Resetting the link rules here avoids this step and saves significant time when linking
-if (WIN32 AND NO_TEMP_OBJECT_A) 
-  message(STATUS "NO TEMP OBJECT")
-	foreach(lang C CXX)
-		set(CMAKE_${lang}_CREATE_SHARED_MODULE
-		"<CMAKE_${lang}_COMPILER> <CMAKE_SHARED_MODULE_${lang}_FLAGS> <LANGUAGE_COMPILE_FLAGS> <LINK_FLAGS> <CMAKE_SHARED_MODULE_CREATE_${lang}_FLAGS> -o <TARGET> ${CMAKE_GNULD_IMAGE_VERSION} <OBJECTS> <LINK_LIBRARIES>")
-		set(CMAKE_${lang}_CREATE_SHARED_LIBRARY
-		"<CMAKE_${lang}_COMPILER> <CMAKE_SHARED_LIBRARY_${lang}_FLAGS> <LANGUAGE_COMPILE_FLAGS> <LINK_FLAGS> <CMAKE_SHARED_LIBRARY_CREATE_${lang}_FLAGS> -o <TARGET> -Wl,--out-implib,<TARGET_IMPLIB> ${CMAKE_GNULD_IMAGE_VERSION} <OBJECTS> <LINK_LIBRARIES>")
-		set(CMAKE_${lang}_LINK_EXECUTABLE
-		"<CMAKE_${lang}_COMPILER> <FLAGS> <CMAKE_${lang}_LINK_FLAGS> <LINK_FLAGS> <OBJECTS>  -o <TARGET> -Wl,--out-implib,<TARGET_IMPLIB> ${CMAKE_GNULD_IMAGE_VERSION} <LINK_LIBRARIES>")
-	endforeach()
+if (NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
+  set(NO_TEMP_OBJECT_A On)
+  # By default cmake generates a temporary object.a archive on windows-gnu
+  # Resetting the link rules here avoids this step and saves significant time when linking
+  if (WIN32 AND NO_TEMP_OBJECT_A) 
+    message(STATUS "NO TEMP OBJECT")
+    foreach(lang C CXX)
+      set(CMAKE_${lang}_CREATE_SHARED_MODULE
+      "<CMAKE_${lang}_COMPILER> <CMAKE_SHARED_MODULE_${lang}_FLAGS> <LANGUAGE_COMPILE_FLAGS> <LINK_FLAGS> <CMAKE_SHARED_MODULE_CREATE_${lang}_FLAGS> -o <TARGET> ${CMAKE_GNULD_IMAGE_VERSION} <OBJECTS> <LINK_LIBRARIES>")
+      set(CMAKE_${lang}_CREATE_SHARED_LIBRARY
+      "<CMAKE_${lang}_COMPILER> <CMAKE_SHARED_LIBRARY_${lang}_FLAGS> <LANGUAGE_COMPILE_FLAGS> <LINK_FLAGS> <CMAKE_SHARED_LIBRARY_CREATE_${lang}_FLAGS> -o <TARGET> -Wl,--out-implib,<TARGET_IMPLIB> ${CMAKE_GNULD_IMAGE_VERSION} <OBJECTS> <LINK_LIBRARIES>")
+      set(CMAKE_${lang}_LINK_EXECUTABLE
+      "<CMAKE_${lang}_COMPILER> <FLAGS> <CMAKE_${lang}_LINK_FLAGS> <LINK_FLAGS> <OBJECTS>  -o <TARGET> -Wl,--out-implib,<TARGET_IMPLIB> ${CMAKE_GNULD_IMAGE_VERSION} <LINK_LIBRARIES>")
+    endforeach()
+  endif()
 endif()
 
 find_path(DAW_DEPS_PATH PATHS ${DAW_DEPS_PATH})
