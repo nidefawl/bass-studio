@@ -377,7 +377,7 @@ void guitrack_editor::trackViewDragBegin(guitrack_editor* view, MouseEvent& evt)
 	subTrSelected = subTr;
 	if (trSelected != NULL) {
 //		MainCtrl::get()->setSelectedTrack(trSelected);
-		MainCtrl::get()->setEditClip(NULL);
+		DawInstance::get()->setEditClip(NULL);
 		if (evt.guiDragged == this) { // cursor move / range select
 			DAW::Cursor& c = dawCtrl->getCursor();
 			c.selRange = 0;
@@ -657,7 +657,7 @@ void guitrack_editor::dragSelectionRelease(gui_clip* gui, MouseEvent& evt) {
 		}
 		action.dragtype = DRAG_NONE;
 		if (gui && showclip)
-			MainCtrl::get()->setEditClip(gui);
+			DawInstance::get()->setEditClip(gui);
 	}
 }
 

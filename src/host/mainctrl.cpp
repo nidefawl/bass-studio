@@ -245,18 +245,21 @@ std::shared_ptr<guictr_layout> makeTabListCtr2() {
 	return ctr;
 }
 class DawViewContainersCompanion : public DawViewContainers {
+	guictr_noteeditor noteeditor;
 public:
 	guictr_menubar ctr_menu;
 	guictr_nodes ctr_nodes;
 	guictr_tracks ctr_tracks2;
-	guictr_plugins ctr_plugins;
+	guictr_clipeditor ctr_clipeditor;
 	guictr_base* ctr_dnd_test;
 	Splitter splitterCenter;
 	DawViewContainersCompanion(DawCtrl* const _dawCtrl, ngui::MenuBar& menubar, DAW::Cursor& _cursor, project_t& _project, project_globals_t& _projectGlobals, scaled_grid& grid, clip_view& clipView, dragdrop_midifile& dragdropclip)
 	  :
+      noteeditor(clipView),
 	  ctr_menu(menubar),
 	  ctr_nodes(_cursor, _project, dragdropclip),
 	  ctr_tracks2(_dawCtrl, _cursor, _project, _projectGlobals, grid, dragdropclip),
+	  ctr_clipeditor(noteeditor, clipView),
 	  ctr_dnd_test(makeDnDTestCtr()),
 	  splitterCenter(0, 0.8f)
 	{
@@ -281,14 +284,14 @@ public:
 //		int hTrackCtr = winH;
 		int hCenter = winH - hTopControls - hStatusBar;
 		int hRight = winH - hTopControls;
-		int hTrackCtr = splitterCenter.leftOrTop(hCenter);
-		int hPlugins = splitterCenter.rightOrBottom(hCenter);
+		int hTrackCtr = hCenter;//splitterCenter.leftOrTop(hCenter);
+//		int hPlugins = splitterCenter.rightOrBottom(hCenter);
 		splitterCenter.pos = ivec2(winX, winY+hTrackCtr-5);
 		splitterCenter.size = ivec2(winW, 10);
-		ctr_dnd_test->size = ctr_nodes.size = centerCtr.size = { winW, hTrackCtr };
-		ctr_plugins.size = { winW, hPlugins };
-		ctr_dnd_test->pos = ctr_nodes.pos = centerCtr.pos = { winX, winY };
-		ctr_plugins.pos = { winX, centerCtr.bottom() };
+		ctr_clipeditor.size = ctr_dnd_test->size = ctr_nodes.size = centerCtr.size = { winW, hTrackCtr };
+//		ctr_plugins.size = { winW, hPlugins };
+		ctr_clipeditor.pos = ctr_dnd_test->pos = ctr_nodes.pos = centerCtr.pos = { winX, winY };
+//		ctr_plugins.pos = { winX, centerCtr.bottom() };
 //		ctr_test.setSnapSides(ivec4(0, 0, 0, 1));
 //		statusbar.setSnapSides(ivec4(0, 1, 0, 0));
 	}
@@ -296,7 +299,7 @@ public:
 		auto& centerCtr = ctr_tracks2;
 		 v.push_back(&centerCtr);
 //		 v.push_back(&ctr_tabbed2);
-		 v.push_back(&ctr_plugins);
+//		 v.push_back(&ctr_plugins);
 //		 v.push_back(&ctr_tabbed);
 #if USE_GUI_MENU
 		 v.push_back(&ctr_menu);
@@ -531,12 +534,13 @@ void CompanionCtrl::setupView() {
 	for (guictr_base *ctr : containers) {
 		ctr->setControl(this);
 	}
-	view->ctr_plugins.setControl(this);
+	view->ctr_clipeditor.setControl(this);
 	view->ctr_tracks2.setControl(this);
 	view->ctr_nodes.setControl(this);
 	view->ctr_dnd_test->setControl(this);
 	view->ctr_tracks2.setVisible(containers[0] == &view->ctr_tracks2);
 	view->ctr_nodes.setVisible(containers[0] == &view->ctr_nodes);
+	view->ctr_clipeditor.setVisible(containers[0] == &view->ctr_clipeditor);
 	view->ctr_dnd_test->setVisible(containers[0] == view->ctr_dnd_test);
 
 }
@@ -594,15 +598,17 @@ void CompanionCtrl::setViewMode(view_mode_t mode) {
 	this->viewMode = mode;
 	switch (mode) {
 	case MIXER:
-		containers[0] = view->ctr_dnd_test;
+//		containers[0] = view->ctr_dnd_test;
+        containers[0] = &view->ctr_nodes;
 		break;
 	case TRACK_TIMELINE:
 		containers[0] = &view->ctr_tracks2;
 		break;
-	case NODE_EDITOR:
-		containers[0] = &view->ctr_nodes;
+    case NODE_EDITOR:
+        containers[0] = &view->ctr_clipeditor;
 		break;
 	}
+	view->ctr_clipeditor.setVisible(containers[0] == &view->ctr_clipeditor);
 	view->ctr_dnd_test->setVisible(containers[0] == view->ctr_dnd_test);
 	view->ctr_tracks2.setVisible(containers[0] == &view->ctr_tracks2);
 	view->ctr_nodes.setVisible(containers[0] == &view->ctr_nodes);
@@ -1610,8 +1616,11 @@ void CompanionCtrl::layoutView(int32_t w, int32_t h) {
 	view->ctr_tracks2.layout();
 	view->ctr_nodes.layout();
 	view->ctr_dnd_test->layout();
+	view->ctr_clipeditor.layout();
 	for (guictr_base *ctr : containers) {
 		if(ctr == &view->ctr_tracks2)
+			continue;
+		if(ctr == &view->ctr_clipeditor)
 			continue;
 		if(ctr == &view->ctr_nodes)
 			continue;
@@ -2250,14 +2259,22 @@ void DawInstance::resetAutomationContext() {
 	}
 }
 void DawInstance::resetEditClip() {
+	setEditClip(nullptr);
+}
+void DawInstance::setEditClip(gui_clip* gclip) {
 	for (auto* ctrl : this->dawCtrls) {
-		ctrl->setEditClip(nullptr);
+        ctrl->setEditClip(gclip);
 	}
 }
 void DawCtrl::setEditClip(gui_clip* gclip) {
 	clipView.set(gclip);
 }
 void MainCtrl::setEditClip(gui_clip* gclip) {
+	view->ctr_clipeditor.storeLayout();
+	clipView.set(gclip);
+	view->ctr_clipeditor.showEditClip();
+}
+void CompanionCtrl::setEditClip(gui_clip* gclip) {
 	view->ctr_clipeditor.storeLayout();
 	clipView.set(gclip);
 	view->ctr_clipeditor.showEditClip();

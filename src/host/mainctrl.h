@@ -354,6 +354,7 @@ public:
 	bool toggleLoop();
 	void resetMouseContext();
 	void resetEditClip();
+	void setEditClip(gui_clip* gclip);
 	void resetAutomationContext();
 	void closeContextMenus();
 	void cutIntersecting(track_t* tr, clip_t* mask);
@@ -562,4 +563,5 @@ public:
 	void fixCursor() override;
 	bool isZooming() override;
 	void setViewMode(view_mode_t mode) override;
+	void setEditClip(gui_clip* gclip) override;
 };
