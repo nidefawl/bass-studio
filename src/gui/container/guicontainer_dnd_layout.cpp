@@ -9,6 +9,82 @@
 
 
 static const int32_t dropIndicatorWidth = 8;
+class guictr_layout_entry_handle_button : public guibutton {
+public:
+    guictr_layout_entry_handle_button() : guibutton()
+    {
+    }
+    void render(NVGcontext* vg)
+    {
+        int32_t fl = getStateFlags();
+        //renderWidgetBorder(vg, fl);
+        renderButtonLabel(vg, fl);
+    }
+    void renderButtonLabel(NVGcontext* vg, int32_t stateFlags)
+    {
+        if (drawFn || str.length()) {
+            nvgSave(vg);
+            setScissorTransform(vg);
+
+            if (drawFn) {
+                ivec2 renderPos(0);
+                GuiColor::constant_t buttonColor = (stateFlags & FLG_HVRD) ? GuiColor::COL_LABEL_ACTIVE : GuiColor::COL_LABEL_INACTIVE;
+                drawFn(vg, renderPos, size, theme->getColor(buttonColor), drawParm, isEnabled());
+            }
+            nvgRestore(vg);
+        }
+    
+	}
+};
+class guictr_layout_entry_handle : public guictr_base {
+    guictr_layout_entry_handle_button btnClose;
+	guictr_layout_entry* const parentCtr;
+	guictr_base* const ctr;
+	bool hasDragged = false;
+	bool hasClicked = false;
+public:
+	guictr_layout_entry_handle(guictr_layout_entry* _parentCtr, guictr_base* _ctr) : parentCtr(_parentCtr), ctr(_ctr) {
+        add(&btnClose);
+        btnClose.drawFn = drawCross;
+        setBackgroundRendered(false);
+        setBackgroundRenderedInset(false);
+        setCanMouseHit(true);
+		setLabel(_ctr->getLabel());
+        padding = 0;
+        margin = 0;
+	}
+    ~guictr_layout_entry_handle() {
+        remove(&btnClose);
+    }
+    void buttonClicked(guibase* button) override
+    {
+        if (button == &btnClose)
+        {
+			std::shared_ptr<guictr_layout_entry> out;
+        	parentCtr->getContainerRef(out, true);
+        	parentCtrl->relayout();
+        }
+    }
+    void layout() override {
+        btnClose.size = ivec2(size.y);
+        btnClose.pos = ivec2(getSizeContent().x - btnClose.size.x, 0);
+        for (auto gui : guis) {
+            gui->layout();
+        }
+	}
+	void handleDraggedBegin(MouseEvent &evt) override;
+	void handleDraggedMove(MouseEvent &evt) override;
+	void handleDraggedRelease(MouseEvent& evt) override;
+	int32_t getStateFlags() const override {
+        int32_t state = guictr_base::getStateFlags();
+        //		if (active()) {
+//			state |= FLG_ACT;
+//		}
+		return state;
+	}
+	void render(NVGcontext* vg) override;
+};
+
 
 bool guictr_layout::setOverlayPos(i_ctr_drop_area* area, const dock_pos dockPos, ivec2 overlayPos, ivec2 overlaySize, int32_t dockPosOfffset, int32_t childContainerIndex)
 {
@@ -164,7 +240,6 @@ guictr_layout::guictr_layout() : guictr_base() {
 //		setBackgroundRendered(true);
 //		setBackgroundRenderedInset(true);
 	this->setCanMouseHit(true);
-//		dragdropContainerAreaHelpers.resize(16);
 	margin = 0;
 	padding = 0;
 	//padding = 6;
@@ -182,64 +257,53 @@ void guictr_layout::layout() {
     default:
         break;
     }
-	int32_t entryIdx = 0;
-    int padding = 2;
-    //if (parentCtrl && parentCtrl->isDraggingContainer()) {
-    //    padding =32;
-    //}
     vec2 segSizeF = vec2(cs);
     vec2 axis = vec2(0);
-    vec2 iaxis = vec2(0);
 	int32_t nEntries = math::max<int32_t>(1, entries.size());
-	bool showHandles = true;
+
 	switch (this->ctrLayout) {
-	case container_layout::TABBED:
-		showHandles = true;
+    case container_layout::TABBED:
+        segSizeF = vec2(cs.x / (float)nEntries, cs.y);
 		break;
 	case container_layout::SOLE:
 		break;
-	case container_layout::SPLIT_V:
+    case container_layout::SPLIT_V:
         segSizeF = vec2(cs.x / (float)nEntries, cs.y);
         axis.x = 1.0f;
-        iaxis.y = 1.0f;
 		break;
-	case container_layout::SPLIT_H:
+    case container_layout::SPLIT_H:
 		segSizeF = vec2(cs.x, cs.y / (float)nEntries);
 		axis.y = 1.0f;
-        iaxis.x = 1.0f;
 		break;
-	}
-    static const uint8_t handleHeight = 20;
+    }
+    static const int32_t handleHeight = 20;
+    static const int32_t paddingHandle = 1;
+    static const int32_t padding = 1;
+    float tabW = segSizeF.x;
+    int32_t entryIdx = 0;
 	if (this->ctrLayout == container_layout::TABBED) {
-		int paddingHandle = 1;
-        int controlHeight = handleHeight;
-		vec2 handleInset(0);
-		vec2 segSizeF = vec2((vec2(cs)-handleInset*2.0f).x / (float)nEntries, (float)controlHeight);
-		axis.x = 1;
-		entryIdx = 0;
+        axis.x = 1;
 		for (auto &entry : entries) {
 			auto *gui = entry->getGui();
 			auto *guiHandle = entry->getHandle();
-			entry->pos = gui->pos = ivec2(padding) + ivec2(0, controlHeight);
-			entry->size = gui->size = math::maxvec2(cs - ivec2(padding * 2) - ivec2(0, controlHeight), ivec2(4, 4));
-			if (guiHandle && showHandles) {
-				guiHandle->pos = ivec2(handleInset + (float)entryIdx * segSizeF * vec2(1, 0) + vec2(paddingHandle, 0));
-				guiHandle->size = ivec2(math::maxvec2f(vec2(segSizeF.x, controlHeight), vec2(4, 4)) - vec2(paddingHandle*2, 0));
+            entry->pos = gui->pos = ivec2(padding) + ivec2(0, handleHeight);
+            entry->size = gui->size = math::maxvec2(cs - ivec2(padding * 2) - ivec2(0, handleHeight), ivec2(4, 4));
+			if (guiHandle) {
+                guiHandle->pos = ivec2((float)entryIdx * vec2(tabW, 0) + vec2(paddingHandle, 0));
+                guiHandle->size = ivec2(math::maxvec2f(vec2(tabW, handleHeight), vec2(4, 4)) - vec2(paddingHandle * 2, 0));
 			}
 			entryIdx++;
 		}
 	} else {
-
 		for (auto &entry : entries) {
-			int paddingHandle = 1;
             int controlHeight = entry->hasHandle ? handleHeight : 0;
 			auto *gui = entry->getGui();
 			auto *guiHandle = entry->getHandle();
 			if (guiHandle && entry->hasHandle) {
                 entry->pos = gui->pos = ivec2(vec2((float)entryIdx * segSizeF * axis) + vec2(0, controlHeight) + vec2(padding));
                 entry->size = gui->size = ivec2(math::maxvec2f(segSizeF - vec2(padding * 2) - vec2(0, controlHeight), vec2(4, 4)));
-				guiHandle->pos = ivec2(vec2((float)entryIdx * segSizeF * axis) + vec2(paddingHandle, 0));
-                guiHandle->size = ivec2(vec2(segSizeF.x, controlHeight) - vec2(paddingHandle * 2, 0));
+                guiHandle->pos = ivec2(vec2((float)entryIdx * segSizeF * axis) + vec2(paddingHandle, 0));
+                guiHandle->size = ivec2(vec2(tabW, controlHeight) - vec2(paddingHandle * 2, 0));
             } else {
                 entry->pos = gui->pos = ivec2(vec2((float)entryIdx * segSizeF * axis) + vec2(0, controlHeight) + vec2(0));
                 entry->size = gui->size = ivec2(math::maxvec2f(segSizeF - vec2(0) - vec2(0, controlHeight), vec2(4, 4)));
@@ -276,37 +340,58 @@ void guictr_layout_entry_handle::handleDraggedRelease(MouseEvent& evt) {
 	if (parent)
 		parent->buttonClicked(this);
 }
-void guictr_layout_entry_handle::render(NVGcontext* vg) {
-		int32_t stateFlags = getStateFlags();
-		nvgBeginPath(vg);
-	//	nvgRoundedRect(vg, pos.x, pos.y, size.x, size.y, 3.0f);
-		nvgRect(vg, pos.x, pos.y, size.x, size.y);
-		nvgFillColor(vg, theme->getBgStrokeColor(stateFlags));
-		nvgFill(vg);
-//		renderWidgetBorder(vg, fl);
-//		renderButtonLabel(vg, fl);
-        String str = parentCtr->getGui()->label;
-		if (drawFn || str.length()) {
-			nvgSave(vg);
-			setScissorTransform(vg);
+void guictr_layout_entry_handle::render(NVGcontext* vg)
+{
+    if (!isVisible()) {
+        log_printf("warning, skip rendering container with state !isVisible()\n", 0);
+        return;
+    }
+    if (isBackgroundRendered()) {
+        renderBackground(vg);
+    }
+    if (!setScissorTransform(vg)) {
+        return;
+    }
+    int32_t stateFlags = getStateFlags();
+    nvgBeginPath(vg);
+    //	nvgRoundedRect(vg, pos.x, pos.y, size.x, size.y, 3.0f);
+    nvgRect(vg, 0, 0, size.x, size.y);
+    nvgFillColor(vg, theme->getBgStrokeColor(stateFlags));
+    nvgFill(vg);
+    //		renderWidgetBorder(vg, fl);
+    //		renderButtonLabel(vg, fl);
+    String str = parentCtr->getGui()->label;
+    if (str.length()) {
 
-			ivec2 renderPos(0);
-			if (str.length() > 0) {
-                int fontScale = 12;
-                //math::round((this->fontSize > 0 ? this->fontSize : math::min(size.y, size.x)) * fFontScale);
-				GuiColor::constant_t c = (stateFlags & FLG_ENBL) ? GuiColor::COL_LABEL_ACTIVE : GuiColor::COL_LABEL_INACTIVE;
+        ivec2 renderPos(size.y / 2, size.y / 2);
+        if (str.length() > 0) {
+            int fontScale = 12;
+            // math::round((this->fontSize > 0 ? this->fontSize : math::min(size.y, size.x)) * fFontScale);
+            GuiColor::constant_t c = (stateFlags & FLG_ENBL) ? GuiColor::COL_LABEL_ACTIVE : GuiColor::COL_LABEL_INACTIVE;
+            NVGcolor color = theme->getColor(c);
+            UTIL_setFont(vg, theme, fontScale, color, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+            nvgText(vg, renderPos.x, renderPos.y, StringAsCStr(str), NULL);
+            //			nvgDrawText(vg, this, pos, size, str, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+            // renderCenteredMultilineText(vg, theme, str, fontScale, c, renderPos, size);
+        }
 
-				//			nvgDawText(vg, this, pos, size, str, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-				renderCenteredMultilineText(vg, theme, str, fontScale, c, renderPos, size);
-
-			}
-
-			if (drawFn) {
-				drawFn(vg, renderPos, size, getBackgroundColor(getStateFlags()), drawParm, isEnabled());
-			}
-			nvgRestore(vg);
-		}
-	}
+    }
+    for (auto c : guis) {
+        if (!c->isVisible()) {
+            //			log_printf("warning, skip rendering child container with state !isVisible()\n", 0);
+            continue;
+        }
+        if (c->size.x <= 0 || c->size.y <= 0) {
+            log_printf("warning, skip rendering child container with size <= 0 0\n", 0);
+            continue;
+        }
+        {
+            nvgSave(vg);
+            c->render(vg);
+            nvgRestore(vg);
+        }
+    }
+}
 
 void i_ctr_drop_area::render(NVGcontext* vg) {
 	nvgBeginPath(vg);

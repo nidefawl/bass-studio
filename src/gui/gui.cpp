@@ -133,13 +133,14 @@ void renderDashedLineFrame(NVGcontext* vg, float x, float y, float w, float h, f
 	nvgStroke(vg);
 	nvgShapeAntiAlias(vg, 1);
 }
-void drawPlaySymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2) {
-	float inset = math::max(2.0f, size.x/8.0f);
-	float x1 = pos.x + inset;
-	float y1 = pos.y + inset;
-	float y2 = pos.y + size.y - inset;
-	float x3 = pos.x + size.x - inset;
-	float y3 = pos.y + size.y / 2.0f;
+void drawPlaySymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2)
+{
+    float inset = math::max(2.0f, size.x / 8.0f);
+    float x1 = pos.x + inset;
+    float y1 = pos.y + inset;
+    float y2 = pos.y + size.y - inset;
+    float x3 = pos.x + size.x - inset;
+    float y3 = pos.y + size.y / 2.0f;
     nvgBeginPath(vg);
     nvgMoveTo(vg, x1, y1);
     nvgLineTo(vg, x1, y2);
@@ -147,6 +148,22 @@ void drawPlaySymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& col
     nvgClosePath(vg);
     nvgFillColor(vg, getContrastFontColorNvg(color));
     nvgFill(vg);
+}
+void drawCross(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2)
+{
+    float inset = math::max(math::min<float>(math::min(size.x, size.y), 4.0f), size.x / 3.0f);
+    float x1 = pos.x + inset;
+    float y1 = pos.y + inset;
+    float y2 = pos.y + size.y - inset;
+    float x2 = pos.x + size.x - inset;
+    nvgBeginPath(vg);
+    nvgMoveTo(vg, x1, y1);
+    nvgLineTo(vg, x2, y2);
+    nvgMoveTo(vg, x1, y2);
+    nvgLineTo(vg, x2, y1);
+    nvgStrokeWidth(vg, 2.0f);
+    nvgStrokeColor(vg, (color));
+    nvgStroke(vg);
 }
 void drawRecordSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2) {
 	float inset = math::max(2.0f, size.x/8.0f);

@@ -166,6 +166,10 @@ public:
 //		postContentChanged();
 		if (this->parent) {
 			this->parent->onChildLayoutChanged(g);
+		} else {
+			if (this->parentCtrl) {
+				this->parentCtrl->relayout();
+			}
 		}
 	}
 	void layout() override;
