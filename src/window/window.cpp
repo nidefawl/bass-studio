@@ -1124,8 +1124,13 @@ window_main* appwindow_main::createOverlay(std::shared_ptr<AppCtrl> ctrl, int fl
 	String sName = StringFormat("%s.child", this->name);
 	std::shared_ptr<appwindow_main> ow = std::make_shared<appwindow_main>(this, ctrl); //TODO: manage lifetime of control
 
+
 	//pass down parent window handle if ctrl is companion ctrl of daw (signaled by WINDOW_IS_MAINWINDOW_SLAVE)
-	appwindow_main* parentHandle = ((flags&WINDOW_IS_MAINWINDOW_SLAVE) != 0) ? this : nullptr;
+    //NOTE: GL context sharing is disabled
+    //appwindow_main* parentHandle = ((flags & WINDOW_IS_MAINWINDOW_SLAVE) != 0) ? this : nullptr;
+
+    appwindow_main* parentHandle = nullptr;
+
 	ivec2 windowSize;
 	getSize(&windowSize);
 	ow->createMainWindow(StringAsCStr(sName), windowSize.x, windowSize.y, parentHandle, flags);
@@ -1232,7 +1237,8 @@ void appwindow_main::createMainWindow(const char* title, int w, int h, appwindow
 	appwindow::createBaseWindow(title, w, h, parentWindowHandle ? parentWindowHandle->glfw : nullptr, nullptr);
 
 	if (flags&WINDOW_IS_MAINWINDOW_SLAVE) {
-		this->nanovgCtxt = parentWindowHandle->nanovgCtxt;
+	    //NOTE: GL context sharing is disabled
+		//this->nanovgCtxt = parentWindowHandle->nanovgCtxt;
 	}
 	if (!parent) {
 		glfwSetWindowSizeLimits(glfw, 640, 480, GLFW_DONT_CARE, GLFW_DONT_CARE);
