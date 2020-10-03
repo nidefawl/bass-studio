@@ -120,6 +120,7 @@ public:
 	SYNCHRONIZED_RW std::atomic<int32_t> bypassEffectProcessing{false};
 	SYNCHRONIZED_RW std::atomic<int32_t> multithreadedProcessing{1};
 	SYNCHRONIZED_RW std::atomic<int32_t> bypassPlaybackProcessing{false};
+	SYNCHRONIZED_RW std::atomic<int32_t> bypassSampleConversion{false};
 	std::atomic<int32_t> pluginId{100};
 	std::atomic<int32_t> audioStageId{100};
 	std::atomic<int32_t> sampleId{(1<<30)}; //TODO: collides with audiocache::nextIdx

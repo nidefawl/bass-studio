@@ -955,7 +955,6 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 	stats.resamplerOutNumSamples = resamplerOutput->getNumSamplesOutputBuffer();
 	int32_t dbg = dbgStep%333;
 	int32_t nBlocksProcessed = 0;
-	bool convert = true;
 	bool canProcess = audioHost && queueSizeOutput < 8 && queueSizeInput > 2;
 	uint32_t blockSizeResampled = DAW::NumSamplesResampled(sampleFormat.blockSize, sampleFormat.sampleRate, sampleFormatExternal.sampleRate);
 	uint32_t numBlocksInternal = math::max<uint32_t>(1U, sampleFormatExternal.blockSize/blockSizeResampled);
@@ -1125,8 +1124,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 				trAudio->onTick(since);
 			}
 		}
-
-		if (convert) {
+		if (!bypassSampleConversion) {
 			int32_t bytesCopied = 0;
 			hires_timer_t timerConvert;
 			for (track_t* tr : project->trackList) {
@@ -1138,6 +1136,9 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			int64_t timeConvert = timerConvert.getTime();
 			stats.timings["convert"] = timeConvert;
 			stats.timings["convertBytes"] = bytesCopied;
+		} else {
+			stats.timings["convert"] = 0;
+			stats.timings["convertBytes"] = 0;
 		}
 
 	}
@@ -1159,9 +1160,6 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			curTimeProcess += timeTaken/NUM_BINS_STATS;
 			stats.timings["blocktime"] = curTimeProcess;
 			stats.timings["blocktimeRaw"] = timeTaken;
-		}
-		if (convert) {
-			stats.timings["convertBlockTime"] = timeTaken;
 		}
 		stats.timings["microSecsPerBlock"] = microSecsPerBlock;
 		stats.usage = stats.timings["blocktime"] / (double) microSecsPerBlock;
@@ -2253,7 +2251,7 @@ vstpluginloadres vsthost::loadPlugin(String filepath, int32_t uId, int32_t globa
 
 	globalId = getNextGlobalModuleId(globalId);
 	vstplugin* plugin = new vstplugin(new handles_t(nullptr, aeffect, moduleHandle), globalId, path, nameWithoutExt, -1);
-	plugin->handle->localCurrentUniqueId = this->impl->vstShellCurrentUniqueId;
+    plugin->handle->localCurrentUniqueId = uId;
 	pluginInstancesVST2.push_back(plugin);
 	pluginInstances.push_back(plugin);
 

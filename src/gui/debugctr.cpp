@@ -51,6 +51,7 @@ enum ID_BTN : int32_t {
 	ID_BTN_TOGGLE_STACKTRACE,
 	ID_BTN_TOGGLE_PLAYBACKPROCESSING,
 	ID_BTN_TOGGLE_EFFECTPROCESSING,
+	ID_BTN_TOGGLE_SAMPLECONVERSION,
 	ID_BTN_TOGGLE_THREADING,
 	ID_BTN_TOGGLE_CLIP_RENDER_CACHE,
 };
@@ -166,6 +167,13 @@ gui_ctr_debug::gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType) :
 			auto btn3 = new guibutton;
 			btn3->id = ID_BTN_TOGGLE_EFFECTPROCESSING;
 			btn3->setText("Bypass Eff. Proc. (OFF)");
+			btn3->setFontSize(BTN_FONT_SIZE);
+			debugGuis.push_back(btn3);
+		}
+		{
+			auto btn3 = new guibutton;
+			btn3->id = ID_BTN_TOGGLE_SAMPLECONVERSION;
+			btn3->setText("Bypass Sample conversion (OFF)");
 			btn3->setFontSize(BTN_FONT_SIZE);
 			debugGuis.push_back(btn3);
 		}
@@ -547,10 +555,13 @@ void gui_ctr_debug::buttonClicked(guibase* button) {
 		static_cast<guibutton*>(button)->setText(String(vsthost::getInstance()->bypassEffectProcessing?"Bypass Effect Processing (ON)":"Bypass Effect Processing (OFF)"));
 
 		break;
+	case ID_BTN_TOGGLE_SAMPLECONVERSION:
+		vsthost::getInstance()->bypassSampleConversion = !vsthost::getInstance()->bypassSampleConversion;
+		static_cast<guibutton*>(button)->setText(String(vsthost::getInstance()->bypassSampleConversion?"Bypass Sample conversion (ON)":"Bypass Sample conversion (OFF)"));
+
+		break;
 	case ID_BTN_TOGGLE_CLIP_RENDER_CACHE:
-		MainCtrl::getPlayThread()->call([]() {
-			daw_tls::getTls().renderStats.enableCache = !daw_tls::getTls().renderStats.enableCache;
-				}, true);
+		daw_tls::getTls().renderStats.enableCache = !daw_tls::getTls().renderStats.enableCache;
 		static_cast<guibutton*>(button)->setText(String(daw_tls::getTls().renderStats.enableCache?"Disable clip render cache":"Enable clip render cache"));
 
 		break;
