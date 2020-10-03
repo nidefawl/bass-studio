@@ -61,6 +61,7 @@ public:
 	String getName() { return sName; };
 	String getProductName() { return sProductName; };
 	void setProductName(String sName) {
+		replaceString(sName, "[jBridge]", "");
 		this->sName = sName;
 		this->sProductName = sName;
 	#ifndef NDEBUG
