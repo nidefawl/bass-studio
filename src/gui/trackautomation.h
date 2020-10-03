@@ -4,7 +4,10 @@
 #include "theme.h"
 #include "guicolors.h"
 #include "track.h"
-#include "trackctr.h"
+#include "gui.h"
+#include "guicontainer.h"
+#include "grid.h"
+#include "trackctr_types.h"
 #include "automation.h"
 
 class gui_track_automation : public guictr_base {
@@ -112,21 +115,9 @@ public:
 	void trackViewDragRelease(guitrack_editor* view, MouseEvent& evt) override;
 	bool trackViewDoubleClick(guitrack_editor* view, MouseEvent& evt) override;
 	void postEdit();
-	void handleDraggedBegin(MouseEvent& evt) override {
-		DawInstance::get()->setSelectedTrack(m_track);
-		evt.relMousepos += getPosContent();
-		parent->handleDraggedBegin(evt);
-	}
-
-	void handleDraggedMove(MouseEvent& evt) override {
-		evt.relMousepos += getPosContent();
-		parent->handleDraggedMove(evt);
-	}
-
-	void handleDraggedRelease(MouseEvent& evt) override {
-		evt.relMousepos += getPosContent();
-		parent->handleDraggedRelease(evt);
-	}
+	void handleDraggedBegin(MouseEvent& evt) override;
+	void handleDraggedMove(MouseEvent& evt) override;
+	void handleDraggedRelease(MouseEvent& evt) override;
 
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
 

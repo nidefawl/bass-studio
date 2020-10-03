@@ -256,7 +256,7 @@ class DawInstance : public project_controller_t, public delete_cb {
 	PlaybackThread playThread;
 	plugindatabase_t plugindb;
 	String projectPath;
-	track_t* selectedTrack = NULL;
+	track_t* selectedTrack = nullptr;
 	String loadProject = "";
 	struct project_to_load_t {
 		std::shared_ptr<project_file> projectfile;

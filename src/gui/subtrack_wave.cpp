@@ -70,8 +70,6 @@ public:
 		}
 	}
 	void render(NVGcontext* vg) override {
-		if (DawInstance::get()->getSelectedTrack() == m_track) {
-		}
 //		nvgBeginPath(vg);
 //		nvgRect(vg, pos.x, pos.y, size.x, size.y);
 //		nvgFillColor(vg, rgbToNvg(0xff00ff));

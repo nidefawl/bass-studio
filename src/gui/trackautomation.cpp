@@ -302,6 +302,22 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 		}
 	}
 
+	void gui_track_automation::handleDraggedBegin(MouseEvent& evt) {
+		DawInstance::get()->setSelectedTrack(m_track);
+		evt.relMousepos += getPosContent();
+		parent->handleDraggedBegin(evt);
+	}
+
+	void gui_track_automation::handleDraggedMove(MouseEvent& evt) {
+		evt.relMousepos += getPosContent();
+		parent->handleDraggedMove(evt);
+	}
+
+	void gui_track_automation::handleDraggedRelease(MouseEvent& evt) {
+		evt.relMousepos += getPosContent();
+		parent->handleDraggedRelease(evt);
+	}
+
 	bool gui_track_automation::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 		if (!this->at || this->param < 0) {
 			return false;

@@ -1,6 +1,7 @@
 #include <glm/geometric.hpp>
 #include <memory>
 #include <numeric>
+#include <vector>
 
 
 #include "track.h"

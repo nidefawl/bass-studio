@@ -25,7 +25,7 @@
 #include "dsp_util.h"
 #include "../host/mainctrl.h"
 #include "trackctr_types.h"
-
+//#error test
 void updateStoreLoadSubtracks(guictr_tracks* guiTracks, track_gui_entry_t* entry) ;
 struct track_selection_t {
 	int32_t trackIdxMin;
@@ -71,8 +71,8 @@ public:
 	project_globals_t& projectGlobals;
 	scaled_grid& grid;
 	dragdrop_midifile& dragdrop;
-	track_gui_entry_t *trSelected = NULL;
-	gui_track_subtrack* subTrSelected = NULL;
+	track_gui_entry_t *trSelected = nullptr;
+	gui_track_subtrack* subTrSelected = nullptr;
 	clip_dragaction action;						 // move up in hierachy
 	std::shared_ptr<clip_clipboard> clipboard; // move up in hierachy
 	tracklayout_t dragStartLayout;
@@ -588,6 +588,58 @@ public:
 		return true;
 	}
 };
+class guitrack_topleft : public guictr_base {
+	guictr_tracks& ctrTracks;
+	DawCtrl* const dawCtrl;
+	track_gui_manager_i& iGuiMgr;
+	project_t& project;
+	guibuttontoggle btnFoldAll;
+	bool isFolded = false;
+	std::vector<guibuttontoggle*> guiButtons;
+
+public:
+	guitrack_topleft(guictr_tracks& _ctrTracks, DawCtrl* const _dawCtrl, track_gui_manager_i& _iGuiMgr, project_t& _project)
+	  : guictr_base(),
+		ctrTracks(_ctrTracks),
+		dawCtrl(_dawCtrl),
+		iGuiMgr(_iGuiMgr),
+		project(_project)
+   {
+		padding = 0;
+//		btnFoldAll.setButtonColor(GuiColor::COL_BTN_LOAD_DEF_PLUGINS);
+		btnFoldAll.setLabel("Fold All Trackss");
+		btnFoldAll.icon = ICON_ARR_RIGHT;
+		btnFoldAll.state = &isFolded;
+		btnFoldAll.getIcon = [gtl=this]{return gtl->isFolded?ICON_ARR_RIGHT:ICON_ARR_DOWN;};
+		guiButtons.push_back(&btnFoldAll);
+		for (auto guiBtn : guiButtons) {
+			add(guiBtn);
+		}
+
+	}
+	~guitrack_topleft() {
+		remove(&btnFoldAll);
+	}
+	void buttonClicked(guibase* _button);
+	void layout() override {
+		const int32_t CONST_LAYOUT_MARGIN = math::min(6, theme->get(GuiConstant::CONST_LAYOUT_MARGIN));
+		const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
+		int32_t inset = CONST_LAYOUT_MARGIN;
+		int32_t i2 = inset * 2;
+		int32_t h = TRACK_HEIGHT_STEP-i2;
+		int buttonSize = h;
+		ivec2 btnPos = {inset, inset};
+		for (auto btn : guiButtons) {
+			btn->size = {buttonSize, buttonSize};
+			btn->setRadius(h/3.f);
+			btn->pos = btnPos;
+			btnPos.x += buttonSize;
+		}
+		for (auto gui : guis) {
+			gui->layout();
+		}
+	}
+};
 class guictr_tracks : public guictr_base, grid_changed_cb, te_constants, public gui_scrollcontainer {
 	friend class guitrack_editor;
 	int32_t globalIndex = 0;
@@ -597,6 +649,7 @@ public:
 	project_t& project;
 	project_globals_t& projectGlobals;
 	track_gui_manager_t guiMgr;
+	guitrack_topleft trackTopLeft;
 	guitrack_mixers trackControls;
 	guitrack_editor trackView;
 	guitrack_timeline trackTimeline;
@@ -607,13 +660,14 @@ protected:
 	int32_t contentViewSize = 0;
 public:
 public:
-	guictr_tracks(DawCtrl* _dawCtrl, DAW::Cursor& _cursor, project_t& _project, project_globals_t& _projectGlobals, scaled_grid& _grid, dragdrop_midifile& _dragdropclip)
+	guictr_tracks(DawCtrl* _dawCtrl, DAW::Cursor& _cursor, DAW::TrackSelection& _trackSelection, project_t& _project, project_globals_t& _projectGlobals, scaled_grid& _grid, dragdrop_midifile& _dragdropclip)
 		: guictr_base(),
 		dawCtrl(_dawCtrl),
 		grid(_grid),
 		project(_project),
 		projectGlobals(_projectGlobals),
 		guiMgr(),
+		trackTopLeft(*this, _dawCtrl, guiMgr, _project),
 		trackControls(guiMgr, _project),
 		trackView(_dawCtrl, guiMgr, _cursor, _project, _projectGlobals, _grid, _dragdropclip),
 		trackTimeline(_grid),
@@ -625,12 +679,14 @@ public:
 		add(&scrollbar);
 		add(&trackTimeline);
 		add(&loophandles);
+		add(&trackTopLeft);
 		add(&trackControls);
 		add(&trackView);
 	}
 	~guictr_tracks() {
 		remove(&trackView);
 		remove(&trackControls);
+		remove(&trackTopLeft);
 		remove(&loophandles);
 		remove(&trackTimeline);
 		remove(&scrollbar);

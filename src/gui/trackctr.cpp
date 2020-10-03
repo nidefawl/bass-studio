@@ -264,9 +264,11 @@ void guictr_tracks::layout() {
 	trackTimeline.size = ivec2(cs.x - trackControlsWidth, 32);
 	loophandles.pos = ivec2(trackTimeline.left(), trackTimeline.bottom());
 	loophandles.size = ivec2(trackTimeline.size.x, heightTimelineControls);
+	trackTopLeft.pos = ivec2(trackCtrlsLeft?0:cs.x - trackControlsWidth, 0);
 	trackView.pos = ivec2(trackCtrlsLeft?trackControlsWidth:0, loophandles.bottom());
 	trackControls.pos = ivec2(trackCtrlsLeft?0:cs.x - trackControlsWidth, loophandles.bottom());
 	trackView.size = ivec2(cs.x - trackControlsWidth, cs.y - loophandles.bottom());
+	trackTopLeft.size = ivec2(trackControlsWidth, loophandles.bottom());
 	trackControls.size = ivec2(trackControlsWidth, trackView.size.y);
 
 	loophandles.clipViewSize = ivec2(trackView.size.x, trackView.size.y+loophandles.size.y);
@@ -343,6 +345,9 @@ void guictr_tracks::render(NVGcontext* vg) {
 	timer.reset();
 		trackView.render(vg);
 		daw_tls::getTls().renderStats.timeRenderEditor=timer.getTime();
+	nvgRestore(vg);
+	nvgSave(vg);
+		trackTopLeft.render(vg);
 	nvgRestore(vg);
 	nvgSave(vg);
 		trackControls.render(vg);
@@ -908,4 +913,22 @@ track_gui_entry_t* getParentOf(track_gui_entry_t* t) {
 		}
 	}
 	return nullptr;
+}
+
+
+void guitrack_topleft::buttonClicked(guibase* _button) {
+	if (_button == &btnFoldAll) {
+		isFolded = !isFolded;
+
+		for (track_gui_entry_t* entry : iGuiMgr.getTracksVisibleFlat()) {
+			if (entry->parent->parent == nullptr) {
+				entry->layout.hideTrack = isFolded;
+				updateStoreLoadSubtracks(entry->parent, entry);
+			}
+		}
+//		DawInstance::get()->updateVisibleTrackContents();
+		ctrTracks.updateVisibleTrackContents();
+		ctrTracks.layout();
+		ctrTracks.updateVisibleTrackContents();
+	}
 }
