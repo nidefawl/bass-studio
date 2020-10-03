@@ -324,7 +324,7 @@ int main(int argc, char* argv[]) {
 			SQLite::Statement   queryDelete(db, "DELETE from plugins where id == ? or path == ?");
 			if (!dryRun) {
 				SQLite::Statement   queryAll(db, "SELECT id, path from plugins");
-				while (queryAll.executeStep())
+				while (queryAll.executeStep() && !quit)
 				{
 					String path = queryAll.getColumn(1).getString();
 					try {
@@ -689,6 +689,7 @@ int main(int argc, char* argv[]) {
 							writeToIPC(client, respShellPlugin);
 							LOG("-- begin of shell plugin list --");
 							for (auto& entry: entries) {
+								if (quit) break;
 								LOG("load shell entry: %08X", entry.pluginUID);
 
 								vstpluginloadres resShellPluginEntry = vsthostInstance->loadPlugin(req.szPath, entry.pluginUID);
