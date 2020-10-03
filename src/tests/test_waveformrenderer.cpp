@@ -6,13 +6,17 @@
 #include <vector>
 #include <memory>
 #include <algorithm>
+
+#ifndef _WIN32
 #include <unistd.h>
+#endif
 
 
 #include "TestBase.hpp"
 #include "math/vec.h"
 #include "math/seq_math.h"
 #include "str_util.h"
+#include "platform.h"
 #include "audiocache.h"
 #include "audiowaveform.h"
 #include "gui/drawwaveform.h"
@@ -206,9 +210,9 @@ void assertNonEqual(F f, F2 f2, std::vector<std::vector<vec2>>& tesselatedWaveFo
 int main(int argc, char* argv[]) {
 	{
 		hires_timer_t t;
-		t.reset();
-		usleep(50000);
-		my_printf("usleep(50000) %lu\n", t.getTime());
+        t.reset();
+        threadSleep(50);
+		my_printf("threadSleep(50) %lu\n", t.getTime());
 	}
 	audiocache cache(44100);
 	daw_tls::tlsinstance& tls = daw_tls::getTls();
