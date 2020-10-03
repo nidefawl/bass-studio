@@ -190,8 +190,9 @@ void serialize(Archive & archive, track_snapshot_t & m)
 {
 	make_optional_nvp(archive, "idx", m.localIdx);
 	archive(make_nvp("settings", base_class<tracksettings_t>(&m)), make_nvp("clips", m.clips), make_nvp("plugins", m.plugins));
-//	make_optional_nvp(archive, "automation", m.layouts);
-	make_optional_nvp(archive, "stageId", m.stageId);
+    //	make_optional_nvp(archive, "automation", m.layouts);
+    //make_optional_nvp(archive, "stageId", m.stageId);
+    archive(make_nvp("stageId", m.stageId));
 }
 template<class Archive>
 void serialize(Archive & archive, layout_grid_t & m)
@@ -299,13 +300,12 @@ void serialize(Archive & archive, project_globals_t & m)
 {
 	archive(make_nvp("loopEnabled", m.loopEnabled),
 			make_nvp("loopStart", m.loopStart),
-			make_nvp("loopLen", m.loopLen));
-	make_optional_nvp(archive, "tempo100", m.tempo100);
-	make_optional_nvp(archive, "loopLen", m.loopLen);
-	make_optional_nvp(archive, "signatureNum", m.signatureNum);
-	make_optional_nvp(archive, "signatureDenom", m.signatureDenom);
-	make_optional_nvp(archive, "playbackPos", m.playbackPos);
-	make_optional_nvp(archive, "cursor", m.cursor);
+			make_nvp("loopLen", m.loopLen),
+            make_nvp("tempo100", m.tempo100),
+            make_nvp("signatureNum", m.signatureNum),
+			make_nvp("signatureDenom", m.signatureDenom),
+            make_nvp("playbackPos", m.playbackPos),
+			make_nvp("cursor", m.cursor));
 }
 template<class Archive>
 void serialize(Archive & archive, project_snapshot_t & m)

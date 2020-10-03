@@ -26,6 +26,7 @@ namespace DAW {
 			const auto outputChannel = trackImpl->outputChannel;
 			if (inputChannel.getType() == channel_input_type::INPUT_AUDIOSTAGE) {
 				if (!host->getAudioStage(inputChannel.stage.stageRef)) {
+					log_printf("Input audiostage with id %d not found\n", inputChannel.stage.stageRef);
 					trackImpl->inputChannel = ChannelNone();
 					numRemoved++;
 				}
@@ -35,6 +36,7 @@ namespace DAW {
 			}
 			if (outputChannel.getType() == channel_input_type::INPUT_AUDIOSTAGE) {
 				if (!host->getAudioStage(outputChannel.stage.stageRef)) {
+					log_printf("Output audiostage with id %d not found\n", outputChannel.stage.stageRef);
 					trackImpl->outputChannel = ChannelNone();
 					numRemoved++;
 				}
