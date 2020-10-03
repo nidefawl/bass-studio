@@ -254,7 +254,7 @@ public:
     bool isDraggingContainer() const {
     	return ctrContent.get() != nullptr || bShowDebugFrames;
     }
-    bool bShowDebugFrames = true;
+    bool bShowDebugFrames = false;
     guictxtmenu_base* ctxtmenu = NULL;
     //	guictxtmenu_base *ctxtmenuOld = NULL;
     int cursorIcon = CURSOR_DEFAULT;
