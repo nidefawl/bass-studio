@@ -21,15 +21,15 @@ struct tick_minmax_t {
 #define TICK_MASK_SUB_16TH ((TICKS_16TH>>1)-1)
 #define MIN_CLIPSIZE (TICKS_16TH>>2)
 struct beatbar16th_t {
-	uint32_t bar;
-	uint32_t beat;
-	uint32_t th;
+	int32_t bar;
+	int32_t beat;
+	int32_t th;
 	int32_t operator[](const int nIndex) {
 		if (nIndex == 2)
-			return static_cast<int32_t>(th);
+			return th;
 		if (nIndex == 1)
-			return static_cast<int32_t>(beat);
-		return static_cast<int32_t>(bar);
+			return beat;
+		return bar;
 	}
 };
 inline tick_t sgn(tick_t val) {

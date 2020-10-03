@@ -52,20 +52,7 @@ public:
 	}
 	int32_t tickToSamples(tick_t ticks);
 	tick_t samplesToTicks(int32_t sample);
-	beatbar16th_t toBeatBar16th(int32_t tick) {
-		beatbar16th_t t;
-		uint32_t denom = 4-math::clamp<uint32_t>(projectGlobals->signatureDenom, 0, 4);
-		uint32_t num = projectGlobals->signatureNum;
-		tick = tick / TICKS_16TH;
-		t.th = tick & ((1<<denom) - 1);
-		uint32_t quarters = (static_cast<uint32_t>(tick)>>denom);
-		t.beat = quarters % num;
-		t.bar = quarters / num;
-		if (tick < 0) {
-			t.bar -= 1;
-		}
-		return t;
-	}
+    beatbar16th_t toBeatBar16th(int32_t tick);
 
 	static project_controller_t* get();
 	double getProjectWorkingArea() {

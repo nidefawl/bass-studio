@@ -41,6 +41,8 @@ namespace math {
 	}
 	template <typename T, typename U>
 	inline bool CheckFitsTypeRange(const U value) {
+		//TODO: this implicitly casts T=int32 to U=float, changing the max from 2147483647 to 2147483648
+		// The easy way to fix this is C++20 http://cpp.arh.pub.ro/cpp/utility/in_range
 		return value >= std::numeric_limits<T>::min()  && value <= std::numeric_limits<T>::max() ;
 	}
 	template<typename T>

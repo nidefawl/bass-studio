@@ -2342,3 +2342,22 @@ tick_t project_controller_t::samplesToTicks(int32_t sample)
 	dbgassert(host);
 	return std::round(sampleToTickPrecise(sample, projectGlobals->tempo100, vsthost::getInstance()->sampleFormat.sampleRate));
 }
+
+beatbar16th_t project_controller_t::toBeatBar16th(int32_t tick)
+{
+    beatbar16th_t t;
+    int32_t denom = 4 - math::clamp<int32_t>(projectGlobals->signatureDenom, 0, 4);
+    int32_t num = projectGlobals->signatureNum;
+    int32_t barOffset = 0;
+    if (tick < 0) {
+        barOffset = -((((-tick)+TICKS_BAR-1) / TICKS_BAR));
+        tick = tick & (TICKS_BAR - 1);
+	}
+    int32_t sixth = tick / TICKS_16TH;//
+    t.th = sixth & ((1 << denom) - 1);
+    int32_t quarters = (sixth >> denom);
+    t.beat = quarters % num;
+    t.bar = quarters / num;
+    t.bar += barOffset;
+    return t;
+}

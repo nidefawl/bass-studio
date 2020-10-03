@@ -4,6 +4,8 @@
 #include "seq_time.h"
 #include "clip.h"
 #include "project.h"
+#include "track.h"
+#include "host/projectcontroller.h"
 #include "test_common.h"
 
 namespace {
@@ -26,8 +28,66 @@ namespace {
 		}
 		ALEPH_TEST_END();
 	}
+	void testTimeSignatureConversion() {
+		ALEPH_TEST_BEGIN("testTimeSignatureConversion");
+		project_t project;
+		project_globals_t projectGlobals;
+    	project_controller_t projectController{&project, &projectGlobals};
+		projectGlobals.signatureNum = 4;
+		projectGlobals.signatureDenom = 2;
+		{
+	    	beatbar16th_t timeSig = projectController.toBeatBar16th(0);
+			ALEPH_ASSERT_THROW(timeSig.bar == 0);
+			ALEPH_ASSERT_THROW(timeSig.beat == 0);
+			ALEPH_ASSERT_THROW(timeSig.th == 0);
+		}
+		{
+	    	beatbar16th_t timeSig = projectController.toBeatBar16th(TICKS_16TH);
+			ALEPH_ASSERT_THROW(timeSig.bar == 0);
+			ALEPH_ASSERT_THROW(timeSig.beat == 0);
+			ALEPH_ASSERT_THROW(timeSig.th == 1);
+		}
+		{
+	    	beatbar16th_t timeSig = projectController.toBeatBar16th(TICKS_QUARTER);
+			ALEPH_ASSERT_THROW(timeSig.bar == 0);
+			ALEPH_ASSERT_THROW(timeSig.beat == 1);
+			ALEPH_ASSERT_THROW(timeSig.th == 0);
+        }
+        {
+            beatbar16th_t timeSig = projectController.toBeatBar16th(TICKS_BAR);
+            ALEPH_ASSERT_THROW(timeSig.bar == 1);
+            ALEPH_ASSERT_THROW(timeSig.beat == 0);
+            ALEPH_ASSERT_THROW(timeSig.th == 0);
+        }
+        {
+            beatbar16th_t timeSig = projectController.toBeatBar16th(TICKS_BAR * 200);
+            ALEPH_ASSERT_THROW(timeSig.bar == 200);
+            ALEPH_ASSERT_THROW(timeSig.beat == 0);
+            ALEPH_ASSERT_THROW(timeSig.th == 0);
+        }
+        {
+            beatbar16th_t timeSig = projectController.toBeatBar16th(-1);
+            ALEPH_ASSERT_THROW(timeSig.bar == -1);
+            ALEPH_ASSERT_THROW(timeSig.beat == 3);
+            ALEPH_ASSERT_THROW(timeSig.th == 3);
+        }
+        {
+            beatbar16th_t timeSig = projectController.toBeatBar16th(-(TICKS_BAR));
+            ALEPH_ASSERT_THROW(timeSig.bar == -1);
+            ALEPH_ASSERT_THROW(timeSig.beat == 0);
+            ALEPH_ASSERT_THROW(timeSig.th == 0);
+        }
+        {
+            beatbar16th_t timeSig = projectController.toBeatBar16th(-(TICKS_BAR+1));
+            ALEPH_ASSERT_THROW(timeSig.bar == -2);
+            ALEPH_ASSERT_THROW(timeSig.beat == 3);
+            ALEPH_ASSERT_THROW(timeSig.th == 3);
+        }
+		ALEPH_TEST_END();
+	}
 }
 int main() {
 	testTickConversions();
+    testTimeSignatureConversion();
 	return 0;
 }
