@@ -485,7 +485,15 @@ bool guictr_noteeditor::handleKeyInput(KeyEvent& kevt) {
 	return content.handleKeyInput(kevt);
 }
 bool guictr_noteeditor::handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
-	piano.setOffset(offset() + yoffset * 1.05* scale());
+	if (isCtrl(evt.kbmods)) {
+        float zomDelta = 1.0f + yoffset * -0.2f;
+        ivec2 localMouse = timeline.toContainerSpace(evt.relMousepos);
+        timeline.adjustZoom(localMouse.x, zomDelta);
+	} else if (isShift(evt.kbmods)) {
+		timeline.adjustOffset(-yoffset*32);
+	} else {
+		piano.setOffset(offset() + yoffset * 2.0* scale());
+	}
 	return true;
 }
 

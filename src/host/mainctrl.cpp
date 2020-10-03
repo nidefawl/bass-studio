@@ -253,12 +253,12 @@ public:
 	guictr_clipeditor ctr_clipeditor;
 	guictr_base* ctr_dnd_test;
 	Splitter splitterCenter;
-	DawViewContainersCompanion(DawCtrl* const _dawCtrl, ngui::MenuBar& menubar, DAW::Cursor& _cursor, project_t& _project, project_globals_t& _projectGlobals, scaled_grid& grid, clip_view& clipView, dragdrop_midifile& dragdropclip)
+	DawViewContainersCompanion(DawCtrl* const _dawCtrl, ngui::MenuBar& menubar, DAW::Cursor& _cursor, DAW::TrackSelection& _trackSelection, project_t& _project, project_globals_t& _projectGlobals, scaled_grid& grid, clip_view& clipView, dragdrop_midifile& dragdropclip)
 	  :
       noteeditor(clipView),
 	  ctr_menu(menubar),
 	  ctr_nodes(_cursor, _project, dragdropclip),
-	  ctr_tracks2(_dawCtrl, _cursor, _project, _projectGlobals, grid, dragdropclip),
+	  ctr_tracks2(_dawCtrl, _cursor, _trackSelection, _project, _projectGlobals, grid, dragdropclip),
 	  ctr_clipeditor(noteeditor, clipView),
 	  ctr_dnd_test(makeDnDTestCtr()),
 	  splitterCenter(0, 0.8f)
@@ -326,14 +326,14 @@ public:
 	enum class SplitterPos : uint32_t {
 		LEFT = 0, CENTER, RIGHT
 	};
-	DawViewContainersMain(MainCtrl* const _mainCtrl, ngui::MenuBar& menubar, DAW::Cursor& _cursor, project_t& _project, project_globals_t& _projectGlobals, scaled_grid& grid, clip_view& clipView, dragdrop_midifile& dragdropclip)
+	DawViewContainersMain(MainCtrl* const _mainCtrl, ngui::MenuBar& menubar, DAW::Cursor& _cursor, DAW::TrackSelection& _trackSelection, project_t& _project, project_globals_t& _projectGlobals, scaled_grid& grid, clip_view& clipView, dragdrop_midifile& dragdropclip)
 	  : noteeditor(clipView),
 	  ctr_menu(menubar),
 	  ctr_tempo(_project, _projectGlobals),
 	  ctr_pluginview(&ctr_plugins),
 	  ctr_clipeditorview(noteeditor),
 	  ctr_clipeditor(noteeditor, clipView),
-	  ctr_tracks(_mainCtrl, _cursor, _project, _projectGlobals, grid, dragdropclip),
+	  ctr_tracks(_mainCtrl, _cursor, _trackSelection, _project, _projectGlobals, grid, dragdropclip),
 	  ctr_nodes(_cursor, _project, dragdropclip),
 	  ctr_stack_right()
 	{
@@ -528,7 +528,7 @@ public:
 	}
 };
 void CompanionCtrl::setupView() {
-	view = new DawViewContainersCompanion(this, menubar, cursor, daw.project, daw.projectGlobals, grid, clipView, daw.dragdropclip);
+	view = new DawViewContainersCompanion(this, menubar, cursor, trackSelection, daw.project, daw.projectGlobals, grid, clipView, daw.dragdropclip);
 	view->addTo(this->containers);
 	viewContainers = view;
 	for (guictr_base *ctr : containers) {
@@ -545,7 +545,7 @@ void CompanionCtrl::setupView() {
 
 }
 void MainCtrl::setupView() {
-	view = new DawViewContainersMain(this, menubar, daw.projectGlobals.cursor, daw.project, daw.projectGlobals, grid, clipView, daw.dragdropclip);
+	view = new DawViewContainersMain(this, menubar, daw.projectGlobals.cursor, daw.projectGlobals.trackSelection, daw.project, daw.projectGlobals, grid, clipView, daw.dragdropclip);
 	view->addTo(this->containers);
 	viewContainers = view;
 	for (guictr_base *ctr : containers) {

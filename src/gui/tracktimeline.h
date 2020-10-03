@@ -22,6 +22,8 @@ public:
 	void handleDraggedBegin(MouseEvent& evt);
 	void handleDraggedMove(MouseEvent& evt);
 	void handleDraggedRelease(MouseEvent& evt);
+	void adjustZoom(float mousePosXScreenSpaceLocal, float disty);
+	void adjustOffset(float gridOffset);
 	void render(NVGcontext* vg);
 	void layout() {
 		for (guibase* gui : guis) {

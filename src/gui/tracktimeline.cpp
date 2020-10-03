@@ -15,7 +15,7 @@
 #include "seq_util.h"
 #include "color_util.h"
 #include "platform.h"
-#include "trackctr.h"
+//#include "trackctr.h"
 #include "basectrl.h"
 #include "guifonts.h"
 #include "../host/mainctrl.h"
@@ -48,10 +48,9 @@ void guitrack_timeline::handleDraggedMove(MouseEvent& evt) {
 		float disty = (float)(evt.dragDistance->y);
 
 		if (math::abs(distx) && (!lockGesture || (lockGesture && isMove))) {
-			grid.setOffset(grid.offset - evt.dragDistance->x);
+			adjustOffset(-evt.dragDistance->x);
 			evt.dragDistance->x = 0;
 //				MainCtrl::get()->updateGrid();
-			grid.notifyChange();
 		}
 
 		if ((!lockGesture && math::abs(disty) > 0) || (lockGesture && !isMove)) {
@@ -62,9 +61,19 @@ void guitrack_timeline::handleDraggedMove(MouseEvent& evt) {
 			double newOffset = grid.calcOffset(anchor_dragposx, dragPosObjSpace);
 			grid.setOffset((int)newOffset);
 			grid.notifyChange();
-//				MainCtrl::get()->updateGrid();
 		}
 	}
+}
+void guitrack_timeline::adjustZoom(float mousePosXScreenSpaceLocal, float disty) {
+	float posPreZoomX = grid.toObjSpace(mousePosXScreenSpaceLocal);
+	grid.setZoom(grid.zoom * disty);
+	double newOffset = grid.calcOffset(mousePosXScreenSpaceLocal, posPreZoomX);
+	grid.setOffset((int)newOffset);
+	grid.notifyChange();
+}
+void guitrack_timeline::adjustOffset(float gridOffset) {
+	grid.setOffset(grid.offset + gridOffset);
+	grid.notifyChange();
 }
 void guitrack_timeline::handleDraggedRelease(MouseEvent& evt) {
 	DawInstance::get()->updateVisibleTrackContents();

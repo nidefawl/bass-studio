@@ -667,6 +667,15 @@ public:
 	}
 	void scrollOffsetChanged(int dir, float offset);
 	virtual bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
+		if (isCtrl(evt.kbmods)) {
+	        float zomDelta = 1.0f + yoffset * -0.2f;
+	        ivec2 localMouse = trackTimeline.toContainerSpace(evt.relMousepos);
+	        trackTimeline.adjustZoom(localMouse.x, zomDelta);
+			return true;
+		} else if (isShift(evt.kbmods)) {
+			trackTimeline.adjustOffset(-yoffset*32);
+			return true;
+		}
 		return scrollbar.handleMouseScroll(evt, xoffset, yoffset);
 	}
 	void setScrollOffset(float offset) {
