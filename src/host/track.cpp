@@ -607,6 +607,7 @@ void vsthost::activateDeferred(effectbase* const eff, effectbase** out_effectLoa
 		effect->resume();
 	}
 	log_printf("done activating deferred plugin %s\n", StringAsCStr(pluginSnapshot.name));
+	unloadPlugin(prevPlugin);
 
 }
 int loadSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, const track_layout_snapshot_t& snapshot)
