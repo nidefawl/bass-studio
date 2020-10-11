@@ -20,6 +20,7 @@ struct NvgImageTexture;
 }
 class BaseCtrl;
 class AppCtrl;
+class DawCtrl;
 class guictxtmenu_base;
 class guitrack_editor;
 class guiplugin;
@@ -73,6 +74,7 @@ public:
 	int id = 0;
 	int zOrder = 0;
 	BaseCtrl* parentCtrl = nullptr;
+	DawCtrl* dawCtrl = nullptr;
 	guibase* parent = nullptr;
 	guitheme_t* theme = nullptr;
 	SafeRef<guibase> safeRef;

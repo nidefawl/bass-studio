@@ -17,6 +17,7 @@
 #include "renderresources.h"
 #include "util/debug_alloc.h"
 #include "guifonts.h"
+#include "host/mainctrl.h"
 
 namespace GuiColor {
 constant_t COL_BTN_BG_DEFAULT_INACTIVE("COL_BTN_BG_DEFAULT_INACTIVE", 0xff202020);
@@ -440,6 +441,7 @@ int32_t guibase::getStateFlags() const {
 }
 void guibase::setControl(BaseCtrl* parentCtrl) {
 	this->parentCtrl = parentCtrl;
+	this->dawCtrl = dynamic_cast<DawCtrl*>(parentCtrl);
 	if (parentCtrl) {
 		setTheme(parentCtrl->getTheme());
 	}
