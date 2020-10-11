@@ -4,7 +4,7 @@
 #include "gui/container/guicontainer_layout_types.h"
 #include "gui/guishaderview.h"
 #include "gui/dialog_io.h"
-
+#include "gui/debugctr.h"
 
 guictr_base* makeCtrProperties();
 guictr_base* makeCtrTheme();
@@ -16,6 +16,7 @@ std::map<container_type, ContainerBuilder>& getContainerFactory() {
 	static bool init = false;
 	static std::map<container_type, ContainerBuilder> containerFactory;
 	if (!init) {
+#if BUILD_VSTHOST
 		containerFactory[container_type::CTR_TYPE_DEBUG_0] = []() {
 			return std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_0);
 		};
@@ -24,12 +25,6 @@ std::map<container_type, ContainerBuilder>& getContainerFactory() {
 		};
 		containerFactory[container_type::CTR_TYPE_DEBUG_2] = []() {
 			return std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_2);
-		};
-		containerFactory[container_type::CTR_TYPE_PROPERTIES] = []() {
-			return std::shared_ptr<guictr_base>(makeCtrProperties());
-		};
-		containerFactory[container_type::CTR_TYPE_THEME] = []() {
-			return std::shared_ptr<guictr_base>(makeCtrTheme());
 		};
 		containerFactory[container_type::CTR_TYPE_HISTORY] = []() {
 			return std::shared_ptr<guictr_base>(makeCtrHistory());
@@ -40,14 +35,18 @@ std::map<container_type, ContainerBuilder>& getContainerFactory() {
 		containerFactory[container_type::CTR_TYPE_SETTINGS] = []() {
 			return std::make_shared<guidialog_settings>();
 		};
-		containerFactory[container_type::CTR_TYPE_LAYOUT] = []() {
-			return std::make_shared<guictr_layout>();
-		};
 		containerFactory[container_type::CTR_TYPE_EFFECTLIBRARY] = []() {
 			return std::shared_ptr<guictr_base>(makeGuiEffectLibrary());
 		};
 		containerFactory[container_type::CTR_TYPE_PLUGINSLOADED] = []() {
 			return std::shared_ptr<guictr_base>(makeGuiPluginsLoadedList());
+		};
+#endif
+		containerFactory[container_type::CTR_TYPE_PROPERTIES] = []() {
+			return std::shared_ptr<guictr_base>(makeCtrProperties());
+		};
+		containerFactory[container_type::CTR_TYPE_THEME] = []() {
+			return std::shared_ptr<guictr_base>(makeCtrTheme());
 		};
 		containerFactory[container_type::CTR_TYPE_LAYOUT] = []() {
 			return std::make_shared<guictr_layout>();

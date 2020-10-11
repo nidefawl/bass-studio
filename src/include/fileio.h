@@ -3,6 +3,7 @@
 #include <fstream>
 #include <vector>
 #include <stdint.h>
+#include <sstream>
 
 #ifdef _WIN32
    #include <io.h>
@@ -45,10 +46,19 @@ int64_t ReadFileText(const String& filename, String& out);
 int promptUserFilePath(window_base* w, int mode, std::vector<SupportedFileType> fileTypes, String& _out);
 void handleGuiEvents();
 size_t GetFileSizeSafe(const String& filename);
+
+inline void writeStringStream(const String& path, Stringstream& sstream) {
+	Stringstream::pos_type len = sstream.tellp();
+	std::vector<uint8_t> buf(len);
+	buf.assign(std::istreambuf_iterator<char>(sstream), std::istreambuf_iterator<char>());
+	WriteFileVector(path, buf);
+}
+
 inline bool FileExists( const String &Filename )
 {
     return shareMode( Filename.c_str(), 0 ) == 0;
 }
+
 inline int64_t FileSize(const String &fileName)
 {
 	std::ifstream file(fileName.c_str(), std::ifstream::in | std::ifstream::binary);

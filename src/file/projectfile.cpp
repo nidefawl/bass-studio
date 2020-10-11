@@ -466,13 +466,6 @@ std::shared_ptr<trackcontainer_snapshot_t> loadTrackContainer(const String& path
     return nullptr;
 }
 
-void writeStringStream(const String& path, Stringstream& sstream) {
-
-	Stringstream::pos_type len = sstream.tellp();
-	std::vector<uint8_t> buf(len);
-	buf.assign(std::istreambuf_iterator<char>(sstream), std::istreambuf_iterator<char>());
-	WriteFileVector(path, buf);
-}
 bool saveTrackContainer(const trackcontainer_snapshot_t& container, const String& path) {
 
 	try {

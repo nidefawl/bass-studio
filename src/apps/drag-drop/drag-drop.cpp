@@ -24,31 +24,6 @@
  * TODO:
  * remove previewLayout. let getOverlay also handle preview
  */
-
-/**
- * Replace all container entries with guictr_layout:
- * in implementation of determineTarget:
- *  check mouse collisions depth first.
- *  for each gui:
- *  	if gui.mouseHitTest:
- *  		if gui is instance of i_ctr_layout:
- *  			requestFocus(gui)
- *  		if gui->parent is instance of i_ctr_layout:
- *  			requestFocus(gui)
- *
- * in getOverlay:
- * target = determineTarget(evt)
- * bool replaceInsideContainer = target not instance of i_ctr_layout and target->parent instance of i_ctr_layout
- *
- * if replaceInsideContainer:
- *   guictr* ctrToReplaceWithGuyLayoutInstance = target
- *   iCtrLayoutInstance = target->parent
- *   return replace overlay
- * else:
- *   return move overlay
- *
- *
- */
 guictr_base* makeCtrTheme();
 guictr_base* makeCtrProperties();
 
@@ -153,6 +128,8 @@ public:
 
 	}
 	void layout() {
+		ctrLayoutTest1->postContentChanged();
+		ctrLayoutTest2->postContentChanged();
 		ivec2 cs = getSizeContent();
 		ctrLayoutTest1->pos = { cs.x*2 / 3, 0 };
 		ctrLayoutTest1->size.x = cs.x/3;
