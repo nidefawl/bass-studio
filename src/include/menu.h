@@ -4,7 +4,7 @@
 #include "exceptions.h"
 
 struct menucmd_t {
-	int command;
+	int command = 0;
 	String arg1 = "";
 };
 inline struct menucmd_t CMD_NOARG(int cmd) {
