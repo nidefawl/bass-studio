@@ -536,6 +536,7 @@ public:
 class CompanionCtrl : public DawCtrl
 {
 	DAW::Cursor cursor;
+	DAW::TrackSelection trackSelection;
 public:
 	DawViewContainersCompanion* view = NULL;
 	CompanionCtrl(DawInstance& _daw) : DawCtrl(_daw) {

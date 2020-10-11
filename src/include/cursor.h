@@ -3,6 +3,11 @@
 #include "seq_time.h"
 namespace DAW {
 
+class TrackSelection {
+public:
+	int32_t trackSelected = 0;
+	std::vector<uint32_t> selectedTracks;
+};
 class Cursor {
 public:
 	tick_t cursorPos = 0;

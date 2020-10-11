@@ -15,6 +15,7 @@ struct project_globals_t {
 	uint32_t signatureDenom = 2;
 	tick_t playbackPos = 0;
 	DAW::Cursor cursor;
+	DAW::TrackSelection trackSelection;
 	bool recordArmed = false;
 	void operator=(project_globals_t const & other) {
 		tempo100 = other.tempo100;
