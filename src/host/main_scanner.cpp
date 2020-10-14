@@ -317,9 +317,9 @@ int main(int argc, char* argv[]) {
 			int a = 0;
 			bool pipeConnected = false;
 //			db.exec("delete from plugins where 1");
-			SQLite::Statement   queryPlugin(db, "SELECT id, moddate, forcedisable, requestState, uid, shellplugin FROM plugins where path == ?");
+			SQLite::Statement   queryPlugin(db, "SELECT id, moddate, forcedisable, requestRescan, uid, shellplugin FROM plugins where path == ?");
 			SQLite::Statement   queryInsertPlugin(db, "INSERT INTO "
-					"plugins(isSynth, uid, version, vstVersion, category, moddate, state, path, name, vendorName, requestState, forcedisable, shellplugin) "
+					"plugins(isSynth, uid, version, vstVersion, category, moddate, state, path, name, vendorName, requestRescan, forcedisable, shellplugin) "
 					"VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)");
 			SQLite::Statement   queryDelete(db, "DELETE from plugins where id == ? or path == ?");
 			if (!dryRun) {
@@ -375,6 +375,9 @@ int main(int argc, char* argv[]) {
 					} else {
 
 						needScan = false;
+					}
+					if (queryPlugin.getColumn(3).getInt()) {
+						needScan = true;
 					}
 				}
 				if (!needScan && fullRescan) {

@@ -16,6 +16,7 @@ void createTables(SQLite::Database& db) {
     	const char* queryCreate = "CREATE TABLE `plugins` (\n"
     			"	`id`	INTEGER PRIMARY KEY AUTOINCREMENT,\n"
     			"	`moduleFormat`	INTEGER DEFAULT 0,\n"
+    			"	`shellplugin`	INTEGER DEFAULT 0,\n"
     			"	`isSynth`	INTEGER DEFAULT 0,\n"
     			"	`uid`	INTEGER NOT NULL,\n"
     			"	`version`	INTEGER NOT NULL,\n"
@@ -26,7 +27,7 @@ void createTables(SQLite::Database& db) {
     			"	`path`	TEXT NOT NULL,\n"
     			"	`name`	TEXT NOT NULL,\n"
     			"	`vendorName`	TEXT NOT NULL,\n"
-    			"	`state`	INTEGER DEFAULT 0,\n"
+    			"	`requestRescan`	INTEGER DEFAULT 0,\n"
     			"	`forcedisable`	INTEGER DEFAULT 0\n"
     			");";
     	db.exec(queryCreate);
