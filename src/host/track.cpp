@@ -598,7 +598,6 @@ void vsthost::activateDeferred(effectbase* const eff, effectbase** out_effectLoa
 	effectbase* prevPlugin = nullptr;
 	always_assert(removeEntry(eff->trackImpl->deferredEffects, eff));
 	replacePlugin(eff->trackImpl, effect, defEffect->getSlot(), &prevPlugin);
-	always_assert(removeEntry(this->pluginsDeferred, eff));
 	effect->loadSnapshot(pluginSnapshot);
 	effect->sName = pluginSnapshot.name;
 	pluginUpdateParamBypass(effect, pluginSnapshot.enabled);
