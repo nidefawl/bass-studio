@@ -195,14 +195,15 @@ void gui_track::prerender(NVGcontext* vg) {
 	nvgLineJoin(vg, NVGlineCap::NVG_BEVEL);
 	nvgCachePath(vg, 1);
 	for (auto& entry : m_trackentry->clipsGuis) {
-		guibase* gui = entry.second;
-		if(!gui) {
-			continue;
+		if(entry.second) {
+			entry.second->updateClipRenderCache(vg);
 		}
-		entry.second->updateClipRenderCache(vg);
 	}
 	nvgCachePath(vg, 0);
 	nvgEndFrame(vg);
+	for (guibase* gui : guis) {
+		gui->prerender(vg);
+	}
 }
 void gui_audio_clip::prerender(NVGcontext* vg) {
 	auto& clipAudio = m_clip->audio;

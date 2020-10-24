@@ -106,7 +106,7 @@ public:
 
 struct audio_stage_t {
 	audiostageid_i32 stageId = TRACKID_INVALID_I32;
-	audiostageflags_t flags = audiostageflags_t::NONE;
+	audiostageflags_t flags = audiostageflags_t::CONVERT_OUTPUT;
 	audio_stage_t* parent;
 	effectbase* owner;
 	guictr_plugins* pluginCtr;
