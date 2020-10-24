@@ -390,7 +390,7 @@ public:
 	DAW::channel_ref_t getEndpoint() override {
 //		if (id == 0)
 //			return ChannelNone();
-		return DAW::ChannelAudioInput(channel.idx, channel.channelOffset, AudioIO::getTrackNameShort(channel.type, channel.idx, isInput), channel.type);
+		return DAW::ChannelAudioInput(channel.idx, channel.channelOffset, "External "+AudioIO::getTrackNameShort(channel.type, channel.idx, isInput), channel.type);
 	}
 };
 class ctxtmenu_entry_stage_channel : public ctxtmenu_entry_endpoint {

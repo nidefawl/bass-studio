@@ -24,21 +24,36 @@ namespace DAW {
 			track_impl_t* trackImpl = track->getStage();
 			const auto inputChannel = trackImpl->inputChannel;
 			const auto outputChannel = trackImpl->outputChannel;
-			if (inputChannel.getType() == channel_input_type::INPUT_AUDIOSTAGE) {
-				if (!host->getAudioStage(inputChannel.stage.stageRef)) {
+			if (inputChannel.getType() == channel_input_type::INPUT_EXTERNAL_AUDIO) {
+				int32_t idx = inputChannel.externalInputIdx;
+				String name = "External "+AudioIO::getTrackNameShort(inputChannel.externalInputType, idx, true);
+				trackImpl->inputChannel = ChannelAudioInput(idx, inputChannel.inputChannelOffset, name, inputChannel.externalInputType);
+			} else if (inputChannel.getType() == channel_input_type::INPUT_AUDIOSTAGE) {
+				auto* stage = host->getAudioStage(inputChannel.stage.stageRef);
+				if (!stage) {
 					log_printf("Input audiostage with id %d not found\n", inputChannel.stage.stageRef);
 					trackImpl->inputChannel = ChannelNone();
 					numRemoved++;
+				} else {
+					trackImpl->inputChannel = DAW::ChannelStage(stage, false);
 				}
 			} else {
 				dbgassert(inputChannel.stage.stageRef.stageId == TRACKID_INVALID_I32);
 //				inputChannel.stage.stageRef.stageId = TRACKID_INVALID_I32; //FIX: old project files have stageId == 0
 			}
-			if (outputChannel.getType() == channel_input_type::INPUT_AUDIOSTAGE) {
-				if (!host->getAudioStage(outputChannel.stage.stageRef)) {
+			if (outputChannel.getType() == channel_input_type::INPUT_EXTERNAL_AUDIO) {
+				int32_t idx = outputChannel.externalInputIdx;
+				auto type = AudioIO::getTrackTypeNumChannels(trackImpl->outputPost.channels);
+				String name = "External "+AudioIO::getTrackNameShort(outputChannel.externalInputType, idx, false);
+				trackImpl->outputChannel = ChannelAudioInput(idx, outputChannel.inputChannelOffset, name, outputChannel.externalInputType);
+			} else if (outputChannel.getType() == channel_input_type::INPUT_AUDIOSTAGE) {
+                auto* stage = host->getAudioStage(outputChannel.stage.stageRef);
+				if (!stage) {
 					log_printf("Output audiostage with id %d not found\n", outputChannel.stage.stageRef);
 					trackImpl->outputChannel = ChannelNone();
 					numRemoved++;
+				} else {
+					trackImpl->outputChannel = DAW::ChannelStage(stage, true);
 				}
 			} else {
 				dbgassert(outputChannel.stage.stageRef.stageId == TRACKID_INVALID_I32);
