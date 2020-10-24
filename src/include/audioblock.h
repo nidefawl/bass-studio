@@ -201,22 +201,27 @@ struct AudioBlock {
 	void addFromOp(float **srcBuf, const uint32_t srcSamples, const uint32_t srcChannels, const mix_op op, float gain) {
 		dbgassert(srcSamples <= samples);
 //		dbgassert(srcChannels == channels); //remove when adding sub-track mixers (between plugins)
-		uint32_t nChannels = math::max(srcChannels, channels);
+		uint32_t nChannels = math::min(srcChannels, channels);
 		uint32_t nSamples = math::min(srcSamples, samples);
 		float srcGain = 1.0f;
-		if (srcChannels > channels) {
-			if (srcChannels == 0 && channels == 1) {
-				srcGain = 0.5f; // mix the same way as multiple stereo channels
-			} else if (srcChannels == 2 && channels == 1) {
-				srcGain = 0.5f;
-			} else {
-				dbgassert(0&&"conversion not implemented");
-			}
+//		if (srcChannels > channels) {
+//			if (srcChannels == 2 && channels == 1) {
+//				srcGain = 0.5f;
+//			} else {
+//				dbgassert(0&&"conversion not implemented");
+//			}
+//		}
+		if (srcChannels == 2 && channels == 1) {
+			srcGain = 0.5f;
+			nChannels = 2;
+		}
+		if (srcChannels == 1 && channels == 2) {
+			nChannels = 2;
 		}
 		bool bdbgProcessed = false;
 		for (uint32_t i = 0; i < nChannels; i++) {
-			uint32_t srcChannelIdx = math::min(srcChannels-1, i);
-			uint32_t dstChannelIdx = math::min(channels-1, i);
+			uint32_t srcChannelIdx = i % srcChannels;
+			uint32_t dstChannelIdx = i % channels;
 			float* srcBufChannel = srcBuf[srcChannelIdx];
 			float* dstBufChannel = buf[dstChannelIdx];
 			for (uint32_t j = 0; j < nSamples; j++) {
