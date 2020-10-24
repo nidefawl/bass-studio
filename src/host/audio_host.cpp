@@ -70,7 +70,7 @@ static int audioCallback(const void *inputBuffer, void *outputBuffer,
 	//TODO: still a race condition on_terminate here
 	AudioBuffer* block = nullptr;
 	int numOutChannelsWritten = 0;
-	if (stream->audioQueue.try_dequeue(block)) {
+	if (stream->try_dequeue(block)) {
 		DBG_AaudioCallbackOutDequeued++;
 		dbgassert(block);
 		if (framesPerBuffer == block->output->samples) {
