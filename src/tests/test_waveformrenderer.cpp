@@ -1,275 +1,390 @@
-#include "glheaders.h"
-#define NANOVG_GL3_IMPLEMENTATION
 #include <nanovg.h>
-#include <nanovg_gl.h>
-#include <nanovg_gl_utils.h>
+#include <time.h>
+#include <algorithm>
+#include <functional>
 #include <vector>
 #include <memory>
-#include <algorithm>
+#include <GLFW/glfw3.h>
 
-#ifndef _WIN32
-#include <unistd.h>
-#endif
-
-
-#include "TestBase.hpp"
-#include "math/vec.h"
-#include "math/seq_math.h"
-#include "str_util.h"
+#include "window.h"
 #include "platform.h"
+#include "fileio.h"
+
+#include "keyboard.h"
+#include "commands.h"
+
+#include "basectrl.h"
+#include "exceptions.h"
+#include "color_util.h"
+#include "str_util.h"
+#include "logging.h"
+#include "tls.h"
+
+#include "gui/gui.h"
+#include "gui/guicontainer.h"
+#include "gui/knob.h"
+#include "gui/button.h"
+
 #include "audiocache.h"
 #include "audiowaveform.h"
 #include "gui/drawwaveform.h"
-#include "gl/gl_path.h"
+#include "gui/guicontainer_layout.h"
 
-#include "tls.h"
-#include "logging.h"
+#include "TestBase.hpp"
 #include "assert_dbg.h"
 
+#define NUM_RENDERERS 3u
 
-String excDescription;
-GLPathRenderer renderer;
-int benchmark_waverender(audiofile_t* sample, BakeGLPath& bakedPath) {
-	audiosample_t* audioSample = sample->sample.get();
-	ivec2 size = {700, 120};
 
-	double zoom = 0.5;
+int startApplication(int argc, char* argv[]);
 
-	auto lenSamples = audioSample->nSamples;
-	double samplesPerPx = lenSamples/(double)size.x;
-	audioclip_texture_t w;
-	w.quality=4;
-	if (samplesPerPx >= 256) {
-		w.quality *= 2;
-//		w.scale = 2;
+
+struct Menus {
+	ngui::Menu file;
+};
+
+struct waveform_test_entry {
+	audiofile_t* sample;
+	gui_waveform_texture_ref ref;
+	uint64_t duration;
+};
+struct waveform_test {
+	std::vector<std::vector<waveform_test_entry>> vecs;
+	uint64_t durations[NUM_RENDERERS];
+	waveformrender* rendererAdv;
+	waveformrender* rendererPolyline;
+	waveformrender* rendererPar;
+	std::vector<waveformrender*> renderers;
+	void init() {
+		daw_tls::tlsinstance& tls = daw_tls::getTls();
+		int sampleRate = 44100;
+		tls.audioCache = new audiocache(sampleRate);
+		rendererPar = new waveformrender(waveformrender_impl_e::PAR);
+		rendererPolyline = new waveformrender(waveformrender_impl_e::POLYLINE2D);
+		rendererAdv = new waveformrender(waveformrender_impl_e::ADV);
+		renderers.push_back(rendererAdv);
+		renderers.push_back(rendererPolyline);
+		renderers.push_back(rendererPar);
+		std::vector<waveform_test_entry> vec;
+		std::vector<FileFound> files;
+		findFilesWithExt(toCWDPath("."), "wav", false, files);
+		log_printf("findFilesWithExt %d\n", files.size());
+		for (auto i = 0u; i < files.size() && vec.size() < 8; i++) {
+			size_t filesize = GetFileSizeSafe(files[i].path);
+			if (filesize > 1024*1024*32) {
+				continue;
+			}
+			log_printf("loadFile %s\n", StringAsCStr(files[i].path));
+			auto sample = audiocache::getInstance()->loadFile(files[i].path);
+			if (!sample) {
+				log_printf("Failed loading sample %s\n", StringAsCStr(files[i].path));
+			} else {
+				vec.push_back(waveform_test_entry{sample, gui_waveform_texture_ref{}, 0u});
+			}
+		}
+		for (auto i = 0u; i < NUM_RENDERERS; i++) {
+			vecs.push_back(vec);
+		}
 	}
-	constexpr float MAX_RES = 512;
-	w.scaleX = 1.0f;
-	if (samplesPerPx > MAX_RES) {
-		w.scaleX = static_cast<float>(MAX_RES/samplesPerPx);
-		samplesPerPx = MAX_RES;
+	void renderUpdate(NVGcontext* nanovgCtxt, waveformrender* renderer, waveform_test_entry* e, uint32_t renderStep) {
+		auto& ref = e->ref;
+		auto sample = e->sample;
+		if (!ref.queued && (!ref.rendered || ref.waveform.audioId != sample->id)) {
+			if (ref.rendered) {
+				renderer->release(&ref);
+				ref.rendered = false;
+			}
+			auto& w = ref.waveform;
+			w.audioId = sample->id;
+			w.sampleBegin = 0;
+			w.sampleEnd = sample->sample->nSamples*30/math::max<int64_t>(1, (renderStep%300)+1);
+			w.sampleBeginOffset = 0;
+			w.scaleX = 1.0f;
+			w.quality=1;
+			w.size = ivec2(512, 64);
+			auto nSamples = w.sampleEnd-w.sampleBeginOffset;
+			double samplesPerPx = nSamples/w.size.x;
+			double pxPerSample = 1.0/samplesPerPx;
+			if (nSamples * pxPerSample > FBO_WIDTH) {
+				samplesPerPx = (nSamples / FBO_WIDTH);
+			}
+			w.samplesPerPx = samplesPerPx;
+			w.linewidth = 1.5f;//+min(0.75, max(0.0, grid.zoom*32.0));
+			w.method = SampleMethod::sample_straight;
+			w.clipped = false;
+			renderer->queueUpdate(sample, &ref);
+			renderer->renderUpdates(nanovgCtxt, 0);
+		}
 	}
-	w.pos = {0,0};
-//	w.startOffset = {0,0};
-	w.size = size;
-	dbgassert(w.size.x > 0);
-	w.sampleBegin = 0;
-	w.sampleBeginOffset = 0;
-	w.sampleEnd = static_cast<int64_t>(lenSamples);
-	w.samplesPerPx = samplesPerPx;
-	w.linewidth = 1.50f+math::min<float>(0.75f, math::max<float>(0.0f, static_cast<float>(zoom)*32.0f));
-	w.method = SampleMethod::sample_straight;
-	w.audioId = sample->id;
+};
+namespace MiniApp {
+	class guictr_TestNanoVGRenderCache : public guictr_base {
+	public:
+		guictr_TestNanoVGRenderCache() : guictr_base() {
+
+		}
+		~guictr_TestNanoVGRenderCache() {
+		}
+
+		void render(NVGcontext* vg) {
+			if (isBackgroundRendered()) {
+				renderBackground(vg);
+			}
+			if (!setScissorTransform(vg)) {
+				return;
+			}
+			for (auto c : guis) {
+				nvgSave(vg);
+				c->render(vg);
+				nvgRestore(vg);
+			}
+
+		}
+		void prerender(NVGcontext* vg) {
+		}
+	};
+	class ViewContainers_TestNanoVGRenderCache {
+	public:
+		guictr_TestNanoVGRenderCache ctrMain;
+		ViewContainers_TestNanoVGRenderCache(/*const*/ AppCtrl* const ctrl) : ctrMain()
+		{
+		}
+#if USE_GUI_MENU
+		guictr_base* getMenuCtr() {
+			return nullptr;
+		}
+#endif
+		void layout(int32_t winW, int32_t winH) {
+			int winX = 0; int winY = 0;
+			ctrMain.pos = {winX, winY};
+			ctrMain.size = {winW, winH};
+		}
+		void addTo(std::vector<guictr_base*>& v) {
+			 v.push_back(&ctrMain);
+		}
+	};
+	template<typename T>
+	class MiniAppCtrl : public AppCtrl
+	{
+		T* view = NULL;
+		waveform_test& waveformTest;
+		uint64_t lastTimeRelease = 0;
+		uint32_t renderStep = 0;
+		hires_timer_t timer;
+		hires_timer_t timerAll;
+	public:
+		MiniAppCtrl(waveform_test& _waveformTest)
+			: waveformTest(_waveformTest) {
+
+		}
+		~MiniAppCtrl() {
+		}
+		void focusReceived() {
+		}
+		void focusLost() {
+			//		closeContextMenu();
+		}
+
+		void destroy()
+		{
+			if (!isOK) {
+				return;
+			}
+			isOK = false;
+			delete view;
+
+			for (auto* renderer : waveformTest.renderers) {
+				renderer->destroy();
+			}
+			daw_tls::tlsinstance& tls = daw_tls::getTls();
+//			delete tls.waveform;
+			delete tls.audioCache;
+//			tls.waveform = nullptr;
+			tls.audioCache = nullptr;
+		}
+
+		void menuCommand(const menucmd_t&& command) {
+			switch (command.command) {
+			case CMD_EXIT:
+				mainWindow->requestClose();
+				break;
+
+			}
+		}
+		void postInit() {
+			for (auto* renderer : waveformTest.renderers) {
+				renderer->init();
+			}
+		}
+		void initApp(int argc, char* argv[]) {
+			waveformTest.init();
+		}
 
 
+		void render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float pixelRatio) override {
+			BaseCtrl::render(nanovgCtxt, x, y, w, h, pixelRatio);
+			nvgBeginFrame(vg, w, h, pixelRatio);
+			nvgScale(vg, m_scale, m_scale);
+//			ivec2 offsetPos(0, 0);
+			for (auto i = 0u; i < NUM_RENDERERS; i++) {
+
+				std::vector<waveform_test_entry>& vec = waveformTest.vecs[i];
+				int y = 0;
+				for (waveform_test_entry& e : vec) {
+					if (e.ref.rendered) {
+						auto& ref = e.ref;
+						ivec2 wvSize = ref.waveform.size;
+
+						ivec2 offsetPos(i*wvSize.x+10, y*wvSize.y+10);
+						nvgSave(vg);
+						nvgTranslate(nanovgCtxt, offsetPos.x, offsetPos.y);
+						nvgBeginPath(vg);
+							nvgRect(vg, 0, 0, wvSize.x, wvSize.y);
+							nvgFillColor(vg, rgbToNvg(0xFFFFFF));
+						nvgFill(vg);
+						nvgBeginPath(vg);
+							nvgRect(vg, 2, 2, wvSize.x-4, wvSize.y-4);
+							nvgFillColor(vg, rgbToNvg(0xFF00FF));
+						nvgFill(vg);
+						waveformTest.renderers[i]->draw(vg, &ref, ref.waveform.size);
+						ivec2 txt(50, 14);
+						nvgBeginPath(vg);
+							nvgRect(vg, 10, wvSize.y-txt.y, txt.x, txt.y);
+							nvgFillColor(vg, rgbToNvg(0x0));
+						nvgFill(vg);
+						UTIL_setFont(vg, &themes.getRef(), txt.y-2, rgbaToNvg(0xffffffff), NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+						String str = StringFormat("%llumicros", e.duration);
+						nvgTextBox(vg, 12, wvSize.y-txt.y/2, txt.x, StringAsCStr(str), nullptr);
+
+						nvgRestore(vg);
+//						offsetPos.y += wvSize.y+10;
+//						if (offsetPos.y + wvSize.y >= h)
+//						{
+//							offsetPos.y = 0;
+//							offsetPos.x += wvSize.x+10;
+//						}
+						y++;
+					}
+				}
+			}
+
+			nvgEndFrame(vg);
+
+		}
+		void prerender(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float pixelRatio) override {
+
+			for (guictr_base *ctr : containers) {
+				ctr->prerender(nanovgCtxt);
+			}
+			if (getTimeMillis() - lastTimeRelease >= 60) {
+				lastTimeRelease = getTimeMillis();
+				for (auto i = 0u; i < NUM_RENDERERS; i++) {
+					std::vector<waveform_test_entry>& vec = waveformTest.vecs[i];
+					for (waveform_test_entry& e : vec) {
+						auto& ref = e.ref;
+						if (ref.rendered) {
+							waveformTest.renderers[i]->release(&ref);
+							ref.rendered = false;
+						}
+					}
+				}
+				timerAll.reset();
+				for (auto i = 0u; i < NUM_RENDERERS; i++) {
+					timer.reset();
+					std::vector<waveform_test_entry>& vec = waveformTest.vecs[i];
+					for (waveform_test_entry& e : vec) {
+						waveformTest.renderUpdate(nanovgCtxt, waveformTest.renderers[i], &e, renderStep);
+					}
+					waveformTest.durations[i] += timer.getTime();
+				}
+				log_printf("took %llu\n", timerAll.getTime());
+
+				renderStep++;
+			}
+			if (renderStep >= 100) {
+				log_printf("request close!\n", 0);
+				this->mainWindow->requestClose();
+			}
+
+		}
+		bool init(window_main* window, NVGcontext* nanovg)
+		{
+			this->mainWindow = window;
+			this->window = window;
+			this->vg = nanovg;
+			themes.loadThemes();
+
+			view = new T(this);
+			view->addTo(this->containers);
+			for (guictr_base *ctr : containers) {
+				ctr->setControl(this);
+			}
+
+			this->updateMenubar();
+		#if !USE_GUI_MENU
+			this->mainWindow->updateMenu();
+		#endif
 
 
-	SampleMethod method = w.method;
-	std::vector<std::vector<vec2>> tesselatedWaveForms;
-	tesselateWaveform(audioSample, 0, 0, &w, method, tesselatedWaveForms);
-	Uniforms bakeOpt;
-	bakeOpt.linecaps = vec2(LineCaps::none, LineCaps::none);
-	bakeOpt.linejoin = w.linewidth > 1.75 ? LineJoin::round : LineJoin::miter;
-	bakeOpt.miter_limit = 1.8f;
-	bakeOpt.color = { 1.0f, 1.0f, 1.0f, 1.0f };
-	//	uint32_t color = colorPalette[(nextIdx++%(COLOR_PALETTE_COLS-2))*COLOR_PALETTE_ROWS+3];
-	//	bakeOpt.color = int32vec4(color);
-	//	bakeOpt.color.w = 1.0;
+			isOK = true;
+			return isOK;
+		}
 
-	bakeOpt.linewidth = w.linewidth;
-	bakeOpt.antialias = 1.0f;
-	bakeOpt.scale = 1;
-	renderer.bakePaths(tesselatedWaveForms, bakeOpt, bakedPath);
+		void onTick()
+		{
+		//	double since = timer.getTimeDoubleReset();
+			for (guictr_base *ctr : containers) {
+				ctr->onTick(this);
+			}
+		//	if (isPlaying()) {
+				mainWindow->requestRedraw();
+		//	}
+		}
 
+		void relayout(int32_t w, int32_t h) {
+			closeAllAppMenus();
+			closeContextMenu();
+			view->layout(w, h);
 
-	return 0;
+			for (guictr_base *ctr : containers) {
+				ctr->layout();
+			}
+		}
+		void mouseMoved(ivec2 mousePos, ivec2 deltaPos) {
+			BaseCtrl::mouseMoved(mousePos, deltaPos);
+		}
+
+		bool processGlobalKeyevent(KeyEvent& event) {
+			if (event.type != KeyEventType::K_RELEASE) {
+			}
+			return false;
+		}
+
+		bool mouseDownPre() {
+			closeAllContextMenus();
+			return true;
+		}
+
+		void setStatusText(String s) {
+			view->statusbar.setTitle(s);
+		}
+	};
+	static std::shared_ptr<AppCtrl> appctrl;
 }
-void tesselate(audiofile_t* sample, std::vector<std::vector<vec2>>& out) {
-	audiosample_t* audioSample = sample->sample.get();
-	ivec2 size = {700, 120};
-
-	double zoom = 0.5;
-
-	auto lenSamples = audioSample->nSamples;
-	double samplesPerPx = lenSamples/(double)size.x;
-	audioclip_texture_t w;
-	w.quality=4;
-	if (samplesPerPx >= 256) {
-		w.quality *= 2;
-//		w.scale = 2;
-	}
-	constexpr float MAX_RES = 512;
-	w.scaleX = 1.0f;
-	if (samplesPerPx > MAX_RES) {
-		w.scaleX = static_cast<float>(MAX_RES/samplesPerPx);
-		samplesPerPx = MAX_RES;
-	}
-	w.pos = {0,0};
-//	w.startOffset = {0,0};
-	w.size = size;
-	dbgassert(w.size.x > 0);
-	w.sampleBegin = 0;
-	w.sampleBeginOffset = 0;
-	w.sampleEnd = static_cast<int64_t>(lenSamples);
-	w.samplesPerPx = samplesPerPx;
-	w.linewidth = 1.50f+math::min<float>(0.75, math::max<float>(0.0f, static_cast<float>(zoom)*32.0f));
-	w.method = SampleMethod::sample_straight;
-	w.audioId = sample->id;
-
-
-
-
-	SampleMethod method = w.method;
-	tesselateWaveform(audioSample, 0, 0, &w, method, out);
-//	Uniforms bakeOpt;
-//	bakeOpt.linecaps = vec2(LineCaps::none, LineCaps::none);
-//	bakeOpt.linejoin = w.linewidth > 1.75 ? LineJoin::round : LineJoin::miter;
-//	bakeOpt.miter_limit = 1.8f;
-//	bakeOpt.color = vec4(vec3(1), 1.0);
-//	//	uint32_t color = colorPalette[(nextIdx++%(COLOR_PALETTE_COLS-2))*COLOR_PALETTE_ROWS+3];
-//	//	bakeOpt.color = int32vec4(color);
-//	//	bakeOpt.color.w = 1.0;
-//
-//	bakeOpt.linewidth = w.linewidth;
-//	bakeOpt.antialias = 1.0f;
-//	bakeOpt.scale = w.scale;
-
+static waveform_test waveformTest;
+std::shared_ptr<AppCtrl> makeApp() {
+	MiniApp::appctrl = std::make_shared<MiniApp::MiniAppCtrl<MiniApp::ViewContainers_TestNanoVGRenderCache>>(waveformTest);
+	return MiniApp::appctrl;
 }
-float packVertexData(vec2list& verticesIn, std::vector<vert>& outVdata, int index = 0, bool closed = false);
-float packVertexData2(vec2list& verticesIn, std::vector<vert>& outVdata, int index = 0, bool closed = false);
-void packVertexDataTest(vec2list& verticesIn, std::vector<vert>& outVdata, int index = 0, bool closed = false) {
-	outVdata.resize(verticesIn.size()*4);
 
-//	//use output iterator
-//	int n = 0;
-//	auto* ptr = verticesIn.data();
-//	while(((ptrdiff_t)ptr&(1<<n)) == 0) {
-//		n++;
-//	}
-//	n++;
-//	my_printf("alignment: %d\n", 1<<n);
-//	auto it2 = outVdata.begin();
-//	auto it = verticesIn.begin();
-//	auto itend = verticesIn.end();
-//	for (; it != itend;) {
-//		it2++->pos = *it;
-//		it2++->pos = *it;
-//		it2++->pos = *it;
-//		it2++->pos = *it++;
-//	}
-//	auto it2 = outVdata.begin();
-//	for (auto& v : verticesIn) {
-//		it2++->pos = v;
-//		it2++->pos = v;
-//		it2++->pos = v;
-//		it2++->pos = v;
-//	}
-	size_t idx = 0;
-	for (auto& v : verticesIn) {
-		outVdata[idx*4+0].pos = v;
-		outVdata[idx*4+1].pos = v;
-		outVdata[idx*4+2].pos = v;
-		outVdata[idx*4+3].pos = v;
-		idx++;
-	}
-}
-template <typename F>
-void benchmark_packdata(F f, std::vector<std::vector<vec2>>& tesselatedWaveForms) {
 
-	std::vector<vert> outVdata;
-	size_t len = tesselatedWaveForms.size();
-	for (size_t i = 0; i < len; i++) {
-		f(tesselatedWaveForms[i], outVdata, (int)i, false);
-	}
-//	f(tesselatedWaveForms[0], outVdata, 0, false);
-}
-template <typename F, typename F2>
-void assertEqual(F f, F2 f2, std::vector<std::vector<vec2>>& tesselatedWaveForms) {
-
-	size_t len = tesselatedWaveForms.size();
-	for (size_t i = 0; i < len; i++) {
-		std::vector<vert> outVdata1;
-		std::vector<vert> outVdata2;
-		f(tesselatedWaveForms[i], outVdata1, (int)i, false);
-		f2(tesselatedWaveForms[i], outVdata2, (int)i, false);
-		dbgassert( outVdata1 == outVdata2 );
-	}
-}
-template <typename F, typename F2>
-void assertNonEqual(F f, F2 f2, std::vector<std::vector<vec2>>& tesselatedWaveForms, std::vector<std::vector<vec2>>& tesselatedWaveForms2) {
-
-	size_t len = tesselatedWaveForms.size();
-	for (size_t i = 0; i < len; i++) {
-		std::vector<vert> outVdata1;
-		std::vector<vert> outVdata2;
-		f(tesselatedWaveForms[i], outVdata1, (int)i, false);
-		f2(tesselatedWaveForms2[i], outVdata2, (int)i, false);
-		dbgassert( outVdata1 != outVdata2 );
-	}
+void deleteApp() {
+	MiniApp::appctrl.reset();
 }
 int main(int argc, char* argv[]) {
-	{
-		hires_timer_t t;
-        t.reset();
-        threadSleep(50);
-		my_printf("threadSleep(50) %lu\n", t.getTime());
+	int ret = startApplication(argc, argv);
+	for (auto i = 0u; i < NUM_RENDERERS; i++) {
+		log_printf("Renderer %u took %llumicros\n", i, waveformTest.durations[i]);
 	}
-	audiocache cache(44100);
-	daw_tls::tlsinstance& tls = daw_tls::getTls();
-	tls.audioCache = &cache;
-	audiofile_t* sample = audiocache::getInstance()->loadFile("PHFT_Drum Loop_130_099.wav");
-	if (!sample) {
-		puts("Failed loading sample");
-		return 1;
-	}
-	audiofile_t* sampleWhiteNoise = audiocache::getInstance()->loadFile("whitenoise_44khz_16bit_1second.wav");
-	if (!sampleWhiteNoise) {
-		puts("Failed loading sample");
-		return 1;
-	}
-	ALEPH_TEST_BEGIN("testThreadWorkerTasks");
-#define NLOOPS 1024
-	{
-
-		std::vector<std::vector<vec2>> tesselatedWaveForms;
-		tesselate(sample, tesselatedWaveForms);
-		assertEqual(packVertexData, packVertexData2, tesselatedWaveForms);
-	}
-	{
-
-		std::vector<std::vector<vec2>> tesselatedWaveForms;
-		std::vector<std::vector<vec2>> tesselatedWaveForms2;
-		tesselate(sample, tesselatedWaveForms);
-		tesselate(sampleWhiteNoise, tesselatedWaveForms2);
-		assertNonEqual(packVertexData, packVertexData2, tesselatedWaveForms, tesselatedWaveForms2);
-	}
-	hires_timer_t t;
-	std::vector<std::vector<vec2>> tesselatedWaveForms;
-	t.reset();
-	tesselate(sample, tesselatedWaveForms);
-	my_printf("tesselate %luus\n", t.getTime());
-	{
-		t.reset();
-		for (int i = 0; i < NLOOPS; i++) {
-			benchmark_packdata(packVertexData, tesselatedWaveForms);
-		}
-		my_printf("packVertexData per loop %luus\n", t.getTime()/NLOOPS);
-	}
-	{
-		t.reset();
-		for (int i = 0; i < NLOOPS; i++) {
-			benchmark_packdata(packVertexData2, tesselatedWaveForms);
-		}
-		my_printf("packVertexData2 per loop %luus\n", t.getTime()/NLOOPS);
-	}
-	{
-
-		t.reset();
-		for (int i = 0; i < NLOOPS; i++) {
-			benchmark_packdata(packVertexDataTest, tesselatedWaveForms);
-		}
-		my_printf(u8"packVertexDataTest per loop %luus\n", t.getTime()/NLOOPS);
-	}
-	ALEPH_TEST_END();
-	return 0;
+	return ret;
 }

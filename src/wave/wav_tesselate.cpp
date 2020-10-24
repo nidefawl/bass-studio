@@ -84,7 +84,7 @@ void tesselateWaveform(audiosample_t* sample, float x, float y, audioclip_textur
 						//End of sample, render next channel
 						break;
 					}
-					int32_t sampleIdx = std::round(sampleOffset);
+					int32_t sampleIdx = std::round(sampleOffset); //TODO: std::round is slow
 					dbgassert((int)sampleIdx%stepSize==0);
 						float fCurX = (sampleOffset-renderOffset) * samplesToPx;
 						if (fCurX >= lastPtX+vOffset) {

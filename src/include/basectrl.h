@@ -328,7 +328,7 @@ public:
         return ivec2(m_size.x * 1.0 / m_scale, m_size.y * 1.0 / m_scale);
     }
     virtual void prerender(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float ratio);
-    void render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float ratio);
+    virtual void render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float ratio);
     virtual bool processGlobalKeyevent(KeyEvent& event)
     {
         return false;

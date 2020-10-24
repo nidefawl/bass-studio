@@ -43,6 +43,9 @@ struct TextureAtlas {
 	NVGLUframebuffer* fb = nullptr;
 	int nextIdx = 10;
 };
+enum waveformrender_impl_e {
+	ADV, POLYLINE2D, PAR
+};
 class waveformrender {
 	struct Impl;
 	Impl* const impl;
@@ -53,7 +56,7 @@ class waveformrender {
 //	std::vector<audioclip_texture_t> prevRendered;
 public:
 	static waveformrender* getInstance();
-	waveformrender();
+	waveformrender(waveformrender_impl_e t);
 	~waveformrender();
 	void destroy();
 	void init();

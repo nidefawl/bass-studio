@@ -20,18 +20,35 @@
 
 bool checkGLError(const char* s);
 struct waveformrender::Impl {
-	GLPathRenderer renderer;
+	IPathRenderer* renderer = nullptr;
+	Impl(waveformrender_impl_e t) {
+		switch (t) {
+		default:
+		case ADV:
+			renderer = new GLPathRenderer();
+			break;
+		case POLYLINE2D:
+			renderer = new GLPathRendererSimple();
+			break;
+		case PAR:
+			renderer = new GLPathRendererSimple2();
+			break;
+		}
+	}
+	~Impl() {
+		delete renderer;
+	}
 };
 waveformrender::~waveformrender() {
 	delete impl;
 }
-waveformrender::waveformrender() : impl(new waveformrender::Impl()) {
+waveformrender::waveformrender(waveformrender_impl_e t) : impl(new waveformrender::Impl(t)) {
 }
 void waveformrender::init() {
-	impl->renderer.init();
+	impl->renderer->init();
 }
 void waveformrender::destroy() {
-	impl->renderer.destroy();
+	impl->renderer->destroy();
 }
 void waveformrender::getRenderedTextures(std::vector<TextureAtlas>& rendered) {
 	for (auto& atlas : atlases) {
@@ -354,7 +371,7 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 	this->queuedTasks.clear();
 	//
 
-	auto& renderer = impl->renderer;
+	auto renderer = impl->renderer;
 	//go over all framebuffers (_atlas.fb)
 	for (TextureAtlas& _atlas : atlases) {
 		bool clearFB = false;
@@ -364,7 +381,7 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 		if (!preGlSet) {
 			preGlSet = true;
 			preGLState();
-			glUseProgram(renderer.program2dLines);
+			glUseProgram(renderer->program2dLines);
 		}
 		if (!_atlas.fb) {
 			preGlSet|=1;
@@ -423,7 +440,7 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 			if (this->nextPathIdx >= this->bakedPaths.size()) {
 				this->nextPathIdx = 0;
 			}
-			renderer.bakePaths(tesselatedWaveForms, bakeOpt, bakedPath);
+			renderer->bakePaths(tesselatedWaveForms, bakeOpt, bakedPath);
 			ivec2& pos = waveformQueueEntry.pos;
 			ivec2& size = waveformQueueEntry.size;
 			mat4x4 matView = mat4x4(1.0);
@@ -436,7 +453,7 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 			glBindVertexArray ( bakedPath.vbo.vaoId );
 
 			glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-			renderer.render(bakedPath, matProj, matView, matModel);
+			renderer->render(bakedPath, matProj, matView, matModel);
 			TextureAtlasEntry e;
 			e.inuse = true;
 			e.pos = pos;

@@ -16,6 +16,7 @@ struct BakeGLPath {
 	DrawVBO vbo;
 	int numPaths = 0;
 	uint32_t uniforms_texture = 0;
+	float lineWidth = 1.0f;
 };
 namespace LineJoin {
 	enum {
@@ -74,7 +75,10 @@ struct vbuf {
 };
 class IPathRenderer {
 public:
+	uint32_t program2dLines;
 	virtual ~IPathRenderer() {};
+	virtual int init() = 0;
+	virtual void destroy() = 0;
 	virtual void bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, BakeGLPath& out) = 0;
 	virtual void render(BakeGLPath& out, const glm::mat4x4& matProj, const glm::mat4x4& matView, const glm::mat4x4& matModel) = 0;
 };
@@ -90,7 +94,6 @@ class GLPathRenderer : public IPathRenderer {
 public:
 	const int countUniforms = 32;
 	const int sizeUniforms = countUniforms*4;
-	uint32_t program2dLines;
 	uint32_t u_dash_atlas;
 	uint32_t u_model;
 	uint32_t u_view;
@@ -99,8 +102,8 @@ public:
 	uint32_t u_uniforms_shape;
 //	hires_timer_t timer;
 public:
-	int init();
-	void destroy();
+	int init() override;
+	void destroy() override;
 	void bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, BakeGLPath& out) override;
 	void render(BakeGLPath& out, const glm::mat4x4& matProj, const glm::mat4x4& matView, const glm::mat4x4& matModel) override;
 };
@@ -110,12 +113,28 @@ class GLPathRendererSimple : public IPathRenderer {
 		{"a_position", 2, GL_FLOAT},
 	};
 public:
-	uint32_t program2dLines;
 	uint32_t u_mvp;
 	uint32_t u_color;
 public:
-	int init();
-	void destroy();
+	int init() override;
+	void destroy() override;
+	void bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, BakeGLPath& out) override;
+	void render(BakeGLPath& out, const glm::mat4x4& matProj, const glm::mat4x4& matView, const glm::mat4x4& matModel) override;
+};
+
+class GLPathRendererSimple2 : public IPathRenderer {
+	std::vector<VertexAttr> attributes {
+		{"a_position", 2, GL_FLOAT},
+		{"a_annotation", 4, GL_FLOAT}
+	};
+	std::vector<float> tmpBuffer;
+public:
+	uint32_t u_mvp;
+	uint32_t u_color;
+	uint32_t u_linewidth;
+public:
+	int init() override;
+	void destroy() override;
 	void bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, BakeGLPath& out) override;
 	void render(BakeGLPath& out, const glm::mat4x4& matProj, const glm::mat4x4& matView, const glm::mat4x4& matModel) override;
 };

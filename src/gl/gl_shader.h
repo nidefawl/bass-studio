@@ -15,7 +15,7 @@ struct glshader_src {
 struct glshader_srcloader {
 	std::vector<glshader_src> sources;
 	bool addStageSrc(int32_t type, const char* fname);
-	bool setStageSrc(int32_t type, String&& fname, const String& strSrc);
+	bool setStageSrc(int32_t type, const String& fname, const String& strSrc);
 	bool reload();
 };
 

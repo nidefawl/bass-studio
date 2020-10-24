@@ -254,7 +254,6 @@ int runCommandLineHost(int argc, const char* argv[]) {
 		project_globals_t projectGlobals;
     	project_controller_t projectController{&project, &projectGlobals};
     	plugindatabase_t plugindb;
-    	waveformrender renderer;
     	audiocache cache(settings.iosettings.samplerate);
     	daw_tls::tlsinstance& tls = daw_tls::getTls();
     	tls.mainCtrl = nullptr;
@@ -269,7 +268,7 @@ int runCommandLineHost(int argc, const char* argv[]) {
     	tls.audioHost = audioHost.get();
     	tls.midiHost = midiHost.get();
     	tls.audioCache = &cache;
-    	tls.waveform = &renderer;
+    	tls.waveform = nullptr;
     	tls.pluginDatabase = &plugindb;
 
 		if (!bRenderOnly) {

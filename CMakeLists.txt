@@ -198,7 +198,10 @@ include("libs.cmake")
 
 
 set(DAW_WORKING_DIR "../../run/" CACHE PATH "output directory")
+get_filename_component(ABS_WORKING_DIR "${DAW_WORKING_DIR}"
+                       REALPATH BASE_DIR "${CMAKE_BINARY_DIR}")
 message(STATUS "DAW_WORKING_DIR ${DAW_WORKING_DIR}")
+message(STATUS "ABS_WORKING_DIR ${ABS_WORKING_DIR}")
 
 FUNCTION(SET_APP_BUILD appname)
     set(tmp1 "${appname}-${BUILD_BINARY_SUFFIX}")
