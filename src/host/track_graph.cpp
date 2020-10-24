@@ -333,6 +333,10 @@ namespace DAW {
 					trackCfg.pulls.push_back(DAW::track_source_t{trackEdgeId++, inputChannel, 1.0f, 0, src->flags});
 					trackCfg.children.push_back(&trackSrcCfg);
 					trackSrcCfg.parents.push_back(&trackCfg);
+				} else if (inputChannel.getType() == channel_input_type::INPUT_EXTERNAL_AUDIO) {
+					trackCfg.pulls.push_back(DAW::track_source_t{trackEdgeId++, inputChannel, 1.0f, 0, audiostageflags_t::NONE});
+				} else {
+					log_printf("missing track input routing\n", 0);
 				}
 			}
 			if (isChannelConnected(outputChannel)) {

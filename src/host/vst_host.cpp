@@ -1291,7 +1291,7 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
 				tempBlock.realloc(srcBlock.samples);
 				dbgassert(srcBlock.samples == tempBlock.samples);
 				dbgassert(srcBlock.channels <= tempBlock.channels);
-				dbgassert(delayLine->block.channels == srcBlock.channels);
+                dbgassert((delayLine->block.channels == srcBlock.channels) || (2 == delayLine->block.channels && 1 == srcBlock.channels));
 
 				//todo: one of the delay lines will always be 0 samples delay
 				delayAudio(delayLine, &srcBlock, &tempBlock, delayToMaxInputLatency);
