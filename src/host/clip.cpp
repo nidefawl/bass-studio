@@ -350,18 +350,16 @@ void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& note
 			notesView.m_list.push_back(nnote);
 		}
 	}
-	if (fillLoop && listLoop.size()) {
+    if (fillLoop && loopLen > 0 && listLoop.size()) {
 
 		/** add all in-loop notes */
-		const tick_t lenClipLoopSection = math::max(0, (localEnd - localStart) - preLoopLen);
-		const int loopLenProcessing = loopEnabled ? ( loopLen <= 0 ? 0 : loopLen) : (localEnd - localStart);
-//		const tick_t numLoops = loopEnabled && loopLenProcessing>0 ? (lenClipLoopSection+loopLen-1) / loopLenProcessing : 0;
-		const int firstLoop = loopLenProcessing <= 0 ? 0 : localStart / loopLenProcessing;
-		const int lastLoop = loopLenProcessing <= 0 ? 0 : localEnd / loopLenProcessing;
-		const tick_t numLoops = lastLoop - firstLoop + 1;
+        const tick_t loopLenProcessing = loopLen;
+        const int32_t firstLoop = math::max(0, (localStart - preLoopLen) / loopLenProcessing);
+        const int32_t lastLoop = (localEnd - preLoopLen) / loopLenProcessing;
+        const tick_t numLoops = lastLoop - firstLoop + 1;
 		if (notesView.m_list.capacity() < numLoops * listLoop.size())
 			notesView.m_list.reserve(numLoops * listLoop.size());
-		for (int i = firstLoop; i < firstLoop+numLoops; i++) {
+        for (auto i = firstLoop; i < firstLoop + numLoops; i++) {
 			auto itNote = listLoop.cbegin();
 			auto itNoteEnd = listLoop.cend();
 			const tick_t posCurLoopStart = preLoopLen + (i * loopLenProcessing);
