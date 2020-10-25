@@ -249,14 +249,14 @@ void guitooltip<clip_t>::layout()  {
 		table.rows.push_back(tbl_row_t{vec});
 	}
 	{
-		tbl_rows vec{tblstr{"num samples"}, tblint{ptr->getLenSamples()}};
-		table.rows.push_back(tbl_row_t{vec});
+		;
+		table.rows.push_back(tbl_row_t{ tbl_rows{ tblstr{"num samples"}, 	tblint{ptr->getLenSamples()} } });
 	}
 	{
-		table.rows.push_back(tbl_row_t{ tbl_rows{{tblstr{"ticks start"}, tblint{ptr->start()}}}});
-		table.rows.push_back(tbl_row_t{ tbl_rows{{tblstr{"ticks end"}, tblint{ptr->end()}}} });
-		table.rows.push_back(tbl_row_t{ tbl_rows{{tblstr{"ticks length"}, tblint{ptr->getLen()}}} });
-		table.rows.push_back(tbl_row_t{ tbl_rows{{tblstr{"color"}, tblint{ptr->rgb, "%08x"}}} });
+		table.rows.push_back(tbl_row_t{ tbl_rows{ tblstr{"ticks start"}, 	tblint{ptr->start()} } });
+		table.rows.push_back(tbl_row_t{ tbl_rows{ tblstr{"ticks end"}, 		tblint{ptr->end()} } });
+		table.rows.push_back(tbl_row_t{ tbl_rows{ tblstr{"ticks length"}, 	tblint{ptr->getLen()} } });
+		table.rows.push_back(tbl_row_t{ tbl_rows{ tblstr{"color"}, 			tblint{ptr->rgb, "%08x"} } });
 	}
 #ifdef TODO_PROPERTIES_TABLE_CLIP_WAVEFORM_PROPERTIES
 	{
