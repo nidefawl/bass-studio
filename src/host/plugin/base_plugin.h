@@ -107,6 +107,9 @@ public:
 	virtual audio_stage_t* getTrackLink() {
 		return trackImpl;
 	}
+	virtual bool isDeferred() {
+		return false;
+	}
 protected:
 	friend class effect_deferred;
 	effect_deferred* toDeferred();
@@ -138,6 +141,9 @@ public:
 	String getDfrdPluginName();
 	plugin_snapshot_t getSnapshot() const;
 	void onPreUnload() override;
+	bool isDeferred() override {
+		return true;
+	}
 };
 effect_deferred* loadPluginDeferred(const plugin_snapshot_t& snapshot);
 //std::shared_ptr<effect_deferred> loadPluginDeferred(const plugin_snapshot_t& snapshot);

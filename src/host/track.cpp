@@ -311,6 +311,9 @@ void audio_stage_t::insertEffect(int32_t idx, effectbase* _effect) {
 		it = effects.begin() + idx;
 	}
 	effects.insert(it, _effect);
+    if (_effect->isDeferred()) {
+        deferredEffects.push_back(_effect);
+	}
 	_effect->setTrackLink(this);
 	int slot = 0;
 	for (effectbase* effect : effects) {
@@ -559,7 +562,7 @@ void audio_stage_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginLi
 		if (effect) {
 			vsthost* host = vsthost::getInstance();
 
-			this->deferredEffects.push_back(effect);
+			//this->deferredEffects.push_back(effect);
 			host->addDeferredEffect(effect);
 			effect->load(host);
 			host->insertNewPlugin(this, effect, pluginSnapshot.slot);

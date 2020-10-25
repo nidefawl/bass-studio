@@ -109,6 +109,10 @@ struct audio_stage_t {
 	audiostageflags_t flags = audiostageflags_t::CONVERT_OUTPUT;
 	audio_stage_t* parent;
 	effectbase* owner;
+	/**
+	 * backward pointer to gui containing this effect stage.
+	 * Used in drag/move handling
+     */
 	guictr_plugins* pluginCtr;
 	rmsmeterimpl<16000> meter;
 	rmsmeterimpl<16000> meterInput;

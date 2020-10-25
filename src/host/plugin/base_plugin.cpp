@@ -160,25 +160,28 @@ void effect_deferred::onPreUnload() {
 plugin_snapshot_t effect_deferred::getSnapshot() const {
 	return mImpl->snapshot;
 }
-//toDeferred()
-//static std::shared_ptr<effect_deferred> fromEffect();
+
 /*static*/ std::shared_ptr<effect_deferred> effect_deferred::fromEffect(effectbase* eff) {
-	auto def = eff->toDeferred();
-	return std::shared_ptr<effect_deferred>(def);
+	effect_deferred* effDeferred = eff->toDeferred();
+	if (effDeferred) {
+		return std::shared_ptr<effect_deferred>(effDeferred);
+	}
+	return nullptr;
 }
 effect_deferred* effectbase::toDeferred() {
-	effect_deferred* eff = new effect_deferred();
-	eff->mImpl = new effect_deferred_impl();
-	return eff;
+	plugin_snapshot_t snapshot;
+	this->makeSnapshot(snapshot, true);
+	effect_deferred* def = new effect_deferred();
+	def->mImpl = new effect_deferred_impl();
+	def->mImpl = new effect_deferred_impl();
+	def->sName = snapshot.name;
+	def->projectGlobalId = snapshot.projectGlobalId;
+	def->bIsEnabled = snapshot.enabled;
+//	def->uId = snapshot.uId;
+	def->mImpl->snapshot = snapshot;
+	def->mImpl->moduleType = snapshot.pluginType;
+	return def;
 }
-
-//std::shared_ptr<effect_deferred> loadPluginDeferred(const plugin_snapshot_t& snapshot) {
-//	auto def = std::make_shared<effect_deferred>();
-//	def->mImpl = new effect_deferred_impl();
-//	def->mImpl->snapshot = snapshot;
-//	def->mImpl->moduleType = snapshot.pluginType;
-//	return def;
-//}
 
 effect_deferred* loadPluginDeferred(const plugin_snapshot_t& snapshot) {
 	auto def = new effect_deferred();
