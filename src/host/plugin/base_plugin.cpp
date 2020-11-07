@@ -46,9 +46,8 @@ effectbase::effectbase(String _sName, int32_t _pluginType, int32_t _projectGloba
 		String name;
 		float val;
 	};
-	const std::array<effectbase_param_entry_t, 2> parameterTypes { {
+	const std::array<effectbase_param_entry_t, 1> parameterTypes { {
 		{PARAM_ENABLE, "Enabled", 1.0f},
-		{PARAM_PLUGIN_DUMMY, "Dummy", 1.0f},
 	} };
 	for (const effectbase_param_entry_t& paramEntry : parameterTypes) {
 		automatable_param_t* regparam = registerParam(paramEntry.id);

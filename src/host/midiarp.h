@@ -30,9 +30,9 @@ private:
 //	struct arp_pattern_entry_t {
 //		std::vector<int32_t> pattern;
 //	};
-#define ARP_PARAM_CLOCK 1
-#define ARP_PARAM_GATE 2
-#define ARP_PARAM_PATTERN 3
+#define ARP_PARAM_CLOCK PARAM_OFFSET_IMPL
+#define ARP_PARAM_GATE (PARAM_OFFSET_IMPL+1)
+#define ARP_PARAM_PATTERN (PARAM_OFFSET_IMPL+2)
 //	const std::array<std::vector<int32_t>, 4> patterns { {
 //		{0, 1, 0, 2, 0, 3, 0, 4, 0 },
 //		{8, 7, 6, 5, 4, 3, 2, 1, 0 },
@@ -65,8 +65,9 @@ public:
 			tickLength[i + 1] = tickLength[i + 0] + (tickLength[i + 0] >> 1);
 			dbgassert(tickLength[i + 0] > 0);
 		}
-		const std::array<arp_param_entry_t, 4> parameterTypes { {
+		const std::array<arp_param_entry_t, 5> parameterTypes { {
 			arp_param_entry_t{PARAM_ENABLE, "Enabled", 0.0f},
+			arp_param_entry_t{PARAM_GAIN, "Gain", 1.0f},
 			arp_param_entry_t{ARP_PARAM_CLOCK, "Clock", 10.0f/(float)NUM_ARP_STEPSIZE_OPTIONS},
 			arp_param_entry_t{ARP_PARAM_GATE, "Gate", 1/4.0f},
 			arp_param_entry_t{ARP_PARAM_PATTERN, "Pattern", 0.0f},
@@ -107,6 +108,9 @@ public:
 	}
 	float getClockF() {
 		return getParamValue(ARP_PARAM_CLOCK);
+	}
+	float getGainF() {
+		return getParamValue(PARAM_GAIN);
 	}
 	tick_t getStepSize() {
 		int32_t option = (int32_t)std::floor(getClockF()*(NUM_ARP_STEPSIZE_OPTIONS-1));
@@ -149,7 +153,8 @@ public:
 	}
 
 	void addNote(std::vector<noteevent_t>& noteEvents, tick_t start, note_t& note, int64_t time) {
-		noteEvents.emplace_back(note.pitch, note.velocity, note.start()-start, true, false);
+		int32_t noteVelocity = math::clamp<int32_t>(this->getGainF() * note.velocity, 0, 127);
+		noteEvents.emplace_back(note.pitch, noteVelocity, note.start()-start, true, false);
 		heldOutputNotes.push_back(note);
 		heldOutputAnimationNotes.push_back(note);
 		notesSpawnTime.push_back(time);

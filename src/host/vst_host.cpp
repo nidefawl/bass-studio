@@ -727,7 +727,7 @@ bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, co
 		if (stage) {
 			/* Calculate audio/midi tracks gain level */
 			float fGainTrack;
-			if (!getGainLvl(stage->mixer.getParamValue(PARAM_TRACK_GAIN), fGainTrack)) {
+			if (!dsp_util::getGainLvl(stage->mixer.getParamValue(PARAM_TRACK_GAIN), fGainTrack)) {
 				fGainTrack = 0.0f;
 			}
 			track_audio_src src;
@@ -1046,7 +1046,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 
 						/* Calculate master tracks gain level */
 						float fGainMaster;
-						if (getGainLvl(trackImpl->mixer.getParamValue(PARAM_TRACK_GAIN), fGainMaster)) {
+						if (dsp_util::getGainLvl(trackImpl->mixer.getParamValue(PARAM_TRACK_GAIN), fGainMaster)) {
 							if (dbg == 0) {
 								log_printf("Process External Audio routing from %s to %s\n", StringAsCStr(track->name), StringAsCStr(outputChannel.name));
 							}
@@ -1107,7 +1107,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			if (!trAudio)
 				continue;
 			float fGainTrack;
-			getGainLvl(trAudio->mixer.getParamValue(PARAM_TRACK_GAIN), fGainTrack);
+			dsp_util::getGainLvl(trAudio->mixer.getParamValue(PARAM_TRACK_GAIN), fGainTrack);
 			trAudio->meter.update(&trAudio->output, fGainTrack);
 			trAudio->meterInput.update(&trAudio->input, 1.0f);
 		}

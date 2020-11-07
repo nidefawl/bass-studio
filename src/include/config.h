@@ -16,7 +16,8 @@
 #define SETTINGS_NAME "data/settings.json"
 #define THEMEFILE_NAME "data/theme.json"
 #define CREATE_DEBUG_COMPANION_WINDOW 1
-
+#define PARAM_COMMON_COUNT (1<<12)
+#define PARAM_OFFSET_IMPL (1<<12)
 #define PARAM_OFFSET_EXTERNAL (1<<16)
 #define PARAM_OFFSET_SEND (1<<12)
 #define MAX_SEND_CHANNELS (1<<4)

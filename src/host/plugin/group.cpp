@@ -191,6 +191,23 @@ struct module_group::internal_handles_t {
 module_group::module_group(int32_t _projectGlobalId)
 : internalplugin("Group", PLUGIN_TYPE_GROUP, _projectGlobalId), handle(new module_group::internal_handles_t{0}), audio(nullptr)
 {
+#define PARAM_GROUPPLUGIN_INPUT_GAIN PARAM_OFFSET_IMPL
+	struct effectgroup_param_entry_t {
+		int32_t id;
+		String name;
+		float val;
+	};
+	const std::array<effectgroup_param_entry_t, 3> parameterTypes { {
+		{PARAM_GAIN, "Output Gain", 1.0f},
+		{PARAM_PAN, "Pan", 0.5f},
+		{PARAM_GROUPPLUGIN_INPUT_GAIN, "Input Gain", 1.0f},
+	} };
+	for (const effectgroup_param_entry_t& paramEntry : parameterTypes) {
+		automatable_param_t* regparam = registerParam(paramEntry.id);
+		regparam->value = paramEntry.val;
+		regparam->label = paramEntry.name;
+		regparam->shortLabel = paramEntry.name;
+	}
 }
 module_group::~module_group()
 {
@@ -276,13 +293,7 @@ void module_group::setTrackLink(audio_stage_t* trImpl) {
 	bIsSetup = true;
 	internalplugin::setTrackLink(trImpl);
 }
-void module_group::process(AudioBlock* in, AudioBlock* out, int32_t samplePos, int32_t numSamples, playback_state state) {
-	dbgassert(getTrackLink()->sampleFormat == this->format && in->samples == format.blockSize && out->samples == format.blockSize && format.blockSize > 0 && format.sampleRate > 0);
-	audio->input.copyFrom(in);
-	vsthost::getInstance()->processAudio(audio, &audio->input, &audio->output, samplePos, numSamples, state);
-	audio->outputPost.copyFrom(&audio->output);
-	out->copyFrom(&audio->outputPost);
-}
+
 String module_group::getInfo(std::vector<String>& list) {
 	return "";
 }
@@ -294,10 +305,24 @@ void module_group::onTick(double since) {
 void module_group::getChildAudioStages(std::vector<audio_stage_t*>& targets) {
 	targets.push_back(this->audio);
 }
+
+void module_group::process(AudioBlock* in, AudioBlock* out, int32_t samplePos, int32_t numSamples, playback_state state) {
+	dbgassert(getTrackLink()->sampleFormat == this->format && in->samples == format.blockSize
+			&& out->samples == format.blockSize && format.blockSize > 0 && format.sampleRate > 0);
+	audio->input.copyFrom(in);
+	vsthost::getInstance()->processAudio(audio, &audio->input, &audio->output, samplePos, numSamples, state);
+	audio->outputPost.clear();
+	/* Calculate group gain level */
+	float fGain;
+	if (dsp_util::getGainLvl(getParamValue(PARAM_GAIN), fGain)) {
+		audio->outputPost.addFromOp(&audio->output, AudioBlock::mix_op::ADD, math::clamp(fGain, 0.0f, 1.0f));
+	}
+	out->copyFrom(&audio->outputPost);
+}
 void module_group::postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) {
-	float fGainGroup;
-	getGainLvl(audio->mixer.getParamValue(PARAM_TRACK_GAIN), fGainGroup);
-	meter.update(out, fGainGroup);
+//	float fGainGroup;
+//	dsp_util::getGainLvl(audio->mixer.getParamValue(PARAM_TRACK_GAIN), fGainGroup);
+	meter.update(out, 1.0f);
 	if (!hasProcessed) {
 		for (effectbase* effect : audio->effects) {
 			effect->postProcess(out, samples, hasProcessed);

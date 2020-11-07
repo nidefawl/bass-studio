@@ -4,6 +4,7 @@
 #include <stdbool.h>
 #include <vector>
 #include "modules.h"
+#include "dsp_util.h"
 #include "internal_plugin.h"
 #include "str_util.h"
 #include "snapshot.h"
@@ -42,4 +43,3 @@ public:
 	void postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) override;
 	void getChildAudioStages(std::vector<audio_stage_t*>& targets) override;
 };
-

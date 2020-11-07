@@ -7,7 +7,12 @@
 //#define PLACE_MARKERS
 void midiarp::loadSnapshot(const arp_snapshot& snapshot) {
 	for (const auto& param : snapshot.params) {
-		dbgassert(getParam(param.idx));
+		if (!getParam(param.idx)) {
+			//version mismatch
+			return;
+		}
+	}
+	for (const auto& param : snapshot.params) {
 		setParamValue(param.idx, param.val, FLG_PAR_UPDATE_INIT);
 	}
 	loadAutomation(snapshot.automatedParams, this);
@@ -214,7 +219,7 @@ void midiarp::process(std::vector<noteevent_t>& noteEventsIn,
 						int idx = getStepIdx(step, heldInput.size());
 						noteevent_t evt = heldInput[idx];
 						note.pitch = evt.pitch;
-							note.velocity = evt.velocity;
+						note.velocity = evt.velocity;
 						addNote(noteEventsProcessed, start, note, time);
 					}
 					nSend++;

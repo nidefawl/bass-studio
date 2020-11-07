@@ -34,17 +34,7 @@ struct track_params_snapshot_t;
 struct track_io_configuration_snapshot_t;
 struct audio_stage_t;
 extern const std::vector<SupportedFileType> vFILE_TYPES_TRACKSNAPSHOT;
-/* Calculate mixer gain level from parameter
- * returns: false if gain == -inf db */
-inline bool getGainLvl(float fLinGain, float& fGainOut) {
-	float fGainRaw = dsp_util::linScaleToGain(fLinGain);
-	if (fGainRaw  < dsp_util::GAIN_DBFLOOR) {
-		fGainOut = 0.0f;
-		return false;
-	}
-	fGainOut = dsp_util::clampReadGain(fGainRaw);
-	return true;
-}
+
 struct track_audio_src {
 	std::vector<float*> channels;
 	uint32_t samples = 0;
