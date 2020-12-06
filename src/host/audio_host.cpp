@@ -512,9 +512,9 @@ int32_t getNumChannelsTrackType(tracktype t) {
 }
 //static_assert(getNumChannelsTrackType(AudioIO::tracktype::MULTI_CHANNEL_6) == 6);
 
-String getTrackNameShort(AudioIO::tracktype type, int32_t index, bool isInput) {
+String getTrackNameShort(AudioIO::tracktype type, int32_t index, stagebuffer_point isInput) {
 	String s = StringFormat("%d", index);
-	if (isInput) {
+	if (isInput == stagebuffer_point::INPUT) {
 		s += " IN";
 	} else {
 		s += " OUT";

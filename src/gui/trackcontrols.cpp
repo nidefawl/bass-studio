@@ -355,12 +355,12 @@ public:
 class ctxtmenu_entry_external_channel : public ctxtmenu_entry_endpoint {
 public:
 	const AudioIO::io_cfg_channel channel;
-	const bool isInput;
+	const stagebuffer_point isInput;
 
-	explicit ctxtmenu_entry_external_channel(int32_t _id, const AudioIO::io_cfg_channel& _channel, bool _isInput)
+	explicit ctxtmenu_entry_external_channel(int32_t _id, const AudioIO::io_cfg_channel& _channel, stagebuffer_point _isInput)
 	: ctxtmenu_entry_endpoint(_id, _channel.name), channel(_channel), isInput(_isInput) {
 	}
-	explicit ctxtmenu_entry_external_channel(int32_t _id, String name, bool _isInput)
+	explicit ctxtmenu_entry_external_channel(int32_t _id, String name, stagebuffer_point _isInput)
 	: ctxtmenu_entry_endpoint(_id, name), channel(), isInput(_isInput) {
 	}
 	void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) override {
@@ -376,7 +376,7 @@ public:
 			auto* stream = audiohost::getInstance()->getStream(0);
 			if (stream) {
 
-				auto& allMeters = isInput ? stream->metersInput : stream->metersOutput;
+				auto& allMeters = isInput == stagebuffer_point::INPUT ? stream->metersInput : stream->metersOutput;
 				int32_t nChannels = AudioIO::getNumChannelsTrackType(channel.type);
 				auto rmsMtr = rmsmeter<16000>(allMeters.channels+channel.channelOffset, nChannels);
 				ivec2 sizeMeter{height-2, height-2};
@@ -430,7 +430,7 @@ public:
 			track_impl_t* trImpl = dynamic_cast<track_impl_t*>(stage);
 			dbgassert(trImpl);
 			if (trImpl) {
-				return DAW::ChannelStage(trImpl, endpoint.isInput);
+				return DAW::ChannelStage(trImpl, endpoint.buffer);
 
 			}
 		}
@@ -486,10 +486,10 @@ public:
 		: busStage(_busStage), stageEndpoint(_dstStage) {
 
 		int32_t idx = 0;
-		if (!_dstStage.isInput) {
-			addEntry(new ctxtmenu_entry_stage_channel(idx++, "Input", audio_channel_ref_t{_busStage, true}));
+		if (_dstStage.buffer != stagebuffer_point::INPUT) {
+			addEntry(new ctxtmenu_entry_stage_channel(idx++, "Input", audio_channel_ref_t{_busStage, stagebuffer_point::INPUT}));
 		} else {
-			addEntry(new ctxtmenu_entry_stage_channel(idx++, "Output", audio_channel_ref_t{_busStage, false}));
+			addEntry(new ctxtmenu_entry_stage_channel(idx++, "Output", audio_channel_ref_t{_busStage, stagebuffer_point::OUTPUT_POST}));
 		}
 		audio_stage_t* stage = vsthost::getInstance()->getAudioStage(stageEndpoint.stageRef);
 		if (stage) {
@@ -512,16 +512,16 @@ public:
 		: busStage(AudioStageRefNULL()), stageEndpoint(_dstStage) {
 //		guidropdown_select_channel_ctxt
 		int32_t idx = 0;
-		auto& list = stageEndpoint.isInput ? cfg.input : cfg.output;
+		auto& list = stageEndpoint.buffer == stagebuffer_point::INPUT ? cfg.input : cfg.output;
 		for (auto& channel : list) {
-			addEntry(new ctxtmenu_entry_external_channel(idx, channel, _dstStage.isInput));
+			addEntry(new ctxtmenu_entry_external_channel(idx, channel, _dstStage.buffer));
 			idx++;
 		}
 	}
 	guidropdown_select_bus_ctxt(audio_channel_ref_t _stageEndpoint, int lvl = 0)
 		: busStage(AudioStageRefNULL()), stageEndpoint(_stageEndpoint) {
 		int32_t idx = 0;
-		String inputName = stageEndpoint.isInput ? "External input" : "External output";
+		String inputName = stageEndpoint.buffer == stagebuffer_point::INPUT ? "External input" : "External output";
 		addEntry(new ctxtmenu_entry_stage_channel(idx++, "None", AudioChannelRefNULL()));
 		addEntry(new ctxtmenu_entry_default_channel(idx++, "Default"));
 		addEntry(new ctxtmenu_entry_bus_external(idx++, inputName, stageEndpoint));
@@ -562,7 +562,7 @@ public:
 		dbgassert(trImpl);
 		if (!trImpl)
 		  return;
-		if (stageEndpoint.isInput) {
+		if (stageEndpoint.buffer == stagebuffer_point::INPUT) {
 			trImpl->inputChannel = entry->getEndpoint();
 		} else {
 			trImpl->outputChannel = entry->getEndpoint();
@@ -680,7 +680,7 @@ public:
 		dbgassert(trImpl);
 		if (!trImpl)
 			return;
-		guictxtmenu_base *popup = new guidropdown_select_bus_ctxt(audio_channel_ref_t{trImpl->toRef(), isInput});
+		guictxtmenu_base *popup = new guidropdown_select_bus_ctxt(audio_channel_ref_t{trImpl->toRef(), isInput ? stagebuffer_point::INPUT : stagebuffer_point::OUTPUT_POST});
 		popup->size = size;
 		popup->setFontSize(size.y);
 		popup->size.x = math::max(250, popup->size.x);

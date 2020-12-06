@@ -53,6 +53,7 @@ public:
 	std::unique_ptr<DelayLine> delayLine;
 	stats_processing_timings_t procStats;
 	int midiEventsDispatched = 0;
+	std::vector<DAW::channel_ref_t> inputChannels;
 
 	effectbase();
 	effectbase(String _sName, int32_t _pluginType, int32_t _projectGlobalId);

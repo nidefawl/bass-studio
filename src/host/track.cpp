@@ -255,7 +255,7 @@ void trackdata_midi_t::getNotesInRange(tick_t start, tick_t end, tick_t cutStart
 audio_stage_ref_t audio_stage_t::toRef() {
 	return {this->stageId};
 }
-effectbase* audio_stage_t::getPluginById(int32_t projectGlobalId) {
+effectbase* audio_stage_t::getPluginById(int32_t projectGlobalId) const {
 	for (effectbase* effect : effects) {
 		 if (effect->projectGlobalId == projectGlobalId) {
 			 return effect;
@@ -536,7 +536,7 @@ void track_impl_t::createIOSnapshot(track_io_configuration_snapshot_t& snapshot)
 		cfg.inputType = static_cast<int32_t>(channel.type);
 		cfg.channelOffset = channel.inputChannelOffset;
 		cfg.stageId = static_cast<int32_t>(channel.stage.stageRef.stageId);
-		cfg.stageEndPointType = channel.stage.isInput ? 0 : 1;
+		cfg.stageEndPointType = static_cast<int32_t>(channel.stage.buffer);
 		cfg.externalInputId = channel.externalInputIdx;
 		cfg.externalInputType = static_cast<int32_t>(channel.externalInputType);
 	}
@@ -549,7 +549,7 @@ void track_impl_t::loadIOConfiguration(const track_io_configuration_snapshot_t& 
 		channel.type = static_cast<DAW::channel_input_type>(cfg.inputType);
 		channel.inputChannelOffset = cfg.channelOffset;
 		channel.stage.stageRef.stageId = static_cast<audiostageid_i32>(cfg.stageId);
-		channel.stage.isInput = cfg.stageEndPointType != 0;
+		channel.stage.buffer = static_cast<stagebuffer_point>(cfg.stageEndPointType);
 		channel.externalInputIdx = cfg.externalInputId;
 		channel.externalInputType = static_cast<AudioIO::tracktype>(cfg.externalInputType);
 	}

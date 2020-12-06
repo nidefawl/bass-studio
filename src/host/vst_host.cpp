@@ -39,6 +39,7 @@
 #include "projectcontroller.h"
 #include "threads/threadlock.h"
 #include "track_graph.h"
+#include "effect_graph.h"
 #include "resampler.h"
 #include "threads/workerthread.h"
 
@@ -683,21 +684,21 @@ bool resolveDefaultConnection(const vsthost* const host, const project_t* const 
 	if (!isInput && TRACKTYPE_TO_CTR(trImpl->track->type) == TRACK_CTR_MASTER) {
 		int32_t idx = 0;
 		auto type = AudioIO::getTrackTypeNumChannels(trImpl->outputPost.channels);
-		String name = "External "+AudioIO::getTrackNameShort(type, idx, isInput);
+		String name = "External "+AudioIO::getTrackNameShort(type, idx, stagebuffer_point::OUTPUT_POST);
 		out = ChannelAudioInput(idx, 0, name, type);
 		return true;
 	}
 	const track_t* const firstMaster = project->trackMasterCtr.size() ? project->trackMasterCtr.front() : nullptr;
 	if (!isInput && TRACKTYPE_TO_CTR(trImpl->track->type) == TRACK_CTR_RETURN) {
 		if (firstMaster) {
-			out = ChannelStage(firstMaster->audio, true);
+			out = ChannelStage(firstMaster->audio, stagebuffer_point::INPUT);
 			return true;
 		}
 	}
 	if (!isInput && TRACKTYPE_TO_CTR(trImpl->track->type) == TRACK_CTR_MIDIAUDIO) {
 		const track_t* const dstTrack = trImpl->track->parent ? trImpl->track->parent : firstMaster;
 		if (dstTrack) {
-			out = ChannelStage(dstTrack->audio, true);
+			out = ChannelStage(dstTrack->audio, stagebuffer_point::INPUT);
 			return true;
 		}
 	}
@@ -731,12 +732,48 @@ bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, co
 				fGainTrack = 0.0f;
 			}
 			track_audio_src src;
-			auto& buff = inputChannel.stage.isInput ? stage->input : stage->outputPost;
-			for (uint32_t i = 0; i < buff.channels; i++) {
-				src.channels.push_back(buff.buf[i]);
+			auto* buff = &stage->input;
+			switch (inputChannel.stage.buffer) {
+			case stagebuffer_point::INPUT:
+				buff = &stage->input;
+				break;
+			case stagebuffer_point::OUTPUT:
+				buff = &stage->output;
+				break;
+			case stagebuffer_point::OUTPUT_POST:
+				buff = &stage->outputPost;
+				break;
+			}
+			for (uint32_t i = 0; i < buff->channels; i++) {
+				src.channels.push_back(buff->buf[i]);
 			}
 			src.sampleFormat = stage->sampleFormat;
-			src.samples = buff.samples;
+			src.samples = buff->samples;
+			src.gain = fGainTrack;
+			src.latency = 0;
+			out = std::move(src);
+			return true;
+		}
+	}
+	if (inputChannel.getType() == channel_input_type::INPUT_AUDIOSTAGE_EFFECT) {
+		audio_stage_t* stage = host->getAudioStage(inputChannel.stage.stageRef);
+		if (stage) {
+			effectbase* eff = stage->getPluginById(inputChannel.projectGlobalId);
+			if (eff) {
+
+			}
+//			/* Calculate audio/midi tracks gain level */
+			float fGainTrack = 1.0f;
+//			if (!dsp_util::getGainLvl(stage->mixer.getParamValue(PARAM_TRACK_GAIN), fGainTrack)) {
+//				fGainTrack = 0.0f;
+//			}
+			track_audio_src src;
+			auto& buff = eff->blockOutputs;
+			for (uint32_t i = 0; i < eff->blockOutputs->channels; i++) {
+				src.channels.push_back(eff->blockOutputs->buf[i]);
+			}
+			src.sampleFormat = stage->sampleFormat;
+			src.samples = eff->blockOutputs->samples;
 			src.gain = fGainTrack;
 			src.latency = 0;
 			out = std::move(src);
@@ -1684,6 +1721,11 @@ void vsthost::processAudio(audio_stage_t* stage, AudioBlock* input, AudioBlock* 
 	int count = 0;
 	if (stage->effects.size()) {
 		count += stage->effects.size();
+	}
+
+	std::shared_ptr<DAW::effect_processing_graph_t> processingGraph;
+	if (!DAW::buildEffectProcessingGraph(this, nullptr, stage, processingGraph)) {
+		log_printf("Failed building effect graph\n", 0);
 	}
 
 	hires_timer_t timer;

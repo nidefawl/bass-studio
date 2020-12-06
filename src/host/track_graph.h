@@ -19,9 +19,7 @@ struct track_source_t {
 	samplerate_t latency = 0U;
 	audiostageflags_t flags;
 };
-enum track_node_type {
-	TRACK, GROUP
-};
+
 struct track_node_t {
 	audiostageid_i32 stageId = TRACKID_INVALID_I32;
 	std::vector<audiostageid_i32> dependencies;

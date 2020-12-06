@@ -1,0 +1,330 @@
+#include "math/seq_math.h"
+#include "str_util.h"
+#include "seq_util.h"
+#include "seq_time.h"
+#include "dsp_util.h"
+
+#include "project.h"
+#include "vst_host.h"
+#include "track.h"
+#include "audio_host.h"
+#include "assert_dbg.h"
+#include "track_impl.h"
+#include "effect_graph.h"
+#include "plugin/base_plugin.h"
+#include "daw_channel.h"
+#include <vector>
+#include <deque>
+
+
+namespace DAW {
+	struct dependency_graph_flattened_t {
+		std::vector<effect_node_t*> resolved;
+		std::vector<effect_node_t*> unresolved;
+	};
+	/**
+	 * Detect loops in graph
+	 *
+	 * @param ctxt
+	 * @param node
+	 * @return
+	 */
+	bool dep_resolve(dependency_graph_flattened_t& ctxt, effect_node_t* node) {
+		ctxt.unresolved.push_back(node);
+		for (auto child : node->children) {
+			if (STL_CONTAINS(ctxt.unresolved, child)) {
+				return false;
+			}
+			if (!dep_resolve(ctxt, child)) {
+				return false;
+			}
+		}
+		if (node->projectGlobalId != 0) {
+			ctxt.resolved.push_back(node);
+		}
+
+		removeEntry(ctxt.unresolved, node);
+		return true;
+	}
+	bool buildEffectProcessingGraph(const vsthost* const host, const project_t* const project, const audio_stage_t* stage, std::shared_ptr<effect_processing_graph_t>& out_procgraph) {
+		std::shared_ptr<DAW::effect_graph_t> dependencyGraph;
+		if (!DAW::buildEffectRoutingGraph(host, project, stage, dependencyGraph )) {
+			log_printf("Failed building track graph\n", 0);
+			return false;
+		}
+		effect_node_t root;
+		root.children.insert(root.children.begin(), dependencyGraph->roots.begin(), dependencyGraph->roots.end());
+		dependency_graph_flattened_t graphFlattened;
+		if (!dep_resolve(graphFlattened, &root)) {
+			log_printf("Failed flattening track graph\n", 0);
+			return false;
+		}
+
+		std::vector<effectbase*> effsVisited;
+		std::shared_ptr<effect_processing_graph_t> shrdPtrProcGraph = std::make_unique<effect_processing_graph_t>();
+		shrdPtrProcGraph->nodes.reserve(dependencyGraph->nodes.size());
+		shrdPtrProcGraph->trackGraph = dependencyGraph;
+		for (effect_node_ptr trackNode : dependencyGraph->nodes) {
+//			audio_stage_t* audioStage = host->getAudioStage(audio_stage_ref_t{trackNode->stageId});
+//			dbgassert(audioStage);
+//			track_t* const track = audioStage->getTrack();
+//			dbgassert(track);
+			effectbase* eff = stage->getPluginById(trackNode->projectGlobalId);
+			dbgassert(eff);
+			processing_effect_node_t* procTrackNode = new processing_effect_node_t();//std::make_unique<processing_track_node_t>();
+
+
+			procTrackNode->pulls = trackNode->pulls;
+			procTrackNode->dependencies = trackNode->dependencies;
+			procTrackNode->projectGlobalId = trackNode->projectGlobalId;
+			procTrackNode->internalLatency = trackNode->internalLatency;
+			procTrackNode->inputLatency = trackNode->inputLatency;
+			procTrackNode->effectOptional = eff;
+			shrdPtrProcGraph->nodes.push_back(procTrackNode);
+		}
+		effect_processing_graph_t& graph = *(shrdPtrProcGraph.get());
+
+		for (const effect_node_t* const ptrTrackNode : graphFlattened.resolved) {
+			const DAW::effect_node_t& trackNode = *ptrTrackNode;
+			int32_t nodeIdx = trackNode.projectGlobalId;
+			effectbase* eff = stage->getPluginById(nodeIdx);
+			dbgassert(eff);
+			if (STL_CONTAINS(effsVisited, eff)) {
+				// expected
+				continue;
+			}
+			effsVisited.push_back(eff);
+			auto itProcGraphNode = std::find_if(graph.nodes.begin(), graph.nodes.end(), [nodeIdx] (const processing_effect_node_ptr& ptr) {
+				return ptr->projectGlobalId == nodeIdx;
+			});
+			dbgassert(itProcGraphNode != graph.nodes.end());
+			processing_effect_node_t* procTrackNode = *itProcGraphNode;
+
+			for (effect_node_t* tnChild : trackNode.children) {
+				auto itProcGraphNodeChild = std::find_if(graph.nodes.begin(), graph.nodes.end(), [nodeIdx=tnChild->projectGlobalId] (const processing_effect_node_ptr& ptr) {
+					return ptr->projectGlobalId == nodeIdx;
+				});
+				dbgassert(itProcGraphNodeChild != graph.nodes.end());
+				processing_effect_node_t* procTrackNodeChild = *itProcGraphNodeChild;
+				dbgassert(procTrackNodeChild->projectGlobalId != trackNode.projectGlobalId);
+				procTrackNode->children.push_back(procTrackNodeChild);
+			}
+
+
+			for (effect_node_t* tnParent : trackNode.parents) {
+				auto itProcGraphNodeParent = std::find_if(graph.nodes.begin(), graph.nodes.end(), [nodeIdx=tnParent->projectGlobalId] (const processing_effect_node_ptr& ptr) {
+					return ptr->projectGlobalId == nodeIdx;
+				});
+				dbgassert(itProcGraphNodeParent != graph.nodes.end());
+				processing_effect_node_t* procTrackNodeParent = *itProcGraphNodeParent;
+				dbgassert(procTrackNodeParent->projectGlobalId != trackNode.projectGlobalId);
+				procTrackNode->parents.push_back(procTrackNodeParent);
+			}
+			if (trackNode.dependencies.empty()) {
+				graph.roots.push_back(procTrackNode);
+			}
+			graph.nodesFlatOrdered.push_back(procTrackNode);
+		}
+
+#ifndef NDEBUG
+		/* assert: dependency must lay before parent */
+		for (auto itStageIdx = graph.nodesFlatOrdered.begin(); itStageIdx < graph.nodesFlatOrdered.end(); ++itStageIdx) {
+			const DAW::effect_node_t& trackNode = *(*itStageIdx);
+			for (auto depNodeIdx : trackNode.dependencies) {
+				auto itDependency = std::find_if(graph.nodesFlatOrdered.begin(), graph.nodesFlatOrdered.end(), [depNodeIdx] (const effect_node_t* ptr) {
+					return ptr->projectGlobalId == depNodeIdx;
+				});
+
+				if (itDependency >= itStageIdx) {
+					log_printf("unexpected: dependecy index >= this index!!\n", 0);
+				}
+				auto itDependencyChildren = std::find_if(trackNode.children.begin(), trackNode.children.end(), [depNodeIdx] (const effect_node_t* ptr) {
+					return ptr->projectGlobalId == depNodeIdx;
+				});
+				dbgassert(itDependencyChildren != trackNode.children.end());
+			}
+		}
+		for (auto itNodes = graph.nodes.begin(); itNodes != graph.nodes.end(); itNodes++) {
+			auto ptrNode = *itNodes;
+			ptrNode->inputLatency = INVALID_SAMPLE_OFFSET_U32;
+		}
+#endif
+
+		/* Determine nodes accumulated inputLatency (own internalLatency + max_latency(all_children)) */
+		/* This has to be done in bottom up/child first */
+		for (auto itNodes = graph.nodesFlatOrdered.begin(); itNodes != graph.nodesFlatOrdered.end(); itNodes++) {
+			auto ptrNode = *itNodes;
+			ptrNode->inputLatency = 0;
+			dbgassert(ptrNode->children.size() == ptrNode->dependencies.size());
+			for (DAW::effect_node_t* trNodeChild : ptrNode->children) {
+				dbgassert(ptrNode->projectGlobalId != trNodeChild->projectGlobalId);
+				auto itProcNode = std::find_if(graph.nodesFlatOrdered.begin(), graph.nodesFlatOrdered.end(), [nodeIdx=trNodeChild->projectGlobalId] (processing_effect_node_t* ptr) {
+					return ptr->projectGlobalId == nodeIdx;
+				});
+				dbgassert(itProcNode != graph.nodesFlatOrdered.end());
+				auto ptrChNode = *itProcNode;
+				dbgassert(ptrChNode == trNodeChild);
+			}
+			for (int32_t nodeIdx : ptrNode->dependencies) {
+				auto itProcNode = std::find_if(graph.nodesFlatOrdered.begin(), graph.nodesFlatOrdered.end(), [nodeIdx] (processing_effect_node_t* ptr) {
+					return ptr->projectGlobalId == nodeIdx;
+				});
+				dbgassert(itProcNode != graph.nodesFlatOrdered.end());
+				auto ptrChNode = *itProcNode;
+#ifndef NDEBUG
+				dbgassert(ptrChNode->inputLatency != INVALID_SAMPLE_OFFSET_U32);
+#endif
+				ptrNode->inputLatency = std::max(ptrNode->inputLatency, ptrChNode->inputLatency + ptrChNode->internalLatency);
+
+			}
+			for (int32_t nodeIdx : ptrNode->dependencies) {
+				auto itProcNode = std::find_if(graph.nodesFlatOrdered.begin(), graph.nodesFlatOrdered.end(), [nodeIdx] (processing_effect_node_t* ptr) {
+					return ptr->projectGlobalId == nodeIdx;
+				});
+				dbgassert(itProcNode != graph.nodesFlatOrdered.end());
+				auto ptrChNode = *itProcNode;
+				dbgassert(ptrNode->inputLatency >= ptrChNode->inputLatency + ptrChNode->internalLatency);
+			}
+			for (DAW::effect_node_t* trNodeChild : ptrNode->children) {
+				dbgassert(STL_CONTAINS(ptrNode->dependencies, trNodeChild->projectGlobalId));
+
+				dbgassert(ptrNode->inputLatency >= trNodeChild->inputLatency + trNodeChild->internalLatency);
+			}
+		}
+		/* Assign the resolved latencies to the previously populated push/pull inputs of each node */
+		for (auto itNodes = graph.nodesFlatOrdered.begin(); itNodes != graph.nodesFlatOrdered.end(); itNodes++) {
+			auto ptrNode = *itNodes;
+			for (auto& pulls : ptrNode->pulls) {
+//				if (DAW::isChannelConnected(pulls.channel) && pulls.channel.getType() == DAW::channel_input_type::INPUT_AUDIOSTAGE) {
+					const auto effId = pulls.channel.projectGlobalId;
+					auto itStageIdx = std::find_if(graph.nodesFlatOrdered.begin(), graph.nodesFlatOrdered.end(), [effId] (processing_effect_node_t* ptr) {
+						return ptr->projectGlobalId == effId;
+					});
+					dbgassert(itStageIdx != graph.nodesFlatOrdered.end());
+					auto ptrChNode = *itStageIdx;
+					pulls.latency = ptrChNode->inputLatency + ptrChNode->internalLatency;
+//				}
+			}
+		}
+//		out_dependencyGraph = std::move(dependencyGraph);
+		out_procgraph = shrdPtrProcGraph;
+		return true;
+	}
+	effect_node_ptr makeEffectNode(int32_t a, samplerate_t b) {
+		return new effect_node_t(a, b);// std::make_unique<effect_node_t>
+	}
+	template<typename M, typename I>
+	inline effect_node_t& getNode(M map, I idx) {
+		return *map[idx];
+	}
+	bool buildEffectRoutingGraph(const vsthost* const host, const project_t* const project, const audio_stage_t* stage, std::shared_ptr<effect_graph_t>& out_graph) {
+		uint32_t trackEdgeId = 0;
+		std::map<int32_t, effect_node_ptr> map;
+		for (effectbase* effect : stage->effects) {
+			const int32_t effectId = effect->projectGlobalId;
+			if (!map.count(effectId)) {
+				map[effectId] = makeEffectNode(effectId, 0);
+			}
+			effect_node_t& trackCfg = getNode(map, effectId);
+#if 0
+			auto inputChannel = trackImpl->inputChannel;
+			auto outputChannel = trackImpl->outputChannel;
+
+			if (inputChannel.type == channel_input_type::INPUT_DEFAULT) {
+				channel_ref_t tmp;
+				if (DAW::resolveDefaultConnection(host, project, trackImpl, true, tmp)) {
+					inputChannel = tmp;
+				}
+			}
+			if (outputChannel.type == channel_input_type::INPUT_DEFAULT) {
+				channel_ref_t tmp;
+				if (DAW::resolveDefaultConnection(host, project, trackImpl, false, tmp)) {
+					outputChannel = tmp;
+				}
+			}
+			if (isChannelConnected(inputChannel)) {
+				if (inputChannel.getType() == channel_input_type::INPUT_AUDIOSTAGE) {
+					audio_stage_t* src = host->getAudioStage(inputChannel.stage.stageRef);
+					dbgassert(src);
+					if (!map.count(src->stageId)) {
+						map[src->stageId] = makeTrackNode(src->stageId, src->getLatency());
+					}
+					effect_node_t& trackSrcCfg = getNode(map, src->stageId);
+					trackCfg.dependencies.push_back(src->stageId);
+					trackCfg.pulls.push_back(DAW::effect_source_t{trackEdgeId++, inputChannel, 1.0f, 0, src->flags});
+					trackCfg.children.push_back(&trackSrcCfg);
+					trackSrcCfg.parents.push_back(&trackCfg);
+				} else if (inputChannel.getType() == channel_input_type::INPUT_EXTERNAL_AUDIO) {
+					trackCfg.pulls.push_back(DAW::effect_source_t{trackEdgeId++, inputChannel, 1.0f, 0, audiostageflags_t::NONE});
+				} else {
+					log_printf("missing track input routing\n", 0);
+				}
+			}
+			if (isChannelConnected(outputChannel)) {
+				if (outputChannel.getType() == channel_input_type::INPUT_AUDIOSTAGE && trackImpl->mixer.isEnabled()) {
+					audio_stage_t* dst = host->getAudioStage(outputChannel.stage.stageRef);
+					dbgassert(dst);
+					if (!map.count(dst->stageId)) {
+//						map[dst->stageId] = effect_node_t(dst->stageId, dst->getLatency());
+						map[dst->stageId] = makeTrackNode(dst->stageId, dst->getLatency());
+					}
+					effect_node_t& trackDstCfg = getNode(map, dst->stageId);
+					trackDstCfg.dependencies.push_back(trackImpl->stageId);
+					// cannot set trackDstCfg.inputLatency here because map[trackImpl->stageId].inputLatency may not have been written yet
+//					trackDstCfg.inputLatency = std::max(trackDstCfg.inputLatency, map[trackImpl->stageId].inputLatency+map[trackImpl->stageId].internalLatency);
+					trackDstCfg.pushs.push_back(DAW::effect_source_t{trackEdgeId++, ChannelStage(trackImpl, false), 1.0f, 0, trackImpl->flags});
+					trackDstCfg.children.push_back(&trackCfg);
+					trackCfg.parents.push_back(&trackDstCfg);
+				}
+			}
+			if (TRACKTYPE_TO_CTR(track->type)  == TRACK_CTR_MIDIAUDIO && trackImpl->mixer.isEnabled()) {
+				/* Feed audio/midi tracks output into returns input */
+				for (track_t* trackReturn : project->trackReturnCtr) {
+					auto retGainMinMax = trackImpl->mixer.getParamMinMaxAutomated(PARAM_OFFSET_SEND+trackReturn->localIdxFlat);
+					/* Calculate send gain level */
+					float fGainRaw = dsp_util::linScaleToGain(retGainMinMax.second);
+					if (fGainRaw  < dsp_util::GAIN_DBFLOOR) {
+						continue;
+					}
+					float fGainReturn = dsp_util::clampReadGain(fGainRaw);
+
+					track_impl_t* audioReturn = trackReturn->audio;
+					dbgassert(audioReturn);
+
+					if (!map.count(audioReturn->stageId)) {
+//						map[audioReturn->stageId] = effect_node_t(audioReturn->stageId, audioReturn->getLatency());
+						map[audioReturn->stageId] = makeTrackNode(audioReturn->stageId, audioReturn->getLatency());
+					}
+					effect_node_t& trackReturnCfg =  getNode(map, audioReturn->stageId);
+					trackReturnCfg.dependencies.push_back(trackImpl->stageId);
+					trackReturnCfg.pushs.push_back(DAW::effect_source_t{trackEdgeId++, ChannelStage(trackImpl, false), fGainReturn, 0, trackImpl->flags});
+					trackReturnCfg.children.push_back(&trackCfg);
+					trackCfg.parents.push_back(&trackReturnCfg);
+
+				}
+
+			}
+#endif
+
+		}
+		auto trackGraph = std::make_shared<effect_graph_t>();
+		trackGraph->nodes.reserve(map.size());
+		for (std::map<int32_t, effect_node_ptr>::iterator mapIt = map.begin(); mapIt != map.end(); ++mapIt) {
+			effect_node_ptr node = mapIt->second;
+			if (node->parents.empty()) {
+				trackGraph->roots.push_back(node);
+			}
+			trackGraph->nodes.push_back(std::move(mapIt->second));
+		}
+//		if (gEnableLog) {
+//			for (effect_node_ptr& ptr : trackGraph->nodes) {
+//				for (int32_t src : ptr->dependencies) {
+//					log_printf("%d => %d\n", src, ptr->projectGlobalId);
+//				}
+//			}
+//		}
+		out_graph = trackGraph;
+
+		return true;
+	}
+}

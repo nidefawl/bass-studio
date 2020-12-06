@@ -122,8 +122,7 @@ struct audio_stage_t {
 	samplerate_t latency = 0;
 	int type;
 	sampleformat_t sampleFormat;
-//	samplerate_t sampleRate;
-//	uint16_t blockSize;
+
 	std::vector<effectbase*> effects;
 	std::vector<effectbase*> deferredEffects;
 	std::vector<audio_stage_t*> children;
@@ -159,7 +158,7 @@ struct audio_stage_t {
 	track_t* getTrack();
 	void addAudioStage(audio_stage_t* stage);
 	void removeAudioStage(audio_stage_t* stage);
-	effectbase* getPluginById(int32_t projectGlobalId);
+	effectbase* getPluginById(int32_t projectGlobalId) const;
 	audio_stage_ref_t toRef();
 	void getStageTargets(std::vector<automatable_t*>& targets);
 };
@@ -196,20 +195,20 @@ inline channel_ref_t ChannelDefaultNone() {
 	return ref;
 }
 inline channel_ref_t ChannelAudioInput(int32_t idx, int32_t channelOffset, String name, AudioIO::tracktype type) {
-	return channel_ref_t{channel_input_type::INPUT_EXTERNAL_AUDIO, type, idx, channelOffset, {{TRACKID_INVALID_I32}, false}, name};
+	return channel_ref_t{channel_input_type::INPUT_EXTERNAL_AUDIO, type, idx, channelOffset, {{TRACKID_INVALID_I32}, stagebuffer_point::OUTPUT}, 0, name};
 }
-inline channel_ref_t ChannelStage(audio_stage_t* stage, bool isInput) {
+inline channel_ref_t ChannelStage(audio_stage_t* stage, stagebuffer_point isInput) {
 	String str = "";
 	auto track = stage->getTrack();
 	if (track) {
 		str = track->name;
 	}
-	if (isInput) {
+	if (isInput == stagebuffer_point::INPUT) {
 		str += " IN";
 	} else {
 		str += " OUT";
 	}
-	return channel_ref_t{channel_input_type::INPUT_AUDIOSTAGE, AudioIO::getTrackTypeNumChannels(stage->input.channels), -1, 0, {stage->toRef(), isInput}, str};
+	return channel_ref_t{channel_input_type::INPUT_AUDIOSTAGE, AudioIO::getTrackTypeNumChannels(stage->input.channels), -1, 0, {stage->toRef(), isInput}, 0, str};
 }
 }
 struct track_gui_entry_t;

@@ -17,19 +17,18 @@ struct audio_stage_ref_t {
 inline const audio_stage_ref_t AudioStageRefNULL() {
 	return {TRACKID_INVALID_I32};
 }
-
 struct audio_channel_ref_t {
 	audio_stage_ref_t stageRef;
-	bool isInput;
+	stagebuffer_point buffer;
 };
 inline const struct audio_channel_ref_t AudioChannelRefNULL() {
-	return {{TRACKID_INVALID_I32}, false};
+	return {{TRACKID_INVALID_I32}, stagebuffer_point::OUTPUT_POST};
 }
 
 namespace DAW {
 
 enum channel_input_type {
-	INPUT_DEFAULT, INPUT_EMPTY, INPUT_EXTERNAL_AUDIO, INPUT_AUDIOSTAGE
+	INPUT_DEFAULT, INPUT_EMPTY, INPUT_EXTERNAL_AUDIO, INPUT_AUDIOSTAGE, INPUT_AUDIOSTAGE_EFFECT
 };
 
 struct channel_ref_t {
@@ -37,7 +36,8 @@ struct channel_ref_t {
 	AudioIO::tracktype externalInputType;
 	int32_t externalInputIdx = -1;
 	int32_t inputChannelOffset = 0;
-	audio_channel_ref_t stage{{TRACKID_INVALID_I32}, false};
+	audio_channel_ref_t stage{{TRACKID_INVALID_I32}, stagebuffer_point::OUTPUT_POST};
+	int32_t projectGlobalId = 0;
 	String name = "None";
 //	channel_input_type getType() const {
 //		if (externalInputIdx != -1)

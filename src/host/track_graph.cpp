@@ -26,7 +26,7 @@ namespace DAW {
 			const auto outputChannel = trackImpl->outputChannel;
 			if (inputChannel.getType() == channel_input_type::INPUT_EXTERNAL_AUDIO) {
 				int32_t idx = inputChannel.externalInputIdx;
-				String name = "External "+AudioIO::getTrackNameShort(inputChannel.externalInputType, idx, true);
+				String name = "External "+AudioIO::getTrackNameShort(inputChannel.externalInputType, idx, stagebuffer_point::INPUT);
 				trackImpl->inputChannel = ChannelAudioInput(idx, inputChannel.inputChannelOffset, name, inputChannel.externalInputType);
 			} else if (inputChannel.getType() == channel_input_type::INPUT_AUDIOSTAGE) {
 				auto* stage = host->getAudioStage(inputChannel.stage.stageRef);
@@ -35,7 +35,7 @@ namespace DAW {
 					trackImpl->inputChannel = ChannelNone();
 					numRemoved++;
 				} else {
-					trackImpl->inputChannel = DAW::ChannelStage(stage, false);
+					trackImpl->inputChannel = DAW::ChannelStage(stage, stagebuffer_point::OUTPUT_POST);
 				}
 			} else {
 				dbgassert(inputChannel.stage.stageRef.stageId == TRACKID_INVALID_I32);
@@ -44,7 +44,7 @@ namespace DAW {
 			if (outputChannel.getType() == channel_input_type::INPUT_EXTERNAL_AUDIO) {
 				int32_t idx = outputChannel.externalInputIdx;
 				auto type = AudioIO::getTrackTypeNumChannels(trackImpl->outputPost.channels);
-				String name = "External "+AudioIO::getTrackNameShort(outputChannel.externalInputType, idx, false);
+				String name = "External "+AudioIO::getTrackNameShort(outputChannel.externalInputType, idx, stagebuffer_point::OUTPUT_POST);
 				trackImpl->outputChannel = ChannelAudioInput(idx, outputChannel.inputChannelOffset, name, outputChannel.externalInputType);
 			} else if (outputChannel.getType() == channel_input_type::INPUT_AUDIOSTAGE) {
                 auto* stage = host->getAudioStage(outputChannel.stage.stageRef);
@@ -53,7 +53,7 @@ namespace DAW {
 					trackImpl->outputChannel = ChannelNone();
 					numRemoved++;
 				} else {
-					trackImpl->outputChannel = DAW::ChannelStage(stage, true);
+					trackImpl->outputChannel = DAW::ChannelStage(stage, stagebuffer_point::INPUT);
 				}
 			} else {
 				dbgassert(outputChannel.stage.stageRef.stageId == TRACKID_INVALID_I32);
@@ -93,6 +93,13 @@ namespace DAW {
 		std::vector<track_node_t*> resolved;
 		std::vector<track_node_t*> unresolved;
 	};
+	/**
+	 * Detect loops in graph
+	 *
+	 * @param ctxt
+	 * @param node
+	 * @return
+	 */
 	bool dep_resolve(dependency_graph_flattened_t& ctxt, track_node_t* node) {
 		ctxt.unresolved.push_back(node);
 		for (auto child : node->children) {
@@ -119,7 +126,10 @@ namespace DAW {
 		track_node_t root;
 		root.children.insert(root.children.begin(), dependencyGraph->roots.begin(), dependencyGraph->roots.end());
 		dependency_graph_flattened_t graphFlattened;
-		dep_resolve(graphFlattened, &root);
+		if (!dep_resolve(graphFlattened, &root)) {
+			log_printf("Failed flattening track graph\n", 0);
+			return false;
+		}
 
 		track_vector tracksVisited;
 		std::shared_ptr<processing_graph_t> shrdPtrProcGraph = std::make_unique<processing_graph_t>();
@@ -351,7 +361,7 @@ namespace DAW {
 					trackDstCfg.dependencies.push_back(trackImpl->stageId);
 					// cannot set trackDstCfg.inputLatency here because map[trackImpl->stageId].inputLatency may not have been written yet
 //					trackDstCfg.inputLatency = std::max(trackDstCfg.inputLatency, map[trackImpl->stageId].inputLatency+map[trackImpl->stageId].internalLatency);
-					trackDstCfg.pushs.push_back(DAW::track_source_t{trackEdgeId++, ChannelStage(trackImpl, false), 1.0f, 0, trackImpl->flags});
+					trackDstCfg.pushs.push_back(DAW::track_source_t{trackEdgeId++, ChannelStage(trackImpl, stagebuffer_point::OUTPUT_POST), 1.0f, 0, trackImpl->flags});
 					trackDstCfg.children.push_back(&trackCfg);
 					trackCfg.parents.push_back(&trackDstCfg);
 				}
@@ -376,7 +386,7 @@ namespace DAW {
 					}
 					track_node_t& trackReturnCfg =  getNode(map, audioReturn->stageId);
 					trackReturnCfg.dependencies.push_back(trackImpl->stageId);
-					trackReturnCfg.pushs.push_back(DAW::track_source_t{trackEdgeId++, ChannelStage(trackImpl, false), fGainReturn, 0, trackImpl->flags});
+					trackReturnCfg.pushs.push_back(DAW::track_source_t{trackEdgeId++, ChannelStage(trackImpl, stagebuffer_point::OUTPUT_POST), fGainReturn, 0, trackImpl->flags});
 					trackReturnCfg.children.push_back(&trackCfg);
 					trackCfg.parents.push_back(&trackReturnCfg);
 
