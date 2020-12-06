@@ -83,7 +83,9 @@ gui_ctr_debug::gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType) :
 			ctrType = CTR_TYPE_DEBUG_2;
 			break;
 	}
+#ifdef _WIN32
 	msgCounterEnabled=true;
+#endif
 	setBackgroundRendered(true);
 	setCanMouseHit(true);
 	std::vector<guibase*>& debugGuis = impl->debugGuis;
