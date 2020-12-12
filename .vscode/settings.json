@@ -81,7 +81,9 @@
         "typeinfo": "cpp",
         "unordered_map": "cpp",
         "unordered_set": "cpp",
-        "utility": "cpp"
+        "utility": "cpp",
+        "thread": "cpp",
+        "cinttypes": "cpp"
     },
     "cmake.configureOnOpen": false,
     "C_Cpp.enhancedColorization": "Enabled"
