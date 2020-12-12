@@ -86,6 +86,8 @@
         "utility": "cpp",
         "__functional_base_03": "cpp",
         "filesystem": "cpp"
+        "thread": "cpp",
+        "cinttypes": "cpp"
     },
     "cmake.configureOnOpen": false,
     "C_Cpp.enhancedColorization": "Enabled"

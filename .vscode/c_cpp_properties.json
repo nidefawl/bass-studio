@@ -46,7 +46,17 @@
         {
             "name": "Linux",
             "includePath": [
-                "${workspaceFolder}/**"
+                "${workspaceFolder}/**",
+                "~/dev/build-deps2/install/lib-clang-debug-static/duktape/include",
+                "~/dev/build-deps2/install/lib-clang-debug-static/glfw/include",
+                "~/dev/build-deps2/install/lib-clang-debug-static/SQLiteCpp/include",
+                "~/dev/build-deps2/install/lib-clang-debug-static/soxr/include",
+                "~/dev/daw-deps/glad/include",
+                "~/dev/daw-deps/dukglue/include",
+                "~/dev/daw-deps/glad/src",
+                "~/dev/daw-deps/glm",
+                "~/dev/daw-deps/portaudio/include",
+                "~/dev/daw-deps/cereal"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/clang-9",
