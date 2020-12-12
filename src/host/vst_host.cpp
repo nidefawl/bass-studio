@@ -306,7 +306,7 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
 	case audioMasterGetTime:
 		//{
 		//	int32_t playThreadId = host->getPlayThreadId();
-		//	int32_t localThreadId = std::this_thread::get_id().get();
+		//	int32_t localThreadId = get_thread_id();
 		//	if (localThreadId == playThreadId) {
 		//		return (VstIntPtr)plugin->getLocalTimeInfoPtr();
 		//	}
@@ -1520,7 +1520,7 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const DAW::processing_
 		audiostageid_i32 stageId;
 		uint32_t threadIdx;
 	};
-	impl->playThreadId = std::this_thread::get_id().get();
+	impl->playThreadId = get_thread_id();
 	const bool useThreading = this->multithreadedProcessing && impl->threadsRunningCount > 0 && impl->threadCount > 1;
 	if (!useThreading) {
 		for (auto itAudioStage = processingGraph->nodesFlatOrdered.begin(); itAudioStage != processingGraph->nodesFlatOrdered.end(); itAudioStage++) {

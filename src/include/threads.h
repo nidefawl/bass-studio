@@ -15,4 +15,5 @@
 #include "str_util.h"
 
 void setCurrentThreadName(String s); // util/debug.cpp
-String getCurrentThreadName(); // util/debug.cpp
+String getCurrentThreadName(); // util/debug.cpp#include <mutex>
+int32_t get_thread_id() noexcept;

@@ -97,7 +97,7 @@ public:
 			this->run();
 		});
 	#ifdef _WIN32
-			this->threadid = static_cast<int32_t>(t.get_id().get());
+			this->threadid = get_thread_id();
 //			HANDLE h = reinterpret_cast<HANDLE*>(t.native_handle());
 	#endif
 	}
