@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <thread>
 #include <unordered_map>
+#include <mutex>
 #include "str_util.h"
 
 #define  READALL_OK          0  /* Success */
