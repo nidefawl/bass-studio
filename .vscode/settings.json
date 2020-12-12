@@ -1,6 +1,8 @@
 {
     "workbench.colorTheme": "Monokai Dimmed",
     "files.associations": {
+        "*.fsh": "glsl",
+        "*.vsh": "glsl",
         "vector": "cpp",
         "exception": "cpp",
         "__functional_03": "cpp",
@@ -81,7 +83,9 @@
         "typeinfo": "cpp",
         "unordered_map": "cpp",
         "unordered_set": "cpp",
-        "utility": "cpp"
+        "utility": "cpp",
+        "__functional_base_03": "cpp",
+        "filesystem": "cpp"
     },
     "cmake.configureOnOpen": false,
     "C_Cpp.enhancedColorization": "Enabled"
