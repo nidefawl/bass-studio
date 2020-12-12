@@ -13,6 +13,7 @@
 #include "modules.h"
 #include "profiling.h"
 #include "saferef.h"
+#include "host/daw_channel.h"
 
 struct AudioBlock;
 struct handles_t;
