@@ -472,6 +472,7 @@ void guitooltip<guiplugin>::layout()  {
 	table.titleCols.clear();
 	table.colSizes.clear();
 	{
+		table.rows.push_back({{String("projectGlobalId"), (int)ptr->effect->projectGlobalId}});
 		table.rows.push_back({{tblstr{"track"}, tblint{(int64_t)ptr->effect->getTrack(), "%12x"}}});
 		table.rows.push_back({{tblstr{"tracklink"}, tblint{(int64_t)ptr->effect->getTrackLink(), "%12x"}}});
 		table.rows.push_back({{tblstr{"bIsSetup"}, tblint{ptr->effect->bIsSetup}}});
@@ -895,6 +896,7 @@ void guitooltip<guivstplugin>::layout()  {
 	table.titleCols.clear();
 	table.colSizes.clear();
 	{
+		table.rows.push_back({{String("projectGlobalId"), (int)ptr->vst->projectGlobalId}});
 		table.rows.push_back({{String("isSynth"), (int)ptr->vst->isSynth}});
 		auto vst = ptr->vst;
 		auto aeffect = vst->handle->aeffect;
