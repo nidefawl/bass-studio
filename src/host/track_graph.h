@@ -6,6 +6,8 @@
 #include <vector>
 
 class track_t;
+class effectbase;
+struct audio_stage_t;
 namespace DAW {
 
 /**
@@ -20,7 +22,11 @@ struct track_source_t {
 	audiostageflags_t flags;
 };
 
+enum class track_node_type_t {
+	TRACK, AUDIOSTAGE, EFFECT
+};
 struct track_node_t {
+	track_node_type_t type = track_node_type_t::TRACK;
 	audiostageid_i32 stageId = TRACKID_INVALID_I32;
 	std::vector<audiostageid_i32> dependencies;
 	std::vector<track_source_t> pulls;
@@ -31,8 +37,8 @@ struct track_node_t {
 	samplerate_t inputLatency = INVALID_SAMPLE_OFFSET_U32;
 
 	track_node_t() = default;
-	track_node_t(audiostageid_i32 _stageId, samplerate_t _internalLatency)
-	: stageId(_stageId), internalLatency(_internalLatency)
+	track_node_t(track_node_type_t _type, audiostageid_i32 _stageId, samplerate_t _internalLatency)
+	: type(_type), stageId(_stageId), internalLatency(_internalLatency)
 	{
 
 	}
@@ -40,6 +46,8 @@ struct track_node_t {
 struct processing_track_node_t : public track_node_t {
 	processing_track_node_t() = default;
 	track_t* trackOptional = nullptr;
+	effectbase* effectOptional = nullptr;
+	audio_stage_t* stage = nullptr;
 };
 
 //using track_node_ptr = std::unique_ptr<track_node_t>;

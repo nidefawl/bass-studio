@@ -146,6 +146,10 @@ public:
 	bool isDeferred() override {
 		return true;
 	}
+	void load(vsthost* host) override;
+	bool isBypass() override {
+		return true ;
+	}
 };
 effect_deferred* loadPluginDeferred(const plugin_snapshot_t& snapshot);
 //std::shared_ptr<effect_deferred> loadPluginDeferred(const plugin_snapshot_t& snapshot);

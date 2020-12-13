@@ -50,7 +50,7 @@ class guiplugin;
 class guictr_test;
 class guictr_tempocontrols;
 class guictr_tracks;
-class guictr_nodes;
+class guictr_nodes_splitview;
 class gui_statusbar;
 class guictr_clipeditor;
 class guictr_clipeditorview;

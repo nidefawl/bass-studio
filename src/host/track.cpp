@@ -252,10 +252,14 @@ void trackdata_midi_t::getNotesInRange(tick_t start, tick_t end, tick_t cutStart
 
 }
 
-audio_stage_ref_t audio_stage_t::toRef() {
+audio_stage_ref_t audio_stage_t::toRef() const {
 	return {this->stageId};
 }
 effectbase* audio_stage_t::getPluginById(int32_t projectGlobalId) const {
+	if (projectGlobalId < 1<<16)
+	{
+		projectGlobalId += 1<<16;
+	}
 	for (effectbase* effect : effects) {
 		 if (effect->projectGlobalId == projectGlobalId) {
 			 return effect;
@@ -428,7 +432,7 @@ VstEvent_t* track_impl_t::reallocEvts(size_t size) {
 	midiEventsBuf->reset();
 	return midiEventsBuf;
 }
-samplerate_t audio_stage_t::getLatency() {
+samplerate_t audio_stage_t::getLatency() const {
 	return latency;
 }
 void audio_stage_t::pluginsChanged() {
@@ -709,13 +713,13 @@ void audio_stage_t::removeAudioStage(audio_stage_t* _child) {
 	_child->parent = nullptr;
 	this->children.erase(it);
 }
-track_t* audio_stage_t::getTrack() {
-	audio_stage_t* stage = this;
+track_t* audio_stage_t::getTrack() const {
+	const audio_stage_t* stage = this;
 	while (stage->parent) {
 		stage = stage->parent;
 	}
 	if (stage->type == 0) {
-		return static_cast<track_impl_t*>(stage)->track;
+		return dynamic_cast<const track_impl_t*>(stage)->track;
 	}
 //	dbgassert(0); // to be expected when deleting effectgroups
 	return nullptr;

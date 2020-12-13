@@ -226,6 +226,11 @@ void effect_deferred::resume() {
 void effect_deferred::sleep() {
 
 }
+void effect_deferred::load(vsthost* host) {
+	effectbase::load(host);
+	this->blockInputs = new AudioBlock(2, host->sampleFormat.blockSize);
+	this->blockOutputs = new AudioBlock(2, host->sampleFormat.blockSize);
+}
 String effect_deferred::getAutomatableName() {
 	return "plugin";
 }

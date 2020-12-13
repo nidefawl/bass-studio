@@ -145,7 +145,8 @@ namespace DAW {
 //			procTrackNode->children = trackNode->children;
 //			procTrackNode->parents = trackNode->parents;
 
-
+			
+			procTrackNode->type = trackNode->type;
 			procTrackNode->pushs = trackNode->pushs;
 			procTrackNode->pulls = trackNode->pulls;
 			procTrackNode->dependencies = trackNode->dependencies;
@@ -297,7 +298,7 @@ namespace DAW {
 		return true;
 	}
 	track_node_ptr makeTrackNode(audiostageid_i32 a, samplerate_t b) {
-		return new track_node_t(a, b);// std::make_unique<track_node_t>
+		return new track_node_t(track_node_type_t::TRACK, a, b);// std::make_unique<track_node_t>
 	}
 	processing_track_node_ptr makeProcTrackNode() {
 		return new processing_track_node_t();// std::make_unique<track_node_t>

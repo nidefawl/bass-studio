@@ -248,7 +248,7 @@ class DawViewContainersCompanion : public DawViewContainers {
 	guictr_noteeditor noteeditor;
 public:
 	guictr_menubar ctr_menu;
-	guictr_nodes ctr_nodes;
+	guictr_nodes_splitview ctr_nodes;
 	guictr_tracks ctr_tracks2;
 	guictr_clipeditor ctr_clipeditor;
 	guictr_base* ctr_dnd_test;
@@ -319,7 +319,7 @@ public:
 	guictr_clipeditorview ctr_clipeditorview;
 	guictr_clipeditor ctr_clipeditor;
 	guictr_tracks ctr_tracks;
-	guictr_nodes ctr_nodes;
+	guictr_nodes_splitview ctr_nodes;
 	std::shared_ptr<guictr_layout> ctr_layoutLeft;
 	std::shared_ptr<guictr_layout> ctr_stack_right;
 	std::vector<std::shared_ptr<Splitter>> splitters;

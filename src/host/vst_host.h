@@ -121,12 +121,13 @@ public:
 	SYNCHRONIZED_RW std::atomic<int32_t> multithreadedProcessing{1};
 	SYNCHRONIZED_RW std::atomic<int32_t> bypassPlaybackProcessing{false};
 	SYNCHRONIZED_RW std::atomic<int32_t> bypassSampleConversion{false};
-	std::atomic<int32_t> pluginId{100};
+	std::atomic<int32_t> pluginId{1<<16};
 	std::atomic<int32_t> audioStageId{100};
 	std::atomic<int32_t> sampleId{(1<<30)}; //TODO: collides with audiocache::nextIdx
 
 	SYNCHRONIZED_RW std::shared_ptr<DAW::track_graph_t> lastTrackGraph;
 	SYNCHRONIZED_RW std::shared_ptr<DAW::processing_graph_t> lastProcessingList;
+	mutable SYNCHRONIZED_RW std::map<audiostageid_i32, std::shared_ptr<DAW::processing_graph_t>> lastProcessingGraphs;
 
 	SYNCHRONIZED_RW hires_timer_t timer; // timer for cpu-time profiling
 	SYNCHRONIZED_RW hires_timer_t timer2;// timer for cpu-time profiling
@@ -238,7 +239,7 @@ public:
 		return false;
 	}
 	vstplugin* getPlugin(AEffect* aeffect);
-	effectbase* getPluginById(int32_t projectGlobalId);
+	effectbase* getPluginById(int32_t projectGlobalId) const;
 	void unloadPlugin(effectbase* plugin);
 	void removePlugin(effectbase* plugin);
 	void unloadTrack(track_t* track);
@@ -272,4 +273,5 @@ public:
 	uint32_t getThreadCount();
 	uint32_t getMaxThreadCount();
 	int32_t getPlayThreadId();
+    int32_t validateIds();
 };

@@ -27,7 +27,7 @@
 
 class gui_graph_entry : public guictr_base {
 	friend class gui_graph;
-	friend class guictr_nodes;
+	friend class guictr_nodes_editor;
 protected:
 	int icon = 0;
 	bool selected = false;
@@ -61,6 +61,7 @@ protected:
 	bool renderHR = false;
 	int32_t selectedIdx = -1;
 public:
+	bool isTrackGraph = false;
 	gui_graph();
 	~gui_graph();
 	void onTick(AppCtrl* appctrl) override;
@@ -105,10 +106,14 @@ public:
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
 	void reset();
 	void refresh();
+	void buttonClicked(guibase* _button) {
+		if (parent) parent->buttonClicked(_button);
+	}
 };
-class guictr_nodes : public guictr_base, te_constants, public gui_scrollcontainer {
-	class guictr_nodes_impl;
-	guictr_nodes_impl * const impl;
+
+class guictr_nodes_editor : public guictr_base, te_constants, public gui_scrollcontainer {
+	class guictr_nodes_editor_impl;
+	guictr_nodes_editor_impl * const impl;
 
 	friend class guitrack_editor;
 public:
@@ -117,8 +122,8 @@ public:
 protected:
 	gui_scrollbar scrollbar;
 public:
-	guictr_nodes(DAW::Cursor& _cursor, project_t& _project, dragdrop_midifile& _dragdropclip);
-	~guictr_nodes();
+	guictr_nodes_editor(DAW::Cursor& _cursor, project_t& _project, dragdrop_midifile& _dragdropclip);
+	~guictr_nodes_editor();
 	void render(NVGcontext* vg);
 	void scrollTo(guibase* g);
 	void layout();
@@ -150,6 +155,9 @@ public:
 	float getScrollOffset() {
 		return this->scrollbar.scrollOffset;
 	}
+	void buttonClicked(guibase* _button) {
+		if (parent) parent->buttonClicked(_button);
+	}
 	void reset();
 	void refresh();
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
@@ -158,4 +166,20 @@ public:
 	guibase* getFocusedContainer() override {
 		return this;
 	}
+};
+
+class guictr_nodes_splitview : public guictr_base {
+public:
+	project_t& project;
+private:
+	guictr_nodes_editor projectView;
+	guictr_nodes_editor trackView;
+public:
+	guictr_nodes_splitview(DAW::Cursor& _cursor, project_t& _project, dragdrop_midifile& _dragdropclip);
+	~guictr_nodes_splitview();
+	void layout() override;
+	void onChildLayoutChanged(guibase* g) override;
+	void reset();
+	void refresh();
+	void buttonClicked(guibase* _button);
 };

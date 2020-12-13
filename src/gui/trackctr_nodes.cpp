@@ -19,7 +19,7 @@
 #include "trackctr_nodes.h"
 #include "guimeter.h"
 
-void guictr_nodes::scrollTo(guibase* g) {
+void guictr_nodes_editor::scrollTo(guibase* g) {
 //	int32_t y = g->pos.y;
 //	ivec2 cs = getSizeContent() - graph.size;
 //	int32_t scrOffsetX = math::max(0.0f, scrollbar.scrollOffset*cs.x);
@@ -159,9 +159,16 @@ public:
 		}
 	};
 	virtual String getText() {
-		track_t* const tr = node->trackOptional;
-		if (tr)
-			return tr->name;
+		switch (node->type) {
+		case DAW::track_node_type_t::TRACK:
+			return StringFormat("%s", StringAsCStr(node->trackOptional->name));
+		case DAW::track_node_type_t::AUDIOSTAGE:
+			return StringFormat("Output Stage %d", static_cast<int32_t>(node->stageId));
+		case DAW::track_node_type_t::EFFECT:
+			return StringFormat("%s", StringAsCStr(node->effectOptional->getName()));
+		default:
+			break;
+		}
 		return StringFormat("Stage id %d", node->stageId);
 	}
 
@@ -196,12 +203,12 @@ public:
 	}
 };
 
-class guictr_nodes::guictr_nodes_impl
+class guictr_nodes_editor::guictr_nodes_editor_impl
 {
-	friend class guictr_nodes;
-	int refreshQueued = true;
+	friend class guictr_nodes_editor;
+	int refreshQueued = 2;
 public:
-	guictr_nodes_impl() {
+	guictr_nodes_editor_impl() {
 
 	}
 };
@@ -429,9 +436,15 @@ public:
 };
 void gui_graph::updateList(bool resetPositions) {
 	std::shared_ptr<DAW::processing_graph_t> lastProcessingList;
-	{
+	if (!isTrackGraph) {  /* project graph */
 		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 		lastProcessingList = vsthost::getInstance()->lastProcessingList;
+	} else {
+		auto track = DawInstance::get()->getSelectedTrack();
+		if (track && track->audio) {
+			ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+			lastProcessingList = vsthost::getInstance()->lastProcessingGraphs[track->audio->stageId];
+		}
 	}
 	ivec2 cs = getSizeContent();
 	cs.x = math::max(400, cs.x);
@@ -456,6 +469,7 @@ void gui_graph::updateList(bool resetPositions) {
 			entry->pos = posGrid;
 			const int32_t hpt = theme->get(GuiConstant::CONST_FIXED_TITLE_HEIGHT);
 
+			auto g = new guinodeinfo_text{node};
 			if (node->trackOptional) {
 				int32_t meterWidth = fontScale;
 				gui_trackmeter<16000,2>* meter = new gui_trackmeter<16000,2>(&node->trackOptional->audio->meter);
@@ -468,12 +482,40 @@ void gui_graph::updateList(bool resetPositions) {
 				entry->add(guimeterInput);
 
 
-				auto g = new guinodeinfo_text{node};
 				g->size = {cs.x-meterWidth*2, cs.y-hpt};
 				g->pos = {guimeterInput->size.x, hpt};
-				entry->add(g);
 			}
+			if (node->effectOptional) {
+				int32_t meterWidth = fontScale;
+				gui_trackmeter<16000,2>* meter = new gui_trackmeter<16000,2>(&node->effectOptional->meter);
+				meter->size = {meterWidth, entry->getSizeContent().y-hpt};
+				meter->pos = {entry->getSizeContent().x-meter->size.x, hpt};
+				entry->add(meter);
+//				gui_trackmeter<16000,2>* guimeterInput = new gui_trackmeter<16000,2>(&node->trackOptional->audio->meterInput);
+//				guimeterInput->size = {meterWidth, entry->getSizeContent().y-hpt};
+//				guimeterInput->pos = {0, hpt};
+//				entry->add(guimeterInput);
 
+				g->size = {cs.x-meterWidth, cs.y-hpt};
+				g->pos = {0, hpt};
+			}
+			if (node->stage) {
+				int32_t meterWidth = fontScale;
+				gui_trackmeter<16000,2>* meter = new gui_trackmeter<16000,2>(&node->stage->meter);
+				meter->size = {meterWidth, entry->getSizeContent().y-hpt};
+				meter->pos = {entry->getSizeContent().x-meter->size.x, hpt};
+				entry->add(meter);
+//				gui_trackmeter<16000,2>* guimeterInput = new gui_trackmeter<16000,2>(&node->trackOptional->audio->meterInput);
+//				guimeterInput->size = {meterWidth, entry->getSizeContent().y-hpt};
+//				guimeterInput->pos = {0, hpt};
+//				entry->add(guimeterInput);
+
+				g->size = {cs.x-meterWidth, cs.y-hpt};
+				g->pos = {0, hpt};
+			}
+			entry->add(g);
+
+			/* copy over positions from old layout */
 			auto it = std::find_if(impl->listNodes.cbegin(), impl->listNodes.cend(), [stageId = node->stageId](gui_graph_n* gn) {
 				return gn->getProcessingNode()->stageId == stageId;
 			});
@@ -525,9 +567,9 @@ void gui_graph::setList(std::vector<gui_graph_entry*> _newList) {
 }
 void gui_graph::onTick(AppCtrl* appctrl) {
 }
-guictr_nodes::guictr_nodes(DAW::Cursor& _cursor, project_t& _project, dragdrop_midifile& _dragdropclip)
+guictr_nodes_editor::guictr_nodes_editor(DAW::Cursor& _cursor, project_t& _project, dragdrop_midifile& _dragdropclip)
 	: guictr_base(),
-	  impl(new guictr_nodes_impl),
+	  impl(new guictr_nodes_editor_impl),
 	project(_project),
 	graph(),
 	scrollbar(1, 0.0f, *this)
@@ -536,13 +578,15 @@ guictr_nodes::guictr_nodes(DAW::Cursor& _cursor, project_t& _project, dragdrop_m
 	setCanMouseHit(true);
 	add(&scrollbar);
 	add(&graph);
+	graph.setBackgroundRendered(false);
+	graph.padding = 0;
 }
-guictr_nodes::~guictr_nodes() {
+guictr_nodes_editor::~guictr_nodes_editor() {
 	remove(&graph);
 	remove(&scrollbar);
 	delete impl;
 }
-void guictr_nodes::render(NVGcontext* vg) {
+void guictr_nodes_editor::render(NVGcontext* vg) {
 	if (isBackgroundRendered()){
 		renderBackground(vg);
 	}
@@ -568,14 +612,14 @@ void guictr_nodes::render(NVGcontext* vg) {
 	nvgRestore(vg);
 
 }
-void guictr_nodes::refresh() {
+void guictr_nodes_editor::refresh() {
 	impl->refreshQueued = 1;
 }
-void guictr_nodes::reset() {
+void guictr_nodes_editor::reset() {
 	graph.reset();
 }
 
-bool guictr_nodes::handleKeyInput(KeyEvent& event) {
+bool guictr_nodes_editor::handleKeyInput(KeyEvent& event) {
 	if (event.type != KeyEventType::K_RELEASE) {
 		if (event.type == KeyEventType::K_PRESS) {
 			KeyCombo kc = KC_REFRESH;
@@ -592,13 +636,13 @@ bool guictr_nodes::handleKeyInput(KeyEvent& event) {
 	}
 	return false;
 }
-void guictr_nodes::onTick(AppCtrl* appctrl) {
+void guictr_nodes_editor::onTick(AppCtrl* appctrl) {
 	if (impl->refreshQueued) {
 		graph.updateList(impl->refreshQueued==2);
 		impl->refreshQueued = 0;
 	}
 }
-bool guictr_nodes::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
+bool guictr_nodes_editor::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 	if (this->contains(mpos)) {
 		if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
 			evt.requestFocus(this);
@@ -619,12 +663,12 @@ bool guictr_nodes::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 	}
 	return false;
 }
-void guictr_nodes::scrollOffsetChanged(int dir, float offset) {
+void guictr_nodes_editor::scrollOffsetChanged(int dir, float offset) {
 	ivec2 cs = getSizeContent() - graph.size;
 	int32_t scrOffset = math::max(0.0f, offset*(cs[dir]));
 
 }
-void guictr_nodes::layout() {
+void guictr_nodes_editor::layout() {
 
 	int scrollW = gui_scrollbar::defaultW;
 	ivec2 cs = getSizeContent();
@@ -634,6 +678,67 @@ void guictr_nodes::layout() {
 	graph.pos = {0, 0};
 	graph.size = cs;
 	graph.determineSize(graph.size);
+	//	double f = scrollbar.toPixels();
+//		contentHeight = graph.size.y;
+//		contentViewSize = cs.y;
+//	scrollbar.scrollTo(f);
+//	scrollOffsetChanged(1, scrollbar.scrollOffset);
+	for (guibase* gui : guis) {
+		gui->layout();
+	}
+}
+
+guictr_nodes_splitview::guictr_nodes_splitview(DAW::Cursor& _cursor, project_t& _project, dragdrop_midifile& _dragdropclip)
+	: project(_project), projectView(_cursor, _project, _dragdropclip), trackView(_cursor, _project, _dragdropclip)
+{
+	trackView.graph.isTrackGraph = true;
+	setCanMouseHit(true);
+	add(&projectView);
+	add(&trackView);
+	 padding = 0;
+	 margin = 0;
+	 setBackgroundRendered(false);
+}
+guictr_nodes_splitview::~guictr_nodes_splitview() {
+	removeGuis();
+}
+
+void guictr_nodes_splitview::onChildLayoutChanged(guibase* g) {
+	layout();
+}
+
+void guictr_nodes_splitview::reset() {
+	projectView.reset();
+	trackView.reset();
+}
+void guictr_nodes_splitview::refresh() {
+	projectView.refresh();
+	trackView.refresh();
+}
+void guictr_nodes_splitview::buttonClicked(guibase* _button) {
+//	if (parent) parent->buttonClicked(_button);
+	if (_button->parent == &projectView.graph) {
+		trackView.refresh();
+	}
+	if (_button->parent == &trackView.graph) {
+
+	}
+}
+
+void guictr_nodes_splitview::layout() {
+
+	int scrollW = gui_scrollbar::defaultW;
+	ivec2 cs = getSizeContent();
+	projectView.pos = ivec2(0);
+	trackView.pos = ivec2(0, cs.y/2);
+	projectView.size = ivec2(cs.x, cs.y/2);
+	trackView.size = ivec2(cs.x, cs.y/2);
+//	scrollbar.pos = ivec2(cs.x-scrollW, 0);
+//	scrollbar.size = ivec2(scrollW, cs.y);
+//	cs.x -= scrollW;
+//	graph.pos = {0, 0};
+//	graph.size = cs;
+//	graph.determineSize(graph.size);
 	//	double f = scrollbar.toPixels();
 //		contentHeight = graph.size.y;
 //		contentViewSize = cs.y;
