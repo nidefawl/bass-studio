@@ -725,7 +725,8 @@ void guiproperties_table<guiproperties_t>::setDebugPropertyHandle(void *vPtr)  {
 	} else {
 		guibase* pGui = static_cast<guibase*>(vPtr);
 		if (ref != pGui) {
-			pGui->id |= (1<<16);
+			/* enable debug background rendering */
+//			pGui->id |= (1<<16);
 			if (pGui) {
 				ptr->safeRef = pGui->makeSafeRef();
 			} else {
