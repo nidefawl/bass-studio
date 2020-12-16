@@ -270,7 +270,7 @@ public:
 #endif
 	}
 	virtual ~appwindow() {
-		dbgassert(std::find(windowTimerHandleList.begin(), windowTimerHandleList.end(), this) == windowTimerHandleList.end());
+		//dbgassert(std::find(windowTimerHandleList.begin(), windowTimerHandleList.end(), this) == windowTimerHandleList.end());
 
 #ifdef _WIN32
 		if (hwnd) {
@@ -1399,6 +1399,7 @@ void appwindow::createBaseWindow(const char* title, int w, int h, GLFWwindow* sh
 	} else {
 		glfw = glfwCreateWindow(w, h, title, NULL, share);
 	}
+	//TODO: glfw can be null here: happened when main window is minimized and DawCtrl::onTick tries to open tooltip after mouse-over timeout
 	if (share) {
 		this->isSharedContextSlave = true;
 	}

@@ -7,6 +7,7 @@
 #include <vector>
 
 class track_t;
+class effectbase;
 namespace DAW {
 //
 ///**
@@ -55,6 +56,8 @@ using effect_processing_graph_t = processing_graph_t;
 
 bool buildEffectRoutingGraph(const vsthost* const host, const project_t* const project, const audio_stage_t* stage, std::shared_ptr<effect_graph_t>& out_graph);
 bool buildEffectProcessingGraph(const vsthost* const host, const project_t* const project, const audio_stage_t* stage, std::shared_ptr<effect_processing_graph_t>& out_procgraph);
+bool resolveEffectDefaultConnection(const vsthost* const host, const project_t* const project, const audio_stage_t* const stage, effectbase* const effect, channel_ref_t& out);
+bool validateEffectRoutings(const vsthost* const host, audio_stage_t* tracksFlat);
 
 //bool removeTrackRoutings(const track_vector& tracksFlat, const int32_t stageId);
 //bool buildTrackRoutingGraph(const vsthost* const host, const project_t* const project, const track_vector& tracksFlat, std::shared_ptr<effect_graph_t>& out_graph);

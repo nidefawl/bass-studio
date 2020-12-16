@@ -31,15 +31,16 @@
 #include "basectrl.h"
 #include "audioblock.h"
 #include "meter.h"
-#include "../host/mainctrl.h"
-#include "../host/vst_host.h"
-#include "../host/plugindatabase.h"
-#include "../threads/playbackthread.h"
+#include "host/mainctrl.h"
+#include "host/vst_host.h"
+#include "host/plugindatabase.h"
+#include "threads/playbackthread.h"
 
 #include "track.h"
 #include "track_impl.h"
 #include "snapshot.h"
-#include "../../file/memoryarchive.h"
+#include "file/memoryarchive.h"
+#include "host/effect_graph.h"
 
 class guimodule_group : public guiplugin {
 public:
@@ -250,16 +251,16 @@ void module_group::resume() {
 void module_group::sleep() {
 }
 void module_group::unload(vsthost* host) {
+	dbgassert(vstHost == host);
 	effectbase::unload(host);
 	onPreUnload();
 	host->releaseAudioStage(audio);
 	this->audio = nullptr;
 }
 void module_group::onPreUnload() {
-	vsthost* host = vsthost::getInstance();
 	std::vector<effectbase*> effects = this->audio->effects; // make a copy before unloading plugins
 	for (effectbase* effect : effects) {
-		host->unloadPlugin(effect);
+		vstHost->unloadPlugin(effect);
 	}
 }
 void module_group::load(vsthost* host) {
@@ -310,7 +311,16 @@ void module_group::process(AudioBlock* in, AudioBlock* out, int32_t samplePos, i
 	dbgassert(getTrackLink()->sampleFormat == this->format && in->samples == format.blockSize
 			&& out->samples == format.blockSize && format.blockSize > 0 && format.sampleRate > 0);
 	audio->input.copyFrom(in);
-	vsthost::getInstance()->processAudio(audio, &audio->input, &audio->output, samplePos, numSamples, state);
+
+	std::shared_ptr<DAW::effect_processing_graph_t> effProcessingGraph;
+	if (!DAW::buildEffectProcessingGraph(vstHost, nullptr, audio, effProcessingGraph)) {
+		log_printf("Failed building effect graph\n", 0);
+	}
+
+	vsthost::getInstance()->processAudio(audio, &audio->input, &audio->output, samplePos, numSamples, state, effProcessingGraph.get());
+
+	//TODO: this code path runs on a workerthread. Store processing-graph add to vsthost::lastProcessingGraphs from playback-thread
+
 	audio->outputPost.clear();
 	/* Calculate group gain level */
 	float fGain;

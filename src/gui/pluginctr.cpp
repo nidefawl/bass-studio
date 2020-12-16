@@ -140,6 +140,7 @@ public:
 	        			host->addDeferredEffect(effect);
 	        			effect->load(host);
 	        			host->insertNewPlugin(stage, effect, -2); // insert at end
+	        			host->postPluginLoaded(stage, effect);
 	        			dbgassert(effect->trackImpl == stage);
 	        			dbgassert(stage->effects.size());
 	        		}
@@ -509,6 +510,7 @@ class action_insert_effect : public action_base {
 				return;
 			}
 			vsthost::getInstance()->insertNewPlugin(stage, effect, dstSlot);
+			vsthost::getInstance()->postPluginLoaded(stage, effect);
 			MainCtrl::getPluginCtr()->relayout();
 			weOwn = false;
 		}
@@ -529,6 +531,7 @@ void guictr_plugins::pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mouse
 		audio_stage_ref_t refdst = stage->toRef();
 		auto* track_action = new action_insert_effect("Insert plugin", effect, refdst, dstSlot);
 		DawInstance::get()->pushHist(track_action);
+		vsthost::getInstance()->postPluginLoaded(stage, effect);
 //	if (res.result == 0 && res.plugin) {
 //		res.plugin->resume();
 //	}
@@ -949,6 +952,7 @@ void action_remove_modules::undo(DawInstance *ctrl) {
 	int32_t slot = 0;
 	for (effectbase *eff : effects) {
 		vsthost::getInstance()->insertNewPlugin(stage, eff, dstSlot+slot);
+		vsthost::getInstance()->postPluginLoaded(stage, eff);
 		dbgassert(eff->getSlot() == dstSlot+slot);
 		slot++;
 	}

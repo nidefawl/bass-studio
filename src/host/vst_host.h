@@ -18,6 +18,7 @@
 #include "saferef.h"
 #include "track.h"
 #include "track_graph.h"
+#include "effect_graph.h"
 #include "daw_channel.h"
 #include "profiling.h"
 
@@ -111,7 +112,7 @@ public:
 	sampleformat_t sampleFormat = {48000, 512, sampleformat_bits_t::NONE};
 	sampleformat_t sampleFormatExternal = {48000, 512, sampleformat_bits_t::NONE};
 	int32_t hostSlot = -1;
-	uint8_t numChannels;
+	uint8_t numChannels = 32u;
 
 	project_globals_t prjGlobals;
 	audioMasterCallback masterCallBackSlot = nullptr;
@@ -127,7 +128,7 @@ public:
 
 	SYNCHRONIZED_RW std::shared_ptr<DAW::track_graph_t> lastTrackGraph;
 	SYNCHRONIZED_RW std::shared_ptr<DAW::processing_graph_t> lastProcessingList;
-	mutable SYNCHRONIZED_RW std::map<audiostageid_i32, std::shared_ptr<DAW::processing_graph_t>> lastProcessingGraphs;
+	SYNCHRONIZED_RW std::map<audiostageid_i32, std::shared_ptr<DAW::processing_graph_t>> lastProcessingGraphs;
 
 	SYNCHRONIZED_RW hires_timer_t timer; // timer for cpu-time profiling
 	SYNCHRONIZED_RW hires_timer_t timer2;// timer for cpu-time profiling
@@ -197,10 +198,11 @@ public:
 
 	void onStartPlayback(project_controller_t* ctrl);
 	void onStopPlayback(project_controller_t* ctrl);
+	void onPluginsChanged(audio_stage_t* stage);
 	int32_t processPlayback(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround);
 	int32_t processBlock(project_controller_t* ctrl, const DAW::processing_graph_t* const processingGraph, AudioBlock* const ptrExternalInputs, AudioBlock* const ptrExternalOutputs, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround);
 	void getBlockThreadStats(std::vector<thread_stats_process_timings_t>&);
-	void processAudio(audio_stage_t* channel, AudioBlock* input, AudioBlock* output, int32_t sample, int32_t samples, playback_state state) const;
+	void processAudio(audio_stage_t* channel, AudioBlock* input, AudioBlock* output, int32_t sample, int32_t samples, playback_state state, const DAW::effect_processing_graph_t* const processingGraph) const;
 	VstTimeInfo* getTimeInfo() {
 		return &this->timeinfo;
 	}
@@ -253,6 +255,7 @@ public:
 	bool movePlugins(audio_stage_t* dstTr, audio_stage_t* trp, int32_t src, int32_t len, int32_t dst);
 	bool moveEffects(audio_stage_t* trp, int32_t src, int32_t dst, int32_t len);
 	bool insertNewPlugin(audio_stage_t* trp, effectbase* plugin, int32_t dst);
+	bool postPluginLoaded(audio_stage_t* trp, effectbase* plugin);
 	bool replacePlugin(audio_stage_t* trp, effectbase* plugin, int32_t dst, effectbase** prevPlugin);
 	void getAllInstances(std::vector<effectbase*>& effects);
 	std::vector<vstplugin*> getVst2Instances() {
@@ -268,7 +271,7 @@ public:
 	}
 	void updateMaximumStageId();
 	void initThreads();
-	int32_t processBlockTrack(process_scratch_buf_t& tmp, track_block_processing_task_t task) const;
+	int32_t processBlockTrack(process_scratch_buf_t& tmp, track_block_processing_task_t& task) const;
 	void setThreadCount(uint32_t threadCount);
 	uint32_t getThreadCount();
 	uint32_t getMaxThreadCount();

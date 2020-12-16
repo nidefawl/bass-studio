@@ -60,7 +60,10 @@ using processing_track_node_ptr = processing_track_node_t*;
 struct track_graph_t {
 	std::vector<track_node_t*> roots; // output nodes (Master, )
 	std::vector<track_node_ptr> nodes;
-	uint64_t maxLatency = 0U;
+    uint64_t maxLatency = 0U;
+    track_graph_t() = default;
+    track_graph_t(const track_graph_t& graph) = delete;
+    track_graph_t& operator=(const track_graph_t& graph) = delete;
 	~track_graph_t() {
 		for (auto ptr : nodes) {
 			delete ptr;
@@ -73,11 +76,12 @@ struct processing_graph_t {
 	std::vector<processing_track_node_t*> roots;
 	std::vector<processing_track_node_ptr> nodes;
 	std::shared_ptr<track_graph_t> trackGraph;
-	~processing_graph_t() {
-		for (auto ptr : nodes) {
-			delete ptr;
-		}
-	}
+    int32_t nInvocation = 0;
+	//TODO: copies of this object are not allowed to free nodes
+	~processing_graph_t();
+    processing_graph_t() = default;
+    processing_graph_t(const processing_graph_t& graph) = delete;
+    processing_graph_t& operator=(const processing_graph_t& graph) = delete;
 };
 
 

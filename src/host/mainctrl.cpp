@@ -63,6 +63,8 @@
 #include "track_impl.h"
 #include "audiocache.h"
 #include "seq_time.h"
+#include "track_graph.h"
+#include "effect_graph.h"
 
 #include "../gui/guiplugin.h"
 #include "../threads/workerthread.h"
@@ -1027,8 +1029,16 @@ void DawInstance::postInit() {
 	if (!loadProject.empty()) {
 		loadFile(loadProject, FLAG_DEFER_LOAD);
 	}
+	vsthost::getInstance()->initThreads();
+	this->playThread.setTls(daw_tls::getTls());
+	this->playThread.startThread(this);
+	this->workerThread.setTls(daw_tls::getTls());
+	this->workerThread.startThread();
 
 	setAudioThreadState(playback_state::status_stop);
+	this->workerThread.call([]() {
+		my_printf("WorkerThreadCallTest\n", 0);
+	})->wait();
 }
 
 void DawInstance::updateClipViews(clip_t* notifyClip, clip_cursor_t cursor) {
@@ -1104,14 +1114,6 @@ void DawInstance::startDaw() {
 	dbgassert(initState == 1);
 	initState++;
 	plugindb.openDatabase();
-	vsthost::getInstance()->initThreads();
-	this->playThread.setTls(daw_tls::getTls());
-	this->playThread.startThread(this);
-	this->workerThread.setTls(daw_tls::getTls());
-	this->workerThread.startThread();
-	this->workerThread.call([]() {
-		my_printf("WorkerThreadCallTest\n", 0);
-	})->wait();
 }
 void DawInstance::initDaw(int argc, char* argv[]) {
 	dbgassert(initState == 0);
@@ -1447,6 +1449,10 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
 
 	/** remove routings to missing track **/
 	DAW::validateTrackRoutings(host, project.getTracksFlatVec());
+	/** create all gui instances **/
+	for (track_t* tr : project.trackList) {
+		DAW::validateEffectRoutings(host, tr->audio);
+	}
 
 	/** inform host about track layout changes so it resets and updates internal structures **/
 	host->onTrackLayoutChange();

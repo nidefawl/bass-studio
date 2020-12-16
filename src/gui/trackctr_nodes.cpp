@@ -163,7 +163,9 @@ public:
 		case DAW::track_node_type_t::TRACK:
 			return StringFormat("%s", StringAsCStr(node->trackOptional->name));
 		case DAW::track_node_type_t::AUDIOSTAGE:
-			return StringFormat("Output Stage %d", static_cast<int32_t>(node->stageId));
+			if (node->stageId == TRACKID_DEFAULT_I32)
+				return StringFormat("Output Stage %d", static_cast<int32_t>(node->stageId));
+			return StringFormat("Input Stage %d", static_cast<int32_t>(node->stageId));
 		case DAW::track_node_type_t::EFFECT:
 			return StringFormat("%s", StringAsCStr(node->effectOptional->getName()));
 		default:
@@ -501,7 +503,7 @@ void gui_graph::updateList(bool resetPositions) {
 			}
 			if (node->stage) {
 				int32_t meterWidth = fontScale;
-				gui_trackmeter<16000,2>* meter = new gui_trackmeter<16000,2>(&node->stage->meter);
+				gui_trackmeter<16000,2>* meter = new gui_trackmeter<16000,2>(node->stageId == TRACKID_DEFAULT_I32 ? &node->stage->meter : &node->stage->meterInput);
 				meter->size = {meterWidth, entry->getSizeContent().y-hpt};
 				meter->pos = {entry->getSizeContent().x-meter->size.x, hpt};
 				entry->add(meter);

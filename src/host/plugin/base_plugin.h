@@ -33,14 +33,14 @@ class effectbase : public automatable_t {
 #ifndef NDEBUG
 	//helper indicator in gdb.
 	//gdb cannot display std::string when built without clib-debug flag (SLOW)
-	const char* szName = NULL;
+	const char* szName = nullptr;
 #endif
 	int nLoadCalls = 0;
 public:
 	rmsmeterimpl<16000> meter;
 	sampleformat_t format;
-	AudioBlock* blockInputs = NULL; // guaranteed to have at least 2 channels
-	AudioBlock* blockOutputs = NULL; // guaranteed to have at least 2 channels
+	AudioBlock* blockInputs = nullptr; // guaranteed to have at least 2 channels
+	AudioBlock* blockOutputs = nullptr; // guaranteed to have at least 2 channels
 	int32_t pluginType = 0;
 	int32_t projectGlobalId;
 	bool bIsEnabled = false;
@@ -55,7 +55,9 @@ public:
 	stats_processing_timings_t procStats;
 	int midiEventsDispatched = 0;
 	std::vector<DAW::channel_ref_t> inputChannels;
-
+protected:
+	vsthost* vstHost = nullptr;
+public:
 	effectbase();
 	effectbase(String _sName, int32_t _pluginType, int32_t _projectGlobalId);
 	virtual ~effectbase();
@@ -80,7 +82,7 @@ public:
 	virtual bool close() = 0;
 	virtual void resume() = 0;
 	virtual void sleep() = 0;
-	virtual void unload(vsthost* host) { dbgassert(nLoadCalls==1); nLoadCalls--; };
+	virtual void unload(vsthost* host);
 	virtual void load(vsthost* host);
 	virtual int32_t getDelay() = 0;
 	virtual String getInfo(std::vector<String>& list) = 0;
@@ -140,8 +142,9 @@ public:
 	void setParamValue(int32_t idx, float val, int flags) override;
 	automationlane_snapshot_t toRef() override;
 	static std::shared_ptr<effect_deferred> fromEffect(effectbase* eff);
-	String getDfrdPluginName();
-	plugin_snapshot_t getSnapshot() const;
+    String getDfrdPluginName();
+    const plugin_snapshot_t& getSnapshot() const;
+	//plugin_snapshot_t getSnapshot() const;
 	void onPreUnload() override;
 	bool isDeferred() override {
 		return true;

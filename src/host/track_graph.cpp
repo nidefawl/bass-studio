@@ -12,6 +12,7 @@
 #include "track_impl.h"
 #include "track_graph.h"
 #include "daw_channel.h"
+#include "host/mainctrl.h"
 #include <vector>
 #include <deque>
 
@@ -132,7 +133,11 @@ namespace DAW {
 		}
 
 		track_vector tracksVisited;
-		std::shared_ptr<processing_graph_t> shrdPtrProcGraph = std::make_unique<processing_graph_t>();
+		std::shared_ptr<processing_graph_t> shrdPtrProcGraph = std::make_shared<processing_graph_t>();
+//		std::shared_ptr<processing_graph_t> shrdPtrProcGraph(new processing_graph_t(), [](processing_graph_t *gr) {
+//			log_printf("free proc_graph %08X\n", reinterpret_cast<uint64_t>(gr));
+//		});
+
 		shrdPtrProcGraph->nodes.reserve(dependencyGraph->nodes.size());
 		shrdPtrProcGraph->trackGraph = dependencyGraph;
 		for (track_node_ptr trackNode : dependencyGraph->nodes) {
@@ -397,6 +402,9 @@ namespace DAW {
 
 		}
 		auto trackGraph = std::make_shared<track_graph_t>();
+//		std::shared_ptr<track_graph_t> trackGraph(new track_graph_t(), [](track_graph_t *gr) {
+//			log_printf("free track_graph %08X\n", reinterpret_cast<uint64_t>(gr));
+//		});
 		trackGraph->nodes.reserve(map.size());
 		for (std::map<audiostageid_i32, track_node_ptr>::iterator mapIt = map.begin(); mapIt != map.end(); ++mapIt) {
 			track_node_ptr node = mapIt->second;
@@ -415,5 +423,20 @@ namespace DAW {
 		out_graph = trackGraph;
 
 		return true;
+	}
+	processing_graph_t::~processing_graph_t() {
+		nInvocation++;
+        int nInvoke = nInvocation;
+        bool secondInvoke = nInvoke > 1;
+        if (get_thread_id() != MainCtrl::getPlayThread()->getThreadId()) {
+            log_printf("not playthread %d != %d\n", get_thread_id(), MainCtrl::getPlayThread()->getThreadId());
+            log_printf("destruct %08X %d %d\n", reinterpret_cast<uint64_t>(this), nInvoke, secondInvoke);
+        }
+        if (secondInvoke) {
+            log_printf("destruct %08X %d %d\n", reinterpret_cast<uint64_t>(this), nInvoke, secondInvoke);
+        }
+		for (auto ptr : nodes) {
+			delete ptr;
+		}
 	}
 }

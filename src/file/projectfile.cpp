@@ -8,6 +8,7 @@
 #include <cereal/cereal.hpp>
 #include <cereal/archives/json.hpp>
 #include <cereal/types/vector.hpp>
+#include <cereal/types/map.hpp>
 #include <cereal/types/polymorphic.hpp>
 #include <cereal/cereal_optional_nvp.hpp>
 
@@ -147,6 +148,7 @@ void serialize(Archive & archive, io_configuration_snapshot_t & m)
 {
 	archive(make_nvp("channelOffset", m.channelOffset),
 			make_nvp("externalInputId", m.externalInputId),
+			make_nvp("externalInputId", m.externalInputId),
 			make_nvp("externalInputType", m.externalInputType),
 			make_nvp("inputType", m.inputType),
 			make_nvp("stageEndPointType", m.stageEndPointType),
@@ -158,12 +160,20 @@ void serialize(Archive & archive, track_io_configuration_snapshot_t & m)
 	archive(make_nvp("input", m.input), make_nvp("output", m.output));
 }
 template<class Archive>
+void serialize(Archive & archive, track_effect_routing_snapshot_t & m)
+{
+//	archive(make_nvp("inputRoutingOutputStage", m.inputRoutingOutputStage));
+	archive(make_nvp("inputRoutingOutputStage", m.inputRoutingOutputStage), make_nvp("inputRoutingEffects", m.inputRoutingEffects));
+
+}
+template<class Archive>
 void serialize(Archive & archive, track_impl_snapshot_t & m)
 {
 	archive(make_nvp("plugins", m.pluginSnapshots));
 	make_optional_nvp(archive, "track", m.trackParams);
 	make_optional_nvp(archive, "arp", m.trackArp);
 	make_optional_nvp(archive, "io", m.trackIO);
+	make_optional_nvp(archive, "routing", m.effectRouting);
 }
 template<class Archive>
 void serialize(Archive & archive, tracksettings_t & m)

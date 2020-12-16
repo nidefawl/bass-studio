@@ -16,15 +16,20 @@ struct track_impl_t;
 
 struct io_configuration_snapshot_t {
 	int32_t stageId = -1;
-	int32_t stageEndPointType;
-	int32_t externalInputType;
-	int32_t externalInputId;
-	int32_t channelOffset;
-	int32_t inputType;
+    int32_t stageEndPointType = 0;
+    int32_t externalInputType = 0;
+    int32_t externalInputId = 0;
+    int32_t channelOffset = 0;
+    int32_t inputType = 0;
 };
 struct track_io_configuration_snapshot_t {
 	io_configuration_snapshot_t input;
 	io_configuration_snapshot_t output;
+};
+struct track_effect_routing_snapshot_t {
+	int32_t routingState = 0;
+	std::vector<io_configuration_snapshot_t> inputRoutingOutputStage;
+	std::map<int32_t, std::vector<io_configuration_snapshot_t>> inputRoutingEffects;
 };
 struct track_params_snapshot_t {
 	std::vector<param_snapshot_t> params;
@@ -41,6 +46,7 @@ struct track_impl_snapshot_t {
 	track_io_configuration_snapshot_t trackIO;
 	track_params_snapshot_t trackParams;
 	std::vector<plugin_snapshot_t> pluginSnapshots;
+	track_effect_routing_snapshot_t effectRouting;
 	track_impl_snapshot_t() = default;
 	track_impl_snapshot_t(track_impl_t* p, bool storePluginChunks);
 };

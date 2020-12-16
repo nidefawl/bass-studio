@@ -70,9 +70,17 @@ void effectbase::setSampleFormat(sampleformat_t sampleFormat) {
 	format = sampleFormat;
 }
 void effectbase::load(vsthost* host) {
+	vstHost = host;
 	setSampleFormat(host->sampleFormat);
-	dbgassert(nLoadCalls==0); nLoadCalls++;
-};
+	dbgassert(nLoadCalls==0);
+	nLoadCalls++;
+}
+void effectbase::unload(vsthost* host) {
+	dbgassert(host == vstHost);
+	vstHost = nullptr;
+	dbgassert(nLoadCalls==1);
+	nLoadCalls--;
+}
 
 void effectbase::postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) {
 	meter.update(out, 1.0f);
@@ -156,7 +164,7 @@ String effect_deferred::getDfrdPluginName() {
 void effect_deferred::onPreUnload() {
 	my_printf("onPreUnload effect_deferred %08X %s\n", (int64_t)mImpl, StringAsCStr(mImpl->snapshot.name));
 }
-plugin_snapshot_t effect_deferred::getSnapshot() const {
+const plugin_snapshot_t& effect_deferred::getSnapshot() const {
 	return mImpl->snapshot;
 }
 
@@ -212,7 +220,7 @@ void effect_deferred::makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks
 	ps = this->mImpl->snapshot;
 }
 void effect_deferred::process(AudioBlock* in, AudioBlock* out, int32_t samplePos, int32_t numSamples, playback_state state) {
-	dbgassert(vsthost::getInstance()->sampleFormat == this->format && in->samples == format.blockSize && out->samples == format.blockSize && format.blockSize > 0 && format.sampleRate > 0);
+	dbgassert(vstHost->sampleFormat == this->format && in->samples == format.blockSize && out->samples == format.blockSize && format.blockSize > 0 && format.sampleRate > 0);
 }
 bool effect_deferred::show() {
 	return false;

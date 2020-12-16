@@ -7,10 +7,13 @@ class project_t;
 struct track_impl_t;
 struct AudioBlock;
 struct track_audio_src;
+struct audio_stage_t;
+struct io_configuration_snapshot_t;
 
 //using trackid_i32 = int32_t;
 enum class audiostageid_i32 : int32_t {};
 #define TRACKID_INVALID_I32 (audiostageid_i32)-1
+#define TRACKID_DEFAULT_I32 (audiostageid_i32)0
 struct audio_stage_ref_t {
 	audiostageid_i32 stageId = TRACKID_INVALID_I32;
 };
@@ -55,6 +58,5 @@ enum bus_type {
 };
 bool resolveDefaultConnection(const vsthost* const host, const project_t* const project, track_impl_t* const trImpl, const bool isInput, channel_ref_t& out);
 bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, const channel_ref_t& inputChannel, const AudioBlock* const ptrExternalInputs, track_audio_src& out);
-
 
 }
