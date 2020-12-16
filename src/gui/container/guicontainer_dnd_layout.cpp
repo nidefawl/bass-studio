@@ -604,14 +604,14 @@ void guictr_layout::render(NVGcontext* vg)
 		return;
 	}
 	if (this->id&(1<<16)) {
-		for (auto h : handles) {
+		for (auto& h : handles) {
 			int32_t stateFlags = getStateFlags();
 			nvgBeginPath(vg);
 			nvgRect(vg, h->pos.x, h->pos.y, h->size.x, h->size.y);
 			nvgFillColor(vg, rgbaToNvg(0x7f00ff00));
 			nvgFill(vg);
 		}
-		for (auto e : entries) {
+		for (auto& e : entries) {
 			auto h = e->getGui();
 			if (!h) continue;
 			int32_t stateFlags = getStateFlags();
