@@ -60,10 +60,17 @@ protected:
 	ivec4 rowMargin = {0, 0, 0, 0};
 	bool renderHR = false;
 	int32_t selectedIdx = -1;
+	float scale = 1.0f;
+	vec2 offset{0};
+	vec2 prevOffset{0};
 public:
 	bool isTrackGraph = false;
 	gui_graph();
 	~gui_graph();
+	virtual ivec2 toParentSpace(ivec2 localCoord);
+	virtual ivec2 toContainerSpace(ivec2 in);
+	vec2 toContainerSpace2f(vec2 in);
+	virtual ivec2 toScreenSpace(ivec2 in) const;
 	void onTick(AppCtrl* appctrl) override;
 	int32_t getSelectedIdx() {
 		return selectedIdx;
@@ -109,6 +116,11 @@ public:
 	void buttonClicked(guibase* _button) {
 		if (parent) parent->buttonClicked(_button);
 	}
+	bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) override;
+
+	void handleDraggedBegin(MouseEvent& evt) override;
+	void handleDraggedMove(MouseEvent& evt) override;
+	void handleDraggedRelease(MouseEvent& evt) override;
 };
 
 class guictr_nodes_editor : public guictr_base, te_constants, public gui_scrollcontainer {
@@ -146,9 +158,6 @@ public:
 		return graph.size;
 	}
 	void scrollOffsetChanged(int dir, float offset);
-	virtual bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
-		return scrollbar.handleMouseScroll(evt, xoffset, yoffset);
-	}
 	void setScrollOffset(float offset) {
 		this->scrollbar.setScrollOffset(offset);
 	}
@@ -165,6 +174,9 @@ public:
 	void onTick(AppCtrl* appctrl) override;
 	guibase* getFocusedContainer() override {
 		return this;
+	}
+	bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) override {
+		return false;
 	}
 };
 
@@ -183,3 +195,4 @@ public:
 	void refresh();
 	void buttonClicked(guibase* _button);
 };
+

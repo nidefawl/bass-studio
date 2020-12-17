@@ -249,6 +249,7 @@ public:
 	}
 };
 gui_graph::gui_graph() : guictr_base(), impl(new gui_graph::guictr_graph_impl) {
+	setCanMouseHit(true);
 	setBackgroundRendered(true);
 }
 gui_graph::~gui_graph() {
@@ -267,6 +268,7 @@ void gui_graph::reset() {
 	impl->procList = nullptr;
 	impl->updateTick = 2220;
 }
+ivec2 toControlsObjectSpace(ivec2& pos, guibase* gui);
 void gui_graph::render(NVGcontext* vg) {
 	if (isBackgroundRendered()) {
 		renderBackground(vg);
@@ -274,6 +276,15 @@ void gui_graph::render(NVGcontext* vg) {
 	if (!setScissorTransform(vg)) {
 		return;
 	}
+	ivec2 posIn = ivec2(parentCtrl->m_mousePos);
+	ivec2 mouseLocal = toControlsObjectSpace(posIn, this);
+	nvgSave(vg);
+	nvgTranslate(vg, offset.x, offset.y);
+	nvgScale(vg, scale, scale);
+	nvgBeginPath(vg);
+	nvgCircleFast(vg, mouseLocal.x, mouseLocal.y, 5.0f);
+	nvgFillColor(vg, nvgRGBAf(1, 0, 1, 1));
+	nvgFill(vg);
 	const int stepLineSegments = 32;
 	const int stepStart = 1;
 	const vec4 colEdgeSignal = {0.1f, 0.6f, 0.1f, 1.0f};
@@ -343,6 +354,7 @@ void gui_graph::render(NVGcontext* vg) {
 
 
 	}
+	nvgRestore(vg);
 }
 bool gui_graph::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 	if (this->contains(mpos)) {
@@ -604,7 +616,6 @@ void guictr_nodes_editor::render(NVGcontext* vg) {
 
 
 
-
 	nvgSave(vg);
 	scrollbar.render(vg);
 	nvgRestore(vg);
@@ -665,9 +676,42 @@ bool guictr_nodes_editor::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 	}
 	return false;
 }
+void gui_graph::handleDraggedBegin(MouseEvent& evt) {
+	prevOffset = offset;
+}
+void gui_graph::handleDraggedMove(MouseEvent& evt) {
+	offset = prevOffset + vec2(evt.mousepos-evt.dragStart);
+
+}
+void gui_graph::handleDraggedRelease(MouseEvent& evt) {
+	prevOffset = offset;
+}
+bool gui_graph::handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
+	if (yoffset) {
+		float newScale = scale;
+		newScale = newScale * (1.0f+(yoffset)/10.0f);
+		if (newScale < 1/128.0f)
+			newScale = 1/128.0f;
+		if (newScale > 128.0f)
+			newScale = 128.0f;
+
+		ivec2 mpos = evt.mousepos;
+		ivec2 relpos = toControlsObjectSpace(mpos, parent) - getPosContent();
+
+		vec2 mousePosCtrSpace = toContainerSpace2f(relpos);
+		vec2 offsetDelta = vec2(mousePosCtrSpace)*(newScale-scale);
+		scale = newScale;
+		/* alternatively offsetDelta can be calculated this way */
+//		ivec2 mousePosCtrSpaceAfter = toContainerSpace2f(relpos);
+//		vec2 offsetDelta = (mousePosCtrSpaceAfter-mousePosCtrSpace)*newScale;
+		offset -= offsetDelta;
+
+	}
+	return true;
+}
 void guictr_nodes_editor::scrollOffsetChanged(int dir, float offset) {
-	ivec2 cs = getSizeContent() - graph.size;
-	int32_t scrOffset = math::max(0.0f, offset*(cs[dir]));
+//	ivec2 cs = getSizeContent() - graph.size;
+//	int32_t scrOffset = math::max(0.0f, offset*(cs[dir]));
 
 }
 void guictr_nodes_editor::layout() {
@@ -749,4 +793,23 @@ void guictr_nodes_splitview::layout() {
 	for (guibase* gui : guis) {
 		gui->layout();
 	}
+}
+
+ivec2 gui_graph::toScreenSpace(ivec2 in) const {
+	in = ivec2(vec2(getPosContent() + in) * scale + offset);
+	if (this->parent != NULL) {
+		in = this->parent->toScreenSpace(in);
+	}
+	return in;
+}
+
+ivec2 gui_graph::toContainerSpace(ivec2 in) {
+	return ivec2((vec2(in - getPosContent()) - offset) * (1.0f / scale));
+}
+vec2 gui_graph::toContainerSpace2f(vec2 in) {
+	return vec2((in - vec2(getPosContent()) - offset) * (1.0f / scale));
+}
+
+ivec2 gui_graph::toParentSpace(ivec2 localCoord) {
+	return ivec2(vec2(getPosContent() + localCoord) * scale + offset);
 }
