@@ -37,6 +37,7 @@ class effectbase : public automatable_t {
 #endif
 	int nLoadCalls = 0;
 public:
+	rmsmeterimpl<16000> meterIn;
 	rmsmeterimpl<16000> meter;
 	sampleformat_t format;
 	AudioBlock* blockInputs = nullptr; // guaranteed to have at least 2 channels
@@ -143,8 +144,8 @@ public:
 	automationlane_snapshot_t toRef() override;
 	static std::shared_ptr<effect_deferred> fromEffect(effectbase* eff);
     String getDfrdPluginName();
-    const plugin_snapshot_t& getSnapshot() const;
-	//plugin_snapshot_t getSnapshot() const;
+    const plugin_snapshot_t& getSnapshotConst() const;
+    plugin_snapshot_t& getSnapshot();
 	void onPreUnload() override;
 	bool isDeferred() override {
 		return true;

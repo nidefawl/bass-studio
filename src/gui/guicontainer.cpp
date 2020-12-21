@@ -136,8 +136,9 @@ void guictr_base::renderFrameOutline(NVGcontext* vg) {
 	nvgStrokeColor(vg, theme->getFrameColorOutline());
 	nvgStrokeWidth(vg, 2.0);
 	nvgStroke(vg);
-	ivec2 sizeInset = getSizeContent();
-	nvgIntersectScissor(vg, 0, 0, sizeInset.x, sizeInset.y);
+	//Why is this still here? This should happen in setScissorTransformContainer
+//	ivec2 sizeInset = getSizeContent();
+//	nvgIntersectScissor(vg, 0, 0, sizeInset.x, sizeInset.y);
 }
 
 void guictr_base::renderTitleBar(NVGcontext* vg, const ivec2& sizeContent, String text, GuiConstant::constant_t& constantHeight, float textOffsetX, int flags, bool isHorizontalTitle) {
@@ -180,7 +181,7 @@ void guictr_base::renderTitleBar(NVGcontext* vg, const ivec2& sizeContent, Strin
 	}
 	nvgFillColor(vg, c);
 	nvgFill(vg);
-	if (textMaxWidth+4 <= 0) {
+	if (textMaxWidth+2 <= 0) {
 		return;
 	}
 	if (text[0]) {

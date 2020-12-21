@@ -91,4 +91,14 @@ namespace math {
 		auto vLen = vec2(b - a);
 		return glm::length(vLen);
 	}
+	inline float distancePointLine(const ivec2 pt, const ivec2 a, const ivec2 b) {
+		vec2 v = b - a;
+		float lenSq = glm::dot(v, v);
+		if (lenSq < 1E-4F) {
+			return glm::distance(vec2(pt), vec2(a));
+		}
+		float t = math::max(0.0f, math::min(1.0f, glm::dot(vec2(pt - a), v) / lenSq));
+		const vec2 p = vec2(a) + t * v;
+		return glm::distance(vec2(pt), p);
+	}
 }

@@ -168,7 +168,7 @@ private:
 private:
 	vstpluginloadres loadInternalPlugin(int32_t type, int32_t globalId = 0);
 	int32_t getNextGlobalModuleId(int32_t n);
-	audiostageid_i32 getNextGlobalAudioStageId(int32_t as);
+	audio_stage_id_t getNextGlobalAudioStageId(int32_t as);
 	bool unloadAllPlugins();
 	void updateTime(VstTimeInfo& timeinfo, int32_t samplePos, double dTickPos, playback_state state) const;
 	void setBlockSize(uint16_t blockSize);
@@ -261,7 +261,7 @@ public:
 	std::vector<vstplugin*> getVst2Instances() {
 		return pluginInstancesVST2;
 	}
-	void addDeferredEffect(effectbase* plugin);
+	bool addDeferredEffect(effectbase* plugin);
 	void getDeferredEffects(std::vector<effectbase*>& effects) {
 		effects = pluginsDeferred;
 	}

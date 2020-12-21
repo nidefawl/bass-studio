@@ -17,18 +17,6 @@
 #include "track_impl.h"
 #include "renderresources.h"
 
-
-float dist_to_segment(vec2 a, vec2 b, vec2 pt)
-{
-	vec2 v = b - a;
-	float lenSq = glm::dot(v, v);
-	if (lenSq < 1E-4F) {
-		return glm::distance(pt, a);
-	}
-	float t = math::max(0.0f, math::min(1.0f, glm::dot(pt - a, v) / lenSq));
-	const vec2 p = a + t * v;
-	return glm::distance(pt, p);
-}
 float dataToCtr(float x, float ctrHeight) {
 	return (1.0f-x)*ctrHeight;
 }
@@ -73,7 +61,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 			int32_t idxSegEnd = *(it+1);
 			vec2& ptStart = cachedShape[idxSegStart];
 			vec2& ptEnd = cachedShape[idxSegEnd];
-			float dist = dist_to_segment(ptStart, ptEnd, mpos);
+			float dist = math::distancePointLine(ptStart, ptEnd, mpos);
 			minSegLineDist = math::min(dist, minSegLineDist);
 		}
 		if (minSegLineDist < 10) {

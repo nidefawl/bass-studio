@@ -374,6 +374,7 @@ public:
 	guictr_tracks* getTrackContainer(int idx);
 	void updateGrid();
 	void updateVisibleTrackContents();
+	void onPluginsChanged();
 	void layoutTrackEditors();
 	bool onChildOverlayWindowClose(window_main*);
 private:
@@ -453,6 +454,9 @@ public:
 	virtual void updateVisibleTrackContents() {
 
 	}
+	virtual void onPluginsChanged() {
+
+	}
 	virtual void updateGrid() {
 
 	}
@@ -508,6 +512,7 @@ public:
 	void showClipEditor();
 	void updateGrid() override;
 	void updateVisibleTrackContents() override;
+	void onPluginsChanged() override;
 	bool processGlobalKeyevent(KeyEvent& event) override;
 	guitrack_editor& getTrackEditor();
 	void addDebug(String s);
@@ -553,6 +558,7 @@ public:
 		return true;
 	}
 	void updateVisibleTrackContents() override;
+	void onPluginsChanged() override;
 	void updateGrid() override;
 	DAW::Cursor& getCursor() override {
 		return cursor;

@@ -146,9 +146,16 @@ track_impl_snapshot_t::track_impl_snapshot_t(track_impl_t* p, bool storePluginCh
 }
 
 void saveSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, track_layout_snapshot_t& snapshot);
-
+track_id_snapshot_t getTrackIdSnapshot(const audio_stage_id_t& stageId) {
+	return track_id_snapshot_t{
+		static_cast<int32_t>(stageId.stageId),
+		static_cast<int32_t>(stageId.inputStageId),
+		static_cast<int32_t>(stageId.outputStageId),
+		static_cast<int32_t>(stageId.outputPostStageId)
+	};
+}
 track_snapshot_t::track_snapshot_t(const track_t* track, bool storePluginChunks)
-  : tracksettings_t(*track), stageId(track->audio ? static_cast<int32_t>(track->audio->stageId) : 0), localIdx(track->localIdxFlat), plugins(track->audio, storePluginChunks)
+  : tracksettings_t(*track), stageIds(track->audio ? getTrackIdSnapshot(track->audio->stageId) : track_id_snapshot_t{}), localIdx(track->localIdxFlat), plugins(track->audio, storePluginChunks)
 {
 	auto& otherClips = track->getConstMidi().getConstClips();
 	for (auto clip : otherClips) {
@@ -176,12 +183,13 @@ void track_t::loadSnapshot(const track_snapshot_t& snapshot) {
 	auto audio = this->audio;
 	dbgassert(audio);
 	const auto& implSnapshot = snapshot.plugins;
-	//TODO: test if stageId is in use. Caller is responsible for generating new stageId
-	if (snapshot.stageId > 0) {
-		audio->stageId = static_cast<audiostageid_i32>(snapshot.stageId);
-	} else {
-		// corrupt snapshot, keep stage id
+	if (snapshot.stageIds.inputStageId != -1) {
+		audio->stageId.stageId = static_cast<audiostageid_i32>(snapshot.stageIds.stageId);
+		audio->stageId.inputStageId = static_cast<audiostageid_i32>(snapshot.stageIds.inputStageId);
+		audio->stageId.outputStageId = static_cast<audiostageid_i32>(snapshot.stageIds.outputStageId);
+		audio->stageId.outputPostStageId = static_cast<audiostageid_i32>(snapshot.stageIds.outputPostStageId);
 	}
+	//TODO: test if stageId is in use. Caller is responsible for generating new stageId
 
 	audio->mixer.loadSnapshot(implSnapshot.trackParams);
 	audio->arp->loadSnapshot(implSnapshot.trackArp);
@@ -258,7 +266,7 @@ void trackdata_midi_t::getNotesInRange(tick_t start, tick_t end, tick_t cutStart
 }
 
 audio_stage_ref_t audio_stage_t::toRef() const {
-	return {this->stageId};
+	return {this->stageId.stageId};
 }
 effectbase* audio_stage_t::getPluginById(int32_t projectGlobalId) const {
 	if (projectGlobalId < 1<<16)
@@ -446,7 +454,7 @@ void audio_stage_t::pluginsChanged() {
 	}
 	DAW::validateEffectRoutings(this->host, this);
 
-	host->onPluginsChanged(this);
+//	host->onPluginsChanged(this);
 	updateLatency();
 }
 void audio_stage_t::updateLatency() {
@@ -510,16 +518,16 @@ effectbase* loadEffectModule(const plugin_snapshot_t& pluginSnapshot, bool force
 			loadedPlugin = dynamic_cast<vstplugin*>(effect);
 		}
 	}
-	if (loadedPlugin && (loadedPlugin->getFlagsVST() & effFlagsProgramChunks) != 0) {
-		if (pluginSnapshot.dataChunk.size() > 0) {
-			my_printf("Plugin %s: Load data1[%d]\n", StringAsCStr(loadedPlugin->sName), pluginSnapshot.dataChunk.size());
-			loadedPlugin->dispatch(effSetChunk, 0, pluginSnapshot.dataChunk.size(), (void*)pluginSnapshot.dataChunk.data());
-		}
-		if (loadPluginPresetWithSnapshot && pluginSnapshot.dataChunk2.size() > 0) {
-			my_printf("Plugin %s: Load data2[%d]\n", StringAsCStr(loadedPlugin->sName), pluginSnapshot.dataChunk2.size());
-			loadedPlugin->dispatch(effSetChunk, 1, pluginSnapshot.dataChunk2.size(), (void*)pluginSnapshot.dataChunk2.data());
-		}
-	}
+//	if (loadedPlugin && (loadedPlugin->getFlagsVST() & effFlagsProgramChunks) != 0) {
+//		if (pluginSnapshot.dataChunk.size() > 0) {
+//			my_printf("Plugin %s: Load data1[%d]\n", StringAsCStr(loadedPlugin->sName), pluginSnapshot.dataChunk.size());
+//			loadedPlugin->dispatch(effSetChunk, 0, pluginSnapshot.dataChunk.size(), (void*)pluginSnapshot.dataChunk.data());
+//		}
+//		if (loadPluginPresetWithSnapshot && pluginSnapshot.dataChunk2.size() > 0) {
+//			my_printf("Plugin %s: Load data2[%d]\n", StringAsCStr(loadedPlugin->sName), pluginSnapshot.dataChunk2.size());
+//			loadedPlugin->dispatch(effSetChunk, 1, pluginSnapshot.dataChunk2.size(), (void*)pluginSnapshot.dataChunk2.data());
+//		}
+//	}
 	return effect;
 }
 void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effectbase* effect) {
@@ -616,7 +624,7 @@ void audio_stage_t::loadRoutingSnapshot(const track_effect_routing_snapshot_t& s
                 for (auto p : effects) {
                     if (p->isDeferred()) {
                         effect_deferred* def = dynamic_cast<effect_deferred*>(p);
-                        const plugin_snapshot_t& plugSnapshot = def->getSnapshot();
+                        const plugin_snapshot_t& plugSnapshot = def->getSnapshotConst();
                         log += StringFormat("%d(%d), ", static_cast<int32_t>(p->projectGlobalId), plugSnapshot.projectGlobalId);
                     }
                     else {
@@ -669,7 +677,12 @@ void audio_stage_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginLi
 		if (effect) {
 
 			//this->deferredEffects.push_back(effect);
-			host->addDeferredEffect(effect);
+            if (!host->addDeferredEffect(effect)) {
+                log_printf("Failed loading effect\n", 0);
+                delete effect;
+                continue;
+            }
+            effect->getSnapshot().projectGlobalId = effect->projectGlobalId;
 			effect->load(host);
 			host->insertNewPlugin(this, effect, pluginSnapshot.slot);
 //			host->postPluginLoaded(this, effect);
@@ -681,18 +694,25 @@ void audio_stage_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginLi
 
 }
 void pluginUpdateParamBypass(effectbase* effect, int state);
-void vsthost::addDeferredEffect(effectbase* plugin) {
-	plugin->projectGlobalId = getNextGlobalModuleId(plugin->projectGlobalId);
+bool vsthost::addDeferredEffect(effectbase* plugin) {
+    plugin->projectGlobalId = getNextGlobalModuleId(plugin->projectGlobalId); // hell is lose
+//    plugin->projectGlobalId = getNextGlobalModuleId(0); // everything goochy
+	while (getPluginById(plugin->projectGlobalId) != nullptr) {
+		plugin->projectGlobalId = getNextGlobalModuleId(0);
+	}
 	auto it = std::find_if(pluginsDeferred.begin(), pluginsDeferred.end(), [plugin](auto* eff) {return eff->projectGlobalId == plugin->projectGlobalId;});
-	dbgassert(it == pluginsDeferred.end());
+    if (it != pluginsDeferred.end()) {
+        return false;
+    }
 	pluginsDeferred.push_back(plugin);
+    return true;
 }
 void vsthost::activateDeferred(effectbase* const eff, effectbase** out_effectLoaded, bool forceLoad) {
 	dbgassert(eff->trackImpl);
 	dbgassert(eff->trackImpl->effects.size());
 	dbgassert(eff->getSlot() >= 0);
 	auto defEffect = dynamic_cast<effect_deferred*>(eff);
-	plugin_snapshot_t pluginSnapshot = defEffect->getSnapshot();
+	plugin_snapshot_t pluginSnapshot = defEffect->getSnapshotConst();
 	log_printf("activating deferred plugin loadEffectModule %s\n", StringAsCStr(pluginSnapshot.name));
 	effectbase* effect = loadEffectModule(pluginSnapshot, forceLoad);
 	if (out_effectLoaded) {
@@ -718,7 +738,7 @@ void vsthost::activateDeferred(effectbase* const eff, effectbase** out_effectLoa
 	}
 	log_printf("done activating deferred plugin %s\n", StringAsCStr(pluginSnapshot.name));
 	unloadPlugin(prevPlugin);
-
+	if (DawInstance::get()) DawInstance::get()->onPluginsChanged();
 }
 int loadSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, const track_layout_snapshot_t& snapshot)
 {
@@ -901,7 +921,7 @@ void sortNoteEvents(std::vector<noteevent_t>& noteEvents) {
 		return a.tickOffsetInBlock < b.tickOffsetInBlock;
 	});
 }
-track_impl_t::track_impl_t(vsthost* const _host, audiostageid_i32 _id, track_t* _track, const samplerate_t _sampleRate, const uint16_t _blockSize, int32_t nChannels)
+track_impl_t::track_impl_t(vsthost* const _host, audio_stage_id_t _id, track_t* _track, const samplerate_t _sampleRate, const uint16_t _blockSize, int32_t nChannels)
    : audio_stage_t(_host, _id, /*_track, */_sampleRate, _blockSize, nChannels, 0)
   , track(_track), inputChannel(DAW::ChannelDefaultNone()), outputChannel(DAW::ChannelDefaultNone())
 {

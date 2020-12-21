@@ -19,6 +19,12 @@
 #include "trackctr_nodes.h"
 #include "guimeter.h"
 
+const float fLineWidth = 4.0f;
+const int stepLineSegments = 32;
+const int stepStart = 1;
+const vec4 colEdgeSignal = {0.1f, 0.6f, 0.1f, 1.0f};
+const float nodePortRadius = 6.0f;
+
 void guictr_nodes_editor::scrollTo(guibase* g) {
 //	int32_t y = g->pos.y;
 //	ivec2 cs = getSizeContent() - graph.size;
@@ -33,6 +39,22 @@ void gui_graph_entry::handleDraggedRelease(MouseEvent& evt) {
 	parentCtrl->objectDragRelease(this, evt);
 }
 
+bool gui_graph_entry::setScissorTransformContainer(NVGcontext* vg) {
+	ivec2 posInset = getPosContent();
+	ivec2 sizeInset = getSizeContent();
+	if (sizeInset.y <= 0 || sizeInset.x <= 0) {
+		return false;
+	}
+	int32_t scissorExpand = 16;
+//	nvgIntersectScissor(vg,
+//		math::max<int32_t>(0, pos.x-scissorExpand),
+//		math::max<int32_t>(0, pos.y-scissorExpand),
+//		size.x+scissorExpand*2,
+//		size.y+scissorExpand*2
+//	);
+	nvgTranslate(vg, posInset.x, posInset.y);
+	return true;
+}
 void gui_graph_entry::render(NVGcontext* vg) {
 
 	if (!setScissorTransformContainer(vg)) {
@@ -100,34 +122,285 @@ void gui_graph_entry::render(NVGcontext* vg) {
 void gui_graph_entry::handleDraggedBegin(MouseEvent& evt) {
 	if (parent) parent->buttonClicked(this);
 }
+namespace DAW {
+bool getChannelRef(DAW::processing_track_node_t* nodeInput, DAW::channel_ref_t& ref) {
+	switch (nodeInput->type) {
+	case track_node_type_t::TRACK:
+		dbgassert(nodeInput->trackOptional);
+		if (nodeInput->trackOptional) {
+			dbgassert(nodeInput->trackOptional->audio);
+			ref = DAW::ChannelStage(nodeInput->trackOptional->audio, stagebuffer_point::OUTPUT_POST);
+			return true;
+		}
+		break;
+	case track_node_type_t::AUDIOSTAGE:
+		dbgassert(nodeInput->stage);
+		if (nodeInput->stage) {
+			ref = DAW::ChannelStage(nodeInput->stage, stagebuffer_point::OUTPUT_POST);
+			return true;
+		}
+		break;
+	case track_node_type_t::EFFECT:
+		dbgassert(nodeInput->effectOptional);
+		if (nodeInput->effectOptional) {
+			ref = DAW::ChannelAudioEffect(nodeInput->effectOptional, stagebuffer_point::OUTPUT_POST);
+			return true;
+		}
+		break;
+	}
+	dbgassert(0);
+	return false;
+}
+bool channelRefEquals(const DAW::channel_ref_t& existingRef, const DAW::channel_ref_t& ref) {
+    if (existingRef.type == channel_input_type::INPUT_DEFAULT)
+        return true;
+	if (existingRef.type == ref.type) {
+		switch (ref.type) {
+		case channel_input_type::INPUT_DEFAULT:
+			return true;
+		case channel_input_type::INPUT_EMPTY:
+			return true;
+		case channel_input_type::INPUT_EXTERNAL_AUDIO:
+			return ref.externalInputType == existingRef.externalInputType && ref.inputChannelOffset == existingRef.inputChannelOffset;
+		case channel_input_type::INPUT_AUDIOSTAGE:
+			return ref.stage.buffer == existingRef.stage.buffer && ref.stage.stageRef.stageId == existingRef.stage.stageRef.stageId;
+		case channel_input_type::INPUT_AUDIOSTAGE_EFFECT:
+			return ref.projectGlobalId == existingRef.projectGlobalId;
+		}
+	}
+	return false;
+}
+bool removeDuplicateRoutings(std::vector<DAW::channel_ref_t>& list, const DAW::channel_ref_t& ref) {
+	auto it = std::remove_if(list.begin(), list.end(), [ref](DAW::channel_ref_t& existingRef){
+		return channelRefEquals(existingRef, ref);
+	});
+	bool removed = it != list.end();
+	list.erase(it, list.end());
+	return removed;
+}
+bool hasDuplicateRoutings(std::vector<DAW::channel_ref_t>& list, const DAW::channel_ref_t& ref) {
+	bool b = std::any_of(list.begin(), list.end(), [ref](DAW::channel_ref_t& existingRef){
+		return channelRefEquals(ref, existingRef);
+	});
+	return b;
+}
+bool disconnectNodes(DAW::processing_track_node_t* nodeDest, DAW::processing_track_node_t* nodeSrc) {
+    DAW::channel_ref_t ref;
+    if (getChannelRef(nodeSrc, ref)) {
+        switch (nodeDest->type) {
+		case track_node_type_t::TRACK:
+            dbgassert(nodeDest->trackOptional);
+            if (nodeDest->trackOptional) {
+                nodeDest->trackOptional->audio->inputChannel = DAW::ChannelNone();
+                return true;
+			}
+			break;
+		case track_node_type_t::AUDIOSTAGE:
+            dbgassert(nodeDest->stage);
+            if (nodeDest->stage) {
+                bool b = hasDuplicateRoutings(nodeDest->stage->postEffectRouting, ref);
+                removeDuplicateRoutings(nodeDest->stage->postEffectRouting, ref);
+                return true;
+			}
+			break;
+		case track_node_type_t::EFFECT:
+            dbgassert(nodeDest->effectOptional);
+            if (nodeDest->effectOptional) {
+                bool b = hasDuplicateRoutings(nodeDest->effectOptional->inputChannels, ref);
+                removeDuplicateRoutings(nodeDest->effectOptional->inputChannels, ref);
+                return true;
+			}
+
+			break;
+		}
+	}
+	dbgassert(0);
+	return false;
+}
+bool connectNodes(DAW::processing_track_node_t* nodeInput, DAW::processing_track_node_t* nodeOutput) {
+	DAW::channel_ref_t ref;
+    if (getChannelRef(nodeOutput, ref)) {
+        switch (nodeInput->type) {
+		case track_node_type_t::TRACK:
+            dbgassert(nodeInput->trackOptional);
+            if (nodeInput->trackOptional) {
+                nodeInput->trackOptional->audio->inputChannel = ref;
+                return true;
+			}
+			break;
+		case track_node_type_t::AUDIOSTAGE:
+            dbgassert(nodeInput->stage);
+            if (nodeInput->stage) {
+                bool b = hasDuplicateRoutings(nodeInput->stage->postEffectRouting, ref);
+                removeDuplicateRoutings(nodeInput->stage->postEffectRouting, ref);
+                nodeInput->stage->postEffectRouting.push_back(ref);
+                return true;
+			}
+			break;
+		case track_node_type_t::EFFECT:
+            dbgassert(nodeInput->effectOptional);
+            if (nodeInput->effectOptional) {
+                bool b = hasDuplicateRoutings(nodeInput->effectOptional->inputChannels, ref);
+                removeDuplicateRoutings(nodeInput->effectOptional->inputChannels, ref);
+                nodeInput->effectOptional->inputChannels.push_back(ref);
+                return true;
+			}
+
+			break;
+		}
+	}
+	dbgassert(0);
+	return false;
+}
+}
+class gui_graph_n;
+class gui_graph_port : public guibase {
+	gui_graph_n* parentGraphNode;
+	stagebuffer_point stageBufferPoint;
+public:
+	gui_graph_port(gui_graph_n* _parentGraphNode, stagebuffer_point _stageBufferPoint)
+	  : guibase(),
+		parentGraphNode(_parentGraphNode),
+		stageBufferPoint(_stageBufferPoint)
+	{
+		setCanMouseHit(true);
+	}
+	vec2 getCenterPos2f() const {
+		return vec2(pos) + vec2(size) * 0.5f;
+	}
+	bool wasDragReleaseOnGuiCtrNodes = false;
+	void handleDraggedBegin(MouseEvent& evt) override {
+	}
+	void handleDraggedMove(MouseEvent& evt) override {
+		parentCtrl->objectDragMove(this, evt);
+	}
+
+	void handleDraggedRelease(MouseEvent& evt) override {
+		parentCtrl->objectDragRelease(this, evt);
+//		if (wasDragReleaseOnGuiCtrNodes) {
+//			auto screenPos = evt.mousepos + evt.dragOffset;
+//			ivec2 localPos = toControlsObjectSpace(screenPos, parent);
+//			pos = localPos;
+//			project_t* project = project_controller_t::get()->getProject();
+//			std::map<int32_t, graph_node_layout_t>& graphLayouts = project->graphLayouts;
+//			if (graphLayouts.count(id)) {
+//				graphLayouts[id].pos = pos;
+//			}
+//			layout();
+//		}
+//		wasDragReleaseOnGuiCtrNodes = false;
+	}
+	virtual String getText() {
+		switch (stageBufferPoint) {
+			case stagebuffer_point::INPUT:
+				return "INPUT";
+			case stagebuffer_point::OUTPUT:
+				return "OUTPUT";
+			case stagebuffer_point::OUTPUT_POST:
+				return "OUTPUT_POST";
+		}
+		dbgassert(0);
+		return "INVALID";
+	}
+
+	void render(NVGcontext* vg) override {
+		auto centerPos = getCenterPos2f();
+		nvgBeginPath(vg);
+		nvgCircle(vg, centerPos.x, centerPos.y, nodePortRadius);
+		nvgFillColor(vg, theme->getFrameColorBase());
+		nvgFill(vg);
+		nvgBeginPath(vg);
+		nvgCircle(vg, centerPos.x, centerPos.y, nodePortRadius);
+		nvgStrokeColor(vg, theme->getFrameColorOutline());
+		nvgStrokeWidth(vg, 2.0);
+		nvgStroke(vg);
+	}
+	void renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2 dragOffset) override {
+		if (parent->parent) {
+			dbgassert(parent->parent->parent);
+			// render without editor scaling
+			// convert to container space of parent of graph (graph applies scale + translate)
+			ivec2 posSS = parent->toParentSpace(getCenterPos2f());
+            posSS = parent->parent->toParentSpace(posSS);
+			ivec2 mouseposSS = toControlsObjectSpace(mousepos, parent->parent->parent);
+            ivec2 nodeEditorPosSS = parent->parent->parent->toScreenSpace(ivec2(0));
+			nvgSave(vg);
+			nvgTranslate(vg, nodeEditorPosSS.x, nodeEditorPosSS.y);
+			nvgBeginPath(vg);
+			nvgMoveTo(vg, posSS.x, posSS.y);
+			const vec2 dInOut = vec2(mouseposSS) - vec2(posSS);
+			for (int i = stepStart; i < stepLineSegments-stepStart; i++) {
+				float t = i/(float)(stepLineSegments-1);
+				float f = t * t * (3.0 - 2.0 * t);
+				vec2 pos = vec2(posSS) + vec2(dInOut.x*t, dInOut.y*f);
+				nvgLineTo(vg, pos.x, pos.y);
+			}
+			nvgLineTo(vg, mouseposSS.x, mouseposSS.y);
+			nvgStrokeColor(vg, vec4ToNvg(colEdgeSignal));
+			nvgStrokeWidth(vg, fLineWidth+2.0f);
+			nvgStroke(vg);
+			nvgRestore(vg);
+		}
+	}
+	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
+		if (canMouseHit() && contains(mpos)) {
+			evt.requestFocus(this);
+			return true;
+		}
+		return false;
+	}
+	void dragMoveOn(guibase* target, ivec2 mousepos);
+	void dragReleaseOn(guibase* target, ivec2 mousepos);
+};
 class gui_graph_n : public gui_graph_entry {
 	DAW::processing_track_node_t* const node;
-	vec2 portInputPos;
-	vec2 portOutputPos;
+	std::vector<gui_graph_port*> guiPorts;
+private:
+	void setPorts() {
+		for (auto guiPort : guiPorts) {
+			remove(guiPort);
+			delete guiPort;
+		}
+		guiPorts.clear();
+		guiPorts.push_back(new gui_graph_port{this, stagebuffer_point::INPUT});
+		guiPorts.push_back(new gui_graph_port{this, stagebuffer_point::OUTPUT_POST});
+		for (auto guiPort : guiPorts) {
+			add(guiPort);
+		}
+	}
 public:
 	gui_graph_n(DAW::processing_track_node_t* const _node) : gui_graph_entry(), node(_node) {
 		padding = 0;
+		setPorts();
+	}
+	~gui_graph_n() {
+		for (auto guiPort : guiPorts) {
+			remove(guiPort);
+			delete guiPort;
+		}
+		destroyGuis();
 	}
 	const DAW::processing_track_node_t* getProcessingNode() const {
 		return node;
 	}
+	DAW::processing_track_node_t* getProcessingNodePointer() {
+		return node;
+	}
 	vec2 getPortOutputPos() const {
-		return portOutputPos;
+		return toParentSpace2f(guiPorts[1]->getCenterPos2f());
 	}
 	vec2 getPortInputPos() const {
-		return portInputPos;
+		return toParentSpace2f(guiPorts[0]->getCenterPos2f());
 	}
 
-	virtual ~gui_graph_n() {
-		destroyGuis();
-	}
 	void layout() override {
-		ivec2 pos = getPosContent();
+		ivec2 pos = vec2(0);
 		ivec2 size = getSizeContent();
+		guiPorts[0]->size = {nodePortRadius*2, nodePortRadius*2};
+		guiPorts[1]->size = guiPorts[0]->size;
 		const int32_t hpt = theme->get(GuiConstant::CONST_FIXED_TITLE_HEIGHT);
-		pos.y+=hpt/2;
-		portInputPos = pos;
-		portOutputPos = vec2(pos.x+size.x, pos.y);
+		guiPorts[0]->pos = pos + ivec2(0, hpt/2) - ivec2(nodePortRadius);
+		guiPorts[1]->pos = pos + ivec2(size.x, hpt/2) - ivec2(nodePortRadius);
 		for (guibase* gui : guis) {
 			gui->layout();
 		}
@@ -144,17 +417,22 @@ public:
 			auto screenPos = evt.mousepos + evt.dragOffset;
 			ivec2 localPos = toControlsObjectSpace(screenPos, parent);
 			pos = localPos;
+			project_t* project = project_controller_t::get()->getProject();
+			std::map<int32_t, graph_node_layout_t>& graphLayouts = project->graphLayouts;
+			if (graphLayouts.count(id)) {
+				graphLayouts[id].pos = pos;
+			}
 			layout();
 		}
 		wasDragReleaseOnGuiCtrNodes = false;
 	}
 	virtual void dragMoveOn(guibase* target, ivec2 mousepos) {
 		wasDragReleaseOnGuiCtrNodes = false;
-		log_printf("dragMoveOn %s on %s\n", StringAsCStr(this->getClassName()), StringAsCStr(target->getClassName()));
 	};
 	virtual void dragReleaseOn(guibase* target, ivec2 mousepos) {
+		ivec2 localPos = toControlsObjectSpace(mousepos, parent->parent);
 		log_printf("dragReleaseOn %s on %s\n", StringAsCStr(this->getClassName()), StringAsCStr(target->getClassName()));
-		if (target == parent->parent) {
+		if (parent->contains(localPos)) {
 			wasDragReleaseOnGuiCtrNodes = true;
 		}
 	};
@@ -163,9 +441,13 @@ public:
 		case DAW::track_node_type_t::TRACK:
 			return StringFormat("%s", StringAsCStr(node->trackOptional->name));
 		case DAW::track_node_type_t::AUDIOSTAGE:
-			if (node->stageId == TRACKID_DEFAULT_I32)
+			if (node->stageId == node->stage->stageId.outputStageId)
 				return StringFormat("Output Stage %d", static_cast<int32_t>(node->stageId));
-			return StringFormat("Input Stage %d", static_cast<int32_t>(node->stageId));
+			if (node->stageId == node->stage->stageId.outputPostStageId)
+				return StringFormat("Output Post Stage %d", static_cast<int32_t>(node->stageId));
+			if (node->stageId == node->stage->stageId.inputStageId)
+				return StringFormat("Input Stage %d", static_cast<int32_t>(node->stageId));
+			return StringFormat("Stage %d", static_cast<int32_t>(node->stageId));
 		case DAW::track_node_type_t::EFFECT:
 			return StringFormat("%s", StringAsCStr(node->effectOptional->getName()));
 		default:
@@ -178,21 +460,19 @@ public:
 		if (parentCtrl&&parentCtrl->guiDragged == this) {
 			nvgGlobalAlpha(vg, 0.5f);
 		}
-		nvgSave(vg);
 		gui_graph_entry::render(vg);
-		const float nodePortRadius = 6.0f;
-		nvgRestore(vg);
-		nvgBeginPath(vg);
-		nvgCircle(vg, portInputPos.x, portInputPos.y, nodePortRadius);
-		nvgCircle(vg, portOutputPos.x, portOutputPos.y, nodePortRadius);
-		nvgFillColor(vg, theme->getFrameColorBase());
-		nvgFill(vg);
-		nvgBeginPath(vg);
-		nvgCircle(vg, portInputPos.x, portInputPos.y, nodePortRadius);
-		nvgCircle(vg, portOutputPos.x, portOutputPos.y, nodePortRadius);
-		nvgStrokeColor(vg, theme->getFrameColorOutline());
-		nvgStrokeWidth(vg, 2.0);
-		nvgStroke(vg);
+		//		const float nodePortRadius = 6.0f;
+		//		nvgBeginPath(vg);
+		//		nvgCircle(vg, ports[0].pos.x, ports[0].pos.y, nodePortRadius);
+		//		nvgCircle(vg, ports[1].pos.x, ports[1].pos.y, nodePortRadius);
+		//		nvgFillColor(vg, theme->getFrameColorBase());
+		//		nvgFill(vg);
+		//		nvgBeginPath(vg);
+		//		nvgCircle(vg, ports[0].pos.x, ports[0].pos.y, nodePortRadius);
+		//		nvgCircle(vg, ports[1].pos.x, ports[1].pos.y, nodePortRadius);
+		//		nvgStrokeColor(vg, theme->getFrameColorOutline());
+		//		nvgStrokeWidth(vg, 2.0);
+		//		nvgStroke(vg);
 		if (parentCtrl&&parentCtrl->guiDragged == this) {
 			nvgGlobalAlpha(vg, 1.0f);
 		}
@@ -204,6 +484,39 @@ public:
 		gui_graph_entry::render(vg);
 	}
 };
+void gui_graph_port::dragReleaseOn(guibase* target, ivec2 mousepos) {
+	log_printf("dragReleaseOn %s on %s\n", StringAsCStr(this->getClassName()), StringAsCStr(target->getClassName()));
+	auto *ptr = dynamic_cast<gui_graph_port*>(target);
+	if (ptr != nullptr) {
+		auto node = ptr->parentGraphNode->getProcessingNode();
+		/* only allow input to output connections */
+		if (isStageBufferPointInput(stageBufferPoint) == isStageBufferPointInput(ptr->stageBufferPoint)) {
+			return;
+		}
+		/* allow no connection to self */
+		if (ptr == this) {
+			return;
+		}
+		auto ptrNodeInput =
+				isStageBufferPointInput(stageBufferPoint) ?
+						parentGraphNode->getProcessingNodePointer() : ptr->parentGraphNode->getProcessingNodePointer();
+		auto ptrNodeOutput =
+				isStageBufferPointInput(stageBufferPoint) ? ptr->parentGraphNode->getProcessingNodePointer()
+                                                                       : parentGraphNode->getProcessingNodePointer();
+        ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+		DAW::connectNodes(ptrNodeInput, ptrNodeOutput);
+        DawInstance::get()->onPluginsChanged();
+		vsthost::getInstance()->onTrackLayoutChange();
+	}
+	//		if (target->parent->parent == target->parent->parent) {
+	//			wasDragReleaseOnGuiCtrNodes = true;
+	//		}
+}
+
+void gui_graph_port::dragMoveOn(guibase* target, ivec2 mousepos) {
+	//		wasDragReleaseOnGuiCtrNodes = false;
+	log_printf("dragMoveOn %s on %s\n", StringAsCStr(this->getClassName()), StringAsCStr(target->getClassName()));
+}
 
 class guictr_nodes_editor::guictr_nodes_editor_impl
 {
@@ -218,8 +531,8 @@ class gui_graph::guictr_graph_impl
 {
 public:
 	struct edge_t {
-		gui_graph_n* a;
-		gui_graph_n* b;
+		gui_graph_n* grphNodeDest;
+		gui_graph_n* grphNodeSrc;
 	};
 	std::shared_ptr<DAW::processing_graph_t> procList;
 	std::vector<gui_graph_entry*> listGuis;
@@ -229,6 +542,15 @@ public:
 	guictr_graph_impl() {
 
 	}
+	enum hit_result_type {
+		HIT_NONE, HIT_EDGE
+	};
+	struct hit_result {
+		hit_result_type hitType = HIT_NONE;
+		edge_t* edge = nullptr;
+		float distanceEdgeMouse = 0.0f;
+	};
+	hit_result hitTest(vec2 mouseLocal);
 };
 class gui_path : public guibase {
 	struct segment {
@@ -285,21 +607,30 @@ void gui_graph::render(NVGcontext* vg) {
 	nvgCircleFast(vg, mouseLocal.x, mouseLocal.y, 5.0f);
 	nvgFillColor(vg, nvgRGBAf(1, 0, 1, 1));
 	nvgFill(vg);
-	const int stepLineSegments = 32;
-	const int stepStart = 1;
-	const vec4 colEdgeSignal = {0.1f, 0.6f, 0.1f, 1.0f};
+	float minEdgeDist = 0.0f;
+	gui_graph::guictr_graph_impl::edge_t* minEdge = nullptr;
 	for (gui_graph::guictr_graph_impl::edge_t& edge : impl->edgeList) {
 
-		gui_graph_n* graphNode = edge.a;
-		gui_graph_n* gTarget = edge.b;
-		const DAW::processing_track_node_t* node = gTarget->getProcessingNode();
-		auto portInputPos = graphNode->getPortInputPos();
-		auto portOutputPos = gTarget->getPortOutputPos();
-		const float fLineWidth = 4.0f;
+		gui_graph_n* graphNodeOutput = edge.grphNodeDest;
+		gui_graph_n* graphNodeInput = edge.grphNodeSrc;
+		const DAW::processing_track_node_t* nodeInput = graphNodeInput->getProcessingNode();
+		const DAW::processing_track_node_t* nodeOutput = graphNodeOutput->getProcessingNode();
+		auto portInputPos = graphNodeOutput->getPortInputPos();
+		auto portOutputPos = graphNodeInput->getPortOutputPos();
+		using meterType = rmsmeterimpl<16000>;
+		meterType* ptrMeter = nullptr;
+		if (nodeInput->effectOptional) {
+			ptrMeter = &nodeInput->effectOptional->meter;
+		}
+		if (nodeInput->trackOptional && nodeInput->trackOptional->audio) {
+			ptrMeter = &nodeInput->trackOptional->audio->meter;
+		}
+		if (nodeInput->stage) {
+			ptrMeter = &nodeInput->stage->meterInput;
+		}
 
-
-		if (node->trackOptional && node->trackOptional->audio) {
-			float maxRms = node->trackOptional->audio->meter.getMaxRMS();
+		if (ptrMeter) {
+			float maxRms = ptrMeter->getMaxRMS();
 			if (maxRms > dsp_util::GAIN_DBFLOOR) {
 				nvgBeginPath(vg);
 				nvgMoveTo(vg, portInputPos.x, portInputPos.y);
@@ -318,19 +649,26 @@ void gui_graph::render(NVGcontext* vg) {
 		}
 
 
+		guictr_graph_impl::hit_result hitResult = impl->hitTest(mouseLocal);
+		float f1;
+		NVGcolor colEdge = theme->getColor(GuiColor::COL_NODES_EDGE);
+		if (hitResult.hitType == guictr_graph_impl::hit_result_type::HIT_EDGE && (&edge == hitResult.edge)) {
+			colEdge = NVGcolor{0.45f, 0.05f, 0.45f, 1.0f};
+		}
+
+		vec2 dInOut = vec2(portOutputPos)-vec2(portInputPos);
+		vec2 lastPos = portInputPos;
 		nvgBeginPath(vg);
 		nvgMoveTo(vg, portInputPos.x, portInputPos.y);
-		vec2 dInOut = vec2(portOutputPos)-vec2(portInputPos);
-		vec4 colEdge = {0.05f, 0.05f, 0.05f, 1.0f};
-
 		for (int i = stepStart; i < stepLineSegments-stepStart; i++) {
 			float t = i/(float)(stepLineSegments-1);
 			float f = t * t * (3.0 - 2.0 * t);
 			vec2 pos = vec2(portInputPos) + vec2(dInOut.x*t, dInOut.y*f);
 			nvgLineTo(vg, pos.x, pos.y);
+			lastPos = pos;
 		}
 		nvgLineTo(vg, portOutputPos.x, portOutputPos.y);
-		nvgStrokeColor(vg, vec4ToNvg(colEdge));
+		nvgStrokeColor(vg, colEdge);
 		nvgStrokeWidth(vg, fLineWidth);
 		nvgStroke(vg);
 
@@ -343,8 +681,8 @@ void gui_graph::render(NVGcontext* vg) {
 	}
 	for (gui_graph::guictr_graph_impl::edge_t& edge : impl->edgeList) {
 
-		gui_graph_n* graphNode = edge.a;
-		gui_graph_n* gTarget = edge.b;
+		gui_graph_n* graphNode = edge.grphNodeDest;
+		gui_graph_n* gTarget = edge.grphNodeSrc;
 		auto portInputPos = graphNode->getPortInputPos();
 		auto portOutputPos = gTarget->getPortOutputPos();
 		auto edgeLabelPos = ivec2(portInputPos+vec2(portOutputPos-portInputPos)*0.5f);
@@ -356,12 +694,55 @@ void gui_graph::render(NVGcontext* vg) {
 	}
 	nvgRestore(vg);
 }
+gui_graph::guictr_graph_impl::hit_result gui_graph::guictr_graph_impl::hitTest(vec2 mouseLocal) {
+	std::vector<hit_result> hit;
+	float minEdgeDist = 0.0f;
+	edge_t* minEdge = nullptr;
+	for (edge_t& edge : edgeList) {
+		gui_graph_n* graphNodeOutput = edge.grphNodeDest;
+		gui_graph_n* graphNodeInput = edge.grphNodeSrc;
+		const DAW::processing_track_node_t* nodeInput = graphNodeInput->getProcessingNode();
+		const DAW::processing_track_node_t* nodeOutput = graphNodeOutput->getProcessingNode();
+		auto portInputPos = graphNodeOutput->getPortInputPos();
+		auto portOutputPos = graphNodeInput->getPortOutputPos();
+
+		vec2 dInOut = vec2(portOutputPos)-vec2(portInputPos);
+		vec4 colEdge = {0.05f, 0.05f, 0.05f, 1.0f};
+		vec2 pos = portInputPos;
+		float edgeMouseDist = 0.0f;
+		for (int i = stepStart; i < stepLineSegments-stepStart; i++) {
+			float t = i/(float)(stepLineSegments-1);
+			float f = t * t * (3.0 - 2.0 * t);
+			vec2 nextPos = vec2(portInputPos) + vec2(dInOut.x*t, dInOut.y*f);
+			float fDist = math::distancePointLine(mouseLocal, pos, nextPos);
+			if (i == stepStart || fDist < edgeMouseDist) {
+				edgeMouseDist = fDist;
+			}
+			pos = nextPos;
+		}
+		if (minEdge == nullptr || edgeMouseDist < minEdgeDist) {
+			minEdgeDist = edgeMouseDist;
+			minEdge = &edge;
+		}
+		if (edgeMouseDist < 10) {
+			hit_result hitSeg{hit_result_type::HIT_EDGE, &edge, edgeMouseDist };
+			hit.push_back(std::move(hitSeg));
+		}
+	}
+	std::sort(hit.begin(), hit.end(), [](hit_result const & a, hit_result const & b) {
+		return a.distanceEdgeMouse<b.distanceEdgeMouse;
+	});
+	if (hit.size()) {
+
+		hit_result& h = hit[0];
+		if (h.distanceEdgeMouse < 10) {
+			return h;
+		}
+	}
+	return {hit_result_type::HIT_NONE, nullptr, 0.0f};
+}
 bool gui_graph::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 	if (this->contains(mpos)) {
-		if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
-			evt.requestFocus(this);
-			return true;
-		}
 		ivec2 localMouse = this->toContainerSpace(mpos);
 		for (guibase* gui : guis) {
 			if (!gui->isVisible())
@@ -369,6 +750,10 @@ bool gui_graph::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 			if (gui->mouseHitTest(localMouse, evt)) {
 				return true;
 			}
+		}
+		if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
+			evt.requestFocus(this);
+			return true;
 		}
 		if (canMouseHit()) {
 			evt.requestFocus(this);
@@ -450,14 +835,32 @@ public:
 };
 void gui_graph::updateList(bool resetPositions) {
 	std::shared_ptr<DAW::processing_graph_t> lastProcessingList;
-	if (!isTrackGraph) {  /* project graph */
-		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-		lastProcessingList = vsthost::getInstance()->lastProcessingList;
-	} else {
-		auto track = DawInstance::get()->getSelectedTrack();
-		if (track && track->audio) {
-			ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-			lastProcessingList = vsthost::getInstance()->lastProcessingGraphs[track->audio->stageId];
+	{
+        ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+        lastProcessingList = nullptr;
+		if (!isTrackGraph) {  /* project graph */
+			//		lastProcessingList = vsthost::getInstance()->lastProcessingList;
+			std::shared_ptr<DAW::processing_graph_t> processingGraph;
+			auto project = project_controller_t::get()->getProject();
+			dbgassert(project);
+			auto tracksFlatAll = project->trackList.getAllTracksFlatVec(); //TODO: get rid of copy
+			if (!DAW::buildProcessingGraph(vsthost::getInstance(), project, tracksFlatAll, processingGraph)) {
+				log_printf("Failed building track graph\n", 0);
+			} else {
+				lastProcessingList = processingGraph;
+            }
+        } else {
+            lastProcessingList = nullptr;
+	//		lastProcessingList = vsthost::getInstance()->lastProcessingGraphs[track->audio->stageId];
+			auto track = DawInstance::get()->getSelectedTrack();
+			if (track && track->audio) {
+		        std::shared_ptr<DAW::effect_processing_graph_t> effProcessingGraph;
+		        if (!DAW::buildEffectProcessingGraph(vsthost::getInstance(), nullptr, track->audio, effProcessingGraph)) {
+		            log_printf("Failed building effect graph\n", 0);
+		        } else {
+					lastProcessingList = effProcessingGraph;
+				}
+            }
 		}
 	}
 	ivec2 cs = getSizeContent();
@@ -476,45 +879,65 @@ void gui_graph::updateList(bool resetPositions) {
 		ivec2 nodeSize = ivec2(nodeWidth, nodeWidth);
 		int32_t posGridStepX = nodeWidth+fontScale*4;
 		ivec2 posGrid = ivec2(fontScale, fontScale);
-		for (DAW::processing_track_node_t* node : procGraph.nodesFlatOrdered) {
+		project_t* project = project_controller_t::get()->getProject();
+		std::map<int32_t, graph_node_layout_t>& graphLayouts = project->graphLayouts;
+		std::vector<DAW::processing_track_node_t*> allNodes = procGraph.nodes;
+		for (DAW::processing_track_node_t* node : allNodes) {
 			gui_graph_n* entry = new gui_graph_n(node);
+			entry->id = static_cast<int32_t>(node->stageId);
 			entry->rowHeight = fontScale;
-			entry->size = nodeSize;
-			entry->pos = posGrid;
 			const int32_t hpt = theme->get(GuiConstant::CONST_FIXED_TITLE_HEIGHT);
 
-			auto g = new guinodeinfo_text{node};
+			if (!graphLayouts.count(entry->id)) {
+                graphLayouts[entry->id] = graph_node_layout_t{posGrid, nodeSize};
+                posGrid.x += posGridStepX;
+                if (posGrid.x + posGridStepX > cs.x) {
+                    posGrid = ivec2(fontScale, posGrid.y + posGridStepX);
+                }
+			}
+			graph_node_layout_t* const nodeLayout = &graphLayouts[entry->id];
+            entry->pos = nodeLayout->pos;
+			entry->size = nodeLayout->size;
+			auto guiText = new guinodeinfo_text{node};
+			guiText->size = {entry->size.x, entry->size.y-hpt};
+			guiText->pos = {0, hpt};
 			if (node->trackOptional) {
 				int32_t meterWidth = fontScale;
+				// meter is updated on audio thread. Copy is not atomic, but should not pose a UB risk since object lifetime is ensured
 				gui_trackmeter<16000,2>* meter = new gui_trackmeter<16000,2>(&node->trackOptional->audio->meter);
 				meter->size = {meterWidth, entry->getSizeContent().y-hpt};
 				meter->pos = {entry->getSizeContent().x-meter->size.x, hpt};
 				entry->add(meter);
+				// meter is updated on audio thread. Copy is not atomic, but should not pose a UB risk since object lifetime is ensured
 				gui_trackmeter<16000,2>* guimeterInput = new gui_trackmeter<16000,2>(&node->trackOptional->audio->meterInput);
 				guimeterInput->size = {meterWidth, entry->getSizeContent().y-hpt};
 				guimeterInput->pos = {0, hpt};
 				entry->add(guimeterInput);
 
 
-				g->size = {cs.x-meterWidth*2, cs.y-hpt};
-				g->pos = {guimeterInput->size.x, hpt};
+				guiText->size = {entry->size.x-meterWidth*2, entry->size.y-hpt};
+				guiText->pos = {guimeterInput->size.x, hpt};
 			}
 			if (node->effectOptional) {
 				int32_t meterWidth = fontScale;
+				// meter is updated on audio thread. Copy is not atomic, but should not pose a UB risk since object lifetime is ensured
 				gui_trackmeter<16000,2>* meter = new gui_trackmeter<16000,2>(&node->effectOptional->meter);
 				meter->size = {meterWidth, entry->getSizeContent().y-hpt};
 				meter->pos = {entry->getSizeContent().x-meter->size.x, hpt};
 				entry->add(meter);
-//				gui_trackmeter<16000,2>* guimeterInput = new gui_trackmeter<16000,2>(&node->trackOptional->audio->meterInput);
-//				guimeterInput->size = {meterWidth, entry->getSizeContent().y-hpt};
-//				guimeterInput->pos = {0, hpt};
-//				entry->add(guimeterInput);
+				// meter is updated on audio thread. Copy is not atomic, but should not pose a UB risk since object lifetime is ensured
+				gui_trackmeter<16000,2>* guimeterInput = new gui_trackmeter<16000,2>(&node->effectOptional->meterIn);
+				guimeterInput->size = {meterWidth, entry->getSizeContent().y-hpt};
+				guimeterInput->pos = {0, hpt};
+				entry->add(guimeterInput);
 
-				g->size = {cs.x-meterWidth, cs.y-hpt};
-				g->pos = {0, hpt};
+
+				guiText->size = {entry->size.x-meterWidth*2, entry->size.y-hpt};
+				guiText->pos = {guimeterInput->size.x, hpt};
 			}
 			if (node->stage) {
 				int32_t meterWidth = fontScale;
+				// meter is updated on audio thread. Copy is not atomic, but should not pose a UB risk since object lifetime is ensured
 				gui_trackmeter<16000,2>* meter = new gui_trackmeter<16000,2>(node->stageId == TRACKID_DEFAULT_I32 ? &node->stage->meter : &node->stage->meterInput);
 				meter->size = {meterWidth, entry->getSizeContent().y-hpt};
 				meter->pos = {entry->getSizeContent().x-meter->size.x, hpt};
@@ -524,28 +947,24 @@ void gui_graph::updateList(bool resetPositions) {
 //				guimeterInput->pos = {0, hpt};
 //				entry->add(guimeterInput);
 
-				g->size = {cs.x-meterWidth, cs.y-hpt};
-				g->pos = {0, hpt};
+				guiText->size = {entry->size.x-meterWidth, entry->size.y-hpt};
+				guiText->pos = {0, hpt};
 			}
-			entry->add(g);
+			entry->add(guiText);
 
 			/* copy over positions from old layout */
-			auto it = std::find_if(impl->listNodes.cbegin(), impl->listNodes.cend(), [stageId = node->stageId](gui_graph_n* gn) {
-				return gn->getProcessingNode()->stageId == stageId;
-			});
-			if (it != impl->listNodes.cend()) {
-				gui_graph_n* gTarget = *it;
-				entry->pos = gTarget->pos;
-				entry->size = gTarget->size;
-			} else {
+			//auto it = std::find_if(impl->listNodes.cbegin(), impl->listNodes.cend(), [stageId = node->stageId](gui_graph_n* gn) {
+			//	return gn->getProcessingNode()->stageId == stageId;
+			//});
+			//if (it != impl->listNodes.cend()) {
+			//	gui_graph_n* gTarget = *it;
+			//	entry->pos = gTarget->pos;
+			//	entry->size = gTarget->size;
+			//} else {
 
-				posGrid.x += posGridStepX;
-			}
+			//}
 			listEntries.push_back(entry);
 			listNodes.push_back(entry);
-			if (posGrid.x + posGridStepX > cs.x) {
-				posGrid = ivec2(fontScale, posGrid.y+posGridStepX);
-			}
 		}
 	}
 	std::shared_ptr<DAW::processing_graph_t> curProcList = impl->procList;
@@ -657,10 +1076,6 @@ void guictr_nodes_editor::onTick(AppCtrl* appctrl) {
 }
 bool guictr_nodes_editor::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 	if (this->contains(mpos)) {
-		if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
-			evt.requestFocus(this);
-			return true;
-		}
 		ivec2 localMouse = this->toContainerSpace(mpos);
 		for (guibase* gui : guis) {
 			if (!gui->isVisible())
@@ -668,7 +1083,11 @@ bool guictr_nodes_editor::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 			if (gui->mouseHitTest(localMouse, evt)) {
 				return true;
 			}
-		}
+        }
+        if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
+            evt.requestFocus(this);
+            return true;
+        }
 		if (canMouseHit()) {
 			evt.requestFocus(this);
 			return true;
@@ -677,6 +1096,16 @@ bool guictr_nodes_editor::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 	return false;
 }
 void gui_graph::handleDraggedBegin(MouseEvent& evt) {
+	guictr_graph_impl::hit_result hitResult = impl->hitTest(evt.relMousepos);
+	if (hitResult.hitType == guictr_graph_impl::hit_result_type::HIT_EDGE && (hitResult.edge)) {
+		if (isCtrl(evt.kbmods)) {
+	        ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+			DAW::disconnectNodes(hitResult.edge->grphNodeDest->getProcessingNodePointer(), hitResult.edge->grphNodeSrc->getProcessingNodePointer());
+            DawInstance::get()->onPluginsChanged();
+			vsthost::getInstance()->onTrackLayoutChange();
+			return;
+		}
+	}
 	prevOffset = offset;
 }
 void gui_graph::handleDraggedMove(MouseEvent& evt) {
@@ -803,13 +1232,18 @@ ivec2 gui_graph::toScreenSpace(ivec2 in) const {
 	return in;
 }
 
-ivec2 gui_graph::toContainerSpace(ivec2 in) {
+ivec2 gui_graph::toContainerSpace(ivec2 in) const {
 	return ivec2((vec2(in - getPosContent()) - offset) * (1.0f / scale));
 }
-vec2 gui_graph::toContainerSpace2f(vec2 in) {
+
+ivec2 gui_graph::toParentSpace(ivec2 localCoord) const {
+	return ivec2(vec2(getPosContent() + localCoord) * scale + offset);
+}
+
+vec2 gui_graph::toContainerSpace2f(vec2 in) const {
 	return vec2((in - vec2(getPosContent()) - offset) * (1.0f / scale));
 }
 
-ivec2 gui_graph::toParentSpace(ivec2 localCoord) {
-	return ivec2(vec2(getPosContent() + localCoord) * scale + offset);
+vec2 gui_graph::toParentSpace2f(vec2 localCoord) const {
+	return (vec2(getPosContent()) + localCoord) * scale + offset;
 }

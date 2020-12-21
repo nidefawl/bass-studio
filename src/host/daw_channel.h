@@ -27,6 +27,15 @@ struct audio_channel_ref_t {
 inline const struct audio_channel_ref_t AudioChannelRefNULL() {
 	return {{TRACKID_INVALID_I32}, stagebuffer_point::OUTPUT_POST};
 }
+struct audio_stage_id_t {
+	audiostageid_i32 stageId = TRACKID_INVALID_I32;
+	audiostageid_i32 inputStageId = TRACKID_INVALID_I32;
+	audiostageid_i32 outputStageId = TRACKID_INVALID_I32;
+	audiostageid_i32 outputPostStageId = TRACKID_INVALID_I32;
+};
+inline bool audioStageIdMatches(const audio_stage_id_t& stageIds, const audiostageid_i32 stageId) {
+	return stageIds.stageId == stageId || stageIds.inputStageId == stageId || stageIds.outputStageId == stageId || stageIds.outputPostStageId == stageId;
+}
 
 namespace DAW {
 

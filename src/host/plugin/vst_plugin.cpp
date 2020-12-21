@@ -294,6 +294,7 @@ void vstplugin::load(vsthost* host) {
 
 
 	this->bIsSetup = true;
+	getRegisteredAutomation(65536);
 }
 
 namespace {
@@ -348,6 +349,16 @@ void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin, bool storePluginCh
 }
 }
 void vstplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
+	if (this && (this->getFlagsVST() & effFlagsProgramChunks) != 0) {
+		if (pluginSnapshot.dataChunk.size() > 0) {
+			my_printf("Plugin %s: Load data1[%d]\n", StringAsCStr(this->sName), pluginSnapshot.dataChunk.size());
+			this->dispatch(effSetChunk, 0, pluginSnapshot.dataChunk.size(), (void*)pluginSnapshot.dataChunk.data());
+		}
+		if (loadPluginPresetWithSnapshot && pluginSnapshot.dataChunk2.size() > 0) {
+			my_printf("Plugin %s: Load data2[%d]\n", StringAsCStr(this->sName), pluginSnapshot.dataChunk2.size());
+			this->dispatch(effSetChunk, 1, pluginSnapshot.dataChunk2.size(), (void*)pluginSnapshot.dataChunk2.data());
+		}
+	}
 }
 void vstplugin::makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) {
 	createSnapshot(ps, this, storePluginChunks);

@@ -128,13 +128,9 @@ namespace DAW {
 					dbgassert(0);
 					break;
 				case track_node_type_t::AUDIOSTAGE:
-                    if (procTrackNode->stageId == TRACKID_DEFAULT_I32) {
-                        procTrackNode->stage = host->getAudioStage(audio_stage_ref_t{stage->stageId}); // resolve const to non const
-                    } else {
-                        procTrackNode->stage = host->getAudioStage(audio_stage_ref_t{procTrackNode->stageId});
-                    }
+                    procTrackNode->stage = host->getAudioStage(audio_stage_ref_t{procTrackNode->stageId});
 					dbgassert(procTrackNode->stage);
-                    dbgassert(procTrackNode->stageId == TRACKID_DEFAULT_I32 || procTrackNode->stageId == stage->stageId); // for now
+                    dbgassert(audioStageIdMatches(stage->stageId, procTrackNode->stageId)); // for now
 					break;
 				case track_node_type_t::EFFECT:
 					procTrackNode->effectOptional = host->getPluginById(static_cast<int32_t>(trackNode->stageId));
@@ -271,7 +267,7 @@ namespace DAW {
 		out_procgraph = shrdPtrProcGraph;
 		return true;
 	}
-	effect_node_ptr makeEffectNode(audiostageid_i32 stageId, int32_t effectId, samplerate_t b) {
+	effect_node_ptr makeEffectNode(int32_t effectId, samplerate_t b) {
 		return new effect_node_t(track_node_type_t::EFFECT, static_cast<audiostageid_i32>(effectId), b);// std::make_unique<effect_node_t>
 	}
 	effect_node_ptr makeAudioStageNode(audiostageid_i32 stageId, samplerate_t b) {
@@ -289,11 +285,14 @@ namespace DAW {
 		int32_t effIdx = 0;
 		int32_t lastEffIdx = stage->effects.size() - 1u;
 		effectbase* effectPrev = nullptr;
+		audioStageInputs[stage->stageId.inputStageId] = makeAudioStageNode(stage->stageId.inputStageId, 0);
+		audioStageOutputs[stage->stageId.outputStageId] = makeAudioStageNode(stage->stageId.outputStageId, 0);
+        effect_node_t& nodeOutput = getEffNode(audioStageOutputs, stage->stageId.outputStageId);
 		for (effectbase* effect : stage->effects) {
 			const int32_t effectId = effect->projectGlobalId;
 			const auto effectIdI32 = static_cast<audiostageid_i32>(effect->projectGlobalId);
 			if (!map.count(effectIdI32)) {
-				map[effectIdI32] = makeEffectNode(stage->stageId, effectId, effect->getDelay());
+				map[effectIdI32] = makeEffectNode(effectId, effect->getDelay());
 			}
 			effect_node_t& trackCfg = getEffNode(map, effectIdI32);
 			for (DAW::channel_ref_t inputChannel : effect->inputChannels) {
@@ -307,13 +306,14 @@ namespace DAW {
 					if (inputChannel.getType() == channel_input_type::INPUT_AUDIOSTAGE) {
 						audio_stage_t* src = host->getAudioStage(inputChannel.stage.stageRef);
 						dbgassert(src);
+						auto outputPostStageId = src->stageId.inputStageId;
 						// the correct dependency here would be the inputs routed to this track (the node of this track in the track graph)
 
-						if (!audioStageInputs.count(src->stageId)) {
-							audioStageInputs[src->stageId] = makeAudioStageNode(src->stageId, 0);
+						if (!audioStageInputs.count(outputPostStageId)) {
+							audioStageInputs[outputPostStageId] = makeAudioStageNode(outputPostStageId, 0);
 						}
-						effect_node_t& trackSrcCfg = getEffNode(audioStageInputs, src->stageId);
-						trackCfg.dependencies.push_back(src->stageId);
+						effect_node_t& trackSrcCfg = getEffNode(audioStageInputs, outputPostStageId);
+						trackCfg.dependencies.push_back(outputPostStageId);
 						trackCfg.pulls.push_back(DAW::effect_source_t{trackEdgeId++, inputChannel, 1.0f, 0, src->flags});
 						trackCfg.children.push_back(&trackSrcCfg);
 						trackSrcCfg.parents.push_back(&trackCfg);
@@ -326,7 +326,7 @@ namespace DAW {
 						dbgassert(effSrc);
 						auto effSrcId_I32 = static_cast<audiostageid_i32>(effSrc->projectGlobalId);
 						if (!map.count(effSrcId_I32)) {
-							map[effSrcId_I32] = makeEffectNode(effSrc->getTrackLink()->stageId, effSrc->projectGlobalId, effSrc->getDelay());
+							map[effSrcId_I32] = makeEffectNode(effSrc->projectGlobalId, effSrc->getDelay());
 						}
 						effect_node_t& trackSrcCfg = getEffNode(map, effSrcId_I32);
 						trackCfg.dependencies.push_back(effSrcId_I32);
@@ -350,8 +350,6 @@ namespace DAW {
 			effectPrev = effect;
 			effIdx++;
 		}
-		audioStageOutputs[TRACKID_DEFAULT_I32] = makeAudioStageNode(TRACKID_DEFAULT_I32, 0);
-		effect_node_t& nodeOutput = getEffNode(audioStageOutputs, TRACKID_DEFAULT_I32);
 
 //		effect_node_t& trackCfg = getEffNode(audioStageOutputs, audioStageOutputs[TRACKID_DEFAULT_I32]);
 		for (DAW::channel_ref_t inputChannel : stage->postEffectRouting) {
@@ -365,13 +363,14 @@ namespace DAW {
 				if (inputChannel.getType() == channel_input_type::INPUT_AUDIOSTAGE) {
 					audio_stage_t* src = host->getAudioStage(inputChannel.stage.stageRef);
 					dbgassert(src);
+					auto outputPostStageId = src->stageId.inputStageId;
 					// the correct dependency here would be the inputs routed to this track (the node of this track in the track graph)
 
-					if (!audioStageInputs.count(src->stageId)) {
-						audioStageInputs[src->stageId] = makeAudioStageNode(src->stageId, 0);
+					if (!audioStageInputs.count(outputPostStageId)) {
+						audioStageInputs[outputPostStageId] = makeAudioStageNode(outputPostStageId, 0);
 					}
-					effect_node_t& trackSrcCfg = getEffNode(audioStageInputs, src->stageId);
-					nodeOutput.dependencies.push_back(src->stageId);
+					effect_node_t& trackSrcCfg = getEffNode(audioStageInputs, outputPostStageId);
+					nodeOutput.dependencies.push_back(outputPostStageId);
 					nodeOutput.pulls.push_back(DAW::effect_source_t{trackEdgeId++, inputChannel, 1.0f, 0, src->flags});
 					nodeOutput.children.push_back(&trackSrcCfg);
 					trackSrcCfg.parents.push_back(&nodeOutput);
@@ -384,7 +383,7 @@ namespace DAW {
 					dbgassert(effSrc);
 					auto effSrcId_I32 = static_cast<audiostageid_i32>(effSrc->projectGlobalId);
 					if (!map.count(effSrcId_I32)) {
-						map[effSrcId_I32] = makeEffectNode(effSrc->getTrackLink()->stageId, effSrc->projectGlobalId, effSrc->getDelay());
+						map[effSrcId_I32] = makeEffectNode(effSrc->projectGlobalId, effSrc->getDelay());
 					}
 					effect_node_t& trackSrcCfg = getEffNode(map, effSrcId_I32);
 					nodeOutput.dependencies.push_back(effSrcId_I32);

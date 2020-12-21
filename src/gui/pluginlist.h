@@ -31,10 +31,10 @@ public:
 		icon = _entry.isSynth ? ICON_SYNTH : ICON_EFFECT;
 	}
 	void dragMoveOn(guibase* target, ivec2 mousepos) override {
-		target->pluginEntryDragMove(this, mousepos);
+		target->pluginEntryDragMove(this, toControlsObjectSpace(mousepos, target));
 	}
 	void dragReleaseOn(guibase* target, ivec2 mousepos) override {
-		target->pluginEntryDragRelease(this, mousepos);
+		target->pluginEntryDragRelease(this, toControlsObjectSpace(mousepos, target));
 	}
 	String getText() override {
 		return entry.name;
@@ -116,10 +116,10 @@ public:
 		icon = _entry.isSynth ? ICON_SYNTH : ICON_EFFECT;
 	}
 	void dragMoveOn(guibase* target, ivec2 mousepos) override {
-		target->pluginEntryDragMove(this, mousepos);
+		target->pluginEntryDragMove(this, toControlsObjectSpace(mousepos, target));
 	}
 	void dragReleaseOn(guibase* target, ivec2 mousepos) override {
-		target->pluginEntryDragRelease(this, mousepos);
+		target->pluginEntryDragRelease(this, toControlsObjectSpace(mousepos, target));
 	}
 	String getText() override {
 		return entry.name;

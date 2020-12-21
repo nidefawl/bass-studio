@@ -1273,27 +1273,31 @@ void MainCtrl::onTick() {
 
 	if (guiDragged && !guiCaptured && guiDragged->isDragMoveable()) {
 		track_gui_entry_t *tr = NULL;
-		int32_t hoverTicks = 0;
-		ivec2 trackViewLocalPos = toControlsObjectSpace(m_mousePos, &view->ctr_tracks);
-		guictr_base& ctrMixers = view->ctr_tracks.trackControls;
-		if (ctrMixers.contains(trackViewLocalPos)) {
-			ivec2 posRelative = m_mousePos - ctrMixers.toScreenSpace(ivec2(0));
-			tr = getTrackFromMouse(this->view->ctr_tracks.guiMgr, posRelative, false);
-			if (tr && tr == lastHoveredTrack && daw.getSelectedTrack() != tr->track) {
-				hoverTicks = lastHoveredTrackTicks + 1;
-				if (lastHoveredTrackTicks >= 6) {
-					daw.setSelectedTrackEntry(tr);
-					showPluginView();
-					hoverTicks = 0;
-				}
-			}
-		} else if (view->ctr_pluginview.contains(m_mousePos)) {
+        int32_t hoverTicks = 0;
+        guictr_base& ctrMixers = view->ctr_tracks.trackControls;
+        if (view->ctr_tracks.isVisible()) {
+            ivec2 trackViewLocalPos = toControlsObjectSpace(m_mousePos, &view->ctr_tracks);
+            if (ctrMixers.contains(trackViewLocalPos)) {
+                ivec2 posRelative = m_mousePos - ctrMixers.toScreenSpace(ivec2(0));
+                tr = getTrackFromMouse(this->view->ctr_tracks.guiMgr, posRelative, false);
+                if (tr && tr == lastHoveredTrack && daw.getSelectedTrack() != tr->track) {
+                    hoverTicks = lastHoveredTrackTicks + 1;
+                    if (lastHoveredTrackTicks >= 6) {
+                        daw.setSelectedTrackEntry(tr);
+                        showPluginView();
+                        hoverTicks = 0;
+                    }
+                }
+            }
+		}
+        if (view->ctr_pluginview.isVisible() && view->ctr_pluginview.contains(m_mousePos)) {
 			hoverTicks = lastHoveredTrackTicks + 1;
 			if (lastHoveredTrackTicks >= 6) {
 				showPluginView();
 				hoverTicks = 0;
 			}
-		} else if (view->ctr_clipeditorview.contains(m_mousePos)) {
+        }
+        else if (view->ctr_clipeditorview.isVisible() && view->ctr_clipeditorview.contains(m_mousePos)) {
 			hoverTicks = lastHoveredTrackTicks + 1;
 			if (lastHoveredTrackTicks >= 6) {
 				showClipEditor();
@@ -1312,6 +1316,12 @@ void DawInstance::updateGrid() {
 	}
 }
 
+void DawInstance::onPluginsChanged() {
+	for (DawCtrl* pDawCtrl : dawCtrls) {
+		dbgassert(pDawCtrl->isOk());
+		pDawCtrl->onPluginsChanged();
+	}
+}
 void DawInstance::updateVisibleTrackContents() {
 	for (DawCtrl* pDawCtrl : dawCtrls) {
 		dbgassert(pDawCtrl->isOk());
@@ -1670,6 +1680,10 @@ void MainCtrl::updateGrid() {
 }
 guitrack_editor& MainCtrl::getTrackEditor() {
 	return view->ctr_tracks.trackView;
+}
+void MainCtrl::onPluginsChanged() {
+	view->ctr_nodes.reset();
+	view->ctr_nodes.refresh();
 }
 void MainCtrl::updateVisibleTrackContents() {
 	view->ctr_tracks.updateVisibleTrackContents();
@@ -2130,7 +2144,10 @@ void DawInstance::removeTrackImpl(track_t* track, int flags) {
 			pDawCtrl->removeTrackFromView(track, flags);
 		}
 	}
-	DAW::removeTrackRoutings(project.getTracksFlatVec(), track->audio->stageId);
+	DAW::removeTrackRoutings(project.getTracksFlatVec(), track->audio->stageId.stageId);
+	DAW::removeTrackRoutings(project.getTracksFlatVec(), track->audio->stageId.inputStageId);
+	DAW::removeTrackRoutings(project.getTracksFlatVec(), track->audio->stageId.outputStageId);
+	DAW::removeTrackRoutings(project.getTracksFlatVec(), track->audio->stageId.outputPostStageId);
 	if (flags&FLG_TRK_CHANGE_USER) {
 		pushHist(new action_modify_track_remove(StringFormat("Remove %s Track", TrackTypeToName(track->type)), track));
 	}
@@ -2187,6 +2204,10 @@ void CompanionCtrl::destroy() {
 	DawCtrl::destroy();
 }
 
+void CompanionCtrl::onPluginsChanged() {
+	view->ctr_nodes.reset();
+	view->ctr_nodes.refresh();
+}
 void CompanionCtrl::updateVisibleTrackContents() {
 	view->ctr_tracks2.updateVisibleTrackContents();
 }

@@ -201,7 +201,7 @@ public:
 	virtual void setProgramName (String name) {
 		setProgramName((char*) StringAsCStr(name));
 	}
-#define STR_GET_STACK_BUF_SIZE 128
+#define STR_GET_STACK_BUF_SIZE 128+1
 	virtual String getProgramName () {
 #if __cplusplus > 201402L
 		static_assert(kVstMaxProgNameLen*4 < STR_GET_STACK_BUF_SIZE);
@@ -212,13 +212,15 @@ public:
 		return ret;
 	}
 
-	virtual String getParameterLabel (VstInt32 index) {
+	virtual String getParameterLabel(VstInt32 index)
+    {
 		char* ptr = static_cast<char*>(alloca(STR_GET_STACK_BUF_SIZE));
 		getParameterLabel(index, (char*) ptr);
 		String ret = ptr;
 		return ret;
 	}
-	virtual String getParameterDisplay (VstInt32 index) {
+    virtual String getParameterDisplay(VstInt32 index)
+    {
 		char* ptr = static_cast<char*>(alloca(STR_GET_STACK_BUF_SIZE));
 		getParameterDisplay(index, (char*) ptr);
 		String ret = ptr;

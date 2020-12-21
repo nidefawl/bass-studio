@@ -101,10 +101,10 @@ public:
 		this->snapSides = _snapSides;
 	}
 	virtual void scissorClip(ivec2& vpos, ivec2& vsize);
-	virtual ivec2 toContainerSpace(ivec2 in) {
+	virtual ivec2 toContainerSpace(ivec2 in) const {
 		return in - getPosContent();
 	}
-	virtual ivec2 toParentSpace(ivec2 in) {
+	virtual ivec2 toParentSpace(ivec2 in) const {
 		return getPosContent() + in;
 	}
 	virtual ivec2 toScreenSpace(ivec2 in) const {

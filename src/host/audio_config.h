@@ -6,6 +6,9 @@
 enum class stagebuffer_point {
 	INPUT, OUTPUT, OUTPUT_POST
 };
+inline bool isStageBufferPointInput(const stagebuffer_point stBufPt) {
+	return stBufPt == stagebuffer_point::INPUT;
+}
 namespace AudioIO {
 	enum tracktype {
 		MONO, STEREO, MULTI_CHANNEL_4, MULTI_CHANNEL_6

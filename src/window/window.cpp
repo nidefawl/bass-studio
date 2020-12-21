@@ -354,7 +354,7 @@ public:
 			daw_tls::tlsinstance& tls = daw_tls::getTls();
 			tls.renderStats.fps = fps;
 #endif
-//			glfwSetWindowTitle(glfw, StringAsCStr(fpsStats));
+			glfwSetWindowTitle(glfw, StringAsCStr(fpsStats));
 			tm_lastfps = tm;
 			calls = 0;
 		}

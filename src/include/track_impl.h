@@ -94,12 +94,12 @@ public:
 	void loadSnapshot(const track_params_snapshot_t& snapshot);
 	void postSetParameter(int32_t idx, float preVal, float val, int flags);
 };
-
 struct audio_stage_t {
-	audiostageid_i32 stageId = TRACKID_INVALID_I32;
+	vsthost* host;
+//	audiostageid_i32 stageId = TRACKID_INVALID_I32;
+	audio_stage_id_t stageId = {TRACKID_INVALID_I32, TRACKID_INVALID_I32, TRACKID_INVALID_I32};
 	audiostageflags_t flags = audiostageflags_t::CONVERT_OUTPUT;
 	audiostagerouting_state_t routingState = audiostagerouting_state_t::INVALID;
-	vsthost* host;
 	audio_stage_t* parent;
 	effectbase* owner;
 	/**
@@ -137,7 +137,7 @@ struct audio_stage_t {
 	} latencyInfo;
     std::map<uint32_t, std::shared_ptr<DelayLine>> effDelayLines;
 
-	audio_stage_t(vsthost* const _host, const audiostageid_i32 _id,/*track_t* _track, */const samplerate_t _sampleRate, const uint16_t _blockSize, int32_t nChannels, int _type = 1)
+	audio_stage_t(vsthost* const _host, const audio_stage_id_t _id,/*track_t* _track, */const samplerate_t _sampleRate, const uint16_t _blockSize, int32_t nChannels, int _type = 1)
 	: host(_host), stageId(_id), parent(nullptr), owner(nullptr),/*track(_track),*/
 	  pluginCtr(nullptr),
 	  input(nChannels, _blockSize),
@@ -149,6 +149,7 @@ struct audio_stage_t {
 		  sampleFormat.blockSize = _blockSize;
 		  sampleFormat.sampleRate = _sampleRate;
 		  sampleFormat.sampleformat = sampleformat_bits_t::FLOAT_32;
+		  configureDefaultRoutings();
 	}
 	virtual ~audio_stage_t() {
 
@@ -257,7 +258,7 @@ struct track_impl_t : public audio_stage_t {
 	DAW::channel_ref_t inputChannel;
 	DAW::channel_ref_t outputChannel;
 	std::vector<track_gui_entry_t*> guiInstances;
-	track_impl_t(vsthost* const _host, audiostageid_i32 _id, track_t* _track, const samplerate_t _sampleRate, const uint16_t _blockSize, int32_t nChannels);
+	track_impl_t(vsthost* const _host, audio_stage_id_t _id, track_t* _track, const samplerate_t _sampleRate, const uint16_t _blockSize, int32_t nChannels);
 	~track_impl_t();
 	void sendNotesOff(int32_t bpm100);
 	void sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, clip_notes_t& midiRealtimeInput, int32_t flags);

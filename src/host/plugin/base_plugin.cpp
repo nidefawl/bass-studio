@@ -62,6 +62,7 @@ effectbase::effectbase() : pluginType(0), projectGlobalId(0), sName("") {
 }
 void effectbase::onTick(double since) {
 	meter.onTick(since);
+	meterIn.onTick(since);
 }
 sampleformat_t effectbase::getSampleFormat() {
 	return format;
@@ -84,6 +85,7 @@ void effectbase::unload(vsthost* host) {
 
 void effectbase::postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) {
 	meter.update(out, 1.0f);
+	meterIn.update(this->blockInputs, 1.0f);
 }
 
 void effectbase::breakTrackLink() {
@@ -164,8 +166,13 @@ String effect_deferred::getDfrdPluginName() {
 void effect_deferred::onPreUnload() {
 	my_printf("onPreUnload effect_deferred %08X %s\n", (int64_t)mImpl, StringAsCStr(mImpl->snapshot.name));
 }
-const plugin_snapshot_t& effect_deferred::getSnapshot() const {
-	return mImpl->snapshot;
+const plugin_snapshot_t& effect_deferred::getSnapshotConst() const
+{
+    return mImpl->snapshot;
+}
+plugin_snapshot_t& effect_deferred::getSnapshot()
+{
+    return mImpl->snapshot;
 }
 
 /*static*/ std::shared_ptr<effect_deferred> effect_deferred::fromEffect(effectbase* eff) {
@@ -179,7 +186,6 @@ effect_deferred* effectbase::toDeferred() {
 	plugin_snapshot_t snapshot;
 	this->makeSnapshot(snapshot, true);
 	effect_deferred* def = new effect_deferred();
-	def->mImpl = new effect_deferred_impl();
 	def->mImpl = new effect_deferred_impl();
 	def->sName = snapshot.name;
 	def->projectGlobalId = snapshot.projectGlobalId;

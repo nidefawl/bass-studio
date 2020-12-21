@@ -22,8 +22,8 @@ struct track_source_t {
 	audiostageflags_t flags;
 };
 
-enum class track_node_type_t {
-	TRACK, AUDIOSTAGE, EFFECT
+enum class track_node_type_t : int32_t {
+	TRACK = 0, AUDIOSTAGE, EFFECT
 };
 struct track_node_t {
 	track_node_type_t type = track_node_type_t::TRACK;
@@ -73,11 +73,10 @@ struct track_graph_t {
 struct processing_graph_t {
 	std::vector<processing_track_node_t*> nodesSolo;
 	std::vector<processing_track_node_t*> nodesFlatOrdered;
-	std::vector<processing_track_node_t*> roots;
-	std::vector<processing_track_node_ptr> nodes;
+	std::vector<processing_track_node_t*> roots; // audio_stage output buffer
+	std::vector<processing_track_node_ptr> nodes; // audio_stage input buffer, effects, audio_stage output buffer
 	std::shared_ptr<track_graph_t> trackGraph;
-    int32_t nInvocation = 0;
-	//TODO: copies of this object are not allowed to free nodes
+    //int32_t nInvocation = 0;
 	~processing_graph_t();
     processing_graph_t() = default;
     processing_graph_t(const processing_graph_t& graph) = delete;

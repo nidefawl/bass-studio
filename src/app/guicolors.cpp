@@ -114,6 +114,7 @@ constant_t COL_BG_DRKER = constant_t("COL_BG_DRKER", 0xFF000000);
 constant_t COL_GUI_HANDLE = constant_t("COL_GUI_HANDLE", 0xFF000000);
 constant_t COL_GUI_HANDLE_FOCUSED = constant_t("COL_GUI_HANDLE_FOCUSED", 0xFF323232);
 constant_t COL_BG_DRKER2 = constant_t("COL_BG_DRKER2", 0xFF000000);
+constant_t COL_NODES_EDGE = constant_t("COL_NODES_EDGE", 0xFF323232);
 constant_t COL_CLEAR_COLOR = constant_t("COL_CLEAR_COLOR", 0xFF000000);
 constant_t COL_LABEL_ACTIVE = constant_t("COL_LABEL_ACTIVE", 0xFF000000);
 constant_t COL_LABEL_INACTIVE = constant_t("COL_LABEL_INACTIVE", 0xFF000000);

@@ -15,6 +15,7 @@ struct track_impl_t;
 
 
 struct io_configuration_snapshot_t {
+	int32_t type = 0;
 	int32_t stageId = -1;
     int32_t stageEndPointType = 0;
     int32_t externalInputType = 0;
@@ -41,6 +42,12 @@ struct arp_snapshot {
 };
 struct audio_stage_t;
 struct plugin_snapshot_t;
+struct track_id_snapshot_t {
+	int32_t stageId = -1;
+	int32_t inputStageId = -1;
+	int32_t outputStageId = -1;
+	int32_t outputPostStageId = -1;
+};
 struct track_impl_snapshot_t {
 	arp_snapshot trackArp;
 	track_io_configuration_snapshot_t trackIO;
@@ -55,7 +62,7 @@ struct track_layout_snapshot_t {
 	std::vector<automationlane_snapshot_t> automationLanes;
 };
 struct track_snapshot_t : public tracksettings_t {
-	int32_t stageId = -1;
+	track_id_snapshot_t stageIds;
 	int32_t localIdx = -1;
 	track_t* trackLoaded = NULL; // ref set in first phase of, cleared in second of 2-phase loading
 	track_impl_snapshot_t plugins;

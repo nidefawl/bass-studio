@@ -83,6 +83,12 @@ public:
 	int allocId;
 	guibase();
 	virtual ~guibase();
+    guibase(const guibase& graph) = delete;
+    guibase& operator=(const guibase& graph) = delete;
+    guibase(guibase&& graph) = delete;
+    guibase& operator=(guibase&& graph) = delete;
+//	guibase(const guibase&) = default; guibase& operator=(const guibase&) = default;
+//	guibase(guibase&&) = default; guibase& operator=(guibase&&) = default;
 protected:
 	void setFlagInternal(int flag) {
 		this->flags |= flag;
@@ -172,10 +178,8 @@ public:
 	}
 
 	String getClassName();
-	guibase(const guibase&) = default; guibase& operator=(const guibase&) = default;
-	guibase(guibase&&) = default; guibase& operator=(guibase&&) = default;
 
-	bool contains(ivec2 mpos) {
+	virtual bool contains(ivec2 mpos) const {
 		return mpos.x >= pos.x &&
 			mpos.y >= pos.y &&
 			mpos.x < pos.x + size.x &&
@@ -335,11 +339,17 @@ public:
 		}
 		vpos = toContainerSpace(vpos);
 	}
-	virtual ivec2 toParentSpace(ivec2 in) {
+	virtual ivec2 toParentSpace(ivec2 in) const {
 		return this->pos + in;
 	}
-	virtual ivec2 toContainerSpace(ivec2 in) {
+	virtual ivec2 toContainerSpace(ivec2 in) const {
 		return in - this->pos;
+	}
+	virtual vec2 toParentSpace2f(vec2 in) const {
+		return (vec2(this->pos)) + in;
+	}
+	virtual vec2 toContainerSpace2f(vec2 in) const {
+		return in - (vec2(this->pos));
 	}
 	void getHierachy(std::vector<guibase*>& stack) {
 		guibase* p = this->parent;

@@ -156,12 +156,12 @@ public:
 			this->track->scrolloffset = offset;
 		}
 	}
-	virtual ivec2 toContainerSpace(ivec2 in) {
+	virtual ivec2 toContainerSpace(ivec2 in) const {
 		ivec2 offsetPos = in - getPosContent();
 		offsetPos.x += scrolloffset;
 		return offsetPos;
 	}
-	virtual ivec2 toParentSpace(ivec2 in) {
+	virtual ivec2 toParentSpace(ivec2 in) const {
 		in.x -= scrolloffset;
 		ivec2 offsetPos = getPosContent() + in;
 		return offsetPos;

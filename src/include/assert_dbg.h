@@ -25,7 +25,7 @@ void failedAssert(const char* expr, const char *file, int line);
 #endif
 
 #ifdef NDEBUG
-#define always_assert(_Expression) ((void)_Expression)
+#define always_assert(_Expression) ((void)(_Expression))
 #else /* !defined (NDEBUG) */
 #define always_assert(_Expression) dbgassert(_Expression)
 #endif

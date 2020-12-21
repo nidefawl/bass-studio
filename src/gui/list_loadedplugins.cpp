@@ -389,6 +389,7 @@ public:
         		my_printf("activate %s\n", StringAsCStr(plugin->sName));
         		effectbase* effectLoaded = nullptr;
     			host->activateDeferred(plugin, &effectLoaded);
+    			DawInstance::get()->onPluginsChanged();
 //            			if (effectLoaded) {
 //            				effectLoaded->show();
 //            			}

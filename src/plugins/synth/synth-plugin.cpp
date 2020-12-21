@@ -48,7 +48,6 @@ AudioEffect* createEffectInstance (audioMasterCallback audioMaster)
 }
 #else
 
-#define MAX_PARAM_STR_LEN 128
 #endif
 
 namespace PluginSynth {

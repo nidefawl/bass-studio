@@ -685,8 +685,7 @@ void BaseCtrl::objectDragMove(guibase* g, MouseEvent& mevt) {
 	}
 	guibase* gui = evt.getGuiHit();
 	if (gui) {
-		ivec2 mposObj = toControlsObjectSpace(mevt.mousepos, gui);
-		g->dragMoveOn(gui, mposObj);
+		g->dragMoveOn(gui, mevt.mousepos);
 	} else {
 	}
 }
@@ -700,8 +699,7 @@ void BaseCtrl::objectDragRelease(guibase* g, MouseEvent& mevt) {
 	}
 	guibase* gui = evt.getGuiHit();
 	if (gui) {
-		ivec2 mposObj = toControlsObjectSpace(mevt.mousepos, gui);
-		g->dragReleaseOn(gui, mposObj);
+		g->dragReleaseOn(gui, mevt.mousepos);
 	}
 }
 void BaseCtrl::dragContainerBegin(MouseEvent& evt, guictr_layout_entry* ctrDragSrc)

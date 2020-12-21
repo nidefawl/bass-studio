@@ -38,6 +38,19 @@ public:
 	}
 	virtual ~gui_graph_entry() {
 	}
+	bool contains(ivec2 mpos) const override {
+		if (mpos.x >= pos.x &&
+			mpos.y >= pos.y &&
+			mpos.x < pos.x + size.x &&
+			mpos.y < pos.y + size.y)
+			return true;
+		ivec2 localPos = toContainerSpace(mpos);
+		for (auto* gui : guis) {
+			if (gui->isVisible() && gui->contains(localPos))
+				return true;
+		}
+		return false;
+	}
 	virtual void render(NVGcontext* vg);
 	virtual void handleDraggedBegin(MouseEvent& evt);
 	virtual void handleDraggedMove(MouseEvent& evt);
@@ -48,9 +61,11 @@ public:
 	bool isDragMoveable() {
 		return true;
 	}
+	bool setScissorTransformContainer(NVGcontext* vg) override;
 };
 class gui_graph_n;
 class gui_graph : public guictr_base {
+private:
 	class guictr_graph_impl;
 	guictr_graph_impl * const impl;
 protected:
@@ -67,9 +82,10 @@ public:
 	bool isTrackGraph = false;
 	gui_graph();
 	~gui_graph();
-	virtual ivec2 toParentSpace(ivec2 localCoord);
-	virtual ivec2 toContainerSpace(ivec2 in);
-	vec2 toContainerSpace2f(vec2 in);
+	ivec2 toParentSpace(ivec2 localCoord) const override;
+	ivec2 toContainerSpace(ivec2 in) const override;
+	vec2 toParentSpace2f(vec2 localCoord) const override;
+	vec2 toContainerSpace2f(vec2 in) const override;
 	virtual ivec2 toScreenSpace(ivec2 in) const;
 	void onTick(AppCtrl* appctrl) override;
 	int32_t getSelectedIdx() {

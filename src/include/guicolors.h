@@ -38,6 +38,7 @@ extern constant_t COL_CTXTMNU_BG;
 extern constant_t COL_CTXTMNU_HILIGHT;
 extern constant_t COL_GUI_STROKE;
 extern constant_t COL_BG_DRK_FOCUSED;
+extern constant_t COL_NODES_EDGE;
 extern constant_t COL_NOTE;
 extern constant_t COL_NOTE_PLAYING;
 extern constant_t COL_NOTE_ARP;

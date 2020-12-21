@@ -301,6 +301,7 @@ String module_group::getInfo(std::vector<String>& list) {
 
 void module_group::onTick(double since) {
 	meter.onTick(since);
+	meterIn.onTick(since);
 	audio->onTick(since);
 }
 void module_group::getChildAudioStages(std::vector<audio_stage_t*>& targets) {
@@ -332,6 +333,7 @@ void module_group::process(AudioBlock* in, AudioBlock* out, int32_t samplePos, i
 void module_group::postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) {
 //	float fGainGroup;
 //	dsp_util::getGainLvl(audio->mixer.getParamValue(PARAM_TRACK_GAIN), fGainGroup);
+	meterIn.update(this->blockInputs, 1.0f);
 	meter.update(out, 1.0f);
 	if (!hasProcessed) {
 		for (effectbase* effect : audio->effects) {
