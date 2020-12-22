@@ -1045,8 +1045,11 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 		stats.timings["inputs.resample"] = timer3.getTime();
 	canProcess = audioHost && queueSizeOutput < RING_BUF_SIZE / 2 && resamplerInput->numBlocksToPop() >= numBlocksExternal * numBlocksInternal;
 
-	dbgassert(validateIds());
-
+	if (dbg != 0) {
+		timer3.reset();
+		dbgassert(validateIds());
+		stats.timings["inputs.validate"] = timer3.getTime();
+	}
 	if (canProcess) {
 
 
@@ -1688,6 +1691,7 @@ void vsthost::onStartPlayback(project_controller_t* ctrl) {
 }
 void vsthost::onPluginsChanged(audio_stage_t* stage) {
 	log_printf("Plugins changed on audio stage %d", static_cast<int32_t>(stage->stageId.stageId));
+	dbgassert(validateIds());
 }
 void vsthost::onStopPlayback(project_controller_t* ctrl) {
 	project_t* project = ctrl->getProject();
