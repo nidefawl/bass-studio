@@ -74,7 +74,7 @@ void registerWindowTimer(appwindow* wnd) {
 	windowTimerHandleList.push_back(wnd);
 }
 void unregisterWindowTimer(appwindow* wnd) {
-	removeEntry(windowTimerHandleList, wnd);
+	dbgassert(removeEntry(windowTimerHandleList, wnd));
 }
 void windowTickTimerRun();
 
@@ -354,7 +354,7 @@ public:
 			daw_tls::tlsinstance& tls = daw_tls::getTls();
 			tls.renderStats.fps = fps;
 #endif
-			glfwSetWindowTitle(glfw, StringAsCStr(fpsStats));
+//			glfwSetWindowTitle(glfw, StringAsCStr(fpsStats));
 			tm_lastfps = tm;
 			calls = 0;
 		}
@@ -520,6 +520,7 @@ public:
 		if (it != children.end())
 			children.erase(it);
 
+        child->destroy();
 		delete child;
 	}
 	virtual void onChildOverlayClose(appwindow* child) {
@@ -997,8 +998,9 @@ public:
 	void destroy() override {
 		if (!glfw)
 			throw appexception("window null");
+		appwindow::killTimer();
 		glfwMakeContextCurrent(glfw);
-		appwindow::destroyGL();
+//		appwindow::destroyGL();
 		glfwSetWindowUserPointer(glfw, nullptr);
 		glfwDestroyWindow(glfw);
 		glfw = nullptr;
