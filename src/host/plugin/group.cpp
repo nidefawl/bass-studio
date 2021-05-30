@@ -357,4 +357,8 @@ void module_group::makeSnapshot(plugin_snapshot_t& snapshot, bool storePluginChu
 		snapshot.pluginSnapshots.push_back(std::move(ps));
 	}
 }
+template<>
+effectbase* makeInstance<module_group>(int32_t _projectGlobalId) {
+	return new module_group(_projectGlobalId);
+}
 

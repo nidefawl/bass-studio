@@ -12,7 +12,7 @@
 class PluginViewContainers;
 class BasePluginVST2 : public AudioEffectX {
 protected:
-	std::vector<PluginViewContainers*> views;
+	std::vector<std::shared_ptr<PluginViewContainers>> views;
 
 public:
 	BasePluginVST2 (audioMasterCallback audioMaster,
@@ -23,7 +23,7 @@ public:
 			VstInt32 numOutputs);
 	virtual ~BasePluginVST2 ();
 
-	void createEditorWindow(PluginViewContainersImpl* view);
+	void createEditorWindow(std::shared_ptr<PluginViewContainers> view);
 
 	virtual void open ();		///< Called when plug-in is initialized
 	virtual void close () {}	///< Called when plug-in will be released
@@ -31,7 +31,7 @@ public:
 	virtual void resume () {}	///< Called when plug-in is switched to on
 
 	virtual void processReplacing (float** inputs, float** outputs, VstInt32 sampleFrames) = 0;
-	virtual PluginViewContainers* createView() = 0;
+	virtual std::shared_ptr<PluginViewContainers> createView() = 0;
 
 
 	virtual bool getInputProperties (VstInt32 index, VstPinProperties* properties);

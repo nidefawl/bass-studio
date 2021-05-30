@@ -324,6 +324,7 @@ void updateSrBs() {
 
 		mctrl->stopPlaying();
 	}
+	mctrl->setAudioThreadState(playback_state::status_no_process);
 	{
 
 		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
@@ -338,6 +339,8 @@ void updateSrBs() {
 	}
 	if (b) {
 		mctrl->startPlaying();
+	} else {
+		mctrl->setAudioThreadState(playback_state::status_stop);
 	}
 };
 

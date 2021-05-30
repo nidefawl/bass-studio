@@ -538,6 +538,9 @@ void vsthost::setSampleFormat(const sampleformat_t& sampleFormat) {
 		for (effectbase* plugin : this->pluginInstances) {
 			plugin->setSampleFormat(sampleFormat);
 		}
+        for (effectbase* plugin : this->pluginsDeferred) {
+			plugin->setSampleFormat(sampleFormat);
+		}
 		for (vstplugin* plugin : this->pluginInstancesVST2) {
 			plugin->dispatch(effSetBlockSize, 0, sampleFormat.blockSize, 0, 0);
 			plugin->dispatch(effSetSampleRate, 0, 0, NULL, (float) sampleFormat.sampleRate);
@@ -1841,9 +1844,13 @@ void vsthost::processAudio(audio_stage_t* stage, AudioBlock* input, AudioBlock* 
                         dbgassert((delayLine->block.channels == srcBlock.channels) ||
                                   (2 <= delayLine->block.channels && ((delayLine->block.channels % 2) == 0) && 1 == srcBlock.channels));
 
-                        // todo: one of the delay lines will always be 0 samples delay
-                        delayAudio(delayLine, &srcBlock, &tempBlock, delayToMaxInputLatency);
-                        blockIn->addFromOp(&srcBlock, AudioBlock::mix_op::ADD, tracksrc.gain);
+                        AudioBlock* srcDelayBlocked = &srcBlock;
+                        // One of the delay lines will always be 0 samples delay
+                        if (delayToMaxInputLatency > 0) {
+                            delayAudio(delayLine, &srcBlock, &tempBlock, delayToMaxInputLatency);
+                        	srcDelayBlocked = &tempBlock;
+                        }
+                        blockIn->addFromOp(srcDelayBlocked, AudioBlock::mix_op::ADD, tracksrc.gain);
                     }
                 }
                 else {

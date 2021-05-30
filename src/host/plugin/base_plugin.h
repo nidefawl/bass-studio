@@ -46,6 +46,7 @@ public:
 	int32_t projectGlobalId;
 	bool bIsEnabled = false;
 	bool bIsSetup = false;
+	bool bEditOpen = false;
 	bool bCanReceiveMidi = false;
 	bool isSynth = false;
 	String sName;
@@ -58,6 +59,8 @@ public:
 	std::vector<DAW::channel_ref_t> inputChannels;
 protected:
 	vsthost* vstHost = nullptr;
+public:
+	std::vector<String> programNames;
 public:
 	effectbase();
 	effectbase(String _sName, int32_t _pluginType, int32_t _projectGlobalId);
@@ -113,6 +116,15 @@ public:
 		return trackImpl;
 	}
 	virtual bool isDeferred() {
+		return false;
+	}
+	virtual bool getCurrentProgramName(String& out) {
+		return false;
+	}
+	virtual bool setCurrentProgram(uint32_t index) {
+		return false;
+	}
+	virtual bool getCurrentProgram(uint32_t& index) {
 		return false;
 	}
 protected:

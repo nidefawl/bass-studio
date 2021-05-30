@@ -15,28 +15,34 @@ struct AudioBlock;
 struct handles_t;
 class track_t;
 class guiplugin;
+class PluginViewContainers;
 struct track_impl_t;
 
 class internalplugin : public effectbase {
+protected:
+	struct internalplugin_handles_t;
+	internalplugin_handles_t* handlesIntPlugin;
 public:
+	std::vector<std::shared_ptr<PluginViewContainers>> views;
 	String sDir;
-	bool bEditOpen = false;
 	bool bInEditIdle = false;
 	int pluginCategory = 0;
 	int vstVersion = 0;
 	int uId = 0;
-	internalplugin(String _sName, int32_t _pluginType, int32_t _projectGlobalId) : effectbase(_sName, _pluginType, _projectGlobalId) {
-	}
-	virtual ~internalplugin() {
-	}
+	internalplugin(String _sName, int32_t _pluginType, int32_t _projectGlobalId);
+	virtual ~internalplugin();
 protected:
 	virtual void onEnable();
 	virtual void onDisable();
 	virtual float dispatchGetParameter(int32_t idx) = 0;
 	virtual void dispatchSetParameter(int32_t idx, float val) = 0;
 public:
-	virtual guiplugin* makeGui() = 0;
-	virtual guiplugin* getGui() = 0;
+	virtual guiplugin* makeGui() override;
+	virtual guiplugin* getGui() override;
+//	virtual PluginViewContainers* createInternalView() = 0;
+	virtual std::shared_ptr<PluginViewContainers> createInternalView() {
+		return nullptr;
+	};
 	virtual int32_t getDelay() = 0;
 	virtual void process(AudioBlock* in, AudioBlock* out, int32_t samplePos, int32_t numSamples, playback_state state) = 0;
 //	virtual bool resume() = 0;
@@ -56,4 +62,6 @@ public:
 	void setParamValue(int32_t idx, float val, int flags) override;
 	void recvPluginEditParamUpdate(int32_t idx);
 	automationlane_snapshot_t toRef() override;
+
+//	virtual std::shared_ptr<PluginViewContainers> createView() = 0;
 };

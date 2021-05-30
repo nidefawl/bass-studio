@@ -1599,12 +1599,14 @@ public:
 				String strNewName = StringFormat("%s copy", StringAsCStr(tr->name));
 
 				track_snapshot_t trSnap(tr, true);
+				trSnap.stageIds.inputStageId = -1;
 				*newTrack = trSnap;
 				DawInstance::get()->addTrackImpl(tr->localIdxFlat+1, newTrack, FLG_TRK_CHANGE_USER);
 //				trSnap.stageId = static_cast<int32_t>(newTrack->audio->stageId);
 				newTrack->loadSnapshot(trSnap);
 				newTrack->name = makeUniqueTrackName(strNewName);
-
+				//make stuff unique
+				dbgassert(vsthost::getInstance()->validateIds());
 				m_trackentry->parent->layout();
 				DawInstance::get()->updateVisibleTrackContents();
 				track_gui_entry_t* entry;

@@ -49,7 +49,7 @@ namespace PluginLatency {
 PluginVST2_Latency::PluginVST2_Latency (audioMasterCallback audioMaster)
 	: BasePluginVST2(audioMaster, PLUGIN_UID, kNumPrograms, kNumParams, kNumInputs, kNumOutputs)
 {
-	createEditorWindow(static_cast<PluginViewContainersImpl*>(createView()));
+	createEditorWindow(createView());
 	setNewLatency(current()->latency);
 }
 
@@ -118,8 +118,10 @@ void PluginVST2_Latency::setParameter (VstInt32 index, float value)
 		break;
 	}
 #if BUILD_VSTHOST
-	for (PluginViewContainers* pviewctr : this->views) {
-		pviewctr->onSetParameter(index, value);
+	for (auto& pviewctr : this->views) {
+		if (pviewctr->isInUse()) {
+			pviewctr->onSetParameter(index, value);
+		}
 	}
 #else
 	if (this->editor) {
@@ -362,9 +364,9 @@ public:
 	{
 		return new PluginVST2_Latency (audioMaster);
 	}
-	PluginViewContainers* PluginVST2_Latency::createView() {
-		auto* v = new ViewContainers_Plugin_Latency();
-		this->views.push_back(v);
-		return v;
+	std::shared_ptr<PluginViewContainers> PluginVST2_Latency::createView() {
+		std::shared_ptr<PluginViewContainers> view = std::make_shared<ViewContainers_Plugin_Latency>();
+		this->views.push_back(view);
+		return view;
 	}
 }

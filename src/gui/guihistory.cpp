@@ -44,10 +44,10 @@ public:
 		icon = 0;
 	}
 	void dragMoveOn(guibase* target, ivec2 mousepos) override {
-//		target->pluginEntryDragMove(this, mousepos);
+//		target->pluginEntryDragMove(this, toControlsObjectSpace(mousepos, target));
 	}
 	void dragReleaseOn(guibase* target, ivec2 mousepos) override {
-//		target->pluginEntryDragRelease(this, mousepos);
+//		target->pluginEntryDragRelease(this, toControlsObjectSpace(mousepos, target));
 	}
 	String getText() override {
 		return entry->getDesc();

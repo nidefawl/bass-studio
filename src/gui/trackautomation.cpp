@@ -61,7 +61,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 			int32_t idxSegEnd = *(it+1);
 			vec2& ptStart = cachedShape[idxSegStart];
 			vec2& ptEnd = cachedShape[idxSegEnd];
-			float dist = math::distancePointLine(ptStart, ptEnd, mpos);
+			float dist = math::distancePointLine(mpos, ptStart, ptEnd);
 			minSegLineDist = math::min(dist, minSegLineDist);
 		}
 		if (minSegLineDist < 10) {
@@ -445,6 +445,10 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 	//	nvgStrokeWidth(vg, 3.0f);
 	//	nvgStroke(vg);
 		ivec2 imouse = toControlsObjectSpace(MainCtrl::get()->m_mousePos, this);
+		nvgBeginPath(vg);
+		nvgCircle(vg, imouse.x, imouse.y, 5);
+		nvgFillColor(vg, theme->getColor(GuiColor::COL_AUTOMATED));
+		nvgFill(vg);
 		bool mouseIn = MainCtrl::get()->guiOver == this && contains(imouse+getPosContent());
 		tick_t mouseTick = !mouseIn ? INVALID_TICK : MainCtrl::get()->getGrid().screenToTickSnap(imouse.x, SNAP_OFF);
 		vec2 fmouse = vec2(imouse);

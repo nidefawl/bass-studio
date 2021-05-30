@@ -235,12 +235,12 @@ void guictr_tracks::updateVisibleTracks() {
 			}
 		}
 	}
-	for (auto *trEntry : tracks) {
-		if (!trEntry->content->isVisible()) {
-			log_printf("track %s is not visible but is in in tracksVisibleFlat\n", StringAsCStr(trEntry->track->name));
-
-		}
-	}
+//	for (auto *trEntry : tracks) {
+//		if (!trEntry->content->isVisible()) {
+//			log_printf("track %s is not visible but is in in tracksVisibleFlat\n", StringAsCStr(trEntry->track->name));
+//
+//		}
+//	}
 }
 void guictr_tracks::updateVisibleTrackContents() {
 	updateVisibleTracks();

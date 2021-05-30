@@ -35,7 +35,7 @@ namespace PluginStereoWidth {
 PluginVST2_StereoWidth::PluginVST2_StereoWidth (audioMasterCallback audioMaster)
 	: BasePluginVST2(audioMaster, PLUGIN_UID, kNumPrograms, kNumParams, kNumInputs, kNumOutputs)
 {
-	createEditorWindow(static_cast<PluginViewContainersImpl*>(createView()));
+	createEditorWindow(createView());
 
 	curProgram = 0;
 }
@@ -115,8 +115,10 @@ void PluginVST2_StereoWidth::setParameter (VstInt32 index, float value)
 		break;
 	}
 #if BUILD_VSTHOST
-	for (PluginViewContainers* pviewctr : this->views) {
-		pviewctr->onSetParameter(index, value);
+	for (auto& pviewctr : this->views) {
+		if (pviewctr->isInUse()) {
+			pviewctr->onSetParameter(index, value);
+		}
 	}
 #else
 	if (this->editor) {

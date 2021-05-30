@@ -233,6 +233,7 @@ inline channel_ref_t ChannelAudioEffect(effectbase* effect, stagebuffer_point is
 	dbgassert(effect);
 	String str = "";
 	auto stage = effect->getTrackLink();
+	dbgassert(stage);
 	auto track = stage->getTrack();
 	if (track) {
 		str = track->name;

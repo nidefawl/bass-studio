@@ -183,6 +183,7 @@ void track_t::loadSnapshot(const track_snapshot_t& snapshot) {
 	auto audio = this->audio;
 	dbgassert(audio);
 	const auto& implSnapshot = snapshot.plugins;
+	// if the snapshot holds a stage id then use it, otherwise keep current stageId
 	if (snapshot.stageIds.inputStageId != -1) {
 		audio->stageId.stageId = static_cast<audiostageid_i32>(snapshot.stageIds.stageId);
 		audio->stageId.inputStageId = static_cast<audiostageid_i32>(snapshot.stageIds.inputStageId);
@@ -545,6 +546,8 @@ void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effec
 	if (missingParams) {
 		//TODO: notify users thru UI
 		log_printf("Some parameters could not be mapped: %s has %d missing parameters\n", StringAsCStr(effect->getName()), missingParams);
+	} else {
+		log_printf("%s: Loaded %d params\n", StringAsCStr(effect->getName()), pluginSnapshotParams.size());
 	}
 //	const std::vector<param_snapshot_t>& pluginHostSideParams = pluginSnapshot.hostParams;
 //	for (const param_snapshot_t& param : pluginHostSideParams) {
@@ -723,21 +726,47 @@ void vsthost::activateDeferred(effectbase* const eff, effectbase** out_effectLoa
 //		dbgassert(0);
 		return;
 	}
-	log_printf("activating deferred plugin loadEffectParamsFromSnapshot %s\n", StringAsCStr(pluginSnapshot.name));
-	loadEffectParamsFromSnapshot(pluginSnapshot, effect);
+
+	/* Begin of loading plugin state (parameter values, binary preset, automation lanes) */
+
+    log_printf("Activate Plugin %s: %d Parameters, %d Automated parameters\n",
+		StringAsCStr(pluginSnapshot.name), 
+		pluginSnapshot.params.size(), 
+		pluginSnapshot.automatedParams.size());
+    
+	bool loadParamsBeforePluginSnapshot = false;
+    /* check if parameter values are assigned before loadSnapshot */
+    if (loadParamsBeforePluginSnapshot) {
+        loadEffectParamsFromSnapshot(pluginSnapshot, effect);
+	}
+	
 	effectbase* prevPlugin = nullptr;
 	always_assert(removeEntry(eff->trackImpl->deferredEffects, eff));
 	replacePlugin(eff->trackImpl, effect, defEffect->getSlot(), &prevPlugin);
+
+	/* Load plugins binary snapshot */
 	effect->loadSnapshot(pluginSnapshot);
+	
+	/* check if parameter values are assigned after loadSnapshot */
+    if (!loadParamsBeforePluginSnapshot) {
+        loadEffectParamsFromSnapshot(pluginSnapshot, effect);
+    }
+
 	effect->inputChannels = prevPlugin->inputChannels;
 	effect->sName = pluginSnapshot.name;
-	pluginUpdateParamBypass(effect, pluginSnapshot.enabled);
+    pluginUpdateParamBypass(effect, pluginSnapshot.enabled);
+
+    /* Load plugin parameter automation lanes */
 	loadAutomation(pluginSnapshot.automatedParams, effect);
+
 	if (pluginSnapshot.enabled) {
 		effect->resume();
 	}
 	log_printf("done activating deferred plugin %s\n", StringAsCStr(pluginSnapshot.name));
+
+	/* Unload the (previous) deferred placeholder plugin */
 	unloadPlugin(prevPlugin);
+
 	if (DawInstance::get()) DawInstance::get()->onPluginsChanged();
 }
 int loadSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, const track_layout_snapshot_t& snapshot)

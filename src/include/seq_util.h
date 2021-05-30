@@ -61,7 +61,12 @@ template<typename C1>
   addAll(C1& a, const C1& b){
 	a.insert(a.end(), begin(b), end(b));
 }
-
+/**
+ * Removes entry b from vector a
+ * @param vector a
+ * @param value type b
+ * @return true if vector a changed in size
+ */
 template<typename C1, typename V1>
 inline bool removeEntry(C1& a, const V1& b) {
   auto curSize = a.size();

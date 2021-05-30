@@ -330,12 +330,16 @@ namespace DAW {
 				channel_ref_t tmp;
 				if (DAW::resolveDefaultConnection(host, project, trackImpl, true, tmp)) {
 					inputChannel = tmp;
+				} else {
+//					log_printf("Default input of stage #%d cannot be mapped\n", stageId);
 				}
 			}
 			if (outputChannel.type == channel_input_type::INPUT_DEFAULT) {
 				channel_ref_t tmp;
 				if (DAW::resolveDefaultConnection(host, project, trackImpl, false, tmp)) {
 					outputChannel = tmp;
+				} else {
+//					log_printf("Default output of stage #%d cannot be mapped\n", stageId);
 				}
 			}
 			if (isChannelConnected(inputChannel)) {
@@ -353,7 +357,7 @@ namespace DAW {
 					trackSrcCfg.parents.push_back(&trackCfg);
 				} else if (inputChannel.getType() == channel_input_type::INPUT_EXTERNAL_AUDIO) {
 					trackCfg.pulls.push_back(DAW::track_source_t{trackEdgeId++, inputChannel, 1.0f, 0, audiostageflags_t::NONE});
-				} else {
+				} else if (inputChannel.type != channel_input_type::INPUT_DEFAULT) {
 					log_printf("missing track input routing\n", 0);
 				}
 			}

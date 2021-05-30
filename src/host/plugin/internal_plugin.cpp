@@ -247,3 +247,29 @@ bool internalplugin::show() {
 //	}
 	return false;
 }
+
+
+struct internalplugin::internalplugin_handles_t {
+	std::unique_ptr<guiinternalpluginview> gui;
+};
+internalplugin::internalplugin(String _sName, int32_t _pluginType, int32_t _projectGlobalId)
+	: effectbase(_sName, _pluginType, _projectGlobalId),
+	  handlesIntPlugin(new internalplugin_handles_t{})
+{
+}
+
+internalplugin::~internalplugin() {
+	delete handlesIntPlugin;
+}
+guiplugin* internalplugin::makeGui() {
+	if (!handlesIntPlugin->gui) {
+		handlesIntPlugin->gui = std::make_unique<guiinternalpluginview>(this);
+		handlesIntPlugin->gui->setTitle(StringFormat("%s", StringAsCStr(this->sName)));
+	}
+	return handlesIntPlugin->gui.get();
+//	return handle->gui;
+}
+guiplugin* internalplugin::getGui() {
+	return handlesIntPlugin->gui.get();
+//	return handle->gui;
+}

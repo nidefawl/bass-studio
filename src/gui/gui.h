@@ -99,8 +99,8 @@ protected:
 public:
 	SafeRef<guibase> makeSafeRef();
 	virtual bool isVisible() const {
-		if (size.x < 0 || size.y < 0)
-			return false;
+		//if (size.x < 0 || size.y < 0)
+		//	return false;
 		return (flags & FLG_VISIBLE) != 0;
 	}
 	void setVisible(bool b) {

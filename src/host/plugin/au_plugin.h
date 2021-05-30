@@ -26,7 +26,6 @@ class auplugin : public effectbase {
 public:
 	handles_t* const handle;
 	String sDir;
-	bool bEditOpen = false;
 	bool bInEditIdle = false;
 	int pluginCategory = 0;
 	int vstVersion = 0;

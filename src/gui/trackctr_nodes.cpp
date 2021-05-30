@@ -18,6 +18,8 @@
 #include "button.h"
 #include "trackctr_nodes.h"
 #include "guimeter.h"
+#include "host/plugin/base_plugin.h"
+#include "host/plugin/internal_plugin.h"
 
 const float fLineWidth = 4.0f;
 const int stepLineSegments = 32;
@@ -234,6 +236,7 @@ bool connectNodes(DAW::processing_track_node_t* nodeInput, DAW::processing_track
                 bool b = hasDuplicateRoutings(nodeInput->stage->postEffectRouting, ref);
                 removeDuplicateRoutings(nodeInput->stage->postEffectRouting, ref);
                 nodeInput->stage->postEffectRouting.push_back(ref);
+                nodeInput->stage->routingState = audiostagerouting_state_t::CUSTOM;
                 return true;
 			}
 			break;
@@ -243,6 +246,7 @@ bool connectNodes(DAW::processing_track_node_t* nodeInput, DAW::processing_track
                 bool b = hasDuplicateRoutings(nodeInput->effectOptional->inputChannels, ref);
                 removeDuplicateRoutings(nodeInput->effectOptional->inputChannels, ref);
                 nodeInput->effectOptional->inputChannels.push_back(ref);
+                nodeInput->effectOptional->getTrackLink()->routingState = audiostagerouting_state_t::CUSTOM;
                 return true;
 			}
 
@@ -353,8 +357,12 @@ public:
 	void dragReleaseOn(guibase* target, ivec2 mousepos);
 };
 class gui_graph_n : public gui_graph_entry {
+	friend class gui_graph;
 	DAW::processing_track_node_t* const node;
 	std::vector<gui_graph_port*> guiPorts;
+	std::shared_ptr<PluginViewContainers> viewCtr;
+	/* holds guictrs of internal vstplugins with custom gui (non-steinberg api) */
+	std::vector<guictr_base*> viewCtrs;
 private:
 	void setPorts() {
 		for (auto guiPort : guiPorts) {
@@ -374,11 +382,17 @@ public:
 		setPorts();
 	}
 	~gui_graph_n() {
-		for (auto guiPort : guiPorts) {
-			remove(guiPort);
-			delete guiPort;
-		}
+        for (auto viewCtr : viewCtrs) {
+            remove(viewCtr);
+        }
+        for (auto guiPort : guiPorts) {
+            remove(guiPort);
+            delete guiPort;
+        }
 		destroyGuis();
+		if (viewCtr) {
+			viewCtr->setFree();
+		}
 	}
 	const DAW::processing_track_node_t* getProcessingNode() const {
 		return node;
@@ -950,7 +964,34 @@ void gui_graph::updateList(bool resetPositions) {
 				guiText->size = {entry->size.x-meterWidth, entry->size.y-hpt};
 				guiText->pos = {0, hpt};
 			}
-			entry->add(guiText);
+			if (node->type == DAW::track_node_type_t::EFFECT && node->effectOptional) {
+				auto intEffect = dynamic_cast<internalplugin*>(node->effectOptional);
+                if (intEffect) {
+                    entry->viewCtr = intEffect->createInternalView();
+                    if (entry->viewCtr) {
+                        entry->viewCtr->addTo(entry->viewCtrs);
+                        entry->viewCtr->onGuiOpen(nullptr);
+                    }
+				}
+            }
+            for (auto* ctr : entry->viewCtrs) {
+                entry->add(ctr);
+            }
+			int32_t insetCtrls = INSET_TITLE;
+			auto layoutPos = guiText->pos;
+			for (auto* ctr : entry->viewCtrs) {
+				ctr->pos = layoutPos + ivec2(insetCtrls, insetCtrls);
+                ivec2 prefSizeCtr = guiText->size - ivec2(insetCtrls*2);
+				ctr->determineSize(prefSizeCtr);
+				ctr->size = prefSizeCtr;
+				ctr->layout();
+				layoutPos.x = ctr->right() + INSET_TITLE;
+			}
+			if (entry->viewCtrs.empty()) {
+				entry->add(guiText);
+			} else {
+				delete guiText;
+			}
 
 			/* copy over positions from old layout */
 			//auto it = std::find_if(impl->listNodes.cbegin(), impl->listNodes.cend(), [stageId = node->stageId](gui_graph_n* gn) {

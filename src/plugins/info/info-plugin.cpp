@@ -50,7 +50,7 @@ PluginVST2_HostInfo::PluginVST2_HostInfo (audioMasterCallback audioMaster)
 	: BasePluginVST2(audioMaster, PLUGIN_UID, kNumPrograms, kNumParams, kNumInputs, kNumOutputs), impl(new PluginVST2_HostInfo_impl_t())
 {
 	programsAreChunks(true);
-	createEditorWindow(static_cast<PluginViewContainersImpl*>(createView()));
+	createEditorWindow(createView());
 
 }
 
@@ -119,8 +119,10 @@ void PluginVST2_HostInfo::setParameter (VstInt32 index, float value)
 		break;
 	}
 #if BUILD_VSTHOST
-	for (PluginViewContainers* pviewctr : this->views) {
-		pviewctr->onSetParameter(index, value);
+	for (auto& pviewctr : this->views) {
+		if (pviewctr->isInUse()) {
+			pviewctr->onSetParameter(index, value);
+		}
 	}
 #else
 	if (this->editor) {
@@ -426,9 +428,9 @@ public:
 	{
 		return new PluginVST2_HostInfo (audioMaster);
 	}
-	PluginViewContainers* PluginVST2_HostInfo::createView() {
-		auto* v = new ViewContainers_Plugin_Latency();
-		this->views.push_back(v);
-		return v;
+	std::shared_ptr<PluginViewContainers> PluginVST2_HostInfo::createView() {
+		std::shared_ptr<PluginViewContainers> view = std::make_shared<ViewContainers_Plugin_Latency>();
+		this->views.push_back(view);
+		return view;
 	}
 }

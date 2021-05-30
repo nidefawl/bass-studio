@@ -14,7 +14,6 @@ struct handles_t {
 	AEffect* aeffect = NULL; // hmodule owns if axEffect == null
 	void* hmodule = NULL; // we dont own
 	std::unique_ptr<guiplugin> gui;
-	PluginViewContainers* viewForInternalVst2 = nullptr;
 	handles_t(AudioEffectX* ex, AEffect* e, void* m) {
 		axEffect = ex;
 		aeffect = e;

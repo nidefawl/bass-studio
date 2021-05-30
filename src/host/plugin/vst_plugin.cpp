@@ -338,11 +338,12 @@ void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin, bool storePluginCh
 	}
 	if (storePluginChunks) {
 		ps.params.reserve(plugin->getNumParameters());
-		plugin->visitParams([&ps](auto& mapEntry) {
-			automatable_param_t& param = mapEntry.second;
+        plugin->visitParams([&ps, plugin](auto& mapEntry) {
+            automatable_param_t& param = mapEntry.second;
 			if (param.inUse) {
 				ps.params.push_back(param_snapshot_t{ param.idx, param.value });
-			}
+            } else {
+            }
 		});
 		storeAutomation(ps.automatedParams, plugin);
 	}
@@ -376,13 +377,12 @@ guiplugin* vstplugin::makeGui() {
 			dbgassert(pGuiVstPlugin);
 			BasePluginVST2* baseVst2 = dynamic_cast<BasePluginVST2*>(handle->axEffect);
 			dbgassert(baseVst2);
-			PluginViewContainers* viewCtr = baseVst2->createView();
+			auto viewCtr = baseVst2->createView();
 			if (viewCtr) {
 				pGuiVstPlugin->viewCtr = viewCtr;
 				viewCtr->addTo(pGuiVstPlugin->viewCtrs);
 				viewCtr->onGuiOpen(handle->axEffect);
 				viewCtr->setVSTPlugin(this);
-				handle->viewForInternalVst2 = viewCtr;
 			}
 		}
 	}
@@ -396,9 +396,6 @@ vstplugin::~vstplugin() {
 	}
 	if (blockOutputs) {
 		delete blockOutputs;
-	}
-	if (handle->viewForInternalVst2) {
-		delete handle->viewForInternalVst2;
 	}
 	delete handle;
 }
@@ -481,6 +478,35 @@ void vstplugin::postSetParameter(int32_t idx, float preVal, float val, int flags
 	parameter_ref_t p = {track->projectIdx,  ref.type, this->projectGlobalId, idx};
 	DawInstance::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
 }
+
+
+bool vstplugin::setCurrentProgram(uint32_t idx) {
+	if (idx < this->programNames.size()) {
+		return dispatch(effSetProgram, 0, idx, 0, 0) > 0;
+	}
+	return false;
+}
+bool vstplugin::getCurrentProgram(uint32_t& idx) {
+	long curProgram = dispatch(effGetProgram, 0, 0, 0, 0);
+	dbgassert(curProgram >= 0);
+	idx = (uint32_t)curProgram;
+	return true;
+}
+bool vstplugin::getCurrentProgramName(String& out) {
+	char buf[1024];
+	memset(buf, 0, sizeof(buf));
+	if (dispatch(effGetProgramName, 0, 0, buf, 0) && buf[0]) {
+		out = String(buf);
+		return true;
+	}
+	long curProgram = dispatch(effGetProgram, 0, 0, 0, 0);
+	if (curProgram >= 0 && curProgram < programNames.size()) {
+		out = programNames[curProgram];
+		return true;
+	}
+	return "";
+}
+
 void vstplugin::recvPluginEditParamUpdate(int32_t internalIdx) {
 	automatable_param_t* param = getEffectParam(internalIdx);
 	dbgassert(param && param->internalIdx >= 0);

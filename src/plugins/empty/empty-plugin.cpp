@@ -41,7 +41,7 @@ namespace PluginEmptyVST2 {
 EmptyPluginVST2::EmptyPluginVST2 (audioMasterCallback audioMaster)
 	: BasePluginVST2(audioMaster, PLUGIN_UID, kNumPrograms, kNumParams, kNumInputs, kNumOutputs)
 {
-	createEditorWindow(static_cast<PluginViewContainersImpl*>(createView()));
+	createEditorWindow(createView());
 
 	curProgram = 0;
 }

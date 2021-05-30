@@ -163,7 +163,7 @@ template<class Archive>
 void serialize(Archive & archive, track_effect_routing_snapshot_t & m)
 {
 //	archive(make_nvp("inputRoutingOutputStage", m.inputRoutingOutputStage));
-	archive(make_nvp("inputRoutingOutputStage", m.inputRoutingOutputStage), make_nvp("inputRoutingEffects", m.inputRoutingEffects));
+	archive(make_nvp("inputRoutingOutputStage", m.inputRoutingOutputStage), make_nvp("inputRoutingEffects", m.inputRoutingEffects), make_nvp("routingState", m.routingState));
 
 }
 template<class Archive>

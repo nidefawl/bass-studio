@@ -563,11 +563,11 @@ void guictr_dragged_plugins::handleDraggedMove(MouseEvent& evt) {
 }
 
 void guictr_dragged_plugins::dragMoveOn(guibase* target, ivec2 mousepos) {
-	target->pluginMultiDragMove(this, mousepos);
+	target->pluginMultiDragMove(this, toControlsObjectSpace(mousepos, target));
 }
 
 void guictr_dragged_plugins::dragReleaseOn(guibase* target, ivec2 mousepos) {
-	target->pluginMultiDragRelease(this, mousepos);
+	target->pluginMultiDragRelease(this, toControlsObjectSpace(mousepos, target));
 }
 void guictr_dragged_plugins::renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2 dragOffset) {
 	//		mousepos += dragOffset;

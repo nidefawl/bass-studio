@@ -428,10 +428,10 @@ void guiplugin::handleRightClick(MouseEvent& evt) {
 
 }
 void guiplugin::dragMoveOn(guibase* target, ivec2 mousepos) {
-	target->pluginDragMove(this, mousepos);
+	target->pluginDragMove(this, toControlsObjectSpace(mousepos, target));
 }
 void guiplugin::dragReleaseOn(guibase* target, ivec2 mousepos) {
-	target->pluginDragRelease(this, mousepos);
+	target->pluginDragRelease(this, toControlsObjectSpace(mousepos, target));
 }
 
 bool guiplugin::focusEvent(MouseHitEvt& evt, bool focused) {
@@ -571,19 +571,19 @@ public:
 void drawImage(NVGcontext* vg, int image, float alpha,
 		float sx, float sy, float sw, float sh, // sprite location on texture
 		float x, float y, float w, float h); // position and size of the sprite rectangle on screen
-class guivstplugin_preview : public guictr_base {
+class guipluginview_preview : public guictr_base {
 	vstplugin* const plugin;
-	guivstplugin* const guivst;
+	guipluginview* const guivst;
 	int tex = -1;
 	ivec2 sizeTex;
 public:
-	guivstplugin_preview(vstplugin* _plugin, guivstplugin* _guivst)
+	guipluginview_preview(vstplugin* _plugin, guipluginview* _guivst)
 	: guictr_base(), plugin(_plugin), guivst(_guivst), sizeTex{0,0}
 	{
 		padding = 0;
 		margin = 0;
 	}
-	~guivstplugin_preview() {
+	~guipluginview_preview() {
 
 	}
 	void determineSize(ivec2& prefSize) override {
@@ -656,37 +656,37 @@ public:
 		}
 	}
 };
-guivstplugin::guivstplugin(vstplugin * _vst)
-  : guiplugin(_vst), vst(_vst), dropdownProgram(_vst)
+guipluginview::guipluginview(effectbase * _effect)
+  : guiplugin(_effect), effect(_effect), dropdownProgram(_effect)
 {
 	params.setRowHeight(48);
 	buttonOpenEditor.icon = ICON_ADJUST;
-	buttonOpenEditor.state = &_vst->bEditOpen;
+	buttonOpenEditor.state = &_effect->bEditOpen;
 	buttonOpenEditor.setParent(this);
 	buttonOpenEditor.colorActive = GuiColor::COL_BTN_BG_SHOW_ACTIVE;
 	addGuiBtn(&buttonOpenEditor);
 	params.setParent(this);
 	dropdownProgram.setParent(this);
 	std::vector<automatable_param_t*> sortedParams;
-	_vst->getSortedParams(sortedParams);
+	_effect->getSortedParams(sortedParams);
 	std::vector<gui_list_entry*> listEntries;
 	listEntries.reserve(sortedParams.size());
-    std::for_each(sortedParams.begin(), sortedParams.end(), [&listEntries, _vst](auto* param) {
-		if (param->internalIdx >= 0)
-			listEntries.push_back(new gui_plugin_paramlist_entry(_vst, param));
+    std::for_each(sortedParams.begin(), sortedParams.end(), [&listEntries, _effect](auto* param) {
+//		if (param->internalIdx >= 0)
+			listEntries.push_back(new gui_plugin_paramlist_entry(_effect, param));
     });
 	params.setList(listEntries);
-//	ctrPreview = new guivstplugin_preview(this->vst, this);
+//	ctrPreview = new guipluginview_preview(this->vst, this);
 //	viewCtrs.push_back(ctrPreview);
 }
 
-guivstplugin::~guivstplugin() {
+guipluginview::~guipluginview() {
 	remove(&buttonOpenEditor);
 	if (ctrPreview) {
 		delete ctrPreview;
 	}
 }
-void guivstplugin::setControl(BaseCtrl* parentCtrl) {
+void guipluginview::setControl(BaseCtrl* parentCtrl) {
 	guiplugin::setControl(parentCtrl);
 	params.setControl(parentCtrl);
 	dropdownProgram.setControl(parentCtrl);
@@ -695,14 +695,14 @@ void guivstplugin::setControl(BaseCtrl* parentCtrl) {
 	}
 }
 
-void guivstplugin::prerender(NVGcontext* vg) {
+void guipluginview::prerender(NVGcontext* vg) {
 	guiplugin::prerender(vg);
 	for (auto* ctr : viewCtrs) {
 		assert(!ctr->parent);
 		ctr->prerender(vg);
 	}
 }
-void guivstplugin::determineSize(glm::ivec2& prefSize) {
+void guipluginview::determineSize(glm::ivec2& prefSize) {
 	if (layoutMode == 1) {
 		guiplugin::determineSize(prefSize);
 		return;
@@ -727,7 +727,7 @@ void guivstplugin::determineSize(glm::ivec2& prefSize) {
 	prefSize.y = math::max(sizeCtrs.y, prefSize.y);
 	prefSize.x += sizeCtrs.x;
 }
-void guivstplugin::render(NVGcontext* vg) {
+void guipluginview::render(NVGcontext* vg) {
 	renderBase(vg);
 	for (auto* btn : guiButtons) {
 		if (btn->isVisible())
@@ -753,7 +753,7 @@ void guivstplugin::render(NVGcontext* vg) {
 		}
 	}
 }
-bool guivstplugin::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
+bool guipluginview::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 	if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
 		return false;
 	}
@@ -785,20 +785,20 @@ bool guivstplugin::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 	}
 	return false;
 }
-void guivstplugin::buttonClicked(guibase* _button) {
+void guipluginview::buttonClicked(guibase* _button) {
 	guiplugin::buttonClicked(_button);
 	if (_button == &buttonOpenEditor) {
-		if (vst->bEditOpen) {
-			vst->close();
+		if (effect->bEditOpen) {
+			effect->close();
 		} else {
-			vst->show();
+			effect->show();
 		}
 	}
-	dropdownProgram.setVisible(layoutMode == 0 && vst->programNames.size());
+	dropdownProgram.setVisible(layoutMode == 0 && effect->programNames.size());
 	params.setVisible(layoutMode == 0);
 	meter.setVisible(layoutMode == 0);
 }
-void guivstplugin::layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {
+void guipluginview::layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {
 	const int32_t hpt = theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT);
 //	buttonOpenEditor.size = buttonBypass.size;
 //	buttonOpenEditor.setRadius(buttonBypass.radius);
@@ -812,7 +812,7 @@ void guivstplugin::layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {
 	while (contentS.y < rowHeight * 8 && rowHeight > 8) {
 		rowHeight -= 4;
 	}
-	dropdownProgram.setVisible(layoutMode == 0 && vst->programNames.size());
+	dropdownProgram.setVisible(layoutMode == 0 && effect->programNames.size());
 	if (dropdownProgram.isVisible()) {
 
 		int hDropDown = hpt*0.7;
@@ -846,7 +846,7 @@ void guivstplugin::layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {
 }
 
 
-guidropdown_select_program::guidropdown_select_program(vstplugin *_plugin) :
+guidropdown_select_program::guidropdown_select_program(effectbase *_plugin) :
 		plugin(_plugin) {
 	this->size.x = 120;
 	this->fontSize = FONT_SIZE_CTXT_SMALL;
@@ -861,22 +861,14 @@ guidropdown_select_program::guidropdown_select_program(vstplugin *_plugin) :
 void guidropdown_select_program::clicked(int _id) {
 	closeContextMenu();
 	if (_id >= 0 && _id < plugin->programNames.size()) {
-		String s = plugin->programNames[_id];
-		plugin->dispatch(effSetProgram, 0, _id, 0, 0);
+		plugin->setCurrentProgram(_id);
 	}
 }
 
 String guidropdownprogram::getString() {
-	char buf[1024];
-	memset(buf, 0, sizeof(buf));
-	if (plugin->dispatch(effGetProgramName, 0, 0, buf, 0) && buf[0]) {
-		return String(buf);
-	}
-	int n = plugin->dispatch(effGetProgram, 0, 0, 0, 0);
-	if (n >= 0 && n < plugin->programNames.size()) {
-		return plugin->programNames[n];
-	}
-	return "";
+	String s = "";
+	plugin->getCurrentProgramName(s);
+	return s;
 }
 
 void guidropdownprogram::handleDraggedRelease(MouseEvent &evt) {
@@ -896,7 +888,7 @@ void guitooltip<guivstplugin>::layout()  {
 	table.titleCols.clear();
 	table.colSizes.clear();
 	{
-		table.rows.push_back({{String("projectGlobalId"), (int)ptr->vst->projectGlobalId}});
+		table.rows.push_back({{String("projectGlobalId"), (int)ptr->effect->projectGlobalId}});
 		table.rows.push_back({{String("isSynth"), (int)ptr->vst->isSynth}});
 		auto vst = ptr->vst;
 		auto aeffect = vst->handle->aeffect;
@@ -931,9 +923,37 @@ void guitooltip<guivstplugin>::layout()  {
 	size.y = table.rows.size()*table.rowHeight;
 }
 
+guivstplugin::guivstplugin(vstplugin * _effect) : guipluginview(_effect), vst(_effect)
+{
+}
+guivstplugin::~guivstplugin() {
+	if (viewCtr) {
+		viewCtr->setFree();
+	}
+}
 guictxtmenu_base* guivstplugin::getTooltip(AppCtrl* appctrl) {
 	auto tooltip = new guitooltip<guivstplugin>(this);
 	return tooltip;
+}
+guictxtmenu_base* guiinternalpluginview::getTooltip(AppCtrl* appctrl) {
+//	auto tooltip = new guitooltip<guiinternalpluginview>(this);
+//	return tooltip;
+	return nullptr;
+}
+guiinternalpluginview::guiinternalpluginview(internalplugin * _effect) : guipluginview(_effect), plugin(_effect)
+{
+	viewCtr = _effect->createInternalView();
+	if (viewCtr) {
+		viewCtr->addTo(viewCtrs);
+		viewCtr->onGuiOpen(nullptr);
+//		this->viewCtr->setVSTPlugin(this);
+//		handleInt->viewForInternalVst2 = this->viewCtr;
+	}
+}
+guiinternalpluginview::~guiinternalpluginview() {
+	if (viewCtr) {
+		viewCtr->setFree();
+	}
 }
 
 template<typename T>

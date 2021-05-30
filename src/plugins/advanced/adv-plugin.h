@@ -68,7 +68,7 @@ public:
 	virtual ~GuiAdvPluginVST2 ();
 
 	void processReplacing (float** inputs, float** outputs, VstInt32 sampleFrames) override;
-	PluginViewContainers* createView() override;
+	std::shared_ptr<PluginViewContainers> createView() override;
 
 	virtual void setProgram(VstInt32 program);
 	virtual void setProgramName(char* name);

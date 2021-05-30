@@ -72,7 +72,6 @@ public:
 	handles_t* const handle;
 	const int internalModuleId;
 	String sDir;
-	bool bEditOpen = false;
 	bool bInEditIdle = false;
 	int pluginCategory = 0;
 	int vstVersion = 0;
@@ -80,7 +79,6 @@ public:
 	vst_window* window = NULL;
 	bool isInSuspend = true;
 	std::vector<vst_param_category> paramsCategories;
-	std::vector<String> programNames;
 //	std::vector<vst_param> vstParams;
 
 	std::vector<String> inputNames;
@@ -131,6 +129,10 @@ public:
 	void setParamValue(int32_t idx, float val, int flags) override;
 	automationlane_snapshot_t toRef() override;
 	void postSetParameter(int32_t idx, float preVal, float val, int flags) override;
+
+	bool setCurrentProgram(uint32_t idx) override;
+	bool getCurrentProgram(uint32_t& idx) override;
+	bool getCurrentProgramName(String& out) override;
 
 	void makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) override;
 	void loadSnapshot(const plugin_snapshot_t& pluginSnapshot) override;

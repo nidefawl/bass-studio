@@ -129,7 +129,9 @@ namespace PluginEmptyVST2 {
 	AudioEffectX* createPlugin (audioMasterCallback audioMaster) {
 		return new EmptyPluginVST2 (audioMaster);
 	}
-	PluginViewContainers* EmptyPluginVST2::createView() {
-		return new ViewContainersEmptyPlugin();
+	std::shared_ptr<PluginViewContainers> EmptyPluginVST2::createView() {
+		std::shared_ptr<PluginViewContainers> view = std::make_shared<ViewContainersEmptyPlugin>();
+		this->views.push_back(view);
+		return view;
 	}
 }

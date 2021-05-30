@@ -107,4 +107,8 @@ void module_empty::process(AudioBlock* in, AudioBlock* out, int32_t samplePos, i
 String module_empty::getInfo(std::vector<String>& list) {
 	return "";
 }
+template<>
+effectbase* makeInstance<module_empty>(int32_t _projectGlobalId) {
+	return new module_empty(_projectGlobalId);
+}
 
