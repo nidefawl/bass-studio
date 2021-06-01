@@ -772,6 +772,7 @@ void DawInstance::loadFile(String path, int flags) {
 	if (!f) {
 		mainCtrl->setStatusText(StringFormat("Failed loading %s", StringAsCStr(FileNameFromPath(path))));
 	} else {
+		settings.recentfiles.add(path);
 		const bool wasUserCallback = (flags&FLAG_INVOKE_USER_CB_DEFERLOAD) != 0;
 		auto cb = [this, path, l1, projFile=f, wasUserCallback](int n) {
 			int loadFlags = 0;
@@ -911,7 +912,6 @@ void DawInstance::menuCommand(const menucmd_t&& command) {
 			if (command.arg1.empty()) {
 				String path;
 				if (promptUserFilePath(mainCtrl->window, 0, vFILE_TYPE_PROJECT, path)) {
-					settings.recentfiles.add(path);
 					loadFile(path, FLAG_INVOKE_USER_CB_DEFERLOAD);
 				}
 			} else {
