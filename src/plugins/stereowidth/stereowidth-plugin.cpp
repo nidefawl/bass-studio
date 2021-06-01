@@ -217,7 +217,7 @@ BaseVST2_ProgramStereoWidth::BaseVST2_ProgramStereoWidth()
 {
 	vst_strncpy(name, "Init", kVstMaxProgNameLen);
 	gain = 1.0f;
-	width = 1.0f;
+	width = 0.5f;
 }
 
 
