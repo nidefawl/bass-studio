@@ -8,7 +8,7 @@ struct project_globals_i {
 };
 struct project_globals_t {
 	tick_t loopStart = 0;
-	tick_t loopLen = TICKS_BAR*4;
+	tick_t loopLen = TICKS_BAR*1;
 	bool loopEnabled = true;
 	uint32_t tempo100 = 12800;
 	uint32_t signatureNum = 4;
