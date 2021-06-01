@@ -445,10 +445,17 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 	//	nvgStrokeWidth(vg, 3.0f);
 	//	nvgStroke(vg);
 		ivec2 imouse = toControlsObjectSpace(MainCtrl::get()->m_mousePos, this);
-		nvgBeginPath(vg);
-		nvgCircle(vg, imouse.x, imouse.y, 5);
-		nvgFillColor(vg, theme->getColor(GuiColor::COL_AUTOMATED));
-		nvgFill(vg);
+
+		const bool bGlbCfg_DrawAutomationLaneMouseCursor = true;
+		if (bGlbCfg_DrawAutomationLaneMouseCursor) {
+			const int bGlbCfg_MouseCursorType = 0;
+			float fAutomationLaneMouseCursorWidth = bGlbCfg_MouseCursorType == 0 ? 2 : 5;
+			nvgBeginPath(vg);
+			nvgCircle(vg, imouse.x, imouse.y, fAutomationLaneMouseCursorWidth);
+			nvgFillColor(vg, theme->getColor(GuiColor::COL_AUTOMATED));
+			nvgFill(vg);
+		}
+
 		bool mouseIn = MainCtrl::get()->guiOver == this && contains(imouse+getPosContent());
 		tick_t mouseTick = !mouseIn ? INVALID_TICK : MainCtrl::get()->getGrid().screenToTickSnap(imouse.x, SNAP_OFF);
 		vec2 fmouse = vec2(imouse);
