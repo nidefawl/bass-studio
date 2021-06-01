@@ -282,6 +282,11 @@ void guiknob_labeled_base::render(NVGcontext* vg) {
 	}
 	renderBorder(vg, getStateFlags(), pos + glm::ivec2(0, size.y - valueHeight + INS_BRD), glm::ivec2(size.x, valueHeight - INS_BRD * 2), GuiColor::COL_BG_BRT);
 	nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+//	setFont(vg, (int)((knob->size.y/2.0)), G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_TOP);
+
+	UIFont::font_instance instance = theme->getFont(UIFont::FONT_DEFAULT);
+	UIFont::bindFont(vg, instance);
+
 	if (isSlider) {
 		nvgFillColor(vg, contrastColor);
 		if (labelHeight) {
