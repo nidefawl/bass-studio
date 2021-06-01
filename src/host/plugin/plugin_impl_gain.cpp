@@ -73,7 +73,7 @@ public:
 //#endif
 	void setDisplayValueFromEffect() {
 		if (this->hostSidePlugin) {
-			String display = StringFormat("%.3f", hostSidePlugin->getParamValue(paramIdx));
+			String display = hostSidePlugin->formatDisplayValue(paramIdx);
 //			String displayUnit = curEffect->getParamName(internalEffectIdx);
 			this->valueDisplay = display;
 		} else {
@@ -261,9 +261,13 @@ void module_gain::onTick(double since) {
 void module_gain::process(AudioBlock* in, AudioBlock* out, int32_t samplePos, int32_t numSamples, playback_state state) {
 	dbgassert(getTrackLink()->sampleFormat == this->format && in->samples == format.blockSize
 			&& out->samples == format.blockSize && format.blockSize > 0 && format.sampleRate > 0);
+
+    out->clear();
+	/* Calculate group gain level */
 	float fGain = 1.0f;
-	out->clear();
-	out->addFromOp(in, AudioBlock::mix_op::ADD, math::clamp(fGain, 0.0f, 1.0f));
+    if (dsp_util::getGainLvl(getParamValue(PARAM_GAIN), fGain)) {
+        out->addFromOp(in, AudioBlock::mix_op::ADD, math::clamp(fGain, 0.0f, 2.0f));
+	}
 }
 void module_gain::postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) {
 	meterIn.update(this->blockInputs, 1.0f);
@@ -274,6 +278,13 @@ void module_gain::loadSnapshot(const plugin_snapshot_t& pluginSnapshot)  {
 }
 void module_gain::makeSnapshot(plugin_snapshot_t& snapshot, bool storePluginChunks) {
 	internalplugin::makeSnapshot(snapshot, storePluginChunks);
+}
+String module_gain::formatDisplayValue(int32_t idx) {
+	float fGain = 1.0f;
+    if (dsp_util::getGainLvl(getParamValue(PARAM_GAIN), fGain)) {
+    	return StringFormat("%.3f dB", dsp_util::dBFS(fGain));
+	}
+    return "-INF";
 }
 
 

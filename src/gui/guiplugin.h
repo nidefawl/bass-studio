@@ -103,6 +103,7 @@ public:
 	guidropdownprogram dropdownProgram;
 	gui_list params; //TODO: use add() on control
 	guibuttontoggle buttonOpenEditor; //TODO: use add() on controls
+    guibuttontoggle buttonShowInlineGUI; // TODO: use add() on controls
 
 	/* holds view controller for internal vstplugins with custom gui (non-steinberg api) */
 	std::shared_ptr<PluginViewContainers> viewCtr;

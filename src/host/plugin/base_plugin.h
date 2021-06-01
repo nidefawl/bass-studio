@@ -47,7 +47,9 @@ public:
 	bool bIsEnabled = false;
 	bool bIsSetup = false;
 	bool bEditOpen = false;
+	bool bCaptureGUI = false;
 	bool bCanReceiveMidi = false;
+	int32_t requestCaptureGUI = 0;
 	bool isSynth = false;
 	String sName;
 	String sProductName;
@@ -129,7 +131,9 @@ public:
 	}
 protected:
 	friend class effect_deferred;
-	effect_deferred* toDeferred();
+public:
+	virtual effect_deferred* toDeferred();
+    virtual String formatDisplayValue(int32_t idx);
 };
 struct effect_deferred_impl;
 class effect_deferred : public effectbase {

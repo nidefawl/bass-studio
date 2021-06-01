@@ -756,15 +756,18 @@ void vsthost::activateDeferred(effectbase* const eff, effectbase** out_effectLoa
     /* Load plugin parameter automation lanes */
 	loadAutomation(pluginSnapshot.automatedParams, effect);
 
+	log_printf("done activating deferred plugin %s: isenabled %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.enabled);
 	if (pluginSnapshot.enabled) {
 		effect->resume();
 	}
-	log_printf("done activating deferred plugin %s\n", StringAsCStr(pluginSnapshot.name));
 
 	/* Unload the (previous) deferred placeholder plugin */
 	unloadPlugin(prevPlugin);
 
-	if (DawInstance::get()) DawInstance::get()->onPluginsChanged();
+	//TODO: make this step optional (bool parameter)
+	// When loading multiple plugins only fire it for the last one, or run postPluginLoaded externally
+	postPluginLoaded(effect->getTrackLink(), effect);
+//	if (DawInstance::get()) DawInstance::get()->onPluginsChanged();
 }
 int loadSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, const track_layout_snapshot_t& snapshot)
 {

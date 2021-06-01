@@ -196,7 +196,10 @@ void pastePluginClipboard(std::shared_ptr<plugin_clipboard_t>& clipboard, audio_
             }
             effect->getSnapshot().projectGlobalId = effect->projectGlobalId;
 			effect->load(host);
-			host->insertNewPlugin(stage, effect, pos++);
+			host->insertNewPlugin(stage, effect, pos);
+			//keep negative values
+            if (pos >= 0)
+                pos++;
 			host->activateDeferred(effect);
 		} else {
 			//TODO: handle
@@ -293,7 +296,8 @@ bool handlePluginCtrCommand(action_plugin_ctr action) {
 		case action_plugin_ctr::PLUGINS_PASTE:
 			if (DawInstance::get()->getPluginClipboard()) {
 				std::shared_ptr<plugin_clipboard_t> clipboard = DawInstance::get()->getPluginClipboard();
-				pastePluginClipboard(clipboard, sel.pluginCtr->stage, selection.back()->getSlot()+1);
+                int pluginPasteSlot = selection.empty() ? -2 : (selection.back()->getSlot() + 1);
+                pastePluginClipboard(clipboard, sel.pluginCtr->stage, pluginPasteSlot);
 				handledKeyinput = true;
 			}
 			break;
@@ -922,8 +926,11 @@ void guictr_plugins::determineSize(glm::ivec2& prefSize) {
 
 	ivec2 sizeInset = prefSize - (paddingTL(padding) + paddingBR(padding));
 	int32_t guiH = sizeInset.y - margin;
-	int32_t titleHeight = ((guiH/8)>>1)<<1;
-	theme->set(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT, titleHeight);
+	int32_t titleHeight = math::min(((320/8)>>1)<<1, ((guiH/8)>>1)<<1);
+    theme->set(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT, titleHeight);
+
+
+
 	int32_t inset = margin / 2;
 	ivec2 gPos(inset * 3, 0);
 	for (guibase* gui : guis) {

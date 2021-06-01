@@ -587,9 +587,9 @@ public:
 
 	}
 	void determineSize(ivec2& prefSize) override {
-//		if (sizeTex.x && sizeTex.y) {
-//			prefSize = sizeTex;
-//		}
+		if (sizeTex.x && sizeTex.y) {
+			prefSize.x = (int)((sizeTex.x / (float)sizeTex.y) * prefSize.y);
+		}
 	}
 	int nFrame = 0;
 	void prerender(NVGcontext* vg) override {
@@ -598,36 +598,47 @@ public:
 //			return;
 //		nFrame = 0;
 		auto window = plugin->window;
-		if (window) {
-//			window->captureWindowFrame();
-			auto& frame = window->capturedFrame;
-			if (frame.w && frame.h) {
-				if (tex > 0 && (frame.w != sizeTex.x || frame.h != sizeTex.y)) {
-					nvgDeleteImage(vg, tex);
-					tex = -1;
-				}
-				if (tex < 0) {
-					tex = nvgCreateImageRGBA(vg, frame.w, frame.h, 0, (const unsigned char*)nullptr);
-					sizeTex = { frame.w, frame.h };
-				}
-//				std::vector<uint8_t> tmpData = frame.bytes;
-////				tmpData.resize(frame.w*frame.h*4);
-//				for (int _x = 0; _x < frame.w; _x++) {
-//
-//					for (int _y = 0; _y < frame.h; _y++) {
-//						int idx = _x*frame.h+_y;
-//						tmpData[idx*4+0] = 0xff;
-////						tmpData[idx*4+1] = 0xff;
-////						tmpData[idx*4+2] = 0xff;
-//						tmpData[idx*4+3] = 0xff;
-//					}
-//				}
-				nvgUpdateImage(vg, tex, frame.bytes.data());
-			} else if (tex > 0) {
-				nvgDeleteImage(vg, tex);
-				tex = -1;
-				sizeTex = { frame.w, frame.h };
-			}
+        if (window && guivst) {
+            if (plugin->requestCaptureGUI >= 1) {
+                plugin->requestCaptureGUI++;
+                if (plugin->requestCaptureGUI >= 33) {
+                    window->captureWindowFrame();
+                    plugin->requestCaptureGUI = -1;
+                }
+            } else if (plugin->requestCaptureGUI == -1) {
+    			plugin->requestCaptureGUI = 0;
+    			auto& frame = window->capturedFrame;
+    			if (frame.w && frame.h && frame.bytes.size()) {
+    				if (tex > 0 && (frame.w != sizeTex.x || frame.h != sizeTex.y)) {
+    					nvgDeleteImage(vg, tex);
+    					tex = -1;
+    				}
+    				if (tex < 0) {
+    					tex = nvgCreateImageRGBA(vg, frame.w, frame.h, 0, (const unsigned char*)nullptr);
+    					sizeTex = { frame.w, frame.h };
+    				}
+    //				std::vector<uint8_t> tmpData = frame.bytes;
+    ////				tmpData.resize(frame.w*frame.h*4);
+    //				for (int _x = 0; _x < frame.w; _x++) {
+    //
+    //					for (int _y = 0; _y < frame.h; _y++) {
+    //						int idx = _x*frame.h+_y;
+    //						tmpData[idx*4+0] = 0xff;
+    ////						tmpData[idx*4+1] = 0xff;
+    ////						tmpData[idx*4+2] = 0xff;
+    //						tmpData[idx*4+3] = 0xff;
+    //					}
+    //				}
+    				nvgUpdateImage(vg, tex, frame.bytes.data());
+    				MainCtrl::getPluginCtr()->relayout();
+    			} else if (tex > 0) {
+    				nvgDeleteImage(vg, tex);
+    				tex = -1;
+    				sizeTex = { frame.w, frame.h };
+    			}
+
+            }
+
 
 		}
 	}
@@ -640,14 +651,14 @@ public:
 		}
 		if (tex > 0) {
 			ivec2 sizePrev;
-			if (sizeTex.x > sizeTex.y) {
-				sizePrev.x = size.x;
-				sizePrev.y = (int)((sizeTex.y/(float)sizeTex.x)*sizePrev.x);
-			} else {
-				sizePrev.y = size.y;
-				sizePrev.x = (int)((sizeTex.x/(float)sizeTex.y)*sizePrev.y);
-			}
-			drawImage(vg, tex, 1.0f, 0, 0, sizeTex.x, sizeTex.y, 0, 0, sizePrev.x, sizePrev.y);
+//			if (sizeTex.x > sizeTex.y) {
+//				sizePrev.x = size.x;
+//				sizePrev.y = (int)((sizeTex.y/(float)sizeTex.x)*sizePrev.x);
+//			} else {
+//				sizePrev.y = size.y;
+//				sizePrev.x = (int)((sizeTex.x/(float)sizeTex.y)*sizePrev.y);
+//			}
+			drawImage(vg, tex, 1.0f, 0, 0, sizeTex.x, sizeTex.y, 0, 0, size.x, size.y);
 		}
 		for (auto c : guis) {
 			nvgSave(vg);
@@ -666,6 +677,10 @@ guipluginview::guipluginview(effectbase * _effect)
 	buttonOpenEditor.colorActive = GuiColor::COL_BTN_BG_SHOW_ACTIVE;
 	addGuiBtn(&buttonOpenEditor);
 	params.setParent(this);
+	buttonShowInlineGUI.icon = ICON_ADJUST;
+	buttonShowInlineGUI.state = &_effect->bCaptureGUI;
+	buttonShowInlineGUI.setParent(this);
+	buttonShowInlineGUI.colorActive = GuiColor::COL_BTN_BG_SHOW_ACTIVE;
 	dropdownProgram.setParent(this);
 	std::vector<automatable_param_t*> sortedParams;
 	_effect->getSortedParams(sortedParams);
@@ -676,12 +691,21 @@ guipluginview::guipluginview(effectbase * _effect)
 			listEntries.push_back(new gui_plugin_paramlist_entry(_effect, param));
     });
 	params.setList(listEntries);
-//	ctrPreview = new guipluginview_preview(this->vst, this);
-//	viewCtrs.push_back(ctrPreview);
+	if (_effect->pluginType == PLUGIN_TYPE_VST) {
+		dbgassert(dynamic_cast<vstplugin*>(_effect));
+		ctrPreview = new guipluginview_preview(dynamic_cast<vstplugin*>(_effect), this);
+		ctrPreview->setVisible(false);
+		viewCtrs.push_back(ctrPreview);
+		addGuiBtn(&buttonShowInlineGUI);
+	}
 }
 
 guipluginview::~guipluginview() {
 	remove(&buttonOpenEditor);
+	//will propably fall on the nose with accessing _effect in the destructor here
+    if (effect->pluginType == PLUGIN_TYPE_VST) {
+		remove(&buttonShowInlineGUI);
+	}
 	if (ctrPreview) {
 		delete ctrPreview;
 	}
@@ -707,22 +731,33 @@ void guipluginview::determineSize(glm::ivec2& prefSize) {
 		guiplugin::determineSize(prefSize);
 		return;
 	}
-	sizeCtrs = {0, size.y};
+    const int32_t hpt = parent->theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT);
+    int32_t meterW = math::max(16, (int32_t)(theme->get(GuiConstant::CONST_METER_WIDTH) * hpt / 32.0));
+    ivec2 contentS;
+    ivec2 contentP;
+
+    if (isHorizontalTitle) {
+        contentP = ivec2(0, hpt);
+        contentS = ivec2(prefSize.x - meterW, size.y - hpt);
+    }
+    else {
+        contentP = ivec2(hpt, 0);
+        contentS = ivec2(size.x - hpt - meterW, size.y);
+    }
+    sizeCtrs = {0, contentS.y};
+
 	if (viewCtr) {
 		ivec2 sizeCtr;
 		viewCtr->getFixedSize(&sizeCtr.x, &sizeCtr.y);
-		sizeCtr.x = (int)((sizeCtr.x/(float)sizeCtr.y)*size.y);
-		sizeCtr.y = size.y;
+        sizeCtr.x = (int)((sizeCtr.x / (float)sizeCtr.y) * contentS.y);
+        sizeCtr.y = sizeCtrs.y;
 		viewCtr->layout(sizeCtr.x, sizeCtr.y);
 		sizeCtrs.x += sizeCtr.x;
 	}
-	if (ctrPreview) {
-		ivec2 sizeCtr{prefSize.y, prefSize.y};
+    if (ctrPreview && ctrPreview->isVisible()) {
+        ivec2 sizeCtr{sizeCtrs.y, sizeCtrs.y};
 		ctrPreview->determineSize(sizeCtr);
-		sizeCtr.x = (int)((sizeCtr.x/(float)sizeCtr.y)*size.y);
-		sizeCtr.y = size.y;
-		ctrPreview->size = sizeCtr;
-		sizeCtrs.x += sizeCtr.x;
+        sizeCtrs.x += sizeCtr.x;
 	}
 	prefSize.y = math::max(sizeCtrs.y, prefSize.y);
 	prefSize.x += sizeCtrs.x;
@@ -735,10 +770,12 @@ void guipluginview::render(NVGcontext* vg) {
 	}
 	if (layoutMode != 1) {
 		for (auto* ctr : viewCtrs) {
-			nvgSave(vg);
 			if (ctr->isVisible())
+			{
+				nvgSave(vg);
 				ctr->render(vg);
-			nvgRestore(vg);
+				nvgRestore(vg);
+			}
 		}
 		if (meter.isVisible())
 			meter.render(vg);
@@ -765,7 +802,7 @@ bool guipluginview::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 			}
 		}
 		for (auto* ctr : viewCtrs) {
-			if (ctr->mouseHitTest(localMouse, evt)) {
+			if (ctr->isVisible() && ctr->mouseHitTest(localMouse, evt)) {
 				return true;
 			}
 		}
@@ -794,9 +831,24 @@ void guipluginview::buttonClicked(guibase* _button) {
 			effect->show();
 		}
 	}
+	if (_button == &buttonShowInlineGUI) {
+		effect->bCaptureGUI = !effect->bCaptureGUI;
+        if (effect->bCaptureGUI) {
+            if (effect->bEditOpen) {
+                effect->close();
+            }
+            effect->requestCaptureGUI = 1;
+            effect->show();
+		}
+	}
+	if (ctrPreview) {
+		ctrPreview->setVisible(effect->bCaptureGUI);
+	}
+
 	dropdownProgram.setVisible(layoutMode == 0 && effect->programNames.size());
 	params.setVisible(layoutMode == 0);
-	meter.setVisible(layoutMode == 0);
+    meter.setVisible(layoutMode == 0);
+    this->onChildLayoutChanged(this);
 }
 void guipluginview::layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {
 	const int32_t hpt = theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT);
@@ -831,18 +883,22 @@ void guipluginview::layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {
 		params.pos = ivec2(insetCtrls, insetCtrls + hpt);
 		params.size = ivec2(paramsW, contentS.y) - ivec2(insetCtrls*2);
 		params.layout();
-	}
+    }
+    int left = params.right() + INSET_TITLE;
 	if (viewCtrs.size()) {
-		int left = params.right() + INSET_TITLE;
 		for (auto* ctr : viewCtrs) {
-			ctr->pos = ivec2(left, 0) + ivec2(insetCtrls, insetCtrls + hpt);
-			ivec2 prefSizeCtr = ivec2(ctr->size.x, contentS.y) - ivec2(insetCtrls*2);
-			ctr->determineSize(prefSizeCtr);
-			ctr->size = prefSizeCtr;
-			ctr->layout();
-			left = ctr->right() + INSET_TITLE;
+            if (ctr->isVisible()) {
+                ctr->pos = ivec2(left, 0) + ivec2(insetCtrls, insetCtrls + hpt);
+                ivec2 prefSizeCtr = ivec2(ctr->size.x, contentS.y) - ivec2(insetCtrls * 2);
+                log_printf("layoutModule prefSizeCtr xy %d %d\n", prefSizeCtr.x, prefSizeCtr.y);
+                ctr->determineSize(prefSizeCtr);
+                ctr->size = prefSizeCtr;
+                log_printf("layoutModule ctr->size xy %d %d\n", ctr->size.x, ctr->size.y);
+                ctr->layout();
+                left = ctr->right() + INSET_TITLE;
+			}
 		}
-	}
+    }
 }
 
 

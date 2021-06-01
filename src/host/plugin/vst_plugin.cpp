@@ -120,6 +120,7 @@ bool vstplugin::updateWindowSize() {
 	}
 	return false;
 }
+
 bool vstplugin::onShow(vst_window* window) {
 	if (this->window == window) {
 		bEditOpen = true;

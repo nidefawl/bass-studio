@@ -186,6 +186,10 @@ plugin_snapshot_t& effect_deferred::getSnapshot()
 	}
 	return nullptr;
 }
+String effectbase::formatDisplayValue(int32_t idx) {
+	String display = StringFormat("%.3f", getParamValue(idx));
+	return display;
+}
 effect_deferred* effectbase::toDeferred() {
 	plugin_snapshot_t snapshot;
 	this->makeSnapshot(snapshot, true);
