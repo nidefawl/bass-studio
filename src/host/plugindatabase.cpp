@@ -44,16 +44,26 @@ public:
 	~Impl() {
 
 	}
-	bool resolve(String name, int32_t uId, String* _outPath, int loadFlags) {
-		static const char* queryByName = "SELECT path FROM plugins where state == 1 and name == ?";
-		static const char* queryByUidD = "SELECT path FROM plugins where state == 1 and uid == ?";
-		for (int i = 0; i < 2; i++) {
+    bool resolve(String name, int32_t uId, String* _outPath, int loadFlags)
+    {
+        static const char* queryBy_NameAndUUID = "SELECT path FROM plugins where state == 1 and name == ? and uid == ?";
+		static const char* queryBy_Name = "SELECT path FROM plugins where state == 1 and name == ?";
+		static const char* queryBy_UUID = "SELECT path FROM plugins where state == 1 and uid == ?";
+        const char* queries[3] = {queryBy_NameAndUUID, queryBy_UUID, queryBy_Name};
+		for (int i = 0; i < 3; i++) {
 			String query = String();
-			SQLite::Statement   queryPlugin(db, i == 0 ? queryByUidD : queryByName);
-			if (i == 0) {
-				queryPlugin.bind(1, uId);
-			} else {
-				queryPlugin.bind(1, name);
+			
+			SQLite::Statement queryPlugin(db, queries[i]);
+            switch (i) {
+            case 0:
+                queryPlugin.bind(2, uId);
+                queryPlugin.bind(1, name);
+                break;
+            case 1:
+                queryPlugin.bind(1, name);
+			case 2:
+                queryPlugin.bind(1, uId);
+                break;
 			}
 			if ((loadFlags&1)==0) {
 				query += " and forcedisable == 0";
