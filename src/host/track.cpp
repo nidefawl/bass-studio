@@ -678,7 +678,6 @@ void audio_stage_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginLi
 	for (const plugin_snapshot_t& pluginSnapshot : trPluginList) {
 		auto effect = loadPluginDeferred(pluginSnapshot);
 		if (effect) {
-
 			//this->deferredEffects.push_back(effect);
             if (!host->addDeferredEffect(effect)) {
                 log_printf("Failed loading effect\n", 0);
@@ -693,8 +692,6 @@ void audio_stage_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginLi
 			dbgassert(effects.size());
 		}
 	}
-
-
 }
 void pluginUpdateParamBypass(effectbase* effect, int state);
 bool vsthost::addDeferredEffect(effectbase* plugin) {
@@ -746,7 +743,7 @@ void vsthost::activateDeferred(effectbase* const eff, effectbase** out_effectLoa
 
 	/* Load plugins binary snapshot */
 	effect->loadSnapshot(pluginSnapshot);
-	
+
 	/* check if parameter values are assigned after loadSnapshot */
     if (!loadParamsBeforePluginSnapshot) {
         loadEffectParamsFromSnapshot(pluginSnapshot, effect);
@@ -1023,6 +1020,12 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 //				heldEnd = math::max(heldEnd, note.end());
 //			}
 			track->getMidi().getNotesInRange(heldBegin, heldEnd, -1, loopEnd, notes);
+			auto getParent = track->parent;
+			while (getParent) {
+				getParent->getMidi().getNotesInRange(heldBegin, heldEnd, -1, loopEnd, notes);
+				getParent = getParent->parent;
+			}
+
 		}
 		time1 = (time1 * 19 + tmr.getTime()) / 20;
 		track->getStage()->procStats.timeGetNotesInRange = time1;
