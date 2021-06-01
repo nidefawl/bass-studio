@@ -750,6 +750,7 @@ public:
 		}
 	}
 	void onWindowFocusChanged(int focused) {
+		releaseMouse(); // fix mouse sometimes not getting released from controls that capture the mouse cursor
 		if (focused) {
 			ctrl->focusReceived();
 		} else {
@@ -1474,6 +1475,7 @@ bool isVstWindow(HWND hwnd);
 }
 #endif
 std::shared_ptr<AppCtrl> makeApp();
+void dawinstance_startup_commands(daw_tls::tlsinstance& tls); // Forward declare from startup.cpp
 void initColor(); // Forward declare from gui/gui.cpp
 void deleteApp(); // Forward declare from host/mainctrl.cpp
 void openGlobalLog(const String& logFileName); // Forward declare from util/debug.cpp
@@ -1580,6 +1582,7 @@ int startApplication(int argc, char* argv[]) {
 	threadCommandLine.setTls(tls);
 	threadCommandLine.init();
 	threadCommandLine.startThread();
+	dawinstance_startup_commands(tls);
 #endif // HAS_JS_CONSOLE
 
 	GLFWwindow* glfwHandle = mainWindow->getGLFW();

@@ -267,6 +267,7 @@ class DawInstance : public project_controller_t, public delete_cb {
 	dragdrop_midifile dragdropclip;
 	dragdrop_target_indicator_t dragdropTarget;
 public:
+	std::function<void(DawInstance*, std::shared_ptr<project_file>, int)> cbProjectLoadCompleteCallback;
 	tick_t tickJmpFrom = 0;
 	tick_t tickJmpTo = 0;
 	plugin_selection pluginSel;

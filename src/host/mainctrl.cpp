@@ -1374,10 +1374,16 @@ void DawInstance::onTick()
 	if (noPopups && projectToLoad) {
 		std::shared_ptr<project_to_load_t> projectToLoadCpy = projectToLoad;
 		projectToLoad = nullptr;
+		bool projectLoadErrored = false;
 		try {
 			setLoadedProject(projectToLoadCpy->projectfile, projectToLoadCpy->loadflags);
 		} catch (...) {
+			projectLoadErrored = true;
 			log_printf("Failed loading project\n", 0);
+		}
+		if (cbProjectLoadCompleteCallback) {
+			cbProjectLoadCompleteCallback(this, projectToLoadCpy->projectfile, projectLoadErrored ? 1 : 0);
+			cbProjectLoadCompleteCallback = nullptr;
 		}
 		log_printf("end of setLoadedProject\n", 0);
 	}
