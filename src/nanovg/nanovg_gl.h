@@ -304,6 +304,8 @@ struct GLNVGcontext {
 	GLuint stencilFuncMask;
 	GLNVGblend blendFunc;
 	#endif
+	const char* overrideShaderVertex;
+	const char* overrideShaderFragment;
 };
 typedef struct GLNVGcontext GLNVGcontext;
 
@@ -456,6 +458,17 @@ NVGLUframebuffer* nvgluCreateFramebuffer(NVGcontext* ctx, int w, int h, int imag
 		return NULL;
 	}
 	return fb;
+}
+
+int nvgReloadShadersInternal(NVGparams* params);
+int nvgReloadShaders(NVGcontext*ctx, const char* shaderSrcVertex, const char* shaderSrcFragment, int n) {
+	GLNVGcontext* gl = (GLNVGcontext*)nvgInternalParams(ctx)->userPtr;
+	gl->overrideShaderVertex = shaderSrcVertex;
+	gl->overrideShaderFragment = shaderSrcFragment;
+	int result = nvgReloadShadersInternal(nvgInternalParams(ctx));
+	gl->overrideShaderVertex = NULL;
+	gl->overrideShaderFragment = NULL;
+	return result;
 }
 
 NVGLUframebuffer* nvgluCreateTempFramebuffer(NVGcontext* ctx, int w, int h, int imageFlags)
@@ -654,6 +667,60 @@ static void glnvg__checkError(GLNVGcontext* gl, const char* str)
 	}
 }
 
+static int glnvg__recompileShader(GLNVGshader* shader, const char* name, const char* header, const char* opts, const char* vshader, const char* fshader)
+{
+    GLint status;
+    GLuint prog, vert, frag;
+    const char* str[3];
+    str[0] = header;
+    str[1] = opts != NULL ? opts : "";
+
+    //memset(shader, 0, sizeof(*shader));
+    glUseProgram(0);
+    glDeleteProgram(shader->prog);
+    glDeleteShader(shader->vert);
+    glDeleteShader(shader->frag);
+    prog = glCreateProgram();
+    vert = glCreateShader(GL_VERTEX_SHADER);
+    frag = glCreateShader(GL_FRAGMENT_SHADER);
+    str[2] = vshader;
+    glShaderSource(shader->vert, 3, str, 0);
+    str[2] = fshader;
+    glShaderSource(shader->frag, 3, str, 0);
+
+    glCompileShader(shader->vert);
+    glGetShaderiv(shader->vert, GL_COMPILE_STATUS, &status);
+    if (status != GL_TRUE) {
+        glnvg__dumpShaderError(shader->vert, name, "vert");
+        return 0;
+    }
+
+    glCompileShader(shader->frag);
+    glGetShaderiv(shader->frag, GL_COMPILE_STATUS, &status);
+    if (status != GL_TRUE) {
+        glnvg__dumpShaderError(shader->frag, name, "frag");
+        return 0;
+    }
+
+    glAttachShader(prog, vert);
+    glAttachShader(prog, frag);
+
+    glBindAttribLocation(prog, 0, "vertex");
+    glBindAttribLocation(prog, 1, "tcoord");
+
+    glLinkProgram(shader->prog);
+    glGetProgramiv(shader->prog, GL_LINK_STATUS, &status);
+    if (status != GL_TRUE) {
+        glnvg__dumpProgramError(prog, name);
+        return 0;
+    }
+
+    shader->prog = prog;
+    shader->vert = vert;
+    shader->frag = frag;
+
+    return 1;
+}
 static int glnvg__createShader(GLNVGshader* shader, const char* name, const char* header, const char* opts, const char* vshader, const char* fshader)
 {
 	GLint status;
@@ -662,6 +729,17 @@ static int glnvg__createShader(GLNVGshader* shader, const char* name, const char
 	str[0] = header;
 	str[1] = opts != NULL ? opts : "";
 
+//	printf("Compiling nanovg shader %s %s %s\n", name, header, opts);
+//	printf("---BEGIN nanovg vshader---\n", 0);
+//	printf("%s\n", header);
+//	printf("%s\n", opts);
+//	printf("%s\n", vshader);
+//	printf("---    END      ---\n", 0);
+//	printf("---BEGIN nanovg fshader---\n", 0);
+//	printf("%s\n", header);
+//	printf("%s\n", opts);
+//	printf("%s\n", fshader);
+//	printf("---    END      ---\n", 0);
 	memset(shader, 0, sizeof(*shader));
 
 	prog = glCreateProgram();
@@ -904,34 +982,60 @@ static int glnvg__renderCreate(void* uptr)
 
 	glnvg__checkError(gl, "init");
 
-	if (gl->flags & NVG_ANTIALIAS) {
-		if (glnvg__createShader(&gl->shader, "shader", shaderHeader, "#define EDGE_AA 1\n", fillVertShader, fillFragShader) == 0)
-			return 0;
-	} else {
-		if (glnvg__createShader(&gl->shader, "shader", shaderHeader, NULL, fillVertShader, fillFragShader) == 0)
-			return 0;
+    const char* srcVertexShader = gl->overrideShaderVertex ? gl->overrideShaderVertex : fillVertShader;
+    const char* srcFragmentShader = gl->overrideShaderFragment ? gl->overrideShaderFragment : fillFragShader;
+    if (gl->overrideShaderVertex || gl->overrideShaderFragment) {
+		if (gl->flags & NVG_ANTIALIAS)
+        {
+            if (glnvg__recompileShader(&gl->shader, "shader", shaderHeader, "#define EDGE_AA 1\n", srcVertexShader, srcFragmentShader) == 0)
+                return 0;
+        }
+        else
+        {
+            if (glnvg__recompileShader(&gl->shader, "shader", shaderHeader, NULL, srcVertexShader, srcFragmentShader) == 0)
+                return 0;
+        }
 	}
+    else {
+        if (gl->flags & NVG_ANTIALIAS) {
+            if (glnvg__createShader(&gl->shader, "shader", shaderHeader, "#define EDGE_AA 1\n", srcVertexShader, srcFragmentShader) == 0)
+                return 0;
+        }
+        else {
+            if (glnvg__createShader(&gl->shader, "shader", shaderHeader, NULL, srcVertexShader, srcFragmentShader) == 0)
+                return 0;
+        }
+	}
+    
 
 	glnvg__checkError(gl, "uniform locations");
 	glnvg__getUniforms(&gl->shader);
 
+    if (gl->vertArr == 0) {
 	// Create dynamic vertex array
 #if defined NANOVG_GL3
-	glGenVertexArrays(1, &gl->vertArr);
+	if (gl->vertArr == 0) {
+		glGenVertexArrays(1, &gl->vertArr);
+	}
 #endif
-	glGenBuffers(1, &gl->vertBuf);
+	if (gl->vertBuf == 0) {
+		glGenBuffers(1, &gl->vertBuf);
+	}
 
 #if NANOVG_GL_USE_UNIFORMBUFFER
 	// Create UBOs
 	glUniformBlockBinding(gl->shader.prog, gl->shader.loc[GLNVG_LOC_FRAG], GLNVG_FRAG_BINDING);
-	glGenBuffers(1, &gl->fragBuf);
+	if (gl->fragBuf == 0) {
+		glGenBuffers(1, &gl->fragBuf);
+	}
 	glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &align);
 #endif
 	gl->fragSize = sizeof(GLNVGfragUniforms) + align - sizeof(GLNVGfragUniforms) % align;
 
 	glnvg__checkError(gl, "create done");
 
-	glFinish();
+	//glFinish();
+    }
 
 	return 1;
 }

@@ -688,6 +688,7 @@ typedef struct NVGparams NVGparams;
 
 // Constructor and destructor, called by the render back-end.
 NVGcontext* nvgCreateInternal(NVGparams* params);
+int nvgReloadShaders(NVGcontext*ctx, const char* shaderSrcVertex, const char* shaderSrcFragment, int n);
 void nvgDeleteInternal(NVGcontext* ctx);
 
 NVGparams* nvgInternalParams(NVGcontext* ctx);

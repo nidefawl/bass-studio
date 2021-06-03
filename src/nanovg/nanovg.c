@@ -306,6 +306,12 @@ static NVGstate* nvg__getState(NVGcontext* ctx)
 	return &ctx->states[ctx->nstates-1];
 }
 
+int nvgReloadShadersInternal(NVGparams* params)
+{
+	if (params->renderCreate(params->userPtr) == 0)
+		return 1;
+	return 0;
+}
 NVGcontext* nvgCreateInternal(NVGparams* params)
 {
 	FONSparams fontParams;
@@ -2285,7 +2291,7 @@ void nvgArc(NVGcontext* ctx, float cx, float cy, float r, float a0, float a1, in
 
 void nvgRect(NVGcontext* ctx, float x, float y, float w, float h)
 {
-	dbgassert(w>=0&&h>=0);
+	//dbgassert(w>=0&&h>=0);
 	float vals[] = {
 		NVG_MOVETO, x,y,
 		NVG_LINETO, x,y+h,

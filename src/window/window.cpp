@@ -257,11 +257,27 @@ private:
 			throw appexception("Couldn't initialize nanovg");
 		}
 
+		reloadCustomShaders();
+
 		glEnable(GL_BLEND);
 		glDisable(GL_CULL_FACE);
 		glDisable(GL_DEPTH_TEST);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	}
+
+protected:
+    void reloadCustomShaders()
+    {
+        String strSrc1;
+        String strSrc2;
+        int64_t ret1 = ReadFileText("nanovg.vsh", strSrc1);
+        int64_t ret2 = ReadFileText("nanovg.fsh", strSrc2);
+        if (ret1 != -1 && ret2 != -1) {
+            my_printf("loading custom shaders\n", 0);
+            nvgReloadShaders(nanovgCtxt, StringAsCStr(strSrc1), StringAsCStr(strSrc2), 0);
+        }
+    }
+
 public:
 	appwindow(appwindow* _parent) : parent(_parent), tm_lastfps(getTimeMillis()) {
 		name[0] = 0;
@@ -656,6 +672,7 @@ public:
 		return this->bCanResize;
 	}
 	void destroy();
+    int32_t nTicks = 0;
 	void onTick() {
 		static bool reentrant = false;
 		reentrantblocker block(reentrant);
@@ -663,7 +680,11 @@ public:
 	    	return;
 	    }
 //		flagNeedsRedraw();
-		glfwMakeContextCurrent(glfw);
+        glfwMakeContextCurrent(glfw);
+//        if (nTicks++ > 600) {
+//            nTicks = 0;
+//            reloadCustomShaders();
+//        }
 		ctrl->onAppTick();
 	}
 	void onRefresh() override {
