@@ -349,10 +349,18 @@ void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin, bool storePluginCh
 		});
 		storeAutomation(ps.automatedParams, plugin);
 	}
+	if (plugin->programNames.size()) {
+		uint32_t curProgramNr = 0;
+		plugin->getCurrentProgram(curProgramNr);
+		ps.currentProgram = curProgramNr;
+	}
 }
 }
 void vstplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
-	if (this && (this->getFlagsVST() & effFlagsProgramChunks) != 0) {
+	if (pluginSnapshot.currentProgram != -1 && pluginSnapshot.currentProgram < programNames.size()) {
+		setCurrentProgram(pluginSnapshot.currentProgram);
+	}
+	if ((this->getFlagsVST() & effFlagsProgramChunks) != 0) {
 		if (pluginSnapshot.dataChunk.size() > 0) {
 			my_printf("Plugin %s: Load data1[%d]\n", StringAsCStr(this->sName), pluginSnapshot.dataChunk.size());
 			this->dispatch(effSetChunk, 0, pluginSnapshot.dataChunk.size(), (void*)pluginSnapshot.dataChunk.data());
@@ -500,7 +508,8 @@ bool vstplugin::getCurrentProgram(uint32_t& idx) {
 bool vstplugin::getCurrentProgramName(String& out) {
 	char buf[1024];
 	memset(buf, 0, sizeof(buf));
-	if (dispatch(effGetProgramName, 0, 0, buf, 0) && buf[0]) {
+	dispatch(effGetProgramName, 0, 0, buf, 0);
+	if (buf[0]) {
 		out = String(buf);
 		return true;
 	}

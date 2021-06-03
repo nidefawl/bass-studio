@@ -9,13 +9,14 @@ struct param_snapshot_t {
 };
 struct automation_view_t;
 struct plugin_snapshot_t {
-	int32_t projectGlobalId;
-	bool present;
-	bool enabled;
-	int32_t slot;
-	int32_t pluginType;
-	int32_t uId;
+	int32_t projectGlobalId = 0;
+	bool present = false;
+	bool enabled = false;
+	int32_t slot = 0;
+	int32_t pluginType = 0;
+	int32_t uId = 0;
 	String name;
+	int32_t currentProgram = -1;
 	std::vector<uint8_t> dataChunk;
 	std::vector<uint8_t> dataChunk2;
 	std::vector<param_snapshot_t> params;
