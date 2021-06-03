@@ -295,7 +295,8 @@ void vstplugin::load(vsthost* host) {
 
 
 	this->bIsSetup = true;
-	getRegisteredAutomation(65536);
+    if (aeffect->numParams)
+		getRegisteredAutomation(65536);
 }
 
 namespace {
