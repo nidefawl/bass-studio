@@ -85,4 +85,5 @@ public:
 	float getMax() {
 		return scaleMax;
 	}
+	void render(NVGcontext* vg);
 };

@@ -2,6 +2,7 @@
 
 #include "plugindatabase.h"
 #include "assert_dbg.h"
+#include "fileio.h"
 #include <vector>
 #include <SQLiteCpp/SQLiteCpp.h>
 #include <SQLiteCpp/VariadicBind.h>
@@ -27,6 +28,8 @@ void createTables(SQLite::Database& db) {
     			"	`path`	TEXT NOT NULL,\n"
     			"	`name`	TEXT NOT NULL,\n"
     			"	`vendorName`	TEXT NOT NULL,\n"
+    			"	`productName`	TEXT NOT NULL,\n"
+    			"	`effectName`	TEXT NOT NULL,\n"
     			"	`requestRescan`	INTEGER DEFAULT 0,\n"
     			"	`forcedisable`	INTEGER DEFAULT 0\n"
     			");";
@@ -109,13 +112,23 @@ void plugindatabase_t::query(String q, std::vector<pluginentry_t>& _out) {
 	_M_Impl->query(q, _out);
 }
 void plugindatabase_t::openDatabase() {
+	revision++;
 	dbgassert(!_M_Impl);
-	_M_Impl = new plugindatabase_t::Impl{"data/plugins.db3"};
+	String cwdPathDB = toCWDPath("data/plugins.db3");
+	_M_Impl = new plugindatabase_t::Impl{cwdPathDB};
 }
 void plugindatabase_t::closeDatabase() {
 	dbgassert(_M_Impl);
 	delete _M_Impl;
 	_M_Impl = NULL;
+}
+void plugindatabase_t::reopen() {
+//	closeDatabase();
+//	openDatabase();
+	revision++;
+}
+int plugindatabase_t::getRevision() {
+	return revision;
 }
 
 

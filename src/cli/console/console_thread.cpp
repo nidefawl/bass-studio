@@ -20,7 +20,7 @@ class ConsoleThread::Impl {
 	int32_t threadid = 0;
     daw_tls::tlsinstance threadTLS;
     std::atomic<bool> m_stop{false};
-    std::atomic<bool> m_running{true};
+    std::atomic<bool> m_running{false};
 public:
     Impl(NU::CONSOLE::CommandLineREP& _cli) : commandREP(_cli) {
 //		std::atomic_init(&m_stop, false);
@@ -34,6 +34,7 @@ public:
     }
 	void start() {
 		t = std::thread([this]() {
+            m_running = true;
 			daw_tls::setTls(threadTLS);
 			setCurrentThreadName("CommandLineThread");
 			this->run();
@@ -57,6 +58,11 @@ public:
 	void init() {
 		commandREP.init();
 	}
+
+    bool isStarted() {
+        return m_running;
+	}
+
 private:
 	void run() {
 		daw_tls::setTls(threadTLS);
@@ -93,8 +99,13 @@ void ConsoleThread::init() {
 int32_t ConsoleThread::getThreadId() {
 	return _M_impl->getThreadId();
 }
-void ConsoleThread::setTls(daw_tls::tlsinstance tls) {
-	_M_impl->setTls(tls);
+void ConsoleThread::setTls(daw_tls::tlsinstance tls)
+{
+    _M_impl->setTls(tls);
+}
+bool ConsoleThread::isStarted()
+{
+    return _M_impl->isStarted();
 }
 
 }

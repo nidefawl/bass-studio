@@ -6,9 +6,13 @@
 #include "vst_host.h"
 #include "track_impl.h"
 #include "logging.h"
+#include "menu.h"
+#include "commands.h"
 
 
 void dawinstance_startup_commands(daw_tls::tlsinstance& tls) {
+	if (1==1)
+		return;
 	auto* const dawMainCtrl = tls.mainCtrl;
 	auto dawInstance = dawMainCtrl->getDaw();
 	vsthost* host = vsthost::getInstance();
@@ -98,6 +102,7 @@ void dawinstance_startup_commands(daw_tls::tlsinstance& tls) {
             //            				effectLoaded->show();
             //            			}
         }
+        dawMainCtrl->menuCommand(CMD_NOARG(CMD_PREFERENCES));
 
 	};
 	dawInstance->loadFile(dawPath + projName, flags);

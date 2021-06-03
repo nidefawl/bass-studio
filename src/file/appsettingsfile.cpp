@@ -13,6 +13,7 @@
 #include "exceptions.h"
 #include "msgbox.h"
 #include "host/audio_config.h"
+#include "fileio.h"
 
 using namespace cereal;
 
@@ -123,7 +124,8 @@ void serialize(Archive & ar, appsettings& settings) {
 
 appsettings loadSettings() {
 	Stringstream ss;
-	ifstream file(SETTINGS_NAME, ifstream::in);
+	String cwdPathSettings = toCWDPath(SETTINGS_NAME);
+	ifstream file(cwdPathSettings, ifstream::in);
 	if (file) {
 		ss << file.rdbuf();
 		std::streampos length = file.tellg();
@@ -134,12 +136,13 @@ appsettings loadSettings() {
 			return tmpSettings;
 		}
 	}
-	throw std::runtime_error("Failed reading config");
+	throw std::runtime_error("Failed reading application settings file "+cwdPathSettings);
 }
 void saveSettings(appsettings& _settings) {
+	String cwdPathSettings = toCWDPath(SETTINGS_NAME);
 	ofstream file;
 	file.exceptions(~ofstream::goodbit);
-	file.open(SETTINGS_NAME, ofstream::out);
+	file.open(cwdPathSettings, ofstream::out);
     cereal::JSONOutputArchive ar( file );
     ar( _settings );
 }

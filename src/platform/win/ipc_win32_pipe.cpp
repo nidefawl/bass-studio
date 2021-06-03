@@ -1,8 +1,10 @@
 #include "ipc.h"
 #include "str_util.h"
+#include "platform.h"
 
 #include <windows.h>
 #include <stdlib.h>
+
 
 String FormatErrorMessage(int32_t error, String msg);
 void printLastError(String fn) {
@@ -40,7 +42,14 @@ public:
 		return IPC_OK;
     }
     int server_accept() {
-    	bool state = ConnectNamedPipe(pipe, NULL);
+    	bool state = false;
+    	int nMax = 30;
+    	while (!state && nMax > 0) {
+    		state = ConnectNamedPipe(pipe, NULL);
+    		if (state) break;
+    		threadSleep(100);
+    		nMax--;
+    	}
 		if (!state && GetLastError() != ERROR_PIPE_CONNECTED) {
 	    	printLastError("ConnectNamedPipe");
     		DisconnectNamedPipe(pipe);
@@ -54,16 +63,25 @@ public:
     	if (ReadFile(pipe, buf, buflen, &bytesSent, NULL)) {
     		return bytesSent;
 		}
-    	printf("ReadFile: %d\n", bytesSent);
+//    	printf("ReadFile: %d\n", bytesSent);
     	printLastError("ReadFile");
 		return 0;
 	}
+    int server_peakreadbuf() {
+    	DWORD bytesAvail = 0;
+		if( !PeekNamedPipe(pipe, NULL, 0, NULL, &bytesAvail, NULL) ){
+	    	printLastError("PeekNamedPipe");
+	    	return -1;
+		}
+//    	printf("PeekNamedPipe: %d\n", bytesAvail);
+		return bytesAvail;
+    }
     int server_send(char *buf, unsigned int buflen) {
         DWORD bytesSent;
         if (WriteFile(pipe, buf, buflen, &bytesSent, NULL)) {
     		return bytesSent;
 		}
-    	printf("WriteFile: %d\n", bytesSent);
+//    	printf("WriteFile: %d\n", bytesSent);
     	printLastError("WriteFile");
 		return 0;
     }
@@ -105,6 +123,9 @@ int ipc_server::sendData(char* buf, unsigned int len) {
 int ipc_server::readData(char* buf, unsigned int len) {
 	return _M_impl->server_read(buf, len);
 }
+int ipc_server::peakReadBufferSize() {
+	return _M_impl->server_peakreadbuf();
+}
 
 class ipc_client::Impl
 {
@@ -118,7 +139,7 @@ public:
 	}
     int client_connect(String path) {
     	String pipeName = StringFormat("\\\\.\\pipe\\%s", StringAsCStr(path));
-		if (!WaitNamedPipe(StringAsCStr(pipeName), 3000)) {
+		if (!WaitNamedPipe(StringAsCStr(pipeName), 5000)) {
 			client_close();
 			return IPC_CONNECT_FAILED;
 		}

@@ -42,6 +42,7 @@
 #include "effect_graph.h"
 #include "resampler.h"
 #include "threads/workerthread.h"
+#include "threads/childprocessthread.h"
 
 #include <deque>
 
@@ -169,6 +170,8 @@ public:
 	process_scratch_buf_t singleThreadedBuf;
 	WorkerThread threads[MAX_AUDIOPROCESSING_THREADS];
 	TrackBlockProcessTask tasks[MAX_AUDIOPROCESSING_THREADS];
+	int scanningState = 0;
+	std::unique_ptr<ProcessThread> vstscannerProcessThread;
     std::map<uint32_t, std::shared_ptr<DelayLine>> delayLines;
 	std::vector<thread_stats_process_timings_t> blockThreadStats;
 	std::vector<thread_stats_process_timings_t> lastBlockThreadStats;
@@ -1016,6 +1019,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 	int32_t nBlocksProcessed = 0;
 	bool canProcess = audioHost && queueSizeOutput < 8 && queueSizeInput > 2;
 	uint32_t blockSizeResampled = DAW::NumSamplesResampled(sampleFormat.blockSize, sampleFormat.sampleRate, sampleFormatExternal.sampleRate);
+	const int64_t microSecsPerBlock = (int64_t)sampleFormat.blockSize * 1000000L / (int64_t)sampleFormat.sampleRate;
 	uint32_t numBlocksInternal = math::max<uint32_t>(1U, sampleFormatExternal.blockSize/blockSizeResampled);
 	uint32_t numBlocksExternal = (blockSizeResampled + sampleFormatExternal.blockSize - 1)/sampleFormatExternal.blockSize;
 	std::vector<AudioBlock> blocksTempInput;
@@ -1123,6 +1127,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			resamplerOutput->push(blockOutput);
 
 			timeRouting += timer3.getTime();
+
 		}
 		if (dbg != 0) {
 			stats.timings["tracks.process"] = timeProcessing;
@@ -1132,6 +1137,14 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 
 
 	if (nBlocksProcessed) {
+		if (dbg != 0) {
+			int64_t blockTimeTaken = timer2.getTime() / nBlocksProcessed;
+			auto curTimeProcess = stats.timings["blocktime"];
+			curTimeProcess -= curTimeProcess/NUM_BINS_STATS;
+			curTimeProcess += blockTimeTaken/NUM_BINS_STATS;
+			stats.timings["blocktime"] = curTimeProcess;
+			stats.timings["blocktimeRaw"] = blockTimeTaken;
+		}
 		timer3.reset();
 		dbgassert(nBlocksProcessed >= 1);
 		int32_t& writePos = ringbuffer.writePos;
@@ -1208,22 +1221,13 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 	if (nBlocksProcessed) {
 
 		stats.blocksProcessed += nBlocksProcessed;
-		stats.samplesProcessed += nBlocksProcessed*sampleFormatExternal.blockSize;
+		stats.samplesProcessed += nBlocksProcessed*sampleFormat.blockSize;
 		int32_t tickQuarterStart = static_cast<int32_t>(math::floor((posDouble) / (float) TICKS_QUARTER));
 		int32_t tickQuarterEnd = static_cast<int32_t>(math::floor((posDouble+ticksPerBlock) / (float) TICKS_QUARTER));
 		if (tickQuarterEnd > tickQuarterStart) {
 			stats.tickBar += tickQuarterStart - tickQuarterEnd;
 		}
-		int64_t microSecsPerBlock = (int64_t)sampleFormatExternal.blockSize * 1000000L / (int64_t)sampleFormatExternal.sampleRate;
 
-		int64_t timeTaken = timer2.getTime();
-		if (dbg != 0) {
-			auto curTimeProcess = stats.timings["blocktime"];
-			curTimeProcess -= curTimeProcess/NUM_BINS_STATS;
-			curTimeProcess += timeTaken/NUM_BINS_STATS;
-			stats.timings["blocktime"] = curTimeProcess;
-			stats.timings["blocktimeRaw"] = timeTaken;
-		}
 		stats.timings["microSecsPerBlock"] = microSecsPerBlock;
 		stats.usage = stats.timings["blocktime"] / (double) microSecsPerBlock;
 		stats.usageRaw = stats.timings["blocktimeRaw"] / (double) microSecsPerBlock;
@@ -1992,6 +1996,7 @@ bool vsthost::onTick() {
 			iDispatched++;
 		}
 	}
+	checkScanner();
 	return false;
 }
 
@@ -2005,6 +2010,7 @@ void vsthost::unload() {
 	unloadAllPlugins();
 }
 void vsthost::destroy() {
+	stopScanner();
 	freeRingBuffer(ringbuffer);
 	dbgassert(hostSlot > -1);
 	dbgassert(g_hostslots[hostSlot].g_instance);
@@ -2063,7 +2069,7 @@ void vsthost::unloadTrack(track_t* track) {
 	auto audio = track->audio;
 	std::vector<effectbase*> effects = audio->effects; // make a copy before unloading plugins
 	for (effectbase* effect : effects) {
-		unloadPlugin(effect);
+		unloadPlugin(effect, FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
 	}
 	dbgassert(audio->deferredEffects.empty());
 }
@@ -2074,20 +2080,29 @@ void vsthost::removePlugin(effectbase* plugin) {
 	if (DawInstance::get()) DawInstance::get()->onPluginsChanged();
 	onTrackLayoutChange();
 }
-void vsthost::unloadPlugin(effectbase* plugin) {
 
-	//TODO: this shouldn't be here!
-	if (MainCtrl::get())
-		MainCtrl::get()->closeContextMenu();
+void vsthost::unloadPlugin(effectbase* plugin, int flags) {
+
+	bool notifyUp = !(flags & FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+	if (notifyUp) {
+		//TODO: this shouldn't be here!
+		if (MainCtrl::get())
+			MainCtrl::get()->closeContextMenu();
+	}
 
 	plugin->onPreUnload();
 	audio_stage_t* audioStage = plugin->getTrackLink();
 	if (audioStage) {
 		audioStage->removePlugin(plugin, false);
-		audioStage->pluginsChanged();
+		if (notifyUp) {
+			audioStage->pluginsChanged();
+
+		}
 	}
 
-	plugin->close();
+	if (notifyUp) {
+		plugin->close();
+	}
 	plugin->unload(this);
 
 	switch (plugin->getModuleType()) {
@@ -2113,7 +2128,9 @@ void vsthost::unloadPlugin(effectbase* plugin) {
 		}
 	}
 	delete plugin;
-	if (DawInstance::get()) DawInstance::get()->onPluginsChanged();
+	if (notifyUp) {
+		if (DawInstance::get()) DawInstance::get()->onPluginsChanged();
+	}
 }
 bool vsthost::unloadAllPlugins() {
 	dbgassert(pluginInstances.empty());
@@ -2569,3 +2586,78 @@ vstpluginloadres vsthost::loadPlugin(String filepath, int32_t uId, int32_t globa
 	dbgassert(plugin->handle && plugin->handle->aeffect);
 	return vstpluginloadres(0, plugin);
 };
+
+void vsthost::scanPlugins() {
+	if (this->impl->scanningState == 0) {
+	    try {
+	    	impl->vstscannerProcessThread = std::make_unique<ProcessThread>();
+	    	String nameScannerExe = "daw-vstscanner.exe";
+	    	if (!FileExists(nameScannerExe)) {
+	    		nameScannerExe = "vstscanner-MSVC-debug.exe";
+	    	}
+			impl->vstscannerProcessThread->startProcess(nameScannerExe, "-server -auto", "");
+			threadSleep(200);
+			if (!impl->vstscannerProcessThread->isRunning()) {
+				impl->vstscannerProcessThread->checkException();
+				log_printf("Failed starting vstscanner", 0);
+			} else {
+				this->impl->scanningState = 1;
+				log_printf("vstscanner is running", 0);
+			}
+
+
+		} catch (std::exception& e) {
+			std::cout << "exception: " << e.what() << std::endl;
+		} catch (...) {
+			std::cout << "Unhandled exception" << std::endl;
+		}
+
+	}
+
+}
+void vsthost::checkScanner() {
+    try {
+    	static int nCalls = 0;
+    	if (this->impl->scanningState && impl->vstscannerProcessThread) {
+    		if (!impl->vstscannerProcessThread->isRunning()) {
+        		impl->vstscannerProcessThread->joinProcess();
+        		impl->vstscannerProcessThread.reset();
+        		DawInstance::get()->getPluginDatabase().reopen();
+            	this->impl->scanningState = 0;
+    		} else {
+				if (++nCalls >= 10) {
+					nCalls = 0;
+					DawInstance::get()->getPluginDatabase().reopen();
+    			}
+    		}
+
+    	}
+	} catch (std::exception& e) {
+		std::cout << "exception: " << e.what() << std::endl;
+	} catch (...) {
+		std::cout << "Unhandled exception" << std::endl;
+	}
+}
+void vsthost::stopScanner() {
+    try {
+    	static int nCalls = 0;
+    	if (this->impl->scanningState && impl->vstscannerProcessThread) {
+    		if (impl->vstscannerProcessThread->isRunning()) {
+    			impl->vstscannerProcessThread->killProcess();
+            	this->impl->scanningState = 0;
+            	if (DawInstance::get()) {
+            		DawInstance::get()->getPluginDatabase().reopen();
+            	}
+
+    		}
+
+    	}
+	} catch (std::exception& e) {
+		std::cout << "exception: " << e.what() << std::endl;
+	} catch (...) {
+		std::cout << "Unhandled exception" << std::endl;
+	}
+}
+bool vsthost::isScanning() {
+	return impl->scanningState > 0;
+}

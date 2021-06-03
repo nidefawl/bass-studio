@@ -13,7 +13,7 @@ void setMinimumResolutionTimer();
 
 void allocConsole();
 void setExceptionHandler();
-
+bool determineWorkingDirectoryPath(String& path);
 String getKeyName(int scancode);
 
 void threadSleep(int millis);

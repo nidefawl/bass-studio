@@ -26,6 +26,7 @@ public:
 	void init();
 	int32_t getThreadId() override;
 	void setTls(daw_tls::tlsinstance tls) override;
+    bool isStarted();
 private:
 	class Impl;
 	Impl* _M_impl;

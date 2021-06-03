@@ -190,11 +190,13 @@ void load(Archive & archive, guitheme_t & m)
 template<class Archive>
 void serialize(Archive & archive, themefile & m)
 {
-	archive(make_nvp("current", m.theme), make_nvp("themes", m.themes));
+	archive(make_nvp("default", m.defaultTheme), make_nvp("current", m.theme), make_nvp("themes", m.themes));
 }
 themefile loadThemeFile() {
 	Stringstream ss;
-	ifstream file(THEMEFILE_NAME, ifstream::in);
+
+	String cwdPathTheme = toCWDPath(THEMEFILE_NAME);
+    ifstream file(cwdPathTheme, ifstream::in);
 	if (file) {
 	    ss << file.rdbuf();
 	    std::streampos length = file.tellg();
@@ -205,12 +207,13 @@ themefile loadThemeFile() {
 		    return tmpSettings;
 	    }
 	}
-	throw std::runtime_error("Failed reading file");
+	throw std::runtime_error("Failed reading theme file "+cwdPathTheme);
 }
 void saveThemeFile(themefile& _settings) {
+	String cwdPathTheme = toCWDPath(THEMEFILE_NAME);
 	ofstream file;
 	file.exceptions(~ofstream::goodbit);
-	file.open(THEMEFILE_NAME, ofstream::out);
+	file.open(cwdPathTheme, ofstream::out);
     cereal::JSONOutputArchive ar( file );
     ar( _settings );
 }

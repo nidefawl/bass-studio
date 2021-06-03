@@ -12,10 +12,11 @@
 #include <stdint.h>
 #include "assert_dbg.h"
 #include "platform_win.h"
+#include <shlobj.h>
 
 int64_t ReadImage( const String &Filename, ImageBuf& ref)
 {
-	String path = toCWDPath(Filename);
+	String path = toResourcePath(Filename);
 	if (!FileExists(path)) {
 		throw appexception(StringAsCStr(StringFormat("File not found: %s", StringAsCStr(path))));
 	}
@@ -122,6 +123,35 @@ void ReadFileVector(const String& filename, vector<uint8_t>& out)
 
 	BOOL result = ReadFile(fobj.GetHandle(), out.data(), filesize, &bytesRead, nullptr);
 	ThrowLastErrorIf(result == FALSE, "ReadFile failed: " + filename);
+}
+INT CALLBACK BrowseCallbackProc(HWND hwnd, UINT uMsg, LPARAM lp, LPARAM pData)
+{
+    if (uMsg==BFFM_INITIALIZED) SendMessage(hwnd, BFFM_SETSELECTION, TRUE, pData);
+    return 0;
+}
+
+int browseForFolder(String title, String pathStart, String& _out)
+{
+	HWND hwnd = getMainHWND();
+
+	BROWSEINFO br;
+	ZeroMemory(&br, sizeof(BROWSEINFO));
+	br.lpfn = BrowseCallbackProc;
+	br.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE;
+	br.hwndOwner = hwnd;
+    br.lpszTitle = StringAsCStr(title);
+    br.lParam = (LPARAM) StringAsCStr(pathStart);
+
+	LPITEMIDLIST pidl = NULL;
+	if ((pidl = SHBrowseForFolderA(&br)) != NULL) {
+		std::vector<char> localAppData;
+		localAppData.resize(MAX_PATH);
+		if (SHGetPathFromIDListA(pidl, localAppData.data())) {
+			_out = localAppData.data();
+			return 0;
+		}
+	}
+	return 1;
 }
 
 int promptUserFilePath(window_base* w, int mode, std::vector<SupportedFileType> fileTypes, String& _out) {
@@ -285,7 +315,16 @@ FileTimeGetter::~FileTimeGetter() {
 int64_t FileTimeGetter::getWriteTimeI64() {
 	return _M_Impl->getWriteTimeI64();
 }
-String cwdPath = "";
+String resourcePath = ""; // read only app resource directory: C:/program files/daw
+String toResourcePath(String relPath) {
+	return resourcePath + relPath;
+}
+void setResourcePath(String cwd) {
+	if (cwd.length() && (!StrEndsWith(cwd, "/") && !StrEndsWith(cwd, "\\")))
+		cwd += "/";
+	resourcePath = cwd;
+}
+String cwdPath = ""; // writable app directory: C:/users/user/appdata/daw/
 String toCWDPath(String relPath) {
 	return cwdPath + relPath;
 }
@@ -293,6 +332,7 @@ void setCWDPath(String cwd) {
 	if (cwd.length() && (!StrEndsWith(cwd, "/") && !StrEndsWith(cwd, "\\")))
 		cwd += "/";
 	cwdPath = cwd;
+	CreateDirectoryA(StringAsCStr(cwd), NULL);
 }
 
 IOFile::IOFile(FileImpl* _impl) : impl(_impl) {

@@ -28,6 +28,7 @@ public:
 	//post startProcess
 	void joinProcess();
 	bool isRunning();
+	void killProcess();
 	bool checkException();
 	int32_t getExitCode();
 	int32_t readLines(std::vector<String>& out);

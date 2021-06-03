@@ -109,6 +109,10 @@ int ipc_server::readData(char* buf, unsigned int len) {
 	return _M_impl->server_read(buf, len);
 }
 
+int ipc_server::peakReadBufferSize() {
+#error TODO
+}
+
 
 class ipc_client::Impl
 {

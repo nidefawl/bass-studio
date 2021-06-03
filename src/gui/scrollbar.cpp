@@ -7,6 +7,9 @@
 #include "guiconstant.h"
 #include "theme.h"
 #include "basectrl.h"
+#include "splitter.h"
+
+
 namespace GuiConstant {
 
 extern constant_t CONST_ROUND;
@@ -53,4 +56,43 @@ void gui_scrollbar::render(NVGcontext* vg) {
 gui_scrollbar::gui_scrollbar(int _dir, float _offset, gui_scrollcontainer& _ctr) :
 		guibase(), dir(_dir), ctr(_ctr), scrollOffset(_offset) {
 	setCanMouseHit(true);
+}
+
+
+void Splitter::render(NVGcontext* vg) {
+	if (!isVisible()) {
+		log_printf("warning, skip rendering container with state !isVisible()\n", 0);
+		return;
+	}
+	if (isBackgroundRendered()) {
+		renderBackground(vg);
+	}
+	if (!setScissorTransform(vg)) {
+		return;
+	}
+	for (auto c : guis) {
+		if (!c->isVisible()) {
+//			log_printf("warning, skip rendering child container with state !isVisible()\n", 0);
+			continue;
+		}
+		if (c->size.x <= 0 || c->size.y <= 0) {
+			log_printf("warning, skip rendering child container with size <= 0 0\n", 0);
+			continue;
+		}
+    }
+    if (parentCtrl && (parentCtrl->getGuiFocused() == this || parentCtrl->guiOver == this))
+    {
+        nvgSave(vg);
+        nvgBeginPath(vg);
+        if (this->type) {
+            nvgRect(vg, 0, 0, size.x, size.y);
+        }
+        else {
+            nvgRect(vg, 0, 0, size.x, size.y);
+        }
+        nvgStrokeColor(vg, G_WHITE);
+        nvgStrokeWidth(vg, 1.0f);
+        nvgStroke(vg);
+        nvgRestore(vg);
+    }
 }

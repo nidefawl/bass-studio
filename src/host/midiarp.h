@@ -189,6 +189,9 @@ public:
 				} else {
 					onDisable();
 				}
+				if (!(flags & FLG_PAR_UPDATE_INIT)) {
+					param->inUse = true;
+				}
 			}
 		}
 	}

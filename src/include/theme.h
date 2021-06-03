@@ -27,6 +27,8 @@ struct guitheme_t {
 	std::unordered_map<int32_t, int32_t> mapColors;
 	std::unordered_map<int32_t, int32_t> mapProperties;
 	std::unordered_map<int32_t, UIFont::font_instance> mapFonts;
+	struct guitheme_override_state_t;
+	guitheme_override_state_t* overrideState = nullptr;
 	guitheme_t();
     guitheme_t(const guitheme_t &) = default;
     ~guitheme_t() = default;
@@ -64,4 +66,8 @@ struct guitheme_t {
 	int32_t get(GuiConstant::constant_t _constant);
 	float getFloat(GuiConstant::constant_t _constant);
 	void set(GuiConstant::constant_t _constant, int32_t _newValue);
+	void updateAnimation();
+	void pingConstant(GuiColor::constant_t _constant);
+	void pingConstant(GuiConstant::constant_t);
+	void endPing();
 };

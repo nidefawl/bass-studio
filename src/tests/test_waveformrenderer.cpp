@@ -67,7 +67,7 @@ struct waveform_test {
 		renderers.push_back(rendererPar);
 		std::vector<waveform_test_entry> vec;
 		std::vector<FileFound> files;
-		findFilesWithExt(toCWDPath("."), "wav", false, files);
+		findFilesWithExt(toResourcePath("."), "wav", false, files);
 		log_printf("findFilesWithExt %d\n", files.size());
 		for (auto i = 0u; i < files.size() && vec.size() < 8; i++) {
 			size_t filesize = GetFileSizeSafe(files[i].path);

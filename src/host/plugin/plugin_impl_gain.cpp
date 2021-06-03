@@ -275,6 +275,7 @@ void module_gain::postProcess(AudioBlock* out, int32_t samples, bool hasProcesse
 }
 
 void module_gain::loadSnapshot(const plugin_snapshot_t& pluginSnapshot)  {
+	internalplugin::loadSnapshot(pluginSnapshot);
 }
 void module_gain::makeSnapshot(plugin_snapshot_t& snapshot, bool storePluginChunks) {
 	internalplugin::makeSnapshot(snapshot, storePluginChunks);

@@ -23,6 +23,9 @@
 #include "str_util.h"
 #include "logging.h"
 #include "error.h"
+#include <shlobj.h>//for knownFolder
+#include <sstream>
+
 
 static HWND mainHWND = NULL;
 extern "C" {
@@ -103,6 +106,19 @@ void setMinimumResolutionTimer() {
 }
 
 
+bool determineWorkingDirectoryPath(String& path)
+{
+    std::vector<wchar_t> localAppData;
+    localAppData.resize(512);
+    wchar_t* ptr = localAppData.data();
+    if ((S_OK == SHGetKnownFolderPath(FOLDERID_RoamingAppData, 0, NULL, &ptr))) {
+        std::wstring ws(ptr);
+        std::string str(ws.begin(), ws.end());
+        path = str;
+        return true;
+	}
+    return false;
+}
 void allocConsole() {
 #ifndef __MINGW32__
 		AllocConsole();

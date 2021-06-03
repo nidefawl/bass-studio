@@ -188,8 +188,14 @@ void internalplugin::setParamValue(int32_t idx, float val, int flags) {
 			} else {
 				onDisable();
 			}
+			if (!(flags & FLG_PAR_UPDATE_INIT)) {
+				param->inUse = true;
+			}
 		}
 	} else {
+		if (!(flags & FLG_PAR_UPDATE_INIT)) {
+			param->inUse = true;
+		}
 		if (param->internalIdx >= 0) {
 			dispatchSetParameter(param->internalIdx, val);
 		}

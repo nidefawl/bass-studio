@@ -757,7 +757,7 @@ bool saveDawViewLayoutSnapshot(dawview_layout_t& snapshot, const String& path) {
 			ar(make_nvp("layout", snapshot));
 		}
 		sstream.flush();
-		writeStringStream(path, sstream);
+		writeStringStream(toCWDPath(path), sstream);
 		return true;
 	}
 	catch (const FileIOException& e)
@@ -775,7 +775,7 @@ std::shared_ptr<dawview_layout_t> loadDawViewLayoutSnapshot(const String& path) 
 	using namespace cereal;
 	try {
 		std::vector<uint8_t> vec;
-		ReadFileVector(path, vec);
+		ReadFileVector(toCWDPath(path), vec);
 		Stringstream sstream(std::string(vec.begin(), vec.end()));
 		std::shared_ptr<dawview_layout_t> snapshot = std::make_shared<dawview_layout_t>();
 		dawview_layout_t& ref = *snapshot.get();

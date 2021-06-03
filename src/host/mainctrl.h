@@ -220,6 +220,7 @@ struct dawview_layout_t {
 };
 class DawViewContainers {
 public:
+	int indexContent = 0;
 	DawViewContainers() = default;
 	virtual ~DawViewContainers() {
 	}

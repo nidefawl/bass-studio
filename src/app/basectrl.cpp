@@ -473,6 +473,7 @@ AppCtrl::AppCtrl() {
 AppCtrl::~AppCtrl() {
 }
 void AppCtrl::onAppTick() {
+	getTheme()->updateAnimation();
 	onTick();
 
 	 //move this in some garbageCollect() methdo and trigger garbage collection after every window-msg on win32 (linux?)

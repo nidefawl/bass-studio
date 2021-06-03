@@ -413,7 +413,11 @@ public:
 	}
 	virtual void onCharInput(unsigned int codepoint) {
 	}
-	virtual void onWindowFocusChanged(int focused) {
+    virtual void onWindowFocusChanged(int focused)
+    {
+        if (!focused) {
+            releaseMouse(); // fix mouse sometimes not getting released from controls that capture the mouse cursor
+        }
 	}
 	virtual void onWindowSizeChanged(int width, int height) {
 	}
@@ -436,13 +440,13 @@ public:
 	virtual void captureMouse() {
 		if (!noRawInput) {
 			glfwSetInputMode(glfw, GLFW_RAW_MOUSE_MOTION, 1);
-		}
+        }
 		glfwSetInputMode(glfw, GLFW_CURSOR, noRawInput ? GLFW_CURSOR_HIDDEN : GLFW_CURSOR_DISABLED);
 	}
 	virtual void releaseMouse() {
 		if (!noRawInput) {
 			glfwSetInputMode(glfw, GLFW_RAW_MOUSE_MOTION, 0);
-		}
+        }
 		glfwSetInputMode(glfw, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 	}
 	virtual bool isMouseCaptured() {
@@ -454,7 +458,6 @@ public:
 		if (shown)
 			return;
 		shown = true;
-		log_printf("show window %s\n", this->name);
 		glfwShowWindow(glfw);
 #ifdef __linux__
 		glfwFocusWindow(glfw);
@@ -464,7 +467,6 @@ public:
 		if (!shown)
 			return;
 		shown = false;
-		log_printf("hide window %s\n", this->name);
 		glfwHideWindow(glfw);
 		onWindowClose();
 	}
@@ -771,10 +773,10 @@ public:
 		}
 	}
 	void onWindowFocusChanged(int focused) {
-		releaseMouse(); // fix mouse sometimes not getting released from controls that capture the mouse cursor
 		if (focused) {
 			ctrl->focusReceived();
-		} else {
+        }else {
+            releaseMouse(); // fix mouse sometimes not getting released from controls that capture the mouse cursor
 			ctrl->focusLost();
 		}
 		flagNeedsRedraw();
@@ -1456,6 +1458,14 @@ void appwindow::createBaseWindow(const char* title, int w, int h, GLFWwindow* sh
 #endif
 	initOGL();
 	initContext();
+	ImageBuf imgBufDawIcon;
+	if (ReadImage(StringFormat("res/icons/daw_icon.png"), imgBufDawIcon) > 0) {
+		GLFWimage images[1];
+		images[0].width = imgBufDawIcon.w;
+		images[0].height = imgBufDawIcon.h;
+		images[0].pixels = imgBufDawIcon.bytes.data();
+		glfwSetWindowIcon(glfw, 1, images);
+	}
 	registerWindowTimer(this);
 	last = getTimeMillis();
 }
@@ -1530,11 +1540,15 @@ int startApplication(int argc, char* argv[]) {
 			argv[i+1] = nullptr;
 		}
 	}
+    String cwdPath = "";
+    if (determineWorkingDirectoryPath(cwdPath)) {
+        setCWDPath(cwdPath+"\\daw\\");
+    }
 	//if (!runConsoleMode) {
 	allocConsole();
 	//}
-	String logFileName = String(BuildInfo::BUILD_BINARY_NAME)+".log";
-	openGlobalLog(logFileName);
+	String logFileName = "daw.log";
+	openGlobalLog(toCWDPath(logFileName));
 	char* pPath;
 	pPath = getenv("PATH");
 	if (pPath != NULL)
@@ -1720,8 +1734,10 @@ int startApplication(int argc, char* argv[]) {
 		handleStdException(e);
 	}
 #if HAS_JS_CONSOLE
-	threadCommandLine.stopThread();
-	threadCommandLine.joinThread();
+    if (threadCommandLine.isStarted()) {
+        threadCommandLine.stopThread();
+        threadCommandLine.joinThread();
+    }
 #endif // HAS_JS_CONSOLE
 	deleteApp();
 	printLeakedGuiBase();

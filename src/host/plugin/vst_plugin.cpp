@@ -459,6 +459,9 @@ void vstplugin::setParamValue(int32_t idx, float val, int flags) {
 			} else {
 				onDisable();
 			}
+			if (!(flags & FLG_PAR_UPDATE_INIT)) {
+				param->inUse = true;
+			}
 		}
 	} else {
 		if (param->internalIdx >= 0) {

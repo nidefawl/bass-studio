@@ -44,6 +44,7 @@ int32_t WriteFileVector(const String& filename, std::vector<uint8_t>& writebuffe
 void ReadFileVector(const String& filename, std::vector<uint8_t>& out);
 int64_t ReadFileText(const String& filename, String& out);
 int promptUserFilePath(window_base* w, int mode, std::vector<SupportedFileType> fileTypes, String& _out);
+int browseForFolder(String title, String pathStart, String& _out);
 void handleGuiEvents();
 size_t GetFileSizeSafe(const String& filename);
 
@@ -139,9 +140,10 @@ inline String FileNameFromPath(String in) {
 	return fileName;
 }
 
-extern String cwdPath;
-String toCWDPath(String relPath);
+String toResourcePath(String relPath);
+void setResourcePath(String cwd);
 void setCWDPath(String cwd);
+String toCWDPath(String relPath);
 
 void findFilesWithExt(
 		const String& strPath,

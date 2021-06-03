@@ -18,6 +18,7 @@
 #include "platform.h"
 #include "meter.h"
 #include "gui/guimeter.h"
+#include "threads/childprocessthread.h"
 #include <portaudio.h>
 #include <portmidi.h>
 
@@ -1307,6 +1308,126 @@ public:
 		}
 	};
 };
+extern appsettings settings;
+class guidialog_plugin_settings : public setting_dialog {
+	guibutton* scanNow;
+	guibutton* selectFolder;
+public:
+	void onDialogShow() override {
+		updateOptions();
+	}
+
+	~guidialog_plugin_settings() {
+		removeGuis();
+		delete scanNow;
+		delete selectFolder;
+	}
+	guidialog_plugin_settings()
+	: setting_dialog()
+	{
+		scanNow = new guibutton();
+		selectFolder = new guibutton();
+
+		setBackgroundRendered(true);
+		selectFolder->id = 0x10;
+		selectFolder->setText(settings.pluginPath);
+		selectFolder->setLabel("VST2 Plugin Path");
+		scanNow->id = 0x11;
+		scanNow->setText("Scan VST2 folder");
+		scanNow->setLabel("Scan");
+		add(selectFolder);
+		add(scanNow);
+		setLabel("Plugins");
+		updateOptions();
+	}
+
+	void render(NVGcontext* vg) {
+		if (isBackgroundRendered()){
+			renderBackground(vg);
+		}
+		if (!setScissorTransform(vg)) {
+			return;
+		}
+
+		float lineh;
+		setFont(vg, TEXT_FONT_SIZE, G_WHITE, NVG_ALIGN_BOTTOM | NVG_ALIGN_LEFT);
+		nvgTextMetrics(vg, NULL, NULL, &lineh);
+		nvgText(vg, 5, this->selectFolder->bottom(), StringAsCStr(this->selectFolder->label), NULL);
+		nvgText(vg, 5, this->scanNow->bottom(), StringAsCStr(this->scanNow->label), NULL);
+
+		for (auto c : guis) {
+			nvgSave(vg);
+	//		if (c == this->selectAPI) {
+	//			nvgIntersectScissor(vg, c->pos.x, c->pos.y, c->size.x, c->size.y);
+	//		}
+			c->render(vg);
+			nvgRestore(vg);
+		}
+	}
+	void layout() {
+		ivec2 cs = getSizeContent();
+
+		int32_t inset = 5;
+		int32_t buttonW = math::max(120, cs.x*2/3);
+		int32_t heightList = math::max(230, cs.y*2/5);
+		int32_t height = 20;
+		selectFolder->size = ivec2(buttonW, height);
+		selectFolder->pos = ivec2(cs.x-inset*2-buttonW, inset);
+		scanNow->size = ivec2(buttonW, height);
+		scanNow->pos = ivec2(cs.x-inset*2-buttonW, selectFolder->bottom()+inset);
+
+		for (auto gui : guis) {
+			gui->layout();
+		}
+	}
+	void buttonClicked(guibase* button) {
+		if (button->id == 0x11) {
+			auto plughost = vsthost::getInstance();
+			if (!plughost->isScanning()) {
+				plughost->scanPlugins();
+				scanNow->setText("Cancel Scanning");
+			} else {
+				plughost->checkScanner();
+				plughost->stopScanner();
+				scanNow->setText("Scan VST2 folder");
+			}
+
+			return;
+		}
+		if (button->id == 0x10) {
+			selectFolder->setText(settings.pluginPath);
+			//select folder
+			String out = "C:/plugins";
+            String curre = settings.pluginPath;
+            
+			replaceString(curre, "/", "\\");
+			if (0 == browseForFolder("Select VST2 Plugin Path", curre, out)) {
+				settings.pluginPath = out;
+				try {
+					saveSettings(settings);
+				} catch (std::exception& e) {
+					getGlobalLogger()->logStr(StringFormat("Exception: %s\n", e.what()));
+				}
+			}
+			selectFolder->setText(settings.pluginPath);
+			return;
+		}
+		if (this->parent) {
+			this->parent->buttonClicked(button);
+		}
+	}
+
+
+	void updateOptions() {
+		auto plughost = vsthost::getInstance();
+		if (!plughost->isScanning()) {
+			scanNow->setText("Scan VST2 folder");
+		} else {
+			scanNow->setText("Cancel Scanning");
+		}
+	};
+};
+
 
 struct guidialog_settings::dialog_entry
 {
@@ -1322,25 +1443,27 @@ struct guidialog_settings::dialog_entry
 guidialog_settings::guidialog_settings(ivec2 _dialogSize, bool _resizeable) : guidialog_base(_dialogSize,_resizeable)
 {
 	addEntry(new guidialog_audio_io(), "Audio I/O");
-	addEntry(new guidialog_midi_io(), "Midi I/O");
-	add(&btnClose);
+    addEntry(new guidialog_midi_io(), "Midi I/O");
+    addEntry(new guidialog_plugin_settings(), "Plugins");
+    add(&btnClose);
 	btnClose.id = ID_BTN_CLOSE;
 	btnClose.setText("Close");
 	btnClose.setFontSize(BTN_FONT_SIZE);
 	setLabel("Settings");
-	setActiveEntry(0);
+	setActiveEntry(2);
 };
 guidialog_settings::guidialog_settings()
 : guidialog_base(ivec2{640, 760}, true) {
 	ctrType = CTR_TYPE_SETTINGS;
 	addEntry(new guidialog_audio_io(), "Audio I/O");
 	addEntry(new guidialog_midi_io(), "Midi I/O");
+	addEntry(new guidialog_plugin_settings(), "Plugins");
 	add(&btnClose);
 	btnClose.id = ID_BTN_CLOSE;
 	btnClose.setText("Close");
 	btnClose.setFontSize(BTN_FONT_SIZE);
 	setLabel("Settings");
-	setActiveEntry(0);
+	setActiveEntry(2);
 };
 void guidialog_settings::addEntry(setting_dialog* ctr, String title) {
 	guidialog_settings::dialog_entry* entry = new guidialog_settings::dialog_entry{ctr, title};

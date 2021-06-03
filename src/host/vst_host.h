@@ -210,7 +210,7 @@ public:
 		stats.usage = this->stats.usage;
 		stats.timeProcess = this->stats.timeProcess;
 		stats.timeProcessRaw = this->stats.timeProcessRaw;
-		stats.timePerBlock_usec = sampleFormatExternal.blockSize*1000000/ sampleFormatExternal.sampleRate;
+		stats.timePerBlock_usec = sampleFormat.blockSize*1000000/ sampleFormat.sampleRate;
 	}
 	void getStats(host_stats_t& stats) {
 		stats = this->stats;
@@ -242,7 +242,8 @@ public:
 	}
 	vstplugin* getPlugin(AEffect* aeffect);
 	effectbase* getPluginById(int32_t projectGlobalId) const;
-	void unloadPlugin(effectbase* plugin);
+	const int FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY = 1;
+	void unloadPlugin(effectbase* plugin, int flags = 0);
 	void removePlugin(effectbase* plugin);
 	void unloadTrack(track_t* track);
 	effectbase* makeModuleInstance(int32_t moduleType, int32_t moduleId, int32_t globalid = -1);
@@ -277,4 +278,8 @@ public:
 	uint32_t getMaxThreadCount();
 	int32_t getPlayThreadId();
     int32_t validateIds();
+    void checkScanner();
+    void scanPlugins();
+    bool isScanning();
+    void stopScanner();
 };
