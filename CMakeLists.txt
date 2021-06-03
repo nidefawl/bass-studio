@@ -170,6 +170,10 @@ source_group("generated" FILES ${GENERATED_SRC_FILES})
 
 list(APPEND CPP_SRC_FILES ${GENERATED_SRC_FILES})
 
+list(APPEND RESOURCE_FILES "")
+if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+list(APPEND RESOURCE_FILES "src/icon_resource.h" "src/icon.rc")
+endif()
 #build a fat library only when tests are enabled
 #if tests are disabled we link objects directly to output executable (faster)
 if (BUILD_DAW_LIB) 
@@ -222,10 +226,10 @@ if (BUILD_DAW_LIB)
 endif()
 
 if (BUILD_DAW_LIB) 
-add_executable(${BUILD_NAME} "src/host/main_daw.cpp")
+add_executable(${BUILD_NAME} "src/host/main_daw.cpp" ${RESOURCE_FILES})
 target_link_libraries(${BUILD_NAME} PUBLIC "dawlib")
 else()
-add_executable(${BUILD_NAME} "src/host/main_daw.cpp" ${CPP_SRC_FILES} ${C_SRC_FILES} ${HDR_FILES})
+add_executable(${BUILD_NAME} "src/host/main_daw.cpp" ${RESOURCE_FILES} ${CPP_SRC_FILES} ${C_SRC_FILES} ${HDR_FILES})
 endif()
 SET_APP_BUILD(${BUILD_NAME})
 ADD_POST_BUILD_COMMANDS(${BUILD_NAME})
