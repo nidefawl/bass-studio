@@ -1114,9 +1114,9 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 						/* Calculate master tracks gain level */
 						float fGainMaster;
 						if (dsp_util::getGainLvl(trackImpl->mixer.getParamValue(PARAM_TRACK_GAIN), fGainMaster)) {
-							if (dbg == 0) {
-								log_printf("Process External Audio routing from %s to %s\n", StringAsCStr(track->name), StringAsCStr(outputChannel.name));
-							}
+//							if (dbg == 0) {
+//								log_printf("Process External Audio routing from %s to %s\n", StringAsCStr(track->name), StringAsCStr(outputChannel.name));
+//							}
 
 						}
 						blockOutput.addFromOp(&trackImpl->output, AudioBlock::mix_op::ADD, math::clamp(fGainMaster, 0.0f, 1.0f));

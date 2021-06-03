@@ -1,6 +1,7 @@
 #include "guimenu.h"
 #include "math/vec.h"
 #include "renderresources.h"
+#include "buildinfo.h"
 
 guimenu_ctxtentry::guimenu_ctxtentry(ngui::Menu* _menu)
 	: ctxtmenu_entry(_menu->title, _menu->command.command), menu(_menu)
@@ -199,4 +200,24 @@ void guimenu::clickedElement(ctxtmenu_entry* e, int _id) {
 	}
 }
 void guimenu::clicked(int _id) {
+}
+
+void guictr_menubar::render(NVGcontext* vg) {
+	setScissorTransform(vg);
+	nvgBeginPath(vg);
+	nvgRect(vg, 0, 0, size.x, size.y);
+	nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_BRT));
+	nvgFill(vg);
+	for (guibase *gui : guis) {
+		gui->render(vg);
+	}
+	String strInfo = BuildInfo::BUILD_BINARY_VERSION;
+    if (strInfo.length() > 0) {
+    	uint32_t fontScale = math::max<uint32_t>(12, size.y*0.8);
+    	uint32_t padding = math::max<uint32_t>(0, (size.y-fontScale)/2);
+        GuiColor::constant_t c = GuiColor::COL_LABEL_INACTIVE;
+        NVGcolor color = theme->getColor(c);
+        UTIL_setFont(vg, theme, fontScale, color, NVG_ALIGN_RIGHT | NVG_ALIGN_TOP);
+        nvgText(vg, size.x-padding, padding, StringAsCStr(strInfo), NULL);
+    }
 }

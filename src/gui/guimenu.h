@@ -70,16 +70,7 @@ public:
 
 		destroyGuis();
 	}
-	virtual void render(NVGcontext* vg) {
-		setScissorTransform(vg);
-		nvgBeginPath(vg);
-		nvgRect(vg, pos.x, pos.y, size.x, size.y);
-		nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_BRT));
-		nvgFill(vg);
-		for (guibase* gui : guis) {
-			gui->render(vg);
-		}
-	}
+	virtual void render(NVGcontext* vg);
 	void updateMenu() {
 		layout();
 	}

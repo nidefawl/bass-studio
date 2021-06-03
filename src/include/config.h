@@ -21,7 +21,6 @@
 #define PARAM_OFFSET_EXTERNAL (1<<16)
 #define PARAM_OFFSET_SEND (1<<12)
 #define MAX_SEND_CHANNELS (1<<4)
-#define MAX_CHANNELS 6
 
 
 #ifndef BUILD_VSTHOST
