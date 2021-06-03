@@ -26,6 +26,7 @@ public:
 	void server_close();
 	int sendData(char* buf, unsigned int len);
 	int readData(char* buf, unsigned int len);
+	int peakReadBufferSize();
 	ipc_server(const ipc_server&) = delete;
 	ipc_server& operator=(const ipc_server&) = delete;
 private:
