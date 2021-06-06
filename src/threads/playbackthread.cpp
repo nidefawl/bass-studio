@@ -78,8 +78,8 @@ public:
     Impl() : q(128) {
 	}
     ~Impl() {
-		dbgassert(!t.joinable());
-    	dbgassert(exited);
+    	// thread has not been started or thread has been started and exited correctly
+    	dbgassert(this->ctrl == nullptr || (exited && !t.joinable()));
     }
     int32_t getThreadId() {
     	return threadid;
