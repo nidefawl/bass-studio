@@ -17,6 +17,16 @@
 #include <numeric>
 #include <functional>
 
+
+namespace AudioIO {
+std::array<uint32_t, 4> IntSamplerates = {
+		44100, 48000, 96000, 192000
+};
+std::array<uint32_t, 4> ExtSamplerates = {
+		44100, 48000, 96000, 192000
+};
+}
+
 using namespace AudioIO;
 
 

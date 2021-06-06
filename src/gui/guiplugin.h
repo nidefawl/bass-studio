@@ -94,6 +94,9 @@ public:
 	}
 	String getString();
 	virtual void handleDraggedRelease(MouseEvent &evt);
+	uint32_t getSelectIndex();
+	uint32_t getLastIndex();
+	void setSelectedIndex(uint32_t idx);
 };
 class guipluginview : public guiplugin {
 public:

@@ -21,6 +21,7 @@
 #include "threads/childprocessthread.h"
 #include <portaudio.h>
 #include <portmidi.h>
+#include <array>
 
 constexpr int ID_BTN_CLOSE = 1;
 constexpr int TITLE_FONT_SIZE = 30;
@@ -63,8 +64,18 @@ public:
 	std::vector<String> options;
 	std::function<void(int)> cbOnOptionSelected;
 	std::function<String()> fnGetCurrentVal;
+	std::function<uint32_t()> fnGetCurrentIdx;
 	String value;
 public:
+	uint32_t getSelectIndex() {
+		return fnGetCurrentIdx();
+	}
+	uint32_t getLastIndex() {
+		return options.size();
+	}
+	void setSelectedIndex(uint32_t idx) {
+		clicked(idx);
+	}
 	String getString() {
 		return fnGetCurrentVal ? fnGetCurrentVal() : "<null>";
 	}
@@ -799,35 +810,35 @@ public:
 		this->audioInternalBlockSize = audioIntBlockSize;
 		auto audioIntSampleRate = new guidropdown_setting_options_t{};
 		this->audioInternalSampleRate = audioIntSampleRate;
-		int srates[] = {
-				44100, 48000, 96000, 192000
-		};
-		int sratesInternal[] = {
-				44100, 48000, 96000, 192000
-		};
 		for (int i = 0; i < 4; i++) {
-			audioSampleRate->options.push_back(StringFormat("%d", srates[i]));
+			audioSampleRate->options.push_back(StringFormat("%d", AudioIO::ExtSamplerates[i]));
 		}
 		for (int i = 0; i < 4; i++) {
-			audioIntSampleRate->options.push_back(StringFormat("%d", sratesInternal[i]));
+			audioIntSampleRate->options.push_back(StringFormat("%d", AudioIO::IntSamplerates[i]));
 		}
-		audioSampleRate->cbOnOptionSelected = [srates](int option) {
+		audioSampleRate->cbOnOptionSelected = [](int option) {
 			if (option >= 0 && option < 4) {
-				settings.iosettings.samplerate = srates[option];
+				settings.iosettings.samplerate = AudioIO::ExtSamplerates[option];
 				updateSrBs();
 			}
 		};
 		audioSampleRate->fnGetCurrentVal = []() -> String {
 			return StringFormat("%d", settings.iosettings.samplerate);
 		};
-		audioIntSampleRate->cbOnOptionSelected = [srates](int option) {
+		audioSampleRate->fnGetCurrentIdx = []() -> uint32_t {
+			return indexOfCtr(AudioIO::ExtSamplerates, settings.iosettings.samplerate);
+		};
+		audioIntSampleRate->cbOnOptionSelected = [](int option) {
 			if (option >= 0 && option < 4) {
-				settings.iosettings.internalSamplerate = srates[option];
+				settings.iosettings.internalSamplerate = AudioIO::IntSamplerates[option];
 				updateSrBs();
 			}
 		};
 		audioIntSampleRate->fnGetCurrentVal = []() -> String {
 			return StringFormat("%d", settings.iosettings.internalSamplerate);
+		};
+		audioIntSampleRate->fnGetCurrentIdx = []() -> uint32_t {
+			return indexOfCtr(AudioIO::IntSamplerates, settings.iosettings.internalSamplerate);
 		};
 		for (int i = 0; i < 10; i++) {
 			int blockSize = 1<<(4+i);

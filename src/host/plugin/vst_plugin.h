@@ -132,6 +132,7 @@ public:
 
 	bool setCurrentProgram(uint32_t idx) override;
 	bool getCurrentProgram(uint32_t& idx) override;
+    bool getNumberOfPrograms(uint32_t& numPrograms) override;
 	bool getCurrentProgramName(String& out) override;
 
 	void makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) override;

@@ -129,6 +129,9 @@ public:
 	virtual bool getCurrentProgram(uint32_t& index) {
 		return false;
 	}
+	virtual bool getNumberOfPrograms(uint32_t& index) {
+		return false;
+	}
 protected:
 	friend class effect_deferred;
 public:

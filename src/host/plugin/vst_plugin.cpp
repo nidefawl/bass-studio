@@ -505,6 +505,10 @@ bool vstplugin::getCurrentProgram(uint32_t& idx) {
 	idx = (uint32_t)curProgram;
 	return true;
 }
+bool vstplugin::getNumberOfPrograms(uint32_t& numPrograms) {
+    numPrograms = this->programNames.size();
+	return true;
+}
 bool vstplugin::getCurrentProgramName(String& out) {
 	char buf[1024];
 	memset(buf, 0, sizeof(buf));

@@ -1019,3 +1019,21 @@ void addPropertiesFromGui(guiplugin& gui, Table::tbl* table);
 void guiplugin::addProperties(Table::tbl* table) {
 	addPropertiesFromGui(*this, table);
 }
+
+void guidropdownprogram::setSelectedIndex(uint32_t idx) {
+	if (idx >= 0 && idx < getLastIndex()) {
+		plugin->setCurrentProgram(idx);
+	}
+}
+
+uint32_t guidropdownprogram::getLastIndex() {
+	uint32_t maxProgram = 0;
+	plugin->getNumberOfPrograms(maxProgram);
+	return maxProgram;
+}
+
+uint32_t guidropdownprogram::getSelectIndex() {
+	uint32_t index = 0;
+	plugin->getCurrentProgram(index);
+	return index;
+}
