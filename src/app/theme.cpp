@@ -10,7 +10,6 @@
 #include "assert_dbg.h"
 
 
-uint32_t nvgToRGB(NVGcolor c);
 uint32_t nvgToRGBA(NVGcolor c);
 NVGcolor getContrastFontColor(uint32_t color);
 
@@ -87,8 +86,6 @@ void guitheme_t::initTheme() {
 	for (auto c : v3) {
 		mapFonts[c.idx] = UIFont::font_instance{c.defValue};
 	}
-	uint32_t rgb = nvgToRGB(getColor(GuiColor::COL_BG_DRK));
-	setTint(rgb);
 }
 
 NVGcolor& guitheme_t::getColorRef(GuiColor::constant_t _constant) {
@@ -187,29 +184,13 @@ UIFont::font_instance guitheme_t::setFont(UIFont::font_type_t _fonttype, String 
 void guitheme_t::set(GuiConstant::constant_t _constant, int32_t _value) {
 	mapProperties[_constant.idx] = _value;
 }
-void guitheme_t::setTint(uint32_t hex) {
-	vec4 hsl = hexToHSL(hex);
-	colorBg = nvgHSL(hsl.x, hsl.y, hsl.z);
-	colorBgDisabled = nvgHSL(hsl.x, CLAMP_F(hsl.y*0.55f), CLAMP_F(hsl.z - 0.3f));
-//	colorBgActive = nvgRGBAf(1, 0, 0, 1);
-	colorBgStroke = nvgHSL(hsl.x, CLAMP_F(hsl.y*1.3f), 0.4f);
-	colorBgFocused = nvgHSL(hsl.x, CLAMP_F(hsl.y*0.85f), CLAMP_F(hsl.z + 0.15f));
-	colorBgHover = nvgHSL(hsl.x, CLAMP_F(hsl.y*0.7f), CLAMP_F(hsl.z - 0.3f));
-	colorBgPressed = nvgHSL(hsl.x, CLAMP_F(hsl.y*1.15f), CLAMP_F(hsl.z - 0.1f));
-//	colorBgPressed = colorBgPressed = colorBgFocused = colorBgHover;
-	const int lvl = 18;
-	colorBgFrameOutline = GUI_COLOR(lvl);
-	colorBgFrameBase = GUI_COLOR(CMUL(lvl, 1.33));
-	colorBgFrameHighlight = GUI_COLOR(CMUL(lvl, 1.66));
-	colorBgFrameBright = GUI_COLOR(CMUL(lvl, 2.2));
-}
 
-const NVGcolor guitheme_t::getBgColor(int32_t flags) {
+NVGcolor guitheme_t::getBgColor(int32_t flags) const {
 	if (!(flags & FLG_ENBL)) {
-		return colorBgDisabled;
+		return getColor(GuiColor::COL_BASE_BG_DISABLED);
 	}
 	if (flags & FLG_DRG) {
-		return colorBgPressed;
+		return getColor(GuiColor::COL_BASE_BG_PRESSED);
 	}
 //	if (flags & FLG_FOC) {
 //		return colorBgFocused;
@@ -217,19 +198,31 @@ const NVGcolor guitheme_t::getBgColor(int32_t flags) {
 //	if (flags & FLG_HVRD) {
 //		return colorBgHover;
 //	}
-	return colorBg;
+	return getColor(GuiColor::COL_BASE_BG);
 }
-const NVGcolor guitheme_t::getBgStrokeColor(int32_t flags) {
+NVGcolor guitheme_t::getBgStrokeColor(int32_t flags) const {
 	if (flags & FLG_FOC) {
-		return colorBgFocused;
+		return getColor(GuiColor::COL_BASE_BG_FOCUSED);
 	}
 	if (flags & FLG_HVRD) {
-		return colorBgHover;
+		return getColor(GuiColor::COL_BASE_BG_HOVER);
 	}
 //	if (!(flags & FLG_ENBL)) {
 //		return colorBgDisabled;
 //	}
-	return colorBgStroke;
+	return getColor(GuiColor::COL_BASE_BG_STROKE);
+}
+NVGcolor guitheme_t::getFrameColorOutline() const {
+	return getColor(GuiColor::COL_BASE_BG_FRAME_OUTLINE);
+}
+NVGcolor guitheme_t::getFrameColorBase() const {
+	return getColor(GuiColor::COL_BASE_BG_FRAME_BASE);
+}
+NVGcolor guitheme_t::getFrameColorHighlight() const {
+	return getColor(GuiColor::COL_BASE_BG_FRAME_HIGHLIGHT);
+}
+NVGcolor guitheme_t::getFrameColorBright() const {
+	return getColor(GuiColor::COL_BASE_BG_FRAME_BRIGHT);
 }
 
 void guitheme_t::updateAnimation() {

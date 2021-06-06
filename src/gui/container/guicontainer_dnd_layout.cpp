@@ -356,7 +356,11 @@ void guictr_layout_entry_handle::render(NVGcontext* vg)
     nvgBeginPath(vg);
     //	nvgRoundedRect(vg, pos.x, pos.y, size.x, size.y, 3.0f);
     nvgRect(vg, 0, 0, size.x, size.y);
-    nvgFillColor(vg, theme->getBgStrokeColor(stateFlags));
+    NVGcolor bg = theme->getColor(GuiColor::COL_BASE_BG);
+    if (parentCtr->getGui()->isVisible()) {
+        bg = theme->getColor(GuiColor::COL_BASE_BG_FOCUSED);
+    }
+    nvgFillColor(vg, bg);
     nvgFill(vg);
     //		renderWidgetBorder(vg, fl);
     //		renderButtonLabel(vg, fl);

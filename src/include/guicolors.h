@@ -17,6 +17,16 @@ struct constant_t {
 std::vector<constant_t> getAllConstants();
 constant_t getConstantById(int32_t id);
 constant_t getConstantByName(String name);
+extern constant_t COL_BASE_BG;
+extern constant_t COL_BASE_BG_HOVER;
+extern constant_t COL_BASE_BG_PRESSED;
+extern constant_t COL_BASE_BG_FOCUSED;
+extern constant_t COL_BASE_BG_DISABLED;
+extern constant_t COL_BASE_BG_FRAME_BASE;
+extern constant_t COL_BASE_BG_FRAME_BRIGHT;
+extern constant_t COL_BASE_BG_FRAME_OUTLINE;
+extern constant_t COL_BASE_BG_FRAME_HIGHLIGHT;
+extern constant_t COL_BASE_BG_STROKE;
 extern constant_t COL_WHITE;
 extern constant_t COL_BLACK;
 extern constant_t COL_LEVEL_IND_GREEN;

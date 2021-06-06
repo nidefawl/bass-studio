@@ -119,16 +119,16 @@ template<class Archive>
 void save(Archive & archive, guitheme_t const & m)
 {
 	archive(make_nvp("name", m.name));
-	archive(make_nvp("colorBg", m.colorBg));
-	archive(make_nvp("colorBgStroke", m.colorBgStroke));
-	archive(make_nvp("colorBgHover", m.colorBgHover));
-	archive(make_nvp("colorBgPressed", m.colorBgPressed));
-	archive(make_nvp("colorBgFocused", m.colorBgFocused));
-	archive(make_nvp("colorBgDisabled", m.colorBgDisabled));
-	archive(make_nvp("colorBgFrameBase", m.colorBgFrameBase));
-	archive(make_nvp("colorBgFrameOutline", m.colorBgFrameOutline));
-	archive(make_nvp("colorBgFrameHighlight", m.colorBgFrameHighlight));
-	archive(make_nvp("colorBgFrameBright", m.colorBgFrameBright));
+//	archive(make_nvp("colorBg", m.colorBg));
+//	archive(make_nvp("colorBgStroke", m.colorBgStroke));
+//	archive(make_nvp("colorBgHover", m.colorBgHover));
+//	archive(make_nvp("colorBgPressed", m.colorBgPressed));
+//	archive(make_nvp("colorBgFocused", m.colorBgFocused));
+//	archive(make_nvp("colorBgDisabled", m.colorBgDisabled));
+//	archive(make_nvp("colorBgFrameBase", m.colorBgFrameBase));
+//	archive(make_nvp("colorBgFrameOutline", m.colorBgFrameOutline));
+//	archive(make_nvp("colorBgFrameHighlight", m.colorBgFrameHighlight));
+//	archive(make_nvp("colorBgFrameBright", m.colorBgFrameBright));
 	//save new
 	theme_data data;
 	storeThemeData(m, data);
@@ -145,16 +145,6 @@ void load(Archive & archive, guitheme_t & m)
 	m.mapColors.clear();
 	m.mapProperties.clear();
 	archive(make_nvp("name", m.name));
-	archive(make_nvp("colorBg", m.colorBg));
-	archive(make_nvp("colorBgStroke", m.colorBgStroke));
-	archive(make_nvp("colorBgHover", m.colorBgHover));
-	archive(make_nvp("colorBgPressed", m.colorBgPressed));
-	archive(make_nvp("colorBgFocused", m.colorBgFocused));
-	archive(make_nvp("colorBgDisabled", m.colorBgDisabled));
-	archive(make_nvp("colorBgFrameBase", m.colorBgFrameBase));
-	archive(make_nvp("colorBgFrameOutline", m.colorBgFrameOutline));
-	archive(make_nvp("colorBgFrameHighlight", m.colorBgFrameHighlight));
-	archive(make_nvp("colorBgFrameBright", m.colorBgFrameBright));
 
 	const char* namePtr = archive.getNodeName();
     if (namePtr && strcmp(namePtr, "mapValues") == 0) {

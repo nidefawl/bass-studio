@@ -328,18 +328,14 @@ public:
 
 				}
 				void hover() {
-					log_printf("hover %d %d\n", clickedcell.idx.x, clickedcell.idx.y);
+					//log_printf("hover %d %d\n", clickedcell.idx.x, clickedcell.idx.y);
 				}
 				virtual void onClickNotImplemented(const click_ctxt_t& ctxt) override {
 					table->setActiveControl(nullptr);
 				}
-				void onClick(const click_ctxt_t& ctxt, const tbltype_gui_flags& obj) override {
-					guibase* ref = safeRefGet(obj.saferef);
-					if (ref) {
-						bool b = ref->isFlag(obj.mask);
-						ref->setFlag(obj.mask, !b);
-					}
-
+                void onClick(const click_ctxt_t& ctxt, const tbltype_gui_flags& obj) override
+                {
+                    hover();
 				}
 				void onClick(const click_ctxt_t& ctxt, glm::ivec2& value) override {
 					hover();
@@ -349,32 +345,7 @@ public:
 				}
 				void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, GuiConstant::constant_t constant) override {
 					hover();
-					BaseCtrl* const ctrl = table->parentCtrl;
-					if (theme == nullptr) {
-						ctrl->getTheme()->pingConstant(constant);
-					} else {
-						ctrl->getTheme()->endPing();
-					}
 				}
-				//Textfield example
-//					void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, UIFont::font_type_t fonttype) override {
-//						click();
-//						gui_textfield& textField = table->textField;
-//						textField.pos = clickedcell.pos;
-//						textField.size = clickedcell.size;
-//						auto t = theme->getFont(fonttype);
-//						textField.setValue(t.name);
-//						textField.setCallback([theme,ft=fonttype,&textField](const String& str) {
-//
-//							textField.setCallback(nullptr);
-//							theme->setFont(ft, str);
-//							return true;
-//						});
-//						evt.guiDragged = &textField;
-//						table->setActiveControl(&textField);
-//						textField.handleDraggedBegin(evt);
-//					/textField.handleDraggedRelease(evt);
-//					}
 				void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, UIFont::font_type_t fonttype) override {
 					hover();
 				}
@@ -484,25 +455,6 @@ public:
 						evt.guiDragged = &numberInput;
 						numberInput.handleDraggedBegin(evt);
 					}
-					//Textfield example
-//					void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, UIFont::font_type_t fonttype) override {
-//						click();
-//						gui_textfield& textField = table->textField;
-//						textField.pos = clickedcell.pos;
-//						textField.size = clickedcell.size;
-//						auto t = theme->getFont(fonttype);
-//						textField.setValue(t.name);
-//						textField.setCallback([theme,ft=fonttype,&textField](const String& str) {
-//
-//							textField.setCallback(nullptr);
-//							theme->setFont(ft, str);
-//							return true;
-//						});
-//						evt.guiDragged = &textField;
-//						table->setActiveControl(&textField);
-//						textField.handleDraggedBegin(evt);
-//					/textField.handleDraggedRelease(evt);
-//					}
 					void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, UIFont::font_type_t fonttype) override {
                         click();
                         if (theme == nullptr)
@@ -513,7 +465,6 @@ public:
 						auto t = theme->getFont(fonttype);
 						selectFont.current = t.name;
 						selectFont.fonttype = fonttype;
-//						selectFont.fonttype = fonttype;
 //						textField.setValue(t.name);
 //						textField.setCallback([theme,ft=fonttype,&textField](const String& str) {
 //
@@ -638,28 +589,6 @@ void addPropertiesFromGui(guiplugin& gui, Table::tbl* table) {
 		}
 		rows.push_back(row);
     }
-//	rows.push_back({{tblstr{"pos"}, tbltypesaferef<glm::ivec2>{ref, gui.pos, nullptr}}});
-//	rows.push_back({{tblstr{"size"}, tbltypesaferef<glm::ivec2>{ref, gui.size, nullptr}}});
-//
-//	rows.push_back({{tblstr{"FLG_VISIBLE"}, tbltype_gui_flags{ref, FLG_VISIBLE}}});
-//	rows.push_back({{tblstr{"FLG_RENDER_BACKGROUND"}, tbltype_gui_flags{ref, FLG_RENDER_BACKGROUND}}});
-//	rows.push_back({{tblstr{"FLG_RENDER_BACKGROUND_INSET"}, tbltype_gui_flags{ref, FLG_RENDER_BACKGROUND_INSET}}});
-//	rows.push_back({{tblstr{"FLG_ENBL"}, tbltype_gui_flags{ref, FLG_ENBL}}});
-//	rows.push_back({{tblstr{"FLG_HVRD"}, tbltype_gui_flags{ref, FLG_HVRD}}});
-//	rows.push_back({{tblstr{"FLG_FOC"}, tbltype_gui_flags{ref, FLG_FOC}}});
-//	rows.push_back({{tblstr{"FLG_ACT"}, tbltype_gui_flags{ref, FLG_ACT}}});
-//	rows.push_back({{tblstr{"FLG_DRG"}, tbltype_gui_flags{ref, FLG_DRG}}});
-//	rows.push_back({{tblstr{"FLG_HAS_COLOR_BG"}, tbltype_gui_flags{ref, FLG_HAS_COLOR_BG}}});
-//
-//	if (gui.parent) {
-//		SafeRef<guibase> parentSafeRef = gui.parent->makeSafeRef();
-//		rows.push_back({{tblstr{"parent"}, parentSafeRef}});
-//	} else {
-//		rows.push_back({{tblstr{"parent"}, tblstr{"<null>"}}});
-//	}
-//	String strTheme = gui.theme->name+StringFormat("[%7X]", (int64_t)gui.theme);
-//	rows.push_back({{tblstr{"theme"}, tblString{strTheme, 1}}});
-//	rows.push_back({{tblstr{"theme2"}, tblString{strTheme, 1}}});
 }
 
 
@@ -975,17 +904,6 @@ void guiproperties_table<guitheme_t>::determineSize(glm::ivec2& prefSize) {
 	table.rows.push_back({{tblstr{"this"}, tblint{(int64_t)ptr, "%08X"}}});
 	if (ptr)
 	{
-
-		table.rows.push_back({{tblstr{"colorBg"}, tbltyperef<NVGcolor>{ptr->colorBg, "%08X"}}});
-		table.rows.push_back({{tblstr{"colorBgHover"}, tbltyperef<NVGcolor>{ ptr->colorBgHover, "%08X"}}});
-		table.rows.push_back({{tblstr{"colorBgPressed"}, tbltyperef<NVGcolor>{ptr->colorBgPressed, "%08X"}}});
-		table.rows.push_back({{tblstr{"colorBgFocused"}, tbltyperef<NVGcolor>{ptr->colorBgFocused, "%08X0"}}});
-		table.rows.push_back({{tblstr{"colorBgDisabled"}, tbltyperef<NVGcolor>{ptr->colorBgDisabled, "%08X"}}});
-		table.rows.push_back({{tblstr{"colorBgFrameBase"}, tbltyperef<NVGcolor>{ptr->colorBgFrameBase, "%08X"}}});
-		table.rows.push_back({{tblstr{"colorBgFrameBright"}, tbltyperef<NVGcolor>{ptr->colorBgFrameBright, "%08X"}}});
-		table.rows.push_back({{tblstr{"colorBgFrameOutline"}, tbltyperef<NVGcolor>{ptr->colorBgFrameOutline, "%08X"}}});
-		table.rows.push_back({{tblstr{"colorBgFrameHighlight"}, tbltyperef<NVGcolor>{ptr->colorBgFrameHighlight, "%08X"}}});
-		table.rows.push_back({{tblstr{"colorBgStroke"}, tbltyperef<NVGcolor>{ptr->colorBgStroke, "%08X"}}});
 		auto add = [this](auto && x, const auto& y) {
 			table.rows.push_back({{x, y}});
 		};
@@ -1115,24 +1033,6 @@ public:
 			c->render(vg);
 			nvgRestore(vg);
 		}
-		//int colorIdx = 0;
-		//auto renderDebugF = [](NVGcontext* vg, guibase* gui, NVGcolor color) {
-		//	nvgBeginPath(vg);
-		//	nvgRect(vg, gui->pos.x, gui->pos.y, gui->size.x, gui->size.y);
-		//	nvgFillColor(vg, color);
-		//	nvgFill(vg);
-		//};
-		//static NVGcolor dbgcolorsa[5] = {
-		//	nvgRGBA(255, 0, 0, 55),
-		//	nvgRGBA(0, 255, 0, 55),
-		//	nvgRGBA(0, 0, 255, 55),
-		//	nvgRGBA(255, 0, 255, 55),
-		//	nvgRGBA(255, 255, 0, 55)
-		//};
-
-		//for (guibase* g : guis) {
-		//	//renderDebugF(vg, g, dbgcolorsa[colorIdx++ % 5]);
-		//}
 	}
 	virtual void buttonClicked(guibase* button) {
 		if (button == &buttonAdd) {

@@ -13,16 +13,6 @@ struct guitheme_t {
 	String name = "";
 	String fileName = "";
 	bool isDefault;
-	NVGcolor colorBg{};
-	NVGcolor colorBgStroke{};
-	NVGcolor colorBgHover{};
-	NVGcolor colorBgPressed{};
-	NVGcolor colorBgFocused{};
-	NVGcolor colorBgDisabled{};
-	NVGcolor colorBgFrameBase{};
-	NVGcolor colorBgFrameOutline{};
-	NVGcolor colorBgFrameHighlight{};
-	NVGcolor colorBgFrameBright{};
 	std::vector<NVGcolor> vecNVGColors;
 	std::unordered_map<int32_t, int32_t> mapColors;
 	std::unordered_map<int32_t, int32_t> mapProperties;
@@ -37,24 +27,12 @@ struct guitheme_t {
 	guitheme_t & operator= (guitheme_t &&) noexcept = default;
 
 	void initTheme();
-	void setTint(uint32_t hex);
-	void setBackgroundColor(uint32_t rgbaint32) {
-		colorBg = rgbaToNvg(rgbaint32);
-	}
-	const NVGcolor getBgColor(int32_t flags);
-	const NVGcolor getBgStrokeColor(int32_t flags);
-	const NVGcolor getFrameColorOutline() {
-		return this->colorBgFrameOutline;
-	}
-	const NVGcolor getFrameColorBase() const {
-		return this->colorBgFrameBase;
-	}
-	const NVGcolor getFrameColorHighlight() const {
-		return this->colorBgFrameHighlight;
-	}
-	const NVGcolor getFrameColorBright() const {
-		return this->colorBgFrameBright;
-	}
+	NVGcolor getBgColor(int32_t flags) const;
+	NVGcolor getBgStrokeColor(int32_t flags) const;
+	NVGcolor getFrameColorOutline() const;
+	NVGcolor getFrameColorBase() const;
+	NVGcolor getFrameColorHighlight() const;
+	NVGcolor getFrameColorBright() const;
 	NVGcolor& getColorRef(GuiColor::constant_t _constant);
 	NVGcolor getColor(GuiColor::constant_t _constant) const;
 	NVGcolor getContrastColor(GuiColor::constant_t _constant) const;

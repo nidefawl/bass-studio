@@ -51,14 +51,15 @@ namespace RenderResources {
 			try {
 				if (ReadImage(path, out) < 0) {
 					my_printf("Error loading image %s\n", StringAsCStr(path));
-				} else {
-	//				my_printf("%s loaded: %dx%d %d-channel, bufsize: %d\n", StringAsCStr(path), out.w, out.h, out.bitdepth, out.bytes.size());
+				}
+				else {
+					//				my_printf("%s loaded: %dx%d %d-channel, bufsize: %d\n", StringAsCStr(path), out.w, out.h, out.bitdepth, out.bytes.size());
 				}
 			} catch (appexception& e) {
 				getGlobalLogger()->logStr(StringFormat("Exception: %s\n", e.what()));
 			}
 		}
-	}
+    }
 	void initResources(NVGcontext* vg) {
 		{
 			ImageBuf imgIconsBuf[NUM_IMGS];
@@ -92,6 +93,7 @@ namespace RenderResources {
 			load(vg, StringFormat("res/icons/speaker.png"), imgIconsBuf[ICON_SPEAKER]);
 			load(vg, StringFormat("res/icons/x.png"), imgIconsBuf[ICON_X]);
 			load(vg, StringFormat("res/icons/daw_icon.png"), imgIconsBuf[ICON_DAW_EXE]);
+
 			for (int i = 0; i < NUM_IMGS; i++) {
 				ImageBuf& buf = imgIconsBuf[i];
 				if (buf.w*buf.h == 0) {
