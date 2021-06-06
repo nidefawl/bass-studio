@@ -97,10 +97,11 @@ static const char* const noteNames[12] {
 const char* noteName(int note) { //DONT KEEP REFERENCE
 	static const size_t buf_size = 32;
 	static thread_local char* const buf = (char*) malloc(buf_size);
+    int noteNameIdx = math::clamp(note % 12, 0, 11);
 #ifdef __APPLE__
-	snprintf(buf, buf_size, "%s%d", noteNames[note%12], (note/12)-2);
+    snprintf(buf, buf_size, "%s%d", noteNames[noteNameIdx], (note / 12) - 2);
 #else
-	_snprintf_s(buf, buf_size, _TRUNCATE, "%s%d", noteNames[note%12], (note/12)-2);
+    _snprintf_s(buf, buf_size, _TRUNCATE, "%s%d", noteNames[noteNameIdx], (note / 12) - 2);
 #endif
 	return buf;
 }
