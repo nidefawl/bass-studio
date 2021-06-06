@@ -11,6 +11,7 @@
 #include "track.h"
 #include "track_impl.h"
 #include "color_util.h"
+#include "seq_util.h"
 #include <unordered_map>
 
 struct wave_split_layout_t {
@@ -332,9 +333,24 @@ public:
 						}
 					}
 				}
-				erase_if(splits, [&samplesPresent](const auto& entry) {
-					return !stl_contains(samplesPresent, entry.second.sample->sampleId);
-				});
+				for (auto it = splits.begin(); it != splits.end();) {
+					auto& entry = *it;
+					if (!stl_contains(samplesPresent, entry.second.sample->sampleId)) {
+						waveview_entry& waveviewEntry = entry.second;
+						if (waveviewEntry.waveformTex.queued) {
+							// skip
+							continue;
+						}
+						if (waveviewEntry.waveformTex.rendered) {
+							gui_waveform_texture_ref* waveformRef = &waveviewEntry.waveformTex;
+							waveformrender::getInstance()->release(waveformRef);
+							waveformRef->rendered = false;
+						}
+						it = splits.erase(it);
+					} else {
+						++it;
+					}
+				}
 			}
 
 		}

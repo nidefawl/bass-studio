@@ -90,18 +90,14 @@ int initDebugWindow() {
 	tess.add(0.0f, 0.0f, 0, 1);
 	tess.add(0.0f, wTexPreview, 0, 0);
 	tess.add(wTexPreview, wTexPreview, 1, 0);
-	glBindVertexArray(0);
 	checkGLError("uploadVBO");
 	glGenVertexArrays(1, &vbo.vaoId);
 	glBindVertexArray(vbo.vaoId);
 	tess2d::uploadVBO(tess, vbo);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo.vboVertId);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo.vboIdxId);
 	bindVertexAttributes(attributes);
-	checkGLError("bindVertexAttributes");
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
+	checkGLError("initDebugWindow");
     return 0;
 }
 
@@ -125,22 +121,25 @@ void drawDebugWindow(NVGcontext* ctx, int winW, int winH, float pxratio) {
 //	}
 	float x = 0; float y = 0;
 	int nrendered = 0;
-	glBindVertexArray(vbo.vaoId);
-	glBindBuffer(GL_ARRAY_BUFFER, vbo.vboVertId);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo.vboIdxId);
 	glActiveTexture( GL_TEXTURE0 );
 	glUseProgram(program2dTexture);
 	glUniform1i(u_tex0, 0);
+	glBindVertexArray(vbo.vaoId);
+
+	// note that we have to call the next 2 lines every frame when not on OpenGL 3.0 or higher contexts.
+	// OpenGL documentation does not mention this directly
+	glBindBuffer(GL_ARRAY_BUFFER, vbo.vboVertId);
+	bindVertexAttributes(attributes);
+
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo.vboIdxId);
 	for (TextureAtlas& e : rendered) {
 		int n = e.glTexture;
 		if (n > 0 && e.entries.size()) {
 			glm::mat4 matProj = glm::ortho(0.f, (float) winW, (float) winH, 0.f, 1.0f, -1.0f);
 			glm::mat4 mvp = matProj * glm::translate(glm::mat4(1.0), glm::vec3(x, y, 0));
-//			glDisable(GL_DEPTH_TEST);
 			glUniformMatrix4fv(u_mvp, 1, GL_FALSE, value_ptr(mvp));
 			glBindTexture(GL_TEXTURE_2D, n);
 			glDrawElements( GL_TRIANGLES, vbo.nIndices, GL_UNSIGNED_INT, NULL);
-//			glEnable(GL_DEPTH_TEST);
 			nrendered++;
 			x += wTexPreview+8;
 			if (x >= 1024) {
@@ -149,9 +148,8 @@ void drawDebugWindow(NVGcontext* ctx, int winW, int winH, float pxratio) {
 			}
 		}
 	}
-	glBindBuffer(GL_ARRAY_BUFFER, 0);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 	glStencilMask(~0);
 	glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 	nvgBeginFrame(ctx, winW, winH, pxratio);
@@ -170,8 +168,12 @@ void drawDebugWindow(NVGcontext* ctx, int winW, int winH, float pxratio) {
 		if (n > 0 && _atlas.entries.size()) {
 			for (TextureAtlasEntry& _entry : _atlas.entries) {
 				nvgBeginPath(ctx);
+				auto entryColor = rgbToNvg(col(nrendered));
 				nvgRect(ctx, x+_entry.pos.x*scale, y+_entry.pos.y*scale, _entry.size.x*scale, _entry.size.y*scale);
-				nvgStrokeColor(ctx, rgbToNvg(col(nrendered)));
+				if (!_entry.inuse) {
+					entryColor = rgbToNvg(0xffff0000);
+				}
+				nvgStrokeColor(ctx, entryColor);
 				nvgStrokeWidth(ctx, 2.0f);
 				nvgStroke(ctx);
 			}

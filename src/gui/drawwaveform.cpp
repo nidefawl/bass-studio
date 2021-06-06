@@ -107,7 +107,7 @@ int waveformrender::queueUpdate(samplesource_t* audio, gui_waveform_texture_ref*
 //	}
 //	assertWaveformRefIsUnbound(waveformRef);
 	dbgassert(waveformRef->waveform.size.x > 0 && waveformRef->waveform.size.y > 0);
-	waveform_update_task_t waveform_update_task{audio, waveformRef, ivec2(0), waveformRef->waveform.size};
+	waveform_update_task_t waveform_update_task{audio, waveformRef, ivec2(0), waveformRef->waveform.size, 1};
 //	dbgassert (std::find_if(queuedTasks.begin(), queuedTasks.end(), [waveformRef](const waveform_update_task_t& t) {
 //		return waveformRef == t.waveformRef;
 //	}) == queuedTasks.end());
@@ -466,7 +466,7 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 			e.refCount = waveformQueueEntry.queuedRefCount;
 			e.ptrs = waveformQueueEntry.queuedptrs;
 			dbgassert(!isIn(e.ptrs, waveformRef));
-			e.refCount++;
+//			e.refCount++;
 			e.ptrs.push_back(waveformRef);
 			waveformRef->queued = false;
 			waveformRef->rendered = true;

@@ -1030,14 +1030,14 @@ public:
 		glfw = nullptr;
 	}
 	void render()
-	{
+    {
+        glfwMakeContextCurrent(glfw);
 		if (!init) {
 			init = true;
 			if (initCallback) {
 				initCallback();
 			}
 		}
-		glfwMakeContextCurrent(glfw);
 		int winwidth, winheight;
 		int fbwidth, fbheight;
 		glfwGetWindowSize(glfw, &winwidth, &winheight);

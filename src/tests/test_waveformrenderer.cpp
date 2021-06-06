@@ -59,9 +59,9 @@ struct waveform_test {
 		daw_tls::tlsinstance& tls = daw_tls::getTls();
 		int sampleRate = 44100;
 		tls.audioCache = new audiocache(sampleRate);
-		rendererPar = new waveformrender(waveformrender_impl_e::PAR);
-		rendererPolyline = new waveformrender(waveformrender_impl_e::POLYLINE2D);
 		rendererAdv = new waveformrender(waveformrender_impl_e::ADV);
+		rendererPolyline = new waveformrender(waveformrender_impl_e::POLYLINE2D);
+		rendererPar = new waveformrender(waveformrender_impl_e::PAR);
 		renderers.push_back(rendererAdv);
 		renderers.push_back(rendererPolyline);
 		renderers.push_back(rendererPar);
@@ -247,7 +247,7 @@ namespace MiniApp {
 							nvgFillColor(vg, rgbToNvg(0xFF00FF));
 						nvgFill(vg);
 						waveformTest.renderers[i]->draw(vg, &ref, ref.waveform.size);
-						ivec2 txt(50, 14);
+						ivec2 txt(70, 14);
 						nvgBeginPath(vg);
 							nvgRect(vg, 10, wvSize.y-txt.y, txt.x, txt.y);
 							nvgFillColor(vg, rgbToNvg(0x0));
@@ -266,6 +266,15 @@ namespace MiniApp {
 						y++;
 					}
 				}
+				ivec2 wvSize = waveformTest.vecs[0][0].ref.waveform.size;
+				ivec2 txt(70, 14);
+				ivec2 offsetPos(i*wvSize.x+10, y*wvSize.y+10);
+				nvgSave(vg);
+				nvgTranslate(nanovgCtxt, offsetPos.x, offsetPos.y);
+				UTIL_setFont(vg, &themes.getRef(), txt.y-2, rgbaToNvg(0xffffffff), NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+				String names[3] = {"ADV", "POLYLINE", "PAR"};
+				nvgTextBox(vg, 12, wvSize.y-txt.y/2, txt.x, StringAsCStr(names[i]), nullptr);
+				nvgRestore(vg);
 			}
 
 			nvgEndFrame(vg);
@@ -290,12 +299,15 @@ namespace MiniApp {
 				}
 				timerAll.reset();
 				for (auto i = 0u; i < NUM_RENDERERS; i++) {
-					timer.reset();
+					int64_t lTook = 0L;
 					std::vector<waveform_test_entry>& vec = waveformTest.vecs[i];
 					for (waveform_test_entry& e : vec) {
+						timer.reset();
 						waveformTest.renderUpdate(nanovgCtxt, waveformTest.renderers[i], &e, renderStep);
+						lTook = timer.getTime();
+						e.duration = lTook;
+						waveformTest.durations[i] += lTook;
 					}
-					waveformTest.durations[i] += timer.getTime();
 				}
 				log_printf("took %llu\n", timerAll.getTime());
 
