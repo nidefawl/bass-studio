@@ -362,8 +362,11 @@ void vstplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
 	}
 	if ((this->getFlagsVST() & effFlagsProgramChunks) != 0) {
 		if (pluginSnapshot.dataChunk.size() > 0) {
-			my_printf("Plugin %s: Load data1[%d]\n", StringAsCStr(this->sName), pluginSnapshot.dataChunk.size());
-			this->dispatch(effSetChunk, 0, pluginSnapshot.dataChunk.size(), (void*)pluginSnapshot.dataChunk.data());
+			auto& localMem = this->handle->dataChunkLocalMemory;
+			localMem = pluginSnapshot.dataChunk;
+			my_printf("Plugin %s: Load data1[%d]\n", StringAsCStr(this->sName), localMem.size());
+//			localMem.resize(localMem.size()*4);
+			this->dispatch(effSetChunk, 0, localMem.size(), (void*)localMem.data());
 		}
 		if (loadPluginPresetWithSnapshot && pluginSnapshot.dataChunk2.size() > 0) {
 			my_printf("Plugin %s: Load data2[%d]\n", StringAsCStr(this->sName), pluginSnapshot.dataChunk2.size());

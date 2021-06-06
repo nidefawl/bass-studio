@@ -94,7 +94,14 @@ public:
 	virtual String getInfo(std::vector<String>& list) = 0;
 	track_t* getTrack() override;
 	virtual void onTick(double since);
-	virtual void setSampleFormat(sampleformat_t sampleFormat);
+	virtual void setSampleFormat(sampleformat_t sampleFormat) {
+		format = sampleFormat;
+		if (blockInputs && blockInputs->samples != sampleFormat.blockSize)
+			blockInputs->realloc(sampleFormat.blockSize);
+
+		if (blockOutputs && blockOutputs->samples != sampleFormat.blockSize)
+			blockOutputs->realloc(sampleFormat.blockSize);
+	}
 	virtual sampleformat_t getSampleFormat();
 	virtual void getChildAudioStages(std::vector<audio_stage_t*>& targets) {
 

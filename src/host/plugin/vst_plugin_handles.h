@@ -14,6 +14,7 @@ struct handles_t {
 	AEffect* aeffect = NULL; // hmodule owns if axEffect == null
 	void* hmodule = NULL; // we dont own
 	std::unique_ptr<guiplugin> gui;
+	std::vector<uint8_t> dataChunkLocalMemory;
 	handles_t(AudioEffectX* ex, AEffect* e, void* m) {
 		axEffect = ex;
 		aeffect = e;

@@ -529,7 +529,6 @@ void vsthost::setSampleFormat(const sampleformat_t& sampleFormat) {
 	if (this->sampleFormat != sampleFormat) {
 		this->sampleFormat = sampleFormat;
 		for (vstplugin* plugin : this->pluginInstancesVST2) {
-			plugin->sleep();
 		}
 		setBlockSize(sampleFormat.blockSize);
 		for (auto* audio : this->allAudioStages) {
@@ -544,12 +543,11 @@ void vsthost::setSampleFormat(const sampleformat_t& sampleFormat) {
         for (effectbase* plugin : this->pluginsDeferred) {
 			plugin->setSampleFormat(sampleFormat);
 		}
-		for (vstplugin* plugin : this->pluginInstancesVST2) {
+        for (vstplugin* plugin : this->pluginInstancesVST2) {
+            plugin->sleep();
 			plugin->dispatch(effSetBlockSize, 0, sampleFormat.blockSize, 0, 0);
-			plugin->dispatch(effSetSampleRate, 0, 0, NULL, (float) sampleFormat.sampleRate);
-		}
-		for (vstplugin* plugin : this->pluginInstancesVST2) {
-			plugin->resume();
+            plugin->dispatch(effSetSampleRate, 0, 0, NULL, (float)sampleFormat.sampleRate);
+            plugin->resume();
 		}
 		for (auto* stage: this->allAudioStages) {
 			stage->pluginsChanged();

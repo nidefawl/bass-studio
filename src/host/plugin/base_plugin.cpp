@@ -67,13 +67,7 @@ void effectbase::onTick(double since) {
 sampleformat_t effectbase::getSampleFormat() {
 	return format;
 }
-void effectbase::setSampleFormat(sampleformat_t sampleFormat) {
-	format = sampleFormat;
-    if (blockInputs && blockInputs->samples != sampleFormat.blockSize)
-		blockInputs->realloc(sampleFormat.blockSize);
-    if (blockOutputs && blockOutputs->samples != sampleFormat.blockSize)
-		blockOutputs->realloc(sampleFormat.blockSize);
-}
+
 void effectbase::load(vsthost* host) {
 	vstHost = host;
 	setSampleFormat(host->sampleFormat);
