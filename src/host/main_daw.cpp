@@ -22,5 +22,10 @@ void deleteApp() {
 	mainctrl = nullptr;
 }
 int main(int argc, char* argv[]) {
-	return startApplication(argc, argv);
+	int retVal = startApplication(argc, argv);
+	// we manually end lifetime here before the at-exit destructors for static objects runs
+	// this is because the destructors have assertions that might throw/abort/print stacktraces that might not work as intended if triggered in at-exit destruction phase
+	mainctrl.reset();
+	dawInstance.reset();
+	return retVal;
 }
