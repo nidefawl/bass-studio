@@ -5,20 +5,36 @@
 /**********************************************/
 /*                Recent ideas                */
 /**********************************************/
+
+Make startup.cpp only compile into daw-application
+Add a button to open daw init script
+
+Add scriptable textboxes: Allow me to fill textboxes with a javascript 
+Add scriptable selection range
+Add scriptable start stop
+Add scriptable exporting
+Add scriptable settings ?
+Make javascript triggerable by midi, keyboard, mouse, external command (http?)
+
+Allow sonogram to be used in a mouse over popup window (not working)
 Tool to auto process samples: run samples thru specific vst preset, run samples thru my effect chains (that I extract from ableton projects)
 Duplicate _muted_ for tracks/plugins/etc
 Duplicate frozen track to flattened audio skipping the creation of plugin chain
 More specific undo, proper undo history, ability to configure it, disable it. 
 Show inactive automation in a list
 
-Show all *.dll files instead of using a vst scanner. Shell plugins need to be handled differently 
-DRUM SEQ:
+Alternative VST2 management:
+ - Show all *.dll files instead of using a vst scanner
+ - Cache results for shell plugins maybe
+ 
+ 
+Implement a drum seq into the timeline:
  - editing must be possible without requiring context change
- - samples should be sequenceable withing the trackcontents
+ - samples should be sequenceable within the trackcontents
  - placed events shall be shown as waveform as if it was a wave sample on an audio track
  - there is a backing midi track having the notes and note editor accessible
  - have them freely place in time, like midi clips
- - a on/off alternative grid with 1/8th raster would be helpful, [x][ ][ ][ ][x][ ][ ][ ]
+ - a on/off alternative grid with 1/8th raster, [x][ ][ ][ ][x][ ][ ][ ]
 
 
  
