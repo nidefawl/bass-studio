@@ -1511,6 +1511,7 @@ void initColor(); // Forward declare from gui/gui.cpp
 void deleteApp(); // Forward declare from host/mainctrl.cpp
 void openGlobalLog(const String& logFileName); // Forward declare from util/debug.cpp
 void closeGlobalLog(); // Forward declare from util/debug.cpp
+String getCurrentWorkingDirectory();
 
 int startApplication(int argc, char* argv[]) {
 	setCurrentThreadName("mainthread");
@@ -1540,6 +1541,7 @@ int startApplication(int argc, char* argv[]) {
 			argv[i+1] = nullptr;
 		}
 	}
+    setResourcePath(getCurrentWorkingDirectory());
     String cwdPath = "";
     if (determineWorkingDirectoryPath(cwdPath)) {
         setCWDPath(cwdPath+"\\daw\\");
@@ -1646,7 +1648,9 @@ int startApplication(int argc, char* argv[]) {
 			    	tmMsgSent = 0;
 			    	if (tmDuration > 0) {
 			    		log_printf("MSG took %d ms to get through, %d messages since sent\n", tmDuration, cntMessages);
-			    	}
+                    }
+                    //String applicationCWD = getCurrentWorkingDirectory();
+                    //log_printf("getCurrentWorkingDirectory: %s\n", StringAsCStr(applicationCWD));
 			    }
 	        }
 	        else

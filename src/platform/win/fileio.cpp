@@ -14,6 +14,9 @@
 #include "platform_win.h"
 #include <shlobj.h>
 
+#ifdef _WIN32
+String getCurrentWorkingDirectory();
+#endif
 int64_t ReadImage( const String &Filename, ImageBuf& ref)
 {
 	String path = toResourcePath(Filename);

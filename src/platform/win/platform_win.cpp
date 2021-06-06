@@ -90,6 +90,17 @@ String getModuleName(HMODULE module) {
 	String path(pathBuf.begin(),pathBuf.end());
 	return path;
 }
+String getCurrentWorkingDirectory() {
+	std::vector<TCHAR> pathBuf;
+	DWORD copied = 0;
+	do {
+	    pathBuf.resize(pathBuf.size()+MAX_PATH);
+	    copied = GetCurrentDirectory(pathBuf.size(), &pathBuf.at(0));
+	} while( copied >= pathBuf.size() );
+	pathBuf.resize(copied);
+	String path(pathBuf.begin(),pathBuf.end());
+	return path;
+}
 void setMinimumResolutionTimer() {
 #define TARGET_RESOLUTION 1u         // 1-millisecond target resolution
 
