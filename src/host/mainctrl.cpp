@@ -176,6 +176,7 @@ public:
 	}
 };
 guictr_base* makeGuiPluginsLoadedList();
+guictr_base* makeGuiPerformance();
 guictr_base* makeGuiEffectLibrary() {
 	return new guictr_effectlibrary();
 }
@@ -230,6 +231,7 @@ std::shared_ptr<guictr_layout> makeTabListCtr2() {
 	auto ctr_effectlib = std::make_shared<guictr_effectlibrary>();
 	auto ctr_properties = std::shared_ptr<guictr_base>(makeCtrProperties());
 	auto ctr_loadedplugins = std::shared_ptr<guictr_base>(makeGuiPluginsLoadedList());
+	auto ctr_performance = std::shared_ptr<guictr_base>(makeGuiPerformance());
 	auto settings = std::make_shared<guidialog_settings>();
 
 	auto ctr_dbg0 = std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_0);
@@ -240,6 +242,7 @@ std::shared_ptr<guictr_layout> makeTabListCtr2() {
 //	ctr->setBackgroundRendered(true);
 	ctr_effectlib->setLabel("Plugins");
 	ctr_loadedplugins->setLabel("Instances");
+	ctr_performance->setLabel("Performance");
 	ctr_properties->setLabel("Properties");
 	ctr_dbg0->setLabel("Debug 0");
 	addLayoutEntry(ctr, ctr_dbg0, ctr_dbg0->label);
@@ -249,6 +252,7 @@ std::shared_ptr<guictr_layout> makeTabListCtr2() {
 	addLayoutEntry(ctr, ctr_dbg2, ctr_dbg2->label);
 	addLayoutEntry(ctr, ctr_effectlib, ctr_effectlib->label);
 	addLayoutEntry(ctr, ctr_loadedplugins, ctr_loadedplugins->label);
+	addLayoutEntry(ctr, ctr_performance, ctr_performance->label);
 	addLayoutEntry(ctr, ctr_properties, ctr_properties->label);
 	ctr->setActiveEntry(0);
 
@@ -1380,6 +1384,9 @@ void DawInstance::setMainControl(MainCtrl* mainCtrl) {
 	this->mainCtrl = mainCtrl;
 	this->dawCtrls.push_back(mainCtrl);
 }
+MainCtrl* DawInstance::getMainControl() {
+	return this->mainCtrl;
+}
 void DawInstance::onTick()
 {
 	const bool bWroteMidiData = vsthost::getInstance()->writeRecordedData(&project);
@@ -2000,7 +2007,20 @@ bool DawCtrl::processGlobalKeyevent(KeyEvent& event) {
 		if (isKC({ 0, KEY_F2, nullptr }, event)) {
 			menuCommand(CMD_NOARG(CMD_PREFERENCES));
 			return true;
-		}
+        }
+        if (event.type != KeyEventType::K_REPEAT) {
+            if (isKC({0, KEY_P, nullptr}, event)) {
+                if (this->getDaw() && this->getDaw()->getMainControl()) {
+                    auto ctrLayoutLeft = this->getDaw()->getMainControl()->view->ctr_layoutLeft;
+                    auto ctr_performance = std::shared_ptr<guictr_base>(makeGuiPerformance());
+                    ctr_performance->setLabel("Performance");
+                    addLayoutEntry(ctrLayoutLeft, ctr_performance, ctr_performance->label);
+                    ctrLayoutLeft->postContentChanged();
+                    ctrLayoutLeft->layout();
+                }
+                return true;
+            }
+        }
 	}
 	return false;
 }

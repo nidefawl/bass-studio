@@ -11,6 +11,7 @@ guictr_base* makeCtrTheme();
 guictr_base* makeCtrHistory();
 guictr_base* makeGuiPluginsLoadedList();
 guictr_base* makeGuiEffectLibrary();
+guictr_base* makeGuiPerformance();
 
 std::map<container_type, ContainerBuilder>& getContainerFactory() {
 	static bool init = false;
@@ -50,6 +51,9 @@ std::map<container_type, ContainerBuilder>& getContainerFactory() {
 		};
 		containerFactory[container_type::CTR_TYPE_LAYOUT] = []() {
 			return std::make_shared<guictr_layout>();
+		};
+		containerFactory[container_type::CTR_TYPE_PERFORMANCE] = []() {
+			return std::shared_ptr<guictr_base>(makeGuiPerformance());
 		};
 	}
 	return containerFactory;

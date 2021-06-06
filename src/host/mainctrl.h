@@ -373,6 +373,7 @@ public:
 	void updateClipViews(clip_t* notifyClip, clip_cursor_t cursor);
 	void onTick();
 	void setMainControl(MainCtrl*);
+	MainCtrl* getMainControl();
 	guictr_tracks* getTrackContainer(int idx);
 	void updateGrid();
 	void updateVisibleTrackContents();
@@ -486,7 +487,8 @@ public:
 
 class MainCtrl : public DawCtrl
 {
-	friend class DawInstance;
+    friend class DawInstance;
+    friend class DawCtrl;
 	DawViewContainersMain* view = NULL;
 	std::array<dawview_layout_t, 10> layouts;
 public:

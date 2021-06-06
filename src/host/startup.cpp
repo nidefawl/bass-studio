@@ -8,16 +8,22 @@
 #include "logging.h"
 #include "menu.h"
 #include "commands.h"
+#include "gui/trackcontrols.h"
+#include "gui/trackcontent.h"
+#include "gui/subtrack.h"
 
 
 void dawinstance_startup_commands(daw_tls::tlsinstance& tls) {
-	if (1==1)
-		return;
+//	if (1==1)
+//		return;
 	auto* const dawMainCtrl = tls.mainCtrl;
+    if (!dawMainCtrl) {
+        return;
+    }
 	auto dawInstance = dawMainCtrl->getDaw();
 	vsthost* host = vsthost::getInstance();
 	String dawPath = "C:/Users/Michael/daw/run/";
-	String projName = "mpowersynthonly.project";
+	String projName = "spire-test.project";
 	int flags = 0x1; // defer load
 	dawInstance->cbProjectLoadCompleteCallback = [tls, dawMainCtrl, dawInstance, host](DawInstance*, std::shared_ptr<project_file> file, int errorState) {
         DAW::Cursor& cursor = dawMainCtrl->getCursor();
@@ -88,22 +94,34 @@ void dawinstance_startup_commands(daw_tls::tlsinstance& tls) {
                 }
             }
         }
-        ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-        auto* host = vsthost::getInstance();
-        std::vector<effectbase*> pluginsDeferred;
-        host->getDeferredEffects(pluginsDeferred);
-        my_printf("loading %d plugins\n", pluginsDeferred.size());
-        for (auto plugin : pluginsDeferred) {
-            my_printf("activate %s\n", StringAsCStr(plugin->sName));
-            effectbase* effectLoaded = nullptr;
-            host->activateDeferred(plugin, &effectLoaded);
-            DawInstance::get()->onPluginsChanged();
-            //            			if (effectLoaded) {
-            //            				effectLoaded->show();
-            //            			}
+        const bool loadPlugins = 1;
+        if (loadPlugins) {
+            ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+            auto* host = vsthost::getInstance();
+            std::vector<effectbase*> pluginsDeferred;
+            host->getDeferredEffects(pluginsDeferred);
+            my_printf("loading %d plugins\n", pluginsDeferred.size());
+            for (auto plugin : pluginsDeferred) {
+                my_printf("activate %s\n", StringAsCStr(plugin->sName));
+                effectbase* effectLoaded = nullptr;
+                host->activateDeferred(plugin, &effectLoaded);
+                DawInstance::get()->onPluginsChanged();
+                //            			if (effectLoaded) {
+                //            				effectLoaded->show();
+                //            			}
+            }
+            //        dawMainCtrl->menuCommand(CMD_NOARG(CMD_PREFERENCES));
         }
-        dawMainCtrl->menuCommand(CMD_NOARG(CMD_PREFERENCES));
+        dawMainCtrl->menuCommand(CMD_NOARG(CMD_SHOW_DEBUG_WINDOW));
+        auto trackList = tls.project->getTracks().getMidiAudioTracksFlatVec();
+        dbgassert(trackList.size() > 1 && trackList[1]->audio->guiInstances.size() > 0);
 
+        track_gui_entry_t* trackGui = trackList[1]->audio->guiInstances[0];
+		auto gui = makeGuiSubtrack(trackGui, MainCtrl::get(), gui_track_subtrack::SUBTRACK_TYPE_WAVE);
+		MainCtrl::getGuiTrackCtr()->addSubTrack(trackGui, gui, true);
+		trackGui->parent->layout();
+		trackGui->parent->updateVisibleTrackContents();
+		dawInstance->startPlaying();
 	};
 	dawInstance->loadFile(dawPath + projName, flags);
 }

@@ -432,7 +432,7 @@ class gui_pluginsloaded_list : public guictr_base {
 //	const int32_t heightTextField = HEIGHT_DEFAULT_INPUT;
 //	gui_textfield textField;
 	gui_stats_list textStats;
-	guictr_scrollbar scrollTop;
+//	guictr_scrollbar scrollTop;
 	gui_list_plugins listCtr;
 	gui_list_plugins listDeferredCtr;
 	String curquery = "";
@@ -445,17 +445,8 @@ public:
 		setBackgroundRendered(false);
 		padding = 0;
 		margin = 0;
-		scrollTop.add(&textStats);
-		scrollTop.maxHeight = -1;
-		add(&scrollTop);
 		add(&listCtr);
 		add(&listDeferredCtr);
-//		textField.setCallback([this](const String& str) {
-//			curquery = str;
-//			update();
-//			return true;
-//		});
-//		textField.setPlaceholder("Search");
 	}
 	~gui_pluginsloaded_list() {
 		removeGuis();
@@ -522,13 +513,10 @@ public:
 	}
 	void layout() {
 		ivec2 cs = getSizeContent();
-		scrollTop.pos = ivec2(0, 0);
-		listCtr.pos = ivec2(0, cs.y/3);
-		listDeferredCtr.pos = ivec2(0, cs.y*2/3);
-		scrollTop.size = ivec2(cs.x, cs.y/3);
-		listCtr.size = ivec2(cs.x, cs.y/3);
-		listDeferredCtr.size = ivec2(cs.x, cs.y/3);
-		scrollTop.determineSize(scrollTop.size);
+		listCtr.pos = ivec2(0, cs.y/2);
+		listDeferredCtr.pos = ivec2(0, cs.y*2/2);
+		listCtr.size = ivec2(cs.x, cs.y/2);
+		listDeferredCtr.size = ivec2(cs.x, cs.y/2);
 		for (guibase* gui : guis) {
 			gui->layout();
 		}
@@ -548,7 +536,59 @@ public:
 
 	}
 };
+class gui_performance : public guictr_base {
+public:
+	gui_stats_list textStats;
+	guictr_scrollbar scrollTop;
+	gui_performance() : guictr_base() {
+		ctrType = CTR_TYPE_PERFORMANCE;
+		setBackgroundRendered(false);
+		padding = 0;
+		margin = 0;
+
+		textStats.padding = 0;
+		textStats.setBackgroundRendered(false);
+		scrollTop.padding = 0;
+		scrollTop.setBackgroundRendered(false);
+		scrollTop.add(&textStats);
+		scrollTop.maxHeight = -1;
+		add(&scrollTop);
+	}
+	~gui_performance() {
+		removeGuis();
+	}
+	void onTick(AppCtrl* ctrl) override {
+		guictr_base::onTick(ctrl);
+	}
+	void layout() {
+		ivec2 cs = getSizeContent();
+		scrollTop.pos = ivec2(0, 0);
+		scrollTop.size = ivec2(cs.x, cs.y);
+		scrollTop.determineSize(scrollTop.size);
+		for (guibase* gui : guis) {
+			gui->layout();
+		}
+	}
+	virtual void render(NVGcontext* vg) {
+		if (isBackgroundRendered()) {
+			renderBackground(vg);
+		}
+		if (!setScissorTransform(vg)) {
+			return;
+		}
+		for (auto* g : guis) {
+			nvgSave(vg);
+			g->render(vg);
+			nvgRestore(vg);
+		}
+	}
+
+};
 
 guictr_base* makeGuiPluginsLoadedList() {
 	return new gui_pluginsloaded_list();
+}
+
+guictr_base* makeGuiPerformance() {
+	return new gui_performance();
 }

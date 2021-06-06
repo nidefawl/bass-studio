@@ -26,6 +26,7 @@ enum container_type : int32_t {
 	CTR_TYPE_DEBUG_0,
 	CTR_TYPE_DEBUG_1,
 	CTR_TYPE_DEBUG_2,
+	CTR_TYPE_PERFORMANCE,
 };
 
 class guictr_base : public guibase {
