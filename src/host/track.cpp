@@ -1023,11 +1023,11 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 //				heldEnd = math::max(heldEnd, note.end());
 //			}
 			track->getMidi().getNotesInRange(heldBegin, heldEnd, -1, loopEnd, notes);
-			auto getParent = track->parent;
-			while (getParent) {
-				getParent->getMidi().getNotesInRange(heldBegin, heldEnd, -1, loopEnd, notes);
-				getParent = getParent->parent;
-			}
+			//auto getParent = track->parent;
+			//while (getParent) {
+			//	getParent->getMidi().getNotesInRange(heldBegin, heldEnd, -1, loopEnd, notes);
+			//	getParent = getParent->parent;
+			//}
 
 		}
 		time1 = (time1 * 19 + tmr.getTime()) / 20;
