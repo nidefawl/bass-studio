@@ -23,7 +23,7 @@ void dawinstance_startup_commands(daw_tls::tlsinstance& tls) {
 	auto dawInstance = dawMainCtrl->getDaw();
 	vsthost* host = vsthost::getInstance();
 	String dawPath = "C:/Users/Michael/daw/run/";
-	String projName = "spire-test.project";
+	String projName = "kontakt5-test.project";
 	int flags = 0x1; // defer load
 	dawInstance->cbProjectLoadCompleteCallback = [tls, dawMainCtrl, dawInstance, host](DawInstance*, std::shared_ptr<project_file> file, int errorState) {
         DAW::Cursor& cursor = dawMainCtrl->getCursor();
@@ -33,10 +33,10 @@ void dawinstance_startup_commands(daw_tls::tlsinstance& tls) {
         /**
          * Code for setting cursor and loop position
          */
-        const bool dbPlaceLoopPosition = false;
+        const bool dbPlaceLoopPosition = true;
         if (dbPlaceLoopPosition) {
-            float fStart = 0.0f;
-            float fLength = 2.0f;
+            float fStart = 32.0f;
+            float fLength = 64.0f;
             // ctrl may still alter project settings during copy here if not locked
             auto& projectGlobals = dawInstance->getGlobals();
             project_controller_t* const ctrl = dawInstance;
@@ -53,7 +53,8 @@ void dawinstance_startup_commands(daw_tls::tlsinstance& tls) {
                 projectGlobals.loopLen = math::round(fLength * TICKS_BAR);
             }
             cursor.setBegin(projectGlobals.cursor.cursorPos);
-            cursor.setEnd(projectGlobals.cursor.cursorPos + projectGlobals.loopLen);
+            cursor.setEnd(projectGlobals.cursor.cursorPos);
+//            cursor.setEnd(projectGlobals.cursor.cursorPos + projectGlobals.loopLen);
             cursor.setTrackBegin(0);
             cursor.setTrackEnd(1);
         }
@@ -112,11 +113,11 @@ void dawinstance_startup_commands(daw_tls::tlsinstance& tls) {
             }
             //        dawMainCtrl->menuCommand(CMD_NOARG(CMD_PREFERENCES));
         }
-        dawMainCtrl->menuCommand(CMD_NOARG(CMD_SHOW_DEBUG_WINDOW));
+//        dawMainCtrl->menuCommand(CMD_NOARG(CMD_SHOW_DEBUG_WINDOW));
         auto trackList = tls.project->getTracks().getMidiAudioTracksFlatVec();
-        dbgassert(trackList.size() > 1 && trackList[1]->audio->guiInstances.size() > 0);
+        dbgassert(trackList.size() > 0 && trackList[0]->audio->guiInstances.size() > 0);
 
-        track_gui_entry_t* trackGui = trackList[1]->audio->guiInstances[0];
+        track_gui_entry_t* trackGui = trackList[0]->audio->guiInstances[0];
 		auto gui = makeGuiSubtrack(trackGui, MainCtrl::get(), gui_track_subtrack::SUBTRACK_TYPE_WAVE);
 		MainCtrl::getGuiTrackCtr()->addSubTrack(trackGui, gui, true);
 		trackGui->parent->layout();
