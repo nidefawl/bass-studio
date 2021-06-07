@@ -20,13 +20,14 @@
 #include "../gui/drawwaveform.h"
 #include "color_util.h"
 
+namespace windowdebug_performance {
 
 GLuint program2dTexture;
 GLint u_mvp;
 GLint u_tex0;
 
-static float wTexPreview = 1024;
-static std::vector<VertexAttr> attributes{
+float wTexPreview = 1024;
+std::vector<VertexAttr> attributes{
 	{"in_position", 2, GL_FLOAT},
 	{"in_texcoord", 2, GL_FLOAT},
 };
@@ -80,7 +81,12 @@ int loadShader() {
 	program2dTexture = program;
     return 0;
 }
-int initDebugWindow() {
+
+}
+
+using namespace windowdebug_performance;
+
+int initDebugWindowPerformance() {
 	glBindVertexArray(0);
 	int ret = loadShader();
 	if (ret)
@@ -101,7 +107,7 @@ int initDebugWindow() {
     return 0;
 }
 
-void drawDebugWindow(NVGcontext* ctx, int winW, int winH, float pxratio) {
+void drawDebugWindowPerformance(NVGcontext* ctx, int winW, int winH, float pxratio) {
 
 	std::vector<TextureAtlas> rendered;
 	auto instance = waveformrender::getInstance();

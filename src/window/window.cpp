@@ -592,6 +592,7 @@ class appwindow_main : public appwindow, public window_main  {
 public:
 	String nameDbg;
 	std::vector<std::shared_ptr<appwindow>> overlayWindows;
+	std::vector<std::shared_ptr<appwindow>> overlayWindowsToClose;
 	appwindow_main(appwindow* _parent, std::shared_ptr<AppCtrl> _ctrl)
 		: appwindow(_parent),
 		  window_main(),
@@ -650,25 +651,14 @@ public:
 	window_main* createOverlay(std::shared_ptr<AppCtrl> ctrl, int flags) override;
 	void closeOverlay(window_main* wnd) override {
 		assert(wnd);
-		wnd->hide();
 		auto it = std::find_if(overlayWindows.begin(), overlayWindows.end(), [wnd](const auto& e) {
 			return dynamic_cast<window_base*>(e.get()) == dynamic_cast<window_base*>(wnd);
 		});
-		auto handlerListSize = windowTimerHandleList.size();
-		if (it != overlayWindows.end()) {
-			auto& sharedPtr = *it;
-			dbgassert(std::find(windowTimerHandleList.begin(), windowTimerHandleList.end(), sharedPtr.get()) != windowTimerHandleList.end());
-			sharedPtr->destroy();
-			dbgassert(std::find(windowTimerHandleList.begin(), windowTimerHandleList.end(), sharedPtr.get()) == windowTimerHandleList.end());
-			sharedPtr.reset();
-			overlayWindows.erase(it);
-			dbgassert(handlerListSize != windowTimerHandleList.size());
-		} else {
-			dbgassert(0);
-		}
-
-
-
+		dbgassert(it != overlayWindows.end());
+		wnd->hide();
+		// extend lifetime of window to a point where click handlers have returned
+		overlayWindowsToClose.push_back(*it);
+		overlayWindows.erase(it);
 	}
 	bool canResize() override {
 		return this->bCanResize;
@@ -683,6 +673,20 @@ public:
 	    }
 //		flagNeedsRedraw();
         glfwMakeContextCurrent(glfw);
+
+        //overlay/child window lifetime management
+        if (overlayWindowsToClose.size()) {
+            for (auto& window : overlayWindowsToClose) {
+        		auto handlerListSize = windowTimerHandleList.size();
+    			dbgassert(std::find(windowTimerHandleList.begin(), windowTimerHandleList.end(), window.get()) != windowTimerHandleList.end());
+    			window->destroy();
+    			dbgassert(std::find(windowTimerHandleList.begin(), windowTimerHandleList.end(), window.get()) == windowTimerHandleList.end());
+    			window.reset();
+    			dbgassert(handlerListSize != windowTimerHandleList.size());
+            }
+            overlayWindowsToClose.clear();
+        }
+
 //        if (nTicks++ > 600) {
 //            nTicks = 0;
 //            reloadCustomShaders();
@@ -756,9 +760,9 @@ public:
 			ctrl->mouseDown(getMousePos(1.0f/ctrl->m_scale), button, dblClick);
 		} else if (action == GLFW_RELEASE) {
 			ctrl->mouseUp(getMousePos(1.0f/ctrl->m_scale), button);
-		}
-		lastclickpos = mousepos;
-		flagNeedsRedraw();
+        }
+        lastclickpos = mousepos;
+        flagNeedsRedraw();
 	}
 	void onWindowSizeChanged(int width, int height) {
 		if (ctrl->isOK) {

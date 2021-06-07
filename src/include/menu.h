@@ -6,9 +6,10 @@
 struct menucmd_t {
 	int command = 0;
 	String arg1 = "";
+	int argInt = 0;
 };
 inline struct menucmd_t CMD_NOARG(int cmd) {
-	return menucmd_t{cmd, ""};
+	return menucmd_t{cmd, "", 0};
 }
 
 namespace ngui {

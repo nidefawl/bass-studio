@@ -15,9 +15,148 @@
 #include "guicontextmenu.h"
 #include "button.h"
 #include "host/audio_host.h"
+#include "guitooltip.h"
+
+namespace {
+	class guigraph2d : public guictr_base {
+	public:
+		struct graph_pt {
+			float m_x;
+			float m_y;
+		};
+	private:
+//			struct axis_desc_t {
+//				String m_name;
+//				String m_unit;
+//				float m_min;
+//				float m_max;
+//				float m_scale;
+//			};
+//			axis_desc_t m_axisX;
+//			axis_desc_t m_axisY;
+		std::vector<vec2> m_data;
+	public:
+		guigraph2d() : guictr_base() {
+			padding = 0;
+			margin = 0;
+			setCanMouseHit(true);
+		}
+		~guigraph2d() {
+
+		}
+		std::vector<vec2>& getData() {
+			return m_data;
+		}
+		void render(NVGcontext* vg) override {
+			if (isBackgroundRendered()) {
+				renderBackground(vg);
+			}
+			if (!setScissorTransform(vg)) {
+				return;
+			}
+//				for (auto c : guis) {
+				nvgSave(vg);
+				if (m_data.size()) {
+					auto cs = getSizeContent();
+					auto fcs = vec2 {cs.x, cs.y};
+					auto vecFirst = m_data[0] * fcs;
+					nvgBeginPath(vg);
+					nvgMoveTo(vg, vecFirst.x, cs.y - 1 - vecFirst.y);
+					for (auto& vec : m_data) {
+						auto vPt = vec * fcs;
+						nvgLineTo(vg, vPt.x, cs.y - 1 - vPt.y);
+					}
+					nvgStrokeWidth(vg, 1.0f);
+					nvgStrokeColor(vg, rgbaToNvg(0xFFFFFFFF));
+					nvgStroke(vg);
+				}
+//					c->render(vg);
+				nvgRestore(vg);
+//				}
+		}
+	};
+	class gui_test : public guictxtmenu_base {
+		SafeRef<effectbase> ref;
+		guigraph2d graph;
+		bool hadMouseFocus = false;
+	public:
+		gui_test(SafeRef<effectbase> _ref) : guictxtmenu_base(), ref(_ref) {
+			add(&graph);
+			setBackgroundRendered(false);
+//			setBackgroundRendered(true);
+//			setBackgroundRenderedInset(false);
+			scrollbarOutside=true;
+			maxHeight = 220;
+		}
+		~gui_test() {
+			remove(&graph);
+		}
+		guigraph2d& getGraph() {
+			return graph;
+		}
+		void updateGraph() {
+			auto* _entry = safeRefGet(ref);
+			if (_entry) {
+				stats_processing_timings_t procStatsCopy = _entry->procStats;
+				auto& vecOut = graph.getData();
+				vecOut.resize(STATS_PROCESSING_MAX_SAMPLES);
+				vec2 scale = {1.0f/(float)STATS_PROCESSING_MAX_SAMPLES, 1.0f/21333.33f};
+//					std::transform(_entry->procStats.statsProcSamples,
+//							_entry->procStats.statsProcSamples+STATS_PROCESSING_MAX_SAMPLES,
+//							std::back_inserter(vecOut), [&posX, scale](int64_t sample){
+//						return vec2{posX++, sample} * scale;
+//					});
+				for (size_t i = 0; i < STATS_PROCESSING_MAX_SAMPLES; i++) {
+					size_t idx = i + procStatsCopy.statsWriteOffset;
+					if (idx == 0) {
+						idx = STATS_PROCESSING_MAX_SAMPLES - 1;
+					} else {
+						idx = idx - 1;
+					}
+					int64_t sample = procStatsCopy.statsProcSamples[idx%STATS_PROCESSING_MAX_SAMPLES];
+					float y = ((float)sample);
+					vecOut[i] = vec2{i, y}  * scale;
+				}
+			}
+		}
+
+		void layout() override {
+			graph.pos = { 0, 0 };
+			graph.size = this->size;
+		}
+
+
+		void render(NVGcontext* vg) override {
+			guictr_base::render(vg);
+		}
+
+		bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
+			if (contains(mpos)) {
+				if (evt.type == MouseHitType::MOUSE_LEFT||evt.type == MouseHitType::MOUSE_RIGHT)
+					hadMouseFocus = true;
+				evt.requestFocus(this);
+				return true;
+			}
+			return false;
+		}
+		bool isTransient() override {
+			return !hadMouseFocus;
+		}
+	//	bool canClose() override {
+	//		return !hadMouseFocus && !parentCtrl->isMouseInside();
+	//	}
+		virtual void clicked(int _id) {
+			closeContextMenu();
+		}
+		void onTick(AppCtrl* appctrl) {
+			updateGraph();
+		}
+	};
+}
 
 class gui_pluginsloaded_list_entry : public gui_list_entry {
 	SafeRef<effectbase> ref;
+	String tmp;
 public:
 	SafeRef<effectbase>& getRef() {
 		return ref;
@@ -26,6 +165,7 @@ public:
 		auto* _entry = safeRefGet(ref);
 		dbgassert(_entry);
 		icon = _entry->isSynth ? ICON_SYNTH : ICON_EFFECT;
+		tmp = getText()+"...";
 	}
 	String getText() override {
 		auto* _entry = safeRefGet(ref);
@@ -79,145 +219,27 @@ public:
 			float xw = x2 - x1;
 			if (size.x/4>xw) {
 				String str = StringFormat("%dmicsec", _entry->procStats.timeProcess);
-				nvgText(vg, size.x*3/4, rowHeight / 2, StringAsCStr(str), NULL);
-			}
+                nvgText(vg, size.x * 3 / 4, rowHeight / 2, StringAsCStr(str), NULL);
+            }
+        }
+        nvgTranslate(vg, -pos.x, -pos.y);
+    }
+    guictxtmenu_base* getTooltip(AppCtrl* appctrl) override
+	{
 
-		}
-		nvgTranslate(vg, -pos.x, -pos.y);
-	}
-	guictxtmenu_base* getTooltip(AppCtrl* appctrl) override {
-		class guigraph2d : public guictr_base {
-		public:
-			struct graph_pt {
-				float m_x;
-				float m_y;
-			};
-		private:
-//			struct axis_desc_t {
-//				String m_name;
-//				String m_unit;
-//				float m_min;
-//				float m_max;
-//				float m_scale;
-//			};
-//			axis_desc_t m_axisX;
-//			axis_desc_t m_axisY;
-			std::vector<vec2> m_data;
-		public:
-			guigraph2d() : guictr_base() {
+				auto tooltip = new gui_test(ref);
+				auto* graph = &tooltip->getGraph();
+				graph->size = {256, 128};
+				graph->pos = {0, 0};
+				tooltip->size = graph->size;
+				tooltip->layout();
+//				tooltip->canTakeInputFocus = true;
+				tooltip->maxHeight = graph->size.y;
+		//
+		////		table.rowHeight = FONT_SIZE_TOOLTIP+INSET_TABLE_CELL_PADDING*2;
+				return tooltip;
+//		return new guitooltip<String>(&this->tmp);
 
-			}
-			~guigraph2d() {
-
-			}
-			std::vector<vec2>& getData() {
-				return m_data;
-			}
-			void render(NVGcontext* vg) override {
-				if (isBackgroundRendered()) {
-					renderBackground(vg);
-				}
-				if (!setScissorTransform(vg)) {
-					return;
-				}
-//				for (auto c : guis) {
-					nvgSave(vg);
-					if (m_data.size()) {
-						auto cs = getSizeContent();
-						auto fcs = vec2 {cs.x, cs.y};
-						auto vecFirst = m_data[0] * fcs;
-						nvgBeginPath(vg);
-						nvgMoveTo(vg, vecFirst.x, cs.y - 1 - vecFirst.y);
-						for (auto& vec : m_data) {
-							auto vPt = vec * fcs;
-							nvgLineTo(vg, vPt.x, cs.y - 1 - vPt.y);
-						}
-						nvgStrokeWidth(vg, 1.0f);
-						nvgStrokeColor(vg, rgbaToNvg(0xFFFFFFFF));
-						nvgStroke(vg);
-					}
-//					c->render(vg);
-					nvgRestore(vg);
-//				}
-			}
-
-		};
-		class gui_test : public guictxtmenu_base {
-			SafeRef<effectbase> ref;
-			guigraph2d graph;
-			bool hadMouseFocus = false;
-		public:
-			gui_test(SafeRef<effectbase> _ref) : guictxtmenu_base(), ref(_ref) {
-				add(&graph);
-			}
-			~gui_test() {
-				remove(&graph);
-			}
-			guigraph2d& getGraph() {
-				return graph;
-			}
-
-			void layout() override {
-				graph.pos = { 0, 0 };
-				graph.size = this->size;
-				auto* _entry = safeRefGet(ref);
-				if (_entry) {
-					stats_processing_timings_t procStatsCopy = _entry->procStats;
-					auto& vecOut = graph.getData();
-					vecOut.resize(STATS_PROCESSING_MAX_SAMPLES);
-					vec2 scale = {1.0f/(float)STATS_PROCESSING_MAX_SAMPLES, 1.0f/21333.33f};
-//					std::transform(_entry->procStats.statsProcSamples,
-//							_entry->procStats.statsProcSamples+STATS_PROCESSING_MAX_SAMPLES,
-//							std::back_inserter(vecOut), [&posX, scale](int64_t sample){
-//						return vec2{posX++, sample} * scale;
-//					});
-					for (size_t i = 0; i < STATS_PROCESSING_MAX_SAMPLES; i++) {
-						size_t idx = i + procStatsCopy.statsWriteOffset;
-						if (idx == 0) {
-							idx = STATS_PROCESSING_MAX_SAMPLES - 1;
-						} else {
-							idx = idx - 1;
-						}
-						int64_t sample = procStatsCopy.statsProcSamples[idx%STATS_PROCESSING_MAX_SAMPLES];
-						float y = ((float)sample);
-						vecOut[i] = vec2{i, y} * scale;
-					}
-				}
-			}
-
-
-			void render(NVGcontext* vg) override {
-				guictr_base::render(vg);
-			}
-
-			bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-				if (contains(mpos)) {
-					if (evt.type == MouseHitType::MOUSE_LEFT||evt.type == MouseHitType::MOUSE_RIGHT)
-						hadMouseFocus = true;
-					evt.requestFocus(this);
-					return true;
-				}
-				return false;
-			}
-			bool isTransient() override {
-				return !hadMouseFocus;
-			}
-		//	bool canClose() override {
-		//		return !hadMouseFocus && !parentCtrl->isMouseInside();
-		//	}
-			virtual void clicked(int _id) {
-				closeContextMenu();
-			}
-			void onTick(AppCtrl* appctrl) {
-				layout();
-			}
-		};
-
-		auto tooltip = new gui_test(ref);
-		tooltip->getGraph().size = {256, 128};
-
-//		table.rowHeight = FONT_SIZE_TOOLTIP+INSET_TABLE_CELL_PADDING*2;
-		return tooltip;
 	}
 };
 class gui_stats_list : public guictr_base
@@ -284,6 +306,8 @@ public:
 		nvgFillColor(vg, G_WHITE);
 		printL("FPS", StringFormat("%.2f", daw_tls::getTls().renderStats.fps));
 
+		printL("timePrerender", StringFormat("%d", daw_tls::getTls().renderStats.timePrerender));
+		printL("timeUpdateWaveforms", StringFormat("%d", daw_tls::getTls().renderStats.timeUpdateWaveforms));
 		printL("timeRender", StringFormat("%d", daw_tls::getTls().renderStats.timeRender));
 		printL("timeRenderEditor", StringFormat("%d", daw_tls::getTls().renderStats.timeRenderEditor));
 		printL("playThreadLockCount (frame)", StringFormat("%d", daw_tls::getTls().renderStats.playThreadLockCount));
@@ -513,8 +537,8 @@ public:
 	}
 	void layout() {
 		ivec2 cs = getSizeContent();
-		listCtr.pos = ivec2(0, cs.y/2);
-		listDeferredCtr.pos = ivec2(0, cs.y*2/2);
+		listCtr.pos = ivec2(0, 0);
+		listDeferredCtr.pos = ivec2(0, cs.y/2);
 		listCtr.size = ivec2(cs.x, cs.y/2);
 		listDeferredCtr.size = ivec2(cs.x, cs.y/2);
 		for (guibase* gui : guis) {

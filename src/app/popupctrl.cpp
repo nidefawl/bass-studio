@@ -11,6 +11,7 @@
 #include "seq_util.h"
 
 #include "../gui/gui.h"
+#include "guiconstant.h"
 #include "../gui/guicontainer.h"
 #include "../gui/guicontextmenu_base.h"
 #include "../gui/guiscrollcontainer.h"
@@ -78,12 +79,17 @@ void PopupCtrl::open(guictxtmenu_base *_ctxtmenu, ivec2 pos, bool bResizeable) {
 	canTakeInputFocus = _ctxtmenu->canTakeInputFocus;
 	popupCtrs->maxHeight = _ctxtmenu->maxHeight;
 	popupCtrs->scrollbarOutside = _ctxtmenu->scrollbarOutside;
-	popupCtrs->setBackgroundRendered(_ctxtmenu->isBackgroundRendered());
+    bool hasThemeAndRound = !_ctxtmenu->theme ? false  : _ctxtmenu->theme->getFloat(GuiConstant::CONST_ROUND) > 0;
+    popupCtrs->setBackgroundRendered(_ctxtmenu->isBackgroundRendered() && !hasThemeAndRound);
 	_ctxtmenu->setParent(popupCtrs);
 	_ctxtmenu->setControl(this);
 	_ctxtmenu->determineSize(_ctxtmenu->size);
 	_ctxtmenu->layout();
 
+    auto mainCtrl = this->mainWindow->getCtrl();
+    if (mainCtrl) {
+        *getTheme() = *mainCtrl->getTheme();
+	}
 
 
 	popupCtrs->size = vec2(_ctxtmenu->size.x, math::max(0, popupCtrs->maxHeight));
@@ -106,8 +112,9 @@ void PopupCtrl::open(guictxtmenu_base *_ctxtmenu, ivec2 pos, bool bResizeable) {
 	int32_t clearc = getTheme()->getColorInt32(GuiColor::COL_CLEAR_COLOR);
 	if (popupCtrs->isBackgroundRendered()) {
 		clearc |= 0xFF000000;
-	} else {
-		clearc &= 0x00FFFFFF;
+    } else {
+        clearc &= 0x00FFFFFF;
+        clearc &= 0x00000000;
 	}
 	getTheme()->setColor(GuiColor::COL_CLEAR_COLOR, clearc);
 }

@@ -776,7 +776,7 @@ void DawCtrl::updateMenubar() {
 	for (auto& strFileRecentPath : settings.recentfiles.sortedEntries) {
 		String a,b,c, d; //path, name, ext, nameExt
 		SplitPath(strFileRecentPath, &a, &b, &c, &d);
-		menus.recent.addCommand(menucmd_t{CMD_FILE_OPEN, strFileRecentPath}, d);
+		menus.recent.addCommand(menucmd_t{CMD_FILE_OPEN, strFileRecentPath, 0}, d);
 	}
 
 }
@@ -837,18 +837,35 @@ void DawInstance::setEmptyProject() {
 
 }
 #if CREATE_DEBUG_COMPANION_WINDOW
-void drawDebugWindow(NVGcontext* ctx, int winW, int winH, float pxratio);
-int initDebugWindow();
-void openDebugWindow(window_main* mainwindow) {
+void drawDebugWindowWaveformCache(NVGcontext* ctx, int winW, int winH, float pxratio);
+int initDebugWindowWaveformCache();
+void openDebugWindowWaveformCache(window_main* mainwindow) {
 	dbgassert(mainwindow);
 	window_dialog* dialog = mainwindow->createDialog("waveform atlas cache", 1280, 720);
 	window_init_fn init;
 	window_draw_fn drawFn;
 	init.initCallback = []() {
-		initDebugWindow();
+		initDebugWindowWaveformCache();
 	};
 	drawFn.drawCallback = [](NVGcontext* ctx, int winW, int winH, float pxratio) {
-		drawDebugWindow(ctx, winW, winH, pxratio);
+		drawDebugWindowWaveformCache(ctx, winW, winH, pxratio);
+	};
+	dialog->setDrawFunction(drawFn);
+	dialog->setInitFunction(init);
+	dialog->show();
+}
+void drawDebugWindowPerformance(NVGcontext* ctx, int winW, int winH, float pxratio);
+int initDebugWindowPerformance();
+void openDebugWindowPerformance(window_main* mainwindow) {
+	dbgassert(mainwindow);
+	window_dialog* dialog = mainwindow->createDialog("performance graphs", 1280, 720);
+	window_init_fn init;
+	window_draw_fn drawFn;
+	init.initCallback = []() {
+		initDebugWindowPerformance();
+	};
+	drawFn.drawCallback = [](NVGcontext* ctx, int winW, int winH, float pxratio) {
+		drawDebugWindowPerformance(ctx, winW, winH, pxratio);
 	};
 	dialog->setDrawFunction(drawFn);
 	dialog->setInitFunction(init);
@@ -887,10 +904,24 @@ void MainCtrl::onChildOverlayWindowClose(window_main* window) {
 		DawCtrl::onChildOverlayWindowClose(window);
 	}
 }
+
 void DawInstance::menuCommand(const menucmd_t&& command) {
 	try {
 	String path = projectPath;
 	switch (command.command) {
+
+	case CMD_OPEN_VIEW:
+	    if (getMainControl()) {
+	    	dbgassert(command.argInt >= 0);
+	    	std::shared_ptr<guictr_base> ctr;
+	    	if (makeContainer(static_cast<container_type>(command.argInt), ctr)) {
+		        auto ctrLayoutLeft = getMainControl()->view->ctr_layoutLeft;
+		        addLayoutEntry(ctrLayoutLeft, ctr, ctr->label);
+		        ctrLayoutLeft->postContentChanged();
+		        ctrLayoutLeft->layout();
+	    	}
+	    }
+		break;
 	case CMD_OPEN_SECOND_WINDOW:
 		if (companionWindows.empty()) {
 			auto companionCtrlStdPtr = std::make_shared<CompanionCtrl>(*this);
@@ -912,6 +943,36 @@ void DawInstance::menuCommand(const menucmd_t&& command) {
 			}
 		} else if (companionWindows.size() && companionWindows[0].ctrl && companionWindows[0].ctrl->isOk()) {
 			companionWindows[0].wnd->show();
+		}
+		return;
+	case CMD_SHOW_DEBUG3_WINDOW:
+		{
+			auto companionCtrlStdPtr = std::make_shared<PopupCtrl>();
+			auto compWindowNew = mainCtrl->mainWindow->createOverlay(companionCtrlStdPtr, WINDOW_IS_MAINWINDOW_SLAVE);
+			dbgassert(compWindowNew);
+			companionWindows.push_back(DawWindowCompanion{compWindowNew, companionCtrlStdPtr});
+			initWindowControl(compWindowNew);
+			if (companionCtrlStdPtr->isOk()) {
+				auto* ctxtWindowTheme = compWindowNew->getCtrl()->getTheme();
+				//copy theme from this control to contextWindows control
+				*ctxtWindowTheme = *mainCtrl->getTheme();
+				compWindowNew->getCtrl()->m_scale = mainCtrl->m_scale;
+				auto b = new guidialog_about;
+				ivec2 windowPos;
+				ivec2 windowSize;
+				mainCtrl->mainWindow->getPos(&windowPos);
+				mainCtrl->mainWindow->getSize(&windowSize);
+				ivec2 wndPos = windowPos+(windowSize-b->size)/2;
+				static_cast<PopupCtrl*>(compWindowNew->getCtrl())->open(b, wndPos, true); //ugly cast
+
+//				for (track_t* tr : project.trackList) {
+//					companionCtrlStdPtr->view->ctr_tracks2.addTrack(tr, FLG_TRK_CHANGE_LOAD);
+//				}
+//				companionCtrlStdPtr->updateVisibleTrackContents();
+//				companionCtrlStdPtr->layoutView();
+//				companionCtrlStdPtr->fixCursor();
+			}
+
 		}
 		return;
 	case CMD_UNDO:
@@ -988,7 +1049,12 @@ void DawInstance::menuCommand(const menucmd_t&& command) {
 		break;
 	case CMD_SHOW_DEBUG_WINDOW:
 #if CREATE_DEBUG_COMPANION_WINDOW
-		openDebugWindow(dynamic_cast<window_main*>(mainCtrl->window));
+		openDebugWindowWaveformCache(dynamic_cast<window_main*>(mainCtrl->window));
+#endif
+		break;
+	case CMD_SHOW_DEBUG2_WINDOW:
+#if CREATE_DEBUG_COMPANION_WINDOW
+		openDebugWindowPerformance(dynamic_cast<window_main*>(mainCtrl->window));
 #endif
 		break;
 	case CMD_PREFERENCES:
@@ -1229,13 +1295,28 @@ bool DawCtrl::init(window_main* window, NVGcontext* nanovg)
 	menus.tools.type = ngui::menu_type::submenu;
 	menus.tools.title = "Tools";
 	menus.tools.addCommand(CMD_NOARG(CMD_PREFERENCES), "Preferences");
-	menus.tools.addCommand(CMD_NOARG(CMD_SHOW_DEBUG_WINDOW), "Show Debug Window");
-	menus.tools.addCommand(CMD_NOARG(CMD_OPEN_SECOND_WINDOW), "Show Second Window");
 	menus.tools.addCommand(CMD_NOARG(CMD_ABOUT), "About");
+	menus.views.addCommand(CMD_NOARG(CMD_OPEN_SECOND_WINDOW), "Show Second Window");
+	menus.views.addSeperator();
+	menus.views.title = "View";
+	for (int i = static_cast<int>(container_type::CTR_TYPE_PROPERTIES); i < CTR_TYPE_COUNT; i++) {
+		String name;
+		getContainerLabel(static_cast<container_type>(i), name);
+		menus.views.addCommand(menucmd_t{
+				CMD_OPEN_VIEW,
+				name,
+				static_cast<int>(i)},
+				"Show "+name);
+	}
+	menus.views.addSeperator();
+	menus.views.addCommand(CMD_NOARG(CMD_SHOW_DEBUG_WINDOW), "Show Waveform Cache");
+	menus.views.addCommand(CMD_NOARG(CMD_SHOW_DEBUG2_WINDOW), "Show Performance Graphs");
+	menus.views.addCommand(CMD_NOARG(CMD_SHOW_DEBUG3_WINDOW), "Show Debug Window #3");
 
 	menubar.add(&menus.file);
 	menubar.add(&menus.edit);
 	menubar.add(&menus.tools);
+	menubar.add(&menus.views);
 	this->updateMenubar();
 #if !USE_GUI_MENU
 	this->mainWindow->updateMenu();
@@ -1268,28 +1349,31 @@ void DawCtrl::onTick()
 	//	if (isPlaying()) {
 			mainWindow->requestRedraw();
 	//	}
-
+			
 	if (!guiDragged && !guiCaptured && guiOver && (!this->ctxtmenu || ctxtmenu->isTransient())) {
-		int32_t hoverTicks = 0;
+		double hoverTime = lastHoverTooltipTime;
 		if (ctxtmenu && ctxtmenu->isTransient() && (lastTooltipSrc && guiOver && guiOver != lastTooltipSrc)) {
 			closeContextMenu();
 		}
 		if (ctxtmenu && !ctxtmenu->isTransient()) {
-			hoverTicks = 0;
+			hoverTime = 0;
 		}
-		if (!ctxtmenu && guiOver == lastHoveredTooltip) {
-			hoverTicks = lastHoveredTooltipTicks + 1;
-			if (lastHoveredTooltipTicks >= 12) {
+		if (!ctxtmenu) {
+            auto timeNow = getTimeMillisd();
+			if (guiOver == lastHoveredTooltip && timeNow - lastHoverTooltipTime >= 360.0) {
 				auto newContextMenu = guiOver->getTooltip(this);
-				if (newContextMenu) {
+                if (newContextMenu) {
+                    newContextMenu->theme = getTheme();
 					lastTooltipSrc = guiOver;
 					daw.nextTooltipId++;
 					openContextMenu(newContextMenu, m_mousePos+ivec2(-16,26));
 				}
-				hoverTicks = 0;
+    			hoverTime = 0;
+            } else if (guiOver != lastHoveredTooltip) {
+				hoverTime = timeNow;
 			}
-		}
-		lastHoveredTooltipTicks = hoverTicks;
+        }
+		lastHoverTooltipTime = hoverTime;
 		lastHoveredTooltip = guiOver;
 	} else {
 		if (ctxtmenu && ctxtmenu->isTransient()) {
@@ -1364,20 +1448,10 @@ void DawInstance::layoutTrackEditors() {
 		pDawCtrl->layoutView();
 	}
 }
-guictr_tracks* DawInstance::getTrackContainer(int idx) {
-	switch (idx) {
-	case 0:
-		return &mainCtrl->view->ctr_tracks;
-	case 1:
-		if (companionWindows.size() > idx-1 && companionWindows[idx-1].ctrl->isOk()) {
-			return &companionWindows[idx-1].ctrl->view->ctr_tracks2;
-		}
-		//return null
-		break;
-	default:
-		break;
+void DawInstance::getTrackContainers(std::vector<guictr_tracks*>& trackCointainers) {
+	for (int i = 0; i < dawCtrls.size(); i++) {
+		dawCtrls[i]->getTrackContainers(trackCointainers);
 	}
-	return nullptr;
 }
 void DawInstance::setMainControl(MainCtrl* mainCtrl) {
 	dbgassert(!this->mainCtrl);
@@ -1639,6 +1713,12 @@ void MainCtrl::dragContainerRelayout(drag_ctr_event evt) {
 		BaseCtrl::relayout();
 	}
 
+}
+void MainCtrl::getTrackContainers(std::vector<guictr_tracks*>& trackCointainers) {
+	trackCointainers.push_back(&view->ctr_tracks);
+}
+void CompanionCtrl::getTrackContainers(std::vector<guictr_tracks*>& trackCointainers) {
+	trackCointainers.push_back(&view->ctr_tracks2);
 }
 void MainCtrl::layoutView(int32_t w, int32_t h) {
 	w = math::max(640, w);
@@ -2365,10 +2445,14 @@ void DawCtrl::prerender(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w,
 	daw_tls::getTls().renderStats.clipsRendered=0;
 	daw_tls::getTls().renderStats.notesRendered=0;
 //	my_printf("prerender %d\n", std::this_thread::get_id());
+	hires_timer_t timer;
 	for (guictr_base *ctr : containers) {
 		ctr->prerender(nanovgCtxt);
 	}
+	daw_tls::getTls().renderStats.timePrerender=timer.getTime();
+	timer.reset();
 	waveformrender::getInstance()->renderUpdates(nanovgCtxt, 0);
+	daw_tls::getTls().renderStats.timeUpdateWaveforms=timer.getTime();
 }
 track_t* clip_view::track() const {
 	if (!this->gui)

@@ -54,6 +54,7 @@ enum ID_BTN : int32_t {
 	ID_BTN_TOGGLE_SAMPLECONVERSION,
 	ID_BTN_TOGGLE_THREADING,
 	ID_BTN_TOGGLE_CLIP_RENDER_CACHE,
+	ID_BTN_TOGGLE_WAVEFORM_UPDATES
 };
 constexpr int BTN_FONT_SIZE = 16;
 struct gui_ctr_debug::ctr_debug_impl_t {
@@ -190,6 +191,13 @@ gui_ctr_debug::gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType) :
 			auto btn3 = new guibutton;
 			btn3->id = ID_BTN_TOGGLE_CLIP_RENDER_CACHE;
 			btn3->setText("Disable clip render cache");
+			btn3->setFontSize(BTN_FONT_SIZE);
+			debugGuis.push_back(btn3);
+		}
+		{
+			auto btn3 = new guibutton;
+			btn3->id = ID_BTN_TOGGLE_WAVEFORM_UPDATES;
+			btn3->setText("Disable audio waveform updates");
 			btn3->setFontSize(BTN_FONT_SIZE);
 			debugGuis.push_back(btn3);
 		}
@@ -565,6 +573,11 @@ void gui_ctr_debug::buttonClicked(guibase* button) {
 	case ID_BTN_TOGGLE_CLIP_RENDER_CACHE:
 		daw_tls::getTls().renderStats.enableCache = !daw_tls::getTls().renderStats.enableCache;
 		static_cast<guibutton*>(button)->setText(String(daw_tls::getTls().renderStats.enableCache?"Disable clip render cache":"Enable clip render cache"));
+
+		break;
+	case ID_BTN_TOGGLE_WAVEFORM_UPDATES:
+		daw_tls::getTls().renderStats.disableWaveformUpdates = !daw_tls::getTls().renderStats.disableWaveformUpdates;
+		static_cast<guibutton*>(button)->setText(String(daw_tls::getTls().renderStats.disableWaveformUpdates?"Enable waveform updates":"Disable waveform updates"));
 
 		break;
 	case ID_BTN_TOGGLE_THREADING:

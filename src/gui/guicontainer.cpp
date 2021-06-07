@@ -132,7 +132,8 @@ void guictr_base::renderFrameBase(NVGcontext* vg) {
 void guictr_base::renderFrameOutline(NVGcontext* vg) {
 	nvgBeginPath(vg);
 	ivec2 sizeContent = getSizeContent();
-	nvgRect(vg, 0, 0, sizeContent.x, sizeContent.y);
+//	nvgRect(vg, 0, 0, sizeContent.x, sizeContent.y);
+	nvgRoundedRect(vg, 0, 0, sizeContent.x, sizeContent.y, theme->getFloat(GuiConstant::CONST_ROUND));
 	nvgStrokeColor(vg, theme->getFrameColorOutline());
 	nvgStrokeWidth(vg, 2.0);
 	nvgStroke(vg);
@@ -218,9 +219,11 @@ void guictr_base::drawBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 
 	static const ivec2 borderThickness(CTR_SPACING - 2);
 	posInset -= ivec2(margin);
 	sizeInset += ivec2(margin) * 2;
-	if (sizeInset.y > 0 && sizeInset.x > 0) {
+    if (sizeInset.y > 0 && sizeInset.x > 0) {
+        auto baaag = theme->getFloat(GuiConstant::CONST_ROUND);
+        float fRound = theme->getFloat(GuiConstant::CONST_ROUND);
 		nvgBeginPath(vg);
-		nvgRoundedRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y, 4);
+        nvgRoundedRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y, fRound);
 		NVGcolor bg = theme->getColor(GuiColor::COL_BG_DRK);
 		if (focused) {
 			bg = theme->getColor(GuiColor::COL_BG_DRK_FOCUSED);

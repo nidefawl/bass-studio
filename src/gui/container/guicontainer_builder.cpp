@@ -13,6 +13,52 @@ guictr_base* makeGuiPluginsLoadedList();
 guictr_base* makeGuiEffectLibrary();
 guictr_base* makeGuiPerformance();
 
+bool getContainerLabel(container_type type, String& out) {
+	switch (type) {
+		case CTR_TYPE_LAYOUT:
+			out = "Layout";
+			return true;
+		case CTR_TYPE_BASE:
+			out = "Base";
+			return true;
+		case CTR_TYPE_PROPERTIES:
+			out = "Properties";
+			return true;
+		case CTR_TYPE_THEME:
+			out = "Theme";
+			return true;
+		case CTR_TYPE_HISTORY:
+			out = "History";
+			return true;
+		case CTR_TYPE_SHADERVIEW:
+			out = "Shader Test";
+			return true;
+		case CTR_TYPE_SETTINGS:
+			out = "Settings";
+			return true;
+		case CTR_TYPE_EFFECTLIBRARY:
+			out = "Plugins";
+			return true;
+		case CTR_TYPE_PLUGINSLOADED:
+			out = "Instances";
+			return true;
+		case CTR_TYPE_DEBUG_0:
+			out = "Debug 0";
+			return true;
+		case CTR_TYPE_DEBUG_1:
+			out = "Debug 1";
+			return true;
+		case CTR_TYPE_DEBUG_2:
+			out = "Debug 2";
+			return true;
+		case CTR_TYPE_PERFORMANCE:
+			out = "Performance";
+			return true;
+		default:
+			break;
+	}
+	return false;
+}
 std::map<container_type, ContainerBuilder>& getContainerFactory() {
 	static bool init = false;
 	static std::map<container_type, ContainerBuilder> containerFactory;
@@ -57,6 +103,22 @@ std::map<container_type, ContainerBuilder>& getContainerFactory() {
 		};
 	}
 	return containerFactory;
+}
+bool makeContainer(container_type type, std::shared_ptr<guictr_base>& out) {
+	auto& fac = getContainerFactory();
+	out = nullptr;
+	if (fac.count(type)) {
+		ContainerBuilder& builder = fac[type];
+		std::shared_ptr<guictr_base> sharedContainer = builder();
+		if (!sharedContainer) {
+			log_printf("Failed building container of type %d\n", type);
+			return false;
+		}
+		getContainerLabel(type, sharedContainer->label);
+		out = sharedContainer;
+		return true;
+	}
+	return false;
 }
 std::shared_ptr<guictr_layout_entry> createGuiCtrLayoutEntry(std::shared_ptr<guictr_base> ctr) {
 	std::shared_ptr<guictr_layout_entry> entry1 = std::make_shared<guictr_layout_entry>(ctr->getLabel(),  ctr);

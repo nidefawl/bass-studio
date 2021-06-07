@@ -102,6 +102,10 @@ int waveformrender::queueUpdate(samplesource_t* audio, gui_waveform_texture_ref*
 	if (waveformRef->queued) {
 		return 0;
 	}
+
+	const bool disableWaveformUpdates = daw_tls::getTls().renderStats.disableWaveformUpdates;
+	if (disableWaveformUpdates)
+		return 0;
 //	if (!canQueueUpdate()) {
 //		return 0;
 //	}

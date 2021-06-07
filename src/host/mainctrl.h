@@ -204,6 +204,7 @@ struct Menus {
 	ngui::Menu recent;
 	ngui::Menu edit;
 	ngui::Menu tools;
+	ngui::Menu views;
 };
 enum view_mode_t {
 	TRACK_TIMELINE, NODE_EDITOR, MIXER
@@ -248,7 +249,7 @@ class DawInstance : public project_controller_t, public delete_cb {
 //	std::shared_ptr<CompanionCtrl> companionCtrlStdPtr{nullptr};
 	struct DawWindowCompanion {
 		window_main* wnd{nullptr};
-		std::shared_ptr<CompanionCtrl> ctrl{nullptr};
+		std::shared_ptr<BaseCtrl> ctrl{nullptr};
 	};
 	std::vector<DawWindowCompanion> companionWindows;
 	std::vector<DawCtrl*> dawCtrls;
@@ -374,7 +375,7 @@ public:
 	void onTick();
 	void setMainControl(MainCtrl*);
 	MainCtrl* getMainControl();
-	guictr_tracks* getTrackContainer(int idx);
+	void getTrackContainers(std::vector<guictr_tracks*>& trackCointainers);
 	void updateGrid();
 	void updateVisibleTrackContents();
 	void onPluginsChanged();
@@ -394,7 +395,7 @@ protected:
 	int32_t lastHoveredTrackTicks = 0;
 	void* lastHoveredTooltip = nullptr;
 	void* lastTooltipSrc = nullptr;
-	int32_t lastHoveredTooltipTicks = 0;
+	double lastHoverTooltipTime = 0;
 public:
 	String lastKey;
 	DawViewContainers* viewContainers = NULL;
@@ -483,6 +484,7 @@ public:
 	virtual bool isZooming() = 0;
 	view_mode_t getViewMode();
 	virtual void setViewMode(view_mode_t mode) = 0;
+	virtual void getTrackContainers(std::vector<guictr_tracks*>& trackCointainers) = 0;
 };
 
 class MainCtrl : public DawCtrl
@@ -540,6 +542,7 @@ public:
     std::shared_ptr<guictr_layout> replaceContainerWith(guictr_base* ctr,
     		std::shared_ptr<guictr_layout> newContainer) override;
     void dragContainerRelayout(drag_ctr_event evt) override;
+	void getTrackContainers(std::vector<guictr_tracks*>& trackCointainers) override;
 };
 
 class CompanionCtrl : public DawCtrl
@@ -575,4 +578,5 @@ public:
 	bool isZooming() override;
 	void setViewMode(view_mode_t mode) override;
 	void setEditClip(gui_clip* gclip) override;
+	void getTrackContainers(std::vector<guictr_tracks*>& trackCointainers) override;
 };

@@ -143,17 +143,17 @@ void guitheme_t::setColor(GuiColor::constant_t _constant, int32_t _newValue) {
 	this->vecNVGColors[_constant.idx] = rgbaToNvg(_newValue);
 }
 
-float guitheme_t::getFloat(GuiConstant::constant_t _constant) {
+float guitheme_t::getFloat(GuiConstant::constant_t _constant) const {
 	return get(_constant)/10.0f;
 }
-int32_t guitheme_t::get(GuiConstant::constant_t _constant) {
+int32_t guitheme_t::get(GuiConstant::constant_t _constant) const {
     auto it = mapProperties.find(_constant.idx);
     if (it == mapProperties.end()) {
     	return _constant.defValue;
     }
-    int32_t val = mapProperties[_constant.idx];
+    const int32_t val = mapProperties.at(_constant.idx);
     dbgassert(val >= 0 && val <= 10000);
-	return mapProperties[_constant.idx];
+    return val;
 }
 UIFont::font_instance guitheme_t::getFont(UIFont::font_type_t _fonttype) const {
     auto it = mapFonts.find(_fonttype.idx);

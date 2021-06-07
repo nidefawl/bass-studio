@@ -163,17 +163,22 @@ track_snapshot_t::track_snapshot_t(const track_t* track, bool storePluginChunks)
 	}
 	track_impl_t* p = track->audio;
 	if (p) {
-
-		for (int i = 0; i < 32; i++) {
-			guictr_tracks* ctr = DawInstance::get()->getTrackContainer(i);
+		// get all trackcointainer instances
+		std::vector<guictr_tracks*> trackCointainers;
+		DawInstance::get()->getTrackContainers(trackCointainers);
+		// should use UUID for serialization
+		int32_t trackCtrIdx = 0;
+		for (auto* ctr : trackCointainers) {
 			if (ctr) {
 				track_gui_entry_t* out;
 				if (ctr->guiMgr.getTrackEntry(track, &out)) {
 					track_layout_snapshot_t snapshot;
 					saveSubtrackLayout(ctr, out, snapshot);
-					layouts[i] = snapshot;
+					layouts[trackCtrIdx] = snapshot;
 				}
 			}
+			trackCtrIdx++;
+
 		}
 	}
 }

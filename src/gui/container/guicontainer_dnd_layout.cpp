@@ -737,7 +737,8 @@ void loadContainerEntrySnapshot(std::shared_ptr<guictrlayout_entry_snapshot_t>& 
 			log_printf("Failed building container of type %d\n", snapshot->type);
 			return;
 		}
-		sharedContainer->label = snapshot->label;
+//		sharedContainer->label = snapshot->label;
+		getContainerLabel(snapshot->type, sharedContainer->label);
 		out = createGuiCtrLayoutEntry(sharedContainer);
 		if (out->getFrameType() == layout_ctr_type::GUICTR_LAYOUT) {
 			guictrlayout_snapshot_t* ctrLayoutSnapshot = dynamic_cast<guictrlayout_snapshot_t*>(snapshot.get());
