@@ -1768,7 +1768,7 @@ void vsthost::processAudio(audio_stage_t* stage, AudioBlock* input, AudioBlock* 
 		count += stage->effects.size();
 	}
 
-	AudioBlock tempBlock(32, 256);
+	AudioBlock tempBlock(64, 256);
 	hires_timer_t timer;
     int64_t timeTotal = 0;
     if (processingGraph != nullptr) {
@@ -1839,12 +1839,16 @@ void vsthost::processAudio(audio_stage_t* stage, AudioBlock* input, AudioBlock* 
                         dbgassert(delayToMaxInputLatency >= 0);
 
                         AudioBlock srcBlock = src.toAudioBlock();
-                        DelayLine* delayLine = stage->getEffectDelayLine(tracksrc.trackEdgeId, srcBlock.channels);
                         tempBlock.realloc(srcBlock.samples);
                         dbgassert(srcBlock.samples == tempBlock.samples);
-                        dbgassert(srcBlock.channels <= tempBlock.channels);
-                        dbgassert((delayLine->block.channels == srcBlock.channels) ||
-                                  (2 <= delayLine->block.channels && ((delayLine->block.channels % 2) == 0) && 1 == srcBlock.channels));
+
+                        uint32_t nChannels = math::min(srcBlock.channels, tempBlock.channels);
+
+                        DelayLine* delayLine = stage->getEffectDelayLine(tracksrc.trackEdgeId, nChannels);
+
+                        //dbgassert(srcBlock.channels <= tempBlock.channels);
+                        //dbgassert((delayLine->block.channels == srcBlock.channels) ||
+                        //          (2 <= delayLine->block.channels && ((delayLine->block.channels % 2) == 0) && 1 == srcBlock.channels));
 
                         AudioBlock* srcDelayBlocked = &srcBlock;
                         // One of the delay lines will always be 0 samples delay
