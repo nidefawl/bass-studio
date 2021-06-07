@@ -104,15 +104,18 @@ public:
 //							nvgRect(vg, 0, 0, wvSize.x, wvSize.y);
 //							nvgFillColor(vg, rgbToNvg(0xFFFFFF));
 //						nvgFill(vg);
-//						nvgBeginPath(vg);
-//							nvgRect(vg, 2, 2, wvSize.x-4, wvSize.y-4);
-//							nvgFillColor(vg, dbgcolorsa[colorIdx++ % 5]);
-//						nvgFill(vg);
+						nvgBeginPath(vg);
+							nvgRect(vg, 2, 2, wvSize.x-4, wvSize.y-4);
+							NVGcolor bgWave = dbgcolorsa[colorIdx % 5];								 
+							bgWave.a = 0.3f;
+                            nvgFillColor(vg, bgWave);
+						nvgFill(vg);
 						ivec2 s = waveformTex.waveform.size;
 						waveformrender::getInstance()->draw(vg, &waveformTex, s);
 
 					nvgRestore(vg);
 				}
+                colorIdx++;
 			}
 			nvgRestore(vg);
 
@@ -160,8 +163,8 @@ public:
 			return !waveformTex.rendered && !waveformTex.queued;
 		});
 	}
-	waveform_layout_updated_t makeWaveformFromClip(const project_globals_t& project, scaled_grid& grid,
-			const waveview_entry& entry, ivec2& pos, ivec2& size, ivec2& posClipped, ivec2& sizeClipped) {
+	bool makeWaveformFromClip(const project_globals_t& project, scaled_grid& grid, const waveview_entry& entry, ivec2& pos, ivec2& size, ivec2& posClipped, ivec2& sizeClipped, waveform_layout_updated_t& out)
+    {
 
 
 		samplerate_t sr = vsthost::getInstance()->sampleFormat.sampleRate; //TODO: store in project_t
@@ -182,16 +185,20 @@ public:
 
 		double posStart = math::max(0.0, grid.tickToScreenD(tickRenderStart));
 		double posEnd = math::min((double)size.x, grid.tickToScreenD(tickRenderStart+tickRenderLen));
-		double renderSize = posEnd-posStart;
+		double renderSize = posEnd - posStart;
 
 
 		int64_t sampleBegin = 0;
 		int64_t sampleBeginOffset = math::floorCast(math::max(0.0, tickToSamplePrecise(tickScreenStart-tickRenderStart, project.tempo100, sr)));
 
-		int64_t nSamples = math::ceilCast(tickToSamplePrecise(grid.screenToTickD(posEnd), project.tempo100, sr) -
-				tickToSamplePrecise(grid.screenToTickD(posStart), project.tempo100, sr));
+		int64_t nSamples = math::ceilCast(
+				tickToSamplePrecise(grid.screenToTickD(posEnd), project.tempo100, sr)   -
+				tickToSamplePrecise(grid.screenToTickD(posStart), project.tempo100, sr)    );
 
-		dbgassert(posEnd>posStart);
+		//rare corner case where only few samples cross the left border of the subtrack begin (pos.x = 0)
+        if (nSamples < 1 || posEnd <= posStart) {
+            return false;
+        }
 
 
 		waveform_layout_updated_t newentry;
@@ -236,8 +243,8 @@ public:
 		w.audioId = entry.sample->sampleId;
 		w.clipped = false;
 
-
-		return newentry;
+		out = newentry;
+		return true;
 
 	}
 	void updatePosition(const project_globals_t& globals, scaled_grid& grid, ivec2& trackSize, bool throttleRefresh) override {
@@ -260,6 +267,8 @@ public:
 			ivec2 posClipped = pos;
 			ivec2 sizeClipped = clipSize;
 			this->parent->scissorClip(posClipped, sizeClipped);
+			// subtrack is never scissored. This check has to be removed in case we for some reason apply left side scissor to parent container 
+            dbgassert(pos.x == 0 && pos.x == posClipped.x);
 			sizeClipped.y = clipSize.y;
 			double tickBegin = grid.screenToTickD(pos.x);
 			double tickEnd = grid.screenToTickD(pos.x + size.x);
@@ -267,7 +276,7 @@ public:
 			double trackPosSampleStart = tickToSamplePrecise(tickBegin, globals.tempo100, sr);
 			double trackPosSampleEnd = tickToSamplePrecise(tickEnd, globals.tempo100, sr);
 			if (posClipped.x+sizeClipped.x <= 0 || sizeClipped.x <= 0) {
-				culled = true;
+				culled = true; // whole subtrack is culled
 			} else {
 				std::vector<audiotrack_split_t*> samples;
 				std::vector<int32_t> samplesPresent;
@@ -285,9 +294,9 @@ public:
 					auto& texture = entry.waveformTex;
 					if (!texture.queued) {
 						entry.sample = this->m_track->audio->audioOutput.getSampleById(sample->sampleId);
-						waveform_layout_updated_t updatedEntry = makeWaveformFromClip(globals, grid, entry, pos, clipSize, posClipped, sizeClipped);
-						dbgassert(updatedEntry.waveform.audioId >= 0 || entry.sample.get() == nullptr);
-						if (updatedEntry.waveform.audioId < 0
+                        waveform_layout_updated_t updatedEntry;
+                        bool samplesVisible = makeWaveformFromClip(globals, grid, entry, pos, clipSize, posClipped, sizeClipped, updatedEntry);
+						if (!samplesVisible || updatedEntry.waveform.audioId < 0
 								|| updatedEntry.waveform.size.x < 1
 								|| updatedEntry.waveform.size.y < 1
 								|| updatedEntry.layout.size.x < 1
@@ -300,9 +309,16 @@ public:
 							entry.waveformUpdated = updatedEntry.waveform;
 							entry.layoutUpdated = updatedEntry.layout;
 						} else {
-							bool equal = sample->version == entry.sampleVersion
+                            dbgassert(updatedEntry.waveform.audioId >= 0 || entry.sample.get() == nullptr);
+
+//							bool equal = sample->version == entry.sampleVersion
+//									&& ((updatedEntry.waveform.size.y > 0) == (texture.waveform.size.y > 0))
+//									&& updatedEntry.waveform == texture.waveform
+//									&& updatedEntry.layout == entry.layoutCurrent;
+							bool equal = math::abs((sample->version-entry.sampleVersion)) < 3
 									&& ((updatedEntry.waveform.size.y > 0) == (texture.waveform.size.y > 0))
-									&& updatedEntry.waveform == texture.waveform
+//									&& updatedEntry.waveform == texture.waveform
+									&& isEqualWaveform3(updatedEntry.waveform, texture.waveform)
 									&& updatedEntry.layout == entry.layoutCurrent;
 							if (sample->version != entry.sampleVersion) {
 //								my_printf("sample->version != entry.sampleVersion %d %d\n", sample->version, equal);
@@ -318,7 +334,7 @@ public:
 							}
 							if (!equal || (sizeDiff.x > limit.x || sizeDiff.y > limit.y)) {
 		//						if (!equal)
-		//							my_printf("unequal\n",0);
+//									my_printf("unequal\n",0);
 		//						else {
 		//							my_printf("sizeDiff %d,%d / %d,%d (canQueue %d)\n",sizeDiff.x,sizeDiff.y,limit.x,limit.y, canQueue);
 		//						}
