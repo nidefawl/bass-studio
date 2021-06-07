@@ -7,7 +7,17 @@
 /**********************************************/
 
 Make startup.cpp only compile into daw-application
+Make the backing audio track on midi tracks optional, only active when subtrack waveview is shown
+It is quite memory intense:
+sr = 44100
+channels = 2
+bytesPerSample = 4
+seconds = 600
+sizeInMB = (bytesPerSample * channels * sr * seconds) / ( 1000**2 )
+21 mb per minute of audio per track
+so for a 10 track 10 minute project its 2.1gb
 Add a button to open daw init script
+remove height limitation from automation tracks
 
 Add scriptable textboxes: Allow me to fill textboxes with a javascript 
 Add scriptable selection range
