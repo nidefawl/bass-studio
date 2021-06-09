@@ -1003,6 +1003,7 @@ void track_impl_t::sendNotesOff(int32_t bpm100) {
 		}
 	}
 }
+//TODO OPTIMIZE ME MORE. 400x speed up in release mode
 void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos,
 		clip_notes_t& midiRealtimeInput, int32_t flags) {
 	//dbgassert(end != loopEnd); //if end equals loopEnd note off events will be on exact end

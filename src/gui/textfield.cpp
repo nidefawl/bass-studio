@@ -208,9 +208,11 @@ void gui_textfield::renderTextField(NVGcontext* ctx) const {
 	}
 	setTfFont(ctx, this);
 
-	NVGcolor mTextColor = GUI_COLORA(5, 160);
-	NVGcolor mDisabledTextColor = GUI_COLORA(255, 80);
-	NVGcolor mColor = mEnabled && (!mCommitted || !mValue.empty()) ? mTextColor : mDisabledTextColor;
+	NVGcolor mTextColor = theme->getColor(GuiColor::COL_TEXTBOX_TEXT);
+	NVGcolor mTextColorDisabled = theme->getColor(GuiColor::COL_TEXTBOX_TEXT_DISABLED);
+	NVGcolor mTextColorMarked = theme->getColor(GuiColor::COL_TEXTBOX_TEXT_MARKED);
+//	NVGcolor mTextColorDisabled = GUI_COLORA(255, 80);
+	NVGcolor mColor = mEnabled && (!mCommitted || !mValue.empty()) ? mTextColor : mTextColorDisabled;
 
 
 	nvgFillColor(ctx, mColor);
@@ -239,7 +241,7 @@ void gui_textfield::renderTextField(NVGcontext* ctx) const {
 
 				// draw selection
 				nvgBeginPath(ctx);
-				nvgFillColor(ctx, nvgRGBA(255, 255, 255, 80));
+				nvgFillColor(ctx, mTextColorMarked);
 				nvgRect(ctx, caretx,  - lineh * 0.5f, selx - caretx, lineh);
 				nvgFill(ctx);
             }

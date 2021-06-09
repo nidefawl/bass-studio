@@ -182,7 +182,7 @@ void renderNote(NVGcontext* vg, gui_clipcontent* c, note_t* note, float yscale, 
 	float nh = yscale;
 	float insetx = calcInset(1, nw);
 	float insety = calcInset(1, nh);
-	nvgRect(vg, nx+insetx, ny - yscale+insety, nw-insetx*2, nh-insety*2);
+	nvgBatchedRect(vg, nx+insetx, ny - yscale+insety, nw-insetx*2, nh-insety*2);
 }
 void renderNoteName(NVGcontext* vg, gui_clipcontent* c, note_t* note, int idx, float yscale) {
 
@@ -631,7 +631,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
 //	nvgRestore(vg);
 	if (!notes.empty()) {
 		for (int i = 0; i < 2; i++) {
-			nvgBeginPath(vg);
+//			nvgBeginPath(vg);
 			for (note_t& note : notes.m_list) {
 				if ((i==0) != note.isEnabled())
 					continue;
@@ -645,15 +645,22 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
 				float nh = scale;
 				float insetx = calcInset(1, nw);
 				float insety = calcInset(1, nh);
-				nvgRect(vg, nx+insetx, ny - scale+insety, nw-insetx*2, nh-insety*2);
+				nvgBatchedRect(vg, nx+insetx, ny - scale+insety, nw-insetx*2, nh-insety*2);
+//				nvgRect(vg, nx+insetx, ny - scale+insety, nw-insetx*2, nh-insety*2);
 			}
 			auto noteColor = theme->getColor(i==0?GuiColor::COL_NOTE:GuiColor::COL_NOTE_MUTE);
-//			NVGcolor hslNoteColor = nvgToHSL(noteColor);
-			nvgFillColor(vg, noteColor);
-			nvgFill(vg);
-			nvgStrokeWidth(vg, 1.0f);
-			nvgStrokeColor(vg, theme->getColor(GuiColor::COL_NOTE_OUTLINE));
-			nvgStroke(vg);
+			NVGpaint paint{0};
+			paint.image = -1;
+			paint.innerColor = noteColor;
+			paint.customPar = 1;
+		    nvgFillPaint(vg, paint);
+		    nvgBatchedRender(vg);
+
+//			nvgFillColor(vg, noteColor);
+//			nvgFill(vg);
+//			nvgStrokeWidth(vg, 1.0f);
+//			nvgStrokeColor(vg, theme->getColor(GuiColor::COL_NOTE_OUTLINE));
+//			nvgStroke(vg);
 		}
 	}
 
@@ -702,11 +709,17 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
 				//TODO: CULL
 				renderNote(vg, this, &note, scale, -note.start() + pos);
 			}
-			nvgFillColor(vg, theme->getColor(GuiColor::COL_NOTE_PLAYING));
-			nvgFill(vg);
-			nvgStrokeWidth(vg, 1.0f);
-			nvgStrokeColor(vg, theme->getColor(GuiColor::COL_NOTE_OUTLINE));
-			nvgStroke(vg);
+//			nvgFillColor(vg, theme->getColor(GuiColor::COL_NOTE_PLAYING));
+//			nvgFill(vg);
+//			nvgStrokeWidth(vg, 1.0f);
+//			nvgStrokeColor(vg, theme->getColor(GuiColor::COL_NOTE_OUTLINE));
+//			nvgStroke(vg);
+			NVGpaint paint{0};
+			paint.image = -1;
+			paint.innerColor = theme->getColor(GuiColor::COL_NOTE_PLAYING);
+			paint.customPar = 2;
+		    nvgFillPaint(vg, paint);
+		    nvgBatchedRender(vg);
 		}
 
 //		std::vector<note_t>& heldNotesArpIn = track->audio->getArpInputNotes(); //TODO: NOT THREADSAFE
@@ -743,11 +756,12 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
 				//TODO: CULL
 				renderNote(vg, this, &note, scale, -note.start() + pos);
 			}
-			nvgFillColor(vg, theme->getColor(GuiColor::COL_NOTE_ARP));
-			nvgFill(vg);
-			nvgStrokeWidth(vg, 1.0f);
-			nvgStrokeColor(vg, theme->getColor(GuiColor::COL_NOTE_OUTLINE));
-			nvgStroke(vg);
+			NVGpaint paint{0};
+			paint.image = -1;
+			paint.innerColor = theme->getColor(GuiColor::COL_NOTE_ARP);
+			paint.customPar = 3;
+		    nvgFillPaint(vg, paint);
+		    nvgBatchedRender(vg);
 		}
 
 		std::vector<marker_t> markers = track->audio->getArpMarkers(); //TODO: NOT THREADSAFE
@@ -789,20 +803,26 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
 	}
 
 	nvgBeginPath(vg);
+	int n2 = 0;
 	if (dragMode >= drag_notes_move) {
 		for (note_t& note : view.draggedSelection) {
 			renderNote(vg, this, &note, scale);
+			n2++;
 		}
 	} else {
 		for (note_t* pnote : notes.selection) {
 			renderNote(vg, this, pnote, scale);
+			n2++;
 		}
 	}
-	//	nvgFillColor(vg, rgbaToNvg(0x7f000000));
-	//	nvgFill(vg);
-		nvgStrokeWidth(vg, 1.0f);
-		nvgStrokeColor(vg, GUI_COLOR(200));
-		nvgStroke(vg);
+	if (n2) {
+		NVGpaint paint{0};
+		paint.image = -1;
+		paint.innerColor = theme->getColor(GuiColor::COL_NOTE_SELECTED);
+		paint.customPar = 3;
+	    nvgFillPaint(vg, paint);
+	    nvgBatchedRender(vg);
+	}
 	if (scale >= 18) {
 		int idx = 0;
 		setFont(vg, 18, theme->getColor(GuiColor::COL_NOTE_TEXT), NVG_ALIGN_LEFT|NVG_ALIGN_MIDDLE);

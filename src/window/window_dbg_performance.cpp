@@ -18,7 +18,10 @@
 #include "../gl/gl_vbo.h"
 #include "../gl/gl_tess2d.h"
 #include "../gui/drawwaveform.h"
+#include "renderresources.h"
 #include "color_util.h"
+#include "rand.h"
+#include "platform.h"
 
 namespace windowdebug_performance {
 
@@ -82,11 +85,37 @@ int loadShader() {
     return 0;
 }
 
+
+using ImgData = std::shared_ptr<uint8_t>;
+
+	void setColor(uint8_t* b, int i) {
+		b[0] = i & 0xFF; i = i >> 8;
+		b[1] = i & 0xFF; i = i >> 8;
+		b[2] = i & 0xFF; i = i >> 8;
+		b[3] = i & 0xFF; i = i >> 8;
+	};
+	ImgData createQuadTexture(int w) {
+		int size = w*w*4;
+		std::shared_ptr<uint8_t> imageData(new uint8_t[size], std::default_delete<uint8_t[]>());
+
+		uint8_t *dataBuf = imageData.get();
+		for (int x = 0; x < w; x++) {
+			for (int y = 0; y < w; y++) {
+				int idx = (x*w+y) * 4;
+				int scale = 16;
+				int ix = x % scale;
+				setColor(dataBuf + idx, ix < 10 ? 0xffffffff : 0x00ffffff);
+			}
+
+		}
+		return imageData;
+	}
+	RenderResources::NvgImageTexture imgQuad;
 }
 
 using namespace windowdebug_performance;
 
-int initDebugWindowPerformance() {
+int initDebugWindowPerformance(NVGcontext* vg) {
 	glBindVertexArray(0);
 	int ret = loadShader();
 	if (ret)
@@ -104,29 +133,20 @@ int initDebugWindowPerformance() {
 	bindVertexAttributes(attributes);
 	glBindVertexArray(0);
 	checkGLError("initDebugWindow");
+
+	{
+		int texSize = 64;
+		ImgData dataB = createQuadTexture(texSize);
+		int32_t nvgid = nvgCreateImageRGBA(vg, texSize, texSize, NVG_IMAGE_REPEATX | NVG_IMAGE_REPEATY | NVG_IMAGE_NEAREST, (const unsigned char*)dataB.get());
+		nvgImageSize(vg, nvgid, &imgQuad.width, &imgQuad.height);
+		imgQuad.perContextId[vg] = nvgid;
+	}
     return 0;
 }
 
-void drawDebugWindowPerformance(NVGcontext* ctx, int winW, int winH, float pxratio) {
+void drawDebugWindowPerformance(NVGcontext* vg, int winW, int winH, float pxratio) {
 
-	std::vector<TextureAtlas> rendered;
-	auto instance = waveformrender::getInstance();
-	if (!instance) {
-		return;
-	}
-	instance->getRenderedTextures(rendered);
-//	my_printf("nrendered: %d\n", rendered.size());
-//	auto* ptr = audiocache::getInstance()->get(0);
-//	if (ptr) {
-//		for (audiowaveform_t& waveform : ptr->waveforms) {
-//			if (waveform.rendered) {
-//				n = waveform.glTexture;
-//				break;
-//			}
-//		}
-//	}
-	float x = 0; float y = 0;
-	int nrendered = 0;
+
 	glActiveTexture( GL_TEXTURE0 );
 	glUseProgram(program2dTexture);
 	glUniform1i(u_tex0, 0);
@@ -138,58 +158,168 @@ void drawDebugWindowPerformance(NVGcontext* ctx, int winW, int winH, float pxrat
 	bindVertexAttributes(attributes);
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo.vboIdxId);
-	for (TextureAtlas& e : rendered) {
-		int n = e.glTexture;
-		if (n > 0 && e.entries.size()) {
-			glm::mat4 matProj = glm::ortho(0.f, (float) winW, (float) winH, 0.f, 1.0f, -1.0f);
-			glm::mat4 mvp = matProj * glm::translate(glm::mat4(1.0), glm::vec3(x, y, 0));
-			glUniformMatrix4fv(u_mvp, 1, GL_FALSE, value_ptr(mvp));
-			glBindTexture(GL_TEXTURE_2D, n);
-			glDrawElements( GL_TRIANGLES, vbo.nIndices, GL_UNSIGNED_INT, NULL);
-			nrendered++;
-			x += wTexPreview+8;
-			if (x >= 1024) {
-				x = 0;
-				y+= wTexPreview+8;
-			}
-		}
-	}
+    float x = 0.0f;
+    float y = 0.0f;
+    int gltexture = 0;
+	glm::mat4 matProj = glm::ortho(0.f, (float) winW, (float) winH, 0.f, 1.0f, -1.0f);
+	glm::mat4 mvp = matProj * glm::translate(glm::mat4(1.0), glm::vec3(x, y, 0));
+	glUniformMatrix4fv(u_mvp, 1, GL_FALSE, value_ptr(mvp));
+	glBindTexture(GL_TEXTURE_2D, gltexture);
+	//glDrawElements( GL_TRIANGLES, vbo.nIndices, GL_UNSIGNED_INT, NULL);
+
 	glBindVertexArray(0);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 	glStencilMask(~0);
 	glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-	nvgBeginFrame(ctx, winW, winH, pxratio);
+	nvgBeginFrame(vg, winW, winH, pxratio);
+    ivec2 pos = {10, 20};
+    ivec2 size = {300, 40};
+#define STEP_MAX 3
+    int step = math::floorCast(((getTimeMillisd()/1000.0) / 1.5))%STEP_MAX;
+    float steps[STEP_MAX] = { 1.0f, 1.0f/32.0f, 1.0f/128.0f };
 
-//	nvgBeginFrame(ctx, winW, winH, pxratio);
-//	nvgBeginPath(ctx);
-//	nvgRect(ctx, 0, 0, winW, winH);
-//	nvgFillColor(ctx, rgbToNvg(0x33ff33));
-//	nvgFill(ctx);
-	 x = 0;
-	 y = 0;
-	nrendered = 1;
-	float scale = (float)wTexPreview / (float) FBO_WIDTH;
-	for (TextureAtlas& _atlas : rendered) {
-		int n = _atlas.glTexture;
-		if (n > 0 && _atlas.entries.size()) {
-			for (TextureAtlasEntry& _entry : _atlas.entries) {
-				nvgBeginPath(ctx);
-				auto entryColor = rgbToNvg(col(nrendered));
-				nvgRect(ctx, x+_entry.pos.x*scale, y+_entry.pos.y*scale, _entry.size.x*scale, _entry.size.y*scale);
-				if (!_entry.inuse) {
-					entryColor = rgbToNvg(0xffff0000);
-				}
-				nvgStrokeColor(ctx, entryColor);
-				nvgStrokeWidth(ctx, 2.0f);
-				nvgStroke(ctx);
-			}
-			x += wTexPreview+8;
-			if (x >= 1024) {
-				x = 0;
-				y+= wTexPreview+8;
-			}
-			nrendered++;
-		}
-	}
-	nvgEndFrame(ctx);
+    nvgSave(vg);
+    nvgTranslate(vg, pos.x, pos.y);
+    nvgShapeAntiAlias(vg, 1);
+    nvgBeginPath(vg);
+    nvgRect(vg, 0, 0, size.x, size.y);
+    nvgFillColor(vg, rgbToNvg(0xFFFFFF));
+    nvgFill(vg);
+    nvgRestore(vg);
+
+    pos.y += size.y + 10;
+    nvgSave(vg);
+//	nvgTranslate(vg, pos.x, pos.y);
+    nvgShapeAntiAlias(vg, 0);
+    nvgBeginPath(vg);
+    nvgRect(vg, pos.x, pos.y, size.x, size.y);
+    nvgFillColor(vg, rgbToNvg(0xFFFFFF));
+    nvgFill(vg);
+    nvgRestore(vg);
+    pos.y += size.y + 10;
+
+    int32_t extImg = 2;
+	RenderResources::NvgImageTexture& image = RenderResources::imgIcons[ICON_DAW_EXE];
+	const int32_t iconW = (int32_t)ceil(math::min(size.x, size.y));
+	const int32_t renderW = iconW + extImg * 2;
+	NVGpaint paintIcon = nvgImagePattern(vg, -extImg, -extImg, iconW + extImg * 2, iconW + extImg * 2, 0, image.perContextId[vg], 1.0f);
+    nvgSave(vg);
+    nvgTranslate(vg, pos.x, pos.y);
+    nvgShapeAntiAlias(vg, 1);
+
+    nvgBeginPath(vg);
+    nvgRect(vg, -extImg, -extImg, iconW + extImg * 2, iconW + extImg * 2);
+    nvgFillPaint(vg, paintIcon);
+    nvgFill(vg);
+    pos.y += size.y + 10;
+
+    nvgRestore(vg);
+    nvgSave(vg);
+    nvgTranslate(vg, pos.x, pos.y);
+    nvgShapeAntiAlias(vg, 0);
+	nvgBeginPath(vg);
+	nvgRect(vg, -extImg, -extImg, iconW + extImg * 2, iconW + extImg * 2);
+	nvgFillPaint(vg, paintIcon);
+	nvgFill(vg);
+    pos.y += size.y + 10;
+    nvgRestore(vg);
+    nvgShapeAntiAlias(vg, 1);
+
+    for (int pass = 0; pass < 2; ++pass) {
+        nvgSave(vg);
+        nvgTranslate(vg, pos.x, pos.y);
+        nvgShapeAntiAlias(vg, pass);
+         x = 0;
+         y = 0;
+        float h = size.y*4;
+        int dir = 0;
+    	float x1 = x;
+    	float y1 = y;
+    	float y2 = y + h/2.0f;
+    	float y3 = y + h;
+    	float x3 = dir == 1 ? x - h/1.41f : x + h/1.41f;
+        nvgBeginPath(vg);
+    //    nvgRect(vg, x1, y1, h, h);
+        nvgMoveTo(vg, x1, y1 + pass * 20);
+        nvgLineTo(vg, x3, y2 + pass * 20);
+        nvgLineTo(vg, x1, y3 + pass * 20);
+        nvgClosePath(vg);
+        nvgFillColor(vg, rgbToNvg(0xFFFF00FF));
+        nvgSetShapeExtents(vg, x1, y1 + pass * 20, h, h);
+        nvgFill(vg);
+        float strokeWidth = 2.0f;
+
+        if (strokeWidth > 0) {
+            nvgStrokeColor(vg, rgbToNvg(0xFFFFFF00));
+            nvgStrokeWidth(vg, strokeWidth);
+            nvgStroke(vg);
+        }
+        pos.y += h + 10;
+        nvgRestore(vg);
+    }
+    for (int pass = 0; pass < 2; ++pass) {
+
+        nvgSave(vg);
+        nvgTranslate(vg, pos.x+pass*(size.x+20), pos.y);
+        nvgShapeAntiAlias(vg, pass);
+    	float x1 = 0;
+    	float y1 = 0;
+    	float x2 = size.x;
+    	float y2 = size.y;
+//        nvgBeginPath(vg);
+//        nvgMoveTo(vg, x2, y1);
+//        nvgLineTo(vg, x1, y1);
+//        nvgLineTo(vg, x1, y2);
+//        nvgLineTo(vg, x2, y2);
+//        nvgClosePath(vg);
+//        nvgFillColor(vg, rgbToNvg(0xFFFF00FF));
+//        nvgFill(vg);
+//        y1+=size.y+10;
+//        y2+=size.y+10;
+        nvgBeginPath(vg);
+        nvgMoveTo(vg, x2, y1);
+        nvgLineTo(vg, x1, y1);
+        nvgLineTo(vg, x1, y2);
+        nvgClosePath(vg);
+        nvgFillColor(vg, rgbToNvg(0xFFFF00FF));
+        nvgSetShapeExtents(vg, x1, y1, size.x, size.y);
+        nvgFill(vg);
+        y1+=size.y+10;
+        y2+=size.y+10;
+        nvgBeginPath(vg);
+        nvgMoveTo(vg, x1, y1);
+        nvgLineTo(vg, x2, y1+(y2-y1)/2.0);
+        nvgLineTo(vg, x1, y2);
+        nvgClosePath(vg);
+        nvgFillColor(vg, rgbToNvg(0xFFFF00FF));
+        nvgSetShapeExtents(vg, x1, y1, size.x, size.y);
+        nvgFill(vg);
+        y1+=size.y+10;
+        y2+=size.y+10;
+        nvgRestore(vg);
+    }
+
+//	NVGpaint paintQuad = nvgImagePattern(vg, 0, 0, imgQuad.width, imgQuad.height, 0, imageId, 1.0f);
+//    nvgSetPaintColor(vg, &paintQuad, rgbToNvg(0xFFFF00FF));
+	NVGpaint paint;
+	memset(&paint, 0, sizeof(paint));
+	paint.image = -1;
+	paint.innerColor = rgbToNvg(0xFF00FF);
+	paint.outerColor = rgbToNvg(0xFF00FF);
+	paint.customPar = 1234;
+//	NVGpaint paintQuad = nvgBoxGradient(vg, 0, 0, 100, 10, 5.0f, 0.5f, rgbToNvg(0xFFFF00FF), rgbToNvg(0xFF121212));
+//    nvgSetPaintColor(vg, &paintQuad, rgbToNvg(0xFFFF00FF));
+
+	ivec2 qSize(100, 10);
+    seq_rand rand;
+    for (int i = 0; i < 200; i++) {
+//    	ivec2 qSize(10+rand.rng_rand(7)*20, 10+rand.rng_rand(7)*20);
+        nvgBatchedRect(vg, rand.rng_rand(1000), rand.rng_rand(1000), qSize.x, qSize.y);
+    }
+    nvgFillPaint(vg, paint);
+    nvgBatchedRender(vg);
+
+
+
+    nvgEndFrame(vg);
 }

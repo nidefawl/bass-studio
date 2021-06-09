@@ -74,35 +74,39 @@ void guiknob::render(NVGcontext* vg) {
 	renderButtonAt(vg, insetP, insetS);
 }
 void guiknob::handleDraggedBegin(MouseEvent& evt) {
-		if (evt.guiDragged == this) {
-			parentCtrl->captureMouse(this);
-		}
-		initialValue = lastVal = getValue();
-		changedValue = false;
+	if (isShift(evt.kbmods) || (bDoubleClickSetsDefault && evt.type == MouseEventType::M_EVT_DOUBLECLICK)) {
+		setToDefaultValue();
+		return;
 	}
-	void guiknob::handleDraggedMove(MouseEvent& evt) {
-		if (evt.guiDragged == this && evt.type == M_EVT_CAPTURED_MOVE) {
-			int disty = (int)evt.dragDistance->y;
-			if (math::abs(disty) < 1)
-				return;
-			float value = lastVal;
-			float scale = isCtrl(evt.kbmods) ? 2000.0f : 200.0f;
-			float delta = disty/scale;
-			if (math::abs(delta) > 1e-2f) {
-				value -= delta;
-				setValue(value, 0);
-				evt.dragDistance->y = 0;
-				lastVal = value;
-				changedValue = true;
-			}
+	if (evt.guiDragged == this) {
+		parentCtrl->captureMouse(this);
+	}
+	fModifyBeginValue = lastVal = getValue();
+	changedValue = false;
+}
+void guiknob::handleDraggedMove(MouseEvent& evt) {
+	if (evt.guiDragged == this && evt.type == M_EVT_CAPTURED_MOVE) {
+		int disty = (int)evt.dragDistance->y;
+		if (math::abs(disty) < 1)
+			return;
+		float value = lastVal;
+		float scale = isCtrl(evt.kbmods) ? 2000.0f : 200.0f;
+		float delta = disty/scale;
+		if (math::abs(delta) > 1e-2f) {
+			value -= delta;
+			setValue(value, 0);
+			evt.dragDistance->y = 0;
+			lastVal = value;
+			changedValue = true;
 		}
 	}
-	void guiknob::handleDraggedRelease(MouseEvent& evt) {
-		if (changedValue) {
-			onValueEditFinish(initialValue, lastVal);
-		}
-		changedValue = false;
+}
+void guiknob::handleDraggedRelease(MouseEvent& evt) {
+	if (changedValue) {
+		onValueEditFinish(fModifyBeginValue, lastVal);
 	}
+	changedValue = false;
+}
 bool guiknob::handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
 	float value = getValue();
 	float scale = isCtrl(evt.kbmods) ? 200.0f : 20.0f;
@@ -190,6 +194,10 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS) {
 
 
 
+}
+
+void guiknob::setToDefaultValue() {
+	setValue(fDefaultValue, 0);
 }
 
 void guiknob::setAutomationHandlers() {

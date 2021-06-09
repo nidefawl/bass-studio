@@ -818,8 +818,24 @@ public:
 			trackParams.setParamValue(PARAM_ENABLE, trackParams.isEnabled() ? 0.0f : 1.0f, 0);
 		}
 		if (&btnShowSubtrack == button) {
-			auto gui = makeGuiSubtrack(m_trackentry, MainCtrl::get(), gui_track_subtrack::SUBTRACK_TYPE_WAVE);
-			MainCtrl::getGuiTrackCtr()->addSubTrack(m_trackentry, gui, true);
+			auto trackCtr = MainCtrl::getGuiTrackCtr();
+
+			bool isShown = static_cast<bool>(m_track->audio->flags & audiostageflags_t::CONVERT_OUTPUT);
+			m_track->audio->flags ^= audiostageflags_t::CONVERT_OUTPUT;
+			if (isShown) {
+				std::vector<gui_track_subtrack*> subtracksVecCopy = m_trackentry->subtracks;
+				for (auto subtrack : subtracksVecCopy) {
+					if (subtrack->subtrackType() == gui_track_subtrack::SUBTRACK_TYPE_WAVE) {
+						trackCtr->removeSubtrack(m_trackentry, subtrack);
+					}
+				}
+			} else {
+				auto gui = makeGuiSubtrack(m_trackentry, MainCtrl::get(), gui_track_subtrack::SUBTRACK_TYPE_WAVE);
+				trackCtr->addSubTrack(m_trackentry, gui, true);
+			}
+
+			trackCtr->layout();
+			trackCtr->updateVisibleTrackContents();
 		}
 		if (&btnActivate == button) {
 			vsthost* host = vsthost::getInstance();

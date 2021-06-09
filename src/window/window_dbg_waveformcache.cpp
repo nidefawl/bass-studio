@@ -86,7 +86,7 @@ int loadShader() {
 
 using namespace windowdebug_waveformcache;
 
-int initDebugWindowWaveformCache() {
+int initDebugWindowWaveformCache(NVGcontext* ctx) {
 	glBindVertexArray(0);
 	int ret = loadShader();
 	if (ret)

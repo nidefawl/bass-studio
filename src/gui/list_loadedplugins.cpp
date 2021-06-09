@@ -310,6 +310,7 @@ public:
 		printL("timeUpdateWaveforms", StringFormat("%d", daw_tls::getTls().renderStats.timeUpdateWaveforms));
 		printL("timeRender", StringFormat("%d", daw_tls::getTls().renderStats.timeRender));
 		printL("timeRenderEditor", StringFormat("%d", daw_tls::getTls().renderStats.timeRenderEditor));
+		printL("timeRenderTrackControls", StringFormat("%d", daw_tls::getTls().renderStats.timeRenderTrackControls));
 		printL("playThreadLockCount (frame)", StringFormat("%d", daw_tls::getTls().renderStats.playThreadLockCount));
 		{
 			size_t clipSufIdx = 0;

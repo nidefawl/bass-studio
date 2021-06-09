@@ -536,7 +536,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 				nvgStrokeColor(vg, theme->getColor(color2));
 				nvgStrokeWidth(vg, 1.5f);
 				nvgStroke(vg);
-				nvgShapeAntiAlias(vg, 1);
+				nvgShapeAntiAlias(vg, USE_NANOVG_AA);
 			}
 
 			path_segment_t* segment = getSegmentSafe(currentDragged.segidx);

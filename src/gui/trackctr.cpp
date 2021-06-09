@@ -130,6 +130,11 @@ void guictr_tracks::addSubTrack(track_gui_entry_t* entry, gui_track_subtrack* su
 	trackView.addSubtrack(entry, subtrack, insertFront);
 	entry->mixer->addSubtrackMixer(entry, subtrack);
 }
+void guictr_tracks::removeSubtrack(track_gui_entry_t* entry, gui_track_subtrack* subtrack) {
+	trackView.removeSubtrack(entry, subtrack);
+	entry->mixer->removeSubtrackMixer(subtrack);
+}
+
 gui_track_automationlane* guictr_tracks::addAutomationLane(track_gui_entry_t* entry, automatable_t* at, int32_t paramIdx, bool insertFront) {
 	gui_track_automationlane* al = new gui_track_automationlane(entry, grid, at, paramIdx);
 	addSubTrack(entry, al, insertFront);
@@ -342,7 +347,6 @@ void guictr_tracks::render(NVGcontext* vg) {
 
 	nvgSave(vg);
 	hires_timer_t timer;
-	timer.reset();
 		trackView.render(vg);
 		daw_tls::getTls().renderStats.timeRenderEditor=timer.getTime();
 	nvgRestore(vg);
@@ -350,7 +354,9 @@ void guictr_tracks::render(NVGcontext* vg) {
 		trackTopLeft.render(vg);
 	nvgRestore(vg);
 	nvgSave(vg);
+		timer.reset();
 		trackControls.render(vg);
+		daw_tls::getTls().renderStats.timeRenderTrackControls=timer.getTime();
 	nvgRestore(vg);
 	nvgSave(vg);
 		trackTimeline.render(vg);
@@ -529,7 +535,7 @@ void guitrack_editor::removeAllAutomationLanes(track_gui_entry_t* entry, automat
 		subTr->idx = idx++;
 	}
 }
-void guitrack_editor::removeSubtrack(track_gui_entry_t* entry, gui_track_automationlane* al) {
+void guitrack_editor::removeSubtrack(track_gui_entry_t* entry, gui_track_subtrack* al) {
 	dbgassert(al);
 	remove(al);
 	auto& atLanes = entry->subtracks;

@@ -10,6 +10,8 @@
 #include "drawwaveform.h"
 #include "audiowaveform.h"
 #include "trackcontent.h"
+#include <array>
+#include <nanovg.h>
 
 namespace GuiColor {
 constant_t COL_CLIP_OUTLINE("COL_CLIP_OUTLINE", 0x0);
@@ -18,15 +20,31 @@ constant_t COL_CLIP_NOTE("COL_CLIP_NOTE", 0xFFFFFFFF);
 constant_t COL_CLIP_NOTE_OVERLAP("COL_CLIP_NOTE_OVERLAP", 0xFF0000FF);
 constant_t COL_CLIP_NOTE_MUTED("COL_CLIP_NOTE_MUTED", 0xFF121212);
 }
+namespace GuiConstant {
+constant_t CONST_NOTE_RENDER_MODE("CONST_NOTE_RENDER_MODE", 1, 0, 1);
+}
+/*
+	NVGpaint paint;
+	memset(&paint, 0, sizeof(paint));
+	paint.image = -1;
+	paint.innerColor = rgbToNvg(0xFF00FF);
+	paint.outerColor = rgbToNvg(0xFF00FF);
+	paint.customPar = 1234;
+	//    	ivec2 qSize(10+rand.rng_rand(7)*20, 10+rand.rng_rand(7)*20);
+	        nvgBatchedRect(vg, rand.rng_rand(1000), rand.rng_rand(1000), qSize.x, qSize.y);
+	    }
+	    nvgFillPaint(vg, paint);
+	    nvgBatchedRender(vg);
 
+ */
 struct noteview_cache_impl_t {
 	bool valid = false;
 	int64_t notesRendered=-1;
 	ivec2 pos={-1,-1};
 	ivec2 size={-1,-1};
-	std::array<nvg_path_cache_storage_t*,4> arr;
+	std::array<nvg_shape_cache*,4> arr;
 	noteview_cache_impl_t() {
-		std::for_each(arr.begin(), arr.end(), [](nvg_path_cache_storage_t*& ptr) {
+		std::for_each(arr.begin(), arr.end(), [](nvg_shape_cache*& ptr) {
 			ptr = nullptr;
 		});
 	}
@@ -40,7 +58,7 @@ struct noteview_cache_impl_t {
 		nvgGetLastCacheResult(vg, &arr[n]);
 		NVGCacheEntryInfo cacheEntryInfo;
 		nvgCacheEntryInfo(NULL, arr[n], &cacheEntryInfo);
-		nvg_path_cache_storage_t* entry = arr[n];
+		nvg_shape_cache* entry = arr[n];
 		dbgassert(entry);
 		daw_tls::tlsinstance& tls = daw_tls::getTls();
 		tls.renderClipCacheStats.sizeCacheAllocatedMemBytes+= cacheEntryInfo.allocationSizeBytes;
@@ -50,7 +68,7 @@ struct noteview_cache_impl_t {
 	}
 	void reset() {
 		valid = false;
-		std::for_each(arr.begin(), arr.end(), [](nvg_path_cache_storage_t*& ptr) {
+		std::for_each(arr.begin(), arr.end(), [](nvg_shape_cache*& ptr) {
 			if (ptr) {
 				NVGCacheEntryInfo cacheEntryInfo;
 				nvgCacheEntryInfo(NULL, ptr, &cacheEntryInfo);
@@ -317,10 +335,12 @@ void gui_midi_clip::updateClipRenderCache(NVGcontext* vg) {
 		NVGcolor rgbNoteOverlap = theme->getColor(GuiColor::COL_CLIP_NOTE_OVERLAP);
 		NVGcolor rgbNoteMuted = theme->getColor(GuiColor::COL_CLIP_NOTE_MUTED);
 
+		int noteRenderMode = theme->get(GuiConstant::CONST_NOTE_RENDER_MODE);
 		nvgSave(vg);
 		nvgTranslate(vg, clipPosScreen.x, clipPosScreen.y);
 		nvgSave(vg);
 		nvgTranslate(vg, 0, HEIGHT_CLIP_TITLE+INSET_CLIP_CONTENT);
+
 		if (sizeContents.x > 0 && sizeContents.y > 0) {
 			clip_notes_t& notes = notesView;
 			if (!notes.empty()) {
@@ -346,9 +366,9 @@ void gui_midi_clip::updateClipRenderCache(NVGcontext* vg) {
 						continue;
 					}
 					if (!begin) {
-
-	//					void nvgCachePath(NVGcontext* ctx, int enabled);
-						nvgBeginPath(vg);
+						if (noteRenderMode == 0) {
+							nvgBeginPath(vg);
+						}
 						begin++;
 					}
 					float objPosNote = noteTime /(float) TICKS_BAR;
@@ -361,7 +381,12 @@ void gui_midi_clip::updateClipRenderCache(NVGcontext* vg) {
 					float nh = scale;
 					float insetx = calcInset(1, nw);
 					float insety = calcInset(1, nh);
-					nvgRect(vg, nx+insetx, ny+insety, nw-insetx*2, nh-insety*2);
+					if (noteRenderMode == 0) {
+						nvgRect(vg, nx+insetx, ny+insety, nw-insetx*2, nh-insety*2);
+					} else {
+				        nvgBatchedRect(vg, nx+insetx, ny+insety, nw-insetx*2, nh-insety*2);
+					}
+
 					notesRendered++;
 	//				if (notesRendered % 1000 == 0) {
 	//					nvgFillColor(vg, rgbNote);
@@ -370,15 +395,29 @@ void gui_midi_clip::updateClipRenderCache(NVGcontext* vg) {
 	//				}
 				}
 				if (begin) {
-					nvgFillColor(vg, rgbNote);
-					nvgFill(vg);
+					if (noteRenderMode == 0) {
+						nvgFillColor(vg, rgbNote);
+						nvgSetShapeExtents(vg, 0, 0, sizeContents.x, sizeContents.y);
+						nvgFill(vg);
+					} else {
+						NVGpaint paint;
+						memset(&paint, 0, sizeof(paint));
+						paint.image = -1;
+						paint.innerColor = rgbNote;
+						paint.outerColor = rgbNote;
+						paint.customPar = 1234;
+					    nvgFillPaint(vg, paint);
+					    nvgBatchedRender(vg);
+					}
 					impl->SaveFill(vg, 0);
 				}
 
 				for (int j = 0; j < 2; j++) {
 					auto& list = j == 0 ? notesClipped : notesMuted;
 					if (!list.empty()) {
-						nvgBeginPath(vg);
+						if (noteRenderMode == 0) {
+							nvgBeginPath(vg);
+						}
 						for (const note_t* noteClipped : list) {
 							const note_t& note = *noteClipped;
 							tick_t noteTime = note.time;
@@ -393,16 +432,32 @@ void gui_midi_clip::updateClipRenderCache(NVGcontext* vg) {
 							float nh = scale;
 							float insetx = calcInset(1, nw);
 							float insety = calcInset(1, nh);
-							nvgRect(vg, nx+insetx, ny+insety, nw-insetx*2, nh-insety*2);
+							if (noteRenderMode == 0) {
+								nvgRect(vg, nx+insetx, ny+insety, nw-insetx*2, nh-insety*2);
+							} else {
+								nvgBatchedRect(vg, nx+insetx, ny+insety, nw-insetx*2, nh-insety*2);
+							}
 							notesRendered++;
 						}
-						nvgFillColor(vg, j == 0 ? rgbNoteOverlap : rgbNoteMuted);
-						nvgFill(vg);
+
+						if (noteRenderMode == 0) {
+							nvgFillColor(vg, j == 0 ? rgbNoteOverlap : rgbNoteMuted);
+							nvgSetShapeExtents(vg, 0, 0, sizeContents.x, sizeContents.y);
+							nvgFill(vg);
+						} else {
+							NVGpaint paint;
+							memset(&paint, 0, sizeof(paint));
+							paint.image = -1;
+							paint.innerColor = j == 0 ? rgbNoteOverlap : rgbNoteMuted;
+							paint.outerColor = j == 0 ? rgbNoteOverlap : rgbNoteMuted;
+							paint.customPar = 1234;
+						    nvgFillPaint(vg, paint);
+						    nvgBatchedRender(vg);
+						}
+
 						if (j == 0) {
-//							nvgGetLastCacheResult(vg, &impl->cache2);
 							impl->SaveFill(vg, 1);
 						} else {
-//							nvgGetLastCacheResult(vg, &impl->cache3);
 							impl->SaveFill(vg, 2);
 						}
 
@@ -592,7 +647,7 @@ void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_gui_ent
 			nvgFillFromCache(vg, notesView.data->arr[3]);
 		}
 		nvgRestore(vg);
-	} else {
+	} else if (0) {
 		nvgCachePath(vg, useCaching);
 		nvgSave(vg);
 		nvgTranslate(vg, posContents.x, posContents.y);
@@ -621,7 +676,6 @@ void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_gui_ent
 						continue;
 					}
 					if (!begin) {
-
 	//					void nvgCachePath(NVGcontext* ctx, int enabled);
 						nvgBeginPath(vg);
 						begin++;
@@ -646,6 +700,7 @@ void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_gui_ent
 				}
 				if (begin) {
 					nvgFillColor(vg, rgbNote);
+					nvgSetShapeExtents(vg, 0, 0, sizeContents.x, sizeContents.y);
 					nvgFill(vg);
 					if (useCaching) {
 						notesView.data->SaveFill(vg, 0);
@@ -674,6 +729,7 @@ void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_gui_ent
 							notesRendered++;
 						}
 						nvgFillColor(vg, j == 0 ? rgbNoteOverlap : rgbNoteMuted);
+						nvgSetShapeExtents(vg, 0, 0, sizeContents.x, sizeContents.y);
 						nvgFill(vg);
 						if (useCaching) {
 							if (j == 0) {

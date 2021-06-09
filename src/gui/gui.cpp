@@ -132,7 +132,7 @@ void renderDashedLineFrame(NVGcontext* vg, float x, float y, float w, float h, f
 	nvgLineTo(vg, x+w, y+h);
 	nvgStrokePaint(vg, paintLeft);
 	nvgStroke(vg);
-	nvgShapeAntiAlias(vg, 1);
+	nvgShapeAntiAlias(vg, USE_NANOVG_AA);
 }
 void drawPlaySymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2)
 {
@@ -148,6 +148,7 @@ void drawPlaySymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& col
     nvgLineTo(vg, x3, y3);
     nvgClosePath(vg);
     nvgFillColor(vg, getContrastFontColorNvg(color));
+    nvgSetShapeExtents(vg, x1, y1, x3 - x1, y2 - y1);
     nvgFill(vg);
 }
 void drawCross(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2)
@@ -168,10 +169,12 @@ void drawCross(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, i
 }
 void drawRecordSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2) {
 	float inset = math::max(2.0f, size.x/8.0f);
+	auto radius = (int)(size.y - inset*2.0)/2.5;
     nvgBeginPath(vg);
-    nvgCircle(vg, pos.x + size.x / 2.0f, pos.y + size.y / 2.0f, (int)(size.y - inset*2.0)/2.5);
+    nvgCircle(vg, pos.x + size.x / 2.0f, pos.y + size.y / 2.0f, radius);
     nvgClosePath(vg);
-    nvgFillColor(vg, !!drawParm2?rgbToNvg(0xFFDD3333):rgbToNvg(0xFF884444));
+    nvgFillColor(vg, !!drawParm2 ? rgbToNvg(0xFFDD3333) : rgbToNvg(0xFF884444));
+    nvgSetShapeExtents(vg, pos.x, pos.y, size.x, size.y);
     nvgFill(vg);
 }
 void drawTri(NVGcontext* vg, float x, float y, float h, const int dir, const NVGcolor& color, const NVGcolor& strokeColor, float strokeWidth) {
@@ -187,6 +190,7 @@ void drawTri(NVGcontext* vg, float x, float y, float h, const int dir, const NVG
     nvgLineTo(vg, x1, y3);
     nvgClosePath(vg);
     nvgFillColor(vg, color);
+    nvgSetShapeExtents(vg, x1, y1, x3-x1, y3-y1);
     nvgFill(vg);
     if (strokeWidth > 0) {
         nvgStrokeColor(vg, strokeColor);

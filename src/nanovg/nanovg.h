@@ -38,8 +38,14 @@ struct NVGpaint {
 	NVGcolor innerColor;
 	NVGcolor outerColor;
 	int image;
+	int objectId;
+	int objectType;
+	int customPar;
 };
 typedef struct NVGpaint NVGpaint;
+typedef struct {
+	int dummy0;
+} nvg_shape_cache;
 
 enum NVGwinding {
 	NVG_CCW = 1,			// Winding for solid shapes
@@ -247,12 +253,11 @@ void nvgFillColor(NVGcontext* ctx, NVGcolor color);
 // Sets current fill style to a paint, which can be a one of the gradients or a pattern.
 void nvgFillPaint(NVGcontext* ctx, NVGpaint paint);
 
-typedef struct nvg_path_cache_storage_t nvg_path_cache_storage_t;
 
 void nvgCachePath(NVGcontext* ctx, int enabled);
-void nvgReleaseCacheResult(nvg_path_cache_storage_t* ppCache);
-void nvgGetLastCacheResult(NVGcontext* ctx, nvg_path_cache_storage_t** ppCache);
-void nvgFillFromCache(NVGcontext* ctx, nvg_path_cache_storage_t* cache);
+void nvgReleaseCacheResult(nvg_shape_cache* ppCache);
+void nvgGetLastCacheResult(NVGcontext* ctx, nvg_shape_cache** ppCache);
+void nvgFillFromCache(NVGcontext* ctx, nvg_shape_cache* cache);
 
 // Sets the miter limit of the stroke style.
 // Miter limit controls when a sharp corner is beveled.
@@ -493,6 +498,8 @@ void nvgPathWinding(NVGcontext* ctx, int dir);
 // Angles are specified in radians.
 void nvgArc(NVGcontext* ctx, float cx, float cy, float r, float a0, float a1, int dir);
 
+void nvgSetShapeExtents(NVGcontext* ctx, float x, float y, float w, float h);
+
 // Creates new rectangle shaped sub-path.
 void nvgRect(NVGcontext* ctx, float x, float y, float w, float h);
 
@@ -519,6 +526,11 @@ void nvgFill(NVGcontext* ctx);
 // Fills the current path with current stroke style.
 void nvgStroke(NVGcontext* ctx);
 
+
+
+void nvgBatchedRender(NVGcontext* ctx);
+void nvgBatchedRect(NVGcontext* ctx, float x, float y, float w, float h);
+void nvgSetPaintColor(NVGcontext* ctx, NVGpaint* paint, NVGcolor color);
 
 //
 // Text
@@ -665,7 +677,7 @@ struct NVGCacheEntryInfo {
 	int allocationSizeBytes;
 };
 typedef struct NVGCacheEntryInfo NVGCacheEntryInfo;
-void nvgCacheEntryInfo(NVGcontext* ctx, nvg_path_cache_storage_t* ppCache, NVGCacheEntryInfo* info);
+void nvgCacheEntryInfo(NVGcontext* ctx, nvg_shape_cache* ppCache, NVGCacheEntryInfo* info);
 
 struct NVGparams {
 	void* userPtr;

@@ -23,7 +23,8 @@ void dawinstance_startup_commands(daw_tls::tlsinstance& tls) {
 	auto dawInstance = dawMainCtrl->getDaw();
 	vsthost* host = vsthost::getInstance();
 	String dawPath = "C:/Users/Michael/daw/run/";
-	String projName = "kontakt5-test.project";
+	String projName = "forever.project";
+//	projName = "test-empty-midi-loop.project";
 	int flags = 0x1; // defer load
 	dawInstance->cbProjectLoadCompleteCallback = [tls, dawMainCtrl, dawInstance, host](DawInstance*, std::shared_ptr<project_file> file, int errorState) {
         DAW::Cursor& cursor = dawMainCtrl->getCursor();
@@ -35,7 +36,7 @@ void dawinstance_startup_commands(daw_tls::tlsinstance& tls) {
          */
         const bool dbPlaceLoopPosition = true;
         if (dbPlaceLoopPosition) {
-            float fStart = 32.0f;
+            float fStart = 177.0f;
             float fLength = 64.0f;
             // ctrl may still alter project settings during copy here if not locked
             auto& projectGlobals = dawInstance->getGlobals();
@@ -95,7 +96,7 @@ void dawinstance_startup_commands(daw_tls::tlsinstance& tls) {
                 }
             }
         }
-        const bool loadPlugins = 1;
+        const bool loadPlugins = 0;
         if (loadPlugins) {
             ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
             auto* host = vsthost::getInstance();
@@ -113,16 +114,19 @@ void dawinstance_startup_commands(daw_tls::tlsinstance& tls) {
             }
             //        dawMainCtrl->menuCommand(CMD_NOARG(CMD_PREFERENCES));
         }
-//        dawMainCtrl->menuCommand(CMD_NOARG(CMD_SHOW_DEBUG_WINDOW));
-        auto trackList = tls.project->getTracks().getMidiAudioTracksFlatVec();
-        dbgassert(trackList.size() > 0 && trackList[0]->audio->guiInstances.size() > 0);
 
-        track_gui_entry_t* trackGui = trackList[0]->audio->guiInstances[0];
-		auto gui = makeGuiSubtrack(trackGui, MainCtrl::get(), gui_track_subtrack::SUBTRACK_TYPE_WAVE);
-		MainCtrl::getGuiTrackCtr()->addSubTrack(trackGui, gui, true);
-		trackGui->parent->layout();
-		trackGui->parent->updateVisibleTrackContents();
+
+        // open subtrack waveview
+        auto trackList = tls.project->getTracks().getMidiAudioTracksFlatVec();
+//        dbgassert(trackList.size() > 0 && trackList[0]->audio->guiInstances.size() > 0);
+//        track_gui_entry_t* trackGui = trackList[0]->audio->guiInstances[0];
+//		auto gui = makeGuiSubtrack(trackGui, MainCtrl::get(), gui_track_subtrack::SUBTRACK_TYPE_WAVE);
+//		MainCtrl::getGuiTrackCtr()->addSubTrack(trackGui, gui, true);
+//		trackGui->parent->layout();
+//		trackGui->parent->updateVisibleTrackContents();
 		dawInstance->startPlaying();
-	};
-	dawInstance->loadFile(dawPath + projName, flags);
+    };
+//    dawMainCtrl->setVisible(false);
+//    dawMainCtrl->menuCommand(CMD_NOARG(CMD_SHOW_DEBUG2_WINDOW));
+    dawInstance->loadFile(dawPath + projName, flags);
 }

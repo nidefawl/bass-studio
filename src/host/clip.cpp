@@ -296,6 +296,7 @@ tick_t clip_t::getNumLoops() const {
 	return (lenClipLoopSection+loopLen-1) / loopLen;
 }
 /* HOT CODEPATH */
+//TODO OPTIMIZE ME MORE. 400x speed up in release mode
 void clip_t::getNotesView(tick_t localStart, tick_t localEnd, clip_notes_t& notesView, bool forPlayback) const {
 	notesView.m_list.clear();
 	if (!enabled) {

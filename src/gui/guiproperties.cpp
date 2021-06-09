@@ -435,7 +435,9 @@ public:
 						}
 					}
 					void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, GuiConstant::constant_t constant) override {
-						click();
+                        click();
+                        if (theme == nullptr)
+                            return;
 						gui_numberinput_field& numberInput = table->numberInput;
 						table->number = theme->get(constant);
 						numberInput.setRef(&table->number);

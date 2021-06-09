@@ -3,6 +3,7 @@
 #ifndef TIMER_MS
 #define TIMER_MS 16
 #endif
+#define USE_NANOVG_AA 1
 
 #define OUTPUT_CHANNELS 2
 #define FILE_FORMAT_VERSION 2

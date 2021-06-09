@@ -8,6 +8,7 @@
 #include "gl_framebuffer.h"
 #include "logging.h"
 #include <GLFW/glfw3.h>
+#include "appsettings.h"
 
 void debugCB(GLenum source,
 	GLenum type,
@@ -16,7 +17,6 @@ void debugCB(GLenum source,
 	GLsizei length,
 	const GLchar *message,
 	const void *userParam) {
-
 	if (strstr(message, "Buffer detailed info") == NULL) {
 		my_printf("%s\n", message);
 		if (strstr(message, "error")) {

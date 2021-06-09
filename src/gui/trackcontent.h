@@ -159,6 +159,7 @@ public:
 	int32_t height = 4;
 	int32_t idx = -1;
 	gui_track_subtrack(track_gui_entry_t* _entry, scaled_grid& _grid, automatable_t* _at, int32_t _param);
+	//TODO: prefix with get
 	virtual int subtrackType() { return SUBTRACK_TYPE_EMPTY; }
 	automation_t* getAutomation() {
 		if (at) {

@@ -10,5 +10,5 @@ struct window_draw_fn {
 };
 
 struct window_init_fn {
-	std::function<void()> initCallback;
+	std::function<void(NVGcontext*)> initCallback;
 };

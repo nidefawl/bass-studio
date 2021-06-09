@@ -10,3 +10,17 @@
 #include <nanovg.h>
 #include <nanovg_gl.h>
 #include <nanovg_gl_utils.h>
+#ifdef _WIN32
+#include <windows.h>
+
+//TODO: make a C wrapper function to call platform.h getTimeMillisd()
+// (right now we cannot call c++ function from c source)
+// or switch compiler for nanovg.c to c++
+float glnvg__getTimeMillisf()
+{
+	DWORD dwTime = timeGetTime();
+	return (float) dwTime;
+}
+#else
+#error TODO IMPLEMENT glnvg__getTimeMillisf
+#endif

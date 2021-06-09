@@ -56,6 +56,7 @@ struct render_stats_t {
 	int64_t clipsRendered;
 	int64_t notesRendered;
 	int64_t timeRenderEditor;
+	int64_t timeRenderTrackControls;
 	int64_t timeUpdateWaveforms;
 	int64_t timePrerender;
 	int64_t playThreadLockCount;

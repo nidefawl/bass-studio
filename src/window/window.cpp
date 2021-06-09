@@ -247,15 +247,16 @@ private:
 //		glfwSwapInterval(-1);
 		if (isSharedContextSlave) {
 			return;
-		}
+        }
 #ifdef NANOVG_GL2
-		nanovgCtxt = nvgCreateGL2(NVG_ANTIALIAS | NVG_DEBUG);
+        nanovgCtxt = nvgCreateGL2(NVG_ANTIALIAS | NVG_DEBUG);
 #elif defined(NANOVG_GL3)
-		nanovgCtxt = nvgCreateGL3(NVG_ANTIALIAS | NVG_DEBUG);
+        nanovgCtxt = nvgCreateGL3(NVG_ANTIALIAS | NVG_DEBUG);
 #endif
-		if (!nanovgCtxt) {
-			throw appexception("Couldn't initialize nanovg");
-		}
+        if (!nanovgCtxt) {
+            throw appexception("Couldn't initialize nanovg");
+        }
+        nvgShapeAntiAlias(nanovgCtxt, USE_NANOVG_AA);
 
 		reloadCustomShaders();
 
@@ -664,7 +665,7 @@ public:
 		return this->bCanResize;
 	}
 	void destroy();
-    int32_t nTicks = 0;
+    double tmLastShaderReloadMillis = 0.0;
 	void onTick() {
 		static bool reentrant = false;
 		reentrantblocker block(reentrant);
@@ -687,10 +688,10 @@ public:
             overlayWindowsToClose.clear();
         }
 
-//        if (nTicks++ > 600) {
-//            nTicks = 0;
-//            reloadCustomShaders();
-//        }
+        if (getTimeMillisd() - tmLastShaderReloadMillis >= 3000) {
+        	tmLastShaderReloadMillis = getTimeMillisd();
+            reloadCustomShaders();
+        }
 		ctrl->onAppTick();
 	}
 	void onRefresh() override {
@@ -731,7 +732,10 @@ public:
 			glClearColor(clearc[0], clearc[1], clearc[2], clearc[3]);
 			glStencilMask(~0);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
-			ctrl->render(this->nanovgCtxt, 0, 0, winwidth, winheight, pxratio);
+			if (ctrl->isVisible()) {
+				ctrl->render(this->nanovgCtxt, 0, 0, winwidth, winheight, pxratio);
+			}
+
 #if BUILD_VSTHOST
 			if (!this->parent) {
 				daw_tls::tlsinstance& tls = daw_tls::getTls();
@@ -986,7 +990,7 @@ void appwindow_main::onChildOverlayClose(appwindow* child) {
 
 class appwindow_dialog : public appwindow, public window_dialog {
 	std::function<void(NVGcontext*,int,int,float)> drawFn;
-	std::function<void()> initCallback;
+	std::function<void(NVGcontext*)> initCallback;
 	const bool disablesParent = false;
 	bool init = false;
 public:
@@ -1039,7 +1043,7 @@ public:
 		if (!init) {
 			init = true;
 			if (initCallback) {
-				initCallback();
+				initCallback(nanovgCtxt);
 			}
 		}
 		int winwidth, winheight;
@@ -1601,7 +1605,7 @@ int startApplication(int argc, char* argv[]) {
 		mainWindow->centerOnScreen(centerScreenIdx);
 	}
 
-	enableGlDebugCallback();
+//	enableGlDebugCallback();
 	glfwSetErrorCallback(glfw_runtime_error_callback);
 	ctrl->postInit();
 

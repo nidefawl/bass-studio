@@ -22,7 +22,7 @@ constant_t COL_LABEL_CONTAINER("COL_LABEL_CONTAINER", 0xffd0d0d0);
 }
 namespace GuiConstant {
 
-constant_t CONST_ROUND("CONST_ROUND", 20);
+constant_t CONST_ROUND("CONST_ROUND", 20, 0, 1000);
 constant_t CONST_FONT_SIZE_CTR_LABEL("CONST_FONT_SIZE_CTR_LABEL", 14);
 }
 
@@ -220,10 +220,15 @@ void guictr_base::drawBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 
 	posInset -= ivec2(margin);
 	sizeInset += ivec2(margin) * 2;
     if (sizeInset.y > 0 && sizeInset.x > 0) {
-        auto baaag = theme->getFloat(GuiConstant::CONST_ROUND);
         float fRound = theme->getFloat(GuiConstant::CONST_ROUND);
 		nvgBeginPath(vg);
-        nvgRoundedRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y, fRound);
+        if (fRound < 0.01f) {
+        	nvgShapeAntiAlias(vg, 0);
+    		nvgRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y);
+        	nvgShapeAntiAlias(vg, USE_NANOVG_AA);
+        } else {
+            nvgRoundedRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y, fRound);
+        }
 		NVGcolor bg = theme->getColor(GuiColor::COL_BG_DRK);
 		if (focused) {
 			bg = theme->getColor(GuiColor::COL_BG_DRK_FOCUSED);

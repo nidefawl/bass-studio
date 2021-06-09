@@ -838,14 +838,14 @@ void DawInstance::setEmptyProject() {
 }
 #if CREATE_DEBUG_COMPANION_WINDOW
 void drawDebugWindowWaveformCache(NVGcontext* ctx, int winW, int winH, float pxratio);
-int initDebugWindowWaveformCache();
+int initDebugWindowWaveformCache(NVGcontext* ctx);
 void openDebugWindowWaveformCache(window_main* mainwindow) {
 	dbgassert(mainwindow);
 	window_dialog* dialog = mainwindow->createDialog("waveform atlas cache", 1280, 720);
 	window_init_fn init;
 	window_draw_fn drawFn;
-	init.initCallback = []() {
-		initDebugWindowWaveformCache();
+	init.initCallback = [](NVGcontext* ctx) {
+		initDebugWindowWaveformCache(ctx);
 	};
 	drawFn.drawCallback = [](NVGcontext* ctx, int winW, int winH, float pxratio) {
 		drawDebugWindowWaveformCache(ctx, winW, winH, pxratio);
@@ -855,14 +855,14 @@ void openDebugWindowWaveformCache(window_main* mainwindow) {
 	dialog->show();
 }
 void drawDebugWindowPerformance(NVGcontext* ctx, int winW, int winH, float pxratio);
-int initDebugWindowPerformance();
+int initDebugWindowPerformance(NVGcontext* ctx);
 void openDebugWindowPerformance(window_main* mainwindow) {
 	dbgassert(mainwindow);
 	window_dialog* dialog = mainwindow->createDialog("performance graphs", 1280, 720);
 	window_init_fn init;
 	window_draw_fn drawFn;
-	init.initCallback = []() {
-		initDebugWindowPerformance();
+	init.initCallback = [](NVGcontext* ctx) {
+		initDebugWindowPerformance(ctx);
 	};
 	drawFn.drawCallback = [](NVGcontext* ctx, int winW, int winH, float pxratio) {
 		drawDebugWindowPerformance(ctx, winW, winH, pxratio);

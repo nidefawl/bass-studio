@@ -150,6 +150,7 @@ enum GLNVGuniformLoc {
 	GLNVG_LOC_VIEWSIZE,
 	GLNVG_LOC_TEX,
 	GLNVG_LOC_FRAG,
+	GLNVG_LOC_RENDERINFO,
 	GLNVG_MAX_LOCS
 };
 
@@ -157,7 +158,8 @@ enum GLNVGshaderType {
 	NSVG_SHADER_FILLGRAD,
 	NSVG_SHADER_FILLIMG,
 	NSVG_SHADER_SIMPLE,
-	NSVG_SHADER_IMG
+	NSVG_SHADER_IMG,
+	NSVG_SHADER_TRI_COLORED
 };
 
 #if NANOVG_GL_USE_UNIFORMBUFFER
@@ -615,6 +617,8 @@ static GLNVGtexture* glnvg__allocTexture(GLNVGcontext* gl)
 
 static GLNVGtexture* glnvg__findTexture(GLNVGcontext* gl, int id)
 {
+	if (id < 0)
+		return NULL;
 	int i;
 	for (i = 0; i < gl->ntextures; i++)
 		if (gl->textures[i].id == id)
@@ -804,6 +808,7 @@ static void glnvg__getUniforms(GLNVGshader* shader)
 #else
 	shader->loc[GLNVG_LOC_FRAG] = glGetUniformLocation(shader->prog, "frag");
 #endif
+	shader->loc[GLNVG_LOC_RENDERINFO] = glGetUniformLocation(shader->prog, "renderInfo");
 }
 
 static int glnvg__renderCreate(void* uptr)
@@ -1273,34 +1278,39 @@ static int glnvg__convertPaint(GLNVGcontext* gl, GLNVGfragUniforms* frag, NVGpai
 	frag->strokeMult = (width*0.5f + fringe*0.5f) / fringe;
 	frag->strokeThr = strokeThr;
 
-	if (paint->image != 0) {
+	if (paint->image != 0 || paint->customPar) {
 		tex = glnvg__findTexture(gl, paint->image);
-		if (tex == NULL) return 0;
-		if ((tex->flags & NVG_IMAGE_FLIPY) != 0) {
-			float m1[6], m2[6];
-			nvgTransformTranslate(m1, 0.0f, frag->extent[1] * 0.5f);
-			nvgTransformMultiply(m1, paint->xform);
-			nvgTransformScale(m2, 1.0f, -1.0f);
-			nvgTransformMultiply(m2, m1);
-			nvgTransformTranslate(m1, 0.0f, -frag->extent[1] * 0.5f);
-			nvgTransformMultiply(m1, m2);
-			nvgTransformInverse(invxform, m1);
+		if (tex != NULL) {
+			frag->type = NSVG_SHADER_FILLIMG;
+			if ((tex->flags & NVG_IMAGE_FLIPY) != 0) {
+				float m1[6], m2[6];
+				nvgTransformTranslate(m1, 0.0f, frag->extent[1] * 0.5f);
+				nvgTransformMultiply(m1, paint->xform);
+				nvgTransformScale(m2, 1.0f, -1.0f);
+				nvgTransformMultiply(m2, m1);
+				nvgTransformTranslate(m1, 0.0f, -frag->extent[1] * 0.5f);
+				nvgTransformMultiply(m1, m2);
+				nvgTransformInverse(invxform, m1);
+			} else {
+				nvgTransformInverse(invxform, paint->xform);
+			}
+#if NANOVG_GL_USE_UNIFORMBUFFER
+if (tex->type == NVG_TEXTURE_RGBA)
+	frag->texType = (tex->flags & NVG_IMAGE_PREMULTIPLIED) ? 0 : 1;
+else
+	frag->texType = 2;
+#else
+if (tex->type == NVG_TEXTURE_RGBA)
+	frag->texType = (tex->flags & NVG_IMAGE_PREMULTIPLIED) ? 0.0f : 1.0f;
+else
+	frag->texType = 2.0f;
+#endif
 		} else {
-			nvgTransformInverse(invxform, paint->xform);
+			frag->type = NSVG_SHADER_TRI_COLORED;
+			frag->texType = paint->customPar;
 		}
-		frag->type = NSVG_SHADER_FILLIMG;
 
-		#if NANOVG_GL_USE_UNIFORMBUFFER
-		if (tex->type == NVG_TEXTURE_RGBA)
-			frag->texType = (tex->flags & NVG_IMAGE_PREMULTIPLIED) ? 0 : 1;
-		else
-			frag->texType = 2;
-		#else
-		if (tex->type == NVG_TEXTURE_RGBA)
-			frag->texType = (tex->flags & NVG_IMAGE_PREMULTIPLIED) ? 0.0f : 1.0f;
-		else
-			frag->texType = 2.0f;
-		#endif
+
 //		printf("frag->texType = %d\n", frag->texType);
 	} else {
 		frag->type = NSVG_SHADER_FILLGRAD;
@@ -1510,6 +1520,8 @@ static GLNVGblend glnvg__blendCompositeOperation(NVGcompositeOperationState op)
 	return blend;
 }
 
+float glnvg__getTimeMillisf();
+
 static void glnvg__renderFlush(void* uptr)
 {
 	GLNVGcontext* gl = (GLNVGcontext*)uptr;
@@ -1564,6 +1576,14 @@ static void glnvg__renderFlush(void* uptr)
 		// Set view and texture just once per frame.
 		glUniform1i(gl->shader.loc[GLNVG_LOC_TEX], 0);
 		glUniform2fv(gl->shader.loc[GLNVG_LOC_VIEWSIZE], 1, gl->view);
+		float dwTime = glnvg__getTimeMillisf();
+		float uniformData[4] = {
+			(float)dwTime/1000.0,
+			0.0,// flags? but is float :/
+			0.0,// screensize.x
+			0.0,// screensize.y
+		};
+		glUniform4fv(gl->shader.loc[GLNVG_LOC_RENDERINFO], 1, uniformData);
 
 #if NANOVG_GL_USE_UNIFORMBUFFER
 		glBindBuffer(GL_UNIFORM_BUFFER, gl->fragBuf);
@@ -1768,6 +1788,13 @@ static void glnvg__renderFill(void* uptr, NVGpaint* paint, NVGcompositeOperation
 		// Fill shader
 		glnvg__convertPaint(gl, nvg__fragUniformPtr(gl, call->uniformOffset + gl->fragSize), paint, scissor, fringe, fringe, -1.0f);
 	} else {
+		//float extw = bounds[2]-bounds[0];
+		//float exth = bounds[3]-bounds[1];
+		//paint->extent[0] = extw;
+		//paint->extent[1] = exth;
+//		GLNVG_CONVEXFILL,
+//		GLNVG_STROKE,
+//		GLNVG_TRIANGLES,
 		call->uniformOffset = glnvg__allocFragUniforms(gl, 1);
 		if (call->uniformOffset == -1) goto error;
 		// Fill shader
@@ -1838,7 +1865,8 @@ error:
 	if (gl->ncalls > 0) gl->ncalls--;
 }
 
-static void glnvg__renderTriangles(void* uptr, NVGpaint* paint, NVGcompositeOperationState compositeOperation, NVGscissor* scissor,
+static void glnvg__renderTriangles(void* uptr, NVGpaint* paint,
+		NVGcompositeOperationState compositeOperation, NVGscissor* scissor,
 								   const NVGvertex* verts, int nverts)
 {
 	GLNVGcontext* gl = (GLNVGcontext*)uptr;
@@ -1863,7 +1891,8 @@ static void glnvg__renderTriangles(void* uptr, NVGpaint* paint, NVGcompositeOper
 	if (call->uniformOffset == -1) goto error;
 	frag = nvg__fragUniformPtr(gl, call->uniformOffset);
 	glnvg__convertPaint(gl, frag, paint, scissor, 1.0f, 1.0f, -1.0f);
-	frag->type = NSVG_SHADER_IMG;
+	if (frag->type != NSVG_SHADER_TRI_COLORED)
+		frag->type = NSVG_SHADER_IMG;
 
 	return;
 

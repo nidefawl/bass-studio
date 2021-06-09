@@ -98,7 +98,7 @@ struct audio_stage_t {
 	vsthost* host;
 //	audiostageid_i32 stageId = TRACKID_INVALID_I32;
 	audio_stage_id_t stageId = {TRACKID_INVALID_I32, TRACKID_INVALID_I32, TRACKID_INVALID_I32};
-	audiostageflags_t flags = audiostageflags_t::CONVERT_OUTPUT;
+	audiostageflags_t flags = audiostageflags_t::NONE;
 	audiostagerouting_state_t routingState = audiostagerouting_state_t::INVALID;
 	audio_stage_t* parent;
 	effectbase* owner;

@@ -146,7 +146,7 @@ public:
 	}
 	void addSubtrack(track_gui_entry_t* entry, gui_track_subtrack* al, bool insertFront);
 
-	void removeSubtrack(track_gui_entry_t* entry, gui_track_automationlane* al);
+	void removeSubtrack(track_gui_entry_t* entry, gui_track_subtrack* al);
 	void removeAllAutomationLanes(track_gui_entry_t* entry, automatable_t* at, int32_t paramIdx);
 	void removeAllAutomationLanes(track_gui_entry_t* entry, automatable_t* at);
 	void removeAllSubtracks(track_gui_entry_t* entry);
@@ -746,6 +746,7 @@ public:
 	void removeAllTracks();
 	void showAutomationLane(track_gui_entry_t* entry, automatable_t* at, int32_t paramIdx);
 	void addSubTrack(track_gui_entry_t* entry, gui_track_subtrack* subtrack, bool insertFront);
+	void removeSubtrack(track_gui_entry_t* entry, gui_track_subtrack* subtrack);
 
 	gui_track_automationlane* addAutomationLane(track_gui_entry_t* entry, automatable_t* at, int32_t paramIdx, bool insertFront);
 	void removeAutomationLane(gui_track_automationlane* al);

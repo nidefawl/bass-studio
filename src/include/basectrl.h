@@ -277,6 +277,7 @@ public:
     int32_t refIdNext = 1;
     std::vector<stored_ref> refs;
     bool canTakeInputFocus = false; // TODO: use flags
+    bool bIsVisible = true;
     int safeRefCreate(guibase* gui) override
     {
         stored_ref ref{gui, (int32_t)refIdNext++};
@@ -399,6 +400,12 @@ public:
     virtual std::shared_ptr<guictr_layout> replaceContainerWith(guictr_base* ctr,
     		std::shared_ptr<guictr_layout> newContainer) {
     	return nullptr;
+    }
+    bool isVisible() {
+    	return bIsVisible;
+    }
+    void setVisible(bool b) {
+    	this->bIsVisible = b;
     }
 };
 class AppCtrl : public BaseCtrl {

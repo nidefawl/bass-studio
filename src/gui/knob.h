@@ -21,8 +21,10 @@ protected:
 	float value = 0.0f;
 	bool isSlider;
 	bool changedValue = false;
-	float initialValue = 0.0f;
+	float fModifyBeginValue = 0.0f;
+	float fDefaultValue = 0.5f;
 	float lastVal = 0.0f;
+	bool bDoubleClickSetsDefault = true;
 
 	automatable_t* paramAutomatable = nullptr;
 	int32_t paramIdx = -1;
@@ -121,4 +123,5 @@ public:
 		return true;
 	}
 	guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
+	void setToDefaultValue();
 };

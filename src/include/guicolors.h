@@ -54,6 +54,7 @@ extern constant_t COL_NOTE_PLAYING;
 extern constant_t COL_NOTE_ARP;
 extern constant_t COL_NOTE_MUTE;
 extern constant_t COL_NOTE_OUTLINE;
+extern constant_t COL_NOTE_SELECTED;
 extern constant_t COL_NOTE_TEXT;
 extern constant_t COL_BG_SELECTEDTRACK;
 extern constant_t COL_BG_SELECTEDTRACK_TITLE;
@@ -74,6 +75,9 @@ extern constant_t COL_PLUG_TITLE_SELECTED;
 extern constant_t COL_PLUG_TITLE_FOCUSED;
 extern constant_t COL_ON;
 extern constant_t COL_OFF;
+extern constant_t COL_TEXTBOX_TEXT;
+extern constant_t COL_TEXTBOX_TEXT_DISABLED;
+extern constant_t COL_TEXTBOX_TEXT_MARKED;
 }
 
 
