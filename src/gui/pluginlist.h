@@ -47,6 +47,7 @@ public:
 class guictr_pluginlibrary : public guictr_base {
 	const int32_t heightTextField = HEIGHT_DEFAULT_INPUT;
 	gui_textfield textField;
+	gui_textfield textField2;
 	gui_list pluginListCtr;
 	String curquery = "";
 	std::vector<pluginentry_t> pluginsLibList;
@@ -56,6 +57,7 @@ public:
 		pluginListCtr.padding = 0;
 		pluginListCtr.setBackgroundRendered(false);
 		add(&textField);
+		add(&textField2);
 		add(&pluginListCtr);
 		textField.setCallback([this](const String& str) {
 			curquery = str;
@@ -63,31 +65,45 @@ public:
 			return true;
 		});
 		textField.setPlaceholder("Search");
+		textField2.setPlaceholder("SQL error");
 	}
 	~guictr_pluginlibrary() {
 		std::vector<gui_list_entry*> _newList;
 		pluginListCtr.setList(_newList);
 		remove(&pluginListCtr);
 		remove(&textField);
+		remove(&textField2);
 	}
 	void update() {
 		std::vector<gui_list_entry*> _newList;
 		pluginsLibList.clear();
-		DawInstance::get()->getPluginDatabase().query(curquery, pluginsLibList);
-
-		for (pluginentry_t& entry : pluginsLibList) {
-			gui_pluginlist_entry* g = new gui_vstpluginlist_entry(entry);
-			_newList.push_back(g);
+		try {
+			DawInstance::get()->getPluginDatabase().query(curquery, pluginsLibList);
+			for (pluginentry_t& entry : pluginsLibList) {
+				gui_pluginlist_entry* g = new gui_vstpluginlist_entry(entry);
+				_newList.push_back(g);
+			}
+			textField2.setValue("");
+		} catch (std::exception& e) {
+			String strValue = e.what();
+			textField2.setValue(strValue);
 		}
+
 		pluginListCtr.setList(_newList);
 		layout();
 	}
 	void layout() {
+		textField2.setVisible(!textField2.value().empty());
 		ivec2 cs = getSizeContent();
-		textField.size = ivec2(cs.x, heightTextField);
 		textField.pos = ivec2(0, 0);
-		pluginListCtr.pos = ivec2(0, heightTextField);
-		pluginListCtr.size = ivec2(cs.x, cs.y-heightTextField);
+		textField.size = ivec2(cs.x, heightTextField);
+		textField2.pos = ivec2(textField.left(), textField.bottom());
+		textField2.size = textField.size;
+		pluginListCtr.pos = ivec2(0, textField.bottom());
+		if (textField2.isVisible()) {
+			pluginListCtr.pos = ivec2(textField2.left(), textField2.bottom());
+		}
+		pluginListCtr.size = ivec2(cs.x, cs.y-pluginListCtr.pos.y);
 		for (guibase* gui : guis) {
 			gui->layout();
 		}
@@ -100,6 +116,9 @@ public:
 			return;
 		}
 		textField.render(vg);
+		if (textField2.isVisible()) {
+			textField2.render(vg);
+		}
 		pluginListCtr.render(vg);
 	}
 };

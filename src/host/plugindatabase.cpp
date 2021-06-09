@@ -79,6 +79,13 @@ public:
 		return false;
 	}
 	void query(String str, std::vector<pluginentry_t>& _out) {
+		String strSQLCond = "1";
+		bool customQuery = str.length() > 1 && str.at(0) == '.';
+		if (customQuery) {
+			strSQLCond = str.substr(1);
+		} else {
+			strSQLCond = " state == 1 and forcedisable == 0 and name like ? ESCAPE '#' ";
+		}
 		if (str.empty()) {
 			str = "%";
 		} else {
@@ -87,8 +94,14 @@ public:
 			replaceString(str, "_", "#_");
 			str = StringFormat("%%%s%%", StringAsCStr(str));
 		}
-		SQLite::Statement   queryPlugin(db, "SELECT * FROM plugins where state == 1 and forcedisable == 0 and name like ? ESCAPE '#' ORDER by name COLLATE NOCASE ASC");
-		queryPlugin.bind(1, str);
+		String strSQLOrder = "ORDER by name COLLATE NOCASE ASC";
+		String strSQLQuery = "SELECT * FROM plugins where " + strSQLCond + " " + strSQLOrder;
+		log_printf("str: %s\n", StringAsCStr(strSQLQuery));
+		SQLite::Statement   queryPlugin(db, strSQLQuery);
+		if (!customQuery) {
+			queryPlugin.bind(1, str);
+		}
+
 		pluginentry_t entry;
 		while (queryPlugin.executeStep()) {
 			entry.id = queryPlugin.getColumn("id").getInt();
