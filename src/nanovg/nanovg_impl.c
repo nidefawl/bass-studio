@@ -16,10 +16,14 @@
 //TODO: make a C wrapper function to call platform.h getTimeMillisd()
 // (right now we cannot call c++ function from c source)
 // or switch compiler for nanovg.c to c++
+static float startOffset;
+void resetShaderTimeOffset() {
+	startOffset = (float)timeGetTime();
+}
 float glnvg__getTimeMillisf()
 {
 	DWORD dwTime = timeGetTime();
-	return (float) dwTime;
+	return (float) dwTime-startOffset;
 }
 #else
 #error TODO IMPLEMENT glnvg__getTimeMillisf

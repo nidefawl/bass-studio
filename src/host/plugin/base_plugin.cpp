@@ -74,7 +74,7 @@ void effectbase::load(vsthost* host) {
 	dbgassert(nLoadCalls==0);
 	nLoadCalls++;
 }
-void effectbase::unload(vsthost* host) {
+void effectbase::unload(vsthost* host, int flags) {
 	dbgassert(host == vstHost);
 	vstHost = nullptr;
 	dbgassert(nLoadCalls==1);
@@ -161,8 +161,8 @@ effect_deferred::~effect_deferred() {
 String effect_deferred::getDfrdPluginName() {
 	return mImpl->snapshot.name;
 }
-void effect_deferred::onPreUnload() {
-	my_printf("onPreUnload effect_deferred %08X %s\n", (int64_t)mImpl, StringAsCStr(mImpl->snapshot.name));
+void effect_deferred::onPreUnload(int flags) {
+	log_printf("onPreUnload effect_deferred %08X %s\n", (int64_t)mImpl, StringAsCStr(mImpl->snapshot.name));
 }
 const plugin_snapshot_t& effect_deferred::getSnapshotConst() const
 {
@@ -183,6 +183,19 @@ plugin_snapshot_t& effect_deferred::getSnapshot()
 String effectbase::formatDisplayValue(int32_t idx) {
 	String display = StringFormat("%.3f", getParamValue(idx));
 	return display;
+}
+void effectbase::updateOnEnableParam(automatable_param_t* param, bool wasEnable, bool isEnable, int flags) {
+	this->bIsEnabled = isEnable;
+	if (this->bIsEnabled != wasEnable) {
+		if (this->bIsEnabled) {
+			onEnable();
+		} else {
+			onDisable();
+		}
+		if (!(flags&FLG_PAR_UPDATE_NOSTORE) && !(flags&FLG_PAR_UPDATE_AUTOMATED)) {
+			param->inUse = true;
+		}
+	}
 }
 effect_deferred* effectbase::toDeferred() {
 	plugin_snapshot_t snapshot;
@@ -242,6 +255,10 @@ void effect_deferred::resume() {
 void effect_deferred::sleep() {
 
 }
+int effect_deferred::getModuleStoredType()
+{
+    return this->mImpl->moduleType;
+}
 void effect_deferred::load(vsthost* host) {
 	effectbase::load(host);
 	this->blockInputs = new AudioBlock(2, host->sampleFormat.blockSize);
@@ -274,7 +291,10 @@ void guideferred::buttonClicked(guibase* _button) {
 	if (_button == &btnLoad) {
 		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 		vsthost* host = vsthost::getInstance();
-		host->activateDeferred(module, nullptr, true);
+        auto dawCtrlCopy = dawCtrl;
+		host->activateDeferred(module, vsthost::FLAG_HOST_FORCELOAD_DISABLED_PLUGINS);
+		// do not access this from here to function exit
+        dawCtrlCopy->onPluginsChanged();
 	}
 }
 guiplugin* effect_deferred::makeGui() {

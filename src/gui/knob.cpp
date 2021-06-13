@@ -5,6 +5,7 @@
 #include "guicontainer.h"
 #include "guicolors.h"
 #include "guiconstant.h"
+#include "guicontextmenu.h"
 #include "guicontextmenu_daw.h"
 #include "theme.h"
 #include "guitooltip.h"

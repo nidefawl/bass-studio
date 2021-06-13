@@ -1461,7 +1461,7 @@ guidialog_settings::guidialog_settings(ivec2 _dialogSize, bool _resizeable) : gu
 	btnClose.setText("Close");
 	btnClose.setFontSize(BTN_FONT_SIZE);
 	setLabel("Settings");
-	setActiveEntry(2);
+	setActiveEntry(0);
 };
 guidialog_settings::guidialog_settings()
 : guidialog_base(ivec2{640, 760}, true) {
@@ -1474,7 +1474,7 @@ guidialog_settings::guidialog_settings()
 	btnClose.setText("Close");
 	btnClose.setFontSize(BTN_FONT_SIZE);
 	setLabel("Settings");
-	setActiveEntry(2);
+	setActiveEntry(0);
 };
 void guidialog_settings::addEntry(setting_dialog* ctr, String title) {
 	guidialog_settings::dialog_entry* entry = new guidialog_settings::dialog_entry{ctr, title};

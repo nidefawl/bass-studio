@@ -154,6 +154,15 @@ struct audio_stage_t {
 	virtual ~audio_stage_t() {
 
 	}
+	void getDeferredEffects(std::vector<effectbase*>& out_effects) {
+		for (auto effect : effects) {
+			effect->getDeferredEffects(out_effects);
+		}
+		if (deferredEffects.size()) {
+			out_effects.reserve(out_effects.size()+deferredEffects.size());
+			addAll(out_effects, deferredEffects);
+		}
+	}
 	DelayLine* getEffectDelayLine(uint32_t id, uint32_t numChannels) {
 		using namespace std;
 //	    lock_guard<mutex> hold(mtx);
@@ -262,6 +271,7 @@ struct track_impl_t : public audio_stage_t {
 	track_impl_t(vsthost* const _host, audio_stage_id_t _id, track_t* _track, const samplerate_t _sampleRate, const uint16_t _blockSize, int32_t nChannels);
 	~track_impl_t();
 	void sendNotesOff(int32_t bpm100);
+	void onStartPlayback();
 	void sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, clip_notes_t& midiRealtimeInput, int32_t flags);
 	void fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, float** buffer, int32_t samples);
 	void addAudio(const AudioBlock& src, float fGain);
@@ -270,7 +280,7 @@ struct track_impl_t : public audio_stage_t {
 	void removePlugin(effectbase* _vst, bool notifyUp) override;
 	std::vector<note_t>& getArpHeldNotes();
 	std::vector<note_t>& getArpInputNotes();
-	std::vector<marker_t>& getArpMarkers();
+	std::vector<marker_t>& getArpMarkers(int n);
 	void getAutomatableTrackTargets(std::vector<automatable_t*>& targets);
 	void createIOSnapshot(track_io_configuration_snapshot_t& snapshot);
 	void loadIOConfiguration(const track_io_configuration_snapshot_t& trPluginList);

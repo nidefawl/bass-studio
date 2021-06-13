@@ -27,7 +27,7 @@ public:
 	virtual String getInfo(std::vector<String>& list) override;
 	void resume() override;
 	void sleep() override;
-	void unload(vsthost* host) override;
+	void unload(vsthost* host, int flags) override;
 	void load(vsthost* host) override;
 	void breakTrackLink() override {
 		bIsSetup = false;

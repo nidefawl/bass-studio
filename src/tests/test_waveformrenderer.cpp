@@ -67,7 +67,7 @@ struct waveform_test {
 		renderers.push_back(rendererPar);
 		std::vector<waveform_test_entry> vec;
 		std::vector<FileFound> files;
-		findFilesWithExt(toResourcePath("."), "wav", false, files);
+		findFilesWithExt(toResourcePath("./test-samples/"), "wav", false, files);
 		log_printf("findFilesWithExt %d\n", files.size());
 		for (auto i = 0u; i < files.size() && vec.size() < 8; i++) {
 			size_t filesize = GetFileSizeSafe(files[i].path);
@@ -109,7 +109,7 @@ struct waveform_test {
 				samplesPerPx = (nSamples / FBO_WIDTH);
 			}
 			w.samplesPerPx = samplesPerPx;
-			w.linewidth = 1.5f;//+min(0.75, max(0.0, grid.zoom*32.0));
+			w.linewidth = 3.5f;//+min(0.75, max(0.0, grid.zoom*32.0));
 			w.method = SampleMethod::sample_straight;
 			w.clipped = false;
 			renderer->queueUpdate(sample, &ref);

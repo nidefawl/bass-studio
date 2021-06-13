@@ -104,6 +104,9 @@ class vsthost {
 public:
 	class vsthost_impl;
 	struct track_block_processing_task_t;
+public:
+	static const int FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY = 1;
+	static const int FLAG_HOST_FORCELOAD_DISABLED_PLUGINS = 2;
 private:
 	vsthost_impl* const impl;
 public:
@@ -242,7 +245,6 @@ public:
 	}
 	vstplugin* getPlugin(AEffect* aeffect);
 	effectbase* getPluginById(int32_t projectGlobalId) const;
-	const int FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY = 1;
 	void unloadPlugin(effectbase* plugin, int flags = 0);
 	void removePlugin(effectbase* plugin);
 	void unloadTrack(track_t* track);
@@ -266,7 +268,7 @@ public:
 	void getDeferredEffects(std::vector<effectbase*>& effects) {
 		effects = pluginsDeferred;
 	}
-	void activateDeferred(effectbase* const eff, effectbase** out_effectLoaded = nullptr, bool forceLoad=false);
+	void activateDeferred(effectbase* const eff, int flags, effectbase** out_effectLoaded = nullptr);
 	SafeRefStorage<effectbase>* getSafeRefStore() {
 		return &safeRefs;
 	}

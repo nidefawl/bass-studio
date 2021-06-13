@@ -23,6 +23,9 @@ public:
 	guiknob clock;
 	guiknob gate;
 	guiknob pattern;
+	guiknob randTime;
+	guiknob randTmMode;
+	guiknob randVel;
 	midiarp* getArp() {
 
 		track_t* track = clipview.track();
@@ -39,12 +42,18 @@ public:
 		add(&clock);
 		add(&gate);
 		add(&pattern);
+		add(&randTime);
+		add(&randTmMode);
+		add(&randVel);
 		padding = 2;
 		margin = 0;
 		text = "Arpeggiator";
 		clock.setLabel("Clock");
 		gate.setLabel("Gate");
 		pattern.setLabel("Pattern");
+		randTime.setLabel("Random Time");
+		randTmMode.setLabel("Random Time Mode");
+		randVel.setLabel("Random Velocity");
 		buttonBypass.setRadius(12);
 		buttonBypass.icon = ICON_BYPASS;
 		buttonBypass.setParent(this);
@@ -56,7 +65,7 @@ public:
 			}
 			return false;
 		};
-		guiknob* knobs[3] { &clock, &gate, &pattern };
+		guiknob* knobs[6] { &clock, &gate, &pattern, &randTime, &randTmMode, &randVel};
 		for (guiknob* knob : knobs) {
 			knob->setAutomationHandlers();
 		}
@@ -75,7 +84,7 @@ public:
 		renderTitleBar(vg, size, this->text, GuiConstant::CONST_FIXED_TITLE_HEIGHT, buttonBypass.right(), flags, true);
 		renderFrameOutline(vg);
 		buttonBypass.render(vg);
-		guiknob* knobs[3] = {&clock, &gate, &pattern};
+		guiknob* knobs[6] = {&clock, &gate, &pattern, &randTime, &randTmMode, &randVel};
 		midiarp* arp = getArp();
 		if (arp) {
 			for (guiknob* knob : knobs) {
@@ -105,13 +114,28 @@ public:
 		midiarp* arp = getArp();
 		if (!arp) return "";
 		if (knob == &clock) {
-			return StringFormat("%.2f", arp->getClockF());
+			return StringFormat("%d ticks", arp->getStepSize());
 		}
 		if (knob == &pattern) {
-			return StringFormat("%.2f", arp->getPatternF());
+			int32_t option = (int32_t) std::floor(arp->getPatternF() * (NUM_PATTERNS - 1));
+			if (option == 0) {
+				return "Chord";
+			}
+			return StringFormat("%d", option);
 		}
 		if (knob == &gate) {
-			return StringFormat("%.2f", arp->getGateF());
+			return StringFormat("%d ticks", arp->getDuration());
+//			return StringFormat("%.2f %%", math::clamp(arp->getGateF()*100.0f, 0.0f, 100.0f));
+		}
+		if (knob == &randVel) {
+			return StringFormat("+/-%d", arp->getRandVelocity());
+		}
+		String upDown = arp->getRandTmMode()?"+/-":"+";
+		if (knob == &randTime) {
+			return StringFormat("%s%d ticks", StringAsCStr(upDown), arp->getRandTime());
+		}
+		if (knob == &randTmMode) {
+			return StringAsCStr(upDown);
 		}
 		return "";
 	}
@@ -127,9 +151,15 @@ public:
 		clock.size = ivec2(48);
 		gate.size = ivec2(48);
 		pattern.size = ivec2(48);
+		randTime.size = ivec2(48);
+		randTmMode.size = ivec2(48);
+		randVel.size = ivec2(48);
 		clock.pos = ivec2(INSET_TITLE, hpt+INSET_TITLE);
 		gate.pos = ivec2(INSET_TITLE, clock.bottom()+INSET_TITLE);
 		pattern.pos = ivec2(INSET_TITLE, gate.bottom()+INSET_TITLE);
+		randTime.pos = ivec2(INSET_TITLE, pattern.bottom()+INSET_TITLE);
+		randTmMode.pos = ivec2(INSET_TITLE, randTime.bottom()+INSET_TITLE);
+		randVel.pos = ivec2(INSET_TITLE, randTmMode.bottom()+INSET_TITLE);
 		for (guibase* gui : guis) {
 			gui->layout();
 		}
@@ -140,6 +170,9 @@ public:
 		clock.setAutomationRef(arp, ARP_PARAM_CLOCK);
 		gate.setAutomationRef(arp, ARP_PARAM_GATE);
 		pattern.setAutomationRef(arp, ARP_PARAM_PATTERN);
+		randTime.setAutomationRef(arp, ARP_PARAM_RAND_TIME);
+		randTmMode.setAutomationRef(arp, ARP_PARAM_RAND_MODE);
+		randVel.setAutomationRef(arp, ARP_PARAM_RAND_VEL);
 #endif
 	}
 };

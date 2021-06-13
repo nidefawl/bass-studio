@@ -47,7 +47,7 @@ public:
 	virtual void process(AudioBlock* in, AudioBlock* out, int32_t samplePos, int32_t numSamples, playback_state state) = 0;
 //	virtual bool resume() = 0;
 //	virtual bool sleep() = 0;
-//	virtual void unload(vsthost* host) = 0;
+//	virtual void unload(vsthost* host, int flags) = 0;
 //	virtual void load(vsthost* host) = 0;
 
 	virtual void loadSnapshot(const plugin_snapshot_t& snapshot) override;

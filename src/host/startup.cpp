@@ -24,8 +24,11 @@ void dawinstance_startup_commands(daw_tls::tlsinstance& tls) {
 	vsthost* host = vsthost::getInstance();
 	String dawPath = "C:/Users/Michael/daw/run/";
 	String projName = "forever.project";
+	projName = "kshmr-samples-test.project";
 //	projName = "test-empty-midi-loop.project";
+	projName = "arp-test.project";
 	int flags = 0x1; // defer load
+	flags = 0; // no defer load
 	dawInstance->cbProjectLoadCompleteCallback = [tls, dawMainCtrl, dawInstance, host](DawInstance*, std::shared_ptr<project_file> file, int errorState) {
         DAW::Cursor& cursor = dawMainCtrl->getCursor();
 
@@ -103,15 +106,18 @@ void dawinstance_startup_commands(daw_tls::tlsinstance& tls) {
             std::vector<effectbase*> pluginsDeferred;
             host->getDeferredEffects(pluginsDeferred);
             my_printf("loading %d plugins\n", pluginsDeferred.size());
-            for (auto plugin : pluginsDeferred) {
-                my_printf("activate %s\n", StringAsCStr(plugin->sName));
+            for (auto effect : pluginsDeferred) {
+                my_printf("activate %s\n", StringAsCStr(effect->sName));
                 effectbase* effectLoaded = nullptr;
-                host->activateDeferred(plugin, &effectLoaded);
-                DawInstance::get()->onPluginsChanged();
-                //            			if (effectLoaded) {
-                //            				effectLoaded->show();
-                //            			}
+                host->activateDeferred(effect, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
             }
+            auto& trackList = dawInstance->getProject()->trackList;
+    		for (track_t* tr : trackList) {
+    			tr->getStage()->pluginsChanged();
+    		}
+        	host->onTrackLayoutChange();
+        	dawInstance->onPluginsChanged();
+
             //        dawMainCtrl->menuCommand(CMD_NOARG(CMD_PREFERENCES));
         }
 
@@ -124,7 +130,7 @@ void dawinstance_startup_commands(daw_tls::tlsinstance& tls) {
 //		MainCtrl::getGuiTrackCtr()->addSubTrack(trackGui, gui, true);
 //		trackGui->parent->layout();
 //		trackGui->parent->updateVisibleTrackContents();
-		dawInstance->startPlaying();
+//		dawInstance->startPlaying();
     };
 //    dawMainCtrl->setVisible(false);
 //    dawMainCtrl->menuCommand(CMD_NOARG(CMD_SHOW_DEBUG2_WINDOW));

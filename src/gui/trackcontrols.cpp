@@ -765,7 +765,6 @@ public:
 	guibutton_trackbypass btnBypass;
 	guibutton_track_solo btnSolo;
 	guibutton btnActivate;
-	guibutton btnShowSubtrack;
 	std::vector<gui_trackgain*> sendGains;
 	gui_trackcontrols_mixer(track_gui_entry_t* _entry) :
 		guictr_base(), m_track(_entry->track), m_trackentry(_entry), meter(&_entry->track->audio->meter), btnBypass(_entry), btnSolo(_entry) {
@@ -774,16 +773,14 @@ public:
 //		btnBypass.setTint(nvgToRGB(theme->getFrameColorOutline()));
 		btnBypass.drawFn = drawTextureSymbol;
 		btnBypass.drawParm = ICON_BYPASS;
-		btnActivate.setButtonColor(GuiColor::COL_BTN_LOAD_DEF_PLUGINS);
+		btnActivate.setButtonColor(GuiColor::COL_PLUG_TITLE);
 		gain.setLabel("Gain Level");
 		btnActivate.setLabel("Load plugins");
-		btnShowSubtrack.setLabel("Add audio subtrack");
 		add(&btnBypass);
 		add(&btnSolo);
 		add(&btnActivate);
 		add(&gain);
 		add(&meter);
-		add(&btnShowSubtrack);
 		if (m_track->type != TRACK_TYPE_MASTER && m_track->type != TRACK_TYPE_RETURN) {
 			sendGains.resize(MAX_SEND_CHANNELS);
 			for (int i = 0; i < MAX_SEND_CHANNELS; i++) {
@@ -805,7 +802,6 @@ public:
 		remove(&btnActivate);
 		remove(&btnSolo);
 		remove(&btnBypass);
-		remove(&btnShowSubtrack);
 	}
 	void buttonClicked(guibase* button) override {
 		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
@@ -817,38 +813,37 @@ public:
 			trackParams.deactivateAutomation(PARAM_ENABLE);
 			trackParams.setParamValue(PARAM_ENABLE, trackParams.isEnabled() ? 0.0f : 1.0f, 0);
 		}
-		if (&btnShowSubtrack == button) {
-			auto trackCtr = MainCtrl::getGuiTrackCtr();
-
-			bool isShown = static_cast<bool>(m_track->audio->flags & audiostageflags_t::CONVERT_OUTPUT);
-			m_track->audio->flags ^= audiostageflags_t::CONVERT_OUTPUT;
-			if (isShown) {
-				std::vector<gui_track_subtrack*> subtracksVecCopy = m_trackentry->subtracks;
-				for (auto subtrack : subtracksVecCopy) {
-					if (subtrack->subtrackType() == gui_track_subtrack::SUBTRACK_TYPE_WAVE) {
-						trackCtr->removeSubtrack(m_trackentry, subtrack);
-					}
-				}
-			} else {
-				auto gui = makeGuiSubtrack(m_trackentry, MainCtrl::get(), gui_track_subtrack::SUBTRACK_TYPE_WAVE);
-				trackCtr->addSubTrack(m_trackentry, gui, true);
-			}
-
-			trackCtr->layout();
-			trackCtr->updateVisibleTrackContents();
-		}
 		if (&btnActivate == button) {
 			vsthost* host = vsthost::getInstance();
-			std::vector<effectbase*> effects = m_track->audio->deferredEffects;
-			for (auto eff : effects) {
-				host->activateDeferred(eff);
+			std::vector<effectbase*> effects;
+			m_track->audio->getDeferredEffects(effects);
+			for (auto effect : effects) {
+				host->activateDeferred(effect, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
 			}
+			host->postPluginLoaded(m_track->audio, nullptr);
+			if (dawCtrl) dawCtrl->onPluginsChanged();
+
 #ifndef NDEBUG
 			log_printf("deferredEffects post activateDeferred on track %s: %d\n", m_track->szName, m_track->audio->deferredEffects.size());
 #endif	
 		}
 	}
+	void onTick(AppCtrl* ctrl) {
+		for (guibase* gui : guis) {
+			if (gui->isVisible()) {
+				gui->onTick(ctrl);
+			}
+		}
+
+		std::vector<effectbase*> effects;
+		dbgassert(m_track->audio);
+		m_track->audio->getDeferredEffects(effects);
+		int nDefEffects = effects.size();
+		btnActivate.setEnabled(nDefEffects>0);
+		btnActivate.setText(nDefEffects>9?"9+":(StringFormat("%d", nDefEffects)));
+	}
 	void layout() {
+
 		const int32_t CONST_LAYOUT_MARGIN = math::min(6, theme->get(GuiConstant::CONST_LAYOUT_MARGIN));
 		const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
 		int32_t inset = CONST_LAYOUT_MARGIN;
@@ -867,16 +862,13 @@ public:
 		btnActivate.pos = {inset, gain.bottom()+i2};
 		btnActivate.setFontSize(h-2);
 		btnActivate.size = { h, h };
-		btnShowSubtrack.pos = {btnActivate.right()+inset*2, gain.bottom()+i2};
-		btnShowSubtrack.setFontSize(h-2);
-		btnShowSubtrack.size = { h, h };
 
 		meter.size = ivec2(mW-i2, size.y-i2);
 		meter.pos = ivec2(size.x - mW+inset, inset);
 		if (sendGains.size()) {
 			const int32_t HEIGHT_SEND_GAIN = h;
 			const int32_t SEND_PER_ROW = 1;
-			ivec2 sendPos = {inset, btnShowSubtrack.bottom()+i2 };
+			ivec2 sendPos = {inset, btnActivate.bottom()+i2 };
 			project_t* project = project_controller_t::get()->getProject();
 			dbgassert(project);
 			int32_t numReturnChannels = project->trackReturnCtr.size();
@@ -902,9 +894,6 @@ public:
 		if (!setScissorTransform(vg)) {
 			return;
 		}
-		int n = m_track->audio->deferredEffects.size();
-		btnActivate.setEnabled(n>0);
-		btnActivate.setText(n>9?"9+":(StringFormat("%d", n)));
 		for (auto gui : guis) {
 			if (gui->isVisible()) {
 				gui->render(vg);
@@ -1566,11 +1555,14 @@ public:
 	guictxtmenu_track(track_gui_entry_t* const trackentry) : guictxtmenu(), m_trackentry(trackentry) {
 		this->size.x = 120;
 		sel = new ctxtmenu_color_select("Pick Color", 100);
-		addEntry(new ctxtmenu_entry("Show all automation", 0));
 		addEntry(new ctxtmenu_entry("Duplicate track", 1));
-		addEntry(new ctxtmenu_entry("Delete track", 2));
-		addEntry(new ctxtmenu_entry("Save track", 3));
+		addEntry(new ctxtmenu_splitter());
+		addEntry(new ctxtmenu_entry("Show all automation", 0));
+		addEntry(new ctxtmenu_entry("Show waveform", 5));
 		addEntry(new ctxtmenu_entry("Add child MIDI Track", 4));
+		addEntry(new ctxtmenu_splitter());
+		addEntry(new ctxtmenu_entry("Save track", 3));
+		addEntry(new ctxtmenu_entry("Delete track", 2));
 		addEntry(new ctxtmenu_splitter());
 		addEntry(sel);
 		DawInstance::get()->setSelectedTrack(m_trackentry->track);
@@ -1631,7 +1623,10 @@ public:
 				}
 			}
 		} else if (_id == 2) {
+			auto trackparent = m_trackentry->parent;
 			DawInstance::get()->removeTrackId(m_trackentry->track->projectIdx);
+			trackparent->layout();
+			DawInstance::get()->updateVisibleTrackContents();
 		} else if (_id == 3) {
 			auto window = parentCtrl->window;
 
@@ -1649,17 +1644,41 @@ public:
 			}
 			return;
 		} else if (_id == 4) {
+			auto trackCtr = m_trackentry->parent;
 			track_t* newTrack = DawInstance::get()->createNewTrack(tr->type);
 			tr->addChild(newTrack);
 			DawInstance::get()->addTrackImpl(0, newTrack, FLG_TRK_CHANGE_USER);
 			newTrack->name = makeUniqueTrackName(tr->name);
 
-			m_trackentry->parent->layout();
+			trackCtr->layout();
 			DawInstance::get()->updateVisibleTrackContents();
 			track_gui_entry_t* entry;
-			if (m_trackentry->parent->getTrackEntry(newTrack, &entry)) {
-				m_trackentry->parent->scrollTo(entry->content);
+			if (trackCtr->getTrackEntry(newTrack, &entry)) {
+				trackCtr->scrollTo(entry->content);
 			}
+			closeContextMenu(); // deletes this
+			return;
+		} else if (_id == 5) {
+
+			auto trackCtr = m_trackentry->parent;
+
+			bool isShown = static_cast<bool>(tr->audio->flags & audiostageflags_t::CONVERT_OUTPUT);
+			tr->audio->flags ^= audiostageflags_t::CONVERT_OUTPUT;
+			if (isShown) {
+				std::vector<gui_track_subtrack*> subtracksVecCopy = m_trackentry->subtracks;
+				for (auto subtrack : subtracksVecCopy) {
+					if (subtrack->subtrackType() == gui_track_subtrack::SUBTRACK_TYPE_WAVE) {
+						trackCtr->removeSubtrack(m_trackentry, subtrack);
+					}
+				}
+			} else {
+				auto gui = makeGuiSubtrack(m_trackentry, MainCtrl::get(), gui_track_subtrack::SUBTRACK_TYPE_WAVE);
+				trackCtr->addSubTrack(m_trackentry, gui, true);
+			}
+
+			trackCtr->layout();
+			DawInstance::get()->updateVisibleTrackContents();
+
 			closeContextMenu(); // deletes this
 			return;
 		}

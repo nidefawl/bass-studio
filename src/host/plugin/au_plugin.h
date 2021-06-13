@@ -71,7 +71,7 @@ public:
 	ivec2 constrainSize(vst_window* window, ivec2& size);
 	bool show() override;
 	bool close() override;
-	void unload(vsthost* host) override;
+	void unload(vsthost* host, int flags) override;
 	void load(vsthost* host) override;
 //	vst_param_category* getCategory(int idx);
 //	void recvPluginEditParamUpdate(int32_t idx);

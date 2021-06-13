@@ -88,7 +88,7 @@ public:
 	virtual bool close() = 0;
 	virtual void resume() = 0;
 	virtual void sleep() = 0;
-	virtual void unload(vsthost* host);
+	virtual void unload(vsthost* host, int flags);
 	virtual void load(vsthost* host);
 	virtual int32_t getDelay() = 0;
 	virtual String getInfo(std::vector<String>& list) = 0;
@@ -109,7 +109,7 @@ public:
 	virtual void loadSnapshot(const plugin_snapshot_t& snapshot) = 0;
 	virtual void breakTrackLink();
 	virtual void setTrackLink(audio_stage_t* audioStage);
-	virtual void onPreUnload() {
+	virtual void onPreUnload(int flags) {
 
 	}
 	virtual bool isBypass() {
@@ -140,10 +140,14 @@ public:
 		return false;
 	}
 protected:
+	virtual void onEnable() {};
+	virtual void onDisable() {};
 	friend class effect_deferred;
 public:
 	virtual effect_deferred* toDeferred();
     virtual String formatDisplayValue(int32_t idx);
+    void updateOnEnableParam(automatable_param_t* param, bool wasEnable, bool isEnable, int flags);
+	virtual void getDeferredEffects(std::vector<effectbase*>& effects) { };
 };
 struct effect_deferred_impl;
 class effect_deferred : public effectbase {
@@ -172,7 +176,7 @@ public:
     String getDfrdPluginName();
     const plugin_snapshot_t& getSnapshotConst() const;
     plugin_snapshot_t& getSnapshot();
-	void onPreUnload() override;
+	void onPreUnload(int flags) override;
 	bool isDeferred() override {
 		return true;
 	}
@@ -180,6 +184,7 @@ public:
 	bool isBypass() override {
 		return true ;
 	}
+    int getModuleStoredType();
 };
 effect_deferred* loadPluginDeferred(const plugin_snapshot_t& snapshot);
 //std::shared_ptr<effect_deferred> loadPluginDeferred(const plugin_snapshot_t& snapshot);

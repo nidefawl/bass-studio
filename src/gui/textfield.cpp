@@ -203,10 +203,10 @@ void gui_textfield::renderTextField(NVGcontext* ctx) const {
 	UIFont::bindFont(ctx, instance);
 	if (!mUnits.empty()) {
 		nvgFillColor(ctx, GUI_COLORA(255, mEnabled ? 64 : 32));
+		setTfFont(ctx, this);
 		nvgTextAlign(ctx, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
 		nvgText(ctx, pos.x + size.x - X_SPACING, drawPos.y, mUnits.c_str(), nullptr);
 	}
-	setTfFont(ctx, this);
 
 	NVGcolor mTextColor = theme->getColor(GuiColor::COL_TEXTBOX_TEXT);
 	NVGcolor mTextColorDisabled = theme->getColor(GuiColor::COL_TEXTBOX_TEXT_DISABLED);
@@ -216,6 +216,7 @@ void gui_textfield::renderTextField(NVGcontext* ctx) const {
 
 
 	nvgFillColor(ctx, mColor);
+	setTfFont(ctx, this);
 
 	nvgSave(ctx);
 	nvgIntersectScissor(ctx, clipPos.x, clipPos.y, clipSize.x, clipSize.y);
@@ -251,7 +252,7 @@ void gui_textfield::renderTextField(NVGcontext* ctx) const {
             nvgBeginPath(ctx);
             nvgMoveTo(ctx, carX,  - lineh * 0.5f);
             nvgLineTo(ctx, carX,  + lineh * 0.5f);
-            nvgStrokeColor(ctx, nvgRGBA(255, 192, 0, 255));
+            nvgStrokeColor(ctx, mTextColor);
             nvgStrokeWidth(ctx, 1.0f);
             nvgStroke(ctx);
         }

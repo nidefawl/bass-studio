@@ -31,8 +31,8 @@ public:
 	String getInfo(std::vector<String>& list) override;
 	void resume() override;
 	void sleep() override;
-	void unload(vsthost* host) override;
-	void onPreUnload() override;
+	void unload(vsthost* host, int flags) override;
+	void onPreUnload(int flags) override;
 	void load(vsthost* host) override;
 	void breakTrackLink() override;
 	void setTrackLink(audio_stage_t* trImpl) override;
@@ -42,4 +42,5 @@ public:
 	void loadSnapshot(const plugin_snapshot_t& snapshot) override;
 	void postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) override;
 	void getChildAudioStages(std::vector<audio_stage_t*>& targets) override;
+	void getDeferredEffects(std::vector<effectbase*>& effects) override;
 };

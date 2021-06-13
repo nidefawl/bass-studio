@@ -86,9 +86,6 @@ public:
 	}
 	void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) {
 		const int h = this->fontSize;
-		UTIL_setFont(vg, theme, h, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-		nvgText(vg, leftOffset(), y+h/2, StringAsCStr(title), NULL);
-		nvgFontSize(vg, this->fontSize-4);
 		int n = 0;
 		for (_time_sel_entry& e : entries) {
 			if (mouse.y >= y+e.y && mouse.y < y+e.y + h && mouse.x >= e.x && mouse.x < e.x+e.w) {
@@ -106,7 +103,14 @@ public:
 				nvgFillColor(vg, theme->getColor(GuiColor::COL_CTXTMNU_OUTLINE));
 				nvgFill(vg);
 			}
-			nvgFillColor(vg, G_WHITE);
+			n++;
+
+		}
+		UTIL_setFont(vg, theme, h, theme->getContrastColor(GuiColor::COL_CTXTMNU_BG), NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+		nvgText(vg, leftOffset(), y+h/2, StringAsCStr(title), NULL);
+		nvgFontSize(vg, this->fontSize-4);
+		n = 0;
+		for (_time_sel_entry& e : entries) {
 			nvgText(vg, e.x+20, y+e.y+h/2, StringAsCStr(e.name), NULL);
 			n++;
 		}

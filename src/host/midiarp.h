@@ -14,6 +14,17 @@
 #include "track_impl.h"
 
 
+#define ARP_PARAM_CLOCK PARAM_OFFSET_IMPL
+#define ARP_PARAM_GATE (PARAM_OFFSET_IMPL+1)
+#define ARP_PARAM_PATTERN (PARAM_OFFSET_IMPL+2)
+#define ARP_PARAM_RAND_TIME (PARAM_OFFSET_IMPL+3)
+#define ARP_PARAM_RAND_MODE (PARAM_OFFSET_IMPL+4)
+#define ARP_PARAM_RAND_VEL (PARAM_OFFSET_IMPL+5)
+#define NUM_ARP_STEPSIZE_OPTIONS 16
+#define NUM_PATTERNS 6
+#define NUM_RANDOM_TIME_MODES 2
+#define NUM_ARP_MAX_POLY_VOICES 32
+
 struct arp_snapshot;
 
 class midiarp : public automatable_t {
@@ -27,29 +38,19 @@ private:
 		String name;
 		float val = 0.0f;
 	};
-//	struct arp_pattern_entry_t {
-//		std::vector<int32_t> pattern;
-//	};
-#define ARP_PARAM_CLOCK PARAM_OFFSET_IMPL
-#define ARP_PARAM_GATE (PARAM_OFFSET_IMPL+1)
-#define ARP_PARAM_PATTERN (PARAM_OFFSET_IMPL+2)
-//	const std::array<std::vector<int32_t>, 4> patterns { {
-//		{0, 1, 0, 2, 0, 3, 0, 4, 0 },
-//		{8, 7, 6, 5, 4, 3, 2, 1, 0 },
-//		{0, 1, 2, 3, 4, 3, 2, 1, 0 },
-//	} };
 	ResetMode resetMode = ResetMode::NOTE;
 	std::vector<noteevent_t> heldInput;
 	std::vector<noteevent_t> heldOutput;
+	std::vector<tick_t> curRandTimeOffset;
+	std::vector<tick_t> processTimePoints;
 public:
 	std::vector<note_t> heldOutputNotes;
 	std::vector<note_t> heldInputAnimationNotes;
 	std::vector<note_t> heldOutputAnimationNotes;
 	std::vector<marker_t> markers;
+	std::vector<marker_t> markers2;
 	std::vector<int64_t> notesSpawnTime;
 private:
-#define NUM_ARP_STEPSIZE_OPTIONS 16
-#define NUM_PATTERNS 6
 	int32_t step = 0;
 	tick_t resetTime = 0;
 	tick_t lastStepSize = 0;
@@ -57,51 +58,33 @@ private:
 	std::array<tick_t, 16*3> tickLength;
 	int32_t numCalls = 0;
 	track_impl_t* const trackImpl;
+    int maxNoteChordCount = 6;
+    long lSeed = 13L;
+    seq_rand arpRand;
+
+    void initRandomDelays(uint64_t seed, int32_t step, int32_t stepSize, int32_t startFrame, int32_t endFrame);
+
 public:
 	bool enable = false;
-	midiarp(track_impl_t* _trImpl) : automatable_t(), trackImpl(_trImpl) {
-		for (int i = 0; i < NUM_ARP_STEPSIZE_OPTIONS; i += 2) {
-			tickLength[i + 0] = (TICKS_16TH >> 3) << (i >> 1);
-			tickLength[i + 1] = tickLength[i + 0] + (tickLength[i + 0] >> 1);
-			dbgassert(tickLength[i + 0] > 0);
-		}
-		const std::array<arp_param_entry_t, 5> parameterTypes { {
-			arp_param_entry_t{PARAM_ENABLE, "Enabled", 0.0f},
-			arp_param_entry_t{PARAM_GAIN, "Gain", 1.0f},
-			arp_param_entry_t{ARP_PARAM_CLOCK, "Clock", 10.0f/(float)NUM_ARP_STEPSIZE_OPTIONS},
-			arp_param_entry_t{ARP_PARAM_GATE, "Gate", 1/4.0f},
-			arp_param_entry_t{ARP_PARAM_PATTERN, "Pattern", 0.0f},
-		} };
-		for (const arp_param_entry_t& paramEntry : parameterTypes) {
-			automatable_param_t* regparam = registerParam(paramEntry.id);
-			regparam->value = paramEntry.val;
-			regparam->label = paramEntry.name;
-			regparam->shortLabel = paramEntry.name;
-		}
-//		setParamValue(ARP_PARAM_ENABLED, 0, FLG_PAR_UPDATE_INIT);
-//		setParamValue(ARP_PARAM_CLOCK, 10/(double)NUM_ARP_STEPSIZE_OPTIONS, FLG_PAR_UPDATE_INIT);
-//		setParamValue(ARP_PARAM_GATE, 1/4.0f, FLG_PAR_UPDATE_INIT);
-//		setParamValue(ARP_PARAM_PATTERN, 0, FLG_PAR_UPDATE_INIT);
-		getOrCreateAutomation(PARAM_ENABLE)->quantizationSteps = 1;
-		getOrCreateAutomation(ARP_PARAM_CLOCK)->quantizationSteps = NUM_ARP_STEPSIZE_OPTIONS-1;
-	}
+	midiarp(track_impl_t* _trImpl);
 	~midiarp() {
 
 	}
 	void reset(tick_t _resetTime) {
 		noteIdx = 0;
 		resetTime = _resetTime;
-		step = 0;
+        step = 0;
 	}
-	void allNotesOff() {
-		heldInput.clear();
-		heldOutput.clear();
-		heldOutputNotes.clear();
-		heldInputAnimationNotes.clear();
-		markers.clear();
-	}
+	void allNotesOff();
+	void onStartPlayback();
 	float getGateF() {
 		return getParamValue(ARP_PARAM_GATE);
+	}
+	float getRandTimeF() {
+		return getParamValue(ARP_PARAM_RAND_TIME);
+	}
+	float getRandVelocityF() {
+		return getParamValue(ARP_PARAM_RAND_VEL);
 	}
 	float getPatternF() {
 		return getParamValue(ARP_PARAM_PATTERN);
@@ -112,54 +95,17 @@ public:
 	float getGainF() {
 		return getParamValue(PARAM_GAIN);
 	}
-	tick_t getStepSize() {
-		int32_t option = (int32_t)std::floor(getClockF()*(NUM_ARP_STEPSIZE_OPTIONS-1));
-		dbgassert(option<NUM_ARP_STEPSIZE_OPTIONS);
-		int32_t len = tickLength[option];
-		dbgassert(len>0);
-		return len;
-	}
-	tick_t getDuration() {
-		const int minDuration = getStepSize()>>3;
-		const int maxDuration = getStepSize()<<1;
-		tick_t len = (tick_t)std::floor(minDuration+getGateF()*(maxDuration-minDuration));
-		dbgassert(len>0);
-		return len;
-	}
-	int isChordOutput() {
-		int32_t option = (int32_t) std::floor(getPatternF() * (NUM_PATTERNS - 1));
-		dbgassert(option<NUM_PATTERNS);
-		return option == 0;
-	}
-	int getStepIdx(int step, int nNotes) {
-		int32_t option = (int32_t) std::floor(getPatternF() * (NUM_PATTERNS - 1));
-		dbgassert(option<NUM_PATTERNS);
-		if (option > 0) {
-			option--;
-		}
-		switch (option) {
-		case 0:
-			return step%nNotes;
-		case 1:
-			return nNotes-1-(step%nNotes);
-		case 2:
-			return (step/nNotes)%2 == 0 ? step%nNotes : (nNotes-1-(step%nNotes));
-		case 3:
-			return (step/nNotes)%2 == 0 ? (nNotes-1-(step%nNotes)) : step%nNotes;
-		case 4:
-			return step%2 == 0 ? 0 : (step/2)%nNotes;
-		}
-		return 0;
-	}
 
-	void addNote(std::vector<noteevent_t>& noteEvents, tick_t start, note_t& note, int64_t time) {
-		int32_t noteVelocity = math::clamp<int32_t>(this->getGainF() * note.velocity, 0, 127);
-		noteEvents.emplace_back(note.pitch, noteVelocity, note.start()-start, true, false);
-		heldOutputNotes.push_back(note);
-		heldOutputAnimationNotes.push_back(note);
-		notesSpawnTime.push_back(time);
-		dbgassert(notesSpawnTime.size() == heldOutputAnimationNotes.size());
-	}
+	tick_t getStepSize();
+	int32_t getRandTmMode();
+	tick_t getDuration();
+	int32_t getRandVelocity();
+
+	tick_t getRandTime();
+	int isChordOutput();
+	int getStepIdx(int step, int nNotes);
+
+	void addNote(std::vector<noteevent_t>& noteEvents, tick_t start, note_t& note, int64_t time);
 
 
 	String getAutomatableName() override {
@@ -189,9 +135,7 @@ public:
 				} else {
 					onDisable();
 				}
-				if (!(flags & FLG_PAR_UPDATE_INIT)) {
-					param->inUse = true;
-				}
+				param->inUse = true;
 			}
 		}
 	}
@@ -210,8 +154,9 @@ public:
 
 	void process(std::vector<noteevent_t>& noteEventsIn,
 					tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd,
-					std::vector<noteevent_t>& noteEventsProcessed);
+					std::vector<noteevent_t>& noteEventsProcessed, tick_t ticksPerBlock);
 	int writeOutputNotes(std::vector<noteevent_t>& noteEventsProcessed,
 			tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int64_t time);
 	void postSetParameter(int32_t idx, float preVal, float val, int flags) override;
 };
+

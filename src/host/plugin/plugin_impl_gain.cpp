@@ -221,12 +221,12 @@ void module_gain::resume() {
 }
 void module_gain::sleep() {
 }
-void module_gain::unload(vsthost* host) {
+void module_gain::unload(vsthost* host, int flags) {
 	dbgassert(vstHost == host);
-	effectbase::unload(host);
-	onPreUnload();
+	effectbase::unload(host, flags);
+	onPreUnload(flags);
 }
-void module_gain::onPreUnload() {
+void module_gain::onPreUnload(int flags) {
 }
 void module_gain::load(vsthost* host) {
 	effectbase::load(host);

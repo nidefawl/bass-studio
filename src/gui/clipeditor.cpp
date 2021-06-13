@@ -663,6 +663,27 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
 //			nvgStroke(vg);
 		}
 	}
+	nvgBeginPath(vg);
+	int n2 = 0;
+	if (dragMode >= drag_notes_move) {
+		for (note_t& note : view.draggedSelection) {
+			renderNote(vg, this, &note, scale);
+			n2++;
+		}
+	} else {
+		for (note_t* pnote : notes.selection) {
+			renderNote(vg, this, pnote, scale);
+			n2++;
+		}
+	}
+	if (n2) {
+		NVGpaint paint{0};
+		paint.image = -1;
+		paint.innerColor = theme->getColor(GuiColor::COL_NOTE_SELECTED);
+		paint.customPar = 3;
+	    nvgFillPaint(vg, paint);
+	    nvgBatchedRender(vg);
+	}
 
 
 	gui_clip* guiClip = view.gui;
@@ -764,65 +785,48 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
 		    nvgBatchedRender(vg);
 		}
 
-		std::vector<marker_t> markers = track->audio->getArpMarkers(); //TODO: NOT THREADSAFE
-		if (markers.size()) {
-			for (marker_t& m : markers) {
-				tick_t pos = m.time - clip->start() + clip->offsetStart;
-				if (clip->isLoopEnabled()) {
-					if (pos > clip->loopStart) {
-						pos = clip->loopStart + (pos - clip->loopStart) % clip->loopLen;
+		float yoff = 0;
+		for (int i = 0; i < 2; i++) {
+			std::vector<marker_t> markers = track->audio->getArpMarkers(i); //TODO: NOT THREADSAFE
+			if (markers.size()) {
+				for (marker_t& m : markers) {
+					tick_t pos = m.time - clip->start() + clip->offsetStart;
+					if (clip->isLoopEnabled()) {
+						if (pos > clip->loopStart) {
+							pos = clip->loopStart + (pos - clip->loopStart) % clip->loopLen;
+						}
 					}
-				}
- 				float nx = grid.tickToScreenD(pos);
-				if (nx < -4)
-					continue;
-				if (nx > w+4)
-					continue;
-				nvgBeginPath(vg);
-				nvgMoveTo(vg, nx, 0);
-				nvgLineTo(vg, nx, h);
-				nvgStrokeColor(vg, rgbToNvg(m.color));
-				nvgStrokeWidth(vg, 2.0f);
-				nvgStroke(vg);
-				if (m.desc[0]) {
-					String cstr = m.desc;
-					setFont(vg, G_FONT_SCALE(24), G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-					float bounds[4];
-					float textX = nx + INSET_TRACK_CONTENT;
-					float textY = 24/2.0 + INSET_TRACK_CONTENT;
-					float w = nvgTextBounds(vg, textX, textY, cstr.c_str(), nullptr, bounds);
+	 				float nx = grid.tickToScreenD(pos);
+					if (nx < -4)
+						continue;
+					if (nx > w+4)
+						continue;
 					nvgBeginPath(vg);
-					nvgRect(vg, bounds[0], bounds[1], bounds[2]-bounds[0], bounds[3]-bounds[1]);
-					nvgFillColor(vg, rgbaToNvg(0xFF121212));
-					nvgFill(vg);
-					nvgFillColor(vg, G_WHITE);
-					nvgText(vg, textX, textY, cstr.c_str(), nullptr);
+					nvgMoveTo(vg, nx, m.yOffset*24+0+yoff);
+					nvgLineTo(vg, nx, m.yOffset*24+h+yoff);
+					nvgStrokeColor(vg, rgbToNvg(m.color));
+					nvgStrokeWidth(vg, 2.0f);
+					nvgStroke(vg);
+					if (m.desc[0]) {
+						String cstr = m.desc;
+						setFont(vg, G_FONT_SCALE(24), G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+						float bounds[4];
+						float textX = nx + INSET_TRACK_CONTENT;
+						float textY = m.yOffset*24+24/2.0 + INSET_TRACK_CONTENT+yoff;
+						float w = nvgTextBounds(vg, textX, textY, cstr.c_str(), nullptr, bounds);
+						nvgBeginPath(vg);
+						nvgRect(vg, bounds[0], bounds[1], bounds[2]-bounds[0], bounds[3]-bounds[1]);
+						nvgFillColor(vg, rgbaToNvg(i == 0 ? 0xFF121212 : 0xFF444412));
+						nvgFill(vg);
+						nvgFillColor(vg, G_WHITE);
+						nvgText(vg, textX, textY, cstr.c_str(), nullptr);
+					}
+					yoff+=3;
 				}
 			}
 		}
 	}
 
-	nvgBeginPath(vg);
-	int n2 = 0;
-	if (dragMode >= drag_notes_move) {
-		for (note_t& note : view.draggedSelection) {
-			renderNote(vg, this, &note, scale);
-			n2++;
-		}
-	} else {
-		for (note_t* pnote : notes.selection) {
-			renderNote(vg, this, pnote, scale);
-			n2++;
-		}
-	}
-	if (n2) {
-		NVGpaint paint{0};
-		paint.image = -1;
-		paint.innerColor = theme->getColor(GuiColor::COL_NOTE_SELECTED);
-		paint.customPar = 3;
-	    nvgFillPaint(vg, paint);
-	    nvgBatchedRender(vg);
-	}
 	if (scale >= 18) {
 		int idx = 0;
 		setFont(vg, 18, theme->getColor(GuiColor::COL_NOTE_TEXT), NVG_ALIGN_LEFT|NVG_ALIGN_MIDDLE);

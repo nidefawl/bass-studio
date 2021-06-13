@@ -104,7 +104,7 @@ bool getClipPosition(scaled_grid& grid, const ivec2& scissorSize, const clip_t* 
 	int32_t tickBeginPx = (int32_t) round(tickBeginX);
 	int32_t widthPx = (int32_t) round(width);
 	pos = ivec2(tickBeginPx, INSET_TRACK_CONTENT);
-	size = ivec2(widthPx, size.y-INSET_TRACK_CONTENT*2);
+	size = math::maxvec2(ivec2(widthPx, size.y-INSET_TRACK_CONTENT*2), ivec2(1));
 	return size.x > 0 && size.y > 0;
 }
 audioclip_texture_t makeWaveformFromClip(const project_globals_t& project, scaled_grid& grid,
@@ -185,7 +185,7 @@ audioclip_texture_t makeWaveformFromClip(const project_globals_t& project, scale
 	w.sampleBeginOffset = sampleStartOffset;
 	w.sampleEnd = sampleEnd;
 	w.samplesPerPx = samplesPerPx;
-	w.linewidth = 1.5f;//+min(0.75, max(0.0, grid.zoom*32.0));
+	w.linewidth = 2.0f;
 	w.method = SampleMethod::sample_straight;
 	w.audioId = m_clip->audio.id;
 	w.clipped = size.x != sizeClipped.x;

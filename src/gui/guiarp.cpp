@@ -22,16 +22,6 @@ void gui_arp::rightClicked(MouseEvent& evt, guibase* button) {
 	if (button == &this->buttonBypass) {
 		clickedParamIdx = PARAM_ENABLE;
 	}
-	//handles directly by guiknob
-//	if (button == &this->clock) {
-//		clickedParamIdx = ARP_PARAM_CLOCK;
-//	}
-//	if (button == &this->gate) {
-//		clickedParamIdx = ARP_PARAM_GATE;
-//	}
-//	if (button == &this->pattern) {
-//		clickedParamIdx = ARP_PARAM_PATTERN;
-//	}
 	if (clickedParamIdx != -1) {
 		auto* ctxt = new guictxtmenu_at_param(this->getArp(), clickedParamIdx);
 		parentCtrl->openContextMenu(ctxt, evt.mousepos);

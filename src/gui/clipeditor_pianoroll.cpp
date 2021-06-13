@@ -157,7 +157,7 @@ void gui_pianoroll::render(NVGcontext* vg) {
 		return;
 	}
 	float h = size.y;
-
+	auto labelColor = parent->theme->getContrastColor(GuiColor::COL_BG_BRT);
 	nvgBeginPath(vg);
 	nvgRect(vg, keysX, -4, widthKeys, size.y+8);
 	nvgFillColor(vg, theme->getColor(GuiColor::COL_PIANOROLL_WHITE));
@@ -303,7 +303,7 @@ void gui_pianoroll::render(NVGcontext* vg) {
 		}
 		nvgStroke(vg);
 		const float FONT_SIZE = 24.0f;
-		setFont(vg, FONT_SIZE, G_BLACK, NVG_ALIGN_LEFT|NVG_ALIGN_MIDDLE);
+		setFont(vg, FONT_SIZE, labelColor, NVG_ALIGN_LEFT|NVG_ALIGN_MIDDLE);
 		y = 0;
 		lastOctave = -1;
 		for (int i = firstKey; len > 0 && i <= len; i++) {
@@ -421,7 +421,7 @@ void gui_pianoroll::render(NVGcontext* vg) {
 			firstKey = 0;
 		}
 		nvgRestore(vg);
-		setFont(vg, 24, G_BLACK, NVG_ALIGN_LEFT|NVG_ALIGN_BOTTOM);
+		setFont(vg, 24, labelColor, NVG_ALIGN_LEFT|NVG_ALIGN_BOTTOM);
 		char buf[5];
 		for (int32_t octave = 0; octave < MAX_OCTAVES; octave++) {
 			float y = scale*octave*12;

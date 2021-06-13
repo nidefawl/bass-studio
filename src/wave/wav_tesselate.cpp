@@ -37,7 +37,7 @@ void tesselateWaveform(audiosample_t* sample, float x, float y, audioclip_textur
 		std::vector<samplechannel_t>& smpCh = nLevel == 0 ? sample->samples : sample->downsampled[nLevel-1];
 		int stepSize = 1;
 		double dres = samplesPerPx;
-		while (dres >= 4.0 && stepSize < 64) {
+		while (dres >= 4.0 && stepSize < 32) {
 			dres /= 2.0;
 			stepSize*=2;
 		}
@@ -47,11 +47,11 @@ void tesselateWaveform(audiosample_t* sample, float x, float y, audioclip_textur
 
 
 		int verticesPerPx = waveformScaled.quality;
-		while (dres >= 2.0 && verticesPerPx < 32) {
+		while (dres >= 2.0 && verticesPerPx < 16) {
 			dres /= 2.0;
 			verticesPerPx *= 2;
 		}
-		const int sumRange = 0;
+		//const int sumRange = 1;
 
 		const float channelHeight = height / (float) sample->nChannels;
 		const float vOffset = 1.0f / (float) verticesPerPx;
@@ -89,20 +89,13 @@ void tesselateWaveform(audiosample_t* sample, float x, float y, audioclip_textur
 						float fCurX = (sampleOffset-renderOffset) * samplesToPx;
 						if (fCurX >= lastPtX+vOffset) {
 							float data = samplesChPtr[sampleIdx];
-							int noffset = 0;
-							int c = 0;
-							for (;noffset<sumRange; noffset++) {
-								if (sampleIdx+noffset > 0 && sampleIdx + noffset < lenSamplesCh) {
-									data+=samplesChPtr[sampleIdx+noffset];
-									c++;
-								}
-								if (sampleIdx-noffset > 0 && sampleIdx - noffset < lenSamplesCh) {
-									data+=samplesChPtr[sampleIdx-noffset];
-									c++;
-								}
-							}
-							if (c > 0) {
-								data /= (float)c;
+                            if (samplesPerPx >= 256) {
+                                int sumRange = samplesPerPx / 32;
+                                for (int noffset = -sumRange; noffset <= sumRange; noffset++) {
+                                    if (noffset != 0 && sampleIdx + noffset > 0 && sampleIdx + noffset < lenSamplesCh) {
+                                        data = math::absMax(data, samplesChPtr[sampleIdx + noffset]);
+                                    }
+                                }
 							}
 							float fY = -data * channelHeight / 2.0f;
 //								dbgassert(px + fCurX>0);

@@ -69,8 +69,8 @@ void gui_clipsettings::buttonClicked(guibase* button) {
 	}
 	if (&btnDuplicateLoop == button) {
 		duplicateClipLoop(view);
-
 	}
+
 	if (&btnLoop == button || &clipTimeStart == button || &clipLoopStart == button || &clipTimeLen == button
 			|| &clipTimeStartOffsedSamples == button || &clipTimeStartOffsetTicks == button || &clipLoopLen == button) {
 		clip_t* clip = view.clip();

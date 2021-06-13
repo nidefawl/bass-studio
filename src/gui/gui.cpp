@@ -48,15 +48,31 @@ void initColor() {
 	const int COLS = COLOR_PALETTE_COLS;
 	for (int i = 0; i < (int)ARR_SIZE(colorPalette); i++) {
 //		colorPalette[i] |= 0xFF000000;
-	}
-	for (int col = 0; col < COLS; col++) {
-		for (int row = 0; row < ROWS; row++) {
-			int idx = col*ROWS+row;
-			float h, s, l;
-			h = col/(COLS-1.0f);
-			s = row/(ROWS-1.0f);
-			l = 1.0f;
-			g_colorPalette[idx] = HSLtoRGB(h*0.9f+0.1f, s, l);
+    }
+    int greyCols = 2;
+    for (int col = 0; col < COLS; col++) {
+        for (int row = 0; row < ROWS; row++) {
+            int idx = col * ROWS + row;
+            switch (col) {
+            case 0:
+                g_colorPalette[idx] = nvgHSL(0, 0, math::clamp(row * 0.4f / (float)(ROWS - 1), 0.0f, 1.0f));
+                break;
+            case 1:
+                if (row == ROWS-1) {
+                    g_colorPalette[idx] = rgbaToNvg(0xffffffff);
+                }
+                else {
+                    g_colorPalette[idx] = nvgHSL(0, 0, math::clamp(0.4f + (row+1) * 0.2f / (float)(ROWS - 1), 0.0f, 1.0f));
+                }
+                
+                break;
+            default:
+                g_colorPalette[idx] =
+                    nvgHSL((col-greyCols) / ((float)COLS - greyCols) + row*0.002f, 
+						row == 0 ? 0.85f : row == 1 ? 0.65f : row == 2 ? 0.65f : 0.8f,
+                        row == 0 ? 0.15f : row == 1 ? 0.3f : row == 2 ? 0.5f : 0.65f); 
+                break;
+            }
 			colorPalette[idx] = nvgToRGBA(g_colorPalette[idx]);
 		}
 	}
@@ -174,7 +190,7 @@ void drawRecordSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& c
     nvgCircle(vg, pos.x + size.x / 2.0f, pos.y + size.y / 2.0f, radius);
     nvgClosePath(vg);
     nvgFillColor(vg, !!drawParm2 ? rgbToNvg(0xFFDD3333) : rgbToNvg(0xFF884444));
-    nvgSetShapeExtents(vg, pos.x, pos.y, size.x, size.y);
+//    nvgSetShapeExtents(vg, pos.x, pos.y, size.x, size.y);
     nvgFill(vg);
 }
 void drawTri(NVGcontext* vg, float x, float y, float h, const int dir, const NVGcolor& color, const NVGcolor& strokeColor, float strokeWidth) {

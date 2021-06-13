@@ -1693,6 +1693,14 @@ void vsthost::initThreads() {
 void vsthost::onStartPlayback(project_controller_t* ctrl) {
 	lastTickEndPos = 0;
 	lastState = playback_state::status_stop;
+	project_t* project = ctrl->getProject();
+	for (track_t* track : project->trackList) {
+		auto trackImpl = track->audio;
+		//if (!trackImpl->heldNotes.empty())
+		{
+			trackImpl->onStartPlayback();
+		}
+	}
 }
 void vsthost::onPluginsChanged(audio_stage_t* stage) {
 	log_printf("Plugins changed on audio stage %d", static_cast<int32_t>(stage->stageId.stageId));
@@ -1704,7 +1712,7 @@ void vsthost::onStopPlayback(project_controller_t* ctrl) {
 
 	for (track_t* track : project->trackList) {
 		auto trackImpl = track->audio;
-		if (!trackImpl->heldNotes.empty())
+		//if (!trackImpl->heldNotes.empty())
 		{
 			trackImpl->sendNotesOff(prjGlobals.tempo100);
 		}
@@ -2092,7 +2100,7 @@ void vsthost::unloadPlugin(effectbase* plugin, int flags) {
 			MainCtrl::get()->closeContextMenu();
 	}
 
-	plugin->onPreUnload();
+	plugin->onPreUnload(flags);
 	audio_stage_t* audioStage = plugin->getTrackLink();
 	if (audioStage) {
 		audioStage->removePlugin(plugin, false);
@@ -2105,7 +2113,7 @@ void vsthost::unloadPlugin(effectbase* plugin, int flags) {
 	if (notifyUp) {
 		plugin->close();
 	}
-	plugin->unload(this);
+	plugin->unload(this, flags);
 
 	switch (plugin->getModuleType()) {
 	case PLUGIN_TYPE_DEFERRED:

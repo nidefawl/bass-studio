@@ -132,8 +132,8 @@ bool vstplugin::onShow(vst_window* window) {
 }
 void AppWndProc_disableBlockReentrant();
 void AppWndProc_enableBlockReentrant();
-void vstplugin::unload(vsthost* host) {
-	effectbase::unload(host);
+void vstplugin::unload(vsthost* host, int flags) {
+	effectbase::unload(host, flags);
 	dbgassert(this->bIsSetup);
 //	if (handle->aeffect != NULL) {
 //		float** pluginBufIn = blockInputs->buf;
@@ -462,29 +462,18 @@ void vstplugin::setParamValue(int32_t idx, float val, int flags) {
 	dbgassert(param);
 	param->value = val;
 	if (param->idx == PARAM_ENABLE) {
-		bool wasEnable = this->bIsEnabled;
-		this->bIsEnabled = val > 0;
-		if (this->bIsEnabled != wasEnable) {
-			if (this->bIsEnabled) {
-				onEnable();
-			} else {
-				onDisable();
-			}
-			if (!(flags & FLG_PAR_UPDATE_INIT)) {
-				param->inUse = true;
-			}
-		}
+		updateOnEnableParam(param, this->bIsEnabled, val > 0, flags);
 	} else {
+		if (!(flags&FLG_PAR_UPDATE_NOSTORE) && !(flags&FLG_PAR_UPDATE_AUTOMATED)) {
+			param->inUse = true;
+		}
 		if (param->internalIdx >= 0) {
-			if (!(flags & FLG_PAR_UPDATE_INIT)) {
-				param->inUse = true;
-			}
 			vst_setParameter(this, handle->aeffect, param->internalIdx, val);
 		}
 	}
 }
 void vstplugin::postSetParameter(int32_t idx, float preVal, float val, int flags) {
-	if (flags != 2) {
+	if (!(flags&FLG_PAR_UPDATE_USER)) {
 		return;
 	}
 	dbgassert(MainCtrl::get()); // this code path is called by user edit, which is only supported on MainCtrl as of now (2020-02-09)

@@ -45,10 +45,17 @@ void guictxtmenu_notrack::clicked(int _id) {
 	            		ts.stageIds = track_id_snapshot_t{};
 	        			ts.trackLoaded->loadSnapshot(ts);
 		    			std::vector<effectbase*> effects = ts.trackLoaded->audio->deferredEffects;
-		    			for (auto eff : effects) {
-		    				host->activateDeferred(eff);
+		    			for (auto effect : effects) {
+		    				host->activateDeferred(effect, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
 		    			}
 	        		}
+	        		dbgassert(dawCtrl);
+	        		for (track_snapshot_t& ts : ctr->tracks) {
+	        			ts.trackLoaded->getStage()->pluginsChanged();
+	        		}
+	        		host->onTrackLayoutChange();
+	        		if (DawInstance::get()) DawInstance::get()->onPluginsChanged();
+
 	        	}
 			}
 			return;

@@ -155,7 +155,9 @@ track_id_snapshot_t getTrackIdSnapshot(const audio_stage_id_t& stageId) {
 	};
 }
 track_snapshot_t::track_snapshot_t(const track_t* track, bool storePluginChunks)
-  : tracksettings_t(*track), stageIds(track->audio ? getTrackIdSnapshot(track->audio->stageId) : track_id_snapshot_t{}), localIdx(track->localIdxFlat), plugins(track->audio, storePluginChunks)
+  : tracksettings_t(*track),
+	stageIds(track->audio ? getTrackIdSnapshot(track->audio->stageId) : track_id_snapshot_t{}), localIdx(track->localIdxFlat),
+	plugins(track->audio, storePluginChunks)
 {
 	auto& otherClips = track->getConstMidi().getConstClips();
 	for (auto clip : otherClips) {
@@ -695,10 +697,13 @@ void audio_stage_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginLi
 //			host->postPluginLoaded(this, effect);
 			dbgassert(effect->trackImpl == this);
 			dbgassert(effects.size());
+			if (effect->getModuleStoredType() == PLUGIN_TYPE_GROUP) {
+				host->activateDeferred(effect, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+			}
 		}
 	}
 }
-void pluginUpdateParamBypass(effectbase* effect, int state);
+
 bool vsthost::addDeferredEffect(effectbase* plugin) {
     plugin->projectGlobalId = getNextGlobalModuleId(plugin->projectGlobalId); // hell is lose
 //    plugin->projectGlobalId = getNextGlobalModuleId(0); // everything goochy
@@ -712,14 +717,14 @@ bool vsthost::addDeferredEffect(effectbase* plugin) {
 	pluginsDeferred.push_back(plugin);
     return true;
 }
-void vsthost::activateDeferred(effectbase* const eff, effectbase** out_effectLoaded, bool forceLoad) {
+void vsthost::activateDeferred(effectbase* const eff, int flags, effectbase** out_effectLoaded) {
 	dbgassert(eff->trackImpl);
 	dbgassert(eff->trackImpl->effects.size());
 	dbgassert(eff->getSlot() >= 0);
 	auto defEffect = dynamic_cast<effect_deferred*>(eff);
 	plugin_snapshot_t pluginSnapshot = defEffect->getSnapshotConst();
 	log_printf("activating deferred plugin loadEffectModule %s\n", StringAsCStr(pluginSnapshot.name));
-	effectbase* effect = loadEffectModule(pluginSnapshot, forceLoad);
+	effectbase* effect = loadEffectModule(pluginSnapshot, flags&FLAG_HOST_FORCELOAD_DISABLED_PLUGINS);
 	if (out_effectLoaded) {
 		*out_effectLoaded = effect;
 	}
@@ -755,8 +760,8 @@ void vsthost::activateDeferred(effectbase* const eff, effectbase** out_effectLoa
     }
 
 	effect->inputChannels = prevPlugin->inputChannels;
-	effect->sName = pluginSnapshot.name;
-    pluginUpdateParamBypass(effect, pluginSnapshot.enabled);
+    effect->sName = pluginSnapshot.name;
+    effect->setParamValue(PARAM_ENABLE, pluginSnapshot.enabled?1.0f:0.0f, FLG_PAR_UPDATE_INIT | FLG_PAR_UPDATE_NOSTORE);
 
     /* Load plugin parameter automation lanes */
 	loadAutomation(pluginSnapshot.automatedParams, effect);
@@ -767,11 +772,15 @@ void vsthost::activateDeferred(effectbase* const eff, effectbase** out_effectLoa
 	}
 
 	/* Unload the (previous) deferred placeholder plugin */
-	unloadPlugin(prevPlugin);
+	unloadPlugin(prevPlugin, flags);
 
-	//TODO: make this step optional (bool parameter)
-	// When loading multiple plugins only fire it for the last one, or run postPluginLoaded externally
-	postPluginLoaded(effect->getTrackLink(), effect);
+	bool notifyUp = !(flags & FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+	if (notifyUp) {
+		// When loading multiple plugins only fire it for the last one, or run postPluginLoaded externally
+
+		//TODO: this shouldn't be here!
+		postPluginLoaded(effect->getTrackLink(), effect);
+	}
 //	if (DawInstance::get()) DawInstance::get()->onPluginsChanged();
 }
 int loadSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, const track_layout_snapshot_t& snapshot)
@@ -970,8 +979,13 @@ std::vector<note_t>& track_impl_t::getArpHeldNotes() {
 	return this->arp->heldOutputAnimationNotes;
 }
 //TODO: make threadsafe getters
-std::vector<marker_t>& track_impl_t::getArpMarkers() {
+std::vector<marker_t>& track_impl_t::getArpMarkers(int n) {
+	if (n) return this->arp->markers2;
 	return this->arp->markers;
+}
+void track_impl_t::onStartPlayback() {
+	if (arp)
+		arp->onStartPlayback();
 }
 void track_impl_t::sendNotesOff(int32_t bpm100) {
 	std::vector<note_t> heldNotes = track->audio->heldNotes;
@@ -982,7 +996,7 @@ void track_impl_t::sendNotesOff(int32_t bpm100) {
 	std::vector<noteevent_t> noteEvents;
 	noteEvents.reserve(heldNotes.size());
 	for (note_t& noteHeld : heldNotes) {
-		noteEvents.emplace_back(noteHeld.pitch, 0, 0, false, false);
+		noteEvents.emplace_back(noteHeld.pitch, 0, 0, 0, false, false);
 	}
 	sortNoteEvents(noteEvents);
 	const double ticksPerBlock = toTickPrecise(sampleFormat.blockSize/(double)sampleFormat.sampleRate, bpm100);
@@ -1010,6 +1024,8 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 	if (std::any_of(effects.begin(), effects.end(), [](const effectbase* ref){
 			return ref->bCanReceiveMidi;
 	})) {
+		const double ticksPerBlock = toTickPrecise(sampleFormat.blockSize/(double)sampleFormat.sampleRate, bpm100);
+		const double tickToSamples = (60.0*sampleFormat.sampleRate) / (bpm100/100.0*TICKS_QUARTER);
 		std::vector<note_t> notes;
 		hires_timer_t tmr;
 
@@ -1064,12 +1080,12 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 			for (note_t& note : notes) {
 				if (note.start() >= start && note.start() < end) {
 					notesBegin.push_back(note);
-					noteEvents.emplace_back(note.pitch, note.velocity, note.start()-start, true, false);
+					noteEvents.emplace_back(note.pitch, note.velocity, note.start()-start, note.start(), true, false);
 				}
 
 				if (note.end() > start && note.end() <= end) {
 					notesEnd.push_back(note);
-					noteEvents.emplace_back(note.pitch, note.velocity, note.end()-start-1, false, note.end() == loopEnd);
+					noteEvents.emplace_back(note.pitch, note.velocity, note.end()-start-1, note.end()-1, false, note.end() == loopEnd);
 				}
 			}
 			time3 = (time3 * 19 + tmr.getTime()) / 20;
@@ -1088,7 +1104,7 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 				if (!found) {
 					my_printf("force note end!\n", 0);
 					notesEnd.push_back(noteHeld);
-					noteEvents.emplace_back(noteHeld.pitch, 0, 0, false, false);
+					noteEvents.emplace_back(noteHeld.pitch, 0, 0, 0, false, false);
 				}
 			}
 			time4 = (time4 * 19 + tmr.getTime()) / 20;
@@ -1102,7 +1118,7 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 			tmr.reset();
 			std::vector<noteevent_t> noteEventsProcessed;
 			if (flags & MidiFlags::PROCESS_ARP) {
-				arp->process(noteEvents, start, end, loopStart, loopEnd, noteEventsProcessed);
+                arp->process(noteEvents, start, end, loopStart, loopEnd, noteEventsProcessed, math::floorF32toS32(ticksPerBlock));
 			} else {
 				noteEventsProcessed = std::move(noteEvents);
 			}
@@ -1112,8 +1128,6 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 			if (numEvents > 0)
 			{
 				VstEvent_t* midiEventsBuf = reallocEvts(numEvents);
-				const double ticksPerBlock = toTickPrecise(sampleFormat.blockSize/(double)sampleFormat.sampleRate, bpm100);
-				const double tickToSamples = (60.0*sampleFormat.sampleRate) / (bpm100/100.0*TICKS_QUARTER);
 				for (noteevent_t& evt : noteEventsProcessed) {
 					dbgassert(evt.tickOffsetInBlock >= 0 && evt.tickOffsetInBlock < ticksPerBlock);
 					midiEventsBuf->writeVstMidiEvt(evt, tickToSamples, sampleFormat.blockSize);

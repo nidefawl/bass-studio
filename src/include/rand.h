@@ -10,7 +10,7 @@ public:
 	}
 	uint32_t rng_rand(uint32_t max)
 	{
-	    return rng_rand()%max;
+        return max == 0 ? 0 : rng_rand() % max;
 	}
 	uint32_t rng_rand()
 	{

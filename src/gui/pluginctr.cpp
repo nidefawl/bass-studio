@@ -142,7 +142,6 @@ public:
                             return;
                         }
 	                    effect->getSnapshot().projectGlobalId = effect->projectGlobalId;
-	        			stage->deferredEffects.push_back(effect);
 	        			effect->load(host);
 	        			host->insertNewPlugin(stage, effect, -2); // insert at end
 	        			host->postPluginLoaded(stage, effect);
@@ -183,11 +182,11 @@ void guictr_plugins::addGui(effectbase* plugin) {
 }
 
 void pastePluginClipboard(std::shared_ptr<plugin_clipboard_t>& clipboard, audio_stage_t* stage, int32_t pos) {
+	vsthost* host = vsthost::getInstance();
 	for (const plugin_snapshot_t& pluginSnapshot : clipboard->plugins) {
 		auto effect = loadPluginDeferred(pluginSnapshot);
 		if (effect) {
 			effect->projectGlobalId = 0; // generate new id
-			vsthost* host = vsthost::getInstance();
 			stage->deferredEffects.push_back(effect);
             if (!host->addDeferredEffect(effect)) {
                 log_printf("Failed loading effect\n", 0);
@@ -200,14 +199,15 @@ void pastePluginClipboard(std::shared_ptr<plugin_clipboard_t>& clipboard, audio_
 			//keep negative values
             if (pos >= 0)
                 pos++;
-			host->activateDeferred(effect);
+			host->activateDeferred(effect, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
 		} else {
 			//TODO: handle
 		}
 	}
 	stage->pluginsChanged();
+	host->onTrackLayoutChange();
 	if (DawInstance::get()) DawInstance::get()->onPluginsChanged();
-	MainCtrl::getPluginCtr()->relayout();
+
 }
 std::shared_ptr<plugin_clipboard_t> copyPluginSelection(plugin_selection& sel) {
 	std::vector<plugin_snapshot_t> pluginSnapshots;

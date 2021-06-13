@@ -350,8 +350,8 @@ int runCommandLineHost(int argc, const char* argv[]) {
             		my_printf("loading %d plugins\n", pluginsDeferred.size());
             		for (auto plugin : pluginsDeferred) {
                 		my_printf("activate %s\n", StringAsCStr(plugin->sName));
-                		effectbase* effectLoaded = nullptr;
-            			host->activateDeferred(plugin, &effectLoaded);
+
+            			host->activateDeferred(plugin, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
 //            			if (effectLoaded) {
 //            				effectLoaded->show();
 //            			}
@@ -397,7 +397,7 @@ int runCommandLineHost(int argc, const char* argv[]) {
 
     		    			std::vector<effectbase*> effects = ts.trackLoaded->audio->deferredEffects;
     		    			for (auto eff : effects) {
-    		    				host->activateDeferred(eff);
+    	            			host->activateDeferred(eff, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
     		    			}
     	        		}
             		}

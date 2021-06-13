@@ -32,7 +32,7 @@ bool auplugin::onResize(vst_window* window, ivec2 size){ return false; }
 ivec2 auplugin::constrainSize(vst_window* window, ivec2& size){return size;}
 bool auplugin::show(){ return false; }
 bool auplugin::close(){ return false; }
-void auplugin::unload(vsthost* host){ }
+void auplugin::unload(vsthost* host, int flags){ }
 void auplugin::load(vsthost* host){ }
 //	vst_param_category* getCategory(int idx);
 //	void recvPluginEditParamUpdate(int32_t idx);
@@ -73,20 +73,9 @@ void auplugin::setParamValue(int32_t idx, float val, int flags) {
 	dbgassert(param);
 	param->value = val;
 	if (param->idx == PARAM_ENABLE) {
-		bool wasEnable = this->bIsEnabled;
-		this->bIsEnabled = val > 0;
-		if (this->bIsEnabled != wasEnable) {
-			if (this->bIsEnabled) {
-				onEnable();
-			} else {
-				onDisable();
-			}
-			if (!(flags & FLG_PAR_UPDATE_INIT)) {
-				param->inUse = true;
-			}
-		}
+		updateOnEnableParam(param, this->bIsEnabled, val > 0, flags);
 	} else {
-		if (!(flags & FLG_PAR_UPDATE_INIT)) {
+		if (!(flags&FLG_PAR_UPDATE_NOSTORE) && !(flags&FLG_PAR_UPDATE_AUTOMATED)) {
 			param->inUse = true;
 		}
 		if (param->internalIdx >= 0) {

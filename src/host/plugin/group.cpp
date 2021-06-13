@@ -41,6 +41,7 @@
 #include "snapshot.h"
 #include "file/memoryarchive.h"
 #include "host/effect_graph.h"
+#include "seq_util.h"
 
 class guimodule_group : public guiplugin {
 public:
@@ -250,17 +251,17 @@ void module_group::resume() {
 }
 void module_group::sleep() {
 }
-void module_group::unload(vsthost* host) {
+void module_group::unload(vsthost* host, int flags) {
 	dbgassert(vstHost == host);
-	effectbase::unload(host);
-	onPreUnload();
+	effectbase::unload(host, flags);
+	onPreUnload(flags);
 	host->releaseAudioStage(audio);
 	this->audio = nullptr;
 }
-void module_group::onPreUnload() {
+void module_group::onPreUnload(int flags) {
 	std::vector<effectbase*> effects = this->audio->effects; // make a copy before unloading plugins
 	for (effectbase* effect : effects) {
-		vstHost->unloadPlugin(effect);
+		vstHost->unloadPlugin(effect, flags);
 	}
 }
 void module_group::load(vsthost* host) {
@@ -318,7 +319,7 @@ void module_group::process(AudioBlock* in, AudioBlock* out, int32_t samplePos, i
 		log_printf("Failed building effect graph\n", 0);
 	}
 
-	vsthost::getInstance()->processAudio(audio, &audio->input, &audio->output, samplePos, numSamples, state, effProcessingGraph.get());
+	vstHost->processAudio(audio, &audio->input, &audio->output, samplePos, numSamples, state, effProcessingGraph.get());
 
 	//TODO: this code path runs on a workerthread. Store processing-graph add to vsthost::lastProcessingGraphs from playback-thread
 
@@ -344,7 +345,13 @@ void module_group::postProcess(AudioBlock* out, int32_t samples, bool hasProcess
 
 void module_group::loadSnapshot(const plugin_snapshot_t& pluginSnapshot)  {
 	dbgassert(audio);
-	this->audio->loadPlugins(pluginSnapshot.pluginSnapshots);
+	audio->loadPlugins(pluginSnapshot.pluginSnapshots);
+	audio->pluginsChanged();
+//	vstHost->onTrackLayoutChange();
+//	if (DawInstance::get()) DawInstance::get()->onPluginsChanged();
+}
+void module_group::getDeferredEffects(std::vector<effectbase*>& targets) {
+	audio->getDeferredEffects(targets);
 }
 void module_group::makeSnapshot(plugin_snapshot_t& snapshot, bool storePluginChunks) {
 	dbgassert(audio);

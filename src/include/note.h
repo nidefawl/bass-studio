@@ -12,6 +12,7 @@ struct marker_t {
 	tick_t time;
 	int32_t color;
 	String desc;
+	float yOffset = 0;
 };
 
 class track_t;
@@ -86,9 +87,10 @@ struct noteevent_t {
 	int32_t pitch = 0;
 	int32_t velocity = 127;
 	tick_t tickOffsetInBlock;
+	tick_t globalTick = 0;
 	bool isNoteOn;
 	bool isLoopNoteOff;
-	noteevent_t(int32_t p, int32_t v, tick_t t, bool b, bool b2) : pitch(p), velocity(v), tickOffsetInBlock(t), isNoteOn(b), isLoopNoteOff(b2) {
+	noteevent_t(int32_t p, int32_t v, tick_t t, tick_t gt, bool b, bool b2) : pitch(p), velocity(v), tickOffsetInBlock(t), globalTick(gt), isNoteOn(b), isLoopNoteOff(b2) {
 
 	}
 };
@@ -157,5 +159,11 @@ inline void offsetEndTime(std::vector<note_t>& notesPtrs, tick_t offset, tick_t 
 	}
 }
 int cutIntersecting(std::vector<note_t>& m_list, note_t& n, bool eliminateDupes);
+
+/* shortens end of intersecting notes, does not remove any notes, instead looks for exact duplicates 
+* returns: -1 if exact duplicate is present
+*		   otherwise the return value is a positive number and represents the number notes modified in the list
+*/
+int cutNoteOutOfList(std::vector<note_t>& m_list, note_t& n, bool eliminateDupes);
 
 void sortNoteEvents(std::vector<noteevent_t>& noteEvents);

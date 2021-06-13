@@ -408,17 +408,25 @@ public:
 			ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 			auto* host = vsthost::getInstance();
     		std::vector<effectbase*> pluginsDeferred;
+    		std::vector<audio_stage_t*> audioStagesAffected;
     		host->getDeferredEffects(pluginsDeferred);
     		my_printf("loading %d plugins\n", pluginsDeferred.size());
     		for (auto plugin : pluginsDeferred) {
         		my_printf("activate %s\n", StringAsCStr(plugin->sName));
         		effectbase* effectLoaded = nullptr;
-    			host->activateDeferred(plugin, &effectLoaded);
-    			DawInstance::get()->onPluginsChanged();
-//            			if (effectLoaded) {
+    			host->activateDeferred(plugin, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &effectLoaded);
+
+				if (effectLoaded) {
 //            				effectLoaded->show();
-//            			}
+					audioStagesAffected.push_back(effectLoaded->getTrackLink());
+				}
     		}
+    		for (audio_stage_t* stage : audioStagesAffected) {
+    			vsthost::getInstance()->postPluginLoaded(stage, nullptr);
+    		}
+			DawInstance::get()->onPluginsChanged();
+
+
 		} else if (STL_CONTAINS(entries, button)) {
 			gui_pluginsloaded_list_entry* entry = dynamic_cast<gui_pluginsloaded_list_entry*>(button);
 			auto* effectbase = safeRefGet(entry->getRef());

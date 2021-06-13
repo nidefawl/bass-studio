@@ -86,8 +86,8 @@ void module_empty::resume() {
 }
 void module_empty::sleep() {
 }
-void module_empty::unload(vsthost* host) {
-	effectbase::unload(host);
+void module_empty::unload(vsthost* host, int flags) {
+	effectbase::unload(host, flags);
 }
 void module_empty::load(vsthost* host) {
 	effectbase::load(host);

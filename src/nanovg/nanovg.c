@@ -2481,10 +2481,14 @@ void nvgCircleFastNDivs(NVGcontext* ctx, float cx, float cy, float r, int ndivs)
 }
 void nvgCircleFast(NVGcontext* ctx, float cx, float cy, float r) {
 	int ndiv = nvg__mini(64, nvg__maxi(6, (int)ceilf(4*r)));
+	nvg__setPaintTransformTranslate(ctx, cx-r, cy-r);
+	nvg__setPaintExtent(ctx, r*2, r*2);
 	nvgCircleFastNDivs(ctx, cx, cy, r, ndiv);
 }
 void nvgCircle(NVGcontext* ctx, float cx, float cy, float r)
 {
+	nvg__setPaintTransformTranslate(ctx, cx-r, cy-r);
+	nvg__setPaintExtent(ctx, r*2, r*2);
 	nvgEllipse(ctx, cx,cy, r,r);
 }
 

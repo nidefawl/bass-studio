@@ -196,6 +196,6 @@ void audiocache::store(samplefile_index_t& v) {
 void audiocache::load(samplefile_index_t& v) {
 	list.reserve(v.list.size());
 	for (auto& w : v.list) {
-//		loadFile(w.name, w.id);
+		loadFile(w.name, w.id);
 	}
 }

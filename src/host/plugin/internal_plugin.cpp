@@ -181,19 +181,10 @@ void internalplugin::setParamValue(int32_t idx, float val, int flags) {
 	param->value = val;
 	if (param->idx == PARAM_ENABLE) {
 		bool wasEnable = this->bIsEnabled;
-		this->bIsEnabled = val > 0;
-		if (this->bIsEnabled != wasEnable) {
-			if (this->bIsEnabled) {
-				onEnable();
-			} else {
-				onDisable();
-			}
-			if (!(flags & FLG_PAR_UPDATE_INIT)) {
-				param->inUse = true;
-			}
-		}
+		bool isEnabled = val > 0;
+		updateOnEnableParam(param, wasEnable, isEnabled, flags);
 	} else {
-		if (!(flags & FLG_PAR_UPDATE_INIT)) {
+		if (!(flags&FLG_PAR_UPDATE_NOSTORE) && !(flags&FLG_PAR_UPDATE_AUTOMATED)) {
 			param->inUse = true;
 		}
 		if (param->internalIdx >= 0) {

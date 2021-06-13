@@ -55,7 +55,7 @@ struct audio_stage_t;
 //	void sleep() override
 //	{
 //	}
-//	void unload(vsthost* host) override
+//	void unload(vsthost* host, int flags) override
 //	{
 //		effectbase::unload(host);
 //	}
@@ -98,8 +98,8 @@ public:
 	String getInfo(std::vector<String>& list) override;
 	void resume() override;
 	void sleep() override;
-	void unload(vsthost* host) override;
-	void onPreUnload() override;
+	void unload(vsthost* host, int flags) override;
+	void onPreUnload(int flags) override;
 	void load(vsthost* host) override;
 	void breakTrackLink() override;
 	void setTrackLink(audio_stage_t* trImpl) override;

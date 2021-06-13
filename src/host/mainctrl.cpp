@@ -81,6 +81,9 @@
 
 	int32_t getNumClipAllocations();
 
+extern "C" {
+	void resetShaderTimeOffset();
+}
 void dragdrop_midifile::reset() {
 	if (isLoaded) {
 
@@ -834,6 +837,7 @@ void DawInstance::setEmptyProject() {
 	}
 	insertNewTrack(-1, TRACK_TYPE_MIDI, FLG_TRK_CHANGE_LOAD);
 	insertNewTrack(-1, TRACK_TYPE_MASTER, 0);
+	resetShaderTimeOffset();
 
 }
 #if CREATE_DEBUG_COMPANION_WINDOW
@@ -1633,6 +1637,8 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
 		 * plugin loading can take a long time and will block the main thread.
 		 * Ideally this would happen on another thread, but that might not work for all vst plugins.
 		 */
+		std::vector<effectbase*> pluginsLoaded;
+		pluginsLoaded.reserve(pluginsDeferred.size());
 		log_printf("begin plugin list loading\n", 0);
 		int len = pluginsDeferred.size();
 		for (int i = 0; i < len; i++) {
@@ -1657,12 +1663,20 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
 			/** TODO: vsync **/
 			threadSleep(16);
 			log_printf("pre activateDeferred %s\n", StringAsCStr(ctr.text));
-			host->activateDeferred(plugin);
+			effectbase* pluginLoaded;
+			host->activateDeferred(plugin, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &pluginLoaded);
 			log_printf("post activateDeferred %s\n", StringAsCStr(ctr.text));
+			if (pluginLoaded) {
+				pluginsLoaded.push_back(pluginLoaded);
+			}
 		}
 		log_printf("end plugin list loading\n", 0);
 		ctr.setControl(nullptr);
 		AppWndProc_disableBlockReentrant();
+		for (track_t* tr : project.trackList) {
+			tr->getStage()->pluginsChanged();
+		}
+		host->onTrackLayoutChange();
 	}
 
 	/** load layouts **/
@@ -1803,6 +1817,7 @@ guitrack_editor& MainCtrl::getTrackEditor() {
 void MainCtrl::onPluginsChanged() {
 	view->ctr_nodes.reset();
 	view->ctr_nodes.refresh();
+	view->ctr_plugins.relayout();
 }
 void MainCtrl::updateVisibleTrackContents() {
 	view->ctr_tracks.updateVisibleTrackContents();
