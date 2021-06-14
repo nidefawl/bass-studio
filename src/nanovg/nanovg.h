@@ -40,6 +40,7 @@ struct NVGpaint {
 	int image;
 	int objectId;
 	int objectType;
+	int renderType;
 	int customPar;
 };
 typedef struct NVGpaint NVGpaint;

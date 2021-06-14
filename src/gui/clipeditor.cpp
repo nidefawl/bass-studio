@@ -327,85 +327,91 @@ void gui_clipcontent_velocities::render(NVGcontext* vg) {
 	}
 
 	const float h = size.y;
-	const int32_t nw = 4;
-	const float r = 4;
 	const clip_notes_t& notes = view.clip()->notes;
+	NVGpaint paint{0};
+	paint.image = -1;
+	paint.customPar = 1;
+	nvgShapeAntiAlias(vg, 0);
+	const float extendCullCheck = 8.0f;
 	if (!notes.empty()) {
+		const int32_t nw = 4;
+		const float r = 4;
 		for (int i = 0; i < 2; i++) {
-			nvgBeginPath(vg);
+			int nRendered = 0;
 			for (const note_t& note : notes.m_list) {
 				if ((i==0) != note.isEnabled())
 					continue;
 				float nx = grid.tickToScreenD(note.time);
-				if (nx + nw/2.0f < -4) continue;
-				if (nx - nw/2.0f > w+4) continue;
+				if (nx + nw/2.0f < -extendCullCheck) continue;
+				if (nx - nw/2.0f > w+extendCullCheck) continue;
 				float nh = velocityToFloat(note.velocity)*h;
 				float insetx = calcInset(1, nw);
 				float insety = calcInset(1, nh);
-				nvgRect(vg, nx-nw/2.0f+insetx, size.y - nh+insety, nw-insetx*2, nh-insety*2);
+				nvgBatchedRect(vg, nx-nw/2.0f+insetx, size.y - nh+insety, nw-insetx*2, nh-insety*2);
+				nRendered++;
 			}
-			nvgFillColor(vg, theme->getColor(i==0?GuiColor::COL_NOTE:GuiColor::COL_NOTE_MUTE));
-			nvgFill(vg);
-			nvgStrokeWidth(vg, 1.0f);
-			nvgStrokeColor(vg, theme->getColor(GuiColor::COL_NOTE_OUTLINE));
-			nvgStroke(vg);
-			nvgBeginPath(vg);
-			for (const note_t& note : notes.m_list) {
-				if ((i==0) != note.isEnabled())
-					continue;
-				float nx = grid.tickToScreenD(note.time);
-				if (nx + r < -4) continue;
-				if (nx - r > w+4) continue;
-				float nh = velocityToFloat(note.velocity)*h;
-				nvgCircle(vg, nx, size.y-nh, r);
-//				nvgCircleFastNDivs(vg, nx+w/2.0f, size.y-nh, 4.0f, 6);
+			if (nRendered) {
+				paint.innerColor = theme->getColor(i==0?GuiColor::COL_NOTE:GuiColor::COL_NOTE_MUTE);
+			    paint.renderType = 4;
+			    nvgFillPaint(vg, paint);
+			    nvgBatchedRender(vg);
+
+				for (const note_t& note : notes.m_list) {
+					if ((i==0) != note.isEnabled())
+						continue;
+					float nx = grid.tickToScreenD(note.time);
+					if (nx + r < -extendCullCheck) continue;
+					if (nx - r > w+extendCullCheck) continue;
+					float nh = velocityToFloat(note.velocity)*h;
+					nvgBatchedRect(vg, nx-r, size.y-nh-r, r*2, r*2);
+				}
+			    paint.renderType = 5;
+			    nvgFillPaint(vg, paint);
+				nvgBatchedRender(vg);
 			}
-			nvgFillColor(vg, theme->getColor(i==0?GuiColor::COL_NOTE:GuiColor::COL_NOTE_MUTE));
-			nvgFill(vg);
-			nvgStrokeWidth(vg, 1.0f);
-			nvgStrokeColor(vg, theme->getColor(GuiColor::COL_NOTE_OUTLINE));
-			nvgStroke(vg);
 		}
 	}
 	if (!notes.selection.empty()) {
+		const int32_t nw = 5;
+		const float r = 5;
 		for (int i = 0; i < 2; i++) {
-			nvgBeginPath(vg);
+			int nRendered = 0;
 			for (const note_t* pnote : notes.selection) {
 				if ((i==0) != pnote->isEnabled())
 					continue;
 				float nx = grid.tickToScreenD(pnote->time);
-				if (nx + nw/2.0f < -4) continue;
-				if (nx - nw/2.0f > w+4) continue;
+				if (nx + nw/2.0f < -extendCullCheck) continue;
+				if (nx - nw/2.0f > w+extendCullCheck) continue;
 				float nh = velocityToFloat(pnote->velocity)*h;
 				float insetx = calcInset(1, nw);
 				float insety = calcInset(1, nh);
-				nvgRect(vg, nx-nw/2.0f+insetx, size.y - nh+insety, nw-insetx*2, nh-insety*2);
+				nvgBatchedRect(vg, nx-nw/2.0f+insetx, size.y - nh+insety, nw-insetx*2, nh-insety*2);
+				nRendered++;
 			}
-			nvgFillColor(vg, theme->getColor(i==0?GuiColor::COL_NOTE:GuiColor::COL_NOTE_MUTE));
-			nvgFill(vg);
-			nvgStrokeWidth(vg, 1.0f);
-			nvgStrokeColor(vg, GUI_COLOR(200));
-			nvgStroke(vg);
-
-			nvgBeginPath(vg);
-			for (const note_t* pnote : notes.selection) {
-				if ((i==0) != pnote->isEnabled())
-					continue;
-				float nx = grid.tickToScreenD(pnote->time);
-				if (nx + r < -4) continue;
-				if (nx - r > w+4) continue;
-				float nh = velocityToFloat(pnote->velocity)*h;
-				nvgCircle(vg, nx, size.y-nh, r);
-		//				nvgCircleFastNDivs(vg, nx+w/2.0f, size.y-nh, 4.0f, 6);
+			if (nRendered) {
+				paint.innerColor = theme->getColor(i==0?GuiColor::COL_NOTE_SELECTED:GuiColor::COL_NOTE_MUTE);
+			    paint.renderType = 4;
+			    nvgFillPaint(vg, paint);
+			    nvgBatchedRender(vg);
+				for (const note_t* pnote : notes.selection) {
+					if ((i==0) != pnote->isEnabled())
+						continue;
+					float nx = grid.tickToScreenD(pnote->time);
+					if (nx + r < -extendCullCheck) continue;
+					if (nx - r > w+extendCullCheck) continue;
+					float nh = velocityToFloat(pnote->velocity)*h;
+					nvgBatchedRect(vg, nx-r, size.y-nh-r, r*2, r*2);
+				}
+			    paint.renderType = 5;
+			    nvgFillPaint(vg, paint);
+			    nvgBatchedRender(vg);
 			}
-			nvgFillColor(vg, theme->getColor(i==0?GuiColor::COL_NOTE:GuiColor::COL_NOTE_MUTE));
-			nvgFill(vg);
-			nvgStrokeWidth(vg, 1.0f);
-			nvgStrokeColor(vg, GUI_COLOR(200));
-			nvgStroke(vg);
 		}
 	}
+	nvgShapeAntiAlias(vg, USE_NANOVG_AA);
 	if (dragMode <= drag_frame) {
+		const int32_t nw = 6;
+		const float r = 6;
 		ivec2 imouse = toControlsObjectSpace(MainCtrl::get()->m_mousePos, this);
 		bool mouseIn = MainCtrl::get()->guiOver == this && contains(imouse+getPosContent());
 		if (mouseIn) {
@@ -426,21 +432,21 @@ void gui_clipcontent_velocities::render(NVGcontext* vg) {
 				float insety = calcInset(1, nh);
 				nvgRect(vg, nx-nw/2.0f+insetx, size.y - nh+insety, nw-insetx*2, nh-insety*2);
 
-//				nvgFillColor(vg, theme->getColor(GuiColor::COL_NOTE));
-//				nvgFill(vg);
-				nvgStrokeWidth(vg, 2.0f);
-				nvgStrokeColor(vg, GUI_COLOR(251));
-				nvgStroke(vg);
+				nvgFillColor(vg, theme->getColor(GuiColor::COL_NOTE_SELECTED));
+				nvgFill(vg);
+//				nvgStrokeWidth(vg, 2.0f);
+//				nvgStrokeColor(vg, GUI_COLOR(251));
+//				nvgStroke(vg);
 
 				nvgBeginPath(vg);
 				nvgCircle(vg, nx, size.y-nh, r);
 
-//				nvgFillColor(vg, theme->getColor(i==0?GuiColor::COL_NOTE:GuiColor::COL_NOTE_MUTE));
-//				nvgFill(vg);
+				nvgFillColor(vg, theme->getColor(GuiColor::COL_NOTE_SELECTED));
+				nvgFill(vg);
 
-				nvgStrokeWidth(vg, 2.0f);
-				nvgStrokeColor(vg, GUI_COLOR(251));
-				nvgStroke(vg);
+//				nvgStrokeWidth(vg, 2.0f);
+//				nvgStrokeColor(vg, GUI_COLOR(251));
+//				nvgStroke(vg);
 			}
 
 		}
@@ -631,7 +637,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
 //	nvgRestore(vg);
 	if (!notes.empty()) {
 		for (int i = 0; i < 2; i++) {
-//			nvgBeginPath(vg);
+			int nRendered = 0;
 			for (note_t& note : notes.m_list) {
 				if ((i==0) != note.isEnabled())
 					continue;
@@ -646,21 +652,17 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
 				float insetx = calcInset(1, nw);
 				float insety = calcInset(1, nh);
 				nvgBatchedRect(vg, nx+insetx, ny - scale+insety, nw-insetx*2, nh-insety*2);
-//				nvgRect(vg, nx+insetx, ny - scale+insety, nw-insetx*2, nh-insety*2);
+				nRendered++;
 			}
-			auto noteColor = theme->getColor(i==0?GuiColor::COL_NOTE:GuiColor::COL_NOTE_MUTE);
-			NVGpaint paint{0};
-			paint.image = -1;
-			paint.innerColor = noteColor;
-			paint.customPar = 1;
-		    nvgFillPaint(vg, paint);
-		    nvgBatchedRender(vg);
-
-//			nvgFillColor(vg, noteColor);
-//			nvgFill(vg);
-//			nvgStrokeWidth(vg, 1.0f);
-//			nvgStrokeColor(vg, theme->getColor(GuiColor::COL_NOTE_OUTLINE));
-//			nvgStroke(vg);
+			if (nRendered) {
+				auto noteColor = theme->getColor(i==0?GuiColor::COL_NOTE:GuiColor::COL_NOTE_MUTE);
+				NVGpaint paint{0};
+				paint.image = -1;
+				paint.innerColor = noteColor;
+				paint.customPar = 1;
+				nvgFillPaint(vg, paint);
+				nvgBatchedRender(vg);
+			}
 		}
 	}
 	nvgBeginPath(vg);
@@ -692,31 +694,35 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
 		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 		clip_t* clip = guiClip->m_clip;
 
-//		std::vector<note_t> heldRealtimeNotes = vsthost::getInstance()->getRealtimeNotes(); //TODO: NOT THREADSAFE
-//		if (heldRealtimeNotes.size() && 0) {
-//			nvgBeginPath(vg);
-//
-//			for (note_t& note : heldRealtimeNotes) {
-//				tick_t pos = note.start() - clip->start() + clip->offsetStart;
-//				if (clip->isLoopEnabled()) {
-//					if (pos > clip->loopStart) {
-//						pos = clip->loopStart + (pos - clip->loopStart) % clip->loopLen;
-//					}
-//				}
-//				//TODO: CULL
-//				renderNote(vg, this, &note, scale, -note.start() + pos);
-//			}
-//			nvgFillColor(vg, theme->getColor(GuiColor::COL_NOTE_REALTIME));
-//			nvgFill(vg);
-//			nvgStrokeWidth(vg, 1.0f);
-//			nvgStrokeColor(vg, theme->getColor(GuiColor::COL_NOTE_OUTLINE));
-//			nvgStroke(vg);
-//		}
-
+		std::vector<note_t> heldRealtimeNotes = vsthost::getInstance()->getRealtimeNotes(); //TODO: NOT THREADSAFE
+		if (heldRealtimeNotes.size()) {
+			int nRendered = 0;
+			for (note_t& note : heldRealtimeNotes) {
+				if (note.isRealtime()) {
+					continue;
+				}
+				tick_t pos = note.start() - clip->start() + clip->offsetStart;
+				if (clip->isLoopEnabled()) {
+					if (pos > clip->loopStart) {
+						pos = clip->loopStart + (pos - clip->loopStart) % clip->loopLen;
+					}
+				}
+				//TODO: CULL
+				renderNote(vg, this, &note, scale, -note.start() + pos);
+				nRendered++;
+			}
+			if (nRendered) {
+				NVGpaint paint{0};
+				paint.image = -1;
+				paint.innerColor = theme->getColor(GuiColor::COL_NOTE_REALTIME);
+				paint.customPar = 2;
+				nvgFillPaint(vg, paint);
+				nvgBatchedRender(vg);
+			}
+		}
 		std::vector<note_t>& heldNotes = track->audio->heldNotes;
 		if (heldNotes.size()) {
-			nvgBeginPath(vg);
-
+			int nRendered = 0;
 			for (note_t& note : heldNotes) {
 				if (note.isRealtime()) {
 					continue;
@@ -729,18 +735,16 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
 				}
 				//TODO: CULL
 				renderNote(vg, this, &note, scale, -note.start() + pos);
+				nRendered++;
 			}
-//			nvgFillColor(vg, theme->getColor(GuiColor::COL_NOTE_PLAYING));
-//			nvgFill(vg);
-//			nvgStrokeWidth(vg, 1.0f);
-//			nvgStrokeColor(vg, theme->getColor(GuiColor::COL_NOTE_OUTLINE));
-//			nvgStroke(vg);
-			NVGpaint paint{0};
-			paint.image = -1;
-			paint.innerColor = theme->getColor(GuiColor::COL_NOTE_PLAYING);
-			paint.customPar = 2;
-		    nvgFillPaint(vg, paint);
-		    nvgBatchedRender(vg);
+			if (nRendered) {
+				NVGpaint paint{0};
+				paint.image = -1;
+				paint.innerColor = theme->getColor(GuiColor::COL_NOTE_PLAYING);
+				paint.customPar = 2;
+				nvgFillPaint(vg, paint);
+				nvgBatchedRender(vg);
+			}
 		}
 
 //		std::vector<note_t>& heldNotesArpIn = track->audio->getArpInputNotes(); //TODO: NOT THREADSAFE

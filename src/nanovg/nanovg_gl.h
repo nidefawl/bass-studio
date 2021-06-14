@@ -144,6 +144,7 @@ NVGLUframebuffer* nvgluCreateTempFramebuffer(NVGcontext* ctx, int w, int h, int 
 #include <string.h>
 #include <math.h>
 #include "nanovg.h"
+#include "assert_dbg.h"
 
 
 enum GLNVGuniformLoc {
@@ -159,7 +160,8 @@ enum GLNVGshaderType {
 	NSVG_SHADER_FILLIMG,
 	NSVG_SHADER_SIMPLE,
 	NSVG_SHADER_IMG,
-	NSVG_SHADER_TRI_COLORED
+	NSVG_SHADER_BATCHED_TRI_COLORED,
+	NSVG_SHADER_BATCHED_CIRCLE_COLORED
 };
 
 #if NANOVG_GL_USE_UNIFORMBUFFER
@@ -1306,7 +1308,7 @@ else
 	frag->texType = 2.0f;
 #endif
 		} else {
-			frag->type = NSVG_SHADER_TRI_COLORED;
+			frag->type = NSVG_SHADER_BATCHED_TRI_COLORED;
 			frag->texType = paint->customPar;
 		}
 
@@ -1370,6 +1372,9 @@ static void glnvg__fill(GLNVGcontext* gl, GLNVGcall* call)
 	glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_KEEP, GL_INCR_WRAP);
 	glStencilOpSeparate(GL_BACK, GL_KEEP, GL_KEEP, GL_DECR_WRAP);
 	glDisable(GL_CULL_FACE);
+	for (i = 0; i < npaths; i++) {
+		dbgassert(paths[i].fillCount>0);
+	}
 	for (i = 0; i < npaths; i++)
 		glDrawArrays(GL_TRIANGLE_FAN, paths[i].fillOffset, paths[i].fillCount);
 	glEnable(GL_CULL_FACE);
@@ -1384,13 +1389,17 @@ static void glnvg__fill(GLNVGcontext* gl, GLNVGcall* call)
 		glnvg__stencilFunc(gl, GL_EQUAL, 0x00, 0xff);
 		glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 		// Draw fringes
-		for (i = 0; i < npaths; i++)
-			glDrawArrays(GL_TRIANGLE_STRIP, paths[i].strokeOffset, paths[i].strokeCount);
+		for (i = 0; i < npaths; i++) {
+			if (paths[i].strokeCount) {
+				glDrawArrays(GL_TRIANGLE_STRIP, paths[i].strokeOffset, paths[i].strokeCount);
+			}
+		}
 	}
 
 	// Draw fill
 	glnvg__stencilFunc(gl, GL_NOTEQUAL, 0x0, 0xff);
 	glStencilOp(GL_ZERO, GL_ZERO, GL_ZERO);
+	dbgassert(call->triangleCount>0);
 	glDrawArrays(GL_TRIANGLE_STRIP, call->triangleOffset, call->triangleCount);
 
 	glDisable(GL_STENCIL_TEST);
@@ -1403,7 +1412,10 @@ static void glnvg__convexFill(GLNVGcontext* gl, GLNVGcall* call)
 
 	glnvg__setUniforms(gl, call->uniformOffset, call->image);
 	glnvg__checkError(gl, "convex fill");
-
+	
+	for (i = 0; i < npaths; i++) {
+		dbgassert(paths[i].fillCount>0);
+	}
 	for (i = 0; i < npaths; i++) {
 		glDrawArrays(GL_TRIANGLE_FAN, paths[i].fillOffset, paths[i].fillCount);
 		// Draw fringes
@@ -1417,7 +1429,10 @@ static void glnvg__stroke(GLNVGcontext* gl, GLNVGcall* call)
 {
 	GLNVGpath* paths = &gl->paths[call->pathOffset];
 	int npaths = call->pathCount, i;
-
+	
+	for (i = 0; i < npaths; i++) {
+		dbgassert(paths[i].strokeCount>0);
+	}
 	if (gl->flags & NVG_STENCIL_STROKES) {
 
 		glEnable(GL_STENCIL_TEST);
@@ -1464,7 +1479,7 @@ static void glnvg__triangles(GLNVGcontext* gl, GLNVGcall* call)
 {
 	glnvg__setUniforms(gl, call->uniformOffset, call->image);
 	glnvg__checkError(gl, "triangles fill");
-
+	dbgassert(call->triangleCount>0);
 	glDrawArrays(GL_TRIANGLES, call->triangleOffset, call->triangleCount);
 }
 
@@ -1875,6 +1890,8 @@ static void glnvg__renderTriangles(void* uptr, NVGpaint* paint,
 
 	if (call == NULL) return;
 
+	dbgassert(nverts>0);
+
 	call->type = GLNVG_TRIANGLES;
 	call->image = paint->image;
 	call->blendFunc = glnvg__blendCompositeOperation(compositeOperation);
@@ -1891,8 +1908,12 @@ static void glnvg__renderTriangles(void* uptr, NVGpaint* paint,
 	if (call->uniformOffset == -1) goto error;
 	frag = nvg__fragUniformPtr(gl, call->uniformOffset);
 	glnvg__convertPaint(gl, frag, paint, scissor, 1.0f, 1.0f, -1.0f);
-	if (frag->type != NSVG_SHADER_TRI_COLORED)
+	if (paint->image >= 0) {
 		frag->type = NSVG_SHADER_IMG;
+	}
+	if (paint->renderType > 0) {
+		frag->type = paint->renderType;
+	}
 
 	return;
 
