@@ -65,7 +65,6 @@ private:
 	bool isChildWindow = false;
 public:
 	ImageBuf capturedFrame;
-	int64_t captureTime = 0;
 #ifdef _WIN32
 	LRESULT CALLBACK proc (UINT message, WPARAM wParam, LPARAM lParam);
 	WINDOW_HANDLE hwnd = NULL;

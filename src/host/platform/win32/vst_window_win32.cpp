@@ -143,6 +143,7 @@ namespace {
 			{
 				case WM_ERASEBKGND:
 				{
+//					break;
 					return 1; // don't draw background
 				}
 //				case WM_PAINT:
@@ -307,7 +308,7 @@ bool vst_window::init(vstplugin* plugin, const String& name, ivec2 size, bool re
 		exStyle = 0;
 		dwStyle = WS_CHILDWINDOW | WS_CLIPSIBLINGS;
 	} else {
-		parentHWND = nullptr;
+		parentHWND = getMainHWND();
 		exStyle = WS_EX_APPWINDOW;
 		dwStyle = WS_CAPTION | WS_SYSMENU | WS_CLIPSIBLINGS;
 		if (resizeable) {
@@ -348,7 +349,8 @@ void vst_window::close()
 {
 	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 	plugin->onClose();
-	ShowWindow(hwnd, SW_HIDE);
+	destroy();
+//	ShowWindow(hwnd, SW_HIDE);
 }
 
 //------------------------------------------------------------------------
@@ -358,6 +360,7 @@ void vst_window::destroy()
 	SetWindowLongPtr (hwnd, GWLP_USERDATA, (__int3264) (LONG_PTR) nullptr);
 	DestroyWindow(hwnd);
 	removeWindow (this);
+	delete this;
 }
 
 //------------------------------------------------------------------------
@@ -365,6 +368,7 @@ void vst_window::show()
 {
 	SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOCOPYBITS | SWP_SHOWWINDOW);
 	if (isChildWindow) {
+
 //		ShowWindow(hwnd, SW_SHOWNA);
 	} else {
 		SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, (__int3264) (LONG_PTR)getMainHWND());
@@ -392,10 +396,11 @@ void vst_window::captureWindowFrame() {
 }
 
 void vst_window::updateWindow() {
-//	InvalidateRect(hwnd, NULL, TRUE);
-	InvalidateRgn(hwnd, NULL, TRUE);
+	////InvalidateRect(hwnd, NULL, TRUE);
+	//InvalidateRect(hwnd, NULL, FALSE);
+	//InvalidateRgn(hwnd, NULL, FALSE);
 //    RedrawWindow( hwnd, NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_FRAME | RDW_ALLCHILDREN );
-//	UpdateWindow(hwnd);
+	UpdateWindow(hwnd);
 //	my_printf("updateDisplay %d\n", getTimeMillis());
 }
 //------------------------------------------------------------------------

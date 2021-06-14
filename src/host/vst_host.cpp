@@ -1997,11 +1997,8 @@ bool vsthost::onTick() {
 			current->dispatch(effEditIdle);
 			current->bInEditIdle = false;
 			if (current->window) {
-				if (now - current->window->captureTime > 1000/25) {
-					current->window->captureTime = now;
-					//current->window->captureWindowFrame();
-				}
-//				current->updateDisplay();
+				//current->window->captureWindowFrame();
+				current->updateWindow();
 			}
 			iDispatched++;
 		}
