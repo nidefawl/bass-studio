@@ -29,6 +29,8 @@ uint32_t colorPalette[COLOR_PALETTE_LEN] = {
 		 0xedbb99, 0xdc7633, 0xba4a00, 0x873600,
 		 0xF0F0F0, 0xA0A0A0, 0x606060, 0x050505,
 };
+extern uint32_t* colorOnlyPalette = &colorPalette[8];
+extern uint32_t colorOnlyPaletteLen = COLOR_PALETTE_LEN - 8;
 namespace GuiColor {
 static std::vector<constant_t*>& _getConstants() {
 	static std::vector<constant_t*> allconstants;

@@ -90,4 +90,6 @@ struct NVGcolor;
 #define COLOR_PALETTE_COLS 15
 #define COLOR_PALETTE_LEN (COLOR_PALETTE_COLS*COLOR_PALETTE_ROWS)
 extern uint32_t colorPalette[COLOR_PALETTE_LEN];
+extern uint32_t* colorOnlyPalette;
+extern uint32_t colorOnlyPaletteLen;
 extern NVGcolor g_colorPalette[COLOR_PALETTE_LEN];
