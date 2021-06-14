@@ -234,10 +234,10 @@ inline int32_t screenToVel(int y, int h)
 note_t* getMinDistNoteVel(clip_notes_t& notes, int32_t tickExact, int32_t tickDist, int32_t velExact, int32_t velDist) {
 	int32_t minDist = 0;
 	int32_t minDistV = 0;
-	note_t* minDistNote = nullptr;
-	notes.visitNotes([&minDistNote, &minDist, &minDistV, tickExact, tickDist, velExact, velDist](note_t& note) {
-		int32_t dist = note.start()-tickExact;
-		int32_t distV = note.velocity-velExact;
+	note_t *minDistNote = nullptr;
+	auto checkNoteDist = [&minDistNote, &minDist, &minDistV, tickExact, tickDist, velExact, velDist](note_t& note) {
+		int32_t dist = note.start() - tickExact;
+		int32_t distV = note.velocity - velExact;
 		if (dist > -tickDist && dist < tickDist && distV > -velDist && distV < velDist) {
 			if (minDistNote == nullptr || minDist > math::abs(dist) || minDistV > math::abs(distV)) {
 				minDistNote = &note;
@@ -245,10 +245,21 @@ note_t* getMinDistNoteVel(clip_notes_t& notes, int32_t tickExact, int32_t tickDi
 				minDistV = math::abs(distV);
 			}
 		}
-	});
+	};
+	notes.visitSelection([&checkNoteDist](note_t* pNote) {
+		checkNoteDist(*pNote);
+	}
+	);
+	if (minDistNote != nullptr) {
+		return minDistNote;
+	}
+	notes.visitNotes([&checkNoteDist](note_t& note) {
+		checkNoteDist(note);
+	}
+	);
 	return minDistNote;
-
 }
+
 void duplicateClipLoop(clip_view& view) {
 	clip_t* clip = view.clip();
 	if (!clip) {
