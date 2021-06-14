@@ -1046,6 +1046,7 @@ public:
 		const int32_t CONST_LAYOUT_MARGIN = math::min(6, theme->get(GuiConstant::CONST_LAYOUT_MARGIN));
 		const int titleHeight = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
 		const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
+		//TODO: this is not optimal!
 		removeUNCHECKED(&automationSelectParam);
 		removeUNCHECKED(&automationSelectDevice);
 		removeUNCHECKED(&hideAutomation);
@@ -1526,8 +1527,10 @@ void gui_track_controls::handleDraggedMove(MouseEvent& evt) {
 			m_trackentry->layout.hideTrack = true;
 			updateStoreLoadSubtracks(m_trackentry->parent, m_trackentry);
 		}
-		this->parent->onChildLayoutChanged(this);
-		DawInstance::get()->updateVisibleTrackContents();
+		//this->parent->onChildLayoutChanged(this);
+		m_trackentry->parent->relayout();
+		//m_trackentry->parent->updateVisibleTrackContents();
+		//DawInstance::get()->updateVisibleTrackContents();
 	}
 }
 String makeUniqueTrackName(const String& strNewName) {

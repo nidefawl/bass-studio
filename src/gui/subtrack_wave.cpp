@@ -315,13 +315,13 @@ public:
 //									&& ((updatedEntry.waveform.size.y > 0) == (texture.waveform.size.y > 0))
 //									&& updatedEntry.waveform == texture.waveform
 //									&& updatedEntry.layout == entry.layoutCurrent;
-							bool equal = math::abs((sample->version-entry.sampleVersion)) < 3
+							bool equal = math::abs((sample->version-entry.sampleVersion)) < 1
 									&& ((updatedEntry.waveform.size.y > 0) == (texture.waveform.size.y > 0))
 //									&& updatedEntry.waveform == texture.waveform
 									&& isEqualWaveform3(updatedEntry.waveform, texture.waveform)
 									&& updatedEntry.layout == entry.layoutCurrent;
 							if (sample->version != entry.sampleVersion) {
-//								my_printf("sample->version != entry.sampleVersion %d %d\n", sample->version, equal);
+								my_printf("sample->version != entry.sampleVersion %d %d\n", sample->version, equal);
 							}
 							bool canQueue = waveformrender::getInstance()->canQueueUpdate();
 							ivec2 sizeDiff = math::absvec2(updatedEntry.waveform.size-texture.waveform.size);
@@ -353,15 +353,8 @@ public:
 					auto& entry = *it;
 					if (!stl_contains(samplesPresent, entry.second.sample->sampleId)) {
 						waveview_entry& waveviewEntry = entry.second;
-						if (waveviewEntry.waveformTex.queued) {
-							// skip
-							continue;
-						}
-						if (waveviewEntry.waveformTex.rendered) {
-							gui_waveform_texture_ref* waveformRef = &waveviewEntry.waveformTex;
-							waveformrender::getInstance()->release(waveformRef);
-							waveformRef->rendered = false;
-						}
+						gui_waveform_texture_ref* waveformRef = &waveviewEntry.waveformTex;
+						waveformrender::getInstance()->release(waveformRef);
 						it = splits.erase(it);
 					} else {
 						++it;

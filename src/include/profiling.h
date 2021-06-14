@@ -51,15 +51,19 @@ struct render_clip_cache_stats_t {
 	int64_t sizeCacheAllocatedMemBytes;
 };
 struct render_stats_t {
-	float fps;
-	int64_t timeRender;
-	int64_t clipsRendered;
-	int64_t notesRendered;
-	int64_t timeRenderEditor;
-	int64_t timeRenderTrackControls;
-	int64_t timeUpdateWaveforms;
-	int64_t timePrerender;
-	int64_t playThreadLockCount;
-	bool enableCache = true;
-	bool disableWaveformUpdates = false;
+	float fps = 0.0f;
+	int64_t timeRender = 0;
+	int64_t clipsRendered = 0;
+	int64_t notesRendered = 0;
+	int64_t timeRenderEditor = 0;
+	int64_t timeRenderTrackControls = 0;
+	int64_t timeUpdateWaveforms = 0;
+	int64_t numWaveFormsRendered = 0;
+	int64_t timePrerender = 0;
+	int64_t playThreadLockCount = 0;
+	render_stats_t() = default;
+};
+struct frame_render_stats {
+	int frameNumber;
+	render_stats_t renderStats;
 };

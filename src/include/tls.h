@@ -8,11 +8,13 @@ class MainCtrl;
 class audiocache;
 class plugindatabase_t;
 class project_controller_t;
+struct app_config_t;
 namespace daw_tls {
 	struct tlsinstance {
 		render_clip_cache_stats_t renderClipCacheStats;
 		render_stats_t renderStats;
-		bool tlsInitialized = false;
+		render_stats_t prevRenderStats;
+		app_config_t* config = nullptr;
 		vsthost* host = nullptr;
 		audiohost* audioHost = nullptr;
 		midihost* midiHost = nullptr;
@@ -21,6 +23,7 @@ namespace daw_tls {
 		audiocache* audioCache = nullptr;
 		plugindatabase_t* pluginDatabase = nullptr;
 		project_controller_t* project = nullptr;
+		bool tlsInitialized = false;
 	};
 	void setTls(tlsinstance& tls);
 	tlsinstance& getTls();

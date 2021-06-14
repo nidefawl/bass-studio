@@ -301,17 +301,18 @@ public:
 		} else {
 			nvgFillColor(vg, G_WHITE);
 		}
+		auto& renderStats = daw_tls::getTls().prevRenderStats;
 		printL("Usage", StringFormat("%.2f%%", stats.usage*100.0));
 		printL("Usage raw", StringFormat("%.2f%%", stats.usageRaw*100.0));
 		nvgFillColor(vg, G_WHITE);
-		printL("FPS", StringFormat("%.2f", daw_tls::getTls().renderStats.fps));
+		printL("FPS", StringFormat("%.2f", renderStats.fps));
 
-		printL("timePrerender", StringFormat("%d", daw_tls::getTls().renderStats.timePrerender));
-		printL("timeUpdateWaveforms", StringFormat("%d", daw_tls::getTls().renderStats.timeUpdateWaveforms));
-		printL("timeRender", StringFormat("%d", daw_tls::getTls().renderStats.timeRender));
-		printL("timeRenderEditor", StringFormat("%d", daw_tls::getTls().renderStats.timeRenderEditor));
-		printL("timeRenderTrackControls", StringFormat("%d", daw_tls::getTls().renderStats.timeRenderTrackControls));
-		printL("playThreadLockCount (frame)", StringFormat("%d", daw_tls::getTls().renderStats.playThreadLockCount));
+		printL("timePrerender", StringFormat("%d", renderStats.timePrerender));
+		printL("timeUpdateWaveforms", StringFormat("%d", renderStats.timeUpdateWaveforms));
+		printL("timeRender", StringFormat("%d", renderStats.timeRender));
+		printL("timeRenderEditor", StringFormat("%d", renderStats.timeRenderEditor));
+		printL("timeRenderTrackControls", StringFormat("%d", renderStats.timeRenderTrackControls));
+		printL("playThreadLockCount (frame)", StringFormat("%d", renderStats.playThreadLockCount));
 		{
 			size_t clipSufIdx = 0;
 			const char *sufArr[3] = { "B", "KB", "MB" };
@@ -324,8 +325,8 @@ public:
 			printL("clip_render_cache size", StringFormat("%f %s", clipCacheSizeAsDouble, sufArr[clipSufIdx%3]));
 		}
 
-		printL("clips in view", StringFormat("%d", daw_tls::getTls().renderStats.clipsRendered));
-		printL("notes in view", StringFormat("%d", daw_tls::getTls().renderStats.notesRendered));
+		printL("clips in view", StringFormat("%d", renderStats.clipsRendered));
+		printL("notes in view", StringFormat("%d", renderStats.notesRendered));
 
 		printL("blocksProcessed", StringFormat("%d", stats.blocksProcessed));
 		printL("samplesProcessed", StringFormat("%d", stats.samplesProcessed));

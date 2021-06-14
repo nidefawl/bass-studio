@@ -47,13 +47,13 @@ void guitrack_timeline::handleDraggedMove(MouseEvent& evt) {
 		float distx = (float)(evt.dragDistance->x);
 		float disty = (float)(evt.dragDistance->y);
 
-		if (math::abs(distx) && (!lockGesture || (lockGesture && isMove))) {
+		if (math::abs(distx) > 5.0 && (!lockGesture || (lockGesture && isMove && math::abs(distx) > 2.0))) {
 			adjustOffset(-evt.dragDistance->x);
 			evt.dragDistance->x = 0;
 //				MainCtrl::get()->updateGrid();
 		}
 
-		if ((!lockGesture && math::abs(disty) > 0) || (lockGesture && !isMove)) {
+		if ((!lockGesture && math::abs(disty) > 5.0) || (lockGesture && !isMove && math::abs(disty) > 2.0)) {
 			evt.dragDistance->y = 0;
 			disty = 1.0f + disty * -0.01f;
 			float anchor_dragposx = (float)(startDrag.x < 50 ? 0 : evt.relMousepos.x);

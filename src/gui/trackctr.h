@@ -697,14 +697,15 @@ public:
 	void render(NVGcontext* vg);
 	void scrollTo(guibase* g);
 	void layout();
+	void relayout();
 private:
 	void updateVisibleTracks();
 public:
 	void updateVisibleTrackContents();
 
 	void onChildLayoutChanged(guibase* g) {
-		updateVisibleTracks();
-		layout();
+		//updateVisibleTracks();
+		//layout();
 	}
 	void gridChanged(scaled_grid& _grid) override {
 		dawCtrl->updateGrid();

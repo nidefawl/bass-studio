@@ -26,7 +26,7 @@ GLuint program2dTexture;
 GLint u_mvp;
 GLint u_tex0;
 
-float wTexPreview = 1024;
+float wTexPreview = 256;
 std::vector<VertexAttr> attributes{
 	{"in_position", 2, GL_FLOAT},
 	{"in_texcoord", 2, GL_FLOAT},

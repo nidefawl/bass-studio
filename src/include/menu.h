@@ -11,6 +11,9 @@ struct menucmd_t {
 inline struct menucmd_t CMD_NOARG(int cmd) {
 	return menucmd_t{cmd, "", 0};
 }
+inline struct menucmd_t CMD_NUMBER_ARG(int cmd, int argInt) {
+	return menucmd_t{cmd, "", argInt};
+}
 
 namespace ngui {
 

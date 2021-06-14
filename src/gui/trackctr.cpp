@@ -251,6 +251,17 @@ void guictr_tracks::updateVisibleTrackContents() {
 	updateVisibleTracks();
 }
 
+
+void guictr_tracks::relayout() {
+	double f = scrollbar.toPixels();
+	dawCtrl->updateGrid();
+	layout();
+	double fNew = scrollbar.toPixels();
+	scrollbar.scrollTo(f);
+	if (math::abs(fNew-f) > 1.0f/1024.0f) {
+		scrollOffsetChanged(1, scrollbar.scrollOffset);
+	}
+}
 void guictr_tracks::layout() {
 //	for (auto* ctr : project.trackTypeUniqueCtrs) {
 //		ctr->updateTracksVisible();
@@ -278,7 +289,6 @@ void guictr_tracks::layout() {
 
 	loophandles.clipViewSize = ivec2(trackView.size.x, trackView.size.y+loophandles.size.y);
 
-	double f = scrollbar.toPixels();
 	ivec2 csTrackView = trackView.getSizeContent();
 	int y = TRACK_HEIGHT_SPACING;
 	for (auto* entry : guiMgr.trackEntriesTop) {
@@ -313,13 +323,9 @@ void guictr_tracks::layout() {
 		const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
 		contentHeight += TRACK_HEIGHT_STEP*4;
 	}
-	scrollbar.scrollTo(f);
-
-	scrollOffsetChanged(1, scrollbar.scrollOffset);
 	for (guibase* gui : guis) {
 		gui->layout();
 	}
-	dawCtrl->updateGrid();
 }
 void horizontalLineAt(guictr_base* gui, NVGcontext* vg, ivec2 posHL) {
 	nvgLineCap(vg, NVGlineCap::NVG_ROUND);

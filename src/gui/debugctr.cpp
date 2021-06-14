@@ -27,6 +27,8 @@
 #include "edithistory.h"
 #include "guiplugin.h"
 #include "util/debug_alloc.h"
+#include "appconfig.h"
+
 #ifdef _WIN32
 #define DISPLAY_WIN_MSG_STATS 1
 #define DISPLAY_HWND_DRAWS 1
@@ -285,8 +287,6 @@ void gui_ctr_debug::render(NVGcontext* vg) {
 				nvgBeginPath(vg);
 				for (auto entry : list) {
 					int32_t stageIdInt = static_cast<int32_t>(entry.stageId);
-					uint64_t stageColorIdx = stageIdInt*1047299;
-					auto graphColor = colorPalette[(stageColorIdx>>3)%COLOR_PALETTE_LEN];
 					auto duration = entry.timeEnd - entry.timeStart;
 					auto posX1 = graphOnlySize.x*(entry.timeStart - minTimeStart) / (float) mikrosPerBlock;
 					auto posX2 = graphOnlySize.x*(entry.timeEnd - minTimeStart) / (float) mikrosPerBlock;
@@ -305,7 +305,9 @@ void gui_ctr_debug::render(NVGcontext* vg) {
 					maxThread = math::max(maxThread, static_cast<int32_t>(entry.threadIdx));
 				}
 				if (pass == 0) {
-					auto graphColor = colorPalette[(pass)%COLOR_PALETTE_LEN];
+//					uint64_t stageColorIdx = stageIdInt*1047299;
+//					auto graphColor = colorOnlyPalette[(stageColorIdx>>3)%(colorOnlyPaletteLen)];
+					auto graphColor = colorOnlyPalette[(pass*4+2)%colorOnlyPaletteLen];
 					nvgStrokeColor(vg, rgbToNvg(graphColor));
 					nvgStrokeWidth(vg, 2.0f);
 					nvgStroke(vg);
@@ -343,131 +345,131 @@ void gui_ctr_debug::render(NVGcontext* vg) {
 		MainCtrl *ctrl = MainCtrl::get();
 		DawInstance *daw = DawInstance::get();
 
-	vector<String> strings;
-	String str;
-	str = StringFormat("%012X", (int64_t) ctrl->getTheme());
-	strings.push_back(String("ctrl->getTheme: ") + str);
-	str = StringFormat("%012X", (int64_t) (parentCtrl?parentCtrl->getTheme():0));
-	strings.push_back(String("parentCtrl->getTheme: ") + str);
-	str = StringFormat("%012X", (int64_t) (theme));
-	strings.push_back(String("this->theme: ") + str);
-	str = ctrl->guiOver ? ctrl->guiOver->getClassName() : "<null>";
-	strings.push_back(String("guiOver: ") + str);
-	str = ctrl->guiDragged ? ctrl->guiDragged->getClassName() : "<null>";
-	strings.push_back(String("guiDragged: ") + str);
-	str = ctrl->guiCaptured ? ctrl->guiCaptured->getClassName() : "<null>";
-	strings.push_back(String("guiCaptured: ") + str);
-	str = ctrl->guiCtrFocused ? ctrl->guiCtrFocused->getClassName() : "<null>";
-	strings.push_back(String("guiCtrFocused: ") + str);
-	str = ctrl->guiFocused ? ctrl->guiFocused->getClassName() : "<null>";
-	strings.push_back(String("guiFocused: ") + str);
-	str = "<null>";
-	if (ctrl->getDragDropTarget().src) {
-		str = static_cast<guibase*>(ctrl->getDragDropTarget().src)->getClassName();
-		str += StringFormat(" %d", ctrl->getDragDropTarget().src);
-	}
-	strings.push_back(String("target: ") + str);
-
-	guibase* p = ctrl->guiFocused;
-	int lvl = 0;
-	while (p != NULL) {
-		String s = "";
-		if (lvl == 0) {
-			s = "guiFocused: ";
+		vector<String> strings;
+		String str;
+		str = StringFormat("%012X", (int64_t) ctrl->getTheme());
+		strings.push_back(String("ctrl->getTheme: ") + str);
+		str = StringFormat("%012X", (int64_t) (parentCtrl?parentCtrl->getTheme():0));
+		strings.push_back(String("parentCtrl->getTheme: ") + str);
+		str = StringFormat("%012X", (int64_t) (theme));
+		strings.push_back(String("this->theme: ") + str);
+		str = ctrl->guiOver ? ctrl->guiOver->getClassName() : "<null>";
+		strings.push_back(String("guiOver: ") + str);
+		str = ctrl->guiDragged ? ctrl->guiDragged->getClassName() : "<null>";
+		strings.push_back(String("guiDragged: ") + str);
+		str = ctrl->guiCaptured ? ctrl->guiCaptured->getClassName() : "<null>";
+		strings.push_back(String("guiCaptured: ") + str);
+		str = ctrl->guiCtrFocused ? ctrl->guiCtrFocused->getClassName() : "<null>";
+		strings.push_back(String("guiCtrFocused: ") + str);
+		str = ctrl->guiFocused ? ctrl->guiFocused->getClassName() : "<null>";
+		strings.push_back(String("guiFocused: ") + str);
+		str = "<null>";
+		if (ctrl->getDragDropTarget().src) {
+			str = static_cast<guibase*>(ctrl->getDragDropTarget().src)->getClassName();
+			str += StringFormat(" %d", ctrl->getDragDropTarget().src);
 		}
-		for (int i = 0; i < lvl; i++) {
-			s += "  ";
+		strings.push_back(String("target: ") + str);
+
+		guibase* p = ctrl->guiFocused;
+		int lvl = 0;
+		while (p != NULL) {
+			String s = "";
+			if (lvl == 0) {
+				s = "guiFocused: ";
+			}
+			for (int i = 0; i < lvl; i++) {
+				s += "  ";
+			}
+			strings.push_back(s + p->getClassName());
+			p = p->parent;
+			lvl++;
 		}
-		strings.push_back(s + p->getClassName());
-		p = p->parent;
-		lvl++;
-	}
 
-	strings.push_back(String("lastKey: ") + ctrl->lastKey);
-	strings.push_back(StringFormat("undo size: %d", daw->getHist().getNumUndoSteps()));
-	strings.push_back(StringFormat("redo size: %d", daw->getHist().getNumRedoSteps()));
-	clip_view& clipView = ctrl->getClipView();
-	if (clipView.clip()) {
-		strings.push_back(StringFormat("Clip: %s", StringAsCStr(clipView.clip()->name)));
-		strings.push_back(StringFormat("Notes: %d", clipView.clip()->notes.m_list.size()));
-		strings.push_back(StringFormat("Selection size: %d", clipView.clip()->notes.selection.size()));
-	}
-
-	strings.push_back("sample format");
-	strings.push_back(StringFormat(" samplerate: %u", vsthost::getInstance()->sampleFormat.sampleRate));
-	strings.push_back(StringFormat(" blockSize : %u", vsthost::getInstance()->sampleFormat.blockSize));
-	strings.push_back(StringFormat(" bit depth : %u", static_cast<int32_t>(vsthost::getInstance()->sampleFormat.sampleformat)));
-
-	track_t* track = daw->getTrackId(0);
-	if (track && track->audio) {
-		strings.push_back(StringFormat("level: %.4f", track->audio->meter.getMaxRMS()));
-	}
-	if (ctrl->guiFocused && ctrl->guiFocused->parent == (guibase*)ctrl->getPluginCtr()) {
-		guiplugin* gplugin = dynamic_cast<guiplugin*>(ctrl->guiFocused);
-		if (gplugin) {
-			effectbase* vst = gplugin->getModule();
-			strings.push_back("\n\n");
-			vst->getInfo(strings);
+		strings.push_back(String("lastKey: ") + ctrl->lastKey);
+		strings.push_back(StringFormat("undo size: %d", daw->getHist().getNumUndoSteps()));
+		strings.push_back(StringFormat("redo size: %d", daw->getHist().getNumRedoSteps()));
+		clip_view& clipView = ctrl->getClipView();
+		if (clipView.clip()) {
+			strings.push_back(StringFormat("Clip: %s", StringAsCStr(clipView.clip()->name)));
+			strings.push_back(StringFormat("Notes: %d", clipView.clip()->notes.m_list.size()));
+			strings.push_back(StringFormat("Selection size: %d", clipView.clip()->notes.selection.size()));
 		}
-	}
-	struct win32_msg {
-		int id;
-		int cnt;
-	};
-#if DISPLAY_HWND_DRAWS
-	std::vector<win32_msg> wnd;
-	for (int i = 0; i < msgCounter.getHWNDMapSize(); i++) {
-		int cnt = msgCounter.getHWNDCnt(i);
-		wnd.push_back( { i, cnt });
-	}
-	std::sort(wnd.begin(), wnd.end(), [](win32_msg const & a, win32_msg const & b) {
-		return a.cnt > b.cnt;
-	});
-	for (win32_msg& msg : wnd) {
-		String s = msgCounter.getHWNDName(msg.id);
-		strings.push_back(StringFormat("%s: %d", StringAsCStr(s), msg.cnt));
 
-	}
-#endif
+		strings.push_back("sample format");
+		strings.push_back(StringFormat(" samplerate: %u", vsthost::getInstance()->sampleFormat.sampleRate));
+		strings.push_back(StringFormat(" blockSize : %u", vsthost::getInstance()->sampleFormat.blockSize));
+		strings.push_back(StringFormat(" bit depth : %u", static_cast<int32_t>(vsthost::getInstance()->sampleFormat.sampleformat)));
 
-#if DISPLAY_WIN_MSG_STATS
-	std::vector<win32_msg> msgs;
-	for (int i = 0; i < msgCounter.getNumMsg(); i++) {
-		int id = msgCounter.getMsgId(i);
-		int cnt = msgCounter.getMsgCnt(i);
-		msgs.push_back( { id, cnt });
-
-	}
-	std::sort(msgs.begin(), msgs.end(), [](win32_msg const & a, win32_msg const & b) {
-		if (a.cnt == b.cnt) {
-			return a.id < b.id;
+		track_t* track = daw->getTrackId(0);
+		if (track && track->audio) {
+			strings.push_back(StringFormat("level: %.4f", track->audio->meter.getMaxRMS()));
 		}
-		return a.cnt > b.cnt;
-	});
-	for (win32_msg& msg : msgs) {
-		strings.push_back(StringFormat("WM_ 0x%04X: %d", msg.id, msg.cnt));
+		if (ctrl->guiFocused && ctrl->guiFocused->parent == (guibase*)ctrl->getPluginCtr()) {
+			guiplugin* gplugin = dynamic_cast<guiplugin*>(ctrl->guiFocused);
+			if (gplugin) {
+				effectbase* vst = gplugin->getModule();
+				strings.push_back("\n\n");
+				vst->getInfo(strings);
+			}
+		}
+		struct win32_msg {
+			int id;
+			int cnt;
+		};
+	#if DISPLAY_HWND_DRAWS
+		std::vector<win32_msg> wnd;
+		for (int i = 0; i < msgCounter.getHWNDMapSize(); i++) {
+			int cnt = msgCounter.getHWNDCnt(i);
+			wnd.push_back( { i, cnt });
+		}
+		std::sort(wnd.begin(), wnd.end(), [](win32_msg const & a, win32_msg const & b) {
+			return a.cnt > b.cnt;
+		});
+		for (win32_msg& msg : wnd) {
+			String s = msgCounter.getHWNDName(msg.id);
+			strings.push_back(StringFormat("%s: %d", StringAsCStr(s), msg.cnt));
 
-	}
-#endif
-	int x = 5;
+		}
+	#endif
 
-	setFont(vg, 14, G_WHITE, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
-	float lineh;
-	nvgTextMetrics(vg, NULL, NULL, &lineh);
+	#if DISPLAY_WIN_MSG_STATS
+		std::vector<win32_msg> msgs;
+		for (int i = 0; i < msgCounter.getNumMsg(); i++) {
+			int id = msgCounter.getMsgId(i);
+			int cnt = msgCounter.getMsgCnt(i);
+			msgs.push_back( { id, cnt });
+
+		}
+		std::sort(msgs.begin(), msgs.end(), [](win32_msg const & a, win32_msg const & b) {
+			if (a.cnt == b.cnt) {
+				return a.id < b.id;
+			}
+			return a.cnt > b.cnt;
+		});
+		for (win32_msg& msg : msgs) {
+			strings.push_back(StringFormat("WM_ 0x%04X: %d", msg.id, msg.cnt));
+
+		}
+	#endif
+		int x = 5;
+
+		setFont(vg, 14, G_WHITE, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
+		float lineh;
+		nvgTextMetrics(vg, NULL, NULL, &lineh);
 
 
-	nvgText(vg, x, 0, StringAsCStr(label), NULL);
-	String proj = StringFormat("Project: %s", StringAsCStr(ctrl->getProjectPath()));
-	nvgText(vg, x, lineh, StringAsCStr(proj), NULL);
-	int y = lineh*3;
-	for (String& s : strings) {
-		nvgText(vg, x, y, StringAsCStr(s), NULL);
-		y += lineh;
-	}
-	for (String& s : g_debugStrings) {
-		nvgText(vg, x, y, StringAsCStr(s), NULL);
-		y += lineh;
-	}
+		nvgText(vg, x, 0, StringAsCStr(label), NULL);
+		String proj = StringFormat("Project: %s", StringAsCStr(ctrl->getProjectPath()));
+		nvgText(vg, x, lineh, StringAsCStr(proj), NULL);
+		int y = lineh*3;
+		for (String& s : strings) {
+			nvgText(vg, x, y, StringAsCStr(s), NULL);
+			y += lineh;
+		}
+		for (String& s : g_debugStrings) {
+			nvgText(vg, x, y, StringAsCStr(s), NULL);
+			y += lineh;
+		}
 
 	}
 	for (auto c : guis) {
@@ -571,13 +573,13 @@ void gui_ctr_debug::buttonClicked(guibase* button) {
 
 		break;
 	case ID_BTN_TOGGLE_CLIP_RENDER_CACHE:
-		daw_tls::getTls().renderStats.enableCache = !daw_tls::getTls().renderStats.enableCache;
-		static_cast<guibutton*>(button)->setText(String(daw_tls::getTls().renderStats.enableCache?"Disable clip render cache":"Enable clip render cache"));
+		daw_tls::getTls().config->enableCache = !daw_tls::getTls().config->enableCache;
+		static_cast<guibutton*>(button)->setText(String(daw_tls::getTls().config->enableCache?"Disable clip render cache":"Enable clip render cache"));
 
 		break;
 	case ID_BTN_TOGGLE_WAVEFORM_UPDATES:
-		daw_tls::getTls().renderStats.disableWaveformUpdates = !daw_tls::getTls().renderStats.disableWaveformUpdates;
-		static_cast<guibutton*>(button)->setText(String(daw_tls::getTls().renderStats.disableWaveformUpdates?"Enable waveform updates":"Disable waveform updates"));
+		daw_tls::getTls().config->disableWaveformUpdates = !daw_tls::getTls().config->disableWaveformUpdates;
+		static_cast<guibutton*>(button)->setText(String(daw_tls::getTls().config->disableWaveformUpdates?"Enable waveform updates":"Disable waveform updates"));
 
 		break;
 	case ID_BTN_TOGGLE_THREADING:

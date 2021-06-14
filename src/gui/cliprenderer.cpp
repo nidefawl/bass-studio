@@ -10,6 +10,7 @@
 #include "drawwaveform.h"
 #include "audiowaveform.h"
 #include "trackcontent.h"
+#include "appconfig.h"
 #include <array>
 #include <nanovg.h>
 
@@ -277,7 +278,7 @@ void gui_midi_clip::updatePosition(project_globals_t& project, scaled_grid& grid
 	//if (!culled && impl->valid) {
 	//	ivec2 posContents = ivec2(pos.x, pos.y + HEIGHT_CLIP_TITLE + INSET_CLIP_CONTENT);
 	//	ivec2 sizeContents = ivec2(size.x, size.y - HEIGHT_CLIP_TITLE - INSET_CLIP_CONTENT * 2);
-	//	const bool useCaching = true;// daw_tls::getTls().renderStats.enableCache;
+	//	const bool useCaching = true;// daw_tls::getTls().config.enableCache;
 	//	noteview_render_t& notesView = m_clip->getNoteViewRender();
 	//	bool cacheValid = notesView.reqRevision == notesView.curRevision;
 	//	cacheValid &= impl->cache1 != nullptr;
@@ -607,7 +608,7 @@ void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_gui_ent
 	float numBars = clipLen / (float) TICKS_BAR;
 	float barSize = sizeContents.x / (float) numBars;
 	int64_t notesRendered=0;
-	const bool useCaching = daw_tls::getTls().renderStats.enableCache;
+	const bool useCaching = daw_tls::getTls().config->enableCache;
 	noteview_render_t& notesView = cl->getNoteViewRender();
 	bool cacheValid = notesView.reqRevision == notesView.curRevision;
 	cacheValid &= notesView.data != nullptr && notesView.data->valid;

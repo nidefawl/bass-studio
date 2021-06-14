@@ -49,7 +49,6 @@ void guictxtmenu_notrack::clicked(int _id) {
 		    				host->activateDeferred(effect, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
 		    			}
 	        		}
-	        		dbgassert(dawCtrl);
 	        		for (track_snapshot_t& ts : ctr->tracks) {
 	        			ts.trackLoaded->getStage()->pluginsChanged();
 	        		}

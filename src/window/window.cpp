@@ -184,11 +184,17 @@ void saveWindowPos(HWND hwnd, windowsize* size);
 #define IDT_TIMER1 0
 #endif
 
+namespace Profiling {
+void profilingRegisterWindow(void* window, String name);
+void profilingCommitStats(void* window, int frameNumber, render_stats_t& stats);
+}
+bool checkGLError(const char* s);
+
 class appwindow : protected DropTargetListener {
 protected:
 	appwindow* const parent;
-private:
 	std::vector<appwindow*> children;
+private:
 	uint64_t last = 0;
 protected:
 	char name[32]{ 0 };
@@ -211,6 +217,9 @@ protected:
 	bool bCanResize = false;
 	bool shown = false;
 	bool valid = true;
+
+	int frameNumber = 0;
+	int frameCountFPS = 0;
 public:
 	bool isValid() {
 		return valid;
@@ -222,7 +231,6 @@ public:
 		this->valid = true;
 	}
 private:
-	int calls = 0;
 	uint64_t tm_lastfps = 0;
 	String fpsStats;
 	double secondsLastDraw = 0.0;
@@ -362,22 +370,23 @@ public:
 	}
 	void endFrame() {
 
+		daw_tls::tlsinstance& tls = daw_tls::getTls();
 		uint64_t tm = getTimeMillis();
 		double since = (tm - tm_lastfps) / 1000.0;
-		if (calls > 0 && since >= 1.0) {
-			double fps = calls / since;
+		if (frameCountFPS > 0 && since >= 1.0) {
+			double fps = frameCountFPS / since;
 			fpsStats = StringFormat("%.2f fps", fps);
 #if BUILD_VSTHOST
-			daw_tls::tlsinstance& tls = daw_tls::getTls();
 			tls.renderStats.fps = fps;
 #endif
 //			glfwSetWindowTitle(glfw, StringAsCStr(fpsStats));
 			tm_lastfps = tm;
-			calls = 0;
+			frameCountFPS = 0;
 		}
-		calls++;
 		secondsLastDraw = getTimeHPC();
 		redrawFlagged = false;
+		frameCountFPS++;
+		frameNumber++;
 	}
 	void killTimer() {
 		unregisterWindowTimer(this);
@@ -674,6 +683,7 @@ public:
 	    }
 //		flagNeedsRedraw();
         glfwMakeContextCurrent(glfw);
+        checkGLError("onTick");
 
         //overlay/child window lifetime management
         if (overlayWindowsToClose.size()) {
@@ -690,7 +700,7 @@ public:
 
         if (getTimeMillisd() - tmLastShaderReloadMillis >= 3000) {
         	tmLastShaderReloadMillis = getTimeMillisd();
-            reloadCustomShaders();
+            //reloadCustomShaders();
         }
 		ctrl->onAppTick();
 	}
@@ -740,6 +750,10 @@ public:
 			if (!this->parent) {
 				daw_tls::tlsinstance& tls = daw_tls::getTls();
 				tls.renderStats.timeRender=timer.getTime();
+				Profiling::profilingCommitStats(this, frameNumber, tls.renderStats);
+				tls.prevRenderStats = tls.renderStats;
+				memset(&tls.renderStats, 0, sizeof(tls.renderStats));
+				tls.renderStats.fps = tls.prevRenderStats.fps;
 			}
 #endif
 			glfwSwapBuffers(glfw);
@@ -1182,6 +1196,11 @@ void appwindow_main::destroyOverlayWindows() {
 		ow.reset();
 	}
 	this->overlayWindows.clear();
+	std::vector<appwindow*> childWindowsCopy = this->children;
+	for (appwindow* ow : childWindowsCopy) {
+		ow->onWindowCloseRequest();
+	}
+	dbgassert(this->children.empty());
 }
 void appwindow_main::destroy() {
 	if (!glfw)
@@ -1519,6 +1538,7 @@ void initColor(); // Forward declare from gui/gui.cpp
 void deleteApp(); // Forward declare from host/mainctrl.cpp
 void openGlobalLog(const String& logFileName); // Forward declare from util/debug.cpp
 void closeGlobalLog(); // Forward declare from util/debug.cpp
+
 String getCurrentWorkingDirectory();
 
 int startApplication(int argc, char* argv[]) {
@@ -1604,6 +1624,8 @@ int startApplication(int argc, char* argv[]) {
 	if (centerScreenIdx >= 0) {
 		mainWindow->centerOnScreen(centerScreenIdx);
 	}
+
+	Profiling::profilingRegisterWindow(mainWindow.get(), "Main Window");
 
 //	enableGlDebugCallback();
 	glfwSetErrorCallback(glfw_runtime_error_callback);
@@ -1773,8 +1795,11 @@ int startApplication(int argc, char* argv[]) {
 void windowTickTimerRun() {
 	std::vector<appwindow*> localWindowTimerHandleList = windowTimerHandleList;
 	for (appwindow* window : localWindowTimerHandleList) {
-		if (STL_CONTAINS(windowTimerHandleList, window))
-			window->onTick();
+		if (STL_CONTAINS(windowTimerHandleList, window)) {
+			if (window->isWindowNotHidden()) {
+				window->onTick();
+			}
+		}
 	}
 }
 

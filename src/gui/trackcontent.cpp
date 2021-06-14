@@ -69,6 +69,7 @@ void gui_audio_clip::handleRightClick(MouseEvent& evt) {
 }
 void gui_audio_clip::releaseRendered() {
 //	my_printf("release %012x from releaseRendered()\n", waveformRef);
+	dbgassert(waveformrender::getInstance()->isValid(waveformRef));
 	waveformrender::getInstance()->release(waveformRef);
 //	m_clip->audio.waveformRef.fbId = -1;
 	waveformRef->rendered = false;
@@ -214,10 +215,14 @@ void gui_audio_clip::prerender(NVGcontext* vg) {
 		}
 		if (!culled && (!waveformRef->rendered || (this->updatedWaveform != waveformRef->waveform))) {
 			releaseRendered();
+			dbgassert(!waveformRef->rendered && !waveformRef->queued);
 			waveformRef->waveform = this->updatedWaveform;
 			dbgassert(!waveformRef->queued);
 			dbgassert(waveformRef->waveform.size.x > 0 && waveformRef->waveform.size.y > 0);
-			waveformrender::getInstance()->queueUpdate(audio, waveformRef);
+			if (waveformrender::getInstance()->queueUpdate(audio, waveformRef)) {
+				dbgassert(!waveformRef->rendered && waveformRef->queued);
+				dbgassert(waveformrender::getInstance()->isValid(waveformRef));
+			}
 		}
 	}
 }

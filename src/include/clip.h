@@ -86,6 +86,10 @@ public:
     void visitNotes(Functor f) {
     	std::for_each(m_list.begin(), m_list.end(), f);
     }
+    template<typename Functor>
+    void visitSelection(Functor f) {
+    	std::for_each(selection.begin(), selection.end(), f);
+    }
 	void setTo(std::set<note_t*>& notePtrs, tick_t offset);
 	void addAll(std::vector<note_t>& list);
 	void removeAll(std::vector<note_t>& list);

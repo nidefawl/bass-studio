@@ -574,10 +574,12 @@ void addPropertiesFromGui(guiplugin& gui, Table::tbl* table) {
 	auto effect = gui.effect;
 	std::vector<automatable_param_t*> sortedParams;
 	effect->getSortedParams(sortedParams);
-	rows.push_back({{tblString{"Name"}, tblString{"idx"}, tblString{"internalIdx"}, tblString{"flags"}, tblString{"category"}, tblString{"Step"}}});
+	rows.push_back({{tblString{"Name"}, tblString{"Value"}, tblString{"idx"}, tblString{"internalIdx"}, tblString{"flags"}, tblString{"category"}, tblString{"Step"}}});
     for (automatable_param_t* param : sortedParams) {
     	tbl_row_t row;
     	row.cols.push_back(tblString{param->label});
+
+    	row.cols.push_back(tblString{StringFormat("%0.4f", param->value)});
     	row.cols.push_back(tblint{param->idx});
     	row.cols.push_back(tblint{param->internalIdx});
     	row.cols.push_back(tblint{param->flags});
