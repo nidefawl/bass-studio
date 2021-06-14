@@ -41,23 +41,17 @@ private:
 	char name[kVstMaxProgNameLen+1];
 };
 
-
-struct PluginVST2_HostInfo_impl_t {
-
-	std::vector<uint8_t> dataPlugin;
-
-	std::vector<uint8_t> dataPreset;
-	PluginVST2_HostInfo_impl_t() {
-
-	}
-};
+struct PluginVST2_HostInfo_impl_t;
 class PluginVST2_HostInfo : public BasePluginVST2 {
+	friend PluginVST2_HostInfo_impl_t* getImpl(PluginVST2_HostInfo*);
+protected:
 	PluginVST2_HostInfo_impl_t* const impl;
 public:
 	PluginVST2_HostInfo (audioMasterCallback audioMaster);
 	~PluginVST2_HostInfo ();
 
 	void processReplacing (float** inputs, float** outputs, VstInt32 sampleFrames) override;
+	VstInt32 processEvents (VstEvents* events) override;
 	std::shared_ptr<PluginViewContainers> createView() override;
 
 	virtual void setProgram(VstInt32 program);
