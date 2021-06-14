@@ -545,7 +545,11 @@ void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effec
 		automatable_param_t* atParam = effect->getParam(param.idx);
 		if (atParam) {
 			dbgassert(param.val >= 0.0f && param.val <= 1.0f);
-			effect->setParamValue(atParam->idx, param.val, FLG_PAR_UPDATE_INIT);
+			int flags = FLG_PAR_UPDATE_INIT;
+			if (!param.flags) {
+				flags |= FLG_PAR_UPDATE_NOSTORE;
+			}
+			effect->setParamValue(atParam->idx, param.val, flags);
 		} else {
 			missingParams++;
 		}
@@ -1021,7 +1025,7 @@ void track_impl_t::sendNotesOff(int32_t bpm100) {
 void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos,
 		clip_notes_t& midiRealtimeInput, int32_t flags) {
 	//dbgassert(end != loopEnd); //if end equals loopEnd note off events will be on exact end
-	if (std::any_of(effects.begin(), effects.end(), [](const effectbase* ref){
+	if (arp || std::any_of(effects.begin(), effects.end(), [](const effectbase* ref){
 			return ref->bCanReceiveMidi;
 	})) {
 		const double ticksPerBlock = toTickPrecise(sampleFormat.blockSize/(double)sampleFormat.sampleRate, bpm100);
@@ -1160,14 +1164,18 @@ void track_params_t::createSnapshot(track_params_snapshot_t& snapshot) {
 	snapshot.params.reserve(getNumParameters());
 	visitParams([&snapshot](auto& mapEntry) {
 		automatable_param_t& param = mapEntry.second;
-		snapshot.params.push_back(param_snapshot_t{param.idx, param.value});
+		snapshot.params.push_back(param_snapshot_t{param.idx, param.value,  param.inUse?1:0});
 	});
 	storeAutomation(snapshot.automatedParams, this);
 }
 void track_params_t::loadSnapshot(const track_params_snapshot_t& snapshot) {
 	for (const auto& param : snapshot.params) {
 		dbgassert(getParam(param.idx));
-		setParamValue(param.idx, param.val, FLG_PAR_UPDATE_INIT);
+		int flags = FLG_PAR_UPDATE_INIT;
+		if (!param.flags) {
+			flags |= FLG_PAR_UPDATE_NOSTORE;
+		}
+		setParamValue(param.idx, param.val, flags);
 	}
 	loadAutomation(snapshot.automatedParams, this);
 }

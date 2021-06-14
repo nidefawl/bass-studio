@@ -4,8 +4,9 @@
 #include "str_util.h"
 
 struct param_snapshot_t {
-	int32_t idx;
-	float val;
+	int32_t idx = 0;
+	float val = 0;
+	int flags = 0;
 };
 struct automation_view_t;
 struct plugin_snapshot_t {

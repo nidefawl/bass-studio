@@ -38,6 +38,7 @@ template<class Archive>
 void serialize(Archive & archive, param_snapshot_t & m)
 {
 	archive(make_nvp("idx", m.idx), make_nvp("val", m.val));
+	make_optional_nvp(archive, "flags", m.flags);
 }
 template<class Archive>
 void serialize(Archive & archive, automationlane_snapshot_t & m)

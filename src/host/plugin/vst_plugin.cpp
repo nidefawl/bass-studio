@@ -315,7 +315,8 @@ void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin, bool storePluginCh
 	}
 	ps.name = plugin->sName;
 
-	if (storePluginChunks && (plugin->getFlagsVST() & effFlagsProgramChunks)) {
+	bool usesBinaryChunks = plugin->getFlagsVST() & effFlagsProgramChunks;
+	if (storePluginChunks && (usesBinaryChunks)) {
 		{
 			void* pluginData = nullptr;
 			int32_t pluginDataSize = plugin->dispatch(effGetChunk, 0, 0, &pluginData, 0);
@@ -339,17 +340,22 @@ void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin, bool storePluginCh
 		}
 	}
 	if (storePluginChunks) {
-		ps.params.reserve(plugin->getNumParameters());
-        plugin->visitParams([&ps, plugin](auto& mapEntry) {
-            automatable_param_t& param = mapEntry.second;
-			if (param.inUse) {
-				ps.params.push_back(param_snapshot_t{ param.idx, param.value });
-            } else {
-            }
+		int32_t numParamsReserve = math::min<int32_t>(150, plugin->getNumParameters());
+		ps.params.reserve(numParamsReserve);
+        plugin->visitParams([&ps, usesBinaryChunks](auto& mapEntry) {
+
+                automatable_param_t& param = mapEntry.second;
+			if (param.internalIdx < 0 || param.internalIdx < 128) {
+    			if (param.inUse || !usesBinaryChunks) {
+    				int paramFlags = param.inUse?1:0;
+    				ps.params.push_back(param_snapshot_t{ param.idx, param.value, paramFlags });
+                } else {
+                }
+        	}
 		});
 		storeAutomation(ps.automatedParams, plugin);
 	}
-	if (plugin->programNames.size()) {
+	if (plugin->programNames.size()>1) {
 		uint32_t curProgramNr = 0;
 		plugin->getCurrentProgram(curProgramNr);
 		ps.currentProgram = curProgramNr;
