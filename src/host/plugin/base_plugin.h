@@ -82,7 +82,7 @@ public:
 	virtual void makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) = 0;
 	virtual guiplugin* makeGui() = 0;
 	virtual guiplugin* getGui() = 0;
-	virtual void process(AudioBlock* in, AudioBlock* out, int32_t samplePos, int32_t numSamples, playback_state state) = 0;
+	virtual void process(AudioBlock* in, AudioBlock* out, double tick, int32_t samplePos, int32_t numSamples, playback_state state) = 0;
 	virtual void postProcess(AudioBlock* out, int32_t samples, bool hasProcessed);
 	virtual bool show() = 0;
 	virtual bool close() = 0;
@@ -163,7 +163,7 @@ public:
 	void makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) override;
 	guiplugin* makeGui() override;
 	guiplugin* getGui() override;
-	void process(AudioBlock* in, AudioBlock* out, int32_t samplePos, int32_t numSamples, playback_state state) override;
+	void process(AudioBlock* in, AudioBlock* out, double tick, int32_t samplePos, int32_t numSamples, playback_state state) override;
 	bool show() override;
 	bool close() override;
 	void resume() override;
@@ -171,7 +171,7 @@ public:
 	String getAutomatableName() override;
 	float getParamValue(int32_t idx) override;
 	void setParamValue(int32_t idx, float val, int flags) override;
-	automationlane_snapshot_t toRef() override;
+	automationlane_snapshot_t toRef() const override;
 	static std::shared_ptr<effect_deferred> fromEffect(effectbase* eff);
     String getDfrdPluginName();
     const plugin_snapshot_t& getSnapshotConst() const;

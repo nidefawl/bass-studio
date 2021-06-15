@@ -205,7 +205,7 @@ public:
 	int32_t processPlayback(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround);
 	int32_t processBlock(project_controller_t* ctrl, const DAW::processing_graph_t* const processingGraph, AudioBlock* const ptrExternalInputs, AudioBlock* const ptrExternalOutputs, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround);
 	void getBlockThreadStats(std::vector<thread_stats_process_timings_t>&);
-	void processAudio(audio_stage_t* channel, AudioBlock* input, AudioBlock* output, int32_t sample, int32_t samples, playback_state state, const DAW::effect_processing_graph_t* const processingGraph) const;
+	void processAudio(audio_stage_t* stage, AudioBlock* input, AudioBlock* output, const double tickLatencyCompensated, int32_t samplePos, int32_t numSamples, playback_state state, const DAW::effect_processing_graph_t* const processingGraph) const;
 	VstTimeInfo* getTimeInfo() {
 		return &this->timeinfo;
 	}

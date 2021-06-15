@@ -309,7 +309,7 @@ void module_group::getChildAudioStages(std::vector<audio_stage_t*>& targets) {
 	targets.push_back(this->audio);
 }
 
-void module_group::process(AudioBlock* in, AudioBlock* out, int32_t samplePos, int32_t numSamples, playback_state state) {
+void module_group::process(AudioBlock* in, AudioBlock* out, double tick, int32_t samplePos, int32_t numSamples, playback_state state) {
 	dbgassert(getTrackLink()->sampleFormat == this->format && in->samples == format.blockSize
 			&& out->samples == format.blockSize && format.blockSize > 0 && format.sampleRate > 0);
 	audio->input.copyFrom(in);
@@ -319,7 +319,7 @@ void module_group::process(AudioBlock* in, AudioBlock* out, int32_t samplePos, i
 		log_printf("Failed building effect graph\n", 0);
 	}
 
-	vstHost->processAudio(audio, &audio->input, &audio->output, samplePos, numSamples, state, effProcessingGraph.get());
+	vstHost->processAudio(audio, &audio->input, &audio->output, tick, samplePos, numSamples, state, effProcessingGraph.get());
 
 	//TODO: this code path runs on a workerthread. Store processing-graph add to vsthost::lastProcessingGraphs from playback-thread
 

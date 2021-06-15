@@ -127,7 +127,7 @@ public:
 	float getParamValue(int32_t idx) override;
 	String getParamValueDisplay(int32_t idx) override;
 	void setParamValue(int32_t idx, float val, int flags) override;
-	automationlane_snapshot_t toRef() override;
+	automationlane_snapshot_t toRef() const override;
 	void postSetParameter(int32_t idx, float preVal, float val, int flags) override;
 
 	bool setCurrentProgram(uint32_t idx) override;
@@ -139,7 +139,7 @@ public:
 	void loadSnapshot(const plugin_snapshot_t& pluginSnapshot) override;
 	guiplugin* makeGui() override;
 	guiplugin* getGui() override;
-	void process(AudioBlock* in, AudioBlock* out, int32_t samplePos, int32_t numSamples, playback_state state) override;
+	void process(AudioBlock* in, AudioBlock* out, double tick, int32_t samplePos, int32_t numSamples, playback_state state) override;
 	int32_t getDelay() override;
 	int32_t getFlagsVST();
 	VstTimeInfo* getLocalTimeInfoPtr();

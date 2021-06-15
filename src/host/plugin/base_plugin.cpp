@@ -240,7 +240,7 @@ int effect_deferred::getModuleType() {
 void effect_deferred::makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) {
 	ps = this->mImpl->snapshot;
 }
-void effect_deferred::process(AudioBlock* in, AudioBlock* out, int32_t samplePos, int32_t numSamples, playback_state state) {
+void effect_deferred::process(AudioBlock* in, AudioBlock* out, double tick, int32_t samplePos, int32_t numSamples, playback_state state) {
 	dbgassert(vstHost->sampleFormat == this->format && in->samples == format.blockSize && out->samples == format.blockSize && format.blockSize > 0 && format.sampleRate > 0);
 }
 bool effect_deferred::show() {
@@ -273,7 +273,7 @@ float effect_deferred::getParamValue(int32_t idx) {
 void effect_deferred::setParamValue(int32_t idx, float val, int flags) {
 
 }
-automationlane_snapshot_t effect_deferred::toRef() {
+automationlane_snapshot_t effect_deferred::toRef() const {
 	automationlane_snapshot_t ref;
 	ref.type = AUTOMATABLE_EFFECT;
 	ref.refId = this->projectGlobalId;

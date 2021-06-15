@@ -1226,6 +1226,74 @@ void track_params_t::setParamValue(int32_t idx, float val, int flags) {
 track_t* track_params_t::getTrack() {
 	return audiostage->getTrack();
 }
+
+automationlane_snapshot_t track_params_t::toRef() const {
+	automationlane_snapshot_t ref;
+	ref.type = AUTOMATABLE_MIXER;
+	ref.refId = static_cast<int32_t>(audiostage->stageId.stageId);
+	return ref;
+}
+
+namespace DAW {
+	bool resolveAutomatableRef(const vsthost* const host, const automationlane_snapshot_t& ref, automatable_t** out) {
+		if (ref.type == AUTOMATABLE_EFFECT) {
+			effectbase* plugin = host->getPluginById(ref.refId);
+//			if (!plugin || plugin->getModuleType() == PLUGIN_TYPE_DEFERRED) {
+//				log_printf("skipping deferred ref.type %d, ref.refId %d, ref.paramIdx %d\n", ref.type, ref.refId, ref.paramIdx);
+//				n++;
+//				continue;
+//			}
+//			al = new gui_track_automationlane(entry, guiTracks->grid, plugin, ref.paramIdx);
+			if (plugin) {
+				*out = plugin;
+				return true;
+			}
+			return false;
+		}
+		if (ref.type == AUTOMATABLE_MIXER) {
+			auto stage = host->getAudioStage(AudioStageRefFromId(ref.refId));
+			if (stage) {
+				*out = &stage->mixer;
+				return true;
+			}
+			return false;
+		}
+		if (ref.type == AUTOMATABLE_ARP) {
+			auto stage = host->getAudioStage(AudioStageRefFromId(ref.refId));
+			if (stage->getTrack()&&stage->getTrack()->getStage()) {
+				auto trImpl = stage->getTrack()->getStage();
+				if (trImpl) {
+					*out = trImpl->arp;
+					return true;
+				}
+			}
+			return false;
+		}
+
+		return false;
+	}
+	bool resolveAutomationAtTime(const vsthost* const host, const automation_ref_t& ref, tick_t atTime, float* fOut) {
+		dbgassert(fOut);
+		switch (ref.type) {
+			case 0:
+				*fOut = ref.val;
+				return true;
+			case 1:
+				automatable_t* at = nullptr;
+				if (resolveAutomatableRef(host, ref.snapshot, &at)) {
+					auto* atData = at->getRegisteredAutomation(ref.snapshot.paramIdx);
+					if (atData) {
+						*fOut = atData->getValueAt(atTime);
+						return true;
+					}
+				}
+				break;
+		}
+		return false;
+	}
+}
+
+
 const char* trackTypeNames[5] = {
 	"Master", "Return", "Midi", "Audio", NULL
 };

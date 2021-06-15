@@ -26,6 +26,11 @@ struct automationlane_snapshot_t {
 	int32_t height = 4;
 	int32_t subtrackType = 0;
 };
+//TODO: toRef should return this class:
+struct automatble_ref_t {
+ // audio_stage_ref_t trackRef
+ // int32_t projectGlobalIdEffectRef
+};
 
 class track_t;
 struct automation_point_t {
@@ -147,7 +152,7 @@ public:
 	 *
 	 */
 	virtual void setParamValue(int32_t idx, float val, int flags) = 0;
-	virtual automationlane_snapshot_t toRef() = 0;
+	virtual automationlane_snapshot_t toRef() const = 0;
 	virtual track_t* getTrack() = 0;
 
 	virtual void flipParamValue(int32_t idx) {
@@ -291,3 +296,23 @@ void storeAutomation(std::vector<automation_view_t>& automatedParams, automatabl
 int32_t indexOfTick(const std::vector<automation_point_t>& dataPoints, tick_t tick);
 int32_t addPointAt(std::vector<automation_point_t>& dataPoints, tick_t tick, int32_t quantizationSteps);
 void simplifyData(std::vector<automation_point_t>& data);
+
+class vsthost;
+namespace DAW {
+	struct automation_ref_t {
+		int type;
+		float val;
+		automationlane_snapshot_t snapshot;
+	};
+	inline automation_ref_t AutomationRef(const automatable_t* automatable, int32_t paramIdx) {
+		automationlane_snapshot_t subtrackSnapshot;
+		subtrackSnapshot = automatable->toRef();
+		subtrackSnapshot.paramIdx = paramIdx;
+		return automation_ref_t{1, 0.0f, subtrackSnapshot};
+	}
+	inline automation_ref_t AutomationConstant(float val) {
+		return automation_ref_t{0, val, {}};
+	}
+	bool resolveAutomationAtTime(const vsthost* const host, const automation_ref_t& ref, tick_t atTime, float* fOut);
+	bool resolveAutomatableRef(const vsthost* const host, automationlane_snapshot_t& ref, automatable_t** out);
+}

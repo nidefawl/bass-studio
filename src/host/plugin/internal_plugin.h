@@ -44,7 +44,7 @@ public:
 		return nullptr;
 	};
 	virtual int32_t getDelay() = 0;
-	virtual void process(AudioBlock* in, AudioBlock* out, int32_t samplePos, int32_t numSamples, playback_state state) = 0;
+	virtual void process(AudioBlock* in, AudioBlock* out, double tick, int32_t samplePos, int32_t numSamples, playback_state state) = 0;
 //	virtual bool resume() = 0;
 //	virtual bool sleep() = 0;
 //	virtual void unload(vsthost* host, int flags) = 0;
@@ -61,7 +61,7 @@ public:
 	float getParamValue(int32_t idx) override;
 	void setParamValue(int32_t idx, float val, int flags) override;
 	void recvPluginEditParamUpdate(int32_t idx);
-	automationlane_snapshot_t toRef() override;
+	automationlane_snapshot_t toRef() const override;
 
 //	virtual std::shared_ptr<PluginViewContainers> createView() = 0;
 };

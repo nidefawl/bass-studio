@@ -38,7 +38,7 @@ struct audio_stage_t;
 //	{
 //		return 0;
 //	}
-//	void process(AudioBlock* in, AudioBlock* out, int32_t samplePos, int32_t numSamples, playback_state state) override
+//	void process(AudioBlock* in, AudioBlock* out, double tick, int32_t samplePos, int32_t numSamples, playback_state state) override
 //	{
 //		dbgassert(
 //				getTrackLink()->sampleFormat == this->format && in->samples == format.blockSize && out->samples == format.blockSize
@@ -94,7 +94,7 @@ public:
 public:
 	virtual int getModuleType() override { return PLUGIN_TYPE_GAIN; };
 	int32_t getDelay() override;
-	void process(AudioBlock* in, AudioBlock* out, int32_t samplePos, int32_t numSamples, playback_state state) override;
+	void process(AudioBlock* in, AudioBlock* out, double tick, int32_t samplePos, int32_t numSamples, playback_state state) override;
 	String getInfo(std::vector<String>& list) override;
 	void resume() override;
 	void sleep() override;

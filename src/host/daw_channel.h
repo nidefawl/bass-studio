@@ -20,6 +20,9 @@ struct audio_stage_ref_t {
 inline const audio_stage_ref_t AudioStageRefNULL() {
 	return {TRACKID_INVALID_I32};
 }
+inline const audio_stage_ref_t AudioStageRefFromId(int32_t id) {
+	return {static_cast<audiostageid_i32>(id)};
+}
 struct audio_channel_ref_t {
 	audio_stage_ref_t stageRef;
 	stagebuffer_point buffer;

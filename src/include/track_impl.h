@@ -80,12 +80,7 @@ public:
 	 *
 	 */
 	void setParamValue(int32_t idx, float val, int flags) override;
-	automationlane_snapshot_t toRef() override {
-		automationlane_snapshot_t ref;
-		ref.type = AUTOMATABLE_MIXER;
-		ref.refId = 0;
-		return ref;
-	}
+	automationlane_snapshot_t toRef() const override;
 	track_t* getTrack() override;
 	bool isEnabled() {
 		return getParam(PARAM_ENABLE)->value >= 0.5f;

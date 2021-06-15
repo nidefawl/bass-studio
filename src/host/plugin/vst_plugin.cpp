@@ -342,13 +342,17 @@ void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin, bool storePluginCh
 	if (storePluginChunks) {
 		int32_t numParamsReserve = math::min<int32_t>(150, plugin->getNumParameters());
 		ps.params.reserve(numParamsReserve);
-        plugin->visitParams([&ps, usesBinaryChunks](auto& mapEntry) {
+        plugin->visitParams([&ps,vstplugin=plugin, usesBinaryChunks](auto& mapEntry) {
 
                 automatable_param_t& param = mapEntry.second;
 			if (param.internalIdx < 0 || param.internalIdx < 128) {
     			if (param.inUse || !usesBinaryChunks) {
+    				float curValue = param.value;
     				int paramFlags = param.inUse?1:0;
-    				ps.params.push_back(param_snapshot_t{ param.idx, param.value, paramFlags });
+    				if (param.internalIdx >= 0) {
+        				curValue = vst_getParameter(vstplugin, vstplugin->handle->aeffect, param.internalIdx);
+    				}
+    				ps.params.push_back(param_snapshot_t{ param.idx, curValue, paramFlags });
                 } else {
                 }
         	}
@@ -529,7 +533,7 @@ void vstplugin::recvPluginEditParamUpdate(int32_t internalIdx) {
 	param->value = vst_getParameter(this, handle->aeffect, param->internalIdx);
 	param->inUse = true;
 }
-automationlane_snapshot_t vstplugin::toRef() {
+automationlane_snapshot_t vstplugin::toRef() const {
 	automationlane_snapshot_t ref;
 	ref.type = AUTOMATABLE_EFFECT;
 	ref.refId = this->projectGlobalId;

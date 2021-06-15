@@ -139,10 +139,10 @@ public:
 			}
 		}
 	}
-	automationlane_snapshot_t toRef() override {
+	automationlane_snapshot_t toRef() const override {
 		automationlane_snapshot_t ref;
 		ref.type = AUTOMATABLE_ARP;
-		ref.refId = 0;
+		ref.refId = static_cast<int32_t>(trackImpl->stageId.stageId);
 		return ref;
 	}
 	track_t* getTrack() override {

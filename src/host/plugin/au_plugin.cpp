@@ -44,7 +44,7 @@ void auplugin::makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks){ }
 void auplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot){ }
 guiplugin* auplugin::makeGui(){ return nullptr; }
 guiplugin* auplugin::getGui(){ return nullptr; }
-void auplugin::process(AudioBlock* in, AudioBlock* out, int32_t samplePos, int32_t numSamples, playback_state state){
+void auplugin::process(AudioBlock* in, AudioBlock* out, double tick, int32_t samplePos, int32_t numSamples, playback_state state){
 
 }
 int32_t auplugin::getDelay() { return 0; }
@@ -98,7 +98,7 @@ void auplugin::postSetParameter(int32_t idx, float preVal, float val, int flags)
 //	dbgassert(param && param->internalIdx >= 0);
 //	param->value = vst_getParameter(this, handle->aeffect, param->internalIdx);
 //}
-automationlane_snapshot_t auplugin::toRef() {
+automationlane_snapshot_t auplugin::toRef() const {
 	automationlane_snapshot_t ref;
 	ref.type = AUTOMATABLE_EFFECT;
 	ref.refId = this->projectGlobalId;

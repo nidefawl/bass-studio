@@ -190,7 +190,7 @@ public:
 	~vsthost_impl() {
 	}
 	void resetDelaylines() {
-		delayLines.clear();//TODO: this might free a lot of memory and be expensive: profile!
+		//delayLines.clear();//TODO: this might free a lot of memory and be expensive: profile!
 	}
 	DelayLine* getDelayLine(uint32_t id, int32_t numChannels) {
 		using namespace std;
@@ -1360,7 +1360,15 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
 
 				//todo: one of the delay lines will always be 0 samples delay
 				delayAudio(delayLine, &srcBlock, &tempBlock, delayToMaxInputLatency);
-				trackImpl->addAudio(tempBlock, src.gain * tracksrc.gain);
+				float fGainRaw = 0.0f;
+				bool bSuccess = DAW::resolveAutomationAtTime(this, tracksrc.gainAutomation, processingPos, &fGainRaw);
+				if (bSuccess) {
+					/* Calculate audio/midi tracks gain level */
+					float fGainTrack;
+					if (dsp_util::getGainLvl(fGainRaw, fGainTrack)) {
+						trackImpl->addAudio(tempBlock, src.gain * fGainTrack);
+					}
+				}
 //				idxDelayLine++;
 			}
 		} else {
@@ -1389,7 +1397,7 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
             req.effectProcessingGraph = effProcessingGraph;
         }
         /* Processes audio/midi tracks plugin chain */
-        processAudio(trackImpl, &trackImpl->input, &trackImpl->output, sampleLatencyCompensated, lBlockSize, state,
+        processAudio(trackImpl, &trackImpl->input, &trackImpl->output, tickLatencyCompensated, sampleLatencyCompensated, lBlockSize, state,
                      req.effectProcessingGraph.get());
     }
 	trackImpl->procStats.numBlocksProcessed++;
@@ -1770,7 +1778,9 @@ void mulGain(AudioBlock* block, float gain) {
 	}
 }
 /* Function needs to be re-entrant (thread safe) */
-void vsthost::processAudio(audio_stage_t* stage, AudioBlock* input, AudioBlock* output, int32_t samplePos, int32_t numSamples, playback_state state, const DAW::effect_processing_graph_t* const processingGraph) const {
+void vsthost::processAudio(audio_stage_t* stage, AudioBlock* input, AudioBlock* output, const double tickLatencyCompensated, int32_t samplePos, int32_t numSamples, playback_state state, const DAW::effect_processing_graph_t* const processingGraph) const {
+
+	tick_t processingPos = floor(tickLatencyCompensated);
 	int count = 0;
 	if (stage->effects.size()) {
 		count += stage->effects.size();
@@ -1864,7 +1874,16 @@ void vsthost::processAudio(audio_stage_t* stage, AudioBlock* input, AudioBlock* 
                             delayAudio(delayLine, &srcBlock, &tempBlock, delayToMaxInputLatency);
                         	srcDelayBlocked = &tempBlock;
                         }
-                        blockIn->addFromOp(srcDelayBlocked, AudioBlock::mix_op::ADD, tracksrc.gain);
+        				float fGainRaw = 0.0f;
+        				bool bSuccess = DAW::resolveAutomationAtTime(this, tracksrc.gainAutomation, processingPos, &fGainRaw);
+        				if (bSuccess) {
+        					/* Calculate audio/midi tracks gain level */
+        					float fGainTrack;
+        					if (dsp_util::getGainLvl(fGainRaw, fGainTrack)) {
+//        						trackImpl->addAudio(tempBlock, src.gain * fGainRaw);
+                                blockIn->addFromOp(srcDelayBlocked, AudioBlock::mix_op::ADD, fGainTrack);
+        					}
+        				}
                     }
                 }
                 else {
@@ -1891,7 +1910,7 @@ void vsthost::processAudio(audio_stage_t* stage, AudioBlock* input, AudioBlock* 
                     blockPostProcess = effect->blockOutputs;
                 }
                 else {
-                    effect->process(effect->blockInputs, effect->blockOutputs, samplePos, numSamples, state);
+                    effect->process(effect->blockInputs, effect->blockOutputs, tickLatencyCompensated, samplePos, numSamples, state);
                     blockPostProcess = effect->blockOutputs;
                 }
                 effect->postProcess(blockPostProcess, numSamples, !isBypass);

@@ -100,7 +100,7 @@ void module_empty::load(vsthost* host) {
 		this->sleep();
 	}
 }
-void module_empty::process(AudioBlock* in, AudioBlock* out, int32_t samplePos, int32_t numSamples, playback_state state) {
+void module_empty::process(AudioBlock* in, AudioBlock* out, double tick, int32_t samplePos, int32_t numSamples, playback_state state) {
 	dbgassert(getTrackLink()->sampleFormat == this->format && in->samples == format.blockSize && out->samples == format.blockSize && format.blockSize > 0 && format.sampleRate > 0);
 	out->copyFrom(in);
 }

@@ -352,11 +352,11 @@ namespace DAW {
 					}
 					track_node_t& trackSrcCfg = getNode(map, srcStageId);
 					trackCfg.dependencies.push_back(srcStageId);
-					trackCfg.pulls.push_back(DAW::track_source_t{trackEdgeId++, inputChannel, 1.0f, 0, src->flags});
+					trackCfg.pulls.push_back(DAW::track_source_t{trackEdgeId++, inputChannel, DAW::AutomationConstant(dsp_util::gainToLinScale(1.0f)), 0, src->flags});
 					trackCfg.children.push_back(&trackSrcCfg);
 					trackSrcCfg.parents.push_back(&trackCfg);
 				} else if (inputChannel.getType() == channel_input_type::INPUT_EXTERNAL_AUDIO) {
-					trackCfg.pulls.push_back(DAW::track_source_t{trackEdgeId++, inputChannel, 1.0f, 0, audiostageflags_t::NONE});
+					trackCfg.pulls.push_back(DAW::track_source_t{trackEdgeId++, inputChannel, DAW::AutomationConstant(dsp_util::gainToLinScale(1.0f)), 0, audiostageflags_t::NONE});
 				} else if (inputChannel.type != channel_input_type::INPUT_DEFAULT) {
 					log_printf("missing track input routing\n", 0);
 				}
@@ -374,7 +374,7 @@ namespace DAW {
 					trackDstCfg.dependencies.push_back(stageId);
 					// cannot set trackDstCfg.inputLatency here because map[trackImpl->stageId].inputLatency may not have been written yet
 //					trackDstCfg.inputLatency = std::max(trackDstCfg.inputLatency, map[trackImpl->stageId].inputLatency+map[trackImpl->stageId].internalLatency);
-					trackDstCfg.pushs.push_back(DAW::track_source_t{trackEdgeId++, ChannelStage(trackImpl, stagebuffer_point::OUTPUT_POST), 1.0f, 0, trackImpl->flags});
+					trackDstCfg.pushs.push_back(DAW::track_source_t{trackEdgeId++, ChannelStage(trackImpl, stagebuffer_point::OUTPUT_POST), DAW::AutomationConstant(dsp_util::gainToLinScale(1.0f)), 0, trackImpl->flags});
 					trackDstCfg.children.push_back(&trackCfg);
 					trackCfg.parents.push_back(&trackDstCfg);
 				}
@@ -382,13 +382,19 @@ namespace DAW {
 			if (TRACKTYPE_TO_CTR(track->type)  == TRACK_CTR_MIDIAUDIO && trackImpl->mixer.isEnabled()) {
 				/* Feed audio/midi tracks output into returns input */
 				for (track_t* trackReturn : project->trackReturnCtr) {
-					auto retGainMinMax = trackImpl->mixer.getParamMinMaxAutomated(PARAM_OFFSET_SEND+trackReturn->localIdxFlat);
-					/* Calculate send gain level */
-					float fGainRaw = dsp_util::linScaleToGain(retGainMinMax.second);
-					if (fGainRaw  < dsp_util::GAIN_DBFLOOR) {
-						continue;
+					int32_t paramIdx = PARAM_OFFSET_SEND+trackReturn->localIdxFlat;
+					auto sendLevelGainVal = trackImpl->mixer.getParamValue(paramIdx);
+					auto automationRef = DAW::AutomationConstant(sendLevelGainVal);
+					auto sendLevelAutomation = trackImpl->mixer.getRegisteredConstAutomation(paramIdx);
+					if (sendLevelAutomation) {
+						automationRef = DAW::AutomationRef(&trackImpl->mixer, paramIdx);
+					} else {
+						/* Calculate send gain level */
+						float fGainRaw = dsp_util::linScaleToGain(sendLevelGainVal);
+						if (fGainRaw  < dsp_util::GAIN_DBFLOOR) {
+							continue;
+						}
 					}
-					float fGainReturn = dsp_util::clampReadGain(fGainRaw);
 
 					track_impl_t* audioReturn = trackReturn->audio;
 					dbgassert(audioReturn);
@@ -400,7 +406,7 @@ namespace DAW {
 					}
 					track_node_t& trackReturnCfg =  getNode(map, srcStageId);
 					trackReturnCfg.dependencies.push_back(trackImpl->stageId.stageId);
-					trackReturnCfg.pushs.push_back(DAW::track_source_t{trackEdgeId++, ChannelStage(trackImpl, stagebuffer_point::OUTPUT_POST), fGainReturn, 0, trackImpl->flags});
+					trackReturnCfg.pushs.push_back(DAW::track_source_t{trackEdgeId++, ChannelStage(trackImpl, stagebuffer_point::OUTPUT_POST), automationRef, 0, trackImpl->flags});
 					trackReturnCfg.children.push_back(&trackCfg);
 					trackCfg.parents.push_back(&trackReturnCfg);
 

@@ -27,6 +27,7 @@ void dawinstance_startup_commands(daw_tls::tlsinstance& tls) {
 	projName = "kshmr-samples-test.project";
 //	projName = "test-empty-midi-loop.project";
 	projName = "arp-test.project";
+	projName = "test-send-automation.project";
 	int flags = 0x1; // defer load
 	flags = 0; // no defer load
 	dawInstance->cbProjectLoadCompleteCallback = [tls, dawMainCtrl, dawInstance, host](DawInstance*, std::shared_ptr<project_file> file, int errorState) {
@@ -133,6 +134,7 @@ void dawinstance_startup_commands(daw_tls::tlsinstance& tls) {
 //		dawInstance->startPlaying();
     };
 //    dawMainCtrl->setVisible(false);
-//    dawMainCtrl->menuCommand(CMD_NOARG(CMD_SHOW_DEBUG2_WINDOW));
+    dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 0));
+    dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 2));
     dawInstance->loadFile(dawPath + projName, flags);
 }

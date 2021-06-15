@@ -207,7 +207,7 @@ void internalplugin::recvPluginEditParamUpdate(int32_t internalIdx) {
 	dbgassert(param && param->internalIdx >= 0);
 	param->value = dispatchGetParameter(param->internalIdx);
 }
-automationlane_snapshot_t internalplugin::toRef() {
+automationlane_snapshot_t internalplugin::toRef() const {
 	automationlane_snapshot_t ref;
 	ref.type = AUTOMATABLE_EFFECT;
 	ref.refId = this->projectGlobalId;

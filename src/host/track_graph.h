@@ -17,7 +17,7 @@ namespace DAW {
 struct track_source_t {
 	uint32_t trackEdgeId;
 	channel_ref_t channel;
-	float gain;
+	automation_ref_t gainAutomation;
 	samplerate_t latency = 0U;
 	audiostageflags_t flags;
 };
