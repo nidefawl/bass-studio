@@ -157,12 +157,15 @@ void vstplugin::unload(vsthost* host, int flags) {
 //		dbgassert(ap.ref);
 //		ap.ref->onDstDelete();
 //	}
-	AppWndProc_enableBlockReentrant();
-	this->dispatch(effClose);
-	AppWndProc_disableBlockReentrant();
+	if (this->window) {
+		this->window->close();
+	}
 	if (this->window) {
 		this->window->destroy();
 	}
+	AppWndProc_enableBlockReentrant();
+	this->dispatch(effClose);
+	AppWndProc_disableBlockReentrant();
 	this->bIsSetup = false;
 	my_printf("UNLOAD %s\n", StringAsCStr(this->sName));
 }
