@@ -142,9 +142,10 @@ void midiarp::onStartPlayback() {
 }
 void midiarp::allNotesOff() {
 	heldInput.clear();
-	heldOutput.clear();
-	heldOutputNotes.clear();
-	heldInputAnimationNotes.clear();
+//	heldOutput.clear();
+//	heldOutputNotes.clear();
+//	heldInputAnimationNotes.clear();
+
 	//        static int calls = 0;
 	//        if (calls++ > 4) {
 	//            calls = 0;
@@ -218,8 +219,8 @@ void midiarp::addNote(std::vector<noteevent_t>& noteEvents, tick_t start, note_t
 	note_t noteInput = note;
 	int retVal = cutNoteOutOfList(heldOutputNotes, note, true);
 	if (retVal == -1) {
-		log_printf("exact duplicate in list!\n", 0);
-		dbgassert(0);
+ 		log_printf("exact duplicate in list!\n", 0);
+		//dbgassert(0);
 	} else if (retVal != 0) {
 		//log_printf("intersecting. ret val %d\n", retVal);
 	}
