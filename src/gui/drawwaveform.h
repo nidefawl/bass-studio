@@ -57,6 +57,16 @@ class waveformrender {
 	std::vector<waveform_update_task_t> queuedTasks;
 //	std::vector<audioclip_texture_t> prevRendered;
 public:
+	struct render_timings {
+		uint64_t tmProcessInputQ = 0;
+		uint64_t tmTesselate = 0;
+		uint64_t tmFindSpot = 0;
+		uint64_t tmFindSimiliar = 0;
+		uint64_t tmDrawGL = 0;
+		uint64_t tmPassed = 0;
+		uint64_t comparisonsA = 0;
+		uint64_t comparisonsB = 0;
+	};
 	static waveformrender* getInstance();
 	waveformrender(waveformrender_impl_e t);
 	~waveformrender();
@@ -73,5 +83,6 @@ public:
 	void release(gui_waveform_texture_ref* waveformRef);
 	bool findFreeSpot(ivec2 size, int& atlasIdx, ivec2& pos);
 	bool canQueueUpdate();
+	render_timings getTimings();
 
 };

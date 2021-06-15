@@ -2487,19 +2487,37 @@ void CompanionCtrl::setEditClip(gui_clip* gclip) {
 
 void DawCtrl::prerender(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float pixelRatio) {
 
-	daw_tls::getTls().renderStats.playThreadLockCount=0;
-	daw_tls::getTls().renderStats.clipsRendered=0;
-	daw_tls::getTls().renderStats.notesRendered=0;
+	daw_tls::tlsinstance& tlsInstance = daw_tls::getTls();
+	auto& renderStats = tlsInstance.renderStats;
+	renderStats.playThreadLockCount=0;
+	renderStats.clipsRendered=0;
+	renderStats.notesRendered=0;
 //	my_printf("prerender %d\n", std::this_thread::get_id());
 	hires_timer_t timer;
 	for (guictr_base *ctr : containers) {
 		ctr->prerender(nanovgCtxt);
 	}
-	daw_tls::getTls().renderStats.timePrerender=timer.getTime();
-	timer.reset();
-	int nUpdates = waveformrender::getInstance()->renderUpdates(nanovgCtxt, 0);
-	daw_tls::getTls().renderStats.numWaveFormsRendered += nUpdates;
-	daw_tls::getTls().renderStats.timeUpdateWaveforms=timer.getTime();
+	renderStats.timePrerender=timer.getTime();
+	static uint64_t tmLastRenderUpdatesMs = getTimeMillis();
+	if (getTimeMillis() - tmLastRenderUpdatesMs >= 100) {
+		timer.reset();
+
+		int nUpdates = tlsInstance.waveform->renderUpdates(nanovgCtxt, 0);
+		renderStats.numWaveFormsRendered += nUpdates;
+		renderStats.timeUpdateWaveforms=timer.getTime();
+		if (nUpdates>15 || renderStats.timeUpdateWaveforms > 20*1000) {
+			log_printf("%d updates took %lld\n", nUpdates, renderStats.timeUpdateWaveforms);
+			auto timings = tlsInstance.waveform->getTimings();
+			log_printf("waveform.tmPassed\t\t%llu\n", timings.tmPassed);
+			log_printf("waveform.tmDrawGL\t\t%llu\n", timings.tmDrawGL);
+			log_printf("waveform.tmProcessInputQ\t%llu\n", timings.tmProcessInputQ);
+			log_printf("waveform.tmTesselate\t\t%llu\n", timings.tmTesselate);
+			log_printf("waveform.tmFindSimiliar\t%llu\n", timings.tmFindSimiliar);
+			log_printf("waveform.tmFindSpot\t\t%llu\n", timings.tmFindSpot);
+			log_printf("waveform.comparisonsA\t%llu\n", timings.comparisonsA);
+			log_printf("waveform.comparisonsB\t%llu\n", timings.comparisonsB);
+		}
+	}
 }
 track_t* clip_view::track() const {
 	if (!this->gui)

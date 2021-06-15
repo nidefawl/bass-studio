@@ -21,6 +21,10 @@
 
 bool checkGLError(const char* s);
 struct waveformrender::Impl {
+	hires_timer_t timer;
+	hires_timer_t timer2;
+	hires_timer_t timer3;
+	waveformrender::render_timings renderTimings;
 	IPathRenderer* renderer = nullptr;
 	Impl(waveformrender_impl_e t) {
 		switch (t) {
@@ -125,7 +129,7 @@ void waveformrender::release(gui_waveform_texture_ref* waveformRef) {
 //	assertWaveformRefIsUnbound(waveformRef);
 }
 bool waveformrender::canQueueUpdate() {
-	return queuedTasks.size() < 4;
+	return queuedTasks.size() < 64;
 }
 int waveformrender::queueUpdate(samplesource_t* audio, gui_waveform_texture_ref* waveformRef) {
 	if (waveformRef->queued) {
@@ -151,79 +155,81 @@ int waveformrender::queueUpdate(samplesource_t* audio, gui_waveform_texture_ref*
 	return 1;
 }
 bool collides(const ivec2& pos1, const ivec2& size1, const ivec2& pos2, const ivec2& size2, ivec2& offset) {
-	ivec2 rightBottom1 = pos1 + size1;
-	ivec2 rightBottom2 = pos2 + size2;
-	if (pos1.x >= rightBottom2.x) {
+	ivec2 lhsRightBottom = pos1 + size1;
+	ivec2 rhsRightBottom = pos2 + size2;
+	if (pos1.x >= rhsRightBottom.x) {
 		return false;
 	}
-	if (rightBottom1.x <= pos2.x) {
+	if (lhsRightBottom.x <= pos2.x) {
 		return false;
 	}
-	if (pos1.y >= rightBottom2.y) {
+	if (pos1.y >= rhsRightBottom.y) {
 		return false;
 	}
-	if (rightBottom1.y <= pos2.y) {
+	if (lhsRightBottom.y <= pos2.y) {
 		return false;
 	}
-	if (pos1.x >= pos2.x && pos1.x < rightBottom2.x) {
-		offset.x += rightBottom2.x - pos1.x;
+	if (pos1.x >= pos2.x && pos1.x < rhsRightBottom.x) {
+		offset.x += rhsRightBottom.x - pos1.x;
 	}
-	else if (pos1.y >= pos2.y && pos1.y < rightBottom2.y) {
-		offset.y += rightBottom2.y - pos1.y;
+	else if (pos1.y >= pos2.y && pos1.y < rhsRightBottom.y) {
+		offset.y += rhsRightBottom.y - pos1.y;
 	}
 	return true;
 }
-struct _pos {
-	ivec2 pos;
-	ivec2 size;
-};
-bool anyCollision(std::vector<_pos>& positions, const ivec2 pos1, const ivec2 size1) {
-	for(auto& entry : positions) {
+bool anyCollision(TextureAtlas& _atlas, const ivec2 pos1, const ivec2 size1, ivec2& colliderBottomRight) {
+	// check against list of existing textures
+	for(auto& entry : _atlas.entries) {
 		ivec2 offset(0, 0);
-		if (collides(pos1, size1, entry.pos, entry.size, offset))
+		if (collides(pos1, size1, entry.pos, entry.size, offset)) {
+			colliderBottomRight.x = entry.pos.x+entry.size.x;
+			colliderBottomRight.y = entry.pos.y+entry.size.y;
 			return true;
+		}
+	}
+	// check against list of queued textures
+	for(auto& entry : _atlas.queuedTasks) {
+		ivec2 offset(0, 0);
+		if (collides(pos1, size1, entry.pos, entry.size, offset)) {
+			colliderBottomRight.x = entry.pos.x+entry.size.x;
+			colliderBottomRight.y = entry.pos.y+entry.size.y;
+			return true;
+		}
 	}
 	return false;
 }
 bool waveformrender::findFreeSpot(const ivec2 size, int& atlasIdx, ivec2& pos) {
 	for (TextureAtlas& _atlas : atlases) {
-		std::vector<_pos> positions;
-		TextureAtlasEntry a;
-		for(auto& entry : _atlas.entries) {
-			positions.push_back(_pos{entry.pos, entry.size});
-		}
-		for(auto& entry : _atlas.queuedTasks) {
-			positions.push_back(_pos{entry.pos, entry.size});
-		}
 		ivec2 tmpPos = {0, 0};
 		while (1) {
-			if (!anyCollision(positions, tmpPos, size)) {
+			ivec2 colliderBottomRight(0);
+			if (!anyCollision(_atlas, tmpPos, size, colliderBottomRight)) {
+				//found a free spot
 				pos = tmpPos;
 				atlasIdx = _atlas.idx;
-				for(auto& entry : positions) {
-					ivec2 offset(0, 0);
-					bool b = collides(tmpPos, size, entry.pos, entry.size, offset);
-					if (b) {
-						dbgassert(0);
-					}
-				}
 				return true;
+			} else {
+				tmpPos.x = colliderBottomRight.x + 4;
 			}
-			tmpPos.x+=16;
+//			//advance by 16 pixels in x direction
+//			tmpPos.x+=16;
 			if (tmpPos.x+size.x >= FBO_WIDTH) {
+				//reached end of texture: reset to x 0 and advance y
 				tmpPos.x = 0;
-				tmpPos.y+=16;
+				tmpPos.y = colliderBottomRight.y + 4;
+//				tmpPos.y+=16;
 			}
-			if (tmpPos.y+size.y >= FBO_HEIGHT) { // texture is filled
+			if (tmpPos.y+size.y >= FBO_HEIGHT) { // atlas has no space for this textures
 				break;
 			}
 		}
 	}
-	// create new texture
+	// create new texture atlas
 	TextureAtlas e;
 	e.idx = atlases.size();
 	atlases.push_back(e);
 
+	// put the texture in the top left corner
 	pos = {0, 0};
 	atlasIdx = e.idx;
 	return true;
@@ -239,8 +245,6 @@ void waveformrender::assertWaveformRefIsUnbound(gui_waveform_texture_ref* wavefo
 	std::vector<waveform_update_task_t> queuedTasks;
 	std::vector<audioclip_texture_t> prevRendered;
 	for (TextureAtlas& _atlas : atlases) {
-		std::vector<_pos> positions;
-		TextureAtlasEntry a;
 		for(auto& entry : _atlas.entries) {
 			dbgassert(!isIn(entry.ptrs, waveformRef));
 		}
@@ -275,9 +279,8 @@ bool waveformrender::findSimiliarWaveform(waveform_update_task_t& waveformQueueE
 	gui_waveform_texture_ref* waveformRef = waveformQueueEntry.queuedptrs[0];
 	waveformRef->refState = 0;
 	for (TextureAtlas& _atlas : atlases) {
-		std::vector<_pos> positions;
-		TextureAtlasEntry a;
 		for(auto& entry : _atlas.entries) {
+			impl->renderTimings.comparisonsA++;
 			if (isAlmostEqualWaveform(entry.props, waveformRef->waveform)) {
 				waveformRef->atlasId = _atlas.idx;
 				waveformRef->atlasEntryId = entry.id;
@@ -290,13 +293,9 @@ bool waveformrender::findSimiliarWaveform(waveform_update_task_t& waveformQueueE
 				isValid(waveformRef);
 				return true;
 			}
-//			else if (entry.props.audioId == waveformRef->waveform.audioId) {
-//				auto& lhs = entry.props;
-//				auto& rhs = waveformRef->waveform;
-//				printf("almost\n",0);
-//			}
 		}
 		for(auto& entry : _atlas.queuedTasks) {
+			impl->renderTimings.comparisonsB++;
 			if (isAlmostEqualWaveform(entry.queuedptrs[0]->waveform, waveformRef->waveform)) {
 				waveformRef->atlasId = _atlas.idx;
 				waveformRef->atlasEntryId = entry.queuedptrs[0]->atlasEntryId;
@@ -309,11 +308,6 @@ bool waveformrender::findSimiliarWaveform(waveform_update_task_t& waveformQueueE
 				isValid(waveformRef);
 				return true;
 			}
-//			else if (entry.audio->id == waveformRef->waveform.audioId) {
-//				auto& lhs = entry.waveformRef->waveform;
-//				auto& rhs = waveformRef->waveform;
-//				printf("almost\n",0);
-//			}
 		}
 	}
 	return false;
@@ -347,12 +341,17 @@ void preGLState() {
 
 	checkGLError("fb prerender");
 }
+waveformrender::render_timings waveformrender::getTimings() {
+	return impl->renderTimings;
+}
 int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
-	hires_timer_t timer;
+	memset(&impl->renderTimings, 0, sizeof(impl->renderTimings));
+	auto renderer = impl->renderer;
+
 	bool preGlSet = false;
 
 	int totalRendered = 0;
-
+	impl->timer.reset();
 //	std::vector<gui_waveform_texture_ref*> queuedTasksRefs;
 //
 //	for (waveform_update_task_t& waveformQueueEntry : this->queuedTasks) {
@@ -364,11 +363,15 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 //	dbgassert(adjacent_find(queuedTasksRefs.begin(), queuedTasksRefs.end()) == queuedTasksRefs.end());
 
 	//go over all waveforms that are queued up
+	impl->timer2.reset();
 	for (waveform_update_task_t& waveformQueueEntry : this->queuedTasks) {
 		gui_waveform_texture_ref* waveformRef = waveformQueueEntry.queuedptrs[0];
 		// see if we have already have an identical texture rendered or queued
 		// if so bind them together and continue with the next queue entry
-		if (findSimiliarWaveform(waveformQueueEntry)) {
+		impl->timer3.reset();
+		bool bFndSimiliar = findSimiliarWaveform(waveformQueueEntry);
+		impl->renderTimings.tmFindSimiliar += impl->timer3.getTime();
+		if (bFndSimiliar) {
 //			my_printf("bind to identical %012x\n", &waveformQueueEntry.waveformRef);
 			continue;
 		}
@@ -380,7 +383,10 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 		ivec2 sizeInternal = ivec2((int)std::ceil(v.x), (int)std::ceil(v.y));
 //		dbgassert(waveformRef->waveform.size.x <= 512);
 		//assign texture to free spot in framebuffertextures
-		if (findFreeSpot(sizeInternal, atlasIdx, pos)) {
+		impl->timer3.reset();
+		bool foundSpot = findFreeSpot(sizeInternal, atlasIdx, pos);
+		impl->renderTimings.tmFindSpot += impl->timer3.getTime();
+		if (foundSpot) {
 //			my_printf("bind to new spot %012x\n", &waveformRef);
 			TextureAtlas& _atlas = this->atlases[atlasIdx];
 			waveformQueueEntry.pos = pos;
@@ -410,11 +416,12 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 //			}
 		}
 	}
+	impl->renderTimings.tmProcessInputQ = impl->timer2.getTime();
+//	impl->renderTimings.tmTesselate = 0;
+//	impl->renderTimings.tmDrawGL = 0;
+//	impl->renderTimings.tmPassed = 0;
 	this->queuedTasks.clear();
-	//
 
-	auto renderer = impl->renderer;
-	bool isLate = false;
 	//go over all framebuffers (_atlas.fb)
 	auto now = getTimeMillis();
 	for (TextureAtlas& _atlas : atlases) {
@@ -467,10 +474,9 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 		// go over all queue updates in that fb and tesselate + draw them
 
 		int numRendered = 0;
-		double timePassed = 0.0;
 		double timeoutMilliseconds = 20.0;
 		auto it = _atlas.queuedTasks.begin();
-		for (; it != _atlas.queuedTasks.end() && timePassed*1000.0 < timeoutMilliseconds; ++it) {
+		for (; it != _atlas.queuedTasks.end() && impl->renderTimings.tmPassed/1000UL < timeoutMilliseconds; ++it) {
 			waveform_update_task_t& waveformQueueEntry = *it;
 			gui_waveform_texture_ref* waveformRefUsedForRendering = waveformQueueEntry.queuedptrs[0];
 //			my_printf("render entry %012x\n", &waveformRef);
@@ -483,7 +489,10 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 //			if (it != prevRendered.end()) {
 //				my_printf("found prev rendered!\n", 0);
 //			}
+			impl->timer2.reset();
 			tesselateWaveform(audio->getSample(), 0, 0, &waveform, method, tesselatedWaveForms);
+			impl->renderTimings.tmTesselate += impl->timer2.getTime();
+			impl->timer2.reset();
 //			prevRendered.push_back(waveform);
 //			while (prevRendered.size() >= 1000) {
 //				prevRendered.erase(prevRendered.begin(), prevRendered.begin()+10);
@@ -518,6 +527,7 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 
 			glClear(GL_COLOR_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 			renderer->render(bakedPath, matProj, matView, matModel);
+			impl->renderTimings.tmDrawGL += impl->timer2.getTime();
 			TextureAtlasEntry e;
 			e.inuse = true;
 			e.pos = pos;
@@ -534,13 +544,13 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 			}
 			_atlas.entries.push_back(e);
 			numRendered++;
-			timePassed = timer.getTimeDouble();
+			impl->renderTimings.tmPassed = impl->timer.getTime();
 		}
 		totalRendered += numRendered;
 		int size1 = _atlas.queuedTasks.size();
 		_atlas.queuedTasks.erase(_atlas.queuedTasks.begin(), it);
 		dbgassert((size1-numRendered)==_atlas.queuedTasks.size());
-		if (timePassed*1000.0 >= timeoutMilliseconds) {
+		if (impl->renderTimings.tmPassed/1000UL >= timeoutMilliseconds) {
 			break;
 		}
 	}
