@@ -107,7 +107,7 @@ struct PluginVST2_HostInfo_impl_t {
 				case IMidiMsg::kControlChange: {
 					switch (ctrl) {
 						case IMidiMsg::kAllNotesOff:
-							heldNotes.clear();
+							//heldNotes.clear();
 							break;
 						default:
 							break;
@@ -313,11 +313,11 @@ VstInt32 PluginVST2_HostInfo::getChunk (void** data, bool isPreset) {
 VstInt32 PluginVST2_HostInfo::setChunk (void* data, VstInt32 byteSize, bool isPreset) {
 	log_printf("setChunk size %d, isPreset = %d: PTR %08X\n", byteSize, isPreset, (uint64_t)(data));
 	if (isPreset && byteSize == 1000) {
-		impl->dataPreset.resize(1000);
+		impl->dataPreset.resize(byteSize);
 		memcpy(impl->dataPreset.data(), data, byteSize);
 		return byteSize;
 	} else if (!isPreset && byteSize == 2000) {
-		impl->dataPreset.resize(1000);
+		impl->dataPreset.resize(byteSize);
 		memcpy(impl->dataPreset.data(), data, byteSize);
 		return byteSize;
 	} else {
