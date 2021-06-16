@@ -115,7 +115,7 @@ void guictr_base::renderBackground(NVGcontext* vg) {
 	drawBackground(vg, theme, getPosContent(), getSizeContent(), margin, focused, isBackgroundRenderedInset());
 	renderContainerLabel(vg);
 	/* render debug background */
-	if (this->id&(1<<16) && size.x>0 && size.y > 0) {
+	if ((this->id&(1<<16)) && size.x>0 && size.y > 0) {
 		nvgBeginPath(vg);
 		nvgRect(vg, pos.x, pos.y, size.x, size.y);
 		nvgFillColor(vg, rgbaToNvg(0x7fff00ff));

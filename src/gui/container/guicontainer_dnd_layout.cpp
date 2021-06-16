@@ -406,6 +406,8 @@ void i_ctr_drop_area::render(NVGcontext* vg) {
 	case dock_pos::STACK:
 		handleColor = rgbaToNvg(0x7fffff00);
 		break;
+	default:
+		break;
 	}
 	nvgFillColor(vg, handleColor);
 	nvgFill(vg);

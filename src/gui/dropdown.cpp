@@ -1,4 +1,3 @@
-#pragma once
 #include "dropdown.h"
 #include "str_util.h"
 

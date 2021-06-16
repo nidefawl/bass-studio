@@ -339,7 +339,7 @@ void gui_clipcontent_velocities::render(NVGcontext* vg) {
 
 	const float h = size.y;
 	const clip_notes_t& notes = view.clip()->notes;
-	NVGpaint paint{0};
+	NVGpaint paint{};
 	paint.image = -1;
 	paint.customPar = 1;
 	nvgShapeAntiAlias(vg, 0);
@@ -667,7 +667,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
 			}
 			if (nRendered) {
 				auto noteColor = theme->getColor(i==0?GuiColor::COL_NOTE:GuiColor::COL_NOTE_MUTE);
-				NVGpaint paint{0};
+				NVGpaint paint{};
 				paint.image = -1;
 				paint.innerColor = noteColor;
 				paint.customPar = 1;
@@ -690,7 +690,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
 		}
 	}
 	if (n2) {
-		NVGpaint paint{0};
+		NVGpaint paint{};
 		paint.image = -1;
 		paint.innerColor = theme->getColor(GuiColor::COL_NOTE_SELECTED);
 		paint.customPar = 3;
@@ -723,7 +723,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
 				nRendered++;
 			}
 			if (nRendered) {
-				NVGpaint paint{0};
+				NVGpaint paint{};
 				paint.image = -1;
 				paint.innerColor = theme->getColor(GuiColor::COL_NOTE_REALTIME);
 				paint.customPar = 2;
@@ -749,7 +749,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
 				nRendered++;
 			}
 			if (nRendered) {
-				NVGpaint paint{0};
+				NVGpaint paint{};
 				paint.image = -1;
 				paint.innerColor = theme->getColor(GuiColor::COL_NOTE_PLAYING);
 				paint.customPar = 2;
@@ -792,7 +792,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
 				//TODO: CULL
 				renderNote(vg, this, &note, scale, -note.start() + pos);
 			}
-			NVGpaint paint{0};
+			NVGpaint paint{};
 			paint.image = -1;
 			paint.innerColor = theme->getColor(GuiColor::COL_NOTE_ARP);
 			paint.customPar = 3;
@@ -828,7 +828,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
 						float bounds[4];
 						float textX = nx + INSET_TRACK_CONTENT;
 						float textY = m.yOffset*24+24/2.0 + INSET_TRACK_CONTENT+yoff;
-						float w = nvgTextBounds(vg, textX, textY, cstr.c_str(), nullptr, bounds);
+						nvgTextBounds(vg, textX, textY, cstr.c_str(), nullptr, bounds);
 						nvgBeginPath(vg);
 						nvgRect(vg, bounds[0], bounds[1], bounds[2]-bounds[0], bounds[3]-bounds[1]);
 						nvgFillColor(vg, rgbaToNvg(i == 0 ? 0xFF121212 : 0xFF444412));
