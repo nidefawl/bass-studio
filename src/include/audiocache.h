@@ -47,4 +47,6 @@ public:
 	audiofile_t* get(int32_t i);
 	void store(samplefile_index_t& v);
 	void load(samplefile_index_t& v);
+	void unloadAll();
+	bool isEmpty() const;
 };

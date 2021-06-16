@@ -836,6 +836,7 @@ void DawInstance::setEmptyProject() {
 		log_printf("getNumClipAllocations == %d!\n", totalAllocs);
 		dbgassert(getNumClipAllocations() == 0);
 	}
+	daw_tls::getTls().audioCache->unloadAll();
 	insertNewTrack(-1, TRACK_TYPE_MIDI, FLG_TRK_CHANGE_LOAD);
 	insertNewTrack(-1, TRACK_TYPE_MASTER, 0);
 	resetShaderTimeOffset();
@@ -904,6 +905,15 @@ void DawInstance::onDawCompanionWindowClose(DawWindowCompanion& entry) {
 		dawCtrls.erase(it);
 	}
 	destroyWindowControl(entry.wnd);
+}
+void DawInstance::setSoloState(audio_stage_ref_t ref, bool enableSolo) {
+	track_t* track = getTracks().resolveTrack(ref);
+	vsthost* host = vsthost::getInstance();
+	dbgassert(track);
+	dbgassert(track->audio);
+	track->audio->flags ^= audiostageflags_t::SOLO;
+//	const vsthost* const host, const project_t* const project, const track_vector& tracksFlat
+	DAW::updateSoloFlag(host, &project, getTracks().getAllTracksFlatVecRef());
 }
 bool DawInstance::onChildOverlayWindowClose(window_main* window) {
 	auto it = std::find_if(companionWindows.begin(), companionWindows.end(), [this, window](auto& wndEntry) {
@@ -1575,7 +1585,7 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
 	/** make sure call to unloadProject unloaded all vst2 instances **/
 	dbgassert(vsthost::getInstance()->getVst2Instances().empty());
 	//TODO: assert that audiocache is empty
-	audiocache::getInstance()->load(file->sampleFileIndex);
+	dbgassert(audiocache::getInstance()->isEmpty());
 
 	/** populates trackList **/
 	project.copyFrom(file->project);
@@ -1634,9 +1644,10 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
 				vec2 cs = getSizeContent();
 	//			float fSeconds = (getTimeHPint64()-time) / 1000000.0;
 	//			String fsince = StringFormat("Loading %.02fs", fSeconds);
-				setFont(vg, 32, G_WHITE, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
-				float w = textWidth(vg, "Loading 1234");
-				nvgText(vg, cs.x/2-w/2, cs.y/2, StringAsCStr(text), NULL);
+				auto cStrText = StringAsCStr(text);
+				setFont(vg, 32, G_WHITE, NVG_ALIGN_TOP | NVG_ALIGN_CENTER);
+//				float w = textWidth(vg, cStrText);
+				nvgText(vg, cs.x/2.0f, cs.y/2.0f, cStrText, NULL);
 			}
 		};
 		guictr_loading ctr;
@@ -1698,6 +1709,30 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
 			}
 		}
 		log_printf("end plugin list loading\n", 0);
+		const int32_t numSamplesToLoad = file->sampleFileIndex.list.size();
+		{
+			windowMain->preRender();
+			NVGcolor col = renderCtrl->getTheme()->getColor(GuiColor::COL_CLEAR_COLOR);
+			glClearColor(col.r, col.g, col.b, col.a);
+			glClear(GL_COLOR_BUFFER_BIT);
+			float ratio = 1.0;
+			auto vg = renderCtrl->vg;
+			nvgBeginFrame(vg, renderCtrl->m_size.x, renderCtrl->m_size.y, ratio);
+			nvgLineJoin(vg, NVGlineCap::NVG_BEVEL);
+
+			nvgSave(vg);
+			ctr.text = StringFormat("Loading %d samples", numSamplesToLoad);
+			ctr.render(vg);
+			nvgRestore(vg);
+			nvgEndFrame(vg);
+			windowMain->postRender();
+			/** TODO: vsync **/
+			threadSleep(16);
+			log_printf("pre load samplefileindex\n", 0);
+			audiocache::getInstance()->load(file->sampleFileIndex);
+			log_printf("post load samplefileindex\n", 0);
+		}
+		log_printf("end sample loading\n", 0);
 		ctr.setControl(nullptr);
 		AppWndProc_disableBlockReentrant();
 		for (track_t* tr : project.trackList) {

@@ -259,16 +259,22 @@ public:
 		setText("S");
 	}
 	NVGcolor getBackgroundColor(int stateflags) const override {
-//		int fl = FLG_HAS_COLOR_BG|FLG_ENBL;
 		int fl = FLG_ENBL;
 		if ((stateflags&fl) == fl) {
-			return theme->getColor(GuiColor::COL_BTN_SOLO_BG_ENABLED);
+			if ((m_track->audio->flags & audiostageflags_t::SOLO) != audiostageflags_t::NONE) {
+				return theme->getColor(GuiColor::COL_BTN_SOLO_BG_ENABLED);
+			}
+			if ((m_track->audio->flags & audiostageflags_t::SOLO_PARENT) != audiostageflags_t::NONE) {
+				return theme->getColor(GuiColor::COL_BTN_SOLO_BG_PARENT);
+			}
 		}
-//		return theme->getColor(GuiColor::COL_BTN_SOLO_BG_DISABLED);
 		return theme->getBgColor(stateflags);
 	}
 	bool isEnabled() const override {
-		return m_track->audio && static_cast<bool>(m_track->audio->flags & audiostageflags_t::SOLO);
+		if (m_track->audio) {
+			return (m_track->audio->flags & (audiostageflags_t::SOLO|audiostageflags_t::SOLO_PARENT)) != audiostageflags_t::NONE;
+		}
+		return false;
 	}
 	void handleRightClick(MouseEvent& evt) override {
 	}
@@ -806,7 +812,8 @@ public:
 	void buttonClicked(guibase* button) override {
 		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 		if (&btnSolo == button) {
-			m_track->audio->flags ^= audiostageflags_t::SOLO;
+			bool isSolo = (m_track->audio->flags & audiostageflags_t::SOLO) != audiostageflags_t::NONE;
+			DawInstance::get()->setSoloState(m_track->audio->toRef(), !isSolo);
 		}
 		if (&btnBypass == button) {
 			track_params_t& trackParams = m_track->audio->mixer;
@@ -1665,7 +1672,7 @@ public:
 
 			auto trackCtr = m_trackentry->parent;
 
-			bool isShown = static_cast<bool>(tr->audio->flags & audiostageflags_t::CONVERT_OUTPUT);
+			bool isShown = (tr->audio->flags & audiostageflags_t::CONVERT_OUTPUT) != audiostageflags_t::NONE;
 			tr->audio->flags ^= audiostageflags_t::CONVERT_OUTPUT;
 			if (isShown) {
 				std::vector<gui_track_subtrack*> subtracksVecCopy = m_trackentry->subtracks;

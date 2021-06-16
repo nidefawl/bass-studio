@@ -88,4 +88,6 @@ bool removeTrackRoutings(const track_vector& tracksFlat, const audiostageid_i32 
 bool buildTrackRoutingGraph(const vsthost* const host, const project_t* const project, const track_vector& tracksFlat, std::shared_ptr<track_graph_t>& out_graph);
 bool buildProcessingGraph(const vsthost* const host, const project_t* const project, const track_vector& tracksFlat, std::shared_ptr<processing_graph_t>& out_procgraph);
 bool validateTrackRoutings(const vsthost* const host, const track_vector& tracksFlat);
+
+void updateSoloFlag(const vsthost* const host, const project_t* const project, const track_vector& tracksFlat);
 }

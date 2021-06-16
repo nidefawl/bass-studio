@@ -491,6 +491,23 @@ track_t* trackallcontainer_t::getTrackTypeIdx(int32_t type, int32_t idx) {
 	return vec[idx];
 }
 
+track_t* trackallcontainer_t::resolveTrack(const audio_stage_ref_t& ref) const {
+	if (ref.stageId == TRACKID_INVALID_I32)
+		return nullptr;
+
+	dbgassert((int32_t )ref.stageId > -1);
+	auto it = std::find_if(trackAllCtr.begin(), trackAllCtr.end(), [ref](const track_t* ptr) {
+		return ptr->getStage() && audioStageIdMatches(ptr->getStage()->stageId, ref.stageId);
+	}
+	);
+	//	dbgassert(it != trackAllCtr.end());
+	if (it != trackAllCtr.end()) {
+		return *it;
+	}
+	log_printf("null track for %d\n", static_cast<int32_t>(ref.stageId));
+	return nullptr;
+}
+
 trackstate_t::~trackstate_t() {
 	for (track_snapshot_t* track : tracks) {
 		delete track;

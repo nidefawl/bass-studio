@@ -466,6 +466,7 @@ void audio_stage_t::pluginsChanged() {
 	updateLatency();
 }
 void audio_stage_t::updateLatency() {
+	//combined stage latency needs to be determined differently when using custom routing
 	samplerate_t latency = 0;
 	for (effectbase* effect : effects) {
 		latency += effect->getDelay();

@@ -40,9 +40,10 @@ enum class audiostageflags_t : int32_t {
 	MUTE_INPUT 				= 1 << 2,
 	MUTE_OUTPUT 			= 1 << 3,
     SOLO				 	= 1 << 4,
-    ARMED_OUTPUT		 	= 1 << 5,
-    WRITE_OUTPUT		 	= 1 << 6,
-    CONVERT_OUTPUT		 	= 1 << 7,
+    SOLO_PARENT 		 	= 1 << 5,
+    ARMED_OUTPUT		 	= 1 << 6,
+    WRITE_OUTPUT		 	= 1 << 7,
+    CONVERT_OUTPUT		 	= 1 << 8,
 };
 enum class audiostagerouting_state_t : int32_t {
 	INVALID = 0, DEFAULT = 1, CUSTOM = 2

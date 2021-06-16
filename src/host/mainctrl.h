@@ -381,6 +381,7 @@ public:
 	void onPluginsChanged();
 	void layoutTrackEditors();
 	bool onChildOverlayWindowClose(window_main*);
+	void setSoloState(audio_stage_ref_t ref, bool enableSolo);
 private:
 	void onDawCompanionWindowClose(DawWindowCompanion& entry);
 };

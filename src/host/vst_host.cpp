@@ -528,8 +528,6 @@ vsthost::vsthost()
 void vsthost::setSampleFormat(const sampleformat_t& sampleFormat) {
 	if (this->sampleFormat != sampleFormat) {
 		this->sampleFormat = sampleFormat;
-		for (vstplugin* plugin : this->pluginInstancesVST2) {
-		}
 		setBlockSize(sampleFormat.blockSize);
 		for (auto* audio : this->allAudioStages) {
 			audio->sampleFormat = sampleFormat;
@@ -1313,7 +1311,7 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
 #if 1
 	struct Func_CheckHasSolo {
 		bool operator()(const DAW::track_source_t& src) const {
-			return (src.flags & audiostageflags_t::SOLO) != audiostageflags_t::NONE;
+			return (src.flags & (audiostageflags_t::SOLO|audiostageflags_t::SOLO_PARENT)) != audiostageflags_t::NONE;
 		}
 	};
 	Func_CheckHasSolo funcCheckSolo;
@@ -1818,14 +1816,13 @@ void vsthost::processAudio(audio_stage_t* stage, AudioBlock* input, AudioBlock* 
 
             std::vector<DAW::effect_source_t> allSources = effNode.pulls; // copy
 
-            struct Func_CheckHasSolo {
-                bool operator()(const DAW::effect_source_t& src) const
-                {
-                    return (src.flags & audiostageflags_t::SOLO) != audiostageflags_t::NONE;
-                }
-            };
-            Func_CheckHasSolo funcCheckSolo;
-            bool hasSolo = std::any_of(allSources.cbegin(), allSources.cend(), funcCheckSolo);
+        	struct Func_CheckHasSolo {
+        		bool operator()(const DAW::track_source_t& src) const {
+        			return (src.flags & (audiostageflags_t::SOLO|audiostageflags_t::SOLO_PARENT)) != audiostageflags_t::NONE;
+        		}
+        	};
+        	Func_CheckHasSolo funcCheckSolo;
+        	bool hasSolo = std::any_of(allSources.cbegin(), allSources.cend(), funcCheckSolo);
 
             //		tmp.timer.reset();
             for (const DAW::effect_source_t& tracksrc : allSources) {

@@ -312,6 +312,33 @@ namespace DAW {
 	inline track_node_t& getNode(M map, I idx) {
 		return *map[idx];
 	}
+	void updateSoloFlag(const vsthost* const host, const project_t* const project, const track_vector& tracksFlat) {
+		std::shared_ptr<DAW::track_graph_t> dependencyGraph;
+		if (!DAW::buildTrackRoutingGraph(host, project, tracksFlat, dependencyGraph )) {
+			log_printf("Failed building track graph\n", 0);
+			return;
+		}
+		for (track_t* track : tracksFlat) {
+			audiostageflags_t& flags = track->getStage()->flags;
+			flags &= ~audiostageflags_t::SOLO_PARENT;
+		}
+		for (track_node_ptr& node : dependencyGraph->nodes) {
+			auto stage = host->getAudioStage(audio_stage_ref_t{node->stageId});
+			dbgassert(stage);
+			if ((stage->flags & audiostageflags_t::SOLO) != audiostageflags_t::NONE) {
+				std::deque<track_node_t*> parents;
+				parents.insert(parents.end(), begin(node->parents), end(node->parents));
+				while (parents.size()) {
+					track_node_t* fr = parents.front();
+					parents.pop_front();
+					auto stage2 = host->getAudioStage(audio_stage_ref_t{fr->stageId});
+					dbgassert(stage2);
+					stage2->flags |= audiostageflags_t::SOLO_PARENT;
+					parents.insert(parents.end(), begin(fr->parents), end(fr->parents));
+				}
+			}
+		}
+	}
 	bool buildTrackRoutingGraph(const vsthost* const host, const project_t* const project, const track_vector& tracksFlat, std::shared_ptr<track_graph_t>& out_graph) {
 		uint32_t trackEdgeId = 0;
 		std::map<audiostageid_i32, track_node_ptr> map;

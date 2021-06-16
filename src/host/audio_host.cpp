@@ -292,7 +292,6 @@ bool audiohost::audiostream::try_dequeue(AudioBuffer*& buf) {
 }
 
 bool audiohost::startAudio(app_iosettings& iosettings) {
-	my_printf("startAudio\n", 0);
 	if (!initPa())
 		return false;
 	stopAudio();

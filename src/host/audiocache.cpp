@@ -193,9 +193,18 @@ void audiocache::store(samplefile_index_t& v) {
 		v.list.push_back({ptr->id, ptr->path});
 	}
 }
+void audiocache::unloadAll() {
+	list.clear();
+	mapId.clear();
+	this->nextIdx = 0;
+}
 void audiocache::load(samplefile_index_t& v) {
+	unloadAll();
 	list.reserve(v.list.size());
 	for (auto& w : v.list) {
 		loadFile(w.name, w.id);
 	}
+}
+bool audiocache::isEmpty() const {
+	return list.size() == 0 && mapId.size() == 0;
 }

@@ -258,7 +258,7 @@ public:
 	track_t(const track_snapshot_t &a);
 	track_t &operator =(const track_snapshot_t &a);
 	track_t &operator =(const track_t &a) = delete;
-	track_impl_t* getStage() {
+	track_impl_t* getStage() const {
 		return this->audio;
 	}
 	track_t(int _type, String _name, bool state) {
@@ -525,6 +525,7 @@ public:
 			}
 		}
 	}
+	track_t* resolveTrack(const audio_stage_ref_t& ref) const;
 	size_t size() const {
 		return trackAllCtr.size();
 	}
@@ -565,6 +566,7 @@ public:
     track_vector getMidiAudioTracksFlatVec() const { return trackMidiAudioCtr.tracksFlat; }
     track_vector getAllTracksFlatVec() const { return trackAllCtr.tracksFlat; }
     track_vector getAllTracksTreeVec() const { return trackAllCtr.tracksTree; }
+    track_vector& getAllTracksFlatVecRef() { return trackAllCtr.tracksFlat; }
 };
 struct project_layout_t {
 	layout_grid_t layoutGrid;

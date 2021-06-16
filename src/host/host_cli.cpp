@@ -538,7 +538,7 @@ int runCommandLineHost(int argc, const char* argv[]) {
 
 					for (auto* trackMaster : project.trackMasterCtr) {
 	    				track_impl_t* trAudio = trackMaster->audio;
-						dbgassert(static_cast<bool>(trAudio->flags & audiostageflags_t::CONVERT_OUTPUT));
+						dbgassert((trAudio->flags & audiostageflags_t::CONVERT_OUTPUT) != audiostageflags_t::NONE);
 					}
 	    			for (track_t* tr : tls.project->getTracks()) {
 	    				track_impl_t* trAudio = tr->audio;
