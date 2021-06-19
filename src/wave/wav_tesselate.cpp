@@ -90,7 +90,7 @@ void tesselateWaveform(audiosample_t* sample, float x, float y, audioclip_textur
 						if (fCurX >= lastPtX+vOffset) {
 							float data = samplesChPtr[sampleIdx];
                             if (samplesPerPx >= 256) {
-                                int sumRange = samplesPerPx / 32;
+                                int sumRange = 0;// samplesPerPx / 32;
                                 for (int noffset = -sumRange; noffset <= sumRange; noffset++) {
                                     if (noffset != 0 && sampleIdx + noffset > 0 && sampleIdx + noffset < lenSamplesCh) {
                                         data = math::absMax(data, samplesChPtr[sampleIdx + noffset]);
