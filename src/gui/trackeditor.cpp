@@ -832,51 +832,82 @@ void guitrack_editor::render(NVGcontext* vg) {
 	float bgOffset = (float)fmod((double)grid.offset, bgRepeat);
 	int steps_bg = (int)ceil((w + bgRepeat) / grid.incr_bg);
 	float x = -bgOffset;
+	NVGpaint paint{};
+	paint.image = -1;
+	
+	/**
+	 * render grid background
+	 * steps:
+	 * 1. draw full width bright
+	 * 2. then draw dark rects
+	 * this way is more efficient
+	 * also drawing them zig-zag would give shimmering edges due to rounding errors
+	 */
 
-	//grid background
-	//draw full width bright
-	//then overdraw dark rects
-	//drawing them zig-zag would give shimmering edges due to rounding errors
+	/* draw full width bright */
 	nvgBeginPath(vg);
 	nvgRect(vg, -2, 0, w+2, size.y);
 	nvgFillColor(vg, theme->getColor(GuiColor::COL_GRID_BRT));
 	nvgFill(vg);
+	
+	/* draw dark grid areas */
+	int nRendered = 0;
 	for (int i = 0; i < steps_bg; i+=2)
 	{
-		nvgBeginPath(vg);
-		nvgRect(vg, x, 0, grid.incr_bg, size.y);
-		nvgFillColor(vg, theme->getColor(GuiColor::COL_GRID_DRK));
-		nvgFill(vg);
+		nvgBatchedRect(vg, x, 0, grid.incr_bg, size.y);
+		nRendered++;
 		x += grid.incr_bg*2.0f;
 		if (x > w)
 			break;
 	}
 
-	for (grid_div g : grid.gridList) {
-		nvgBeginPath(vg);
-		nvgMoveTo(vg, g.screenpos, 0);
-		nvgLineTo(vg, g.screenpos, size.y);
-		NVGcolor col;
-		switch (g.color) {
-		case 0:
-			col = theme->getColor(GuiColor::COL_LINE_BAR);
-			break;
-		case 1:
-			col = theme->getColor(GuiColor::COL_LINE_QRT);
-			break;
-		case 2:
-		default:
-			col = theme->getColor(GuiColor::COL_LINE_XTH);
-			break;
-		}
-		nvgStrokeColor(vg, col);
-		nvgStrokeWidth(vg, g.thickness);
-		nvgStroke(vg);
+	if (nRendered) {
+		paint.innerColor = theme->getColor(GuiColor::COL_GRID_DRK);
+		paint.customPar = 1;
+		nvgFillPaint(vg, paint);
+		nvgBatchedRender(vg);
 	}
-	ivec2 cs = getSizeContent();
-	int ySplit = getPosYFirstReturnTrack(iGuiMgr.getTracksVisibleFlat());
 
-	int32_t bottomHeight = cs.y-ySplit;
+	
+	/* draw grid lines: bar, beat, xth */
+	const float renderOffsetGrid = 0.0f; // for debugging AA 
+	bool hasMorePasses = true;
+	for (int pass = 0; hasMorePasses && pass < 3; ++pass) {
+		hasMorePasses = false;
+		int nRendered = 0;
+		for (grid_div& g : grid.gridList) {
+			if (g.color == pass) {
+				float lineThickness = 4.0f;
+				nvgBatchedRect(vg, g.screenpos - lineThickness * 0.5f + renderOffsetGrid, 0, lineThickness, size.y);
+				paint.feather = g.thickness;
+				nRendered++;
+			} else {
+				hasMorePasses |= g.color > pass;
+			}
+		}
+		if (nRendered) {
+			switch (pass) {
+				case 0:
+					paint.innerColor = theme->getColor(GuiColor::COL_LINE_BAR);
+					break;
+				case 1:
+					paint.innerColor = theme->getColor(GuiColor::COL_LINE_QRT);
+					break;
+				case 2:
+				default:
+					paint.innerColor = theme->getColor(GuiColor::COL_LINE_XTH);
+					break;
+			}
+			paint.customPar = 2;
+			nvgFillPaint(vg, paint);
+			nvgBatchedRender(vg);
+		}
+	}
+	
+	/* draw master track and return track contents */
+	const ivec2 cs = getSizeContent();
+	const int ySplit = getPosYFirstReturnTrack(iGuiMgr.getTracksVisibleFlat());
+	int32_t bottomHeight = cs.y - ySplit;
 	if (bottomHeight > 0) {
 		nvgSave(vg);
 		nvgIntersectScissor(vg, 0, ySplit, cs.x, bottomHeight);
@@ -902,7 +933,8 @@ void guitrack_editor::render(NVGcontext* vg) {
 		}
 		nvgRestore(vg);
 	}
-
+	
+	/* draw audio/midi track track contents */
 	bool restore = ySplit > 0;
 	if (ySplit  > 0) {
 		nvgSave(vg);
@@ -940,7 +972,8 @@ void guitrack_editor::render(NVGcontext* vg) {
 //		renderDragDropClip(vg, dragdrop);
 //		nvgRestore(vg);
 //	}
-
+	
+	/* draw selection overlay and track content cursor */
 	DAW::Cursor& c = dawCtrl->getCursor();
 	if (iGuiMgr.validTrackIdx(c.cursorTrack)) {
 		const track_gui_entry_t* trEntry = iGuiMgr.at(c.cursorTrack);
@@ -1014,8 +1047,9 @@ void guitrack_editor::render(NVGcontext* vg) {
 			}
 		}
 	}
-	if (restore)
-	nvgRestore(vg);
+	if (restore) {
+		nvgRestore(vg);
+	}
 }
 int32_t getPosYFirstReturnTrack(const track_gui_vector_td& tracksVisibleFlat) {
 	track_gui_entry_t* trLastVisible = nullptr;

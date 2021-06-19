@@ -57,7 +57,7 @@ track_gui_entry_t *getTrackFromMouse(track_gui_manager_i& iGuiMgr, ivec2 mouse, 
 gui_track_subtrack* getSubTrackFromMouse(track_gui_manager_i& iGuiMgr, ivec2 mouse, bool isDragSnap);
 gui_track* createTrackGui(track_gui_entry_t* _entry, scaled_grid&); // trackcontent.cpp
 gui_track_controls* createTrackGuiMixer(track_gui_entry_t* _entry); // trackcontrols.cpp
-void drawSeperator(NVGcontext* vg, const guitheme_t* theme, int32_t seperatorY, ivec2& cs);
+void drawSeperator(NVGcontext* vg, const guitheme_t* theme, int32_t seperatorY, const ivec2& cs);
 
 
 

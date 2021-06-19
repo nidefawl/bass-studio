@@ -70,7 +70,7 @@ void guitrack_mixers::removeTrackEntry(track_gui_entry_t& e) {
 	this->remove(e.mixer);
 }
 
-void drawSeperator(NVGcontext* vg, const guitheme_t* theme, int32_t seperatorY, ivec2& cs) {
+void drawSeperator(NVGcontext* vg, const guitheme_t* theme, int32_t seperatorY, const ivec2& cs) {
 	nvgBeginPath(vg);
 	nvgMoveTo(vg, 0, seperatorY);
 	nvgLineTo(vg, cs.x, seperatorY);
