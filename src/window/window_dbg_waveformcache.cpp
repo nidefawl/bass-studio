@@ -26,7 +26,6 @@ GLuint program2dTexture;
 GLint u_mvp;
 GLint u_tex0;
 
-float wTexPreview = 256;
 std::vector<VertexAttr> attributes{
 	{"in_position", 2, GL_FLOAT},
 	{"in_texcoord", 2, GL_FLOAT},
@@ -91,6 +90,8 @@ int initDebugWindowWaveformCache(NVGcontext* ctx) {
 	int ret = loadShader();
 	if (ret)
 		return ret;
+
+	float wTexPreview = 256;
 	tess2d tess;
 	tess.add(wTexPreview, 0.0f, 1, 1);
 	tess.add(0.0f, 0.0f, 0, 1);
@@ -126,7 +127,26 @@ void drawDebugWindowWaveformCache(NVGcontext* ctx, int winW, int winH, float pxr
 //		}
 //	}
 	float x = 0; float y = 0;
-	int nrendered = 0;
+
+
+	float wTexPreview = 1024;
+	int xCols, yCols;
+	for (;wTexPreview>1;) {
+		xCols = (winW+wTexPreview-1)/wTexPreview;
+		yCols = (winH+wTexPreview-1)/wTexPreview;
+		if (xCols*yCols >= rendered.size()) {
+			break;
+		}
+		wTexPreview /= 2;
+	}
+
+	tess2d tess;
+	tess.add(wTexPreview, 0.0f, 1, 1);
+	tess.add(0.0f, 0.0f, 0, 1);
+	tess.add(0.0f, wTexPreview, 0, 0);
+	tess.add(wTexPreview, wTexPreview, 1, 0);
+	tess2d::uploadVBO(tess, vbo);
+
 	glActiveTexture( GL_TEXTURE0 );
 	glUseProgram(program2dTexture);
 	glUniform1i(u_tex0, 0);
@@ -138,6 +158,8 @@ void drawDebugWindowWaveformCache(NVGcontext* ctx, int winW, int winH, float pxr
 	bindVertexAttributes(attributes);
 
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo.vboIdxId);
+
+	int nrendered = 0;
 	for (TextureAtlas& e : rendered) {
 		int n = e.glTexture;
 		if (n > 0 && e.entries.size()) {
