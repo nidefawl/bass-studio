@@ -492,7 +492,6 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 			impl->timer2.reset();
 			tesselateWaveform(audio->getSample(), 0, 0, &waveform, method, tesselatedWaveForms);
 			impl->renderTimings.tmTesselate += impl->timer2.getTime();
-			impl->timer2.reset();
 //			prevRendered.push_back(waveform);
 //			while (prevRendered.size() >= 1000) {
 //				prevRendered.erase(prevRendered.begin(), prevRendered.begin()+10);
@@ -513,7 +512,10 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 			if (this->nextPathIdx >= this->bakedPaths.size()) {
 				this->nextPathIdx = 0;
 			}
+			impl->timer2.reset();
 			renderer->bakePaths(tesselatedWaveForms, bakeOpt, bakedPath);
+			impl->renderTimings.tmBakePaths += impl->timer2.getTime();
+			impl->timer2.reset();
 			ivec2& pos = waveformQueueEntry.pos;
 			ivec2& size = waveformQueueEntry.size;
 			mat4x4 matView = mat4x4(1.0);
@@ -522,6 +524,7 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 			matView = glm::translate(matView, glm::vec3(pos.x, pos.y, 0));
 			mat4x4 matProj = glm::ortho(0.f, (float) FBO_WIDTH, (float)FBO_HEIGHT, 0.f, 1.0f, -1.0f);
 			dbgassert(pos.x+size.x<=FBO_WIDTH);
+			impl->timer2.reset();
 			glScissor(pos.x, FBO_HEIGHT-pos.y-size.y, size.x, size.y);
 			glBindVertexArray ( bakedPath.vbo.vaoId );
 

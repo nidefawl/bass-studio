@@ -62,6 +62,7 @@ public:
 		uint64_t tmTesselate = 0;
 		uint64_t tmFindSpot = 0;
 		uint64_t tmFindSimiliar = 0;
+		uint64_t tmBakePaths = 0;
 		uint64_t tmDrawGL = 0;
 		uint64_t tmPassed = 0;
 		uint64_t comparisonsA = 0;

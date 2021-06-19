@@ -727,6 +727,7 @@ void DawInstance::unloadProject() {
 	}
 
 	vsthost::getInstance()->releaseProjectResources();
+	daw_tls::getTls().audioCache->unloadAll();
 
 	auto* ctrl = mainCtrl;
 	if (ctrl) {
@@ -836,7 +837,6 @@ void DawInstance::setEmptyProject() {
 		log_printf("getNumClipAllocations == %d!\n", totalAllocs);
 		dbgassert(getNumClipAllocations() == 0);
 	}
-	daw_tls::getTls().audioCache->unloadAll();
 	insertNewTrack(-1, TRACK_TYPE_MIDI, FLG_TRK_CHANGE_LOAD);
 	insertNewTrack(-1, TRACK_TYPE_MASTER, 0);
 	resetShaderTimeOffset();
@@ -1623,7 +1623,7 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
 
 	MainCtrl* renderCtrl = this->mainCtrl;
 	// is plugin loading not deferred?
-	if ((flags&FLAG_DEFER_LOAD) == 0) {
+	if (1) {
 		AppWndProc_enableBlockReentrant();
 		/**
 		 * plugin loading was not deferred.
@@ -1660,55 +1660,58 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
 		auto windowMain = dynamic_cast<window_main*>(renderCtrl->window);
 		dbgassert(windowMain);
 
-		/** get the list of all plugins in deferred loading state **/
-		std::vector<effectbase*> pluginsDeferred;
-		host->getDeferredEffects(pluginsDeferred);
+		if ((flags&FLAG_DEFER_LOAD) == 0) {
 
-		/**
-		 * The following loop calls activateDeferred on all tracks, effectively doing the following sequence for each track:
-		 *  - load shared libraries
-		 *  - create audioeffect instance
-		 *  - load binary plugin snapshots
-		 *  - load plugin, mixer, arp parameter values
-		 *  - load plugin, mixer, arp automation
-		 *
-		 * plugin loading can take a long time and will block the main thread.
-		 * Ideally this would happen on another thread, but that might not work for all vst plugins.
-		 */
-		std::vector<effectbase*> pluginsLoaded;
-		pluginsLoaded.reserve(pluginsDeferred.size());
-		log_printf("begin plugin list loading\n", 0);
-		int len = pluginsDeferred.size();
-		for (int i = 0; i < len; i++) {
-			dbgassert(pluginsDeferred[i]->getModuleType() == PLUGIN_TYPE_DEFERRED);
-			auto plugin = dynamic_cast<effect_deferred*>(pluginsDeferred[i]);
-			windowMain->preRender();
-	//		render(0, 0, m_size.x, m_size.y, 1.0);
-			NVGcolor col = renderCtrl->getTheme()->getColor(GuiColor::COL_CLEAR_COLOR);
-			glClearColor(col.r, col.g, col.b, col.a);
-			glClear(GL_COLOR_BUFFER_BIT);
-			float ratio = 1.0;
-			auto vg = renderCtrl->vg;
-			nvgBeginFrame(vg, renderCtrl->m_size.x, renderCtrl->m_size.y, ratio);
-			nvgLineJoin(vg, NVGlineCap::NVG_BEVEL);
+			/** get the list of all plugins in deferred loading state **/
+			std::vector<effectbase*> pluginsDeferred;
+			host->getDeferredEffects(pluginsDeferred);
 
-			nvgSave(vg);
-			ctr.text = plugin->getDfrdPluginName();
-			ctr.render(vg);
-			nvgRestore(vg);
-			nvgEndFrame(vg);
-			windowMain->postRender();
-			/** TODO: vsync **/
-			threadSleep(16);
-			log_printf("pre activateDeferred %s\n", StringAsCStr(ctr.text));
-			effectbase* pluginLoaded;
-			host->activateDeferred(plugin, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &pluginLoaded);
-			log_printf("post activateDeferred %s\n", StringAsCStr(ctr.text));
-			if (pluginLoaded) {
-				pluginsLoaded.push_back(pluginLoaded);
+			/**
+			 * The following loop calls activateDeferred on all tracks, effectively doing the following sequence for each track:
+			 *  - load shared libraries
+			 *  - create audioeffect instance
+			 *  - load binary plugin snapshots
+			 *  - load plugin, mixer, arp parameter values
+			 *  - load plugin, mixer, arp automation
+			 *
+			 * plugin loading can take a long time and will block the main thread.
+			 * Ideally this would happen on another thread, but that might not work for all vst plugins.
+			 */
+			std::vector<effectbase*> pluginsLoaded;
+			pluginsLoaded.reserve(pluginsDeferred.size());
+			log_printf("begin plugin list loading\n", 0);
+			int len = pluginsDeferred.size();
+			for (int i = 0; i < len; i++) {
+				dbgassert(pluginsDeferred[i]->getModuleType() == PLUGIN_TYPE_DEFERRED);
+				auto plugin = dynamic_cast<effect_deferred*>(pluginsDeferred[i]);
+				windowMain->preRender();
+		//		render(0, 0, m_size.x, m_size.y, 1.0);
+				NVGcolor col = renderCtrl->getTheme()->getColor(GuiColor::COL_CLEAR_COLOR);
+				glClearColor(col.r, col.g, col.b, col.a);
+				glClear(GL_COLOR_BUFFER_BIT);
+				float ratio = 1.0;
+				auto vg = renderCtrl->vg;
+				nvgBeginFrame(vg, renderCtrl->m_size.x, renderCtrl->m_size.y, ratio);
+				nvgLineJoin(vg, NVGlineCap::NVG_BEVEL);
+
+				nvgSave(vg);
+				ctr.text = plugin->getDfrdPluginName();
+				ctr.render(vg);
+				nvgRestore(vg);
+				nvgEndFrame(vg);
+				windowMain->postRender();
+				/** TODO: vsync **/
+				threadSleep(16);
+				log_printf("pre activateDeferred %s\n", StringAsCStr(ctr.text));
+				effectbase* pluginLoaded;
+				host->activateDeferred(plugin, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &pluginLoaded);
+				log_printf("post activateDeferred %s\n", StringAsCStr(ctr.text));
+				if (pluginLoaded) {
+					pluginsLoaded.push_back(pluginLoaded);
+				}
 			}
+			log_printf("end plugin list loading\n", 0);
 		}
-		log_printf("end plugin list loading\n", 0);
 		const int32_t numSamplesToLoad = file->sampleFileIndex.list.size();
 		{
 			windowMain->preRender();
@@ -2544,11 +2547,12 @@ void DawCtrl::prerender(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w,
 			log_printf("%d updates took %lld\n", nUpdates, renderStats.timeUpdateWaveforms);
 			auto timings = tlsInstance.waveform->getTimings();
 			log_printf("waveform.tmPassed\t\t%llu\n", timings.tmPassed);
-			log_printf("waveform.tmDrawGL\t\t%llu\n", timings.tmDrawGL);
 			log_printf("waveform.tmProcessInputQ\t%llu\n", timings.tmProcessInputQ);
-			log_printf("waveform.tmTesselate\t\t%llu\n", timings.tmTesselate);
 			log_printf("waveform.tmFindSimiliar\t%llu\n", timings.tmFindSimiliar);
 			log_printf("waveform.tmFindSpot\t\t%llu\n", timings.tmFindSpot);
+			log_printf("waveform.tmTesselate\t\t%llu\n", timings.tmTesselate);
+			log_printf("waveform.tmBakePaths\t\t%llu\n", timings.tmBakePaths);
+			log_printf("waveform.tmDrawGL\t\t%llu\n", timings.tmDrawGL);
 			log_printf("waveform.comparisonsA\t%llu\n", timings.comparisonsA);
 			log_printf("waveform.comparisonsB\t%llu\n", timings.comparisonsB);
 		}
