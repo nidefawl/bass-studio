@@ -1261,7 +1261,7 @@ public:
 			if (cursor.inSubTrack(m_trackentry->idx, laneIdx)) {
 				fixCursorSubRange(cursor, m_trackentry->subtracks.size()-1);
 			}
-//			MainCtrl::getGuiTrackCtr()->removeSubtrack(this->al);
+			MainCtrl::getGuiTrackCtr()->removeSubtrack(m_trackentry, subtrack);
 			DawInstance::get()->layoutTrackEditors();
 			DawInstance::get()->updateVisibleTrackContents();
 		}
@@ -1412,15 +1412,15 @@ void gui_track_controls::render(NVGcontext* vg) {
 	if (!setScissorTransform(vg)) {
 		return;
 	}
-	nvgBeginPath(vg);
-	nvgRect(vg, 0, 0, size.x, size.y);
-	nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_BRT));
-	nvgFill(vg);
+	auto bgColor = theme->getColor(GuiColor::COL_BG_BRT);
 	DawInstance* daw = DawInstance::get();
 	if (daw->getSelectedTrack() == m_track) {
-		nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_SELECTEDTRACK));
-		nvgFill(vg);
+		bgColor = theme->getColor(GuiColor::COL_BG_SELECTEDTRACK);
 	}
+	nvgBeginPath(vg);
+	nvgRect(vg, 0, 0, size.x, size.y);
+	nvgFillColor(vg, bgColor);
+	nvgFill(vg);
 
 	for (guibase* g : guis) {
 		//content
