@@ -320,9 +320,9 @@ public:
 //									&& updatedEntry.waveform == texture.waveform
 									&& isEqualWaveform3(updatedEntry.waveform, texture.waveform)
 									&& updatedEntry.layout == entry.layoutCurrent;
-							if (sample->version != entry.sampleVersion) {
-								my_printf("sample->version != entry.sampleVersion %d %d\n", sample->version, equal);
-							}
+//							if (sample->version != entry.sampleVersion) {
+//								my_printf("sample->version != entry.sampleVersion %d %d\n", sample->version, equal);
+//							}
 							bool canQueue = waveformrender::getInstance()->canQueueUpdate();
 							ivec2 sizeDiff = math::absvec2(updatedEntry.waveform.size-texture.waveform.size);
 							ivec2 limit = math::maxvec2(ivec2(1), ivec2(updatedEntry.waveform.size.x/4, 16));

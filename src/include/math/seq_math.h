@@ -53,25 +53,23 @@ namespace math {
 	template<typename T>
 	inline int64_t ceilCast(T a) {
 		T val = std::ceil(a);
-		assert(CheckFitsTypeRange<int64_t>(a));
 		return val;
 	}
 	template<typename T>
 	inline int64_t floorCast(T a) {
 		T val = std::floor(a);
-		assert(CheckFitsTypeRange<int64_t>(a));
 		return val;
 	}
 	template<typename T>
 	inline int32_t floorF32toS32(T a) {
 		T val = std::floor(a);
-		assert(CheckFitsTypeRange<int32_t>(val));
+		assert(a >= -2147483648.0 && a <= 2147483520.0);
 		return static_cast<int32_t>(val);
 	}
 	template<typename T>
 	inline uint32_t floorF32toU32(T a) {
 		T val = std::floor(a);
-		assert(CheckFitsTypeRange<uint32_t>(val));
+		assert(a >= 0 && a <= 4294967040.0);
 		return static_cast<uint32_t>(val);
 	}
 	template<typename T>

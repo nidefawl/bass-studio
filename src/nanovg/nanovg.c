@@ -2526,7 +2526,7 @@ void nvgCachePath(NVGcontext* ctx, int enabled)
 void nvgFillFromCache(NVGcontext* ctx, nvg_shape_cache* shapeCache)
 {
 	NVGstate* state = nvg__getState(ctx);
-	nvg_cache_storage* storage = (nvg_shape_cache*)shapeCache;
+	nvg_cache_storage* storage = (nvg_cache_storage*)shapeCache;
 	if (storage->ptrBatchedVerts) {
 		nvg_cache_entry_batchedverts_t* verts = storage->ptrBatchedVerts;
 		// glnvg__renderTriangles
@@ -2576,7 +2576,7 @@ void nvgFillFromCache(NVGcontext* ctx, nvg_shape_cache* shapeCache)
 
 }
 void nvgCacheEntryInfo(NVGcontext* ctx, nvg_shape_cache* shapeCache, NVGCacheEntryInfo* info) {
-	nvg_cache_storage* storage = (nvg_shape_cache*)shapeCache;
+	nvg_cache_storage* storage = (nvg_cache_storage*)shapeCache;
 	dbgassert(storage && info);
 	if (storage && info) {
 		info->allocationSizeBytes = storage->allocationSizeBytes;
@@ -2584,7 +2584,7 @@ void nvgCacheEntryInfo(NVGcontext* ctx, nvg_shape_cache* shapeCache, NVGCacheEnt
 }
 void nvgGetLastCacheResult(NVGcontext* ctx, nvg_shape_cache** pShapeCache)
 {
-	nvg_cache_storage** pStorage = (nvg_shape_cache*)pShapeCache;
+	nvg_cache_storage** pStorage = (nvg_cache_storage**)pShapeCache;
 //	printf("nvgGetLastCacheResult: return nvg_path_fill_cache_t 0x%06X\n", (uint64_t)&ctx->cachedPathFill);
     dbgassert(!ctx->cacheStorage || ctx->cacheStorage->ptrPath || ctx->cacheStorage->ptrBatchedVerts);
 	*pStorage = ctx->cacheStorage;
@@ -2592,7 +2592,7 @@ void nvgGetLastCacheResult(NVGcontext* ctx, nvg_shape_cache** pShapeCache)
 }
 void nvgReleaseCacheResult(nvg_shape_cache* pShapeCache)
 {
-	nvg_cache_storage* storage = (nvg_shape_cache*)pShapeCache;
+	nvg_cache_storage* storage = (nvg_cache_storage*)pShapeCache;
 	nvg_cache_entry_path_t* pCache = storage->ptrPath;
 	for (int i = 0; pCache && i < pCache->len; i++) {
 		NVGpath* path = &pCache->arrPath[i];
@@ -2993,7 +2993,6 @@ float nvgText(NVGcontext* ctx, float x, float y, const char* string, const char*
 static void nvg_appendRect(NVGcontext* ctx, float x, float y, float w, float h)
 {
 	NVGstate* state = nvg__getState(ctx);
-	int i;
 	NVGvertex* verts;
 	if (ctx->cache->nbatchedVerts+32 >= ctx->cache->cbatchedVerts) {
 		int cverts = (ctx->cache->nbatchedVerts + 32 + 0xff) & ~0xff; // Round up to prevent allocations when things change just slightly.

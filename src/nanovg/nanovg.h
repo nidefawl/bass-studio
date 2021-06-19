@@ -44,9 +44,7 @@ struct NVGpaint {
 	int customPar;
 };
 typedef struct NVGpaint NVGpaint;
-typedef struct {
-	int dummy0;
-} nvg_shape_cache;
+typedef struct nvg_shape_cache nvg_shape_cache;
 
 enum NVGwinding {
 	NVG_CCW = 1,			// Winding for solid shapes

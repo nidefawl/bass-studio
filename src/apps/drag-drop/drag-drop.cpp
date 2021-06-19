@@ -1,8 +1,6 @@
 #include <vector>
 #include <memory>
 #include <algorithm>
-#include <glm/glm.hpp>
-#include <glm/vec2.hpp>
 
 #include "math/vec.h"
 #include "math/seq_math.h"
