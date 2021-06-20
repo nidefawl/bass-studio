@@ -1256,12 +1256,8 @@ PluginVST2_Synth::PluginVST2_Synth (audioMasterCallback audioMaster)
 	setParamName(getParam(Parameters::FilterMode), "Filter Mode", "Flt Mode", "%d");
 	addEnumParam(Parameters::FmMode)->setStrings(stringsFMMode)->setRangedValue(0);
 	setParamName(getParam(Parameters::FmMode), "Fm Mode", "Fm Mode", "%d");
-<<<<<<< HEAD
 	initPrograms();
-	createEditorWindow(static_cast<PluginViewContainersImpl*>(createView()));
-=======
 	createEditorWindow(createView());
->>>>>>> 3b9cf1c9e82df1f64fa9490e843ad364996d0d92
 	for (auto param : this->vecParams) {
 		this->impl->OnParamChange(param->enumParam);
 	}
