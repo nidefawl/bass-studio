@@ -43,6 +43,7 @@ ivec2 toControlsObjectSpace(ivec2& pos, guibase* gui);
 #define BASECTRL_WND_POS_RELATIVE 1
 #define BASECTRL_WND_POS_ABSOLUTE 2
 #define BASECTRL_WND_RESIZEABLE 4
+#define BASECTRL_WND_IS_TOPLEVEL_CHILD 8
 
 enum class dock_pos : int32_t { NONE=0, CENTER, LEFT, RIGHT, TOP, BOTTOM, STACK };
 enum class container_layout : int32_t { SOLE, SPLIT_H, SPLIT_V, TABBED };
@@ -546,4 +547,5 @@ public:
     void onTick();
     void postInit(){}; /* OpenGL context exists in postInit */
     bool mouseDownPre();
+    void render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float ratio);
 };

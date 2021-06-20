@@ -508,7 +508,10 @@ void AppCtrl::openAppMenu(int lvl, guictxtmenu_base *b, ivec2 pos) {
 		menuWindows.push_back({ nullptr, nullptr });
 	}
 	if (!menuWindows[lvl].wnd) {
-		menuWindows[lvl].wnd = this->mainWindow->createOverlay(std::make_shared<PopupCtrl>(), WINDOW_BORDERLESS_POPUP);
+		int createflags = 0;
+		createflags |= WINDOW_BORDERLESS_POPUP;
+		createflags |= WINDOW_IS_TOPLEVEL_CHILD;
+		menuWindows[lvl].wnd = this->mainWindow->createOverlay(std::make_shared<PopupCtrl>(), createflags);
 	}
 	//TODO: menu change on same level will let this assertion fail
 	auto& entry = menuWindows[lvl];
@@ -517,7 +520,12 @@ void AppCtrl::openAppMenu(int lvl, guictxtmenu_base *b, ivec2 pos) {
 	ivec2 windowPos;
 	this->mainWindow->getPos(&windowPos);
 	entry.wnd->getCtrl()->m_scale = m_scale;
-	static_cast<PopupCtrl*>(entry.wnd->getCtrl())->open(b, windowPos+pos, false);
+	ivec2 childMenuPos = pos;
+	//TODO: this OS specific handling should be abstracted away into window.cpp 
+#ifndef _WIN32
+	childMenuPos += windowPos;
+#endif
+	static_cast<PopupCtrl*>(entry.wnd->getCtrl())->open(b, childMenuPos, false);
 }
 
 void AppCtrl::openOverlayGui(guictxtmenu_base *b, ivec2 pos, int flags) {
@@ -540,12 +548,19 @@ void AppCtrl::openOverlayGui(guictxtmenu_base *b, ivec2 pos, int flags) {
 	} else {
 		wndPos = windowPos+(windowSize-b->size)/2;
 	}
-	bool bResizeable = (flags&BASECTRL_WND_RESIZEABLE);
-	if (!contextWindow || contextWindow->canResize() != bResizeable) {
+	bool bResizeable = (flags & BASECTRL_WND_RESIZEABLE);
+	int createflags = 0;
+	if (!(flags & BASECTRL_WND_RESIZEABLE)) {
+		createflags |= WINDOW_BORDERLESS_POPUP;
+	}
+	if (flags & BASECTRL_WND_IS_TOPLEVEL_CHILD) {
+		createflags |= WINDOW_IS_TOPLEVEL_CHILD;
+	}
+	if (!contextWindow || contextWindow->getCreationFlags() != createflags) {
 		if (contextWindow) {
 			this->mainWindow->closeOverlay(contextWindow);
 		}
-		contextWindow = this->mainWindow->createOverlay(std::make_shared<PopupCtrl>(), bResizeable ? 0 : WINDOW_BORDERLESS_POPUP);
+		contextWindow = this->mainWindow->createOverlay(std::make_shared<PopupCtrl>(), createflags);
 		//contextWindows[this->mainWindow] = contextWindow;
 	}
 	if (contextWindow) {
@@ -558,7 +573,9 @@ void AppCtrl::openOverlayGui(guictxtmenu_base *b, ivec2 pos, int flags) {
 
 }
 void AppCtrl::openDialog(guidialog_base *_guidialog) {
-	openOverlayGui(_guidialog, ivec2(0), (_guidialog->isDialogResizeable()) ? BASECTRL_WND_RESIZEABLE : 0);
+	int flags = (_guidialog->isDialogResizeable()) ? BASECTRL_WND_RESIZEABLE : 0;
+	flags |= BASECTRL_WND_IS_TOPLEVEL_CHILD;
+	openOverlayGui(_guidialog, ivec2(0), flags);
 }
 void AppCtrl::openContextMenu(guictxtmenu_base *b, ivec2 pos, int flags) {
 	openOverlayGui(b, pos, flags);
@@ -570,7 +587,8 @@ void AppCtrl::closeContextMenu() {
 	}
 }
 void AppCtrl::onChildOverlayWindowClose(window_main* ptr) {
-	log_printf("close ptr %X, contextWindow %X, this->ctxtmenu %X menuWindows.size() %d\n", (int64_t) ptr, (int64_t) contextWindow, this->ctxtmenu, menuWindows.size());
+	//log_printf("close ptr %X, contextWindow %X, this->ctxtmenu %X menuWindows.size() %d\n", (int64_t) ptr, (int64_t) contextWindow, this->ctxtmenu, menuWindows.size());
+
 //	std::vector<String> vecStrStacktrace;
 //	getStackTrace(vecStrStacktrace);
 //	int len = vecStrStacktrace.size();

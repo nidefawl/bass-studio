@@ -351,6 +351,7 @@ public:
 	virtual void onRefresh()
 	{
 		PREVENT_REENTRANT("REENTRANT IN RENDER MAIN")
+		//TODO: make sure we compare same units here (seconds vs milliseconds)
 		double delay = getSince(secondsLastDraw);
 		if (delay > minFrameDelay) {
 			render();
@@ -673,6 +674,9 @@ public:
 	bool canResize() override {
 		return this->bCanResize;
 	}
+	int getCreationFlags() override {
+		return this->windowCreationFlags;
+	}
 	void destroy();
     double tmLastShaderReloadMillis = 0.0;
 	void onTick() {
@@ -700,7 +704,7 @@ public:
 
         if (getTimeMillisd() - tmLastShaderReloadMillis >= 3000) {
         	tmLastShaderReloadMillis = getTimeMillisd();
-            //reloadCustomShaders();
+//            reloadCustomShaders();
         }
 		ctrl->onAppTick();
 	}
@@ -888,7 +892,7 @@ public:
 		flagNeedsRedraw();
 	}
 	void onChildDialogClose(appwindow* child) override {
-		glfwFocusWindow(this->glfw);
+		//glfwFocusWindow(this->glfw);
 		appwindow::onChildDialogClose(child);
 	}
 	void onChildOverlayClose(appwindow* child) override;
@@ -982,6 +986,14 @@ public:
 
 	void show() {
 		appwindow::showWindow();
+
+		//TODO: add this function to GLFW
+	    //glfwBringWindowToTop(glfw);
+#ifdef _WIN32
+		BringWindowToTop(hwnd);
+#else
+	    glfwFocusWindow(glfw);
+#endif
 	}
 
 	void hide() {
@@ -1182,7 +1194,7 @@ window_main* appwindow_main::createOverlay(std::shared_ptr<AppCtrl> ctrl, int fl
 	ivec2 windowSize;
 	getSize(&windowSize);
 	ow->createMainWindow(StringAsCStr(sName), windowSize.x, windowSize.y, parentHandle, flags);
-	if (((flags&WINDOW_IS_MAINWINDOW_SLAVE) == 0)) {
+	if (!(flags&WINDOW_IS_MAINWINDOW_SLAVE)) {
 		ow->initControl();
 	}
 //	ow->createOverlayWindow(StringAsCStr(sName), 200, 200, nullptr);
@@ -1300,11 +1312,18 @@ void appwindow_main::createMainWindow(const char* title, int w, int h, appwindow
 
 		//glfwSetWindowAttrib(glfw, GLFW_FLOATING, GL_TRUE);
 	}
+	if ((flags&WINDOW_IS_TOPLEVEL_CHILD) && parent) {
+		/* window will always be rendered on top of parent window */
+#ifdef _WIN32
+		SetParent(hwnd, parent->getHWND());
+		//SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, (__int3264) (LONG_PTR)parent->getHWND());
+#endif
+	}
 	if (flags&WINDOW_BORDERLESS_POPUP) {
 		glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER , GL_FALSE); //set global state back to default
 		glfwSetWindowAttrib(glfw, GLFW_FOCUS_ON_SHOW, 0);
 #ifdef _WIN32
-		SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, (__int3264) (LONG_PTR)parent->getHWND());
+		//SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, (__int3264) (LONG_PTR)parent->getHWND());
 		LONG l = GetWindowLong(hwnd, GWL_EXSTYLE);
 		l = l & ~WS_EX_APPWINDOW;
 		l = l | WS_EX_TOOLWINDOW;

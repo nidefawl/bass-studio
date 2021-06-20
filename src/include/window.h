@@ -6,6 +6,7 @@
 #define WINDOW_BORDERLESS_POPUP 1
 #define WINDOW_IS_MAINWINDOW_MASTER 2
 #define WINDOW_IS_MAINWINDOW_SLAVE 4
+#define WINDOW_IS_TOPLEVEL_CHILD 8
 
 class BaseCtrl;
 class AppCtrl;
@@ -67,4 +68,5 @@ public:
 	virtual AppCtrl* getCtrl() = 0;
 	virtual void positionOnScreen(ivec2 pos, ivec2 size) = 0;
 	virtual bool canResize() = 0;
+	virtual int getCreationFlags() = 0;
 };

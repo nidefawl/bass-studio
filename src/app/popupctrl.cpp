@@ -41,7 +41,9 @@ void PopupCtrl::onWindowClose() {
 	popupCtrs->removeGuis();
 	resetMouseContext();
 }
-
+void PopupCtrl::render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float ratio) {
+	BaseCtrl::render(nanovgCtxt, x, y, w, h, ratio);
+}
 void PopupCtrl::relayout(int32_t w, int32_t h) {
 	if (bResizeable) {
 		closeAllAppMenus();
