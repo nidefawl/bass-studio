@@ -157,15 +157,10 @@ void bindVertexAttributes(std::vector<VertexAttr>& attrs, int fixedStride) {
 		}
 	}
 
-	for (int i = 0; i < 6; i++) {
-		glDisableVertexAttribArray(i);
-	}
 	size_t offset = 0;
 	for (int i = 0; i < (int)attrs.size(); i++) {
 		VertexAttr& attr = attrs[i];
 		if (attr.bindingPt >= 0) {
-			glEnableVertexAttribArray(attr.bindingPt);
-			checkGLError("glEnableVertexAttribArray");
 			glVertexAttribPointer(attr.bindingPt,
 					attr.elements,
 					attr.type,
@@ -173,8 +168,13 @@ void bindVertexAttributes(std::vector<VertexAttr>& attrs, int fixedStride) {
 					vertStrideBytes,
 					(const void*) offset);
 			checkGLError("glVertexAttribPointer");
+			glEnableVertexAttribArray(attr.bindingPt);
+			checkGLError("glEnableVertexAttribArray");
 		}
 		offset += attr.elements * sizeof(float);
+	}
+	for (int i = attrs.size(); i < 6; i++) {
+		glDisableVertexAttribArray(i);
 	}
 }
 void DrawVBO::genBuffers() {

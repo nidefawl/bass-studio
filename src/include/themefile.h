@@ -6,6 +6,7 @@
 struct themefile
 {
 public:
+	guitheme_t defaultTheme;
 	guitheme_t theme;
 	std::vector<guitheme_t> themes;
 	themefile() { }

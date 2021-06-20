@@ -32,7 +32,7 @@ class click_type_handler;
 struct click_ctxt_t {
 	guibase* gui;
 	click_type_handler* callback;
-	MouseEvent evt;
+//	MouseEvent evt;
 };
 class table_entry_t {
 public:
@@ -124,6 +124,8 @@ void drawTbl(const table_ctxt_t& ctxt, const float& obj);
 void drawTbl(const table_ctxt_t& ctxt, const String& obj);
 void drawTbl(const table_ctxt_t& ctxt, const ivec2& obj);
 void drawTbl(const table_ctxt_t& ctxt, const ivec4& obj);
+void drawTbl(const table_ctxt_t& ctxt, const GuiColor::constant_t& obj);
+void drawTbl(const table_ctxt_t& ctxt, const GuiConstant::constant_t& obj);
 template <typename T>
 inline void cellClicked(const click_ctxt_t& ctxt, T& obj) {
 

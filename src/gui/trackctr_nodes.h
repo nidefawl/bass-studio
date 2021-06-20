@@ -27,7 +27,7 @@
 
 class gui_graph_entry : public guictr_base {
 	friend class gui_graph;
-	friend class guictr_nodes;
+	friend class guictr_nodes_editor;
 protected:
 	int icon = 0;
 	bool selected = false;
@@ -37,6 +37,19 @@ public:
 		setCanMouseHit(true);
 	}
 	virtual ~gui_graph_entry() {
+	}
+	bool contains(ivec2 mpos) const override {
+		if (mpos.x >= pos.x &&
+			mpos.y >= pos.y &&
+			mpos.x < pos.x + size.x &&
+			mpos.y < pos.y + size.y)
+			return true;
+		ivec2 localPos = toContainerSpace(mpos);
+		for (auto* gui : guis) {
+			if (gui->isVisible() && gui->contains(localPos))
+				return true;
+		}
+		return false;
 	}
 	virtual void render(NVGcontext* vg);
 	virtual void handleDraggedBegin(MouseEvent& evt);
@@ -48,9 +61,11 @@ public:
 	bool isDragMoveable() {
 		return true;
 	}
+	bool setScissorTransformContainer(NVGcontext* vg) override;
 };
 class gui_graph_n;
 class gui_graph : public guictr_base {
+private:
 	class guictr_graph_impl;
 	guictr_graph_impl * const impl;
 protected:
@@ -60,9 +75,18 @@ protected:
 	ivec4 rowMargin = {0, 0, 0, 0};
 	bool renderHR = false;
 	int32_t selectedIdx = -1;
+	float scale = 1.0f;
+	vec2 offset{0};
+	vec2 prevOffset{0};
 public:
+	bool isTrackGraph = false;
 	gui_graph();
 	~gui_graph();
+	ivec2 toParentSpace(ivec2 localCoord) const override;
+	ivec2 toContainerSpace(ivec2 in) const override;
+	vec2 toParentSpace2f(vec2 localCoord) const override;
+	vec2 toContainerSpace2f(vec2 in) const override;
+	virtual ivec2 toScreenSpace(ivec2 in) const;
 	void onTick(AppCtrl* appctrl) override;
 	int32_t getSelectedIdx() {
 		return selectedIdx;
@@ -105,10 +129,19 @@ public:
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
 	void reset();
 	void refresh();
+	void buttonClicked(guibase* _button) {
+		if (parent) parent->buttonClicked(_button);
+	}
+	bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) override;
+
+	void handleDraggedBegin(MouseEvent& evt) override;
+	void handleDraggedMove(MouseEvent& evt) override;
+	void handleDraggedRelease(MouseEvent& evt) override;
 };
-class guictr_nodes : public guictr_base, te_constants, public gui_scrollcontainer {
-	class guictr_nodes_impl;
-	guictr_nodes_impl * const impl;
+
+class guictr_nodes_editor : public guictr_base, te_constants, public gui_scrollcontainer {
+	class guictr_nodes_editor_impl;
+	guictr_nodes_editor_impl * const impl;
 
 	friend class guitrack_editor;
 public:
@@ -117,8 +150,8 @@ public:
 protected:
 	gui_scrollbar scrollbar;
 public:
-	guictr_nodes(DAW::Cursor& _cursor, project_t& _project, dragdrop_midifile& _dragdropclip);
-	~guictr_nodes();
+	guictr_nodes_editor(DAW::Cursor& _cursor, project_t& _project, dragdrop_midifile& _dragdropclip);
+	~guictr_nodes_editor();
 	void render(NVGcontext* vg);
 	void scrollTo(guibase* g);
 	void layout();
@@ -141,14 +174,14 @@ public:
 		return graph.size;
 	}
 	void scrollOffsetChanged(int dir, float offset);
-	virtual bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
-		return scrollbar.handleMouseScroll(evt, xoffset, yoffset);
-	}
 	void setScrollOffset(float offset) {
 		this->scrollbar.setScrollOffset(offset);
 	}
 	float getScrollOffset() {
 		return this->scrollbar.scrollOffset;
+	}
+	void buttonClicked(guibase* _button) {
+		if (parent) parent->buttonClicked(_button);
 	}
 	void reset();
 	void refresh();
@@ -158,4 +191,24 @@ public:
 	guibase* getFocusedContainer() override {
 		return this;
 	}
+	bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) override {
+		return false;
+	}
 };
+
+class guictr_nodes_splitview : public guictr_base {
+public:
+	project_t& project;
+private:
+	guictr_nodes_editor projectView;
+	guictr_nodes_editor trackView;
+public:
+	guictr_nodes_splitview(DAW::Cursor& _cursor, project_t& _project, dragdrop_midifile& _dragdropclip);
+	~guictr_nodes_splitview();
+	void layout() override;
+	void onChildLayoutChanged(guibase* g) override;
+	void reset();
+	void refresh();
+	void buttonClicked(guibase* _button);
+};
+

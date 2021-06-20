@@ -12,6 +12,7 @@ option(BUILD_SCANNER "Build plugin scanner" OFF)
 option(BUILD_CMDLINE_HOST "Build command line host" OFF)
 option(BUILD_GUI_TEST "Build test app" OFF)
 option(BUILD_RGB_MASTER "Build rgb master" OFF)
+option(BUILD_INSTALLER "Build windows msi installer package" OFF)
 
 if (BUILD_TESTS OR BUILD_SCANNER OR BUILD_CMDLINE_HOST OR BUILD_GUI_TEST OR BUILD_RGB_MASTER)
 set(BUILD_DAW_LIB ON)
@@ -170,6 +171,10 @@ source_group("generated" FILES ${GENERATED_SRC_FILES})
 
 list(APPEND CPP_SRC_FILES ${GENERATED_SRC_FILES})
 
+list(APPEND RESOURCE_FILES "")
+if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+list(APPEND RESOURCE_FILES "src/icon_resource.h" "src/icon.rc")
+endif()
 #build a fat library only when tests are enabled
 #if tests are disabled we link objects directly to output executable (faster)
 if (BUILD_DAW_LIB) 
@@ -222,10 +227,10 @@ if (BUILD_DAW_LIB)
 endif()
 
 if (BUILD_DAW_LIB) 
-add_executable(${BUILD_NAME} "src/host/main_daw.cpp")
+add_executable(${BUILD_NAME} "src/host/main_daw.cpp" ${RESOURCE_FILES})
 target_link_libraries(${BUILD_NAME} PUBLIC "dawlib")
 else()
-add_executable(${BUILD_NAME} "src/host/main_daw.cpp" ${CPP_SRC_FILES} ${C_SRC_FILES} ${HDR_FILES})
+add_executable(${BUILD_NAME} "src/host/main_daw.cpp" ${RESOURCE_FILES} ${CPP_SRC_FILES} ${C_SRC_FILES} ${HDR_FILES})
 endif()
 SET_APP_BUILD(${BUILD_NAME})
 ADD_POST_BUILD_COMMANDS(${BUILD_NAME})
@@ -371,3 +376,27 @@ if (BUILD_TESTS)
         add_custom_target(report DEPENDS coverage-report.txt)
     endif()
 endif(BUILD_TESTS)
+
+if (BUILD_INSTALLER)
+
+    list(APPEND CMAKE_MODULE_PATH "C:/dev/FindWiX/cmake")
+    get_property(DAW_EXE_LOC TARGET ${BUILD_NAME} PROPERTY OUTPUT_NAME_RELWITHDEBINFO)
+    #get_filename_component(DAW_EXE_NAME ${DAW_EXE_LOC}".exe" NAME)
+
+    # set("DAW_EXE_NAME" "${DAW_EXE_LOC}.exe")
+    # set("ProductVersion" "0.4.1.0")
+    # find_package(WIX REQUIRED)
+    # wix_add_project(DAW-installer 
+    #     daw-installer.wxs
+    #     EXTENSIONS WixUIExtension WixUtilExtension WixBalExtension
+    #     DEPENDS ${BUILD_NAME} #the way to build CppExecutable first
+    #     )
+    # set("DAW_EXE_NAME" "${DAW_EXE_LOC}.exe")
+    # set("ProductVersion" "0.4.1.0")
+    # find_package(WIX REQUIRED)
+    # wix_add_project(DAW-installer 
+    #     daw-installer.wxs
+    #     EXTENSIONS WixUIExtension WixUtilExtension WixBalExtension
+    #     DEPENDS ${BUILD_NAME} #the way to build CppExecutable first
+    #     )
+endif(BUILD_INSTALLER)

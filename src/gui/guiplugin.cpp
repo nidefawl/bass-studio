@@ -428,10 +428,10 @@ void guiplugin::handleRightClick(MouseEvent& evt) {
 
 }
 void guiplugin::dragMoveOn(guibase* target, ivec2 mousepos) {
-	target->pluginDragMove(this, mousepos);
+	target->pluginDragMove(this, toControlsObjectSpace(mousepos, target));
 }
 void guiplugin::dragReleaseOn(guibase* target, ivec2 mousepos) {
-	target->pluginDragRelease(this, mousepos);
+	target->pluginDragRelease(this, toControlsObjectSpace(mousepos, target));
 }
 
 bool guiplugin::focusEvent(MouseHitEvt& evt, bool focused) {
@@ -472,6 +472,7 @@ void guitooltip<guiplugin>::layout()  {
 	table.titleCols.clear();
 	table.colSizes.clear();
 	{
+		table.rows.push_back({{String("projectGlobalId"), (int)ptr->effect->projectGlobalId}});
 		table.rows.push_back({{tblstr{"track"}, tblint{(int64_t)ptr->effect->getTrack(), "%12x"}}});
 		table.rows.push_back({{tblstr{"tracklink"}, tblint{(int64_t)ptr->effect->getTrackLink(), "%12x"}}});
 		table.rows.push_back({{tblstr{"bIsSetup"}, tblint{ptr->effect->bIsSetup}}});
@@ -570,25 +571,25 @@ public:
 void drawImage(NVGcontext* vg, int image, float alpha,
 		float sx, float sy, float sw, float sh, // sprite location on texture
 		float x, float y, float w, float h); // position and size of the sprite rectangle on screen
-class guivstplugin_preview : public guictr_base {
+class guipluginview_preview : public guictr_base {
 	vstplugin* const plugin;
-	guivstplugin* const guivst;
+	guipluginview* const guivst;
 	int tex = -1;
 	ivec2 sizeTex;
 public:
-	guivstplugin_preview(vstplugin* _plugin, guivstplugin* _guivst)
+	guipluginview_preview(vstplugin* _plugin, guipluginview* _guivst)
 	: guictr_base(), plugin(_plugin), guivst(_guivst), sizeTex{0,0}
 	{
 		padding = 0;
 		margin = 0;
 	}
-	~guivstplugin_preview() {
+	~guipluginview_preview() {
 
 	}
 	void determineSize(ivec2& prefSize) override {
-//		if (sizeTex.x && sizeTex.y) {
-//			prefSize = sizeTex;
-//		}
+		if (sizeTex.x && sizeTex.y) {
+			prefSize.x = (int)((sizeTex.x / (float)sizeTex.y) * prefSize.y);
+		}
 	}
 	int nFrame = 0;
 	void prerender(NVGcontext* vg) override {
@@ -597,36 +598,47 @@ public:
 //			return;
 //		nFrame = 0;
 		auto window = plugin->window;
-		if (window) {
-//			window->captureWindowFrame();
-			auto& frame = window->capturedFrame;
-			if (frame.w && frame.h) {
-				if (tex > 0 && (frame.w != sizeTex.x || frame.h != sizeTex.y)) {
-					nvgDeleteImage(vg, tex);
-					tex = -1;
-				}
-				if (tex < 0) {
-					tex = nvgCreateImageRGBA(vg, frame.w, frame.h, 0, (const unsigned char*)nullptr);
-					sizeTex = { frame.w, frame.h };
-				}
-//				std::vector<uint8_t> tmpData = frame.bytes;
-////				tmpData.resize(frame.w*frame.h*4);
-//				for (int _x = 0; _x < frame.w; _x++) {
-//
-//					for (int _y = 0; _y < frame.h; _y++) {
-//						int idx = _x*frame.h+_y;
-//						tmpData[idx*4+0] = 0xff;
-////						tmpData[idx*4+1] = 0xff;
-////						tmpData[idx*4+2] = 0xff;
-//						tmpData[idx*4+3] = 0xff;
-//					}
-//				}
-				nvgUpdateImage(vg, tex, frame.bytes.data());
-			} else if (tex > 0) {
-				nvgDeleteImage(vg, tex);
-				tex = -1;
-				sizeTex = { frame.w, frame.h };
-			}
+        if (window && guivst) {
+            if (plugin->requestCaptureGUI >= 1) {
+                plugin->requestCaptureGUI++;
+                if (plugin->requestCaptureGUI >= 33) {
+                    window->captureWindowFrame();
+                    plugin->requestCaptureGUI = -1;
+                }
+            } else if (plugin->requestCaptureGUI == -1) {
+    			plugin->requestCaptureGUI = 0;
+    			auto& frame = window->capturedFrame;
+    			if (frame.w && frame.h && frame.bytes.size()) {
+    				if (tex > 0 && (frame.w != sizeTex.x || frame.h != sizeTex.y)) {
+    					nvgDeleteImage(vg, tex);
+    					tex = -1;
+    				}
+    				if (tex < 0) {
+    					tex = nvgCreateImageRGBA(vg, frame.w, frame.h, 0, (const unsigned char*)nullptr);
+    					sizeTex = { frame.w, frame.h };
+    				}
+    //				std::vector<uint8_t> tmpData = frame.bytes;
+    ////				tmpData.resize(frame.w*frame.h*4);
+    //				for (int _x = 0; _x < frame.w; _x++) {
+    //
+    //					for (int _y = 0; _y < frame.h; _y++) {
+    //						int idx = _x*frame.h+_y;
+    //						tmpData[idx*4+0] = 0xff;
+    ////						tmpData[idx*4+1] = 0xff;
+    ////						tmpData[idx*4+2] = 0xff;
+    //						tmpData[idx*4+3] = 0xff;
+    //					}
+    //				}
+    				nvgUpdateImage(vg, tex, frame.bytes.data());
+    				MainCtrl::getPluginCtr()->relayout();
+    			} else if (tex > 0) {
+    				nvgDeleteImage(vg, tex);
+    				tex = -1;
+    				sizeTex = { frame.w, frame.h };
+    			}
+
+            }
+
 
 		}
 	}
@@ -639,14 +651,14 @@ public:
 		}
 		if (tex > 0) {
 			ivec2 sizePrev;
-			if (sizeTex.x > sizeTex.y) {
-				sizePrev.x = size.x;
-				sizePrev.y = (int)((sizeTex.y/(float)sizeTex.x)*sizePrev.x);
-			} else {
-				sizePrev.y = size.y;
-				sizePrev.x = (int)((sizeTex.x/(float)sizeTex.y)*sizePrev.y);
-			}
-			drawImage(vg, tex, 1.0f, 0, 0, sizeTex.x, sizeTex.y, 0, 0, sizePrev.x, sizePrev.y);
+//			if (sizeTex.x > sizeTex.y) {
+//				sizePrev.x = size.x;
+//				sizePrev.y = (int)((sizeTex.y/(float)sizeTex.x)*sizePrev.x);
+//			} else {
+//				sizePrev.y = size.y;
+//				sizePrev.x = (int)((sizeTex.x/(float)sizeTex.y)*sizePrev.y);
+//			}
+			drawImage(vg, tex, 1.0f, 0, 0, sizeTex.x, sizeTex.y, 0, 0, size.x, size.y);
 		}
 		for (auto c : guis) {
 			nvgSave(vg);
@@ -655,37 +667,50 @@ public:
 		}
 	}
 };
-guivstplugin::guivstplugin(vstplugin * _vst)
-  : guiplugin(_vst), vst(_vst), dropdownProgram(_vst)
+guipluginview::guipluginview(effectbase * _effect)
+  : guiplugin(_effect), effect(_effect), dropdownProgram(_effect)
 {
 	params.setRowHeight(48);
 	buttonOpenEditor.icon = ICON_ADJUST;
-	buttonOpenEditor.state = &_vst->bEditOpen;
+	buttonOpenEditor.state = &_effect->bEditOpen;
 	buttonOpenEditor.setParent(this);
 	buttonOpenEditor.colorActive = GuiColor::COL_BTN_BG_SHOW_ACTIVE;
 	addGuiBtn(&buttonOpenEditor);
 	params.setParent(this);
+	buttonShowInlineGUI.icon = ICON_ADJUST;
+	buttonShowInlineGUI.state = &_effect->bCaptureGUI;
+	buttonShowInlineGUI.setParent(this);
+	buttonShowInlineGUI.colorActive = GuiColor::COL_BTN_BG_SHOW_ACTIVE;
 	dropdownProgram.setParent(this);
 	std::vector<automatable_param_t*> sortedParams;
-	_vst->getSortedParams(sortedParams);
+	_effect->getSortedParams(sortedParams);
 	std::vector<gui_list_entry*> listEntries;
 	listEntries.reserve(sortedParams.size());
-    std::for_each(sortedParams.begin(), sortedParams.end(), [&listEntries, _vst](auto* param) {
-		if (param->internalIdx >= 0)
-			listEntries.push_back(new gui_plugin_paramlist_entry(_vst, param));
+    std::for_each(sortedParams.begin(), sortedParams.end(), [&listEntries, _effect](auto* param) {
+//		if (param->internalIdx >= 0)
+			listEntries.push_back(new gui_plugin_paramlist_entry(_effect, param));
     });
 	params.setList(listEntries);
-//	ctrPreview = new guivstplugin_preview(this->vst, this);
-//	viewCtrs.push_back(ctrPreview);
+	if (_effect->pluginType == PLUGIN_TYPE_VST) {
+		dbgassert(dynamic_cast<vstplugin*>(_effect));
+		ctrPreview = new guipluginview_preview(dynamic_cast<vstplugin*>(_effect), this);
+		ctrPreview->setVisible(false);
+		viewCtrs.push_back(ctrPreview);
+		addGuiBtn(&buttonShowInlineGUI);
+	}
 }
 
-guivstplugin::~guivstplugin() {
+guipluginview::~guipluginview() {
 	remove(&buttonOpenEditor);
+	//will propably fall on the nose with accessing _effect in the destructor here
+    if (effect->pluginType == PLUGIN_TYPE_VST) {
+		remove(&buttonShowInlineGUI);
+	}
 	if (ctrPreview) {
 		delete ctrPreview;
 	}
 }
-void guivstplugin::setControl(BaseCtrl* parentCtrl) {
+void guipluginview::setControl(BaseCtrl* parentCtrl) {
 	guiplugin::setControl(parentCtrl);
 	params.setControl(parentCtrl);
 	dropdownProgram.setControl(parentCtrl);
@@ -694,39 +719,50 @@ void guivstplugin::setControl(BaseCtrl* parentCtrl) {
 	}
 }
 
-void guivstplugin::prerender(NVGcontext* vg) {
+void guipluginview::prerender(NVGcontext* vg) {
 	guiplugin::prerender(vg);
 	for (auto* ctr : viewCtrs) {
 		assert(!ctr->parent);
 		ctr->prerender(vg);
 	}
 }
-void guivstplugin::determineSize(glm::ivec2& prefSize) {
+void guipluginview::determineSize(glm::ivec2& prefSize) {
 	if (layoutMode == 1) {
 		guiplugin::determineSize(prefSize);
 		return;
 	}
-	sizeCtrs = {0, size.y};
+    const int32_t hpt = parent->theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT);
+    int32_t meterW = math::max(16, (int32_t)(theme->get(GuiConstant::CONST_METER_WIDTH) * hpt / 32.0));
+    ivec2 contentS;
+    ivec2 contentP;
+
+    if (isHorizontalTitle) {
+        contentP = ivec2(0, hpt);
+        contentS = ivec2(prefSize.x - meterW, size.y - hpt);
+    }
+    else {
+        contentP = ivec2(hpt, 0);
+        contentS = ivec2(size.x - hpt - meterW, size.y);
+    }
+    sizeCtrs = {0, contentS.y};
+
 	if (viewCtr) {
 		ivec2 sizeCtr;
 		viewCtr->getFixedSize(&sizeCtr.x, &sizeCtr.y);
-		sizeCtr.x = (int)((sizeCtr.x/(float)sizeCtr.y)*size.y);
-		sizeCtr.y = size.y;
+        sizeCtr.x = (int)((sizeCtr.x / (float)sizeCtr.y) * contentS.y);
+        sizeCtr.y = sizeCtrs.y;
 		viewCtr->layout(sizeCtr.x, sizeCtr.y);
 		sizeCtrs.x += sizeCtr.x;
 	}
-	if (ctrPreview) {
-		ivec2 sizeCtr{prefSize.y, prefSize.y};
+    if (ctrPreview && ctrPreview->isVisible()) {
+        ivec2 sizeCtr{sizeCtrs.y, sizeCtrs.y};
 		ctrPreview->determineSize(sizeCtr);
-		sizeCtr.x = (int)((sizeCtr.x/(float)sizeCtr.y)*size.y);
-		sizeCtr.y = size.y;
-		ctrPreview->size = sizeCtr;
-		sizeCtrs.x += sizeCtr.x;
+        sizeCtrs.x += sizeCtr.x;
 	}
 	prefSize.y = math::max(sizeCtrs.y, prefSize.y);
 	prefSize.x += sizeCtrs.x;
 }
-void guivstplugin::render(NVGcontext* vg) {
+void guipluginview::render(NVGcontext* vg) {
 	renderBase(vg);
 	for (auto* btn : guiButtons) {
 		if (btn->isVisible())
@@ -734,10 +770,12 @@ void guivstplugin::render(NVGcontext* vg) {
 	}
 	if (layoutMode != 1) {
 		for (auto* ctr : viewCtrs) {
-			nvgSave(vg);
 			if (ctr->isVisible())
+			{
+				nvgSave(vg);
 				ctr->render(vg);
-			nvgRestore(vg);
+				nvgRestore(vg);
+			}
 		}
 		if (meter.isVisible())
 			meter.render(vg);
@@ -752,7 +790,7 @@ void guivstplugin::render(NVGcontext* vg) {
 		}
 	}
 }
-bool guivstplugin::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
+bool guipluginview::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 	if (evt.type == MouseHitType::MOUSE_DRAGDROP_OBJECT) {
 		return false;
 	}
@@ -764,7 +802,7 @@ bool guivstplugin::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 			}
 		}
 		for (auto* ctr : viewCtrs) {
-			if (ctr->mouseHitTest(localMouse, evt)) {
+			if (ctr->isVisible() && ctr->mouseHitTest(localMouse, evt)) {
 				return true;
 			}
 		}
@@ -784,20 +822,35 @@ bool guivstplugin::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 	}
 	return false;
 }
-void guivstplugin::buttonClicked(guibase* _button) {
+void guipluginview::buttonClicked(guibase* _button) {
 	guiplugin::buttonClicked(_button);
 	if (_button == &buttonOpenEditor) {
-		if (vst->bEditOpen) {
-			vst->close();
+		if (effect->bEditOpen) {
+			effect->close();
 		} else {
-			vst->show();
+			effect->show();
 		}
 	}
-	dropdownProgram.setVisible(layoutMode == 0 && vst->programNames.size());
+	if (_button == &buttonShowInlineGUI) {
+		effect->bCaptureGUI = !effect->bCaptureGUI;
+        if (effect->bCaptureGUI) {
+            if (effect->bEditOpen) {
+                effect->close();
+            }
+            effect->requestCaptureGUI = 1;
+            effect->show();
+		}
+	}
+	if (ctrPreview) {
+		ctrPreview->setVisible(effect->bCaptureGUI);
+	}
+
+	dropdownProgram.setVisible(layoutMode == 0 && effect->programNames.size());
 	params.setVisible(layoutMode == 0);
-	meter.setVisible(layoutMode == 0);
+    meter.setVisible(layoutMode == 0);
+    this->onChildLayoutChanged(this);
 }
-void guivstplugin::layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {
+void guipluginview::layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {
 	const int32_t hpt = theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT);
 //	buttonOpenEditor.size = buttonBypass.size;
 //	buttonOpenEditor.setRadius(buttonBypass.radius);
@@ -811,7 +864,7 @@ void guivstplugin::layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {
 	while (contentS.y < rowHeight * 8 && rowHeight > 8) {
 		rowHeight -= 4;
 	}
-	dropdownProgram.setVisible(layoutMode == 0 && vst->programNames.size());
+	dropdownProgram.setVisible(layoutMode == 0 && effect->programNames.size());
 	if (dropdownProgram.isVisible()) {
 
 		int hDropDown = hpt*0.7;
@@ -830,22 +883,26 @@ void guivstplugin::layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {
 		params.pos = ivec2(insetCtrls, insetCtrls + hpt);
 		params.size = ivec2(paramsW, contentS.y) - ivec2(insetCtrls*2);
 		params.layout();
-	}
+    }
+    int left = params.right() + INSET_TITLE;
 	if (viewCtrs.size()) {
-		int left = params.right() + INSET_TITLE;
 		for (auto* ctr : viewCtrs) {
-			ctr->pos = ivec2(left, 0) + ivec2(insetCtrls, insetCtrls + hpt);
-			ivec2 prefSizeCtr = ivec2(ctr->size.x, contentS.y) - ivec2(insetCtrls*2);
-			ctr->determineSize(prefSizeCtr);
-			ctr->size = prefSizeCtr;
-			ctr->layout();
-			left = ctr->right() + INSET_TITLE;
+            if (ctr->isVisible()) {
+                ctr->pos = ivec2(left, 0) + ivec2(insetCtrls, insetCtrls + hpt);
+                ivec2 prefSizeCtr = ivec2(ctr->size.x, contentS.y) - ivec2(insetCtrls * 2);
+                log_printf("layoutModule prefSizeCtr xy %d %d\n", prefSizeCtr.x, prefSizeCtr.y);
+                ctr->determineSize(prefSizeCtr);
+                ctr->size = prefSizeCtr;
+                log_printf("layoutModule ctr->size xy %d %d\n", ctr->size.x, ctr->size.y);
+                ctr->layout();
+                left = ctr->right() + INSET_TITLE;
+			}
 		}
-	}
+    }
 }
 
 
-guidropdown_select_program::guidropdown_select_program(vstplugin *_plugin) :
+guidropdown_select_program::guidropdown_select_program(effectbase *_plugin) :
 		plugin(_plugin) {
 	this->size.x = 120;
 	this->fontSize = FONT_SIZE_CTXT_SMALL;
@@ -860,22 +917,14 @@ guidropdown_select_program::guidropdown_select_program(vstplugin *_plugin) :
 void guidropdown_select_program::clicked(int _id) {
 	closeContextMenu();
 	if (_id >= 0 && _id < plugin->programNames.size()) {
-		String s = plugin->programNames[_id];
-		plugin->dispatch(effSetProgram, 0, _id, 0, 0);
+		plugin->setCurrentProgram(_id);
 	}
 }
 
 String guidropdownprogram::getString() {
-	char buf[1024];
-	memset(buf, 0, sizeof(buf));
-	if (0 == plugin->dispatch(effGetProgramName, 0, 0, buf, 0) && buf[0]) {
-		return String(buf);
-	}
-	int n = plugin->dispatch(effGetProgram, 0, 0, 0, 0);
-	if (n >= 0 && n < plugin->programNames.size()) {
-		return plugin->programNames[n];
-	}
-	return "";
+	String s = "";
+	plugin->getCurrentProgramName(s);
+	return s;
 }
 
 void guidropdownprogram::handleDraggedRelease(MouseEvent &evt) {
@@ -895,6 +944,7 @@ void guitooltip<guivstplugin>::layout()  {
 	table.titleCols.clear();
 	table.colSizes.clear();
 	{
+		table.rows.push_back({{String("projectGlobalId"), (int)ptr->effect->projectGlobalId}});
 		table.rows.push_back({{String("isSynth"), (int)ptr->vst->isSynth}});
 		auto vst = ptr->vst;
 		auto aeffect = vst->handle->aeffect;
@@ -929,9 +979,37 @@ void guitooltip<guivstplugin>::layout()  {
 	size.y = table.rows.size()*table.rowHeight;
 }
 
+guivstplugin::guivstplugin(vstplugin * _effect) : guipluginview(_effect), vst(_effect)
+{
+}
+guivstplugin::~guivstplugin() {
+	if (viewCtr) {
+		viewCtr->setFree();
+	}
+}
 guictxtmenu_base* guivstplugin::getTooltip(AppCtrl* appctrl) {
 	auto tooltip = new guitooltip<guivstplugin>(this);
 	return tooltip;
+}
+guictxtmenu_base* guiinternalpluginview::getTooltip(AppCtrl* appctrl) {
+//	auto tooltip = new guitooltip<guiinternalpluginview>(this);
+//	return tooltip;
+	return nullptr;
+}
+guiinternalpluginview::guiinternalpluginview(internalplugin * _effect) : guipluginview(_effect), plugin(_effect)
+{
+	viewCtr = _effect->createInternalView();
+	if (viewCtr) {
+		viewCtr->addTo(viewCtrs);
+		viewCtr->onGuiOpen(nullptr);
+//		this->viewCtr->setVSTPlugin(this);
+//		handleInt->viewForInternalVst2 = this->viewCtr;
+	}
+}
+guiinternalpluginview::~guiinternalpluginview() {
+	if (viewCtr) {
+		viewCtr->setFree();
+	}
 }
 
 template<typename T>
@@ -940,4 +1018,22 @@ template<>
 void addPropertiesFromGui(guiplugin& gui, Table::tbl* table);
 void guiplugin::addProperties(Table::tbl* table) {
 	addPropertiesFromGui(*this, table);
+}
+
+void guidropdownprogram::setSelectedIndex(uint32_t idx) {
+	if (idx >= 0 && idx < getLastIndex()) {
+		plugin->setCurrentProgram(idx);
+	}
+}
+
+uint32_t guidropdownprogram::getLastIndex() {
+	uint32_t maxProgram = 0;
+	plugin->getNumberOfPrograms(maxProgram);
+	return maxProgram;
+}
+
+uint32_t guidropdownprogram::getSelectIndex() {
+	uint32_t index = 0;
+	plugin->getCurrentProgram(index);
+	return index;
 }

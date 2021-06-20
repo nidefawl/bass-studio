@@ -29,10 +29,10 @@ KeyEvent keyEvent(int key, int scancode, int keyState, int mods, const char* key
 
 class PluginControl : public AppCtrl
 {
-	PluginViewContainersImpl* view;
+	std::shared_ptr<PluginViewContainers> view;
 	bool firstInit = true;
 public:
-	PluginControl(PluginViewContainersImpl* view);
+	PluginControl(std::shared_ptr<PluginViewContainers> view);
 	~PluginControl();
 	static PluginControl* get();
 	void focusReceived() override { };

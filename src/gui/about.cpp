@@ -35,7 +35,8 @@ void guidialog_about::render(NVGcontext* vg) {
 	using std::make_tuple;
 	std::vector<AboutLine> strings;
 	String str;
-	strings.emplace_back(String("Build: "), String(BuildInfo::BUILD_BINARY_NAME));
+	strings.emplace_back(String("Version: "), String(BuildInfo::BUILD_BINARY_VERSION));
+	strings.emplace_back(String("Platform: "), String(BuildInfo::BUILD_BINARY_NAME));
 	strings.emplace_back(String("Compiled: "), String(BuildInfo::BUILD_TIMESTAMP));
 	strings.emplace_back(String("Compiler ID: "), String(BuildInfo::COMPILER_ID));
 #if defined(_WIN32) && defined(WINVER)

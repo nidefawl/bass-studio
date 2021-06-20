@@ -43,7 +43,8 @@ void PluginControl::destroy()
 	}
 	isOK = false;
 	if (view) {
-		delete view;
+//		delete view;
+		view->setFree();
 		view = nullptr;
 	}
 	
@@ -60,11 +61,12 @@ void PluginControl::menuCommand(const menucmd_t&& command) {
 
 void PluginControl::initApp(int argc, char* argv[]) {
 }
-PluginControl::PluginControl(PluginViewContainersImpl* _view) : AppCtrl(), view(_view) {
+PluginControl::PluginControl(std::shared_ptr<PluginViewContainers> _view) : AppCtrl(), view(_view) {
 }
 PluginControl::~PluginControl() {
 	if (view) {
-		delete view;
+		view->setFree();
+//		delete view;
 		view = nullptr;
 	}
 }

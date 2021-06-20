@@ -62,20 +62,28 @@ effectbase::effectbase() : pluginType(0), projectGlobalId(0), sName("") {
 }
 void effectbase::onTick(double since) {
 	meter.onTick(since);
+	meterIn.onTick(since);
 }
 sampleformat_t effectbase::getSampleFormat() {
 	return format;
 }
-void effectbase::setSampleFormat(sampleformat_t sampleFormat) {
-	format = sampleFormat;
-}
+
 void effectbase::load(vsthost* host) {
+	vstHost = host;
 	setSampleFormat(host->sampleFormat);
-	dbgassert(nLoadCalls==0); nLoadCalls++;
-};
+	dbgassert(nLoadCalls==0);
+	nLoadCalls++;
+}
+void effectbase::unload(vsthost* host) {
+	dbgassert(host == vstHost);
+	vstHost = nullptr;
+	dbgassert(nLoadCalls==1);
+	nLoadCalls--;
+}
 
 void effectbase::postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) {
 	meter.update(out, 1.0f);
+	meterIn.update(this->blockInputs, 1.0f);
 }
 
 void effectbase::breakTrackLink() {
@@ -156,8 +164,13 @@ String effect_deferred::getDfrdPluginName() {
 void effect_deferred::onPreUnload() {
 	my_printf("onPreUnload effect_deferred %08X %s\n", (int64_t)mImpl, StringAsCStr(mImpl->snapshot.name));
 }
-plugin_snapshot_t effect_deferred::getSnapshot() const {
-	return mImpl->snapshot;
+const plugin_snapshot_t& effect_deferred::getSnapshotConst() const
+{
+    return mImpl->snapshot;
+}
+plugin_snapshot_t& effect_deferred::getSnapshot()
+{
+    return mImpl->snapshot;
 }
 
 /*static*/ std::shared_ptr<effect_deferred> effect_deferred::fromEffect(effectbase* eff) {
@@ -167,11 +180,14 @@ plugin_snapshot_t effect_deferred::getSnapshot() const {
 	}
 	return nullptr;
 }
+String effectbase::formatDisplayValue(int32_t idx) {
+	String display = StringFormat("%.3f", getParamValue(idx));
+	return display;
+}
 effect_deferred* effectbase::toDeferred() {
 	plugin_snapshot_t snapshot;
 	this->makeSnapshot(snapshot, true);
 	effect_deferred* def = new effect_deferred();
-	def->mImpl = new effect_deferred_impl();
 	def->mImpl = new effect_deferred_impl();
 	def->sName = snapshot.name;
 	def->projectGlobalId = snapshot.projectGlobalId;
@@ -212,7 +228,7 @@ void effect_deferred::makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks
 	ps = this->mImpl->snapshot;
 }
 void effect_deferred::process(AudioBlock* in, AudioBlock* out, int32_t samplePos, int32_t numSamples, playback_state state) {
-	dbgassert(vsthost::getInstance()->sampleFormat == this->format && in->samples == format.blockSize && out->samples == format.blockSize && format.blockSize > 0 && format.sampleRate > 0);
+	dbgassert(vstHost->sampleFormat == this->format && in->samples == format.blockSize && out->samples == format.blockSize && format.blockSize > 0 && format.sampleRate > 0);
 }
 bool effect_deferred::show() {
 	return false;
@@ -225,6 +241,11 @@ void effect_deferred::resume() {
 }
 void effect_deferred::sleep() {
 
+}
+void effect_deferred::load(vsthost* host) {
+	effectbase::load(host);
+	this->blockInputs = new AudioBlock(2, host->sampleFormat.blockSize);
+	this->blockOutputs = new AudioBlock(2, host->sampleFormat.blockSize);
 }
 String effect_deferred::getAutomatableName() {
 	return "plugin";

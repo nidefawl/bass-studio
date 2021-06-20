@@ -126,7 +126,7 @@ int getAudioGraph(duk_context *ctx) {
 		duk_push_number(ctx, 12345);
 		duk_put_prop_string(ctx, -2, "nativeHandle");
 		if (daw_tls::getTls().host) {
-			auto graph = vsthost::getInstance()->lastTrackGraph;
+			//auto graph = vsthost::getInstance()->lastTrackGraph;
 //			{
 //
 //				duk_idx_t  arr_idx = duk_push_array(ctx);

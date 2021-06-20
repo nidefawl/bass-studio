@@ -210,7 +210,9 @@ namespace PluginTestAdv {
 	AudioEffectX* createPlugin (audioMasterCallback audioMaster) {
 		return new GuiAdvPluginVST2 (audioMaster);
 	}
-	PluginViewContainers* GuiAdvPluginVST2::createView() {
-		return new ViewContainersAdvPlugin();
+	std::shared_ptr<PluginViewContainers> GuiAdvPluginVST2::createView() {
+		std::shared_ptr<PluginViewContainers> view = std::make_shared<ViewContainersAdvPlugin>();
+		this->views.push_back(view);
+		return view;
 	}
 }

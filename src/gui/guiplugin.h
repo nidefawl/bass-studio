@@ -14,6 +14,7 @@
 
 class effectbase;
 class vstplugin;
+class internalplugin;
 class BaseCtrl;
 class AppCtrl;
 class PluginViewContainers;
@@ -80,31 +81,35 @@ public:
 };
 
 class guidropdown_select_program : public guictxtmenu {
-	vstplugin* const plugin;
+	effectbase* const plugin;
 public:
-	guidropdown_select_program(vstplugin *_plugin);
+	guidropdown_select_program(effectbase *_plugin);
 	void clicked(int _id);
 };
 class guidropdownprogram : public guidropdownbase {
-	vstplugin* plugin = nullptr;
+	effectbase* plugin = nullptr;
 public:
-	guidropdownprogram(vstplugin* _plugin) : guidropdownbase(), plugin(_plugin) {
+	guidropdownprogram(effectbase* _plugin) : guidropdownbase(), plugin(_plugin) {
 
 	}
 	String getString();
 	virtual void handleDraggedRelease(MouseEvent &evt);
+	uint32_t getSelectIndex();
+	uint32_t getLastIndex();
+	void setSelectedIndex(uint32_t idx);
 };
-class guivstplugin : public guiplugin {
+class guipluginview : public guiplugin {
 public:
-	guivstplugin(vstplugin * _vst);
-	~guivstplugin();
-	vstplugin* const vst;
+	guipluginview(effectbase * _effect);
+	~guipluginview();
+	effectbase* const effect;
 	guidropdownprogram dropdownProgram;
 	gui_list params; //TODO: use add() on control
 	guibuttontoggle buttonOpenEditor; //TODO: use add() on controls
+    guibuttontoggle buttonShowInlineGUI; // TODO: use add() on controls
 
 	/* holds view controller for internal vstplugins with custom gui (non-steinberg api) */
-	PluginViewContainers* viewCtr = nullptr;
+	std::shared_ptr<PluginViewContainers> viewCtr;
 	/* holds guictrs of internal vstplugins with custom gui (non-steinberg api) */
 	std::vector<guictr_base*> viewCtrs;
 	/* holds size for internal vstplugins with custom gui (non-steinberg api) */
@@ -116,8 +121,23 @@ public:
 	void render(NVGcontext* vg) override;
 	void buttonClicked(guibase* _button) override;
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
-	guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
 	virtual void setControl(BaseCtrl* parentCtrl) override;
 	void determineSize(ivec2& prefSize) override;
 	void prerender(NVGcontext* vg) override;
+};
+class guivstplugin : public guipluginview {
+public:
+	guivstplugin(vstplugin * _vst);
+	~guivstplugin();
+	vstplugin* const vst;
+	guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
+
+};
+class guiinternalpluginview : public guipluginview {
+	internalplugin* const plugin;
+public:
+	guiinternalpluginview(internalplugin * _effect);
+	~guiinternalpluginview();
+	guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
+
 };

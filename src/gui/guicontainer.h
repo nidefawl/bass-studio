@@ -26,6 +26,7 @@ enum container_type : int32_t {
 	CTR_TYPE_DEBUG_0,
 	CTR_TYPE_DEBUG_1,
 	CTR_TYPE_DEBUG_2,
+	CTR_TYPE_PERFORMANCE,
 };
 
 class guictr_base : public guibase {
@@ -101,10 +102,10 @@ public:
 		this->snapSides = _snapSides;
 	}
 	virtual void scissorClip(ivec2& vpos, ivec2& vsize);
-	virtual ivec2 toContainerSpace(ivec2 in) {
+	virtual ivec2 toContainerSpace(ivec2 in) const {
 		return in - getPosContent();
 	}
-	virtual ivec2 toParentSpace(ivec2 in) {
+	virtual ivec2 toParentSpace(ivec2 in) const {
 		return getPosContent() + in;
 	}
 	virtual ivec2 toScreenSpace(ivec2 in) const {

@@ -39,18 +39,20 @@ public:
 };
 class gui_history_list_entry_t : public gui_list_entry {
 public:
-	action_base* const entry;
-	gui_history_list_entry_t(action_base* const _entry) : gui_list_entry(), entry(_entry) {
+	String desc;
+	gui_history_list_entry_t(action_base* const _entry) : gui_list_entry() //entry(_entry)
+	, desc(_entry->getDesc())
+	{
 		icon = 0;
 	}
 	void dragMoveOn(guibase* target, ivec2 mousepos) override {
-//		target->pluginEntryDragMove(this, mousepos);
+//		target->pluginEntryDragMove(this, toControlsObjectSpace(mousepos, target));
 	}
 	void dragReleaseOn(guibase* target, ivec2 mousepos) override {
-//		target->pluginEntryDragRelease(this, mousepos);
+//		target->pluginEntryDragRelease(this, toControlsObjectSpace(mousepos, target));
 	}
 	String getText() override {
-		return entry->getDesc();
+		return desc;
 	}
 };
 class guictr_history_view : public guictr_base {
@@ -105,6 +107,10 @@ public:
 		}
 	}
 	void render(NVGcontext* vg) {
+		DawInstance *daw = DawInstance::get();
+		if (!daw || histRevision != daw->getHist().getRevision()) {
+			return;
+		}
 		if (!setScissorTransform(vg)) {
 			return;
 		}

@@ -19,6 +19,7 @@
 #include "track.h"
 #include "fileio.h"
 #include "host/vst_host.h"
+#include "host/plugin/base_plugin.h"
 #include "host/audio_config.h"
 #include "host/daw_channel.h"
 #include "profiling.h"
@@ -93,10 +94,12 @@ public:
 	void loadSnapshot(const track_params_snapshot_t& snapshot);
 	void postSetParameter(int32_t idx, float preVal, float val, int flags);
 };
-
 struct audio_stage_t {
-	audiostageid_i32 stageId = TRACKID_INVALID_I32;
+	vsthost* host;
+//	audiostageid_i32 stageId = TRACKID_INVALID_I32;
+	audio_stage_id_t stageId = {TRACKID_INVALID_I32, TRACKID_INVALID_I32, TRACKID_INVALID_I32};
 	audiostageflags_t flags = audiostageflags_t::CONVERT_OUTPUT;
+	audiostagerouting_state_t routingState = audiostagerouting_state_t::INVALID;
 	audio_stage_t* parent;
 	effectbase* owner;
 	/**
@@ -125,15 +128,17 @@ struct audio_stage_t {
 
 	std::vector<effectbase*> effects;
 	std::vector<effectbase*> deferredEffects;
+	std::vector<DAW::channel_ref_t> postEffectRouting;
 	std::vector<audio_stage_t*> children;
 	stats_processing_timings_t procStats;
 	struct latency_info_t {
 		int32_t delayToPreReturn = 0;
 		int32_t delayToPostReturn = 0;
 	} latencyInfo;
+    std::map<uint32_t, std::shared_ptr<DelayLine>> effDelayLines;
 
-	audio_stage_t(const audiostageid_i32 _id,/*track_t* _track, */const samplerate_t _sampleRate, const uint16_t _blockSize, int32_t nChannels, int _type = 1)
-	: stageId(_id), parent(nullptr), owner(nullptr),/*track(_track),*/
+	audio_stage_t(vsthost* const _host, const audio_stage_id_t _id,/*track_t* _track, */const samplerate_t _sampleRate, const uint16_t _blockSize, int32_t nChannels, int _type = 1)
+	: host(_host), stageId(_id), parent(nullptr), owner(nullptr),/*track(_track),*/
 	  pluginCtr(nullptr),
 	  input(nChannels, _blockSize),
 	  output(nChannels, _blockSize),
@@ -144,23 +149,36 @@ struct audio_stage_t {
 		  sampleFormat.blockSize = _blockSize;
 		  sampleFormat.sampleRate = _sampleRate;
 		  sampleFormat.sampleformat = sampleformat_bits_t::FLOAT_32;
+		  configureDefaultRoutings();
 	}
 	virtual ~audio_stage_t() {
 
 	}
+	DelayLine* getEffectDelayLine(uint32_t id, uint32_t numChannels) {
+		using namespace std;
+//	    lock_guard<mutex> hold(mtx);
+	    if (!effDelayLines.count(id) || effDelayLines[id]->block.channels != numChannels) {
+	    	effDelayLines[id] = std::shared_ptr<DelayLine>(new DelayLine(numChannels, 16));
+	    }
+	    return effDelayLines[id].get();
+	}
 	virtual void removePlugin(effectbase* _vst, bool notifyUp);
 	void loadPlugins(const std::vector<plugin_snapshot_t>& trPluginList);
-	samplerate_t getLatency();
+	samplerate_t getLatency() const;
 	void insertEffect(int32_t idx, effectbase* _instrument);
 	bool replaceEffect(int32_t idx, effectbase* _effect, effectbase** _prevEffect);
 	void pluginsChanged();
+	void updateLatency();
 	void onTick(double since);
-	track_t* getTrack();
+	track_t* getTrack() const;
 	void addAudioStage(audio_stage_t* stage);
 	void removeAudioStage(audio_stage_t* stage);
 	effectbase* getPluginById(int32_t projectGlobalId) const;
-	audio_stage_ref_t toRef();
+	audio_stage_ref_t toRef() const;
 	void getStageTargets(std::vector<automatable_t*>& targets);
+	void createRoutingSnapshot(track_effect_routing_snapshot_t& snapshot);
+	void loadRoutingSnapshot(const track_effect_routing_snapshot_t& snapshot);
+	void configureDefaultRoutings();
 };
 inline bool isAudioStageChildOf(audio_stage_t* parent, audio_stage_t* child) {
 	std::vector<audio_stage_t*>& children = parent->children;
@@ -197,7 +215,8 @@ inline channel_ref_t ChannelDefaultNone() {
 inline channel_ref_t ChannelAudioInput(int32_t idx, int32_t channelOffset, String name, AudioIO::tracktype type) {
 	return channel_ref_t{channel_input_type::INPUT_EXTERNAL_AUDIO, type, idx, channelOffset, {{TRACKID_INVALID_I32}, stagebuffer_point::OUTPUT}, 0, name};
 }
-inline channel_ref_t ChannelStage(audio_stage_t* stage, stagebuffer_point isInput) {
+inline channel_ref_t ChannelStage(const audio_stage_t* stage, stagebuffer_point isInput) {
+	dbgassert(stage);
 	String str = "";
 	auto track = stage->getTrack();
 	if (track) {
@@ -210,6 +229,26 @@ inline channel_ref_t ChannelStage(audio_stage_t* stage, stagebuffer_point isInpu
 	}
 	return channel_ref_t{channel_input_type::INPUT_AUDIOSTAGE, AudioIO::getTrackTypeNumChannels(stage->input.channels), -1, 0, {stage->toRef(), isInput}, 0, str};
 }
+inline channel_ref_t ChannelAudioEffect(effectbase* effect, stagebuffer_point isInput) {
+	dbgassert(effect);
+	String str = "";
+	auto stage = effect->getTrackLink();
+	dbgassert(stage);
+	auto track = stage->getTrack();
+	if (track) {
+		str = track->name;
+	}
+	str += effect->getName();
+	int32_t numChannels;
+	if (isInput == stagebuffer_point::INPUT) {
+		str += " IN";
+		numChannels = effect->blockInputs ? effect->blockInputs->channels : 2;
+	} else {
+		str += " OUT";
+		numChannels = effect->blockOutputs ? effect->blockOutputs->channels : 2;
+	}
+	return channel_ref_t{channel_input_type::INPUT_AUDIOSTAGE_EFFECT, AudioIO::getTrackTypeNumChannels(numChannels), -1, 0, {stage->toRef(), isInput}, effect->projectGlobalId, str};
+}
 }
 struct track_gui_entry_t;
 struct track_impl_t : public audio_stage_t {
@@ -220,7 +259,7 @@ struct track_impl_t : public audio_stage_t {
 	DAW::channel_ref_t inputChannel;
 	DAW::channel_ref_t outputChannel;
 	std::vector<track_gui_entry_t*> guiInstances;
-	track_impl_t(audiostageid_i32 _id, track_t* _track, const samplerate_t _sampleRate, const uint16_t _blockSize, int32_t nChannels);
+	track_impl_t(vsthost* const _host, audio_stage_id_t _id, track_t* _track, const samplerate_t _sampleRate, const uint16_t _blockSize, int32_t nChannels);
 	~track_impl_t();
 	void sendNotesOff(int32_t bpm100);
 	void sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, clip_notes_t& midiRealtimeInput, int32_t flags);

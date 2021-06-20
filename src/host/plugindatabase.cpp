@@ -2,6 +2,7 @@
 
 #include "plugindatabase.h"
 #include "assert_dbg.h"
+#include "fileio.h"
 #include <vector>
 #include <SQLiteCpp/SQLiteCpp.h>
 #include <SQLiteCpp/VariadicBind.h>
@@ -27,6 +28,8 @@ void createTables(SQLite::Database& db) {
     			"	`path`	TEXT NOT NULL,\n"
     			"	`name`	TEXT NOT NULL,\n"
     			"	`vendorName`	TEXT NOT NULL,\n"
+    			"	`productName`	TEXT NOT NULL,\n"
+    			"	`effectName`	TEXT NOT NULL,\n"
     			"	`requestRescan`	INTEGER DEFAULT 0,\n"
     			"	`forcedisable`	INTEGER DEFAULT 0\n"
     			");";
@@ -44,16 +47,26 @@ public:
 	~Impl() {
 
 	}
-	bool resolve(String name, int32_t uId, String* _outPath, int loadFlags) {
-		static const char* queryByName = "SELECT path FROM plugins where state == 1 and name == ?";
-		static const char* queryByUidD = "SELECT path FROM plugins where state == 1 and uid == ?";
-		for (int i = 0; i < 2; i++) {
+    bool resolve(String name, int32_t uId, String* _outPath, int loadFlags)
+    {
+        static const char* queryBy_NameAndUUID = "SELECT path FROM plugins where state == 1 and name == ? and uid == ?";
+		static const char* queryBy_Name = "SELECT path FROM plugins where state == 1 and name == ?";
+		static const char* queryBy_UUID = "SELECT path FROM plugins where state == 1 and uid == ?";
+        const char* queries[3] = {queryBy_NameAndUUID, queryBy_UUID, queryBy_Name};
+		for (int i = 0; i < 3; i++) {
 			String query = String();
-			SQLite::Statement   queryPlugin(db, i == 0 ? queryByUidD : queryByName);
-			if (i == 0) {
-				queryPlugin.bind(1, uId);
-			} else {
-				queryPlugin.bind(1, name);
+			
+			SQLite::Statement queryPlugin(db, queries[i]);
+            switch (i) {
+            case 0:
+                queryPlugin.bind(2, uId);
+                queryPlugin.bind(1, name);
+                break;
+            case 1:
+                queryPlugin.bind(1, name);
+			case 2:
+                queryPlugin.bind(1, uId);
+                break;
 			}
 			if ((loadFlags&1)==0) {
 				query += " and forcedisable == 0";
@@ -99,13 +112,23 @@ void plugindatabase_t::query(String q, std::vector<pluginentry_t>& _out) {
 	_M_Impl->query(q, _out);
 }
 void plugindatabase_t::openDatabase() {
+	revision++;
 	dbgassert(!_M_Impl);
-	_M_Impl = new plugindatabase_t::Impl{"data/plugins.db3"};
+	String cwdPathDB = toCWDPath("data/plugins.db3");
+	_M_Impl = new plugindatabase_t::Impl{cwdPathDB};
 }
 void plugindatabase_t::closeDatabase() {
 	dbgassert(_M_Impl);
 	delete _M_Impl;
 	_M_Impl = NULL;
+}
+void plugindatabase_t::reopen() {
+//	closeDatabase();
+//	openDatabase();
+	revision++;
+}
+int plugindatabase_t::getRevision() {
+	return revision;
 }
 
 

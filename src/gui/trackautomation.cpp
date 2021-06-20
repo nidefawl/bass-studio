@@ -17,18 +17,6 @@
 #include "track_impl.h"
 #include "renderresources.h"
 
-
-float dist_to_segment(vec2 a, vec2 b, vec2 pt)
-{
-	vec2 v = b - a;
-	float lenSq = glm::dot(v, v);
-	if (lenSq < 1E-4F) {
-		return glm::distance(pt, a);
-	}
-	float t = math::max(0.0f, math::min(1.0f, glm::dot(pt - a, v) / lenSq));
-	const vec2 p = a + t * v;
-	return glm::distance(pt, p);
-}
 float dataToCtr(float x, float ctrHeight) {
 	return (1.0f-x)*ctrHeight;
 }
@@ -73,7 +61,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 			int32_t idxSegEnd = *(it+1);
 			vec2& ptStart = cachedShape[idxSegStart];
 			vec2& ptEnd = cachedShape[idxSegEnd];
-			float dist = dist_to_segment(ptStart, ptEnd, mpos);
+			float dist = math::distancePointLine(mpos, ptStart, ptEnd);
 			minSegLineDist = math::min(dist, minSegLineDist);
 		}
 		if (minSegLineDist < 10) {
@@ -457,6 +445,17 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 	//	nvgStrokeWidth(vg, 3.0f);
 	//	nvgStroke(vg);
 		ivec2 imouse = toControlsObjectSpace(MainCtrl::get()->m_mousePos, this);
+
+		const bool bGlbCfg_DrawAutomationLaneMouseCursor = true;
+		if (bGlbCfg_DrawAutomationLaneMouseCursor) {
+			const int bGlbCfg_MouseCursorType = 0;
+			float fAutomationLaneMouseCursorWidth = bGlbCfg_MouseCursorType == 0 ? 2 : 5;
+			nvgBeginPath(vg);
+			nvgCircle(vg, imouse.x, imouse.y, fAutomationLaneMouseCursorWidth);
+			nvgFillColor(vg, theme->getColor(GuiColor::COL_AUTOMATED));
+			nvgFill(vg);
+		}
+
 		bool mouseIn = MainCtrl::get()->guiOver == this && contains(imouse+getPosContent());
 		tick_t mouseTick = !mouseIn ? INVALID_TICK : MainCtrl::get()->getGrid().screenToTickSnap(imouse.x, SNAP_OFF);
 		vec2 fmouse = vec2(imouse);

@@ -674,6 +674,7 @@ public:
 		loophandles(_project, _projectGlobals, _grid),
 		scrollbar(1, 0.0f, *this)
 	{
+		setCanMouseHit(true);
 		setBackgroundRendered(true);
 		_grid.addCallback(this);
 		add(&scrollbar);

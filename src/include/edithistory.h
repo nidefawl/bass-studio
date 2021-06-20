@@ -31,6 +31,7 @@ public:
 		return revision;
 	}
 	void clear(DawInstance* ctrl) {
+		revision = -1;
 		while (!m_redo.empty()) {
 			action_base* redoAction = m_redo.back();
 			m_redo.pop_back();
@@ -43,6 +44,7 @@ public:
 			undoAction->releaseResources(ctrl);
 			delete undoAction;
 		}
+		revision = 0;
 	}
 	void undoStep(DawInstance* ctrl) {
 		action_base* step = m_undo.back(); m_undo.pop_back();

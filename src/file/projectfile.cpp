@@ -8,6 +8,7 @@
 #include <cereal/cereal.hpp>
 #include <cereal/archives/json.hpp>
 #include <cereal/types/vector.hpp>
+#include <cereal/types/map.hpp>
 #include <cereal/types/polymorphic.hpp>
 #include <cereal/cereal_optional_nvp.hpp>
 
@@ -109,6 +110,9 @@ void load( Archive & archive, plugin_snapshot_t & m, const std::uint32_t version
 	if (version > 2) {
 		archive(make_nvp("plugins", m.pluginSnapshots));
 	}
+	if (version > 4) {
+		archive(make_nvp("currentProgram", m.currentProgram));
+	}
 }
 
 template <class Archive>
@@ -131,6 +135,7 @@ void save( Archive & archive, plugin_snapshot_t const & m, const std::uint32_t v
 		((JSONOutputArchive*)&archive)->saveBinaryValue(m.dataChunk.data(), size, "plugindata");
 	}
 	archive(make_nvp("plugins", m.pluginSnapshots));
+	archive(make_nvp("currentProgram", m.currentProgram));
 }
 template<class Archive>
 void serialize(Archive & archive, track_params_snapshot_t & m)
@@ -147,6 +152,7 @@ void serialize(Archive & archive, io_configuration_snapshot_t & m)
 {
 	archive(make_nvp("channelOffset", m.channelOffset),
 			make_nvp("externalInputId", m.externalInputId),
+			make_nvp("externalInputId", m.externalInputId),
 			make_nvp("externalInputType", m.externalInputType),
 			make_nvp("inputType", m.inputType),
 			make_nvp("stageEndPointType", m.stageEndPointType),
@@ -158,15 +164,30 @@ void serialize(Archive & archive, track_io_configuration_snapshot_t & m)
 	archive(make_nvp("input", m.input), make_nvp("output", m.output));
 }
 template<class Archive>
+void serialize(Archive & archive, track_effect_routing_snapshot_t & m)
+{
+//	archive(make_nvp("inputRoutingOutputStage", m.inputRoutingOutputStage));
+	archive(make_nvp("inputRoutingOutputStage", m.inputRoutingOutputStage), make_nvp("inputRoutingEffects", m.inputRoutingEffects), make_nvp("routingState", m.routingState));
+
+}
+template<class Archive>
 void serialize(Archive & archive, track_impl_snapshot_t & m)
 {
 	archive(make_nvp("plugins", m.pluginSnapshots));
 	make_optional_nvp(archive, "track", m.trackParams);
 	make_optional_nvp(archive, "arp", m.trackArp);
 	make_optional_nvp(archive, "io", m.trackIO);
+	make_optional_nvp(archive, "routing", m.effectRouting);
 }
 template<class Archive>
-void serialize(Archive & archive, tracksettings_t & m)
+void save(Archive & archive, tracksettings_t const & m, const std::uint32_t version)
+{
+	archive(make_nvp("name", m.name),
+			make_nvp("rgb", m.rgb),
+			make_nvp("type", m.type));
+}
+template<class Archive>
+void load(Archive & archive, tracksettings_t & m, const std::uint32_t version)
 {
 	archive(make_nvp("name", m.name),
 			make_nvp("rgb", m.rgb),
@@ -186,13 +207,54 @@ void serialize(Archive & archive, track_layout_snapshot_t & m)
 //			make_nvp("subtracks", m.automationLanes));
 }
 template<class Archive>
-void serialize(Archive & archive, track_snapshot_t & m)
+void serialize(Archive & archive, track_id_snapshot_t & m)
+{
+	archive(make_nvp("stageId", m.stageId),
+			make_nvp("inputStageId", m.inputStageId),
+			make_nvp("outputStageId", m.outputStageId),
+			make_nvp("outputPostStageId", m.outputPostStageId));
+}
+//template<class Archive>
+//void serialize(Archive & archive, track_snapshot_t & m)
+//{
+//			make_optional_nvp(archive, "idx", m.localIdx);
+//			archive(make_nvp("settings", base_class<tracksettings_t>(&m)), make_nvp("clips", m.clips), make_nvp("plugins", m.plugins));
+//	//		int32_t stageId = m.stageIds.stageId;
+//	//	    archive(make_nvp("stageId", stageId));
+//	//	    stageId*=4;
+//	//	    m.stageIds.stageId = stageId++;
+//	//	    m.stageIds.inputStageId = stageId++;
+//	//	    m.stageIds.outputStageId = stageId++;
+//	//	    m.stageIds.outputPostStageId = stageId++;
+//				    archive(make_nvp("stageIds", m.stageIds));
+//}
+template<class Archive>
+void load(Archive & archive, track_snapshot_t & m, const std::uint32_t version)
+{
+    //	make_optional_nvp(archive, "automation", m.layouts);
+    //make_optional_nvp(archive, "stageId", m.stageId);
+	if (version == 0) {
+		make_optional_nvp(archive, "idx", m.localIdx);
+		archive(make_nvp("settings", base_class<tracksettings_t>(&m)), make_nvp("clips", m.clips), make_nvp("plugins", m.plugins));
+		int32_t stageId = m.stageIds.stageId;
+	    archive(make_nvp("stageId", stageId));
+	    stageId*=4;
+	    m.stageIds.stageId = stageId++;
+	    m.stageIds.inputStageId = stageId++;
+	    m.stageIds.outputStageId = stageId++;
+	    m.stageIds.outputPostStageId = stageId++;
+	} else {
+		archive(make_nvp("idx", m.localIdx));
+		archive(make_nvp("settings", base_class<tracksettings_t>(&m)), make_nvp("clips", m.clips), make_nvp("plugins", m.plugins));
+	    archive(make_nvp("stageIds", m.stageIds));
+	}
+}
+template<class Archive>
+void save(Archive & archive, const track_snapshot_t & m, const std::uint32_t version)
 {
 	make_optional_nvp(archive, "idx", m.localIdx);
 	archive(make_nvp("settings", base_class<tracksettings_t>(&m)), make_nvp("clips", m.clips), make_nvp("plugins", m.plugins));
-    //	make_optional_nvp(archive, "automation", m.layouts);
-    //make_optional_nvp(archive, "stageId", m.stageId);
-    archive(make_nvp("stageId", m.stageId));
+    archive(make_nvp("stageIds", m.stageIds));
 }
 template<class Archive>
 void serialize(Archive & archive, layout_grid_t & m)
@@ -364,7 +426,8 @@ void save( Archive & archive, project_file const & file, const std::uint32_t ver
 	archive(cereal::make_nvp("samples", file.sampleFileIndex));
 }
 CEREAL_CLASS_VERSION( project_file, FILE_FORMAT_VERSION);
-CEREAL_CLASS_VERSION( plugin_snapshot_t, 4 );
+CEREAL_CLASS_VERSION( plugin_snapshot_t, 5 );
+CEREAL_CLASS_VERSION( track_snapshot_t, 1 );
 
 /**
  * @param projectfile

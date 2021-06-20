@@ -31,15 +31,16 @@
 #include "basectrl.h"
 #include "audioblock.h"
 #include "meter.h"
-#include "../host/mainctrl.h"
-#include "../host/vst_host.h"
-#include "../host/plugindatabase.h"
-#include "../threads/playbackthread.h"
+#include "host/mainctrl.h"
+#include "host/vst_host.h"
+#include "host/plugindatabase.h"
+#include "threads/playbackthread.h"
 
 #include "track.h"
 #include "track_impl.h"
 #include "snapshot.h"
-#include "../../file/memoryarchive.h"
+#include "file/memoryarchive.h"
+#include "host/effect_graph.h"
 
 class guimodule_group : public guiplugin {
 public:
@@ -250,16 +251,16 @@ void module_group::resume() {
 void module_group::sleep() {
 }
 void module_group::unload(vsthost* host) {
+	dbgassert(vstHost == host);
 	effectbase::unload(host);
 	onPreUnload();
 	host->releaseAudioStage(audio);
 	this->audio = nullptr;
 }
 void module_group::onPreUnload() {
-	vsthost* host = vsthost::getInstance();
 	std::vector<effectbase*> effects = this->audio->effects; // make a copy before unloading plugins
 	for (effectbase* effect : effects) {
-		host->unloadPlugin(effect);
+		vstHost->unloadPlugin(effect);
 	}
 }
 void module_group::load(vsthost* host) {
@@ -300,6 +301,7 @@ String module_group::getInfo(std::vector<String>& list) {
 
 void module_group::onTick(double since) {
 	meter.onTick(since);
+	meterIn.onTick(since);
 	audio->onTick(since);
 }
 void module_group::getChildAudioStages(std::vector<audio_stage_t*>& targets) {
@@ -310,7 +312,16 @@ void module_group::process(AudioBlock* in, AudioBlock* out, int32_t samplePos, i
 	dbgassert(getTrackLink()->sampleFormat == this->format && in->samples == format.blockSize
 			&& out->samples == format.blockSize && format.blockSize > 0 && format.sampleRate > 0);
 	audio->input.copyFrom(in);
-	vsthost::getInstance()->processAudio(audio, &audio->input, &audio->output, samplePos, numSamples, state);
+
+	std::shared_ptr<DAW::effect_processing_graph_t> effProcessingGraph;
+	if (!DAW::buildEffectProcessingGraph(vstHost, nullptr, audio, effProcessingGraph)) {
+		log_printf("Failed building effect graph\n", 0);
+	}
+
+	vsthost::getInstance()->processAudio(audio, &audio->input, &audio->output, samplePos, numSamples, state, effProcessingGraph.get());
+
+	//TODO: this code path runs on a workerthread. Store processing-graph add to vsthost::lastProcessingGraphs from playback-thread
+
 	audio->outputPost.clear();
 	/* Calculate group gain level */
 	float fGain;
@@ -322,6 +333,7 @@ void module_group::process(AudioBlock* in, AudioBlock* out, int32_t samplePos, i
 void module_group::postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) {
 //	float fGainGroup;
 //	dsp_util::getGainLvl(audio->mixer.getParamValue(PARAM_TRACK_GAIN), fGainGroup);
+	meterIn.update(this->blockInputs, 1.0f);
 	meter.update(out, 1.0f);
 	if (!hasProcessed) {
 		for (effectbase* effect : audio->effects) {
@@ -344,5 +356,9 @@ void module_group::makeSnapshot(plugin_snapshot_t& snapshot, bool storePluginChu
 		effect->makeSnapshot(ps, storePluginChunks);
 		snapshot.pluginSnapshots.push_back(std::move(ps));
 	}
+}
+template<>
+effectbase* makeInstance<module_group>(int32_t _projectGlobalId) {
+	return new module_group(_projectGlobalId);
 }
 

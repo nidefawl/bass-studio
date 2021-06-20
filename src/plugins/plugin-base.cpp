@@ -37,11 +37,13 @@ String getModuleName(HMODULE module); //platform_win.cpp
 
 AEffEditor* createPluginWindow(AudioEffect *_effect, std::shared_ptr<PluginControl> _ctrl, int w, int h);
 
-void BasePluginVST2::createEditorWindow(PluginViewContainersImpl* view) {
+void BasePluginVST2::createEditorWindow(std::shared_ptr<PluginViewContainers> view) {
 	try {
 		std::shared_ptr<PluginControl> ctrl = std::make_shared<PluginControl>(view);
 		ctrl->initApp(0, NULL);
-		editor = createPluginWindow(this, ctrl, view->width, view->height);
+		int32_t ctrlWidth = 0, ctrlHeight = 0;
+		view->getFixedSize(&ctrlWidth, &ctrlHeight);
+		editor = createPluginWindow(this, ctrl, ctrlWidth, ctrlHeight);
 	} catch (std::exception& e) {
 		String excDesc = StringFormat("Fatal error: %s", e.what());
 		ngui::show(StringAsCStr(excDesc), "Error", ngui::Style::Error, ngui::Buttons::OK);

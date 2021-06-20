@@ -215,10 +215,10 @@ namespace PluginStereoWidth {
 	{
 		return new PluginVST2_StereoWidth (audioMaster);
 	}
-	PluginViewContainers* PluginVST2_StereoWidth::createView() {
-		auto* v = new ViewContainersStereoWidth();
-		this->views.push_back(v);
-		return v;
+	std::shared_ptr<PluginViewContainers> PluginVST2_StereoWidth::createView() {
+		std::shared_ptr<PluginViewContainers> view = std::make_shared<ViewContainersStereoWidth>();
+		this->views.push_back(view);
+		return view;
 	}
 }
 

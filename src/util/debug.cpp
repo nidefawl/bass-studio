@@ -2,8 +2,6 @@
 
 #ifdef __GNUC__
 
-#include <thread>
-#include <unordered_map>
 #include <cxxabi.h>
 
 
@@ -202,24 +200,24 @@ namespace {
 
 struct threadnames_t {
 	std::mutex gThreadMutex;
-	std::unordered_map<std::thread::id, String> gThreadNames;
+	std::unordered_map<int32_t, String> gThreadNames;
 	threadnames_t() {
 		std::lock_guard<std::mutex> lock(gThreadMutex);
 	}
 	void setCurrentsName(String str) {
-		auto threadId = std::this_thread::get_id();
+        auto threadId = get_thread_id();
 		std::lock_guard<std::mutex> lock(gThreadMutex);
 		gThreadNames[threadId] = str;
 	}
 	String getCurrentsName() {
-		return "thread";
-		//auto threadId = std::this_thread::get_id();
-		//std::lock_guard<std::mutex> lock(gThreadMutex);
-		//auto it = gThreadNames.find(threadId);
-		//if (it == gThreadNames.end()) {
-		//	return StringFormat("thread-%X", static_cast<int32_t>(threadId.get()));
-		//}
-		//return it->second+StringFormat("-%X", static_cast<int32_t>(threadId.get()));
+		//return "thread";
+		auto threadId = get_thread_id();
+		std::lock_guard<std::mutex> lock(gThreadMutex);
+		auto it = gThreadNames.find(threadId);
+		if (it == gThreadNames.end()) {
+            return StringFormat("thread-%X", static_cast<int32_t>(threadId));
+		}
+        return it->second + StringFormat("-%X", static_cast<int32_t>(threadId));
 	}
 };
 threadnames_t& getThreadNames() {
@@ -260,16 +258,3 @@ void failedAssert(const char* expr, const char *file, int line) {
 }
 }
 
-int32_t get_thread_id() noexcept {
-    static int32_t thread_idx = 0;
-    static std::mutex thread_mutex;
-    static std::unordered_map<std::thread::id, int32_t> thread_ids;
-
-    std::lock_guard<std::mutex> lock(thread_mutex);
-    std::thread::id id = std::this_thread::get_id();
-    auto iter = thread_ids.find(id);
-    if (iter == thread_ids.end()) {
-        iter = thread_ids.insert(std::pair<std::thread::id, int32_t>(id, thread_idx++)).first;
-    }
-    return iter->second;
-}

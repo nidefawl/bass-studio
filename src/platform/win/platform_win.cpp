@@ -23,6 +23,9 @@
 #include "str_util.h"
 #include "logging.h"
 #include "error.h"
+#include <shlobj.h>//for knownFolder
+#include <sstream>
+
 
 static HWND mainHWND = NULL;
 extern "C" {
@@ -87,6 +90,17 @@ String getModuleName(HMODULE module) {
 	String path(pathBuf.begin(),pathBuf.end());
 	return path;
 }
+String getCurrentWorkingDirectory() {
+	std::vector<TCHAR> pathBuf;
+	DWORD copied = 0;
+	do {
+	    pathBuf.resize(pathBuf.size()+MAX_PATH);
+	    copied = GetCurrentDirectory(pathBuf.size(), &pathBuf.at(0));
+	} while( copied >= pathBuf.size() );
+	pathBuf.resize(copied);
+	String path(pathBuf.begin(),pathBuf.end());
+	return path;
+}
 void setMinimumResolutionTimer() {
 #define TARGET_RESOLUTION 1u         // 1-millisecond target resolution
 
@@ -103,6 +117,19 @@ void setMinimumResolutionTimer() {
 }
 
 
+bool determineWorkingDirectoryPath(String& path)
+{
+    std::vector<wchar_t> localAppData;
+    localAppData.resize(512);
+    wchar_t* ptr = localAppData.data();
+    if ((S_OK == SHGetKnownFolderPath(FOLDERID_RoamingAppData, 0, NULL, &ptr))) {
+        std::wstring ws(ptr);
+        std::string str(ws.begin(), ws.end());
+        path = str;
+        return true;
+	}
+    return false;
+}
 void allocConsole() {
 #ifndef __MINGW32__
 		AllocConsole();

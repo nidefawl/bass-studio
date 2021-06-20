@@ -74,7 +74,7 @@ void registerWindowTimer(appwindow* wnd) {
 	windowTimerHandleList.push_back(wnd);
 }
 void unregisterWindowTimer(appwindow* wnd) {
-	removeEntry(windowTimerHandleList, wnd);
+	dbgassert(removeEntry(windowTimerHandleList, wnd));
 }
 void windowTickTimerRun();
 
@@ -257,11 +257,27 @@ private:
 			throw appexception("Couldn't initialize nanovg");
 		}
 
+		reloadCustomShaders();
+
 		glEnable(GL_BLEND);
 		glDisable(GL_CULL_FACE);
 		glDisable(GL_DEPTH_TEST);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 	}
+
+protected:
+    void reloadCustomShaders()
+    {
+        String strSrc1;
+        String strSrc2;
+        int64_t ret1 = ReadFileText("nanovg.vsh", strSrc1);
+        int64_t ret2 = ReadFileText("nanovg.fsh", strSrc2);
+        if (ret1 != -1 && ret2 != -1) {
+            my_printf("loading custom shaders\n", 0);
+            nvgReloadShaders(nanovgCtxt, StringAsCStr(strSrc1), StringAsCStr(strSrc2), 0);
+        }
+    }
+
 public:
 	appwindow(appwindow* _parent) : parent(_parent), tm_lastfps(getTimeMillis()) {
 		name[0] = 0;
@@ -270,7 +286,7 @@ public:
 #endif
 	}
 	virtual ~appwindow() {
-		dbgassert(std::find(windowTimerHandleList.begin(), windowTimerHandleList.end(), this) == windowTimerHandleList.end());
+		//dbgassert(std::find(windowTimerHandleList.begin(), windowTimerHandleList.end(), this) == windowTimerHandleList.end());
 
 #ifdef _WIN32
 		if (hwnd) {
@@ -397,7 +413,11 @@ public:
 	}
 	virtual void onCharInput(unsigned int codepoint) {
 	}
-	virtual void onWindowFocusChanged(int focused) {
+    virtual void onWindowFocusChanged(int focused)
+    {
+        if (!focused) {
+            releaseMouse(); // fix mouse sometimes not getting released from controls that capture the mouse cursor
+        }
 	}
 	virtual void onWindowSizeChanged(int width, int height) {
 	}
@@ -420,13 +440,13 @@ public:
 	virtual void captureMouse() {
 		if (!noRawInput) {
 			glfwSetInputMode(glfw, GLFW_RAW_MOUSE_MOTION, 1);
-		}
+        }
 		glfwSetInputMode(glfw, GLFW_CURSOR, noRawInput ? GLFW_CURSOR_HIDDEN : GLFW_CURSOR_DISABLED);
 	}
 	virtual void releaseMouse() {
 		if (!noRawInput) {
 			glfwSetInputMode(glfw, GLFW_RAW_MOUSE_MOTION, 0);
-		}
+        }
 		glfwSetInputMode(glfw, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 	}
 	virtual bool isMouseCaptured() {
@@ -438,7 +458,6 @@ public:
 		if (shown)
 			return;
 		shown = true;
-		log_printf("show window %s\n", this->name);
 		glfwShowWindow(glfw);
 #ifdef __linux__
 		glfwFocusWindow(glfw);
@@ -448,7 +467,6 @@ public:
 		if (!shown)
 			return;
 		shown = false;
-		log_printf("hide window %s\n", this->name);
 		glfwHideWindow(glfw);
 		onWindowClose();
 	}
@@ -520,6 +538,7 @@ public:
 		if (it != children.end())
 			children.erase(it);
 
+        child->destroy();
 		delete child;
 	}
 	virtual void onChildOverlayClose(appwindow* child) {
@@ -655,6 +674,7 @@ public:
 		return this->bCanResize;
 	}
 	void destroy();
+    int32_t nTicks = 0;
 	void onTick() {
 		static bool reentrant = false;
 		reentrantblocker block(reentrant);
@@ -662,7 +682,11 @@ public:
 	    	return;
 	    }
 //		flagNeedsRedraw();
-		glfwMakeContextCurrent(glfw);
+        glfwMakeContextCurrent(glfw);
+//        if (nTicks++ > 600) {
+//            nTicks = 0;
+//            reloadCustomShaders();
+//        }
 		ctrl->onAppTick();
 	}
 	void onRefresh() override {
@@ -751,7 +775,8 @@ public:
 	void onWindowFocusChanged(int focused) {
 		if (focused) {
 			ctrl->focusReceived();
-		} else {
+        }else {
+            releaseMouse(); // fix mouse sometimes not getting released from controls that capture the mouse cursor
 			ctrl->focusLost();
 		}
 		flagNeedsRedraw();
@@ -997,21 +1022,22 @@ public:
 	void destroy() override {
 		if (!glfw)
 			throw appexception("window null");
+		appwindow::killTimer();
 		glfwMakeContextCurrent(glfw);
-		appwindow::destroyGL();
+//		appwindow::destroyGL();
 		glfwSetWindowUserPointer(glfw, nullptr);
 		glfwDestroyWindow(glfw);
 		glfw = nullptr;
 	}
 	void render()
-	{
+    {
+        glfwMakeContextCurrent(glfw);
 		if (!init) {
 			init = true;
 			if (initCallback) {
 				initCallback();
 			}
 		}
-		glfwMakeContextCurrent(glfw);
 		int winwidth, winheight;
 		int fbwidth, fbheight;
 		glfwGetWindowSize(glfw, &winwidth, &winheight);
@@ -1399,6 +1425,7 @@ void appwindow::createBaseWindow(const char* title, int w, int h, GLFWwindow* sh
 	} else {
 		glfw = glfwCreateWindow(w, h, title, NULL, share);
 	}
+	//TODO: glfw can be null here: happened when main window is minimized and DawCtrl::onTick tries to open tooltip after mouse-over timeout
 	if (share) {
 		this->isSharedContextSlave = true;
 	}
@@ -1431,6 +1458,14 @@ void appwindow::createBaseWindow(const char* title, int w, int h, GLFWwindow* sh
 #endif
 	initOGL();
 	initContext();
+	ImageBuf imgBufDawIcon;
+	if (ReadImage(StringFormat("res/icons/daw_icon.png"), imgBufDawIcon) > 0) {
+		GLFWimage images[1];
+		images[0].width = imgBufDawIcon.w;
+		images[0].height = imgBufDawIcon.h;
+		images[0].pixels = imgBufDawIcon.bytes.data();
+		glfwSetWindowIcon(glfw, 1, images);
+	}
 	registerWindowTimer(this);
 	last = getTimeMillis();
 }
@@ -1471,10 +1506,12 @@ bool isVstWindow(HWND hwnd);
 }
 #endif
 std::shared_ptr<AppCtrl> makeApp();
+void dawinstance_startup_commands(daw_tls::tlsinstance& tls); // Forward declare from startup.cpp
 void initColor(); // Forward declare from gui/gui.cpp
 void deleteApp(); // Forward declare from host/mainctrl.cpp
 void openGlobalLog(const String& logFileName); // Forward declare from util/debug.cpp
 void closeGlobalLog(); // Forward declare from util/debug.cpp
+String getCurrentWorkingDirectory();
 
 int startApplication(int argc, char* argv[]) {
 	setCurrentThreadName("mainthread");
@@ -1504,11 +1541,16 @@ int startApplication(int argc, char* argv[]) {
 			argv[i+1] = nullptr;
 		}
 	}
+    setResourcePath(getCurrentWorkingDirectory());
+    String cwdPath = "";
+    if (determineWorkingDirectoryPath(cwdPath)) {
+        setCWDPath(cwdPath+"\\daw\\");
+    }
 	//if (!runConsoleMode) {
 	allocConsole();
 	//}
-	String logFileName = String(BuildInfo::BUILD_BINARY_NAME)+".log";
-	openGlobalLog(logFileName);
+	String logFileName = "daw.log";
+	openGlobalLog(toCWDPath(logFileName));
 	char* pPath;
 	pPath = getenv("PATH");
 	if (pPath != NULL)
@@ -1577,6 +1619,7 @@ int startApplication(int argc, char* argv[]) {
 	threadCommandLine.setTls(tls);
 	threadCommandLine.init();
 	threadCommandLine.startThread();
+	dawinstance_startup_commands(tls);
 #endif // HAS_JS_CONSOLE
 
 	GLFWwindow* glfwHandle = mainWindow->getGLFW();
@@ -1605,7 +1648,9 @@ int startApplication(int argc, char* argv[]) {
 			    	tmMsgSent = 0;
 			    	if (tmDuration > 0) {
 			    		log_printf("MSG took %d ms to get through, %d messages since sent\n", tmDuration, cntMessages);
-			    	}
+                    }
+                    //String applicationCWD = getCurrentWorkingDirectory();
+                    //log_printf("getCurrentWorkingDirectory: %s\n", StringAsCStr(applicationCWD));
 			    }
 	        }
 	        else
@@ -1693,8 +1738,10 @@ int startApplication(int argc, char* argv[]) {
 		handleStdException(e);
 	}
 #if HAS_JS_CONSOLE
-	threadCommandLine.stopThread();
-	threadCommandLine.joinThread();
+    if (threadCommandLine.isStarted()) {
+        threadCommandLine.stopThread();
+        threadCommandLine.joinThread();
+    }
 #endif // HAS_JS_CONSOLE
 	deleteApp();
 	printLeakedGuiBase();

@@ -69,14 +69,14 @@ void getPluginData(vstplugin* plugin, vst_metadata* _out) {
 	}
 	_out->isSynth = plugin->isSynth;
 }
-bool quit = false;
+bool userSentQuitRequest = false;
 #ifdef _WIN32
 static BOOL WINAPI ConsoleHandler(DWORD dwType)
 {
     switch(dwType) {
     case CTRL_C_EVENT:
 		LOG("CTRL_C");
-    	quit = true;
+    	userSentQuitRequest = true;
         break;
     }
     return TRUE;
@@ -228,6 +228,10 @@ int runCommandLineHost(int argc, const char* argv[]) {
 	std::set_terminate(on_terminate1);
 	std::set_unexpected(on_unexpected1);
 
+    String cwdPath = "";
+    if (determineWorkingDirectoryPath(cwdPath)) {
+        setCWDPath(cwdPath+"\\daw\\");
+    }
     appsettings settings = loadSettings();
 	String file = getCmdOption(argc, argv, "-f", "");
 	String fOutWave = getCmdOption(argc, argv, "-o", "");
@@ -484,7 +488,7 @@ int runCommandLineHost(int argc, const char* argv[]) {
 				host->onStartPlayback(&projectController);
 			}
 			host->prjGlobals = projectGlobals;
-    		while (!quit) {
+    		while (!userSentQuitRequest) {
 				auto tNow = getTimeMillis()/1000.0;
 				if (tNow - tLastMsg >= 1.0) {
 					tLastMsg = tNow;
@@ -579,7 +583,7 @@ int runCommandLineHost(int argc, const char* argv[]) {
 							playThread->addRequest(REQ_STATE, (int) playback_state::status_no_process, true);
 						}
 
-						quit = true;
+						userSentQuitRequest = true;
 					}
 				}
 

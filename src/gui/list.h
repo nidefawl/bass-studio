@@ -125,7 +125,7 @@ public:
 	}
 	void layout() {
 		ivec2 cs = getSizeContent();
-		int scrollW = gui_scrollbar::defaultW;
+		int scrollW = math::max(5, math::min(cs.x/10, gui_scrollbar::defaultW));
 		int entryW = cs.x - scrollW;
 		scrollbar.size = ivec2(scrollW, cs.y);
 		scrollbar.pos = ivec2(cs.x-scrollW, 0);

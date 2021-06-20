@@ -83,5 +83,26 @@
                 ]
             }
         }
+        {
+            "label": "Linux make ~/dev/build2",
+            "command": "make",
+            "args": [
+                "-j",
+                "6"
+            ],
+            "options": {
+                "cwd": "/home/michael/dev/build2"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": {
+                "base": "$gcc",
+                "fileLocation": [
+                    "absolute"
+                ]
+            }
+        }
     ]
 }

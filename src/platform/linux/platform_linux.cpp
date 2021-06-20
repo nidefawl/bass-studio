@@ -12,6 +12,7 @@
 
 #include "msgbox.h"
 #include "str_util.h"
+#include "threads.h"
 
 uint64_t getTimeMillis() {
 	struct timeval tp;

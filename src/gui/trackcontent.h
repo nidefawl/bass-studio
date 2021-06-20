@@ -227,9 +227,18 @@ public:
 		return false;
 	}
 	void positionChanged() {
-		automation.setParent(this->parent);
+//		automation.setParent(this->parent);
 		automation.pos = this->pos;
 		automation.size = this->size;
+	}
+	void setParent(guibase* parent) {
+		guictr_base::setParent(parent);
+//		automation.setParent(this->parent);
+		automation.setParent(this->parent);
+	}
+	void setControl(BaseCtrl* parentCtrl) {
+		guictr_base::setControl(parentCtrl);
+		automation.setControl(parentCtrl);
 	}
 	void layout() override {
 		positionChanged();
@@ -319,9 +328,17 @@ public:
 		automation.layout();
 	}
 	void positionChanged() {
-		automation.setParent(this->parent);
+//		automation.setParent(this);
 		automation.pos = this->pos;
 		automation.size = this->size;
+	}
+	void setParent(guibase* parent) {
+		guictr_base::setParent(parent);
+		automation.setParent(this->parent);
+	}
+	void setControl(BaseCtrl* parentCtrl) {
+		guictr_base::setControl(parentCtrl);
+		automation.setControl(parentCtrl);
 	}
 	void destroyGuis() override {
 		automation.destroyGuis();

@@ -183,6 +183,9 @@ public:
 		}
 		return true;
 	}
+	void killProcess() {
+		TerminateProcess(processInformation.hProcess, 1);
+	}
 	~ProcessRunScope() {
 		CloseHandle(processInformation.hProcess);
 		CloseHandle(handleStdOutRead);
@@ -197,6 +200,7 @@ class ProcessThread::Impl
     std::atomic<bool> readFailed;
     std::vector<String> buffer;
     bool started = false;
+    ProcessRunScope* processScope = nullptr;
 public:
     volatile int32_t processExitCode = 0;
     std::exception_ptr eptr = nullptr;
@@ -237,6 +241,7 @@ public:
 				std::array<char, 2048> TEMP;
 				std::vector<char> buf;
 				ProcessRunScope scopedProcess(argbinary, argparams, argwd, argenv, argpipe);
+				processScope = &scopedProcess;
 				if (argpipe) {
 					while (!readFailed) {
 #ifndef _WIN32
@@ -271,6 +276,11 @@ dbgassert(0&&"Not implemented on this platform");
 		});
 
 	}
+	void killProcess() {
+        if (processScope) {
+        	processScope->killProcess();
+        }
+	}
 	bool isRunning() {
         return isrunning;
 	}
@@ -303,6 +313,10 @@ void ProcessThread::joinProcess() {
 }
 bool ProcessThread::isRunning() {
     return _M_impl->isRunning();
+}
+void ProcessThread::killProcess() {
+    if (_M_impl)
+		_M_impl->killProcess();
 }
 bool ProcessThread::checkException() {
 	if (_M_impl->eptr != nullptr) {

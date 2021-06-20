@@ -12,6 +12,7 @@
 #include "track_impl.h"
 #include "track_graph.h"
 #include "daw_channel.h"
+#include "host/mainctrl.h"
 #include <vector>
 #include <deque>
 
@@ -132,7 +133,11 @@ namespace DAW {
 		}
 
 		track_vector tracksVisited;
-		std::shared_ptr<processing_graph_t> shrdPtrProcGraph = std::make_unique<processing_graph_t>();
+		std::shared_ptr<processing_graph_t> shrdPtrProcGraph = std::make_shared<processing_graph_t>();
+//		std::shared_ptr<processing_graph_t> shrdPtrProcGraph(new processing_graph_t(), [](processing_graph_t *gr) {
+//			log_printf("free proc_graph %08X\n", reinterpret_cast<uint64_t>(gr));
+//		});
+
 		shrdPtrProcGraph->nodes.reserve(dependencyGraph->nodes.size());
 		shrdPtrProcGraph->trackGraph = dependencyGraph;
 		for (track_node_ptr trackNode : dependencyGraph->nodes) {
@@ -145,7 +150,8 @@ namespace DAW {
 //			procTrackNode->children = trackNode->children;
 //			procTrackNode->parents = trackNode->parents;
 
-
+			
+			procTrackNode->type = trackNode->type;
 			procTrackNode->pushs = trackNode->pushs;
 			procTrackNode->pulls = trackNode->pulls;
 			procTrackNode->dependencies = trackNode->dependencies;
@@ -297,7 +303,7 @@ namespace DAW {
 		return true;
 	}
 	track_node_ptr makeTrackNode(audiostageid_i32 a, samplerate_t b) {
-		return new track_node_t(a, b);// std::make_unique<track_node_t>
+		return new track_node_t(track_node_type_t::TRACK, a, b);// std::make_unique<track_node_t>
 	}
 	processing_track_node_ptr makeProcTrackNode() {
 		return new processing_track_node_t();// std::make_unique<track_node_t>
@@ -311,10 +317,11 @@ namespace DAW {
 		std::map<audiostageid_i32, track_node_ptr> map;
 		for (track_t* track : tracksFlat) {
 			track_impl_t* trackImpl = track->getStage();
-			if (!map.count(trackImpl->stageId)) {
-				map[trackImpl->stageId] = makeTrackNode(trackImpl->stageId, trackImpl->getLatency());
+			auto stageId = trackImpl->stageId.stageId;
+			if (!map.count(stageId)) {
+				map[stageId] = makeTrackNode(stageId, trackImpl->getLatency());
 			}
-			track_node_t& trackCfg = getNode(map, trackImpl->stageId);
+			track_node_t& trackCfg = getNode(map, stageId);
 
 			auto inputChannel = trackImpl->inputChannel;
 			auto outputChannel = trackImpl->outputChannel;
@@ -323,29 +330,34 @@ namespace DAW {
 				channel_ref_t tmp;
 				if (DAW::resolveDefaultConnection(host, project, trackImpl, true, tmp)) {
 					inputChannel = tmp;
+				} else {
+//					log_printf("Default input of stage #%d cannot be mapped\n", stageId);
 				}
 			}
 			if (outputChannel.type == channel_input_type::INPUT_DEFAULT) {
 				channel_ref_t tmp;
 				if (DAW::resolveDefaultConnection(host, project, trackImpl, false, tmp)) {
 					outputChannel = tmp;
+				} else {
+//					log_printf("Default output of stage #%d cannot be mapped\n", stageId);
 				}
 			}
 			if (isChannelConnected(inputChannel)) {
 				if (inputChannel.getType() == channel_input_type::INPUT_AUDIOSTAGE) {
 					audio_stage_t* src = host->getAudioStage(inputChannel.stage.stageRef);
 					dbgassert(src);
-					if (!map.count(src->stageId)) {
-						map[src->stageId] = makeTrackNode(src->stageId, src->getLatency());
+					auto srcStageId = src->stageId.stageId;
+					if (!map.count(srcStageId)) {
+						map[srcStageId] = makeTrackNode(srcStageId, src->getLatency());
 					}
-					track_node_t& trackSrcCfg = getNode(map, src->stageId);
-					trackCfg.dependencies.push_back(src->stageId);
+					track_node_t& trackSrcCfg = getNode(map, srcStageId);
+					trackCfg.dependencies.push_back(srcStageId);
 					trackCfg.pulls.push_back(DAW::track_source_t{trackEdgeId++, inputChannel, 1.0f, 0, src->flags});
 					trackCfg.children.push_back(&trackSrcCfg);
 					trackSrcCfg.parents.push_back(&trackCfg);
 				} else if (inputChannel.getType() == channel_input_type::INPUT_EXTERNAL_AUDIO) {
 					trackCfg.pulls.push_back(DAW::track_source_t{trackEdgeId++, inputChannel, 1.0f, 0, audiostageflags_t::NONE});
-				} else {
+				} else if (inputChannel.type != channel_input_type::INPUT_DEFAULT) {
 					log_printf("missing track input routing\n", 0);
 				}
 			}
@@ -353,12 +365,13 @@ namespace DAW {
 				if (outputChannel.getType() == channel_input_type::INPUT_AUDIOSTAGE && trackImpl->mixer.isEnabled()) {
 					audio_stage_t* dst = host->getAudioStage(outputChannel.stage.stageRef);
 					dbgassert(dst);
-					if (!map.count(dst->stageId)) {
+					auto dstStageId = dst->stageId.stageId;
+					if (!map.count(dstStageId)) {
 //						map[dst->stageId] = track_node_t(dst->stageId, dst->getLatency());
-						map[dst->stageId] = makeTrackNode(dst->stageId, dst->getLatency());
+						map[dstStageId] = makeTrackNode(dstStageId, dst->getLatency());
 					}
-					track_node_t& trackDstCfg = getNode(map, dst->stageId);
-					trackDstCfg.dependencies.push_back(trackImpl->stageId);
+					track_node_t& trackDstCfg = getNode(map, dstStageId);
+					trackDstCfg.dependencies.push_back(stageId);
 					// cannot set trackDstCfg.inputLatency here because map[trackImpl->stageId].inputLatency may not have been written yet
 //					trackDstCfg.inputLatency = std::max(trackDstCfg.inputLatency, map[trackImpl->stageId].inputLatency+map[trackImpl->stageId].internalLatency);
 					trackDstCfg.pushs.push_back(DAW::track_source_t{trackEdgeId++, ChannelStage(trackImpl, stagebuffer_point::OUTPUT_POST), 1.0f, 0, trackImpl->flags});
@@ -379,13 +392,14 @@ namespace DAW {
 
 					track_impl_t* audioReturn = trackReturn->audio;
 					dbgassert(audioReturn);
+					auto srcStageId = audioReturn->stageId.stageId;
 
-					if (!map.count(audioReturn->stageId)) {
+					if (!map.count(srcStageId)) {
 //						map[audioReturn->stageId] = track_node_t(audioReturn->stageId, audioReturn->getLatency());
-						map[audioReturn->stageId] = makeTrackNode(audioReturn->stageId, audioReturn->getLatency());
+						map[srcStageId] = makeTrackNode(srcStageId, audioReturn->getLatency());
 					}
-					track_node_t& trackReturnCfg =  getNode(map, audioReturn->stageId);
-					trackReturnCfg.dependencies.push_back(trackImpl->stageId);
+					track_node_t& trackReturnCfg =  getNode(map, srcStageId);
+					trackReturnCfg.dependencies.push_back(trackImpl->stageId.stageId);
 					trackReturnCfg.pushs.push_back(DAW::track_source_t{trackEdgeId++, ChannelStage(trackImpl, stagebuffer_point::OUTPUT_POST), fGainReturn, 0, trackImpl->flags});
 					trackReturnCfg.children.push_back(&trackCfg);
 					trackCfg.parents.push_back(&trackReturnCfg);
@@ -396,6 +410,9 @@ namespace DAW {
 
 		}
 		auto trackGraph = std::make_shared<track_graph_t>();
+//		std::shared_ptr<track_graph_t> trackGraph(new track_graph_t(), [](track_graph_t *gr) {
+//			log_printf("free track_graph %08X\n", reinterpret_cast<uint64_t>(gr));
+//		});
 		trackGraph->nodes.reserve(map.size());
 		for (std::map<audiostageid_i32, track_node_ptr>::iterator mapIt = map.begin(); mapIt != map.end(); ++mapIt) {
 			track_node_ptr node = mapIt->second;
@@ -414,5 +431,20 @@ namespace DAW {
 		out_graph = trackGraph;
 
 		return true;
+	}
+	processing_graph_t::~processing_graph_t() {
+//		nInvocation++;
+//        int nInvoke = nInvocation;
+//        bool secondInvoke = nInvoke > 1;
+//        if (get_thread_id() != MainCtrl::getPlayThread()->getThreadId()) {
+//            log_printf("not playthread %d != %d\n", get_thread_id(), MainCtrl::getPlayThread()->getThreadId());
+//            log_printf("destruct %08X %d %d\n", reinterpret_cast<uint64_t>(this), nInvoke, secondInvoke);
+//        }
+//        if (secondInvoke) {
+//            log_printf("destruct %08X %d %d\n", reinterpret_cast<uint64_t>(this), nInvoke, secondInvoke);
+//        }
+		for (auto ptr : nodes) {
+			delete ptr;
+		}
 	}
 }

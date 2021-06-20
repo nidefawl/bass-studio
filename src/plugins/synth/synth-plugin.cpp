@@ -49,7 +49,6 @@ AudioEffect* createEffectInstance (audioMasterCallback audioMaster)
 }
 #else
 
-#define MAX_PARAM_STR_LEN 128
 #endif
 
 namespace PluginSynth {
@@ -1257,8 +1256,12 @@ PluginVST2_Synth::PluginVST2_Synth (audioMasterCallback audioMaster)
 	setParamName(getParam(Parameters::FilterMode), "Filter Mode", "Flt Mode", "%d");
 	addEnumParam(Parameters::FmMode)->setStrings(stringsFMMode)->setRangedValue(0);
 	setParamName(getParam(Parameters::FmMode), "Fm Mode", "Fm Mode", "%d");
+<<<<<<< HEAD
 	initPrograms();
 	createEditorWindow(static_cast<PluginViewContainersImpl*>(createView()));
+=======
+	createEditorWindow(createView());
+>>>>>>> 3b9cf1c9e82df1f64fa9490e843ad364996d0d92
 	for (auto param : this->vecParams) {
 		this->impl->OnParamChange(param->enumParam);
 	}
@@ -1423,8 +1426,10 @@ void PluginVST2_Synth::setParameter (VstInt32 index, float value)
 		this->impl->OnParamChange(param->enumParam);
 	}
 #if BUILD_VSTHOST
-	for (PluginViewContainers* pviewctr : this->views) {
-		pviewctr->onSetParameter(index, value);
+	for (auto& pviewctr : this->views) {
+		if (pviewctr->isInUse()) {
+			pviewctr->onSetParameter(index, value);
+		}
 	}
 #else
 	if (this->editor) {
@@ -1772,9 +1777,9 @@ public:
 	{
 		return new PluginVST2_Synth (audioMaster);
 	}
-	PluginViewContainers* PluginVST2_Synth::createView() {
-		auto* v = new ViewContainers_Plugin_Synth();
-		this->views.push_back(v);
-		return v;
+	std::shared_ptr<PluginViewContainers> PluginVST2_Synth::createView() {
+		std::shared_ptr<PluginViewContainers> view = std::make_shared<ViewContainers_Plugin_Synth>();
+		this->views.push_back(view);
+		return view;
 	}
 }

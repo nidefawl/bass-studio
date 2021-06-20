@@ -14,6 +14,7 @@ struct pluginentry_t {
 class plugindatabase_t {
 	class Impl;
 	Impl* _M_Impl = NULL;
+	int revision = -1;
 public:
 	plugindatabase_t();
 	~plugindatabase_t();
@@ -21,5 +22,7 @@ public:
 	void query(String q, std::vector<pluginentry_t>& _out);
 	void openDatabase();
 	void closeDatabase();
+	void reopen();
+	int getRevision();
 	static plugindatabase_t* getInstance();
 };

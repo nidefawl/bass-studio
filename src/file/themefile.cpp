@@ -119,16 +119,16 @@ template<class Archive>
 void save(Archive & archive, guitheme_t const & m)
 {
 	archive(make_nvp("name", m.name));
-	archive(make_nvp("colorBg", m.colorBg));
-	archive(make_nvp("colorBgStroke", m.colorBgStroke));
-	archive(make_nvp("colorBgHover", m.colorBgHover));
-	archive(make_nvp("colorBgPressed", m.colorBgPressed));
-	archive(make_nvp("colorBgFocused", m.colorBgFocused));
-	archive(make_nvp("colorBgDisabled", m.colorBgDisabled));
-	archive(make_nvp("colorBgFrameBase", m.colorBgFrameBase));
-	archive(make_nvp("colorBgFrameOutline", m.colorBgFrameOutline));
-	archive(make_nvp("colorBgFrameHighlight", m.colorBgFrameHighlight));
-	archive(make_nvp("colorBgFrameBright", m.colorBgFrameBright));
+//	archive(make_nvp("colorBg", m.colorBg));
+//	archive(make_nvp("colorBgStroke", m.colorBgStroke));
+//	archive(make_nvp("colorBgHover", m.colorBgHover));
+//	archive(make_nvp("colorBgPressed", m.colorBgPressed));
+//	archive(make_nvp("colorBgFocused", m.colorBgFocused));
+//	archive(make_nvp("colorBgDisabled", m.colorBgDisabled));
+//	archive(make_nvp("colorBgFrameBase", m.colorBgFrameBase));
+//	archive(make_nvp("colorBgFrameOutline", m.colorBgFrameOutline));
+//	archive(make_nvp("colorBgFrameHighlight", m.colorBgFrameHighlight));
+//	archive(make_nvp("colorBgFrameBright", m.colorBgFrameBright));
 	//save new
 	theme_data data;
 	storeThemeData(m, data);
@@ -145,16 +145,6 @@ void load(Archive & archive, guitheme_t & m)
 	m.mapColors.clear();
 	m.mapProperties.clear();
 	archive(make_nvp("name", m.name));
-	archive(make_nvp("colorBg", m.colorBg));
-	archive(make_nvp("colorBgStroke", m.colorBgStroke));
-	archive(make_nvp("colorBgHover", m.colorBgHover));
-	archive(make_nvp("colorBgPressed", m.colorBgPressed));
-	archive(make_nvp("colorBgFocused", m.colorBgFocused));
-	archive(make_nvp("colorBgDisabled", m.colorBgDisabled));
-	archive(make_nvp("colorBgFrameBase", m.colorBgFrameBase));
-	archive(make_nvp("colorBgFrameOutline", m.colorBgFrameOutline));
-	archive(make_nvp("colorBgFrameHighlight", m.colorBgFrameHighlight));
-	archive(make_nvp("colorBgFrameBright", m.colorBgFrameBright));
 
 	const char* namePtr = archive.getNodeName();
     if (namePtr && strcmp(namePtr, "mapValues") == 0) {
@@ -190,11 +180,13 @@ void load(Archive & archive, guitheme_t & m)
 template<class Archive>
 void serialize(Archive & archive, themefile & m)
 {
-	archive(make_nvp("current", m.theme), make_nvp("themes", m.themes));
+	archive(make_nvp("default", m.defaultTheme), make_nvp("current", m.theme), make_nvp("themes", m.themes));
 }
 themefile loadThemeFile() {
 	Stringstream ss;
-	ifstream file(THEMEFILE_NAME, ifstream::in);
+
+	String cwdPathTheme = toCWDPath(THEMEFILE_NAME);
+    ifstream file(cwdPathTheme, ifstream::in);
 	if (file) {
 	    ss << file.rdbuf();
 	    std::streampos length = file.tellg();
@@ -205,12 +197,13 @@ themefile loadThemeFile() {
 		    return tmpSettings;
 	    }
 	}
-	throw std::runtime_error("Failed reading file");
+	throw std::runtime_error("Failed reading theme file "+cwdPathTheme);
 }
 void saveThemeFile(themefile& _settings) {
+	String cwdPathTheme = toCWDPath(THEMEFILE_NAME);
 	ofstream file;
 	file.exceptions(~ofstream::goodbit);
-	file.open(THEMEFILE_NAME, ofstream::out);
+	file.open(cwdPathTheme, ofstream::out);
     cereal::JSONOutputArchive ar( file );
     ar( _settings );
 }

@@ -41,6 +41,7 @@ void guitheme_mgr::saveThemes() {
 		}
 	}
 	themefile themeFile;
+	themeFile.defaultTheme = defaultTheme;
 	themeFile.theme = current;
 	themeFile.themes = themes;
 	auto it = themeFile.themes.begin();
@@ -73,6 +74,9 @@ void guitheme_mgr::loadThemes() {
 	} catch (std::exception& e) {
 		getGlobalLogger()->logStr(StringFormat("Exception: %s\n", e.what()));
 	}
+	defaultTheme = themeFile.defaultTheme;
+	defaultTheme.name = "default";
+	defaultTheme.isDefault = true;
 	String selectedTheme = themeFile.theme.name;
 	auto it = themeFile.themes.begin();
 	while (it != themeFile.themes.end())

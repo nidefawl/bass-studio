@@ -134,6 +134,7 @@ track_impl_snapshot_t::track_impl_snapshot_t(track_impl_t* p, bool storePluginCh
 		p->arp->createSnapshot(trackArp);
 		p->mixer.createSnapshot(trackParams);
 		p->createIOSnapshot(trackIO);
+		p->createRoutingSnapshot(effectRouting);
 		std::vector<effectbase*> effects = p->effects;
 		pluginSnapshots.reserve(p->effects.size());
 		for (effectbase* effect : p->effects) {
@@ -145,9 +146,16 @@ track_impl_snapshot_t::track_impl_snapshot_t(track_impl_t* p, bool storePluginCh
 }
 
 void saveSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, track_layout_snapshot_t& snapshot);
-
+track_id_snapshot_t getTrackIdSnapshot(const audio_stage_id_t& stageId) {
+	return track_id_snapshot_t{
+		static_cast<int32_t>(stageId.stageId),
+		static_cast<int32_t>(stageId.inputStageId),
+		static_cast<int32_t>(stageId.outputStageId),
+		static_cast<int32_t>(stageId.outputPostStageId)
+	};
+}
 track_snapshot_t::track_snapshot_t(const track_t* track, bool storePluginChunks)
-  : tracksettings_t(*track), stageId(track->audio ? static_cast<int32_t>(track->audio->stageId) : 0), localIdx(track->localIdxFlat), plugins(track->audio, storePluginChunks)
+  : tracksettings_t(*track), stageIds(track->audio ? getTrackIdSnapshot(track->audio->stageId) : track_id_snapshot_t{}), localIdx(track->localIdxFlat), plugins(track->audio, storePluginChunks)
 {
 	auto& otherClips = track->getConstMidi().getConstClips();
 	for (auto clip : otherClips) {
@@ -175,18 +183,24 @@ void track_t::loadSnapshot(const track_snapshot_t& snapshot) {
 	auto audio = this->audio;
 	dbgassert(audio);
 	const auto& implSnapshot = snapshot.plugins;
-	//TODO: test if stageId is in use. Caller is responsible for generating new stageId
-	if (snapshot.stageId > 0) {
-		audio->stageId = static_cast<audiostageid_i32>(snapshot.stageId);
-	} else {
-		// corrupt snapshot, keep stage id
+	// if the snapshot holds a stage id then use it, otherwise keep current stageId
+	if (snapshot.stageIds.inputStageId != -1) {
+		audio->stageId.stageId = static_cast<audiostageid_i32>(snapshot.stageIds.stageId);
+		audio->stageId.inputStageId = static_cast<audiostageid_i32>(snapshot.stageIds.inputStageId);
+		audio->stageId.outputStageId = static_cast<audiostageid_i32>(snapshot.stageIds.outputStageId);
+		audio->stageId.outputPostStageId = static_cast<audiostageid_i32>(snapshot.stageIds.outputPostStageId);
 	}
+	//TODO: test if stageId is in use. Caller is responsible for generating new stageId
 
 	audio->mixer.loadSnapshot(implSnapshot.trackParams);
 	audio->arp->loadSnapshot(implSnapshot.trackArp);
 	const std::vector<plugin_snapshot_t>& trPluginList = implSnapshot.pluginSnapshots;
 	audio->loadPlugins(trPluginList);
 	audio->loadIOConfiguration(implSnapshot.trackIO);
+	audio->loadRoutingSnapshot(implSnapshot.effectRouting);
+	if (audio->routingState == audiostagerouting_state_t::INVALID) {
+		audio->configureDefaultRoutings();
+	}
 }
 //void track_t::loadPluginAutomationParameters(const track_impl_snapshot_t& trackStatic) {
 //	dbgassert(audio);
@@ -252,10 +266,14 @@ void trackdata_midi_t::getNotesInRange(tick_t start, tick_t end, tick_t cutStart
 
 }
 
-audio_stage_ref_t audio_stage_t::toRef() {
-	return {this->stageId};
+audio_stage_ref_t audio_stage_t::toRef() const {
+	return {this->stageId.stageId};
 }
 effectbase* audio_stage_t::getPluginById(int32_t projectGlobalId) const {
+	if (projectGlobalId < 1<<16)
+	{
+		projectGlobalId += 1<<16;
+	}
 	for (effectbase* effect : effects) {
 		 if (effect->projectGlobalId == projectGlobalId) {
 			 return effect;
@@ -428,10 +446,19 @@ VstEvent_t* track_impl_t::reallocEvts(size_t size) {
 	midiEventsBuf->reset();
 	return midiEventsBuf;
 }
-samplerate_t audio_stage_t::getLatency() {
+samplerate_t audio_stage_t::getLatency() const {
 	return latency;
 }
 void audio_stage_t::pluginsChanged() {
+	if (routingState != audiostagerouting_state_t::CUSTOM) {
+		configureDefaultRoutings();
+	}
+	DAW::validateEffectRoutings(this->host, this);
+
+//	host->onPluginsChanged(this);
+	updateLatency();
+}
+void audio_stage_t::updateLatency() {
 	samplerate_t latency = 0;
 	for (effectbase* effect : effects) {
 		latency += effect->getDelay();
@@ -492,16 +519,16 @@ effectbase* loadEffectModule(const plugin_snapshot_t& pluginSnapshot, bool force
 			loadedPlugin = dynamic_cast<vstplugin*>(effect);
 		}
 	}
-	if (loadedPlugin && (loadedPlugin->getFlagsVST() & effFlagsProgramChunks) != 0) {
-		if (pluginSnapshot.dataChunk.size() > 0) {
-			my_printf("Plugin %s: Load data1[%d]\n", StringAsCStr(loadedPlugin->sName), pluginSnapshot.dataChunk.size());
-			loadedPlugin->dispatch(effSetChunk, 0, pluginSnapshot.dataChunk.size(), (void*)pluginSnapshot.dataChunk.data());
-		}
-		if (loadPluginPresetWithSnapshot && pluginSnapshot.dataChunk2.size() > 0) {
-			my_printf("Plugin %s: Load data2[%d]\n", StringAsCStr(loadedPlugin->sName), pluginSnapshot.dataChunk2.size());
-			loadedPlugin->dispatch(effSetChunk, 1, pluginSnapshot.dataChunk2.size(), (void*)pluginSnapshot.dataChunk2.data());
-		}
-	}
+//	if (loadedPlugin && (loadedPlugin->getFlagsVST() & effFlagsProgramChunks) != 0) {
+//		if (pluginSnapshot.dataChunk.size() > 0) {
+//			my_printf("Plugin %s: Load data1[%d]\n", StringAsCStr(loadedPlugin->sName), pluginSnapshot.dataChunk.size());
+//			loadedPlugin->dispatch(effSetChunk, 0, pluginSnapshot.dataChunk.size(), (void*)pluginSnapshot.dataChunk.data());
+//		}
+//		if (loadPluginPresetWithSnapshot && pluginSnapshot.dataChunk2.size() > 0) {
+//			my_printf("Plugin %s: Load data2[%d]\n", StringAsCStr(loadedPlugin->sName), pluginSnapshot.dataChunk2.size());
+//			loadedPlugin->dispatch(effSetChunk, 1, pluginSnapshot.dataChunk2.size(), (void*)pluginSnapshot.dataChunk2.data());
+//		}
+//	}
 	return effect;
 }
 void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effectbase* effect) {
@@ -519,6 +546,8 @@ void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effec
 	if (missingParams) {
 		//TODO: notify users thru UI
 		log_printf("Some parameters could not be mapped: %s has %d missing parameters\n", StringAsCStr(effect->getName()), missingParams);
+	} else {
+		log_printf("%s: Loaded %d params\n", StringAsCStr(effect->getName()), pluginSnapshotParams.size());
 	}
 //	const std::vector<param_snapshot_t>& pluginHostSideParams = pluginSnapshot.hostParams;
 //	for (const param_snapshot_t& param : pluginHostSideParams) {
@@ -529,16 +558,110 @@ void loadEffectParamsFromSnapshot(const plugin_snapshot_t& pluginSnapshot, effec
 //	}
 
 }
+namespace DAW {
+void createDawChannelRefSnapshot(const channel_ref_t& channel, io_configuration_snapshot_t& cfg);
+void loadDawChannelRefSnapshot(const io_configuration_snapshot_t& cfg, channel_ref_t& channel);
+
+void createDawChannelRefSnapshot(const DAW::channel_ref_t& channel, io_configuration_snapshot_t& cfg) {
+	cfg.inputType = static_cast<int32_t>(channel.type);
+	cfg.channelOffset = channel.inputChannelOffset;
+	cfg.stageId = static_cast<int32_t>(channel.stage.stageRef.stageId);
+	cfg.stageEndPointType = static_cast<int32_t>(channel.stage.buffer);
+	cfg.externalInputId = channel.externalInputIdx;
+	cfg.externalInputType = static_cast<int32_t>(channel.externalInputType);
+}
+void loadDawChannelRefSnapshot(const io_configuration_snapshot_t& cfg, channel_ref_t& channel) {
+	channel.type = static_cast<DAW::channel_input_type>(cfg.inputType);
+	channel.inputChannelOffset = cfg.channelOffset;
+	channel.stage.stageRef.stageId = static_cast<audiostageid_i32>(cfg.stageId);
+	channel.stage.buffer = static_cast<stagebuffer_point>(cfg.stageEndPointType);
+	channel.externalInputIdx = cfg.externalInputId;
+	channel.externalInputType = static_cast<AudioIO::tracktype>(cfg.externalInputType);}
+}
+
+void audio_stage_t::createRoutingSnapshot(track_effect_routing_snapshot_t& snapshot) {
+	for (int i = 0; i < this->postEffectRouting.size(); i++) {
+		DAW::channel_ref_t& channel = this->postEffectRouting[i];
+		io_configuration_snapshot_t cfg;
+		createDawChannelRefSnapshot(channel, cfg);
+		snapshot.inputRoutingOutputStage.push_back(cfg);
+	}
+	for (effectbase* effect : effects) {
+		for (DAW::channel_ref_t& channel : effect->inputChannels) {
+			io_configuration_snapshot_t cfg;
+			createDawChannelRefSnapshot(channel, cfg);
+			snapshot.inputRoutingEffects[static_cast<int32_t>(effect->projectGlobalId)].push_back(cfg);
+		}
+	}
+	snapshot.routingState = static_cast<int32_t>(this->routingState);
+}
+void audio_stage_t::configureDefaultRoutings() {
+	this->postEffectRouting.clear();
+	this->postEffectRouting.push_back(DAW::ChannelDefaultNone());
+	for (effectbase* effect : effects) {
+		effect->inputChannels.clear();
+		effect->inputChannels.push_back(DAW::ChannelDefaultNone());
+	}
+	routingState = audiostagerouting_state_t::DEFAULT;
+}
+void audio_stage_t::loadRoutingSnapshot(const track_effect_routing_snapshot_t& snapshot)
+{
+	this->postEffectRouting.clear();
+	this->routingState = audiostagerouting_state_t::INVALID;
+	for (int i = 0; i < snapshot.inputRoutingOutputStage.size(); i++) {
+		const io_configuration_snapshot_t& cfg = snapshot.inputRoutingOutputStage[i];
+		DAW::channel_ref_t channel;
+		loadDawChannelRefSnapshot(cfg, channel);
+		this->postEffectRouting.push_back(channel);
+    }
+    audiostagerouting_state_t snapshotRoutingState = static_cast<audiostagerouting_state_t>(snapshot.routingState);
+    //for (plugin in effectsVec)
+    //plugin->inputChannels.clear();
+    //if (snapshotRoutingState != audiostagerouting_state_t::INVALID)
+	{
+        for (const auto& mapEntry : snapshot.inputRoutingEffects) {
+            auto* plugin = getPluginById(mapEntry.first);
+            //dbgassert(plugin);
+            if (!plugin) {
+                String log = "stage.effects = [";
+                for (auto p : effects) {
+                    if (p->isDeferred()) {
+                        effect_deferred* def = dynamic_cast<effect_deferred*>(p);
+                        const plugin_snapshot_t& plugSnapshot = def->getSnapshotConst();
+                        log += StringFormat("%d(%d), ", static_cast<int32_t>(p->projectGlobalId), plugSnapshot.projectGlobalId);
+                    }
+                    else {
+                        log += StringFormat("%d, ", static_cast<int32_t>(p->projectGlobalId));
+                    }
+                }
+                log += "]";
+                log_printf("%s\n", StringAsCStr(log));
+                String log2 = "snapshot.inputRoutingEffects = [";
+                for (auto& p : snapshot.inputRoutingEffects) {
+                    log2 += StringFormat("%d, ", static_cast<int32_t>(p.first));
+                }
+                log2 += "]";
+                log_printf("%s\n", StringAsCStr(log2));
+                log_printf("Plugin with id %d not found\n", static_cast<int32_t>(mapEntry.first));
+                snapshotRoutingState = audiostagerouting_state_t::INVALID;
+            } else {
+        dbgassert(plugin->inputChannels.empty());
+                for (const io_configuration_snapshot_t& effInputSnapshot : mapEntry.second) {
+                    DAW::channel_ref_t channel;
+                    loadDawChannelRefSnapshot(effInputSnapshot, channel);
+                    plugin->inputChannels.push_back(channel);
+                }
+			}
+        }
+    }
+//	dbgassert(snapshot.routingState == 0);
+    this->routingState = snapshotRoutingState;
+}
 void track_impl_t::createIOSnapshot(track_io_configuration_snapshot_t& snapshot) {
 	for (int i = 0; i < 2; i++) {
 		DAW::channel_ref_t channel = i == 0 ? inputChannel : outputChannel;
 		io_configuration_snapshot_t& cfg = i == 0 ? snapshot.input : snapshot.output;
-		cfg.inputType = static_cast<int32_t>(channel.type);
-		cfg.channelOffset = channel.inputChannelOffset;
-		cfg.stageId = static_cast<int32_t>(channel.stage.stageRef.stageId);
-		cfg.stageEndPointType = static_cast<int32_t>(channel.stage.buffer);
-		cfg.externalInputId = channel.externalInputIdx;
-		cfg.externalInputType = static_cast<int32_t>(channel.externalInputType);
+		createDawChannelRefSnapshot(channel, cfg);
 	}
 }
 void track_impl_t::loadIOConfiguration(const track_io_configuration_snapshot_t& snapshot)
@@ -546,12 +669,7 @@ void track_impl_t::loadIOConfiguration(const track_io_configuration_snapshot_t& 
 	for (int i = 0; i < 2; i++) {
 		DAW::channel_ref_t& channel = i == 0 ? inputChannel : outputChannel;
 		io_configuration_snapshot_t cfg = i == 0 ? snapshot.input : snapshot.output;
-		channel.type = static_cast<DAW::channel_input_type>(cfg.inputType);
-		channel.inputChannelOffset = cfg.channelOffset;
-		channel.stage.stageRef.stageId = static_cast<audiostageid_i32>(cfg.stageId);
-		channel.stage.buffer = static_cast<stagebuffer_point>(cfg.stageEndPointType);
-		channel.externalInputIdx = cfg.externalInputId;
-		channel.externalInputType = static_cast<AudioIO::tracktype>(cfg.externalInputType);
+		loadDawChannelRefSnapshot(cfg, channel);
 	}
 
 }
@@ -560,32 +678,41 @@ void audio_stage_t::loadPlugins(const std::vector<plugin_snapshot_t>& trPluginLi
 	for (const plugin_snapshot_t& pluginSnapshot : trPluginList) {
 		auto effect = loadPluginDeferred(pluginSnapshot);
 		if (effect) {
-			vsthost* host = vsthost::getInstance();
-
 			//this->deferredEffects.push_back(effect);
-			host->addDeferredEffect(effect);
+            if (!host->addDeferredEffect(effect)) {
+                log_printf("Failed loading effect\n", 0);
+                delete effect;
+                continue;
+            }
+            effect->getSnapshot().projectGlobalId = effect->projectGlobalId;
 			effect->load(host);
 			host->insertNewPlugin(this, effect, pluginSnapshot.slot);
+//			host->postPluginLoaded(this, effect);
 			dbgassert(effect->trackImpl == this);
 			dbgassert(effects.size());
 		}
 	}
-
-
 }
 void pluginUpdateParamBypass(effectbase* effect, int state);
-void vsthost::addDeferredEffect(effectbase* plugin) {
-	plugin->projectGlobalId = getNextGlobalModuleId(0);
+bool vsthost::addDeferredEffect(effectbase* plugin) {
+    plugin->projectGlobalId = getNextGlobalModuleId(plugin->projectGlobalId); // hell is lose
+//    plugin->projectGlobalId = getNextGlobalModuleId(0); // everything goochy
+	while (getPluginById(plugin->projectGlobalId) != nullptr) {
+		plugin->projectGlobalId = getNextGlobalModuleId(0);
+	}
 	auto it = std::find_if(pluginsDeferred.begin(), pluginsDeferred.end(), [plugin](auto* eff) {return eff->projectGlobalId == plugin->projectGlobalId;});
-	dbgassert(it == pluginsDeferred.end());
+    if (it != pluginsDeferred.end()) {
+        return false;
+    }
 	pluginsDeferred.push_back(plugin);
+    return true;
 }
 void vsthost::activateDeferred(effectbase* const eff, effectbase** out_effectLoaded, bool forceLoad) {
 	dbgassert(eff->trackImpl);
 	dbgassert(eff->trackImpl->effects.size());
 	dbgassert(eff->getSlot() >= 0);
 	auto defEffect = dynamic_cast<effect_deferred*>(eff);
-	plugin_snapshot_t pluginSnapshot = defEffect->getSnapshot();
+	plugin_snapshot_t pluginSnapshot = defEffect->getSnapshotConst();
 	log_printf("activating deferred plugin loadEffectModule %s\n", StringAsCStr(pluginSnapshot.name));
 	effectbase* effect = loadEffectModule(pluginSnapshot, forceLoad);
 	if (out_effectLoaded) {
@@ -596,21 +723,51 @@ void vsthost::activateDeferred(effectbase* const eff, effectbase** out_effectLoa
 //		dbgassert(0);
 		return;
 	}
-	log_printf("activating deferred plugin loadEffectParamsFromSnapshot %s\n", StringAsCStr(pluginSnapshot.name));
-	loadEffectParamsFromSnapshot(pluginSnapshot, effect);
+
+	/* Begin of loading plugin state (parameter values, binary preset, automation lanes) */
+
+    log_printf("Activate Plugin %s: %d Parameters, %d Automated parameters\n",
+		StringAsCStr(pluginSnapshot.name), 
+		pluginSnapshot.params.size(), 
+		pluginSnapshot.automatedParams.size());
+    
+	bool loadParamsBeforePluginSnapshot = false;
+    /* check if parameter values are assigned before loadSnapshot */
+    if (loadParamsBeforePluginSnapshot) {
+        loadEffectParamsFromSnapshot(pluginSnapshot, effect);
+	}
+	
 	effectbase* prevPlugin = nullptr;
 	always_assert(removeEntry(eff->trackImpl->deferredEffects, eff));
 	replacePlugin(eff->trackImpl, effect, defEffect->getSlot(), &prevPlugin);
+
+	/* Load plugins binary snapshot */
 	effect->loadSnapshot(pluginSnapshot);
+
+	/* check if parameter values are assigned after loadSnapshot */
+    if (!loadParamsBeforePluginSnapshot) {
+        loadEffectParamsFromSnapshot(pluginSnapshot, effect);
+    }
+
+	effect->inputChannels = prevPlugin->inputChannels;
 	effect->sName = pluginSnapshot.name;
-	pluginUpdateParamBypass(effect, pluginSnapshot.enabled);
+    pluginUpdateParamBypass(effect, pluginSnapshot.enabled);
+
+    /* Load plugin parameter automation lanes */
 	loadAutomation(pluginSnapshot.automatedParams, effect);
+
+	log_printf("done activating deferred plugin %s: isenabled %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.enabled);
 	if (pluginSnapshot.enabled) {
 		effect->resume();
 	}
-	log_printf("done activating deferred plugin %s\n", StringAsCStr(pluginSnapshot.name));
+
+	/* Unload the (previous) deferred placeholder plugin */
 	unloadPlugin(prevPlugin);
 
+	//TODO: make this step optional (bool parameter)
+	// When loading multiple plugins only fire it for the last one, or run postPluginLoaded externally
+	postPluginLoaded(effect->getTrackLink(), effect);
+//	if (DawInstance::get()) DawInstance::get()->onPluginsChanged();
 }
 int loadSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, const track_layout_snapshot_t& snapshot)
 {
@@ -709,13 +866,13 @@ void audio_stage_t::removeAudioStage(audio_stage_t* _child) {
 	_child->parent = nullptr;
 	this->children.erase(it);
 }
-track_t* audio_stage_t::getTrack() {
-	audio_stage_t* stage = this;
+track_t* audio_stage_t::getTrack() const {
+	const audio_stage_t* stage = this;
 	while (stage->parent) {
 		stage = stage->parent;
 	}
 	if (stage->type == 0) {
-		return static_cast<track_impl_t*>(stage)->track;
+		return dynamic_cast<const track_impl_t*>(stage)->track;
 	}
 //	dbgassert(0); // to be expected when deleting effectgroups
 	return nullptr;
@@ -793,8 +950,8 @@ void sortNoteEvents(std::vector<noteevent_t>& noteEvents) {
 		return a.tickOffsetInBlock < b.tickOffsetInBlock;
 	});
 }
-track_impl_t::track_impl_t(audiostageid_i32 _id, track_t* _track, const samplerate_t _sampleRate, const uint16_t _blockSize, int32_t nChannels)
-   : audio_stage_t(_id, /*_track, */_sampleRate, _blockSize, nChannels, 0)
+track_impl_t::track_impl_t(vsthost* const _host, audio_stage_id_t _id, track_t* _track, const samplerate_t _sampleRate, const uint16_t _blockSize, int32_t nChannels)
+   : audio_stage_t(_host, _id, /*_track, */_sampleRate, _blockSize, nChannels, 0)
   , track(_track), inputChannel(DAW::ChannelDefaultNone()), outputChannel(DAW::ChannelDefaultNone())
 {
 	arp = new midiarp(this);
@@ -866,6 +1023,12 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 //				heldEnd = math::max(heldEnd, note.end());
 //			}
 			track->getMidi().getNotesInRange(heldBegin, heldEnd, -1, loopEnd, notes);
+			//auto getParent = track->parent;
+			//while (getParent) {
+			//	getParent->getMidi().getNotesInRange(heldBegin, heldEnd, -1, loopEnd, notes);
+			//	getParent = getParent->parent;
+			//}
+
 		}
 		time1 = (time1 * 19 + tmr.getTime()) / 20;
 		track->getStage()->procStats.timeGetNotesInRange = time1;

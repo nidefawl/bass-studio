@@ -89,6 +89,17 @@ constant_t::constant_t(const char* _name, int32_t _defValue)
 //	my_printf("push %16s to %12X -> size %d\n", _name, (int64_t)&allconstants, allconstants.size());
   allconstants.push_back(this);
 }
+constant_t COL_BASE_BG = constant_t("COL_BASE_BG", 0xFF1A1A1A);
+constant_t COL_BASE_BG_HOVER = constant_t("COL_BASE_BG_HOVER", 0xFF000000);
+constant_t COL_BASE_BG_PRESSED = constant_t("COL_BASE_BG_PRESSED", 0xFF0C0C0C);
+constant_t COL_BASE_BG_FOCUSED = constant_t("COL_BASE_BG_FOCUSED", 0xFF4C4C4C);
+constant_t COL_BASE_BG_DISABLED = constant_t("COL_BASE_BG_DISABLED", 0xFF000000);
+constant_t COL_BASE_BG_FRAME_BASE = constant_t("COL_BASE_BG_FRAMEBASE", 0xFF171717);
+constant_t COL_BASE_BG_FRAME_BRIGHT = constant_t("COL_BASE_BG_FRAME_BRIGHT", 0xFF272727);
+constant_t COL_BASE_BG_FRAME_OUTLINE = constant_t("COL_BASE_BG_FRAME_OUTLINE", 0xFF060606);
+constant_t COL_BASE_BG_FRAME_HIGHLIGHT = constant_t("COL_BASE_BG_FRAME_HIGHLIGHT", 0xFF1D1D1D);
+constant_t COL_BASE_BG_STROKE = constant_t("COL_BASE_BG_STROKE", 0x339B9B9B);
+
 constant_t COL_GRID_DRK = constant_t("COL_GRID_DRK", 0xFF000000);
 constant_t COL_GRID_BRT = constant_t("COL_GRID_BRT", 0xFF000000);
 constant_t COL_LINE_BAR = constant_t("COL_LINE_BAR", 0xFF000000);
@@ -114,6 +125,7 @@ constant_t COL_BG_DRKER = constant_t("COL_BG_DRKER", 0xFF000000);
 constant_t COL_GUI_HANDLE = constant_t("COL_GUI_HANDLE", 0xFF000000);
 constant_t COL_GUI_HANDLE_FOCUSED = constant_t("COL_GUI_HANDLE_FOCUSED", 0xFF323232);
 constant_t COL_BG_DRKER2 = constant_t("COL_BG_DRKER2", 0xFF000000);
+constant_t COL_NODES_EDGE = constant_t("COL_NODES_EDGE", 0xFF323232);
 constant_t COL_CLEAR_COLOR = constant_t("COL_CLEAR_COLOR", 0xFF000000);
 constant_t COL_LABEL_ACTIVE = constant_t("COL_LABEL_ACTIVE", 0xFF000000);
 constant_t COL_LABEL_INACTIVE = constant_t("COL_LABEL_INACTIVE", 0xFF000000);

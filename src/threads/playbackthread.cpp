@@ -78,8 +78,8 @@ public:
     Impl() : q(128) {
 	}
     ~Impl() {
-		dbgassert(!t.joinable());
-    	dbgassert(exited);
+    	// thread has not been started or thread has been started and exited correctly
+    	dbgassert(this->ctrl == nullptr || (exited && !t.joinable()));
     }
     int32_t getThreadId() {
     	return threadid;
@@ -90,15 +90,15 @@ public:
     }
 	void start(project_controller_t* ctrl) {
 		this->ctrl = ctrl;
-		t = std::thread([this]() {
+        t = std::thread([this]() {
+            this->threadid = get_thread_id();
+#ifdef _WIN32
+            HANDLE h = reinterpret_cast<HANDLE*>(t.native_handle());
+            SetThreadPriority(h, THREAD_PRIORITY_TIME_CRITICAL);
+#endif
 			daw_tls::setTls(threadTLS);
 			this->run();
 		});
-#ifdef _WIN32
-		this->threadid = get_thread_id();
-		HANDLE h = reinterpret_cast<HANDLE*>(t.native_handle());
-		SetThreadPriority(h, THREAD_PRIORITY_TIME_CRITICAL);
-#endif
 	}
 	void join() {
 		dbgassert(t.joinable());

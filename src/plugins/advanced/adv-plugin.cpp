@@ -32,7 +32,7 @@ namespace PluginTestAdv {
 GuiAdvPluginVST2::GuiAdvPluginVST2 (audioMasterCallback audioMaster)
 	: BasePluginVST2(audioMaster, PLUGIN_UID, kNumPrograms, kNumParams, kNumInputs, kNumOutputs)
 {
-	createEditorWindow(static_cast<PluginViewContainersImpl*>(createView()));
+	createEditorWindow(createView());
 	// initialize programs
 	programs[0].latency = 0.3f;
 	programs[0].noiseVolume = 0.1f;

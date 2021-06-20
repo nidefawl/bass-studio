@@ -256,6 +256,7 @@ public:
 	bool isControl(guibase* g) {
 		return STL_CONTAINS(controls, g);
 	}
+	bool interactiveMode = true;
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
 		validateReferences();
 		if (this->contains(mpos)) {
@@ -266,6 +267,16 @@ public:
 				if (gui->mouseHitTest(localMouse, evt)) {
 					return true;
 				}
+			}
+			validateReferences();
+			lastClicked = cellclicked_t();
+			ivec2 local = localMouse;
+			ivec2 tableMin = ivec2(INSET_TABLE);
+			ivec2 tableMax = tableMin + getSizeContent()-ivec2(INSET_TABLE<<1);
+			if (local.x >= tableMin.x && local.y >= tableMin.y && local.x < tableMax.x && local.y < tableMax.y) {
+				mouseDown = true;
+				GetCellClicked(table, theme, local-tableMin, lastClicked.idx, lastClicked.pos, lastClicked.size);
+				onCellHover(lastClicked, evt);
 			}
 			evt.requestFocus(this);
 			return true;
@@ -303,6 +314,59 @@ public:
 			onCellClicked(lastClicked, evt);
 			lastClicked = cellclicked_t();
 		}
+	}
+	void onCellHover(const cellclicked_t cell, const MouseHitEvt& evt) {
+		if (cell.idx.x >= 0 && cell.idx.y >= 0) {
+			table_entry_t& tableCell = GetCell(table, cell.idx.x, cell.idx.y);
+			class mouseover_handler_t : public click_type_handler {
+				guiproperties_table* const table;
+				const cellclicked_t& clickedcell;
+				const MouseHitEvt& evt;
+			public:
+				mouseover_handler_t(guiproperties_table* _table, const cellclicked_t& _clickedcell, const MouseHitEvt& _evt)
+					: click_type_handler(), table(_table), clickedcell(_clickedcell), evt(_evt) {
+
+				}
+				void hover() {
+					//log_printf("hover %d %d\n", clickedcell.idx.x, clickedcell.idx.y);
+				}
+				virtual void onClickNotImplemented(const click_ctxt_t& ctxt) override {
+					table->setActiveControl(nullptr);
+				}
+                void onClick(const click_ctxt_t& ctxt, const tbltype_gui_flags& obj) override
+                {
+                    hover();
+				}
+				void onClick(const click_ctxt_t& ctxt, glm::ivec2& value) override {
+					hover();
+				}
+				void onClick(const click_ctxt_t& ctxt, glm::ivec4& value) override {
+					hover();
+				}
+				void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, GuiConstant::constant_t constant) override {
+					hover();
+				}
+				void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, UIFont::font_type_t fonttype) override {
+					hover();
+				}
+				void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, GuiColor::constant_t constant) override {
+					hover();
+					BaseCtrl* const ctrl = table->parentCtrl;
+					if (theme == nullptr) {
+						ctrl->getTheme()->pingConstant(constant);
+					} else {
+						ctrl->getTheme()->endPing();
+					}
+				}
+
+				void onClick(const click_ctxt_t& ctxt, NVGcolor& value) override {
+					hover();
+				}
+            };
+            mouseover_handler_t handler(this, cell, evt);
+            const click_ctxt_t ctxt = {this, &handler};
+            tableCellClicked(ctxt, tableCell);
+        }
 	}
 	void onCellClicked(cellclicked_t cell, MouseEvent& evt) {
 		if (cell.idx.x >= 0 && cell.idx.y >= 0) {
@@ -391,34 +455,16 @@ public:
 						evt.guiDragged = &numberInput;
 						numberInput.handleDraggedBegin(evt);
 					}
-					//Textfield example
-//					void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, UIFont::font_type_t fonttype) override {
-//						click();
-//						gui_textfield& textField = table->textField;
-//						textField.pos = clickedcell.pos;
-//						textField.size = clickedcell.size;
-//						auto t = theme->getFont(fonttype);
-//						textField.setValue(t.name);
-//						textField.setCallback([theme,ft=fonttype,&textField](const String& str) {
-//
-//							textField.setCallback(nullptr);
-//							theme->setFont(ft, str);
-//							return true;
-//						});
-//						evt.guiDragged = &textField;
-//						table->setActiveControl(&textField);
-//						textField.handleDraggedBegin(evt);
-//					/textField.handleDraggedRelease(evt);
-//					}
 					void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, UIFont::font_type_t fonttype) override {
-						click();
+                        click();
+                        if (theme == nullptr)
+                            return;
 						guidropdown_selectfont& selectFont = table->selectFont;
 						selectFont.pos = clickedcell.pos;
 						selectFont.size = clickedcell.size;
 						auto t = theme->getFont(fonttype);
 						selectFont.current = t.name;
 						selectFont.fonttype = fonttype;
-//						selectFont.fonttype = fonttype;
 //						textField.setValue(t.name);
 //						textField.setCallback([theme,ft=fonttype,&textField](const String& str) {
 //
@@ -433,6 +479,8 @@ public:
 					}
 					void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, GuiColor::constant_t constant) override {
 						click();
+                        if (theme == nullptr)
+                            return;
 						gui_color_pick* color = new gui_color_pick();
 						color->size = {480, 240};
 						color->pos = {0, 0};
@@ -447,6 +495,7 @@ public:
 						ctxtMenu->add(color);
 						ctxtMenu->layout();
 						ctxtMenu->canTakeInputFocus = true;
+						ctxtMenu->maxHeight = color->size.y;
 						dbgassert(!ctxtMenu->isBackgroundRendered());
 						ctxtMenu->setBackgroundRendered(false);
 						table->parentCtrl->openContextMenu(ctxtMenu, evt.mousepos);
@@ -467,6 +516,7 @@ public:
 						ctxtMenu->add(color);
 						ctxtMenu->layout();
 						ctxtMenu->canTakeInputFocus = true;
+						ctxtMenu->maxHeight = color->size.y;
 						dbgassert(!ctxtMenu->isBackgroundRendered());
 						ctxtMenu->setBackgroundRendered(false);
 						table->parentCtrl->openContextMenu(ctxtMenu, evt.mousepos);
@@ -475,7 +525,7 @@ public:
 					}
 				};
 				click_handler_t handler( this, cell, evt );
-				const click_ctxt_t ctxt = {this, &handler, evt};
+				const click_ctxt_t ctxt = {this, &handler};
 				tableCellClicked(ctxt, tableCell);
 			}
 		} else {
@@ -539,28 +589,6 @@ void addPropertiesFromGui(guiplugin& gui, Table::tbl* table) {
 		}
 		rows.push_back(row);
     }
-//	rows.push_back({{tblstr{"pos"}, tbltypesaferef<glm::ivec2>{ref, gui.pos, nullptr}}});
-//	rows.push_back({{tblstr{"size"}, tbltypesaferef<glm::ivec2>{ref, gui.size, nullptr}}});
-//
-//	rows.push_back({{tblstr{"FLG_VISIBLE"}, tbltype_gui_flags{ref, FLG_VISIBLE}}});
-//	rows.push_back({{tblstr{"FLG_RENDER_BACKGROUND"}, tbltype_gui_flags{ref, FLG_RENDER_BACKGROUND}}});
-//	rows.push_back({{tblstr{"FLG_RENDER_BACKGROUND_INSET"}, tbltype_gui_flags{ref, FLG_RENDER_BACKGROUND_INSET}}});
-//	rows.push_back({{tblstr{"FLG_ENBL"}, tbltype_gui_flags{ref, FLG_ENBL}}});
-//	rows.push_back({{tblstr{"FLG_HVRD"}, tbltype_gui_flags{ref, FLG_HVRD}}});
-//	rows.push_back({{tblstr{"FLG_FOC"}, tbltype_gui_flags{ref, FLG_FOC}}});
-//	rows.push_back({{tblstr{"FLG_ACT"}, tbltype_gui_flags{ref, FLG_ACT}}});
-//	rows.push_back({{tblstr{"FLG_DRG"}, tbltype_gui_flags{ref, FLG_DRG}}});
-//	rows.push_back({{tblstr{"FLG_HAS_COLOR_BG"}, tbltype_gui_flags{ref, FLG_HAS_COLOR_BG}}});
-//
-//	if (gui.parent) {
-//		SafeRef<guibase> parentSafeRef = gui.parent->makeSafeRef();
-//		rows.push_back({{tblstr{"parent"}, parentSafeRef}});
-//	} else {
-//		rows.push_back({{tblstr{"parent"}, tblstr{"<null>"}}});
-//	}
-//	String strTheme = gui.theme->name+StringFormat("[%7X]", (int64_t)gui.theme);
-//	rows.push_back({{tblstr{"theme"}, tblString{strTheme, 1}}});
-//	rows.push_back({{tblstr{"theme2"}, tblString{strTheme, 1}}});
 }
 
 
@@ -725,7 +753,8 @@ void guiproperties_table<guiproperties_t>::setDebugPropertyHandle(void *vPtr)  {
 	} else {
 		guibase* pGui = static_cast<guibase*>(vPtr);
 		if (ref != pGui) {
-			pGui->id |= (1<<16);
+			/* enable debug background rendering */
+//			pGui->id |= (1<<16);
 			if (pGui) {
 				ptr->safeRef = pGui->makeSafeRef();
 			} else {
@@ -820,6 +849,18 @@ inline void cellClicked(const click_ctxt_t& ctxt, const tbltype_theme_color& obj
 	ctxt.callback->onClick(ctxt, obj.theme, obj.constant);
 }
 template <>
+inline void cellClicked(const click_ctxt_t& ctxt, const GuiColor::constant_t& obj) {
+	if (ctxt.callback) {
+		ctxt.callback->onClick(ctxt, (guitheme_t*)nullptr, obj);
+	}
+}
+template <>
+inline void cellClicked(const click_ctxt_t& ctxt, const GuiConstant::constant_t& obj) {
+	if (ctxt.callback) {
+		ctxt.callback->onClick(ctxt, (guitheme_t*)nullptr, obj);
+	}
+}
+template <>
 void drawTbl(const table_ctxt_t& ctxt, const tbltype_theme_constant& obj) {
 	int32_t t = obj.theme->get(obj.constant);
 	drawTbl(ctxt, t);
@@ -863,29 +904,18 @@ void guiproperties_table<guitheme_t>::determineSize(glm::ivec2& prefSize) {
 	table.rows.push_back({{tblstr{"this"}, tblint{(int64_t)ptr, "%08X"}}});
 	if (ptr)
 	{
-
-		table.rows.push_back({{tblstr{"colorBg"}, tbltyperef<NVGcolor>{ptr->colorBg, "%08X"}}});
-		table.rows.push_back({{tblstr{"colorBgHover"}, tbltyperef<NVGcolor>{ ptr->colorBgHover, "%08X"}}});
-		table.rows.push_back({{tblstr{"colorBgPressed"}, tbltyperef<NVGcolor>{ptr->colorBgPressed, "%08X"}}});
-		table.rows.push_back({{tblstr{"colorBgFocused"}, tbltyperef<NVGcolor>{ptr->colorBgFocused, "%08X0"}}});
-		table.rows.push_back({{tblstr{"colorBgDisabled"}, tbltyperef<NVGcolor>{ptr->colorBgDisabled, "%08X"}}});
-		table.rows.push_back({{tblstr{"colorBgFrameBase"}, tbltyperef<NVGcolor>{ptr->colorBgFrameBase, "%08X"}}});
-		table.rows.push_back({{tblstr{"colorBgFrameBright"}, tbltyperef<NVGcolor>{ptr->colorBgFrameBright, "%08X"}}});
-		table.rows.push_back({{tblstr{"colorBgFrameOutline"}, tbltyperef<NVGcolor>{ptr->colorBgFrameOutline, "%08X"}}});
-		table.rows.push_back({{tblstr{"colorBgFrameHighlight"}, tbltyperef<NVGcolor>{ptr->colorBgFrameHighlight, "%08X"}}});
-		table.rows.push_back({{tblstr{"colorBgStroke"}, tbltyperef<NVGcolor>{ptr->colorBgStroke, "%08X"}}});
-		auto add = [this](tblstr&& x, const auto& y) {
+		auto add = [this](auto && x, const auto& y) {
 			table.rows.push_back({{x, y}});
 		};
 		std::vector<GuiColor::constant_t> vec = GuiColor::getAllConstants();
 		std::sort(vec.begin(), vec.end(), [](auto& a, auto& b){ return strcmp(a.name, b.name) < 0; });
 		for (auto _constant : vec) {
-			add(tblstr{ _constant.name }, tbltype_theme_color{ ptr, _constant });
+			add(_constant, tbltype_theme_color{ ptr, _constant });
 		}
 		std::vector<GuiConstant::constant_t> vec2 = GuiConstant::getAllConstants();
 		std::sort(vec2.begin(), vec2.end(), [](auto& a, auto& b){ return strcmp(a.name, b.name) < 0; });
 		for (auto _constant2 : vec2) {
-			add(tblstr{ _constant2.name }, tbltype_theme_constant{ ptr, _constant2 });
+			add(_constant2, tbltype_theme_constant{ ptr, _constant2 });
 		}
 		std::vector<UIFont::font_type_t> vec3 = UIFont::getAllConstants();
 		std::sort(vec3.begin(), vec3.end(), [](auto& a, auto& b){ return strcmp(a.name, b.name) < 0; });
@@ -1003,24 +1033,6 @@ public:
 			c->render(vg);
 			nvgRestore(vg);
 		}
-		//int colorIdx = 0;
-		//auto renderDebugF = [](NVGcontext* vg, guibase* gui, NVGcolor color) {
-		//	nvgBeginPath(vg);
-		//	nvgRect(vg, gui->pos.x, gui->pos.y, gui->size.x, gui->size.y);
-		//	nvgFillColor(vg, color);
-		//	nvgFill(vg);
-		//};
-		//static NVGcolor dbgcolorsa[5] = {
-		//	nvgRGBA(255, 0, 0, 55),
-		//	nvgRGBA(0, 255, 0, 55),
-		//	nvgRGBA(0, 0, 255, 55),
-		//	nvgRGBA(255, 0, 255, 55),
-		//	nvgRGBA(255, 255, 0, 55)
-		//};
-
-		//for (guibase* g : guis) {
-		//	//renderDebugF(vg, g, dbgcolorsa[colorIdx++ % 5]);
-		//}
 	}
 	virtual void buttonClicked(guibase* button) {
 		if (button == &buttonAdd) {

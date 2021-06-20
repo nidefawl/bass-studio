@@ -5,6 +5,39 @@
 /**********************************************/
 /*                Recent ideas                */
 /**********************************************/
+
+Make startup.cpp only compile into daw-application
+Add a button to open daw init script
+
+Add scriptable textboxes: Allow me to fill textboxes with a javascript 
+Add scriptable selection range
+Add scriptable start stop
+Add scriptable exporting
+Add scriptable settings ?
+Make javascript triggerable by midi, keyboard, mouse, external command (http?)
+
+Allow sonogram to be used in a mouse over popup window (not working)
+Tool to auto process samples: run samples thru specific vst preset, run samples thru my effect chains (that I extract from ableton projects)
+Duplicate _muted_ for tracks/plugins/etc
+Duplicate frozen track to flattened audio skipping the creation of plugin chain
+More specific undo, proper undo history, ability to configure it, disable it. 
+Show inactive automation in a list
+
+Alternative VST2 management:
+ - Show all *.dll files instead of using a vst scanner
+ - Cache results for shell plugins maybe
+ 
+ 
+Implement a drum seq into the timeline:
+ - editing must be possible without requiring context change
+ - samples should be sequenceable within the trackcontents
+ - placed events shall be shown as waveform as if it was a wave sample on an audio track
+ - there is a backing midi track having the notes and note editor accessible
+ - have them freely place in time, like midi clips
+ - a on/off alternative grid with 1/8th raster, [x][ ][ ][ ][x][ ][ ][ ]
+
+
+ 
 track_t::projectIdx should be constant (UID): when restoring track contents using trackstate_t the resolution of tracks should be done using the UID for robustness reasons
 
 Performance: reduce sizeof(clip_t)
@@ -28,19 +61,26 @@ track editor vertical drag-move zooming like note-editor
 select all deactivated notes
 consider handling context menu ownership with shared_ptrs. I may require to use shared from this to solve issues with call close-context-menu from click handlers
 scrubbing with beat sync
-add vertical plugin list in mix view
+add vertical plugin chain in mix view (like cubase mixer)
 /**********************************************/
 /*                   Bugs                     */
 /**********************************************/
+while having a selection with no time range, sitting on subtrack 0 of a midi track (first automation lane, just having a cursor sitting in an automation lane):
+ if the track is dragged onto another track to put it as child the program will assert in subtrack range check with out of bounds 
+ see screenshot 02.05.2021 22:58
+
+Melda mpowersynth doesn't store fucking presets even after fixing the shit with olga vst (loading param values after plugin binary blob)
+mpowersynth does not load presets from converted projects
+volume shaper does not run in debug and fucks up debug sessions
+mpowersynth is blocking the main window render refresh timer if in foreground (have project with 1 track mpowersynth, playing, have plugin window active in foreground, look playhead position, fps is not constant, window refreshs are not triggered reliably)
 automation lanes are read in stopped mode 
 clip loop gets notes stuck
 status bar does not show text
 clipsettings labels overlap input fields
 ALT key sometimes stuck, wonderful
-mousewheel scrolling on noteeditor not working
 ALT key to disable grid is not allowing note-resize below grid size
 notes border rendering not respecting z-order when note rectangles overlap
-
+MainCtrl::getPlayThread() is bad interface for no-GUI headless applications
 
 Add lists/tables for debugging:
 - all loaded plugins (done: list view showing type as icon, name and cpu usage)
@@ -57,6 +97,7 @@ refactor into namespaces
 all interface types must have suffix _i instead of 
 make _t and no-_t type names consistent
 unit tests
+Fix visibility of fields of all classes
 
 /**********************************************/
 /*              TODO (high priority)          */
@@ -136,3 +177,4 @@ implemented tooltips for object inspection (using template class)
 duplicate plugin/plugin groups
 Sends/Return tracks
 UI settings for internal/external samplerate/blocksize settings
+mousewheel scrolling on noteeditor not working

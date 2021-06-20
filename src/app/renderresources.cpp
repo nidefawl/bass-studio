@@ -51,14 +51,15 @@ namespace RenderResources {
 			try {
 				if (ReadImage(path, out) < 0) {
 					my_printf("Error loading image %s\n", StringAsCStr(path));
-				} else {
-	//				my_printf("%s loaded: %dx%d %d-channel, bufsize: %d\n", StringAsCStr(path), out.w, out.h, out.bitdepth, out.bytes.size());
+				}
+				else {
+					//				my_printf("%s loaded: %dx%d %d-channel, bufsize: %d\n", StringAsCStr(path), out.w, out.h, out.bitdepth, out.bytes.size());
 				}
 			} catch (appexception& e) {
 				getGlobalLogger()->logStr(StringFormat("Exception: %s\n", e.what()));
 			}
 		}
-	}
+    }
 	void initResources(NVGcontext* vg) {
 		{
 			ImageBuf imgIconsBuf[NUM_IMGS];
@@ -91,6 +92,8 @@ namespace RenderResources {
 			load(vg, StringFormat("res/led_glow.png"), imgIconsBuf[IMG_LED_GLOW]);
 			load(vg, StringFormat("res/icons/speaker.png"), imgIconsBuf[ICON_SPEAKER]);
 			load(vg, StringFormat("res/icons/x.png"), imgIconsBuf[ICON_X]);
+			load(vg, StringFormat("res/icons/daw_icon.png"), imgIconsBuf[ICON_DAW_EXE]);
+
 			for (int i = 0; i < NUM_IMGS; i++) {
 				ImageBuf& buf = imgIconsBuf[i];
 				if (buf.w*buf.h == 0) {
@@ -113,8 +116,8 @@ namespace RenderResources {
 		{
 			NvgFonts fonts;
 			std::vector<FileFound> files;
-			findFilesWithExt(toCWDPath("res/fonts/gui/"), "ttf", false, files);
-			findFilesWithExt(toCWDPath("res/fonts/gui/"), "otf", false, files);
+			findFilesWithExt(toResourcePath("res/fonts/gui/"), "ttf", false, files);
+			findFilesWithExt(toResourcePath("res/fonts/gui/"), "otf", false, files);
 			if (files.empty()) {
 				throw appexception("Please install ttf fonts to res/fonts/gui");
 			}
@@ -134,7 +137,7 @@ namespace RenderResources {
 				String fntKey = StringFormat("font%d", i);
 				log_printf("loading font %s %s\n", StringAsCStr(fntKey), StringAsCStr(lf.font.path));
 				if (i == 0) {
-					lf.nvgId = nvgCreateFont(vg, StringAsCStr(fntKey), StringAsCStr(toCWDPath(files[i].path)));
+					lf.nvgId = nvgCreateFont(vg, StringAsCStr(fntKey), StringAsCStr(toResourcePath(files[i].path)));
 				} else {
 					lf.nvgId = -999;
 				}

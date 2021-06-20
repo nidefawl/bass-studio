@@ -4,6 +4,7 @@
 #include <cmath>
 #include <list>
 #include <deque>
+#include <map>
 #include "assert_dbg.h"
 #include "exceptions.h"
 #include "seq_time.h"
@@ -569,6 +570,10 @@ struct project_layout_t {
 	layout_grid_t layoutGrid;
 	float scrollOffsetX;
 };
+struct graph_node_layout_t {
+	ivec2 pos;
+	ivec2 size;
+};
 class project_t {
 public:
 	trackallcontainer_t trackList;
@@ -578,6 +583,7 @@ public:
 	trackbasecontainer_t& tracksBottom;
 	trackcontainer_tracktype_t* const *trackTypeCtrs;
 	const std::array<trackcontainer_tracktype_t*,3>& trackTypeUniqueCtrs;
+	std::map<int32_t, graph_node_layout_t> graphLayouts;
 	project_t() :
 		trackList(),
 		trackMidiAudioCtr(trackList.trackMidiAudioCtr),

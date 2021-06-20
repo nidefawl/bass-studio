@@ -382,7 +382,11 @@ ivec2 vst_window::getContentSize ()
 
 
 void vst_window::captureWindowFrame() {
-
+	capturedFrame.w = 0;
+	capturedFrame.h = 0;
+	capturedFrame.bytes.clear();
+//	window->captureWindowFrame();
+//	auto& frame = window->capturedFrame;
 	captureWindow(hwnd, capturedFrame);
 
 }

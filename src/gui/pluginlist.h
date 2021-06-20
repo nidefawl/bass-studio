@@ -31,10 +31,10 @@ public:
 		icon = _entry.isSynth ? ICON_SYNTH : ICON_EFFECT;
 	}
 	void dragMoveOn(guibase* target, ivec2 mousepos) override {
-		target->pluginEntryDragMove(this, mousepos);
+		target->pluginEntryDragMove(this, toControlsObjectSpace(mousepos, target));
 	}
 	void dragReleaseOn(guibase* target, ivec2 mousepos) override {
-		target->pluginEntryDragRelease(this, mousepos);
+		target->pluginEntryDragRelease(this, toControlsObjectSpace(mousepos, target));
 	}
 	String getText() override {
 		return entry.name;
@@ -116,10 +116,10 @@ public:
 		icon = _entry.isSynth ? ICON_SYNTH : ICON_EFFECT;
 	}
 	void dragMoveOn(guibase* target, ivec2 mousepos) override {
-		target->pluginEntryDragMove(this, mousepos);
+		target->pluginEntryDragMove(this, toControlsObjectSpace(mousepos, target));
 	}
 	void dragReleaseOn(guibase* target, ivec2 mousepos) override {
-		target->pluginEntryDragRelease(this, mousepos);
+		target->pluginEntryDragRelease(this, toControlsObjectSpace(mousepos, target));
 	}
 	String getText() override {
 		return entry.name;
@@ -140,6 +140,7 @@ public:
 		setBackgroundRendered(true);
 		effectEntries.push_back(module_desc_t{PLUGIN_TYPE_EMPTY, 0, "Empty", false});
 		effectEntries.push_back(module_desc_t{PLUGIN_TYPE_GROUP, 0, "Group", false});
+		effectEntries.push_back(module_desc_t{PLUGIN_TYPE_GAIN, 0, "Gain", false});
 		auto host = vsthost::getInstance();
 		if (host) {
 			std::vector<builtin_module_reg_t>& vecReg = host->getBuiltinModuleRegistry();

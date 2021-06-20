@@ -1,6 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include <memory>
+#include <array>
 #include "config.h"
 #include "samplerate.h"
 #include "str_util.h"
@@ -13,6 +14,10 @@
 #include "audio_config.h"
 #include "appsettings.h"
 
+namespace AudioIO {
+extern std::array<uint32_t, 4> ExtSamplerates;
+extern std::array<uint32_t, 4> IntSamplerates;
+}
 
 typedef void PaStream;
 class audiohost {

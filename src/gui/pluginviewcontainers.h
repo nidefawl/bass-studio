@@ -3,11 +3,14 @@
 #include <stdint.h>
 #include "gui.h"
 #include "guicontainer.h"
+#include "logging.h"
 class AudioEffect;
 class vstplugin;
 class PluginViewContainers {
+	bool inUse = true;
 public:
 	virtual ~PluginViewContainers() {
+		log_printf("delete viewcontainers %012X\n", reinterpret_cast<uint64_t>(this));
 	}
 	 //all are called from host side
 	virtual void setVSTPlugin(vstplugin* hostsideplugin) = 0;
@@ -17,5 +20,13 @@ public:
 	virtual void layout(int32_t winW, int32_t winH) = 0;
 	virtual void onSetParameter(int32_t index, float value) = 0;
 	virtual void getFixedSize(int32_t* w, int32_t* h) = 0;
-
+	void setFree() {
+		inUse = false;
+	}
+	void setUsed() {
+		inUse = true;
+	}
+	bool isInUse() const {
+		return inUse;
+	}
 };

@@ -120,6 +120,7 @@ bool vstplugin::updateWindowSize() {
 	}
 	return false;
 }
+
 bool vstplugin::onShow(vst_window* window) {
 	if (this->window == window) {
 		bEditOpen = true;
@@ -203,17 +204,17 @@ void vstplugin::load(vsthost* host) {
 	this->pluginCategory = this->dispatch(effGetPlugCategory);
 	this->isSynth = (handle->aeffect->flags & effFlagsIsSynth) != 0;
 	this->bCanReceiveMidi = this->isSynth || this->dispatch(effCanDo, 0, 0, (void*)PlugCanDos::canDoReceiveVstMidiEvent) > 0;
-    char szBuf[256] = "";
-    szBuf[0] = 0;
-    if (this->dispatch(effGetEffectName, 0, 0, (void*)szBuf) && szBuf[0] != 0) {
-        setProductName(szBuf);
-    }
-    else {
-        szBuf[0] = 0;
-        if (this->dispatch(effGetProductString, 0, 0, (void*)szBuf) && szBuf[0] != 0) {
-            setProductName(szBuf);
-        }
-    }
+//    char szBuf[256] = "";
+//    szBuf[0] = 0;
+//    if (this->dispatch(effGetEffectName, 0, 0, (void*)szBuf) && szBuf[0] != 0) {
+//        setProductName(szBuf);
+//    }
+//    else {
+//        szBuf[0] = 0;
+//        if (this->dispatch(effGetProductString, 0, 0, (void*)szBuf) && szBuf[0] != 0) {
+//            setProductName(szBuf);
+//        }
+//    }
 	VstParameterProperties properties = {};
 
 	char buf[1024];
@@ -294,6 +295,8 @@ void vstplugin::load(vsthost* host) {
 
 
 	this->bIsSetup = true;
+    if (aeffect->numParams)
+		getRegisteredAutomation(65536);
 }
 
 namespace {
@@ -337,17 +340,39 @@ void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin, bool storePluginCh
 	}
 	if (storePluginChunks) {
 		ps.params.reserve(plugin->getNumParameters());
-		plugin->visitParams([&ps](auto& mapEntry) {
-			automatable_param_t& param = mapEntry.second;
+        plugin->visitParams([&ps, plugin](auto& mapEntry) {
+            automatable_param_t& param = mapEntry.second;
 			if (param.inUse) {
 				ps.params.push_back(param_snapshot_t{ param.idx, param.value });
-			}
+            } else {
+            }
 		});
 		storeAutomation(ps.automatedParams, plugin);
+	}
+	if (plugin->programNames.size()) {
+		uint32_t curProgramNr = 0;
+		plugin->getCurrentProgram(curProgramNr);
+		ps.currentProgram = curProgramNr;
 	}
 }
 }
 void vstplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {
+	if (pluginSnapshot.currentProgram != -1 && pluginSnapshot.currentProgram < programNames.size()) {
+		setCurrentProgram(pluginSnapshot.currentProgram);
+	}
+	if ((this->getFlagsVST() & effFlagsProgramChunks) != 0) {
+		if (pluginSnapshot.dataChunk.size() > 0) {
+			auto& localMem = this->handle->dataChunkLocalMemory;
+			localMem = pluginSnapshot.dataChunk;
+			my_printf("Plugin %s: Load data1[%d]\n", StringAsCStr(this->sName), localMem.size());
+//			localMem.resize(localMem.size()*4);
+			this->dispatch(effSetChunk, 0, localMem.size(), (void*)localMem.data());
+		}
+		if (loadPluginPresetWithSnapshot && pluginSnapshot.dataChunk2.size() > 0) {
+			my_printf("Plugin %s: Load data2[%d]\n", StringAsCStr(this->sName), pluginSnapshot.dataChunk2.size());
+			this->dispatch(effSetChunk, 1, pluginSnapshot.dataChunk2.size(), (void*)pluginSnapshot.dataChunk2.data());
+		}
+	}
 }
 void vstplugin::makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) {
 	createSnapshot(ps, this, storePluginChunks);
@@ -365,13 +390,12 @@ guiplugin* vstplugin::makeGui() {
 			dbgassert(pGuiVstPlugin);
 			BasePluginVST2* baseVst2 = dynamic_cast<BasePluginVST2*>(handle->axEffect);
 			dbgassert(baseVst2);
-			PluginViewContainers* viewCtr = baseVst2->createView();
+			auto viewCtr = baseVst2->createView();
 			if (viewCtr) {
 				pGuiVstPlugin->viewCtr = viewCtr;
 				viewCtr->addTo(pGuiVstPlugin->viewCtrs);
 				viewCtr->onGuiOpen(handle->axEffect);
 				viewCtr->setVSTPlugin(this);
-				handle->viewForInternalVst2 = viewCtr;
 			}
 		}
 	}
@@ -385,9 +409,6 @@ vstplugin::~vstplugin() {
 	}
 	if (blockOutputs) {
 		delete blockOutputs;
-	}
-	if (handle->viewForInternalVst2) {
-		delete handle->viewForInternalVst2;
 	}
 	delete handle;
 }
@@ -449,6 +470,9 @@ void vstplugin::setParamValue(int32_t idx, float val, int flags) {
 			} else {
 				onDisable();
 			}
+			if (!(flags & FLG_PAR_UPDATE_INIT)) {
+				param->inUse = true;
+			}
 		}
 	} else {
 		if (param->internalIdx >= 0) {
@@ -470,6 +494,40 @@ void vstplugin::postSetParameter(int32_t idx, float preVal, float val, int flags
 	parameter_ref_t p = {track->projectIdx,  ref.type, this->projectGlobalId, idx};
 	DawInstance::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
 }
+
+
+bool vstplugin::setCurrentProgram(uint32_t idx) {
+	if (idx < this->programNames.size()) {
+		return dispatch(effSetProgram, 0, idx, 0, 0) > 0;
+	}
+	return false;
+}
+bool vstplugin::getCurrentProgram(uint32_t& idx) {
+	long curProgram = dispatch(effGetProgram, 0, 0, 0, 0);
+	dbgassert(curProgram >= 0);
+	idx = (uint32_t)curProgram;
+	return true;
+}
+bool vstplugin::getNumberOfPrograms(uint32_t& numPrograms) {
+    numPrograms = this->programNames.size();
+	return true;
+}
+bool vstplugin::getCurrentProgramName(String& out) {
+	char buf[1024];
+	memset(buf, 0, sizeof(buf));
+	dispatch(effGetProgramName, 0, 0, buf, 0);
+	if (buf[0]) {
+		out = String(buf);
+		return true;
+	}
+	long curProgram = dispatch(effGetProgram, 0, 0, 0, 0);
+	if (curProgram >= 0 && curProgram < programNames.size()) {
+		out = programNames[curProgram];
+		return true;
+	}
+	return "";
+}
+
 void vstplugin::recvPluginEditParamUpdate(int32_t internalIdx) {
 	automatable_param_t* param = getEffectParam(internalIdx);
 	dbgassert(param && param->internalIdx >= 0);

@@ -6,6 +6,8 @@
 #include <vector>
 
 class track_t;
+class effectbase;
+struct audio_stage_t;
 namespace DAW {
 
 /**
@@ -20,7 +22,11 @@ struct track_source_t {
 	audiostageflags_t flags;
 };
 
+enum class track_node_type_t : int32_t {
+	TRACK = 0, AUDIOSTAGE, EFFECT
+};
 struct track_node_t {
+	track_node_type_t type = track_node_type_t::TRACK;
 	audiostageid_i32 stageId = TRACKID_INVALID_I32;
 	std::vector<audiostageid_i32> dependencies;
 	std::vector<track_source_t> pulls;
@@ -31,8 +37,8 @@ struct track_node_t {
 	samplerate_t inputLatency = INVALID_SAMPLE_OFFSET_U32;
 
 	track_node_t() = default;
-	track_node_t(audiostageid_i32 _stageId, samplerate_t _internalLatency)
-	: stageId(_stageId), internalLatency(_internalLatency)
+	track_node_t(track_node_type_t _type, audiostageid_i32 _stageId, samplerate_t _internalLatency)
+	: type(_type), stageId(_stageId), internalLatency(_internalLatency)
 	{
 
 	}
@@ -40,6 +46,8 @@ struct track_node_t {
 struct processing_track_node_t : public track_node_t {
 	processing_track_node_t() = default;
 	track_t* trackOptional = nullptr;
+	effectbase* effectOptional = nullptr;
+	audio_stage_t* stage = nullptr;
 };
 
 //using track_node_ptr = std::unique_ptr<track_node_t>;
@@ -52,7 +60,10 @@ using processing_track_node_ptr = processing_track_node_t*;
 struct track_graph_t {
 	std::vector<track_node_t*> roots; // output nodes (Master, )
 	std::vector<track_node_ptr> nodes;
-	uint64_t maxLatency = 0U;
+    uint64_t maxLatency = 0U;
+    track_graph_t() = default;
+    track_graph_t(const track_graph_t& graph) = delete;
+    track_graph_t& operator=(const track_graph_t& graph) = delete;
 	~track_graph_t() {
 		for (auto ptr : nodes) {
 			delete ptr;
@@ -62,14 +73,14 @@ struct track_graph_t {
 struct processing_graph_t {
 	std::vector<processing_track_node_t*> nodesSolo;
 	std::vector<processing_track_node_t*> nodesFlatOrdered;
-	std::vector<processing_track_node_t*> roots;
-	std::vector<processing_track_node_ptr> nodes;
+	std::vector<processing_track_node_t*> roots; // audio_stage output buffer
+	std::vector<processing_track_node_ptr> nodes; // audio_stage input buffer, effects, audio_stage output buffer
 	std::shared_ptr<track_graph_t> trackGraph;
-	~processing_graph_t() {
-		for (auto ptr : nodes) {
-			delete ptr;
-		}
-	}
+    //int32_t nInvocation = 0;
+	~processing_graph_t();
+    processing_graph_t() = default;
+    processing_graph_t(const processing_graph_t& graph) = delete;
+    processing_graph_t& operator=(const processing_graph_t& graph) = delete;
 };
 
 

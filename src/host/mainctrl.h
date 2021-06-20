@@ -50,7 +50,7 @@ class guiplugin;
 class guictr_test;
 class guictr_tempocontrols;
 class guictr_tracks;
-class guictr_nodes;
+class guictr_nodes_splitview;
 class gui_statusbar;
 class guictr_clipeditor;
 class guictr_clipeditorview;
@@ -220,6 +220,7 @@ struct dawview_layout_t {
 };
 class DawViewContainers {
 public:
+	int indexContent = 0;
 	DawViewContainers() = default;
 	virtual ~DawViewContainers() {
 	}
@@ -267,6 +268,7 @@ class DawInstance : public project_controller_t, public delete_cb {
 	dragdrop_midifile dragdropclip;
 	dragdrop_target_indicator_t dragdropTarget;
 public:
+	std::function<void(DawInstance*, std::shared_ptr<project_file>, int)> cbProjectLoadCompleteCallback;
 	tick_t tickJmpFrom = 0;
 	tick_t tickJmpTo = 0;
 	plugin_selection pluginSel;
@@ -371,9 +373,11 @@ public:
 	void updateClipViews(clip_t* notifyClip, clip_cursor_t cursor);
 	void onTick();
 	void setMainControl(MainCtrl*);
+	MainCtrl* getMainControl();
 	guictr_tracks* getTrackContainer(int idx);
 	void updateGrid();
 	void updateVisibleTrackContents();
+	void onPluginsChanged();
 	void layoutTrackEditors();
 	bool onChildOverlayWindowClose(window_main*);
 private:
@@ -453,6 +457,9 @@ public:
 	virtual void updateVisibleTrackContents() {
 
 	}
+	virtual void onPluginsChanged() {
+
+	}
 	virtual void updateGrid() {
 
 	}
@@ -480,7 +487,8 @@ public:
 
 class MainCtrl : public DawCtrl
 {
-	friend class DawInstance;
+    friend class DawInstance;
+    friend class DawCtrl;
 	DawViewContainersMain* view = NULL;
 	std::array<dawview_layout_t, 10> layouts;
 public:
@@ -508,6 +516,7 @@ public:
 	void showClipEditor();
 	void updateGrid() override;
 	void updateVisibleTrackContents() override;
+	void onPluginsChanged() override;
 	bool processGlobalKeyevent(KeyEvent& event) override;
 	guitrack_editor& getTrackEditor();
 	void addDebug(String s);
@@ -553,6 +562,7 @@ public:
 		return true;
 	}
 	void updateVisibleTrackContents() override;
+	void onPluginsChanged() override;
 	void updateGrid() override;
 	DAW::Cursor& getCursor() override {
 		return cursor;

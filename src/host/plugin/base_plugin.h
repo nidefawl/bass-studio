@@ -33,19 +33,23 @@ class effectbase : public automatable_t {
 #ifndef NDEBUG
 	//helper indicator in gdb.
 	//gdb cannot display std::string when built without clib-debug flag (SLOW)
-	const char* szName = NULL;
+	const char* szName = nullptr;
 #endif
 	int nLoadCalls = 0;
 public:
+	rmsmeterimpl<16000> meterIn;
 	rmsmeterimpl<16000> meter;
 	sampleformat_t format;
-	AudioBlock* blockInputs = NULL; // guaranteed to have at least 2 channels
-	AudioBlock* blockOutputs = NULL; // guaranteed to have at least 2 channels
+	AudioBlock* blockInputs = nullptr; // guaranteed to have at least 2 channels
+	AudioBlock* blockOutputs = nullptr; // guaranteed to have at least 2 channels
 	int32_t pluginType = 0;
 	int32_t projectGlobalId;
 	bool bIsEnabled = false;
 	bool bIsSetup = false;
+	bool bEditOpen = false;
+	bool bCaptureGUI = false;
 	bool bCanReceiveMidi = false;
+	int32_t requestCaptureGUI = 0;
 	bool isSynth = false;
 	String sName;
 	String sProductName;
@@ -55,7 +59,11 @@ public:
 	stats_processing_timings_t procStats;
 	int midiEventsDispatched = 0;
 	std::vector<DAW::channel_ref_t> inputChannels;
-
+protected:
+	vsthost* vstHost = nullptr;
+public:
+	std::vector<String> programNames;
+public:
 	effectbase();
 	effectbase(String _sName, int32_t _pluginType, int32_t _projectGlobalId);
 	virtual ~effectbase();
@@ -80,13 +88,20 @@ public:
 	virtual bool close() = 0;
 	virtual void resume() = 0;
 	virtual void sleep() = 0;
-	virtual void unload(vsthost* host) { dbgassert(nLoadCalls==1); nLoadCalls--; };
+	virtual void unload(vsthost* host);
 	virtual void load(vsthost* host);
 	virtual int32_t getDelay() = 0;
 	virtual String getInfo(std::vector<String>& list) = 0;
 	track_t* getTrack() override;
 	virtual void onTick(double since);
-	virtual void setSampleFormat(sampleformat_t sampleFormat);
+	virtual void setSampleFormat(sampleformat_t sampleFormat) {
+		format = sampleFormat;
+		if (blockInputs && blockInputs->samples != sampleFormat.blockSize)
+			blockInputs->realloc(sampleFormat.blockSize);
+
+		if (blockOutputs && blockOutputs->samples != sampleFormat.blockSize)
+			blockOutputs->realloc(sampleFormat.blockSize);
+	}
 	virtual sampleformat_t getSampleFormat();
 	virtual void getChildAudioStages(std::vector<audio_stage_t*>& targets) {
 
@@ -112,9 +127,23 @@ public:
 	virtual bool isDeferred() {
 		return false;
 	}
+	virtual bool getCurrentProgramName(String& out) {
+		return false;
+	}
+	virtual bool setCurrentProgram(uint32_t index) {
+		return false;
+	}
+	virtual bool getCurrentProgram(uint32_t& index) {
+		return false;
+	}
+	virtual bool getNumberOfPrograms(uint32_t& index) {
+		return false;
+	}
 protected:
 	friend class effect_deferred;
-	effect_deferred* toDeferred();
+public:
+	virtual effect_deferred* toDeferred();
+    virtual String formatDisplayValue(int32_t idx);
 };
 struct effect_deferred_impl;
 class effect_deferred : public effectbase {
@@ -140,11 +169,16 @@ public:
 	void setParamValue(int32_t idx, float val, int flags) override;
 	automationlane_snapshot_t toRef() override;
 	static std::shared_ptr<effect_deferred> fromEffect(effectbase* eff);
-	String getDfrdPluginName();
-	plugin_snapshot_t getSnapshot() const;
+    String getDfrdPluginName();
+    const plugin_snapshot_t& getSnapshotConst() const;
+    plugin_snapshot_t& getSnapshot();
 	void onPreUnload() override;
 	bool isDeferred() override {
 		return true;
+	}
+	void load(vsthost* host) override;
+	bool isBypass() override {
+		return true ;
 	}
 };
 effect_deferred* loadPluginDeferred(const plugin_snapshot_t& snapshot);

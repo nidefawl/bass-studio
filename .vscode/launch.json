@@ -20,7 +20,7 @@
             "request": "launch",
             "program": "/home/michael/run/DAW-Clang-debug",
             "args": [],
-            "preLaunchTask": "Linux make ~/dev/build",
+            "preLaunchTask": "Linux make ~/dev/build2",
             "stopAtEntry": false,
             "cwd": "/home/michael/run/",
             "environment": [],

@@ -125,6 +125,10 @@ void guitooltip<audio_info_t>::layout()  {
 	{
 		table.rows.push_back({{tblstr{"track"}, tblString{ptr->name}}});
 		auto audio = ptr->audio;
+		table.rows.push_back({{tblstr{"stageId"}, tblint{static_cast<int32_t>(ptr->audio->stageId.stageId)}}});
+		table.rows.push_back({{tblstr{"inputStageId"}, tblint{static_cast<int32_t>(ptr->audio->stageId.inputStageId)}}});
+		table.rows.push_back({{tblstr{"outputStageId"}, tblint{static_cast<int32_t>(ptr->audio->stageId.outputStageId)}}});
+		table.rows.push_back({{tblstr{"outputPostStageId"}, tblint{static_cast<int32_t>(ptr->audio->stageId.outputPostStageId)}}});
 		table.rows.push_back({{tblstr{"Latency"}, tblint{(int32_t)audio->getLatency()}}});
 		table.rows.push_back({{tblstr{"delayToPreReturn"}, tblint{audio->latencyInfo.delayToPreReturn}}});
 		table.rows.push_back({{tblstr{"delayToPostReturn"}, tblint{audio->latencyInfo.delayToPostReturn}}});
@@ -1191,10 +1195,10 @@ public:
 		}
 	}
 	void dragMoveOn(guibase* target, ivec2 mousepos) override {
-		target->trackEntryDragMove(this->m_trackentry->content, mousepos);
+		target->trackEntryDragMove(this->m_trackentry->content, toControlsObjectSpace(mousepos, target));
 	}
 	void dragReleaseOn(guibase* target, ivec2 mousepos) override {
-		target->trackEntryDragRelease(this->m_trackentry->content, mousepos);
+		target->trackEntryDragRelease(this->m_trackentry->content, toControlsObjectSpace(mousepos, target));
 	}
 	void handleRightClick(MouseEvent& evt) {
 		parent->handleRightClick(evt);
@@ -1590,16 +1594,19 @@ public:
 			}
 		} else if (_id == 1) {
 			if (tr) {
+				//TODO: generate unique stage ids and assign them to track audio stage and plugin instances
 				track_t* newTrack = DawInstance::get()->createNewTrack(tr->type);
 				String strNewName = StringFormat("%s copy", StringAsCStr(tr->name));
 
 				track_snapshot_t trSnap(tr, true);
+				trSnap.stageIds.inputStageId = -1;
 				*newTrack = trSnap;
 				DawInstance::get()->addTrackImpl(tr->localIdxFlat+1, newTrack, FLG_TRK_CHANGE_USER);
-				trSnap.stageId = static_cast<int32_t>(newTrack->audio->stageId);
+//				trSnap.stageId = static_cast<int32_t>(newTrack->audio->stageId);
 				newTrack->loadSnapshot(trSnap);
 				newTrack->name = makeUniqueTrackName(strNewName);
-
+				//make stuff unique
+				dbgassert(vsthost::getInstance()->validateIds());
 				m_trackentry->parent->layout();
 				DawInstance::get()->updateVisibleTrackContents();
 				track_gui_entry_t* entry;

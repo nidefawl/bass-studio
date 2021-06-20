@@ -356,7 +356,11 @@ void guictr_layout_entry_handle::render(NVGcontext* vg)
     nvgBeginPath(vg);
     //	nvgRoundedRect(vg, pos.x, pos.y, size.x, size.y, 3.0f);
     nvgRect(vg, 0, 0, size.x, size.y);
-    nvgFillColor(vg, theme->getBgStrokeColor(stateFlags));
+    NVGcolor bg = theme->getColor(GuiColor::COL_BASE_BG);
+    if (parentCtr->getGui()->isVisible()) {
+        bg = theme->getColor(GuiColor::COL_BASE_BG_FOCUSED);
+    }
+    nvgFillColor(vg, bg);
     nvgFill(vg);
     //		renderWidgetBorder(vg, fl);
     //		renderButtonLabel(vg, fl);
@@ -604,14 +608,14 @@ void guictr_layout::render(NVGcontext* vg)
 		return;
 	}
 	if (this->id&(1<<16)) {
-		for (auto h : handles) {
+		for (auto& h : handles) {
 			int32_t stateFlags = getStateFlags();
 			nvgBeginPath(vg);
 			nvgRect(vg, h->pos.x, h->pos.y, h->size.x, h->size.y);
 			nvgFillColor(vg, rgbaToNvg(0x7f00ff00));
 			nvgFill(vg);
 		}
-		for (auto e : entries) {
+		for (auto& e : entries) {
 			auto h = e->getGui();
 			if (!h) continue;
 			int32_t stateFlags = getStateFlags();
@@ -757,7 +761,7 @@ bool saveDawViewLayoutSnapshot(dawview_layout_t& snapshot, const String& path) {
 			ar(make_nvp("layout", snapshot));
 		}
 		sstream.flush();
-		writeStringStream(path, sstream);
+		writeStringStream(toCWDPath(path), sstream);
 		return true;
 	}
 	catch (const FileIOException& e)
@@ -775,7 +779,7 @@ std::shared_ptr<dawview_layout_t> loadDawViewLayoutSnapshot(const String& path) 
 	using namespace cereal;
 	try {
 		std::vector<uint8_t> vec;
-		ReadFileVector(path, vec);
+		ReadFileVector(toCWDPath(path), vec);
 		Stringstream sstream(std::string(vec.begin(), vec.end()));
 		std::shared_ptr<dawview_layout_t> snapshot = std::make_shared<dawview_layout_t>();
 		dawview_layout_t& ref = *snapshot.get();

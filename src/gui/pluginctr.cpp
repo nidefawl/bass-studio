@@ -135,11 +135,17 @@ public:
 	        		auto effect = loadPluginDeferred(*pluginSnapshot.get());
 	        		if (effect) {
 	        			vsthost* host = vsthost::getInstance();
-
+	        			effect->projectGlobalId = 0; // generate new id
+                        if (!host->addDeferredEffect(effect)) {
+                            log_printf("Failed loading effect\n", 0);
+                            delete effect;
+                            return;
+                        }
+	                    effect->getSnapshot().projectGlobalId = effect->projectGlobalId;
 	        			stage->deferredEffects.push_back(effect);
-	        			host->addDeferredEffect(effect);
 	        			effect->load(host);
 	        			host->insertNewPlugin(stage, effect, -2); // insert at end
+	        			host->postPluginLoaded(stage, effect);
 	        			dbgassert(effect->trackImpl == stage);
 	        			dbgassert(stage->effects.size());
 	        		}
@@ -180,18 +186,27 @@ void pastePluginClipboard(std::shared_ptr<plugin_clipboard_t>& clipboard, audio_
 	for (const plugin_snapshot_t& pluginSnapshot : clipboard->plugins) {
 		auto effect = loadPluginDeferred(pluginSnapshot);
 		if (effect) {
+			effect->projectGlobalId = 0; // generate new id
 			vsthost* host = vsthost::getInstance();
-
 			stage->deferredEffects.push_back(effect);
-			host->addDeferredEffect(effect);
+            if (!host->addDeferredEffect(effect)) {
+                log_printf("Failed loading effect\n", 0);
+                delete effect;
+                continue;
+            }
+            effect->getSnapshot().projectGlobalId = effect->projectGlobalId;
 			effect->load(host);
-			host->insertNewPlugin(stage, effect, pos++);
+			host->insertNewPlugin(stage, effect, pos);
+			//keep negative values
+            if (pos >= 0)
+                pos++;
 			host->activateDeferred(effect);
 		} else {
 			//TODO: handle
 		}
 	}
 	stage->pluginsChanged();
+	if (DawInstance::get()) DawInstance::get()->onPluginsChanged();
 	MainCtrl::getPluginCtr()->relayout();
 }
 std::shared_ptr<plugin_clipboard_t> copyPluginSelection(plugin_selection& sel) {
@@ -244,6 +259,7 @@ bool handlePluginCtrCommand(action_plugin_ctr action) {
 				auto* actionRemove = new action_remove_modules("Remove plugins", std::move(effects), audioStage->toRef(), slot);
 				DawInstance::get()->pushHist(actionRemove);
 				audioStage->pluginsChanged();
+				if (DawInstance::get()) DawInstance::get()->onPluginsChanged();
 				handledKeyinput = true;
 			}
 			break;
@@ -280,7 +296,8 @@ bool handlePluginCtrCommand(action_plugin_ctr action) {
 		case action_plugin_ctr::PLUGINS_PASTE:
 			if (DawInstance::get()->getPluginClipboard()) {
 				std::shared_ptr<plugin_clipboard_t> clipboard = DawInstance::get()->getPluginClipboard();
-				pastePluginClipboard(clipboard, sel.pluginCtr->stage, selection.back()->getSlot()+1);
+                int pluginPasteSlot = selection.empty() ? -2 : (selection.back()->getSlot() + 1);
+                pastePluginClipboard(clipboard, sel.pluginCtr->stage, pluginPasteSlot);
 				handledKeyinput = true;
 			}
 			break;
@@ -411,7 +428,8 @@ void guictr_plugins::relayout() {
 void guictr_plugins::getEffects(std::vector<effectbase*>& out) {
 	out = this->stage->effects; // copy
 }
-void guictr_plugins::showTrack(audio_stage_t* audio) {
+void guictr_plugins::showTrack(audio_stage_t* audio)
+{
 	removeGuis();
 	this->track = audio ? audio->getTrack() : nullptr;
 	this->stage = audio;
@@ -420,7 +438,7 @@ void guictr_plugins::showTrack(audio_stage_t* audio) {
 		dbgassert(audio->parent || MainCtrl::getPluginCtr() == this);
 		if (!audio->effects.empty()) {
 			for (effectbase* vst : audio->effects) {
-				addGui(vst);
+                addGui(vst);
 			}
 		} else
 			add(&placeholder);
@@ -509,6 +527,7 @@ class action_insert_effect : public action_base {
 				return;
 			}
 			vsthost::getInstance()->insertNewPlugin(stage, effect, dstSlot);
+			vsthost::getInstance()->postPluginLoaded(stage, effect);
 			MainCtrl::getPluginCtr()->relayout();
 			weOwn = false;
 		}
@@ -529,6 +548,7 @@ void guictr_plugins::pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mouse
 		audio_stage_ref_t refdst = stage->toRef();
 		auto* track_action = new action_insert_effect("Insert plugin", effect, refdst, dstSlot);
 		DawInstance::get()->pushHist(track_action);
+		vsthost::getInstance()->postPluginLoaded(stage, effect);
 //	if (res.result == 0 && res.plugin) {
 //		res.plugin->resume();
 //	}
@@ -547,11 +567,11 @@ void guictr_dragged_plugins::handleDraggedMove(MouseEvent& evt) {
 }
 
 void guictr_dragged_plugins::dragMoveOn(guibase* target, ivec2 mousepos) {
-	target->pluginMultiDragMove(this, mousepos);
+	target->pluginMultiDragMove(this, toControlsObjectSpace(mousepos, target));
 }
 
 void guictr_dragged_plugins::dragReleaseOn(guibase* target, ivec2 mousepos) {
-	target->pluginMultiDragRelease(this, mousepos);
+	target->pluginMultiDragRelease(this, toControlsObjectSpace(mousepos, target));
 }
 void guictr_dragged_plugins::renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2 dragOffset) {
 	//		mousepos += dragOffset;
@@ -724,6 +744,7 @@ void removePlugin(effectbase* module) {
 	auto* actionRemove = new action_remove_modules("Remove plugin", std::move(effects), audioStage->toRef(), module->getSlot());
 	DawInstance::get()->pushHist(actionRemove);
 	audioStage->pluginsChanged();
+	if (DawInstance::get()) DawInstance::get()->onPluginsChanged();
 }
 void guictr_plugins::pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mousepos) {
 	// gui_ctr_plugins receiving list of effectbase
@@ -905,8 +926,11 @@ void guictr_plugins::determineSize(glm::ivec2& prefSize) {
 
 	ivec2 sizeInset = prefSize - (paddingTL(padding) + paddingBR(padding));
 	int32_t guiH = sizeInset.y - margin;
-	int32_t titleHeight = ((guiH/8)>>1)<<1;
-	theme->set(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT, titleHeight);
+	int32_t titleHeight = math::min(((320/8)>>1)<<1, ((guiH/8)>>1)<<1);
+    theme->set(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT, titleHeight);
+
+
+
 	int32_t inset = margin / 2;
 	ivec2 gPos(inset * 3, 0);
 	for (guibase* gui : guis) {
@@ -949,6 +973,7 @@ void action_remove_modules::undo(DawInstance *ctrl) {
 	int32_t slot = 0;
 	for (effectbase *eff : effects) {
 		vsthost::getInstance()->insertNewPlugin(stage, eff, dstSlot+slot);
+		vsthost::getInstance()->postPluginLoaded(stage, eff);
 		dbgassert(eff->getSlot() == dstSlot+slot);
 		slot++;
 	}

@@ -167,7 +167,7 @@ public:
 	virtual void setBlockSize (VstInt32 blockSize);
 	VstInt32 processEvents (VstEvents* events) override;	///< Called when new MIDI events come in
 	void processReplacing (float** inputs, float** outputs, VstInt32 sampleFrames) override;
-	PluginViewContainers* createView() override;
+	std::shared_ptr<PluginViewContainers> createView() override;
 
 	virtual void setProgram(VstInt32 program);
 	virtual void setProgramName(char* name);

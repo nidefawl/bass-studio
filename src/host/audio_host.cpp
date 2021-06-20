@@ -15,7 +15,17 @@
 #include <stdint.h>
 #include <memory>
 #include <numeric>
-//#include <memory>
+#include <functional>
+
+
+namespace AudioIO {
+std::array<uint32_t, 4> IntSamplerates = {
+		44100, 48000, 96000, 192000
+};
+std::array<uint32_t, 4> ExtSamplerates = {
+		44100, 48000, 96000, 192000
+};
+}
 
 using namespace AudioIO;
 
@@ -331,13 +341,15 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
 				bool bInputMatches = bAsioMatches || (apiIdxASIO != info->hostApi && cfg.deviceNameInput == info->name);
 				if (bOutputMatches  && info->maxOutputChannels > 0) {
 					deviceIdxSelectedOutput = i;
+					my_printf("deviceIdxSelectedOutput DEVICE[%d] = %s %d IN/%d OUT channels\n", i, info->name, info->maxInputChannels, info->maxOutputChannels);
 					pref = "[x] ";
 				}
 				if (bInputMatches  && info->maxInputChannels > 0) {
 					deviceIdxSelectedInput = i;
+					my_printf("deviceIdxSelectedInput DEVICE[%d] = %s %d IN/%d OUT channels\n", i, info->name, info->maxInputChannels, info->maxOutputChannels);
+
 					pref = "[x] ";
 				}
-				my_printf("%sDEVICE[%d] = %s %d %s channels\n", pref, i, info->name, info->maxInputChannels?info->maxInputChannels:info->maxOutputChannels, info->maxInputChannels ? "input" : "output");
 			}
 
 		}
@@ -358,7 +370,7 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
 	if (deviceIdxSelectedOutput != paNoDevice) {
 		pOutputParams = &outputParams;
 		outputParams.device = deviceIdxSelectedOutput;
-		outputParams.channelCount = devInfo->maxOutputChannels;       /* stereo output */
+		outputParams.channelCount = devInfo->maxOutputChannels;       /* use all channels */
 		outputParams.sampleFormat = paFloat32 | paNonInterleaved; /* 32 bit floating point output */
 		outputParams.suggestedLatency = devInfo->defaultLowOutputLatency;
 		outputParams.hostApiSpecificStreamInfo = NULL;
@@ -371,9 +383,9 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
 	if (devInfoInput) {
 		pInputParams = &inputParams;
 		inputParams.device = deviceIdxSelectedInput;
-		inputParams.channelCount = devInfoInput->maxInputChannels;       /* stereo output */
+		inputParams.channelCount = devInfoInput->maxInputChannels;       /* use all channels */
 		inputParams.sampleFormat = paFloat32 | paNonInterleaved; /* 32 bit floating point output */
-		inputParams.suggestedLatency = devInfoInput->defaultLowOutputLatency;
+		inputParams.suggestedLatency = devInfoInput->defaultLowInputLatency;
 		inputParams.hostApiSpecificStreamInfo = NULL;
 	} else {
 		inputParams.channelCount = 0;
@@ -382,7 +394,10 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
 	my_printf("With %d input channels\n", inputParams.channelCount);
 	int32_t streamId = ++nextStreamId;
 	io_cfg_tracks chCfg;
-	if (channelConfig.isInit) {
+	
+	if (channelConfig.isInit && 
+		getNumChannelsInConfig(channelConfig.input) == inputParams.channelCount &&
+		getNumChannelsInConfig(channelConfig.output) == outputParams.channelCount) {
 		chCfg = channelConfig;
 	} else {
 		int32_t chIdx = 0;
@@ -509,6 +524,12 @@ int32_t getNumChannelsTrackType(tracktype t) {
 	case MULTI_CHANNEL_6:
 		return 6;
 	}
+}
+int32_t getNumChannelsInConfig(const std::vector<io_cfg_channel>& cfg) {
+	int32_t val = std::accumulate(cfg.cbegin(), cfg.cend(), 0, [](int cnt, auto& cfgEntry) {
+		return cnt + getNumChannelsTrackType(cfgEntry.type);
+	});
+	return val;
 }
 //static_assert(getNumChannelsTrackType(AudioIO::tracktype::MULTI_CHANNEL_6) == 6);
 

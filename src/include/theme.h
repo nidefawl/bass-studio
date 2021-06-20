@@ -13,20 +13,12 @@ struct guitheme_t {
 	String name = "";
 	String fileName = "";
 	bool isDefault;
-	NVGcolor colorBg{};
-	NVGcolor colorBgStroke{};
-	NVGcolor colorBgHover{};
-	NVGcolor colorBgPressed{};
-	NVGcolor colorBgFocused{};
-	NVGcolor colorBgDisabled{};
-	NVGcolor colorBgFrameBase{};
-	NVGcolor colorBgFrameOutline{};
-	NVGcolor colorBgFrameHighlight{};
-	NVGcolor colorBgFrameBright{};
 	std::vector<NVGcolor> vecNVGColors;
 	std::unordered_map<int32_t, int32_t> mapColors;
 	std::unordered_map<int32_t, int32_t> mapProperties;
 	std::unordered_map<int32_t, UIFont::font_instance> mapFonts;
+	struct guitheme_override_state_t;
+	guitheme_override_state_t* overrideState = nullptr;
 	guitheme_t();
     guitheme_t(const guitheme_t &) = default;
     ~guitheme_t() = default;
@@ -35,24 +27,12 @@ struct guitheme_t {
 	guitheme_t & operator= (guitheme_t &&) noexcept = default;
 
 	void initTheme();
-	void setTint(uint32_t hex);
-	void setBackgroundColor(uint32_t rgbaint32) {
-		colorBg = rgbaToNvg(rgbaint32);
-	}
-	const NVGcolor getBgColor(int32_t flags);
-	const NVGcolor getBgStrokeColor(int32_t flags);
-	const NVGcolor getFrameColorOutline() {
-		return this->colorBgFrameOutline;
-	}
-	const NVGcolor getFrameColorBase() const {
-		return this->colorBgFrameBase;
-	}
-	const NVGcolor getFrameColorHighlight() const {
-		return this->colorBgFrameHighlight;
-	}
-	const NVGcolor getFrameColorBright() const {
-		return this->colorBgFrameBright;
-	}
+	NVGcolor getBgColor(int32_t flags) const;
+	NVGcolor getBgStrokeColor(int32_t flags) const;
+	NVGcolor getFrameColorOutline() const;
+	NVGcolor getFrameColorBase() const;
+	NVGcolor getFrameColorHighlight() const;
+	NVGcolor getFrameColorBright() const;
 	NVGcolor& getColorRef(GuiColor::constant_t _constant);
 	NVGcolor getColor(GuiColor::constant_t _constant) const;
 	NVGcolor getContrastColor(GuiColor::constant_t _constant) const;
@@ -64,4 +44,8 @@ struct guitheme_t {
 	int32_t get(GuiConstant::constant_t _constant);
 	float getFloat(GuiConstant::constant_t _constant);
 	void set(GuiConstant::constant_t _constant, int32_t _newValue);
+	void updateAnimation();
+	void pingConstant(GuiColor::constant_t _constant);
+	void pingConstant(GuiConstant::constant_t);
+	void endPing();
 };

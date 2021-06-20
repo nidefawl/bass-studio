@@ -32,9 +32,10 @@ class AudioEffect;
 //
 //};
 class PluginViewContainersImpl : public PluginViewContainers {
+protected:
+	uint32_t width;
+	uint32_t height;
 public:
-	const int width;
-	const int height;
 	PluginViewContainersImpl(int _width, int _height) : width(_width), height(_height) {
 	}
 	virtual ~PluginViewContainersImpl() {
@@ -42,6 +43,6 @@ public:
 };
 
 extern "C" {
-DAW_PLUGINAPI PluginViewContainers* createView();
+//DAW_PLUGINAPI std::shared_ptr<PluginViewContainers> createView();
 }
 
