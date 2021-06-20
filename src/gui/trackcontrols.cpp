@@ -1154,22 +1154,7 @@ public:
 				m_trackentry->parent->addAutomationLane(m_trackentry, autom, param, true);
 			}
 		}
-		m_trackentry->parent->layout();
-		m_trackentry->parent->updateVisibleTrackContents();
-//		guictxtmenu_base *popup = NULL;
-//		if (button == &automationSelectDevice) {
-//			popup = new guidropdown_popup(m_track, automationSelectDevice);
-//		}
-//		if (button == &automationSelectParam) {
-//			popup = new guidropdown_popup2(automationSelectParam);
-//			popup->add(new ctxtmenu_entry("asdf", 0));
-//			popup->add(new ctxtmenu_splitter());
-//		}
-//		if (popup) {
-//			popup->layout();
-//			popup->size.x = button->size.x-2;
-//			MainCtrl::get()->openContextMenu(popup, button->toScreenSpace(ivec2(0, button->size.y))-popup->pos+ivec2(1));
-//		}
+		m_trackentry->parent->relayout();
 	}
 	void render(NVGcontext* vg) {
 		if (!setScissorTransform(vg)) {
