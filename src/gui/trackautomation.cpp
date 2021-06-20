@@ -105,10 +105,14 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 		dragged = hitTest(local);
 		if (dragged.mode != dragmode::drag_node && cursor.containsSubtrack(this->m_trackentry->idx, this->idx, tickAt)) {
 			int32_t steps = at->getQuantizationSteps(param);
-			addPointAt(data.points, cursor.getTickBegin(), steps);
-			int32_t idx = addPointAt(data.points, cursor.getTickBegin(), steps);
-			int32_t idx2 = addPointAt(data.points, cursor.getTickEnd(), steps);
-			addPointAt(data.points, cursor.getTickEnd(), steps);
+			float fInitialVal = 0.5f;
+			if (at) {
+				fInitialVal = math::min(1.0f, math::max(0.0f, at->quantizeVal(param, getDstVal())));
+			}
+			addPointAt(data.points, cursor.getTickBegin(), steps, fInitialVal);
+			int32_t idx = addPointAt(data.points, cursor.getTickBegin(), steps, fInitialVal);
+			int32_t idx2 = addPointAt(data.points, cursor.getTickEnd(), steps, fInitialVal);
+			addPointAt(data.points, cursor.getTickEnd(), steps, fInitialVal);
 //			updateVisibleTrackContents(view->grid);
 			DawInstance::get()->updateVisibleTrackContents();
 			dragged = hitTest(local);

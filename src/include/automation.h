@@ -294,7 +294,7 @@ public:
 void loadAutomation(const std::vector<automation_view_t>& automatedParams, automatable_t* at);
 void storeAutomation(std::vector<automation_view_t>& automatedParams, automatable_t* at);
 int32_t indexOfTick(const std::vector<automation_point_t>& dataPoints, tick_t tick);
-int32_t addPointAt(std::vector<automation_point_t>& dataPoints, tick_t tick, int32_t quantizationSteps);
+int32_t addPointAt(std::vector<automation_point_t>& dataPoints, tick_t tick, int32_t quantizationSteps, float fInitialVal);
 void simplifyData(std::vector<automation_point_t>& data);
 
 class vsthost;

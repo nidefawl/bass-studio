@@ -12,7 +12,7 @@ int32_t indexOfTick(const std::vector<automation_point_t>& dataPoints, tick_t ti
 	}
 	return idx;
 }
-int32_t addPointAt(std::vector<automation_point_t>& dataPoints, tick_t tick, int32_t quantizationSteps) {
+int32_t addPointAt(std::vector<automation_point_t>& dataPoints, tick_t tick, int32_t quantizationSteps, float fInitialVal) {
 	int32_t idx;
 	for (idx = 0; idx < (int)dataPoints.size(); idx++) {
 		automation_point_t& pt = dataPoints[idx];
@@ -45,7 +45,7 @@ int32_t addPointAt(std::vector<automation_point_t>& dataPoints, tick_t tick, int
 		dataPoints.insert(dataPoints.begin() + idx, { tick, v });
 		return idx;
 	} else {
-		dataPoints.insert(dataPoints.begin(), { tick, 0 });
+		dataPoints.insert(dataPoints.begin(), { tick, fInitialVal });
 	}
 	return 0;
 }
