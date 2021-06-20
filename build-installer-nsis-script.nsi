@@ -5,12 +5,12 @@
 ############################################################################################
 Unicode True
 
-!define APP_VERSION "0.4.1"
+!define VERSION "00.04.03.01"
+!define APP_VERSION "0.4.3"
 !define APP_SHORTNAME "daw"
 !define APP_NAME "${APP_SHORTNAME}-${APP_VERSION}"
 !define COMP_NAME "Hept"
 !define WEB_SITE "tbd"
-!define VERSION "00.04.01.02"
 !define COPYRIGHT "Michael Hept © 2021"
 !define DESCRIPTION "DAW"
 !define LICENSE_TXT "C:\Users\Michael\daw\run\res\installer\license_en.rtf"
