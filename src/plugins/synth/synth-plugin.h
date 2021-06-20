@@ -1,11 +1,11 @@
 #pragma once
 #include <vector>
+#include <array>
 #include <cmath>
 #include "../plugin-base.h"
 #include "../plugin-base.h"
 #include "vstsdk-plugin-2.4/audioeffectx.h"
 #include "threads.h"
-
 
 namespace PluginSynth {
 
@@ -14,7 +14,7 @@ class PluginVST2_Synth;
 enum
 {
 	// Global
-	kNumPrograms = 0, // wonder if that works
+	kNumPrograms = 4, // wonder if that works
 	kNumOutputs = 2,
 	kNumInputs = 2,
 };
@@ -99,9 +99,9 @@ public:
 	double targetMasterVolume = 0.0;
 	double masterVolume = 0.0;
 };
-class ProgramParameters {
+class SynthProgramParameters {
 public:
-	~ProgramParameters() = default;
+	~SynthProgramParameters() = default;
 protected:
 	double Osc1Wave = 0.0;
 	double Osc1Coarse = 0.0;
@@ -142,12 +142,12 @@ protected:
 	double GlideLength = 0.0;
 	double MasterVolume = 0.0;
 };
-class Program : public ProgramParameters
+class SynthProgram : public SynthProgramParameters
 {
 	friend class PluginVST2_Synth;
 public:
-	Program();
-	~Program() {}
+	SynthProgram();
+	~SynthProgram() {}
 
 private:
 	char name[kVstMaxProgNameLen+1];
@@ -160,7 +160,9 @@ public:
 	using ThreadLock = std::lock_guard<std::recursive_mutex>;
 	PluginVST2_Synth (audioMasterCallback audioMaster);
 	~PluginVST2_Synth ();
-
+	void initPrograms();
+	void writeCurrentProgram();
+	void setFromSynthProgram(SynthProgram* program);
 	virtual void setSampleRate (float sampleRate);
 	virtual void setBlockSize (VstInt32 blockSize);
 	VstInt32 processEvents (VstEvents* events) override;	///< Called when new MIDI events come in
@@ -200,6 +202,7 @@ public:
 	}
 private:
 	std::vector<SynthParamBase*> vecParams;
+	std::array<SynthProgram, kNumPrograms> staticPrograms;
 	SynthImpl* impl;
 	std::recursive_mutex mutex;
 };

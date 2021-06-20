@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <stdio.h>
 #include <vector>
+#include <map>
 #include <deque>
 #include <memory>
 #include "config.h"
@@ -1134,6 +1135,15 @@ public:
 		GrayOutControls();
 	}
 };
+void PluginVST2_Synth::initPrograms() {
+	for (SynthProgram& program : staticPrograms) {
+		memset(&program, 0, sizeof(SynthProgram));
+	}
+	auto& prog = staticPrograms[0];
+	prog.FilterCutoff = 1.0f;
+	prog.FilterMode = 1.0;// TODO: add butto to write out presets in source code format so we can add them here
+
+}
 PluginVST2_Synth::PluginVST2_Synth (audioMasterCallback audioMaster)
 	: BasePluginVST2(audioMaster, PLUGIN_UID, kNumPrograms, Parameters::kNumParams, kNumInputs, kNumOutputs)
 {
@@ -1167,7 +1177,7 @@ PluginVST2_Synth::PluginVST2_Synth (audioMasterCallback audioMaster)
 	addFloatParam(Parameters::FilterResonance)->setRange(0.0, 1.0)->setRangedValue(0.0);
 	setParamName(getParam(Parameters::FilterResonance), "Filter Resonance", "Flt Res", "%f");
 	addFloatParam(Parameters::FilterKeyTracking)->setRange(-1.0, 1.0)->setRangedValue(0.0);
-	setParamName(getParam(Parameters::FilterKeyTracking), "Filter Keytrack8ing", "Flt Trk", "%f");
+	setParamName(getParam(Parameters::FilterKeyTracking), "Filter Keytracking", "Flt Trk", "%f");
 
 	addFloatParam(Parameters::FmFine)->setRange(-1.0, 1.0)->setRangedValue(0.0);
 	setParamName(getParam(Parameters::FmFine), "Fm fine", "Fm fine", "%f");
@@ -1247,6 +1257,7 @@ PluginVST2_Synth::PluginVST2_Synth (audioMasterCallback audioMaster)
 	setParamName(getParam(Parameters::FilterMode), "Filter Mode", "Flt Mode", "%d");
 	addEnumParam(Parameters::FmMode)->setStrings(stringsFMMode)->setRangedValue(0);
 	setParamName(getParam(Parameters::FmMode), "Fm Mode", "Fm Mode", "%d");
+	initPrograms();
 	createEditorWindow(static_cast<PluginViewContainersImpl*>(createView()));
 	for (auto param : this->vecParams) {
 		this->impl->OnParamChange(param->enumParam);
@@ -1257,6 +1268,92 @@ PluginVST2_Synth::~PluginVST2_Synth ()
 {
 }
 
+void logParam(const char* szParamName, const float val) {
+	log_printf("%s = %f\n", szParamName, val);
+
+}
+void PluginVST2_Synth::writeCurrentProgram ()
+{
+//	logParam("MasterVolume", getParam(MasterVolume)->getAsFloat());
+	logParam("VoiceMode", getParam(VoiceMode)->getAsFloat());
+	logParam("GlideLength", getParam(GlideLength)->getAsFloat());
+	logParam("FilterMode", getParam(FilterMode)->getAsFloat());
+	logParam("FilterCutoff", getParam(FilterCutoff)->getAsFloat());
+	logParam("FilterResonance", getParam(FilterResonance)->getAsFloat());
+	logParam("FilterKeyTracking", getParam(FilterKeyTracking)->getAsFloat());
+	logParam("VolEnvCutoff", getParam(VolEnvCutoff)->getAsFloat());
+	logParam("ModEnvCutoff", getParam(ModEnvCutoff)->getAsFloat());
+	logParam("OscMix", getParam(OscMix)->getAsFloat());
+	logParam("Osc1Wave", getParam(Osc1Wave)->getAsFloat());
+	logParam("Osc1Coarse", getParam(Osc1Coarse)->getAsFloat());
+	logParam("Osc1Fine", getParam(Osc1Fine)->getAsFloat());
+	logParam("Osc1Split", getParam(Osc1Split)->getAsFloat());
+	logParam("Osc2Wave", getParam(Osc2Wave)->getAsFloat());
+	logParam("Osc2Coarse", getParam(Osc2Coarse)->getAsFloat());
+	logParam("Osc2Fine", getParam(Osc2Fine)->getAsFloat());
+	logParam("Osc2Split", getParam(Osc2Split)->getAsFloat());
+	logParam("LfoAmount", getParam(LfoAmount)->getAsFloat());
+	logParam("LfoFrequency", getParam(LfoFrequency)->getAsFloat());
+	logParam("LfoDelay", getParam(LfoDelay)->getAsFloat());
+	logParam("LfoCutoff", getParam(LfoCutoff)->getAsFloat());
+	logParam("FmMode", getParam(FmMode)->getAsFloat());
+	logParam("FmCoarse", getParam(FmCoarse)->getAsFloat());
+	logParam("FmFine", getParam(FmFine)->getAsFloat());
+	logParam("VolEnvFm", getParam(VolEnvFm)->getAsFloat());
+	logParam("ModEnvFm", getParam(ModEnvFm)->getAsFloat());
+	logParam("LfoFm", getParam(LfoFm)->getAsFloat());
+	logParam("VolEnvA", getParam(VolEnvA)->getAsFloat());
+	logParam("VolEnvD", getParam(VolEnvD)->getAsFloat());
+	logParam("VolEnvS", getParam(VolEnvS)->getAsFloat());
+	logParam("VolEnvR", getParam(VolEnvR)->getAsFloat());
+	logParam("VolEnvV", getParam(VolEnvV)->getAsFloat());
+	logParam("ModEnvA", getParam(ModEnvA)->getAsFloat());
+	logParam("ModEnvD", getParam(ModEnvD)->getAsFloat());
+	logParam("ModEnvS", getParam(ModEnvS)->getAsFloat());
+	logParam("ModEnvR", getParam(ModEnvR)->getAsFloat());
+	logParam("ModEnvV", getParam(ModEnvV)->getAsFloat());
+}
+void PluginVST2_Synth::setFromSynthProgram(SynthProgram* program)
+{
+//	getParam(MasterVolume)->set(program->MasterVolume);
+	getParam(VoiceMode)->set(program->VoiceMode);
+	getParam(GlideLength)->set(program->GlideLength);
+	getParam(FilterMode)->set(program->FilterMode);
+	getParam(FilterCutoff)->set(program->FilterCutoff);
+	getParam(FilterResonance)->set(program->FilterResonance);
+	getParam(FilterKeyTracking)->set(program->FilterKeyTracking);
+	getParam(VolEnvCutoff)->set(program->VolEnvCutoff);
+	getParam(ModEnvCutoff)->set(program->ModEnvCutoff);
+	getParam(OscMix)->set(program->OscMix);
+	getParam(Osc1Wave)->set(program->Osc1Wave);
+	getParam(Osc1Coarse)->set(program->Osc1Coarse);
+	getParam(Osc1Fine)->set(program->Osc1Fine);
+	getParam(Osc1Split)->set(program->Osc1Split);
+	getParam(Osc2Wave)->set(program->Osc2Wave);
+	getParam(Osc2Coarse)->set(program->Osc2Coarse);
+	getParam(Osc2Fine)->set(program->Osc2Fine);
+	getParam(Osc2Split)->set(program->Osc2Split);
+	getParam(LfoAmount)->set(program->LfoAmount);
+	getParam(LfoFrequency)->set(program->LfoFrequency);
+	getParam(LfoDelay)->set(program->LfoDelay);
+	getParam(LfoCutoff)->set(program->LfoCutoff);
+	getParam(FmMode)->set(program->FmMode);
+	getParam(FmCoarse)->set(program->FmCoarse);
+	getParam(FmFine)->set(program->FmFine);
+	getParam(VolEnvFm)->set(program->VolEnvFm);
+	getParam(ModEnvFm)->set(program->ModEnvFm);
+	getParam(LfoFm)->set(program->LfoFm);
+	getParam(VolEnvA)->set(program->VolEnvA);
+	getParam(VolEnvD)->set(program->VolEnvD);
+	getParam(VolEnvS)->set(program->VolEnvS);
+	getParam(VolEnvR)->set(program->VolEnvR);
+	getParam(VolEnvV)->set(program->VolEnvV);
+	getParam(ModEnvA)->set(program->ModEnvA);
+	getParam(ModEnvD)->set(program->ModEnvD);
+	getParam(ModEnvS)->set(program->ModEnvS);
+	getParam(ModEnvR)->set(program->ModEnvR);
+	getParam(ModEnvV)->set(program->ModEnvV);
+}
 SynthParamBase* PluginVST2_Synth::getParam(Parameters enumParam) {
 	if (enumParam >= 0 && enumParam < vecParams.size()) {
 		return vecParams[enumParam];
@@ -1267,21 +1364,28 @@ SynthImpl* PluginVST2_Synth::getSynth() {
 	return this->impl;
 }
 
-void PluginVST2_Synth::setProgram (VstInt32 program)
+void PluginVST2_Synth::setProgram (VstInt32 programIdx)
 {
-	if (program < 0 || program >= kNumPrograms)
+	if (programIdx < 0 || programIdx >= kNumPrograms)
 		return;
-	curProgram = program;
+
+	curProgram = programIdx;
+	log_printf("setprogram %d\n", programIdx);
+	auto& program = this->staticPrograms[programIdx];
+	setFromSynthProgram(&program);
 }
 
 void PluginVST2_Synth::setProgramName (char* name)
 {
+	log_printf("setprogramname %s\n", name);
 }
 
 void PluginVST2_Synth::getProgramName (char* name)
 {
 	if (name)
 		name[0] = 0;
+	String progName = StringFormat("Program %d", this->curProgram);
+	vst_strncpy(name, progName.c_str(), kVstMaxProgNameLen);
 //	if (name != NULL && curProgram >= 0)
 //		vst_strncpy(name, programs[curProgram].name, kVstMaxProgNameLen);
 }
@@ -1343,7 +1447,9 @@ bool PluginVST2_Synth::getProgramNameIndexed (VstInt32 category, VstInt32 index,
 {
 	if (index >= 0 && index < kNumPrograms)
 	{
-		vst_strncpy (text, "Default", kVstMaxProgNameLen);
+//		vst_strncpy (text, "Default", kVstMaxProgNameLen);
+		String progName = StringFormat("Program %d", index);
+		vst_strncpy(text, progName.c_str(), kVstMaxProgNameLen);
 		return true;
 	}
 	return false;
@@ -1438,7 +1544,7 @@ void PluginVST2_Synth::processReplacing(float** inputs, float** outputs, VstInt3
 }
 
 
-Program::Program()
+SynthProgram::SynthProgram()
 {
 	vst_strncpy(name, "Init", kVstMaxProgNameLen);
 }
@@ -1457,6 +1563,7 @@ class guicontainer_plugin_synth : public guictr_base {
 	};
 	std::vector<_synth_gui_param_knob> knobs;
 	guiknob_pluginparam knobParam0;
+	std::map<Parameters, guiknob_pluginparam*> mapKnobs;
 public:
 	guicontainer_plugin_synth()
 	: guictr_base(),
@@ -1612,7 +1719,9 @@ public:
 	}
 	bool handleKeyInput(KeyEvent& event) override {
 		if (event.type != KeyEventType::K_RELEASE) {
-
+			if (event.keyCode == KEY_ENTER) {
+				this->curEffect->writeCurrentProgram();
+			}
 		}
 		return false;
 	}

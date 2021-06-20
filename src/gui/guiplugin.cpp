@@ -868,7 +868,7 @@ void guidropdown_select_program::clicked(int _id) {
 String guidropdownprogram::getString() {
 	char buf[1024];
 	memset(buf, 0, sizeof(buf));
-	if (plugin->dispatch(effGetProgramName, 0, 0, buf, 0) && buf[0]) {
+	if (0 == plugin->dispatch(effGetProgramName, 0, 0, buf, 0) && buf[0]) {
 		return String(buf);
 	}
 	int n = plugin->dispatch(effGetProgram, 0, 0, 0, 0);
