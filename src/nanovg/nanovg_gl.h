@@ -1310,6 +1310,7 @@ else
 		} else {
 			frag->type = NSVG_SHADER_BATCHED_TRI_COLORED;
 			frag->texType = paint->customPar;
+			frag->feather = paint->feather;
 		}
 
 
