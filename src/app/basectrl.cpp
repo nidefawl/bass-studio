@@ -587,42 +587,21 @@ void AppCtrl::closeContextMenu() {
 	}
 }
 void AppCtrl::onChildOverlayWindowClose(window_main* ptr) {
-	//log_printf("close ptr %X, contextWindow %X, this->ctxtmenu %X menuWindows.size() %d\n", (int64_t) ptr, (int64_t) contextWindow, this->ctxtmenu, menuWindows.size());
 
-//	std::vector<String> vecStrStacktrace;
-//	getStackTrace(vecStrStacktrace);
-//	int len = vecStrStacktrace.size();
-//	for (int i = 0; i < len; i++) {
-//		log_printf("%s\n", StringAsCStr(vecStrStacktrace[i]));
-//	}
 	if (ptr == this->contextWindow) {
 		if (this->ctxtmenu) {
-			dbgassert(this->ctxtmenu);
 			this->ctxtmenu->onParentWindowClose();
 			this->ctxtmenu->setControl(nullptr);
-			// ctxtmenu can't be deleted at this point, some point in the call chain may dereference it again
+			/**
+			 * ctxtmenu can't be deleted at this point.
+			 * somewhere in the call chain it might get dereferenced again.
+			 */
+			/* garbage collect context menu in onTick handler */
 			garbageGuis.push_back(this->ctxtmenu);
 			this->ctxtmenu = nullptr;
-			//this->ctxtmenus[this->mainWindow] = nullptr;
 		}
 		return;
 	}
-/*	for (const auto& entry : contextWindows) {
-		if (entry.second == ptr) {
-			dbgassert(ctxtmenus.count(entry.first));
-			guictxtmenu_base* ctxt = ctxtmenus[entry.first];
-			if (ctxt) {
-				dbgassert(ctxt);
-				ctxt->onParentWindowClose();
-				ctxt->setControl(nullptr);
-				// ctxtmenu can't be deleted at this point, some point in the call chain may dereference it again
-				garbageGuis.push_back(ctxt);
-				ctxt = nullptr;
-				ctxtmenus[entry.first] = nullptr;
-			}
-			return;
-		}
-	}*/
 	auto it = std::find_if(menuWindows.begin(), menuWindows.end(), [ptr](const auto& entry) {
 		return entry.wnd == ptr;
 	});
@@ -632,7 +611,7 @@ void AppCtrl::onChildOverlayWindowClose(window_main* ptr) {
 		dbgassert(menuWnd.ctxt);
 		menuWnd.ctxt->onParentWindowClose();
 		menuWnd.ctxt->setControl(nullptr);
-		// ctxtmenu can't be deleted at this point, some point in the call chain may dereference it again
+		/* garbage collect menu in onTick handler */
 		garbageGuis.push_back(menuWnd.ctxt);
 		menuWnd.ctxt = nullptr;
 		return;
