@@ -42,10 +42,10 @@ class window_base;
 
 int32_t WriteFileVector(const String& filename, std::vector<uint8_t>& writebuffer);
 void ReadFileVector(const String& filename, std::vector<uint8_t>& out);
-int64_t ReadFileText(const String& filename, String& out);
+int64_t ReadFileText(const String& filename, String& out, int resourceType = 0);
 int promptUserFilePath(window_base* w, int mode, std::vector<SupportedFileType> fileTypes, String& _out);
 int browseForFolder(String title, String pathStart, String& _out);
-void handleGuiEvents();
+
 size_t GetFileSizeSafe(const String& filename);
 
 inline void writeStringStream(const String& path, Stringstream& sstream) {
@@ -59,6 +59,8 @@ inline bool FileExists( const String &Filename )
 {
     return shareMode( Filename.c_str(), 0 ) == 0;
 }
+
+bool CreateDirectoryIfNotExists( const String &DirPath );
 
 inline int64_t FileSize(const String &fileName)
 {
@@ -139,11 +141,6 @@ inline String FileNameFromPath(String in) {
 	SplitPath(in, NULL, NULL, NULL, &fileName);
 	return fileName;
 }
-
-String toResourcePath(String relPath);
-void setResourcePath(String cwd);
-void setCWDPath(String cwd);
-String toCWDPath(String relPath);
 
 void findFilesWithExt(
 		const String& strPath,

@@ -1,11 +1,4 @@
 #include "themefile.h"
-#include <cereal/cereal.hpp>
-#include <cereal/cereal_optional_nvp.hpp>
-#include <cereal/archives/json.hpp>
-#include <cereal/types/vector.hpp>
-#include <cereal/types/unordered_map.hpp>
-#include <cereal/types/polymorphic.hpp>
-#include <cereal/cereal_optional_nvp.hpp>
 #include "str_util.h"
 #include "color_util.h"
 #include "config.h"
@@ -14,15 +7,26 @@
 #include "guicolors.h"
 #include "msgbox.h"
 #include "renderresources.h"
+#include "assert_dbg.h"
+#include "platform.h"
+
 #include <math.h>
 #include <chrono>
 #include <vector>
 #include <iostream>
 #include <sstream>
 #include <fstream>
-#include "assert_dbg.h"
 #include <algorithm>
 #include <map>
+
+#include <cereal/cereal.hpp>
+#include <cereal/cereal_optional_nvp.hpp>
+#include <cereal/archives/json.hpp>
+#include <cereal/types/vector.hpp>
+#include <cereal/types/unordered_map.hpp>
+#include <cereal/types/polymorphic.hpp>
+#include <cereal/cereal_optional_nvp.hpp>
+
 using namespace std;
 using namespace cereal;
 
@@ -185,7 +189,7 @@ void serialize(Archive & archive, themefile & m)
 themefile loadThemeFile() {
 	Stringstream ss;
 
-	String cwdPathTheme = toCWDPath(THEMEFILE_NAME);
+	String cwdPathTheme = toUserdataPath(THEMEFILE_NAME);
     ifstream file(cwdPathTheme, ifstream::in);
 	if (file) {
 	    ss << file.rdbuf();
@@ -200,7 +204,7 @@ themefile loadThemeFile() {
 	throw std::runtime_error("Failed reading theme file "+cwdPathTheme);
 }
 void saveThemeFile(themefile& _settings) {
-	String cwdPathTheme = toCWDPath(THEMEFILE_NAME);
+	String cwdPathTheme = toUserdataPath(THEMEFILE_NAME);
 	ofstream file;
 	file.exceptions(~ofstream::goodbit);
 	file.open(cwdPathTheme, ofstream::out);

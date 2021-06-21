@@ -307,8 +307,8 @@ public:
 			hasInit = true;
 			NU::SCRIPTING::setGlobalInstance(ctx, DawInstance::get());
 			String srcJS;
-			String contextInitScript = "daw_context_init.js";
-			int64_t ret = ReadFileText(contextInitScript, srcJS);
+			String contextInitScript = "data/daw_context_init.js";
+			int64_t ret = ReadFileText(contextInitScript, srcJS, 1);
 			if (ret > 0) {
 				call_context_t ctxt;
 				String response = eval(srcJS, ctxt);

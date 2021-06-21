@@ -3,6 +3,7 @@
 #include "plugindatabase.h"
 #include "assert_dbg.h"
 #include "fileio.h"
+#include "platform.h"
 #include <vector>
 #include <SQLiteCpp/SQLiteCpp.h>
 #include <SQLiteCpp/VariadicBind.h>
@@ -127,7 +128,7 @@ void plugindatabase_t::query(String q, std::vector<pluginentry_t>& _out) {
 void plugindatabase_t::openDatabase() {
 	revision++;
 	dbgassert(!_M_Impl);
-	String cwdPathDB = toCWDPath("data/plugins.db3");
+	String cwdPathDB = toUserdataPath("data/plugins.db3");
 	_M_Impl = new plugindatabase_t::Impl{cwdPathDB};
 }
 void plugindatabase_t::closeDatabase() {

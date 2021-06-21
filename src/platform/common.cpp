@@ -8,6 +8,29 @@
 #include <mutex>
 #include "str_util.h"
 
+
+String pathResources = ""; // read only app resource directory: C:/program files/daw
+String pathUserdata = ""; // writable app directory: C:/users/user/appdata/daw/
+
+String toResourcePath(String relPath) {
+	return pathResources + relPath;
+}
+String toUserdataPath(String relPath) {
+	return pathUserdata + relPath;
+}
+
+void setResourcePath(String cwd) {
+	if (cwd.length() && (!StrEndsWith(cwd, "/") && !StrEndsWith(cwd, "\\")))
+		cwd += "/";
+	pathResources = cwd;
+}
+void setUserdataPath(String cwd) {
+	if (cwd.length() && (!StrEndsWith(cwd, "/") && !StrEndsWith(cwd, "\\")))
+		cwd += "/";
+	pathUserdata = cwd;
+    CreateDirectoryIfNotExists(pathUserdata);
+}
+
 #define  READALL_OK          0  /* Success */
 #define  READALL_INVALID    -1  /* Invalid parameters */
 #define  READALL_ERROR      -2  /* Stream error */
@@ -88,8 +111,14 @@ int readall(FILE *in, char **dataptr, size_t *sizeptr)
 
     return READALL_OK;
 }
-int64_t ReadFileText(const String& filename, String& out) {
-	const char* fname = StringAsCStr(filename);
+int64_t ReadFileText(const String& filename, String& out, int resourceType) {
+    String fileResPath;
+    if (resourceType == 0) {
+        fileResPath = toResourcePath(filename);
+    } else {
+        fileResPath = toUserdataPath(filename);
+    }
+	const char* fname = StringAsCStr(fileResPath);
 	FILE *fp = fopen(fname, "r");
 	if (!fp) {
 		int err = errno;

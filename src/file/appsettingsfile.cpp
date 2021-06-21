@@ -14,6 +14,7 @@
 #include "msgbox.h"
 #include "host/audio_config.h"
 #include "fileio.h"
+#include "platform.h"
 
 using namespace cereal;
 
@@ -124,7 +125,7 @@ void serialize(Archive & ar, appsettings& settings) {
 
 appsettings loadSettings() {
 	Stringstream ss;
-	String cwdPathSettings = toCWDPath(SETTINGS_NAME);
+	String cwdPathSettings = toUserdataPath(SETTINGS_NAME);
 	ifstream file(cwdPathSettings, ifstream::in);
 	if (file) {
 		ss << file.rdbuf();
@@ -139,7 +140,7 @@ appsettings loadSettings() {
 	throw std::runtime_error("Failed reading application settings file "+cwdPathSettings);
 }
 void saveSettings(appsettings& _settings) {
-	String cwdPathSettings = toCWDPath(SETTINGS_NAME);
+	String cwdPathSettings = toUserdataPath(SETTINGS_NAME);
 	ofstream file;
 	file.exceptions(~ofstream::goodbit);
 	file.open(cwdPathSettings, ofstream::out);

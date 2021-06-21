@@ -11,12 +11,10 @@
 #include <stdexcept>
 #include <stdint.h>
 #include "assert_dbg.h"
+#include "platform.h"
 #include "platform_win.h"
 #include <shlobj.h>
 
-#ifdef _WIN32
-String getCurrentWorkingDirectory();
-#endif
 int64_t ReadImage( const String &Filename, ImageBuf& ref)
 {
 	String path = toResourcePath(Filename);
@@ -32,6 +30,11 @@ int64_t ReadImage( const String &Filename, ImageBuf& ref)
 	ref.bytes.assign(data, data + bufSize);
 	stbi_image_free(data);
 	return bufSize;
+}
+
+bool CreateDirectoryIfNotExists( const String &DirPath )
+{
+	return 0 != CreateDirectoryA(StringAsCStr(DirPath), NULL);
 }
 
 using namespace std;
@@ -317,25 +320,6 @@ FileTimeGetter::~FileTimeGetter() {
 }
 int64_t FileTimeGetter::getWriteTimeI64() {
 	return _M_Impl->getWriteTimeI64();
-}
-String resourcePath = ""; // read only app resource directory: C:/program files/daw
-String toResourcePath(String relPath) {
-	return resourcePath + relPath;
-}
-void setResourcePath(String cwd) {
-	if (cwd.length() && (!StrEndsWith(cwd, "/") && !StrEndsWith(cwd, "\\")))
-		cwd += "/";
-	resourcePath = cwd;
-}
-String cwdPath = ""; // writable app directory: C:/users/user/appdata/daw/
-String toCWDPath(String relPath) {
-	return cwdPath + relPath;
-}
-void setCWDPath(String cwd) {
-	if (cwd.length() && (!StrEndsWith(cwd, "/") && !StrEndsWith(cwd, "\\")))
-		cwd += "/";
-	cwdPath = cwd;
-	CreateDirectoryA(StringAsCStr(cwd), NULL);
 }
 
 IOFile::IOFile(FileImpl* _impl) : impl(_impl) {

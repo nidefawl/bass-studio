@@ -157,7 +157,7 @@ struct AppMouseCursor {
 				dbgassert((int)buf.bytes.size() == buf.w*buf.h * 4);
 			}
 			for (int i = 0; i < 6; i++) {
-				load(StringFormat("res/cursors/cursor%02d.png", i), imgCursors[i]);
+				load(StringFormat("cursors/cursor%02d.png", i), imgCursors[i]);
 			}
 			cursors[0] = NULL;
 			for (int i = 0; i < NUM_CURSORS; i++) {

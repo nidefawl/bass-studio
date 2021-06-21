@@ -13,9 +13,15 @@ void setMinimumResolutionTimer();
 
 void allocConsole();
 void setExceptionHandler();
-bool determineWorkingDirectoryPath(String& path);
+bool determineUserdataPath(String& path);
 String getKeyName(int scancode);
 
 void threadSleep(int millis);
 void logStackTrace();
 void getStackTrace(std::vector<String>& vec);
+
+
+String toResourcePath(String relPath);
+void setResourcePath(String cwd);
+void setUserdataPath(String cwd);
+String toUserdataPath(String relPath);

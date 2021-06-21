@@ -44,6 +44,7 @@ ivec2 toControlsObjectSpace(ivec2& pos, guibase* gui);
 #define BASECTRL_WND_POS_ABSOLUTE 2
 #define BASECTRL_WND_RESIZEABLE 4
 #define BASECTRL_WND_IS_TOPLEVEL_CHILD 8
+#define BASECTRL_WND_IS_DIALOG 16
 
 enum class dock_pos : int32_t { NONE=0, CENTER, LEFT, RIGHT, TOP, BOTTOM, STACK };
 enum class container_layout : int32_t { SOLE, SPLIT_H, SPLIT_V, TABBED };

@@ -991,6 +991,7 @@ public:
 	    //glfwBringWindowToTop(glfw);
 #ifdef _WIN32
 		BringWindowToTop(hwnd);
+		SetActiveWindow(hwnd);
 #else
 	    glfwFocusWindow(glfw);
 #endif
@@ -1294,6 +1295,7 @@ void appwindow_main::createMainWindow(const char* title, int w, int h, appwindow
 		glfwWindowHint(GLFW_DECORATED, GL_FALSE);
 //		glfwWindowHint(GLFW_UTILITY_WINDOW, GL_TRUE);
 		glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER , GL_TRUE);
+		glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER , GL_FALSE);
 	} else {
 		bCanResize = true;
 	}
@@ -1313,10 +1315,11 @@ void appwindow_main::createMainWindow(const char* title, int w, int h, appwindow
 		//glfwSetWindowAttrib(glfw, GLFW_FLOATING, GL_TRUE);
 	}
 	if ((flags&WINDOW_IS_TOPLEVEL_CHILD) && parent) {
-		/* window will always be rendered on top of parent window */
+
+	}
+	if ((flags&WINDOW_IS_DIALOG) && parent) {
 #ifdef _WIN32
-		SetParent(hwnd, parent->getHWND());
-		//SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, (__int3264) (LONG_PTR)parent->getHWND());
+		SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, (__int3264) (LONG_PTR)parent->getHWND());
 #endif
 	}
 	if (flags&WINDOW_BORDERLESS_POPUP) {
@@ -1330,6 +1333,8 @@ void appwindow_main::createMainWindow(const char* title, int w, int h, appwindow
 		SetWindowLong(hwnd, GWL_EXSTYLE, l);
 		SetWindowLong(hwnd, GWL_STYLE, WS_CHILD | WS_CLIPSIBLINGS);
 #endif
+	} else {	
+		glfwSetWindowAttrib(glfw, GLFW_FOCUS_ON_SHOW, 1);
 	}
 //	if (!(flags&WINDOW_IS_MAINWINDOW_SLAVE)) {
 		RenderResources::initResources(nanovgCtxt);
@@ -1505,7 +1510,7 @@ void appwindow::createBaseWindow(const char* title, int w, int h, GLFWwindow* sh
 	initOGL();
 	initContext();
 	ImageBuf imgBufDawIcon;
-	if (ReadImage(StringFormat("res/icons/daw_icon.png"), imgBufDawIcon) > 0) {
+	if (ReadImage(StringFormat("icons/daw_icon.png"), imgBufDawIcon) > 0) {
 		GLFWimage images[1];
 		images[0].width = imgBufDawIcon.w;
 		images[0].height = imgBufDawIcon.h;
@@ -1588,16 +1593,22 @@ int startApplication(int argc, char* argv[]) {
 			argv[i+1] = nullptr;
 		}
 	}
-    setResourcePath(getCurrentWorkingDirectory());
+	String strCurWrkDir = getCurrentWorkingDirectory();
+	if (!FileExists(strCurWrkDir+"/res/")) {
+		strCurWrkDir += "/../res/";
+	} else {
+		strCurWrkDir += "/res/";
+	}
+    setResourcePath(strCurWrkDir);
     String cwdPath = "";
-    if (determineWorkingDirectoryPath(cwdPath)) {
-        setCWDPath(cwdPath+"\\daw\\");
+    if (determineUserdataPath(cwdPath)) {
+        setUserdataPath(cwdPath+"/daw/");
     }
 	//if (!runConsoleMode) {
 	allocConsole();
 	//}
 	String logFileName = "daw.log";
-	openGlobalLog(toCWDPath(logFileName));
+	openGlobalLog(toUserdataPath(logFileName));
 	char* pPath;
 	pPath = getenv("PATH");
 	if (pPath != NULL)
@@ -1654,7 +1665,7 @@ int startApplication(int argc, char* argv[]) {
 #if HAS_JS_CONSOLE
 	JSContext jsContext;
 	String srcJS;
-	int64_t ret = ReadFileText("daw_init.js", srcJS);
+	int64_t ret = ReadFileText("data/daw_init.js", srcJS, 1);
 	if (ret > 0) {
 		call_context_t ctxt;
 		String response = jsContext.eval(srcJS, ctxt);

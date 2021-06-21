@@ -117,7 +117,7 @@ void setMinimumResolutionTimer() {
 }
 
 
-bool determineWorkingDirectoryPath(String& path)
+bool determineUserdataPath(String& path)
 {
     std::vector<wchar_t> localAppData;
     localAppData.resize(512);

@@ -373,7 +373,7 @@ static int runScannerServer(vstscanner_server_options options) {
     	LOG("Update *%s*", StringAsCStr(options.updatePattern));
     }
     try {
-    	String cwdPathDB = toCWDPath("data/plugins.db3");
+    	String cwdPathDB = toUserdataPath("data/plugins.db3");
 		SQLite::Database    db(cwdPathDB, SQLite::OPEN_READWRITE | SQLite::OPEN_CREATE);
         std::cout << "SQLite database file '" << db.getFilename().c_str() << "' opened successfully\n";
 		createTables(db);
@@ -741,11 +741,11 @@ const int timeoutdefault = 120;
 
 int main(int argc, char* argv[]) {
     String cwdPath = "";
-    if (determineWorkingDirectoryPath(cwdPath)) {
-        setCWDPath(cwdPath+"\\daw\\");
+    if (determineUserdataPath(cwdPath)) {
+        setUserdataPath(cwdPath+"/daw/");
     }
 	if (argc <= 1) {
-    	String cwdPathDB = toCWDPath("data/plugins.db3");
+    	String cwdPathDB = toUserdataPath("data/plugins.db3");
 		printf("Daw VST scanner version %s\n\n", BuildInfo::BUILD_BINARY_VERSION);
 		printf("This program can be run in server or client mode.\n");
 		printf("The server starts a client process that loads the VST2 DLL and scans it.\n");

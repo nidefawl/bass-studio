@@ -229,8 +229,8 @@ int runCommandLineHost(int argc, const char* argv[]) {
 	std::set_unexpected(on_unexpected1);
 
     String cwdPath = "";
-    if (determineWorkingDirectoryPath(cwdPath)) {
-        setCWDPath(cwdPath+"\\daw\\");
+    if (determineUserdataPath(cwdPath)) {
+        setUserdataPath(cwdPath+"\\daw\\");
     }
     appsettings settings = loadSettings();
 	String file = getCmdOption(argc, argv, "-f", "");

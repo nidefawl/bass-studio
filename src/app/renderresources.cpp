@@ -5,6 +5,7 @@
 
 #include "str_util.h"
 #include "fileio.h"
+#include "platform.h"
 #include "renderresources.h"
 #include "guifonts.h"
 #include "exceptions.h"
@@ -67,32 +68,32 @@ namespace RenderResources {
 				ImageBuf& buf = imgIconsBuf[i];
 				dbgassert((int)buf.bytes.size() == buf.w*buf.h * 4);
 			}
-			load(vg, StringFormat("res/icons/synth_32px.png"), imgIconsBuf[ICON_SYNTH]);
-			load(vg, StringFormat("res/icons/effect.png"), imgIconsBuf[ICON_EFFECT]);
-			load(vg, StringFormat("res/icons/folder.png"), imgIconsBuf[ICON_FOLDER]);
-			load(vg, StringFormat("res/icons/folder_open.png"), imgIconsBuf[ICON_FOLDER_OPEN]);
-			load(vg, StringFormat("res/icons/file.png"), imgIconsBuf[ICON_FILE]);
-			load(vg, StringFormat("res/icons/save.png"), imgIconsBuf[ICON_SAVE]);
-			load(vg, StringFormat("res/icons/copy.png"), imgIconsBuf[ICON_COPY]);
-			load(vg, StringFormat("res/icons/paste.png"), imgIconsBuf[ICON_PASTE]);
-			load(vg, StringFormat("res/icons/cut.png"), imgIconsBuf[ICON_CUT]);
-			load(vg, StringFormat("res/icons/adjust.png"), imgIconsBuf[ICON_ADJUST]);
-			load(vg, StringFormat("res/icons/close.png"), imgIconsBuf[ICON_CLOSE]);
-			load(vg, StringFormat("res/icons/bypass.png"), imgIconsBuf[ICON_BYPASS]);
-			load(vg, StringFormat("res/icons/loop.png"), imgIconsBuf[ICON_LOOP]);
-			load(vg, StringFormat("res/icons/arr_down.png"), imgIconsBuf[ICON_ARR_DOWN]);
-			load(vg, StringFormat("res/icons/arr_left.png"), imgIconsBuf[ICON_ARR_LEFT]);
-			load(vg, StringFormat("res/icons/arr_right.png"), imgIconsBuf[ICON_ARR_RIGHT]);
-			load(vg, StringFormat("res/icons/arr_up.png"), imgIconsBuf[ICON_ARR_UP]);
-			load(vg, StringFormat("res/icons/plus.png"), imgIconsBuf[ICON_PLUS]);
-			load(vg, StringFormat("res/icons/minus.png"), imgIconsBuf[ICON_MINUS]);
-			load(vg, StringFormat("res/icons/automation.png"), imgIconsBuf[ICON_AUTOMATION]);
-			load(vg, StringFormat("res/led.png"), imgIconsBuf[IMG_LED]);
-			load(vg, StringFormat("res/led_off.png"), imgIconsBuf[IMG_LED_OFF]);
-			load(vg, StringFormat("res/led_glow.png"), imgIconsBuf[IMG_LED_GLOW]);
-			load(vg, StringFormat("res/icons/speaker.png"), imgIconsBuf[ICON_SPEAKER]);
-			load(vg, StringFormat("res/icons/x.png"), imgIconsBuf[ICON_X]);
-			load(vg, StringFormat("res/icons/daw_icon.png"), imgIconsBuf[ICON_DAW_EXE]);
+			load(vg, StringFormat("icons/synth_32px.png"), imgIconsBuf[ICON_SYNTH]);
+			load(vg, StringFormat("icons/effect.png"), imgIconsBuf[ICON_EFFECT]);
+			load(vg, StringFormat("icons/folder.png"), imgIconsBuf[ICON_FOLDER]);
+			load(vg, StringFormat("icons/folder_open.png"), imgIconsBuf[ICON_FOLDER_OPEN]);
+			load(vg, StringFormat("icons/file.png"), imgIconsBuf[ICON_FILE]);
+			load(vg, StringFormat("icons/save.png"), imgIconsBuf[ICON_SAVE]);
+			load(vg, StringFormat("icons/copy.png"), imgIconsBuf[ICON_COPY]);
+			load(vg, StringFormat("icons/paste.png"), imgIconsBuf[ICON_PASTE]);
+			load(vg, StringFormat("icons/cut.png"), imgIconsBuf[ICON_CUT]);
+			load(vg, StringFormat("icons/adjust.png"), imgIconsBuf[ICON_ADJUST]);
+			load(vg, StringFormat("icons/close.png"), imgIconsBuf[ICON_CLOSE]);
+			load(vg, StringFormat("icons/bypass.png"), imgIconsBuf[ICON_BYPASS]);
+			load(vg, StringFormat("icons/loop.png"), imgIconsBuf[ICON_LOOP]);
+			load(vg, StringFormat("icons/arr_down.png"), imgIconsBuf[ICON_ARR_DOWN]);
+			load(vg, StringFormat("icons/arr_left.png"), imgIconsBuf[ICON_ARR_LEFT]);
+			load(vg, StringFormat("icons/arr_right.png"), imgIconsBuf[ICON_ARR_RIGHT]);
+			load(vg, StringFormat("icons/arr_up.png"), imgIconsBuf[ICON_ARR_UP]);
+			load(vg, StringFormat("icons/plus.png"), imgIconsBuf[ICON_PLUS]);
+			load(vg, StringFormat("icons/minus.png"), imgIconsBuf[ICON_MINUS]);
+			load(vg, StringFormat("icons/automation.png"), imgIconsBuf[ICON_AUTOMATION]);
+			load(vg, StringFormat("led.png"), imgIconsBuf[IMG_LED]);
+			load(vg, StringFormat("led_off.png"), imgIconsBuf[IMG_LED_OFF]);
+			load(vg, StringFormat("led_glow.png"), imgIconsBuf[IMG_LED_GLOW]);
+			load(vg, StringFormat("icons/speaker.png"), imgIconsBuf[ICON_SPEAKER]);
+			load(vg, StringFormat("icons/x.png"), imgIconsBuf[ICON_X]);
+			load(vg, StringFormat("icons/daw_icon.png"), imgIconsBuf[ICON_DAW_EXE]);
 
 			for (int i = 0; i < NUM_IMGS; i++) {
 				ImageBuf& buf = imgIconsBuf[i];
@@ -116,10 +117,10 @@ namespace RenderResources {
 		{
 			NvgFonts fonts;
 			std::vector<FileFound> files;
-			findFilesWithExt(toResourcePath("res/fonts/gui/"), "ttf", false, files);
-			findFilesWithExt(toResourcePath("res/fonts/gui/"), "otf", false, files);
+			findFilesWithExt(toResourcePath("fonts/gui/"), "ttf", false, files);
+			findFilesWithExt(toResourcePath("fonts/gui/"), "otf", false, files);
 			if (files.empty()) {
-				throw appexception("Please install ttf fonts to res/fonts/gui");
+				throw appexception("Please install ttf fonts to fonts/gui");
 			}
 			fonts.fontsInstalled.clear();
 			fonts.fontsInstalled.resize(files.size());
@@ -133,11 +134,12 @@ namespace RenderResources {
 			String fntList = "";
 			int loaded = 0;
 			for (int i = 0; i < MAX_FONTS && i < files.size(); i++) {
+				String fontPath = (files[i].path);
 				LoadedFont lf;
 				String fntKey = StringFormat("font%d", i);
-				log_printf("loading font %s %s\n", StringAsCStr(fntKey), StringAsCStr(lf.font.path));
+				log_printf("loading font %s %s\n", StringAsCStr(fntKey), StringAsCStr(fontPath));
 				if (i == 0) {
-					lf.nvgId = nvgCreateFont(vg, StringAsCStr(fntKey), StringAsCStr(toResourcePath(files[i].path)));
+					lf.nvgId = nvgCreateFont(vg, StringAsCStr(fntKey), StringAsCStr(fontPath));
 				} else {
 					lf.nvgId = -999;
 				}
