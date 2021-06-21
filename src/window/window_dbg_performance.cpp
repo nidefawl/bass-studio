@@ -254,9 +254,11 @@ using ImgData = std::shared_ptr<uint8_t>;
 				normalizeData(channel.get());
 			}
 		}
+		texData.resize(texW*texW);
 		memset(texData.data(), 0, sizeof(float)*texData.size());
-		//int i = 0;
-				for (int j = 0; j < texW; ++j) texData[j] = 0.5f;
+		for (int j = 0; j < texW; ++j) {
+			texData[j] = 0.5f;
+		}
 		for (auto& channel : allChannels) {
 			memcpy(&texData[channel->texChannel*texW], channel->valuesNormalized.data(), sizeof(float)*texW);
 			//if (i%2==1) {
@@ -310,7 +312,6 @@ int initDebugWindowPerformance(NVGcontext* vg) {
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
 	checkGLError("glTexImage2D");
-	texData.resize(texW*texW);
 	glBindTexture( GL_TEXTURE_2D, 0);
 
 
