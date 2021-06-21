@@ -522,7 +522,7 @@ void AppCtrl::openAppMenu(int lvl, guictxtmenu_base *b, ivec2 pos) {
 	entry.wnd->getCtrl()->m_scale = m_scale;
 	ivec2 childMenuPos = pos;
 	//TODO: this OS specific handling should be abstracted away into window.cpp 
-#ifndef _WIN32
+#ifdef _WIN32
 	childMenuPos += windowPos;
 #endif
 	static_cast<PopupCtrl*>(entry.wnd->getCtrl())->open(b, childMenuPos, false);
@@ -556,6 +556,9 @@ void AppCtrl::openOverlayGui(guictxtmenu_base *b, ivec2 pos, int flags) {
 	if (flags & BASECTRL_WND_IS_TOPLEVEL_CHILD) {
 		createflags |= WINDOW_IS_TOPLEVEL_CHILD;
 	}
+	if (flags & BASECTRL_WND_IS_DIALOG) {
+		createflags |= WINDOW_IS_DIALOG;
+	}
 	if (!contextWindow || contextWindow->getCreationFlags() != createflags) {
 		if (contextWindow) {
 			this->mainWindow->closeOverlay(contextWindow);
@@ -574,7 +577,7 @@ void AppCtrl::openOverlayGui(guictxtmenu_base *b, ivec2 pos, int flags) {
 }
 void AppCtrl::openDialog(guidialog_base *_guidialog) {
 	int flags = (_guidialog->isDialogResizeable()) ? BASECTRL_WND_RESIZEABLE : 0;
-	flags |= BASECTRL_WND_IS_TOPLEVEL_CHILD;
+	flags |= BASECTRL_WND_IS_DIALOG;
 	openOverlayGui(_guidialog, ivec2(0), flags);
 }
 void AppCtrl::openContextMenu(guictxtmenu_base *b, ivec2 pos, int flags) {
