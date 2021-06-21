@@ -24,8 +24,8 @@ namespace AudioIO {
 		std::vector<io_cfg_channel> input;
 		std::vector<io_cfg_channel> output;
 	};
-	int32_t getNumChannelsTrackType(tracktype t);
-	tracktype getTrackTypeNumChannels(int32_t t);
+	int32_t getNumChannelsFromTrackType(tracktype t);
+	tracktype getTrackTypeFromNumChannels(int32_t t);
 	int32_t getNumChannelsInConfig(const std::vector<io_cfg_channel>& cfg);
 
 	String getTrackNameShort(AudioIO::tracktype type, int32_t index, stagebuffer_point isInput);

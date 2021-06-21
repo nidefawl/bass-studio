@@ -171,8 +171,8 @@ struct resampler_t {
 			auto* ptrBlockResampled = b->block;
 			auto maxCopy = math::min<uint32_t>(resampler.numSamplesResampled-readOffset, blockOut.samples-writeOffset);
 			//b.block->fillNoise(nNoise++);
-			auto srcBlock = ptrBlockResampled->SubBlock(0, ptrBlockResampled->channels, readOffset, maxCopy);
-			blockOut.SubBlock(0, numChannels, writeOffset, maxCopy)
+			auto srcBlock = ptrBlockResampled->SubChannelsSamplesBlock(0, ptrBlockResampled->channels, readOffset, maxCopy);
+			blockOut.SubChannelsSamplesBlock(0, numChannels, writeOffset, maxCopy)
 					.addFromOp(&srcBlock, AudioBlock::mix_op::MIX, 1.0f);
 			readOffset = (readOffset + maxCopy) % ptrBlockResampled->samples;
 			writeOffset += maxCopy;

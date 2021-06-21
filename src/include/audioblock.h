@@ -109,9 +109,13 @@ struct AudioBlock {
 	{
 		return AudioBlock(*this, 0, this->channels, sampleOffset, this->samples - sampleOffset);
 	};
-	AudioBlock SubBlock(const uint32_t channelOffset, const uint32_t numChannels, const uint32_t sampleOffset, const uint32_t numSamples) const
+	AudioBlock SubChannelsSamplesBlock(const uint32_t channelOffset, const uint32_t numChannels, const uint32_t sampleOffset, const uint32_t numSamples) const
 	{
 		return AudioBlock(*this, channelOffset, numChannels, sampleOffset, numSamples);
+	};
+	AudioBlock SubChannelsBlock(const uint32_t channelOffset, const uint32_t numChannels) const
+	{
+		return AudioBlock(*this, channelOffset, numChannels, 0, this->samples);
 	};
 	void clear() {
 		for (uint32_t i = 0; i < channels; i++) {

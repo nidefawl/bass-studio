@@ -20,6 +20,7 @@ class guidialog_settings : public guidialog_base {
 	std::vector<dialog_entry*> entries;
 	dialog_entry* activeEntry = nullptr;
 	guibutton btnClose;
+	void init();
 public:
 	guidialog_settings();
 	guidialog_settings(ivec2 _dialogSize, bool _resizeable = false);

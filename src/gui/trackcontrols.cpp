@@ -324,7 +324,7 @@ public:
 //						if (stream) {
 //
 //							auto& allMeters = isInput ? stream->metersInput : stream->metersOutput;
-//							int32_t nChannels = AudioIO::getNumChannelsTrackType(channel.type);
+//							int32_t nChannels = AudioIO::getNumChannelsFromTrackType(channel.type);
 //							auto rmsMtr = rmsmeter<16000>(allMeters.channels+channel.channelOffset, nChannels);
 //							ivec2 sizeMeter{height-2, height-2};
 //							renderMeterAt(vg, theme, {width-sizeMeter.x+1, y+1}, sizeMeter, &rmsMtr);
@@ -387,7 +387,7 @@ public:
 			if (stream) {
 
 				auto& allMeters = isInput == stagebuffer_point::INPUT ? stream->metersInput : stream->metersOutput;
-				int32_t nChannels = AudioIO::getNumChannelsTrackType(channel.type);
+				int32_t nChannels = AudioIO::getNumChannelsFromTrackType(channel.type);
 				auto rmsMtr = rmsmeter<16000>(allMeters.channels+channel.channelOffset, nChannels);
 				ivec2 sizeMeter{height-2, height-2};
 				renderMeterAt(vg, theme, {width-sizeMeter.x+1, y+1}, sizeMeter, &rmsMtr);

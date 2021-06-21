@@ -456,6 +456,9 @@ VstEvent_t* track_impl_t::reallocEvts(size_t size) {
 samplerate_t audio_stage_t::getLatency() const {
 	return latency;
 }
+samplerate_t audio_stage_t::getGlobalLatency() const {
+	return latencyAbs;
+}
 void audio_stage_t::pluginsChanged() {
 	if (routingState != audiostagerouting_state_t::CUSTOM) {
 		configureDefaultRoutings();

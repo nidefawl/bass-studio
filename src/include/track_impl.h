@@ -118,6 +118,7 @@ struct audio_stage_t {
 	track_params_t mixer;
 	audiotrack_t audioOutput;
 	samplerate_t latency = 0;
+	samplerate_t latencyAbs = 0;
 	int type;
 	sampleformat_t sampleFormat;
 
@@ -169,6 +170,7 @@ struct audio_stage_t {
 	virtual void removePlugin(effectbase* _vst, bool notifyUp);
 	void loadPlugins(const std::vector<plugin_snapshot_t>& trPluginList);
 	samplerate_t getLatency() const;
+	samplerate_t getGlobalLatency() const;
 	void insertEffect(int32_t idx, effectbase* _instrument);
 	bool replaceEffect(int32_t idx, effectbase* _effect, effectbase** _prevEffect);
 	void pluginsChanged();
@@ -231,7 +233,7 @@ inline channel_ref_t ChannelStage(const audio_stage_t* stage, stagebuffer_point 
 	} else {
 		str += " OUT";
 	}
-	return channel_ref_t{channel_input_type::INPUT_AUDIOSTAGE, AudioIO::getTrackTypeNumChannels(stage->input.channels), -1, 0, {stage->toRef(), isInput}, 0, str};
+	return channel_ref_t{channel_input_type::INPUT_AUDIOSTAGE, AudioIO::getTrackTypeFromNumChannels(stage->input.channels), -1, 0, {stage->toRef(), isInput}, 0, str};
 }
 inline channel_ref_t ChannelAudioEffect(effectbase* effect, stagebuffer_point isInput) {
 	dbgassert(effect);
@@ -251,7 +253,7 @@ inline channel_ref_t ChannelAudioEffect(effectbase* effect, stagebuffer_point is
 		str += " OUT";
 		numChannels = effect->blockOutputs ? effect->blockOutputs->channels : 2;
 	}
-	return channel_ref_t{channel_input_type::INPUT_AUDIOSTAGE_EFFECT, AudioIO::getTrackTypeNumChannels(numChannels), -1, 0, {stage->toRef(), isInput}, effect->projectGlobalId, str};
+	return channel_ref_t{channel_input_type::INPUT_AUDIOSTAGE_EFFECT, AudioIO::getTrackTypeFromNumChannels(numChannels), -1, 0, {stage->toRef(), isInput}, effect->projectGlobalId, str};
 }
 }
 struct track_gui_entry_t;

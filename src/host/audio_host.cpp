@@ -175,13 +175,13 @@ audiohost::audiostream::audiostream(int32_t _nStreamId, io_cfg_tracks cfg, int32
 	for (int32_t i = 0; i < cfg.input.size(); i++) {
 		io_cfg_channel& track = cfg.input[i];
 		tracksInput[i] = std::make_shared<audiotrack>(i, track.type, channelOffset, metersInput.channels + channelOffset);
-		channelOffset += getNumChannelsTrackType(track.type);
+		channelOffset += getNumChannelsFromTrackType(track.type);
 	}
 	channelOffset = 0;
 	for (int32_t i = 0; i < cfg.output.size(); i++) {
 		io_cfg_channel& track = cfg.output[i];
 		tracksOutput[i] = std::make_shared<audiotrack>(i, track.type, channelOffset, metersOutput.channels + channelOffset);
-		channelOffset += getNumChannelsTrackType(track.type);
+		channelOffset += getNumChannelsFromTrackType(track.type);
 	}
 }
 audiohost::audiostream::~audiostream() {
@@ -410,7 +410,7 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
 			}
 			channels.name = AudioIO::getTrackName(channels.type, channels.idx, false);
 			channels.channelOffset = i;
-			i += getNumChannelsTrackType(channels.type);
+			i += getNumChannelsFromTrackType(channels.type);
 			chCfg.output.push_back(channels);
 		}
 		chIdx = 0;
@@ -424,7 +424,7 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
 			}
 			channels.name = AudioIO::getTrackName(channels.type, channels.idx, true);
 			channels.channelOffset = i;
-			i += getNumChannelsTrackType(channels.type);
+			i += getNumChannelsFromTrackType(channels.type);
 			chCfg.input.push_back(channels);
 		}
 		chCfg.isInit = true;
@@ -498,7 +498,7 @@ bool audiohost::stopAudio() {
 
 namespace AudioIO {
 
-tracktype getTrackTypeNumChannels(int32_t t) {
+tracktype getTrackTypeFromNumChannels(int32_t t) {
 	if (t < 2)
 		return MONO;
 
@@ -511,7 +511,7 @@ tracktype getTrackTypeNumChannels(int32_t t) {
 	return MULTI_CHANNEL_6;
 }
 
-int32_t getNumChannelsTrackType(tracktype t) {
+int32_t getNumChannelsFromTrackType(tracktype t) {
 	switch (t) {
 	default:
 	case MONO:
@@ -526,11 +526,11 @@ int32_t getNumChannelsTrackType(tracktype t) {
 }
 int32_t getNumChannelsInConfig(const std::vector<io_cfg_channel>& cfg) {
 	int32_t val = std::accumulate(cfg.cbegin(), cfg.cend(), 0, [](int cnt, auto& cfgEntry) {
-		return cnt + getNumChannelsTrackType(cfgEntry.type);
+		return cnt + getNumChannelsFromTrackType(cfgEntry.type);
 	});
 	return val;
 }
-//static_assert(getNumChannelsTrackType(AudioIO::tracktype::MULTI_CHANNEL_6) == 6);
+//static_assert(getNumChannelsFromTrackType(AudioIO::tracktype::MULTI_CHANNEL_6) == 6);
 
 String getTrackNameShort(AudioIO::tracktype type, int32_t index, stagebuffer_point isInput) {
 	String s = StringFormat("%d", index);

@@ -166,7 +166,7 @@ void gui_timeinput::render(NVGcontext* vg) {
 				NULL);
 	}
 }
-
+void updateSrBs();
 void guictr_tempocontrols::buttonClicked(guibase* button) {
 	if (button == &this->btnPlay) {
 		DawInstance::get()->startPlaying();
@@ -181,33 +181,19 @@ void guictr_tempocontrols::buttonClicked(guibase* button) {
 		projectGlobals.loopEnabled = !projectGlobals.loopEnabled;
 	}
 	if (button == &this->btnAudioOnOff) {
-		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-		vsthost* host = vsthost::getInstance();
-		audiohost* ahost = audiohost::getInstance();
-		if (ahost->isStreaming()) {
-			ahost->stopAudio();
-			host->setOutput(nullptr);
-			settings.startEngine = false;
-		} else {
-			settings.startEngine = true;
-		}
-		if (settings.startEngine && ahost->startAudio(settings.iosettings)) {
-			host->setOutput(ahost);
-		} else {
-		}
+		settings.startEngine = !settings.startEngine;
+		updateSrBs();
 	}
 }
 
 
 void guibutton_audioengine::render(NVGcontext* vg) {
-	host_stats_t stats;
-	vsthost::getInstance()->getStats(stats);
-	if (getTimeMillisd() - lastT2 >= 2000.0) {
-		lastT2 = getTimeMillisd();
-	}
-	if (stats.tickBar != lastNumBlocks) {
-		lastT = getTimeMillisd() + 300.0;
-		lastNumBlocks = stats.tickBar;
+	audiohost* ahost = audiohost::getInstance();
+	if (!ahost || !ahost->isStreaming()) {
+		setText("Off");
+	} else {
+		vsthost::getInstance()->getStats(stats);
+		setText(StringFormat("%.0f%%", stats.usage*100.0));
 	}
 	int32_t fl = getStateFlags();
 	renderWidgetBorder(vg, fl);
@@ -216,15 +202,26 @@ void guibutton_audioengine::render(NVGcontext* vg) {
 
 NVGcolor guibutton_audioengine::getBackgroundColor(int stateflags) const {
 	NVGcolor c = theme->getBgColor(stateflags);
-	if (lastT > getTimeMillisd()) {
-		double tFlash = lastT - getTimeMillisd();
+//	lastTickBar = stats.tickBar;
+	auto projCtrl = project_controller_t::get();
+	if (projCtrl) {
+		const auto& globals = projCtrl->getGlobals();
+		const float fBarNumFloor = (int32_t)stats.tickBar / (int32_t)TICKS_BAR;
+		const auto tmConstantBar = 60000.0*100.0/globals.tempo100;
+		const float barProgress = getTimeMillisd() / tmConstantBar;
+		float fMo = fmodf(barProgress, 1.0f);
+		const float fBarTmAbsolute = fBarNumFloor + fMo;
+		double t = sin(fBarTmAbsolute*M_PI*2.0)*0.5+0.5;
+
 		vec4 v { c.r, c.g, c.b, c.a };
 		vec4 v2 = v;
-		v2.r = math::min(1.0, v.r*2.0);
-		v2.b = math::min(1.0, v.b*2.0);
-		float d = (float) (math::clamp(tFlash / 300.0, 0.0, 1.0));
+		v2.r = math::min(1.0, v.r*stats.usageRaw);
+		v2.b = math::min(1.0, v.b*t);
+		float d = (float) (math::clamp(t, 0.0, 1.0));
 		v = v + d * (v2 - v);
 		return NVGcolor { v.x, v.y, v.z, v.w };
 	}
+
+
 	return c;
 }

@@ -177,12 +177,10 @@ public:
 };
 
 class guibutton_audioengine : public guibutton {
-	int32_t lastNumBlocks = 0;
-	double lastT = 0;
-	double lastT2 = 0;
+	int32_t lastTickBar = 0;
+	host_stats_t stats;
 public:
 	guibutton_audioengine() : guibutton() {
-		lastT2 = getTimeMillisd();
 	}
 	bool isEnabled() const override {
 		return vsthost::getInstance()->isStreaming();

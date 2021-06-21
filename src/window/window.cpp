@@ -1183,7 +1183,6 @@ public:
 	}
 };
 window_main* appwindow_main::createOverlay(std::shared_ptr<AppCtrl> ctrl, int flags) {
-//	std::unique_ptr<appwindow_overlay> ow = std::make_unique<appwindow_overlay>(this);
 	String sName = StringFormat("%s.child", this->name);
 	std::shared_ptr<appwindow_main> ow = std::make_shared<appwindow_main>(this, ctrl); //TODO: manage lifetime of control
 

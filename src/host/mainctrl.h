@@ -351,6 +351,7 @@ public:
 	/**
 	 * setAudioThreadState - puts audio thread into requested state - synchronized
 	 * 						 does not return before audio thread is in requested state
+	 *						 Attention: If the calling thread holds the playback thread lock it will result in a deadlock
 	 */
 	void setAudioThreadState(playback_state state);
 	bool isPlaying();

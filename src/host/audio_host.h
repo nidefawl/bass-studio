@@ -25,7 +25,7 @@ public:
 	struct audiostream {
 		struct audiotrack {
 			audiotrack(int32_t _index, AudioIO::tracktype _type, int32_t _channelOffset, runningsum<16000>* sums)
-			: meter(sums, AudioIO::getNumChannelsTrackType(_type)), buf((uint32_t)AudioIO::getNumChannelsTrackType(_type), 0),
+			: meter(sums, AudioIO::getNumChannelsFromTrackType(_type)), buf((uint32_t)AudioIO::getNumChannelsFromTrackType(_type), 0),
 			  index(_index),
 			  channelOffset(_channelOffset),
 			  type(_type) {

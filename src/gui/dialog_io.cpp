@@ -19,6 +19,7 @@
 #include "meter.h"
 #include "gui/guimeter.h"
 #include "threads/childprocessthread.h"
+#include "tempocontrols.h"
 #include <portaudio.h>
 #include <portmidi.h>
 #include <array>
@@ -344,15 +345,22 @@ void updateSrBs() {
 		audiohost* ahost = audiohost::getInstance();
 		ahost->stopAudio();
 		host->setOutput(nullptr);
-		host->setSampleFormat(sampleformat_t{static_cast<samplerate_t>(settings.iosettings.internalSamplerate), settings.iosettings.internalBlocksize, sampleformat_bits_t::FLOAT_32});
-		if (ahost->startAudio(settings.iosettings)) {
-			host->setOutput(ahost);
+		if (settings.startEngine) {
+			host->setSampleFormat(sampleformat_t{static_cast<samplerate_t>(settings.iosettings.internalSamplerate), settings.iosettings.internalBlocksize, sampleformat_bits_t::FLOAT_32});
+			if (ahost->startAudio(settings.iosettings)) {
+				host->setOutput(ahost);
+			} else {
+//				settings.startEngine = false;
+			}
+			
 		}
 	}
-	if (b) {
-		mctrl->startPlaying();
-	} else {
-		mctrl->setAudioThreadState(playback_state::status_stop);
+	if (settings.startEngine) {
+		if (b) {
+			mctrl->startPlaying();
+		} else {
+			mctrl->setAudioThreadState(playback_state::status_stop);
+		}
 	}
 };
 
@@ -394,7 +402,7 @@ public:
 		add(&btnTrackType);
 		btnTrackType.setFontScale(0.3f);
 		btnTrackType.setText(AudioIO::getTrackTypeStr(_track->type));
-		int32_t nChannels = getNumChannelsTrackType(track->type);
+		int32_t nChannels = getNumChannelsFromTrackType(track->type);
 		guimeter = getMeter(nChannels, &track->meter);
 		add(guimeter.get());
 		setBackgroundRendered(false);
@@ -413,7 +421,7 @@ public:
 		remove(&btnTrackType);
 	}
 	int32_t getNumChannels() {
-		return getNumChannelsTrackType(track->type);
+		return getNumChannelsFromTrackType(track->type);
 	}
 	void render(NVGcontext* vg) override {
 //		if (isBackgroundRendered()) {
@@ -465,8 +473,8 @@ public:
 			newList.clear();
 
 			const AudioIO::tracktype type = AudioIO::getNextTrackType(track->type);
-			const int32_t nChannelsPrev = AudioIO::getNumChannelsTrackType(track->type);
-			const int32_t nChannels = AudioIO::getNumChannelsTrackType(type);
+			const int32_t nChannelsPrev = AudioIO::getNumChannelsFromTrackType(track->type);
+			const int32_t nChannels = AudioIO::getNumChannelsFromTrackType(type);
 			const int32_t base = (track->channelOffset/nChannels);
 			const int32_t begin = base*nChannels;
 			const int32_t end = begin+nChannels;
@@ -481,7 +489,7 @@ public:
 			}
 			for (int i = 0; i < list.size(); i++) {
 				auto& cnf = list[i];
-				int32_t nChannels = AudioIO::getNumChannelsTrackType(cnf.type);
+				int32_t nChannels = AudioIO::getNumChannelsFromTrackType(cnf.type);
 				if (cnf.channelOffset>=end || cnf.channelOffset+nChannels<=begin) {
 					newList.push_back(cnf);
 				}
@@ -494,7 +502,7 @@ public:
 				auto it = std::find_if(newList.begin(), newList.end(), [&endPrevChannel](const AudioIO::io_cfg_channel& entryA) {
 					if (entryA.channelOffset > endPrevChannel)
 						return true;
-					endPrevChannel = entryA.channelOffset+AudioIO::getNumChannelsTrackType(entryA.type);
+					endPrevChannel = entryA.channelOffset+AudioIO::getNumChannelsFromTrackType(entryA.type);
 					return false;
 				});
 				if (it == newList.end()) {
@@ -504,12 +512,12 @@ public:
 				int32_t free = endChannel - endPrevChannel;
 				log_printf("found %d unassinged channels %d to %d\n", free, endPrevChannel, endChannel);
 				while (free > 0) {
-					const AudioIO::tracktype type = AudioIO::getTrackTypeNumChannels(free);
+					const AudioIO::tracktype type = AudioIO::getTrackTypeFromNumChannels(free);
 					AudioIO::io_cfg_channel channel2;
 					channel2.idx = -1;
 					channel2.type = type;
 					channel2.channelOffset = endPrevChannel;
-					int32_t nChannels = AudioIO::getNumChannelsTrackType(channel2.type);
+					int32_t nChannels = AudioIO::getNumChannelsFromTrackType(channel2.type);
 					endPrevChannel += nChannels;
 					free -= nChannels;
 					newList.push_back(channel2);
@@ -529,13 +537,13 @@ public:
 //			assert(list.size() > index);
 //			auto currentChannel = list[index];
 //			AudioIO::tracktype type = AudioIO::getNextTrackType(track->type);
-//			int32_t currentChannels = AudioIO::getNumChannelsTrackType(track->type);
+//			int32_t currentChannels = AudioIO::getNumChannelsFromTrackType(track->type);
 //			int32_t channelOffset = 0;
 //			for (int i = 0; i < index; i++) {
 //				auto& channel = list[i];
 //				newList.push_back(channel);
 //				channelOffset = math::max(channelOffset, channel.channelOffset);
-//				channelOffset += AudioIO::getNumChannelsTrackType(channel.type);
+//				channelOffset += AudioIO::getNumChannelsFromTrackType(channel.type);
 //			}
 //			assert(channelOffset == currentChannel.channelOffset);
 //			int32_t newIndex = index;
@@ -545,12 +553,12 @@ public:
 //			channels.name = AudioIO::getTrackName(channels.type, channels.idx, isInput);
 //			channels.channelOffset = channelOffset;
 //			newList.push_back(channels);
-//			channelOffset += AudioIO::getNumChannelsTrackType(channels.type);
+//			channelOffset += AudioIO::getNumChannelsFromTrackType(channels.type);
 //			int32_t free = currentChannel.channelOffset+currentChannels - channelOffset;
 //			if (free < 0) {
 //				for (; free < 0 && index < list.size(); index++) {
 //					auto& ref = list[index];
-//					free += AudioIO::getNumChannelsTrackType(ref.type);
+//					free += AudioIO::getNumChannelsFromTrackType(ref.type);
 //				}
 //			}
 //			if (free < 0) {
@@ -565,7 +573,7 @@ public:
 //					channel2.type = free >= 2 && !addRightMono ? AudioIO::STEREO : AudioIO::MONO;
 //					channel2.name = AudioIO::getTrackName(channel2.type, channel2.idx, isInput);
 //					channel2.channelOffset = channelOffset;
-//					int32_t nChannels = AudioIO::getNumChannelsTrackType(channel2.type);
+//					int32_t nChannels = AudioIO::getNumChannelsFromTrackType(channel2.type);
 //					channelOffset += nChannels;
 //					free -= nChannels;
 //					addRightMono = false;
@@ -588,7 +596,7 @@ public:
 			for (auto& i : v) i = -1;
 			for (int i = 0; i < newList.size(); i++) {
 				auto& ch = newList[i];
-				int32_t nChannels = AudioIO::getNumChannelsTrackType(ch.type);
+				int32_t nChannels = AudioIO::getNumChannelsFromTrackType(ch.type);
 				for (int j = 0; j < nChannels; j++) {
 					assert(v[j+ch.channelOffset] < 0);
 					v[j+ch.channelOffset] = ch.idx;
@@ -605,15 +613,7 @@ public:
 			cnf = newConfig;
 
 			{
-
-				ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-				vsthost* host = vsthost::getInstance();
-				audiohost* ahost = audiohost::getInstance();
-				ahost->stopAudio();
-				host->setOutput(nullptr);
-				if (ahost->startAudio(settings.iosettings)) {
-					host->setOutput(ahost);
-				}
+				updateSrBs();
 			}
 		}
 	}
@@ -720,6 +720,7 @@ class guidialog_audio_io : public setting_dialog {
 	guidropdownbase* asioDevice;
 	gui_list* deviceListInput;
 	gui_list* deviceListOutput;
+	guibutton_audioengine* audioEngineOn;
 	guidropdownbase* audioBlockSize;
 	guidropdownbase* audioSampleRate;
 	guidropdownbase* audioInternalBlockSize;
@@ -786,6 +787,7 @@ public:
 		delete selectAPI;
 		delete asioDevice;
 		delete audioBlockSize;
+		delete audioEngineOn;
 		delete audioSampleRate;
 		delete audioInternalSampleRate;
 		delete audioInternalBlockSize;
@@ -802,6 +804,8 @@ public:
 		asioDevice = asio;
 		deviceListInput = new gui_list();
 		deviceListOutput = new gui_list();
+		auto* audioEngineOn = new guibutton_audioengine{};
+		this->audioEngineOn = audioEngineOn;
 		auto audioBlockSize = new guidropdown_setting_options_t{};
 		this->audioBlockSize = audioBlockSize;
 		auto audioSampleRate = new guidropdown_setting_options_t{};
@@ -868,8 +872,8 @@ public:
 
 //
 
-		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-		if (audiohost::getInstance()->initPa()) {
+		dbgassert(audiohost::getInstance()->initPa());
+		{
 			int apiCnt = Pa_GetHostApiCount();
 			int apiIdxASIO = -1;
 			for (int i = 0; i < apiCnt; i++) {
@@ -896,17 +900,9 @@ public:
 		updateOptions();
 		api->cbOnOptionSelected = [this, api](int option) {
 			if (option >= 0 && option < api->options.size()) {
-				ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-				vsthost* host = vsthost::getInstance();
-				audiohost* ahost = audiohost::getInstance();
-				ahost->stopAudio();
-				host->setOutput(nullptr);
 				settings.iosettings.device_api = api->options[option];
 				updateOptions();
-				if (ahost->startAudio(settings.iosettings)) {
-					host->setOutput(ahost);
-				} else {
-				}
+				updateSrBs();
 			}
 		};
 		api->fnGetCurrentVal = []() -> String {
@@ -915,11 +911,6 @@ public:
 		asio->cbOnOptionSelected = [asio](int option) {
 			if (option >= 0 && option < asio->options.size()) {
 				auto devOption = asio->options[option];
-				ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-				vsthost* host = vsthost::getInstance();
-				audiohost* ahost = audiohost::getInstance();
-				ahost->stopAudio();
-				host->setOutput(nullptr);
 				app_ioasioconfig& asioconfig = settings.iosettings.asioConfig;
 				asioconfig.device_api = "ASIO";
 				asioconfig.deviceName = devOption;
@@ -930,10 +921,7 @@ public:
 					channel.channels.push_back(1);
 					asioconfig.outputs.push_back(channel);
 				}
-				if (ahost->startAudio(settings.iosettings)) {
-					host->setOutput(ahost);
-				} else {
-				}
+				updateSrBs();
 			}
 		};
 		asio->fnGetCurrentVal = []() -> String {
@@ -960,6 +948,7 @@ public:
 		metersOutput.setLabel("Output Channels");
 		selectAPI->setLabel("Audio API");
 		asioDevice->setLabel("ASIO Device");
+		audioEngineOn->setLabel("Audio Engine");
 		audioBlockSize->setLabel("Ext. Blocksize");
 		audioSampleRate->setLabel("Ext. Samplerate");
 		audioIntBlockSize->setLabel("Int. Blocksize");
@@ -982,6 +971,7 @@ public:
 		add(asioDevice);
 		add(deviceListInput);
 		add(deviceListOutput);
+		add(audioEngineOn);
 		add(audioBlockSize);
 		add(audioSampleRate);
 		add(audioIntBlockSize);
@@ -1006,6 +996,7 @@ public:
 		float lineh;
 		setFont(vg, TEXT_FONT_SIZE, G_WHITE, NVG_ALIGN_BOTTOM | NVG_ALIGN_LEFT);
 		nvgTextMetrics(vg, NULL, NULL, &lineh);
+		nvgText(vg, 5, this->audioEngineOn->bottom(), StringAsCStr(this->audioEngineOn->label), NULL);
 		nvgText(vg, 5, this->audioBlockSize->bottom(), StringAsCStr(this->audioBlockSize->label), NULL);
 		nvgText(vg, 5, this->audioSampleRate->bottom(), StringAsCStr(this->audioSampleRate->label), NULL);
 		nvgText(vg, 5, this->audioInternalBlockSize->bottom(), StringAsCStr(this->audioInternalBlockSize->label), NULL);
@@ -1052,8 +1043,10 @@ public:
 		int32_t buttonW = math::max(120, cs.x*2/3);
 		int32_t heightList = math::max(230, cs.y*2/5);
 		int32_t height = 20;
+		audioEngineOn->size = ivec2(buttonW, height);
+		audioEngineOn->pos = ivec2(cs.x-inset*2-buttonW, inset);
 		audioInternalBlockSize->size = ivec2(buttonW, height);
-		audioInternalBlockSize->pos = ivec2(cs.x-inset*2-buttonW, inset);
+		audioInternalBlockSize->pos = ivec2(cs.x-inset*2-buttonW, audioEngineOn->bottom()+inset);
 		audioInternalSampleRate->size = ivec2(buttonW, height);
 		audioInternalSampleRate->pos = ivec2(cs.x-inset*2-buttonW, audioInternalBlockSize->bottom()+inset);
 		audioBlockSize->size = ivec2(buttonW, height);
@@ -1103,8 +1096,14 @@ public:
 		deviceListInput->setRowHeight(rowHeight);
 		deviceListOutput->setRowHeight(rowHeight);
 	}
+
 	void buttonClicked(guibase* button) {
-		if ((button->id&0x0F) == 0xF) {
+		if (button == this->audioEngineOn) {
+			settings.startEngine = !settings.startEngine;
+			updateSrBs();
+			return;
+		}
+		if ((button->id & 0x0F) == 0xF) {
 			updateSrBs();
 			return;
 		}
@@ -1112,8 +1111,6 @@ public:
 			this->parent->buttonClicked(button);
 		}
 	}
-
-
 };
 class gui_listentry_mididevice : public gui_list_entry {
 	String deviceAPI;
@@ -1451,30 +1448,25 @@ struct guidialog_settings::dialog_entry
 		tabButton.setFontScale(0.7f);
 	}
 };
-guidialog_settings::guidialog_settings(ivec2 _dialogSize, bool _resizeable) : guidialog_base(_dialogSize,_resizeable)
-{
+void guidialog_settings::init() {
+	ctrType = CTR_TYPE_SETTINGS;
 	addEntry(new guidialog_audio_io(), "Audio I/O");
     addEntry(new guidialog_midi_io(), "Midi I/O");
     addEntry(new guidialog_plugin_settings(), "Plugins");
-    add(&btnClose);
-	btnClose.id = ID_BTN_CLOSE;
-	btnClose.setText("Close");
-	btnClose.setFontSize(BTN_FONT_SIZE);
-	setLabel("Settings");
-	setActiveEntry(0);
-};
-guidialog_settings::guidialog_settings()
-: guidialog_base(ivec2{640, 760}, true) {
-	ctrType = CTR_TYPE_SETTINGS;
-	addEntry(new guidialog_audio_io(), "Audio I/O");
-	addEntry(new guidialog_midi_io(), "Midi I/O");
-	addEntry(new guidialog_plugin_settings(), "Plugins");
 	add(&btnClose);
 	btnClose.id = ID_BTN_CLOSE;
 	btnClose.setText("Close");
 	btnClose.setFontSize(BTN_FONT_SIZE);
 	setLabel("Settings");
 	setActiveEntry(0);
+}
+guidialog_settings::guidialog_settings(ivec2 _dialogSize, bool _resizeable) : guidialog_base(_dialogSize,_resizeable)
+{
+	init();
+};
+guidialog_settings::guidialog_settings()
+: guidialog_base(ivec2{640, 760}, true) {
+	init();
 };
 void guidialog_settings::addEntry(setting_dialog* ctr, String title) {
 	guidialog_settings::dialog_entry* entry = new guidialog_settings::dialog_entry{ctr, title};
