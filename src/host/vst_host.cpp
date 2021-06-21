@@ -1730,9 +1730,9 @@ void vsthost::onTrackLayoutChange() {
 }
 void vsthost::setOutput(audiohost* audioHost) {
 	this->audioHost = audioHost;
-	sampleformat_t sampleFormatExternal;
-	samplerate_t extSampleRate = audioHost && audioHost->lSampleRate > 0 ? audioHost->lSampleRate : 48000U;
-	uint32_t extBlockSize = audioHost && audioHost->lBlockSize > 0 ? audioHost->lBlockSize : 512U;
+	sampleformat_t sampleFormatExternal = this->sampleFormatExternal;
+	samplerate_t extSampleRate = audioHost && audioHost->lSampleRate > 0 ? audioHost->lSampleRate : sampleFormatExternal.sampleRate;
+	uint32_t extBlockSize = audioHost && audioHost->lBlockSize > 0 ? audioHost->lBlockSize : sampleFormatExternal.blockSize;
 	sampleFormatExternal = { extSampleRate, extBlockSize, sampleformat_bits_t::FLOAT_32 };
 	
 //	sampleformat_t sampleFormat = {sampleFormatExternal.sampleRate, sampleFormatExternal.blockSize, sampleformat_bits_t::FLOAT_32};

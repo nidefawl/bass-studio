@@ -112,8 +112,8 @@ private:
 public:
 //	samplerate_t lSampleRate = 0;
 //	uint16_t lBlockSize = 0;
-	sampleformat_t sampleFormat = {48000, 512, sampleformat_bits_t::NONE};
-	sampleformat_t sampleFormatExternal = {48000, 512, sampleformat_bits_t::NONE};
+	sampleformat_t sampleFormat = {44100, 512, sampleformat_bits_t::NONE};
+	sampleformat_t sampleFormatExternal = {44100, 512, sampleformat_bits_t::NONE};
 	int32_t hostSlot = -1;
 	uint8_t numChannels = 32u;
 
