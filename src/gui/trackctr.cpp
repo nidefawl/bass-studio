@@ -254,8 +254,9 @@ void guictr_tracks::updateVisibleTrackContents() {
 
 void guictr_tracks::relayout() {
 	double f = scrollbar.toPixels();
-	dawCtrl->updateGrid();
 	layout();
+	dawCtrl->updateGrid();
+	dawCtrl->updateVisibleTrackContents();
 	double fNew = scrollbar.toPixels();
 	scrollbar.scrollTo(f);
 	if (math::abs(fNew-f) > 1.0f/1024.0f) {

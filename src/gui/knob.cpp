@@ -322,11 +322,10 @@ void guiknob_labeled_base::render(NVGcontext* vg) {
 void guiknob::handleRightClick(MouseEvent& evt) {
 #if BUILD_VSTHOST
 	if (paramAutomatable && paramIdx > -1) {
-		MainCtrl* ctrl = dynamic_cast<MainCtrl*>(getControl());
-		dbgassert(ctrl);
-		if (ctrl) {
+		dbgassert(dawCtrl);
+		if (dawCtrl) {
 			dbgassert(paramAutomatable->getParam(paramIdx));
-			ctrl->openContextMenu(new guictxtmenu_at_param(paramAutomatable, paramIdx), evt.mousepos);
+			dawCtrl->openContextMenu(new guictxtmenu_at_param(paramAutomatable, paramIdx), evt.mousepos);
 		}
 		return;
 	}

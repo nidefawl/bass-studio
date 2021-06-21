@@ -87,13 +87,15 @@ public:
 				int n = project_controller_t::get()->sigNum();
 				n = CLAMP_I(n - disty, 0, 32);
 				project_controller_t::get()->setNum(n);
-				MainCtrl::get()->updateGrid();
+				DawInstance::get()->updateGrid();
+				DawInstance::get()->updateVisibleTrackContents();
 			} else {
 				int prev = project_controller_t::get()->sigDen();
 				int now = 1<<CLAMP_I((int)log2(prev) - disty, 0, 4);
 				printf("old %d new %d\n", prev, now);
 				project_controller_t::get()->setDen(now);
-				MainCtrl::get()->updateGrid();
+				DawInstance::get()->updateGrid();
+				DawInstance::get()->updateVisibleTrackContents();
 			}
 		}
 	}

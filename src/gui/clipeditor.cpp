@@ -172,7 +172,7 @@ public:
 
 void gui_clipcontent::handleRightClick(MouseEvent& evt) {
 	guictr_noteeditor* editor = dynamic_cast<guictr_noteeditor*>(this->parent);
-	MainCtrl::get()->openContextMenu(new guictxtmenu_noteeditor(editor), evt.mousepos);
+	dawCtrl->openContextMenu(new guictxtmenu_noteeditor(editor), evt.mousepos);
 }
 void renderNote(NVGcontext* vg, gui_clipcontent* c, note_t* note, float yscale, tick_t offset = 0) {
 
