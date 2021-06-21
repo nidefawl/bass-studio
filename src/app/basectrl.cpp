@@ -510,7 +510,6 @@ void AppCtrl::openAppMenu(int lvl, guictxtmenu_base *b, ivec2 pos) {
 	if (!menuWindows[lvl].wnd) {
 		int createflags = 0;
 		createflags |= WINDOW_BORDERLESS_POPUP;
-		createflags |= WINDOW_IS_TOPLEVEL_CHILD;
 		menuWindows[lvl].wnd = this->mainWindow->createOverlay(std::make_shared<PopupCtrl>(), createflags);
 	}
 	//TODO: menu change on same level will let this assertion fail
@@ -527,61 +526,84 @@ void AppCtrl::openAppMenu(int lvl, guictxtmenu_base *b, ivec2 pos) {
 #endif
 	static_cast<PopupCtrl*>(entry.wnd->getCtrl())->open(b, childMenuPos, false);
 }
-
+namespace {
+	template<typename T>
+	void determineWindowPos(T* b, window_main* mainWindow, float m_scale, int flags, ivec2 pos, ivec2& wndPos) {
+		ivec2 windowPos;
+		ivec2 windowSize;
+		mainWindow->getPos(&windowPos);
+		mainWindow->getSize(&windowSize);
+		wndPos = windowPos;
+		if (flags&BASECTRL_WND_POS_ABSOLUTE) {
+			wndPos = pos;
+		} else if (flags&BASECTRL_WND_POS_RELATIVE) {
+			wndPos = windowPos+ivec2(pos.x*m_scale, pos.y*m_scale);
+		} else {
+			wndPos = windowPos+(windowSize-b->size)/2;
+		}
+	}
+}
 void AppCtrl::openOverlayGui(guictxtmenu_base *b, ivec2 pos, int flags) {
+	if (!(flags & BASECTRL_OVERLAY_TYPE_CONTEXTMENU)) {
+		dbgassert(0);
+		return;
+	}
 	if (this->ctxtmenu) {
 		closeContextMenu();
 	}
+
 	b->setFontSize(getTheme()->getFloat(GuiConstant::CONST_FONT_SIZE_CONTEXT_MENU));
+
 	dbgassert(!this->ctxtmenu);
 	this->ctxtmenu = b;
-	//this->ctxtmenus[this->mainWindow] = b;
-	ivec2 windowPos;
-	ivec2 windowSize;
-	this->mainWindow->getPos(&windowPos);
-	this->mainWindow->getSize(&windowSize);
-	ivec2 wndPos = windowPos;
-	if (flags&BASECTRL_WND_POS_ABSOLUTE) {
-		wndPos = pos;
-	} else if (flags&BASECTRL_WND_POS_RELATIVE) {
-		wndPos = windowPos+ivec2(pos.x*m_scale, pos.y*m_scale);
-	} else {
-		wndPos = windowPos+(windowSize-b->size)/2;
-	}
-	bool bResizeable = (flags & BASECTRL_WND_RESIZEABLE);
-	int createflags = 0;
-	if (!(flags & BASECTRL_WND_RESIZEABLE)) {
-		createflags |= WINDOW_BORDERLESS_POPUP;
-	}
-	if (flags & BASECTRL_WND_IS_TOPLEVEL_CHILD) {
-		createflags |= WINDOW_IS_TOPLEVEL_CHILD;
-	}
-	if (flags & BASECTRL_WND_IS_DIALOG) {
-		createflags |= WINDOW_IS_DIALOG;
-	}
-	if (!contextWindow || contextWindow->getCreationFlags() != createflags) {
-		if (contextWindow) {
-			this->mainWindow->closeOverlay(contextWindow);
+
+	ivec2 wndPos(0);
+	determineWindowPos(b, mainWindow, m_scale, flags, pos, wndPos);
+
+	int createflags = WINDOW_BORDERLESS_POPUP;
+    window_main* ctxtWindow = this->contextWindow;
+	if (!ctxtWindow || ctxtWindow->getCreationFlags() != createflags) {
+		if (ctxtWindow) {
+			this->mainWindow->closeOverlay(ctxtWindow);
 		}
-		contextWindow = this->mainWindow->createOverlay(std::make_shared<PopupCtrl>(), createflags);
-		//contextWindows[this->mainWindow] = contextWindow;
+		dbgassert(!this->contextWindow);
+		ctxtWindow = this->mainWindow->createOverlay(std::make_shared<PopupCtrl>(), createflags);
 	}
-	if (contextWindow) {
-		auto* ctxtWindowTheme = contextWindow->getCtrl()->getTheme();
+	this->contextWindow = ctxtWindow;
+	if (ctxtWindow) {
+		auto* ctxtWindowTheme = ctxtWindow->getCtrl()->getTheme();
 		//copy theme from this control to contextWindows control
 		*ctxtWindowTheme = *getTheme();
-		contextWindow->getCtrl()->m_scale = m_scale;
-		static_cast<PopupCtrl*>(contextWindow->getCtrl())->open(b, wndPos, bResizeable); //ugly cast
+		ctxtWindow->getCtrl()->m_scale = m_scale;
+		log_printf("open popup/overlay window\n", 0);
+		static_cast<PopupCtrl*>(ctxtWindow->getCtrl())->open(b, wndPos, false);
+	} else {
+		dbgassert(0);
 	}
 
 }
 void AppCtrl::openDialog(guidialog_base *_guidialog) {
-	int flags = (_guidialog->isDialogResizeable()) ? BASECTRL_WND_RESIZEABLE : 0;
-	flags |= BASECTRL_WND_IS_DIALOG;
-	openOverlayGui(_guidialog, ivec2(0), flags);
+	if (this->dialog) {
+		return;
+	}
+	this->dialog = _guidialog;
+	ivec2 wndPos(0);
+	determineWindowPos(_guidialog, mainWindow, m_scale, 0, ivec2(0), wndPos);
+    window_main* dialogWindow = nullptr;
+	int createflags = 0;
+	dialogWindow = this->mainWindow->createOverlay(std::make_shared<PopupCtrl>(), WINDOW_IS_DIALOG | WINDOW_IS_RESIZABLE);
+
+	auto* ctxtWindowTheme = dialogWindow->getCtrl()->getTheme();
+	//copy theme from this control to contextWindows control
+	*ctxtWindowTheme = *getTheme();
+	dialogWindow->getCtrl()->m_scale = m_scale;
+	log_printf("open dialogWindow\n", 0);
+	static_cast<PopupCtrl*>(dialogWindow->getCtrl())->open(_guidialog, wndPos, (dialogWindow->getCreationFlags() & WINDOW_IS_RESIZABLE)); //ugly cast
+
 }
 void AppCtrl::openContextMenu(guictxtmenu_base *b, ivec2 pos, int flags) {
-	openOverlayGui(b, pos, flags);
+	log_printf("open ctxtmenu_base %s\n", StringAsCStr(b->getLabel()));
+	openOverlayGui(b, pos, flags|BASECTRL_OVERLAY_TYPE_CONTEXTMENU);
 }
 void AppCtrl::closeContextMenu() {
 	if (this->ctxtmenu) {
@@ -619,8 +641,13 @@ void AppCtrl::onChildOverlayWindowClose(window_main* ptr) {
 		menuWnd.ctxt = nullptr;
 		return;
 	}
-	dbgassert(0);
+	dbgassert(this->dialog && ptr->getCreationFlags() & WINDOW_IS_DIALOG);
+	this->dialog->onParentWindowClose();
+	this->dialog->setControl(nullptr);
+	garbageGuis.push_back(this->dialog);
+	this->dialog = nullptr;
 }
+
 bool AppCtrl::hasContextMenu() {
 	return this->contextWindow && this->contextWindow->isShown();
 }

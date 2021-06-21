@@ -476,7 +476,7 @@ void guibase::setParent(guibase* parent) {
 NVGcolor guibase::getBackgroundColor(int stateflags) const {
 	return theme->getBgColor(stateflags);
 }
-String guibase::getClassName() {
+String guibase::getClassName() const {
 	return typeName(*this);
 }
 

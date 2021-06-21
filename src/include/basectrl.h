@@ -42,9 +42,7 @@ ivec2 toControlsObjectSpace(ivec2& pos, guibase* gui);
 
 #define BASECTRL_WND_POS_RELATIVE 1
 #define BASECTRL_WND_POS_ABSOLUTE 2
-#define BASECTRL_WND_RESIZEABLE 4
-#define BASECTRL_WND_IS_TOPLEVEL_CHILD 8
-#define BASECTRL_WND_IS_DIALOG 16
+#define BASECTRL_OVERLAY_TYPE_CONTEXTMENU 8
 
 enum class dock_pos : int32_t { NONE=0, CENTER, LEFT, RIGHT, TOP, BOTTOM, STACK };
 enum class container_layout : int32_t { SOLE, SPLIT_H, SPLIT_V, TABBED };
@@ -418,6 +416,7 @@ protected:
     };
     std::vector<appmenu_window_entry> menuWindows;
     std::vector<guibase*> garbageGuis;
+    guidialog_base* dialog = nullptr;
     bool closed = false;
 
 public:
@@ -539,7 +538,7 @@ public:
     void closePopup() override;
     void relayout(int32_t w, int32_t h) override;
     void open(guictxtmenu_base* ctxtmenu, ivec2 pos, bool bResizeable);
-    bool init(window_main* window, NVGcontext* nanovg);
+    bool init(window_main* window, NVGcontext* nanovg) override;
     virtual void initApp(int argc, char* argv[]){};
     bool initPopup(window_overlay* window, NVGcontext* nanovg);
     void focusReceived(){};

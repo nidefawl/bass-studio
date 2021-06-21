@@ -990,8 +990,10 @@ public:
 		//TODO: add this function to GLFW
 	    //glfwBringWindowToTop(glfw);
 #ifdef _WIN32
-		BringWindowToTop(hwnd);
+	BringWindowToTop(hwnd);
+	if ((getCreationFlags()&WINDOW_IS_DIALOG) && parent) {
 		SetActiveWindow(hwnd);
+	}
 #else
 	    glfwFocusWindow(glfw);
 #endif
@@ -1280,15 +1282,12 @@ void appwindow_main::initControl() {
 }
 
 void appwindow_main::createMainWindow(const char* title, int w, int h, appwindow_main* parentWindowHandle, int flags) {
-	nameDbg=title;
+	nameDbg = title;
 	windowCreationFlags = flags;
+	bCanResize = flags & WINDOW_IS_RESIZABLE;
 	setAppWindowHints();
-//	if (!parentWindowHandle)
-
-		glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
-
-	if (flags&WINDOW_BORDERLESS_POPUP) {
-		bCanResize = false;
+	glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
+	if (flags & WINDOW_BORDERLESS_POPUP) {
 		glfwWindowHint(GLFW_RESIZABLE, GL_FALSE);
 		glfwWindowHint(GLFW_VISIBLE, GL_FALSE);
 		glfwWindowHint(GLFW_FOCUSED, GL_FALSE);
@@ -1296,33 +1295,26 @@ void appwindow_main::createMainWindow(const char* title, int w, int h, appwindow
 //		glfwWindowHint(GLFW_UTILITY_WINDOW, GL_TRUE);
 		glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER , GL_TRUE);
 		glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER , GL_FALSE);
-	} else {
-		bCanResize = true;
 	}
 
 	//glfwWindowHint(GLFW_FLOATING, parent != nullptr);
 	appwindow::createBaseWindow(title, w, h, parentWindowHandle ? parentWindowHandle->glfw : nullptr, nullptr);
 
 	if (flags&WINDOW_IS_MAINWINDOW_SLAVE) {
-	    //NOTE: GL context sharing is disabled
+	    //NOTE: GL context sharing with companion window is disabled!
 		//this->nanovgCtxt = parentWindowHandle->nanovgCtxt;
 	}
 	if (!parent) {
 		glfwSetWindowSizeLimits(glfw, 640, 480, GLFW_DONT_CARE, GLFW_DONT_CARE);
 	} else {
-
-
 		//glfwSetWindowAttrib(glfw, GLFW_FLOATING, GL_TRUE);
 	}
-	if ((flags&WINDOW_IS_TOPLEVEL_CHILD) && parent) {
-
-	}
-	if ((flags&WINDOW_IS_DIALOG) && parent) {
+	if ((flags & WINDOW_IS_DIALOG) && parent) {
 #ifdef _WIN32
 		SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, (__int3264) (LONG_PTR)parent->getHWND());
 #endif
 	}
-	if (flags&WINDOW_BORDERLESS_POPUP) {
+	if (flags & WINDOW_BORDERLESS_POPUP) {
 		glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER , GL_FALSE); //set global state back to default
 		glfwSetWindowAttrib(glfw, GLFW_FOCUS_ON_SHOW, 0);
 #ifdef _WIN32
@@ -1336,11 +1328,8 @@ void appwindow_main::createMainWindow(const char* title, int w, int h, appwindow
 	} else {	
 		glfwSetWindowAttrib(glfw, GLFW_FOCUS_ON_SHOW, 1);
 	}
-//	if (!(flags&WINDOW_IS_MAINWINDOW_SLAVE)) {
-		RenderResources::initResources(nanovgCtxt);
-		MouseCursors::initCursors(); //TODO: call MouseCursors::destroy() on exit of last instance
-
-//	}
+	RenderResources::initResources(nanovgCtxt);
+	MouseCursors::initCursors(); //TODO: call MouseCursors::destroy() on exit of last instance
 }
 #if defined(__linux__) or defined(__APPLE__)
 void AppWndProc_enableBlockReentrant() {

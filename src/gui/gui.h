@@ -174,10 +174,13 @@ public:
 		label = _str;
 	}
 	String getLabel() const {
+		if (label.empty()) {
+			return getClassName();
+		}
 		return label;
 	}
 
-	String getClassName();
+	String getClassName() const;
 
 	virtual bool contains(ivec2 mpos) const {
 		return mpos.x >= pos.x &&
