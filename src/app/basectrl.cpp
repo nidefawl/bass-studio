@@ -456,6 +456,8 @@ void BaseCtrl::openContextMenu(guictxtmenu_base *b, ivec2 pos, int flags)
 {
 	delete b; //TODO: defer delete
 }
+void BaseCtrl::closeDialogs() {
+}
 void BaseCtrl::closeAllContextMenus() {
 	if (!this->ctxtmenu || !this->ctxtmenu->isDialog()) {
 		closeContextMenu();
@@ -609,6 +611,11 @@ void AppCtrl::closeContextMenu() {
 	if (this->ctxtmenu) {
 		dbgassert(contextWindow);
 		contextWindow->getCtrl()->closePopup();
+	}
+}
+void AppCtrl::closeDialogs() {
+	if (this->dialog) {
+		this->dialog->closeContextMenu();
 	}
 }
 void AppCtrl::onChildOverlayWindowClose(window_main* ptr) {

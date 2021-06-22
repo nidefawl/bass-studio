@@ -818,6 +818,7 @@ void DawInstance::loadFile(String path, int flags) {
 			}
 			setProjectToLoad(projFile, loadFlags);
 			closeContextMenus();
+			closeDialogs();
 		};
 		if ((flags&FLAG_INVOKE_USER_CB_DEFERLOAD) == 0) {
 			cb(flags&FLAG_DEFER_LOAD);
@@ -2494,6 +2495,11 @@ void DawInstance::resetMouseContext() {
 void DawInstance::closeContextMenus() {
 	for (auto* ctrl : this->dawCtrls) {
 		ctrl->closeContextMenu();
+	}
+}
+void DawInstance::closeDialogs() {
+	for (auto* ctrl : this->dawCtrls) {
+		ctrl->closeDialogs();
 	}
 }
 void DawInstance::resetAutomationContext() {

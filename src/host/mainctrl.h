@@ -361,6 +361,7 @@ public:
 	void setEditClip(gui_clip* gclip);
 	void resetAutomationContext();
 	void closeContextMenus();
+	void closeDialogs();
 	void cutIntersecting(track_t* tr, clip_t* mask);
 	void cutIntersecting(track_t* tr, tick_t tickBegin, tick_t tickEnd);
 	track_t* createNewTrack(int trackType);

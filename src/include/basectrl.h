@@ -371,6 +371,7 @@ public:
     };
     virtual void closeAppMenusAtLvl(int startlvl){};
     virtual void closeAllContextMenus();
+    virtual void closeDialogs();
     virtual void openAppMenu(int lvl, guictxtmenu_base* b, ivec2 pos){};
     virtual void closePopup(){}; // close this window if its a popup window
     virtual bool hasContextMenu()
@@ -446,6 +447,7 @@ public:
     void openContextMenu(guictxtmenu_base* b, ivec2 pos, int flags = 1) override;
     void openDialog(guidialog_base* b);
     void closeContextMenu() override;
+    void closeDialogs() override;
     void openAppMenu(int lvl, guictxtmenu_base* b, ivec2 pos) override;
     void closeAppMenusAtLvl(int startlvl) override;
     bool hasContextMenu() override;
