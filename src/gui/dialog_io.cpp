@@ -330,6 +330,7 @@ public:
 		nvgTranslate(vg, -pos.x, -pos.y);
 	}
 };
+//TODO: this should be member of DawInstance
 void updateSrBs() {
 	auto mctrl = DawInstance::get();
 	bool b = mctrl->isPlaying();
@@ -337,6 +338,7 @@ void updateSrBs() {
 
 		mctrl->stopPlaying();
 	}
+	mctrl->setAudioThreadState(playback_state::status_stop);
 	mctrl->setAudioThreadState(playback_state::status_no_process);
 	{
 
@@ -454,7 +456,7 @@ public:
 	void layout() override {
 		const int32_t htt = theme->get(GuiConstant::CONST_SMALL_LABEL_HEIGHT);
 		int32_t w = getSizeContent().x - htt;
-		int topH = math::min(getSizeContent().y/4, w);
+		int topH = math::min(getSizeContent().y/6, w/3);
 		guimeter->pos = {htt, topH};
 		guimeter->size = getSizeContent() - ivec2{htt, topH};
 		btnTrackType.pos = {htt, 0};
