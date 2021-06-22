@@ -185,6 +185,7 @@ struct audio_stage_t {
 	void createRoutingSnapshot(track_effect_routing_snapshot_t& snapshot);
 	void loadRoutingSnapshot(const track_effect_routing_snapshot_t& snapshot);
 	void configureDefaultRoutings();
+	void sendNotesOff(int32_t bpm100);
 };
 inline bool isAudioStageChildOf(audio_stage_t* parent, audio_stage_t* child) {
 	std::vector<audio_stage_t*>& children = parent->children;

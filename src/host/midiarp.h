@@ -43,6 +43,7 @@ private:
 	std::vector<noteevent_t> heldOutput;
 	std::vector<tick_t> curRandTimeOffset;
 	std::vector<tick_t> processTimePoints;
+	std::vector<int32_t> processNotesSpawn;
 public:
 	std::vector<note_t> heldOutputNotes;
 	std::vector<note_t> heldInputAnimationNotes;
@@ -52,6 +53,7 @@ public:
 	std::vector<int64_t> notesSpawnTime;
 private:
 	int32_t step = 0;
+	int32_t stepGenerated = 0;
 	tick_t resetTime = 0;
 	tick_t lastStepSize = 0;
 	int noteIdx = 0;
@@ -62,7 +64,7 @@ private:
     long lSeed = 13L;
     seq_rand arpRand;
 
-    void initRandomDelays(uint64_t seed, int32_t step, int32_t stepSize, int32_t startFrame, int32_t endFrame);
+    void initRandomDelays(uint64_t seed, int32_t step, int32_t stepSize, int32_t startFrame, int32_t endFrame, bool reset);
 
 public:
 	bool enable = false;

@@ -489,6 +489,9 @@ void audio_stage_t::getStageTargets(std::vector<automatable_t*>& targets) {
 		}
 	}
 }
+
+void audio_stage_t::sendNotesOff(int32_t bpm100) {
+}
 void track_impl_t::getAutomatableTrackTargets(std::vector<automatable_t*>& targets) {
 	targets.push_back(&mixer);
 	targets.push_back(arp);

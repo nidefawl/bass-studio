@@ -704,7 +704,7 @@ bool resolveEffectDefaultConnection(const vsthost* const host, const project_t* 
 bool resolveDefaultConnection(const vsthost* const host, const project_t* const project, track_impl_t* const trImpl, const bool isInput, channel_ref_t& out) {
 	if (!isInput && TRACKTYPE_TO_CTR(trImpl->track->type) == TRACK_CTR_MASTER) {
 		int32_t idx = 0;
-		auto type = AudioIO::getTrackTypeNumChannels(trImpl->outputPost.channels);
+		auto type = AudioIO::getTrackTypeFromNumChannels(trImpl->outputPost.channels);
 		String name = "External "+AudioIO::getTrackNameShort(type, idx, stagebuffer_point::OUTPUT_POST);
 		out = ChannelAudioInput(idx, 0, name, type);
 		return true;
@@ -729,7 +729,7 @@ bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, co
 	if (inputChannel.getType() == channel_input_type::INPUT_EXTERNAL_AUDIO) {
 		if (ptrExternalInputs != nullptr) {
 			int32_t idx = inputChannel.inputChannelOffset;
-			size_t size = math::min<uint32_t>(AudioIO::getNumChannelsTrackType(inputChannel.externalInputType), numChannelsTrack);
+			size_t size = math::min<uint32_t>(AudioIO::getNumChannelsFromTrackType(inputChannel.externalInputType), numChannelsTrack);
 			if (idx >= 0 && idx+size <= ptrExternalInputs->channels) {
 				track_audio_src src;
 				for (int i = 0; i < size; i++) {
@@ -771,7 +771,7 @@ bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, co
 			src.sampleFormat = stage->sampleFormat;
 			src.samples = buff->samples;
 			src.gain = fGainTrack;
-			src.latency = 0;
+			src.latency = stage->getGlobalLatency();
 			out = std::move(src);
 			return true;
 		}
@@ -1086,10 +1086,10 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			AudioBlock block = resamplerInput->pop();
 			int32_t post = resamplerInput->numBlocksToPop();
 			dbgassert(post == pre-1);
-			AudioBlock blockOutput(32, sampleFormat.blockSize);
-			dsp_util::fillBlock(blockOutput, 0.0f);
+			AudioBlock blockExtOut(32, sampleFormat.blockSize);
+			dsp_util::fillBlock(blockExtOut, 0.0f);
 			timer3.reset();
-			nBlocksProcessed += processBlock(ctrl, processingGraph.get(), &block, &blockOutput, samplePosProcess, tickPosProcess, state, inLoop, isLoopAround);
+			nBlocksProcessed += processBlock(ctrl, processingGraph.get(), &block, &blockExtOut, samplePosProcess, tickPosProcess, state, inLoop, isLoopAround);
 			timeProcessing += timer3.getTime();
 			timer3.reset();
 			for (auto itAudioStage = processingGraph->nodesFlatOrdered.begin(); itAudioStage != processingGraph->nodesFlatOrdered.end(); itAudioStage++) {
@@ -1098,29 +1098,30 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 				track_t* const track = trackNode.trackOptional;
 				track_impl_t* const trackImpl = track->audio;
 				if (trackImpl->mixer.isEnabled()) {
-					auto outputChannel = trackImpl->outputChannel;
-					if (outputChannel.type == DAW::channel_input_type::INPUT_DEFAULT) {
+					auto tracDst = trackImpl->outputChannel;
+					if (tracDst.type == DAW::channel_input_type::INPUT_DEFAULT) {
 						DAW::channel_ref_t tmp;
 						if (DAW::resolveDefaultConnection(this, project, trackImpl, false, tmp)) {
-							outputChannel = tmp;
+							tracDst = tmp;
 						}
 					}
-					if (DAW::isChannelConnected(outputChannel) && outputChannel.getType() == DAW::channel_input_type::INPUT_EXTERNAL_AUDIO) {
+					if (DAW::isChannelConnected(tracDst) && tracDst.getType() == DAW::channel_input_type::INPUT_EXTERNAL_AUDIO) {
+						
+						// TODO: latency compensate (add external output nodes to graph)
+						int offset = tracDst.inputChannelOffset;
 
 						/* Calculate master tracks gain level */
 						float fGainMaster;
 						if (dsp_util::getGainLvl(trackImpl->mixer.getParamValue(PARAM_TRACK_GAIN), fGainMaster)) {
-//							if (dbg == 0) {
-//								log_printf("Process External Audio routing from %s to %s\n", StringAsCStr(track->name), StringAsCStr(outputChannel.name));
-//							}
-
 						}
-						blockOutput.addFromOp(&trackImpl->output, AudioBlock::mix_op::ADD, math::clamp(fGainMaster, 0.0f, 1.0f));
+						int routedOutputChannelCount = AudioIO::getNumChannelsFromTrackType(tracDst.externalInputType);
+						auto trackSubChannelOutput = trackImpl->output.SubChannelsBlock(0, routedOutputChannelCount);
+						blockExtOut.SubChannelsBlock(tracDst.inputChannelOffset, numChannels).addFromOp(&trackSubChannelOutput, AudioBlock::mix_op::ADD, math::clamp(fGainMaster, 0.0f, 1.0f));
 
 					}
 				}
 			}
-			resamplerOutput->push(blockOutput);
+			resamplerOutput->push(blockExtOut);
 
 			timeRouting += timer3.getTime();
 
@@ -1716,11 +1717,10 @@ void vsthost::onStopPlayback(project_controller_t* ctrl) {
 	project_t* project = ctrl->getProject();
 	midiRealtimeInput->m_list.clear();
 
-	for (track_t* track : project->trackList) {
-		auto trackImpl = track->audio;
+	for (auto stageImpl : allAudioStages) {
 		//if (!trackImpl->heldNotes.empty())
 		{
-			trackImpl->sendNotesOff(prjGlobals.tempo100);
+			stageImpl->sendNotesOff(prjGlobals.tempo100);
 		}
 	}
 }

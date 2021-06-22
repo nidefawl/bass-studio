@@ -4,8 +4,8 @@
 #include "color_util.h"
 #include "history.h"
 #include "mainctrl.h"
-//#define PLACE_MARKERS
-//#define PLACE_MARKERS_OUTPUT
+#define PLACE_MARKERS
+#define PLACE_MARKERS_OUTPUT
 
 
 
@@ -170,24 +170,7 @@ tick_t midiarp::getRandTime() {
 
 int midiarp::writeOutputNotes(std::vector<noteevent_t>& noteEventsProcessed,
 		tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int64_t time) {
-	int nSend = 0;
-	if (!heldOutputNotes.empty()) {
-		auto i = std::begin(heldOutputNotes);
-		while (i != std::end(heldOutputNotes)) {
-			note_t& note = *i;
-			if (note.end() > start && note.end() <= end) {
-				noteEventsProcessed.emplace_back(note.pitch, note.velocity, note.end()-start-1, note.start(), false, note.end() == loopEnd);
-				nSend++;
-				i = heldOutputNotes.erase(i);
-			} else if (note.end() <= start) {
-				//force off
-				noteEventsProcessed.emplace_back(note.pitch, note.velocity, 0, note.start(), false, note.end() == loopEnd);
-				nSend++;
-				i = heldOutputNotes.erase(i);
-			}
-			else i++;
-		}
-	}
+
 	dbgassert(notesSpawnTime.size() == heldOutputAnimationNotes.size());
 	if (!heldOutputAnimationNotes.empty()) {
 		auto i = std::begin(heldOutputAnimationNotes);
@@ -206,11 +189,9 @@ int midiarp::writeOutputNotes(std::vector<noteevent_t>& noteEventsProcessed,
 		}
 	}
 	dbgassert(notesSpawnTime.size() == heldOutputAnimationNotes.size());
-	struct markers_cleaner {
-	};
 	cleanupMarkers(markers, end);
 	cleanupMarkers(markers2, end);
-	return nSend;
+	return 0;
 }
 
 void midiarp::addNote(std::vector<noteevent_t>& noteEvents, tick_t start, note_t& note, int64_t time) {
@@ -222,7 +203,7 @@ void midiarp::addNote(std::vector<noteevent_t>& noteEvents, tick_t start, note_t
  		log_printf("exact duplicate in list!\n", 0);
 		//dbgassert(0);
 	} else if (retVal != 0) {
-		//log_printf("intersecting. ret val %d\n", retVal);
+		log_printf("intersecting. ret val %d\n", retVal);
 	}
 
 	noteEvents.emplace_back(note.pitch, note.velocity, note.start() - start, note.start(), true, false);
@@ -232,49 +213,75 @@ void midiarp::addNote(std::vector<noteevent_t>& noteEvents, tick_t start, note_t
 	heldOutputAnimationNotes.push_back(note);
 	dbgassert(notesSpawnTime.size() == heldOutputAnimationNotes.size());
 }
-void midiarp::initRandomDelays(uint64_t seed, int32_t step, int32_t stepSize, int32_t startFrame, int32_t endFrame)
+void midiarp::initRandomDelays(uint64_t seed, int32_t step, int32_t stepSize, int32_t startFrame, int32_t endFrame, bool reset)
 {
-    processTimePoints.clear();
-    int32_t rndTime = this->getRandTime();
-    if (rndTime) {
-		uint64_t stepSeed_u64 = seed ^ (uint64_t)resetTime ^ (uint64_t)math::max<int32_t>(0, step - 1) * stepSize;
+	struct arp_generated_pattern_step {
+		tick_t time;
+		int32_t index;
+	};
+	std::vector<arp_generated_pattern_step> arpSteps;
+	uint64_t stepSeed_u64 = seed ^ (uint64_t)resetTime ^ (uint64_t)math::max<int32_t>(0, step - 1) * stepSize;
 //		uint64_t seedu64 = (lSeed^evt.globalTick)^((evt.pitch<<12)|(evt.velocity));
-        arpRand.rng_seed(stepSeed_u64);
-        int32_t randMode = getRandTmMode();
-        for (int i = 0; i < NUM_ARP_MAX_POLY_VOICES; i++) {
-        	uint32_t rnd_u32 = arpRand.rng_rand(rndTime);
-        	if (randMode == 0) {
-                curRandTimeOffset[i] = rnd_u32;
-        	} else {
-        		curRandTimeOffset[i] = -rndTime + arpRand.rng_rand(rndTime*2);
-        	}
-            tick_t rndStepTime = resetTime + step * stepSize + curRandTimeOffset[i];
-            processTimePoints.push_back(rndStepTime);
-        }
-    } else {
-		memset(curRandTimeOffset.data(), 0, curRandTimeOffset.size()*sizeof(tick_t));
+    arpRand.rng_seed(stepSeed_u64);
+    int32_t randMode = getRandTmMode();
+	bool noRandomOnReset = true;
+    int32_t rndTime = noRandomOnReset && step == 0 ? 0 : this->getRandTime();
+	
+    for (int i = 0; i < NUM_ARP_MAX_POLY_VOICES; i++) {
+		uint32_t rnd_u32 = arpRand.rng_rand(rndTime);
+		if (noRandomOnReset && step == 0) {
+			curRandTimeOffset[i] = 0;
+		} else if (randMode == 0) {
+			curRandTimeOffset[i] = rnd_u32;
+		} else {
+			curRandTimeOffset[i] = -rndTime + arpRand.rng_rand(rndTime*2);
+		}
+		tick_t rndStepTime = resetTime + step * stepSize + curRandTimeOffset[i];
+		arpSteps.push_back(arp_generated_pattern_step{rndStepTime, i});
 	}
-    processTimePoints.push_back(resetTime + step * stepSize);
-    sort_unique_erase(processTimePoints);
-#ifdef PLACE_MARKERS
+	std::sort(arpSteps.begin(), arpSteps.end(), [](const arp_generated_pattern_step& a, const arp_generated_pattern_step& b) {
+		if (a.time == b.time) {
+			return a.index < b.index;
+		}
+		return a.time < b.time;
+	});
+#ifdef PLACE_MARKERS142
     markers2.clear();
-    for (int i = 0; i < processTimePoints.size(); i++) {
-    	auto& procTmPt = processTimePoints[i];
+    for (int i = 0; i < arpSteps.size()&&i<6 ; i++) {
+    	auto& procTmPt = arpSteps[i];
 		
-		String str = StringFormat("@%d rndStepTime[%d]", i, procTmPt);
-		markers2.push_back(marker_t{procTmPt, col(7), str, (float)(i)});
+		String str = StringFormat("@%d rndStepTime[%d]", procTmPt.time, procTmPt.index);
+		markers2.push_back(marker_t{procTmPt.time, col(7), str, (float)(i)});
     }
 #endif
+    processTimePoints.clear();
+    processNotesSpawn.clear();
+    for (int i = 0; i < arpSteps.size(); i++) {
+    	auto& procTmPt = arpSteps[i];
+		processTimePoints.push_back(procTmPt.time);
+		processNotesSpawn.push_back(procTmPt.index);
+	}
+
+
 }
 void midiarp::process(std::vector<noteevent_t>& noteEventsIn,
 				tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd,
 				std::vector<noteevent_t>& noteEventsProcessed, tick_t ticksPerBlock) {
-#define TIME_STEP (resetTime + step * stepSize)
+	int tickMarkers = 0;
+	//#ifdef PLACE_MARKERS
+	//						markers.push_back(marker_t{start, col(7), StringFormat("process %d evts", noteEventsIn.size()), (float)(tickMarkers++)});
+	//#endif
+	//#ifdef PLACE_MARKERS
+	//						markers.push_back(marker_t{end, col(7), "block end", (float)(tickMarkers++)});
+	//#endif
 
+	
 	int nSend = 0;
 	int64_t time = getTimeMillis()/100ULL;
 	std::vector<noteevent_t> noteEvents = noteEventsIn;
+	sortNoteEvents(noteEvents);
 	std::reverse(noteEvents.begin(), noteEvents.end());
+
 	numCalls++;
 	if (!this->enable) {
 		const automation_t* automatEnable = getRegisteredConstAutomation(PARAM_ENABLE);
@@ -297,7 +304,8 @@ void midiarp::process(std::vector<noteevent_t>& noteEventsIn,
 		const tick_t tick = t;
 		bool enabledBefore = this->enable;
 		updateAutomatedParameters(tick);
-		int tickMarkers = 0;
+		tick_t stepSize = getStepSize();
+		tick_t noteDuration = getDuration();
 		if (this->enable != enabledBefore) {
 			for (noteevent_t& evt : this->heldInput) {
 #ifdef PLACE_MARKERS
@@ -316,68 +324,119 @@ void midiarp::process(std::vector<noteevent_t>& noteEventsIn,
 				nSend++;
 			}
 		}
-		tick_t stepSize = getStepSize();
-		tick_t noteDuration = getDuration();
-		if (stepSize != lastStepSize) {
-			int nextStep = (resetTime + step * lastStepSize);
-			step = 0;
-			while (TIME_STEP < nextStep) {
-				step++;
+		int nSend = 0;
+		if (!heldOutputNotes.empty()) {
+			auto i = std::begin(heldOutputNotes);
+			while (i != std::end(heldOutputNotes)) {
+				note_t& note = *i;
+				if (note.end() > start && note.end() <= end) {
+					noteEventsProcessed.emplace_back(note.pitch, note.velocity, note.end()-start-1, note.start(), false, note.end() == loopEnd);
+					nSend++;
+					i = heldOutputNotes.erase(i);
+				} else if (note.end() <= start) {
+					//force off
+					noteEventsProcessed.emplace_back(note.pitch, note.velocity, 0, note.start(), false, note.end() == loopEnd);
+					nSend++;
+					i = heldOutputNotes.erase(i);
+				}
+				else i++;
 			}
-			while (TIME_STEP > nextStep+stepSize) {
-				step--;
-			}
-#ifdef PLACE_MARKERS
-			markers.push_back(marker_t{tick, col(1), "", (float)(tickMarkers++)});
-			String str = StringFormat("StepSize %d -> %d", lastStepSize, stepSize);
-			if (TIME_STEP<start||TIME_STEP>=end) {
-				markers.push_back(marker_t{TIME_STEP, col(2), str, (float)(tickMarkers++)});
-//					my_printf("reset out of range\n", 0);
-//					reset(tick);
-			} else {
-				markers.push_back(marker_t{TIME_STEP, col(3), str, (float)(tickMarkers++)});
-//					reset(TIME_STEP);
-			}
-#endif
-            initRandomDelays(lSeed, step, stepSize, start, end);
-			lastStepSize = stepSize;
-        }
+		}
+//#define TIME_STEP (resetTime + step * stepSize)
+//			int newStep = step;
+//			while (tick < resetTime + newStep * stepSize) {
+//				newStep++;
+//			}
+//			while (tick > resetTime + newStep * stepSize+stepSize) {
+//				newStep--;
+//			}
+//			step = newStep;
+		//if (resetTime && heldInput.size() && stepSize != lastStepSize) {
+//#ifdef PLACE_MARKERS
+//			markers.push_back(marker_t{tick, col(1), "", (float)(tickMarkers++)});
+//			String str = StringFormat("StepSize %d -> %d", lastStepSize, stepSize);
+//			if (TIME_STEP<start||TIME_STEP>=end) {
+//				markers.push_back(marker_t{TIME_STEP, col(2), str, (float)(tickMarkers++)});
+////					my_printf("reset out of range\n", 0);
+////					reset(tick);
+//			} else {
+//				markers.push_back(marker_t{TIME_STEP, col(3), str, (float)(tickMarkers++)});
+////					reset(TIME_STEP);
+//			}
+//#endif
+            //initRandomDelays(lSeed, step, stepSize, start, end, false);
+			//lastStepSize = stepSize;
+        //}
         //				tick_t step = (start - resetTime + stepSize-1) / stepSize;
-		while (!noteEvents.empty()) {
-			noteevent_t* evt = &noteEvents.back();
-			if (evt->tickOffsetInBlock+start > tick) {
-				break;
+
+		for (noteevent_t& noteevt : noteEvents) {
+			noteevent_t* evt = &noteevt;
+			if (evt->tickOffsetInBlock+start != tick) {
+				continue;
 			}
 			if (evt->isNoteOn) {
-
 				auto it = std::find_if(heldInput.begin(), heldInput.end(), [evt](const noteevent_t evt2) {
 					return evt->pitch == evt2.pitch;
 				});
+				bool isReset = false;
 				if (it == heldInput.end()) {
 					if (heldInput.empty()) {
-						if (resetMode == ResetMode::NOTE) {
+						//if (resetMode == ResetMode::NOTE) {
 							reset(evt->tickOffsetInBlock+start);
 	#ifdef PLACE_MARKERS
 							markers.push_back(marker_t{tick, col(4), "reset first note", (float)(tickMarkers++)});
 	#endif
-							initRandomDelays(lSeed, step, stepSize, start, end);
-						}
+							initRandomDelays(lSeed, step, stepSize, start, end, true);
+							isReset = true;
+						//}
+					} else if (processTimePoints.size() < heldInput.size()+1) {
+						//initRandomDelays(lSeed, step, stepSize, start, end, false);
 					}
 					note_t note;
 					note.time = evt->tickOffsetInBlock+start;
 					note.pitch = evt->pitch;
 					note.velocity = evt->velocity;
 					note.len = TICKS_QUARTER*2;
-					noteevent_t& nevt = *evt;
+ 					noteevent_t& nevt = *evt;
 					heldInput.push_back(nevt);
 #ifdef PLACE_MARKERS
-					markers.push_back(marker_t{tick, col(5), StringFormat("START IN %s", noteName(note.pitch)), (float)(tickMarkers++)});
+					markers.push_back(marker_t{note.time, col(5), StringFormat("Note Start IN %s", noteName(note.pitch)), (float)(tickMarkers++)});
 #endif
-					std::sort(heldInput.begin(), heldInput.end(), [](const noteevent_t evt1, const noteevent_t evt2) {
+		/*			std::sort(heldInput.begin(), heldInput.end(), [](const noteevent_t evt1, const noteevent_t evt2) {
 						return evt1.pitch < evt2.pitch;
-					});
+					});*/
 					heldInputAnimationNotes.push_back(note);
-					maxNoteChordCount = math::clamp<int32_t>(maxNoteChordCount, math::max<int32_t>(heldInput.size(), 6), curRandTimeOffset.size());
+					maxNoteChordCount = math::clamp<int32_t>(heldInput.size()-1, 0, curRandTimeOffset.size()-1);
+					if (!isReset) {
+						if (note.time < (resetTime+step*stepSize)+noteDuration-1) {
+#ifdef PLACE_MARKERS
+							markers.push_back(marker_t{note.time, col(3), StringFormat("late note IN %s", noteName(note.pitch)), (float)(tickMarkers++)});
+#endif
+				//auto it = std::find_if(heldInput.begin(), heldInput.end(), [&nevt](const noteevent_t evt2) {
+				//	return nevt.pitch == evt2.pitch && nevt.tickOffsetInBlock == evt2.tickOffsetInBlock;
+				//});
+				//int32_t newNoteIdx = it - heldInput.begin();
+				int32_t newNoteIdx = maxNoteChordCount;
+							for (int idxVoice = 0; idxVoice < NUM_ARP_MAX_POLY_VOICES; idxVoice++) {
+								if (processNotesSpawn[idxVoice] == newNoteIdx) {
+  									curRandTimeOffset[idxVoice]=note.time - resetTime;
+									processTimePoints[idxVoice]=note.time;
+#ifdef PLACE_MARKERS
+    markers2.clear();
+    for (int i2 = 0; i2 < processNotesSpawn.size()&&i2<6 ; i2++) {
+		String str = StringFormat("@%d rndStepTime[%d]", processTimePoints[i2], processNotesSpawn[i2]);
+		markers2.push_back(marker_t{processTimePoints[i2], col(7), str, (float)(i2)});
+    }
+#endif
+									break;
+								}
+							}
+						}
+					}
+				} else {
+	#ifdef PLACE_MARKERS
+					markers.push_back(marker_t{evt->tickOffsetInBlock+start, col(1), StringFormat("Note Duplicate Held IN %s", noteName(evt->pitch)), (float)(tickMarkers++)});
+	#endif
 				}
 
 			} else {
@@ -405,46 +464,42 @@ void midiarp::process(std::vector<noteevent_t>& noteEventsIn,
 				noteEventsProcessed.push_back(*evt);
 				nSend++;
 			}
-			noteEvents.pop_back();
 		}
 		if (enable) {
-			const tick_t tmStepBeginCurrent = TIME_STEP;
-			{
-				bool resetTimePoints = processTimePoints.empty();
-				resetTimePoints |= (tick == tmStepBeginCurrent+(stepSize>>1));
-				if (resetTimePoints) {
-					resetTimePoints = false;
-//					initRandomDelays(lSeed, step, stepSize, start, end);
-				}
-			}
 
-            if (!onceProcMsg) {
-                onceProcMsg = true;
-               	//log_printf("process %d to %d\n", start, end);
-            }
+			int currentpolyphonecount = heldInput.size();
 			for (int prIdx = 0; prIdx < processTimePoints.size(); prIdx++) {
                 tick_t timeStep = processTimePoints[prIdx];
-                if (timeStep > tick)
-                    break;
-                if (timeStep < tick)
-                    continue;
                 if (timeStep < start) {
                     //dbgassert(0);
                     continue;
                 }
                 if (timeStep >= end) {
-                    dbgassert(0);
                     continue;
                 }
-                if (timeStep < tmStepBeginCurrent-stepSize) {
-                    dbgassert(0);
+                if (timeStep != tick)
                     continue;
-                }
-                tick_t offsetFromRegTick = tick - tmStepBeginCurrent;
+				const tick_t tickConst = tick;
+                tick_t offsetFromRegTick = tick - (resetTime+step*stepSize);
+				dbgassert(processNotesSpawn.size() > prIdx && prIdx >= 0);
+				dbgassert(processNotesSpawn[prIdx] >= 0);
+				dbgassert(processNotesSpawn[prIdx] >= 0);
+					
+	#ifdef PLACE_MARKERS
+				markers.push_back(marker_t{start, col(2347), StringFormat("output step %d evts", noteEventsIn.size()), (float)(tickMarkers++)});
+	#endif
+				if (heldOutputNotes.size() >= currentpolyphonecount) {
+					break;
+				}
+				int noteIdx = processNotesSpawn[prIdx]%(math::max<int32_t>(1, heldInput.size()));
+				int spawnNotes = 1<<(noteIdx);
+				#if 0
                 //log_printf("process processTimePoints[%d] %d, offsetFromRegTick %d\n", prIdx, processTimePoints[prIdx], offsetFromRegTick);
-                int32_t maxNote = math::min<int32_t>(maxNoteChordCount, isChordOutput() ? heldInput.size() : math::min <int32_t>(heldInput.size(), 1));
-                int indexProcessed = -1;
-                for (int i = 0; i < curRandTimeOffset.size(); i++) {
+                int32_t maxNote = math::min<int32_t>(maxNoteChordCount, 
+					isChordOutput() ? heldInput.size() : math::min <int32_t>(heldInput.size(), 1));
+
+                int indexProcessed = cur;
+                for (int i = 0; i < processNotesSpawn.size(); i++) {
                     if (offsetFromRegTick == curRandTimeOffset[i]) {
                         //log_printf("timeStep[%d] %d offsetFromRegTick %d\n", prIdx, tick, offsetFromRegTick);
                     	indexProcessed = i;
@@ -463,6 +518,7 @@ void midiarp::process(std::vector<noteevent_t>& noteEventsIn,
 						spawnNotes |= (1<<i);
 					}
 				}
+				#endif
 #ifdef PLACE_MARKERS2
                 String str;
                 str = StringFormat("pt  0x%02X", spawnNotes);
@@ -497,11 +553,13 @@ void midiarp::process(std::vector<noteevent_t>& noteEventsIn,
 									tick_t randVel = -rndVelIntensity + arpRand.rng_rand(rndVelIntensity*2);
 									noteChord.velocity = math::clamp(noteChord.velocity+randVel, 0, 127);
 								}
-								addNote(noteEventsProcessed, start, noteChord, time);
+
 #ifdef PLACE_MARKERS_OUTPUT
-						String str = StringFormat("note step %d", step);
-						markers.push_back(marker_t{tick, col(6), str, (float)(tickMarkers++)});
+						String str = StringFormat("noteChord %d %d %s", noteChord.time, noteChord.len, noteName(noteChord.pitch));
+						markers.push_back(marker_t{tick, col(2), str, (float)(tickMarkers++)});
 #endif
+								addNote(noteEventsProcessed, start, noteChord, time);
+
 								nSend++;
 							}
 						}
@@ -526,20 +584,33 @@ void midiarp::process(std::vector<noteevent_t>& noteEventsIn,
 					}
 				}
             }
+			
+			if (tick >= (resetTime+step*stepSize))
 			{
-				const auto tmEndStep = tick;
-				bool stepCompleted = std::all_of(std::begin(processTimePoints), std::end(processTimePoints), [tmEndStep](tick_t t){
-					return t <= tmEndStep;
-				});
-				if (stepCompleted) {
-					step++;
-					initRandomDelays(lSeed, step, stepSize, start, end);
-					if (TIME_STEP >= end) {
-						break;
+				const auto tmTickCur = tick;
+				if (heldInput.size()) {
+					if (tick == resetTime+(step+1)*stepSize) {
+						step++;
+					}
+					if (tick >= (resetTime+step*stepSize) + (stepSize/2)) {
+						if (stepGenerated != step+1) {
+							dbgassert(tick < resetTime+(step+1)*stepSize);
+							bool stepCompleted = std::all_of(std::begin(processTimePoints), std::end(processTimePoints), [tmTickCur](tick_t t){
+								return t <= tmTickCur;
+							});
+							if (stepCompleted) {
+								initRandomDelays(lSeed, step+1, stepSize, start, end, false);
+								bool stepCompleted2 = std::all_of(std::begin(processTimePoints), std::end(processTimePoints), [tmTickCur](tick_t t){
+									return t <= tmTickCur;
+								});
+								dbgassert(!stepCompleted2);
+								stepGenerated = step+1;
+							}
+						}
 					}
 				}
 			}
-		} else {
+		} else if (false) {
 			while (!noteEvents.empty()) {
 				noteevent_t* evt = &noteEvents.back();
 				if (evt->tickOffsetInBlock+start > tick) {
@@ -547,9 +618,6 @@ void midiarp::process(std::vector<noteevent_t>& noteEventsIn,
 				}
 				noteEventsProcessed.push_back(*evt);
 				noteEvents.pop_back();
-			}
-			if (tick == TIME_STEP) {
-				step++;
 			}
 		}
 	}
