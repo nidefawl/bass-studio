@@ -202,6 +202,7 @@ public:
 	void onStartPlayback(project_controller_t* ctrl);
 	void onStopPlayback(project_controller_t* ctrl);
 	void onPluginsChanged(audio_stage_t* stage);
+	int32_t processRender(project_controller_t* ctrl, int32_t sample, double posDouble);
 	int32_t processPlayback(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround);
 	int32_t processBlock(project_controller_t* ctrl, const DAW::processing_graph_t* const processingGraph, AudioBlock* const ptrExternalInputs, AudioBlock* const ptrExternalOutputs, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround);
 	void getBlockThreadStats(std::vector<thread_stats_process_timings_t>&);

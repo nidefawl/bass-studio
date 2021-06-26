@@ -462,7 +462,7 @@ int runCommandLineHost(int argc, const char* argv[]) {
 			int32_t samplePos = 0;
 			double tickPos = 0;
 			if (!bRenderOnly) {
-				playThread->addRequest(REQ_STATE, (int) playback_state::status_play, true);
+				playThread->addRequest(REQ_STATE, (int) playback_state::status_playback, true);
 			} else {
 	    		/*
 	    		 * Process audio/midi tracks
@@ -529,51 +529,11 @@ int runCommandLineHost(int argc, const char* argv[]) {
 	            			&& tickPos < projectGlobals.loopStart+projectGlobals.loopLen
 							&& projectGlobals.loopEnabled);
 
-	            	int32_t processedBlock = host->processBlock(tls.project, processingGraph.get(), &blockIn, &blockOut, samplePos, tickPos, playback_state::status_play, inLoop, isLoopAround);
+//	            	int32_t processedBlock = host->processBlock(tls.project, processingGraph.get(), &blockIn, &blockOut, samplePos, tickPos, playback_state::status_play, inLoop, isLoopAround);
+    	            int32_t processedBlock = host->processRender(tls.project, samplePos, tickPos);
 
 	            	dbgassert(processedBlock > 0);
 
-	    			int32_t bytesCopied = 0;
-//	    			hires_timer_t timerConvert;
-
-					for (auto* trackMaster : project.trackMasterCtr) {
-	    				track_impl_t* trAudio = trackMaster->audio;
-						dbgassert((trAudio->flags & audiostageflags_t::CONVERT_OUTPUT) != audiostageflags_t::NONE);
-					}
-	    			for (track_t* tr : tls.project->getTracks()) {
-	    				track_impl_t* trAudio = tr->audio;
-	    				if (static_cast<bool>(trAudio->flags & audiostageflags_t::CONVERT_OUTPUT)) {
-	    					bytesCopied += trAudio->audioOutput.convertToSamples(host.get());
-	    				}
-	    			}
-//	    			int64_t timeConvert = timerConvert.getTime();
-//	    			stats.timings["convert"] = timeConvert;
-//	    			stats.timings["convertBytes"] = bytesCopied;
-    				{
-    		        	samplerate_t sampleRate = host->sampleFormat.sampleRate;
-    		        	int32_t blockSize = host->sampleFormat.blockSize;
-    	            	int32_t bpm100 = projectGlobals.tempo100;
-    					double blocksPerS = sampleRate / (double) blockSize;
-    					double msPerBlock = 1000.0 / blocksPerS;
-    					const double ticksPerBlock = toTickPrecise(blockSize/(double)sampleRate, bpm100);
-    					if (processedBlock) {
-    						//copy away output data...
-    			            isLoopAround = false;
-    						samplePos += blockSize*processedBlock;
-    						tickPos += ticksPerBlock*processedBlock;
-							if (inLoop) {
-								if (tickPos >= projectGlobals.loopStart + projectGlobals.loopLen) {
-									LOG("JMP FROM %.2f to %d\n", tickPos, projectGlobals.loopStart);
-									tickPos = projectGlobals.loopStart;
-									samplePos = tickToSample(projectGlobals.loopStart, bpm100, sampleRate);
-									LOG("JMP LOOPBEGIN seconds: %.2f - BLOCK %d\n", toSeconds(projectGlobals.loopStart, bpm100), samplePos / blockSize);
-									isLoopAround = true;
-								}
-							}
-							projectController.getPlaybackPos() = (int32_t) floor(tickPos);
-
-    					}
-    				}
     			}
 				if (fStart >= 0.0f && fLength >= 0.0f) {
 	//				project.loopEnabled = false;

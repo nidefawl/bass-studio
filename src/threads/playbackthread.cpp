@@ -164,7 +164,11 @@ private:
 					{
 						playback_state reqState = (playback_state) req->param;
 						switch (reqState) {
-							case playback_state::status_play:
+							case playback_state::status_render:
+							{
+								break;
+							}
+							case playback_state::status_playback:
 							{
 								dbgassert(host->sampleFormat.sampleRate != 0);
 								dbgassert(host->sampleFormat.blockSize != 0);
@@ -218,7 +222,7 @@ private:
 //			}
             int32_t processedBlock = 0;
             bool inLoop = false;
-            int64_t processDuration = 0;
+
             if (m_status != playback_state::status_no_process)
             {
 				std::unique_lock<std::recursive_mutex> lock(mutex);
@@ -230,7 +234,7 @@ private:
 
             	inLoop = (tickPos >= projGlobals.loopStart
             			&& tickPos < projGlobals.loopStart+projGlobals.loopLen
-						&& m_status == status_play && projGlobals.loopEnabled);
+						&& m_status == status_playback && projGlobals.loopEnabled);
             	midiHost->processMidi(this->ctrl, samplePos, tickPos, m_status, inLoop, isLoopAround);
             	if (!host->bypassPlaybackProcessing) {
 
@@ -244,7 +248,6 @@ private:
                     	timer2.reset();
                     }
             	}
-//            	processDuration = timer2.getTime();
 //    			LOG("processedBlocks: %d, play: %d, tickpos: %f\n", processedBlock, (m_status==playback_state::status_play), tickPos);
             }
             host_stats_t stats;
@@ -282,7 +285,7 @@ private:
 		            isLoopAround = false;
 					samplePos += blockSize*processedBlock;
 					tickPos += ticksPerBlock*processedBlock;
-					if (m_status == status_play) {
+					if (m_status == status_playback) {
 						if (inLoop) {
 							if (tickPos >= projGlobals.loopStart + projGlobals.loopLen) {
 								if (DawInstance::get()) {
@@ -300,7 +303,7 @@ private:
 					playbackDuration += msPerBlock*processedBlock;
 				}
 			}
-			if (playbackDuration > 10000 && m_status == status_play) {
+			if (playbackDuration > 10000 && m_status == status_playback) {
 				double wallTimeMs = timer.getTimeDouble() * 1000.0;
 	            LOG("playbackDuration %.4f wallTime %.4f error %.4f\n", playbackDuration, wallTimeMs, playbackDuration-wallTimeMs);
 	            playbackDuration = 0;

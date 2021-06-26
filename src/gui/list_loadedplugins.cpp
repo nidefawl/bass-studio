@@ -297,11 +297,11 @@ public:
 			nvgFillColor(vg, G_WHITE);
 		}
 		auto& renderStats = daw_tls::getTls().prevRenderStats;
+		printL("playback_state", StringFormat("%lld", static_cast<int32_t>(state)));
 		printL("Usage", StringFormat("%.2f%%", stats.usage*100.0));
 		printL("Usage raw", StringFormat("%.2f%%", stats.usageRaw*100.0));
 		nvgFillColor(vg, G_WHITE);
 		printL("FPS", StringFormat("%.2f", renderStats.fps));
-
 		printL("timePrerender", StringFormat("%d", renderStats.timePrerender));
 		printL("timeUpdateWaveforms", StringFormat("%d", renderStats.timeUpdateWaveforms));
 		printL("timeRender", StringFormat("%d", renderStats.timeRender));
@@ -328,7 +328,6 @@ public:
 		printL("audioCallback tDelta usec", StringFormat("%d", audioHost ? audioHost->audioCallbackInvocationDelay_usec : 0));
 		printL("timeProcess", StringFormat("%lld", stats.timeProcess));
 		printL("timeProcessRaw", StringFormat("%lld", stats.timeProcessRaw));
-		printL("playback_state", StringFormat("%lld", static_cast<int32_t>(state)));
 		printL("input q len", StringFormat("%d", stats.inputQueueLen));
 		printL("output q len", StringFormat("%d", stats.outputQueueLen));
 		printL("INPUT  resampler", StringFormat("%d samples|%d blocks", stats.resamplerInNumSamples, stats.resamplerInNumBlocks));

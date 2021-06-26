@@ -2241,7 +2241,7 @@ bool DawCtrl::processGlobalKeyevent(KeyEvent& event) {
 	return false;
 }
 void DawInstance::startPlaying() {
-	setAudioThreadState(playback_state::status_play);
+	setAudioThreadState(playback_state::status_playback);
 }
 void DawInstance::stopPlaying() {
 	setAudioThreadState(playback_state::status_stop);
@@ -2254,7 +2254,7 @@ bool DawInstance::toggleLoop() {
 	return projectGlobals.loopEnabled;
 }
 bool DawInstance::isPlaying() {
-	return playThread.getState() == playback_state::status_play;
+	return playThread.getState() == playback_state::status_playback;
 }
 bool DawCtrl::mouseDownPre() {
 	daw.dragdropclip.reset();

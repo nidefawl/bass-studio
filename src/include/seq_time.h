@@ -102,6 +102,12 @@ inline double blockToTickPrecise(double block, int32_t bpm100, samplerate_t samp
 }
 enum playback_state {
 	status_stop,
-	status_play,
+	status_playback,
+	status_render,
 	status_no_process,
 };
+namespace DAW {
+	inline bool isPlaybackState(playback_state s) {
+		return s == status_playback || s == status_render;
+	}
+}
