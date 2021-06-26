@@ -24,7 +24,7 @@ void guitooltip<guibuttonbase>::layout()  {
 	{
 
 		tbl_row_t row{};
-		row.cols.push_back(tblString{ptr->label});
+		row.cols.push_back(tblString{ptr->getTooltipText()});
 		table.rows.push_back(row);
 	}
 	Table::AdjustColSizes(table, getSizeContent()-ivec2(INSET_TABLE<<1));

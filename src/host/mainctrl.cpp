@@ -1021,6 +1021,7 @@ void DawInstance::menuCommand(const menucmd_t&& command) {
 				}
 			}
 			saveFile(path);
+			settings.recentfiles.add(path);
 		}
 		break;
 	case CMD_FILE_CLOSE:
@@ -1503,6 +1504,35 @@ void DawInstance::setMainControl(MainCtrl* mainCtrl) {
 MainCtrl* DawInstance::getMainControl() {
 	return this->mainCtrl;
 }
+
+guictxtmenu_base* makeGuiAutosave(int64_t delay);
+String getProjectAutosaveFilename(String projectPath) {
+	String bakPathName;
+	if (projectPath.empty())
+	{
+		String tmpPath = toUserdataPath("unsaved.project");
+		int count = 1;
+		while (FileExists(tmpPath)) {
+			tmpPath = toUserdataPath(StringFormat("unsaved-%d.project", count));
+		}
+		bakPathName = tmpPath;
+	} else {
+		String path,name,ext, nameExt; //path, name, ext, nameExt
+		SplitPath(projectPath, &path, &name, &ext, &nameExt);
+		bakPathName = path + DAW_FILEIO_PATHSEP + name + "-autosave." + ext;
+	}
+	return bakPathName;
+}
+void DawInstance::triggerAutoSave()
+{
+	tmLastSave = getTimeMillis();
+	projectPathAutosave = getProjectAutosaveFilename(projectPath);
+	std::shared_ptr<project_file> f = createProjectFile();
+	saveProject(f, projectPathAutosave);
+}
+String DawInstance::getAutoSaveFilename() {
+	return getProjectAutosaveFilename(projectPath);
+}
 void DawInstance::onTick()
 {
 	const bool bWroteMidiData = vsthost::getInstance()->writeRecordedData(&project);
@@ -1517,8 +1547,11 @@ void DawInstance::onTick()
 	vsthost::getInstance()->onTick();
 
 	bool noPopups = true;
+	bool noWindows = true;
 	for (auto* ctrl : dawCtrls) {
 		noPopups &= !ctrl->guiDragged && !ctrl->guiCaptured && !ctrl->ctxtmenu;
+		noWindows &= !ctrl->hasDialogWindows();
+		noWindows &= !ctrl->hasContextMenu();
 	}
 	if (noPopups && projectToLoad) {
 		std::shared_ptr<project_to_load_t> projectToLoadCpy = projectToLoad;
@@ -1535,6 +1568,23 @@ void DawInstance::onTick()
 			cbProjectLoadCompleteCallback = nullptr;
 		}
 		log_printf("end of setLoadedProject\n", 0);
+	}
+	if (noWindows && autosaveState.isEnabled) {
+		if (0 == autosaveState.tmLastTrigger) {
+			autosaveState.tmLastTrigger = getTimeMillis();
+		}
+		auto tmNow = getTimeMillis();
+		if (tmNow - tmLastSave > autosaveState.tmSaveDelay) {
+			if (tmNow - autosaveState.tmLastTrigger > autosaveState.tmReminderDelay) {
+				autosaveState.tmLastTrigger = tmNow;
+				auto tooltip = makeGuiAutosave(5000);
+				auto ctrlSize = mainCtrl->m_size;
+				tooltip->size = ivec2(420, 90);
+				tooltip->maxHeight = tooltip->size.y;
+				mainCtrl->openContextMenu(tooltip, ivec2(ctrlSize.x/2, ctrlSize.y-100)-tooltip->size/2, BASECTRL_WND_POS_RELATIVE);
+			}
+
+		}
 	}
 }
 
@@ -1782,6 +1832,7 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
 
 	/** set as current project **/
 	this->projectPath = file->path;
+	this->tmLastSave = getTimeMillis();
 
 	setAudioThreadState(playback_state::status_stop);
 	return true;

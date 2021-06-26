@@ -23,6 +23,7 @@ class guibuttonbase : public guibase {
 protected:
 	GuiColor::constant_t buttonColor;
 	String str = "";
+	String tooltipText = "";
 	int fontSize = 0;
 	float fFontScale = 1.0f;
 public:
@@ -50,6 +51,13 @@ public:
 	void setText(String _str) {
 		str = _str;
 	}
+	void setTooltipText(String _tooltipText) {
+		tooltipText = _tooltipText;
+	}
+	String getTooltipText() {
+		return tooltipText.empty() ? label : tooltipText;
+	}
+	
 	void setFontSize(int fs) {
 		fontSize = fs;
 	}

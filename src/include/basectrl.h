@@ -165,6 +165,10 @@ class BaseCtrl : public SafeRefHandler<guibase> {
 protected:
     guitheme_mgr themes;
 
+    bool hasCtxtMenu()
+    {
+        return this->ctxtmenu != NULL;
+    }
 public:
     BaseCtrl()
     {
@@ -408,6 +412,10 @@ public:
     void setVisible(bool b) {
     	this->bIsVisible = b;
     }
+    virtual bool hasDialogWindows()
+    {
+        return false;
+    }
 };
 class AppCtrl : public BaseCtrl {
 protected:
@@ -421,10 +429,6 @@ protected:
     bool closed = false;
 
 public:
-    bool hasCtxtMenu()
-    {
-        return this->ctxtmenu != NULL;
-    }
     bool hasMenuWindow()
     {
         for (auto& w : menuWindows) {
@@ -506,6 +510,11 @@ public:
     virtual void destroy() = 0;
     void onAppTick();
     void destroyControl();
+    bool hasDialogWindows() {
+    	if (hasMenuWindow())
+    		return true;
+    	return dialog != nullptr;
+    }
 
 protected:
     /**

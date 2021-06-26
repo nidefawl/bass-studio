@@ -93,8 +93,7 @@ void PopupCtrl::open(guictxtmenu_base *_ctxtmenu, ivec2 pos, bool bResizeable) {
         *getTheme() = *mainCtrl->getTheme();
 	}
 
-
-	popupCtrs->size = vec2(_ctxtmenu->size.x, math::max(0, popupCtrs->maxHeight));
+	popupCtrs->size = vec2(_ctxtmenu->size.x, math::max(0, popupCtrs->maxHeight > 0 ? popupCtrs->maxHeight : _ctxtmenu->size.y));
 	popupCtrs->add(_ctxtmenu);
 	popupCtrs->determineSize(popupCtrs->size);
 	popupCtrs->layout();

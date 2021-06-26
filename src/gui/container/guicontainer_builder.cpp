@@ -12,6 +12,7 @@ guictr_base* makeCtrHistory();
 guictr_base* makeGuiPluginsLoadedList();
 guictr_base* makeGuiEffectLibrary();
 guictr_base* makeGuiPerformance();
+guictr_base* makeGuiExport();
 
 bool getContainerLabel(container_type type, String& out) {
 	switch (type) {
@@ -53,6 +54,9 @@ bool getContainerLabel(container_type type, String& out) {
 			return true;
 		case CTR_TYPE_PERFORMANCE:
 			out = "Performance";
+			return true;
+		case CTR_TYPE_EXPORT:
+			out = "Export Audio";
 			return true;
 		default:
 			break;
@@ -100,6 +104,9 @@ std::map<container_type, ContainerBuilder>& getContainerFactory() {
 		};
 		containerFactory[container_type::CTR_TYPE_PERFORMANCE] = []() {
 			return std::shared_ptr<guictr_base>(makeGuiPerformance());
+		};
+		containerFactory[container_type::CTR_TYPE_EXPORT] = []() {
+			return std::shared_ptr<guictr_base>(makeGuiExport());
 		};
 	}
 	return containerFactory;

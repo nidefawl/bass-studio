@@ -35,6 +35,11 @@ struct FileFound {
 	String name;
 	String ext;
 };
+#ifdef _WIN32
+#define DAW_FILEIO_PATHSEP "\\"
+#else
+#define DAW_FILEIO_PATHSEP "/"
+#endif
 
 using ByteBuf = std::vector<uint8_t>;
 

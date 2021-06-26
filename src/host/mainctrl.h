@@ -237,6 +237,12 @@ public:
 
 	}
 };
+struct autosave_state_t {
+	int64_t tmSaveDelay = (600) * 1000L;
+	int64_t tmLastTrigger = 0L;
+	int64_t tmReminderDelay = 30000L;
+	bool isEnabled = true;
+};
 class DawInstance : public project_controller_t, public delete_cb {
 	friend class MainCtrl;
 	friend class CompanionCtrl;
@@ -258,6 +264,8 @@ class DawInstance : public project_controller_t, public delete_cb {
 	PlaybackThread playThread;
 	plugindatabase_t plugindb;
 	String projectPath;
+	int64_t tmLastSave = 0L;
+	String projectPathAutosave;
 	track_t* selectedTrack = nullptr;
 	String loadProject = "";
 	struct project_to_load_t {
@@ -268,6 +276,7 @@ class DawInstance : public project_controller_t, public delete_cb {
 	std::shared_ptr<plugin_clipboard_t> pluginClipboard;
 	dragdrop_midifile dragdropclip;
 	dragdrop_target_indicator_t dragdropTarget;
+	autosave_state_t autosaveState;
 public:
 	std::function<void(DawInstance*, std::shared_ptr<project_file>, int)> cbProjectLoadCompleteCallback;
 	tick_t tickJmpFrom = 0;
@@ -384,6 +393,8 @@ public:
 	void layoutTrackEditors();
 	bool onChildOverlayWindowClose(window_main*);
 	void setSoloState(audio_stage_ref_t ref, bool enableSolo);
+	void triggerAutoSave();
+	String getAutoSaveFilename();
 private:
 	void onDawCompanionWindowClose(DawWindowCompanion& entry);
 };
