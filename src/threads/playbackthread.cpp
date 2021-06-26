@@ -297,7 +297,7 @@ private:
 						}
 						ctrl->getPlaybackPos() = (int32_t) floor(tickPos);
 					}
-					playbackDuration += msPerBlock;
+					playbackDuration += msPerBlock*processedBlock;
 				}
 			}
 			if (playbackDuration > 10000 && m_status == status_play) {
