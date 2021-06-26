@@ -226,20 +226,15 @@ public:
     }
     guictxtmenu_base* getTooltip(AppCtrl* appctrl) override
 	{
-
-				auto tooltip = new gui_test(ref);
-				auto* graph = &tooltip->getGraph();
-				graph->size = {256, 128};
-				graph->pos = {0, 0};
-				tooltip->size = graph->size;
-				tooltip->layout();
-//				tooltip->canTakeInputFocus = true;
-				tooltip->maxHeight = graph->size.y;
-		//
-		////		table.rowHeight = FONT_SIZE_TOOLTIP+INSET_TABLE_CELL_PADDING*2;
-				return tooltip;
-//		return new guitooltip<String>(&this->tmp);
-
+		auto tooltip = new gui_test(ref);
+		auto* graph = &tooltip->getGraph();
+		graph->size = {256, 128};
+		graph->pos = {0, 0};
+		tooltip->size = graph->size;
+		tooltip->layout();
+//		tooltip->canTakeInputFocus = true;
+		tooltip->maxHeight = graph->size.y;
+		return tooltip;
 	}
 };
 class gui_stats_list : public guictr_base
@@ -334,7 +329,6 @@ public:
 		printL("timeProcess", StringFormat("%lld", stats.timeProcess));
 		printL("timeProcessRaw", StringFormat("%lld", stats.timeProcessRaw));
 		printL("playback_state", StringFormat("%lld", static_cast<int32_t>(state)));
-		audiothread_ringbuffer_t& ringbuffer = vsthost::getInstance()->getRingBuffer();
 		printL("input q len", StringFormat("%d", stats.inputQueueLen));
 		printL("output q len", StringFormat("%d", stats.outputQueueLen));
 		printL("INPUT  resampler", StringFormat("%d samples|%d blocks", stats.resamplerInNumSamples, stats.resamplerInNumBlocks));
@@ -358,8 +352,7 @@ class gui_list_plugins : public guictr_base {
 	std::vector<gui_pluginsloaded_list_entry*>& entries;
 public:
 	gui_list list;
-
-	guibutton btnLoadAll;
+	
 	gui_list_plugins(std::vector<gui_pluginsloaded_list_entry*>& _entries) : guictr_base(), entries(_entries) {
 
 		setBackgroundRendered(true);
@@ -367,8 +360,6 @@ public:
 		list.setBackgroundRendered(false);
 		list.setRowHeight(14);
 		add(&list);
-		add(&btnLoadAll);
-		btnLoadAll.setLabel("Load all");
 	}
 	void sort() {
 
@@ -393,42 +384,14 @@ public:
 		list.setRowHeight(rowHeight);
 //		const int32_t hpt = theme->get(GuiConstant::CONST_FIXED_TITLE_HEIGHT);
 		const int32_t inset = math::min(6, theme->get(GuiConstant::CONST_LAYOUT_MARGIN));
-		const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
-		list.pos = {inset, TRACK_HEIGHT_STEP+inset};
-		list.size = {cs.x-inset*2, cs.y-TRACK_HEIGHT_STEP-inset*2};
-		btnLoadAll.pos = {inset, inset};
-		btnLoadAll.size = {cs.x-inset*2, TRACK_HEIGHT_STEP-inset*2};
+		list.pos = {inset, inset};
+		list.size = {cs.x-inset*2, cs.y-inset*2};
 		for (auto* g : guis) {
 			g->layout();
 		}
 	}
 	void buttonClicked(guibase* button) {
-		if (&btnLoadAll == button) {
-
-			log_printf("load all deferred\n", 0);
-			ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-			auto* host = vsthost::getInstance();
-    		std::vector<effectbase*> pluginsDeferred;
-    		std::vector<audio_stage_t*> audioStagesAffected;
-    		host->getDeferredEffects(pluginsDeferred);
-    		my_printf("loading %d plugins\n", pluginsDeferred.size());
-    		for (auto plugin : pluginsDeferred) {
-        		my_printf("activate %s\n", StringAsCStr(plugin->sName));
-        		effectbase* effectLoaded = nullptr;
-    			host->activateDeferred(plugin, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &effectLoaded);
-
-				if (effectLoaded) {
-//            				effectLoaded->show();
-					audioStagesAffected.push_back(effectLoaded->getTrackLink());
-				}
-    		}
-    		for (audio_stage_t* stage : audioStagesAffected) {
-    			vsthost::getInstance()->postPluginLoaded(stage, nullptr);
-    		}
-			DawInstance::get()->onPluginsChanged();
-
-
-		} else if (STL_CONTAINS(entries, button)) {
+		if (STL_CONTAINS(entries, button)) {
 			gui_pluginsloaded_list_entry* entry = dynamic_cast<gui_pluginsloaded_list_entry*>(button);
 			auto* effectbase = safeRefGet(entry->getRef());
 			if (effectbase) {
@@ -469,6 +432,7 @@ class gui_pluginsloaded_list : public guictr_base {
 //	guictr_scrollbar scrollTop;
 	gui_list_plugins listCtr;
 	gui_list_plugins listDeferredCtr;
+	guibutton btnLoadAll;
 	String curquery = "";
 	uint64_t lastUpdate = 0;
 	std::vector<gui_pluginsloaded_list_entry*> listEntriesLoadedPlugins;
@@ -479,6 +443,7 @@ public:
 		setBackgroundRendered(false);
 		padding = 0;
 		margin = 0;
+		add(&btnLoadAll);
 		add(&listCtr);
 		add(&listDeferredCtr);
 	}
@@ -537,6 +502,15 @@ public:
 			_newList.push_back(g);
 			_newListLoadedPlugins.push_back(g);
 		}
+		int numDeferred = deferredEffects.size();
+		btnLoadAll.setLabel("Load all deferred");
+		btnLoadAll.setEnabled(numDeferred > 0);
+		if (numDeferred) {
+			btnLoadAll.setText(StringFormat("Load %d Plugins", deferredEffects.size()));
+		} else {
+			btnLoadAll.setText(btnLoadAll.getLabel());
+		}
+		
 		listCtr.list.setList(_newList);
 		listDeferredCtr.list.setList(_newListDef);
 		listEntriesLoadedPlugins = _newListLoadedPlugins;
@@ -545,12 +519,48 @@ public:
 		listCtr.sort();
 		layout();
 	}
+	void buttonClicked(guibase* button) {
+		if (&btnLoadAll == button) {
+
+			log_printf("load all deferred\n", 0);
+			ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+			auto* host = vsthost::getInstance();
+    		std::vector<effectbase*> pluginsDeferred;
+    		std::vector<audio_stage_t*> audioStagesAffected;
+    		host->getDeferredEffects(pluginsDeferred);
+    		my_printf("loading %d plugins\n", pluginsDeferred.size());
+    		for (auto plugin : pluginsDeferred) {
+        		my_printf("activate %s\n", StringAsCStr(plugin->sName));
+        		effectbase* effectLoaded = nullptr;
+    			host->activateDeferred(plugin, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &effectLoaded);
+
+				if (effectLoaded) {
+//            				effectLoaded->show();
+					audioStagesAffected.push_back(effectLoaded->getTrackLink());
+				}
+    		}
+    		for (audio_stage_t* stage : audioStagesAffected) {
+    			vsthost::getInstance()->postPluginLoaded(stage, nullptr);
+    		}
+			DawInstance::get()->onPluginsChanged();
+
+
+		} 
+	}
 	void layout() {
 		ivec2 cs = getSizeContent();
-		listCtr.pos = ivec2(0, 0);
-		listDeferredCtr.pos = ivec2(0, cs.y/2);
-		listCtr.size = ivec2(cs.x, cs.y/2);
-		listDeferredCtr.size = ivec2(cs.x, cs.y/2);
+		const int32_t inset = math::min(6, theme->get(GuiConstant::CONST_LAYOUT_MARGIN));
+		const int32_t CONST_FIXED_TITLE_HEIGHT = theme->get(GuiConstant::CONST_FIXED_TITLE_HEIGHT);
+
+		int posLists = 0;
+		int heightLists = cs.y - CONST_FIXED_TITLE_HEIGHT;
+
+		listCtr.pos = ivec2(0, posLists+0);
+		listDeferredCtr.pos = ivec2(0, posLists+heightLists/2+inset/2);
+		listCtr.size = ivec2(cs.x, posLists+heightLists/2-inset/2);
+		listDeferredCtr.size = ivec2(cs.x, heightLists/2-inset/2);
+		btnLoadAll.pos = {inset, posLists+heightLists+inset/2};
+		btnLoadAll.size = {cs.x-inset*2, CONST_FIXED_TITLE_HEIGHT-inset};
 		for (guibase* gui : guis) {
 			gui->layout();
 		}
