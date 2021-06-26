@@ -94,6 +94,8 @@ namespace RenderResources {
 			load(vg, StringFormat("icons/speaker.png"), imgIconsBuf[ICON_SPEAKER]);
 			load(vg, StringFormat("icons/x.png"), imgIconsBuf[ICON_X]);
 			load(vg, StringFormat("icons/daw_icon.png"), imgIconsBuf[ICON_DAW_EXE]);
+			load(vg, StringFormat("icons/opt_unlocked.png"), imgIconsBuf[ICON_OPT_UNLOCKED]);
+			load(vg, StringFormat("icons/opt_locked.png"), imgIconsBuf[ICON_OPT_LOCKED]);
 
 			for (int i = 0; i < NUM_IMGS; i++) {
 				ImageBuf& buf = imgIconsBuf[i];

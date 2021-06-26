@@ -22,6 +22,7 @@ gui_clipsettings::gui_clipsettings(scaled_grid& _grid, clip_view& _view) :
 	margin = 0;
 	btnLoop.drawFn = drawTextureSymbol;
 	btnLoop.drawParm = ICON_LOOP;
+	btnLoop.setFlag(FLG_RENDER_BUTTON_WITH_LED, true);
 	btnLoop.setEnabledRef(nullptr);
 	clipLoopStart.setRef(nullptr);
 	clipLoopLen.setRef(nullptr);

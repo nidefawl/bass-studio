@@ -779,6 +779,7 @@ public:
 //		btnBypass.setTint(nvgToRGB(theme->getFrameColorOutline()));
 		btnBypass.drawFn = drawTextureSymbol;
 		btnBypass.drawParm = ICON_BYPASS;
+		btnBypass.setFlag(FLG_RENDER_BUTTON_WITH_LED, true);
 		btnActivate.setButtonColor(GuiColor::COL_PLUG_TITLE);
 		gain.setLabel("Gain Level");
 		btnActivate.setLabel("Load plugins");

@@ -2,6 +2,7 @@
 #include "gui.h"
 #include "guicontainer.h"
 #include "guitooltip.h"
+#include "renderresources.h"
 
 
 using Table::tbl;
@@ -73,14 +74,13 @@ void guibuttonbase::renderButtonLabel(NVGcontext* vg, int32_t stateFlags) {
 		if (str.length() > 0) {
 			int fontScale = math::round((this->fontSize > 0 ? this->fontSize : math::min(size.y, size.x)) * fFontScale);
 			GuiColor::constant_t c = (stateFlags & FLG_ENBL) ? GuiColor::COL_LABEL_ACTIVE : GuiColor::COL_LABEL_INACTIVE;
-
 			//			nvgDawText(vg, this, pos, size, str, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
 			renderCenteredMultilineText(vg, theme, str, fontScale, c, renderPos, size);
-
 		}
 
 		if (drawFn) {
-			drawFn(vg, renderPos, size, getBackgroundColor(getStateFlags()), drawParm, isEnabled());
+			int drawParm2 = isFlag(FLG_RENDER_BUTTON_WITH_LED) ? (isEnabled() ? IMG_LED : IMG_LED_OFF) : -1;
+			drawFn(vg, renderPos, size, getBackgroundColor(getStateFlags()), drawParm, drawParm2);
 		}
 		nvgRestore(vg);
 	}

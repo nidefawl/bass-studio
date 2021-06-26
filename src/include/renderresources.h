@@ -27,7 +27,9 @@
 #define ICON_SPEAKER 23
 #define ICON_X 24
 #define ICON_DAW_EXE 25
-#define NUM_IMGS 26
+#define ICON_OPT_LOCKED 26
+#define ICON_OPT_UNLOCKED 27
+#define NUM_IMGS 28
 #define MAX_FONTS 256
 
 struct NVGcontext;

@@ -105,8 +105,9 @@ void renderText(NVGcontext* ctx, float x, float y, float maxWidth, const char* s
 	int nrows;
 	if ((nrows = nvgTextBreakLines(ctx, string, NULL, maxWidth, rows, 2))) {
 		NVGtextRow* row = &rows[0];
-		if (row->width > maxWidth)
+		if (row->width > maxWidth) {
 			return;
+		}
 		float f = nvgText(ctx, x, y, row->start, row->end);
 		if (nrows > 1 && (maxWidth-(f-x)) > 18) {
 			nvgText(ctx, f, y, "...", NULL);
@@ -244,11 +245,10 @@ void drawTextureSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& 
 	nvgTranslate(vg, -iconPos.x, -iconPos.y);
 
 	if (drawParm2 > -1) {
-		int icon = drawParm2 == 0 ? IMG_LED_OFF : IMG_LED;
 		extImg = 2;
 		iconW = 18;
 		int32_t extW = iconW+extImg*2;
-		paintIcon = imagePattern(vg, iconW, extImg, icon);
+		paintIcon = imagePattern(vg, iconW, extImg, drawParm2);
 		ivec2 ledPos = ivec2(pos.x+6-iconW/2, pos.y+size.y-6-iconW/2);
 		nvgTranslate(vg, ledPos.x, ledPos.y);
 		nvgBeginPath(vg);
@@ -256,7 +256,7 @@ void drawTextureSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& 
 		nvgFillPaint(vg, paintIcon);
 		nvgFill(vg);
 		nvgGlobalCompositeOperation(vg, NVG_LIGHTER);
-		if (icon == IMG_LED) {
+		if (drawParm2 == IMG_LED) {
 			paintIcon = imagePattern(vg, iconW, extImg, IMG_LED_GLOW);
 			nvgBeginPath(vg);
 			nvgRect(vg, -extImg, -extImg, extW, extW);

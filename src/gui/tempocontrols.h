@@ -222,6 +222,7 @@ public:
 		btnStop.drawFn = drawStopSymbol;
 		btnLoop.drawFn = drawTextureSymbol;
 		btnLoop.drawParm = ICON_LOOP;
+		btnLoop.setFlag(FLG_RENDER_BUTTON_WITH_LED, true);
 		btnLoop.setEnabledRef(&projectGlobals.loopEnabled);
 		btnRecord.setEnabledRef(&projectGlobals.recordArmed);
 		btnRecord.setButtonColor(GuiColor::COL_BTN_RECORD_ARM_BG);

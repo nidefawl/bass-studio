@@ -59,6 +59,11 @@ public:
 	int getFontSize() {
 		return fontSize;
 	}
+	void render(NVGcontext* vg) {
+		int32_t fl = getStateFlags();
+		renderWidgetBorder(vg, fl);
+		renderButtonLabel(vg, fl);
+	}
 	void renderButtonLabel(NVGcontext* vg, int32_t stateFlags);
 	guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
 };
