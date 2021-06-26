@@ -178,7 +178,7 @@ return smoothstep(0.0, 1.0, (1.0-abs(ftcoord.x*2.0-1.0))*strokeMult) * smoothste
 // #define SIMPLE_SHADING
 #define COLOR_SHADING
 
-vec4 applyShading(vec2 pt, vec2 texcoord, float mask, vec4 color) {
+vec4 applyShading(vec2 pt, vec2 texcoord, vec4 color) {
 	vec4 result = color;
 	float fTimeSeconds = renderInfo.x;
 	
@@ -215,6 +215,7 @@ vec4 applyShading(vec2 pt, vec2 texcoord, float mask, vec4 color) {
 	result.rgb+=vec3(antiBandingDither);
 #endif
 	return result;
+	// return clamp(result, vec4(0.0), vec4(1.0));
 }
 void main(void) {
 	float scissor = scissorMask(fpos);
@@ -238,33 +239,13 @@ void main(void) {
 		vec4 color = mix(innerCol,outerCol,d);
 		// Combine alpha
 		float mask = strokeAlpha * scissor;
-		if (mask > 0 && abs(extent.x)+abs(extent.y) > 0) {
-			result = applyShading(pt, texcoord, mask, color);
+		vec4 shadedColor;
+		if (abs(extent.x)+abs(extent.y) > 0) {
+			shadedColor = applyShading(pt, texcoord, color);
 		} else {
-			result = color * mask;
+			shadedColor = color;
 		}
-#define TC_DBG 0
-#if TC_DBG
-		result.b = 0.0;
-		result.rg = texcoord.xy;
-		if (texcoord.x < 0) {
-			result.rgb = vec3(1.0, 0.0, 1.0);
-		}
-		if (texcoord.y < 0) {
-			result.rgb = vec3(1.0, 0.0, 1.0);
-		}
-		if (texcoord.x > 1) {
-			result.rgb = vec3(0.0, 1.0, 1.0);
-		}
-		if (texcoord.y > 1) {
-			result.rgb = vec3(0.0, 1.0, 0.0);
-		}
-#endif
-		// vec2 pt1 = (paintMat * vec3(fpos,1.0)).xy;
-		// vec2 texcoord1 = pt1 / extent;
-		// result.b=0;
-		// result.rg = texcoord1.xy;
-			
+		result = shadedColor * strokeAlpha * scissor;
 	} else if (type == 1) {         // Image
 		// Calculate color fron texture
 		vec2 pt = (paintMat * vec3(fpos,1.0)).xy / extent;
@@ -278,10 +259,7 @@ void main(void) {
 			color = vec4(color.xyz*color.w,color.w);
 		if (texType == 2) 
 			color = vec4(color.x);                // Apply color tint and alpha.
-		color *= innerCol;
-		// Combine alpha
-		color *= strokeAlpha * scissor;
-		result = color;
+		result = color * innerCol * strokeAlpha * scissor;
 	} else if (type == 2) {         // Stencil fill
 		result = vec4(1,1,1,1);
 	} else if (type == 3) {         // Textured tris
@@ -291,28 +269,27 @@ void main(void) {
 #else
 		vec4 color = texture2D(tex, ftcoord);
 #endif
-		if (texType == 1) color = vec4(color.xyz*color.w,color.w);              if (texType == 2) color = vec4(color.x);               
-			color *= scissor;
-		result = color * innerCol;
-		// result.xy = ftcoord.xy;
-		// result.a=1;
-		// result.b=0;
+		if (texType == 1) 
+			color = vec4(color.xyz*color.w,color.w);
+		if (texType == 2) 
+			color = vec4(color.x);       
+		result = color * innerCol * scissor;
 	} else if (type == 4) {         // colored tri
-		float mask = scissor;
 		fragTexCoord = ftcoord;
 		// 0 flat
 		// 1 shaded
 		// 2 aa vertical lines
+		vec4 color = vec4(0.0);
 		if (texType == 1) {
-			result = applyShading(fpos.xy, ftcoord.xy, mask, innerCol);
+			color = applyShading(fpos.xy, ftcoord.xy, innerCol);
 		} else if (texType == 2) {
 			float distCenterX = (abs(0.5 - ftcoord.x) * 4.) * feather;
 			float intens = clamp(1.0 - distCenterX, 0., 1.);
-			result = innerCol * intens;
+			color = innerCol * intens;
 		} else {
-			result = innerCol;
+			color = innerCol;
 		}
-		result *= mask;
+		result = color * scissor;
 	} else if (type == 5) {         // opengl renders rect that fragment shader turns into circle
 		fragTexCoord = ftcoord;
 		vec2 distCenter = abs((ftcoord-vec2(0.5))*2.0);
@@ -322,7 +299,24 @@ void main(void) {
 		result *= Border.y*Border.x*intens;
 	}
 #endif
-
+#if 1
+	// vec4 colorDbg = vec4(fragTexCoord.xy, 1.0, 1.0);
+	// {
+			
+	// 	float fTimeSeconds = renderInfo.x;
+		
+	// 	float fPerS = 1.0;
+	// 	float fTmProgr = mod(fTimeSeconds+fPerS/2.0, 4);
+	// 	/* /\________  1s anim 4s sleep (5s cycle)*/
+	// 	float fadeTri = clamp(1.0-abs(fTmProgr*2.0/fPerS-1.0), 0.0, 1.0);
+	// 	if (result.r < 0 || result.g < 0 || result.b < 0 || result.a < 0) {
+	// 		result = vec4(1, 0, 0, 1);
+	// 	} else {
+	// 	}
+	// }
+	// result = result*0.5+0.5*vec4(fragTexCoord.xy, 1.0, 1.0);
+#else
+#endif
 	if (result.a < 1.0/2048.0) 
 		discard;
 #ifdef NANOVG_GL3
