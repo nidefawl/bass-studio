@@ -27,7 +27,6 @@ if (NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
     set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "${CMAKE_COMMAND} -E time")
 endif()
 include("setup.cmake")
-include("cotire.cmake")
 add_definitions("-DUSE_WIN32_EXC_HOOKS")
 add_definitions("-DBUILD_VSTHOST=1")
 add_definitions("-DBUILD_EXTERNAL_PLUGIN=0")
@@ -304,20 +303,6 @@ SET_APP_BUILD("rgbmaster")
 target_link_libraries("rgbmaster" PUBLIC "dawlib")
 ADD_POST_BUILD_COMMANDS("rgbmaster")
 endif()
-
-set(COTIRE_UNITY_SOURCE_EXCLUDE_EXTENSIONS "m;mm;c")
-message(STATUS "COTIRE_UNITY_SOURCE_EXCLUDE_EXTENSIONS: ${COTIRE_UNITY_SOURCE_EXCLUDE_EXTENSIONS}")
-set_source_files_properties("${DAW_SRC_PATH}/platform/win/DropTarget.cpp" PROPERTIES COTIRE_EXCLUDED TRUE)
-set_source_files_properties("${DAW_SRC_PATH}/platform/win/fileio.cpp" PROPERTIES COTIRE_EXCLUDED TRUE)
-set_source_files_properties("${DAW_SRC_PATH}/window/window.cpp" PROPERTIES COTIRE_EXCLUDED TRUE)
-set_source_files_properties("${DAW_SRC_PATH}/window/debugwindow.cpp" PROPERTIES COTIRE_EXCLUDED TRUE)
-# set_target_properties(${BUILD_NAME} PROPERTIES COTIRE_PREFIX_HEADER_IGNORE_PATH "${DAW_SRC_PATH}/nanovg")
-
-# set_source_files_properties("src/render.cpp" PROPERTIES COTIRE_EXCLUDED TRUE)
-set(NANOVG_HDR_PATH "${DAW_SRC_PATH}/nanovg/")
-#set_target_properties(${BUILD_NAME} PROPERTIES COTIRE_PREFIX_HEADER_IGNORE_PATH "${CMAKE_SOURCE_DIR};${NANOVG_HDR_PATH}")
-
-# cotire(${BUILD_NAME}) #comment to disable cotire
 
 if (BUILD_TESTS)
   ENABLE_TESTING()
