@@ -366,13 +366,13 @@ public:
 	}
 	void endFrame() {
 
-		daw_tls::tlsinstance& tls = daw_tls::getTls();
 		uint64_t tm = getTimeMillis();
 		double since = (tm - tm_lastfps) / 1000.0;
 		if (frameCountFPS > 0 && since >= 1.0) {
 			double fps = frameCountFPS / since;
 			fpsStats = StringFormat("%.2f fps", fps);
 #if BUILD_VSTHOST
+			daw_tls::tlsinstance& tls = daw_tls::getTls();
 			tls.renderStats.fps = fps;
 #endif
 //			glfwSetWindowTitle(glfw, StringAsCStr(fpsStats));
@@ -1639,8 +1639,10 @@ int startApplication(int argc, char* argv[]) {
 	ctrl->postInit();
 
 
+#if BUILD_VSTHOST
 	daw_tls::tlsinstance& tls = daw_tls::getTls();
 	dawinstance_startup_commands(tls);
+#endif
 
 	GLFWwindow* glfwHandle = mainWindow->getGLFW();
 	int64_t lastTick = getTimeMillis();
