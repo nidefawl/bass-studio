@@ -156,8 +156,9 @@ using ImgData = std::shared_ptr<uint8_t>;
 		const float sc = (maxFl-minFl);
 		float* normalizedData = &ch->valuesNormalized[0];
 		if (sc < 1.0f/1024.0f) {
-			memset(normalizedData, 0.5f, sizeof(float)*DBG_PERF_HIST_SIZE);
-			//memcpy(normalizedData, rawData, sizeof(float)*DBG_PERF_HIST_SIZE);
+			for (int i = 0; i < DBG_PERF_HIST_SIZE; ++i) {
+				*normalizedData++ = 0.5f;
+			}
 			return;
 		}
 		for (int i = 0; i < DBG_PERF_HIST_SIZE; ++i) {
@@ -414,7 +415,7 @@ void drawDebugWindowPerformance(NVGcontext* vg, int winW, int winH, float pxrati
 		auto channel = allChannels[pass];
 		nvgBatchedRect(vg, channel->graphPos.x, channel->graphPos.y+lineh, (channel->graphSize.x-inset*2)/3.5, channel->graphSize.y-inset-(lineh));
 	}
-	NVGpaint paint{0};
+	NVGpaint paint{};
 	paint.image = -1;
 	paint.innerColor = rgbaToNvg(0x7F333333);
 	nvgFillPaint(vg, paint);
