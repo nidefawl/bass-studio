@@ -7,12 +7,10 @@
                 "C:/Users/Michael/daw/src",
                 "C:/Users/Michael/daw/src/include",
                 "C:/Users/Michael/daw/src/nanovg",
-                "C:/dev/build-deps/install/lib-clang-debug-static/duktape/include",
                 "C:/dev/build-deps/install/lib-clang-debug-static/glfw/include",
                 "C:/dev/build-deps/install/lib-clang-debug-static/SQLiteCpp/include",
                 "C:/dev/build-deps/install/lib-clang-debug-static/soxr/include",
                 "D:/dev/daw-deps/glad/include",
-                "D:/dev/daw-deps/dukglue/include",
                 "D:/dev/daw-deps/glad/src",
                 "D:/dev/daw-deps/glm",
                 "D:/dev/daw-deps/portaudio/include",
@@ -44,15 +42,17 @@
             "compileCommands": "${workspaceFolder}/build/clang-ninja-daw-build/compile_commands.json"
         },
         {
+            "name": "win-cmake",
+            "configurationProvider": "ms-vscode.cmake-tools"
+        },
+        {
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "~/dev/build-deps2/install/lib-clang-debug-static/duktape/include",
                 "~/dev/build-deps2/install/lib-clang-debug-static/glfw/include",
                 "~/dev/build-deps2/install/lib-clang-debug-static/SQLiteCpp/include",
                 "~/dev/build-deps2/install/lib-clang-debug-static/soxr/include",
                 "~/dev/daw-deps/glad/include",
-                "~/dev/daw-deps/dukglue/include",
                 "~/dev/daw-deps/glad/src",
                 "~/dev/daw-deps/glm",
                 "~/dev/daw-deps/portaudio/include",

@@ -62,11 +62,6 @@
 #include "buildinfo.h"
 #include "../threads/workerthread.h"
 #include "window_impl.h"
-#if HAS_JS_CONSOLE
-#include "cli/console/console_thread.h"
-#include "cli/console/commandline_rep.h"
-#include "js/scripting.h"
-#endif
 
 class appwindow;
 static std::vector<appwindow*> windowTimerHandleList;
@@ -1564,11 +1559,7 @@ int startApplication(int argc, char* argv[]) {
 #ifdef USE_WIN32_EXC_HOOKS
 	setExceptionHandler();
 #endif
-#if HAS_JS_CONSOLE
-	//lifetime of thread must exceed try/catch because deconstruction of an unjoined std::thread terminates process
-	NU::CONSOLE::CommandLineREP_TCP cli;
-	NU::CONSOLE::ConsoleThread threadCommandLine(cli);
-#endif
+
 	try {
 	int centerScreenIdx = -1;
 	for (int i = 0; i < argc; i++) {
@@ -1648,25 +1639,8 @@ int startApplication(int argc, char* argv[]) {
 	ctrl->postInit();
 
 
-#if HAS_JS_CONSOLE
-	JSContext jsContext;
-	String srcJS;
-	int64_t ret = ReadFileText("data/daw_init.js", srcJS, 1);
-	if (ret > 0) {
-		call_context_t ctxt;
-		String response = jsContext.eval(srcJS, ctxt);
-		if (response.length()) {
-			fwrite(response.c_str(), response.length(), 1, stdout);
-			fflush(stdout);
-		}
-	}
-
 	daw_tls::tlsinstance& tls = daw_tls::getTls();
-	threadCommandLine.setTls(tls);
-	threadCommandLine.init();
-	threadCommandLine.startThread();
 	dawinstance_startup_commands(tls);
-#endif // HAS_JS_CONSOLE
 
 	GLFWwindow* glfwHandle = mainWindow->getGLFW();
 	int64_t lastTick = getTimeMillis();
@@ -1756,9 +1730,6 @@ int startApplication(int argc, char* argv[]) {
 			start = getTimeMillis();
 		}
 #endif
-#if HAS_JS_CONSOLE
-		cli.executeCommands();
-#endif // HAS_JS_CONSOLE
 	}
 	mainWindow->setInvalid();
 	mainWindow->destroy();
@@ -1783,12 +1754,7 @@ int startApplication(int argc, char* argv[]) {
 	} catch (std::exception& e) {
 		handleStdException(e);
 	}
-#if HAS_JS_CONSOLE
-    if (threadCommandLine.isStarted()) {
-        threadCommandLine.stopThread();
-        threadCommandLine.joinThread();
-    }
-#endif // HAS_JS_CONSOLE
+
 	deleteApp();
 	printLeakedGuiBase();
 #if BUILD_VSTHOST

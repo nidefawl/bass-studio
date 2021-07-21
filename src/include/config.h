@@ -27,13 +27,6 @@
 #ifndef BUILD_VSTHOST
 #define BUILD_VSTHOST 1
 #endif
-#ifndef HAS_JS_CONSOLE
-#define HAS_JS_CONSOLE BUILD_VSTHOST
-#endif
-#ifdef __APPLE__
-#undef HAS_JS_CONSOLE
-#define HAS_JS_CONSOLE 0
-#endif
 #ifndef BUILD_EXTERNAL_PLUGIN
 #define BUILD_EXTERNAL_PLUGIN 0
 #endif
