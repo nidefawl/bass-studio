@@ -535,8 +535,8 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
 					nvgCircleFastNDivs(vg, pt->x, pt->y, radiusHandle, 6);
 
 				}
-				nvgFillColor(vg, theme->getColor(c1));
-				nvgFill(vg);
+//				nvgFillColor(vg, theme->getColor(c1));
+//				nvgFill(vg);
 				nvgStrokeColor(vg, theme->getColor(color2));
 				nvgStrokeWidth(vg, 1.5f);
 				nvgStroke(vg);

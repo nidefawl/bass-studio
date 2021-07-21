@@ -90,7 +90,7 @@ public:
 	virtual void sleep() = 0;
 	virtual void unload(vsthost* host, int flags);
 	virtual void load(vsthost* host);
-	virtual int32_t getDelay() = 0;
+	virtual int32_t getPluginLatency() = 0;
 	virtual String getInfo(std::vector<String>& list) = 0;
 	track_t* getTrack() override;
 	virtual void onTick(double since);
@@ -157,7 +157,7 @@ public:
 	//	deffered_effect();
 	~effect_deferred();
 	void loadSnapshot(const plugin_snapshot_t& snapshot) override;
-	int32_t getDelay() override;
+	int32_t getPluginLatency() override;
 	String getInfo(std::vector<String>& list) override;
 	int getModuleType() override;
 	void makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) override;

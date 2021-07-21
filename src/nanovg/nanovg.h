@@ -22,6 +22,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+//#define NVG_3D_MODE
 
 #define NVG_PI 3.14159265358979323846264338327f
 
@@ -44,7 +45,8 @@ struct NVGpaint {
 	int customPar;
 };
 typedef struct NVGpaint NVGpaint;
-typedef struct nvg_shape_cache nvg_shape_cache;
+
+typedef void* nvg_shape_cache;
 
 enum NVGwinding {
 	NVG_CCW = 1,			// Winding for solid shapes
@@ -531,6 +533,10 @@ void nvgBatchedRender(NVGcontext* ctx);
 void nvgBatchedRect(NVGcontext* ctx, float x, float y, float w, float h);
 void nvgSetPaintColor(NVGcontext* ctx, NVGpaint* paint, NVGcolor color);
 
+#ifdef NVG_3D_MODE
+void nvgSetZOffset(NVGcontext* ctx, float z);
+#endif
+
 //
 // Text
 //
@@ -654,7 +660,11 @@ struct NVGCachingStructure {
 typedef struct NVGCachingStructure NVGCachingStructure;
 
 struct NVGvertex {
-	float x,y,u,v;
+	float x,y,
+#ifdef NVG_3D_MODE
+	z,w,
+#endif
+	u,v;
 };
 typedef struct NVGvertex NVGvertex;
 
@@ -689,9 +699,9 @@ struct NVGparams {
 	void (*renderViewport)(void* uptr, float width, float height, float devicePixelRatio);
 	void (*renderCancel)(void* uptr);
 	void (*renderFlush)(void* uptr);
-	void (*renderFill)(void* uptr, NVGpaint* paint, NVGcompositeOperationState compositeOperation, NVGscissor* scissor, float fringe, const float* bounds, const NVGpath* paths, int npaths);
-	void (*renderStroke)(void* uptr, NVGpaint* paint, NVGcompositeOperationState compositeOperation, NVGscissor* scissor, float fringe, float strokeWidth, const NVGpath* paths, int npaths);
-	void (*renderTriangles)(void* uptr, NVGpaint* paint, NVGcompositeOperationState compositeOperation, NVGscissor* scissor, const NVGvertex* verts, int nverts);
+	void (*renderFill)(void* uptr, NVGpaint* paint, NVGcompositeOperationState compositeOperation, NVGscissor* scissor, float fringe, const float* bounds, const NVGpath* paths, int npaths, float z);
+	void (*renderStroke)(void* uptr, NVGpaint* paint, NVGcompositeOperationState compositeOperation, NVGscissor* scissor, float fringe, float strokeWidth, const NVGpath* paths, int npaths, float z);
+	void (*renderTriangles)(void* uptr, NVGpaint* paint, NVGcompositeOperationState compositeOperation, NVGscissor* scissor, const NVGvertex* verts, int nverts, float z);
 	void (*renderDelete)(void* uptr);
 	int (*renderGetGLImageHandle)(void* uptr, int image);
 };

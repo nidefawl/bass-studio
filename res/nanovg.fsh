@@ -204,6 +204,14 @@ vec4 applyShading(vec2 pt, vec2 texcoord, vec4 color) {
 	vec3 paletteColor = palette( Border.y*Border.y, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(1.0,1.0,1.0),vec3(0.0,0.10,0.20) );
 	// result.rgb=mix(result.rgb, result.rgb*paletteColor.x, 0*fFade);
 	result.rgb=mix(result.rgb, paletteColor.rgb, 0.04*fFade)*1.2;
+	{
+		
+		vec2 txF = clamp(1.0-pow(abs((texcoord*2.0)-1.0), vec2(8.0)), 0.0, 1.0);
+		float f = txF.x*txF.y;//clamp(dot(Border, Border), 0.0, 1.0);
+		float pal2Idx = 1-f;
+		vec3 paletteColor2 = palette( pal2Idx+fTmProgr, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(1.0,1.0,1.0),vec3(0.3,0.20,0.20) );
+		result.rgb=mix(result.rgb, paletteColor2, 0.13*highlightShade);
+	}
 	result.rgb+=vec3(antiBandingDither);
 #endif
 	// result.rgb = mix(result.rgb, paletteColor, intens*1);
@@ -260,6 +268,10 @@ void main(void) {
 		if (texType == 2) 
 			color = vec4(color.x);                // Apply color tint and alpha.
 		result = color * innerCol * strokeAlpha * scissor;
+#if 0
+		result = vec4(0,0,0,1);
+		result.y = texture(tex, pt).y;
+#endif
 	} else if (type == 2) {         // Stencil fill
 		result = vec4(1,1,1,1);
 	} else if (type == 3) {         // Textured tris

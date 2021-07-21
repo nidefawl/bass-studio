@@ -40,4 +40,5 @@ struct audiotrack_t {
 	void store(AudioBlock* input, int32_t samplePos);
 	~audiotrack_t() {
 	}
+	static int32_t GetSplitSampleLength();
 };

@@ -129,7 +129,9 @@ void guitooltip<audio_info_t>::layout()  {
 		table.rows.push_back({{tblstr{"inputStageId"}, tblint{static_cast<int32_t>(ptr->audio->stageId.inputStageId)}}});
 		table.rows.push_back({{tblstr{"outputStageId"}, tblint{static_cast<int32_t>(ptr->audio->stageId.outputStageId)}}});
 		table.rows.push_back({{tblstr{"outputPostStageId"}, tblint{static_cast<int32_t>(ptr->audio->stageId.outputPostStageId)}}});
-		table.rows.push_back({{tblstr{"Latency"}, tblint{(int32_t)audio->getLatency()}}});
+		table.rows.push_back({{tblstr{"latency input "}, tblint{(int32_t)audio->getInputLatency()}}});
+		table.rows.push_back({{tblstr{"latency intern"}, tblint{(int32_t)audio->getInternalLatency()}}});
+		table.rows.push_back({{tblstr{"latency output"}, tblint{(int32_t)audio->getOutputLatency()}}});
 		table.rows.push_back({{tblstr{"delayToPreReturn"}, tblint{audio->latencyInfo.delayToPreReturn}}});
 		table.rows.push_back({{tblstr{"delayToPostReturn"}, tblint{audio->latencyInfo.delayToPostReturn}}});
 		table.rows.push_back({{tblstr{"sampleRate"}, tblint{audio->sampleFormat.sampleRate}}});
@@ -1659,8 +1661,8 @@ public:
 			auto trackCtr = m_trackentry->parent;
 
 			bool isShown = (tr->audio->flags & audiostageflags_t::CONVERT_OUTPUT) != audiostageflags_t::NONE;
-			tr->audio->flags ^= audiostageflags_t::CONVERT_OUTPUT;
 			if (isShown) {
+				tr->audio->flags &= ~(audiostageflags_t::CONVERT_OUTPUT | audiostageflags_t::WRITE_OUTPUT);
 				std::vector<gui_track_subtrack*> subtracksVecCopy = m_trackentry->subtracks;
 				for (auto subtrack : subtracksVecCopy) {
 					if (subtrack->subtrackType() == gui_track_subtrack::SUBTRACK_TYPE_WAVE) {
@@ -1668,6 +1670,7 @@ public:
 					}
 				}
 			} else {
+				tr->audio->flags |= audiostageflags_t::CONVERT_OUTPUT | audiostageflags_t::WRITE_OUTPUT;
 				auto gui = makeGuiSubtrack(m_trackentry, MainCtrl::get(), gui_track_subtrack::SUBTRACK_TYPE_WAVE);
 				trackCtr->addSubTrack(m_trackentry, gui, true);
 			}

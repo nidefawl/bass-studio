@@ -429,7 +429,7 @@ vstplugin::~vstplugin() {
 guiplugin* vstplugin::getGui() {
 	return handle->gui.get();
 }
-int32_t vstplugin::getDelay() {
+int32_t vstplugin::getPluginLatency() {
 	return handle && handle->aeffect ? handle->aeffect->initialDelay : 0;
 }
 int32_t vstplugin::getFlagsVST() {

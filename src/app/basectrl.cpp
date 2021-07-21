@@ -648,7 +648,7 @@ void AppCtrl::onChildOverlayWindowClose(window_main* ptr) {
 		menuWnd.ctxt = nullptr;
 		return;
 	}
-	dbgassert(this->dialog && ptr->getCreationFlags() & WINDOW_IS_DIALOG);
+	dbgassert(this->dialog && (ptr->getCreationFlags() & WINDOW_IS_DIALOG));
 	this->dialog->onParentWindowClose();
 	this->dialog->setControl(nullptr);
 	garbageGuis.push_back(this->dialog);

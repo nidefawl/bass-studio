@@ -567,6 +567,7 @@ public:
     track_vector getAllTracksFlatVec() const { return trackAllCtr.tracksFlat; }
     track_vector getAllTracksTreeVec() const { return trackAllCtr.tracksTree; }
     track_vector& getAllTracksFlatVecRef() { return trackAllCtr.tracksFlat; }
+    track_vector& getMasterTracksFlatVecRef() { return trackMasterCtr.tracksFlat; }
 };
 struct project_layout_t {
 	layout_grid_t layoutGrid;

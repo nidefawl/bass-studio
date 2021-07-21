@@ -300,9 +300,9 @@ void simplifyData(std::vector<automation_point_t>& data);
 class vsthost;
 namespace DAW {
 	struct automation_ref_t {
-		int type;
-		float val;
-		automationlane_snapshot_t snapshot;
+		int type = -1;
+		float val = 0.0f;
+		automationlane_snapshot_t snapshot{};
 	};
 	inline automation_ref_t AutomationRef(const automatable_t* automatable, int32_t paramIdx) {
 		automationlane_snapshot_t subtrackSnapshot;

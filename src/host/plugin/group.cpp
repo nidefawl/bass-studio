@@ -244,8 +244,8 @@ guiplugin* module_group::getGui() {
 	return handle->gui.get();
 //	return handle->gui;
 }
-int32_t module_group::getDelay() {
-	return static_cast<int32_t>(audio->getLatency());
+int32_t module_group::getPluginLatency() {
+	return static_cast<int32_t>(audio->getInternalLatency());
 }
 void module_group::resume() {
 }
@@ -259,6 +259,11 @@ void module_group::unload(vsthost* host, int flags) {
 	this->audio = nullptr;
 }
 void module_group::onPreUnload(int flags) {
+	if (this->audio && this->audio->pluginCtr == &this->handle->gui->ctr) {
+		this->handle->gui->ctr.showTrack(nullptr);
+		this->audio->pluginCtr = nullptr;
+		dbgassert(this->handle->gui->guis.size() == 1);
+	}
 	std::vector<effectbase*> effects = this->audio->effects; // make a copy before unloading plugins
 	for (effectbase* effect : effects) {
 		vstHost->unloadPlugin(effect, flags);

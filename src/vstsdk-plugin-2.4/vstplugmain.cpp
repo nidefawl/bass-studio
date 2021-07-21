@@ -31,7 +31,7 @@
 // OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED
 // OF THE POSSIBILITY OF SUCH DAMAGE.
 //----------------------------------------------------------------------------------
-
+#if 1
 #include "audioeffect.h"
 
 //------------------------------------------------------------------------
@@ -83,13 +83,13 @@ VST_EXPORT AEffect* main_plugin (audioMasterCallback audioMaster) { return VSTPl
 #if WIN32
 #include <windows.h>
 HINSTANCE hInstance;
-void onModuleLoad();
+void onModuleLoad(HINSTANCE hInst);
 void onModuleUnload();
 extern "C" {
 BOOL WINAPI DllMain (HINSTANCE hInst, DWORD dwReason, LPVOID lpvReserved)
 {
 	if (dwReason == DLL_PROCESS_ATTACH) {
-		onModuleLoad();
+		onModuleLoad(hInst);
 	}
 	if (dwReason == DLL_PROCESS_DETACH) {
 		onModuleUnload();
@@ -98,4 +98,6 @@ BOOL WINAPI DllMain (HINSTANCE hInst, DWORD dwReason, LPVOID lpvReserved)
 	return 1;
 }
 } // extern "C"
+#endif
+
 #endif

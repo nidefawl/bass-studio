@@ -371,12 +371,21 @@ void serialize(Archive & archive, project_globals_t & m)
 			make_nvp("cursor", m.cursor));
 }
 template<class Archive>
+void serialize(Archive & archive, export_settings_t & m)
+{
+	archive(make_nvp("pos", m.exportPos),
+			make_nvp("len", m.exportLen),
+			make_nvp("path", m.exportPath),
+			make_nvp("locked", m.isLocked));
+}
+template<class Archive>
 void serialize(Archive & archive, project_snapshot_t & m)
 {
 	archive(make_nvp("masterTracks", m.trackMasterCtr),
 			make_nvp("returnTracks", m.trackReturnCtr),
 			make_nvp("tracks", m.trackCtr));
 	make_optional_nvp(archive, "globals", m.globals);
+	make_optional_nvp(archive, "exportSettings", m.exportSettings);
 };
 template<class Archive>
 void serialize(Archive & archive, project_layout_t & m)

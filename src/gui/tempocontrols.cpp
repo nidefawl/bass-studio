@@ -9,6 +9,7 @@
 #include "gui.h"
 #include "guicontainer.h"
 #include "guicolors.h"
+#include "guitooltip.h"
 #include "theme.h"
 #include "button.h"
 #include "renderresources.h"
@@ -24,6 +25,37 @@ namespace GuiColor {
 constant_t COL_BTN_RECORD_ARM_BG("COL_BTN_RECORD_ARM_BG", 0xFF442222);
 }
 
+
+using Table::tbl;
+using Table::tbl_row_t;
+using Table::table_entry_t;
+using Table::tblint;
+using Table::tblfloat;
+using Table::tblstr;
+using Table::tblString;
+
+template <>
+void guitooltip<gui_timeinput>::layout()  {
+	size.x = 140;
+	table.rowHeight = FONT_SIZE_TOOLTIP+INSET_TABLE_CELL_PADDING*2;
+	table.rows.clear();
+	table.titleCols.clear();
+	table.colSizes.clear();
+
+	{
+
+		tbl_row_t row{};
+    	row.cols.push_back(tblString{"Tick"});
+    	row.cols.push_back(tblint{ptr->getTime()});
+		table.rows.push_back(row);
+	}
+	Table::AdjustColSizes(table, getSizeContent()-ivec2(INSET_TABLE<<1));
+	size.y = table.rows.size()*table.rowHeight;
+}
+guictxtmenu_base* gui_timeinput::getTooltip(AppCtrl* appctrl) {
+	auto tooltip = new guitooltip<gui_timeinput>(this);
+	return tooltip;
+}
 gui_timeinput_field::gui_timeinput_field(int _idx, int32_t* _time, const bool _isRelative) :
 		guibuttonbase(), idx(_idx), time(_time), isRelative(_isRelative) {
 }
@@ -98,6 +130,9 @@ gui_timeinput::gui_timeinput(int32_t* _time, const bool isRelative) :
 	setCanMouseHit(true);
 }
 
+int32_t gui_timeinput::getTime() {
+	return *time;
+}
 void gui_timeinput::setRef(int32_t* time) {
 	this->time = time;
 	bar.setRef(time);

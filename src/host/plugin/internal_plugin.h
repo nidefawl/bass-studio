@@ -43,7 +43,7 @@ public:
 	virtual std::shared_ptr<PluginViewContainers> createInternalView() {
 		return nullptr;
 	};
-	virtual int32_t getDelay() = 0;
+	virtual int32_t getPluginLatency() = 0;
 	virtual void process(AudioBlock* in, AudioBlock* out, double tick, int32_t samplePos, int32_t numSamples, playback_state state) = 0;
 //	virtual bool resume() = 0;
 //	virtual bool sleep() = 0;

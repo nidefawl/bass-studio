@@ -1573,7 +1573,7 @@ void DawInstance::onTick()
 		if (0 == autosaveState.tmLastTrigger) {
 			autosaveState.tmLastTrigger = getTimeMillis();
 		}
-		auto tmNow = getTimeMillis();
+		int64_t tmNow = getTimeMillis();
 		if (tmNow - tmLastSave > autosaveState.tmSaveDelay) {
 			if (tmNow - autosaveState.tmLastTrigger > autosaveState.tmReminderDelay) {
 				autosaveState.tmLastTrigger = tmNow;
@@ -1597,6 +1597,7 @@ std::shared_ptr<project_file> DawInstance::createProjectFile() {
 	file->path = projectPath;
 	project.copyTo(file->project);
 	file->project.globals = projectGlobals;
+	file->project.exportSettings = getExportSettings();
 	audiocache::getInstance()->store(file->sampleFileIndex);
 	file->layout.layoutGrid = mainCtrl->grid;
 	file->layout.scrollOffsetX = mainCtrl->view->ctr_tracks.getScrollOffset();
@@ -1641,6 +1642,7 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
 	/** populates trackList **/
 	project.copyFrom(file->project);
 	projectGlobals = file->project.globals;
+	getExportSettings() = file->project.exportSettings;
 
 
 	/** create all audio instances **/
@@ -2242,6 +2244,9 @@ bool DawCtrl::processGlobalKeyevent(KeyEvent& event) {
 }
 void DawInstance::startPlaying() {
 	setAudioThreadState(playback_state::status_playback);
+}
+void DawInstance::startExport() {
+	setAudioThreadState(playback_state::status_render);
 }
 void DawInstance::stopPlaying() {
 	setAudioThreadState(playback_state::status_stop);

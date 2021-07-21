@@ -44,6 +44,7 @@ enum class audiostageflags_t : int32_t {
     ARMED_OUTPUT		 	= 1 << 6,
     WRITE_OUTPUT		 	= 1 << 7,
     CONVERT_OUTPUT		 	= 1 << 8,
+    RECORD_PROCESSED_MIDI	= 1 << 9,
 };
 enum class audiostagerouting_state_t : int32_t {
 	INVALID = 0, DEFAULT = 1, CUSTOM = 2

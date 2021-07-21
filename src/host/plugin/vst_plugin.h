@@ -140,7 +140,7 @@ public:
 	guiplugin* makeGui() override;
 	guiplugin* getGui() override;
 	void process(AudioBlock* in, AudioBlock* out, double tick, int32_t samplePos, int32_t numSamples, playback_state state) override;
-	int32_t getDelay() override;
+	int32_t getPluginLatency() override;
 	int32_t getFlagsVST();
 	VstTimeInfo* getLocalTimeInfoPtr();
 	int32_t getLocalCurrentUniqueId();

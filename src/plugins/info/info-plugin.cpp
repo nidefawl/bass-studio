@@ -250,31 +250,43 @@ VstInt32 PluginVST2_HostInfo::getVendorVersion ()
 {
 	return 1;
 }
+
+/* Return parameter properties */
+bool PluginVST2_HostInfo::getParameterProperties (VstInt32 index, VstParameterProperties* p) {
+
+	if (index == 0 && p) {
+		memset(p, 0, sizeof(VstParameterProperties));
+		vst_strncpy(p->label, "Dummy Parameter", kVstMaxLabelLen);
+		vst_strncpy(p->shortLabel, "dummy", kVstMaxShortLabelLen);
+		return true;
+	}
+	return false;
+}
 VstInt32 PluginVST2_HostInfo::processEvents (VstEvents* events) {
 	assert(events);
 	if (events) {
 		StdThreadLock lock(impl->getMutex());
 		int32_t len = events->numEvents;
-//		if (events->numEvents)
-//		log_printf("events->numEvents %d\n", events->numEvents);
+		if (events->numEvents)
+		log_printf("events->numEvents %d\n", events->numEvents);
 		for (int i = 0; i < len; i++) {
 			auto pEvent = events->events[i];
 			if (pEvent->type == VstEventTypes::kVstMidiType) {
 			    VstMidiEvent* pME = (VstMidiEvent*) pEvent;
 			    IMidiMsg msg(pME->deltaFrames, pME->midiData[0], pME->midiData[1], pME->midiData[2]);
 	            impl->ProcessMidiMsg(msg);
-//				log_printf("event[%d].type %d\n", i, pME->type);
-//				log_printf("event[%d].byteSize %d\n", i, pME->byteSize);
-//				log_printf("event[%d].deltaFrames %d\n", i, pME->deltaFrames);
-//				log_printf("event[%d].flags %d\n", i, pME->flags);
-//				log_printf("event[%d].noteLength %d\n", i, pME->noteLength);
-//				log_printf("event[%d].noteOffset %d\n", i, pME->noteOffset);
-//				log_printf("event[%d].midiData %02X%02X%02X%02X\n", i,
-//						(unsigned)pME->midiData[0], (unsigned)pME->midiData[1], (unsigned)pME->midiData[2], (unsigned)pME->midiData[3]);
-//				log_printf("event[%d].detune %d\n", i, (unsigned)pME->detune);
-//				log_printf("event[%d].noteOffVelocity %d\n", i, (unsigned)pME->noteOffVelocity);
-//				log_printf("event[%d].reserved1 %d\n", i, (unsigned)pME->reserved1);
-//				log_printf("event[%d].reserved2 %d\n", i, (unsigned)pME->reserved2);
+				log_printf("event[%d].type %d\n", i, pME->type);
+				log_printf("event[%d].byteSize %d\n", i, pME->byteSize);
+				log_printf("event[%d].deltaFrames %d\n", i, pME->deltaFrames);
+				log_printf("event[%d].flags %d\n", i, pME->flags);
+				log_printf("event[%d].noteLength %d\n", i, pME->noteLength);
+				log_printf("event[%d].noteOffset %d\n", i, pME->noteOffset);
+				log_printf("event[%d].midiData %02X%02X%02X%02X\n", i,
+						(unsigned)pME->midiData[0], (unsigned)pME->midiData[1], (unsigned)pME->midiData[2], (unsigned)pME->midiData[3]);
+				log_printf("event[%d].detune %d\n", i, (unsigned)pME->detune);
+				log_printf("event[%d].noteOffVelocity %d\n", i, (unsigned)pME->noteOffVelocity);
+				log_printf("event[%d].reserved1 %d\n", i, (unsigned)pME->reserved1);
+				log_printf("event[%d].reserved2 %d\n", i, (unsigned)pME->reserved2);
 			}
 		}
 	}

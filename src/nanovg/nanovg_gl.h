@@ -152,6 +152,7 @@ enum GLNVGuniformLoc {
 	GLNVG_LOC_TEX,
 	GLNVG_LOC_FRAG,
 	GLNVG_LOC_RENDERINFO,
+	GLNVG_LOC_MVP,
 	GLNVG_MAX_LOCS
 };
 
@@ -292,6 +293,7 @@ struct GLNVGcontext {
 	struct NVGvertex* verts;
 	int cverts;
 	int nverts;
+	int nVertAllocCalls;
 	unsigned char* uniforms;
 	int cuniforms;
 	int nuniforms;
@@ -811,6 +813,7 @@ static void glnvg__getUniforms(GLNVGshader* shader)
 	shader->loc[GLNVG_LOC_FRAG] = glGetUniformLocation(shader->prog, "frag");
 #endif
 	shader->loc[GLNVG_LOC_RENDERINFO] = glGetUniformLocation(shader->prog, "renderInfo");
+	shader->loc[GLNVG_LOC_MVP] = glGetUniformLocation(shader->prog, "u_mvp");
 }
 
 static int glnvg__renderCreate(void* uptr)
@@ -839,6 +842,11 @@ static int glnvg__renderCreate(void* uptr)
 #else
 	"#define UNIFORMARRAY_SIZE 11\n"
 #endif
+
+#ifdef NVG_3D_MODE
+	"#define NVG_3D_MODE 1\n"
+#endif
+
 	"\n";
 
 	static const char* fillVertShader =
@@ -862,6 +870,320 @@ static int glnvg__renderCreate(void* uptr)
 		"}\n";
 
 	static const char* fillFragShader =
+			"#ifdef GL_ES\n"
+			"#if defined(GL_FRAGMENT_PRECISION_HIGH) || defined(NANOVG_GL3)\n"
+			" precision highp float;\n"
+			"#else\n"
+			" precision mediump float;\n"
+			"#endif\n"
+			"#endif\n"
+			"uniform vec4 renderInfo;\n"
+			"#define fRenderTime renderInfo.x\n"
+			"#ifdef NANOVG_GL3\n"
+			"#ifdef USE_UNIFORMBUFFER\n"
+			"	layout(std140) uniform frag {\n"
+			"		mat3 scissorMat;\n"
+			"		mat3 paintMat;\n"
+			"		vec4 innerCol;\n"
+			"		vec4 outerCol;\n"
+			"		vec2 scissorExt;\n"
+			"		vec2 scissorScale;\n"
+			"		vec2 extent;\n"
+			"		float radius;\n"
+			"		float feather;\n"
+			"		float strokeMult;\n"
+			"		float strokeThr;\n"
+			"		int texType;\n"
+			"		int type;\n"
+			"	};\n"
+			"#else\n"
+			"	uniform vec4 frag[UNIFORMARRAY_SIZE];\n"
+			"#endif\n"
+			"	uniform sampler2D tex;\n"
+			"	in vec2 ftcoord;\n"
+			"	in vec2 fpos;\n"
+			"	out vec4 outColor;\n"
+			"#else\n"
+			"	uniform vec4 frag[UNIFORMARRAY_SIZE];\n"
+			"	uniform sampler2D tex;\n"
+			"	varying vec2 ftcoord;\n"
+			"	varying vec2 fpos;\n"
+			"#endif\n"
+			"#ifndef USE_UNIFORMBUFFER\n"
+			"	#define scissorMat mat3(frag[0].xyz, frag[1].xyz, frag[2].xyz)\n"
+			"	#define paintMat mat3(frag[3].xyz, frag[4].xyz, frag[5].xyz)\n"
+			"	#define innerCol frag[6]\n"
+			"	#define outerCol frag[7]\n"
+			"	#define scissorExt frag[8].xy\n"
+			"	#define scissorScale frag[8].zw\n"
+			"	#define extent frag[9].xy\n"
+			"	#define radius frag[9].z\n"
+			"	#define feather frag[9].w\n"
+			"	#define strokeMult frag[10].x\n"
+			"	#define strokeThr frag[10].y\n"
+			"	#define texType int(frag[10].z)\n"
+			"	#define type int(frag[10].w)\n"
+			"#endif\n"
+			"\n"
+			"float sdroundrect(vec2 pt, vec2 ext, float rad) {\n"
+			"	vec2 ext2 = ext - vec2(rad,rad);\n"
+			"	vec2 d = abs(pt) - ext2;\n"
+			"	return min(max(d.x,d.y),0.0) + length(max(d,0.0)) - rad;\n"
+			"}\n"
+			"\n"
+			"// Scissoring\n"
+			"float scissorMask(vec2 p) {\n"
+			"	vec2 sc = (abs((scissorMat * vec3(p,1.0)).xy) - scissorExt);\n"
+			"	sc = vec2(0.5,0.5) - sc * scissorScale;\n"
+			"	return clamp(sc.x,0.0,1.0) * clamp(sc.y,0.0,1.0);\n"
+			"}\n"
+			"#ifdef EDGE_AA\n"
+			"// Stroke - from [0..1] to clipped pyramid, where the slope is 1px.\n"
+			"float strokeMask() {\n"
+			"return smoothstep(0.0, 1.0, (1.0-abs(ftcoord.x*2.0-1.0))*strokeMult) * smoothstep(0.0, 1.0, ftcoord.y);\n"
+			"}\n"
+			"#endif\n"
+			"vec3 palette( in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d )\n"
+			"{\n"
+			"    return a + b *cos( 6.28318*(c*t+d) );\n"
+			"}\n"
+			"void mainDbgTexc(void) {\n"
+			"   vec4 result;\n"
+			"		// result = vec4(vec3(max(extent.x, extent.y)), 1.0);\n"
+			"		vec2 pt = (paintMat * vec3(fpos,1.0)).xy / (extent);\n"
+			"		result = vec4(pt.xy, 0.0, 1.0);\n"
+			"#ifdef NANOVG_GL3\n"
+			"	outColor = result;\n"
+			"#else\n"
+			"	gl_FragColor = result;\n"
+			"#endif\n"
+			"}\n"
+			"\n"
+			"//note: uniformly distributed, normalized rand, [0;1[\n"
+			"float nrand( vec2 n )\n"
+			"{\n"
+			"	return fract(sin(dot(n.xy, vec2(12.9898, 78.233)))* 43758.5453);\n"
+			"}\n"
+			"//note: remaps v to [0;1] in interval [a;b]\n"
+			"float remap( float a, float b, float v )\n"
+			"{\n"
+			"	return clamp( (v-a) / (b-a), 0.0, 1.0 );\n"
+			"}\n"
+			"//note: quantizes in l levels\n"
+			"float trunc_( float a, float l )\n"
+			"{\n"
+			"	return floor(a*l)/l;\n"
+			"}\n"
+			"\n"
+			"float n1rand( vec2 n )\n"
+			"{\n"
+			"	float t = fract( fRenderTime );\n"
+			"	float nrnd0 = nrand( n + 0.07*t );\n"
+			"	return nrnd0;\n"
+			"}\n"
+			"float n2rand( vec2 n )\n"
+			"{\n"
+			"	float t = fract( fRenderTime );\n"
+			"	float nrnd0 = nrand( n + 0.07*t );\n"
+			"	float nrnd1 = nrand( n + 0.11*t );\n"
+			"	return (nrnd0+nrnd1) / 2.0;\n"
+			"}\n"
+			"\n"
+			"float n2rand_faster( vec2 n )\n"
+			"{\n"
+			"	float t = fract( fRenderTime );\n"
+			"	float nrnd0 = fract(sin(dot(( n + 0.07*t ).xy, vec2(12.9898, 78.233)))* 43758.5453);\n"
+			"\n"
+			"    // Convert uniform distribution into triangle-shaped distribution.\n"
+			"    float orig = nrnd0*2.0-1.0;\n"
+			"    nrnd0 = orig*inversesqrt(abs(orig));\n"
+			"    nrnd0 = max(-1.0,nrnd0); // Nerf the NaN generated by 0*rsqrt(0). Thanks @FioraAeterna!\n"
+			"    nrnd0 = nrnd0-sign(orig)+0.5;\n"
+			"    \n"
+			"    // Result is range [-0.5,1.5] which is\n"
+			"    // useful for actual dithering.\n"
+			"    // convert to [0,1] for histogram.\n"
+			"    return (nrnd0+0.5) * 0.5;\n"
+			"}\n"
+			"float n3rand( vec2 n )\n"
+			"{\n"
+			"	float t = fract( fRenderTime );\n"
+			"	float nrnd0 = nrand( n + 0.07*t );\n"
+			"	float nrnd1 = nrand( n + 0.11*t );\n"
+			"	float nrnd2 = nrand( n + 0.13*t );\n"
+			"	return (nrnd0+nrnd1+nrnd2) / 3.0;\n"
+			"}\n"
+			"float n4rand( vec2 n )\n"
+			"{\n"
+			"	float t = fract( fRenderTime );\n"
+			"	float nrnd0 = nrand( n + 0.07*t );\n"
+			"	float nrnd1 = nrand( n + 0.11*t );	\n"
+			"	float nrnd2 = nrand( n + 0.13*t );\n"
+			"	float nrnd3 = nrand( n + 0.17*t );\n"
+			"	return (nrnd0+nrnd1+nrnd2+nrnd3) / 4.0;\n"
+			"}\n"
+			"float n4rand_inv( vec2 n )\n"
+			"{\n"
+			"	float t = fract( fRenderTime );\n"
+			"	float nrnd0 = nrand( n + 0.07*t );\n"
+			"	float nrnd1 = nrand( n + 0.11*t );	\n"
+			"	float nrnd2 = nrand( n + 0.13*t );\n"
+			"	float nrnd3 = nrand( n + 0.17*t );\n"
+			"    float nrnd4 = nrand( n + 0.19*t );\n"
+			"	float v1 = (nrnd0+nrnd1+nrnd2+nrnd3) / 4.0;\n"
+			"    float v2 = 0.5 * remap( 0.0, 0.5, v1 ) + 0.5;\n"
+			"    float v3 = 0.5 * remap( 0.5, 1.0, v1 );\n"
+			"    return (nrnd4<0.5) ? v2 : v3;\n"
+			"}\n"
+			"\n"
+			"\n"
+			"void main(void) {\n"
+			"   vec4 result = vec4(0,0,0,1);\n"
+			"        float scissor = scissorMask(fpos);\n"
+			"#ifdef EDGE_AA\n"
+			"        float strokeAlpha = strokeMask();\n"
+			"        if (strokeAlpha < strokeThr) discard;\n"
+			"#else\n"
+			"        float strokeAlpha = 1.0;\n"
+			"#endif\n"
+			"#define SHADE_NANOVG\n"
+			"#ifdef SHADE_NANOVG\n"
+			"        if (type == 0) {                        // Gradient\n"
+			"                // Calculate gradient color using box gradient\n"
+			"                vec2 pt = (paintMat * vec3(fpos,1.0)).xy;\n"
+			"                vec2 texcoord = pt / extent;\n"
+			"                float d = clamp((sdroundrect(pt, extent, radius) + feather*0.5) / feather, 0.0, 1.0);\n"
+			"                vec4 color = mix(innerCol,outerCol,d);\n"
+			"                // Combine alpha\n"
+			"				float mask = strokeAlpha * scissor;\n"
+			"                color *= strokeAlpha * scissor;\n"
+			"                result = color;\n"
+			"				// vec2 ptOffset = clamp(abs(pt*2.0-1.0), vec2(0.0), vec2(1.0));\n"
+			"				// ptOffset = pow(ptOffset, vec2(2.0));\n"
+			"				// float intens = ptOffset.x*ptOffset.y; //dot or sth\n"
+			"				// result.rbg*=1;\n"
+			"				// float fMix = 0.5;\n"
+			"				//yaaa lousy branch in shader\n"
+			"// #define SIMPLE_SHADING\n"
+			"#define COLOR_SHADING\n"
+			"				if (mask > 0 && abs(extent.x)+abs(extent.y) > 0) {\n"
+			"					float fTimeSeconds = renderInfo.x;\n"
+			"					\n"
+			"					float fPerS = 2.0;\n"
+			"					float fTmProgr = mod(fTimeSeconds+fPerS/2.0, 4);\n"
+			"					/* /\\________  1s anim 4s sleep (5s cycle)*/\n"
+			"					float fadeTri = clamp(1.0-abs(fTmProgr*2.0/fPerS-1.0), 0.0, 1.0);\n"
+			"					fadeTri = pow(fadeTri, 2);\n"
+			"					float speed = 0.3+pow(fTmProgr/fPerS, 8.0)*20.0;\n"
+			"					float normalizedNoise = n3rand( pt.xy );\n"
+			"					float antiBandingDither = (-0.5+2.0*normalizedNoise)/256.0; // for 8 bit output\n"
+			"					float highlightShade = 0.0 + fadeTri;\n"
+			"#ifdef COLOR_SHADING\n"
+			"						//noninverse\n"
+			"						// vec2 txF = clamp(pow(abs((texcoord*2.0)-1.0), vec2(2.0)), 0.0, 1.0);\n"
+			"						//inverse is also nice\n"
+			"\n"
+			"						// vec2 txF = clamp(1.0-pow(abs((texcoord*2.0)-1.0), vec2(8.0)), 0.0, 1.0);\n"
+			"\n"
+			"						vec2 Border = 0.5 + 0.5*sqrt(4.0*texcoord*(1.0-texcoord));\n"
+			"						float fPal = Border.y*Border.y;\n"
+			"						float fFade = Border.x*Border.y*Border.x*Border.y*Border.x*Border.y;\n"
+			"						vec3 paletteColor = palette( Border.y*Border.y, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(1.0,1.0,1.0),vec3(0.0,0.10,0.20) );\n"
+			"						// result.rgb=mix(result.rgb, result.rgb*paletteColor.x, 0*fFade);\n"
+			"						result.rgb=mix(result.rgb, paletteColor.rgb, 0.04*fFade)*1.2;\n"
+			"						result.rgb+=vec3(antiBandingDither);\n"
+			"#endif\n"
+			"						// result.rgb = mix(result.rgb, paletteColor, intens*1);\n"
+			"#ifdef SIMPLE_SHADING\n"
+			"						vec2 Border = 0.5 + 0.5*sqrt(4.0*texcoord*(1.0-texcoord));\n"
+			"						Border = pow(Border, vec2(2.0));\n"
+			"						float f = dot(Border, Border);\n"
+			"						result.rgb*=vec3(mix(f, 1, 0.9));\n"
+			"						result.rgb+=vec3(antiBandingDither);\n"
+			"#endif\n"
+			"\n"
+			"#define TC_DBG 0\n"
+			"#if TC_DBG\n"
+			"						result.b = 0.0;\n"
+			"						result.rg = texcoord.xy;\n"
+			"						if (texcoord.x < 0) {\n"
+			"							result.rgb = vec3(1.0, 0.0, 1.0);\n"
+			"						}\n"
+			"						if (texcoord.y < 0) {\n"
+			"							result.rgb = vec3(1.0, 0.0, 1.0);\n"
+			"						}\n"
+			"						if (texcoord.x > 1) {\n"
+			"							result.rgb = vec3(0.0, 1.0, 1.0);\n"
+			"						}\n"
+			"						if (texcoord.y > 1) {\n"
+			"							result.rgb = vec3(0.0, 1.0, 0.0);\n"
+			"						}\n"
+			"#endif\n"
+			"				}\n"
+			"		// vec2 pt1 = (paintMat * vec3(fpos,1.0)).xy;\n"
+			"		// vec2 texcoord1 = pt1 / extent;\n"
+			"		// result.b=0;\n"
+			"		// result.rg = texcoord1.xy;\n"
+			"				\n"
+			"        } else if (type == 1) {         // Image\n"
+			"                // Calculate color fron texture\n"
+			"                vec2 pt = (paintMat * vec3(fpos,1.0)).xy / extent;\n"
+			"#ifdef NANOVG_GL3\n"
+			"                vec4 color = texture(tex, pt);\n"
+			"#else\n"
+			"                vec4 color = texture2D(tex, pt);\n"
+			"#endif\n"
+			"                if (texType == 1) color = vec4(color.xyz*color.w,color.w);              if (texType == 2) color = vec4(color.x);                // Apply color tint and alpha.\n"
+			"                color *= innerCol;\n"
+			"                // Combine alpha\n"
+			"                color *= strokeAlpha * scissor;\n"
+			"                result = color;\n"
+			"        } else if (type == 2) {         // Stencil fill\n"
+			"                result = vec4(1,1,1,1);\n"
+			"        } else if (type == 3) {         // Textured tris\n"
+			"#ifdef NANOVG_GL3\n"
+			"                vec4 color = texture(tex, ftcoord);\n"
+			"#else\n"
+			"                vec4 color = texture2D(tex, ftcoord);\n"
+			"#endif\n"
+			"                if (texType == 1) color = vec4(color.xyz*color.w,color.w);              if (texType == 2) color = vec4(color.x);               \n"
+			"				 color *= scissor;\n"
+			"                result = color * innerCol;\n"
+			"				// result.xy = ftcoord.xy;\n"
+			"				// result.a=1;\n"
+			"				// result.b=0;\n"
+			"        } else if (type == 4) {         // colored tri\n"
+			"         \n"
+			"				vec2 Border = 0.5 + 0.5*sqrt(4.0*ftcoord*(1.0-ftcoord));\n"
+			"				vec2 fstr = clamp(1.3-pow(clamp(1.6-Border, vec2(0), vec2(1)), vec2(8.0)), vec2(0), vec2(1));\n"
+			"                result = innerCol  *fstr.y*scissor;\n"
+			"				// result.xyz = vec3(ftcoord.xy,0);\n"
+			"				// result.a=1;\n"
+			"				// result.b=0;\n"
+			"        }\n"
+			"#endif\n"
+			"\n"
+			"#if 0\n"
+			"				if (abs(extent.x)+abs(extent.y) <= 0) {\n"
+			"					// result.rgb = vec3(0,1,1)*1;\n"
+			"					// result.a=1;\n"
+			"				} else {\n"
+			"					// result.a=1;\n"
+			"				}\n"
+			"#endif\n"
+			"#ifdef NANOVG_GL3\n"
+			"#if 0\n"
+			"		vec2 pt1 = (paintMat * vec3(fpos,1.0)).xy;\n"
+			"		vec2 texcoord1 = pt1 / extent;\n"
+			"		result.b=0;\n"
+			"		result.rg = texcoord1.xy;\n"
+			"#endif\n"
+			"        outColor = result;\n"
+			"#else\n"
+			"        gl_FragColor = result;\n"
+			"#endif\n"
+			"}";
+	static const char* fillFragShaderOld =
 		"#ifdef GL_ES\n"
 		"#if defined(GL_FRAGMENT_PRECISION_HIGH) || defined(NANOVG_GL3)\n"
 		" precision highp float;\n"
@@ -1536,6 +1858,8 @@ static GLNVGblend glnvg__blendCompositeOperation(NVGcompositeOperationState op)
 	return blend;
 }
 
+void glnvg__updateMvp(int, float, float);
+
 float glnvg__getTimeMillisf();
 
 static void glnvg__renderFlush(void* uptr)
@@ -1582,12 +1906,24 @@ static void glnvg__renderFlush(void* uptr)
 #if defined NANOVG_GL3
 		glBindVertexArray(gl->vertArr);
 #endif
+#ifdef NVG_3D_MODE
+		for (int i = 0; i < gl->nverts; i++) {
+			if (gl->verts[i].w != 1.0f) {
+				dbgassert(0);
+			}
+		}
+#endif
 		glBindBuffer(GL_ARRAY_BUFFER, gl->vertBuf);
 		glBufferData(GL_ARRAY_BUFFER, gl->nverts * sizeof(NVGvertex), gl->verts, GL_STREAM_DRAW);
 		glEnableVertexAttribArray(0);
 		glEnableVertexAttribArray(1);
+#ifdef NVG_3D_MODE
+		glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, sizeof(NVGvertex), (const GLvoid*)(size_t)0);
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(NVGvertex), (const GLvoid*)(0 + 4*sizeof(float)));
+#else
 		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(NVGvertex), (const GLvoid*)(size_t)0);
 		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(NVGvertex), (const GLvoid*)(0 + 2*sizeof(float)));
+#endif
 
 		// Set view and texture just once per frame.
 		glUniform1i(gl->shader.loc[GLNVG_LOC_TEX], 0);
@@ -1599,6 +1935,9 @@ static void glnvg__renderFlush(void* uptr)
 			0.0,// screensize.x
 			0.0,// screensize.y
 		};
+
+		glnvg__updateMvp(gl->shader.loc[GLNVG_LOC_MVP], gl->view[0], gl->view[1]);
+
 		glUniform4fv(gl->shader.loc[GLNVG_LOC_RENDERINFO], 1, uniformData);
 
 #if NANOVG_GL_USE_UNIFORMBUFFER
@@ -1634,15 +1973,16 @@ static void glnvg__renderFlush(void* uptr)
 
 	// Reset calls
 	gl->nverts = 0;
+	gl->nVertAllocCalls = 0;
 	gl->npaths = 0;
 	gl->ncalls = 0;
 	gl->nuniforms = 0;
 	for (int i = 0; i < gl->nframebuffers; i++) {
 		NVGLUTempFramebuffer* fb = &gl->framebuffers[i];
 		fb->idleframes++;
+		fb->inuse = 0;
 		if (fb->setup && fb->idleframes>=3) {
 			fb->setup = 0;
-			fb->inuse = 0;
 			fb->idleframes = 0;
 			nvglu__DeleteFramebuffer(&fb->fb);
 		}
@@ -1704,6 +2044,7 @@ static int glnvg__allocVerts(GLNVGcontext* gl, int n)
 	}
 	ret = gl->nverts;
 	gl->nverts += n;
+	gl->nVertAllocCalls++;
 	return ret;
 }
 
@@ -1728,16 +2069,20 @@ static GLNVGfragUniforms* nvg__fragUniformPtr(GLNVGcontext* gl, int i)
 	return (GLNVGfragUniforms*)&gl->uniforms[i];
 }
 
-static void glnvg__vset(NVGvertex* vtx, float x, float y, float u, float v)
+static void glnvg__vset(NVGvertex* vtx, float x, float y, float z, float u, float v)
 {
 	vtx->x = x;
 	vtx->y = y;
+#ifdef NVG_3D_MODE
+	vtx->z = z;
+	vtx->w = 1.0f;
+#endif
 	vtx->u = u;
 	vtx->v = v;
 }
 
 static void glnvg__renderFill(void* uptr, NVGpaint* paint, NVGcompositeOperationState compositeOperation, NVGscissor* scissor, float fringe,
-							  const float* bounds, const NVGpath* paths, int npaths)
+							  const float* bounds, const NVGpath* paths, int npaths, float zPos)
 {
 	GLNVGcontext* gl = (GLNVGcontext*)uptr;
 	GLNVGcall* call = glnvg__allocCall(gl);
@@ -1759,6 +2104,8 @@ static void glnvg__renderFill(void* uptr, NVGpaint* paint, NVGcompositeOperation
 	{
 		call->type = GLNVG_CONVEXFILL;
 		call->triangleCount = 0;	// Bounding box fill quad not needed for convex fill
+	} else {
+		i = 0;
 	}
 
 	// Allocate vertices for all the paths.
@@ -1774,12 +2121,24 @@ static void glnvg__renderFill(void* uptr, NVGpaint* paint, NVGcompositeOperation
 			copy->fillOffset = offset;
 			copy->fillCount = path->nfill;
 			memcpy(&gl->verts[offset], path->fill, sizeof(NVGvertex) * path->nfill);
+#ifdef NVG_3D_MODE
+			for (int i = 0; i < path->nfill; i++) {
+				gl->verts[offset+i].z = zPos;
+				gl->verts[offset+i].w = 1.0f;
+			}
+#endif
 			offset += path->nfill;
 		}
 		if (path->nstroke > 0) {
 			copy->strokeOffset = offset;
 			copy->strokeCount = path->nstroke;
 			memcpy(&gl->verts[offset], path->stroke, sizeof(NVGvertex) * path->nstroke);
+#ifdef NVG_3D_MODE
+			for (int i = 0; i < path->nstroke; i++) {
+				gl->verts[offset+i].z = zPos;
+				gl->verts[offset+i].w = 1.0f;
+			}
+#endif
 			offset += path->nstroke;
 		}
 	}
@@ -1789,10 +2148,10 @@ static void glnvg__renderFill(void* uptr, NVGpaint* paint, NVGcompositeOperation
 		// Quad
 		call->triangleOffset = offset;
 		quad = &gl->verts[call->triangleOffset];
-		glnvg__vset(&quad[0], bounds[2], bounds[3], 0.5f, 1.0f);
-		glnvg__vset(&quad[1], bounds[2], bounds[1], 0.5f, 1.0f);
-		glnvg__vset(&quad[2], bounds[0], bounds[3], 0.5f, 1.0f);
-		glnvg__vset(&quad[3], bounds[0], bounds[1], 0.5f, 1.0f);
+		glnvg__vset(&quad[0], bounds[2], bounds[3], zPos, 0.5f, 1.0f);
+		glnvg__vset(&quad[1], bounds[2], bounds[1], zPos, 0.5f, 1.0f);
+		glnvg__vset(&quad[2], bounds[0], bounds[3], zPos, 0.5f, 1.0f);
+		glnvg__vset(&quad[3], bounds[0], bounds[1], zPos, 0.5f, 1.0f);
 
 		call->uniformOffset = glnvg__allocFragUniforms(gl, 2);
 		if (call->uniformOffset == -1) goto error;
@@ -1826,7 +2185,7 @@ error:
 }
 
 static void glnvg__renderStroke(void* uptr, NVGpaint* paint, NVGcompositeOperationState compositeOperation, NVGscissor* scissor, float fringe,
-								float strokeWidth, const NVGpath* paths, int npaths)
+								float strokeWidth, const NVGpath* paths, int npaths, float zPos)
 {
 	GLNVGcontext* gl = (GLNVGcontext*)uptr;
 	GLNVGcall* call = glnvg__allocCall(gl);
@@ -1854,6 +2213,12 @@ static void glnvg__renderStroke(void* uptr, NVGpaint* paint, NVGcompositeOperati
 			copy->strokeOffset = offset;
 			copy->strokeCount = path->nstroke;
 			memcpy(&gl->verts[offset], path->stroke, sizeof(NVGvertex) * path->nstroke);
+#ifdef NVG_3D_MODE
+			for (int i = 0; i < path->nstroke; i++) {
+				gl->verts[offset+i].z = zPos;
+				gl->verts[offset+i].w = 1.0f;
+			}
+#endif
 			offset += path->nstroke;
 		}
 	}
@@ -1883,11 +2248,12 @@ error:
 
 static void glnvg__renderTriangles(void* uptr, NVGpaint* paint,
 		NVGcompositeOperationState compositeOperation, NVGscissor* scissor,
-								   const NVGvertex* verts, int nverts)
+								   const NVGvertex* verts, int nverts, float zPos)
 {
 	GLNVGcontext* gl = (GLNVGcontext*)uptr;
 	GLNVGcall* call = glnvg__allocCall(gl);
 	GLNVGfragUniforms* frag;
+	NVGvertex* vertices;
 
 	if (call == NULL) return;
 
@@ -1902,7 +2268,18 @@ static void glnvg__renderTriangles(void* uptr, NVGpaint* paint,
 	if (call->triangleOffset == -1) goto error;
 	call->triangleCount = nverts;
 
-	memcpy(&gl->verts[call->triangleOffset], verts, sizeof(NVGvertex) * nverts);
+	vertices = &gl->verts[call->triangleOffset];
+
+	memcpy(vertices, verts, sizeof(NVGvertex) * nverts);
+
+
+#ifdef NVG_3D_MODE
+	for (int i = 0; i < nverts; i++) {
+		vertices->w = 1.0f;
+		vertices->z = zPos;
+		vertices++;
+	}
+#endif
 
 	// Fill shader
 	call->uniformOffset = glnvg__allocFragUniforms(gl, 1);

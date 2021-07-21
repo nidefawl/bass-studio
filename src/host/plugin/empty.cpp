@@ -79,7 +79,7 @@ guiplugin* module_empty::getGui() {
 	return handle->gui.get();
 //	return handle->gui;
 }
-int32_t module_empty::getDelay() {
+int32_t module_empty::getPluginLatency() {
 	return 0;
 }
 void module_empty::resume() {

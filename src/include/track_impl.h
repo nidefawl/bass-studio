@@ -39,7 +39,6 @@ extern const std::vector<SupportedFileType> vFILE_TYPES_TRACKSNAPSHOT;
 struct track_audio_src {
 	std::vector<float*> channels;
 	uint32_t samples = 0;
-	float gain = 0.0f;
 	int32_t latency = 0;
 	sampleformat_t sampleFormat;
 	AudioBlock toAudioBlock() const {
@@ -117,8 +116,9 @@ struct audio_stage_t {
 	AudioBlock outputPost;
 	track_params_t mixer;
 	audiotrack_t audioOutput;
-	samplerate_t latency = 0;
-	samplerate_t latencyAbs = 0;
+	samplerate_t latencyInternal = 0;
+	samplerate_t latencyInput = 0;
+	samplerate_t latencyOuput = 0;
 	int type;
 	sampleformat_t sampleFormat;
 
@@ -147,9 +147,7 @@ struct audio_stage_t {
 		  sampleFormat.sampleformat = sampleformat_bits_t::FLOAT_32;
 		  configureDefaultRoutings();
 	}
-	virtual ~audio_stage_t() {
-
-	}
+	virtual ~audio_stage_t();
 	void getDeferredEffects(std::vector<effectbase*>& out_effects) {
 		for (auto effect : effects) {
 			effect->getDeferredEffects(out_effects);
@@ -169,8 +167,9 @@ struct audio_stage_t {
 	}
 	virtual void removePlugin(effectbase* _vst, bool notifyUp);
 	void loadPlugins(const std::vector<plugin_snapshot_t>& trPluginList);
-	samplerate_t getLatency() const;
-	samplerate_t getGlobalLatency() const;
+	samplerate_t getInternalLatency() const;
+	samplerate_t getOutputLatency() const;
+	samplerate_t getInputLatency() const;
 	void insertEffect(int32_t idx, effectbase* _instrument);
 	bool replaceEffect(int32_t idx, effectbase* _effect, effectbase** _prevEffect);
 	void pluginsChanged();
@@ -185,7 +184,8 @@ struct audio_stage_t {
 	void createRoutingSnapshot(track_effect_routing_snapshot_t& snapshot);
 	void loadRoutingSnapshot(const track_effect_routing_snapshot_t& snapshot);
 	void configureDefaultRoutings();
-	void sendNotesOff(int32_t bpm100);
+	virtual void sendNotesOff(int32_t bpm100);
+	void notifyPluginContainers();
 };
 inline bool isAudioStageChildOf(audio_stage_t* parent, audio_stage_t* child) {
 	std::vector<audio_stage_t*>& children = parent->children;
@@ -266,9 +266,10 @@ struct track_impl_t : public audio_stage_t {
 	DAW::channel_ref_t inputChannel;
 	DAW::channel_ref_t outputChannel;
 	std::vector<track_gui_entry_t*> guiInstances;
+	std::vector<noteevent_t> noteEventsProcessed;
 	track_impl_t(vsthost* const _host, audio_stage_id_t _id, track_t* _track, const samplerate_t _sampleRate, const uint16_t _blockSize, int32_t nChannels);
 	~track_impl_t();
-	void sendNotesOff(int32_t bpm100);
+	void sendNotesOff(int32_t bpm100) override;
 	void onStartPlayback();
 	void sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, clip_notes_t& midiRealtimeInput, int32_t flags);
 	void fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, float** buffer, int32_t samples);

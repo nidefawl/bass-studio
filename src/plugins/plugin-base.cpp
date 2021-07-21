@@ -18,6 +18,8 @@
 #include "exceptions.h"
 #include "handle-exceptions.h"
 #include "msgbox.h"
+#include "platform.h"
+
 #include "assert_dbg.h"
 
 #if BUILD_EXTERNAL_PLUGIN
@@ -151,32 +153,7 @@ void BasePluginVST2::open () {
 	if (!isFirstPluginLoad) {
 		return;
 	}
-	isFirstPluginLoad = false;
 #endif
-	//this is the first point where we have the right currentworkingdirectory set
-	//no file io before this point!
-	const int bufLen = 512*4;
-	char* cwdbuf = _getcwd(NULL, bufLen);
-	String strPath = "??";
-	if (cwdbuf) {
-		strPath = cwdbuf;
-		free(cwdbuf);
-		replaceString(strPath, "\\", "/");
-		my_printf("getcwd: %s\n", StringAsCStr(strPath));
-	}
-	if (!FileExists("res")) { //TODO: make sure its a directory not a file
-		String moduleName = getModuleName(hInstance);
-		String modulePath = "";
-		SplitPath(moduleName, &modulePath, nullptr, nullptr, nullptr);
-		if (!FileExists(modulePath +"/res")) {
-			modulePath="C:/Users/Michael/daw/run";
-		}
-		setCWDPath(modulePath);
-		my_printf("setCWDPath: %s\n", StringAsCStr(modulePath));
-	} else {
-		setCWDPath(strPath);// remember cwd, it _will_ change
-		my_printf("setCWDPath: %s\n", StringAsCStr(strPath));
-	}
 	isFirstPluginLoad = false;
 	MouseCursors::initCursors(); //TODO: call MouseCursors::destroy() on exit of last instance
 
@@ -188,20 +165,34 @@ void BasePluginVST2::open () {
 static void glfw_plugin_error_callback(int error, const char* description) {
 	char errorCodeStr[1024] = { 0 };
 	_snprintf_s(errorCodeStr, 1024 - 1, _TRUNCATE, "Error %d: %s", error, description);
-	my_printf("%s\n", errorCodeStr);
+	log_printf("%s\n", errorCodeStr);
 //	ngui::show(errorCodeStr, "Error", ngui::Style::Error, ngui::Buttons::OK);
 }
 static void showerror(const char* description) {
 	ngui::show(description, "Error", ngui::Style::Error, ngui::Buttons::OK);
 }
 void initColor(); // gui/gui.cpp
-void onModuleLoad() {
+void onModuleLoad(HINSTANCE hInst) {
 	isFirstPluginLoad = true;
+	String moduleName = getModuleName(hInst);
+	log_printf("moduleName %s\n", StringAsCStr(moduleName));
+	String path = "";
+	SplitPath(moduleName, &path, nullptr, nullptr, nullptr);
+	String resPath = path+"/res/";
+	log_printf("resPath %s\n", StringAsCStr(resPath));
+    setResourcePath(resPath);
+
+    String cwdPath = "";
+    if (determineUserdataPath(cwdPath)) {
+        setUserdataPath(cwdPath+"/daw/");
+    	log_printf("UserdataPath %s\n", StringAsCStr(toUserdataPath("")));
+    }
+
 	try {
 	initColor();
 	char pluginWindowClassName[32];
 	sprintf_s(pluginWindowClassName, 32, "PLUGWND%I64X", (int64_t)&onModuleLoad);
-	my_printf("window class name %s\n", pluginWindowClassName);
+	log_printf("window class name %s\n", pluginWindowClassName);
 	glfwSetErrorCallback(glfw_plugin_error_callback);
 	if (!glfwInit(pluginWindowClassName)) {
 #ifdef _WIN32

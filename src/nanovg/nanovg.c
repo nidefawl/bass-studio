@@ -86,6 +86,7 @@ struct NVGstate {
 	int tess;
 	float alpha;
 	float xform[6];
+	float zOffset;
 	NVGscissor scissor;
 	float fontSize;
 	float letterSpacing;
@@ -170,6 +171,7 @@ struct NVGcontext {
 	int textTriCount;
 	int cacheNextPath;
 	nvg_cache_storage* cacheStorage;
+	int dbgCount;
 };
 
 static float nvg__sqrtf(float a) { return sqrtf(a); }
@@ -421,6 +423,7 @@ void nvgBeginFrame(NVGcontext* ctx, float windowWidth, float windowHeight, float
 		ctx->drawCallCount, ctx->fillTriCount, ctx->strokeTriCount, ctx->textTriCount,
 		ctx->fillTriCount+ctx->strokeTriCount+ctx->textTriCount);*/
 
+	ctx->dbgCount = 0;
 	ctx->nstates = 0;
 	nvgSave(ctx);
 	nvgReset(ctx);
@@ -688,6 +691,7 @@ void nvgSave(NVGcontext* ctx)
 		return;
 	if (ctx->nstates > 0)
 		memcpy(&ctx->states[ctx->nstates], &ctx->states[ctx->nstates-1], sizeof(NVGstate));
+	ctx->states[ctx->nstates].zOffset -= 2.0f;
 	ctx->nstates++;
 }
 
@@ -1329,6 +1333,12 @@ static NVGvertex* nvg__allocTempVerts(NVGcontext* ctx, int nverts)
 		ctx->cache->verts = verts;
 		ctx->cache->cverts = cverts;
 	}
+#ifdef NVG_3D_MODE
+	for (int i = 0; i < nverts; i++) {
+		ctx->cache->verts[i].z = 0.0f;
+		ctx->cache->verts[i].w = 1.0f;
+	}
+#endif
 
 	return ctx->cache->verts;
 }
@@ -1373,6 +1383,8 @@ static void nvg__vset(NVGvertex* vtx, float x, float y, float u, float v)
 {
 	vtx->x = x;
 	vtx->y = y;
+//	vtx->z = 0.0f;
+//	vtx->w = 1.0f;
 	vtx->u = u;
 	vtx->v = v;
 }
@@ -2127,6 +2139,7 @@ static int nvg__expandFill(NVGcontext* ctx, float w, int lineJoin, float miterLi
 		}
 
 		path->nfill = (int)(dst - verts);
+		dbgassert(path->nfill>0);
 		verts = dst;
 
 		// Calculate fringe
@@ -2179,6 +2192,7 @@ static int nvg__expandFill(NVGcontext* ctx, float w, int lineJoin, float miterLi
 void nvgBeginPath(NVGcontext* ctx)
 {
 	ctx->ncommands = 0;
+	ctx->dbgCount = 0;
 	nvg__clearPathCache(ctx);
 }
 
@@ -2360,6 +2374,7 @@ void nvgSetShapeExtents(NVGcontext* ctx, float x, float y, float w, float h)
 }
 void nvgRect(NVGcontext* ctx, float x, float y, float w, float h)
 {
+	ctx->dbgCount++;
 	//dbgassert(w>=0&&h>=0);
 	float vals[] = {
 		NVG_MOVETO, x,y,
@@ -2533,7 +2548,7 @@ void nvgFillFromCache(NVGcontext* ctx, nvg_shape_cache* shapeCache)
 			ctx->params.renderTriangles(ctx->params.userPtr,
 					&verts->fillPaint,
 					verts->compositeOperation,
-					&state->scissor, verts->verts, verts->nVerts);
+					&state->scissor, verts->verts, verts->nVerts, state->zOffset);
 
 			ctx->drawCallCount++;
 			ctx->textTriCount += verts->nVerts/3;
@@ -2553,7 +2568,7 @@ void nvgFillFromCache(NVGcontext* ctx, nvg_shape_cache* shapeCache)
 
 		if (cache->type == 0) {
 			ctx->params.renderFill(ctx->params.userPtr, &fillPaint, state->compositeOperation, &state->scissor, ctx->fringeWidth,
-							   cache->bounds, cache->arrPath, cache->len);
+							   cache->bounds, cache->arrPath, cache->len, cache->state.zOffset);
 			// Count triangles
 			for (i = 0; i < cache->len; i++) {
 				path = &cache->arrPath[i];
@@ -2563,7 +2578,7 @@ void nvgFillFromCache(NVGcontext* ctx, nvg_shape_cache* shapeCache)
 			}
 		} else {
 			ctx->params.renderStroke(ctx->params.userPtr, &fillPaint, state->compositeOperation, &state->scissor, ctx->fringeWidth,
-								 cache->strokeWidth, cache->arrPath, cache->len);
+								 cache->strokeWidth, cache->arrPath, cache->len, cache->state.zOffset);
 			// Count triangles
 			for (i = 0; i < ctx->cache->npaths; i++) {
 				path = &ctx->cache->paths[i];
@@ -2625,6 +2640,9 @@ void nvgFill(NVGcontext* ctx)
 	if (ctx->ncommands == 0) {
 		return;
 	}
+	if (ctx->dbgCount > 1) {
+		//dbgassert(0);
+	}
 	NVGstate* state = nvg__getState(ctx);
 	const NVGpath* path;
 	NVGpaint fillPaint = state->fill;
@@ -2679,7 +2697,7 @@ void nvgFill(NVGcontext* ctx)
 		fillPaint.innerColor.a *= state->alpha;
 		fillPaint.outerColor.a *= state->alpha;
 		ctx->params.renderFill(ctx->params.userPtr, &fillPaint, state->compositeOperation, &state->scissor, ctx->fringeWidth,
-							   ctx->cache->bounds, ctx->cache->paths, ctx->cache->npaths);
+							   ctx->cache->bounds, ctx->cache->paths, ctx->cache->npaths, state->zOffset);
 	}
 
 	// Count triangles
@@ -2768,7 +2786,7 @@ void nvgStroke(NVGcontext* ctx)
 		strokePaint.outerColor.a *= state->alpha;
 
 		ctx->params.renderStroke(ctx->params.userPtr, &strokePaint, state->compositeOperation, &state->scissor, ctx->fringeWidth,
-								 strokeWidth, ctx->cache->paths, ctx->cache->npaths);
+								 strokeWidth, ctx->cache->paths, ctx->cache->npaths, state->zOffset);
 	}
 
 	// Count triangles
@@ -2918,7 +2936,7 @@ static void nvg__renderText(NVGcontext* ctx, NVGvertex* verts, int nverts)
 	if (0 == nverts) {
 		return;
 	}
-	ctx->params.renderTriangles(ctx->params.userPtr, &paint, state->compositeOperation, &state->scissor, verts, nverts);
+	ctx->params.renderTriangles(ctx->params.userPtr, &paint, state->compositeOperation, &state->scissor, verts, nverts, state->zOffset);
 
 	ctx->drawCallCount++;
 	ctx->textTriCount += nverts/3;
@@ -3014,6 +3032,12 @@ static void nvg_appendRect(NVGcontext* ctx, float x, float y, float w, float h)
 	nvg__vset(&verts[nverts], c[4], c[5], 1, 1); nverts++;
 	nvg__vset(&verts[nverts], c[2], c[3], 1, 0); nverts++;
 	nvg__vset(&verts[nverts], c[6], c[7], 0, 1); nverts++;
+#ifdef NVG_3D_MODE
+	for (int i = 0; i < 6; i++) {
+		ctx->cache->batchedVerts[ctx->cache->nbatchedVerts+i].z = 0.0f;
+		ctx->cache->batchedVerts[ctx->cache->nbatchedVerts+i].w = 1.0f;
+	}
+#endif
     dbgassert(nverts <= ctx->cache->cbatchedVerts);
 	ctx->cache->nbatchedVerts = nverts;
 
@@ -3061,7 +3085,7 @@ static void nvg__renderBatched(NVGcontext* ctx)
 	} else {
 	// glnvg__renderTriangles
 		ctx->params.renderTriangles(ctx->params.userPtr, &paint,
-				state->compositeOperation, &state->scissor, verts, nverts);
+				state->compositeOperation, &state->scissor, verts, nverts, state->zOffset);
 
 		ctx->drawCallCount++;
 		ctx->textTriCount += nverts/3;
@@ -3078,6 +3102,11 @@ void nvgBatchedRender(NVGcontext* ctx)
 void nvgBatchedRect(NVGcontext* ctx, float x, float y, float w, float h)
 {
 	nvg_appendRect(ctx, x, y, w, h);
+}
+void nvgSetZOffset(NVGcontext* ctx, float z)
+{
+	NVGstate* state = nvg__getState(ctx);
+	state->zOffset = z;
 }
 
 void nvgTextBox(NVGcontext* ctx, float x, float y, float breakRowWidth, const char* string, const char* end)

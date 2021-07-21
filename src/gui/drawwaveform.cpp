@@ -144,7 +144,10 @@ int waveformrender::queueUpdate(samplesource_t* audio, gui_waveform_texture_ref*
 //	}
 //	assertWaveformRefIsUnbound(waveformRef);
 	dbgassert(waveformRef->waveform.size.x > 0 && waveformRef->waveform.size.y > 0);
-	waveform_update_task_t waveform_update_task{audio, ivec2(0), waveformRef->waveform.size, 1};
+	waveform_update_task_t waveform_update_task{};
+	waveform_update_task.audio = audio;
+	waveform_update_task.pos = ivec2(-1, 0);
+	waveform_update_task.size = waveformRef->waveform.size;
 	waveform_update_task.queuedRefCount = 1;
 	waveform_update_task.queuedptrs.push_back(waveformRef);
 //	dbgassert (std::find_if(queuedTasks.begin(), queuedTasks.end(), [waveformRef](const waveform_update_task_t& t) {
@@ -190,7 +193,7 @@ bool anyCollision(TextureAtlas& _atlas, const ivec2 pos1, const ivec2 size1, ive
 	// check against list of queued textures
 	for(auto& entry : _atlas.queuedTasks) {
 		ivec2 offset(0, 0);
-		if (collides(pos1, size1, entry.pos, entry.size, offset)) {
+		if (entry.pos.x >= 0 && collides(pos1, size1, entry.pos, entry.size, offset)) {
 			colliderBottomRight.x = entry.pos.x+entry.size.x;
 			colliderBottomRight.y = entry.pos.y+entry.size.y;
 			return true;
@@ -364,7 +367,9 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 
 	//go over all waveforms that are queued up
 	impl->timer2.reset();
-	for (waveform_update_task_t& waveformQueueEntry : this->queuedTasks) {
+	auto itQTask = this->queuedTasks.begin();
+	for (;itQTask!=this->queuedTasks.end(); ) {
+		waveform_update_task_t& waveformQueueEntry = *itQTask;
 		gui_waveform_texture_ref* waveformRef = waveformQueueEntry.queuedptrs[0];
 		// see if we have already have an identical texture rendered or queued
 		// if so bind them together and continue with the next queue entry
@@ -372,7 +377,8 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 		bool bFndSimiliar = findSimiliarWaveform(waveformQueueEntry);
 		impl->renderTimings.tmFindSimiliar += impl->timer3.getTime();
 		if (bFndSimiliar) {
-//			my_printf("bind to identical %012x\n", &waveformQueueEntry.waveformRef);
+			// bind to similiar waveform
+			itQTask++;
 			continue;
 		}
 		int atlasIdx = -1;
@@ -386,35 +392,18 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 		impl->timer3.reset();
 		bool foundSpot = findFreeSpot(sizeInternal, atlasIdx, pos);
 		impl->renderTimings.tmFindSpot += impl->timer3.getTime();
-		if (foundSpot) {
-//			my_printf("bind to new spot %012x\n", &waveformRef);
-			TextureAtlas& _atlas = this->atlases[atlasIdx];
-			waveformQueueEntry.pos = pos;
-			dbgassert(sizeInternal.x > 0&& sizeInternal.y > 0);
-			waveformQueueEntry.size = sizeInternal;
-			_atlas.queuedTasks.push_back(waveformQueueEntry);
-			waveformRef->atlasId = atlasIdx;
-			const int id = _atlas.nextIdx++;
-			waveformRef->atlasEntryId = id;
-//			std::vector<_pos> positions;
-//			for(auto& entry : _atlas.entries) {
-//				positions.push_back(_pos{entry.pos, entry.size});
-//			}
-//			for(auto& entry : _atlas.queuedTasks) {
-//				positions.push_back(_pos{entry.pos, entry.size});
-//			}
-//			for(auto& entry : positions) {
-//				for(auto& entry2 : positions) {
-//					if (&entry2 == &entry) continue;
-//					ivec2 offset(0, 0);
-//					bool b = collides(entry2.pos, entry2.size, entry.pos, entry.size, offset);
-//					if (b) {
-//						my_printf("COLLISION\n",0);
-//						dbgassert(0);
-//					}
-//				}
-//			}
-		}
+		dbgassert(foundSpot);
+
+		TextureAtlas& _atlas = this->atlases[atlasIdx];
+		waveformQueueEntry.pos = pos;
+		dbgassert(sizeInternal.x > 0&& sizeInternal.y > 0);
+		waveformQueueEntry.size = sizeInternal;
+		_atlas.queuedTasks.push_back(waveformQueueEntry);
+		waveformRef->atlasId = atlasIdx;
+		const int id = _atlas.nextIdx++;
+		waveformRef->atlasEntryId = id;
+		//itQTask = this->queuedTasks.erase(itQTask);
+		itQTask++;
 	}
 	impl->renderTimings.tmProcessInputQ = impl->timer2.getTime();
 //	impl->renderTimings.tmTesselate = 0;

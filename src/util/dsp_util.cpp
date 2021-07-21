@@ -13,6 +13,7 @@
 #include <string.h>
 
 namespace dsp_util {
+const float GAIN_DB30 = math::powf(10.0f, 30.0f/20.0f); // 2.0f
 const float GAIN_DB6 = math::powf(10.0f, 6.0f/20.0f); // 2.0f
 const float GAIN_DBFLOOR = math::powf(10.0f, DBFS_FLOOR/20.0f);
 const float GAIN_DBINF = math::powf(10.0f, DBFS_INF_POS/20.0f);
@@ -77,8 +78,8 @@ float clampGain(float f) {
 	return f;
 }
 float clampReadGain(float f) {
-	if (f > GAIN_DB6)
-		return GAIN_DB6;
+	if (f > GAIN_DB30)
+		return GAIN_DB30;
 	if (f < GAIN_DBFLOOR)
 		return 0;
 	return f;

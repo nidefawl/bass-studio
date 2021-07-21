@@ -14,4 +14,6 @@ public:
 
 	}
 	virtual void onSetParameter(int32_t index, float value) = 0;
+	void idle () override {
+	}
 };

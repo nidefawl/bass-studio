@@ -292,7 +292,7 @@ namespace DAW {
 			const int32_t effectId = effect->projectGlobalId;
 			const auto effectIdI32 = static_cast<audiostageid_i32>(effect->projectGlobalId);
 			if (!map.count(effectIdI32)) {
-				map[effectIdI32] = makeEffectNode(effectId, effect->getDelay());
+				map[effectIdI32] = makeEffectNode(effectId, effect->getPluginLatency());
 			}
 			effect_node_t& trackCfg = getEffNode(map, effectIdI32);
 			for (DAW::channel_ref_t inputChannel : effect->inputChannels) {
@@ -326,7 +326,7 @@ namespace DAW {
 						dbgassert(effSrc);
 						auto effSrcId_I32 = static_cast<audiostageid_i32>(effSrc->projectGlobalId);
 						if (!map.count(effSrcId_I32)) {
-							map[effSrcId_I32] = makeEffectNode(effSrc->projectGlobalId, effSrc->getDelay());
+							map[effSrcId_I32] = makeEffectNode(effSrc->projectGlobalId, effSrc->getPluginLatency());
 						}
 						effect_node_t& trackSrcCfg = getEffNode(map, effSrcId_I32);
 						trackCfg.dependencies.push_back(effSrcId_I32);
@@ -383,7 +383,7 @@ namespace DAW {
 					dbgassert(effSrc);
 					auto effSrcId_I32 = static_cast<audiostageid_i32>(effSrc->projectGlobalId);
 					if (!map.count(effSrcId_I32)) {
-						map[effSrcId_I32] = makeEffectNode(effSrc->projectGlobalId, effSrc->getDelay());
+						map[effSrcId_I32] = makeEffectNode(effSrc->projectGlobalId, effSrc->getPluginLatency());
 					}
 					effect_node_t& trackSrcCfg = getEffNode(map, effSrcId_I32);
 					nodeOutput.dependencies.push_back(effSrcId_I32);

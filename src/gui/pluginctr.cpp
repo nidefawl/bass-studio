@@ -958,7 +958,7 @@ action_remove_modules::action_remove_modules(String s, std::vector<effectbase*> 
 action_remove_modules::~action_remove_modules() {
 	if (weOwn) {
 		for (effectbase *eff : effects) {
-			vsthost::getInstance()->unloadPlugin(eff);
+			vsthost::getInstance()->unloadPlugin(eff, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
 		}
 	}
 }

@@ -419,7 +419,11 @@ void main()
     }
     else
     {
-        d /= v_antialias;
-        gl_FragColor = vec4(color.xyz, exp(-d*d)*color.a);
+        float alpha = color.a;
+        if (v_antialias > 0.0) {
+            d /= v_antialias;
+            alpha = exp(-d*d)*color.a;
+        }
+        gl_FragColor = vec4(color.xyz, alpha);
     }
 }

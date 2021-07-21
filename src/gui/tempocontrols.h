@@ -154,6 +154,9 @@ public:
 	void handleDraggedBegin(MouseEvent& evt) override;
 	void handleDraggedMove(MouseEvent& evt) override;
 	void handleDraggedRelease(MouseEvent& evt) override;
+	guictxtmenu_base* getTooltip(AppCtrl* appctrl) {
+		return parent ? parent->getTooltip(appctrl) : nullptr;
+	}
 
 };
 class gui_timeinput : public guictr_base {
@@ -174,6 +177,8 @@ public:
 			parent->buttonClicked(this);
 	}
 	void render(NVGcontext* vg);
+	guictxtmenu_base* getTooltip(AppCtrl* appctrl);
+	int32_t getTime();
 };
 
 class guibutton_audioengine : public guibutton {

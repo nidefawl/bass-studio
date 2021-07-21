@@ -63,6 +63,7 @@ private:
     int maxNoteChordCount = 6;
     long lSeed = 13L;
     seq_rand arpRand;
+	int tickMarkers = 0;
 
     void initRandomDelays(uint64_t seed, int32_t step, int32_t stepSize, int32_t startFrame, int32_t endFrame, bool reset);
 
@@ -76,8 +77,9 @@ public:
 		noteIdx = 0;
 		resetTime = _resetTime;
         step = 0;
+        stepGenerated = -1;
 	}
-	void allNotesOff();
+	void allNotesOff(std::vector<noteevent_t>& noteEvents);
 	void onStartPlayback();
 	float getGateF() {
 		return getParamValue(ARP_PARAM_GATE);
@@ -160,5 +162,6 @@ public:
 	int writeOutputNotes(std::vector<noteevent_t>& noteEventsProcessed,
 			tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int64_t time);
 	void postSetParameter(int32_t idx, float preVal, float val, int flags) override;
+	int endOutputNotes(tick_t tick, tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, std::vector<noteevent_t>& noteEventsProcessed);
 };
 

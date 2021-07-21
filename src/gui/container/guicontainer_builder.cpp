@@ -92,6 +92,12 @@ std::map<container_type, ContainerBuilder>& getContainerFactory() {
 		containerFactory[container_type::CTR_TYPE_PLUGINSLOADED] = []() {
 			return std::shared_ptr<guictr_base>(makeGuiPluginsLoadedList());
 		};
+		containerFactory[container_type::CTR_TYPE_PERFORMANCE] = []() {
+			return std::shared_ptr<guictr_base>(makeGuiPerformance());
+		};
+		containerFactory[container_type::CTR_TYPE_EXPORT] = []() {
+			return std::shared_ptr<guictr_base>(makeGuiExport());
+		};
 #endif
 		containerFactory[container_type::CTR_TYPE_PROPERTIES] = []() {
 			return std::shared_ptr<guictr_base>(makeCtrProperties());
@@ -101,12 +107,6 @@ std::map<container_type, ContainerBuilder>& getContainerFactory() {
 		};
 		containerFactory[container_type::CTR_TYPE_LAYOUT] = []() {
 			return std::make_shared<guictr_layout>();
-		};
-		containerFactory[container_type::CTR_TYPE_PERFORMANCE] = []() {
-			return std::shared_ptr<guictr_base>(makeGuiPerformance());
-		};
-		containerFactory[container_type::CTR_TYPE_EXPORT] = []() {
-			return std::shared_ptr<guictr_base>(makeGuiExport());
 		};
 	}
 	return containerFactory;

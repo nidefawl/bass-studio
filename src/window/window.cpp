@@ -1551,8 +1551,6 @@ void deleteApp(); // Forward declare from host/mainctrl.cpp
 void openGlobalLog(const String& logFileName); // Forward declare from util/debug.cpp
 void closeGlobalLog(); // Forward declare from util/debug.cpp
 
-String getCurrentWorkingDirectory();
-
 int startApplication(int argc, char* argv[]) {
 	setCurrentThreadName("mainthread");
 #if !defined(NDEBUG) && defined(_WIN32)
@@ -1965,6 +1963,9 @@ public:
 #endif
 		}
 //		wglMakeCurrent(NULL, NULL);
+	}
+	void idle () override {
+		flagNeedsRedraw();
 	}
 };
 

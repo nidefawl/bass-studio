@@ -250,6 +250,7 @@ void renderAudioClip(NVGcontext* vg, const guitheme_t* theme, const track_t* tr,
 		nvgStrokeWidth(vg, 1.f);
 		nvgStroke(vg);
 	}
+	daw_tls::getTls().renderStats.clipsRendered++;
 }
 float noteToScreen(float note, float scale, float offset, float sizeY) {
 	float offsetKey = note * scale;

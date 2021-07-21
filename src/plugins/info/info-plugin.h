@@ -50,6 +50,7 @@ public:
 	PluginVST2_HostInfo (audioMasterCallback audioMaster);
 	~PluginVST2_HostInfo ();
 
+	bool getParameterProperties (VstInt32 index, VstParameterProperties* p) override;
 	void processReplacing (float** inputs, float** outputs, VstInt32 sampleFrames) override;
 	VstInt32 processEvents (VstEvents* events) override;
 	std::shared_ptr<PluginViewContainers> createView() override;

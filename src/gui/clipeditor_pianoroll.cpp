@@ -329,21 +329,35 @@ void gui_pianoroll::render(NVGcontext* vg) {
 
 		nvgTranslate(vg, 0, yOff);
 
+		NVGpaint paint;
+		memset(&paint, 0, sizeof(paint));
+		paint.image = -1;
+		paint.innerColor = theme->getColor(GuiColor::COL_PIANOROLL_BLACK);
+		paint.outerColor = paint.innerColor;
+		paint.customPar = 1;
+
 		float yoct = 0;
 		for (int32_t octave = firstOctave; octave < MAX_OCTAVES; octave++) {
 			float y = yoct;
-			nvgBeginPath(vg);
+//			nvgBeginPath(vg);
+			int nRendered = 0;
 			for (int i = firstKey; i < 12; i++) {
 				if (isSharp(i)) {
-					nvgRect(vg, keysX, h-y, widthKeys, scale);
+					nvgBatchedRect(vg, keysX, h-y, widthKeys, scale);
+//					nvgRect(vg, keysX, h-y, widthKeys, scale);
+					nRendered++;
 				}
 				y += scale;
 				if (y >= size.y+scale*2) {
 					break;
 				}
 			}
-			nvgFillColor(vg, theme->getColor(GuiColor::COL_PIANOROLL_BLACK));
-			nvgFill(vg);
+			if (nRendered) {
+			    nvgFillPaint(vg, paint);
+			    nvgBatchedRender(vg);
+			}
+//			nvgFillColor(vg, theme->getColor(GuiColor::COL_PIANOROLL_BLACK));
+//			nvgFill(vg);
 
 
 			if (!noteRealtimePitch.empty()) {

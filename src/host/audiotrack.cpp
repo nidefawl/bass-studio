@@ -10,6 +10,9 @@
 static constexpr int32_t PER_BLOCK_BYTES = (1024*512);
 static constexpr int32_t PER_BLOCK_SAMPLES = (PER_BLOCK_BYTES/(sizeof(float)));
 
+/*static*/ int32_t audiotrack_t::GetSplitSampleLength() {
+	return PER_BLOCK_SAMPLES;
+}
 std::shared_ptr<audiotrack_split_t> audiotrack_t::getSampleById(int32_t sampleId) {
 	//TODO: this lock could be narrowed
 	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();

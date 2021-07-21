@@ -34,7 +34,7 @@ struct audio_stage_t;
 //	int getModuleType() override { return PLUGIN_TYPE_GAIN; };
 //	guiplugin* makeGui() override;
 //	guiplugin* getGui() override;
-//	int32_t getDelay() override
+//	int32_t getPluginLatency() override
 //	{
 //		return 0;
 //	}
@@ -93,7 +93,7 @@ public:
 	void dispatchSetParameter(int32_t idx, float val) override;
 public:
 	virtual int getModuleType() override { return PLUGIN_TYPE_GAIN; };
-	int32_t getDelay() override;
+	int32_t getPluginLatency() override;
 	void process(AudioBlock* in, AudioBlock* out, double tick, int32_t samplePos, int32_t numSamples, playback_state state) override;
 	String getInfo(std::vector<String>& list) override;
 	void resume() override;

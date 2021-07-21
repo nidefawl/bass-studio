@@ -52,7 +52,8 @@
 #if defined(__linux__) || defined(__APPLE__)
 #include <dlfcn.h>
 #endif
-//#include "../util/readerwriterqueue.h"
+
+#include "wave/dr_wav.h"
 
 //#define DBG_PRINT_CALLBACKS
 #ifdef DBG_PRINT_CALLBACKS
@@ -515,6 +516,7 @@ vsthost::~vsthost() {
 	delete blockZero;
 	delete impl;
 	delete midiRealtimeInput;
+	delete midiProcessedInput;
 }
 vsthost::vsthost()
 	: impl(new vsthost_impl{}), numChannels(OUTPUT_CHANNELS), moduleMgr{new vsthost::ModuleManager{}}
@@ -523,6 +525,7 @@ vsthost::vsthost()
 	allocRingBuffer(ringbuffer, 32);
 	updateTime(timeinfo, 0, 0.0, playback_state::status_stop);
 	midiRealtimeInput = new clip_notes_t;
+	midiProcessedInput = new clip_notes_t;
 	registerPlugins();
 }
 void vsthost::setSampleFormat(const sampleformat_t& sampleFormat) {
@@ -596,8 +599,8 @@ void vsthost::updateTime(VstTimeInfo& timeinfo, int32_t samplePos, double dTickP
 	timeinfo.cycleEndPos = ((prjGlobals.loopStart+prjGlobals.loopLen)/(double)TICKS_QUARTER);
 	timeinfo.timeSigNumerator = prjGlobals.signatureNum;
 	timeinfo.timeSigDenominator = 1 << prjGlobals.signatureDenom;
-	if (prjGlobals.loopEnabled) {
-	} else {
+	bool loopEnabed = state != playback_state::status_render && prjGlobals.loopEnabled;
+	if (!loopEnabed) {
 		timeinfo.cycleStartPos = 0;
 		timeinfo.cycleEndPos = 0;
 	}
@@ -620,7 +623,7 @@ void vsthost::updateTime(VstTimeInfo& timeinfo, int32_t samplePos, double dTickP
 
 		bool changed;
 		changed = setFlag(timeinfo.flags, kVstTransportPlaying, DAW::isPlaybackState(state));
-		changed |= setFlag(timeinfo.flags, kVstTransportCycleActive, prjGlobals.loopEnabled);
+		changed |= setFlag(timeinfo.flags, kVstTransportCycleActive, loopEnabed);
 		changed |= setFlag(timeinfo.flags, kVstTransportRecording, false);
 		setFlag(timeinfo.flags, kVstTransportChanged, changed);
 		setFlag(timeinfo.flags, kVstAutomationWriting, false);
@@ -737,7 +740,6 @@ bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, co
 				}
 				src.sampleFormat = host->sampleFormatExternal;
 				src.samples = ptrExternalInputs->samples;
-				src.gain = 1.0f;
 				src.latency = 0;
 				out = std::move(src);
 				return true;
@@ -757,12 +759,15 @@ bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, co
 			switch (inputChannel.stage.buffer) {
 			case stagebuffer_point::INPUT:
 				buff = &stage->input;
+				src.latency = stage->getInputLatency();
 				break;
 			case stagebuffer_point::OUTPUT:
 				buff = &stage->output;
+				src.latency = stage->getOutputLatency();
 				break;
 			case stagebuffer_point::OUTPUT_POST:
 				buff = &stage->outputPost;
+				src.latency = stage->getOutputLatency();
 				break;
 			}
 			for (uint32_t i = 0; i < buff->channels; i++) {
@@ -770,8 +775,6 @@ bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, co
 			}
 			src.sampleFormat = stage->sampleFormat;
 			src.samples = buff->samples;
-			src.gain = fGainTrack;
-			src.latency = stage->getGlobalLatency();
 			out = std::move(src);
 			return true;
 		}
@@ -783,11 +786,6 @@ bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, co
             if (!eff  || !eff->blockOutputs) {
                 return false;
             }
-//			/* Calculate audio/midi tracks gain level */
-			float fGainTrack = 1.0f;
-//			if (!dsp_util::getGainLvl(stage->mixer.getParamValue(PARAM_TRACK_GAIN), fGainTrack)) {
-//				fGainTrack = 0.0f;
-//			}
 			track_audio_src src;
 			auto& buff = eff->blockOutputs;
 			for (uint32_t i = 0; i < eff->blockOutputs->channels; i++) {
@@ -795,7 +793,6 @@ bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, co
 			}
 			src.sampleFormat = stage->sampleFormat;
 			src.samples = eff->blockOutputs->samples;
-			src.gain = fGainTrack;
 			src.latency = 0;
 			out = std::move(src);
 			return true;
@@ -804,15 +801,15 @@ bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, co
 	return false;
 };
 }
+const int32_t lenTicksInfinite = TICKS_BAR*16;
 void vsthost::processMidiRealtimeInput(project_controller_t* ctrl, double posDouble, playback_state state) {
+	//TODO: This needs to be done per input and per track
 	const sampleformat_t sampleFormat = this->sampleFormat;
 	const double ticksPerBlock = toTickPrecise(sampleFormat.blockSize/(double)sampleFormat.sampleRate, prjGlobals.tempo100);
 	tick_t tickPosBlockStart = ceil(posDouble);
 
 	std::vector<MidiIOEvent> msgs = midihost::getInstance()->getInputMessages();
 	bool notesProcessed = false;
-	//TODO: This needs to be done per input and per track
-	int32_t lenTicksInfinite = TICKS_BAR*16;
 	if (msgs.size()) {
 
 
@@ -895,55 +892,125 @@ void vsthost::processMidiRealtimeInput(project_controller_t* ctrl, double posDou
 	if (notesProcessed) {
 		midiRealtimeInput->updateBounds();
 		if (state == playback_state::status_playback && prjGlobals.recordArmed) {
-			if (recordingClip == nullptr) {
-				recordingClip = new clip_t;
-				recordingClip->name = "Midi Input - Recorded";
-				recordingClip->time = tickPosBlockStart;
-				recordingClip->setLen(ticksPerBlock*4);
-				recordingClip->loopStart = 0;
-				recordingClip->loopLen = TICKS_BAR*4;
-			}
-			if (recordingClip) {
-				if (recordingClip->start() > tickPosBlockStart) {
-					recordingClip->time = tickPosBlockStart;
-				}
-				if (recordingClip->end() < tickPosBlockStart+ticksPerBlock) {
-					recordingClip->setLen((tickPosBlockStart+ticksPerBlock)-recordingClip->start());
-				}
-				for (auto& note : midiRealtimeInput->m_list) {
-					if (note.len != lenTicksInfinite) {
-
-						auto noteCopy = note;
-						noteCopy.time -= recordingClip->start();
-						noteCopy.setEnabled(true);
-						noteCopy.setRealtime(false);
-						recordingClip->notes.addSingle(noteCopy);
-					}
-				}
-				clip_t* cloned = recordingClip->clone();
-				cloned->setLen(tickPosBlockStart - recordingClip->time);
-				cloned->loopEnabled = false;
-				cloned->loopLen = ( ( math::max ( 1, cloned->getLen() / (TICKS_BAR*4) ) )   * (TICKS_BAR*4) );
-				cloned->notes.updateBounds();
-				cloned->setDirty();
-				std::swap(recordDataProcessed, cloned);
-				delete cloned;
-				hasNewRecordedData = true;
-			}
-
-
+//			updateRecordingClip(tickPosBlockStart, midiRealtimeInput->m_list);
 		}
 	}
-	if (!midiRealtimeInput->m_list.empty()) {
+//	if (!midiRealtimeInput->m_list.empty()) {
 //		log_printf("Realtime midi notes %d\n", midiRealtimeInput->m_list.size());
+//	}
+	if (recordingClip && !(state == playback_state::status_playback && prjGlobals.recordArmed)) {
+//		finishRecordingClip(tickPosBlockStart, midiRealtimeInput->m_list);
+	}
+}
+void vsthost::processMidiProcessedOutput(playback_state state, tick_t procPos, std::vector<noteevent_t>& noteEventsProcessed) {
+//	std::vector<MidiIOEvent> msgs = midihost::getInstance()->getInputMessages();
+	bool notesProcessed = false;
+	if (noteEventsProcessed.size()) {
+
+
+		std::vector<note_t> newNotes;
+		for (noteevent_t& msg : noteEventsProcessed) {
+			if (msg.isNoteOn) {
+				note_t note;
+				note.setRealtime(true);
+				note.time = procPos + msg.tickOffsetInBlock;
+				note.len = lenTicksInfinite;
+				note.pitch = msg.pitch;
+				note.velocity = msg.velocity;
+				newNotes.push_back(note);
+			}
+		}
+		if (newNotes.size()) {
+//			for (auto& note : newNotes) {
+//				log_printf("%d note TRIG %s %d\n", noteName(note.pitch), note.start());
+//			}
+			midiProcessedInput->addAll(newNotes);
+		}
+		for (noteevent_t& msg : noteEventsProcessed) {
+//			int32_t chan = MidiMsgStatus(msg.message) & MIDI_CHN_MASK;
+			if (!msg.isNoteOn) {
+				int32_t pitch = msg.pitch;
+				int32_t tickEnd = procPos + msg.tickOffsetInBlock;
+				// kill oldest (first) note
+				bool fnd = false;
+				for (note_t& noteHeld : midiProcessedInput->m_list) {
+					if(noteHeld.pitch == pitch) {
+						if (noteHeld.len != lenTicksInfinite) {
+							log_printf("%s note was released before, looking for next one\n", noteName(noteHeld.pitch));
+							continue;
+						}
+						if (noteHeld.start() > tickEnd) {
+							log_printf("%s note starts after this release (tickEnd %d, noteHeld.start() %d)\n",
+									noteName(noteHeld.pitch), tickEnd, noteHeld.start());
+							continue;
+						}
+						if (noteHeld.start() == tickEnd) {
+							log_printf("%s noteHeld.start() == tickEnd %d, adding TICKS_16TH/4\n", noteName(noteHeld.pitch), tickEnd);
+							tickEnd += TICKS_16TH/4;
+						}
+						noteHeld.len = tickEnd - noteHeld.start() + 1;
+						assert(noteHeld.len >= 0);
+						fnd = true;
+						notesProcessed = true;
+//						log_printf("%d note KILL %s %d\n", noteName(noteHeld.pitch), noteHeld.start());
+						break;
+					}
+				}
+				if (!fnd) {
+					log_printf("MIDI_OFF_NOTE note not found %s tickEnd %d\n", noteName(pitch), tickEnd);
+				}
+
+			}
+		}
+		if (newNotes.size() || notesProcessed) {
+			midiProcessedInput->removeDuplicates();
+			notesProcessed = true;
+		}
+	}
+	if (notesProcessed) {
+		midiProcessedInput->updateBounds();
+		if (state == playback_state::status_playback && prjGlobals.recordArmed) {
+			updateRecordingClip(procPos, midiProcessedInput->m_list);
+		}
 	}
 	if (recordingClip && !(state == playback_state::status_playback && prjGlobals.recordArmed)) {
-		for (auto& note : midiRealtimeInput->m_list) {
-			note_t noteCopy = note;
-			if (noteCopy.time < tickPosBlockStart && noteCopy.len == lenTicksInfinite) {
-				noteCopy.len = tickPosBlockStart - noteCopy.time;
+		finishRecordingClip(procPos, midiProcessedInput->m_list);
+	}
+	if (midiProcessedInput->m_list.size()) {
+		auto it = midiProcessedInput->m_list.begin();
+		while (it != midiProcessedInput->m_list.end()) {
+			note_t& note = *it;
+			if (note.end() < procPos) {
+				notesProcessed = true;
+				it = midiProcessedInput->m_list.erase(it);
+			} else {
+				it++;
 			}
-			if (noteCopy.len > 0 && noteCopy.len != lenTicksInfinite) {
+		}
+	}
+}
+void vsthost::updateRecordingClip(tick_t tickPosBlockStart, std::vector<note_t>& m_list) {
+	const double ticksPerBlock = toTickPrecise(sampleFormat.blockSize/(double)sampleFormat.sampleRate, prjGlobals.tempo100);
+
+	if (recordingClip == nullptr) {
+		recordingClip = new clip_t;
+		recordingClip->name = "Midi Input - Recorded";
+		recordingClip->time = tickPosBlockStart;
+		recordingClip->setLen(ticksPerBlock*4);
+		recordingClip->loopStart = 0;
+		recordingClip->loopLen = TICKS_BAR*4;
+	}
+	if (recordingClip) {
+		if (recordingClip->start() > tickPosBlockStart) {
+			recordingClip->time = tickPosBlockStart;
+		}
+		if (recordingClip->end() < tickPosBlockStart+ticksPerBlock) {
+			recordingClip->setLen((tickPosBlockStart+ticksPerBlock)-recordingClip->start());
+		}
+		for (auto& note : m_list) {
+			if (note.len != lenTicksInfinite) {
+
+				auto noteCopy = note;
 				noteCopy.time -= recordingClip->start();
 				noteCopy.setEnabled(true);
 				noteCopy.setRealtime(false);
@@ -951,23 +1018,165 @@ void vsthost::processMidiRealtimeInput(project_controller_t* ctrl, double posDou
 			}
 		}
 		clip_t* cloned = recordingClip->clone();
-		tick_t clipLen = tickPosBlockStart - recordingClip->time + ticksPerBlock;
-		tick_t loopLen = ( ( math::max ( 1, clipLen / (TICKS_BAR*4) ) )   * (TICKS_BAR*4) );
-
-
+		cloned->setLen(tickPosBlockStart - recordingClip->time);
 		cloned->loopEnabled = false;
-		cloned->setLen(clipLen);
-		cloned->loopLen = loopLen;
+		cloned->loopLen = ( ( math::max ( 1, cloned->getLen() / (TICKS_BAR*4) ) )   * (TICKS_BAR*4) );
 		cloned->notes.updateBounds();
 		cloned->setDirty();
 		std::swap(recordDataProcessed, cloned);
 		delete cloned;
 		hasNewRecordedData = true;
-		delete recordingClip;
-		recordingClip = nullptr;
 	}
+
+
+
+}
+void vsthost::finishRecordingClip(tick_t tickPosBlockStart, std::vector<note_t>& m_list) {
+	const double ticksPerBlock = toTickPrecise(sampleFormat.blockSize/(double)sampleFormat.sampleRate, prjGlobals.tempo100);
+	for (auto& note : m_list) {
+		note_t noteCopy = note;
+		if (noteCopy.time < tickPosBlockStart && noteCopy.len == lenTicksInfinite) {
+			noteCopy.len = tickPosBlockStart - noteCopy.time;
+		}
+		if (noteCopy.len > 0 && noteCopy.len != lenTicksInfinite) {
+			noteCopy.time -= recordingClip->start();
+			noteCopy.setEnabled(true);
+			noteCopy.setRealtime(false);
+			recordingClip->notes.addSingle(noteCopy);
+		}
+	}
+	clip_t* cloned = recordingClip->clone();
+	tick_t clipLen = tickPosBlockStart - recordingClip->time + ticksPerBlock;
+	tick_t loopLen = ( ( math::max ( 1, clipLen / (TICKS_BAR*4) ) )   * (TICKS_BAR*4) );
+
+
+	cloned->loopEnabled = false;
+	cloned->setLen(clipLen);
+	cloned->loopLen = loopLen;
+	cloned->notes.updateBounds();
+	cloned->setDirty();
+	std::swap(recordDataProcessed, cloned);
+	delete cloned;
+	hasNewRecordedData = true;
+	delete recordingClip;
+	recordingClip = nullptr;
+
 }
 
+void vsthost::preExportBegin(project_controller_t* ctrl, export_settings_t& exportSettings) {
+
+	for (auto* trackMaster : ctrl->getTracks().getMasterTracksFlatVecRef()) {
+		trackMaster->getStage()->flags |= audiostageflags_t::WRITE_OUTPUT;
+	}
+}
+void vsthost::postExportEnd(project_controller_t* ctrl, export_settings_t& exportSettings) {
+
+
+	project_t* const project = ctrl->getProject();
+	const tick_t tickBegin = exportSettings.exportPos;
+	const tick_t tickEnd = tickBegin + exportSettings.exportLen;
+	const samplerate_t sr = sampleFormat.sampleRate;
+	const uint32_t tempo100 = prjGlobals.tempo100;
+	const samplerate_t sampleBegin = math::floorCast(tickToSamplePrecise(tickBegin, tempo100, sr));
+	const samplerate_t sampleEnd = math::ceilCast(tickToSamplePrecise(tickEnd, tempo100, sr));
+	const samplerate_t numSamples = sampleEnd - sampleBegin;
+
+	for (auto* trackMaster : ctrl->getTracks().getMasterTracksFlatVecRef()) {
+		if ((trackMaster->getStage()->flags & audiostageflags_t::WRITE_OUTPUT) != audiostageflags_t::NONE) {
+			writeTrackSamplesToDisk(exportSettings.exportPath, trackMaster->getStage(), sampleBegin, numSamples);
+		}
+		trackMaster->getStage()->flags &= ~audiostageflags_t::WRITE_OUTPUT;
+	}
+}
+int64_t vsthost::writeTrackSamplesToDisk(String fOutWave, track_impl_t* trImpl, samplerate_t samplePos, samplerate_t numSamples) {
+	if (fOutWave.empty()) {
+		dbgassert(0);
+		return 0;
+	}
+	if ((trImpl->flags & audiostageflags_t::WRITE_OUTPUT) == audiostageflags_t::NONE) {
+		dbgassert(0);
+		return 0;
+	}
+	if (trImpl->output.channels != this->numChannels || trImpl->output.channels != 2) {
+		dbgassert(0);
+		return 0;
+	}
+	log_printf("writeTrackSamplesToDisk %s pos %d len %d\n", StringAsCStr(trImpl->getTrack()->name), samplePos, numSamples);
+	const int64_t SPLIT_SAMPLECOUNT = audiotrack_t::GetSplitSampleLength();
+	const int64_t samplePosEnd = samplePos + numSamples;
+	const int64_t numChannels = trImpl->output.channels;
+
+	trImpl->audioOutput.convertToSamples(this);
+	std::vector<audiotrack_split_t*> samples;
+	trImpl->audioOutput.visitSamples_NoLock([&samples, SPLIT_SAMPLECOUNT, samplePos, samplePosEnd](std::shared_ptr<audiotrack_split_t>& split) {
+		auto* ptrSplit = split.get();
+		if (ptrSplit && ptrSplit->samplePos + SPLIT_SAMPLECOUNT >= (int64_t)samplePos && ptrSplit->samplePos < samplePosEnd) {
+			samples.push_back(ptrSplit);
+		}
+	});
+	if (samples.empty()) {
+		//unexpected
+		dbgassert(0);
+		return 0;
+	}
+
+
+
+	std::sort(samples.begin(), samples.end(), [](audiotrack_split_t* lhs, audiotrack_split_t* rhs) {
+		return lhs->samplePos < rhs->samplePos;
+	});
+
+	drwav_data_format format;
+	format.container = drwav_container_riff; // <-- drwav_container_riff = normal WAV files, drwav_container_w64 = Sony Wave64.
+	format.format = DR_WAVE_FORMAT_IEEE_FLOAT;          // <-- Any of the DR_WAVE_FORMAT_* codes.
+	format.channels = numChannels;
+	format.sampleRate = trImpl->sampleFormat.sampleRate;
+	format.bitsPerSample = 32;
+	drwav *pWav;
+//		String nameWaveFileTrack = fOutWave+"_"+std::to_string(trackIndex)+"_"+trackMaster->name+"_f32.wav";
+	String nameWaveFileTrack = fOutWave;
+	pWav = drwav_open_file_write(StringAsCStr(nameWaveFileTrack), &format);
+
+
+	AudioBlock blockFull(1, SPLIT_SAMPLECOUNT*numChannels);
+	int64_t samplesWritten = 0;
+	int64_t samplesWritten2 = 0;
+	int64_t sampleIdx = 0;
+	for (audiotrack_split_t* split : samples) {
+		auto* sample = split->getSample();
+		dbgassert(split->samplePos + SPLIT_SAMPLECOUNT >= samplePos && split->samplePos < samplePosEnd);
+
+		const int64_t sampleCountMinusBegin = SPLIT_SAMPLECOUNT - math::max<int64_t>(0, (int64_t)samplePos - split->samplePos);
+		const size_t inputOffset = SPLIT_SAMPLECOUNT - sampleCountMinusBegin;
+		const int64_t sampleCountMinusEnd = SPLIT_SAMPLECOUNT - math::max<int64_t>(0, ((int64_t)split->samplePos + SPLIT_SAMPLECOUNT) - samplePosEnd);
+		const int64_t sampleCountMin = math::min<int64_t>(sampleCountMinusBegin, sampleCountMinusEnd);
+
+		dbgassert(sample->nChannels == numChannels);
+		dbgassert(sample->nChannels == sample->samples.size());
+		dbgassert(sample->nSamples == SPLIT_SAMPLECOUNT);
+		dbgassert(sample->nSamples == sample->samples[0].size());
+		dbgassert(sample->nSamples == sample->samples[1].size());
+		dbgassert(blockFull.samples == sample->nSamples*sample->nChannels);
+
+
+		float* in1 = sample->samples[0].data() + inputOffset;
+		float* in2 = sample->samples[1].data() + inputOffset;
+		float* out0 = blockFull.buf[0];
+		float sa = (sampleIdx+1) / 10.0f;
+		for (int64_t nSample = 0; nSample < sampleCountMin; nSample++) {
+			*out0++ = *in1++;
+			*out0++ = *in2++;
+		}
+		samplesWritten2 += sampleCountMin;
+		samplesWritten += drwav_write(pWav, sampleCountMin * numChannels, blockFull.buf[0]);
+		sampleIdx++;
+	};
+	log_printf("wrote %lld samples to %s\n", samplesWritten, StringAsCStr(nameWaveFileTrack));
+	log_printf("processed %lld splits and %lld samples\n", samples.size(), samplesWritten2);
+	drwav_close(pWav);
+
+	return samplesWritten;
+}
 static int32_t dbgStep = 1;
 int32_t vsthost::processRender(project_controller_t* ctrl, int32_t sample, double posDouble) {
 	dbgassert(ctrl);
@@ -1001,11 +1210,14 @@ int32_t vsthost::processRender(project_controller_t* ctrl, int32_t sample, doubl
 	 */
 
 	timer3.reset();
+
+	//TODO: move outside
 	/** turn tree structure into linear pointer array with parents followed by their children **/
 	std::shared_ptr<DAW::processing_graph_t> processingGraph;
 	if (!DAW::buildProcessingGraph(this, project, tracksFlatAll, processingGraph)) {
 		log_printf("Failed building track graph\n", 0);
 	}
+
 	if (recordStats)
 		stats.timings["graph.build"] = timer3.getTime();
 
@@ -1015,8 +1227,8 @@ int32_t vsthost::processRender(project_controller_t* ctrl, int32_t sample, doubl
 	int64_t timeProcessing = 0;
 
 
-	int32_t samplePosProcess = sample + sampleFormat.blockSize;
-	double tickPosProcess = posDouble + ticksPerBlock;
+	int32_t samplePosProcess = sample;
+	double tickPosProcess = posDouble;
 	AudioBlock blockExtIn(32, sampleFormat.blockSize);
 	AudioBlock blockExtOut(32, sampleFormat.blockSize);
 	dsp_util::fillBlock(blockExtOut, 0.0f);
@@ -1051,7 +1263,7 @@ int32_t vsthost::processRender(project_controller_t* ctrl, int32_t sample, doubl
 				}
 				int routedOutputChannelCount = AudioIO::getNumChannelsFromTrackType(tracDst.externalInputType);
 				auto trackSubChannelOutput = trackImpl->output.SubChannelsBlock(0, routedOutputChannelCount);
-				blockExtOut.SubChannelsBlock(tracDst.inputChannelOffset, numChannels).addFromOp(&trackSubChannelOutput, AudioBlock::mix_op::ADD, math::clamp(fGainMaster, 0.0f, 1.0f));
+				blockExtOut.SubChannelsBlock(tracDst.inputChannelOffset, numChannels).addFromOp(&trackSubChannelOutput, AudioBlock::mix_op::ADD, dsp_util::clampReadGain(fGainMaster));
 
 			}
 		}
@@ -1274,7 +1486,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 						}
 						int routedOutputChannelCount = AudioIO::getNumChannelsFromTrackType(tracDst.externalInputType);
 						auto trackSubChannelOutput = trackImpl->output.SubChannelsBlock(0, routedOutputChannelCount);
-						blockExtOut.SubChannelsBlock(tracDst.inputChannelOffset, numChannels).addFromOp(&trackSubChannelOutput, AudioBlock::mix_op::ADD, math::clamp(fGainMaster, 0.0f, 1.0f));
+						blockExtOut.SubChannelsBlock(tracDst.inputChannelOffset, numChannels).addFromOp(&trackSubChannelOutput, AudioBlock::mix_op::ADD, dsp_util::clampReadGain(fGainMaster));
 
 					}
 				}
@@ -1389,7 +1601,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 	}
 	return nBlocksProcessed;
 }
-int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_processing_task_t& req) const {
+int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_processing_task_t& req) /*const*/ {
 	const sampleformat_t sampleFormat = this->sampleFormat;
 	const int32_t lBlockSize = sampleFormat.blockSize;
 	const double ticksPerBlock = toTickPrecise(sampleFormat.blockSize/(double)sampleFormat.sampleRate, prjGlobals.tempo100);
@@ -1430,7 +1642,6 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
 		std::vector<automatable_t*> targets;
 		trackImpl->getAutomatableTrackTargets(targets);
 		for (automatable_t* at : targets) {
-			//at->getLatency();
 			at->updateAutomatedParameters(processingPos);
 		}
 	}
@@ -1465,6 +1676,14 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
 
 	tmp.timer.reset();
 	trackImpl->sendNotes(processingPos, tickBlockEnd, loopCutStart, loopCutEnd, prjGlobals.tempo100, sampleLatencyCompensated, *midiRealtimeInput, midiProcessFlags);
+
+//	if ((trackImpl->flags & audiostageflags_t::RECORD_PROCESSED_MIDI) != audiostageflags_t::NONE) {
+	auto& midiAudioTracks = project_controller_t::get()->getProject()->trackMidiAudioCtr;
+	if (midiAudioTracks.size() > 1 && midiAudioTracks[1] == track) {
+
+		processMidiProcessedOutput(state, processingPos, trackImpl->noteEventsProcessed);
+	}
+
 	track->getStage()->procStats.timeSendNotes = tmp.timer.getTime();
 
 	if (DAW::isPlaybackState(state)) {
@@ -1509,7 +1728,7 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
 				 */
 				/* compensate at input stage */
 				/* figure out max latency of all inputs */
-				/* delay signal by maxLatency - trackImpl->getLatency() */
+				/* delay signal by max_child_input_latency - src_output_latency */
 				/* Compensate audio midi track to pre-return latency */
 				dbgassert(trackNode.inputLatency >= tracksrc.latency);
 				samplerate_t delayToMaxInputLatency = trackNode.inputLatency - tracksrc.latency;
@@ -1524,7 +1743,7 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
 				dbgassert(srcBlock.channels <= tempBlock.channels);
                 dbgassert((delayLine->block.channels == srcBlock.channels) || (2 == delayLine->block.channels && 1 == srcBlock.channels));
 
-				//todo: one of the delay lines will always be 0 samples delay
+				// TODO: one of the delay lines will always be 0 samples delay
 				delayAudio(delayLine, &srcBlock, &tempBlock, delayToMaxInputLatency);
 				float fGainRaw = 0.0f;
 				bool bSuccess = DAW::resolveAutomationAtTime(this, tracksrc.gainAutomation, processingPos, &fGainRaw);
@@ -1532,10 +1751,9 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
 					/* Calculate audio/midi tracks gain level */
 					float fGainTrack;
 					if (dsp_util::getGainLvl(fGainRaw, fGainTrack)) {
-						trackImpl->addAudio(tempBlock, src.gain * fGainTrack);
+						trackImpl->addAudio(tempBlock, fGainTrack);
 					}
 				}
-//				idxDelayLine++;
 			}
 		} else {
 
@@ -1568,20 +1786,45 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
     }
 	trackImpl->procStats.numBlocksProcessed++;
 
+	
+	trackImpl->outputPost.clear();
 
 
-	trackImpl->outputPost.copyFrom(&trackImpl->output);
+	DAW::automation_ref_t automationRef;
+	// get automationRef
+	{
+		int32_t paramIdx = PARAM_GAIN;
+		auto sendLevelGainVal = trackImpl->mixer.getParamValue(paramIdx);
+		automationRef = DAW::AutomationConstant(sendLevelGainVal);
+		auto sendLevelAutomation = trackImpl->mixer.getRegisteredConstAutomation(paramIdx);
+		if (sendLevelAutomation) {
+			automationRef = DAW::AutomationRef(&trackImpl->mixer, paramIdx);
+		}
+	}
+	
+	// evaluate automationRef
+	float fValAutomated = 0.0f;
+    bool bSuccess = DAW::resolveAutomationAtTime(this, automationRef, tickLatencyCompensated, &fValAutomated);
+	//if (bSuccess) {
+	//	fGainTrack = dsp_util::linScaleToGain(fValAutomated);
+	//}
+    float fGainTrack;
+    if (dsp_util::getGainLvl(fValAutomated, fGainTrack)) {
+		trackImpl->outputPost.addFromOp(&trackImpl->output, AudioBlock::mix_op::ADD, dsp_util::clampReadGain(fGainTrack));
+    }
 
 	/* Store block in audioOutput memory */
 	if (DAW::isPlaybackState(state)) {
 		if (static_cast<bool>(trackImpl->flags & audiostageflags_t::WRITE_OUTPUT)) {
-			int32_t offset = sample - (int32_t)(trackImpl->getLatency());
+			int32_t offset = sample - (int32_t)(trackImpl->getOutputLatency());
 			if (offset >= 0) {
-	#if 1
+				auto* track = trackImpl->getTrack();
+				String trName = track ? track->name : "?";
+				int32_t blockIdx = sample/lBlockSize;
+				log_printf("store track %s block %d at sample offset %d (samplepos %d - stage.latencyOutput %u)\n", StringAsCStr(trName), blockIdx, offset, sample, trackImpl->getOutputLatency());
 				trackImpl->audioOutput.store(&trackImpl->outputPost, offset);
-	#endif
 			} else {
-				log_printf("cannot write to negative offset %d (samplepos %d - stage.latency %d)\n", offset, sample, trackImpl->getLatency());
+				log_printf("cannot write to negative offset %d (samplepos %d - stage.latencyOutput %d)\n", offset, sample, trackImpl->getOutputLatency());
 			}
 		}
 
@@ -1882,6 +2125,7 @@ void vsthost::onPluginsChanged(audio_stage_t* stage) {
 void vsthost::onStopPlayback(project_controller_t* ctrl) {
 	project_t* project = ctrl->getProject();
 	midiRealtimeInput->m_list.clear();
+	midiProcessedInput->m_list.clear();
 
 	for (auto stageImpl : allAudioStages) {
 		//if (!trackImpl->heldNotes.empty())
@@ -2059,7 +2303,7 @@ void vsthost::processAudio(audio_stage_t* stage, AudioBlock* input, AudioBlock* 
             if (effect) {
                 bool isBypass = effect->isBypass();
                 if (isBypass || bypassEffectProcessing) {
-                    samplerate_t delay = effect->getDelay();
+                    samplerate_t delay = effect->getPluginLatency();
                     if (delay > 0) {
                         if (!effect->delayLine.get()) {
                             effect->delayLine.reset(new DelayLine(this->numChannels, sampleFormat.blockSize));
@@ -2118,7 +2362,7 @@ void vsthost::processAudio(audio_stage_t* stage, AudioBlock* input, AudioBlock* 
 		blockIn->realloc(sampleFormat.blockSize);
 		blockOut->realloc(sampleFormat.blockSize);
 		if (isBypass || bypassEffectProcessing) {
-			samplerate_t delay = current->getDelay();
+			samplerate_t delay = current->getPluginLatency();
 			if (delay > 0) {
 				if (!current->delayLine.get()) {
 					current->delayLine.reset(new DelayLine(this->numChannels, sampleFormat.blockSize));
@@ -2531,9 +2775,9 @@ bool vsthost::writeRecordedData(project_t* project) {
 	if (this->hasNewRecordedData) {
 		this->hasNewRecordedData = false;
 		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-		clip_t* pClip = nullptr;
-		std::swap(recordDataProcessed, pClip);
-		if (pClip) {
+		if (recordDataProcessed && recordDataProcessed->notes.m_list.size() && recordDataProcessed->getLen() > 0) {
+			clip_t* pClip = nullptr;
+			std::swap(recordDataProcessed, pClip);
 			track_t* tr = project->trackMidiAudioCtr.front();
 			if (tr) {
 //				String s = "Recorded notes: ";

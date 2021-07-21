@@ -357,6 +357,7 @@ public:
 	bool setProjectToLoad(std::shared_ptr<project_file> file, int flags);
 	void startPlaying();
 	void stopPlaying();
+	void startExport();
 	/**
 	 * setAudioThreadState - puts audio thread into requested state - synchronized
 	 * 						 does not return before audio thread is in requested state

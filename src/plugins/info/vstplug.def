@@ -1,2 +1,2 @@
-LIBRARY     info
+LIBRARY     hostinfo-vst-MSVC-debug
 EXPORTS     main=VSTPluginMain

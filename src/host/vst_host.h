@@ -152,6 +152,7 @@ private:
 	audiohost* audioHost = nullptr;
 	SYNCHRONIZED_RW audiothread_ringbuffer_t ringbuffer;
 	SYNCHRONIZED_RW clip_notes_t* midiRealtimeInput; //TODO: per device and channel
+	SYNCHRONIZED_RW clip_notes_t* midiProcessedInput; //TODO: per device and channel
 
 //	std::vector<std::shared_ptr<DelayLine>> delayLines;
 
@@ -179,6 +180,10 @@ private:
 	void processMidiRealtimeInput(project_controller_t* ctrl, double posDouble, playback_state state);
 
 	void finishTreadTasks(std::vector<audiostageid_i32>& processFinishedStageIds, const std::vector<audiostageid_i32>& reqFinishWaitStageIds, bool isFinalInvocation);
+
+	void updateRecordingClip(tick_t tickPosBlockStart, std::vector<note_t>& m_list);
+	void finishRecordingClip(tick_t tickPosBlockStart, std::vector<note_t>& m_list);
+	void processMidiProcessedOutput(playback_state state, tick_t procPos, std::vector<noteevent_t>& noteEventsProcessed);
 public:
 	vsthost();
 	vsthost(vsthost const&) = delete;
@@ -275,7 +280,7 @@ public:
 	}
 	void updateMaximumStageId();
 	void initThreads();
-	int32_t processBlockTrack(process_scratch_buf_t& tmp, track_block_processing_task_t& task) const;
+	int32_t processBlockTrack(process_scratch_buf_t& tmp, track_block_processing_task_t& task) /*const*/;
 	void setThreadCount(uint32_t threadCount);
 	uint32_t getThreadCount();
 	uint32_t getMaxThreadCount();
@@ -285,4 +290,7 @@ public:
     void scanPlugins();
     bool isScanning();
     void stopScanner();
+    int64_t writeTrackSamplesToDisk(String fOutWave, track_impl_t* trImpl, samplerate_t samplePos, samplerate_t numSamples);
+    void preExportBegin(project_controller_t* ctrl, export_settings_t& exportSettings);
+    void postExportEnd(project_controller_t* ctrl, export_settings_t& exportSettings);
 };

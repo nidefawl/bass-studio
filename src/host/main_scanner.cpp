@@ -594,6 +594,45 @@ static int runScannerServer(vstscanner_server_options options) {
 	}
 	return 0;
 }
+static int runPluginTest(request_type_vst24_t req, response_type_vst24_plugin_t& respPlugin) {
+	LOG("runPluginTest");
+
+	auto vsthostInstance = std::make_unique<vsthost>();
+	vsthost::assignMasterCallback(vsthostInstance.get());
+	vsthostInstance->setSampleFormat(sampleformat_t{static_cast<samplerate_t>(48000), 512, sampleformat_bits_t::FLOAT_32});
+
+
+	daw_tls::tlsinstance& tls = daw_tls::getTls();
+	// tls.mainCtrl = nullptr;
+
+	tls.host = vsthostInstance.get();
+
+	int response = 0;
+	LOG("Load plugin %s", req.szPath);
+	try {
+
+		vstpluginloadres res = vsthostInstance->loadPlugin(req.szPath, 0);
+		LOG("result: %d", res.result);
+		if (res.result < 0) {
+			response = CMD_PLUGIN_LOAD_ERROR;
+		} else {
+			dbgassert(res.result == 0);
+			dbgassert(res.plugin);
+			response = CMD_PLUGIN_LOAD_SUCCESS_PLUGIN;
+			response_type_vst24_plugin_t respPlugin;
+			getPluginData(res.plugin, &respPlugin);
+			vsthostInstance->unloadPlugin(res.plugin);
+		}
+	} catch (...) {
+		LOG("exception while loading %s", req.szPath);
+		response = -1;
+	}
+
+	LOG("runPluginTest end");
+	threadSleep(25);
+	vsthost::getInstance()->destroy();
+	return response;
+}
 static int runScannerClient() {
 
     // Open the named pipe
@@ -818,24 +857,12 @@ int main(int argc, char* argv[]) {
 	} else if (argc > 0 && !strcmp("-test", argv[argc-1])) {
 		setExceptionHandler();
 		threadSleep(120);
-    	auto vsthostInstance = std::make_unique<vsthost>();
-    	vsthost::assignMasterCallback(vsthostInstance.get());
-		vsthostInstance->setSampleFormat(sampleformat_t{static_cast<samplerate_t>(48000), 512, sampleformat_bits_t::FLOAT_32});
-
-    	daw_tls::tlsinstance& tls = daw_tls::getTls();
-    	tls.host = vsthostInstance.get();
-		LOG("START");
-		request_type_vst24_t type;
-		static const char* testPath = "C:\\PluginManager\\configs\\default\\hosts\\Ableton\\categories\\WaveShell-VST 9.6_x64.dll";
-		strncpy(type.szPath, testPath, math::min<size_t>(1023U, strlen(testPath)+1));
-
-		LOG("loadPlugin: %s", type.szPath);
-
-//		response_type_vst24_t
-//		tryLoadPlugin(vsthostInstance.get(), type);
-
-		threadSleep(500);
-		vsthost::getInstance()->destroy();
+		request_type_vst24_t req;
+		String fPath = "C:/PluginManager/configs/default/hosts/Ableton/categories/dev/hostinfo-vst-Clang-debug.dll";
+        strncpy(req.szPath, StringAsCStr(fPath), fPath.length());
+		response_type_vst24_plugin_t respPlugin;
+		int retCode = runPluginTest(req, respPlugin);
+		log_printf("Plugin %s: %d\n", StringAsCStr(fPath), retCode);
 	} else if (argc > 0 && !strcmp("-client", argv[argc-1])) {
 		logPrefixIdx = 1;
 		setExceptionHandler();

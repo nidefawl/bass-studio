@@ -3,9 +3,13 @@
 #include "cursor.h"
 #include "logging.h"
 
-struct project_globals_i {
-
+struct export_settings_t {
+	tick_t exportPos = 0;
+	tick_t exportLen = 0;
+	String exportPath = "";
+	bool isLocked = false;
 };
+
 struct project_globals_t {
 	tick_t loopStart = 0;
 	tick_t loopLen = TICKS_BAR*1;

@@ -24,23 +24,20 @@ const SupportedFileType FILE_TYPE_EXPORT {"*.wav", "wav"};
 
 std::vector<SupportedFileType> vFILE_TYPE_EXPORT = { FILE_TYPE_EXPORT };
 }
-
-struct export_settings_t {
-	tick_t exportPos = 0;
-	tick_t exportLen = 0;
-	String exportPath = "";
-};
+class gui_export;
 class guictr_timeframe : public guictr_base {
+	friend class gui_export;
 	gui_timeinput tmTickStart;
 	gui_timeinput tmTickLen;
-	bool locked = false;
+	bool* const pIsLocked;
 	guibuttonbase btnLock;
 	int32_t widthText = 0;
 public:
-	guictr_timeframe(tick_t* s, tick_t* d) :
+	guictr_timeframe(tick_t* s, tick_t* d, bool* l) :
 		guictr_base(),
 		tmTickStart(s),
-		tmTickLen(d, true)
+		tmTickLen(d, true),
+		pIsLocked(l)
 	{
 		padding = 0;
 		margin = 0;
@@ -62,7 +59,7 @@ public:
 	}
 	void onTick(AppCtrl* ctrl) override {
 		guictr_base::onTick(ctrl);
-		btnLock.drawParm = locked ? ICON_OPT_LOCKED : ICON_OPT_UNLOCKED;
+		btnLock.drawParm = *pIsLocked ? ICON_OPT_LOCKED : ICON_OPT_UNLOCKED;
 	}
 	void layout() {
 
@@ -94,7 +91,7 @@ public:
 
 		setFont(vg, TEXT_FONT_SIZE, G_WHITE, NVG_ALIGN_BOTTOM | NVG_ALIGN_LEFT);
 		nvgText(vg, 0, this->tmTickStart.bottom(), StringAsCStr(this->tmTickStart.getLabel()), NULL);
-		nvgText(vg, this->tmTickStart.right()+5, this->tmTickLen.bottom(), StringAsCStr(this->tmTickLen.getLabel()), NULL);
+		nvgText(vg, this->tmTickStart.right()+10, this->tmTickLen.bottom(), StringAsCStr(this->tmTickLen.getLabel()), NULL);
 
 
 		for (auto* g : guis) {
@@ -106,24 +103,24 @@ public:
 
 	void buttonClicked(guibase* button) {
 		if (button == &btnLock) {
-			locked = !locked;
-			btnLock.drawParm = locked?ICON_OPT_LOCKED : ICON_OPT_UNLOCKED;
+			*pIsLocked = !*pIsLocked;
+			btnLock.drawParm = *pIsLocked?ICON_OPT_LOCKED : ICON_OPT_UNLOCKED;
 
 		}
 	}
 	bool isLocked() const {
-		return this->locked;
+		return *pIsLocked;
 	}
 };
 class gui_export : public guictr_base {
-	export_settings_t settings;
+	export_settings_t& settings;
 	guictr_timeframe tmFrameExport;
 	guibutton btnExport;
 	guibutton selectFolder;
 public:
-	gui_export() :
+	gui_export(export_settings_t& _settings) :
 		guictr_base(),
-		tmFrameExport(&settings.exportPos, &settings.exportLen)
+		settings(_settings), tmFrameExport(&settings.exportPos, &settings.exportLen, &settings.isLocked)
 	{
 		ctrType = CTR_TYPE_EXPORT;
 		getContainerLabel(ctrType, this->label);
@@ -132,6 +129,7 @@ public:
 		selectFolder.setText(settings.exportPath);
 		selectFolder.setTooltipText(settings.exportPath);
 		selectFolder.setLabel("Path");
+		btnExport.id = 0x20;
 		btnExport.setLabel("Export");
 		btnExport.setText(btnExport.getLabel());
 
@@ -145,6 +143,8 @@ public:
 	}
 	void onTick(AppCtrl* ctrl) override {
 		guictr_base::onTick(ctrl);
+		selectFolder.setText(settings.exportPath);
+		selectFolder.setTooltipText(settings.exportPath);
 		if (!tmFrameExport.isLocked()) {
 			auto& globals = DawInstance::get()->getGlobals();
 			if (globals.cursor.getRange()) {
@@ -174,6 +174,8 @@ public:
 		selectFolder.pos = ivec2(cs.x-inset*2-buttonW, inset);
 		tmFrameExport.size = ivec2(cs.x, height*3);
 		tmFrameExport.pos = ivec2(0, selectFolder.bottom()+inset);
+		selectFolder.pos.x = tmFrameExport.tmTickStart.pos.x;
+		selectFolder.size.x = cs.x - selectFolder.pos.x;
 		for (guibase* gui : guis) {
 			gui->layout();
 		}
@@ -218,10 +220,18 @@ public:
 			selectFolder.setTooltipText(settings.exportPath);
 			return;
 		}
+
+
+		if (button->id == 0x20) {
+			DawInstance::get()->startExport();
+			return;
+		}
 	}
 };
 
 
 guictr_base* makeGuiExport() {
-	return new gui_export();
+	dbgassert(project_controller_t::get());
+	auto& settings = project_controller_t::get()->getExportSettings();
+	return new gui_export(settings);
 }

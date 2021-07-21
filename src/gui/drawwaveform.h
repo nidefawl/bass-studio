@@ -32,7 +32,7 @@ struct TextureAtlasEntry {
 struct waveform_update_task_t {
 	samplesource_t* audio;
 //	gui_waveform_texture_ref* owner; //lifetime defined by clip_t
-	ivec2 pos{0,0};
+	ivec2 pos{-1, 0};
 	ivec2 size{0,0};
 	int queuedRefCount = 0;
 	std::vector<gui_waveform_texture_ref*> queuedptrs;

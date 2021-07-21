@@ -180,17 +180,17 @@ module_gain::module_gain(int32_t _projectGlobalId)
 : internalplugin("Gain", PLUGIN_TYPE_GAIN, _projectGlobalId), handle(new module_gain::internal_handles_t{})
 {
 //#define PARAM_GROUPPLUGIN_INPUT_GAIN PARAM_OFFSET_IMPL
-	struct effectgroup_param_entry_t {
+	struct effectgain_param_entry {
 		int32_t id;
 		String name;
 		float val;
 	};
-	const std::array<effectgroup_param_entry_t, 2> parameterTypes { {
-		{PARAM_GAIN, "Gain", 1.0f},
+	const std::array<effectgain_param_entry, 2> parameterTypes { {
+		{PARAM_GAIN, "Gain", dsp_util::gainToLinScale(1.0f)},
 		{PARAM_PAN, "Pan", 0.5f},
 //		{PARAM_GROUPPLUGIN_INPUT_GAIN, "Input Gain", 1.0f},
 	} };
-	for (const effectgroup_param_entry_t& paramEntry : parameterTypes) {
+	for (const effectgain_param_entry& paramEntry : parameterTypes) {
 		automatable_param_t* regparam = registerParam(paramEntry.id);
 		regparam->value = paramEntry.val;
 		regparam->label = paramEntry.name;
@@ -214,7 +214,7 @@ float module_gain::dispatchGetParameter(int32_t idx) {
 void module_gain::dispatchSetParameter(int32_t idx, float val) {
 
 }
-int32_t module_gain::getDelay() {
+int32_t module_gain::getPluginLatency() {
 	return 0;
 }
 void module_gain::resume() {

@@ -146,6 +146,7 @@ private:
 		project_controller_t* const ctrl = this->ctrl;
 		vsthost* host = vsthost::getInstance();
 		midihost* midiHost = midihost::getInstance();
+		export_settings_t exportSettingsLocal{};
 		double playbackDuration = 0;
 		hires_timer_t timer;
 		hires_timer_t timer2;
@@ -163,9 +164,30 @@ private:
         		case REQ_STATE:
 					{
 						playback_state reqState = (playback_state) req->param;
+
+						if (m_status == playback_state::status_render && reqState != playback_state::status_render) {
+							host->postExportEnd(ctrl, exportSettingsLocal);
+						}
+
 						switch (reqState) {
 							case playback_state::status_render:
 							{
+								dbgassert(host->sampleFormat.sampleRate != 0);
+								dbgassert(host->sampleFormat.blockSize != 0);
+								exportSettingsLocal = ctrl->getExportSettings(); // copy export settings
+								host->preExportBegin(ctrl, exportSettingsLocal);
+								tick_t startPos = exportSettingsLocal.exportPos;
+								tickPos = startPos;
+								ctrl->getPlaybackPos() = startPos;
+								int32_t bpm100 = ctrl->getCurrentTempo();
+								samplePos = tickToSample(startPos, bpm100, host->sampleFormat.sampleRate);
+								LOG("START EXPORT ON seconds: %.2f - sample %d\n", toSeconds(startPos, bpm100), samplePos);
+								host->onStartPlayback(this->ctrl);
+								timer.reset();
+								timer2.reset();
+								playbackDuration = 0;
+								firstBlock = true;
+								isLoopAround = false;
 								break;
 							}
 							case playback_state::status_playback:
@@ -225,40 +247,52 @@ private:
 
             if (m_status != playback_state::status_no_process)
             {
+            	// aquire lock so data does not get modified during processing
 				std::unique_lock<std::recursive_mutex> lock(mutex);
 
 
-            	//ctrl may still alter project settings during copy here if not locked
+            	// copy project globals from controller to host
             	project_globals_t& projGlobals = host->prjGlobals;
             	projGlobals = ctrl->getGlobals();
 
-            	inLoop = (tickPos >= projGlobals.loopStart
-            			&& tickPos < projGlobals.loopStart+projGlobals.loopLen
-						&& m_status == status_playback && projGlobals.loopEnabled);
-            	midiHost->processMidi(this->ctrl, samplePos, tickPos, m_status, inLoop, isLoopAround);
-            	if (!host->bypassPlaybackProcessing) {
+            	inLoop = m_status == status_playback
+            			&& projGlobals.loopEnabled
+            			&& (tickPos >= projGlobals.loopStart)
+            			&& (tickPos < projGlobals.loopStart+projGlobals.loopLen);
 
-                	processedBlock = host->processPlayback(this->ctrl, samplePos, tickPos, m_status, inLoop, isLoopAround);
-					timer2.reset();
-            	} else {
-            		processedBlock = 0;
-                    double d = timer2.getTimeDouble();
-                    if (d > 1.0*host->sampleFormat.blockSize/host->sampleFormat.sampleRate) {
-                    	processedBlock = 1;
-                    	timer2.reset();
-                    }
+            	if (m_status != playback_state::status_render) {
+            		midiHost->processMidi(this->ctrl, samplePos, tickPos, m_status, inLoop, isLoopAround);
+                	if (!host->bypassPlaybackProcessing) {
+                    	processedBlock = host->processPlayback(this->ctrl, samplePos, tickPos, m_status, inLoop, isLoopAround);
+    					timer2.reset();
+                	} else {
+                		processedBlock = 0;
+                        double d = timer2.getTimeDouble();
+                        if (d > 1.0*host->sampleFormat.blockSize/host->sampleFormat.sampleRate) {
+                        	processedBlock = 1;
+                        	timer2.reset();
+                        }
+                	}
+            	}
+
+            	if (m_status == playback_state::status_render) {
+                	processedBlock = host->processRender(this->ctrl, samplePos, tickPos);
             	}
 //    			LOG("processedBlocks: %d, play: %d, tickpos: %f\n", processedBlock, (m_status==playback_state::status_play), tickPos);
             }
-            host_stats_t stats;
-            host->getStats(stats);
-            if (!host->bypassPlaybackProcessing && stats.outputQueueLen < 2) {
-            	if (stats.outputQueueLen != 0) {
-                	std::this_thread::sleep_for(std::chrono::microseconds(500));
-            	}
-            } else {
 
-            	std::this_thread::sleep_for(std::chrono::milliseconds(1));
+            if (m_status != playback_state::status_render)
+            {
+                host_stats_t stats;
+                host->getStats(stats);
+                if (!host->bypassPlaybackProcessing && stats.outputQueueLen < 2) {
+                	if (stats.outputQueueLen != 0) {
+                    	std::this_thread::sleep_for(std::chrono::microseconds(500));
+                	}
+                } else {
+
+                	std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                }
             }
 
             /*
@@ -299,6 +333,14 @@ private:
 							}
 						}
 						ctrl->getPlaybackPos() = (int32_t) floor(tickPos);
+					}
+					if (m_status == status_render) {
+						if (tickPos >= exportSettingsLocal.exportPos + exportSettingsLocal.exportLen) {
+							//DONE
+							m_status = status_stop;
+							host->postExportEnd(ctrl, exportSettingsLocal);
+							ctrl->getPlaybackPos() = exportSettingsLocal.exportPos+exportSettingsLocal.exportLen;
+						}
 					}
 					playbackDuration += msPerBlock*processedBlock;
 				}

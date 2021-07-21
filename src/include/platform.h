@@ -25,3 +25,4 @@ String toResourcePath(String relPath);
 void setResourcePath(String cwd);
 void setUserdataPath(String cwd);
 String toUserdataPath(String relPath);
+String getCurrentWorkingDirectory();

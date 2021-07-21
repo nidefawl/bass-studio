@@ -576,7 +576,9 @@ public:
 		}
 		nvgTranslate(vg, -pos.x, -pos.y);
 
-		knobTest.render(vg);
+		if (knobTest.size.y >= 4) {
+			knobTest.render(vg);
+		}
 	}
 };
 

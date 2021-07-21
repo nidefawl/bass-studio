@@ -87,34 +87,10 @@ void effectbase::postProcess(AudioBlock* out, int32_t samples, bool hasProcessed
 }
 
 void effectbase::breakTrackLink() {
-	audio_stage_t* audioStage = this->trackImpl;
 	trackImpl = nullptr;
-	while (audioStage != nullptr) {
-		guictr_plugins* pluginCtr = audioStage->pluginCtr;
-		if (pluginCtr) {
-			dbgassert(MainCtrl::get());
-			plugin_selection& sel = MainCtrl::get()->getPluginSel();
-			if (sel.pluginCtr == pluginCtr) {
-				sel.clear();
-			}
-			my_printf("Update audiostage of %s which is %s\n", StringAsCStr(pluginCtr->getClassName()),
-				pluginCtr->isDefaultPluginCtr ? "default" : "group");
-			pluginCtr->showTrack(audioStage);
-		}
-		audioStage = audioStage->parent;
-	}
 }
 void effectbase::setTrackLink(audio_stage_t* audioStage) {
 	trackImpl = audioStage;
-	while (audioStage != nullptr) {
-		guictr_plugins* plugins = audioStage->pluginCtr;
-		if (plugins) {
-			my_printf("Update audiostage of %s which is %s\n", StringAsCStr(plugins->getClassName()),
-					plugins->isDefaultPluginCtr ? "default" : "group");
-			plugins->showTrack(audioStage);
-		}
-		audioStage = audioStage->parent;
-	}
 }
 
 class guideferred : public guiplugin {
@@ -228,7 +204,7 @@ void effect_deferred::loadSnapshot(const plugin_snapshot_t& snapshot) {
 	this->mImpl->snapshot = snapshot;
 	this->mImpl->moduleType = snapshot.pluginType;
 }
-int32_t effect_deferred::getDelay() {
+int32_t effect_deferred::getPluginLatency() {
 	return 0;
 }
 String effect_deferred::getInfo(std::vector<String>& list) {

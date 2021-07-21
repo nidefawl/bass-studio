@@ -36,7 +36,7 @@ void guictr_base::setParent(guibase* parent) {
 	guibase::setParent(parent);
 	for (guibase* g : guis) {
 		dbgassert(g->parent == this);
-			g->setParent(this);
+		g->setParent(this);
 	}
 }
 void guictr_base::onRemove() {

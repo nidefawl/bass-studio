@@ -307,14 +307,22 @@ void audio_stage_t::removePlugin(effectbase* _effect, bool notifyUp) {
 	for (effectbase* effect : effects) {
 		effect->setSlot(slot++);
 	}
+	auto stage = _effect->getTrackLink();
 	_effect->breakTrackLink();
+	if (stage && notifyUp) {
+		stage->notifyPluginContainers();
+	}
 }
 
 bool audio_stage_t::replaceEffect(int32_t idx, effectbase* _effect, effectbase** _prevEffect) {
 	dbgassert(idx >= 0 && idx < (int32_t)effects.size());
 	if (idx >= 0 && idx < (int32_t)effects.size()) {
 		auto cur = effects[idx];
+		auto stage = cur->getTrackLink();
 		cur->breakTrackLink();
+		if (stage) {
+			stage->notifyPluginContainers();
+		}
 		*_prevEffect = cur;
 		effects[idx] = _effect;
 		_effect->setTrackLink(this);
@@ -322,6 +330,7 @@ bool audio_stage_t::replaceEffect(int32_t idx, effectbase* _effect, effectbase**
 		for (effectbase* effect : effects) {
 			effect->setSlot(slot++);
 		}
+		this->notifyPluginContainers();
 		return true;
 	}
 	return false;
@@ -344,6 +353,7 @@ void audio_stage_t::insertEffect(int32_t idx, effectbase* _effect) {
 	for (effectbase* effect : effects) {
 		effect->setSlot(slot++);
 	}
+	this->notifyPluginContainers();
 }
 
 
@@ -453,11 +463,14 @@ VstEvent_t* track_impl_t::reallocEvts(size_t size) {
 	midiEventsBuf->reset();
 	return midiEventsBuf;
 }
-samplerate_t audio_stage_t::getLatency() const {
-	return latency;
+samplerate_t audio_stage_t::getInternalLatency() const {
+	return latencyInternal;
 }
-samplerate_t audio_stage_t::getGlobalLatency() const {
-	return latencyAbs;
+samplerate_t audio_stage_t::getOutputLatency() const {
+	return latencyOuput;
+}
+samplerate_t audio_stage_t::getInputLatency() const {
+	return latencyInput;
 }
 void audio_stage_t::pluginsChanged() {
 	if (routingState != audiostagerouting_state_t::CUSTOM) {
@@ -472,9 +485,9 @@ void audio_stage_t::updateLatency() {
 	//combined stage latency needs to be determined differently when using custom routing
 	samplerate_t latency = 0;
 	for (effectbase* effect : effects) {
-		latency += effect->getDelay();
+		latency += effect->getPluginLatency();
 	}
-	this->latency = latency;
+	this->latencyInternal = latency;
 }
 void audio_stage_t::getStageTargets(std::vector<automatable_t*>& targets) {
 	if (std::find(targets.begin(), targets.end(), &mixer) == targets.end()) {
@@ -491,6 +504,23 @@ void audio_stage_t::getStageTargets(std::vector<automatable_t*>& targets) {
 }
 
 void audio_stage_t::sendNotesOff(int32_t bpm100) {
+}
+void audio_stage_t::notifyPluginContainers() {
+	audio_stage_t* audioStage = this;
+	while (audioStage != nullptr) {
+		guictr_plugins* pluginCtr = audioStage->pluginCtr;
+		if (pluginCtr) {
+			dbgassert(MainCtrl::get());
+			plugin_selection& sel = MainCtrl::get()->getPluginSel();
+			if (sel.pluginCtr == pluginCtr) {
+				sel.clear();
+			}
+			my_printf("Update audiostage of %s which is %s\n", StringAsCStr(pluginCtr->getClassName()),
+				pluginCtr->isDefaultPluginCtr ? "default" : "group");
+			pluginCtr->showTrack(audioStage);
+		}
+		audioStage = audioStage->parent;
+	}
 }
 void track_impl_t::getAutomatableTrackTargets(std::vector<automatable_t*>& targets) {
 	targets.push_back(&mixer);
@@ -866,6 +896,9 @@ void updateStoreLoadSubtracks(guictr_tracks* guiTracks, track_gui_entry_t* entry
 		loadSubtrackLayout(guiTracks, entry, entry->state.layoutSaved);
 	}
 }
+audio_stage_t::~audio_stage_t() {
+	log_printf("delete track %08X\n", reinterpret_cast<uint64_t>(this));
+}
 void audio_stage_t::onTick(double since) {
 	meter.onTick(since);
 	meterInput.onTick(since);
@@ -1001,10 +1034,10 @@ void track_impl_t::onStartPlayback() {
 void track_impl_t::sendNotesOff(int32_t bpm100) {
 	std::vector<note_t> heldNotes = track->audio->heldNotes;
 	track->audio->heldNotes.clear();
-	if (arp)
-		arp->allNotesOff();
-
 	std::vector<noteevent_t> noteEvents;
+	if (arp)
+		arp->allNotesOff(noteEvents);
+
 	noteEvents.reserve(heldNotes.size());
 	for (note_t& noteHeld : heldNotes) {
 		noteEvents.emplace_back(noteHeld.pitch, 0, 0, 0, false, false);
@@ -1127,7 +1160,7 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 			time5 = (time5 * 19 + tmr.getTime()) / 20;
 
 			tmr.reset();
-			std::vector<noteevent_t> noteEventsProcessed;
+			this->noteEventsProcessed.clear();
 			if (flags & MidiFlags::PROCESS_ARP) {
                 arp->process(noteEvents, start, end, loopStart, loopEnd, noteEventsProcessed, math::floorF32toS32(ticksPerBlock));
 			} else {

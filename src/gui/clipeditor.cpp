@@ -184,14 +184,14 @@ void renderNote(NVGcontext* vg, gui_clipcontent* c, note_t* note, float yscale, 
 	float insety = calcInset(1, nh);
 	nvgBatchedRect(vg, nx+insetx, ny - yscale+insety, nw-insetx*2, nh-insety*2);
 }
-void renderNoteName(NVGcontext* vg, gui_clipcontent* c, note_t* note, int idx, float yscale) {
+void renderNoteName(NVGcontext* vg, gui_clipcontent* c, note_t* note, int idx, float yscale, tick_t absPos) {
 
 	float ny = c->toScreenF(note->pitch);
 	float nx = c->grid.tickToScreenD(note->time);
 	float nw = c->grid.tickLenToScreen(note->len);
 	float nh = yscale;
 	float insetx = calcInset(5, nw);
-	renderText(vg, nx + insetx, ny - yscale + nh / 2.0f, nw-insetx*2, StringAsCStr(StringFormat("%s %d", noteName(note->pitch), idx)));
+	renderText(vg, nx + insetx, ny - yscale + nh / 2.0f, nw-insetx*2, StringAsCStr(StringFormat("%s @%d %d", noteName(note->pitch), absPos, note->len)));
 }
 void renderFrame(NVGcontext* vg, ivec2 posA, ivec2 posB) {
 	float x = math::min(posA.x, posB.x);
@@ -846,8 +846,12 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
 		int idx = 0;
 		setFont(vg, 18, theme->getColor(GuiColor::COL_NOTE_TEXT), NVG_ALIGN_LEFT|NVG_ALIGN_MIDDLE);
 		for (note_t& note : notes.m_list) {
+			tick_t absPos = note.start();
+			if (view.clip()) {
+				absPos = note.start() + view.clip()->start() - view.clip()->offsetStart;
+			}
 			//TODO: CULL
-			renderNoteName(vg, this, &note, idx++, scale);
+			renderNoteName(vg, this, &note, idx++, scale, absPos);
 		}
 	}
 
