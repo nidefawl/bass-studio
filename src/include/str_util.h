@@ -71,6 +71,11 @@ inline bool StrEndsWith(String const & a, String const & b)
     if (b.size() > a.size()) return false;
     return std::equal(a.begin() + static_cast<uint32_t>(a.size() - b.size()), a.end(), b.begin());
 }
+inline bool StrStartsWith(String const & a, String const & b)
+{
+    if (b.size() > a.size()) return false;
+    return std::equal(a.begin(), a.begin() + static_cast<uint32_t>(b.size()), b.begin());
+}
 inline String StringTrim(String str) {
 	// trim trailing spaces
 	size_t endpos = str.find_last_not_of(" \t\n\r");

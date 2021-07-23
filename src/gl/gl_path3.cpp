@@ -18,7 +18,9 @@
 #include "gl_tess2d.h"
 #include "hires_timer.h"
 #include "assert_dbg.h"
+#if BUILD_VSTHOST
 #define PAR_STREAMLINES_IMPLEMENTATION
+#endif
 #include "par_streamlines.h"
 #include <algorithm>
 

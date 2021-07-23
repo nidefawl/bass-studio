@@ -225,12 +225,12 @@ public:
 	void setValid() {
 		this->valid = true;
 	}
+	const double minFrameDelaySeconds = 1/288.0;
 private:
 	uint64_t tm_lastfps = 0;
 	String fpsStats;
 	double secondsLastDraw = 0.0;
-//	double secondsLastDrawReq = 0.0;
-	const double minFrameDelay = 1/288.0;
+	int skipFrames = 0;
 	bool redrawFlagged = false;
 	void initOGL() {
 		//static code
@@ -347,15 +347,13 @@ public:
 	{
 		PREVENT_REENTRANT("REENTRANT IN RENDER MAIN")
 		//TODO: make sure we compare same units here (seconds vs milliseconds)
-		double delay = getSince(secondsLastDraw);
-		if (delay > minFrameDelay) {
+//		double delay = getSince(secondsLastDraw);
+//		if (delay >= minFrameDelaySeconds) {
 			render();
 			endFrame();
-		}
-	}
-	bool needsRefresh() {
-		double delay = getSince(secondsLastDraw);
-		return delay > minFrameDelay;
+//		} else {
+//			skipFrames++;
+//		}
 	}
 	virtual void flagNeedsRedraw() {
 //		double delay = getSince(secondsLastDrawReq);
@@ -383,6 +381,7 @@ public:
 		redrawFlagged = false;
 		frameCountFPS++;
 		frameNumber++;
+//		flagNeedsRedraw();
 	}
 	void killTimer() {
 		unregisterWindowTimer(this);
@@ -697,7 +696,7 @@ public:
             overlayWindowsToClose.clear();
         }
 
-        if (getTimeMillisd() - tmLastShaderReloadMillis >= 3000) {
+        if (getTimeMillisd() - tmLastShaderReloadMillis >= 1000) {
         	tmLastShaderReloadMillis = getTimeMillisd();
 //            reloadCustomShaders();
         }
@@ -926,7 +925,7 @@ public:
 		return appwindow::setSize(size);
 	}
 	void requestRedraw() {
-		flagNeedsRedraw();
+//		flagNeedsRedraw();
 	}
 	void setClipboardText(String s) override {
 		glfwSetClipboardString(glfw, StringAsCStr(s));
@@ -1643,12 +1642,12 @@ int startApplication(int argc, char* argv[]) {
 	daw_tls::tlsinstance& tls = daw_tls::getTls();
 	dawinstance_startup_commands(tls);
 #endif
-
+	hires_timer_t hiresTimer;
 	GLFWwindow* glfwHandle = mainWindow->getGLFW();
-	int64_t lastTick = getTimeMillis();
-	int64_t start = getTimeMillis();
-	int64_t tmLastCheck = getTimeMillis();
-	int64_t tmMsgSent = 0;
+	int64_t tmHRLastTick = hiresTimer.getTime();
+	int64_t tmHRLastFrame = tmHRLastTick;
+	int64_t tmLRLastCheck = getTimeMillis();
+	int64_t tmLRMsgSent = 0;
 	int64_t cntMessages = 0;
 	while (!fataError && !glfwWindowShouldClose(glfwHandle)) {
 #ifdef _WIN32
@@ -1665,9 +1664,9 @@ int startApplication(int argc, char* argv[]) {
 	        	glfwSetWindowShouldClose(glfwHandle, 1);
 	        }
 	        else if (msg.message == WM_APP + 42) {
-			    if (tmMsgSent != 0) {
-			    	int64_t tmDuration = (getTimeMillis() - tmMsgSent);
-			    	tmMsgSent = 0;
+			    if (tmLRMsgSent != 0) {
+			    	int64_t tmDuration = (getTimeMillis() - tmLRMsgSent);
+			    	tmLRMsgSent = 0;
 			    	if (tmDuration > 0) {
 			    		log_printf("MSG took %d ms to get through, %d messages since sent\n", tmDuration, cntMessages);
                     }
@@ -1708,28 +1707,29 @@ int startApplication(int argc, char* argv[]) {
 	        }
 	    }
 		glfwUpdateInternals();
+		int64_t tmHRNow = hiresTimer.getTime();
 #endif //_WIN32
-		if (getTimeMillis() - lastTick >= 20) { //TODO: figure out good tick rate
+		if (tmHRNow - tmHRLastTick >= 20*1000) { //TODO: figure out good tick rate
+			tmHRLastTick = tmHRNow;
 			windowTickTimerRun();
-			lastTick = getTimeMillis();
 		}
 #if defined(__linux__) || defined(__APPLE__)
 		glfwWaitEventsTimeout(0.001);
 		mainWindow->onRefresh();
 #else
-		if (tmMsgSent > 0 && getTimeMillis() - tmMsgSent >= 1000)
+		if (tmLRMsgSent > 0 && getTimeMillis() - tmLRMsgSent >= 1000)
 		{
-			tmMsgSent = 0;
+			tmLRMsgSent = 0;
 		}
-		if (getTimeMillis() - tmLastCheck >= 1000 && tmMsgSent == 0) {
-			tmLastCheck = tmMsgSent = getTimeMillis();
+		if (getTimeMillis() - tmLRLastCheck >= 1000 && tmLRMsgSent == 0) {
+			tmLRLastCheck = tmLRMsgSent = getTimeMillis();
 			cntMessages = 0;
 			PostMessage(mainWindow->getHWND(), WM_APP + 42, 0, 0);
 
 		}
-		if (getTimeMillis() - start >= 16) {
+		if (tmHRNow - tmHRLastFrame >= mainWindow->minFrameDelaySeconds * 1000000L) {
 			mainWindow->flagNeedsRedraw();
-			start = getTimeMillis();
+			tmHRLastFrame = tmHRNow;
 		}
 #endif
 	}

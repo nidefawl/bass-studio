@@ -2139,7 +2139,7 @@ static int nvg__expandFill(NVGcontext* ctx, float w, int lineJoin, float miterLi
 		}
 
 		path->nfill = (int)(dst - verts);
-		dbgassert(path->nfill>0);
+//		dbgassert(path->nfill>0);
 		verts = dst;
 
 		// Calculate fringe

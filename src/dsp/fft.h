@@ -6,7 +6,7 @@
 #include <tools/kiss_fftr.h>
 
 constexpr float MIN_FREQ = 20;
-constexpr float MAX_FREQ = 22000;
+constexpr float MAX_FREQ = 11000;
 //constexpr size_t INPUTLEN = 512*8;
 
 
@@ -229,8 +229,8 @@ public:
 			float fX = powf(10.0f, (min*(maxLog-minLog))+minLog);
 			freq[i] = fX;
 			if (i < 12) {
-				printf("freq[%d] %f\n", i, fX);
 			}
+			printf("freq[%d] %f\n", i, fX);
 		}
 	}
 	fft_processor(const int32_t _blocksize, const int32_t _samplerate) :

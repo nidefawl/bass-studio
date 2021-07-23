@@ -44,7 +44,8 @@ void fillbands(std::vector<float> const & mags, std::vector<float> const & freq,
 		}
 	}
 	for (int i = 0; i < numBands; i++) {
-		bands[i] = bands[i] * 0.5 + newBands[i] * 0.5;
+//		bands[i] = bands[i] * 0.5 + newBands[i] * 0.5;
+		bands[i] = bands[i] * 0.15 + newBands[i] * 0.85;
 
 //		bands[i] = newBands[i];
 

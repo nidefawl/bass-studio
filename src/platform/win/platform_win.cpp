@@ -46,16 +46,19 @@ double getTimeMillisd() {
 
 double getTimeHPC()
 {
-  static LARGE_INTEGER frequency;
-  if (frequency.QuadPart == 0)
+  static LARGE_INTEGER frequency{};
+  static LARGE_INTEGER begin{};
+  if (frequency.QuadPart == 0) {
 	::QueryPerformanceFrequency(&frequency);
-  LARGE_INTEGER now;
+    ::QueryPerformanceCounter(&begin);
+  }
+  LARGE_INTEGER now{};
   ::QueryPerformanceCounter(&now);
-  return now.QuadPart / double(frequency.QuadPart);
+  return (now.QuadPart - begin.QuadPart) / double(frequency.QuadPart);
 }
 int64_t getTimeHPint64()
  {
-	static LARGE_INTEGER frequency;
+	static LARGE_INTEGER frequency{};
 	if (frequency.QuadPart == 0)
 		::QueryPerformanceFrequency(&frequency);
 	LARGE_INTEGER now;

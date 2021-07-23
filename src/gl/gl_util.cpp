@@ -17,7 +17,8 @@ void debugCB(GLenum source,
 	GLsizei length,
 	const GLchar *message,
 	const void *userParam) {
-	if (strstr(message, "Buffer detailed info") == NULL) {
+	if (strstr(message, "Buffer detailed info") == NULL
+			&& strstr(message, "state performance warning") == NULL) {
 		my_printf("%s\n", message);
 		if (strstr(message, "error")) {
 
