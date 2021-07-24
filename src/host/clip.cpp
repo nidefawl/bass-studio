@@ -491,7 +491,7 @@ void clip_notes_t::selectLastN(size_t num) {
 	}
 }
 void clip_notes_t::selectIdxRange(size_t start, size_t end) {
-	dbgassert(start < end && end <= m_list.size());
+	dbgassert(start <= end && end <= m_list.size());
 	for (size_t p = start; p < end; ++p) {
 		selection.insert(&m_list[p]);
 	}
