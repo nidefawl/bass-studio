@@ -399,7 +399,7 @@ void guibuttontoggle::render(NVGcontext* vg) {
 	cen.y += pos.y;
 	int32_t state = getStateFlags();
 	GuiColor::constant_t color = GuiColor::COL_BTN_BG_DEFAULT_INACTIVE;
-	if (state & FLG_ENBL) {
+	if (getState()) {
 		color = colorActive;
 	}
 	nvgBeginPath(vg);

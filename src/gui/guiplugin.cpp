@@ -684,15 +684,13 @@ guipluginview::guipluginview(effectbase * _effect)
 {
 	params.setRowHeight(48);
 	buttonOpenEditor.icon = ICON_ADJUST;
-	//TODO: mark as active
-//	buttonOpenEditor.state = &_effect->bEditOpen;
+	buttonOpenEditor.setStateRef(&_effect->bEditOpen);
 	buttonOpenEditor.setParent(this);
 	buttonOpenEditor.colorActive = GuiColor::COL_BTN_BG_SHOW_ACTIVE;
 	addGuiBtn(&buttonOpenEditor);
 	params.setParent(this);
 	buttonShowInlineGUI.icon = ICON_ADJUST;
-	//TODO: mark as active
-//	buttonShowInlineGUI.state = &_effect->bCaptureGUI;
+	buttonShowInlineGUI.setStateRef(&_effect->bCaptureGUI);
 	buttonShowInlineGUI.setParent(this);
 	buttonShowInlineGUI.colorActive = GuiColor::COL_BTN_BG_SHOW_ACTIVE;
 	dropdownProgram.setParent(this);

@@ -1443,13 +1443,13 @@ public:
 
 struct guidialog_settings::dialog_entry
 {
-	guibutton tabButton;
+	guibuttonstate tabButton;
 	setting_dialog* tabCtr;
 	bool active = false;
 	dialog_entry(setting_dialog* _ctr, String title) : tabButton(), tabCtr(_ctr) {
 		tabButton.setText(title);
-		//TODO: mark as active
-//		tabButton.setEnabledRef(&active);
+		tabButton.setButtonColor(GuiColor::COL_BASE_BG_FOCUSED);
+		tabButton.setStateRef(&active);
 		tabButton.setFontScale(0.7f);
 	}
 };

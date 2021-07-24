@@ -484,7 +484,7 @@ public:
 	/**
 	 * checks if entry is visible.
 	 * A track_gui_entry_t is visible if
-	 * all of its parents have the field
+	 * none of its parents have the field
 	 * this->layout.hideTrack == true
 	 */
 	bool isVisible(const track_gui_entry_t* entry) override {
