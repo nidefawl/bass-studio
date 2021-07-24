@@ -14,7 +14,7 @@ using Table::tblstr;
 using Table::tblString;
 
 template <>
-void guitooltip<guibuttonbase>::layout()  {
+void guitooltip<guibutton>::layout()  {
 	size.x = 140;
 	table.rowHeight = FONT_SIZE_TOOLTIP+INSET_TABLE_CELL_PADDING*2;
 	table.rows.clear();
@@ -65,7 +65,7 @@ void renderCenteredMultilineText(NVGcontext* vg, const guitheme_t* const theme, 
 	}
 	nvgTextBox(vg, 0, renderPos.y, size.x, StringAsCStr(str), NULL);
 }
-void guibuttonbase::renderButtonLabel(NVGcontext* vg, int32_t stateFlags) {
+void guibutton::renderButtonLabel(NVGcontext* vg, int32_t stateFlags) {
 	if (drawFn || str.length()) {
 		nvgSave(vg);
 		setScissorTransform(vg);
@@ -79,16 +79,16 @@ void guibuttonbase::renderButtonLabel(NVGcontext* vg, int32_t stateFlags) {
 		}
 
 		if (drawFn) {
-			int drawParm2 = isFlag(FLG_RENDER_BUTTON_WITH_LED) ? (isEnabled() ? IMG_LED : IMG_LED_OFF) : -1;
+			int drawParm2 = isFlag(FLG_RENDER_BUTTON_WITH_LED) ? (getState() ? IMG_LED : IMG_LED_OFF) : getState();
 			drawFn(vg, renderPos, size, getBackgroundColor(getStateFlags()), drawParm, drawParm2);
 		}
 		nvgRestore(vg);
 	}
 }
-guictxtmenu_base* guibuttonbase::getTooltip(AppCtrl* appctrl) {
+guictxtmenu_base* guibutton::getTooltip(AppCtrl* appctrl) {
 	if (!label.empty()) {
 
-		auto tooltip = new guitooltip<guibuttonbase>(this);
+		auto tooltip = new guitooltip<guibutton>(this);
 		return tooltip;
 	}
 	return nullptr;

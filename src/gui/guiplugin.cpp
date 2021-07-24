@@ -181,14 +181,12 @@ guiplugin::guiplugin(effectbase* _effect)
 	buttonBypass.setLabel("Bypass");
 	buttonBypass.colorActive = GuiColor::COL_BTN_BG_BYPASS_ACTIVE;
 	buttonBypass.icon = ICON_BYPASS;
-	buttonBypass.getState = [_effect]() {
+	buttonBypass.fnGetState = [_effect]() {
 		return _effect->getParamValue(PARAM_ENABLE)>0;
 	};
 //	buttonBypass.setTint(0x80c040);
 	buttonDelete.setLabel("Remove");
 	buttonDelete.icon = ICON_CLOSE;
-	static bool closeEnabled = true;
-	buttonDelete.state = &closeEnabled;
 	buttonLayout.icon = ICON_ARR_RIGHT;
 	buttonLayout.setLabel("Hide");
 	buttonSave.icon = ICON_SAVE;
@@ -686,13 +684,15 @@ guipluginview::guipluginview(effectbase * _effect)
 {
 	params.setRowHeight(48);
 	buttonOpenEditor.icon = ICON_ADJUST;
-	buttonOpenEditor.state = &_effect->bEditOpen;
+	//TODO: mark as active
+//	buttonOpenEditor.state = &_effect->bEditOpen;
 	buttonOpenEditor.setParent(this);
 	buttonOpenEditor.colorActive = GuiColor::COL_BTN_BG_SHOW_ACTIVE;
 	addGuiBtn(&buttonOpenEditor);
 	params.setParent(this);
 	buttonShowInlineGUI.icon = ICON_ADJUST;
-	buttonShowInlineGUI.state = &_effect->bCaptureGUI;
+	//TODO: mark as active
+//	buttonShowInlineGUI.state = &_effect->bCaptureGUI;
 	buttonShowInlineGUI.setParent(this);
 	buttonShowInlineGUI.colorActive = GuiColor::COL_BTN_BG_SHOW_ACTIVE;
 	dropdownProgram.setParent(this);

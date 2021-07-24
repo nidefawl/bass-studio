@@ -189,7 +189,7 @@ void gui_color_pick::handleRightClick(MouseEvent& evt) {
 
 
 gui_input_filtered::gui_input_filtered(int32_t* _number) :
-		guibuttonbase(), number(_number) {
+		guibutton(), number(_number) {
 	field.setParent(this);
 	field.setFilter(&filter);
 	setAlignCenter(false);

@@ -236,16 +236,16 @@ public:
 };
 
 
-class guibutton_trackbypass : public guibutton {
+class guibutton_trackbypass : public guibuttonstate {
 	track_t* const m_track;
 	track_gui_entry_t* const m_trackentry;
 public:
-	guibutton_trackbypass(track_gui_entry_t* _entry) : guibutton(), m_track(_entry->track), m_trackentry(_entry) {
+	guibutton_trackbypass(track_gui_entry_t* _entry) : guibuttonstate(), m_track(_entry->track), m_trackentry(_entry) {
 	}
 	bool trackenabled() const {
 		return m_track->audio && m_track->audio->mixer.isEnabled();
 	}
-	bool isEnabled() const override {
+	bool getState() const override {
 		return trackenabled();
 	}
 	void handleRightClick(MouseEvent& evt) override {
@@ -253,26 +253,23 @@ public:
 	}
 };
 
-class guibutton_track_solo : public guibutton {
+class guibutton_track_solo : public guibuttonstate {
 	track_t* const m_track;
 	track_gui_entry_t* const m_trackentry;
 public:
-	guibutton_track_solo(track_gui_entry_t* _entry) : guibutton(), m_track(_entry->track), m_trackentry(_entry) {
+	guibutton_track_solo(track_gui_entry_t* _entry) : guibuttonstate(), m_track(_entry->track), m_trackentry(_entry) {
 		setText("S");
 	}
 	NVGcolor getBackgroundColor(int stateflags) const override {
-		int fl = FLG_ENBL;
-		if ((stateflags&fl) == fl) {
-			if ((m_track->audio->flags & audiostageflags_t::SOLO) != audiostageflags_t::NONE) {
-				return theme->getColor(GuiColor::COL_BTN_SOLO_BG_ENABLED);
-			}
-			if ((m_track->audio->flags & audiostageflags_t::SOLO_PARENT) != audiostageflags_t::NONE) {
-				return theme->getColor(GuiColor::COL_BTN_SOLO_BG_PARENT);
-			}
+		if ((m_track->audio->flags & audiostageflags_t::SOLO) != audiostageflags_t::NONE) {
+			return theme->getColor(GuiColor::COL_BTN_SOLO_BG_ENABLED);
+		}
+		if ((m_track->audio->flags & audiostageflags_t::SOLO_PARENT) != audiostageflags_t::NONE) {
+			return theme->getColor(GuiColor::COL_BTN_SOLO_BG_PARENT);
 		}
 		return theme->getBgColor(stateflags);
 	}
-	bool isEnabled() const override {
+	bool getState() const override {
 		if (m_track->audio) {
 			return (m_track->audio->flags & (audiostageflags_t::SOLO|audiostageflags_t::SOLO_PARENT)) != audiostageflags_t::NONE;
 		}
@@ -1034,8 +1031,8 @@ public:
 		hideAutomation.setRadius(10);
 		addAutomationLane.setRadius(10);
 
-		hideTrack.state = &_entry->layout.hideTrack;
-		hideAutomation.state = &_entry->layout.hideSubtracks;
+		hideTrack.setStateRef(&_entry->layout.hideTrack);
+		hideAutomation.setStateRef(&_entry->layout.hideSubtracks);
 		padding = 0;
 		hideTrack.getIcon = [e=_entry]{return e->layout.hideTrack?ICON_ARR_RIGHT:ICON_ARR_DOWN;};
 		hideAutomation.getIcon = [e=_entry]{return e->layout.hideSubtracks?ICON_ARR_RIGHT:ICON_ARR_DOWN;};

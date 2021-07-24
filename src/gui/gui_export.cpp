@@ -30,7 +30,7 @@ class guictr_timeframe : public guictr_base {
 	gui_timeinput tmTickStart;
 	gui_timeinput tmTickLen;
 	bool* const pIsLocked;
-	guibuttonbase btnLock;
+	guibutton btnLock;
 	int32_t widthText = 0;
 public:
 	guictr_timeframe(tick_t* s, tick_t* d, bool* l) :

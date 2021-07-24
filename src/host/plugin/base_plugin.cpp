@@ -101,7 +101,6 @@ public:
 		isHorizontalTitle = false;
 		buttonBypass.icon = -1;
 		buttonBypass.colorActive = GuiColor::COL_BTN_BG_DEFAULT_ACTIVE;
-		buttonBypass.getState = nullptr;
 		meter.setVisible(false);
 		add(&btnLoad);
 	}

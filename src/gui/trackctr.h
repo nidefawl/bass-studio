@@ -609,7 +609,7 @@ public:
 //		btnFoldAll.setButtonColor(GuiColor::COL_BTN_LOAD_DEF_PLUGINS);
 		btnFoldAll.setLabel("Fold All Trackss");
 		btnFoldAll.icon = ICON_ARR_RIGHT;
-		btnFoldAll.state = &isFolded;
+		btnFoldAll.setStateRef(&isFolded);
 		btnFoldAll.getIcon = [gtl=this]{return gtl->isFolded?ICON_ARR_RIGHT:ICON_ARR_DOWN;};
 		guiButtons.push_back(&btnFoldAll);
 		for (auto guiBtn : guiButtons) {

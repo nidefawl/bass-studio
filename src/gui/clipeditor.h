@@ -141,7 +141,7 @@ class gui_clipsettings : public guictr_base {
 public:
 	scaled_grid& grid;
 	clip_view& view;
-	guibutton btnLoop;
+	guibuttonstate btnLoop;
 	gui_timeinput clipLoopStart;
 	gui_timeinput clipLoopLen;
 	gui_timeinput clipTimeStart;
@@ -286,7 +286,7 @@ public:
 	guitrack_timeline timeline;
 	guictr_cliphandles clipHandles;
 	clip_view& view;
-	guibutton btnToggleFold;
+	guibuttonstate btnToggleFold;
 	int32_t velHeight = 120;
 public:
 	guictr_noteeditor(clip_view& _view);

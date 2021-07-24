@@ -21,10 +21,10 @@ extern constant_t COL_BTN_RECORD_ARM_BG;
 }
 
 void testTask();
-class gui_tempocontrol : public guibuttonbase {
+class gui_tempocontrol : public guibutton {
 public:
 	gui_tempocontrol()
-		:  guibuttonbase() {
+		:  guibutton() {
 	}
 	void render(NVGcontext* vg) {
 		renderWidgetBorder(vg, getStateFlags());
@@ -51,11 +51,11 @@ public:
 	void handleDraggedRelease(MouseEvent& evt) {
 	}
 };
-class gui_signaturecontrol_input : public guibuttonbase {
+class gui_signaturecontrol_input : public guibutton {
 	const int idx;
 public:
 	gui_signaturecontrol_input(int _idx)
-		: guibuttonbase(),
+		: guibutton(),
 		idx(_idx) {
 	}
 
@@ -141,7 +141,7 @@ public:
 		nvgText(vg, size.x / 2.0f, G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(sigSep), NULL);
 	}
 };
-class gui_timeinput_field : public guibuttonbase {
+class gui_timeinput_field : public guibutton {
 	const int idx;
 	int32_t* time;
 	const bool isRelative;
@@ -181,13 +181,13 @@ public:
 	int32_t getTime();
 };
 
-class guibutton_audioengine : public guibutton {
+class guibutton_audioengine : public guibuttonstate {
 	int32_t lastTickBar = 0;
 	host_stats_t stats;
 public:
-	guibutton_audioengine() : guibutton() {
+	guibutton_audioengine() : guibuttonstate() {
 	}
-	bool isEnabled() const override {
+	bool getState() const override {
 		return vsthost::getInstance()->isStreaming();
 	}
 	void render(NVGcontext* vg);
@@ -203,10 +203,10 @@ class guictr_tempocontrols : public guictr_base {
 	gui_timeinput cursorPos;
 	gui_timeinput songPos;
 	guibutton_audioengine btnAudioOnOff;
-	guibutton btnRecord;
-	guibutton btnPlay;
-	guibutton btnStop;
-	guibutton btnLoop;
+	guibuttonstate btnRecord;
+	guibuttonstate btnPlay;
+	guibuttonstate btnStop;
+	guibuttonstate btnLoop;
 	gui_timeinput loopPos;
 	gui_timeinput loopLen;
 public:
@@ -228,8 +228,8 @@ public:
 		btnLoop.drawFn = drawTextureSymbol;
 		btnLoop.drawParm = ICON_LOOP;
 		btnLoop.setFlag(FLG_RENDER_BUTTON_WITH_LED, true);
-		btnLoop.setEnabledRef(&projectGlobals.loopEnabled);
-		btnRecord.setEnabledRef(&projectGlobals.recordArmed);
+		btnLoop.setStateRef(&projectGlobals.loopEnabled);
+		btnRecord.setStateRef(&projectGlobals.recordArmed);
 		btnRecord.setButtonColor(GuiColor::COL_BTN_RECORD_ARM_BG);
 		add(&loopLen);
 		add(&loopPos);

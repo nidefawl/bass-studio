@@ -1448,7 +1448,8 @@ struct guidialog_settings::dialog_entry
 	bool active = false;
 	dialog_entry(setting_dialog* _ctr, String title) : tabButton(), tabCtr(_ctr) {
 		tabButton.setText(title);
-		tabButton.setEnabledRef(&active);
+		//TODO: mark as active
+//		tabButton.setEnabledRef(&active);
 		tabButton.setFontScale(0.7f);
 	}
 };

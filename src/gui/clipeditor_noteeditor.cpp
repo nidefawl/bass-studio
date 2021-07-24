@@ -366,7 +366,7 @@ guictr_noteeditor::guictr_noteeditor(clip_view& _view) :
 	add(&btnToggleFold);
 	btnToggleFold.setButtonColor(GuiColor::COL_FOLD_BUTTON);
 	btnToggleFold.setText("Fold");
-	btnToggleFold.setEnabledRef(&fold);
+	btnToggleFold.setStateRef(&fold);
 	content.showRange(2 * 12, 4 * 12);
 }
 

@@ -386,9 +386,8 @@ void guibase::setTheme(guitheme_t* theme) {
 	this->theme = theme;
 }
 
-NVGcolor guibuttonbase::getBackgroundColor(int stateflags) const {
-	int fl = FLG_HAS_COLOR_BG|FLG_ENBL;
-	if ((stateflags&fl) == fl) {
+NVGcolor guibutton::getBackgroundColor(int stateflags) const {
+	if ((stateflags&FLG_HAS_COLOR_BG) && getState()) {
 		return theme->getColor(buttonColor);
 	}
 	return theme->getBgColor(stateflags);
@@ -437,7 +436,7 @@ bool guibase::focused() const {
 	return parentCtrl && this == parentCtrl->guiFocused;
 }
 int32_t guibase::getStateFlags() const {
-	int dynFlags = FLG_DRG|FLG_HVRD|FLG_FOC|FLG_ENBL|FLG_VISIBLE|FLG_RENDER_BACKGROUND;
+	int dynFlags = FLG_DRG|FLG_HVRD|FLG_FOC|FLG_VISIBLE|FLG_RENDER_BACKGROUND;
 	int32_t flgs = this->flags & (~dynFlags);
 	if (pressed()) {
 		flgs |= FLG_DRG;
@@ -447,9 +446,6 @@ int32_t guibase::getStateFlags() const {
 	}
 	if (focused()) {
 		flgs |= FLG_FOC;
-	}
-	if (isEnabled()) {
-		flgs |= FLG_ENBL;
 	}
 	if (isVisible()) {
 		flgs |= FLG_VISIBLE;

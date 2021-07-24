@@ -14,13 +14,13 @@
 #include "basectrl.h"
 #include "textfield.h"
 
-class gui_numberinput_field_base : public guibuttonbase {
+class gui_numberinput_field_base : public guibutton {
 protected:
 	gui_textfield field;
 	bool isEditing = false;
 public:
 	gui_numberinput_field_base() :
-		guibuttonbase() {
+		guibutton() {
 		field.setParent(this);
 	}
 
@@ -116,7 +116,7 @@ public:
 uint32_t nvgToRGB(NVGcolor c);
 
 
-class gui_input_filtered: public guibuttonbase {
+class gui_input_filtered: public guibutton {
 	int32_t* number;
 	gui_textfield field;
 	input_filter_hex32 filter;

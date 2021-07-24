@@ -57,7 +57,7 @@ guictxtmenu_base* gui_timeinput::getTooltip(AppCtrl* appctrl) {
 	return tooltip;
 }
 gui_timeinput_field::gui_timeinput_field(int _idx, int32_t* _time, const bool _isRelative) :
-		guibuttonbase(), idx(_idx), time(_time), isRelative(_isRelative) {
+		guibutton(), idx(_idx), time(_time), isRelative(_isRelative) {
 }
 
 void gui_timeinput_field::render(NVGcontext* vg) {

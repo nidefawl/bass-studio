@@ -23,7 +23,7 @@ gui_clipsettings::gui_clipsettings(scaled_grid& _grid, clip_view& _view) :
 	btnLoop.drawFn = drawTextureSymbol;
 	btnLoop.drawParm = ICON_LOOP;
 	btnLoop.setFlag(FLG_RENDER_BUTTON_WITH_LED, true);
-	btnLoop.setEnabledRef(nullptr);
+	btnLoop.setStateRef(nullptr);
 	clipLoopStart.setRef(nullptr);
 	clipLoopLen.setRef(nullptr);
 	clipTimeStart.setRef(nullptr);
@@ -40,7 +40,6 @@ gui_clipsettings::gui_clipsettings(scaled_grid& _grid, clip_view& _view) :
 	clipTimeStartOffsedSamples.setLabel("Sample offset");
 	clipAudioId.setLabel("Sample ID");
 	btnDuplicateLoop.setLabel("Duplicate Loop");
-	btnDuplicateLoop.setEnabledRef(nullptr);
 	add(&btnLoop);
 	add(&clipLoopStart);
 	add(&clipLoopLen);
@@ -93,7 +92,7 @@ void gui_clipsettings::buttonClicked(guibase* button) {
 void gui_clipsettings::showEditClip() {
 	clip_t* clip = view.clip();
 	if (clip != NULL) {
-		btnLoop.setEnabledRef(&clip->loopEnabled);
+		btnLoop.setStateRef(&clip->loopEnabled);
 		clipLoopStart.setRef(&clip->loopStart);
 		clipLoopLen.setRef(&clip->loopLen);
 		clipTimeStart.setRef(&clip->time);
@@ -111,7 +110,7 @@ void gui_clipsettings::showEditClip() {
 		//			}
 	} else {
 
-		btnLoop.setEnabledRef(nullptr);
+		btnLoop.setStateRef(nullptr);
 		clipLoopStart.setRef(nullptr);
 		clipLoopLen.setRef(nullptr);
 		clipTimeStart.setRef(nullptr);

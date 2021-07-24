@@ -24,7 +24,8 @@ struct guictr_tabbed::tabbed_entry
 	bool active = false;
 	tabbed_entry(guibase* _ctr, String title) : tabButton(), tabCtr(_ctr) {
 		tabButton.setText(title);
-		tabButton.setEnabledRef(&active);
+		//TODO: mark as active
+//		tabButton.setEnabledRef(&active);
 		tabButton.setFontScale(0.7f);
 	}
 };
@@ -122,7 +123,8 @@ struct guictr_stacked::stacked_entry
 	stacked_entry(guictr_base* _ctr, String title) : splitter(0, 0.5), btnHideEntry(), tabCtr(_ctr) {
 		splitterScale = splitter.getScale();
 		btnHideEntry.setText(title);
-		btnHideEntry.state = &active;
+		//TODO: mark as active
+//		btnHideEntry.state = &active;
 		btnHideEntry.setRadius(HEIGHT_DEFAULT_INPUT/2);
 		btnHideEntry.getIcon = [this]{return active?ICON_ARR_DOWN:ICON_ARR_RIGHT;};
 		btnHideEntry.pos = ivec2(INSET_CTR_SPACING, INSET_CTR_SPACING);

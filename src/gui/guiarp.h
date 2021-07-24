@@ -58,7 +58,7 @@ public:
 		buttonBypass.icon = ICON_BYPASS;
 		buttonBypass.setParent(this);
 		buttonBypass.colorActive = GuiColor::COL_BTN_BG_BYPASS_ACTIVE;
-		buttonBypass.getState = [this]() {
+		buttonBypass.fnGetState = [this]() {
 			auto arp = getArp();
 			if (arp) {
 				return arp->getParamValue(0)>0;

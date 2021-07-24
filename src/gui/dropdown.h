@@ -10,7 +10,7 @@
 #include "button.h"
 
 
-class guidropdownbase : public guibuttonbase {
+class guidropdownbase : public guibutton {
 public:
 	enum dropdown_field_selectitem {
 		SELECT_IDX,
@@ -19,7 +19,7 @@ public:
 		SELECT_FIRST,
 		SELECT_LAST,
 	};
-	guidropdownbase() : guibuttonbase() {
+	guidropdownbase() : guibutton() {
 	}
 	void render(NVGcontext* vg) override {
 //		nvgIntersectScissor(vg, pos.x, pos.y, size.x, size.y);
