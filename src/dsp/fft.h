@@ -85,6 +85,8 @@ public:
 	const int32_t fftlen;
 	const double srOverFFT;
 	int32_t numBands;
+	int32_t minFreq;
+	int32_t maxFreq;
 	std::array<std::vector<float>, OUTPUT_CHANNELS> bands{};
 	std::array<std::vector<float>, OUTPUT_CHANNELS> mags{};
 	audio_spectrum(const audio_spectrum& ref) :
@@ -92,7 +94,9 @@ public:
 		blocksize(ref.blocksize),
 		fftlen(ref.fftlen),
 		srOverFFT(ref.srOverFFT),
-		numBands(ref.numBands)
+		numBands(ref.numBands),
+		minFreq(MIN_FREQ),
+		maxFreq(MAX_FREQ)
 	{
 		for (int i = 0; i < OUTPUT_CHANNELS; i++) {
 			mags[i] = ref.mags[i];
@@ -104,7 +108,9 @@ public:
 		blocksize(_blocksize),
 		fftlen(_fftLen),
 		srOverFFT(_samplerate/(double)fftlen),
-		numBands(_numBands) {
+		numBands(_numBands),
+		minFreq(MIN_FREQ),
+		maxFreq(MAX_FREQ) {
 
 	}
 	void clear() {
@@ -212,32 +218,37 @@ public:
 		}
 	}
 
-	void setNumBands(int _numBands) {
-		assert(numBands>0);
+	void setNumBands(int32_t _numBands) {
 		this->numBands = _numBands;
+	}
+	void setFreqRange(int32_t _minFreq, int32_t _maxFreq) {
+		this->minFreq = _minFreq;
+		this->maxFreq = _maxFreq;
+	}
+	void updateBands() {
+		assert(numBands>0);
+		assert(minFreq>0);
+		assert(maxFreq>0);
 		freq.resize(numBands);
 		memset(freq.data(), 0, sizeof(float) * freq.size());
 		for (int ch = 0; ch < OUTPUT_CHANNELS; ch++) {
 			bands[ch].resize(numBands);
 			memset(bands[ch].data(), 0, sizeof(float) * bands[ch].size());
 		}
-		float minLog = log10f(MIN_FREQ);
-		float maxLog = log10f(MAX_FREQ);
+		float minLog = log10f(this->minFreq);
+		float maxLog = log10f(this->maxFreq);
 		float bandwidth = 1.0f / numBands;
 		for (int i = 0; i < numBands; i++) {
 			float min = i/((float)(numBands)) + 0.5*bandwidth;
 			float fX = powf(10.0f, (min*(maxLog-minLog))+minLog);
 			freq[i] = fX;
-			if (i < 12) {
-			}
-			printf("freq[%d] %f\n", i, fX);
 		}
 	}
 	fft_processor(const int32_t _blocksize, const int32_t _samplerate) :
 		audio_spectrum(_blocksize, _samplerate, INPUTLEN*T, 64),
 			fftctxt(new fft_ctxt_t<INPUTLEN>(fftlen, srOverFFT))
 	{
-		setNumBands(64);
+		updateBands();
 		assert(freq.size()==bands[0].size());
 		for (int i = 0; i < OUTPUT_CHANNELS; i++) {
 			memset(ins[i].data(), 0, sizeof(float) * ins[i].size());
