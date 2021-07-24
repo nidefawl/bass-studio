@@ -441,7 +441,7 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
 			preGlSet|=1;
 			_atlas.fb = nvgluCreateFramebuffer(ctxt, FBO_WIDTH, FBO_HEIGHT, NVG_IMAGE_PREMULTIPLIED|NVG_IMAGE_16BIT);
 			if (!_atlas.fb) {
-				throw new appexception("nvgluCreateFramebuffer error");
+				throw appexception("nvgluCreateFramebuffer error");
 			}
 			checkGLError("waveformrender::render nvgluCreateFramebuffer");
 			_atlas.glTexture = nvgGetGLImageHandle(ctxt, _atlas.fb->image);

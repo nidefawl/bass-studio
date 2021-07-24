@@ -20,7 +20,7 @@ class hires_timer_t::Impl {
 public:
 	Impl() {
 		if (!QueryPerformanceFrequency(&freq)) {
-			throw new SystemException(GetLastError(), "QueryPerformanceFrequency failed");
+			throw SystemException(GetLastError(), "QueryPerformanceFrequency failed");
 		}
 		reset();
 	}

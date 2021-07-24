@@ -102,7 +102,7 @@ void testTask() {
 	task.b = 5;
 	WorkerThread* t = MainCtrl::get()->getWorkerThread();
 	if (!t->pushTask(&task)) {
-		throw new appexception("thread task failed");
+		throw appexception("thread task failed");
 	}
 	if (task.isInQueue()) {
 		task.wait();

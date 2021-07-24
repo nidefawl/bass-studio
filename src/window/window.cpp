@@ -99,7 +99,7 @@ public:
 	reentrantblocker block(reentrant); 			\
 	if (!block.check()) {						\
 		dbgassert(0&&reentrant_err_msg);		    \
-		throw new applogicexception(reentrant_err_msg); \
+		throw applogicexception(reentrant_err_msg); \
 	}
 #define EXC_TRY try {
 #define EXC_CATCH \

@@ -38,7 +38,7 @@ namespace ngui {
 			if (entries.size() == 0) {
 				entries.reserve(128);
 			} else if (entries.capacity()-entries.size() < 1) {
-				throw new applogicexception("out of menu space");
+				throw applogicexception("out of menu space");
 			}
 			Menu m;
 			entries.push_back(m);
