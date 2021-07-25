@@ -65,6 +65,10 @@ public:
     int server_send(char *buf, unsigned int buflen) {
     	return send(s2, buf, buflen, 0);
     }
+    int server_peekreadbuf() {
+    	char peekBuf[32];
+    	return recv(s2, peekBuf, 32, MSG_PEEK);
+    }
     void server_close() {
     	server_disconnect();
     	if (s > 0) {
@@ -109,8 +113,8 @@ int ipc_server::readData(char* buf, unsigned int len) {
 	return _M_impl->server_read(buf, len);
 }
 
-int ipc_server::peakReadBufferSize() {
-#error TODO
+int ipc_server::peekReadBufferSize() {
+	return _M_impl->server_peekreadbuf();
 }
 
 

@@ -245,7 +245,7 @@ static int readClientResponses(vstscanner_server_options& options, ipc_server& s
 	int nPluginsScanned = 0;
 	while (!userSentQuitRequest) {
 		int32_t responseType = 0;
-		int peakRdBufSizeResult = server.peakReadBufferSize();
+		int peakRdBufSizeResult = server.peekReadBufferSize();
 		if (peakRdBufSizeResult < sizeof(responseType)) {
 			uint64_t timeSince_ms = getTimeMillis() - timeStartScan_ms;
 			if (-1 == peakRdBufSizeResult || (timeSince_ms > timeoutPluginScan_ms)) {

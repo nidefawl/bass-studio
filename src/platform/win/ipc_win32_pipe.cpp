@@ -67,7 +67,7 @@ public:
     	printLastError("ReadFile");
 		return 0;
 	}
-    int server_peakreadbuf() {
+    int server_peekreadbuf() {
     	DWORD bytesAvail = 0;
 		if( !PeekNamedPipe(pipe, NULL, 0, NULL, &bytesAvail, NULL) ){
 	    	printLastError("PeekNamedPipe");
@@ -123,8 +123,8 @@ int ipc_server::sendData(char* buf, unsigned int len) {
 int ipc_server::readData(char* buf, unsigned int len) {
 	return _M_impl->server_read(buf, len);
 }
-int ipc_server::peakReadBufferSize() {
-	return _M_impl->server_peakreadbuf();
+int ipc_server::peekReadBufferSize() {
+	return _M_impl->server_peekreadbuf();
 }
 
 class ipc_client::Impl
