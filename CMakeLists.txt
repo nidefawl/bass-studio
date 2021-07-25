@@ -12,7 +12,6 @@ option(BUILD_SCANNER "Build plugin scanner" OFF)
 option(BUILD_CMDLINE_HOST "Build command line host" OFF)
 option(BUILD_GUI_TEST "Build test app" OFF)
 option(BUILD_RGB_MASTER "Build rgb master" OFF)
-option(BUILD_INSTALLER "Build windows msi installer package" OFF)
 
 if (BUILD_TESTS OR BUILD_SCANNER OR BUILD_CMDLINE_HOST OR BUILD_GUI_TEST OR BUILD_RGB_MASTER)
 set(BUILD_DAW_LIB ON)
@@ -360,27 +359,3 @@ if (BUILD_TESTS)
         add_custom_target(report DEPENDS coverage-report.txt)
     endif()
 endif(BUILD_TESTS)
-
-if (BUILD_INSTALLER)
-
-    list(APPEND CMAKE_MODULE_PATH "C:/dev/FindWiX/cmake")
-    get_property(DAW_EXE_LOC TARGET ${BUILD_NAME} PROPERTY OUTPUT_NAME_RELWITHDEBINFO)
-    #get_filename_component(DAW_EXE_NAME ${DAW_EXE_LOC}".exe" NAME)
-
-    # set("DAW_EXE_NAME" "${DAW_EXE_LOC}.exe")
-    # set("ProductVersion" "0.4.1.0")
-    # find_package(WIX REQUIRED)
-    # wix_add_project(DAW-installer 
-    #     daw-installer.wxs
-    #     EXTENSIONS WixUIExtension WixUtilExtension WixBalExtension
-    #     DEPENDS ${BUILD_NAME} #the way to build CppExecutable first
-    #     )
-    # set("DAW_EXE_NAME" "${DAW_EXE_LOC}.exe")
-    # set("ProductVersion" "0.4.1.0")
-    # find_package(WIX REQUIRED)
-    # wix_add_project(DAW-installer 
-    #     daw-installer.wxs
-    #     EXTENSIONS WixUIExtension WixUtilExtension WixBalExtension
-    #     DEPENDS ${BUILD_NAME} #the way to build CppExecutable first
-    #     )
-endif(BUILD_INSTALLER)
