@@ -63,7 +63,7 @@
             "cStandard": "c11",
             "cppStandard": "c++14",
             "intelliSenseMode": "clang-x64",
-            "compileCommands": "/home/michael/dev/build/compile_commands.json"
+            "compileCommands": "/home/michael/dev/build2/compile_commands.json"
         },
         {
             "name": "Mac",

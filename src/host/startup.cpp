@@ -134,7 +134,7 @@ void dawinstance_startup_commands(daw_tls::tlsinstance& tls) {
 //		dawInstance->startPlaying();
     };
 //    dawMainCtrl->setVisible(false);
-    dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 0));
-    dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 2));
-    dawInstance->loadFile(dawPath + projName, flags);
+  //  dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 0));
+  //  dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 2));
+ //   dawInstance->loadFile(dawPath + projName, flags);
 }

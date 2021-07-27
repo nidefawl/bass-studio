@@ -485,6 +485,7 @@ void AppCtrl::onAppTick() {
 	garbageGuis.clear();
 }
 void AppCtrl::destroyControl() {
+	closeAllContextMenus();
 	if (this->ctxtmenu) {
 		dbgassert(contextWindow);
 		contextWindow->getCtrl()->closePopup();
@@ -524,8 +525,8 @@ void AppCtrl::openAppMenu(int lvl, guictxtmenu_base *b, ivec2 pos) {
 	ivec2 childMenuPos = pos;
 	//TODO: this OS specific handling should be abstracted away into window.cpp 
 #ifdef _WIN32
-	childMenuPos += windowPos;
 #endif
+	childMenuPos += windowPos;
 	static_cast<PopupCtrl*>(entry.wnd->getCtrl())->open(b, childMenuPos, false);
 }
 namespace {

@@ -29,7 +29,7 @@ class guimenu : public guictxtmenu {
 public:
 	guictr_menubar* parentMenuBar = NULL;
 	guimenu(ngui::Menu* _menu, int _lvl = 0, guimenu_ctxtentry* parent = nullptr);
-	~guimenu() {
+	virtual ~guimenu() {
 	}
 
 	void clicked(int _id);

@@ -72,17 +72,14 @@
             "options": {
                 "cwd": "/home/michael/dev/build"
             },
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
+            "group": "build",
             "problemMatcher": {
                 "base": "$gcc",
                 "fileLocation": [
                     "absolute"
                 ]
             }
-        }
+        },
         {
             "label": "Linux make ~/dev/build2",
             "command": "make",

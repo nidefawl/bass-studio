@@ -210,6 +210,7 @@ static void nvg__deletePathCache(NVGpathCache* c)
 	if (c->points != NULL) free(c->points);
 	if (c->paths != NULL) free(c->paths);
 	if (c->verts != NULL) free(c->verts);
+	if (c->batchedVerts != NULL) free(c->batchedVerts);
 	free(c);
 }
 
@@ -235,7 +236,7 @@ static NVGpathCache* nvg__allocPathCache(void)
 	c->cverts = NVG_INIT_VERTS_SIZE;
 
 	c->batchedVerts = (NVGvertex*)malloc(sizeof(NVGvertex)*NVG_INIT_VERTS_SIZE);
-	if (!c->verts) goto error;
+	if (!c->batchedVerts) goto error;
 	c->nbatchedVerts = 0;
 	c->cbatchedVerts = NVG_INIT_VERTS_SIZE;
 

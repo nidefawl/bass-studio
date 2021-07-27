@@ -3,9 +3,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
+#include <unistd.h>
+#include <pwd.h>
+#include <sys/time.h>
+#include <sys/types.h>
 #include <stdio.h>
 #include <vector>
-#include <sys/time.h>
 #include <time.h>
 #include <thread>
 #include <chrono>
@@ -71,10 +74,16 @@ String FormatErrorMessage(int32_t error, String msg)
 {
 	static const int BUFFERLENGTH = 1024;
 	std::vector<char> buf(BUFFERLENGTH);
-	strerror_r(error, buf.data(), BUFFERLENGTH);
-	if (msg.empty())
-		return String(buf.data());
-	return String(buf.data()) + "   (" + msg + ")";
+	char* strErrBuf = strerror_r(error, buf.data(), BUFFERLENGTH);
+	if (strErrBuf)
+	{
+		String strErrMsg = String(strErrBuf);
+		if (!msg.empty()) {
+			strErrMsg += " (" + msg + ")";
+		}
+		return strErrMsg;
+	}
+	return msg;
 }
 
 #ifdef __linux__
@@ -82,6 +91,34 @@ namespace seqthreads {
 int32_t currentThreadsId() {
 	return get_thread_id();
 }
+}
+
+String getCurrentWorkingDirectory() {
+	String path;
+	char* cwdBuf = getcwd(NULL, 0);
+	if (cwdBuf) {
+		path = cwdBuf;
+	}
+	free(cwdBuf);
+	return path;
+}
+
+bool determineUserdataPath(String& path)
+{
+
+	char* homedir = getenv("HOME");
+	if (!homedir) {
+		uid_t curUid = getuid();
+		struct passwd * curPw = getpwuid(curUid);
+		if (curPw) {
+			homedir = curPw->pw_dir;
+		}
+	}
+	if (homedir) {
+		path = homedir;
+		return true;
+	}
+	return false;
 }
 
 #endif

@@ -43,6 +43,7 @@ public:
 	void reopenAllConfiguredDevices(bool forceClose);
 	bool initPm();
 	void deinitPm();
+	bool isInitialized();
 	void onStreamEnd();
 	bool startMidi();
 	bool stopMidi();

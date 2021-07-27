@@ -64,7 +64,7 @@ struct guitheme_t::guitheme_override_state_t {
 
 };
 guitheme_t::guitheme_t() {
-	this->overrideState = new guitheme_t::guitheme_override_state_t{};
+	this->pOverrideState = std::make_shared<guitheme_t::guitheme_override_state_t>();
 	initTheme();
 }
 
@@ -101,8 +101,8 @@ NVGcolor& guitheme_t::getColorRef(GuiColor::constant_t _constant) {
 }
 NVGcolor guitheme_t::getColor(GuiColor::constant_t _constant) const {
     dbgassert(_constant.idx >= 0 && _constant.idx < this->vecNVGColors.size());
-    if (overrideState->overrideState == 1 && overrideState->_overrideColorConstant.idx == _constant.idx) {
-        return rgbaToNvg(this->overrideState->_overrideColorValue);
+    if (pOverrideState->overrideState == 1 && pOverrideState->_overrideColorConstant.idx == _constant.idx) {
+        return rgbaToNvg(this->pOverrideState->_overrideColorValue);
     }
 #ifndef NDEBUG
 	//Make sure the 2 are in sync
@@ -114,15 +114,15 @@ NVGcolor guitheme_t::getColor(GuiColor::constant_t _constant) const {
 	return this->vecNVGColors[_constant.idx];
 }
 NVGcolor guitheme_t::getContrastColor(GuiColor::constant_t _constant) const {
-	if (overrideState->overrideState == 1 && overrideState->_overrideColorConstant.idx == _constant.idx) {
-		return getContrastFontColor(this->overrideState->_overrideColorValue);
+	if (pOverrideState->overrideState == 1 && pOverrideState->_overrideColorConstant.idx == _constant.idx) {
+		return getContrastFontColor(this->pOverrideState->_overrideColorValue);
 	}
 	dbgassert(_constant.idx >= 0 && _constant.idx < this->vecNVGColors.size());
 	return getContrastFontColor(nvgToRGBA(this->vecNVGColors[_constant.idx]));
 }
 int32_t guitheme_t::getColorInt32(GuiColor::constant_t _constant) {
-	if (overrideState->overrideState == 1 && overrideState->_overrideColorConstant.idx == _constant.idx) {
-		return this->overrideState->_overrideColorValue;
+	if (pOverrideState->overrideState == 1 && pOverrideState->_overrideColorConstant.idx == _constant.idx) {
+		return this->pOverrideState->_overrideColorValue;
 	}
     auto it = mapColors.find(_constant.idx);
     if (it == mapColors.end()) {
@@ -226,7 +226,7 @@ NVGcolor guitheme_t::getFrameColorBright() const {
 }
 
 void guitheme_t::updateAnimation() {
-	this->overrideState->updateAnimation();
+	this->pOverrideState->updateAnimation();
 }
 void guitheme_t::pingConstant(GuiColor::constant_t _constant)
 {
@@ -234,12 +234,12 @@ void guitheme_t::pingConstant(GuiColor::constant_t _constant)
     if (this->mapColors.count(_constant.idx)) {
         colorContrastPing = 0xFF000000|getContrastFontColoru32(this->mapColors.at(_constant.idx));
     }
-    this->overrideState->pingConstant(_constant, colorContrastPing);
+    this->pOverrideState->pingConstant(_constant, colorContrastPing);
 
 }
 void guitheme_t::pingConstant(GuiConstant::constant_t _constant) {
-	this->overrideState->pingConstant(_constant);
+	this->pOverrideState->pingConstant(_constant);
 }
 void guitheme_t::endPing() {
-	this->overrideState->endPing();
+	this->pOverrideState->endPing();
 }

@@ -474,6 +474,9 @@ void midihost::deinitPm() {
 		pmIsInitalized = false;
 	}
 }
+bool midihost::isInitialized() {
+    return pmIsInitalized;
+}
 void midihost::onStreamEnd() {
 
 }

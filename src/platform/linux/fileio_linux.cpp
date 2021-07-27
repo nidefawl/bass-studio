@@ -2,12 +2,18 @@
 #include "fileio.h"
 #include "exceptions.h"
 #include "str_util.h"
+#include "assert_dbg.h"
+#include "window.h"
+#include "platform.h"
+#include "logging.h"
+
 #include <stb_image.h>
 #include <vector>
 #include <iostream>
 #include <string>
 
 #include <limits>
+#include <stdio.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdexcept>
@@ -16,23 +22,29 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <dirent.h>
-#include "assert_dbg.h"
 #include <fts.h>
 
-
-#include <stdio.h>
 #ifdef __linux__
 #include <gtk/gtk.h>
 #include <gdk/gdk.h>
 #include <gdk/gdkx.h>
+#include <X11/Xlib.h>
+#include <X11/extensions/Xrandr.h>
 #endif
+
 #include <GLFW/glfw3.h>
 #include <GLFW/glfw3native.h>
-#include "window.h"
+
+Display* getX11Display();
+Window getX11FromWindowBase(window_base* w);
 
 int64_t ReadImage( const String &Filename, ImageBuf& ref)
 {
-	 unsigned char *data = stbi_load(StringAsCStr(Filename), &ref.w, &ref.h, &ref.bitdepth, 0);
+	String path = toResourcePath(Filename);
+	if (!FileExists(path)) {
+		throw appexception(StringAsCStr(StringFormat("File not found: %s", StringAsCStr(path))));
+	}
+	 unsigned char *data = stbi_load(StringAsCStr(path), &ref.w, &ref.h, &ref.bitdepth, 0);
 	 int64_t bufSize = -1;
 	 if (data) {
 		 bufSize = ref.w*ref.h*ref.bitdepth;
@@ -202,7 +214,6 @@ static void WaitForCleanup(void)
         gtk_main_iteration();
 }
 
-#include "logging.h"
 
 struct DialogResult {
 	int result = 0;
@@ -246,10 +257,12 @@ void handleGuiEvents(window_base* w, GtkWidget *dialog) {
 	my_printf("Exit loop\n", 0);
 }
 
-Display* getX11Display();
-Window getX11FromWindowBase(window_base* w);
-#include <X11/Xlib.h>
-#include <X11/extensions/Xrandr.h>
+
+int browseForFolder(String title, String pathStart, String& _out)
+{
+	log_printf("not implemented\n", 0);
+	return 0;
+}
 
 int promptUserFilePath(window_base* w, int mode,
 		std::vector<SupportedFileType> fileTypes, String& _out) {
@@ -312,6 +325,7 @@ int promptUserFilePath(window_base* w, int mode,
 	_out = "";
 	return 0;
 }
+
 #endif
 
 class FileTimeGetter::Impl {
@@ -400,6 +414,14 @@ IOFile* IOFile::openFile(String filename, OpenFileMode mode) {
 		return nullptr;
 	}
 	return new IOFile(impl);
+}
+
+bool CreateDirectoryIfNotExists( const String &DirPath )
+{
+	int mkdRet = mkdir(StringAsCStr(DirPath), 0755);
+	ThrowLastErrorIf((mkdRet != 0) && (errno != EEXIST),
+		"mkdir call failed on file named " + DirPath);
+	return true;
 }
 
 #endif

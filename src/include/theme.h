@@ -1,4 +1,5 @@
 #pragma once
+#include <memory>
 #include <vector>
 #include <nanovg_min.h>
 #include <unordered_map>
@@ -18,7 +19,7 @@ struct guitheme_t {
 	std::unordered_map<int32_t, int32_t> mapProperties;
 	std::unordered_map<int32_t, UIFont::font_instance> mapFonts;
 	struct guitheme_override_state_t;
-	guitheme_override_state_t* overrideState = nullptr;
+	std::shared_ptr<guitheme_override_state_t> pOverrideState;
 	guitheme_t();
     guitheme_t(const guitheme_t &) = default;
     ~guitheme_t() = default;

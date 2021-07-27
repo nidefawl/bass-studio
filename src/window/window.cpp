@@ -346,14 +346,15 @@ public:
 	virtual void onRefresh()
 	{
 		PREVENT_REENTRANT("REENTRANT IN RENDER MAIN")
-		//TODO: make sure we compare same units here (seconds vs milliseconds)
-//		double delay = getSince(secondsLastDraw);
-//		if (delay >= minFrameDelaySeconds) {
-			render();
-			endFrame();
-//		} else {
-//			skipFrames++;
-//		}
+#ifdef __linux__
+		double delay = getSince(secondsLastDraw);
+		if (delay < minFrameDelaySeconds) {
+			skipFrames++;
+			return;
+		}
+#endif
+		render();
+		endFrame();
 	}
 	virtual void flagNeedsRedraw() {
 //		double delay = getSince(secondsLastDrawReq);
@@ -1707,15 +1708,19 @@ int startApplication(int argc, char* argv[]) {
 	        }
 	    }
 		glfwUpdateInternals();
-		int64_t tmHRNow = hiresTimer.getTime();
 #endif //_WIN32
+		int64_t tmHRNow = hiresTimer.getTime();
 		if (tmHRNow - tmHRLastTick >= 20*1000) { //TODO: figure out good tick rate
 			tmHRLastTick = tmHRNow;
 			windowTickTimerRun();
 		}
 #if defined(__linux__) || defined(__APPLE__)
 		glfwWaitEventsTimeout(0.001);
-		mainWindow->onRefresh();
+
+		if (tmHRNow - tmHRLastFrame >= mainWindow->minFrameDelaySeconds * 1000000L) {
+			mainWindow->onRefresh();
+			tmHRLastFrame = tmHRNow;
+		}
 #else
 		if (tmLRMsgSent > 0 && getTimeMillis() - tmLRMsgSent >= 1000)
 		{

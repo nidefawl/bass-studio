@@ -13,6 +13,7 @@
 #if defined(__linux__) || defined(__APPLE__)
 #include <unistd.h>
 #include <spawn.h>
+#include <signal.h>
 #include <sys/wait.h>
 #include <vector>
 #include <sstream>
@@ -61,6 +62,9 @@ public:
 			throw SystemException(errno, "Process did not exit normally");
 		}
 		exitCode = WEXITSTATUS(procStatus);
+	}
+	void killProcess() {
+		kill(pid, SIGKILL);
 	}
 	~ProcessRunScope() {
 
