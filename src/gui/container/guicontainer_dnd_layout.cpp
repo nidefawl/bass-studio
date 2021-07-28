@@ -128,7 +128,7 @@ bool guictr_layout::setOverlayPos(i_ctr_drop_area* area, const dock_pos dockPos,
 	area->childContainerIndex = childContainerIndex;
 	area->pos = toScreenSpace(relPos - paddingTL(padding));
 	area->size = math::maxvec2(ivec2(relSize), ivec2(10, 10));
-	area->label = "DockPos "+std::to_string(static_cast<int32_t>(area->dockPos))+" of "+StringFormat("%8X", reinterpret_cast<uint64_t>(this));
+	area->label = "DockPos "+std::to_string(static_cast<int32_t>(area->dockPos))+" of "+this->getLayoutCtrName();
 	return true;
 }
 bool guictr_layout::setOverlayPosForTab(i_ctr_drop_area* area, const dock_pos dockPos, const int32_t dockOffset, const bool rightSideHandle) {
@@ -153,9 +153,14 @@ bool guictr_layout::setOverlayPosForTab(i_ctr_drop_area* area, const dock_pos do
 			relSize = ivec2(dropIndicatorWidth, FONT_SIZE_CTXT_SMALL);
 		}
 		area->dockPos = dockPos;
-		area->dockPosOffset = dockOffset;
+		if (rightSideHandle) {
+			area->dockPosOffset = dockOffset + 1;
+		} else {
+			area->dockPosOffset = dockOffset;
+		}
 		area->pos = toScreenSpace(relPos - paddingTL(padding));
 		area->size = math::maxvec2(ivec2(relSize), ivec2(10, 10));
+		area->label = "Tab Pos "+std::to_string(static_cast<int32_t>(area->dockPosOffset))+" of "+this->getLayoutCtrName();
 		return true;
 	}
 	return false;
@@ -318,6 +323,10 @@ void guictr_layout::layout() {
 		//TODO: do not layout invisible (tabbed) entries
 		gui->layout();
 	}
+	for (auto &entry : entries) {
+		auto *gui = entry->getGui();
+		gui->size = math::minvec2(gui->size, entry->size);
+	}
 }
 
 void guictr_layout_entry_handle::handleDraggedBegin(MouseEvent &evt){
@@ -466,6 +475,8 @@ bool guictr_layout::getContainerRef(guictr_layout_entry* ctr, std::shared_ptr<gu
 	if (!remove) {
 		return true;
 	}
+	int32_t pos = it - entries.begin();
+	bool removedActive = getActivePosition() == pos;
 	entries.erase(it);
 	guictr_base::remove(ctr->getGui());
 	auto *guiHandle = ctr->getHandle();
@@ -474,6 +485,14 @@ bool guictr_layout::getContainerRef(guictr_layout_entry* ctr, std::shared_ptr<gu
 		guictr_base::remove(guiHandle);
 	}
 	ctr->parentLayoutContainer = nullptr;
+	if (removedActive && this->ctrLayout == container_layout::TABBED) {
+		if (pos-1 >= 0 || entries.empty()) {
+			pos--;
+		}
+//		setActiveEntry(pos);
+		this->activePosition = pos;
+		updateVisible();
+	}
 	return true;
 }
 
@@ -551,14 +570,12 @@ bool guictr_layout::placeContainer(std::shared_ptr<guictr_layout_entry> ctr, i_c
 	if (it != entries.end()) {
 		throw applogicexception(StringFormat("%s - attempt to add element twice", StringAsCStr(getClassName())));
 	}
-	//		hasRemovedContainer = true;
-	//		dbgassert(ctrContent2);
-	//		dbgassert(ctrContent == ctrContent2);
-	bool updatedVisible = false;
+
+	bool layoutChanged = false;
 	if (ctrLayout != updatedCtrLayout) {
 		log_printf("Container layout changed to %d\n", static_cast<int>(updatedCtrLayout));
 		setLayout(updatedCtrLayout);
-		updatedVisible = true;
+		layoutChanged = true;
 	}
 	if (dockPos == dock_pos::STACK) {
 		if (dockPosOffset <= -1) {
@@ -574,11 +591,10 @@ bool guictr_layout::placeContainer(std::shared_ptr<guictr_layout_entry> ctr, i_c
 		entries.insert(entries.begin(), ctr);
 	}
 
-	//		ctr->getGui()->setFlag(FLG_RENDER_LABEL, true);
 	auto guiCtr = ctr->getGui();
 	ctr->hasHandle = dynamic_cast<guictr_layout*>(guiCtr) == nullptr || this->ctrLayout == container_layout::TABBED;
 	guictr_base::add(guiCtr);
-	//guiCtr->snapSides = ivec4(1);
+
 	auto* guiHandle = ctr->getHandle();
 
 	if (guiHandle && ctr->hasHandle) {
@@ -586,10 +602,12 @@ bool guictr_layout::placeContainer(std::shared_ptr<guictr_layout_entry> ctr, i_c
 		handles.push_back(guiHandle);
 	}
 	ctr->parentLayoutContainer = this;
-	//if (!updatedVisible) {
-	//	updateVisible();
-	//}
-	//layout();
+	if (this->ctrLayout == container_layout::TABBED) {
+		int32_t newIdx = indexOfCtr(entries, ctr);
+		this->activePosition = newIdx;
+		updateVisible();
+	}
+
 	return true;
 }
 void guictr_layout::render(NVGcontext* vg)
@@ -622,25 +640,35 @@ void guictr_layout::render(NVGcontext* vg)
 		for (auto& e : entries) {
 			auto h = e->getGui();
 			if (!h) continue;
-			int32_t stateFlags = getStateFlags();
 			nvgBeginPath(vg);
 			nvgRect(vg, h->pos.x, h->pos.y, h->size.x, h->size.y);
 			nvgFillColor(vg, rgbaToNvg(0x7fffff00));
 			nvgFill(vg);
 		}
 	}
-	for (auto c : guis) {
-		if (!c->isVisible()) {
-//			log_printf("warning, skip rendering child container with state !isVisible()\n", 0);
+	for (auto &entry : entries) {
+		auto container = entry->getGui();
+		if (!container || !container->isVisible())
 			continue;
-		}
-		if (c->size.x <= 0 || c->size.y <= 0) {
+		if (container->size.x <= 0 || container->size.y <= 0) {
 			log_printf("warning, skip rendering child container with size <= 0 0\n", 0);
 			continue;
 		}
 		{
 			nvgSave(vg);
-			c->render(vg);
+			nvgIntersectScissor(vg, entry->pos.x, entry->pos.y, entry->size.x, entry->size.y);
+			container->render(vg);
+			nvgRestore(vg);
+		}
+	}
+	for (auto& handle : handles) {
+		if (handle->size.x <= 0 || handle->size.y <= 0) {
+			log_printf("warning, skip rendering child container with size <= 0 0\n", 0);
+			continue;
+		}
+		{
+			nvgSave(vg);
+			handle->render(vg);
 			nvgRestore(vg);
 		}
 	}
@@ -687,13 +715,12 @@ std::shared_ptr<guictr_layout_entry> guictr_layout::replaceContainerWith(guictr_
 }
 
 guictr_layout_entry::guictr_layout_entry(String _label, std::shared_ptr<guictr_base> _ctr)
-    : type(_ctr->getContainerType()), frameType(_ctr->getContainerType() == CTR_TYPE_LAYOUT ? layout_ctr_type::GUICTR_LAYOUT : layout_ctr_type::GUICTR_BASE), ctr(_ctr), label(_label) {
+    :
+	type(_ctr->getContainerType()),
+	frameType(_ctr->getContainerType() == CTR_TYPE_LAYOUT ? layout_ctr_type::GUICTR_LAYOUT : layout_ctr_type::GUICTR_BASE),
+	ctr(_ctr),
+	label(_label) {
 	ctrHandle = new guictr_layout_entry_handle(this, _ctr.get());
-//		if (dynamic_cast<guictr_layout*>(_ctr.get()) == nullptr) {
-//			ctrHandle->setLabel("...");
-//		} else {
-//			ctrHandle = nullptr;
-//		}
 }
 guictr_layout_entry::~guictr_layout_entry() {
 	delete ctrHandle;

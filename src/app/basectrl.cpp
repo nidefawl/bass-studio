@@ -344,7 +344,8 @@ void BaseCtrl::render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, i
 						log_printf("warning, rendering container with size 0 0\n", 0);
 						continue;
 					}
-					if (shrdPtrTarget->contains(ctrDragHandler.pos)) {
+					if (shrdPtrTarget->contains(ctrDragHandler.pos))
+					{
 						nvgSave(vg);
 						shrdPtrTarget->render(vg);
 						nvgRestore(vg);
@@ -852,6 +853,19 @@ std::vector<std::weak_ptr<i_ctr_drop_area>> BaseCtrl::getTargets(MouseEvent& mev
 	for (i_ctr_layout* ctr : ifMatches) {
 		std::vector<std::weak_ptr<i_ctr_drop_area>> ctrtargets;
 		ctr->getOverlays(mevt, ctrtargets);
+		for (auto& target : ctrtargets) {
+			if (!target.expired()) {
+				//TODO: no need to lock here...
+				auto shrdPtrTarget = target.lock();
+				if (shrdPtrTarget->pos.x > m_size.x*1.0/m_scale - 10) {
+					shrdPtrTarget->pos.x -= 10;
+				}
+				if (shrdPtrTarget->pos.x+shrdPtrTarget->size.x < 10) {
+					shrdPtrTarget->pos.x += 10;
+				}
+			}
+
+		}
 //    		log_printf("ctrtargets %X %d\n", reinterpret_cast<int64_t>(ctr), ctrtargets.size());
 		targets.insert(targets.begin(), ctrtargets.begin(), ctrtargets.end());
 	}

@@ -50,6 +50,12 @@ private:
 	std::vector<std::shared_ptr<guictr_layout_entry>> entries;
 	std::vector<guibase*> handles;
 	std::vector<std::shared_ptr<i_ctr_drop_area>> dragdropContainerAreaHelpers;
+	String getLayoutCtrName() {
+		if (this->label.empty()) {
+			return StringFormat("%8X", reinterpret_cast<uint64_t>(this));
+		}
+		return this->label;
+	}
 public:
 	guictr_layout();
 	virtual ~guictr_layout() {

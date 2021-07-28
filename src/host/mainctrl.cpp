@@ -1,3 +1,4 @@
+#include "glheaders.h"
 #include <nanovg.h>
 #include <GLFW/glfw3.h>
 #include <time.h>
@@ -352,8 +353,8 @@ public:
 	guictr_clipeditorview ctr_clipeditorview;
 	guictr_tracks ctr_tracks;
 	guictr_nodes_splitview ctr_nodes;
-	std::shared_ptr<guictr_layout> ctr_layoutLeft;
-	std::shared_ptr<guictr_layout> ctr_stack_right;
+	std::shared_ptr<guictr_layout> ctr_Left;
+	std::shared_ptr<guictr_layout> ctr_Right;
 	std::vector<std::shared_ptr<Splitter>> splitters;
 	enum class SplitterPos : uint32_t {
 		LEFT = 0, CENTER, RIGHT
@@ -368,7 +369,7 @@ public:
 	  ctr_clipeditorview(ctr_clipeditor.noteeditor),
 	  ctr_tracks(_mainCtrl, _cursor, _trackSelection, _project, _projectGlobals, grid, dragdropclip),
 	  ctr_nodes(_cursor, _project, dragdropclip),
-	  ctr_stack_right()
+	  ctr_Right()
 	{
         indexContent = 3;
 		auto subctr_tabbed = makeTabListCtr1();
@@ -380,11 +381,13 @@ public:
 		subctr_tabbed->setLabel("Bottom");
 		std::shared_ptr<guictr_layout_entry> entry1 = createGuiCtrLayoutEntry(subctr_tabbed2);
 		std::shared_ptr<guictr_layout_entry> entry2 = createGuiCtrLayoutEntry(subctr_tabbed);
-		ctr_layoutLeft = std::make_shared<guictr_layout>();
-		ctr_stack_right = std::make_shared<guictr_layout>();
-		ctr_stack_right->setLayout(container_layout::SPLIT_H);
-		ctr_stack_right->addEntry(entry1);
-		ctr_stack_right->addEntry(entry2);
+		ctr_Left = std::make_shared<guictr_layout>();
+		ctr_Left->setLabel("Left Docker");
+		ctr_Right = std::make_shared<guictr_layout>();
+		ctr_Right->setLabel("Right Docker");
+		ctr_Right->setLayout(container_layout::SPLIT_H);
+		ctr_Right->addEntry(entry1);
+		ctr_Right->addEntry(entry2);
 //		ctr_stack_right->setBackgroundRendered(false);
 //		ctr_stack_right->padding = 0;
 //		ctr_stack_right->margin = 0;
@@ -402,8 +405,8 @@ public:
 		ctr_clipeditor.setSnapSides(ivec4(0, 1, 0, 0));
 		ctr_plugins.setSnapSides(ivec4(0, 1, 0, 0));
 		subctr_tabbed2->setSnapSides(ivec4(1, 0, 0, 1));
-		ctr_layoutLeft->setSnapSides(ivec4(0, 0, 1, 0));
-		ctr_stack_right->setSnapSides(ivec4(1, 0, 0, 0));
+		ctr_Left->setSnapSides(ivec4(0, 0, 1, 0));
+		ctr_Right->setSnapSides(ivec4(1, 0, 0, 0));
 
 		subctr_tabbed->setSnapSides(ivec4(1, 0, 0, 0));
 	}
@@ -420,11 +423,17 @@ public:
 		ctr_menu.pos = vec2(0, 0);
 		ctr_menu.size = vec2(winW, hMenu);
 #endif
-		if (ctr_layoutLeft->getEntries().empty()) {
-			getSplitter(SplitterPos::LEFT)->setScale(0);
+		auto leftSplitter = getSplitter(SplitterPos::LEFT);
+		auto rightSplitter = getSplitter(SplitterPos::RIGHT);
+		if (ctr_Left->getEntries().empty()) {
+			leftSplitter->setScale(0);
+		} else if (leftSplitter->getScale() < leftSplitter->getMin()) {
+			leftSplitter->setScale(leftSplitter->getMin());
 		}
-		if (ctr_stack_right->getEntries().empty()) {
-			getSplitter(SplitterPos::RIGHT)->setScale(1);
+		if (ctr_Right->getEntries().empty()) {
+			rightSplitter->setScale(1);
+		} else if (rightSplitter->getScale() > rightSplitter->getMax()) {
+			rightSplitter->setScale(rightSplitter->getMax());
 		}
 		int hTopControls = 48;
 		int hStatusBar = 60;
@@ -459,8 +468,8 @@ public:
 		ctr_pluginview.pos = { ctr_clipeditorview.right(), winBottom - hStatusBar };
 		ctr_plugins.pos = { widthLeft, winBottom - hStatusBar - hEditor};
 		ctr_clipeditor.pos = { widthLeft, winBottom - hStatusBar - hEditor };
-		ctr_layoutLeft->pos = { winX, winY+hTopControls };
-		ctr_layoutLeft->size = { widthLeft, hContent };
+		ctr_Left->pos = { winX, winY+hTopControls };
+		ctr_Left->size = { widthLeft, hContent };
 		getSplitter(SplitterPos::LEFT)->pos = ivec2(widthLeft - 5, hTopControls);
 		getSplitter(SplitterPos::LEFT)->size = ivec2(10, hContent);
 		getSplitter(SplitterPos::CENTER)->pos = ivec2(widthLeft, ctr_clipeditor.pos.y - 5);
@@ -472,17 +481,17 @@ public:
 //		ctr_tabbed.size = {wRight, heightDebug};
 //		ctr_tabbed2.pos = {width, winY+hTopControls};
 //		ctr_tabbed2.size = {wRight, heightList};
-		ctr_stack_right->pos = {widthLeft+widthCenter, winY+hTopControls};
-		ctr_stack_right->size = {widthRight, hContent};
+		ctr_Right->pos = {widthLeft+widthCenter, winY+hTopControls};
+		ctr_Right->size = {widthRight, hContent};
 
 
-		getSplitter(SplitterPos::RIGHT)->pos = ivec2(ctr_stack_right->pos.x - 5, hTopControls);
+		getSplitter(SplitterPos::RIGHT)->pos = ivec2(ctr_Right->pos.x - 5, hTopControls);
 		getSplitter(SplitterPos::RIGHT)->size = ivec2(10, hContent);
 //		splitterList.pos = ivec2(ctr_tabbed.pos.x, ctr_tabbed2.bottom()-5);
 //		splitterList.size = ivec2(wRight, 10);
 
-		ctr_stack_right->postContentChanged();
-		ctr_layoutLeft->postContentChanged();
+		ctr_Right->postContentChanged();
+		ctr_Left->postContentChanged();
 	}
 	void addTo(std::vector<guictr_base*>& v) {
 		this->ctr_plugins.setControl(mainCtrl);
@@ -496,8 +505,8 @@ public:
 		 v.push_back(&ctr_tempo);
 		 v.push_back(&ctr_pluginview);
 		 v.push_back(&ctr_clipeditorview);
-		 v.push_back(ctr_layoutLeft.get());
-		 v.push_back(ctr_stack_right.get());
+		 v.push_back(ctr_Left.get());
+		 v.push_back(ctr_Right.get());
 //		 v.push_back(&ctr_tabbed2);
 		 v.push_back(&statusbar);
 //		 v.push_back(&ctr_tabbed);
@@ -508,14 +517,14 @@ public:
 
 	void dragContainerRelayout(MainCtrl* ctrl, BaseCtrl::drag_ctr_event evt) override {
         if (evt.evtType != BaseCtrl::drag_ctr_event_type::DRAG_MOVE) {
-            ctr_stack_right->postContentChanged();
-            ctr_layoutLeft->postContentChanged();
-            ctr_stack_right->layout();
-            ctr_layoutLeft->layout();
+            ctr_Right->postContentChanged();
+            ctr_Left->postContentChanged();
+            ctr_Right->layout();
+            ctr_Left->layout();
 		}
     	if (evt.evtType == BaseCtrl::drag_ctr_event_type::DRAG_END) {
             bool bRelayout = false;
-    		guictr_layout* layoutCtrs[2] = {ctr_layoutLeft.get(), ctr_stack_right.get()};
+    		guictr_layout* layoutCtrs[2] = {ctr_Left.get(), ctr_Right.get()};
     		for (auto* layoutCtr : layoutCtrs) {
         	    if (layoutCtr->getLayout() == container_layout::SOLE
         	    		&& layoutCtr->getEntries().size() == 1
@@ -538,11 +547,11 @@ public:
 	}
 
 	void loadLayout(const dawview_layout_t* viewLayout) {
-		ctr_stack_right->removeAllEntries();
-		ctr_layoutLeft->removeAllEntries();
+		ctr_Right->removeAllEntries();
+		ctr_Left->removeAllEntries();
 		if (viewLayout->left && viewLayout->right) {
-			loadContainerSnapshot(ctr_stack_right.get(), viewLayout->right.get());
-			loadContainerSnapshot(ctr_layoutLeft.get(), viewLayout->left.get());
+			loadContainerSnapshot(ctr_Right.get(), viewLayout->right.get());
+			loadContainerSnapshot(ctr_Left.get(), viewLayout->left.get());
 		}
 		if (viewLayout->splitterPositions.size() == splitters.size()) {
 			for (int i = 0; i < splitters.size(); i++) {
@@ -557,8 +566,8 @@ public:
 	void storeLayout(dawview_layout_t* layout) {
 		layout->left = std::make_shared<guictrlayout_snapshot_t>();
 		layout->right = std::make_shared<guictrlayout_snapshot_t>();
-		storeContainerSnapshot(ctr_stack_right.get(), layout->right.get());
-		storeContainerSnapshot(ctr_layoutLeft.get(), layout->left.get());
+		storeContainerSnapshot(ctr_Right.get(), layout->right.get());
+		storeContainerSnapshot(ctr_Left.get(), layout->left.get());
 		layout->splitterPositions.resize(splitters.size());
 		for (int i = 0; i < splitters.size(); i++) {
 			layout->splitterPositions[i] = splitters[i]->getScale();
@@ -592,21 +601,21 @@ void MainCtrl::setupView() {
 std::shared_ptr<guictr_layout> MainCtrl::replaceContainerWith(guictr_base* ctr,
 		std::shared_ptr<guictr_layout> newContainer) {
 	std::shared_ptr<guictr_layout> ret;
-	if (ctr == view->ctr_stack_right.get()) {
-		replaceEntry(containers, view->ctr_stack_right.get(), newContainer.get());
-		ret = view->ctr_stack_right;
+	if (ctr == view->ctr_Right.get()) {
+		replaceEntry(containers, view->ctr_Right.get(), newContainer.get());
+		ret = view->ctr_Right;
 		ret->parent = nullptr;
-		view->ctr_stack_right = newContainer;
-		view->ctr_stack_right->parent = nullptr;
-		view->ctr_stack_right->setControl(this);
+		view->ctr_Right = newContainer;
+		view->ctr_Right->parent = nullptr;
+		view->ctr_Right->setControl(this);
 	}
-	if (ctr == view->ctr_layoutLeft.get()) {
-		replaceEntry(containers, view->ctr_layoutLeft.get(), newContainer.get());
-		ret = view->ctr_layoutLeft;
+	if (ctr == view->ctr_Left.get()) {
+		replaceEntry(containers, view->ctr_Left.get(), newContainer.get());
+		ret = view->ctr_Left;
 		ret->parent = nullptr;
-		view->ctr_layoutLeft = newContainer;
-		view->ctr_layoutLeft->parent = nullptr;
-		view->ctr_layoutLeft->setControl(this);
+		view->ctr_Left = newContainer;
+		view->ctr_Left->parent = nullptr;
+		view->ctr_Left->setControl(this);
 	}
 	return ret;
 }
@@ -944,7 +953,7 @@ void DawInstance::menuCommand(const menucmd_t&& command) {
 	    	dbgassert(command.argInt >= 0);
 	    	std::shared_ptr<guictr_base> ctr;
 	    	if (makeContainer(static_cast<container_type>(command.argInt), ctr)) {
-		        auto ctrLayoutLeft = getMainControl()->view->ctr_layoutLeft;
+		        auto ctrLayoutLeft = getMainControl()->view->ctr_Left;
 		        addLayoutEntry(ctrLayoutLeft, ctr, ctr->label);
 		        ctrLayoutLeft->postContentChanged();
 		        ctrLayoutLeft->layout();
@@ -2226,7 +2235,7 @@ bool DawCtrl::processGlobalKeyevent(KeyEvent& event) {
         if (event.type != KeyEventType::K_REPEAT) {
             if (isKC({0, KEY_P, nullptr}, event)) {
                 if (this->getDaw() && this->getDaw()->getMainControl()) {
-                    auto ctrLayoutLeft = this->getDaw()->getMainControl()->view->ctr_layoutLeft;
+                    auto ctrLayoutLeft = this->getDaw()->getMainControl()->view->ctr_Left;
                     auto ctr_performance = std::shared_ptr<guictr_base>(makeGuiPerformance());
                     ctr_performance->setLabel("Performance");
                     addLayoutEntry(ctrLayoutLeft, ctr_performance, ctr_performance->label);
