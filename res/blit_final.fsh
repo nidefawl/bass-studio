@@ -111,7 +111,12 @@ vec3 shade2(float fTime, vec2 tc) {
 	// mod((tc.x+fTm1), 1.0)*5.0
 	return pow(colFinal, vec3(1.0/2.2)) + vec3(antiBandingDither);
 }
+vec3 shadeNone(float fTime, vec2 tc) {
+	vec3 c0 = texture(tex0, tc).rgb;
+	return c0;
+}
+
 void main(void) {
 	float fTm1 = triFade(u_time+bpm2Tm(u_bpm)*8.0, bpm2Tm(u_bpm)*16.0, bpm2Tm(u_bpm)*16.0);
-	out_Color = vec4(shade2(u_time, pass_texcoord), 1.0);
+	out_Color = vec4(shadeNone(u_time, pass_texcoord), 1.0);
 }
