@@ -16,23 +16,19 @@ public:
 class gui_scrollbar : public guibase {
 	int dir;
 	gui_scrollcontainer& ctr;
+	float startOffset = 0;
+	float prevScrollRange = -1.0;
+	float prevSetOffset = -1.0;
 public:
 	float scrollOffset;
 	static const int defaultW = 20;
 	static const int smallW = 10;
 	gui_scrollbar(int _dir, float _offset, gui_scrollcontainer& _ctr);
 	virtual void render(NVGcontext* vg);
-	float startOffset = 0;
 	virtual void handleDraggedBegin(MouseEvent& evt) {
 		startOffset = scrollOffset;
 	}
-	void setScrollOffset(float f) {
-		if (getScrollRange() <= 0)
-			f = 0;
-		float _newOffset = f < 0 ? 0 : f > 1 ? 1 : f;
-		scrollOffset = _newOffset;
-		ctr.scrollOffsetChanged(dir, scrollOffset);
-	}
+	void setScrollOffset(float f);
 	float getScrollRange() {
 		ivec2 vcS = ctr.getScrollTotalSize();
 		ivec2 vs = ctr.getScrollViewSize();
@@ -96,4 +92,3 @@ public:
 	virtual void handleDraggedRelease(MouseEvent& evt) {
 	}
 };
-

@@ -96,3 +96,30 @@ void Splitter::render(NVGcontext* vg) {
         nvgRestore(vg);
     }
 }
+
+void gui_scrollbar::setScrollOffset(float f) {
+	float fRange = getScrollRange();
+	if (fRange <= 0) {
+		f = 0;
+	}
+	//if (fRange == 0 && prevScrollRange == 0) {
+	//	return;
+	//}
+	float _newOffset = f < 0 ? 0 : f > 1 ? 1 : f;
+	//if (_newOffset == 0 && prevSetOffset == 0) {
+	//	return;
+	//}
+	bool canSkip = math::abs(fRange - prevScrollRange) < 1 && math::abs(scrollOffset - _newOffset) < 0.001f;
+	if (canSkip) {
+		static int skipped = 0;
+		skipped++;
+		if (skipped % 20 == 0) {
+			log_printf("setScrollOffset skipped %d\n", skipped);
+		}
+		return;
+	}
+	prevScrollRange = fRange;
+	prevSetOffset = scrollOffset;
+	scrollOffset = _newOffset;
+	ctr.scrollOffsetChanged(dir, scrollOffset);
+}
