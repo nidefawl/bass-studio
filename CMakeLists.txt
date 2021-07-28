@@ -4,7 +4,7 @@ message (STATUS "CMake version: ${CMAKE_VERSION}")
 set(DAW_SRC_PATH "${CMAKE_SOURCE_DIR}/src")
 set(BUILD_NAME "DAW")
 set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT ${BUILD_NAME})
-# set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${BUILD_NAME})
+
 project(${BUILD_NAME} C CXX)
 option(BUILD_HOST "Build daw" ON)
 option(BUILD_TESTS "Build tests" OFF)
@@ -14,14 +14,14 @@ option(BUILD_GUI_TEST "Build test app" OFF)
 option(BUILD_RGB_MASTER "Build rgb master" OFF)
 
 if (BUILD_TESTS OR BUILD_SCANNER OR BUILD_CMDLINE_HOST OR BUILD_GUI_TEST OR BUILD_RGB_MASTER)
-set(BUILD_DAW_LIB ON)
+    set(BUILD_DAW_LIB ON)
 else()
-set(BUILD_DAW_LIB OFF)
+    set(BUILD_DAW_LIB OFF)
 endif ()
 
 #set(BUILD_DAW_LIB ON) #override
 
-if (NOT CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
+if (NOT MSVC)
     set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CMAKE_COMMAND} -E time")
     set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "${CMAKE_COMMAND} -E time")
 endif()
@@ -44,6 +44,7 @@ list(APPEND MM_SRC_FILES "")
 if (APPLE)
 	file(GLOB_RECURSE MM_SRC_FILES src/*.mm)
 endif (APPLE)
+
 foreach(f ${HDR_ALL_FILES})
     if (f MATCHES ".*/tests/[^/]*$")
         continue()
@@ -140,7 +141,8 @@ set(SRC_FILES_SUBDIR_FILES
     src/file/themefile.cpp
     src/file/appsettingsfile.cpp
 )
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+
+if (NOT MSVC)
     set_source_files_properties(${SRC_FILES_SUBDIR_FILES} PROPERTIES COMPILE_OPTIONS "-g;-O")
     set(SRC_FILES_OPTIMIZE 
         src/gl/gl_path.cpp
@@ -150,8 +152,6 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" STRE
         src/host/track_graph.cpp
     )
     set_source_files_properties(${SRC_FILES_OPTIMIZE} PROPERTIES COMPILE_OPTIONS "-g;-O")
-endif()
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     set(SRC_FILES_NO_OPTIMIZE 
         src/host/plugin/vst_plugin_dispatch.cpp
     )
@@ -162,24 +162,30 @@ set(CPP_SRC_FILES ${SRC_FILES_SUBDIR_FILES} ${CPP_SRC_FILES} ${MM_SRC_FILES})
 set(ALL_SRC_FILES ${CPP_SRC_FILES})
 list(APPEND ALL_SRC_FILES ${C_SRC_FILES})
 list(APPEND ALL_SRC_FILES ${HDR_FILES})
-source_group(TREE ${DAW_SRC_PATH} PREFIX "src" FILES ${ALL_SRC_FILES})
 
 set(GENERATED_SRC_FILES "${CMAKE_BINARY_DIR}/buildinfo.cpp")
+list(APPEND CPP_SRC_FILES ${GENERATED_SRC_FILES})
+source_group(TREE ${DAW_SRC_PATH} PREFIX "src" FILES ${ALL_SRC_FILES})
 source_group("generated" FILES ${GENERATED_SRC_FILES})
 
-list(APPEND CPP_SRC_FILES ${GENERATED_SRC_FILES})
-
 list(APPEND RESOURCE_FILES "")
-if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-list(APPEND RESOURCE_FILES "src/icon_resource.h" "src/icon.rc")
+if (MSVC)
+    list(APPEND RESOURCE_FILES "src/icon_resource.h" "src/icon.rc")
 endif()
-#build a fat library only when tests are enabled
-#if tests are disabled we link objects directly to output executable (faster)
+
+#build a fat library only if BUILD_DAW_LIB is ON
+#if BUILD_DAW_LIB is OFF we link objects directly to output executable (faster)
 if (BUILD_DAW_LIB) 
-set(LINK_TARGET "dawlib")
+    set(LINK_TARGET "dawlib")
 else()
-set(LINK_TARGET ${BUILD_NAME})
+    set(LINK_TARGET ${BUILD_NAME})
 endif()
+
+include("includes.cmake")
+include("libs.cmake")
+
+# instead of an installation step we only copy the exectuable to APP_WORKING_DIR
+set(APP_WORKING_DIR "../../run/" CACHE PATH "output directory")
 
 message(STATUS "${BUILD_HOST} Build daw")
 message(STATUS "${BUILD_TESTS} Build tests")
@@ -193,30 +199,8 @@ message(STATUS "BUILD_NAME ${BUILD_NAME}")
 message(STATUS "LINK_TARGET ${LINK_TARGET}")
 message(STATUS "CMAKE_CXX_COMPILER_ID ${CMAKE_CXX_COMPILER_ID}")
 message(STATUS "CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE}")
+message(STATUS "APP_WORKING_DIR ${APP_WORKING_DIR}")
 
-# target_link_libraries(${LINK_TARGET} PUBLIC ${GLFW_LIB} ${SQLITECPP_LIB} ${SOXR_LIB} ${PORTAUDIO_LIB})
-
-include("includes.cmake")
-include("libs.cmake")
-
-
-set(DAW_WORKING_DIR "../../run/" CACHE PATH "output directory")
-get_filename_component(ABS_WORKING_DIR "${DAW_WORKING_DIR}"
-                       REALPATH BASE_DIR "${CMAKE_BINARY_DIR}")
-message(STATUS "DAW_WORKING_DIR ${DAW_WORKING_DIR}")
-message(STATUS "ABS_WORKING_DIR ${ABS_WORKING_DIR}")
-
-FUNCTION(SET_APP_BUILD appname)
-    set(tmp1 "${appname}-${BUILD_BINARY_SUFFIX}")
-    set_target_properties(${appname} PROPERTIES OUTPUT_NAME ${tmp1})
-    set_target_properties(${appname} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${DAW_WORKING_DIR}$<$<CONFIG:Debug>:>)
-    set_target_properties(${appname} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ${DAW_WORKING_DIR})
-    set_target_properties(${appname} PROPERTIES OUTPUT_NAME_DEBUG "${appname}-${CMAKE_CXX_COMPILER_ID}-debug${OUTPUT_BINARY_SUFFIX}" )
-    set_target_properties(${appname} PROPERTIES OUTPUT_NAME_RELEASE "${appname}-${CMAKE_CXX_COMPILER_ID}-release${OUTPUT_BINARY_SUFFIX}" )
-    set_target_properties(${appname} PROPERTIES OUTPUT_NAME_MINSIZEREL "${appname}-${CMAKE_CXX_COMPILER_ID}-minsizerel${OUTPUT_BINARY_SUFFIX}" )
-    set_target_properties(${appname} PROPERTIES OUTPUT_NAME_RELWITHDEBINFO "${appname}-${CMAKE_CXX_COMPILER_ID}-relwithdebinfo${OUTPUT_BINARY_SUFFIX}" )
-
-ENDFUNCTION(SET_APP_BUILD)
 
 if (BUILD_DAW_LIB) 
     add_library("dawlib" STATIC ${CPP_SRC_FILES} ${C_SRC_FILES} ${HDR_FILES})
@@ -225,11 +209,13 @@ if (BUILD_DAW_LIB)
 endif()
 
 if (BUILD_DAW_LIB) 
-add_executable(${BUILD_NAME} "src/host/main_daw.cpp" ${RESOURCE_FILES})
-target_link_libraries(${BUILD_NAME} PUBLIC "dawlib")
+    add_executable(${BUILD_NAME} "src/host/main_daw.cpp" ${RESOURCE_FILES})
+    target_link_libraries(${BUILD_NAME} PUBLIC "dawlib")
 else()
-add_executable(${BUILD_NAME} "src/host/main_daw.cpp" ${RESOURCE_FILES} ${CPP_SRC_FILES} ${C_SRC_FILES} ${HDR_FILES})
+    add_executable(${BUILD_NAME} "src/host/main_daw.cpp" ${RESOURCE_FILES} ${CPP_SRC_FILES} ${C_SRC_FILES} ${HDR_FILES})
 endif()
+
+# define main exectuable
 SET_APP_BUILD(${BUILD_NAME})
 ADD_POST_BUILD_COMMANDS(${BUILD_NAME})
 
@@ -242,64 +228,62 @@ target_link_libraries(${LINK_TARGET} PUBLIC optimized ${PORTAUDIO_LIB_RELEASE} d
 target_link_libraries(${LINK_TARGET} PUBLIC optimized ${PORTMIDI_LIB_RELEASE} debug ${PORTMIDI_LIB_DEBUG})
 
 if (LINUX)
-target_link_libraries(${LINK_TARGET} PRIVATE ${X11_X11_LIB} ${CMAKE_THREAD_LIBS_INIT} ${CMAKE_DL_LIBS} ${ALSA_LIBRARY} ${GTK3_LIBRARIES} GL rt m)
+    target_link_libraries(${LINK_TARGET} PRIVATE ${X11_X11_LIB} ${CMAKE_THREAD_LIBS_INIT} ${CMAKE_DL_LIBS} ${ALSA_LIBRARY} ${GTK3_LIBRARIES} GL rt m)
 endif(LINUX)
 if (APPLE)
-
-
-target_link_libraries(${LINK_TARGET} PRIVATE 
-	${CMAKE_THREAD_LIBS_INIT} 
-	${CMAKE_DL_LIBS} 
-	${APPLE_COREMIDI_LIBRARY}
-	${APPLE_COREVIDEO_LIBRARY}
-	${APPLE_OPENGL_LIBRARY}
-	${APPLE_IOKIT_LIBRARY}
-	${APPLE_COCOA_LIBRARY}
-    ${APPLE_CARBON_LIBRARY}
-    ${APPLE_FOUNDATION_LIBRARY}
-	${APPLE_AUDIOUNIT_LIBRARY}
-	${APPLE_AUDIOTOOLBOX_LIBRARY}
-	${APPLE_COREAUDIO_LIBRARY}
-	m)
+    target_link_libraries(${LINK_TARGET} PRIVATE 
+        ${CMAKE_THREAD_LIBS_INIT} 
+        ${CMAKE_DL_LIBS} 
+        ${APPLE_COREMIDI_LIBRARY}
+        ${APPLE_COREVIDEO_LIBRARY}
+        ${APPLE_OPENGL_LIBRARY}
+        ${APPLE_IOKIT_LIBRARY}
+        ${APPLE_COCOA_LIBRARY}
+        ${APPLE_CARBON_LIBRARY}
+        ${APPLE_FOUNDATION_LIBRARY}
+        ${APPLE_AUDIOUNIT_LIBRARY}
+        ${APPLE_AUDIOTOOLBOX_LIBRARY}
+        ${APPLE_COREAUDIO_LIBRARY}
+        m)
 endif(APPLE)
 if (WIN32)
-target_link_libraries(${LINK_TARGET} PRIVATE dbghelp winmm opengl32 kernel32 gdi32 ole32 uuid comdlg32 setupapi mswsock ws2_32)
+    target_link_libraries(${LINK_TARGET} PRIVATE dbghelp winmm opengl32 kernel32 gdi32 ole32 uuid comdlg32 setupapi mswsock ws2_32)
 endif(WIN32)
 
 
 
 
 if (BUILD_SCANNER) 
-project("vstscanner" C CXX)
-add_executable("vstscanner" "src/host/main_scanner.cpp")
-SET_APP_BUILD("vstscanner")
-target_link_libraries("vstscanner" PUBLIC "dawlib")
-ADD_POST_BUILD_COMMANDS("vstscanner")
+    project("vstscanner" C CXX)
+    add_executable("vstscanner" "src/host/main_scanner.cpp")
+    SET_APP_BUILD("vstscanner")
+    target_link_libraries("vstscanner" PUBLIC "dawlib")
+    ADD_POST_BUILD_COMMANDS("vstscanner")
 endif()
 
 if (BUILD_CMDLINE_HOST) 
-project("host" C CXX)
-add_executable("host" "src/host/main_cmdline.cpp")
-SET_APP_BUILD("host")
-target_link_libraries("host" PUBLIC "dawlib")
-ADD_POST_BUILD_COMMANDS("host")
+    project("host" C CXX)
+    add_executable("host" "src/host/main_cmdline.cpp")
+    SET_APP_BUILD("host")
+    target_link_libraries("host" PUBLIC "dawlib")
+    ADD_POST_BUILD_COMMANDS("host")
 endif()
 
 if (BUILD_GUI_TEST) 
-project("guitest" C CXX)
-add_executable("guitest" "src/host/main_test.cpp")
-SET_APP_BUILD("guitest")
-target_link_libraries("guitest" PUBLIC "dawlib")
-ADD_POST_BUILD_COMMANDS("guitest")
+    project("guitest" C CXX)
+    add_executable("guitest" "src/host/main_test.cpp")
+    SET_APP_BUILD("guitest")
+    target_link_libraries("guitest" PUBLIC "dawlib")
+    ADD_POST_BUILD_COMMANDS("guitest")
 endif()
 
 
 if (BUILD_RGB_MASTER) 
-project("rgbmaster" C CXX)
-add_executable("rgbmaster" "src/rgb/main_rgb_master.cpp")
-SET_APP_BUILD("rgbmaster")
-target_link_libraries("rgbmaster" PUBLIC "dawlib")
-ADD_POST_BUILD_COMMANDS("rgbmaster")
+    project("rgbmaster" C CXX)
+    add_executable("rgbmaster" "src/rgb/main_rgb_master.cpp")
+    SET_APP_BUILD("rgbmaster")
+    target_link_libraries("rgbmaster" PUBLIC "dawlib")
+    ADD_POST_BUILD_COMMANDS("rgbmaster")
 endif()
 
 if (BUILD_TESTS)
@@ -307,22 +291,14 @@ if (BUILD_TESTS)
   ADD_SUBDIRECTORY( src/tests )
 endif()
 
+# march=native optimzation. Turn off for dist build
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG("-march=native" COMPILER_SUPPORTS_MARCH_NATIVE)
 if(COMPILER_SUPPORTS_MARCH_NATIVE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
 endif()
 
-get_property(BUILD_COMPILE_OPTIONS        DIRECTORY  PROPERTY COMPILE_OPTIONS)
-get_property(BUILD_COMPILE_DEFS           DIRECTORY  PROPERTY COMPILE_DEFINITIONS)
-get_property(BUILD_CXX_STANDARD           TARGET ${BUILD_NAME}  PROPERTY CXX_STANDARD)
-string(TOUPPER ${CMAKE_BUILD_TYPE} BUILD_TYPE_SUFFIX)
-separate_arguments(GLOBAL_FLAGS UNIX_COMMAND "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_${BUILD_TYPE_SUFFIX}}")
-list(APPEND BUILD_COMPILE_OPTIONS ${GLOBAL_FLAGS})
-list(APPEND BUILD_COMPILE_OPTIONS -std=c++${BUILD_CXX_STANDARD})
-string(REPLACE ";" " " BUILD_COMPILE_OPTIONS "${BUILD_COMPILE_OPTIONS}")
-string(REPLACE ";" " -D" BUILD_COMPILE_DEFS "-D${BUILD_COMPILE_DEFS}")
-CONFIGURE_FILE( src/app/buildinfo.cpp.in ${CMAKE_BINARY_DIR}/buildinfo.cpp ESCAPE_QUOTES)
+GENERATE_BUILDINFO_CPP()
 
 if (BUILD_TESTS)
     if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
