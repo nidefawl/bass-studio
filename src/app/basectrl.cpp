@@ -486,11 +486,8 @@ void AppCtrl::onAppTick() {
 }
 void AppCtrl::destroyControl() {
 	closeAllContextMenus();
-	if (this->ctxtmenu) {
-		dbgassert(contextWindow);
-		contextWindow->getCtrl()->closePopup();
-		dbgassert(!this->ctxtmenu);
-	}
+	dbgassert(!contextWindow);
+	dbgassert(!this->ctxtmenu);
 	for (auto gui : garbageGuis) {
 		delete gui;
 	}
