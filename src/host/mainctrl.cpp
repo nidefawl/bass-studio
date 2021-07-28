@@ -1510,6 +1510,7 @@ String getProjectAutosaveFilename(String projectPath) {
 		int count = 1;
 		while (FileExists(tmpPath)) {
 			tmpPath = toUserdataPath(StringFormat("unsaved-%d.project", count));
+			count++;
 		}
 		bakPathName = tmpPath;
 	} else {
