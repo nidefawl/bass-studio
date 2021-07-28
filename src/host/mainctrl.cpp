@@ -264,7 +264,6 @@ std::shared_ptr<guictr_layout> makeTabListCtr2() {
 }
 class DawViewContainersCompanion : public DawViewContainers {
 	DawCtrl* const dawCtrl;
-	guictr_noteeditor noteeditor;
 public:
 	guictr_menubar ctr_menu;
 	guictr_nodes_splitview ctr_nodes;
@@ -275,11 +274,10 @@ public:
 	DawViewContainersCompanion(DawCtrl* const _dawCtrl, ngui::MenuBar& menubar, DAW::Cursor& _cursor, DAW::TrackSelection& _trackSelection, project_t& _project, project_globals_t& _projectGlobals, scaled_grid& grid, clip_view& clipView, dragdrop_midifile& dragdropclip)
 	  :
 	  dawCtrl(_dawCtrl),
-      noteeditor(clipView),
 	  ctr_menu(menubar),
 	  ctr_nodes(_cursor, _project, dragdropclip),
 	  ctr_tracks2(_dawCtrl, _cursor, _trackSelection, _project, _projectGlobals, grid, dragdropclip),
-	  ctr_clipeditor(noteeditor, clipView),
+	  ctr_clipeditor(clipView),
 	  ctr_dnd_test(makeDnDTestCtr()),
 	  splitterCenter(0, 0.8f)
 	{
@@ -343,7 +341,6 @@ public:
 };
 class DawViewContainersMain : public DawViewContainers {
 	MainCtrl* const mainCtrl;
-	guictr_noteeditor noteeditor;
 public:
 	guictr_menubar ctr_menu;
 	guictr_tempocontrols ctr_tempo;
@@ -351,8 +348,8 @@ public:
 	guictr_test ctr_test;
 	gui_statusbar statusbar;
 	guictr_pluginview ctr_pluginview;
-	guictr_clipeditorview ctr_clipeditorview;
 	guictr_clipeditor ctr_clipeditor;
+	guictr_clipeditorview ctr_clipeditorview;
 	guictr_tracks ctr_tracks;
 	guictr_nodes_splitview ctr_nodes;
 	std::shared_ptr<guictr_layout> ctr_layoutLeft;
@@ -364,12 +361,11 @@ public:
 	DawViewContainersMain(MainCtrl* const _mainCtrl, ngui::MenuBar& menubar, DAW::Cursor& _cursor, DAW::TrackSelection& _trackSelection, project_t& _project, project_globals_t& _projectGlobals, scaled_grid& grid, clip_view& clipView, dragdrop_midifile& dragdropclip)
 	  :
 	  mainCtrl(_mainCtrl),
-	  noteeditor(clipView),
 	  ctr_menu(menubar),
 	  ctr_tempo(_project, _projectGlobals),
 	  ctr_pluginview(&ctr_plugins),
-	  ctr_clipeditorview(noteeditor),
-	  ctr_clipeditor(noteeditor, clipView),
+	  ctr_clipeditor(clipView),
+	  ctr_clipeditorview(ctr_clipeditor.noteeditor),
 	  ctr_tracks(_mainCtrl, _cursor, _trackSelection, _project, _projectGlobals, grid, dragdropclip),
 	  ctr_nodes(_cursor, _project, dragdropclip),
 	  ctr_stack_right()

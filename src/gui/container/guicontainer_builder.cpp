@@ -13,6 +13,7 @@ guictr_base* makeGuiPluginsLoadedList();
 guictr_base* makeGuiEffectLibrary();
 guictr_base* makeGuiPerformance();
 guictr_base* makeGuiExport();
+guictr_base* makeGuiClipEditor();
 
 bool getContainerLabel(container_type type, String& out) {
 	switch (type) {
@@ -58,6 +59,9 @@ bool getContainerLabel(container_type type, String& out) {
 		case CTR_TYPE_EXPORT:
 			out = "Export Audio";
 			return true;
+		case CTR_TYPE_CLIPEDITOR:
+			out = "Clip Editor";
+			return true;
 		default:
 			break;
 	}
@@ -97,6 +101,9 @@ std::map<container_type, ContainerBuilder>& getContainerFactory() {
 		};
 		containerFactory[container_type::CTR_TYPE_EXPORT] = []() {
 			return std::shared_ptr<guictr_base>(makeGuiExport());
+		};
+		containerFactory[container_type::CTR_TYPE_CLIPEDITOR] = []() {
+			return std::shared_ptr<guictr_base>(makeGuiClipEditor());
 		};
 #endif
 		containerFactory[container_type::CTR_TYPE_PROPERTIES] = []() {

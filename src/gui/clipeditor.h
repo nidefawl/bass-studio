@@ -308,15 +308,15 @@ public:
 class guictr_clipeditor : public guictr_base {
 	clip_view& view;
 public:
+	guictr_noteeditor noteeditor;
 	gui_clipsettings settings;
 	gui_arp arp;
-	guictr_noteeditor& noteeditor;
-	guictr_clipeditor(guictr_noteeditor& _noteeditor, clip_view& _view)
+	guictr_clipeditor(clip_view& _view)
 	: guictr_base(),
 	  view(_view),
-	  settings(_noteeditor.grid, _view),
-	  arp(_view),
-	  noteeditor(_noteeditor)
+	  noteeditor(view),
+	  settings(noteeditor.grid, _view),
+	  arp(_view)
 	{
 		setBackgroundRendered(true);
 		setBackgroundRenderedInset(false);

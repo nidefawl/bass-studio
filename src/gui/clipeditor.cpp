@@ -1513,4 +1513,7 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
 	return false;
 }
 
+guictr_base* makeGuiClipEditor() {
+	return new guictr_clipeditor(MainCtrl::get()->getClipView());
+}
 

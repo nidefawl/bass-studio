@@ -27,9 +27,10 @@ enum container_type : int32_t {
 	CTR_TYPE_DEBUG_1,
 	CTR_TYPE_DEBUG_2,
 	CTR_TYPE_PERFORMANCE,
-	CTR_TYPE_EXPORT
+	CTR_TYPE_EXPORT,
+	CTR_TYPE_CLIPEDITOR
 };
-#define CTR_TYPE_COUNT (static_cast<int>(container_type::CTR_TYPE_EXPORT)+1)
+#define CTR_TYPE_COUNT (static_cast<int>(container_type::CTR_TYPE_CLIPEDITOR)+1)
 
 class guictr_base : public guibase {
 protected:
