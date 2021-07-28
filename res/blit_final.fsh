@@ -58,32 +58,60 @@ float luminance(vec3 rgb)
 {
     return dot(rgb, vec3(0.2125, 0.7154, 0.0721));
 }
+//note: uniformly distributed, normalized rand, [0;1[
+float nrand( vec2 n )
+{
+	return fract(sin(dot(n.xy, vec2(12.9898, 78.233)))* 43758.5453);
+}
+float n3rand( vec2 n, float rt )
+{
+	float t = fract( rt );
+	float nrnd0 = nrand( n + 0.07*t );
+	float nrnd1 = nrand( n + 0.11*t );
+	float nrnd2 = nrand( n + 0.13*t );
+	return (nrnd0+nrnd1+nrnd2) / 3.0;
+}
 const float u_bpm = 128.0;
-void main(void) {
-	float fTimeSeconds = u_time;
-	
-	vec3 c0 = texture(tex0, pass_texcoord).rgb*0.01;
-	//c = max(vec3(0.0), vec3(1.0)-c);
-	float fTm1 = triFade(fTimeSeconds, bpm2Tm(u_bpm)*16.0, bpm2Tm(u_bpm)*16.0);
-	// float fTm2 = triFade(fTimeSeconds, bpm2Tm(u_bpm)*1212.0, bpm2Tm(u_bpm)*1212.0);
-	vec3 c1 = pow(c0, vec3(0.7));
-#if 1
-	float vign = vignette(pass_texcoord.xy);
+vec3 shade1(float fTime, vec2 tc) {
+	vec3 c0 = texture(tex0, tc).rgb*0.01;
+	float fTm1 = triFade(fTime, bpm2Tm(u_bpm)*16.0, bpm2Tm(u_bpm)*16.0);
+	float fTm2 = triFade(fTime, bpm2Tm(u_bpm)*32.0, bpm2Tm(u_bpm)*32.0);
+	vec3 c1 = pow(c0, vec3(2.7));
+	float vign = vignette(tc.xy);
 	float vignStrong = pow(vign, 8.0);
 	vec2 texDim = textureSize(tex0, 0);
 	float texStp = ((vign)*fTm1*4.0)/texDim.x;
-	vec3 sampleA = sampleShifted(tex0, pass_texcoord.st, vec2(texStp*1, 0), vec2(00), vec2(texStp*-1, 0));
-	out_Color = vec4(mix(c1, sampleA, vignStrong), 1.0);
-	float neigLum = luminance(sampleNeigbours(tex0, pass_texcoord, 4)*(1.0/600.0));
-	// mod((pass_texcoord.x+fTm1), 1.0)*5.0
-    vec3 paletteColor2 = pow(paletteIdx( vign+dot(c1.rgb, sampleA.rgb)*0.6, 5. ), vec3(1.7));
-	out_Color.rgb = pow((out_Color.rgb+paletteColor2.rgb)*0.5, vec3(0.7));
-	if (c0.r > 1 || c0.g > 1 || c0.b > 1) {
-		// out_Color.rgb=vec3(1,0,1);
-	}
+	vec3 sampleA = sampleShifted(tex0, tc.st, vec2(texStp*1, 0), vec2(00), vec2(texStp*-1, 0));
+	vec3 colFinal = mix(c1, sampleA, vignStrong);
+    vec3 paletteColor2 = pow(paletteIdx( vign, 5. ), vec3(1.7));
+	return pow((colFinal-paletteColor2*0.1-vign*0.1), vec3(1.0/2.2));
+}
+vec3 shade2(float fTime, vec2 tc) {
+	float normalizedNoise = n3rand( tc.xy, fTime );
+	float normalizedNoise2 = n3rand( (vec2(1.0)-tc.xy)*1.4+vec2(0.3) , fTime );
+	float antiBandingDither = (-0.5+2.0*normalizedNoise)/256.0; // for 8 bit output
 
-	// out_Color = vec4(vec3(neigLum), 1.0);
-#else
-	out_Color = vec4(c, 1.0);
-#endif
+	vec3 c0 = texture(tex0, tc).rgb*0.1;
+	float fTm1 = triFade(fTime, bpm2Tm(u_bpm)*16.0, bpm2Tm(u_bpm)*16.0);
+	float fTm2 = triFade(fTime, bpm2Tm(u_bpm)*32.0, bpm2Tm(u_bpm)*32.0);
+	vec3 c1 = pow(c0, vec3(0.7));
+	float vign = vignette(tc.xy);
+	float vignStrong = pow(vign, 8.0);
+	vec2 texDim = textureSize(tex0, 0);
+	float texStp = ((vign)*fTm1*23.0)/texDim.x;
+	vec3 sampleA = sampleShifted(tex0, tc.st, vec2(texStp*1, 0), vec2(0.), vec2(texStp*-1, 0))*0.2;
+	// vec3 colFinal = mix(c1, sampleA, vignStrong);
+	// float neigLum = luminance(sampleNeigbours(tex0, tc, 4)*(1.0/600.0));
+
+	vec3 colFinal = pow(
+		paletteIdx( (0.2+(fTm2*vign)*0.13)*20.8+ normalizedNoise2*0.05 , 4. )*0.5	
+		+ sampleA, 
+		vec3(2.7));
+
+	// mod((tc.x+fTm1), 1.0)*5.0
+	return pow(colFinal, vec3(1.0/2.2)) + vec3(antiBandingDither);
+}
+void main(void) {
+	float fTm1 = triFade(u_time+bpm2Tm(u_bpm)*8.0, bpm2Tm(u_bpm)*16.0, bpm2Tm(u_bpm)*16.0);
+	out_Color = vec4(shade2(u_time, pass_texcoord), 1.0);
 }
