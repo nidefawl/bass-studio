@@ -123,3 +123,36 @@ void gui_scrollbar::setScrollOffset(float f) {
 	scrollOffset = _newOffset;
 	ctr.scrollOffsetChanged(dir, scrollOffset);
 }
+
+void Splitter::handleDraggedMove(MouseEvent& evt) {
+	ivec2 windowSize;
+	ivec2 mpos;
+	if (notifyCtrl) {
+		windowSize = notifyCtrl->getContainerSize();
+		mpos = evt.mousepos-this->parent->toScreenSpace(ivec2(0));
+	} else {
+		windowSize = parentCtrl->getScaledSize();
+		mpos = evt.mousepos;
+	}
+	float sc = type == 0 ? (mpos.y / (float) (windowSize.y)) : (mpos.x / (float) (windowSize.x));
+	int clampedAt = 0;
+	if (sc < scaleMin) {
+		clampedAt = -1;
+	}
+	if (sc > scaleMax) {
+		clampedAt = 1;
+	}
+	this->scale = (sc < scaleMin ? scaleMin : sc > scaleMax ? scaleMax : sc);
+	if (notifyCtrl) {
+		notifyCtrl->handleSplitterChanged(*this, this->scale, clampedAt);
+	} else {
+		parentCtrl->relayout(); //TODO: this sucks, triggers a complete relayout
+	}
+}
+template<typename T>
+void addPropertiesFromGui(T& gui, Table::tbl* table);
+template<>
+void addPropertiesFromGui(Splitter& gui, Table::tbl* table);
+void Splitter::addProperties(Table::tbl* table) {
+	addPropertiesFromGui(*this, table);
+}

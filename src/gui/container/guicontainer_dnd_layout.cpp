@@ -8,6 +8,7 @@
 #include <cereal/archives/json.hpp>
 #include <cereal/types/vector.hpp>
 #include <cereal/types/polymorphic.hpp>
+#include <cereal/cereal_optional_nvp.hpp>
 
 
 static const int32_t dropIndicatorWidth = 8;
@@ -283,18 +284,19 @@ void guictr_layout::layout() {
 		axis.y = 1.0f;
 		break;
     }
+
     static const int32_t handleHeight = 20;
     static const int32_t paddingHandle = 1;
-    static const int32_t padding = 1;
     float tabW = segSizeF.x;
     int32_t entryIdx = 0;
 	if (this->ctrLayout == container_layout::TABBED) {
         axis.x = 1;
+        static const int32_t ctrPadding = 1;
 		for (auto &entry : entries) {
 			auto *gui = entry->getGui();
 			auto *guiHandle = entry->getHandle();
-            entry->pos = gui->pos = ivec2(padding) + ivec2(0, handleHeight);
-            entry->size = gui->size = math::maxvec2(cs - ivec2(padding * 2) - ivec2(0, handleHeight), ivec2(4, 4));
+            entry->pos = gui->pos = ivec2(ctrPadding) + ivec2(0, handleHeight);
+            entry->size = gui->size = math::maxvec2(cs - ivec2(ctrPadding * 2) - ivec2(0, handleHeight), ivec2(4, 4));
 			if (guiHandle) {
                 guiHandle->pos = ivec2((float)entryIdx * vec2(tabW, 0) + vec2(paddingHandle, 0));
                 guiHandle->size = ivec2(math::maxvec2f(vec2(tabW, handleHeight), vec2(4, 4)) - vec2(paddingHandle * 2, 0));
@@ -306,15 +308,42 @@ void guictr_layout::layout() {
             int controlHeight = entry->hasHandle ? handleHeight : 0;
 			auto *gui = entry->getGui();
 			auto *guiHandle = entry->getHandle();
+		    static const int32_t ctrPadding = guiHandle && entry->hasHandle ? 1 : 0;
+			vec2 segPos = vec2((float)entryIdx * segSizeF * axis);
+			if (this->ctrLayout == container_layout::SPLIT_V || this->ctrLayout == container_layout::SPLIT_H) {
+				float curScale = 1.0f;
+				if (splitters.size() > entryIdx) {
+					curScale = splitters[entryIdx]->scale;
+				}
+				float prevScale = 0.0f;
+				if (entryIdx-1 >= 0) {
+					prevScale = splitters[entryIdx-1]->scale;
+				}
+				segSizeF = (curScale-prevScale)*vec2(cs)*axis + vec2(cs)*vec2(axis.y, axis.x);
+				if (entryIdx-1 >= 0) {
+					segPos = splitters[entryIdx-1]->scale*vec2(cs)*axis;
+				}
+				if (this->ctrLayout == container_layout::SPLIT_V) {
+					tabW = segSizeF.x;
+				}
+			}
+            entry->pos = gui->pos = ivec2(segPos + vec2(0, controlHeight) + vec2(ctrPadding));
+            entry->size = gui->size = ivec2(math::maxvec2f(segSizeF - vec2(ctrPadding * 2) - vec2(0, controlHeight), vec2(4, 4)));
 			if (guiHandle && entry->hasHandle) {
-                entry->pos = gui->pos = ivec2(vec2((float)entryIdx * segSizeF * axis) + vec2(0, controlHeight) + vec2(padding));
-                entry->size = gui->size = ivec2(math::maxvec2f(segSizeF - vec2(padding * 2) - vec2(0, controlHeight), vec2(4, 4)));
-                guiHandle->pos = ivec2(vec2((float)entryIdx * segSizeF * axis) + vec2(paddingHandle, 0));
+                guiHandle->pos = ivec2(segPos + vec2(paddingHandle, 0));
                 guiHandle->size = ivec2(vec2(tabW, controlHeight) - vec2(paddingHandle * 2, 0));
-            } else {
-                entry->pos = gui->pos = ivec2(vec2((float)entryIdx * segSizeF * axis) + vec2(0, controlHeight) + vec2(0));
-                entry->size = gui->size = ivec2(math::maxvec2f(segSizeF - vec2(0) - vec2(0, controlHeight), vec2(4, 4)));
             }
+			if (entryIdx > 0 && splitters.size() > entryIdx - 1) {
+				ivec2 splitterPos = entry->pos;
+				ivec2 splitterSize = entry->size;
+				if (guiHandle && entry->hasHandle) {
+					splitterPos = guiHandle->pos;
+					splitterSize = entry->size+guiHandle->size;
+				}
+				splitters[entryIdx - 1]->pos = splitterPos - ivec2(vec2(5) * axis);
+				auto invAxis = ivec2(axis.y, axis.x);
+				splitters[entryIdx - 1]->size = (splitterSize) * invAxis + ivec2(vec2(10) * axis);
+			}
 			entryIdx++;
 		}
 	}
@@ -429,11 +458,92 @@ void i_ctr_drop_area::render(NVGcontext* vg) {
 	renderText(vg, pos.x, pos.y+size.y/2, 300, StringAsCStr(this->label));
 }
 
+Splitter* guictr_layout::getSplitter(int32_t pos) {
+	return splitters[pos].get();
+}
+template<typename T>
+void updateSplitterMinMax(T& splitters) {
+	float off = 1.0f / (splitters.size()+1);
+	int numSplitters = splitters.size();
+	const float margin = off*0.2f;
+	for (int i = 0; i < numSplitters; ++i) {
+		auto& splitter = splitters[i];
+		const float prevScalePos = (i - 1 >= 0            ? splitters[i - 1]->scale : 0.0f) + margin;
+		const float nextScalePos = (i + 1 <  numSplitters ? splitters[i + 1]->scale : 1.0f) - margin;
+		splitter->setMinMax(prevScalePos, nextScalePos);
+	}
+}
+std::vector<float> guictr_layout::getSplitterPositions() {
+	std::vector<float> splitterPos;
+	splitterPos.reserve(splitters.size());
+	for (auto &splitter : splitters) {
+		splitterPos.push_back(splitter->scale);
+	}
+	return splitterPos;
+}
+
+void guictr_layout::setSplitterPositions(std::vector<float>& splitterPositons) {
+	if (splitterPositons.size() == this->splitters.size()) {
+		for (size_t i = 0; i < splitterPositons.size(); ++i) {
+			splitters[i]->scale = splitterPositons[i];
+		}
+		updateSplitterMinMax(splitters);
+	}
+}
+
+void guictr_layout::updateSplitters() {
+	for (auto& splitter : splitters) {
+		if (splitter->parent) {
+			guictr_base::remove(splitter.get());
+		}
+	}
+	splitters.clear();
+	int numSplitters = entries.size() - 1;
+	if (numSplitters <= 0)
+		return;
+	if (this->ctrLayout == container_layout::SPLIT_H || this->ctrLayout == container_layout::SPLIT_V) {
+		int splitterLayout = ctrLayout == container_layout::SPLIT_V ? 1 : 0;
+		float off = 1.0f / (numSplitters+1);
+		for (int i = 0; i < numSplitters; ++i) {
+			float splitPos = off + i*off;
+			auto splitter = std::make_shared<Splitter>(splitterLayout, splitPos);
+			splitters.push_back(splitter);
+			splitter->setMinMax(splitPos-off*0.8f, splitPos+off*0.8f);
+			splitter->notifyCtrl = this;
+		}
+		updateSplitterMinMax(splitters);
+		for (auto& splitter : splitters) {
+			guictr_base::add(splitter.get());
+		}
+	}
+}
+void guictr_layout::handleSplitterChanged(Splitter& splitter, float scale, int clampedAt) {
+	updateSplitterMinMax(splitters);
+	layout();
+}
+ivec2 guictr_layout::getContainerSize() {
+	return size;
+}
+void guictr_layout::updateVisible() {
+	int32_t entryIdx = 0;
+	for (auto &entry : entries) {
+		entry->getGui()->setVisible(this->ctrLayout != container_layout::TABBED || entryIdx == this->activePosition);
+		entryIdx++;
+	}
+}
 
 bool guictr_layout::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 	if (this->contains(mpos)) {
 		ivec2 localMouse = this->toContainerSpace(mpos);
 		for (guibase *gui : handles) {
+			if (!gui->isVisible())
+				continue;
+
+			if (gui->mouseHitTest(localMouse, evt)) {
+				return true;
+			}
+		}
+		for (auto& gui : splitters) {
 			if (!gui->isVisible())
 				continue;
 
@@ -485,6 +595,7 @@ bool guictr_layout::getContainerRef(guictr_layout_entry* ctr, std::shared_ptr<gu
 		guictr_base::remove(guiHandle);
 	}
 	ctr->parentLayoutContainer = nullptr;
+	updateSplitters();
 	if (removedActive && this->ctrLayout == container_layout::TABBED) {
 		if (pos-1 >= 0 || entries.empty()) {
 			pos--;
@@ -516,17 +627,11 @@ void guictr_layout::addEntry(std::shared_ptr<guictr_layout_entry> ctr, int32_t p
 		handles.push_back(guiHandle);
 	}
 	ctr->parentLayoutContainer = this;
+	updateSplitters();
 }
 
 bool guictr_layout::placeContainer(std::shared_ptr<guictr_layout_entry> ctr, i_ctr_drop_area* area) {
-//	auto itHelper = std::find_if(dragdropContainerAreaHelpers.begin(), dragdropContainerAreaHelpers.end(),
-//			[area](std::shared_ptr<g_layout_ctr_drop_area>& e) {
-//				return e.get() == area;
-//			}
-//	);
-//	if (itHelper == dragdropContainerAreaHelpers.end()) {
-//		throw applogicexception("pointer area does not point to a member of this container");
-//	}
+
 	// prevent dropping into self
 	guibase *parent = this;
 	while (parent) {
@@ -535,36 +640,17 @@ bool guictr_layout::placeContainer(std::shared_ptr<guictr_layout_entry> ctr, i_c
 		}
 		parent = parent->parent;
 	}
-//	std::shared_ptr<g_layout_ctr_drop_area> &dropArea = *itHelper;
+
 	dock_pos dockPos = area->dockPos;
 	int32_t dockPosOffset = area->dockPosOffset;
 	auto updatedCtrLayout = dock_pos_to_container_layout(dockPos);
-	if (entries.size() > 1 && updatedCtrLayout != ctrLayout) {
-		// introduce new layer
-		log_printf("Introduce new layer\n", 0);
-		//			std::make_shared<guictr_layout> ctrLayoutNewLayer;
-		//			this->getContainerRef(ctr, out, remove)
-		switch (dockPos) {
-		case dock_pos::LEFT:
-			// set container layout to SPLIT_V, make this container right entry, entry to drop left
-			break;
-		case dock_pos::RIGHT:
-			break;
-		case dock_pos::TOP:
-			break;
-		case dock_pos::BOTTOM:
-			break;
-		}
-		return false;
-	}
+
 	std::shared_ptr<guictr_layout_entry> out;
 	if (ctr->parentLayoutContainer != nullptr) {
-		auto prevParent = ctr->parentLayoutContainer;
 		//undock from current container
 		if (!ctr->getContainerRef(out, true)) {
 			return false;
 		}
-//		prevParent->postContentChanged();
 	}
 	auto it = std::find(entries.begin(), entries.end(), ctr);
 	if (it != entries.end()) {
@@ -607,6 +693,7 @@ bool guictr_layout::placeContainer(std::shared_ptr<guictr_layout_entry> ctr, i_c
 		this->activePosition = newIdx;
 		updateVisible();
 	}
+	updateSplitters();
 
 	return true;
 }
@@ -672,6 +759,17 @@ void guictr_layout::render(NVGcontext* vg)
 			nvgRestore(vg);
 		}
 	}
+	for (auto& splitter : splitters) {
+		if (splitter->size.x <= 0 || splitter->size.y <= 0) {
+			log_printf("warning, skip rendering child container with size <= 0 0\n", 0);
+			continue;
+		}
+		{
+			nvgSave(vg);
+			splitter->render(vg);
+			nvgRestore(vg);
+		}
+	}
 }
 std::shared_ptr<guictr_layout_entry> guictr_layout::replaceContainerWith(guictr_base* ctr,
 		std::shared_ptr<guictr_layout> newContainer) {
@@ -710,7 +808,7 @@ std::shared_ptr<guictr_layout_entry> guictr_layout::replaceContainerWith(guictr_
 		handles.push_back(guiHandle);
 	}
 	entry1->parentLayoutContainer = this;
-
+	updateSplitters();
 	return entry;
 }
 
@@ -834,6 +932,7 @@ std::shared_ptr<dawview_layout_t> loadDawViewLayoutSnapshot(const String& path) 
 
 void storeContainerSnapshot(guictr_layout* ctrlayout, guictrlayout_snapshot_t* snapshot) {
 	auto& entries = ctrlayout->getEntries();
+	snapshot->splitterPositions = ctrlayout->getSplitterPositions();
 	snapshot->activePosition = ctrlayout->getActivePosition();
 	snapshot->ctrLayout = ctrlayout->getLayout();
 	snapshot->entries.reserve(entries.size());
@@ -851,14 +950,16 @@ void loadContainerSnapshot(guictr_layout* ctrlayout, guictrlayout_snapshot_t* sn
 		if (sharedEntry) {
 			ctrlayout->addEntry(sharedEntry, -2);
 		}
-		ctrlayout->setActiveEntry(snapshot->activePosition);
-//		ctrlayout->postContentChanged();
 	}
+	ctrlayout->setSplitterPositions(snapshot->splitterPositions);
+	ctrlayout->setActiveEntry(snapshot->activePosition);
+//		ctrlayout->postContentChanged();
 }
 template<class Archive>
 void serialize(Archive & archive, guictrlayout_snapshot_t & m)
 {
 	archive(m.label, m.type, m.activePosition, m.ctrLayout, m.entries);
+	make_optional_nvp(archive, "splitterPositions", m.splitterPositions);
 }
 template<class Archive>
 void serialize(Archive & archive, guictrlayout_entry_snapshot_t & m)

@@ -784,8 +784,8 @@ void BaseCtrl::dragContainerRelease(MouseEvent& evt)
 			log_printf("replace guictr_layout container\n", 0);
 			if (updatedCtrLayout == container_layout::TABBED) {
 				auto& ctrEntries = layoutCtr->getEntries();
-				dbgassert(area->dockPosOffset >= 0 && area->dockPosOffset < ctrEntries.size());
-				auto entryToReplace = ctrEntries[area->dockPosOffset];
+				dbgassert(area->dockPosOffset >= 0 && area->dockPosOffset <= ctrEntries.size());
+				auto entryToReplace = ctrEntries[math::min<int32_t>(ctrEntries.size()-1, area->dockPosOffset)];
 				auto oldEntryThatIsNowTabEntry = layoutCtr->replaceContainerWith(entryToReplace->getGui(), newContainer);
 
 				newContainer->placeContainer(ctrContent, area);

@@ -251,6 +251,9 @@ void guictr_stacked::handleSplitterChanged(Splitter& splitter, float scale, int 
 	}
 	dbgassert(0&&"entry not found");
 }
+ivec2 guictr_stacked::getContainerSize() {
+	return size;
+}
 int32_t guictr_stacked::getCollapsedCtrHeight(guictr_base* ctr) {
 	ivec2 ctrPadding = ctr->getPadding();
 	return ctrPadding.y + HEIGHT_DEFAULT_INPUT + INSET_CTR_SPACING*2;

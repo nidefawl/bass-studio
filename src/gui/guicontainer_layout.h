@@ -31,6 +31,7 @@ public:
 	void layout() override;
 	void render(NVGcontext* vg) override;
 	void handleSplitterChanged(Splitter& splitter, float scale, int clampedAt) override;
+	ivec2 getContainerSize() override;
 	int32_t getCollapsedCtrHeight(guictr_base* ctr);
 };
 class guictr_tabbed : public guictr_base {

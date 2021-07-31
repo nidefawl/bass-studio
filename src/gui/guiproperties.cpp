@@ -568,6 +568,19 @@ public:
 template<typename T>
 void addPropertiesFromGui(T& gui, Table::tbl* table);
 template<>
+void addPropertiesFromGui(Splitter& gui, Table::tbl* table) {
+	SafeRef<guibase> ref = gui.makeSafeRef();
+	std::vector<tbl_row_t>& rows = table->rows;
+	rows.push_back({{tblstr{"this"}, ref}});
+	rows.push_back({{tblstr{"pos"}, tbltypesaferef<glm::ivec2>{ref, gui.pos, nullptr}}});
+	rows.push_back({{tblstr{"size"}, tbltypesaferef<glm::ivec2>{ref, gui.size, nullptr}}});
+	rows.push_back({{tblstr{"splittertype"}, tbltypesaferef<int>{ref, gui.type, nullptr}}});
+	rows.push_back({{tblstr{"scale"}, tbltypesaferef<float>{ref, gui.scale, nullptr}}});
+	rows.push_back({{tblstr{"scaleMin"}, tbltypesaferef<float>{ref, gui.scaleMin, nullptr}}});
+	rows.push_back({{tblstr{"scaleMax"}, tbltypesaferef<float>{ref, gui.scaleMax, nullptr}}});
+
+}
+template<>
 void addPropertiesFromGui(guiplugin& gui, Table::tbl* table) {
 	std::vector<tbl_row_t>& rows = table->rows;
 //	rows.push_back({{tblstr{"this"}, ref}});
@@ -705,7 +718,7 @@ void guiproperties_table<guiproperties_t>::determineSize(glm::ivec2& prefSize) {
 	{
 		ref->addProperties(&table);
 	}
-	prefSize.y = table.rows.size()*table.rowHeight+table.rowHeight;
+	prefSize.y = table.rows.size()*table.rowHeight+table.rowHeight + 10;
 
 }
 template <>

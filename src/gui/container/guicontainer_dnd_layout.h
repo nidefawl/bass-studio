@@ -39,7 +39,7 @@
 class guictr_layout;
 struct dawview_layout_t;
 
-class guictr_layout : public guictr_base, public i_ctr_layout {
+class guictr_layout : public guictr_base, public i_ctr_layout, public splitter_cb {
     bool setOverlayPos(i_ctr_drop_area* area, const dock_pos dockPos, ivec2 overlayPos, ivec2 overlaySize, int32_t dockPosOfffset, int32_t childContainerIndex);
 	bool setOverlayPosForTab(i_ctr_drop_area* area, const dock_pos dockPos, const int32_t dockOffset, const bool rightSideHandle);
 	i_ctr_drop_area* makeDropArea(int32_t idx);
@@ -50,12 +50,14 @@ private:
 	std::vector<std::shared_ptr<guictr_layout_entry>> entries;
 	std::vector<guibase*> handles;
 	std::vector<std::shared_ptr<i_ctr_drop_area>> dragdropContainerAreaHelpers;
+	std::vector<std::shared_ptr<Splitter>> splitters;
 	String getLayoutCtrName() {
 		if (this->label.empty()) {
 			return StringFormat("%8X", reinterpret_cast<uint64_t>(this));
 		}
 		return this->label;
 	}
+	Splitter* getSplitter(int32_t pos);
 public:
 	guictr_layout();
 	virtual ~guictr_layout() {
@@ -97,6 +99,8 @@ public:
 	std::vector<std::shared_ptr<guictr_layout_entry>>& getEntries() {
 		return entries;
 	}
+	std::vector<float> getSplitterPositions();
+	void setSplitterPositions(std::vector<float>& splitterPositons);
 	void simplify() {
 		struct InlineEntry {
 			int32_t index;
@@ -160,13 +164,8 @@ public:
 			layout();
 		}
 	}
-	void updateVisible() {
-		int32_t entryIdx = 0;
-		for (auto &entry : entries) {
-			entry->getGui()->setVisible(this->ctrLayout != container_layout::TABBED || entryIdx == this->activePosition);
-			entryIdx++;
-		}
-	}
+	void updateSplitters();
+	void updateVisible();
 
 	void onChildLayoutChanged(guibase* g) override {
 //		postContentChanged();
@@ -206,6 +205,8 @@ public:
 
 	std::shared_ptr<guictr_layout_entry> replaceContainerWith(guictr_base* ctr, std::shared_ptr<guictr_layout> newContainer);
 	void render(NVGcontext* vg);
+	void handleSplitterChanged(Splitter& splitter, float scale, int clampedAt);
+	ivec2 getContainerSize();
 };
 
 struct guictrlayout_snapshot_t;
@@ -217,18 +218,13 @@ struct guictrlayout_entry_snapshot_t {
 	virtual ~guictrlayout_entry_snapshot_t() {
 
 	}
-	//guictrlayout_entry_snapshot_data_t data;
-//	template<class Archive>
-//	void serialize(Archive &ar) {
-//	}
 };
+
 struct guictrlayout_snapshot_t : public virtual guictrlayout_entry_snapshot_t {
 	container_layout ctrLayout = container_layout::SOLE;
 	int32_t activePosition = -1;
 	std::vector<std::shared_ptr<guictrlayout_entry_snapshot_t>> entries;
-//	template<class Archive>
-//	void serialize(Archive &ar) {
-//	}
+	std::vector<float> splitterPositions;
 };
 
 

@@ -13,6 +13,7 @@ public:
 	splitter_cb() {}
 	virtual ~splitter_cb() {}
 	virtual void handleSplitterChanged(Splitter& splitter, float scale, int clampedAt) = 0;
+	virtual ivec2 getContainerSize() = 0;
 };
 class Splitter : public guictr_base {
 public:
@@ -35,7 +36,9 @@ public:
 		this->scaleMax = _max;
 	}
 	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-		if (this->contains(mpos) && evt.type <= MouseHitType::MOUSE_RIGHT) {
+		if (this->contains(mpos)
+//				&& evt.type <= MouseHitType::MOUSE_RIGHT
+				) {
 			evt.requestFocus(this);
 			evt.requestCursor(type == 0 ? CURSOR_RESIZE_V : CURSOR_RESIZE_H);
 			return true;
@@ -50,24 +53,7 @@ public:
 	}
 	virtual void handleDraggedBegin(MouseEvent& evt) {
 	}
-	virtual void handleDraggedMove(MouseEvent& evt) {
-		ivec2 windowSize = parentCtrl->getScaledSize();
-		float sc = type == 0  ? (evt.mousepos.y/(float)windowSize.y) : (evt.mousepos.x/(float)windowSize.x);
-		int clampedAt = 0;
-		if (sc < scaleMin) {
-			clampedAt = -1;
-		}
-		if (sc > scaleMax) {
-			clampedAt = 1;
-		}
-		this->scale = (sc < scaleMin ? scaleMin : sc > scaleMax ? scaleMax : sc);
-		if (notifyCtrl) {
-			notifyCtrl->handleSplitterChanged(*this, this->scale, clampedAt);
-		} else{
-			parentCtrl->relayout(); //TODO: this sucks, triggers a complete relayout
-		}
-
-	}
+	virtual void handleDraggedMove(MouseEvent& evt);
 	virtual void handleDraggedRelease(MouseEvent& evt) {
 	}
 	virtual bool isStaticContainer() {
@@ -86,4 +72,6 @@ public:
 		return scaleMax;
 	}
 	void render(NVGcontext* vg);
+	virtual void addProperties(Table::tbl* table);
 };
+
