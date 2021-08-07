@@ -399,19 +399,26 @@ int32_t guictr_noteeditor::getTotalWidth() {
 
 void guictr_noteeditor::layout() {
 	ivec2 cs = getSizeContent();
+	int32_t velHeight = this->velHeight;
+	if (size.y < velHeight*2) {
+		velocities.setVisible(false);
+		piano.size = ivec2(100, cs.y - heightTimeLine - heightClipIndicators);
+		velocities.size = ivec2(timeline.size.x, 0);
+	} else {
+		velocities.setVisible(true);
+		piano.size = ivec2(100, cs.y - heightTimeLine - heightClipIndicators - velHeight);
+		velocities.size = ivec2(timeline.size.x, velHeight);
+	}
 	piano.pos = ivec2(0, heightTimeLine + heightClipIndicators);
-	piano.size = ivec2(100, cs.y - heightTimeLine - heightClipIndicators - velHeight);
 	timeline.pos = ivec2(piano.right(), 0);
 	timeline.size = ivec2(cs.x - piano.size.x, heightTimeLine);
 	clipHandles.pos = ivec2(timeline.left(), timeline.bottom());
 	clipHandles.size = ivec2(timeline.size.x, heightClipIndicators);
 	btnToggleFold.pos = ivec2(padding, padding);
 	btnToggleFold.size = ivec2((piano.size.x) / 2, 18);
-	int32_t velHeight = this->velHeight;
 	content.pos = ivec2(timeline.left(), clipHandles.bottom());
 	content.size = ivec2(timeline.size.x, piano.size.y);
 	velocities.pos = ivec2(timeline.left(), content.bottom());
-	velocities.size = ivec2(timeline.size.x, velHeight);
 	clipHandles.clipViewSize = ivec2(content.size.x, content.size.y + clipHandles.size.y);
 	grid.update(content.size);
 	for (guibase* gui : guis) {
