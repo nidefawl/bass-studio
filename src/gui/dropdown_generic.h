@@ -27,10 +27,32 @@ public:
 		this->current = currentVal;
 		this->options = options;
 	}
-	void handleDraggedRelease(MouseEvent& evt) override;
+	void handleDraggedRelease(MouseEvent& evt) override {
+		std::vector<String> strOptions;
+		strOptions.reserve(options.size());
+		for (auto& option : options) {
+			strOptions.push_back(optionToString(option));
+		}
+		auto* popup = createContextMenu(std::move(strOptions));
+		popup->size = size;
+		int fontScale = math::round((this->fontSize > 0 ? this->fontSize : size.y) * fFontScale);
+		popup->setFontSize(fontScale);
+		this->parentCtrl->openContextMenu(popup, toScreenSpace(ivec2(0, size.y))-popup->pos+ivec2(1));
+	}
 	String getString() override {
 		return current;
 	}
-	void onOptionSelected(int _id) override;
+	void onOptionSelected(int _id) override {
+		if (_id >= 0) {
+			auto& option = options[_id];
+			if (fnOptionSelected) {
+				current = fnOptionSelected(_id, option);
+			} else {
+				current = optionToString(option);
+			}
+		}
+	}
+	guictxtmenu_base* createContextMenu(std::vector<String>&& strOptions);
 	String optionToString(const T& ref);
 };
+

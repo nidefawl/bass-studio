@@ -26,32 +26,21 @@ public:
 		}
 	}
 };
-
+/* TODO: find a way to have this generic, while having definition of guidropdown_generic_ctxt only in this cpp file */
+template<>
+guictxtmenu_base* guidropdown_generic<String>::createContextMenu(std::vector<String>&& strOptions) {
+	return new guidropdown_generic_ctxt(this, std::move(strOptions));
+}
 template<>
 String guidropdown_generic<String>::optionToString(const String& ref) {
 	return ref;
 }
+
 template<>
-void guidropdown_generic<String>::onOptionSelected(int _id) {
-	if (_id >= 0) {
-		auto& option = options[_id];
-		if (fnOptionSelected) {
-			current = fnOptionSelected(_id, option);
-		} else {
-			current = optionToString(option);
-		}
-	}
+guictxtmenu_base* guidropdown_generic<int32_t>::createContextMenu(std::vector<String>&& strOptions) {
+	return new guidropdown_generic_ctxt(this, std::move(strOptions));
 }
 template<>
-void guidropdown_generic<String>::handleDraggedRelease(MouseEvent& evt) {
-	std::vector<String> strOptions;
-	strOptions.reserve(options.size());
-	for (auto& option : options) {
-		strOptions.push_back(optionToString(option));
-	}
-	guictxtmenu_base *popup = new guidropdown_generic_ctxt(this, std::move(strOptions));
-	popup->size = size;
-	int fontScale = math::round((this->fontSize > 0 ? this->fontSize : size.y) * fFontScale);
-	popup->setFontSize(fontScale);
-	this->parentCtrl->openContextMenu(popup, toScreenSpace(ivec2(0, size.y))-popup->pos+ivec2(1));
+String guidropdown_generic<int32_t>::optionToString(const int32_t& ref) {
+	return std::to_string(ref);
 }
