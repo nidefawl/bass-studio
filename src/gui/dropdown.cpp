@@ -54,3 +54,24 @@ void guidropdownbase::select(dropdown_field_selectitem req, uint32_t idxOffset) 
 		break;
 	}
 }
+
+void guidropdownbase::render(NVGcontext* vg) {
+	//		nvgIntersectScissor(vg, pos.x, pos.y, size.x, size.y);
+	renderWidgetBorder(vg, getStateFlags());
+	if (this->label.length()) {
+		setFont(vg, G_FONT_SCALE(size.y), G_WHITE, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+		String str = getString();
+		float pX = nvgText(vg, pos.x + size.x - 3, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(str), NULL);
+		NVGcolor mDisabledTextColor = GUI_COLORA(255, 80);
+		setFont(vg, G_FONT_SCALE(size.y), mDisabledTextColor, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+		float bounds[4] { 0 };
+		nvgTextBounds(vg, pos.x + 3.0f, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(this->label), nullptr, bounds);
+		if (pX - 3 > bounds[2]) {
+			nvgText(vg, pos.x + 3.0f, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(this->label), NULL);
+		}
+	} else {
+		int fontScale = math::round((this->fontSize > 0 ? this->fontSize : size.y) * fFontScale);
+		setFont(vg, fontScale, G_WHITE, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+		nvgText(vg, pos.x + size.x / 2.0f, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(getString()), NULL);
+	}
+}
