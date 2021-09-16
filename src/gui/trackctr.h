@@ -607,7 +607,7 @@ public:
    {
 		padding = 0;
 //		btnFoldAll.setButtonColor(GuiColor::COL_BTN_LOAD_DEF_PLUGINS);
-		btnFoldAll.setLabel("Fold All Trackss");
+		btnFoldAll.setLabel("Fold All Tracks");
 		btnFoldAll.icon = ICON_ARR_RIGHT;
 		btnFoldAll.setStateRef(&isFolded);
 		btnFoldAll.getIcon = [gtl=this]{return gtl->isFolded?ICON_ARR_RIGHT:ICON_ARR_DOWN;};
@@ -694,6 +694,7 @@ public:
 	}
 
 	int32_t setTrackPosition(track_gui_entry_t* e, int32_t y, bool isBottom);
+	int32_t getTrackTotalHeight(track_gui_entry_t* e);
 	void render(NVGcontext* vg);
 	void scrollTo(guibase* g);
 	void layout();

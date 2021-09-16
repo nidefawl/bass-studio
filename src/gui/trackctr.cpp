@@ -78,8 +78,19 @@ void drawSeperator(NVGcontext* vg, const guitheme_t* theme, int32_t seperatorY, 
 	nvgStrokeWidth(vg, TRACK_HEIGHT_SPACING);
 	nvgStroke(vg);
 }
+int32_t guictr_tracks::getTrackTotalHeight(track_gui_entry_t* e) {
+	const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
+	int lvl = e->track->getChildLvl();
+	int32_t trH = e->layout.hideTrack ? 1 : e->layout.height;
+	int32_t totalHeight = trH * TRACK_HEIGHT_STEP;
+	if (!(e->layout.hideTrack || e->layout.hideSubtracks)) {
+		for (auto t2 : e->subtracks) {
+			totalHeight += t2->height * TRACK_HEIGHT_STEP + TRACK_HEIGHT_SPACING;
+		}
+	}
+	return totalHeight;
+}
 int32_t guictr_tracks::setTrackPosition(track_gui_entry_t* e, int32_t y, bool isBottom) {
-//	get
 	const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
 	ivec2& cntPos = e->content->pos;
 	ivec2& mxrPos = e->mixer->pos;
@@ -199,17 +210,17 @@ void guictr_tracks::loadTrackLayouts(trackcontainer_snapshot_t& in) {
 	}
 }
 void guictr_tracks::scrollOffsetChanged(int dir, float offset) {
-//	trackView.pos.y = loophandles.bottom()-offset*(contentHeight-size.y);
-//	trackControls.pos.y = loophandles.bottom()-offset*(contentHeight-size.y);
 	int32_t scrOffset = math::max(0.0f, offset*(contentHeight-contentViewSize));
 	int y = TRACK_HEIGHT_SPACING-scrOffset;
-	for (track_t* t : project.trackMidiAudioCtr) {
-		track_gui_entry_t* entry;
-		if (guiMgr.getTrackEntry(t, &entry) && guiMgr.isVisible(entry)) {
+	for (auto* entry : guiMgr.trackEntriesTop) {
+		if (guiMgr.isVisible(entry)) {
 			int32_t h = setTrackPosition(entry, y, false);
 			y += h + TRACK_HEIGHT_SPACING;
+		} else {
+			dbgassert(0);
 		}
 	}
+
 	updateVisibleTrackContents();
 }
 void guictr_tracks::scrollTo(guibase* g) {
@@ -240,33 +251,21 @@ void guictr_tracks::updateVisibleTracks() {
 			}
 		}
 	}
-//	for (auto *trEntry : tracks) {
-//		if (!trEntry->content->isVisible()) {
-//			log_printf("track %s is not visible but is in in tracksVisibleFlat\n", StringAsCStr(trEntry->track->name));
-//
-//		}
-//	}
 }
+
 void guictr_tracks::updateVisibleTrackContents() {
 	updateVisibleTracks();
 }
-
 
 void guictr_tracks::relayout() {
 	double f = scrollbar.toPixels();
 	layout();
 	dawCtrl->updateGrid();
 	dawCtrl->updateVisibleTrackContents();
-	double fNew = scrollbar.toPixels();
 	scrollbar.scrollTo(f);
-	if (math::abs(fNew-f) > 1.0f/1024.0f) {
-		scrollOffsetChanged(1, scrollbar.scrollOffset);
-	}
 }
+
 void guictr_tracks::layout() {
-//	for (auto* ctr : project.trackTypeUniqueCtrs) {
-//		ctr->updateTracksVisible();
-//	}
 
 	bool trackCtrlsLeft = true;
 	const int32_t trackControlsWidth = theme->get(GuiConstant::CONST_TRACK_CONTROLS_WIDTH);
@@ -291,7 +290,37 @@ void guictr_tracks::layout() {
 	loophandles.clipViewSize = ivec2(trackView.size.x, trackView.size.y+loophandles.size.y);
 
 	ivec2 csTrackView = trackView.getSizeContent();
-	int y = TRACK_HEIGHT_SPACING;
+
+	// Calculate the combined height of all top tracks
+	int32_t allTracksHeight = 0;
+	for (auto* entry : guiMgr.trackEntriesTop) {
+		if (guiMgr.isVisible(entry)) {
+			allTracksHeight += getTrackTotalHeight(entry);
+			allTracksHeight += TRACK_HEIGHT_SPACING;
+		}
+	}
+
+	// Calculate the y position of the first return
+	int32_t yPosFirstReturn = csTrackView.y-TRACK_HEIGHT_SPACING;
+	auto itMastersTracks = guiMgr.trackEntriesBottom.rbegin();
+	auto itMastersEnd = guiMgr.trackEntriesBottom.rend();
+	while (itMastersTracks != itMastersEnd) {
+		auto& entry = *itMastersTracks;
+		if (guiMgr.isVisible(entry)) {
+			yPosFirstReturn -= getTrackTotalHeight(entry);
+			yPosFirstReturn -= TRACK_HEIGHT_SPACING;
+		}
+		itMastersTracks++;
+	}
+	contentHeight = allTracksHeight;
+	contentViewSize = yPosFirstReturn;
+	//if (contentHeight >= contentViewSize) {
+		const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
+		contentHeight += TRACK_HEIGHT_STEP*4;
+	//}
+
+	int32_t scrOffset = math::max(0.0f, getScrollOffset()*(contentHeight-contentViewSize));
+	int y = TRACK_HEIGHT_SPACING-scrOffset;
 	for (auto* entry : guiMgr.trackEntriesTop) {
 		if (guiMgr.isVisible(entry)) {
 			int32_t h = setTrackPosition(entry, y, false);
@@ -300,11 +329,10 @@ void guictr_tracks::layout() {
 			dbgassert(0);
 		}
 	}
-	contentHeight = y;
+
 	y = csTrackView.y-TRACK_HEIGHT_SPACING;
-//		y = 0;
-	auto itMastersTracks = guiMgr.trackEntriesBottom.rbegin();
-	auto itMastersEnd = guiMgr.trackEntriesBottom.rend();
+	itMastersTracks = guiMgr.trackEntriesBottom.rbegin();
+	itMastersEnd = guiMgr.trackEntriesBottom.rend();
 	while (itMastersTracks != itMastersEnd) {
 		auto& entry = *itMastersTracks;
 		if (guiMgr.isVisible(entry)) {
@@ -319,15 +347,12 @@ void guictr_tracks::layout() {
 
 		itMastersTracks++;
 	}
-	contentViewSize = y;
-	if (contentHeight >= contentViewSize) {
-		const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
-		contentHeight += TRACK_HEIGHT_STEP*4;
-	}
+
 	for (guibase* gui : guis) {
 		gui->layout();
 	}
 }
+
 void horizontalLineAt(guictr_base* gui, NVGcontext* vg, ivec2 posHL) {
 	nvgLineCap(vg, NVGlineCap::NVG_ROUND);
 	nvgBeginPath(vg);
@@ -339,6 +364,7 @@ void horizontalLineAt(guictr_base* gui, NVGcontext* vg, ivec2 posHL) {
 	nvgStroke(vg);
 	nvgLineCap(vg, NVGlineCap::NVG_BUTT);
 }
+
 void guictr_tracks::render(NVGcontext* vg) {
 	if (isBackgroundRendered()){
 		renderBackground(vg);
