@@ -59,9 +59,9 @@ struct waveform_test {
 		daw_tls::tlsinstance& tls = daw_tls::getTls();
 		int sampleRate = 44100;
 		tls.audioCache = new audiocache(sampleRate);
-		rendererAdv = new waveformrender(waveformrender_impl_e::ADV);
-		rendererPolyline = new waveformrender(waveformrender_impl_e::POLYLINE2D);
-		rendererPar = new waveformrender(waveformrender_impl_e::PAR);
+		rendererAdv = new waveformrender(pathrenderer_type_e::ADV);
+		rendererPolyline = new waveformrender(pathrenderer_type_e::POLYLINE2D);
+		rendererPar = new waveformrender(pathrenderer_type_e::PAR);
 		renderers.push_back(rendererAdv);
 		renderers.push_back(rendererPolyline);
 		renderers.push_back(rendererPar);

@@ -73,6 +73,9 @@ struct vbuf {
 	std::vector<float> v;
 	std::vector<int> i;
 };
+enum class pathrenderer_type_e : int32_t {
+	ADV = 0, POLYLINE2D, PAR
+};
 class IPathRenderer {
 public:
 	uint32_t program2dLines;

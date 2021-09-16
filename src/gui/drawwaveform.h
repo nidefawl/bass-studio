@@ -45,9 +45,7 @@ struct TextureAtlas {
 	NVGLUframebuffer* fb = nullptr;
 	int nextIdx = 10;
 };
-enum waveformrender_impl_e {
-	ADV, POLYLINE2D, PAR
-};
+
 class waveformrender {
 	struct Impl;
 	Impl* const impl;
@@ -69,7 +67,7 @@ public:
 		uint64_t comparisonsB = 0;
 	};
 	static waveformrender* getInstance();
-	waveformrender(waveformrender_impl_e t);
+	waveformrender(pathrenderer_type_e t);
 	~waveformrender();
 	void destroy();
 	void init();

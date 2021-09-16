@@ -9,6 +9,7 @@ struct DrawVBO {
 	int32_t vboVertSize = 0;
 	int32_t vboIdxSize = 0;
 	~DrawVBO();
+	void destroy();
 	void genBuffers();
 
 	void uploadBuffer(uint32_t bufferType, void* ptr, size_t len);

@@ -26,16 +26,16 @@ struct waveformrender::Impl {
 	hires_timer_t timer3;
 	waveformrender::render_timings renderTimings;
 	IPathRenderer* renderer = nullptr;
-	Impl(waveformrender_impl_e t) {
+	Impl(pathrenderer_type_e t) {
 		switch (t) {
 		default:
-		case ADV:
+		case pathrenderer_type_e::ADV:
 			renderer = new GLPathRenderer();
 			break;
-		case POLYLINE2D:
+		case pathrenderer_type_e::POLYLINE2D:
 			renderer = new GLPathRendererSimple();
 			break;
-		case PAR:
+		case pathrenderer_type_e::PAR:
 			renderer = new GLPathRendererSimple2();
 			break;
 		}
@@ -47,13 +47,20 @@ struct waveformrender::Impl {
 waveformrender::~waveformrender() {
 	delete impl;
 }
-waveformrender::waveformrender(waveformrender_impl_e t) : impl(new waveformrender::Impl(t)) {
+waveformrender::waveformrender(pathrenderer_type_e t) : impl(new waveformrender::Impl(t)) {
 }
 void waveformrender::init() {
 	impl->renderer->init();
 }
 void waveformrender::destroy() {
 	impl->renderer->destroy();
+	for (BakeGLPath& path : bakedPaths) {
+		if (path.uniforms_texture != 0) {
+			glDeleteTextures(1, &path.uniforms_texture);
+		}
+		path.uniforms_texture = 0;
+		path.vbo.destroy();
+	}
 }
 void waveformrender::getRenderedTextures(std::vector<TextureAtlas>& rendered) {
 	for (auto& atlas : atlases) {
