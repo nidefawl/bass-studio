@@ -16,12 +16,36 @@
 #include "math/vec.h"
 #include "math/mat.h"
 
+enum class blur_num_passes : int32_t {
+	PASSES_2 = 0,
+	PASSES_3,
+	PASSES_5,
+	PASSES_7,
+	PASSES_10
+};
+namespace blur_pass_parameters {
+	std::vector<int32_t> BLUR_2PASS{ 0, 0 };
+	std::vector<int32_t> BLUR_3PASS{ 0, 1, 1 };
+	std::vector<int32_t> BLUR_5PASS{ 0, 1, 2, 2, 3 };
+	std::vector<int32_t> BLUR_7PASS{ 0, 1, 2, 3, 4, 4, 5 };
+	std::vector<int32_t> BLUR_10PASS{ 0, 1, 2, 3, 4, 5, 7, 8, 9, 10 };
+	std::vector<int32_t>& getPassConstants(blur_num_passes n) {
+		switch(n) {
+			case blur_num_passes::PASSES_2:
+				return BLUR_2PASS;
+			case blur_num_passes::PASSES_3:
+				return BLUR_3PASS;
+			case blur_num_passes::PASSES_5:
+				return BLUR_5PASS;
+			case blur_num_passes::PASSES_7:
+				return BLUR_7PASS;
+			case blur_num_passes::PASSES_10:
+				return BLUR_10PASS;
+		}
+		return BLUR_2PASS;
+	}
+}
 struct blur_tex_shader : gl_shader_pipeline {
-	std::array<const int, 2> BLUR_2PASS{ 0, 0 };
-	std::array<const int, 3> BLUR_3PASS{ 0, 1, 1 };
-	std::array<const int, 5> BLUR_5PASS{ 0, 1, 2, 2, 3 };
-	std::array<const int, 7> BLUR_7PASS{ 0, 1, 2, 3, 4, 4, 5 };
-	std::array<const int, 10> BLUR_10PASS{ 0, 1, 2, 3, 4, 5, 7, 8, 9, 10 };
 public:
 	struct rendercontext_t {
 		int w, h;
@@ -68,7 +92,7 @@ public:
 
 
 
-	void render(rendercontext_t* ctxt) {
+	void render(rendercontext_t* ctxt, blur_num_passes passes, float pixelScale) {
 		if (framebuffers.empty()) {
 	        ctxt->outputTexture = ctxt->inputTexture;
 			return;
@@ -94,9 +118,9 @@ public:
 
         int input = ctxt->inputTexture;
         FrameBuffer* bufferTarget = framebuffers[0].get();
-		auto& kawaseKernPasses = BLUR_10PASS;
+		std::vector<int32_t>& kawaseKernPasses = blur_pass_parameters::getPassConstants(passes);
         for (int p = 0; p < kawaseKernPasses.size(); p++) {
-        	glProgramUniform3f(program, u_blurPassProp, 1.0f/(float)w, 1.0f/(float)h, kawaseKernPasses[p]);
+        	glProgramUniform3f(program, u_blurPassProp, pixelScale/(float)w, pixelScale/(float)h, kawaseKernPasses[p]);
         	bufferTarget->bind();
         	bufferTarget->clearFrameBuffer();
     		glBindTexture(GL_TEXTURE_2D, input);
@@ -109,12 +133,12 @@ public:
 		FrameBuffer::unbindFramebuffer();
         glViewport(0, 0, w, h);
 	}
-	void setupFramebuffers(int w, int h) {
+	void setupFramebuffers(int w, int h, int downsample) {
 		for (auto& fb : framebuffers) {
 			fb->destroy();
 		}
 		framebuffers.clear();
-		downsampledResolution(w, h, 8, wd, hd);
+		downsampledResolution(w, h, downsample, wd, hd);
 		for (int i = 0; i < 2; i++) {
 			auto fb = std::make_shared<FrameBuffer>(wd, hd, GL_RGBA16F, false, vec4(0.0f));
 			fb->setup();
