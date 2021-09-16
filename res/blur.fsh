@@ -61,6 +61,8 @@ void main()
     // // double-Kawase is also an option, but loses some quality
     // FragColor.xyz += KawaseBlurFilter( tex0, pass_texcoord.xy, blurPassProp.xy, blurPassProp.z*2.0 + 1.0 );
     // FragColor.xyz *= 0.5;
+    // out_Color += vec4(KawaseBlurFilter( tex0, pass_texcoord.xy, PASS_PROP.xy, PASS_PROP.z*2.0+1.0 ), 1);
+    // out_Color *= 0.5;
 
     // out_Color.a = 1.0;
 }
