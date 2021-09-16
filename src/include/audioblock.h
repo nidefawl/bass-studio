@@ -166,12 +166,12 @@ struct AudioBlock {
 	void copyFrom(AudioBlock* src, T getMappedSrcChannel) {
 		copyFrom(src->buf, src->samples, src->channels, getMappedSrcChannel);
 	}
-	void copyFromPosToPos(float **srcBuf, uint32_t offsetIn, uint32_t offsetOut, uint32_t srcSamples, uint32_t srcChannels) {
-		assert(offsetIn >= 0);
-		assert(offsetOut >= 0);
-//		dbgassert(srcSamples == samples);
+	void copyFromPosToPos(float **srcBuf, uint32_t offsetIn, uint32_t offsetOut, uint32_t len, uint32_t srcChannels) {
+		dbgassert(offsetIn >= 0);
+		dbgassert(offsetOut >= 0);
 		uint32_t nChannels = math::max(srcChannels, channels);
-		uint32_t nSamples = math::min(srcSamples, samples);
+		uint32_t nSamples = math::min(len, samples);
+		dbgassert(offsetOut+nSamples <= samples);
 		for (uint32_t i = 0; i < nChannels; i++) {
 			uint32_t srcChannelIdx = math::min(srcChannels-1, i);
 			uint32_t dstChannelIdx = math::min(channels-1, i);
