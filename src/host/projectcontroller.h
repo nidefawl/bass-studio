@@ -57,7 +57,7 @@ public:
 
 	static project_controller_t* get();
 	double getProjectWorkingArea() {
-		return 1000.0;
+		return 6000.0;
 	}
 	virtual inline void addTrackImpl(int32_t trackInsertPos, track_t* newTrack, int flags) {
 		project->trackList.addTrack(trackInsertPos, newTrack);

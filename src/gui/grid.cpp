@@ -25,13 +25,13 @@ void scaled_grid::showRange(tick_t start, tick_t end) {
 	}
 }
 void scaled_grid::setZoom(double fNewZoom) {
-	double newZoom = fNewZoom < MIN_ZOOM ? MIN_ZOOM : fNewZoom > 100 ? 100 : fNewZoom;
+	double newZoom = fNewZoom < MIN_ZOOM ? MIN_ZOOM : fNewZoom > MAX_ZOOM ? MAX_ZOOM : fNewZoom;
 	double length = toObjSpace(lastW, fNewZoom, 0);
 	double projectWorkingArea = project_controller_t::get()->getProjectWorkingArea();
 	if (length > projectWorkingArea) {
 		newZoom = 8.0 / (lastW / projectWorkingArea);
 	}
-	this->zoom = (float) (newZoom < MIN_ZOOM ? MIN_ZOOM : newZoom > 100 ? 100 : newZoom);
+	this->zoom = (float) (newZoom < MIN_ZOOM ? MIN_ZOOM : newZoom > MAX_ZOOM ? MAX_ZOOM : newZoom);
 }
 void scaled_grid::notifyChange() {
 	for (grid_changed_cb* cb : this->callbacks) {
