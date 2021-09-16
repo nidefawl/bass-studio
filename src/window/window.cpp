@@ -65,6 +65,7 @@
 
 class appwindow;
 static std::vector<appwindow*> windowTimerHandleList;
+static application_stats_t appStats;
 void registerWindowTimer(appwindow* wnd) {
 	windowTimerHandleList.push_back(wnd);
 }
@@ -179,10 +180,6 @@ void saveWindowPos(HWND hwnd, windowsize* size);
 #define IDT_TIMER1 0
 #endif
 
-namespace Profiling {
-void profilingRegisterWindow(void* window, String name);
-void profilingCommitStats(void* window, int frameNumber, render_stats_t& stats);
-}
 bool checkGLError(const char* s);
 
 class appwindow : protected DropTargetListener {
@@ -357,11 +354,8 @@ public:
 		endFrame();
 	}
 	virtual void flagNeedsRedraw() {
-//		double delay = getSince(secondsLastDrawReq);
-//		if(delay > minFrameDelay*2) {
-//			secondsLastDrawReq = getTimeHPC();
-			invalidateWindowContents(glfw);
-//		}
+		appStats.numRedrawReq++;
+		invalidateWindowContents(glfw);
 	}
 	void endFrame() {
 
@@ -369,12 +363,12 @@ public:
 		double since = (tm - tm_lastfps) / 1000.0;
 		if (frameCountFPS > 0 && since >= 1.0) {
 			double fps = frameCountFPS / since;
-			fpsStats = StringFormat("%.2f fps", fps);
 #if BUILD_VSTHOST
 			daw_tls::tlsinstance& tls = daw_tls::getTls();
 			tls.renderStats.fps = fps;
 #endif
-//			glfwSetWindowTitle(glfw, StringAsCStr(fpsStats));
+			fpsStats = StringFormat("%.2f fps, %f", fps, secondsLastDraw);
+			glfwSetWindowTitle(glfw, StringAsCStr(fpsStats));
 			tm_lastfps = tm;
 			frameCountFPS = 0;
 		}
@@ -382,7 +376,6 @@ public:
 		redrawFlagged = false;
 		frameCountFPS++;
 		frameNumber++;
-//		flagNeedsRedraw();
 	}
 	void killTimer() {
 		unregisterWindowTimer(this);
@@ -702,6 +695,7 @@ public:
 //            reloadCustomShaders();
         }
 		ctrl->onAppTick();
+		flagNeedsRedraw();
 	}
 	void onRefresh() override {
 		appwindow::onRefresh();
@@ -712,8 +706,6 @@ public:
 		#endif
 	}
 	void render() {
-		/*std::vector<int64_t> test;
-		test.reserve(1<<31);*/
 		renderMain(ctrl);
 	}
 	void renderMain(AppCtrl* const ctrl)
@@ -1632,9 +1624,10 @@ int startApplication(int argc, char* argv[]) {
 		mainWindow->centerOnScreen(centerScreenIdx);
 	}
 
-	Profiling::profilingRegisterWindow(mainWindow.get(), "Main Window");
+	Profiling::profilingRegisterEntry<application_stats_t>(ctrl.get(), "Application Stats");
+	Profiling::profilingRegisterEntry<render_stats_t>(mainWindow.get(), "Main Renderstats");
 
-//	enableGlDebugCallback();
+	enableGlDebugCallback();
 	glfwSetErrorCallback(glfw_runtime_error_callback);
 	ctrl->postInit();
 
@@ -1644,20 +1637,27 @@ int startApplication(int argc, char* argv[]) {
 	dawinstance_startup_commands(tls);
 #endif
 	hires_timer_t hiresTimer;
+	hires_timer_t hiresTimer1;
 	GLFWwindow* glfwHandle = mainWindow->getGLFW();
 	int64_t tmHRLastTick = hiresTimer.getTime();
-	int64_t tmHRLastFrame = tmHRLastTick;
 	int64_t tmLRLastCheck = getTimeMillis();
 	int64_t tmLRMsgSent = 0;
 	int64_t cntMessages = 0;
+	int frameNumberStats = 0;
+#ifdef _WIN32
+	int64_t tmLRLastCheckMsgLoop = getTimeMillis();
+	bool debugMessageLoop = false;
+#endif
 	while (!fataError && !glfwWindowShouldClose(glfwHandle)) {
 #ifdef _WIN32
 		int64_t maxMsgProcess = 1024;
 		DWORD timeout = 5;
 		MsgWaitForMultipleObjects(0, NULL, FALSE, timeout, QS_ALLEVENTS);
 	    MSG msg;
+	    hiresTimer1.reset();
 	    while (!fataError && PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE) && maxMsgProcess-- > 0)
 	    {
+			appStats.numMessagesProcessed++;
 	    	cntMessages++;
 //	    	logEveryMsec(0, 5000, "Main msg loop");
 	        if (msg.message == WM_QUIT)
@@ -1666,14 +1666,12 @@ int startApplication(int argc, char* argv[]) {
 	        }
 	        else if (msg.message == WM_APP + 42) {
 			    if (tmLRMsgSent != 0) {
-			    	int64_t tmDuration = (getTimeMillis() - tmLRMsgSent);
-			    	tmLRMsgSent = 0;
-			    	if (tmDuration > 0) {
-			    		log_printf("MSG took %d ms to get through, %d messages since sent\n", tmDuration, cntMessages);
-                    }
-                    //String applicationCWD = getCurrentWorkingDirectory();
-                    //log_printf("getCurrentWorkingDirectory: %s\n", StringAsCStr(applicationCWD));
 			    }
+		    	int64_t tmDuration = (getTimeMillis() - tmLRMsgSent);
+		    	tmLRMsgSent = 0;
+	    		log_printf("MSG took %d ms to get through, %d messages since sent\n", tmDuration, cntMessages);
+                //String applicationCWD = getCurrentWorkingDirectory();
+                //log_printf("getCurrentWorkingDirectory: %s\n", StringAsCStr(applicationCWD));
 	        }
 	        else
 	        {
@@ -1695,7 +1693,8 @@ int startApplication(int argc, char* argv[]) {
 			            DispatchMessageW(&msg);
 						break;
 	            }
-
+				if (msg.message == WM_PAINT)
+					appStats.numMessagesWmPaint++;
 	            if (msgCounterEnabled) {
 		            msgCounter.incrMessage(msg.message);
 					if (msg.message == WM_PAINT)
@@ -1707,11 +1706,18 @@ int startApplication(int argc, char* argv[]) {
 	            }
 	        }
 	    }
+	    int64_t tmMsgLoop = hiresTimer1.getTime();
+	    hiresTimer1.reset();
 		glfwUpdateInternals();
+	    int64_t tmUpdateInternals = hiresTimer1.getTime();
 #endif //_WIN32
 		int64_t tmHRNow = hiresTimer.getTime();
 		if (tmHRNow - tmHRLastTick >= 20*1000) { //TODO: figure out good tick rate
+			appStats.tickTimerDelay = tmHRNow - tmHRLastTick;
 			tmHRLastTick = tmHRNow;
+			Profiling::profilingCommitStats(ctrl.get(), frameNumberStats, appStats);
+			appStats = application_stats_t{};
+			frameNumberStats++;
 			windowTickTimerRun();
 		}
 #if defined(__linux__) || defined(__APPLE__)
@@ -1721,20 +1727,23 @@ int startApplication(int argc, char* argv[]) {
 			mainWindow->onRefresh();
 			tmHRLastFrame = tmHRNow;
 		}
-#else
-		if (tmLRMsgSent > 0 && getTimeMillis() - tmLRMsgSent >= 1000)
-		{
-			tmLRMsgSent = 0;
-		}
-		if (getTimeMillis() - tmLRLastCheck >= 1000 && tmLRMsgSent == 0) {
-			tmLRLastCheck = tmLRMsgSent = getTimeMillis();
-			cntMessages = 0;
-			PostMessage(mainWindow->getHWND(), WM_APP + 42, 0, 0);
-
-		}
-		if (tmHRNow - tmHRLastFrame >= mainWindow->minFrameDelaySeconds * 1000000L) {
-			mainWindow->flagNeedsRedraw();
-			tmHRLastFrame = tmHRNow;
+#endif
+#ifdef _WIN32
+		if (debugMessageLoop) {
+			if (getTimeMillis() - tmLRLastCheckMsgLoop >= 1000 ) {
+				tmLRLastCheckMsgLoop = getTimeMillis();
+				log_printf("maxMsgProcessesed %d tmMsgLoop %ld, tmUpdateInternals %ld\n", static_cast<int>(1024-maxMsgProcess), tmMsgLoop, tmUpdateInternals);
+			}
+			if (tmLRMsgSent > 0 && getTimeMillis() - tmLRMsgSent >= 1000)
+			{
+				tmLRMsgSent = 0;
+			}
+			if (getTimeMillis() - tmLRLastCheck >= 1000 && tmLRMsgSent == 0) {
+				tmLRLastCheck = tmLRMsgSent = getTimeMillis();
+				cntMessages = 0;
+				log_printf("PostMessage WM_APP + 42\n", 0);
+				PostMessage(mainWindow->getHWND(), WM_APP + 42, 0, 0);
+			}
 		}
 #endif
 	}

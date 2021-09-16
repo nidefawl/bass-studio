@@ -32,7 +32,6 @@ GLuint program2dTexture = 0;
 GLint u_mvp = 0;
 GLint u_renderColor = 0;
 GLint u_renderInfo = 0;
-uint32_t tex0 = 0;
 double timeLastUpdate = 0.0;
 double timeLastReload = 0.0;
 float quadSize = 1024;
@@ -99,6 +98,21 @@ int loadShader() {
 	program2dTexture = program;
     return 0;
 }
+GLuint generateTexture() {
+	GLuint tex0 = 0;
+	glGenTextures(1, &tex0);
+	glActiveTexture( GL_TEXTURE0);
+	glBindTexture( GL_TEXTURE_2D, tex0);
+	glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
+	checkGLError("glTexImage2D");
+	glBindTexture( GL_TEXTURE_2D, 0);
+	return tex0;
+}
 
 
 using ImgData = std::shared_ptr<uint8_t>;
@@ -125,7 +139,7 @@ using ImgData = std::shared_ptr<uint8_t>;
 		}
 		return imageData;
 	}
-	RenderResources::NvgImageTexture imgQuad;
+//	RenderResources::NvgImageTexture imgQuad;
 
 
 
@@ -187,30 +201,35 @@ using ImgData = std::shared_ptr<uint8_t>;
 			ch->valueAvg /= DBG_PERF_HIST_SIZE;
 		}
 	}
-	struct ProfilingDataInstance {
+	struct ProfilingDataRenderInstance {
     	void* instancePtr = nullptr;
     	std::vector<std::shared_ptr<ProfilingDataChannelBase>> channels;
 		int32_t lastWriteIdx = -1;
+		GLuint tex0 = 0;
+	    std::vector<ProfilingDataChannelBase*> allChannels;
+		vec2 instancePos{};
+		String name = "";
+		int32_t nextFreeChannelIdx = 0;
 	};
-	std::vector<ProfilingDataInstance> instancesRenderStats;
-    std::vector<ProfilingDataChannelBase*> allChannels;
-	int32_t nextFreeChannelIdx = 0;
+	std::vector<ProfilingDataRenderInstance> instancesRenderStats;
 	void updateProfilingData() {
 		using namespace ProfilingImpl;
-		profiled_instances<frame_render_stats>* renderWindowStatsVec;
-		profilingGetDataRenderStats(&renderWindowStatsVec);
+		profiled_instances<render_stats_t>* renderWindowStatsVec;
+		profilingGetData(&renderWindowStatsVec);
 		for (auto& renderWindowStats : *renderWindowStatsVec) {
-			ProfilingDataInstance* windowInstance = nullptr;
-			for (ProfilingDataInstance& prevChannel : instancesRenderStats) {
+			ProfilingDataRenderInstance* windowInstance = nullptr;
+			for (ProfilingDataRenderInstance& prevChannel : instancesRenderStats) {
 				if (prevChannel.instancePtr == renderWindowStats.instancePtr) {
 					windowInstance = &prevChannel;
 				}
 			}
 			bool isFirstInvocation = false;
 			if (!windowInstance) {
-				instancesRenderStats.push_back(ProfilingDataInstance{});
+				instancesRenderStats.push_back(ProfilingDataRenderInstance{});
 				windowInstance = &instancesRenderStats.back();
 				windowInstance->instancePtr = renderWindowStats.instancePtr;
+				windowInstance->tex0 = generateTexture();
+				windowInstance->name = renderWindowStats.name;
 				isFirstInvocation = true;
 			}
 			auto& statsArray = renderWindowStats.stats;
@@ -220,16 +239,15 @@ using ImgData = std::shared_ptr<uint8_t>;
 				chs.resize(8);
 				for(auto& ch : chs) {
 					ch = std::make_shared<ProfilingDataChannelBase>();
-					allChannels.push_back(ch.get());
 				}
-				setChannel(chs[0].get(), "tm ctrl::render", "us", nextFreeChannelIdx++);
-				setChannel(chs[1].get(), "tm ctrl::prerender", "us", nextFreeChannelIdx++);
-				setChannel(chs[2].get(), "tm editor::render", "us", nextFreeChannelIdx++);
-				setChannel(chs[3].get(), "tm track_controls::render", "us", nextFreeChannelIdx++);
-				setChannel(chs[4].get(), "tm waveforms::update", "us", nextFreeChannelIdx++);
-				setChannel(chs[5].get(), "# waveforms updates", " ", nextFreeChannelIdx++);
-				setChannel(chs[6].get(), "# notes rendered", " ", nextFreeChannelIdx++);
-				setChannel(chs[7].get(), "# clips rendered", " ", nextFreeChannelIdx++);
+				setChannel(chs[0].get(), "tm ctrl::render", "us", windowInstance->nextFreeChannelIdx++);
+				setChannel(chs[1].get(), "tm ctrl::prerender", "us", windowInstance->nextFreeChannelIdx++);
+				setChannel(chs[2].get(), "tm editor::render", "us", windowInstance->nextFreeChannelIdx++);
+				setChannel(chs[3].get(), "tm track_controls::render", "us", windowInstance->nextFreeChannelIdx++);
+				setChannel(chs[4].get(), "tm waveforms::update", "us", windowInstance->nextFreeChannelIdx++);
+				setChannel(chs[5].get(), "# waveforms updates", " ", windowInstance->nextFreeChannelIdx++);
+				setChannel(chs[6].get(), "# notes rendered", " ", windowInstance->nextFreeChannelIdx++);
+				setChannel(chs[7].get(), "# clips rendered", " ", windowInstance->nextFreeChannelIdx++);
 			}
 
 			//step thru time backwards
@@ -239,14 +257,14 @@ using ImgData = std::shared_ptr<uint8_t>;
 				if (idx < 0) {
 					idx = statsArray.size() - 1;
 				}
-				setSample(chs[0].get(), dataSize-1, statsArray[idx].renderStats.timeRender);
-				setSample(chs[1].get(), dataSize-1, statsArray[idx].renderStats.timePrerender);
-				setSample(chs[2].get(), dataSize-1, statsArray[idx].renderStats.timeRenderEditor);
-				setSample(chs[3].get(), dataSize-1, statsArray[idx].renderStats.timeRenderTrackControls);
-				setSample(chs[4].get(), dataSize-1, statsArray[idx].renderStats.timeUpdateWaveforms);
-				setSample(chs[5].get(), dataSize-1, statsArray[idx].renderStats.numWaveFormsRendered);
-				setSample(chs[6].get(), dataSize-1, statsArray[idx].renderStats.notesRendered);
-				setSample(chs[7].get(), dataSize-1, statsArray[idx].renderStats.clipsRendered);
+				setSample(chs[0].get(), dataSize-1, statsArray[idx].stats.timeRender);
+				setSample(chs[1].get(), dataSize-1, statsArray[idx].stats.timePrerender);
+				setSample(chs[2].get(), dataSize-1, statsArray[idx].stats.timeRenderEditor);
+				setSample(chs[3].get(), dataSize-1, statsArray[idx].stats.timeRenderTrackControls);
+				setSample(chs[4].get(), dataSize-1, statsArray[idx].stats.timeUpdateWaveforms);
+				setSample(chs[5].get(), dataSize-1, statsArray[idx].stats.numWaveFormsRendered);
+				setSample(chs[6].get(), dataSize-1, statsArray[idx].stats.notesRendered);
+				setSample(chs[7].get(), dataSize-1, statsArray[idx].stats.clipsRendered);
 
 
 				idx--;
@@ -255,28 +273,101 @@ using ImgData = std::shared_ptr<uint8_t>;
 			for (auto& channel : chs) {
 				normalizeData(channel.get());
 			}
+			texData.resize(texW*texW);
+			memset(texData.data(), 0, sizeof(float)*texData.size());
+			for (int j = 0; j < texW; ++j) {
+				texData[j] = 0.5f;
+			}
+			for (auto& channel : chs) {
+				memcpy(&texData[channel->texChannel*texW], channel->valuesNormalized.data(), sizeof(float)*texW);
+				//if (i%2==1) {
+				//	for (int j = 0; j < texW; ++j) texData[i*texW+j] = 0.5f;
+				//}
+				//if (i%4==3) {
+				//	for (int j = 0; j < texW; ++j) texData[i*texW+j] = 0.75f;
+				//}
+				//if (i==0) {
+				//	for (int j = 0; j < texW; ++j) texData[i*texW+j] = 0.25f;
+				//}
+				//i++;
+			}
+			glActiveTexture( GL_TEXTURE0);
+			glBindTexture( GL_TEXTURE_2D, windowInstance->tex0);
+			glTexImage2D( GL_TEXTURE_2D, 0, GL_R32F, texW, texW, 0, GL_RED, GL_FLOAT, texData.data());
 		}
-		texData.resize(texW*texW);
-		memset(texData.data(), 0, sizeof(float)*texData.size());
-		for (int j = 0; j < texW; ++j) {
-			texData[j] = 0.5f;
+		profiled_instances<application_stats_t>* appStatsVec;
+		profilingGetData(&appStatsVec);
+		for (auto& appStats : *appStatsVec) {
+			ProfilingDataRenderInstance* windowInstance = nullptr;
+			for (ProfilingDataRenderInstance& prevChannel : instancesRenderStats) {
+				if (prevChannel.instancePtr == appStats.instancePtr) {
+					windowInstance = &prevChannel;
+				}
+			}
+			bool isFirstInvocation = false;
+			if (!windowInstance) {
+				instancesRenderStats.push_back(ProfilingDataRenderInstance{});
+				windowInstance = &instancesRenderStats.back();
+				windowInstance->instancePtr = appStats.instancePtr;
+				windowInstance->tex0 = generateTexture();
+				windowInstance->name = appStats.name;
+				isFirstInvocation = true;
+			}
+			auto& statsArray = appStats.stats;
+			const int32_t statsArrayLen = statsArray.size();
+			auto& chs = windowInstance->channels;
+			if (chs.empty()) {
+				chs.resize(4);
+				for(auto& ch : chs) {
+					ch = std::make_shared<ProfilingDataChannelBase>();
+				}
+				setChannel(chs[0].get(), "tm tick delay", "us", windowInstance->nextFreeChannelIdx++);
+				setChannel(chs[1].get(), "#window msgs", "msgs", windowInstance->nextFreeChannelIdx++);
+				setChannel(chs[2].get(), "#WM_PAINT msgs", "msgs", windowInstance->nextFreeChannelIdx++);
+				setChannel(chs[3].get(), "#redraw req", "req", windowInstance->nextFreeChannelIdx++);
+			}
+
+			//step thru time backwards
+			int32_t idx = appStats.writeIdx - 1;
+			int32_t dataSize = math::min<int32_t>(texW, statsArrayLen);
+			for (; dataSize && idx < statsArrayLen; ) {
+				if (idx < 0) {
+					idx = statsArray.size() - 1;
+				}
+				setSample(chs[0].get(), dataSize-1, statsArray[idx].stats.tickTimerDelay);
+				setSample(chs[1].get(), dataSize-1, statsArray[idx].stats.numMessagesProcessed);
+				setSample(chs[2].get(), dataSize-1, statsArray[idx].stats.numMessagesWmPaint);
+				setSample(chs[3].get(), dataSize-1, statsArray[idx].stats.numRedrawReq);
+
+
+				idx--;
+				dataSize--;
+			}
+			for (auto& channel : chs) {
+				normalizeData(channel.get());
+			}
+			texData.resize(texW*texW);
+			memset(texData.data(), 0, sizeof(float)*texData.size());
+			for (int j = 0; j < texW; ++j) {
+				texData[j] = 0.5f;
+			}
+			for (auto& channel : chs) {
+				memcpy(&texData[channel->texChannel*texW], channel->valuesNormalized.data(), sizeof(float)*texW);
+				//if (i%2==1) {
+				//	for (int j = 0; j < texW; ++j) texData[i*texW+j] = 0.5f;
+				//}
+				//if (i%4==3) {
+				//	for (int j = 0; j < texW; ++j) texData[i*texW+j] = 0.75f;
+				//}
+				//if (i==0) {
+				//	for (int j = 0; j < texW; ++j) texData[i*texW+j] = 0.25f;
+				//}
+				//i++;
+			}
+			glActiveTexture( GL_TEXTURE0);
+			glBindTexture( GL_TEXTURE_2D, windowInstance->tex0);
+			glTexImage2D( GL_TEXTURE_2D, 0, GL_R32F, texW, texW, 0, GL_RED, GL_FLOAT, texData.data());
 		}
-		for (auto& channel : allChannels) {
-			memcpy(&texData[channel->texChannel*texW], channel->valuesNormalized.data(), sizeof(float)*texW);
-			//if (i%2==1) {
-			//	for (int j = 0; j < texW; ++j) texData[i*texW+j] = 0.5f;
-			//}
-			//if (i%4==3) {
-			//	for (int j = 0; j < texW; ++j) texData[i*texW+j] = 0.75f;
-			//}
-			//if (i==0) {
-			//	for (int j = 0; j < texW; ++j) texData[i*texW+j] = 0.25f;
-			//}
-			//i++;
-		}
-		glActiveTexture( GL_TEXTURE0);
-		glBindTexture( GL_TEXTURE_2D, tex0);
-		glTexImage2D( GL_TEXTURE_2D, 0, GL_R32F, texW, texW, 0, GL_RED, GL_FLOAT, texData.data());
 	}
 }
 
@@ -302,28 +393,6 @@ int initDebugWindowPerformance(NVGcontext* vg) {
 	checkGLError("initDebugWindow");
 
 
-
-
-	glGenTextures(1, &tex0);
-	glActiveTexture( GL_TEXTURE0);
-	glBindTexture( GL_TEXTURE_2D, tex0);
-	glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameterf( GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
-	checkGLError("glTexImage2D");
-	glBindTexture( GL_TEXTURE_2D, 0);
-
-
-	{
-		int texSize = 64;
-		ImgData dataB = createQuadTexture(texSize);
-		int32_t nvgid = nvgCreateImageRGBA(vg, texSize, texSize, NVG_IMAGE_REPEATX | NVG_IMAGE_REPEATY | NVG_IMAGE_NEAREST, (const unsigned char*)dataB.get());
-		nvgImageSize(vg, nvgid, &imgQuad.width, &imgQuad.height);
-		imgQuad.perContextId[vg] = nvgid;
-	}
     return 0;
 }
 void drawDebugWindowPerformance(NVGcontext* vg, int winW, int winH, float pxratio) {
@@ -363,10 +432,7 @@ void drawDebugWindowPerformance(NVGcontext* vg, int winW, int winH, float pxrati
 	}
 	tess2d::uploadVBO(tess, vbo);
 
-	glActiveTexture( GL_TEXTURE0);
-	glBindTexture( GL_TEXTURE_2D, tex0);
 
-	vec2 graphPos = vec2(renderPos);
 	// note that we have to call the next 2 lines every frame when not on OpenGL 3.0 or higher contexts.
 	// OpenGL documentation does not mention this directly
 	glBindVertexArray(vbo.vaoId);
@@ -374,23 +440,33 @@ void drawDebugWindowPerformance(NVGcontext* vg, int winW, int winH, float pxrati
 	glBindBuffer(GL_ARRAY_BUFFER, vbo.vboVertId);
 
 	glm::mat4 mvp;
-	for (int pass = 0; pass < allChannels.size(); pass++) {
-		auto channel = allChannels[pass];
-		auto color = rgbToNvg(colorOnlyPalette[(pass*4+2)%colorOnlyPaletteLen]);
-		color.a = 0.77f;
-		mvp = matProj * glm::translate(glm::mat4(1.0), glm::vec3(graphPos.x, graphPos.y, 0));
-		glUniformMatrix4fv(u_mvp, 1, GL_FALSE, value_ptr(mvp));
-		glUniform4f(u_renderColor, color.r, color.g, color.b, color.a);
-		glUniform4f(u_renderInfo, tmNow*0.001f, pass, graphSizeInset.x, graphSizeInset.y);
-		glDrawElements( GL_TRIANGLES, vbo.nIndices, GL_UNSIGNED_INT, NULL);
-		channel->graphPos = graphPos;
-		channel->graphSize = graphSize;
-		if (pass % cols == cols - 1) {
-			graphPos.y += graphSize.y;
-			graphPos.x = renderPos.x;
-		} else {
-			graphPos.x += graphSize.x;
+
+	vec2 graphPos = vec2(renderPos);
+	for (ProfilingDataRenderInstance& renderInstance : instancesRenderStats) {
+		renderInstance.instancePos = graphPos;
+		glActiveTexture( GL_TEXTURE0);
+		glBindTexture( GL_TEXTURE_2D, renderInstance.tex0);
+		for (int pass = 0; pass < renderInstance.channels.size(); pass++) {
+			auto channel = renderInstance.channels[pass];
+			auto color = rgbToNvg(colorOnlyPalette[(pass*4+2)%colorOnlyPaletteLen]);
+			color.a = 0.77f;
+			mvp = matProj * glm::translate(glm::mat4(1.0), glm::vec3(graphPos.x, graphPos.y, 0));
+			glUniformMatrix4fv(u_mvp, 1, GL_FALSE, value_ptr(mvp));
+			glUniform4f(u_renderColor, color.r, color.g, color.b, color.a);
+			glUniform4f(u_renderInfo, tmNow*0.001f, pass, graphSizeInset.x, graphSizeInset.y);
+			glDrawElements( GL_TRIANGLES, vbo.nIndices, GL_UNSIGNED_INT, NULL);
+			channel->graphPos = graphPos;
+			channel->graphSize = graphSize;
+			if (pass % cols == cols - 1) {
+				graphPos.y += graphSize.y;
+				graphPos.x = renderPos.x;
+			} else {
+				graphPos.x += graphSize.x;
+			}
 		}
+		graphPos.y += graphSize.y;
+		graphPos.x = renderPos.x;
+
 	}
 
 	glBindVertexArray(0);
@@ -412,9 +488,12 @@ void drawDebugWindowPerformance(NVGcontext* vg, int winW, int winH, float pxrati
 	int TEXT_FONT_SIZE = 18;
 	nvgFontSize(vg, TEXT_FONT_SIZE);
 	int inset = 0;
-	for (int pass = 0; pass < allChannels.size(); pass++) {
-		auto channel = allChannels[pass];
-		nvgBatchedRect(vg, channel->graphPos.x, channel->graphPos.y+lineh, (channel->graphSize.x-inset*2)/3.5, channel->graphSize.y-inset-(lineh));
+
+	for (ProfilingDataRenderInstance& renderInstance : instancesRenderStats) {
+		for (int pass = 0; pass < renderInstance.channels.size(); pass++) {
+			auto channel = renderInstance.channels[pass];
+			nvgBatchedRect(vg, channel->graphPos.x, channel->graphPos.y+lineh, (channel->graphSize.x-inset*2)/3.5, channel->graphSize.y-inset-(lineh));
+		}
 	}
 	NVGpaint paint{};
 	paint.image = -1;
@@ -423,11 +502,15 @@ void drawDebugWindowPerformance(NVGcontext* vg, int winW, int winH, float pxrati
 	nvgBatchedRender(vg);
 	nvgFillColor(vg, rgbaToNvg(0xFFFFFFFF));
 	nvgTextAlign(vg, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
-	for (int pass = 0; pass < allChannels.size(); pass++) {
-		auto channel = allChannels[pass];
-		float y = channel->graphPos.y;
-		nvgText(vg, channel->graphPos.x+4, y+inset/2, StringAsCStr(channel->name), nullptr);
-		y += lineh;
+	for (ProfilingDataRenderInstance& renderInstance : instancesRenderStats) {
+		nvgText(vg, renderInstance.instancePos.x+4, renderInstance.instancePos.y-TEXT_FONT_SIZE-inset/2, StringAsCStr(renderInstance.name), nullptr);
+		for (int pass = 0; pass < renderInstance.channels.size(); pass++) {
+			auto channel = renderInstance.channels[pass];
+			float y = channel->graphPos.y;
+			nvgText(vg, channel->graphPos.x+4, y+inset/2, StringAsCStr(channel->name), nullptr);
+			y += lineh;
+		}
+
 	}
 	TEXT_FONT_SIZE -= 4;
 	nvgTranslate(vg, 6, 3);
@@ -435,29 +518,31 @@ void drawDebugWindowPerformance(NVGcontext* vg, int winW, int winH, float pxrati
 	nvgFillColor(vg, rgbaToNvg(0xFFAAAAAA));
 	nvgTextAlign(vg, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
 	nvgTextMetrics(vg, NULL, NULL, &lineh);
-	for (int pass = 0; pass < allChannels.size(); pass++) {
-		auto channel = allChannels[pass];
-		float y = channel->graphPos.y + TEXT_FONT_SIZE + inset;
-		{
-			String strFormatted = StringFormat("%d%s", channel->valueLast, StringAsCStr(channel->unit));
-			nvgText(vg, channel->graphPos.x+inset/2, y+inset/2, StringAsCStr(strFormatted), nullptr);
+	for (ProfilingDataRenderInstance& renderInstance : instancesRenderStats) {
+		for (int pass = 0; pass < renderInstance.channels.size(); pass++) {
+			auto channel = renderInstance.channels[pass];
+			float y = channel->graphPos.y + TEXT_FONT_SIZE + inset;
+			{
+				String strFormatted = StringFormat("%d%s", channel->valueLast, StringAsCStr(channel->unit));
+				nvgText(vg, channel->graphPos.x+inset/2, y+inset/2, StringAsCStr(strFormatted), nullptr);
+			}
+			y += lineh;
+			{
+				String strFormatted = StringFormat("Avg: %d%s", channel->valueAvg, StringAsCStr(channel->unit));
+				nvgText(vg, channel->graphPos.x+inset/2, y+inset/2, StringAsCStr(strFormatted), nullptr);
+			}
+			y += lineh;
+			{
+				String strFormatted = StringFormat("Max: %d%s", channel->valueMax, StringAsCStr(channel->unit));
+				nvgText(vg, channel->graphPos.x+inset/2, y+inset/2, StringAsCStr(strFormatted), nullptr);
+			}
+			y += lineh;
+			{
+				String strFormatted = StringFormat("Min: %d%s", channel->valueMin, StringAsCStr(channel->unit));
+				nvgText(vg, channel->graphPos.x+inset/2, y+inset/2, StringAsCStr(strFormatted), nullptr);
+			}
+			y += lineh;
 		}
-		y += lineh;
-		{
-			String strFormatted = StringFormat("Avg: %d%s", channel->valueAvg, StringAsCStr(channel->unit));
-			nvgText(vg, channel->graphPos.x+inset/2, y+inset/2, StringAsCStr(strFormatted), nullptr);
-		}
-		y += lineh;
-		{
-			String strFormatted = StringFormat("Max: %d%s", channel->valueMax, StringAsCStr(channel->unit));
-			nvgText(vg, channel->graphPos.x+inset/2, y+inset/2, StringAsCStr(strFormatted), nullptr);
-		}
-		y += lineh;
-		{
-			String strFormatted = StringFormat("Min: %d%s", channel->valueMin, StringAsCStr(channel->unit));
-			nvgText(vg, channel->graphPos.x+inset/2, y+inset/2, StringAsCStr(strFormatted), nullptr);
-		}
-		y += lineh;
 	}
     nvgRestore(vg);
 

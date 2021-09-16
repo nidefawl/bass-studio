@@ -50,6 +50,12 @@ struct render_clip_cache_stats_t {
 	int64_t clipsCached;
 	int64_t sizeCacheAllocatedMemBytes;
 };
+struct application_stats_t {
+	int64_t tickTimerDelay = 0;
+	int64_t numMessagesProcessed = 0;
+	int64_t numMessagesWmPaint = 0;
+	int64_t numRedrawReq = 0;
+};
 struct render_stats_t {
 	float fps = 0.0f;
 	int64_t timeRender = 0;
@@ -63,7 +69,9 @@ struct render_stats_t {
 	int64_t playThreadLockCount = 0;
 	render_stats_t() = default;
 };
-struct frame_render_stats {
-	int frameNumber;
-	render_stats_t renderStats;
-};
+namespace Profiling {
+template <typename T>
+void profilingRegisterEntry(void* entry, String name);
+template <typename T>
+void profilingCommitStats(void* entry, int frameNumber, T& stats);
+}

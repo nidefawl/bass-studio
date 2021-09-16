@@ -8,15 +8,15 @@
 
 namespace ProfilingImpl {
 
-
+	template <typename T>
 	struct profiling_impl_t {
-		profiled_instances<frame_render_stats> regWindowRenderStats;
-		void commit(void* ptr, int frameNumber, render_stats_t& frameRenderStats) {
-			for (auto& entry : regWindowRenderStats) {
+		profiled_instances<T> regWindowProfStats;
+		void commit(void* ptr, int frameNumber, T& stats) {
+			for (auto& entry : regWindowProfStats) {
 				if (entry.instancePtr == ptr)  {
-					frame_render_stats* lastEntry = &entry.stats[entry.writeIdx];
+					frame_stats<T>* lastEntry = &entry.stats[entry.writeIdx];
 					lastEntry->frameNumber = frameNumber;
-					lastEntry->renderStats = frameRenderStats;
+					lastEntry->stats = stats;
 					if (entry.writeIdx + 1 >= PROFILING_MAX_LEN) {
 						entry.writeIdx = 0;
 						entry.loopCount++;
@@ -25,19 +25,41 @@ namespace ProfilingImpl {
 			}
 		}
 		void registerInstance(void* ptr, String name) {
-			regWindowRenderStats.push_back({ptr, name});
+			regWindowProfStats.resize(regWindowProfStats.size()+1);
+			profiling_entry_t<T>& last = regWindowProfStats.back();
+			last.name = name;
+			last.instancePtr = ptr;
 		}
 	};
-	profiling_impl_t impl;
-	void profilingGetDataRenderStats(profiled_instances<frame_render_stats>** out) {
-		*out = &(impl.regWindowRenderStats);
+
+	profiling_impl_t<render_stats_t> renderStats;
+	profiling_impl_t<application_stats_t> appStats;
+
+	template <>
+	void profilingGetData(profiled_instances<render_stats_t>** out) {
+		*out = &(renderStats.regWindowProfStats);
+	}
+
+	template <>
+	void profilingGetData(profiled_instances<application_stats_t>** out) {
+		*out = &(appStats.regWindowProfStats);
 	}
 }
 namespace Profiling {
-	void profilingRegisterWindow(void* window, String name) {
-		ProfilingImpl::impl.registerInstance(window, name);
+	template <>
+	void profilingRegisterEntry<render_stats_t>(void* entry, String name) {
+		ProfilingImpl::renderStats.registerInstance(entry, name);
 	}
-	void profilingCommitStats(void* window, int frameNumber, render_stats_t& stats) {
-		ProfilingImpl::impl.commit(window, frameNumber, stats);
+	template <>
+	void profilingCommitStats(void* entry, int frameNumber, render_stats_t& stats) {
+		ProfilingImpl::renderStats.commit(entry, frameNumber, stats);
+	}
+	template <>
+	void profilingRegisterEntry<application_stats_t>(void* entry, String name) {
+		ProfilingImpl::appStats.registerInstance(entry, name);
+	}
+	template <>
+	void profilingCommitStats(void* entry, int frameNumber, application_stats_t& stats) {
+		ProfilingImpl::appStats.commit(entry, frameNumber, stats);
 	}
 }
