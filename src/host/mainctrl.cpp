@@ -1553,11 +1553,14 @@ void DawInstance::onTick()
 	vsthost::getInstance()->onTick();
 
 	bool noPopups = true;
-	bool noWindows = true;
+	bool canOpenAutosave = true;
 	for (auto* ctrl : dawCtrls) {
 		noPopups &= !ctrl->guiDragged && !ctrl->guiCaptured && !ctrl->ctxtmenu;
-		noWindows &= !ctrl->hasDialogWindows();
-		noWindows &= !ctrl->hasContextMenu();
+		canOpenAutosave &= noPopups;
+		canOpenAutosave &= !ctrl->hasDialogWindows();
+		canOpenAutosave &= !ctrl->hasContextMenu();
+		canOpenAutosave &= ctrl->hasInputFocus();
+		/*canOpenAutosave &= last click was n seconds ago*/
 	}
 	if (noPopups && projectToLoad) {
 		std::shared_ptr<project_to_load_t> projectToLoadCpy = projectToLoad;
@@ -1575,7 +1578,7 @@ void DawInstance::onTick()
 		}
 		log_printf("end of setLoadedProject\n", 0);
 	}
-	if (noWindows && autosaveState.isEnabled) {
+	if (canOpenAutosave && autosaveState.isEnabled) {
 		if (0 == autosaveState.tmLastTrigger) {
 			autosaveState.tmLastTrigger = getTimeMillis();
 		}
