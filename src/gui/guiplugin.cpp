@@ -55,12 +55,12 @@ guiplugin::~guiplugin() {
 	remove(&buttonBypass);
 	remove(&buttonSave);
 	remove(&meter);
-	for (auto g : guiButtons) {
+	for (auto g : guiButtonsTitlebar) {
 		dbgassert(!stl_contains(guis, g));
 	}
 }
-void guiplugin::addGuiBtn(guibuttontoggle* btn)  {
-	guiButtons.push_back(btn);
+void guiplugin::addGuiBtnTitlebar(guibuttontoggle* btn)  {
+	guiButtonsTitlebar.push_back(btn);
 	add(btn);
 }
 
@@ -192,10 +192,10 @@ guiplugin::guiplugin(effectbase* _effect)
 	buttonSave.icon = ICON_SAVE;
 	buttonSave.setLabel("Save");
 	add(&meter);
-	addGuiBtn(&buttonBypass);
-	addGuiBtn(&buttonLayout);
-	addGuiBtn(&buttonDelete);
-	addGuiBtn(&buttonSave);
+	addGuiBtnTitlebar(&buttonBypass);
+	addGuiBtnTitlebar(&buttonLayout);
+	addGuiBtnTitlebar(&buttonDelete);
+	addGuiBtnTitlebar(&buttonSave);
 //	buttonDelete.setTint(0x404040);
 }
 void guiplugin::rightClicked(MouseEvent& evt, guibase* button) {
@@ -216,7 +216,7 @@ void guiplugin::layout() {
 	ivec2 btnPos = {inset1, inset1};
 	buttonLayout.pos = btnPos;
 	btnPos[isHorizontalTitle?0:1] += buttonSize;
-	for (auto btn : guiButtons) {
+	for (auto btn : guiButtonsTitlebar) {
 		btn->size = {buttonSize, buttonSize};
 		btn->setRadius(hpt/3.f);
 		if (btn == &buttonLayout) {
@@ -679,36 +679,47 @@ public:
 		}
 	}
 };
+void guipluginview::updateParamList(const String& strParamNameFilter) {
+	std::vector<automatable_param_t*> sortedParams;
+	effect->getSortedParams(sortedParams);
+	std::vector<gui_list_entry*> listEntries;
+	listEntries.reserve(sortedParams.size());
+    std::for_each(sortedParams.begin(), sortedParams.end(), [&listEntries, eff = this->effect, &strParamNameFilter](auto* param) {
+    	if (strParamNameFilter.empty() || ci_find_substr(param->label, strParamNameFilter) >= 0) {
+    		listEntries.push_back(new gui_plugin_paramlist_entry(eff, param));
+    	}
+    });
+	params.setList(listEntries);
+
+}
 guipluginview::guipluginview(effectbase * _effect)
   : guiplugin(_effect), effect(_effect), dropdownProgram(_effect)
 {
 	params.setRowHeight(48);
+	textFieldSearchBox.setParent(this);
+	textFieldSearchBox.setChangeCallback([this](const String& str) {
+		updateParamList(str);
+		return true;
+	});
+	textFieldSearchBox.setPlaceholder("Search");
 	buttonOpenEditor.icon = ICON_ADJUST;
 	buttonOpenEditor.setStateRef(&_effect->bEditOpen);
 	buttonOpenEditor.setParent(this);
 	buttonOpenEditor.colorActive = GuiColor::COL_BTN_BG_SHOW_ACTIVE;
-	addGuiBtn(&buttonOpenEditor);
+	addGuiBtnTitlebar(&buttonOpenEditor);
 	params.setParent(this);
 	buttonShowInlineGUI.icon = ICON_ADJUST;
 	buttonShowInlineGUI.setStateRef(&_effect->bCaptureGUI);
 	buttonShowInlineGUI.setParent(this);
 	buttonShowInlineGUI.colorActive = GuiColor::COL_BTN_BG_SHOW_ACTIVE;
 	dropdownProgram.setParent(this);
-	std::vector<automatable_param_t*> sortedParams;
-	_effect->getSortedParams(sortedParams);
-	std::vector<gui_list_entry*> listEntries;
-	listEntries.reserve(sortedParams.size());
-    std::for_each(sortedParams.begin(), sortedParams.end(), [&listEntries, _effect](auto* param) {
-//		if (param->internalIdx >= 0)
-			listEntries.push_back(new gui_plugin_paramlist_entry(_effect, param));
-    });
-	params.setList(listEntries);
+	updateParamList("");
 	if (_effect->pluginType == PLUGIN_TYPE_VST) {
 		dbgassert(dynamic_cast<vstplugin*>(_effect));
 		ctrPreview = new guipluginview_preview(dynamic_cast<vstplugin*>(_effect), this);
 		ctrPreview->setVisible(false);
 		viewCtrs.push_back(ctrPreview);
-		addGuiBtn(&buttonShowInlineGUI);
+		addGuiBtnTitlebar(&buttonShowInlineGUI);
 	}
 }
 
@@ -726,6 +737,7 @@ void guipluginview::setControl(BaseCtrl* parentCtrl) {
 	guiplugin::setControl(parentCtrl);
 	params.setControl(parentCtrl);
 	dropdownProgram.setControl(parentCtrl);
+	textFieldSearchBox.setControl(parentCtrl);
 	for (auto* ctr : viewCtrs) {
 		ctr->setControl(parentCtrl);
 	}
@@ -776,7 +788,7 @@ void guipluginview::determineSize(glm::ivec2& prefSize) {
 }
 void guipluginview::render(NVGcontext* vg) {
 	renderBase(vg);
-	for (auto* btn : guiButtons) {
+	for (auto* btn : guiButtonsTitlebar) {
 		if (btn->isVisible())
 			btn->render(vg);
 	}
@@ -794,6 +806,9 @@ void guipluginview::render(NVGcontext* vg) {
 		if (dropdownProgram.isVisible()) {
 			dropdownProgram.render(vg);
 		}
+		if (textFieldSearchBox.isVisible()) {
+			textFieldSearchBox.render(vg);
+		}
 		if (params.isVisible()) {
 			if (params.isBackgroundRendered()){
 				params.renderBackground(vg);
@@ -808,7 +823,7 @@ bool guipluginview::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 	}
 	if (contains(mpos)) {
 		ivec2 localMouse = this->toContainerSpace(mpos);
-		for (auto* btn : guiButtons) {
+		for (auto* btn : guiButtonsTitlebar) {
 			if (btn->isVisible() && btn->mouseHitTest(localMouse, evt)) {
 				return true;
 			}
@@ -822,6 +837,9 @@ bool guipluginview::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 			return true;
 		}
 		if (dropdownProgram.isVisible() && dropdownProgram.mouseHitTest(localMouse, evt)) {
+			return true;
+		}
+		if (textFieldSearchBox.isVisible() && textFieldSearchBox.mouseHitTest(localMouse, evt)) {
 			return true;
 		}
 		if (isShift(evt.kbmods)) {
@@ -876,36 +894,43 @@ void guipluginview::layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) {
 	while (contentS.y < rowHeight * 8 && rowHeight > 8) {
 		rowHeight -= 4;
 	}
-	dropdownProgram.setVisible(layoutMode == 0 && effect->programNames.size());
+	int heightRow = hpt*0.7;
+	textFieldSearchBox.setVisible(layoutMode == 0 && heightRow >= 20);
+	dropdownProgram.setVisible(layoutMode == 0 && effect->programNames.size() && heightRow >= 20);
+	int hDropDown = 0;
+
 	if (dropdownProgram.isVisible()) {
-
-		int hDropDown = hpt*0.7;
-		int paramsW = contentS.x - sizeCtrs.x;
-		params.setRowHeight(rowHeight);
-		params.pos = ivec2(insetCtrls, insetCtrls + hpt+hDropDown);
-		params.size = ivec2(paramsW, contentS.y-hDropDown) - ivec2(insetCtrls*2);
-		params.layout();
-		dropdownProgram.pos = ivec2(insetCtrls*2, insetCtrls+hpt);
-		dropdownProgram.size = ivec2(paramsW, hDropDown) - ivec2(insetCtrls*4, 0);
+		hDropDown += hpt*0.7;
+	}
+	if (textFieldSearchBox.isVisible()) {
+		hDropDown += hpt*0.7;
+	}
+	int paramsW = contentS.x - sizeCtrs.x;
+	params.setRowHeight(rowHeight);
+	params.pos = ivec2(insetCtrls, insetCtrls + hpt+hDropDown);
+	params.size = ivec2(paramsW, contentS.y-hDropDown) - ivec2(insetCtrls*2);
+	params.layout();
+	int topOffset = 0;
+	if (dropdownProgram.isVisible()) {
+		dropdownProgram.pos = ivec2(insetCtrls*2, insetCtrls+hpt+topOffset);
+		dropdownProgram.size = ivec2(paramsW, hpt*0.7) - ivec2(insetCtrls*4, 0);
 		dropdownProgram.layout();
-	} else {
-
-		int paramsW = contentS.x - sizeCtrs.x;
-		params.setRowHeight(rowHeight);
-		params.pos = ivec2(insetCtrls, insetCtrls + hpt);
-		params.size = ivec2(paramsW, contentS.y) - ivec2(insetCtrls*2);
-		params.layout();
-    }
+		topOffset += hpt*0.7;
+	}
+	if (textFieldSearchBox.isVisible()) {
+		textFieldSearchBox.pos = ivec2(insetCtrls*2, insetCtrls+hpt+topOffset);
+		textFieldSearchBox.size = ivec2(paramsW, hpt*0.7) - ivec2(insetCtrls*4, 0);
+		textFieldSearchBox.layout();
+		topOffset += hpt*0.7;
+	}
     int left = params.right() + INSET_TITLE;
 	if (viewCtrs.size()) {
 		for (auto* ctr : viewCtrs) {
             if (ctr->isVisible()) {
                 ctr->pos = ivec2(left, 0) + ivec2(insetCtrls, insetCtrls + hpt);
                 ivec2 prefSizeCtr = ivec2(ctr->size.x, contentS.y) - ivec2(insetCtrls * 2);
-                log_printf("layoutModule prefSizeCtr xy %d %d\n", prefSizeCtr.x, prefSizeCtr.y);
                 ctr->determineSize(prefSizeCtr);
                 ctr->size = prefSizeCtr;
-                log_printf("layoutModule ctr->size xy %d %d\n", ctr->size.x, ctr->size.y);
                 ctr->layout();
                 left = ctr->right() + INSET_TITLE;
 			}

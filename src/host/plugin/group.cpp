@@ -124,7 +124,7 @@ void guimodule_group::render(NVGcontext* vg) {
 		ctr.render(vg);
 		nvgRestore(vg);
 	}
-	for (auto* btn : guiButtons) {
+	for (auto* btn : guiButtonsTitlebar) {
 		if (btn->isVisible())
 			btn->render(vg);
 	}

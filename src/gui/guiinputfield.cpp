@@ -23,8 +23,6 @@ void gui_numberinput_field_base::render(NVGcontext* vg) {
 		return;
 	}
 	setFont(vg, G_FONT_SCALE(size.y), G_WHITE, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
-//	int32_t _number = number ? *number : 0;
-//	String str = StringFormat("%d", _number);
 	String str = getAsStringLiteral();
 	float pX = nvgText(vg, pos.x + size.x - 3, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(str), NULL);
 	if (!isEditing && this->label.length()) {
@@ -35,7 +33,6 @@ void gui_numberinput_field_base::render(NVGcontext* vg) {
 		if (pX-3 > bounds[2]) {
 			nvgText(vg, pos.x + 3.0f, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(this->label), NULL);
 		}
-
 	}
 }
 
@@ -51,7 +48,7 @@ bool gui_numberinput_field_base::focusEvent(MouseHitEvt& evt, bool focused) {
 
 void gui_numberinput_field_base::endEdit(bool success) {
 	if (isEditing) {
-		this->field.endEdit();
+		this->field.endEdit(success);
 		if (success) {
 			endEditImpl();
 		}

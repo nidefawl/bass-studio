@@ -12,6 +12,7 @@
 #include "guicontextmenu_base.h"
 #include "guicontextmenu.h"
 #include "guicontextmenu_daw.h"
+#include "textfield.h"
 #include "button.h"
 #include "event.h"
 #include "renderresources.h"
@@ -144,12 +145,15 @@ guitooltip<audio_info_t>::~guitooltip()  {
 	removeGuis();
 	delete ptr;
 }
-class gui_trackgain: public guibase {
+class gui_trackgain: public gui_textfield {
 	automatable_t* paramAutomatable = nullptr;
 	int32_t paramIdx = -1;
 public:
-	gui_trackgain() : guibase() {
+	gui_trackgain() : gui_textfield() {
 		setCanMouseHit(true);
+		setAlignment(gui_textfield::Alignment::Center);
+		setFontSize(20);
+		mReturnCommits = true;
 	}
 	void setAutomationRef(automatable_t* _paramAutomatable, int32_t _paramIdx) {
 		this->paramAutomatable = _paramAutomatable;
@@ -194,44 +198,143 @@ public:
 				nvgFillColor(vg, theme->getColor(valColor));
 				nvgFill(vg);
 			}
-			setFont(vg, 20, theme->getContrastColor(valColor), NVG_ALIGN_CENTER|NVG_ALIGN_MIDDLE);
-			String strLvl = StringFormat("%.2f", dsp_util::dBFSClampInf6(gainDb));
+			setFont(vg, fontSize(), theme->getContrastColor(valColor), NVG_ALIGN_CENTER|NVG_ALIGN_MIDDLE);
+			String strLvl = getValueAsString();
 			nvgText(vg, insetP.x + insetS.x / 2.0f, insetP.y + G_FONT_MIDDLE_OFFSET(insetS.y), StringAsCStr(strLvl), NULL);
 		}
+		if (!mCommitted) {
+			gui_textfield::render(vg);
+		}
+	}
+	String getValueAsString() {
+		float gainDb = dsp_util::linScaleToGain(paramAutomatable->getParamValue(paramIdx));
+		return StringFormat("%.2f", dsp_util::dBFSClampInf6(gainDb));
+	}
+	bool focusEvent(MouseHitEvt& evt, bool focused)
+	{
+		if (!focused) {
+			gui_textfield::focusEvent(evt, focused);
+		}
+		return true;
+	}
+	bool handleCharInput(unsigned int codepoint) override {
+	    if (mCommitted && codepoint >= 0 && codepoint < 0xFF) {
+	    	char keyChar = (char)codepoint;
+	    	if ((keyChar >= '0' && keyChar <= '9')
+	    		|| (keyChar == '-')) {
+				MouseHitEvt evt(MouseHitType::MOUSE_LEFT, 0);
+				gui_textfield::setValue(getValueAsString());
+				gui_textfield::focusEvent(evt, true);
+				gui_textfield::setSelectionRange(-1, -1);
+			}
+	    }
+	    if (!mCommitted) {
+	    	return gui_textfield::handleCharInput(codepoint);
+        }
+	    return false;
+	}
+	bool keyboardEvent(int key, int scancode, KeyEventType action, int modifiers) {
+
+	    if (action == KeyEventType::K_PRESS && mCommitted) {
+        	if ((key == KEY_ENTER || key == KEY_KP_ENTER)) {
+    			MouseHitEvt evt(MouseHitType::MOUSE_LEFT, 0);
+    			gui_textfield::setValue(getValueAsString());
+    			gui_textfield::focusEvent(evt, true);
+    			gui_textfield::setSelectionRange(-1, -1);
+        	}
+	    }
+
+	    if (!mCommitted) {
+	    	return gui_textfield::keyboardEvent(key, scancode, action, modifiers);
+        }
+        if (action == KeyEventType::K_PRESS || action == KeyEventType::K_REPEAT) {
+            if (key == KEY_UP) {
+            	float amt = -1.0f;
+                if (modifiers == KB_MOD_SHIFT) {
+                	amt *= 0.1f;
+                }
+				modifyGainLevel(amt, false);
+                return true;
+            } else if (key == KEY_DOWN) {
+            	float amt = 1.0f;
+                if (modifiers == KB_MOD_SHIFT) {
+                	amt *= 0.1f;
+                }
+				modifyGainLevel(amt, false);
+                return true;
+            }
+        }
+	    return false;
+    }
+	void onTextEndEdit() override {
+		String textFieldVal = value();
+		float fTextFieldVal = atof(StringAsCStr(textFieldVal));
+		float fGain = dsp_util::fromdBFSClampInf6(fTextFieldVal);
+		if (fGain < dsp_util::GAIN_DBFLOOR) {
+			fGain = dsp_util::GAIN_DBFLOOR;
+		}
+		float fNew = dsp_util::clampGain(fGain);
+		paramAutomatable->deactivateAutomation(paramIdx);
+		paramAutomatable->getParam(paramIdx)->value = dsp_util::gainToLinScale(fNew);
 	}
 	void handleDraggedBegin(MouseEvent& evt) {
+		if (!mCommitted) {
+			gui_textfield::handleDraggedBegin(evt);
+			return;
+		}
+		if (evt.type == MouseEventType::M_EVT_DOUBLECLICK) {
+			MouseHitEvt evt(MouseHitType::MOUSE_LEFT, 0);
+			gui_textfield::setValue(getValueAsString());
+			gui_textfield::focusEvent(evt, true);
+			gui_textfield::setSelectionRange(-1, -1);
+			return;
+		}
 		if (evt.guiDragged == this) {
 			parentCtrl->captureMouse(this);
 		}
 	}
+	void modifyGainLevel(float amt, bool applyUserInputScaling) {
+		float fGain = dsp_util::linScaleToGain(paramAutomatable->getParamValue(paramIdx));
+		if (fGain < dsp_util::GAIN_DBFLOOR) {
+			fGain = dsp_util::GAIN_DBFLOOR;
+		}
+		float dbfs = dsp_util::dBFS(fGain);
+		float delta = 1.0f;
+		if (applyUserInputScaling) {
+			for (int i = 1; i < 4; i++) {
+				if (dbfs < -12*i) {
+					delta *= 2;
+				}
+			}
+		}
+		dbfs -= delta * amt;
+		float f = dsp_util::fromdBFS(dbfs);
+		float fNew = dsp_util::clampGain(f);
+		paramAutomatable->deactivateAutomation(paramIdx);
+		paramAutomatable->getParam(paramIdx)->value = dsp_util::gainToLinScale(fNew);
+	}
 	void handleDraggedMove(MouseEvent& evt) {
+		if (!mCommitted) {
+			gui_textfield::handleDraggedMove(evt);
+			return;
+		}
 		if (evt.guiDragged == this && evt.type == M_EVT_CAPTURED_MOVE) {
 			int scale = isCtrl(evt.kbmods) ? 15 : 2;
 			int disty = (int)evt.dragDistance->y / scale;
 			if (!disty)
 				return;
+
 			evt.dragDistance->y = 0;
 			if (paramAutomatable && paramIdx > -1) {
-				float fGain = dsp_util::linScaleToGain(paramAutomatable->getParamValue(paramIdx));
-				if (fGain < dsp_util::GAIN_DBFLOOR) {
-					fGain = dsp_util::GAIN_DBFLOOR;
-				}
-				float dbfs = dsp_util::dBFS(fGain);
-				float delta = 0.1f;
-				for (int i = 1; i < 4; i++) {
-					if (dbfs < -12*i) {
-						delta *= 2;
-					}
-				}
-				dbfs -= delta * disty;
-				float f = dsp_util::fromdBFS(dbfs);
-				float fNew = dsp_util::clampGain(f);
-				paramAutomatable->deactivateAutomation(paramIdx);
-				paramAutomatable->getParam(paramIdx)->value = dsp_util::gainToLinScale(fNew);
+				modifyGainLevel(disty * 0.1f, true);
 			}
 		}
 	}
 	void handleDraggedRelease(MouseEvent& evt) {
+		if (!mCommitted) {
+			gui_textfield::handleDraggedRelease(evt);
+			return;
+		}
 	}
 };
 

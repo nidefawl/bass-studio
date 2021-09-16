@@ -93,7 +93,7 @@ float dBFSClampInf6(float f) {
 float fromdBFSClampInf6(float f_dBfs) {
 	if (f_dBfs <= DBFS_FLOOR)
 		return 0.0f;
-	float f_gain = pow(10.0f, f_dBfs/-20.0f);
+	float f_gain = pow(10.0f, f_dBfs/20.0f);
 	if (f_gain > GAIN_DB6) {
 		return GAIN_DB6;
 	}

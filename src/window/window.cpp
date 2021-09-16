@@ -1399,7 +1399,7 @@ static void glfw_cb_keyinput(GLFWwindow *w, int key, int scancode, int action, i
 		wu->onKeyInput(key, scancode, action, mods, key_name);
 	EXC_CATCH
 }
-static void glfw_cb_charinput(GLFWwindow *w, unsigned int codepoint) {
+static void glfw_cb_charinput(GLFWwindow *w, unsigned int codepoint, int mods) {
 	EXC_TRY
 	appwindow* wu;
 	if ((wu = getUserData(w)) && wu->isValid())
@@ -1467,7 +1467,8 @@ void appwindow::createBaseWindow(const char* title, int w, int h, GLFWwindow* sh
 	glfwSetMouseButtonCallback(glfw, glfw_cb_mousebutton);
 	glfwSetScrollCallback(glfw, glfw_cb_mousescroll);
 	glfwSetKeyCallback(glfw, glfw_cb_keyinput);
-	glfwSetCharCallback(glfw, glfw_cb_charinput);
+//	glfwSetCharCallback(glfw, glfw_cb_charinput);
+	glfwSetCharModsCallback(glfw, glfw_cb_charinput);
 	glfwSetCursorEnterCallback(glfw, glfw_cb_cursorenter);
 	double mposx, mposy;
 	glfwGetCursorPos(glfw, &mposx, &mposy);

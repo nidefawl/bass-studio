@@ -11,6 +11,7 @@
 #include "guimeter.h"
 #include "dropdown.h"
 #include "guicontextmenu.h"
+#include "textfield.h"
 
 class effectbase;
 class vstplugin;
@@ -33,10 +34,11 @@ public:
 	bool isHorizontalTitle=true;
 	int layoutMode = 0;
 
-	std::vector<guibuttontoggle*> guiButtons;
+	std::vector<guibuttontoggle*> guiButtonsTitlebar;
+	std::vector<guibuttontoggle*> guiButtonsSidebar;
 	guiplugin(effectbase* _effect);
 	~guiplugin();
-	void addGuiBtn(guibuttontoggle* btn);
+	void addGuiBtnTitlebar(guibuttontoggle* btn);
 	virtual void render(NVGcontext* vg) override;
 	virtual void prerender(NVGcontext* vg) override;
 	virtual void buttonClicked(guibase* _button);
@@ -106,7 +108,8 @@ public:
 	guidropdownprogram dropdownProgram;
 	gui_list params; //TODO: use add() on control
 	guibuttontoggle buttonOpenEditor; //TODO: use add() on controls
-    guibuttontoggle buttonShowInlineGUI; // TODO: use add() on controls
+    guibuttontoggle buttonShowInlineGUI; // TODO: use add() on controls;
+	gui_textfield textFieldSearchBox;
 
 	/* holds view controller for internal vstplugins with custom gui (non-steinberg api) */
 	std::shared_ptr<PluginViewContainers> viewCtr;
@@ -116,6 +119,7 @@ public:
 	ivec2 sizeCtrs;
 
 	guictr_base* ctrPreview = nullptr;
+	void updateParamList(const String& strParamNameFilter);
 
 	void layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1);
 	void render(NVGcontext* vg) override;

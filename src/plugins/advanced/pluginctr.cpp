@@ -36,7 +36,7 @@ gui_ctr_main::gui_ctr_main()
 		my_printf("text callback %s\n", StringAsCStr(str));
 		return true;
 	};
-	textField.setCallback(callback);
+	textField.setChangeCallback(callback);
 	//commented code below because of broken eclipse indexer
 //	textField.setCallback([](const String& str) {
 //		my_printf("text callback %s\n", StringAsCStr(str));

@@ -249,7 +249,7 @@ bool gui_input_filtered::focusEvent(MouseHitEvt& evt, bool focused) {
 
 void gui_input_filtered::endEdit(bool success) {
 	if (isEditing) {
-		this->field.endEdit();
+		this->field.endEdit(success);
 		if (success && this->number) {
 			int newVal = filter.parseString(this->field.value());
 			*number = newVal;

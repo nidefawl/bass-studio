@@ -59,7 +59,7 @@ public:
 		add(&textField);
 		add(&textField2);
 		add(&pluginListCtr);
-		textField.setCallback([this](const String& str) {
+		textField.setChangeCallback([this](const std::string& str) {
 			curquery = str;
 			update();
 			return true;
@@ -171,7 +171,7 @@ public:
 		pluginListCtr.setBackgroundRendered(false);
 		add(&textField);
 		add(&pluginListCtr);
-		textField.setCallback([this](const String& str) {
+		textField.setChangeCallback([this](const std::string& str) {
 			curquery = str;
 			update();
 			return true;

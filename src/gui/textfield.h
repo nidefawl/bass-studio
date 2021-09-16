@@ -110,11 +110,8 @@ public:
     /// Set the \ref Theme used to draw this widget
 //    virtual void setTheme(Theme *theme) override;
 
-    /// The callback to execute when the value of this TextBox has changed.
-    std::function<bool(const std::string& str)> callback() const { return mCallback; }
-
     /// Sets the callback to execute when the value of this TextBox has changed.
-    void setCallback(const std::function<bool(const std::string& str)> &callback) { mCallback = callback; }
+    void setChangeCallback(const std::function<bool(const std::string& str)> &callback) { mCallback = callback; }
 
     virtual bool focusEvent(MouseHitEvt& evt, bool focused);
     virtual bool keyboardEvent(int key, int scancode, KeyEventType action, int modifiers);
@@ -124,7 +121,7 @@ public:
 
 
     void beginEdit();
-    void endEdit();
+    void endEdit(bool success);
 
     virtual void render(NVGcontext* ctx) override;
     void updateTextLayout(NVGcontext* ctx);
@@ -135,7 +132,8 @@ public:
 	virtual void handleDraggedBegin(MouseEvent& evt) override;
 	virtual void handleDraggedMove(MouseEvent& evt) override;
 	virtual void handleDraggedRelease(MouseEvent& evt) override;
-
+	virtual void onTextChange();
+	virtual void onTextEndEdit();
 
 
     bool copySelectionString(std::string& output);
@@ -159,6 +157,7 @@ protected:
 public:
     bool mEditable;
     bool mCommitted;
+    bool mReturnCommits = false;
     std::string mValue;
     std::string mDefaultValue;
     Alignment mAlignment;
@@ -172,7 +171,6 @@ public:
     std::string mPlaceholder;
     int mCursorPos;
     int mSelectionPos;
-    ivec2 mMousePos;
     ivec2 mMouseDownPos;
     ivec2 mMouseDragPos;
     int mMouseDownModifier;
@@ -181,7 +179,6 @@ public:
 protected:
     bool mVisible;
     bool mEnabled;
-    std::string mTooltip;
     bool mFocused;
     float mFontSize;
     bool mMouseFocus;
