@@ -391,22 +391,25 @@ namespace DAW {
 				} else if (inputChannel.getType() == channel_input_type::INPUT_EXTERNAL_AUDIO) {
 					trackCfg.pulls.push_back(DAW::track_source_t{trackEdgeId++, inputChannel, DAW::AutomationConstant(dsp_util::gainToLinScale(1.0f)), 0, audiostageflags_t::NONE});
 				} else if (inputChannel.type != channel_input_type::INPUT_DEFAULT) {
-					log_printf("missing track input routing\n", 0);
+					log_printf("missing track input routing on track %s\n", StringAsCStr(track->name));
 				}
 			}
 			if (isChannelConnected(outputChannel)) {
 				if (outputChannel.getType() == channel_input_type::INPUT_AUDIOSTAGE && trackImpl->mixer.isEnabled()) {
 					audio_stage_t* dst = host->getAudioStage(outputChannel.stage.stageRef);
-					dbgassert(dst);
-					auto dstStageId = dst->stageId.stageId;
-					if (!map.count(dstStageId)) {
-						map[dstStageId] = makeTrackNode(dstStageId, dst->getInternalLatency());
+					if (!dst) {
+						log_printf("missing track output routing on track %s\n", StringAsCStr(track->name));
+					} else {
+						auto dstStageId = dst->stageId.stageId;
+						if (!map.count(dstStageId)) {
+							map[dstStageId] = makeTrackNode(dstStageId, dst->getInternalLatency());
+						}
+						track_node_t& trackDstCfg = getNode(map, dstStageId);
+						trackDstCfg.dependencies.push_back(stageId);
+						trackDstCfg.pushs.push_back(DAW::track_source_t{trackEdgeId++, ChannelStage(trackImpl, stagebuffer_point::OUTPUT_POST), DAW::AutomationConstant(dsp_util::gainToLinScale(1.0f)), 0, trackImpl->flags});
+						trackDstCfg.children.push_back(&trackCfg);
+						trackCfg.parents.push_back(&trackDstCfg);
 					}
-					track_node_t& trackDstCfg = getNode(map, dstStageId);
-					trackDstCfg.dependencies.push_back(stageId);
-					trackDstCfg.pushs.push_back(DAW::track_source_t{trackEdgeId++, ChannelStage(trackImpl, stagebuffer_point::OUTPUT_POST), DAW::AutomationConstant(dsp_util::gainToLinScale(1.0f)), 0, trackImpl->flags});
-					trackDstCfg.children.push_back(&trackCfg);
-					trackCfg.parents.push_back(&trackDstCfg);
 				}
 			}
 			if (TRACKTYPE_TO_CTR(track->type)  == TRACK_CTR_MIDIAUDIO && trackImpl->mixer.isEnabled()) {
