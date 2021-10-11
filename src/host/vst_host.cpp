@@ -394,7 +394,11 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
 		cbPrintf(plugin, "audioMasterVendorSpecific %d %d %d\n", index, opcode, value);
 		return 0;
 	case audioMasterCanDo:
+
+#ifdef DBG_PRINT_CALLBACKS
 		cbPrintf(plugin, "audioMasterCanDo %d %d %d\n", index, opcode, value);
+		log_printf("audioMasterCanDo %s\n", (const char*)ptr);
+#endif
 		return host->canDo((const char*)ptr);
 	case audioMasterGetLanguage:
 		cbPrintf(plugin, "audioMasterGetLanguage %d %d %d\n", index, opcode, value);
@@ -756,6 +760,7 @@ bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, co
 			}
 			track_audio_src src;
 			auto* buff = &stage->input;
+			int32_t idx = inputChannel.inputChannelOffset;
 			switch (inputChannel.stage.buffer) {
 			case stagebuffer_point::INPUT:
 				buff = &stage->input;
@@ -770,8 +775,9 @@ bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, co
 				src.latency = stage->getOutputLatency();
 				break;
 			}
+			dbgassert(idx <= buff->channels);
 			for (uint32_t i = 0; i < buff->channels; i++) {
-				src.channels.push_back(buff->buf[i]);
+				src.channels.push_back(buff->buf[i + idx]);
 			}
 			src.sampleFormat = stage->sampleFormat;
 			src.samples = buff->samples;

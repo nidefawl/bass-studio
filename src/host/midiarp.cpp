@@ -490,6 +490,37 @@ void midiarp::process(std::vector<noteevent_t>& noteEventsIn,
 			}
 		}
 		if (enable) {
+			if (tick >= (resetTime+step*stepSize))
+			{
+				const auto tmTickCur = tick;
+				if (heldInput.size()) {
+					if (tick == resetTime+(step+1)*stepSize) {
+						step++;
+					}
+					if (tick >= (resetTime+step*stepSize) + (stepSize/2)) {
+						if (stepGenerated != step+1) {
+							if(tick >= resetTime+(step+1)*stepSize) {
+								log_printf("missed a step, did stepsize change?\n", 0);
+							}
+							bool stepCompleted = std::all_of(std::begin(processTimePoints), std::end(processTimePoints), [tmTickCur](tick_t t){
+								return t <= tmTickCur;
+							});
+							if (stepCompleted) {
+								initRandomDelays(lSeed, step+1, stepSize, start, end, false);
+								bool stepCompleted2 = std::all_of(std::begin(processTimePoints), std::end(processTimePoints), [tmTickCur](tick_t t){
+									return t <= tmTickCur;
+								});
+								if(stepCompleted2) {
+									log_printf("no unprocessed steps (%d) generated at step %d range %d %d\n", processTimePoints.size(), step+1, start, end);
+								}
+								stepGenerated = step+1;
+							}
+						} else {
+//							log_printf("skip step, already generated\n", 0);
+						}
+					}
+				}
+			}
 
 			int currentpolyphonecount = heldInput.size();
 			for (int prIdx = 0; prIdx < processTimePoints.size() && (prIdx == 0 || isChordOutput()); prIdx++) {
@@ -609,33 +640,6 @@ void midiarp::process(std::vector<noteevent_t>& noteEventsIn,
 				}
             }
 			
-			if (tick >= (resetTime+step*stepSize))
-			{
-				const auto tmTickCur = tick;
-				if (heldInput.size()) {
-					if (tick == resetTime+(step+1)*stepSize) {
-						step++;
-					}
-					if (tick >= (resetTime+step*stepSize) + (stepSize/2)) {
-						if (stepGenerated != step+1) {
-							dbgassert(tick < resetTime+(step+1)*stepSize);
-							bool stepCompleted = std::all_of(std::begin(processTimePoints), std::end(processTimePoints), [tmTickCur](tick_t t){
-								return t <= tmTickCur;
-							});
-							if (stepCompleted) {
-								initRandomDelays(lSeed, step+1, stepSize, start, end, false);
-								bool stepCompleted2 = std::all_of(std::begin(processTimePoints), std::end(processTimePoints), [tmTickCur](tick_t t){
-									return t <= tmTickCur;
-								});
-								dbgassert(!stepCompleted2);
-								stepGenerated = step+1;
-							}
-						} else {
-//							log_printf("skip step, already generated\n", 0);
-						}
-					}
-				}
-			}
 		} else if (false) {
 			while (!noteEvents.empty()) {
 				noteevent_t* evt = &noteEvents.back();

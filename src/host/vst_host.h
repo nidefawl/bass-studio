@@ -238,10 +238,12 @@ public:
 	{
 		if ((!strcmp(ptr, HostCanDos::canDoSendVstEvents)) ||
 			(!strcmp(ptr, HostCanDos::canDoSendVstMidiEvent)) ||
+			(!strcmp(ptr, HostCanDos::canDoSendVstTimeInfo)) ||
 			(!strcmp(ptr, HostCanDos::canDoReceiveVstEvents)) ||
 			(!strcmp(ptr, HostCanDos::canDoReceiveVstMidiEvent)) ||
-			(!strcmp(ptr, HostCanDos::canDoSizeWindow)) ||
+			(!strcmp(ptr, HostCanDos::canDoReportConnectionChanges)) ||
 			(!strcmp(ptr, HostCanDos::canDoAcceptIOChanges)) ||
+			(!strcmp(ptr, HostCanDos::canDoSizeWindow)) ||
 			(!strcmp(ptr, HostCanDos::canDoSendVstMidiEventFlagIsRealtime)) ||
 			(!strcmp(ptr, HostCanDos::canDoStartStopProcess)) ||
 			(!strcmp(ptr, HostCanDos::canDoShellCategory)) ||

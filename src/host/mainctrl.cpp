@@ -1918,7 +1918,7 @@ void DawCtrl::relayout(int32_t w, int32_t h) {
 }
 void DawInstance::setSelectedTrackEntry(track_gui_entry_t* trackEntry) {
 	selectedTrack = trackEntry ? trackEntry->track : nullptr;
-	mainCtrl->view->ctr_plugins.showTrack(trackEntry&&trackEntry->track ? trackEntry->track->audio : nullptr);
+	mainCtrl->view->ctr_plugins.showTrack(trackEntry && trackEntry->track ? trackEntry->track->audio : nullptr);
 }
 void DawInstance::setSelectedTrack(track_t* track) {
 	selectedTrack = track;
