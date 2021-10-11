@@ -55,5 +55,6 @@ public:
 
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
 	void layout() override;
+	guibase* getTitle();
 };
 

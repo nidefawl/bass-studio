@@ -971,6 +971,9 @@ public:
 #endif
 	}
 
+	void focus() {
+		glfwFocusWindow(glfw);
+	}
 	void show() {
 		appwindow::showWindow();
 

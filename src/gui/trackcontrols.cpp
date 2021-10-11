@@ -1289,7 +1289,8 @@ public:
 			nvgFill(vg);
 		}
 		setFont(vg, (int) (titleHeight * 0.9), getContrastFontColorNvg(color), G_TITLE_ALIGN);
-		renderText(vg, hideTrack.right() + INSET_TITLE*2, 0 + titleHeight / 2, titleSize.x-hideTrack.right(), StringAsCStr(m_track->name));
+		auto textWidth = titleSize.x-hideTrack.right();
+		nvgText(vg, hideTrack.right() + INSET_TITLE*2, 0 + titleHeight / 2, StringAsCStr(m_track->name), nullptr);
 
 		for (auto g : guis) {
 			g->render(vg);
@@ -1573,6 +1574,9 @@ namespace GuiConstant {
 GuiConstant::constant_t CONST_MIXER_WIDTH("CONST_MIXER_WIDTH", 160);
 GuiConstant::constant_t CONST_TRACK_IO_WIDTH("CONST_TRACK_IO_WIDTH", 180);
 }
+guibase* gui_track_controls::getTitle() {
+	return title;
+}
 void gui_track_controls::layout() {
 	const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
 	const int32_t TRACK_IO_WIDTH = theme->get(GuiConstant::CONST_TRACK_IO_WIDTH);
@@ -1654,6 +1658,7 @@ public:
 		this->size.x = 120;
 		sel = new ctxtmenu_color_select("Pick Color", 100);
 		addEntry(new ctxtmenu_entry("Duplicate track", 1));
+		addEntry(new ctxtmenu_entry("Rename track", 6));
 		addEntry(new ctxtmenu_splitter());
 		addEntry(new ctxtmenu_entry("Show all automation", 0));
 		addEntry(new ctxtmenu_entry("Show waveform", 5));
@@ -1756,6 +1761,37 @@ public:
 			}
 			closeContextMenu(); // deletes this
 			return;
+		} else if (_id == 6) {
+			const int titleHeight = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
+
+			auto title = m_trackentry->mixer->getTitle();
+			auto popupPos = title->toScreenSpace(ivec2(0));//+ivec2(title->hideTrack.right() + INSET_TITLE*2, 0);
+			gui_textfield* field = new gui_textfield();
+			field->size = title->size;
+			field->size.y = titleHeight;
+			field->pos = {0, 0};
+			field->setFontSize((int)(titleHeight*0.9));
+			field->mReturnCommits = true;
+
+			guictxtmenu_base* ctxtMenu = new guictxtmenu_base();
+			ctxtMenu->size = field->size;
+			ctxtMenu->add(field);
+			ctxtMenu->layout();
+			ctxtMenu->canTakeInputFocus = true;
+			ctxtMenu->maxHeight = field->size.y;
+			dbgassert(!ctxtMenu->isBackgroundRendered());
+			ctxtMenu->setBackgroundRendered(false);
+			auto cb = [trackEntry = m_trackentry, ctxtMenu](const std::string& str){
+				trackEntry->track->name  = str;
+				ctxtMenu->closeContextMenu();
+				return true;
+			};
+			field->setEndEditCallback(cb);
+			m_trackentry->parentCtrl->openContextMenu(ctxtMenu, popupPos);
+
+			field->setValue(m_trackentry->track->name);
+			field->setSelectionRange(-1, -1);
+			field->parentCtrl->focusGui(field);
 		} else if (_id == 5) {
 
 			auto trackCtr = m_trackentry->parent;

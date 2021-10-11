@@ -115,6 +115,9 @@ void gui_textfield::onTextChange() {
     }
 }
 void gui_textfield::onTextEndEdit() {
+    if (mCallbackEnd && !mCallbackEnd(mValueTemp)){
+
+    }
 }
 void setTfFont(NVGcontext* ctx, const gui_textfield* tf) {
 	nvgFontSize(ctx, tf->fontSize());
@@ -283,7 +286,15 @@ void gui_textfield::renderTextField(NVGcontext* ctx) const {
 void gui_textfield::beginEdit() {
     mValueTemp = mValue;
     mCommitted = false;
-    mCursorPos = 0;
+	int begin = mCursorPos;
+	int end = mSelectionPos;
+
+	if (begin > end)
+		std::swap(begin, end);
+    if (begin < 0 || end > mValue.length()) {
+        mCursorPos = 0;
+        mSelectionPos = -1;
+    }
     mValidFormat = (mValueTemp == "") || checkFormat(mValueTemp, mFormat);
 }
 void gui_textfield::endEdit(bool success) {

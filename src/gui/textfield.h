@@ -112,6 +112,7 @@ public:
 
     /// Sets the callback to execute when the value of this TextBox has changed.
     void setChangeCallback(const std::function<bool(const std::string& str)> &callback) { mCallback = callback; }
+    void setEndEditCallback(const std::function<bool(const std::string& str)> &callback) { mCallbackEnd = callback; }
 
     virtual bool focusEvent(MouseHitEvt& evt, bool focused);
     virtual bool keyboardEvent(int key, int scancode, KeyEventType action, int modifiers);
@@ -165,12 +166,13 @@ public:
     std::string mFormat;
     input_filter* filter = nullptr;
     std::function<bool(const std::string& str)> mCallback = nullptr;
+    std::function<bool(const std::string& str)> mCallbackEnd = nullptr;
     std::function<void(MouseHitEvt&, bool)> fnFocus = nullptr;
     bool mValidFormat;
     std::string mValueTemp;
     std::string mPlaceholder;
-    int mCursorPos;
-    int mSelectionPos;
+    int mCursorPos = -1;
+    int mSelectionPos = -1;
     ivec2 mMouseDownPos;
     ivec2 mMouseDragPos;
     int mMouseDownModifier;

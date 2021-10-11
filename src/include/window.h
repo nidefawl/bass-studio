@@ -62,6 +62,7 @@ public:
 	virtual void closeOverlay(window_main* wnd) = 0;
 	virtual void show() = 0;
 	virtual void hide() = 0;
+	virtual void focus() = 0;
 	virtual void requestClose() = 0;
 	virtual void updateMenu() = 0;
 	virtual void preRender() = 0;
