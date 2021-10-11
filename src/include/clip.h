@@ -44,7 +44,7 @@ public:
 		this->weakCachedAudio = obj.weakCachedAudio;
 //		this->waveformRef.rendered = false;
 	}
-	tick_t lenSamples();
+	int32_t lenSamples() const;
 };
 class clip_notes_t {
 public:

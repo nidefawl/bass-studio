@@ -85,3 +85,19 @@ public:
 	render_timings getTimings();
 
 };
+
+
+struct wave_split_layout_t {
+	ivec2 pos{0};
+	ivec2 size{0};
+};
+inline bool operator==(const wave_split_layout_t& lhs, const wave_split_layout_t& rhs){
+	return lhs.pos == rhs.pos && lhs.size == rhs.size;
+}
+inline bool operator!=(const wave_split_layout_t& lhs, const wave_split_layout_t& rhs){
+	return !operator==(lhs,rhs);
+}
+struct waveform_layout_updated_t {
+	audioclip_texture_t waveform;
+	wave_split_layout_t layout;
+};

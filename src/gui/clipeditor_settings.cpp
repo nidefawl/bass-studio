@@ -15,8 +15,8 @@
 #include "grid.h"
 
 
-gui_clipsettings::gui_clipsettings(scaled_grid& _grid, clip_view& _view) :
-		guictr_base(), grid(_grid), view(_view), clipLoopStart(nullptr), clipLoopLen(nullptr, true), clipTimeStart(nullptr), clipTimeLen(
+gui_clipsettings::gui_clipsettings(scaled_grid& , clip_view& _view) :
+		guictr_base(), /*grid(_grid),*/ view(_view), clipLoopStart(nullptr), clipLoopLen(nullptr, true), clipTimeStart(nullptr), clipTimeLen(
 				nullptr, true), clipTimeStartOffsetTicks(nullptr), clipTimeStartOffsedSamples(nullptr), clipAudioId(nullptr) {
 	padding = 2;
 	margin = 0;

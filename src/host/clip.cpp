@@ -589,7 +589,7 @@ std::pair<note_t*, note_t*> getMinMaxTime(std::vector<note_t>& notes) {
     return std::make_pair(&*min, &*max);
 }
 
-tick_t clip_audio_t::lenSamples() {
+int32_t clip_audio_t::lenSamples() const {
 	dbgassert(audiocache::getInstance());
 	audiofile_t* audio = audiocache::getInstance()->get(this->id);
 	auto* sample = audio ? audio->sample.get() : nullptr;

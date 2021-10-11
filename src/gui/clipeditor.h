@@ -139,7 +139,7 @@ public:
 
 class gui_clipsettings : public guictr_base {
 public:
-	scaled_grid& grid;
+//	scaled_grid& grid;
 	clip_view& view;
 	guibuttonstate btnLoop;
 	gui_timeinput clipLoopStart;
@@ -159,7 +159,7 @@ public:
 	void buttonClicked(guibase* button) override;
 	void showEditClip();
 };
-;
+
 class gui_clipcontent : public guictr_base, public piano_scale {
 public:
 	enum dragmode {
@@ -207,6 +207,7 @@ public:
 protected:
 	void setGlobalSelectionFromClipSelection();
 };
+
 class gui_clipcontent_notes : public gui_clipcontent {
 public:
 	gui_clipcontent_notes(scaled_grid& _grid, clip_view& _view, layout_pianoroll_t& _layout) : gui_clipcontent(_grid, _view, _layout, false)
@@ -216,6 +217,7 @@ public:
 	void render(NVGcontext* vg);
 
 };
+
 class gui_clipcontent_velocities : public gui_clipcontent {
 public:
 	gui_clipcontent_velocities(scaled_grid& _grid, clip_view& _view, layout_pianoroll_t& _layout) : gui_clipcontent(_grid, _view, _layout, true)
@@ -224,6 +226,7 @@ public:
 	}
 	void render(NVGcontext* vg);
 };
+
 class ce_constants {
 protected:
 	const int32_t heightTimeLine = 26;
@@ -276,7 +279,7 @@ public:
 	}
 	void render(NVGcontext* vg);
 };
-class gui_velocities;
+
 class guictr_noteeditor : public guictr_base, public layout_pianoroll_t, grid_changed_cb, ce_constants {
 public:
 	scaled_grid grid;
@@ -288,54 +291,128 @@ public:
 	clip_view& view;
 	guibuttonstate btnToggleFold;
 	int32_t velHeight = 120;
+private:
+	void setLayout(layout_pianoroll_t& layout);
+	void zoomPianoRollToClipsNoteRange();
 public:
 	guictr_noteeditor(clip_view& _view);
 	~guictr_noteeditor();
-	void setLayout(layout_pianoroll_t& layout);
-	virtual void buttonClicked(guibase* button);
-	int32_t getTotalWidth();
+
+	void buttonClicked(guibase* button) override;
 	void renderBackground(NVGcontext* vg) override;
-	void render(NVGcontext* vg);
-	void layout();
+	void render(NVGcontext* vg) override;
+	void layout() override;
+	void handleDraggedBegin(MouseEvent& evt) override;
+	bool handleKeyInput(KeyEvent& kevt) override;
+	bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) override;
+
 	void gridChanged(scaled_grid& _grid) override;
-	void handleDraggedBegin(MouseEvent& evt);
-	void zoomPianoRollToClipsNoteRange();
+
+	int32_t getTotalWidth();
 	void showEditClip();
 	void storeLayout();
-	bool handleKeyInput(KeyEvent& kevt);
-	bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset);
+};
+
+class gui_audiocontent : public guictr_base {
+public:
+	scaled_grid& grid;
+	clip_view& view;
+private:
+	audioclip_texture_t updatedWaveform;
+	gui_waveform_texture_ref* waveformRef;
+	int32_t tickOffset = 0;
+	int32_t updateCalls = 0;
+	void renderAudioClip(NVGcontext* vg);
+public:
+	gui_audiocontent(scaled_grid& _grid, clip_view& _view);
+	~gui_audiocontent();
+	void layout() override;
+	void onTick(AppCtrl* appctrl) override;
+	void render(NVGcontext* vg) override;
+	void prerender(NVGcontext* vg) override;
+
+	void releaseRendered();
+	void updatePosition();
+//protected:
+//	void setGlobalSelectionFromClipSelection();
+};
+class guictr_audioeditor : public guictr_base, grid_changed_cb, ce_constants {
+public:
+	scaled_grid grid;
+	gui_audiocontent content;
+	guitrack_timeline timeline;
+	guictr_cliphandles clipHandles;
+	clip_view& view;
+private:
+public:
+	guictr_audioeditor(clip_view& _view);
+	~guictr_audioeditor();
+
+	void buttonClicked(guibase* button) override;
+	void renderBackground(NVGcontext* vg) override;
+	void render(NVGcontext* vg) override;
+	void layout() override;
+	void handleDraggedBegin(MouseEvent& evt) override;
+	bool handleKeyInput(KeyEvent& kevt) override;
+	bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) override;
+
+	void gridChanged(scaled_grid& _grid) override;
+
+	int32_t getTotalWidth();
+	void showEditClip();
+	void storeLayout();
 };
 class guictr_clipeditor : public guictr_base {
 	clip_view& view;
 public:
 	guictr_noteeditor noteeditor;
+	guictr_audioeditor audioeditor;
 	gui_clipsettings settings;
 	gui_arp arp;
 	guictr_clipeditor(clip_view& _view)
 	: guictr_base(),
 	  view(_view),
 	  noteeditor(view),
+	  audioeditor(view),
 	  settings(noteeditor.grid, _view),
 	  arp(_view)
 	{
 		setBackgroundRendered(true);
 		setBackgroundRenderedInset(false);
 		add(&noteeditor);
+		add(&audioeditor);
 		add(&arp);
 		add(&settings);
 	}
 	~guictr_clipeditor() {
 		remove(&settings);
 		remove(&arp);
+		remove(&audioeditor);
 		remove(&noteeditor);
 	}
 	void storeLayout() {
-		noteeditor.storeLayout();
+		const clip_t* clip = view.clip();
+		const bool isMidi = clip && clip->clipType == CLIP_MIDI;
+		if (isMidi) {
+			noteeditor.storeLayout();
+		} else {
+			audioeditor.storeLayout();
+		}
 	}
 	void showEditClip() {
+		const clip_t* clip = view.clip();
+		const bool isMidi = clip && clip->clipType == CLIP_MIDI;
+		arp.setVisible(isMidi);
+		noteeditor.setVisible(isMidi);
+		audioeditor.setVisible(!isMidi);
 		settings.showEditClip();
-		noteeditor.showEditClip();
-		arp.showEditClip();
+		if (isMidi) {
+			noteeditor.showEditClip();
+			arp.showEditClip();
+		} else {
+			audioeditor.showEditClip();
+		}
+		layout();
 	}
 	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
 		if (!view.clip()) return false;
@@ -354,15 +431,24 @@ public:
 			nvgSave(vg);
 			settings.render(vg);
 			nvgRestore(vg);
-			nvgSave(vg);
-			arp.render(vg);
-			nvgRestore(vg);
-			noteeditor.render(vg);
+			if (arp.isVisible()) {
+				nvgSave(vg);
+				arp.render(vg);
+				nvgRestore(vg);
+			}
+			if (noteeditor.isVisible()) {
+				noteeditor.render(vg);
+			}
+			if (audioeditor.isVisible()) {
+				audioeditor.render(vg);
+			}
 		} else {
 			setFont(vg, 18, G_WHITE, NVG_ALIGN_CENTER|NVG_ALIGN_MIDDLE);
 			nvgText(vg, center.x, center.y, "No clip selected", NULL);
 		}
 		for (guibase* gui : guis) {
+			if (gui == &audioeditor)
+				continue;
 			if (gui == &noteeditor)
 				continue;
 			if (gui == &settings)
@@ -378,16 +464,25 @@ public:
 		ivec2 cs = getSizeContent();
 		settings.pos = ivec2(0, 0);
 		settings.size = ivec2(250, cs.y);
-		arp.pos = ivec2(settings.right()+margin, 0);
-		arp.size = ivec2(250, cs.y);
-		noteeditor.pos = ivec2(arp.right()+margin, 0);
-		noteeditor.size = ivec2(cs.x-arp.right(), cs.y);
-//		arp.size = ivec2(210, cs.y);
+		guibase* leftContainer = &settings;
+		if (arp.isVisible()) {
+			leftContainer = &arp;
+			arp.pos = ivec2(settings.right()+margin, 0);
+			arp.size = ivec2(250, cs.y);
+		}
+		noteeditor.pos = ivec2(leftContainer->right()+margin, 0);
+		noteeditor.size = ivec2(cs.x-leftContainer->right(), cs.y);
+		audioeditor.pos = ivec2(leftContainer->right()+margin, 0);
+		audioeditor.size = ivec2(cs.x-leftContainer->right(), cs.y);
+
 		for (guibase* gui : guis) {
 			gui->layout();
 		}
 	}
 	bool handleKeyInput(KeyEvent& kevt) {
+		if (audioeditor.isVisible()) {
+			return audioeditor.handleKeyInput(kevt);
+		}
 		return noteeditor.handleKeyInput(kevt);
 	}
 
@@ -470,3 +565,4 @@ public:
 		return false;
 	}
 };
+

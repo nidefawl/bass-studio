@@ -11,8 +11,12 @@
 #include "cursor.h"
 #include "keyboard.h"
 #include "grid.h"
+#include "drawwaveform.h"
+#include "audiowaveform.h"
 
 #include "guicontextmenu_daw.h"
+#include "logging.h"
+
 namespace GuiConstant {
 extern constant_t CONST_CLIPEDITOR_HANDLES_STROKE_WIDTH;
 }
@@ -513,9 +517,6 @@ void guictr_noteeditor::setLayout(layout_pianoroll_t& layout) {
 }
 
 void guictr_noteeditor::render(NVGcontext* vg) {
-//		setFont(vg, 14, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-//		nvgText(vg, 5, 5, "pianoroll", NULL);
-//		pianoroll.render();
 	renderBackground(vg);
 	if (!setScissorTransform(vg)) {
 		return;
@@ -536,12 +537,326 @@ void guictr_noteeditor::render(NVGcontext* vg) {
 	clipHandles.render(vg);
 	nvgRestore(vg);
 	btnToggleFold.render(vg);
-//	nvgBeginPath(vg);
-//	nvgMoveTo(vg, piano.left(), 0);
-//	nvgLineTo(vg, piano.left(), size.y);
-//	nvgStrokeColor(vg, theme->getColor(GuiColor::COL_PIANOROLL_BLACK));
-//	nvgStrokeWidth(vg, 2.0f);
-//	nvgStroke(vg);
+}
 
+
+gui_audiocontent::gui_audiocontent(scaled_grid& _grid, clip_view& _view) :
+		guictr_base(), grid(_grid), view(_view), waveformRef(new gui_waveform_texture_ref{}) {
+	padding = 0;
+}
+gui_audiocontent::~gui_audiocontent() {
+	delete waveformRef;
+}
+void gui_audiocontent::renderAudioClip(NVGcontext* vg) {
+
+	nvgSave(vg);
+	nvgTranslate(vg, pos.x, pos.y);
+//	int colorIdx = 0;
+//	static NVGcolor dbgcolorsa[5] = {
+//		nvgRGBA(255, 0, 0, 55),
+//		nvgRGBA(0, 255, 0, 55),
+//		nvgRGBA(0, 0, 255, 55),
+//		nvgRGBA(255, 0, 255, 55),
+//		nvgRGBA(255, 255, 0, 55)
+//	};
+
+	if (waveformRef->rendered) {
+//		nvgBeginPath(vg);
+//			nvgRect(vg, 2, 2, size.x-4, size.y-4);
+//			NVGcolor bgWave = dbgcolorsa[colorIdx % 5];
+//			bgWave.a = 0.3f;
+//			nvgFillColor(vg, bgWave);
+//		nvgFill(vg);
+		waveformrender::getInstance()->draw(vg, waveformRef, size);
+	}
+
+	nvgRestore(vg);
+
+}
+void gui_audiocontent::render(NVGcontext* vg) {
+	renderAudioClip(vg);
+}
+void gui_audiocontent::releaseRendered() {
+//	my_printf("release %012x from releaseRendered()\n", waveformRef);
+	dbgassert(waveformrender::getInstance()->isValid(waveformRef));
+	waveformrender::getInstance()->release(waveformRef);
+//	m_clip->audio.waveformRef.fbId = -1;
+	waveformRef->rendered = false;
+}
+
+audioclip_texture_t makeWaveformFromSample(const project_globals_t& project, scaled_grid& grid, const clip_audio_t& clipAudio,
+		const ivec2& pos, const ivec2& size) {
+
+
+	samplerate_t sr = vsthost::getInstance()->sampleFormat.sampleRate; //TODO: store in project_t
+
+	int32_t pxBegin = 0;
+	int32_t pxEnd = size.x;
+	double tickBegin = grid.screenToTickD(0);
+	double tickBeginOffset = grid.screenToTickD(0);
+	double tickEnd = grid.screenToTickD(pxEnd);
+
+	int64_t sampleBegin = math::floorCast(tickToSamplePrecise(tickBegin, project.tempo100, sr));
+	int64_t sampleStartOffset = math::floorCast(tickToSamplePrecise(tickBeginOffset, project.tempo100, sr));
+	int64_t sampleEnd = math::floorCast(tickToSamplePrecise(tickEnd, project.tempo100, sr));
+		
+	double lenSamples = sampleEnd-sampleStartOffset; //tickToSamplePrecise(m_clip->getLen(), project.tempo100, sr);
+	double samplesPerPx = lenSamples/size.x;
+	tickBegin = 0; sampleBegin = 0;
+
+
+	audioclip_texture_t w;
+	w.quality = 2;
+
+	double pxPerSample = 1.0/samplesPerPx;
+
+	constexpr float MAX_RES = 2048;
+	w.scaleX = 1.0f;
+	w.pos = pos;
+
+	w.size = ivec2(math::min(size.x, FBO_WIDTH), math::min(size.y, FBO_HEIGHT));
+	int64_t nSamples = sampleEnd-sampleStartOffset;
+	if (nSamples * pxPerSample > FBO_WIDTH) {
+		samplesPerPx = (nSamples / FBO_WIDTH);
+	}
+	if (samplesPerPx > MAX_RES && (nSamples / MAX_RES) <= FBO_WIDTH) {
+		w.scaleX = MAX_RES/samplesPerPx;
+		samplesPerPx = MAX_RES;
+	}
+
+	dbgassert(w.size.x <= FBO_WIDTH && w.size.y <= FBO_HEIGHT);
+	dbgassert(w.size.x > 0);
+	w.sampleBegin = sampleBegin;
+	w.sampleBeginOffset = sampleStartOffset;
+	w.sampleEnd = sampleEnd;
+	w.samplesPerPx = samplesPerPx;
+	w.linewidth = 2.0f;
+	w.method = SampleMethod::sample_straight;
+	w.audioId = clipAudio.id;
+	w.clipped = true;
+	log_printf("waveform %d - %d - %d - %d %f %f %f\n", w.audioId, w.sampleBegin, w.sampleBeginOffset, w.sampleEnd, w.samplesPerPx, grid.zoom, lenSamples);
+	//log_printf("waveform[height:%d,zoom:%f,q:%d,w:%f,smp/px:%f,scale:%f]\n", w.size.y, grid.zoom, w.quality, w.linewidth, w.samplesPerPx, w.scaleX);
+
+
+	return w;
+
+}
+inline bool isAlmostEqualWaveformSample(const audioclip_texture_t& lhs, const audioclip_texture_t& rhs){
+	if ((lhs.sampleBeginOffset - lhs.sampleBegin) == (rhs.sampleBeginOffset - rhs.sampleBegin) &&
+			(lhs.sampleEnd - lhs.sampleBegin) == (rhs.sampleEnd - rhs.sampleBegin) &&
+//			lhs.startOffset == rhs.startOffset &&
+//			lhs.size == rhs.size &&
+//			lhs.samplesPerPx == rhs.samplesPerPx &&
+//			lhs.scale == rhs.scale &&
+//			lhs.scaleX == rhs.scaleX &&
+			lhs.audioId == rhs.audioId && lhs.quality == rhs.quality && lhs.method == rhs.method) {
+
+		if (lhs.clipped || rhs.clipped)
+			return lhs.scaleX == rhs.scaleX && lhs.scaleY == rhs.scaleY && lhs.size == rhs.size && lhs.samplesPerPx == rhs.samplesPerPx;
+		vec2 sd = vec2(math::absvec2(lhs.size-rhs.size));
+		vec2 limit = vec2(lhs.size) / 4.0f;
+		return sd.x < limit.x && sd.y < limit.y;
+	}
+	return false;
+}
+void gui_audiocontent::updatePosition() {
+	project_globals_t& project = DawInstance::get()->getGlobals();
+	const clip_t* clip = view.clip();
+	if (!clip || clip->clipType != CLIP_AUDIO) {
+		releaseRendered();
+		return;
+	}
+	auto& clipAudio = clip->audio;
+	audiofile_t* audio = audiocache::getInstance()->get(clipAudio.id);
+	if (!audio) {
+		releaseRendered();
+	}
+
+	dbgassert(size.x > 0);
+	if (audio) {
+		audioclip_texture_t waveform = makeWaveformFromSample(project, grid, clipAudio, ivec2(0, 0), size);
+		if (waveform.size.x < 1 || waveform.size.y < 1) {
+			releaseRendered();
+			waveformRef->waveform = waveform;
+			this->updatedWaveform = waveform;
+		} else {
+			bool equal = waveform.size == waveformRef->waveform.size && clipAudio.id == waveformRef->waveform.audioId && isAlmostEqualWaveformSample(waveform, waveformRef->waveform);
+
+			bool canQueue = waveformrender::getInstance()->canQueueUpdate();
+//			ivec2 sizeDiff = math::absvec2(waveform.size-waveformRef->waveform.size);
+//			ivec2 limit = math::maxvec2(ivec2(1), ivec2(waveform.size.x/4, 16));
+//			if (!canQueue) {
+//				limit.x = waveform.size.x/4;
+//			}
+//			if (waveform.clipped || (MainCtrl::get() && !MainCtrl::get()->isZooming())) {
+//				limit = {0,0};
+//			}
+			if (canQueue && !equal
+//					|| (sizeDiff.x > limit.x || sizeDiff.y > limit.y)
+					) {
+//						if (!equal)
+//							my_printf("unequal\n",0);
+//						else {
+//							my_printf("sizeDiff %d,%d / %d,%d (canQueue %d)\n",sizeDiff.x,sizeDiff.y,limit.x,limit.y, canQueue);
+//						}
+				this->updatedWaveform = waveform;
+//				if (sizeDiff.x > limit.x || sizeDiff.y > limit.y) {
+//					releaseRendered();
+//				}
+			}
+		}
+	}
+
+}
+void gui_audiocontent::onTick(AppCtrl* appctrl) {
+	if (tickOffset++>60) {
+		tickOffset = 0;
+		//updatePosition();
+	}
+}
+void gui_audiocontent::prerender(NVGcontext* vg) {
+	const clip_t* clip = view.clip();
+	if (!clip || clip->clipType != CLIP_AUDIO) {
+		return;
+	}
+	auto& clipAudio = clip->audio;
+	audiofile_t* audio = audiocache::getInstance()->get(clipAudio.id);
+	if (!waveformRef->queued) {
+		if (!audio || this->updatedWaveform.size.x < 1 || this->updatedWaveform.size.y < 1) {
+			return;
+		}
+		if ((!waveformRef->rendered || (this->updatedWaveform != waveformRef->waveform))) {
+			releaseRendered();
+			dbgassert(!waveformRef->rendered && !waveformRef->queued);
+			waveformRef->waveform = this->updatedWaveform;
+			dbgassert(!waveformRef->queued);
+			dbgassert(waveformRef->waveform.size.x > 0 && waveformRef->waveform.size.y > 0);
+			if (waveformrender::getInstance()->queueUpdate(audio, waveformRef)) {
+				dbgassert(!waveformRef->rendered && waveformRef->queued);
+				dbgassert(waveformrender::getInstance()->isValid(waveformRef));
+			}
+		}
+	}
+}
+
+void gui_audiocontent::layout() {
+	for (guibase *gui : guis) {
+		gui->layout();
+	}
+}
+
+
+guictr_audioeditor::guictr_audioeditor(clip_view& _view) :
+		guictr_base(), content(grid, _view), timeline(grid), clipHandles(grid, _view), view(
+				_view) {
+	padding = 2;
+	grid.showRange(0, TICKS_BAR * 4);
+	grid.addCallback(this);
+	add(&content);
+	add(&timeline);
+	add(&clipHandles);
+}
+
+guictr_audioeditor::~guictr_audioeditor() {
+	remove(&timeline);
+	remove(&content);
+	remove(&clipHandles);
+}
+
+void guictr_audioeditor::buttonClicked(guibase* button) {
+}
+
+void guictr_audioeditor::renderBackground(NVGcontext* vg) {
+	drawInsetBackground(vg, theme, getPosContent(), getSizeContent());
+}
+
+int32_t guictr_audioeditor::getTotalWidth() {
+	return math::max(10000, getSizeContent().x);
+}
+
+void guictr_audioeditor::layout() {
+	ivec2 cs = getSizeContent();
+	timeline.pos = ivec2(0, 0);
+	timeline.size = ivec2(cs.x, heightTimeLine);
+	clipHandles.pos = ivec2(timeline.left(), timeline.bottom());
+	clipHandles.size = ivec2(timeline.size.x, heightClipIndicators);
+	content.pos = ivec2(timeline.left(), clipHandles.bottom());
+	content.size = ivec2(timeline.size.x, cs.y - heightTimeLine - heightClipIndicators);
+
+	clipHandles.clipViewSize = ivec2(content.size.x, content.size.y + clipHandles.size.y);
+	grid.update(content.size);
+	for (guibase* gui : guis) {
+		gui->layout();
+	}
+}
+
+void guictr_audioeditor::gridChanged(scaled_grid& _grid) {
+	ivec2 cs = getSizeContent();
+	_grid.update(ivec2(timeline.size.x, cs.y - 30));
+	content.updatePosition();
+}
+
+void guictr_audioeditor::handleDraggedBegin(MouseEvent& evt) {
+//	if (evt.guiDragged == &piano) {
+//		if (evt.type == M_EVT_DOUBLECLICK)
+//			zoomPianoRollToClipsNoteRange();
+//
+//		return;
+//	}
+}
+
+void guictr_audioeditor::showEditClip() {
+	clip_t* clip = view.clip();
+	if (clip != NULL) {
+		if (clip->noLayout) {
+			grid.showRange(clip->offsetStart, clip->offsetStart + clip->getLen());
+		} else {
+			clip_editor_layout_t& layout = clip->editorLayout;
+			grid.setLayout(layout.layoutGrid);
+		}
+	}
+	content.updatePosition();
+}
+
+void guictr_audioeditor::storeLayout() {
+	clip_t* clip = view.clip();
+	if (clip != NULL) {
+		clip_editor_layout_t& layout = clip->editorLayout;
+		layout.layoutGrid = grid;
+		clip->noLayout = false;
+	}
+}
+
+bool guictr_audioeditor::handleKeyInput(KeyEvent& kevt) {
+	return content.handleKeyInput(kevt);
+}
+bool guictr_audioeditor::handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
+	if (isCtrl(evt.kbmods)) {
+        float zomDelta = 1.0f + yoffset * -0.2f;
+        ivec2 localMouse = timeline.toContainerSpace(evt.relMousepos);
+        timeline.adjustZoom(localMouse.x, zomDelta);
+	} else if (isShift(evt.kbmods)) {
+		timeline.adjustOffset(-yoffset*32);
+	} else {
+//		piano.setOffset(offset() + yoffset * 2.0* scale());
+	}
+	return true;
+}
+
+void guictr_audioeditor::render(NVGcontext* vg) {
+
+	renderBackground(vg);
+	if (!setScissorTransform(vg)) {
+		return;
+	}
+	nvgSave(vg);
+	timeline.render(vg);
+	nvgRestore(vg);
+	nvgSave(vg);
+	content.render(vg);
+	nvgRestore(vg);
+	nvgSave(vg);
+	clipHandles.render(vg);
+	nvgRestore(vg);
 
 }

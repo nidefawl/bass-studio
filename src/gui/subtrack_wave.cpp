@@ -14,23 +14,7 @@
 #include "seq_util.h"
 #include <unordered_map>
 
-struct wave_split_layout_t {
-	ivec2 pos{0};
-	ivec2 size{0};
-};
-inline bool operator==(const wave_split_layout_t& lhs, const wave_split_layout_t& rhs){
-	return lhs.pos == rhs.pos && lhs.size == rhs.size;
-}
-inline bool operator!=(const wave_split_layout_t& lhs, const wave_split_layout_t& rhs){
-	return !operator==(lhs,rhs);
-}
 class gui_subtrack_waveview : public gui_track_subtrack {
-	bool culled = true;
-	scaled_grid& grid;
-	struct waveform_layout_updated_t {
-		audioclip_texture_t waveform;
-		wave_split_layout_t layout;
-	};
 	struct waveview_entry {
 		bool flagUpdated = false;
 		int64_t sampleVersion = -1;
@@ -40,6 +24,8 @@ class gui_subtrack_waveview : public gui_track_subtrack {
 		wave_split_layout_t layoutUpdated;
 		std::shared_ptr<audiotrack_split_t> sample;
 	};
+	bool culled = true;
+	scaled_grid& grid;
 	std::unordered_map<int32_t, waveview_entry> splits;
 	int32_t tickOffset = 0;
 	int32_t updateCalls = 0;
