@@ -49,7 +49,7 @@ void audiocache::setSamplerate(int32_t samplerate) {
 		loadFile(f.path, f.id);
 	}
 }
-audiofile_t* audiocache::loadFile(String path, int id) {
+audiofile_t* audiocache::loadFile(String path, int32_t id) {
 	drwav wav;
 	//satinize path so comparison matches, or ask os if path equals a file we already loaded before
 
@@ -167,7 +167,11 @@ audiofile_t* audiocache::loadFile(String path, int id) {
 		log_printf("Downsampling %s took %fsec\n", path.c_str(), timeDiffDownsample/1000000.0);
 //		int nDownSmplSteps = maxDownS-1;
 //		dbgassert(sample->downsampled.size() == nDownSmplSteps);
-		int _id = id < 0 ? this->nextIdx++ : id;
+		int32_t _id = id;
+		if (_id < 0) {
+			_id = this->nextIdx++;
+		}
+		this->nextIdx = math::max(this->nextIdx.load(), _id+1);
 		std::unique_ptr<audiofile_t> cachedaudio = std::make_unique<audiofile_t>();
 		cachedaudio->sample = std::move(sample);
 		cachedaudio->id = _id;

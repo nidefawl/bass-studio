@@ -41,7 +41,7 @@ public:
 	}
 	static audiocache* getInstance();
 	void getLoaded(std::vector<audiofile_t*>& v);
-	audiofile_t* loadFile(String s, int id = -1);
+	audiofile_t* loadFile(String s, int32_t id = -1);
 	void setSamplerate(int32_t samplerate);
 	void unloadSampleId(int32_t id);
 	audiofile_t* get(int32_t i);
