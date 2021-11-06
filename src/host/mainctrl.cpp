@@ -1282,7 +1282,7 @@ void DawInstance::initDaw(int argc, char* argv[]) {
 	tls.midiHost = midiHost;
 	tls.pluginDatabase = &plugindb;
 	tls.audioCache = new audiocache(settings.iosettings.samplerate);
-	tls.waveform = new waveformrender(pathrenderer_type_e::PAR);
+	tls.waveform = new waveformrender(pathrenderer_type_e::ADV);
 }
 void DawCtrl::initApp(int argc, char* argv[]) {
 }
