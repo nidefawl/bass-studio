@@ -2,7 +2,7 @@ DEPS_BUILD_FOLDER:PATH=E:/dev/builds/daw-deps/clang-libc++-git
 clang with external mingw:
 cmake ../.. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Debug -DDAW_DEPS_PATH=D:\dev\daw-deps\ -DDEPS_BUILD_FOLDER=D:\dev\daw-deps\build-clang-stdc++ -DCMAKE_CXX_FLAGS=--target=x86_64-pc-windows-gnu -DCMAKE_C_FLAGS=--target=x86_64-pc-windows-gnu
 clang-mingw (using libc++, see: https://github.com/mstorsjo/llvm-mingw)
-cmake ../.. -G "Ninja" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=Debug -DDAW_DEPS_PATH=D:\dev\daw-deps\ -DDEPS_BUILD_FOLDER=E:\dev\builds\daw-deps\clang-libc++-git
+cmake ../.. -G "Ninja" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=Debug -DDAW_DEPS_PATH=D:\dev\daw-deps\ -DDEPS_BUILD_FOLDER=C:/dev/build-deps/install
 
 
 msvc currently requires a patch to its std thread header:

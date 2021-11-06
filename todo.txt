@@ -6,6 +6,7 @@
 /*                Recent ideas                */
 /**********************************************/
 
+Handle multi-channel audio effects correctlyy
 Make startup.cpp only compile into daw-application
 remove height limitation from automation tracks
 Allow sonogram to be used in a mouse over popup window (not working)
