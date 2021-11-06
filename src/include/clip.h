@@ -260,8 +260,8 @@ public:
 	void adjustStartSamples(tick_t offset);
 	void adjustStartOffset(tick_t offset) {
 		if (clipType == CLIP_AUDIO) {
-			adjustStartSamples(offset);
-			return;
+//			adjustStartSamples(offset);
+//			return;
 		}
 		if (isLoopEnabled() && offsetStart < loopStart) {
 			tick_t lenAdj = math::min(offset, loopStart - offsetStart);

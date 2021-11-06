@@ -15,7 +15,7 @@
 using vec2list = std::vector<vec2>;
 //constexpr float MAX_RES = 512;
 using samplechannel_t = std::vector<float>;
-void tesselateWaveform(audiosample_t* sample, float x, float y, audioclip_texture_t* waveformshape, SampleMethod method, std::vector<vec2list>& channels) {
+void tesselateWaveformStraight(audiosample_t* sample, float x, float y, audioclip_texture_t* waveformshape, std::vector<vec2list>& channels) {
 	if (sample->nSamples) {
 		double samplesPerPx = waveformshape->samplesPerPx;
 		const float width = waveformshape->size.x * (1.0f/waveformshape->scaleX);
@@ -140,6 +140,122 @@ void tesselateWaveform(audiosample_t* sample, float x, float y, audioclip_textur
 //		my_printf("min: %f, max: %f\n", fsMin, fsMax);
 	}
 
+}
+void tesselateWaveformEnergy(audiosample_t* sample, float x, float y, audioclip_texture_t* waveformshape, std::vector<vec2list>& channels) {
+	if (sample->nSamples) {
+		double samplesPerPx = waveformshape->samplesPerPx;
+		const float width = waveformshape->size.x * (1.0f / waveformshape->scaleX);
+		const auto widthPxRounded = math::floor(width);
+		const float height = waveformshape->size.y;
+//		const int nMaxDowns = sample->downsampled.size() + 1;
+		audioclip_texture_t waveformScaled = *waveformshape;
+		std::vector<samplechannel_t>& smpCh = sample->samples;
+
+
+		const double samplePosClip = waveformScaled.sampleBegin;
+		const double samplePosRender = waveformScaled.sampleBeginOffset;
+
+		//const int sumRange = 1;
+
+		const float channelHeight = height / (float) sample->nChannels;
+		const float samplesToPx = 1.0f/samplesPerPx;
+		const int64_t nSamples = waveformScaled.sampleEnd - waveformScaled.sampleBeginOffset;
+
+		
+
+
+		for (int iChannel = 0; iChannel < sample->nChannels; iChannel++) {
+			const auto& samplesCh = smpCh[iChannel];
+			const float* samplesChPtr = samplesCh.data();
+			const auto lenSamplesCh = samplesCh.size();
+			std::vector<float> lows, highs, energies;
+			for (int64_t pixelPos = 0; pixelPos < widthPxRounded; pixelPos++) {
+				int64_t startIndex = math::round(pixelPos/(float)widthPxRounded*nSamples);
+				int64_t endIndex = math::round((pixelPos + 1)/(float)widthPxRounded*nSamples);
+				//dbgassert(startIndex >= 0 && endIndex <= lenSamplesCh);
+				float sum2 = 0, low = 0, high = 0;
+				for (int64_t samplePos = startIndex; samplePos < endIndex && samplePos < lenSamplesCh; samplePos++) {
+					double sampleOffset = math::max(0.0, (double)(samplePos + (samplePosRender-samplePosClip)));
+					int64_t samplePosAbs = std::round(sampleOffset); //TODO: std::round is slow
+					if (samplePosAbs < 0) 
+						continue;
+					if (samplePosAbs >= lenSamplesCh)
+						break;
+					float fSample = samplesChPtr[samplePosAbs];
+					sum2 += fSample * fSample;
+					if (fSample < low) low = fSample;
+					if (fSample > high) high = fSample;
+				}
+				float level3 = sqrtf(sum2/(endIndex - startIndex));
+				energies.push_back(level3);
+				//if (math::abs(low) > math::abs(high)) {
+				//	high = low;
+				//} else {
+				//	low = high;
+				//}
+				lows.push_back(low);
+				highs.push_back(high);
+			}
+			const float py = y + channelHeight * iChannel;
+
+			vec2list vecs;
+			vecs.reserve(energies.size()*4);
+			//for (int64_t pixelPos = 0; pixelPos < energies.size(); pixelPos++) {
+	/*			auto& vecS = (pixelPos&1) == 0 ? highs:lows;
+                {
+					float fY = (0.5 - 0.5*vecS[pixelPos]) * channelHeight;
+					vec2 vec { x + pixelPos, py + fY };
+					vecs.push_back(std::move(vec));
+				}*/
+    //            {
+				//	float fY = (0.5 - 0.5*highs[pixelPos]) * channelHeight;
+				//	vec2 vec { x + pixelPos, py + fY };
+				//	vecs.push_back(std::move(vec));
+				//}
+    //            {
+				//	float fY = (0.5 - 0.5*lows[pixelPos]) * channelHeight;
+				//	vec2 vec { x + pixelPos + 0.5f, py + fY };
+				//	vecs.push_back(std::move(vec));
+				//}
+			//}
+			//for (int64_t pixelPos = 0; pixelPos < energies.size(); pixelPos++) {
+			//	float fY = (0.5 - 0.5*highs[pixelPos]) * channelHeight;
+			//	vec2 vec { x + pixelPos, py + fY };
+			//	vecs.push_back(std::move(vec));
+			//}
+			//for (int64_t pixelPos = energies.size() - 1 ; pixelPos >= 0; pixelPos--) {
+			//	float fY = (0.5 - 0.5*lows[pixelPos]) * channelHeight;
+			//	vec2 vec { x + pixelPos, py + fY };
+			//	vecs.push_back(std::move(vec));
+			//}
+			for (int64_t pixelPos = 0; pixelPos < energies.size(); pixelPos++) {
+				float fY = (0.5 - 0.5*energies[pixelPos]) * channelHeight;
+				vec2 vec { x + pixelPos, py + fY };
+				vecs.push_back(std::move(vec));
+			}
+			for (int64_t pixelPos = energies.size() - 1 ; pixelPos >= 0; pixelPos--) {
+				float fY = (0.5 + 0.5*energies[pixelPos]) * channelHeight;
+				vec2 vec { x + pixelPos, py + fY };
+				vecs.push_back(std::move(vec));
+			}
+			channels.push_back(std::move(vecs));
+
+		}
+	}
+
+}
+void tesselateWaveform(audiosample_t* sample, float x, float y, audioclip_texture_t* waveformshape, SampleMethod method, std::vector<vec2list>& channels) {
+	switch (method) {
+	case SampleMethod::sample_straight:
+		tesselateWaveformStraight(sample, x, y, waveformshape, channels);
+		break;
+	case SampleMethod::sample_energy:
+		tesselateWaveformEnergy(sample, x, y, waveformshape, channels);
+		break;
+	default:
+		dbgassert(0);
+		break;
+	}
 }
 
 void tesselateWaveformOld(audiosample_t* sample, float x, float y, audioclip_texture_t* waveformshape, SampleMethod method, std::vector<vec2list>& channels) {

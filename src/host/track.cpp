@@ -122,6 +122,16 @@ track_t &track_t::operator =(const track_snapshot_t &obj) {
 	scrolloffset = 0;
 	return *this;
 }
+void track_t::fixClipLengths() {
+	for (clip_t* clip : midi.getClips()) {
+		if (clip->clipType == CLIP_AUDIO && project_controller_t::get()) {
+			dbgassert(clip->lenSamples > 0 && clip->len > 0);
+			auto convertetLenSamples = project_controller_t::get()->tickToSamples(clip->len);
+			auto convertetLenTicks = project_controller_t::get()->samplesToTicks(clip->lenSamples);
+			clip->len = convertetLenTicks;
+		}
+	}
+}
 track_t::track_t(const track_snapshot_t &a)
   : tracksettings_t(a), localIdxFlat(a.localIdx) {
 	dbgassert(midi.getConstClips().empty());

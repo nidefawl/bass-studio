@@ -130,8 +130,9 @@ audioclip_texture_t makeWaveformFromClip(const project_globals_t& project, scale
 	int64_t sampleStartOffset = math::floorCast(tickToSamplePrecise(tickBeginOffset, project.tempo100, sr));
 
 	int64_t sampleEnd = math::floorCast(tickToSamplePrecise(tickEnd, project.tempo100, sr));
-	sampleStartOffset += m_clip->offsetSamples;
-	sampleEnd += m_clip->offsetSamples;
+	auto offsetSamples = tickToSamplePrecise(m_clip->offsetStart, project.tempo100, sr);
+	sampleStartOffset += offsetSamples;
+	sampleEnd += offsetSamples;
 	ivec2 startOffset = posClipped - pos;
 	audioclip_texture_t w;
 	w.quality = 1;
@@ -187,7 +188,10 @@ audioclip_texture_t makeWaveformFromClip(const project_globals_t& project, scale
 	w.sampleEnd = sampleEnd;
 	w.samplesPerPx = samplesPerPx;
 	w.linewidth = 2.0f;
-	w.method = SampleMethod::sample_straight;
+//	if (samplesPerPx > 2.0)
+//		w.method = 	SampleMethod::sample_energy;
+//    else
+		w.method = SampleMethod::sample_straight;
 	w.audioId = m_clip->audio.id;
 	w.clipped = size.x != sizeClipped.x;
 //	my_printf("waveform[height:%d,zoom:%f,q:%d,w:%f,smp/px:%f,scale:%d]\n", w.size.y, grid.zoom, w.quality, w.linewidth, w.samplesPerPx, w.scale);
@@ -218,7 +222,6 @@ void renderAudioClip(NVGcontext* vg, const guitheme_t* theme, const track_t* tr,
 //		renderText(vg, pos.x + INSET_TITLE, pos.y + HEIGHT_CLIP_TITLE + 4, size.x-INSET_TITLE*3, StringAsCStr(text));
 
 	}
-
 	ivec2 posContents = ivec2(posClipped.x, pos.y+HEIGHT_CLIP_TITLE+INSET_CLIP_CONTENT);
 //	ivec2 sizeContents = ivec2(sizeClipped.x, sizeClipped.y-HEIGHT_CLIP_TITLE-INSET_CLIP_CONTENT*2);
 	tick_t clipLen = cl->getLen();
@@ -227,9 +230,7 @@ void renderAudioClip(NVGcontext* vg, const guitheme_t* theme, const track_t* tr,
 	if (sizeClipped.x > 0 && sizeClipped.y > 0 && waveformRef->rendered) {
 		nvgSave(vg);
 		nvgTranslate(vg, posContents.x, posContents.y);
-
 		waveformrender::getInstance()->draw(vg, waveformRef, sizeClipped);
-
 		nvgRestore(vg);
 	}
 	if (cl->loopEnabled && cl->loopLen > 0) {
@@ -250,7 +251,9 @@ void renderAudioClip(NVGcontext* vg, const guitheme_t* theme, const track_t* tr,
 		nvgStrokeWidth(vg, 1.f);
 		nvgStroke(vg);
 	}
+
 	daw_tls::getTls().renderStats.clipsRendered++;
+
 }
 float noteToScreen(float note, float scale, float offset, float sizeY) {
 	float offsetKey = note * scale;

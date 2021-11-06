@@ -202,6 +202,7 @@ public:
 private:
 	guictr_nodes_editor projectView;
 	guictr_nodes_editor trackView;
+	Splitter splitter;
 public:
 	guictr_nodes_splitview(DAW::Cursor& _cursor, project_t& _project, dragdrop_midifile& _dragdropclip);
 	~guictr_nodes_splitview();

@@ -59,7 +59,7 @@ public:
         setColorAtt(GL_COLOR_ATTACHMENT0, type);
         setFilter(GL_COLOR_ATTACHMENT0, GL_LINEAR, GL_LINEAR);
         setClearColor(GL_COLOR_ATTACHMENT0, clrCol);
-		depthBuffer = false;
+//		depthBuffer = false;
         if (depthBuffer)
             setHasDepthAttachment();
 	}

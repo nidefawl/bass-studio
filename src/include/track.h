@@ -327,6 +327,7 @@ public:
 		}
 		return lvl;
 	}
+	void fixClipLengths();
 };
 struct trackcontainer_snapshot_t;
 

@@ -621,7 +621,13 @@ void clip_t::adjustStartSamples(tick_t offset) {
 tick_t clip_t::getLen() const {
 
 	if (this->lenSamples>0&&this->clipType == CLIP_AUDIO && project_controller_t::get()) {
-		return project_controller_t::get()->samplesToTicks(this->lenSamples);
+		auto curSampleRate = vsthost::getInstance()->sampleFormat.sampleRate;
+		auto lenConverted = project_controller_t::get()->samplesToTicks(this->lenSamples);
+		if (lenConverted != len) {
+			log_printf("tick vs sample len missmatch. Did the samplerate change?", 0);
+			dbgassert(0);
+		}
+		dbgassert(len > 0 && lenConverted > 0);
 	}
 //	tick_t
 	return len;
@@ -640,7 +646,9 @@ void clip_t::setLen(tick_t len) {
 }
 
 void clip_t::adjustLen(tick_t offset) {
+	auto preLen = len;
 	setLen(len+offset);
+	dbgassert(getLen() == preLen + offset);
 }
 tick_t clip_t::getLenSamples() const {
 	return lenSamples;
@@ -648,7 +656,7 @@ tick_t clip_t::getLenSamples() const {
 
 void clip_t::setLenSamples(tick_t lenSamples) {
 	if (this->clipType == CLIP_AUDIO && project_controller_t::get()) {
-		this->len = project_controller_t::get()->samplesToTicks(len);
+		this->len = project_controller_t::get()->samplesToTicks(lenSamples);
 	}
 	this->lenSamples = lenSamples;
 }

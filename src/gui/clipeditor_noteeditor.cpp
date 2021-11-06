@@ -630,11 +630,14 @@ audioclip_texture_t makeWaveformFromSample(const project_globals_t& project, sca
 	w.sampleBeginOffset = sampleStartOffset;
 	w.sampleEnd = sampleEnd;
 	w.samplesPerPx = samplesPerPx;
-	w.linewidth = 2.0f;
-	w.method = SampleMethod::sample_straight;
+	w.linewidth = 3.0f;
+//	if (samplesPerPx >= 8.0)
+//		w.method = SampleMethod::sample_energy;
+//    else
+		w.method = SampleMethod::sample_straight;
 	w.audioId = clipAudio.id;
 	w.clipped = true;
-	log_printf("waveform %d - %d - %d - %d %f %f %f\n", w.audioId, w.sampleBegin, w.sampleBeginOffset, w.sampleEnd, w.samplesPerPx, grid.zoom, lenSamples);
+	//log_printf("waveform %d - %d - %d - %d %f %f %f\n", w.audioId, w.sampleBegin, w.sampleBeginOffset, w.sampleEnd, w.samplesPerPx, grid.zoom, lenSamples);
 	//log_printf("waveform[height:%d,zoom:%f,q:%d,w:%f,smp/px:%f,scale:%f]\n", w.size.y, grid.zoom, w.quality, w.linewidth, w.samplesPerPx, w.scaleX);
 
 
@@ -679,30 +682,10 @@ void gui_audiocontent::updatePosition() {
 			releaseRendered();
 			waveformRef->waveform = waveform;
 			this->updatedWaveform = waveform;
-		} else {
+		} else if (waveformrender::getInstance()->canQueueUpdate()) {
 			bool equal = waveform.size == waveformRef->waveform.size && clipAudio.id == waveformRef->waveform.audioId && isAlmostEqualWaveformSample(waveform, waveformRef->waveform);
-
-			bool canQueue = waveformrender::getInstance()->canQueueUpdate();
-//			ivec2 sizeDiff = math::absvec2(waveform.size-waveformRef->waveform.size);
-//			ivec2 limit = math::maxvec2(ivec2(1), ivec2(waveform.size.x/4, 16));
-//			if (!canQueue) {
-//				limit.x = waveform.size.x/4;
-//			}
-//			if (waveform.clipped || (MainCtrl::get() && !MainCtrl::get()->isZooming())) {
-//				limit = {0,0};
-//			}
-			if (canQueue && !equal
-//					|| (sizeDiff.x > limit.x || sizeDiff.y > limit.y)
-					) {
-//						if (!equal)
-//							my_printf("unequal\n",0);
-//						else {
-//							my_printf("sizeDiff %d,%d / %d,%d (canQueue %d)\n",sizeDiff.x,sizeDiff.y,limit.x,limit.y, canQueue);
-//						}
+			if (!equal) {
 				this->updatedWaveform = waveform;
-//				if (sizeDiff.x > limit.x || sizeDiff.y > limit.y) {
-//					releaseRendered();
-//				}
 			}
 		}
 	}

@@ -265,12 +265,8 @@ public:
 	}
 	dragmode getDragZone(ivec2 local);
 	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
-	float clipStartScrX() {
-		return (float)grid.tickToScreenD(view.clip()->offsetStart);
-	}
-	float clipEndScrX() {
-		return (float)grid.tickToScreenD(view.clip()->offsetStart + view.clip()->getLen());
-	}
+	float clipStartScrX();
+	float clipEndScrX();
 	float clipLoopStartScrX() {
 		return (float)grid.tickToScreenD(view.clip()->loopStart);
 	}
@@ -565,4 +561,3 @@ public:
 		return false;
 	}
 };
-

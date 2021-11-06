@@ -6,7 +6,7 @@
 #include "audiosample.h"
 
 enum SampleMethod {
-	sample_straight, sample_sum, sample_minmax, sample_interp, sample_minmax2
+	sample_straight, sample_sum, sample_minmax, sample_interp, sample_minmax2, sample_energy
 };
 
 

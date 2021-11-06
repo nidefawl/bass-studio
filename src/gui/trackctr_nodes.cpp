@@ -1205,7 +1205,7 @@ void guictr_nodes_editor::layout() {
 }
 
 guictr_nodes_splitview::guictr_nodes_splitview(DAW::Cursor& _cursor, project_t& _project, dragdrop_midifile& _dragdropclip)
-	: project(_project), projectView(_cursor, _project, _dragdropclip), trackView(_cursor, _project, _dragdropclip)
+	: project(_project), projectView(_cursor, _project, _dragdropclip), trackView(_cursor, _project, _dragdropclip), splitter(0, 0.5)
 {
 	trackView.graph.isTrackGraph = true;
 	setCanMouseHit(true);

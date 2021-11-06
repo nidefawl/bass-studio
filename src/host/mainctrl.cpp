@@ -1657,6 +1657,7 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
 	/** create all audio instances **/
 	vsthost* host = vsthost::getInstance();
 	for (track_t* t : project.trackList) {
+		t->fixClipLengths();
 		host->createAudio(t);
 	}
 

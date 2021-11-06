@@ -22,14 +22,17 @@ void dawinstance_startup_commands(daw_tls::tlsinstance& tls) {
     }
 	auto dawInstance = dawMainCtrl->getDaw();
 	vsthost* host = vsthost::getInstance();
-	String dawPath = "C:/Users/Michael/daw/run/";
-	String projName = "forever.project";
-	projName = "kshmr-samples-test.project";
+//	String dawPath = "C:/dev/daw/run/";
+	String dawPath = "C:/Users/Michael/daw/run/projects/";
+	String projName = "startup2.project";
+	//projName = "kshmr-samples-test.project";
 //	projName = "test-empty-midi-loop.project";
-	projName = "arp-test.project";
-	projName = "test-send-automation.project";
+	//projName = "arp-test.project";
+	//projName = "test-send-automation.project";
+	//projName = "kshmr-samples-test.project";
+	//projName = "kshmr-samples-test.project";
 	int flags = 0x1; // defer load
-	flags = 0; // no defer load
+//	flags = 0; // no defer load
 	dawInstance->cbProjectLoadCompleteCallback = [tls, dawMainCtrl, dawInstance, host](DawInstance*, std::shared_ptr<project_file> file, int errorState) {
         DAW::Cursor& cursor = dawMainCtrl->getCursor();
 
@@ -38,7 +41,7 @@ void dawinstance_startup_commands(daw_tls::tlsinstance& tls) {
         /**
          * Code for setting cursor and loop position
          */
-        const bool dbPlaceLoopPosition = true;
+        const bool dbPlaceLoopPosition = false;
         if (dbPlaceLoopPosition) {
             float fStart = 177.0f;
             float fLength = 64.0f;
@@ -134,7 +137,7 @@ void dawinstance_startup_commands(daw_tls::tlsinstance& tls) {
 //		dawInstance->startPlaying();
     };
 //    dawMainCtrl->setVisible(false);
-  //  dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 0));
-  //  dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 2));
- //   dawInstance->loadFile(dawPath + projName, flags);
+//    dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 0));
+//    dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 2));
+    dawInstance->loadFile(dawPath + projName, flags);
 }
