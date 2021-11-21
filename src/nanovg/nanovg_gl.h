@@ -1279,7 +1279,7 @@ static void glnvg__convexFill(GLNVGcontext* gl, GLNVGcall* call)
 	glnvg__checkError(gl, "convex fill");
 	
 	for (i = 0; i < npaths; i++) {
-		dbgassert(paths[i].fillCount>0);
+		dbgassert((paths[i].fillCount>0) || (paths[i].strokeCount>0));
 	}
 	for (i = 0; i < npaths; i++) {
 		glDrawArrays(GL_TRIANGLE_FAN, paths[i].fillOffset, paths[i].fillCount);
