@@ -40,6 +40,7 @@ gui_clipsettings::gui_clipsettings(scaled_grid& , clip_view& _view) :
 	clipTimeStartOffsedSamples.setLabel("Sample offset");
 	clipAudioId.setLabel("Sample ID");
 	btnDuplicateLoop.setLabel("Duplicate Loop");
+	btnSelectMuted.setLabel("Select all muted");
 	add(&btnLoop);
 	add(&clipLoopStart);
 	add(&clipLoopLen);
@@ -49,6 +50,7 @@ gui_clipsettings::gui_clipsettings(scaled_grid& , clip_view& _view) :
 	add(&clipTimeStartOffsedSamples);
 	add(&clipAudioId);
 	add(&btnDuplicateLoop);
+	add(&btnSelectMuted);
 }
 
 gui_clipsettings::~gui_clipsettings() {
@@ -60,6 +62,17 @@ void gui_clipsettings::renderBackground(NVGcontext* vg) {
 }
 
 void duplicateClipLoop(clip_view& view);//clipeditor.cpp;
+void selectAllMuted(clip_view& view) {
+	clip_notes_t& notes = view.clip()->notes;
+	notes.selection.clear();
+	notes.visitNotes([&notes](note_t& n){
+		if (!n.isEnabled()) {
+			notes.selection.insert(&n);
+		}
+	});
+	String selStatus = StringFormat("%d notes selected", notes.selection.size());
+	MainCtrl::get()->setStatusText(selStatus);
+}
 void gui_clipsettings::buttonClicked(guibase* button) {
 	if (&btnLoop == button) {
 		clip_t* clip = view.clip();
@@ -69,6 +82,9 @@ void gui_clipsettings::buttonClicked(guibase* button) {
 	}
 	if (&btnDuplicateLoop == button) {
 		duplicateClipLoop(view);
+	}
+	if (&btnSelectMuted == button) {
+		selectAllMuted(view);
 	}
 
 	if (&btnLoop == button || &clipTimeStart == button || &clipLoopStart == button || &clipTimeLen == button
@@ -184,6 +200,8 @@ void gui_clipsettings::layout() {
 	clipAudioId.pos = ivec2(clipTimeStartOffsedSamples.left(), clipTimeStartOffsedSamples.bottom()+inset);
 	btnDuplicateLoop.pos = ivec2(inset, clipAudioId.bottom()+inset);
 	btnDuplicateLoop.size = ivec2(w-inset * 2, btnH);
+	btnSelectMuted.pos = ivec2(inset, btnDuplicateLoop.bottom()+inset);
+	btnSelectMuted.size = ivec2(w-inset * 2, btnH);
 	for (guibase* gui : guis) {
 		gui->layout();
 	}

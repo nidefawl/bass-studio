@@ -424,13 +424,14 @@ static int runScannerServer(vstscanner_server_options options) {
 			while (queryAll.executeStep() && !userSentQuitRequest)
 			{
 				String path = queryAll.getColumn(1).getString();
+
 				try {
 					size_t size = GetFileSizeSafe(path);
 					if (size > 0) {
 						continue;
 					}
 				} catch (std::exception& e) {
-					LOG("REMOVE %s\n", StringAsCStr(path));
+					LOG("REMOVE plugin: File at %s is missing\n", StringAsCStr(path));
 				}
 				queryDelete.reset();
 				queryDelete.bind(1, queryAll.getColumn(0).getInt());

@@ -274,7 +274,7 @@ protected:
         int64_t ret1 = ReadFileText("nanovg.vsh", strSrc1);
         int64_t ret2 = ReadFileText("nanovg.fsh", strSrc2);
         if (ret1 != -1 && ret2 != -1) {
-            my_printf("loading custom shaders\n", 0);
+            log_printf("loading custom shaders\n", 0);
             nvgReloadShaders(nanovgCtxt, StringAsCStr(strSrc1), StringAsCStr(strSrc2), 0);
         }
     }

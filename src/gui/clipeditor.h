@@ -150,6 +150,7 @@ public:
 	gui_numberinput_field clipTimeStartOffsedSamples;
 	gui_numberinput_field clipAudioId;
 	guibutton btnDuplicateLoop;
+	guibutton btnSelectMuted;
 	gui_clipsettings(scaled_grid& _grid, clip_view& _view);
 	~gui_clipsettings();
 	void render(NVGcontext* vg);
