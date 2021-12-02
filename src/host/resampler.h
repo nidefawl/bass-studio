@@ -74,10 +74,13 @@ struct oversampler_t : public oversample_config_t {
 //			my_printf("pSamples2.size %d\n", pSamples2.size());
 
 		soxr = soxr_create((double)inputSampleRate, (double)outputSampleRate, numChannels, &soxrError, &io_spec, &q_spec, &runtime_spec);
+		if (!!soxrError) {
+			log_printf("soxr_create failed: %d %s\n", soxrError, soxr_strerror(soxrError));
+		}
 
 
 	}
-	void runResample(AudioBlock& srcBlock, AudioBlock& dstBlock) {
+	bool runResample(AudioBlock& srcBlock, AudioBlock& dstBlock, uint32_t& nOutputProcessed) {
 		dbgassert(srcBlock.samples == this->numSamplesInput);
 		dbgassert(srcBlock.channels <= this->numChannels);
 		dbgassert(dstBlock.samples >= this->numSamplesResampled);
@@ -95,20 +98,19 @@ struct oversampler_t : public oversample_config_t {
 				channelPtrsOut[i] = nullptr;
 			}
 		}
-		if (!!soxrError) {
-			my_printf("soxr_create failed: %d %s\n", soxrError, soxr_strerror(soxrError));
-		} else {
-			size_t offset = 0;
-			soxrError = soxr_process(soxr, channelPtrsIn.data(), numSamplesInput, NULL, channelPtrsOut.data(), numSamplesResampled, &offset);
-//				my_printf("offset %d, numSamplesInput: %d\n", offset, numSamplesInput);
-
-
-			if (!!soxrError) {
-				my_printf("soxr_process failed: %d %s\n", soxrError, soxr_strerror(soxrError));
+		if (soxr) {
+			size_t inputProcessed = 0;
+			size_t outputProcessed = 0;
+			soxrError = soxr_process(soxr, channelPtrsIn.data(), numSamplesInput, NULL, channelPtrsOut.data(), numSamplesResampled, &outputProcessed);
+			if (!soxrError) {
+				nOutputProcessed = static_cast<uint32_t>(outputProcessed);
+				return true;
 			} else {
-//					my_printf("soxr_process success %d\n", error);
+
+				log_printf("soxr_process failed: %d %s\n", soxrError, soxr_strerror(soxrError));
 			}
 		}
+		return false;
 	}
 	~oversampler_t() {
 //			my_printf("%-26s\n", soxr_strerror(error));
@@ -125,9 +127,10 @@ struct resampler_t {
 	AudioBlock bufScratch;
 	struct buf_t {
 		AudioBlock* block{ nullptr };
+		uint32_t samplesAvail{ 0 };
+		uint32_t readOffset{ 0 };
 		bool inUse{ false };
 	};
-	uint32_t readOffset = 0;
 	std::vector<buf_t*> outputBuffers;
 	std::deque<buf_t*> outputQueue;
 	resampler_t(const uint32_t _idx, sampleformat_t _in, sampleformat_t _out, oversample_config_t config) :
@@ -146,59 +149,72 @@ struct resampler_t {
 			}
 		}
 		outputBuffers.push_back(new buf_t{ new AudioBlock(numChannels, resampler.numSamplesResampled), false });
+		log_printf("Allocate new output buffer, total %d buffers\n", outputBuffers.size());
 		return outputBuffers.back();
 	}
 
 	bool push(AudioBlock& block) {
-		if (outputQueue.size() > 16) {
+		if (outputQueue.size() > 32) {
+			log_printf("Output queue is not processed, flushing %d output buffers\n", outputBuffers.size());
 			releaseBuffers();
 		}
 		buf_t* buf = getFreeOutputBuffer();
 		buf->inUse = true;
 		bufScratch.copyFrom(&block);
-		resampler.runResample(bufScratch, *buf->block);
+		uint32_t nOutputProcessed = 0;
+		if (!resampler.runResample(bufScratch, *buf->block, nOutputProcessed)) {
+			return false;
+		}
+		buf->samplesAvail = nOutputProcessed;
 		outputQueue.push_back(buf);
 		return true;
 	}
 	AudioBlock pop() {
 		dbgassert(outputQueue.size() > 0);
-		AudioBlock blockOut(numChannels, out.blockSize);
-		uint32_t writeOffset = 0;
+
 		uint32_t numSamplesBegin = getNumSamplesOutputBuffer();
 		dbgassert(numSamplesBegin >= out.blockSize);
+
+		AudioBlock blockOut(numChannels, out.blockSize);
+		uint32_t writeOffset = 0;
+
 		while (writeOffset < out.blockSize) {
 			buf_t* b = outputQueue.front();
 			auto* ptrBlockResampled = b->block;
-			auto maxCopy = math::min<uint32_t>(resampler.numSamplesResampled-readOffset, blockOut.samples-writeOffset);
-			//b.block->fillNoise(nNoise++);
-			auto srcBlock = ptrBlockResampled->SubChannelsSamplesBlock(0, ptrBlockResampled->channels, readOffset, maxCopy);
-			blockOut.SubChannelsSamplesBlock(0, numChannels, writeOffset, maxCopy)
-					.addFromOp(&srcBlock, AudioBlock::mix_op::MIX, 1.0f);
-			readOffset = (readOffset + maxCopy) % ptrBlockResampled->samples;
+			auto maxCopy = math::min<uint32_t>(b->samplesAvail - b->readOffset, blockOut.samples - writeOffset);
+
+			auto srcBlock = ptrBlockResampled->SubChannelsSamplesBlock(0, ptrBlockResampled->channels, b->readOffset, maxCopy);
+			blockOut.SubChannelsSamplesBlock(0, numChannels, writeOffset, maxCopy).addFromOp(&srcBlock, AudioBlock::mix_op::MIX, 1.0f);
+
+			b->readOffset += maxCopy;
 			writeOffset += maxCopy;
-			if (readOffset > 0) {
+
+			if (b->samplesAvail - b->readOffset <= 0) {
+				b->inUse = false;
+				b->samplesAvail = 0;
+				b->readOffset = 0;
+				outputQueue.pop_front();
+				// assertion that we filled blockOut fully or there is more readable in queue
+				dbgassert(writeOffset == out.blockSize || outputQueue.size());
+			} else {
+				// assert that we filled blockOut fully
 				dbgassert(writeOffset == out.blockSize);
-				break;
 			}
-			b->inUse = false;
-			outputQueue.pop_front();
+
 		}
+
 		uint32_t numSamplesEnd = getNumSamplesOutputBuffer();
 		dbgassert(numSamplesEnd < numSamplesBegin);
 
 		return blockOut;
 	}
 	uint32_t getNumSamplesOutputBuffer() {
-		uint32_t numSamples;
-		if (readOffset) {
-			dbgassert(outputQueue.size() > 0);
-			buf_t* b = outputQueue.front();
-			numSamples = b->block->samples - readOffset;
-			numSamples += (static_cast<uint32_t>(outputQueue.size()) - 1) * resampler.numSamplesResampled;
+		uint32_t numSamples = 0;
+
+		for (buf_t* b : outputQueue) {
+			numSamples += b->samplesAvail - b->readOffset;
 		}
-		else {
-			numSamples = static_cast<uint32_t>(outputQueue.size()) * resampler.numSamplesResampled;
-		}
+
 		return numSamples;
 	}
 	uint32_t numBlocksToPop() {
@@ -208,8 +224,9 @@ struct resampler_t {
 		return numBlocks;
 	}
 	void releaseBuffers() {
-		readOffset = 0;
 		for (buf_t* b : outputQueue) {
+			b->readOffset = 0;
+			b->samplesAvail = 0;
 			b->inUse = false;
 		}
 		outputQueue.clear();

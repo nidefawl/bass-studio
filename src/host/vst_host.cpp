@@ -166,7 +166,6 @@ public:
 class vsthost::vsthost_impl {
 public:
 	std::vector<std::shared_ptr<resampler_t>> resamplers;
-	std::shared_ptr<oversampler_t> oversampler;
 
 	process_scratch_buf_t singleThreadedBuf;
 	WorkerThread threads[MAX_AUDIOPROCESSING_THREADS];
@@ -1419,7 +1418,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 	if (dbg != 0)
 		stats.timings["inputs.resample"] = timer3.getTime();
 
-	canProcess = audioHost && queueSizeOutput < RING_BUF_SIZE / 2 && resamplerInput->numBlocksToPop() >= numBlocksExternal * numBlocksInternal;
+	canProcess = audioHost && queueSizeOutput < RING_BUF_SIZE / 2 && resamplerInput->numBlocksToPop() >= numBlocksInternal;
 
 	if (dbg != 0) {
 		timer3.reset();
@@ -1503,8 +1502,8 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 
 		}
 		if (dbg != 0) {
-			stats.timings["tracks.process"] = timeProcessing;
-			stats.timings["tracks.route"] = timeRouting;
+			stats.timings["tracks.process"] = timeProcessing/numBlocksInternal;
+			stats.timings["tracks.route"] = timeRouting/numBlocksInternal;
 		}
 	}
 
@@ -1518,15 +1517,15 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			stats.timings["blocktime"] = curTimeProcess;
 			stats.timings["blocktimeRaw"] = blockTimeTaken;
 		}
+	}
+	int32_t nResampledOutputBlocks = resamplerOutput->numBlocksToPop();
+	if (nResampledOutputBlocks > 0 && stream->getOutputQueueSize() < RING_BUF_SIZE*2/3) {
 		timer3.reset();
-		dbgassert(nBlocksProcessed >= 1);
 		int32_t& writePos = ringbuffer.writePos;
+		//TODO: this is incorrect, the resampler should keep track of sample/tick position, but right now these fields are not read on output side
 		double blockPosSample = sample;
 		double blockPosTick = posDouble;
-		int32_t nIt = 0;
-		int32_t nBlocks = resamplerOutput->numBlocksToPop();
-		while (nBlocks > 0 && stream->getOutputQueueSize() < RING_BUF_SIZE/2+4) {
-			++nIt;
+		while (nResampledOutputBlocks > 0 && stream->getOutputQueueSize() < RING_BUF_SIZE*2/3) {
 			AudioBlock block = resamplerOutput->pop();
 			AudioBuffer** buffers = ringbuffer.buffers;
 			AudioBuffer* const ptrExternalOutputs = buffers[writePos%RING_BUF_SIZE];
@@ -1540,7 +1539,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			ptrExternalOutputs->blockPosTick = blockPosTick;
 			writePos = (writePos+1) & RING_BUF_MASK;
 			stream->enqueue(ptrExternalOutputs);
-			nBlocks--;
+			nResampledOutputBlocks--;
 		}
 		if (dbg != 0) {
 			stats.timings["output.enqueue"] = timer3.getTime();
@@ -1827,7 +1826,7 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
 				auto* track = trackImpl->getTrack();
 				String trName = track ? track->name : "?";
 				int32_t blockIdx = sample/lBlockSize;
-				log_printf("store track %s block %d at sample offset %d (samplepos %d - stage.latencyOutput %u)\n", StringAsCStr(trName), blockIdx, offset, sample, trackImpl->getOutputLatency());
+//				log_printf("store track %s block %d at sample offset %d (samplepos %d - stage.latencyOutput %u)\n", StringAsCStr(trName), blockIdx, offset, sample, trackImpl->getOutputLatency());
 				trackImpl->audioOutput.store(&trackImpl->outputPost, offset);
 			} else {
 				log_printf("cannot write to negative offset %d (samplepos %d - stage.latencyOutput %d)\n", offset, sample, trackImpl->getOutputLatency());
@@ -2150,21 +2149,8 @@ void vsthost::setOutput(audiohost* audioHost) {
 	samplerate_t extSampleRate = audioHost && audioHost->lSampleRate > 0 ? audioHost->lSampleRate : sampleFormatExternal.sampleRate;
 	uint32_t extBlockSize = audioHost && audioHost->lBlockSize > 0 ? audioHost->lBlockSize : sampleFormatExternal.blockSize;
 	sampleFormatExternal = { extSampleRate, extBlockSize, sampleformat_bits_t::FLOAT_32 };
-	
-//	sampleformat_t sampleFormat = {sampleFormatExternal.sampleRate, sampleFormatExternal.blockSize, sampleformat_bits_t::FLOAT_32};
-//	sampleformat_t sampleFormat = {audioHost->lSampleRate*2, sampleFormatExternal.blockSize, sampleformat_bits_t::FLOAT_32};
-	//sampleformat_t sampleFormat = { 96000, sampleFormatExternal.blockSize, sampleformat_bits_t::FLOAT_32};
-	sampleformat_t sampleFormat = {extSampleRate, sampleFormatExternal.blockSize, sampleformat_bits_t::FLOAT_32};
-
-	oversample_config_t config;
-	config.inputSampleRate = sampleFormat.sampleRate;
-	config.outputSampleRate = sampleFormatExternal.sampleRate;
-	config.numChannels = this->numChannels;
-	config.setInputLength(sampleFormat.blockSize);
-	this->impl->oversampler = std::make_shared<oversampler_t>(config);
 	this->sampleFormatExternal = sampleFormatExternal;
-	audiocache::getInstance()->setSamplerate(sampleFormat.sampleRate);
-
+	audiocache::getInstance()->setSamplerate(extSampleRate);
 }
 
 bool vsthost::isStreaming() {
