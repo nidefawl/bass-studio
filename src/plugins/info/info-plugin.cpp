@@ -31,7 +31,6 @@
 #include "vstsdk-plugin-2.4/audioeffect.h"
 #include "vstsdk-plugin-2.4/audioeffectx.h"
 #include "audioblock.h"
-//#include "midi-msg.h"
 #include "midi-defs.h"
 #include "../synth/IPlugMidi.h"
 
@@ -131,8 +130,6 @@ PluginVST2_HostInfo::PluginVST2_HostInfo (audioMasterCallback audioMaster)
 {
 	programsAreChunks(true);
 	isSynth(true);
-	createEditorWindow(createView());
-
 }
 
 

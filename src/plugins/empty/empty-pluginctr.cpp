@@ -62,7 +62,7 @@ namespace PluginEmptyVST2 {
 		int line = 26;
 		setFont(vg, line-2, G_WHITE, NVG_ALIGN_BOTTOM | NVG_ALIGN_LEFT);
 		int y = line;
-		nvgText(vg, 5, y, "CRASH VST", NULL);
+		nvgText(vg, 5, y, PluginEmptyVST2::getName(), NULL);
 		y += line;
 		String str = StringFormat("%d processBlock calls", this->curEffect->numCalls);
 		nvgText(vg, 5, y, StringAsCStr(str), NULL);

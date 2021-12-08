@@ -49,7 +49,6 @@ namespace PluginLatency {
 PluginVST2_Latency::PluginVST2_Latency (audioMasterCallback audioMaster)
 	: BasePluginVST2(audioMaster, PLUGIN_UID, kNumPrograms, kNumParams, kNumInputs, kNumOutputs)
 {
-	createEditorWindow(createView());
 	setNewLatency(current()->latency);
 }
 

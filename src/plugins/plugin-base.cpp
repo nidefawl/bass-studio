@@ -14,6 +14,7 @@
 
 #include "plugins/plugin.h"
 #include "plugins/plugincontrol.h"
+#include "plugins/plugin-window.h"
 #include "../gui/pluginviewcontainers.h"
 #include "exceptions.h"
 #include "handle-exceptions.h"
@@ -37,7 +38,7 @@ extern HMODULE hInstance;
 String getModuleName(HMODULE module); //platform_win.cpp
 #endif //BUILD_EXTERNAL_PLUGIN
 
-AEffEditor* createPluginWindow(AudioEffect *_effect, std::shared_ptr<PluginControl> _ctrl, int w, int h);
+pluginwindow* createPluginWindow(AudioEffect *_effect, std::shared_ptr<PluginControl> _ctrl, int w, int h);
 
 void BasePluginVST2::createEditorWindow(std::shared_ptr<PluginViewContainers> view) {
 	try {
@@ -45,15 +46,14 @@ void BasePluginVST2::createEditorWindow(std::shared_ptr<PluginViewContainers> vi
 		ctrl->initApp(0, NULL);
 		int32_t ctrlWidth = 0, ctrlHeight = 0;
 		view->getFixedSize(&ctrlWidth, &ctrlHeight);
-		editor = createPluginWindow(this, ctrl, ctrlWidth, ctrlHeight);
+		pluginwindow* pluginWindow = createPluginWindow(this, ctrl, ctrlWidth, ctrlHeight);
+		setEditor(pluginWindow);
 	} catch (std::exception& e) {
 		String excDesc = StringFormat("Fatal error: %s", e.what());
 		ngui::show(StringAsCStr(excDesc), "Error", ngui::Style::Error, ngui::Buttons::OK);
-//			exit(1);
 		throw;
 	} catch (...) {
 		ngui::show("FATAL", "Error", ngui::Style::Error, ngui::Buttons::OK);
-//			exit(1);
 		throw;
 	}
 
@@ -149,6 +149,10 @@ void BasePluginVST2::open () {
 	FILE* f;
 	freopen_s(&f, "CON", "w", stdout);
 	log_printf("open!\n", 0);
+	if (editor) {
+		log_printf("Editor already exists!\n", 0);
+	}
+	createEditorWindow(createView());
 #ifdef _WIN32
 	if (!isFirstPluginLoad) {
 		return;
@@ -161,12 +165,18 @@ void BasePluginVST2::open () {
 #endif //BUILD_EXTERNAL_PLUGIN
 
 }
+
+void BasePluginVST2::close() {
+	if (editor) {
+		delete editor;
+		editor = nullptr;
+	}
+}
+
 #if BUILD_EXTERNAL_PLUGIN
 static void glfw_plugin_error_callback(int error, const char* description) {
-	char errorCodeStr[1024] = { 0 };
-	_snprintf_s(errorCodeStr, 1024 - 1, _TRUNCATE, "Error %d: %s", error, description);
-	log_printf("%s\n", errorCodeStr);
-//	ngui::show(errorCodeStr, "Error", ngui::Style::Error, ngui::Buttons::OK);
+	log_printf("glfw-error %d: %s\n", error, description);
+	logStackTrace();
 }
 static void showerror(const char* description) {
 	ngui::show(description, "Error", ngui::Style::Error, ngui::Buttons::OK);

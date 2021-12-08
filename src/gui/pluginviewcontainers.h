@@ -10,9 +10,7 @@ class PluginViewContainers {
 	bool inUse = true;
 public:
 	virtual ~PluginViewContainers() {
-		log_printf("delete viewcontainers %012X\n", reinterpret_cast<uint64_t>(this));
 	}
-	 //all are called from host side
 	virtual void setVSTPlugin(vstplugin* hostsideplugin) = 0;
 	virtual void onGuiOpen(AudioEffect* eff) = 0;
 	virtual void onGuiClose(AudioEffect* eff) = 0;

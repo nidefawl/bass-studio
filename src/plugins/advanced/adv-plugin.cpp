@@ -18,7 +18,6 @@
 #define PLUGIN_VENDOR_NAME "MichaelH"
 #define PLUGIN_UID "AGTP" //advanced gui test plugin
 #define PLUGIN_PRODUCT_NAME "advanced gui test plugin VST2.x "
-//
 
 #if BUILD_EXTERNAL_PLUGIN
 AudioEffect* createEffectInstance (audioMasterCallback audioMaster)
@@ -32,8 +31,6 @@ namespace PluginTestAdv {
 GuiAdvPluginVST2::GuiAdvPluginVST2 (audioMasterCallback audioMaster)
 	: BasePluginVST2(audioMaster, PLUGIN_UID, kNumPrograms, kNumParams, kNumInputs, kNumOutputs)
 {
-	createEditorWindow(createView());
-	// initialize programs
 	programs[0].latency = 0.3f;
 	programs[0].noiseVolume = 0.1f;
 	programs[0].reportLatency = true;

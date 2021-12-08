@@ -26,7 +26,7 @@ public:
 	void createEditorWindow(std::shared_ptr<PluginViewContainers> view);
 
 	virtual void open ();		///< Called when plug-in is initialized
-	virtual void close () {}	///< Called when plug-in will be released
+	virtual void close ();		///< Called when plug-in will be released
 	virtual void suspend () {}	///< Called when plug-in is switched to off
 	virtual void resume () {}	///< Called when plug-in is switched to on
 

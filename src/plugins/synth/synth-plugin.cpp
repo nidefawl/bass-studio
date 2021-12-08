@@ -33,7 +33,6 @@
 #include "vstsdk-plugin-2.4/audioeffect.h"
 #include "vstsdk-plugin-2.4/audioeffectx.h"
 #include "audioblock.h"
-//#include "midi-msg.h"
 #include "midi-defs.h"
 #include "IPlugMidi.h"
 
@@ -1257,7 +1256,7 @@ PluginVST2_Synth::PluginVST2_Synth (audioMasterCallback audioMaster)
 	addEnumParam(Parameters::FmMode)->setStrings(stringsFMMode)->setRangedValue(0);
 	setParamName(getParam(Parameters::FmMode), "Fm Mode", "Fm Mode", "%d");
 	initPrograms();
-	createEditorWindow(createView());
+
 	for (auto param : this->vecParams) {
 		this->impl->OnParamChange(param->enumParam);
 	}

@@ -18,7 +18,7 @@
 #include <Windows.h>
 #endif
 
-#if defined(PLUGIN_BUILD_CRASHVERSION) || defined(BUILD_VSTHOST)
+#if defined(PLUGIN_BUILD_CRASHVERSION)
 #define PLUGIN_EFFECT_NAME "CrashVST2x"
 #else
 #define PLUGIN_EFFECT_NAME "Empty"
@@ -27,7 +27,6 @@
 #define PLUGIN_VENDOR_NAME "MichaelH"
 #define PLUGIN_UID "EMPT" //advanced gui test plugin
 #define PLUGIN_PRODUCT_NAME "empty test plugin VST2.x "
-//
 
 #if BUILD_EXTERNAL_PLUGIN
 AudioEffect* createEffectInstance (audioMasterCallback audioMaster)
@@ -41,8 +40,6 @@ namespace PluginEmptyVST2 {
 EmptyPluginVST2::EmptyPluginVST2 (audioMasterCallback audioMaster)
 	: BasePluginVST2(audioMaster, PLUGIN_UID, kNumPrograms, kNumParams, kNumInputs, kNumOutputs)
 {
-	createEditorWindow(createView());
-
 	curProgram = 0;
 }
 
@@ -193,7 +190,7 @@ void EmptyPluginVST2::processReplacing(float** inputs, float** outputs, VstInt32
 		if (inputs)
 			dsp_util::fillChannels(inputs, this->getAeffect()->numInputs, sampleFrames, 0.0f);
 		dsp_util::fillChannels(outputs, this->getAeffect()->numOutputs, sampleFrames, 0.0f);
-#if defined(PLUGIN_BUILD_CRASHVERSION) || defined(BUILD_VSTHOST)
+#if defined(PLUGIN_BUILD_CRASHVERSION)
 //		my_printf("producing segfault\n", 0);
 		int64_t* ptr = nullptr;
 		ptr = static_cast<int64_t*>((void*)0xBAADF00D);

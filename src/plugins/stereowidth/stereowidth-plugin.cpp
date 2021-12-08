@@ -35,8 +35,6 @@ namespace PluginStereoWidth {
 PluginVST2_StereoWidth::PluginVST2_StereoWidth (audioMasterCallback audioMaster)
 	: BasePluginVST2(audioMaster, PLUGIN_UID, kNumPrograms, kNumParams, kNumInputs, kNumOutputs)
 {
-	createEditorWindow(createView());
-
 	curProgram = 0;
 }
 

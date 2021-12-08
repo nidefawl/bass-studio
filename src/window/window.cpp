@@ -587,6 +587,7 @@ class appwindow_main : public appwindow, public window_main  {
 	uint64_t dblclicktimer;
 	int32_t windowCreationFlags = 0;
 //	WorkerThread workerThread;
+protected:
 	void destroyOverlayWindows();
 public:
 	String nameDbg;
@@ -775,12 +776,11 @@ public:
 	}
 	void onWindowSizeChanged(int width, int height) {
 		if (ctrl->isOK) {
-
 			if (ctrl->m_size.x != width || ctrl->m_size.y != height) {
 				log_printf("size change from %dx%d to %dx%d on window %08X: parent %08X\n", ctrl->m_size.x, ctrl->m_size.y, width, height, (uint64_t)(this), (uint64_t)(parent));
 				ctrl->windowSizeChanged(width, height);
 			} else {
-				log_printf("skip window resize on window %08X: parent %08X\n", (uint64_t)(this), (uint64_t)(parent));
+				log_printf("skip window resize to %dx%d on window %08X: parent %08X\n", ctrl->m_size.x, ctrl->m_size.y, (uint64_t)(this), (uint64_t)(parent));
 			}
 			flagNeedsRedraw();
 		}
@@ -1213,8 +1213,10 @@ void appwindow_main::destroy() {
 	appwindow::killTimer();
 #if BUILD_VSTHOST
 #ifdef _WIN32
-	if (this->dropTarget)
+	if (this->dropTarget) {
 		UnregisterDropWindow(hwnd, this->dropTarget);
+		this->dropTarget = nullptr;
+	}
 	if (!parent) {
 		if (windowCreationFlags & WINDOW_IS_MAINWINDOW_SLAVE) {
 			saveWindowPos(hwnd, settings.wndCompanion.size.get());
@@ -1414,6 +1416,8 @@ static void glfw_cb_refresh(GLFWwindow *w) {
 	appwindow* wu;
 	if ((wu = getUserData(w)) && wu->isValid())
 		wu->onRefresh();
+	else
+		log_printf("glfw_cb_refresh on invalid handle %08X\n", (uint64_t)w);
 	EXC_CATCH
 }
 static void glfw_cb_windowclose(GLFWwindow *w) {
@@ -1421,6 +1425,8 @@ static void glfw_cb_windowclose(GLFWwindow *w) {
 	appwindow* wu;
 	if ((wu = getUserData(w)) && wu->isValid())
 		wu->onWindowCloseRequest();
+	else
+		log_printf("glfw_cb_windowclose on invalid handle %08X\n", (uint64_t)w);
 	EXC_CATCH
 }
 static void glfw_cb_windowfocus(GLFWwindow *w, int focused) {
@@ -1428,6 +1434,8 @@ static void glfw_cb_windowfocus(GLFWwindow *w, int focused) {
 	appwindow* wu;
 	if ((wu = getUserData(w)) && wu->isValid())
 		wu->onWindowFocusChanged(focused);
+	else
+		log_printf("glfw_cb_windowfocus on invalid handle %08X\n", (uint64_t)w);
 	EXC_CATCH
 }
 static void glfw_cb_windowwize(GLFWwindow *w, int width, int height) {
@@ -1435,6 +1443,8 @@ static void glfw_cb_windowwize(GLFWwindow *w, int width, int height) {
 	appwindow* wu;
 	if ((wu = getUserData(w)) && wu->isValid())
 		wu->onWindowSizeChanged(width, height);
+	else
+		log_printf("glfw_cb_windowwize on invalid handle %08X\n", (uint64_t)w);
 	EXC_CATCH
 }
 static void glfw_cb_framebuffersize(GLFWwindow *w, int width, int height) {
@@ -1442,6 +1452,8 @@ static void glfw_cb_framebuffersize(GLFWwindow *w, int width, int height) {
 	appwindow* wu;
 	if ((wu = getUserData(w)) && wu->isValid())
 		wu->onFramebufferSizeChanged(width, height);
+	else
+		log_printf("glfw_cb_framebuffersize on invalid handle %08X\n", (uint64_t)w);
 	EXC_CATCH
 }
 
@@ -1823,22 +1835,39 @@ public:
 	{
 		this->effect = _effect;
 		setRect(0, 0, w, h);
-		effect->setEditor(this);
 		isExternalWindow = true;
 	}
 
 	virtual ~appwindow_plugin() {
 		if (isInitialized) {
-			my_printf("~pluginwindow_main()\n", 0);
-			try {
-				destroyContextAndWindow();
-			EXC_CATCH_NO_THROW_DIALOG
+			my_printf("Plugin window was not correctly de-initialized\n", 0);
 		}
 	}
-
+	// start pluginwindow overrides
 	void onSetParameter(int32_t index, float value) override {
 		this->ctrlShared->onSetParameter(index, value);
 	}
+
+	void destroyContextAndWindow() override {
+		isInitialized = false;
+		if (!glfw)
+			throw appexception("glfw null");
+		destroyOverlayWindows();
+		appwindow::killTimer();
+		glfwMakeContextCurrent(glfw);
+		if (!isSharedContextSlave) {
+			appwindow::destroyGL();
+		} else {
+			nanovgCtxt = nullptr;
+		}
+		glfwDestroyWindow(glfw);
+		glfw = nullptr;
+#ifdef _WIN32
+		hwnd = nullptr;
+#endif
+	}
+	// end pluginwindow overrides
+
 	//start aeffect AEffEditor overrides
 	//-----------------------------------------------------------------------------
 	void setRect(int x, int y, int width, int height)
@@ -1861,33 +1890,27 @@ public:
 		if (!ctrlShared->init(this, this->nanovgCtxt)) {
 			throw appexception("Couldn't start application");
 		}
-#ifdef _WIN32
-		this->dropTarget = RegisterDropWindow(hwnd, this);
-#endif
-#ifdef __linux__
-		//TODO: implement linux
-#endif
-
-		glfwGetWindowSize(glfw, &w, &h);
-		this->onWindowSizeChanged(w, h);
 	}
+
 	bool open(void *ptr) override {
 		try {
 			AEffEditor::open(ptr);
 			if (ptr)
 			{
-				if (!isInitialized) {
-					isInitialized = true;
-					setAppWindowHints();
-					createPluginWindow("plugin-window", _rect.right-_rect.left, _rect.bottom-_rect.top, ptr);
+				if (isInitialized) {
+					bool validWindow = IsWindow(hwnd);
+					log_printf("Already initialized with hwnd %08X. IsWindow valid: %d\n", (uint64_t)(hwnd), validWindow);
 				}
-#ifdef _WIN32
-				dbgassert(hwnd);
-#endif
-				dbgassert(glfw);
-				dbgassert(nanovgCtxt);
+				isInitialized = true;
+				setAppWindowHints();
+				int windowWidth = _rect.right-_rect.left;
+				int windowHeight = _rect.bottom-_rect.top;
+				createPluginWindow("plugin-window", windowWidth, windowHeight, ptr);
+				setValid();
+				glfwGetWindowSize(glfw, &windowWidth, &windowHeight);
+				this->onWindowSizeChanged(windowWidth, windowHeight);
 				showWindow();
-				guiOpen();
+			    ctrlShared->onGuiOpen(effect);
 				return true;
 			}
 		EXC_CATCH_NO_THROW_DIALOG
@@ -1896,13 +1919,16 @@ public:
 	}
 	void close() override
 	{
-		if (this->systemWindow) {
+		try {
 			glfwMakeContextCurrent(glfw);
-			guiClose();
-			hideWindow();
-		//	destroyContextAndWindow();
-			AEffEditor::close();
-		}
+			ctrlShared->onGuiClose(effect);
+			if (isInitialized) {
+				hideWindow();
+				destroyContextAndWindow();
+			}
+			setInvalid();
+		EXC_CATCH_NO_THROW_DIALOG
+		AEffEditor::close();
 	}
 	///< Receive key down event. Return true only if key was really used!
 	virtual bool onKeyDown (VstKeyCode& keyCode) override	{
@@ -1921,41 +1947,12 @@ public:
 
 	//end aeffect overrides
 
-	virtual void guiOpen() {
-		setValid();
-		dbgassert(glfw);
-		dbgassert(effect);
-		dbgassert(ctrlShared.get());
-#ifdef _WIN32
-		dbgassert(hwnd);
-	    RECT area;
-	    GetClientRect(hwnd, &area);
-	    onWindowSizeChanged(area.right-area.left, area.bottom-area.top);
-#endif
-	    ctrlShared->onGuiOpen(effect);
-	}
-	virtual void guiClose() {
-		setInvalid();
-		ctrlShared->onGuiClose(effect);
-	}
-	virtual void destroyContextAndWindow() {
-		destroy();
-		if (glfw) {
-			my_printf("glfwDestroyWindow %012X\n", (int64_t)glfw);
-			glfwDestroyWindow(glfw);
-			glfw = nullptr;
-#ifdef _WIN32
-			hwnd = nullptr;
-#endif
-		}
-//		wglMakeCurrent(NULL, NULL);
-	}
 	void idle () override {
 		flagNeedsRedraw();
 	}
 };
 
-AEffEditor* createPluginWindow(AudioEffect *_effect, std::shared_ptr<PluginControl> _ctrl, int w, int h) {
+pluginwindow* createPluginWindow(AudioEffect *_effect, std::shared_ptr<PluginControl> _ctrl, int w, int h) {
 	appwindow_plugin* window = new appwindow_plugin(_effect, std::move(_ctrl), w, h);
 	return window;
 }
