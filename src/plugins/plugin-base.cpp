@@ -152,7 +152,9 @@ void BasePluginVST2::open () {
 	if (editor) {
 		log_printf("Editor already exists!\n", 0);
 	}
+#endif //BUILD_EXTERNAL_PLUGIN
 	createEditorWindow(createView());
+#if BUILD_EXTERNAL_PLUGIN
 #ifdef _WIN32
 	if (!isFirstPluginLoad) {
 		return;
