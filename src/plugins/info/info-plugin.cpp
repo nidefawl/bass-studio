@@ -477,14 +477,14 @@ public:
 		}
 		VstTimeInfo* timeinfo = effx->getTimeInfo(flags);
 		assert(timeinfo);
-		strings.push_back(StringFormat("samplePos %.0f", timeinfo->samplePos));
-		strings.push_back(StringFormat("sampleRate %.0f", timeinfo->sampleRate));
-		strings.push_back(StringFormat("nanoSeconds %.0f", timeinfo->nanoSeconds));
-		strings.push_back(StringFormat("ppqPos %.0f", timeinfo->ppqPos));
-		strings.push_back(StringFormat("tempo %.0f", timeinfo->tempo));
-		strings.push_back(StringFormat("barStartPos %.0f", timeinfo->barStartPos));
-		strings.push_back(StringFormat("cycleStartPos %.0f", timeinfo->cycleStartPos));
-		strings.push_back(StringFormat("cycleEndPos %.0f", timeinfo->cycleEndPos));
+		strings.push_back(StringFormat("samplePos %.4f", timeinfo->samplePos));
+		strings.push_back(StringFormat("sampleRate %.3f", timeinfo->sampleRate));
+		strings.push_back(StringFormat("nanoSeconds %.2f", timeinfo->nanoSeconds));
+		strings.push_back(StringFormat("ppqPos %.5f", timeinfo->ppqPos));
+		strings.push_back(StringFormat("tempo %.4f", timeinfo->tempo));
+		strings.push_back(StringFormat("barStartPos %.4f", timeinfo->barStartPos));
+		strings.push_back(StringFormat("cycleStartPos %.4f", timeinfo->cycleStartPos));
+		strings.push_back(StringFormat("cycleEndPos %.4f", timeinfo->cycleEndPos));
 		strings.push_back(StringFormat("timeSigNumerator %d", timeinfo->timeSigNumerator));
 		strings.push_back(StringFormat("timeSigDenominator %d", timeinfo->timeSigDenominator));
 		strings.push_back(StringFormat("smpteOffset %d", timeinfo->smpteOffset));
