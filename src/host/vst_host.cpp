@@ -1151,10 +1151,9 @@ int64_t vsthost::writeTrackSamplesToDisk(String fOutWave, track_impl_t* trImpl, 
 		auto* sample = split->getSample();
 		dbgassert(split->samplePos + SPLIT_SAMPLECOUNT >= samplePos && split->samplePos < samplePosEnd);
 
-		const int64_t sampleCountMinusBegin = SPLIT_SAMPLECOUNT - math::max<int64_t>(0, (int64_t)samplePos - split->samplePos);
-		const size_t inputOffset = SPLIT_SAMPLECOUNT - sampleCountMinusBegin;
-		const int64_t sampleCountMinusEnd = SPLIT_SAMPLECOUNT - math::max<int64_t>(0, ((int64_t)split->samplePos + SPLIT_SAMPLECOUNT) - samplePosEnd);
-		const int64_t sampleCountMin = math::min<int64_t>(sampleCountMinusBegin, sampleCountMinusEnd);
+		const size_t readBeginOffset = math::clamp<int64_t>((int64_t)samplePos - split->samplePos, 0, SPLIT_SAMPLECOUNT);
+		const size_t readEndOffset = math::clamp<int64_t>((int64_t)samplePosEnd - split->samplePos, 0, SPLIT_SAMPLECOUNT);
+		const size_t readLen = math::clamp<int64_t>(readEndOffset - readBeginOffset, 0, SPLIT_SAMPLECOUNT);
 
 		dbgassert(sample->nChannels == numChannels);
 		dbgassert(sample->nChannels == sample->samples.size());
@@ -1164,16 +1163,18 @@ int64_t vsthost::writeTrackSamplesToDisk(String fOutWave, track_impl_t* trImpl, 
 		dbgassert(blockFull.samples == sample->nSamples*sample->nChannels);
 
 
-		float* in1 = sample->samples[0].data() + inputOffset;
-		float* in2 = sample->samples[1].data() + inputOffset;
-		float* out0 = blockFull.buf[0];
-		float sa = (sampleIdx+1) / 10.0f;
-		for (int64_t nSample = 0; nSample < sampleCountMin; nSample++) {
-			*out0++ = *in1++;
-			*out0++ = *in2++;
+
+		if (sample->samples.size() >= 2) {
+			float* in1 = sample->samples[0].data() + readBeginOffset;
+			float* in2 = sample->samples[1].data() + readBeginOffset;
+			float* out0 = blockFull.buf[0];
+			for (int64_t nSample = 0; nSample < readLen; nSample++) {
+				*out0++ = *in1++;
+				*out0++ = *in2++;
+			}
+			samplesWritten2 += readLen;
+			samplesWritten += drwav_write(pWav, readLen * numChannels, blockFull.buf[0]);
 		}
-		samplesWritten2 += sampleCountMin;
-		samplesWritten += drwav_write(pWav, sampleCountMin * numChannels, blockFull.buf[0]);
 		sampleIdx++;
 	};
 	log_printf("wrote %lld samples to %s\n", samplesWritten, StringAsCStr(nameWaveFileTrack));
