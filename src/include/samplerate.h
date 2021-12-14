@@ -14,8 +14,8 @@ enum class sampleformat_bits_t : int32_t {
     FLOAT_64 	= 1 << 1,
 };
 struct sampleformat_t {
-	samplerate_t sampleRate;
-	uint32_t blockSize;
+	samplerate_t sampleRate = 0;
+	uint32_t blockSize = 0;
 	sampleformat_bits_t sampleformat = sampleformat_bits_t::NONE;
 };
 inline const char* sampleformat_bits_to_str(sampleformat_bits_t t) {

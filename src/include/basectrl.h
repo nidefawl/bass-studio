@@ -308,9 +308,9 @@ public:
         dbgassert(0);
     }
 
-    ivec2 dragStart;
-    ivec2 dragOffset;
-    ivec2 dragDistance;
+    ivec2 dragStart{0};
+    ivec2 dragOffset{0};
+    ivec2 dragDistance{0};
     bool mouseInside = false;
     bool isOK = false;
     bool isOk() const

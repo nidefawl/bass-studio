@@ -103,7 +103,7 @@ public:
 	void setSplitterPositions(std::vector<float>& splitterPositons);
 	void simplify() {
 		struct InlineEntry {
-			int32_t index;
+			int32_t index = 0;
 			std::shared_ptr<guictr_layout_entry> entry;
 		};
 		std::vector<std::shared_ptr<guictr_layout_entry>> entriesToRemove;

@@ -24,7 +24,7 @@ namespace ngui {
 	};
 	struct Menu {
 	public:
-		menu_type type;
+		menu_type type = menu_type::command;
 		menucmd_t command;
 		String title;
 		std::vector<Menu> entries;

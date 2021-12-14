@@ -90,18 +90,18 @@ void emptyPrinft(vstplugin* plugin, const char *fmt, ...) {
 
 
 struct vsthost::track_block_processing_task_t {
-	const DAW::processing_track_node_t* trackNode;
-	AudioBlock* ptrExternalInputs;
-	AudioBlock* ptrExternalOutputs;
-	int32_t sample;
-	double posDouble;
-	playback_state state;
-	bool inLoop;
-	int debugLogProcessing;
+	const DAW::processing_track_node_t* trackNode = nullptr;
+	AudioBlock* ptrExternalInputs = nullptr;
+	AudioBlock* ptrExternalOutputs = nullptr;
+	int32_t sample = 0;
+	double posDouble = 0.0;
+	playback_state state = playback_state::status_no_process;
+	bool inLoop = false;
+	int debugLogProcessing = 0;
 	std::shared_ptr<DAW::effect_processing_graph_t> effectProcessingGraph;
 };
 struct process_scratch_buf_t {
-	VstTimeInfo timeinfo;
+	VstTimeInfo timeinfo{};
 	AudioBlock tempBlock;
 	SYNCHRONIZED_RW hires_timer_t timer;// timer for cpu-time profiling
 	process_scratch_buf_t() : tempBlock(8, 256) {
