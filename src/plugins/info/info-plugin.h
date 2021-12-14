@@ -6,7 +6,7 @@
 
 
 namespace PluginHostInfo {
-
+#define MAX_VERBOSITY 16
 class PluginVST2_HostInfo;
 
 enum
@@ -19,7 +19,7 @@ enum
 
 enum
 {
-	kTestParam = 0,
+	kLogVerbosity = 0,
 	kNumParams
 };
 
@@ -27,7 +27,7 @@ enum
 class ProgramParameters
 {
 public:
-	float testValue = 0.0f;
+	float logVerbosity = 0.0f;
 };
 
 class Program : public ProgramParameters
@@ -90,6 +90,9 @@ public:
 #endif // DEBUG
 
 private:
+	int getLogVerbosity() {
+		return math::round(current()->logVerbosity*MAX_VERBOSITY);
+	}
 	Program singleProgram;
 };
 AudioEffectX* createPlugin (audioMasterCallback audioMaster);

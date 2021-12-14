@@ -58,6 +58,7 @@ struct PluginVST2_HostInfo_impl_t {
 	std::recursive_mutex mutex;
 	IMidiQueue midiQueue;
 	std::vector<int> heldNotes;
+	int32_t invalidNoteMessages = 0;
 	std::recursive_mutex& getMutex() {
 		return mutex;
 	}
@@ -72,7 +73,7 @@ struct PluginVST2_HostInfo_impl_t {
 			dbgassert(0);
 		}
 	}
-	void processMidiSamplePos(int sample)
+	void processMidiSamplePos(int sample, int logVerbosity)
 	{
 		while (!midiQueue.Empty())
 		{
@@ -90,14 +91,22 @@ struct PluginVST2_HostInfo_impl_t {
 
 			switch (status) {
 				case IMidiMsg::kNoteOff:
-					dbgassert(stl_contains(heldNotes, note));
-					removeEntry(heldNotes, note);
-//					heldNotes.erase(
-//							std::remove(std::begin(heldNotes),
-//									std::end(heldNotes), note),
-//									std::end(heldNotes));
+					if (!removeEntry(heldNotes, note)) {
+						invalidNoteMessages++;
+						log_printf("Sample %03d: Note %s OFF msg, but NOT held\n", message.mOffset, noteName(note));
+					} else {
+						if (logVerbosity > 3)
+						log_printf("Sample %03d: %s OFF\n", message.mOffset, noteName(note));
+					}
 					break;
 				case IMidiMsg::kNoteOn:
+					if (stl_contains(heldNotes, note)) {
+						invalidNoteMessages++;
+						log_printf("Sample %03d: Note %s ON msg, but ALREADY held\n", message.mOffset, noteName(note));
+					} else {
+						if (logVerbosity > 3)
+							log_printf("Sample %03d: %s ON\n", message.mOffset, noteName(note));
+					}
 					heldNotes.push_back(note);
 					break;
 				case IMidiMsg::kPitchWheel: {
@@ -160,7 +169,7 @@ void PluginVST2_HostInfo::getProgramName (char* name)
 void PluginVST2_HostInfo::getParameterLabel (VstInt32 index, char* label)
 {
 	switch (index) {
-		case kTestParam:
+		case kLogVerbosity:
 			vst_strncpy(label, "", kVstMaxParamStrLen);
 			return;
 		default:
@@ -173,8 +182,8 @@ void PluginVST2_HostInfo::getParameterDisplay (VstInt32 index, char* text)
 	text[0] = 0;
 	switch (index)
 	{
-		case kTestParam: {
-			snprintf(text, kVstMaxParamStrLen, "%f", current()->testValue);
+		case kLogVerbosity: {
+			snprintf(text, kVstMaxParamStrLen, "%d", getLogVerbosity());
 			break;
 		}
 	}
@@ -184,7 +193,7 @@ void PluginVST2_HostInfo::getParameterName (VstInt32 index, char* label)
 {
 	switch (index)
 	{
-	case kTestParam:		vst_strncpy(label, "Test", kVstMaxParamStrLen);	return;
+	case kLogVerbosity:		vst_strncpy(label, "Log Verbosity", kVstMaxParamStrLen);	return;
 	}
 }
 
@@ -192,8 +201,8 @@ void PluginVST2_HostInfo::setParameter (VstInt32 index, float value)
 {
 	Program *ap = current();
 	switch (index) {
-	case kTestParam:
-		ap->testValue = value;
+	case kLogVerbosity:
+		ap->logVerbosity = value;
 		break;
 	}
 #if BUILD_VSTHOST
@@ -214,8 +223,8 @@ float PluginVST2_HostInfo::getParameter (VstInt32 index)
 	Program *ap = current();
 	float value = 0;
 	switch (index) {
-	case kTestParam:
-		value = ap->testValue;
+	case kLogVerbosity:
+		value = ap->logVerbosity;
 		break;
 	}
 	return value;
@@ -259,8 +268,8 @@ bool PluginVST2_HostInfo::getParameterProperties (VstInt32 index, VstParameterPr
 
 	if (index == 0 && p) {
 		memset(p, 0, sizeof(VstParameterProperties));
-		vst_strncpy(p->label, "Dummy Parameter", kVstMaxLabelLen);
-		vst_strncpy(p->shortLabel, "dummy", kVstMaxShortLabelLen);
+		vst_strncpy(p->label, "Logging Verbosity", kVstMaxLabelLen);
+		vst_strncpy(p->shortLabel, "Log Verbosity", kVstMaxShortLabelLen);
 		return true;
 	}
 	return false;
@@ -270,15 +279,17 @@ VstInt32 PluginVST2_HostInfo::processEvents (VstEvents* events) {
 	if (events) {
 		StdThreadLock lock(impl->getMutex());
 		int32_t len = events->numEvents;
-		if (events->numEvents)
+		if (events->numEvents && getLogVerbosity() > 6)
 		log_printf("events->numEvents %d\n", events->numEvents);
 		for (int i = 0; i < len; i++) {
 			auto pEvent = events->events[i];
 			if (pEvent->type == VstEventTypes::kVstMidiType) {
+				if (getLogVerbosity() > 6)
+				log_printf("pEvent->type kVstMidiType\n", pEvent->type);
 			    VstMidiEvent* pME = (VstMidiEvent*) pEvent;
 			    IMidiMsg msg(pME->deltaFrames, pME->midiData[0], pME->midiData[1], pME->midiData[2]);
 	            impl->ProcessMidiMsg(msg);
-				log_printf("event[%d].type %d\n", i, pME->type);
+				/*log_printf("event[%d].type %d\n", i, pME->type);
 				log_printf("event[%d].byteSize %d\n", i, pME->byteSize);
 				log_printf("event[%d].deltaFrames %d\n", i, pME->deltaFrames);
 				log_printf("event[%d].flags %d\n", i, pME->flags);
@@ -289,7 +300,10 @@ VstInt32 PluginVST2_HostInfo::processEvents (VstEvents* events) {
 				log_printf("event[%d].detune %d\n", i, (unsigned)pME->detune);
 				log_printf("event[%d].noteOffVelocity %d\n", i, (unsigned)pME->noteOffVelocity);
 				log_printf("event[%d].reserved1 %d\n", i, (unsigned)pME->reserved1);
-				log_printf("event[%d].reserved2 %d\n", i, (unsigned)pME->reserved2);
+				log_printf("event[%d].reserved2 %d\n", i, (unsigned)pME->reserved2);*/
+			} else {
+				if (getLogVerbosity() > 7)
+				log_printf("pEvent->type %d\n", pEvent->type);
 			}
 		}
 	}
@@ -309,6 +323,7 @@ VstInt32 PluginVST2_HostInfo::canDo (char* text)
 }
 ///< Host stores plug-in state. Returns the size in bytes of the chunk (plug-in allocates the data array)
 VstInt32 PluginVST2_HostInfo::getChunk (void** data, bool isPreset) {
+	if (getLogVerbosity() > 2)
 	log_printf("getChunk isPreset = %d: PTR %08X\n", isPreset, (uint64_t)(data));
 	if (isPreset) {
 		impl->dataPreset.resize(1000);
@@ -326,6 +341,7 @@ VstInt32 PluginVST2_HostInfo::getChunk (void** data, bool isPreset) {
 }
 ///< Host restores plug-in state
 VstInt32 PluginVST2_HostInfo::setChunk (void* data, VstInt32 byteSize, bool isPreset) {
+	if (getLogVerbosity() > 2)
 	log_printf("setChunk size %d, isPreset = %d: PTR %08X\n", byteSize, isPreset, (uint64_t)(data));
 	if (isPreset && byteSize == 1000) {
 		impl->dataPreset.resize(byteSize);
@@ -349,7 +365,7 @@ void PluginVST2_HostInfo::processReplacing(float** inputs, float** outputs, VstI
 
 		for (int s = 0; s < sampleFrames; s++)
 		{
-			impl->processMidiSamplePos(s);
+			impl->processMidiSamplePos(s, getLogVerbosity());
 //			UpdateParameters();
 //			UpdateDrift();
 //			lfoValue = lfo.Get(dt, GetParamFloat(Parameters::LfoFrequency)->Value());
@@ -392,7 +408,7 @@ class guicontainer_plugin_HostInfo : public guictr_base {
 
 public:
 	guicontainer_plugin_HostInfo()
-	: guictr_base(), knobParam0(PARAM_OFFSET_EXTERNAL+kTestParam, kTestParam) {
+	: guictr_base(), knobParam0(PARAM_OFFSET_EXTERNAL+kLogVerbosity, kLogVerbosity) {
 		setBackgroundRendered(true);
 		padding = 4;
 		margin = 4;
@@ -419,7 +435,7 @@ public:
 
 	guiknob_pluginparam* getKnobFromParameter(int32_t index) {
 		switch (index) {
-			case kTestParam:
+			case kLogVerbosity:
 				return &knobParam0;
 		}
 		return nullptr;
@@ -496,7 +512,7 @@ public:
 		strings.push_back(StringFormat("smpteOffset %d", timeinfo->smpteOffset));
 		strings.push_back(StringFormat("smpteFrameRate %d", timeinfo->smpteFrameRate));
 		strings.push_back(StringFormat("samplesToNextClock %d", timeinfo->samplesToNextClock));
-		strings.push_back(StringFormat("flags %d", timeinfo->flags));
+		strings.push_back(StringFormat("flags %08X", timeinfo->flags));
 		setFont(vg, 16, G_WHITE, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
 		float lineh;
 		nvgTextMetrics(vg, NULL, NULL, &lineh);
@@ -525,6 +541,8 @@ public:
 			}
 		}
 
+		nvgText(vg, x, y, StringAsCStr(StringFormat("Invalid notes: %d", curEffectImpl->invalidNoteMessages)), NULL);
+		y += lineh;
 
 		for (String& s : strings) {
 			nvgText(vg, x, y, StringAsCStr(s), NULL);
