@@ -657,36 +657,7 @@ void vsthost::sendNotesOff(effectbase* plugin) {
 std::vector<note_t> vsthost::getRealtimeNotes() {
 	return this->midiRealtimeInput->m_list;
 }
-void delayAudio(DelayLine* delayLine, AudioBlock* input, AudioBlock* output, samplerate_t delay) {
-	dbgassert(delay >= 0 && delay < 1<<20);
-	dbgassert(delayLine);
-	int32_t bufSize = (int32_t)input->samples;
-	int32_t bufDelay = delay;
-	int32_t numBlocks = 1;
-	while (bufDelay > 0) {
-		bufDelay -= bufSize;
-		numBlocks++;
-	}
-	int32_t delayLineSize = numBlocks*bufSize;
-	delayLine->blockOffset = (delayLine->blockOffset+1)%numBlocks;
-	int32_t writePos = delayLine->blockOffset*bufSize;
-	int32_t readPos = writePos - delay;
-	if (readPos < 0) {
-		readPos += delayLineSize;
-	}
-	AudioBlock& delayBlock = delayLine->block;
-	delayBlock.realloc(delayLineSize);
-	delayBlock.copyFromPosToPos(input->buf, 0, writePos, input->samples, input->channels);
-	if (readPos + (int32_t)output->samples > delayLineSize) {
-		int32_t read1Len = delayLineSize - readPos;
-		int32_t read2Len = output->samples - read1Len;
-		output->copyFromPosToPos(delayBlock.buf, readPos, 0, read1Len, delayBlock.channels);
-		output->copyFromPosToPos(delayBlock.buf, 0, read1Len, read2Len, delayBlock.channels);
-	} else {
-		output->copyFromPosToPos(delayBlock.buf, readPos, 0, output->samples, delayBlock.channels);
-	}
 
-}
 namespace DAW {
 bool resolveEffectDefaultConnection(const vsthost* const host, const project_t* const project, const audio_stage_t* const stage, effectbase* const effect, channel_ref_t& out) {
 	if (effect == nullptr) {
