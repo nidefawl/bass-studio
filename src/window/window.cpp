@@ -1918,7 +1918,9 @@ public:
 	void close() override
 	{
 		try {
-			glfwMakeContextCurrent(glfw);
+			if (isInitialized) {
+				glfwMakeContextCurrent(glfw);
+			}
 			ctrlShared->onGuiClose(effect);
 			if (isInitialized) {
 				hideWindow();
@@ -1946,7 +1948,9 @@ public:
 	//end aeffect overrides
 
 	void idle () override {
-		flagNeedsRedraw();
+		if (isInitialized) {
+			flagNeedsRedraw();
+		}
 	}
 };
 
