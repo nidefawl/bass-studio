@@ -15,6 +15,7 @@
 #include "plugins/latency/latency-plugin.h"
 #include "plugins/info/info-plugin.h"
 #include "plugins/synth/synth-plugin.h"
+#include "plugins/bitcrush/bitcrush-plugin.h"
 
 typedef	AudioEffectX* (*FnCreateModule) (audioMasterCallback);
 void vsthost::registerPlugins() {
@@ -26,6 +27,7 @@ void vsthost::registerPlugins() {
 	builtinModules.push_back({moduleId++, false, PluginLatency::getName(), PluginLatency::createPlugin });
 	builtinModules.push_back({moduleId++, false, PluginHostInfo::getName(), PluginHostInfo::createPlugin });
 	builtinModules.push_back({moduleId++, true, PluginSynth::getName(), PluginSynth::createPlugin });
+	builtinModules.push_back({moduleId++, false, PluginBitcrush::getName(), PluginBitcrush::createPlugin });
 }
 
 vstpluginloadres vsthost::loadInternalPlugin(int32_t moduleId, int32_t globalId) {
