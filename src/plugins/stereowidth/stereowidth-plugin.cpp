@@ -179,16 +179,27 @@ VstInt32 PluginVST2_StereoWidth::canDo (char* text)
 		return 1;
 	return -1;	// explicitly can't do; 0 => don't know
 }
-
-static void processStereo(float** inputs, float** outputs, VstInt32 sampleFrames, float gain, float width) {
+template<typename T>
+inline void updateParam(T& cur, const T& next, const T filterCoeff) {
+	T delta = next - cur;
+	if (math::abs(delta) < math::F_MIN) {
+		cur = next;
+	} else {
+		cur += filterCoeff * delta;
+	}
+}
+static void processStereo(float** inputs, float** outputs, VstInt32 sampleFrames, const float filterCoeff, BaseVST2_ProgramStereoWidth& params, const BaseVST2_ProgramStereoWidth nextParams) {
 	float *out1 = outputs[0];
 	float *out2 = outputs[1];
 	float *in1 = inputs[0];
 	float *in2 = inputs[1];
-
-	float scaleMono = 1.0f - math::max(0.0f, (width-0.5f)*2.0f);
-	float scaleStereo = math::min(1.0f, width*2.0f);
 	for (int a = 0; a < sampleFrames; a++) {
+		updateParam(params.gain, nextParams.gain, filterCoeff);
+		updateParam(params.width, nextParams.width, filterCoeff);
+		float gain = params.gain * 2.0f;
+		float width = params.width;
+		float scaleMono = 1.0f - math::max(0.0f, (width-0.5f)*2.0f);
+		float scaleStereo = math::min(1.0f, width*2.0f);
 		float channelL = (*in1++);
 		float channelR = (*in2++);
 		float stereo = (channelL-channelR) / 2.0f;
@@ -210,9 +221,11 @@ void PluginVST2_StereoWidth::processReplacing(float** inputs, float** outputs, V
 		return;
 	}
 	BaseVST2_ProgramStereoWidth *ap = current();
-	float scaledgain = ap->gain*2.0f;
 	if (this->getAeffect()->numOutputs == 2) {
-		processStereo(inputs, outputs, sampleFrames, scaledgain, ap->width);
+		float fBlockFreq = (sampleRate / blockSize) * 0.45f;
+		float filterCoeff = 1.0f - std::expf(-2.0f * M_PI * (fBlockFreq/sampleRate));
+//		filterCoeff = 1.0f;
+		processStereo(inputs, outputs, sampleFrames, filterCoeff, paramsState, *ap);
 	}
 }
 

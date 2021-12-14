@@ -96,13 +96,13 @@ public:
 	BaseVST2_ProgramStereoWidth* current() {
 		return &singleProgram;
 	}
-
 #ifdef DISPATCHER_DEBUG_TRACE
 	VstIntPtr dispatcher(VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt);
 #endif // DEBUG
 
 private:
 	BaseVST2_ProgramStereoWidth singleProgram;
+	BaseVST2_ProgramStereoWidth paramsState;
 //	BaseVST2_Program programs[kNumPrograms];
 };
 
