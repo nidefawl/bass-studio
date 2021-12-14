@@ -157,6 +157,12 @@ bool PluginVST2_Latency::getEffectName (char* name)
 	return true;
 }
 
+bool PluginVST2_Latency::getVendorString (char* text)
+{
+	vst_strncpy(text, PLUGIN_VENDOR_NAME, kVstMaxVendorStrLen);
+	return true;
+}
+
 bool PluginVST2_Latency::getProductString (char* text)
 {
 	vst_strncpy(text, PLUGIN_PRODUCT_NAME, kVstMaxProductStrLen);

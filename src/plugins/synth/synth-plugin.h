@@ -182,8 +182,9 @@ public:
 	virtual void getParameterDisplay (VstInt32 index, char* text) override;
 	virtual void getParameterName (VstInt32 index, char* text) override;
 
-	virtual bool getEffectName (char* name);
-	virtual bool getProductString (char* text);
+	bool getEffectName (char* name) override;
+	bool getVendorString (char* text) override;
+	bool getProductString (char* text) override;
 	virtual VstPlugCategory getPlugCategory ()
 	{
 		return kPlugCategEffect;

@@ -152,7 +152,13 @@ bool PluginVST2_StereoWidth::getProgramNameIndexed (VstInt32 category, VstInt32 
 
 bool PluginVST2_StereoWidth::getEffectName (char* name)
 {
-	vst_strncpy(name, "StereoWidth", kVstMaxEffectNameLen);
+	vst_strncpy(name, PLUGIN_EFFECT_NAME, kVstMaxEffectNameLen);
+	return true;
+}
+
+bool PluginVST2_StereoWidth::getVendorString (char* text)
+{
+	vst_strncpy(text, PLUGIN_VENDOR_NAME, kVstMaxVendorStrLen);
 	return true;
 }
 

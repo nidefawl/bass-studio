@@ -86,9 +86,9 @@ public:
 	virtual bool getInputProperties (VstInt32 index, VstPinProperties* properties);
 	virtual bool getOutputProperties (VstInt32 index, VstPinProperties* properties);
 
-	virtual bool getEffectName (char* name);
-	virtual bool getVendorString (char* text);
-	virtual bool getProductString (char* text);
+	bool getEffectName (char* name) override;
+	bool getVendorString (char* text) override;
+	bool getProductString (char* text) override;
 	virtual VstPlugCategory getPlugCategory ()
 	{
 		return kPlugCategEffect;

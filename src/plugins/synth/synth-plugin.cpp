@@ -1461,6 +1461,12 @@ bool PluginVST2_Synth::getEffectName (char* name)
 	return true;
 }
 
+bool PluginVST2_Synth::getVendorString (char* text)
+{
+	vst_strncpy(text, PLUGIN_VENDOR_NAME, kVstMaxVendorStrLen);
+	return true;
+}
+
 bool PluginVST2_Synth::getProductString (char* text)
 {
 	vst_strncpy(text, PLUGIN_PRODUCT_NAME, kVstMaxProductStrLen);

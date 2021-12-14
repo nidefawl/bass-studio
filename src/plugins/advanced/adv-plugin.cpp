@@ -159,7 +159,7 @@ bool GuiAdvPluginVST2::getProgramNameIndexed (VstInt32 category, VstInt32 index,
 
 bool GuiAdvPluginVST2::getEffectName (char* name)
 {
-	vst_strncpy(name, "DrumSynth", kVstMaxEffectNameLen);
+	vst_strncpy(name, PLUGIN_EFFECT_NAME, kVstMaxEffectNameLen);
 	return true;
 }
 
