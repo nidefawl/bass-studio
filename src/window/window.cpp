@@ -810,7 +810,6 @@ public:
 		}
 	}
 	void onWindowClose() override {
-		log_printf("onWindowClose ptr %s\n", StringAsCStr(nameDbg));
 		ctrl->onWindowClose();
 		if (parent) {
 			parent->onChildOverlayClose(this);
@@ -1002,7 +1001,6 @@ void appwindow_main::onChildOverlayClose(appwindow* child) {
 	appwindow_main* wndOverlay = dynamic_cast<appwindow_main*>(child);
 	dbgassert(wndOverlay);
 	if (wndOverlay) {
-		log_printf("onChildOverlayClose ptr %s\n", StringAsCStr(wndOverlay->nameDbg));
 		this->ctrl->onChildOverlayWindowClose(wndOverlay);
 	}
 }

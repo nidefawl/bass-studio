@@ -576,7 +576,6 @@ void AppCtrl::openOverlayGui(guictxtmenu_base *b, ivec2 pos, int flags) {
 		//copy theme from this control to contextWindows control
 		*ctxtWindowTheme = *getTheme();
 		ctxtWindow->getCtrl()->m_scale = m_scale;
-		log_printf("open popup/overlay window\n", 0);
 		static_cast<PopupCtrl*>(ctxtWindow->getCtrl())->open(b, wndPos, false);
 	} else {
 		dbgassert(0);
@@ -603,7 +602,7 @@ void AppCtrl::openDialog(guidialog_base *_guidialog) {
 
 }
 void AppCtrl::openContextMenu(guictxtmenu_base *b, ivec2 pos, int flags) {
-	log_printf("open ctxtmenu_base %s\n", StringAsCStr(b->getLabel()));
+//	log_printf("open ctxtmenu_base %s\n", StringAsCStr(b->getLabel()));
 	openOverlayGui(b, pos, flags|BASECTRL_OVERLAY_TYPE_CONTEXTMENU);
 }
 void AppCtrl::closeContextMenu() {

@@ -1874,13 +1874,6 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const DAW::processing_
 	const int32_t lBlockSize = sampleFormat.blockSize;
 	const double ticksPerBlock = toTickPrecise(sampleFormat.blockSize/(double)sampleFormat.sampleRate, prjGlobals.tempo100);
 
-
-
-	/*
-	 * We try to stay 4 blocks ahead of the audiothread read position
-	 * This should be adjusted depending on samplerate and blocksize
-	 */
-//	int readWriteDist = writePos >= readPos ? writePos-readPos : writePos-(readPos-RING_BUF_SIZE);
 	bool debugLogProcessing = false;
 
 #ifndef NDEBUG
@@ -1902,19 +1895,8 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const DAW::processing_
 		dsp_util::fillBlock(audio->outputPost, 0.0f);
 		audio->updateLatency(); // determine max latency so getLatency() is correct
 	}
-//
+
 	tick_t pos = floor(posDouble);
-//	if (state == playback_state::status_play) {
-//		//TODO: latency compensate automation
-//		updateTime(sample, posDouble, state);
-//		for (track_t* tr : ctrl->trackList) {
-//			std::vector<automatable_t*> targets;
-//			tr->audio->getAutomatableTrackTargets(targets);
-//			for (automatable_t* at : targets) {
-//				at->updateAutomatedParameters(pos);
-//			}
-//		}
-//	}
 
 	tick_t loopCutStart = -1;
 	tick_t loopCutEnd = -1;
@@ -2111,10 +2093,11 @@ void vsthost::onStopPlayback(project_controller_t* ctrl) {
 		}
 	}
 }
+
 void vsthost::onTrackLayoutChange() {
-//	delayLines.clear();
 	impl->resetDelaylines();
 }
+
 void vsthost::setOutput(audiohost* audioHost) {
 	this->audioHost = audioHost;
 	sampleformat_t sampleFormatExternal = this->sampleFormatExternal;
@@ -2128,27 +2111,7 @@ void vsthost::setOutput(audiohost* audioHost) {
 bool vsthost::isStreaming() {
 	return this->audioHost && this->audioHost->isStreaming();
 }
-//void vsthost::toggleAudioEngineOnOff() {
-//	if (isStreaming()) {
-//		stopAudio();
-//		settings.startEngine = false;
-//	} else {
-//		if (startAudio()) {
-//			settings.startEngine = true;
-//		}
-//	}
-//}
 
-void mulGain(AudioBlock* block, float gain) {
-
-	for (uint32_t i = 0; i < block->channels; i++) {
-		float *buf = block->buf[i];
-		for (uint32_t j = 0; j < block->samples; j++) {
-			*buf *= gain;
-			buf++;
-		}
-	}
-}
 /* Function needs to be re-entrant (thread safe) */
 void vsthost::processAudio(audio_stage_t* stage, AudioBlock* input, AudioBlock* output, const double tickLatencyCompensated, int32_t samplePos, int32_t numSamples, playback_state state, const DAW::effect_processing_graph_t* const processingGraph) const {
 
@@ -2304,72 +2267,13 @@ void vsthost::processAudio(audio_stage_t* stage, AudioBlock* input, AudioBlock* 
             timeTotal += timePassed;
         }
 	}
-	
-#if 0
-	timeTotal = 0;
-	for (int i = 0; i < 0; ++i)
-	{
-		effectbase *current = NULL;
-		current = stage->effects[i];
-		if (!current->bIsSetup) {
-			continue;
-		}
-		//TODO: fix thread safety
-//		processing.pluginId = current->projectGlobalId;
-		dbgassert(current->bIsSetup);
-		timer.reset();
-		bool isBypass = current->isBypass();
-		AudioBlock* blockPostProcess;
-		//blockIn/blockOut will always have 2 channels at least
-		AudioBlock* blockIn = current->blockInputs;
-		AudioBlock* blockOut = current->blockOutputs;
-		blockIn->realloc(sampleFormat.blockSize);
-		blockOut->realloc(sampleFormat.blockSize);
-		if (isBypass || bypassEffectProcessing) {
-			samplerate_t delay = current->getPluginLatency();
-			if (delay > 0) {
-				if (!current->delayLine.get()) {
-					current->delayLine.reset(new DelayLine(this->numChannels, sampleFormat.blockSize));
-				}
-				AudioBlock* blockOut = current->blockOutputs;
-				delayAudio(current->delayLine.get(), input, blockOut, delay);
-				input = blockOut;
-			}
-			blockPostProcess = blockZero;
-		} else {
-			blockIn->copyFrom(input);
 
-			current->process(blockIn, blockOut, samplePos, numSamples, state);
-			input = blockOut;
-			blockPostProcess = blockOut;
-		}
-		current->postProcess(blockPostProcess, numSamples, !isBypass);
-		const auto timePassed = timer.getTime();
-
-		auto& plugStats = current->procStats;
-		if (plugStats.statsProcStep%STATS_PROCESSING_INTERVAL_STEP == 0) {
-			plugStats.statsProcSamples[(plugStats.statsWriteOffset+1)%STATS_PROCESSING_MAX_SAMPLES] = timePassed;
-			plugStats.statsWriteOffset++;
-		}
-		auto curTimeProcess = plugStats.timeProcess;
-		curTimeProcess -= curTimeProcess/NUM_BINS_STATS;
-		curTimeProcess += timePassed/NUM_BINS_STATS;
-		plugStats.timeProcess = curTimeProcess;
-		plugStats.timeProcessRaw = timePassed;
-		timeTotal += timePassed;
-		//current->fTimePercentBlockProcess = ((current->fTimePercentBlockProcess*49.0)+(timer.getTime() / (double) microSecsPerBlock))/50.0;^^
-//		processing.pluginId = 0;
-	}
-#endif
 	auto curTotalTimeProc = stage->procStats.timeProcess;
 	curTotalTimeProc -= curTotalTimeProc/NUM_BINS_STATS;
 	curTotalTimeProc += timeTotal/NUM_BINS_STATS;
 	stage->procStats.timeProcessRaw = timeTotal;
 	stage->procStats.timeProcess = curTotalTimeProc;
 
-
-	//   If a plugin runs mono inputs or outputs we need to handle this manually here
-//	output->copyFrom(input);
 
 }
 void vsthost::updatePluginWindows() {
