@@ -3,6 +3,7 @@
 #include <vector>
 #include <limits.h>
 #include "math/seq_math.h"
+#include "seq_time.h"
 #include "assert_dbg.h"
 
 #ifdef _WIN32
@@ -88,6 +89,18 @@ void replaceString(String& s, String f, String r) {
 		s.replace(index, f.length(), r);
 		offset = index + r.length();
 	}
+}
+String tickAsBeatString(int32_t tick) {
+	static const size_t buf_size = 32;
+	static thread_local char* const buf = (char*) malloc(buf_size);
+	auto beatBarNth = tickToBarBeat16th(tick, 4, 2);
+	constexpr const char format[] = "%d.%d.%d.%d";
+#ifdef __APPLE__
+    snprintf(buf, buf_size, format, beatBarNth.bar, beatBarNth.beat, beatBarNth.th);
+#else
+    _snprintf_s(buf, buf_size, _TRUNCATE, format, beatBarNth.bar, beatBarNth.beat, beatBarNth.th, beatBarNth.subticks);
+#endif
+	return String(buf);
 }
 
 static const char* const noteNames[12] {
