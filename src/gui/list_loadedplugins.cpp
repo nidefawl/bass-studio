@@ -260,19 +260,13 @@ public:
 		int x = 5;
 		int x2 = getSizeContent().x-x;
 		int y = 5;
-		{
-			ThreadLock lock = MainCtrl::getPlayThread()->tryLockThread();
-			if (lock.isLocked()) {
-				timeLastUpdate = getTimeHPint64();
-				state = MainCtrl::getPlayThread()->getState();
-				vsthost::getInstance()->getStats(stats);
-			}
-		}
 		if (getTimeHPint64() - timeLastUpdate >= 250000) {
 			timeLastUpdate = getTimeHPint64();
-			ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+			ThreadLock lock = MainCtrl::getPlayThread()->tryLockThread();
 			state = MainCtrl::getPlayThread()->getState();
-			vsthost::getInstance()->getStats(stats);
+			if (lock.isLocked()) {
+				vsthost::getInstance()->getStats(stats);
+			}
 		}
 //		const int fontSize = 12;
 		int32_t fontSize = 14;
@@ -458,16 +452,22 @@ public:
 		}
 	}
 	void update() {
-		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+		ThreadLock lock = MainCtrl::getPlayThread()->tryLockThread();
+		if (!lock.isLocked()) {
+			return;
+		}
+
 		std::vector<effectbase*> effects;
-		vsthost::getInstance()->getAllInstances(effects);
+		std::vector<effectbase*> deferredEffects;
+
+		auto host = vsthost::getInstance();
+		host->getAllInstances(effects);
+		host->getDeferredEffects(deferredEffects);
+
 		std::vector<gui_list_entry*> _newList;
 		std::vector<gui_list_entry*> _newListDef;
 		std::vector<gui_pluginsloaded_list_entry*> _newListLoadedPlugins;
 		std::vector<gui_pluginsloaded_list_entry*> _newListDefPlugins;
-		std::vector<effectbase*> deferredEffects;
-		auto host = vsthost::getInstance();
-		host->getDeferredEffects(deferredEffects);
 		std::stable_sort(deferredEffects.begin(), deferredEffects.end(), [](const effectbase* ptrA, const effectbase* ptrB){
 			if (ptrA->sName == ptrB->sName)
 				return (size_t)ptrA > (size_t)ptrB;
