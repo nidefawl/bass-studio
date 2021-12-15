@@ -374,6 +374,7 @@ void gui_pianoroll::render(NVGcontext* vg) {
 					}
 				}
 				nvgFillColor(vg, theme->getColor(GuiColor::COL_NOTE_REALTIME));
+				nvgSetShapeExtents(vg, keysX, -4, widthKeys, size.y+8);
 				nvgFill(vg);
 			}
 			if (!notePlayingPitch.empty()) {
@@ -390,6 +391,7 @@ void gui_pianoroll::render(NVGcontext* vg) {
 					}
 				}
 				nvgFillColor(vg, theme->getColor(GuiColor::COL_NOTE_PLAYING));
+				nvgSetShapeExtents(vg, keysX, -4, widthKeys, size.y+8);
 				nvgFill(vg);
 			}
 			if (noteMouse.y >= 0 && noteMouse.y/12 == octave) {
@@ -398,6 +400,7 @@ void gui_pianoroll::render(NVGcontext* vg) {
 					nvgBeginPath(vg);
 					nvgRect(vg, keysX, h-y, widthKeys, scale);
 					nvgFillColor(vg, theme->getColor(GuiColor::COL_NOTE_MOUSE));
+					nvgSetShapeExtents(vg, keysX, h-y, widthKeys, scale);
 					nvgFill(vg);
 				}
 			}
