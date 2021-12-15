@@ -850,10 +850,9 @@ public:
 void gui_graph::updateList(bool resetPositions) {
 	std::shared_ptr<DAW::processing_graph_t> lastProcessingList;
 	{
-        ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+		// A lock is not required here
         lastProcessingList = nullptr;
 		if (!isTrackGraph) {  /* project graph */
-			//		lastProcessingList = vsthost::getInstance()->lastProcessingList;
 			std::shared_ptr<DAW::processing_graph_t> processingGraph;
 			auto project = project_controller_t::get()->getProject();
 			dbgassert(project);
@@ -865,7 +864,6 @@ void gui_graph::updateList(bool resetPositions) {
             }
         } else {
             lastProcessingList = nullptr;
-	//		lastProcessingList = vsthost::getInstance()->lastProcessingGraphs[track->audio->stageId];
 			auto track = DawInstance::get()->getSelectedTrack();
 			if (track && track->audio) {
 		        std::shared_ptr<DAW::effect_processing_graph_t> effProcessingGraph;
