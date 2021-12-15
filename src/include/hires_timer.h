@@ -12,6 +12,9 @@ public:
 	/* returns time passed in int64_t MICROSECONDS */
 	int64_t getTime();
 
+	/* returns time passed in int64_t MICROSECONDS */
+	int64_t getTimeReset();
+
 	/* returns time passed in double SECONDS */
 	double getTimeDouble();
 

@@ -1102,14 +1102,6 @@ void track_impl_t::sendNotes(playback_state state, int32_t flags, tick_t cursorP
 		std::vector<note_t> notes;
 		hires_timer_t tmr;
 
-		static int64_t time1=0;
-		static int64_t time2=0;
-		static int64_t time3=0;
-		static int64_t time4=0;
-		static int64_t time5=0;
-		static int64_t time6=0;
-		static int64_t time7=0;
-		tmr.reset();
 		if (flags & MidiFlags::PROCESS_CLIPS) {
 			tick_t heldBegin = blockStart;
 			tick_t heldEnd = blockEnd;
@@ -1121,17 +1113,16 @@ void track_impl_t::sendNotes(playback_state state, int32_t flags, tick_t cursorP
 			//}
 
 		}
-		time1 = (time1 * 19 + tmr.getTime()) / 20;
-		track->getStage()->procStats.timeGetNotesInRange = time1;
 
-		tmr.reset();
+		updateProfilingTime(procMidiStats.tm0InputClips, tmr.getTimeReset());
+
 		if (flags & MidiFlags::PROCESS_REALTIME) {
 			tick_t heldBegin = blockStart;
 			tick_t heldEnd = blockEnd;
 			getClipNotesInTimeRange(heldBegin, heldEnd, -1, loopEnd, midiRealtimeInput, notes);
 		}
-		time2 = (time2 * 19 + tmr.getTime()) / 20;
 
+		updateProfilingTime(procMidiStats.tm1InputRT, tmr.getTimeReset());
 
 		if (!notes.empty() || !heldNotes.empty() || arp != nullptr) {
 			ThreadLock lock = midiMutex.lockThread();
@@ -1164,10 +1155,7 @@ void track_impl_t::sendNotes(playback_state state, int32_t flags, tick_t cursorP
 				}
 			}
 
-			time3 = (time3 * 19 + tmr.getTime()) / 20;
-
-			tmr.reset();
-
+			updateProfilingTime(procMidiStats.tm2ProcNotes, tmr.getTimeReset());
 
 			// revalidate held notes ends so we end notes that were modified by the user (loop or clip modifactions)
 			for (auto it = heldNotes.begin(); it != heldNotes.end(); ) {
@@ -1204,11 +1192,11 @@ void track_impl_t::sendNotes(playback_state state, int32_t flags, tick_t cursorP
 				}
 			}
 
-			time4 = (time4 * 19 + tmr.getTime()) / 20;
+			updateProfilingTime(procMidiStats.tm3RevalidateEnds, tmr.getTimeReset());
 
-			tmr.reset();
 			sortNoteEvents(noteEvents);
-			time5 = (time5 * 19 + tmr.getTime()) / 20;
+
+			updateProfilingTime(procMidiStats.tm4SortEvents, tmr.getTimeReset());
 
 			tmr.reset();
 			this->noteEventsProcessed.clear();
@@ -1217,8 +1205,9 @@ void track_impl_t::sendNotes(playback_state state, int32_t flags, tick_t cursorP
 			} else {
 				noteEventsProcessed = std::move(noteEvents);
 			}
-			time6 = (time6 * 19 + tmr.getTime()) / 20;
-			tmr.reset();
+
+			updateProfilingTime(procMidiStats.tm5ProcArp, tmr.getTimeReset());
+
 			size_t numEvents = noteEventsProcessed.size();
 			if (numEvents > 0)
 			{
@@ -1238,10 +1227,15 @@ void track_impl_t::sendNotes(playback_state state, int32_t flags, tick_t cursorP
 					}
 				}
 			}
-			time7 = (time7 * 19 + tmr.getTime()) / 20;
+
+			updateProfilingTime(procMidiStats.tm6WriteVstEvents, tmr.getTimeReset());
 		}
+
 		processMidiOutput(state, flags, blockStart, blockEnd, loopStart, loopEnd, bpm100, blockSamplePos);
+
 		this->noteEventsProcessed.clear();
+
+		updateProfilingTime(procMidiStats.tm7ProcessOutput, tmr.getTimeReset());
 	}
 }
 void track_impl_t::processMidiOutput(playback_state state, int32_t flags, tick_t blockStart, tick_t blockEnd, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos) {

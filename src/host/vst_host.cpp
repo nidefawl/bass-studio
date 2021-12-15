@@ -90,15 +90,16 @@ void emptyPrinft(vstplugin* plugin, const char *fmt, ...) {
 
 
 struct vsthost::track_block_processing_task_t {
+	std::shared_ptr<DAW::effect_processing_graph_t> effectProcessingGraph;
 	const DAW::processing_track_node_t* trackNode = nullptr;
 	AudioBlock* ptrExternalInputs = nullptr;
 	AudioBlock* ptrExternalOutputs = nullptr;
-	int32_t sample = 0;
-	double posDouble = 0.0;
-	playback_state state = playback_state::status_no_process;
+	audiostream_properties_t audioProp;
+	int32_t samplePosProcess = 0;
+	double tickPosProcess = 0.0;
 	bool inLoop = false;
+	playback_state playbackState = playback_state::status_no_process;
 	int debugLogProcessing = 0;
-	std::shared_ptr<DAW::effect_processing_graph_t> effectProcessingGraph;
 };
 struct process_scratch_buf_t {
 	VstTimeInfo timeinfo{};
@@ -541,6 +542,19 @@ vsthost::vsthost()
 	midiProcessedInput = new clip_notes_t;
 	registerPlugins();
 }
+vsthost::audiostream_properties_t getAudioStreamPropertiesForFormat(sampleformat_t sampleFormat, sampleformat_t sampleFormatExternal, uint32_t tempo100) {
+	vsthost::audiostream_properties_t prop;
+	prop.microSecsPerBlock = (int64_t)sampleFormat.blockSize * 1000000L / (int64_t)sampleFormat.sampleRate;
+	prop.ticksPerBlock = toTickPrecise(sampleFormat.blockSize/(double)sampleFormat.sampleRate, tempo100);
+	prop.blockSizeResampled = DAW::NumSamplesResampled(sampleFormat.blockSize, sampleFormat.sampleRate, sampleFormatExternal.sampleRate);
+	prop.numBlocksInternal = math::max<uint32_t>(1U, sampleFormatExternal.blockSize/prop.blockSizeResampled);
+	prop.numBlocksExternal = (prop.blockSizeResampled + sampleFormatExternal.blockSize - 1)/sampleFormatExternal.blockSize;
+	return prop;
+}
+
+vsthost::audiostream_properties_t vsthost::getAudioStreamProperties() const {
+	return getAudioStreamPropertiesForFormat(sampleFormat, sampleFormatExternal, prjGlobals.tempo100);
+}
 void vsthost::setSampleFormat(const sampleformat_t& sampleFormat) {
 	if (this->sampleFormat != sampleFormat) {
 		this->sampleFormat = sampleFormat;
@@ -790,7 +804,7 @@ bool resolveAudioChannel(const vsthost* const host, int32_t numChannelsTrack, co
 const int32_t lenTicksInfinite = TICKS_BAR*16;
 void vsthost::processMidiRealtimeInput(project_controller_t* ctrl, double posDouble, playback_state state) {
 	//TODO: This needs to be done per input and per track
-	const sampleformat_t sampleFormat = this->sampleFormat;
+	const sampleformat_t& sampleFormat = this->sampleFormat;
 	tick_t tickPosBlockStart = ceil(posDouble);
 
 	std::vector<MidiIOEvent> msgs = midihost::getInstance()->getInputMessages();
@@ -1168,11 +1182,10 @@ int32_t vsthost::processRender(project_controller_t* ctrl, int32_t sample, doubl
 
 
 	timer2.reset();
-	const sampleformat_t sampleFormat = this->sampleFormat;
-	const double ticksPerBlock = toTickPrecise(sampleFormat.blockSize/(double)sampleFormat.sampleRate, prjGlobals.tempo100);
+	const sampleformat_t& sampleFormat = this->sampleFormat;
+	const audiostream_properties_t audioProp = getAudioStreamProperties();
 	const bool recordStats = (dbgStep%333) == 0;
 	const bool canProcess = true;
-	const int64_t microSecsPerBlock = (int64_t)sampleFormat.blockSize * 1000000L / (int64_t)sampleFormat.sampleRate;
 
 	int32_t nBlocksProcessed = 0;
 
@@ -1215,7 +1228,7 @@ int32_t vsthost::processRender(project_controller_t* ctrl, int32_t sample, doubl
 	dsp_util::fillBlock(blockExtOut, 0.0f);
 
 	timer3.reset();
-	nBlocksProcessed += processBlock(ctrl, processingGraph.get(), &blockExtIn, &blockExtOut, samplePosProcess, tickPosProcess, state, false, false);
+	nBlocksProcessed += processBlock(ctrl, audioProp, processingGraph.get(), &blockExtIn, &blockExtOut, samplePosProcess, tickPosProcess, state, false, false);
 	timeProcessing += timer3.getTime();
 	timer3.reset();
 	dbgassert(nBlocksProcessed >= 1);
@@ -1287,7 +1300,7 @@ int32_t vsthost::processRender(project_controller_t* ctrl, int32_t sample, doubl
 #endif
 	dbgStep++;
 #ifndef NDEBUG
-	lastTickEndPos = posDouble + ticksPerBlock*nBlocksProcessed;
+	lastTickEndPos = posDouble + audioProp.ticksPerBlock*nBlocksProcessed;
 #endif
 #if 1
 	double since = timer.getTimeDoubleReset();
@@ -1321,14 +1334,14 @@ int32_t vsthost::processRender(project_controller_t* ctrl, int32_t sample, doubl
 		stats.blocksProcessed += nBlocksProcessed;
 		stats.samplesProcessed += nBlocksProcessed*sampleFormat.blockSize;
 		int32_t tickQuarterStart = static_cast<int32_t>(math::floor((posDouble) / (float) TICKS_QUARTER));
-		int32_t tickQuarterEnd = static_cast<int32_t>(math::floor((posDouble+ticksPerBlock) / (float) TICKS_QUARTER));
+		int32_t tickQuarterEnd = static_cast<int32_t>(math::floor((posDouble+audioProp.ticksPerBlock) / (float) TICKS_QUARTER));
 		if (tickQuarterEnd > tickQuarterStart) {
 			stats.tickBar += tickQuarterStart - tickQuarterEnd;
 		}
 
-		stats.timings["microSecsPerBlock"] = microSecsPerBlock;
-		stats.usage = stats.timings["blocktime"] / (double) microSecsPerBlock;
-		stats.usageRaw = stats.timings["blocktimeRaw"] / (double) microSecsPerBlock;
+		stats.timings["microSecsPerBlock"] = audioProp.microSecsPerBlock;
+		stats.usage = stats.timings["blocktime"] / (double) audioProp.microSecsPerBlock;
+		stats.usageRaw = stats.timings["blocktimeRaw"] / (double) audioProp.microSecsPerBlock;
 	}
 	return nBlocksProcessed;
 }
@@ -1348,8 +1361,9 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 
 
 	timer2.reset();
-	const sampleformat_t sampleFormat = this->sampleFormat;
-	const double ticksPerBlock = toTickPrecise(sampleFormat.blockSize/(double)sampleFormat.sampleRate, prjGlobals.tempo100);
+	const sampleformat_t& sampleFormat = this->sampleFormat;
+	const audiostream_properties_t audioProp = getAudioStreamProperties();
+
 	std::shared_ptr<resampler_t> resamplerOutput = impl->getResampler(sampleFormat, sampleFormatExternal, 0);
 	std::shared_ptr<resampler_t> resamplerInput = impl->getResampler(sampleFormatExternal, sampleFormat, 1);
 
@@ -1369,10 +1383,6 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 	int32_t dbg = dbgStep%333;
 	int32_t nBlocksProcessed = 0;
 	bool canProcess = audioHost && queueSizeOutput < 8 && queueSizeInput > 2;
-	uint32_t blockSizeResampled = DAW::NumSamplesResampled(sampleFormat.blockSize, sampleFormat.sampleRate, sampleFormatExternal.sampleRate);
-	const int64_t microSecsPerBlock = (int64_t)sampleFormat.blockSize * 1000000L / (int64_t)sampleFormat.sampleRate;
-	uint32_t numBlocksInternal = math::max<uint32_t>(1U, sampleFormatExternal.blockSize/blockSizeResampled);
-	uint32_t numBlocksExternal = (blockSizeResampled + sampleFormatExternal.blockSize - 1)/sampleFormatExternal.blockSize;
 
 	timer3.reset();
 	while (queueSizeInput) {
@@ -1398,7 +1408,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 	 * Start processing when the output ring buffer is less than half filled.
 	 * We also have to wait for the input resampler to have enough data to start processing.
 	 */
-	canProcess = audioHost && queueSizeOutput < RING_BUF_SIZE / 2 && resamplerInput->numBlocksToPop() >= numBlocksInternal;
+	canProcess = audioHost && queueSizeOutput < RING_BUF_SIZE / 2 && resamplerInput->numBlocksToPop() >= audioProp.numBlocksInternal;
 
 	if (dbg != 0) {
 		timer3.reset();
@@ -1434,9 +1444,9 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 		int64_t timeProcessing = 0;
 
 
-		for (uint32_t i = 0; i < numBlocksInternal; i++) {
+		for (uint32_t i = 0; i < audioProp.numBlocksInternal; i++) {
 			int32_t samplePosProcess = sample + sampleFormat.blockSize*i;
-			double tickPosProcess = posDouble + ticksPerBlock*i;
+			double tickPosProcess = posDouble + audioProp.ticksPerBlock*i;
 			int32_t pre = resamplerInput->numBlocksToPop();
 			AudioBlock block = resamplerInput->pop();
 			int32_t post = resamplerInput->numBlocksToPop();
@@ -1444,7 +1454,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			AudioBlock blockExtOut(32, sampleFormat.blockSize);
 			dsp_util::fillBlock(blockExtOut, 0.0f);
 			timer3.reset();
-			nBlocksProcessed += processBlock(ctrl, processingGraph.get(), &block, &blockExtOut, samplePosProcess, tickPosProcess, state, inLoop, isLoopAround);
+			nBlocksProcessed += processBlock(ctrl, audioProp, processingGraph.get(), &block, &blockExtOut, samplePosProcess, tickPosProcess, state, inLoop, isLoopAround);
 			timeProcessing += timer3.getTime();
 			timer3.reset();
 			for (auto itAudioStage = processingGraph->nodesFlatOrdered.begin(); itAudioStage != processingGraph->nodesFlatOrdered.end(); itAudioStage++) {
@@ -1482,8 +1492,8 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 
 		}
 		if (dbg != 0) {
-			stats.timings["tracks.process"] = timeProcessing/numBlocksInternal;
-			stats.timings["tracks.route"] = timeRouting/numBlocksInternal;
+			stats.timings["tracks.process"] = timeProcessing/audioProp.numBlocksInternal;
+			stats.timings["tracks.route"] = timeRouting/audioProp.numBlocksInternal;
 		}
 	}
 
@@ -1551,7 +1561,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 		stats.timings["meters.update"] = timer3.getTime();
 		dbgStep++;
 #ifndef NDEBUG
-		lastTickEndPos = posDouble + ticksPerBlock*nBlocksProcessed;
+		lastTickEndPos = posDouble + audioProp.ticksPerBlock*nBlocksProcessed;
 #endif
 		double since = timer.getTimeDoubleReset();
 		for (track_t* tr : project->trackList) {
@@ -1583,32 +1593,30 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 		stats.blocksProcessed += nBlocksProcessed;
 		stats.samplesProcessed += nBlocksProcessed*sampleFormat.blockSize;
 		int32_t tickQuarterStart = static_cast<int32_t>(math::floor((posDouble) / (float) TICKS_QUARTER));
-		int32_t tickQuarterEnd = static_cast<int32_t>(math::floor((posDouble+ticksPerBlock) / (float) TICKS_QUARTER));
+		int32_t tickQuarterEnd = static_cast<int32_t>(math::floor((posDouble+audioProp.ticksPerBlock) / (float) TICKS_QUARTER));
 		if (tickQuarterEnd > tickQuarterStart) {
 			stats.tickBar += tickQuarterStart - tickQuarterEnd;
 		}
 
-		stats.timings["microSecsPerBlock"] = microSecsPerBlock;
-		stats.usage = stats.timings["blocktime"] / (double) microSecsPerBlock;
-		stats.usageRaw = stats.timings["blocktimeRaw"] / (double) microSecsPerBlock;
+		stats.timings["microSecsPerBlock"] = audioProp.microSecsPerBlock;
+		stats.usage = stats.timings["blocktime"] / (double) audioProp.microSecsPerBlock;
+		stats.usageRaw = stats.timings["blocktimeRaw"] / (double) audioProp.microSecsPerBlock;
 	}
 	return nBlocksProcessed;
 }
 int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_processing_task_t& req) /*const*/ {
-	const sampleformat_t sampleFormat = this->sampleFormat;
-	const int32_t lBlockSize = sampleFormat.blockSize;
-	const double ticksPerBlock = toTickPrecise(sampleFormat.blockSize/(double)sampleFormat.sampleRate, prjGlobals.tempo100);
+	const sampleformat_t& sampleFormat = this->sampleFormat;
+	const double ticksPerBlock = req.audioProp.ticksPerBlock;
 
-	int32_t sample = req.sample;
+	const int32_t samplePosProcess = req.samplePosProcess;
 	const DAW::processing_track_node_t& trackNode = *req.trackNode;
 	track_t* const track = trackNode.trackOptional;
 	track_impl_t* const trackImpl = track->audio;
-	const auto state = req.state;
-	const double ticksLatency = toTickPrecise(trackNode.inputLatency/(double)sampleFormat.sampleRate, prjGlobals.tempo100);
-	const double sampleLatencyCompensated = sample - trackNode.inputLatency;
-	const double tickLatencyCompensated = req.posDouble-ticksLatency;
+	const auto playbackState = req.playbackState;
+	const double ticksLatency = toTickPrecise(trackNode.inputLatency / (double) sampleFormat.sampleRate, prjGlobals.tempo100);
+	const double sampleLatencyCompensated = samplePosProcess - trackNode.inputLatency;
+	const double tickLatencyCompensated = req.tickPosProcess - ticksLatency;
 	tick_t processingPos = floor(tickLatencyCompensated);
-	int32_t samplePosBlockEnd = sampleLatencyCompensated + lBlockSize;
 	int32_t tickBlockEnd = floor(tickLatencyCompensated + ticksPerBlock);
 
 	tick_t loopCutStart = -1;
@@ -1635,7 +1643,7 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
 	 *       This has to be done inside processAudio.
 	 *
 	 */
-	updateTime(tmp.timeinfo, sampleLatencyCompensated, tickLatencyCompensated, state);
+	updateTime(tmp.timeinfo, sampleLatencyCompensated, tickLatencyCompensated, playbackState);
 	for (effectbase* plugin : trackImpl->effects) {
 		if (plugin->pluginType == PLUGIN_TYPE_VST) {
 			auto* ptr = dynamic_cast<vstplugin*>(plugin)->getLocalTimeInfoPtr();
@@ -1648,7 +1656,7 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
 	/**
 	 * Read and apply automation.
 	 */
-	if (DAW::isPlaybackState(state)) {
+	if (DAW::isPlaybackState(playbackState)) {
 		std::vector<automatable_t*> targets;
 		trackImpl->getAutomatableTrackTargets(targets);
 		for (automatable_t* at : targets) {
@@ -1664,13 +1672,13 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
 //				log_printf("process stage 2 %d\n", static_cast<int32_t>(trackNode.stageId));
 //			}
 
-	trackImpl->input.realloc(lBlockSize);
-	trackImpl->output.realloc(lBlockSize);
+	trackImpl->input.realloc(sampleFormat.blockSize);
+	trackImpl->output.realloc(sampleFormat.blockSize);
 
 	dsp_util::fillBlock(trackImpl->input, 0.0f);
 
 	int32_t midiProcessFlags = 0;
-	switch (state) {
+	switch (playbackState) {
 		case playback_state::status_playback:
 			midiProcessFlags = MidiFlags::PROCESS_REALTIME|MidiFlags::PROCESS_CLIPS|MidiFlags::PROCESS_ARP;
 			break;
@@ -1690,16 +1698,16 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
 	}
 
 	tmp.timer.reset();
-	trackImpl->sendNotes(state, midiProcessFlags, cursorPos, processingPos, tickBlockEnd, loopCutStart, loopCutEnd, prjGlobals.tempo100, sampleLatencyCompensated, *midiRealtimeInput);
+	trackImpl->sendNotes(playbackState, midiProcessFlags, cursorPos, processingPos, tickBlockEnd, loopCutStart, loopCutEnd, prjGlobals.tempo100, sampleLatencyCompensated, *midiRealtimeInput);
 //	if ((trackImpl->flags & audiostageflags_t::RECORD_PROCESSED_MIDI) != audiostageflags_t::NONE) {
 	if (isSet(trackImpl->flags, audiostageflags_t::RECORD_PROCESSED_MIDI)) {
-		processMidiProcessedOutput(state, processingPos, tickBlockEnd, trackImpl->noteEventsProcessed);
+		processMidiProcessedOutput(playbackState, processingPos, tickBlockEnd, trackImpl->noteEventsProcessed);
 	}
 
 	track->getStage()->procStats.timeSendNotes = tmp.timer.getTime();
 
-	if (DAW::isPlaybackState(state)) {
-		trackImpl->fillAudio(processingPos, tickBlockEnd, loopCutStart, loopCutEnd, prjGlobals.tempo100, sampleLatencyCompensated, trackImpl->input.buf, (int32_t)lBlockSize);
+	if (DAW::isPlaybackState(playbackState)) {
+		trackImpl->fillAudio(processingPos, tickBlockEnd, loopCutStart, loopCutEnd, prjGlobals.tempo100, sampleLatencyCompensated, trackImpl->input.buf, (int32_t)sampleFormat.blockSize);
 	}
 
 	const uint32_t numChannelsTrack = trackImpl->input.channels;
@@ -1796,7 +1804,7 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
             req.effectProcessingGraph = effProcessingGraph;
         }
         /* Processes audio/midi tracks plugin chain */
-        processAudio(trackImpl, &trackImpl->input, &trackImpl->output, tickLatencyCompensated, sampleLatencyCompensated, lBlockSize, state,
+        processAudio(trackImpl, &trackImpl->input, &trackImpl->output, tickLatencyCompensated, sampleLatencyCompensated, (int32_t)sampleFormat.blockSize, playbackState,
                      req.effectProcessingGraph.get());
     }
 	trackImpl->procStats.numBlocksProcessed++;
@@ -1831,17 +1839,17 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
     }
 
 	/* Store block in audioOutput memory */
-	if (DAW::isPlaybackState(state)) {
+	if (DAW::isPlaybackState(playbackState)) {
 		if (static_cast<bool>(trackImpl->flags & audiostageflags_t::WRITE_OUTPUT)) {
-			int32_t offset = sample - (int32_t)(trackImpl->getOutputLatency());
+			int32_t offset = samplePosProcess - (int32_t)(trackImpl->getOutputLatency());
 			if (offset >= 0) {
 				auto* track = trackImpl->getTrack();
 				String trName = track ? track->name : "?";
-				int32_t blockIdx = sample/lBlockSize;
+				int32_t blockIdx = samplePosProcess/(int32_t)sampleFormat.blockSize;
 //				log_printf("store track %s block %d at sample offset %d (samplepos %d - stage.latencyOutput %u)\n", StringAsCStr(trName), blockIdx, offset, sample, trackImpl->getOutputLatency());
 				trackImpl->audioOutput.store(&trackImpl->outputPost, offset);
 			} else {
-				log_printf("cannot write to negative offset %d (samplepos %d - stage.latencyOutput %d)\n", offset, sample, trackImpl->getOutputLatency());
+				log_printf("cannot write to negative offset %d (samplepos %d - stage.latencyOutput %d)\n", offset, samplePosProcess, trackImpl->getOutputLatency());
 			}
 		}
 
@@ -1907,17 +1915,15 @@ void vsthost::finishTreadTasks(std::vector<audiostageid_i32>& processFinishedSta
 		}
 	}
 }
-int32_t vsthost::processBlock(project_controller_t* ctrl, const DAW::processing_graph_t* const processingGraph, AudioBlock* const ptrExternalInputs, AudioBlock* const ptrExternalOutputs, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround) {
+int32_t vsthost::processBlock(project_controller_t* ctrl, const audiostream_properties_t& audioProp, const DAW::processing_graph_t* const processingGraph, AudioBlock* const ptrExternalInputs, AudioBlock* const ptrExternalOutputs, int32_t samplePosProcess, double tickPosProcess, playback_state playbackState, bool inLoop, bool isLoopAround) {
 	dbgassert(ctrl);
 	project_t* project = ctrl->getProject();
-	const sampleformat_t sampleFormat = this->sampleFormat;
-	const int32_t lBlockSize = sampleFormat.blockSize;
-	const double ticksPerBlock = toTickPrecise(sampleFormat.blockSize/(double)sampleFormat.sampleRate, prjGlobals.tempo100);
+	const sampleformat_t& sampleFormat = this->sampleFormat;
 
 	bool debugLogProcessing = false;
 
 #ifndef NDEBUG
-	lastState = state;
+	lastState = playbackState;
 #endif
 	this->impl->resetBlock();
 
@@ -1927,16 +1933,16 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const DAW::processing_
 	for (track_t* track : project->trackList) {
 		dbgassert(track->audio);
 		track_impl_t* audio = track->audio;
-		audio->input.realloc(lBlockSize);
-		audio->output.realloc(lBlockSize);
-		audio->outputPost.realloc(lBlockSize);
+		audio->input.realloc(sampleFormat.blockSize);
+		audio->output.realloc(sampleFormat.blockSize);
+		audio->outputPost.realloc(sampleFormat.blockSize);
 		dsp_util::fillBlock(audio->input, 0.0f);
 		dsp_util::fillBlock(audio->output, 0.0f);
 		dsp_util::fillBlock(audio->outputPost, 0.0f);
 		audio->updateLatency(); // determine max latency so getLatency() is correct
 	}
 
-	tick_t pos = floor(posDouble);
+	tick_t tickPos = floor(tickPosProcess);
 
 	tick_t loopCutStart = -1;
 	tick_t loopCutEnd = -1;
@@ -1987,9 +1993,10 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const DAW::processing_
 			dbgassert(blockProcTask.trackNode==ptrProcessingNode);
 			blockProcTask.ptrExternalInputs = ptrExternalInputs;
 			blockProcTask.ptrExternalOutputs = ptrExternalOutputs;
-			blockProcTask.sample = sample;
-			blockProcTask.posDouble = posDouble;
-			blockProcTask.state = state;
+			blockProcTask.audioProp = audioProp;
+			blockProcTask.samplePosProcess = samplePosProcess;
+			blockProcTask.tickPosProcess = tickPosProcess;
+			blockProcTask.playbackState = playbackState;
 			blockProcTask.inLoop = inLoop;
 			blockProcTask.debugLogProcessing = debugLogProcessing;
 			auto timeStart = getTimeHPint64();
@@ -2051,9 +2058,10 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const DAW::processing_
 							dbgassert(blockProcTask.trackNode==ptrProcessingNode);
 							blockProcTask.ptrExternalInputs = ptrExternalInputs;
 							blockProcTask.ptrExternalOutputs = ptrExternalOutputs;
-							blockProcTask.sample = sample;
-							blockProcTask.posDouble = posDouble;
-							blockProcTask.state = state;
+							blockProcTask.audioProp = audioProp;
+							blockProcTask.samplePosProcess = samplePosProcess;
+							blockProcTask.tickPosProcess = tickPosProcess;
+							blockProcTask.playbackState = playbackState;
 							blockProcTask.inLoop = inLoop;
 							blockProcTask.debugLogProcessing = debugLogProcessing;
 
@@ -2079,13 +2087,20 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const DAW::processing_
  		dbgassert(allProcessed);
 	}
 	/* Profiling/Timings: Accumulate timings */
-	int64_t timeProcessingArr[5] = {0, 0, 0, 0, 0};
+	int64_t timeProcessingArr[4+8] = {0};
 	for (track_t* track : project->trackList) {
 		timeProcessingArr[0] += track->getStage()->procStats.timeProcessRaw;
 		timeProcessingArr[1] += track->getStage()->procStats.timeMixInputs;
 		timeProcessingArr[2] += track->getStage()->procStats.timeUpdateParameters;
 		timeProcessingArr[3] += track->getStage()->procStats.timeSendNotes;
-		timeProcessingArr[4] += track->getStage()->procStats.timeGetNotesInRange;
+		timeProcessingArr[4] += track->getStage()->procMidiStats.tm0InputClips;
+		timeProcessingArr[5] += track->getStage()->procMidiStats.tm1InputRT;
+		timeProcessingArr[6] += track->getStage()->procMidiStats.tm2ProcNotes;
+		timeProcessingArr[7] += track->getStage()->procMidiStats.tm3RevalidateEnds;
+		timeProcessingArr[8] += track->getStage()->procMidiStats.tm4SortEvents;
+		timeProcessingArr[9] += track->getStage()->procMidiStats.tm5ProcArp;
+		timeProcessingArr[10] += track->getStage()->procMidiStats.tm6WriteVstEvents;
+		timeProcessingArr[11] += track->getStage()->procMidiStats.tm7ProcessOutput;
 	}
 	int64_t timeTotal = timeProcessingArr[0];
 	stats.timings["timeMixInputs"] = timeProcessingArr[1];

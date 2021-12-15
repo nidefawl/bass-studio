@@ -261,6 +261,9 @@ inline channel_ref_t ChannelAudioEffect(effectbase* effect, stagebuffer_point is
 }
 }
 struct track_gui_entry_t;
+inline void updateProfilingTime(int64_t& field, int64_t tm, uint8_t weighting = 20) {
+	field = (field * (weighting-1) + tm) / weighting;
+}
 struct track_impl_t : public audio_stage_t {
 	midiarp* arp = nullptr;
 	track_t* track;
@@ -272,7 +275,7 @@ struct track_impl_t : public audio_stage_t {
 	std::vector<noteevent_t> noteEventsProcessed;
 	clip_notes_t* midiProcessed = nullptr;
 	ThreadMutex midiMutex;
-
+	track_midiprocess_profiling_t procMidiStats;
 	track_impl_t(vsthost* const _host, audio_stage_id_t _id, track_t* _track, const samplerate_t _sampleRate, const uint16_t _blockSize, int32_t nChannels);
 	~track_impl_t();
 	void sendNotesOff(int32_t bpm100) override;

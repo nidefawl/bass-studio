@@ -112,7 +112,6 @@ namespace math {
 		return std::log10((outValue - scaleMin) / scale) / std::log10(inValue);
 	}
 	inline float calcMappedValueForScale(float inValue, float expo, float scaleMin=0.0f, float scaleMax=1.0f) {
-		float scale = scaleMax - scaleMin;
 	    return std::pow(inValue, expo) * (scaleMax - scaleMin) + scaleMin;
 	}
 }

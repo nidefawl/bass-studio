@@ -191,10 +191,6 @@ void processWindowMessages() {
 }
 #endif
 int runCommandLineHost(int argc, const char* argv[]) {
-//    auto audiohost = std::make_unique<vsthost>();
-//	vsthost::assignMasterCallback(audiohost.get());
-//    daw_tls::tlsinstance& tls = daw_tls::getTls();
-//    tls.host = audiohost.get();
 #ifdef _WIN32
     WNDCLASS wc;
 

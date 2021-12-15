@@ -38,6 +38,12 @@ public:
 		queryStop();
 		return QPC_TOMICROSECONDS(iStart, iStop, freq);
 	}
+	int64_t getTimeReset() {
+		queryStop();
+		int64_t i = QPC_TOMICROSECONDS(iStart, iStop, freq);
+		iStart = iStop;
+		return i;
+	}
 
 	double getTimeDouble() {
 		queryStop();
@@ -64,6 +70,10 @@ void hires_timer_t::reset() {
 /* returns time passed in int64_t MICROSECONDS */
 int64_t hires_timer_t::getTime() {
 	return _M_Iimpl->getTime();
+}
+/* returns time passed in int64_t MICROSECONDS */
+int64_t hires_timer_t::getTimeReset() {
+	return _M_Iimpl->getTimeReset();
 }
 /* returns time passed in double SECONDS */
 double hires_timer_t::getTimeDouble() {
