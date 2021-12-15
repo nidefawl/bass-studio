@@ -50,7 +50,6 @@ public:
 //	return ThreadLock(nullptr);
 }
 
-
 ThreadLock::ThreadLock(ThreadLock::Impl* impl) :
 	_M_impl(impl) {
 }
@@ -60,6 +59,20 @@ ThreadLock::~ThreadLock() {
 }
 bool ThreadLock::isLocked() const noexcept {
 	return this->_M_impl->isLocked();
+}
+
+bool ThreadMutex::isLocked() {
+	return this->mLockCount > 0;
+}
+
+ThreadLock ThreadMutex::lockThread() {
+	ThreadLock t = ThreadLock::MakeThreadLock(mutex, this->mLockCount, false);
+	return std::move(t); //CANNOT RELY ON RVO
+}
+
+ThreadLock ThreadMutex::tryLockThread() {
+	ThreadLock t = ThreadLock::MakeThreadLock(mutex, this->mLockCount, true);
+	return std::move(t); //CANNOT RELY ON RVO
 }
 
 #ifndef _MSC_VER

@@ -19,3 +19,11 @@ public:
 	static ThreadLock MakeThreadLock(std::recursive_mutex& _mutex, std::atomic<int32_t>& _isLocked, const bool bTryLock);
 };
 
+class ThreadMutex {
+	std::recursive_mutex mutex;
+	std::atomic<int32_t> mLockCount{0};
+public:
+	bool isLocked();
+	ThreadLock lockThread();
+	ThreadLock tryLockThread();
+};
