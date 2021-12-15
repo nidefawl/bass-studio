@@ -921,7 +921,7 @@ public:
 		if (&btnBypass == button) {
 			track_params_t& trackParams = m_track->audio->mixer;
 			trackParams.deactivateAutomation(PARAM_ENABLE);
-			trackParams.setParamValue(PARAM_ENABLE, trackParams.isEnabled() ? 0.0f : 1.0f, 0);
+			trackParams.setParamValue(PARAM_ENABLE, trackParams.isEnabled() ? 0.0f : 1.0f, FLG_PAR_UPDATE_USER);
 		}
 		if (&btnActivate == button) {
 			vsthost* host = vsthost::getInstance();

@@ -95,7 +95,7 @@ void guiknob::handleDraggedMove(MouseEvent& evt) {
 		float delta = disty/scale;
 		if (math::abs(delta) > 1e-2f) {
 			value -= delta;
-			setValue(value, 0);
+			setValue(value, FLG_PAR_UPDATE_USER);
 			evt.dragDistance->y = 0;
 			lastVal = value;
 			changedValue = true;
@@ -112,7 +112,7 @@ bool guiknob::handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset)
 	float value = getValue();
 	float scale = isCtrl(evt.kbmods) ? 200.0f : 20.0f;
 	value += yoffset/scale;
-	setValue(value, 2);
+	setValue(value, FLG_PAR_UPDATE_USER);
 	return true;
 }
 void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS) {
@@ -198,7 +198,7 @@ void guiknob::renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS) {
 }
 
 void guiknob::setToDefaultValue() {
-	setValue(fDefaultValue, 0);
+	setValue(fDefaultValue, FLG_PAR_UPDATE_USER);
 }
 
 void guiknob::setAutomationHandlers() {
