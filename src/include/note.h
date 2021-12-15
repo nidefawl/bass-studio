@@ -23,6 +23,7 @@ inline float velocityToFloat(int32_t velocity) {
 namespace NoteFlags {
 static constexpr int32_t ENABLED = 1;
 static constexpr int32_t REALTIME = 2;
+static constexpr int32_t IS_HELD = 4;
 }
 struct note_t {
 public:
@@ -44,6 +45,16 @@ public:
 		} else {
 			flags &= ~NoteFlags::REALTIME;
 		}
+	}
+	inline void setIsHeld(bool bIsHeld) {
+		if (bIsHeld) {
+			flags |= NoteFlags::IS_HELD;
+		} else {
+			flags &= ~NoteFlags::IS_HELD;
+		}
+	}
+	inline bool isHeld() const {
+		return flags & NoteFlags::IS_HELD;
 	}
 	inline bool isEnabled() const {
 		return flags & NoteFlags::ENABLED;
@@ -88,8 +99,8 @@ struct noteevent_t {
 	int32_t velocity = 127;
 	tick_t tickOffsetInBlock;
 	tick_t globalTick = 0;
-	bool isNoteOn;
-	bool isLoopNoteOff;
+	bool isNoteOn = false;
+	bool isLoopNoteOff = false;
 	noteevent_t(int32_t p, int32_t v, tick_t t, tick_t gt, bool b, bool b2) : pitch(p), velocity(v), tickOffsetInBlock(t), globalTick(gt), isNoteOn(b), isLoopNoteOff(b2) {
 
 	}
