@@ -151,8 +151,6 @@ private:
 		hires_timer_t timer;
 		hires_timer_t timer2;
 
-		bool firstBlock = false;
-		bool isLoopAround = false;
 		std::shared_ptr<PlaybackThreadReq> req;
 		int32_t samplePos = 0;
 		double tickPos = 0;
@@ -186,8 +184,6 @@ private:
 								timer.reset();
 								timer2.reset();
 								playbackDuration = 0;
-								firstBlock = true;
-								isLoopAround = false;
 								break;
 							}
 							case playback_state::status_playback:
@@ -204,8 +200,6 @@ private:
 								timer.reset();
 								timer2.reset();
 								playbackDuration = 0;
-								firstBlock = true;
-								isLoopAround = false;
 								break;
 							}
 							case playback_state::status_stop:
@@ -242,43 +236,86 @@ private:
 //			if (state != status_play) {
 //				tickPos = ctrl->cursor.cursorPos;
 //			}
-            int32_t processedBlock = 0;
-            bool inLoop = false;
 
             if (m_status != playback_state::status_no_process)
             {
             	// aquire lock so data does not get modified during processing
 				std::unique_lock<std::recursive_mutex> lock(mutex);
 
-
             	// copy project globals from controller to host
-            	project_globals_t& projGlobals = host->prjGlobals;
-            	projGlobals = ctrl->getGlobals();
+            	host->prjGlobals = ctrl->getGlobals();
 
-            	inLoop = m_status == status_playback
+            	const project_globals_t& projGlobals = host->prjGlobals;
+
+                const samplerate_t sampleRate = host->sampleFormat.sampleRate;
+            	const int32_t blockSize = host->sampleFormat.blockSize;
+            	const double blocksPerS = sampleRate / (double) blockSize;
+    			const double msPerBlock = 1000.0 / blocksPerS;
+
+
+            	const int32_t bpm100 = projGlobals.tempo100;
+    			const double ticksPerBlock = toTickPrecise(blockSize/(double)sampleRate, bpm100);
+
+    			const bool isLoopAround = tickPos+ticksPerBlock >= projGlobals.loopStart + projGlobals.loopLen;
+
+                int32_t numBlocksProcessed = 0;
+
+                bool inLoop = m_status == status_playback
             			&& projGlobals.loopEnabled
             			&& (tickPos >= projGlobals.loopStart)
             			&& (tickPos < projGlobals.loopStart+projGlobals.loopLen);
 
+
             	if (m_status != playback_state::status_render) {
             		midiHost->processMidi(this->ctrl, samplePos, tickPos, m_status, inLoop, isLoopAround);
                 	if (!host->bypassPlaybackProcessing) {
-                    	processedBlock = host->processPlayback(this->ctrl, samplePos, tickPos, m_status, inLoop, isLoopAround);
+                    	numBlocksProcessed = host->processPlayback(this->ctrl, samplePos, tickPos, m_status, inLoop, isLoopAround);
     					timer2.reset();
                 	} else {
-                		processedBlock = 0;
+                		numBlocksProcessed = 0;
                         double d = timer2.getTimeDouble();
-                        if (d > 1.0*host->sampleFormat.blockSize/host->sampleFormat.sampleRate) {
-                        	processedBlock = 1;
+						if (d > 1.0 * blockSize / sampleRate) {
+                        	numBlocksProcessed = 1;
                         	timer2.reset();
                         }
                 	}
             	}
 
             	if (m_status == playback_state::status_render) {
-                	processedBlock = host->processRender(this->ctrl, samplePos, tickPos);
+                	numBlocksProcessed = host->processRender(this->ctrl, samplePos, tickPos);
             	}
 //    			LOG("processedBlocks: %d, play: %d, tickpos: %f\n", processedBlock, (m_status==playback_state::status_play), tickPos);
+
+				if (numBlocksProcessed) {
+					samplePos += blockSize * numBlocksProcessed;
+					tickPos += ticksPerBlock * numBlocksProcessed;
+					if (m_status == status_playback) {
+						if (inLoop) {
+							if (tickPos >= projGlobals.loopStart + projGlobals.loopLen) {
+								if (DawInstance::get()) {
+									DawInstance::get()->setJumpFromTo(tickPos, projGlobals.loopStart);
+								}
+								double nextTickPos = projGlobals.loopStart;
+								int32_t nextSamplePos = tickToSample(nextTickPos, bpm100, sampleRate);
+								host->onPlaybackJumpFromTo(this->ctrl, samplePos, tickPos, nextSamplePos, nextTickPos);
+								LOG("JMP FROM %.2f to %.2f\n", tickPos, nextTickPos);
+								tickPos = nextTickPos;
+								samplePos = nextSamplePos;
+								LOG("JMP LOOPBEGIN seconds: %.2f - BLOCK %d\n", toSeconds(projGlobals.loopStart, bpm100), samplePos / blockSize);
+
+							}
+						}
+						ctrl->getPlaybackPos() = (int32_t) floor(tickPos);
+					}
+					if (m_status == status_render) {
+						if (tickPos >= exportSettingsLocal.exportPos + exportSettingsLocal.exportLen) {
+							m_status = status_stop;
+							host->postExportEnd(ctrl, exportSettingsLocal);
+							ctrl->getPlaybackPos() = exportSettingsLocal.exportPos+exportSettingsLocal.exportLen;
+						}
+					}
+					playbackDuration += msPerBlock*numBlocksProcessed;
+				}
             }
 
             if (m_status != playback_state::status_render)
@@ -295,59 +332,8 @@ private:
                 }
             }
 
-            /*
-             * at sample rate 44100 and blocksize 512 the block duration is 1.xxms
-             * the producer side trys to stay 4 blocks ahead of the consumer (audio thread)
-             * We can expect processPlayback to only process one block under normal load
-             */
-			if (processedBlock > 1) {
-//				LOG("processedBlock > 1: %d\n", processedBlock);
-			} else if (!processedBlock) {
 
-				//std::this_thread::sleep_for(std::chrono::microseconds(500));
 
-			}
-			{
-	        	samplerate_t sampleRate = host->sampleFormat.sampleRate;
-	        	int32_t blockSize = host->sampleFormat.blockSize;
-            	project_globals_t& projGlobals = host->prjGlobals;
-            	int32_t bpm100 = projGlobals.tempo100;
-				double blocksPerS = sampleRate / (double) blockSize;
-				double msPerBlock = 1000.0 / blocksPerS;
-				const double ticksPerBlock = toTickPrecise(blockSize/(double)sampleRate, bpm100);
-				if (processedBlock) {
-		            isLoopAround = false;
-					samplePos += blockSize*processedBlock;
-					tickPos += ticksPerBlock*processedBlock;
-					if (m_status == status_playback) {
-						if (inLoop) {
-							if (tickPos >= projGlobals.loopStart + projGlobals.loopLen) {
-								if (DawInstance::get()) {
-									DawInstance::get()->setJumpFromTo(tickPos, projGlobals.loopStart);
-								}
-								double nextTickPos = projGlobals.loopStart;
-								int32_t nextSamplePos = tickToSample(nextTickPos, bpm100, sampleRate);
-								host->onPlaybackJumpFromTo(this->ctrl, samplePos, tickPos, nextSamplePos, nextTickPos);
-								LOG("JMP FROM %.2f to %.2f\n", tickPos, nextTickPos);
-								tickPos = nextTickPos;
-								samplePos = nextSamplePos;
-								LOG("JMP LOOPBEGIN seconds: %.2f - BLOCK %d\n", toSeconds(projGlobals.loopStart, bpm100), samplePos / blockSize);
-								isLoopAround = true;
-							}
-						}
-						ctrl->getPlaybackPos() = (int32_t) floor(tickPos);
-					}
-					if (m_status == status_render) {
-						if (tickPos >= exportSettingsLocal.exportPos + exportSettingsLocal.exportLen) {
-							//DONE
-							m_status = status_stop;
-							host->postExportEnd(ctrl, exportSettingsLocal);
-							ctrl->getPlaybackPos() = exportSettingsLocal.exportPos+exportSettingsLocal.exportLen;
-						}
-					}
-					playbackDuration += msPerBlock*processedBlock;
-				}
-			}
 			if (playbackDuration > 10000 && m_status == status_playback) {
 				double wallTimeMs = timer.getTimeDouble() * 1000.0;
 	            LOG("playbackDuration %.4f wallTime %.4f error %.4f\n", playbackDuration, wallTimeMs, playbackDuration-wallTimeMs);
