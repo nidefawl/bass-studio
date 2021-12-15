@@ -26,6 +26,7 @@ public:
 	guiknob randTime;
 	guiknob randTmMode;
 	guiknob randVel;
+	guiknob* knobs[6] = { &pattern, &clock, &gate, &randTime, &randTmMode, &randVel};
 	midiarp* getArp() {
 
 		track_t* track = clipview.track();
@@ -39,12 +40,9 @@ public:
 	}
 	gui_arp(clip_view& _clipview) : clipview(_clipview) {
 		add(&buttonBypass);
-		add(&clock);
-		add(&gate);
-		add(&pattern);
-		add(&randTime);
-		add(&randTmMode);
-		add(&randVel);
+		for (guiknob* knob : knobs) {
+			add(knob);
+		}
 		padding = 2;
 		margin = 0;
 		text = "Arpeggiator";
@@ -61,11 +59,10 @@ public:
 		buttonBypass.fnGetState = [this]() {
 			auto arp = getArp();
 			if (arp) {
-				return arp->getParamValue(0)>0;
+				return arp->getParamValue(PARAM_ENABLE)>0;
 			}
 			return false;
 		};
-		guiknob* knobs[6] { &clock, &gate, &pattern, &randTime, &randTmMode, &randVel};
 		for (guiknob* knob : knobs) {
 			knob->setAutomationHandlers();
 		}
@@ -84,7 +81,6 @@ public:
 		renderTitleBar(vg, size, this->text, GuiConstant::CONST_FIXED_TITLE_HEIGHT, buttonBypass.right(), flags, true);
 		renderFrameOutline(vg);
 		buttonBypass.render(vg);
-		guiknob* knobs[6] = {&clock, &gate, &pattern, &randTime, &randTmMode, &randVel};
 		midiarp* arp = getArp();
 		if (arp) {
 			for (guiknob* knob : knobs) {
@@ -117,7 +113,7 @@ public:
 			return StringFormat("%d ticks", arp->getStepSize());
 		}
 		if (knob == &pattern) {
-			int32_t option = (int32_t) std::floor(arp->getPatternF() * (NUM_PATTERNS - 1));
+			int32_t option = arp->getPatternIdx();
 			if (option == 0) {
 				return "Chord";
 			}
@@ -148,18 +144,12 @@ public:
 		buttonBypass.pos = {inset1, inset1};
 		buttonBypass.setRadius(hpt/3.f);
 
-		clock.size = ivec2(48);
-		gate.size = ivec2(48);
-		pattern.size = ivec2(48);
-		randTime.size = ivec2(48);
-		randTmMode.size = ivec2(48);
-		randVel.size = ivec2(48);
-		clock.pos = ivec2(INSET_TITLE, hpt+INSET_TITLE);
-		gate.pos = ivec2(INSET_TITLE, clock.bottom()+INSET_TITLE);
-		pattern.pos = ivec2(INSET_TITLE, gate.bottom()+INSET_TITLE);
-		randTime.pos = ivec2(INSET_TITLE, pattern.bottom()+INSET_TITLE);
-		randTmMode.pos = ivec2(INSET_TITLE, randTime.bottom()+INSET_TITLE);
-		randVel.pos = ivec2(INSET_TITLE, randTmMode.bottom()+INSET_TITLE);
+		guiknob* knobPrev = nullptr;
+		for (guiknob* knob : knobs) {
+			knob->size = ivec2(48);
+			knob->pos = ivec2(INSET_TITLE, (knobPrev?knobPrev->bottom():hpt)+INSET_TITLE);
+			knobPrev = knob;
+		}
 		for (guibase* gui : guis) {
 			gui->layout();
 		}

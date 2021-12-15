@@ -513,8 +513,12 @@ void audio_stage_t::getStageTargets(std::vector<automatable_t*>& targets) {
 	}
 }
 
+void audio_stage_t::onStopPlayback() {
+}
+
 void audio_stage_t::sendNotesOff(int32_t bpm100) {
 }
+
 void audio_stage_t::notifyPluginContainers() {
 	audio_stage_t* audioStage = this;
 	while (audioStage != nullptr) {
@@ -1006,13 +1010,14 @@ void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t 
 }
 void sortNoteEvents(std::vector<noteevent_t>& noteEvents) {
 	std::sort(noteEvents.begin(), noteEvents.end(), [](const noteevent_t& a, const noteevent_t& b) {
-		if (a.isNoteOn && !b.isNoteOn) {
-			return false;
-		}
-		if (!a.isNoteOn && b.isNoteOn) {
-			return true;
-		}
+		// sort by tick, pitch, note off, note on
 		if (a.tickOffsetInBlock == b.tickOffsetInBlock) {
+			if (a.pitch == b.pitch) {
+				if (!a.isNoteOn && b.isNoteOn) {
+					return true;
+				}
+				return false;
+			}
 			return a.pitch < b.pitch;
 		}
 		return a.tickOffsetInBlock < b.tickOffsetInBlock;
@@ -1023,39 +1028,47 @@ track_impl_t::track_impl_t(vsthost* const _host, audio_stage_id_t _id, track_t* 
   , track(_track), inputChannel(DAW::ChannelDefaultNone()), outputChannel(DAW::ChannelDefaultNone())
 {
 	arp = new midiarp(this);
+	midiProcessed = new clip_notes_t();
 }
-//TODO: make threadsafe getters
-std::vector<note_t>& track_impl_t::getArpInputNotes() {
-	return this->arp->heldInputAnimationNotes;
+const std::vector<arp_note_t>& track_impl_t::getArpHeldNotes() {
+	return this->arp->getHeldNotes();
 }
-//TODO: make threadsafe getters
-std::vector<note_t>& track_impl_t::getArpHeldNotes() {
-	return this->arp->heldOutputAnimationNotes;
-}
-//TODO: make threadsafe getters
 std::vector<marker_t>& track_impl_t::getArpMarkers(int n) {
+	dbgassert(midiMutex.isLocked());
 	if (n) return this->arp->markers2;
 	return this->arp->markers;
 }
 void track_impl_t::onStartPlayback() {
+	ThreadLock lock = midiMutex.lockThread();
 	if (arp)
 		arp->onStartPlayback();
 }
+void track_impl_t::onStopPlayback() {
+	midiProcessed->clear();
+}
+void track_impl_t::onPlaybackJumpFromTo(int32_t fromSamplePos, double fromTickPos, int32_t toSamplePos, double toTickPos) {
+	midiProcessed->clear();
+}
 void track_impl_t::sendNotesOff(int32_t bpm100) {
-	std::vector<note_t> heldNotes = track->audio->heldNotes;
-	track->audio->heldNotes.clear();
 	std::vector<noteevent_t> noteEvents;
-	if (arp)
-		arp->allNotesOff(noteEvents);
-
-	noteEvents.reserve(heldNotes.size());
-	for (note_t& noteHeld : heldNotes) {
-		noteEvents.emplace_back(noteHeld.pitch, 0, 0, 0, false, false);
+	{
+		ThreadLock lock = midiMutex.lockThread();
+		if (arp) {
+			arp->allNotesOff(noteEvents);
+		}
+		if (!arp || !arp->isProcessingEnabled()) {
+			const std::vector<note_t>& heldNotes = track->audio->heldNotes;
+			noteEvents.reserve(heldNotes.size());
+			for (const note_t& noteHeld : heldNotes) {
+				noteEvents.emplace_back(noteHeld.pitch, noteHeld.velocity, 0, noteHeld.start(), false, false);
+			}
+		}
+		track->audio->heldNotes.clear();
 	}
 	sortNoteEvents(noteEvents);
 	const double ticksPerBlock = toTickPrecise(sampleFormat.blockSize/(double)sampleFormat.sampleRate, bpm100);
 	const double tickToSamples = (60.0*sampleFormat.sampleRate) / (bpm100/100.0*TICKS_QUARTER);
-	VstEvent_t* midiEventsBuf = reallocEvts(noteEvents.size());
+	VstEvent_t* midiEventsBuf = reallocEvts(noteEvents.size() + 1);
 	for (noteevent_t& evt : noteEvents) {
 		dbgassert(evt.tickOffsetInBlock >= 0 && evt.tickOffsetInBlock < ticksPerBlock);
 		midiEventsBuf->writeVstMidiEvt(evt, tickToSamples, sampleFormat.blockSize);
@@ -1065,16 +1078,22 @@ void track_impl_t::sendNotesOff(int32_t bpm100) {
 	for (effectbase* effect : effects) {
 		vstplugin* vst = dynamic_cast<vstplugin*>(effect);
 		if (vst && vst->bCanReceiveMidi) {
-//					VstEvent_t midiEventsBufTemp = *midiEventsBuf; //TODO: make a copy, plugin may manipulate data
+			//TODO: decide if we should make a copy, plugin may manipulate data
+//			VstEvent_t midiEventsBufTemp = *midiEventsBuf;
 //			log_printf("send %d midi events to %s\n", midiEventsBuf->vstEvents->numEvents, StringAsCStr(vst->getName()));
 			vst->dispatch(effProcessEvents, 0, 0, midiEventsBuf->vstEvents);
 		}
 	}
 }
-//TODO OPTIMIZE ME MORE. 400x speed up in release mode
-void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos,
-		clip_notes_t& midiRealtimeInput, int32_t flags) {
-	//dbgassert(end != loopEnd); //if end equals loopEnd note off events will be on exact end
+/**
+ * track_impl_t::sendNotes
+ * Right now there is no latency compensation applied.
+ * TODO: First apply latency compensation per-track. Then implement per-plugin latency compensation
+ * TODO: OPTIMIZE this function. I saw up to 400x speed up in release mode
+ */
+void track_impl_t::sendNotes(playback_state state, int32_t flags, tick_t cursorPos, tick_t blockStart, tick_t blockEnd, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos,
+		const clip_notes_t& midiRealtimeInput) {
+	constexpr bool logProcessedNotes = false;
 	if (arp || std::any_of(effects.begin(), effects.end(), [](const effectbase* ref){
 			return ref->bCanReceiveMidi;
 	})) {
@@ -1092,12 +1111,8 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 		static int64_t time7=0;
 		tmr.reset();
 		if (flags & MidiFlags::PROCESS_CLIPS) {
-			tick_t heldBegin = start;
-			tick_t heldEnd = end;
-//			for (const note_t& note : heldNotes) {
-//				heldBegin = math::min(heldBegin, note.start());
-//				heldEnd = math::max(heldEnd, note.end());
-//			}
+			tick_t heldBegin = blockStart;
+			tick_t heldEnd = blockEnd;
 			track->getMidi().getNotesInRange(heldBegin, heldEnd, -1, loopEnd, notes);
 			//auto getParent = track->parent;
 			//while (getParent) {
@@ -1111,68 +1126,94 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 
 		tmr.reset();
 		if (flags & MidiFlags::PROCESS_REALTIME) {
-			tick_t heldBegin = start;
-			tick_t heldEnd = end;
-			for (const note_t& note : heldNotes) {
-				heldBegin = math::min(heldBegin, note.start());
-				heldEnd = math::max(heldEnd, note.end());
-			}
+			tick_t heldBegin = blockStart;
+			tick_t heldEnd = blockEnd;
 			getClipNotesInTimeRange(heldBegin, heldEnd, -1, loopEnd, midiRealtimeInput, notes);
 		}
 		time2 = (time2 * 19 + tmr.getTime()) / 20;
 
 
-		if (loopStart > -1&&start<loopStart)
-			start = loopStart;
 		if (!notes.empty() || !heldNotes.empty() || arp != nullptr) {
-			std::vector<note_t> notesBegin;
-			std::vector<note_t> notesEnd;
-			std::vector<noteevent_t> noteEvents;
-			notesBegin.reserve(notes.size());
-			notesEnd.reserve(heldNotes.size()+6);
-			tmr.reset();
-			for (note_t& note : notes) {
-				if (note.start() >= start && note.start() < end) {
-					notesBegin.push_back(note);
-					noteEvents.emplace_back(note.pitch, note.velocity, note.start()-start, note.start(), true, false);
-				}
+			ThreadLock lock = midiMutex.lockThread();
 
-				if (note.end() > start && note.end() <= end) {
-					notesEnd.push_back(note);
-					noteEvents.emplace_back(note.pitch, note.velocity, note.end()-start-1, note.end()-1, false, note.end() == loopEnd);
+
+			tick_t blockLoopStart = loopStart > -1 && blockStart < loopStart ? loopStart : blockStart;
+			tick_t blockLoopEnd = loopEnd > -1 && blockEnd > loopEnd ? loopEnd : blockEnd;
+
+
+			std::vector<noteevent_t> noteEvents;
+
+			tmr.reset();
+
+			for (note_t& note : notes) {
+				// Find beginning notes
+				if (note.start() >= blockLoopStart && note.start() < blockLoopEnd) {
+					if (logProcessedNotes)
+					log_printf("Block %d-%d: %s ON at %d (abs time: %d len: %d)\n", blockStart, blockEnd, noteName(note.pitch), note.start()-blockStart, note.time, note.len);
+
+					noteEvents.emplace_back(note.pitch, note.velocity, note.start()-blockStart, note.start(), true, false);
+					heldNotes.push_back(note);
+				}
+				// Find ending notes
+				if (note.end() > blockLoopStart && note.end() <= blockLoopEnd) {
+					if (removeEntry(heldNotes, note)) {
+						if (logProcessedNotes)
+						log_printf("Block %d-%d: %s OFF at %d/%f\n", blockStart, blockEnd, noteName(note.pitch), note.end()-blockStart-1, ticksPerBlock);
+						noteEvents.emplace_back(note.pitch, note.velocity, note.end()-blockStart-1, note.end()-1, false, false);
+					}
 				}
 			}
+
 			time3 = (time3 * 19 + tmr.getTime()) / 20;
 
 			tmr.reset();
-			//revalidate note ends to end notes after loop or clip modifactions
-			for (const note_t& noteHeld : heldNotes) {
+
+
+			// revalidate held notes ends so we end notes that were modified by the user (loop or clip modifactions)
+			for (auto it = heldNotes.begin(); it != heldNotes.end(); ) {
+				const note_t& noteHeld = *it;
 				bool found = false;
 				for (note_t& note : notes) {
-					if (note.pitch == noteHeld.pitch &&
-							note.start() <= noteHeld.start() && note.end() >= start) {
-						found = true;
+					if (note.pitch != noteHeld.pitch) {
+						continue;
+					}
+					if (note.start() < blockLoopEnd && note.end() > blockEnd) {
+						found |= true;
 						break;
 					}
 				}
 				if (!found) {
-					my_printf("force note end!\n", 0);
-					notesEnd.push_back(noteHeld);
-					noteEvents.emplace_back(noteHeld.pitch, 0, 0, 0, false, false);
+					if (logProcessedNotes)
+					log_printf("Block %d-%d: %s Force OFF at %d\n", blockStart, blockEnd, noteName(noteHeld.pitch), 0);
+					noteEvents.emplace_back(noteHeld.pitch, noteHeld.velocity, 0, blockStart, false, false);
+					it = heldNotes.erase(it);
+					continue;
+				}
+		        ++it;
+			}
+			// force end notes at loop end boundary
+			if (loopEnd > 0 && blockStart < loopEnd && blockEnd >= loopEnd) {
+				for (auto it = heldNotes.begin(); it != heldNotes.end(); ) {
+					const note_t& noteHeld = *it;
+
+					auto tickOffsetInBlockEnd = math::min(blockEnd - blockStart - 1, loopEnd - blockStart - 1);
+					if (logProcessedNotes)
+					log_printf("Block %d-%d: %s Force OFF (LOOP END @%d) at %d/%f = %d\n", blockStart, blockEnd, noteName(noteHeld.pitch), loopEnd, tickOffsetInBlockEnd, ticksPerBlock, blockStart+tickOffsetInBlockEnd);
+					noteEvents.emplace_back(noteHeld.pitch, noteHeld.velocity, tickOffsetInBlockEnd, blockStart+tickOffsetInBlockEnd, false, true);
+			        it = heldNotes.erase(it);
 				}
 			}
+
 			time4 = (time4 * 19 + tmr.getTime()) / 20;
 
 			tmr.reset();
-			addAll(heldNotes, notesBegin);
-			removeAll(heldNotes, notesEnd);
 			sortNoteEvents(noteEvents);
 			time5 = (time5 * 19 + tmr.getTime()) / 20;
 
 			tmr.reset();
 			this->noteEventsProcessed.clear();
 			if (flags & MidiFlags::PROCESS_ARP) {
-                arp->process(noteEvents, start, end, loopStart, loopEnd, noteEventsProcessed, math::floorF32toS32(ticksPerBlock));
+                arp->process(state, cursorPos, noteEvents, blockStart, blockEnd, loopStart, loopEnd, math::floorF32toS32(ticksPerBlock), noteEventsProcessed);
 			} else {
 				noteEventsProcessed = std::move(noteEvents);
 			}
@@ -1190,23 +1231,132 @@ void track_impl_t::sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t 
 				for (effectbase* effect : effects) {
 					vstplugin* vst = dynamic_cast<vstplugin*>(effect);
 					if (vst && vst->isSynth) {
-	//					VstEvent_t midiEventsBufTemp = *midiEventsBuf; //TODO: make a copy, plugin may manipulate data
+						//TODO: decide if we should make a copy, plugin may manipulate data
+//						VstEvent_t midiEventsBufTemp = *midiEventsBuf;
 						vst->midiEventsDispatched += midiEventsBuf->vstEvents->numEvents;
 						vst->dispatch(effProcessEvents, 0, 0, midiEventsBuf->vstEvents);
 					}
 				}
 			}
 			time7 = (time7 * 19 + tmr.getTime()) / 20;
-		} else {
-//			for (effectbase* effect : effects) {
-//				vstplugin* vst = dynamic_cast<vstplugin*>(effect);
-//				if (vst && vst->bCanReceiveMidi) {
-//					VstEvents noEvData;
-//					noEvData = {  };
-//					vst->dispatch(effProcessEvents, 0, 0, &noEvData);
-//				}
-//			}
 		}
+		processMidiOutput(state, flags, blockStart, blockEnd, loopStart, loopEnd, bpm100, blockSamplePos);
+		this->noteEventsProcessed.clear();
+	}
+}
+void track_impl_t::processMidiOutput(playback_state state, int32_t flags, tick_t blockStart, tick_t blockEnd, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos) {
+	constexpr bool logProcessedNotes = false;
+	bool notesProcessed = false;
+	const int32_t lenTicksInfinite = TICKS_BAR*16;
+	if (noteEventsProcessed.size()) {
+
+		std::vector<note_t> newNotes;
+		for (noteevent_t& msg : noteEventsProcessed) {
+			if (msg.isNoteOn) {
+				note_t note;
+//				note.setRealtime(false);
+				note.setIsHeld(true);
+				note.time = blockStart + msg.tickOffsetInBlock;
+				note.len = lenTicksInfinite;
+				note.pitch = msg.pitch;
+				note.velocity = msg.velocity;
+				newNotes.push_back(note);
+			}
+		}
+		if (newNotes.size()) {
+			if (logProcessedNotes)
+			for (auto& note : newNotes) {
+				log_printf("Block %d, note open %d (%s)\n", blockStart, note.start(), noteName(note.pitch));
+			}
+			midiProcessed->addAll(newNotes);
+			notesProcessed = true;
+		}
+		for (noteevent_t& msg : noteEventsProcessed) {
+			if (!msg.isNoteOn) {
+				int32_t pitch = msg.pitch;
+				int32_t tickEnd = blockStart + msg.tickOffsetInBlock;
+				if (logProcessedNotes)
+				log_printf("%s@%d Looking for NOTE_ON evt\n", noteName(pitch), tickEnd);
+				bool fnd = false;
+				for (note_t& noteHeld : midiProcessed->m_list) {
+					if(noteHeld.pitch == pitch) {
+						if (!noteHeld.isHeld()) {
+//							log_printf("%s@%d note was released before (@%d), looking for next one\n", noteName(noteHeld.pitch), noteHeld.start(), noteHeld.end());
+							continue;
+						}
+						if (noteHeld.start() > tickEnd) {
+//							log_printf("%s@%d note starts after this release\n", noteName(noteHeld.pitch), noteHeld.start());
+							continue;
+						}
+						if (noteHeld.start() == tickEnd) {
+//							log_printf("%s noteHeld.start() == tickEnd %d, adding TICKS_16TH/4\n", noteName(noteHeld.pitch), tickEnd);
+							tickEnd += TICKS_16TH/4;
+						}
+						noteHeld.len = tickEnd - noteHeld.start();
+						noteHeld.setIsHeld(false);
+						assert(noteHeld.len >= 0);
+						fnd = true;
+						notesProcessed = true;
+						if (logProcessedNotes)
+						log_printf("Block %d, note complete %d END %d (%s)\n", blockStart, noteHeld.start(), noteHeld.end(), noteName(noteHeld.pitch));
+						break;
+					}
+				}
+				if (!fnd) {
+					log_printf("MIDI_OFF_NOTE note not found %s tickEnd %d\n", noteName(pitch), tickEnd);
+				}
+
+			}
+		}
+//			if (newNotes.size() || notesProcessed) {
+//				midiProcessed->removeDuplicates();
+//				notesProcessed = true;
+//			}
+	}
+	if (midiProcessed->m_list.size()) {
+
+		{
+			for (note_t& n : midiProcessed->m_list) {
+				if (n.isHeld())
+					continue;
+				int exactDupes = 0;
+				for (note_t& c : midiProcessed->m_list) {
+					if (c.isHeld())
+						continue;
+					if (c.pitch == n.pitch) {
+						if (c == n && exactDupes == 0) {
+							exactDupes++;
+							continue;
+						}
+						if (c.start() >= n.end() || c.end() <= n.start()) {
+							continue;
+						}
+						log_printf("Found notes overlapping (%s@%d-%d and @%d-%d)\n", noteName(n.pitch), n.start(), n.end(), c.start(), c.end());
+					}
+				}
+			}
+		}
+
+
+		auto it = midiProcessed->m_list.begin();
+		while (it != midiProcessed->m_list.end()) {
+			note_t& note = *it;
+			if (!note.isHeld() && note.end() < blockStart) {
+				String strTmStart = tickAsBeatString(note.start());
+				String strTmEnd = tickAsBeatString(note.end());
+				if (logProcessedNotes) {
+					log_printf("Note %s recorded from %s to %s\n", noteName(note.pitch), StringAsCStr(strTmStart), StringAsCStr(strTmEnd));
+					log_printf("Note %s recorded from %d to %d\n", noteName(note.pitch), note.start(), note.end());
+				}
+				notesProcessed = true;
+				it = midiProcessed->m_list.erase(it);
+			} else {
+				it++;
+			}
+		}
+	}
+	if (notesProcessed) {
+		midiProcessed->updateBounds();
 	}
 }
 

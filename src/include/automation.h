@@ -184,7 +184,7 @@ public:
 				targets.push_back(t.paramIdx);
 		}
 	}
-	void updateAutomatedParameters(tick_t pos) {
+	virtual void updateAutomatedParameters(tick_t pos) {
 		for (automated_param_t& param : automatedParams) {
 			if (param.src.isActive()) {
 				float val = param.src.getValueAt(pos);
@@ -296,6 +296,7 @@ void storeAutomation(std::vector<automation_view_t>& automatedParams, automatabl
 int32_t indexOfTick(const std::vector<automation_point_t>& dataPoints, tick_t tick);
 int32_t addPointAt(std::vector<automation_point_t>& dataPoints, tick_t tick, int32_t quantizationSteps, float fInitialVal);
 void simplifyData(std::vector<automation_point_t>& data);
+void toggleDeviceEnableState(automatable_t* effect, int flags);
 
 class vsthost;
 namespace DAW {

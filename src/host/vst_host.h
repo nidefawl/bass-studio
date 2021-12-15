@@ -181,9 +181,9 @@ private:
 
 	void finishTreadTasks(std::vector<audiostageid_i32>& processFinishedStageIds, const std::vector<audiostageid_i32>& reqFinishWaitStageIds, bool isFinalInvocation);
 
-	void updateRecordingClip(tick_t tickPosBlockStart, std::vector<note_t>& m_list);
-	void finishRecordingClip(tick_t tickPosBlockStart, std::vector<note_t>& m_list);
-	void processMidiProcessedOutput(playback_state state, tick_t procPos, std::vector<noteevent_t>& noteEventsProcessed);
+	void updateRecordingClip(tick_t tickBlockStart, tick_t tickBlockEnd, std::vector<note_t>& m_list);
+	void finishRecordingClip(tick_t tickBlockStart, tick_t tickBlockEnd, std::vector<note_t>& m_list);
+	void processMidiProcessedOutput(playback_state state, tick_t tickBlockStart, tick_t tickBlockEnd, std::vector<noteevent_t>& noteEventsProcessed);
 public:
 	vsthost();
 	vsthost(vsthost const&) = delete;
@@ -206,6 +206,7 @@ public:
 
 	void onStartPlayback(project_controller_t* ctrl);
 	void onStopPlayback(project_controller_t* ctrl);
+	void onPlaybackJumpFromTo(project_controller_t* ctrl, int32_t fromSamplePos, double fromTickPos, int32_t toSamplePos, double toTickPos);
 	void onPluginsChanged(audio_stage_t* stage);
 	int32_t processRender(project_controller_t* ctrl, int32_t sample, double posDouble);
 	int32_t processPlayback(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround);

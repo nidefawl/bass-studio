@@ -23,6 +23,7 @@
 #include "host/audio_config.h"
 #include "host/daw_channel.h"
 #include "profiling.h"
+#include "threads/threadlock.h"
 
 #define PARAM_TRACK_GAIN 1
 
@@ -186,6 +187,7 @@ struct audio_stage_t {
 	void configureDefaultRoutings();
 	virtual void sendNotesOff(int32_t bpm100);
 	void notifyPluginContainers();
+	virtual void onStopPlayback();
 };
 inline bool isAudioStageChildOf(audio_stage_t* parent, audio_stage_t* child) {
 	std::vector<audio_stage_t*>& children = parent->children;
@@ -202,6 +204,7 @@ inline bool isAudioStageChildOf(audio_stage_t* parent, audio_stage_t* child) {
 
 class clip_notes_t;
 class midiarp;
+struct arp_note_t;
 namespace MidiFlags {
 static constexpr int PROCESS_REALTIME = 1;
 static constexpr int PROCESS_CLIPS = 2;
@@ -267,18 +270,23 @@ struct track_impl_t : public audio_stage_t {
 	DAW::channel_ref_t outputChannel;
 	std::vector<track_gui_entry_t*> guiInstances;
 	std::vector<noteevent_t> noteEventsProcessed;
+	clip_notes_t* midiProcessed = nullptr;
+	ThreadMutex midiMutex;
+
 	track_impl_t(vsthost* const _host, audio_stage_id_t _id, track_t* _track, const samplerate_t _sampleRate, const uint16_t _blockSize, int32_t nChannels);
 	~track_impl_t();
 	void sendNotesOff(int32_t bpm100) override;
 	void onStartPlayback();
-	void sendNotes(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, clip_notes_t& midiRealtimeInput, int32_t flags);
+	void onStopPlayback() override;
+	void onPlaybackJumpFromTo(int32_t fromSamplePos, double fromTickPos, int32_t toSamplePos, double toTickPos);
+	void sendNotes(playback_state state, int32_t flags, tick_t cursorPos, tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, const clip_notes_t& midiRealtimeInput);
+	void processMidiOutput(playback_state state, int32_t flags, tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos);
 	void fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int32_t bpm100, int32_t blockSamplePos, float** buffer, int32_t samples);
 	void addAudio(const AudioBlock& src, float fGain);
 	int32_t mapInput(int32_t nInputChannels, int32_t nChannel);
 	VstEvent_t* reallocEvts(size_t size);
 	void removePlugin(effectbase* _vst, bool notifyUp) override;
-	std::vector<note_t>& getArpHeldNotes();
-	std::vector<note_t>& getArpInputNotes();
+	const std::vector<arp_note_t>& getArpHeldNotes();
 	std::vector<marker_t>& getArpMarkers(int n);
 	void getAutomatableTrackTargets(std::vector<automatable_t*>& targets);
 	void createIOSnapshot(track_io_configuration_snapshot_t& snapshot);

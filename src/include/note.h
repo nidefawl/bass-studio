@@ -171,10 +171,4 @@ inline void offsetEndTime(std::vector<note_t>& notesPtrs, tick_t offset, tick_t 
 }
 int cutIntersecting(std::vector<note_t>& m_list, note_t& n, bool eliminateDupes);
 
-/* shortens end of intersecting notes, does not remove any notes, instead looks for exact duplicates 
-* returns: -1 if exact duplicate is present
-*		   otherwise the return value is a positive number and represents the number notes modified in the list
-*/
-int cutNoteOutOfList(std::vector<note_t>& m_list, note_t& n, bool eliminateDupes);
-
 void sortNoteEvents(std::vector<noteevent_t>& noteEvents);

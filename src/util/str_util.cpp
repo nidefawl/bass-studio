@@ -96,9 +96,9 @@ String tickAsBeatString(int32_t tick) {
 	auto beatBarNth = tickToBarBeat16th(tick, 4, 2);
 	constexpr const char format[] = "%d.%d.%d.%d";
 #ifdef __APPLE__
-    snprintf(buf, buf_size, format, beatBarNth.bar, beatBarNth.beat, beatBarNth.th);
+    snprintf(buf, buf_size, format, beatBarNth.bar+1, beatBarNth.beat+1, beatBarNth.th+1);
 #else
-    _snprintf_s(buf, buf_size, _TRUNCATE, format, beatBarNth.bar, beatBarNth.beat, beatBarNth.th, beatBarNth.subticks);
+    _snprintf_s(buf, buf_size, _TRUNCATE, format, beatBarNth.bar+1, beatBarNth.beat+1, beatBarNth.th+1, beatBarNth.subticks);
 #endif
 	return String(buf);
 }

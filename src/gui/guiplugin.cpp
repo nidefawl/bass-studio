@@ -100,25 +100,7 @@ void guiplugin::determineSize(ivec2& prefSize) {
 		prefSize.x = prefSize.y;
 	}
 }
-void toggleEffectEnableState(effectbase* effect, int flags)
-{
-    automation_t* paramAutomation;
- //   paramAutomation = effect->getRegisteredAutomation(PARAM_ENABLE);
- //   bool automationActive = paramAutomation && paramAutomation->isActive();
-	//if (automationActive) {
-	//	effect->deactivateAutomation(PARAM_ENABLE);
- //   }
-    float f = effect->getParamValue(PARAM_ENABLE);
-    f = math::clamp(1.0f - f, 0.0f, 1.0f);
-    effect->setParamValue(PARAM_ENABLE, f, flags);
-    if ((flags & FLG_PAR_UPDATE_USER)) {
-        paramAutomation = effect->getRegisteredAutomation(PARAM_ENABLE);
-        if (paramAutomation) {
-            paramAutomation->active = false;
-		}
-	}
-    
-}
+
 void guiplugin::buttonClicked(guibase* _button) {
 	if (_button == &buttonLayout) {
 		layoutMode = (layoutMode+1)%2;
@@ -129,7 +111,7 @@ void guiplugin::buttonClicked(guibase* _button) {
 	}
 	if (_button == &buttonBypass) {
     	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-        toggleEffectEnableState(effect, FLG_PAR_UPDATE_USER);
+        toggleDeviceEnableState(effect, FLG_PAR_UPDATE_USER);
 	}
 	if (_button == &buttonSave) {
     	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();

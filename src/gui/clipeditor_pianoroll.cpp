@@ -193,13 +193,8 @@ void gui_pianoroll::render(NVGcontext* vg) {
 
 	auto track = this->view.track();
 	if (track) {
-//		std::vector<note_t> heldNotes;
-//		{
-//			ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-//			heldNotes = track->audio->heldNotes;
-//		}
-//		for (auto& note : heldNotes) {
-		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+
+		ThreadLock lock = track->audio->midiMutex.lockThread();
 		for (auto& note : track->audio->heldNotes) {
 			if (note.isRealtime()) {
 				if (!STL_CONTAINS(noteRealtimePitch, note.pitch)) {

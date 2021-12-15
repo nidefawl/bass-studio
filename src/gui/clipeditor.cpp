@@ -174,7 +174,9 @@ void gui_clipcontent::handleRightClick(MouseEvent& evt) {
 	guictr_noteeditor* editor = dynamic_cast<guictr_noteeditor*>(this->parent);
 	dawCtrl->openContextMenu(new guictxtmenu_noteeditor(editor), evt.mousepos);
 }
-void renderNote(NVGcontext* vg, gui_clipcontent* c, note_t* note, float yscale, tick_t offset = 0) {
+
+template<typename T>
+void renderNote(NVGcontext* vg, gui_clipcontent* c, T* note, float yscale, tick_t offset = 0) {
 
 	float ny = c->toScreenF(note->pitch);
 	float nx = c->grid.tickToScreenD(note->time + offset);
@@ -702,9 +704,9 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
 	gui_clip* guiClip = view.gui;
 	track_t* track = guiClip ? guiClip->m_track : NULL;
 	if (track && track->audio) {
-		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 		clip_t* clip = guiClip->m_clip;
-
+/*
+		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 		std::vector<note_t> heldRealtimeNotes = vsthost::getInstance()->getRealtimeNotes(); //TODO: NOT THREADSAFE
 		if (heldRealtimeNotes.size()) {
 			int nRendered = 0;
@@ -730,7 +732,8 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
 				nvgFillPaint(vg, paint);
 				nvgBatchedRender(vg);
 			}
-		}
+		}*/
+		ThreadLock lock = track->audio->midiMutex.lockThread();
 		std::vector<note_t>& heldNotes = track->audio->heldNotes;
 		if (heldNotes.size()) {
 			int nRendered = 0;
@@ -758,31 +761,11 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
 			}
 		}
 
-//		std::vector<note_t>& heldNotesArpIn = track->audio->getArpInputNotes(); //TODO: NOT THREADSAFE
-//		if (heldNotesArpIn.size()&&false) {
-//			nvgBeginPath(vg);
-//			for (note_t& note : heldNotesArpIn) {
-//				tick_t pos = note.start() - clip->start() + clip->offsetStart;
-//				if (clip->isLoopEnabled()) {
-//					if (pos > clip->loopStart) {
-//						pos = clip->loopStart + (pos - clip->loopStart) % clip->loopLen;
-//					}
-//				}
-//				//TODO: CULL
-//				renderNote(vg, this, &note, scale, -note.start() + pos);
-//			}
-//			nvgFillColor(vg, rgbToNvg(0xbbbb00));
-//			nvgFill(vg);
-//			nvgStrokeWidth(vg, 1.0f);
-//			nvgStrokeColor(vg, theme->getColor(GuiColor::COL_NOTE_OUTLINE));
-//			nvgStroke(vg);
-//		}
-
-		std::vector<note_t>& heldNotesArp = track->audio->getArpHeldNotes(); //TODO: NOT THREADSAFE
+		auto& heldNotesArp = track->audio->getArpHeldNotes(); //TODO: NOT THREADSAFE
 		if (heldNotesArp.size()) {
 			nvgBeginPath(vg);
 
-			for (note_t& note : heldNotesArp) {
+			for (auto& note : heldNotesArp) {
 				tick_t pos = note.start() - clip->start() + clip->offsetStart;
 				if (clip->isLoopEnabled()) {
 					if (pos > clip->loopStart) {

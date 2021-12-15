@@ -73,6 +73,7 @@ public:
 	const int internalModuleId;
 	String sDir;
 	bool bInEditIdle = false;
+	bool bWantsEffIdle = false;
 	int pluginCategory = 0;
 	int vstVersion = 0;
 	int uId = 0;

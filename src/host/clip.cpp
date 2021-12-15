@@ -71,34 +71,6 @@ note_t& clip_notes_t::add(note_t& t) {
 	return m_list.back();
 }
 
-/* does not remove notes */
-int cutNoteOutOfList(std::vector<note_t>& m_list, note_t& n, bool eliminateDupes) {
-	auto it = m_list.begin();
-	// find exact duplicate;
-	while (it != m_list.end()) {
-		const note_t& val = *it++;
-		if (val.pitch == n.pitch && val.time == n.time && val.len == n.len) {
-			return -1;
-		}
-	}
-
-	int nAdjusted = 0;
-	for (it = m_list.begin(); it != m_list.end(); ++it) {
-		note_t& c = *it;
-		if (c.pitch != n.pitch) {
-			continue;
-		} else if (c.start() >= n.end() || c.end() <= n.start()) {
-			continue;
-		} else if (c.start() < n.start()) {
-			c.cutRight(n.start());
-			nAdjusted++;
-		} else if (c.start() > n.start()) {
-			n.cutRight(c.start());
-			nAdjusted++;
-		}
-	}
-	return nAdjusted;
-}
 int cutIntersecting(std::vector<note_t>& m_list, note_t& n, bool eliminateDupes) {
 	int nErased = 0;
 	auto it = m_list.begin();

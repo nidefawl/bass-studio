@@ -200,6 +200,15 @@ void automation_t::setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automa
 
 }
 
+void toggleDeviceEnableState(automatable_t* effect, int flags)
+{
+    float f = math::clamp(1.0f - effect->getParamValue(PARAM_ENABLE), 0.0f, 1.0f);
+    if ((flags & FLG_PAR_UPDATE_USER)) {
+		effect->deactivateAutomation(PARAM_ENABLE);
+	}
+    effect->setParamValue(PARAM_ENABLE, f, flags);
+}
+
 void loadAutomation(const std::vector<automation_view_t>& automatedParams, automatable_t* at) {
 	log_printf("Loading %d automation lanes for device %s\n", automatedParams.size(), StringAsCStr(at->getAutomatableName()));
 	for (const automation_view_t& automatedParam : automatedParams) {

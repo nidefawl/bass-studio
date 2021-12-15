@@ -1639,7 +1639,7 @@ int startApplication(int argc, char* argv[]) {
 	}
 
 	Profiling::profilingRegisterEntry<application_stats_t>(ctrl.get(), "Application Stats");
-	Profiling::profilingRegisterEntry<render_stats_t>(mainWindow.get(), "Main Renderstats");
+	Profiling::profilingRegisterEntry<render_stats_t>(mainWindow.get(), "Main Window Renderstats");
 
 	enableGlDebugCallback();
 	glfwSetErrorCallback(glfw_runtime_error_callback);

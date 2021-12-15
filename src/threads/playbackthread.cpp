@@ -325,9 +325,12 @@ private:
 								if (DawInstance::get()) {
 									DawInstance::get()->setJumpFromTo(tickPos, projGlobals.loopStart);
 								}
-								LOG("JMP FROM %.2f to %d\n", tickPos, projGlobals.loopStart);
-								tickPos = projGlobals.loopStart;
-								samplePos = tickToSample(projGlobals.loopStart, bpm100, sampleRate);
+								double nextTickPos = projGlobals.loopStart;
+								int32_t nextSamplePos = tickToSample(nextTickPos, bpm100, sampleRate);
+								host->onPlaybackJumpFromTo(this->ctrl, samplePos, tickPos, nextSamplePos, nextTickPos);
+								LOG("JMP FROM %.2f to %.2f\n", tickPos, nextTickPos);
+								tickPos = nextTickPos;
+								samplePos = nextSamplePos;
 								LOG("JMP LOOPBEGIN seconds: %.2f - BLOCK %d\n", toSeconds(projGlobals.loopStart, bpm100), samplePos / blockSize);
 								isLoopAround = true;
 							}

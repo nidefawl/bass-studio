@@ -167,6 +167,9 @@ public:
 			_out.push_back(ref);
 		}
 	}
+	void clear() {
+		copy(clip_notes_t());
+	}
 };
 struct noteview_cache_impl_t;
 class noteview_render_t : public clip_notes_t {

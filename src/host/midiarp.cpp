@@ -7,6 +7,9 @@
 //#define PLACE_MARKERS
 //#define PLACE_MARKERS_OUTPUT
 
+namespace {
+constexpr bool logProcessedNotes = false;
+}
 
 
 midiarp::midiarp(track_impl_t* _trImpl) :
@@ -36,21 +39,31 @@ midiarp::midiarp(track_impl_t* _trImpl) :
 		regparam->label = paramEntry.name;
 		regparam->shortLabel = paramEntry.name;
 	}
-	//		setParamValue(ARP_PARAM_ENABLED, 0, FLG_PAR_UPDATE_INIT);
-	//		setParamValue(ARP_PARAM_CLOCK, 10/(double)NUM_ARP_STEPSIZE_OPTIONS, FLG_PAR_UPDATE_INIT);
-	//		setParamValue(ARP_PARAM_GATE, 1/4.0f, FLG_PAR_UPDATE_INIT);
-	//		setParamValue(ARP_PARAM_PATTERN, 0, FLG_PAR_UPDATE_INIT);
+
 	getOrCreateAutomation(PARAM_ENABLE)->quantizationSteps = 1;
-	getOrCreateAutomation(ARP_PARAM_CLOCK)->quantizationSteps = NUM_ARP_STEPSIZE_OPTIONS - 1;
+	if (syncClock) {
+		getOrCreateAutomation(ARP_PARAM_CLOCK)->quantizationSteps = NUM_ARP_STEPSIZE_OPTIONS - 1;
+	}
 	getOrCreateAutomation(ARP_PARAM_RAND_MODE)->quantizationSteps = NUM_RANDOM_TIME_MODES - 1;
+	getOrCreateAutomation(ARP_PARAM_PATTERN)->quantizationSteps = NUM_PATTERNS - 1;
 }
 
 tick_t midiarp::getStepSize() {
-	int32_t option = (int32_t) std::floor(getClockF() * (NUM_ARP_STEPSIZE_OPTIONS - 1));
-	dbgassert(option<NUM_ARP_STEPSIZE_OPTIONS);
-	int32_t len = tickLength[option];
-	dbgassert(len > 0);
-	return len;
+
+	if (syncClock) {
+		int32_t option = (int32_t) std::floor(getParamValue(ARP_PARAM_CLOCK) * (NUM_ARP_STEPSIZE_OPTIONS - 1));
+		dbgassert(option<NUM_ARP_STEPSIZE_OPTIONS);
+		int32_t len = tickLength[option];
+		return len;
+	}
+	float scMin = 1.0f/8.0f;
+	float scMax = 4.0f*4.0f*4.0f;
+	float expo = math::calcExponentForScale(0.5f, 4.0f, scMin, scMax);
+	//TODO: hardcode or constexpr this exponent
+
+    float valueMapped = TICKS_16TH * math::calcMappedValueForScale(getParamValue(ARP_PARAM_CLOCK), expo, scMin, scMax);
+	dbgassert(valueMapped > 0);
+	return valueMapped;
 }
 
 int32_t midiarp::getRandTmMode() {
@@ -60,38 +73,67 @@ int32_t midiarp::getRandTmMode() {
 }
 
 tick_t midiarp::getDuration() {
-	const int minDuration = getStepSize() >> 3;
-	const int maxDuration = getStepSize() << 1;
-	tick_t len = (tick_t) (std::floor(minDuration + getGateF() * (maxDuration - minDuration)));
+//	const int minDuration = getStepSize() >> 3;
+//	const int maxDuration = getStepSize() << 1;
+//	tick_t len = (tick_t) (std::floor(minDuration + getGateF() * (maxDuration - minDuration)));
+
+	// range is 1/8 to 2 times the StepSize
+	// I want f = 0.5 to map to 1.0
+	float scMin = 1.0f/8.0f;
+	float scMax = 2.0f;
+	float expo = math::calcExponentForScale(0.5f, 1.0f, scMin, scMax);
+	//TODO: hardcode or constexpr this exponent
+
+    float valueMapped = pow(getGateF(), expo) * (scMax - scMin) + scMin;
+	tick_t len = (tick_t) (std::floor(valueMapped * getStepSize()));
 	dbgassert(len > 0);
 	return len;
 }
 
 int midiarp::isChordOutput() {
-	int32_t option = (int32_t) std::floor(getPatternF() * (NUM_PATTERNS - 1));
-	dbgassert(option<NUM_PATTERNS);
-	return option == 0;
+	return getPatternIdx() == 0;
 }
-
-int midiarp::getStepIdx(int step, int nNotes) {
-	int32_t option = (int32_t) std::floor(getPatternF() * (NUM_PATTERNS - 1));
-	dbgassert(option<NUM_PATTERNS);
-	if (option > 0) {
-		option--;
+int getStepIdx(int option, int step, int nNotes) {
+	if (nNotes < 2) {
+		return 0;
 	}
 	switch (option) {
 	case 0:
+		// 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
 		return step % nNotes;
 	case 1:
+		// 3, 2, 1, 0, 3, 2, 1, 0,
 		return nNotes - 1 - (step % nNotes);
 	case 2:
-		return (step / nNotes) % 2 == 0 ? step % nNotes : (nNotes - 1 - (step % nNotes));
+		// 0, 1, 2, 3, 3, 2, 1, 0, 0, 1, 2, 3
+		return (step / nNotes) % 2 == 0 ? getStepIdx(0, step, nNotes) : getStepIdx(1, step, nNotes);
 	case 3:
-		return (step / nNotes) % 2 == 0 ? (nNotes - 1 - (step % nNotes)) : step % nNotes;
+		// 0, 1, 2, 3, 2, 1, 0, 1, 2, 3, 2
+		return (step / (nNotes-1)) % 2 == 0 ? step % (nNotes-1) : (nNotes - 1 - (step % (nNotes-1)));
 	case 4:
-		return step % 2 == 0 ? 0 : (step / 2) % nNotes;
+		// 3, 2, 1, 0, 1, 2, 3, 2
+		return getStepIdx(3, step+nNotes-1, nNotes);
+	case 5:
+		return (step / (nNotes-1)) % 2 == 0 ? (nNotes - 1 - (step % (nNotes-1))) : step % (nNotes-1);
+	case 6:
+		// 0, 1, 0, 2, 0, 3, 0, 1, 0, 2, 0, 3
+		if (step % 2 == 0)
+			return 0;
+		return 1+getStepIdx(0, step/2, nNotes-1);
+	case 7:
+		// 0, 1, 0, 2, 0, 3, 0, 2, 0, 1, 0, 2
+		if (step % 2 == 0)
+			return 0;
+		return 1+getStepIdx(3, step/2, nNotes-1);
 	}
 	return 0;
+}
+int midiarp::getArpStepIdx(int step, int nNotes) {
+	int32_t option = getPatternIdx();
+	if (option > 0) {
+		option--;
+	}
+	return getStepIdx(option, step, nNotes);
 }
 
 void midiarp::loadSnapshot(const arp_snapshot& snapshot) {
@@ -107,7 +149,7 @@ void midiarp::loadSnapshot(const arp_snapshot& snapshot) {
 	loadAutomation(snapshot.automatedParams, this);
 }
 void midiarp::postSetParameter(int32_t idx, float preVal, float val, int flags) {
-	if (flags != 2) {
+	if (flags != FLG_PAR_UPDATE_USER) {
 		return;
 	}
 	dbgassert(this->trackImpl->getTrack());
@@ -149,20 +191,19 @@ void midiarp::onStartPlayback() {
 }
 void midiarp::allNotesOff(std::vector<noteevent_t>& noteEvents) {
 	stepGenerated = -1;
-	heldInput.clear();
-	int nSend = 0;
-	if (!heldOutputNotes.empty()) {
-		auto itHeldOutNotes = std::begin(heldOutputNotes);
-		while (itHeldOutNotes != std::end(heldOutputNotes)) {
-			note_t& note = *itHeldOutNotes;
-			//force off
+	for (arp_note_t& note : this->heldOutputNotes) {
+		if (note.isEnabled() && note.isHeld()) {
 			noteEvents.emplace_back(note.pitch, note.velocity, 0, note.start(), false, false);
-			itHeldOutNotes = heldOutputNotes.erase(itHeldOutNotes);
+		}
+		note.setEnabled(false);
+		note.setIsHeld(false);
+	}
+	for (arp_note_t& note : this->heldInput) {
+		if (note.isEnabled() && note.isHeld()) {
+			noteEvents.emplace_back(note.pitch, note.velocity, 0, note.start(), false, false);
 		}
 	}
-	dbgassert(heldOutputNotes.empty());
-	heldOutputAnimationNotes.clear();
-	notesSpawnTime.clear();
+	heldInput.clear();
 }
 
 int32_t midiarp::getRandVelocity() {
@@ -179,482 +220,526 @@ tick_t midiarp::getRandTime() {
 	return len;
 }
 
-int midiarp::writeOutputNotes(std::vector<noteevent_t>& noteEventsProcessed,
-		tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int64_t time) {
+int midiarp::updateMarkersAndAnimation(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int64_t wallClockTime) {
 
-	dbgassert(notesSpawnTime.size() == heldOutputAnimationNotes.size());
-	if (!heldOutputAnimationNotes.empty()) {
-		auto i = std::begin(heldOutputAnimationNotes);
-		auto j = std::begin(notesSpawnTime);
-		while (i != std::end(heldOutputAnimationNotes)) {
-			int64_t spawnTime = *j;
-			int64_t timeSince = time - spawnTime;
-			if (timeSince > 10) {
-				i = heldOutputAnimationNotes.erase(i);
-				j = notesSpawnTime.erase(j);
-			} else {
-				i++;
-				j++;
-			}
-			dbgassert(notesSpawnTime.size() == heldOutputAnimationNotes.size());
+	float fWallTime = (double)wallClockTime / 1000.0f;
+	if (!heldOutputNotes.empty()) {
+		auto i = std::begin(heldOutputNotes);
+		while (i != std::end(heldOutputNotes)) {
+			arp_note_t& heldNoteOut = *i;
+			if (!heldNoteOut.isEnabled() && (fWallTime - heldNoteOut.wallTime >= 1.0f)) {
+				i = heldOutputNotes.erase(i);
+			} else i++;
+
 		}
 	}
-	dbgassert(notesSpawnTime.size() == heldOutputAnimationNotes.size());
 	cleanupMarkers(markers, end);
 	cleanupMarkers(markers2, end);
 	return 0;
 }
 
-void midiarp::addNote(std::vector<noteevent_t>& noteEvents, tick_t start, note_t& note, int64_t time) {
-	//		int32_t noteVelocity = math::clamp<int32_t>(this->getGainF() * note.velocity, 0, 127);
-	//find overlapping held notes;
-	note_t noteInput = note;
-	int retVal = cutNoteOutOfList(heldOutputNotes, note, true);
-	if (retVal == -1) {
- 		log_printf("exact duplicate in list!\n", 0);
-		//dbgassert(0);
-	} else if (retVal != 0) {
-		log_printf("intersecting. ret val %d\n", retVal);
+/* shortens end of intersecting notes, does not remove any notes, instead looks for exact duplicates
+* returns: -1 if exact duplicate is present
+*		   otherwise the return value is a positive number and represents the number notes modified in the list
+*/
+template<typename T>
+inline int cutNoteOutOfList(std::vector<T>& m_list, T& n, bool eliminateDupes) {
+	auto it = m_list.begin();
+	// find exact duplicate
+	while (it != m_list.end()) {
+		const T& val = *it++;
+		if (val.isEnabled() && val.pitch == n.pitch && val.time == n.time && val.len == n.len) {
+			return -1;
+		}
 	}
 
-	noteEvents.emplace_back(note.pitch, note.velocity, note.start() - start, note.start(), true, false);
-	heldOutputNotes.push_back(note);
-	notesSpawnTime.push_back(time);
-	cutNoteOutOfList(heldOutputAnimationNotes, noteInput, true);
-	heldOutputAnimationNotes.push_back(note);
-	dbgassert(notesSpawnTime.size() == heldOutputAnimationNotes.size());
+	int nAdjusted = 0;
+	for (it = m_list.begin(); it != m_list.end(); ++it) {
+		T& c = *it;
+		if (!c.isEnabled())
+			continue;
+		if (c.pitch != n.pitch) {
+			continue;
+		} else if (c.start() >= n.end() || c.end() <= n.start()) {
+			continue;
+		} else if (c.start() < n.start()) {
+			c.cutRight(n.start());
+			nAdjusted++;
+		} else if (c.start() > n.start()) {
+			n.cutRight(c.start());
+			nAdjusted++;
+		}
+	}
+	return nAdjusted;
 }
-void midiarp::initRandomDelays(uint64_t seed, int32_t step, int32_t stepSize, int32_t startFrame, int32_t endFrame, bool reset)
+void midiarp::addNote(tick_t start, arp_note_t& note, std::vector<noteevent_t>& noteEvents) {
+	//find overlapping held notes;
+	int retVal = cutNoteOutOfList(heldOutputNotes, note, true);
+	if (retVal == -1) {
+		log_printf("exact duplicate in list!\n", 0);
+		//dbgassert(0);
+		return;
+	}
+	if (retVal != 0) {
+		if (logProcessedNotes) {
+			log_printf("intersecting. ret val %d\n", retVal);
+		}
+	}
+	heldOutputNotes.push_back(note);
+
+	if (note.isHeld()) {
+		if (logProcessedNotes) {
+			log_printf("Block %d: %s ARP ON at %d = %d, arp enabled: %d\n", start, noteName(note.pitch), note.start() - start, note.start(), enable);
+		}
+		noteEvents.emplace_back(note.pitch, note.velocity, note.start() - start, note.start(), true, false);
+
+	}
+}
+
+void midiarp::initRandomDelays(tick_t tick, tick_t startFrame, tick_t endFrame, int32_t step, tick_t stepSize, uint64_t seed, bool reset)
 {
-	struct arp_generated_pattern_step {
-		tick_t time;
-		int32_t index;
-	};
-	std::vector<arp_generated_pattern_step> arpSteps;
-	uint64_t stepSeed_u64 = seed ^ (uint64_t)resetTime ^ (uint64_t)math::max<int32_t>(0, step - 1) * stepSize;
-//		uint64_t seedu64 = (lSeed^evt.globalTick)^((evt.pitch<<12)|(evt.velocity));
+	uint64_t stepSeed_u64 = (((resetTime+step*stepSize+(seed)*326597ULL) * 2825836522051561ULL +  stepSize * 1285607ULL) + step) * 55733ULL;
     arpRand.rng_seed(stepSeed_u64);
+    velocitySeed_u64 = static_cast<uint64_t>(arpRand.rng_rand())<<32|arpRand.rng_rand();
     int32_t randMode = getRandTmMode();
 	bool noRandomOnReset = true;
+
     int32_t rndTime = noRandomOnReset && step == 0 ? 0 : this->getRandTime();
-	
+
+    markers2.clear();
+    processTimePoints.clear();
     for (int i = 0; i < NUM_ARP_MAX_POLY_VOICES; i++) {
-		uint32_t rnd_u32 = arpRand.rng_rand(rndTime);
 		if (noRandomOnReset && step == 0) {
 			curRandTimeOffset[i] = 0;
 		} else if (randMode == 0) {
-			curRandTimeOffset[i] = rnd_u32;
+			curRandTimeOffset[i] = arpRand.rng_rand(rndTime);
 		} else {
 			curRandTimeOffset[i] = -rndTime + arpRand.rng_rand(rndTime*2);
 		}
 		tick_t rndStepTime = resetTime + step * stepSize + curRandTimeOffset[i];
-		arpSteps.push_back(arp_generated_pattern_step{rndStepTime, i});
-	}
-	std::sort(arpSteps.begin(), arpSteps.end(), [](const arp_generated_pattern_step& a, const arp_generated_pattern_step& b) {
-		if (a.time == b.time) {
-			return a.index < b.index;
+		processTimePoints.push_back(rndStepTime);
+
+		#ifdef PLACE_MARKERS
+		if (i < 6) {
+			String str = StringFormat("@%d processTimePoints[%d]", rndStepTime, i);
+			markers2.push_back(marker_t{rndStepTime, col(7), str, (float)(i)});
 		}
-		return a.time < b.time;
-	});
-#ifdef PLACE_MARKERS
-    markers2.clear();
-    for (int i = 0; i < arpSteps.size()&&i<6 ; i++) {
-    	auto& procTmPt = arpSteps[i];
-		
-		String str = StringFormat("@%d rndStepTime[%d]", procTmPt.time, procTmPt.index);
-		markers2.push_back(marker_t{procTmPt.time, col(7), str, (float)(i)});
-    }
-#endif
-    processTimePoints.clear();
-    processNotesSpawn.clear();
-    for (int i = 0; i < arpSteps.size(); i++) {
-    	auto& procTmPt = arpSteps[i];
-		processTimePoints.push_back(procTmPt.time);
-		processNotesSpawn.push_back(procTmPt.index);
+		#endif
 	}
-
-
+    if (logProcessedNotes) {
+    	log_printf("@%s STEP %d STEPSIZE %d FIRST %s SEED %016llx VEL-SEED %016llx rndTime %d\n",
+    			StringAsCStr(tickAsBeatString(tick)),
+    			step, stepSize, StringAsCStr(tickAsBeatString(processTimePoints[0])), stepSeed_u64, velocitySeed_u64, rndTime);
+    }
 }
+
+bool midiarp::isOutputNoteGateOn(const arp_note_t& noteHeldOut) {
+	if (gateOutputNotes) {
+		return std::find_if(heldInput.cbegin(), heldInput.cend(), [&noteHeldOut](const arp_note_t& noteHeldIn) {
+			return noteHeldIn.arpNoteUid == noteHeldOut.arpNoteUid;
+		}) != heldInput.cend();
+	}
+	return true;
+}
+
 int midiarp::endOutputNotes(tick_t tick, tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, std::vector<noteevent_t>& noteEventsProcessed) {
 	int nSend = 0;
 	if (!heldOutputNotes.empty()) {
+		bool forceLoopEndNotesOff = loopEnd > -1 && tick+1 >= loopEnd;
 		auto i = std::begin(heldOutputNotes);
 		while (i != std::end(heldOutputNotes)) {
-			note_t& note = *i;
-			if (note.end() <= tick || note.end() < start) {
-				auto tickOffsetInBlockEnd = tick-start-1;
+			arp_note_t& heldNoteOut = *i;
+			if (heldNoteOut.isEnabled() &&
+					(forceLoopEndNotesOff
+							|| heldNoteOut.end() <= tick
+							|| heldNoteOut.end() < start
+							|| !isOutputNoteGateOn(heldNoteOut))) {
+				auto tickOffsetInBlockEnd = math::min(end - start - 1, tick - start);
+
+				if (logProcessedNotes && heldNoteOut.isHeld()) {
+					if (forceLoopEndNotesOff) {
+						log_printf("Block %d-%d: %s ARP Force OFF (LOOP END %d) at %d = %d\n", start, end, noteName(heldNoteOut.pitch), loopEnd, tickOffsetInBlockEnd, tick);
+					} else {
+						log_printf("Block %d-%d: %s@%d ARP OFF at %d = %d\n", start, end, noteName(heldNoteOut.pitch), heldNoteOut.start(), tickOffsetInBlockEnd, tick);
+					}
+				}
 				if (tickOffsetInBlockEnd < 0) {
-					dbgassert(note.end() <= start);
+					dbgassert(heldNoteOut.end() <= start);
 					log_printf("ending output note with end() < blockStart\n", 0);
 					tickOffsetInBlockEnd = 0;
 				}
+				heldNoteOut.cutRight(tick);
 #ifdef PLACE_MARKERS
-				markers.push_back(marker_t{tick, col(5), StringFormat("%d end %s @%d %d %d", tick, noteName(note.pitch), note.end(), note.len, tickOffsetInBlockEnd), (float)(tickMarkers++)});
+				markers.push_back(marker_t{tick, col(5), StringFormat("%d end %s start %d len %d end %d tickoffset %d", tick, noteName(heldNoteOut.pitch), heldNoteOut.start(), heldNoteOut.len, heldNoteOut.end(), tickOffsetInBlockEnd), (float)(tickMarkers++)});
 #endif
-				noteEventsProcessed.emplace_back(note.pitch, note.velocity, tickOffsetInBlockEnd, note.start(), false, note.end() == loopEnd);
-				nSend++;
-				i = heldOutputNotes.erase(i);
+				if (heldNoteOut.isHeld()) {
+					noteEventsProcessed.emplace_back(heldNoteOut.pitch, heldNoteOut.velocity, tickOffsetInBlockEnd, heldNoteOut.start(), false, forceLoopEndNotesOff);
+					nSend++;
+				}
+				heldNoteOut.setIsHeld(false);
+				heldNoteOut.setEnabled(false);
 			}
-			else i++;
+			i++;
 		}
 	}
 	return nSend;
 }
-void midiarp::process(std::vector<noteevent_t>& noteEventsIn,
-				tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd,
-				std::vector<noteevent_t>& noteEventsProcessed, tick_t ticksPerBlock) {
-	this->tickMarkers = 0;
-	//#ifdef PLACE_MARKERS
-	//						markers.push_back(marker_t{start, col(7), StringFormat("process %d evts", noteEventsIn.size()), (float)(tickMarkers++)});
-	//#endif
-	//#ifdef PLACE_MARKERS
-	//						markers.push_back(marker_t{end, col(7), "block end", (float)(tickMarkers++)});
-	//#endif
 
-	int64_t time = getTimeMillis()/100ULL;
-	std::vector<noteevent_t> noteEvents = noteEventsIn;
-	sortNoteEvents(noteEvents);
-	std::reverse(noteEvents.begin(), noteEvents.end());
-
-	numCalls++;
+bool midiarp::isProcessingEnabled() {
 	if (!this->enable) {
 		const automation_t* automatEnable = getRegisteredConstAutomation(PARAM_ENABLE);
 		if (!automatEnable || !automatEnable->active) {
-			noteEventsProcessed = noteEventsIn;
-			return;
+			return false;
 		}
 	}
-	if (noteEventsIn.empty()
-			&& this->heldInput.empty()
-			&& this->heldOutput.empty()
-			&& this->heldOutputNotes.empty()
-			&& this->heldInputAnimationNotes.empty()
-			&& this->heldOutputAnimationNotes.empty()) {
+	return true;
+}
+
+void midiarp::process(playback_state state, tick_t cursorPos, const std::vector<noteevent_t>& noteEventsIn,
+				tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, tick_t ticksPerBlock,
+				std::vector<noteevent_t>& noteEventsProcessed) {
+	const int64_t wallClockTime = getTimeMillis();
+
+	if (!isProcessingEnabled() && !bEnableStateUserToggled && false) {
 		noteEventsProcessed = noteEventsIn;
-		return;
+	} else {
+		processArpInternal(state, cursorPos, noteEventsIn, start, end, loopStart, loopEnd, ticksPerBlock, wallClockTime, noteEventsProcessed);
 	}
+
+	updateMarkersAndAnimation(start, end, loopStart, loopEnd, wallClockTime);
+
+}
+
+/*
+ * midiarp::processArpInternal
+ * Note: notes that are held (= sent out) are flagged IS_HELD
+ * heldOutputNotes only contains pattern generated notes, not pass thru input notes
+ * heldOutputNotes may contain disabled notes: They are released notes that will remain for a constant time for GUI animation purposes
+ */
+void midiarp::processArpInternal(playback_state state, tick_t cursorPos, const std::vector<noteevent_t>& noteEventsIn,
+				tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, tick_t ticksPerBlock, int64_t wallClockTime,
+				std::vector<noteevent_t>& noteEventsProcessed) {
+
+	tickMarkers = 0;
+
+#ifdef PLACE_MARKERS
+	markers.push_back(marker_t{start, col(7), StringFormat("process %d evts", noteEventsIn.size()), (float)(tickMarkers++)});
+#endif
+#ifdef PLACE_MARKERS
+	markers.push_back(marker_t{end, col(7), "block end", (float)(tickMarkers++)});
+#endif
+	std::vector<automated_param_t> arpAutomatedParams;
+	getAllAutomatedParams(arpAutomatedParams);
+
+	std::vector<noteevent_t> noteEvents = noteEventsIn;
+	sortNoteEvents(noteEvents);
+
+	int32_t nInputEventsProcessed = 0;
 	int nSend = 0;
-    bool onceProcMsg = false;
-	for (tick_t t = start; t < end; t++) {
+	tick_t arpLoopStart = loopStart > -1 ? math::max(loopStart, start) : start;
+	tick_t arpLoopEnd = loopEnd > -1 ? math::min(loopEnd, end) : end;
+	for (tick_t t = arpLoopStart; t < arpLoopEnd; t++) {
 		const tick_t tick = t;
+
 		bool enabledBefore = this->enable;
-		updateAutomatedParameters(tick);
+		tick_t stepSizeBefore = getStepSize();
+		if (bEnableStateUserToggled) {
+			bEnableStateUserToggled = false;
+			this->enable = bEnableNextState;
+		}
+
+		tick_t automationPos = tick;
+		if (!DAW::isPlaybackState(state)) {
+			automationPos = cursorPos;
+		}
+		for (automated_param_t& param : arpAutomatedParams) {
+			if (param.src.isActive()) {
+				float val = param.src.getValueAt(automationPos);
+				setParamValue(param.paramIdx, val, FLG_PAR_UPDATE_AUTOMATED);
+			}
+		}
+
 		tick_t stepSize = getStepSize();
 		tick_t noteDuration = getDuration();
+		const bool isChordPattern = isChordOutput();
+
+		// handle on/off state changes
 		if (this->enable != enabledBefore) {
-			for (noteevent_t& evt : this->heldInput) {
-#ifdef PLACE_MARKERS
-				String str;
-				if (this->enable) {
-					str = StringFormat("Note off %s", noteName(evt.pitch));
-				} else {
-					str = StringFormat("Note on %s", noteName(evt.pitch));
+			if (logProcessedNotes) {
+				log_printf("Block %d: ARP STATE CHANGED TO (%s) at %d = %d, %d heldinput, %d heldOutput\n", start, (enable?"enabled":"disabled"), tick-start, tick, heldInput.size(), heldOutputNotes.size());
+			}
+			// end incoming notes when arp was enabled. Restart incoming notes when arp has been disabled
+			for (arp_note_t& heldInput : this->heldInput) {
+				if (enable == heldInput.isHeld()) {
+					heldInput.setIsHeld(!enable);
+					noteevent_t noteEvt(heldInput.pitch, heldInput.velocity, tick-start, tick, !enable, false);
+	   				noteEventsProcessed.push_back(noteEvt);
+	   				if (logProcessedNotes) {
+	   					log_printf("Block %d: %s ARP PASSTHRU heldIn %s at %d = %d\n", start, noteName(heldInput.pitch), (!enable?"ON":"OFF"), tick-start, tick);
+	   				}
+					nSend++;
 				}
-				markers.push_back(marker_t{tick, col(5), str, (float)(tickMarkers++)});
-#endif
-				noteevent_t evt2 = evt;
-				evt2.isNoteOn = !enable;
-				evt2.tickOffsetInBlock = tick - start;
-   				noteEventsProcessed.push_back(evt2);
-				nSend++;
+			}
+
+			// start outgoing notes when arp was enabled. End outgoing notes when arp has been disabled
+			for (arp_note_t& noteOutHeld : this->heldOutputNotes) {
+				if (noteOutHeld.isEnabled()) {
+					if (enable != noteOutHeld.isHeld()) {
+						noteOutHeld.setIsHeld(enable);
+						noteevent_t noteEvt(noteOutHeld.pitch, noteOutHeld.velocity, tick-start, tick, enable, false);
+		   				noteEventsProcessed.push_back(noteEvt);
+		   				if (logProcessedNotes) {
+		   					log_printf("Block %d: %s ARP PASSTRU heldOut %s at %d = %d\n", start, noteName(noteOutHeld.pitch), (enable?"ON":"OFF"), tick-start, tick);
+		   				}
+						nSend++;
+					}
+				}
 			}
 		}
-		endOutputNotes(tick, start, end, loopStart, loopEnd, noteEventsProcessed);
-//#define TIME_STEP (resetTime + step * stepSize)
-//			int newStep = step;
-//			while (tick < resetTime + newStep * stepSize) {
-//				newStep++;
-//			}
-//			while (tick > resetTime + newStep * stepSize+stepSize) {
-//				newStep--;
-//			}
-//			step = newStep;
-		//if (resetTime && heldInput.size() && stepSize != lastStepSize) {
-//#ifdef PLACE_MARKERS
-//			markers.push_back(marker_t{tick, col(1), "", (float)(tickMarkers++)});
-//			String str = StringFormat("StepSize %d -> %d", lastStepSize, stepSize);
-//			if (TIME_STEP<start||TIME_STEP>=end) {
-//				markers.push_back(marker_t{TIME_STEP, col(2), str, (float)(tickMarkers++)});
-////					my_printf("reset out of range\n", 0);
-////					reset(tick);
-//			} else {
-//				markers.push_back(marker_t{TIME_STEP, col(3), str, (float)(tickMarkers++)});
-////					reset(TIME_STEP);
-//			}
-//#endif
-            //initRandomDelays(lSeed, step, stepSize, start, end, false);
-			//lastStepSize = stepSize;
-        //}
-        //				tick_t step = (start - resetTime + stepSize-1) / stepSize;
 
-		for (noteevent_t& noteevt : noteEvents) {
-			if (noteevt.tickOffsetInBlock+start != tick) {
+
+		// TODO: store index of last processed event and start iterating at that location
+		for (const noteevent_t& evt : noteEvents) {
+			if (evt.tickOffsetInBlock+start != tick) {
+				// break when all events are in the future. This relys on sorted lists
+				//TODO: test early break
+//				if (evt+start > tick) {
+//					break;
+//				}
 				continue;
 			}
-			if (!noteevt.isNoteOn) {
-				auto it = std::find_if(heldInput.begin(), heldInput.end(), [&noteevt](const noteevent_t evt2) {
-					return noteevt.pitch == evt2.pitch;
+			nInputEventsProcessed++;
+
+			// process note off event (even when arp is disabled)
+			if (!evt.isNoteOn) {
+				auto it = std::find_if(heldInput.begin(), heldInput.end(), [&evt](const auto& heldArpIn) {
+					return evt.pitch == heldArpIn.pitch;
 				});
 				if (it == heldInput.end()) {
-					// arp received a note off with the corresponding note_on missing -> pass through
-					// when playback starts in middle of note
+					// arp received a note off with the corresponding note_on missing
+					log_printf("Arp received note off with the corresponding note_on missing %d\n", noteName(evt.pitch));
 				} else {
+					arp_note_t& arpInputNote = *it;
+	   				if (logProcessedNotes) {
+	   					log_printf("Block %d: %s ARP INPUT OFF (HELD %s) at %d = %d\n", start, noteName(arpInputNote.pitch), (arpInputNote.isHeld()?"ON":"OFF"), tick-start, tick);
+	   				}
 #ifdef PLACE_MARKERS
 					markers.push_back(marker_t{tick, col(5), StringFormat("END IN %s", noteName((*it).pitch)), (float)(tickMarkers++)});
 #endif
 					heldInput.erase(it);
-					auto it2 = std::find_if(heldInputAnimationNotes.begin(), heldInputAnimationNotes.end(), [&noteevt](const note_t evt2) {
-						return noteevt.pitch == evt2.pitch;
-					});
-					if (it2 != heldInputAnimationNotes.end()) {
-						heldInputAnimationNotes.erase(it2);
-					}
 				}
 			}
 
-		}
-		const bool isReset = heldInput.empty();
-		for (noteevent_t& noteevt : noteEvents) {
-			noteevent_t* evt = &noteevt;
-			if (evt->tickOffsetInBlock+start != tick) {
-				continue;
-			}
-			if (evt->isNoteOn) {
-				auto it = std::find_if(heldInput.begin(), heldInput.end(), [evt](const noteevent_t evt2) {
-					return evt->pitch == evt2.pitch;
+			// process note on event (even when arp is disabled)
+			if (evt.isNoteOn) {
+				auto it = std::find_if(heldInput.begin(), heldInput.end(), [&evt](const auto& heldArpIn) {
+					return evt.pitch == heldArpIn.pitch;
 				});
+				if (it != heldInput.end()) {
+					log_printf("Arp received double note on event %s\n", noteName(evt.pitch));
+					log_printf("New event is at tick %d\n", evt.tickOffsetInBlock+start);
+					log_printf("Held note started at tick %d\n", it->time);
+				}
 				if (it == heldInput.end()) {
 					if (heldInput.empty()) {
 						//if (resetMode == ResetMode::NOTE) {
-							reset(evt->tickOffsetInBlock+start);
-	#ifdef PLACE_MARKERS
-							markers.push_back(marker_t{tick, col(4), "reset first note", (float)(tickMarkers++)});
-	#endif
-							initRandomDelays(lSeed, step, stepSize, start, end, true);
+							reset(tick);
+#ifdef PLACE_MARKERS
+							markers.push_back(marker_t{tick, col(1), StringFormat("Step %d reset", step), (float)(tickMarkers++)});
+#endif
+
+							initRandomDelays(tick, start, end, 0, stepSize, lSeed, true);
+							stepGenerated = 0;
 						//}
 					} else if (processTimePoints.size() < heldInput.size()+1) {
 						//initRandomDelays(lSeed, step, stepSize, start, end, false);
 					}
-					note_t note;
-					note.time = evt->tickOffsetInBlock+start;
-					note.pitch = evt->pitch;
-					note.velocity = evt->velocity;
-					note.len = TICKS_QUARTER*2;
- 					noteevent_t& nevt = *evt;
-					heldInput.push_back(nevt);
+					arp_note_t arpInputNote;
+					arpInputNote.time = tick;
+					arpInputNote.pitch = evt.pitch;
+					arpInputNote.velocity = evt.velocity;
+					arpInputNote.len = TICKS_QUARTER*2;
+					arpInputNote.len = 0;
+					arpInputNote.setIsHeld(!enable);
+					arpInputNote.setEnabled(true);
+					arpInputNote.arpNoteUid = this->arpNoteUidCounter++;
+	   				if (logProcessedNotes) {
+	   					log_printf("Block %d: %s ARP INPUT ON (HELD %s) at %d = %d\n", start, noteName(arpInputNote.pitch), (arpInputNote.isHeld()?"ON":"OFF"), tick-start, tick);
+	   				}
+					heldInput.push_back(arpInputNote);
 #ifdef PLACE_MARKERS
-					markers.push_back(marker_t{note.time, col(5), StringFormat("Note Start IN %s", noteName(note.pitch)), (float)(tickMarkers++)});
+					markers.push_back(marker_t{arpInputNote.time, col(5), StringFormat("Note Start IN %s", noteName(arpInputNote.pitch)), (float)(tickMarkers++)});
 #endif
-		/*			std::sort(heldInput.begin(), heldInput.end(), [](const noteevent_t evt1, const noteevent_t evt2) {
-						return evt1.pitch < evt2.pitch;
-					});*/
-					heldInputAnimationNotes.push_back(note);
-					maxNoteChordCount = math::clamp<int32_t>(heldInput.size()-1, 0, curRandTimeOffset.size()-1);
-					if (!isReset) {
-						if (note.time < (resetTime+step*stepSize)+noteDuration-1) {
+
+					//TODO: this late-note fix shouldn't be required now
+					if (false)
+					if (isChordPattern && heldInput.size() > 1) {
+						if (arpInputNote.time < resetTime+noteDuration-1) {
+							int32_t idxVoice = heldInput.size()-1;
+							if (idxVoice  < NUM_ARP_MAX_POLY_VOICES) {
+								curRandTimeOffset[idxVoice]=arpInputNote.time - resetTime;
+								processTimePoints[idxVoice]=arpInputNote.time;
 #ifdef PLACE_MARKERS
-							markers.push_back(marker_t{note.time, col(3), StringFormat("late note IN %s", noteName(note.pitch)), (float)(tickMarkers++)});
+								String str = StringFormat("@%d latenotefix for %s idx %d", processTimePoints[idxVoice], noteName(arpInputNote.pitch), idxVoice);
+								markers2.push_back(marker_t{processTimePoints[idxVoice], col(6), str, (float)(markers2.size())});
 #endif
-							//auto it = std::find_if(heldInput.begin(), heldInput.end(), [&nevt](const noteevent_t evt2) {
-							//	return nevt.pitch == evt2.pitch && nevt.tickOffsetInBlock == evt2.tickOffsetInBlock;
-							//});
-							//int32_t newNoteIdx = it - heldInput.begin();
-							int32_t newNoteIdx = maxNoteChordCount;
-							for (int idxVoice = 0; idxVoice < NUM_ARP_MAX_POLY_VOICES; idxVoice++) {
-								if (processNotesSpawn[idxVoice] == newNoteIdx) {
-  									curRandTimeOffset[idxVoice]=note.time - resetTime;
-									processTimePoints[idxVoice]=note.time;
-#ifdef PLACE_MARKERS
-    markers2.clear();
-    for (int i2 = 0; i2 < processNotesSpawn.size()&&i2<12; i2++) {
-		String str = StringFormat("@%d latenotefix[%d]", processTimePoints[i2], processNotesSpawn[i2]);
-		markers2.push_back(marker_t{processTimePoints[i2], col(6), str, (float)(i2)});
-    }
-#endif
-									break;
-								}
 							}
 						}
 					}
 				} else {
-	#ifdef PLACE_MARKERS
-					markers.push_back(marker_t{evt->tickOffsetInBlock+start, col(1), StringFormat("Note Duplicate Held IN %s", noteName(evt->pitch)), (float)(tickMarkers++)});
-	#endif
+#ifdef PLACE_MARKERS
+					markers.push_back(marker_t{evt.tickOffsetInBlock+start, col(1), StringFormat("Note Duplicate Held IN %s", noteName(evt.pitch)), (float)(tickMarkers++)});
+#endif
 				}
-
 			}
-			if (!enable) {
 
-				noteEventsProcessed.push_back(*evt);
+			// arp is disabled: pass thru events
+			if (!enable) {
+   				if (logProcessedNotes) {
+   					log_printf("Block %d: %s ARP PASSTRU evt %s at %d = %d\n", start, noteName(evt.pitch), (evt.isNoteOn?"ON":"OFF"), evt.tickOffsetInBlock, evt.globalTick);
+   				}
+				noteEventsProcessed.push_back(evt);
 				nSend++;
 			}
 		}
-		if (enable) {
-			if (tick >= (resetTime+step*stepSize))
-			{
-				const auto tmTickCur = tick;
-				if (heldInput.size()) {
-					if (tick == resetTime+(step+1)*stepSize) {
-						step++;
-					}
-					if (tick >= (resetTime+step*stepSize) + (stepSize/2)) {
-						if (stepGenerated != step+1) {
-							if(tick >= resetTime+(step+1)*stepSize) {
-								log_printf("missed a step, did stepsize change?\n", 0);
-							}
-							bool stepCompleted = std::all_of(std::begin(processTimePoints), std::end(processTimePoints), [tmTickCur](tick_t t){
-								return t <= tmTickCur;
-							});
-							if (stepCompleted) {
-								initRandomDelays(lSeed, step+1, stepSize, start, end, false);
-								bool stepCompleted2 = std::all_of(std::begin(processTimePoints), std::end(processTimePoints), [tmTickCur](tick_t t){
-									return t <= tmTickCur;
-								});
-								if(stepCompleted2) {
-									log_printf("no unprocessed steps (%d) generated at step %d range %d %d\n", processTimePoints.size(), step+1, start, end);
-								}
-								stepGenerated = step+1;
-							}
-						} else {
-//							log_printf("skip step, already generated\n", 0);
-						}
-					}
+
+		const auto stepRecalc = (tick - resetTime)/stepSize;
+
+
+		if (logProcessedNotes) {
+			if (tick>=resetTime&&(tick-resetTime)%stepSize == 0) {
+				if (DAW::isPlaybackState(state)) {
+	#ifdef PLACE_MARKERS
+				markers.push_back(marker_t{tick, col(3), StringFormat("Increment step %d tickMarkers %d", step, tickMarkers), (float)(tickMarkers++)});
+	#endif
+					log_printf("@%s first tick in step %d\n",
+							StringAsCStr(tickAsBeatString(tick)),
+							stepRecalc);
 				}
 			}
+			if (stepSizeBefore != stepSize) {
+				const auto stepCurrent = (tick - resetTime)/stepSizeBefore;
+				log_printf("@%s STEPSIZE change from %d to %d. Step: %d recalculated: %d\n",
+						StringAsCStr(tickAsBeatString(tick)),
+						stepSizeBefore, stepSize, stepCurrent, stepRecalc);
 
-			int currentpolyphonecount = heldInput.size();
-			for (int prIdx = 0; prIdx < processTimePoints.size() && (prIdx == 0 || isChordOutput()); prIdx++) {
-                tick_t timeStep = processTimePoints[prIdx];
-                if (timeStep < start) {
-                    //dbgassert(0);
-                    continue;
-                }
-                if (timeStep >= end) {
-                    continue;
-                }
-                if (timeStep != tick)
-                    continue;
-//				const tick_t tickConst = tick;
-//                tick_t offsetFromRegTick = tick - (resetTime+step*stepSize);
-				dbgassert(processNotesSpawn.size() > prIdx && prIdx >= 0);
-				dbgassert(processNotesSpawn[prIdx] >= 0);
-				dbgassert(processNotesSpawn[prIdx] >= 0);
-//				bool voiceLimitHit = heldOutputNotes.size() >= currentpolyphonecount+heldInput.size();
-				int noteIdx = processNotesSpawn[prIdx];
-				int spawnNotes = 1<<(noteIdx);
-#ifdef PLACE_MARKERS
-				markers.push_back(marker_t{timeStep, col(2347), StringFormat("stp prIdx %d noteIdx %d heldnotes: %d", prIdx, noteIdx, heldOutput.size()), (float)(tickMarkers++)});
-#endif
-//				if (heldOutputNotes.size() >= currentpolyphonecount) {
-//					break;
-//				}
-				#if 0
-                //log_printf("process processTimePoints[%d] %d, offsetFromRegTick %d\n", prIdx, processTimePoints[prIdx], offsetFromRegTick);
-                int32_t maxNote = math::min<int32_t>(maxNoteChordCount, 
-					isChordOutput() ? heldInput.size() : math::min <int32_t>(heldInput.size(), 1));
-
-                int indexProcessed = cur;
-                for (int i = 0; i < processNotesSpawn.size(); i++) {
-                    if (offsetFromRegTick == curRandTimeOffset[i]) {
-                        //log_printf("timeStep[%d] %d offsetFromRegTick %d\n", prIdx, tick, offsetFromRegTick);
-                    	indexProcessed = i;
-                    	break;
-                    }
-                }
-                dbgassert(offsetFromRegTick == 0 || indexProcessed != -1);
-    //        	log_printf("handle timeStep %d\n", timeStep);
-    //        	log_printf("processTimePoints size %d\n", processTimePoints.size());
-    //        	log_printf("maxNote %d\n", maxNote);
-				int spawnNotes = 0;
-                for (int i = 0; i < maxNote; i++) {
-//	            	log_printf("curRandTimeOffset[%d] %d\n", i, curRandTimeOffset[i]);
-                    if (offsetFromRegTick == curRandTimeOffset[i]) {
-                    	//log_printf("playnote %d\n", maxNote);
-						spawnNotes |= (1<<i);
-					}
-				}
-				#endif
-#ifdef PLACE_MARKERS2
-                String str;
-                str = StringFormat("pt  0x%02X", spawnNotes);
-                markers.push_back(marker_t{timeStep, col(6), str, (float)(tickMarkers++)});
-                str = StringFormat("prIdx %d", prIdx);
-                markers.push_back(marker_t{timeStep, col(6), str, (float)(tickMarkers++)});
-                str = StringFormat("step %d", step);
-                markers.push_back(marker_t{timeStep, col(6), str, (float)(tickMarkers++)});
-                str = StringFormat("timeStep %d", timeStep);
-                markers.push_back(marker_t{timeStep, col(6), str, (float)(tickMarkers++)});
-                str = StringFormat("spawnNotes %d", spawnNotes);
-                markers.push_back(marker_t{timeStep, col(6), str, (float)(tickMarkers++)});
-                str = StringFormat("heldInput %d", heldInput.size());
-                markers.push_back(marker_t{timeStep, col(6), str, (float)(tickMarkers++)});
-#endif
-				if (spawnNotes) {
-					note_t note;
-					note.time = tick;
-					dbgassert(note.time >= start && note.time < end);
-					note.len = noteDuration;
-					if (isChordOutput()) {
-						for (int idx = 0; idx < (int)heldInput.size(); idx++) {
-							const noteevent_t& evt = heldInput[idx];
-							if (spawnNotes & (1<<idx))  {
-								note_t noteChord = note;
-								noteChord.pitch = evt.pitch;
-								noteChord.velocity = evt.velocity;
-								int32_t rndVelIntensity = this->getRandVelocity();
-								if (rndVelIntensity) {
-									uint64_t seedu64 = (lSeed^evt.globalTick)^((evt.pitch<<12)|(evt.velocity));
-									arpRand.rng_seed(seedu64);
-									tick_t randVel = -rndVelIntensity + arpRand.rng_rand(rndVelIntensity*2);
-									noteChord.velocity = math::clamp(noteChord.velocity+randVel, 0, 127);
-								}
-
-#ifdef PLACE_MARKERS_OUTPUT
-						String str = StringFormat("noteChord %d %d %s", noteChord.time, noteChord.len, noteName(noteChord.pitch));
-						markers.push_back(marker_t{tick, col(2), str, (float)(tickMarkers++)});
-#endif
-								addNote(noteEventsProcessed, start, noteChord, time);
-
-								nSend++;
-							}
-						}
-					} else if (heldInput.size()) {
-						int idx = getStepIdx(step, heldInput.size());
-						const noteevent_t& evt = heldInput[idx];
-						note.pitch = evt.pitch;
-						note.velocity = evt.velocity;
-						int32_t rndVelIntensity = this->getRandVelocity();
-						if (rndVelIntensity) {
-							uint64_t seedu64 = (lSeed^evt.globalTick)^((evt.pitch<<12)|(evt.velocity));
-							arpRand.rng_seed(seedu64);
-							tick_t randVel = arpRand.rng_rand(rndVelIntensity);
-							note.velocity = math::clamp(note.velocity+randVel, 0, 127);
-						}
-						addNote(noteEventsProcessed, start, note, time);
-#ifdef PLACE_MARKERS_OUTPUT
-						String str = StringFormat("noteSingle %d %d %s", note.time, note.len, noteName(note.pitch));
-						markers.push_back(marker_t{tick, col(6), str, (float)(tickMarkers++)});
-#endif
-						nSend++;
-					}
-				}
-            }
-			
-		} else if (false) {
-			while (!noteEvents.empty()) {
-				noteevent_t* evt = &noteEvents.back();
-				if (evt->tickOffsetInBlock+start > tick) {
-					break;
-				}
-				noteEventsProcessed.push_back(*evt);
-				noteEvents.pop_back();
 			}
 		}
+
+		// run reset logic (even when arp is disabled). pregenerates the randomized step timings for the next step
+		if (heldInput.size()) {
+			int stepToGenerate = -1;
+			if (tick >= resetTime && (tick - resetTime) % stepSize == 0 && stepGenerated != stepRecalc) {
+				stepToGenerate = stepRecalc;
+			} else if ((stepGenerated != stepRecalc+1) && std::all_of(std::begin(processTimePoints), std::end(processTimePoints), [tick](tick_t t){
+				return t < tick;
+			})) {
+				stepToGenerate = stepRecalc+1;
+			}
+			if (stepToGenerate > -1) {
+
+#ifdef PLACE_MARKERS
+				markers.push_back(marker_t{tick, col(2), StringFormat("Generate step %d (prev %d, exact %d)", step+1, stepGenerated), (float)(tickMarkers++)});
+#endif
+
+				initRandomDelays(tick, start, end, stepToGenerate, stepSize, lSeed, false);
+				bool stepCompleted2 = std::all_of(std::begin(processTimePoints), std::end(processTimePoints), [tick](tick_t t){
+					return t < tick;
+				});
+				if(stepCompleted2) {
+					log_printf("all generated timepoints are before the current tick\n", 0);
+				}
+				int stepSomeCompleted2 = std::count_if(std::begin(processTimePoints), std::end(processTimePoints), [tick](tick_t t){
+					return t < tick;
+				});
+				if(stepSomeCompleted2) {
+					log_printf("some unprocessed steps (%d) generated at step %d range %s %s\n", stepSomeCompleted2, stepToGenerate, StringAsCStr(tickAsBeatString(start)), StringAsCStr(tickAsBeatString(end)));
+				}
+				stepGenerated = stepToGenerate;
+
+			}
+		}
+
+		// generate heldOutput notes even when arp is disabled
+		if (1) {
+			if (processTimePoints.size() != NUM_ARP_MAX_POLY_VOICES && heldInput.size() > 0) {
+				log_printf("processTimePoints.size() is %d, waiting for reset...\n", processTimePoints.size());
+			}
+			int32_t maxProcPts = math::min<int32_t>(isChordPattern ? NUM_ARP_MAX_POLY_VOICES : 1, heldInput.size());
+			maxProcPts = math::min<int32_t>(maxProcPts, processTimePoints.size());
+
+			// only in polyphonic chord mode this loop will iterate past 0
+			for (int prIdx = 0; prIdx < maxProcPts; prIdx++) {
+                tick_t timeStepPreGenerated = processTimePoints[prIdx];
+//                if (timeStep < start) {
+//                    dbgassert(0);
+//                    continue;
+//                }
+//                if (timeStep >= end) {
+//                    dbgassert(0);
+//                    continue;
+//                }
+
+                if (timeStepPreGenerated != tick)
+                    continue;
+                int actualStep = stepGenerated;
+    			if (stepGenerated < 0) {
+    				log_printf("stepGenerated < 0, unexpected...\n", 0);
+    				actualStep = 0;
+    			}
+#ifdef PLACE_MARKERS
+				markers.push_back(marker_t{timeStepPreGenerated, col(2347), StringFormat("stp prIdx %d heldInNotes %d heldOutNotes %d", prIdx, heldInput.size(), heldOutputNotes.size()), (float)(tickMarkers++)});
+#endif
+
+				int noteStpIdx = -1;
+				if (isChordPattern && prIdx < heldInput.size()) {
+					noteStpIdx = prIdx;
+				} else if (!isChordPattern && heldInput.size()) {
+					noteStpIdx = getArpStepIdx(actualStep, heldInput.size());
+				}
+				if (noteStpIdx > -1) {
+					const arp_note_t& noteArpInput = heldInput[noteStpIdx];
+					arp_note_t noteArpStep = noteArpInput;
+					noteArpStep.setIsHeld(enable);
+					noteArpStep.setEnabled(true);
+					noteArpStep.time = tick;
+					noteArpStep.len = noteDuration;
+					noteArpStep.wallTime = wallClockTime/1000.0f;
+					int32_t rndVelIntensity = this->getRandVelocity();
+					if (rndVelIntensity) {
+						uint64_t stepSeed_u64 = (velocitySeed_u64+noteArpInput.time*2888443ULL+noteArpInput.pitch* 341123ULL + stepRecalc) * 484751ULL;
+						arpRand.rng_seed(stepSeed_u64);
+						tick_t randVel = -rndVelIntensity + arpRand.rng_rand(rndVelIntensity*2);
+						noteArpStep.velocity = math::clamp(noteArpStep.velocity+randVel, 1, 127);
+					}
+					addNote(start, noteArpStep, noteEventsProcessed);
+					nSend++;
+#ifdef PLACE_MARKERS_OUTPUT
+					String str = StringFormat("note %d %d %s", noteArpStep.time, noteArpStep.len, noteName(noteArpStep.pitch));
+					markers.push_back(marker_t{tick, col(2), str, (float)(tickMarkers++)});
+#endif
+				}
+
+            }
+		}
+
+		// process ending output notes (even when arp is disabled)
+		nSend += endOutputNotes(tick, start, end, loopStart, loopEnd, noteEventsProcessed);
 	}
-	endOutputNotes(end-1, start, end, loopStart, loopEnd, noteEventsProcessed);
-	nSend += writeOutputNotes(noteEventsProcessed, start, end, loopStart, loopEnd, time);
+
+	// sanity check, remove later on
+	if (nInputEventsProcessed != noteEventsIn.size()) {
+		log_printf("Block %d-%d: ARP did not process all events. Processed %d of %d\n", start, end, nInputEventsProcessed, noteEventsIn.size());
+		log_printf("Block %d-%d: loopStart %d, loopEnd %d\n", start, end, loopStart, loopEnd);
+		for (noteevent_t& evt : noteEvents) {
+			log_printf("Block %d-%d: Event %s %d %d %s\n", start, end, evt.isNoteOn?"ON":"OFF", evt.globalTick, evt.tickOffsetInBlock, noteName(evt.pitch));
+		}
+	}
+
+	// run endOutputNotes for one past the end tick, this might be the loopEnd tick or blockend tick
+	nSend += endOutputNotes(arpLoopEnd, start, end, loopStart, loopEnd, noteEventsProcessed);
+
 	if (nSend)
 		sortNoteEvents(noteEventsProcessed);
-	dbgassert(notesSpawnTime.size() == heldOutputAnimationNotes.size());
-#undef TIME_STEP
+
 }

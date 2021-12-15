@@ -10,10 +10,7 @@ void gui_arp::buttonClicked(guibase* _button) {
 		midiarp* arp = getArp();
 		if (arp) {
 	    	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-	    	float f = arp->getParamValue(PARAM_ENABLE);
-	    	float f2 = f > 0.5 ? 0 : 1;
-	    	arp->setParamValue(PARAM_ENABLE, f2, 2);
-	    	arp->postSetParameter(PARAM_ENABLE, f, f2, 2);
+	    	toggleDeviceEnableState(arp, FLG_PAR_UPDATE_USER);
 		}
 	}
 }
