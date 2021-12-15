@@ -1,6 +1,5 @@
 #pragma once
 #include <stdint.h>
-#include "str_util.h"
 #include "seq_util.h"
 #include "assert_dbg.h"
 
