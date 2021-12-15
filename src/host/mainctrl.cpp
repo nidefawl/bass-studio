@@ -1000,10 +1000,13 @@ void DawInstance::menuCommand(const menucmd_t&& command) {
 		break;
 	case CMD_FILE_NEW:
 	{
+		stopPlaying();
+		setAudioThreadState(playback_state::status_no_process);
 		//TODO: stop playback here
 		setEmptyProject();
 		layoutTrackEditors();
 		updateVisibleTrackContents();
+		setAudioThreadState(playback_state::status_stop);
 	}
 		break;
 	case CMD_FILE_OPEN:
