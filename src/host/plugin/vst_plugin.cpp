@@ -391,10 +391,26 @@ void vstplugin::makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) {
 	createSnapshot(ps, this, storePluginChunks);
 	ps.slot = this->slot;
 }
+
+class guivstplugin_empty : public guiplugin {
+	vstplugin* const module;
+
+public:
+	guivstplugin_empty(vstplugin* _vst)
+	: guiplugin(_vst),
+	  module(_vst) {
+	}
+	~guivstplugin_empty() {
+	}
+
+	void layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) override {
+	}
+};
 guiplugin* vstplugin::makeGui() {
 
 	dbgassert(handle->hmodule || handle->axEffect);
 	if (!handle->gui) {
+//		handle->gui = std::make_unique<guivstplugin_empty>(this);
 		handle->gui = std::make_unique<guivstplugin>(this);
 		handle->gui->setTitle(StringFormat("%s", StringAsCStr(this->sName)));
 		if (handle->axEffect) { //only provided by internal vst2 instance (not a DLL)
