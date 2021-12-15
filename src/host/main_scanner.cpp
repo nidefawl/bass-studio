@@ -484,11 +484,11 @@ static int runScannerServer(vstscanner_server_options options) {
 				needScan = file.name.find(options.updatePattern) != String::npos;
 			}
 			if (!needScan) {
-				if (options.updatePattern.empty())
-					LOG("%s is up to date", StringAsCStr(file.name));
+//				if (options.updatePattern.empty())
+//					LOG("%s is up to date", StringAsCStr(file.name));
 				continue;
 			}
-			LOG("%s needs update", StringAsCStr(file.name));
+			LOG("%s needs update", StringAsCStr(file.path));
 			if (options.dryRun) {
 				continue;
 			}
