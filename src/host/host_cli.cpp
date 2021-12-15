@@ -43,8 +43,6 @@
 
 #include <stdlib.h>
 
-#define LOG(fmtString,...) printf(fmtString "\n", ##__VA_ARGS__); fflush(stdout)
-
 
 struct vst_metadata {
 	uint32_t id;
@@ -75,7 +73,7 @@ static BOOL WINAPI ConsoleHandler(DWORD dwType)
 {
     switch(dwType) {
     case CTRL_C_EVENT:
-		LOG("CTRL_C");
+		log_printf("CTRL_C\n", 0);
     	userSentQuitRequest = true;
         break;
     }
@@ -212,10 +210,6 @@ int runCommandLineHost(int argc, const char* argv[]) {
     wc.hIcon         = LoadIcon(NULL, IDI_APPLICATION);
 
     RegisterClass(&wc);
-	LOG("ARGC %d", argc);
-	for (int i = 0; i < argc; i++) {
-		LOG("argv[%d] %s", i, argv[i]);
-	}
     if (!SetConsoleCtrlHandler((PHANDLER_ROUTINE)ConsoleHandler,TRUE)) {
         fprintf(stderr, "Unable to install handler!\n");
         return EXIT_FAILURE;
@@ -239,7 +233,11 @@ int runCommandLineHost(int argc, const char* argv[]) {
 	float fStart = StringToFloat(getCmdOption(argc, argv, "-s", "-1.0"));
 	float fLength = StringToFloat(getCmdOption(argc, argv, "-l", "-1.0"));
 	bool activateDeferred = !(getCmdOption(argc, argv, "-d", "false")!="false");
-
+	
+	if (file.empty()) {
+		log_printf("please specify project file with -f <file>\n", 0);
+		return 1;
+	}
 	if (bRenderOnly && fOutWave.empty()) {
 		log_printf("--render requires -o <file>\n", 0);
 		return 1;
@@ -253,6 +251,9 @@ int runCommandLineHost(int argc, const char* argv[]) {
     	auto host = std::make_unique<vsthost>();
     	vsthost::assignMasterCallback(host.get());
 		host->setSampleFormat(sampleformat_t{static_cast<samplerate_t>(settings.iosettings.samplerate), settings.iosettings.blocksize, sampleformat_bits_t::FLOAT_32});
+		
+		dbgassert(host->sampleFormat.sampleRate != 0);
+		dbgassert(host->sampleFormat.blockSize != 0);
 
 		project_t project;
 		project_globals_t projectGlobals;
@@ -306,7 +307,7 @@ int runCommandLineHost(int argc, const char* argv[]) {
 #endif
 
 
-    	LOG("START");
+    	log_printf("START\n", 0);
     	{
     		std::unique_ptr<PlaybackThread> playThread;
     		if (!bRenderOnly) {
@@ -327,6 +328,7 @@ int runCommandLineHost(int argc, const char* argv[]) {
 
 				/** create all audio instances **/
 				for (track_t* t : projectController.getTracks()) {
+					t->fixClipLengths();
 					host->createAudio(t);
 				}
 
@@ -347,9 +349,9 @@ int runCommandLineHost(int argc, const char* argv[]) {
         		if (activateDeferred) {
             		std::vector<effectbase*> pluginsDeferred;
             		host->getDeferredEffects(pluginsDeferred);
-            		my_printf("loading %d plugins\n", pluginsDeferred.size());
+            		log_printf("loading %d plugins\n", pluginsDeferred.size());
             		for (auto plugin : pluginsDeferred) {
-                		my_printf("activate %s\n", StringAsCStr(plugin->sName));
+                		log_printf("activate %s\n", StringAsCStr(plugin->sName));
 
             			host->activateDeferred(plugin, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
 //            			if (effectLoaded) {
@@ -422,13 +424,11 @@ int runCommandLineHost(int argc, const char* argv[]) {
 	    		}
 			}
 			for (auto* trackMaster : project.trackMasterCtr) {
-				trackMaster->audio->mixer.setParamValue(PARAM_TRACK_GAIN, 0.4f, FLG_PAR_UPDATE_INIT);
+				trackMaster->audio->mixer.setParamValue(PARAM_TRACK_GAIN, 0.8f, FLG_PAR_UPDATE_INIT);
 			}
 			/** inform host about track layout changes so it resets and updates internal structures */
 			host->onTrackLayoutChange();
 
-    		my_printf("Tempo100: %d\n", projectGlobals.tempo100);
-    		my_printf("project.cursor.cursorPos: %d\n", projectGlobals.cursor.cursorPos);
 
     		AudioBlock block(2, host->sampleFormat.blockSize);
     		AudioBlock blockFull(1, host->sampleFormat.blockSize*2);
@@ -447,20 +447,39 @@ int runCommandLineHost(int argc, const char* argv[]) {
 				projectGlobals.loopEnabled = false;
 //				project.loopLen = math::round(fLength*TICKS_BAR);
 			}
-			if (bRenderOnly) {
-
-			}
-
-			my_printf("playback start...\n", 0);
 
     		std::shared_ptr<DAW::processing_graph_t> processingGraph;
 			AudioBlock blockIn(host->numChannels, host->sampleFormat.blockSize);
 			AudioBlock blockOut(host->numChannels, host->sampleFormat.blockSize);
 			host->prjGlobals = projectGlobals;
+
+			
+			
+    		log_printf("host->sampleFormat.sampleRate: %u\n", host->sampleFormat.sampleRate);
+    		log_printf("host->sampleFormat.blockSize: %u\n", host->sampleFormat.blockSize);
+
+    		log_printf("projectController.getCursorPos: %d\n", projectController.getCursorPos());
+    		log_printf("projectController.getCurrentTempo: %d\n", projectController.getCurrentTempo());
+    		log_printf("projectController.getCursorPos: %d\n", projectController.getCursorPos());
+    		log_printf("projectController.loopEnabled: %d\n", projectController.getGlobals().loopEnabled);
+    		log_printf("projectController.loopStart: %d\n", projectController.getGlobals().loopStart);
+    		log_printf("projectController.loopLen: %d\n", projectController.getGlobals().loopLen);
+
+			log_printf("playback start...\n", 0);
+
+			
+			
+			const double blocksPerS = host->sampleFormat.sampleRate / (double) host->sampleFormat.blockSize;
+			const double msPerBlock = 1000.0 / blocksPerS;
+			const double ticksPerBlock = toTickPrecise(host->sampleFormat.blockSize/(double)host->sampleFormat.sampleRate, host->prjGlobals.tempo100);
+
+			double tickPos = projectGlobals.cursor.cursorPos;
+			int32_t samplePos = tickToSample(tickPos, projectGlobals.tempo100, host->sampleFormat.sampleRate);
+			
 			bool firstBlock = false;
 			bool isLoopAround = false;
-			int32_t samplePos = 0;
-			double tickPos = 0;
+
+
 			if (!bRenderOnly) {
 				playThread->addRequest(REQ_STATE, (int) playback_state::status_playback, true);
 			} else {
@@ -477,29 +496,25 @@ int runCommandLineHost(int argc, const char* argv[]) {
 	    			log_printf("Failed building track graph\n", 0);
 	    			return -1;
 	    		}
-				dbgassert(host->sampleFormat.sampleRate != 0);
-				dbgassert(host->sampleFormat.blockSize != 0);
-				tick_t startPos = projectController.getCursorPos();
-				tickPos = startPos;
-				projectController.getPlaybackPos() = startPos;
-				int32_t bpm100 = projectController.getCurrentTempo();
-				samplePos = tickToSample(startPos, bpm100, host->sampleFormat.sampleRate);
-				LOG("START ON seconds: %.2f - sample %d\n", toSeconds(startPos, bpm100), samplePos);
+				log_printf("START ON seconds: %.2f - sample %d\n", toSeconds(tickPos, host->prjGlobals.tempo100), samplePos);
 				host->onStartPlayback(&projectController);
 			}
-			host->prjGlobals = projectGlobals;
+
     		while (!userSentQuitRequest) {
 				auto tNow = getTimeMillis()/1000.0;
 				if (tNow - tLastMsg >= 1.0) {
 					tLastMsg = tNow;
+					//require locking here
 					host_stats_t stats;
 					host->getStats(stats);
+
 					String strProgress = "x";
 					if (fStart >= 0.0f && fLength >= 0.0f) {
 						float fProgress = ((projectGlobals.playbackPos)/(float)TICKS_BAR - fStart)/fLength;
 						strProgress = StringFormat("%0.2f%%", fProgress*100.0f);
 					}
-					log_printf("PROCESS[render=%d,sr=%0.1fk,bs=%d] %s playbackPos %d/%.0f, %d blocks, %d samples\n", bRenderOnly, host->sampleFormat.sampleRate/1000.0f, host->sampleFormat.blockSize,
+					log_printf("PROCESS[render=%d,sr=%0.1fk,bs=%d] %s playbackPos %d/%.0f, %d blocks, %d samples\n", 
+							bRenderOnly, host->sampleFormat.sampleRate/1000.0f, host->sampleFormat.blockSize,
 							StringAsCStr(strProgress),
 							projectGlobals.playbackPos, (fStart+fLength)*TICKS_BAR, stats.blocksProcessed, stats.samplesProcessed);
 
@@ -517,28 +532,15 @@ int runCommandLineHost(int argc, const char* argv[]) {
     //				}
     			if (bRenderOnly) {
 
-    	            //this is stupid
-    	//			if (state != status_play) {
-    	//				tickPos = ctrl->cursor.cursorPos;
-    	//			}
-
-
-
-	            	//ctrl may still alter project settings during copy here if not locked
-    	            bool inLoop = (tickPos >= projectGlobals.loopStart
-	            			&& tickPos < projectGlobals.loopStart+projectGlobals.loopLen
-							&& projectGlobals.loopEnabled);
-
-//	            	int32_t processedBlock = host->processBlock(tls.project, processingGraph.get(), &blockIn, &blockOut, samplePos, tickPos, playback_state::status_play, inLoop, isLoopAround);
     	            int32_t processedBlock = host->processRender(tls.project, samplePos, tickPos);
-
 	            	dbgassert(processedBlock > 0);
 
+					samplePos += host->sampleFormat.blockSize*processedBlock;
+					tickPos += ticksPerBlock*processedBlock;
+					projectController.getPlaybackPos() = tickPos;
     			}
 				if (fStart >= 0.0f && fLength >= 0.0f) {
-	//				project.loopEnabled = false;
-	//				project.loopLen = math::round(fLength*TICKS_BAR);
-					if ((projectGlobals.playbackPos)/(float)TICKS_BAR - fStart >= fLength) {
+					if ((projectController.getPlaybackPos())/(float)TICKS_BAR - fStart >= fLength) {
 						if (playThread) {
 							playThread->addRequest(REQ_STATE, (int) playback_state::status_no_process, true);
 						}
@@ -549,7 +551,7 @@ int runCommandLineHost(int argc, const char* argv[]) {
 
 				processWindowMessages();
     		}
-			my_printf("playback end..\n", 0);
+			log_printf("playback end..\n", 0);
 			if (playThread) {
 				playThread->addRequest(REQ_STATE, (int) playback_state::status_no_process, true);
 			}
@@ -561,8 +563,7 @@ int runCommandLineHost(int argc, const char* argv[]) {
     		int trackIndex = 0;
 			for (auto* trackMaster : project.trackMasterCtr) {
 				auto* trImpl = trackMaster->getStage();
-				if (static_cast<bool>(trImpl->flags & audiostageflags_t::CONVERT_OUTPUT)
-						&& static_cast<bool>(trImpl->flags & audiostageflags_t::WRITE_OUTPUT)) {
+				if (isSet(trImpl->flags, audiostageflags_t::CONVERT_OUTPUT | audiostageflags_t::WRITE_OUTPUT)) {
 					bytesCopied += trImpl->audioOutput.convertToSamples(tls.host);
 					std::vector<audiotrack_split_t*> samples;
 					trImpl->audioOutput.visitSamples_NoLock([&samples](std::shared_ptr<audiotrack_split_t>& split) {
@@ -621,9 +622,9 @@ int runCommandLineHost(int argc, const char* argv[]) {
 
 
     		std::vector<track_t*> _tracks = project.trackList.getAllTracksFlatVec();
-    		my_printf("DELETE _tracks %d\n", _tracks.size());
+    		log_printf("DELETE _tracks %d\n", _tracks.size());
     		for (track_t* tr : _tracks) {
-    			my_printf("DELETE TRACK %s\n", StringAsCStr(tr->name));
+    			log_printf("DELETE TRACK %s\n", StringAsCStr(tr->name));
     			vsthost::getInstance()->unloadTrack(tr);
     			project.trackList.removeTrack(tr);
     		}
@@ -646,7 +647,7 @@ int runCommandLineHost(int argc, const char* argv[]) {
 			tls.audioHost->deinitPa();
 		}
     	host->destroy();
-    	LOG("END");
+    	log_printf("END\n", 0);
     } catch (std::exception& e) {
     	log_printf("exception %s\n", e.what());
     } catch (...) {
