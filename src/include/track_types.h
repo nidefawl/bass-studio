@@ -49,17 +49,21 @@ enum class audiostageflags_t : int32_t {
 enum class audiostagerouting_state_t : int32_t {
 	INVALID = 0, DEFAULT = 1, CUSTOM = 2
 };
+
 template<class T, typename = std::enable_if_t<std::is_same<T, audiostageflags_t>::value> >
-inline T operator~ (T a) { return (T)~(int)a; }
+inline T operator~ (T a) { return (T)~(int32_t)a; }
 template<class T, typename = std::enable_if_t<std::is_same<T, audiostageflags_t>::value> >
-inline T operator| (T a, T b) { return (T)((int)a | (int)b); }
+inline T operator| (T a, T b) { return (T)((int32_t)a | (int32_t)b); }
 template<class T, typename = std::enable_if_t<std::is_same<T, audiostageflags_t>::value> >
-inline T operator& (T a, T b) { return (T)((int)a & (int)b); }
+inline T operator& (T a, T b) { return (T)((int32_t)a & (int32_t)b); }
 template<class T, typename = std::enable_if_t<std::is_same<T, audiostageflags_t>::value> >
-inline T operator^ (T a, T b) { return (T)((int)a ^ (int)b); }
+inline T operator^ (T a, T b) { return (T)((int32_t)a ^ (int32_t)b); }
 template<class T, typename = std::enable_if_t<std::is_same<T, audiostageflags_t>::value> >
-inline T& operator|= (T& a, T b) { return (T&)((int&)a |= (int)b); }
+inline T& operator|= (T& a, T b) { return (T&)((int32_t&)a |= (int32_t)b); }
 template<class T, typename = std::enable_if_t<std::is_same<T, audiostageflags_t>::value> >
-inline T& operator&= (T& a, T b) { return (T&)((int&)a &= (int)b); }
+inline T& operator&= (T& a, T b) { return (T&)((int32_t&)a &= (int32_t)b); }
 template<class T, typename = std::enable_if_t<std::is_same<T, audiostageflags_t>::value> >
-inline T& operator^= (T& a, T b) { return (T&)((int&)a ^= (int)b); }
+inline T& operator^= (T& a, T b) { return (T&)((int32_t&)a ^= (int32_t)b); }
+
+template<class T, typename = audiostageflags_t>
+inline bool isSet(T a, T b) { return static_cast<bool>((a & b) == b); }
