@@ -24,6 +24,7 @@ struct beatbar16th_t {
 	int32_t bar;
 	int32_t beat;
 	int32_t th;
+	int32_t subticks;
 	int32_t operator[](const int nIndex) {
 		if (nIndex == 2)
 			return th;
@@ -32,9 +33,27 @@ struct beatbar16th_t {
 		return bar;
 	}
 };
-inline tick_t sgn(tick_t val) {
-    return (0 < val) - (val < 0);
+
+inline beatbar16th_t tickToBarBeat16th(int32_t tick, int32_t signatureNum = 4, int32_t signatureDenomBits = 2)
+{
+    beatbar16th_t t;
+    int32_t denom = 4 - math::clamp<int32_t>(signatureDenomBits, 0, 4);
+    int32_t num = signatureNum;
+    int32_t barOffset = 0;
+    if (tick < 0) {
+        barOffset = -((((-tick)+TICKS_BAR-1) / TICKS_BAR));
+        tick = tick & (TICKS_BAR - 1);
+	}
+    int32_t sixth = tick / TICKS_16TH;
+    t.subticks = tick % TICKS_16TH;
+    t.th = sixth & ((1 << denom) - 1);
+    int32_t quarters = (sixth >> denom);
+    t.beat = quarters % num;
+    t.bar = quarters / num;
+    t.bar += barOffset;
+    return t;
 }
+
 
 template<typename T>
 inline bool almost_equal(T x, T y, int ulp)
