@@ -632,8 +632,10 @@ void gui_ctr_debug::onTick(AppCtrl* ctrl) {
 		gui->onTick(ctrl);
 	}
 	{
-		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-		vsthost::getInstance()->getBlockThreadStats(impl->lastProcessingList);
-		impl->sampleformat = vsthost::getInstance()->sampleFormat;
+		ThreadLock lock = MainCtrl::getPlayThread()->tryLockThread();
+		if (lock.isLocked()) {
+			vsthost::getInstance()->getBlockThreadStats(impl->lastProcessingList);
+			impl->sampleformat = vsthost::getInstance()->sampleFormat;
+		}
 	}
 }
