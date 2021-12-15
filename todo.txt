@@ -5,21 +5,36 @@
 /**********************************************/
 /*                Recent ideas                */
 /**********************************************/
-
-Handle multi-channel audio effects correctlyy
+Add optional horizontal grid steps to automation (allow offset/scale?)
+Cleanup automation stuff: setParamValue is inconsistent
+Resizing a clip can stop held notes. This has to be handled somehow
+Add a keyboard on the bottom, make it small so its not using up screenspace. Display all held notes from all tracks in different colors so I can quickly see what key the song is currently in etc.
+Exported audio files are incorrect length
+Automation sub tracks are not removed from track when moving plugin to another track
+Exp/Log slopes for automation data
+Basic +/- pitch for wave samples
+Sample database
+Categories for plugins (at least effects/instruments for now)
+Selection info (Show duration in bars/secs/samples)
+Add a way to copy clips + automation or only clips (keybind? key modifier?)
+Parallel groups for plugins
+Handle multi-channel audio effects correctly
 Make startup.cpp only compile into daw-application
 remove height limitation from automation tracks
+Allow reordering automation tracks
 Allow sonogram to be used in a mouse over popup window (not working)
 Tool to auto process samples: run samples thru specific vst preset, run samples thru my effect chains (that I extract from ableton projects)
 "Duplicate muted" for tracks/plugins/etc: Duplicates the instance but keeps it muted/inactive
 Duplicate frozen track to flattened audio skipping the creation of plugin chain
 More specific undo, proper undo history, ability to configure it, disable it. 
 Show inactive automation in a list
+Show automated parameters in a list, and on a tab in the plugin container
+
 
 Alternative VST2 management:
  - Show all *.dll files instead of using a vst scanner
  - Cache results for shell plugins maybe
- 
+ - Allow drag-dropping dll from windows explorer
  
 Implement a drum seq into the timeline:
  - editing must be possible without requiring context change
@@ -44,7 +59,7 @@ make volume slider that modifies only exponent of float32
 clip transformation tool (select tool from toolbar -> mouse cursor is adjusted(?) -> click clip -> applys transformation operation) 
   i.e. +/-12 semitones
 histogram of timings of processPlayback invocations	
-add metadata to clips (creation date, modify date, (references?))
+add metadata to clips (creation date, modify date, source midi file, (references?))
 IDEA: arpeggiator as per clip setting
 javascripted or python functions for plugin parameter automation, allowing live editing
 reset plugin state to last save-state of project file by right clicking right-click contextmenu on vst plugins
@@ -58,6 +73,15 @@ add vertical plugin chain in mix view (like cubase mixer)
 /**********************************************/
 /*                   Bugs                     */
 /**********************************************/
+Meters are buggy after sample rate or blocksize changes
+Fix solo buttons: 
+- Do not update after track routing changes
+- Add Un-solo all button 
+Fix recent file list: state should be flushed each load/save
+fix shift-clicking not extending selection to clicked clips boundaries
+Fix selecting regions while holding shift (i.e. when scrolling is required to make bigger selection)
+Fix undo/redo for automation data
+
 while having a selection with no time range, sitting on subtrack 0 of a midi track (first automation lane, just having a cursor sitting in an automation lane):
  if the track is dragged onto another track to put it as child the program will assert in subtrack range check with out of bounds 
  see screenshot 02.05.2021 22:58
@@ -70,10 +94,9 @@ automation lanes are read in stopped mode
 clip loop gets notes stuck
 status bar does not show text
 clipsettings labels overlap input fields
-ALT key sometimes stuck, wonderful
+ALT key sometimes stuck, wonderful old bug from GLFW.
 ALT key to disable grid is not allowing note-resize below grid size
 notes border rendering not respecting z-order when note rectangles overlap
-MainCtrl::getPlayThread() is bad interface for no-GUI headless applications
 
 Add lists/tables for debugging:
 - all loaded plugins (done: list view showing type as icon, name and cpu usage)
@@ -91,14 +114,20 @@ all interface types must have suffix _i instead of
 make _t and no-_t type names consistent
 unit tests
 Fix visibility of fields of all classes
+MainCtrl::getPlayThread() is bad interface for no-GUI headless applications
 
 /**********************************************/
 /*              TODO (high priority)          */
 /**********************************************/
-Solo buttons!
 global midi pitch offset (and per track global offset bypass)
 per track samplerate / blocksize 
 do multiblock processing in tight loop to increase automation samplerate 
+Parameter filtering:
+- Host outgoing data will probably stay unfiltered
+- Filtering for send automation
+- Internal Plugins incoming data must be filtered. 
+- Where possible we should access automation lanes to have latency free look-ahead. This allows more accurate filtering.
+  This will some work when taking latency compensation and looping into account
 
 
 /**********************************************/
@@ -124,24 +153,14 @@ add keybind constant
 keybind editor/presets
 multiselection of tracks
 Mixing desk view
-Load/Save current view quickbuttons
-Implement recent file list
-more work:
 Compressed binary file format
-latency compensated automation !!!
 stress-test synchronization
 use templates + template specialization for the 3 window classes in window.cpp
-further optimize waveform rendering
 scale factor for UI font sizes
-dynamic scaling for all of the UI (50%-200%)
-fix shift-clicking not extending selection to clicked clips boundaries
 support waves shell plugins 
-later:
-seperate internal samplerate / external (audiointerface) samplerate
-add a toggle button for current tracks complete effect chain
+add a toggle button for current tracks complete effect chain. This should probably be the function of the power/enable button of a track. Adding a mute button that keeps audio processing enabled
 midi export
 freeze track
-filter automation (smoothing): outgoing on host as option, incoming on plugin required
 don't fully close vst-windows, just hide them and defer destruction so they reopen quickly 
 try rendering vst-windows into gui at fixed location (kind of a bookmark)
 add a view of a list of all thirdparty+internal plugin instances 
@@ -149,6 +168,11 @@ add a view of a list of all thirdparty+internal plugin instances
 /**********************************************/
 /*                  COMPLETED                 */
 /**********************************************/
+Load/Save current view quickbuttons: F1-F12 keys, hold ctrl to save
+latency compensated automation (write a simple test case for this)
+further optimize waveform rendering
+dynamic scaling for all of the UI (50%-200%)
+seperate internal samplerate / external (audiointerface) samplerate
 Make the backing audio track on midi tracks optional, only active when subtrack waveview is shown
 Performance regression: midi clip processing runtime scales linear to number of loops (expected to scale linearly with loop length)
 audio track routing options
