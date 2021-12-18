@@ -667,7 +667,7 @@ void guipluginview::updateParamList(const String& strParamNameFilter) {
 	std::vector<gui_list_entry*> listEntries;
 	listEntries.reserve(sortedParams.size());
     std::for_each(sortedParams.begin(), sortedParams.end(), [&listEntries, eff = this->effect, &strParamNameFilter](auto* param) {
-    	if (strParamNameFilter.empty() || ci_find_substr(param->label, strParamNameFilter) >= 0) {
+    	if (strParamNameFilter.empty() || StringContainsCI(param->label, strParamNameFilter) >= 0) {
     		listEntries.push_back(new gui_plugin_paramlist_entry(eff, param));
     	}
     });

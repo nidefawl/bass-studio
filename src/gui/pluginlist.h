@@ -184,7 +184,7 @@ public:
 	void update() {
 		std::vector<gui_list_entry*> _newList;
 		for (auto& t : effectEntries) {
-			if (ci_find_substr(t.name, curquery) >= 0) {
+			if (StringContainsCI(t.name, curquery) >= 0) {
 				gui_modulelist_entry* g = new gui_modulelist_entry(t);
 				_newList.push_back(g);
 			}
