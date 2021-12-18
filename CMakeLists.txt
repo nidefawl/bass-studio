@@ -134,6 +134,10 @@ foreach(f ${CPP_ALL_FILES})
     list(APPEND CPP_SRC_FILES ${f})
 endforeach()
 
+if (BUILD_TESTS)
+    list(APPEND CPP_SRC_FILES "src/tests/test_environment.cpp")
+endif()
+
 
 set(SRC_FILES_SUBDIR_FILES 
     src/file/fileloader.cpp
