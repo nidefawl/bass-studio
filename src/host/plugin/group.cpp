@@ -288,7 +288,6 @@ void module_group::breakTrackLink() {
 	this->audio->parent->removeAudioStage(this->audio);
 	dbgassert(this->audio->parent == nullptr);
 	this->audio->owner = nullptr;
-	bIsSetup = false;
 	internalplugin::breakTrackLink();
 }
 void module_group::setTrackLink(audio_stage_t* trImpl) {
@@ -297,7 +296,6 @@ void module_group::setTrackLink(audio_stage_t* trImpl) {
 	trImpl->addAudioStage(this->audio);
 	dbgassert(this->audio->parent == trImpl);
 	this->audio->owner = this;
-	bIsSetup = true;
 	internalplugin::setTrackLink(trImpl);
 }
 

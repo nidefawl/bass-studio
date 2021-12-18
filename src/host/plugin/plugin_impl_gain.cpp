@@ -241,11 +241,9 @@ void module_gain::load(vsthost* host) {
 }
 
 void module_gain::breakTrackLink() {
-	bIsSetup = false;
 	internalplugin::breakTrackLink();
 }
 void module_gain::setTrackLink(audio_stage_t* trImpl) {
-	bIsSetup = true;
 	internalplugin::setTrackLink(trImpl);
 }
 

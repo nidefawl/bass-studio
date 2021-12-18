@@ -84,6 +84,13 @@ public:
 	bool isInSuspend = true;
 	std::vector<vst_param_category> paramsCategories;
 
+	//TODO: this is not thread safe
+	std::map<int32_t, vst_opcode_stats_t> opCodeIn;
+	std::map<int32_t, vst_opcode_stats_t> opCodeOut;
+	vst_opcode_stats_t& getOpCodeStats(bool incoming, int32_t opCode) {
+		auto& map = incoming ? opCodeIn : opCodeOut;
+		return map[opCode];
+	}
 	std::vector<String> inputNames;
 	std::vector<String> outputNames;
 	vstplugin(handles_t* _handle, int32_t globalId, String sDir, String sName, int32_t _moduleId)

@@ -30,11 +30,9 @@ public:
 	void unload(vsthost* host, int flags) override;
 	void load(vsthost* host) override;
 	void breakTrackLink() override {
-		bIsSetup = false;
 		internalplugin::breakTrackLink();
 	}
 	void setTrackLink(audio_stage_t* trImpl) override {
-		bIsSetup = !!(trImpl);
 		internalplugin::setTrackLink(trImpl);
 	}
 	virtual bool isBypass() override {

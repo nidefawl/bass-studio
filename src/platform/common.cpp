@@ -140,6 +140,7 @@ int64_t ReadFileText(const String& filename, String& out, int resourceType) {
     return -1;
 }
 
+//TODO: implement this using TLS
 int32_t get_thread_id() noexcept {
     static int32_t thread_idx = 0;
     static std::mutex thread_mutex;

@@ -2424,6 +2424,7 @@ void DawInstance::removeTrackId(uint32_t trackId) {
 void DawInstance::removeTrackImpl(track_t* track, int flags) {
 	guictr_plugins* plugins = MainCtrl::getPluginCtr();
 	plugins->hideTrack(track->audio);
+	// TODO: handle plugins correctly, right now they remain loaded in vsthost
 	if (mainCtrl->clipView.gui && mainCtrl->clipView.gui->m_track == track){
 		mainCtrl->clipView.set(NULL);
 	}

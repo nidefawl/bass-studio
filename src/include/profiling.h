@@ -16,11 +16,11 @@ struct track_midiprocess_profiling_t {
 	int64_t tm7ProcessOutput = 0;
 };
 struct stats_processing_timings_t {
-	int64_t timeProcessRaw = 0;
-	int64_t timeProcess = 0;
-	int64_t timeUpdateParameters = 0;
-	int64_t timeMixInputs = 0;
-	int64_t timeSendNotes = 0;
+	int64_t timeTrackProcessPluginsRaw = 0;
+	int64_t timeTrackProcessPlugins = 0;
+	int64_t timeTrackApplyAutomation = 0;
+	int64_t timeTrackMixInputs = 0;
+	int64_t timeTrackProcessMidi = 0;
 	int64_t statsProcSamples[STATS_PROCESSING_MAX_SAMPLES] = {};
 	int32_t statsProcStep = 0;
 	int64_t statsWriteOffset=0;
@@ -38,20 +38,22 @@ struct host_stats_t {
 	int32_t tickBar = 0;
 	int32_t samplesProcessed;
 	int32_t blocksProcessed;
-	int64_t timeProcessRaw;
-	int64_t timeProcess;
+	int64_t timeProcessPluginsRaw;
+	int64_t timeProcessPlugins;
+	int64_t timeBlockRaw;
+	int64_t timeBlock;
 	std::map<String, int64_t> timings;
+	track_midiprocess_profiling_t blockMidiStats;
 	double usage;
 	double usageRaw;
 	int32_t inputBufferUnderuns = 0;
-	int32_t lastInvocationTime_i64 = 0;
 	int32_t inputQueueLen = 0;
 	int32_t outputQueueLen = 0;
 	int32_t resamplerInNumBlocks = 0;
 	int32_t resamplerInNumSamples = 0;
 	int32_t resamplerOutNumBlocks = 0;
 	int32_t resamplerOutNumSamples = 0;
-
+	int64_t lastInvocationTime_i64 = 0;
 };
 
 struct render_clip_cache_stats_t {
@@ -77,6 +79,10 @@ struct render_stats_t {
 	int64_t timePrerender = 0;
 	int64_t playThreadLockCount = 0;
 	render_stats_t() = default;
+};
+struct vst_opcode_stats_t {
+	int32_t tmMillis = 0;
+	int32_t numDispatches = 0;
 };
 namespace Profiling {
 template <typename T>
