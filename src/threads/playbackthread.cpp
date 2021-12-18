@@ -67,6 +67,7 @@ public:
 class PlaybackThread::Impl {
 	std::thread t;
 	ReaderWriterQueue<std::shared_ptr<PlaybackThreadReq>> q;
+	//TODO: use atomic for m_status
     playback_state m_status = status_no_process;
 	std::recursive_mutex mutex;
 	std::atomic<int32_t> mLockCount{0};
@@ -96,6 +97,7 @@ public:
             HANDLE h = reinterpret_cast<HANDLE*>(t.native_handle());
             SetThreadPriority(h, THREAD_PRIORITY_TIME_CRITICAL);
 #endif
+            dbgassert(threadTLS.tlsInitialized);
 			daw_tls::setTls(threadTLS);
 			this->run();
 		});
@@ -172,14 +174,15 @@ private:
 							{
 								dbgassert(host->sampleFormat.sampleRate != 0);
 								dbgassert(host->sampleFormat.blockSize != 0);
-								exportSettingsLocal = ctrl->getExportSettings(); // copy export settings
-								host->preExportBegin(ctrl, exportSettingsLocal);
+								// copy export settings to this thread
+								exportSettingsLocal = ctrl->getExportSettings();
 								tick_t startPos = exportSettingsLocal.exportPos;
+								int32_t bpm100 = ctrl->getCurrentTempo();
 								tickPos = startPos;
 								ctrl->getPlaybackPos() = startPos;
-								int32_t bpm100 = ctrl->getCurrentTempo();
 								samplePos = tickToSample(startPos, bpm100, host->sampleFormat.sampleRate);
 								LOG("START EXPORT ON seconds: %.2f - sample %d\n", toSeconds(startPos, bpm100), samplePos);
+								host->preExportBegin(ctrl, exportSettingsLocal);
 								host->onStartPlayback(this->ctrl);
 								timer.reset();
 								timer2.reset();
@@ -190,10 +193,11 @@ private:
 							{
 								dbgassert(host->sampleFormat.sampleRate != 0);
 								dbgassert(host->sampleFormat.blockSize != 0);
+								// copy start pos to this thread
 								tick_t startPos = ctrl->getCursorPos();
+								int32_t bpm100 = ctrl->getCurrentTempo();
 								tickPos = startPos;
 								ctrl->getPlaybackPos() = startPos;
-								int32_t bpm100 = ctrl->getCurrentTempo();
 								samplePos = tickToSample(startPos, bpm100, host->sampleFormat.sampleRate);
 								LOG("START ON seconds: %.2f - sample %d\n", toSeconds(startPos, bpm100), samplePos);
 								host->onStartPlayback(this->ctrl);
@@ -232,17 +236,32 @@ private:
         	}
 
 
-            //this is stupid
-//			if (state != status_play) {
-//				tickPos = ctrl->cursor.cursorPos;
-//			}
+        	/**
+        	 * TODO: for the case m_status == playback_state::status_stop the tickPos
+        	 * should be synced to the current cursor pos for automation reading.
+        	 * Automation reading should not move forward in time. But normal audio processing
+        	 * must move the tickPos as if we are playing.
+        	 * This ensure that audio is processing can function while in stop and automation
+        	 * is always read from the current editing position on the UI
+        	 */
 
             if (m_status != playback_state::status_no_process)
             {
             	// aquire lock so data does not get modified during processing
 				std::unique_lock<std::recursive_mutex> lock(mutex);
 
-            	// copy project globals from controller to host
+            	/**
+            	 * Copy project globals from controller to host
+            	 *
+            	 * Any subsequent reads inside the audio processing threads
+            	 * are protected from changes on the UI/controller side.
+            	 *
+            	 * TODO: Some of the parameters are not guarded by the lock against
+            	 * the playback thread. They either have to happen with a lock
+            	 * or guarantee to get written atomically and be sanity checked here
+            	 * before processing.
+            	 * @see project_globals_t in project.h
+            	 */
             	host->prjGlobals = ctrl->getGlobals();
 
             	const project_globals_t& projGlobals = host->prjGlobals;

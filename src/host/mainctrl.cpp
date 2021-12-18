@@ -1139,8 +1139,7 @@ void DawCtrl::postInit() {
 }
 void MainCtrl::postInit() {
 	daw.startDaw();
-	waveformrender::getInstance()->init();
-	daw.setEmptyProject();
+	waveformrender::getInstance()->init(); // move into init()
 	daw.postInit();
 	DawCtrl::postInit();
 	view->storeLayout(&layouts[0]);
@@ -1170,19 +1169,22 @@ void DawInstance::postInit() {
 		}
 	}
 	midihost::getInstance()->startMidi();
-	if (!loadProject.empty()) {
-		loadFile(loadProject, FLAG_DEFER_LOAD);
-	}
-	vsthost::getInstance()->initThreads();
 	this->playThread.setTls(daw_tls::getTls());
 	this->playThread.startThread(this);
+	dbgassert(this->playThread.getState() == playback_state::status_no_process);
+	vsthost::getInstance()->initThreads();
 	this->workerThread.setTls(daw_tls::getTls());
 	this->workerThread.startThread();
 
 	setAudioThreadState(playback_state::status_stop);
 	this->workerThread.call([]() {
-		my_printf("WorkerThreadCallTest\n", 0);
+		log_printf("WorkerThreadCallTest\n", 0);
 	})->wait();
+	if (!loadProject.empty()) {
+		loadFile(loadProject, FLAG_DEFER_LOAD);
+	} else {
+		setEmptyProject();
+	}
 }
 
 void DawInstance::updateClipViews(clip_t* notifyClip, clip_cursor_t cursor) {
@@ -1290,14 +1292,16 @@ void DawInstance::initDaw(int argc, char* argv[]) {
 void DawCtrl::initApp(int argc, char* argv[]) {
 }
 MainCtrl::MainCtrl(DawInstance& _daw) : DawCtrl(_daw) {
-	my_printf("MainCtrl constructor\n",0);
+	log_printf("MainCtrl constructor\n",0);
 }
 void MainCtrl::initApp(int argc, char* argv[]) {
+	daw_tls::tlsinstance initTls;
+	initTls.tlsInitialized = true;
+	initTls.config = new app_config_t{};
+	initTls.mainCtrl = this;
+	daw_tls::setTls(initTls);
+
 	daw.initDaw(argc, argv);
-	daw_tls::tlsinstance& tls = daw_tls::getTls();
-	tls.tlsInitialized = true;
-	tls.config = new app_config_t{};
-	tls.mainCtrl = this;
 }
 bool MainCtrl::init(window_main* window, NVGcontext* nanovg)
 {
@@ -1379,7 +1383,6 @@ bool DawCtrl::init(window_main* window, NVGcontext* nanovg)
 		grid.grid_dens = settings.wndMain.dens;
 	}
 
-//	vsthost::getInstance()->setSamplerateBlockSize(settings.iosettings.samplerate, settings.iosettings.blocksize);
 	updateGrid();
 	isOK = true;
 	return isOK;

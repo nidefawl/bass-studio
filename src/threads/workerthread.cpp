@@ -92,8 +92,9 @@ public:
     }
 	void start() {
 		t = std::thread([this]() {
-			daw_tls::setTls(threadTLS);
 			setCurrentThreadName("workerthread");
+            dbgassert(threadTLS.tlsInitialized);
+			daw_tls::setTls(threadTLS);
 			this->run();
 		});
 	#ifdef _WIN32

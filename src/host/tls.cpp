@@ -12,10 +12,13 @@ namespace daw_tls {
 	static thread_local tlsinstance tls;
 
 	void setTls(tlsinstance& _tls) {
+		dbgassert(_tls.tlsInitialized);
 		tls = _tls;
 	}
 	tlsinstance& getTls() {
-		return tls;
+		tlsinstance& localTls = tls;
+		dbgassert(localTls.tlsInitialized);
+		return localTls;
 	}
 }
 

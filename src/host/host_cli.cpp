@@ -1,39 +1,33 @@
 #include "str_util.h"
-#include "../vstsdk-host-2.4/aeffectx.h"
-#include "../host/vst_host.h"
-#include "../host/plugin/vst_plugin.h"
-#include "../host/plugin/vst_plugin_handles.h"
+#include "seq_time.h"
 #include "fileio.h"
 #include "exceptions.h"
-#include "../threads/childprocessthread.h"
 #include "platform.h"
-#include <SQLiteCpp/SQLiteCpp.h>
-#include <SQLiteCpp/VariadicBind.h>
-#include <iostream>
-#include <memory>
-#include "ipc.h"
 #include "appsettings.h"
 #include "projectfile.h"
+#include "track_snapshot.h"
 #include "project.h"
+#include "projectcontroller.h"
 #include "samplerate.h"
-#include "track.h"
-#include "threads/playbackthread.h"
 #include "audioblock.h"
 #include "audiocache.h"
 #include "audiobuffer.h"
-#include "projectcontroller.h"
-#include "plugindatabase.h"
+#include "track.h"
+#include "track_impl.h"
 #include "fileio.h"
-#include "wave/dr_wav.h"
 #include "basectrl.h"
 #include "audio_host.h"
 #include "midi_host.h"
-#include "track.h"
-#include "track_impl.h"
-#include "track_snapshot.h"
+#include "host/vst_host.h"
+#include "host/plugin/vst_plugin.h"
+#include "host/plugin/vst_plugin_handles.h"
+#include "plugindatabase.h"
+#include "threads/playbackthread.h"
+#include "wave/dr_wav.h"
+#include "appconfig.h"
 
 #ifdef _WIN32
-#include "../platform/win/platform_win.h"
+#include "platform/win/platform_win.h"
 #include <windows.h>
 #endif
 #ifdef __linux__
@@ -42,6 +36,10 @@
 #endif
 
 #include <stdlib.h>
+#include <iostream>
+#include <memory>
+#include <SQLiteCpp/SQLiteCpp.h>
+#include <SQLiteCpp/VariadicBind.h>
 
 
 struct vst_metadata {
@@ -55,18 +53,6 @@ struct vst_metadata {
 	char szVendorName[256];
 };
 
-void getPluginData(vstplugin* plugin, vst_metadata* _out) {
-	AEffect* aeffect = plugin->handle->aeffect;
-	_out->id = aeffect->uniqueID;
-	_out->version = aeffect->version;
-	_out->vstVersion = plugin->vstVersion;
-	_out->pluginCategory = plugin->pluginCategory;
-	strncpy(_out->szName, StringAsCStr(plugin->sName), plugin->sName.length());
-	if (!plugin->dispatch(effGetVendorString, 0, 0, (void*)_out->szVendorName)) {
-		_out->szVendorName[0] = 0;
-	}
-	_out->isSynth = plugin->isSynth;
-}
 bool userSentQuitRequest = false;
 #ifdef _WIN32
 static BOOL WINAPI ConsoleHandler(DWORD dwType)
@@ -232,17 +218,34 @@ int runCommandLineHost(int argc, const char* argv[]) {
 	
 	if (file.empty()) {
 		log_printf("please specify project file with -f <file>\n", 0);
-		return 1;
+		return EXIT_FAILURE;
 	}
 	if (bRenderOnly && fOutWave.empty()) {
 		log_printf("--render requires -o <file>\n", 0);
-		return 1;
+		return EXIT_FAILURE;
+	}
+	std::shared_ptr<project_file> projectFile;
+	if (!file.empty()) {
+		try {
+    		projectFile = loadProjectFile(file);
+		} catch (std::exception& e) {
+			log_printf("exception %s\n", e.what());
+			return EXIT_FAILURE;
+		} catch (...) {
+			log_printf("unhandled exception\n", 0);
+			return EXIT_FAILURE;
+		}
+		if (!projectFile) {
+			fprintf(stderr, "Error: failed loading file\n");
+			return EXIT_FAILURE;
+		}
 	}
 
-	int64_t time;
     try {
-    	FileTimeGetter filetime(file);
-    	time = filetime.getWriteTimeI64();
+    	daw_tls::tlsinstance initTls;
+    	initTls.tlsInitialized = true;
+    	initTls.config = new app_config_t{};
+    	daw_tls::setTls(initTls);
 
     	auto host = std::make_unique<vsthost>();
     	vsthost::assignMasterCallback(host.get());
@@ -312,15 +315,10 @@ int runCommandLineHost(int argc, const char* argv[]) {
     			playThread->startThread(&projectController);
     			playThread->addRequest(REQ_STATE, (int) playback_state::status_no_process, true);
     		}
-			if (!file.empty()) {
-	    		auto pf = loadProjectFile(file);
-	    		if (!pf) {
-	    			fprintf(stderr, "Error: failed loading file\n");
-	    			return EXIT_FAILURE;
-	    		}
-				project_snapshot_t& snapshot = pf->project;
+			if (projectFile) {
+				project_snapshot_t& snapshot = projectFile->project;
 				project.copyFrom(snapshot);
-				audiocache::getInstance()->load(pf->sampleFileIndex);
+				audiocache::getInstance()->load(projectFile->sampleFileIndex);
 
 				/** create all audio instances **/
 				for (track_t* t : projectController.getTracks()) {
