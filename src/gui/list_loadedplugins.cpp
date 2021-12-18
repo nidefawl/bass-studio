@@ -211,14 +211,14 @@ public:
 			host_stats_reducted_t stats;
 			auto host = vsthost::getInstance();
 			host->getShortStats(stats);
-			float fPercentLoad = stats.timePerBlock_usec <= 0 ? 0 : _entry->procStats.timeProcess*100.0f / stats.timePerBlock_usec;
+			float fPercentLoad = stats.timePerBlock_usec <= 0 ? 0 : _entry->procStats.timeTrackProcessPlugins*100.0f / stats.timePerBlock_usec;
 			nvgTextAlign(vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
 			String str = StringFormat("%.2f%%", fPercentLoad);
 			float x2 = size.x-spacing;
 			float x1 = nvgText(vg, size.x-spacing, rowHeight / 2, StringAsCStr(str), NULL);
 			float xw = x2 - x1;
 			if (size.x/4>xw) {
-				String str = StringFormat("%dmicsec", _entry->procStats.timeProcess);
+				String str = StringFormat("%dmicsec", _entry->procStats.timeTrackProcessPlugins);
                 nvgText(vg, size.x * 3 / 4, rowHeight / 2, StringAsCStr(str), NULL);
             }
         }
@@ -257,14 +257,11 @@ public:
 		if (!setScissorTransform(vg)) {
 			return;
 		}
-		int x = 5;
-		int x2 = getSizeContent().x-x;
-		int y = 5;
 		if (getTimeHPint64() - timeLastUpdate >= 250000) {
 			timeLastUpdate = getTimeHPint64();
 			ThreadLock lock = MainCtrl::getPlayThread()->tryLockThread();
-			state = MainCtrl::getPlayThread()->getState();
 			if (lock.isLocked()) {
+				state = MainCtrl::getPlayThread()->getState();
 				vsthost::getInstance()->getStats(stats);
 			}
 		}
@@ -275,10 +272,14 @@ public:
 		float lineh;
 		setFont(vg, fontSize, G_WHITE, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
 		nvgTextMetrics(vg, NULL, NULL, &lineh);
+		int x = math::max<int32_t>(5, lineh/2);
+		int y = x;
+		int x2 = getSizeContent().x-x;
 
-		auto printL = [&](const char* caption, const String& str) {
+		auto printL = [&](int inset, const char* caption, const String& str) {
+			float offsetX = (inset+1)*x;
 			nvgTextAlign(vg, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
-			nvgText(vg, x, y, caption, NULL);
+			nvgText(vg, offsetX, y, caption, NULL);
 			nvgTextAlign(vg, NVG_ALIGN_TOP | NVG_ALIGN_RIGHT);
 			nvgText(vg, x2, y, StringAsCStr(str), NULL);
 			y += lineh;
@@ -291,17 +292,69 @@ public:
 			nvgFillColor(vg, G_WHITE);
 		}
 		auto& renderStats = daw_tls::getTls().prevRenderStats;
-		printL("playback_state", StringFormat("%lld", static_cast<int32_t>(state)));
-		printL("Usage", StringFormat("%.2f%%", stats.usage*100.0));
-		printL("Usage raw", StringFormat("%.2f%%", stats.usageRaw*100.0));
+		printL(0, "Usage", StringFormat("%.2f%% (%.2f%%)", stats.usage*100.0, stats.usageRaw*100.0));
 		nvgFillColor(vg, G_WHITE);
-		printL("FPS", StringFormat("%.2f", renderStats.fps));
-		printL("timePrerender", StringFormat("%d", renderStats.timePrerender));
-		printL("timeUpdateWaveforms", StringFormat("%d", renderStats.timeUpdateWaveforms));
-		printL("timeRender", StringFormat("%d", renderStats.timeRender));
-		printL("timeRenderEditor", StringFormat("%d", renderStats.timeRenderEditor));
-		printL("timeRenderTrackControls", StringFormat("%d", renderStats.timeRenderTrackControls));
-		printL("playThreadLockCount (frame)", StringFormat("%d", renderStats.playThreadLockCount));
+		printL(0, "FPS", StringFormat("%.2f", renderStats.fps));
+		printL(0, "Render", StringFormat("%d µs", renderStats.timeRender));
+		printL(1, "Prerender", StringFormat("%d µs", renderStats.timePrerender));
+		printL(1, "UpdateWaveforms", StringFormat("%d µs", renderStats.timeUpdateWaveforms));
+		printL(1, "RenderEditor", StringFormat("%d µs", renderStats.timeRenderEditor));
+		printL(1, "RenderTrackControls", StringFormat("%d µs", renderStats.timeRenderTrackControls));
+		printL(0, "Clips in view", StringFormat("%d", renderStats.clipsRendered));
+		printL(0, "Notes in view", StringFormat("%d", renderStats.notesRendered));
+		y+=lineh/2;
+
+		printL(0, "Blocks Processed", StringFormat("%d", stats.blocksProcessed));
+		printL(0, "Samples Processed", StringFormat("%d", stats.samplesProcessed));
+		printL(0, "All Plugins", StringFormat("%lld µs (%lld µs)", stats.timeProcessPlugins, stats.timeProcessPluginsRaw));
+		printL(0, "Block", StringFormat("%lld µs (%lld µs)", stats.timeBlock, stats.timeBlockRaw));
+		for (auto& entry : stats.timings) {
+			const String& entryKey = entry.first;
+			int ident = 0;
+			int iLeftCut = 0;
+
+		    for (auto& c : entryKey) {
+		        if ('.' == c) {
+		        	iLeftCut = (&c) - &entryKey.front() + 1;
+		        	ident++;
+		        }
+		    }
+
+			String format = "%lld µs";
+			if (entryKey.find("Bytes") != String::npos) {
+				format = "%lld bytes";
+			}
+			if (entryKey.find("SSE") != String::npos) {
+				format = "%08X";
+			}
+
+
+		    const String label = entryKey.substr(iLeftCut);
+			printL(ident, StringAsCStr(label), StringFormat(StringAsCStr(format), entry.second));
+			if (ident && label == "ProcessMidi") {
+				ident++;
+				printL(ident, "InputClips", StringFormat("%lld µs", stats.blockMidiStats.tm0InputClips));
+				printL(ident, "InputRealtime", StringFormat("%lld µs", stats.blockMidiStats.tm1InputRT));
+				printL(ident, "ProcessNotes", StringFormat("%lld µs", stats.blockMidiStats.tm2ProcNotes));
+				printL(ident, "RevalidateEnds", StringFormat("%lld µs", stats.blockMidiStats.tm3RevalidateEnds));
+				printL(ident, "SortEvents", StringFormat("%lld µs", stats.blockMidiStats.tm4SortEvents));
+				printL(ident, "ProcArp", StringFormat("%lld µs", stats.blockMidiStats.tm5ProcArp));
+				printL(ident, "WriteVstEvents", StringFormat("%lld µs", stats.blockMidiStats.tm6WriteVstEvents));
+				printL(ident, "ProcessOutput", StringFormat("%lld µs", stats.blockMidiStats.tm7ProcessOutput));
+			}
+		}
+		y+=lineh/2;
+		printL(0, "audioCallback tDelta", StringFormat("%d µs", audioHost ? audioHost->audioCallbackInvocationDelay_usec : 0));
+		printL(0, "inputBufferUnderuns", StringFormat("%d", stats.inputBufferUnderuns));
+		printL(0, "outputBufferUnderuns", StringFormat("%u", audioHost ? audioHost->bufferUnderuns : 0));
+		printL(0, "inputBufferOverrun", StringFormat("%u", audioHost ? audioHost->inputBufferUnderuns : 0));
+		printL(0, "input q len", StringFormat("%d", stats.inputQueueLen));
+		printL(0, "output q len", StringFormat("%d", stats.outputQueueLen));
+		printL(0, "INPUT  resampler", StringFormat("%d samples|%d blocks", stats.resamplerInNumSamples, stats.resamplerInNumBlocks));
+		printL(0, "OUTPUT resampler", StringFormat("%d samples|%d blocks", stats.resamplerOutNumSamples, stats.resamplerOutNumBlocks));
+		printL(0, "output q len", StringFormat("%d", stats.outputQueueLen));
+
+		printL(0, "playThreadLockCount (frame)", StringFormat("%d", renderStats.playThreadLockCount));
 		{
 			size_t clipSufIdx = 0;
 			const char *sufArr[3] = { "B", "KB", "MB" };
@@ -311,28 +364,9 @@ public:
 				clipCacheSizeAsDouble /= 1024.0;
 				clipSufIdx++;
 			}
-			printL("clip_render_cache size", StringFormat("%f %s", clipCacheSizeAsDouble, sufArr[clipSufIdx%3]));
+			printL(0, "clip_render_cache size", StringFormat("%f %s", clipCacheSizeAsDouble, sufArr[clipSufIdx%3]));
 		}
 
-		printL("clips in view", StringFormat("%d", renderStats.clipsRendered));
-		printL("notes in view", StringFormat("%d", renderStats.notesRendered));
-
-		printL("blocksProcessed", StringFormat("%d", stats.blocksProcessed));
-		printL("samplesProcessed", StringFormat("%d", stats.samplesProcessed));
-		printL("audioCallback tDelta usec", StringFormat("%d", audioHost ? audioHost->audioCallbackInvocationDelay_usec : 0));
-		printL("timeProcess", StringFormat("%lld", stats.timeProcess));
-		printL("timeProcessRaw", StringFormat("%lld", stats.timeProcessRaw));
-		printL("input q len", StringFormat("%d", stats.inputQueueLen));
-		printL("output q len", StringFormat("%d", stats.outputQueueLen));
-		printL("INPUT  resampler", StringFormat("%d samples|%d blocks", stats.resamplerInNumSamples, stats.resamplerInNumBlocks));
-		printL("OUTPUT resampler", StringFormat("%d samples|%d blocks", stats.resamplerOutNumSamples, stats.resamplerOutNumBlocks));
-		printL("output q len", StringFormat("%d", stats.outputQueueLen));
-		printL("inputBufferUnderuns", StringFormat("%d", stats.inputBufferUnderuns));
-		printL("outputBufferUnderuns", StringFormat("%u", audioHost ? audioHost->bufferUnderuns : 0));
-		printL("inputBufferOverrun", StringFormat("%u", audioHost ? audioHost->inputBufferUnderuns : 0));
-		for (auto& entry : stats.timings) {
-			printL(StringAsCStr(entry.first), StringFormat("%lld", entry.second));
-		}
 		minHTop = y+lineh;
 
 	}
@@ -366,7 +400,7 @@ public:
 			if (!ptrEffB)
 				return false;
 
-			return ptrEffA->procStats.timeProcess > ptrEffB->procStats.timeProcess;
+			return ptrEffA->procStats.timeTrackProcessPlugins > ptrEffB->procStats.timeTrackProcessPlugins;
 		});
 	}
 	void layout() {

@@ -297,6 +297,9 @@ public:
 	plugindatabase_t& getPluginDatabase() {
 		return plugindb;
 	}
+	PlaybackThread* getPlayThread() {
+		return &playThread;
+	}
 	static DawInstance* get();
 
 	void postInit();
@@ -516,7 +519,7 @@ public:
 	}
 	static PlaybackThread* getPlayThread() {
 		MainCtrl* ctrl = MainCtrl::get();
-		return ctrl ? &ctrl->daw.playThread : nullptr;
+		return ctrl ? ctrl->daw.getPlayThread() : nullptr;
 	}
 	static guictr_plugins* getPluginCtr();
 	static guictr_tracks* getGuiTrackCtr();

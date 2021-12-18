@@ -176,7 +176,7 @@ public:
 		if (parent)
 			parent->buttonClicked(this);
 	}
-	void render(NVGcontext* vg);
+	void render(NVGcontext* vg) override;
 	guictxtmenu_base* getTooltip(AppCtrl* appctrl);
 	int32_t getTime();
 };
@@ -184,13 +184,15 @@ public:
 class guibutton_audioengine : public guibuttonstate {
 	int32_t lastTickBar = 0;
 	host_stats_t stats;
+	float cpuUsage = 0.0f;
 public:
 	guibutton_audioengine() : guibuttonstate() {
 	}
 	bool getState() const override {
 		return vsthost::getInstance()->isStreaming();
 	}
-	void render(NVGcontext* vg);
+	void render(NVGcontext* vg) override;
+	void prerender(NVGcontext* vg) override;
 	virtual void onTick(AppCtrl* appctrl) {
 
 	}

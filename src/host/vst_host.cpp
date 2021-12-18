@@ -43,6 +43,7 @@
 #include "resampler.h"
 #include "threads/workerthread.h"
 #include "threads/childprocessthread.h"
+#include "sse.h"
 
 #include <deque>
 
@@ -74,12 +75,12 @@ bool filterOpCode(int opcode) {
 //		return false;
 	return true;
 }
-void cbPrintf(vstplugin* plugin, const char *fmt, int index, int opcode, int value);
-void cbPrintf(vstplugin* plugin, const char *fmt, int index, int opcode, int value) {
+void cbPrintf(vstplugin* plugin, const char *fmt, int index, int opcode, int value, float opt = 0);
+void cbPrintf(vstplugin* plugin, const char *fmt, int index, int opcode, int value, float opt) {
 	if (filterOpCode(opcode)) {
 		char buf[MAX_LEN_MY_DBF];
-		snprintf(buf, MAX_LEN_MY_DBF - 1, fmt, index, opcode, value);
-		my_printf("%s %s", !plugin?"UNKNOWN":StringAsCStr(plugin->sName), buf);
+		snprintf(buf, MAX_LEN_MY_DBF - 1, fmt, index, opcode, value, opt);
+		log_printf("%s %s", !plugin?"UNKNOWN":StringAsCStr(plugin->sName), buf);
 	}
 }
 #else
@@ -275,37 +276,132 @@ vst_internal_hostslot g_hostslots[4];
 }
 
 VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* effect, VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt) {
+	/**
+	 * TODO: validate that the plugin is currently either being loaded or connected to an audiostage that is valid.
+	 * Currently plugins have an extended lifetime after removal inside the edithistory.
+	 *
+	 * TODO: validate that we get called from a known thread.
+	 * This could be one of: the playthread, an audio workerthread, the UI thread
+	 * If the thread is not known (plugin created it) we can't guarantee
+	 * proper lockfree synchronization. So, depending on the opcode the call gets ignored if
+	 * it is the wrong thread.
+	 *
+	 * audioMasterSizeWindow: Ignored if not from the UI thread (Should be rare from non UI-threads)
+	 * audioMasterUpdateDisplay: Already handled by the onTick handler (20ms interval)
+	 * audioMasterUpdateDisplay: Update the parameter list and program name
+	 *
+	 * Any outgoing call into 3rd party or windows code might end up here again in a reentrant scenario.
+	 * i.e. audioMasterSizeWindow calls updateWindowSize. That could trigger a message box that spawns
+	 * a win32 event-pump, causing a render of the plugin UI. Before rendering, the plugin dispatches
+	 * a audioMasterGetTime call and we end up here again.
+	 *
+	 * Maybe its best to move all outgoing calls out of this callback and have them fired asynchronously
+	 * from the UI thread.
+	 *
+	 * This might not solve all cases of reentrant calls, so there is still value in counting and detecting it
+	 * to avoid mysterious crashes in infinite loop scenarios.
+	 * Entrance counting has to be done per plugin and thread-id.
+	 * In the common case plugin developers are aware of this and take care of it.
+	 * So this must be done in a lock free manner to avoid unnecessary locks and synchronization to fix a
+	 * really rare problem.
+	 *
+	 *
+	 * TODO: Detect reentrance and guard against it.
+	 * This approach will not work:
+	 *
+	 * class host {
+	 * map<plugin, list_of_thread_ids_in_cb> cbEntrants;
+	 * }
+	 * if (cbEntrants[pluginId].contains(threadid)) // adding/removing from map requires lock
+	 *    return; // reentrant
+     * else //add to map, remove on function exit
+	 *
+	 *
+	 *
+	 * The following approach will work if:
+	 * The number of allowed threads to enter the callback is UI + playback + n audio workers (1+1+32 max)
+	 * _AND_ the method to retrieve a self-assigned thread idx does not use a map + mutex but thread local storage.
+	 * where each thread I start process plugins on gets a number (1-34) assigned
+	 *
+	 * #def MAX_NUM_OF_THREADS 35
+	 * class plugin {
+	 *  int threadArr[MAX_NUM_OF_THREADS];
+	 * }
+	 * threadId = get_my_thread_idx() //get thread IDX from TLS.
+	 *
+	 * if (threadId == 0)
+	 *   callFromUnknownThread = true; // be worried, its a thread the plugin fired up, do limited stuff!
+	 * else
+	 * if (threadId > 0) {
+	 *   if (plugin->threadArr[threadId] > 0)
+	 *     return;//reentrant
+	 *   plugin->threadArr[threadId]++
+	 * }
+	 *
+	 *
+	 * on function leave (RAII helper): plugin->threadArr[threadId]--
+	 *
+	 */
 	dbgassert(host);
 	if (!host)
 		return 0;
-	vstplugin* plugin = host->getPlugin(effect);
 
+	vstplugin* plugin = host->getPlugin(effect);
+	bool throttleLog = false;
+	bool validProcessingState = false;
+	if (plugin) {
+		//TODO: getOpCodeStats is not a threadsafe implementation
+		vst_opcode_stats_t& opcodeStats = plugin->getOpCodeStats(true, opcode);
+		opcodeStats.numDispatches++;
+		int32_t tmMillis = getTimeMillis()&0xFFFFFFFF;
+		int32_t tmSince = tmMillis-opcodeStats.tmMillis;
+		if (tmSince < 2000) {
+			throttleLog = opcodeStats.numDispatches > 20;
+		} else {
+			opcodeStats.tmMillis = tmMillis;
+		}
+
+		//TODO: rewrite this hack
+		// this is also not thread safe, accessing project track structure
+		if (plugin->bIsSetup && plugin->trackImpl) {
+			// get this from the host instead of the tls
+			auto projCtrl = project_controller_t::get();
+			if (projCtrl && projCtrl->getTracks().resolveTrack(plugin->trackImpl->toRef())) {
+				validProcessingState = true;
+			}
+		}
+		if (!validProcessingState) {
+			log_printf("%s opCode %d in !validProcessingState\\n", StringAsCStr(plugin->sName), opcode);
+		}
+	}
 	switch (opcode)
 	{
 	case audioMasterAutomate:
-		cbPrintf(plugin, "audioMasterAutomate %d %d %d\n", index, opcode, value);
+		if (!throttleLog) cbPrintf(plugin, "audioMasterAutomate %d %d %d %f\n", index, opcode, value, opt);
 		if (plugin) {
 			auto* effParam = plugin->getEffectParam(index);
 			if (!effParam) {
-				log_printf("%s audioMasterAutomate unknown param index %d\n", StringAsCStr(plugin->getName()), index);
+				log_printf("%s audioMasterAutomate unknown param index %d %d %f\n", StringAsCStr(plugin->getName()), index, value, opt);
 			} else {
+
+				// call to deactivateAutomation is not thread safe,
 				plugin->deactivateAutomation(effParam->idx);
 				plugin->recvPluginEditParamUpdate(effParam->internalIdx);
 			}
 		}
 		return 1;
 	case audioMasterVersion:
-		cbPrintf(plugin, "audioMasterVersion %d %d %d\n", index, opcode, value);
+		if (!throttleLog) cbPrintf(plugin, "audioMasterVersion %d %d %d\n", index, opcode, value);
 		return 2400L; //VST 2.4
 	case audioMasterCurrentId:
-		cbPrintf(plugin, "audioMasterCurrentId %d %d %d\n", index, opcode, value);
+		if (!throttleLog) cbPrintf(plugin, "audioMasterCurrentId %d %d %d\n", index, opcode, value);
 		//return OnGetCurrentUniqueId(nEffect);
 		if (plugin) {
 			return (VstIntPtr)plugin->getLocalCurrentUniqueId();
 		}
 		return impl->vstShellCurrentUniqueId;
 	case audioMasterIdle:
-		cbPrintf(plugin, "audioMasterIdle %d %d %d\n", index, opcode, value);
+		if (!throttleLog) cbPrintf(plugin, "audioMasterIdle %d %d %d\n", index, opcode, value);
 		//return OnIdle(nEffect);
 		return 0L;
 	case audioMasterGetTime:
@@ -316,32 +412,32 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
 		//		return (VstIntPtr)plugin->getLocalTimeInfoPtr();
 		//	}
 		//}
-//		cbPrintf(plugin, "audioMasterGetTime %d %d %d\n", index, opcode, value);
+//		if (!throttleLog) cbPrintf(plugin, "audioMasterGetTime %d %d %d\n", index, opcode, value);
 		if (plugin) {
 			return (VstIntPtr)plugin->getLocalTimeInfoPtr();
 		}
 		return (VstIntPtr)host->getTimeInfo();
 		
 	case audioMasterProcessEvents:
-		cbPrintf(plugin, "audioMasterProcessEvents %d %d %d\n", index, opcode, value);
+		if (!throttleLog) cbPrintf(plugin, "audioMasterProcessEvents %d %d %d\n", index, opcode, value);
 		return 0;
 	case audioMasterIOChanged:
-		cbPrintf(plugin, "audioMasterIOChanged %d %d %d\n", index, opcode, value);
+		if (!throttleLog) cbPrintf(plugin, "audioMasterIOChanged %d %d %d\n", index, opcode, value);
 		return 0;
 	case audioMasterNeedIdle:
-		cbPrintf(plugin, "audioMasterNeedIdle %d %d %d\n", index, opcode, value);
+		if (!throttleLog) cbPrintf(plugin, "audioMasterNeedIdle %d %d %d\n", index, opcode, value);
 		if (plugin) {
 			plugin->bWantsEffIdle = true;
 		}
 		return 0;
 	case audioMasterSizeWindow:
-		cbPrintf(plugin, "audioMasterSizeWindow %d %d %d\n", index, opcode, value);
+		if (!throttleLog) cbPrintf(plugin, "audioMasterSizeWindow %d %d %d\n", index, opcode, value);
 		if (plugin) {
 			plugin->updateWindowSize();
 		}
 		return 1;
 	case audioMasterGetSampleRate:
-		cbPrintf(plugin, "audioMasterGetSampleRate %d %d %d\n", index, opcode, value);
+		if (!throttleLog) cbPrintf(plugin, "audioMasterGetSampleRate %d %d %d\n", index, opcode, value);
 		if (plugin) {
 			return (long)plugin->format.sampleRate;
 		}
@@ -350,7 +446,7 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
 		}
 		return 0;
 	case audioMasterGetBlockSize:
-		cbPrintf(plugin, "audioMasterGetBlockSize %d %d %d\n", index, opcode, value);
+		if (!throttleLog) cbPrintf(plugin, "audioMasterGetBlockSize %d %d %d\n", index, opcode, value);
 		if (plugin) {
 			return (long)plugin->format.blockSize;
 		}
@@ -359,96 +455,96 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
 		}
 		return 0;
 	case audioMasterGetInputLatency:
-//		cbPrintf(plugin, "audioMasterGetInputLatency %d %d %d\n", index, opcode, value);
+//		if (!throttleLog) cbPrintf(plugin, "audioMasterGetInputLatency %d %d %d\n", index, opcode, value);
 		//TODO: find out if other hosts provide this info
 		// IL Harmor requests this info
 		return 0;
 	case audioMasterGetOutputLatency:
-//		cbPrintf(plugin, "audioMasterGetOutputLatency %d %d %d\n", index, opcode, value);
+//		if (!throttleLog) cbPrintf(plugin, "audioMasterGetOutputLatency %d %d %d\n", index, opcode, value);
 		//TODO: find out if other hosts provide this info
 		// IL Harmor requests this info
 		return 0;
 	case audioMasterGetCurrentProcessLevel:
-//		cbPrintf(plugin, "audioMasterGetCurrentProcessLevel %d %d %d\n", index, opcode, value);
+//		if (!throttleLog) cbPrintf(plugin, "audioMasterGetCurrentProcessLevel %d %d %d\n", index, opcode, value);
 		return VstProcessLevels::kVstProcessLevelRealtime;
 	case audioMasterGetAutomationState:
-		cbPrintf(plugin, "audioMasterGetAutomationState %d %d %d\n", index, opcode, value);
+		if (!throttleLog) cbPrintf(plugin, "audioMasterGetAutomationState %d %d %d\n", index, opcode, value);
 		return kVstAutomationReadWrite;
 	case audioMasterOfflineStart:
-		cbPrintf(plugin, "audioMasterOfflineStart %d %d %d\n", index, opcode, value);
+		if (!throttleLog) cbPrintf(plugin, "audioMasterOfflineStart %d %d %d\n", index, opcode, value);
 		return 0;
 	case audioMasterOfflineRead:
-		cbPrintf(plugin, "audioMasterOfflineRead %d %d %d\n", index, opcode, value);
+		if (!throttleLog) cbPrintf(plugin, "audioMasterOfflineRead %d %d %d\n", index, opcode, value);
 		return 0;
 	case audioMasterOfflineWrite:
-		cbPrintf(plugin, "audioMasterOfflineWrite %d %d %d\n", index, opcode, value);
+		if (!throttleLog) cbPrintf(plugin, "audioMasterOfflineWrite %d %d %d\n", index, opcode, value);
 		return 0;
 	case audioMasterOfflineGetCurrentPass:
-		cbPrintf(plugin, "audioMasterOfflineGetCurrentPass %d %d %d\n", index, opcode, value);
+		if (!throttleLog) cbPrintf(plugin, "audioMasterOfflineGetCurrentPass %d %d %d\n", index, opcode, value);
 		return 0;
 	case audioMasterOfflineGetCurrentMetaPass:
-		cbPrintf(plugin, "audioMasterOfflineGetCurrentMetaPass %d %d %d\n", index, opcode, value);
+		if (!throttleLog) cbPrintf(plugin, "audioMasterOfflineGetCurrentMetaPass %d %d %d\n", index, opcode, value);
 		return 0;
 	case audioMasterGetVendorString:
-		cbPrintf(plugin, "audioMasterGetVendorString %d %d %d\n", index, opcode, value);
+		if (!throttleLog) cbPrintf(plugin, "audioMasterGetVendorString %d %d %d\n", index, opcode, value);
 		 strcpy((char *)ptr, "NFMH");
 		return 1L;
 	case audioMasterGetProductString:
-		cbPrintf(plugin, "audioMasterGetProductString %d %d %d\n", index, opcode, value);
+		if (!throttleLog) cbPrintf(plugin, "audioMasterGetProductString %d %d %d\n", index, opcode, value);
 		strcpy((char *)ptr, "DAW");
 		return 1L;
 	case audioMasterGetVendorVersion:
-		cbPrintf(plugin, "audioMasterGetVendorVersion %d %d %d\n", index, opcode, value);
+		if (!throttleLog) cbPrintf(plugin, "audioMasterGetVendorVersion %d %d %d\n", index, opcode, value);
 		return 1L;
 	case audioMasterVendorSpecific:
-		cbPrintf(plugin, "audioMasterVendorSpecific %d %d %d\n", index, opcode, value);
+		if (!throttleLog) cbPrintf(plugin, "audioMasterVendorSpecific %d %d %d\n", index, opcode, value);
 		return 0;
 	case audioMasterCanDo:
-
-#ifdef DBG_PRINT_CALLBACKS
-		cbPrintf(plugin, "audioMasterCanDo %d %d %d\n", index, opcode, value);
-		log_printf("audioMasterCanDo %s\n", (const char*)ptr);
-#endif
+		if (!throttleLog) {
+			log_printf("%s audioMasterCanDo %s\n", !plugin?"UNKNOWN":StringAsCStr(plugin->sName), (const char*)ptr);
+		}
 		return host->canDo((const char*)ptr);
 	case audioMasterGetLanguage:
-		cbPrintf(plugin, "audioMasterGetLanguage %d %d %d\n", index, opcode, value);
+		if (!throttleLog) cbPrintf(plugin, "audioMasterGetLanguage %d %d %d\n", index, opcode, value);
 		return 0;
 	case audioMasterGetDirectory:
 		if (plugin == NULL) {
-			cbPrintf(plugin, "audioMasterGetDirectory plugin == NULL %d %d %d\n", index, opcode, value);
+			if (!throttleLog) cbPrintf(plugin, "audioMasterGetDirectory plugin == NULL %d %d %d\n", index, opcode, value);
 			return 0;
 		}
-		cbPrintf(plugin, "audioMasterGetDirectory %d %d %d\n", index, opcode, value);
+		if (!throttleLog) cbPrintf(plugin, "audioMasterGetDirectory %d %d %d\n", index, opcode, value);
 		return (VstIntPtr)plugin->getDir();
 	case audioMasterUpdateDisplay:
 		if (plugin == NULL) {
-			cbPrintf(plugin, "audioMasterUpdateDisplay plugin == NULL %d %d %d\n", index, opcode, value);
+			if (!throttleLog) cbPrintf(plugin, "audioMasterUpdateDisplay plugin == NULL %d %d %d\n", index, opcode, value);
 			return 0;
 		}
-		cbPrintf(plugin, "audioMasterUpdateDisplay %d %d %d\n", index, opcode, value);
-
-		return (VstIntPtr)plugin->updateWindow();
+		if (!throttleLog) cbPrintf(plugin, "audioMasterUpdateDisplay %d %d %d\n", index, opcode, value);
+		if (validProcessingState) {
+			//TODO: flag plugin for parameter and program name update. To be executed on the UI thread
+		}
+		return true;
 #ifdef VST_2_1_EXTENSIONS
 	case audioMasterBeginEdit:
-		cbPrintf(plugin, "audioMasterBeginEdit %d %d %d\n", index, opcode, value);
+		if (!throttleLog) cbPrintf(plugin, "audioMasterBeginEdit %d %d %d %f\n", index, opcode, value, opt);
 		return 1;
 	case audioMasterEndEdit:
-		cbPrintf(plugin, "audioMasterEndEdit %d %d %d\n", index, opcode, value);
+		if (!throttleLog) cbPrintf(plugin, "audioMasterEndEdit %d %d %d %f\n", index, opcode, value, opt);
 		return 1;
 	case audioMasterOpenFileSelector:
-		cbPrintf(plugin, "audioMasterOpenFileSelector %d %d %d\n", index, opcode, value);
+		if (!throttleLog) cbPrintf(plugin, "audioMasterOpenFileSelector %d %d %d\n", index, opcode, value);
 		return 0;
 #endif
 #ifdef VST_2_2_EXTENSIONS
 	case audioMasterCloseFileSelector:
-		cbPrintf(plugin, "audioMasterCloseFileSelector %d %d %d\n", index, opcode, value);
+		if (!throttleLog) cbPrintf(plugin, "audioMasterCloseFileSelector %d %d %d\n", index, opcode, value);
 		return 0;
 #endif
 	case audioMasterWantMidi:
-		cbPrintf(plugin, "depr audioMasterWantMidi %d %d %d\n", index, opcode, value);
+		if (!throttleLog) cbPrintf(plugin, "depr audioMasterWantMidi %d %d %d\n", index, opcode, value);
 		return 0;
 	default:
-		cbPrintf(plugin, "unhandled %d %d %d\n", index, opcode, value);
+		if (!throttleLog) cbPrintf(plugin, "unhandled %d %d %d %f\n", index, opcode, value, opt);
 
 	}
 	return 0L;
@@ -1177,14 +1273,21 @@ int32_t vsthost::processRender(project_controller_t* ctrl, int32_t sample, doubl
 	dbgassert(ctrl);
 	dbgassert(sampleFormat.blockSize > 0);
 	dbgassert(sampleFormat.sampleRate > 0);
+	const bool enableProfiling = (dbgStep%333) != 0;
+
 	project_t* const project = ctrl->getProject();
 
+	auto timeNow_i64 = getTimeHPint64();
+	if (0 != stats.lastInvocationTime_i64 && enableProfiling) {
+		auto timeDelta = timeNow_i64 - stats.lastInvocationTime_i64;
+		stats.timings["Block.timeDelta"] = timeDelta;
+	}
+	stats.lastInvocationTime_i64 = timeNow_i64;
 
 
-	timer2.reset();
+	timerBlock.reset();
 	const sampleformat_t& sampleFormat = this->sampleFormat;
 	const audiostream_properties_t audioProp = getAudioStreamProperties();
-	const bool recordStats = (dbgStep%333) == 0;
 	const bool canProcess = true;
 
 	int32_t nBlocksProcessed = 0;
@@ -1203,7 +1306,9 @@ int32_t vsthost::processRender(project_controller_t* ctrl, int32_t sample, doubl
 	 * process in reverse order: first children, then parents
 	 */
 
-	timer3.reset();
+	if (enableProfiling) {
+		timerProfile.reset();
+	}
 
 	//TODO: move outside
 	/** turn tree structure into linear pointer array with parents followed by their children **/
@@ -1212,13 +1317,12 @@ int32_t vsthost::processRender(project_controller_t* ctrl, int32_t sample, doubl
 		log_printf("Failed building track graph\n", 0);
 	}
 
-	if (recordStats)
-		stats.timings["graph.build"] = timer3.getTime();
+	if (enableProfiling) {
+		stats.timings["Block.GraphBuild"] = timerProfile.getTimeReset();
+	}
 
 	this->lastTrackGraph = processingGraph->trackGraph;
 	this->lastProcessingList= processingGraph;
-	int64_t timeRouting = 0;
-	int64_t timeProcessing = 0;
 
 
 	int32_t samplePosProcess = sample;
@@ -1227,11 +1331,16 @@ int32_t vsthost::processRender(project_controller_t* ctrl, int32_t sample, doubl
 	AudioBlock blockExtOut(32, sampleFormat.blockSize);
 	dsp_util::fillBlock(blockExtOut, 0.0f);
 
-	timer3.reset();
+	if (enableProfiling) {
+		timerProfile.reset();
+	}
+
 	nBlocksProcessed += processBlock(ctrl, audioProp, processingGraph.get(), &blockExtIn, &blockExtOut, samplePosProcess, tickPosProcess, state, false, false);
-	timeProcessing += timer3.getTime();
-	timer3.reset();
 	dbgassert(nBlocksProcessed >= 1);
+
+	if (enableProfiling) {
+		stats.timings["Block.Tracks"] = timerProfile.getTimeReset();
+	}
 
 	for (auto itAudioStage = processingGraph->nodesFlatOrdered.begin(); itAudioStage != processingGraph->nodesFlatOrdered.end(); itAudioStage++) {
 		const DAW::processing_track_node_t* ptrProcessingNode = *itAudioStage;
@@ -1263,28 +1372,23 @@ int32_t vsthost::processRender(project_controller_t* ctrl, int32_t sample, doubl
 		}
 	}
 	// blockExtOut now holds master channels outputs
-//	resamplerOutput->push(blockExtOut);
 
-	timeRouting += timer3.getTime();
-
-
-	if (recordStats) {
-		stats.timings["tracks.process"] = timeProcessing;
-		stats.timings["tracks.route"] = timeRouting;
+	if (enableProfiling) {
+		stats.timings["Block.TrackOutputRouting"] = timerProfile.getTimeReset();
 	}
 
-	if (recordStats) {
+	if (nBlocksProcessed && enableProfiling) {
 		dbgassert(nBlocksProcessed >= 1);
-		int64_t blockTimeTaken = timer2.getTime() / nBlocksProcessed;
-		auto curTimeProcess = stats.timings["blocktime"];
+		int64_t blockTimeTaken = timerBlock.getTime() / nBlocksProcessed;
+		auto curTimeProcess = stats.timeBlock;
 		curTimeProcess -= curTimeProcess/NUM_BINS_STATS;
 		curTimeProcess += blockTimeTaken/NUM_BINS_STATS;
-		stats.timings["blocktime"] = curTimeProcess;
-		stats.timings["blocktimeRaw"] = blockTimeTaken;
+		stats.timeBlock = curTimeProcess;
+		stats.timeBlockRaw = blockTimeTaken;
 	}
 
 #if 1
-	timer3.reset();
+	if (enableProfiling) timerProfile.reset();
 	/* Update all track meters */
 	for (track_t* track : project->trackList) {
 		track_impl_t* trAudio = track->audio;
@@ -1295,20 +1399,23 @@ int32_t vsthost::processRender(project_controller_t* ctrl, int32_t sample, doubl
 		trAudio->meter.update(&trAudio->output, fGainTrack);
 		trAudio->meterInput.update(&trAudio->input, 1.0f);
 	}
-	if (recordStats)
-		stats.timings["meters.update"] = timer3.getTime();
+	if (enableProfiling) {
+		stats.timings["Block.UpdateMeters"] = timerProfile.getTimeReset();
+	}
 #endif
-	dbgStep++;
 #ifndef NDEBUG
 	lastTickEndPos = posDouble + audioProp.ticksPerBlock*nBlocksProcessed;
 #endif
 #if 1
-	double since = timer.getTimeDoubleReset();
+	double tmSinceStageTick = timerAudioTick.getTimeDoubleReset();
 	for (track_t* tr : project->trackList) {
 		track_impl_t* trAudio = tr->audio;
 		if (trAudio) {
-			trAudio->onTick(since);
+			trAudio->onTick(tmSinceStageTick);
 		}
+	}
+	if (enableProfiling) {
+		stats.timings["Block.Tracks.Tick"] = timerProfile.getTimeReset();
 	}
 #endif
 	if (!bypassSampleConversion) {
@@ -1320,28 +1427,33 @@ int32_t vsthost::processRender(project_controller_t* ctrl, int32_t sample, doubl
 				bytesCopied += trAudio->audioOutput.convertToSamples(this);
 			}
 		}
-		int64_t timeConvert = timerConvert.getTime();
-		stats.timings["convert"] = timeConvert;
-		stats.timings["convertBytes"] = bytesCopied;
-	} else {
-		stats.timings["convert"] = 0;
-		stats.timings["convertBytes"] = 0;
+		if (enableProfiling) {
+			stats.timings["Block.BufferedAudioConversion"] = timerProfile.getTimeReset();
+			stats.timings["Block.BufferedAudioBytesCopied"] = bytesCopied;
+		}
 	}
-
+	dbgStep++;
 
 	if (nBlocksProcessed) {
-
 		stats.blocksProcessed += nBlocksProcessed;
 		stats.samplesProcessed += nBlocksProcessed*sampleFormat.blockSize;
+
 		int32_t tickQuarterStart = static_cast<int32_t>(math::floor((posDouble) / (float) TICKS_QUARTER));
-		int32_t tickQuarterEnd = static_cast<int32_t>(math::floor((posDouble+audioProp.ticksPerBlock) / (float) TICKS_QUARTER));
+		int32_t tickQuarterEnd = static_cast<int32_t>(math::floor((posDouble + audioProp.ticksPerBlock) / (float) TICKS_QUARTER));
 		if (tickQuarterEnd > tickQuarterStart) {
 			stats.tickBar += tickQuarterStart - tickQuarterEnd;
 		}
 
-		stats.timings["microSecsPerBlock"] = audioProp.microSecsPerBlock;
-		stats.usage = stats.timings["blocktime"] / (double) audioProp.microSecsPerBlock;
-		stats.usageRaw = stats.timings["blocktimeRaw"] / (double) audioProp.microSecsPerBlock;
+		if (enableProfiling) {
+			stats.timings["Constants.microSecsPerBlock"] = audioProp.microSecsPerBlock;
+			stats.timings["Constants.ticksPerBlock"] = audioProp.ticksPerBlock;
+			stats.timings["Constants.blockSizeResampled"] = audioProp.blockSizeResampled;
+			stats.timings["Constants.numBlocksExternal"] = audioProp.numBlocksExternal;
+			stats.timings["Constants.numBlocksInternal"] = audioProp.numBlocksInternal;
+			stats.usage = stats.timeBlock / (double) audioProp.microSecsPerBlock;
+			stats.usageRaw = stats.timeBlockRaw / (double) audioProp.microSecsPerBlock;
+			this->cpuUsagePercent = stats.usage;
+		}
 	}
 	return nBlocksProcessed;
 }
@@ -1349,18 +1461,19 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 	dbgassert(ctrl);
 	dbgassert(sampleFormat.blockSize > 0);
 	dbgassert(sampleFormat.sampleRate > 0);
+	const bool enableProfiling = (dbgStep%333) != 0;
+
 	project_t* project = ctrl->getProject();
 
-	stats.lastInvocationTime_i64 = 0;
 	auto timeNow_i64 = getTimeHPint64();
-	if (0 != stats.lastInvocationTime_i64) {
+	if (0 != stats.lastInvocationTime_i64 && enableProfiling) {
 		auto timeDelta = timeNow_i64 - stats.lastInvocationTime_i64;
-		stats.timings["timeDelta_usec"] = static_cast<int32_t>(timeDelta);
+		stats.timings["Block.timeDelta"] = timeDelta;
 	}
 	stats.lastInvocationTime_i64 = timeNow_i64;
 
 
-	timer2.reset();
+	timerBlock.reset();
 	const sampleformat_t& sampleFormat = this->sampleFormat;
 	const audiostream_properties_t audioProp = getAudioStreamProperties();
 
@@ -1380,15 +1493,14 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 	stats.resamplerInNumSamples = resamplerInput->getNumSamplesOutputBuffer();
 	stats.resamplerOutNumBlocks = resamplerOutput->numBlocksToPop();
 	stats.resamplerOutNumSamples = resamplerOutput->getNumSamplesOutputBuffer();
-	int32_t dbg = dbgStep%333;
-	int32_t nBlocksProcessed = 0;
-	bool canProcess = audioHost && queueSizeOutput < 8 && queueSizeInput > 2;
 
-	timer3.reset();
+
 	while (queueSizeInput) {
 		AudioBuffer* ptrExternalInputs = nullptr;
 		if (stream->try_dequeueInput(ptrExternalInputs)) {
+			if (enableProfiling) timerProfile.reset();
 			resamplerInput->push(*ptrExternalInputs->output);
+			if (enableProfiling) stats.timings["Block.ResampleInput"] = timerProfile.getTime();
 //			if (queueSizeOutput < 4 && resamplerInput->numBlocksToPop() <= 2) {
 ////				log_printf("enqueue fake input to get ahead\n", 0);
 ////				resamplerInput->push(*ptrExternalInputs->output);
@@ -1401,25 +1513,27 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 		queueSizeInput--;
 	}
 
-	if (dbg != 0)
-		stats.timings["inputs.resample"] = timer3.getTime();
 
 	/*
 	 * Start processing when the output ring buffer is less than half filled.
 	 * We also have to wait for the input resampler to have enough data to start processing.
 	 */
-	canProcess = audioHost && queueSizeOutput < RING_BUF_SIZE / 2 && resamplerInput->numBlocksToPop() >= audioProp.numBlocksInternal;
+	const bool canProcess = audioHost && queueSizeOutput < RING_BUF_SIZE / 2 && resamplerInput->numBlocksToPop() >= audioProp.numBlocksInternal;
 
-	if (dbg != 0) {
-		timer3.reset();
+	if (enableProfiling) {
+		timerProfile.reset();
 		dbgassert(validateIds());
-		stats.timings["inputs.validate"] = timer3.getTime();
+		stats.timings["Block.ValidateIds"] = timerProfile.getTimeReset();
 	}
+
+	int32_t nBlocksProcessed = 0;
+
 	if (canProcess) {
 		updateTime(timeinfo, sample, posDouble, state);
 		processMidiRealtimeInput(ctrl, posDouble, state);
-
-
+		if (enableProfiling) {
+			stats.timings["Block.MidiRealtimeInput"] = timerProfile.getTime();
+		}
 
 		/*
 		 * Process audio/midi tracks
@@ -1429,19 +1543,23 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 		 * process in reverse order: first children, then parents
 		 */
 
-		timer3.reset();
+		if (enableProfiling) {
+			timerProfile.reset();
+		}
 		/** turn tree structure into linear pointer array with parents followed by their children **/
 		std::shared_ptr<DAW::processing_graph_t> processingGraph;
 		if (!DAW::buildProcessingGraph(this, project, tracksFlatAll, processingGraph)) {
 			log_printf("Failed building track graph\n", 0);
 		}
-		if (dbg != 0)
-		stats.timings["graph.build"] = timer3.getTime();
+		if (enableProfiling) {
+			stats.timings["Block.GraphBuild"] = timerProfile.getTimeReset();
+		}
 
 		this->lastTrackGraph = processingGraph->trackGraph;
 		this->lastProcessingList= processingGraph;
 		int64_t timeRouting = 0;
 		int64_t timeProcessing = 0;
+		int64_t timeResampleOutput = 0;
 
 
 		for (uint32_t i = 0; i < audioProp.numBlocksInternal; i++) {
@@ -1453,10 +1571,14 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			dbgassert(post == pre-1);
 			AudioBlock blockExtOut(32, sampleFormat.blockSize);
 			dsp_util::fillBlock(blockExtOut, 0.0f);
-			timer3.reset();
+			if (enableProfiling) {
+				timerProfile.reset();
+			}
 			nBlocksProcessed += processBlock(ctrl, audioProp, processingGraph.get(), &block, &blockExtOut, samplePosProcess, tickPosProcess, state, inLoop, isLoopAround);
-			timeProcessing += timer3.getTime();
-			timer3.reset();
+
+			if (enableProfiling) {
+				timeProcessing += timerProfile.getTimeReset();
+			}
 			for (auto itAudioStage = processingGraph->nodesFlatOrdered.begin(); itAudioStage != processingGraph->nodesFlatOrdered.end(); itAudioStage++) {
 				const DAW::processing_track_node_t* ptrProcessingNode = *itAudioStage;
 				const DAW::processing_track_node_t& trackNode = *ptrProcessingNode;
@@ -1486,27 +1608,29 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 					}
 				}
 			}
+			if (enableProfiling) {
+				timeRouting += timerProfile.getTimeReset();
+			}
 			resamplerOutput->push(blockExtOut);
-
-			timeRouting += timer3.getTime();
-
+			if (enableProfiling) {
+				timeResampleOutput += timerProfile.getTimeReset();
+			}
 		}
-		if (dbg != 0) {
-			stats.timings["tracks.process"] = timeProcessing/audioProp.numBlocksInternal;
-			stats.timings["tracks.route"] = timeRouting/audioProp.numBlocksInternal;
+		if (enableProfiling) {
+			stats.timings["Block.Tracks"] = timeProcessing/audioProp.numBlocksInternal;
+			stats.timings["Block.TrackOutputRouting"] = timeRouting/audioProp.numBlocksInternal;
+			stats.timings["Block.ResampleOutput"] = timeResampleOutput/audioProp.numBlocksInternal;
 		}
 	}
 
 
-	if (nBlocksProcessed) {
-		if (dbg != 0) {
-			int64_t blockTimeTaken = timer2.getTime() / nBlocksProcessed;
-			auto curTimeProcess = stats.timings["blocktime"];
-			curTimeProcess -= curTimeProcess/NUM_BINS_STATS;
-			curTimeProcess += blockTimeTaken/NUM_BINS_STATS;
-			stats.timings["blocktime"] = curTimeProcess;
-			stats.timings["blocktimeRaw"] = blockTimeTaken;
-		}
+	if (nBlocksProcessed && enableProfiling) {
+		int64_t blockTimeTaken = timerBlock.getTime() / nBlocksProcessed;
+		auto curTimeProcess = stats.timeBlock;
+		curTimeProcess -= curTimeProcess/NUM_BINS_STATS;
+		curTimeProcess += blockTimeTaken/NUM_BINS_STATS;
+		stats.timeBlock = curTimeProcess;
+		stats.timeBlockRaw = blockTimeTaken;
 	}
 
 	/*
@@ -1516,21 +1640,27 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 	 * to achieve minimal input-to-output latency for live/recording/monitoring scenarios
 	 */
 
+	if (enableProfiling) timerProfile.reset();
 	int32_t nResampledOutputBlocks = resamplerOutput->numBlocksToPop();
 	if (nResampledOutputBlocks > 0 && stream->getOutputQueueSize() < RING_BUF_SIZE*2/3) {
-		timer3.reset();
 		int32_t& writePos = ringbuffer.writePos;
 		//TODO: this is incorrect, the resampler should keep track of sample/tick position, but right now these fields are not read on output side
 		double blockPosSample = sample;
 		double blockPosTick = posDouble;
+		int64_t time0 = 0;
+		int64_t time1 = 0;
+		int64_t time2 = 0;
 		while (nResampledOutputBlocks > 0 && stream->getOutputQueueSize() < RING_BUF_SIZE*2/3) {
+			if (enableProfiling) timerBlock.reset();
 			AudioBlock block = resamplerOutput->pop();
+			if (enableProfiling) time0 += timerBlock.getTimeReset();
 			AudioBuffer** buffers = ringbuffer.buffers;
 			AudioBuffer* const ptrExternalOutputs = buffers[writePos%RING_BUF_SIZE];
 			dbgassert(!ptrExternalOutputs->inUse);
 			ptrExternalOutputs->submitted = false;
 			ptrExternalOutputs->output->realloc(sampleFormatExternal.blockSize);
 			ptrExternalOutputs->output->copyFrom(&block);
+			if (enableProfiling) time1 += timerBlock.getTimeReset();
 			ptrExternalOutputs->inUse = true;
 			ptrExternalOutputs->submitted = true;
 			ptrExternalOutputs->blockPosSample = blockPosSample;
@@ -1538,15 +1668,21 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			writePos = (writePos+1) & RING_BUF_MASK;
 			stream->enqueue(ptrExternalOutputs);
 			nResampledOutputBlocks--;
+			if (enableProfiling) time2 += timerBlock.getTimeReset();
 		}
-		if (dbg != 0) {
-			stats.timings["output.enqueue"] = timer3.getTime();
+		if (enableProfiling) {
+			stats.timings["Block.EnqueueOutput.0"] = time0;
+			stats.timings["Block.EnqueueOutput.1"] = time1;
+			stats.timings["Block.EnqueueOutput.2"] = time2;
 		}
+	}
+	if (enableProfiling) {
+		stats.timings["Block.EnqueueOutput"] = timerProfile.getTime();
 	}
 
 
 	if (nBlocksProcessed) {
-		timer3.reset();
+		if (enableProfiling) timerProfile.reset();
 		/* Update all track meters */
 		for (track_t* track : project->trackList) {
 			track_impl_t* trAudio = track->audio;
@@ -1558,36 +1694,37 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			trAudio->meter.update(&trAudio->output, fGainTrack);
 			trAudio->meterInput.update(&trAudio->input, 1.0f);
 		}
-		if (dbg != 0)
-		stats.timings["meters.update"] = timer3.getTime();
-		dbgStep++;
+		if (enableProfiling) {
+			stats.timings["Block.UpdateMeters"] = timerProfile.getTimeReset();
+		}
 #ifndef NDEBUG
 		lastTickEndPos = posDouble + audioProp.ticksPerBlock*nBlocksProcessed;
 #endif
-		double since = timer.getTimeDoubleReset();
+		double tmSinceStageTick = timerAudioTick.getTimeDoubleReset();
 		for (track_t* tr : project->trackList) {
 			track_impl_t* trAudio = tr->audio;
 			if (trAudio) {
-				trAudio->onTick(since);
+				trAudio->onTick(tmSinceStageTick);
 			}
 		}
+		if (enableProfiling) {
+			stats.timings["Block.Tracks.Tick"] = timerProfile.getTimeReset();
+		}
 		if (!bypassSampleConversion) {
-			int32_t bytesCopied = 0;
-			hires_timer_t timerConvert;
+			int64_t bytesCopied = 0;
 			for (track_t* tr : project->trackList) {
 				track_impl_t* trAudio = tr->audio;
 				if (static_cast<bool>(trAudio->flags & audiostageflags_t::CONVERT_OUTPUT)) {
 					bytesCopied += trAudio->audioOutput.convertToSamples(this);
 				}
 			}
-			int64_t timeConvert = timerConvert.getTime();
-			stats.timings["convert"] = timeConvert;
-			stats.timings["convertBytes"] = bytesCopied;
-		} else {
-			stats.timings["convert"] = 0;
-			stats.timings["convertBytes"] = 0;
+			if (enableProfiling) {
+				stats.timings["Block.BufferedAudioConversion"] = timerProfile.getTimeReset();
+				stats.timings["Block.BufferedAudioBytesCopied"] = bytesCopied;
+			}
 		}
 
+		dbgStep++;
 	}
 	if (nBlocksProcessed) {
 
@@ -1598,10 +1735,21 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 		if (tickQuarterEnd > tickQuarterStart) {
 			stats.tickBar += tickQuarterStart - tickQuarterEnd;
 		}
-
-		stats.timings["microSecsPerBlock"] = audioProp.microSecsPerBlock;
-		stats.usage = stats.timings["blocktime"] / (double) audioProp.microSecsPerBlock;
-		stats.usageRaw = stats.timings["blocktimeRaw"] / (double) audioProp.microSecsPerBlock;
+		if (enableProfiling) {
+			// I expect default. In this version FP modes are not modified on any audio thread
+			RegisterStatus_SSE_CS sseStatus = getSSEControlStatusRegister();
+			stats.timings["SSE"] = sseStatus.registerBits;
+			stats.timings["SSE.FlushZeroMode"] = sseStatus.regFlushZeroMode;
+			stats.timings["SSE.DenormalsAreZero"] = sseStatus.regDenormalsAreZero;
+			stats.timings["SSE.RoundingMode"] = sseStatus.regRoundingMode;
+			stats.timings["Constants.microSecsPerBlock"] = audioProp.microSecsPerBlock;
+			stats.timings["Constants.ticksPerBlock"] = audioProp.ticksPerBlock;
+			stats.timings["Constants.blockSizeResampled"] = audioProp.blockSizeResampled;
+			stats.timings["Constants.numBlocksExternal"] = audioProp.numBlocksExternal;
+			stats.timings["Constants.numBlocksInternal"] = audioProp.numBlocksInternal;
+			stats.usage = stats.timeBlock / (double) audioProp.microSecsPerBlock;
+			stats.usageRaw = stats.timeBlockRaw / (double) audioProp.microSecsPerBlock;
+		}
 	}
 	return nBlocksProcessed;
 }
@@ -1665,7 +1813,7 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
 		}
 	}
 
-	track->getStage()->procStats.timeUpdateParameters = tmp.timer.getTime();
+	track->getStage()->procStats.timeTrackApplyAutomation = tmp.timer.getTime();
 	dbgassert(tickBlockEnd-processingPos < ceil(ticksPerBlock+1));
 //			if (dbg == 0) {
 //				log_printf("process track %s\n", StringAsCStr(track->name));
@@ -1705,7 +1853,7 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
 		processMidiProcessedOutput(playbackState, processingPos, tickBlockEnd, trackImpl->noteEventsProcessed);
 	}
 
-	track->getStage()->procStats.timeSendNotes = tmp.timer.getTime();
+	track->getStage()->procStats.timeTrackProcessMidi = tmp.timer.getTime();
 
 	if (DAW::isPlaybackState(playbackState)) {
 		trackImpl->fillAudio(processingPos, tickBlockEnd, loopCutStart, loopCutEnd, prjGlobals.tempo100, sampleLatencyCompensated, trackImpl->input.buf, (int32_t)sampleFormat.blockSize);
@@ -1786,7 +1934,7 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
 			}
 		}
 	}
-	track->getStage()->procStats.timeMixInputs = tmp.timer.getTime();
+	track->getStage()->procStats.timeTrackMixInputs = tmp.timer.getTime();
 #endif
 
 	dbgassert(
@@ -1953,9 +2101,6 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const audiostream_prop
 	}
 
 
-	if (debugLogProcessing) {
-		log_printf("DelayLine.instanceCount %d\n", DelayLine::instanceCount.load());
-	}
 	/**
 	 * Parallelizing processing:
 	 * In Host init:
@@ -2016,6 +2161,7 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const audiostream_prop
 		funcCheckNodeUnprocessed.stagesProcessed.reserve(processingGraph->nodesFlatOrdered.size());
 		bool outOfOrderProcessing = true;
 		auto timeEnd = getTimeHPint64();
+		int limR = 0;
 		for (bool unprocessed=true; unprocessed; unprocessed=outOfOrderProcessing && tasksQueued.size() != processingGraph->nodesFlatOrdered.size()) {
 			for (auto itAudioStage = processingGraph->nodesFlatOrdered.begin(); itAudioStage != processingGraph->nodesFlatOrdered.end(); itAudioStage++) {
 				const DAW::processing_track_node_t* ptrProcessingNode = *itAudioStage;
@@ -2034,7 +2180,7 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const audiostream_prop
 				}
 				/* If all threads are busy wait for a thread to become free
 				 * if node has unprocessed inputs wait for threads. This works as long as we process in order.
-				 * Unimplemented: For processing out of order we skip nodes with unprocessed inputs and loop over nodesFlatOrdered again */
+				 * out of order processing: For processing out of order we skip nodes with unprocessed inputs and loop over nodesFlatOrdered again */
 
 				std::vector<audiostageid_i32> tasksToFinish;
 				if (!outOfOrderProcessing) {
@@ -2043,8 +2189,16 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const audiostream_prop
 				auto timeStart = getTimeHPint64();
 				finishTreadTasks(funcCheckNodeUnprocessed.stagesProcessed, tasksToFinish, false);
 				timeEnd = getTimeHPint64();
-				thread_stats_process_timings_t thrdProcStats = {static_cast<uint32_t>(impl->threadCount), TRACKID_INVALID_I32, timeStart, timeEnd};
-				impl->blockThreadStats.push_back(thrdProcStats);
+
+				/* TODO: A lot of stats entries might be created. Especially when one of the threads goes unresponsive (broken plugin for example)
+				 * A forced sleep of this thread might increase latency too much
+				 * Until I know a smarter way to handle this I will put a hard limit on the length of the stats vector to avoid OOM situations */
+				if (impl->blockThreadStats.size() < 5000) {
+					thread_stats_process_timings_t thrdProcStats = {static_cast<uint32_t>(impl->threadCount), TRACKID_INVALID_I32, timeStart, timeEnd};
+					impl->blockThreadStats.push_back(thrdProcStats);
+				} else {
+					limR++;// for setting debugger breakpoint
+				}
 				bool hasUnprocessedInputs = /*!outOfOrderProcessing || */std::any_of(trackNode.children.cbegin(), trackNode.children.cend(), funcCheckNodeUnprocessed);
 				if (!hasUnprocessedInputs) {
 
@@ -2077,10 +2231,7 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const audiostream_prop
 					}
 					dbgassert(pushd);
 				}
-
-
 			}
-
 		}
 		std::vector<audiostageid_i32> empty;
 		finishTreadTasks(funcCheckNodeUnprocessed.stagesProcessed, empty, true);
@@ -2088,31 +2239,34 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const audiostream_prop
  		dbgassert(allProcessed);
 	}
 	/* Profiling/Timings: Accumulate timings */
-	int64_t timeProcessingArr[4+8] = {0};
+	int64_t timeProcessingArr[5] = {0};
+	track_midiprocess_profiling_t blockMidiStats;
 	for (track_t* track : project->trackList) {
-		timeProcessingArr[0] += track->getStage()->procStats.timeProcessRaw;
-		timeProcessingArr[1] += track->getStage()->procStats.timeMixInputs;
-		timeProcessingArr[2] += track->getStage()->procStats.timeUpdateParameters;
-		timeProcessingArr[3] += track->getStage()->procStats.timeSendNotes;
-		timeProcessingArr[4] += track->getStage()->procMidiStats.tm0InputClips;
-		timeProcessingArr[5] += track->getStage()->procMidiStats.tm1InputRT;
-		timeProcessingArr[6] += track->getStage()->procMidiStats.tm2ProcNotes;
-		timeProcessingArr[7] += track->getStage()->procMidiStats.tm3RevalidateEnds;
-		timeProcessingArr[8] += track->getStage()->procMidiStats.tm4SortEvents;
-		timeProcessingArr[9] += track->getStage()->procMidiStats.tm5ProcArp;
-		timeProcessingArr[10] += track->getStage()->procMidiStats.tm6WriteVstEvents;
-		timeProcessingArr[11] += track->getStage()->procMidiStats.tm7ProcessOutput;
+		auto& procStats = track->getStage()->procStats;
+		auto& procMidiStats = track->getStage()->procMidiStats;
+		timeProcessingArr[0] += procStats.timeTrackProcessPluginsRaw;
+		timeProcessingArr[1] += procStats.timeTrackMixInputs;
+		timeProcessingArr[2] += procStats.timeTrackApplyAutomation;
+		timeProcessingArr[3] += procStats.timeTrackProcessMidi;
+		blockMidiStats.tm0InputClips += procMidiStats.tm0InputClips;
+		blockMidiStats.tm1InputRT += procMidiStats.tm1InputRT;
+		blockMidiStats.tm2ProcNotes += procMidiStats.tm2ProcNotes;
+		blockMidiStats.tm3RevalidateEnds += procMidiStats.tm3RevalidateEnds;
+		blockMidiStats.tm4SortEvents += procMidiStats.tm4SortEvents;
+		blockMidiStats.tm5ProcArp += procMidiStats.tm5ProcArp;
+		blockMidiStats.tm6WriteVstEvents += procMidiStats.tm6WriteVstEvents;
+		blockMidiStats.tm7ProcessOutput += procMidiStats.tm7ProcessOutput;
 	}
-	int64_t timeTotal = timeProcessingArr[0];
-	stats.timings["timeMixInputs"] = timeProcessingArr[1];
-	stats.timings["timeUpdateParameters"] = timeProcessingArr[2];
-	stats.timings["timeSendNotes"] = timeProcessingArr[3];
-	stats.timings["timeGetNotesInRange"] = timeProcessingArr[4];
-	stats.timeProcessRaw = timeTotal;
-	auto curTimeProcess = stats.timeProcess;
-	curTimeProcess -= curTimeProcess / NUM_BINS_STATS;
-	curTimeProcess += timeTotal / NUM_BINS_STATS;
-	stats.timeProcess = curTimeProcess;
+	int64_t timeTotalProcessPluginsRaw = timeProcessingArr[0];
+	stats.timings["Block.Tracks.MixInputs"] = timeProcessingArr[1];
+	stats.timings["Block.Tracks.ApplyAutomation"] = timeProcessingArr[2];
+	stats.timings["Block.Tracks.ProcessMidi"] = timeProcessingArr[3];
+	stats.blockMidiStats = blockMidiStats;
+	stats.timeProcessPluginsRaw = timeTotalProcessPluginsRaw;
+	auto curTimePluginProcess = stats.timeProcessPlugins;
+	curTimePluginProcess -= curTimePluginProcess / NUM_BINS_STATS;
+	curTimePluginProcess += timeTotalProcessPluginsRaw / NUM_BINS_STATS;
+	stats.timeProcessPlugins = curTimePluginProcess;
 	return 1;
 }
 void vsthost::initThreads() {
@@ -2283,60 +2437,55 @@ void vsthost::processAudio(audio_stage_t* stage, AudioBlock* input, AudioBlock* 
         					}
         				}
                     }
-                }
-                else {
-                    log_printf("effect %s has no connected input %s\n", StringAsCStr(effect->getName()));
+                } else {
+                	log_printf("effect %s has no connected input %s\n", StringAsCStr(effect->getName()));
                 }
             }
             timer.reset();
             AudioBlock* blockPostProcess;
             int64_t timePassed = 0;
-            if (effect) {
-                bool isBypass = effect->isBypass();
-                if (isBypass || bypassEffectProcessing) {
-                    samplerate_t delay = effect->getPluginLatency();
-                    if (delay > 0) {
-                        if (!effect->delayLine.get()) {
-                            effect->delayLine.reset(new DelayLine(this->numChannels, sampleFormat.blockSize));
-                        }
-                        AudioBlock* blockOut = effect->blockOutputs;
-                        delayAudio(effect->delayLine.get(), blockIn, blockOut, delay);
-                    }
-                    else {
-                        effect->blockOutputs->copyFrom(blockIn);
-                    }
-                    blockPostProcess = effect->blockOutputs;
-                }
-                else {
-                    effect->process(effect->blockInputs, effect->blockOutputs, tickLatencyCompensated, samplePos, numSamples, state);
-                    blockPostProcess = effect->blockOutputs;
-                }
-                effect->postProcess(blockPostProcess, numSamples, !isBypass);
-                timePassed = timer.getTime();
-                auto& plugStats = effect->procStats;
-                if (plugStats.statsProcStep % STATS_PROCESSING_INTERVAL_STEP == 0) {
-                    plugStats.statsProcSamples[(plugStats.statsWriteOffset + 1) % STATS_PROCESSING_MAX_SAMPLES] = timePassed;
-                    plugStats.statsWriteOffset++;
-                }
-                auto curTimeProcess = plugStats.timeProcess;
-                curTimeProcess -= curTimeProcess / NUM_BINS_STATS;
-                curTimeProcess += timePassed / NUM_BINS_STATS;
-                plugStats.timeProcess = curTimeProcess;
-                plugStats.timeProcessRaw = timePassed;
-            }
-            else {
-                timePassed = timer.getTime();
-            }
-
-            timeTotal += timePassed;
+			if (effect) {
+				bool isBypass = effect->isBypass();
+				if (isBypass || bypassEffectProcessing) {
+					samplerate_t delay = effect->getPluginLatency();
+					if (delay > 0) {
+						if (!effect->delayLine.get()) {
+							effect->delayLine.reset(new DelayLine(this->numChannels, sampleFormat.blockSize));
+						}
+						AudioBlock *blockOut = effect->blockOutputs;
+						delayAudio(effect->delayLine.get(), blockIn, blockOut, delay);
+					} else {
+						effect->blockOutputs->copyFrom(blockIn);
+					}
+					blockPostProcess = effect->blockOutputs;
+				} else {
+					effect->process(effect->blockInputs, effect->blockOutputs, tickLatencyCompensated, samplePos, numSamples, state);
+					blockPostProcess = effect->blockOutputs;
+				}
+				effect->postProcess(blockPostProcess, numSamples, !isBypass);
+				timePassed = timer.getTime();
+				auto &plugStats = effect->procStats;
+				if (plugStats.statsProcStep % STATS_PROCESSING_INTERVAL_STEP == 0) {
+					plugStats.statsProcSamples[(plugStats.statsWriteOffset + 1) % STATS_PROCESSING_MAX_SAMPLES] = timePassed;
+					plugStats.statsWriteOffset++;
+				}
+				auto curTimeProcess = plugStats.timeTrackProcessPlugins;
+				curTimeProcess -= curTimeProcess / NUM_BINS_STATS;
+				curTimeProcess += timePassed / NUM_BINS_STATS;
+				plugStats.timeTrackProcessPlugins = curTimeProcess;
+				plugStats.timeTrackProcessPluginsRaw = timePassed;
+			} else {
+				timePassed = timer.getTime();
+			}
+			timeTotal += timePassed;
         }
 	}
 
-	auto curTotalTimeProc = stage->procStats.timeProcess;
+	auto curTotalTimeProc = stage->procStats.timeTrackProcessPlugins;
 	curTotalTimeProc -= curTotalTimeProc/NUM_BINS_STATS;
 	curTotalTimeProc += timeTotal/NUM_BINS_STATS;
-	stage->procStats.timeProcessRaw = timeTotal;
-	stage->procStats.timeProcess = curTotalTimeProc;
+	stage->procStats.timeTrackProcessPluginsRaw = timeTotal;
+	stage->procStats.timeTrackProcessPlugins = curTotalTimeProc;
 
 
 }

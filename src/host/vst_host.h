@@ -100,10 +100,18 @@ struct thread_stats_process_timings_t {
 };
 #define MAX_AUDIOPROCESSING_THREADS 32
 class vsthost;
+
 class vsthost {
 public:
 	class vsthost_impl;
 	struct track_block_processing_task_t;
+	struct audiostream_properties_t {
+		double ticksPerBlock = 0.0;
+		int64_t microSecsPerBlock = 0;
+		uint32_t blockSizeResampled = 0;
+		uint32_t numBlocksInternal = 0;
+		uint32_t numBlocksExternal = 0;
+	};
 public:
 	static const int FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY = 1;
 	static const int FLAG_HOST_FORCELOAD_DISABLED_PLUGINS = 2;
@@ -114,6 +122,7 @@ public:
 //	uint16_t lBlockSize = 0;
 	sampleformat_t sampleFormat = {44100, 512, sampleformat_bits_t::NONE};
 	sampleformat_t sampleFormatExternal = {44100, 512, sampleformat_bits_t::NONE};
+
 	int32_t hostSlot = -1;
 	uint8_t numChannels = 32u;
 
@@ -133,10 +142,11 @@ public:
 	SYNCHRONIZED_RW std::shared_ptr<DAW::processing_graph_t> lastProcessingList;
 	SYNCHRONIZED_RW std::map<audiostageid_i32, std::shared_ptr<DAW::processing_graph_t>> lastProcessingGraphs;
 
-	SYNCHRONIZED_RW hires_timer_t timer; // timer for cpu-time profiling
-	SYNCHRONIZED_RW hires_timer_t timer2;// timer for cpu-time profiling
-	SYNCHRONIZED_RW hires_timer_t timer3;// timer for cpu-time profiling
+	SYNCHRONIZED_RW hires_timer_t timerAudioTick; // timer for cpu-time profiling
+	SYNCHRONIZED_RW hires_timer_t timerBlock;// timer for cpu-time profiling
+	SYNCHRONIZED_RW hires_timer_t timerProfile;// timer for cpu-time profiling
 //	SYNCHRONIZED_RW hires_timer_t timer4;// timer for cpu-time profiling
+	float cpuUsagePercent = 0.0f;
 private:
 	SYNCHRONIZED_RW clip_t* recordingClip = nullptr;
 	SYNCHRONIZED_RW std::atomic<bool> hasNewRecordedData{0};
@@ -178,48 +188,68 @@ private:
 	void setBlockSize(uint16_t blockSize);
 	void registerPlugins();
 	void processMidiRealtimeInput(project_controller_t* ctrl, double posDouble, playback_state state);
-
-	void finishTreadTasks(std::vector<audiostageid_i32>& processFinishedStageIds, const std::vector<audiostageid_i32>& reqFinishWaitStageIds, bool isFinalInvocation);
-
+	int32_t processBlock(project_controller_t* ctrl, const audiostream_properties_t& audioProp, const DAW::processing_graph_t* const processingGraph, AudioBlock* const ptrExternalInputs, AudioBlock* const ptrExternalOutputs, int32_t samplePosProcess, double tickPosProcess, playback_state state, bool inLoop, bool isLoopAround);
+	int64_t writeTrackSamplesToDisk(String fOutWave, track_impl_t* trImpl, samplerate_t samplePos, samplerate_t numSamples);
+    void finishTreadTasks(std::vector<audiostageid_i32>& processFinishedStageIds, const std::vector<audiostageid_i32>& reqFinishWaitStageIds, bool isFinalInvocation);
 	void updateRecordingClip(tick_t tickBlockStart, tick_t tickBlockEnd, std::vector<note_t>& m_list);
 	void finishRecordingClip(tick_t tickBlockStart, tick_t tickBlockEnd, std::vector<note_t>& m_list);
 	void processMidiProcessedOutput(playback_state state, tick_t tickBlockStart, tick_t tickBlockEnd, std::vector<noteevent_t>& noteEventsProcessed);
+	/* These are currently not called */
+	void onPluginsChanged(audio_stage_t* stage);
+	void updatePluginWindows();
+
 public:
 	vsthost();
 	vsthost(vsthost const&) = delete;
 	~vsthost();
-	void setSampleFormat(const sampleformat_t& sampleFormat);
-	void setOutput(audiohost* host);
 	void operator=(vsthost const&) = delete;
+
 	static vsthost* getInstance();
 	static bool assignMasterCallback(vsthost* host);
-	audiothread_ringbuffer_t& getRingBuffer() {
-		return ringbuffer;
-	}
-	int32_t getNextSampleId(int32_t id);
-	bool writeRecordedData(project_t* project);
-	void sendNotesOff(effectbase* plugin);
-	std::vector<builtin_module_reg_t>& getBuiltinModuleRegistry() {
-		return builtinModules;
-	}
-	std::vector<note_t> getRealtimeNotes();
 
+	void destroy();
+
+	void initThreads();
+	void setThreadCount(uint32_t threadCount);
+	uint32_t getThreadCount();
+	uint32_t getMaxThreadCount();
+	int32_t getPlayThreadId();
+
+	void setSampleFormat(const sampleformat_t& sampleFormat);
+	void setOutput(audiohost* host);
+	audiostream_properties_t getAudioStreamProperties() const;
+	bool isStreaming();
+
+	int32_t processRender(project_controller_t* ctrl, int32_t sample, double posDouble);
+	int32_t processPlayback(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround);
+	int32_t processBlockTrack(process_scratch_buf_t& tmp, track_block_processing_task_t& task) /*const*/;
+	void processAudio(audio_stage_t* stage, AudioBlock* input, AudioBlock* output, const double tickLatencyCompensated, int32_t samplePos, int32_t numSamples, playback_state state, const DAW::effect_processing_graph_t* const processingGraph) const;
+
+
+	void unload();
+	void releaseProjectResources();
+
+	bool onTick();
+	void onTrackLayoutChange();
 	void onStartPlayback(project_controller_t* ctrl);
 	void onStopPlayback(project_controller_t* ctrl);
 	void onPlaybackJumpFromTo(project_controller_t* ctrl, int32_t fromSamplePos, double fromTickPos, int32_t toSamplePos, double toTickPos);
-	void onPluginsChanged(audio_stage_t* stage);
-	int32_t processRender(project_controller_t* ctrl, int32_t sample, double posDouble);
-	int32_t processPlayback(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround);
-	int32_t processBlock(project_controller_t* ctrl, const DAW::processing_graph_t* const processingGraph, AudioBlock* const ptrExternalInputs, AudioBlock* const ptrExternalOutputs, int32_t sample, double posDouble, playback_state state, bool inLoop, bool isLoopAround);
-	void getBlockThreadStats(std::vector<thread_stats_process_timings_t>&);
-	void processAudio(audio_stage_t* stage, AudioBlock* input, AudioBlock* output, const double tickLatencyCompensated, int32_t samplePos, int32_t numSamples, playback_state state, const DAW::effect_processing_graph_t* const processingGraph) const;
-	VstTimeInfo* getTimeInfo() {
-		return &this->timeinfo;
+
+	int32_t getNextSampleId(int32_t id);
+	std::vector<note_t> getRealtimeNotes();
+	bool writeRecordedData(project_t* project);
+	void sendNotesOff(effectbase* plugin);
+
+	std::vector<builtin_module_reg_t>& getBuiltinModuleRegistry() {
+		return builtinModules;
 	}
+
+
+	void getBlockThreadStats(std::vector<thread_stats_process_timings_t>&);
 	void getShortStats(host_stats_reducted_t& stats) {
 		stats.usage = this->stats.usage;
-		stats.timeProcess = this->stats.timeProcess;
-		stats.timeProcessRaw = this->stats.timeProcessRaw;
+		stats.timeProcess = this->stats.timeProcessPlugins;
+		stats.timeProcessRaw = this->stats.timeProcessPluginsRaw;
 		stats.timePerBlock_usec = sampleFormat.blockSize*1000000/ sampleFormat.sampleRate;
 	}
 	void getStats(host_stats_t& stats) {
@@ -228,13 +258,10 @@ public:
 	void getProcessingStats(host_processing_stats_t& stats) {
 		stats = this->processing;
 	}
-	void updatePluginWindows();
-	void releaseProjectResources();
-	void destroy();
-	void unload();
-	bool onTick();
-	bool isStreaming();
-	void onTrackLayoutChange();
+
+	VstTimeInfo* getTimeInfo() {
+		return &this->timeinfo;
+	}
 	bool canDo(const char *ptr)
 	{
 		if ((!strcmp(ptr, HostCanDos::canDoSendVstEvents)) ||
@@ -252,23 +279,9 @@ public:
 			return true;
 		return false;
 	}
+
 	vstplugin* getPlugin(AEffect* aeffect);
 	effectbase* getPluginById(int32_t projectGlobalId) const;
-	void unloadPlugin(effectbase* plugin, int flags = 0);
-	void removePlugin(effectbase* plugin);
-	void unloadTrack(track_t* track);
-	effectbase* makeModuleInstance(int32_t moduleType, int32_t moduleId, int32_t globalid = -1);
-	vstpluginloadres loadPlugin(String filepath, int32_t uId, int32_t globalId = 0);
-	void createAudio(track_t* track);
-	void releaseAudio(track_t* track);
-	audio_stage_t* createAudioStage();
-	void releaseAudioStage(audio_stage_t* audioStage);
-	audio_stage_t* getAudioStage(const audio_stage_ref_t& ref) const;
-	bool movePlugins(audio_stage_t* dstTr, audio_stage_t* trp, int32_t src, int32_t len, int32_t dst);
-	bool moveEffects(audio_stage_t* trp, int32_t src, int32_t dst, int32_t len);
-	bool insertNewPlugin(audio_stage_t* trp, effectbase* plugin, int32_t dst);
-	bool postPluginLoaded(audio_stage_t* trp, effectbase* plugin);
-	bool replacePlugin(audio_stage_t* trp, effectbase* plugin, int32_t dst, effectbase** prevPlugin);
 	void getAllInstances(std::vector<effectbase*>& effects);
 	std::vector<vstplugin*> getVst2Instances() {
 		return pluginInstancesVST2;
@@ -277,23 +290,37 @@ public:
 	void getDeferredEffects(std::vector<effectbase*>& effects) {
 		effects = pluginsDeferred;
 	}
-	void activateDeferred(effectbase* const eff, int flags, effectbase** out_effectLoaded = nullptr);
 	SafeRefStorage<effectbase>* getSafeRefStore() {
 		return &safeRefs;
 	}
-	void updateMaximumStageId();
-	void initThreads();
-	int32_t processBlockTrack(process_scratch_buf_t& tmp, track_block_processing_task_t& task) /*const*/;
-	void setThreadCount(uint32_t threadCount);
-	uint32_t getThreadCount();
-	uint32_t getMaxThreadCount();
-	int32_t getPlayThreadId();
+	void unloadPlugin(effectbase* plugin, int flags = 0);
+	void removePlugin(effectbase* plugin);
+	void unloadTrack(track_t* track);
+	effectbase* makeModuleInstance(int32_t moduleType, int32_t moduleId, int32_t globalid = -1);
+	vstpluginloadres loadPlugin(String filepath, int32_t uId, int32_t globalId = 0);
+	void activateDeferred(effectbase* const eff, int flags, effectbase** out_effectLoaded = nullptr);
+
+	void createAudio(track_t* track);
+	void releaseAudio(track_t* track);
+	audio_stage_t* createAudioStage();
+	void releaseAudioStage(audio_stage_t* audioStage);
+	audio_stage_t* getAudioStage(const audio_stage_ref_t& ref) const;
     int32_t validateIds();
+	void updateMaximumStageId();
+
+	bool movePlugins(audio_stage_t* dstTr, audio_stage_t* trp, int32_t src, int32_t len, int32_t dst);
+	bool moveEffects(audio_stage_t* trp, int32_t src, int32_t dst, int32_t len);
+	bool insertNewPlugin(audio_stage_t* trp, effectbase* plugin, int32_t dst);
+	bool postPluginLoaded(audio_stage_t* trp, effectbase* plugin);
+	bool replacePlugin(audio_stage_t* trp, effectbase* plugin, int32_t dst, effectbase** prevPlugin);
+
+
     void checkScanner();
     void scanPlugins();
     bool isScanning();
     void stopScanner();
-    int64_t writeTrackSamplesToDisk(String fOutWave, track_impl_t* trImpl, samplerate_t samplePos, samplerate_t numSamples);
+
     void preExportBegin(project_controller_t* ctrl, export_settings_t& exportSettings);
     void postExportEnd(project_controller_t* ctrl, export_settings_t& exportSettings);
+
 };

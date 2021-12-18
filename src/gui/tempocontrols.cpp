@@ -222,13 +222,21 @@ void guictr_tempocontrols::buttonClicked(guibase* button) {
 }
 
 
+void guibutton_audioengine::prerender(NVGcontext* vg) {
+	ThreadLock lock = dawCtrl->getDaw()->getPlayThread()->tryLockThread();
+	if (lock.isLocked()) {
+		vsthost::getInstance()->getStats(stats);
+		this->cpuUsage = stats.usageRaw;
+	} else {
+		this->cpuUsage = vsthost::getInstance()->cpuUsagePercent;
+	}
+}
 void guibutton_audioengine::render(NVGcontext* vg) {
 	audiohost* ahost = audiohost::getInstance();
 	if (!ahost || !ahost->isStreaming()) {
 		setText("Off");
 	} else {
-		vsthost::getInstance()->getStats(stats);
-		setText(StringFormat("%.0f%%", stats.usage*100.0));
+		setText(StringFormat("%.0f%%", this->cpuUsage*100.0));
 	}
 	int32_t fl = getStateFlags();
 	renderWidgetBorder(vg, fl);
@@ -246,13 +254,13 @@ NVGcolor guibutton_audioengine::getBackgroundColor(int stateflags) const {
 		const float barProgress = getTimeMillisd() / tmConstantBar;
 		float fMo = fmodf(barProgress, 1.0f);
 		const float fBarTmAbsolute = fBarNumFloor + fMo;
-		double t = sin(fBarTmAbsolute*M_PI*2.0)*0.5+0.5;
+		float t = std::sin(fBarTmAbsolute*M_PI*2.0f)*0.5f+0.5f;
 
 		vec4 v { c.r, c.g, c.b, c.a };
 		vec4 v2 = v;
-		v2.r = math::min(1.0, v.r*stats.usageRaw);
-		v2.b = math::min(1.0, v.b*t);
-		float d = (float) (math::clamp(t, 0.0, 1.0));
+		v2.r = math::min(1.0f, v.r*this->cpuUsage);
+		v2.b = math::min(1.0f, v.b*t);
+		float d = (float) (math::clamp(t, 0.0f, 1.0f));
 		v = v + d * (v2 - v);
 		return NVGcolor { v.x, v.y, v.z, v.w };
 	}
