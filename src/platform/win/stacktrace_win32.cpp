@@ -86,16 +86,18 @@ namespace Win32Stacktrace {
 			DWORD  offset = 0;
 			IMAGEHLP_LINE imgline;
 			imgline.SizeOfStruct = sizeof(IMAGEHLP_LINE);
-			int prefOffset = snprintf(bufPrefix, 128, "%08X ", (int64_t)frame.AddrPC.Offset);
-			if (prefOffset < 0) prefOffset = 0;
+			int prefOffset = snprintf(bufPrefix, 128, "%012llx ", (uint64_t)frame.AddrPC.Offset);
+			if (prefOffset < 0) {
+				prefOffset = 0;
+			}
 			if (SymGetLineFromAddr(process, frame.AddrPC.Offset, &offset, &imgline)) {
 				const char* shortName = removeLeadingPathSegments(imgline.FileName, 2);
 				replaceBackslashWithForwardslash(shortName, tempBuffer, MAX_SYM_NAME+1);
-				snprintf(bufPrefix+prefOffset, 128, "%s:%d:%d", tempBuffer, (int)imgline.LineNumber, offset);
+				snprintf(bufPrefix+prefOffset, 128, "%s:%u:%u", tempBuffer, (uint32_t)imgline.LineNumber, (uint32_t)offset);
 			} else {
-				snprintf(bufPrefix+prefOffset, 128, "%s:%d", removeLeadingPathSegments(moduleName, 0), (int)displacement);
+				snprintf(bufPrefix+prefOffset, 128, "%s:%u", removeLeadingPathSegments(moduleName, 0), (uint32_t)displacement);
 			}
-			stackTrace.push_back(StringFormat("%-42s %s", bufPrefix, functioName));
+			stackTrace.push_back(StringFormat("%-48s %s", bufPrefix, functioName));
 
 
 			stackPos++;
