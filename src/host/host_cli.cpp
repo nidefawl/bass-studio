@@ -24,6 +24,7 @@
 #include "plugindatabase.h"
 #include "threads/playbackthread.h"
 #include "wave/dr_wav.h"
+#include "tests/test_environment.h"
 #include "appconfig.h"
 
 #ifdef _WIN32
@@ -544,6 +545,14 @@ int runCommandLineHost(int argc, const char* argv[]) {
 				}
 
 				processWindowMessages();
+
+				if (daw_test::ENABLED && daw_test::runTest(daw_test::TestCases::TEST_HOST_EXCEPTIONS)) {
+					static int nTestLoops = 10;
+					if (nTestLoops-- == 0) {
+						log_printf("Invoking test code\n", 0);
+						throw applogicexception("TEST_HOST_EXCEPTIONS: Testing exception handling");
+					}
+				}
     		}
 			log_printf("playback end..\n", 0);
 			if (playThread) {

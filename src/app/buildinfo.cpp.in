@@ -2,8 +2,8 @@
 #define __TIMESTAMP__ "Undefined"
 #endif
 namespace BuildInfo {
-const char* COMPILE_OPTIONS 	 = "@BUILD_COMPILE_OPTIONS@";
-const char* COMPILE_DEFS 		 = "@BUILD_COMPILE_DEFS@";
+const char* COMPILE_OPTIONS 	 = "@BUILDINFO_COMPILE_OPTIONS@";
+const char* COMPILE_DEFS 		 = "@BUILDINFO_COMPILE_DEFS@";
 const char* COMPILER_ID 		 = "@CMAKE_CXX_COMPILER_ID@ @CMAKE_CXX_COMPILER_VERSION@";
 const char* COMPILER_PATH 		 = "@CMAKE_CXX_COMPILER@";
 const char* BUILD_BINARY_VERSION = "0.4.4.1";

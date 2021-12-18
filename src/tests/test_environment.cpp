@@ -1,0 +1,5 @@
+#include <stdint.h>
+
+namespace daw_test {
+uint32_t currentTest = 0;
+}
