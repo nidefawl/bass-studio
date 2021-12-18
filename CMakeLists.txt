@@ -12,12 +12,13 @@ option(BUILD_SCANNER "Build plugin scanner" OFF)
 option(BUILD_CMDLINE_HOST "Build command line host" OFF)
 option(BUILD_GUI_TEST "Build test app" OFF)
 option(BUILD_RGB_MASTER "Build rgb master" OFF)
+option(USE_OPENGL3 "Use OpenGL 3.x instead of OpenGL 2" ON)
 
 if (BUILD_TESTS OR BUILD_SCANNER OR BUILD_CMDLINE_HOST OR BUILD_GUI_TEST OR BUILD_RGB_MASTER)
     set(BUILD_DAW_LIB ON)
 else()
     set(BUILD_DAW_LIB OFF)
-endif ()
+endif()
 
 #set(BUILD_DAW_LIB ON) #override
 
@@ -26,11 +27,17 @@ if (NOT MSVC)
     set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "${CMAKE_COMMAND} -E time")
 endif()
 include("setup.cmake")
-add_definitions("-DUSE_WIN32_EXC_HOOKS")
-add_definitions("-DBUILD_VSTHOST=1")
-add_definitions("-DBUILD_EXTERNAL_PLUGIN=0")
-# add_definitions("-DNANOVG_GL2=1")
-add_definitions("-DNANOVG_GL3=1")
+add_compile_definitions("USE_WIN32_EXC_HOOKS")
+add_compile_definitions("BUILD_VSTHOST=1")
+add_compile_definitions("BUILD_EXTERNAL_PLUGIN=0")
+if (USE_OPENGL3)
+    add_compile_definitions("NANOVG_GL3=1")
+else()
+    add_compile_definitions("NANOVG_GL2=1")
+endif()
+if (BUILD_TESTS)
+    add_compile_definitions("BUILD_TESTS")
+endif()
 
 
 file(GLOB_RECURSE HDR_ALL_FILES src/*.h)
@@ -81,27 +88,18 @@ endforeach()
 
 foreach(f ${CPP_ALL_FILES})
     if (f MATCHES ".*/main.cpp$")
-        message("STATUS SKIPPING SRC ${f}")
         continue()
     endif()
     if (f MATCHES ".*/main_.*.cpp$")
-        message("STATUS SKIPPING SRC ${f}")
         continue()
     endif()
     if (f MATCHES ".*/plugins/plugin-window.cpp$")
-         message("STATUS SKIPPING SRC ${f}")
         continue()
     endif()
     if (f MATCHES ".*/vstsdk-plugin-2.4/vstplugmain.cpp$")
-         message("STATUS SKIPPING SRC ${f}")
         continue()
     endif()
     if (f MATCHES ".*/tests/[^/]*$")
-        message("STATUS SKIPPING SRC ${f}")
-        continue()
-    endif()
-    if (f MATCHES ".*/file/[^/]*$")
-        message("STATUS SKIPPING SRC ${f}")
         continue()
     endif()
     if (UNIX)
@@ -139,15 +137,21 @@ if (BUILD_TESTS)
 endif()
 
 
-set(SRC_FILES_SUBDIR_FILES 
-    src/file/fileloader.cpp
-    src/file/projectfile.cpp
-    src/file/themefile.cpp
-    src/file/appsettingsfile.cpp
-)
 
 if (NOT MSVC)
-    set_source_files_properties(${SRC_FILES_SUBDIR_FILES} PROPERTIES COMPILE_OPTIONS "-g;-O")
+    # These files are especially important to have optimized
+    # In debug builds their slow performance make the program unusable.
+    # But I also want to disable mixed optimization levels if possible.
+    # It might be an ODR/ABI violation, and I have seen linkers not producing correct results
+    set(SRC_FILES_SUBDIR_FILES 
+        src/file/fileloader.cpp
+        src/file/projectfile.cpp
+        src/file/themefile.cpp
+        src/file/appsettingsfile.cpp
+    )
+    # TODO: what does -O without a number/s produce?
+    # TODO: don't lower -O level for release builds when reenabling -On files in debug builds
+    # set_source_files_properties(${SRC_FILES_SUBDIR_FILES} PROPERTIES COMPILE_OPTIONS "-g;-O")
     set(SRC_FILES_OPTIMIZE 
         src/gl/gl_path.cpp
         src/wave/wav_tesselate.cpp
@@ -155,14 +159,16 @@ if (NOT MSVC)
         src/host/vsthost.cpp
         src/host/track_graph.cpp
     )
-    set_source_files_properties(${SRC_FILES_OPTIMIZE} PROPERTIES COMPILE_OPTIONS "-g;-O")
+    # set_source_files_properties(${SRC_FILES_OPTIMIZE} PROPERTIES COMPILE_OPTIONS "-g;-O")
+
+    # The SEH assembly will not work correctly on clang mingw if any level of optimization is applied
     set(SRC_FILES_NO_OPTIMIZE 
         src/host/plugin/vst_plugin_dispatch.cpp
     )
     set_source_files_properties(${SRC_FILES_NO_OPTIMIZE} PROPERTIES COMPILE_OPTIONS "-O0")
 endif()
 
-set(CPP_SRC_FILES ${SRC_FILES_SUBDIR_FILES} ${CPP_SRC_FILES} ${MM_SRC_FILES})
+set(CPP_SRC_FILES ${CPP_SRC_FILES} ${MM_SRC_FILES})
 set(ALL_SRC_FILES ${CPP_SRC_FILES})
 list(APPEND ALL_SRC_FILES ${C_SRC_FILES})
 list(APPEND ALL_SRC_FILES ${HDR_FILES})
@@ -191,20 +197,21 @@ include("libs.cmake")
 # instead of an installation step we only copy the exectuable to APP_WORKING_DIR
 set(APP_WORKING_DIR "../../run/" CACHE PATH "output directory")
 
-message(STATUS "${BUILD_HOST} Build daw")
-message(STATUS "${BUILD_TESTS} Build tests")
-message(STATUS "${BUILD_SCANNER} Build plugin scanner")
-message(STATUS "${BUILD_CMDLINE_HOST} Build command line host")
-message(STATUS "${BUILD_GUI_TEST} Build test app")
-message(STATUS "BUILD_NAME ${BUILD_NAME}")
 message(STATUS "DAW_DEPS_PATH ${DAW_DEPS_PATH}")
 message(STATUS "DEPS_BUILD_FOLDER ${DEPS_BUILD_FOLDER}")
-message(STATUS "BUILD_NAME ${BUILD_NAME}")
-message(STATUS "LINK_TARGET ${LINK_TARGET}")
 message(STATUS "CMAKE_CXX_COMPILER_ID ${CMAKE_CXX_COMPILER_ID}")
 message(STATUS "CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE}")
+
+message(STATUS "BUILD_DAW_LIB ${BUILD_DAW_LIB}")
+message(STATUS "BUILD_NAME ${BUILD_NAME}")
+message(STATUS "LINK_TARGET ${LINK_TARGET}")
 message(STATUS "APP_WORKING_DIR ${APP_WORKING_DIR}")
 
+message(STATUS "BUILD_HOST ${BUILD_HOST}")
+message(STATUS "BUILD_TESTS ${BUILD_TESTS} ")
+message(STATUS "BUILD_SCANNER ${BUILD_SCANNER} ")
+message(STATUS "BUILD_CMDLINE_HOST ${BUILD_CMDLINE_HOST}")
+message(STATUS "BUILD_GUI_TEST ${BUILD_GUI_TEST}")
 
 if (BUILD_DAW_LIB) 
     add_library("dawlib" STATIC ${CPP_SRC_FILES} ${C_SRC_FILES} ${HDR_FILES})
@@ -249,16 +256,15 @@ if (APPLE)
         ${APPLE_AUDIOTOOLBOX_LIBRARY}
         ${APPLE_COREAUDIO_LIBRARY}
         m)
-endif(APPLE)
+endif (APPLE)
 if (WIN32)
     target_link_libraries(${LINK_TARGET} PRIVATE dbghelp winmm opengl32 kernel32 gdi32 ole32 uuid comdlg32 setupapi mswsock ws2_32)
-endif(WIN32)
+endif (WIN32)
 
 
 
 
 if (BUILD_SCANNER) 
-    #project("vstscanner" C CXX)
     add_executable("vstscanner" "src/host/main_scanner.cpp")
     SET_APP_BUILD("vstscanner")
     target_link_libraries("vstscanner" PUBLIC "dawlib")
@@ -266,7 +272,6 @@ if (BUILD_SCANNER)
 endif()
 
 if (BUILD_CMDLINE_HOST) 
-    #project("host" C CXX)
     add_executable("host" "src/host/main_cmdline.cpp")
     SET_APP_BUILD("host")
     target_link_libraries("host" PUBLIC "dawlib")
@@ -274,7 +279,6 @@ if (BUILD_CMDLINE_HOST)
 endif()
 
 if (BUILD_GUI_TEST) 
-    #project("guitest" C CXX)
     add_executable("guitest" "src/host/main_test.cpp")
     SET_APP_BUILD("guitest")
     target_link_libraries("guitest" PUBLIC "dawlib")
@@ -283,59 +287,22 @@ endif()
 
 
 if (BUILD_RGB_MASTER) 
-    #project("rgbmaster" C CXX)
     add_executable("rgbmaster" "src/rgb/main_rgb_master.cpp")
     SET_APP_BUILD("rgbmaster")
     target_link_libraries("rgbmaster" PUBLIC "dawlib")
     ADD_POST_BUILD_COMMANDS("rgbmaster")
 endif()
 
-if (BUILD_TESTS)
-  ENABLE_TESTING()
-  ADD_SUBDIRECTORY( src/tests )
-endif()
-
 # march=native optimzation. Turn off for dist build
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG("-march=native" COMPILER_SUPPORTS_MARCH_NATIVE)
-if(COMPILER_SUPPORTS_MARCH_NATIVE)
+if (COMPILER_SUPPORTS_MARCH_NATIVE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
 endif()
 
 GENERATE_BUILDINFO_CPP()
 
 if (BUILD_TESTS)
-    if (CMAKE_CXX_COMPILER_ID MATCHES "MSVC")
-    elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        add_compile_options("-fprofile-instr-generate")
-        add_compile_options("-fcoverage-mapping")
-        link_libraries("-fprofile-instr-generate")
-        if (WIN32)
-            set(TEST_BINARY_NAME ${CMAKE_CURRENT_BINARY_DIR}/src/tests/test_notes.exe)
-        else()
-            set(TEST_BINARY_NAME ${CMAKE_CURRENT_BINARY_DIR}/src/tests/test_notes)
-        endif (WIN32)
-        set(FILE_DAW_PROFILE_DATA "${CMAKE_CURRENT_BINARY_DIR}/daw-code-profile.profdata")
-        #llvm-cov interface is a bit awkward, not acceptiong libraries, only binary or .o
-        add_custom_command(
-        OUTPUT ${FILE_DAW_PROFILE_DATA}
-        POST_BUILD 
-        COMMENT "generate test report"
-        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-        #COMMAND python ${CMAKE_SOURCE_DIR}/../test/generate-report.py
-        COMMAND llvm-profdata merge -output=${FILE_DAW_PROFILE_DATA} ${CMAKE_CURRENT_BINARY_DIR}/src/tests/*.profraw
-        DEPENDS src/tests
-        )
-
-        add_custom_command(
-        OUTPUT coverage-report.txt
-        POST_BUILD 
-        COMMENT "generate coverage report"
-        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
-        #COMMAND python ${CMAKE_SOURCE_DIR}/../test/generate-report.py
-        COMMAND llvm-cov report ${TEST_BINARY_NAME} -instr-profile=${FILE_DAW_PROFILE_DATA} ${CMAKE_SOURCE_DIR}/src/ > "coverage-report.txt"
-        DEPENDS ${FILE_DAW_PROFILE_DATA}
-        )
-        add_custom_target(report DEPENDS coverage-report.txt)
-    endif()
-endif(BUILD_TESTS)
+  ENABLE_TESTING()
+  ADD_SUBDIRECTORY( src/tests )
+endif()
