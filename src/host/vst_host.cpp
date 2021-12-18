@@ -1552,6 +1552,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			track_impl_t* trAudio = track->audio;
 			if (!trAudio)
 				continue;
+			//TODO: do meter updates on the worker threads. (be aware of unconnected tracks not getting processed)
 			float fGainTrack;
 			dsp_util::getGainLvl(trAudio->mixer.getParamValue(PARAM_TRACK_GAIN), fGainTrack);
 			trAudio->meter.update(&trAudio->output, fGainTrack);

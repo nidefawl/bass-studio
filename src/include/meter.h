@@ -23,6 +23,7 @@ public:
 	float fLvl = 0;
 	float fPeakFalloffDelay = 0;
 	void update(const float* fBuf, uint32_t samples, float fGain) {
+		//TODO: find out if this could be done more efficiently. Think about SIMD or look at the assembly
 		uint32_t i;
 		float fMaxBlock = 0.0f;
 		for (i = 0; i < samples; i++) {
@@ -49,17 +50,25 @@ public:
 		fLvl = runningSum > math::F_MIN ? (float) sqrt(runningSum / (double) N) : 0.0f;
 	}
 	void onTick(double since) {
+		/*
+		 * TODO: parameter since is constant on calls from audio thread (blocksize/samplerate)
+		 * make the decay curve a state or parameter
+		 */
+		//
+		float decayCurve = math::powf(10.0f, (float)-since);
 		if (fMax > math::F_MIN) {
-			fMax = math::max(0.0f, fMax*math::powf(10.0f, (float)-since));
-		} else {
+			fMax = math::max(0.0f, fMax*decayCurve);
+		}
+		if (!(fMax > math::F_MIN)) {
 			fMax = 0.0f;
 		}
 		if (fPeakFalloffDelay > 0) {
 			fPeakFalloffDelay -= since;
 		} else {
-			if (fMax > math::F_MIN) {
-				fPeak = math::max(0.0f, fPeak*math::powf(10.0f, (float)-since));
-			} else {
+			if (fPeak > math::F_MIN) {
+				fPeak = math::max(0.0f, fPeak*decayCurve);
+			}
+			if (!(fPeak > math::F_MIN)) {
 				fPeak = 0.0f;
 			}
 		}

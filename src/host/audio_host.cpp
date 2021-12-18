@@ -255,7 +255,6 @@ void audiohost::audiostream::enqueueInput(AudioBuffer* buf) {
 		track->buf.copyFrom(blockIn, [offset=track->channelOffset](uint32_t dstIdx, uint32_t srcIdx) {
 			return offset+dstIdx;
 		});
-		track->meter.onTick(buf->output->samples/(double)this->host->lSampleRate);
 	}
 //	dbgassert(isStreaming());
 	this->audioQueueInput.enqueue(buf);
