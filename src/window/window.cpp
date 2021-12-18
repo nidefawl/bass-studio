@@ -1552,6 +1552,7 @@ void initColor(); // Forward declare from gui/gui.cpp
 void deleteApp(); // Forward declare from host/mainctrl.cpp
 void openGlobalLog(const String& logFileName); // Forward declare from util/debug.cpp
 void closeGlobalLog(); // Forward declare from util/debug.cpp
+void runSseBenchmarkTests(); //Forward declare from benchmark/benchmark-main.cpp
 
 int startApplication(int argc, char* argv[]) {
 	setCurrentThreadName("mainthread");
@@ -1566,6 +1567,7 @@ int startApplication(int argc, char* argv[]) {
 #ifdef USE_WIN32_EXC_HOOKS
 	setExceptionHandler();
 #endif
+	runSseBenchmarkTests();
 
 	try {
 	int centerScreenIdx = -1;
