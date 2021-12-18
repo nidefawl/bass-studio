@@ -62,11 +62,11 @@
 									<listOptionValue builtIn="false" value="_GLIBCXX_DEBUG"/>
 									<listOptionValue builtIn="false" value="_GLIBCXX_DEBUG_PEDANTIC"/>
 									<listOptionValue builtIn="false" value="USE_WIN32_EXC_HOOKS"/>
-									<listOptionValue builtIn="false" value="ENABLE_MICHAELS_GLIBCXX_HACKS=1"/>
 									<listOptionValue builtIn="false" value="BUILD_VSTHOST=1"/>
 									<listOptionValue builtIn="false" value="BUILD_EXTERNAL_PLUGIN=0"/>
 									<listOptionValue builtIn="false" value="_LIBCPP_NO_EXCEPTIONS"/>
 									<listOptionValue builtIn="false" value="NANOVG_GL3=1"/>
+									<listOptionValue builtIn="false" value="BUILD_TESTS"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.439961260" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
@@ -103,13 +103,11 @@
 									<listOptionValue builtIn="false" value="_GLIBCXX_DEBUG"/>
 									<listOptionValue builtIn="false" value="_GLIBCXX_DEBUG_PEDANTIC"/>
 									<listOptionValue builtIn="false" value="USE_WIN32_EXC_HOOKS"/>
-									<listOptionValue builtIn="false" value="BUILD_BUILTIN_EFFECT"/>
-									<listOptionValue builtIn="false" value="NO_EXTEND_WINDOW_CPP"/>
 									<listOptionValue builtIn="false" value="BUILD_VSTHOST=1"/>
 									<listOptionValue builtIn="false" value="BUILD_EXTERNAL_PLUGIN=0"/>
 									<listOptionValue builtIn="false" value="_LIBCPP_NO_EXCEPTIONS"/>
-									<listOptionValue builtIn="false" value="ENABLE_MICHAELS_GLIBCXX_HACKS=0"/>
 									<listOptionValue builtIn="false" value="NANOVG_GL3=1"/>
+									<listOptionValue builtIn="false" value="BUILD_TESTS"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.1025305914" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
@@ -210,11 +208,11 @@
 									<listOptionValue builtIn="false" value="_GLIBCXX_DEBUG"/>
 									<listOptionValue builtIn="false" value="_GLIBCXX_DEBUG_PEDANTIC"/>
 									<listOptionValue builtIn="false" value="USE_WIN32_EXC_HOOKS"/>
-									<listOptionValue builtIn="false" value="ENABLE_MICHAELS_GLIBCXX_HACKS=1"/>
 									<listOptionValue builtIn="false" value="BUILD_VSTHOST=1"/>
 									<listOptionValue builtIn="false" value="BUILD_EXTERNAL_PLUGIN=0"/>
 									<listOptionValue builtIn="false" value="_LIBCPP_NO_EXCEPTIONS"/>
 									<listOptionValue builtIn="false" value="NANOVG_GL2=1"/>
+									<listOptionValue builtIn="false" value="BUILD_TESTS"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.cpp.compiler.input.695757781" superClass="cdt.managedbuild.tool.gnu.cpp.compiler.input"/>
 							</tool>
@@ -251,13 +249,11 @@
 									<listOptionValue builtIn="false" value="_GLIBCXX_DEBUG"/>
 									<listOptionValue builtIn="false" value="_GLIBCXX_DEBUG_PEDANTIC"/>
 									<listOptionValue builtIn="false" value="USE_WIN32_EXC_HOOKS"/>
-									<listOptionValue builtIn="false" value="BUILD_BUILTIN_EFFECT"/>
-									<listOptionValue builtIn="false" value="NO_EXTEND_WINDOW_CPP"/>
 									<listOptionValue builtIn="false" value="BUILD_VSTHOST=1"/>
 									<listOptionValue builtIn="false" value="BUILD_EXTERNAL_PLUGIN=0"/>
 									<listOptionValue builtIn="false" value="_LIBCPP_NO_EXCEPTIONS"/>
-									<listOptionValue builtIn="false" value="ENABLE_MICHAELS_GLIBCXX_HACKS=0"/>
 									<listOptionValue builtIn="false" value="NANOVG_GL2=1"/>
+									<listOptionValue builtIn="false" value="BUILD_TESTS"/>
 								</option>
 								<inputType id="cdt.managedbuild.tool.gnu.c.compiler.input.1764620200" superClass="cdt.managedbuild.tool.gnu.c.compiler.input"/>
 							</tool>
@@ -369,6 +365,9 @@
 		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100;cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.;cdt.managedbuild.tool.gnu.c.compiler.mingw.base.1533097334;cdt.managedbuild.tool.gnu.c.compiler.input.14326597">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.20178016;cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.20178016.;cdt.managedbuild.tool.gnu.cpp.compiler.mingw.base.1818651051;cdt.managedbuild.tool.gnu.cpp.compiler.input.695757781">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
 		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.1012399357;cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.1012399357.;cdt.managedbuild.tool.gnu.c.compiler.mingw.base.1480213350;cdt.managedbuild.tool.gnu.c.compiler.input.50000982">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 		</scannerConfigBuildInfo>
@@ -382,6 +381,9 @@
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 		</scannerConfigBuildInfo>
 		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949;cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.;cdt.managedbuild.tool.gnu.cpp.compiler.mingw.base.733104896;cdt.managedbuild.tool.gnu.cpp.compiler.input.439961260">
+			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
+		</scannerConfigBuildInfo>
+		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.20178016;cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.20178016.;cdt.managedbuild.tool.gnu.c.compiler.mingw.base.631430609;cdt.managedbuild.tool.gnu.c.compiler.input.1764620200">
 			<autodiscovery enabled="true" problemReportingEnabled="true" selectedProfileId=""/>
 		</scannerConfigBuildInfo>
 		<scannerConfigBuildInfo instanceId="cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.700633768;cdt.managedbuild.config.gnu.mingw.exe.debug.2103226280.1414770100.1620643949.700633768.;cdt.managedbuild.tool.gnu.c.compiler.mingw.base.1212838177;cdt.managedbuild.tool.gnu.c.compiler.input.1300725403">
