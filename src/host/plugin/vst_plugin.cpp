@@ -180,6 +180,7 @@ void vstplugin::load(vsthost* host) {
 	aeffect->resvd2 = 0;
 	this->vstVersion = dispatch(effGetVstVersion);
 	this->uId = aeffect->uniqueID;
+	this->vendorVersion = dispatch(effGetVendorVersion);
 
 	long l0 = this->dispatch(effIdentify, 0, 0, 0, 0);
 	long l5 = this->dispatch(effOpen);
@@ -314,7 +315,9 @@ void createSnapshot(plugin_snapshot_t& ps, vstplugin* plugin, bool storePluginCh
 		ps.uId = plugin->internalModuleId;
 	} else {
 		ps.pluginType = PLUGIN_TYPE_VST;
+		ps.vendorVersion = plugin->vendorVersion;
 		ps.uId = plugin->uId;
+		ps.localDbId = plugin->localDbId;
 	}
 	ps.name = plugin->sName;
 

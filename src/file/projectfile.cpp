@@ -114,6 +114,10 @@ void load( Archive & archive, plugin_snapshot_t & m, const std::uint32_t version
 	if (version > 4) {
 		archive(make_nvp("currentProgram", m.currentProgram));
 	}
+	if (version > 5) {
+		archive(make_nvp("vendorVersion", m.vendorVersion));
+		archive(make_nvp("localDbId", m.localDbId));
+	}
 }
 
 template <class Archive>
@@ -137,6 +141,8 @@ void save( Archive & archive, plugin_snapshot_t const & m, const std::uint32_t v
 	}
 	archive(make_nvp("plugins", m.pluginSnapshots));
 	archive(make_nvp("currentProgram", m.currentProgram));
+	archive(make_nvp("vendorVersion", m.vendorVersion));
+	archive(make_nvp("localDbId", m.localDbId));
 }
 template<class Archive>
 void serialize(Archive & archive, track_params_snapshot_t & m)
@@ -436,7 +442,7 @@ void save( Archive & archive, project_file const & file, const std::uint32_t ver
 	archive(cereal::make_nvp("samples", file.sampleFileIndex));
 }
 CEREAL_CLASS_VERSION( project_file, FILE_FORMAT_VERSION);
-CEREAL_CLASS_VERSION( plugin_snapshot_t, 5 );
+CEREAL_CLASS_VERSION( plugin_snapshot_t, 6 );
 CEREAL_CLASS_VERSION( track_snapshot_t, 1 );
 
 /**

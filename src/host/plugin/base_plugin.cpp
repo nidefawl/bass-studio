@@ -180,7 +180,6 @@ effect_deferred* effectbase::toDeferred() {
 	def->sName = snapshot.name;
 	def->projectGlobalId = snapshot.projectGlobalId;
 	def->bIsEnabled = snapshot.enabled;
-//	def->uId = snapshot.uId;
 	def->mImpl->snapshot = snapshot;
 	def->mImpl->moduleType = snapshot.pluginType;
 	return def;
@@ -192,7 +191,6 @@ effect_deferred* loadPluginDeferred(const plugin_snapshot_t& snapshot) {
 	def->sName = snapshot.name;
 	def->projectGlobalId = snapshot.projectGlobalId;
 	def->bIsEnabled = snapshot.enabled;
-//	def->uId = snapshot.uId;
 	def->mImpl->snapshot = snapshot;
 	def->mImpl->moduleType = snapshot.pluginType;
 	return def;

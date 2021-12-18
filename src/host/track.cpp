@@ -557,7 +557,7 @@ effectbase* loadEffectModule(const plugin_snapshot_t& pluginSnapshot, bool force
 	if (pluginSnapshot.pluginType == PLUGIN_TYPE_VST) {
 		my_printf("Next loading plugin %s, uId %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId);
 		plugindatabase_t* db = plugindatabase_t::getInstance();
-		if (db->resolve(pluginSnapshot.name, pluginSnapshot.uId, &path, forceLoad ? 1 : 0)) {
+		if (db->resolve(pluginSnapshot, &path, forceLoad ? 1 : 0)) {
 			my_printf("Plugin is registered... loading %s, uId %d, forceLoad %d\n", StringAsCStr(pluginSnapshot.name), pluginSnapshot.uId, forceLoad);
 			vstpluginloadres res = host->loadPlugin(path, pluginSnapshot.uId, pluginSnapshot.projectGlobalId);
 			if (res.result==0&&res.plugin) {

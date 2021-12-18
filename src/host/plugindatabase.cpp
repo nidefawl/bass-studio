@@ -4,6 +4,7 @@
 #include "assert_dbg.h"
 #include "fileio.h"
 #include "platform.h"
+#include "snapshot.h"
 #include <vector>
 #include <SQLiteCpp/SQLiteCpp.h>
 #include <SQLiteCpp/VariadicBind.h>
@@ -48,29 +49,54 @@ public:
 	~Impl() {
 
 	}
-    bool resolve(String name, int32_t uId, String* _outPath, int loadFlags)
+    bool resolve(const plugin_snapshot_t& pluginSnapshot, String* _outPath, int loadFlags)
     {
-        static const char* queryBy_NameAndUUID = "SELECT path FROM plugins where state == 1 and name == ? and uid == ?";
-		static const char* queryBy_Name = "SELECT path FROM plugins where state == 1 and name == ?";
-		static const char* queryBy_UUID = "SELECT path FROM plugins where state == 1 and uid == ?";
-        const char* queries[3] = {queryBy_NameAndUUID, queryBy_UUID, queryBy_Name};
-		for (int i = 0; i < 3; i++) {
-			String query = String();
+    	enum query_type : uint32_t {
+    		BY_LOCALID_AND_UUID = 0,
+			BY_NAME_AND_UUID,
+			BY_UUID,
+			BY_NAME,
+			NUM_QUERY_TYPES = 4
+    	};
+    	auto name = pluginSnapshot.name;
+    	auto uId = pluginSnapshot.uId;
+    	auto localId = pluginSnapshot.localDbId;
+		bool loadForceDisabled = (loadFlags&1)!=0;
+
+        static const char* queryBy_LocalIdAndUUID = "SELECT path FROM plugins where state == 1 and id == ? and uid == ? and __COND__";
+        static const char* queryBy_NameAndUUID = "SELECT path FROM plugins where state == 1 and name == ? and uid == ? and __COND__ order by forcedisable ASC, version DESC, id DESC";
+		static const char* queryBy_UUID = "SELECT path FROM plugins where state == 1 and uid == ? and __COND__ order by id DESC forcedisable ASC, version DESC, productName DESC";
+		static const char* queryBy_Name = "SELECT path FROM plugins where state == 1 and name == ? and __COND__ order by id DESC forcedisable ASC, version DESC, productName DESC";
+        const char* queries[NUM_QUERY_TYPES] = {queryBy_LocalIdAndUUID, queryBy_NameAndUUID, queryBy_UUID, queryBy_Name};
+		for (int i = 0; i < NUM_QUERY_TYPES; i++) {
+			if (i == BY_LOCALID_AND_UUID && localId <= 0) {
+				continue;
+			}
+			String query = queries[i];
+			if (loadForceDisabled) {
+				replaceString(query, "__COND__", "1");
+			} else {
+				replaceString(query, "__COND__", "forcedisable == 0");
+			}
 			
-			SQLite::Statement queryPlugin(db, queries[i]);
+			SQLite::Statement queryPlugin(db, query);
             switch (i) {
-            case 0:
+            case BY_LOCALID_AND_UUID:
+                queryPlugin.bind(1, localId);
                 queryPlugin.bind(2, uId);
-                queryPlugin.bind(1, name);
                 break;
-            case 1:
+            case BY_NAME_AND_UUID:
                 queryPlugin.bind(1, name);
-			case 2:
+                queryPlugin.bind(2, uId);
+                break;
+			case BY_UUID:
+            	//TODO: let user pick if multiple
                 queryPlugin.bind(1, uId);
                 break;
-			}
-			if ((loadFlags&1)==0) {
-				query += " and forcedisable == 0";
+            case BY_NAME:
+            	//TODO: let user pick if multiple
+                queryPlugin.bind(1, name);
+                break;
 			}
 			if (queryPlugin.executeStep()) {
 				*_outPath = queryPlugin.getColumn("path").getString();
@@ -119,8 +145,8 @@ plugindatabase_t::plugindatabase_t() {
 }
 plugindatabase_t::~plugindatabase_t() {
 }
-bool plugindatabase_t::resolve(String name, int32_t uId, String* _outPath, int loadFlags) {
-	return _M_Impl->resolve(name, uId, _outPath, loadFlags);
+bool plugindatabase_t::resolve(const plugin_snapshot_t& pluginSnapshot, String* _outPath, int loadFlags) {
+	return _M_Impl->resolve(pluginSnapshot, _outPath, loadFlags);
 }
 void plugindatabase_t::query(String q, std::vector<pluginentry_t>& _out) {
 	_M_Impl->query(q, _out);

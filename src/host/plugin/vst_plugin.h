@@ -67,6 +67,7 @@ struct vst_param_category {
 //	//if kVstParameterSupportsDisplayCategory
 //	int16_t category;			///< 0: no category, else group index + 1
 //};
+
 class vstplugin : public effectbase {
 public:
 	handles_t* const handle;
@@ -76,11 +77,12 @@ public:
 	bool bWantsEffIdle = false;
 	int pluginCategory = 0;
 	int vstVersion = 0;
+	int localDbId = 0;
+	int vendorVersion = 0;
 	int uId = 0;
 	vst_window* window = NULL;
 	bool isInSuspend = true;
 	std::vector<vst_param_category> paramsCategories;
-//	std::vector<vst_param> vstParams;
 
 	std::vector<String> inputNames;
 	std::vector<String> outputNames;

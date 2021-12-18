@@ -11,6 +11,9 @@ struct pluginentry_t {
 	String name;
 	String path;
 };
+
+struct plugin_snapshot_t;
+
 class plugindatabase_t {
 	class Impl;
 	Impl* _M_Impl = NULL;
@@ -18,7 +21,7 @@ class plugindatabase_t {
 public:
 	plugindatabase_t();
 	~plugindatabase_t();
-	bool resolve(String name, int32_t uId, String* _outPath, int loadFlags);
+	bool resolve(const plugin_snapshot_t& pluginSnapshot, String* _outPath, int loadFlags);
 	void query(String q, std::vector<pluginentry_t>& _out);
 	void openDatabase();
 	void closeDatabase();
