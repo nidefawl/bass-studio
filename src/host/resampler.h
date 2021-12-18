@@ -18,7 +18,7 @@
 
 #include <deque>
 #include <soxr.h>
-
+//#define RESAMPLER_H_ENABLE_BUFFER_CHECKS
 
 
 struct oversample_config_t {
@@ -34,32 +34,14 @@ struct oversample_config_t {
 	}
 };
 struct oversampler_t : public oversample_config_t {
-//		std::vector<std::vector<float>> dataIn;
-//		std::vector<std::vector<float>> dataOut;
 	std::vector<float*> channelPtrsOut;
 	std::vector<float*> channelPtrsIn;
 	soxr_t soxr = 0;
 	soxr_error_t soxrError = 0;
 	oversampler_t(oversample_config_t cfg) {
 		*static_cast<oversample_config_t*>(this) = cfg;
-//			dataIn.resize(numChannels);
-//			dataOut.resize(numChannels);
 		channelPtrsIn.resize(numChannels);
 		channelPtrsOut.resize(numChannels);
-//			float* dataInput = new float[numSamplesInput];
-//			float* dataOutput = new float[numSamplesResampled];
-//			for (int i = 0; i < numChannels; i++) {
-//				dataIn[i].clear();
-//				dataIn[i].insert(dataIn[i].begin(), dataInput, dataInput+numSamplesInput);
-//				dataOut[i].clear();
-//				dataOut[i].insert(dataOut[i].begin(), dataOutput, dataOutput+numSamplesResampled);
-//			}
-//			for (int i = 0; i < numChannels; i++) {
-//				channelPtrsIn[i] = dataIn[i].data();
-//				channelPtrsOut[i] = dataOut[i].data();
-//			}
-//			delete [] dataInput;
-//			delete [] dataOutput;
 		for (uint32_t i = 0; i < numChannels; i++) {
 			channelPtrsIn[i] = nullptr;
 			channelPtrsOut[i] = nullptr;
@@ -68,10 +50,6 @@ struct oversampler_t : public oversample_config_t {
 		soxr_quality_spec_t q_spec = soxr_quality_spec(0, 0);
 		soxr_io_spec_t io_spec = soxr_io_spec(SOXR_FLOAT32_S, SOXR_FLOAT32_S);
 		soxr_runtime_spec_t const runtime_spec = soxr_runtime_spec(0);
-
-//			my_printf("soxr_oneshot from %d to %d, samples %d -> %d, channels %d\n", wav.sampleRate, this->samplerate, wav.totalSampleCount, olen, wav.channels);
-//			my_printf("pSamples.size %d\n", pSamples.size());
-//			my_printf("pSamples2.size %d\n", pSamples2.size());
 
 		soxr = soxr_create((double)inputSampleRate, (double)outputSampleRate, numChannels, &soxrError, &io_spec, &q_spec, &runtime_spec);
 		if (!!soxrError) {
@@ -113,7 +91,6 @@ struct oversampler_t : public oversample_config_t {
 		return false;
 	}
 	~oversampler_t() {
-//			my_printf("%-26s\n", soxr_strerror(error));
 		soxr_delete(soxr);
 	}
 };
@@ -131,6 +108,7 @@ struct resampler_t {
 		uint32_t readOffset{ 0 };
 		bool inUse{ false };
 	};
+	uint32_t numSamplesQueued = 0;
 	std::vector<buf_t*> outputBuffers;
 	std::deque<buf_t*> outputQueue;
 	resampler_t(const uint32_t _idx, sampleformat_t _in, sampleformat_t _out, oversample_config_t config) :
@@ -166,14 +144,18 @@ struct resampler_t {
 			return false;
 		}
 		buf->samplesAvail = nOutputProcessed;
+		numSamplesQueued += nOutputProcessed;
 		outputQueue.push_back(buf);
 		return true;
 	}
 	AudioBlock pop() {
-		dbgassert(outputQueue.size() > 0);
 
+#ifdef RESAMPLER_H_ENABLE_BUFFER_CHECKS
+		dbgassert(outputQueue.size() > 0);
 		uint32_t numSamplesBegin = getNumSamplesOutputBuffer();
 		dbgassert(numSamplesBegin >= out.blockSize);
+		dbgassert(numSamplesBegin == numSamplesQueued);
+#endif
 
 		AudioBlock blockOut(numChannels, out.blockSize);
 		uint32_t writeOffset = 0;
@@ -188,7 +170,7 @@ struct resampler_t {
 
 			b->readOffset += maxCopy;
 			writeOffset += maxCopy;
-
+			numSamplesQueued-= maxCopy;
 			if (b->samplesAvail - b->readOffset <= 0) {
 				b->inUse = false;
 				b->samplesAvail = 0;
@@ -203,24 +185,31 @@ struct resampler_t {
 
 		}
 
+#ifdef RESAMPLER_H_ENABLE_BUFFER_CHECKS
 		uint32_t numSamplesEnd = getNumSamplesOutputBuffer();
 		dbgassert(numSamplesEnd < numSamplesBegin);
+		dbgassert(numSamplesEnd == numSamplesQueued);
+#endif
 
 		return blockOut;
 	}
 	uint32_t getNumSamplesOutputBuffer() {
+#ifdef RESAMPLER_H_ENABLE_BUFFER_CHECKS
 		uint32_t numSamples = 0;
 
 		for (buf_t* b : outputQueue) {
 			numSamples += b->samplesAvail - b->readOffset;
 		}
-
-		return numSamples;
+		dbgassert(numSamples == numSamplesQueued);
+#endif
+		return numSamplesQueued;
 	}
 	uint32_t numBlocksToPop() {
 		uint32_t numSamples = getNumSamplesOutputBuffer();
 		uint32_t numBlocks = numSamples / out.blockSize;
+#ifdef RESAMPLER_H_ENABLE_BUFFER_CHECKS
 		dbgassert(numBlocks == 0 || outputQueue.size() > 0);
+#endif
 		return numBlocks;
 	}
 	void releaseBuffers() {
@@ -229,6 +218,7 @@ struct resampler_t {
 			b->samplesAvail = 0;
 			b->inUse = false;
 		}
+		numSamplesQueued = 0;
 		outputQueue.clear();
 	}
 };
