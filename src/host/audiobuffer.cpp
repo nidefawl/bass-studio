@@ -118,5 +118,12 @@ void delayAudio(DelayLine* delayLine, AudioBlock* input, AudioBlock* output, sam
 
 }
 
+
 std::atomic<int32_t> DelayLine::instanceCount{0};
 std::atomic<int32_t> AudioBlock::instanceCount{0};
+
+
+void printLeakedAudioBuffers() {
+	log_printf("AudioBlock::instanceCount: %d\n", AudioBlock::instanceCount.load());
+	log_printf("DelayLine::instanceCount: %d\n", DelayLine::instanceCount.load());
+}

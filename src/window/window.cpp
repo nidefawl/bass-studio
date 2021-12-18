@@ -1513,6 +1513,7 @@ void appwindow::createBaseWindow(const char* title, int w, int h, GLFWwindow* sh
 
 void printLeakedGuiBase();
 #if BUILD_VSTHOST
+void printLeakedAudioBuffers();
 void printClipAllocations();
 #endif
 
@@ -1789,6 +1790,7 @@ int startApplication(int argc, char* argv[]) {
 	printLeakedGuiBase();
 #if BUILD_VSTHOST
 	printClipAllocations();
+	printLeakedAudioBuffers();
 #endif
 	if (fataError) {
 		my_printf("EXIT_FAILURE\n", 0);
