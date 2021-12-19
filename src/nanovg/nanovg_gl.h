@@ -1521,9 +1521,9 @@ static void glnvg__renderFlush(void* uptr)
 	gl->nuniforms = 0;
 	for (int i = 0; i < gl->nframebuffers; i++) {
 		NVGLUTempFramebuffer* fb = &gl->framebuffers[i];
-		fb->idleframes++;
 		fb->inuse = 0;
-		if (fb->setup && fb->idleframes>=3) {
+		//TODO: renderFlush will get called multiple times per frame
+		if (fb->setup && fb->idleframes++ >= 10) {
 			fb->setup = 0;
 			fb->idleframes = 0;
 			nvglu__DeleteFramebuffer(&fb->fb);
