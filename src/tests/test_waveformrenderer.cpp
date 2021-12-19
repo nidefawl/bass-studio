@@ -6,6 +6,7 @@
 #include <memory>
 #include <GLFW/glfw3.h>
 
+#include "appconfig.h"
 #include "window.h"
 #include "platform.h"
 #include "fileio.h"
@@ -67,7 +68,7 @@ struct waveform_test {
 		renderers.push_back(rendererPar);
 		std::vector<waveform_test_entry> vec;
 		std::vector<FileFound> files;
-		findFilesWithExt(toResourcePath("./test-samples/"), "wav", false, files);
+		findFilesWithExt("./cpp-test-data/", "wav", false, files);
 		log_printf("findFilesWithExt %d\n", files.size());
 		for (auto i = 0u; i < files.size() && vec.size() < 8; i++) {
 			size_t filesize = GetFileSizeSafe(files[i].path);
@@ -81,6 +82,9 @@ struct waveform_test {
 			} else {
 				vec.push_back(waveform_test_entry{sample, gui_waveform_texture_ref{}, 0u});
 			}
+		}
+		if (vec.size() < 1) {
+			throw appexception("Failed loading test samples");
 		}
 		for (auto i = 0u; i < NUM_RENDERERS; i++) {
 			vecs.push_back(vec);
@@ -217,6 +221,10 @@ namespace MiniApp {
 			}
 		}
 		void initApp(int argc, char* argv[]) {
+			daw_tls::tlsinstance _tls;
+			_tls.tlsInitialized = true;
+	        _tls.config = new app_config_t{};
+			daw_tls::setTls(_tls);
 			waveformTest.init();
 		}
 

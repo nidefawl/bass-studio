@@ -7,6 +7,7 @@
 #include "../host/plugin/vst_plugin.h"
 #include "tls.h"
 #include "project.h"
+#include "appconfig.h"
 
 
 
@@ -16,6 +17,7 @@ int main(int argc, char* argv[]) {
 	vsthost::assignMasterCallback(audiohost.get());
 	daw_tls::tlsinstance _tls;
 	_tls.tlsInitialized = true;
+    _tls.config = new app_config_t{};
     _tls.host = audiohost.get();
 	daw_tls::setTls(_tls);
 	vsthost::getInstance()->onTick();

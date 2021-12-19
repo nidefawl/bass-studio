@@ -13,6 +13,7 @@ namespace daw_tls {
 
 	void setTls(tlsinstance& _tls) {
 		dbgassert(_tls.tlsInitialized);
+		dbgassert(!tls.tlsInitialized);
 		tls = _tls;
 	}
 	tlsinstance& getTls() {
