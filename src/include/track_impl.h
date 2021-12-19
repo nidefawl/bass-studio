@@ -83,7 +83,7 @@ public:
 	automationlane_snapshot_t toRef() const override;
 	track_t* getTrack() override;
 	bool isEnabled() {
-		return getParam(PARAM_ENABLE)->value >= 0.5f;
+		return getParamUnchecked(PARAM_ENABLE)->value >= 0.5f;
 	}
 	void createSnapshot(track_params_snapshot_t& snapshot);
 	void loadSnapshot(const track_params_snapshot_t& snapshot);

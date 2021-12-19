@@ -168,7 +168,7 @@ String internalplugin::getAutomatableName() {
 	return this->sName;
 }
 float internalplugin::getParamValue(int32_t idx) {
-	automatable_param_t* param = getParam(idx);
+	automatable_param_t* param = getParamUnchecked(idx);
 	dbgassert(param);
 	if (param->internalIdx >= 0) {
 		param->value = dispatchGetParameter(param->internalIdx);
@@ -176,7 +176,7 @@ float internalplugin::getParamValue(int32_t idx) {
 	return param->value;
 }
 void internalplugin::setParamValue(int32_t idx, float val, int flags) {
-	automatable_param_t* param = getParam(idx);
+	automatable_param_t* param = getParamUnchecked(idx);
 	dbgassert(param);
 	param->value = val;
 	if (param->idx == PARAM_ENABLE) {

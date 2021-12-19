@@ -110,7 +110,7 @@ public:
 		return "Arp";
 	}
 	float getParamValue(int32_t idx) override {
-		automatable_param_t* param = getParam(idx);
+		automatable_param_t* param = getParamUnchecked(idx);
 		dbgassert(param);
 		return param->value;
 	}
@@ -120,7 +120,7 @@ public:
 	}
 
 	void setParamValue(int32_t idx, float val, int flags) override {
-		automatable_param_t* param = getParam(idx);
+		automatable_param_t* param = getParamUnchecked(idx);
 		dbgassert(param);
 		param->value = val;
 		if (param->idx == PARAM_ENABLE) {

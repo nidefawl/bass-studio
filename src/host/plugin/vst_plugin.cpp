@@ -471,7 +471,7 @@ String vstplugin::getAutomatableName() {
 	return this->sName;
 }
 float vstplugin::getParamValue(int32_t idx) {
-	automatable_param_t* param = getParam(idx);
+	automatable_param_t* param = getParamUnchecked(idx);
 	dbgassert(param);
 	if (param->internalIdx >= 0) {
 		param->value = vst_getParameter(this, handle->aeffect, param->internalIdx);
@@ -479,7 +479,7 @@ float vstplugin::getParamValue(int32_t idx) {
 	return param->value;
 }
 String vstplugin::getParamValueDisplay(int32_t idx) {
-	automatable_param_t* param = getParam(idx);
+	automatable_param_t* param = getParamUnchecked(idx);
 	dbgassert(param);
 	if (param->internalIdx >= 0) {
 		char buf[1024];
@@ -490,7 +490,7 @@ String vstplugin::getParamValueDisplay(int32_t idx) {
 	return effectbase::getParamValueDisplay(idx);
 }
 void vstplugin::setParamValue(int32_t idx, float val, int flags) {
-	automatable_param_t* param = getParam(idx);
+	automatable_param_t* param = getParamUnchecked(idx);
 	dbgassert(param);
 	param->value = val;
 	if (param->idx == PARAM_ENABLE) {

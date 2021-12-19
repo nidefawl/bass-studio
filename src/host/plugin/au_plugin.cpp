@@ -50,7 +50,7 @@ void auplugin::process(AudioBlock* in, AudioBlock* out, double tick, int32_t sam
 int32_t auplugin::getPluginLatency() { return 0; }
 
 float auplugin::getParamValue(int32_t idx) {
-	automatable_param_t* param = getParam(idx);
+	automatable_param_t* param = getParamUnchecked(idx);
 	dbgassert(param);
 	if (param->internalIdx >= 0) {
 		param->value = 0;// vst_getParameter(this, handle->aeffect, param->internalIdx);
@@ -58,7 +58,7 @@ float auplugin::getParamValue(int32_t idx) {
 	return param->value;
 }
 String auplugin::getParamValueDisplay(int32_t idx) {
-	automatable_param_t* param = getParam(idx);
+	automatable_param_t* param = getParamUnchecked(idx);
 	dbgassert(param);
 	if (param->internalIdx >= 0) {
 		char buf[1024];
@@ -69,7 +69,7 @@ String auplugin::getParamValueDisplay(int32_t idx) {
 	return effectbase::getParamValueDisplay(idx);
 }
 void auplugin::setParamValue(int32_t idx, float val, int flags) {
-	automatable_param_t* param = getParam(idx);
+	automatable_param_t* param = getParamUnchecked(idx);
 	dbgassert(param);
 	param->value = val;
 	if (param->idx == PARAM_ENABLE) {

@@ -78,7 +78,7 @@ void guiplugin::render(NVGcontext* vg) {
 }
 void guiplugin::prerender(NVGcontext* vg) {
 	guictr_base::prerender(vg);
-	if (effect->getParam(PARAM_ENABLE)) {
+	if (effect->getParamUnchecked(PARAM_ENABLE)) {
 		auto at = effect->getRegisteredAutomation(PARAM_ENABLE);
 		if (at && at->isAutomated()) {
 			buttonBypass.colorActive = GuiColor::COL_AUTOMATED;

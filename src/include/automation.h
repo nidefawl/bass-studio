@@ -222,13 +222,18 @@ public:
 	 * returns: null or temporary reference, do not keep around
 	 */
 	automatable_param_t* getParam(int32_t paramIdx) {
-		auto it = std::find_if(mapParams.begin(), mapParams.end(), [paramIdx](const auto& mapEntry) {
-			return mapEntry.second.idx == paramIdx;
-		});
+		auto it = mapParams.find(paramIdx);
+		dbgassert(it != mapParams.end());
 		if (it != mapParams.end()) {
 			return &it->second;
 		}
 		return nullptr;
+	}
+	/**
+	 * returns: reference
+	 */
+	automatable_param_t* getParamUnchecked(int32_t paramIdx) {
+		return &mapParams[paramIdx];
 	}
 	const automation_t* getRegisteredConstAutomation(int32_t paramIdx) const {
 		dbgassert(mapParams.count(paramIdx));
@@ -284,7 +289,7 @@ public:
 				return param.src.getMinMax();
 			}
 		}
-		automatable_param_t* param = getParam(paramIdx);
+		automatable_param_t* param = getParamUnchecked(paramIdx);
 		dbgassert(param);
 		return {param->value, param->value};
 	}

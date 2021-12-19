@@ -1405,14 +1405,14 @@ track_params_t::track_params_t(audio_stage_t* _audiostage) : automatable_t(), au
 }
 
 float track_params_t::getParamValue(int32_t idx) {
-	automatable_param_t* param = getParam(idx);
+	automatable_param_t* param = getParamUnchecked(idx);
 	dbgassert(param);
 	//		return convertValFrom(idx, param->value);
 	return param->value;
 }
 
 void track_params_t::setParamValue(int32_t idx, float val, int flags) {
-	automatable_param_t* param = getParam(idx);
+	automatable_param_t* param = getParamUnchecked(idx);
 	dbgassert(param);
 	param->value = val; //convertValTo(idx, val);
 }
