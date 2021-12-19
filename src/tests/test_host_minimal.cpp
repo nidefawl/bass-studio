@@ -14,9 +14,11 @@
 int main(int argc, char* argv[]) {
     auto audiohost = std::make_unique<vsthost>();
 	vsthost::assignMasterCallback(audiohost.get());
-    daw_tls::tlsinstance& tls = daw_tls::getTls();
-    tls.host = audiohost.get();
-
+	daw_tls::tlsinstance _tls;
+	_tls.tlsInitialized = true;
+    _tls.host = audiohost.get();
+	daw_tls::setTls(_tls);
+	vsthost::getInstance()->onTick();
 	vsthost::getInstance()->unload();
 	vsthost::getInstance()->destroy();
 }

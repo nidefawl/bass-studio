@@ -7,7 +7,7 @@
 
 int main(int argc, char* argv[]) {
 	std::vector<String> vecStringArgs {
-		"-f", "serum-test.project",
+		"-f", "cpp-test-data/serum-test.project",
 		"-s", "32.0",
 		"-l", "12.0",
 		"-o", "test-render",

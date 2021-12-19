@@ -39,8 +39,10 @@ static void test() {
 		task.b = 10;
 		i++;
 	}
-
+	daw_tls::tlsinstance tls;
+	tls.tlsInitialized = true;
 	WorkerThread wthread;
+	wthread.setTls(tls);
 	wthread.startThread();
 	for (TestTask& task : tasks) {
 		if (task.id == 2) {

@@ -1,4 +1,3 @@
-
 #include "str_util.h"
 #include "test_common.h"
 #include "../host/vst_host.h"
@@ -10,12 +9,12 @@
 #endif
 
 namespace {
-
+int32_t exitStatusCode = 1;
 
 #if defined(_WIN32) 
 
-static const std::vector<String> files{"mdaLimiter.dll", "mdaPiano.dll"};
-size_t rIdx = 0;
+static const std::vector<String> dllFilesToTest{"cpp-test-data/mdaLimiter.dll", "cpp-test-data/mdaPiano.dll"};
+size_t currentFileIdx = 0;
 HWND hwnd = NULL;
 
 class reentrantblocker {
@@ -36,45 +35,51 @@ VOID CALLBACK TimerCallback(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime
 	static vstpluginloadres res(0, NULL);
 	static bool reentrant = false;
 	if (reentrant) {
+    	exitStatusCode = 1;
+	    printf("TimerCallback reentrant\n");
 		return;
 	}
 	reentrantblocker block(reentrant);
 
 
-	static int tick = 0;
-	static int test = 0;
-	auto* audiohost = vsthost::getInstance();
+	static int currentTimerTick = 0;
+	static int numPluginsTested = 0;
+	auto* host = vsthost::getInstance();
 	if (res.plugin == NULL) {
-		if (test > 122) {
-            PostQuitMessage(0);
-		}
-		if (rIdx >= files.size()) {
+		if (numPluginsTested > 122) {
             PostQuitMessage(0);
 			return;
 		}
-	    String f = files[rIdx];
-		res = audiohost->loadPlugin(f, 0);
+		if (currentFileIdx >= dllFilesToTest.size()) {
+            PostQuitMessage(0);
+			return;
+		}
+	    String f = dllFilesToTest[currentFileIdx];
+		res = host->loadPlugin(f, 0);
 	    printf("loadPlugin: %s %d\n", StringAsCStr(f), res.result);
 	    if (res.result != 0) {
+	    	exitStatusCode = 1;
 			res = vstpluginloadres(0, NULL);
+            PostQuitMessage(0);
+			return;
 	    }
-		rIdx++;
+		currentFileIdx++;
 	} else {
-		if (tick == 0) {
+		if (currentTimerTick == 0) {
 			res.plugin->show();
-		} else if (tick == 72) {
+		} else if (currentTimerTick == 72) {
 			res.plugin->close();
-		} else if (tick == 92) {
+		} else if (currentTimerTick == 92) {
 			printf("unloadPlugin\n");
-			audiohost->unloadPlugin(res.plugin);
+			host->unloadPlugin(res.plugin);
 			res = vstpluginloadres(0, NULL);
-			tick = -1;
-			test++;
+			currentTimerTick = -1;
+			numPluginsTested++;
 		} else {
-			audiohost->onTick();
+			host->onTick();
 			res.plugin->updateWindow();
 		}
-		tick++;
+		currentTimerTick++;
 	}
 }
 static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -91,19 +96,8 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 
     return DefWindowProc(hwnd, msg, wParam, lParam);
 }
-#endif
 
-}
-
-
-
-int main(int argc, char* argv[]) {
-    auto audiohost = std::make_unique<vsthost>();
-	vsthost::assignMasterCallback(audiohost.get());
-    daw_tls::tlsinstance& tls = daw_tls::getTls();
-    tls.host = audiohost.get();
-#if defined(_WIN32) 
-    MSG msg;
+void createWin32Window() {
     WNDCLASS wc;
 
     wc.style         = CS_HREDRAW | CS_VREDRAW;
@@ -126,11 +120,37 @@ int main(int argc, char* argv[]) {
     ShowWindow(hwnd, SW_SHOW);
     UpdateWindow(hwnd);
 
-    while  (GetMessage(&msg, NULL, 0, 0))
-    {
-        DispatchMessage(&msg);
-    }
+}
 #endif
-	vsthost::getInstance()->unload();
-	vsthost::getInstance()->destroy();
+
+}
+
+
+int main(int argc, char* argv[]) {
+    auto audiohost = std::make_unique<vsthost>();
+    try {
+    	vsthost::assignMasterCallback(audiohost.get());
+    	daw_tls::tlsinstance _tls;
+    	_tls.tlsInitialized = true;
+        _tls.host = audiohost.get();
+    	daw_tls::setTls(_tls);
+
+#if defined(_WIN32)
+    	exitStatusCode = 0;
+    	createWin32Window();
+        MSG msg;
+        while  (GetMessage(&msg, NULL, 0, 0))
+        {
+            DispatchMessage(&msg);
+        }
+#endif
+
+    	vsthost::getInstance()->unload();
+    	vsthost::getInstance()->destroy();
+    	return exitStatusCode;
+    } catch(std::exception& e) {
+    	printf("std::exception: %s\n", e.what());
+    	return 1;
+    }
+	return 0;
 }
