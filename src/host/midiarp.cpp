@@ -81,7 +81,7 @@ tick_t midiarp::getDuration() {
 	// I want f = 0.5 to map to 1.0
 	float scMin = 1.0f/8.0f;
 	float scMax = 2.0f;
-	float expo = math::calcExponentForScale(0.5f, 1.0f, scMin, scMax);
+	float expo = 1.1f;//math::calcExponentForScale(0.5f, 1.0f, scMin, scMax);
 	//TODO: hardcode or constexpr this exponent
 
     float valueMapped = pow(getGateF(), expo) * (scMax - scMin) + scMin;
@@ -400,7 +400,11 @@ void midiarp::process(playback_state state, tick_t cursorPos, const std::vector<
 				std::vector<noteevent_t>& noteEventsProcessed) {
 	const int64_t wallClockTime = getTimeMillis();
 
-	if (!isProcessingEnabled() && !bEnableStateUserToggled && false) {
+	if (!isProcessingEnabled()
+			&& !bEnableStateUserToggled
+			&& heldInput.empty()
+			&& heldOutputNotes.empty()
+			&& noteEventsIn.empty()) {
 		noteEventsProcessed = noteEventsIn;
 	} else {
 		processArpInternal(state, cursorPos, noteEventsIn, start, end, loopStart, loopEnd, ticksPerBlock, wallClockTime, noteEventsProcessed);
