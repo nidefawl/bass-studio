@@ -56,21 +56,16 @@ double getTimeHPC()
   return (now.QuadPart - begin.QuadPart) / double(frequency.QuadPart);
 }
 int64_t getTimeHPint64()
- {
+{
 	static LARGE_INTEGER frequency{};
 	if (frequency.QuadPart == 0)
 		::QueryPerformanceFrequency(&frequency);
 	LARGE_INTEGER now;
 	::QueryPerformanceCounter(&now);
-	//This overflowed after months of uptime
-//	now.QuadPart *= 1000000UL; //microseconds resolution
-
-
-	//prevent overflow, but keep some precision
-	now.QuadPart *= 10000UL;
-	int64_t val = now.QuadPart / frequency.QuadPart;
-	dbgassert(val > 0);
-	val *= 100UL;
+	assert(frequency.QuadPart >= 1000000UL);
+	//microseconds resolution
+	int64_t val = (now.QuadPart / (frequency.QuadPart/1000000UL));
+	assert(val > 0);
     return val;
 }
 double getSince(double& d) //checks for overflow
