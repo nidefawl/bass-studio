@@ -44,8 +44,8 @@ struct host_stats_t {
 	int64_t timeBlock;
 	std::map<String, int64_t> timings;
 	track_midiprocess_profiling_t blockMidiStats;
-	double usage;
-	double usageRaw;
+	float usage;
+	float usageRaw;
 	int32_t inputBufferUnderuns = 0;
 	int32_t inputQueueLen = 0;
 	int32_t outputQueueLen = 0;

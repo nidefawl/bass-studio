@@ -226,9 +226,8 @@ void guibutton_audioengine::prerender(NVGcontext* vg) {
 	ThreadLock lock = dawCtrl->getDaw()->getPlayThread()->tryLockThread();
 	if (lock.isLocked()) {
 		vsthost::getInstance()->getStats(stats);
-		this->cpuUsage = stats.usageRaw;
 	} else {
-		this->cpuUsage = vsthost::getInstance()->cpuUsagePercent;
+		this->cpuUsage = vsthost::getInstance()->getCpuUsage();
 	}
 }
 void guibutton_audioengine::render(NVGcontext* vg) {

@@ -146,7 +146,6 @@ public:
 	SYNCHRONIZED_RW hires_timer_t timerBlock;// timer for cpu-time profiling
 	SYNCHRONIZED_RW hires_timer_t timerProfile;// timer for cpu-time profiling
 //	SYNCHRONIZED_RW hires_timer_t timer4;// timer for cpu-time profiling
-	float cpuUsagePercent = 0.0f;
 private:
 	SYNCHRONIZED_RW clip_t* recordingClip = nullptr;
 	SYNCHRONIZED_RW std::atomic<bool> hasNewRecordedData{0};
@@ -251,6 +250,9 @@ public:
 		stats.timeProcess = this->stats.timeProcessPlugins;
 		stats.timeProcessRaw = this->stats.timeProcessPluginsRaw;
 		stats.timePerBlock_usec = sampleFormat.blockSize*1000000/ sampleFormat.sampleRate;
+	}
+	float getCpuUsage() {
+		return stats.usageRaw;
 	}
 	void getStats(host_stats_t& stats) {
 		stats = this->stats;

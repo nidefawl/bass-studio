@@ -292,7 +292,7 @@ public:
 			nvgFillColor(vg, G_WHITE);
 		}
 		auto& renderStats = daw_tls::getTls().prevRenderStats;
-		printL(0, "Usage", StringFormat("%.2f%% (%.2f%%)", stats.usage*100.0, stats.usageRaw*100.0));
+		printL(0, "Usage", StringFormat("%.2f%% (%.2f%%)", stats.usage*100.0f, stats.usageRaw*100.0f));
 		nvgFillColor(vg, G_WHITE);
 		printL(0, "FPS", StringFormat("%.2f", renderStats.fps));
 		printL(0, "Render", StringFormat("%d µs", renderStats.timeRender));

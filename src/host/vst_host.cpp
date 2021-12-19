@@ -1453,9 +1453,8 @@ int32_t vsthost::processRender(project_controller_t* ctrl, int32_t sample, doubl
 			stats.timings["Constants.blockSizeResampled"] = audioProp.blockSizeResampled;
 			stats.timings["Constants.numBlocksExternal"] = audioProp.numBlocksExternal;
 			stats.timings["Constants.numBlocksInternal"] = audioProp.numBlocksInternal;
-			stats.usage = stats.timeBlock / (double) audioProp.microSecsPerBlock;
-			stats.usageRaw = stats.timeBlockRaw / (double) audioProp.microSecsPerBlock;
-			this->cpuUsagePercent = stats.usage;
+			stats.usage = stats.timeBlock / (float) audioProp.microSecsPerBlock;
+			stats.usageRaw = stats.timeBlockRaw / (float) audioProp.microSecsPerBlock;
 		}
 	}
 	return nBlocksProcessed;
@@ -1750,8 +1749,8 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			stats.timings["Constants.blockSizeResampled"] = audioProp.blockSizeResampled;
 			stats.timings["Constants.numBlocksExternal"] = audioProp.numBlocksExternal;
 			stats.timings["Constants.numBlocksInternal"] = audioProp.numBlocksInternal;
-			stats.usage = stats.timeBlock / (double) audioProp.microSecsPerBlock;
-			stats.usageRaw = stats.timeBlockRaw / (double) audioProp.microSecsPerBlock;
+			stats.usage = stats.timeBlock / (float) audioProp.microSecsPerBlock;
+			stats.usageRaw = stats.timeBlockRaw / (float) audioProp.microSecsPerBlock;
 		}
 	}
 	return nBlocksProcessed;
