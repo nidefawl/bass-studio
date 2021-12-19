@@ -808,13 +808,12 @@ void DawInstance::saveFile(const String& path) {
 void DawInstance::loadFile(String path, int flags) {
 	timer.reset();
 	std::shared_ptr<project_file> f = loadProjectFile(path);
-	double l1 = timer.getTimeDoubleReset();
 	if (!f) {
 		mainCtrl->setStatusText(StringFormat("Failed loading %s", StringAsCStr(FileNameFromPath(path))));
 	} else {
 		settings.recentfiles.add(path);
 		const bool wasUserCallback = (flags&FLAG_INVOKE_USER_CB_DEFERLOAD) != 0;
-		auto cb = [this, path, l1, projFile=f, wasUserCallback](int n) {
+		auto cb = [this, path, projFile=f, wasUserCallback](int n) {
 			int loadFlags = 0;
 			if (wasUserCallback) {
 				loadFlags = n==0 ? FLAG_DEFER_LOAD : 0;
