@@ -25,12 +25,12 @@ String demangleName(String to_demangle)
 	return to_demangle;
 }
 #endif
-#include "logging.h"
-#include "assert_dbg.h"
 #include <ctime>
 #include <unordered_map>
-#include "assert_dbg.h"
 #include <vector>
+#include <mutex>
+#include "logging.h"
+#include "assert_dbg.h"
 #include "math/seq_math.h"
 #include "fileio.h"
 #include "thread.h"

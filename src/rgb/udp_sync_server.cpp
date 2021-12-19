@@ -8,6 +8,7 @@
 #include <vector>
 #include <algorithm>
 #include <atomic>
+#include <mutex>
 #include "basectrl.h"
 #include "color_util.h"
 #include "platform.h"

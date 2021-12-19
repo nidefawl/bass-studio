@@ -2,6 +2,7 @@
 #include <vector>
 #include <array>
 #include <cmath>
+#include <mutex>
 #include "../plugin-base.h"
 #include "../plugin-base.h"
 #include "vstsdk-plugin-2.4/audioeffectx.h"
