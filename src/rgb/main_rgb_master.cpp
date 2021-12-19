@@ -47,7 +47,7 @@ void closeGlobalLog(); // Forward declare from util/debug.cpp
 int mainApp(int argc, char **argv);
 int main(int argc, char **argv)
 {
-	seqthreads::setCurrentThreadName("mainthread");
+	seqthreads::registerThread("mainthread");
 	network_init();
 #if !defined(NDEBUG) && defined(_WIN32)
     _dup2( 1, 2 ); //workaround: redirect stderr to stdout so stderr is visible when using gdb on eclipse (bug)

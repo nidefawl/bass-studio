@@ -2,62 +2,59 @@
 #include <mutex>
 #include <stdint.h>
 #include <unordered_map>
-//#include "thread.h"
+#include <atomic>
 #include "str_util.h"
+#include "assert_dbg.h"
 
-namespace {
 
-struct threadnames_t {
-	std::mutex gThreadMutex;
-	std::unordered_map<int32_t, String> gThreadNames;
-	threadnames_t() {
-		std::lock_guard<std::mutex> lock(gThreadMutex);
-	}
-	void setThreadName(int32_t threadId, const String& str) {
-		std::lock_guard<std::mutex> lock(gThreadMutex);
-		gThreadNames[threadId] = str;
-	}
-	String getThreadName(int32_t threadId) {
-		std::lock_guard<std::mutex> lock(gThreadMutex);
-		auto it = gThreadNames.find(threadId);
-		if (it == gThreadNames.end()) {
-            return StringFormat("thread-%X", static_cast<int32_t>(threadId));
-		}
-        return it->second + StringFormat("-%X", static_cast<int32_t>(threadId));
-	}
-};
+namespace
+{
+	struct threadlocal_threadinfo_t {
+		int32_t threadId = 0;
+		String threadName = "";
+		bool isKnownThread = false;
+	};
 
-threadnames_t& getThreadNames() {
-	static threadnames_t threadnames;
-	return threadnames;
+	int32_t getNextThreadId() noexcept {
+	    static std::atomic<int32_t> thread_idx(0);
+	    return thread_idx.fetch_add(1, std::memory_order::memory_order_acquire);
+	}
+
+	thread_local threadlocal_threadinfo_t* tlsThreadInfo = nullptr;
+
+	void registerThreadInternal(String threadName, bool isKnownThread) {
+		static std::mutex gRegisterMutex;
+		std::lock_guard<std::mutex> lock(gRegisterMutex);
+		dbgassert(!tlsThreadInfo || !tlsThreadInfo->isKnownThread);
+		threadlocal_threadinfo_t* threadInfo = new threadlocal_threadinfo_t{};
+		threadInfo->threadId = getNextThreadId();
+		threadInfo->threadName = threadName + StringFormat("-%d", threadInfo->threadId);
+		threadInfo->isKnownThread = isKnownThread;
+		tlsThreadInfo = threadInfo;
+	}
 }
-
-}
-
 namespace seqthreads {
 
-//TODO: implement this using TLS
-int32_t get_thread_id() noexcept {
-    static int32_t thread_idx = 0;
-    static std::mutex thread_mutex;
-    static std::unordered_map<std::thread::id, int32_t> thread_ids;
-
-    std::lock_guard<std::mutex> lock(thread_mutex);
-    std::thread::id id = std::this_thread::get_id();
-    auto iter = thread_ids.find(id);
-    if (iter == thread_ids.end()) {
-        iter = thread_ids.insert(std::pair<std::thread::id, int32_t>(id, thread_idx++)).first;
-    }
-    return iter->second;
+void registerThread(String threadName) {
+	registerThreadInternal(threadName, true);
 }
 
-void setCurrentThreadName(String str) {
-	int32_t threadId = get_thread_id();
-	getThreadNames().setThreadName(threadId, str);
+int32_t getCurrentThreadId() noexcept {
+	threadlocal_threadinfo_t* threadInfo = tlsThreadInfo;
+	return threadInfo ? threadInfo->threadId : -1;
+}
+bool isInternalThread() noexcept {
+	threadlocal_threadinfo_t* threadInfo = tlsThreadInfo;
+	return threadInfo && threadInfo->isKnownThread;
 }
 
 String getCurrentThreadName() {
-	return getThreadNames().getThreadName(get_thread_id());
+	threadlocal_threadinfo_t* threadInfo = tlsThreadInfo;
+	if (!threadInfo) {
+		registerThreadInternal("unknown", false);
+		threadInfo = tlsThreadInfo;
+	}
+	return threadInfo ? threadInfo->threadName : "unknown";
 }
 
 void threadSleep(int32_t millis) {

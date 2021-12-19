@@ -474,8 +474,8 @@ namespace DAW {
 //		nInvocation++;
 //        int nInvoke = nInvocation;
 //        bool secondInvoke = nInvoke > 1;
-//        if (get_thread_id() != MainCtrl::getPlayThread()->getThreadId()) {
-//            log_printf("not playthread %d != %d\n", get_thread_id(), MainCtrl::getPlayThread()->getThreadId());
+//        if (getCurrentThreadId() != MainCtrl::getPlayThread()->getThreadId()) {
+//            log_printf("not playthread %d != %d\n", getCurrentThreadId(), MainCtrl::getPlayThread()->getThreadId());
 //            log_printf("destruct %08X %d %d\n", reinterpret_cast<uint64_t>(this), nInvoke, secondInvoke);
 //        }
 //        if (secondInvoke) {

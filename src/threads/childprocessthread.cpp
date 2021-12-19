@@ -242,7 +242,7 @@ public:
 		isrunning = true;
 		this->lastCmd = StringFormat("%s> %s %s", StringAsCStr(workingDir),  StringAsCStr(binary), StringAsCStr(params));
 		t = std::thread([this, argbinary=binary, argparams=params, argwd=workingDir, argenv=env, argpipe=pipedOutput]() {
-			seqthreads::setCurrentThreadName("childprocessthread");
+			seqthreads::registerThread("childprocessthread");
 			try {
 				std::array<char, 2048> TEMP;
 				std::vector<char> buf;

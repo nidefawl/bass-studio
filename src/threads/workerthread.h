@@ -95,29 +95,3 @@ public:
 		fn();
 	}
 };
-class ThreadTaskTest : public WorkerThread::ThreadTask {
-public:
-	ThreadTaskTest() : ThreadTask() {
-	}
-	int id = 0;
-	int a = 0;
-	int b = 0;
-	int result = 0;
-	void run() {
-		result = a*b;
-		//seqthreads::threadSleep(120);
-//        LOG("work on ThreadTask %d", result);
-        if (id == 3)
-        	throw std::runtime_error("little error hihi");
-	}
-};
-//template<typename T>
-//class AsyncTask : public WorkerThread::ThreadTask {
-//	T* const handle;
-//public:
-//	AsyncTask(T* _handle) : ThreadTask(), handle(_handle) {
-//	}
-//	void run() {
-//		handle->doAsync(this);
-//	}
-//};

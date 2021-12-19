@@ -91,13 +91,13 @@ public:
     }
 	void start() {
 		t = std::thread([this]() {
-			seqthreads::setCurrentThreadName("workerthread");
+			seqthreads::registerThread("workerthread");
             dbgassert(threadTLS.tlsInitialized);
 			daw_tls::setTls(threadTLS);
 			this->run();
 		});
 	#ifdef _WIN32
-			this->threadid = seqthreads::get_thread_id();
+			this->threadid = seqthreads::getCurrentThreadId();
 //			HANDLE h = reinterpret_cast<HANDLE*>(t.native_handle());
 	#endif
 	}

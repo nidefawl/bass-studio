@@ -1554,7 +1554,7 @@ void closeGlobalLog(); // Forward declare from util/debug.cpp
 void runSseBenchmarkTests(); //Forward declare from benchmark/benchmark-main.cpp
 
 int startApplication(int argc, char* argv[]) {
-	seqthreads::setCurrentThreadName("mainthread");
+	seqthreads::registerThread("mainthread");
 #if !defined(NDEBUG) && defined(_WIN32)
     _dup2( 1, 2 ); //workaround: redirect stderr to stdout so stderr is visible when using gdb on eclipse (bug)
 #endif
@@ -1566,7 +1566,9 @@ int startApplication(int argc, char* argv[]) {
 #ifdef USE_WIN32_EXC_HOOKS
 	setExceptionHandler();
 #endif
+#if BUILD_VSTHOST
 	runSseBenchmarkTests();
+#endif
 
 	try {
 	int centerScreenIdx = -1;

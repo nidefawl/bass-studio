@@ -95,39 +95,7 @@ void dragdrop_midifile::reset() {
 	isLoaded = false;
 	clipboard.reset();
 }
-void testTask() {
 
-	ThreadTaskTest task;
-	task.id = 3;
-	task.a = 4;
-	task.b = 5;
-	WorkerThread* t = MainCtrl::get()->getWorkerThread();
-	if (!t->pushTask(&task)) {
-		throw appexception("thread task failed");
-	}
-	if (task.isInQueue()) {
-		task.wait();
-	}
-	if (task.isError()) {
-		printf("task[%d] iserror: %d\n", task.id, task.result);
-		std::exception_ptr eptr = task.getException();
-		if (eptr != nullptr) {
-			printf("task[%d] had exception.. rethrowing\n",task.id);
-	        try{
-	        	std::rethrow_exception(eptr);
-	        }
-	        catch(const std::exception &ex)
-	        {
-				printf("task[%d] had exception: %s\n",task.id,  ex.what());
-	        }
-		}
-	} else if (task.isGood()) {
-		printf("task[%d] isGood: %d\n", task.id, task.result);
-	} else {
-		printf("task[%d] was not processed!\n", task.id);
-	}
-
-}
 guictr_base* makeCtrProperties(); //guiproperties.cpp
 guictr_base* makeCtrTheme(); //guiproperties.cpp
 guictr_base* makeCtrHistory(); //guihistory.cpp
@@ -2661,7 +2629,7 @@ GLFWwindow* getTopLevelGlfwWindow() {
 
 int handleFatalError(int type, int implSpecType) {
 	seqthreads::thread_base* thread = MainCtrl::getPlayThread();
-	if (thread && seqthreads::get_thread_id() == thread->getThreadId()) {
+	if (thread && seqthreads::getCurrentThreadId() == thread->getThreadId()) {
 		host_processing_stats_t processing;
 		auto host = vsthost::getInstance();
 		host->getProcessingStats(processing);

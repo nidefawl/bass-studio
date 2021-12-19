@@ -93,13 +93,14 @@ public:
 	void start(project_controller_t* ctrl) {
 		this->ctrl = ctrl;
         t = std::thread([this]() {
-            this->threadid = seqthreads::get_thread_id();
+    		seqthreads::registerThread("audiothread");
+            this->threadid = seqthreads::getCurrentThreadId();
+            dbgassert(threadTLS.tlsInitialized);
+			daw_tls::setTls(threadTLS);
 #ifdef _WIN32
             HANDLE h = reinterpret_cast<HANDLE*>(t.native_handle());
             SetThreadPriority(h, THREAD_PRIORITY_TIME_CRITICAL);
 #endif
-            dbgassert(threadTLS.tlsInitialized);
-			daw_tls::setTls(threadTLS);
 			this->run();
 		});
 	}
@@ -145,7 +146,6 @@ public:
 private:
 
 	void run() {
-		seqthreads::setCurrentThreadName("audiothread");
 		project_controller_t* const ctrl = this->ctrl;
 		vsthost* host = vsthost::getInstance();
 		midihost* midiHost = midihost::getInstance();

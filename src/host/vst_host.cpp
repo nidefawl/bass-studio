@@ -343,6 +343,13 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
 		return 0;
 
 	vstplugin* plugin = host->getPlugin(effect);
+	if (!seqthreads::isInternalThread()) {
+
+		log_printf("Ignore %s (own thread) opcode %d %d %d %f\n", !plugin?"UNKNOWN":StringAsCStr(plugin->sName), opcode, index, value, opt);
+		return 0;
+	}
+
+
 	bool throttleLog = false;
 	bool validProcessingState = false;
 	if (plugin) {
@@ -403,7 +410,7 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
 	case audioMasterGetTime:
 		//{
 		//	int32_t playThreadId = host->getPlayThreadId();
-		//	int32_t localThreadId = get_thread_id();
+		//	int32_t localThreadId = getCurrentThreadId();
 		//	if (localThreadId == playThreadId) {
 		//		return (VstIntPtr)plugin->getLocalTimeInfoPtr();
 		//	}
@@ -2121,7 +2128,7 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const audiostream_prop
 		audiostageid_i32 stageId;
 		uint32_t threadIdx;
 	};
-	impl->playThreadId = seqthreads::get_thread_id();
+	impl->playThreadId = seqthreads::getCurrentThreadId();
 	const bool useThreading = this->multithreadedProcessing && impl->threadsRunningCount > 0 && impl->threadCount > 1;
 	if (!useThreading) {
 		for (auto itAudioStage = processingGraph->nodesFlatOrdered.begin(); itAudioStage != processingGraph->nodesFlatOrdered.end(); itAudioStage++) {

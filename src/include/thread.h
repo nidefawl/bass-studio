@@ -4,12 +4,14 @@
 #include "str_util.h"
 
 namespace seqthreads {
-	int32_t get_thread_id() noexcept;
+	int32_t getCurrentThreadId() noexcept;
+	void registerThread(String threadName);
+	bool isInternalThread() noexcept;
+	String getCurrentThreadName();
+
 	void threadSleep(int32_t millis);
 	void threadSleepMicros(int32_t microSeconds);
 
-	void setCurrentThreadName(String s);
-	String getCurrentThreadName();
 
 	class thread_base {
 	public:
