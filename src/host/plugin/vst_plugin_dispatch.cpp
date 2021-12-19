@@ -32,11 +32,11 @@ int exchandler(_In_ EXCEPTION_POINTERS *lpEP)
 #endif // _WIN32
 
 void dealWithPluginException(effectbase* eff) {
+	log_printf("segfault/fatal exception\n", 0);
 	if (!eff->isBypass()) {
 		eff->setParamValue(PARAM_ENABLE, 0, FLG_PAR_UPDATE_NOSTORE);
 		log_printf("segfault/fatal exception on %s\n", StringAsCStr(eff->getName()));
 	}
-	logEveryMsec(4, 1000, String("EXCEPTION_ACCESS_VIOLATION on " + eff->getName()));
 }
 
 long vstplugin::dispatch(

@@ -16,7 +16,6 @@ void setExceptionHandler();
 bool determineUserdataPath(String& path);
 String getKeyName(int scancode);
 
-void threadSleep(int millis);
 void logStackTrace();
 void getStackTrace(std::vector<String>& vec);
 

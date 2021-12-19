@@ -27,6 +27,7 @@
 #include "appsettings.h"
 #include "buildinfo.h"
 #include "tls.h"
+#include "thread.h"
 #ifdef _WIN32
 #include "../platform/win/platform_win.h"
 #include <windows.h>
@@ -48,12 +49,11 @@ inline String APPLE_getExecutablePath() {
 }
 #endif
 
-//#define LOG_SERVER(fmtString,...) printf("SRV:" fmtString "\n", ##__VA_ARGS__); fflush(stdout)
-//#define LOG(fmtString,...) printf(fmtString "\n", ##__VA_ARGS__); fflush(stdout)
 static const char* szLogPrefixes[2] = {
 	"SRV: ",
 	"CLI: ",
 };
+
 static int logPrefixIdx = 0;
 #define LOG_MSG(prefix, fmtString,...) printf("%s" fmtString "\n", prefix, ##__VA_ARGS__);
 #define LOG(fmtString,...) LOG_MSG(szLogPrefixes[logPrefixIdx], fmtString, ##__VA_ARGS__); fflush(stdout)
@@ -75,6 +75,9 @@ static int logPrefixIdx = 0;
 #define CMD_PLUGIN_END_SUCCESS 7
 #define NUM_BUFS (16*1024)
 #define SCAN_IPC_PIPE_NAME "DAW1pipc"
+
+using seqthreads::threadSleep;
+
 void deleteApp() {
 
 }

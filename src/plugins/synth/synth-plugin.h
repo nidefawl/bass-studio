@@ -5,7 +5,6 @@
 #include "../plugin-base.h"
 #include "../plugin-base.h"
 #include "vstsdk-plugin-2.4/audioeffectx.h"
-#include "threads.h"
 
 namespace PluginSynth {
 

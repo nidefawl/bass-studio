@@ -11,7 +11,6 @@
 #include "platform.h"
 
 #include <math.h>
-#include <chrono>
 #include <vector>
 #include <iostream>
 #include <sstream>

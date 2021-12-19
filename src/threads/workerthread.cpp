@@ -1,16 +1,15 @@
-#include "workerthread.h"
-#include "threads.h"
-
 #include <atomic>
 #include <queue>
-#include "assert_dbg.h"
 #include <exception>
 #include <functional>
 #include <memory>
-
-
+#include <thread>
+#include <condition_variable>
+#include <mutex>
+#include "thread.h"
 #include "logging.h"
-#define LOG(fmtString,...) printf(fmtString "\n", ##__VA_ARGS__); fflush(stdout)
+#include "workerthread.h"
+#include "assert_dbg.h"
 
 class WorkerThread::ThreadTaskImpl {
     ThreadTask* task;
@@ -92,13 +91,13 @@ public:
     }
 	void start() {
 		t = std::thread([this]() {
-			setCurrentThreadName("workerthread");
+			seqthreads::setCurrentThreadName("workerthread");
             dbgassert(threadTLS.tlsInitialized);
 			daw_tls::setTls(threadTLS);
 			this->run();
 		});
 	#ifdef _WIN32
-			this->threadid = get_thread_id();
+			this->threadid = seqthreads::get_thread_id();
 //			HANDLE h = reinterpret_cast<HANDLE*>(t.native_handle());
 	#endif
 	}

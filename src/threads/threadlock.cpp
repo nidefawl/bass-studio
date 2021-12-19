@@ -1,8 +1,9 @@
 #include "threadlock.h"
-#include <chrono>
 #include <atomic>
 #include <queue>
-#include "threads.h"
+#include <thread>
+#include <condition_variable>
+#include <mutex>
 
 #include "error.h"
 

@@ -1770,7 +1770,7 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
 				nvgEndFrame(vg);
 				windowMain->postRender();
 				/** TODO: vsync **/
-				threadSleep(16);
+				seqthreads::threadSleep(16);
 				log_printf("pre activateDeferred %s\n", StringAsCStr(ctr.text));
 				effectbase* pluginLoaded;
 				host->activateDeferred(plugin, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &pluginLoaded);
@@ -1799,7 +1799,7 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
 			nvgEndFrame(vg);
 			windowMain->postRender();
 			/** TODO: vsync **/
-			threadSleep(16);
+			seqthreads::threadSleep(16);
 			log_printf("pre load samplefileindex\n", 0);
 			audiocache::getInstance()->load(file->sampleFileIndex);
 			log_printf("post load samplefileindex\n", 0);
@@ -2662,7 +2662,7 @@ GLFWwindow* getTopLevelGlfwWindow() {
 
 int handleFatalError(int type, int implSpecType) {
 	seqthreads::thread_base* thread = MainCtrl::getPlayThread();
-	if (thread && seqthreads::currentThreadsId() == thread->getThreadId()) {
+	if (thread && seqthreads::get_thread_id() == thread->getThreadId()) {
 		host_processing_stats_t processing;
 		auto host = vsthost::getInstance();
 		host->getProcessingStats(processing);

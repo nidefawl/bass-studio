@@ -1,9 +1,12 @@
 #include "TestBase.hpp"
 #include <vector>
 #include <stdint.h>
+#include <chrono>
 #include "test_common.h"
-#include "threads.h"
+#include "thread.h"
 #include "threads/workerthread.h"
+
+using hp_clock = std::chrono::high_resolution_clock;
 
 
 namespace {
@@ -21,7 +24,7 @@ public:
 		for (uint32_t i = 0; i < 500000; i++) {
 			result = ((result*a) >> 1) + rng.randI();
 		}
-		std::this_thread::sleep_for(std::chrono::milliseconds{ 20 });
+		seqthreads::threadSleep(20);
 		//        LOG("work on TestTask %d", result);
 		if (id == 3)
 			throw std::runtime_error("little error hihi");
@@ -53,7 +56,7 @@ static void test() {
 		}
 		wthread.pushTask(&task);
 	}
-	LOG("post wthread.stop");
+	printf("post wthread.stop\n");
 	auto start = hp_clock::now();
 	for (TestTask& task : tasks) {
 		if (task.isInQueue()) {
@@ -81,12 +84,13 @@ static void test() {
 		}
 	}
 	auto end = hp_clock::now();
+
 	std::chrono::duration<float, std::milli> duration = end - start;
 	printf("%.2f\n", duration.count());
 
 	wthread.stopThread();
 	wthread.joinThread();
-	LOG("end");
+	printf("end\n");
 }
 
 }
@@ -94,7 +98,7 @@ int main() {
 	ALEPH_TEST_BEGIN("testThreadWorkerTasks");
 	for (int i = 0; i < 10; i++) {
 		test();
-		std::this_thread::sleep_for(std::chrono::milliseconds{ 40 });
+		seqthreads::threadSleep(40);
 	}
 	ALEPH_TEST_END();
 	return 0;

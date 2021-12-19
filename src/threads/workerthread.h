@@ -105,7 +105,7 @@ public:
 	int result = 0;
 	void run() {
 		result = a*b;
-		//std::this_thread::sleep_for(std::chrono::milliseconds{ 120 });
+		//seqthreads::threadSleep(120);
 //        LOG("work on ThreadTask %d", result);
         if (id == 3)
         	throw std::runtime_error("little error hihi");

@@ -37,6 +37,7 @@
 #include <memory.h>
 #include "track_impl.h"
 #include "projectcontroller.h"
+#include "thread.h"
 #include "threads/threadlock.h"
 #include "track_graph.h"
 #include "effect_graph.h"
@@ -136,11 +137,6 @@ public:
 		stats.timeStart = getTimeHPint64();
 		vsthost::getInstance()->processBlockTrack(buf, blockProcTask);
 		stats.timeEnd = getTimeHPint64();
-//		log_printf("Thread[%d] processed stageId %d\n", threadIdx, blockProcTask.trackNode->stageId);
-
-//		std::this_thread::sleep_for(std::chrono::milliseconds{ 20 });
-		//if (blockProcTask.dbg == 3)
-			//throw std::runtime_error("little error hihi");
 		isBusy=false;
 	}
 	void setTask(vsthost::track_block_processing_task_t task) {
@@ -2060,7 +2056,7 @@ void vsthost::finishTreadTasks(std::vector<audiostageid_i32>& processFinishedSta
 //			return !STL_CONTAINS(processFinishedStageIds, stageId);
 //		});
 		if (allBusyFlag) {
-//			std::this_thread::sleep_for(std::chrono::microseconds( 500 ));
+//			seqthreads::threadSleep(500);
 		}
 	}
 }
@@ -2125,7 +2121,7 @@ int32_t vsthost::processBlock(project_controller_t* ctrl, const audiostream_prop
 		audiostageid_i32 stageId;
 		uint32_t threadIdx;
 	};
-	impl->playThreadId = get_thread_id();
+	impl->playThreadId = seqthreads::get_thread_id();
 	const bool useThreading = this->multithreadedProcessing && impl->threadsRunningCount > 0 && impl->threadCount > 1;
 	if (!useThreading) {
 		for (auto itAudioStage = processingGraph->nodesFlatOrdered.begin(); itAudioStage != processingGraph->nodesFlatOrdered.end(); itAudioStage++) {
@@ -3119,7 +3115,7 @@ void vsthost::scanPlugins() {
 	    		nameScannerExe = "vstscanner-MSVC-debug.exe";
 	    	}
 			impl->vstscannerProcessThread->startProcess(nameScannerExe, "-server -auto", "");
-			threadSleep(200);
+			seqthreads::threadSleep(200);
 			if (!impl->vstscannerProcessThread->isRunning()) {
 				impl->vstscannerProcessThread->checkException();
 				log_printf("Failed starting vstscanner", 0);

@@ -18,12 +18,11 @@
 #include <vector>
 #include <signal.h>
 
-#include "threads.h"
 #include "math/seq_math.h"
 #include "str_util.h"
 #include "logging.h"
 #include "error.h"
-#include <shlobj.h>//for knownFolder
+#include <shlobj.h> //for knownFolder
 #include <sstream>
 
 
@@ -250,15 +249,13 @@ void setExceptionHandler() {
     SetUnhandledExceptionFilter(TopLevelExceptionHandler);
 }
 #endif
+
 String getKeyName(int scancode) {
 	TCHAR strBuf[512];
 	GetKeyNameText(scancode<<16, strBuf, 512);
 	return strBuf;
 }
-void threadSleep(int millis) {
 
-	std::this_thread::sleep_for(std::chrono::milliseconds(millis));
-}
 String FormatErrorMessage(int32_t error, String msg)
 {
 	static const int BUFFERLENGTH = 1024;
@@ -268,11 +265,6 @@ String FormatErrorMessage(int32_t error, String msg)
 	if (msg.empty())
 		return String(buf.data());
 	return msg + " (" + StringTrim(String(buf.data())) + ")";
-}
-namespace seqthreads {
-int32_t currentThreadsId() {
-	return get_thread_id();
-}
 }
 
 #endif

@@ -15,7 +15,7 @@ namespace {
 #if defined(_WIN32) 
 
 static const std::vector<String> files{"mdaLimiter.dll", "mdaPiano.dll"};
-int rIdx = 0;
+size_t rIdx = 0;
 HWND hwnd = NULL;
 
 class reentrantblocker {
@@ -48,13 +48,13 @@ VOID CALLBACK TimerCallback(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime
 		if (test > 122) {
             PostQuitMessage(0);
 		}
-		if (rIdx >= (int32_t)files.size()) {
+		if (rIdx >= files.size()) {
             PostQuitMessage(0);
 			return;
 		}
 	    String f = files[rIdx];
 		res = audiohost->loadPlugin(f, 0);
-	    LOG("loadPlugin: %s %d\n", StringAsCStr(f), res.result);
+	    printf("loadPlugin: %s %d\n", StringAsCStr(f), res.result);
 	    if (res.result != 0) {
 			res = vstpluginloadres(0, NULL);
 	    }
@@ -65,7 +65,7 @@ VOID CALLBACK TimerCallback(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime
 		} else if (tick == 72) {
 			res.plugin->close();
 		} else if (tick == 92) {
-			LOG("unloadPlugin");
+			printf("unloadPlugin\n");
 			audiohost->unloadPlugin(res.plugin);
 			res = vstpluginloadres(0, NULL);
 			tick = -1;

@@ -11,7 +11,6 @@
 #include "basectrl.h"
 #include "color_util.h"
 #include "platform.h"
-#include "threads.h"
 #include "assert_dbg.h"
 #include "net/network.h"
 #include "net/packet.h"

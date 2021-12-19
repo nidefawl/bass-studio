@@ -1,12 +1,13 @@
 #include "playbackthread.h"
-#include <chrono>
 #include <atomic>
 #include <queue>
+#include <thread>
+#include <mutex>
 #include "assert_dbg.h"
 
 #include "error.h"
+#include "thread.h"
 #include "threadlock.h"
-#include "threads.h"
 #include "seq_time.h"
 #include "hires_timer.h"
 #include "util/readerwriterqueue.h"
@@ -92,7 +93,7 @@ public:
 	void start(project_controller_t* ctrl) {
 		this->ctrl = ctrl;
         t = std::thread([this]() {
-            this->threadid = get_thread_id();
+            this->threadid = seqthreads::get_thread_id();
 #ifdef _WIN32
             HANDLE h = reinterpret_cast<HANDLE*>(t.native_handle());
             SetThreadPriority(h, THREAD_PRIORITY_TIME_CRITICAL);
@@ -144,7 +145,7 @@ public:
 private:
 
 	void run() {
-		setCurrentThreadName("audiothread");
+		seqthreads::setCurrentThreadName("audiothread");
 		project_controller_t* const ctrl = this->ctrl;
 		vsthost* host = vsthost::getInstance();
 		midihost* midiHost = midihost::getInstance();
@@ -225,7 +226,7 @@ private:
         		case PLAYBACK_THREAD_EXIT:
 #ifndef NDEBUG
     				LOG("PLAYBACK_THREAD_EXIT");
-    				std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    				seqthreads::threadSleep(200);
 #endif
             		req->notify();
             		exited = true;
@@ -343,11 +344,11 @@ private:
                 host->getStats(stats);
                 if (!host->bypassPlaybackProcessing && stats.outputQueueLen < 2) {
                 	if (stats.outputQueueLen != 0) {
-                    	std::this_thread::sleep_for(std::chrono::microseconds(500));
+                		seqthreads::threadSleepMicros(500);
                 	}
                 } else {
 
-                	std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                	seqthreads::threadSleep(1);
                 }
             }
 

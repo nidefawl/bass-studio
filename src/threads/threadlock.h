@@ -1,6 +1,6 @@
 #pragma once
 #include <atomic>
-#include "threads.h"
+#include <mutex>
 
 class ThreadLock {
 public:
@@ -19,6 +19,7 @@ public:
 	static ThreadLock MakeThreadLock(std::recursive_mutex& _mutex, std::atomic<int32_t>& _isLocked, const bool bTryLock);
 };
 
+//TODO: make hidden implementation to avoid mutex and atomic includes
 class ThreadMutex {
 	std::recursive_mutex mutex;
 	std::atomic<int32_t> mLockCount{0};

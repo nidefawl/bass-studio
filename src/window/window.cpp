@@ -16,7 +16,6 @@
 #define WIN32API_CALLBACK_TYPE __stdcall
 
 #include <math.h>
-#include <chrono>
 #include <vector>
 #include <iostream>
 #include <fstream>
@@ -57,7 +56,7 @@
 #include "renderresources.h"
 #include "mousecursor.h"
 #include "fileio.h"
-#include "threads.h"
+#include "thread.h"
 #include "error.h"
 #include "buildinfo.h"
 #include "../threads/workerthread.h"
@@ -1555,7 +1554,7 @@ void closeGlobalLog(); // Forward declare from util/debug.cpp
 void runSseBenchmarkTests(); //Forward declare from benchmark/benchmark-main.cpp
 
 int startApplication(int argc, char* argv[]) {
-	setCurrentThreadName("mainthread");
+	seqthreads::setCurrentThreadName("mainthread");
 #if !defined(NDEBUG) && defined(_WIN32)
     _dup2( 1, 2 ); //workaround: redirect stderr to stdout so stderr is visible when using gdb on eclipse (bug)
 #endif

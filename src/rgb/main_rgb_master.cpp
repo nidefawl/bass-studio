@@ -8,10 +8,12 @@
 #include <vector>
 #include <algorithm>
 #include <atomic>
+#include <chrono>
+#include <thread>
 #include "basectrl.h"
 #include "color_util.h"
 #include "platform.h"
-#include "threads.h"
+#include "thread.h"
 #include "assert_dbg.h"
 #include "net/network.h"
 #include "net/packet.h"
@@ -45,7 +47,7 @@ void closeGlobalLog(); // Forward declare from util/debug.cpp
 int mainApp(int argc, char **argv);
 int main(int argc, char **argv)
 {
-	setCurrentThreadName("mainthread");
+	seqthreads::setCurrentThreadName("mainthread");
 	network_init();
 #if !defined(NDEBUG) && defined(_WIN32)
     _dup2( 1, 2 ); //workaround: redirect stderr to stdout so stderr is visible when using gdb on eclipse (bug)

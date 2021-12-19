@@ -33,7 +33,7 @@ String demangleName(String to_demangle)
 #include <vector>
 #include "math/seq_math.h"
 #include "fileio.h"
-#include "threads.h"
+#include "thread.h"
 #include "platform.h"
 
 
@@ -176,7 +176,7 @@ void log_format_to_logger(Logger* logger, const char *file, int line, const char
 	const char* szLogStatement = nullptr;
 	if (file && line && func) {
 		replaceBackslashWithForwardslash(relFileName(file), szFileShort, MAX_LEN_FILENAME);
-		String threadName = getCurrentThreadName();
+		String threadName = seqthreads::getCurrentThreadName();
 		const char* szThreadName = StringAsCStr(threadName);
 		#ifndef _WIN32
 		ret = snprintf(szLogBuf, MAX_LEN_MY_PRINTF - 1, "%s:%s:%d %s: %s", szThreadName, szFileShort, line, func, szLogStr);
@@ -196,59 +196,7 @@ void log_format_to_logger(Logger* logger, const char *file, int line, const char
 		logger->log(szLogStatement, ret);
 	}
 }
-namespace {
 
-struct threadnames_t {
-	std::mutex gThreadMutex;
-	std::unordered_map<int32_t, String> gThreadNames;
-	threadnames_t() {
-		std::lock_guard<std::mutex> lock(gThreadMutex);
-	}
-	void setCurrentsName(String str) {
-        auto threadId = get_thread_id();
-		std::lock_guard<std::mutex> lock(gThreadMutex);
-		gThreadNames[threadId] = str;
-	}
-	String getCurrentsName() {
-		//return "thread";
-		auto threadId = get_thread_id();
-		std::lock_guard<std::mutex> lock(gThreadMutex);
-		auto it = gThreadNames.find(threadId);
-		if (it == gThreadNames.end()) {
-            return StringFormat("thread-%X", static_cast<int32_t>(threadId));
-		}
-        return it->second + StringFormat("-%X", static_cast<int32_t>(threadId));
-	}
-};
-threadnames_t& getThreadNames() {
-	static threadnames_t threadnames;
-	return threadnames;
-}
-}
-void setCurrentThreadName(String str) {
-	getThreadNames().setCurrentsName(str);
-}
-String getCurrentThreadName() {
-	return getThreadNames().getCurrentsName();
-}
-bool logEveryMsec(int32_t nId, int32_t delayMs, String str) {
-	static std::recursive_mutex gLogMutex;
-	static std::unordered_map<int32_t, int32_t> gEntries;
-	auto now = getTimeMillis();
-	bool shouldLog = false;
-	{
-		std::lock_guard<std::recursive_mutex> lock(gLogMutex);
-		auto it = gEntries.find(nId);
-		if (it == gEntries.end() || now - it->second > delayMs) {
-			shouldLog = true;
-			gEntries[nId] = now;
-		}
-	}
-	if (shouldLog) {
-		getGlobalLogger()->logStr(str);
-	}
-	return shouldLog;
-}
 extern "C" {
 void failedAssert(const char* expr, const char *file, int line) {
 	log_format_to_logger(getGlobalLogger(), file, line, "dbgassert", "Assertion failed: %s\n", expr);

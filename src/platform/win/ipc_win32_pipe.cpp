@@ -1,6 +1,7 @@
 #include "ipc.h"
 #include "str_util.h"
 #include "platform.h"
+#include "thread.h"
 
 #include <windows.h>
 #include <stdlib.h>
@@ -47,7 +48,8 @@ public:
     	while (!state && nMax > 0) {
     		state = ConnectNamedPipe(pipe, NULL);
     		if (state) break;
-    		threadSleep(100);
+    		//TODO: this sleep should be invoked on the call site
+    		seqthreads::threadSleep(100);
     		nMax--;
     	}
 		if (!state && GetLastError() != ERROR_PIPE_CONNECTED) {
@@ -163,7 +165,7 @@ public:
     	if (ReadFile(pipe, buf, buflen, &bytesSent, NULL)) {
     		return bytesSent;
 		}
-    	printf("ReadFile: %d\n", bytesSent);
+    	printf("ReadFile: %lu\n", bytesSent);
     	printLastError("ReadFile");
 		return 0;
 	}
@@ -172,7 +174,7 @@ public:
         if (WriteFile(pipe, buf, buflen, &bytesSent, NULL)) {
     		return bytesSent;
 		}
-    	printf("WriteFile: %d\n", bytesSent);
+    	printf("WriteFile: %lu\n", bytesSent);
     	printLastError("WriteFile");
 		return 0;
     }

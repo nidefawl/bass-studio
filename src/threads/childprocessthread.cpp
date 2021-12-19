@@ -3,10 +3,12 @@
 #include <vector>
 #include <array>
 #include <algorithm>
-#include "threads.h"
+#include <thread>
+#include <mutex>
 #include "str_util.h"
-#include "../host/vst_host.h"
-#include "../host/plugin/vst_plugin.h"
+#include "thread.h"
+#include "host/vst_host.h"
+#include "host/plugin/vst_plugin.h"
 #include "fileio.h"
 #include "exceptions.h"
 
@@ -240,7 +242,7 @@ public:
 		isrunning = true;
 		this->lastCmd = StringFormat("%s> %s %s", StringAsCStr(workingDir),  StringAsCStr(binary), StringAsCStr(params));
 		t = std::thread([this, argbinary=binary, argparams=params, argwd=workingDir, argenv=env, argpipe=pipedOutput]() {
-			setCurrentThreadName("childprocessthread");
+			seqthreads::setCurrentThreadName("childprocessthread");
 			try {
 				std::array<char, 2048> TEMP;
 				std::vector<char> buf;
@@ -264,7 +266,7 @@ dbgassert(0&&"Not implemented on this platform");
 							flushOutputBuffer(buf);
 						}
 #endif
-						threadSleep(25);
+						seqthreads::threadSleep(25);
 					}
 					if (buf.size() > 0) {
 						flushOutputBuffer(buf);
