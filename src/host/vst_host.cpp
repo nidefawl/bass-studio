@@ -2569,10 +2569,14 @@ bool vsthost::assignMasterCallback(vsthost* host)
 	return false;
 }
 vstplugin* vsthost::getPlugin(AEffect* aeffect) {
-	for (auto* current : pluginInstancesVST2) {
-		if (current->handle->aeffect == aeffect)
-			return current;
+	vstplugin* plugin;
+	if (aeffect && aeffect->user) {
+		return static_cast<vstplugin*>(aeffect->user);
 	}
+//	for (auto* current : pluginInstancesVST2) {
+//		if (current->handle->aeffect == aeffect)
+//			return current;
+//	}
 	return nullptr;
 }
 effectbase* vsthost::getPluginById(int32_t projectGlobalId) const {
@@ -3076,6 +3080,7 @@ vstpluginloadres vsthost::loadPlugin(String filepath, int32_t uId, int32_t globa
 			FreeLibrary(hmodule);
 			return vstpluginloadres(-6, NULL);
 		}
+		dbgassert(!aeffect->user);
 		moduleHandle = hmodule;
 	}
 
@@ -3104,6 +3109,7 @@ vstpluginloadres vsthost::loadPlugin(String filepath, int32_t uId, int32_t globa
 
 	globalId = getNextGlobalModuleId(globalId);
 	vstplugin* plugin = new vstplugin(new handles_t(nullptr, aeffect, moduleHandle), globalId, path, nameWithoutExt, -1);
+	aeffect->user = plugin;
     plugin->handle->localCurrentUniqueId = uId;
 	pluginInstancesVST2.push_back(plugin);
 	pluginInstances.push_back(plugin);
