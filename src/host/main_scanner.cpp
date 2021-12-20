@@ -783,6 +783,7 @@ static int runScannerClient() {
 const int timeoutdefault = 120;
 
 int main(int argc, char* argv[]) {
+	seqthreads::registerThread("mainthread");
     String cwdPath = "";
     if (determineUserdataPath(cwdPath)) {
         setUserdataPath(cwdPath+"/daw/");
