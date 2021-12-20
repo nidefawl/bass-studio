@@ -1,31 +1,41 @@
-DEPS_BUILD_FOLDER:PATH=E:/dev/builds/daw-deps/clang-libc++-git
-clang with external mingw:
-cmake ../.. -G "MinGW Makefiles" -DCMAKE_BUILD_TYPE=Debug -DDAW_DEPS_PATH=D:\dev\daw-deps\ -DDEPS_BUILD_FOLDER=D:\dev\daw-deps\build-clang-stdc++ -DCMAKE_CXX_FLAGS=--target=x86_64-pc-windows-gnu -DCMAKE_C_FLAGS=--target=x86_64-pc-windows-gnu
+#######################################
+##      Win10 build instructions     ##
+#######################################
+
+clang mingw
+===========
 clang-mingw (using libc++, see: https://github.com/mstorsjo/llvm-mingw)
 cmake ../.. -G "Ninja" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=Debug -DDAW_DEPS_PATH=D:\dev\daw-deps\ -DDEPS_BUILD_FOLDER=C:/dev/build-deps/install
 
+On newer cmake versions:
+cd %DAW%
+cmake -E make_directory "build"
+cmake -G "Ninja" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=Debug -DDAW_DEPS_PATH=D:/dev/daw-deps -DDEPS_BUILD_FOLDER=C:/dev/build-deps/install -S . -B "build"
+cmake --build "build" --target all -j 8 --
 
-msvc currently requires a patch to its std thread header:
-C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Tools\MSVC\14.16.27023\include\thread
+MSVC
+====
 
-class thread::id
-	{	// thread id
-public:
-.....
-	//START EDIT
-	int32_t get() {
-		return static_cast<int32_t>(_Id);
-	}
-	//END EDIT
-	
-.....
-.....
+"C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars64.bat"
+or 
+x64 Native Tools Command Prompt for VS 2019
 
-Maybe find a better workaround like: https://hackernoon.com/c-telltales-pt-1-human-readable-thread-id-92caa554a35f
+Using Ninja build files
+-----------------------
+cd %DAW%
+set DAW_BUILD_DIR="build/build-msvc-ninja"
+cmake -E make_directory %DAW_BUILD_DIR%
+cmake -G "Ninja" -DDAW_DEPS_PATH=D:/dev/daw-deps -DDEPS_BUILD_FOLDER=D:/dev/daw-deps/build-msvc2019-d -S . -B %DAW_BUILD_DIR%
+cmake --build %DAW_BUILD_DIR% --config RelWithDebInfo --target all -j 8 --
 
 
-
-
+Using SLN/vcxproj build files
+-----------------------------
+cd %DAW%
+set DAW_BUILD_DIR="build/build-msvc-2019"
+cmake -E make_directory %DAW_BUILD_DIR%
+cmake -G "Visual Studio 16 2019" -DDAW_DEPS_PATH=D:/dev/daw-deps -DDEPS_BUILD_FOLDER=D:/dev/daw-deps/build-msvc2019-d -S . -B %DAW_BUILD_DIR%
+cmake --build %DAW_BUILD_DIR% --config RelWithDebInfo --target ALL_BUILD -j 8 --
 
 
 #######################################

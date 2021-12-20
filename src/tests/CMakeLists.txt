@@ -53,7 +53,7 @@ add_compile_definitions("DAW_UNITTEST")
 
 MACRO( CONFIGURE_AS_TEST test_name)
   target_link_libraries(${test_name} PRIVATE "dawlib")
-  get_filename_component(ABS_WORKING_DIR "${APP_WORKING_DIR}" REALPATH BASE_DIR "${CMAKE_BINARY_DIR}")
+  get_filename_component(ABS_WORKING_DIR "${APP_WORKING_DIR}" REALPATH BASE_DIR "${CMAKE_BINARY_DIR}") # CMAKE_SOURCE_DIR for out of source builds?!
   ADD_TEST(NAME ${test_name} COMMAND ${test_name} WORKING_DIRECTORY ${ABS_WORKING_DIR})
   # SET_TESTS_PROPERTIES( ${test_name} PROPERTIES ENVIRONMENT "LLVM_PROFILE_FILE=${CMAKE_CURRENT_BINARY_DIR}/${test_name}.profraw")
   set_target_properties(${test_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${ABS_WORKING_DIR}$<$<CONFIG:Debug>:>)

@@ -1,12 +1,30 @@
 /**********************************************/
-/*                   WIP                      */
+/*           Testing VST2 plugins             */
 /**********************************************/
-
+	
+ * Ohmforce Frohmage: 
+    Spawns its own thread and calls the host-callback from it (endEdit): Currently the opCode is not handled. 
+ 
+  * Avenger:
+     Breaks hosts opengl context
+ 
 /**********************************************/
 /*                Recent ideas                */
 /**********************************************/
+track all hostCanDo requests:
+- keep a list of "seen" feature requests. Store it in a json file, load on startup, save whenever a new type is found
+track VST API statistics per plugin:
+- plugin to host and host to plugin
+- total number of requests per opcode
+- min/max timings of dispatches
+check all audiomastercallback opcodes again:
+- VstProcessLevels/audioMasterGetCurrentProcessLevel ?
+- Write a test app to load all possible VST plugins and dispatch weird stuff to make better assumptions about
+  plugins stability, number of parameter configurations, used opcodes, dispatch timings, load times, maybe memory usage
+  supported samplerates and blocksizes
+
 Add optional horizontal grid steps to automation (allow offset/scale?)
-Cleanup automation stuff: setParamValue is inconsistent
+Cleanup automation stuff: setParamValue is called with inconsistent flags
 Resizing a clip can stop held notes. This has to be handled somehow
 Add a keyboard on the bottom, make it small so its not using up screenspace. Display all held notes from all tracks in different colors so I can quickly see what key the song is currently in etc.
 Exported audio files are incorrect length
@@ -30,6 +48,11 @@ More specific undo, proper undo history, ability to configure it, disable it.
 Show inactive automation in a list
 Show automated parameters in a list, and on a tab in the plugin container
 
+Add lists/tables for debugging:
+- all loaded plugins (done: list view showing type as icon, name and cpu usage)
+- all tracks
+- all guibase instances
+- all automation
 
 Alternative VST2 management:
  - Show all *.dll files instead of using a vst scanner
@@ -47,6 +70,7 @@ Implement a drum seq into the timeline:
 
  
 track_t::projectIdx should be constant (UID): when restoring track contents using trackstate_t the resolution of tracks should be done using the UID for robustness reasons
+ -> not a problem if edit history is always consistent (unlikely). Solution: Use toRef(), stageIds will be constant
 
 Performance: reduce sizeof(clip_t)
 todo: render group contents into folded group track background
@@ -70,6 +94,7 @@ select all deactivated notes
 consider handling context menu ownership with shared_ptrs. I may require to use shared from this to solve issues with call close-context-menu from click handlers
 scrubbing with beat sync
 add vertical plugin chain in mix view (like cubase mixer)
+
 /**********************************************/
 /*                   Bugs                     */
 /**********************************************/
@@ -98,23 +123,54 @@ ALT key sometimes stuck, wonderful old bug from GLFW.
 ALT key to disable grid is not allowing note-resize below grid size
 notes border rendering not respecting z-order when note rectangles overlap
 
-Add lists/tables for debugging:
-- all loaded plugins (done: list view showing type as icon, name and cpu usage)
-- all tracks
-- all guibase instances
-- all automation
-maybe implement with js in browser
 
 
 /**********************************************/
 /*              TODO (code quality)           */
 /**********************************************/
-refactor into namespaces
-all interface types must have suffix _i instead of 
-make _t and no-_t type names consistent
-unit tests
-Fix visibility of fields of all classes
+
+Initialization and lifetime of DawInstance should be controlled top level, not by a GUI-Ctrl:
+ - MainCtrl::init(window, nanovg) renamed to MainCtrl::initAppWindow(window, nanovg) to avoid confusion
+ - refactor makeApp() to main.cpp::makeApp(argc, argv) 
+ - makeApp(argc, argv) generates the AppCtrl and DawInstance instances (stored in the shared pointers) as before
+ - the call to the AppCtrl::initApp(argc, argv) is moved inside main.cpp::makeApp(argc, argv) 
+ - remove all calls made MainCtrl::initApp(argc, argv) and move them into makeApp(argc, argv)
+ - now makeApp(argc, argv) calls DawInstance::initDaw(argc, argv) directly
+ - after return from makeApp all required instances in the tls are alive
+ - create main.cpp::startApp, replace AppCtrl::postInit with call to main.cpp::startApp
+ - main.cpp::startApp calls AppCtrl::postInit
+ - main.cpp::startApp calls DawInstance::startDaw(); DawInstance::postInit();
+ - main.cpp::startApp calls AppCtrl::postInit()
+ - move the project loading from DawInstance::startDaw to DawInstance::postInit
+ - Consider moving DawInstance::postInit() after AppCtrl::postInit
+ - Consider moving showWindow after startApp
+ 
+DawInstance should be usable without a GUI-Ctrl instance
 MainCtrl::getPlayThread() is bad interface for no-GUI headless applications
+
+cleanup trackcontainer.cpp
+
+DawCtrl::filesDropBegin:
+  - figure out which thread the calls come from
+  - make sure it the code inside is fast and never blocks: 
+    Right now: Audio is loaded sync'd and the thread task for loading midi simply waits until completion, so both things block
+  - Read win32 docs on constraints of IDropTarget  
+
+Fix the sign conversion warnings!
+  
+refactor into namespaces
+all interface types must have suffix _i 
+make _t and no-_t type names consistent
+make struct and class types consistent: 
+ structs have no functions besides ctors/dtors/copy/move operators
+ classes have functions
+Fix visibility of fields of all classes
+add more (unit) tests
+
+Test handling of exceptions and segfaults on threads and worker thread tasks (TrackBlockProcessTask)
+Test handling of tasks and threads not responding (stuck in inf loop)
+ 
+Remove the networking source code for DAW builds until I use it (rgb-master uses UDP)
 
 /**********************************************/
 /*              TODO (high priority)          */
