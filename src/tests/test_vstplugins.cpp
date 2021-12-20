@@ -15,7 +15,7 @@
 #include <exception>
 
 namespace {
-int32_t exitStatusCode = 1;
+int32_t exitStatusCode = 0;
 
 #if defined(_WIN32) 
 struct TestCaseEntry {
@@ -175,7 +175,7 @@ int main(int argc, char* argv[]) {
 				DispatchMessage(&msg);
 			}
 		}
-    	printf("END\n");
+    	printf("Test result: %d\n", retVal);
 #endif
     } catch(std::exception& e) {
     	printf("std::exception: %s\n", e.what());
