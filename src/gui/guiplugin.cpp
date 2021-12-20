@@ -837,6 +837,7 @@ bool guipluginview::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 void guipluginview::buttonClicked(guibase* _button) {
 	guiplugin::buttonClicked(_button);
 	if (_button == &buttonOpenEditor) {
+		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 		if (effect->bEditOpen) {
 			effect->close();
 		} else {
@@ -846,6 +847,7 @@ void guipluginview::buttonClicked(guibase* _button) {
 	if (_button == &buttonShowInlineGUI) {
 		effect->bCaptureGUI = !effect->bCaptureGUI;
         if (effect->bCaptureGUI) {
+			ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
             if (effect->bEditOpen) {
                 effect->close();
             }

@@ -347,7 +347,6 @@ bool vst_window::init(vstplugin* plugin, const String& name, ivec2 size, bool re
 //------------------------------------------------------------------------
 void vst_window::close()
 {
-	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 	plugin->onClose();
 	destroy();
 //	ShowWindow(hwnd, SW_HIDE);
