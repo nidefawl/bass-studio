@@ -104,12 +104,12 @@ void setMinimumResolutionTimer() {
 	TIMECAPS tc;
 	UINT     wTimerRes;
 
-	if (timeGetDevCaps(&tc, sizeof(TIMECAPS)) != TIMERR_NOERROR)
-	{
-		// Error; application can't continue.
+	if (timeGetDevCaps(&tc, sizeof(TIMECAPS)) == TIMERR_NOERROR) {
+		wTimerRes = math::min(math::max((uint32_t)tc.wPeriodMin, (uint32_t)TARGET_RESOLUTION), (uint32_t)tc.wPeriodMax);
+		timeBeginPeriod(wTimerRes);
+	} else {
+		log_printf("timeGetDevCaps failed, cannot call timeBeginPeriod\n", 0);
 	}
-	wTimerRes = math::min(math::max((uint32_t)tc.wPeriodMin, (uint32_t)TARGET_RESOLUTION), (uint32_t)tc.wPeriodMax);
-	timeBeginPeriod(wTimerRes);
 
 }
 
