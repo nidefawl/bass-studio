@@ -250,6 +250,7 @@ class DawInstance : public project_controller_t, public delete_cb {
 	project_t project;
 	project_globals_t projectGlobals;
 	int initState = 0;
+	vsthost* host = nullptr;
 	MainCtrl* mainCtrl = nullptr;
 //	CompanionCtrl* companionCtrl = nullptr;
 //	std::shared_ptr<CompanionCtrl> companionCtrlStdPtr{nullptr};
@@ -299,6 +300,9 @@ public:
 	}
 	PlaybackThread* getPlayThread() {
 		return &playThread;
+	}
+	vsthost* getHost() {
+		return host;
 	}
 	static DawInstance* get();
 

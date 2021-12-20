@@ -699,7 +699,7 @@ void DawInstance::unloadProject() {
 		delete track;
 	}
 
-	vsthost::getInstance()->releaseProjectResources();
+	host->releaseProjectResources();
 	daw_tls::getTls().audioCache->unloadAll();
 
 	auto* ctrl = mainCtrl;
@@ -717,8 +717,6 @@ void DawInstance::unloadProject() {
 	}
 
 	{
-
-		auto* host = vsthost::getInstance();
 		std::vector<effectbase*> pluginsDeferred;
 		host->getDeferredEffects(pluginsDeferred);
 		dbgassert(pluginsDeferred.empty());
@@ -881,7 +879,6 @@ void DawInstance::onDawCompanionWindowClose(DawWindowCompanion& entry) {
 }
 void DawInstance::setSoloState(audio_stage_ref_t ref, bool enableSolo) {
 	track_t* track = getTracks().resolveTrack(ref);
-	vsthost* host = vsthost::getInstance();
 	dbgassert(track);
 	dbgassert(track->audio);
 	track->audio->flags ^= audiostageflags_t::SOLO;
@@ -1126,7 +1123,6 @@ void DawInstance::postInit() {
 	audiohost::getInstance()->initPa();
 	midihost::getInstance()->initPm();
 	if (settings.startEngine) {
-		vsthost* host = vsthost::getInstance();
 		audiohost* audioHost = audiohost::getInstance();
 		if (audioHost->startAudio(settings.iosettings)) {
 			host->setOutput(audioHost);
@@ -1139,7 +1135,7 @@ void DawInstance::postInit() {
 	this->playThread.setTls(daw_tls::getTls());
 	this->playThread.startThread(this);
 	dbgassert(this->playThread.getState() == playback_state::status_no_process);
-	vsthost::getInstance()->initThreads();
+	host->initThreads();
 	this->workerThread.setTls(daw_tls::getTls());
 	this->workerThread.startThread();
 
@@ -1185,8 +1181,8 @@ void DawInstance::destroy()
 		dbgassert(!companion.ctrl->isOk());
 	}
 	companionWindows.clear();
-	vsthost::getInstance()->unload();
-	vsthost::getInstance()->destroy();
+	host->unload();
+	host->destroy();
 	audiohost::getInstance()->deinitPa();
 	midihost::getInstance()->deinitPm();
 	waveformrender::getInstance()->destroy();
@@ -1199,7 +1195,6 @@ void DawInstance::destroy()
 	delete tls.waveform;
 	delete tls.audioCache;
 	delete tls.midiHost;
-	delete tls.host;
 	delete tls.audioHost;
 	tls.host = nullptr;
 	tls.midiHost = nullptr;
@@ -1209,6 +1204,8 @@ void DawInstance::destroy()
 	tls.pluginDatabase = nullptr;
 	tls.waveform = nullptr;
 	tls.audioCache = nullptr;
+	delete host;
+	host = nullptr;
 }
 void DawCtrl::destroy()
 {
@@ -1514,7 +1511,7 @@ String DawInstance::getAutoSaveFilename() {
 }
 void DawInstance::onTick()
 {
-	const bool bWroteMidiData = vsthost::getInstance()->writeRecordedData(&project);
+	const bool bWroteMidiData = host->writeRecordedData(&project);
 
 	if (bWroteMidiData) {
 		for (auto ctrl : dawCtrls) {
@@ -1523,7 +1520,7 @@ void DawInstance::onTick()
 
 	}
 //	double since = timer.getTimeDoubleReset();
-	vsthost::getInstance()->onTick();
+	host->onTick();
 
 	bool noPopups = true;
 	bool canOpenAutosave = true;
@@ -1617,7 +1614,7 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
 	ThreadLock lock = playThread.lockThread();
 	unloadProject();
 	/** make sure call to unloadProject unloaded all vst2 instances **/
-	dbgassert(vsthost::getInstance()->getVst2Instances().empty());
+	dbgassert(host->getVst2Instances().empty());
 	//TODO: assert that audiocache is empty
 	dbgassert(audiocache::getInstance()->isEmpty());
 
@@ -1628,7 +1625,6 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
 
 
 	/** create all audio instances **/
-	vsthost* host = vsthost::getInstance();
 	for (track_t* t : project.trackList) {
 		t->fixClipLengths();
 		host->createAudio(t);
@@ -2292,28 +2288,28 @@ public:
 		localIdx = _trackPtr->localIdxFlat;
 		dbgassert(DawInstance::get()->getTrackId(trackIdx) == _trackPtr);
 	}
-	void releaseResources(DawInstance* ctrl) override {
+	void releaseResources(DawInstance* daw) override {
 		if (trackPtr) {
-			releaseTrackResources(trackPtr, ctrl);
+			releaseTrackResources(trackPtr, daw);
 			delete trackPtr;
 			trackPtr = nullptr;
 		}
 	}
-	void undo(DawInstance* ctrl) {
-		ctrl->resetMouseContext();
-		ctrl->resetEditClip();
-		trackPtr = ctrl->getTrackId(trackIdx);
+	void undo(DawInstance* daw) {
+		daw->resetMouseContext();
+		daw->resetEditClip();
+		trackPtr = daw->getTrackId(trackIdx);
 		dbgassert(trackPtr && trackPtr->audio && trackPtr->audio->sampleFormat.blockSize%8==0); // see if pointer is valid
 		dbgassert(localIdx == trackPtr->localIdxFlat);
 		//SERIALIZE TRACK VSTs
 		localIdx = trackPtr->localIdxFlat;
-		ctrl->removeTrackImpl(trackPtr, FLG_TRK_CHANGE_HISTORY_UNDO);
+		daw->removeTrackImpl(trackPtr, FLG_TRK_CHANGE_HISTORY_UNDO);
 	}
-	void redo(DawInstance* ctrl) {
+	void redo(DawInstance* daw) {
 		dbgassert(trackPtr);
-		ctrl->resetMouseContext();
-		ctrl->resetEditClip();
-		ctrl->addTrackImpl(localIdx, trackPtr, FLG_TRK_CHANGE_HISTORY_UNDO);
+		daw->resetMouseContext();
+		daw->resetEditClip();
+		daw->addTrackImpl(localIdx, trackPtr, FLG_TRK_CHANGE_HISTORY_UNDO);
 		dbgassert(localIdx == trackPtr->localIdxFlat);
 		localIdx = trackPtr->localIdxFlat;
 		trackPtr = nullptr;
@@ -2335,30 +2331,30 @@ public:
 	}
 	~action_modify_track_remove() {
 	}
-	void releaseResources(DawInstance* ctrl) override {
+	void releaseResources(DawInstance* daw) override {
 		if (trackPtr) {
-			releaseTrackResources(trackPtr, ctrl);
+			releaseTrackResources(trackPtr, daw);
 			delete trackPtr;
 			trackPtr = nullptr;
 		}
 	}
 
-	void undo(DawInstance* ctrl) {
-		ctrl->resetMouseContext();
-		ctrl->resetEditClip();
-		ctrl->addTrackImpl(localIdx, trackPtr, FLG_TRK_CHANGE_HISTORY_UNDO);
+	void undo(DawInstance* daw) {
+		daw->resetMouseContext();
+		daw->resetEditClip();
+		daw->addTrackImpl(localIdx, trackPtr, FLG_TRK_CHANGE_HISTORY_UNDO);
 		dbgassert(localIdx == trackPtr->localIdxFlat);
 		localIdx = trackPtr->localIdxFlat;
 		trackPtr = nullptr;
 		//UNSERIALIZE TRACK VSTs
 	}
-	void redo(DawInstance* ctrl) {
-		ctrl->resetMouseContext();
-		ctrl->resetEditClip();
-		trackPtr = ctrl->getTrackId(trackIdx);
+	void redo(DawInstance* daw) {
+		daw->resetMouseContext();
+		daw->resetEditClip();
+		trackPtr = daw->getTrackId(trackIdx);
 		dbgassert(trackPtr);
 		//SERIALIZE TRACK VSTs
-		ctrl->removeTrackImpl(trackPtr, FLG_TRK_CHANGE_HISTORY_UNDO);
+		daw->removeTrackImpl(trackPtr, FLG_TRK_CHANGE_HISTORY_UNDO);
 		dbgassert(trackPtr && trackPtr->audio && trackPtr->audio->sampleFormat.blockSize%8==0); // see if pointer is valid
 		dbgassert(localIdx == trackPtr->localIdxFlat);
 	}
@@ -2369,7 +2365,6 @@ void DawInstance::addTrackImpl(int32_t trackInsertPos, track_t* newTrack, int fl
 		dbgassert(newTrack->audio);
 	} else {
 		dbgassert(!newTrack->audio);
-		vsthost* host = vsthost::getInstance();
 		host->createAudio(newTrack);
 	}
 	for (DawCtrl* pDawCtrl : dawCtrls) {
@@ -2381,7 +2376,7 @@ void DawInstance::addTrackImpl(int32_t trackInsertPos, track_t* newTrack, int fl
 		pushHist(new action_modify_track_add(StringFormat("Add %s Track", TrackTypeToName(newTrack->type)), newTrack));
 	}
 
-	vsthost::getInstance()->onTrackLayoutChange();
+	host->onTrackLayoutChange();
 }
 void DawInstance::removeTrackId(uint32_t trackId) {
 	if (project.trackList.validTrackIdx(trackId)) {
@@ -2408,7 +2403,7 @@ void DawInstance::removeTrackImpl(track_t* track, int flags) {
 	if (flags&FLG_TRK_CHANGE_USER) {
 		pushHist(new action_modify_track_remove(StringFormat("Remove %s Track", TrackTypeToName(track->type)), track));
 	}
-	vsthost::getInstance()->onTrackLayoutChange();
+	host->onTrackLayoutChange();
 }
 track_t* DawInstance::getTrackId(uint32_t trackId) {
 	return project.trackList[trackId]; // operator[] returns NULL on oob
@@ -2647,13 +2642,13 @@ int32_t project_controller_t::tickToSamples(tick_t ticks)
 {
 	vsthost* host = vsthost::getInstance();
 	dbgassert(host);
-	return std::round(tickToSamplePrecise(ticks, projectGlobals->tempo100, vsthost::getInstance()->sampleFormat.sampleRate));
+	return std::round(tickToSamplePrecise(ticks, projectGlobals->tempo100, host->sampleFormat.sampleRate));
 }
 tick_t project_controller_t::samplesToTicks(int32_t sample)
 {
 	vsthost* host = vsthost::getInstance();
 	dbgassert(host);
-	return std::round(sampleToTickPrecise(sample, projectGlobals->tempo100, vsthost::getInstance()->sampleFormat.sampleRate));
+	return std::round(sampleToTickPrecise(sample, projectGlobals->tempo100, host->sampleFormat.sampleRate));
 }
 
 beatbar16th_t project_controller_t::toBeatBar16th(int32_t tick)

@@ -44,16 +44,16 @@ public:
 		before = std::move(_tracks);
 	}
 
-	void undo(DawInstance* ctrl) {
+	void undo(DawInstance* daw) {
 		my_printf("action_modify_track undo, num tracks: %d\n", before.tracks.size());
 
-		ctrl->resetMouseContext();
-		ctrl->resetEditClip();
+		daw->resetMouseContext();
+		daw->resetEditClip();
 		bool initAfter = after.tracks.empty();
 		if (initAfter) {
 			after.cursor = MainCtrl::get()->getCursor();
 		}
-		trackallcontainer_t& trCtr = ctrl->getTracks();
+		trackallcontainer_t& trCtr = daw->getTracks();
 		for (track_snapshot_t* trackStored : before.tracks) {
 			my_printf("trackStored: %s %d\n", TrackTypeToName(trackStored->type), trackStored->localIdx);
 			if (trCtr.validTrackTypeIdx(trackStored->type, trackStored->localIdx)) {
@@ -61,7 +61,7 @@ public:
 				if (initAfter) {
 					after.tracks.push_back(new track_snapshot_t(track, false));
 				}
-				track->getMidi().deleteClips(ctrl);
+				track->getMidi().deleteClips(daw);
 				track->releaseTrackContent();
 //				if (track->type == TRACK_TYPE_MIDI)
 				my_printf("TRACKBeforeUndo[%d] HAS %d clips\n", track->projectIdx, track->getMidi().getConstClips().size());
@@ -76,14 +76,14 @@ public:
 		}
 		MainCtrl::get()->getCursor() = before.cursor;
 	}
-	void redo(DawInstance* ctrl) {
-		ctrl->resetMouseContext();
-		ctrl->resetEditClip();
-		trackallcontainer_t& trCtr = ctrl->getTracks();
+	void redo(DawInstance* daw) {
+		daw->resetMouseContext();
+		daw->resetEditClip();
+		trackallcontainer_t& trCtr = daw->getTracks();
 		for (track_snapshot_t* trackStored : after.tracks) {
 			if (trCtr.validTrackTypeIdx(trackStored->type, trackStored->localIdx)) {
 				track_t* track = trCtr.getTrackTypeIdx(trackStored->type, trackStored->localIdx);
-				track->getMidi().deleteClips(ctrl);
+				track->getMidi().deleteClips(daw);
 				track->releaseTrackContent();
 				*track = *trackStored;
 //				track->loadPluginAutomationParameters(trackStored->plugins);

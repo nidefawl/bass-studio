@@ -66,8 +66,8 @@ public:
 		before.removeDuplicates();
 		after.removeDuplicates();
 	}
-	void undo(DawInstance* ctrl) {
-		track_t* tr = ctrl->getTracks()[trackIdx];
+	void undo(DawInstance* daw) {
+		track_t* tr = daw->getTracks()[trackIdx];
 		if (!tr)
 			return;
 		trackdata_midi_t& midi = tr->getMidi();
@@ -76,10 +76,10 @@ public:
 			return;
 		clip->notes = before;
 		clip->setDirty();
-		ctrl->updateClipViews(clip, cursorBefore);
+		daw->updateClipViews(clip, cursorBefore);
 	}
-	void redo(DawInstance* ctrl) {
-		track_t* tr = ctrl->getTracks()[trackIdx];
+	void redo(DawInstance* daw) {
+		track_t* tr = daw->getTracks()[trackIdx];
 		if (!tr)
 			return;
 		trackdata_midi_t& midi = tr->getMidi();
@@ -88,7 +88,7 @@ public:
 			return;
 		clip->notes = after;
 		clip->setDirty();
-		ctrl->updateClipViews(clip, cursorAfter);
+		daw->updateClipViews(clip, cursorAfter);
 	}
 };
 class action_modify_clip : public action_base {
@@ -113,8 +113,8 @@ public:
 		before = oldC;
 		cursorBefore = oldCursor;
 	}
-	void undo(DawInstance* ctrl) {
-		track_t* tr = ctrl->getTracks()[trackIdx];
+	void undo(DawInstance* daw) {
+		track_t* tr = daw->getTracks()[trackIdx];
 		if (!tr)
 			return;
 		trackdata_midi_t& midi = tr->getMidi();
@@ -123,10 +123,10 @@ public:
 			return;
 		*clip = before;
 		clip->setDirty();
-		ctrl->updateClipViews(clip, cursorBefore);
+		daw->updateClipViews(clip, cursorBefore);
 	}
-	void redo(DawInstance* ctrl) {
-		track_t* tr = ctrl->getTracks()[trackIdx];
+	void redo(DawInstance* daw) {
+		track_t* tr = daw->getTracks()[trackIdx];
 		if (!tr)
 			return;
 		trackdata_midi_t& midi = tr->getMidi();
@@ -135,7 +135,7 @@ public:
 			return;
 		*clip = after;
 		clip->setDirty();
-		ctrl->updateClipViews(clip, cursorAfter);
+		daw->updateClipViews(clip, cursorAfter);
 	}
 };
 

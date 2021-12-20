@@ -31,8 +31,8 @@ public:
 		my_printf("Undo modify parameter task: set %s::%s (idx %d) from %f to %f\n", StringAsCStr(at->getAutomatableName()), StringAsCStr(at->getParamName(_ref.paramIdx)), _ref.paramIdx,  _oldVal, _newVal);
 	}
 	//TODO: this shouldn't be here
-	automatable_t* tryGetAt(DawInstance* ctrl) {
-		auto& tracks = ctrl->getTracks();
+	automatable_t* tryGetAt(DawInstance* daw) {
+		auto& tracks = daw->getTracks();
 		if (!tracks.validTrackIdx(ref.trackIdx)) {
 			setError("track missing");
 			return nullptr;
@@ -65,17 +65,17 @@ public:
 		}
 		return at;
 	}
-	void undo(DawInstance* ctrl) {
+	void undo(DawInstance* daw) {
 
-		automatable_t* at = tryGetAt(ctrl);
+		automatable_t* at = tryGetAt(daw);
 		if (at) {
 			my_printf("undo(): set %s::%s (idx %d) from %f to %f\n", StringAsCStr(at->getAutomatableName()), StringAsCStr(at->getParamName(ref.paramIdx)), ref.paramIdx,  valBefore, valAfter);
 
 			at->setParamValue(ref.paramIdx, valBefore, FLG_PAR_UPDATE_UNDO);
 		}
 	}
-	void redo(DawInstance* ctrl) {
-		automatable_t* at = tryGetAt(ctrl);
+	void redo(DawInstance* daw) {
+		automatable_t* at = tryGetAt(daw);
 		if (at) {
 			my_printf("redo(): set %s::%s (idx %d) from %f to %f\n", StringAsCStr(at->getAutomatableName()), StringAsCStr(at->getParamName(ref.paramIdx)), ref.paramIdx,  valBefore, valAfter);
 

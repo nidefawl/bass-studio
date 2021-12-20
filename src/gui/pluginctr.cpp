@@ -506,14 +506,16 @@ class action_insert_effect : public action_base {
 			: action_base(), effect(_effect), ref(_ref), dstSlot(_dst) {
 			desc = s;
 		}
-		~action_insert_effect() {
+		void releaseResources(DawInstance* daw) override {
 			if (weOwn) {
-				vsthost::getInstance()->unloadPlugin(this->effect);
+				daw->getHost()->unloadPlugin(this->effect, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+				effect = nullptr;
+				weOwn = false;
 			}
 		}
-		void undo(DawInstance* ctrl) override {
+		void undo(DawInstance* daw) override {
 			ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-			audio_stage_t* stage = vsthost::getInstance()->getAudioStage(ref);
+			audio_stage_t* stage = daw->getHost()->getAudioStage(ref);
 			if (!stage) {
 				setError("missing trackimpl");
 				return;
@@ -523,9 +525,9 @@ class action_insert_effect : public action_base {
 			MainCtrl::getPluginCtr()->relayout();
 			weOwn = true;
 		}
-		void redo(DawInstance* ctrl) override {
+		void redo(DawInstance* daw) override {
 			ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-			audio_stage_t* stage = vsthost::getInstance()->getAudioStage(ref);
+			audio_stage_t* stage = daw->getHost()->getAudioStage(ref);
 			if (!stage) {
 				setError("missing trackimpl");
 				return;
@@ -681,27 +683,27 @@ class action_move_modules : public action_base {
 			: action_base(), refdst(_refdst), refsrc(_refsrc), dst(_dst), src(_src), len(_len) {
 			desc = s;
 		}
-		void undo(DawInstance* ctrl) override {
-			audio_stage_t* dstStage = vsthost::getInstance()->getAudioStage(refdst);
-			audio_stage_t* srcStage = vsthost::getInstance()->getAudioStage(refsrc);
+		void undo(DawInstance* daw) override {
+			audio_stage_t* dstStage = daw->getHost()->getAudioStage(refdst);
+			audio_stage_t* srcStage = daw->getHost()->getAudioStage(refsrc);
 			if (!dstStage || !srcStage) {
 				setError("missing trackimpl");
 				return;
 			}
-			vsthost::getInstance()->movePlugins(srcStage, dstStage, dst, src, len);
+			daw->getHost()->movePlugins(srcStage, dstStage, dst, src, len);
 			MainCtrl::getPluginCtr()->relayout();
-			vsthost::getInstance()->onTrackLayoutChange();
+			daw->getHost()->onTrackLayoutChange();
 		}
-		void redo(DawInstance* ctrl) override {
-			audio_stage_t* dstStage = vsthost::getInstance()->getAudioStage(refdst);
-			audio_stage_t* srcStage = vsthost::getInstance()->getAudioStage(refsrc);
+		void redo(DawInstance* daw) override {
+			audio_stage_t* dstStage = daw->getHost()->getAudioStage(refdst);
+			audio_stage_t* srcStage = daw->getHost()->getAudioStage(refsrc);
 			if (!dstStage || !srcStage) {
 				setError("missing trackimpl");
 				return;
 			}
-			vsthost::getInstance()->movePlugins(dstStage, srcStage, src, dst, len);
+			daw->getHost()->movePlugins(dstStage, srcStage, src, dst, len);
 			MainCtrl::getPluginCtr()->relayout();
-			vsthost::getInstance()->onTrackLayoutChange();
+			daw->getHost()->onTrackLayoutChange();
 		}
 };
 class action_shift_modules : public action_base {
@@ -715,22 +717,22 @@ class action_shift_modules : public action_base {
 			: action_base(), ref(_ref), dst(_dst), src(_src), len(_len) {
 			desc = s;
 		}
-		void undo(DawInstance* ctrl) override {
-			audio_stage_t* stage = vsthost::getInstance()->getAudioStage(ref);
+		void undo(DawInstance* daw) override {
+			audio_stage_t* stage = daw->getHost()->getAudioStage(ref);
 			if (!stage) {
 				setError("missing trackimpl");
 				return;
 			}
-			vsthost::getInstance()->moveEffects(stage, dst, src, len);
+			daw->getHost()->moveEffects(stage, dst, src, len);
 			MainCtrl::getPluginCtr()->relayout();
 		}
-		void redo(DawInstance* ctrl) override {
-			audio_stage_t* stage = vsthost::getInstance()->getAudioStage(ref);
+		void redo(DawInstance* daw) override {
+			audio_stage_t* stage = daw->getHost()->getAudioStage(ref);
 			if (!stage) {
 				setError("missing trackimpl");
 				return;
 			}
-			vsthost::getInstance()->moveEffects(stage, src, dst, len);
+			daw->getHost()->moveEffects(stage, src, dst, len);
 			MainCtrl::getPluginCtr()->relayout();
 		}
 };
@@ -959,25 +961,27 @@ action_remove_modules::action_remove_modules(String s, std::vector<effectbase*> 
 	assert(effects.size());
 }
 
-action_remove_modules::~action_remove_modules() {
+void action_remove_modules::releaseResources(DawInstance* daw) {
 	if (weOwn) {
 		for (effectbase *eff : effects) {
-			vsthost::getInstance()->unloadPlugin(eff, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
+			daw->getHost()->unloadPlugin(eff, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
 		}
+		effects.clear();
+		weOwn = false;
 	}
 }
 
-void action_remove_modules::undo(DawInstance *ctrl) {
+void action_remove_modules::undo(DawInstance* daw) {
 	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-	audio_stage_t *stage = vsthost::getInstance()->getAudioStage(ref);
+	audio_stage_t *stage = daw->getHost()->getAudioStage(ref);
 	if (!stage) {
 		setError("missing trackimpl");
 		return;
 	}
 	int32_t slot = 0;
 	for (effectbase *eff : effects) {
-		vsthost::getInstance()->insertNewPlugin(stage, eff, dstSlot+slot);
-		vsthost::getInstance()->postPluginLoaded(stage, eff);
+		daw->getHost()->insertNewPlugin(stage, eff, dstSlot+slot);
+		daw->getHost()->postPluginLoaded(stage, eff);
 		dbgassert(eff->getSlot() == dstSlot+slot);
 		slot++;
 	}
@@ -985,9 +989,9 @@ void action_remove_modules::undo(DawInstance *ctrl) {
 	weOwn = false;
 }
 
-void action_remove_modules::redo(DawInstance *ctrl) {
+void action_remove_modules::redo(DawInstance* daw) {
 	ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-	audio_stage_t *stage = vsthost::getInstance()->getAudioStage(ref);
+	audio_stage_t *stage = daw->getHost()->getAudioStage(ref);
 	if (!stage) {
 		setError("missing trackimpl");
 		return;
@@ -995,7 +999,7 @@ void action_remove_modules::redo(DawInstance *ctrl) {
 	dbgassert(effects[0]->getSlot() == dstSlot);
 	for (effectbase *eff : effects) {
 		eff->close();
-		vsthost::getInstance()->removePlugin(eff);
+		daw->getHost()->removePlugin(eff);
 	}
 	MainCtrl::getPluginCtr()->relayout();
 	weOwn = true;

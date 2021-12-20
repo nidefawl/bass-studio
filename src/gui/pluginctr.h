@@ -281,8 +281,8 @@ class action_remove_modules : public action_base {
 	protected:
 	public:
 	action_remove_modules(String s, std::vector<effectbase*> &&_effects, audio_stage_ref_t _ref, int32_t _dst);
-	~action_remove_modules();
-	void undo(DawInstance *ctrl) override;
-	void redo(DawInstance *ctrl) override;
+	void undo(DawInstance* daw) override;
+	void redo(DawInstance* daw) override;
+	void releaseResources(DawInstance* daw) override;
 };
 

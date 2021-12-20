@@ -9,11 +9,11 @@ public:
 	std::string desc;
 	bool errored = false;
 	std::string errorDesc;
-	virtual ~action_base(){ };
-	virtual void undo(DawInstance* ctrl) = 0;
-	virtual void redo(DawInstance* ctrl) = 0;
+	virtual ~action_base() { };
+	virtual void undo(DawInstance* daw) = 0;
+	virtual void redo(DawInstance* daw) = 0;
 
-	virtual void releaseResources(DawInstance* ctrl) { };
+	virtual void releaseResources(DawInstance* daw) { };
 	String getDesc() {
 		return desc;
 	}
@@ -30,41 +30,41 @@ public:
 	int64_t getRevision() const {
 		return revision;
 	}
-	void clear(DawInstance* ctrl) {
+	void clear(DawInstance* daw) {
 		revision = -1;
 		while (!m_redo.empty()) {
 			action_base* redoAction = m_redo.back();
 			m_redo.pop_back();
-			redoAction->releaseResources(ctrl);
+			redoAction->releaseResources(daw);
 			delete redoAction;
 		}
 		while (!m_undo.empty()) {
 			action_base* undoAction = m_undo.back();
 			m_undo.pop_back();
-			undoAction->releaseResources(ctrl);
+			undoAction->releaseResources(daw);
 			delete undoAction;
 		}
 		revision = 0;
 	}
-	void undoStep(DawInstance* ctrl) {
+	void undoStep(DawInstance* daw) {
 		action_base* step = m_undo.back(); m_undo.pop_back();
-		step->undo(ctrl);
+		step->undo(daw);
 		dbgassert(!step->errored);
 		m_redo.push_back(step);
 		revision--;
 	}
-	void redoStep(DawInstance* ctrl) {
+	void redoStep(DawInstance* daw) {
 		action_base* step = m_redo.back(); m_redo.pop_back();
-		step->redo(ctrl);
+		step->redo(daw);
 		dbgassert(!step->errored);
 		m_undo.push_back(step);
 		revision++;
 	}
-	void push(DawInstance* ctrl, action_base* action) {
+	void push(DawInstance* daw, action_base* action) {
 		while (!m_redo.empty()) {
 			action_base* redoAction = m_redo.back();
 			m_redo.pop_back();
-			redoAction->releaseResources(ctrl);
+			redoAction->releaseResources(daw);
 			delete redoAction;
 		}
 		m_redo.clear();
