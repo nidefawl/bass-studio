@@ -374,7 +374,7 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
 			}
 		}
 		if (!validProcessingState) {
-			log_printf("%s opCode %d in !validProcessingState\\n", StringAsCStr(plugin->sName), opcode);
+			log_printf("%s opCode %d in !validProcessingState\n", StringAsCStr(plugin->sName), opcode);
 		}
 	}
 	switch (opcode)
@@ -3061,15 +3061,6 @@ vstpluginloadres vsthost::loadPlugin(String filepath, int32_t uId, int32_t globa
 		if (uId != 0) {
 			this->impl->vstShellCurrentUniqueId = static_cast<VstInt32>(0);
 		}
-		
-		if (uId == 0) {
-			// this branch is only reached by the vst scanner application when passing uId == 0
-			VstIntPtr vstIntPtr = aeffect->dispatcher(aeffect, effGetPlugCategory, 0, 0, 0, 0);
-			VstPlugCategory pluginCategory = static_cast<VstPlugCategory>(vstIntPtr);
-			if (pluginCategory == VstPlugCategory::kPlugCategShell) {
-				return vstpluginloadres(1, nullptr, new handles_t(nullptr, aeffect, moduleHandle), filepath, nameWithoutExt);
-			}
-		}
 		if (!aeffect) {
 			FreeLibrary(hmodule);
 			return vstpluginloadres(-5, NULL);
@@ -3078,6 +3069,15 @@ vstpluginloadres vsthost::loadPlugin(String filepath, int32_t uId, int32_t globa
 			FreeLibrary(hmodule);
 			return vstpluginloadres(-6, NULL);
 		}
+		if (uId == 0) {
+			// this branch is only reached by the vst scanner application when passing uId == 0
+			VstIntPtr vstIntPtr = aeffect->dispatcher(aeffect, effGetPlugCategory, 0, 0, 0, 0);
+			VstPlugCategory pluginCategory = static_cast<VstPlugCategory>(vstIntPtr);
+			if (pluginCategory == VstPlugCategory::kPlugCategShell) {
+				return vstpluginloadres(1, nullptr, new handles_t(nullptr, aeffect, moduleHandle), filepath, nameWithoutExt);
+			}
+		}
+
 		dbgassert(!aeffect->user);
 		moduleHandle = hmodule;
 	}
