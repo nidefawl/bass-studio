@@ -1236,7 +1236,7 @@ void DawInstance::initDaw(int argc, char* argv[]) {
 	}
 	daw_tls::tlsinstance& tls = daw_tls::getTls();
 	auto audioHost = new audiohost();
-	auto host = new vsthost();
+	host = new vsthost();
 	auto midiHost = new midihost();
 	if (!vsthost::assignMasterCallback(host)) {
 		delete host;
