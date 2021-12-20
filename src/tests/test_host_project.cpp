@@ -1,3 +1,4 @@
+#include "str_util.h"
 #include "host/main_daw.h"
 #include "host/mainctrl.h"
 #include <memory>

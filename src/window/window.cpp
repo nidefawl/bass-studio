@@ -1570,14 +1570,19 @@ int startApplication(int argc, char* argv[]) {
 	runSseBenchmarkTests();
 #endif
 
-	try {
+	bool openConsole = false;
 	int centerScreenIdx = -1;
+	String strLogFilename = "";
+	try {
 	for (int i = 0; i < argc; i++) {
 		if (argv[i] && strcmp(argv[i], "-center") == 0 && i + 1 < argc) {
-			char* a = argv[i+1];
-			centerScreenIdx = atoi(a);
-			argv[i] = nullptr;
-			argv[i+1] = nullptr;
+			centerScreenIdx = atoi(argv[i+1]);
+		}
+		if (argv[i] && strcmp(argv[i], "-log") == 0 && i + 1 < argc) {
+			strLogFilename = argv[i+1];
+		}
+		if (argv[i] && strcmp(argv[i], "-console") == 0) {
+			openConsole = true;
 		}
 	}
 	String strCurWrkDir = getCurrentWorkingDirectory();
@@ -1591,15 +1596,17 @@ int startApplication(int argc, char* argv[]) {
     if (determineUserdataPath(cwdPath)) {
         setUserdataPath(cwdPath+"/daw/");
     }
-	//if (!runConsoleMode) {
-	allocConsole();
-	//}
-	String logFileName = "daw.log";
-	openGlobalLog(toUserdataPath(logFileName));
+	if (openConsole) {
+		allocConsole();
+	}
+	if (strLogFilename.length()) {
+		openGlobalLog(toUserdataPath(strLogFilename));
+	}
 	char* pPath;
 	pPath = getenv("PATH");
-	if (pPath != NULL)
-		log_printf ("getenv PATH: %s\n",pPath);
+	if (pPath != NULL) {;
+		log_printf("getenv PATH: %s\n",pPath);
+	}
 	log_out("BUILD_BINARY_NAME %s\n", BuildInfo::BUILD_BINARY_NAME);
 	log_out("COMPILER_ID %s\n", BuildInfo::COMPILER_ID);
 	log_out("COMPILE_OPTIONS %s\n", BuildInfo::COMPILE_OPTIONS);
@@ -1800,7 +1807,9 @@ int startApplication(int argc, char* argv[]) {
 	} else {
 		my_printf("EXIT_SUCCESS\n", 0);
 	}
-	closeGlobalLog();
+	if (strLogFilename.length()) {
+		closeGlobalLog();
+	}
 #ifdef _WIN32
 	OleUninitialize();
 #endif
