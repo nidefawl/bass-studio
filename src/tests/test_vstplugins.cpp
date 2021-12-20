@@ -5,74 +5,59 @@
 #include "tls.h"
 #include "project.h"
 #include "appconfig.h"
+#include "thread.h"
+#include "fileio.h"
+#include "platform.h"
+#include "platform/win/platform_win.h"
 #ifdef _WIN32
 #include <windows.h>
 #endif
+#include <exception>
 
 namespace {
 int32_t exitStatusCode = 1;
 
 #if defined(_WIN32) 
-
-static const std::vector<String> dllFilesToTest{"cpp-test-data/mdaLimiter.dll", "cpp-test-data/mdaPiano.dll"};
-size_t currentFileIdx = 0;
-HWND hwnd = NULL;
-
-class reentrantblocker {
-	bool& boolField;
-public:
-	reentrantblocker(bool& _boolField) : boolField(_boolField) {
-		boolField = true;
-	}
-	~reentrantblocker() {
-		boolField = false;
-	}
-	bool isReentrant() {
-		return boolField;
-	}
+struct TestCaseEntry {
+	String pathToDll;
+	int expectedStatus;
 };
-VOID CALLBACK TimerCallback(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime)
+static std::vector<TestCaseEntry> dllFilesToTest; 
+
+size_t currentFileIdx = 0;
+
+static void TickTest()
 {
 	static vstpluginloadres res(0, NULL);
-	static bool reentrant = false;
-	if (reentrant) {
-    	exitStatusCode = 1;
-	    printf("TimerCallback reentrant\n");
-		return;
-	}
-	reentrantblocker block(reentrant);
-
-
 	static int currentTimerTick = 0;
 	static int numPluginsTested = 0;
 	auto* host = vsthost::getInstance();
 	if (res.plugin == NULL) {
-		if (numPluginsTested > 122) {
-            PostQuitMessage(0);
-			return;
-		}
 		if (currentFileIdx >= dllFilesToTest.size()) {
-            PostQuitMessage(0);
+            PostQuitMessage(exitStatusCode);
 			return;
 		}
-	    String f = dllFilesToTest[currentFileIdx];
-		res = host->loadPlugin(f, 0);
-	    printf("loadPlugin: %s %d\n", StringAsCStr(f), res.result);
-	    if (res.result != 0) {
+	    TestCaseEntry testCase = dllFilesToTest[currentFileIdx++];
+		res = host->loadPlugin(testCase.pathToDll, 0);
+	    if (res.result != testCase.expectedStatus) {
+		    printf("loadPlugin: %s %d => ERROR\n", StringAsCStr(testCase.pathToDll), res.result);
 	    	exitStatusCode = 1;
-			res = vstpluginloadres(0, NULL);
-            PostQuitMessage(0);
+            PostQuitMessage(exitStatusCode);
 			return;
+	    } else {
+		    printf("loadPlugin: %s %d => GOOD\n", StringAsCStr(testCase.pathToDll), res.result);
 	    }
-		currentFileIdx++;
+		if (res.result < 0) {
+			res = vstpluginloadres(0, NULL);
+		}
 	} else {
-		if (currentTimerTick == 0) {
+		bool hasUI = res.plugin->getFlagsVST() & effFlagsHasEditor;
+		if (hasUI && currentTimerTick == 10) {
 			res.plugin->show();
-		} else if (currentTimerTick == 72) {
+		} else if (hasUI && currentTimerTick == 30) {
 			res.plugin->close();
-		} else if (currentTimerTick == 92) {
-			printf("unloadPlugin\n");
-			host->unloadPlugin(res.plugin);
+		} else if ((hasUI && currentTimerTick == 40) || (!hasUI && currentTimerTick == 10)) {
+			host->unloadPlugin(res.plugin, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
 			res = vstpluginloadres(0, NULL);
 			currentTimerTick = -1;
 			numPluginsTested++;
@@ -83,16 +68,14 @@ VOID CALLBACK TimerCallback(HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime
 		currentTimerTick++;
 	}
 }
+
 static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     switch(msg)
     {
-	case WM_CREATE:
-		SetTimer(NULL, 0, 2, TimerCallback);
-		break;
 	case WM_DESTROY:
-		PostQuitMessage(0);
-		return 0;
+		PostQuitMessage(exitStatusCode);
+		return exitStatusCode;
 	}
 
     return DefWindowProc(hwnd, msg, wParam, lParam);
@@ -113,11 +96,24 @@ void createWin32Window() {
     wc.hIcon         = LoadIcon(NULL, IDI_APPLICATION);
 
     RegisterClass(&wc);
-    hwnd = CreateWindow(wc.lpszClassName, "Window",
+    HWND hwnd = CreateWindow(wc.lpszClassName, "Window",
                 WS_OVERLAPPEDWINDOW | WS_VISIBLE,
                 100, 100, 350, 250, NULL, NULL, wc.hInstance, NULL);
     dbgassert(hwnd != NULL);
+	
+    setMainHWND(hwnd);
 
+	RECT rcWindow;
+    MONITORINFO monInfo;
+    monInfo.cbSize = sizeof(monInfo);
+	GetWindowRect(hwnd, &rcWindow);
+	GetMonitorInfo(MonitorFromWindow(hwnd, MONITOR_DEFAULTTOPRIMARY), &monInfo);
+	SetWindowPos(hwnd,
+		HWND_TOP,
+		((monInfo.rcWork.right-monInfo.rcWork.left)-(rcWindow.right-rcWindow.left))/2,
+		((monInfo.rcWork.bottom-monInfo.rcWork.top)-(rcWindow.bottom-rcWindow.top))/2,
+		0, 0,          // Ignores size arguments.
+		SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
     ShowWindow(hwnd, SW_SHOW);
     UpdateWindow(hwnd);
 
@@ -126,33 +122,66 @@ void createWin32Window() {
 
 }
 
+extern volatile bool fataError;
+void on_terminate();
+void on_unexpected();
 
 int main(int argc, char* argv[]) {
-    auto audiohost = std::make_unique<vsthost>();
-    try {
-    	vsthost::assignMasterCallback(audiohost.get());
-    	daw_tls::tlsinstance _tls;
-    	_tls.tlsInitialized = true;
-        _tls.config = new app_config_t{};
-        _tls.host = audiohost.get();
-    	daw_tls::setTls(_tls);
+	seqthreads::registerThread("mainthread");
 
-#if defined(_WIN32)
-    	exitStatusCode = 0;
-    	createWin32Window();
-        MSG msg;
-        while  (GetMessage(&msg, NULL, 0, 0))
-        {
-            DispatchMessage(&msg);
-        }
+	std::set_terminate(on_terminate);
+	std::set_unexpected(on_unexpected);
+#ifdef USE_WIN32_EXC_HOOKS
+	setExceptionHandler();
 #endif
 
-    	vsthost::getInstance()->unload();
-    	vsthost::getInstance()->destroy();
-    	return exitStatusCode;
+	dllFilesToTest.push_back(TestCaseEntry{String("MISSING.dll"), -2});
+	std::vector<FileFound> files;
+	findFilesWithExt("cpp-test-data/plugins-vst2-ok/", PLATFORM_PLUGIN_EXT, true, files);
+	for (const FileFound& file : files) {
+		dllFilesToTest.push_back(TestCaseEntry{String(file.path), 0});
+	}
+
+	int retVal = 0;
+    auto audiohost = std::make_unique<vsthost>();
+    vsthost::assignMasterCallback(audiohost.get());
+    daw_tls::tlsinstance _tls;
+    _tls.tlsInitialized = true;
+    _tls.config = new app_config_t{};
+    _tls.host = audiohost.get();
+    daw_tls::setTls(_tls);
+    try {
+
+#if defined(_WIN32)
+    	createWin32Window();
+		double tmLastTick = getTimeHPC();
+		bool quit = false;
+		while (!fataError && !quit) {
+			double tmNow = getTimeHPC();
+			if (tmNow - tmLastTick >= 0.025) {
+				tmLastTick = tmNow;
+				TickTest();
+			}
+			DWORD timeout = 5;
+			MsgWaitForMultipleObjects(0, NULL, FALSE, timeout, QS_ALLEVENTS);
+			MSG msg{};
+			while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE))
+			{
+				if (msg.message == WM_QUIT) {
+					retVal = static_cast<int>(msg.wParam);
+					quit = true;
+					break;
+				}
+				DispatchMessage(&msg);
+			}
+		}
+    	printf("END\n");
+#endif
     } catch(std::exception& e) {
     	printf("std::exception: %s\n", e.what());
-    	return 1;
+		fataError = true;
     }
-	return 0;
+    _tls.host->unload();
+    _tls.host->destroy();
+    return fataError ? 0x5A5A5A5A : retVal;
 }
