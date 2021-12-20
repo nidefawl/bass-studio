@@ -199,7 +199,11 @@ void log_format_to_logger(Logger* logger, const char *file, int line, const char
 
 extern "C" {
 void failedAssert(const char* expr, const char *file, int line) {
-	log_format_to_logger(getGlobalLogger(), file, line, "dbgassert", "Assertion failed: %s\n", expr);
+	static bool failedAssert = false;
+	if (!failedAssert) {
+		failedAssert = true;
+		log_format_to_logger(getGlobalLogger(), file, line, "dbgassert", "Assertion failed: %s\n", expr);
+	}
 	auto nop = [](){};
 	nop();
 	abort();
