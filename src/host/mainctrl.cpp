@@ -2623,18 +2623,18 @@ GLFWwindow* getTopLevelGlfwWindow() {
 }
 
 int handleFatalError(int type, int implSpecType) {
-	seqthreads::thread_base* thread = MainCtrl::getPlayThread();
-	if (thread && seqthreads::getCurrentThreadId() == thread->getThreadId()) {
-		host_processing_stats_t processing;
-		auto host = vsthost::getInstance();
-		host->getProcessingStats(processing);
-		if (processing.pluginId) {
-			effectbase* eff = host->getPluginById(processing.pluginId);
-			if (eff) {
-				my_printf("Crash was most likely caused by %s\n", StringAsCStr(eff->getName()));
-			}
-		}
-	}
+//	seqthreads::thread_base* thread = MainCtrl::getPlayThread();
+//	if (thread && seqthreads::getCurrentThreadId() == thread->getThreadId()) {
+//		host_processing_stats_t processing;
+//		auto host = vsthost::getInstance();
+//		host->getProcessingStats(processing);
+//		if (processing.pluginId) {
+//			effectbase* eff = host->getPluginById(processing.pluginId);
+//			if (eff) {
+//				my_printf("Crash was most likely caused by %s\n", StringAsCStr(eff->getName()));
+//			}
+//		}
+//	}
 	return 0;
 }
 
