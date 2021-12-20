@@ -60,9 +60,9 @@ struct oversampler_t : public oversample_config_t {
 	}
 	bool runResample(AudioBlock& srcBlock, AudioBlock& dstBlock, uint32_t& nOutputProcessed) {
 		dbgassert(srcBlock.samples == this->numSamplesInput);
-		dbgassert(srcBlock.channels <= this->numChannels);
+		dbgassert(srcBlock.channels >= this->numChannels);
 		dbgassert(dstBlock.samples >= this->numSamplesResampled);
-		dbgassert(dstBlock.channels <= this->numChannels);
+		dbgassert(dstBlock.channels >= this->numChannels);
 
 		for (uint32_t i = 0; i < numChannels; i++) {
 			if (i < srcBlock.channels) {
@@ -138,6 +138,7 @@ struct resampler_t {
 		}
 		buf_t* buf = getFreeOutputBuffer();
 		buf->inUse = true;
+		//TODO: avoid this copy step by setting the resamplers channel count equal to the external input/output channel count
 		bufScratch.copyFrom(&block);
 		uint32_t nOutputProcessed = 0;
 		if (!resampler.runResample(bufScratch, *buf->block, nOutputProcessed)) {

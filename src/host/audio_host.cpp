@@ -84,27 +84,12 @@ static int audioCallback(const void *inputBuffer, void *outputBuffer,
 		DBG_AaudioCallbackOutDequeued++;
 		dbgassert(block);
 		if (framesPerBuffer == block->output->samples) {
-//			static uint32_t s22 = 0;
-//			block->output->fillNoise(++s22);
 			int32_t channels = math::min<int32_t>(block->output->channels, stream->nOutputChannels);
 			for (int32_t i = 0; i < channels; i++) {
 				float* channel = block->output->buf[i];
 				memcpy(outputs[i], channel, framesPerBuffer * sizeof(float));
 			}
 			numOutChannelsWritten = channels;
-
-
-//			if (logEveryMsec(123, 3000, StringFormat("stream %d samples %d channels OUT:%s\n", framesPerBuffer, channels, StringAsCStr(stream->outputName)))) {
-//				float* vec = block->output->buf[0];
-//				float lvl = std::accumulate(vec, vec+framesPerBuffer, 0.0f, [](float f, float fVal) {
-//					return f+fVal*fVal;
-//				});
-//				log_printf("std::accumulate: %f\n", lvl);
-//				lvl = lvl / framesPerBuffer;
-//				log_printf("lvl / framesPerBuffer: %f\n", lvl / framesPerBuffer);
-//				lvl = lvl < 0.01f ? 0.0f : sqrtf(lvl);
-//				log_printf("Level: %f\n", lvl);
-//			}
 		}
 		block->inUse = false;
 	} else {

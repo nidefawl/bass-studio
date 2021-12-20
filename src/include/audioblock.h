@@ -89,14 +89,18 @@ struct AudioBlock {
 	};
 	AudioBlock getOffsetBlock(const uint32_t sampleOffset) const
 	{
+		dbgassert(sampleOffset < this->samples);
 		return AudioBlock(*this, 0, this->channels, sampleOffset, this->samples - sampleOffset);
 	};
 	AudioBlock SubChannelsSamplesBlock(const uint32_t channelOffset, const uint32_t numChannels, const uint32_t sampleOffset, const uint32_t numSamples) const
 	{
+		dbgassert(channelOffset+numChannels <= this->channels);
+		dbgassert(sampleOffset+numSamples <= this->samples);
 		return AudioBlock(*this, channelOffset, numChannels, sampleOffset, numSamples);
 	};
 	AudioBlock SubChannelsBlock(const uint32_t channelOffset, const uint32_t numChannels) const
 	{
+		dbgassert(channelOffset+numChannels <= this->channels);
 		return AudioBlock(*this, channelOffset, numChannels, 0, this->samples);
 	};
 	void clear() {

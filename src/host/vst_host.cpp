@@ -1571,7 +1571,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 			AudioBlock block = resamplerInput->pop();
 			int32_t post = resamplerInput->numBlocksToPop();
 			dbgassert(post == pre-1);
-			AudioBlock blockExtOut(32, sampleFormat.blockSize);
+			AudioBlock blockExtOut(resamplerOutput->numChannels, sampleFormat.blockSize);
 			dsp_util::fillBlock(blockExtOut, 0.0f);
 			if (enableProfiling) {
 				timerProfile.reset();
@@ -1597,7 +1597,6 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 					if (DAW::isChannelConnected(tracDst) && tracDst.getType() == DAW::channel_input_type::INPUT_EXTERNAL_AUDIO) {
 						
 						// TODO: latency compensate (add external output nodes to graph)
-						int offset = tracDst.inputChannelOffset;
 
 						/* Calculate master tracks gain level */
 						float fGainMaster;
@@ -1605,7 +1604,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 						}
 						int routedOutputChannelCount = AudioIO::getNumChannelsFromTrackType(tracDst.externalInputType);
 						auto trackSubChannelOutput = trackImpl->output.SubChannelsBlock(0, routedOutputChannelCount);
-						blockExtOut.SubChannelsBlock(tracDst.inputChannelOffset, numChannels).addFromOp(&trackSubChannelOutput, AudioBlock::mix_op::ADD, dsp_util::clampReadGain(fGainMaster));
+						blockExtOut.SubChannelsBlock(tracDst.inputChannelOffset, routedOutputChannelCount).addFromOp(&trackSubChannelOutput, AudioBlock::mix_op::ADD, dsp_util::clampReadGain(fGainMaster));
 
 					}
 				}
