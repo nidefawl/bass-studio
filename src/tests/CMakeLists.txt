@@ -65,6 +65,7 @@ MACRO( DEFINE_TEST test_name )
   CONFIGURE_AS_TEST(${test_name})
 ENDMACRO()
 
+DEFINE_TEST(test_logger)
 ADD_EXECUTABLE(test_waveformrenderer test_waveformrenderer.cpp)
 CONFIGURE_AS_TEST(test_waveformrenderer)
 DEFINE_TEST(test_audioblock)
