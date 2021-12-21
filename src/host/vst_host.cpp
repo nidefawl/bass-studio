@@ -272,84 +272,24 @@ vst_internal_hostslot g_hostslots[4];
 }
 
 VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* effect, VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt) {
-	/**
-	 * TODO: validate that the plugin is currently either being loaded or connected to an audiostage that is valid.
-	 * Currently plugins have an extended lifetime after removal inside the edithistory.
-	 *
-	 * TODO: validate that we get called from a known thread.
-	 * This could be one of: the playthread, an audio workerthread, the UI thread
-	 * If the thread is not known (plugin created it) we can't guarantee
-	 * proper lockfree synchronization. So, depending on the opcode the call gets ignored if
-	 * it is the wrong thread.
-	 *
-	 * audioMasterSizeWindow: Ignored if not from the UI thread (Should be rare from non UI-threads)
-	 * audioMasterUpdateDisplay: Already handled by the onTick handler (20ms interval)
-	 * audioMasterUpdateDisplay: Update the parameter list and program name
-	 *
-	 * Any outgoing call into 3rd party or windows code might end up here again in a reentrant scenario.
-	 * i.e. audioMasterSizeWindow calls updateWindowSize. That could trigger a message box that spawns
-	 * a win32 event-pump, causing a render of the plugin UI. Before rendering, the plugin dispatches
-	 * a audioMasterGetTime call and we end up here again.
-	 *
-	 * Maybe its best to move all outgoing calls out of this callback and have them fired asynchronously
-	 * from the UI thread.
-	 *
-	 * This might not solve all cases of reentrant calls, so there is still value in counting and detecting it
-	 * to avoid mysterious crashes in infinite loop scenarios.
-	 * Entrance counting has to be done per plugin and thread-id.
-	 * In the common case plugin developers are aware of this and take care of it.
-	 * So this must be done in a lock free manner to avoid unnecessary locks and synchronization to fix a
-	 * really rare problem.
-	 *
-	 *
-	 * TODO: Detect reentrance and guard against it.
-	 * This approach will not work:
-	 *
-	 * class host {
-	 * map<plugin, list_of_thread_ids_in_cb> cbEntrants;
-	 * }
-	 * if (cbEntrants[pluginId].contains(threadid)) // adding/removing from map requires lock
-	 *    return; // reentrant
-     * else //add to map, remove on function exit
-	 *
-	 *
-	 *
-	 * The following approach will work if:
-	 * The number of allowed threads to enter the callback is UI + playback + n audio workers (1+1+32 max)
-	 * _AND_ the method to retrieve a self-assigned thread idx does not use a map + mutex but thread local storage.
-	 * where each thread I start process plugins on gets a number (1-34) assigned
-	 *
-	 * #def MAX_NUM_OF_THREADS 35
-	 * class plugin {
-	 *  int threadArr[MAX_NUM_OF_THREADS];
-	 * }
-	 * threadId = get_my_thread_idx() //get thread IDX from TLS.
-	 *
-	 * if (threadId == 0)
-	 *   callFromUnknownThread = true; // be worried, its a thread the plugin fired up, do limited stuff!
-	 * else
-	 * if (threadId > 0) {
-	 *   if (plugin->threadArr[threadId] > 0)
-	 *     return;//reentrant
-	 *   plugin->threadArr[threadId]++
-	 * }
-	 *
-	 *
-	 * on function leave (RAII helper): plugin->threadArr[threadId]--
-	 *
-	 */
 	dbgassert(host);
+	// In case a plugin instance outlives the host
 	if (!host)
 		return 0;
 
-	vstplugin* plugin = host->getPlugin(effect);
+	/**
+	 * Thread safety is guaranteed by only allowing internal threads to enter the callback
+	 * TODO: Find out what exact thread we got called from. @see notes
+	 */
+	vstplugin *plugin = host->getPlugin(effect);
 	if (!seqthreads::isInternalThread()) {
 
 		log_printf("Ignore %s (own thread) opcode %d %d %d %f\n", !plugin?"UNKNOWN":StringAsCStr(plugin->sName), opcode, index, value, opt);
 		return 0;
 	}
-
-
+	/**
+	 * TODO: Detect reentrance and guard against it. @see notes
+	 */
 	bool throttleLog = false;
 	bool validProcessingState = false;
 	if (plugin) {
@@ -364,8 +304,13 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
 			opcodeStats.tmMillis = tmMillis;
 		}
 
-		//TODO: rewrite this hack
-		// this is also not thread safe, accessing project track structure
+		/**
+		 * Validate that the plugin is currently fully loaded and setup and connected to an audiostage that is valid.
+		 * Currently plugins have an extended lifetime after removal inside the edithistory.
+		 *
+		 * TODO: This check is not well implemented
+		 * Add a lock free thread-safe way to check (from the callback) if a plugin is ready for processing
+		 */
 		if (plugin->bIsSetup && plugin->trackImpl) {
 			// get this from the host instead of the tls
 			auto projCtrl = project_controller_t::get();

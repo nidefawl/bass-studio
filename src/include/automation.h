@@ -158,11 +158,13 @@ public:
 	virtual void flipParamValue(int32_t idx) {
 		setParamValue(idx, 1.0f-getParamValue(idx), FLG_PAR_UPDATE_USER);
 	}
+	// TODO: don't create a new automation here. Quantization must be property of the parameter
 	int32_t getQuantizationSteps(int32_t idx) {
 		automation_t* at = getOrCreateAutomation(idx);
 		dbgassert(at);
 		return at->quantizationSteps;
 	}
+	// TODO: don't create a new automation here. Quantization must be property of the parameter
 	float quantizeVal(int32_t idx, float f) {
 		automation_t* at = getOrCreateAutomation(idx);
 		dbgassert(at);
