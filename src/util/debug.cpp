@@ -158,18 +158,21 @@ void openGlobalLog(const String& logFileName) {
 	getFileLogger().logStr("Begin of logfile\n");
 	getMultiLogger().addLogger(&getFileLogger());
 }
-#define MAX_LEN_MY_PRINTF 4096
+#define LOG_BUF_SIZE 4096
 #define MAX_LEN_FILENAME 512
 
 void log_format_to_logger(Logger* logger, const char *file, int line, const char *func, const char *fmt, ...) {
-	char szLogStr[MAX_LEN_MY_PRINTF]{ 0 };
+	char szLogStr[LOG_BUF_SIZE]{ 0 };
 	char szFileShort[MAX_LEN_FILENAME]{ 0 };
-	char szLogBuf[MAX_LEN_MY_PRINTF]{ 0 };
+	char szLogBuf[LOG_BUF_SIZE]{ 0 };
 	va_list args;
 	va_start(args, fmt);
-	int ret = vsnprintf(szLogStr, MAX_LEN_MY_PRINTF - 1, fmt, args);
+	int ret = vsnprintf_s(szLogStr, LOG_BUF_SIZE, _TRUNCATE, fmt, args);
 	va_end(args);
-	if (ret <= 0) {
+	if (ret == -1) {
+		ret = LOG_BUF_SIZE-1;
+	}
+	if (ret < 0 || ret >= LOG_BUF_SIZE) {
 		dbgassert(0);
 		return;
 	}
@@ -179,15 +182,16 @@ void log_format_to_logger(Logger* logger, const char *file, int line, const char
 		String threadName = seqthreads::getCurrentThreadName();
 		const char* szThreadName = StringAsCStr(threadName);
 		#ifndef _WIN32
-		ret = snprintf(szLogBuf, MAX_LEN_MY_PRINTF - 1, "%s:%s:%d %s: %s", szThreadName, szFileShort, line, func, szLogStr);
+		ret = snprintf(szLogBuf, LOG_BUF_SIZE - 1, "%s:%s:%d %s: %s", szThreadName, szFileShort, line, func, szLogStr);
 		#else
-		ret = sprintf_s(szLogBuf, MAX_LEN_MY_PRINTF - 1, "%s:%s:%d %s: %s", szThreadName, szFileShort, line, func, szLogStr);
+		ret = _snprintf_s(szLogBuf, LOG_BUF_SIZE, _TRUNCATE, "%s:%s:%d %s: %s", szThreadName, szFileShort, line, func, szLogStr);
+		if (ret == -1) {
+			ret = LOG_BUF_SIZE-1;
+			szLogBuf[ret-1] = '\n';
+		}
 		#endif
-		if (ret > 0) {
-			dbgassert(ret+1 <= MAX_LEN_MY_PRINTF);
+		if (ret >= 0 && ret < LOG_BUF_SIZE) {
 			szLogStatement = szLogBuf;
-		} else {
-			dbgassert(0&&"string was too long to log");
 		}
 	} else {
 		szLogStatement = szLogStr;

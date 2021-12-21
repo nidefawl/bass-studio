@@ -174,13 +174,15 @@ void replaceBackslashInString(String& str) {
 }
 void replaceBackslashWithForwardslash(const char* filename, char* buf, size_t bufOutSize) {
 	size_t inLen = strlen(filename);
-	dbgassert(inLen+1 < bufOutSize);
 	char* out = &buf[0];
 	const char* in = &filename[0];
 	size_t i = 0;
-	for (; i < inLen; i++) {
+	for (; i < inLen && i < bufOutSize; i++) {
 		*out++ = (*in == '\\') ? '/' : *in;
 		in++;
+	}
+	if (i && i == bufOutSize) {
+		i--;
 	}
 	buf[i] = '\0';
 }
