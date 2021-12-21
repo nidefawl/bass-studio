@@ -142,11 +142,15 @@ static Logger& getExclusiveLoggerInstance() {
 	static StdOutLogger logger;
 	return logger;
 }
+static Logger* globalLogger = &getMultiLogger();
 Logger* getExclusiveLogger() {
 	return &getExclusiveLoggerInstance();
 }
 Logger* getGlobalLogger() {
-	return &getMultiLogger();
+	return globalLogger;
+}
+void setGlobalLogger(Logger* logger) {
+	globalLogger = logger;
 }
 void closeGlobalLog() {
 	getFileLogger().logStr("End of logfile\n");
