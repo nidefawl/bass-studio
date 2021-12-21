@@ -63,7 +63,7 @@ namespace {
 			buf.resize(len);
 			memset(buf.data(), 'x', buf.size());
 			buf.back() = '\0';
-			log_format_to_logger(getGlobalLogger(), buf.data(), __INT_MAX__, buf.data(), buf.data());
+			log_format_to_logger(getGlobalLogger(), buf.data(), 0x7FFFFFFF, buf.data(), buf.data());
 			printf("log_format_to_logger strlen: %llu, Recv strlen %llu\n", safe_strlen(buf.data(), 1UL<<16U), testLogger.recvdSize);
 			if (len < 100) {
 				printf("STR '%s'\n", testLogger.recvdLog);
