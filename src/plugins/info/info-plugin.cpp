@@ -50,6 +50,22 @@ using StdThreadLock = std::lock_guard<std::recursive_mutex>;
 
 namespace PluginHostInfo {
 
+void timeInfoToStrings(VstTimeInfo* timeinfo, std::vector<String>& strings) {
+	strings.push_back(StringFormat("samplePos %.4f", timeinfo->samplePos));
+	strings.push_back(StringFormat("sampleRate %.3f", timeinfo->sampleRate));
+	strings.push_back(StringFormat("nanoSeconds %.2f", timeinfo->nanoSeconds));
+	strings.push_back(StringFormat("ppqPos %.5f", timeinfo->ppqPos));
+	strings.push_back(StringFormat("tempo %.4f", timeinfo->tempo));
+	strings.push_back(StringFormat("barStartPos %.4f", timeinfo->barStartPos));
+	strings.push_back(StringFormat("cycleStartPos %.4f", timeinfo->cycleStartPos));
+	strings.push_back(StringFormat("cycleEndPos %.4f", timeinfo->cycleEndPos));
+	strings.push_back(StringFormat("timeSigNumerator %d", timeinfo->timeSigNumerator));
+	strings.push_back(StringFormat("timeSigDenominator %d", timeinfo->timeSigDenominator));
+	strings.push_back(StringFormat("smpteOffset %d", timeinfo->smpteOffset));
+	strings.push_back(StringFormat("smpteFrameRate %d", timeinfo->smpteFrameRate));
+	strings.push_back(StringFormat("samplesToNextClock %d", timeinfo->samplesToNextClock));
+	strings.push_back(StringFormat("flags %08X", timeinfo->flags));
+}
 
 struct PluginVST2_HostInfo_impl_t {
 
@@ -170,6 +186,7 @@ void PluginVST2_HostInfo::getParameterLabel (VstInt32 index, char* label)
 {
 	switch (index) {
 		case kLogVerbosity:
+		case kLogBlocksProcessed:
 			vst_strncpy(label, "", kVstMaxParamStrLen);
 			return;
 		default:
@@ -186,6 +203,10 @@ void PluginVST2_HostInfo::getParameterDisplay (VstInt32 index, char* text)
 			snprintf(text, kVstMaxParamStrLen, "%d", getLogVerbosity());
 			break;
 		}
+		case kLogBlocksProcessed: {
+			snprintf(text, kVstMaxParamStrLen, "%d", getLogBlocks());
+			break;
+		}
 	}
 }
 
@@ -193,7 +214,8 @@ void PluginVST2_HostInfo::getParameterName (VstInt32 index, char* label)
 {
 	switch (index)
 	{
-	case kLogVerbosity:		vst_strncpy(label, "Log Verbosity", kVstMaxParamStrLen);	return;
+	case kLogVerbosity:			vst_strncpy(label, "Log Verbosity", kVstMaxParamStrLen);	return;
+	case kLogBlocksProcessed:	vst_strncpy(label, "Log Blocks", kVstMaxParamStrLen);	return;
 	}
 }
 
@@ -203,6 +225,9 @@ void PluginVST2_HostInfo::setParameter (VstInt32 index, float value)
 	switch (index) {
 	case kLogVerbosity:
 		ap->logVerbosity = value;
+		break;
+	case kLogBlocksProcessed:
+		ap->logBlocks = value;
 		break;
 	}
 #if BUILD_VSTHOST
@@ -226,8 +251,29 @@ float PluginVST2_HostInfo::getParameter (VstInt32 index)
 	case kLogVerbosity:
 		value = ap->logVerbosity;
 		break;
+	case kLogBlocksProcessed:
+		value = ap->logBlocks;
+		break;
 	}
 	return value;
+}
+/* Return parameter properties */
+bool PluginVST2_HostInfo::getParameterProperties (VstInt32 index, VstParameterProperties* p) {
+
+	if (!p)
+		return false;
+	memset(p, 0, sizeof(VstParameterProperties));
+	if (index == kLogVerbosity) {
+		vst_strncpy(p->label, "Logging Verbosity", kVstMaxLabelLen);
+		vst_strncpy(p->shortLabel, "Log Verbosity", kVstMaxShortLabelLen);
+		return true;
+	}
+	if (index == kLogBlocksProcessed) {
+		vst_strncpy(p->label, "Log Blocks", kVstMaxLabelLen);
+		vst_strncpy(p->shortLabel, "Log Blocks", kVstMaxShortLabelLen);
+		return true;
+	}
+	return false;
 }
 
 bool PluginVST2_HostInfo::getProgramNameIndexed (VstInt32 category, VstInt32 index, char* text)
@@ -263,17 +309,6 @@ VstInt32 PluginVST2_HostInfo::getVendorVersion ()
 	return 1;
 }
 
-/* Return parameter properties */
-bool PluginVST2_HostInfo::getParameterProperties (VstInt32 index, VstParameterProperties* p) {
-
-	if (index == 0 && p) {
-		memset(p, 0, sizeof(VstParameterProperties));
-		vst_strncpy(p->label, "Logging Verbosity", kVstMaxLabelLen);
-		vst_strncpy(p->shortLabel, "Log Verbosity", kVstMaxShortLabelLen);
-		return true;
-	}
-	return false;
-}
 VstInt32 PluginVST2_HostInfo::processEvents (VstEvents* events) {
 	assert(events);
 	if (events) {
@@ -360,6 +395,29 @@ VstInt32 PluginVST2_HostInfo::setChunk (void* data, VstInt32 byteSize, bool isPr
 void PluginVST2_HostInfo::processReplacing(float** inputs, float** outputs, VstInt32 sampleFrames)
 {
 //	numCalls++;
+	if (getLogBlocks() > 1){
+		std::vector<String> strings;
+		String str;
+		str = StringFormat("Blocksize %d", getBlockSize());
+		strings.push_back(str);
+		str = StringFormat("Samplerate %.0f", getSampleRate());
+		strings.push_back(str);
+		int flags = 0;
+		for (int i = 8; i < 16; i++) {
+			flags |= (1<<i);
+		}
+		log_printf("Process block %d\n", sampleFrames);
+		VstTimeInfo* timeinfo = getTimeInfo(flags);
+		if (!timeinfo) {
+			log_printf("getTimeInfo() == nullptr\n", 0);
+			assert(timeinfo);
+			timeInfoToStrings(timeinfo, strings);
+		}
+		for (String& str2 : strings) {
+			log_printf("%s\n", StringAsCStr(str2));
+		}
+	}
+		
 	dbgassert(sampleFrames <= blockSize);
 	if (!issetprogram && sampleFrames <= blockSize) {
 
@@ -499,20 +557,7 @@ public:
 		}
 		VstTimeInfo* timeinfo = effx->getTimeInfo(flags);
 		assert(timeinfo);
-		strings.push_back(StringFormat("samplePos %.4f", timeinfo->samplePos));
-		strings.push_back(StringFormat("sampleRate %.3f", timeinfo->sampleRate));
-		strings.push_back(StringFormat("nanoSeconds %.2f", timeinfo->nanoSeconds));
-		strings.push_back(StringFormat("ppqPos %.5f", timeinfo->ppqPos));
-		strings.push_back(StringFormat("tempo %.4f", timeinfo->tempo));
-		strings.push_back(StringFormat("barStartPos %.4f", timeinfo->barStartPos));
-		strings.push_back(StringFormat("cycleStartPos %.4f", timeinfo->cycleStartPos));
-		strings.push_back(StringFormat("cycleEndPos %.4f", timeinfo->cycleEndPos));
-		strings.push_back(StringFormat("timeSigNumerator %d", timeinfo->timeSigNumerator));
-		strings.push_back(StringFormat("timeSigDenominator %d", timeinfo->timeSigDenominator));
-		strings.push_back(StringFormat("smpteOffset %d", timeinfo->smpteOffset));
-		strings.push_back(StringFormat("smpteFrameRate %d", timeinfo->smpteFrameRate));
-		strings.push_back(StringFormat("samplesToNextClock %d", timeinfo->samplesToNextClock));
-		strings.push_back(StringFormat("flags %08X", timeinfo->flags));
+		PluginHostInfo::timeInfoToStrings(timeinfo, strings);
 		setFont(vg, 16, G_WHITE, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
 		float lineh;
 		nvgTextMetrics(vg, NULL, NULL, &lineh);

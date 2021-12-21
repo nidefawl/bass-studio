@@ -7,6 +7,7 @@
 
 namespace PluginHostInfo {
 #define MAX_VERBOSITY 16
+#define MAX_LOG_BLOCKS 3
 class PluginVST2_HostInfo;
 
 enum
@@ -20,6 +21,7 @@ enum
 enum
 {
 	kLogVerbosity = 0,
+	kLogBlocksProcessed = 1,
 	kNumParams
 };
 
@@ -28,6 +30,7 @@ class ProgramParameters
 {
 public:
 	float logVerbosity = 0.0f;
+	float logBlocks = 0.0f;
 };
 
 class Program : public ProgramParameters
@@ -92,6 +95,9 @@ public:
 private:
 	int getLogVerbosity() {
 		return math::round(current()->logVerbosity*MAX_VERBOSITY);
+	}
+	int getLogBlocks() {
+		return math::round(current()->logBlocks*MAX_LOG_BLOCKS);
 	}
 	Program singleProgram;
 };
