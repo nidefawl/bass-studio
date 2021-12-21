@@ -70,7 +70,9 @@ namespace {
 			}
 			testLogger.reset();
 		}
-
+#if 0
+		// Generate a format string that ends with "xxxxxx%2" 
+		// This generates an invalid parameter error and calls a handler that terminates the application
 		buf.resize(LOG_BUFFER_SIZE);
 		for (size_t i = 0; i < 3; i++) {
 			memset(buf.data(), 'x', buf.size());
@@ -79,6 +81,7 @@ namespace {
 			log_printf(buf.data(), 1.0f/3.0f);
 			testLogger.reset();
 		}
+#endif
 		const char* strmsg = "123123123123123\n";
 		log_out(strmsg, 0);
 		ALEPH_ASSERT_THROW(strcmp(testLogger.recvdLog, strmsg) == 0);
