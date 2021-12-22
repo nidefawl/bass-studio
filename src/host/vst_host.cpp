@@ -76,18 +76,19 @@ bool filterOpCode(int opcode) {
 //		return false;
 	return true;
 }
-void cbPrintf(vstplugin* plugin, const char *fmt, int index, int opcode, int value, float opt = 0);
-void cbPrintf(vstplugin* plugin, const char *fmt, int index, int opcode, int value, float opt) {
+void logPluginCb(vstplugin* plugin, const char* fmt, int opcode, int index, int64_t value, float opt = 0);
+void logPluginCb(vstplugin* plugin, const char* fmt, int opcode, int index, int64_t value, float opt)
+{
 	if (filterOpCode(opcode)) {
 		char buf[MAX_LEN_MY_DBF];
-		snprintf(buf, MAX_LEN_MY_DBF - 1, fmt, index, opcode, value, opt);
+		snprintf(buf, MAX_LEN_MY_DBF - 1, fmt, opcode, index, value, opt);
 		log_printf("%s %s", !plugin?"UNKNOWN":StringAsCStr(plugin->sName), buf);
 	}
 }
 #else
 void emptyPrinft(vstplugin* plugin, const char *fmt, ...) {
 }
-#define cbPrintf emptyPrinft
+#define logPluginCb emptyPrinft
 #endif
 
 
@@ -284,7 +285,7 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
 	vstplugin *plugin = host->getPlugin(effect);
 	if (!seqthreads::isInternalThread()) {
 
-		log_printf("Ignore %s (own thread) opcode %d %d %d %f\n", !plugin?"UNKNOWN":StringAsCStr(plugin->sName), opcode, index, value, opt);
+		log_printf("Ignore %s (own thread) opcode %d %d %zd %f\n", !plugin?"UNKNOWN":StringAsCStr(plugin->sName), opcode, index, value, opt);
 		return 0;
 	}
 	/**
@@ -325,11 +326,12 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
 	switch (opcode)
 	{
 	case audioMasterAutomate:
-		if (!throttleLog) cbPrintf(plugin, "audioMasterAutomate %d %d %d %f\n", index, opcode, value, opt);
+		if (!throttleLog)
+            logPluginCb(plugin, "audioMasterAutomate %d %d %zd %f\n", opcode, index, value, opt);
 		if (plugin) {
 			auto* effParam = plugin->getEffectParam(index);
 			if (!effParam) {
-				log_printf("%s audioMasterAutomate unknown param index %d %d %f\n", StringAsCStr(plugin->getName()), index, value, opt);
+				log_printf("%s audioMasterAutomate unknown param index %d %zd %f\n", StringAsCStr(plugin->getName()), index, value, opt);
 			} else {
 
 				// call to deactivateAutomation is not thread safe,
@@ -339,17 +341,20 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
 		}
 		return 1;
 	case audioMasterVersion:
-		if (!throttleLog) cbPrintf(plugin, "audioMasterVersion %d %d %d\n", index, opcode, value);
+		if (!throttleLog)
+            logPluginCb(plugin, "audioMasterVersion %d %d %zd\n", opcode, index, value, 0);
 		return 2400L; //VST 2.4
 	case audioMasterCurrentId:
-		if (!throttleLog) cbPrintf(plugin, "audioMasterCurrentId %d %d %d\n", index, opcode, value);
+		if (!throttleLog)
+            logPluginCb(plugin, "audioMasterCurrentId %d %d %zd\n", opcode, index, value, 0);
 		//return OnGetCurrentUniqueId(nEffect);
 		if (plugin) {
 			return (VstIntPtr)plugin->getLocalCurrentUniqueId();
 		}
 		return impl->vstShellCurrentUniqueId;
 	case audioMasterIdle:
-		if (!throttleLog) cbPrintf(plugin, "audioMasterIdle %d %d %d\n", index, opcode, value);
+		if (!throttleLog)
+            logPluginCb(plugin, "audioMasterIdle %d %d %zd\n", opcode, index, value, 0);
 		//return OnIdle(nEffect);
 		return 0L;
 	case audioMasterGetTime:
@@ -360,32 +365,37 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
 		//		return (VstIntPtr)plugin->getLocalTimeInfoPtr();
 		//	}
 		//}
-//		if (!throttleLog) cbPrintf(plugin, "audioMasterGetTime %d %d %d\n", index, opcode, value);
+//		if (!throttleLog) logPluginCb(plugin, "audioMasterGetTime %d %d %zd\n", opcode, index, value);
 		if (plugin) {
 			return (VstIntPtr)plugin->getLocalTimeInfoPtr();
 		}
 		return (VstIntPtr)host->getTimeInfo();
 		
 	case audioMasterProcessEvents:
-		if (!throttleLog) cbPrintf(plugin, "audioMasterProcessEvents %d %d %d\n", index, opcode, value);
+		if (!throttleLog)
+            logPluginCb(plugin, "audioMasterProcessEvents %d %d %zd\n", opcode, index, value, 0);
 		return 0;
 	case audioMasterIOChanged:
-		if (!throttleLog) cbPrintf(plugin, "audioMasterIOChanged %d %d %d\n", index, opcode, value);
+		if (!throttleLog)
+            logPluginCb(plugin, "audioMasterIOChanged %d %d %zd\n", opcode, index, value, 0);
 		return 0;
 	case audioMasterNeedIdle:
-		if (!throttleLog) cbPrintf(plugin, "audioMasterNeedIdle %d %d %d\n", index, opcode, value);
+		if (!throttleLog)
+            logPluginCb(plugin, "audioMasterNeedIdle %d %d %zd\n", opcode, index, value, 0);
 		if (plugin) {
 			plugin->bWantsEffIdle = true;
 		}
 		return 0;
 	case audioMasterSizeWindow:
-		if (!throttleLog) cbPrintf(plugin, "audioMasterSizeWindow %d %d %d\n", index, opcode, value);
+		if (!throttleLog)
+            logPluginCb(plugin, "audioMasterSizeWindow %d %d %zd\n", opcode, index, value, 0);
 		if (plugin) {
 			plugin->updateWindowSize();
 		}
 		return 1;
 	case audioMasterGetSampleRate:
-		if (!throttleLog) cbPrintf(plugin, "audioMasterGetSampleRate %d %d %d\n", index, opcode, value);
+		if (!throttleLog)
+            logPluginCb(plugin, "audioMasterGetSampleRate %d %d %zd\n", opcode, index, value, 0);
 		if (plugin) {
 			return (long)plugin->format.sampleRate;
 		}
@@ -394,7 +404,8 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
 		}
 		return 0;
 	case audioMasterGetBlockSize:
-		if (!throttleLog) cbPrintf(plugin, "audioMasterGetBlockSize %d %d %d\n", index, opcode, value);
+		if (!throttleLog)
+            logPluginCb(plugin, "audioMasterGetBlockSize %d %d %zd\n", opcode, index, value, 0);
 		if (plugin) {
 			return (long)plugin->format.blockSize;
 		}
@@ -403,49 +414,59 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
 		}
 		return 0;
 	case audioMasterGetInputLatency:
-//		if (!throttleLog) cbPrintf(plugin, "audioMasterGetInputLatency %d %d %d\n", index, opcode, value);
+//		if (!throttleLog) logPluginCb(plugin, "audioMasterGetInputLatency %d %d %zd\n", opcode, index, value);
 		//TODO: find out if other hosts provide this info
 		// IL Harmor requests this info
 		return 0;
 	case audioMasterGetOutputLatency:
-//		if (!throttleLog) cbPrintf(plugin, "audioMasterGetOutputLatency %d %d %d\n", index, opcode, value);
+//		if (!throttleLog) logPluginCb(plugin, "audioMasterGetOutputLatency %d %d %zd\n", opcode, index, value);
 		//TODO: find out if other hosts provide this info
 		// IL Harmor requests this info
 		return 0;
 	case audioMasterGetCurrentProcessLevel:
-//		if (!throttleLog) cbPrintf(plugin, "audioMasterGetCurrentProcessLevel %d %d %d\n", index, opcode, value);
+//		if (!throttleLog) logPluginCb(plugin, "audioMasterGetCurrentProcessLevel %d %d %zd\n", opcode, index, value);
 		return VstProcessLevels::kVstProcessLevelRealtime;
 	case audioMasterGetAutomationState:
-		if (!throttleLog) cbPrintf(plugin, "audioMasterGetAutomationState %d %d %d\n", index, opcode, value);
+		if (!throttleLog)
+            logPluginCb(plugin, "audioMasterGetAutomationState %d %d %zd\n", opcode, index, value, 0);
 		return kVstAutomationReadWrite;
 	case audioMasterOfflineStart:
-		if (!throttleLog) cbPrintf(plugin, "audioMasterOfflineStart %d %d %d\n", index, opcode, value);
+		if (!throttleLog)
+            logPluginCb(plugin, "audioMasterOfflineStart %d %d %zd\n", opcode, index, value, 0);
 		return 0;
 	case audioMasterOfflineRead:
-		if (!throttleLog) cbPrintf(plugin, "audioMasterOfflineRead %d %d %d\n", index, opcode, value);
+		if (!throttleLog)
+            logPluginCb(plugin, "audioMasterOfflineRead %d %d %zd\n", opcode, index, value, 0);
 		return 0;
 	case audioMasterOfflineWrite:
-		if (!throttleLog) cbPrintf(plugin, "audioMasterOfflineWrite %d %d %d\n", index, opcode, value);
+		if (!throttleLog)
+            logPluginCb(plugin, "audioMasterOfflineWrite %d %d %zd\n", opcode, index, value, 0);
 		return 0;
 	case audioMasterOfflineGetCurrentPass:
-		if (!throttleLog) cbPrintf(plugin, "audioMasterOfflineGetCurrentPass %d %d %d\n", index, opcode, value);
+		if (!throttleLog)
+            logPluginCb(plugin, "audioMasterOfflineGetCurrentPass %d %d %zd\n", opcode, index, value, 0);
 		return 0;
 	case audioMasterOfflineGetCurrentMetaPass:
-		if (!throttleLog) cbPrintf(plugin, "audioMasterOfflineGetCurrentMetaPass %d %d %d\n", index, opcode, value);
+		if (!throttleLog)
+            logPluginCb(plugin, "audioMasterOfflineGetCurrentMetaPass %d %d %zd\n", opcode, index, value, 0);
 		return 0;
 	case audioMasterGetVendorString:
-		if (!throttleLog) cbPrintf(plugin, "audioMasterGetVendorString %d %d %d\n", index, opcode, value);
+		if (!throttleLog)
+            logPluginCb(plugin, "audioMasterGetVendorString %d %d %zd\n", opcode, index, value, 0);
 		 strcpy((char *)ptr, "NFMH");
 		return 1L;
 	case audioMasterGetProductString:
-		if (!throttleLog) cbPrintf(plugin, "audioMasterGetProductString %d %d %d\n", index, opcode, value);
+		if (!throttleLog)
+            logPluginCb(plugin, "audioMasterGetProductString %d %d %zd\n", opcode, index, value, 0);
 		strcpy((char *)ptr, "DAW");
 		return 1L;
 	case audioMasterGetVendorVersion:
-		if (!throttleLog) cbPrintf(plugin, "audioMasterGetVendorVersion %d %d %d\n", index, opcode, value);
+		if (!throttleLog)
+            logPluginCb(plugin, "audioMasterGetVendorVersion %d %d %zd\n", opcode, index, value, 0);
 		return 1L;
 	case audioMasterVendorSpecific:
-		if (!throttleLog) cbPrintf(plugin, "audioMasterVendorSpecific %d %d %d\n", index, opcode, value);
+		if (!throttleLog)
+            logPluginCb(plugin, "audioMasterVendorSpecific %d %d %zd\n", opcode, index, value, 0);
 		return 0;
 	case audioMasterCanDo:
 		if (!throttleLog) {
@@ -453,46 +474,57 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
 		}
 		return host->canDo((const char*)ptr);
 	case audioMasterGetLanguage:
-		if (!throttleLog) cbPrintf(plugin, "audioMasterGetLanguage %d %d %d\n", index, opcode, value);
+		if (!throttleLog)
+            logPluginCb(plugin, "audioMasterGetLanguage %d %d %zd\n", opcode, index, value, 0);
 		return 0;
 	case audioMasterGetDirectory:
 		if (plugin == NULL) {
-			if (!throttleLog) cbPrintf(plugin, "audioMasterGetDirectory plugin == NULL %d %d %d\n", index, opcode, value);
+			if (!throttleLog)
+                logPluginCb(plugin, "audioMasterGetDirectory plugin == NULL %d %d %zd\n", opcode, index, value, 0);
 			return 0;
 		}
-		if (!throttleLog) cbPrintf(plugin, "audioMasterGetDirectory %d %d %d\n", index, opcode, value);
+		if (!throttleLog)
+            logPluginCb(plugin, "audioMasterGetDirectory %d %d %zd\n", opcode, index, value, 0);
 		return (VstIntPtr)plugin->getDir();
 	case audioMasterUpdateDisplay:
 		if (plugin == NULL) {
-			if (!throttleLog) cbPrintf(plugin, "audioMasterUpdateDisplay plugin == NULL %d %d %d\n", index, opcode, value);
+			if (!throttleLog)
+                logPluginCb(plugin, "audioMasterUpdateDisplay plugin == NULL %d %d %zd\n", opcode, index, value, 0);
 			return 0;
 		}
-		if (!throttleLog) cbPrintf(plugin, "audioMasterUpdateDisplay %d %d %d\n", index, opcode, value);
+		if (!throttleLog)
+            logPluginCb(plugin, "audioMasterUpdateDisplay %d %d %zd\n", opcode, index, value, 0);
 		if (validProcessingState) {
 			//TODO: flag plugin for parameter and program name update. To be executed on the UI thread
 		}
 		return true;
 #ifdef VST_2_1_EXTENSIONS
 	case audioMasterBeginEdit:
-		if (!throttleLog) cbPrintf(plugin, "audioMasterBeginEdit %d %d %d %f\n", index, opcode, value, opt);
+		if (!throttleLog)
+            logPluginCb(plugin, "audioMasterBeginEdit %d %d %zd %f\n", opcode, index, value, opt);
 		return 1;
 	case audioMasterEndEdit:
-		if (!throttleLog) cbPrintf(plugin, "audioMasterEndEdit %d %d %d %f\n", index, opcode, value, opt);
+		if (!throttleLog)
+            logPluginCb(plugin, "audioMasterEndEdit %d %d %zd %f\n", opcode, index, value, opt);
 		return 1;
 	case audioMasterOpenFileSelector:
-		if (!throttleLog) cbPrintf(plugin, "audioMasterOpenFileSelector %d %d %d\n", index, opcode, value);
+		if (!throttleLog)
+            logPluginCb(plugin, "audioMasterOpenFileSelector %d %d %zd\n", opcode, index, value, 0);
 		return 0;
 #endif
 #ifdef VST_2_2_EXTENSIONS
 	case audioMasterCloseFileSelector:
-		if (!throttleLog) cbPrintf(plugin, "audioMasterCloseFileSelector %d %d %d\n", index, opcode, value);
+		if (!throttleLog)
+            logPluginCb(plugin, "audioMasterCloseFileSelector %d %d %zd\n", opcode, index, value, 0);
 		return 0;
 #endif
 	case audioMasterWantMidi:
-		if (!throttleLog) cbPrintf(plugin, "depr audioMasterWantMidi %d %d %d\n", index, opcode, value);
+		if (!throttleLog)
+            logPluginCb(plugin, "depr audioMasterWantMidi %d %d %zd\n", opcode, index, value, 0);
 		return 0;
 	default:
-		if (!throttleLog) cbPrintf(plugin, "unhandled %d %d %d %f\n", index, opcode, value, opt);
+		if (!throttleLog)
+            logPluginCb(plugin, "unhandled %d %d %zd %f\n", opcode, index, value, opt);
 
 	}
 	return 0L;
