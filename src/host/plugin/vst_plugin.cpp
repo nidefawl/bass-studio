@@ -641,16 +641,10 @@ String vstplugin::getInfo(std::vector<String>& list) {
 	if (handle->flags & effFlagsCanDoubleReplacing)
 		out += "effFlagsCanDoubleReplacing\n";
 
-
-
-
-
-#define ARR_SIZE(x) (sizeof(x)/sizeof(x[0]))
-	for (size_t j = 0; j < ARR_SIZE(plug_features_array); j++)
+	for (const char* canDo : plug_features_array)
 	{
-		if (this->dispatch(effCanDo, 0, 0, (void *)plug_features_array[j])) {
-			list.push_back(StringFormat("effCanDo %s", plug_features_array[j]));
-
+		if (this->dispatch(effCanDo, 0, 0, (void *)canDo)) {
+			list.push_back(StringFormat("effCanDo %s", canDo));
 		}
 	}
 
