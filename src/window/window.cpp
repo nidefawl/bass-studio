@@ -26,7 +26,6 @@
 
 #ifdef _WIN32
 #include "../platform/win/platform_win.h"
-#include "../platform/win/winheaders.h"
 #include "../platform/win/DropTarget.h"
 #endif
 #ifdef __linux__
