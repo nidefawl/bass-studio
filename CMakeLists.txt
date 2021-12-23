@@ -1,6 +1,11 @@
 cmake_minimum_required(VERSION 3.3)
-message (STATUS "CMake version: ${CMAKE_VERSION}")
+# Don't use -rdynamic
+if (POLICY CMP0065)
+  cmake_policy(SET CMP0065 NEW)
+endif ()
+set (CMAKE_USER_MAKE_RULES_OVERRIDE "cmake/msvc-init-override.cmake")
 
+message (STATUS "CMake version: ${CMAKE_VERSION}")
 set(DAW_SRC_PATH "${CMAKE_SOURCE_DIR}/src")
 set(BUILD_NAME "DAW")
 set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT ${BUILD_NAME})
@@ -13,30 +18,57 @@ option(BUILD_TESTS "Build tests" ON)
 option(BUILD_GUI_TEST "Build test app" OFF)
 option(BUILD_RGB_MASTER "Build rgb master" OFF)
 option(USE_OPENGL3 "Use OpenGL 3.x instead of OpenGL 2" ON)
+# instead of an installation step we only copy the exectuable to APP_WORKING_DIR
+set(APP_WORKING_DIR "../../run/" CACHE PATH "working directory (run)")
 
 if (BUILD_TESTS OR BUILD_SCANNER OR BUILD_CMDLINE_HOST OR BUILD_GUI_TEST OR BUILD_RGB_MASTER)
     set(BUILD_DAW_LIB ON)
 else()
     set(BUILD_DAW_LIB OFF)
 endif()
-
+    
 #set(BUILD_DAW_LIB ON) #override
 
 if (NOT MSVC)
     set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CMAKE_COMMAND} -E time")
     set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "${CMAKE_COMMAND} -E time")
 endif()
-include("setup.cmake")
-add_compile_definitions("USE_WIN32_EXC_HOOKS")
-add_compile_definitions("BUILD_VSTHOST=1")
-add_compile_definitions("BUILD_EXTERNAL_PLUGIN=0")
+include("cmake/setup.cmake")
+include("cmake/libs.cmake")
+
+add_compile_definitions(USE_WIN32_EXC_HOOKS BUILD_VSTHOST=1 BUILD_EXTERNAL_PLUGIN=0)
+#add_compile_definitions(PA_ENABLE_DEBUG_OUTPUT=1)
+add_compile_definitions(VST_FORCE_DEPRECATED=0 USE_GLAD_GL_HEADERS GLM_FORCE_CXX14=1)
+if (WIN32)
+  add_compile_definitions(PA_USE_ASIO=1 PA_USE_DS=1 PA_USE_WASAPI=1 PA_USE_WDMKS=1)
+endif (WIN32)
+if (UNIX)
+  add_compile_definitions(PA_USE_ALSA=1 __cdecl="")
+endif (UNIX)
 if (USE_OPENGL3)
-    add_compile_definitions("NANOVG_GL3=1")
+    add_compile_definitions(NANOVG_GL3=1)
 else()
-    add_compile_definitions("NANOVG_GL2=1")
+    add_compile_definitions(NANOVG_GL2=1)
 endif()
 if (BUILD_TESTS)
-    add_compile_definitions("BUILD_TESTS")
+    add_compile_definitions(BUILD_TESTS)
+endif()
+
+# set warn flags
+if (MSVC)
+# /wd4067 unexpected tokens following preprocessor directive
+# /wd4267 size_t to int
+# /wd4244 float to int
+set(BUILD_WARNING_FLAGS /W2 /wd4067 /wd4267 /wd4244)
+else()
+set(BUILD_WARNING_FLAGS -Wall -Wno-inconsistent-missing-override -Wno-unused-parameter)
+endif()
+
+# march=native optimzation. Turn off for dist build
+include(CheckCXXCompilerFlag)
+CHECK_CXX_COMPILER_FLAG("-march=native" COMPILER_SUPPORTS_MARCH_NATIVE)
+if (COMPILER_SUPPORTS_MARCH_NATIVE)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
 endif()
 
 
@@ -115,7 +147,7 @@ foreach(f ${CPP_ALL_FILES})
 	    if (f MATCHES ".*/external_asio.cpp$")
 	        continue()
 	    endif()
-	  endif (UNIX)
+	endif (UNIX)
     if (WIN32)
 	    if (f MATCHES ".*/host/platform/linux/[^/]*$")
 	        continue()
@@ -136,13 +168,9 @@ if (BUILD_TESTS)
     list(APPEND CPP_SRC_FILES "src/tests/test_environment.cpp")
 endif()
 
-
-
 if (NOT MSVC)
-    # These files are especially important to have optimized
-    # In debug builds their slow performance make the program unusable.
-    # But I also want to disable mixed optimization levels if possible.
-    # It might be an ODR/ABI violation, and I have seen linkers not producing correct results
+    # These files are especially important to have optimized, even in debug builds
+    # Right now this is disabled because of the ODR rule on inline functions (in library headers)
     set(SRC_FILES_SUBDIR_FILES 
         src/file/fileloader.cpp
         src/file/projectfile.cpp
@@ -183,54 +211,67 @@ if (MSVC)
     list(APPEND RESOURCE_FILES "src/icon_resource.h" "src/icon.rc")
 endif()
 
-#build a fat library only if BUILD_DAW_LIB is ON
-#if BUILD_DAW_LIB is OFF we link objects directly to output executable (faster)
-if (BUILD_DAW_LIB) 
-    set(LINK_TARGET "dawlib")
-else()
-    set(LINK_TARGET ${BUILD_NAME})
-endif()
-
-include("includes.cmake")
-include("libs.cmake")
-
-# instead of an installation step we only copy the exectuable to APP_WORKING_DIR
-set(APP_WORKING_DIR "../../run/" CACHE PATH "output directory")
-
 message(STATUS "DAW_DEPS_PATH ${DAW_DEPS_PATH}")
 message(STATUS "DEPS_BUILD_FOLDER ${DEPS_BUILD_FOLDER}")
 message(STATUS "CMAKE_CXX_COMPILER_ID ${CMAKE_CXX_COMPILER_ID}")
 message(STATUS "CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE}")
 
-message(STATUS "BUILD_DAW_LIB ${BUILD_DAW_LIB}")
-message(STATUS "BUILD_NAME ${BUILD_NAME}")
-message(STATUS "LINK_TARGET ${LINK_TARGET}")
 message(STATUS "APP_WORKING_DIR ${APP_WORKING_DIR}")
 
+message(STATUS "BUILD_DAW_LIB ${BUILD_DAW_LIB}")
 message(STATUS "BUILD_HOST ${BUILD_HOST}")
 message(STATUS "BUILD_TESTS ${BUILD_TESTS} ")
 message(STATUS "BUILD_SCANNER ${BUILD_SCANNER} ")
 message(STATUS "BUILD_CMDLINE_HOST ${BUILD_CMDLINE_HOST}")
 message(STATUS "BUILD_GUI_TEST ${BUILD_GUI_TEST}")
+message(STATUS "BUILD WARNINGS ${BUILD_WARNING_FLAGS}")
 
+# build a fat library only if BUILD_DAW_LIB is ON
+# if BUILD_DAW_LIB is OFF we link objects directly to output executable (faster)
 if (BUILD_DAW_LIB) 
-    add_library("dawlib" STATIC ${CPP_SRC_FILES} ${C_SRC_FILES} ${HDR_FILES})
-    SET_APP_BUILD("dawlib")
-    set_property(TARGET "dawlib" PROPERTY DBG_POSTFIX d)
-endif()
-
-if (BUILD_DAW_LIB) 
-    add_executable(${BUILD_NAME} "src/host/main_daw.cpp" ${RESOURCE_FILES})
-    target_link_libraries(${BUILD_NAME} PUBLIC "dawlib")
+    set(LINK_TARGET "dawlib")
+    add_library(${LINK_TARGET} STATIC ${CPP_SRC_FILES} ${C_SRC_FILES} ${HDR_FILES})
+    target_compile_options(${LINK_TARGET} PRIVATE $<$<CONFIG:Debug>:${BUILD_WARNING_FLAGS}>)
+    set_property(TARGET ${LINK_TARGET} PROPERTY DBG_POSTFIX d)
 else()
+    set(LINK_TARGET ${BUILD_NAME})
+    # define main exectuable
     add_executable(${BUILD_NAME} "src/host/main_daw.cpp" ${RESOURCE_FILES} ${CPP_SRC_FILES} ${C_SRC_FILES} ${HDR_FILES})
+    SET_APP_BUILD(${BUILD_NAME})
+    ADD_POST_BUILD_COMMANDS(${BUILD_NAME})
+    target_compile_options(${BUILD_NAME} PRIVATE $<$<CONFIG:Debug>:${BUILD_WARNING_FLAGS}>)
 endif()
 
-# define main exectuable
-SET_APP_BUILD(${BUILD_NAME})
-ADD_POST_BUILD_COMMANDS(${BUILD_NAME})
+MACRO( DEFINE_EXECUTABLE target_name target_sources)
+    add_executable(${target_name} ${target_sources})
+    SET_APP_BUILD(${target_name})
+    target_link_libraries(${target_name} PUBLIC "dawlib")
+    ADD_POST_BUILD_COMMANDS(${target_name})
+    target_compile_options(${target_name} PRIVATE $<$<CONFIG:Debug>:${BUILD_WARNING_FLAGS}>)
+ENDMACRO()
 
+if (BUILD_DAW_LIB)
+    # define main exectuable
+    list(APPEND DAW_MAIN_SRC "src/host/main_daw.cpp")
+    list(APPEND DAW_MAIN_SRC ${RESOURCE_FILES})
+    DEFINE_EXECUTABLE(${BUILD_NAME} ${DAW_MAIN_SRC})
+        
+    if (BUILD_SCANNER) 
+        DEFINE_EXECUTABLE("vstscanner" "src/host/main_scanner.cpp")
+    endif()
 
+    if (BUILD_CMDLINE_HOST) 
+        DEFINE_EXECUTABLE("host" "src/host/main_cmdline.cpp")
+    endif()
+
+    if (BUILD_GUI_TEST) 
+        DEFINE_EXECUTABLE("guitest" "src/host/main_test.cpp")
+    endif()
+
+    if (BUILD_RGB_MASTER) 
+        DEFINE_EXECUTABLE("rgbmaster" "src/rgb/main_rgb_master.cpp")
+    endif()
+endif()
 
 target_link_libraries(${LINK_TARGET} PUBLIC optimized ${GLFW_LIB_RELEASE} debug ${GLFW_LIB_DEBUG})
 target_link_libraries(${LINK_TARGET} PUBLIC optimized ${SQLITECPP_LIB_RELEASE} debug ${SQLITECPP_LIB_DEBUG})
@@ -261,44 +302,6 @@ if (WIN32)
     target_link_libraries(${LINK_TARGET} PRIVATE dbghelp winmm opengl32 kernel32 gdi32 ole32 uuid comdlg32 setupapi mswsock ws2_32)
 endif (WIN32)
 
-
-
-
-if (BUILD_SCANNER) 
-    add_executable("vstscanner" "src/host/main_scanner.cpp")
-    SET_APP_BUILD("vstscanner")
-    target_link_libraries("vstscanner" PUBLIC "dawlib")
-    ADD_POST_BUILD_COMMANDS("vstscanner")
-endif()
-
-if (BUILD_CMDLINE_HOST) 
-    add_executable("host" "src/host/main_cmdline.cpp")
-    SET_APP_BUILD("host")
-    target_link_libraries("host" PUBLIC "dawlib")
-    ADD_POST_BUILD_COMMANDS("host")
-endif()
-
-if (BUILD_GUI_TEST) 
-    add_executable("guitest" "src/host/main_test.cpp")
-    SET_APP_BUILD("guitest")
-    target_link_libraries("guitest" PUBLIC "dawlib")
-    ADD_POST_BUILD_COMMANDS("guitest")
-endif()
-
-
-if (BUILD_RGB_MASTER) 
-    add_executable("rgbmaster" "src/rgb/main_rgb_master.cpp")
-    SET_APP_BUILD("rgbmaster")
-    target_link_libraries("rgbmaster" PUBLIC "dawlib")
-    ADD_POST_BUILD_COMMANDS("rgbmaster")
-endif()
-
-# march=native optimzation. Turn off for dist build
-include(CheckCXXCompilerFlag)
-CHECK_CXX_COMPILER_FLAG("-march=native" COMPILER_SUPPORTS_MARCH_NATIVE)
-if (COMPILER_SUPPORTS_MARCH_NATIVE)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
-endif()
 
 GENERATE_BUILDINFO_CPP()
 

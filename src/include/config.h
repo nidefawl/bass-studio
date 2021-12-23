@@ -30,15 +30,14 @@
 #ifndef BUILD_EXTERNAL_PLUGIN
 #define BUILD_EXTERNAL_PLUGIN 0
 #endif
-#if BUILD_EXTERNAL_PLUGIN && BUILD_VSTHOST
-#error
-#endif
 
 #if BUILD_EXTERNAL_PLUGIN && BUILD_VSTHOST
-#error "cant have both"
+#error "BUILD_EXTERNAL_PLUGIN && BUILD_VSTHOST can't be defined at the same time"
 #endif
 
-#define HAS_MAIN_LOOP (!(TEST_PROJECT) && !BUILD_EXTERNAL_PLUGIN)
+#ifndef HAS_MAIN_LOOP
+#define HAS_MAIN_LOOP (BUILD_EXTERNAL_PLUGIN==0)
+#endif
 
 #if HAS_MAIN_LOOP
 #define HAS_APP_SETTINGS 1

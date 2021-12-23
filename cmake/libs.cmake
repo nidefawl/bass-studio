@@ -1,4 +1,9 @@
 
+
+find_path(DAW_DEPS_PATH PATHS ${DAW_DEPS_PATH})
+if(NOT DAW_DEPS_PATH)
+  message(FATAL_ERROR "Can't find DAW_DEPS_PATH")
+endif()
 if (USE_SHARED_LIBS)
 set(BUILD_PATH_LIB_TYPE "shared")
 else()
@@ -118,3 +123,34 @@ if (LINUX)
   include_directories(SYSTEM ${X11_X11_INCLUDE_PATH})
   include_directories(SYSTEM ${ALSA_INCLUDE_DIR})
 endif(LINUX)
+
+
+set(DEPS_BUILD_FOLDER "${DAW_DEPS_PATH}/build" CACHE PATH "deps build-directory")
+
+
+set(USE_SHARED_LIBS Off)
+if (USE_SHARED_LIBS)
+    set(LIB_LINKAGE "shared")
+else()
+    set(LIB_LINKAGE "static")
+endif(USE_SHARED_LIBS)
+
+string(TOLOWER "lib-${CMAKE_CXX_COMPILER_ID}" LIB_COMPILER)
+
+set(LIB_GN_EXPR ${LIB_COMPILER}-$<$<CONFIG:Debug>:debug>$<$<NOT:$<CONFIG:Debug>>:release>-${LIB_LINKAGE})
+
+include_directories("${DAW_SRC_PATH}")
+include_directories("${DAW_SRC_PATH}/include")
+include_directories(SYSTEM "${DAW_SRC_PATH}/nanovg")
+include_directories(SYSTEM  
+    ${DEPS_BUILD_FOLDER}/${LIB_GN_EXPR}/glfw/include
+    ${DEPS_BUILD_FOLDER}/${LIB_GN_EXPR}/SQLiteCpp/include
+    ${DEPS_BUILD_FOLDER}/${LIB_GN_EXPR}/soxr/include
+    ${DAW_DEPS_PATH}/glad/include
+    ${DAW_DEPS_PATH}/glad/src
+    ${DAW_DEPS_PATH}/glm
+    ${DAW_DEPS_PATH}/portaudio/include
+    ${DAW_DEPS_PATH}/portmidi/pm_common
+    ${DAW_DEPS_PATH}/SplineLibrary/spline_library
+    ${DAW_DEPS_PATH}/cereal
+    ${DAW_DEPS_PATH}/kissfft)

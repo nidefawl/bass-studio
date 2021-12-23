@@ -307,6 +307,37 @@ sizeInMB = (bytesPerSample * channels * sr * seconds) / ( 1000**2 )
 so for a 10 track 10 minute project its 2.1gb
 ```
 
+C++ Tooling
+===========
+
+Warnings
+--------
+Project warnings are set to:
+    
+    clang
+    -Wall -Wno-inconsistent-missing-override -Wno-unused-parameter 
+
+    msvc
+    /external:anglebrackets /external:W0
+    /w2 
+    disabled
+    /wd4067 unexpected tokens following preprocessor directive - expected a newline: triggers on semicolon after macro function invocation
+    /wd4267 'var' : conversion from 'size_t' to 'type', possible loss of data
+    /wd4244
+    'argument' : conversion from 'type1' to 'type2', possible loss of data
+    A floating point type was converted to an integer type. A possible loss of data may have occurred.
+
+Testcase warnings
+
+    clang (not sure about them)
+    -Wall -Wextra -pedantic -Wnon-virtual-dtor -Woverloaded-virtual -Wconversion
+    msvc
+    /external:anglebrackets /external:W0
+    /W3 /Wall
+
+Testcases warnings on MSVC
+
+
 
 
 COMPLETED
