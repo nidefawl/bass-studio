@@ -31,8 +31,10 @@ message(STATUS "TESTS WARNINGS ${TC_WARNING_FLAGS}")
 function( CONFIGURE_AS_TEST test_name)
   get_filename_component(ABS_WORKING_DIR "${APP_WORKING_DIR}" REALPATH BASE_DIR "${CMAKE_BINARY_DIR}") # CMAKE_SOURCE_DIR for out of source builds?!
   # SET_TESTS_PROPERTIES( ${test_name} PROPERTIES ENVIRONMENT "LLVM_PROFILE_FILE=${CMAKE_CURRENT_BINARY_DIR}/${test_name}.profraw")
-  set_target_properties(${test_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${ABS_WORKING_DIR}$<$<CONFIG:Debug>:>)
+  # As per CMake docs: Add empty generator expr to avoid a configuration subdirectory on multi configs
+  set_target_properties(${test_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${ABS_WORKING_DIR}$<0:...>)
   set_target_properties(${test_name} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ${ABS_WORKING_DIR})
+  set_target_properties(${test_name} PROPERTIES OUTPUT_NAME "${test_name}-${BUILD_BINARY_SUFFIX}")
   target_compile_options(${test_name} PRIVATE ${TC_WARNING_FLAGS})
   target_link_libraries(${test_name} PRIVATE "dawlib")
   add_test(NAME ${test_name} COMMAND ${test_name} WORKING_DIRECTORY ${ABS_WORKING_DIR})

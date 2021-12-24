@@ -23,10 +23,8 @@ if(NOT MSVC AND NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Debug)
 endif()
 
-set(BUILD_BINARY_SUFFIX "${CMAKE_CXX_COMPILER_ID}-${CMAKE_BUILD_TYPE}${OUTPUT_BINARY_SUFFIX}")
 set(OUTPUT_BINARY_SUFFIX "" CACHE STRING "OUTPUT_BINARY_SUFFIX")
-message(STATUS "BUILD_BINARY_SUFFIX ${BUILD_BINARY_SUFFIX}")
-
+set(BUILD_BINARY_SUFFIX "${CMAKE_CXX_COMPILER_ID}-$<LOWER_CASE:$<CONFIG>>${OUTPUT_BINARY_SUFFIX}")
 
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -66,7 +64,7 @@ endif()
 
 if (NOT MSVC)
   set(NO_TEMP_OBJECT_A On)
-  # By default cmake generates a temporary object.a archive on windows-gnu
+  # By default cmake generates a temporary object.a archive on windows-gnu 
   # Resetting the link rules here avoids this step and saves significant time when linking
   if (WIN32 AND NO_TEMP_OBJECT_A) 
     message(STATUS "NO TEMP OBJECT")
@@ -112,13 +110,10 @@ ENDFUNCTION()
 
 # macro to add define a executable binary to be built
 FUNCTION(SET_APP_BUILD appname)
-  set_target_properties(${appname} PROPERTIES OUTPUT_NAME ${appname}-${BUILD_BINARY_SUFFIX})
-  set_target_properties(${appname} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${APP_WORKING_DIR})
+  # As per CMake docs: Add empty generator expr to avoid a configuration subdirectory on multi configs
+  set_target_properties(${appname} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${APP_WORKING_DIR}$<0:...>)
   set_target_properties(${appname} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ${APP_WORKING_DIR})
-  set_target_properties(${appname} PROPERTIES OUTPUT_NAME_DEBUG "${appname}-${CMAKE_CXX_COMPILER_ID}-debug${OUTPUT_BINARY_SUFFIX}" )
-  set_target_properties(${appname} PROPERTIES OUTPUT_NAME_RELEASE "${appname}-${CMAKE_CXX_COMPILER_ID}-release${OUTPUT_BINARY_SUFFIX}" )
-  set_target_properties(${appname} PROPERTIES OUTPUT_NAME_MINSIZEREL "${appname}-${CMAKE_CXX_COMPILER_ID}-minsizerel${OUTPUT_BINARY_SUFFIX}" )
-  set_target_properties(${appname} PROPERTIES OUTPUT_NAME_RELWITHDEBINFO "${appname}-${CMAKE_CXX_COMPILER_ID}-relwithdebinfo${OUTPUT_BINARY_SUFFIX}" )
+  set_target_properties(${appname} PROPERTIES OUTPUT_NAME "${appname}-${BUILD_BINARY_SUFFIX}")
 ENDFUNCTION(SET_APP_BUILD)
 
 FUNCTION(GENERATE_BUILDINFO_CPP)
