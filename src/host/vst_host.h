@@ -310,7 +310,7 @@ public:
     int32_t validateIds();
 	void updateMaximumStageId();
 
-	bool movePlugins(audio_stage_t* dstTr, audio_stage_t* trp, int32_t src, int32_t len, int32_t dst);
+	bool movePlugins(audio_stage_t* dstTr, audio_stage_t* trp, int32_t src, int32_t dst, int32_t len);
 	bool moveEffects(audio_stage_t* trp, int32_t src, int32_t dst, int32_t len);
 	bool insertNewPlugin(audio_stage_t* trp, effectbase* plugin, int32_t dst);
 	bool postPluginLoaded(audio_stage_t* trp, effectbase* plugin);
