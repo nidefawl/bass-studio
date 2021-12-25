@@ -728,6 +728,7 @@ public:
 
 				}
 				if (entry->busType == DAW::bus_type::external) {
+                    using DAW::settings;
 					auto& cfg = settings.iosettings.getChannelConfig(settings.iosettings.device_api);
 					popup = new guidropdown_select_bus_ctxt(cfg, stageEndpoint);
 				}
@@ -1432,7 +1433,7 @@ gui_track_controls::~gui_track_controls() {
 	remove(io);
 	remove(mixer);
 	remove(title);
-	delete mixer;;
+	delete mixer;
 	delete io;
 	delete title;
 }

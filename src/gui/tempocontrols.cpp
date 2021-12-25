@@ -215,21 +215,24 @@ void guictr_tempocontrols::buttonClicked(guibase* button) {
 	if (button == &this->btnLoop) {
 		projectGlobals.loopEnabled = !projectGlobals.loopEnabled;
 	}
-	if (button == &this->btnAudioOnOff) {
-		settings.startEngine = !settings.startEngine;
-		updateSrBs();
-	}
+    if (button == &this->btnAudioOnOff) {
+        using DAW::settings;
+        settings.startEngine = !settings.startEngine;
+        updateSrBs();
+    }
 }
 
-
-void guibutton_audioengine::prerender(NVGcontext* vg) {
-	ThreadLock lock = dawCtrl->getDaw()->getPlayThread()->tryLockThread();
-	if (lock.isLocked()) {
-		vsthost::getInstance()->getStats(stats);
-	} else {
-		this->cpuUsage = vsthost::getInstance()->getCpuUsage();
-	}
+void guibutton_audioengine::prerender(NVGcontext *vg) {
+    if (dawCtrl) {
+        ThreadLock lock = dawCtrl->getDaw()->getPlayThread()->tryLockThread();
+        if (lock.isLocked()) {
+            vsthost::getInstance()->getStats(stats);
+        } else {
+            this->cpuUsage = vsthost::getInstance()->getCpuUsage();
+        }
+    }
 }
+
 void guibutton_audioengine::render(NVGcontext* vg) {
 	audiohost* ahost = audiohost::getInstance();
 	if (!ahost || !ahost->isStreaming()) {

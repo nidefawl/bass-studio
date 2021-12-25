@@ -749,7 +749,7 @@ void DawCtrl::updateMenubar() {
 	}
 	menus.recent.clear();
 
-	for (auto& strFileRecentPath : settings.recentfiles.sortedEntries) {
+	for (auto& strFileRecentPath : DAW::settings.recentfiles.sortedEntries) {
 		String a,b,c, d; //path, name, ext, nameExt
 		SplitPath(strFileRecentPath, &a, &b, &c, &d);
 		menus.recent.addCommand(menucmd_t{CMD_FILE_OPEN, strFileRecentPath, 0}, d);
@@ -777,7 +777,7 @@ void DawInstance::loadFile(String path, int flags) {
 	if (!f) {
 		mainCtrl->setStatusText(StringFormat("Failed loading %s", StringAsCStr(FileNameFromPath(path))));
 	} else {
-		settings.recentfiles.add(path);
+        DAW::settings.recentfiles.add(path);
 		const bool wasUserCallback = (flags&FLAG_INVOKE_USER_CB_DEFERLOAD) != 0;
 		auto cb = [this, path, projFile=f, wasUserCallback](int n) {
 			int loadFlags = 0;
@@ -993,7 +993,7 @@ void DawInstance::menuCommand(const menucmd_t&& command) {
 				}
 			}
 			saveFile(path);
-			settings.recentfiles.add(path);
+            DAW::settings.recentfiles.add(path);
 		}
 		break;
 	case CMD_FILE_CLOSE:
@@ -1119,6 +1119,7 @@ void MainCtrl::postInit() {
 }
 void DawInstance::postInit() {
 	dbgassert(initState == 2);
+    using DAW::settings;
 	initState++;
 	audiohost::getInstance()->initPa();
 	midihost::getInstance()->initPm();
@@ -1227,6 +1228,7 @@ void DawInstance::startDaw() {
 }
 void DawInstance::initDaw(int argc, char* argv[]) {
 	dbgassert(initState == 0);
+    using DAW::settings;
 	initState++;
 	for (int i = 1; i < argc; i++) {
 		String s = argv[i];
@@ -1341,6 +1343,7 @@ bool DawCtrl::init(window_main* window, NVGcontext* nanovg)
 	this->mainWindow->updateMenu();
 #endif
 
+    using DAW::settings;
 	if (isCompanion()) {
 		grid.grid_dens = settings.wndCompanion.dens;
 	} else {
@@ -2444,13 +2447,13 @@ void DawInstance::setTempo(int32_t _tempo100) {
 //	}, true);
 }
 void MainCtrl::destroy() {
-	settings.wndMain.dens = grid.grid_dens;
+	DAW::settings.wndMain.dens = grid.grid_dens;
 	daw.destroy();
 	view = nullptr;
 	DawCtrl::destroy();
 }
 void CompanionCtrl::destroy() {
-	settings.wndCompanion.dens = grid.grid_dens;
+    DAW::settings.wndCompanion.dens = grid.grid_dens;
 	view->ctr_tracks2.removeAllTracks();
 	view = nullptr;
 	DawCtrl::destroy();

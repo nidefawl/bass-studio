@@ -24,14 +24,6 @@
 #include <map>
 #include <glm/geometric.hpp>
 
-#ifdef _WIN32
-#include "../platform/win/platform_win.h"
-#include "../platform/win/DropTarget.h"
-#endif
-#ifdef __linux__
-#include "../platform/linux/x11_gtk_util.h"
-#endif
-
 #include "config.h"
 #include "math/vec.h"
 #include "math/seq_math.h"
@@ -60,6 +52,15 @@
 #include "buildinfo.h"
 #include "../threads/workerthread.h"
 #include "window_impl.h"
+
+#ifdef _WIN32
+#include "platform/win/windowsize.h"
+#include "../platform/win/platform_win.h"
+#include "../platform/win/DropTarget.h"
+#endif
+#ifdef __linux__
+#include "../platform/linux/x11_gtk_util.h"
+#endif
 
 class appwindow;
 static std::vector<appwindow*> windowTimerHandleList;
@@ -162,7 +163,7 @@ void invalidateWindowContents(GLFWwindow* glfw) {
 
 
 #if HAS_APP_SETTINGS
-appsettings settings;
+
 #endif
 
 class appwindow_dialog;
@@ -281,7 +282,7 @@ public:
 	appwindow(appwindow* _parent) : parent(_parent), tm_lastfps(getTimeMillis()) {
 		name[0] = 0;
 #if HAS_APP_SETTINGS
-		noRawInput = settings.vmmode;
+		noRawInput = DAW::settings.vmmode;
 #endif
 	}
 	virtual ~appwindow() {
@@ -1214,6 +1215,7 @@ void appwindow_main::destroy() {
 		this->dropTarget = nullptr;
 	}
 	if (!parent) {
+        using DAW::settings;
 		if (windowCreationFlags & WINDOW_IS_MAINWINDOW_SLAVE) {
 			saveWindowPos(hwnd, settings.wndCompanion.size.get());
 		} else {
@@ -1246,6 +1248,7 @@ void appwindow_main::initControl() {
 #ifdef _WIN32
 	this->dropTarget = RegisterDropWindow(hwnd, this);
 	if (!parent) {
+        using DAW::settings;
 		if (windowCreationFlags & WINDOW_IS_MAINWINDOW_SLAVE) {
 			if (!restoreWindowPos(hwnd, settings.wndCompanion.size.get())) {
 				this->maximize();
@@ -1619,10 +1622,10 @@ int startApplication(int argc, char* argv[]) {
 	initColor();
 #if HAS_APP_SETTINGS
 	try {
-		settings = loadSettings();
+		DAW::settings = loadSettings();
 	} catch (std::exception& e) {
 		getGlobalLogger()->logStr(StringFormat("Exception: %s\n", e.what()));
-		settings = appsettings();
+        DAW::settings = appsettings();
 		ngui::show("Couldn't read config file.\nSome settings may have been reset", "Warning", ngui::Style::Warning, ngui::Buttons::OK);
 	}
 #endif
@@ -1776,7 +1779,7 @@ int startApplication(int argc, char* argv[]) {
 
 	if (!fataError) {
 		try {
-			saveSettings(settings);
+			saveSettings(DAW::settings);
 		} catch (std::exception& e) {
 			getGlobalLogger()->logStr(StringFormat("Exception: %s\n", e.what()));
 			ngui::show("Couldn't write config file.", "Warning", ngui::Style::Warning, ngui::Buttons::OK);

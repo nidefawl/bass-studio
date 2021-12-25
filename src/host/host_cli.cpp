@@ -26,6 +26,7 @@
 #include "appconfig.h"
 
 #ifdef _WIN32
+#include "platform/win/windowsize.h"
 #include "platform/win/platform_win.h"
 #endif
 #ifdef __linux__
@@ -159,6 +160,7 @@ int runCommandLineHost(int argc, const char* argv[]) {
     if (determineUserdataPath(cwdPath)) {
         setUserdataPath(cwdPath + "\\daw\\");
     }
+    using DAW::settings;
     settings  = loadSettings();
     String file           = getCmdOption(argc, argv, "-f", "");
     String fOutWave       = getCmdOption(argc, argv, "-o", "");
@@ -546,7 +548,7 @@ int runCommandLineHost(int argc, const char* argv[]) {
                                 }
 
                                 samplesWritten += drwav_write(pWav, blockTrack.samples, blockTrack.buf[0]);
-                            };
+                            }
                             log_printf("wrote %lld samples to %s\n", samplesWritten, StringAsCStr(nameWaveFileTrack));
                             drwav_close(pWav);
                         }

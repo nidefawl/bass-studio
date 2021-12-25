@@ -10,26 +10,27 @@
  *
  */
 
-#include "str_util.h"
-#include "../vstsdk-host-2.4/aeffectx.h"
-#include "../host/vst_host.h"
-#include "../host/plugin/vst_plugin.h"
-#include "../host/plugin/vst_plugin_handles.h"
-#include "fileio.h"
+#include "host/plugin/vst_plugin.h"
+#include "host/plugin/vst_plugin_handles.h"
+#include "host/vst_host.h"
+#include "threads/childprocessthread.h"
+#include "vstsdk-host-2.4/aeffectx.h"
+#include "appsettings.h"
+#include "buildinfo.h"
 #include "exceptions.h"
-#include "../threads/childprocessthread.h"
+#include "fileio.h"
+#include "ipc.h"
 #include "platform.h"
+#include "str_util.h"
+#include "thread.h"
+#include "tls.h"
 #include <SQLiteCpp/SQLiteCpp.h>
 #include <SQLiteCpp/VariadicBind.h>
 #include <iostream>
 #include <memory>
-#include "ipc.h"
-#include "appsettings.h"
-#include "buildinfo.h"
-#include "tls.h"
-#include "thread.h"
 #ifdef _WIN32
-#include "../platform/win/platform_win.h"
+#include "platform/win/windowsize.h"
+#include "platform/win/platform_win.h"
 #include <windows.h>
 #endif
 #if defined(__linux__) || defined(__APPLE__)
@@ -623,7 +624,6 @@ static int runPluginTest(request_type_vst24_t req, response_type_vst24_plugin_t&
 			dbgassert(res.result == 0);
 			dbgassert(res.plugin);
 			response = CMD_PLUGIN_LOAD_SUCCESS_PLUGIN;
-			response_type_vst24_plugin_t respPlugin;
 			getPluginData(res.plugin, &respPlugin);
 			vsthostInstance->unloadPlugin(res.plugin);
 		}
@@ -818,7 +818,8 @@ int main(int argc, char* argv[]) {
         return EXIT_FAILURE;
     }
 #endif
-    appsettings settings = loadSettings();
+    using DAW::settings;
+    settings = loadSettings();
 	String vstPlugPath = settings.pluginPath;
 	LOG("pluginPath '%s'", StringAsCStr(vstPlugPath));
     if (vstPlugPath.empty()) {
