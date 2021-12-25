@@ -13,115 +13,119 @@
 #include "event.h"
 
 namespace GuiColor {
-extern constant_t COL_BTN_BG_DEFAULT_INACTIVE;
-extern constant_t COL_BTN_BG_DEFAULT_ACTIVE;
-extern constant_t COL_BTN_BG_BYPASS_ACTIVE;
-extern constant_t COL_BTN_BG_SHOW_ACTIVE;
-}
+    extern constant_t COL_BTN_BG_DEFAULT_INACTIVE;
+    extern constant_t COL_BTN_BG_DEFAULT_ACTIVE;
+    extern constant_t COL_BTN_BG_BYPASS_ACTIVE;
+    extern constant_t COL_BTN_BG_SHOW_ACTIVE;
+}// namespace GuiColor
 
 class guibutton : public guibase {
 protected:
-	GuiColor::constant_t buttonColor;
-	String str = "";
-	String tooltipText = "";
-	int fontSize = 0;
-	float fFontScale = 1.0f;
+    GuiColor::constant_t buttonColor;
+    String str         = "";
+    String tooltipText = "";
+    int fontSize       = 0;
+    float fFontScale   = 1.0f;
+
 public:
-	void (*drawFn)(NVGcontext*, ivec2&, ivec2&, const NVGcolor&, int drawParm, int drawParm2) = NULL;
-	int drawParm = 0;
+    void (*drawFn)(NVGcontext*, ivec2&, ivec2&, const NVGcolor&, int drawParm, int drawParm2) = NULL;
+    int drawParm                                                                              = 0;
+
 public:
-	guibutton() : guibase() {
-		setCanMouseHit(true);
-	}
-	void setButtonColor(GuiColor::constant_t color) {
-		buttonColor = color;
-		setFlagInternal(FLG_HAS_COLOR_BG);
-	}
-	virtual NVGcolor getBackgroundColor(int stateflags) const override;
-	virtual void handleDraggedMove(MouseEvent& evt) {
-	}
-	virtual void handleDraggedRelease(MouseEvent& evt) {
-		if (parent)
-			parent->buttonClicked(this);
-	}
-	void handleRightClick(MouseEvent& evt) override {
-		if (parent)
-			parent->rightClicked(evt, this);
-	}
-	void setText(String _str) {
-		str = _str;
-	}
-	void setTooltipText(String _tooltipText) {
-		tooltipText = _tooltipText;
-	}
-	String getTooltipText() {
-		return tooltipText.empty() ? label : tooltipText;
-	}
-	
-	void setFontSize(int fs) {
-		fontSize = fs;
-	}
-	void setFontScale(float fScale) {
-		fFontScale = fScale;
-	}
-	int getFontSize() {
-		return fontSize;
-	}
-	void render(NVGcontext* vg) {
-		int32_t fl = getStateFlags();
-		renderWidgetBorder(vg, fl);
-		renderButtonLabel(vg, fl);
-	}
-	void renderButtonLabel(NVGcontext* vg, int32_t stateFlags);
-	guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
-	virtual bool getState() const {
-		return true;
-	}
+    guibutton() : guibase() {
+        setCanMouseHit(true);
+    }
+    void setButtonColor(GuiColor::constant_t color) {
+        buttonColor = color;
+        setFlagInternal(FLG_HAS_COLOR_BG);
+    }
+    virtual NVGcolor getBackgroundColor(int stateflags) const override;
+    virtual void handleDraggedMove(MouseEvent& evt) {
+    }
+    virtual void handleDraggedRelease(MouseEvent& evt) {
+        if (parent)
+            parent->buttonClicked(this);
+    }
+    void handleRightClick(MouseEvent& evt) override {
+        if (parent)
+            parent->rightClicked(evt, this);
+    }
+    void setText(String _str) {
+        str = _str;
+    }
+    void setTooltipText(String _tooltipText) {
+        tooltipText = _tooltipText;
+    }
+    String getTooltipText() {
+        return tooltipText.empty() ? label : tooltipText;
+    }
+
+    void setFontSize(int fs) {
+        fontSize = fs;
+    }
+    void setFontScale(float fScale) {
+        fFontScale = fScale;
+    }
+    int getFontSize() {
+        return fontSize;
+    }
+    void render(NVGcontext* vg) {
+        int32_t fl = getStateFlags();
+        renderWidgetBorder(vg, fl);
+        renderButtonLabel(vg, fl);
+    }
+    void renderButtonLabel(NVGcontext* vg, int32_t stateFlags);
+    guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
+    virtual bool getState() const {
+        return true;
+    }
 };
 class guibuttonstate : public guibutton {
 protected:
-	bool* statePtr = NULL;
+    bool* statePtr = NULL;
+
 public:
-	guibuttonstate() : guibutton() {
-	}
-	bool getState() const override {
-		if (statePtr)
-			return *statePtr;
-		return true;
-	}
-	void setStateRef(bool* _enabledPtr) {
-		statePtr = _enabledPtr;
-	}
-	void render(NVGcontext* vg) {
-		int32_t fl = getStateFlags();
-		renderWidgetBorder(vg, fl);
-		renderButtonLabel(vg, fl);
-	}
+    guibuttonstate() : guibutton() {
+    }
+    bool getState() const override {
+        if (statePtr)
+            return *statePtr;
+        return true;
+    }
+    void setStateRef(bool* _enabledPtr) {
+        statePtr = _enabledPtr;
+    }
+    void render(NVGcontext* vg) {
+        int32_t fl = getStateFlags();
+        renderWidgetBorder(vg, fl);
+        renderButtonLabel(vg, fl);
+    }
 };
 class guibuttontoggle : public guibuttonstate {
-	int _getIcon() {
-		return getIcon?getIcon():icon;
-	}
+    int _getIcon() {
+        return getIcon ? getIcon() : icon;
+    }
+
 public:
-	float radius = 0;
-	int icon = -1;
+    float radius = 0;
+    int icon     = -1;
     std::function<int()> getIcon;
     std::function<bool()> fnGetState;
-	GuiColor::constant_t colorActive = GuiColor::COL_BTN_BG_DEFAULT_ACTIVE;
-	guibuttontoggle() : guibuttonstate() {
-	}
-	void setRadius(float fRadius) {
-		this->radius = fRadius;
-		if (size.x == 0 && size.y == 0) {
-			size = ivec2((int32_t)std::round(this->radius*2.0f));
-		}
-	}
-	bool getState() const override {
-		if (statePtr)
-			return *statePtr;
-		if (fnGetState)
-			return fnGetState();
-		return true;
-	}
-	void render(NVGcontext* vg);
+    GuiColor::constant_t colorActive = GuiColor::COL_BTN_BG_DEFAULT_ACTIVE;
+    guibuttontoggle() : guibuttonstate() {
+    }
+    void setRadius(float fRadius) {
+        this->radius = fRadius;
+        if (size.x == 0 && size.y == 0) {
+            size = ivec2((int32_t) std::round(this->radius * 2.0f));
+        }
+    }
+    bool getState() const override {
+        if (statePtr)
+            return *statePtr;
+        if (fnGetState)
+            return fnGetState();
+        return true;
+    }
+    void render(NVGcontext* vg);
 };

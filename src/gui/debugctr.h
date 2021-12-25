@@ -8,24 +8,29 @@
 
 
 class gui_ctr_debug : public guictr_base {
-	struct ctr_debug_impl_t;
-	ctr_debug_impl_t* const impl;
+    struct ctr_debug_impl_t;
+    ctr_debug_impl_t* const impl;
+
 public:
-	enum class gui_ctr_debug_type_i32 : int32_t {
-		TYPE_0, TYPE_1, TYPE_2
-	};
+    enum class gui_ctr_debug_type_i32 : int32_t {
+        TYPE_0,
+        TYPE_1,
+        TYPE_2
+    };
+
 private:
-	const gui_ctr_debug_type_i32 dgbCtrType;
-	std::vector<String> g_debugStrings;
+    const gui_ctr_debug_type_i32 dgbCtrType;
+    std::vector<String> g_debugStrings;
+
 public:
-	gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType);
-	~gui_ctr_debug();
-	virtual void render(NVGcontext* vg);
-	void layout();
-	void addStr(String str) {
-		g_debugStrings.push_back(std::move(str));
-	}
-	void buttonClicked(guibase* button);
-//	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
-	void onTick(AppCtrl* ctrl) override;
+    gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType);
+    ~gui_ctr_debug();
+    virtual void render(NVGcontext* vg);
+    void layout();
+    void addStr(String str) {
+        g_debugStrings.push_back(std::move(str));
+    }
+    void buttonClicked(guibase* button);
+    //	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
+    void onTick(AppCtrl* ctrl) override;
 };

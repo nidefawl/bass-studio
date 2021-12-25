@@ -5,4 +5,3 @@
 
 void addContextEntriesAutomation(guictxtmenu* ctxt, automatable_t* atl, int paramIdx);
 bool handleAutomatbleContextMenu(automatable_t* at, int paramIdx, int _id);
-

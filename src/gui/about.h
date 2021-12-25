@@ -9,13 +9,14 @@
 #include "dialog.h"
 
 class guidialog_about : public guidialog_base {
-	guibutton btnClose;
+    guibutton btnClose;
+
 public:
-	guidialog_about();
-	~guidialog_about() {
-		removeGuis();
-	}
-	void render(NVGcontext* vg) override;
-	void layout() override;
-	void buttonClicked(guibase* button) override;
+    guidialog_about();
+    ~guidialog_about() {
+        removeGuis();
+    }
+    void render(NVGcontext* vg) override;
+    void layout() override;
+    void buttonClicked(guibase* button) override;
 };
