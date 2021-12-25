@@ -2,10 +2,10 @@
 #include <vector>
 
 struct VertexAttr {
-	const char* name;
-	int elements;
-	int type;
-	int bindingPt = 0;
+    const char* name{};
+    int elements{};
+    int type{};
+    int bindingPt{};
 };
 
 /** This is only required to be called once per vao */

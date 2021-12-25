@@ -8,94 +8,95 @@
 #define TESS_ATTR 2
 #define TESS_ATTR2 4
 class tess2d {
-	std::vector<float> buf;
-	int flags;
-	int vertexcount = 0;
-	vec4 rgba { 1.0f, 1.0f, 1.0f, 1.0f };
-	vec2 offset { 0.0f, 0.0f};
-	vec2 uv { 0.0f, 0.0f };
-	vec4 attr {  0.0f, 0.0f, 0.0f, 0.0f };
-	vec4 attr2 {  0.0f, 0.0f, 0.0f, 0.0f };
+    std::vector<float> buf;
+    int flags;
+    int vertexcount = 0;
+    vec4 rgba{1.0f, 1.0f, 1.0f, 1.0f};
+    vec2 offset{0.0f, 0.0f};
+    vec2 uv{0.0f, 0.0f};
+    vec4 attr{0.0f, 0.0f, 0.0f, 0.0f};
+    vec4 attr2{0.0f, 0.0f, 0.0f, 0.0f};
+
 public:
-	tess2d() : flags(0) {
-	}
-	tess2d(int _flags) : flags(_flags) {
-	}
-	int size() {
-		return getBufIdx(vertexcount);
-	}
-	int count() {
-		return vertexcount;
-	}
-	float* data() {
-		return buf.data();
-	}
+    tess2d() : flags(0) {
+    }
+    tess2d(int _flags) : flags(_flags) {
+    }
+    int size() {
+        return getBufIdx(vertexcount);
+    }
+    int count() {
+        return vertexcount;
+    }
+    float* data() {
+        return buf.data();
+    }
 
     void setOffset(vec2 offset) {
-    	this->offset = offset;
+        this->offset = offset;
     }
     void setColor(vec4 color) {
         if (!(flags & TESS_COLOR)) {
-        	dbgassert(0&&"tesselator flag TESS_COLOR not set!");
+            dbgassert(0 && "tesselator flag TESS_COLOR not set!");
         }
-    	this->rgba = color;
+        this->rgba = color;
     }
     void setAttrs(vec4 i) {
         if (!(flags & TESS_ATTR)) {
-        	dbgassert(0&&"tesselator flag TESS_ATTR not set!");
+            dbgassert(0 && "tesselator flag TESS_ATTR not set!");
         }
-    	this->attr = i;
+        this->attr = i;
     }
     void setAttrIdx(int idx, float f) {
         if (!(flags & TESS_ATTR)) {
-        	dbgassert(0&&"tesselator flag TESS_ATTR not set!");
+            dbgassert(0 && "tesselator flag TESS_ATTR not set!");
         }
-    	this->attr[idx] = f;
+        this->attr[idx] = f;
     }
     void setAttrs2(vec4 i) {
         if (!(flags & TESS_ATTR2)) {
-        	dbgassert(0&&"tesselator flag TESS_ATTR2 not set!");
+            dbgassert(0 && "tesselator flag TESS_ATTR2 not set!");
         }
-    	this->attr2 = i;
+        this->attr2 = i;
     }
     void setAttr2Idx(int idx, float f) {
         if (!(flags & TESS_ATTR2)) {
-        	dbgassert(0&&"tesselator flag TESS_ATTR2 not set!");
+            dbgassert(0 && "tesselator flag TESS_ATTR2 not set!");
         }
-    	this->attr2[idx] = f;
+        this->attr2[idx] = f;
     }
     void add(float x, float y) {
-    	add({x, y});
+        add({x, y});
     }
     void add(float x, float y, float u, float v) {
-    	uv.x = u;
-    	uv.y = v;
-    	add({x, y});
+        uv.x = u;
+        uv.y = v;
+        add({x, y});
     }
     void add(vec2 v) {
-		static_assert(sizeof(vec2) == sizeof(float)*2, "sizeof vec2 is not sizeof float * 2");
+        static_assert(sizeof(vec2) == sizeof(float) * 2, "sizeof vec2 is not sizeof float * 2");
 
-		int32_t index = getBufIdx(vertexcount);
-        if ((int32_t)buf.size() < index+getVSize()) {
-        	buf.resize(buf.size()+256);
+        int32_t index = getBufIdx(vertexcount);
+        if ((int32_t) buf.size() < index + getVSize()) {
+            buf.resize(buf.size() + 256);
         }
-		vec2 pos = v + offset;
-		float* bufPos = buf.data() + index;
+        vec2 pos      = v + offset;
+        float* bufPos = buf.data() + index;
 
         memcpy(bufPos, vec_ptr(pos), sizeof(vec2));
         bufPos += 2;
-    	memcpy(bufPos, vec_ptr(uv), sizeof(vec2));
+        memcpy(bufPos, vec_ptr(uv), sizeof(vec2));
         bufPos += 2;
         if (flags & TESS_COLOR) {
-        	memcpy(bufPos, vec_ptr(rgba), sizeof(vec4));
+            memcpy(bufPos, vec_ptr(rgba), sizeof(vec4));
             bufPos += 4;
         }
         if (flags & TESS_ATTR) {
-        	memcpy(bufPos, vec_ptr(attr), sizeof(vec4));
+            memcpy(bufPos, vec_ptr(attr), sizeof(vec4));
             bufPos += 4;
         }
         if (flags & TESS_ATTR2) {
-        	memcpy(bufPos, vec_ptr(attr2), sizeof(vec4));
+            memcpy(bufPos, vec_ptr(attr2), sizeof(vec4));
             bufPos += 4;
         }
         vertexcount++;
@@ -104,43 +105,43 @@ public:
         return getVSize() * v;
     }
     int32_t getVSize() {
-    	int size = 2+2;
+        int size = 2 + 2;
 
         if (flags & TESS_COLOR) {
-        	size += 4;
+            size += 4;
         }
 
         if (flags & TESS_ATTR) {
-        	size += 4;
+            size += 4;
         }
         if (flags & TESS_ATTR2) {
-        	size += 4;
+            size += 4;
         }
 
-    	return size;
+        return size;
     }
     void reset() {
-    	buf.clear();
-    	vertexcount = 0;
+        buf.clear();
+        vertexcount = 0;
     }
     void store(std::vector<float>& _outFloat, std::vector<int>& _outInt) {
-    	_outFloat.resize(vertexcount*getVSize());
-    	memcpy(_outFloat.data(), buf.data(), vertexcount*getVSize()*sizeof(float));
-    	_outInt.reserve((vertexcount/4) * 6);
-    	buildQuadIndices(vertexcount, _outInt, 0);
+        _outFloat.resize(vertexcount * getVSize());
+        memcpy(_outFloat.data(), buf.data(), vertexcount * getVSize() * sizeof(float));
+        _outInt.reserve((vertexcount / 4) * 6);
+        buildQuadIndices(vertexcount, _outInt, 0);
     }
-    static void buildQuadIndices(int vertexCount, std::vector<int>& _out, int offset=0) {
-    	static int quadIdx[] = {0,1,2,0,2,3};
-    	const int nQuads = vertexCount/4;
-    	for (int i = 0; i < nQuads; i++) {
-    		for (int j = 0; j < 6; j++)
-    			_out.push_back(offset + quadIdx[j] + i*4);
-    	}
+    static void buildQuadIndices(int vertexCount, std::vector<int>& _out, int offset = 0) {
+        static int quadIdx[] = {0, 1, 2, 0, 2, 3};
+        const int nQuads     = vertexCount / 4;
+        for (int i = 0; i < nQuads; i++) {
+            for (int j = 0; j < 6; j++)
+                _out.push_back(offset + quadIdx[j] + i * 4);
+        }
     }
     static void uploadVBO(tess2d& tess, DrawVBO& vbo);
     static inline void fullscreenQuad(tess2d& tess, float w, float h) {
-        float x = 0;
-        float y = 0;
+        float x  = 0;
+        float y  = 0;
         float tw = w;
         float th = h;
         tess.add(x + tw,   y,      1.0f, 1.0f);
@@ -149,4 +150,3 @@ public:
         tess.add(x + tw,   y + th, 1.0f, 0.0f);
     }
 };
-
