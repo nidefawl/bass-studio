@@ -784,8 +784,6 @@ void guictr_plugins::pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mou
 			StringAsCStr(this->stage->getTrack()->name), dstSlot);
 	int targetslot = slotFromCoord(mousepos);
 	if (srcStage == this->stage) {
-		int first = g->effects.front()->getSlot();
-		int last = g->effects.back()->getSlot();
 		if (targetslot >= first && targetslot <= last) {
 			return;
 		}
@@ -800,8 +798,6 @@ void guictr_plugins::pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mou
 			auto* track_action = new action_move_modules("Move plugin", refdst, refsrc, targetslot, first, last-first+1);
 			DawInstance::get()->pushHist(track_action);
 		} else {
-			int first = g->effects.front()->getSlot();
-			int last = g->effects.back()->getSlot();
 			if (targetslot > first) targetslot-=g->effects.size();
 //			if (targetslot > curSlot) targetslot--;
 			if (first == targetslot)
