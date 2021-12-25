@@ -117,22 +117,22 @@ public:
 		addEntry(new ctxtmenu_entry("Load plugin", CMD_LOAD_PLUGIN));
 	}
 	void clicked(int _id) {
-		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
+        auto window = parentCtrl->window;
+        // promptUserFilePath initiates a native dialog that would close this context menu
+        // so we close it before this happens
+        closeContextMenu(); // deletes this
+        // now we make sure not to access this-> after this point
+
 		if (_id == CMD_LOAD_PLUGIN) {
 
-			auto window = parentCtrl->window;
-			// promptUserFilePath initiates a native dialog that would close this context menu
-			// so we do it ourself controlled here
-			closeContextMenu(); // deletes this
-			// now we make sure not to access heap (this) after this point
 			String path;
 			if (promptUserFilePath(window, 0, vFILE_TYPE_PLUGINSNAPSHOT, path)) {
+                ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 	        	std::shared_ptr<plugin_snapshot_t> pluginSnapshot = loadPluginSnapshot(path);
 	        	dbgassert(pluginSnapshot);
 	        	if (pluginSnapshot) {
-	        		ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
 
-	        		auto effect = loadPluginDeferred(*pluginSnapshot.get());
+	        		auto effect = loadPluginDeferred(*pluginSnapshot);
 	        		if (effect) {
 	        			vsthost* host = vsthost::getInstance();
 	        			effect->projectGlobalId = 0; // generate new id
@@ -146,12 +146,11 @@ public:
 	        			host->insertNewPlugin(stage, effect, -2); // insert at end
 	        			host->postPluginLoaded(stage, effect);
 	        			dbgassert(effect->trackImpl == stage);
-	        			dbgassert(stage->effects.size());
+	        			dbgassert(!stage->effects.empty());
 	        		}
 	        	}
         	}
 		}
-		closeContextMenu();
 	}
 };
 void guictr_plugins::handleRightClick(MouseEvent& evt) {
