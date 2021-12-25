@@ -299,8 +299,8 @@ public:
 		} else {
 			children.insert(children.begin() + track->childIdxTree, track);
 			int32_t childIdx = 0;
-			for (auto track : children) {
-				track->childIdxTree = childIdx++;
+			for (auto child : children) {
+                child->childIdxTree = childIdx++;
 			}
 		}
 		track->parent = this;
@@ -312,8 +312,8 @@ public:
 		dbgassert(children.at(checkedCastUint32(track->childIdxTree)) == track);
 		children.erase(std::remove(children.begin(), children.end(), track));
 		int32_t childIdx = 0;
-		for (auto track : children) {
-			track->childIdxTree = childIdx++;
+		for (auto child : children) {
+            child->childIdxTree = childIdx++;
 		}
 		track->childIdxTree = -1;
 		track->parent = nullptr;
