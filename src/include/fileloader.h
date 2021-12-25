@@ -9,18 +9,14 @@
 #include "clipboard.h"
 
 class LoadMidiTask : public WorkerThread::ThreadTask {
-	String path;
-	std::shared_ptr<clip_clipboard> clipboard;
-	void loadFile();
+    String path;
+    std::shared_ptr<clip_clipboard> clipboard;
+    void loadFile();
+
 public:
-	LoadMidiTask(String& _path) : ThreadTask() {
-		this->path = _path;
-	}
-	void run() {
-		loadFile();
-	}
+    LoadMidiTask(String& _path) : ThreadTask() { this->path = _path; }
+    void run() { loadFile(); }
+
 public:
-	std::shared_ptr<clip_clipboard> getClipboard() {
-		return clipboard;
-	}
+    std::shared_ptr<clip_clipboard> getClipboard() { return clipboard; }
 };
