@@ -10,68 +10,64 @@
 class Splitter;
 class splitter_cb {
 public:
-	splitter_cb() {}
-	virtual ~splitter_cb() {}
-	virtual void handleSplitterChanged(Splitter& splitter, float scale, int clampedAt) = 0;
-	virtual ivec2 getContainerSize() = 0;
+    splitter_cb() {}
+    virtual ~splitter_cb() {}
+    virtual void handleSplitterChanged(Splitter& splitter, float scale, int clampedAt) = 0;
+    virtual ivec2 getContainerSize()                                                   = 0;
 };
 class Splitter : public guictr_base {
 public:
-	static constexpr int SPLITTER_LAYOUT_THICKNESS = 10;
-	int type;
-	float scale;
-	float scaleMin, scaleMax;
-	splitter_cb* notifyCtrl = nullptr;
-	Splitter(int _type, float _scale)
-	: guictr_base(),
-	  type(_type),
-	  scale(_scale)
-	{
-		scaleMin = 0;
-		scaleMax = 1;
-		padding = 0;
-	}
-	void setMinMax(float _min, float _max) {
-		this->scaleMin = _min;
-		this->scaleMax = _max;
-	}
-	virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-		if (this->contains(mpos)
-//				&& evt.type <= MouseHitType::MOUSE_RIGHT
-				) {
-			evt.requestFocus(this);
-			evt.requestCursor(type == 0 ? CURSOR_RESIZE_V : CURSOR_RESIZE_H);
-			return true;
-		}
-		return false;
-	}
-	int32_t leftOrTop(int32_t wh) {
-		return round(wh*scale);
-	}
-	int32_t rightOrBottom(int32_t wh) {
-		return wh-leftOrTop(wh);
-	}
-	virtual void handleDraggedBegin(MouseEvent& evt) {
-	}
-	virtual void handleDraggedMove(MouseEvent& evt);
-	virtual void handleDraggedRelease(MouseEvent& evt) {
-	}
-	virtual bool isStaticContainer() {
-		return true;
-	}
-	float getScale() const {
-		return this->scale;
-	}
-	void setScale(float f) {
-		this->scale = f;
-	}
-	float getMin() {
-		return scaleMin;
-	}
-	float getMax() {
-		return scaleMax;
-	}
-	void render(NVGcontext* vg);
-	virtual void addProperties(Table::tbl* table);
+    static constexpr int SPLITTER_LAYOUT_THICKNESS = 10;
+    int type;
+    float scale;
+    float scaleMin, scaleMax;
+    splitter_cb* notifyCtrl = nullptr;
+    Splitter(int _type, float _scale)
+        : guictr_base(),
+          type(_type),
+          scale(_scale) {
+        scaleMin = 0;
+        scaleMax = 1;
+        padding  = 0;
+    }
+    void setMinMax(float _min, float _max) {
+        this->scaleMin = _min;
+        this->scaleMax = _max;
+    }
+    virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
+        if (this->contains(mpos) /*&& evt.type <= MouseHitType::MOUSE_RIGHT*/) {
+            evt.requestFocus(this);
+            evt.requestCursor(type == 0 ? CURSOR_RESIZE_V : CURSOR_RESIZE_H);
+            return true;
+        }
+        return false;
+    }
+    int32_t leftOrTop(int32_t wh) {
+        return round(wh * scale);
+    }
+    int32_t rightOrBottom(int32_t wh) {
+        return wh - leftOrTop(wh);
+    }
+    virtual void handleDraggedBegin(MouseEvent& evt) {
+    }
+    virtual void handleDraggedMove(MouseEvent& evt);
+    virtual void handleDraggedRelease(MouseEvent& evt) {
+    }
+    virtual bool isStaticContainer() {
+        return true;
+    }
+    float getScale() const {
+        return this->scale;
+    }
+    void setScale(float f) {
+        this->scale = f;
+    }
+    float getMin() {
+        return scaleMin;
+    }
+    float getMax() {
+        return scaleMax;
+    }
+    void render(NVGcontext* vg);
+    virtual void addProperties(Table::tbl* table);
 };
-

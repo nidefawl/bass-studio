@@ -5,33 +5,33 @@
 
 class gui_statusbar : public guictr_base {
 public:
-	String text;
-	gui_statusbar() : guictr_base() {
-		setBackgroundRendered(true);
-	}
-	~gui_statusbar() {
-	}
-	void render(NVGcontext* vg) {
-		if (isBackgroundRendered()) {
-			renderBackground(vg);
-		}
-		if (!setScissorTransform(vg)) {
-			return;
-		}
-		if (this->text[0]) {
-			const int32_t hpt = theme->get(GuiConstant::CONST_FIXED_TITLE_HEIGHT);
-			setFont(vg, (int)(hpt*0.8), G_BLACK, G_TITLE_ALIGN);
-			nvgText(vg, INSET_TITLE, getSizeContent().y / 2, StringAsCStr(text), NULL);
-		}
-	}
-	bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
-		if (contains(mpos)) {
-			evt.requestFocus(this);
-			return true;
-		}
-		return false;
-	}
-	void setTitle(String _text) {
-		text = _text;
-	}
+    String text;
+    gui_statusbar() : guictr_base() {
+        setBackgroundRendered(true);
+    }
+    ~gui_statusbar() {
+    }
+    void render(NVGcontext* vg) {
+        if (isBackgroundRendered()) {
+            renderBackground(vg);
+        }
+        if (!setScissorTransform(vg)) {
+            return;
+        }
+        if (this->text[0]) {
+            const int32_t hpt = theme->get(GuiConstant::CONST_FIXED_TITLE_HEIGHT);
+            setFont(vg, (int) (hpt * 0.8), G_BLACK, G_TITLE_ALIGN);
+            nvgText(vg, INSET_TITLE, getSizeContent().y / 2, StringAsCStr(text), NULL);
+        }
+    }
+    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
+        if (contains(mpos)) {
+            evt.requestFocus(this);
+            return true;
+        }
+        return false;
+    }
+    void setTitle(String _text) {
+        text = _text;
+    }
 };
