@@ -1,7 +1,8 @@
 #include "guicontainer.h"
+#include "host/mainctrl.h"
 #include "list.h"
 #include "edithistory.h"
-#include "host/mainctrl.h"
+#include "guiscrollcontainer.h"
 
 class gui_list_history : public gui_list {
 public:
