@@ -723,7 +723,7 @@ static int runScannerClient() {
 						respShellPlugin.numPlugins = entries.size();
 						writeToIPC(client, respShellPlugin);
 						LOG("-- begin of shell plugin list --");
-						for (auto& entry: entries) {
+						for (auto& entry : entries) {
 							if (userSentQuitRequest) break;
 							LOG("load shell entry: %08X", entry.pluginUID);
 

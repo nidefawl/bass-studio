@@ -203,7 +203,7 @@ public:
     bool handleKeyInput(KeyEvent& kevt);
 
     void layout() {
-        for (guibase* gui: guis) {
+        for (guibase* gui : guis) {
             gui->layout();
         }
     }
@@ -446,7 +446,7 @@ public:
             setFont(vg, 18, G_WHITE, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
             nvgText(vg, center.x, center.y, "No clip selected", NULL);
         }
-        for (guibase* gui: guis) {
+        for (guibase* gui : guis) {
             if (gui == &audioeditor)
                 continue;
             if (gui == &noteeditor)
@@ -477,7 +477,7 @@ public:
         audioeditor.pos  = ivec2(leftContainer->right() + margin, 0);
         audioeditor.size = ivec2(cs.x - leftContainer->right(), cs.y);
 
-        for (guibase* gui: guis) {
+        for (guibase* gui : guis) {
             gui->layout();
         }
     }
@@ -529,7 +529,7 @@ public:
             double noteScale = cs.y / (double) distPitch;
             double tickScale = cs.x / (double) lenTime;
             nvgBeginPath(vg);
-            for (note_t& note: notes.m_list) {
+            for (note_t& note : notes.m_list) {
                 float nX = (float) ((note.start() - minTime) * tickScale);
                 float nW = (float) (note.len * tickScale);
                 nvgRect(vg, cp.x + nX, cp.y + (note.pitch - minPitch) * noteScale, nW, noteScale);

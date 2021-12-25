@@ -30,7 +30,7 @@ void scaled_grid::setZoom(double fNewZoom) {
     this->zoom = math::clamp(newZoom, MIN_ZOOM, MAX_ZOOM);
 }
 void scaled_grid::notifyChange() {
-    for (grid_changed_cb* cb: this->callbacks) { cb->gridChanged(*this); }
+    for (grid_changed_cb* cb : this->callbacks) { cb->gridChanged(*this); }
 }
 
 tick_t scaled_grid::getTickLength() {
@@ -83,7 +83,7 @@ tick_t scaled_grid::screenToTickSnap(int32_t x, int snap) {
     if (snap != SNAP_OFF && this->grid_dens.getSnap() != GRID_OFF) {
         grid_div* min  = NULL;
         tick_t minDist = 0;
-        for (grid_div& d: gridList) {
+        for (grid_div& d : gridList) {
             if (snap == SNAP_LEAST) {
                 if (d.time > tick) { return min == NULL ? 0 : min->time; }
                 min = &d;

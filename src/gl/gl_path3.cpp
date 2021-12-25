@@ -104,7 +104,7 @@ void GLPathRendererSimple2::bakePaths(std::vector<vec2list> paths, Uniforms path
     int idx = 0;
     std::vector<uint16_t> spineLengths;
     std::vector<vec2> bufFinal;
-    for (vec2list& list: paths) {
+    for (vec2list& list : paths) {
         if (list.size() > 1) {
             bufFinal.insert(bufFinal.end(), list.begin(), list.end());
             dbgassert(FitsTypeRange<uint16_t>(list.size()));

@@ -84,7 +84,7 @@ void guictr_menubar_entry::render(NVGcontext* vg) {
 guimenu::guimenu(ngui::Menu* _menu, int _lvl, guimenu_ctxtentry* parent) : guictxtmenu() /*, menu(_menu)*/, lvl(_lvl), parentSubmenuEntry(parent) {
     this->size.x    = 190;
     this->maxHeight = 0;
-    for (auto e: _menu->children) {
+    for (auto e : _menu->children) {
         if (e->type == ngui::menu_type::seperator) {
             addEntry(new ctxtmenu_splitter());
         } else {
@@ -96,15 +96,15 @@ guimenu::guimenu(ngui::Menu* _menu, int _lvl, guimenu_ctxtentry* parent) : guict
 }
 
 void guimenu::layout() {
-    for (auto entry: guimenuEntries) {
+    for (auto entry : guimenuEntries) {
         entry->fixedLeftOffset = -1;
     }
     guictxtmenu::layout();
     int leftOffset = 0;
-    for (auto entry: guimenuEntries) {
+    for (auto entry : guimenuEntries) {
         leftOffset = math::max(entry->leftOffset(), leftOffset);
     }
-    for (auto e: guimenuEntries) {
+    for (auto e : guimenuEntries) {
         e->fixedLeftOffset = leftOffset;
     }
 }
@@ -114,7 +114,7 @@ void guimenu::onRemove() {
         this->parentMenuBar->currentMenu = NULL;
     }
     parentCtrl->closeAppMenusAtLvl(lvl);
-    for (ctxtmenu_entry* e: entries) {
+    for (ctxtmenu_entry* e : entries) {
         guimenu_ctxtentry* e2 = dynamic_cast<guimenu_ctxtentry*>(e);
         if (e2)
             e2->isMenuOpen = false;
@@ -131,7 +131,7 @@ bool guimenu::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
     if (this->contains(mpos)) {
         ivec2 local                 = toContainerSpace(mpos);
         guimenu_ctxtentry* entryHit = NULL;
-        for (guimenu_ctxtentry* e: guimenuEntries) {
+        for (guimenu_ctxtentry* e : guimenuEntries) {
             int n = e->getClicked(size, local);
             if (n >= 0) {
                 entryHit = e;
@@ -142,7 +142,7 @@ bool guimenu::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 
         auto closeAllSubmenus = [this, appCtrlParent]() {
             bool anyOpen = false;
-            for (guimenu_ctxtentry* e: guimenuEntries) {
+            for (guimenu_ctxtentry* e : guimenuEntries) {
                 anyOpen |= e->isMenuOpen;
                 e->isMenuOpen = false;
             }
@@ -203,7 +203,7 @@ void guictr_menubar::render(NVGcontext* vg) {
     nvgRect(vg, 0, 0, size.x, size.y);
     nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_BRT));
     nvgFill(vg);
-    for (guibase* gui: guis) {
+    for (guibase* gui : guis) {
         gui->render(vg);
     }
     String strInfo = BuildInfo::BUILD_BINARY_VERSION;

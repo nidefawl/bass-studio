@@ -51,7 +51,7 @@ public:
         if (!setScissorTransform(vg)) {
             return;
         }
-        for (auto c: guis) {
+        for (auto c : guis) {
             nvgSave(vg);
             c->render(vg);
             nvgRestore(vg);

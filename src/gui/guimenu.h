@@ -89,7 +89,7 @@ public:
 
         std::vector<ngui::Menu*> list = menubar.children;
         setFont(vg, fontSize, G_WHITE, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-        for (ngui::Menu* m: list) {
+        for (ngui::Menu* m : list) {
             guictr_menubar_entry* entry = new guictr_menubar_entry(m, this);
 
             const char* cstr   = StringAsCStr(m->title);
@@ -106,7 +106,7 @@ public:
             add(entry);
             x = entry->right();
         }
-        for (guibase* gui: guis) {
+        for (guibase* gui : guis) {
             gui->layout();
         }
     }

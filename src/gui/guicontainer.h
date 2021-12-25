@@ -53,7 +53,7 @@ public:
         dbgassert(guis.empty());
     }
     virtual void destroyGuis() {
-        for (guibase* g: guis) {
+        for (guibase* g : guis) {
             g->onRemove();
             g->setParent(nullptr);
             //g->setControl(nullptr);
@@ -62,7 +62,7 @@ public:
         guis.clear();
     }
     virtual void removeGuis() {
-        for (guibase* g: guis) {
+        for (guibase* g : guis) {
             g->onRemove();
             g->setParent(nullptr);
             //g->setControl(nullptr);
@@ -201,7 +201,7 @@ public:
     virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
         if (this->contains(mpos)) {
             ivec2 localMouse = this->toContainerSpace(mpos);
-            for (guibase* gui: guis) {
+            for (guibase* gui : guis) {
                 if (!gui->isVisible())
                     continue;
                 if (gui->mouseHitTest(localMouse, evt)) {
@@ -221,17 +221,17 @@ public:
     }
 
     virtual void onIdle() {
-        for (guibase* gui: guis) {
+        for (guibase* gui : guis) {
             gui->onIdle();
         }
     }
     virtual void prerender(NVGcontext* vg) {
-        for (guibase* gui: guis) {
+        for (guibase* gui : guis) {
             gui->prerender(vg);
         }
     }
     virtual void onTick(AppCtrl* ctrl) {
-        for (guibase* gui: guis) {
+        for (guibase* gui : guis) {
             if (gui->isVisible()) {
                 gui->onTick(ctrl);
             }

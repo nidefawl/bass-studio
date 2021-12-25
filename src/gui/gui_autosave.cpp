@@ -80,7 +80,7 @@ public:
     void layout() override {
         btnSaveNow.pos  = ivec2(size.x - size.x / 4, 0);
         btnSaveNow.size = ivec2(size.x / 4, size.y);
-        for (auto* g: guis) {
+        for (auto* g : guis) {
             g->layout();
         }
     }

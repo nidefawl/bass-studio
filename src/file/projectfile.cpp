@@ -66,7 +66,7 @@ void load(Archive& archive, plugin_snapshot_t& m, const std::uint32_t version) {
         std::vector<param_snapshot_t> nonHostParams;
         make_optional_nvp(archive, "parameters", nonHostParams);
         make_optional_nvp(archive, "hostParams", allParams);
-        for (auto p: nonHostParams) {
+        for (auto p : nonHostParams) {
             p.idx += PARAM_OFFSET_EXTERNAL;
             allParams.push_back(p);
         }
@@ -416,11 +416,11 @@ CEREAL_CLASS_VERSION(track_snapshot_t, 1);
  */
 bool validateProjectFile(std::shared_ptr<project_file> projectfile) {
     auto trackArr = {projectfile->project.trackCtr, projectfile->project.trackReturnCtr, projectfile->project.trackMasterCtr};
-    for (const trackcontainer_snapshot_t& trackcontainersnapshot: trackArr) {
+    for (const trackcontainer_snapshot_t& trackcontainersnapshot : trackArr) {
         std::vector<int32_t> vec;
         vec.reserve(128);
-        for (const track_snapshot_t& tracksnapshot: trackcontainersnapshot.tracks) {
-            for (const plugin_snapshot_t& pluginsnapshot: tracksnapshot.plugins.pluginSnapshots) {
+        for (const track_snapshot_t& tracksnapshot : trackcontainersnapshot.tracks) {
+            for (const plugin_snapshot_t& pluginsnapshot : tracksnapshot.plugins.pluginSnapshots) {
                 int32_t globalId = pluginsnapshot.projectGlobalId;
                 if (std::binary_search(vec.begin(), vec.end(), globalId)) {
                     log_printf("invalid project: duplicate plugin global id %d found\n", globalId);

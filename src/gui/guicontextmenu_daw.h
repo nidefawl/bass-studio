@@ -50,7 +50,7 @@ public:
         int iX      = inset;
         int iY      = h + 2;
         int elW     = (tw - inset * 2) / perRow;
-        for (_time_sel_entry& e: entries) {
+        for (_time_sel_entry& e : entries) {
             this->height = iY + h;
             e.x          = iX;
             e.y          = iY;
@@ -86,7 +86,7 @@ public:
     void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) {
         const int h = this->fontSize;
         int n       = 0;
-        for (_time_sel_entry& e: entries) {
+        for (_time_sel_entry& e : entries) {
             if (mouse.y >= y + e.y && mouse.y < y + e.y + h && mouse.x >= e.x && mouse.x < e.x + e.w) {
                 nvgBeginPath(vg);
                 nvgRect(vg, e.x, y + e.y + 2, e.w, h - 4);
@@ -107,7 +107,7 @@ public:
         nvgText(vg, leftOffset(), y + h / 2, StringAsCStr(title), NULL);
         nvgFontSize(vg, this->fontSize - 4);
         n = 0;
-        for (_time_sel_entry& e: entries) {
+        for (_time_sel_entry& e : entries) {
             nvgText(vg, e.x + 20, y + e.y + h / 2, StringAsCStr(e.name), NULL);
             n++;
         }
@@ -119,7 +119,7 @@ public:
         if (contains(ctxtSize, mouse)) {
             int n       = fixed ? 10 : 0;
             const int h = this->fontSize;
-            for (_time_sel_entry& e: entries) {
+            for (_time_sel_entry& e : entries) {
                 if (mouse.y >= y + e.y && mouse.y < y + e.y + h && mouse.x >= 0 && mouse.x < e.x + e.w) {
                     return n + 100;
                 }

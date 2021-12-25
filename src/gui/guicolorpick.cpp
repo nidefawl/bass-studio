@@ -57,7 +57,7 @@ void gui_color_pick::init() {
 void gui_color_pick::layout() {
     int sizeQuad  = size.y;
     float sliderW = size.y / 4;
-    for (auto* g: guis)
+    for (auto* g : guis)
         g->size = vec2(sliderW, size.y);
 
     this->hexInput.size = { sizeQuad, sizeQuad / 4 };
@@ -69,7 +69,7 @@ void gui_color_pick::layout() {
 
     this->hexInput.pos = { knH.left() - sizeQuad, sizeQuad / 4 * 3 };
 
-    for (auto* g: guis) {
+    for (auto* g : guis) {
         g->layout();
     }
 }
@@ -98,7 +98,7 @@ void gui_color_pick::render(NVGcontext* vg) {
         nvgFillColor(vg, col);
         nvgFill(vg);
     }
-    for (auto* g: guis)
+    for (auto* g : guis)
         g->render(vg);
 }
 

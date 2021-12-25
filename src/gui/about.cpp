@@ -57,7 +57,7 @@ void guidialog_about::render(NVGcontext* vg) {
     nvgTextMetrics(vg, NULL, NULL, &lineh);
     y += lineh;
     int yPosLines = y;
-    for (AboutLine& t: strings) {
+    for (AboutLine& t : strings) {
         nvgText(vg, x, y, StringAsCStr(std::get<0>(t)), NULL);
         y += lineh;
     }
@@ -65,7 +65,7 @@ void guidialog_about::render(NVGcontext* vg) {
     int xRight = x + width;
     nvgTextAlign(vg, NVG_ALIGN_TOP | NVG_ALIGN_RIGHT);
     y = yPosLines;
-    for (AboutLine& t: strings) {
+    for (AboutLine& t : strings) {
         const char* c = StringAsCStr(std::get<1>(t));
         nvgText(vg, xRight, y, c, NULL);
         y += lineh;
@@ -92,7 +92,7 @@ void guidialog_about::render(NVGcontext* vg) {
     nvgTextBoxBounds(vg, xRight, y, width - xRight, BuildInfo::COMPILE_DEFS, nullptr, bounds);
     nvgTextBox(vg, xRight, y, width - xRight, BuildInfo::COMPILE_DEFS, nullptr);
     y = bounds[3];
-    for (auto c: guis) {
+    for (auto c : guis) {
         nvgSave(vg);
         c->render(vg);
         nvgRestore(vg);
@@ -103,7 +103,7 @@ void guidialog_about::layout() {
     int32_t size  = 32;
     btnClose.size = ivec2(size * 4, size);
     btnClose.pos  = ivec2(cs.x - btnClose.size.x, cs.y - btnClose.size.y);
-    for (auto gui: guis) {
+    for (auto gui : guis) {
         gui->layout();
     }
 }

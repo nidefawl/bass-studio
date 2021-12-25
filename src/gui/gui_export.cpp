@@ -65,7 +65,7 @@ public:
         tmTickLen.size   = tmTickStart.size;
         btnLock.pos      = ivec2(widthStartAndLen, 0) + ivec2(inset);
         btnLock.size     = ivec2(widthLock);
-        for (guibase* gui: guis) {
+        for (guibase* gui : guis) {
             gui->layout();
         }
     }
@@ -82,7 +82,7 @@ public:
         nvgText(vg, this->tmTickStart.right() + 10, this->tmTickLen.bottom(), StringAsCStr(this->tmTickLen.getLabel()), NULL);
 
 
-        for (auto* g: guis) {
+        for (auto* g : guis) {
             nvgSave(vg);
             g->render(vg);
             nvgRestore(vg);
@@ -163,7 +163,7 @@ public:
         tmFrameExport.pos   = ivec2(0, selectFolder.bottom() + inset);
         selectFolder.pos.x  = tmFrameExport.tmTickStart.pos.x;
         selectFolder.size.x = cs.x - selectFolder.pos.x;
-        for (guibase* gui: guis) {
+        for (guibase* gui : guis) {
             gui->layout();
         }
     }
@@ -180,7 +180,7 @@ public:
         nvgTextMetrics(vg, NULL, NULL, &lineh);
         nvgText(vg, 5, this->selectFolder.bottom(), StringAsCStr(this->selectFolder.getLabel()), NULL);
 
-        for (auto* g: guis) {
+        for (auto* g : guis) {
             nvgSave(vg);
             g->render(vg);
             nvgRestore(vg);

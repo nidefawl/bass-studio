@@ -49,12 +49,12 @@ public:
         before      = oldNotes;
 
         std::list<note_t*> selcopy;
-        for (note_t* sel: before.selection) {
+        for (note_t* sel : before.selection) {
             selcopy.insert(selcopy.end(), sel);
         }
-        for (note_t* sel: selcopy) {
+        for (note_t* sel : selcopy) {
             bool found = false;
-            for (note_t& ent: before.m_list) {
+            for (note_t& ent : before.m_list) {
                 if (sel == &ent) {
                     found = true;
                     break;

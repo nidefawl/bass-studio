@@ -84,7 +84,7 @@ void GLPathRendererSimple::bakePaths(std::vector<vec2list> paths, Uniforms pathO
     float thickness = pathOpt.linewidth;
     int idx         = 0;
     std::vector<vec2> bufFinal;
-    for (vec2list& list: paths) {
+    for (vec2list& list : paths) {
         if (list.size() > 1) {
             auto len = Polyline2D::create(bufFinal, list, thickness,
                                           Polyline2D::JointStyle::ROUND,

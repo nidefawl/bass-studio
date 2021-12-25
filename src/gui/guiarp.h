@@ -33,7 +33,7 @@ public:
     gui_arp(clip_view& _clipview)
         : clipview(_clipview) {
         add(&buttonBypass);
-        for (guiknob* knob: knobs) {
+        for (guiknob* knob : knobs) {
             add(knob);
         }
         padding = 2;
@@ -56,7 +56,7 @@ public:
             }
             return false;
         };
-        for (guiknob* knob: knobs) {
+        for (guiknob* knob : knobs) {
             knob->setAutomationHandlers();
         }
     }
@@ -76,10 +76,10 @@ public:
         buttonBypass.render(vg);
         midiarp* arp = getArp();
         if (arp) {
-            for (guiknob* knob: knobs) {
+            for (guiknob* knob : knobs) {
                 knob->render(vg);
             }
-            for (guiknob* knob: knobs) {
+            for (guiknob* knob : knobs) {
                 nvgBeginPath(vg);
                 int32_t widthParam = this->getSizeContent().x - knob->right() - INSET_TITLE * 2;
                 nvgRect(vg, knob->right() + INSET_TITLE, knob->pos.y, widthParam, knob->size.y);
@@ -138,12 +138,12 @@ public:
         buttonBypass.setRadius(hpt / 3.f);
 
         guiknob* knobPrev = nullptr;
-        for (guiknob* knob: knobs) {
+        for (guiknob* knob : knobs) {
             knob->size = ivec2(48);
             knob->pos  = ivec2(INSET_TITLE, (knobPrev ? knobPrev->bottom() : hpt) + INSET_TITLE);
             knobPrev   = knob;
         }
-        for (guibase* gui: guis) {
+        for (guibase* gui : guis) {
             gui->layout();
         }
     }

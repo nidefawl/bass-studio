@@ -30,7 +30,7 @@ bool glshader_srcloader::setStageSrc(int32_t type, const String& fname, const St
     return true;
 }
 bool glshader_srcloader::reload() {
-    for (auto& srcEntry: sources) {
+    for (auto& srcEntry : sources) {
         int64_t ret = ReadFileText(srcEntry.filepath, srcEntry.source);
         if (ret <= 0) {
             my_printf("failed loading %s\n", StringAsCStr(srcEntry.filepath));

@@ -30,7 +30,7 @@ void guictxtmenu_notrack::clicked(int _id) {
             dbgassert(ctr);
             if (ctr) {
                 ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
-                for (track_snapshot_t& ts: ctr->tracks) {
+                for (track_snapshot_t& ts : ctr->tracks) {
                     track_t* tr    = new track_t(ts);
                     ts.trackLoaded = tr;
                     DawInstance::get()->addTrackImpl(-1, tr, 0);
@@ -39,7 +39,7 @@ void guictxtmenu_notrack::clicked(int _id) {
 
                 vsthost* host = vsthost::getInstance();
                 //load plugins
-                for (track_snapshot_t& ts: ctr->tracks) {
+                for (track_snapshot_t& ts : ctr->tracks) {
                     log_printf("track '%s' loading %d plugins\n", StringAsCStr(ts.trackLoaded->name), ts.plugins.pluginSnapshots.size());
                     ts.stageIds = track_id_snapshot_t{};
                     ts.trackLoaded->loadSnapshot(ts);

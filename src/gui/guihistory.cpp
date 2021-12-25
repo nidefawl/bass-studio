@@ -93,7 +93,7 @@ public:
         if (!setScissorTransform(vg)) {
             return;
         }
-        for (auto c: guis) {
+        for (auto c : guis) {
             nvgSave(vg);
             c->render(vg);
             nvgRestore(vg);
@@ -113,7 +113,7 @@ public:
 //            nvgRGBA(255, 255, 0, 55)
 //        };
 
-//        for (guibase* g: guis) {
+//        for (guibase* g : guis) {
 //            //renderDebugF(vg, g, dbgcolorsa[colorIdx++ % 5]);
 //        }
     }
@@ -126,7 +126,7 @@ public:
         scrollContainer.size = { size.x, size.y - hTop };
         scrollContainer.determineSize(scrollContainer.size);
 
-        for (auto c: guis) {
+        for (auto c : guis) {
             c->layout();
         }
     }

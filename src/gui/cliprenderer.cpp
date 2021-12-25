@@ -351,7 +351,7 @@ void gui_midi_clip::updateClipRenderCache(NVGcontext* vg) {
                 std::vector<const note_t*> notesClipped;
                 std::vector<const note_t*> notesMuted;
                 int begin = 0;
-                for (const note_t& note: notes.m_list) {
+                for (const note_t& note : notes.m_list) {
                     tick_t noteTime = note.time;
                     if (noteTime >= clipLen) {
                         notesClipped.push_back(&note);
@@ -418,7 +418,7 @@ void gui_midi_clip::updateClipRenderCache(NVGcontext* vg) {
                         if (noteRenderMode == 0) {
                             nvgBeginPath(vg);
                         }
-                        for (const note_t* noteClipped: list) {
+                        for (const note_t* noteClipped : list) {
                             const note_t& note = *noteClipped;
                             tick_t noteTime    = note.time;
                             //			dbgassert(objPosNote >= 0 && objPosNote < numBars);

@@ -653,7 +653,7 @@ void vsthost::setSampleFormat(const sampleformat_t& sampleFormat) {
             plugin->dispatch(effSetSampleRate, 0, 0, NULL, (float)sampleFormat.sampleRate);
             plugin->resume();
 		}
-		for (auto* stage: this->allAudioStages) {
+		for (auto* stage : this->allAudioStages) {
 			stage->pluginsChanged();
 		}
 	}

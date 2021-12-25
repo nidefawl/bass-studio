@@ -30,7 +30,7 @@ public:
     void handleDraggedRelease(MouseEvent& evt) override {
         std::vector<String> strOptions;
         strOptions.reserve(options.size());
-        for (auto& option: options) {
+        for (auto& option : options) {
             strOptions.push_back(optionToString(option));
         }
         auto* popup   = createContextMenu(std::move(strOptions));

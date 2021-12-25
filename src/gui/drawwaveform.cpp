@@ -54,7 +54,7 @@ void waveformrender::init() {
 }
 void waveformrender::destroy() {
     impl->renderer->destroy();
-    for (BakeGLPath& path: bakedPaths) {
+    for (BakeGLPath& path : bakedPaths) {
         if (path.uniforms_texture != 0) {
             glDeleteTextures(1, &path.uniforms_texture);
         }
@@ -63,7 +63,7 @@ void waveformrender::destroy() {
     }
 }
 void waveformrender::getRenderedTextures(std::vector<TextureAtlas>& rendered) {
-    for (auto& atlas: atlases) {
+    for (auto& atlas : atlases) {
         if (atlas.entries.size()) {
             rendered.push_back(atlas);
         }
@@ -188,7 +188,7 @@ bool collides(const ivec2& pos1, const ivec2& size1, const ivec2& pos2, const iv
 }
 bool anyCollision(TextureAtlas& _atlas, const ivec2 pos1, const ivec2 size1, ivec2& colliderBottomRight) {
     // check against list of existing textures
-    for (auto& entry: _atlas.entries) {
+    for (auto& entry : _atlas.entries) {
         ivec2 offset(0, 0);
         if (collides(pos1, size1, entry.pos, entry.size, offset)) {
             colliderBottomRight.x = entry.pos.x + entry.size.x;
@@ -197,7 +197,7 @@ bool anyCollision(TextureAtlas& _atlas, const ivec2 pos1, const ivec2 size1, ive
         }
     }
     // check against list of queued textures
-    for (auto& entry: _atlas.queuedTasks) {
+    for (auto& entry : _atlas.queuedTasks) {
         ivec2 offset(0, 0);
         if (entry.pos.x >= 0 && collides(pos1, size1, entry.pos, entry.size, offset)) {
             colliderBottomRight.x = entry.pos.x + entry.size.x;
@@ -208,7 +208,7 @@ bool anyCollision(TextureAtlas& _atlas, const ivec2 pos1, const ivec2 size1, ive
     return false;
 }
 bool waveformrender::findFreeSpot(const ivec2 size, int& atlasIdx, ivec2& pos) {
-    for (TextureAtlas& _atlas: atlases) {
+    for (TextureAtlas& _atlas : atlases) {
         ivec2 tmpPos = { 0, 0 };
         while (1) {
             ivec2 colliderBottomRight(0);
@@ -253,12 +253,12 @@ void waveformrender::assertWaveformRefIsUnbound(gui_waveform_texture_ref* wavefo
     std::vector<TextureAtlas> atlases;
     std::vector<waveform_update_task_t> queuedTasks;
     std::vector<audioclip_texture_t> prevRendered;
-    for (TextureAtlas& _atlas: atlases) {
-        for (auto& entry: _atlas.entries) {
+    for (TextureAtlas& _atlas : atlases) {
+        for (auto& entry : _atlas.entries) {
             dbgassert(!isIn(entry.ptrs, waveformRef));
         }
     }
-    for (auto& updateTask: queuedTasks) {
+    for (auto& updateTask : queuedTasks) {
         //		if (updateTask.waveformRef == waveformRef) {
         //			dbgassert(0);
         //		}
@@ -287,8 +287,8 @@ inline bool isAlmostEqualWaveform(const audioclip_texture_t& lhs, const audiocli
 bool waveformrender::findSimiliarWaveform(waveform_update_task_t& waveformQueueEntry) {
     gui_waveform_texture_ref* waveformRef = waveformQueueEntry.queuedptrs[0];
     waveformRef->refState                 = 0;
-    for (TextureAtlas& _atlas: atlases) {
-        for (auto& entry: _atlas.entries) {
+    for (TextureAtlas& _atlas : atlases) {
+        for (auto& entry : _atlas.entries) {
             impl->renderTimings.comparisonsA++;
             if (isAlmostEqualWaveform(entry.props, waveformRef->waveform)) {
                 waveformRef->atlasId      = _atlas.idx;
@@ -303,7 +303,7 @@ bool waveformrender::findSimiliarWaveform(waveform_update_task_t& waveformQueueE
                 return true;
             }
         }
-        for (auto& entry: _atlas.queuedTasks) {
+        for (auto& entry : _atlas.queuedTasks) {
             impl->renderTimings.comparisonsB++;
             if (isAlmostEqualWaveform(entry.queuedptrs[0]->waveform, waveformRef->waveform)) {
                 waveformRef->atlasId      = _atlas.idx;

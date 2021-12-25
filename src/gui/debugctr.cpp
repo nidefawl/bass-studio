@@ -68,7 +68,7 @@ struct gui_ctr_debug::ctr_debug_impl_t {
 };
 gui_ctr_debug::~gui_ctr_debug() {
     removeGuis();
-    for (auto* g: impl->debugGuis) {
+    for (auto* g : impl->debugGuis) {
         delete g;
     }
     delete impl;
@@ -227,7 +227,7 @@ gui_ctr_debug::gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType)
             debugGuis.push_back(btn3);
         }
     }
-    for (auto g: debugGuis) {
+    for (auto g : debugGuis) {
         add(g);
     }
 }
@@ -294,14 +294,14 @@ void gui_ctr_debug::render(NVGcontext* vg) {
             int32_t maxThread    = -1;
             float yStep          = 16.0f;
             int64_t minTimeStart = list[0].timeStart;
-            for (auto entry: list) {
+            for (auto entry : list) {
                 minTimeStart = math::min(minTimeStart, entry.timeStart);
             }
             nvgSave(vg);
             nvgTranslate(vg, legendX, 0);
             for (int pass = 0; pass < 2; pass++) {
                 nvgBeginPath(vg);
-                for (auto entry: list) {
+                for (auto entry : list) {
                     int32_t stageIdInt = static_cast<int32_t>(entry.stageId);
                     auto duration      = entry.timeEnd - entry.timeStart;
                     auto posX1         = graphOnlySize.x * (entry.timeStart - minTimeStart) / (float) mikrosPerBlock;
@@ -439,7 +439,7 @@ void gui_ctr_debug::render(NVGcontext* vg) {
         std::sort(wnd.begin(), wnd.end(), [](win32_msg const& a, win32_msg const& b) {
             return a.cnt > b.cnt;
         });
-        for (win32_msg& msg: wnd) {
+        for (win32_msg& msg : wnd) {
             String s = msgCounter.getHWNDName(msg.id);
             strings.push_back(StringFormat("%s: %d", StringAsCStr(s), msg.cnt));
         }
@@ -458,7 +458,7 @@ void gui_ctr_debug::render(NVGcontext* vg) {
             }
             return a.cnt > b.cnt;
         });
-        for (win32_msg& msg: msgs) {
+        for (win32_msg& msg : msgs) {
             strings.push_back(StringFormat("WM_ 0x%04X: %d", msg.id, msg.cnt));
         }
 #endif
@@ -473,16 +473,16 @@ void gui_ctr_debug::render(NVGcontext* vg) {
         String proj = StringFormat("Project: %s", StringAsCStr(ctrl->getProjectPath()));
         nvgText(vg, x, lineh, StringAsCStr(proj), NULL);
         int y = lineh * 3;
-        for (String& s: strings) {
+        for (String& s : strings) {
             nvgText(vg, x, y, StringAsCStr(s), NULL);
             y += lineh;
         }
-        for (String& s: g_debugStrings) {
+        for (String& s : g_debugStrings) {
             nvgText(vg, x, y, StringAsCStr(s), NULL);
             y += lineh;
         }
     }
-    for (auto c: guis) {
+    for (auto c : guis) {
         nvgSave(vg);
         c->render(vg);
         nvgRestore(vg);
@@ -504,7 +504,7 @@ void gui_ctr_debug::layout() {
     }
     auto posY = cs.y;
     auto posX = 0;
-    for (auto gui: guis) {
+    for (auto gui : guis) {
         gui->layout();
         if (gui == knobTest)
             continue;
@@ -527,7 +527,7 @@ void resetHistAndCheck() {
 
     auto& tracks = daw->getTracks();
     int n        = 0;
-    for (auto track: tracks) {
+    for (auto track : tracks) {
         int nTrackClips = track->getMidi().getConstClips().size();
         my_printf("track %s %d %s has %d clips\n", TrackTypeToName(track->type), track->projectIdx, StringAsCStr(track->name), nTrackClips);
         n += nTrackClips;
@@ -622,7 +622,7 @@ void gui_ctr_debug::buttonClicked(guibase* button) {
 //}
 
 void gui_ctr_debug::onTick(AppCtrl* ctrl) {
-    for (guibase* gui: guis) {
+    for (guibase* gui : guis) {
         gui->onTick(ctrl);
     }
     {

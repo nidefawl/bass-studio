@@ -167,7 +167,7 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 				track_gui_entry_t* trMin = NULL;
 				track_gui_entry_t* trMax = NULL;
 				int idx = 0;
-				for (track_gui_entry_t* t: iGuiMgr.getTracksVisibleFlat()) {
+				for (track_gui_entry_t* t : iGuiMgr.getTracksVisibleFlat()) {
 					auto minMax = t->track->getMinMaxEvents();
 					if (minMax.min != INVALID_TICK) {
 						evtMin = evtMin == INVALID_TICK ? minMax.min : math::min(evtMin, minMax.min);
@@ -192,7 +192,7 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
 				handledKeyinput = true;
 			}
 			if (isKC(KC_DELETE, kevt) && cursor.getRange()) {
-//				for (track_t* t: trCtr) {
+//				for (track_t* t : trCtr) {
 //					if (cursor.inTrackRange(t->idx)) {
 //						ctrl->cutIntersecting(t, cursor.getTickBegin(), cursor.getTickEnd());
 //					}

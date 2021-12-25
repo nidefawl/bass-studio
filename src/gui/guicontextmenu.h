@@ -21,7 +21,7 @@ public:
         setSnapSides(ivec4(1));
     }
     virtual ~guictxtmenu() {
-        for (ctxtmenu_entry* e: entries) {
+        for (ctxtmenu_entry* e : entries) {
             delete e;
         }
     }
@@ -38,7 +38,7 @@ public:
     }
     virtual void handleDraggedBegin(MouseEvent& evt) {
         ivec2 local = evt.relMousepos;
-        for (ctxtmenu_entry* e: entries) {
+        for (ctxtmenu_entry* e : entries) {
             int n = e->getClicked(size, local);
             if (n >= 0) {
                 clickedElement(e, n);
@@ -50,7 +50,7 @@ public:
     void layout() {
         //TODO: figure out string width here to make life easier laying out context menus
         int y = paddingV;
-        for (ctxtmenu_entry* e: entries) {
+        for (ctxtmenu_entry* e : entries) {
             e->layout(size, fontSize);
             e->y = y;
             y += e->height + paddingV;
@@ -58,7 +58,7 @@ public:
     }
     void determineSize(ivec2& prefSize) override {
         ivec2 newMaxSize = { size.x, paddingV };
-        for (ctxtmenu_entry* e: entries) {
+        for (ctxtmenu_entry* e : entries) {
             newMaxSize.y += e->height + paddingV;
         }
         if (entries.empty()) {
@@ -75,14 +75,14 @@ public:
         int idx     = 0;
         ivec2 mouse = parentCtrl->m_mousePos;
         mouse       = toContainerSpace(mouse);
-        for (ctxtmenu_entry* e: entries) {
+        for (ctxtmenu_entry* e : entries) {
             e->render(size, vg, idx, mouse);
             idx++;
         }
     }
     void setControl(BaseCtrl* parentCtrl) {
         guictxtmenu_base::setControl(parentCtrl);
-        for (auto* g: entries) {
+        for (auto* g : entries) {
             g->theme = parentCtrl ? parentCtrl->getTheme() : nullptr;
         }
     }

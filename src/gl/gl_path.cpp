@@ -202,7 +202,7 @@ float packVertexData2(vec2list& verticesIn, std::vector<vert>& outVdata, int ind
     vec2list T(n - 1);
     std::vector<float> N(n - 1);
     int idx = 0;
-    for (vec2& v: vertices) {
+    for (vec2& v : vertices) {
         vert& vd = vdata[idx++];
         vd.pos   = v;
         vd.index = index;
@@ -363,7 +363,7 @@ void GLPathRenderer::bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, Ba
     size_t flBufVertsPos     = 0;
     int packed               = 0;
     int idx                  = 0;
-    for (vec2list& list: paths) {
+    for (vec2list& list : paths) {
         if (list.size() > 1) {
             //      timer.reset();
             float len = packVertexData2(list, outVdata, idx);
