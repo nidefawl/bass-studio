@@ -312,9 +312,9 @@ public:
     virtual void rightClicked(MouseEvent& evt, guibase* button) {
     }
     /*
-	 * determines if drag operations should focus containers
-	 * when hovering target containers for short periods
-	 */
+     * determines if drag operations should focus containers
+     * when hovering target containers for short periods
+     */
     virtual bool isDragMoveable() {
         return false;
     }
