@@ -3,11 +3,6 @@
 // A.Greensted - Feb 2010
 // http://www.labbookpages.co.uk
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <string.h>
-
 enum filterType {LOW_PASS, HIGH_PASS, BAND_PASS, BAND_STOP};
 enum windowType {RECTANGULAR, BARTLETT, HANNING, HAMMING, BLACKMAN};
 
