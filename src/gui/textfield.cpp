@@ -30,28 +30,22 @@ gui_textfield::gui_textfield()
       mValueTemp(""),
       mCursorPos(-1),
       mSelectionPos(-1),
-      mMouseDownPos(ivec2(-1,-1)),
-      mMouseDragPos(ivec2(-1,-1)),
+      mMouseDownPos(ivec2(-1, -1)),
+      mMouseDragPos(ivec2(-1, -1)),
       mMouseDownModifier(0),
       mTextOffset(0),
       mLastClick(0), mVisible(true), mEnabled(true),
       mFocused(false),
-	  mFontSize(28.0f),
-	  mMouseFocus(false)
-{
-//    if (mTheme) mFontSize = mTheme->mTextBoxFontSize;
-//    mIconExtraScale = 0.8f;// widget override
-
+      mFontSize(28.0f),
+      mMouseFocus(false) {
 }
 
 void gui_textfield::setEditable(bool editable) {
     mEditable = editable;
-//    setCursor(editable ? DAW::Cursor::IBeam : DAW::Cursor::Arrow);
 }
 
-
-ivec2 gui_textfield::preferredSize(NVGcontext *ctx) const {
-	int iH = (int32_t)ceil(fontSize() * 1.4f);
+ivec2 gui_textfield::preferredSize(NVGcontext* ctx) const {
+    int iH = (int32_t) ceil(fontSize() * 1.4f);
     ivec2 size(0, iH);
 
     float uw = 0;
@@ -61,46 +55,40 @@ ivec2 gui_textfield::preferredSize(NVGcontext *ctx) const {
     float sw = 0;
 
     float ts = nvgTextBounds(ctx, 0, 0, mValue.c_str(), nullptr, nullptr);
-    size[0] = size[1] + ts + uw + sw;
+    size[0]  = size[1] + ts + uw + sw;
     return size;
 }
 
 bool gui_textfield::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
-	if (contains(mpos)) {
-		evt.requestFocus(this);
-		return true;
-	}
-	return false;
+    if (contains(mpos)) {
+        evt.requestFocus(this);
+        return true;
+    }
+    return false;
 }
 bool gui_textfield::handleKeyInput(KeyEvent& kevt) {
-	return keyboardEvent(kevt.keyCode, 0, kevt.type, kevt.mods);
+    return keyboardEvent(kevt.keyCode, 0, kevt.type, kevt.mods);
 }
 void gui_textfield::handleRightClick(MouseEvent& evt) {
 }
 void gui_textfield::handleDraggedBegin(MouseEvent& evt) {
-    if (mEditable && focused()) {
-    }
-    if (evt.button == 1 && !mFocused) {
-//        if (!mSpinnable || spinArea(p) == SpinArea::None) /* not on scrolling arrows */
-//            requestFocus();
-    }
     ivec2 local = evt.relMousepos;
     if (mEditable) {
-        mMouseDownPos = local;
+        mMouseDownPos      = local;
         mMouseDownModifier = evt.kbmods;
 
-        double time = getTimeMillis()/1000.0;
+        double time = getTimeMillis() / 1000.0;
         if (time - mLastClick < 0.25) {
             /* Double-click: select all text */
             mSelectionPos = 0;
-            mCursorPos = (int) mValueTemp.size();
+            mCursorPos    = (int) mValueTemp.size();
             mMouseDownPos = ivec2(-1, -1);
         }
         mLastClick = time;
     }
 }
 void gui_textfield::handleDraggedMove(MouseEvent& evt) {
-    mMouseDragPos = evt.relMousepos;
+    mMouseDragPos     = evt.relMousepos;
     this->mTextOffset = -123123;
     if (mEditable && mFocused) {
     }
@@ -110,225 +98,205 @@ void gui_textfield::handleDraggedRelease(MouseEvent& evt) {
     mMouseDragPos = ivec2(-1, -1);
 }
 void gui_textfield::onTextChange() {
-    if (mCallback && !mCallback(mValueTemp)){
-
+    if (mCallback && !mCallback(mValueTemp)) {
     }
 }
 void gui_textfield::onTextEndEdit() {
-    if (mCallbackEnd && !mCallbackEnd(mValueTemp)){
-
+    if (mCallbackEnd && !mCallbackEnd(mValueTemp)) {
     }
 }
 void setTfFont(NVGcontext* ctx, const gui_textfield* tf) {
-	nvgFontSize(ctx, tf->fontSize());
-	UIFont::font_instance instance = tf->theme->getFont(UIFont::FONT_TEXFIELD);
-	UIFont::bindFont(ctx, instance);
-	switch (tf->alignment()) {
-		case gui_textfield::Alignment::Left:
-			nvgTextAlign(ctx, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-			break;
-		case gui_textfield::Alignment::Right:
-			nvgTextAlign(ctx, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
-			break;
-		case gui_textfield::Alignment::Center:
-			nvgTextAlign(ctx, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-			break;
-	}
+    nvgFontSize(ctx, tf->fontSize());
+    UIFont::font_instance instance = tf->theme->getFont(UIFont::FONT_TEXFIELD);
+    UIFont::bindFont(ctx, instance);
+    switch (tf->alignment()) {
+        case gui_textfield::Alignment::Left:
+            nvgTextAlign(ctx, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+            break;
+        case gui_textfield::Alignment::Right:
+            nvgTextAlign(ctx, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+            break;
+        case gui_textfield::Alignment::Center:
+            nvgTextAlign(ctx, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+            break;
+    }
 }
 void gui_textfield::render(NVGcontext* ctx) {
 
-	//TODO: find a better place to do this: font metrics require nano-vg context but should be calculated in drag/move on the fly
-	setTfFont(ctx, this);
-	updateTextLayout(ctx);
+    //TODO: find a better place to do this: font metrics require nano-vg context but should be calculated in drag/move on the fly
+    setTfFont(ctx, this);
+    updateTextLayout(ctx);
     if (!mCommitted) {
         updateCursor(ctx, metrics.textBounds[2]);
         updateShiftCursorVisible();
     }
-	this->renderTextField(ctx);
+    this->renderTextField(ctx);
 }
 #define X_SPACING (size.y * 0.3f)
 void gui_textfield::updateTextLayout(NVGcontext* ctx) {
 
-	nvgTextBounds(ctx, 0, 0, mValueTemp.c_str(), nullptr, metrics.textBounds);
-	metrics.lineH = metrics.textBounds[3] - metrics.textBounds[1];
+    nvgTextBounds(ctx, 0, 0, mValueTemp.c_str(), nullptr, metrics.textBounds);
+    metrics.lineH = metrics.textBounds[3] - metrics.textBounds[1];
 
-	// find cursor positions
-	metrics.numGlyphs = nvgTextGlyphPositions(ctx, 0, 0, mValueTemp.c_str(), nullptr, metrics.glyphPositions, MAX_CHARS);
+    // find cursor positions
+    metrics.numGlyphs = nvgTextGlyphPositions(ctx, 0, 0, mValueTemp.c_str(), nullptr, metrics.glyphPositions, MAX_CHARS);
 
-	ivec2 insetPos(pos.x, pos.y + size.y * 0.5f + 1);
+    ivec2 insetPos(pos.x, pos.y + size.y * 0.5f + 1);
 
 
-	float unitWidth = 0;
+    float unitWidth = 0;
 
-	if (!mUnits.empty()) {
-		unitWidth = nvgTextBounds(ctx, 0, 0, mUnits.c_str(), nullptr, nullptr) + 2;
-	}
+    if (!mUnits.empty()) {
+        unitWidth = nvgTextBounds(ctx, 0, 0, mUnits.c_str(), nullptr, nullptr) + 2;
+    }
 
-	float leftInset = 0.f;
-	switch (mAlignment) {
-		case Alignment::Left:
-			insetPos.x += X_SPACING + leftInset;
-			break;
-		case Alignment::Right:
-			insetPos.x += size.x - unitWidth - X_SPACING;
-			break;
-		case Alignment::Center:
-			insetPos.x += size.x * 0.5f;
-			break;
-	}
+    float leftInset = 0.f;
+    switch (mAlignment) {
+        case Alignment::Left:
+            insetPos.x += X_SPACING + leftInset;
+            break;
+        case Alignment::Right:
+            insetPos.x += size.x - unitWidth - X_SPACING;
+            break;
+        case Alignment::Center:
+            insetPos.x += size.x * 0.5f;
+            break;
+    }
 
-	drawPos = insetPos;
-	clipPos = {pos.x + X_SPACING + leftInset - 1.0f, pos.y + 1.0f};
-	clipSize = {size.x - unitWidth - leftInset - 2 * X_SPACING + 2.0f, size.y - 3.0f};
+    drawPos  = insetPos;
+    clipPos  = { pos.x + X_SPACING + leftInset - 1.0f, pos.y + 1.0f };
+    clipSize = { size.x - unitWidth - leftInset - 2 * X_SPACING + 2.0f, size.y - 3.0f };
 }
 void gui_textfield::renderTextField(NVGcontext* ctx) const {
 
-	if (size.x * size.y < 10)
-		return;
-	int32_t fl = getStateFlags();
-	renderWidgetBorder(ctx, fl);
+    if (size.x * size.y < 10)
+        return;
+    int32_t fl = getStateFlags();
+    renderWidgetBorder(ctx, fl);
 
-	nvgBeginPath(ctx);
-	nvgRoundedRect(ctx, pos.x + 1, pos.y + 1 + 1.0f, size.x - 2, size.y - 2, 3);
+    nvgBeginPath(ctx);
+    nvgRoundedRect(ctx, pos.x + 1, pos.y + 1 + 1.0f, size.x - 2, size.y - 2, 3);
 
-	if (mEditable && mFocused)
-		nvgFillColor(ctx, mValidFormat ? theme->getColor(GuiColor::COL_BG_DRK_FOCUSED) : nvgRGBA(200, 90, 90, 255));
-	else
-		nvgFillColor(ctx, theme->getColor(GuiColor::COL_BG_DRK));
-//	nvgFillColor(ctx, rgbaToNvg(0xFFDD3333));
+    if (mEditable && mFocused)
+        nvgFillColor(ctx, mValidFormat ? theme->getColor(GuiColor::COL_BG_DRK_FOCUSED) : nvgRGBA(200, 90, 90, 255));
+    else
+        nvgFillColor(ctx, theme->getColor(GuiColor::COL_BG_DRK));
 
-	nvgFill(ctx);
-
-
-	// clip visible text area
-	if (clipSize.x < 1 || clipSize.y < 1)
-		return;
-	nvgFontSize(ctx, fontSize());
-	UIFont::font_instance instance = theme->getFont(UIFont::FONT_TEXFIELD);
-	UIFont::bindFont(ctx, instance);
-	if (!mUnits.empty()) {
-		nvgFillColor(ctx, GUI_COLORA(255, mEnabled ? 64 : 32));
-		setTfFont(ctx, this);
-		nvgTextAlign(ctx, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
-		nvgText(ctx, pos.x + size.x - X_SPACING, drawPos.y, mUnits.c_str(), nullptr);
-	}
-
-	NVGcolor mTextColor = theme->getColor(GuiColor::COL_TEXTBOX_TEXT);
-	NVGcolor mTextColorDisabled = theme->getColor(GuiColor::COL_TEXTBOX_TEXT_DISABLED);
-	NVGcolor mTextColorMarked = theme->getColor(GuiColor::COL_TEXTBOX_TEXT_MARKED);
-//	NVGcolor mTextColorDisabled = GUI_COLORA(255, 80);
-	NVGcolor mColor = mEnabled && (!mCommitted || !mValue.empty()) ? mTextColor : mTextColorDisabled;
+    nvgFill(ctx);
 
 
+    // clip visible text area
+    if (clipSize.x < 1 || clipSize.y < 1)
+        return;
+    nvgFontSize(ctx, fontSize());
+    UIFont::font_instance instance = theme->getFont(UIFont::FONT_TEXFIELD);
+    UIFont::bindFont(ctx, instance);
+    if (!mUnits.empty()) {
+        nvgFillColor(ctx, GUI_COLORA(255, mEnabled ? 64 : 32));
+        setTfFont(ctx, this);
+        nvgTextAlign(ctx, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+        nvgText(ctx, pos.x + size.x - X_SPACING, drawPos.y, mUnits.c_str(), nullptr);
+    }
 
-	nvgSave(ctx);
-	nvgIntersectScissor(ctx, clipPos.x, clipPos.y, clipSize.x, clipSize.y);
+    NVGcolor mTextColor         = theme->getColor(GuiColor::COL_TEXTBOX_TEXT);
+    NVGcolor mTextColorDisabled = theme->getColor(GuiColor::COL_TEXTBOX_TEXT_DISABLED);
+    NVGcolor mTextColorMarked   = theme->getColor(GuiColor::COL_TEXTBOX_TEXT_MARKED);
 
-	if (mCommitted) {
-		nvgFillColor(ctx, mColor);
-		setTfFont(ctx, this);
-		nvgText(ctx, drawPos.x, drawPos.y, mValue.empty() ? mPlaceholder.c_str() : mValue.c_str(), nullptr);
-	} else {
-
-		nvgTranslate(ctx, drawPos.x + mTextOffset, drawPos.y);
-		//
-		if (mCursorPos > -1) {
-			float lineh = metrics.lineH;
-			float caretx = cursorIndex2Position(mCursorPos, metrics.textBounds[2]);
-			float carX = caretx;
-			if (mSelectionPos > -1) {
-				float selx = cursorIndex2Position(mSelectionPos, metrics.textBounds[2]);
-
-				if (caretx > selx)
-					std::swap(caretx, selx);
-
-				// draw selection
-				nvgBeginPath(ctx);
-				nvgRect(ctx, caretx,  - lineh * 0.5f, selx - caretx, lineh);
-				nvgFillColor(ctx, mTextColorMarked);
-				nvgFill(ctx);
-			}
+    NVGcolor mColor = mEnabled && (!mCommitted || !mValue.empty()) ? mTextColor : mTextColorDisabled;
 
 
-			// draw cursor
-			nvgBeginPath(ctx);
-			nvgMoveTo(ctx, carX,  - lineh * 0.5f);
-			nvgLineTo(ctx, carX,  + lineh * 0.5f);
-			nvgStrokeColor(ctx, mTextColor);
-			nvgStrokeWidth(ctx, 1.0f);
-			nvgStroke(ctx);
-		}
+    nvgSave(ctx);
+    nvgIntersectScissor(ctx, clipPos.x, clipPos.y, clipSize.x, clipSize.y);
 
-		nvgFillColor(ctx, mColor);
-		setTfFont(ctx, this);
-		// draw text with offset
-		nvgText(ctx, 0, 0, mValueTemp.c_str(), nullptr);
-	}
-//	int colorIdx = 0;
-//	auto renderDebugF = [](NVGcontext* vg, const guibase* gui, NVGcolor color) {
-//		nvgBeginPath(vg);
-//		nvgRect(vg, gui->pos.x, gui->pos.y, gui->size.x, gui->size.y);
-//		nvgFillColor(vg, color);
-//		nvgFill(vg);
-//	};
-//	static NVGcolor dbgcolorsa[5] = {
-//		nvgRGBA(255, 0, 0, 55),
-//		nvgRGBA(0, 255, 0, 55),
-//		nvgRGBA(0, 0, 255, 55),
-//		nvgRGBA(255, 0, 255, 55),
-//		nvgRGBA(255, 255, 0, 55)
-//	};
-//	renderDebugF(ctx, this, dbgcolorsa[colorIdx++ % 5]);
-	nvgRestore(ctx);
-//	renderDebugF(ctx, this, dbgcolorsa[colorIdx++ % 5]);
+    if (mCommitted) {
+        nvgFillColor(ctx, mColor);
+        setTfFont(ctx, this);
+        nvgText(ctx, drawPos.x, drawPos.y, mValue.empty() ? mPlaceholder.c_str() : mValue.c_str(), nullptr);
+    } else {
+
+        nvgTranslate(ctx, drawPos.x + mTextOffset, drawPos.y);
+        //
+        if (mCursorPos > -1) {
+            float lineh  = metrics.lineH;
+            float caretx = cursorIndex2Position(mCursorPos, metrics.textBounds[2]);
+            float carX   = caretx;
+            if (mSelectionPos > -1) {
+                float selx = cursorIndex2Position(mSelectionPos, metrics.textBounds[2]);
+
+                if (caretx > selx)
+                    std::swap(caretx, selx);
+
+                // draw selection
+                nvgBeginPath(ctx);
+                nvgRect(ctx, caretx, -lineh * 0.5f, selx - caretx, lineh);
+                nvgFillColor(ctx, mTextColorMarked);
+                nvgFill(ctx);
+            }
+
+
+            // draw cursor
+            nvgBeginPath(ctx);
+            nvgMoveTo(ctx, carX, -lineh * 0.5f);
+            nvgLineTo(ctx, carX, +lineh * 0.5f);
+            nvgStrokeColor(ctx, mTextColor);
+            nvgStrokeWidth(ctx, 1.0f);
+            nvgStroke(ctx);
+        }
+
+        nvgFillColor(ctx, mColor);
+        setTfFont(ctx, this);
+        // draw text with offset
+        nvgText(ctx, 0, 0, mValueTemp.c_str(), nullptr);
+    }
+    nvgRestore(ctx);
 }
 
 void gui_textfield::beginEdit() {
     mValueTemp = mValue;
     mCommitted = false;
-	int begin = mCursorPos;
-	int end = mSelectionPos;
+    int begin  = mCursorPos;
+    int end    = mSelectionPos;
 
-	if (begin > end)
-		std::swap(begin, end);
+    if (begin > end)
+        std::swap(begin, end);
     if (begin < 0 || end > mValue.length()) {
-        mCursorPos = 0;
+        mCursorPos    = 0;
         mSelectionPos = -1;
     }
     mValidFormat = (mValueTemp == "") || checkFormat(mValueTemp, mFormat);
 }
 void gui_textfield::endEdit(bool success) {
-	if (success) {
-	    mValidFormat = (mValueTemp == "") || checkFormat(mValueTemp, mFormat);
-	    if (mValidFormat) {
-	        if (mValueTemp == "")
-	            mValue = mDefaultValue;
-	        else
-	            mValue = mValueTemp;
-	    }
-	    onTextEndEdit();
-	} else {
-		mValueTemp = mValue;
-	}
+    if (success) {
+        mValidFormat = (mValueTemp == "") || checkFormat(mValueTemp, mFormat);
+        if (mValidFormat) {
+            if (mValueTemp == "")
+                mValue = mDefaultValue;
+            else
+                mValue = mValueTemp;
+        }
+        onTextEndEdit();
+    } else {
+        mValueTemp = mValue;
+    }
 
-    mValidFormat = true;
-    mCommitted = true;
-    mCursorPos = -1;
+    mValidFormat  = true;
+    mCommitted    = true;
+    mCursorPos    = -1;
     mSelectionPos = -1;
-    mTextOffset = 0;
+    mTextOffset   = 0;
 }
 bool gui_textfield::focusEvent(MouseHitEvt& evt, bool focused) {
-//    Widget::focusEvent(focused);
+    //    Widget::focusEvent(focused);
     std::string backup = mValue;
-    mFocused = focused;
+    mFocused           = focused;
     if (fnFocus) {
-    	fnFocus(evt, focused);
+        fnFocus(evt, focused);
     }
     if (mEditable) {
         if (focused) {
             beginEdit();
         } else {
-        	endEdit(!mCommitted);
+            endEdit(!mCommitted);
         }
     }
 
@@ -380,31 +348,31 @@ bool gui_textfield::keyboardEvent(int key, int /* scancode */, KeyEventType acti
                 if (!deleteSelection()) {
                     if (mCursorPos > 0) {
                         mCursorPos--;
-                    	if (filter && filter->isReplaceInput()) {
-                    		mValueTemp[mCursorPos] = '0';
-                    	} else if (mValueTemp.length()){
+                        if (filter && filter->isReplaceInput()) {
+                            mValueTemp[mCursorPos] = '0';
+                        } else if (mValueTemp.length()) {
                             mValueTemp.erase(mValueTemp.begin() + mCursorPos);
-                    	}
+                        }
                     }
                 }
             } else if (key == KEY_DELETE) {
                 if (!deleteSelection()) {
-					if (filter && filter->isReplaceInput()) {
-					} else {
-						if (mCursorPos < (int)mValueTemp.length())
-							mValueTemp.erase(mValueTemp.begin() + mCursorPos);
-					}
+                    if (filter && filter->isReplaceInput()) {
+                    } else {
+                        if (mCursorPos < (int) mValueTemp.length())
+                            mValueTemp.erase(mValueTemp.begin() + mCursorPos);
+                    }
                 }
             } else if (key == KEY_ESCAPE) {
-            	if (!mCommitted)
-            		endEdit(false);
+                if (!mCommitted)
+                    endEdit(false);
             } else if (mReturnCommits && (key == KEY_ENTER || key == KEY_KP_ENTER)) {
-            	if (!mCommitted)
-            		endEdit(true);
-            	else
-            		beginEdit();
+                if (!mCommitted)
+                    endEdit(true);
+                else
+                    beginEdit();
             } else if (key == KEY_A && isCtrl(modifiers)) {
-                mCursorPos = (int) mValueTemp.length();
+                mCursorPos    = (int) mValueTemp.length();
                 mSelectionPos = 0;
             } else if (key == KEY_X && isCtrl(modifiers)) {
                 copySelection();
@@ -415,8 +383,7 @@ bool gui_textfield::keyboardEvent(int key, int /* scancode */, KeyEventType acti
                 deleteSelection();
                 pasteFromClipboard();
             }
-    		onChange();
-
+            onChange();
         }
 
         return true;
@@ -426,70 +393,70 @@ bool gui_textfield::keyboardEvent(int key, int /* scancode */, KeyEventType acti
 }
 
 bool gui_textfield::handleCharInput(unsigned int codepoint) {
-	if (mEditable && mFocused) {
-		if (filter) {
-			if (!filter->isAllowedChar(codepoint)) {
-				return true;
-			}
-		}
-		std::ostringstream convert;
-		convert << (char) codepoint;
-		if (mCursorPos > -1) {
-			auto cvstr = convert.str();
-			if (!cvstr.length()) {
-				return true;
-			}
-			auto cvchar = cvstr[0];
-			if (filter && filter->isReplaceInput()) {
-				int32_t len = 1;
-				int32_t mincursor = mCursorPos;
-			    if (mSelectionPos > -1) {
-					mincursor = math::min(mSelectionPos, mCursorPos);
-			    	len = math::max(mSelectionPos, mCursorPos) - mincursor;
-			    }
-		        for (int i = 0; i < len; i++) {
-		        	mValueTemp[i+mincursor] = cvchar;
-		        }
-				if (mCursorPos > mValueTemp.length() - 1) {
-					mCursorPos = mValueTemp.length() - 1;
-				}
+    if (mEditable && mFocused) {
+        if (filter) {
+            if (!filter->isAllowedChar(codepoint)) {
+                return true;
+            }
+        }
+        std::ostringstream convert;
+        convert << (char) codepoint;
+        if (mCursorPos > -1) {
+            auto cvstr = convert.str();
+            if (!cvstr.length()) {
+                return true;
+            }
+            auto cvchar = cvstr[0];
+            if (filter && filter->isReplaceInput()) {
+                int32_t len       = 1;
+                int32_t mincursor = mCursorPos;
+                if (mSelectionPos > -1) {
+                    mincursor = math::min(mSelectionPos, mCursorPos);
+                    len       = math::max(mSelectionPos, mCursorPos) - mincursor;
+                }
+                for (int i = 0; i < len; i++) {
+                    mValueTemp[i + mincursor] = cvchar;
+                }
+                if (mCursorPos > mValueTemp.length() - 1) {
+                    mCursorPos = mValueTemp.length() - 1;
+                }
 
-			    if (mSelectionPos < 0) {
-		 			mCursorPos++;
-					if (mCursorPos == mValueTemp.length()) {
-						mCursorPos = 2;
-					}
-			    }
-			} else {
-				deleteSelection();
-				mValueTemp.insert(mCursorPos, cvstr);
-	 			mCursorPos++;
-			}
-			onChange();
-		}
-		return true;
-	}
+                if (mSelectionPos < 0) {
+                    mCursorPos++;
+                    if (mCursorPos == mValueTemp.length()) {
+                        mCursorPos = 2;
+                    }
+                }
+            } else {
+                deleteSelection();
+                mValueTemp.insert(mCursorPos, cvstr);
+                mCursorPos++;
+            }
+            onChange();
+        }
+        return true;
+    }
 
-	return false;
+    return false;
 }
 void gui_textfield::onChange() {
     mValidFormat = (mValueTemp == "") || checkFormat(mValueTemp, mFormat);
-	if (filter) {
-		mValueTemp = filter->parse(mValueTemp);
-		if (mCursorPos > mValueTemp.length()) {
-			mCursorPos = mValueTemp.length();
-		}
-	}
+    if (filter) {
+        mValueTemp = filter->parse(mValueTemp);
+        if (mCursorPos > mValueTemp.length()) {
+            mCursorPos = mValueTemp.length();
+        }
+    }
     onTextChange();
 }
-bool gui_textfield::checkFormat(const std::string &input, const std::string &format) {
+bool gui_textfield::checkFormat(const std::string& input, const std::string& format) {
 #if TEXTFIELD_USE_REGEX_PATTERN
     if (format.empty())
         return true;
     try {
         std::regex regex(format);
         return regex_match(input, regex);
-    } catch (const std::regex_error &) {
+    } catch (const std::regex_error&) {
 #if __GNUC__ < 4 || (__GNUC__ == 4 && __GNUC_MINOR__ < 9)
         std::cerr << "Warning: cannot validate text field due to lacking regular expression support. please compile with GCC >= 4.9" << std::endl;
         return true;
@@ -503,48 +470,48 @@ bool gui_textfield::checkFormat(const std::string &input, const std::string &for
 }
 
 bool gui_textfield::copySelectionString(std::string& output) {
-	if (mSelectionPos > -1) {
-		int begin = mCursorPos;
-		int end = mSelectionPos;
+    if (mSelectionPos > -1) {
+        int begin = mCursorPos;
+        int end   = mSelectionPos;
 
-		if (begin > end)
-			std::swap(begin, end);
-		if ((int) mValueTemp.length() >= end - begin)
-			output = mValueTemp.substr(begin, end).c_str();
-		return true;
-	}
+        if (begin > end)
+            std::swap(begin, end);
+        if ((int) mValueTemp.length() >= end - begin)
+            output = mValueTemp.substr(begin, end).c_str();
+        return true;
+    }
 
-	return false;
+    return false;
 }
 bool gui_textfield::copySelection() {
-	if (mSelectionPos > -1) {
-		int begin = mCursorPos;
-		int end = mSelectionPos;
+    if (mSelectionPos > -1) {
+        int begin = mCursorPos;
+        int end   = mSelectionPos;
 
-		if (begin > end)
-			std::swap(begin, end);
-		if ((int)mValueTemp.length() >= end-begin)
-		parentCtrl->setClipboardText(mValueTemp.substr(begin, end).c_str());
-		onChange(); //=??????
-		return true;
-	}
+        if (begin > end)
+            std::swap(begin, end);
+        if ((int) mValueTemp.length() >= end - begin)
+            parentCtrl->setClipboardText(mValueTemp.substr(begin, end).c_str());
+        onChange();//=??????
+        return true;
+    }
 
     return false;
 }
 
 void gui_textfield::pasteFromClipboard() {
-	if (mCursorPos >= 0 && mCursorPos <= (int)mValueTemp.size()) {
-		String str = parentCtrl->getClipboardText();
-		mValueTemp.insert(mCursorPos, str);
-		mCursorPos += str.length();
-		onChange();
-	}
+    if (mCursorPos >= 0 && mCursorPos <= (int) mValueTemp.size()) {
+        String str = parentCtrl->getClipboardText();
+        mValueTemp.insert(mCursorPos, str);
+        mCursorPos += str.length();
+        onChange();
+    }
 }
 
 bool gui_textfield::deleteSelection() {
     if (mSelectionPos > -1) {
         int begin = mCursorPos;
-        int end = mSelectionPos;
+        int end   = mSelectionPos;
 
         if (begin > end)
             std::swap(begin, end);
@@ -556,7 +523,7 @@ bool gui_textfield::deleteSelection() {
             mValueTemp.erase(mValueTemp.begin() + begin,
                              mValueTemp.begin() + end);
 
-        mCursorPos = begin;
+        mCursorPos    = begin;
         mSelectionPos = -1;
         return true;
     }
@@ -570,70 +537,70 @@ void gui_textfield::updateShiftCursorVisible() {
     float prevCX = cursorIndex2Position(prevCPos, metrics.textBounds[2]);
     float nextCX = cursorIndex2Position(nextCPos, metrics.textBounds[2]);
 
-	switch (mAlignment) {
-	case Alignment::Left:
-		nextCX = nextCX+drawPos.x-clipPos.x;
-		prevCX = prevCX+drawPos.x-clipPos.x;
-		break;
-	case Alignment::Center:
-		nextCX = nextCX+drawPos.x-clipPos.x;
-		prevCX = prevCX+drawPos.x-clipPos.x;
-		break;
-	case Alignment::Right:
-		nextCX = nextCX+drawPos.x-clipPos.x;
-		prevCX = prevCX+drawPos.x-clipPos.x;
-		break;
-	}
+    switch (mAlignment) {
+        case Alignment::Left:
+            nextCX = nextCX + drawPos.x - clipPos.x;
+            prevCX = prevCX + drawPos.x - clipPos.x;
+            break;
+        case Alignment::Center:
+            nextCX = nextCX + drawPos.x - clipPos.x;
+            prevCX = prevCX + drawPos.x - clipPos.x;
+            break;
+        case Alignment::Right:
+            nextCX = nextCX + drawPos.x - clipPos.x;
+            prevCX = prevCX + drawPos.x - clipPos.x;
+            break;
+    }
     float mTextOffset = 0;
-	if (nextCX > clipSize.x)
-		mTextOffset -= nextCX - clipSize.x + 1;
-	if (prevCX < 0)
-		mTextOffset += 0 - prevCX + 1;
-//	if (this->mTextOffset != mTextOffset) {
-//		if (nextCX > clipSize.x)
-//			my_printf("nextCX > clipSize.x %f > %f\n", nextCX, clipSize.x);
-//		if (prevCX < 0)
-//			my_printf("prevCX < 0 %f\n", prevCX);
-//		my_printf("prevCPos %d\n", prevCPos);
-//		my_printf("metrics.textBounds[2] %f\n", metrics.textBounds[2]);
-//		my_printf("pos.x %f\n", (float)pos.x);
-//		my_printf("drawPos.x %f\n", (float)drawPos.x);
-//		my_printf("drawPos.x-pos.x %f\n", (float)(drawPos.x-pos.x));
-//		my_printf("clipPos.x %f\n", (float)clipPos.x);
-//	}
-	this->mTextOffset = mTextOffset;
+    if (nextCX > clipSize.x)
+        mTextOffset -= nextCX - clipSize.x + 1;
+    if (prevCX < 0)
+        mTextOffset += 0 - prevCX + 1;
+    //    if (this->mTextOffset != mTextOffset) {
+    //        if (nextCX > clipSize.x)
+    //            my_printf("nextCX > clipSize.x %f > %f\n", nextCX, clipSize.x);
+    //        if (prevCX < 0)
+    //            my_printf("prevCX < 0 %f\n", prevCX);
+    //        my_printf("prevCPos %d\n", prevCPos);
+    //        my_printf("metrics.textBounds[2] %f\n", metrics.textBounds[2]);
+    //        my_printf("pos.x %f\n", (float) pos.x);
+    //        my_printf("drawPos.x %f\n", (float) drawPos.x);
+    //        my_printf("drawPos.x-pos.x %f\n", (float) (drawPos.x - pos.x));
+    //        my_printf("clipPos.x %f\n", (float) clipPos.x);
+    //    }
+    this->mTextOffset = mTextOffset;
 }
-void gui_textfield::updateCursor(NVGcontext *, float lastx) {
-	// handle mouse cursor events
-	if (mMouseDownPos.x != -1) {
-		if (mMouseDownModifier == KB_MOD_SHIFT) {
-			if (mSelectionPos == -1)
-				mSelectionPos = mCursorPos;
-		} else
-			mSelectionPos = -1;
+void gui_textfield::updateCursor(NVGcontext*, float lastx) {
+    // handle mouse cursor events
+    if (mMouseDownPos.x != -1) {
+        if (mMouseDownModifier == KB_MOD_SHIFT) {
+            if (mSelectionPos == -1)
+                mSelectionPos = mCursorPos;
+        } else
+            mSelectionPos = -1;
 
-		mCursorPos = position2CursorIndex(mMouseDownPos.x-(drawPos.x-pos.x), lastx);
+        mCursorPos = position2CursorIndex(mMouseDownPos.x - (drawPos.x - pos.x), lastx);
 
-		mMouseDownPos = ivec2(-1, -1);
-	} else if (mMouseDragPos.x != -1) {
-		if (mSelectionPos == -1)
-			mSelectionPos = mCursorPos;
+        mMouseDownPos = ivec2(-1, -1);
+    } else if (mMouseDragPos.x != -1) {
+        if (mSelectionPos == -1)
+            mSelectionPos = mCursorPos;
 
-		mCursorPos = position2CursorIndex(mMouseDragPos.x-(drawPos.x-pos.x), lastx);
-	} else {
-		// set cursor to last character
-		if (mCursorPos == -2)
-			mCursorPos = metrics.numGlyphs;
-	}
+        mCursorPos = position2CursorIndex(mMouseDragPos.x - (drawPos.x - pos.x), lastx);
+    } else {
+        // set cursor to last character
+        if (mCursorPos == -2)
+            mCursorPos = metrics.numGlyphs;
+    }
 
-	if (mCursorPos == mSelectionPos)
-		mSelectionPos = -1;
+    if (mCursorPos == mSelectionPos)
+        mSelectionPos = -1;
 }
 
 float gui_textfield::cursorIndex2Position(int index, float lastx) const {
     float pos = 0;
     if (index == metrics.numGlyphs)
-        pos = lastx; // last character
+        pos = lastx;// last character
     else
         pos = metrics.glyphPositions[index].x;
 
@@ -641,13 +608,13 @@ float gui_textfield::cursorIndex2Position(int index, float lastx) const {
 }
 
 int gui_textfield::position2CursorIndex(float posx, float lastx) const {
-//	posx += drawPos.x;
+    //	posx += drawPos.x;
     int mCursorId = 0;
-    float caretx = metrics.glyphPositions[mCursorId].x;
+    float caretx  = metrics.glyphPositions[mCursorId].x;
     for (int j = 1; j < metrics.numGlyphs; j++) {
         if (math::abs(caretx - posx) > math::abs(metrics.glyphPositions[j].x - posx)) {
             mCursorId = j;
-            caretx = metrics.glyphPositions[mCursorId].x;
+            caretx    = metrics.glyphPositions[mCursorId].x;
         }
     }
     if (math::abs(caretx - posx) > math::abs(lastx - posx))
