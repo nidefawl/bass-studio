@@ -90,9 +90,9 @@ void guictr_base::renderContainerLabel(NVGcontext* vg) {
 			} else {
 				posInset.y -= sizeF;
 			}
-	//		posInset -= ivec2(margin);
-	//		sizeInset += ivec2(margin) * 2;
-			if (sizeInset.y > 0 && sizeInset.x > 0) {
+//            posInset -= ivec2(margin);
+//            sizeInset += ivec2(margin) * 2;
+            if (sizeInset.y > 0 && sizeInset.x > 0) {
 				nvgBeginPath(vg);
 				nvgRoundedRect(vg, posInset.x, posInset.y, sizeInset.x, sizeInset.y, 4);
 				NVGcolor bg = theme->getColor(GuiColor::COL_BG_DRK);
@@ -137,9 +137,6 @@ void guictr_base::renderFrameOutline(NVGcontext* vg) {
 	nvgStrokeColor(vg, theme->getFrameColorOutline());
 	nvgStrokeWidth(vg, 2.0);
 	nvgStroke(vg);
-	//Why is this still here? This should happen in setScissorTransformContainer
-//	ivec2 sizeInset = getSizeContent();
-//	nvgIntersectScissor(vg, 0, 0, sizeInset.x, sizeInset.y);
 }
 
 void guictr_base::renderTitleBar(NVGcontext* vg, const ivec2& sizeContent, String text, GuiConstant::constant_t& constantHeight, float textOffsetX, int flags, bool isHorizontalTitle) {

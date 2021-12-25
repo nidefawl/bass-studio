@@ -11,80 +11,79 @@
 class ctxtmenu_entry;
 class guictxtmenu : public guictxtmenu_base {
 protected:
-	std::vector<ctxtmenu_entry*> entries;
+    std::vector<ctxtmenu_entry*> entries;
+
 public:
-	guictxtmenu() : guictxtmenu_base() {
-		setCanMouseHit(true);
-		setBackgroundRendered(false);
-		setBackgroundRenderedInset(false);
-		setSnapSides(ivec4(1));
-	}
-	virtual ~guictxtmenu() {
-		for (ctxtmenu_entry* e : entries) {
-			delete e;
-		}
-	}
-	void addEntry(ctxtmenu_entry* entry) {
-		size.x = math::max(size.x, entry->width);
-		entries.push_back(entry);
-		entry->theme = theme;
-	}
-	virtual void clicked(int _id) {
-		closeContextMenu();
-	}
-	virtual void clickedElement(ctxtmenu_entry* e, int _id) {
-		clicked(_id);
-	}
-	virtual void handleDraggedBegin(MouseEvent& evt) {
-		ivec2 local = evt.relMousepos;
-		for (ctxtmenu_entry* e : entries) {
-			int n = e->getClicked(size, local);
-			if (n >= 0) {
-				clickedElement(e, n);
-				return;
-			}
-		}
-		return;
-	}
-	void layout() {
-		//TODO: figure out string width here to make life easier laying out context menus
-		int y = paddingV;
-		for (ctxtmenu_entry* e : entries) {
-			e->layout(size, fontSize);
-			e->y = y;
-			y += e->height + paddingV;
-		}
-	}
-	void determineSize(ivec2& prefSize) override {
-		ivec2 newMaxSize = {size.x, paddingV};
-		for (ctxtmenu_entry* e : entries) {
-			newMaxSize.y += e->height + paddingV;
-		}
-		if (entries.empty()) {
-			newMaxSize.y += paddingV;
-		}
-		prefSize = newMaxSize;
-	}
+    guictxtmenu() : guictxtmenu_base() {
+        setCanMouseHit(true);
+        setBackgroundRendered(false);
+        setBackgroundRenderedInset(false);
+        setSnapSides(ivec4(1));
+    }
+    virtual ~guictxtmenu() {
+        for (ctxtmenu_entry* e: entries) {
+            delete e;
+        }
+    }
+    void addEntry(ctxtmenu_entry* entry) {
+        size.x = math::max(size.x, entry->width);
+        entries.push_back(entry);
+        entry->theme = theme;
+    }
+    virtual void clicked(int _id) {
+        closeContextMenu();
+    }
+    virtual void clickedElement(ctxtmenu_entry* e, int _id) {
+        clicked(_id);
+    }
+    virtual void handleDraggedBegin(MouseEvent& evt) {
+        ivec2 local = evt.relMousepos;
+        for (ctxtmenu_entry* e: entries) {
+            int n = e->getClicked(size, local);
+            if (n >= 0) {
+                clickedElement(e, n);
+                return;
+            }
+        }
+        return;
+    }
+    void layout() {
+        //TODO: figure out string width here to make life easier laying out context menus
+        int y = paddingV;
+        for (ctxtmenu_entry* e: entries) {
+            e->layout(size, fontSize);
+            e->y = y;
+            y += e->height + paddingV;
+        }
+    }
+    void determineSize(ivec2& prefSize) override {
+        ivec2 newMaxSize = { size.x, paddingV };
+        for (ctxtmenu_entry* e: entries) {
+            newMaxSize.y += e->height + paddingV;
+        }
+        if (entries.empty()) {
+            newMaxSize.y += paddingV;
+        }
+        prefSize = newMaxSize;
+    }
 
-	void render(NVGcontext* vg) {
-		if (isBackgroundRendered()) {
-			renderBackground(vg);
-		}
-		setScissorTransform(vg);
-		int idx = 0;
-		ivec2 mouse = parentCtrl->m_mousePos;
-		mouse = toContainerSpace(mouse);
-		for (ctxtmenu_entry* e : entries) {
-			e->render(size, vg, idx, mouse);
-			idx++;
-		}
-	}
-	void setControl(BaseCtrl* parentCtrl) {
-		guictxtmenu_base::setControl(parentCtrl);
-		for (auto* g : entries) {
-			g->theme = parentCtrl ? parentCtrl->getTheme() : nullptr;
-		}
-	}
+    void render(NVGcontext* vg) {
+        if (isBackgroundRendered()) {
+            renderBackground(vg);
+        }
+        setScissorTransform(vg);
+        int idx     = 0;
+        ivec2 mouse = parentCtrl->m_mousePos;
+        mouse       = toContainerSpace(mouse);
+        for (ctxtmenu_entry* e: entries) {
+            e->render(size, vg, idx, mouse);
+            idx++;
+        }
+    }
+    void setControl(BaseCtrl* parentCtrl) {
+        guictxtmenu_base::setControl(parentCtrl);
+        for (auto* g: entries) {
+            g->theme = parentCtrl ? parentCtrl->getTheme() : nullptr;
+        }
+    }
 };
-
-
