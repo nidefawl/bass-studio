@@ -705,8 +705,8 @@ void DawInstance::unloadProject() {
 	auto* ctrl = mainCtrl;
 	if (ctrl) {
 		auto& trackView = ctrl->view->ctr_tracks.trackView;
-		trackView.resizePreModifyState.reset();
-		trackView.clipboard.reset();
+		trackView.m_resizePreModifyState.reset();
+		trackView.m_clipboard.reset();
 		trackView.action.clipboard.reset();
 		trackView.iGuiMgr.reset();
 	}

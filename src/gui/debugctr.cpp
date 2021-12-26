@@ -522,7 +522,7 @@ void resetHistAndCheck() {
     auto daw          = DawInstance::get();
     auto& trackEditor = MainCtrl::getGuiTrackCtr()->trackView;
     trackEditor.action.clipboard.reset();
-    trackEditor.clipboard.reset();
+    trackEditor.m_clipboard.reset();
     daw->getHist().clear(daw);
 
     auto& tracks = daw->getTracks();

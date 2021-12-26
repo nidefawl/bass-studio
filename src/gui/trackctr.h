@@ -70,12 +70,12 @@ public:
     track_gui_entry_t* trSelected     = nullptr;
     gui_track_subtrack* subTrSelected = nullptr;
     clip_dragaction action;                   // move up in hierachy
-    std::shared_ptr<clip_clipboard> clipboard;// move up in hierachy
+    std::shared_ptr<clip_clipboard> m_clipboard;// move up in hierachy
     tracklayout_t dragStartLayout;
     int32_t dragStartTick     = 0;
     int32_t dragStartTrackIdx = 0;
 
-    trackstate_t resizePreModifyState;
+    trackstate_t m_resizePreModifyState;
     bool selectionMoved = false;
     guitrack_editor(DawCtrl* const _dawCtrl, track_gui_manager_i& _iGuiMgr, DAW::Cursor& _cursor, project_t& _project, project_globals_t& _projectGlobals, scaled_grid& _grid, dragdrop_midifile& _dragdropclip)
         : guictr_base(),
@@ -90,7 +90,7 @@ public:
         sortChildren = true;
     }
     ~guitrack_editor() override {
-        clipboard.reset();
+        m_clipboard.reset();
     }
     bool mouseHitTest(ivec2 v, MouseHitEvt& evt) override;
     bool handleKeyInput(KeyEvent& kevt) override;
@@ -111,7 +111,7 @@ public:
     void handleRightClick(MouseEvent& evt) override;
 
     void renderClip(NVGcontext* vg, const track_gui_entry_t* entry, clip_t* cl, tick_t offset);
-    void renderAction(NVGcontext* vg, clip_dragaction& action);
+    void renderAction(NVGcontext* vg, clip_dragaction& renderAction);
     void render(NVGcontext* vg) override;
     void prerender(NVGcontext* vg) override;
 

@@ -176,8 +176,8 @@ void guictr_tracks::removeAllSubtracks(track_gui_entry_t* entry) {
     trackView.removeAllSubtracks(entry);
 }
 void guictr_tracks::resetView() {
-    trackView.resizePreModifyState.reset();
-    trackView.clipboard.reset();
+    trackView.m_resizePreModifyState.reset();
+    trackView.m_clipboard.reset();
     trackView.action.clipboard.reset();
     trackView.iGuiMgr.reset();
 }
