@@ -5,8 +5,8 @@
 
 void enableGlDebugCallback();
 bool checkGLError(const char* s);
-int getStatus(int obj, int type);
-String getLog(int logtype, int obj);
+int getStatus(unsigned int obj, unsigned int type);
+String getLog(int logtype, unsigned int obj);
 int compileShader(int type, const String& src);
 bool isGLContextPresent();
 inline void gldPerspective(double* mat4x4, double fovy, double aspect, double zNear, double zFar) {
@@ -48,7 +48,6 @@ inline void downsampledResolution(int w, int h, int fac, int& wd, int& hd) {
         if (ssrH < 1) ssrH = 1;
         wd = ssrW;
         hd = ssrH;
-        ;
     } else {
         wd = w;
         hd = h;

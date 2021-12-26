@@ -1,5 +1,4 @@
 #include "glheaders.h"
-#include <stdio.h>
 #include <vector>
 #include "str_util.h"
 #include "gl_tess2d.h"
@@ -8,7 +7,6 @@
 #include "gl_framebuffer.h"
 #include "logging.h"
 #include <GLFW/glfw3.h>
-#include "appsettings.h"
 
 void debugCB(GLenum source,
              GLenum type,
@@ -17,18 +15,19 @@ void debugCB(GLenum source,
              GLsizei length,
              const GLchar* message,
              const void* userParam) {
-    if (strstr(message, "Buffer detailed info") == NULL && strstr(message, "state performance warning") == NULL) {
-        my_printf("%s\n", message);
+    if (!strstr(message, "Buffer detailed info") && !strstr(message, "state performance warning")) {
+        log_printf("%s\n", message);
         if (strstr(message, "error")) {
         }
     }
 }
+
 void enableGlDebugCallback() {
 
     glEnable(GL_DEBUG_OUTPUT);
     glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
     if (glDebugMessageCallback)
-        glDebugMessageCallback(debugCB, NULL);
+        glDebugMessageCallback(debugCB, nullptr);
     GLuint unusedIds = 0;
     if (glDebugMessageControl)
         glDebugMessageControl(GL_DONT_CARE,
@@ -70,7 +69,7 @@ bool checkGLError(const char* s) {
     }
     return false;
 }
-int getStatus(int obj, int type) {
+int getStatus(GLuint obj, GLenum type) {
     GLint n = 0;
     if (type == GL_LINK_STATUS) {
         glGetProgramiv(obj, type, &n);
@@ -79,7 +78,7 @@ int getStatus(int obj, int type) {
     }
     return n;
 }
-String getLog(int logtype, int obj) {
+String getLog(int logtype, GLuint obj) {
     GLint maxLength = 0;
     if (logtype == 0) {
         glGetShaderiv(obj, GL_INFO_LOG_LENGTH, &maxLength);
@@ -102,7 +101,7 @@ String getLog(int logtype, int obj) {
         checkGLError("glGetProgramInfoLog");
     }
     String s;
-    if (infoLog.size()) s = infoLog.data();
+    if (!infoLog.empty()) s = infoLog.data();
     return s;
 }
 bool isGLContextPresent() {
@@ -111,8 +110,8 @@ bool isGLContextPresent() {
 int compileShader(int type, const String& src) {
     int iShader = glCreateShader(type);
     checkGLError("glCreateShader");
-    const GLchar* szSrc = (const GLchar*) StringAsCStr(src);
-    glShaderSource(iShader, 1, &szSrc, NULL);
+    const auto* szSrc = (const GLchar*) StringAsCStr(src);
+    glShaderSource(iShader, 1, &szSrc, nullptr);
     checkGLError("glShaderSourceARB");
     glCompileShader(iShader);
     checkGLError("glCompileShader");
@@ -138,25 +137,24 @@ int compileShader(int type, const String& src) {
         glGenBuffers(1, &out.vboIdxId);
     }
     glBindBuffer(GL_ARRAY_BUFFER, out.vboVertId);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(float) * vertices.size(), vertices.data(), GL_STREAM_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(sizeof(float) * vertices.size()), vertices.data(), GL_STREAM_DRAW);
     checkGLError("upload vertex data");
 
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, out.vboIdxId);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(int) * indices.size(), indices.data(), GL_STREAM_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, (GLsizeiptr)(sizeof(int) * indices.size()), indices.data(), GL_STREAM_DRAW);
     checkGLError("upload index data");
-    out.nIndices = indices.size();
+    out.nIndices = (int64_t)indices.size();
 }
 void bindVertexAttributes(std::vector<VertexAttr>& attrs, int fixedStride) {
     int32_t vertStrideBytes = fixedStride;
     if (!vertStrideBytes) {
-        for (int i = 0; i < (int) attrs.size(); i++) {
-            vertStrideBytes += attrs[i].elements * sizeof(float);
+        for (auto & attr : attrs) {
+            vertStrideBytes += (int32_t)(attr.elements * sizeof(float));
         }
     }
 
     size_t offset = 0;
-    for (int i = 0; i < (int) attrs.size(); i++) {
-        VertexAttr& attr = attrs[i];
+    for (auto & attr : attrs) {
         if (attr.bindingPt >= 0) {
             glVertexAttribPointer(attr.bindingPt,
                                   attr.elements,
@@ -170,7 +168,7 @@ void bindVertexAttributes(std::vector<VertexAttr>& attrs, int fixedStride) {
         }
         offset += attr.elements * sizeof(float);
     }
-    for (int i = attrs.size(); i < 6; i++) {
+    for (int i = (int)attrs.size(); i < 6; i++) {
         glDisableVertexAttribArray(i);
     }
 }
@@ -184,9 +182,9 @@ void DrawVBO::genBuffers() {
 }
 
 #define MIN_BUF_SIZE (16384)
-void DrawVBO::uploadBuffer(uint32_t bufferType, void* ptr, size_t len) {
+void DrawVBO::uploadBuffer(uint32_t bufferType, void* ptr, int64_t len) {
     uint32_t buffer  = (bufferType == GL_ARRAY_BUFFER) ? vboVertId : vboIdxId;
-    int32_t& vboSize = (bufferType == GL_ARRAY_BUFFER) ? vboVertSize : vboIdxSize;
+    int64_t& vboSize = (bufferType == GL_ARRAY_BUFFER) ? vboVertSize : vboIdxSize;
 
     glBindBuffer(bufferType, buffer);
     const GLenum usage = GL_DYNAMIC_DRAW;
@@ -194,12 +192,12 @@ void DrawVBO::uploadBuffer(uint32_t bufferType, void* ptr, size_t len) {
         glBufferData(bufferType, MIN_BUF_SIZE, nullptr, usage);
         vboSize = MIN_BUF_SIZE;
     }
-    //  log_printf("Buffer type %s %d, vboSize %d, len %d, ptr %08X\n",
-    //      (bufferType == GL_ARRAY_BUFFER) ? "GL_ARRAY_BUFFER" : "GL_ELEMENT_ARRAY_BUFFER",
-    //      buffer, vboSize, len, ptr);
+    //log_printf("Buffer type %s %d, vboSize %d, len %d, ptr %08X\n",
+    //           (bufferType == GL_ARRAY_BUFFER) ? "GL_ARRAY_BUFFER" : "GL_ELEMENT_ARRAY_BUFFER",
+    //           buffer, vboSize, len, ptr);
     if (vboSize < len) {
         vboSize = len;
-        //      log_printf("len changed to %d, orphan buffer\n", len);
+        //log_printf("len changed to %d, orphan buffer\n", len);
         glBufferData(bufferType, len, nullptr, usage);//invalidate previous buffer ('handoff' to driver as explained by some guru)
         glBufferData(bufferType, len, ptr, usage);
     } else {
@@ -220,6 +218,7 @@ void DrawVBO::destroy() {
         glDeleteBuffers(1, &vboIdxId);
     }
     vaoId       = 0;
+
     vboVertId   = 0;
     vboIdxId    = 0;
     nIndices    = 0;
