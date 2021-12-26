@@ -1,4 +1,4 @@
-#include <stdint.h>
+#include <cstdint>
 #include <nanovg.h>
 #include <algorithm>
 #include "math/seq_math.h"
@@ -17,7 +17,7 @@ NVGcolor rgbToNvg(uint32_t i) {
 	NVGcolor c;
 	c.b = (float)((i & 0xFF) / 255.); i >>= 8;
 	c.g = (float)((i & 0xFF) / 255.); i >>= 8;
-	c.r = (float)((i & 0xFF) / 255.); i >>= 8;
+	c.r = (float)((i & 0xFF) / 255.);
 	c.a = 1.0f;
 	return c;
 }
@@ -33,7 +33,7 @@ NVGcolor rgbfToNvg(uint32_t i, float f) {
 	NVGcolor c;
 	c.b = (float)((i & 0xFF) / 255.); i >>= 8;
 	c.g = (float)((i & 0xFF) / 255.); i >>= 8;
-	c.r = (float)((i & 0xFF) / 255.); i >>= 8;
+	c.r = (float)((i & 0xFF) / 255.);
 	c.a = f;
 	return c;
 }
@@ -66,14 +66,12 @@ NVGcolor mulSatBright(NVGcolor rgb, float sat, float brt) {
 }
 NVGcolor HSVtoRGB(float h, float s, float v)
 {
-
 	struct rgbdouble {
 		double x, y, z;
 	};
-	rgbdouble RGB;
     double H = h, S = s, V = v,
-            P, Q, T,
-            fract;
+           P, Q, T,
+           fract;
 
     (H == 360.)?(H = 0.):(H /= 60.);
     fract = H - floor(H);
@@ -82,6 +80,7 @@ NVGcolor HSVtoRGB(float h, float s, float v)
     Q = V*(1. - S*fract);
     T = V*(1. - S*(1. - fract));
 
+    rgbdouble RGB{};
     if      (0. <= H && H < 1.)
         RGB = {V, T, P};
     else if (1. <= H && H < 2.)
@@ -113,7 +112,6 @@ NVGcolor HSLtoRGB(float h, float s, float l)
     float p = l * ( 1 - s );
     float q = l * ( 1 - s * f );
     float t = l * ( 1 - s * ( 1 - f ) );
-    NVGcolor rgb{};
     switch (region)
     {
         case 0:
@@ -127,10 +125,8 @@ NVGcolor HSLtoRGB(float h, float s, float l)
         case 4:
         	return {t, p, l, 1.0f};
         default:
-        	return {l, p, q, 1.0f};
+            return {l, p, q, 1.0f};
     }
-
-    return rgb;
 }
 
 NVGcolor nvgToHSL(NVGcolor rgb) {
@@ -146,7 +142,6 @@ NVGcolor nvgToHSL(NVGcolor rgb) {
 
 	if (diff != 0) {
 		s = l < 0.5 ? diff / (fCMax + fCMin) : diff / (2.0 - fCMax - fCMin);
-
 		h = (r == fCMax ? (g - b) / diff : g == fCMax ? 2.0 + (b - r) / diff : 4.0 + (r - g) / diff) / 6.0;
 	}
 	NVGcolor hsv;
@@ -239,7 +234,6 @@ glm::vec4 RGBtoHSV(glm::vec4 rgb) {
 
 	if (diff != 0) {
 		s = l < 0.5 ? diff / (fCMax + fCMin) : diff / (2.0 - fCMax - fCMin);
-
 		h = (r == fCMax ? (g - b) / diff : g == fCMax ? 2.0 + (b - r) / diff : 4.0 + (r - g) / diff) / 6.0;
 	}
 	glm::vec4 hsv;
@@ -263,7 +257,7 @@ glm::vec4 int32vec4(uint32_t i) {
 	r.z = (float) ((i & 0xFF) / 255.); i >>= 8;
 	r.y = (float) ((i & 0xFF) / 255.); i >>= 8;
 	r.x = (float) ((i & 0xFF) / 255.); i >>= 8;
-	r.w = (float) ((i & 0xFF) / 255.); i >>= 8;
+	r.w = (float) ((i & 0xFF) / 255.);
 	return r;
 }
 

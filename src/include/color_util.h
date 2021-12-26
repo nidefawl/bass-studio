@@ -12,7 +12,7 @@ vec4 colorHex(uint32_t color);
 vec4 hexToHSL(uint32_t color);
 vec4 int32vec4(uint32_t i);
 inline NVGcolor vec4ToNvg(vec4 v) {
-	return {v.x, v.y, v.z, v.w};
+    return { v.x, v.y, v.z, v.w };
 }
 NVGcolor getContrastFontColor(uint32_t i);
 NVGcolor getContrastFontColorNvg(NVGcolor i);

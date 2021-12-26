@@ -39,12 +39,12 @@ String demangleName(String to_demangle)
 
 class StdOutLogger : public Logger {
 public:
-	virtual ~StdOutLogger() { }
-	void log(const char* data, size_t len) {
+	~StdOutLogger() override = default;
+	void log(const char* data, size_t len) override {
 	    fwrite(data, len, 1, stdout);
 	    fflush(stdout);
 	}
-	void logStr(String s) {
+	void logStr(String s) override {
 		if (s.length() && s.back() != '\n')
 			s+='\n';
 		fprintf(stdout, "%s", StringAsCStr(s));
@@ -54,7 +54,7 @@ public:
 class MultiLogger : public Logger {
 	std::vector<Logger*> loggers;
 public:
-	MultiLogger(Logger* handle = nullptr) {
+	explicit MultiLogger(Logger* handle = nullptr) {
 		if (handle)
 			loggers.push_back(handle);
 	}
@@ -65,13 +65,13 @@ public:
 		loggers.erase(std::remove(loggers.begin(), loggers.end(), _logger), loggers.end());
 		loggers.push_back(_logger);
 	}
-	virtual ~MultiLogger() { }
-	void log(const char* data, size_t len) {
+	~MultiLogger() override = default;
+	void log(const char* data, size_t len) override {
 		for (auto* logger : loggers) {
 			logger->log(data, len);
 		}
 	}
-	void logStr(String s) {
+	void logStr(String s) override {
 		for (auto* logger : loggers) {
 			logger->logStr(s);
 		}
@@ -81,12 +81,9 @@ class ThreadSafeFileLogger : public Logger {
 	std::recursive_mutex mutex;
 	IOFile* handle = nullptr;
 public:
-	ThreadSafeFileLogger() {
-	}
-	~ThreadSafeFileLogger() {
-		if (handle) {
-			delete handle;
-		}
+	ThreadSafeFileLogger() = default;
+	~ThreadSafeFileLogger() override {
+        delete handle;
 	}
 	//Not threadsafe
 	void openFile(const String& filename) {
@@ -111,7 +108,11 @@ public:
 			std::lock_guard<std::recursive_mutex> lockguard(mutex);
 		    std::time_t t = std::time(nullptr);
 		    char mbstr[100];
-		    size_t posDateTime = std::strftime(mbstr, sizeof(mbstr), "%Y-%m-%dT%H:%M:%S ", std::localtime(&t));
+		    size_t posDateTime = std::strftime(
+                    mbstr,
+                    sizeof(mbstr),
+                    "%Y-%m-%dT%H:%M:%S ",
+                    std::localtime(&t));
 		    if (posDateTime > 0) {
 				handle->write(mbstr, posDateTime);
 		    }
@@ -165,56 +166,55 @@ void openGlobalLog(const String& logFileName) {
 #define LOG_BUF_SIZE 4096
 #define MAX_LEN_FILENAME 512
 
-void log_format_to_logger(Logger* logger, const char *file, int line, const char *func, const char *fmt, ...) {
-	char szLogStr[LOG_BUF_SIZE]{ 0 };
-	char szFileShort[MAX_LEN_FILENAME]{ 0 };
-	char szLogBuf[LOG_BUF_SIZE]{ 0 };
-	va_list args;
-	va_start(args, fmt);
-	int ret = vsnprintf_s(szLogStr, LOG_BUF_SIZE, _TRUNCATE, fmt, args);
-	va_end(args);
-	if (ret == -1) {
-		ret = LOG_BUF_SIZE-1;
-	}
-	if (ret < 0 || ret >= LOG_BUF_SIZE) {
-		dbgassert(0);
-		return;
-	}
-	const char* szLogStatement = nullptr;
-	if (file && line && func) {
-		replaceBackslashWithForwardslash(relFileName(file), szFileShort, MAX_LEN_FILENAME);
-		String threadName = seqthreads::getCurrentThreadName();
-		const char* szThreadName = StringAsCStr(threadName);
-		#ifndef _WIN32
-		ret = snprintf(szLogBuf, LOG_BUF_SIZE - 1, "%s:%s:%d %s: %s", szThreadName, szFileShort, line, func, szLogStr);
-		#else
-		ret = _snprintf_s(szLogBuf, LOG_BUF_SIZE, _TRUNCATE, "%s:%s:%d %s: %s", szThreadName, szFileShort, line, func, szLogStr);
-		if (ret == -1) {
-			ret = LOG_BUF_SIZE-1;
-			szLogBuf[ret-1] = '\n';
-		}
-		#endif
-		if (ret >= 0 && ret < LOG_BUF_SIZE) {
-			szLogStatement = szLogBuf;
-		}
-	} else {
-		szLogStatement = szLogStr;
-	}
-	if (szLogStatement) {
-		logger->log(szLogStatement, ret);
-	}
+void log_format_to_logger(Logger* logger, const char* file, int line, const char* func, const char* fmt, ...) {
+    char szLogStr[LOG_BUF_SIZE]{ 0 };
+    char szFileShort[MAX_LEN_FILENAME]{ 0 };
+    char szLogBuf[LOG_BUF_SIZE]{ 0 };
+    va_list args;
+    va_start(args, fmt);
+    int ret = vsnprintf_s(szLogStr, LOG_BUF_SIZE, _TRUNCATE, fmt, args);
+    va_end(args);
+    if (ret == -1) {
+        ret = LOG_BUF_SIZE - 1;
+    }
+    if (ret < 0 || ret >= LOG_BUF_SIZE) {
+        dbgassert(0);
+        return;
+    }
+    const char* szLogStatement = nullptr;
+    if (file && line && func) {
+        replaceBackslashWithForwardslash(relFileName(file), szFileShort, MAX_LEN_FILENAME);
+        String threadName        = seqthreads::getCurrentThreadName();
+        const char* szThreadName = StringAsCStr(threadName);
+#ifndef _WIN32
+        ret = snprintf(szLogBuf, LOG_BUF_SIZE - 1, "%s:%s:%d %s: %s", szThreadName, szFileShort, line, func, szLogStr);
+#else
+        ret = _snprintf_s(szLogBuf, LOG_BUF_SIZE, _TRUNCATE, "%s:%s:%d %s: %s", szThreadName, szFileShort, line, func, szLogStr);
+        if (ret == -1) {
+            ret               = LOG_BUF_SIZE - 1;
+            szLogBuf[ret - 1] = '\n';
+        }
+#endif
+        if (ret >= 0 && ret < LOG_BUF_SIZE) {
+            szLogStatement = szLogBuf;
+        }
+    } else {
+        szLogStatement = szLogStr;
+    }
+    if (szLogStatement) {
+        logger->log(szLogStatement, ret);
+    }
 }
 
 extern "C" {
-void failedAssert(const char* expr, const char *file, int line) {
-	static bool failedAssert = false;
-	if (!failedAssert) {
-		failedAssert = true;
-		log_format_to_logger(getGlobalLogger(), file, line, "dbgassert", "Assertion failed: %s\n", expr);
-	}
-	auto nop = [](){};
-	nop();
-	abort();
+void failedAssert(const char* expr, const char* file, int line) {
+    static bool failedAssert = false;
+    if (!failedAssert) {
+        failedAssert = true;
+        log_format_to_logger(getGlobalLogger(), file, line, "dbgassert", "Assertion failed: %s\n", expr);
+    }
+    auto nop = []() {};
+    nop();
+    abort();
 }
 }
-
