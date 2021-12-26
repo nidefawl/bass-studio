@@ -1,6 +1,7 @@
 #pragma once
 #include <unordered_map>
 #include "fileio.h"
+
 #define ICON_SYNTH 0
 #define ICON_EFFECT 1
 #define ICON_FOLDER 2
@@ -34,27 +35,27 @@
 
 struct NVGcontext;
 namespace RenderResources {
-	struct FontDesc {
-		String name;
-		String path;
-	};
-	struct LoadedFont {
-		bool loaded;
-		int nvgId;
-		String name;
-		FontDesc font;
-	};
-	struct NvgImageTexture {
-		std::unordered_map<NVGcontext*,int32_t> perContextId;
-		int width;
-		int height;
-	};
-	struct NvgFonts {
-		std::vector<FontDesc> fontsInstalled;
-		std::vector<LoadedFont> fontsLoaded;
-	};
-	extern NvgImageTexture imgDashedLine;
-	extern NvgImageTexture imgIcons[NUM_IMGS];
-	extern std::unordered_map<NVGcontext*,NvgFonts> perContextFonts;
-	extern std::vector<FontDesc> fontsInstalled;
-};
+    struct FontDesc {
+        String name;
+        String path;
+    };
+    struct LoadedFont {
+        bool loaded;
+        int nvgId;
+        String name;
+        FontDesc font;
+    };
+    struct NvgImageTexture {
+        std::unordered_map<NVGcontext*, int32_t> perContextId;
+        int width;
+        int height;
+    };
+    struct NvgFonts {
+        std::vector<FontDesc> fontsInstalled;
+        std::vector<LoadedFont> fontsLoaded;
+    };
+    extern NvgImageTexture imgDashedLine;
+    extern NvgImageTexture imgIcons[NUM_IMGS];
+    extern std::unordered_map<NVGcontext*, NvgFonts> perContextFonts;
+    extern std::vector<FontDesc> fontsInstalled;
+}// namespace RenderResources

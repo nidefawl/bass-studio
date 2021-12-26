@@ -114,7 +114,7 @@ const char* noteName(int note) {//DONT KEEP REFERENCE
     return buf;
 }
 #ifdef _WIN32
-String wcharToSring(const LPWSTR text) {
+String wcharToSring(LPWSTR text) {
 #ifdef USE_WSTRING
     String s = text;
     return s;

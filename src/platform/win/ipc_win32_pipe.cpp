@@ -101,32 +101,31 @@ public:
     }
 };
 
-ipc_server::ipc_server() :
-	_M_impl { new ipc_server::Impl {  } } {
+ipc_server::ipc_server() : m_impl{ new ipc_server::Impl {  } } {
 }
 ipc_server::~ipc_server() {
-	delete _M_impl;
+	delete m_impl;
 }
 int ipc_server::server_open(String path) {
-	return _M_impl->server_open(path);
+	return m_impl->server_open(path);
 }
 int ipc_server::server_accept() {
-	return _M_impl->server_accept();
+	return m_impl->server_accept();
 }
 void ipc_server::server_disconnect() {
-	_M_impl->server_disconnect();
+    m_impl->server_disconnect();
 }
 void ipc_server::server_close() {
-	_M_impl->server_close();
+    m_impl->server_close();
 }
 int ipc_server::sendData(char* buf, unsigned int len) {
-	return _M_impl->server_send(buf, len);
+	return m_impl->server_send(buf, len);
 }
 int ipc_server::readData(char* buf, unsigned int len) {
-	return _M_impl->server_read(buf, len);
+	return m_impl->server_read(buf, len);
 }
 int ipc_server::peekReadBufferSize() {
-	return _M_impl->server_peekreadbuf();
+	return m_impl->server_peekreadbuf();
 }
 
 class ipc_client::Impl
@@ -186,21 +185,20 @@ public:
     }
 };
 
-ipc_client::ipc_client() :
-	_M_impl { new ipc_client::Impl {  } } {
+ipc_client::ipc_client() : m_impl{ new ipc_client::Impl {  } } {
 }
 ipc_client::~ipc_client() {
-	delete _M_impl;
+	delete m_impl;
 }
 int ipc_client::client_connect(String path) {
-	return _M_impl->client_connect(path);
+	return m_impl->client_connect(path);
 }
 void ipc_client::client_close() {
-	_M_impl->client_close();
+    m_impl->client_close();
 }
 int ipc_client::sendData(char* buf, unsigned int len) {
-	return _M_impl->client_send(buf, len);
+	return m_impl->client_send(buf, len);
 }
 int ipc_client::readData(char* buf, unsigned int len) {
-	return _M_impl->client_read(buf, len);
+	return m_impl->client_read(buf, len);
 }

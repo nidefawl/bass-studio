@@ -1,14 +1,14 @@
 #pragma once
-#include <stdlib.h>
 
 template<typename T>
 struct ref {
-	T* ref;
+    T* ref;
+
 public:
-	void onDelete() {
-		ref = nullptr;
-	}
-	T get() {
-		return ref;
-	}
+    void onDelete() {
+        ref = nullptr;
+    }
+    T get() {
+        return ref;
+    }
 };

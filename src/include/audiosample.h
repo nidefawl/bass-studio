@@ -1,5 +1,5 @@
 #pragma once
-#include <stdint.h>
+#include <cstdint>
 #include <vector>
 #include "str_util.h"
 
@@ -18,11 +18,11 @@ struct audiosample_t {
     // The total number of samples making up the audio data. Use <totalSampleCount> * <bytesPerSample> to calculate
     // the required size of a buffer to hold the entire audio data.
     uint64_t nSamples;
-	std::vector<samplechannel_t> samples;//TODO: rename to "channels"
-	std::vector<std::vector<samplechannel_t>> downsampled;
+    std::vector<samplechannel_t> samples;//TODO: rename to "channels"
+    std::vector<std::vector<samplechannel_t>> downsampled;
 };
 
 struct samplesource_t {
-	virtual audiosample_t* getSample() = 0;
-	virtual ~samplesource_t() = default;
+    virtual audiosample_t* getSample() = 0;
+    virtual ~samplesource_t()          = default;
 };

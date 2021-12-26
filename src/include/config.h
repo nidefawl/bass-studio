@@ -17,11 +17,11 @@
 #define SETTINGS_NAME "data/settings.json"
 #define THEMEFILE_NAME "data/theme.json"
 #define CREATE_DEBUG_COMPANION_WINDOW 1
-#define PARAM_COMMON_COUNT (1<<12)
-#define PARAM_OFFSET_IMPL (1<<12)
-#define PARAM_OFFSET_EXTERNAL (1<<16)
-#define PARAM_OFFSET_SEND (1<<12)
-#define MAX_SEND_CHANNELS (1<<4)
+#define PARAM_COMMON_COUNT (1 << 12)
+#define PARAM_OFFSET_IMPL (1 << 12)
+#define PARAM_OFFSET_EXTERNAL (1 << 16)
+#define PARAM_OFFSET_SEND (1 << 12)
+#define MAX_SEND_CHANNELS (1 << 4)
 
 
 #ifndef BUILD_VSTHOST
@@ -36,7 +36,7 @@
 #endif
 
 #ifndef HAS_MAIN_LOOP
-#define HAS_MAIN_LOOP (BUILD_EXTERNAL_PLUGIN==0)
+#define HAS_MAIN_LOOP (BUILD_EXTERNAL_PLUGIN == 0)
 #endif
 
 #if HAS_MAIN_LOOP
@@ -44,4 +44,3 @@
 #else
 #define HAS_APP_SETTINGS 0
 #endif
-

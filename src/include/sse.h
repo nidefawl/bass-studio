@@ -48,24 +48,24 @@
 //            (_mm_getcsr() & _MM_DENORMALS_ZERO_MASK)
 
 struct RegisterStatus_SSE_CS {
-	unsigned int registerBits;
-	int regExceptionMask = 0;
-	int regExceptionState = 0;
-	int regFlushZeroMode = 0;
-	int regDenormalsAreZero = 0;
-	int regRoundingMode = 0;
+    unsigned int registerBits = 0;
+    int regExceptionMask      = 0;
+    int regExceptionState     = 0;
+    int regFlushZeroMode      = 0;
+    int regDenormalsAreZero   = 0;
+    int regRoundingMode       = 0;
 };
 inline RegisterStatus_SSE_CS getSSEControlStatusRegister() {
-	RegisterStatus_SSE_CS status;
+    RegisterStatus_SSE_CS status;
 #ifdef _WIN32
-	status.registerBits = _mm_getcsr();
-	status.regExceptionMask = (status.registerBits & _MM_MASK_MASK);
-	status.regExceptionState = (status.registerBits & _MM_EXCEPT_MASK);
-	status.regFlushZeroMode = (status.registerBits & _MM_FLUSH_ZERO_MASK);
-	status.regDenormalsAreZero = (status.registerBits & _MM_DENORMALS_ZERO_MASK);
-	status.regRoundingMode = (status.registerBits & _MM_ROUND_MASK);
+    status.registerBits        = _mm_getcsr();
+    status.regExceptionMask    = (int)(status.registerBits & _MM_MASK_MASK);
+    status.regExceptionState   = (int)(status.registerBits & _MM_EXCEPT_MASK);
+    status.regFlushZeroMode    = (int)(status.registerBits & _MM_FLUSH_ZERO_MASK);
+    status.regDenormalsAreZero = (int)(status.registerBits & _MM_DENORMALS_ZERO_MASK);
+    status.regRoundingMode     = (int)(status.registerBits & _MM_ROUND_MASK);
 #endif
-	return status;
+    return status;
 }
 inline void setSSEFlushDenormals() {
 #ifdef _WIN32

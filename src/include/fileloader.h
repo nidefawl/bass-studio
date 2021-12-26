@@ -1,6 +1,6 @@
 #pragma once
-#include "../threads/workerthread.h"
-#include "../midi/MidiFile.h"
+#include "threads/workerthread.h"
+#include "midi/MidiFile.h"
 #include "seq_time.h"
 #include "str_util.h"
 #include "clip.h"
@@ -14,8 +14,8 @@ class LoadMidiTask : public WorkerThread::ThreadTask {
     void loadFile();
 
 public:
-    LoadMidiTask(String& _path) : ThreadTask() { this->path = _path; }
-    void run() { loadFile(); }
+    explicit LoadMidiTask(String& _path) : ThreadTask() { this->path = _path; }
+    void run() override { loadFile(); }
 
 public:
     std::shared_ptr<clip_clipboard> getClipboard() { return clipboard; }

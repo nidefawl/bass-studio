@@ -51,21 +51,19 @@ namespace GuiConstant {
         return constantsNextId++;
     }
 
-    constant_t::constant_t() : idx(0), name(nullptr), defValue(0) {
-        //  allconstants.push_back(*this);
+    constant_t::constant_t() noexcept : idx(0), name(nullptr), defValue(0) {
     }
-    constant_t::constant_t(const char* _name, int32_t _defValue) : idx(getNextId()), name(_name), defValue(_defValue) {
+    constant_t::constant_t(const char* _name, int32_t _defValue) noexcept
+        : idx(getNextId()), name(_name), defValue(_defValue) {
         auto& allconstants = _getConstants();
-        //		my_printf("push %16s to %12X -> size %d\n", _name, (int64_t)&allconstants, allconstants.size());
         allconstants.push_back(this);
     }
-    constant_t::constant_t(const char* _name, int32_t _defValue, int _rangeMin, int _rangeMax)
+    constant_t::constant_t(const char* _name, int32_t _defValue, int _rangeMin, int _rangeMax) noexcept
         : idx(getNextId()), name(_name), defValue(_defValue), rangeMin(_rangeMin), rangeMax(_rangeMax) {
         auto& allconstants = _getConstants();
-        //		my_printf("push %16s to %12X -> size %d\n", _name, (int64_t)&allconstants, allconstants.size());
         allconstants.push_back(this);
     }
-    constant_t& constant_t::setMinMax(int iMin, int iMax) {
+    constant_t& constant_t::setMinMax(int iMin, int iMax) noexcept {
         rangeMin = iMin;
         rangeMax = iMax;
         return *this;

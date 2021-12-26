@@ -1,8 +1,8 @@
 #pragma once
 #include "math/vec.h"
-#include <stdint.h>
+#include <cstdint>
 #include <vector>
-#include "math.h"
+#include "math/seq_math.h"
 #include "seq_time.h"
 #include "guicolors.h"
 #include "logging.h"
@@ -38,8 +38,7 @@ struct grid_density {
 class scaled_grid;
 class grid_changed_cb {
 public:
-    virtual ~grid_changed_cb() {
-    }
+    virtual ~grid_changed_cb() = default;
     virtual void gridChanged(scaled_grid& grid) = 0;
 };
 
@@ -60,8 +59,7 @@ public:
     double incr_bg  = 0;
 
 public:
-    scaled_grid() {
-    }
+    scaled_grid() = default;
     void addCallback(grid_changed_cb* cb) {
         this->callbacks.push_back(cb);
     }
@@ -71,9 +69,9 @@ public:
         notifyChange();
     }
     void update(ivec2 contentsize) {
-//        if (!dirty && lastOffset == offset && lastZoom == zoom && lastW == contentsize.x) {
-//            return;
-//        }
+        //if (!dirty && lastOffset == offset && lastZoom == zoom && lastW == contentsize.x) {
+        //    return;
+        //}
         dirty = false;
         calcLen(offset, zoom, contentsize.x);
         lastOffset = offset;

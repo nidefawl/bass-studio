@@ -1,35 +1,38 @@
 #pragma once
 #include <list>
 #include <vector>
+#include <memory>
 #include "math/seq_math.h"
-#include "note.h"
 #include "seq_time.h"
 #include "str_util.h"
 #include "seq_util.h"
-#include "logging.h"
+#include "note.h"
 #include "layout.h"
 #include "audiocache.h"
 #include "wave/waveform_render.h"
+#include "logging.h"
 #include "assert_dbg.h"
-#include <memory>
 
 #define CLIP_MIDI 0
 #define CLIP_AUDIO 1
 
 class clip_notes_t;
 struct track_gui_entry_t;
-int getClipNotesInTimeRange(tick_t absStart, tick_t absEnd, tick_t cutStart, tick_t cutEnd, const clip_notes_t notesView, std::vector<note_t>& list);
+int getClipNotesInTimeRange(tick_t absStart, tick_t absEnd, tick_t cutStart, tick_t cutEnd, const clip_notes_t& notesView, std::vector<note_t>& list);
 
 class track_t;
 class gui_clip;
-//struct cachedaudio_t;
-class clip_audio_t {
-public:
-	int32_t id = -1;
-	std::weak_ptr<audiofile_t> weakCachedAudio;
 
-	clip_audio_t() {
-	}
+class clip_audio_t {
+
+public:
+    int32_t id = -1;
+    std::weak_ptr<audiofile_t> weakCachedAudio;
+
+public:
+    clip_audio_t() = default;
+    ~clip_audio_t() = default;
+
 	clip_audio_t &operator =(const clip_audio_t &a) {
 		copy(a);
 		return *this;
@@ -37,12 +40,9 @@ public:
 	clip_audio_t(const clip_audio_t &a) {
 		copy(a);
 	}
-	~clip_audio_t() {
-	}
 	void copy( const clip_audio_t &obj) {
 		this->id = obj.id;
 		this->weakCachedAudio = obj.weakCachedAudio;
-//		this->waveformRef.rendered = false;
 	}
 	int32_t lenSamples() const;
 };
@@ -292,8 +292,8 @@ public:
 		return loopEnabled && this->loopLen > 0;
 	}
 
-	void setLoopEnabled(bool loopEnabled = true) {
-		this->loopEnabled = loopEnabled;
+	void setLoopEnabled(bool bLoopEnabled = true) {
+		this->loopEnabled = bLoopEnabled;
 	}
 
 	std::vector<track_gui_entry_t*> trackEntries;
@@ -315,15 +315,12 @@ note_t* getFirstAfter(std::vector<note_t>& v, int32_t pitch, tick_t time);
 note_t* getFirstBefore(std::vector<note_t>& v, int32_t pitch, tick_t time);
 inline void cutClipLeft(clip_t* c, tick_t len) {
 	c->adjustStartOffset(len);
-
 	c->time += len;
-//	c->len -= len;
 	c->setLen(c->getLen()-len);
 	dbgassert(c->time>0);
 	dbgassert(c->getLenRef()>0);
 }
 inline void cutClipRight(clip_t* c, tick_t len) {
-//	c->len -= len;
 	c->setLen(c->getLen()-len);
 	dbgassert(c->getLenRef()>0);
 }

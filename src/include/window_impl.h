@@ -6,9 +6,9 @@ void AppWndProc_disableBlockReentrant();
 void AppWndProc_enableBlockReentrant();
 
 struct window_draw_fn {
-	std::function<void(NVGcontext*,int,int,float)> drawCallback;
+    std::function<void(NVGcontext*, int, int, float)> drawCallback;
 };
 
 struct window_init_fn {
-	std::function<void(NVGcontext*)> initCallback;
+    std::function<void(NVGcontext*)> initCallback;
 };

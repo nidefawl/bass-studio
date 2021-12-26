@@ -2,4 +2,4 @@
 #include <Windows.h>
 #include "str_util.h"
 
-String wcharToSring(const LPWSTR text);
+String wcharToSring(LPWSTR text);

@@ -1,11 +1,12 @@
 #pragma once
+#include <utility>
 #include <vector>
 #include "str_util.h"
 #include "exceptions.h"
 
 struct menucmd_t {
 	int command = 0;
-	String arg1 = "";
+	String arg1;
 	int argInt = 0;
 };
 inline struct menucmd_t CMD_NOARG(int cmd) {
@@ -31,11 +32,11 @@ namespace ngui {
 		std::vector<Menu*> children;
 		bool disabled = false;
 		bool checked = false;
-		Menu* parent = NULL;
+		Menu* parent = nullptr;
 		int icon = -1;
 	private:
 		Menu& makeChild_() {
-			if (entries.size() == 0) {
+			if (entries.empty()) {
 				entries.reserve(128);
 			} else if (entries.capacity()-entries.size() < 1) {
 				throw applogicexception("out of menu space");
@@ -45,18 +46,18 @@ namespace ngui {
 			return entries.back();
 		}
 	public:
-		void addCommand(menucmd_t cmd, String title, int icon = -1) {
+		void addCommand(menucmd_t menuCmd, String cmdTitle, int cmdIcon = -1) {
 			Menu& m = makeChild_();
 			m.type = menu_type::command;
-			m.command = cmd;
-			m.title = title;
-			m.icon = icon;
+			m.command = std::move(menuCmd);
+			m.title = std::move(cmdTitle);
+			m.icon = cmdIcon;
 			add(&m);
 		}
 		void remove(Menu* m) {
 			auto it = std::find(children.begin(), children.end(), m);
 			if (it != children.end()) {
-				(*it)->parent = NULL;
+				(*it)->parent = nullptr;
 				children.erase(it);
 			}
 		}
@@ -71,12 +72,12 @@ namespace ngui {
 			children.push_back(m);
 			m->parent = this;
 		}
-		Menu* getByName(String name) {
+		Menu* getByName(const String& name) {
 			for (Menu* m : children){
 				if (m->title == name)
 					return m;
 			}
-			return NULL;
+			return nullptr;
 		}
 		Menu* getByCmd(int cmd) {
 			for (Menu* m : children){
@@ -86,7 +87,7 @@ namespace ngui {
 					}
 				}
 			}
-			return NULL;
+			return nullptr;
 		}
 		void clear() {
 			children.clear();
@@ -96,5 +97,4 @@ namespace ngui {
 	struct MenuBar : Menu {
 		bool disableAll = false;
 	};
-
 }

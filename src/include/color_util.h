@@ -1,6 +1,6 @@
 #pragma once
 
-#include <stdint.h>
+#include <cstdint>
 #include "math/vec.h"
 #include <nanovg_min.h>
 

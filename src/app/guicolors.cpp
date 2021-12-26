@@ -64,12 +64,12 @@ namespace GuiColor {
         return constantsNextId++;
     }
 
-    constant_t::constant_t() : idx(0), name(nullptr), defValue(0) {
-        //  allconstants.push_back(*this);
+    constant_t::constant_t() noexcept
+        : idx(0), name(nullptr), defValue(0) {
     }
-    constant_t::constant_t(const char* _name, int32_t _defValue) : idx(getNextId()), name(_name), defValue(_defValue) {
+    constant_t::constant_t(const char* _name, uint32_t _defValue) noexcept
+        : idx(getNextId()), name(_name), defValue(_defValue) {
         auto& allconstants = _getConstants();
-        //	my_printf("push %16s to %12X -> size %d\n", _name, (int64_t)&allconstants, allconstants.size());
         allconstants.push_back(this);
     }
     constant_t COL_BASE_BG                 = constant_t("COL_BASE_BG", 0xFF1A1A1A);

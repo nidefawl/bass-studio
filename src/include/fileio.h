@@ -17,8 +17,8 @@
 
 struct ImageBuf {
     std::vector<uint8_t> bytes;
-    int w = 0;
-    int h = 0;
+    int w        = 0;
+    int h        = 0;
     int bitdepth = 0;
 };
 

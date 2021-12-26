@@ -9,23 +9,23 @@
 
 struct AudioBlock;
 struct AudioBuffer {
-	AudioBlock* output;
-	int32_t writeOffset;
-	std::atomic<bool> inUse;
-	bool submitted;
-	int32_t nonce;
-	double blockPosSample;
-	double blockPosTick;
+    AudioBlock* output;
+    int32_t writeOffset;
+    std::atomic<bool> inUse;
+    bool submitted;
+    int32_t nonce;
+    double blockPosSample;
+    double blockPosTick;
 };
 //static_assert(std::is_pod<AudioBuffer>::value, "AudioBuffer is not POD type.");
 
-#define RING_BUF_SIZE (1<<4)
-#define RING_BUF_MASK (RING_BUF_SIZE-1)
+#define RING_BUF_SIZE (1 << 4)
+#define RING_BUF_MASK (RING_BUF_SIZE - 1)
 struct audiothread_ringbuffer_t {
-	int32_t readPos = 0;
-	int32_t writePos = 0;
-	AudioBuffer* buffers[RING_BUF_SIZE] = { 0 };
+    int32_t readPos = 0;
+    int32_t writePos = 0;
+    AudioBuffer* buffers[RING_BUF_SIZE] = { 0 };
 };
-AudioBuffer* allocateBuffer(int32_t nChannels=2);
-void allocRingBuffer(audiothread_ringbuffer_t&, int32_t nChannels=2);
+AudioBuffer* allocateBuffer(int32_t nChannels = 2);
+void allocRingBuffer(audiothread_ringbuffer_t&, int32_t nChannels = 2);
 void freeRingBuffer(audiothread_ringbuffer_t&);

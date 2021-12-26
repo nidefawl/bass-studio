@@ -54,29 +54,29 @@ public:
     }
 };
 
-hires_timer_t::hires_timer_t() : _M_Iimpl{ new Impl{} } {
+hires_timer_t::hires_timer_t() : m_impl{ new Impl{} } {
 }
 hires_timer_t::~hires_timer_t() {
-    delete _M_Iimpl;
+    delete m_impl;
 }
 void hires_timer_t::reset() {
-    _M_Iimpl->reset();
+    m_impl->reset();
 }
 /* returns time passed in int64_t MICROSECONDS */
 int64_t hires_timer_t::getTime() {
-    return _M_Iimpl->getTime();
+    return m_impl->getTime();
 }
 /* returns time passed in int64_t MICROSECONDS */
 int64_t hires_timer_t::getTimeReset() {
-    return _M_Iimpl->getTimeReset();
+    return m_impl->getTimeReset();
 }
 /* returns time passed in double SECONDS */
 double hires_timer_t::getTimeDouble() {
-    return _M_Iimpl->getTimeDouble();
+    return m_impl->getTimeDouble();
 }
 /* returns time passed in double SECONDS */
 double hires_timer_t::getTimeDoubleReset() {
-    return _M_Iimpl->getTimeDoubleReset();
+    return m_impl->getTimeDoubleReset();
 }
 
 #endif

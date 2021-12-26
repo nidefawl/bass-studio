@@ -472,13 +472,7 @@ void trackcontainer_tracktype_t::loadPlugins(trackcontainer_snapshot_t& in) {
 		trackLoaded->loadSnapshot(trackStatic);
 	}
 }
-//void trackcontainer_tracktype_t::loadSubtrackLayouts(trackcontainer_snapshot_t& in) {
-//	for (track_snapshot_t& trackStatic : in.tracks) {
-//		track_t* trackLoaded = trackStatic.trackLoaded;
-//		trackLoaded->loadSubtrackLayout(trackStatic);
-//		trackStatic.trackLoaded = nullptr;
-//	}
-//}
+
 bool trackallcontainer_t::validTrackTypeIdx(int32_t type, int32_t idx) const {
 	if (type >= TRACK_TYPE_MASTER && type <= TRACK_TYPE_AUDIO) {
 		const trackcontainer_tracktype_t* trackTypeCtr = trackTypeCtrs[type];

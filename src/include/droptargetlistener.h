@@ -5,8 +5,8 @@
 
 class DropTargetListener {
 public:
-	virtual ~DropTargetListener() { }
+    virtual ~DropTargetListener() = default;
     virtual bool filesDropBegin(std::vector<String>& files, ivec2 pos, int kbmods) = 0;
-    virtual bool filesDropMove(ivec2 pos, int kbmods) = 0;
+    virtual bool filesDropMove(ivec2 pos, int kbmods)                              = 0;
     virtual bool filesDropFinal(std::vector<String>& files, ivec2 pos, int kbmods) = 0;
 };

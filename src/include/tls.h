@@ -1,5 +1,6 @@
 #pragma once
 #include "profiling.h"
+
 class audiohost;
 class midihost;
 class vsthost;
@@ -10,21 +11,22 @@ class plugindatabase_t;
 class project_controller_t;
 struct app_config_t;
 namespace daw_tls {
-	struct tlsinstance {
-		render_clip_cache_stats_t renderClipCacheStats;
-		render_stats_t renderStats;
-		render_stats_t prevRenderStats;
-		app_config_t* config = nullptr;
-		vsthost* host = nullptr;
-		audiohost* audioHost = nullptr;
-		midihost* midiHost = nullptr;
-		waveformrender* waveform = nullptr;
-		MainCtrl* mainCtrl = nullptr;
-		audiocache* audioCache = nullptr;
-		plugindatabase_t* pluginDatabase = nullptr;
-		project_controller_t* project = nullptr;
-		bool tlsInitialized = false;
-	};
-	void setTls(tlsinstance& tls);
-	tlsinstance& getTls();
-};
+    struct tlsinstance {
+        render_clip_cache_stats_t renderClipCacheStats{};
+        render_stats_t renderStats;
+        render_stats_t prevRenderStats;
+        app_config_t* config             = nullptr;
+        vsthost* host                    = nullptr;
+        audiohost* audioHost             = nullptr;
+        midihost* midiHost               = nullptr;
+        waveformrender* waveform         = nullptr;
+        MainCtrl* mainCtrl               = nullptr;
+        audiocache* audioCache           = nullptr;
+        plugindatabase_t* pluginDatabase = nullptr;
+        project_controller_t* project    = nullptr;
+        bool tlsInitialized              = false;
+    };
+
+    void setTls(tlsinstance& tls);
+    tlsinstance& getTls();
+};// namespace daw_tls
