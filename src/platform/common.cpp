@@ -1,37 +1,37 @@
 #include "fileio.h"
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdlib>
+#include <cstdio>
 #include "str_util.h"
 
 
-String pathResources = ""; // read only app resource directory: C:/program files/daw
-String pathUserdata = ""; // writable app directory: C:/users/user/appdata/daw/
+String pathResources;// read only app resource directory: C:/program files/daw
+String pathUserdata; // writable app directory: C:/users/user/appdata/daw/
 
-String toResourcePath(String relPath) {
-	return pathResources + relPath;
+String toResourcePath(const String& relPath) {
+    return pathResources + relPath;
 }
-String toUserdataPath(String relPath) {
-	return pathUserdata + relPath;
+
+String toUserdataPath(const String& relPath) {
+    return pathUserdata + relPath;
 }
 
 void setResourcePath(String cwd) {
-	if (cwd.length() && (!StrEndsWith(cwd, "/") && !StrEndsWith(cwd, "\\")))
-		cwd += "/";
-	pathResources = cwd;
+    if (cwd.length() && (!StrEndsWith(cwd, "/") && !StrEndsWith(cwd, "\\")))
+        cwd += "/";
+    pathResources = cwd;
 }
 void setUserdataPath(String cwd) {
-	if (cwd.length() && (!StrEndsWith(cwd, "/") && !StrEndsWith(cwd, "\\")))
-		cwd += "/";
-	pathUserdata = cwd;
+    if (cwd.length() && (!StrEndsWith(cwd, "/") && !StrEndsWith(cwd, "\\")))
+        cwd += "/";
+    pathUserdata = cwd;
     CreateDirectoryIfNotExists(pathUserdata);
 }
 
-#define  READALL_OK          0  /* Success */
-#define  READALL_INVALID    -1  /* Invalid parameters */
-#define  READALL_ERROR      -2  /* Stream error */
-#define  READALL_TOOMUCH    -3  /* Too much input */
-#define  READALL_NOMEM      -4  /* Out of memory */
+#define  READALL_OK           0   /* Success */
+#define  READALL_INVALID    (-1)  /* Invalid parameters */
+#define  READALL_ERROR      (-2)  /* Stream error */
+#define  READALL_TOOMUCH    (-3)  /* Too much input */
+#define  READALL_NOMEM      (-4)  /* Out of memory */
 /* Size of each input chunk to be
    read and allocate for. */
 #ifndef  READALL_CHUNK
@@ -47,15 +47,14 @@ void setUserdataPath(String cwd) {
      and automatically appended after the data.
    Initial values of (*dataptr) and (*sizeptr) are ignored.
 */
-int readall(FILE *in, char **dataptr, size_t *sizeptr)
-{
-    char  *data = NULL, *temp;
+int readall(FILE* in, char** dataptr, size_t* sizeptr) {
+    char *data  = nullptr, *temp;
     size_t size = 0;
     size_t used = 0;
     size_t n;
 
-    /* None of the parameters can be NULL. */
-    if (in == NULL || dataptr == NULL || sizeptr == NULL)
+    /* None of the parameters can be nullptr. */
+    if (in == nullptr || dataptr == nullptr || sizeptr == nullptr)
         return READALL_INVALID;
 
     /* A read error already occurred? */
@@ -74,8 +73,8 @@ int readall(FILE *in, char **dataptr, size_t *sizeptr)
                 return READALL_TOOMUCH;
             }
 
-            temp = (char*)realloc(data, size);
-            if (temp == NULL) {
+            temp = (char*) realloc(data, size);
+            if (temp == nullptr) {
                 free(data);
                 return READALL_NOMEM;
             }
@@ -94,12 +93,12 @@ int readall(FILE *in, char **dataptr, size_t *sizeptr)
         return READALL_ERROR;
     }
 
-    temp = (char*)realloc(data, used + 1);
-    if (temp == NULL) {
+    temp = (char*) realloc(data, used + 1);
+    if (temp == nullptr) {
         free(data);
         return READALL_NOMEM;
     }
-    data = temp;
+    data       = temp;
     data[used] = '\0';
 
     *dataptr = data;
@@ -107,6 +106,7 @@ int readall(FILE *in, char **dataptr, size_t *sizeptr)
 
     return READALL_OK;
 }
+
 int64_t ReadFileText(const String& filename, String& out, int resourceType) {
     String fileResPath;
     if (resourceType == 0) {
@@ -114,24 +114,26 @@ int64_t ReadFileText(const String& filename, String& out, int resourceType) {
     } else {
         fileResPath = toUserdataPath(filename);
     }
-	const char* fname = StringAsCStr(fileResPath);
-	FILE *fp = fopen(fname, "r");
-	if (!fp) {
-		int err = errno;
-		printf("Failed opening file %s: %s (%d)\n", fname, strerror(err), err);
-	}
-	if (fp != NULL) {
-		char* buf;
-		size_t len;
-		int ret = readall(fp, &buf, &len);
-		fclose(fp);
-		if (ret == READALL_OK) {
-			if (buf) {
-				out = buf;
-				free(buf);
-			}
-			return len;
-		}
-	}
+
+    const char* fname = StringAsCStr(fileResPath);
+
+    FILE* fp = fopen(fname, "r");
+    if (!fp) {
+        int err = errno;
+        printf("Failed opening file %s: %s (%d)\n", fname, strerror(err), err);
+    }
+    if (fp != nullptr) {
+        char* buf;
+        size_t len;
+        int ret = readall(fp, &buf, &len);
+        fclose(fp);
+        if (ret == READALL_OK) {
+            if (buf) {
+                out = buf;
+                free(buf);
+            }
+            return (int64_t) len;
+        }
+    }
     return -1;
 }

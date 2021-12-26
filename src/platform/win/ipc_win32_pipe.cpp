@@ -2,12 +2,12 @@
 #include "str_util.h"
 #include "platform.h"
 #include "thread.h"
+#include "exceptions.h"
 
 #include <windows.h>
-#include <stdlib.h>
+#include <cstdlib>
 
 
-String FormatErrorMessage(uint32_t error, String msg);
 void printLastError(String fn) {
 	DWORD err = GetLastError();
 	String desc = StringFormat("%s failed (%d)", StringAsCStr(fn), (int32_t)err);

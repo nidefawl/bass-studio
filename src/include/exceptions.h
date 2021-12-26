@@ -3,7 +3,7 @@
 #include "str_util.h"
 
 
-String FormatErrorMessage(uint32_t error, String msg = "");
+String FormatErrorMessage(uint32_t error, const String& msg = "");
 class FileIOException : public std::runtime_error
 {
 private:

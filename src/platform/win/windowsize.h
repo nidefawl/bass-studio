@@ -6,7 +6,7 @@ struct windowsize {
     WINDOWPLACEMENT p{};
     windowsize() {
         p.length = sizeof(WINDOWPLACEMENT);
-        valid = false;
+        valid    = false;
     }
 };
 #endif

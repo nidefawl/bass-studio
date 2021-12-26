@@ -224,7 +224,7 @@ private:
         			break;
         		case PLAYBACK_THREAD_EXIT:
 #ifndef NDEBUG
-                    log_printf("PLAYBACK_THREAD_EXIT");
+                    log_printf("PLAYBACK_THREAD_EXIT", 0);
     				seqthreads::threadSleep(200);
 #endif
             		req->notify();

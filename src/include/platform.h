@@ -20,8 +20,8 @@ void logStackTrace();
 void getStackTrace(std::vector<String>& vec);
 
 
-String toResourcePath(String relPath);
+String toResourcePath(const String& relPath);
 void setResourcePath(String cwd);
 void setUserdataPath(String cwd);
-String toUserdataPath(String relPath);
+String toUserdataPath(const String& relPath);
 String getCurrentWorkingDirectory();

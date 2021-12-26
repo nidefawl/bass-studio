@@ -7,16 +7,12 @@
 
 
 class DropTargetImpl;
-class DropTarget
-{
+class DropTarget {
 public:
-	DropTarget(DropTargetImpl* _impl)
-	: impl(_impl)
-	{
-
-	}
-	DropTargetImpl* const impl;
-
+    explicit DropTarget(DropTargetImpl* _impl)
+        : impl(_impl) {
+    }
+    DropTargetImpl* const impl;
 };
-DropTarget *RegisterDropWindow(HWND hwnd, DropTargetListener *dropTargetListener);
-void UnregisterDropWindow(HWND hwnd, DropTarget *pDropTarget);
+DropTarget* RegisterDropWindow(HWND hwnd, DropTargetListener* dropTargetListener);
+void UnregisterDropWindow(HWND hwnd, DropTarget* pDropTarget);
