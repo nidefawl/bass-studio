@@ -27,8 +27,8 @@
 #include "gui/button.h"
 
 #include "audiocache.h"
-#include "audiowaveform.h"
-#include "gui/drawwaveform.h"
+#include "wave/waveform_render.h"
+#include "wave/waveform_render_impl.h"
 #include "gui/guicontainer_layout.h"
 
 #include "TestBase.hpp"

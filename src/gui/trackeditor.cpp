@@ -26,8 +26,6 @@
 #include "mousecursor.h"
 #include "logging.h"
 #include "audiocache.h"
-#include "audiowaveform.h"
-#include "drawwaveform.h"
 #include "cliprenderer.h"
 #include "logging.h"
 

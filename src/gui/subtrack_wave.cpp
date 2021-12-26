@@ -7,7 +7,7 @@
 #include "str_util.h"
 #include "math/vec.h"
 #include "math/seq_math.h"
-#include "gui/drawwaveform.h"
+#include "wave/waveform_render_impl.h"
 #include "track.h"
 #include "track_impl.h"
 #include "color_util.h"

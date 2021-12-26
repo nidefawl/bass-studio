@@ -3,7 +3,10 @@
 #include <vector>
 #include "assert_dbg.h"
 
-void downsample(float sampleRate, float* samplesIn, int len, std::vector<float>& samplesOut, int downsampleBits) {
+int downsample(float sampleRate, float* samplesIn, int len, std::vector<float>& samplesOut, int downsampleBits) {
+
+// Straight forward downsampling using internal LPF. I can't remember any details about this
+
 //	float srtDown = sampleRate / (float) (1 << downsampleBits);
 ////	double ft = (srtDown*0.4f);
 //	double ft = (sampleRate * 0.45f);
@@ -17,7 +20,7 @@ void downsample(float sampleRate, float* samplesIn, int len, std::vector<float>&
 //		int pos = j * nStep;
 //		float out = 0.0;
 //		for (int y = 0; y < lenCoeffs; y++) {
-//			out += samplesIn[max(0, pos)] * coeff[y];
+//			out += samplesIn[math::max(0, pos)] * coeff[y];
 //			pos--;
 //		}
 //		samplesOut[j] = out;
@@ -39,5 +42,8 @@ void downsample(float sampleRate, float* samplesIn, int len, std::vector<float>&
 			samplesIn, len, NULL, /* Input. */
 			samplesOut.data(), olen, &odone, /* Output. */
 			&iospec, NULL, NULL); /* Default configuration.*/
+
+    dbgassert(!error);
 	dbgassert(odone <= (samplesOut.size()));
+    return (int)(int64_t)(error); // soxr_error_t is const char*
 }

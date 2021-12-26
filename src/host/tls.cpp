@@ -6,7 +6,7 @@
 #include "host/plugindatabase.h"
 #include "host/projectcontroller.h"
 #include "audiocache.h"
-#include "gui/drawwaveform.h"
+#include "wave/waveform_render_impl.h"
 #include "thread.h"
 
 namespace daw_tls {

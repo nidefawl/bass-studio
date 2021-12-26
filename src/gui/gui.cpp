@@ -210,6 +210,30 @@ void drawTri(NVGcontext* vg, float x, float y, float h, const int dir, const NVG
         nvgStroke(vg);
     }
 }
+
+void drawImage(NVGcontext* vg, int image, float alpha,
+               float sx, float sy, float sw, float sh,// sprite location on texture
+               float x, float y, float w, float h)    // position and size of the sprite rectangle on screen
+{
+    float ax, ay;
+    int iw, ih;
+    NVGpaint img;
+
+    nvgImageSize(vg, image, &iw, &ih);
+
+    // Aspect ration of pixel in x an y dimensions. This allows us to scale
+    // the sprite to fill the whole rectangle.
+    ax = w / sw;
+    ay = h / sh;
+
+    img = nvgImagePattern(vg, x - sx * ax, y - sy * ay, (float) iw * ax, (float) ih * ay,
+                          0, image, alpha);
+    nvgBeginPath(vg);
+    nvgRect(vg, x, y, w, h);
+    nvgFillPaint(vg, img);
+    nvgFill(vg);
+}
+
 NVGpaint imagePattern(NVGcontext* vg, int width, int ext, int imgId) {
     RenderResources::NvgImageTexture& image = RenderResources::imgIcons[imgId];
     return nvgImagePattern(vg, -ext, -ext, width + ext * 2, width + ext * 2, 0, image.perContextId[vg], 1.0f);

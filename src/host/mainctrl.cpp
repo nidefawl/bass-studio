@@ -52,7 +52,7 @@
 #include "../gui/pluginlist.h"
 #include "../gui/guimenu.h"
 #include "../gui/debugctr.h"
-#include "../gui/drawwaveform.h"
+#include "wave/waveform_render_impl.h"
 #include "../gui/guishaderview.h"
 #include "../gui/about.h"
 #include "../gui/dialog_io.h"

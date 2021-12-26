@@ -7,8 +7,8 @@
 #include "project.h"
 #include "guicolors.h"
 #include "guiconstant.h"
-#include "drawwaveform.h"
-#include "audiowaveform.h"
+#include "wave/waveform_render.h"
+#include "wave/waveform_render_impl.h"
 #include "trackcontent.h"
 #include "appconfig.h"
 #include <array>

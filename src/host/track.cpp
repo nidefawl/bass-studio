@@ -31,7 +31,7 @@
 #include "mainctrl.h"
 #include "history.h"
 #include "plugindatabase.h"
-#include "gui/drawwaveform.h"
+#include "wave/waveform_render_impl.h"
 #include "gui/subtrack.h"
 #include "midi-msg.h"
 #include "fileio.h"

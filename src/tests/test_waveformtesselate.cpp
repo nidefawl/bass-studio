@@ -18,8 +18,8 @@
 #include "str_util.h"
 #include "platform.h"
 #include "audiocache.h"
-#include "audiowaveform.h"
-#include "gui/drawwaveform.h"
+#include "wave/waveform_render.h"
+#include "wave/waveform_render_impl.h"
 #include "gl/gl_path.h"
 
 #include "tls.h"

@@ -9,7 +9,7 @@
 #include "logging.h"
 #include "layout.h"
 #include "audiocache.h"
-#include "../gui/drawwaveform.h"
+#include "wave/waveform_render.h"
 #include "assert_dbg.h"
 #include <memory>
 

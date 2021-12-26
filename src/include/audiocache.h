@@ -4,7 +4,7 @@
 #include <memory>
 #include "str_util.h"
 #include "audiosample.h"
-#include "audiowaveform.h"
+#include "wave/waveform_render.h"
 #include "samplefileidx.h"
 
 struct NVGcontext;

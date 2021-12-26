@@ -21,8 +21,8 @@
 #include "trackctr.h"
 #include "trackcontent.h"
 #include "audiocache.h"
-#include "drawwaveform.h"
-#include "audiowaveform.h"
+#include "wave/waveform_render.h"
+#include "wave/waveform_render_impl.h"
 #include "host/vst_host.h"
 
 struct track_gui_entry_t;
@@ -78,18 +78,6 @@ void gui_audio_clip::releaseRendered() {
     dbgassert(waveformrender::getInstance()->isValid(waveformRef));
     waveformrender::getInstance()->release(waveformRef);
     waveformRef->rendered = false;
-}
-
-bool isEqualWaveform3(const audioclip_texture_t& lhs, const audioclip_texture_t& rhs) {
-    if (lhs.audioId != rhs.audioId)
-        return false;
-    if ((lhs.sampleBeginOffset - lhs.sampleBegin) != (rhs.sampleBeginOffset - rhs.sampleBegin)) {
-        return false;
-    }
-    if ((lhs.sampleEnd - lhs.sampleBegin) != (rhs.sampleEnd - rhs.sampleBegin)) {
-        return false;
-    }
-    return lhs.clipped == rhs.clipped && lhs.quality == rhs.quality && lhs.method == rhs.method;
 }
 
 void gui_audio_clip::updateClipRenderCache(NVGcontext* vg) {

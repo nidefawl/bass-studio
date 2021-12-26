@@ -5,6 +5,7 @@
 #include <list>
 #include <deque>
 #include <map>
+#include <array>
 #include "assert_dbg.h"
 #include "exceptions.h"
 #include "seq_time.h"

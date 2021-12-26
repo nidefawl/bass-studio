@@ -47,7 +47,7 @@
 #include "../gui/pluginlist.h"
 #include "../gui/guimenu.h"
 #include "../gui/debugctr.h"
-#include "../gui/drawwaveform.h"
+#include "wave/waveform_render_impl.h"
 
 #include "vst_host.h"
 #include "plugin/base_plugin.h"

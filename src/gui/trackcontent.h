@@ -11,7 +11,6 @@
 #include "automation.h"
 #include "automatable.h"
 #include "trackautomation.h"
-#include "audiowaveform.h"
 #include "cliprenderer.h"
 
 struct gui_waveform_texture_ref;

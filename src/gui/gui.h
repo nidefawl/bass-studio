@@ -46,6 +46,9 @@ void drawCross(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, i
 void drawStopSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2);
 void drawTextureSymbol(NVGcontext* vg, ivec2& pos, ivec2& size, const NVGcolor& color, int drawParm, int drawParm2);
 void drawTri(NVGcontext* vg, float xTop, float yTop, float h, const int dir, const NVGcolor& color, const NVGcolor& strokeColor, float strokeWidth);
+void drawImage(NVGcontext* vg, int image, float alpha,
+               float sx, float sy, float sw, float sh,// sprite location on texture
+               float x, float y, float w, float h);   // position and size of the sprite rectangle on screen
 
 guitheme_t* getDefaultTheme();
 ivec2 toControlsObjectSpace(ivec2& pos, guibase* gui);

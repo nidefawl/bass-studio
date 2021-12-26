@@ -556,9 +556,6 @@ public:
     }
 };
 
-void drawImage(NVGcontext* vg, int image, float alpha,
-               float sx, float sy, float sw, float sh,// sprite location on texture
-               float x, float y, float w, float h);   // position and size of the sprite rectangle on screen
 class guipluginview_preview : public guictr_base {
     vstplugin* const plugin;
     guipluginview* const guivst;

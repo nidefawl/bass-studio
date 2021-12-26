@@ -12,7 +12,7 @@
 #include "gl/gl_attr.h"
 #include "gl/gl_vbo.h"
 #include "gl/gl_tess2d.h"
-#include "gui/drawwaveform.h"
+#include "wave/waveform_render_impl.h"
 #include "color_util.h"
 
 namespace windowdebug_waveformcache {

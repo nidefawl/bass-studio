@@ -11,8 +11,8 @@
 #include "cursor.h"
 #include "keyboard.h"
 #include "grid.h"
-#include "drawwaveform.h"
-#include "audiowaveform.h"
+#include "wave/waveform_render.h"
+#include "wave/waveform_render_impl.h"
 
 #include "guicontextmenu_daw.h"
 #include "logging.h"
