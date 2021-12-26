@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <stdexcept>
 
 namespace daw_test {
     enum TestCases : uint32_t {
@@ -7,6 +8,7 @@ namespace daw_test {
         TEST_HOST_EXCEPTIONS = 1
     };
     extern uint32_t currentTest;
+    extern bool testThrowAssertEnabled;
     inline bool runTest(TestCases testcase) {
 #if defined(BUILD_TESTS) || defined(__CLION_IDE_)
         return currentTest == testcase;
@@ -14,4 +16,9 @@ namespace daw_test {
         return false;
 #endif
     }
+
+class failed_assert_exception : public std::runtime_error {
+public:
+    explicit failed_assert_exception(const char* msg) : runtime_error(msg) {}
+};
 }// namespace daw_test

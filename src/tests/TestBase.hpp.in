@@ -30,13 +30,13 @@ inline void testAssertExpr( bool condition )
 }
 #define TEST_ASSERT_THROW( condition ) CppTest::testAssertExpr((condition))
 #define TEST_ASSERT_EQUAL( x, y ) CppTest::testAssertExpr(( x ) == ( y ))
-#define TEST_EXPECT_EXCEPTION( expression, exception )             \
+#define TEST_EXPECT_EXCEPTION( expression, expected_exception_type )\
 do {                                                                \
   try                                                               \
   {                                                                 \
     ( expression );                                                 \
   }                                                                 \
-  catch( std::exception& e )                                        \
+  catch( expected_exception_type& e )                               \
   {                                                                 \
   }                                                                 \
   catch( ... )                                                      \
@@ -50,7 +50,7 @@ do {                                                                \
   }                                                                 \
 } while(0)
 
-#define TEST_BEGIN( name ) (std::cerr << "-- Running test \"" << name << "\"...")
+#define TEST_BEGIN( name ) (std::cerr << "-- Running test \"" << (name) << "\"...")
 
 #define TEST_END() (std::cerr << "finished\n")
 

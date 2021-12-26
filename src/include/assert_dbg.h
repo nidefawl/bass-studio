@@ -1,31 +1,42 @@
 #pragma once
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-void failedAssert(const char* expr, const char *file, int line);
-
 #ifdef NDEBUG
+
 #define assert_expr(_Expression) (!!(_Expression))
 #define dbgassert (void)
-#else
+#define always_assert(_Expression) ((void)(_Expression))
+
+#else/* !defined (NDEBUG) */
+
+#ifdef __cplusplus
+
+void CPP_failedAssert(const char* expr, const char *file, int line);
+
 #define dbgassert(_Expression) \
  (void) \
  ((!!(_Expression)) || \
-  (failedAssert(#_Expression,__FILE__,__LINE__),0))
+  (CPP_failedAssert(#_Expression,__FILE__,__LINE__),0))
+
 #define assert_expr(_Expression) \
  ((!!(_Expression)) || \
-  (failedAssert(#_Expression,__FILE__,__LINE__),0))
+  (CPP_failedAssert(#_Expression,__FILE__,__LINE__),0))
 
-#endif
-#ifdef __cplusplus
-}
-#endif
-
-#ifdef NDEBUG
-#define always_assert(_Expression) ((void)(_Expression))
-#else /* !defined (NDEBUG) */
 #define always_assert(_Expression) dbgassert(_Expression)
+
+#else/* !defined (__cplusplus) */
+#pragma message("C ASSERT")
+void C_failedAssert(const char* expr, const char *file, int line);
+
+#define dbgassert(_Expression) \
+ (void) \
+ ((!!(_Expression)) || \
+  (C_failedAssert(#_Expression,__FILE__,__LINE__),0))
+
+//No need for other macros in C
+
+
 #endif
+
+
+#endif /* NDEBUG */

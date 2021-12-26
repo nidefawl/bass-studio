@@ -1,69 +1,34 @@
 #include "TestBase.hpp"
-#include <vector>
-#include <memory>
-#include "seq_time.h"
-#include "../host/resampler.h"
+#include "audioblock.h"
 #include "test_common.h"
+#include "test_environment.h"
 
 namespace {
-
-
-    class test_impl {
-    public:
-        std::vector<std::shared_ptr<resampler_t>> resamplers;
-
-        std::shared_ptr<resampler_t> getResampler(sampleformat_t in, sampleformat_t out, int32_t idx) {
-            auto it = std::find_if(resamplers.begin(), resamplers.end(), [&in, &out](std::shared_ptr<resampler_t>& ptr) {
-                return ptr->in == in && ptr->out == out;
-            });
-            if (it == resamplers.end()) {
-
-                oversample_config_t config;
-                config.inputSampleRate  = in.sampleRate;
-                config.outputSampleRate = out.sampleRate;
-                config.numChannels      = 32;
-                config.setInputLength(in.blockSize);
-                std::shared_ptr<resampler_t> resampler = std::make_shared<resampler_t>(idx, in, out, config);
-                resamplers.push_back(resampler);
-                return resampler;
-            }
-            return *it;
-        }
-    };
-    void testAudioBlock() {
-        TEST_BEGIN("testAudioBlock");
-        test_impl impl;
+    void testCopy() {
         const uint32_t numChannels = 2;
         const uint32_t blockSize   = 512;
-        sampleformat_t sfIn        = sampleformat_t{ 48000, blockSize, sampleformat_bits_t::FLOAT_32 };
-        sampleformat_t sfOut       = sampleformat_t{ 44100, blockSize, sampleformat_bits_t::FLOAT_32 };
-
-        std::shared_ptr<resampler_t> ptr = impl.getResampler(sfIn, sfOut, 0);
-
-        TEST_ASSERT_THROW(ptr.get());
-
         AudioBlock block(numChannels, blockSize);
+        AudioBlock block2(numChannels, blockSize);
+        AudioBlock blockHalf(numChannels, blockSize>>1);
+        AudioBlock block1Channel(1, blockSize);
+        AudioBlock block3Channel(3, blockSize);
+        float** pBuf = block2.buf;
+        const float * const * pConst = block2.buf;
+        block.copyFromPosToPos(pConst, 10, 20, 30, numChannels);
+        block.copyFromPosToPos(pBuf, 10, 20, 30, numChannels);
+        block2.copyFromPosToPos(pBuf, 10, 20, 30, numChannels);
+        block2.copyFrom(&block1Channel);
+        block3Channel.SubChannelsBlock(1, 1).copyFrom(&block1Channel);
+        block3Channel.SubChannelsBlock(1, 1).copyFrom(&block1Channel);
 
-        uint32_t noiseSeed = 13;
-        int32_t popped     = 0;
-        int32_t pushed     = 0;
-        while (ptr->numBlocksToPop() < 4) {
-            block.fillNoise(noiseSeed++);
-            ptr->push(block);
-            pushed++;
-        }
-        TEST_ASSERT_THROW(pushed);
-        while (ptr->numBlocksToPop() > 0) {
-            AudioBlock blockOut = ptr->pop();
-            blockOut.fillNoise(noiseSeed++);
-            popped++;
-        }
-        TEST_ASSERT_THROW(popped);
-        TEST_END();
+        TEST_EXPECT_EXCEPTION(blockHalf.copyFrom(&block1Channel), daw_test::failed_assert_exception);
+        TEST_EXPECT_EXCEPTION(blockHalf.copyFrom(&block3Channel), daw_test::failed_assert_exception);
+        TEST_EXPECT_EXCEPTION(block2.copyFrom(&blockHalf), daw_test::failed_assert_exception);
     }
-
 }// namespace
+
 int main() {
-    testAudioBlock();
+    daw_test::testThrowAssertEnabled = true;
+    testCopy();
     return 0;
 }

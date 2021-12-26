@@ -11,14 +11,15 @@ String typeName(const T& t) {
 class ThreadSafeFileLogger;
 class Logger {
 public:
+    Logger() noexcept = default;
     virtual ~Logger() = default;
     virtual void log(const char* data, size_t len) = 0;
     virtual void logStr(String s)                  = 0;
 };
 
-Logger* getGlobalLogger();
+Logger* getGlobalLogger() noexcept;
 
-void log_format_to_logger(Logger* logger, const char* file, int line, const char* func, const char* fmt, ...);
+void log_format_to_logger(Logger* logger, const char* file, int line, const char* func, const char* fmt, ...) noexcept;
 #define my_printf(fmt, ...) log_format_to_logger(getGlobalLogger(), __FILE__, __LINE__, __FUNCTION__, fmt, __VA_ARGS__)
 #define log_out(fmt, ...) log_format_to_logger(getGlobalLogger(), nullptr, 0, nullptr, fmt, __VA_ARGS__)
 #define log_printf my_printf
