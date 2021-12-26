@@ -7,7 +7,6 @@
 #include <condition_variable>
 #include <mutex>
 #include "thread.h"
-#include "logging.h"
 #include "workerthread.h"
 #include "assert_dbg.h"
 
@@ -15,138 +14,136 @@ class WorkerThread::ThreadTaskImpl {
     ThreadTask* task;
     std::mutex m_mtx;
     std::condition_variable m_cond;
-    std::atomic<bool> m_finished{false};
+    std::atomic<bool> m_finished{ false };
+
 public:
-    ThreadTaskImpl(ThreadTask* _task)
-	: task(_task)
-	{
-	}
-    virtual ~ThreadTaskImpl() {
+    explicit ThreadTaskImpl(ThreadTask* _task)
+        : task(_task) {
     }
+    virtual ~ThreadTaskImpl() = default;
     void reset() {
-    	m_finished = false;
-    	task->clearException();
-    	task->status = status_init;
+        m_finished = false;
+        task->clearException();
+        task->status = status_init;
     }
     void run() {
-    	task->run();
+        task->run();
     }
     void setException(std::exception_ptr eptr) {
-    	task->setException(eptr);
+        task->setException(eptr);
     }
     void setError() {
-    	task->status = status_error;
+        task->status = status_error;
     }
-	void setInQueue() {
-		task->status = status_accepted;
-	}
-	void setCompleted() {
-		task->status = status_complete;
-	}
-	bool isCompleted() {
-		return m_finished;
-	}
-	void wait() {
+    void setInQueue() {
+        task->status = status_accepted;
+    }
+    void setCompleted() {
+        task->status = status_complete;
+    }
+    bool isCompleted() {
+        return m_finished;
+    }
+    void wait() {
         std::unique_lock<std::mutex> lock(m_mtx);
         if (!m_finished) {
-            m_cond.wait(lock, [&](){ return m_finished == true; });
+            m_cond.wait(lock, [&]() { return m_finished.load(); });
         }
-	}
-	void notify() {
+    }
+    void notify() {
         std::unique_lock<std::mutex> lock(m_mtx);
         m_finished = true;
         m_cond.notify_all();
-	}
+    }
 };
 WorkerThread::ThreadTask::~ThreadTask() {
-	delete _M_impl;
+    delete m_taskImpl;
 }
 WorkerThread::ThreadTask::ThreadTask()
-: _M_impl( new ThreadTaskImpl(this) ) {
+    : m_taskImpl(new ThreadTaskImpl(this)) {
 }
 void WorkerThread::ThreadTask::wait() {
-	this->_M_impl->wait();
+    this->m_taskImpl->wait();
 }
 void WorkerThread::ThreadTask::reset() {
-	this->_M_impl->reset();
+    this->m_taskImpl->reset();
 }
 bool WorkerThread::ThreadTask::isCompleted() {
-	return this->_M_impl->isCompleted();
+    return this->m_taskImpl->isCompleted();
 }
 class WorkerThread::Impl {
-	std::thread t;
-	std::queue<ThreadTaskImpl*> m_q;
+    std::thread t;
+    std::queue<ThreadTaskImpl*> m_q;
     std::mutex m_mtx;
     std::condition_variable m_cond;
     std::atomic<bool> m_stop;
-	int32_t threadid = 0;
+    int32_t threadid = 0;
     daw_tls::tlsinstance threadTLS;
+
 public:
     Impl() {
-		std::atomic_init(&m_stop, false);
-	}
+        std::atomic_init(&m_stop, false);
+    }
     void setTls(daw_tls::tlsinstance tls) {
-    	dbgassert(!t.joinable());
-    	threadTLS = tls;
+        dbgassert(!t.joinable());
+        threadTLS = tls;
     }
-	void start() {
-		t = std::thread([this]() {
-			seqthreads::registerThread("workerthread");
+    void start() {
+        t = std::thread([this]() {
+            seqthreads::registerThread("workerthread");
+#ifdef _WIN32
+            this->threadid = seqthreads::getCurrentThreadId();
+#endif
             dbgassert(threadTLS.tlsInitialized);
-			daw_tls::setTls(threadTLS);
-			this->run();
-		});
-	#ifdef _WIN32
-			this->threadid = seqthreads::getCurrentThreadId();
-//			HANDLE h = reinterpret_cast<HANDLE*>(t.native_handle());
-	#endif
-	}
-	void join() {
-		t.join();
-	}
-    int32_t getThreadId() {
-    	return threadid;
+            daw_tls::setTls(threadTLS);
+            this->run();
+        });
     }
-    bool push(ThreadTaskImpl* task){
+    void join() {
+        t.join();
+    }
+    int32_t getThreadId() const {
+        return threadid;
+    }
+    bool push(ThreadTaskImpl* task) {
         std::unique_lock<std::mutex> lock(m_mtx);
         if (!m_stop) {
-        	task->setInQueue();
+            task->setInQueue();
             m_q.push(task);
             m_cond.notify_one();
-        	return true;
+            return true;
         }
-    	return false;
+        return false;
     }
 
-    void stop(){
+    void stop() {
         std::unique_lock<std::mutex> lock(m_mtx);
-    	m_stop = true;
+        m_stop = true;
         m_cond.notify_all();
     }
-private:
-	void run() {
-        while (true){
-        	ThreadTaskImpl* task = pop();
-			if (!task) {
-				break;
-			}
-			try {
-				task->run();
-				task->setCompleted();
-			}
-		    catch(...)
-		    {
-		        task->setException(std::current_exception());
-		    }
-			task->notify();
-        }
-	}
-	ThreadTaskImpl* pop() {
-        std::unique_lock<std::mutex> lock(m_mtx);
-        m_cond.wait(lock, [&](){ return !m_q.empty() || m_stop; });
 
-        if (m_stop && m_q.empty()){
-        	return NULL;
+private:
+    void run() {
+        while (true) {
+            ThreadTaskImpl* task = pop();
+            if (!task) {
+                break;
+            }
+            try {
+                task->run();
+                task->setCompleted();
+            } catch (...) {
+                task->setException(std::current_exception());
+            }
+            task->notify();
+        }
+    }
+    ThreadTaskImpl* pop() {
+        std::unique_lock<std::mutex> lock(m_mtx);
+        m_cond.wait(lock, [&]() { return !m_q.empty() || m_stop; });
+
+        if (m_stop && m_q.empty()) {
+            return nullptr;
         }
 
         ThreadTaskImpl* task = m_q.front();
@@ -155,33 +152,32 @@ private:
     }
 };
 WorkerThread::~WorkerThread() {
-	delete _M_impl;
+    delete m_threadImpl;
 }
 
-WorkerThread::WorkerThread() :
-	_M_impl { new WorkerThread::Impl {  } } {
+WorkerThread::WorkerThread() : m_threadImpl{ new WorkerThread::Impl{} } {
 }
 
 void WorkerThread::startThread() {
-	_M_impl->start();
+    m_threadImpl->start();
 }
 void WorkerThread::stopThread() {
-	_M_impl->stop();
+    m_threadImpl->stop();
 }
 void WorkerThread::joinThread() {
-	_M_impl->join();
+    m_threadImpl->join();
 }
 int32_t WorkerThread::getThreadId() {
-	return _M_impl->getThreadId();
+    return m_threadImpl->getThreadId();
 }
 bool WorkerThread::pushTask(ThreadTask* task) {
-	return this->_M_impl->push(task->_M_impl);
+    return this->m_threadImpl->push(task->m_taskImpl);
 }
 void WorkerThread::setTls(daw_tls::tlsinstance tls) {
-	_M_impl->setTls(tls);
+    m_threadImpl->setTls(tls);
 }
 std::shared_ptr<WorkerThread::ThreadTask> WorkerThread::call(std::function<void()>&& fn) {
-	std::shared_ptr<WorkerThread::ThreadTask> task = std::make_shared<ThreadTaskCallStdFn>(fn);
-	_M_impl->push(task->_M_impl);
-	return task;
+    std::shared_ptr<WorkerThread::ThreadTask> task = std::make_shared<ThreadTaskCallStdFn>(fn);
+    m_threadImpl->push(task->m_taskImpl);
+    return task;
 }

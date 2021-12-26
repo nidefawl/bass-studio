@@ -26,9 +26,8 @@
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Wpessimizing-move"
 #endif
-using namespace moodycamel;
 
-#define LOG(fmtString,...) printf(fmtString "\n", ##__VA_ARGS__); fflush(stdout)
+using namespace moodycamel;
 
 #define PLAYBACK_THREAD_EXIT 255
 
@@ -66,52 +65,52 @@ public:
 };
 
 class PlaybackThread::Impl {
-	std::thread t;
-	ReaderWriterQueue<std::shared_ptr<PlaybackThreadReq>> q;
+	std::thread m_t;
+	ReaderWriterQueue<std::shared_ptr<PlaybackThreadReq>> m_q;
 	//TODO: use atomic for m_status
     playback_state m_status = status_no_process;
-	std::recursive_mutex mutex;
-	std::atomic<int32_t> mLockCount{0};
-	int32_t threadid = 0;
-	project_controller_t* ctrl = nullptr;
-	bool exited = false;
-	daw_tls::tlsinstance threadTLS;
+	std::recursive_mutex m_mutex;
+	std::atomic<int32_t> m_lockCount{0};
+	int32_t m_threadId         = 0;
+	project_controller_t* m_prjCtrl = nullptr;
+	bool m_exited                   = false;
+	daw_tls::tlsinstance m_threadTls;
 public:
-    Impl() : q(128) {
+    Impl() : m_q(128) {
 	}
     ~Impl() {
     	// thread has not been started or thread has been started and exited correctly
-    	dbgassert(this->ctrl == nullptr || (exited && !t.joinable()));
+    	dbgassert(this->m_prjCtrl == nullptr || (m_exited && !m_t.joinable()));
     }
     int32_t getThreadId() {
-    	return threadid;
+    	return m_threadId;
     }
     void setTls(daw_tls::tlsinstance tls) {
-		dbgassert(!t.joinable());
-		threadTLS = tls;
+		dbgassert(!m_t.joinable());
+        m_threadTls = tls;
     }
-	void start(project_controller_t* ctrl) {
-		this->ctrl = ctrl;
-        t = std::thread([this]() {
+	void start(project_controller_t* projCtrl) {
+		this->m_prjCtrl = projCtrl;
+        m_t        = std::thread([this]() {
     		seqthreads::registerThread("audiothread");
-            this->threadid = seqthreads::getCurrentThreadId();
-            dbgassert(threadTLS.tlsInitialized);
-			daw_tls::setTls(threadTLS);
+            this->m_threadId = seqthreads::getCurrentThreadId();
+            dbgassert(m_threadTls.tlsInitialized);
+			daw_tls::setTls(m_threadTls);
 #ifdef _WIN32
-            HANDLE h = reinterpret_cast<HANDLE*>(t.native_handle());
+            HANDLE h = reinterpret_cast<HANDLE*>(m_t.native_handle());
             SetThreadPriority(h, THREAD_PRIORITY_TIME_CRITICAL);
 #endif
 			this->run();
 		});
 	}
 	void join() {
-		dbgassert(t.joinable());
-		t.join();
+		dbgassert(m_t.joinable());
+        m_t.join();
 	}
 	bool addRequest(std::shared_ptr<PlaybackThreadReq>& req) {
-        if (!exited) { 
-			dbgassert(t.joinable());
-            if (q.enqueue(req)) {
+        if (!m_exited) {
+			dbgassert(m_t.joinable());
+            if (m_q.enqueue(req)) {
                 return true;
 			}
             dbgassert(0 && "Failed enqeueing req");
@@ -120,10 +119,10 @@ public:
 	}
 
     void stop(){
-		dbgassert(t.joinable());
-        if (!exited) {
+		dbgassert(m_t.joinable());
+        if (!m_exited) {
             auto req = std::make_shared<PlaybackThreadReq>(PLAYBACK_THREAD_EXIT, 0);
-            if (!q.enqueue(req)) {
+            if (!m_q.enqueue(req)) {
                 dbgassert(0 && "Failed enqeueing req");
             }
             req->wait();
@@ -133,20 +132,20 @@ public:
     	return m_status;
     }
     bool isLocked() {
-    	return this->mLockCount > 0;
+    	return this->m_lockCount > 0;
     }
 	ThreadLock lockThread() {
-		ThreadLock t = ThreadLock::MakeThreadLock(mutex, this->mLockCount, false);
+		ThreadLock t = ThreadLock::MakeThreadLock(m_mutex, this->m_lockCount, false);
 		return std::move(t); //CANNOT RELY ON RVO
 	}
 	ThreadLock tryLockThread() {
-		ThreadLock t = ThreadLock::MakeThreadLock(mutex, this->mLockCount, true);
+		ThreadLock t = ThreadLock::MakeThreadLock(m_mutex, this->m_lockCount, true);
 		return std::move(t); //CANNOT RELY ON RVO
 	}
 private:
 
 	void run() {
-		project_controller_t* const ctrl = this->ctrl;
+		project_controller_t* const ctrl = this->m_prjCtrl;
 		vsthost* host = vsthost::getInstance();
 		midihost* midiHost = midihost::getInstance();
 		export_settings_t exportSettingsLocal{};
@@ -160,7 +159,7 @@ private:
 
 		try {
         while (true){
-        	if (q.try_dequeue(req)) {
+        	if (m_q.try_dequeue(req)) {
         		switch (req->msgId) {
         		case REQ_STATE:
 					{
@@ -182,9 +181,9 @@ private:
 								tickPos = startPos;
 								ctrl->getPlaybackPos() = startPos;
 								samplePos = tickToSample(startPos, bpm100, host->sampleFormat.sampleRate);
-								LOG("START EXPORT ON seconds: %.2f - sample %d\n", toSeconds(startPos, bpm100), samplePos);
+								log_printf("START EXPORT ON seconds: %.2f - sample %d\n", toSeconds(startPos, bpm100), samplePos);
 								host->preExportBegin(ctrl, exportSettingsLocal);
-								host->onStartPlayback(this->ctrl);
+								host->onStartPlayback(this->m_prjCtrl);
 								timer.reset();
 								timer2.reset();
 								playbackDuration = 0;
@@ -200,8 +199,8 @@ private:
 								tickPos = startPos;
 								ctrl->getPlaybackPos() = startPos;
 								samplePos = tickToSample(startPos, bpm100, host->sampleFormat.sampleRate);
-								LOG("START ON seconds: %.2f - sample %d\n", toSeconds(startPos, bpm100), samplePos);
-								host->onStartPlayback(this->ctrl);
+                                log_printf("START ON seconds: %.2f - sample %d\n", toSeconds(startPos, bpm100), samplePos);
+								host->onStartPlayback(this->m_prjCtrl);
 								timer.reset();
 								timer2.reset();
 								playbackDuration = 0;
@@ -209,7 +208,7 @@ private:
 							}
 							case playback_state::status_stop:
 							{
-								host->onStopPlayback(this->ctrl);
+								host->onStopPlayback(this->m_prjCtrl);
 								break;
 							}
 							case playback_state::status_no_process:
@@ -225,11 +224,11 @@ private:
         			break;
         		case PLAYBACK_THREAD_EXIT:
 #ifndef NDEBUG
-    				LOG("PLAYBACK_THREAD_EXIT");
+                    log_printf("PLAYBACK_THREAD_EXIT");
     				seqthreads::threadSleep(200);
 #endif
             		req->notify();
-            		exited = true;
+                    m_exited = true;
         			return;
         		}
         		req->notify();
@@ -249,7 +248,7 @@ private:
             if (m_status != playback_state::status_no_process)
             {
             	// aquire lock so data does not get modified during processing
-				std::unique_lock<std::recursive_mutex> lock(mutex);
+				std::unique_lock<std::recursive_mutex> lock(m_mutex);
 
             	/**
             	 * Copy project globals from controller to host
@@ -287,9 +286,9 @@ private:
 
 
             	if (m_status != playback_state::status_render) {
-            		midiHost->processMidi(this->ctrl, samplePos, tickPos, m_status, inLoop, isLoopAround);
+            		midiHost->processMidi(this->m_prjCtrl, samplePos, tickPos, m_status, inLoop, isLoopAround);
                 	if (!host->bypassPlaybackProcessing) {
-                    	numBlocksProcessed = host->processPlayback(this->ctrl, samplePos, tickPos, m_status, inLoop, isLoopAround);
+                    	numBlocksProcessed = host->processPlayback(this->m_prjCtrl, samplePos, tickPos, m_status, inLoop, isLoopAround);
     					timer2.reset();
                 	} else {
                 		numBlocksProcessed = 0;
@@ -302,7 +301,7 @@ private:
             	}
 
             	if (m_status == playback_state::status_render) {
-                	numBlocksProcessed = host->processRender(this->ctrl, samplePos, tickPos);
+                	numBlocksProcessed = host->processRender(this->m_prjCtrl, samplePos, tickPos);
             	}
 //    			LOG("processedBlocks: %d, play: %d, tickpos: %f\n", processedBlock, (m_status==playback_state::status_play), tickPos);
 
@@ -317,11 +316,11 @@ private:
 								}
 								double nextTickPos = projGlobals.loopStart;
 								int32_t nextSamplePos = tickToSample(nextTickPos, bpm100, sampleRate);
-								host->onPlaybackJumpFromTo(this->ctrl, samplePos, tickPos, nextSamplePos, nextTickPos);
-								LOG("JMP FROM %.2f to %.2f\n", tickPos, nextTickPos);
+								host->onPlaybackJumpFromTo(this->m_prjCtrl, samplePos, tickPos, nextSamplePos, nextTickPos);
+                                log_printf("JMP FROM %.2f to %.2f\n", tickPos, nextTickPos);
 								tickPos = nextTickPos;
 								samplePos = nextSamplePos;
-								LOG("JMP LOOPBEGIN seconds: %.2f - BLOCK %d\n", toSeconds(projGlobals.loopStart, bpm100), samplePos / blockSize);
+                                log_printf("JMP LOOPBEGIN seconds: %.2f - BLOCK %d\n", toSeconds(projGlobals.loopStart, bpm100), samplePos / blockSize);
 
 							}
 						}
@@ -356,17 +355,15 @@ private:
 
 			if (playbackDuration > 10000 && m_status == status_playback) {
 				double wallTimeMs = timer.getTimeDouble() * 1000.0;
-	            LOG("playbackDuration %.4f wallTime %.4f error %.4f\n", playbackDuration, wallTimeMs, playbackDuration-wallTimeMs);
+                log_printf("playbackDuration %.4f wallTime %.4f error %.4f\n", playbackDuration, wallTimeMs, playbackDuration-wallTimeMs);
 	            playbackDuration = 0;
 	            timer.reset();
 			}
-
-//	    	logEveryMsec(1, 5000, "audio thread loop");
         }
 		} catch (std::exception& e) {
 			handleStdException(e);
         }
-        exited = true;
+        m_exited = true;
 	}
 };
 PlaybackThread::~PlaybackThread() {

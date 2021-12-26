@@ -7,7 +7,7 @@
 #include <stdlib.h>
 
 
-String FormatErrorMessage(int32_t error, String msg);
+String FormatErrorMessage(uint32_t error, String msg);
 void printLastError(String fn) {
 	DWORD err = GetLastError();
 	String desc = StringFormat("%s failed (%d)", StringAsCStr(fn), (int32_t)err);

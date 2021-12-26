@@ -64,7 +64,7 @@ String getKeyName(int scancode) {
 	return StringFormat("key_%d", scancode);
 }
 
-String FormatErrorMessage(int32_t error, String msg)
+String FormatErrorMessage(uint32_t error, String msg)
 {
 	static const int BUFFERLENGTH = 1024;
 	std::vector<char> buf(BUFFERLENGTH);
