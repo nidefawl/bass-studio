@@ -108,7 +108,7 @@ public:
         }
 
         nvgSave(vg);
-        automation.render(vg);
+        guiTrAutomation.render(vg);
         nvgRestore(vg);
     }
     void refreshWaveform(waveview_entry* wv) {
