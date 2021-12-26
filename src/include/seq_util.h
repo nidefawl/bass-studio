@@ -6,7 +6,7 @@
 #define UNUSED(expr) do { (void)(expr); } while (0)
 
 #define ARR_SIZE(x) (sizeof(x)/sizeof(x[0]))
-#define DELETE_PTR(x) do { delete x; x = NULL; } while (0);
+#define DELETE_PTR(x) do { delete x; x = NULL; } while (0)
 
 #define STL_CONTAINS(x, y) (std::find(x.cbegin(), x.cend(), y) != x.cend())
 #define STL_RANGE(ctr) ctr.begin(), ctr.end()

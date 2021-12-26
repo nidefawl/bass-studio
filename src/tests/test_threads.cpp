@@ -97,11 +97,11 @@ static void test() {
 
 }
 int main() {
-	ALEPH_TEST_BEGIN("testThreadWorkerTasks");
+	TEST_BEGIN("testThreadWorkerTasks");
 	for (int i = 0; i < 10; i++) {
 		test();
 		seqthreads::threadSleep(40);
 	}
-	ALEPH_TEST_END();
+	TEST_END();
 	return 0;
 }

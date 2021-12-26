@@ -16,47 +16,27 @@
 #define __PRETTY_FUNCTION__ __FUNCSIG__
 #endif
 
-namespace aleph
+namespace CppTest {
+
+inline void testAssertExpr( bool condition )
 {
-
-#define ALEPH_ASSERT_EQUAL( x, y )                                  \
-{                                                                   \
-  if( ( x ) != ( y ) )                                              \
-  {                                                                 \
-    throw std::runtime_error(   std::string( __FILE__ )             \
-                              + std::string( ":" )                  \
-                              + std::to_string( __LINE__ )          \
-                              + std::string( " in " )               \
-                              + std::string( __PRETTY_FUNCTION__ )  \
-                              + std::string( ": " )                 \
-                              + std::to_string( ( x ) )             \
-                              + std::string( " != " )               \
-                              + std::to_string( ( y ) )             \
-    );                                                              \
-  }                                                                 \
+    if (!(condition)) {
+        throw std::runtime_error(   std::string( __FILE__ )
+                                  + std::string( ":" )
+                                  + std::to_string( __LINE__ )
+                                  + std::string( " in " )
+                                  + std::string( __PRETTY_FUNCTION__ ));
+    }
 }
-
-
-#define ALEPH_ASSERT_THROW( condition )                             \
-{                                                                   \
-  if( !( condition ) )                                              \
-  {                                                                 \
-    throw std::runtime_error(   std::string( __FILE__ )             \
-                              + std::string( ":" )                  \
-                              + std::to_string( __LINE__ )          \
-                              + std::string( " in " )               \
-                              + std::string( __PRETTY_FUNCTION__ )  \
-    );                                                              \
-  }                                                                 \
-}
-
-#define ALEPH_EXPECT_EXCEPTION( expression, exception )             \
-{                                                                   \
+#define TEST_ASSERT_THROW( condition ) CppTest::testAssertExpr((condition))
+#define TEST_ASSERT_EQUAL( x, y ) CppTest::testAssertExpr(( x ) == ( y ))
+#define TEST_EXPECT_EXCEPTION( expression, exception )             \
+do {                                                                \
   try                                                               \
   {                                                                 \
     ( expression );                                                 \
   }                                                                 \
-  catch( exception& e )                                             \
+  catch( std::exception& e )                                        \
   {                                                                 \
   }                                                                 \
   catch( ... )                                                      \
@@ -68,24 +48,13 @@ namespace aleph
                               + std::string( __PRETTY_FUNCTION__ )  \
     );                                                              \
   }                                                                 \
-}
+} while(0)
 
-#define ALEPH_TEST_BEGIN( name )\
-{\
-  std::cerr << "-- Running test \"" << name << "\"...";\
-}
+#define TEST_BEGIN( name ) (std::cerr << "-- Running test \"" << name << "\"...")
 
-#define ALEPH_TEST_END() \
-{\
-  std::cerr << "finished\n";\
-}
+#define TEST_END() (std::cerr << "finished\n")
 
-#define TEST_MAIN \
-int main(int, char**) \
-{ \
-  runTest(); \
-}
 
-}
+} // namespace CppTest
 
 #endif
