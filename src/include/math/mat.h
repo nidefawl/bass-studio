@@ -7,7 +7,6 @@
 using mat4x4 = glm::mat4x4;
 
 template<typename T>
-inline float const* mat_ptr(T const& m)
-{
-	return &(m[0].x);
+inline float const* mat_ptr(T const& m) {
+    return &(m[0].x);
 }

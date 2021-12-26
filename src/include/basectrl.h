@@ -318,7 +318,7 @@ public:
     ~AppCtrl() override;
     void relayout(int32_t w, int32_t h) override = 0;
     virtual void onChildOverlayWindowClose(window_main*);
-    void openContextMenu(guictxtmenu_base* b, ivec2 pos, int flags) override;
+    void openContextMenu(guictxtmenu_base* b, ivec2 pos, int flags=1) override;
     void openDialog(guidialog_base* b);
     void closeContextMenu() override;
     void closeDialogs() override;
