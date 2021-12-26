@@ -1,431 +1,374 @@
 #ifdef _WIN32
-#include "../../vst_window.h"
-#include "../../vst_host.h"
-#include "../../plugin/vst_plugin.h"
-#include "../host/mainctrl.h"
-#ifdef _WIN32
+#include "host/vst_window.h"
+#include "host/vst_host.h"
+#include "host/plugin/vst_plugin.h"
+#include "host/mainctrl.h"
+#define WINDOW_HANDLE HWND
 #include <windows.h>
 #include <winuser.h>
-#define WINDOW_HANDLE HWND
-#endif
-
 #include <tchar.h>
-#include <Windows.h>
+
 #include "math/vec.h"
 #include "math/seq_math.h"
-#include "../platform/win/platform_win.h"
+#include "platform/win/platform_win.h"
 
 #define WIN32API_CALLBACK_TYPE __stdcall
-LRESULT WIN32API_CALLBACK_TYPE appWndProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam); // window.cpp
+LRESULT WIN32API_CALLBACK_TYPE appWndProc(HWND hwnd, UINT Msg, WPARAM wParam, LPARAM lParam);// window.cpp
 
 namespace {
-	const TCHAR* gWindowClassName = _T("VSTHOSTWINDOW");
-	static std::vector<vst_window*> vst_window_list;
-	static void addWindow (vst_window* window)
-	{
-		vst_window_list.push_back (window);
-	}
-	static void removeWindow (vst_window* window)
-	{
-		auto it = std::find (vst_window_list.begin (), vst_window_list.end (), window);
-		if (it != vst_window_list.end ())
-			vst_window_list.erase(it);
-	}
-	static vst_window* getWindowByHWND (WINDOW_HANDLE hwnd)
-	{
-		auto it = std::find_if(vst_window_list.begin (), vst_window_list.end (), [hwnd](vst_window* window) {
-			return window->getHWND() == hwnd;
-		});
-		if (it != vst_window_list.end ())
-			return *it;
-		return nullptr;
-	}
+    const TCHAR* gWindowClassName = _T("VSTHOSTWINDOW");
+    std::vector<vst_window*> vst_window_list;
+    void addWindow(vst_window* window) {
+        vst_window_list.push_back(window);
+    }
+    void removeWindow(vst_window* window) {
+        auto it = std::find(vst_window_list.begin(), vst_window_list.end(), window);
+        if (it != vst_window_list.end())
+            vst_window_list.erase(it);
+    }
+    vst_window* getWindowByHWND(WINDOW_HANDLE hwnd) {
+        auto it = std::find_if(vst_window_list.begin(), vst_window_list.end(), [hwnd](vst_window* window) {
+            return window->getHWND() == hwnd;
+        });
+        if (it != vst_window_list.end())
+            return *it;
+        return nullptr;
+    }
 
-	void captureWindow(HWND hwnd, ImageBuf& capturedFrame) {
-		if (!IsWindowVisible(hwnd)) {
-			capturedFrame.w = 0;
-			capturedFrame.h = 0;
-			capturedFrame.bytes.resize(0);
-			capturedFrame.bitdepth = 4;
-			return;
-		}
-		static hires_timer_t time2;
-		time2.reset();
-		HDC hdc = GetDCEx(hwnd, nullptr, DCX_CACHE);
-//		HDC hdc = GetDC(hwnd);
-		if (hdc) {
-			static hires_timer_t time;
-			RECT rectClientArea;
-			GetClientRect(hwnd, &rectClientArea);
-//			RECT rectClientArea;
-//
-//		    const int wBrd = GetSystemMetrics(SM_CXSIZEFRAME);
-//		    const int hBrd = GetSystemMetrics(SM_CYSIZEFRAME);
-//			if (!GetWindowRect(hwnd, &rectClientArea)) {
-//				return;
-//			}
-//			rectClientArea.left+=wBrd;
-//			rectClientArea.right-=wBrd;
-//			rectClientArea.bottom-=hBrd;
+    void captureWindow(HWND hwnd, ImageBuf& capturedFrame) {
+        if (!IsWindowVisible(hwnd)) {
+            capturedFrame.w = 0;
+            capturedFrame.h = 0;
+            capturedFrame.bytes.resize(0);
+            capturedFrame.bitdepth = 4;
+            return;
+        }
+        static hires_timer_t time2;
+        time2.reset();
+        HDC hdc = GetDCEx(hwnd, nullptr, DCX_CACHE);
+        if (hdc) {
+            static hires_timer_t time;
+            RECT rectClientArea;
+            GetClientRect(hwnd, &rectClientArea);
 
-			const int width = rectClientArea.right - rectClientArea.left;
-			const int height = rectClientArea.bottom - rectClientArea.top;
-			const int bytesPerPixel = 4;
-			const int bufSizeBitmap = width * height * bytesPerPixel;
-			BITMAPINFO info { };
-			info.bmiHeader.biSize = sizeof(info.bmiHeader);
-			info.bmiHeader.biWidth = width;
-			info.bmiHeader.biHeight = -height; // negative for top-down pixel array
-			info.bmiHeader.biPlanes = 1;
-			info.bmiHeader.biBitCount = bytesPerPixel * 8;
-			info.bmiHeader.biCompression = BI_RGB;
-			info.bmiHeader.biSizeImage = bufSizeBitmap;
-			void* pVoidBitmap;
-			HBITMAP bitmap = CreateDIBSection(hdc, &info, DIB_RGB_COLORS, &pVoidBitmap, nullptr, 0);
-			if (!bitmap) {
-				log_printf("Failed creating bitmap: %d\n", GetLastError());
-			}
+            const int width         = rectClientArea.right - rectClientArea.left;
+            const int height        = rectClientArea.bottom - rectClientArea.top;
+            const int bytesPerPixel = 4;
+            const int bufSizeBitmap = width * height * bytesPerPixel;
+            BITMAPINFO info{};
+            info.bmiHeader.biSize        = sizeof(info.bmiHeader);
+            info.bmiHeader.biWidth       = width;
+            info.bmiHeader.biHeight      = -height;// negative for top-down pixel array
+            info.bmiHeader.biPlanes      = 1;
+            info.bmiHeader.biBitCount    = bytesPerPixel * 8;
+            info.bmiHeader.biCompression = BI_RGB;
+            info.bmiHeader.biSizeImage   = bufSizeBitmap;
+            void* pVoidBitmap;
+            HBITMAP bitmap = CreateDIBSection(hdc, &info, DIB_RGB_COLORS, &pVoidBitmap, nullptr, 0);
+            if (!bitmap) {
+                log_printf("Failed creating bitmap: %d\n", GetLastError());
+            }
 
-			HDC memDC = CreateCompatibleDC(hdc);
-			HBITMAP prevOBj = (HBITMAP)SelectObject(memDC, bitmap);
-//			if (!PrintWindow(hwnd, memDC, PW_CLIENTONLY)) {
-//				log_printf("PrintWindow failed: %d\n", GetLastError());
-//			}
-			time.reset();
-			if (!BitBlt(memDC, 0, 0, width, height, hdc, 0, 0, SRCCOPY)) {
-				log_printf("BitBlt failed: %d\n", GetLastError());
-			}
-			static int calls = 0;
-			static double total = 0.0;
-			total += time.getTimeDouble();
-			if (++calls%60==0) {
-				double perCall = total / calls;
-				log_printf("bitblt %f\n", perCall);
-				total = 0;
-				calls = 0;
-			}
-			SelectObject(memDC, prevOBj);
-			DeleteDC(memDC);
-			ReleaseDC(hwnd, hdc);
+            HDC memDC       = CreateCompatibleDC(hdc);
+            HBITMAP prevOBj = (HBITMAP) SelectObject(memDC, bitmap);
+            //if (!PrintWindow(hwnd, memDC, PW_CLIENTONLY)) {
+            //    log_printf("PrintWindow failed: %d\n", GetLastError());
+            //}
+            time.reset();
+            if (!BitBlt(memDC, 0, 0, width, height, hdc, 0, 0, SRCCOPY)) {
+                log_printf("BitBlt failed: %d\n", GetLastError());
+            }
+            static int calls    = 0;
+            static double total = 0.0;
+            total += time.getTimeDouble();
+            if (++calls % 60 == 0) {
+                double perCall = total / calls;
+                log_printf("bitblt %f\n", perCall);
+                total = 0;
+                calls = 0;
+            }
+            SelectObject(memDC, prevOBj);
+            DeleteDC(memDC);
+            ReleaseDC(hwnd, hdc);
 
-			int64_t bufSize = width * height * 4;
-			capturedFrame.w = width;
-			capturedFrame.h = height;
-			capturedFrame.bitdepth = 4;
-			capturedFrame.bytes.resize(bufSize);
-			uint8_t* pBitmapData = reinterpret_cast<uint8_t*>(pVoidBitmap);
-			uint8_t* pOut = capturedFrame.bytes.data();
-//			capturedFrame.bytes.assign(bitmapData, bitmapData + bufSize);
-			for (int idx = 0; idx < bufSizeBitmap; idx += bytesPerPixel) {
-				*pOut++ = pBitmapData[idx + 2];
-				*pOut++ = pBitmapData[idx + 1];
-				*pOut++ = pBitmapData[idx + 0];
-				*pOut++ = 0xFF;
-			}
-		    DeleteObject(bitmap);
-		}
-		static int calls2 = 0;
-		static double total2 = 0.0;
-		total2 += time2.getTimeDouble();
-		if (++calls2%60==0) {
-			double perCall = total2 / calls2;
-			log_printf("total %f\n", perCall);
-			total2 = 0;
-			calls2 = 0;
-		}
-	}
-	LRESULT CALLBACK PluginWndProc (HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam)
-	{
-		vst_window* window = reinterpret_cast<vst_window*> ((LONG_PTR)GetWindowLongPtr (hwnd, GWLP_USERDATA));
-		if (window) {
-			vstplugin* plugin = window->getPlugin();
-			switch (message)
-			{
-				case WM_ERASEBKGND:
-				{
-//					break;
-					return 1; // don't draw background
-				}
-//				case WM_PAINT:
-//				{
-//					PAINTSTRUCT ps{};
-//					BeginPaint(hwnd, &ps);
-//					EndPaint(hwnd, &ps);
-//					return 0;
-//				}
-				case WM_SIZE:
-				{
-					plugin->onResize(window, window->getContentSize ());
-					break;
-				}
-		        case WM_KEYDOWN:
-		        case WM_SYSKEYDOWN:
-		        case WM_KEYUP:
-		        case WM_SYSKEYUP:
-		        	my_printf("key \n", 0);
-					{
-						HWND hwndMain = getMainHWND();
-						if (hwndMain) {
-							return appWndProc(hwndMain, message, wParam, lParam);
-						}
-					}
-		        	break;
-				case WM_SIZING:
-				{
-					RECT* newSize = reinterpret_cast<RECT*> (lParam);
-					RECT oldSize;
-					GetWindowRect (hwnd, &oldSize);
-					RECT clientSize;
-					GetClientRect (hwnd, &clientSize);
+            int64_t bufSize        = width * height * 4;
+            capturedFrame.w        = width;
+            capturedFrame.h        = height;
+            capturedFrame.bitdepth = 4;
+            capturedFrame.bytes.resize(bufSize);
+            uint8_t* pBitmapData = reinterpret_cast<uint8_t*>(pVoidBitmap);
+            uint8_t* pOut        = capturedFrame.bytes.data();
 
-					auto diffX = (newSize->right - newSize->left) - (oldSize.right - oldSize.left);
-					auto diffY = (newSize->bottom - newSize->top) - (oldSize.bottom - oldSize.top);
+            for (int idx = 0; idx < bufSizeBitmap; idx += bytesPerPixel) {
+                *pOut++ = pBitmapData[idx + 2];
+                *pOut++ = pBitmapData[idx + 1];
+                *pOut++ = pBitmapData[idx + 0];
+                *pOut++ = 0xFF;
+            }
+            DeleteObject(bitmap);
+        }
+        static int calls2    = 0;
+        static double total2 = 0.0;
+        total2 += time2.getTimeDouble();
+        if (++calls2 % 60 == 0) {
+            double perCall = total2 / calls2;
+            log_printf("total %f\n", perCall);
+            total2 = 0;
+            calls2 = 0;
+        }
+    }
+    LRESULT CALLBACK PluginWndProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
+        vst_window* window = reinterpret_cast<vst_window*>((LONG_PTR) GetWindowLongPtr(hwnd, GWLP_USERDATA));
+        if (window) {
+            vstplugin* plugin = window->getPlugin();
+            switch (message) {
+                case WM_ERASEBKGND: {
+                    return 1;// don't draw background
+                }
+                case WM_SIZE: {
+                    plugin->onResize(window, window->getContentSize());
+                    break;
+                }
+                case WM_KEYDOWN:
+                case WM_SYSKEYDOWN:
+                case WM_KEYUP:
+                case WM_SYSKEYUP:
+                    {
+                        HWND hwndMain = getMainHWND();
+                        if (hwndMain) {
+                            return appWndProc(hwndMain, message, wParam, lParam);
+                        }
+                    }
+                    break;
+                case WM_SIZING: {
+                    RECT* newSize = reinterpret_cast<RECT*>(lParam);
+                    RECT oldSize;
+                    GetWindowRect(hwnd, &oldSize);
+                    RECT clientSize;
+                    GetClientRect(hwnd, &clientSize);
 
-					ivec2 newClientSize = {(clientSize.right - clientSize.left),
-					                      (clientSize.bottom - clientSize.top)};
-					newClientSize.x += diffX;
-					newClientSize.y += diffY;
+                    auto diffX = (newSize->right - newSize->left) - (oldSize.right - oldSize.left);
+                    auto diffY = (newSize->bottom - newSize->top) - (oldSize.bottom - oldSize.top);
 
-					ivec2 constraintSize = plugin->constrainSize (window, newClientSize);
-					if (constraintSize != newClientSize)
-					{
-						auto diffX = (oldSize.right - oldSize.left) - (clientSize.right - clientSize.left);
-						auto diffY = (oldSize.bottom - oldSize.top) - (clientSize.bottom - clientSize.top);
-						newSize->right = newSize->left + static_cast<LONG> (constraintSize.x + diffX);
-						newSize->bottom = newSize->top + static_cast<LONG> (constraintSize.y + diffY);
-					}
-					return TRUE;
-				}
-				case WM_CLOSE:
-				{
-					window->close();
-					return 1;
-				}
-			}
-		}
-		return DefWindowProc (hwnd, message, wParam, lParam);
-	}
-	void registerWindowClass (HINSTANCE instance)
-	{
-		static bool once = true;
-		if (!once)
-			return;
-		once = true;
+                    ivec2 newClientSize = { (clientSize.right - clientSize.left),
+                                            (clientSize.bottom - clientSize.top) };
+                    newClientSize.x += diffX;
+                    newClientSize.y += diffY;
 
-		WNDCLASSEX wcex {};
+                    ivec2 constraintSize = plugin->constrainSize(window, newClientSize);
+                    if (constraintSize != newClientSize) {
+                        diffX = (oldSize.right - oldSize.left) - (clientSize.right - clientSize.left);
+                        diffY = (oldSize.bottom - oldSize.top) - (clientSize.bottom - clientSize.top);
+                        newSize->right  = newSize->left + static_cast<LONG>(constraintSize.x + diffX);
+                        newSize->bottom = newSize->top + static_cast<LONG>(constraintSize.y + diffY);
+                    }
+                    return TRUE;
+                }
+                case WM_CLOSE: {
+                    window->close();
+                    return 1;
+                }
+                default:
+                    break;
+            }
+        }
+        return DefWindowProc(hwnd, message, wParam, lParam);
+    }
+    void registerWindowClass(HINSTANCE instance) {
+        static bool once = true;
+        if (!once)
+            return;
+        once = true;
 
-		wcex.cbSize = sizeof (WNDCLASSEX);
+        WNDCLASSEX wcex{};
 
-		wcex.style = CS_DBLCLKS;
-		wcex.lpfnWndProc = PluginWndProc;
-		wcex.hInstance = instance;
-		wcex.hCursor = LoadCursor (instance, IDC_ARROW);
-		wcex.hbrBackground = nullptr;
-		wcex.lpszClassName = gWindowClassName;
+        wcex.cbSize = sizeof(WNDCLASSEX);
 
-		RegisterClassEx (&wcex);
-	}
-}
+        wcex.style         = CS_DBLCLKS;
+        wcex.lpfnWndProc   = PluginWndProc;
+        wcex.hInstance     = instance;
+        wcex.hCursor       = LoadCursor(instance, IDC_ARROW);
+        wcex.hbrBackground = nullptr;
+        wcex.lpszClassName = gWindowClassName;
+
+        RegisterClassEx(&wcex);
+    }
+}// namespace
 
 
-vst_window* vst_window::make (vstplugin* plugin, const String& name, ivec2 size, bool resizeable)
-{
-	vst_window* window = new vst_window();
-	if (window->init (plugin, name, size, resizeable))
-		return window;
-	return nullptr;
+vst_window* vst_window::make(vstplugin* plugin, const String& name, ivec2 size, bool resizeable) {
+    auto* window = new vst_window();
+    if (window->init(plugin, name, size, resizeable))
+        return window;
+    return nullptr;
 }
 namespace vst_window_mgr {
-	void destroyAllVSTWindows() {
-		for (vst_window* w : vst_window_list) {
-			HWND hwnd = w->getHWND();
-			if (hwnd) {
-				ShowWindow(hwnd, false);
-				DestroyWindow(hwnd);
-			}
-		}
-		vst_window_list.clear();
-		UnregisterClass(gWindowClassName, GetModuleHandle(NULL));
-	}
-	bool isVstWindow(HWND hwnd) {
-		return nullptr != vst_window::getVSTWindow(hwnd);
-	}
-}
-vst_window* vst_window::getVSTWindow(HWND handle)
-{
-	dbgassert(handle);
-	TCHAR clsName_v[512];
-	String sChain = "";
-	vst_window* vstwinhandle = nullptr;
-	while (handle /*&& !vstwinhandle*/) {
-		if (GetClassName(handle, clsName_v, 512)) {
-			if (!vstwinhandle && strcmp(clsName_v, "VSTHOSTWINDOW") == 0) {
-				vstwinhandle = getWindowByHWND(handle);
-			}
-			if (!strcmp(clsName_v, "Edit")) {
-				vstwinhandle = nullptr;
-				break;
-			}
-			if (!sChain.length()) {
-				sChain = String(clsName_v);
-			} else {
-				sChain = String(clsName_v) + " > " + sChain;
-			}
-		} else {
-			my_printf("GetClassName failed\n",0);
-		}
-		WINDOWINFO info;
-		info.cbSize = sizeof(info);
-		GetWindowInfo(handle, &info);
-		if (info.dwStyle & WS_CHILD) {
-			handle = GetParent(handle);
-		} else break;
-	}
-//	my_printf("getVSTWindow %s isPlugin %d\n", StringAsCStr(sChain), vstwinhandle ? 1 : 0);
-	return vstwinhandle;
-}
+    void destroyAllVSTWindows() {
+        for (vst_window* w : vst_window_list) {
+            HWND hwnd = w->getHWND();
+            if (hwnd) {
+                ShowWindow(hwnd, false);
+                DestroyWindow(hwnd);
+            }
+        }
+        vst_window_list.clear();
+        UnregisterClass(gWindowClassName, GetModuleHandle(nullptr));
+    }
+    bool isVstWindow(HWND hwnd) {
+        return nullptr != vst_window::getVSTWindow(hwnd);
+    }
+}// namespace vst_window_mgr
 
-
-
-//------------------------------------------------------------------------
-std::vector<vst_window*>& vst_window::getWindows ()
-{
-	return vst_window_list;
+vst_window* vst_window::getVSTWindow(HWND handle) {
+    dbgassert(handle);
+    TCHAR clsName_v[512];
+    String sChain;
+    vst_window* vstwinhandle = nullptr;
+    while (handle /*&& !vstwinhandle*/) {
+        if (GetClassName(handle, clsName_v, 512)) {
+            if (!vstwinhandle && strcmp(clsName_v, "VSTHOSTWINDOW") == 0) {
+                vstwinhandle = getWindowByHWND(handle);
+            }
+            if (!strcmp(clsName_v, "Edit")) {
+                vstwinhandle = nullptr;
+                break;
+            }
+            if (!sChain.length()) {
+                sChain = String(clsName_v);
+            } else {
+                sChain = String(clsName_v) + " > " + sChain;
+            }
+        } else {
+            log_printf("GetClassName failed\n", 0);
+        }
+        WINDOWINFO info;
+        info.cbSize = sizeof(info);
+        GetWindowInfo(handle, &info);
+        if (info.dwStyle & WS_CHILD) {
+            handle = GetParent(handle);
+        } else
+            break;
+    }
+    return vstwinhandle;
 }
 
-//------------------------------------------------------------------------
-bool vst_window::init(vstplugin* plugin, const String& name, ivec2 size, bool resizeable)
-{
-	HWND mainHWND = getMainHWND();
-	assert(mainHWND);
-	this->plugin = plugin;
-	HINSTANCE instance = GetModuleHandle(NULL);
-	registerWindowClass (instance);
-	DWORD exStyle, dwStyle;
-	HWND parentHWND;
-	if (isChildWindow) {
-		parentHWND = mainHWND;
-		exStyle = 0;
-		dwStyle = WS_CHILDWINDOW | WS_CLIPSIBLINGS;
-	} else {
-		parentHWND = getMainHWND();
-		exStyle = WS_EX_APPWINDOW;
-		dwStyle = WS_CAPTION | WS_SYSMENU | WS_CLIPSIBLINGS;
-		if (resizeable) {
-			dwStyle |= WS_SIZEBOX | WS_MAXIMIZEBOX;
-		}
-	}
-	hwnd = CreateWindowEx (exStyle, gWindowClassName, StringAsCStr(name), dwStyle,
-            0, 0, size.x, size.y, parentHWND, nullptr, instance, nullptr);
-
-//	CreateWindowExA(DWORD dwExStyle,LPCSTR lpClassName,LPCSTR lpWindowName,DWORD dwStyle,int X,int Y,int nWidth,int nHeight,HWND hWndParent,HMENU hMenu,HINSTANCE hInstance,LPVOID lpParam);
-	if (hwnd)
-	{
-		if (!isChildWindow) {
-			RECT rcOwner;
-			RECT rcDlg;
-			RECT rc;
-			GetWindowRect(mainHWND, &rcOwner);
-			GetWindowRect(hwnd, &rcDlg);
-			CopyRect(&rc, &rcOwner);
-			OffsetRect(&rcDlg, -rcDlg.left, -rcDlg.top);
-			OffsetRect(&rc, -rc.left, -rc.top);
-			OffsetRect(&rc, -rcDlg.right, -rcDlg.bottom);
-			SetWindowPos(hwnd,
-				HWND_TOP,
-				rcOwner.left + (rc.right / 2),
-				rcOwner.top + (rc.bottom / 2),
-				0, 0,          // Ignores size arguments.
-				SWP_NOSIZE);
-		}
-		SetWindowLongPtr (hwnd, GWLP_USERDATA, (__int3264) (LONG_PTR)this);
-		addWindow (this);
-	}
-	return hwnd != nullptr;
+std::vector<vst_window*>& vst_window::getWindows() {
+    return vst_window_list;
 }
 
-//------------------------------------------------------------------------
-void vst_window::close()
-{
-	plugin->onClose();
-	destroy();
-//	ShowWindow(hwnd, SW_HIDE);
+bool vst_window::init(vstplugin* _plugin, const String& name, ivec2 size, bool resizeable) {
+    HWND mainHWND = getMainHWND();
+    assert(mainHWND);
+    this->plugin       = _plugin;
+    HINSTANCE instance = GetModuleHandle(nullptr);
+    registerWindowClass(instance);
+    DWORD exStyle, dwStyle;
+    HWND parentHWND;
+    if (isChildWindow) {
+        parentHWND = mainHWND;
+        exStyle    = 0;
+        dwStyle    = WS_CHILDWINDOW | WS_CLIPSIBLINGS;
+    } else {
+        parentHWND = getMainHWND();
+        exStyle    = WS_EX_APPWINDOW;
+        dwStyle    = WS_CAPTION | WS_SYSMENU | WS_CLIPSIBLINGS;
+        if (resizeable) {
+            dwStyle |= WS_SIZEBOX | WS_MAXIMIZEBOX;
+        }
+    }
+    hwnd = CreateWindowEx(exStyle, gWindowClassName, StringAsCStr(name), dwStyle,
+                          0, 0, size.x, size.y, parentHWND, nullptr, instance, nullptr);
+
+    if (hwnd) {
+        if (!isChildWindow) {
+            RECT rcOwner;
+            RECT rcDlg;
+            RECT rc;
+            GetWindowRect(mainHWND, &rcOwner);
+            GetWindowRect(hwnd, &rcDlg);
+            CopyRect(&rc, &rcOwner);
+            OffsetRect(&rcDlg, -rcDlg.left, -rcDlg.top);
+            OffsetRect(&rc, -rc.left, -rc.top);
+            OffsetRect(&rc, -rcDlg.right, -rcDlg.bottom);
+            SetWindowPos(hwnd,
+                         HWND_TOP,
+                         rcOwner.left + (rc.right / 2),
+                         rcOwner.top + (rc.bottom / 2),
+                         0, 0,// Ignores size arguments.
+                         SWP_NOSIZE);
+        }
+        SetWindowLongPtr(hwnd, GWLP_USERDATA, (__int3264) (LONG_PTR) this);
+        addWindow(this);
+    }
+    return hwnd != nullptr;
 }
 
-//------------------------------------------------------------------------
-void vst_window::destroy()
-{
-	plugin->onWindowDestroy();
-	SetWindowLongPtr (hwnd, GWLP_USERDATA, (__int3264) (LONG_PTR) nullptr);
-	DestroyWindow(hwnd);
-	removeWindow (this);
-	delete this;
+void vst_window::close() {
+    plugin->onClose();
+    destroy();
 }
 
-//------------------------------------------------------------------------
-void vst_window::show()
-{
-	SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOCOPYBITS | SWP_SHOWWINDOW);
-	if (isChildWindow) {
-
-//		ShowWindow(hwnd, SW_SHOWNA);
-	} else {
-		SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, (__int3264) (LONG_PTR)getMainHWND());
-	}
-	plugin->onShow(this);
+void vst_window::destroy() {
+    plugin->onWindowDestroy();
+    SetWindowLongPtr(hwnd, GWLP_USERDATA, (__int3264) (LONG_PTR) nullptr);
+    DestroyWindow(hwnd);
+    removeWindow(this);
+    delete this;
 }
 
-//------------------------------------------------------------------------
-ivec2 vst_window::getContentSize ()
-{
-	RECT r;
-	GetClientRect (hwnd, &r);
-	return {r.right - r.left, r.bottom - r.top};
+void vst_window::show() {
+    SetWindowPos(hwnd, HWND_TOP, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOCOPYBITS | SWP_SHOWWINDOW);
+    if (isChildWindow) {
+        //ShowWindow(hwnd, SW_SHOWNA);
+    } else {
+        SetWindowLongPtr(hwnd, GWLP_HWNDPARENT, (__int3264) (LONG_PTR) getMainHWND());
+    }
+    plugin->onShow(this);
 }
 
+
+ivec2 vst_window::getContentSize() const {
+    RECT r;
+    GetClientRect(hwnd, &r);
+    return { r.right - r.left, r.bottom - r.top };
+}
 
 void vst_window::captureWindowFrame() {
-	capturedFrame.w = 0;
-	capturedFrame.h = 0;
-	capturedFrame.bytes.clear();
-//	window->captureWindowFrame();
-//	auto& frame = window->capturedFrame;
-	captureWindow(hwnd, capturedFrame);
-
+    capturedFrame.w = 0;
+    capturedFrame.h = 0;
+    capturedFrame.bytes.clear();
+    captureWindow(hwnd, capturedFrame);
 }
 
-void vst_window::updateWindow() {
-	////InvalidateRect(hwnd, NULL, TRUE);
-	//InvalidateRect(hwnd, NULL, FALSE);
-	//InvalidateRgn(hwnd, NULL, FALSE);
-//    RedrawWindow( hwnd, NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_FRAME | RDW_ALLCHILDREN );
-	UpdateWindow(hwnd);
-//	my_printf("updateDisplay %d\n", getTimeMillis());
-}
-//------------------------------------------------------------------------
-void vst_window::resize (ivec2 newSize)
-{
-	if (getContentSize () == newSize)
-		return;
-	WINDOWINFO windowInfo{ 0 };
-	windowInfo.cbSize = sizeof(WINDOWINFO);
-	GetWindowInfo (hwnd, &windowInfo);
-	RECT clientRect {};
-	clientRect.right = newSize.x;
-	clientRect.bottom = newSize.y;
-	AdjustWindowRectEx (&clientRect, windowInfo.dwStyle, false, windowInfo.dwExStyle);
-	if (isChildWindow) {
-		SetWindowPos (hwnd, nullptr, 0, 0, clientRect.right - clientRect.left,
-		              clientRect.bottom - clientRect.top, SWP_NOMOVE | SWP_NOCOPYBITS | SWP_NOACTIVATE);
-	} else {
-		SetWindowPos (hwnd, HWND_TOP, 0, 0, clientRect.right - clientRect.left,
-		              clientRect.bottom - clientRect.top, SWP_NOMOVE | SWP_NOCOPYBITS | SWP_NOACTIVATE);
-	}
+void vst_window::updateWindow() const {
+    //InvalidateRect(hwnd, NULL, TRUE);
+    //InvalidateRect(hwnd, NULL, FALSE);
+    //InvalidateRgn(hwnd, NULL, FALSE);
+    //RedrawWindow( hwnd, NULL, NULL, RDW_ERASE | RDW_INVALIDATE | RDW_FRAME | RDW_ALLCHILDREN );
+    UpdateWindow(hwnd);
+    //log_printf("updateDisplay %d\n", getTimeMillis());
 }
 
-//------------------------------------------------------------------------
-WINDOW_HANDLE vst_window::getHWND () const
-{
-	return hwnd;
+void vst_window::resize(ivec2 newSize) const {
+    if (getContentSize() == newSize)
+        return;
+    WINDOWINFO windowInfo{ 0 };
+    windowInfo.cbSize = sizeof(WINDOWINFO);
+    GetWindowInfo(hwnd, &windowInfo);
+    RECT clientRect{};
+    clientRect.right  = newSize.x;
+    clientRect.bottom = newSize.y;
+    AdjustWindowRectEx(&clientRect, windowInfo.dwStyle, false, windowInfo.dwExStyle);
+    if (isChildWindow) {
+        SetWindowPos(hwnd, nullptr, 0, 0, clientRect.right - clientRect.left,
+                     clientRect.bottom - clientRect.top, SWP_NOMOVE | SWP_NOCOPYBITS | SWP_NOACTIVATE);
+    } else {
+        SetWindowPos(hwnd, HWND_TOP, 0, 0, clientRect.right - clientRect.left,
+                     clientRect.bottom - clientRect.top, SWP_NOMOVE | SWP_NOCOPYBITS | SWP_NOACTIVATE);
+    }
+}
+
+WINDOW_HANDLE vst_window::getHWND() const {
+    return hwnd;
 }
 #endif

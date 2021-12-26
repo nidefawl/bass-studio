@@ -1,7 +1,6 @@
 #ifdef __APPLE__
 #endif
-#include <stdint.h>
-#include <stdbool.h>
+#include <cstdint>
 #include "math/vec.h"
 #include "str_util.h"
 #include "seq_time.h"
@@ -10,107 +9,90 @@
 #include "track_impl.h"
 #include "au_plugin.h"
 
-auplugin::~auplugin(){ }
-void auplugin::resume(){ }
-void auplugin::sleep(){ }
+void auplugin::resume() {}
+void auplugin::sleep() {}
 
 //	bool updateWindow();
 String auplugin::getInfo(std::vector<String>& list) { return "NOT IMPLEMENTED"; }
-//	long dispatch(
-//		long opcode = 0,
-//		long index = 0,
-//		long value = 0,
-//		void *ptr = 0,
-//		float opt = 0);
-bool auplugin::getNameString(char* szBuf){ szBuf[0] = 0; return false; }
-void auplugin::printNames(){ }
-bool auplugin::onClose(){ return true; }
-void auplugin::onWindowDestroy(){ }
-bool auplugin::onShow(vst_window* window){return false; }
-bool auplugin::updateWindowSize(){ return false; }
-bool auplugin::onResize(vst_window* window, ivec2 size){ return false; }
-ivec2 auplugin::constrainSize(vst_window* window, ivec2& size){return size;}
-bool auplugin::show(){ return false; }
-bool auplugin::close(){ return false; }
-void auplugin::unload(vsthost* host, int flags){ }
-void auplugin::load(vsthost* host){ }
-//	vst_param_category* getCategory(int idx);
-//	void recvPluginEditParamUpdate(int32_t idx);
 
-//automatable_t
-String auplugin::getAutomatableName(){ return "AU_PLUGIN"; }
+bool auplugin::getNameString(char* szBuf) {
+    szBuf[0] = 0;
+    return false;
+}
+void auplugin::printNames() {}
+bool auplugin::onClose() { return true; }
+void auplugin::onWindowDestroy() {}
+bool auplugin::onShow(vst_window* window) { return false; }
+bool auplugin::updateWindowSize() { return false; }
+bool auplugin::onResize(vst_window* window, ivec2 size) { return false; }
+ivec2 auplugin::constrainSize(vst_window* window, ivec2& size) { return size; }
+bool auplugin::show() { return false; }
+bool auplugin::close() { return false; }
+void auplugin::unload(vsthost* host, int flags) {}
+void auplugin::load(vsthost* host) {}
 
-void auplugin::makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks){ }
-void auplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot){ }
-guiplugin* auplugin::makeGui(){ return nullptr; }
-guiplugin* auplugin::getGui(){ return nullptr; }
-void auplugin::process(AudioBlock* in, AudioBlock* out, double tick, int32_t samplePos, int32_t numSamples, playback_state state){
+String auplugin::getAutomatableName() { return "AU_PLUGIN"; }
 
+void auplugin::makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) {}
+void auplugin::loadSnapshot(const plugin_snapshot_t& pluginSnapshot) {}
+guiplugin* auplugin::makeGui() { return nullptr; }
+guiplugin* auplugin::getGui() { return nullptr; }
+void auplugin::process(AudioBlock* in, AudioBlock* out, double tick, int32_t samplePos, int32_t numSamples, playback_state state) {
 }
 int32_t auplugin::getPluginLatency() { return 0; }
 
 float auplugin::getParamValue(int32_t idx) {
-	automatable_param_t* param = getParamUnchecked(idx);
-	dbgassert(param);
-	if (param->internalIdx >= 0) {
-		param->value = 0;// vst_getParameter(this, handle->aeffect, param->internalIdx);
-	}
-	return param->value;
+    automatable_param_t* param = getParamUnchecked(idx);
+    dbgassert(param);
+    if (param->internalIdx >= 0) {
+        param->value = 0;// vst_getParameter(this, handle->aeffect, param->internalIdx);
+    }
+    return param->value;
 }
 String auplugin::getParamValueDisplay(int32_t idx) {
-	automatable_param_t* param = getParamUnchecked(idx);
-	dbgassert(param);
-	if (param->internalIdx >= 0) {
-		char buf[1024];
-		memset(buf, 0, sizeof(buf));
-//		this->dispatch(effGetParamDisplay, param->internalIdx, 0, buf);
-		return StringFormat("%s", buf);
-	}
-	return effectbase::getParamValueDisplay(idx);
+    automatable_param_t* param = getParamUnchecked(idx);
+    dbgassert(param);
+    if (param->internalIdx >= 0) {
+        char buf[1024];
+        memset(buf, 0, sizeof(buf));
+        //		this->dispatch(effGetParamDisplay, param->internalIdx, 0, buf);
+        return StringFormat("%s", buf);
+    }
+    return effectbase::getParamValueDisplay(idx);
 }
 void auplugin::setParamValue(int32_t idx, float val, int flags) {
-	automatable_param_t* param = getParamUnchecked(idx);
-	dbgassert(param);
-	param->value = val;
-	if (param->idx == PARAM_ENABLE) {
-		updateOnEnableParam(param, this->bIsEnabled, val > 0, flags);
-	} else {
-		if (!(flags&FLG_PAR_UPDATE_NOSTORE) && !(flags&FLG_PAR_UPDATE_AUTOMATED)) {
-			param->inUse = true;
-		}
-		if (param->internalIdx >= 0) {
-//			vst_setParameter(this, handle->aeffect, param->internalIdx, val);
-		}
-	}
+    automatable_param_t* param = getParamUnchecked(idx);
+    dbgassert(param);
+    param->value = val;
+    if (param->idx == PARAM_ENABLE) {
+        updateOnEnableParam(param, this->bIsEnabled, val > 0, flags);
+    } else {
+        if (!(flags & FLG_PAR_UPDATE_NOSTORE) && !(flags & FLG_PAR_UPDATE_AUTOMATED)) {
+            param->inUse = true;
+        }
+        if (param->internalIdx >= 0) {
+            //dispatch update to plugin
+        }
+    }
 }
 void auplugin::postSetParameter(int32_t idx, float preVal, float val, int flags) {
-	if (flags != 2) {
-		return;
-	}
-//	dbgassert(this->trackImpl->getTrack());
-//	track_t* track = this->trackImpl->getTrack();
-//	automationlane_snapshot_t ref = toRef();
-//	parameter_ref_t p = {track->idx,  ref.type, this->projectGlobalId, idx};
-//	DawInstance::get()->pushHist(new action_modify_effect_parameter("Modify parameter", p, preVal, val));
+    if (flags != 2) {
+        return;
+    }
 }
-//void auplugin::recvPluginEditParamUpdate(int32_t internalIdx) {
-//	automatable_param_t* param = getEffectParam(internalIdx);
-//	dbgassert(param && param->internalIdx >= 0);
-//	param->value = vst_getParameter(this, handle->aeffect, param->internalIdx);
-//}
+
 automationlane_snapshot_t auplugin::toRef() const {
-	automationlane_snapshot_t ref;
-	ref.type = AUTOMATABLE_EFFECT;
-	ref.refId = this->projectGlobalId;
-	return ref;
+    automationlane_snapshot_t ref;
+    ref.type  = AUTOMATABLE_EFFECT;
+    ref.refId = this->projectGlobalId;
+    return ref;
 }
 
 void auplugin::onEnable() {
-	//TODO: check current thread, check if playthread is locked
-	resume();
+    //TODO: check current thread, check if playthread is locked
+    resume();
 }
 void auplugin::onDisable() {
-	//TODO: check current thread, check if playthread is locked
-	sleep();
-//	vsthost::getInstance()->sendNotesOff(this);
+    //TODO: check current thread, check if playthread is locked
+    sleep();
 }
