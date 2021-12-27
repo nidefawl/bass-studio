@@ -41,14 +41,12 @@ void createTables(SQLite::Database& db) {
 class plugindatabase_t::Impl {
 	SQLite::Database db;
 public:
-	Impl(String path)
+	explicit Impl(const String& path)
 		: db(path, SQLite::OPEN_READWRITE | SQLite::OPEN_CREATE)
 	{
 		createTables(db);
 	}
-	~Impl() {
-
-	}
+	~Impl() = default;
     bool resolve(const plugin_snapshot_t& pluginSnapshot, String* _outPath, int loadFlags)
     {
     	enum query_type : uint32_t {
@@ -93,6 +91,7 @@ public:
             	//TODO: let user pick if multiple
                 queryPlugin.bind(1, uId);
                 break;
+            default:
             case BY_NAME:
             	//TODO: let user pick if multiple
                 queryPlugin.bind(1, name);
@@ -105,24 +104,25 @@ public:
 		}
 		return false;
 	}
-	void query(String str, std::vector<pluginentry_t>& _out) {
+	void query(const String& strQuery, std::vector<pluginentry_t>& _out) {
+        String strSearchQuery = strQuery;
 		String strSQLCond = "1";
 		String strSQLOrder = "ORDER by name COLLATE NOCASE ASC";
-		bool customQuery = str.length() > 1 && str.at(0) == '.';
+		bool customQuery = strSearchQuery.length() > 1 && strSearchQuery.at(0) == '.';
 		if (customQuery) {
-			strSQLCond = str.substr(1);
+			strSQLCond = strSearchQuery.substr(1);
 			if (StringContainsCI(strSQLCond, "order")) {
 				strSQLOrder.clear();
 			}
 		} else {
 			strSQLCond = " state == 1 and forcedisable == 0 and name like ? ESCAPE '#' ";
-			if (str.empty()) {
-				str = "%";
+			if (strSearchQuery.empty()) {
+                strSearchQuery = "%";
 			} else {
-				replaceString(str, "#", "##");
-				replaceString(str, "%", "#%");
-				replaceString(str, "_", "#_");
-				str = StringFormat("%%%s%%", StringAsCStr(str));
+				replaceString(strSearchQuery, "#", "##");
+				replaceString(strSearchQuery, "%", "#%");
+				replaceString(strSearchQuery, "_", "#_");
+                strSearchQuery = StringFormat("%%%s%%", StringAsCStr(strSearchQuery));
 			}
 		}
 		String strSQLQuery = "SELECT * FROM plugins where " + strSQLCond + " " + strSQLOrder;
@@ -130,7 +130,7 @@ public:
 			log_printf("str: %s\n", StringAsCStr(strSQLQuery));
 		SQLite::Statement   queryPlugin(db, strSQLQuery);
 		if (!customQuery) {
-			queryPlugin.bind(1, str);
+			queryPlugin.bind(1, strSearchQuery);
 		}
 
 		pluginentry_t entry;
@@ -145,33 +145,31 @@ public:
 		}
 	}
 };
-plugindatabase_t::plugindatabase_t() {
-}
-plugindatabase_t::~plugindatabase_t() {
-}
+plugindatabase_t::plugindatabase_t() = default;
+plugindatabase_t::~plugindatabase_t() = default;
 bool plugindatabase_t::resolve(const plugin_snapshot_t& pluginSnapshot, String* _outPath, int loadFlags) {
-	return _M_Impl->resolve(pluginSnapshot, _outPath, loadFlags);
+	return m_impl->resolve(pluginSnapshot, _outPath, loadFlags);
 }
-void plugindatabase_t::query(String q, std::vector<pluginentry_t>& _out) {
-	_M_Impl->query(q, _out);
+void plugindatabase_t::query(const String& q, std::vector<pluginentry_t>& _out) {
+    m_impl->query(q, _out);
 }
 void plugindatabase_t::openDatabase() {
 	revision++;
-	dbgassert(!_M_Impl);
+	dbgassert(!m_impl);
 	String cwdPathDB = toUserdataPath("data/plugins.db3");
-	_M_Impl = new plugindatabase_t::Impl{cwdPathDB};
+    m_impl           = new plugindatabase_t::Impl{cwdPathDB};
 }
 void plugindatabase_t::closeDatabase() {
-	dbgassert(_M_Impl);
-	delete _M_Impl;
-	_M_Impl = NULL;
+	dbgassert(m_impl);
+	delete m_impl;
+    m_impl = nullptr;
 }
 void plugindatabase_t::reopen() {
 //	closeDatabase();
 //	openDatabase();
 	revision++;
 }
-int plugindatabase_t::getRevision() {
+int plugindatabase_t::getRevision() const {
 	return revision;
 }
 

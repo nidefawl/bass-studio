@@ -113,10 +113,10 @@ double StringToF(const String& s) { return atof(s.c_str()); }
 #ifdef _WIN32
 void processWindowMessages() {
     DWORD timeout = 5;
-    MsgWaitForMultipleObjects(0, NULL, FALSE, timeout, QS_ALLEVENTS);
+    MsgWaitForMultipleObjects(0, nullptr, FALSE, timeout, QS_ALLEVENTS);
     MSG msg;
     int maxProcess = 500;
-    while (!fataError && PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE) && maxProcess-- > 0) {
+    while (!fataError && PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE) && maxProcess-- > 0) {
         if (msg.message == WM_QUIT) {
             break;
         }
@@ -136,12 +136,12 @@ int runCommandLineHost(int argc, const char* argv[]) {
     wc.cbClsExtra    = 0;
     wc.cbWndExtra    = 0;
     wc.lpszClassName = "Window";
-    wc.hInstance     = GetModuleHandle(NULL);
+    wc.hInstance     = GetModuleHandle(nullptr);
     wc.hbrBackground = GetSysColorBrush(COLOR_3DFACE);
-    wc.lpszMenuName  = NULL;
+    wc.lpszMenuName  = nullptr;
     wc.lpfnWndProc   = WndProc;
-    wc.hCursor       = LoadCursor(NULL, IDC_ARROW);
-    wc.hIcon         = LoadIcon(NULL, IDI_APPLICATION);
+    wc.hCursor       = LoadCursor(nullptr, IDC_ARROW);
+    wc.hIcon         = LoadIcon(nullptr, IDI_APPLICATION);
 
     RegisterClass(&wc);
     if (!SetConsoleCtrlHandler((PHANDLER_ROUTINE)ConsoleHandler, TRUE)) {
@@ -245,9 +245,9 @@ int runCommandLineHost(int argc, const char* argv[]) {
         vsthost::getInstance()->initThreads();
 
 #ifdef _WIN32
-        HWND hwnd = CreateWindow(wc.lpszClassName, "Window", WS_OVERLAPPEDWINDOW | WS_VISIBLE, 100, 100, 350, 250, NULL,
-                                 NULL, wc.hInstance, NULL);
-        dbgassert(hwnd != NULL);
+        HWND hwnd = CreateWindow(wc.lpszClassName, "Window", WS_OVERLAPPEDWINDOW | WS_VISIBLE, 100, 100, 350, 250, nullptr,
+                                 nullptr, wc.hInstance, nullptr);
+        dbgassert(hwnd != nullptr);
         setMainHWND(hwnd);
         ShowWindow(hwnd, SW_SHOW);
         UpdateWindow(hwnd);
@@ -373,7 +373,7 @@ int runCommandLineHost(int argc, const char* argv[]) {
             /** inform host about track layout changes so it resets and updates internal structures */
             host->onTrackLayoutChange();
 
-            double tLastMsg        = getTimeMillis() / 1000.0;
+            double tLastMsg        = getTimeMillisd() / 1000.0;
             int64_t samplesWritten = 0;
 
 
@@ -433,7 +433,7 @@ int runCommandLineHost(int argc, const char* argv[]) {
             }
 
             while (!userSentQuitRequest) {
-                auto tNow = getTimeMillis() / 1000.0;
+                auto tNow = getTimeMillisd() / 1000.0;
                 if (tNow - tLastMsg >= 1.0) {
                     tLastMsg = tNow;
                     // require locking here

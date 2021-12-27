@@ -29,7 +29,7 @@ struct arp_snapshot;
 
 struct arp_note_t : note_t {
     int32_t arpNoteUid = 0;
-    float wallTime = 0.0f;
+    float wallTime     = 0.0f;
 };
 class midiarp : public automatable_t {
 public:
@@ -55,34 +55,33 @@ public:
     std::vector<marker_t> markers2;
 
 private:
-    int32_t step = 0;
-    int32_t stepGenerated = 0;
+    int32_t step              = 0;
+    int32_t stepGenerated     = 0;
     int32_t arpNoteUidCounter = 1;
-    tick_t resetTime = 0;
-    std::array<tick_t, 16 * 3> tickLength;
-    track_impl_t *const trackImpl;
-    uint64_t lSeed = 13L;
+    tick_t resetTime          = 0;
+    std::array<tick_t, 16 * 3> tickLength{};
+    track_impl_t* const trackImpl;
+    uint64_t lSeed            = 13L;
     uint64_t velocitySeed_u64 = 326597L;
     seq_rand arpRand;
-    int tickMarkers = 0;
-    bool gateOutputNotes = true;
-    bool syncClock = true;
+    int tickMarkers              = 0;
+    bool gateOutputNotes         = true;
+    bool syncClock               = true;
     bool bEnableStateUserToggled = false;
-    bool bEnableNextState = false;
+    bool bEnableNextState        = false;
 
-    void initRandomDelays(tick_t tick, tick_t startFrame, tick_t endFrame, int32_t step, tick_t stepSize, uint64_t seed, bool reset);
+    void initRandomDelays(tick_t tick, tick_t startFrame, tick_t endFrame, int32_t nextStep, tick_t stepSize, uint64_t seed, bool reset);
 
 public:
     bool enable = false;
-    midiarp(track_impl_t *_trImpl);
-    ~midiarp() {
-    }
+    explicit midiarp(track_impl_t* _trImpl);
+    ~midiarp() override = default;
     void reset(tick_t _resetTime) {
-        resetTime = _resetTime;
-        step = 0;
+        resetTime     = _resetTime;
+        step          = 0;
         stepGenerated = -1;
     }
-    void allNotesOff(std::vector<noteevent_t> &noteEvents);
+    void allNotesOff(std::vector<noteevent_t>& noteEvents);
     void onStartPlayback();
     float getGateF() {
         return getParamValue(ARP_PARAM_GATE);
@@ -94,7 +93,7 @@ public:
         return getParamValue(ARP_PARAM_RAND_VEL);
     }
     int getPatternIdx() {
-        int32_t option = (int32_t) std::floor(getParamValue(ARP_PARAM_PATTERN) * (NUM_PATTERNS - 1));
+        auto option = (int32_t) std::floor(getParamValue(ARP_PARAM_PATTERN) * (NUM_PATTERNS - 1));
         dbgassert(option < NUM_PATTERNS);
         return option;
     }
@@ -106,14 +105,14 @@ public:
 
     tick_t getRandTime();
     int isChordOutput();
-    int getArpStepIdx(int step, int nNotes);
+    int getArpStepIdx(int _step, int nNotes);
 
 
     String getAutomatableName() override {
         return "Arp";
     }
     float getParamValue(int32_t idx) override {
-        automatable_param_t *param = getParamUnchecked(idx);
+        automatable_param_t* param = getParamUnchecked(idx);
         dbgassert(param);
         return param->value;
     }
@@ -123,12 +122,12 @@ public:
     }
 
     void setParamValue(int32_t idx, float val, int flags) override {
-        automatable_param_t *param = getParamUnchecked(idx);
+        automatable_param_t* param = getParamUnchecked(idx);
         dbgassert(param);
         param->value = val;
         if (param->idx == PARAM_ENABLE) {
             if ((flags & FLG_PAR_UPDATE_USER)) {
-                bEnableNextState = val > 0;
+                bEnableNextState        = val > 0;
                 bEnableStateUserToggled = true;
             } else {
                 enable = val > 0;
@@ -141,32 +140,32 @@ public:
 
     automationlane_snapshot_t toRef() const override {
         automationlane_snapshot_t ref;
-        ref.type = AUTOMATABLE_ARP;
+        ref.type  = AUTOMATABLE_ARP;
         ref.refId = static_cast<int32_t>(trackImpl->stageId.stageId);
         return ref;
     }
-    track_t *getTrack() override {
+    track_t* getTrack() override {
         dbgassert(this->trackImpl);
         return this->trackImpl->getTrack();
     }
-    void createSnapshot(arp_snapshot &snapshot);
-    void loadSnapshot(const arp_snapshot &snapshot);
+    void createSnapshot(arp_snapshot& snapshot);
+    void loadSnapshot(const arp_snapshot& snapshot);
 
-    void process(playback_state state, tick_t cursorPos, const std::vector<noteevent_t> &noteEventsIn,
+    void process(playback_state state, tick_t cursorPos, const std::vector<noteevent_t>& noteEventsIn,
                  tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, tick_t ticksPerBlock,
-                 std::vector<noteevent_t> &noteEventsProcessed);
+                 std::vector<noteevent_t>& noteEventsProcessed);
     void postSetParameter(int32_t idx, float preVal, float val, int flags) override;
     bool isProcessingEnabled();
-    const std::vector<arp_note_t> &getHeldNotes() {
+    const std::vector<arp_note_t>& getHeldNotes() {
         return this->heldOutputNotes;
     }
 
 protected:
-    bool isOutputNoteGateOn(const arp_note_t &noteHeldOut);
-    void addNote(tick_t start, arp_note_t &note, std::vector<noteevent_t> &noteEvents);
-    void processArpInternal(playback_state state, tick_t cursorPos, const std::vector<noteevent_t> &noteEventsIn,
+    bool isOutputNoteGateOn(const arp_note_t& noteHeldOut);
+    void addNote(tick_t start, arp_note_t& note, std::vector<noteevent_t>& noteEvents);
+    void processArpInternal(playback_state state, tick_t cursorPos, const std::vector<noteevent_t>& noteEventsIn,
                             tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, tick_t ticksPerBlock, int64_t wallClockTime,
-                            std::vector<noteevent_t> &noteEventsProcessed);
+                            std::vector<noteevent_t>& noteEventsProcessed);
     int updateMarkersAndAnimation(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int64_t wallClockTime);
-    int endOutputNotes(tick_t tick, tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, std::vector<noteevent_t> &noteEventsProcessed);
+    int endOutputNotes(tick_t tick, tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, std::vector<noteevent_t>& noteEventsProcessed);
 };

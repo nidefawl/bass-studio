@@ -1,7 +1,6 @@
 #include "profiling.h"
 #include "str_util.h"
 #include "assert_dbg.h"
-#include <stdint.h>
 #include <array>
 #include <vector>
 
@@ -14,7 +13,7 @@ namespace ProfilingImpl {
 	};
 	template<typename T>
 	struct profiling_entry_t {
-		void* instancePtr;
+		void* instancePtr{};
 		String name;
 		std::array<frame_stats<T>, PROFILING_MAX_LEN> stats;
 		int writeIdx = 0;

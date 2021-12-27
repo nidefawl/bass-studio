@@ -1,7 +1,6 @@
 #include "math/seq_math.h"
 #include "str_util.h"
 #include "seq_util.h"
-#include "seq_time.h"
 #include "dsp_util.h"
 
 #include "project.h"
@@ -12,7 +11,6 @@
 #include "track_impl.h"
 #include "track_graph.h"
 #include "daw_channel.h"
-#include "host/mainctrl.h"
 #include <vector>
 #include <deque>
 
@@ -145,7 +143,7 @@ namespace DAW {
 			dbgassert(audioStage);
 			track_t* const track = audioStage->getTrack();
 			dbgassert(track);
-			processing_track_node_ptr procTrackNode = new processing_track_node_t();//std::make_unique<processing_track_node_t>();
+			auto procTrackNode = new processing_track_node_t();//std::make_unique<processing_track_node_t>();
 
 //			procTrackNode->children = trackNode->children;
 //			procTrackNode->parents = trackNode->parents;
@@ -161,7 +159,7 @@ namespace DAW {
 			procTrackNode->trackOptional = track;
 			shrdPtrProcGraph->nodes.push_back(procTrackNode);
 		}
-		processing_graph_t& graph = *(shrdPtrProcGraph.get());
+		processing_graph_t& graph = *(shrdPtrProcGraph);
 
 		for (const track_node_t* const ptrTrackNode : graphFlattened.resolved) {
 			const DAW::track_node_t& trackNode = *ptrTrackNode;
@@ -334,7 +332,7 @@ namespace DAW {
 			if ((stage->flags & audiostageflags_t::SOLO) != audiostageflags_t::NONE) {
 				std::deque<track_node_t*> parents;
 				parents.insert(parents.end(), begin(node->parents), end(node->parents));
-				while (parents.size()) {
+				while (!parents.empty()) {
 					track_node_t* fr = parents.front();
 					parents.pop_front();
 					auto stage2 = host->getAudioStage(audio_stage_ref_t{fr->stageId});
@@ -452,7 +450,7 @@ namespace DAW {
 //			log_printf("free track_graph %08X\n", reinterpret_cast<uint64_t>(gr));
 //		});
 		trackGraph->nodes.reserve(map.size());
-		for (std::map<audiostageid_i32, track_node_ptr>::iterator mapIt = map.begin(); mapIt != map.end(); ++mapIt) {
+		for (auto mapIt = map.begin(); mapIt != map.end(); ++mapIt) {
 			track_node_ptr node = mapIt->second;
 			if (node->parents.empty()) {
 				trackGraph->roots.push_back(node);
@@ -471,16 +469,6 @@ namespace DAW {
 		return true;
 	}
 	processing_graph_t::~processing_graph_t() {
-//		nInvocation++;
-//        int nInvoke = nInvocation;
-//        bool secondInvoke = nInvoke > 1;
-//        if (getCurrentThreadId() != MainCtrl::getPlayThread()->getThreadId()) {
-//            log_printf("not playthread %d != %d\n", getCurrentThreadId(), MainCtrl::getPlayThread()->getThreadId());
-//            log_printf("destruct %08X %d %d\n", reinterpret_cast<uint64_t>(this), nInvoke, secondInvoke);
-//        }
-//        if (secondInvoke) {
-//            log_printf("destruct %08X %d %d\n", reinterpret_cast<uint64_t>(this), nInvoke, secondInvoke);
-//        }
 		for (auto ptr : nodes) {
 			delete ptr;
 		}

@@ -10,84 +10,85 @@ class effectbase;
 struct audio_stage_t;
 namespace DAW {
 
-/**
+    /**
  * track_node_t - represents a node in the audio chain dependency graph
  *
  */
-struct track_source_t {
-	uint32_t trackEdgeId;
-	channel_ref_t channel;
-	automation_ref_t gainAutomation;
-	samplerate_t latency = 0U;
-	audiostageflags_t flags;
-};
+    struct track_source_t {
+        uint32_t trackEdgeId{};
+        channel_ref_t channel;
+        automation_ref_t gainAutomation;
+        samplerate_t latency = 0U;
+        audiostageflags_t flags = audiostageflags_t::NONE;
+    };
 
-enum class track_node_type_t : int32_t {
-	TRACK = 0, AUDIOSTAGE, EFFECT
-};
-struct track_node_t {
-	track_node_type_t type = track_node_type_t::TRACK;
-	audiostageid_i32 stageId = TRACKID_INVALID_I32;
-	std::vector<audiostageid_i32> dependencies;
-	std::vector<track_source_t> pulls;
-	std::vector<track_source_t> pushs;
-	std::vector<track_node_t*> parents;
-	std::vector<track_node_t*> children;
-	samplerate_t internalLatency = INVALID_SAMPLE_OFFSET_U32;
-	samplerate_t inputLatency = INVALID_SAMPLE_OFFSET_U32;
+    enum class track_node_type_t : int32_t {
+        TRACK = 0,
+        AUDIOSTAGE,
+        EFFECT
+    };
+    struct track_node_t {
+        track_node_type_t type   = track_node_type_t::TRACK;
+        audiostageid_i32 stageId = TRACKID_INVALID_I32;
+        std::vector<audiostageid_i32> dependencies;
+        std::vector<track_source_t> pulls;
+        std::vector<track_source_t> pushs;
+        std::vector<track_node_t*> parents;
+        std::vector<track_node_t*> children;
+        samplerate_t internalLatency = INVALID_SAMPLE_OFFSET_U32;
+        samplerate_t inputLatency    = INVALID_SAMPLE_OFFSET_U32;
 
-	track_node_t() = default;
-	track_node_t(track_node_type_t _type, audiostageid_i32 _stageId, samplerate_t _internalLatency)
-	: type(_type), stageId(_stageId), internalLatency(_internalLatency)
-	{
+        track_node_t() = default;
+        track_node_t(track_node_type_t _type, audiostageid_i32 _stageId, samplerate_t _internalLatency)
+            : type(_type), stageId(_stageId), internalLatency(_internalLatency) {
+        }
+    };
+    struct processing_track_node_t : public track_node_t {
+        processing_track_node_t()  = default;
+        track_t* trackOptional     = nullptr;
+        effectbase* effectOptional = nullptr;
+        audio_stage_t* stage       = nullptr;
+    };
 
-	}
-};
-struct processing_track_node_t : public track_node_t {
-	processing_track_node_t() = default;
-	track_t* trackOptional = nullptr;
-	effectbase* effectOptional = nullptr;
-	audio_stage_t* stage = nullptr;
-};
-
-//using track_node_ptr = std::unique_ptr<track_node_t>;
-using track_node_ptr = track_node_t*;
-using processing_track_node_ptr = processing_track_node_t*;
-/**
+    //using track_node_ptr = std::unique_ptr<track_node_t>;
+    using track_node_ptr            = track_node_t*;
+    using processing_track_node_ptr = processing_track_node_t*;
+    /**
  * track_graph_t - represents the audio chain dependency graph build from I/O configuration of all loaded tracks
  *
  */
-struct track_graph_t {
-	std::vector<track_node_t*> roots; // output nodes (Master, )
-	std::vector<track_node_ptr> nodes;
-    uint64_t maxLatency = 0U;
-    track_graph_t() = default;
-    track_graph_t(const track_graph_t& graph) = delete;
-    track_graph_t& operator=(const track_graph_t& graph) = delete;
-	~track_graph_t() {
-		for (auto ptr : nodes) {
-			delete ptr;
-		}
-	}
-};
-struct processing_graph_t {
-	std::vector<processing_track_node_t*> nodesSolo;
-	std::vector<processing_track_node_t*> nodesFlatOrdered;
-	std::vector<processing_track_node_t*> roots; // audio_stage output buffer
-	std::vector<processing_track_node_ptr> nodes; // audio_stage input buffer, effects, audio_stage output buffer
-	std::shared_ptr<track_graph_t> trackGraph;
-    //int32_t nInvocation = 0;
-	~processing_graph_t();
-    processing_graph_t() = default;
-    processing_graph_t(const processing_graph_t& graph) = delete;
-    processing_graph_t& operator=(const processing_graph_t& graph) = delete;
-};
+    struct track_graph_t {
+        std::vector<track_node_t*> roots;// output nodes (Master, )
+        std::vector<track_node_ptr> nodes;
+        uint64_t maxLatency = 0U;
+
+        track_graph_t() = default;
+        track_graph_t(const track_graph_t& graph) = delete;
+        track_graph_t& operator=(const track_graph_t& graph) = delete;
+        ~track_graph_t() {
+            for (auto ptr : nodes) {
+                delete ptr;
+            }
+        }
+    };
+    struct processing_graph_t {
+        std::vector<processing_track_node_t*> nodesSolo;
+        std::vector<processing_track_node_t*> nodesFlatOrdered;
+        std::vector<processing_track_node_t*> roots; // audio_stage output buffer
+        std::vector<processing_track_node_ptr> nodes;// audio_stage input buffer, effects, audio_stage output buffer
+        std::shared_ptr<track_graph_t> trackGraph;
+        //int32_t nInvocation = 0;
+        ~processing_graph_t();
+        processing_graph_t()                                = default;
+        processing_graph_t(const processing_graph_t& graph) = delete;
+        processing_graph_t& operator=(const processing_graph_t& graph) = delete;
+    };
 
 
-bool removeTrackRoutings(const track_vector& tracksFlat, const audiostageid_i32 stageId);
-bool buildTrackRoutingGraph(const vsthost* const host, const project_t* const project, const track_vector& tracksFlat, std::shared_ptr<track_graph_t>& out_graph);
-bool buildProcessingGraph(const vsthost* const host, const project_t* const project, const track_vector& tracksFlat, std::shared_ptr<processing_graph_t>& out_procgraph);
-bool validateTrackRoutings(const vsthost* const host, const track_vector& tracksFlat);
+    bool removeTrackRoutings(const track_vector& tracksFlat, audiostageid_i32 stageId);
+    bool buildTrackRoutingGraph(const vsthost* host, const project_t* project, const track_vector& tracksFlat, std::shared_ptr<track_graph_t>& out_graph);
+    bool buildProcessingGraph(const vsthost* host, const project_t* project, const track_vector& tracksFlat, std::shared_ptr<processing_graph_t>& out_procgraph);
+    bool validateTrackRoutings(const vsthost* host, const track_vector& tracksFlat);
 
-void updateSoloFlag(const vsthost* const host, const project_t* const project, const track_vector& tracksFlat);
-}
+    void updateSoloFlag(const vsthost* host, const project_t* project, const track_vector& tracksFlat);
+}// namespace DAW

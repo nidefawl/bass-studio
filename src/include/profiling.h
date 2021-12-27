@@ -87,7 +87,7 @@ struct vst_opcode_stats_t {
 };
 namespace Profiling {
     template<typename T>
-    void profilingRegisterEntry(void* entry, String name);
+    void profilingRegisterEntry(void* entry, const String& name);
     template<typename T>
     void profilingCommitStats(void* entry, int frameNumber, T& stats);
 }// namespace Profiling
