@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 3.3)
 # Don't use -rdynamic
 if (POLICY CMP0065)
-  cmake_policy(SET CMP0065 NEW)
+    cmake_policy(SET CMP0065 NEW)
 endif ()
-set (CMAKE_USER_MAKE_RULES_OVERRIDE "cmake/msvc-init-override.cmake")
+set(CMAKE_USER_MAKE_RULES_OVERRIDE "cmake/msvc-init-override.cmake")
 
-message (STATUS "CMake version: ${CMAKE_VERSION}")
+message(STATUS "CMake version: ${CMAKE_VERSION}")
 set(DAW_SRC_PATH "${CMAKE_SOURCE_DIR}/src")
 set(BUILD_NAME "DAW")
 set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT ${BUILD_NAME})
@@ -21,16 +21,16 @@ set(APP_WORKING_DIR "../../run/" CACHE PATH "working directory (run)")
 
 if (BUILD_TESTS OR BUILD_SCANNER OR BUILD_CMDLINE_HOST)
     set(BUILD_DAW_LIB ON)
-else()
+else ()
     set(BUILD_DAW_LIB OFF)
-endif()
-    
+endif ()
+
 #set(BUILD_DAW_LIB ON) #override
 
 if (NOT MSVC)
     set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CMAKE_COMMAND} -E time")
     set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "${CMAKE_COMMAND} -E time")
-endif()
+endif ()
 include("cmake/setup.cmake")
 include("cmake/libs.cmake")
 
@@ -38,38 +38,38 @@ add_compile_definitions(USE_WIN32_EXC_HOOKS BUILD_VSTHOST=1 BUILD_EXTERNAL_PLUGI
 #add_compile_definitions(PA_ENABLE_DEBUG_OUTPUT=1)
 add_compile_definitions(VST_FORCE_DEPRECATED=0 USE_GLAD_GL_HEADERS GLM_FORCE_CXX14=1)
 if (WIN32)
-  add_compile_definitions(PA_USE_ASIO=1 PA_USE_DS=1 PA_USE_WASAPI=1 PA_USE_WDMKS=1)
+    add_compile_definitions(PA_USE_ASIO=1 PA_USE_DS=1 PA_USE_WASAPI=1 PA_USE_WDMKS=1)
 endif (WIN32)
 if (UNIX)
-  add_compile_definitions(PA_USE_ALSA=1 __cdecl="")
+    add_compile_definitions(PA_USE_ALSA=1 __cdecl="")
 endif (UNIX)
 if (USE_OPENGL3)
     add_compile_definitions(NANOVG_GL3=1)
-else()
+else ()
     add_compile_definitions(NANOVG_GL2=1)
-endif()
+endif ()
 if (BUILD_TESTS)
     add_compile_definitions(BUILD_TESTS)
-endif()
+endif ()
 
 # set warn flags
 if (MSVC)
-# /wd4067 unexpected tokens following preprocessor directive
-# /wd4267 size_t to int
-# /wd4244 float to int
-# /wd4100 unreferenced formal parameter
-# /wd4458 declaration of x hides class member
-set(BUILD_WARNING_FLAGS /W4 /wd4067 /wd4267 /wd4244 /wd4100 /wd4458)
-else()
-set(BUILD_WARNING_FLAGS -Wall -Wno-inconsistent-missing-override -Wno-unused-parameter)
-endif()
+    # /wd4067 unexpected tokens following preprocessor directive
+    # /wd4267 size_t to int
+    # /wd4244 float to int
+    # /wd4100 unreferenced formal parameter
+    # /wd4458 declaration of x hides class member
+    set(BUILD_WARNING_FLAGS /W4 /wd4067 /wd4267 /wd4244 /wd4100 /wd4458)
+else ()
+    set(BUILD_WARNING_FLAGS -Wall -Wno-inconsistent-missing-override -Wno-unused-parameter)
+endif ()
 
 # march=native optimzation. Turn off for dist build
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG("-march=native" COMPILER_SUPPORTS_MARCH_NATIVE)
 if (COMPILER_SUPPORTS_MARCH_NATIVE)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
-endif()
+endif ()
 
 
 file(GLOB_RECURSE HDR_ALL_FILES src/*.h)
@@ -84,39 +84,39 @@ if (APPLE)
     file(GLOB_RECURSE MM_SRC_FILES src/*.mm)
 endif (APPLE)
 
-foreach(f ${HDR_ALL_FILES})
+foreach (f ${HDR_ALL_FILES})
     if (f MATCHES ".*/tests/[^/]*$")
         continue()
-    endif()
+    endif ()
     if (UNIX)
-      if (f MATCHES ".*/host/platform/win/[^/]*$")
-          continue()
-      endif()
-      if (f MATCHES ".*/platform/win/[^/]*$")
-          continue()
-      endif()
-      if (f MATCHES ".*/platform/mingw/[^/]*$")
-          continue()
-      endif()
-      if (f MATCHES ".*/external_asio.cpp$")
-          continue()
-      endif()
+        if (f MATCHES ".*/host/platform/win/[^/]*$")
+            continue()
+        endif ()
+        if (f MATCHES ".*/platform/win/[^/]*$")
+            continue()
+        endif ()
+        if (f MATCHES ".*/platform/mingw/[^/]*$")
+            continue()
+        endif ()
+        if (f MATCHES ".*/external_asio.cpp$")
+            continue()
+        endif ()
     endif (UNIX)
     if (WIN32)
-      if (f MATCHES ".*/host/platform/linux/[^/]*$")
-          continue()
-      endif()
-      if (f MATCHES ".*/platform/linux/[^/]*$")
-          continue()
-      endif()
+        if (f MATCHES ".*/host/platform/linux/[^/]*$")
+            continue()
+        endif ()
+        if (f MATCHES ".*/platform/linux/[^/]*$")
+            continue()
+        endif ()
     endif (WIN32)
     if (MSVC)
-      if (f MATCHES ".*/platform/mingw/[^/]*$")
-          continue()
-      endif()
+        if (f MATCHES ".*/platform/mingw/[^/]*$")
+            continue()
+        endif ()
     endif (MSVC)
     list(APPEND HDR_FILES ${f})
-endforeach()
+endforeach ()
 
 foreach (f ${CPP_ALL_FILES})
     if (f MATCHES ".*/main.cpp$")
@@ -166,35 +166,35 @@ endforeach ()
 
 if (BUILD_TESTS)
     list(APPEND CPP_SRC_FILES "src/tests/test_environment.cpp")
-endif()
+endif ()
 
 if (NOT MSVC)
     # These files are especially important to have optimized, even in debug builds
     # Right now this is disabled because of the ODR rule on inline functions (in library headers)
-    set(SRC_FILES_SUBDIR_FILES 
-        src/file/fileloader.cpp
-        src/file/projectfile.cpp
-        src/file/themefile.cpp
-        src/file/appsettingsfile.cpp
-    )
+    set(SRC_FILES_SUBDIR_FILES
+            src/file/fileloader.cpp
+            src/file/projectfile.cpp
+            src/file/themefile.cpp
+            src/file/appsettingsfile.cpp
+            )
     # TODO: what does -O without a number/s produce?
     # TODO: don't lower -O level for release builds when reenabling -On files in debug builds
     # set_source_files_properties(${SRC_FILES_SUBDIR_FILES} PROPERTIES COMPILE_OPTIONS "-g;-O")
-    set(SRC_FILES_OPTIMIZE 
-        src/gl/gl_path.cpp
-        src/wave/waveform_generate.cpp
-        src/wave/clip.cpp
-        src/host/vsthost.cpp
-        src/host/track_graph.cpp
-    )
+    set(SRC_FILES_OPTIMIZE
+            src/gl/gl_path.cpp
+            src/wave/waveform_generate.cpp
+            src/wave/clip.cpp
+            src/host/vsthost.cpp
+            src/host/track_graph.cpp
+            )
     # set_source_files_properties(${SRC_FILES_OPTIMIZE} PROPERTIES COMPILE_OPTIONS "-g;-O")
 
     # The SEH assembly will not work correctly on clang mingw if any level of optimization is applied
-    set(SRC_FILES_NO_OPTIMIZE 
-        src/host/plugin/vst_plugin_dispatch.cpp
-    )
+    set(SRC_FILES_NO_OPTIMIZE
+            src/host/plugin/vst_plugin_dispatch.cpp
+            )
     set_source_files_properties(${SRC_FILES_NO_OPTIMIZE} PROPERTIES COMPILE_OPTIONS "-O0")
-endif()
+endif ()
 
 set(CPP_SRC_FILES ${CPP_SRC_FILES} ${MM_SRC_FILES})
 set(ALL_SRC_FILES ${CPP_SRC_FILES})
@@ -209,7 +209,7 @@ source_group("generated" FILES ${GENERATED_SRC_FILES})
 list(APPEND RESOURCE_FILES "")
 if (MSVC)
     list(APPEND RESOURCE_FILES "src/icon_resource.h" "src/icon.rc")
-endif()
+endif ()
 
 message(STATUS "DAW_DEPS_PATH ${DAW_DEPS_PATH}")
 message(STATUS "DEPS_BUILD_FOLDER ${DEPS_BUILD_FOLDER}")
@@ -227,21 +227,21 @@ message(STATUS "BUILD WARNINGS ${BUILD_WARNING_FLAGS}")
 
 # build a fat library only if BUILD_DAW_LIB is ON
 # if BUILD_DAW_LIB is OFF we link objects directly to output executable (faster)
-if (BUILD_DAW_LIB) 
+if (BUILD_DAW_LIB)
     set(LINK_TARGET "dawlib")
     add_library(${LINK_TARGET} STATIC ${CPP_SRC_FILES} ${C_SRC_FILES} ${HDR_FILES})
     target_compile_options(${LINK_TARGET} PRIVATE $<$<CONFIG:Debug>:${BUILD_WARNING_FLAGS}>)
     set_property(TARGET ${LINK_TARGET} PROPERTY DBG_POSTFIX d)
-else()
+else ()
     set(LINK_TARGET ${BUILD_NAME})
     # define main exectuable
     add_executable(${BUILD_NAME} "src/host/main_daw.cpp" ${RESOURCE_FILES} ${CPP_SRC_FILES} ${C_SRC_FILES} ${HDR_FILES})
     SET_APP_BUILD(${BUILD_NAME})
     ADD_POST_BUILD_COMMANDS(${BUILD_NAME})
     target_compile_options(${BUILD_NAME} PRIVATE $<$<CONFIG:Debug>:${BUILD_WARNING_FLAGS}>)
-endif()
+endif ()
 
-MACRO( DEFINE_EXECUTABLE target_name target_sources)
+MACRO(DEFINE_EXECUTABLE target_name target_sources)
     add_executable(${target_name} ${target_sources})
     SET_APP_BUILD(${target_name})
     target_link_libraries(${target_name} PUBLIC "dawlib")
@@ -254,15 +254,15 @@ if (BUILD_DAW_LIB)
     list(APPEND DAW_MAIN_SRC "src/host/main_daw.cpp")
     list(APPEND DAW_MAIN_SRC ${RESOURCE_FILES})
     DEFINE_EXECUTABLE(${BUILD_NAME} ${DAW_MAIN_SRC})
-        
-    if (BUILD_SCANNER) 
-        DEFINE_EXECUTABLE("vstscanner" "src/host/main_scanner.cpp")
-    endif()
 
-    if (BUILD_CMDLINE_HOST) 
+    if (BUILD_SCANNER)
+        DEFINE_EXECUTABLE("vstscanner" "src/host/main_scanner.cpp")
+    endif ()
+
+    if (BUILD_CMDLINE_HOST)
         DEFINE_EXECUTABLE("host" "src/host/main_cmdline.cpp")
-    endif()
-endif()
+    endif ()
+endif ()
 
 target_link_libraries(${LINK_TARGET} PUBLIC optimized ${GLFW_LIB_RELEASE} debug ${GLFW_LIB_DEBUG})
 target_link_libraries(${LINK_TARGET} PUBLIC optimized ${SQLITECPP_LIB_RELEASE} debug ${SQLITECPP_LIB_DEBUG})
@@ -272,22 +272,22 @@ target_link_libraries(${LINK_TARGET} PUBLIC optimized ${PORTMIDI_LIB_RELEASE} de
 
 if (LINUX)
     target_link_libraries(${LINK_TARGET} PRIVATE ${X11_X11_LIB} ${CMAKE_THREAD_LIBS_INIT} ${CMAKE_DL_LIBS} ${ALSA_LIBRARY} ${GTK3_LIBRARIES} GL rt m)
-endif(LINUX)
+endif (LINUX)
 if (APPLE)
-    target_link_libraries(${LINK_TARGET} PRIVATE 
-        ${CMAKE_THREAD_LIBS_INIT} 
-        ${CMAKE_DL_LIBS} 
-        ${APPLE_COREMIDI_LIBRARY}
-        ${APPLE_COREVIDEO_LIBRARY}
-        ${APPLE_OPENGL_LIBRARY}
-        ${APPLE_IOKIT_LIBRARY}
-        ${APPLE_COCOA_LIBRARY}
-        ${APPLE_CARBON_LIBRARY}
-        ${APPLE_FOUNDATION_LIBRARY}
-        ${APPLE_AUDIOUNIT_LIBRARY}
-        ${APPLE_AUDIOTOOLBOX_LIBRARY}
-        ${APPLE_COREAUDIO_LIBRARY}
-        m)
+    target_link_libraries(${LINK_TARGET} PRIVATE
+            ${CMAKE_THREAD_LIBS_INIT}
+            ${CMAKE_DL_LIBS}
+            ${APPLE_COREMIDI_LIBRARY}
+            ${APPLE_COREVIDEO_LIBRARY}
+            ${APPLE_OPENGL_LIBRARY}
+            ${APPLE_IOKIT_LIBRARY}
+            ${APPLE_COCOA_LIBRARY}
+            ${APPLE_CARBON_LIBRARY}
+            ${APPLE_FOUNDATION_LIBRARY}
+            ${APPLE_AUDIOUNIT_LIBRARY}
+            ${APPLE_AUDIOTOOLBOX_LIBRARY}
+            ${APPLE_COREAUDIO_LIBRARY}
+            m)
 endif (APPLE)
 if (WIN32)
     target_link_libraries(${LINK_TARGET} PRIVATE dbghelp winmm opengl32 kernel32 gdi32 ole32 uuid comdlg32 setupapi mswsock ws2_32)
@@ -297,6 +297,6 @@ endif (WIN32)
 GENERATE_BUILDINFO_CPP()
 
 if (BUILD_TESTS)
-  ENABLE_TESTING()
-  ADD_SUBDIRECTORY( src/tests )
-endif()
+    ENABLE_TESTING()
+    ADD_SUBDIRECTORY(src/tests)
+endif ()
