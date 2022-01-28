@@ -591,11 +591,6 @@ void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_gui_ent
                     float insety = calcInset(1, nh);
                     nvgRect(vg, nx + insetx, ny + insety, nw - insetx * 2, nh - insety * 2);
                     notesRendered++;
-                    //				if (notesRendered % 1000 == 0) {
-                    //					nvgFillColor(vg, rgbNote);
-                    //					nvgFill(vg);
-                    //					begin = 0;
-                    //				}
                 }
                 if (begin) {
                     nvgFillColor(vg, rgbNote);
