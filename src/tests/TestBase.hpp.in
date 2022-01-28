@@ -1,5 +1,4 @@
-#ifndef ALEPH_TESTS_BASE_HH__
-#define ALEPH_TESTS_BASE_HH__
+#pragma once
 
 #cmakedefine CMAKE_SOURCE_DIR         "@CMAKE_SOURCE_DIR@"
 #cmakedefine CMAKE_CURRENT_BINARY_DIR "@CMAKE_CURRENT_BINARY_DIR@"
@@ -12,31 +11,142 @@
 #include <iostream>
 #include <stdexcept>
 #include <string>
+#include "math/vec.h"
+
 #ifdef _MSC_VER
 #define __PRETTY_FUNCTION__ __FUNCSIG__
 #endif
 
 namespace CppTest {
 
-inline void testAssertExpr( bool condition )
+template<typename T>
+inline std::string stringify(const T& val) {
+    return std::to_string(val);
+}
+
+template<typename T>
+inline std::string stringify(T* val) {
+    constexpr size_t MAX_LEN = 512U;
+    char stringBuf[MAX_LEN];
+    auto ret = _snprintf_s(stringBuf, MAX_LEN, _TRUNCATE, "%012ZX", reinterpret_cast<size_t>(val));
+    if (ret == -1) {
+        ret = MAX_LEN - 2;
+        stringBuf[MAX_LEN - 1] = '\0';
+    }
+    return std::string(stringBuf);
+}
+
+template<>
+inline std::string stringify(const float& val) {
+    size_t tmp = *reinterpret_cast<const uint32_t*>(&val);
+    return std::to_string(val) + " "+ stringify(reinterpret_cast<const void*>(tmp));
+}
+
+template<>
+inline std::string stringify(const bool& val) {
+    return val ? "true" : "false";
+}
+
+template<>
+inline std::string stringify(const glm::vec2& val) {
+    return stringify(val.x) + ","+stringify(val.y);
+}
+
+template<>
+inline std::string stringify(const glm::ivec2& val) {
+    return stringify(val.x) + ","+stringify(val.y);
+}
+
+inline void testAssertExpr( bool condition, const char* file, int ln, const char* fn, const char* str )
 {
     if (!(condition)) {
-        throw std::runtime_error(   std::string( __FILE__ )
+        throw std::runtime_error(   std::string( file )
                                   + std::string( ":" )
-                                  + std::to_string( __LINE__ )
+                                  + std::to_string( ln )
                                   + std::string( " in " )
-                                  + std::string( __PRETTY_FUNCTION__ ));
+                                  + std::string( fn )+" > "
+                                  + std::string(str) );
     }
 }
-#define TEST_ASSERT_THROW( condition ) CppTest::testAssertExpr((condition))
-#define TEST_ASSERT_EQUAL( x, y ) CppTest::testAssertExpr(( x ) == ( y ))
+inline void testFailed(const char* file,
+                         int ln,
+                         const char* fn,
+                         const char* expr,
+                         const std::string& str ) {
+    std::string strDesc;
+    strDesc += "Test failed";
+    strDesc += "\nFile\t\t";
+    strDesc += file;
+    strDesc += ":";
+    strDesc +=  std::to_string( ln );
+    strDesc += "\nFunction\t";
+    strDesc += fn;
+    strDesc += "\nExpr\t\t";
+    strDesc += expr;
+    strDesc += "\nExpected\t";
+    strDesc += str;
+    strDesc += "\n";
+    throw std::runtime_error(strDesc);
+}
+
+inline void testEqualityFailed(const char* file,
+                         int ln,
+                         const char* fn,
+                         const char* exprLhs,
+                         const char* exprRhs,
+                         const std::string& strLhs,
+                         const std::string& strRhs  ) {
+    std::string strDesc;
+    strDesc += "Test failed";
+    strDesc += "\nFile\t\t";
+    strDesc += file;
+    strDesc += ":";
+    strDesc +=  std::to_string( ln );
+    strDesc += "\nFunction\t";
+    strDesc += fn;
+    strDesc += "\nExpr\t\t";
+    strDesc += exprLhs;
+    strDesc += "\nExpected\t";
+    strDesc += exprRhs;
+    strDesc += "\nValues\tLeft-hand:\t";
+    strDesc += strLhs;
+    strDesc += "\n\t\tRight-hand\t";
+    strDesc += strRhs;
+    strDesc += "\n";
+    throw std::runtime_error(strDesc);
+}
+
+#define TEST_ASSERT_EQUAL( lhs, rhs )   \
+    do {                                \
+        auto evalLhs = (lhs);           \
+        auto evalRhs = (rhs);           \
+        if (evalLhs != evalRhs) {       \
+            CppTest::testEqualityFailed(__FILE__, __LINE__, __PRETTY_FUNCTION__, #lhs, #rhs, CppTest::stringify(evalLhs), CppTest::stringify(evalRhs)); \
+        }                               \
+    } while(0)
+#define TEST_ASSERT_THROW( expr )       \
+    do {                                \
+        auto evalExpr = (expr);         \
+        if (!evalExpr) {                \
+            CppTest::testFailed(__FILE__, __LINE__, __PRETTY_FUNCTION__, #expr, CppTest::stringify(evalExpr)); \
+        }                               \
+    } while(0)
+#define TEST_ASSERT_NOT_EQUAL( lhs, rhs )   \
+    do {                                    \
+        auto evalLhs = (lhs);               \
+        auto evalRhs = (rhs);               \
+        if (evalLhs == evalRhs) {           \
+            CppTest::testFailed(__FILE__, __LINE__, __PRETTY_FUNCTION__, #lhs" != "#rhs, CppTest::stringify(evalLhs)+ " != "+CppTest::stringify(evalRhs)); \
+        }                                   \
+    } while(0)
+
 #define TEST_EXPECT_EXCEPTION( expression, expected_exception_type )\
 do {                                                                \
   try                                                               \
   {                                                                 \
     ( expression );                                                 \
   }                                                                 \
-  catch( expected_exception_type& e )                               \
+  catch( expected_exception_type& )                                 \
   {                                                                 \
   }                                                                 \
   catch( ... )                                                      \
@@ -50,11 +160,10 @@ do {                                                                \
   }                                                                 \
 } while(0)
 
-#define TEST_BEGIN( name ) (std::cerr << "-- Running test \"" << (name) << "\"...")
+#define TEST_BEGIN( name ) (std::cerr << "-- Running test \"" << (name) << "\"...\n", std::cerr.flush())
 
-#define TEST_END() (std::cerr << "finished\n")
+#define TEST_END() (std::cerr << "finished\n", std::cerr.flush())
 
 
 } // namespace CppTest
 
-#endif

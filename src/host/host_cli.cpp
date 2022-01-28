@@ -22,7 +22,7 @@
 #include "plugindatabase.h"
 #include "threads/playbackthread.h"
 #include "wave/dr_wav.h"
-#include "tests/test_environment.h"
+#include "tests/common/test_environment.h"
 #include "appconfig.h"
 
 #ifdef _WIN32
@@ -378,13 +378,13 @@ int runCommandLineHost(int argc, const char* argv[]) {
 
 
             projectGlobals.cursor.cursorPos = projectGlobals.loopStart;
-            if (fStart >= 0.0f) {
-                projectGlobals.cursor.cursorPos = math::round(fStart * TICKS_BAR);
-                projectGlobals.loopStart        = math::round(fStart * TICKS_BAR);
+            if (fStart >= 0.0) {
+                projectGlobals.cursor.cursorPos = math::roundD(fStart * TICKS_BAR);
+                projectGlobals.loopStart        = math::roundD(fStart * TICKS_BAR);
             }
-            if (fStart >= 0.0f && fLength >= 0.0f) {
+            if (fStart >= 0.0 && fLength >= 0.0) {
                 projectGlobals.loopEnabled = false;
-                //                project.loopLen = math::round(fLength*TICKS_BAR);
+                //                project.loopLen = math::roundD(fLength*TICKS_BAR);
             }
 
             std::shared_ptr<DAW::processing_graph_t> processingGraph;
@@ -441,7 +441,7 @@ int runCommandLineHost(int argc, const char* argv[]) {
                     host->getStats(stats);
 
                     String strProgress = "x";
-                    if (fStart >= 0.0f && fLength >= 0.0f) {
+                    if (fStart >= 0.0 && fLength >= 0.0) {
                         auto fProgress = (projectGlobals.playbackPos / (double)TICKS_BAR - fStart) / fLength;
                         strProgress     = StringFormat("%0.2f%%", fProgress * 100.0);
                     }
@@ -470,7 +470,7 @@ int runCommandLineHost(int argc, const char* argv[]) {
                     tickPos += ticksPerBlock * processedBlock;
                     projectController.getPlaybackPos() = (tick_t) floor(tickPos);
                 }
-                if (fStart >= 0.0f && fLength >= 0.0f) {
+                if (fStart >= 0.0 && fLength >= 0.0) {
                     if ((projectController.getPlaybackPos()) / (double)TICKS_BAR - fStart >= fLength) {
                         if (playThread) {
                             playThread->addRequest(REQ_STATE, (int)playback_state::status_no_process, true);

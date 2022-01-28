@@ -34,7 +34,7 @@ gui_pianoroll::gui_pianoroll(clip_view& _view, layout_pianoroll_t& _layout)
     widthKeys = 0;
 }
 int32_t toVel(vec2 note) {
-    return math::clamp<int32_t>(math::round(note.x * 127.0 / 1024.0), 0, 127);
+    return math::clamp<int32_t>(math::round(note.x * 127.0f / 1024.0f), 0, 127);
 }
 void gui_pianoroll::handleDraggedBegin(MouseEvent& evt) {
     dragMode = dragmode::drag_none;

@@ -178,9 +178,9 @@ guictr_stacked::~guictr_stacked() {
 }
 void guictr_stacked::addEntry(guictr_base* ctr, String title) {
 	guictr_stacked::stacked_entry* entry = new guictr_stacked::stacked_entry{ctr, title};
-	entry->splitter.notifyCtrl = this;
 	ctr->add(&entry->btnHideEntry);
 	guictr_base::add(ctr);
+    entry->splitter.setCallback(this);
 	guictr_base::add(&entry->splitter);
 	this->entries.push_back(entry);
 }

@@ -116,6 +116,7 @@ namespace DAW {
         return false;
     }
     bool channelRefEquals(const DAW::channel_ref_t& existingRef, const DAW::channel_ref_t& ref) {
+        //TODO: why is this here??
         if (existingRef.type == channel_input_type::INPUT_DEFAULT)
             return true;
         if (existingRef.type == ref.type) {

@@ -7,7 +7,6 @@
 #include "color_util.h"
 #include "button.h"
 #include "list.h"
-#include "table.h"
 #include "guimeter.h"
 #include "dropdown.h"
 #include "guicontextmenu.h"

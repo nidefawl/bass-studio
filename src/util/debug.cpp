@@ -1,5 +1,5 @@
 #include "str_util.h"
-#include "tests/test_environment.h"
+#include "tests/common/test_environment.h"
 
 #ifdef __GNUC__
 
@@ -189,11 +189,12 @@ void log_format_to_logger(Logger* logger, const char* file, int line, const char
 #ifndef _WIN32
         ret = snprintf(szLogBuf, LOG_BUF_SIZE - 1, "%s:%s:%d %s: %s", szThreadName, szFileShort, line, func, szLogStr);
 #else
-        ret = _snprintf_s(szLogBuf, LOG_BUF_SIZE, _TRUNCATE, "%s:%s:%d %s: %s", szThreadName, szFileShort, line, func, szLogStr);
+        ret = _snprintf_s(szLogBuf, LOG_BUF_SIZE-1, _TRUNCATE, "%s:%s:%d %s: %s", szThreadName, szFileShort, line, func, szLogStr);
         if (ret == -1) {
-            ret               = LOG_BUF_SIZE - 1;
-            szLogBuf[ret - 1] = '\n';
+            ret = LOG_BUF_SIZE - 1;
+            szLogBuf[LOG_BUF_SIZE-2] = '\n';
         }
+        szLogBuf[LOG_BUF_SIZE-1] = '\0';
 #endif
         if (ret >= 0 && ret < LOG_BUF_SIZE) {
             szLogStatement = szLogBuf;

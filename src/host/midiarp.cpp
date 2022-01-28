@@ -63,7 +63,7 @@ tick_t midiarp::getStepSize() {
 
     float valueMapped = TICKS_16TH * math::calcMappedValueForScale(getParamValue(ARP_PARAM_CLOCK), expo, scMin, scMax);
     dbgassert(valueMapped > 0);
-    return math::floorF32toS32(valueMapped);
+    return math::floorS32(valueMapped);
 }
 
 int32_t midiarp::getRandTmMode() {

@@ -128,9 +128,6 @@ namespace {
         bool isTransient() override {
             return !hadMouseFocus;
         }
-//        bool canClose() override {
-//            return !hadMouseFocus && !parentCtrl->isMouseInside();
-//        }
         virtual void clicked(int _id) {
             closeContextMenu();
         }

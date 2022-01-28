@@ -5,9 +5,11 @@
 
 template<typename T>
 class SafeRefHandler {
+protected:
+    ~SafeRefHandler() = default;
+
 public:
     SafeRefHandler()                        = default;
-    virtual ~SafeRefHandler()               = default;
     virtual int safeRefCreate(T*)           = 0;
     virtual T* safeRefGetPtr(int32_t refId) = 0;
 

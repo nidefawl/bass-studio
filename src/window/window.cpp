@@ -1321,7 +1321,7 @@ void appwindow_main::createMainWindow(const char* title, int w, int h, appwindow
 	RenderResources::initResources(nanovgCtxt);
 	MouseCursors::initCursors(); //TODO: call MouseCursors::destroy() on exit of last instance
 }
-#if defined(__linux__) or defined(__APPLE__)
+#if defined(__linux__) || defined(__APPLE__)
 void AppWndProc_enableBlockReentrant() {
 }
 void AppWndProc_disableBlockReentrant() {

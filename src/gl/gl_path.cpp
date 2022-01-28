@@ -24,7 +24,7 @@ using vec2list = std::vector<vec2>;
 
 
 void buildIndices(int nV, int offset, std::vector<int>& _out) {
-    static int quadIdx[] = {0, 1, 2, 1, 2, 3};
+    static int quadIdx[] = { 0, 1, 2, 1, 2, 3 };
     for (int i = 0; i < nV; i++) {
         for (int j = 0; j < 6; j++)
             _out.push_back(offset + quadIdx[j] + i * 4);

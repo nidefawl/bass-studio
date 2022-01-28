@@ -40,8 +40,8 @@ class guictr_layout;
 struct dawview_layout_t;
 
 class guictr_layout : public guictr_base, public i_ctr_layout, public splitter_cb {
-    bool setOverlayPos(i_ctr_drop_area* area, const dock_pos dockPos, ivec2 overlayPos, ivec2 overlaySize, int32_t dockPosOfffset, int32_t childContainerIndex);
-    bool setOverlayPosForTab(i_ctr_drop_area* area, const dock_pos dockPos, const int32_t dockOffset, const bool rightSideHandle);
+    bool setOverlayPos(i_ctr_drop_area* area, dock_pos dockPos, ivec2 overlayPos, ivec2 overlaySize, int32_t dockPosOfffset, int32_t childContainerIndex);
+    bool setOverlayPosForTab(i_ctr_drop_area* area, dock_pos dockPos, int32_t dockOffset, bool rightSideHandle);
     i_ctr_drop_area* makeDropArea(int32_t idx);
 
 public:
@@ -62,7 +62,7 @@ private:
 
 public:
     guictr_layout();
-    virtual ~guictr_layout() {
+    ~guictr_layout() override {
         removeGuis();
         entries.clear();
     }
@@ -72,7 +72,7 @@ public:
         }
         //		return ivec2(0, _padding);
         //		return ivec2(_padding - margin*snapSides.x, _padding - margin*snapSides.y);
-        return ivec2(_padding - margin * snapSides.x, 0);
+        return {_padding - margin * snapSides.x, 0};
     }
     ivec2 paddingBR(int _padding) const override {
         if (parentCtrl && parentCtrl->isDraggingContainer()) {
@@ -80,7 +80,7 @@ public:
         }
         //		return ivec2(0, _padding);
         //		return ivec2(_padding - margin*snapSides.z, _padding - margin*snapSides.w);
-        return ivec2(_padding - margin * snapSides.z, 0);
+        return {_padding - margin * snapSides.z, 0};
     }
     void removeAllEntries() {
         for (auto& entry: entries) {
@@ -111,7 +111,7 @@ public:
         std::vector<std::shared_ptr<guictr_layout_entry>> entriesToRemove;
         std::vector<InlineEntry> entriesInsert;
         int32_t index = 0;
-        for (auto entry: entries) {
+        for (const auto& entry: entries) {
             auto guiCtrLayout = dynamic_cast<guictr_layout*>(entry->getGui());
             if (guiCtrLayout) {
                 guiCtrLayout->simplify();
@@ -129,14 +129,14 @@ public:
             }
             index++;
         }
-        if (entriesToRemove.size()) {
+        if (!entriesToRemove.empty()) {
             log_printf("remove %d container entries\n", entriesToRemove.size());
         }
-        for (auto entry: entriesToRemove) {
+        for (const auto& entry: entriesToRemove) {
             std::shared_ptr<guictr_layout_entry> out;
             getContainerRef(entry.get(), out, true);
         }
-        for (auto entry: entriesInsert) {
+        for (const auto& entry: entriesInsert) {
             addEntry(entry.entry, entry.index);
         }
         if (entries.size() < 2) {
@@ -152,7 +152,7 @@ public:
         this->ctrLayout = ctrLayoutNew;
         updateVisible();
     }
-    void postContentChanged() {
+    void postContentChanged() override {
         simplify();
         updateVisible();
         if (this->parent) {
@@ -193,7 +193,7 @@ public:
         }
     }
 
-    virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
+    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
     container_layout getLayout() const override {
         return this->ctrLayout;
     }
@@ -205,22 +205,22 @@ public:
     //	void replaceContentWith(guictr_layout* ctr);
 
     std::shared_ptr<guictr_layout_entry> replaceContainerWith(guictr_base* ctr, std::shared_ptr<guictr_layout> newContainer);
-    void render(NVGcontext* vg);
-    void handleSplitterChanged(Splitter& splitter, float scale, int clampedAt);
-    ivec2 getContainerSize();
+    void render(NVGcontext* vg) override;
+    void handleSplitterChanged(Splitter& splitter, float scale, int clampedAt) override;
+    ivec2 getContainerSize() override;
 };
 
 struct guictrlayout_snapshot_t;
 //TODO: guictrlayout_snapshot_t should not derive from guictrlayout_entry_snapshot_t
 // instead add field to guictrlayout_entry_snapshot_t
 struct guictrlayout_entry_snapshot_t {
+    virtual ~guictrlayout_entry_snapshot_t() = default;
     container_type type;
     String label;
-    virtual ~guictrlayout_entry_snapshot_t() {
-    }
 };
 
-struct guictrlayout_snapshot_t : public virtual guictrlayout_entry_snapshot_t {
+struct guictrlayout_snapshot_t : public guictrlayout_entry_snapshot_t {
+    ~guictrlayout_snapshot_t() override = default;
     container_layout ctrLayout = container_layout::SOLE;
     int32_t activePosition     = -1;
     std::vector<std::shared_ptr<guictrlayout_entry_snapshot_t>> entries;

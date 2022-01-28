@@ -306,15 +306,15 @@ void guictr_layout::layout() {
             if (this->ctrLayout == container_layout::SPLIT_V || this->ctrLayout == container_layout::SPLIT_H) {
                 float curScale = 1.0f;
                 if (splitters.size() > entryIdx) {
-                    curScale = splitters[entryIdx]->scale;
+                    curScale = splitters[entryIdx]->getScale();
                 }
                 float prevScale = 0.0f;
                 if (entryIdx - 1 >= 0) {
-                    prevScale = splitters[entryIdx - 1]->scale;
+                    prevScale = splitters[entryIdx - 1]->getScale();
                 }
                 segSizeF = (curScale - prevScale) * vec2(cs) * axis + vec2(cs) * vec2(axis.y, axis.x);
                 if (entryIdx - 1 >= 0) {
-                    segPos = splitters[entryIdx - 1]->scale * vec2(cs) * axis;
+                    segPos = splitters[entryIdx - 1]->getScale() * vec2(cs) * axis;
                 }
                 if (this->ctrLayout == container_layout::SPLIT_V) {
                     tabW = segSizeF.x;
@@ -459,8 +459,8 @@ void updateSplitterMinMax(T& splitters) {
     const float margin = off * 0.2f;
     for (int i = 0; i < numSplitters; ++i) {
         auto& splitter           = splitters[i];
-        const float prevScalePos = (i - 1 >= 0 ? splitters[i - 1]->scale : 0.0f) + margin;
-        const float nextScalePos = (i + 1 < numSplitters ? splitters[i + 1]->scale : 1.0f) - margin;
+        const float prevScalePos = (i - 1 >= 0 ? splitters[i - 1]->getScale() : 0.0f) + margin;
+        const float nextScalePos = (i + 1 < numSplitters ? splitters[i + 1]->getScale() : 1.0f) - margin;
         splitter->setMinMax(prevScalePos, nextScalePos);
     }
 }
@@ -468,7 +468,7 @@ std::vector<float> guictr_layout::getSplitterPositions() {
     std::vector<float> splitterPos;
     splitterPos.reserve(splitters.size());
     for (auto& splitter: splitters) {
-        splitterPos.push_back(splitter->scale);
+        splitterPos.push_back(splitter->getScale());
     }
     return splitterPos;
 }
@@ -476,7 +476,7 @@ std::vector<float> guictr_layout::getSplitterPositions() {
 void guictr_layout::setSplitterPositions(std::vector<float>& splitterPositons) {
     if (splitterPositons.size() == this->splitters.size()) {
         for (size_t i = 0; i < splitterPositons.size(); ++i) {
-            splitters[i]->scale = splitterPositons[i];
+            splitters[i]->setScale(splitterPositons[i]);
         }
         updateSplitterMinMax(splitters);
     }
@@ -496,11 +496,11 @@ void guictr_layout::updateSplitters() {
         int splitterLayout = ctrLayout == container_layout::SPLIT_V ? 1 : 0;
         float off          = 1.0f / (numSplitters + 1);
         for (int i = 0; i < numSplitters; ++i) {
-            float splitPos = off + i * off;
+            float splitPos =         off + i * off;
             auto splitter  = std::make_shared<Splitter>(splitterLayout, splitPos);
             splitters.push_back(splitter);
             splitter->setMinMax(splitPos - off * 0.8f, splitPos + off * 0.8f);
-            splitter->notifyCtrl = this;
+            splitter->setCallback(this);
         }
         updateSplitterMinMax(splitters);
         for (auto& splitter: splitters) {

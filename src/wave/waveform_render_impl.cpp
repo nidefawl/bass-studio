@@ -1,4 +1,5 @@
 #include "glheaders.h"
+#include "seq_util.h"
 #include "waveform_render_impl.h"
 #include "gl/gl_path.h"
 
@@ -15,7 +16,9 @@
 #include "waveform_generate.h"
 #include "logging.h"
 #include "appconfig.h"
-#include "host/mainctrl.h"
+#include "tls.h"
+#include "gui/gui.h"
+//#include "host/mainctrl.h"
 
 
 bool checkGLError(const char* s);
@@ -69,7 +72,7 @@ void waveformrender::getRenderedTextures(std::vector<TextureAtlas>& rendered) {
     }
 }
 template<typename T>
-bool isIn(const std::vector<T*>& ptrs, const void* ptr) {
+bool isIn(const std::vector<T*>& ptrs, const void* ptr)  {
     auto it2 = std::find_if(ptrs.cbegin(), ptrs.cend(), [ptr](const void* entry) {
         return entry == ptr;
     });
@@ -552,7 +555,7 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
     return totalRendered;
 }
 
-bool waveformrender::isValid(const gui_waveform_texture_ref* waveformRef) {
+bool waveformrender::isValid(const gui_waveform_texture_ref* waveformRef) const {
     if (waveformRef->atlasId >= 0) {
         const int id = waveformRef->atlasEntryId;
         // check if waveformRef looks plausible
@@ -569,7 +572,7 @@ bool waveformrender::isValid(const gui_waveform_texture_ref* waveformRef) {
                    });
             bool b2         = (it2 != vecQTasks.end());
             dbgassert(b2);
-            waveform_update_task_t& taskEntry = *it2;
+            auto& taskEntry = *it2;
             dbgassert(isIn(taskEntry.queuedptrs, waveformRef));
             dbgassert(taskEntry.queuedRefCount > 0);
         }
@@ -579,7 +582,7 @@ bool waveformrender::isValid(const gui_waveform_texture_ref* waveformRef) {
                 return entry.id == id;
               });
             dbgassert(it != vec.end());
-            TextureAtlasEntry& entry = *it;
+            auto& entry = *it;
             dbgassert(isIn(entry.ptrs, waveformRef));
             auto it2 = std::find(entry.ptrs.begin(), entry.ptrs.end(), waveformRef);
             dbgassert(it2 != entry.ptrs.end());

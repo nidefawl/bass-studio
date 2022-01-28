@@ -20,6 +20,7 @@
 #include "str_util.h"
 #include "logging.h"
 #include "error.h"
+#include "str_win32.h"
 #include <shlobj.h>//for knownFolder
 #include <sstream>
 
@@ -110,13 +111,18 @@ void setMinimumResolutionTimer() {
 
 
 bool determineUserdataPath(String& path) {
-    std::vector<wchar_t> localAppData;
-    localAppData.resize(512);
-    wchar_t* ptr = localAppData.data();
-    if ((S_OK == SHGetKnownFolderPath(FOLDERID_RoamingAppData, 0, nullptr, &ptr))) {
-        std::wstring ws(ptr);
-        std::string str(ws.begin(), ws.end());
-        path = str;
+    wchar_t *wPath = nullptr;
+    if ((S_OK == SHGetKnownFolderPath(FOLDERID_RoamingAppData, KF_FLAG_CREATE, nullptr, &wPath))) {
+#ifdef USE_WSTRING
+        path = wPath;
+#else
+        std::vector<char> convertedStr;
+        auto errorCode = wcharToSring(CP_UTF8, wPath, ::wcslen(wPath), convertedStr);
+        if (!errorCode){
+            path.assign(convertedStr.begin(), convertedStr.end());
+        }
+#endif
+        ::CoTaskMemFree(wPath);
         return true;
     }
     return false;
@@ -248,7 +254,7 @@ String getKeyName(int scancode) {
 String FormatErrorMessage(uint32_t error, const String& msg) {
     static const int BUFFERLENGTH = 1024;
     std::vector<char> buf(BUFFERLENGTH);
-    FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM, nullptr, error, 0, buf.data(), BUFFERLENGTH - 1, nullptr);
+        FormatMessageA(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, error, 0, buf.data(), BUFFERLENGTH - 1, nullptr);
     if (msg.empty())
         return { buf.data() };
     return msg + " (" + StringTrim(String(buf.data())) + ")";

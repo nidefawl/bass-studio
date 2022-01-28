@@ -62,7 +62,7 @@
 #define G_YELLOW_DRK (theme->getColor(GuiColor::COL_LEVEL_IND_YELLOW_DRK))
 #define G_YELLOW_DRKER (theme->getColor(GuiColor::COL_LEVEL_IND_YELLOW_DRKER))
 #define G_FONT_MIDDLE_OFFSET(x) (x / 2.0f + 1)
-#define G_FONT_SCALE(x) (math::round(x * theme->getFloat(GuiConstant::CONST_FONT_SCALE)))
+#define G_FONT_SCALE(x) ( math::round(x * theme->getFloat(GuiConstant::CONST_FONT_SCALE)) )
 #define G_MOVE_HIGHLIGHT nvgRGBA(255, 0, 0, 192)
 
 #define G_TITLE_ALIGN NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE

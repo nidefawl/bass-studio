@@ -141,10 +141,22 @@ void Splitter::handleDraggedMove(MouseEvent& evt) {
         parentCtrl->relayout();//TODO: this sucks, triggers a complete relayout
     }
 }
-template<typename T>
-void addPropertiesFromGui(T& gui, Table::tbl* table);
-template<>
-void addPropertiesFromGui(Splitter& gui, Table::tbl* table);
 void Splitter::addProperties(Table::tbl* table) {
-    addPropertiesFromGui(*this, table);
+    using Table::table_entry_t;
+    using Table::tbl;
+    using Table::tbl_row_t;
+    using Table::tblfloat;
+    using Table::tblint;
+    using Table::tblstr;
+    using Table::tblString;
+    using Table::tbltypesaferef;
+    SafeRef<guibase> ref = this->makeSafeRef();
+    std::vector<tbl_row_t>& rows = table->rows;
+    rows.push_back({{tblstr{"this"}, ref}});
+    rows.push_back({{tblstr{"pos"}, tbltypesaferef<glm::ivec2>{ref, this->pos, nullptr}}});
+    rows.push_back({{tblstr{"size"}, tbltypesaferef<glm::ivec2>{ref, this->size, nullptr}}});
+    rows.push_back({{tblstr{"splittertype"}, tbltypesaferef<int>{ref, this->type, nullptr}}});
+    rows.push_back({{tblstr{"scale"}, tbltypesaferef<float>{ref, this->scale, nullptr}}});
+    rows.push_back({{tblstr{"scaleMin"}, tbltypesaferef<float>{ref, this->scaleMin, nullptr}}});
+    rows.push_back({{tblstr{"scaleMax"}, tbltypesaferef<float>{ref, this->scaleMax, nullptr}}});
 }

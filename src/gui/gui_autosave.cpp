@@ -1,4 +1,4 @@
-#include <algorithm>x
+#include <algorithm>
 #include "guicolors.h"
 #include "guiconstant.h"
 #include "host/mainctrl.h"
@@ -57,9 +57,6 @@ public:
 //        return !hadMouseFocus;
         return false;
     }
-//    bool canClose() override {
-//        return !hadMouseFocus && !parentCtrl->isMouseInside();
-//    }
     void onTick(AppCtrl* appctrl) {
         layout();
         int64_t tmLeft = math::max<int32_t>(0, this->tmDelay - ((int64_t) getTimeMillis() - this->tmCreate));

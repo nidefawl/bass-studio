@@ -1201,7 +1201,7 @@ void track_impl_t::sendNotes(playback_state state, int32_t flags, tick_t cursorP
 			tmr.reset();
 			this->noteEventsProcessed.clear();
 			if (flags & MidiFlags::PROCESS_ARP) {
-                arp->process(state, cursorPos, noteEvents, blockStart, blockEnd, loopStart, loopEnd, math::floorF32toS32(ticksPerBlock), noteEventsProcessed);
+                arp->process(state, cursorPos, noteEvents, blockStart, blockEnd, loopStart, loopEnd, math::floorS32(ticksPerBlock), noteEventsProcessed);
 			} else {
 				noteEventsProcessed = std::move(noteEvents);
 			}

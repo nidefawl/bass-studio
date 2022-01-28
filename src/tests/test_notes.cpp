@@ -3,7 +3,7 @@
 #include "seq_time.h"
 #include "clip.h"
 #include "../host/mainctrl.h"
-#include "test_common.h"
+#include "tests/common/test_common.h"
 
 namespace {
 

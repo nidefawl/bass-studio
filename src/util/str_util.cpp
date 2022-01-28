@@ -13,7 +13,7 @@
 #include <stdio.h>
 #endif
 
-#if __linux__ or defined(__APPLE__)
+#if __linux__ || defined(__APPLE__)
 int _vscprintf(const char* format, va_list pargs) {
     int retval;
     va_list argcopy;
@@ -114,22 +114,23 @@ const char* noteName(int note) {//DONT KEEP REFERENCE
     return buf;
 }
 #ifdef _WIN32
-String wcharToSring(LPWSTR text) {
-#ifdef USE_WSTRING
-    String s = text;
-    return s;
-#else
-    std::vector<char> buffer;
-    int size = WideCharToMultiByte(CP_UTF8, 0, text, -1, NULL, 0, NULL, NULL);
-    if (size > 0) {
-        buffer.resize(size);
-        WideCharToMultiByte(CP_UTF8, 0, text, -1, &buffer[0], buffer.size(),
-                            NULL, NULL);
-        return String(buffer.begin(), buffer.end() - 1);
+#ifndef USE_WSTRING
+uint32_t wcharToSring(uint32_t codepage, const wchar_t *utf16, size_t utf16_len, std::vector<char>& converted) {
+    int len  = WideCharToMultiByte(codepage, 0, utf16, (int)utf16_len, converted.data(), 0, nullptr, nullptr);
+    if (len  > 0) {
+        converted.reserve(len);
+        converted.resize(len);
+        converted.front() = 0;
+        len  = WideCharToMultiByte(codepage, 0, utf16, (int)utf16_len, converted.data(), (int)converted.size(), nullptr, nullptr);
+        if (len > 0) {
+            converted.push_back(0);
+            converted.pop_back();
+            return 0;
+        }
     }
-    return "";
-#endif
+    return ::GetLastError();
 }
+#endif
 #endif//_WIN32
 
 /**
@@ -222,7 +223,7 @@ int StringContainsCI(const String& str1, const String& str2, const std::locale& 
     auto it = std::search( str1.begin(), str1.end(), str2.begin(), str2.end(),
                           str_char_toupper_comparator<typename String::value_type>(loc) );
     if (it != str1.end())
-        return it - str1.begin();
+        return (int)(it - str1.begin());
     else
         return -1;// not found
 }

@@ -53,15 +53,6 @@ inline beatbar16th_t tickToBarBeat16th(int32_t tick, int32_t signatureNum = 4, i
     return t;
 }
 
-
-template<typename T>
-inline bool almost_equal(T x, T y, int ulp) {
-    // the machine epsilon has to be scaled to the magnitude of the values used
-    // and multiplied by the desired precision in ULPs (units in the last place)
-    return math::abs(x - y) <= std::numeric_limits<T>::epsilon() * math::abs(x + y) * ulp
-           // unless the result is subnormal
-           || math::abs(x - y) < std::numeric_limits<T>::min();
-}
 inline double toMilliSeconds(tick_t tick, int32_t bpm100) {
     return ((tick) / (double) (bpm100 * TICKS_QUARTER)) * 100.0 * 60.0 * 1000.0;
 }

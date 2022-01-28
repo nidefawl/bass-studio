@@ -110,9 +110,6 @@ public:
     virtual bool isDialog() {
         return false;
     }
-    //	virtual bool canClose() {
-    //		return false;
-    //	}
     virtual void onParentWindowClose() {
     }
 

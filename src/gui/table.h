@@ -34,6 +34,8 @@ namespace Table {
         click_type_handler* callback;
         //	MouseEvent evt;
     };
+
+    /* Inspired by Sean Parent: Better Code: Runtime Polymorphism - 2017 */
     class table_entry_t {
     public:
         template<typename T>
@@ -48,8 +50,8 @@ namespace Table {
 
     private:
         struct concept_t {
-            virtual ~concept_t()                                    = default;
-            virtual void drawTblImpl(const table_ctxt_t&) const     = 0;
+            virtual ~concept_t() = default;
+            virtual void drawTblImpl(const table_ctxt_t&) const = 0;
             virtual void cellClickedImpl(const click_ctxt_t&) const = 0;
         };
         template<typename T>
@@ -87,11 +89,14 @@ namespace Table {
     };
     struct tblstr {
         const char* str = nullptr;
-        int flags       = 0;
+        int flags = 0;
     };
     struct tblint {
-        int64_t i;
+        int64_t i{};
         const char* format = nullptr;
+    };
+    struct tblfloat {
+        float f{};
     };
     template<typename T>
     struct tbltype {
@@ -103,19 +108,33 @@ namespace Table {
         T& t;
         const char* format = nullptr;
     };
+    template <typename T>
+    struct tbltypesaferef {
+        SafeRef<guibase> saferef;
+        T& t;
+        const char* format = nullptr;
+    };
     template<typename T>
     inline void drawTbl(const table_ctxt_t& ctxt, T& obj) {
         drawTbl(ctxt, const_cast<const T&>(obj));
     }
     template<typename T>
+    void drawTbl(const table_ctxt_t& ctxt, const T& obj);
+
+    template<typename T>
     void drawTbl(const table_ctxt_t& ctxt, const tbltype<T>& obj);
+
     template<typename T>
     inline void drawTbl(const table_ctxt_t& ctxt, const tbltyperef<T>& obj) {
         drawTbl(ctxt, const_cast<const T&>(obj.t));
     }
-    struct tblfloat {
-        float f;
-    };
+    template <typename T>
+    inline void drawTbl(const table_ctxt_t& ctxt, const tbltypesaferef<T>& obj) {
+        if (safeRefOk(obj.saferef)) {
+            drawTbl(ctxt, const_cast<const T&>(obj.t));
+        }
+    }
+    void drawTbl(const table_ctxt_t& ctxt, const SafeRef<guibase>& obj);
     void drawTbl(const table_ctxt_t& ctxt, const tblfloat& obj);
     void drawTbl(const table_ctxt_t& ctxt, const tblString& obj);
     void drawTbl(const table_ctxt_t& ctxt, const tblstr& obj);
@@ -125,8 +144,9 @@ namespace Table {
     void drawTbl(const table_ctxt_t& ctxt, const String& obj);
     void drawTbl(const table_ctxt_t& ctxt, const ivec2& obj);
     void drawTbl(const table_ctxt_t& ctxt, const ivec4& obj);
-    void drawTbl(const table_ctxt_t& ctxt, const GuiColor::constant_t& obj);
     void drawTbl(const table_ctxt_t& ctxt, const GuiConstant::constant_t& obj);
+    void drawTbl(const table_ctxt_t& ctxt, const GuiColor::constant_t& obj);
+
     template<typename T>
     inline void cellClicked(const click_ctxt_t& ctxt, T& obj) {
     }

@@ -296,20 +296,20 @@ void guiknob_labeled_base::render(NVGcontext* vg) {
     if (isSlider) {
         nvgFillColor(vg, contrastColor);
         if (labelHeight) {
-            nvgFontSize(vg, (int32_t) G_FONT_SCALE(labelHeight * 0.5));
+            nvgFontSize(vg, (int32_t) G_FONT_SCALE(labelHeight * 0.5f));
             nvgText(vg, pos.x + size.x / 2.0f, pos.y + G_FONT_MIDDLE_OFFSET(labelHeight), StringAsCStr(label), NULL);
         }
-        nvgFontSize(vg, (int32_t) G_FONT_SCALE(valueHeight * 0.5));
+        nvgFontSize(vg, (int32_t) G_FONT_SCALE(valueHeight * 0.5f));
         nvgText(vg, pos.x + size.x / 2.0f, pos.y + size.y - valueHeight + G_FONT_MIDDLE_OFFSET(valueHeight), StringAsCStr(valueDisplay),
                 NULL);
 
     } else {
         nvgFillColor(vg, contrastColor);
         if (labelHeight) {
-            nvgFontSize(vg, (int32_t) G_FONT_SCALE(labelHeight - 2));
+            nvgFontSize(vg, (int32_t) G_FONT_SCALE(labelHeight - 2.0f));
             nvgText(vg, pos.x + size.x / 2.0f, pos.y + G_FONT_MIDDLE_OFFSET(labelHeight), StringAsCStr(label), NULL);
         }
-        nvgFontSize(vg, (int32_t) G_FONT_SCALE(valueHeight - 2));
+        nvgFontSize(vg, (int32_t) G_FONT_SCALE(valueHeight - 2.0f));
         nvgText(vg, pos.x + size.x / 2.0f, pos.y + size.y - valueHeight + G_FONT_MIDDLE_OFFSET(valueHeight), StringAsCStr(valueDisplay),
                 NULL);
     }

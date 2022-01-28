@@ -2,11 +2,12 @@
 #include <vector>
 #include <stdint.h>
 #include "seq_time.h"
+#include "math/seq_math.h"
 #include "clip.h"
 #include "project.h"
 #include "track.h"
 #include "host/projectcontroller.h"
-#include "test_common.h"
+#include "tests/common/test_common.h"
 
 namespace {
     void testTickConversions() {
@@ -19,7 +20,7 @@ namespace {
         for (blockPos = 0; blockPos < 160000; blockPos++) {
             double blockStartTick = blockToTickPrecise(blockPos, tempo100, samplerate, blocksize);
             double block = tickToBlockPrecise(blockStartTick, tempo100, samplerate, blocksize);
-            TEST_ASSERT_THROW(almost_equal(static_cast<double>(blockPos), block, 2));
+            TEST_ASSERT_THROW(math::almost_equal(static_cast<double>(blockPos), block, 2));
         }
         TEST_END();
     }

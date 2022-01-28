@@ -8,7 +8,6 @@
 
 #include "math/seq_math.h"
 #include "str_util.h"
-#include "saferef.h"
 #include "seq_util.h"
 #include "color_util.h"
 #include "event.h"
@@ -60,12 +59,6 @@ namespace Table {
 		virtual ~click_type_handler() {
 
 		}
-	};
-	template <typename T>
-	struct tbltypesaferef {
-		SafeRef<guibase> saferef;
-		T& t;
-		const char* format = nullptr;
 	};
 	template <>
 	inline void cellClicked(const click_ctxt_t& ctxt, const tbltype_gui_flags& obj) {
@@ -283,12 +276,6 @@ public:
 		}
 		return false;
 	}
-//	bool isTransient() override {
-//		return true;
-//	}
-//	bool canClose() override {
-//		return hadMouseMovement && !parentCtrl->isMouseInside();
-//	}
 	virtual void handleDraggedBegin(MouseEvent& evt) override {
 		validateReferences();
 		lastClicked = cellclicked_t();
@@ -567,19 +554,7 @@ public:
 
 template<typename T>
 void addPropertiesFromGui(T& gui, Table::tbl* table);
-template<>
-void addPropertiesFromGui(Splitter& gui, Table::tbl* table) {
-	SafeRef<guibase> ref = gui.makeSafeRef();
-	std::vector<tbl_row_t>& rows = table->rows;
-	rows.push_back({{tblstr{"this"}, ref}});
-	rows.push_back({{tblstr{"pos"}, tbltypesaferef<glm::ivec2>{ref, gui.pos, nullptr}}});
-	rows.push_back({{tblstr{"size"}, tbltypesaferef<glm::ivec2>{ref, gui.size, nullptr}}});
-	rows.push_back({{tblstr{"splittertype"}, tbltypesaferef<int>{ref, gui.type, nullptr}}});
-	rows.push_back({{tblstr{"scale"}, tbltypesaferef<float>{ref, gui.scale, nullptr}}});
-	rows.push_back({{tblstr{"scaleMin"}, tbltypesaferef<float>{ref, gui.scaleMin, nullptr}}});
-	rows.push_back({{tblstr{"scaleMax"}, tbltypesaferef<float>{ref, gui.scaleMax, nullptr}}});
 
-}
 template<>
 void addPropertiesFromGui(guiplugin& gui, Table::tbl* table) {
 	std::vector<tbl_row_t>& rows = table->rows;
@@ -753,7 +728,6 @@ void guiproperties_table<guiproperties_t>::onTick(AppCtrl* appctrl) {
 	if (needsRelayout) {
 		needsRelayout = false;
 		onChildLayoutChanged(this);
-//		layout();
 	}
 }
 template <>
@@ -810,30 +784,6 @@ void drawColor(NVGcontext* vg, ivec2 pos, ivec2 size, int32_t rgba) {
 	nvgFillColor(vg, rgbaToNvg(-1));
 
 }
-template <typename T>
-inline void drawTbl(const table_ctxt_t& ctxt, const tbltypesaferef<T>& obj) {
-	if (safeRefOk(obj.saferef)) {
-		drawTbl(ctxt, const_cast<const T&>(obj.t));
-	}
-}
-
-template <>
-void drawTbl(const table_ctxt_t& ctxt, const SafeRef<guibase>& obj) {
-	const vec2& pos = ctxt.pos;
-	const vec2& size = ctxt.size;
-	nvgTextAlign(ctxt.vg, NVG_ALIGN_RIGHT|NVG_ALIGN_BOTTOM);
-	guibase* ref = safeRefGet(obj);
-	if (ref)
-	{
-		String strAddr = StringFormat("0x%6X (refId %d)", (int64_t)ref, obj.refId);
-		String className = ref->getClassName();
-		nvgText(ctxt.vg, pos.x+size.x-INSET_TABLE_CELL_PADDING, pos.y+size.y-INSET_TABLE_CELL_PADDING, StringAsCStr(StringFormat("%s [%s]", StringAsCStr(className), StringAsCStr(strAddr))), nullptr);
-
-	} else {
-		nvgText(ctxt.vg, pos.x+size.x-INSET_TABLE_CELL_PADDING, pos.y+size.y-INSET_TABLE_CELL_PADDING, StringAsCStr(StringFormat("<null> [%d]", obj.refId)), nullptr);
-
-	}
-}
 
 template <>
 void drawTbl(const table_ctxt_t& ctxt, const tbltype_gui_flags& obj) {
@@ -848,15 +798,7 @@ void drawTbl(const table_ctxt_t& ctxt, const tbltype_gui_flags& obj) {
 		nvgText(ctxt.vg, pos.x+size.x-INSET_TABLE_CELL_PADDING, pos.y+size.y-INSET_TABLE_CELL_PADDING, strState, nullptr);
 	}
 }
-template <>
-void drawTbl(const table_ctxt_t& ctxt, NVGcolor& obj) {
-	drawColor(ctxt.vg, ctxt.pos, ctxt.size, nvgToRGBA(obj));
-}
-template <>
-void drawTbl(const table_ctxt_t& ctxt, const tbltyperef<NVGcolor>& obj) {
-	drawColor(ctxt.vg, ctxt.pos, ctxt.size, nvgToRGBA(obj.t));
-}
-template <>
+
 void drawTbl(const table_ctxt_t& ctxt, const tbltype_theme_color& obj) {
 	auto t = obj.theme->getColorInt32(obj.constant);
 	drawColor(ctxt.vg, ctxt.pos, ctxt.size, t);
@@ -877,7 +819,7 @@ inline void cellClicked(const click_ctxt_t& ctxt, const GuiConstant::constant_t&
 		ctxt.callback->onClick(ctxt, (guitheme_t*)nullptr, obj);
 	}
 }
-template <>
+
 void drawTbl(const table_ctxt_t& ctxt, const tbltype_theme_constant& obj) {
 	int32_t t = obj.theme->get(obj.constant);
 	drawTbl(ctxt, t);
@@ -886,7 +828,7 @@ template <>
 inline void cellClicked(const click_ctxt_t& ctxt, const tbltype_theme_constant& obj) {
 	ctxt.callback->onClick(ctxt, obj.theme, obj.constant);
 }
-template <>
+
 void drawTbl(const table_ctxt_t& ctxt, const tbltype_theme_font& obj) {
 	auto t = obj.theme->getFont(obj.fonttype);
 	drawTbl(ctxt, t.name);
@@ -952,7 +894,6 @@ void guiproperties_table<guitheme_t>::onTick(AppCtrl* appctrl) {
 	if (needsRelayout) {
 		needsRelayout = false;
 		onChildLayoutChanged(this);
-//		layout();
 	}
 }
 template <>

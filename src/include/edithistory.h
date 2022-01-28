@@ -1,4 +1,5 @@
 #pragma once
+#include <utility>
 #include <vector>
 #include "str_util.h"
 #include "assert_dbg.h"
@@ -9,17 +10,17 @@ public:
     std::string desc;
     bool errored = false;
     std::string errorDesc;
-    virtual ~action_base(){};
+    virtual ~action_base()= default;;
     virtual void undo(DawInstance* daw) = 0;
     virtual void redo(DawInstance* daw) = 0;
 
     virtual void releaseResources(DawInstance* daw){};
-    String getDesc() {
+    String getDesc() const {
         return desc;
     }
     void setError(String err) {
         this->errored   = true;
-        this->errorDesc = err;
+        this->errorDesc = std::move(err);
     }
 };
 class edithistory {

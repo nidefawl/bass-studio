@@ -1539,12 +1539,17 @@ void DawInstance::onTick()
 		std::shared_ptr<project_to_load_t> projectToLoadCpy = projectToLoad;
 		projectToLoad = nullptr;
 		bool projectLoadErrored = false;
+        AppWndProc_enableBlockReentrant();
 		try {
 			setLoadedProject(projectToLoadCpy->projectfile, projectToLoadCpy->loadflags);
-		} catch (...) {
-			projectLoadErrored = true;
-			log_printf("Failed loading project\n", 0);
-		}
+		} catch (std::exception& e) {
+            log_printf("Failed loading project: %s %s\n", StringAsCStr(typeName(e)), e.what());
+            projectLoadErrored = true;
+		} catch (...){
+            log_printf("Failed loading project. Unhandled exception\n", 0);
+            projectLoadErrored = true;
+        }
+        AppWndProc_disableBlockReentrant();
 		if (cbProjectLoadCompleteCallback) {
 			cbProjectLoadCompleteCallback(this, projectToLoadCpy->projectfile, projectLoadErrored ? 1 : 0);
 			cbProjectLoadCompleteCallback = nullptr;
@@ -1659,7 +1664,6 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
 	MainCtrl* renderCtrl = this->mainCtrl;
 	// is plugin loading not deferred?
 	if (1) {
-		AppWndProc_enableBlockReentrant();
 		/**
 		 * plugin loading was not deferred.
 		 * handle request to load all plugins.
@@ -1772,7 +1776,7 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
 		}
 		log_printf("end sample loading\n", 0);
 		ctr.setControl(nullptr);
-		AppWndProc_disableBlockReentrant();
+        AppWndProc_disableBlockReentrant();
 		for (track_t* tr : project.trackList) {
 			tr->getStage()->pluginsChanged();
 		}

@@ -3,240 +3,244 @@
 #include "../gui/automatable.h"
 
 int32_t indexOfTick(const std::vector<automation_point_t>& dataPoints, tick_t tick) {
-	int32_t idx;
-	for (idx = 0; idx < (int)dataPoints.size(); idx++) {
-		const automation_point_t& pt = dataPoints[idx];
-		if (pt.time > tick) {
-			break;
-		}
-	}
-	return idx;
+    int32_t idx;
+    for (idx = 0; idx < (int) dataPoints.size(); idx++) {
+        const automation_point_t& pt = dataPoints[idx];
+        if (pt.time > tick) {
+            break;
+        }
+    }
+    return idx;
 }
 int32_t addPointAt(std::vector<automation_point_t>& dataPoints, tick_t tick, int32_t quantizationSteps, float fInitialVal) {
-	int32_t idx;
-	for (idx = 0; idx < (int)dataPoints.size(); idx++) {
-		automation_point_t& pt = dataPoints[idx];
-		if (pt.time > tick) {
-			break;
-		}
-	}
-	if (!dataPoints.empty()) {
-		float v;
-		if (idx == (int)dataPoints.size()) {
-			v = dataPoints[idx-1].val;
-		} else if (idx == 0) {
-			v = dataPoints[0].val;
-		} else {
-			automation_point_t& pt1 = dataPoints[idx - 1];
-			if (quantizationSteps) {
-				v = pt1.val;
-			} else {
-				automation_point_t& pt2 = dataPoints[idx];
-				dbgassert(tick >= pt1.time && tick <= pt2.time);
-				tick_t tickDist = pt2.time - pt1.time;
-				if (tickDist == 0) {
-					v = pt2.val;
-				} else {
-					float pr = (tick - pt1.time) / (float) tickDist;
-					v = pt1.val + pr * (pt2.val - pt1.val);
-				}
-			}
-		}
-		dataPoints.insert(dataPoints.begin() + idx, { tick, v });
-		return idx;
-	} else {
-		dataPoints.insert(dataPoints.begin(), { tick, fInitialVal });
-	}
-	return 0;
+    int32_t idx;
+    for (idx = 0; idx < (int) dataPoints.size(); idx++) {
+        automation_point_t& pt = dataPoints[idx];
+        if (pt.time > tick) {
+            break;
+        }
+    }
+    if (!dataPoints.empty()) {
+        float v;
+        if (idx == (int) dataPoints.size()) {
+            v = dataPoints[idx - 1].val;
+        } else if (idx == 0) {
+            v = dataPoints[0].val;
+        } else {
+            automation_point_t& pt1 = dataPoints[idx - 1];
+            if (quantizationSteps) {
+                v = pt1.val;
+            } else {
+                automation_point_t& pt2 = dataPoints[idx];
+                dbgassert(tick >= pt1.time && tick <= pt2.time);
+                tick_t tickDist = pt2.time - pt1.time;
+                if (tickDist == 0) {
+                    v = pt2.val;
+                } else {
+                    /**
+                     * NOTE - precission - converting 2 relative tick_t values to float for LERPing
+                     * @see automation_t::getValueAt
+                     **/
+                    float pr = (tick - pt1.time) / (float) tickDist;
+                    v = pt1.val + pr * (pt2.val - pt1.val);
+                }
+            }
+        }
+        dataPoints.insert(dataPoints.begin() + idx, { tick, v });
+        return idx;
+    } else {
+        dataPoints.insert(dataPoints.begin(), { tick, fInitialVal });
+    }
+    return 0;
 }
 
 void simplifyData(std::vector<automation_point_t>& data) {
-	//remove multiple points on same time
-	{
+    //TODO: proof correctness and compare performance to STL algo
 
-		std::vector<automation_point_t>::iterator first = data.begin();
-		std::vector<automation_point_t>::iterator last = data.end();
-	    if (first != last) {
-	        for(auto i = first; i != last; ++i) {
-	        	tick_t firstTime = (*i).time;
-	            *first++ = std::move(*i);
-				if (i + 1 != last) {
-					std::vector<automation_point_t>::iterator j = i + 2;
-					for (; j < last; ++j) {
-						if (firstTime != (*j).time) {
-							break;
-						}
-					}
-					i = j - 2;
-				}
-	        }
-			if (first != last)
-	        data.erase(first, last);
-	    }
-	}
     {
-
-        //remove multiple consecutive points with same value
-    	std::vector<automation_point_t>::iterator first = data.begin();
-		std::vector<automation_point_t>::iterator last = data.end();
+        /* remove multiple points on same time */
+        auto first = data.begin();
+        auto last  = data.end();
         if (first != last) {
-            for(auto i = first; i != last; ++i) {
-            	float firstVal = (*i).val;
-                *first++ = std::move(*i);
-
-				if (i + 1 != last) {
-					std::vector<automation_point_t>::iterator j = i + 2;
-					for (; j < last; ++j) {
-						if (firstVal != (*j).val || firstVal != (*(j - 1)).val) {
-							break;
-						}
-					}
-					i = j - 2;
-				}
+            for (auto it = first; it != last; ++it) {
+                tick_t firstTime = (*it).time;
+                *first++         = std::move(*it);
+                if (it + 1 != last) {
+                    std::vector<automation_point_t>::iterator j = it + 2;
+                    for (; j < last; ++j) {
+                        if (firstTime != (*j).time) {
+                            break;
+                        }
+                    }
+                    it = j - 2;
+                }
             }
-			if (first != last)
-            data.erase(first, last);
+            if (first != last)
+                data.erase(first, last);
+        }
+    }
+    {
+        /* remove multiple consecutive points with same value */
+        auto first = data.begin();
+        auto last  = data.end();
+        if (first != last) {
+            for (auto i = first; i != last; ++i) {
+                float firstVal = (*i).val;
+                *first++       = std::move(*i);
+
+                if (i + 1 != last) {
+                    std::vector<automation_point_t>::iterator j = i + 2;
+                    for (; j < last; ++j) {
+                        if (firstVal != (*j).val || firstVal != (*(j - 1)).val) {
+                            break;
+                        }
+                    }
+                    i = j - 2;
+                }
+            }
+            if (first != last)
+                data.erase(first, last);
         }
     }
 }
-
-//float automation_t::getEventsInRange(tick_t tick) {
-//
-//}
 float automation_t::getValueAt(tick_t tick) const {
-	if (points.size()) {
-		int32_t idx = indexOfTick(points, tick);
-		dbgassert(idx <= (int)points.size());
-		if (idx == (int)points.size())
-			return points.back().val;
-		if (idx > 0) {
-			const automation_point_t& pt1 = points[idx-1];
-			if (quantizationSteps) {
-				return pt1.val;
-			}
-			const automation_point_t& pt2 = points[idx];
-			dbgassert(tick>=pt1.time && tick <= pt2.time);
-			tick_t tickDist = pt2.time-pt1.time;
-			if (!tickDist) {
-				return pt2.val;
-			}
-			float pr = (tick - pt1.time) / (float) tickDist;
-			return pt1.val + pr * (pt2.val - pt1.val);
-		}
-		return points.front().val;
-	}
-	return 0.5f;
+    if (!points.empty()) {
+        int32_t idx = indexOfTick(points, tick);
+        dbgassert(idx <= (int) points.size());
+        if (idx == (int) points.size())
+            return points.back().val;
+        if (idx > 0) {
+            const automation_point_t& pt1 = points[idx - 1];
+            if (quantizationSteps) {
+                return pt1.val;
+            }
+            const automation_point_t& pt2 = points[idx];
+            dbgassert(tick >= pt1.time && tick <= pt2.time);
+            tick_t tickDist = pt2.time - pt1.time;
+            if (!tickDist) {
+                return pt2.val;
+            }
+            /**
+             * NOTE - precission - converting 2 relative tick_t values to float for LERPing
+             * Precision depends on the distance in ticks between consecutive automation points
+             **/
+            float pr = (tick - pt1.time) / (float) tickDist;
+            return pt1.val + pr * (pt2.val - pt1.val);
+        }
+        return points.front().val;
+    }
+    return 0.5f;
 }
+
 void automation_t::copyRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data) const {
-	if (points.size()) {
-		int32_t idxStart = indexOfTick(points, tickBegin);
-		int32_t idxEnd = indexOfTick(points, tickEnd) + 1;
-		if (idxStart >= (int)points.size()) {
-			idxStart = points.size()-1;
-		}
-		if (idxEnd >= (int)points.size()) {
-			idxEnd = points.size()-1;
-		}
-		automation_point_t ptStart{0, getValueAt(tickBegin)};
-		automation_point_t ptEnd{tickEnd - tickBegin, getValueAt(tickEnd)};
-		int32_t loopLen = math::max(0, (idxEnd)-(idxStart));
-		data.reserve(2+loopLen);
-		data.push_back(std::move(ptStart));
-		for (int j = idxStart; j <= idxEnd; j++) {
-			auto pt = points[j];
-			if (pt.time >= tickBegin && pt.time <= tickEnd) {
-				pt.time -= tickBegin;
-				data.push_back(std::move(pt));
-			}
-		}
-		data.push_back(std::move(ptEnd));
-	}
+    if (!points.empty()) {
+        int32_t idxStart = indexOfTick(points, tickBegin);
+        int32_t idxEnd   = indexOfTick(points, tickEnd) + 1;
+        if (idxStart >= (int32_t) points.size()) {
+            idxStart = (int32_t) points.size() - 1;
+        }
+        if (idxEnd >= (int32_t) points.size()) {
+            idxEnd = (int32_t) points.size() - 1;
+        }
+        automation_point_t ptStart{ 0, getValueAt(tickBegin) };
+        automation_point_t ptEnd{ tickEnd - tickBegin, getValueAt(tickEnd) };
+        int32_t loopLen = math::max(0, (idxEnd) - (idxStart));
+        data.reserve(2 + loopLen);
+        data.push_back(std::move(ptStart));
+        for (int j = idxStart; j <= idxEnd; j++) {
+            auto pt = points[j];
+            if (pt.time >= tickBegin && pt.time <= tickEnd) {
+                pt.time -= tickBegin;
+                data.push_back(std::move(pt));
+            }
+        }
+        data.push_back(std::move(ptEnd));
+    }
 }
-std::pair<float , float> automation_t::getMinMax() {
-	float defaultVal = getValueAt(0);
-	std::pair<float , float> res = {defaultVal, defaultVal};
-	int32_t idx1 = 0;
-	for (; idx1 < (int)points.size(); idx1++) {
-		auto& pt = points[idx1];
-		res.first = math::min(res.first, pt.val);
-		res.second = math::max(res.second, pt.val);
-	}
-	return res;
+
+std::pair<float, float> automation_t::getMinMax() {
+    float defaultVal            = getValueAt(0);
+    std::pair<float, float> res = { defaultVal, defaultVal };
+    int32_t idx1                = 0;
+    for (; idx1 < (int) points.size(); idx1++) {
+        auto& pt   = points[idx1];
+        res.first  = math::min(res.first, pt.val);
+        res.second = math::max(res.second, pt.val);
+    }
+    return res;
 }
+
 void automation_t::setRange(tick_t tickBegin, tick_t tickEnd, std::vector<automation_point_t>& data) {
-	std::vector<automation_point_t> pointsTmp;
-	pointsTmp.reserve(data.size()+points.size());
-	int32_t idx1 = 0;
-	for (; idx1 < (int)points.size(); idx1++) {
-		auto& pt = points[idx1];
-		if (pt.time <= tickBegin) {
-			pointsTmp.push_back(pt);
-		} else {
-			break;
-		}
-	}
-	if (!pointsTmp.empty() && !data.empty() && pointsTmp.back().time != tickBegin) {
-		automation_point_t ptStart{tickBegin, getValueAt(tickBegin)};
-		pointsTmp.push_back(std::move(ptStart));
-	}
-	for (int32_t idx = 0; idx < (int)data.size(); idx++) {
-		auto pt = data[idx];
-		pt.time += tickBegin;
-		pt.val = quantizeFloat(pt.val, quantizationSteps);
-		pointsTmp.push_back(std::move(pt));
-	}
-	if (!pointsTmp.empty() && !data.empty()) {
-		automation_point_t ptEnd{tickEnd, getValueAt(tickEnd)};
-		pointsTmp.push_back(std::move(ptEnd));
-	}
-	for (; idx1 < (int)points.size(); idx1++) {
-		auto& pt = points[idx1];
-		if (pt.time >= tickEnd) {
-			pointsTmp.push_back(pt);
-		}
-	}
-	simplifyData(pointsTmp);
-	points = std::move(pointsTmp);
-
+    std::vector<automation_point_t> pointsTmp;
+    pointsTmp.reserve(data.size() + points.size());
+    int32_t idx1 = 0;
+    for (; idx1 < (int) points.size(); idx1++) {
+        auto& pt = points[idx1];
+        if (pt.time <= tickBegin) {
+            pointsTmp.push_back(pt);
+        } else {
+            break;
+        }
+    }
+    if (!pointsTmp.empty() && !data.empty() && pointsTmp.back().time != tickBegin) {
+        automation_point_t ptStart{ tickBegin, getValueAt(tickBegin) };
+        pointsTmp.push_back(std::move(ptStart));
+    }
+    for (int32_t idx = 0; idx < (int) data.size(); idx++) {
+        auto pt = data[idx];
+        pt.time += tickBegin;
+        pt.val = quantizeFloat(pt.val, quantizationSteps);
+        pointsTmp.push_back(std::move(pt));
+    }
+    if (!pointsTmp.empty() && !data.empty()) {
+        automation_point_t ptEnd{ tickEnd, getValueAt(tickEnd) };
+        pointsTmp.push_back(std::move(ptEnd));
+    }
+    for (; idx1 < (int) points.size(); idx1++) {
+        auto& pt = points[idx1];
+        if (pt.time >= tickEnd) {
+            pointsTmp.push_back(pt);
+        }
+    }
+    simplifyData(pointsTmp);
+    points = std::move(pointsTmp);
 }
 
-void toggleDeviceEnableState(automatable_t* effect, int flags)
-{
+void toggleDeviceEnableState(automatable_t* effect, int flags) {
     float f = math::clamp(1.0f - effect->getParamValue(PARAM_ENABLE), 0.0f, 1.0f);
     if ((flags & FLG_PAR_UPDATE_USER)) {
-		effect->deactivateAutomation(PARAM_ENABLE);
-	}
+        effect->deactivateAutomation(PARAM_ENABLE);
+    }
     effect->setParamValue(PARAM_ENABLE, f, flags);
 }
 
 void loadAutomation(const std::vector<automation_view_t>& automatedParams, automatable_t* at) {
-	log_printf("Loading %d automation lanes for device %s\n", automatedParams.size(), StringAsCStr(at->getAutomatableName()));
-	for (const automation_view_t& automatedParam : automatedParams) {
-		int32_t targetParam = automatedParam.targetParam;
-		if (!at->getParam(targetParam) && at->getParam(targetParam+PARAM_OFFSET_EXTERNAL)) {
-			targetParam += PARAM_OFFSET_EXTERNAL;
-			log_printf("Loading %d automation lanes for device %s\n", automatedParams.size(), StringAsCStr(at->getAutomatableName()));
-
-		}
-		if (at->getParam(targetParam)) {
-			automation_t* autom = at->getOrCreateAutomation(targetParam);
-			autom->points = automatedParam.points;
-			autom->active = automatedParam.active;
-		}
-	}
+    log_printf("Loading %d automation lanes for device %s\n", automatedParams.size(), StringAsCStr(at->getAutomatableName()));
+    for (const automation_view_t& automatedParam : automatedParams) {
+        int32_t targetParam = automatedParam.targetParam;
+        if (!at->getParam(targetParam) && at->getParam(targetParam + PARAM_OFFSET_EXTERNAL)) {
+            targetParam += PARAM_OFFSET_EXTERNAL;
+            log_printf("Loading %d automation lanes for device %s\n", automatedParams.size(), StringAsCStr(at->getAutomatableName()));
+        }
+        if (at->getParam(targetParam)) {
+            automation_t* autom = at->getOrCreateAutomation(targetParam);
+            autom->points       = automatedParam.points;
+            autom->active       = automatedParam.active;
+        }
+    }
 }
 void storeAutomation(std::vector<automation_view_t>& automatedParams, automatable_t* at) {
-	std::vector<automated_param_t> out;
-	at->getAllAutomatedParams(out);
-	int total = 0;
-	for (const automated_param_t& automatedParam : out) {
-		dbgassert(!automatedParam.src.points.empty());
-		automation_view_t atv;
-		atv.targetParam = automatedParam.paramIdx;
-		atv.points = automatedParam.src.points;
-		atv.active = automatedParam.src.active;
-		automatedParams.push_back(atv);
-		total++;
-	}
-	log_printf("Storing %d automation lanes for device %s\n", total, StringAsCStr(at->getAutomatableName()));
+    std::vector<automated_param_t> out;
+    at->getAllAutomatedParams(out);
+    int total = 0;
+    for (const automated_param_t& automatedParam : out) {
+        dbgassert(!automatedParam.src.points.empty());
+        automation_view_t atv;
+        atv.targetParam = automatedParam.paramIdx;
+        atv.points      = automatedParam.src.points;
+        atv.active      = automatedParam.src.active;
+        automatedParams.push_back(atv);
+        total++;
+    }
+    log_printf("Storing %d automation lanes for device %s\n", total, StringAsCStr(at->getAutomatableName()));
 }
