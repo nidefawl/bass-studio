@@ -3,6 +3,34 @@
     "tasks": [
         {
             "type": "shell",
+            "label": "test_math-Clang-debug",
+            "command": "cmake",
+            "args": [
+                "--build",
+                ".",
+                "--target",
+                "test_math",
+                "|",
+                "tee",
+                "build.log"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}/build/clang-ninja-daw-build"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+
+            "runOptions": {
+                "reevaluateOnRerun": true
+            }
+        },
+        {
+            "type": "shell",
             "label": "clang++ build active file",
             "command": "/usr/bin/clang++",
             "args": [
@@ -48,7 +76,8 @@
             },
             "problemMatcher": [
                 "$gcc"
-            ]
+            ],
+            "group": "build"
         },
         {
             "label": "MacOS make ~/dev/build",
@@ -90,10 +119,7 @@
             "options": {
                 "cwd": "/home/michael/dev/build2"
             },
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
+            "group": "build",
             "problemMatcher": {
                 "base": "$gcc",
                 "fileLocation": [

@@ -5,6 +5,22 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "type": "cppdbg",
+            "request": "launch",
+            "name": "gdb-windows",
+            // "target": "${workspaceFolder}/run/DAW-Clang-debug.exe",
+            "cwd": "${workspaceRoot}/run",
+            "valuesFormatting": "parseText",
+            "MIMode": "gdb",
+            "program": null,
+            "windows": {
+                "envFile": "${workspaceRoot}/.vscode/.env_wingdb",
+                "program": "${workspaceRoot}/run/${defaultBuildTask}.exe",
+                // "program": "${workspaceRoot}/run/DAW-MSVC-debug.exe",
+                "miDebuggerPath": "C:\\dev\\gdb\\bin\\gdb.exe",
+            }
+        },
+        {
             "name": "Python: Aktuelle Datei",
             "type": "python",
             "request": "launch",

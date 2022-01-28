@@ -1,30 +1,6 @@
 {
     "configurations": [
         {
-            "name": "Win32",
-            "includePath": [
-                "${workspaceFolder}/**",
-                "C:/Users/Michael/daw/src",
-                "C:/Users/Michael/daw/src/include",
-                "C:/Users/Michael/daw/src/nanovg",
-                "E:/dev/builds/daw-deps/clang-libc++-git/lib-clang-debug-static/glfw/include",
-                "E:/dev/builds/daw-deps/clang-libc++-git/lib-clang-debug-static/SQLiteCpp/include",
-                "E:/dev/builds/daw-deps/clang-libc++-git/lib-clang-debug-static/soxr/include",
-                "D:/dev/daw-deps/glad/include",
-                "D:/dev/daw-deps/glad/src",
-                "D:/dev/daw-deps/glm",
-                "D:/dev/daw-deps/portaudio/include",
-                "D:/dev/daw-deps/cereal",
-                "D:/dev/daw-deps/nvwa/nvwa"
-            ],
-            "defines": [],
-            "compilerPath": "C:\\dev\\llvm-mingw-git\\bin\\clang++.exe",
-            "cStandard": "c11",
-            "cppStandard": "c++14",
-            "intelliSenseMode": "gcc-x64",
-            "compileCommands": "${workspaceFolder}/build/clang-static-debug/compile_commands_NoRSP.json"
-        },
-        {
             "name": "Mac",
             "includePath": [
                 "${workspaceFolder}/**"

@@ -34,12 +34,14 @@
                 "PA_USE_WDMKS=1",
                 "SOXR_DLL=1",
                 "USE_WIN32_EXC_HOOKS",
-                "VST_FORCE_DEPRECATED=0"],
+                "VST_FORCE_DEPRECATED=0"
+            ],
             "compilerPath": "C:\\dev\\llvm-mingw-git\\bin\\clang++.exe",
             "cStandard": "c11",
             "cppStandard": "c++14",
-            "intelliSenseMode": "gcc-x64",
-            "compileCommands": "${workspaceFolder}/build/clang-ninja-daw-build/compile_commands.json"
+            "intelliSenseMode": "windows-gcc-x64",
+            "compileCommands": "${workspaceFolder}/build/clang-ninja-daw-build/compile_commands.json",
+            "configurationProvider": "ms-vscode.cmake-tools"
         },
         {
             "name": "win-cmake",
