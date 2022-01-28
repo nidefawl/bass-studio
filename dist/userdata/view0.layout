@@ -1,0 +1,102 @@
+{
+    "layout": {
+        "value0": {
+            "polymorphic_id": 1073741824,
+            "ptr_wrapper": {
+                "id": 2147483649,
+                "data": {
+                    "value0": "",
+                    "value1": 0,
+                    "value2": -1,
+                    "value3": 2,
+                    "value4": [
+                        {
+                            "polymorphic_id": 1073741824,
+                            "ptr_wrapper": {
+                                "id": 2147483650,
+                                "data": {
+                                    "value0": "Export Audio",
+                                    "value1": 13
+                                }
+                            }
+                        },
+                        {
+                            "polymorphic_id": 1073741824,
+                            "ptr_wrapper": {
+                                "id": 2147483651,
+                                "data": {
+                                    "value0": "Plugins",
+                                    "value1": 7
+                                }
+                            }
+                        },
+                        {
+                            "polymorphic_id": 1073741824,
+                            "ptr_wrapper": {
+                                "id": 2147483652,
+                                "data": {
+                                    "value0": "Performance",
+                                    "value1": 12
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        },
+        "value1": {
+            "polymorphic_id": 1073741824,
+            "ptr_wrapper": {
+                "id": 2147483653,
+                "data": {
+                    "value0": "",
+                    "value1": 0,
+                    "value2": -1,
+                    "value3": 0,
+                    "value4": [
+                        {
+                            "polymorphic_id": 2147483649,
+                            "polymorphic_name": "guictrlayout_snapshot_t",
+                            "ptr_wrapper": {
+                                "id": 2147483654,
+                                "data": {
+                                    "value0": "Right Docker",
+                                    "value1": 0,
+                                    "value2": 0,
+                                    "value3": 3,
+                                    "value4": [
+                                        {
+                                            "polymorphic_id": 1073741824,
+                                            "ptr_wrapper": {
+                                                "id": 2147483655,
+                                                "data": {
+                                                    "value0": "Instances",
+                                                    "value1": 8
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "polymorphic_id": 1073741824,
+                                            "ptr_wrapper": {
+                                                "id": 2147483656,
+                                                "data": {
+                                                    "value0": "Properties",
+                                                    "value1": 2
+                                                }
+                                            }
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        },
+        "value2": [
+            0.40742188692092898,
+            0.8316602110862732,
+            0.8296874761581421
+        ]
+    }
+}

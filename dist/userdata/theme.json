@@ -1,0 +1,4103 @@
+{
+    "value0": {
+        "default": {
+            "name": "default",
+            "data": {
+                "colors": [
+                    {
+                        "key": "COL_LINE_BAR",
+                        "value": 1845493760
+                    },
+                    {
+                        "key": "COL_CLIP_NOTE_OVERLAP",
+                        "value": -16776961
+                    },
+                    {
+                        "key": "COL_CTXTMNU_BG",
+                        "value": -16448251
+                    },
+                    {
+                        "key": "COL_AUTOMATED",
+                        "value": -121945
+                    },
+                    {
+                        "key": "COL_LEVEL_IND_YELLOW_DRK",
+                        "value": -40093
+                    },
+                    {
+                        "key": "COL_BG_BRT",
+                        "value": -14803426
+                    },
+                    {
+                        "key": "COL_CLIPEDITOR_SHARP",
+                        "value": 956301312
+                    },
+                    {
+                        "key": "COL_CLEAR_COLOR",
+                        "value": 1250067
+                    },
+                    {
+                        "key": "COL_GUI_HANDLE",
+                        "value": -2631721
+                    },
+                    {
+                        "key": "COL_BTN_LOAD_DEF_PLUGINS",
+                        "value": -1
+                    },
+                    {
+                        "key": "COL_BTN_BG_DEFAULT_INACTIVE",
+                        "value": -14671840
+                    },
+                    {
+                        "key": "COL_BG_DRKER",
+                        "value": -8953891
+                    },
+                    {
+                        "key": "COL_NODES_EDGE",
+                        "value": -11776146
+                    },
+                    {
+                        "key": "COL_NOTE_ARP",
+                        "value": -14501086
+                    },
+                    {
+                        "key": "COL_LINE_QRT",
+                        "value": 704643072
+                    },
+                    {
+                        "key": "COL_LINE_SEPERATOR",
+                        "value": 687865855
+                    },
+                    {
+                        "key": "COL_NOTE",
+                        "value": -10494601
+                    },
+                    {
+                        "key": "COL_CLIP_NOTE_MUTED",
+                        "value": -15592942
+                    },
+                    {
+                        "key": "COL_PIANOROLL_BLACK",
+                        "value": -15658735
+                    },
+                    {
+                        "key": "COL_KNOB",
+                        "value": -12161864
+                    },
+                    {
+                        "key": "COL_LEVEL_IND_YELLOW_DRKER",
+                        "value": -22009
+                    },
+                    {
+                        "key": "COL_NOTE_MUTE",
+                        "value": -10066330
+                    },
+                    {
+                        "key": "COL_PLUG_TITLE",
+                        "value": -11706153
+                    },
+                    {
+                        "key": "COL_FOLD_BUTTON",
+                        "value": -26317
+                    },
+                    {
+                        "key": "COL_PIANOROLL_WHITE",
+                        "value": -1773827
+                    },
+                    {
+                        "key": "COL_CLIP_NOTE",
+                        "value": -3542273
+                    },
+                    {
+                        "key": "COL_BG_SELECTEDTRACK_TITLE",
+                        "value": -4473925
+                    },
+                    {
+                        "key": "COL_CTXTMNU_HILIGHT",
+                        "value": -13224394
+                    },
+                    {
+                        "key": "COL_NOTE_REALTIME",
+                        "value": -65281
+                    },
+                    {
+                        "key": "COL_GRID_BRT",
+                        "value": -14145496
+                    },
+                    {
+                        "key": "COL_PLUGIN_VIEW_FRAME",
+                        "value": 2147483647
+                    },
+                    {
+                        "key": "COL_KNOB_IND",
+                        "value": -1
+                    },
+                    {
+                        "key": "COL_BTN_RECORD_ARM_BG",
+                        "value": -12312030
+                    },
+                    {
+                        "key": "COL_BG_DRK",
+                        "value": -11645362
+                    },
+                    {
+                        "key": "COL_WHITE",
+                        "value": -1447171
+                    },
+                    {
+                        "key": "COL_LEVEL_IND_YELLOW",
+                        "value": -65536
+                    },
+                    {
+                        "key": "COL_BTN_BG_SHOW_ACTIVE",
+                        "value": -12538944
+                    },
+                    {
+                        "key": "COL_CTXTMNU_OUTLINE",
+                        "value": -1
+                    },
+                    {
+                        "key": "COL_NOTE_TEXT",
+                        "value": -13421773
+                    },
+                    {
+                        "key": "COL_GRID_DRK",
+                        "value": 520753944
+                    },
+                    {
+                        "key": "COL_CLIP_OUTLINE",
+                        "value": 2130706432
+                    },
+                    {
+                        "key": "COL_BTN_SOLO_BG_ENABLED",
+                        "value": -13419850
+                    },
+                    {
+                        "key": "COL_BG_SELECTEDTRACK",
+                        "value": 581149603
+                    },
+                    {
+                        "key": "COL_LEVEL_IND_GREEN_DRK",
+                        "value": -11702254
+                    },
+                    {
+                        "key": "COL_PLUG_TITLE_FOCUSED",
+                        "value": -4799234
+                    },
+                    {
+                        "key": "COL_BLACK",
+                        "value": 0
+                    },
+                    {
+                        "key": "COL_ON",
+                        "value": -2953006
+                    },
+                    {
+                        "key": "COL_OFF",
+                        "value": -2960656
+                    },
+                    {
+                        "key": "COL_BTN_BG_DEFAULT_ACTIVE",
+                        "value": -12566464
+                    },
+                    {
+                        "key": "COL_NOTE_PLAYING",
+                        "value": -1778427559
+                    },
+                    {
+                        "key": "COL_BG_DRK_FOCUSED",
+                        "value": -7237231
+                    },
+                    {
+                        "key": "COL_NOTE_MOUSE",
+                        "value": -16711681
+                    },
+                    {
+                        "key": "COL_LABEL_CONTAINER",
+                        "value": -3092272
+                    },
+                    {
+                        "key": "COL_GUI_STROKE",
+                        "value": -9737365
+                    },
+                    {
+                        "key": "COL_PLUG_TITLE_SELECTED",
+                        "value": -7378945
+                    },
+                    {
+                        "key": "COL_LABEL_ACTIVE",
+                        "value": -1
+                    },
+                    {
+                        "key": "COL_BG_DRKER2",
+                        "value": -14869219
+                    },
+                    {
+                        "key": "COL_LEVEL_IND_GREEN",
+                        "value": -6815971
+                    },
+                    {
+                        "key": "COL_LINE_XTH",
+                        "value": 1509949440
+                    },
+                    {
+                        "key": "COL_NOTE_OUTLINE",
+                        "value": -16777216
+                    },
+                    {
+                        "key": "COL_BTN_SOLO_BG_DISABLED",
+                        "value": -9868684
+                    },
+                    {
+                        "key": "COL_LEVEL_IND_GREEN_DRKER",
+                        "value": -4984165
+                    },
+                    {
+                        "key": "COL_GUI_HANDLE_FOCUSED",
+                        "value": -2269334
+                    },
+                    {
+                        "key": "COL_LABEL_INACTIVE",
+                        "value": -8355712
+                    },
+                    {
+                        "key": "COL_PIANOROLL_STROKE",
+                        "value": 1174405120
+                    },
+                    {
+                        "key": "COL_BTN_BG_BYPASS_ACTIVE",
+                        "value": -8344640
+                    }
+                ],
+                "properties": [
+                    {
+                        "key": "CONST_LAYOUT_MARGIN",
+                        "value": 1
+                    },
+                    {
+                        "key": "CONST_TRACK_CONTROLS_WIDTH",
+                        "value": 520
+                    },
+                    {
+                        "key": "CONST_GUI_FRAME_STROKE_WIDTH",
+                        "value": 1
+                    },
+                    {
+                        "key": "CONST_CLIPEDITOR_HANDLES_STROKE_WIDTH",
+                        "value": 10
+                    },
+                    {
+                        "key": "CONST_TRACK_IO_WIDTH",
+                        "value": 180
+                    },
+                    {
+                        "key": "CONST_TRACK_HEIGHT_TITLE",
+                        "value": 26
+                    },
+                    {
+                        "key": "CONST_GUI_INSET_WIDGET_BG",
+                        "value": 1
+                    },
+                    {
+                        "key": "CONST_FIXED_TITLE_HEIGHT",
+                        "value": 36
+                    },
+                    {
+                        "key": "CONST_PIANOROLL_STROKE_WIDTH",
+                        "value": 10
+                    },
+                    {
+                        "key": "CONST_MIXER_WIDTH",
+                        "value": 180
+                    },
+                    {
+                        "key": "CONST_METER_WIDTH",
+                        "value": 32
+                    },
+                    {
+                        "key": "CONST_FONT_SIZE_CONTEXT_MENU",
+                        "value": 200
+                    },
+                    {
+                        "key": "CONST_ROUND",
+                        "value": 20
+                    },
+                    {
+                        "key": "CONST_FONT_SCALE",
+                        "value": 8
+                    },
+                    {
+                        "key": "CONST_TRACK_HEIGHT_STEP",
+                        "value": 21
+                    },
+                    {
+                        "key": "CONST_PLUGIN_TITLE_HEIGHT",
+                        "value": 16
+                    },
+                    {
+                        "key": "CONST_SMALL_LABEL_HEIGHT",
+                        "value": 12
+                    }
+                ],
+                "fonts": [
+                    {
+                        "key": "FONT_LABEL",
+                        "value": "Roboto-Regular.ttf"
+                    },
+                    {
+                        "key": "FONT_TEXFIELD",
+                        "value": "out.ttf"
+                    },
+                    {
+                        "key": "FONT_DEFAULT",
+                        "value": "Roboto-Regular.ttf"
+                    },
+                    {
+                        "key": "FONT_CONTEXT_MENU",
+                        "value": "Roboto-Regular.ttf"
+                    },
+                    {
+                        "key": "FONT_DECIMAL",
+                        "value": "Roboto-Regular.ttf"
+                    }
+                ]
+            }
+        },
+        "current": {
+            "name": "nidefawl",
+            "data": {
+                "colors": [
+                    {
+                        "key": "COL_BTN_SOLO_BG_PARENT",
+                        "value": 1826846583
+                    },
+                    {
+                        "key": "COL_BTN_BG_BYPASS_ACTIVE",
+                        "value": -8344640
+                    },
+                    {
+                        "key": "COL_NOTE_MOUSE",
+                        "value": -16711681
+                    },
+                    {
+                        "key": "COL_BASE_BG",
+                        "value": -15724013
+                    },
+                    {
+                        "key": "COL_BG_BRT",
+                        "value": -15329770
+                    },
+                    {
+                        "key": "COL_CLIPEDITOR_SHARP",
+                        "value": 956301312
+                    },
+                    {
+                        "key": "COL_LABEL_INACTIVE",
+                        "value": -8355712
+                    },
+                    {
+                        "key": "COL_GUI_HANDLE",
+                        "value": -2631721
+                    },
+                    {
+                        "key": "COL_TEXTBOX_TEXT_MARKED",
+                        "value": -11706153
+                    },
+                    {
+                        "key": "COL_LEVEL_IND_YELLOW_DRKER",
+                        "value": -22009
+                    },
+                    {
+                        "key": "COL_NOTE_MUTE",
+                        "value": -10066330
+                    },
+                    {
+                        "key": "COL_ON",
+                        "value": -2953006
+                    },
+                    {
+                        "key": "COL_CLIP_OUTLINE",
+                        "value": 2130706432
+                    },
+                    {
+                        "key": "COL_BASE_BG_STROKE",
+                        "value": -15724528
+                    },
+                    {
+                        "key": "COL_LINE_SEPERATOR",
+                        "value": -872415232
+                    },
+                    {
+                        "key": "COL_NOTE",
+                        "value": -10494601
+                    },
+                    {
+                        "key": "COL_LABEL_CONTAINER",
+                        "value": -3092272
+                    },
+                    {
+                        "key": "COL_GUI_STROKE",
+                        "value": -9737365
+                    },
+                    {
+                        "key": "COL_PLUG_TITLE_SELECTED",
+                        "value": -7378945
+                    },
+                    {
+                        "key": "COL_BG_DRKER",
+                        "value": -13948041
+                    },
+                    {
+                        "key": "COL_BTN_BG_DEFAULT_INACTIVE",
+                        "value": -14671840
+                    },
+                    {
+                        "key": "COL_OFF",
+                        "value": -2960656
+                    },
+                    {
+                        "key": "COL_NOTE_PLAYING",
+                        "value": -1283840
+                    },
+                    {
+                        "key": "COL_BTN_BG_DEFAULT_ACTIVE",
+                        "value": -12566464
+                    },
+                    {
+                        "key": "COL_NOTE_TEXT",
+                        "value": -13421773
+                    },
+                    {
+                        "key": "COL_KNOB_IND",
+                        "value": -1
+                    },
+                    {
+                        "key": "COL_BTN_RECORD_ARM_BG",
+                        "value": -12312030
+                    },
+                    {
+                        "key": "COL_PLUGIN_VIEW_FRAME",
+                        "value": 2147483647
+                    },
+                    {
+                        "key": "COL_CTXTMNU_OUTLINE",
+                        "value": -1
+                    },
+                    {
+                        "key": "COL_BTN_BG_SHOW_ACTIVE",
+                        "value": -12538944
+                    },
+                    {
+                        "key": "COL_LEVEL_IND_GREEN",
+                        "value": -6815971
+                    },
+                    {
+                        "key": "COL_BG_DRKER2",
+                        "value": -14869219
+                    },
+                    {
+                        "key": "COL_LABEL_ACTIVE",
+                        "value": -1
+                    },
+                    {
+                        "key": "COL_PIANOROLL_WHITE",
+                        "value": -1773827
+                    },
+                    {
+                        "key": "COL_FOLD_BUTTON",
+                        "value": -26317
+                    },
+                    {
+                        "key": "COL_BG_SELECTEDTRACK_TITLE",
+                        "value": -14763267
+                    },
+                    {
+                        "key": "COL_CTXTMNU_HILIGHT",
+                        "value": -13224394
+                    },
+                    {
+                        "key": "COL_CLIP_NOTE",
+                        "value": -3542273
+                    },
+                    {
+                        "key": "COL_GUI_HANDLE_FOCUSED",
+                        "value": -11706153
+                    },
+                    {
+                        "key": "COL_LEVEL_IND_GREEN_DRKER",
+                        "value": -4984165
+                    },
+                    {
+                        "key": "COL_PIANOROLL_STROKE",
+                        "value": 1174405120
+                    },
+                    {
+                        "key": "COL_GRID_BRT",
+                        "value": -2144455108
+                    },
+                    {
+                        "key": "COL_NOTE_REALTIME",
+                        "value": -65281
+                    },
+                    {
+                        "key": "COL_KNOB",
+                        "value": -12161864
+                    },
+                    {
+                        "key": "COL_PIANOROLL_BLACK",
+                        "value": -15658735
+                    },
+                    {
+                        "key": "COL_CLIP_NOTE_MUTED",
+                        "value": -15592942
+                    },
+                    {
+                        "key": "COL_NOTE_ARP",
+                        "value": -9155841
+                    },
+                    {
+                        "key": "COL_NODES_EDGE",
+                        "value": -11776146
+                    },
+                    {
+                        "key": "COL_BASE_BG_FOCUSED",
+                        "value": -13408615
+                    },
+                    {
+                        "key": "COL_GRID_DRK",
+                        "value": 2065440032
+                    },
+                    {
+                        "key": "COL_BLACK",
+                        "value": 0
+                    },
+                    {
+                        "key": "COL_PLUG_TITLE_FOCUSED",
+                        "value": -4799234
+                    },
+                    {
+                        "key": "COL_LEVEL_IND_GREEN_DRK",
+                        "value": -11702254
+                    },
+                    {
+                        "key": "COL_BG_DRK",
+                        "value": -11645362
+                    },
+                    {
+                        "key": "COL_WHITE",
+                        "value": -1447171
+                    },
+                    {
+                        "key": "COL_LEVEL_IND_YELLOW",
+                        "value": -65536
+                    },
+                    {
+                        "key": "COL_BTN_SOLO_BG_ENABLED",
+                        "value": -2739919
+                    },
+                    {
+                        "key": "COL_BG_SELECTEDTRACK",
+                        "value": 658680792
+                    },
+                    {
+                        "key": "COL_LEVEL_IND_YELLOW_DRK",
+                        "value": -40093
+                    },
+                    {
+                        "key": "COL_LINE_QRT",
+                        "value": 704643072
+                    },
+                    {
+                        "key": "COL_LINE_BAR",
+                        "value": 1845493760
+                    },
+                    {
+                        "key": "COL_PLUG_TITLE",
+                        "value": -11706153
+                    },
+                    {
+                        "key": "COL_BTN_LOAD_DEF_PLUGINS",
+                        "value": -1
+                    },
+                    {
+                        "key": "COL_CLEAR_COLOR",
+                        "value": -15790321
+                    },
+                    {
+                        "key": "COL_NOTE_SELECTED",
+                        "value": -387306452
+                    },
+                    {
+                        "key": "COL_BTN_SOLO_BG_DISABLED",
+                        "value": -9868684
+                    },
+                    {
+                        "key": "COL_NOTE_OUTLINE",
+                        "value": -16777216
+                    },
+                    {
+                        "key": "COL_CTXTMNU_BG",
+                        "value": -16448251
+                    },
+                    {
+                        "key": "COL_LINE_XTH",
+                        "value": 536870912
+                    },
+                    {
+                        "key": "COL_CLIP_NOTE_OVERLAP",
+                        "value": -16776961
+                    },
+                    {
+                        "key": "COL_AUTOMATED",
+                        "value": -3407786
+                    },
+                    {
+                        "key": "COL_BG_DRK_FOCUSED",
+                        "value": -6908266
+                    }
+                ],
+                "properties": [
+                    {
+                        "key": "CONST_SMALL_LABEL_HEIGHT",
+                        "value": 20
+                    },
+                    {
+                        "key": "CONST_FONT_SCALE",
+                        "value": 7
+                    },
+                    {
+                        "key": "CONST_ROUND",
+                        "value": 0
+                    },
+                    {
+                        "key": "CONST_FONT_SIZE_CONTEXT_MENU",
+                        "value": 200
+                    },
+                    {
+                        "key": "CONST_NODES_SCALE",
+                        "value": 40
+                    },
+                    {
+                        "key": "CONST_FIXED_TITLE_HEIGHT",
+                        "value": 36
+                    },
+                    {
+                        "key": "CONST_GUI_INSET_WIDGET_BG",
+                        "value": 1
+                    },
+                    {
+                        "key": "CONST_TRACK_HEIGHT_TITLE",
+                        "value": 32
+                    },
+                    {
+                        "key": "CONST_FONT_SIZE_CTR_LABEL",
+                        "value": 14
+                    },
+                    {
+                        "key": "CONST_CLIPEDITOR_HANDLES_STROKE_WIDTH",
+                        "value": 10
+                    },
+                    {
+                        "key": "CONST_FONT_SIZE_TABLE",
+                        "value": 199
+                    },
+                    {
+                        "key": "CONST_GUI_FRAME_STROKE_WIDTH",
+                        "value": 10
+                    },
+                    {
+                        "key": "CONST_TRACK_CONTROLS_WIDTH",
+                        "value": 550
+                    },
+                    {
+                        "key": "CONST_PLUGIN_TITLE_HEIGHT",
+                        "value": 40
+                    },
+                    {
+                        "key": "CONST_NOTE_RENDER_MODE",
+                        "value": 1
+                    },
+                    {
+                        "key": "CONST_TRACK_HEIGHT_STEP",
+                        "value": 23
+                    },
+                    {
+                        "key": "CONST_TRACK_IO_WIDTH",
+                        "value": 150
+                    },
+                    {
+                        "key": "CONST_METER_WIDTH",
+                        "value": 100
+                    },
+                    {
+                        "key": "CONST_MIXER_WIDTH",
+                        "value": 250
+                    },
+                    {
+                        "key": "CONST_PIANOROLL_STROKE_WIDTH",
+                        "value": 10
+                    },
+                    {
+                        "key": "CONST_LAYOUT_MARGIN",
+                        "value": 1
+                    }
+                ],
+                "fonts": [
+                    {
+                        "key": "FONT_LABEL",
+                        "value": "Roboto-Regular.ttf"
+                    },
+                    {
+                        "key": "FONT_TEXFIELD",
+                        "value": "out.ttf"
+                    },
+                    {
+                        "key": "FONT_DEFAULT",
+                        "value": "Roboto-Regular.ttf"
+                    },
+                    {
+                        "key": "FONT_CONTEXT_MENU",
+                        "value": "Roboto-Regular.ttf"
+                    },
+                    {
+                        "key": "FONT_DECIMAL",
+                        "value": "Roboto-Regular.ttf"
+                    }
+                ]
+            }
+        },
+        "themes": [
+            {
+                "name": "nidefawl",
+                "data": {
+                    "colors": [
+                        {
+                            "key": "COL_BG_DRK_FOCUSED",
+                            "value": -6908266
+                        },
+                        {
+                            "key": "COL_AUTOMATED",
+                            "value": -3407786
+                        },
+                        {
+                            "key": "COL_CLIP_NOTE_OVERLAP",
+                            "value": -16776961
+                        },
+                        {
+                            "key": "COL_LINE_XTH",
+                            "value": 536870912
+                        },
+                        {
+                            "key": "COL_CTXTMNU_BG",
+                            "value": -16448251
+                        },
+                        {
+                            "key": "COL_NOTE_OUTLINE",
+                            "value": -16777216
+                        },
+                        {
+                            "key": "COL_BTN_SOLO_BG_DISABLED",
+                            "value": -9868684
+                        },
+                        {
+                            "key": "COL_NOTE_SELECTED",
+                            "value": -387306452
+                        },
+                        {
+                            "key": "COL_CLEAR_COLOR",
+                            "value": -15790321
+                        },
+                        {
+                            "key": "COL_BTN_LOAD_DEF_PLUGINS",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_PLUG_TITLE",
+                            "value": -11706153
+                        },
+                        {
+                            "key": "COL_LINE_BAR",
+                            "value": 1845493760
+                        },
+                        {
+                            "key": "COL_LINE_QRT",
+                            "value": 704643072
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_YELLOW_DRK",
+                            "value": -40093
+                        },
+                        {
+                            "key": "COL_BG_SELECTEDTRACK",
+                            "value": 658680792
+                        },
+                        {
+                            "key": "COL_BTN_SOLO_BG_ENABLED",
+                            "value": -2739919
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_YELLOW",
+                            "value": -65536
+                        },
+                        {
+                            "key": "COL_WHITE",
+                            "value": -1447171
+                        },
+                        {
+                            "key": "COL_BG_DRK",
+                            "value": -11645362
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_GREEN_DRK",
+                            "value": -11702254
+                        },
+                        {
+                            "key": "COL_PLUG_TITLE_FOCUSED",
+                            "value": -4799234
+                        },
+                        {
+                            "key": "COL_BLACK",
+                            "value": 0
+                        },
+                        {
+                            "key": "COL_GRID_DRK",
+                            "value": 2065440032
+                        },
+                        {
+                            "key": "COL_BASE_BG_FOCUSED",
+                            "value": -13408615
+                        },
+                        {
+                            "key": "COL_NODES_EDGE",
+                            "value": -11776146
+                        },
+                        {
+                            "key": "COL_NOTE_ARP",
+                            "value": -9155841
+                        },
+                        {
+                            "key": "COL_CLIP_NOTE_MUTED",
+                            "value": -15592942
+                        },
+                        {
+                            "key": "COL_KNOB",
+                            "value": -12161864
+                        },
+                        {
+                            "key": "COL_PIANOROLL_BLACK",
+                            "value": -15658735
+                        },
+                        {
+                            "key": "COL_NOTE_REALTIME",
+                            "value": -65281
+                        },
+                        {
+                            "key": "COL_GRID_BRT",
+                            "value": -2144455108
+                        },
+                        {
+                            "key": "COL_PIANOROLL_STROKE",
+                            "value": 1174405120
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_GREEN_DRKER",
+                            "value": -4984165
+                        },
+                        {
+                            "key": "COL_GUI_HANDLE_FOCUSED",
+                            "value": -11706153
+                        },
+                        {
+                            "key": "COL_CTXTMNU_HILIGHT",
+                            "value": -13224394
+                        },
+                        {
+                            "key": "COL_CLIP_NOTE",
+                            "value": -3542273
+                        },
+                        {
+                            "key": "COL_BG_SELECTEDTRACK_TITLE",
+                            "value": -14763267
+                        },
+                        {
+                            "key": "COL_FOLD_BUTTON",
+                            "value": -26317
+                        },
+                        {
+                            "key": "COL_PIANOROLL_WHITE",
+                            "value": -1773827
+                        },
+                        {
+                            "key": "COL_LABEL_ACTIVE",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_BG_DRKER2",
+                            "value": -14869219
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_GREEN",
+                            "value": -6815971
+                        },
+                        {
+                            "key": "COL_BTN_BG_SHOW_ACTIVE",
+                            "value": -12538944
+                        },
+                        {
+                            "key": "COL_CTXTMNU_OUTLINE",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_PLUGIN_VIEW_FRAME",
+                            "value": 2147483647
+                        },
+                        {
+                            "key": "COL_KNOB_IND",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_BTN_RECORD_ARM_BG",
+                            "value": -12312030
+                        },
+                        {
+                            "key": "COL_NOTE_TEXT",
+                            "value": -13421773
+                        },
+                        {
+                            "key": "COL_BTN_BG_DEFAULT_ACTIVE",
+                            "value": -12566464
+                        },
+                        {
+                            "key": "COL_NOTE_PLAYING",
+                            "value": -1283840
+                        },
+                        {
+                            "key": "COL_OFF",
+                            "value": -2960656
+                        },
+                        {
+                            "key": "COL_BTN_BG_DEFAULT_INACTIVE",
+                            "value": -14671840
+                        },
+                        {
+                            "key": "COL_BG_DRKER",
+                            "value": -13948041
+                        },
+                        {
+                            "key": "COL_PLUG_TITLE_SELECTED",
+                            "value": -7378945
+                        },
+                        {
+                            "key": "COL_GUI_STROKE",
+                            "value": -9737365
+                        },
+                        {
+                            "key": "COL_LABEL_CONTAINER",
+                            "value": -3092272
+                        },
+                        {
+                            "key": "COL_NOTE",
+                            "value": -10494601
+                        },
+                        {
+                            "key": "COL_LINE_SEPERATOR",
+                            "value": -872415232
+                        },
+                        {
+                            "key": "COL_BASE_BG_STROKE",
+                            "value": -15724528
+                        },
+                        {
+                            "key": "COL_CLIP_OUTLINE",
+                            "value": 2130706432
+                        },
+                        {
+                            "key": "COL_NOTE_MUTE",
+                            "value": -10066330
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_YELLOW_DRKER",
+                            "value": -22009
+                        },
+                        {
+                            "key": "COL_TEXTBOX_TEXT_MARKED",
+                            "value": -11706153
+                        },
+                        {
+                            "key": "COL_ON",
+                            "value": -2953006
+                        },
+                        {
+                            "key": "COL_GUI_HANDLE",
+                            "value": -2631721
+                        },
+                        {
+                            "key": "COL_LABEL_INACTIVE",
+                            "value": -8355712
+                        },
+                        {
+                            "key": "COL_NOTE_MOUSE",
+                            "value": -16711681
+                        },
+                        {
+                            "key": "COL_CLIPEDITOR_SHARP",
+                            "value": 956301312
+                        },
+                        {
+                            "key": "COL_BG_BRT",
+                            "value": -15329770
+                        },
+                        {
+                            "key": "COL_BASE_BG",
+                            "value": -15724013
+                        },
+                        {
+                            "key": "COL_BTN_BG_BYPASS_ACTIVE",
+                            "value": -8344640
+                        },
+                        {
+                            "key": "COL_BTN_SOLO_BG_PARENT",
+                            "value": 1826846583
+                        }
+                    ],
+                    "properties": [
+                        {
+                            "key": "CONST_LAYOUT_MARGIN",
+                            "value": 1
+                        },
+                        {
+                            "key": "CONST_PIANOROLL_STROKE_WIDTH",
+                            "value": 10
+                        },
+                        {
+                            "key": "CONST_MIXER_WIDTH",
+                            "value": 250
+                        },
+                        {
+                            "key": "CONST_METER_WIDTH",
+                            "value": 100
+                        },
+                        {
+                            "key": "CONST_TRACK_IO_WIDTH",
+                            "value": 150
+                        },
+                        {
+                            "key": "CONST_TRACK_HEIGHT_STEP",
+                            "value": 23
+                        },
+                        {
+                            "key": "CONST_NOTE_RENDER_MODE",
+                            "value": 1
+                        },
+                        {
+                            "key": "CONST_PLUGIN_TITLE_HEIGHT",
+                            "value": 40
+                        },
+                        {
+                            "key": "CONST_TRACK_CONTROLS_WIDTH",
+                            "value": 550
+                        },
+                        {
+                            "key": "CONST_GUI_FRAME_STROKE_WIDTH",
+                            "value": 10
+                        },
+                        {
+                            "key": "CONST_FONT_SIZE_TABLE",
+                            "value": 199
+                        },
+                        {
+                            "key": "CONST_CLIPEDITOR_HANDLES_STROKE_WIDTH",
+                            "value": 10
+                        },
+                        {
+                            "key": "CONST_TRACK_HEIGHT_TITLE",
+                            "value": 32
+                        },
+                        {
+                            "key": "CONST_FONT_SIZE_CTR_LABEL",
+                            "value": 14
+                        },
+                        {
+                            "key": "CONST_GUI_INSET_WIDGET_BG",
+                            "value": 1
+                        },
+                        {
+                            "key": "CONST_FIXED_TITLE_HEIGHT",
+                            "value": 36
+                        },
+                        {
+                            "key": "CONST_NODES_SCALE",
+                            "value": 40
+                        },
+                        {
+                            "key": "CONST_FONT_SIZE_CONTEXT_MENU",
+                            "value": 200
+                        },
+                        {
+                            "key": "CONST_ROUND",
+                            "value": 0
+                        },
+                        {
+                            "key": "CONST_FONT_SCALE",
+                            "value": 7
+                        },
+                        {
+                            "key": "CONST_SMALL_LABEL_HEIGHT",
+                            "value": 20
+                        }
+                    ],
+                    "fonts": [
+                        {
+                            "key": "FONT_DECIMAL",
+                            "value": "Roboto-Regular.ttf"
+                        },
+                        {
+                            "key": "FONT_TEXFIELD",
+                            "value": "out.ttf"
+                        },
+                        {
+                            "key": "FONT_LABEL",
+                            "value": "Roboto-Regular.ttf"
+                        },
+                        {
+                            "key": "FONT_CONTEXT_MENU",
+                            "value": "Roboto-Regular.ttf"
+                        },
+                        {
+                            "key": "FONT_DEFAULT",
+                            "value": "Roboto-Regular.ttf"
+                        }
+                    ]
+                }
+            },
+            {
+                "name": "User 6",
+                "data": {
+                    "colors": [
+                        {
+                            "key": "COL_PLUGIN_VIEW_FRAME",
+                            "value": 2147483647
+                        },
+                        {
+                            "key": "COL_BTN_BG_DEFAULT_INACTIVE",
+                            "value": -14671840
+                        },
+                        {
+                            "key": "COL_BG_DRKER",
+                            "value": -3552823
+                        },
+                        {
+                            "key": "COL_BTN_BG_SHOW_ACTIVE",
+                            "value": -12674375
+                        },
+                        {
+                            "key": "COL_CTXTMNU_OUTLINE",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_NOTE_PLAYING",
+                            "value": -479808001
+                        },
+                        {
+                            "key": "COL_NOTE_ARP",
+                            "value": -14501086
+                        },
+                        {
+                            "key": "COL_CTXTMNU_BG",
+                            "value": -16448251
+                        },
+                        {
+                            "key": "COL_AUTOMATED",
+                            "value": -121945
+                        },
+                        {
+                            "key": "COL_NOTE_MUTE",
+                            "value": -10066330
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_YELLOW_DRKER",
+                            "value": -22009
+                        },
+                        {
+                            "key": "COL_PLUG_TITLE",
+                            "value": -12368043
+                        },
+                        {
+                            "key": "COL_CLIP_NOTE_MUTED",
+                            "value": -15592942
+                        },
+                        {
+                            "key": "COL_PIANOROLL_BLACK",
+                            "value": -15658735
+                        },
+                        {
+                            "key": "COL_KNOB",
+                            "value": -12161864
+                        },
+                        {
+                            "key": "COL_NOTE_REALTIME",
+                            "value": -696331
+                        },
+                        {
+                            "key": "COL_GRID_BRT",
+                            "value": 941762089
+                        },
+                        {
+                            "key": "COL_BG_DRKER2",
+                            "value": -16777216
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_GREEN",
+                            "value": -6815971
+                        },
+                        {
+                            "key": "COL_LABEL_ACTIVE",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_PIANOROLL_STROKE",
+                            "value": 1174405120
+                        },
+                        {
+                            "key": "COL_FOLD_BUTTON",
+                            "value": -26317
+                        },
+                        {
+                            "key": "COL_PIANOROLL_WHITE",
+                            "value": -986896
+                        },
+                        {
+                            "key": "COL_NOTE_OUTLINE",
+                            "value": -16777216
+                        },
+                        {
+                            "key": "COL_BTN_SOLO_BG_DISABLED",
+                            "value": -9868684
+                        },
+                        {
+                            "key": "COL_BG_SELECTEDTRACK_TITLE",
+                            "value": -4473925
+                        },
+                        {
+                            "key": "COL_CTXTMNU_HILIGHT",
+                            "value": -13224394
+                        },
+                        {
+                            "key": "COL_CLIP_NOTE",
+                            "value": -3542273
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_GREEN_DRKER",
+                            "value": -4984165
+                        },
+                        {
+                            "key": "COL_GUI_HANDLE_FOCUSED",
+                            "value": -13487566
+                        },
+                        {
+                            "key": "COL_CLIP_OUTLINE",
+                            "value": 2130706432
+                        },
+                        {
+                            "key": "COL_BTN_SOLO_BG_ENABLED",
+                            "value": -13419850
+                        },
+                        {
+                            "key": "COL_BG_SELECTEDTRACK",
+                            "value": 581149603
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_YELLOW",
+                            "value": -65536
+                        },
+                        {
+                            "key": "COL_WHITE",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_BG_DRK",
+                            "value": -11513776
+                        },
+                        {
+                            "key": "COL_LINE_BAR",
+                            "value": -1107296256
+                        },
+                        {
+                            "key": "COL_BTN_BG_BYPASS_ACTIVE",
+                            "value": -8410176
+                        },
+                        {
+                            "key": "COL_CLIP_NOTE_OVERLAP",
+                            "value": -16776961
+                        },
+                        {
+                            "key": "COL_GUI_STROKE",
+                            "value": -14803426
+                        },
+                        {
+                            "key": "COL_PLUG_TITLE_SELECTED",
+                            "value": -2039584
+                        },
+                        {
+                            "key": "COL_BTN_LOAD_DEF_PLUGINS",
+                            "value": -10796252
+                        },
+                        {
+                            "key": "COL_CLEAR_COLOR",
+                            "value": -15329770
+                        },
+                        {
+                            "key": "COL_GUI_HANDLE",
+                            "value": -16777216
+                        },
+                        {
+                            "key": "COL_LINE_SEPERATOR",
+                            "value": 687865855
+                        },
+                        {
+                            "key": "COL_NOTE",
+                            "value": -26317
+                        },
+                        {
+                            "key": "COL_LABEL_INACTIVE",
+                            "value": -8355712
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_GREEN_DRK",
+                            "value": -11702254
+                        },
+                        {
+                            "key": "COL_BLACK",
+                            "value": -16777216
+                        },
+                        {
+                            "key": "COL_PLUG_TITLE_FOCUSED",
+                            "value": -4537633
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_YELLOW_DRK",
+                            "value": -40093
+                        },
+                        {
+                            "key": "COL_LINE_QRT",
+                            "value": 1946157056
+                        },
+                        {
+                            "key": "COL_BTN_BG_DEFAULT_ACTIVE",
+                            "value": -12566464
+                        },
+                        {
+                            "key": "COL_BG_DRK_FOCUSED",
+                            "value": -11119018
+                        },
+                        {
+                            "key": "COL_NOTE_MOUSE",
+                            "value": -1157693341
+                        },
+                        {
+                            "key": "COL_CLIPEDITOR_SHARP",
+                            "value": 956301312
+                        },
+                        {
+                            "key": "COL_BG_BRT",
+                            "value": -13355980
+                        },
+                        {
+                            "key": "COL_NOTE_TEXT",
+                            "value": -13421773
+                        },
+                        {
+                            "key": "COL_GRID_DRK",
+                            "value": 301989888
+                        },
+                        {
+                            "key": "COL_LINE_XTH",
+                            "value": 1952407391
+                        },
+                        {
+                            "key": "COL_OFF",
+                            "value": -761246
+                        },
+                        {
+                            "key": "COL_BTN_RECORD_ARM_BG",
+                            "value": -11396325
+                        },
+                        {
+                            "key": "COL_KNOB_IND",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_ON",
+                            "value": -10292126
+                        },
+                        {
+                            "key": "COL_LABEL_CONTAINER",
+                            "value": -3092272
+                        }
+                    ],
+                    "properties": [
+                        {
+                            "key": "CONST_GUI_FRAME_STROKE_WIDTH",
+                            "value": 9
+                        },
+                        {
+                            "key": "CONST_TRACK_CONTROLS_WIDTH",
+                            "value": 489
+                        },
+                        {
+                            "key": "CONST_LAYOUT_MARGIN",
+                            "value": 2
+                        },
+                        {
+                            "key": "CONST_FONT_SCALE",
+                            "value": 10
+                        },
+                        {
+                            "key": "CONST_TRACK_HEIGHT_TITLE",
+                            "value": 24
+                        },
+                        {
+                            "key": "CONST_GUI_INSET_WIDGET_BG",
+                            "value": 1
+                        },
+                        {
+                            "key": "CONST_FIXED_TITLE_HEIGHT",
+                            "value": 36
+                        },
+                        {
+                            "key": "CONST_CLIPEDITOR_HANDLES_STROKE_WIDTH",
+                            "value": 10
+                        },
+                        {
+                            "key": "CONST_MIXER_WIDTH",
+                            "value": 154
+                        },
+                        {
+                            "key": "CONST_METER_WIDTH",
+                            "value": 34
+                        },
+                        {
+                            "key": "CONST_PIANOROLL_STROKE_WIDTH",
+                            "value": 10
+                        },
+                        {
+                            "key": "CONST_SMALL_LABEL_HEIGHT",
+                            "value": 18
+                        },
+                        {
+                            "key": "CONST_PLUGIN_TITLE_HEIGHT",
+                            "value": 24
+                        },
+                        {
+                            "key": "CONST_ROUND",
+                            "value": 20
+                        },
+                        {
+                            "key": "CONST_TRACK_HEIGHT_STEP",
+                            "value": 24
+                        },
+                        {
+                            "key": "CONST_TRACK_IO_WIDTH",
+                            "value": 184
+                        }
+                    ],
+                    "fonts": [
+                        {
+                            "key": "FONT_LABEL",
+                            "value": "Roboto-Medium.ttf"
+                        },
+                        {
+                            "key": "FONT_TEXFIELD",
+                            "value": "Roboto-Medium.ttf"
+                        },
+                        {
+                            "key": "FONT_DEFAULT",
+                            "value": "Roboto-Medium.ttf"
+                        },
+                        {
+                            "key": "FONT_CONTEXT_MENU",
+                            "value": "Roboto-Medium.ttf"
+                        },
+                        {
+                            "key": "FONT_DECIMAL",
+                            "value": "Roboto-Medium.ttf"
+                        }
+                    ]
+                }
+            },
+            {
+                "name": "white test",
+                "data": {
+                    "colors": [
+                        {
+                            "key": "COL_LINE_QRT",
+                            "value": -16185079
+                        },
+                        {
+                            "key": "COL_BASE_BG",
+                            "value": -1513240
+                        },
+                        {
+                            "key": "COL_AUTOMATED",
+                            "value": -1088801
+                        },
+                        {
+                            "key": "COL_BG_DRK_FOCUSED",
+                            "value": -11119018
+                        },
+                        {
+                            "key": "COL_BTN_BG_DEFAULT_ACTIVE",
+                            "value": -12566464
+                        },
+                        {
+                            "key": "COL_NOTE_PLAYING",
+                            "value": -13369549
+                        },
+                        {
+                            "key": "COL_PLUGIN_VIEW_FRAME",
+                            "value": 2147483647
+                        },
+                        {
+                            "key": "COL_BTN_BG_BYPASS_ACTIVE",
+                            "value": -8344640
+                        },
+                        {
+                            "key": "COL_CLIP_NOTE_MUTED",
+                            "value": -15592942
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_YELLOW_DRKER",
+                            "value": -16418696
+                        },
+                        {
+                            "key": "COL_NOTE_MUTE",
+                            "value": -10066330
+                        },
+                        {
+                            "key": "COL_PLUG_TITLE",
+                            "value": -1447447
+                        },
+                        {
+                            "key": "COL_KNOB",
+                            "value": -16720385
+                        },
+                        {
+                            "key": "COL_PIANOROLL_BLACK",
+                            "value": -14079703
+                        },
+                        {
+                            "key": "COL_KNOB_IND",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_BTN_RECORD_ARM_BG",
+                            "value": -12312030
+                        },
+                        {
+                            "key": "COL_OFF",
+                            "value": -2960656
+                        },
+                        {
+                            "key": "COL_NOTE_TEXT",
+                            "value": -13421773
+                        },
+                        {
+                            "key": "COL_NOTE_OUTLINE",
+                            "value": -15527149
+                        },
+                        {
+                            "key": "COL_BTN_SOLO_BG_DISABLED",
+                            "value": -9868684
+                        },
+                        {
+                            "key": "COL_CLIP_NOTE",
+                            "value": -16448251
+                        },
+                        {
+                            "key": "COL_BG_SELECTEDTRACK_TITLE",
+                            "value": -14803426
+                        },
+                        {
+                            "key": "COL_CTXTMNU_HILIGHT",
+                            "value": -13224394
+                        },
+                        {
+                            "key": "COL_CTXTMNU_BG",
+                            "value": -16448251
+                        },
+                        {
+                            "key": "COL_LINE_XTH",
+                            "value": -15987700
+                        },
+                        {
+                            "key": "COL_BG_DRKER2",
+                            "value": -9079435
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_GREEN",
+                            "value": -14745826
+                        },
+                        {
+                            "key": "COL_LABEL_ACTIVE",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_FOLD_BUTTON",
+                            "value": -26317
+                        },
+                        {
+                            "key": "COL_PIANOROLL_WHITE",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_ON",
+                            "value": -2953006
+                        },
+                        {
+                            "key": "COL_NOTE_ARP",
+                            "value": -14501086
+                        },
+                        {
+                            "key": "COL_CTXTMNU_OUTLINE",
+                            "value": -526345
+                        },
+                        {
+                            "key": "COL_BTN_BG_SHOW_ACTIVE",
+                            "value": -12538944
+                        },
+                        {
+                            "key": "COL_GUI_STROKE",
+                            "value": -14803426
+                        },
+                        {
+                            "key": "COL_PLUG_TITLE_SELECTED",
+                            "value": -13290187
+                        },
+                        {
+                            "key": "COL_NOTE",
+                            "value": -26317
+                        },
+                        {
+                            "key": "COL_LINE_SEPERATOR",
+                            "value": -16579837
+                        },
+                        {
+                            "key": "COL_GRID_BRT",
+                            "value": -137112621
+                        },
+                        {
+                            "key": "COL_NOTE_REALTIME",
+                            "value": -65281
+                        },
+                        {
+                            "key": "COL_PLUG_TITLE_FOCUSED",
+                            "value": -5770246
+                        },
+                        {
+                            "key": "COL_BLACK",
+                            "value": 16250871
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_YELLOW_DRK",
+                            "value": -16080736
+                        },
+                        {
+                            "key": "COL_BG_DRKER",
+                            "value": -6052957
+                        },
+                        {
+                            "key": "COL_BTN_BG_DEFAULT_INACTIVE",
+                            "value": -14671840
+                        },
+                        {
+                            "key": "COL_NOTE_MOUSE",
+                            "value": -16711681
+                        },
+                        {
+                            "key": "COL_BG_SELECTEDTRACK",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_BTN_SOLO_BG_ENABLED",
+                            "value": -13419850
+                        },
+                        {
+                            "key": "COL_GUI_HANDLE",
+                            "value": -16777216
+                        },
+                        {
+                            "key": "COL_BTN_LOAD_DEF_PLUGINS",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_CLEAR_COLOR",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_BG_BRT",
+                            "value": -3355444
+                        },
+                        {
+                            "key": "COL_CLIPEDITOR_SHARP",
+                            "value": 856756497
+                        },
+                        {
+                            "key": "COL_CLIP_OUTLINE",
+                            "value": -16777216
+                        },
+                        {
+                            "key": "COL_LINE_BAR",
+                            "value": -16382458
+                        },
+                        {
+                            "key": "COL_WHITE",
+                            "value": -12961222
+                        },
+                        {
+                            "key": "COL_BG_DRK",
+                            "value": -5526613
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_YELLOW",
+                            "value": -14745601
+                        },
+                        {
+                            "key": "COL_BASE_BG_DISABLED",
+                            "value": -4802890
+                        },
+                        {
+                            "key": "COL_LABEL_INACTIVE",
+                            "value": -8355712
+                        },
+                        {
+                            "key": "COL_GUI_HANDLE_FOCUSED",
+                            "value": -13487566
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_GREEN_DRKER",
+                            "value": -16418811
+                        },
+                        {
+                            "key": "COL_CLIP_NOTE_OVERLAP",
+                            "value": -16776961
+                        },
+                        {
+                            "key": "COL_LABEL_CONTAINER",
+                            "value": -3092272
+                        },
+                        {
+                            "key": "COL_PIANOROLL_STROKE",
+                            "value": -12303292
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_GREEN_DRK",
+                            "value": -16080886
+                        },
+                        {
+                            "key": "COL_GRID_DRK",
+                            "value": -3947581
+                        }
+                    ],
+                    "properties": [
+                        {
+                            "key": "CONST_CLIPEDITOR_HANDLES_STROKE_WIDTH",
+                            "value": 10
+                        },
+                        {
+                            "key": "CONST_FONT_SCALE",
+                            "value": 10
+                        },
+                        {
+                            "key": "CONST_TRACK_IO_WIDTH",
+                            "value": 156
+                        },
+                        {
+                            "key": "CONST_TRACK_HEIGHT_STEP",
+                            "value": 28
+                        },
+                        {
+                            "key": "CONST_SMALL_LABEL_HEIGHT",
+                            "value": 12
+                        },
+                        {
+                            "key": "CONST_TRACK_HEIGHT_TITLE",
+                            "value": 28
+                        },
+                        {
+                            "key": "CONST_FIXED_TITLE_HEIGHT",
+                            "value": 22
+                        },
+                        {
+                            "key": "CONST_GUI_INSET_WIDGET_BG",
+                            "value": 0
+                        },
+                        {
+                            "key": "CONST_PIANOROLL_STROKE_WIDTH",
+                            "value": 10
+                        },
+                        {
+                            "key": "CONST_METER_WIDTH",
+                            "value": 64
+                        },
+                        {
+                            "key": "CONST_MIXER_WIDTH",
+                            "value": 224
+                        },
+                        {
+                            "key": "CONST_ROUND",
+                            "value": 20
+                        },
+                        {
+                            "key": "CONST_PLUGIN_TITLE_HEIGHT",
+                            "value": 34
+                        },
+                        {
+                            "key": "CONST_LAYOUT_MARGIN",
+                            "value": 3
+                        },
+                        {
+                            "key": "CONST_TRACK_CONTROLS_WIDTH",
+                            "value": 544
+                        },
+                        {
+                            "key": "CONST_GUI_FRAME_STROKE_WIDTH",
+                            "value": 1
+                        }
+                    ],
+                    "fonts": [
+                        {
+                            "key": "FONT_LABEL",
+                            "value": "Roboto-Medium.ttf"
+                        },
+                        {
+                            "key": "FONT_TEXFIELD",
+                            "value": "Roboto-Medium.ttf"
+                        },
+                        {
+                            "key": "FONT_DEFAULT",
+                            "value": "Roboto-Medium.ttf"
+                        },
+                        {
+                            "key": "FONT_CONTEXT_MENU",
+                            "value": "Roboto-Medium.ttf"
+                        },
+                        {
+                            "key": "FONT_DECIMAL",
+                            "value": "Roboto-Medium.ttf"
+                        }
+                    ]
+                }
+            },
+            {
+                "name": "User 10",
+                "data": {
+                    "colors": [
+                        {
+                            "key": "COL_LEVEL_IND_YELLOW_DRK",
+                            "value": -40093
+                        },
+                        {
+                            "key": "COL_NOTE_ARP",
+                            "value": -14501086
+                        },
+                        {
+                            "key": "COL_LINE_QRT",
+                            "value": 704643072
+                        },
+                        {
+                            "key": "COL_LABEL_INACTIVE",
+                            "value": -8355712
+                        },
+                        {
+                            "key": "COL_LINE_BAR",
+                            "value": 1845493760
+                        },
+                        {
+                            "key": "COL_GUI_HANDLE",
+                            "value": -2631721
+                        },
+                        {
+                            "key": "COL_NOTE",
+                            "value": -10494601
+                        },
+                        {
+                            "key": "COL_LINE_SEPERATOR",
+                            "value": 687865855
+                        },
+                        {
+                            "key": "COL_BTN_LOAD_DEF_PLUGINS",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_CLEAR_COLOR",
+                            "value": -8617843
+                        },
+                        {
+                            "key": "COL_LABEL_CONTAINER",
+                            "value": -3092272
+                        },
+                        {
+                            "key": "COL_LINE_XTH",
+                            "value": 1509949440
+                        },
+                        {
+                            "key": "COL_CTXTMNU_BG",
+                            "value": -16448251
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_GREEN",
+                            "value": -6815971
+                        },
+                        {
+                            "key": "COL_LABEL_ACTIVE",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_BG_DRKER2",
+                            "value": -14869219
+                        },
+                        {
+                            "key": "COL_KNOB",
+                            "value": -12161864
+                        },
+                        {
+                            "key": "COL_PIANOROLL_BLACK",
+                            "value": -15658735
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_YELLOW_DRKER",
+                            "value": -22009
+                        },
+                        {
+                            "key": "COL_NOTE_MUTE",
+                            "value": -10066330
+                        },
+                        {
+                            "key": "COL_PLUG_TITLE",
+                            "value": -8953891
+                        },
+                        {
+                            "key": "COL_CLIP_NOTE",
+                            "value": -3542273
+                        },
+                        {
+                            "key": "COL_CTXTMNU_HILIGHT",
+                            "value": -13224394
+                        },
+                        {
+                            "key": "COL_BG_SELECTEDTRACK_TITLE",
+                            "value": -4473925
+                        },
+                        {
+                            "key": "COL_BTN_SOLO_BG_DISABLED",
+                            "value": -9868684
+                        },
+                        {
+                            "key": "COL_NOTE_OUTLINE",
+                            "value": -16777216
+                        },
+                        {
+                            "key": "COL_KNOB_IND",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_BTN_RECORD_ARM_BG",
+                            "value": -12312030
+                        },
+                        {
+                            "key": "COL_PLUGIN_VIEW_FRAME",
+                            "value": 2147483647
+                        },
+                        {
+                            "key": "COL_AUTOMATED",
+                            "value": -121945
+                        },
+                        {
+                            "key": "COL_PLUG_TITLE_SELECTED",
+                            "value": -10494601
+                        },
+                        {
+                            "key": "COL_GUI_STROKE",
+                            "value": -9737365
+                        },
+                        {
+                            "key": "COL_ON",
+                            "value": -2953006
+                        },
+                        {
+                            "key": "COL_BG_DRK_FOCUSED",
+                            "value": -7237231
+                        },
+                        {
+                            "key": "COL_NOTE_PLAYING",
+                            "value": -1778427559
+                        },
+                        {
+                            "key": "COL_BTN_BG_DEFAULT_ACTIVE",
+                            "value": -12566464
+                        },
+                        {
+                            "key": "COL_WHITE",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_BG_DRK",
+                            "value": -11645362
+                        },
+                        {
+                            "key": "COL_BLACK",
+                            "value": 0
+                        },
+                        {
+                            "key": "COL_PLUG_TITLE_FOCUSED",
+                            "value": -2263201
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_GREEN_DRK",
+                            "value": -11702254
+                        },
+                        {
+                            "key": "COL_CLIP_NOTE_OVERLAP",
+                            "value": -16776961
+                        },
+                        {
+                            "key": "COL_BTN_BG_BYPASS_ACTIVE",
+                            "value": -8344640
+                        },
+                        {
+                            "key": "COL_GRID_DRK",
+                            "value": 520883212
+                        },
+                        {
+                            "key": "COL_NOTE_TEXT",
+                            "value": -13421773
+                        },
+                        {
+                            "key": "COL_BTN_SOLO_BG_ENABLED",
+                            "value": -13419850
+                        },
+                        {
+                            "key": "COL_BG_SELECTEDTRACK",
+                            "value": 581149603
+                        },
+                        {
+                            "key": "COL_CLIP_OUTLINE",
+                            "value": 2130706432
+                        },
+                        {
+                            "key": "COL_PIANOROLL_STROKE",
+                            "value": 1174405120
+                        },
+                        {
+                            "key": "COL_NOTE_REALTIME",
+                            "value": -65281
+                        },
+                        {
+                            "key": "COL_GRID_BRT",
+                            "value": -14145496
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_GREEN_DRKER",
+                            "value": -4984165
+                        },
+                        {
+                            "key": "COL_GUI_HANDLE_FOCUSED",
+                            "value": -10494601
+                        },
+                        {
+                            "key": "COL_BTN_BG_SHOW_ACTIVE",
+                            "value": -12538944
+                        },
+                        {
+                            "key": "COL_CTXTMNU_OUTLINE",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_OFF",
+                            "value": -2960656
+                        },
+                        {
+                            "key": "COL_BG_DRKER",
+                            "value": -8953891
+                        },
+                        {
+                            "key": "COL_BTN_BG_DEFAULT_INACTIVE",
+                            "value": -14671840
+                        },
+                        {
+                            "key": "COL_NOTE_MOUSE",
+                            "value": -16711681
+                        },
+                        {
+                            "key": "COL_BG_BRT",
+                            "value": -14803426
+                        },
+                        {
+                            "key": "COL_CLIPEDITOR_SHARP",
+                            "value": 956301312
+                        },
+                        {
+                            "key": "COL_PIANOROLL_WHITE",
+                            "value": -986896
+                        },
+                        {
+                            "key": "COL_FOLD_BUTTON",
+                            "value": -26317
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_YELLOW",
+                            "value": -65536
+                        },
+                        {
+                            "key": "COL_CLIP_NOTE_MUTED",
+                            "value": -15592942
+                        }
+                    ],
+                    "properties": [
+                        {
+                            "key": "CONST_TRACK_CONTROLS_WIDTH",
+                            "value": 520
+                        },
+                        {
+                            "key": "CONST_GUI_FRAME_STROKE_WIDTH",
+                            "value": 1
+                        },
+                        {
+                            "key": "CONST_LAYOUT_MARGIN",
+                            "value": 1
+                        },
+                        {
+                            "key": "CONST_PLUGIN_TITLE_HEIGHT",
+                            "value": 24
+                        },
+                        {
+                            "key": "CONST_ROUND",
+                            "value": 20
+                        },
+                        {
+                            "key": "CONST_FONT_SIZE_CONTEXT_MENU",
+                            "value": 200
+                        },
+                        {
+                            "key": "CONST_MIXER_WIDTH",
+                            "value": 180
+                        },
+                        {
+                            "key": "CONST_PIANOROLL_STROKE_WIDTH",
+                            "value": 10
+                        },
+                        {
+                            "key": "CONST_METER_WIDTH",
+                            "value": 32
+                        },
+                        {
+                            "key": "CONST_TRACK_HEIGHT_TITLE",
+                            "value": 26
+                        },
+                        {
+                            "key": "CONST_GUI_INSET_WIDGET_BG",
+                            "value": 1
+                        },
+                        {
+                            "key": "CONST_FIXED_TITLE_HEIGHT",
+                            "value": 36
+                        },
+                        {
+                            "key": "CONST_CLIPEDITOR_HANDLES_STROKE_WIDTH",
+                            "value": 10
+                        },
+                        {
+                            "key": "CONST_SMALL_LABEL_HEIGHT",
+                            "value": 12
+                        },
+                        {
+                            "key": "CONST_TRACK_IO_WIDTH",
+                            "value": 180
+                        },
+                        {
+                            "key": "CONST_TRACK_HEIGHT_STEP",
+                            "value": 26
+                        },
+                        {
+                            "key": "CONST_FONT_SCALE",
+                            "value": 10
+                        }
+                    ],
+                    "fonts": [
+                        {
+                            "key": "FONT_LABEL",
+                            "value": "out.ttf"
+                        },
+                        {
+                            "key": "FONT_TEXFIELD",
+                            "value": "out.ttf"
+                        },
+                        {
+                            "key": "FONT_DEFAULT",
+                            "value": "Roboto-Regular.ttf"
+                        },
+                        {
+                            "key": "FONT_CONTEXT_MENU",
+                            "value": "out.ttf"
+                        },
+                        {
+                            "key": "FONT_DECIMAL",
+                            "value": "Roboto-Regular.ttf"
+                        }
+                    ]
+                }
+            },
+            {
+                "name": "User 11",
+                "data": {
+                    "colors": [
+                        {
+                            "key": "COL_BTN_BG_DEFAULT_ACTIVE",
+                            "value": -12566464
+                        },
+                        {
+                            "key": "COL_NOTE_PLAYING",
+                            "value": -1560281089
+                        },
+                        {
+                            "key": "COL_AUTOMATED",
+                            "value": -3604298
+                        },
+                        {
+                            "key": "COL_PLUG_TITLE_SELECTED",
+                            "value": -10494601
+                        },
+                        {
+                            "key": "COL_GUI_STROKE",
+                            "value": -9737365
+                        },
+                        {
+                            "key": "COL_LINE_QRT",
+                            "value": 704643072
+                        },
+                        {
+                            "key": "COL_BLACK",
+                            "value": 0
+                        },
+                        {
+                            "key": "COL_PLUG_TITLE_FOCUSED",
+                            "value": -2263201
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_GREEN_DRK",
+                            "value": -11702254
+                        },
+                        {
+                            "key": "COL_PLUG_TITLE",
+                            "value": -8953891
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_YELLOW",
+                            "value": -65536
+                        },
+                        {
+                            "key": "COL_WHITE",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_BG_DRK",
+                            "value": -11645362
+                        },
+                        {
+                            "key": "COL_LINE_BAR",
+                            "value": 1845493760
+                        },
+                        {
+                            "key": "COL_BTN_BG_BYPASS_ACTIVE",
+                            "value": -8344640
+                        },
+                        {
+                            "key": "COL_CLIP_NOTE_OVERLAP",
+                            "value": -16776961
+                        },
+                        {
+                            "key": "COL_PIANOROLL_BLACK",
+                            "value": -15658735
+                        },
+                        {
+                            "key": "COL_KNOB",
+                            "value": -12161864
+                        },
+                        {
+                            "key": "COL_CLIP_NOTE_MUTED",
+                            "value": -15592942
+                        },
+                        {
+                            "key": "COL_OFF",
+                            "value": -2960656
+                        },
+                        {
+                            "key": "COL_KNOB_IND",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_BTN_RECORD_ARM_BG",
+                            "value": -12312030
+                        },
+                        {
+                            "key": "COL_PLUGIN_VIEW_FRAME",
+                            "value": 2147483647
+                        },
+                        {
+                            "key": "COL_NOTE_TEXT",
+                            "value": -13421773
+                        },
+                        {
+                            "key": "COL_GRID_DRK",
+                            "value": 520883212
+                        },
+                        {
+                            "key": "COL_FOLD_BUTTON",
+                            "value": -26317
+                        },
+                        {
+                            "key": "COL_PIANOROLL_WHITE",
+                            "value": -986896
+                        },
+                        {
+                            "key": "COL_NOTE_REALTIME",
+                            "value": -65281
+                        },
+                        {
+                            "key": "COL_GRID_BRT",
+                            "value": -13158601
+                        },
+                        {
+                            "key": "COL_PIANOROLL_STROKE",
+                            "value": 1174405120
+                        },
+                        {
+                            "key": "COL_NOTE_MUTE",
+                            "value": -10066330
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_YELLOW_DRKER",
+                            "value": -22009
+                        },
+                        {
+                            "key": "COL_CLIP_NOTE",
+                            "value": -3542273
+                        },
+                        {
+                            "key": "COL_BG_SELECTEDTRACK_TITLE",
+                            "value": -4473925
+                        },
+                        {
+                            "key": "COL_CTXTMNU_HILIGHT",
+                            "value": -13224394
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_GREEN",
+                            "value": -6815971
+                        },
+                        {
+                            "key": "COL_LABEL_ACTIVE",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_BG_DRKER2",
+                            "value": -14869219
+                        },
+                        {
+                            "key": "COL_CLIP_OUTLINE",
+                            "value": 2130706432
+                        },
+                        {
+                            "key": "COL_BTN_SOLO_BG_ENABLED",
+                            "value": -13419850
+                        },
+                        {
+                            "key": "COL_BG_SELECTEDTRACK",
+                            "value": 581149603
+                        },
+                        {
+                            "key": "COL_LINE_SEPERATOR",
+                            "value": 687865855
+                        },
+                        {
+                            "key": "COL_NOTE",
+                            "value": -10494601
+                        },
+                        {
+                            "key": "COL_CLEAR_COLOR",
+                            "value": -15329770
+                        },
+                        {
+                            "key": "COL_BTN_LOAD_DEF_PLUGINS",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_GUI_HANDLE",
+                            "value": -2631721
+                        },
+                        {
+                            "key": "COL_BG_BRT",
+                            "value": -14803426
+                        },
+                        {
+                            "key": "COL_CLIPEDITOR_SHARP",
+                            "value": 956301312
+                        },
+                        {
+                            "key": "COL_NOTE_MOUSE",
+                            "value": -16711681
+                        },
+                        {
+                            "key": "COL_BTN_BG_DEFAULT_INACTIVE",
+                            "value": -14671840
+                        },
+                        {
+                            "key": "COL_BG_DRKER",
+                            "value": -8953891
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_YELLOW_DRK",
+                            "value": -40093
+                        },
+                        {
+                            "key": "COL_BG_DRK_FOCUSED",
+                            "value": -7237231
+                        },
+                        {
+                            "key": "COL_NOTE_ARP",
+                            "value": -14501086
+                        },
+                        {
+                            "key": "COL_BTN_SOLO_BG_DISABLED",
+                            "value": -9868684
+                        },
+                        {
+                            "key": "COL_NOTE_OUTLINE",
+                            "value": -16777216
+                        },
+                        {
+                            "key": "COL_CTXTMNU_BG",
+                            "value": -16448251
+                        },
+                        {
+                            "key": "COL_LINE_XTH",
+                            "value": 369098752
+                        },
+                        {
+                            "key": "COL_LABEL_CONTAINER",
+                            "value": -3092272
+                        },
+                        {
+                            "key": "COL_GUI_HANDLE_FOCUSED",
+                            "value": -10494601
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_GREEN_DRKER",
+                            "value": -4984165
+                        },
+                        {
+                            "key": "COL_ON",
+                            "value": -2953006
+                        },
+                        {
+                            "key": "COL_CTXTMNU_OUTLINE",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_BTN_BG_SHOW_ACTIVE",
+                            "value": -12538944
+                        },
+                        {
+                            "key": "COL_LABEL_INACTIVE",
+                            "value": -8355712
+                        }
+                    ],
+                    "properties": [
+                        {
+                            "key": "CONST_CLIPEDITOR_HANDLES_STROKE_WIDTH",
+                            "value": 10
+                        },
+                        {
+                            "key": "CONST_FONT_SCALE",
+                            "value": 10
+                        },
+                        {
+                            "key": "CONST_SMALL_LABEL_HEIGHT",
+                            "value": 12
+                        },
+                        {
+                            "key": "CONST_PIANOROLL_STROKE_WIDTH",
+                            "value": 10
+                        },
+                        {
+                            "key": "CONST_METER_WIDTH",
+                            "value": 42
+                        },
+                        {
+                            "key": "CONST_MIXER_WIDTH",
+                            "value": 180
+                        },
+                        {
+                            "key": "CONST_TRACK_HEIGHT_STEP",
+                            "value": 26
+                        },
+                        {
+                            "key": "CONST_TRACK_IO_WIDTH",
+                            "value": 180
+                        },
+                        {
+                            "key": "CONST_LAYOUT_MARGIN",
+                            "value": 2
+                        },
+                        {
+                            "key": "CONST_TRACK_CONTROLS_WIDTH",
+                            "value": 520
+                        },
+                        {
+                            "key": "CONST_GUI_FRAME_STROKE_WIDTH",
+                            "value": 1
+                        },
+                        {
+                            "key": "CONST_FIXED_TITLE_HEIGHT",
+                            "value": 36
+                        },
+                        {
+                            "key": "CONST_GUI_INSET_WIDGET_BG",
+                            "value": 1
+                        },
+                        {
+                            "key": "CONST_TRACK_HEIGHT_TITLE",
+                            "value": 26
+                        },
+                        {
+                            "key": "CONST_ROUND",
+                            "value": 20
+                        },
+                        {
+                            "key": "CONST_PLUGIN_TITLE_HEIGHT",
+                            "value": 24
+                        },
+                        {
+                            "key": "CONST_FONT_SIZE_TABLE",
+                            "value": 160
+                        }
+                    ],
+                    "fonts": [
+                        {
+                            "key": "FONT_LABEL",
+                            "value": "Roboto-Medium.ttf"
+                        },
+                        {
+                            "key": "FONT_TEXFIELD",
+                            "value": "Roboto-Medium.ttf"
+                        },
+                        {
+                            "key": "FONT_DEFAULT",
+                            "value": "Roboto-Medium.ttf"
+                        },
+                        {
+                            "key": "FONT_CONTEXT_MENU",
+                            "value": "Roboto-Medium.ttf"
+                        },
+                        {
+                            "key": "FONT_DECIMAL",
+                            "value": "Roboto-Medium.ttf"
+                        }
+                    ]
+                }
+            },
+            {
+                "name": "Bold",
+                "data": {
+                    "colors": [
+                        {
+                            "key": "COL_AUTOMATED",
+                            "value": -3604298
+                        },
+                        {
+                            "key": "COL_LINE_QRT",
+                            "value": 704643072
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_YELLOW_DRK",
+                            "value": -40093
+                        },
+                        {
+                            "key": "COL_NOTE",
+                            "value": -10494601
+                        },
+                        {
+                            "key": "COL_LINE_SEPERATOR",
+                            "value": 687865855
+                        },
+                        {
+                            "key": "COL_CLEAR_COLOR",
+                            "value": -15329770
+                        },
+                        {
+                            "key": "COL_PLUG_TITLE_FOCUSED",
+                            "value": -2263201
+                        },
+                        {
+                            "key": "COL_BLACK",
+                            "value": 0
+                        },
+                        {
+                            "key": "COL_CLIP_OUTLINE",
+                            "value": 2130706432
+                        },
+                        {
+                            "key": "COL_PLUG_TITLE_SELECTED",
+                            "value": -10494601
+                        },
+                        {
+                            "key": "COL_GUI_STROKE",
+                            "value": -9737365
+                        },
+                        {
+                            "key": "COL_BTN_BG_DEFAULT_ACTIVE",
+                            "value": -12566464
+                        },
+                        {
+                            "key": "COL_NOTE_PLAYING",
+                            "value": -1560281089
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_YELLOW",
+                            "value": -65536
+                        },
+                        {
+                            "key": "COL_WHITE",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_BG_DRK",
+                            "value": -11645362
+                        },
+                        {
+                            "key": "COL_LINE_BAR",
+                            "value": 1845493760
+                        },
+                        {
+                            "key": "COL_BTN_BG_BYPASS_ACTIVE",
+                            "value": -8344640
+                        },
+                        {
+                            "key": "COL_CLIP_NOTE_OVERLAP",
+                            "value": -16776961
+                        },
+                        {
+                            "key": "COL_PLUGIN_VIEW_FRAME",
+                            "value": 2147483647
+                        },
+                        {
+                            "key": "COL_BTN_RECORD_ARM_BG",
+                            "value": -12312030
+                        },
+                        {
+                            "key": "COL_KNOB_IND",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_OFF",
+                            "value": -2960656
+                        },
+                        {
+                            "key": "COL_CLIP_NOTE_MUTED",
+                            "value": -15592942
+                        },
+                        {
+                            "key": "COL_PIANOROLL_BLACK",
+                            "value": -15658735
+                        },
+                        {
+                            "key": "COL_KNOB",
+                            "value": -12161864
+                        },
+                        {
+                            "key": "COL_PLUG_TITLE",
+                            "value": -8953891
+                        },
+                        {
+                            "key": "COL_NOTE_MUTE",
+                            "value": -10066330
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_YELLOW_DRKER",
+                            "value": -22009
+                        },
+                        {
+                            "key": "COL_BG_SELECTEDTRACK_TITLE",
+                            "value": -4473925
+                        },
+                        {
+                            "key": "COL_CLIP_NOTE",
+                            "value": -3542273
+                        },
+                        {
+                            "key": "COL_CTXTMNU_HILIGHT",
+                            "value": -13224394
+                        },
+                        {
+                            "key": "COL_FOLD_BUTTON",
+                            "value": -26317
+                        },
+                        {
+                            "key": "COL_PIANOROLL_WHITE",
+                            "value": -986896
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_GREEN",
+                            "value": -6815971
+                        },
+                        {
+                            "key": "COL_BG_DRKER2",
+                            "value": -14869219
+                        },
+                        {
+                            "key": "COL_LABEL_ACTIVE",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_BG_SELECTEDTRACK",
+                            "value": 581149603
+                        },
+                        {
+                            "key": "COL_BTN_SOLO_BG_ENABLED",
+                            "value": -13419850
+                        },
+                        {
+                            "key": "COL_NOTE_MOUSE",
+                            "value": -16711681
+                        },
+                        {
+                            "key": "COL_GRID_BRT",
+                            "value": -13158601
+                        },
+                        {
+                            "key": "COL_NOTE_REALTIME",
+                            "value": -65281
+                        },
+                        {
+                            "key": "COL_BTN_BG_DEFAULT_INACTIVE",
+                            "value": -14671840
+                        },
+                        {
+                            "key": "COL_BG_DRKER",
+                            "value": -8953891
+                        },
+                        {
+                            "key": "COL_CLIPEDITOR_SHARP",
+                            "value": 956301312
+                        },
+                        {
+                            "key": "COL_BG_BRT",
+                            "value": -14803426
+                        },
+                        {
+                            "key": "COL_BTN_BG_SHOW_ACTIVE",
+                            "value": -12538944
+                        },
+                        {
+                            "key": "COL_CTXTMNU_OUTLINE",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_ON",
+                            "value": -2953006
+                        },
+                        {
+                            "key": "COL_BG_DRK_FOCUSED",
+                            "value": -7237231
+                        },
+                        {
+                            "key": "COL_GUI_HANDLE_FOCUSED",
+                            "value": -10494601
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_GREEN_DRKER",
+                            "value": -4984165
+                        },
+                        {
+                            "key": "COL_LINE_XTH",
+                            "value": 369098752
+                        },
+                        {
+                            "key": "COL_CTXTMNU_BG",
+                            "value": -16448251
+                        },
+                        {
+                            "key": "COL_BTN_LOAD_DEF_PLUGINS",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_GUI_HANDLE",
+                            "value": -2631721
+                        },
+                        {
+                            "key": "COL_PIANOROLL_STROKE",
+                            "value": 1174405120
+                        },
+                        {
+                            "key": "COL_LABEL_CONTAINER",
+                            "value": -3092272
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_GREEN_DRK",
+                            "value": -11702254
+                        },
+                        {
+                            "key": "COL_NOTE_ARP",
+                            "value": -14501086
+                        },
+                        {
+                            "key": "COL_NOTE_OUTLINE",
+                            "value": -16777216
+                        },
+                        {
+                            "key": "COL_BTN_SOLO_BG_DISABLED",
+                            "value": -9868684
+                        },
+                        {
+                            "key": "COL_NOTE_TEXT",
+                            "value": -13421773
+                        },
+                        {
+                            "key": "COL_GRID_DRK",
+                            "value": 520883212
+                        },
+                        {
+                            "key": "COL_LABEL_INACTIVE",
+                            "value": -8355712
+                        }
+                    ],
+                    "properties": [
+                        {
+                            "key": "CONST_NODES_SCALE",
+                            "value": 7
+                        },
+                        {
+                            "key": "CONST_FONT_SCALE",
+                            "value": 10
+                        },
+                        {
+                            "key": "CONST_MIXER_WIDTH",
+                            "value": 210
+                        },
+                        {
+                            "key": "CONST_METER_WIDTH",
+                            "value": 22
+                        },
+                        {
+                            "key": "CONST_PIANOROLL_STROKE_WIDTH",
+                            "value": 48
+                        },
+                        {
+                            "key": "CONST_SMALL_LABEL_HEIGHT",
+                            "value": 10
+                        },
+                        {
+                            "key": "CONST_TRACK_HEIGHT_STEP",
+                            "value": 26
+                        },
+                        {
+                            "key": "CONST_TRACK_IO_WIDTH",
+                            "value": 180
+                        },
+                        {
+                            "key": "CONST_CLIPEDITOR_HANDLES_STROKE_WIDTH",
+                            "value": 10
+                        },
+                        {
+                            "key": "CONST_TRACK_HEIGHT_TITLE",
+                            "value": 24
+                        },
+                        {
+                            "key": "CONST_FIXED_TITLE_HEIGHT",
+                            "value": 20
+                        },
+                        {
+                            "key": "CONST_GUI_INSET_WIDGET_BG",
+                            "value": 1
+                        },
+                        {
+                            "key": "CONST_LAYOUT_MARGIN",
+                            "value": 2
+                        },
+                        {
+                            "key": "CONST_TRACK_CONTROLS_WIDTH",
+                            "value": 520
+                        },
+                        {
+                            "key": "CONST_GUI_FRAME_STROKE_WIDTH",
+                            "value": 2
+                        },
+                        {
+                            "key": "CONST_NOTE_RENDER_MODE",
+                            "value": 1
+                        },
+                        {
+                            "key": "CONST_PLUGIN_TITLE_HEIGHT",
+                            "value": 40
+                        },
+                        {
+                            "key": "CONST_ROUND",
+                            "value": 0
+                        },
+                        {
+                            "key": "CONST_FONT_SIZE_TABLE",
+                            "value": 160
+                        }
+                    ],
+                    "fonts": [
+                        {
+                            "key": "FONT_LABEL",
+                            "value": "Roboto-Medium.ttf"
+                        },
+                        {
+                            "key": "FONT_TEXFIELD",
+                            "value": "Roboto-Medium.ttf"
+                        },
+                        {
+                            "key": "FONT_DEFAULT",
+                            "value": "Roboto-Medium.ttf"
+                        },
+                        {
+                            "key": "FONT_CONTEXT_MENU",
+                            "value": "Roboto-Medium.ttf"
+                        },
+                        {
+                            "key": "FONT_DECIMAL",
+                            "value": "Roboto-Medium.ttf"
+                        }
+                    ]
+                }
+            },
+            {
+                "name": "Test2",
+                "data": {
+                    "colors": [
+                        {
+                            "key": "COL_BTN_BG_DEFAULT_ACTIVE",
+                            "value": -12566464
+                        },
+                        {
+                            "key": "COL_AUTOMATED",
+                            "value": -121945
+                        },
+                        {
+                            "key": "COL_CLIP_NOTE_OVERLAP",
+                            "value": -16776961
+                        },
+                        {
+                            "key": "COL_LINE_BAR",
+                            "value": 1845493760
+                        },
+                        {
+                            "key": "COL_BTN_BG_DEFAULT_INACTIVE",
+                            "value": -14671840
+                        },
+                        {
+                            "key": "COL_BG_DRKER",
+                            "value": -10197916
+                        },
+                        {
+                            "key": "COL_CLEAR_COLOR",
+                            "value": -16052713
+                        },
+                        {
+                            "key": "COL_PLUG_TITLE",
+                            "value": -16514548
+                        },
+                        {
+                            "key": "COL_BG_BRT",
+                            "value": -14803426
+                        },
+                        {
+                            "key": "COL_CLIPEDITOR_SHARP",
+                            "value": 956301312
+                        },
+                        {
+                            "key": "COL_GUI_STROKE",
+                            "value": -9737365
+                        },
+                        {
+                            "key": "COL_PLUG_TITLE_SELECTED",
+                            "value": -10494601
+                        },
+                        {
+                            "key": "COL_NOTE_ARP",
+                            "value": -14501086
+                        },
+                        {
+                            "key": "COL_LINE_XTH",
+                            "value": 1509949440
+                        },
+                        {
+                            "key": "COL_CTXTMNU_BG",
+                            "value": -16448251
+                        },
+                        {
+                            "key": "COL_LINE_QRT",
+                            "value": 704643072
+                        },
+                        {
+                            "key": "COL_BLACK",
+                            "value": 0
+                        },
+                        {
+                            "key": "COL_PLUG_TITLE_FOCUSED",
+                            "value": -2263201
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_YELLOW_DRK",
+                            "value": -40093
+                        },
+                        {
+                            "key": "COL_BG_DRKER2",
+                            "value": -14869219
+                        },
+                        {
+                            "key": "COL_LABEL_ACTIVE",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_GREEN",
+                            "value": -6815971
+                        },
+                        {
+                            "key": "COL_KNOB",
+                            "value": -12161864
+                        },
+                        {
+                            "key": "COL_PIANOROLL_BLACK",
+                            "value": -15658735
+                        },
+                        {
+                            "key": "COL_CLIP_NOTE_MUTED",
+                            "value": -15592942
+                        },
+                        {
+                            "key": "COL_FOLD_BUTTON",
+                            "value": -26317
+                        },
+                        {
+                            "key": "COL_PIANOROLL_WHITE",
+                            "value": -986896
+                        },
+                        {
+                            "key": "COL_ON",
+                            "value": -2953006
+                        },
+                        {
+                            "key": "COL_NOTE_MUTE",
+                            "value": -10066330
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_YELLOW_DRKER",
+                            "value": -22009
+                        },
+                        {
+                            "key": "COL_BG_SELECTEDTRACK_TITLE",
+                            "value": -4473925
+                        },
+                        {
+                            "key": "COL_CLIP_NOTE",
+                            "value": -3542273
+                        },
+                        {
+                            "key": "COL_CTXTMNU_HILIGHT",
+                            "value": -1587552905
+                        },
+                        {
+                            "key": "COL_GRID_BRT",
+                            "value": -14145496
+                        },
+                        {
+                            "key": "COL_NOTE_REALTIME",
+                            "value": -65281
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_GREEN_DRKER",
+                            "value": -4984165
+                        },
+                        {
+                            "key": "COL_GUI_HANDLE_FOCUSED",
+                            "value": -10494601
+                        },
+                        {
+                            "key": "COL_TEXTBOX_TEXT_DISABLED",
+                            "value": -5427923
+                        },
+                        {
+                            "key": "COL_PLUGIN_VIEW_FRAME",
+                            "value": 2147483647
+                        },
+                        {
+                            "key": "COL_BTN_RECORD_ARM_BG",
+                            "value": -12312030
+                        },
+                        {
+                            "key": "COL_KNOB_IND",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_OFF",
+                            "value": -2960656
+                        },
+                        {
+                            "key": "COL_WHITE",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_BG_DRK",
+                            "value": -11645362
+                        },
+                        {
+                            "key": "COL_BTN_BG_SHOW_ACTIVE",
+                            "value": -12538944
+                        },
+                        {
+                            "key": "COL_CTXTMNU_OUTLINE",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_NOTE_OUTLINE",
+                            "value": -16777216
+                        },
+                        {
+                            "key": "COL_BTN_SOLO_BG_DISABLED",
+                            "value": -9868684
+                        },
+                        {
+                            "key": "COL_NOTE_MOUSE",
+                            "value": -16711681
+                        },
+                        {
+                            "key": "COL_BG_SELECTEDTRACK",
+                            "value": 581149603
+                        },
+                        {
+                            "key": "COL_BTN_SOLO_BG_ENABLED",
+                            "value": -13419850
+                        },
+                        {
+                            "key": "COL_CLIP_OUTLINE",
+                            "value": 2130706432
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_YELLOW",
+                            "value": -65536
+                        },
+                        {
+                            "key": "COL_GRID_DRK",
+                            "value": 520883212
+                        },
+                        {
+                            "key": "COL_NOTE_TEXT",
+                            "value": -13421773
+                        },
+                        {
+                            "key": "COL_NOTE",
+                            "value": -10494601
+                        },
+                        {
+                            "key": "COL_LINE_SEPERATOR",
+                            "value": 687865855
+                        },
+                        {
+                            "key": "COL_BTN_LOAD_DEF_PLUGINS",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_GUI_HANDLE",
+                            "value": -2631721
+                        },
+                        {
+                            "key": "COL_BTN_BG_BYPASS_ACTIVE",
+                            "value": -8344640
+                        },
+                        {
+                            "key": "COL_PIANOROLL_STROKE",
+                            "value": 1174405120
+                        },
+                        {
+                            "key": "COL_LABEL_CONTAINER",
+                            "value": -3092272
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_GREEN_DRK",
+                            "value": -11702254
+                        },
+                        {
+                            "key": "COL_LABEL_INACTIVE",
+                            "value": -8355712
+                        },
+                        {
+                            "key": "COL_NOTE_PLAYING",
+                            "value": -1778427559
+                        },
+                        {
+                            "key": "COL_BG_DRK_FOCUSED",
+                            "value": -7237231
+                        }
+                    ],
+                    "properties": [
+                        {
+                            "key": "CONST_LAYOUT_MARGIN",
+                            "value": 1
+                        },
+                        {
+                            "key": "CONST_TRACK_CONTROLS_WIDTH",
+                            "value": 520
+                        },
+                        {
+                            "key": "CONST_GUI_FRAME_STROKE_WIDTH",
+                            "value": 1
+                        },
+                        {
+                            "key": "CONST_CLIPEDITOR_HANDLES_STROKE_WIDTH",
+                            "value": 10
+                        },
+                        {
+                            "key": "CONST_TRACK_IO_WIDTH",
+                            "value": 180
+                        },
+                        {
+                            "key": "CONST_TRACK_HEIGHT_TITLE",
+                            "value": 26
+                        },
+                        {
+                            "key": "CONST_GUI_INSET_WIDGET_BG",
+                            "value": 1
+                        },
+                        {
+                            "key": "CONST_FIXED_TITLE_HEIGHT",
+                            "value": 36
+                        },
+                        {
+                            "key": "CONST_PIANOROLL_STROKE_WIDTH",
+                            "value": 10
+                        },
+                        {
+                            "key": "CONST_MIXER_WIDTH",
+                            "value": 180
+                        },
+                        {
+                            "key": "CONST_METER_WIDTH",
+                            "value": 32
+                        },
+                        {
+                            "key": "CONST_FONT_SIZE_CONTEXT_MENU",
+                            "value": 200
+                        },
+                        {
+                            "key": "CONST_ROUND",
+                            "value": 0
+                        },
+                        {
+                            "key": "CONST_FONT_SCALE",
+                            "value": 7
+                        },
+                        {
+                            "key": "CONST_TRACK_HEIGHT_STEP",
+                            "value": 26
+                        },
+                        {
+                            "key": "CONST_PLUGIN_TITLE_HEIGHT",
+                            "value": 24
+                        },
+                        {
+                            "key": "CONST_SMALL_LABEL_HEIGHT",
+                            "value": 12
+                        }
+                    ],
+                    "fonts": [
+                        {
+                            "key": "FONT_LABEL",
+                            "value": "out.ttf"
+                        },
+                        {
+                            "key": "FONT_TEXFIELD",
+                            "value": "out.ttf"
+                        },
+                        {
+                            "key": "FONT_DEFAULT",
+                            "value": "Roboto-Regular.ttf"
+                        },
+                        {
+                            "key": "FONT_CONTEXT_MENU",
+                            "value": "out.ttf"
+                        },
+                        {
+                            "key": "FONT_DECIMAL",
+                            "value": "Roboto-Regular.ttf"
+                        }
+                    ]
+                }
+            },
+            {
+                "name": "User",
+                "data": {
+                    "colors": [
+                        {
+                            "key": "COL_BTN_SOLO_BG_PARENT",
+                            "value": 1826846583
+                        },
+                        {
+                            "key": "COL_NOTE_MOUSE",
+                            "value": -16711681
+                        },
+                        {
+                            "key": "COL_ON",
+                            "value": -2953006
+                        },
+                        {
+                            "key": "COL_BTN_BG_BYPASS_ACTIVE",
+                            "value": -8344640
+                        },
+                        {
+                            "key": "COL_BASE_BG",
+                            "value": -15724013
+                        },
+                        {
+                            "key": "COL_BG_BRT",
+                            "value": -15329770
+                        },
+                        {
+                            "key": "COL_CLIPEDITOR_SHARP",
+                            "value": 956301312
+                        },
+                        {
+                            "key": "COL_CLIP_OUTLINE",
+                            "value": 2130706432
+                        },
+                        {
+                            "key": "COL_BASE_BG_STROKE",
+                            "value": -15724528
+                        },
+                        {
+                            "key": "COL_LABEL_INACTIVE",
+                            "value": -8355712
+                        },
+                        {
+                            "key": "COL_GUI_HANDLE",
+                            "value": -2631721
+                        },
+                        {
+                            "key": "COL_LINE_SEPERATOR",
+                            "value": -872415232
+                        },
+                        {
+                            "key": "COL_NOTE",
+                            "value": -10494601
+                        },
+                        {
+                            "key": "COL_LABEL_CONTAINER",
+                            "value": -3092272
+                        },
+                        {
+                            "key": "COL_GUI_STROKE",
+                            "value": -9737365
+                        },
+                        {
+                            "key": "COL_PLUG_TITLE_SELECTED",
+                            "value": -7378945
+                        },
+                        {
+                            "key": "COL_BG_DRKER",
+                            "value": -13948041
+                        },
+                        {
+                            "key": "COL_BTN_BG_DEFAULT_INACTIVE",
+                            "value": -14671840
+                        },
+                        {
+                            "key": "COL_OFF",
+                            "value": -2960656
+                        },
+                        {
+                            "key": "COL_NOTE_PLAYING",
+                            "value": -1778427559
+                        },
+                        {
+                            "key": "COL_BTN_BG_DEFAULT_ACTIVE",
+                            "value": -12566464
+                        },
+                        {
+                            "key": "COL_NOTE_TEXT",
+                            "value": -13421773
+                        },
+                        {
+                            "key": "COL_BTN_RECORD_ARM_BG",
+                            "value": -12312030
+                        },
+                        {
+                            "key": "COL_KNOB_IND",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_PLUGIN_VIEW_FRAME",
+                            "value": 2147483647
+                        },
+                        {
+                            "key": "COL_CTXTMNU_OUTLINE",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_BTN_BG_SHOW_ACTIVE",
+                            "value": -12538944
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_GREEN",
+                            "value": -6815971
+                        },
+                        {
+                            "key": "COL_BG_DRKER2",
+                            "value": -14869219
+                        },
+                        {
+                            "key": "COL_LABEL_ACTIVE",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_PIANOROLL_WHITE",
+                            "value": -1773827
+                        },
+                        {
+                            "key": "COL_FOLD_BUTTON",
+                            "value": -26317
+                        },
+                        {
+                            "key": "COL_BG_SELECTEDTRACK_TITLE",
+                            "value": -14763267
+                        },
+                        {
+                            "key": "COL_CTXTMNU_HILIGHT",
+                            "value": -13224394
+                        },
+                        {
+                            "key": "COL_CLIP_NOTE",
+                            "value": -3542273
+                        },
+                        {
+                            "key": "COL_GUI_HANDLE_FOCUSED",
+                            "value": -11706153
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_GREEN_DRKER",
+                            "value": -4984165
+                        },
+                        {
+                            "key": "COL_PIANOROLL_STROKE",
+                            "value": 1174405120
+                        },
+                        {
+                            "key": "COL_GRID_BRT",
+                            "value": -2144455108
+                        },
+                        {
+                            "key": "COL_NOTE_REALTIME",
+                            "value": -65281
+                        },
+                        {
+                            "key": "COL_KNOB",
+                            "value": -12161864
+                        },
+                        {
+                            "key": "COL_PIANOROLL_BLACK",
+                            "value": -15658735
+                        },
+                        {
+                            "key": "COL_CLIP_NOTE_MUTED",
+                            "value": -15592942
+                        },
+                        {
+                            "key": "COL_NOTE_ARP",
+                            "value": -1999498805
+                        },
+                        {
+                            "key": "COL_NODES_EDGE",
+                            "value": -11776146
+                        },
+                        {
+                            "key": "COL_LINE_BAR",
+                            "value": -3811282
+                        },
+                        {
+                            "key": "COL_WHITE",
+                            "value": -1447171
+                        },
+                        {
+                            "key": "COL_BG_DRK",
+                            "value": -11645362
+                        },
+                        {
+                            "key": "COL_BASE_BG_FOCUSED",
+                            "value": -13408615
+                        },
+                        {
+                            "key": "COL_NOTE_MUTE",
+                            "value": -10066330
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_YELLOW_DRKER",
+                            "value": -22009
+                        },
+                        {
+                            "key": "COL_PLUG_TITLE",
+                            "value": -11706153
+                        },
+                        {
+                            "key": "COL_GRID_DRK",
+                            "value": 2065440032
+                        },
+                        {
+                            "key": "COL_BLACK",
+                            "value": 0
+                        },
+                        {
+                            "key": "COL_PLUG_TITLE_FOCUSED",
+                            "value": -4799234
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_GREEN_DRK",
+                            "value": -11702254
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_YELLOW",
+                            "value": -65536
+                        },
+                        {
+                            "key": "COL_BTN_SOLO_BG_ENABLED",
+                            "value": -2739919
+                        },
+                        {
+                            "key": "COL_BG_SELECTEDTRACK",
+                            "value": 658680792
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_YELLOW_DRK",
+                            "value": -40093
+                        },
+                        {
+                            "key": "COL_LINE_QRT",
+                            "value": -3390396
+                        },
+                        {
+                            "key": "COL_BTN_LOAD_DEF_PLUGINS",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_CLEAR_COLOR",
+                            "value": -15790321
+                        },
+                        {
+                            "key": "COL_NOTE_SELECTED",
+                            "value": -387306452
+                        },
+                        {
+                            "key": "COL_BTN_SOLO_BG_DISABLED",
+                            "value": -9868684
+                        },
+                        {
+                            "key": "COL_NOTE_OUTLINE",
+                            "value": -16777216
+                        },
+                        {
+                            "key": "COL_CTXTMNU_BG",
+                            "value": -16448251
+                        },
+                        {
+                            "key": "COL_LINE_XTH",
+                            "value": -13748784
+                        },
+                        {
+                            "key": "COL_CLIP_NOTE_OVERLAP",
+                            "value": -16776961
+                        },
+                        {
+                            "key": "COL_AUTOMATED",
+                            "value": -3407786
+                        },
+                        {
+                            "key": "COL_BG_DRK_FOCUSED",
+                            "value": -6908266
+                        }
+                    ],
+                    "properties": [
+                        {
+                            "key": "CONST_SMALL_LABEL_HEIGHT",
+                            "value": 14
+                        },
+                        {
+                            "key": "CONST_NODES_SCALE",
+                            "value": 40
+                        },
+                        {
+                            "key": "CONST_FONT_SCALE",
+                            "value": 7
+                        },
+                        {
+                            "key": "CONST_ROUND",
+                            "value": 0
+                        },
+                        {
+                            "key": "CONST_FONT_SIZE_CONTEXT_MENU",
+                            "value": 200
+                        },
+                        {
+                            "key": "CONST_TRACK_HEIGHT_TITLE",
+                            "value": 32
+                        },
+                        {
+                            "key": "CONST_FONT_SIZE_CTR_LABEL",
+                            "value": 14
+                        },
+                        {
+                            "key": "CONST_FIXED_TITLE_HEIGHT",
+                            "value": 36
+                        },
+                        {
+                            "key": "CONST_GUI_INSET_WIDGET_BG",
+                            "value": 1
+                        },
+                        {
+                            "key": "CONST_CLIPEDITOR_HANDLES_STROKE_WIDTH",
+                            "value": 10
+                        },
+                        {
+                            "key": "CONST_FONT_SIZE_TABLE",
+                            "value": 199
+                        },
+                        {
+                            "key": "CONST_GUI_FRAME_STROKE_WIDTH",
+                            "value": 10
+                        },
+                        {
+                            "key": "CONST_TRACK_CONTROLS_WIDTH",
+                            "value": 550
+                        },
+                        {
+                            "key": "CONST_METER_WIDTH",
+                            "value": 100
+                        },
+                        {
+                            "key": "CONST_MIXER_WIDTH",
+                            "value": 250
+                        },
+                        {
+                            "key": "CONST_PIANOROLL_STROKE_WIDTH",
+                            "value": 10
+                        },
+                        {
+                            "key": "CONST_NOTE_RENDER_MODE",
+                            "value": 1
+                        },
+                        {
+                            "key": "CONST_PLUGIN_TITLE_HEIGHT",
+                            "value": 40
+                        },
+                        {
+                            "key": "CONST_TRACK_HEIGHT_STEP",
+                            "value": 23
+                        },
+                        {
+                            "key": "CONST_TRACK_IO_WIDTH",
+                            "value": 150
+                        },
+                        {
+                            "key": "CONST_LAYOUT_MARGIN",
+                            "value": 1
+                        }
+                    ],
+                    "fonts": [
+                        {
+                            "key": "FONT_LABEL",
+                            "value": "Roboto-Regular.ttf"
+                        },
+                        {
+                            "key": "FONT_TEXFIELD",
+                            "value": "out.ttf"
+                        },
+                        {
+                            "key": "FONT_DEFAULT",
+                            "value": "Roboto-Regular.ttf"
+                        },
+                        {
+                            "key": "FONT_CONTEXT_MENU",
+                            "value": "Roboto-Regular.ttf"
+                        },
+                        {
+                            "key": "FONT_DECIMAL",
+                            "value": "Roboto-Regular.ttf"
+                        }
+                    ]
+                }
+            },
+            {
+                "name": "User 1",
+                "data": {
+                    "colors": [
+                        {
+                            "key": "COL_LINE_BAR",
+                            "value": 1845493760
+                        },
+                        {
+                            "key": "COL_CLIP_NOTE_OVERLAP",
+                            "value": -16776961
+                        },
+                        {
+                            "key": "COL_CTXTMNU_BG",
+                            "value": -16448251
+                        },
+                        {
+                            "key": "COL_AUTOMATED",
+                            "value": -121945
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_YELLOW_DRK",
+                            "value": -40093
+                        },
+                        {
+                            "key": "COL_BG_BRT",
+                            "value": -14803426
+                        },
+                        {
+                            "key": "COL_CLIPEDITOR_SHARP",
+                            "value": 956301312
+                        },
+                        {
+                            "key": "COL_CLEAR_COLOR",
+                            "value": 1250067
+                        },
+                        {
+                            "key": "COL_GUI_HANDLE",
+                            "value": -2631721
+                        },
+                        {
+                            "key": "COL_BTN_LOAD_DEF_PLUGINS",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_BTN_BG_DEFAULT_INACTIVE",
+                            "value": -14671840
+                        },
+                        {
+                            "key": "COL_BG_DRKER",
+                            "value": -8953891
+                        },
+                        {
+                            "key": "COL_NODES_EDGE",
+                            "value": -11776146
+                        },
+                        {
+                            "key": "COL_NOTE_ARP",
+                            "value": -14501086
+                        },
+                        {
+                            "key": "COL_LINE_QRT",
+                            "value": 704643072
+                        },
+                        {
+                            "key": "COL_LINE_SEPERATOR",
+                            "value": 687865855
+                        },
+                        {
+                            "key": "COL_NOTE",
+                            "value": -10494601
+                        },
+                        {
+                            "key": "COL_CLIP_NOTE_MUTED",
+                            "value": -15592942
+                        },
+                        {
+                            "key": "COL_PIANOROLL_BLACK",
+                            "value": -15658735
+                        },
+                        {
+                            "key": "COL_KNOB",
+                            "value": -12161864
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_YELLOW_DRKER",
+                            "value": -22009
+                        },
+                        {
+                            "key": "COL_NOTE_MUTE",
+                            "value": -10066330
+                        },
+                        {
+                            "key": "COL_PLUG_TITLE",
+                            "value": -11706153
+                        },
+                        {
+                            "key": "COL_FOLD_BUTTON",
+                            "value": -26317
+                        },
+                        {
+                            "key": "COL_PIANOROLL_WHITE",
+                            "value": -1773827
+                        },
+                        {
+                            "key": "COL_CLIP_NOTE",
+                            "value": -3542273
+                        },
+                        {
+                            "key": "COL_BG_SELECTEDTRACK_TITLE",
+                            "value": -4473925
+                        },
+                        {
+                            "key": "COL_CTXTMNU_HILIGHT",
+                            "value": -13224394
+                        },
+                        {
+                            "key": "COL_NOTE_REALTIME",
+                            "value": -65281
+                        },
+                        {
+                            "key": "COL_GRID_BRT",
+                            "value": -14145496
+                        },
+                        {
+                            "key": "COL_PLUGIN_VIEW_FRAME",
+                            "value": 2147483647
+                        },
+                        {
+                            "key": "COL_KNOB_IND",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_BTN_RECORD_ARM_BG",
+                            "value": -12312030
+                        },
+                        {
+                            "key": "COL_BG_DRK",
+                            "value": -11645362
+                        },
+                        {
+                            "key": "COL_WHITE",
+                            "value": -1447171
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_YELLOW",
+                            "value": -65536
+                        },
+                        {
+                            "key": "COL_BTN_BG_SHOW_ACTIVE",
+                            "value": -12538944
+                        },
+                        {
+                            "key": "COL_CTXTMNU_OUTLINE",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_NOTE_TEXT",
+                            "value": -13421773
+                        },
+                        {
+                            "key": "COL_GRID_DRK",
+                            "value": 520753944
+                        },
+                        {
+                            "key": "COL_CLIP_OUTLINE",
+                            "value": 2130706432
+                        },
+                        {
+                            "key": "COL_BTN_SOLO_BG_ENABLED",
+                            "value": -13419850
+                        },
+                        {
+                            "key": "COL_BG_SELECTEDTRACK",
+                            "value": 581149603
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_GREEN_DRK",
+                            "value": -11702254
+                        },
+                        {
+                            "key": "COL_PLUG_TITLE_FOCUSED",
+                            "value": -4799234
+                        },
+                        {
+                            "key": "COL_BLACK",
+                            "value": 0
+                        },
+                        {
+                            "key": "COL_ON",
+                            "value": -2953006
+                        },
+                        {
+                            "key": "COL_OFF",
+                            "value": -2960656
+                        },
+                        {
+                            "key": "COL_BTN_BG_DEFAULT_ACTIVE",
+                            "value": -12566464
+                        },
+                        {
+                            "key": "COL_NOTE_PLAYING",
+                            "value": -1778427559
+                        },
+                        {
+                            "key": "COL_BG_DRK_FOCUSED",
+                            "value": -7237231
+                        },
+                        {
+                            "key": "COL_NOTE_MOUSE",
+                            "value": -16711681
+                        },
+                        {
+                            "key": "COL_LABEL_CONTAINER",
+                            "value": -3092272
+                        },
+                        {
+                            "key": "COL_GUI_STROKE",
+                            "value": -9737365
+                        },
+                        {
+                            "key": "COL_PLUG_TITLE_SELECTED",
+                            "value": -7378945
+                        },
+                        {
+                            "key": "COL_LABEL_ACTIVE",
+                            "value": -1
+                        },
+                        {
+                            "key": "COL_BG_DRKER2",
+                            "value": -14869219
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_GREEN",
+                            "value": -6815971
+                        },
+                        {
+                            "key": "COL_LINE_XTH",
+                            "value": 1509949440
+                        },
+                        {
+                            "key": "COL_NOTE_OUTLINE",
+                            "value": -16777216
+                        },
+                        {
+                            "key": "COL_BTN_SOLO_BG_DISABLED",
+                            "value": -9868684
+                        },
+                        {
+                            "key": "COL_LEVEL_IND_GREEN_DRKER",
+                            "value": -4984165
+                        },
+                        {
+                            "key": "COL_GUI_HANDLE_FOCUSED",
+                            "value": -2269334
+                        },
+                        {
+                            "key": "COL_LABEL_INACTIVE",
+                            "value": -8355712
+                        },
+                        {
+                            "key": "COL_PIANOROLL_STROKE",
+                            "value": 1174405120
+                        },
+                        {
+                            "key": "COL_BTN_BG_BYPASS_ACTIVE",
+                            "value": -8344640
+                        }
+                    ],
+                    "properties": [
+                        {
+                            "key": "CONST_LAYOUT_MARGIN",
+                            "value": 1
+                        },
+                        {
+                            "key": "CONST_TRACK_CONTROLS_WIDTH",
+                            "value": 520
+                        },
+                        {
+                            "key": "CONST_GUI_FRAME_STROKE_WIDTH",
+                            "value": 1
+                        },
+                        {
+                            "key": "CONST_CLIPEDITOR_HANDLES_STROKE_WIDTH",
+                            "value": 10
+                        },
+                        {
+                            "key": "CONST_TRACK_IO_WIDTH",
+                            "value": 180
+                        },
+                        {
+                            "key": "CONST_TRACK_HEIGHT_TITLE",
+                            "value": 26
+                        },
+                        {
+                            "key": "CONST_GUI_INSET_WIDGET_BG",
+                            "value": 1
+                        },
+                        {
+                            "key": "CONST_FIXED_TITLE_HEIGHT",
+                            "value": 36
+                        },
+                        {
+                            "key": "CONST_PIANOROLL_STROKE_WIDTH",
+                            "value": 10
+                        },
+                        {
+                            "key": "CONST_MIXER_WIDTH",
+                            "value": 180
+                        },
+                        {
+                            "key": "CONST_METER_WIDTH",
+                            "value": 32
+                        },
+                        {
+                            "key": "CONST_FONT_SIZE_CONTEXT_MENU",
+                            "value": 200
+                        },
+                        {
+                            "key": "CONST_ROUND",
+                            "value": 0
+                        },
+                        {
+                            "key": "CONST_FONT_SCALE",
+                            "value": 8
+                        },
+                        {
+                            "key": "CONST_TRACK_HEIGHT_STEP",
+                            "value": 21
+                        },
+                        {
+                            "key": "CONST_PLUGIN_TITLE_HEIGHT",
+                            "value": 40
+                        },
+                        {
+                            "key": "CONST_SMALL_LABEL_HEIGHT",
+                            "value": 12
+                        }
+                    ],
+                    "fonts": [
+                        {
+                            "key": "FONT_LABEL",
+                            "value": "Roboto-Regular.ttf"
+                        },
+                        {
+                            "key": "FONT_TEXFIELD",
+                            "value": "out.ttf"
+                        },
+                        {
+                            "key": "FONT_DEFAULT",
+                            "value": "Roboto-Regular.ttf"
+                        },
+                        {
+                            "key": "FONT_CONTEXT_MENU",
+                            "value": "Roboto-Regular.ttf"
+                        },
+                        {
+                            "key": "FONT_DECIMAL",
+                            "value": "Roboto-Regular.ttf"
+                        }
+                    ]
+                }
+            }
+        ]
+    }
+}

@@ -1,0 +1,35 @@
+{
+    "layout": {
+        "value0": {
+            "polymorphic_id": 1073741824,
+            "ptr_wrapper": {
+                "id": 2147483649,
+                "data": {
+                    "value0": "",
+                    "value1": 0,
+                    "value2": -1,
+                    "value3": 0,
+                    "value4": []
+                }
+            }
+        },
+        "value1": {
+            "polymorphic_id": 1073741824,
+            "ptr_wrapper": {
+                "id": 2147483650,
+                "data": {
+                    "value0": "",
+                    "value1": 0,
+                    "value2": -1,
+                    "value3": 0,
+                    "value4": []
+                }
+            }
+        },
+        "value2": [
+            0.0,
+            0.7698841691017151,
+            1.0
+        ]
+    }
+}

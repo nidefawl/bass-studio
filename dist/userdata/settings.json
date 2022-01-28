@@ -1,0 +1,20 @@
+{
+    "value0": {
+        "grid": {
+            "value0": true,
+            "value1": false,
+            "value2": 5,
+            "value3": 3
+        },
+        "iosettings": {
+            "samplerate": 44100,
+            "blocksize": 512,
+            "internalSamplerate": 44100,
+            "internalBlocksize": 512,
+            "device_api": "ASIO"
+        },
+        "startEngine": true,
+        "pluginPath": "C:/Program Files/Steinberg/VstPlugins",
+        "vmmode": false
+    }
+}
