@@ -1,5 +1,6 @@
 # Set the default behavior, in case people don't have core.autocrlf set.
 * text=auto
+*.h linguist-language=cpp
 
 glcorearb.h linguist-vendored
 stb_*.h linguist-vendored
