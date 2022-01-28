@@ -1,6 +1,3 @@
-/*****************************/
-/*           Ideas           */
-/*****************************/
 # Ideas 
 
 Add optional horizontal grid steps to automation (allow offset/scale?)  
@@ -62,10 +59,6 @@ track editor vertical drag-move zooming like note-editor
 consider handling context menu ownership with shared_ptrs. I may require to use shared from this to solve issues with call close-context-menu from click handlers  
 scrubbing with beat sync  
 add vertical plugin chain in mix view (like cubase mixer)  
-
-/*****************************/
-/*           Bugs           */
-/*****************************/
 # Bugs
 Meters are buggy after sample rate or blocksize changes 
 solo buttons not update after track routing changes  
@@ -83,60 +76,6 @@ notes border rendering not respecting z-order when note rectangles overlap
 
 while having a selection with no time range, sitting on subtrack 0 of a midi track (first automation lane, just having a cursor sitting in an automation lane):  
 if the track is dragged onto another track to put it as child the program will assert in subtrack range check with out of bounds. see screenshot 02.05.2021 22:58
-
-/*****************************/
-/*           TODOs           */
-/*****************************/
-# TODO code quality
-
-Initialization and lifetime of DawInstance should be controlled top level, not by a GUI-Ctrl:
-- MainCtrl::init(window, nanovg) renamed to MainCtrl::initAppWindow(window, nanovg) to avoid confusion
-- refactor makeApp() to main.cpp::makeApp(argc, argv) 
-- makeApp(argc, argv) generates the AppCtrl and DawInstance instances (stored in the shared pointers) as before
-- the call to the AppCtrl::initApp(argc, argv) is moved inside main.cpp::makeApp(argc, argv) 
-- remove all calls made MainCtrl::initApp(argc, argv) and move them into makeApp(argc, argv)
-- now makeApp(argc, argv) calls DawInstance::initDaw(argc, argv) directly
-- after return from makeApp all required instances in the tls are alive
-- create main.cpp::startApp, replace AppCtrl::postInit with call to main.cpp::startApp
-- main.cpp::startApp calls AppCtrl::postInit
-- main.cpp::startApp calls DawInstance::startDaw(); DawInstance::postInit();
-- main.cpp::startApp calls AppCtrl::postInit()
-- move the project loading from DawInstance::startDaw to DawInstance::postInit
-- Consider moving DawInstance::postInit() after AppCtrl::postInit
-- Consider moving showWindow after startApp
-
-DawInstance should be usable without a GUI-Ctrl instance  
-MainCtrl::getPlayThread() is bad interface for no-GUI headless applications  
-cleanup trackcontainer.cpp  
-DawCtrl::filesDropBegin:
-- figure out which thread the calls come from
-- make sure it the code inside is fast and never blocks.  
-  Right now wave files are loaded sync'd and the thread task for loading midi simply waits until completion, so both things block
-- Read win32 docs on constraints of IDropTarget  
-  
-Fix the sign conversion warnings!
-refactor into namespaces  
-all interface types must have suffix _i   
-make _t and no-_t type names consistent  
-make struct and class types consistent:   
-- structs have no functions besides ctors/dtors/copy/move operators
-- classes have functions
-
-Fix visibility of fields of all classes  
-add more (unit) tests  
-Test handling of exceptions and segfaults on threads and worker thread tasks (TrackBlockProcessTask)  
-Test handling of tasks and threads not responding (stuck in inf loop)  
- Remove the networking source code for DAW builds until I use it (rgb-master uses UDP)  
-
-change to initializer braces assignment for ivec2 (so we can easily change the type)  
-
-    find: \s*=\s*ivec2\s*\(\s*([^, ]*),\s*([^, ]*)\s*\)\s*;  
-    replace: = {\1, \2};
-
-track_t::projectIdx should be constant (UID):  
-- when restoring track contents using trackstate_t the resolution of tracks should be done using the UID for robustness reasons  
-- Solution: Use toRef(), stageIds are (runtime?) constant
-
 # TODO high priority
 custom block length processing  
 per track samplerate / blocksize   
@@ -163,33 +102,68 @@ height track title should be equal height clip title, at least on folded tracks
 remove height limitation from automation tracks  
 Allow reordering automation tracks  
 
-plugin preset indexing, plugin preset search
-quantize midi 
-legato button in midi editor
-consolidate clips
-plugin preset store/load
-group+plugin snapshots
-add keybind constant
-keybind editor/presets
-multiselection of tracks
-Mixing desk view
-Compressed binary file format
-stress-test synchronization
-use templates + template specialization for the 3 window classes in window.cpp
-scale factor for UI font sizes
-support waves shell plugins 
-add a toggle button for current tracks complete effect chain. This should probably be the function of the power/enable button of a track. Adding a mute button that keeps audio processing enabled
-midi export
-freeze track
-don't fully close vst-windows, just hide them and defer destruction so they reopen quickly 
-try rendering vst-windows into gui at fixed location (kind of a bookmark)
-add a view of a list of all thirdparty+internal plugin instances 
+plugin preset indexing, plugin preset search  
+quantize midi   
+legato button in midi editor  
+consolidate clips  
+plugin preset store/load  
+group+plugin snapshots  
+add keybind constant  
+keybind editor/presets  
+multiselection of tracks  
+Mixing desk view  
+Compressed binary file format  
+stress-test synchronization  
+use templates + template specialization for the 3 window classes in window.cpp  
+scale factor for UI font sizes  
+support waves shell plugins   
+add a toggle button for current tracks complete effect chain. This should probably be the function of the power/enable button of a track. Adding a mute button that keeps audio processing enabled  
+midi export  
+freeze track  
+don't fully close vst-windows, just hide them and defer destruction so they reopen quickly   
+try rendering vst-windows into gui at fixed location (kind of a bookmark)  
+add a view of a list of all thirdparty+internal plugin instances   
 
 
-/*****************************/
-/*           NOTES           */
-/*****************************/
+# Timing & Accuracy of Audioprocessing
+## Tick accuracy
 
+
+in playback thread the tickPos accumulates fp math error:
+  
+    samplePos += blockSize * numBlocksProcessed; //int
+    tickPos += ticksPerBlock * numBlocksProcessed; //double
+
+This can be more significant than I thought when writing it
+It is better to calculate the tickPos from the sample
+  
+    samplePos += blockSize * numBlocksProcessed; //int
+    tickPos = toTick(samplePos); //double
+
+Also make sure to __NEVER__ use floats for tickpos
+After 4 minutes of playback at 128bpm the floats will produce significant errors after getting round back to int:
+
+    At value 2,097,152 32bit floats have a precision of only 0.25
+    ticks / (bpm*TPQ)
+    2097152/(128*4096) = 4 minutes
+    At 4,194,304 the precision is 0.5 = 8 minutes
+
+Type Conversions
+----------------
+
+Implement or adapt these functions  
+
+    platform.h
+      int32_t getTimeMillis()
+    math.h
+      tick_t math::round(double) // or seqMath roundtick
+    seq_time.h
+      int32_t tickToSample(double tick)
+    audiocache(uint32_t samplerate)
+    sampleformat_t
+      uint16 blockSize // no narrowing when assigning to int32
+
+seq_time::toTick takes bpm as int32 and project_globals stores it as uint32
 
 Testing VST2 plugins
 ====================
@@ -294,51 +268,177 @@ plugin->isInCallback[threadId]--
 ```
 
 
-Memory usage
-============
-It is quite memory intense:
-```
-sr = 44100
-channels = 2
-bytesPerSample = 4
-seconds = 600
-sizeInMB = (bytesPerSample * channels * sr * seconds) / ( 1000**2 )
-21 mb per minute of audio per track
-so for a 10 track 10 minute project its 2.1gb
-```
+TODOs Code Architecture
+------------------------
+
+### Initialization and lifetime of DawInstance should be controlled top level, not by a GUI-Ctrl:
+- MainCtrl::init(window, nanovg) renamed to MainCtrl::initAppWindow(window, nanovg) to avoid confusion
+- refactor makeApp() to main.cpp::makeApp(argc, argv) 
+- makeApp(argc, argv) generates the AppCtrl and DawInstance instances (stored in the shared pointers) as before
+- the call to the AppCtrl::initApp(argc, argv) is moved inside main.cpp::makeApp(argc, argv) 
+- remove all calls made MainCtrl::initApp(argc, argv) and move them into makeApp(argc, argv)
+- now makeApp(argc, argv) calls DawInstance::initDaw(argc, argv) directly
+- after return from makeApp all required instances in the tls are alive
+- create main.cpp::startApp, replace AppCtrl::postInit with call to main.cpp::startApp
+- main.cpp::startApp calls AppCtrl::postInit
+- main.cpp::startApp calls DawInstance::startDaw(); DawInstance::postInit();
+- main.cpp::startApp calls AppCtrl::postInit()
+- move the project loading from DawInstance::startDaw to DawInstance::postInit
+- Consider moving DawInstance::postInit() after AppCtrl::postInit
+- Consider moving showWindow after startApp
+
+DawInstance should be usable without a GUI-Ctrl instance  
+MainCtrl::getPlayThread() is bad interface for no-GUI headless applications  
+
+DawCtrl::filesDropBegin:
+- figure out which thread the calls come from
+- make sure it the code inside is fast and never blocks.  
+  Right now wave files are loaded sync'd and the thread task for loading midi simply waits until completion, so both things block
+- Read win32 docs on constraints of IDropTarget  
+
+track_t::projectIdx should be constant (UID):  
+- when restoring track contents using trackstate_t the resolution of tracks should be done using the UID for robustness reasons  
+- Solution: Use toRef(), stageIds are (runtime?) constant
+
+TODOs Includes, visibility and namespaces
+-----------------------------------------
+
+remove all includes of `<math.h>`  
+reduce includes of `table.h`  
+remove the guiplugin.h include in `vst_pluign_handles.h`  
+cleanup trackcontainer.cpp (done?)  
+refactor everything into namespaces 
+Fix visibility of fields of all classes  
+
+TODOs Naming
+------------
+
+all interface types must have suffix _i or otherwise consistend names  
+make _t and no-_t type names consistent  
+make struct and class types consistent:   
+- structs have no functions besides ctors/dtors/copy/move operators
+- classes have functions
+
+TODOs Tests
+------------
+
+add more (unit) tests  
+Test handling of exceptions and segfaults on threads and worker thread tasks (TrackBlockProcessTask)  
+Test handling of tasks and threads not responding (stuck in inf loop)  
+
+TODOs Syntax consistency
+------------------------
+
+change to initializer braces assignment for ivec2 (so we can easily change the type)  
+
+    find: \s*=\s*ivec2\s*\(\s*([^, ]*),\s*([^, ]*)\s*\)\s*;  
+    replace: = {\1, \2};
+TODOs GUI consistency
+---------------------
+Fix the usage of macros in guiglobals.h  
+The macros hide color and other constants in the code and should be replaced by functions.
+
+# Warnings
+
+TODOs Warnings
+---------------
+
+Fix the sign conversion warnings or establish rules
+
+
+Project warn levels
+-------------------
+
+
+  Clang basic warnings
+    
+    -Wall -Wno-inconsistent-missing-override -Wno-unused-parameter 
+
+  MSVC is really verbose on /W4 and produces too much noise.  
+  I missed some really important warnings because of the noise.
+  I think its better to use /W3 and enable selected warnings on top.
+
+  MSVC Disable system header warnings (`#include <systemheader>`) 
+
+    /external:anglebrackets /external:W0
+
+  MSVC Disabled Warnings
+
+    /wd4067 unexpected tokens following preprocessor directive - expected a newline: triggers on semicolon after macro function invocation
+    /wd4267 'var' : conversion from 'size_t' to 'type', possible loss of data
+    /wd4244 'argument' : conversion from 'type1' to 'type2', possible loss of data
+
+
+Testcase warn levels
+--------------------
+
+  clang (not sure about them)
+
+    -Wall -Wextra -pedantic -Wnon-virtual-dtor -Woverloaded-virtual -Wconversion
+  
+
+  MSVC
+
+    /external:anglebrackets /external:W0
+    /W3
+
 
 C++ Tooling
 ===========
 
-Warnings
---------
-Project warnings are set to:
-    
-    clang
-    -Wall -Wno-inconsistent-missing-override -Wno-unused-parameter 
+MSVC Builds
+-----------
+ws2_32.dll disappeared in deps between 20.dec and 24.dec
 
-    msvc
-    /external:anglebrackets /external:W0
-    /w2 
-    disabled
-    /wd4067 unexpected tokens following preprocessor directive - expected a newline: triggers on semicolon after macro function invocation
-    /wd4267 'var' : conversion from 'size_t' to 'type', possible loss of data
-    /wd4244
-    'argument' : conversion from 'type1' to 'type2', possible loss of data
-    A floating point type was converted to an integer type. A possible loss of data may have occurred.
+Formatting
+----------
 
-Testcase warnings
+Clang format is really good, but not perfect.  
+Some of the settings need to be toggled depending on the current file.
 
-    clang (not sure about them)
-    -Wall -Wextra -pedantic -Wnon-virtual-dtor -Woverloaded-virtual -Wconversion
-    msvc
-    /external:anglebrackets /external:W0
-    /W3 /Wall
-
-Testcases warnings on MSVC
+Otherwise it will just ruin array initialization or formatted output.
 
 
+### Excluded
 
+    src/dsp/memoryarchive.h
+    src/include/glcorearb.h
+    src/include/glheaders.h
+    src/nanovg/*
+    src/midi/*
+    src/gl/polyline/*
+    src/vstsdk-host-2.4/**
+    src/vstsdk-plugin-2.4/**
+    src/dr_libs.c
+    src/external_glad.c
+    src/external_kissfft.c
+    src/external_kissfftr.c
+    src/util/PtrQueue.h
+    src/util/SPSCQueue.h
+    src/util/atomicops.h
+    src/util/readerwriterqueue.h
+    src/wave/dr_wav.h
+    src/icon_resource.h
+
+
+Third party libs should be moved to a common folder (third-party or external or xtern)
+
+Memory usage
+============
+It is quite memory intense:
+
+    sr = 44100
+    channels = 2
+    bytesPerSample = 4
+    seconds = 600
+    sizeInMB = (bytesPerSample * channels * sr * seconds) / ( 1000**2 )
+    21 mb per minute of audio per track
+    so for a 10 track 10 minute project its 2.1gb
+
+
+### Problems
+
+- Comment blocks are intended incorrectly -> remove tabs first
 
 COMPLETED
 =========
@@ -373,3 +473,4 @@ duplicate plugin/plugin groups
 Sends/Return tracks  
 UI settings for internal/external samplerate/blocksize settings  
 mousewheel scrolling on noteeditor not working  
+Remove the networking source code for DAW builds until I use it (rgb-master uses UDP)  
