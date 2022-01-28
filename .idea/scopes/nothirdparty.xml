@@ -1,0 +1,3 @@
+<component name="DependencyValidationManager">
+  <scope name="nothirdparty" pattern="file[daw]:src//*&amp;&amp;!file[daw]:src/vstsdk-host-2.4//*&amp;&amp;!file[daw]:src/vstsdk-plugin-2.4//*&amp;&amp;!file[daw]:src/nanovg//*&amp;&amp;!file[daw]:src/gl/polyline//*&amp;&amp;!file[daw]:src/midi//*" />
+</component>
