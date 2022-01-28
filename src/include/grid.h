@@ -128,7 +128,7 @@ public:
         double dTick = TICKS_BAR * d;
         return dTick;
     }
-    bool debug = false;
+
     double tickToScreenD(tick_t x) {
         double bar            = x / (double) TICKS_BAR;
         double objspaceOffset = toObjSpace(0, this->zoom, offset);

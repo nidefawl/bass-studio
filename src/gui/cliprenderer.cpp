@@ -21,23 +21,11 @@ namespace GuiColor {
     constant_t COL_CLIP_NOTE_OVERLAP("COL_CLIP_NOTE_OVERLAP", 0xFF0000FF);
     constant_t COL_CLIP_NOTE_MUTED("COL_CLIP_NOTE_MUTED", 0xFF121212);
 }// namespace GuiColor
+
 namespace GuiConstant {
     constant_t CONST_NOTE_RENDER_MODE("CONST_NOTE_RENDER_MODE", 1, 0, 1);
 }
-/*
-	NVGpaint paint;
-	memset(&paint, 0, sizeof(paint));
-	paint.image = -1;
-	paint.innerColor = rgbToNvg(0xFF00FF);
-	paint.outerColor = rgbToNvg(0xFF00FF);
-	paint.customPar = 1234;
-	//    	ivec2 qSize(10+rand.rng_rand(7)*20, 10+rand.rng_rand(7)*20);
-	        nvgBatchedRect(vg, rand.rng_rand(1000), rand.rng_rand(1000), qSize.x, qSize.y);
-	    }
-	    nvgFillPaint(vg, paint);
-	    nvgBatchedRender(vg);
 
- */
 struct noteview_cache_impl_t {
     bool valid            = false;
     int64_t notesRendered = -1;
@@ -82,8 +70,8 @@ struct noteview_cache_impl_t {
         });
     }
 };
+
 struct midi_clip_render_cache_t : public noteview_cache_impl_t {
-public:
     midi_clip_render_cache_t() : noteview_cache_impl_t() {
     }
 };
@@ -91,9 +79,7 @@ public:
 bool getClipPosition(scaled_grid& grid, const ivec2& scissorSize, const clip_t* cl, ivec2& pos, ivec2& size, tick_t offset) {
     tick_t tickBegin  = cl->time + offset;
     tick_t tickEnd    = cl->time + offset + cl->getLen();
-    grid.debug        = true;
     double tickBeginX = grid.tickToScreenD(tickBegin);
-    grid.debug        = false;
     double tickEndX   = grid.tickToScreenD(tickEnd);
     if (tickEndX < -4 || tickBeginX > scissorSize.x + 4) {
         return false;
@@ -107,6 +93,7 @@ bool getClipPosition(scaled_grid& grid, const ivec2& scissorSize, const clip_t* 
     size                = math::maxvec2(ivec2(widthPx, size.y - INSET_TRACK_CONTENT * 2), ivec2(1));
     return size.x > 0 && size.y > 0;
 }
+
 audioclip_texture_t makeWaveformFromClip(const project_globals_t& project, scaled_grid& grid,
                                          ivec2& trackSize, clip_t* m_clip,
                                          ivec2& pos, ivec2& size, ivec2& posClipped, ivec2& sizeClipped) {
@@ -125,61 +112,32 @@ audioclip_texture_t makeWaveformFromClip(const project_globals_t& project, scale
         tickBegin       = m_clip->start();
         tickEnd         = m_clip->end();
     }
-    int64_t sampleBegin       = math::floorCast(tickToSamplePrecise(tickBegin, project.tempo100, sr));
-    int64_t sampleStartOffset = math::floorCast(tickToSamplePrecise(tickBeginOffset, project.tempo100, sr));
-
-    int64_t sampleEnd  = math::floorCast(tickToSamplePrecise(tickEnd, project.tempo100, sr));
     auto offsetSamples = tickToSamplePrecise(m_clip->offsetStart, project.tempo100, sr);
-    sampleStartOffset += offsetSamples;
-    sampleEnd += offsetSamples;
+
+    int64_t sampleBegin       = math::floorS64D(tickToSamplePrecise(tickBegin, project.tempo100, sr));
+    int64_t sampleStartOffset = math::floorS64D(offsetSamples + tickToSamplePrecise(tickBeginOffset, project.tempo100, sr));
+    int64_t sampleEnd  = math::floorS64D(offsetSamples + tickToSamplePrecise(tickEnd, project.tempo100, sr));
+
     ivec2 startOffset = posClipped - pos;
+
     audioclip_texture_t w;
     w.quality = 1;
 
     double pxPerSample = 1.0 / samplesPerPx;
-    //	if (samplesPerPx >= 256 && size.y * (w.scale*2) <= FBO_HEIGHT) {
-    //		w.quality *= 2;
-    //		w.scale *= 2;
-    //	}
-    //	if (samplesPerPx >= 512 && size.y * (w.scale*2) <= FBO_HEIGHT) {
-    //		w.quality *= 2;
-    //		w.scale *= 2;
-    //	}
-    //	if (samplesPerPx >= 1024 && size.y * (w.scale*2) <= FBO_HEIGHT) {
-    //		w.quality *= 2;
-    //		w.scale *= 2;
-    //	}
-    //	if (size.y * 4 <= FBO_HEIGHT) {
-    //		w.quality = 2;
-    //		w.scale = 4;
-    //	}
     constexpr float MAX_RES = 2048;
     w.scaleX                = 1.0f;
     w.pos                   = pos;
-    //	w.startOffset = startOffset;
+    //w.startOffset = startOffset;
     w.size           = ivec2(math::min(sizeClipped.x, FBO_WIDTH), math::min(size.y, FBO_HEIGHT));
     int64_t nSamples = sampleEnd - sampleStartOffset;
     if (nSamples * pxPerSample > FBO_WIDTH) {
         samplesPerPx = (nSamples / FBO_WIDTH);
     }
-    //	if (w.scale == 1) {
-    //		w.size.x = math::min(FBO_WIDTH, (int)std::round(fsizeX));
     if (samplesPerPx > MAX_RES && (nSamples / MAX_RES) <= FBO_WIDTH) {
         w.scaleX     = MAX_RES / samplesPerPx;
         samplesPerPx = MAX_RES;
-        //			my_printf("w.scaleX %f\n", w.scaleX);
-        //			size.x *= 2;
     }
-    //		int n = 0;
-    //		double d = 2;
-    //		while (n++ < 5) {
-    //			w.scaleX /= d;
-    //			samplesPerPx /= d;
-    //		}
-    //	}
-    //	pxPerSample = 1.0/samplesPerPx;
-    //	double width = (sampleEnd-sampleStartOffset)*pxPerSample*w.scale;
-    //	dbgassert(width <= FBO_WIDTH);
+
     dbgassert(w.size.x <= FBO_WIDTH && w.size.y <= FBO_HEIGHT);
     dbgassert(w.size.x > 0);
     w.sampleBegin       = sampleBegin;
@@ -187,14 +145,11 @@ audioclip_texture_t makeWaveformFromClip(const project_globals_t& project, scale
     w.sampleEnd         = sampleEnd;
     w.samplesPerPx      = samplesPerPx;
     w.linewidth         = 2.0f;
-    //	if (samplesPerPx > 2.0)
-    //		w.method = 	SampleMethod::sample_energy;
-    //    else
+
     w.method  = SampleMethod::sample_straight;
     w.audioId = m_clip->audio.id;
     w.clipped = size.x != sizeClipped.x;
-    //	my_printf("waveform[height:%d,zoom:%f,q:%d,w:%f,smp/px:%f,scale:%d]\n", w.size.y, grid.zoom, w.quality, w.linewidth, w.samplesPerPx, w.scale);
-
+    //log_printf("waveform[height:%d,zoom:%f,q:%d,w:%f,smp/px:%f,scale:%d]\n", w.size.y, grid.zoom, w.quality, w.linewidth, w.samplesPerPx, w.scale);
 
     return w;
 }
@@ -215,12 +170,8 @@ void renderAudioClip(NVGcontext* vg, const guitheme_t* theme, const track_t* tr,
     if (cl->name.length()) {
         UTIL_setFont(vg, theme, (int) (HEIGHT_CLIP_TITLE * 0.95), getContrastFontColor(cl->rgb), G_TITLE_ALIGN);
         renderText(vg, pos.x + INSET_TITLE, pos.y + HEIGHT_CLIP_TITLE / 2, size.x - INSET_TITLE * 3, StringAsCStr(cl->name));
-        //		setFont(vg, (int) (HEIGHT_CLIP_TITLE * 0.95), rgbaToNvg(-1), G_TITLE_ALIGN);
-        //		String text = StringFormat("%d", pos.x);
-        //		renderText(vg, pos.x + INSET_TITLE, pos.y + HEIGHT_CLIP_TITLE + 4, size.x-INSET_TITLE*3, StringAsCStr(text));
     }
     ivec2 posContents = ivec2(posClipped.x, pos.y + HEIGHT_CLIP_TITLE + INSET_CLIP_CONTENT);
-    //	ivec2 sizeContents = ivec2(sizeClipped.x, sizeClipped.y-HEIGHT_CLIP_TITLE-INSET_CLIP_CONTENT*2);
     tick_t clipLen = cl->getLen();
     float numBars  = clipLen / (float) TICKS_BAR;
     float barSize  = size.x / (float) numBars;
@@ -251,12 +202,12 @@ void renderAudioClip(NVGcontext* vg, const guitheme_t* theme, const track_t* tr,
 
     daw_tls::getTls().renderStats.clipsRendered++;
 }
+
 float noteToScreen(float note, float scale, float offset, float sizeY) {
     float offsetKey = note * scale;
     float rel       = offsetKey - offset;
     return (sizeY) -rel;
 }
-
 
 noteview_render_t::~noteview_render_t() {
     if (data) {
@@ -267,48 +218,33 @@ noteview_render_t::~noteview_render_t() {
 gui_midi_clip::gui_midi_clip(track_gui_entry_t* _track, clip_t* _clip)
     : gui_clip(_track, _clip), impl(new midi_clip_render_cache_t) {
 }
+
 gui_midi_clip::~gui_midi_clip() {
     delete impl;
 }
+
 void gui_midi_clip::updatePosition(project_globals_t& project, scaled_grid& grid, ivec2& trackSize) {
     size   = this->parent->size;
     culled = !getClipPosition(grid, trackSize, m_clip, pos, size, 0);
-    //bool resetCache = false;
-    //if (!culled && impl->valid) {
-    //	ivec2 posContents = ivec2(pos.x, pos.y + HEIGHT_CLIP_TITLE + INSET_CLIP_CONTENT);
-    //	ivec2 sizeContents = ivec2(size.x, size.y - HEIGHT_CLIP_TITLE - INSET_CLIP_CONTENT * 2);
-    //	const bool useCaching = true;// daw_tls::getTls().config.enableCache;
-    //	noteview_render_t& notesView = m_clip->getNoteViewRender();
-    //	bool cacheValid = notesView.reqRevision == notesView.curRevision;
-    //	cacheValid &= impl->cache1 != nullptr;
-    //	cacheValid &= impl->pos == posContents;
-    //	cacheValid &= impl->size == sizeContents;
-    //	cacheValid &= useCaching;
-    //	if (!cacheValid) {
-    //		resetCache;
-    //	}
-    //} else if (culled && impl->valid) {
-    //	resetCache = true;
-    //}
-    //if (resetCache) {
-    impl->reset();
-    //}
 }
+
 void gui_midi_clip::prerender(NVGcontext* vg) {
     gui_clip::prerender(vg);
 }
+
 void gui_midi_clip::updateClipRenderCache(NVGcontext* vg) {
     if (culled) {
+        impl->reset();
         return;
     }
 
     clip_t* const cl  = m_clip;
     track_t* const tr = m_track;
     if (cl->getLen() <= 0) {
+        impl->reset();
         return;
     }
 
-    ivec2 posContents   = ivec2(pos.x, pos.y + HEIGHT_CLIP_TITLE + INSET_CLIP_CONTENT);
     ivec2 sizeContents  = ivec2(size.x, size.y - HEIGHT_CLIP_TITLE - INSET_CLIP_CONTENT * 2);
     ivec2 clipPosScreen = toScreenSpace(ivec2(0, 0));
 
@@ -319,18 +255,12 @@ void gui_midi_clip::updateClipRenderCache(NVGcontext* vg) {
     noteview_render_t& notesView = cl->getNoteViewRender();
     bool cacheValid              = notesView.reqRevision == notesView.curRevision;
     cacheValid &= impl->valid;
-    cacheValid &= impl->pos == posContents;
+    cacheValid &= impl->pos == clipPosScreen;
     cacheValid &= impl->size == sizeContents;
     if (!cacheValid) {
         notesView.curRevision = -1;
         impl->reset();
 
-
-        //TODO: move this up in hierachy so its called once
-        //	NVGcolor col = getTheme()->getColor(GuiColor::COL_CLEAR_COLOR);
-        //	glClearColor(col.r, col.g, col.b, col.a);
-        //	glClear(GL_COLOR_BUFFER_BIT);
-        //	static int test = 0;
         NVGcolor rgbNote        = theme->getColor(GuiColor::COL_CLIP_NOTE);
         NVGcolor rgbNoteOverlap = theme->getColor(GuiColor::COL_CLIP_NOTE_OVERLAP);
         NVGcolor rgbNoteMuted   = theme->getColor(GuiColor::COL_CLIP_NOTE_MUTED);
@@ -372,9 +302,7 @@ void gui_midi_clip::updateClipRenderCache(NVGcontext* vg) {
                         begin++;
                     }
                     float objPosNote = noteTime / (float) TICKS_BAR;
-                    //			dbgassert(objPosNote >= 0 && objPosNote < numBars);
                     float objLenNote = note.len / (float) TICKS_BAR;
-                    //			dbgassert(objPosNote+objLenNote >= 0);
                     float ny     = noteToScreen(note.pitch - minN.pitch, scale, 0, sizeContents.y);
                     float nx     = math::max(0.0f, objPosNote * barSize);
                     float nw     = math::min(objLenNote * barSize, sizeContents.x - nx);
@@ -388,11 +316,6 @@ void gui_midi_clip::updateClipRenderCache(NVGcontext* vg) {
                     }
 
                     notesRendered++;
-                    //				if (notesRendered % 1000 == 0) {
-                    //					nvgFillColor(vg, rgbNote);
-                    //					nvgFill(vg);
-                    //					begin = 0;
-                    //				}
                 }
                 if (begin) {
                     if (noteRenderMode == 0) {
@@ -421,8 +344,6 @@ void gui_midi_clip::updateClipRenderCache(NVGcontext* vg) {
                         for (const note_t* noteClipped : list) {
                             const note_t& note = *noteClipped;
                             tick_t noteTime    = note.time;
-                            //			dbgassert(objPosNote >= 0 && objPosNote < numBars);
-                            //			dbgassert(objPosNote+objLenNote >= 0);
 
                             float objPosNote = noteTime / (float) TICKS_BAR;
                             float objLenNote = note.len / (float) TICKS_BAR;
@@ -488,13 +409,12 @@ void gui_midi_clip::updateClipRenderCache(NVGcontext* vg) {
                 nvgStrokeColor(vg, theme->getFrameColorBase());
                 nvgStrokeWidth(vg, 1.f);
                 nvgStroke(vg);
-                //				nvgGetLastCacheResult(vg, &impl->cache4);
                 impl->SaveFill(vg, 3);
             }
         }
         nvgRestore(vg);
         impl->valid           = true;
-        impl->pos             = posContents;
+        impl->pos             = clipPosScreen;
         impl->size            = sizeContents;
         impl->notesRendered   = notesRendered;
         notesView.curRevision = notesView.reqRevision;
@@ -522,32 +442,26 @@ void gui_midi_clip::render(NVGcontext* vg) {
         if (cl->name.length() && size.x - INSET_TITLE * 3 >= 5) {
             UTIL_setFont(vg, theme, (int) (HEIGHT_CLIP_TITLE * 0.95), getContrastFontColor(cl->rgb), G_TITLE_ALIGN);
             renderText(vg, pos.x + INSET_TITLE, pos.y + HEIGHT_CLIP_TITLE / 2, size.x - INSET_TITLE * 3, StringAsCStr(cl->name));
-            //			return;
         }
-        ivec2 posContents  = ivec2(pos.x, pos.y + HEIGHT_CLIP_TITLE + INSET_CLIP_CONTENT);
-        ivec2 sizeContents = ivec2(size.x, size.y - HEIGHT_CLIP_TITLE - INSET_CLIP_CONTENT * 2);
+        dbgassert(impl->valid);
+        if (impl->valid && std::any_of(impl->arr.cbegin(), impl->arr.cend(), [](const auto* ptr) { return !!ptr; })) {
+            ivec2 posContents  = ivec2(pos.x, pos.y + HEIGHT_CLIP_TITLE + INSET_CLIP_CONTENT);
+            ivec2 sizeContents = ivec2(size.x, size.y - HEIGHT_CLIP_TITLE - INSET_CLIP_CONTENT * 2);
 
-        tick_t clipLen               = cl->getLen();
-        float numBars                = clipLen / (float) TICKS_BAR;
-        float barSize                = sizeContents.x / (float) numBars;
-        int64_t notesRendered        = 0;
-        const bool useCaching        = true;
-        noteview_render_t& notesView = cl->getNoteViewRender();
-        bool cacheValid              = notesView.reqRevision == notesView.curRevision;
-        cacheValid &= impl->valid;
-        cacheValid &= impl->pos == posContents;
-        cacheValid &= impl->size == sizeContents;
-        cacheValid &= useCaching;
+            tick_t clipLen               = cl->getLen();
+            float numBars                = clipLen / (float) TICKS_BAR;
+            float barSize                = sizeContents.x / (float) numBars;
+            int64_t notesRendered        = 0;
+            const bool useCaching        = true;
+            noteview_render_t& notesView = cl->getNoteViewRender();
 
-        NVGcolor rgbNote        = theme->getColor(GuiColor::COL_CLIP_NOTE);
-        NVGcolor rgbNoteOverlap = theme->getColor(GuiColor::COL_CLIP_NOTE_OVERLAP);
-        NVGcolor rgbNoteMuted   = theme->getColor(GuiColor::COL_CLIP_NOTE_MUTED);
-        if (cacheValid) {
+            NVGcolor rgbNote        = theme->getColor(GuiColor::COL_CLIP_NOTE);
+            NVGcolor rgbNoteOverlap = theme->getColor(GuiColor::COL_CLIP_NOTE_OVERLAP);
+            NVGcolor rgbNoteMuted   = theme->getColor(GuiColor::COL_CLIP_NOTE_MUTED);
             nvgSave(vg);
             nvgTranslate(vg, pos.x, pos.y);
             nvgSave(vg);
             nvgTranslate(vg, 0, HEIGHT_CLIP_TITLE + INSET_CLIP_CONTENT);
-            //			nvgTranslate(vg, posContents.x, posContents.y);
             if (impl->isCacheValid(0)) {
                 nvgFillFromCache(vg, impl->arr[0]);
             }
@@ -565,16 +479,9 @@ void gui_midi_clip::render(NVGcontext* vg) {
                 }
             }
             nvgRestore(vg);
+            daw_tls::getTls().renderStats.notesRendered += notesRendered;
         }
-        //
-        //		if (useCaching && impl) {
-        //			impl->pos = posContents;
-        //			impl->size = sizeContents;
-        //			impl->notesRendered = notesRendered;
-        //			notesView.curRevision = notesView.reqRevision;
-        //		}
         daw_tls::getTls().renderStats.clipsRendered++;
-        daw_tls::getTls().renderStats.notesRendered += notesRendered;
     }
 }
 void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_gui_entry_t* const entry, const clip_t* cl, ivec2 pos, ivec2 size) {
@@ -671,14 +578,11 @@ void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_gui_ent
                         continue;
                     }
                     if (!begin) {
-                        //					void nvgCachePath(NVGcontext* ctx, int enabled);
                         nvgBeginPath(vg);
                         begin++;
                     }
                     float objPosNote = noteTime / (float) TICKS_BAR;
-                    //			dbgassert(objPosNote >= 0 && objPosNote < numBars);
                     float objLenNote = note.len / (float) TICKS_BAR;
-                    //			dbgassert(objPosNote+objLenNote >= 0);
                     float ny     = noteToScreen(note.pitch - minN.pitch, scale, 0, sizeContents.y);
                     float nx     = math::max(0.0f, objPosNote * barSize);
                     float nw     = math::min(objLenNote * barSize, sizeContents.x - nx);
@@ -709,8 +613,6 @@ void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_gui_ent
                         for (const note_t* noteClipped: list) {
                             const note_t& note = *noteClipped;
                             tick_t noteTime    = note.time;
-                            //			dbgassert(objPosNote >= 0 && objPosNote < numBars);
-                            //			dbgassert(objPosNote+objLenNote >= 0);
 
                             float objPosNote = noteTime / (float) TICKS_BAR;
                             float objLenNote = note.len / (float) TICKS_BAR;

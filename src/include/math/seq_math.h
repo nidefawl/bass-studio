@@ -67,13 +67,26 @@ namespace math {
      * Round down to integer
      * NAN returns 0
      */
-    inline int64_t floorS64(float val) {
+    inline int64_t floorS64F(float val) {
         if (std::isnan(val))
             return 0;
         if (std::isinf(val))
             return 0;
         float valueFloat = std::floorf(val);
         return static_cast<int64_t>(valueFloat);
+    }
+
+    /**
+     * Round down to integer
+     * NAN returns 0
+     */
+    inline int64_t floorS64D(double val) {
+        if (std::isnan(val))
+            return 0;
+        if (std::isinf(val))
+            return 0;
+        double value = std::floor(val);
+        return static_cast<int64_t>(value);
     }
 
     /**
@@ -152,6 +165,25 @@ namespace math {
     }
 
     /**
+     * Round float to neareast sint64 integer without
+     * additional runtime checks.
+     * NAN returns 0
+     */
+    inline int64_t roundS64D(double val) {
+        // otherwise implementation defined
+        if (std::isnan(val))
+            return 0;
+        if (val >= static_cast<double>(std::numeric_limits<int64_t>::max()))
+            return std::numeric_limits<int64_t>::max();
+        if (val <= static_cast<double>(std::numeric_limits<int64_t>::min()))
+            return std::numeric_limits<int64_t>::min();
+        int64_t val_s64 = std::llround(val);
+        dbgassert(val_s64 >= int64_t{ std::numeric_limits<int64_t>::min() });
+        dbgassert(val_s64 <= int64_t{ std::numeric_limits<int64_t>::max() });
+        return val_s64;
+    }
+
+    /**
      * Round double to neareast sint32 integer
      *
      * Clamps out of sint32 range values to sint32 range.
@@ -171,7 +203,7 @@ namespace math {
     }
 
     template<typename T>
-    [[deprecated("Use floorS or floorU")]]
+    [[deprecated("Use one of floorS32, floorU32, floorS64F, floorS64D")]]
     inline T floor(T a) {
         return std::floor(a);
     }
@@ -193,7 +225,7 @@ namespace math {
         return std::ceilf(val);
     }
     template<typename T>
-    [[deprecated("Use one of floorS32, floorU32, floorS64")]]
+    [[deprecated("Use one of floorS32, floorU32, floorS64F, floorS64D")]]
     inline int64_t floorCast(T val) {
         return std::floorf(val);
     }

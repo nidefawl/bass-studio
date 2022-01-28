@@ -323,19 +323,19 @@ namespace test_math {
     }
 
 
-    void testFloorS64() {
-        using ::math::floorS64;
-        TEST_ASSERT_EQUAL(floorS64(0.0f), 0);
-        TEST_ASSERT_EQUAL(floorS64(0.5f), 0);
-        TEST_ASSERT_EQUAL(floorS64(1.0f), 1);
-        TEST_ASSERT_EQUAL(floorS64(1.5f), 1);
-        TEST_ASSERT_EQUAL(floorS64(2.0f), 2);
-        TEST_ASSERT_EQUAL(floorS64(-0.0f), 0);
-        TEST_ASSERT_EQUAL(floorS64(-0.25f), -1);
-        TEST_ASSERT_EQUAL(floorS64(-0.5f), -1);
-        TEST_ASSERT_EQUAL(floorS64(-1.0f), -1);
-        TEST_ASSERT_EQUAL(floorS64(-1.5f), -2);
-        TEST_ASSERT_EQUAL(floorS64(-2.0f), -2);
+    void testFloorS64F() {
+        using ::math::floorS64F;
+        TEST_ASSERT_EQUAL(floorS64F(0.0f), 0);
+        TEST_ASSERT_EQUAL(floorS64F(0.5f), 0);
+        TEST_ASSERT_EQUAL(floorS64F(1.0f), 1);
+        TEST_ASSERT_EQUAL(floorS64F(1.5f), 1);
+        TEST_ASSERT_EQUAL(floorS64F(2.0f), 2);
+        TEST_ASSERT_EQUAL(floorS64F(-0.0f), 0);
+        TEST_ASSERT_EQUAL(floorS64F(-0.25f), -1);
+        TEST_ASSERT_EQUAL(floorS64F(-0.5f), -1);
+        TEST_ASSERT_EQUAL(floorS64F(-1.0f), -1);
+        TEST_ASSERT_EQUAL(floorS64F(-1.5f), -2);
+        TEST_ASSERT_EQUAL(floorS64F(-2.0f), -2);
 
         /**
          * The sint64 will overflow and return a negative value for a positive
@@ -343,31 +343,79 @@ namespace test_math {
          * This is not intuitive, but will not be fixed, as it introduces a runtime overhead.
          */
         // float max will be negative
-        TEST_ASSERT_THROW(floorS64(std::numeric_limits<float>::max()) < 0);
+        TEST_ASSERT_THROW(floorS64F(std::numeric_limits<float>::max()) < 0);
         float maxS32PositiveValue = 0.0f;
         // This is the last positive float value we can store in a sint64
         (*reinterpret_cast<uint32_t*>(&maxS32PositiveValue)) = 0x5EFFFFFF;
-        TEST_ASSERT_THROW(floorS64(maxS32PositiveValue) > 0);
+        TEST_ASSERT_THROW(floorS64F(maxS32PositiveValue) > 0);
         // At this point we overflow
         (*reinterpret_cast<uint32_t*>(&maxS32PositiveValue)) = 0x5F000000;
-        TEST_ASSERT_THROW(floorS64(maxS32PositiveValue) < 0);
+        TEST_ASSERT_THROW(floorS64F(maxS32PositiveValue) < 0);
 
         float onebeforemax = std::numeric_limits<float>::max();
         (*reinterpret_cast<uint32_t*>(&onebeforemax))--;
 
-        TEST_ASSERT_NOT_EQUAL(floorS64(onebeforemax), std::numeric_limits<int64_t>::max());
+        TEST_ASSERT_NOT_EQUAL(floorS64F(onebeforemax), std::numeric_limits<int64_t>::max());
 
-        TEST_ASSERT_EQUAL(floorS64(std::numeric_limits<float>::lowest()), std::numeric_limits<int64_t>::min());
-        TEST_ASSERT_EQUAL(floorS64(std::numeric_limits<float>::min()), 0);
-        TEST_ASSERT_EQUAL(floorS64(std::numeric_limits<float>::denorm_min()), 0);
-        TEST_ASSERT_EQUAL(floorS64(std::numeric_limits<float>::infinity()), 0);
-        TEST_ASSERT_EQUAL(floorS64(-std::numeric_limits<float>::infinity()), 0);
-        TEST_ASSERT_EQUAL(floorS64(INFINITY), 0);
-        TEST_ASSERT_EQUAL(floorS64(-INFINITY), 0);
-        TEST_ASSERT_EQUAL(floorS64(std::numeric_limits<float>::quiet_NaN()), 0);
+        TEST_ASSERT_EQUAL(floorS64F(std::numeric_limits<float>::lowest()), std::numeric_limits<int64_t>::min());
+        TEST_ASSERT_EQUAL(floorS64F(std::numeric_limits<float>::min()), 0);
+        TEST_ASSERT_EQUAL(floorS64F(std::numeric_limits<float>::denorm_min()), 0);
+        TEST_ASSERT_EQUAL(floorS64F(std::numeric_limits<float>::infinity()), 0);
+        TEST_ASSERT_EQUAL(floorS64F(-std::numeric_limits<float>::infinity()), 0);
+        TEST_ASSERT_EQUAL(floorS64F(INFINITY), 0);
+        TEST_ASSERT_EQUAL(floorS64F(-INFINITY), 0);
+        TEST_ASSERT_EQUAL(floorS64F(std::numeric_limits<float>::quiet_NaN()), 0);
 
-        TEST_ASSERT_NOT_EQUAL(floorS64(getFloatAboveS32()), std::numeric_limits<int64_t>::max());
-        TEST_ASSERT_NOT_EQUAL(floorS64(getFloatBelowS32()), std::numeric_limits<int64_t>::min());
+        TEST_ASSERT_NOT_EQUAL(floorS64F(getFloatAboveS32()), std::numeric_limits<int64_t>::max());
+        TEST_ASSERT_NOT_EQUAL(floorS64F(getFloatBelowS32()), std::numeric_limits<int64_t>::min());
+    }
+
+    void testFloorS64D() {
+        using ::math::floorS64D;
+        TEST_ASSERT_EQUAL(floorS64D(0.0), 0);
+        TEST_ASSERT_EQUAL(floorS64D(0.5), 0);
+        TEST_ASSERT_EQUAL(floorS64D(1.0), 1);
+        TEST_ASSERT_EQUAL(floorS64D(1.5), 1);
+        TEST_ASSERT_EQUAL(floorS64D(2.0), 2);
+        TEST_ASSERT_EQUAL(floorS64D(-0.0), 0);
+        TEST_ASSERT_EQUAL(floorS64D(-0.25), -1);
+        TEST_ASSERT_EQUAL(floorS64D(-0.5), -1);
+        TEST_ASSERT_EQUAL(floorS64D(-1.0), -1);
+        TEST_ASSERT_EQUAL(floorS64D(-1.5), -2);
+        TEST_ASSERT_EQUAL(floorS64D(-2.0), -2);
+
+        /**
+         * The sint64 will overflow and return a negative value for a positive
+         * float that doesn't fit its range.
+         * This is not intuitive, but will not be fixed, as it introduces a runtime overhead.
+         */
+        // double max will be negative
+        TEST_ASSERT_THROW(floorS64D(std::numeric_limits<double>::max()) < 0);
+        /*float maxS32PositiveValue = 0.0f;
+        // This is the last positive double value we can store in a sint64
+        (*reinterpret_cast<uint64_t*>(&maxS32PositiveValue)) = ---TODO---;
+        TEST_ASSERT_THROW(floorS64D(maxS32PositiveValue) > 0);
+        // At this point we overflow
+        (*reinterpret_cast<uint64_t*>(&maxS32PositiveValue)) = ---TODO---;
+        TEST_ASSERT_THROW(floorS64D(maxS32PositiveValue) < 0);*/
+
+        double onebeforemax = std::numeric_limits<double>::max();
+        (*reinterpret_cast<uint64_t*>(&onebeforemax))--;
+
+        TEST_ASSERT_NOT_EQUAL(floorS64D(onebeforemax), std::numeric_limits<int64_t>::max());
+
+        TEST_ASSERT_EQUAL(floorS64D(std::numeric_limits<double>::lowest()), std::numeric_limits<int64_t>::min());
+        TEST_ASSERT_EQUAL(floorS64D(std::numeric_limits<double>::min()), 0);
+        TEST_ASSERT_EQUAL(floorS64D(std::numeric_limits<double>::denorm_min()), 0);
+        TEST_ASSERT_EQUAL(floorS64D(std::numeric_limits<double>::infinity()), 0);
+        TEST_ASSERT_EQUAL(floorS64D(-std::numeric_limits<double>::infinity()), 0);
+        TEST_ASSERT_EQUAL(floorS64D(INFINITY), 0);
+        TEST_ASSERT_EQUAL(floorS64D(-INFINITY), 0);
+        TEST_ASSERT_EQUAL(floorS64D(std::numeric_limits<double>::quiet_NaN()), 0);
+
+        //TODO
+        //TEST_ASSERT_NOT_EQUAL(floorS64D(getFloatAboveS32()), std::numeric_limits<int64_t>::max());
+        //TEST_ASSERT_NOT_EQUAL(floorS64D(getFloatBelowS32()), std::numeric_limits<int64_t>::min());
     }
 
     void testFunctions() {
@@ -558,8 +606,11 @@ int main() {
         TEST_BEGIN("math::floorU32");
         test_math::testFloorU32();
         TEST_END();
-        TEST_BEGIN("math::floorS64");
-        test_math::testFloorS64();
+        TEST_BEGIN("math::floorS64F");
+        test_math::testFloorS64F();
+        TEST_END();
+        TEST_BEGIN("math::floorS64D");
+        test_math::testFloorS64D();
         TEST_END();
         test_math::testFunctions();
         test_math::testVecMath();
@@ -570,8 +621,8 @@ int main() {
         log_printf("roundF32toS32 float(%012X) = %012X\n", largeInt, (int32_t)math::round((float)aboveS32Max));;
         log_printf("roundF32toS64 float(%012X) = %012X\n", largeInt, math::roundS64(aboveS32Max));
         log_printf("sint64 max = %zd\n", 1ULL << 63);
-        log_printf("floorS64(std::numeric_limits<float>::infinity()) = %zd\n", math::floorS64(std::numeric_limits<float>::infinity()));
-        log_printf("floorS64(std::numeric_limits<float>::max()) = %zd\n", math::floorS64(std::numeric_limits<float>::max()));
+        log_printf("floorS64(std::numeric_limits<float>::infinity()) = %zd\n", math::floorS64F(std::numeric_limits<float>::infinity()));
+        log_printf("floorS64(std::numeric_limits<float>::max()) = %zd\n", math::floorS64F(std::numeric_limits<float>::max()));
 
     } catch (std::exception& e) {
         log_printf("Caught exception: %s\n", e.what());
