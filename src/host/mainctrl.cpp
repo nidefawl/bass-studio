@@ -2685,13 +2685,13 @@ int handleFatalError(int type, int implSpecType) {
 int32_t project_controller_t::tickToSamples(tick_t ticks) {
     vsthost* host = vsthost::getInstance();
     dbgassert(host);
-    return std::round(tickToSamplePrecise(ticks, projectGlobals->tempo100, host->sampleFormat.sampleRate));
+    return tickToSampleConvert<int32_t, roundmode::round>(ticks, projectGlobals->tempo100, host->m_sampleFormatInternal.sampleRate);
 }
 
 tick_t project_controller_t::samplesToTicks(int32_t sample) {
     vsthost* host = vsthost::getInstance();
     dbgassert(host);
-    return std::round(sampleToTickPrecise(sample, projectGlobals->tempo100, host->sampleFormat.sampleRate));
+    return sampleToTickConvert<tick_t, roundmode::round>(sample, projectGlobals->tempo100, host->m_sampleFormatInternal.sampleRate);
 }
 
 beatbar16th_t project_controller_t::toBeatBar16th(int32_t tick) {

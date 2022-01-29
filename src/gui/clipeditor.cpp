@@ -1484,18 +1484,10 @@ bool gui_clipcontent::handleKeyInput(KeyEvent& kevt) {
 }
 
 float guictr_cliphandles::clipStartScrX() {
-    //  if (view.clip()->clipType == CLIP_AUDIO) {
-    //    float ticksFromSampleOffset = DawInstance::get()->samplesToTicks(view.clip()->offsetSamples);
-    //    return (float) (grid.tickToScreenD(ticksFromSampleOffset));
-    //  }
     return (float) (grid.tickToScreenD(view.clip()->offsetStart));
 }
 
 float guictr_cliphandles::clipEndScrX() {
-    //  if (view.clip()->clipType == CLIP_AUDIO) {
-    //    float ticksFromSampleOffset = DawInstance::get()->samplesToTicks(view.clip()->offsetSamples);
-    //    return (float) (grid.tickToScreenD(ticksFromSampleOffset + view.clip()->getLen()));
-    //  }
     return (float) (grid.tickToScreenD(view.clip()->offsetStart + view.clip()->getLen()));
 }
 

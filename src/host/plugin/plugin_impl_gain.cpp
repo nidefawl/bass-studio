@@ -199,8 +199,8 @@ void module_gain::onPreUnload(int flags) {
 
 void module_gain::load(vsthost* host) {
     effectbase::load(host);
-    this->blockInputs  = new AudioBlock(2, host->sampleFormat.blockSize);
-    this->blockOutputs = new AudioBlock(2, host->sampleFormat.blockSize);
+    this->blockInputs  = new AudioBlock(2, host->m_sampleFormatInternal.blockSize);
+    this->blockOutputs = new AudioBlock(2, host->m_sampleFormatInternal.blockSize);
     bIsEnabled         = this->getParamValue(PARAM_ENABLE) > 0.5;
     if (bIsEnabled) {
         this->resume();

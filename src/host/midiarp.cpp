@@ -392,14 +392,14 @@ bool midiarp::isProcessingEnabled() {
 }
 
 void midiarp::process(playback_state state, tick_t cursorPos, const std::vector<noteevent_t>& noteEventsIn,
-                      tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, tick_t ticksPerBlock,
+                      tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd,
                       std::vector<noteevent_t>& noteEventsProcessed) {
     const int64_t wallClockTime = getTimeMillis();
 
     if (!isProcessingEnabled() && !bEnableStateUserToggled && heldInput.empty() && heldOutputNotes.empty() && noteEventsIn.empty()) {
         noteEventsProcessed = noteEventsIn;
     } else {
-        processArpInternal(state, cursorPos, noteEventsIn, start, end, loopStart, loopEnd, ticksPerBlock, wallClockTime, noteEventsProcessed);
+        processArpInternal(state, cursorPos, noteEventsIn, start, end, loopStart, loopEnd, wallClockTime, noteEventsProcessed);
     }
 
     updateMarkersAndAnimation(start, end, loopStart, loopEnd, wallClockTime);
@@ -412,7 +412,7 @@ void midiarp::process(playback_state state, tick_t cursorPos, const std::vector<
  * heldOutputNotes may contain disabled notes: They are released notes that will remain for a constant time for GUI animation purposes
  */
 void midiarp::processArpInternal(playback_state state, tick_t cursorPos, const std::vector<noteevent_t>& noteEventsIn,
-                                 tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, tick_t ticksPerBlock, int64_t wallClockTime,
+                                 tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int64_t wallClockTime,
                                  std::vector<noteevent_t>& noteEventsProcessed) {
 
     tickMarkers = 0;

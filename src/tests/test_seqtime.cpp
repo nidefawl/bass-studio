@@ -18,9 +18,6 @@ namespace {
         int32_t tempo100        = 12800;
         int32_t blockPos        = 0;
         for (blockPos = 0; blockPos < 160000; blockPos++) {
-            double blockStartTick = blockToTickPrecise(blockPos, tempo100, samplerate, blocksize);
-            double block = tickToBlockPrecise(blockStartTick, tempo100, samplerate, blocksize);
-            TEST_ASSERT_THROW(math::almost_equal(static_cast<double>(blockPos), block, 2));
         }
         TEST_END();
     }

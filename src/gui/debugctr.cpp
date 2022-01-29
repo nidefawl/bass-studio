@@ -410,9 +410,9 @@ void gui_ctr_debug::render(NVGcontext* vg) {
         }
 
         strings.push_back("sample format");
-        strings.push_back(StringFormat(" samplerate: %u", vsthost::getInstance()->sampleFormat.sampleRate));
-        strings.push_back(StringFormat(" blockSize : %u", vsthost::getInstance()->sampleFormat.blockSize));
-        strings.push_back(StringFormat(" bit depth : %u", static_cast<int32_t>(vsthost::getInstance()->sampleFormat.sampleformat)));
+        strings.push_back(StringFormat(" samplerate: %u", vsthost::getInstance()->m_sampleFormatInternal.sampleRate));
+        strings.push_back(StringFormat(" blockSize : %u", vsthost::getInstance()->m_sampleFormatInternal.blockSize));
+        strings.push_back(StringFormat(" bit depth : %u", static_cast<int32_t>(vsthost::getInstance()->m_sampleFormatInternal.sampleformat)));
 
         track_t* track = daw->getTrackId(0);
         if (track && track->audio) {
@@ -629,7 +629,7 @@ void gui_ctr_debug::onTick(AppCtrl* ctrl) {
         ThreadLock lock = MainCtrl::getPlayThread()->tryLockThread();
         if (lock.isLocked()) {
             vsthost::getInstance()->getBlockThreadStats(impl->lastProcessingList);
-            impl->sampleformat = vsthost::getInstance()->sampleFormat;
+            impl->sampleformat = vsthost::getInstance()->m_sampleFormatInternal;
         }
     }
 }

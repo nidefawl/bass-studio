@@ -594,53 +594,51 @@ audioclip_texture_t makeWaveformFromSample(const project_globals_t& project, sca
                                            const ivec2& pos, const ivec2& size) {
 
 
-    samplerate_t sr = vsthost::getInstance()->sampleFormat.sampleRate;//TODO: store in project_t
+    samplerate_t sr = vsthost::getInstance()->m_sampleFormatInternal.sampleRate;
 
     int32_t pxBegin        = 0;
     int32_t pxEnd          = size.x;
-    double tickBegin       = grid.screenToTickD(0);
+
     double tickBeginOffset = grid.screenToTickD(0);
     double tickEnd         = grid.screenToTickD(pxEnd);
 
-    int64_t sampleBegin       = math::floorCast(tickToSamplePrecise(tickBegin, project.tempo100, sr));
-    int64_t sampleStartOffset = math::floorCast(tickToSamplePrecise(tickBeginOffset, project.tempo100, sr));
-    int64_t sampleEnd         = math::floorCast(tickToSamplePrecise(tickEnd, project.tempo100, sr));
+    double sampleStartOffset = tickToSampleConvert<double, roundmode::floor>(tickBeginOffset, project.tempo100, sr);
+    double sampleEnd         = tickToSampleConvert<double, roundmode::floor>(tickEnd, project.tempo100, sr);
 
-    double lenSamples   = sampleEnd - sampleStartOffset;//tickToSamplePrecise(m_clip->getLen(), project.tempo100, sr);
+    double lenSamples   = sampleEnd - sampleStartOffset;
     double samplesPerPx = lenSamples / size.x;
-    tickBegin           = 0;
-    sampleBegin         = 0;
 
 
     audioclip_texture_t w;
     w.quality = 2;
 
     double pxPerSample      = 1.0 / samplesPerPx;
-    constexpr float MAX_RES = 2048;
+    constexpr double MAX_RES = 2048.0;
+    constexpr double FBO_WIDTH_D = FBO_WIDTH;
 
     w.scaleX = 1.0f;
     w.pos    = pos;
     w.size   = ivec2(math::min(size.x, FBO_WIDTH), math::min(size.y, FBO_HEIGHT));
 
-    int64_t nSamples = sampleEnd - sampleStartOffset;
-    if (nSamples * pxPerSample > FBO_WIDTH) {
-        samplesPerPx = (nSamples / FBO_WIDTH);
+    double nSamplesD = sampleEnd - sampleStartOffset;
+    if (nSamplesD * pxPerSample > FBO_WIDTH_D) {
+        samplesPerPx = (nSamplesD / FBO_WIDTH_D);
     }
-    if (samplesPerPx > MAX_RES && (nSamples / MAX_RES) <= FBO_WIDTH) {
-        w.scaleX     = MAX_RES / samplesPerPx;
+    if (samplesPerPx > MAX_RES && (nSamplesD / MAX_RES) <= FBO_WIDTH_D) {
+        w.scaleX     = static_cast<float>(MAX_RES / samplesPerPx);
         samplesPerPx = MAX_RES;
     }
 
     dbgassert(w.size.x <= FBO_WIDTH && w.size.y <= FBO_HEIGHT);
     dbgassert(w.size.x > 0);
-    w.sampleBegin       = sampleBegin;
-    w.sampleBeginOffset = sampleStartOffset;
-    w.sampleEnd         = sampleEnd;
+    w.sampleBegin       = 0;
+    w.sampleBeginOffset = math::floorS64D(sampleStartOffset);
+    w.sampleEnd         = math::floorS64D(sampleEnd);
     w.samplesPerPx      = samplesPerPx;
     w.linewidth         = 3.0f;
     //if (samplesPerPx >= 8.0)
-    //w.method = SampleMethod::sample_energy;
-    //    else
+    //    w.method = SampleMethod::sample_energy;
+    //else
     w.method  = SampleMethod::sample_straight;
     w.audioId = clipAudio.id;
     w.clipped = true;

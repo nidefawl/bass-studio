@@ -619,7 +619,7 @@ void clip_t::adjustStartSamples(tick_t offset) {
 tick_t clip_t::getLen() const {
 
     if (this->lenSamples > 0 && this->clipType == CLIP_AUDIO && project_controller_t::get()) {
-        auto curSampleRate = vsthost::getInstance()->sampleFormat.sampleRate;
+        auto curSampleRate = vsthost::getInstance()->m_sampleFormatInternal.sampleRate;
         auto lenConverted  = project_controller_t::get()->samplesToTicks(this->lenSamples);
         if (lenConverted != len) {
             log_printf("tick vs sample len missmatch. Did the samplerate change?", 0);

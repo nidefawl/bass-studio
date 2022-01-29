@@ -19,6 +19,10 @@ struct tick_minmax_t {
 #define TICKS_BAR (TICKS_QUARTER << 2)
 #define TICK_MASK_16TH (TICKS_16TH - 1)
 #define TICK_MASK_SUB_16TH ((TICKS_16TH >> 1) - 1)
+
+constexpr double TPQ_OVER_MINUTE_100 = TICKS_QUARTER/6000.;
+constexpr double MINUTE_100_OVER_TPQ = 6000.0/TICKS_QUARTER;
+
 #define MIN_CLIPSIZE (TICKS_16TH >> 2)
 struct beatbar16th_t {
     int32_t bar;
@@ -53,67 +57,98 @@ inline beatbar16th_t tickToBarBeat16th(int32_t tick, int32_t signatureNum = 4, i
     return t;
 }
 
-inline double toMilliSeconds(tick_t tick, int32_t bpm100) {
-    return ((tick) / (double) (bpm100 * TICKS_QUARTER)) * 100.0 * 60.0 * 1000.0;
+
+inline double toSecondsDD(double tick, double oneOverBPM100) {
+    return tick * MINUTE_100_OVER_TPQ * oneOverBPM100;
 }
-inline double toSeconds(tick_t tick, int32_t bpm100) {
-    return ((tick) / (double) (bpm100 * TICKS_QUARTER)) * 100.0 * 60.0;
+
+inline double toSeconds(double tick, int32_t bpm100) {
+    return toSecondsDD(tick, 1.0 / bpm100);
 }
-inline double toSecondsPrecise(double tick, int32_t bpm100) {
-    return (tick / (double) (bpm100 * TICKS_QUARTER)) * 100.0 * 60.0;
+
+namespace roundmode {
+    struct none {};
+    struct round {};
+    struct floor {};
+    struct ceil {};
+    struct floorclamp {};
+}// namespace roundmode
+
+inline double tickToSampleDD(double tick, double srOverBpm) {
+    return tick * MINUTE_100_OVER_TPQ * srOverBpm;
 }
-inline tick_t toTick(double seconds, int32_t bpm100) {
-    return (tick_t) std::floor((seconds * bpm100 * TICKS_QUARTER) / 6000.0);
+
+template<typename ReturnType, typename RoundMode, typename TickType>
+typename std::enable_if<std::is_same<RoundMode, roundmode::none>::value, ReturnType>::type
+tickToSampleConvert(TickType tick, int32_t bpm100, samplerate_t samplerate) {
+    return static_cast<ReturnType>(tickToSampleDD(tick, samplerate / (double) bpm100));
 }
-inline double toTickPrecise(double seconds, int32_t bpm100) {
-    return (seconds * bpm100 * TICKS_QUARTER) / 6000.0;
+
+template<typename ReturnType, typename RoundMode, typename TickType>
+typename std::enable_if<std::is_same<RoundMode, roundmode::round>::value, ReturnType>::type
+tickToSampleConvert(TickType tick, int32_t bpm100, samplerate_t samplerate) {
+    return static_cast<ReturnType>(std::lround(tickToSampleDD(tick, samplerate / (double) bpm100)));
 }
-inline tick_t millisToTick(double ms, int32_t bpm100) {
-    return (tick_t) std::floor((ms * bpm100 * TICKS_QUARTER) / 6000000.0);
+
+template<typename ReturnType, typename RoundMode, typename TickType>
+typename std::enable_if<std::is_same<RoundMode, roundmode::floor>::value, ReturnType>::type
+tickToSampleConvert(TickType tick, int32_t bpm100, samplerate_t samplerate) {
+    return static_cast<ReturnType>(std::floor(tickToSampleDD(tick, samplerate / (double) bpm100)));
 }
-inline int32_t tickToSample(tick_t tick, int32_t bpm100, samplerate_t samplerate) {
-    double samplePos = toSeconds(tick, bpm100) * samplerate;
-    return (int32_t) floor(samplePos);
+
+template<typename ReturnType, typename RoundMode, typename TickType>
+typename std::enable_if<std::is_same<RoundMode, roundmode::floorclamp>::value, ReturnType>::type
+tickToSampleConvert(TickType tick, int32_t bpm100, samplerate_t samplerate) {
+    return static_cast<ReturnType>(math::max<double>(0.0, std::floor(tickToSampleDD(tick, samplerate / (double) bpm100))));
 }
-inline double tickToSamplePrecise(double tick, int32_t bpm100, samplerate_t samplerate) {
-    double samplePos = toSecondsPrecise(tick, bpm100) * samplerate;
-    return samplePos;
+
+template<typename ReturnType, typename RoundMode, typename TickType>
+typename std::enable_if<std::is_same<RoundMode, roundmode::ceil>::value, ReturnType>::type
+tickToSampleConvert(TickType tick, int32_t bpm100, samplerate_t samplerate) {
+    return static_cast<ReturnType>(std::ceil(tickToSampleDD(tick, samplerate / (double) bpm100)));
 }
-inline double sampleToTickPrecise(double sample, int32_t bpm100, samplerate_t samplerate) {
-    double seconds = sample / (double) samplerate;
-    return toTickPrecise(seconds, bpm100);
+
+inline double sampleToTickDD(double sample, double bpmOverSR) {
+    return sample * TPQ_OVER_MINUTE_100 * bpmOverSR;
 }
-inline int32_t sampleToTick(int32_t sample, int32_t bpm100, samplerate_t samplerate) {
-    double seconds = sample / (double) samplerate;
-    return (int32_t) toTick(seconds, bpm100);
+
+template<typename ReturnType, typename RoundMode, typename SampleType>
+typename std::enable_if<std::is_same<RoundMode, roundmode::none>::value, ReturnType>::type
+sampleToTickConvert(SampleType sample, int32_t bpm100, samplerate_t samplerate) {
+    return static_cast<ReturnType>(sampleToTickDD(sample, bpm100 / (double) samplerate));
 }
-inline int32_t tickToBlock(tick_t tick, int32_t bpm100, samplerate_t samplerate, int32_t blocksize) {
-    double samplePos = toSeconds(tick, bpm100) * samplerate;
-    double blockPos  = samplePos / blocksize;
-    return (int32_t) floor(blockPos);
+
+template<typename ReturnType, typename RoundMode, typename SampleType>
+typename std::enable_if<std::is_same<RoundMode, roundmode::round>::value, ReturnType>::type
+sampleToTickConvert(SampleType sample, int32_t bpm100, samplerate_t samplerate) {
+    return static_cast<ReturnType>(std::lround(sampleToTickDD(sample, bpm100 / (double) samplerate)));
 }
-inline double tickToBlockPrecise(double tick, int32_t bpm100, samplerate_t samplerate, int32_t blocksize) {
-    double bpm            = bpm100 / 100.0;
-    double minutesOver100 = tick / (double) (bpm * TICKS_QUARTER);
-    double seconds        = minutesOver100 * 60.0;
-    double samplePos      = seconds * samplerate;
-    double blockPos       = samplePos / blocksize;
-    return blockPos;
+
+template<typename ReturnType, typename RoundMode, typename SampleType>
+typename std::enable_if<std::is_same<RoundMode, roundmode::floor>::value, ReturnType>::type
+sampleToTickConvert(SampleType sample, int32_t bpm100, samplerate_t samplerate) {
+    return static_cast<ReturnType>(std::floor(sampleToTickDD(sample, bpm100 / (double) samplerate)));
 }
-inline tick_t blockToTick(int32_t block, int32_t bpm100, samplerate_t samplerate, int32_t blocksize) {
-    double seconds = (block * blocksize) / (double) samplerate;
-    return (tick_t) toTick(seconds, bpm100);
+
+template<typename ReturnType, typename RoundMode, typename SampleType>
+typename std::enable_if<std::is_same<RoundMode, roundmode::floorclamp>::value, ReturnType>::type
+sampleToTickConvert(SampleType sample, int32_t bpm100, samplerate_t samplerate) {
+    return static_cast<ReturnType>(math::max<double>(0.0, std::floor(sampleToTickDD(sample, bpm100 / (double) samplerate))));
 }
-inline double blockToTickPrecise(double block, int32_t bpm100, samplerate_t samplerate, int32_t blocksize) {
-    double seconds = (block * blocksize) / (double) samplerate;
-    return toTickPrecise(seconds, bpm100);
+
+template<typename ReturnType, typename RoundMode, typename SampleType>
+typename std::enable_if<std::is_same<RoundMode, roundmode::ceil>::value, ReturnType>::type
+sampleToTickConvert(SampleType sample, int32_t bpm100, samplerate_t samplerate) {
+    return static_cast<ReturnType>(std::ceil(sampleToTickDD(sample, bpm100 / (double) samplerate)));
 }
+
 enum playback_state {
     status_stop,
     status_playback,
     status_render,
     status_no_process,
 };
+
 namespace DAW {
     inline bool isPlaybackState(playback_state s) {
         return s == status_playback || s == status_render;

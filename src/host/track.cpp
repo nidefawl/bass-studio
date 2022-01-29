@@ -418,7 +418,7 @@ struct VstEvent_t {
         evt.type          = kVstMidiType;
         evt.byteSize      = 24;//sizeof(VstMidiEvent);
         evt.flags         = 0; //kVstMidiEventIsRealtime;
-        evt.deltaFrames   = floor(nevt.tickOffsetInBlock * tickToSamples);
+        evt.deltaFrames   = math::floorS32D(nevt.tickOffsetInBlock * tickToSamples);
         dbgassert(evt.deltaFrames >= 0 && evt.deltaFrames < blockSize);
         if (nevt.isNoteOn) {
             numOns++;
@@ -983,8 +983,8 @@ void track_impl_t::fillAudio(tick_t start, tick_t end, tick_t loopStart, tick_t 
     for (clip_t* clip : clips) {
         tick_t clipStartTick    = clip->getOffsetStart();
         tick_t clipEndTick      = clip->end();
-        int32_t clipStartSample = tickToSample(clipStartTick, bpm100, sampleFormat.sampleRate);
-        int32_t clipEndSample   = tickToSample(clipEndTick, bpm100, sampleFormat.sampleRate);
+        int32_t clipStartSample = tickToSampleConvert<int32_t, roundmode::floor>(clipStartTick, bpm100, sampleFormat.sampleRate);
+        int32_t clipEndSample   = tickToSampleConvert<int32_t, roundmode::floor>(clipEndTick, bpm100, sampleFormat.sampleRate);
         if (clipStartSample > blockEnd)
             continue;
         if (clipEndSample <= blockSamplePos)
@@ -1086,8 +1086,10 @@ void track_impl_t::sendNotesOff(int32_t bpm100) {
         track->audio->m_heldNotes.clear();
     }
     sortNoteEvents(noteEvents);
-    const double ticksPerBlock = toTickPrecise(sampleFormat.blockSize / (double) sampleFormat.sampleRate, bpm100);
-    const double tickToSamples = (60.0 * sampleFormat.sampleRate) / (bpm100 / 100.0 * TICKS_QUARTER);
+
+    const double ticksPerBlock = sampleToTickConvert<double, roundmode::none>(sampleFormat.blockSize, bpm100, sampleFormat.sampleRate);
+    const double tickToSamples = tickToSampleConvert<double, roundmode::none>(1.0, bpm100, sampleFormat.sampleRate);
+
     VstEvent_t* midiEventsBuf  = reallocEvts(noteEvents.size() + 1);
     for (noteevent_t& evt : noteEvents) {
         dbgassert(evt.tickOffsetInBlock >= 0 && evt.tickOffsetInBlock < ticksPerBlock);
@@ -1123,8 +1125,9 @@ void track_impl_t::sendNotes(playback_state state, int32_t flags,
     if (arp || std::any_of(effects.begin(), effects.end(), [](const effectbase* ref) {
             return ref->bCanReceiveMidi;
         })) {
-        const double ticksPerBlock = toTickPrecise(sampleFormat.blockSize / (double) sampleFormat.sampleRate, bpm100);
-        const double tickToSamples = (60.0 * sampleFormat.sampleRate) / (bpm100 / 100.0 * TICKS_QUARTER);
+        const double ticksPerBlock = sampleToTickConvert<double, roundmode::none>(sampleFormat.blockSize, bpm100, sampleFormat.sampleRate);
+        const double tickToSamples = tickToSampleConvert<double, roundmode::none>(1.0, bpm100, sampleFormat.sampleRate);
+
         std::vector<note_t> notes;
         hires_timer_t tmr;
 
@@ -1226,7 +1229,7 @@ void track_impl_t::sendNotes(playback_state state, int32_t flags,
             tmr.reset();
             this->noteEventsProcessed.clear();
             if (flags & MidiFlags::PROCESS_ARP) {
-                arp->process(state, cursorPos, noteEvents, blockStart, blockEnd, loopStart, loopEnd, math::floorS32(ticksPerBlock), noteEventsProcessed);
+                arp->process(state, cursorPos, noteEvents, blockStart, blockEnd, loopStart, loopEnd, noteEventsProcessed);
             } else {
                 noteEventsProcessed = std::move(noteEvents);
             }

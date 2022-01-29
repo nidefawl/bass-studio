@@ -58,10 +58,10 @@ public:
         }
     }
     void render(NVGcontext* vg) override {
-//        nvgBeginPath(vg);
-//        nvgRect(vg, pos.x, pos.y, size.x, size.y);
-//        nvgFillColor(vg, rgbToNvg(0xff00ff));
-//        nvgFill(vg);
+        //nvgBeginPath(vg);
+        //nvgRect(vg, pos.x, pos.y, size.x, size.y);
+        //nvgFillColor(vg, rgbToNvg(0xff00ff));
+        //nvgFill(vg);
 
         if (!culled) {
             ivec2 posClipped  = pos;
@@ -87,10 +87,10 @@ public:
                     nvgSave(vg);
                     nvgTranslate(vg, wv.pos.x, wv.pos.y);
 
-//                    nvgBeginPath(vg);
-//                    nvgRect(vg, 0, 0, wvSize.x, wvSize.y);
-//                    nvgFillColor(vg, rgbToNvg(0xFFFFFF));
-//                    nvgFill(vg);
+                    //nvgBeginPath(vg);
+                    //nvgRect(vg, 0, 0, wvSize.x, wvSize.y);
+                    //nvgFillColor(vg, rgbToNvg(0xFFFFFF));
+                    //nvgFill(vg);
                     nvgBeginPath(vg);
                         nvgRect(vg, 2, 2, wvSize.x - 4, wvSize.y - 4);
                         NVGcolor bgWave = dbgcolorsa[colorIdx % 5];
@@ -152,16 +152,17 @@ public:
     bool makeWaveformFromClip(const project_globals_t& project, scaled_grid& grid, const waveview_entry& entry, ivec2& pos, ivec2& size, ivec2& posClipped, ivec2& sizeClipped, waveform_layout_updated_t& out) {
 
 
-        samplerate_t sr = vsthost::getInstance()->sampleFormat.sampleRate;//TODO: store in project_t
+        samplerate_t sr = vsthost::getInstance()->m_sampleFormatInternal.sampleRate;
         dbgassert(pos.x == 0);
 
 
         double tickScreenStart   = grid.screenToTickD(left());
         double tickScreenEnd     = grid.screenToTickD(right());
-        int64_t samplesScreenLen = math::ceilCast(tickToSamplePrecise(tickScreenEnd - tickScreenStart, project.tempo100, sr));
 
-        double tickRenderStart = sampleToTickPrecise(entry.sample->samplePos, project.tempo100, sr);
-        double tickRenderLen   = sampleToTickPrecise(entry.sample->sample.nSamples, project.tempo100, sr);
+        double samplesScreenLen = tickToSampleConvert<double, roundmode::ceil>(tickScreenEnd - tickScreenStart, project.tempo100, sr);
+
+        double tickRenderStart = sampleToTickConvert<double, roundmode::none>(entry.sample->samplePos, project.tempo100, sr);
+        double tickRenderLen = sampleToTickConvert<double, roundmode::none>(entry.sample->sample.nSamples, project.tempo100, sr);
 
         double samplesPerPx = samplesScreenLen / (double) size.x;
 
@@ -174,11 +175,12 @@ public:
 
 
         int64_t sampleBegin       = 0;
-        int64_t sampleBeginOffset = math::floorCast(math::max(0.0, tickToSamplePrecise(tickScreenStart - tickRenderStart, project.tempo100, sr)));
+        int64_t sampleBeginOffset = tickToSampleConvert<int64_t, roundmode::floorclamp>(tickScreenStart - tickRenderStart, project.tempo100, sr);
 
-        int64_t nSamples = math::ceilCast(
-                tickToSamplePrecise(grid.screenToTickD(posEnd), project.tempo100, sr) -
-                tickToSamplePrecise(grid.screenToTickD(posStart), project.tempo100, sr));
+        auto sampleScreenPosStart = tickToSampleConvert<double, roundmode::none>(grid.screenToTickD(posStart), project.tempo100, sr);
+        auto sampleScreenPosEnd   = tickToSampleConvert<double, roundmode::none>(grid.screenToTickD(posEnd), project.tempo100, sr);
+
+        int64_t nSamples = math::ceilS64D(sampleScreenPosEnd - sampleScreenPosStart);
 
         //rare corner case where only few samples cross the left border of the subtrack begin (pos.x = 0)
         if (nSamples < 1 || posEnd <= posStart) {
@@ -187,8 +189,8 @@ public:
 
 
         waveform_layout_updated_t newentry;
-        newentry.layout.pos  = { math::floor(posStart), 0 };
-        newentry.layout.size = { math::floor(renderSize), size.y };
+        newentry.layout.pos  = { math::floorS32D(posStart), 0 };
+        newentry.layout.size = { math::floorS32D(renderSize), size.y };
 
 
         audioclip_texture_t& w = newentry.waveform;
@@ -205,7 +207,7 @@ public:
             samplesPerPx = (nSamples / FBO_WIDTH);
             //my_printf("nSamples * pxPerSample > FBO_WIDTH  samplesPerPx = %f, size.x %d\n", samplesPerPx, w.size.x);
         } else {
-            w.size.x = math::min((int32_t) math::floor(nSamples * pxPerSample), FBO_WIDTH);
+            w.size.x = math::min(math::floorS32D(nSamples * pxPerSample), FBO_WIDTH);
             //my_printf("nSamples * pxPerSample < FBO_WIDTH  samplesPerPx = %f, size.x %d\n", samplesPerPx, w.size.x);
         }
         if (samplesPerPx > MAX_RES && (nSamples / MAX_RES) <= FBO_WIDTH) {
@@ -252,12 +254,13 @@ public:
             this->parent->scissorClip(posClipped, sizeClipped);
             // subtrack is never scissored. This check has to be removed in case we for some reason apply left side scissor to parent container
             dbgassert(pos.x == 0 && pos.x == posClipped.x);
-            sizeClipped.y              = clipSize.y;
-            double tickBegin           = grid.screenToTickD(pos.x);
-            double tickEnd             = grid.screenToTickD(pos.x + size.x);
-            samplerate_t sr            = vsthost::getInstance()->sampleFormat.sampleRate;//TODO: store in project_t
-            double trackPosSampleStart = tickToSamplePrecise(tickBegin, globals.tempo100, sr);
-            double trackPosSampleEnd   = tickToSamplePrecise(tickEnd, globals.tempo100, sr);
+            sizeClipped.y    = clipSize.y;
+            double tickBegin = grid.screenToTickD(pos.x);
+            double tickEnd   = grid.screenToTickD(pos.x + size.x);
+            samplerate_t sr  = vsthost::getInstance()->m_sampleFormatInternal.sampleRate;
+
+            double trackPosSampleStart = tickToSampleConvert<double, roundmode::none>(tickBegin, globals.tempo100, sr);
+            double trackPosSampleEnd   = tickToSampleConvert<double, roundmode::none>(tickEnd, globals.tempo100, sr);
             if (posClipped.x + sizeClipped.x <= 0 || sizeClipped.x <= 0) {
                 culled = true;// whole subtrack is culled
             } else {
@@ -302,12 +305,12 @@ public:
                             //             && updatedEntry.layout == entry.layoutCurrent;
                             bool equal = math::abs((sample->version - entry.sampleVersion)) < 1
                                          && ((updatedEntry.waveform.size.y > 0) == (texture.waveform.size.y > 0))
-//                                       && updatedEntry.waveform == texture.waveform
+                                       //&& updatedEntry.waveform == texture.waveform
                                          && isEqualWaveform3(updatedEntry.waveform, texture.waveform)
                                          && updatedEntry.layout == entry.layoutCurrent;
-//                            if (sample->version != entry.sampleVersion) {
-//                                my_printf("sample->version != entry.sampleVersion %d %d\n", sample->version, equal);
-//                            }
+                            //if (sample->version != entry.sampleVersion) {
+                            //    my_printf("sample->version != entry.sampleVersion %d %d\n", sample->version, equal);
+                            //}
                             bool canQueue  = waveformrender::getInstance()->canQueueUpdate();
                             ivec2 sizeDiff = math::absvec2(updatedEntry.waveform.size - texture.waveform.size);
                             ivec2 limit    = math::maxvec2(ivec2(1), ivec2(updatedEntry.waveform.size.x / 4, 16));
@@ -318,11 +321,11 @@ public:
                                 limit = { 0, 0 };
                             }
                             if (!equal || (sizeDiff.x > limit.x || sizeDiff.y > limit.y)) {
-//                                if (!equal)
-//                                    my_printf("unequal\n", 0);
-//                                else {
-//                                    my_printf("sizeDiff %d,%d / %d,%d (canQueue %d)\n", sizeDiff.x, sizeDiff.y, limit.x, limit.y, canQueue);
-//                                }
+                                //if (!equal)
+                                //    my_printf("unequal\n", 0);
+                                //else {
+                                //    my_printf("sizeDiff %d,%d / %d,%d (canQueue %d)\n", sizeDiff.x, sizeDiff.y, limit.x, limit.y, canQueue);
+                                //}
                                 entry.waveformUpdated = updatedEntry.waveform;
                                 entry.layoutUpdated   = updatedEntry.layout;
                                 entry.flagUpdated     = true;

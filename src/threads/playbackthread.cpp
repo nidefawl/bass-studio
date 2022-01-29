@@ -169,15 +169,15 @@ private:
 
                             switch (reqState) {
                                 case playback_state::status_render: {
-                                    dbgassert(host->sampleFormat.sampleRate != 0);
-                                    dbgassert(host->sampleFormat.blockSize != 0);
+                                    dbgassert(host->m_sampleFormatInternal.sampleRate != 0);
+                                    dbgassert(host->m_sampleFormatInternal.blockSize != 0);
                                     // copy export settings to this thread
                                     exportSettingsLocal    = ctrl->getExportSettings();
                                     tick_t startPos        = exportSettingsLocal.exportPos;
                                     int32_t bpm100         = ctrl->getCurrentTempo();
                                     tickPos                = startPos;
                                     ctrl->getPlaybackPos() = startPos;
-                                    samplePos              = tickToSample(startPos, bpm100, host->sampleFormat.sampleRate);
+                                    samplePos              = tickToSampleConvert<int32_t, roundmode::floor>(startPos, bpm100, host->m_sampleFormatInternal.sampleRate);
                                     log_printf("START EXPORT ON seconds: %.2f - sample %d\n", toSeconds(startPos, bpm100), samplePos);
                                     host->preExportBegin(ctrl, exportSettingsLocal);
                                     host->onStartPlayback(this->m_prjCtrl);
@@ -187,14 +187,14 @@ private:
                                     break;
                                 }
                                 case playback_state::status_playback: {
-                                    dbgassert(host->sampleFormat.sampleRate != 0);
-                                    dbgassert(host->sampleFormat.blockSize != 0);
+                                    dbgassert(host->m_sampleFormatInternal.sampleRate != 0);
+                                    dbgassert(host->m_sampleFormatInternal.blockSize != 0);
                                     // copy start pos to this thread
                                     tick_t startPos        = ctrl->getCursorPos();
                                     int32_t bpm100         = ctrl->getCurrentTempo();
                                     tickPos                = startPos;
                                     ctrl->getPlaybackPos() = startPos;
-                                    samplePos              = tickToSample(startPos, bpm100, host->sampleFormat.sampleRate);
+                                    samplePos              = tickToSampleConvert<int32_t, roundmode::floor>(startPos, bpm100, host->m_sampleFormatInternal.sampleRate);
                                     log_printf("START ON seconds: %.2f - sample %d\n", toSeconds(startPos, bpm100), samplePos);
                                     host->onStartPlayback(this->m_prjCtrl);
                                     timer.reset();
@@ -258,16 +258,16 @@ private:
 
                     const project_globals_t& projGlobals = host->prjGlobals;
 
-                    const samplerate_t sampleRate = host->sampleFormat.sampleRate;
-                    const int32_t blockSize       = host->sampleFormat.blockSize;
-                    const double blocksPerS       = sampleRate / (double) blockSize;
-                    const double msPerBlock       = 1000.0 / blocksPerS;
+                    const samplerate_t sampleRate = host->m_sampleFormatInternal.sampleRate;
+                    const int32_t blockSize       = host->m_sampleFormatInternal.blockSize;
+
+                    const int32_t bpm100 = projGlobals.tempo100;
 
 
-                    const int32_t bpm100       = projGlobals.tempo100;
-                    const double ticksPerBlock = toTickPrecise(blockSize / (double) sampleRate, bpm100);
+                    const auto props = host->getAudioStreamProperties();
 
-                    const bool isLoopAround = tickPos + ticksPerBlock >= projGlobals.loopStart + projGlobals.loopLen;
+
+                    const bool isLoopAround = tickPos + props.ticksPerBlock >= projGlobals.loopStart + projGlobals.loopLen;
 
                     int32_t numBlocksProcessed = 0;
 
@@ -296,7 +296,7 @@ private:
 
                     if (numBlocksProcessed) {
                         samplePos += blockSize * numBlocksProcessed;
-                        tickPos += ticksPerBlock * numBlocksProcessed;
+                        tickPos += props.ticksPerBlock * numBlocksProcessed;
                         if (m_status == status_playback) {
                             if (inLoop) {
                                 if (tickPos >= projGlobals.loopStart + projGlobals.loopLen) {
@@ -304,7 +304,7 @@ private:
                                         DawInstance::get()->setJumpFromTo(tickPos, projGlobals.loopStart);
                                     }
                                     double nextTickPos    = projGlobals.loopStart;
-                                    int32_t nextSamplePos = tickToSample(nextTickPos, bpm100, sampleRate);
+                                    int32_t nextSamplePos = tickToSampleConvert<int32_t, roundmode::floor>(nextTickPos, bpm100, sampleRate);
                                     host->onPlaybackJumpFromTo(this->m_prjCtrl, samplePos, tickPos, nextSamplePos, nextTickPos);
                                     log_printf("JMP FROM %.2f to %.2f\n", tickPos, nextTickPos);
                                     tickPos   = nextTickPos;
@@ -321,7 +321,7 @@ private:
                                 ctrl->getPlaybackPos() = exportSettingsLocal.exportPos + exportSettingsLocal.exportLen;
                             }
                         }
-                        playbackDuration += msPerBlock * numBlocksProcessed;
+                        playbackDuration += props.microSecsPerBlock * 0.001 * numBlocksProcessed;
                     }
                 }
 

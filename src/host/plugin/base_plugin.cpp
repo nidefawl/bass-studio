@@ -67,7 +67,7 @@ sampleformat_t effectbase::getSampleFormat() {
 
 void effectbase::load(vsthost* host) {
     vstHost = host;
-    setSampleFormat(host->sampleFormat);
+    setSampleFormat(host->m_sampleFormatInternal);
     dbgassert(nLoadCalls == 0);
     nLoadCalls++;
 }
@@ -202,7 +202,7 @@ void effect_deferred::makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks
     ps = this->mImpl->snapshot;
 }
 void effect_deferred::process(AudioBlock* in, AudioBlock* out, double tick, int32_t samplePos, int32_t numSamples, playback_state state) {
-    dbgassert(vstHost->sampleFormat == this->format && in->samples == format.blockSize && out->samples == format.blockSize && format.blockSize > 0 && format.sampleRate > 0);
+    dbgassert(vstHost->m_sampleFormatInternal == this->format && in->samples == format.blockSize && out->samples == format.blockSize && format.blockSize > 0 && format.sampleRate > 0);
 }
 bool effect_deferred::show() {
     return false;
@@ -219,8 +219,8 @@ int effect_deferred::getModuleStoredType() const {
 }
 void effect_deferred::load(vsthost* host) {
     effectbase::load(host);
-    this->blockInputs  = new AudioBlock(2, host->sampleFormat.blockSize);
-    this->blockOutputs = new AudioBlock(2, host->sampleFormat.blockSize);
+    this->blockInputs  = new AudioBlock(2, host->m_sampleFormatInternal.blockSize);
+    this->blockOutputs = new AudioBlock(2, host->m_sampleFormatInternal.blockSize);
 }
 String effect_deferred::getAutomatableName() {
     return "plugin";

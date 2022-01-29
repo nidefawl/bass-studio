@@ -205,8 +205,8 @@ int runCommandLineHost(int argc, const char* argv[]) {
         host->setSampleFormat(sampleformat_t{static_cast<samplerate_t>(settings.iosettings.samplerate),
                                              settings.iosettings.blocksize, sampleformat_bits_t::FLOAT_32});
 
-        dbgassert(host->sampleFormat.sampleRate != 0);
-        dbgassert(host->sampleFormat.blockSize != 0);
+        dbgassert(host->m_sampleFormatInternal.sampleRate != 0);
+        dbgassert(host->m_sampleFormatInternal.blockSize != 0);
 
         project_t project;
         project_globals_t projectGlobals;
@@ -379,8 +379,8 @@ int runCommandLineHost(int argc, const char* argv[]) {
 
             projectGlobals.cursor.cursorPos = projectGlobals.loopStart;
             if (fStart >= 0.0) {
-                projectGlobals.cursor.cursorPos = math::roundD(fStart * TICKS_BAR);
-                projectGlobals.loopStart        = math::roundD(fStart * TICKS_BAR);
+                projectGlobals.cursor.cursorPos = math::roundS32D(fStart * TICKS_BAR);
+                projectGlobals.loopStart        = math::roundS32D(fStart * TICKS_BAR);
             }
             if (fStart >= 0.0 && fLength >= 0.0) {
                 projectGlobals.loopEnabled = false;
@@ -388,13 +388,13 @@ int runCommandLineHost(int argc, const char* argv[]) {
             }
 
             std::shared_ptr<DAW::processing_graph_t> processingGraph;
-            AudioBlock blockIn(host->numChannels, host->sampleFormat.blockSize);
-            AudioBlock blockOut(host->numChannels, host->sampleFormat.blockSize);
+            AudioBlock blockIn(host->numChannels, host->m_sampleFormatInternal.blockSize);
+            AudioBlock blockOut(host->numChannels, host->m_sampleFormatInternal.blockSize);
             host->prjGlobals = projectGlobals;
 
 
-            log_printf("host->sampleFormat.sampleRate: %u\n", host->sampleFormat.sampleRate);
-            log_printf("host->sampleFormat.blockSize: %u\n", host->sampleFormat.blockSize);
+            log_printf("host->sampleFormat.sampleRate: %u\n", host->m_sampleFormatInternal.sampleRate);
+            log_printf("host->sampleFormat.blockSize: %u\n", host->m_sampleFormatInternal.blockSize);
 
             log_printf("projectController.getCursorPos: %d\n", projectController.getCursorPos());
             log_printf("projectController.getCurrentTempo: %d\n", projectController.getCurrentTempo());
@@ -406,11 +406,14 @@ int runCommandLineHost(int argc, const char* argv[]) {
             log_printf("playback start...\n", 0);
 
 
-            const double ticksPerBlock = toTickPrecise(
-                    host->sampleFormat.blockSize / (double)host->sampleFormat.sampleRate, host->prjGlobals.tempo100);
+            const double ticksPerBlock = sampleToTickConvert<double, roundmode::none>(host->m_sampleFormatInternal.blockSize,
+                                                                                      host->prjGlobals.tempo100,
+                                                                                      host->m_sampleFormatInternal.sampleRate);
 
             double tickPos    = projectGlobals.cursor.cursorPos;
-            int32_t samplePos = tickToSample(tickPos, projectGlobals.tempo100, host->sampleFormat.sampleRate);
+            int32_t samplePos = tickToSampleConvert<int32_t, roundmode::floor>(projectGlobals.cursor.cursorPos,
+                                                                               projectGlobals.tempo100,
+                                                                               host->m_sampleFormatInternal.sampleRate);
 
             if (!bRenderOnly) {
                 playThread->addRequest(REQ_STATE, (int)playback_state::status_playback, true);
@@ -446,7 +449,7 @@ int runCommandLineHost(int argc, const char* argv[]) {
                         strProgress     = StringFormat("%0.2f%%", fProgress * 100.0);
                     }
                     log_printf("PROCESS[render=%d,sr=%0.1fk,bs=%d] %s playbackPos %d/%.0f, %d blocks, %d samples\n",
-                               bRenderOnly, host->sampleFormat.sampleRate / 1000.0f, host->sampleFormat.blockSize,
+                               bRenderOnly, host->m_sampleFormatInternal.sampleRate / 1000.0f, host->m_sampleFormatInternal.blockSize,
                                StringAsCStr(strProgress), projectGlobals.playbackPos, (fStart + fLength) * TICKS_BAR,
                                stats.blocksProcessed, stats.samplesProcessed);
                 }
@@ -466,7 +469,7 @@ int runCommandLineHost(int argc, const char* argv[]) {
                     int32_t processedBlock = host->processRender(tls.project, samplePos, tickPos);
                     dbgassert(processedBlock > 0);
 
-                    samplePos += host->sampleFormat.blockSize * processedBlock;
+                    samplePos += host->m_sampleFormatInternal.blockSize * processedBlock;
                     tickPos += ticksPerBlock * processedBlock;
                     projectController.getPlaybackPos() = (tick_t) floor(tickPos);
                 }

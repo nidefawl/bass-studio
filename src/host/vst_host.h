@@ -118,11 +118,11 @@ private:
 public:
     //  samplerate_t lSampleRate = 0;
     //  uint16_t lBlockSize = 0;
-    sampleformat_t sampleFormat         = { 44100, 512, sampleformat_bits_t::NONE };
-    sampleformat_t sampleFormatExternal = { 44100, 512, sampleformat_bits_t::NONE };
+    sampleformat_t m_sampleFormatInternal = { 44100, 512, sampleformat_bits_t::NONE };
+    sampleformat_t m_sampleFormatExternal = { 44100, 512, sampleformat_bits_t::NONE };
 
     int32_t hostSlot    = -1;
-    uint8_t numChannels = 32u;
+    uint8_t numChannels;
 
     project_globals_t prjGlobals;
     audioMasterCallback masterCallBackSlot = nullptr;
@@ -148,7 +148,7 @@ private:
     SYNCHRONIZED_RW clip_t* recordingClip = nullptr;
     SYNCHRONIZED_RW std::atomic<bool> hasNewRecordedData{};
     SYNCHRONIZED_RW clip_t* recordDataProcessed = nullptr;
-    SYNCHRONIZED_RW VstTimeInfo timeinfo        = {};
+    SYNCHRONIZED_RW VstTimeInfo m_sharedTimeInfo = {};
     SYNCHRONIZED_RW double lastTickEndPos       = 0;
     playback_state lastState                    = playback_state::status_stop;
     SYNCHRONIZED_RW host_stats_t stats{};
@@ -212,7 +212,7 @@ public:
     uint32_t getMaxThreadCount();
     int32_t getPlayThreadId();
 
-    void setSampleFormat(const sampleformat_t& sampleFormat);
+    void setSampleFormat(const sampleformat_t& _sampleFormat);
     void setOutput(audiohost* host);
     audiostream_properties_t getAudioStreamProperties() const;
     bool isStreaming();
@@ -247,7 +247,7 @@ public:
         stats.usage             = this->stats.usage;
         stats.timeProcess       = this->stats.timeProcessPlugins;
         stats.timeProcessRaw    = this->stats.timeProcessPluginsRaw;
-        stats.timePerBlock_usec = sampleFormat.blockSize * 1000000 / sampleFormat.sampleRate;
+        stats.timePerBlock_usec = m_sampleFormatInternal.blockSize * 1000000 / m_sampleFormatInternal.sampleRate;
     }
     float getCpuUsage() const {
         return stats.usageRaw;
@@ -260,7 +260,7 @@ public:
     }
 
     VstTimeInfo* getTimeInfo() {
-        return &this->timeinfo;
+        return &this->m_sharedTimeInfo;
     }
     static bool canDo(const char* ptr) {
         if ((!strcmp(ptr, HostCanDos::canDoSendVstEvents)) ||

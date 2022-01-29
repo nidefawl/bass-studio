@@ -129,12 +129,12 @@ public:
         return dTick;
     }
 
-    double tickToScreenD(tick_t x) {
+    double tickToScreenD(double x) {
         double bar            = x / (double) TICKS_BAR;
         double objspaceOffset = toObjSpace(0, this->zoom, offset);
         return toScreenSpace(bar - objspaceOffset);
     }
-    double tickLenToScreen(tick_t x) {
+    double tickLenToScreen(double x) {
         double bar = x / (double) TICKS_BAR;
         return toScreenSpace(bar);
     }

@@ -152,7 +152,7 @@ public:
     void loadSnapshot(const arp_snapshot& snapshot);
 
     void process(playback_state state, tick_t cursorPos, const std::vector<noteevent_t>& noteEventsIn,
-                 tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, tick_t ticksPerBlock,
+                 tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd,
                  std::vector<noteevent_t>& noteEventsProcessed);
     void postSetParameter(int32_t idx, float preVal, float val, int flags) override;
     bool isProcessingEnabled();
@@ -164,7 +164,7 @@ protected:
     bool isOutputNoteGateOn(const arp_note_t& noteHeldOut);
     void addNote(tick_t start, arp_note_t& note, std::vector<noteevent_t>& noteEvents);
     void processArpInternal(playback_state state, tick_t cursorPos, const std::vector<noteevent_t>& noteEventsIn,
-                            tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, tick_t ticksPerBlock, int64_t wallClockTime,
+                            tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int64_t wallClockTime,
                             std::vector<noteevent_t>& noteEventsProcessed);
     int updateMarkersAndAnimation(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int64_t wallClockTime);
     int endOutputNotes(tick_t tick, tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, std::vector<noteevent_t>& noteEventsProcessed);
