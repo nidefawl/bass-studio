@@ -30,11 +30,12 @@ enum container_type : int32_t {
     CTR_TYPE_EXPORT,
     CTR_TYPE_CLIPEDITOR
 };
+
 #define CTR_TYPE_COUNT (static_cast<int>(container_type::CTR_TYPE_CLIPEDITOR) + 1)
 
 class guictr_base : public guibase {
 protected:
-    container_type ctrType;
+    container_type ctrType{CTR_TYPE_BASE};
 
 public:
     int padding = CONTENT_INSET;
@@ -45,13 +46,16 @@ public:
 
 public:
     guictr_base() : guibase() {
-        ctrType = CTR_TYPE_BASE;
         setBackgroundRendered(false);
         setBackgroundRenderedInset(true);
     }
-    virtual ~guictr_base() {
+
+    ~guictr_base() override {
+        // The derived class has to remove guis before this dtor is called
+        // destroyGuis() will not be called here
         dbgassert(guis.empty());
     }
+
     virtual void destroyGuis() {
         for (guibase* g : guis) {
             g->onRemove();
@@ -61,6 +65,7 @@ public:
         }
         guis.clear();
     }
+
     virtual void removeGuis() {
         for (guibase* g : guis) {
             g->onRemove();
@@ -70,17 +75,19 @@ public:
         guis.clear();
     }
 
-    virtual void setControl(BaseCtrl* parentCtrl) override;
-    virtual void setParent(guibase* parent) override;
+    void setControl(BaseCtrl* parentCtrl) override;
+    void setParent(guibase* parent) override;
 
 public:
     static void drawBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 posInset, ivec2 sizeInset, int margin, bool focused = false, bool drawInset = true);
     static void drawInsetBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 posInset, ivec2 sizeInset);
 
-    virtual void onRemove() override;
-    virtual void onAdded() override;
-    virtual void determineSize(ivec2& prefSize) override {
+    void onRemove() override;
+    void onAdded() override;
+
+    void determineSize(ivec2& prefSize) override {
     }
+
     virtual ivec2 paddingTL(int _padding) const {
         return ivec2(_padding - margin * snapSides.x, _padding - margin * snapSides.y);
     }
@@ -96,31 +103,40 @@ public:
     ivec2 getPadding() {
         return (paddingTL(padding) + paddingBR(padding));
     }
+
     void renderTitleBar(NVGcontext* vg, const ivec2& sizeContent, String text, GuiConstant::constant_t& constantHeight, float textOffsetX, int flags, bool isHorizontalTitle);
     void renderFrameBase(NVGcontext* vg);
     void renderFrameOutline(NVGcontext* vg);
     virtual void renderBackground(NVGcontext* vg);
     virtual void renderContainerLabel(NVGcontext* vg);
-    virtual void render(NVGcontext* vg);
+
+    void render(NVGcontext* vg) override;
+
     virtual bool setScissorTransformContainer(NVGcontext* vg);
-    virtual bool setScissorTransform(NVGcontext* vg);
+    bool setScissorTransform(NVGcontext* vg) override;
+
     void setSnapSides(ivec4 _snapSides) {
         this->snapSides = _snapSides;
     }
-    virtual void scissorClip(ivec2& vpos, ivec2& vsize);
-    virtual ivec2 toContainerSpace(ivec2 in) const {
+
+    void scissorClip(ivec2& vpos, ivec2& vsize) override;
+
+    ivec2 toContainerSpace(ivec2 in) const override {
         return in - getPosContent();
     }
-    virtual ivec2 toParentSpace(ivec2 in) const {
+
+    ivec2 toParentSpace(ivec2 in) const override {
         return getPosContent() + in;
     }
-    virtual ivec2 toScreenSpace(ivec2 in) const {
+
+    ivec2 toScreenSpace(ivec2 in) const override {
         in += getPosContent();
-        if (this->parent != NULL) {
+        if (this->parent != nullptr) {
             in = this->parent->toScreenSpace(in);
         }
         return in;
     }
+
     guibase* getByID(int id) {
         auto it = std::find_if(guis.begin(), guis.end(), [id](auto g) {
             return g->id == id;
@@ -130,6 +146,7 @@ public:
         }
         return *it;
     }
+
     virtual void add(guibase* gui) {
         auto it = std::find(guis.begin(), guis.end(), gui);
         if (it != guis.end()) {
@@ -145,6 +162,7 @@ public:
         gui->setControl(getControl());
         gui->onAdded();
     }
+
     template<typename Container>
     void sortChildrenByList(Container& container) {
         //TODO: very inefficient
@@ -158,10 +176,12 @@ public:
             return indexA < indexB;
         });
     }
+
     bool hasGui(guibase* gui) {
         auto it = std::find(guis.begin(), guis.end(), gui);
         return it != guis.end();
     }
+
     virtual void remove(guibase* gui) {
         auto it = std::find(guis.begin(), guis.end(), gui);
         if (it == guis.end()) {
@@ -174,6 +194,7 @@ public:
         gui->setParent(nullptr);
         //gui->setControl(nullptr);
     }
+
     virtual void addUNCHECKED(guibase* gui) {
         auto it = std::find(guis.begin(), guis.end(), gui);
         if (it != guis.end()) {
@@ -188,6 +209,7 @@ public:
         gui->setParent(this);
         gui->setControl(getControl());
     }
+
     virtual void removeUNCHECKED(guibase* gui) {
         auto it = std::find(guis.begin(), guis.end(), gui);
         if (it == guis.end()) {
@@ -198,7 +220,8 @@ public:
         gui->setParent(nullptr);
         //gui->setControl(nullptr);
     }
-    virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
+
+    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
         if (this->contains(mpos)) {
             ivec2 localMouse = this->toContainerSpace(mpos);
             for (guibase* gui : guis) {
@@ -220,29 +243,33 @@ public:
         return false;
     }
 
-    virtual void onIdle() {
+    void onIdle() override {
         for (guibase* gui : guis) {
             gui->onIdle();
         }
     }
-    virtual void prerender(NVGcontext* vg) {
+
+    void prerender(NVGcontext* vg) override {
         for (guibase* gui : guis) {
             gui->prerender(vg);
         }
     }
-    virtual void onTick(AppCtrl* ctrl) {
+
+    void onTick(AppCtrl* ctrl) override {
         for (guibase* gui : guis) {
             if (gui->isVisible()) {
                 gui->onTick(ctrl);
             }
         }
     }
-    virtual guibase* getFocusedContainer() {
-        if (this->parent != NULL) {
+
+    guibase* getFocusedContainer() override {
+        if (this->parent != nullptr) {
             return this->parent->getFocusedContainer();
         }
         return this;
     }
+
     void addProperties(Table::tbl* table) override;
 #if RENDER_DBG_BRD
     void renderDebug(NVGcontext* vg, NVGcolor color) {
