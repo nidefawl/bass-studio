@@ -1,10 +1,6 @@
 #pragma once
-#include <stdint.h>
-#include <memory.h>
+#include <cstdint>
 #include <atomic>
-#include <stdint.h>
-#include <stdlib.h>
-#include <stdbool.h>
 #include "assert_dbg.h"
 
 struct AudioBlock;
