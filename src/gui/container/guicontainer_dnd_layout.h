@@ -24,7 +24,6 @@
 #include "gui/knob.h"
 
 #include "gui/guicontainer.h"
-#include "gui/guicontainer_layout.h"
 #include "gui/guicolorpick.h"
 #include "gui/guiinputfield.h"
 #include "gui/button.h"

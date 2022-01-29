@@ -57,7 +57,6 @@
 #include "../gui/about.h"
 #include "../gui/dialog_io.h"
 #include "../gui/dialogs.h"
-#include "../gui/guicontainer_layout.h"
 
 #include "plugin/base_plugin.h"
 #include "plugin/vst_plugin.h"
