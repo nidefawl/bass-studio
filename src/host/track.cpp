@@ -415,11 +415,13 @@ struct VstEvent_t {
         int32_t idx = vstEvents->numEvents;
         dbgassert(idx < maxEvents);
         VstMidiEvent& evt = evtArr[idx];
-        evt.type          = kVstMidiType;
-        evt.byteSize      = 24;//sizeof(VstMidiEvent);
-        evt.flags         = 0; //kVstMidiEventIsRealtime;
-        evt.deltaFrames   = math::floorS32D(nevt.tickOffsetInBlock * tickToSamples);
+        evt.type        = kVstMidiType;
+        evt.byteSize    = 24;//sizeof(VstMidiEvent);
+        evt.flags       = 0; //kVstMidiEventIsRealtime;
+        evt.deltaFrames = math::floordS32(nevt.tickOffsetInBlock * tickToSamples);
+
         dbgassert(evt.deltaFrames >= 0 && evt.deltaFrames < blockSize);
+
         if (nevt.isNoteOn) {
             numOns++;
             writeNoteOn((unsigned char*) evt.midiData, nevt.pitch, nevt.velocity);
@@ -427,6 +429,7 @@ struct VstEvent_t {
             numOffs++;
             writeNoteOff((unsigned char*) evt.midiData, nevt.pitch);
         }
+
         vstEvents->events[idx] = reinterpret_cast<VstEvent*>(&evt);
         vstEvents->numEvents++;
     }

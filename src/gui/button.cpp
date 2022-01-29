@@ -70,7 +70,7 @@ void guibutton::renderButtonLabel(NVGcontext* vg, int32_t stateFlags) {
 
         ivec2 renderPos(0);
         if (str.length() > 0) {
-            int fontScale = math::round((this->fontSize > 0 ? this->fontSize : math::min(size.y, size.x)) * fFontScale);
+            int fontScale = math::roundfS32((this->fontSize > 0 ? this->fontSize : math::min(size.y, size.x)) * fFontScale);
             GuiColor::constant_t c = (stateFlags & FLG_ENBL) ? GuiColor::COL_LABEL_ACTIVE : GuiColor::COL_LABEL_INACTIVE;
             //nvgDawText(vg, this, pos, size, str, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
             renderCenteredMultilineText(vg, theme, str, fontScale, c, renderPos, size);

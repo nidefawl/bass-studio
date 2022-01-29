@@ -379,8 +379,8 @@ int runCommandLineHost(int argc, const char* argv[]) {
 
             projectGlobals.cursor.cursorPos = projectGlobals.loopStart;
             if (fStart >= 0.0) {
-                projectGlobals.cursor.cursorPos = math::roundS32D(fStart * TICKS_BAR);
-                projectGlobals.loopStart        = math::roundS32D(fStart * TICKS_BAR);
+                projectGlobals.cursor.cursorPos = math::rounddS32(fStart * TICKS_BAR);
+                projectGlobals.loopStart        = math::rounddS32(fStart * TICKS_BAR);
             }
             if (fStart >= 0.0 && fLength >= 0.0) {
                 projectGlobals.loopEnabled = false;

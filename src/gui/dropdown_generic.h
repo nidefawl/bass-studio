@@ -35,7 +35,7 @@ public:
         }
         auto* popup   = createContextMenu(std::move(strOptions));
         popup->size   = size;
-        int fontScale = math::round((this->fontSize > 0 ? this->fontSize : size.y) * fFontScale);
+        int fontScale = math::roundfS32((this->fontSize > 0 ? this->fontSize : size.y) * fFontScale);
         popup->setFontSize(fontScale);
         this->parentCtrl->openContextMenu(popup, toScreenSpace(ivec2(0, size.y)) - popup->pos + ivec2(1));
     }

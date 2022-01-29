@@ -46,7 +46,7 @@ public:
         return false;
     }
     int32_t leftOrTop(int32_t wh) const {
-        return math::round(wh * scale);
+        return math::roundfS32(wh * scale);
     }
     int32_t rightOrBottom(int32_t wh) const {
         return wh - leftOrTop(wh);

@@ -741,12 +741,12 @@ void vsthost::updateTime(VstTimeInfo& timeinfo, int32_t samplePos, double dTickP
 
     double midiTickPPQ24 = timeinfo.ppqPos*24.0;
     double samplePosMidiTick = PPQ24TickToSample(midiTickPPQ24, prjGlobals.tempo100, m_sampleFormatInternal.sampleRate, m_sampleFormatInternal.blockSize);
-    double samplePosPrevMidiTick = PPQ24TickToSample(std::floor(midiTickPPQ24), prjGlobals.tempo100, m_sampleFormatInternal.sampleRate, m_sampleFormatInternal.blockSize);
-    double samplePosNextMidiTick = PPQ24TickToSample(std::ceil(midiTickPPQ24), prjGlobals.tempo100, m_sampleFormatInternal.sampleRate, m_sampleFormatInternal.blockSize);
+    double samplePosPrevMidiTick = PPQ24TickToSample(math::floord(midiTickPPQ24), prjGlobals.tempo100, m_sampleFormatInternal.sampleRate, m_sampleFormatInternal.blockSize);
+    double samplePosNextMidiTick = PPQ24TickToSample(math::ceild(midiTickPPQ24), prjGlobals.tempo100, m_sampleFormatInternal.sampleRate, m_sampleFormatInternal.blockSize);
 
     double samplePosClosestPPQ24Tick = math::absMin(samplePosPrevMidiTick - samplePosMidiTick, samplePosNextMidiTick - samplePosMidiTick);
     //TODO: assingn nearest clock (can be negative), not next aka soonest
-    timeinfo.samplesToNextClock = samplePosClosestPPQ24Tick;
+    timeinfo.samplesToNextClock = math::rounddS32(samplePosClosestPPQ24Tick);
 
     {
         bool changed = setFlag(timeinfo.flags, kVstTransportPlaying, DAW::isPlaybackState(state));
@@ -913,7 +913,7 @@ const int32_t lenTicksInfinite = TICKS_BAR*16;
 void vsthost::processMidiRealtimeInput(project_controller_t* ctrl, double posDouble, playback_state state) {
     //TODO: This needs to be done per input and per track
     const sampleformat_t& sampleFormat = this->m_sampleFormatInternal;
-    tick_t tickPosBlockStart = ceil(posDouble);
+    tick_t tickPosBlockStart = math::ceildS32(posDouble);
 
     std::vector<MidiIOEvent> msgs = midihost::getInstance()->getInputMessages();
     bool notesProcessed = false;
@@ -1448,8 +1448,8 @@ int32_t vsthost::processRender(project_controller_t* ctrl, int32_t sample, doubl
         stats.blocksProcessed += nBlocksProcessed;
         stats.samplesProcessed += nBlocksProcessed*sampleFormat.blockSize;
 
-        int32_t tickQuarterStart = static_cast<int32_t>(math::floor((posDouble) / (float) TICKS_QUARTER));
-        int32_t tickQuarterEnd = static_cast<int32_t>(math::floor((posDouble + audioProp.ticksPerBlock) / (float) TICKS_QUARTER));
+        int32_t tickQuarterStart = static_cast<int32_t>(math::floord((posDouble) / (float) TICKS_QUARTER));
+        int32_t tickQuarterEnd = static_cast<int32_t>(math::floord((posDouble + audioProp.ticksPerBlock) / (float) TICKS_QUARTER));
         if (tickQuarterEnd > tickQuarterStart) {
             stats.tickBar += tickQuarterStart - tickQuarterEnd;
         }
@@ -1740,8 +1740,8 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 
         stats.blocksProcessed += nBlocksProcessed;
         stats.samplesProcessed += nBlocksProcessed*sampleFormat.blockSize;
-        int32_t tickQuarterStart = static_cast<int32_t>(math::floor((posDouble) / (float) TICKS_QUARTER));
-        int32_t tickQuarterEnd = static_cast<int32_t>(math::floor((posDouble+audioProp.ticksPerBlock) / (float) TICKS_QUARTER));
+        int32_t tickQuarterStart = static_cast<int32_t>(math::floord((posDouble) / (float) TICKS_QUARTER));
+        int32_t tickQuarterEnd = static_cast<int32_t>(math::floord((posDouble+audioProp.ticksPerBlock) / (float) TICKS_QUARTER));
         if (tickQuarterEnd > tickQuarterStart) {
             stats.tickBar += tickQuarterStart - tickQuarterEnd;
         }
@@ -1825,7 +1825,7 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
     }
 
     track->getStage()->procStats.timeTrackApplyAutomation = tmp.timer.getTime();
-    dbgassert(tickBlockEnd-processingPos < ceil(ticksPerBlock+1));
+    dbgassert(tickBlockEnd-processingPos < math::ceildS32(ticksPerBlock+1));
 //            if (dbg == 0) {
 //                log_printf("process track %s\n", StringAsCStr(track->name));
 //                log_printf("process stage 1 %d\n", static_cast<int32_t>(track->audio->stageId));

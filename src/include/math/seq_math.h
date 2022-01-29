@@ -70,9 +70,27 @@ namespace math {
 
     /**
      * Round down to integer
+     *
+     * No range check is applied
      * NAN returns 0
+     * INF return 0
      */
-    inline int64_t floorS64F(float val) {
+    inline double floord(double val) {
+        if (std::isnan(val))
+            return 0;
+        if (std::isinf(val))
+            return 0;
+        return std::floor(val);
+    }
+
+    /**
+     * Round down to integer
+     *
+     * No range check is applied before casting to int64
+     * NAN returns 0
+     * INF return 0
+     */
+    inline int64_t floorfS64(float val) {
         if (std::isnan(val))
             return 0;
         if (std::isinf(val))
@@ -83,9 +101,12 @@ namespace math {
 
     /**
      * Round down to integer
+     *
+     * No range check is applied before casting to int64
      * NAN returns 0
+     * INF return 0
      */
-    inline int64_t floorS64D(double val) {
+    inline int64_t floordS64(double val) {
         if (std::isnan(val))
             return 0;
         if (std::isinf(val))
@@ -100,7 +121,7 @@ namespace math {
      * Clamps out of sint32 range values to sint32 range.
      * NAN returns 0
      */
-    inline int32_t floorS32(float val) {
+    inline int32_t floorfS32(float val) {
         if (std::isnan(val))
             return 0;
         float val_f = std::floorf(val);
@@ -114,10 +135,27 @@ namespace math {
     /**
      * Round down to integer
      *
+     * Clamps out of int32 range values to int32 range.
+     * NAN returns 0
+     */
+    inline int32_t floordS32(double val) {
+        if (std::isnan(val))
+            return 0;
+        double value = std::floor(val);
+        if (value >= double{ std::numeric_limits<int32_t>::max() })
+            return std::numeric_limits<int32_t>::max();
+        if (value <= double{ std::numeric_limits<int32_t>::min() })
+            return std::numeric_limits<int32_t>::min();
+        return static_cast<int32_t>(value);
+    }
+
+    /**
+     * Round down to integer
+     *
      * Clamps out of uint32 range values to uint32 range.
      * NAN returns 0
      */
-    inline uint32_t floorU32(float val) {
+    inline uint32_t floorfU32(float val) {
         if (std::isnan(val))
             return 0;
         float val_f = std::floorf(val);
@@ -134,7 +172,7 @@ namespace math {
      * Clamps out of uint32 range values to uint32 range.
      * NAN returns 0
      */
-    inline uint32_t floorU32D(double val) {
+    inline uint32_t floordU32(double val) {
         if (std::isnan(val))
             return 0;
         double value = std::floor(val);
@@ -146,27 +184,28 @@ namespace math {
     }
 
     /**
-     * Round down to integer
+     * Round up to integer
      *
-     * Clamps out of int32 range values to int32 range.
+     * No range check is applied
      * NAN returns 0
+     * INF return 0
      */
-    inline int32_t floorS32D(double val) {
+    inline double ceild(double val) {
         if (std::isnan(val))
             return 0;
-        double value = std::floor(val);
-        if (value >= double{ std::numeric_limits<int32_t>::max() })
-            return std::numeric_limits<int32_t>::max();
-        if (value <= double{ std::numeric_limits<int32_t>::min() })
-            return std::numeric_limits<int32_t>::min();
-        return static_cast<int32_t>(value);
+        if (std::isinf(val))
+            return 0;
+        return std::ceil(val);
     }
 
     /**
-     * Round down to integer
+     * Round up to integer
+     *
+     * No range check is applied before casting to int64
      * NAN returns 0
+     * INF return 0
      */
-    inline int64_t ceilS64F(float val) {
+    inline int64_t ceilfS64(float val) {
         if (std::isnan(val))
             return 0;
         if (std::isinf(val))
@@ -176,10 +215,13 @@ namespace math {
     }
 
     /**
-     * Round down to integer
+     * Round up to integer
+     *
+     * No range check is applied before casting to int64
      * NAN returns 0
+     * INF return 0
      */
-    inline int64_t ceilS64D(double val) {
+    inline int64_t ceildS64(double val) {
         if (std::isnan(val))
             return 0;
         if (std::isinf(val))
@@ -189,12 +231,12 @@ namespace math {
     }
 
     /**
-     * Round down to integer
+     * Round up to integer
      *
      * Clamps out of sint32 range values to sint32 range.
      * NAN returns 0
      */
-    inline int32_t ceilS32(float val) {
+    inline int32_t ceilfS32(float val) {
         if (std::isnan(val))
             return 0;
         float val_f = std::ceilf(val);
@@ -206,12 +248,29 @@ namespace math {
     }
 
     /**
-     * Round down to integer
+     * Round up to integer
+     *
+     * Clamps out of int32 range values to int32 range.
+     * NAN returns 0
+     */
+    inline int32_t ceildS32(double val) {
+        if (std::isnan(val))
+            return 0;
+        double value = std::ceil(val);
+        if (value >= double{ std::numeric_limits<int32_t>::max() })
+            return std::numeric_limits<int32_t>::max();
+        if (value <= double{ std::numeric_limits<int32_t>::min() })
+            return std::numeric_limits<int32_t>::min();
+        return static_cast<int32_t>(value);
+    }
+
+    /**
+     * Round up to integer
      *
      * Clamps out of uint32 range values to uint32 range.
      * NAN returns 0
      */
-    inline uint32_t ceilU32(float val) {
+    inline uint32_t ceilfU32(float val) {
         if (std::isnan(val))
             return 0;
         float val_f = std::ceilf(val);
@@ -223,12 +282,12 @@ namespace math {
     }
 
     /**
-     * Round down to integer
+     * Round up to integer
      *
      * Clamps out of uint32 range values to uint32 range.
      * NAN returns 0
      */
-    inline uint32_t ceilU32D(double val) {
+    inline uint32_t ceildU32(double val) {
         if (std::isnan(val))
             return 0;
         double value = std::ceil(val);
@@ -240,22 +299,16 @@ namespace math {
     }
 
     /**
-     * Round down to integer
+     * Round float to neareast integer
      *
-     * Clamps out of int32 range values to int32 range.
      * NAN returns 0
      */
-    inline int32_t ceilS32D(double val) {
+    inline float froundf(float val) {
+        // otherwise implementation defined
         if (std::isnan(val))
             return 0;
-        double value = std::ceil(val);
-        if (value >= double{ std::numeric_limits<int32_t>::max() })
-            return std::numeric_limits<int32_t>::max();
-        if (value <= double{ std::numeric_limits<int32_t>::min() })
-            return std::numeric_limits<int32_t>::min();
-        return static_cast<int32_t>(value);
+        return std::roundf(val);
     }
-
 
     /**
      * Round float to neareast sint32 integer
@@ -263,8 +316,7 @@ namespace math {
      * Clamps out of sint32 range values to sint32 range.
      * NAN returns 0
      */
-    template<typename T = float>
-    int32_t round(float val) {
+    inline int32_t roundfS32(float val) {
         // otherwise implementation defined
         if (std::isnan(val))
             return 0;
@@ -279,11 +331,31 @@ namespace math {
     }
 
     /**
+     * Round float to neareast uint32 integer
+     *
+     * Clamps out of uint32 range values to sint32 range.
+     * NAN returns 0
+     */
+    inline uint32_t roundfU32(float val) {
+        // otherwise implementation defined
+        if (std::isnan(val))
+            return 0;
+        if (double(val) >= double{ std::numeric_limits<uint32_t>::max() })
+            return std::numeric_limits<uint32_t>::max();
+        if (double(val) <= double{ std::numeric_limits<uint32_t>::min() })
+            return std::numeric_limits<uint32_t>::min();
+        int64_t val_s64 = std::lroundf(val);
+        dbgassert(val_s64 >= int64_t{ std::numeric_limits<uint32_t>::min() });
+        dbgassert(val_s64 <= int64_t{ std::numeric_limits<uint32_t>::max() });
+        return static_cast<uint32_t>(val_s64);
+    }
+
+    /**
      * Round float to neareast sint64 integer without
      * additional runtime checks.
      * NAN returns 0
      */
-    inline int64_t roundS64(float val) {
+    inline int64_t roundfS64(float val) {
         // otherwise implementation defined
         if (std::isnan(val))
             return 0;
@@ -302,7 +374,7 @@ namespace math {
      * additional runtime checks.
      * NAN returns 0
      */
-    inline int64_t roundS64D(double val) {
+    inline int64_t rounddS64(double val) {
         // otherwise implementation defined
         if (std::isnan(val))
             return 0;
@@ -322,7 +394,7 @@ namespace math {
      * Clamps out of sint32 range values to sint32 range.
      * NAN returns 0
      */
-    inline int32_t roundS32D(double val) {
+    inline int32_t rounddS32(double val) {
         // otherwise implementation defined
         if (std::isnan(val))
             return 0;
@@ -338,32 +410,9 @@ namespace math {
         return std::pow(a, b);
     }
 
-    template<typename T>
-    [[deprecated("Use one of floorS32, floorU32, floorS64F, floorS64D")]]
-    inline T floor(T a) {
-        return std::floor(a);
-    }
-
-    template<typename T>
-    [[deprecated]]
-    inline T ceil(T a) {
-        return std::ceil(a);
-    }
-
     template<typename T, typename U>
     inline bool CheckFitsTypeRange(const U value) {
         return double(value) >= std::numeric_limits<T>::min() && double(value) <= std::numeric_limits<T>::max();
-    }
-
-    template<typename T>
-    [[deprecated("Use one of ceilS32, ceilU32, ceilS32D, ceilU32D, ceilS64F, ceilS64D")]]
-    inline int64_t ceilCast(T val) {
-        return std::ceilf(val);
-    }
-    template<typename T>
-    [[deprecated("Use one of floorS32, floorU32, floorS32D, floorU32D, floorS64F, floorS64D")]]
-    inline int64_t floorCast(T val) {
-        return std::floorf(val);
     }
 
     template<typename T>

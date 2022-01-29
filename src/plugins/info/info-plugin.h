@@ -98,10 +98,10 @@ namespace PluginHostInfo {
 
     private:
         int getLogVerbosity() {
-            return math::round(current()->logVerbosity * MAX_VERBOSITY);
+            return math::roundfS32(current()->logVerbosity * MAX_VERBOSITY);
         }
         int getLogBlocks() {
-            return math::round(current()->logBlocks * MAX_LOG_BLOCKS);
+            return math::roundfS32(current()->logBlocks * MAX_LOG_BLOCKS);
         }
         Program singleProgram;
     };

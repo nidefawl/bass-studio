@@ -34,7 +34,7 @@ gui_pianoroll::gui_pianoroll(clip_view& _view, layout_pianoroll_t& _layout)
     widthKeys = 0;
 }
 int32_t toVel(vec2 note) {
-    return math::clamp<int32_t>(math::round(note.x * 127.0f / 1024.0f), 0, 127);
+    return math::clamp<int32_t>(math::roundfS32(note.x * 127.0f / 1024.0f), 0, 127);
 }
 void gui_pianoroll::handleDraggedBegin(MouseEvent& evt) {
     dragMode = dragmode::drag_none;
@@ -104,7 +104,7 @@ void gui_pianoroll::handleDraggedMove(MouseEvent& evt) {
         ivec2 local = evt.relMousepos;
         vec2 note   = getNoteFromPos(local);
         if (note.y >= 0 && note.y < MAX_OCTAVES * 12) {
-            int32_t notePitch = math::floor(note.y);
+            int32_t notePitch = math::floorfS32(note.y);
             if (lastNote != notePitch) {
                 ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
                 if (lastNote > -1) {
@@ -185,7 +185,7 @@ void gui_pianoroll::render(NVGcontext* vg) {
         if (mouseIn) {
             vec2 note = getNoteFromPos(imouse);
             if (note.y >= 0 && note.y < MAX_OCTAVES * 12) {
-                noteMouse = { math::round(note.x), math::floor(note.y) };
+                noteMouse = { math::roundfS32(note.x), math::floorfS32(note.y) };
             }
         }
     }

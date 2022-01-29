@@ -115,7 +115,7 @@ gui_ctr_debug::gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType)
         knob->id         = ID_KNOB_SET_THREAD_COUNT;
         knob->fnSetValue = [knob](float f, int flags) {
             uint32_t thrdCntMax = vsthost::getInstance()->getMaxThreadCount();
-            uint32_t thrdCnt    = math::clamp<uint32_t>(math::round(f * thrdCntMax), 1U, thrdCntMax);
+            uint32_t thrdCnt    = math::clamp<uint32_t>(math::roundfU32(f * thrdCntMax), 1U, thrdCntMax);
             ThreadLock lock     = MainCtrl::getPlayThread()->lockThread();
             vsthost::getInstance()->setThreadCount(thrdCnt);
             String strThrdCnt = StringFormat("Number of Threads: %d", vsthost::getInstance()->getThreadCount());
@@ -241,7 +241,7 @@ void gui_ctr_debug::render(NVGcontext* vg) {
 
     int framesSkip = 30;
     if (dgbCtrType == gui_ctr_debug_type_i32::TYPE_2 && impl->sampleformat.sampleRate > 0) {
-        auto mikrosPerBlock = (impl->sampleformat.blockSize * 1000000) / impl->sampleformat.sampleRate;
+        auto mikrosPerBlock = (impl->sampleformat.blockSize * 1000000UL) / impl->sampleformat.sampleRate;
         int inset           = 30;
         auto cs             = getSizeContent();
         vec2 graphSize      = vec2(cs.x - 20, cs.y) - inset * 2.0f;
@@ -263,8 +263,8 @@ void gui_ctr_debug::render(NVGcontext* vg) {
         nvgStrokeColor(vg, rgbToNvg(graphLegendColor));
         nvgStrokeWidth(vg, 1.f);
         nvgStroke(vg);
-        vec2 graphLegendSteps(4);
-        vec2 graphStepLen = graphOnlySize / (graphLegendSteps - 1.0f);
+        ivec2 graphLegendSteps(4);
+        vec2 graphStepLen = graphOnlySize / (vec2(graphLegendSteps) - 1.0f);
         int markW         = 5;
         nvgBeginPath(vg);
         for (int i = 0; i < graphLegendSteps.x; i++) {
@@ -284,13 +284,13 @@ void gui_ctr_debug::render(NVGcontext* vg) {
             float fPos = i / (graphLegendSteps.x - 1.0f);
             float xPos = legendX + graphStepLen.x * (i);
             setFont(vg, 14, G_WHITE, NVG_ALIGN_MIDDLE | NVG_ALIGN_CENTER);
-            String strThrdCnt = StringFormat("%dµs", static_cast<int32_t>(math::round(fPos * mikrosPerBlock)));
+            String strThrdCnt = StringFormat("%dµs", static_cast<int32_t>(math::roundfS32(fPos * mikrosPerBlock)));
             if (i == graphLegendSteps.x - 1) {
                 strThrdCnt = StringFormat("%dµs deadline", static_cast<int32_t>(mikrosPerBlock));
             }
             nvgText(vg, xPos, graphOnlySize.y + markW + 5, StringAsCStr(strThrdCnt), NULL);
         }
-        if (list.size()) {
+        if (!list.empty()) {
             int32_t maxThread    = -1;
             float yStep          = 16.0f;
             int64_t minTimeStart = list[0].timeStart;

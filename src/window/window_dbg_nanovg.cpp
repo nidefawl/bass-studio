@@ -171,7 +171,7 @@ void drawDebugWindowNanoVG(NVGcontext* vg, int winW, int winH, float pxratio) {
     ivec2 pos  = { 10, 20 };
     ivec2 size = { 300, 40 };
 #define STEP_MAX 3
-    int step = math::floorCast(((getTimeMillisd() / 1000.0) / 1.5)) % STEP_MAX;
+    int step = math::floordS32(((getTimeMillisd() / 1000.0) / 1.5)) % STEP_MAX;
 
     float steps[STEP_MAX] = { 1.0f, 1.0f / 32.0f, 1.0f / 128.0f };
 
@@ -198,7 +198,7 @@ void drawDebugWindowNanoVG(NVGcontext* vg, int winW, int winH, float pxratio) {
     RenderResources::NvgImageTexture& image = RenderResources::imgIcons[ICON_DAW_EXE];
 
     int32_t extImg        = 2;
-    const int32_t iconW   = (int32_t) ceil(math::min(size.x, size.y));
+    const int32_t iconW   = math::min(size.x, size.y);
     const int32_t renderW = iconW + extImg * 2;
     NVGpaint paintIcon    = nvgImagePattern(vg, -extImg, -extImg, iconW + extImg * 2, iconW + extImg * 2, 0, image.perContextId[vg], 1.0f);
 

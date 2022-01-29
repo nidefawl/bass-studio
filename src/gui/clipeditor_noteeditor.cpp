@@ -191,23 +191,23 @@ void guictr_cliphandles::render(NVGcontext* vg) {
     nvgRect(vg, -2, 0, cs.x + 2, size.y);
     nvgFillColor(vg, theme->getColor(GuiColor::COL_GRID_DRK));
     nvgFill(vg);
-    //    {
+    //{
     //
-    //        float w        = (float) size.x;
-    //        float bgRepeat = grid.incr_bg * 2.0f;
-    //        float bgOffset = (float) std::fmod(grid.offset, bgRepeat);
-    //        int steps_bg   = (int) ceil((w + bgRepeat) / grid.incr_bg);
-    //        float x        = -bgOffset;
-    //        for (int i = 0; i < steps_bg; i += 2) {
-    //            nvgBeginPath(vg);
-    //            nvgRect(vg, x, 0, grid.incr_bg, size.y);
-    //            nvgFillColor(vg, theme->getColor(GuiColor::COL_GRID_DRK));
-    //            nvgFill(vg);
-    //            x += grid.incr_bg * 2.0f;
-    //            if (x > w)
-    //                break;
-    //        }
+    //    float w        = (float) size.x;
+    //    float bgRepeat = grid.incr_bg * 2.0f;
+    //    float bgOffset = (float) std::fmod(grid.offset, bgRepeat);
+    //    int steps_bg   = math::ceildS32((w + bgRepeat) / grid.incr_bg);
+    //    float x        = -bgOffset;
+    //    for (int i = 0; i < steps_bg; i += 2) {
+    //        nvgBeginPath(vg);
+    //        nvgRect(vg, x, 0, grid.incr_bg, size.y);
+    //        nvgFillColor(vg, theme->getColor(GuiColor::COL_GRID_DRK));
+    //        nvgFill(vg);
+    //        x += grid.incr_bg * 2.0f;
+    //        if (x > w)
+    //            break;
     //    }
+    //}
     for (grid_div g: grid.gridList) {
         nvgBeginPath(vg);
         nvgMoveTo(vg, g.screenpos, 0);
@@ -632,8 +632,8 @@ audioclip_texture_t makeWaveformFromSample(const project_globals_t& project, sca
     dbgassert(w.size.x <= FBO_WIDTH && w.size.y <= FBO_HEIGHT);
     dbgassert(w.size.x > 0);
     w.sampleBegin       = 0;
-    w.sampleBeginOffset = math::floorS64D(sampleStartOffset);
-    w.sampleEnd         = math::floorS64D(sampleEnd);
+    w.sampleBeginOffset = math::floordS64(sampleStartOffset);
+    w.sampleEnd         = math::floordS64(sampleEnd);
     w.samplesPerPx      = samplesPerPx;
     w.linewidth         = 3.0f;
     //if (samplesPerPx >= 8.0)

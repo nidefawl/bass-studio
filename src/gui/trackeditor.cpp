@@ -785,7 +785,7 @@ void guitrack_editor::render(NVGcontext* vg) {
     float w         = (float) size.x;
     double bgRepeat = grid.incr_bg * 2.0;
     float bgOffset  = (float) fmod((double) grid.offset, bgRepeat);
-    int steps_bg    = (int) ceil((w + bgRepeat) / grid.incr_bg);
+    int steps_bg    = math::ceildS32((w + bgRepeat) / grid.incr_bg);
     float x         = -bgOffset;
     NVGpaint paint{};
     paint.image = -1;

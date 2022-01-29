@@ -551,7 +551,7 @@ namespace PluginSynth {
             return valFloat;
         }
         void set(float f) override {
-            iValue = math::max(iMin, math::min(iMax, (int32_t) math::round(f * (iMax - iMin) + iMin)));
+            iValue = math::max(iMin, math::min(iMax, (int32_t) math::froundf(f * (iMax - iMin) + iMin)));
             setRangedValue(iValue);
         }
         void setRangedValue(int32_t i) {

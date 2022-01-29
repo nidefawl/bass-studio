@@ -49,13 +49,13 @@ void dawinstance_startup_commands(daw_tls::tlsinstance& tls) {
             my_printf("project.cursor.cursorPos: %d\n", projectGlobals.cursor.cursorPos);
             projectGlobals.cursor.cursorPos = projectGlobals.loopStart;
             if (fStart >= 0.0f) {
-                projectGlobals.cursor.cursorPos = math::round(fStart * TICKS_BAR);
-                projectGlobals.loopStart        = math::round(fStart * TICKS_BAR);
+                projectGlobals.cursor.cursorPos = math::roundfS32(fStart * TICKS_BAR);
+                projectGlobals.loopStart        = math::roundfS32(fStart * TICKS_BAR);
             }
 
             if (fStart >= 0.0f && fLength >= 0.0f) {
                 projectGlobals.loopEnabled = true;
-                projectGlobals.loopLen     = math::round(fLength * TICKS_BAR);
+                projectGlobals.loopLen     = math::roundfS32(fLength * TICKS_BAR);
             }
             cursor.setBegin(projectGlobals.cursor.cursorPos);
             cursor.setEnd(projectGlobals.cursor.cursorPos);

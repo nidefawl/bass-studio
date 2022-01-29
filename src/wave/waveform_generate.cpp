@@ -147,7 +147,7 @@ void tesselateWaveformEnergy(audiosample_t* sample, float x, float y, audioclip_
     if (sample->nSamples) {
         double samplesPerPx       = waveformshape->samplesPerPx;
         const float width         = waveformshape->size.x * (1.0f / waveformshape->scaleX);
-        const auto widthPxRounded = math::floor(width);
+        const auto widthPxRounded = math::floorfS32(width);
         const float height        = waveformshape->size.y;
 
         audioclip_texture_t waveformScaled  = *waveformshape;
@@ -169,8 +169,8 @@ void tesselateWaveformEnergy(audiosample_t* sample, float x, float y, audioclip_
             const auto lenSamplesCh   = samplesCh.size();
             std::vector<float> lows, highs, energies;
             for (int64_t pixelPos = 0; pixelPos < widthPxRounded; pixelPos++) {
-                int64_t startIndex = math::round(pixelPos / (float) widthPxRounded * nSamples);
-                int64_t endIndex   = math::round((pixelPos + 1) / (float) widthPxRounded * nSamples);
+                int64_t startIndex = math::roundfS32(pixelPos / (float) widthPxRounded * nSamples);
+                int64_t endIndex   = math::roundfS32((pixelPos + 1) / (float) widthPxRounded * nSamples);
                 //dbgassert(startIndex >= 0 && endIndex <= lenSamplesCh);
                 float sum2 = 0, low = 0, high = 0;
                 for (int64_t samplePos = startIndex; samplePos < endIndex && samplePos < lenSamplesCh; samplePos++) {

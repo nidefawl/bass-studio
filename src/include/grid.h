@@ -118,12 +118,12 @@ public:
     }*/
     tick_t screenToTickSnap(int32_t x, int snap);
 
-    tick_t screenToTick(int32_t x) {
+    tick_t screenToTick(double x) {
         double d     = toObjSpace(x);
         double dTick = TICKS_BAR * d;
-        return (int32_t) round(dTick);
+        return (int32_t) math::rounddS32(dTick);
     }
-    double screenToTickD(int32_t x) {
+    double screenToTickD(double x) {
         double d     = toObjSpace(x);
         double dTick = TICKS_BAR * d;
         return dTick;
@@ -140,11 +140,11 @@ public:
     }
     int32_t pixelsToTicks(int32_t pixels) {
         double x = toObjSpace(pixels, this->zoom, 0) * TICKS_BAR;
-        return math::max(1, (int32_t) ceil(x));
+        return math::max(1, math::ceildS32(x));
     }
     int32_t pixelsToTicks2(int32_t pixels) {
         double x = toObjSpace(pixels, this->zoom, 0) * TICKS_BAR;
-        return (int32_t) round(x);
+        return math::rounddS32(x);
     }
     void showRange(tick_t start, tick_t end);
     void calcLen(int scrollOffsetX, double zoom, int contentWidth);

@@ -389,7 +389,7 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
         vec2 v(waveformQueueEntry.size.x, waveformQueueEntry.size.y);
         //v *= vec2(waveformRef->waveform.scaleX, waveformRef->waveform.scaleY);
         //v.x *= 1.0f / waveformRef->waveform.scaleX;
-        ivec2 sizeInternal = ivec2((int) std::ceil(v.x), (int) std::ceil(v.y));
+        ivec2 sizeInternal = ivec2(math::ceilfS32(v.x), math::ceilfS32(v.y));
         //dbgassert(waveformRef->waveform.size.x <= 512);
         //assign texture to free spot in framebuffertextures
         impl->timer3.reset();

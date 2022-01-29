@@ -239,7 +239,7 @@ NVGpaint imagePattern(NVGcontext* vg, int width, int ext, int imgId) {
     return nvgImagePattern(vg, -ext, -ext, width + ext * 2, width + ext * 2, 0, image.perContextId[vg], 1.0f);
 }
 void drawIcon(NVGcontext* vg, const ivec2& size, RenderResources::NvgImageTexture* image, int32_t extImg) {
-    const int32_t iconW   = (int32_t) ceil(math::min(size.x, size.y));
+    const int32_t iconW   = math::min(size.x, size.y);
     const int32_t renderW = iconW + extImg * 2;
     NVGpaint paintIcon    = nvgImagePattern(vg, -extImg, -extImg, iconW + extImg * 2, iconW + extImg * 2, 0, image->perContextId[vg], 1.0f);
     nvgBeginPath(vg);

@@ -174,8 +174,8 @@ void scaled_grid::calcLen(int scrollOffsetX, double fzoom, int contentWidth) {
             denom_sub_size = denom_size / denum_substep;
         }
         float_type bar_offset    = -fmod((double) offset, (double) (barSize * step));
-        int numBarsOnScreen      = (int) ceil(contentWidth / barSize) + 1;//todo: maybe make this optimal
-        int firstBarLeftOfScreen = (int) floor(offset / (barSize));
+        int numBarsOnScreen      = math::ceildS32(contentWidth / barSize) + 1;//todo: maybe make this optimal
+        int firstBarLeftOfScreen = math::floordS32(offset / (barSize));
         firstBarLeftOfScreen     = (firstBarLeftOfScreen / step) * step;
         //TODO: very important: make sure grid is never empty
         auto* project = project_controller_t::get();
