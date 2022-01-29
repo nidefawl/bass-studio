@@ -48,7 +48,7 @@ namespace DAW {
         void setTrack(int32_t track) {
             cursorTrack = track;
         }
-        tick_t getRange() {
+        tick_t getRange() const {
             if (cursorTrack < 0)
                 return 0;
             return getTickEnd() - getTickBegin();
@@ -137,17 +137,17 @@ namespace DAW {
             return cursor;
         }
 #if 0
-	Cursor operator+(const Cursor &c2) const
-	{
-		Cursor tmp;
-		tmp.cursorTrack = math::min(getTrackBegin(), c2.getTrackBegin());
-		tmp.selTrackRange = math::max(getTrackEnd(), c2.getTrackEnd()) - tmp.cursorTrack;
-		tmp.cursorPos = math::min(getTickBegin(), c2.getTickBegin());
-		tmp.selRange = math::max(getTickEnd(), c2.getTickEnd()) - tmp.cursorPos;
-		tmp.cursorSubTrack = math::min(getSubTrackBegin(), c2.getSubTrackBegin());
-		tmp.selSubTrackRange = math::max(getSubTrackEnd(), c2.getSubTrackEnd()) - tmp.cursorSubTrack;
-		return tmp;
-	}
+    Cursor operator+(const Cursor &c2) const
+    {
+        Cursor tmp;
+        tmp.cursorTrack = math::min(getTrackBegin(), c2.getTrackBegin());
+        tmp.selTrackRange = math::max(getTrackEnd(), c2.getTrackEnd()) - tmp.cursorTrack;
+        tmp.cursorPos = math::min(getTickBegin(), c2.getTickBegin());
+        tmp.selRange = math::max(getTickEnd(), c2.getTickEnd()) - tmp.cursorPos;
+        tmp.cursorSubTrack = math::min(getSubTrackBegin(), c2.getSubTrackBegin());
+        tmp.selSubTrackRange = math::max(getSubTrackEnd(), c2.getSubTrackEnd()) - tmp.cursorSubTrack;
+        return tmp;
+    }
 #endif
     };
 

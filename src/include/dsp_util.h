@@ -31,8 +31,11 @@ namespace dsp_util {
     float scaledRange(float db, float lvlFloor, float lvlCeil);
     float gainToLinScale(float f);
     float linScaleToGain(float f);
-    /* Calculate mixer gain level from parameter
-	 * returns: false if gain == -inf db */
+
+    /**
+     * Calculate mixer gain level from parameter.
+     * returns: false if gain == -inf db
+     */
     inline bool getGainLvl(float fLinGain, float& fGainOut) {
         float fGainRaw = dsp_util::linScaleToGain(fLinGain);
         if (fGainRaw < dsp_util::GAIN_DBFLOOR) {
