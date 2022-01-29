@@ -176,7 +176,7 @@ namespace GuiColor {
 } // namespace GuiColor
 
 namespace UIFont {
-    static std::vector<font_type_t*>& _getConstants() {
+    static std::vector<font_type_t*>& _getConstants() noexcept {
         static std::vector<font_type_t*> allconstants;
         return allconstants;
     }
@@ -187,22 +187,22 @@ namespace UIFont {
                 return *c;
             }
         }
-        return font_type_t();
+        return {};
     }
-    font_type_t getConstantByName(String name) {
+    font_type_t getConstantByName(const String& name) {
         auto& v = _getConstants();
         for (auto* c : v) {
             if (c->name == name) {
                 return *c;
             }
         }
-        return font_type_t();
+        return {};
     }
     std::vector<font_type_t> getAllConstants() {
         std::vector<font_type_t> v;
         auto constants = _getConstants();
         v.reserve(constants.size());
-        for (auto it = constants.begin(); it != constants.end();) {
+        for (auto it = constants.cbegin(); it != constants.cend();) {
             v.push_back(*(*it++));
         }
         return v;
@@ -212,19 +212,20 @@ namespace UIFont {
         return constantsNextId++;
     }
 
-    font_type_t::font_type_t() : idx(0), name(nullptr), defValue("") {
-        //allconstants.push_back(*this);
+    font_type_t::font_type_t() noexcept : idx(0), name(nullptr), defValue("") {
     }
-    font_type_t::font_type_t(const char* _name, const char* _defValue) : idx(getNextId()), name(_name), defValue(_defValue) {
+
+    font_type_t::font_type_t(const char* _name, const char* _defValue) noexcept : idx(getNextId()), name(_name), defValue(_defValue) {
         auto& allconstants = _getConstants();
-        //my_printf("push %16s to %12X -> size %d\n", _name, (int64_t)&allconstants, allconstants.size());
         allconstants.push_back(this);
     }
-    font_type_t FONT_DEFAULT      = font_type_t("FONT_DEFAULT", "Roboto-Medium.ttf");
-    font_type_t FONT_LABEL        = font_type_t("FONT_LABEL", "Roboto-Medium.ttf");
-    font_type_t FONT_TEXFIELD     = font_type_t("FONT_TEXFIELD", "Roboto-Medium.ttf");
-    font_type_t FONT_CONTEXT_MENU = font_type_t("FONT_CONTEXT_MENU", "Roboto-Medium.ttf");
-    font_type_t FONT_DECIMAL      = font_type_t("FONT_DECIMAL", "Roboto-Medium.ttf");
+
+    const font_type_t FONT_DEFAULT      = font_type_t("FONT_DEFAULT", "Roboto-Medium.ttf");
+    const font_type_t FONT_LABEL        = font_type_t("FONT_LABEL", "Roboto-Medium.ttf");
+    const font_type_t FONT_TEXFIELD     = font_type_t("FONT_TEXFIELD", "Roboto-Medium.ttf");
+    const font_type_t FONT_CONTEXT_MENU = font_type_t("FONT_CONTEXT_MENU", "Roboto-Medium.ttf");
+    const font_type_t FONT_DECIMAL      = font_type_t("FONT_DECIMAL", "Roboto-Medium.ttf");
+
     void bindFont(NVGcontext* ctx, UIFont::font_instance font) {
         RenderResources::NvgFonts& fonts = RenderResources::perContextFonts[ctx];
         if (font.fontInstanceIdx == -1) {
@@ -238,7 +239,7 @@ namespace UIFont {
                 i++;
             }
         }
-        if (!fonts.fontsLoaded.size()) {
+        if (fonts.fontsLoaded.empty()) {
             return;
         }
         const int fontIdx = math::clamp<int32_t>(font.fontInstanceIdx, 0, fonts.fontsLoaded.size());
@@ -249,8 +250,5 @@ namespace UIFont {
         }
         nvgFontFaceId(ctx, fontloaded.nvgId);
     }
-    // String getFontName(int fontInstanceIdx) {
-    //    const int fontIdx = math::clamp(fontInstanceIdx, 0, MAX_FONTS);
-    //    return RenderResources::fontsLoaded[fontIdx].name;
-    // }
+
 } // namespace UIFont
