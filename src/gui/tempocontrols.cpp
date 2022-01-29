@@ -244,7 +244,7 @@ void guibutton_audioengine::render(NVGcontext* vg) {
 
 NVGcolor guibutton_audioengine::getBackgroundColor(int stateflags) const {
     NVGcolor c = theme->getBgColor(stateflags);
-    //	lastTickBar = stats.tickBar;
+    //lastTickBar = stats.tickBar;
     auto projCtrl = project_controller_t::get();
     if (projCtrl) {
         const auto& globals        = projCtrl->getGlobals();

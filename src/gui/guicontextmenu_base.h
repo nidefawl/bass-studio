@@ -93,7 +93,7 @@ public:
     bool scrollbarOutside  = false;
     bool canTakeInputFocus = false;
     int maxHeight          = 360;
-    //	int curTooltip = 0;
+    //int curTooltip = 0;
     guictxtmenu_base() : guictr_base() {
         margin  = 0;
         padding = 0;
@@ -130,7 +130,7 @@ public:
         prefSize = maxSize;
     }
     virtual void onChildLayoutChanged(guibase* g) override {
-        //		determineSize();
+        //determineSize();
         if (this->parent != NULL) {
             this->parent->onChildLayoutChanged(this);
         }

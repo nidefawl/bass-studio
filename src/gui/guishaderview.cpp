@@ -134,7 +134,7 @@ void gui_shaderview::onTick(AppCtrl* appctrl) {
             seq_rand rnd;
             rnd.rng_seed(now);
             const int texW = math::min(size.x, size.y);
-            //			const int texW = 128;
+            //const int texW = 128;
             std::vector<float> texData;
             texData.resize(texW * texW);
 //            for (int x = 0; x < texW; x++) {
@@ -164,7 +164,7 @@ void gui_shaderview::render(NVGcontext* vg) {
         return;
     }
 
-    //		dbgassert(fb);
+    //dbgassert(impl->fb);
     if (impl->fb) {
         int w        = math::min(size.x, size.y);
         int h        = w;

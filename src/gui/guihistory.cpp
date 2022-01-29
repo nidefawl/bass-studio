@@ -13,7 +13,7 @@ public:
     void buttonClicked(guibase* button) {
         selectedIdx = indexOfCtr(this->listGuis, button);
         if (selectedIdx > -1) {
-            //			if (parent) parent->buttonClicked(button);
+            //if (parent) parent->buttonClicked(button);
         }
     }
 };

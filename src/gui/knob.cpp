@@ -38,7 +38,7 @@ void guitooltip<guiknob>::layout() {
     table.rows.clear();
     table.titleCols.clear();
     table.colSizes.clear();
-    //	row1.cols.push_back();
+    //row1.cols.push_back();
     using tbl_rows = std::vector<table_entry_t>;
     {
         tbl_rows vec{ tblstr{ "value" }, tblfloat{ ptr->getValue() } };

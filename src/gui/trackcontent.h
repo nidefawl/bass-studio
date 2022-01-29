@@ -157,7 +157,7 @@ protected:
 public:
     automatable_t* at;
     int32_t param;
-    //	tracklayout_settings_t layout;
+    //tracklayout_settings_t layout;
     int32_t height = 4;
     int32_t idx    = -1;
     gui_track_subtrack(track_gui_entry_t* _entry, scaled_grid& _grid, automatable_t* _at, int32_t _param);
@@ -235,7 +235,7 @@ public:
     }
     void setParent(guibase* parent) override {
         guictr_base::setParent(parent);
-        //		automation.setParent(this->parent);
+        //automation.setParent(this->parent);
         guiTrAutomation.setParent(this->parent);
     }
     void setControl(BaseCtrl* parentCtrl) override {

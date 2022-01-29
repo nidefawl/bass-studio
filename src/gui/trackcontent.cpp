@@ -226,11 +226,11 @@ void guitooltip<clip_t>::layout() {
         audioclip_texture_t waveform          = ptr->audio.waveformRef.waveform;
         gui_waveform_texture_ref& waveformRef = ptr->audio.waveformRef;
 
-        //		table.rows.push_back(tbl_row_t{tbl_rows{{tblstr{"waveform", FONT_SIZE_TOOLTIP_BIG}, tblint{waveform.quality}}}});
+        //table.rows.push_back(tbl_row_t{tbl_rows{{tblstr{"waveform", FONT_SIZE_TOOLTIP_BIG}, tblint{waveform.quality}}}});
         table.rows.push_back(tbl_row_t{ tbl_rows{ { tblstr{ "waveform samplesPerPx" }, tblfloat{ (float) waveform.samplesPerPx } } } });
         table.rows.push_back(tbl_row_t{ tbl_rows{ { tblstr{ "waveform pos" }, waveform.pos } } });
         table.rows.push_back(tbl_row_t{ tbl_rows{ { tblstr{ "waveform size" }, waveform.size } } });
-        //		table.rows.push_back(tbl_row_t{tbl_rows{{tblstr{"waveform startOffset"}, waveform.startOffset}}});
+        //table.rows.push_back(tbl_row_t{tbl_rows{{tblstr{"waveform startOffset"}, waveform.startOffset}}});
         table.rows.push_back(tbl_row_t{ tbl_rows{ { tblstr{ "waveform clipped" }, tblstr{ (waveform.clipped ? "yes" : "no") } } } });
         table.rows.push_back(tbl_row_t{ tbl_rows{ { tblstr{ "waveform quality" }, tblint{ waveform.quality } } } });
         table.rows.push_back(tbl_row_t{ tbl_rows{ { tblstr{ "waveform scaleX" }, tblfloat{ waveform.scaleX } } } });

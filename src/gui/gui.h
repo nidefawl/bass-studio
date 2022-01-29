@@ -92,8 +92,8 @@ public:
     guibase& operator=(const guibase& graph) = delete;
     guibase(guibase&& graph)                 = delete;
     guibase& operator=(guibase&& graph) = delete;
-    //	guibase(const guibase&) = default; guibase& operator=(const guibase&) = default;
-    //	guibase(guibase&&) = default; guibase& operator=(guibase&&) = default;
+    //guibase(const guibase&) = default; guibase& operator=(const guibase&) = default;
+    //guibase(guibase&&) = default; guibase& operator=(guibase&&) = default;
 protected:
     void setFlagInternal(int flag) {
         this->flags |= flag;
@@ -106,7 +106,7 @@ public:
     SafeRef<guibase> makeSafeRef();
     virtual bool isVisible() const {
         //if (size.x < 0 || size.y < 0)
-        //	return false;
+        //  return false;
         return (flags & FLG_VISIBLE) != 0;
     }
     void setVisible(bool b) {

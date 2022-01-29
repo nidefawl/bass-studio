@@ -27,7 +27,7 @@ PopupCtrl::~PopupCtrl() {
 }
 
 void PopupCtrl::focusLost() {
-    //	parentCtrl->closeContextMenu();
+    //parentCtrl->closeContextMenu();
 }
 
 void PopupCtrl::closePopup() {
@@ -71,7 +71,7 @@ bool PopupCtrl::mouseDownPre() {
 
 void PopupCtrl::open(guictxtmenu_base* _ctxtmenu, ivec2 pos, bool bResizeable) {
     this->closed = false;
-    //	dbgassert(!isShown());
+    //dbgassert(!isShown());
     mouseInside       = false;
     this->bResizeable = bResizeable;
     this->m_mousePos  = ivec2(-1111111);
@@ -132,8 +132,8 @@ void PopupCtrl::destroy() {
 class guictr_scrollbar_outline : public guictr_scrollbar {
 public:
     guictr_scrollbar_outline() : guictr_scrollbar() {
-        //		padding=0;
-        //		margin=0;
+        //padding=0;
+        //margin=0;
     }
     void render(NVGcontext* vg) {
         renderFrameBase(vg);

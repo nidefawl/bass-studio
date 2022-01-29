@@ -193,7 +193,7 @@ public:
         if (it == guis.end()) {
             return;
         }
-        //		gui->onRemove();
+        //gui->onRemove();
         guis.erase(it);
         gui->setParent(nullptr);
         //gui->setControl(nullptr);

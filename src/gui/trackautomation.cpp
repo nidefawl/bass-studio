@@ -123,7 +123,7 @@ void gui_track_automation::trackViewDragBegin(guitrack_editor* view, MouseEvent&
     dataPointsEdited = dataPointsCopy;
 }
 void gui_track_automation::trackViewDragMove(guitrack_editor* view, MouseEvent& evt) {
-    //		ivec2 trackEditorLocal = evt.relMousepos;
+    //ivec2 trackEditorLocal = evt.relMousepos;
     ivec2 cs          = getSizeContent();
     int32_t disty     = -evt.dragDistance->y;
     int32_t distx     = evt.dragDistance->x;

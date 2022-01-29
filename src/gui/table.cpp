@@ -91,9 +91,9 @@ namespace Table {
         String strX = StringFormat("X %d", obj.x);
         String strY = StringFormat("Y %d", obj.y);
         int w       = 100;
-        //	if(strX.length() > 5) {
-        //		w = 180;
-        //	}
+        //if(strX.length() > 5) {
+        //  w = 180;
+        //}
         nvgText(ctxt.vg,
                 pos.x + size.x - (w + INSET_TABLE_CELL_PADDING) * 1 - INSET_TABLE_CELL_PADDING,
                 pos.y + size.y - INSET_TABLE_CELL_PADDING, StringAsCStr(strX), nullptr);

@@ -114,7 +114,7 @@ public:
         }
         if (knob == &gate) {
             return StringFormat("%d ticks", arp->getDuration());
-            //			return StringFormat("%.2f %%", math::clamp(arp->getGateF()*100.0f, 0.0f, 100.0f));
+            //return StringFormat("%.2f %%", math::clamp(arp->getGateF()*100.0f, 0.0f, 100.0f));
         }
         if (knob == &randVel) {
             return StringFormat("+/-%d", arp->getRandVelocity());

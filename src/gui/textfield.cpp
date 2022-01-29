@@ -608,7 +608,7 @@ float gui_textfield::cursorIndex2Position(int index, float lastx) const {
 }
 
 int gui_textfield::position2CursorIndex(float posx, float lastx) const {
-    //	posx += drawPos.x;
+    //posx += drawPos.x;
     int mCursorId = 0;
     float caretx  = metrics.glyphPositions[mCursorId].x;
     for (int j = 1; j < metrics.numGlyphs; j++) {

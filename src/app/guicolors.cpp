@@ -213,11 +213,11 @@ namespace UIFont {
     }
 
     font_type_t::font_type_t() : idx(0), name(nullptr), defValue("") {
-        //  allconstants.push_back(*this);
+        //allconstants.push_back(*this);
     }
     font_type_t::font_type_t(const char* _name, const char* _defValue) : idx(getNextId()), name(_name), defValue(_defValue) {
         auto& allconstants = _getConstants();
-        //	my_printf("push %16s to %12X -> size %d\n", _name, (int64_t)&allconstants, allconstants.size());
+        //my_printf("push %16s to %12X -> size %d\n", _name, (int64_t)&allconstants, allconstants.size());
         allconstants.push_back(this);
     }
     font_type_t FONT_DEFAULT      = font_type_t("FONT_DEFAULT", "Roboto-Medium.ttf");
@@ -250,7 +250,7 @@ namespace UIFont {
         nvgFontFaceId(ctx, fontloaded.nvgId);
     }
     // String getFontName(int fontInstanceIdx) {
-    //	const int fontIdx = math::clamp(fontInstanceIdx, 0, MAX_FONTS);
-    //	return RenderResources::fontsLoaded[fontIdx].name;
+    //    const int fontIdx = math::clamp(fontInstanceIdx, 0, MAX_FONTS);
+    //    return RenderResources::fontsLoaded[fontIdx].name;
     // }
 } // namespace UIFont

@@ -74,8 +74,8 @@ void guictr_scrollbar::determineSize(glm::ivec2& prefSize) /* const */ {
 }
 
 void guictr_scrollbar::onChildLayoutChanged(guibase* g) {
-    //	glm::ivec2 prefSize = getSizeContent();
-    //	determineSize(prefSize);
+    //glm::ivec2 prefSize = getSizeContent();
+    //determineSize(prefSize);
     layout();
     if (this->parent != NULL) {
         this->parent->onChildLayoutChanged(this);

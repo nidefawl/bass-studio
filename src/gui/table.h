@@ -26,13 +26,13 @@ namespace Table {
         vec2 pos;
         vec2 size;
         float fontSize;
-        //	int align;
+        //int align;
     };
     class click_type_handler;
     struct click_ctxt_t {
         guibase* gui;
         click_type_handler* callback;
-        //	MouseEvent evt;
+        //MouseEvent evt;
     };
 
     /* Inspired by Sean Parent: Better Code: Runtime Polymorphism - 2017 */
