@@ -11,14 +11,13 @@ struct audio_stage_t;
 namespace DAW {
 
     /**
- * track_node_t - represents a node in the audio chain dependency graph
- *
- */
+     * track_node_t - represents a node in the audio chain dependency graph
+     */
     struct track_source_t {
         uint32_t trackEdgeId{};
         channel_ref_t channel;
         automation_ref_t gainAutomation;
-        samplerate_t latency = 0U;
+        samplerate_t latency    = 0U;
         audiostageflags_t flags = audiostageflags_t::NONE;
     };
 
@@ -50,13 +49,13 @@ namespace DAW {
         audio_stage_t* stage       = nullptr;
     };
 
-    //using track_node_ptr = std::unique_ptr<track_node_t>;
     using track_node_ptr            = track_node_t*;
     using processing_track_node_ptr = processing_track_node_t*;
+
     /**
- * track_graph_t - represents the audio chain dependency graph build from I/O configuration of all loaded tracks
- *
- */
+     * track_graph_t - represents the audio chain dependency graph build from I/O configuration of all loaded tracks
+     *
+     */
     struct track_graph_t {
         std::vector<track_node_t*> roots;// output nodes (Master, )
         std::vector<track_node_ptr> nodes;
