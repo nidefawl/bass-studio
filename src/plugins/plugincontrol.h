@@ -24,16 +24,13 @@ class guictr_base;
 class guictxtmenu_base;
 class AudioEffect;
 
-
-KeyEvent keyEvent(int key, int scancode, int keyState, int mods, const char* key_name);
-
 class PluginControl : public AppCtrl {
     std::shared_ptr<PluginViewContainers> view;
     bool firstInit = true;
 
 public:
-    PluginControl(std::shared_ptr<PluginViewContainers> view);
-    ~PluginControl();
+    explicit PluginControl(std::shared_ptr<PluginViewContainers> view);
+    ~PluginControl() override;
     static PluginControl* get();
     void focusReceived() override{};
     void focusLost() override{};
