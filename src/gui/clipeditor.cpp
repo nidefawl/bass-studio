@@ -727,7 +727,7 @@ void gui_clipcontent_notes::render(NVGcontext* vg) {
             }
         }*/
         ThreadLock lock                = track->audio->midiMutex.lockThread();
-        std::vector<note_t>& heldNotes = track->audio->heldNotes;
+        std::vector<note_t>& heldNotes = track->audio->m_heldNotes;
         if (heldNotes.size()) {
             int nRendered = 0;
             for (note_t& note: heldNotes) {

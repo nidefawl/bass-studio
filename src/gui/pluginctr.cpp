@@ -347,7 +347,7 @@ bool guictr_plugins::handleKeyInput(KeyEvent& kevt) {
 
 void guictr_plugins::hideTrack(audio_stage_t* _track) {
     if (this->stage == _track) {
-        this->stage->pluginCtr = nullptr;
+        this->stage->m_pluginCtr = nullptr;
         this->track            = nullptr;
         this->stage            = nullptr;
         removeGuis();
@@ -423,7 +423,7 @@ void guictr_plugins::showTrack(audio_stage_t* audio) {
     this->track = audio ? audio->getTrack() : nullptr;
     this->stage = audio;
     if (audio && this->track) {
-        audio->pluginCtr = this;
+        audio->m_pluginCtr = this;
         dbgassert(audio->parent || MainCtrl::getPluginCtr() == this);
         if (!audio->effects.empty()) {
             for (effectbase* vst : audio->effects) {
@@ -603,7 +603,7 @@ void guictr_plugins::pluginMultiDragMove(guictr_dragged_plugins* g, ivec2 mousep
     for (auto* ptr : g->effects) {
         dbgassert(ptr->getTrackLink() == srcStage);
     }
-    dbgassert(srcStage->pluginCtr);
+    dbgassert(srcStage->m_pluginCtr);
 
     int highlightSlot = slotFromCoord(mousepos);
     if (this->stage == srcStage) {
@@ -641,7 +641,7 @@ void guictr_plugins::pluginMultiDragMove(guictr_dragged_plugins* g, ivec2 mousep
     MainCtrl::get()->getDragDropTarget() = dragdrop_target_indicator_t{
         dragdrop_target_indicator_t::target_area,
         highlightSlot,
-        srcStage->pluginCtr,
+        srcStage->m_pluginCtr,
         this,
         { -1, -1 }
     };
@@ -654,7 +654,7 @@ void guictr_plugins::pluginDragMove(guiplugin* g, ivec2 mousepos) {
     effectbase* effect = g->getModule();
     audio_stage_t* trp = effect->getTrackLink();
     dbgassert(trp);
-    dbgassert(trp->pluginCtr);
+    dbgassert(trp->m_pluginCtr);
     int highlightSlot = slotFromCoord(mousepos);
     //  if (abs((evt.dragStart - evt.mousepos).x) > getSizeContent().y / 4) {
     int curSlot = trp == stage ? (effect->getSlot()) : -2;
@@ -664,7 +664,7 @@ void guictr_plugins::pluginDragMove(guiplugin* g, ivec2 mousepos) {
     MainCtrl::get()->getDragDropTarget() = dragdrop_target_indicator_t{
         dragdrop_target_indicator_t::target_area,
         highlightSlot,
-        trp->pluginCtr,
+        trp->m_pluginCtr,
         this,
         { -1, -1 }
     };

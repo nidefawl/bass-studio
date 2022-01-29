@@ -60,10 +60,15 @@ public:
     trackdata_midi_t(const trackdata_midi_t& a) {
         deepcopy(a);
     }
+    ~trackdata_midi_t() {
+        dbgassert(clips.empty());
+    }
+
     trackdata_midi_t& operator=(const trackdata_midi_t& a) {
         deepcopy(a);
         return *this;
     }
+
     void deepcopy(const trackdata_midi_t& obj) {
         //this shouldn't be down here
         for (clip_t* clip : obj.clips) {
@@ -77,16 +82,17 @@ public:
         }
         sortClips();
     }
-    ~trackdata_midi_t() {
-        dbgassert(clips.empty());
-    }
+
     const std::vector<clip_t*>& getConstClips() const {
         return clips;
     }
+
     std::vector<clip_t*>& getClips() {
         return clips;
     }
+
     std::vector<clip_t*>::iterator removeClip(clip_t* clip);
+
     void addClip(clip_t* clip) {
         auto it = std::find(clips.begin(), clips.end(), clip);
         if (it != clips.end()) {
@@ -94,6 +100,7 @@ public:
         }
         clips.push_back(clip);
     }
+
     void sortClips() {
         std::stable_sort(clips.begin(), clips.end(), [](const clip_t* a, const clip_t* b) {
             return a->time < b->time;
@@ -102,17 +109,22 @@ public:
             dbgassert(clips[0]->start() < clips[1]->start());
         }
     }
+
     void addClipSort(clip_t* clip) {
         addClip(clip);
         sortClips();
     }
+
     tick_t start();
     tick_t end();
+
     std::pair<clip_t*, clip_t*> getMinMax();
+
     bool hasClip(clip_t* c) {
         auto it = std::find(clips.begin(), clips.end(), c);
         return it != clips.end();
     }
+
     clip_t* getNextClip(clip_t* c) {
         bool matched = false;
         for (clip_t* clip : clips) {
@@ -122,6 +134,7 @@ public:
         }
         return nullptr;
     }
+
     clip_t* getPrevClip(clip_t* c) {
         clip_t* clipBefore = nullptr;
         for (clip_t* clip : clips) {
@@ -131,6 +144,7 @@ public:
         }
         return nullptr;
     }
+
     clip_t* getClipAt(time_t time) {
         for (clip_t* clip : clips) {
             if (clip->time == time)
@@ -138,11 +152,13 @@ public:
         }
         return nullptr;
     }
+
     void deleteEmptyClips(delete_cb* cb);
     void deleteClips(delete_cb* cb);
     void getClipsInRange(tick_t start, tick_t end, std::vector<clip_t*>& clips);
     void getNotesInRange(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, std::vector<note_t>& notes);
 };
+
 struct clip_layout_t {
     clip_t* clip;
     tick_t time;
@@ -155,7 +171,9 @@ struct clip_layout_t {
                                                                                                                                          time(time), len(len), lenSamples(lenSamples), offsetStart(offsetStart), offsetSamples(offsetSamples), loopLen(loopLen) {
     }
 };
+
 struct track_snapshot_t;
+
 struct trackstate_t {
     std::vector<track_snapshot_t*> tracks;
     DAW::Cursor cursor;
@@ -168,6 +186,7 @@ struct trackstate_t {
     ~trackstate_t();
     void reset();
 };
+
 class tracklayout_t {
 public:
     std::list<clip_layout_t> clips;
@@ -175,16 +194,19 @@ public:
     explicit tracklayout_t(const trackdata_midi_t& a) {
         copy(a);
     }
+
     tracklayout_t& operator=(const trackdata_midi_t& a) {
         copy(a);
         return *this;
     }
+
     void copy(const trackdata_midi_t& a) {
         clips.clear();
         for (clip_t* clip : a.getConstClips()) {
             clips.emplace_back(clip, clip->time, clip->len, clip->lenSamples, clip->offsetStart, clip->offsetSamples, clip->loopLen);
         }
     }
+
     void apply(track_t* tr) {
         for (clip_layout_t& clipLayout : clips) {
             clip_t* clip        = clipLayout.clip;
@@ -196,8 +218,10 @@ public:
             clip->loopLen       = clipLayout.loopLen;
         }
     }
+
 #define CLIP_FIELD_EQUAL(fldName) \
     if (clip->fldName != clipLayout.fldName) return true;
+
     bool diff(track_t* tr) {
         for (clip_layout_t& clipLayout : clips) {
             clip_t* clip = clipLayout.clip;
@@ -217,6 +241,7 @@ struct tracksettings_t {
     int type    = -1;//CONST!
     int rgb     = -1;
 };
+
 struct tracklayout_settings_t {
     int height         = 4;
     bool hideTrack     = false;
@@ -449,6 +474,7 @@ public:
         return true;
     }
 };
+
 class trackallcontainer_t;
 class trackcontainer_tracktype_t : public trackbasecontainer_t {
 public:
@@ -461,7 +487,9 @@ public:
     void copyFrom(trackcontainer_snapshot_t& in);
     void loadPlugins(trackcontainer_snapshot_t& in);
 };
+
 struct project_snapshot_t;
+
 class trackallcontainer_t {
     friend class project_t;
     trackbasecontainer_t trackAllCtr;
@@ -564,14 +592,17 @@ public:
     track_vector& getAllTracksFlatVecRef() { return trackAllCtr.tracksFlat; }
     track_vector& getMasterTracksFlatVecRef() { return trackMasterCtr.tracksFlat; }
 };
+
 struct project_layout_t {
     layout_grid_t layoutGrid;
     float scrollOffsetX{};
 };
+
 struct graph_node_layout_t {
     ivec2 pos;
     ivec2 size;
 };
+
 class project_t {
 public:
     trackallcontainer_t trackList;
@@ -597,6 +628,7 @@ public:
         return trackList.trackAllCtr.getTracksFlatVec();
     }
 };
+
 class delete_cb {
 public:
     virtual ~delete_cb()                       = default;

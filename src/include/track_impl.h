@@ -103,7 +103,7 @@ struct audio_stage_t {
      * backward pointer to gui containing this effect stage.
      * Used in drag/move handling
      */
-    guictr_plugins* pluginCtr;
+    guictr_plugins* m_pluginCtr;
     rmsmeterimpl<16000> meter;
     rmsmeterimpl<16000> meterInput;
     /**
@@ -138,7 +138,7 @@ struct audio_stage_t {
 
     audio_stage_t(vsthost* const _host, const audio_stage_id_t _id,/*track_t* _track, */const samplerate_t _sampleRate, const uint16_t _blockSize, int32_t nChannels, int _type = 1)
     : host(_host), stageId(_id), parent(nullptr), owner(nullptr),/*track(_track),*/
-      pluginCtr(nullptr),
+          m_pluginCtr(nullptr),
       input(nChannels, _blockSize),
       output(nChannels, _blockSize),
       outputPost(nChannels, _blockSize),
@@ -269,8 +269,8 @@ inline void updateProfilingTime(int64_t& field, int64_t tm, uint8_t weighting = 
 struct track_impl_t : public audio_stage_t {
     midiarp* arp = nullptr;
     track_t* track;
-    std::vector<note_t> heldNotes;
-    VstEvent_t* midiEventsBuf = nullptr;
+    std::vector<note_t> m_heldNotes;
+    VstEvent_t* m_midiEventsBuf = nullptr;
     DAW::channel_ref_t inputChannel;
     DAW::channel_ref_t outputChannel;
     std::vector<track_gui_entry_t*> guiInstances;

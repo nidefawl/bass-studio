@@ -211,7 +211,7 @@ guiplugin* module_group::makeGui() {
         dbgassert(this->audio);
         handle->gui = std::make_unique<guimodule_group>(this);
         handle->gui->setTitle(StringFormat("%s", StringAsCStr(this->sName)));
-        this->audio->pluginCtr = &this->handle->gui->ctr;
+        this->audio->m_pluginCtr = &this->handle->gui->ctr;
         handle->gui->ctr.stage = this->audio;
         handle->gui->ctr.track = this->audio->getTrack();
     }
@@ -244,9 +244,9 @@ void module_group::unload(vsthost* host, int flags) {
 
 void module_group::onPreUnload(int flags) {
     dbgassert(this->audio);
-    if (this->audio->pluginCtr == &this->handle->gui->ctr) {
+    if (this->audio->m_pluginCtr == &this->handle->gui->ctr) {
         this->handle->gui->ctr.showTrack(nullptr);
-        this->audio->pluginCtr = nullptr;
+        this->audio->m_pluginCtr = nullptr;
     }
     std::vector<effectbase*> effects = this->audio->effects;// make a copy before unloading plugins
     for (effectbase* effect : effects) {
