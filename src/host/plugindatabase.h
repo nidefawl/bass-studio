@@ -15,8 +15,8 @@ struct plugin_snapshot_t;
 
 class plugindatabase_t {
     class Impl;
-    Impl* m_impl  = NULL;
-    int revision  = -1;
+    Impl* m_impl = nullptr;
+    int revision = -1;
 
 public:
     plugindatabase_t();
