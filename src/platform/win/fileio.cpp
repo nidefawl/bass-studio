@@ -148,7 +148,6 @@ int browseForFolder(const String& title, const String& pathStart, String& _out) 
 }
 
 int promptUserFilePath(window_base*, int mode, std::vector<SupportedFileType> fileTypes, String& _out) {
-    //	const char supportedFiles = "Text Files (*." fileExt ")\0*." fileExt "\0All Files (*.*)\0*.*\0";
     char supportedFiles[MAX_PATH] = "";
     int offset                    = 0;
     fileTypes.push_back(SupportedFileType{ "All Files", "*" });

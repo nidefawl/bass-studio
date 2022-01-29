@@ -18,14 +18,14 @@ struct project_globals_t {
     /** (synced but not mutex locked) */
     bool loopEnabled = true;
     /**
-	 * (synced with threadsafe task)
-	 * tempo100 = bpm*100
-	 * Not automatable.
-	 *
-	 * Changes to tempo happen in task sent to playthread.
-	 * This is applied between processing of blocks
-	 * TODO: validate positioning of audio processing and note processing after tempo changes
-	 **/
+     * (synced with threadsafe task)
+     * tempo100 = bpm*100
+     * Not automatable.
+     *
+     * Changes to tempo happen in task sent to playthread.
+     * This is applied between processing of blocks
+     * TODO: validate positioning of audio processing and note processing after tempo changes
+     **/
     uint32_t tempo100 = 12800;
     /** (synced but not mutex locked) Does not affect audio processing on host side, but time info structure sent to plugins */
     uint32_t signatureNum = 4;

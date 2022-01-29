@@ -216,12 +216,12 @@ guiplugin* module_group::makeGui() {
         handle->gui->ctr.track = this->audio->getTrack();
     }
     return handle->gui.get();
-    //	return handle->gui;
+    //return handle->gui;
 }
 
 guiplugin* module_group::getGui() {
     return handle->gui.get();
-    //	return handle->gui;
+    //return handle->gui;
 }
 
 int32_t module_group::getPluginLatency() {
@@ -322,8 +322,8 @@ void module_group::process(AudioBlock* in, AudioBlock* out, double tick, int32_t
 }
 
 void module_group::postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) {
-    //	float fGainGroup;
-    //	dsp_util::getGainLvl(audio->mixer.getParamValue(PARAM_TRACK_GAIN), fGainGroup);
+    //float fGainGroup;
+    //dsp_util::getGainLvl(audio->mixer.getParamValue(PARAM_TRACK_GAIN), fGainGroup);
     meterIn.update(this->blockInputs, 1.0f);
     meter.update(out, 1.0f);
     if (!hasProcessed) {

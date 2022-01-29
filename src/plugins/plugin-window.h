@@ -5,16 +5,16 @@
 
 class pluginwindow : public AEffEditor {
 protected:
-	std::shared_ptr<PluginControl> const ctrlShared;
+    std::shared_ptr<PluginControl> const ctrlShared;
+
 public:
-	pluginwindow(std::shared_ptr<PluginControl> _ctrl) : ctrlShared(_ctrl) {
+    pluginwindow(std::shared_ptr<PluginControl> _ctrl) : ctrlShared(_ctrl) {
+    }
+    virtual ~pluginwindow() {
+    }
 
-	}
-	virtual ~pluginwindow() {
-
-	}
-	virtual void onSetParameter(int32_t index, float value) = 0;
-	virtual void destroyContextAndWindow() = 0;
-	void idle () override {
-	}
+    virtual void onSetParameter(int32_t index, float value) = 0;
+    virtual void destroyContextAndWindow()                  = 0;
+    void idle() override {
+    }
 };

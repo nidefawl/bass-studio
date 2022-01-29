@@ -52,10 +52,9 @@ public:
     }
     void onTick(double since) {
         /*
-		 * TODO: parameter since is constant on calls from audio thread (blocksize/samplerate)
-		 * make the decay curve a state or parameter
-		 */
-        //
+         * TODO: parameter since is constant on calls from audio thread (blocksize/samplerate)
+         * make the decay curve a state or parameter
+         */
         float decayCurve = math::powf(10.0f, (float) -since);
         if (fMax > math::F_MIN) {
             fMax = math::max(0.0f, fMax * decayCurve);

@@ -15,8 +15,6 @@ namespace UIFont {
         const char* name;
         const char* defValue;
         font_type_t();
-        //	font_type_t(const font_type_t&) = default;
-        //	font_type_t& operator=(const font_type_t&) = default;
         font_type_t(const char* _name, const char* _defValue);
     };
     std::vector<font_type_t> getAllConstants();

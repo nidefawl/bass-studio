@@ -27,30 +27,30 @@ class AudioEffect;
 
 KeyEvent keyEvent(int key, int scancode, int keyState, int mods, const char* key_name);
 
-class PluginControl : public AppCtrl
-{
-	std::shared_ptr<PluginViewContainers> view;
-	bool firstInit = true;
+class PluginControl : public AppCtrl {
+    std::shared_ptr<PluginViewContainers> view;
+    bool firstInit = true;
+
 public:
-	PluginControl(std::shared_ptr<PluginViewContainers> view);
-	~PluginControl();
-	static PluginControl* get();
-	void focusReceived() override { };
-	void focusLost() override { };
+    PluginControl(std::shared_ptr<PluginViewContainers> view);
+    ~PluginControl();
+    static PluginControl* get();
+    void focusReceived() override{};
+    void focusLost() override{};
 
     void mouseMoved(ivec2 mousePos, ivec2 deltaPos) override;
-	void menuCommand(const menucmd_t&& command) override;
-	void onTick() override;
-	bool init(window_main* window, NVGcontext* nanovg) override;
-	void postInit() override;
-	void destroy() override;
-	void relayout(int32_t w, int32_t h) override;
-	bool processGlobalKeyevent(KeyEvent& event) override;
-	bool mouseDownPre() override;
+    void menuCommand(const menucmd_t&& command) override;
+    void onTick() override;
+    bool init(window_main* window, NVGcontext* nanovg) override;
+    void postInit() override;
+    void destroy() override;
+    void relayout(int32_t w, int32_t h) override;
+    bool processGlobalKeyevent(KeyEvent& event) override;
+    bool mouseDownPre() override;
 
-	void initApp(int argc, char* argv[]) override;
+    void initApp(int argc, char* argv[]) override;
 
-	void onGuiOpen(AudioEffect* eff);
-	void onGuiClose(AudioEffect* eff);
-	void onSetParameter(int32_t index, float value);
+    void onGuiOpen(AudioEffect* eff);
+    void onGuiClose(AudioEffect* eff);
+    void onSetParameter(int32_t index, float value);
 };

@@ -489,9 +489,9 @@ public:
     }
 
     /**
-	 * inserts a track at position trackInsertPos of its track-type specific container
-	 * children have to have to set their parent reference outside
-	 */
+     * inserts a track at position trackInsertPos of its track-type specific container
+     * children have to have to set their parent reference outside
+     */
     void addTrack(int trackInsertPos, track_t* newTrack);
     void removeTrack(track_t* track);
     void moveTrack(track_t* track, int32_t newIdx);

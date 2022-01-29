@@ -599,21 +599,21 @@ int32_t clip_audio_t::lenSamples() const {
 void clip_t::adjustStartSamples(tick_t offset) {
     dbgassert(project_controller_t::get());
     int32_t tick = project_controller_t::get()->tickToSamples(offset);
-    //	if (loopEnabled && offsetStart < loopStart) {
-    //		tick_t lenAdj = min(offset, loopStart - offsetStart);
-    //		offsetStart += lenAdj;
-    //		offset -= lenAdj;
-    //	}
-    //	bool inLoop = loopEnabled && offsetStart >= loopStart;
+    //  if (loopEnabled && offsetStart < loopStart) {
+    //    tick_t lenAdj = min(offset, loopStart - offsetStart);
+    //    offsetStart += lenAdj;
+    //    offset -= lenAdj;
+    //  }
+    //  bool inLoop = loopEnabled && offsetStart >= loopStart;
     this->offsetSamples += tick;
-    //	if (this->offsetSamples < 0)
-    //		this->offsetSamples = 0;
-    //	while (inLoop && offsetStart < loopStart) {
-    //		offsetStart += loopLen;
-    //	}
-    //	while (inLoop && offsetStart >= loopStart+loopLen) {
-    //		offsetStart -= loopLen;
-    //	}
+    //  if (this->offsetSamples < 0)
+    //    this->offsetSamples = 0;
+    //  while (inLoop && offsetStart < loopStart) {
+    //    offsetStart += loopLen;
+    //  }
+    //  while (inLoop && offsetStart >= loopStart+loopLen) {
+    //    offsetStart -= loopLen;
+    //  }
 }
 
 tick_t clip_t::getLen() const {
@@ -627,7 +627,6 @@ tick_t clip_t::getLen() const {
         }
         dbgassert(len > 0 && lenConverted > 0);
     }
-    //	tick_t
     return len;
 }
 

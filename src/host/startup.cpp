@@ -12,25 +12,25 @@
 
 
 void dawinstance_startup_commands(daw_tls::tlsinstance& tls) {
-    //	if (1==1)
-    //		return;
+    //  if (1==1)
+    //    return;
     auto* const dawMainCtrl = tls.mainCtrl;
     if (!dawMainCtrl) {
         return;
     }
     auto dawInstance = dawMainCtrl->getDaw();
     vsthost* host    = vsthost::getInstance();
-    //	String dawPath = "C:/dev/daw/run/";
+    //  String dawPath = "C:/dev/daw/run/";
     String dawPath  = "C:/Users/Michael/daw/run/projects/";
     String projName = "startup2.project";
     //projName = "kshmr-samples-test.project";
-    //	projName = "test-empty-midi-loop.project";
+    //  projName = "test-empty-midi-loop.project";
     //projName = "arp-test.project";
     //projName = "test-send-automation.project";
     //projName = "kshmr-samples-test.project";
     //projName = "kshmr-samples-test.project";
     int flags = 0x1;// defer load
-                    //	flags = 0; // no defer load
+                    //  flags = 0; // no defer load
     dawInstance->cbProjectLoadCompleteCallback = [tls, dawMainCtrl, dawInstance, host](DawInstance*, std::shared_ptr<project_file> file, int errorState) {
         DAW::Cursor& cursor = dawMainCtrl->getCursor();
 
@@ -125,11 +125,11 @@ void dawinstance_startup_commands(daw_tls::tlsinstance& tls) {
         auto trackList = tls.project->getTracks().getMidiAudioTracksFlatVec();
         //        dbgassert(trackList.size() > 0 && trackList[0]->audio->guiInstances.size() > 0);
         //        track_gui_entry_t* trackGui = trackList[0]->audio->guiInstances[0];
-        //		auto gui = makeGuiSubtrack(trackGui, MainCtrl::get(), gui_track_subtrack::SUBTRACK_TYPE_WAVE);
-        //		MainCtrl::getGuiTrackCtr()->addSubTrack(trackGui, gui, true);
-        //		trackGui->parent->layout();
-        //		trackGui->parent->updateVisibleTrackContents();
-        //		dawInstance->startPlaying();
+        //    auto gui = makeGuiSubtrack(trackGui, MainCtrl::get(), gui_track_subtrack::SUBTRACK_TYPE_WAVE);
+        //    MainCtrl::getGuiTrackCtr()->addSubTrack(trackGui, gui, true);
+        //    trackGui->parent->layout();
+        //    trackGui->parent->updateVisibleTrackContents();
+        //    dawInstance->startPlaying();
     };
     //    dawMainCtrl->setVisible(false);
     //    dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 0));

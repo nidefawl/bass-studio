@@ -315,9 +315,9 @@ void trackallcontainer_t::loadPlugins(project_snapshot_t& project) {
     trackMasterCtr.loadPlugins(project.trackMasterCtr);
 }
 //void trackallcontainer_t::loadSubtrackLayouts(project_snapshot_t& project) {
-//	trackMidiAudioCtr.loadSubtrackLayouts(project.trackCtr);
-//	trackReturnCtr.loadSubtrackLayouts(project.trackReturnCtr);
-//	trackMasterCtr.loadSubtrackLayouts(project.trackMasterCtr);
+//  trackMidiAudioCtr.loadSubtrackLayouts(project.trackCtr);
+//  trackReturnCtr.loadSubtrackLayouts(project.trackReturnCtr);
+//  trackMasterCtr.loadSubtrackLayouts(project.trackMasterCtr);
 //}
 void trackallcontainer_t::copyTracks(int32_t trackBegin, int32_t trackEnd, trackstate_t& _out) {
     _out.reset();

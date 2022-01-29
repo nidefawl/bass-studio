@@ -229,11 +229,11 @@ void SignalHandler(int signal) {
 }
 void setExceptionHandler() {
 #if defined(_MSC_VER) || (defined(__MSVCRT_VERSION__) && __MSVCRT_VERSION__ > 0x800)
-    //	_set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
+    //_set_abort_behavior(0, _WRITE_ABORT_MSG | _CALL_REPORTFAULT);
     _set_error_mode(_OUT_TO_STDERR);// we have to supress the assert dialog, since it will spawn a message loop inside onRefresh
     signal(SIGABRT, SignalHandler);
 
-    //	_set_abort_behavior(0, _WRITE_ABORT_MSG);
+    //_set_abort_behavior(0, _WRITE_ABORT_MSG);
 #endif
 #if defined(_MSC_VER)
     //this is here to trigger a breakpoint when dbgassert(0) is called using the ms c-runtime
