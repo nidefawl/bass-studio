@@ -116,8 +116,8 @@ private:
     vsthost_impl* const impl;
 
 public:
-    //	samplerate_t lSampleRate = 0;
-    //	uint16_t lBlockSize = 0;
+    //  samplerate_t lSampleRate = 0;
+    //  uint16_t lBlockSize = 0;
     sampleformat_t sampleFormat         = { 44100, 512, sampleformat_bits_t::NONE };
     sampleformat_t sampleFormatExternal = { 44100, 512, sampleformat_bits_t::NONE };
 
@@ -143,7 +143,7 @@ public:
     SYNCHRONIZED_RW hires_timer_t timerAudioTick;// timer for cpu-time profiling
     SYNCHRONIZED_RW hires_timer_t timerBlock;    // timer for cpu-time profiling
     SYNCHRONIZED_RW hires_timer_t timerProfile;  // timer for cpu-time profiling
-    //	SYNCHRONIZED_RW hires_timer_t timer4;// timer for cpu-time profiling
+    //  SYNCHRONIZED_RW hires_timer_t timer4;// timer for cpu-time profiling
 private:
     SYNCHRONIZED_RW clip_t* recordingClip = nullptr;
     SYNCHRONIZED_RW std::atomic<bool> hasNewRecordedData{};
@@ -161,7 +161,7 @@ private:
     SYNCHRONIZED_RW clip_notes_t* midiRealtimeInput; //TODO: per device and channel
     SYNCHRONIZED_RW clip_notes_t* midiProcessedInput;//TODO: per device and channel
 
-    //	std::vector<std::shared_ptr<DelayLine>> delayLines;
+    //  std::vector<std::shared_ptr<DelayLine>> delayLines;
 
 
     class ModuleManager;
