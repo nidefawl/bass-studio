@@ -8,100 +8,103 @@
 namespace PluginHostInfo {
 #define MAX_VERBOSITY 16
 #define MAX_LOG_BLOCKS 3
-class PluginVST2_HostInfo;
+    class PluginVST2_HostInfo;
 
-enum
-{
-	// Global
-	kNumPrograms = 0, // wonder if that works
-	kNumOutputs = 2,
-	kNumInputs = 2,
-};
+    enum {
+        // Global
+        kNumPrograms = 0,// wonder if that works
+        kNumOutputs  = 2,
+        kNumInputs   = 2,
+    };
 
-enum
-{
-	kLogVerbosity = 0,
-	kLogBlocksProcessed = 1,
-	kNumParams
-};
+    enum {
+        kLogVerbosity       = 0,
+        kLogBlocksProcessed = 1,
+        kNumParams
+    };
 
 
-class ProgramParameters
-{
-public:
-	float logVerbosity = 0.0f;
-	float logBlocks = 0.0f;
-};
+    class ProgramParameters {
+    public:
+        float logVerbosity = 0.0f;
+        float logBlocks    = 0.0f;
+    };
 
-class Program : public ProgramParameters
-{
-	friend class PluginVST2_HostInfo;
-public:
-	Program();
-	~Program() {}
+    class Program : public ProgramParameters {
+        friend class PluginVST2_HostInfo;
 
-private:
-	char name[kVstMaxProgNameLen+1];
-};
+    public:
+        Program();
+        ~Program() = default;
 
-struct PluginVST2_HostInfo_impl_t;
-class PluginVST2_HostInfo : public BasePluginVST2 {
-	friend PluginVST2_HostInfo_impl_t* getImpl(PluginVST2_HostInfo*);
-protected:
-	PluginVST2_HostInfo_impl_t* const impl;
-public:
-	PluginVST2_HostInfo (audioMasterCallback audioMaster);
-	~PluginVST2_HostInfo ();
+    private:
+        char name[kVstMaxProgNameLen + 1]{ 0 };
+    };
 
-	bool getParameterProperties (VstInt32 index, VstParameterProperties* p) override;
-	void processReplacing (float** inputs, float** outputs, VstInt32 sampleFrames) override;
-	VstInt32 processEvents (VstEvents* events) override;
-	std::shared_ptr<PluginViewContainers> createView() override;
+    struct PluginVST2_HostInfo_impl_t;
+    class PluginVST2_HostInfo : public BasePluginVST2 {
+        friend PluginVST2_HostInfo_impl_t* getImpl(PluginVST2_HostInfo*);
 
-	virtual void setProgram(VstInt32 program);
-	virtual void setProgramName(char* name);
-	virtual void getProgramName(char* name);
-	virtual bool beginSetProgram() { this->issetprogram = true; return false; }	///< Called before a program is loaded
-	virtual bool endSetProgram() { this->issetprogram = false; return false; }		///< Called after a program was loaded
-	virtual bool getProgramNameIndexed (VstInt32 category, VstInt32 index, char* text);
+    protected:
+        PluginVST2_HostInfo_impl_t* const impl;
 
-	virtual void setParameter (VstInt32 index, float value) override;
-	virtual float getParameter (VstInt32 index) override;
-	virtual void getParameterLabel (VstInt32 index, char* label) override;
-	virtual void getParameterDisplay (VstInt32 index, char* text) override;
-	virtual void getParameterName (VstInt32 index, char* text) override;
-	virtual VstInt32 getChunk (void** data, bool isPreset = false) override;
-	virtual VstInt32 setChunk (void* data, VstInt32 byteSize, bool isPreset = false) override;
+    public:
+        explicit PluginVST2_HostInfo(audioMasterCallback audioMaster);
+        ~PluginVST2_HostInfo() override;
+
+        bool getParameterProperties(VstInt32 index, VstParameterProperties* p) override;
+        void processReplacing(float** inputs, float** outputs, VstInt32 sampleFrames) override;
+        VstInt32 processEvents(VstEvents* events) override;
+        std::shared_ptr<PluginViewContainers> createView() override;
+
+        void setProgram(VstInt32 program) override;
+        void setProgramName(char* name) override;
+        void getProgramName(char* name) override;
+        bool beginSetProgram() override {
+            this->issetprogram = true;
+            return false;
+        }///< Called before a program is loaded
+        bool endSetProgram() override {
+            this->issetprogram = false;
+            return false;
+        }///< Called after a program was loaded
+        bool getProgramNameIndexed(VstInt32 category, VstInt32 index, char* text) override;
+
+        void setParameter(VstInt32 index, float value) override;
+        float getParameter(VstInt32 index) override;
+        void getParameterLabel(VstInt32 index, char* label) override;
+        void getParameterDisplay(VstInt32 index, char* text) override;
+        void getParameterName(VstInt32 index, char* text) override;
+        VstInt32 getChunk(void** data, bool isPreset = false) override;
+        VstInt32 setChunk(void* data, VstInt32 byteSize, bool isPreset = false) override;
 
 
-	bool getEffectName (char* name) override;
-	bool getVendorString (char* text) override;
-	bool getProductString (char* text) override;
-	virtual VstPlugCategory getPlugCategory ()
-	{
-		return kPlugCategEffect;
-	}
-	virtual VstInt32 getVendorVersion ();
-	virtual VstInt32 canDo (char* text);
+        bool getEffectName(char* name) override;
+        bool getVendorString(char* text) override;
+        bool getProductString(char* text) override;
+        VstPlugCategory getPlugCategory() override {
+            return kPlugCategEffect;
+        }
+        VstInt32 getVendorVersion() override;
+        VstInt32 canDo(char* text) override;
 
-	Program* current() {
-		return &singleProgram;
-	}
+        Program* current() {
+            return &singleProgram;
+        }
 
 #ifdef DISPATCHER_DEBUG_TRACE
-	VstIntPtr dispatcher(VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt);
-#endif // DEBUG
+        VstIntPtr dispatcher(VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt);
+#endif// DEBUG
 
-private:
-	int getLogVerbosity() {
-		return math::round(current()->logVerbosity*MAX_VERBOSITY);
-	}
-	int getLogBlocks() {
-		return math::round(current()->logBlocks*MAX_LOG_BLOCKS);
-	}
-	Program singleProgram;
-};
-AudioEffectX* createPlugin (audioMasterCallback audioMaster);
-const char* getName();
-}
-
+    private:
+        int getLogVerbosity() {
+            return math::round(current()->logVerbosity * MAX_VERBOSITY);
+        }
+        int getLogBlocks() {
+            return math::round(current()->logBlocks * MAX_LOG_BLOCKS);
+        }
+        Program singleProgram;
+    };
+    AudioEffectX* createPlugin(audioMasterCallback audioMaster);
+    const char* getName();
+}// namespace PluginHostInfo

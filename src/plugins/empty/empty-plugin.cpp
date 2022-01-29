@@ -1,6 +1,6 @@
-#include <math.h>
+#include <cmath>
 #include <algorithm>
-#include <stdio.h>
+#include <cstdio>
 #include <memory>
 #include "config.h"
 #include "str_util.h"
@@ -25,190 +25,155 @@
 #endif
 
 #define PLUGIN_VENDOR_NAME "MichaelH"
-#define PLUGIN_UID "EMPT" //advanced gui test plugin
+#define PLUGIN_UID "EMPT"//advanced gui test plugin
 #define PLUGIN_PRODUCT_NAME "empty test plugin VST2.x "
 
 #if BUILD_EXTERNAL_PLUGIN
-AudioEffect* createEffectInstance (audioMasterCallback audioMaster)
-{
-	return PluginEmptyVST2::createPlugin(audioMaster);
+AudioEffect* createEffectInstance(audioMasterCallback audioMaster) {
+    return PluginEmptyVST2::createPlugin(audioMaster);
 }
 #endif
 
 namespace PluginEmptyVST2 {
 
-EmptyPluginVST2::EmptyPluginVST2 (audioMasterCallback audioMaster)
-	: BasePluginVST2(audioMaster, PLUGIN_UID, kNumPrograms, kNumParams, kNumInputs, kNumOutputs)
-{
-	curProgram = 0;
-}
+    EmptyPluginVST2::EmptyPluginVST2(audioMasterCallback audioMaster)
+        : BasePluginVST2(audioMaster, PLUGIN_UID, kNumPrograms, kNumParams, kNumInputs, kNumOutputs) {
+        curProgram = 0;
+    }
+
+    void EmptyPluginVST2::setProgram(VstInt32 program) {
+        if (program < 0 || program >= kNumPrograms)
+            return;
+        curProgram = program;
+    }
+
+    void EmptyPluginVST2::setProgramName(char* name) {
+    }
+
+    void EmptyPluginVST2::getProgramName(char* name) {
+        if (name && curProgram >= 0)
+            vst_strncpy(name, programs[curProgram].name, kVstMaxProgNameLen);
+    }
+
+    void EmptyPluginVST2::getParameterLabel(VstInt32 index, char* label) {
+        vst_strncpy(label, "", kVstMaxParamStrLen);
+    }
+
+    void EmptyPluginVST2::getParameterDisplay(VstInt32 index, char* text) {
+        text[0] = 0;
+    }
+
+    void EmptyPluginVST2::getParameterName(VstInt32 index, char* label) {
+    }
+
+    void EmptyPluginVST2::setParameter(VstInt32 index, float value) {
+    }
+
+    float EmptyPluginVST2::getParameter(VstInt32 index) {
+        return 0;
+    }
 
 
-EmptyPluginVST2::~EmptyPluginVST2 ()
-{
-}
+    bool EmptyPluginVST2::getInputProperties(VstInt32 index, VstPinProperties* properties) {
+        if (index == 0 || index == 1) {
+            properties->flags = kVstPinIsActive | kVstPinIsStereo;
+        }
+        if (index == 0) {
+            strcpy(properties->label, "Left input");
+            strcpy(properties->shortLabel, "L in");
+            return true;
+        } else if (index == 1) {
+            strcpy(properties->label, "Right input");
+            strcpy(properties->shortLabel, "R in");
+            return true;
+        }
+        return false;
+    }
+    bool EmptyPluginVST2::getOutputProperties(VstInt32 index, VstPinProperties* properties) {
+        if (index == 0 || index == 1) {
+            properties->flags = kVstPinIsActive | kVstPinIsStereo;
+        }
+        if (index == 0) {
+            strcpy(properties->label, "Left output");
+            strcpy(properties->shortLabel, "L out");
+            return true;
+        } else if (index == 1) {
+            strcpy(properties->label, "Right output");
+            strcpy(properties->shortLabel, "R out");
+            return true;
+        }
+        return false;
+    }
 
-void EmptyPluginVST2::setProgram (VstInt32 program)
-{
-	if (program < 0 || program >= kNumPrograms)
-		return;
-	curProgram = program;
-}
+    bool EmptyPluginVST2::getProgramNameIndexed(VstInt32 category, VstInt32 index, char* text) {
+        if (index >= 0 && index < kNumPrograms) {
+            vst_strncpy(text, programs[index].name, kVstMaxProgNameLen);
+            return true;
+        }
+        return false;
+    }
 
-void EmptyPluginVST2::setProgramName (char* name)
-{
-}
+    bool EmptyPluginVST2::getEffectName(char* name) {
+        vst_strncpy(name, PLUGIN_EFFECT_NAME, kVstMaxEffectNameLen);
+        return true;
+    }
 
-void EmptyPluginVST2::getProgramName (char* name)
-{
-	if (name != NULL && curProgram >= 0)
-		vst_strncpy(name, programs[curProgram].name, kVstMaxProgNameLen);
-}
+    bool EmptyPluginVST2::getVendorString(char* text) {
+        vst_strncpy(text, PLUGIN_VENDOR_NAME, kVstMaxVendorStrLen);
+        return true;
+    }
 
-void EmptyPluginVST2::getParameterLabel (VstInt32 index, char* label)
-{
-	vst_strncpy(label, "", kVstMaxParamStrLen);
-}
+    bool EmptyPluginVST2::getProductString(char* text) {
+        vst_strncpy(text, PLUGIN_PRODUCT_NAME, kVstMaxProductStrLen);
+        return true;
+    }
 
-void EmptyPluginVST2::getParameterDisplay (VstInt32 index, char* text)
-{
-	text[0] = 0;
-}
+    VstInt32 EmptyPluginVST2::getVendorVersion() {
+        return 2;
+    }
 
-void EmptyPluginVST2::getParameterName (VstInt32 index, char* label)
-{
-}
+    VstInt32 EmptyPluginVST2::canDo(char* text) {
+        if (!strcmp(text, "receiveVstEvents"))
+            return 1;
+        if (!strcmp(text, "receiveVstTimeInfo"))
+            return 1;
+        return -1;// explicitly can't do; 0 => don't know
+    }
 
-void EmptyPluginVST2::setParameter (VstInt32 index, float value)
-{
+    void EmptyPluginVST2::processReplacing(float** inputs, float** outputs, VstInt32 sampleFrames) {
+        numCalls++;
+        if (issetprogram)
+            return;
 
-}
-
-float EmptyPluginVST2::getParameter (VstInt32 index)
-{
-	return 0;
-}
-
-
-bool EmptyPluginVST2::getInputProperties (VstInt32 index, VstPinProperties* properties)
-{
-	if (index == 0 || index == 1)
-	{
-		properties->flags = kVstPinIsActive | kVstPinIsStereo;
-	}
-	if (index == 0)
-	{
-		strcpy(properties->label,	   "Left input");
-		strcpy(properties->shortLabel, "L in");
-		return true;
-	}
-	else if (index == 1)
-	{
-		strcpy(properties->label,	   "Right input");
-		strcpy(properties->shortLabel, "R in");
-		return true;
-	}
-	return false;
-}
-bool EmptyPluginVST2::getOutputProperties (VstInt32 index, VstPinProperties* properties)
-{
-	if (index == 0 || index == 1)
-	{
-		properties->flags = kVstPinIsActive | kVstPinIsStereo;
-	}
-	if (index == 0)
-	{
-		strcpy(properties->label,	   "Left output");
-		strcpy(properties->shortLabel, "L out");
-		return true;
-	}
-	else if (index == 1)
-	{
-		strcpy(properties->label,	   "Right output");
-		strcpy(properties->shortLabel, "R out");
-		return true;
-	}
-	return false;
-}
-
-bool EmptyPluginVST2::getProgramNameIndexed (VstInt32 category, VstInt32 index, char* text)
-{
-	if (index >= 0 && index < kNumPrograms)
-	{
-		vst_strncpy (text, programs[index].name, kVstMaxProgNameLen);
-		return true;
-	}
-	return false;
-}
-
-bool EmptyPluginVST2::getEffectName (char* name)
-{
-	vst_strncpy(name, PLUGIN_EFFECT_NAME, kVstMaxEffectNameLen);
-	return true;
-}
-
-bool EmptyPluginVST2::getVendorString (char* text)
-{
-	vst_strncpy(text, PLUGIN_VENDOR_NAME, kVstMaxVendorStrLen);
-	return true;
-}
-
-bool EmptyPluginVST2::getProductString (char* text)
-{
-	vst_strncpy(text, PLUGIN_PRODUCT_NAME, kVstMaxProductStrLen);
-	return true;
-}
-
-VstInt32 EmptyPluginVST2::getVendorVersion ()
-{
-	return 2;
-}
-
-VstInt32 EmptyPluginVST2::canDo (char* text)
-{
-	if (!strcmp (text, "receiveVstEvents"))
-		return 1;
-	if (!strcmp(text, "receiveVstTimeInfo"))
-		return 1;
-	return -1;	// explicitly can't do; 0 => don't know
-}
-
-void EmptyPluginVST2::processReplacing(float** inputs, float** outputs, VstInt32 sampleFrames)
-{
-	numCalls++;
-	if (issetprogram)
-		return;
-
-	if (sampleFrames != blockSize) {
-		return;
-	}
-	if (this->getAeffect()->numOutputs == 1) {
-		if (inputs)
-			memset(inputs[0], 0, sizeof(float)*sampleFrames);
-		memset(outputs[0], 0, sizeof(float)*sampleFrames);
-	} else if (this->getAeffect()->numOutputs == 2) {
-		if (inputs)
-			dsp_util::fillChannels(inputs, this->getAeffect()->numInputs, sampleFrames, 0.0f);
-		dsp_util::fillChannels(outputs, this->getAeffect()->numOutputs, sampleFrames, 0.0f);
+        if (sampleFrames != blockSize) {
+            return;
+        }
+        if (this->getAeffect()->numOutputs == 1) {
+            if (inputs)
+                memset(inputs[0], 0, sizeof(float) * sampleFrames);
+            memset(outputs[0], 0, sizeof(float) * sampleFrames);
+        } else if (this->getAeffect()->numOutputs == 2) {
+            if (inputs)
+                dsp_util::fillChannels(inputs, this->getAeffect()->numInputs, sampleFrames, 0.0f);
+            dsp_util::fillChannels(outputs, this->getAeffect()->numOutputs, sampleFrames, 0.0f);
 #if defined(PLUGIN_BUILD_CRASHVERSION)
-//		my_printf("producing segfault\n", 0);
-		int64_t* ptr = nullptr;
-		ptr = static_cast<int64_t*>((void*)0xBAADF00D);
-		int64_t val = *ptr;
-		my_printf("val = %lld WTF\n", val);
+            //log_printf("producing segfault\n", 0);
+            int64_t* ptr = nullptr;
+            ptr          = static_cast<int64_t*>((void*) 0xBAADF00D);
+            int64_t val  = *ptr;
+            my_printf("val = %lld WTF\n", val);
 #endif
-	}
-	numCalls2++;
-}
+        }
+        numCalls2++;
+    }
 
 
-BaseVST2_Program::BaseVST2_Program()
-{
-	vst_strncpy(name, "Init", kVstMaxProgNameLen);
-}
+    BaseVST2_Program::BaseVST2_Program() : ProgramParameters() {
+        vst_strncpy(name, "Init", kVstMaxProgNameLen);
+    }
 
 
-const char* getName() {
-	return PLUGIN_EFFECT_NAME;
-}
-}
+    const char* getName() {
+        return PLUGIN_EFFECT_NAME;
+    }
+}// namespace PluginEmptyVST2

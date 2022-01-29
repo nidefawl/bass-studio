@@ -1,6 +1,6 @@
-#include <math.h>
+#include <cmath>
 #include <algorithm>
-#include <stdio.h>
+#include <cstdio>
 #include <memory>
 #include "config.h"
 #include "str_util.h"

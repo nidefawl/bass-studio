@@ -42,7 +42,7 @@ void PluginControl::destroy() {
     }
     isOK = false;
     if (view) {
-        //		delete view;
+        //delete view;
         view->setFree();
         view = nullptr;
     }
@@ -65,7 +65,7 @@ PluginControl::PluginControl(std::shared_ptr<PluginViewContainers> _view) : AppC
 PluginControl::~PluginControl() {
     if (view) {
         view->setFree();
-        //		delete view;
+        //delete view;
         view = nullptr;
     }
 }

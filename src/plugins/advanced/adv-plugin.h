@@ -21,24 +21,12 @@ namespace PluginTestAdv {
         kNumParams   = 1
     };
 
-
-    //------------------------------------------------------------------------------------------
-    // ProgramParameters
-    //------------------------------------------------------------------------------------------
-
-
     class ProgramParameters {
     public:
         float latency;
         float noiseVolume;
         bool reportLatency;
     };
-
-
-    //------------------------------------------------------------------------------------------
-    // FSM_VST_Program
-    //------------------------------------------------------------------------------------------
-
 
     class BaseVST2_Program : public ProgramParameters {
         friend class GuiAdvPluginVST2;
@@ -48,13 +36,8 @@ namespace PluginTestAdv {
         ~BaseVST2_Program() = default;
 
     private:
-        char name[kVstMaxProgNameLen + 1];
+        char name[kVstMaxProgNameLen + 1]{0};
     };
-
-
-    //------------------------------------------------------------------------------------------
-    // FSM_VST_Plugin
-    //------------------------------------------------------------------------------------------
 
     class GuiAdvPluginVST2 : public BasePluginVST2 {
 
