@@ -33,18 +33,21 @@ struct track_selection_t {
 };
 class track_gui_manager_i {
 public:
-    virtual ~track_gui_manager_i()                                           = default;
+    virtual ~track_gui_manager_i() = default;
+    virtual void reset()           = 0;
+
+    virtual bool validTrackIdx(int32_t idx) const       = 0;
+    virtual const track_gui_entry_t* at(size_t i) const = 0;
+    virtual track_gui_entry_t* atNC(size_t i)           = 0;
+    virtual int32_t clampTrackIdx(int32_t idx) const    = 0;
+
+    virtual bool isVisible(const track_gui_entry_t* entry)     = 0;
+    virtual const track_gui_vector_td& getTracksVisibleFlat()  = 0;
+
     virtual bool getTrackEntryCopy(const track_t* t, track_gui_entry_t& out) = 0;
     virtual bool getPointerEntry(const track_t* t, track_gui_entry_t** out)  = 0;
+    virtual int32_t getTrackProjectIndex(int32_t guiIdx) const               = 0;
 
-    virtual bool isVisible(const track_gui_entry_t* entry)                                  = 0;
-    virtual bool validTrackIdx(int32_t idx) const                                           = 0;
-    virtual const track_gui_entry_t* at(size_t i) const                               = 0;
-    virtual track_gui_entry_t* atNC(size_t i)                                         = 0;
-    virtual int32_t clampTrackIdx(int32_t idx) const                                        = 0;
-    virtual const track_gui_vector_td& getTracksVisibleFlat()                               = 0;
-    virtual void reset()                                                                    = 0;
-    virtual int32_t getTrackProjectIndex(int32_t guiIdx) const                              = 0;
     virtual bool getTrackSelection(const DAW::Cursor& cursor, track_selection_t& sel) const = 0;
 };
 
