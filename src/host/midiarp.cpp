@@ -73,9 +73,9 @@ int32_t midiarp::getRandTmMode() {
 }
 
 tick_t midiarp::getDuration() {
-    //	const int minDuration = getStepSize() >> 3;
-    //	const int maxDuration = getStepSize() << 1;
-    //	tick_t len = (tick_t) (std::floor(minDuration + getGateF() * (maxDuration - minDuration)));
+    //const int minDuration = getStepSize() >> 3;
+    //const int maxDuration = getStepSize() << 1;
+    //tick_t len = (tick_t) (std::floor(minDuration + getGateF() * (maxDuration - minDuration)));
 
     // range is 1/8 to 2 times the StepSize
     // I want f = 0.5 to map to 1.0
@@ -498,9 +498,9 @@ void midiarp::processArpInternal(playback_state state, tick_t cursorPos, const s
             if (evt.tickOffsetInBlock + start != tick) {
                 // break when all events are in the future. This relys on sorted lists
                 //TODO: test early break
-                //				if (evt+start > tick) {
-                //					break;
-                //				}
+                //if (evt+start > tick) {
+                //break;
+                //}
                 continue;
             }
             nInputEventsProcessed++;

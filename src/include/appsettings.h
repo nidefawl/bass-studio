@@ -129,7 +129,7 @@ struct appsettings {
     appsettings() noexcept = default; // need noexcept for static storage
     appwindowsettings wndMain;
     appwindowsettings wndCompanion;
-    //	String device_selected;
+    //String device_selected;
     bool startEngine = false;
     bool vmmode = false;
     String pluginPath;

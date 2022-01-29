@@ -43,15 +43,15 @@ tick_t scaled_grid::getTickLength() {
 }
 void scaled_grid::setOffset(int newOffset) {
     newOffset = newOffset < 0 ? 0 : newOffset;
-    //	double rightMost = toObjSpace(lastW, this->zoom, newOffset);
-    //	double projectWorkingArea = MainCtrl::get()->getProjectWorkingArea();
-    //	if (rightMost > projectWorkingArea) {
-    //		double n = toScreenSpace(projectWorkingArea);
-    //		newOffset =  n - (double)lastW;
-    //		if (newOffset < 0.) {
-    //			newOffset = 0.;
-    //		}
-    //	}
+    //double rightMost = toObjSpace(lastW, this->zoom, newOffset);
+    //double projectWorkingArea = MainCtrl::get()->getProjectWorkingArea();
+    //if (rightMost > projectWorkingArea) {
+    //double n = toScreenSpace(projectWorkingArea);
+    //newOffset =  n - (double)lastW;
+    //if (newOffset < 0.) {
+    //newOffset = 0.;
+    //}
+    //}
     this->offset = (int) newOffset;
 }
 tick_t scaled_grid::next(tick_t tick) {

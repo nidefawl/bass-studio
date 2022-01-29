@@ -101,9 +101,9 @@ gui_ctr_debug::gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType)
             float guiScale      = math::max(0.05f, f * 2.0f);
             parentCtrl->m_scale = guiScale;
             parentCtrl->relayout();
-            //		curVal = 0+math::max(0, math::min(255, (int32_t)math::floor(f*255)));
-            //		GuiColor::initConstants(curVal);
-            //		parentCtrl->getTheme()->initTheme();
+            //curVal = 0+math::max(0, math::min(255, (int32_t)math::floor(f*255)));
+            //GuiColor::initConstants(curVal);
+            //parentCtrl->getTheme()->initTheme();
         };
         knob->fnGetValue = [this](void) {
             return math::max(0.05f, math::min(1.0f, parentCtrl->m_scale * 0.5f));
@@ -258,7 +258,7 @@ void gui_ctr_debug::render(NVGcontext* vg) {
         auto graphLegendColor = (int32_t) 0x33ff33;
         nvgMoveTo(vg, legendX, graphOnlySize.y / 2);
         nvgLineTo(vg, legendX, graphOnlySize.y);
-        //		nvgMoveTo(vg, legendX, graphOnlySize.y);
+        //nvgMoveTo(vg, legendX, graphOnlySize.y);
         nvgLineTo(vg, legendX + graphOnlySize.x, graphOnlySize.y);
         nvgStrokeColor(vg, rgbToNvg(graphLegendColor));
         nvgStrokeWidth(vg, 1.f);
@@ -272,11 +272,11 @@ void gui_ctr_debug::render(NVGcontext* vg) {
             nvgMoveTo(vg, xPos, graphOnlySize.y);
             nvgLineTo(vg, xPos, graphOnlySize.y + markW);
         }
-        //		for (int i = 0; i < graphLegendSteps.y; i++) {
-        //			float yPos = graphStepLen.y*(i+0.5f);
-        //			nvgMoveTo(vg, legendX-markW, yPos);
-        //			nvgLineTo(vg, legendX, yPos);
-        //		}
+        //for (int i = 0; i < graphLegendSteps.y; i++) {
+        //float yPos = graphStepLen.y*(i+0.5f);
+        //nvgMoveTo(vg, legendX-markW, yPos);
+        //nvgLineTo(vg, legendX, yPos);
+        //}
         nvgStrokeColor(vg, rgbToNvg(graphLegendColor));
         nvgStrokeWidth(vg, 2.0f);
         nvgStroke(vg);
@@ -321,8 +321,8 @@ void gui_ctr_debug::render(NVGcontext* vg) {
                     maxThread = math::max(maxThread, static_cast<int32_t>(entry.threadIdx));
                 }
                 if (pass == 0) {
-                    //					uint64_t stageColorIdx = stageIdInt*1047299;
-                    //					auto graphColor = colorOnlyPalette[(stageColorIdx>>3)%(colorOnlyPaletteLen)];
+                    //uint64_t stageColorIdx = stageIdInt*1047299;
+                    //auto graphColor = colorOnlyPalette[(stageColorIdx>>3)%(colorOnlyPaletteLen)];
                     auto graphColor = colorOnlyPalette[(pass * 4 + 2) % colorOnlyPaletteLen];
                     nvgStrokeColor(vg, rgbToNvg(graphColor));
                     nvgStrokeWidth(vg, 2.0f);
@@ -610,15 +610,15 @@ void gui_ctr_debug::buttonClicked(guibase* button) {
     }
 }
 //bool gui_ctr_debug::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
-//	if (this->contains(mpos)) {
-//		ivec2 localMouse = this->toContainerSpace(mpos);
-//		for (guibase* gui : guis) {
-//			if (gui->mouseHitTest(localMouse, evt)) {
-//				return true;
-//			}
-//		}
-//	}
-//	return false;
+//if (this->contains(mpos)) {
+//ivec2 localMouse = this->toContainerSpace(mpos);
+//for (guibase* gui : guis) {
+//if (gui->mouseHitTest(localMouse, evt)) {
+//return true;
+//}
+//}
+//}
+//return false;
 //}
 
 void gui_ctr_debug::onTick(AppCtrl* ctrl) {

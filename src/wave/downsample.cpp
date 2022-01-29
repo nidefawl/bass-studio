@@ -7,24 +7,24 @@ int downsample(float sampleRate, float* samplesIn, int len, std::vector<float>& 
 
 // Straight forward downsampling using internal LPF. I can't remember any details about this
 
-//	float srtDown = sampleRate / (float) (1 << downsampleBits);
-////	double ft = (srtDown*0.4f);
-//	double ft = (sampleRate * 0.45f);
-//	double bt = 8000 / (float) (1 << downsampleBits);
-//	double ripple = 0.001;
-//	int lenCoeffs;
-//	double *coeff = calcLPF(sampleRate, ft, ripple, bt, &lenCoeffs);
-//	int nStep = 1 << downsampleBits;
-//	int lenSamplesDown = len >> downsampleBits;
-//	for (int j = 0; j < lenSamplesDown; j++) {
-//		int pos = j * nStep;
-//		float out = 0.0;
-//		for (int y = 0; y < lenCoeffs; y++) {
-//			out += samplesIn[math::max(0, pos)] * coeff[y];
-//			pos--;
-//		}
-//		samplesOut[j] = out;
-//	}
+//float srtDown = sampleRate / (float) (1 << downsampleBits);
+////double ft = (srtDown*0.4f);
+//double ft = (sampleRate * 0.45f);
+//double bt = 8000 / (float) (1 << downsampleBits);
+//double ripple = 0.001;
+//int lenCoeffs;
+//double *coeff = calcLPF(sampleRate, ft, ripple, bt, &lenCoeffs);
+//int nStep = 1 << downsampleBits;
+//int lenSamplesDown = len >> downsampleBits;
+//for (int j = 0; j < lenSamplesDown; j++) {
+//int pos = j * nStep;
+//float out = 0.0;
+//for (int y = 0; y < lenCoeffs; y++) {
+//out += samplesIn[math::max(0, pos)] * coeff[y];
+//pos--;
+//}
+//samplesOut[j] = out;
+//}
 
 	soxr_io_spec_t iospec;
 	iospec.flags = 0;

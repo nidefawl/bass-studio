@@ -158,7 +158,7 @@ void serialize(Archive& archive, track_io_configuration_snapshot_t& m) {
 
 template<class Archive>
 void serialize(Archive& archive, track_effect_routing_snapshot_t& m) {
-    //	archive(make_nvp("inputRoutingOutputStage", m.inputRoutingOutputStage));
+    //archive(make_nvp("inputRoutingOutputStage", m.inputRoutingOutputStage));
     archive(make_nvp("inputRoutingOutputStage", m.inputRoutingOutputStage), make_nvp("inputRoutingEffects", m.inputRoutingEffects),
             make_nvp("routingState", m.routingState));
 }
@@ -196,8 +196,8 @@ void serialize(Archive& archive, tracklayout_settings_t& m) {
 template<class Archive>
 void serialize(Archive& archive, track_layout_snapshot_t& m) {
     // TODO: Store/Load track layout
-    //	archive(make_nvp("layout", m.layout),
-    //			make_nvp("subtracks", m.automationLanes));
+    //archive(make_nvp("layout", m.layout),
+    //make_nvp("subtracks", m.automationLanes));
 }
 
 template<class Archive>

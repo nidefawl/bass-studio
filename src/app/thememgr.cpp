@@ -97,20 +97,20 @@ void guitheme_mgr::setTheme(guitheme_t setTheme) {
             has    = true;
         }
     }
-    //	if (!has) {
-    //		themes.push_back(current);
-    //	}
+    //if (!has) {
+    //themes.push_back(current);
+    //}
     if (setTheme.isDefault) {
         setTheme = defaultTheme;
     }
-    //	if (current != setTheme) {
+    //if (current != setTheme) {
     current = setTheme;
     current.bindFonts();
     if (parent && parent->isOk()) {
         parent->relayout();
     }
 
-    //	}
+    //}
 }
 void guitheme_mgr::setThemeName(String themeName) {
     if (themeName == "default") {

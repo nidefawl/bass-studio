@@ -109,7 +109,7 @@ int32_t audiotrack_t::convertToSamples(vsthost* host) {
 }
 
 void copyFromToSample(audiosample_t* dstSample, float** srcBuf, uint32_t offsetIn, uint32_t offsetOut, uint32_t srcSamples, uint32_t srcChannels) {
-    //		dbgassert(srcSamples == samples);
+    //dbgassert(srcSamples == samples);
     uint32_t nChannels = math::max(srcChannels, (uint32_t) dstSample->nChannels);
     uint32_t nSamples  = math::min(srcSamples, (uint32_t) dstSample->nSamples);
     for (uint32_t i = 0; i < nChannels; i++) {

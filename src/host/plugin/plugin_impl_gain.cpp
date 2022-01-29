@@ -61,7 +61,7 @@ public:
     void setDisplayValueFromEffect() {
         if (this->hostSidePlugin) {
             String display = hostSidePlugin->formatDisplayValue(paramIdx);
-            //			String displayUnit = curEffect->getParamName(internalEffectIdx);
+            //String displayUnit = curEffect->getParamName(internalEffectIdx);
             this->valueDisplay = display;
         } else {
 
@@ -156,7 +156,7 @@ module_gain::module_gain(int32_t _projectGlobalId)
     const std::array<effectgain_param_entry, 2> parameterTypes{ {
             { PARAM_GAIN, "Gain", dsp_util::gainToLinScale(1.0f) },
             { PARAM_PAN,  "Pan",  0.5f },
-            //		{PARAM_GROUPPLUGIN_INPUT_GAIN, "Input Gain", 1.0f},
+            //{PARAM_GROUPPLUGIN_INPUT_GAIN, "Input Gain", 1.0f},
     } };
     for (const effectgain_param_entry& paramEntry : parameterTypes) {
         automatable_param_t* regparam = registerParam(paramEntry.id);

@@ -217,7 +217,7 @@ namespace MiniApp {
             BaseCtrl::render(nanovgCtxt, x, y, w, h, pixelRatio);
             nvgBeginFrame(vg, w, h, pixelRatio);
             nvgScale(vg, m_scale, m_scale);
-            //			ivec2 offsetPos(0, 0);
+            //ivec2 offsetPos(0, 0);
             for (auto i = 0u; i < NUM_RENDERERS; i++) {
                 std::vector<waveform_test_entry>& vec = waveformTest.vecs[i];
 

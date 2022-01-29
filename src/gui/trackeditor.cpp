@@ -221,7 +221,7 @@ bool guitrack_editor::handleKeyInput(KeyEvent& kevt) {
                 std::shared_ptr<clip_clipboard> clipboardCopy         = DAW::copySelection(iGuiMgr, cursor);
                 std::shared_ptr<clip_clipboard> clipboardConsolidated = DAW::consolidateClipboard(clipboardCopy, cursor);
                 cursor.setLeftAligned();
-                //				cursor.cursorPos += cursor.getRange();
+                //cursor.cursorPos += cursor.getRange();
                 DAW::cutSelection(iGuiMgr, cursor);
                 DAW::pasteClipboard(iGuiMgr, clipboardConsolidated.get(), cursor);
                 grid.makeTickVisible(cursor.cursorPos + clipboardConsolidated->selRange);
@@ -417,8 +417,8 @@ void guitrack_editor::dragSelectionBegin(gui_clip* gClip, MouseEvent& evt) {
     tick_t tickExact    = grid.screenToTickSnap(local.x, SNAP_OFF);
     track_t* track      = gClip->m_track;
     clip_t* clicked     = gClip->m_clip;
-    //		ghostCopy = new gui_clip(clip->m_clip->clone());
-    //		ghostCopy->m_clip->gClip = ghostCopy;
+    //ghostCopy = new gui_clip(clip->m_clip->clone());
+    //ghostCopy->m_clip->gClip = ghostCopy;
     track_gui_entry_t* trackClicked = getTrackFromMouse(iGuiMgr, local, false);
     if (trackClicked) {
         DawInstance::get()->setSelectedTrackEntry(trackClicked);
@@ -699,10 +699,10 @@ void guitrack_editor::prerender(NVGcontext* vg) {
                     ivec2 clipSize     = tr->content->size;//TODO: get rid of *tr here, figure out size before and add default fallback
                     audiofile_t* audio = audiocache::getInstance()->get(cl->audio.id);
                     if (!audio || !getClipPosition(grid, tr->content->size, cl, clipPos, clipSize, 0)) {
-                        //						my_printf("release %012x from prerender() (clipped) \n", &cl->audio.waveformRef);
+                        //my_printf("release %012x from prerender() (clipped) \n", &cl->audio.waveformRef);
                         waveformrender::getInstance()->release(&cl->audio.waveformRef);
-                        //						cl->audio.waveformRef.fbId = -1;
-                        //						cl->audio.waveformRef.rendered = false;
+                        //cl->audio.waveformRef.fbId = -1;
+                        //cl->audio.waveformRef.rendered = false;
                         continue;
                     }
 
@@ -715,15 +715,15 @@ void guitrack_editor::prerender(NVGcontext* vg) {
                     if (!waveformRef.queued) {
                         if (!waveformRef.rendered || waveform != waveformRef.waveform) {
                             dbgassert(!waveformRef.queued);
-                            //						my_printf("release %012x from prerender() (refresh) \n", &waveformRef);
+                            //my_printf("release %012x from prerender() (refresh) \n", &waveformRef);
                             waveformrender::getInstance()->release(&waveformRef);
                             if (waveform.size.x > 0 && waveform.size.y > 0) {
                                 waveformRef.waveform = waveform;
                                 /*int ret = */ waveformrender::getInstance()->queueUpdate(audio, &waveformRef);
                             }
 
-                            //						waveformRef.fbId = ret;
-                            //						waveformRef.rendered = true;
+                            //waveformRef.fbId = ret;
+                            //waveformRef.rendered = true;
                         }
                     }
 #endif
@@ -749,11 +749,11 @@ void guitrack_editor::renderClip(NVGcontext* vg, const track_gui_entry_t* const 
                 log_printf("dragged waveform rendering not implemented\n", 0);
             }
 #ifdef TODO_IMPLEMENT_DRAGGED_WAVE_FORM_RENDERING
-//			track_gui_entry_t entry;
-//			dbgassert(iGuiMgr.getTrackEntry(tr, entry));
-//			dbgassert(entry.clipsGuis.count(cl));
-//			const gui_waveform_texture_ref * ptr = dynamic_cast<gui_audio_clip*>(entry.clipsGuis[cl])->waveformRef;
-//			renderAudioClip(vg, theme, tr, cl, ptr, clipPos, clipSize, clipPos, clipSize);
+//track_gui_entry_t entry;
+//dbgassert(iGuiMgr.getTrackEntry(tr, entry));
+//dbgassert(entry.clipsGuis.count(cl));
+//const gui_waveform_texture_ref * ptr = dynamic_cast<gui_audio_clip*>(entry.clipsGuis[cl])->waveformRef;
+//renderAudioClip(vg, theme, tr, cl, ptr, clipPos, clipSize, clipPos, clipSize);
 #endif
         }
     }
@@ -940,8 +940,8 @@ void guitrack_editor::render(NVGcontext* vg) {
             const track_gui_entry_t* trEEntry = iGuiMgr.at(trackEnd);
             int32_t tickBegin                 = c.getTickBegin();
             int32_t tickEnd                   = c.getTickEnd();
-            //			double tickBeginX = max(-2, (int) grid.tickToScreenD(tickBegin));
-            //			double tickEndX = min(size.x + 2, (int) grid.tickToScreenD(tickEnd));
+            //double tickBeginX = max(-2, (int) grid.tickToScreenD(tickBegin));
+            //double tickEndX = min(size.x + 2, (int) grid.tickToScreenD(tickEnd));
             double tickBeginX = grid.tickToScreenD(tickBegin);
             double tickEndX   = grid.tickToScreenD(tickEnd);
             float trackYMin   = math::min(trBEntry->content->top(), trEEntry->content->top());

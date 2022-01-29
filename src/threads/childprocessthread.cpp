@@ -33,7 +33,7 @@ public:
         if (env.size()) {
             dbgassert(0 && "Custom environment not yet implemented on this platform");
         }
-        //		char *argv[] = { "ls", (char *) 0 };
+        //char *argv[] = { "ls", (char *) 0 };
         std::vector<String> strings;
         std::istringstream f(params);
         String s;
@@ -98,7 +98,7 @@ public:
             char* dstOffset = bufEnv.data();
             char* dstEnd    = bufEnv.data() + totalEnvLen;
             for (const auto& entry : env) {
-                //				my_printf("ENV[\"%s\"]\t=\t%s\n", StringAsCStr(entry.name), StringAsCStr(entry.value));
+                //my_printf("ENV[\"%s\"]\t=\t%s\n", StringAsCStr(entry.name), StringAsCStr(entry.value));
                 if (strcpy_s(dstOffset, (dstEnd - dstOffset), StringAsCStr(entry.name)))
                     throw appexception("Failed processing env key");
                 dstOffset += entry.name.length();

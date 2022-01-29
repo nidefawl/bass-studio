@@ -20,7 +20,7 @@ void guitooltip<guibutton>::layout() {
     table.rows.clear();
     table.titleCols.clear();
     table.colSizes.clear();
-    //	row1.cols.push_back();
+    //row1.cols.push_back();
     {
         tbl_row_t row{};
         row.cols.push_back(tblString{ptr->getTooltipText()});
@@ -72,7 +72,7 @@ void guibutton::renderButtonLabel(NVGcontext* vg, int32_t stateFlags) {
         if (str.length() > 0) {
             int fontScale = math::round((this->fontSize > 0 ? this->fontSize : math::min(size.y, size.x)) * fFontScale);
             GuiColor::constant_t c = (stateFlags & FLG_ENBL) ? GuiColor::COL_LABEL_ACTIVE : GuiColor::COL_LABEL_INACTIVE;
-            //			nvgDawText(vg, this, pos, size, str, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+            //nvgDawText(vg, this, pos, size, str, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
             renderCenteredMultilineText(vg, theme, str, fontScale, c, renderPos, size);
         }
 

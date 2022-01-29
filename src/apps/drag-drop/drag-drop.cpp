@@ -41,7 +41,7 @@ std::shared_ptr<guictr_layout> makeDragTestCtr() {
 #if BUILD_VSTHOST
     addLayoutEntry(ctr, std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_2), "Theme 3");
 #endif
-    //	addLayoutEntry(ctr, std::make_shared<guictr_layout>(), "guictr_layout");
+    //addLayoutEntry(ctr, std::make_shared<guictr_layout>(), "guictr_layout");
 
     ctr->setActiveEntry(0);
     return ctr;

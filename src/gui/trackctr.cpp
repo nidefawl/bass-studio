@@ -439,7 +439,7 @@ void guictr_tracks::render(NVGcontext* vg) {
         auto& dragDropTarget = dawCtrl->getDragDropTarget();
         if (dragDropTarget.src) {
             auto* trackMixers = static_cast<guitrack_mixers*>(dragDropTarget.src);
-            //			dragDropTarget.src->renderWidgetBorderPosSize(vg, flags, pos, size)
+            //dragDropTarget.src->renderWidgetBorderPosSize(vg, flags, pos, size)
             int n       = trackMixers->theme->get(GuiConstant::CONST_GUI_INSET_WIDGET_BG);
             auto bgPos  = /*trackMixers->getPosContent()+*/ ivec2(n);
             auto bgSize = trackMixers->getSizeContent() - ivec2(n * 2);
@@ -488,11 +488,11 @@ void guictr_tracks::render(NVGcontext* vg) {
         nvgIntersectScissor(vg, trackView.pos.x, 0, trackView.size.x, cs.y);
         nvgTranslate(vg, trackView.pos.x, 0);
         tick_t pos = DawInstance::get()->getPlaybackPos();
-        //		if (project.loopEnabled) {
-        //			if (pos > project.loopStart) {
-        //				pos = project.loopStart + (pos - project.loopStart) % project.loopLen;
-        //			}
-        //		}
+        //if (project.loopEnabled) {
+        //if (pos > project.loopStart) {
+        //pos = project.loopStart + (pos - project.loopStart) % project.loopLen;
+        //}
+        //}
         float playBackX = (float) grid.tickToScreenD(pos);
         if (playBackX > -4.0f && playBackX < cs.x + 4.0f) {
             nvgBeginPath(vg);
@@ -508,24 +508,24 @@ void guictr_tracks::render(NVGcontext* vg) {
             nvgStrokeWidth(vg, 1);
             nvgStroke(vg);
         }
-        //		nvgIntersectScissor(vg, 0, 0, trackView.size.x, trackView.size.y);
-        //		nvgTranslate(vg, 0, trackTimeline.bottom());
+        //nvgIntersectScissor(vg, 0, 0, trackView.size.x, trackView.size.y);
+        //nvgTranslate(vg, 0, trackTimeline.bottom());
 
-        //		double playBackX = grid.tickToScreenD(dawCtrl->playbackPos);
-        //		if (playBackX > -4 && playBackX < cs.x+4) {
-        //			nvgBeginPath(vg);
-        //			nvgMoveTo(vg, playBackX, 0);
-        //			nvgLineTo(vg, playBackX, cs.y);
-        //			nvgStrokeColor(vg, GUI_COLOR(120));
-        //			nvgStrokeWidth(vg, 3);
-        //			nvgStroke(vg);
-        //			nvgBeginPath(vg);
-        //			nvgMoveTo(vg, playBackX, 0);
-        //			nvgLineTo(vg, playBackX, cs.y);
-        //			nvgStrokeColor(vg, GUI_COLOR(250));
-        //			nvgStrokeWidth(vg, 1);
-        //			nvgStroke(vg);
-        //		}
+        //double playBackX = grid.tickToScreenD(dawCtrl->playbackPos);
+        //if (playBackX > -4 && playBackX < cs.x+4) {
+        //nvgBeginPath(vg);
+        //nvgMoveTo(vg, playBackX, 0);
+        //nvgLineTo(vg, playBackX, cs.y);
+        //nvgStrokeColor(vg, GUI_COLOR(120));
+        //nvgStrokeWidth(vg, 3);
+        //nvgStroke(vg);
+        //nvgBeginPath(vg);
+        //nvgMoveTo(vg, playBackX, 0);
+        //nvgLineTo(vg, playBackX, cs.y);
+        //nvgStrokeColor(vg, GUI_COLOR(250));
+        //nvgStrokeWidth(vg, 1);
+        //nvgStroke(vg);
+        //}
     }
 }
 void guitrack_editor::addSubtrack(track_gui_entry_t* entry, gui_track_subtrack* al, bool insertFront) {
@@ -620,13 +620,13 @@ gui_track_drop_position_t slotFromCoord(guictr_tracks* parent, track_gui_entry_t
 
     for (auto it = itcBegin; it != itcEnd; it++) {
         int32_t slotIdx = itcEnd - it - 1;
-        //		track_t* track = *it;
-        //		track_gui_entry_t trackEntryNeighbour;
-        //		if (!trackEntryDragged.parent->getTrackEntry(track, trackEntryNeighbour)) {
-        //			continue;
-        //		}
-        //		if (!trackEntryDragged.parent->isTrackEntryVisible(trackEntryNeighbour))
-        //			continue;
+        //track_t* track = *it;
+        //track_gui_entry_t trackEntryNeighbour;
+        //if (!trackEntryDragged.parent->getTrackEntry(track, trackEntryNeighbour)) {
+        //continue;
+        //}
+        //if (!trackEntryDragged.parent->isTrackEntryVisible(trackEntryNeighbour))
+        //continue;
         track_gui_entry_t* pTrackEntryNeighbour = *it;
 
         auto* gui = pTrackEntryNeighbour->content;
@@ -770,7 +770,7 @@ namespace {
         vsthost::getInstance()->onTrackLayoutChange();
         DawInstance::get()->layoutTrackEditors();
         DawInstance::get()->updateVisibleTrackContents();
-        //			//TODO: edithistory entry
+        ////TODO: edithistory entry
     }
 }// namespace
 bool guitrack_editor::mouseHitTest(ivec2 v, MouseHitEvt& evt) {
@@ -902,7 +902,7 @@ void guictr_tracks::removeTrack(track_t* track, int flags) {
     entry->content = nullptr;
     entry->mixer   = nullptr;
     guiMgr.removeTrack(*entry);// does delete entry;
-                               //		trackView.addTrack(entry.content);
+                               //trackView.addTrack(entry.content);
 }
 
 void guictr_tracks::addTrack(track_t* track, int flags) {
@@ -918,7 +918,7 @@ void guictr_tracks::addTrack(track_t* track, int flags) {
     guiMgr.addTrack(entry);
     trackControls.addTrackEntry(*entry);
     trackView.addTrackEntry(*entry);
-    //	track->content = entry->content;
+    //track->content = entry->content;
     track->audio->guiInstances.push_back(entry);
     //TODO: restore subtracks
     if (!(flags & FLG_TRK_CHANGE_LOAD)) {

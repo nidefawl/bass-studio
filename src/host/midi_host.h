@@ -34,7 +34,7 @@ private:
 public:
     midihost() = default;
     static midihost* getInstance();
-    //	void enqueue(AudioBuffer*);
+    //void enqueue(AudioBuffer*);
     int32_t processMidi(project_controller_t* ctrl, int32_t sample, double posDouble, playback_state state, bool inLoop,
                         bool isLoopAround);
     bool hasInputMessages() {

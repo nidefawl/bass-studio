@@ -41,7 +41,7 @@ inline bool isEqualWaveform3(const audioclip_texture_t& lhs, const audioclip_tex
 
 inline bool operator==(const audioclip_texture_t& lhs, const audioclip_texture_t& rhs) {
     return lhs.pos == rhs.pos &&
-           //			lhs.startOffset == rhs.startOffset &&
+           //lhs.startOffset == rhs.startOffset &&
            lhs.size == rhs.size && lhs.sampleBegin == rhs.sampleBegin &&
            lhs.sampleBeginOffset == rhs.sampleBeginOffset && lhs.sampleEnd == rhs.sampleEnd &&
            lhs.samplesPerPx == rhs.samplesPerPx &&

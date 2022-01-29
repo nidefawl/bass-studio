@@ -186,7 +186,7 @@ void drawDebugWindowNanoVG(NVGcontext* vg, int winW, int winH, float pxratio) {
 
     pos.y += size.y + 10;
     nvgSave(vg);
-    //	nvgTranslate(vg, pos.x, pos.y);
+    //nvgTranslate(vg, pos.x, pos.y);
     nvgShapeAntiAlias(vg, 0);
     nvgBeginPath(vg);
     nvgRect(vg, pos.x, pos.y, size.x, size.y);

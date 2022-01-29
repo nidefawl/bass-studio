@@ -163,12 +163,12 @@ void guitheme_t::bindFonts() {
         UIFont::font_type_t c = UIFont::getConstantById(key);
         if (c.idx <= 0) continue;
         it->second.fontInstanceIdx = -1;
-        //		for (int i = 0; i < MAX_FONTS; i++) {
-        //			if (RenderResources::fontsLoaded[i].name == it->second.name) {
-        //				it->second.fontInstanceIdx = i;
-        //				return;
-        //			}
-        //		}
+        //for (int i = 0; i < MAX_FONTS; i++) {
+        //if (RenderResources::fontsLoaded[i].name == it->second.name) {
+        //it->second.fontInstanceIdx = i;
+        //return;
+        //}
+        //}
     }
 }
 UIFont::font_instance guitheme_t::setFont(UIFont::font_type_t _fonttype, String s) {
@@ -186,12 +186,12 @@ NVGcolor guitheme_t::getBgColor(int32_t flags) const {
     if (flags & FLG_DRG) {
         return getColor(GuiColor::COL_BASE_BG_PRESSED);
     }
-    //	if (flags & FLG_FOC) {
-    //		return colorBgFocused;
-    //	}
-    //	if (flags & FLG_HVRD) {
-    //		return colorBgHover;
-    //	}
+    //if (flags & FLG_FOC) {
+    //return colorBgFocused;
+    //}
+    //if (flags & FLG_HVRD) {
+    //return colorBgHover;
+    //}
     return getColor(GuiColor::COL_BASE_BG);
 }
 NVGcolor guitheme_t::getBgStrokeColor(int32_t flags) const {
@@ -201,9 +201,9 @@ NVGcolor guitheme_t::getBgStrokeColor(int32_t flags) const {
     if (flags & FLG_HVRD) {
         return getColor(GuiColor::COL_BASE_BG_HOVER);
     }
-    //	if (!(flags & FLG_ENBL)) {
-    //		return colorBgDisabled;
-    //	}
+    //if (!(flags & FLG_ENBL)) {
+    //return colorBgDisabled;
+    //}
     return getColor(GuiColor::COL_BASE_BG_STROKE);
 }
 NVGcolor guitheme_t::getFrameColorOutline() const {

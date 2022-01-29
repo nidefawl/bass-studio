@@ -45,7 +45,7 @@ void LoadMidiTask::loadFile() {
                         MidiEvent& evt = list[event];
                         int evtSize    = evt.size();
                         if (evtSize)
-                            //						my_printf("Event[%d] = %02X\n", event, evt[0]);
+                            //my_printf("Event[%d] = %02X\n", event, evt[0]);
                             if (evt.isNoteOn()) {
                                 noteOnEvents++;
                                 MidiEvent* evt2 = evt.getLinkedEvent();
@@ -60,7 +60,7 @@ void LoadMidiTask::loadFile() {
                                         note.len   = ((((end - start) * 100) / tpqMidiFile) * TICKS_QUARTER) / 100;
                                         note.pitch = key;
                                         notes.m_list.push_back(note);
-                                        //										my_printf("note %d %d - %d\n", key, start, end);
+                                        //my_printf("note %d %d - %d\n", key, start, end);
                                     }
                                 } else {
                                     my_printf("midi lib failed to link the events\n", 0);
@@ -75,7 +75,7 @@ void LoadMidiTask::loadFile() {
 
                         String filepath, name, ext;
                         SplitPath(path, &filepath, &name, &ext);
-                        //							my_printf("%s %s %s\n", StringAsCStr(path), StringAsCStr(name), StringAsCStr(ext));
+                        //my_printf("%s %s %s\n", StringAsCStr(path), StringAsCStr(name), StringAsCStr(ext));
                         clip_t clip;
                         clip.clipType = CLIP_MIDI;
                         clip.name     = name;

@@ -25,7 +25,7 @@ struct guictr_tabbed::tabbed_entry
 	tabbed_entry(guibase* _ctr, String title) : tabButton(), tabCtr(_ctr) {
 		tabButton.setText(title);
 		//TODO: mark as active
-//		tabButton.setEnabledRef(&active);
+//tabButton.setEnabledRef(&active);
 		tabButton.setFontScale(0.7f);
 	}
 };
@@ -124,7 +124,7 @@ struct guictr_stacked::stacked_entry
 		splitterScale = splitter.getScale();
 		btnHideEntry.setText(title);
 		//TODO: mark as active
-//		btnHideEntry.state = &active;
+//btnHideEntry.state = &active;
 		btnHideEntry.setRadius(HEIGHT_DEFAULT_INPUT/2);
 		btnHideEntry.getIcon = [this]{return active?ICON_ARR_DOWN:ICON_ARR_RIGHT;};
 		btnHideEntry.pos = ivec2(INSET_CTR_SPACING, INSET_CTR_SPACING);
@@ -162,9 +162,9 @@ void guictr_stacked::buttonClicked(guibase* button) {
 		toggleEntry((int32_t) pos, (&(*it)->btnHideEntry == button ? 1 : (2|1)));
 		return;
 	}
-//	if (parent) {
-//		parent->buttonClicked(button);
-//	}
+//if (parent) {
+//parent->buttonClicked(button);
+//}
 }
 guictr_stacked::~guictr_stacked() {
 	for (stacked_entry* entry : entries) {
@@ -198,7 +198,7 @@ void guictr_stacked::render(NVGcontext* vg) {
 	}
 }
 void guictr_stacked::handleSplitterChanged(Splitter& splitter, float scale, int clampedAt) {
-//	log_printf("splitter change %012X %f %d\n", (int64_t)&splitter, scale, clampedAt);
+//log_printf("splitter change %012X %f %d\n", (int64_t)&splitter, scale, clampedAt);
 	auto it = std::find_if(entries.begin(), entries.end(), [addrOfSplitter=&splitter](const auto* entry) {
 		return &entry->splitter == addrOfSplitter;
 	});
@@ -206,7 +206,7 @@ void guictr_stacked::handleSplitterChanged(Splitter& splitter, float scale, int 
 		auto pos = it-entries.begin();
 		auto entry = *it;
 		auto getEntryHeight = [this](int32_t idx, auto& entries, ivec2 csize) -> int32_t {
-		//	ivec2 csize = getSizeContent();
+		//ivec2 csize = getSizeContent();
 			int32_t totalH = csize.y;
 			int len = entries.size();
 			for (int i = 0; i < len; i++) {
@@ -239,8 +239,8 @@ void guictr_stacked::handleSplitterChanged(Splitter& splitter, float scale, int 
 		} else if (!entry->active && newHeight > minSize+10) {
 			newState = true;
 		}
-//		log_printf("splitter change for %d, active: %d, splitterClamped: %d\n", pos, entry->active, oldState);
-//		log_printf("newHeight: %d, minSize %d\n", newHeight, minSize);
+//log_printf("splitter change for %d, active: %d, splitterClamped: %d\n", pos, entry->active, oldState);
+//log_printf("newHeight: %d, minSize %d\n", newHeight, minSize);
 		if (newState != oldState) {
 			toggleEntry(pos, 0);
 		} else {

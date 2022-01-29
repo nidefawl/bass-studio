@@ -506,8 +506,8 @@ public:
         return false;
     }
     DAW::channel_ref_t getEndpoint() override {
-        //		if (id == 0)
-        //			return ChannelNone();
+        //if (id == 0)
+        //return ChannelNone();
         return DAW::ChannelAudioInput(channel.idx,
                                       channel.channelOffset,
                                       "External " + AudioIO::getTrackNameShort(channel.type, channel.idx, isInput),
@@ -781,9 +781,9 @@ public:
                     if (DAW::resolveDefaultConnection(host, project, trImpl, isInput, out)) {
                         return out.name;
                     }
-                    //			if (stageEndpoint.isInput) {
-                    //				return "Default";
-                    //			}
+                    //if (stageEndpoint.isInput) {
+                    //return "Default";
+                    //}
                     return "Default";
                 }
             }
@@ -1292,14 +1292,14 @@ public:
         nvgRect(vg, 0, 0, titleSize.x, rectHeight);
         nvgFillColor(vg, color);
         nvgFill(vg);
-        //		if (ctrl->getSelectedTrack() == m_track) {
-        //			color = theme->getColor(GuiColor::COL_BG_SELECTEDTRACK_TITLE);
-        //			int posX = hideTrack.right() + INSET_TITLE;
-        //			nvgBeginPath(vg);
-        //			nvgRect(vg, posX, 0, titleSize.x-posX, rectHeight);
-        //			nvgFillColor(vg, color);
-        //			nvgFill(vg);
-        //		}
+        //if (ctrl->getSelectedTrack() == m_track) {
+        //color = theme->getColor(GuiColor::COL_BG_SELECTEDTRACK_TITLE);
+        //int posX = hideTrack.right() + INSET_TITLE;
+        //nvgBeginPath(vg);
+        //nvgRect(vg, posX, 0, titleSize.x-posX, rectHeight);
+        //nvgFillColor(vg, color);
+        //nvgFill(vg);
+        //}
         if (daw->getSelectedTrack() == m_track) {
             NVGcolor color2 = theme->getColor(GuiColor::COL_BG_SELECTEDTRACK_TITLE);
             int right       = hideTrack.right() + (hideTrack.pos.x) /*inset*/;
@@ -1426,7 +1426,7 @@ public:
         if (dragMode == DRAG_RESIZE) {
             int32_t mouseDragDist = evt.relMousepos.y;
             int32_t heightStep    = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
-            //			resize(m_trackentry, subtrack, mouseDragDist, heightStep);
+            //resize(m_trackentry, subtrack, mouseDragDist, heightStep);
             this->parent->onChildLayoutChanged(this);
         }
     }
@@ -1504,10 +1504,10 @@ void gui_track_controls::renderGroupHandle(NVGcontext* vg) {//TODO: make const, 
         dbgassert(lvl);
 
         NVGcolor color = rgbToNvg(p->rgb);
-        //	ivec2 titleSize(size.x, size.y);
-        //	MainCtrl* ctrl = MainCtrl::get();
-        //	const int titleHeight = theme->get(GuiConstant::CONST_TRACK_HEIGHT_TITLE);
-        //	const int rectHeight = math::min(titleHeight, size.y);
+        //ivec2 titleSize(size.x, size.y);
+        //MainCtrl* ctrl = MainCtrl::get();
+        //const int titleHeight = theme->get(GuiConstant::CONST_TRACK_HEIGHT_TITLE);
+        //const int rectHeight = math::min(titleHeight, size.y);
 
         ivec2 inset{ 2, 0 };
         int32_t width = 8 * lvl;
@@ -1737,7 +1737,7 @@ public:
                 trSnap.stageIds.inputStageId = -1;
                 *newTrack                    = trSnap;
                 DawInstance::get()->addTrackImpl(tr->localIdxFlat + 1, newTrack, FLG_TRK_CHANGE_USER);
-                //				trSnap.stageId = static_cast<int32_t>(newTrack->audio->stageId);
+                //trSnap.stageId = static_cast<int32_t>(newTrack->audio->stageId);
                 newTrack->loadSnapshot(trSnap);
                 newTrack->name = makeUniqueTrackName(strNewName);
                 //make stuff unique

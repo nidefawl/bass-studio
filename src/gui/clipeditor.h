@@ -142,7 +142,7 @@ public:
 
 class gui_clipsettings : public guictr_base {
 public:
-    //	scaled_grid& grid;
+    //scaled_grid& grid;
     clip_view& view;
     guibuttonstate btnLoop;
     gui_timeinput clipLoopStart;
@@ -333,7 +333,7 @@ public:
     void releaseRendered();
     void updatePosition();
     //protected:
-    //	void setGlobalSelectionFromClipSelection();
+    //void setGlobalSelectionFromClipSelection();
 };
 class guictr_audioeditor : public guictr_base, grid_changed_cb, ce_constants {
 public:
@@ -422,7 +422,7 @@ public:
         if (isBackgroundRendered()) {
             renderBackground(vg);
         }
-        //		guictr_base::setScissorTransform(vg);
+        //guictr_base::setScissorTransform(vg);
         ivec2 posInset = getPosContent();
         nvgTranslate(vg, posInset.x, posInset.y);
 
@@ -457,7 +457,7 @@ public:
                 continue;
             gui->render(vg);
         }
-        //		nvgResetScissor(vg);
+        //nvgResetScissor(vg);
         nvgResetTransform(vg);
     }
     void layout() {
@@ -541,15 +541,15 @@ public:
     void handleDraggedBegin(MouseEvent& evt) {
         if (evt.guiDragged == this) {
             MainCtrl::get()->showClipEditor();
-            //			lastscrolloffset = noteeditor.scrolloffset;
+            //lastscrolloffset = noteeditor.scrolloffset;
         }
     }
     void handleDraggedMove(MouseEvent& evt) {
         if (evt.guiDragged == this) {
-            //			ivec2 move = evt.mousepos - evt.dragStart;
-            //			vec2 scale = getScale();
-            //			float minScale = min(scale.x, scale.y);
-            //			noteeditor.setScrolloffset(lastscrolloffset + (int)(move.x*(1.0 / minScale)));
+            //ivec2 move = evt.mousepos - evt.dragStart;
+            //vec2 scale = getScale();
+            //float minScale = min(scale.x, scale.y);
+            //noteeditor.setScrolloffset(lastscrolloffset + (int)(move.x*(1.0 / minScale)));
         }
     }
     void layout() {

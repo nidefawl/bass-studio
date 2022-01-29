@@ -158,7 +158,7 @@ namespace dsp_util {
         one.f                   = 1.0f;
         static uint32_t intOver = 0L;
         uint32_t intIncr        = (uint32_t) ((4294967296.0 / samplerate) * freq);
-        //	static int lastSign = (intOver & 0x80000000);
+        //static int lastSign = (intOver & 0x80000000);
         // loop:
         for (uint32_t i = 0; i < samples; i++) {
             one.i &= 0x7FFFFFFF;// mask out sign bit

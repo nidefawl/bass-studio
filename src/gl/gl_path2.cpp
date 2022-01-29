@@ -62,14 +62,14 @@ int GLPathRendererSimple::init() {
     u_mvp   = glGetUniformLocation(program, "u_mvp");
     u_color = glGetUniformLocation(program, "u_color");
     //
-    //	for (int i = 0; i < attributes.size(); i++) {
-    //		attributes[i].bindingPt = glGetAttribLocation(program, attributes[i].name);
-    //	}
+    //for (int i = 0; i < attributes.size(); i++) {
+    //attributes[i].bindingPt = glGetAttribLocation(program, attributes[i].name);
+    //}
     for (int i = 0; i < (int) attributes.size(); i++) {
         VertexAttr& attr = attributes[i];
         attr.bindingPt   = glGetAttribLocation(program, attr.name);
         checkGLError("glGetAttribLocation");
-        //		printf("%s %d\n", attributes[i].name, attr.bindingPt);
+        //printf("%s %d\n", attributes[i].name, attr.bindingPt);
     }
 
     program2dLines = program;
@@ -98,9 +98,9 @@ void GLPathRendererSimple::bakePaths(std::vector<vec2list> paths, Uniforms pathO
 #endif
 
     //
-    //	for (float f : bufFinal.v) {
-    //		dbgassert(!std::isnan(f) && !std::isinf(f));
-    //	}
+    //for (float f : bufFinal.v) {
+    //dbgassert(!std::isnan(f) && !std::isinf(f));
+    //}
     bool newBuffer = false;
     DrawVBO& vbo   = out.vbo;
     if (vbo.vaoId == 0) {

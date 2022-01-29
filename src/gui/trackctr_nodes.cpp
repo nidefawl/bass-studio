@@ -1118,15 +1118,15 @@ bool gui_graph::handleMouseScroll(MouseEvent& evt, double xoffset, double yoffse
         vec2 offsetDelta      = vec2(mousePosCtrSpace) * (newScale - scale);
         scale                 = newScale;
         /* alternatively offsetDelta can be calculated this way */
-        //		ivec2 mousePosCtrSpaceAfter = toContainerSpace2f(relpos);
-        //		vec2 offsetDelta = (mousePosCtrSpaceAfter-mousePosCtrSpace)*newScale;
+        //ivec2 mousePosCtrSpaceAfter = toContainerSpace2f(relpos);
+        //vec2 offsetDelta = (mousePosCtrSpaceAfter-mousePosCtrSpace)*newScale;
         offset -= offsetDelta;
     }
     return true;
 }
 void guictr_nodes_editor::scrollOffsetChanged(int dir, float offset) {
-    //	ivec2 cs = getSizeContent() - graph.size;
-    //	int32_t scrOffset = math::max(0.0f, offset*(cs[dir]));
+    //ivec2 cs = getSizeContent() - graph.size;
+    //int32_t scrOffset = math::max(0.0f, offset*(cs[dir]));
 }
 void guictr_nodes_editor::layout() {
 
@@ -1138,11 +1138,11 @@ void guictr_nodes_editor::layout() {
     graph.pos  = { 0, 0 };
     graph.size = cs;
     graph.determineSize(graph.size);
-    //	double f = scrollbar.toPixels();
-    //		contentHeight = graph.size.y;
-    //		contentViewSize = cs.y;
-    //	scrollbar.scrollTo(f);
-    //	scrollOffsetChanged(1, scrollbar.scrollOffset);
+    //double f = scrollbar.toPixels();
+    //contentHeight = graph.size.y;
+    //contentViewSize = cs.y;
+    //scrollbar.scrollTo(f);
+    //scrollOffsetChanged(1, scrollbar.scrollOffset);
     for (guibase* gui : guis) {
         gui->layout();
     }
@@ -1178,7 +1178,7 @@ void guictr_nodes_splitview::refresh() {
     trackView.refresh();
 }
 void guictr_nodes_splitview::buttonClicked(guibase* _button) {
-    //	if (parent) parent->buttonClicked(_button);
+    //if (parent) parent->buttonClicked(_button);
     if (_button->parent == &projectView.graph) {
         trackView.refresh();
     }

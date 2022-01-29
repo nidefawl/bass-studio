@@ -59,6 +59,6 @@ public:
 	void render(NVGcontext* vg) override;
 	void handleDraggedBegin(MouseEvent& evt);
 	void handleDraggedMove(MouseEvent& evt);
-//	void handleDraggedRelease(MouseEvent& evt);
+//void handleDraggedRelease(MouseEvent& evt);
 };
 

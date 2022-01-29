@@ -46,7 +46,7 @@ public:
 };
 /*static*/ ThreadLock ThreadLock::MakeThreadLock(std::recursive_mutex& _mutex, std::atomic<int32_t>& _isLocked, const bool bTryLock) {
     return ThreadLock(new Impl(_mutex, _isLocked, bTryLock));
-    //	return ThreadLock(nullptr);
+    //return ThreadLock(nullptr);
 }
 
 ThreadLock::ThreadLock(ThreadLock::Impl* impl) : _M_impl(impl) {

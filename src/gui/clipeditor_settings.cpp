@@ -176,7 +176,7 @@ void gui_clipsettings::render(NVGcontext* vg) {
     setFont(vg, G_FONT_SCALE(h), G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
     for (guibase* gui: guis) {
 
-        //			gui->render(vg);
+        //gui->render(vg);
         nvgText(vg, i2, gui->top() + G_FONT_MIDDLE_OFFSET(gui->size.y), StringAsCStr(gui->label), nullptr);
     }
     nvgRestore(vg);

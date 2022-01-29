@@ -164,8 +164,8 @@ public:
 
         nvgTextAlign(vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
         nvgText(vg, posIcon.x - 4, rowHeight / 2, StringAsCStr(StringFormat("%d CH", nChannels)), nullptr);
-        //		auto* _entry = safeRefGet(ref);
-        //		if (_entry) {
+        //auto* _entry = safeRefGet(ref);
+        //if (_entry) {
         bool enbl = enabled();
         setFont(vg, (int)(ROW_FONT_SIZE), theme->getColor(enbl ? GuiColor::COL_ON : GuiColor::COL_OFF), G_TITLE_ALIGN);
         nvgTextAlign(vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
@@ -175,8 +175,8 @@ public:
         nvgRect(vg, 0, 0, sizeIcon.x, sizeIcon.y);
         nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_DRKER2));
         nvgFill(vg);
-        //			nvgStrokeColor(vg, theme->getColor(GuiColor::COL_GUI_STROKE));
-        //			nvgStrokeWidth(vg, theme->getFloat(GuiConstant::CONST_GUI_FRAME_STROKE_WIDTH));
+        //nvgStrokeColor(vg, theme->getColor(GuiColor::COL_GUI_STROKE));
+        //nvgStrokeWidth(vg, theme->getFloat(GuiConstant::CONST_GUI_FRAME_STROKE_WIDTH));
         nvgStrokeColor(vg, theme->getBgStrokeColor(parent->getFlags()));
         nvgStrokeWidth(vg, theme->getFloat(GuiConstant::CONST_GUI_FRAME_STROKE_WIDTH));
         nvgStroke(vg);
@@ -184,14 +184,14 @@ public:
             drawIcon(vg, sizeIcon, &image, 2);
         }
         nvgTranslate(vg, -posIcon.x, -posIcon.y);
-        //			String str = enbl?"On":"Off";bypass
-        //			nvgText(vg, size.x-spacing, rowHeight / 2, StringAsCStr(str), NULL);
-        //		}
-        //		nvgBeginPath(vg);
-        //		int i2 = 4;
-        //		nvgRect(vg, i2, i2, size.x-i2*2, size.y-i2*2);
-        //		nvgFillColor(vg, rgbToNvg(0xFF11ff11));
-        //		nvgFill(vg);
+        //String str = enbl?"On":"Off";bypass
+        //nvgText(vg, size.x-spacing, rowHeight / 2, StringAsCStr(str), NULL);
+        //}
+        //nvgBeginPath(vg);
+        //int i2 = 4;
+        //nvgRect(vg, i2, i2, size.x-i2*2, size.y-i2*2);
+        //nvgFillColor(vg, rgbToNvg(0xFF11ff11));
+        //nvgFill(vg);
 
         nvgTranslate(vg, -pos.x, -pos.y);
     }
@@ -220,7 +220,7 @@ void updateSrBs() {
             if (ahost->startAudio(settings.iosettings)) {
                 host->setOutput(ahost);
             } else {
-                //				settings.startEngine = false;
+                //settings.startEngine = false;
             }
         }
     }
@@ -293,9 +293,9 @@ public:
     audiohost::audiostream::audiotrack* getTrack() { return track.get(); }
 
     void render(NVGcontext* vg) override {
-        //		if (isBackgroundRendered()) {
-        //			renderBackground(vg);
-        //		}
+        //if (isBackgroundRendered()) {
+        //renderBackground(vg);
+        //}
         if (!setScissorTransformContainer(vg)) {
             return;
         }
@@ -458,9 +458,9 @@ class guictr_input_meters : public guictr_base {
     int32_t prevStream = 0;
 
     //
-    //	void effectbase::postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) {
-    //		meter.update(out, 1.0f);
-    //	}
+    //void effectbase::postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) {
+    //meter.update(out, 1.0f);
+    //}
 public:
     explicit guictr_input_meters(const bool _isInput) : guictr_base(), isInput(_isInput) {}
     void render(NVGcontext* vg) override {
@@ -751,7 +751,7 @@ public:
 
         selectAPI->setFontScale(0.77f);
         asioDevice->setFontScale(0.77f);
-        //	selectDevice->setFontScale(0.77f);
+        //selectDevice->setFontScale(0.77f);
         deviceListInput->setRenderHR(true);
         deviceListInput->setRowMargin(ivec4(0, 1, 0, 1));
         deviceListOutput->setRenderHR(true);
@@ -823,37 +823,37 @@ public:
         if (this->asioDevice->isVisible()) {
             nvgText(vg, 5, this->asioDevice->bottom(), StringAsCStr(this->asioDevice->label), nullptr);
         }
-        //		if (this->deviceListInput->isVisible()) {
-        //			nvgText(vg, 5, this->deviceListInput->top()-2, StringAsCStr(this->deviceListInput->label), nullptr);
-        //		}
-        //		if (this->deviceListOutput->isVisible()) {
-        //			nvgText(vg, 5, this->deviceListOutput->top()-2, StringAsCStr(this->deviceListOutput->label), nullptr);
-        //		}
+        //if (this->deviceListInput->isVisible()) {
+        //nvgText(vg, 5, this->deviceListInput->top()-2, StringAsCStr(this->deviceListInput->label), nullptr);
+        //}
+        //if (this->deviceListOutput->isVisible()) {
+        //nvgText(vg, 5, this->deviceListOutput->top()-2, StringAsCStr(this->deviceListOutput->label), nullptr);
+        //}
 
 
         for (auto c : guis) {
             nvgSave(vg);
-            //		if (c == this->selectAPI) {
-            //			nvgIntersectScissor(vg, c->pos.x, c->pos.y, c->size.x, c->size.y);
-            //		}
+            //if (c == this->selectAPI) {
+            //nvgIntersectScissor(vg, c->pos.x, c->pos.y, c->size.x, c->size.y);
+            //}
             if (c->isVisible()) {
                 c->render(vg);
             }
             nvgRestore(vg);
         }
-        //		if (!this->asioDevice->isVisible()) {
+        //if (!this->asioDevice->isVisible()) {
         //
-        //			auto stream = audiohost::getInstance()->getStream(0);
-        //			if (stream) {
-        //				int nChannels = stream->nInputChannels;
-        //				nvgText(vg, 5, this->deviceListInput->bottom()+TEXT_FONT_SIZE+2, StringAsCStr(StringFormat("%d
+        //auto stream = audiohost::getInstance()->getStream(0);
+        //if (stream) {
+        //int nChannels = stream->nInputChannels;
+        //nvgText(vg, 5, this->deviceListInput->bottom()+TEXT_FONT_SIZE+2, StringAsCStr(StringFormat("%d
         //channels", nChannels)), nullptr);
         //
-        //				nChannels = stream->nOutputChannels;
-        //				nvgText(vg, 5, this->deviceListOutput->bottom()+TEXT_FONT_SIZE+2, StringAsCStr(StringFormat("%d
+        //nChannels = stream->nOutputChannels;
+        //nvgText(vg, 5, this->deviceListOutput->bottom()+TEXT_FONT_SIZE+2, StringAsCStr(StringFormat("%d
         //channels", nChannels)), nullptr);
-        //			}
-        //		}
+        //}
+        //}
     }
     void layout() override {
         ivec2 cs = getSizeContent();
@@ -994,19 +994,19 @@ public:
         }
         setFont(vg, (int)(ROW_FONT_SIZE), G_WHITE, G_TITLE_ALIGN);
         nvgText(vg, x, rowHeight / 2, StringAsCStr(getText()), nullptr);
-        //		auto* _entry = safeRefGet(ref);
-        //		if (_entry) {
+        //auto* _entry = safeRefGet(ref);
+        //if (_entry) {
         bool enbl = enabled();
         setFont(vg, (int)(ROW_FONT_SIZE), theme->getColor(enbl ? GuiColor::COL_ON : GuiColor::COL_OFF), G_TITLE_ALIGN);
         nvgTextAlign(vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
         String str = enbl ? "On" : "Off";
         nvgText(vg, size.x - spacing, rowHeight / 2, StringAsCStr(str), nullptr);
-        //		}
-        //		nvgBeginPath(vg);
-        //		int i2 = 4;
-        //		nvgRect(vg, i2, i2, size.x-i2*2, size.y-i2*2);
-        //		nvgFillColor(vg, rgbToNvg(0xFF11ff11));
-        //		nvgFill(vg);
+        //}
+        //nvgBeginPath(vg);
+        //int i2 = 4;
+        //nvgRect(vg, i2, i2, size.x-i2*2, size.y-i2*2);
+        //nvgFillColor(vg, rgbToNvg(0xFF11ff11));
+        //nvgFill(vg);
         nvgTranslate(vg, -pos.x, -pos.y);
     }
 };
@@ -1053,9 +1053,9 @@ public:
 
         for (auto c : guis) {
             nvgSave(vg);
-            //		if (c == this->selectAPI) {
-            //			nvgIntersectScissor(vg, c->pos.x, c->pos.y, c->size.x, c->size.y);
-            //		}
+            //if (c == this->selectAPI) {
+            //nvgIntersectScissor(vg, c->pos.x, c->pos.y, c->size.x, c->size.y);
+            //}
             c->render(vg);
             nvgRestore(vg);
         }
@@ -1077,7 +1077,7 @@ public:
     void buttonClicked(guibase* button) override {
         if ((button->id & 0x0F) == 0xF) {
             midihost::getInstance()->reopenAllConfiguredDevices(false);
-            //			updateSrBs();
+            //updateSrBs();
             return;
         }
         if (this->parent) {
@@ -1172,9 +1172,9 @@ public:
 
         for (auto c : guis) {
             nvgSave(vg);
-            //		if (c == this->selectAPI) {
-            //			nvgIntersectScissor(vg, c->pos.x, c->pos.y, c->size.x, c->size.y);
-            //		}
+            //if (c == this->selectAPI) {
+            //nvgIntersectScissor(vg, c->pos.x, c->pos.y, c->size.x, c->size.y);
+            //}
             c->render(vg);
             nvgRestore(vg);
         }
@@ -1348,9 +1348,9 @@ void guidialog_settings::buttonClicked(guibase* button) {
         size_t pos = it - entries.begin();
         setActiveEntry((int32_t)pos);
     }
-    //	if (parent) {
-    //		parent->buttonClicked(button);
-    //	}
+    //if (parent) {
+    //parent->buttonClicked(button);
+    //}
     switch (button->id) {
         case ID_BTN_CLOSE:
             closeContextMenu();

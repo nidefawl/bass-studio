@@ -89,11 +89,11 @@ void guiplugin::prerender(NVGcontext* vg) {
 }
 void guiplugin::determineSize(ivec2& prefSize) {
     if (layoutMode == 1) {
-        //		dbgassert(module->getAudioStage());
+        //dbgassert(module->getAudioStage());
         //
         const int32_t hpt = theme->get(GuiConstant::CONST_PLUGIN_TITLE_HEIGHT);
-        //		int32_t meterW = math::max(16, (int32_t)(theme->get(GuiConstant::CONST_METER_WIDTH)*hpt/32.0));
-        //		prefSize.x = hpt+ctr.size.x+meterW;
+        //int32_t meterW = math::max(16, (int32_t)(theme->get(GuiConstant::CONST_METER_WIDTH)*hpt/32.0));
+        //prefSize.x = hpt+ctr.size.x+meterW;
         prefSize.x = hpt;
     } else {
 
@@ -165,7 +165,7 @@ guiplugin::guiplugin(effectbase* _effect)
     buttonBypass.fnGetState  = [_effect]() {
         return _effect->getParamValue(PARAM_ENABLE) > 0;
     };
-    //	buttonBypass.setTint(0x80c040);
+    //buttonBypass.setTint(0x80c040);
     buttonDelete.setLabel("Remove");
     buttonDelete.icon = ICON_CLOSE;
     buttonLayout.icon = ICON_ARR_RIGHT;
@@ -177,7 +177,7 @@ guiplugin::guiplugin(effectbase* _effect)
     addGuiBtnTitlebar(&buttonLayout);
     addGuiBtnTitlebar(&buttonDelete);
     addGuiBtnTitlebar(&buttonSave);
-    //	buttonDelete.setTint(0x404040);
+    //buttonDelete.setTint(0x404040);
 }
 void guiplugin::rightClicked(MouseEvent& evt, guibase* button) {
     int32_t clickedParamIdx = -1;
@@ -273,13 +273,13 @@ void guiplugin::handleDraggedRelease(MouseEvent& evt) {
 void guiplugin::handleDraggedBegin(MouseEvent& evt) {
     hasDragged = false;
     if (!isSelected()) {
-        //		hasDragged = true;
+        //hasDragged = true;
         static_cast<guictr_plugins*>(this->parent)->onSelected(evt, this);
     }
 }
 
 //enum action_plugin_ctr {
-//	SELECTALL, DELETE, CUT, COPY, PASTE, DUPLICATE
+//SELECTALL, DELETE, CUT, COPY, PASTE, DUPLICATE
 //};
 //bool handlePluginCtrCommand(action_plugin_ctr action);
 debugproperties* makeUniquePropertiesCtr();
@@ -578,9 +578,9 @@ public:
     int nFrame = 0;
     void prerender(NVGcontext* vg) override {
         //TODO: resource management
-        //		if (nFrame++<20)
-        //			return;
-        //		nFrame = 0;
+        //if (nFrame++<20)
+        //return;
+        //nFrame = 0;
         auto window = plugin->window;
         if (window && guivst) {
             if (plugin->requestCaptureGUI >= 1) {
@@ -993,8 +993,8 @@ guictxtmenu_base* guivstplugin::getTooltip(AppCtrl* appctrl) {
     return tooltip;
 }
 guictxtmenu_base* guiinternalpluginview::getTooltip(AppCtrl* appctrl) {
-    //	auto tooltip = new guitooltip<guiinternalpluginview>(this);
-    //	return tooltip;
+    //auto tooltip = new guitooltip<guiinternalpluginview>(this);
+    //return tooltip;
     return nullptr;
 }
 guiinternalpluginview::guiinternalpluginview(internalplugin* _effect) : guipluginview(_effect), plugin(_effect) {

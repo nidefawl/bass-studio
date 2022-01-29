@@ -183,7 +183,7 @@ void guictr_cliphandles::render(NVGcontext* vg) {
         return;
     }
     MainCtrl* ctrl = MainCtrl::get();
-    //	DawInstance* daw = DawInstance::get();
+    //DawInstance* daw = DawInstance::get();
     tick_t clipOffset = (view.clip()) ? view.clip()->getOffsetStart() : 0;
     nvgIntersectScissor(vg, pos.x, pos.y, cs.x, cs.y);
     nvgTranslate(vg, pos.x, pos.y);
@@ -327,7 +327,7 @@ void guictr_cliphandles::render(NVGcontext* vg) {
             nvgFill(vg);
         }
     }
-    //		-view.clip->start()+view.clip->offsetStart
+    //-view.clip->start()+view.clip->offsetStart
     clip_t* clip = view.clip();
     if (clip) {
         tick_t pos = DawInstance::get()->getPlaybackPos() - clip->time + clip->offsetStart;
@@ -583,10 +583,10 @@ void gui_audiocontent::render(NVGcontext* vg) {
     renderAudioClip(vg);
 }
 void gui_audiocontent::releaseRendered() {
-    //	my_printf("release %012x from releaseRendered()\n", waveformRef);
+    //my_printf("release %012x from releaseRendered()\n", waveformRef);
     dbgassert(waveformrender::getInstance()->isValid(waveformRef));
     waveformrender::getInstance()->release(waveformRef);
-    //	m_clip->audio.waveformRef.fbId = -1;
+    //m_clip->audio.waveformRef.fbId = -1;
     waveformRef->rendered = false;
 }
 
@@ -638,8 +638,8 @@ audioclip_texture_t makeWaveformFromSample(const project_globals_t& project, sca
     w.sampleEnd         = sampleEnd;
     w.samplesPerPx      = samplesPerPx;
     w.linewidth         = 3.0f;
-    //	if (samplesPerPx >= 8.0)
-    //		w.method = SampleMethod::sample_energy;
+    //if (samplesPerPx >= 8.0)
+    //w.method = SampleMethod::sample_energy;
     //    else
     w.method  = SampleMethod::sample_straight;
     w.audioId = clipAudio.id;
@@ -653,11 +653,11 @@ audioclip_texture_t makeWaveformFromSample(const project_globals_t& project, sca
 inline bool isAlmostEqualWaveformSample(const audioclip_texture_t& lhs, const audioclip_texture_t& rhs) {
     if ((lhs.sampleBeginOffset - lhs.sampleBegin) == (rhs.sampleBeginOffset - rhs.sampleBegin) &&
         (lhs.sampleEnd - lhs.sampleBegin) == (rhs.sampleEnd - rhs.sampleBegin) &&
-        //			lhs.startOffset == rhs.startOffset &&
-        //			lhs.size == rhs.size &&
-        //			lhs.samplesPerPx == rhs.samplesPerPx &&
-        //			lhs.scale == rhs.scale &&
-        //			lhs.scaleX == rhs.scaleX &&
+        //lhs.startOffset == rhs.startOffset &&
+        //lhs.size == rhs.size &&
+        //lhs.samplesPerPx == rhs.samplesPerPx &&
+        //lhs.scale == rhs.scale &&
+        //lhs.scaleX == rhs.scaleX &&
         lhs.audioId == rhs.audioId && lhs.quality == rhs.quality && lhs.method == rhs.method) {
 
         if (lhs.clipped || rhs.clipped)
@@ -788,12 +788,12 @@ void guictr_audioeditor::gridChanged(scaled_grid& _grid) {
 }
 
 void guictr_audioeditor::handleDraggedBegin(MouseEvent& evt) {
-    //	if (evt.guiDragged == &piano) {
-    //		if (evt.type == M_EVT_DOUBLECLICK)
-    //			zoomPianoRollToClipsNoteRange();
+    //if (evt.guiDragged == &piano) {
+    //if (evt.type == M_EVT_DOUBLECLICK)
+    //zoomPianoRollToClipsNoteRange();
     //
-    //		return;
-    //	}
+    //return;
+    //}
 }
 
 void guictr_audioeditor::showEditClip() {
@@ -829,7 +829,7 @@ bool guictr_audioeditor::handleMouseScroll(MouseEvent& evt, double xoffset, doub
     } else if (isShift(evt.kbmods)) {
         timeline.adjustOffset(-yoffset * 32);
     } else {
-        //		piano.setOffset(offset() + yoffset * 2.0* scale());
+        //piano.setOffset(offset() + yoffset * 2.0* scale());
     }
     return true;
 }

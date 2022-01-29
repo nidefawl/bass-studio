@@ -75,9 +75,9 @@ public:
     void handleDraggedRelease(MouseEvent& evt) override;
     int32_t getStateFlags() const override {
         int32_t state = guictr_base::getStateFlags();
-        //		if (active()) {
-        //			state |= FLG_ACT;
-        //		}
+        //if (active()) {
+        //state |= FLG_ACT;
+        //}
         return state;
     }
     void render(NVGcontext* vg) override;
@@ -114,9 +114,9 @@ bool guictr_layout::setOverlayPos(i_ctr_drop_area* area, const dock_pos dockPos,
         default:
             dbgassert(0);
             return false;
-            //		layoutGui->validPreview = false;
-            //		layoutGui->boxes.clear();
-            //		return false;
+            //layoutGui->validPreview = false;
+            //layoutGui->boxes.clear();
+            //return false;
     }
     area->dockPos             = dockPos;
     area->dockPosOffset       = 0;
@@ -238,8 +238,8 @@ void guictr_layout::getOverlays(MouseEvent& evt, std::vector<std::weak_ptr<i_ctr
 
 guictr_layout::guictr_layout() : guictr_base() {
     ctrType = CTR_TYPE_LAYOUT;
-    //		setBackgroundRendered(true);
-    //		setBackgroundRenderedInset(true);
+    //setBackgroundRendered(true);
+    //setBackgroundRenderedInset(true);
     this->setCanMouseHit(true);
     margin  = 0;
     padding = 0;
@@ -366,7 +366,7 @@ void guictr_layout_entry_handle::handleDraggedMove(MouseEvent& evt) {
         parentCtrl->dragContainerBegin(evt, parentCtr);
         hasDragged = true;
     } else if (!hasDragged) {
-        //		parent->buttonClicked(this);
+        //parent->buttonClicked(this);
     }
 }
 void guictr_layout_entry_handle::handleDraggedRelease(MouseEvent& evt) {
@@ -386,7 +386,7 @@ void guictr_layout_entry_handle::render(NVGcontext* vg) {
     }
     int32_t stateFlags = getStateFlags();
     nvgBeginPath(vg);
-    //	nvgRoundedRect(vg, pos.x, pos.y, size.x, size.y, 3.0f);
+    //nvgRoundedRect(vg, pos.x, pos.y, size.x, size.y, 3.0f);
     nvgRect(vg, 0, 0, size.x, size.y);
     NVGcolor bg = theme->getColor(GuiColor::COL_BASE_BG);
     if (parentCtr->getGui()->isVisible()) {
@@ -394,8 +394,8 @@ void guictr_layout_entry_handle::render(NVGcontext* vg) {
     }
     nvgFillColor(vg, bg);
     nvgFill(vg);
-    //		renderWidgetBorder(vg, fl);
-    //		renderButtonLabel(vg, fl);
+    //renderWidgetBorder(vg, fl);
+    //renderButtonLabel(vg, fl);
     String str = parentCtr->getGui()->label;
     if (str.length()) {
 
@@ -407,13 +407,13 @@ void guictr_layout_entry_handle::render(NVGcontext* vg) {
             NVGcolor color         = theme->getColor(c);
             UTIL_setFont(vg, theme, fontScale, color, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
             nvgText(vg, renderPos.x, renderPos.y, StringAsCStr(str), NULL);
-            //			nvgDrawText(vg, this, pos, size, str, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+            //nvgDrawText(vg, this, pos, size, str, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
             // renderCenteredMultilineText(vg, theme, str, fontScale, c, renderPos, size);
         }
     }
     for (auto c: guis) {
         if (!c->isVisible()) {
-            //			log_printf("warning, skip rendering child container with state !isVisible()\n", 0);
+            //log_printf("warning, skip rendering child container with state !isVisible()\n", 0);
             continue;
         }
         if (c->size.x <= 0 || c->size.y <= 0) {
@@ -430,7 +430,7 @@ void guictr_layout_entry_handle::render(NVGcontext* vg) {
 
 void i_ctr_drop_area::render(NVGcontext* vg) {
     nvgBeginPath(vg);
-    //	nvgRoundedRect(vg, pos.x, pos.y, size.x, size.y, 3.0f);
+    //nvgRoundedRect(vg, pos.x, pos.y, size.x, size.y, 3.0f);
     nvgRect(vg, pos.x, pos.y, size.x, size.y);
     auto handleColor = rgbaToNvg(0x7f00ff00);
     switch (this->dockPos) {
@@ -590,7 +590,7 @@ bool guictr_layout::getContainerRef(guictr_layout_entry* ctr, std::shared_ptr<gu
         if (pos - 1 >= 0 || entries.empty()) {
             pos--;
         }
-        //		setActiveEntry(pos);
+        //setActiveEntry(pos);
         this->activePosition = pos;
         updateVisible();
     }
@@ -853,7 +853,7 @@ void loadContainerEntrySnapshot(std::shared_ptr<guictrlayout_entry_snapshot_t>& 
             log_printf("Failed building container of type %d\n", snapshot->type);
             return;
         }
-        //		sharedContainer->label = snapshot->label;
+        //sharedContainer->label = snapshot->label;
         getContainerLabel(snapshot->type, sharedContainer->label);
         out = createGuiCtrLayoutEntry(sharedContainer);
         if (out->getFrameType() == layout_ctr_type::GUICTR_LAYOUT) {
@@ -932,7 +932,7 @@ void loadContainerSnapshot(guictr_layout* ctrlayout, guictrlayout_snapshot_t* sn
     }
     ctrlayout->setSplitterPositions(snapshot->splitterPositions);
     ctrlayout->setActiveEntry(snapshot->activePosition);
-    //		ctrlayout->postContentChanged();
+    //ctrlayout->postContentChanged();
 }
 template<class Archive>
 void serialize(Archive& archive, guictrlayout_snapshot_t& m) {

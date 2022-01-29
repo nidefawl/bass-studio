@@ -210,7 +210,7 @@ protected:
     const uint32_t heightTimelineControls = heightLoopIndicators + heightSeperator;
 };
 class guictr_tracks_loophandles : public guibase, te_constants {
-    //	project_t& project;
+    //project_t& project;
     project_globals_t& projectGlobals;
     scaled_grid& grid;
     enum dragmode {
@@ -591,7 +591,7 @@ public:
           iGuiMgr(_iGuiMgr),
           project(_project) {
         padding = 0;
-        //		btnFoldAll.setButtonColor(GuiColor::COL_BTN_LOAD_DEF_PLUGINS);
+        //btnFoldAll.setButtonColor(GuiColor::COL_BTN_LOAD_DEF_PLUGINS);
         btnFoldAll.setLabel("Fold All Tracks");
         btnFoldAll.icon = ICON_ARR_RIGHT;
         btnFoldAll.setStateRef(&isFolded);

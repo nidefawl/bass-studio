@@ -70,16 +70,16 @@ public:
         if (parentCtrl && parentCtrl->isDraggingContainer()) {
             return ivec2(8);
         }
-        //		return ivec2(0, _padding);
-        //		return ivec2(_padding - margin*snapSides.x, _padding - margin*snapSides.y);
+        //return ivec2(0, _padding);
+        //return ivec2(_padding - margin*snapSides.x, _padding - margin*snapSides.y);
         return {_padding - margin * snapSides.x, 0};
     }
     ivec2 paddingBR(int _padding) const override {
         if (parentCtrl && parentCtrl->isDraggingContainer()) {
             return ivec2(8);
         }
-        //		return ivec2(0, _padding);
-        //		return ivec2(_padding - margin*snapSides.z, _padding - margin*snapSides.w);
+        //return ivec2(0, _padding);
+        //return ivec2(_padding - margin*snapSides.z, _padding - margin*snapSides.w);
         return {_padding - margin * snapSides.z, 0};
     }
     void removeAllEntries() {
@@ -142,11 +142,11 @@ public:
         if (entries.size() < 2) {
             setLayout(container_layout::SOLE);
         }
-        //		if (this->ctrLayout != container_layout::TABBED) {
-        //			for (auto handle : handles) {
-        //				handle->setVisible(false);
-        //			}
-        //		}
+        //if (this->ctrLayout != container_layout::TABBED) {
+        //for (auto handle : handles) {
+        //handle->setVisible(false);
+        //}
+        //}
     }
     void setLayout(container_layout ctrLayoutNew) {
         this->ctrLayout = ctrLayoutNew;
@@ -170,7 +170,7 @@ public:
     void updateVisible();
 
     void onChildLayoutChanged(guibase* g) override {
-        //		postContentChanged();
+        //postContentChanged();
         if (this->parent) {
             this->parent->onChildLayoutChanged(g);
         } else {
@@ -202,7 +202,7 @@ public:
     bool placeContainer(std::shared_ptr<guictr_layout_entry> ctr, i_ctr_drop_area* area) override;
 
     void getOverlays(MouseEvent& evt, std::vector<std::weak_ptr<i_ctr_drop_area>>& handles) override;
-    //	void replaceContentWith(guictr_layout* ctr);
+    //void replaceContentWith(guictr_layout* ctr);
 
     std::shared_ptr<guictr_layout_entry> replaceContainerWith(guictr_base* ctr, std::shared_ptr<guictr_layout> newContainer);
     void render(NVGcontext* vg) override;

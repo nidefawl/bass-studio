@@ -216,8 +216,8 @@ void vstplugin::load(vsthost* host) {
                 param->shortLabel = properties.shortLabel;
             }
             if (param->flags & ParamUsesFloatStep) {
-                //				param.min.valFloat = 0.0f;
-                //				param.max.valFloat = 1.0f;
+                //param.min.valFloat = 0.0f;
+                //param.max.valFloat = 1.0f;
                 param->step.valFloat      = properties.stepFloat;
                 param->stepSmall.valFloat = properties.smallStepFloat;
                 param->stepLarge.valFloat = properties.largeStepFloat;
@@ -263,13 +263,13 @@ void vstplugin::load(vsthost* host) {
 
 
     bIsEnabled = this->getParamValue(PARAM_ENABLE) > 0.5;
-    //	if (bIsEnabled) {
-    //		this->resume();
-    //	} else {
-    //		this->sleep();
-    //	}
-    //	this->dispatch(effSetBlockSize, 0, format.blockSize);
-    //	this->resume();
+    //if (bIsEnabled) {
+    //this->resume();
+    //} else {
+    //this->sleep();
+    //}
+    //this->dispatch(effSetBlockSize, 0, format.blockSize);
+    //this->resume();
 
 
     this->bIsSetup = true;

@@ -39,7 +39,7 @@ namespace {
             if (!setScissorTransform(vg)) {
                 return;
             }
-            //				for (auto c : guis) {
+            //for (auto c : guis) {
             nvgSave(vg);
             if (m_data.size()) {
                 auto cs       = getSizeContent();
@@ -55,9 +55,9 @@ namespace {
                 nvgStrokeColor(vg, rgbaToNvg(0xFFFFFFFF));
                 nvgStroke(vg);
             }
-            //					c->render(vg);
+            //c->render(vg);
             nvgRestore(vg);
-            //				}
+            //}
         }
     };
     class gui_test : public guictxtmenu_base {
@@ -247,7 +247,7 @@ public:
                 vsthost::getInstance()->getStats(stats);
             }
         }
-        //		const int fontSize = 12;
+        //const int fontSize = 12;
         int32_t fontSize = 14;
         int32_t w = size.x / 128;
         fontSize += w * 4;
@@ -391,7 +391,7 @@ public:
         int32_t w         = cs.x / 128;
         rowHeight += w * 4;
         list.setRowHeight(rowHeight);
-        //		const int32_t hpt = theme->get(GuiConstant::CONST_FIXED_TITLE_HEIGHT);
+        //const int32_t hpt = theme->get(GuiConstant::CONST_FIXED_TITLE_HEIGHT);
         const int32_t inset = math::min(6, theme->get(GuiConstant::CONST_LAYOUT_MARGIN));
         list.pos            = { inset, inset };
         list.size           = { cs.x - inset * 2, cs.y - inset * 2 };
