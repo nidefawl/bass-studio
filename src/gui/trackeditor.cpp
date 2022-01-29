@@ -791,13 +791,13 @@ void guitrack_editor::render(NVGcontext* vg) {
     paint.image = -1;
 
     /**
-	 * render grid background
-	 * steps:
-	 * 1. draw full width bright
-	 * 2. then draw dark rects
-	 * this way is more efficient
-	 * also drawing them zig-zag would give shimmering edges due to rounding errors
-	 */
+     * render grid background
+     * steps:
+     * 1. draw full width bright
+     * 2. then draw dark rects
+     * this way is more efficient
+     * also drawing them zig-zag would give shimmering edges due to rounding errors
+     */
 
     /* draw full width bright */
     nvgBeginPath(vg);

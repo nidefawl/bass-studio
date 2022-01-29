@@ -1,4 +1,4 @@
-#include <stdio.h>
+#include <cstdio>
 #include <numeric>
 #include <cmath>
 #include <windows.h>
@@ -22,12 +22,12 @@ static void runTest(bool isFZM) {
     double sumOfResult = std::accumulate(std::cbegin(y), std::cend(y), 0.0);
     double sumInDbFS   = 20.0 * std::log10(std::abs(sumOfResult));
     // clang-format off
-	log_out("%s %6s %12llu mysec\ty[0] %f\tsum %.2f dBFS\n",
-			(isFZM ? "_MM_FLUSH_ZERO_ON " : "_MM_FLUSH_ZERO_OFF"),
-			"Denormals",
-			result,
-			y[0],
-			sumInDbFS);
+    log_out("%s %6s %12llu mysec\ty[0] %f\tsum %.2f dBFS\n",
+            (isFZM ? "_MM_FLUSH_ZERO_ON " : "_MM_FLUSH_ZERO_OFF"),
+            "Denormals",
+            result,
+            y[0],
+            sumInDbFS);
     // clang-format on
 }
 

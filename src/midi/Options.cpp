@@ -85,7 +85,7 @@ void Option_register::clearModified(void) {
 //////////////////////////////
 //
 // Option_register::getDefinition -- Returns the initial definition.
-//	string used to define this entry.
+//    string used to define this entry.
 //
 
 const string& Option_register::getDefinition(void) {
@@ -154,7 +154,7 @@ char Option_register::getType(void) {
 //////////////////////////////
 //
 // Option_register::getOption -- return the modified option
-//  	or the default option if no modified option.
+//      or the default option if no modified option.
 //
 
 const string& Option_register::getOption(void) {
@@ -170,7 +170,7 @@ const string& Option_register::getOption(void) {
 //////////////////////////////
 //
 // Option_register::reset -- deallocate space for all
-//	strings in object.  (but default string is set to "")
+//    strings in object.  (but default string is set to "")
 //
 
 void Option_register::reset(void) {
@@ -446,7 +446,7 @@ int Options::isDefined(const string& name) {
 //////////////////////////////
 //
 // Options::getArg -- returns the specified argument.
-//	argurment 0 is the command name.
+//    argurment 0 is the command name.
 //
 
 const string& Options::getArg(int index) {
@@ -468,7 +468,7 @@ const string& Options::getArgument(int index) {
 //////////////////////////////
 //
 // Options::getArgCount --  number of arguments on command line.
-//	does not count the options or the command name.
+//    does not count the options or the command name.
 //
 
 int Options::getArgCount(void) {
@@ -504,7 +504,7 @@ const vector<string>& Options::getArgumentList(void) {
 //////////////////////////////
 //
 // Options::getBoolean --  returns true if the option was
-//	used on the command line.
+//    used on the command line.
 //
 
 int Options::getBoolean(const string& optionName) {
@@ -579,8 +579,8 @@ string Options::getDefinition(const string& optionName) {
 //////////////////////////////
 //
 // Options::getDouble -- returns the double float associated
-//	with the given option.  Returns 0 if there is no
-//	number associated with the option.
+//    with the given option.  Returns 0 if there is no
+//    number associated with the option.
 //
 
 double Options::getDouble(const string& optionName) {
@@ -604,7 +604,7 @@ char Options::getChar(const string& optionName) {
 //////////////////////////////
 //
 // Options::getFloat -- Return the floating point number
-//	associated with the given option.
+//    associated with the given option.
 //
 
 float Options::getFloat(const string& optionName) {
@@ -616,8 +616,8 @@ float Options::getFloat(const string& optionName) {
 //////////////////////////////
 //
 // Options::getInt -- Return the integer argument.  Can handle
-//	hexadecimal, decimal, and octal written in standard
-//	C syntax.
+//    hexadecimal, decimal, and octal written in standard
+//    C syntax.
 //
 
 int Options::getInt(const string& optionName) {
@@ -711,9 +711,9 @@ char Options::getFlag(void) {
 //////////////////////////////
 //
 // Options::setFlag -- Set the character used to indicate an
-//	option.  For unix this is usually '-', in MS-DOS,
-//	this is usually '/';  But the syntax of the Options
-//	class is for Unix-style options.
+//    option.  For unix this is usually '-', in MS-DOS,
+//    this is usually '/';  But the syntax of the Options
+//    class is for Unix-style options.
 //
 
 void Options::setFlag(char aFlag) {
@@ -929,7 +929,7 @@ char Options::getType(const string& optionName) {
 //////////////////////////////
 //
 // Options::process -- Same as xverify.
-//   	default values: error_check = 1, suppress = 0;
+//       default values: error_check = 1, suppress = 0;
 //
 
 void Options::process(int argc, char** argv, int error_check, int suppress) {
@@ -947,7 +947,7 @@ void Options::process(int error_check, int suppress) {
 //////////////////////////////
 //
 // Options::xverify --
-//	default value: error_check = 1, suppress = 0;
+//    default value: error_check = 1, suppress = 0;
 //
 
 void Options::xverify(int error_check, int suppress) {
@@ -1024,7 +1024,7 @@ void Options::xverify(int argc, char** argv, int error_check, int suppress) {
 //////////////////////////////
 //
 // Options::getRegIndex -- returns the index of the option associated
-//	with this name.
+//    with this name.
 //
 
 int Options::getRegIndex(const string& optionName) {
@@ -1057,8 +1057,8 @@ int Options::getRegIndex(const string& optionName) {
 //////////////////////////////
 //
 // Options::optionQ --  returns true if the string is an option
-//	"--" is not an option, also '-' is not an option.
-//	aString is assumed to not be NULL.
+//    "--" is not an option, also '-' is not an option.
+//    aString is assumed to not be NULL.
 //
 
 int Options::optionQ(const string& aString, int& argp) {

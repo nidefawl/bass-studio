@@ -468,11 +468,11 @@ public:
         entries.push_back(entry);
     }
     /**
-	 * checks if entry is visible.
-	 * A track_gui_entry_t is visible if
-	 * none of its parents have the field
-	 * this->layout.hideTrack == true
-	 */
+     * checks if entry is visible.
+     * A track_gui_entry_t is visible if
+     * none of its parents have the field
+     * this->layout.hideTrack == true
+     */
     bool isVisible(const track_gui_entry_t* entry) override {
         bool bHidden = false;
         track_t* p   = entry->track->parent;

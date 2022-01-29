@@ -20,11 +20,11 @@
 
  //TODO: make this more memory friendly by not using std::vector
 class MidiMessage : public std::vector<unsigned char> {
-	public:
-		               MidiMessage          (void);
-		               MidiMessage          (int command);
-		               MidiMessage          (int command, int p1);
-		               MidiMessage          (int command, int p1, int p2);
+    public:
+                     MidiMessage          (void);
+                     MidiMessage          (int command);
+                     MidiMessage          (int command, int p1);
+                     MidiMessage          (int command, int p1, int p2);
                      MidiMessage          (const MidiMessage& message);
                      MidiMessage          (const std::vector<unsigned char>& message);
                      MidiMessage          (const std::vector<char>& message);
@@ -114,7 +114,7 @@ class MidiMessage : public std::vector<unsigned char> {
       void           makeCopyright        (const std::string& text);
       void           makeTempo            (double tempo) { setTempo(tempo); }
       void           makeTimeSignature    (int top, int bottom,
-	                                        int clocksPerClick = 24,
+                                           int clocksPerClick = 24,
                                            int num32dsPerQuarter = 8);
 
       // meta-message related functions:

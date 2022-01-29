@@ -65,7 +65,6 @@ public:
         if (ReadFile(pipe, buf, buflen, &bytesSent, nullptr)) {
             return bytesSent;
         }
-        //    	printf("ReadFile: %d\n", bytesSent);
         printLastError("ReadFile");
         return 0;
     }
@@ -75,7 +74,6 @@ public:
             printLastError("PeekNamedPipe");
             return -1;
         }
-        //    	printf("PeekNamedPipe: %d\n", bytesAvail);
         return bytesAvail;
     }
     int server_send(char* buf, unsigned int buflen) {
@@ -83,7 +81,6 @@ public:
         if (WriteFile(pipe, buf, buflen, &bytesSent, nullptr)) {
             return bytesSent;
         }
-        //    	printf("WriteFile: %d\n", bytesSent);
         printLastError("WriteFile");
         return 0;
     }

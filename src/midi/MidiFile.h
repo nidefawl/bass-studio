@@ -182,11 +182,11 @@ class MidiFile {
                                            double aTempo);
       int       addTimeSignature          (int aTrack, int aTick,
                                            int top, int bottom,
-	                                   int clocksPerClick = 24,
+                                           int clocksPerClick = 24,
                                            int num32dsPerQuarter = 8);
       int       addCompoundTimeSignature  (int aTrack, int aTick,
                                            int top, int bottom,
-	                                   int clocksPerClick = 36,
+                                           int clocksPerClick = 36,
                                            int num32dsPerQuarter = 8);
 
       void      erase                     (void);

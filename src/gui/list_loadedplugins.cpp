@@ -74,12 +74,15 @@ namespace {
             scrollbarOutside = true;
             maxHeight        = 220;
         }
+
         ~gui_test() {
             remove(&graph);
         }
+
         guigraph2d& getGraph() {
             return graph;
         }
+
         void updateGraph() {
             auto* _entry = safeRefGet(ref);
             if (_entry) {
@@ -128,10 +131,12 @@ namespace {
         bool isTransient() override {
             return !hadMouseFocus;
         }
-        virtual void clicked(int _id) {
+
+        void clicked(int _id) {
             closeContextMenu();
         }
-        void onTick(AppCtrl* appctrl) {
+
+        void onTick(AppCtrl* appctrl) override {
             updateGraph();
         }
     };
@@ -189,7 +194,7 @@ public:
             drawIcon(vg, size, &image);
         }
         setFont(vg, (int) (rowHeight * 0.8), G_WHITE, G_TITLE_ALIGN);
-        nvgText(vg, x, rowHeight / 2, StringAsCStr(getText()), NULL);
+        nvgText(vg, x, rowHeight / 2, StringAsCStr(getText()), nullptr);
         auto* _entry = safeRefGet(ref);
         if (_entry) {
             host_stats_reducted_t stats;
@@ -199,11 +204,11 @@ public:
             nvgTextAlign(vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
             String str = StringFormat("%.2f%%", fPercentLoad);
             float x2   = size.x - spacing;
-            float x1   = nvgText(vg, size.x - spacing, rowHeight / 2, StringAsCStr(str), NULL);
+            float x1   = nvgText(vg, size.x - spacing, rowHeight / 2, StringAsCStr(str), nullptr);
             float xw   = x2 - x1;
             if (size.x / 4 > xw) {
-                String str = StringFormat("%dmicsec", _entry->procStats.timeTrackProcessPlugins);
-                nvgText(vg, size.x * 3 / 4, rowHeight / 2, StringAsCStr(str), NULL);
+                str = StringFormat("%dmicsec", _entry->procStats.timeTrackProcessPlugins);
+                nvgText(vg, size.x * 3 / 4, rowHeight / 2, StringAsCStr(str), nullptr);
             }
         }
         nvgTranslate(vg, -pos.x, -pos.y);
@@ -230,9 +235,8 @@ public:
     gui_stats_list() : guictr_base() {
         setBackgroundRendered(true);
     }
-    ~gui_stats_list() {
-    }
-    virtual void render(NVGcontext* vg) {
+    ~gui_stats_list() override = default;
+    void render(NVGcontext* vg) override {
         if (isBackgroundRendered()) {
             renderBackground(vg);
         }
@@ -253,7 +257,7 @@ public:
         fontSize += w * 4;
         float lineh;
         setFont(vg, fontSize, G_WHITE, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
-        nvgTextMetrics(vg, NULL, NULL, &lineh);
+        nvgTextMetrics(vg, nullptr, nullptr, &lineh);
         int x  = math::max<int32_t>(5, lineh / 2);
         int y  = x;
         int x2 = getSizeContent().x - x;
@@ -261,9 +265,9 @@ public:
         auto printL = [&](int inset, const char* caption, const String& str) {
             float offsetX = (inset + 1) * x;
             nvgTextAlign(vg, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
-            nvgText(vg, offsetX, y, caption, NULL);
+            nvgText(vg, offsetX, y, caption, nullptr);
             nvgTextAlign(vg, NVG_ALIGN_TOP | NVG_ALIGN_RIGHT);
-            nvgText(vg, x2, y, StringAsCStr(str), NULL);
+            nvgText(vg, x2, y, StringAsCStr(str), nullptr);
             y += lineh;
         };
         auto audioHost = audiohost::getInstance();
@@ -533,7 +537,7 @@ public:
         listCtr.sort();
         layout();
     }
-    void buttonClicked(guibase* button) {
+    void buttonClicked(guibase* button) override {
         if (&btnLoadAll == button) {
 
             log_printf("load all deferred\n", 0);
@@ -549,7 +553,7 @@ public:
                 host->activateDeferred(plugin, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &effectLoaded);
 
                 if (effectLoaded) {
-                    //            				effectLoaded->show();
+                    //effectLoaded->show();
                     audioStagesAffected.push_back(effectLoaded->getTrackLink());
                 }
             }
@@ -559,7 +563,7 @@ public:
             DawInstance::get()->onPluginsChanged();
         }
     }
-    void layout() {
+    void layout() override {
         ivec2 cs                               = getSizeContent();
         const int32_t inset                    = math::min(6, theme->get(GuiConstant::CONST_LAYOUT_MARGIN));
         const int32_t CONST_FIXED_TITLE_HEIGHT = theme->get(GuiConstant::CONST_FIXED_TITLE_HEIGHT);
@@ -577,7 +581,7 @@ public:
             gui->layout();
         }
     }
-    virtual void render(NVGcontext* vg) {
+    void render(NVGcontext* vg) override {
         if (isBackgroundRendered()) {
             renderBackground(vg);
         }
@@ -615,7 +619,7 @@ public:
     void onTick(AppCtrl* ctrl) override {
         guictr_base::onTick(ctrl);
     }
-    void layout() {
+    void layout() override {
         ivec2 cs       = getSizeContent();
         scrollTop.pos  = ivec2(0, 0);
         scrollTop.size = ivec2(cs.x, cs.y);
@@ -624,7 +628,7 @@ public:
             gui->layout();
         }
     }
-    virtual void render(NVGcontext* vg) {
+    void render(NVGcontext* vg) override {
         if (isBackgroundRendered()) {
             renderBackground(vg);
         }

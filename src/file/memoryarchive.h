@@ -132,11 +132,11 @@ namespace cereal
       template <std::size_t DataSize> inline
       void saveBinary( const void * data, std::size_t size )
       {
-  		buffer.resize(buffer.size() + size);
-  		memcpy(&buffer[buffer.size() - size], data, size);
+        buffer.resize(buffer.size() + size);
+        memcpy(&buffer[buffer.size() - size], data, size);
       }
       std::vector<uint8_t>& getBuffer() {
-    	  return buffer;
+        return buffer;
       }
 
     private:

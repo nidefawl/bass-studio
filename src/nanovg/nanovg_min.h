@@ -6,7 +6,7 @@ extern "C" {
 typedef struct NVGcontext NVGcontext;
 typedef struct NVGcolor NVGcolor;
 struct NVGcolor {
-	float r,g,b,a;
+    float r,g,b,a;
 };
 NVGcolor nvgHSL(float h, float s, float l);
 NVGcolor nvgRGBA(unsigned char r, unsigned char g, unsigned char b, unsigned char a);

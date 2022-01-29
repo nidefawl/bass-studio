@@ -240,9 +240,9 @@ int midiarp::updateMarkersAndAnimation(tick_t start, tick_t end, tick_t loopStar
 }
 
 /* shortens end of intersecting notes, does not remove any notes, instead looks for exact duplicates
-* returns: -1 if exact duplicate is present
-*		   otherwise the return value is a positive number and represents the number notes modified in the list
-*/
+ * returns: -1 if exact duplicate is present
+ * otherwise the return value is a positive number and represents the number notes modified in the list
+ */
 template<typename T>
 inline int cutNoteOutOfList(std::vector<T>& m_list, T& n, bool eliminateDupes) {
     auto it = m_list.begin();
