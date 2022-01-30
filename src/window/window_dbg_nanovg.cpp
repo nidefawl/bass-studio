@@ -1,4 +1,5 @@
 #include "glheaders.h"
+#include <memory>
 #include <nanovg.h>
 #include <nanovg_gl.h>
 #include <nanovg_gl_utils.h>

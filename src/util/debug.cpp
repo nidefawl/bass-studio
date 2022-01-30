@@ -172,7 +172,12 @@ void log_format_to_logger(Logger* logger, const char* file, int line, const char
     char szLogBuf[LOG_BUF_SIZE]{ 0 };
     va_list args;
     va_start(args, fmt);
+#ifdef _WIN32
     int ret = vsnprintf_s(szLogStr, LOG_BUF_SIZE, _TRUNCATE, fmt, args);
+#else
+    //TODO test truncation on linux
+    int ret = vsnprintf(szLogStr, LOG_BUF_SIZE, fmt, args);
+#endif
     va_end(args);
     if (ret == -1) {
         ret = LOG_BUF_SIZE - 1;

@@ -5,7 +5,7 @@ void generateDenormals(float y[16]) {
     for (int i = 0; i < 16; i++) {
         y[i] = x[i];
     }
-    for (int j = 0; j < 9000000; j++) {
+    for (int j = 0; j < 90000; j++) {
         for (int i = 0; i < 16; i++) {
             y[i] *= x[i];
             y[i] /= z[i];

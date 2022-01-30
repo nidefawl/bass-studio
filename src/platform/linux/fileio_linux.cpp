@@ -258,7 +258,7 @@ void handleGuiEvents(window_base* w, GtkWidget *dialog) {
 }
 
 
-int browseForFolder(String title, String pathStart, String& _out)
+int browseForFolder(const String& title, const String& pathStart, String& _out)
 {
 	log_printf("not implemented\n", 0);
 	return 0;
@@ -348,14 +348,14 @@ public:
 	~Impl() {
 	}
 };
-FileTimeGetter::FileTimeGetter(String path) : _M_Impl{new FileTimeGetter::Impl{path}} {
+FileTimeGetter::FileTimeGetter(const String& path) : m_impl{new FileTimeGetter::Impl{path}} {
 
 }
 FileTimeGetter::~FileTimeGetter() {
-	delete _M_Impl;
+	delete m_impl;
 }
 int64_t FileTimeGetter::getWriteTimeI64() {
-	return _M_Impl->getWriteTimeI64();
+	return m_impl->getWriteTimeI64();
 }
 class FileImpl
 {
@@ -390,7 +390,7 @@ public:
 
 	FILE* GetHandle() { return m_handle; }
 };
-IOFile::IOFile(FileImpl* _impl) : impl(_impl) {
+IOFile::IOFile(FileImpl* _impl) noexcept : impl(_impl) {
 	this->validHandle = true;
 }
 IOFile::~IOFile() {
@@ -407,7 +407,7 @@ void IOFile::flush() {
 	}
 }
 
-IOFile* IOFile::openFile(String filename, OpenFileMode mode) {
+IOFile* IOFile::openFile(const String& filename, OpenFileMode mode) {
 	FileImpl* impl = new FileImpl(filename, mode);
 	if (!impl->GetHandle()) {
 		delete impl;

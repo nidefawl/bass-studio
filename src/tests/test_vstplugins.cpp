@@ -8,10 +8,11 @@
 #include "thread.h"
 #include "fileio.h"
 #include "platform.h"
-#include "platform/win/platform_win.h"
+
 #ifdef _WIN32
 #include <windows.h>
 #endif
+
 #include <exception>
 
 namespace {
@@ -136,12 +137,14 @@ int main(int, char*[]) {
     setExceptionHandler();
 #endif
 
+#ifdef _WIN32
     dllFilesToTest.push_back(TestCaseEntry{ String("MISSING.dll"), -2 });
     std::vector<FileFound> files;
     findFilesWithExt("cpp-test-data/plugins-vst2-ok/", PLATFORM_PLUGIN_EXT, true, files);
     for (const FileFound& file : files) {
         dllFilesToTest.push_back(TestCaseEntry{ String(file.path), 0 });
     }
+#endif
 
     int retVal     = 0;
     auto audiohost = std::make_unique<vsthost>();
@@ -153,7 +156,7 @@ int main(int, char*[]) {
     daw_tls::setTls(_tls);
     try {
 
-#if defined(_WIN32)
+#ifdef _WIN32
         createWin32Window();
         double tmLastTick = getTimeHPC();
         bool quit         = false;

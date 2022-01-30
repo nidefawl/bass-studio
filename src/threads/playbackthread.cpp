@@ -3,6 +3,7 @@
 #include <queue>
 #include <thread>
 #include <mutex>
+#include <condition_variable>
 #include "assert_dbg.h"
 
 #include "error.h"

@@ -1,8 +1,10 @@
 #include <cstdio>
 #include <numeric>
 #include <cmath>
+#ifdef _WIN32
 #include <windows.h>
 #include <intrin.h>
+#endif
 #include "sse.h"
 #include "hires_timer.h"
 #include "logging.h"

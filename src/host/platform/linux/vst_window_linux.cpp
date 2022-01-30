@@ -116,7 +116,7 @@ void vst_window::show()
 }
 
 //------------------------------------------------------------------------
-ivec2 vst_window::getContentSize ()
+ivec2 vst_window::getContentSize() const
 {
 	ivec2 s;
 	glfwGetWindowSize(glfw, &s.x, &s.y);
@@ -128,14 +128,14 @@ ivec2 vst_window::getContentSize ()
 
 
 
-void vst_window::updateWindow() {
+void vst_window::updateWindow() const {
 //	InvalidateRgn(hwnd, NULL, TRUE);
 #ifdef __linux__
 	sendExposeEvent(glfw);
 #endif
 }
 //------------------------------------------------------------------------
-void vst_window::resize (ivec2 newSize)
+void vst_window::resize (ivec2 newSize) const
 {
 	if (getContentSize () == newSize)
 		return;

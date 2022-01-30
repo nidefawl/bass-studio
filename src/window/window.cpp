@@ -1667,13 +1667,16 @@ int startApplication(int argc, char* argv[]) {
 	hires_timer_t hiresTimer1;
 	GLFWwindow* glfwHandle = mainWindow->getGLFW();
 	int64_t tmHRLastTick = hiresTimer.getTime();
+	int frameNumberStats = 0;
+
+#ifdef _WIN32
 	int64_t tmLRLastCheck = getTimeMillis();
 	int64_t tmLRMsgSent = 0;
 	int64_t cntMessages = 0;
-	int frameNumberStats = 0;
-#ifdef _WIN32
 	int64_t tmLRLastCheckMsgLoop = getTimeMillis();
 	bool debugMessageLoop = false;
+#else
+	int64_t tmHRLastFrame = 0;
 #endif
 	while (!fataError && !glfwWindowShouldClose(glfwHandle)) {
 #ifdef _WIN32
@@ -1911,10 +1914,6 @@ public:
 			AEffEditor::open(ptr);
 			if (ptr)
 			{
-				if (isInitialized) {
-					bool validWindow = IsWindow(hwnd);
-					log_printf("Already initialized with hwnd %08X. IsWindow valid: %d\n", (uint64_t)(hwnd), validWindow);
-				}
 				isInitialized = true;
 				setAppWindowHints();
 				int windowWidth = _rect.right-_rect.left;

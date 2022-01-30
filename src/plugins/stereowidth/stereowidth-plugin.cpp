@@ -204,7 +204,7 @@ namespace PluginStereoWidth {
         BaseVST2_ProgramStereoWidth* ap = current();
         if (this->getAeffect()->numOutputs == 2) {
             float fBlockFreq  = (sampleRate / blockSize) * 0.45f;
-            float filterCoeff = 1.0f - std::expf(-2.0f * M_PI * (fBlockFreq / sampleRate));
+            float filterCoeff = 1.0f - expf(-2.0f * M_PI * (fBlockFreq / sampleRate));
             //filterCoeff = 1.0f;
             processStereo(inputs, outputs, sampleFrames, filterCoeff, paramsState, *ap);
         }

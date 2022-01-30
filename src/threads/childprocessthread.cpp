@@ -4,6 +4,7 @@
 #include <array>
 #include <thread>
 #include <mutex>
+#include <atomic>
 #include "str_util.h"
 #include "thread.h"
 #include "exceptions.h"
@@ -202,7 +203,9 @@ class ProcessThread::Impl {
     std::atomic<bool> m_readFailed{false};
     std::vector<String> m_buffer;
     bool m_started = false;
+#ifdef _WIN32
     HANDLE m_processHandle = nullptr;
+#endif
 public:
     volatile int32_t m_processExitCode = 0;
     std::exception_ptr m_eptr = nullptr;
@@ -243,8 +246,9 @@ public:
                 std::array<char, 2048> TEMP{};
                 std::vector<char> buf;
                 ProcessRunScope scopedProcess(argbinary, argparams, argwd, argenv, argpipe);
+#ifdef _WIN32
                 m_processHandle = scopedProcess.processInformation.hProcess;
-
+#endif
                 if (argpipe) {
                     while (!m_readFailed) {
 #ifndef _WIN32
@@ -278,10 +282,12 @@ public:
         });
     }
     void killProcess() {
+#ifdef _WIN32
         if (m_processHandle) {
             // handle might be invalid
             TerminateProcess(m_processHandle, 1);
         }
+#endif
     }
     bool isRunning() {
         return m_isRunning;

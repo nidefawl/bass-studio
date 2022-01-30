@@ -27,7 +27,7 @@ namespace {
             TEST_ASSERT_THROW(len < LOG_BUFFER_SIZE);
             TEST_ASSERT_EQUAL(data[len], 0);
             TEST_ASSERT_EQUAL(safe_strlen(data, 4096), len);
-            recvdLog  = _strdup(data);
+            recvdLog  = strdup(data);
             recvdSize = len;
             numCalls++;
         }

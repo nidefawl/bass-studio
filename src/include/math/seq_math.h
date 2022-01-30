@@ -1,11 +1,11 @@
 #pragma once
 
-#include <algorithm>
-#include <cmath>
-#include <limits>
-#include <type_traits>
 #include "vec.h"
 #include "assert_dbg.h"
+#include <algorithm>
+#include <limits>
+#include <type_traits>
+#include <cmath>
 
 #define CLAMP_I(x, min, max) (x > max ? max : x < min ? min : x)
 #define CLAMP_F(x) (x > 1.f ? 1.f : x < 0.f ? 0.f : x)
@@ -95,7 +95,7 @@ namespace math {
             return 0;
         if (std::isinf(val))
             return 0;
-        float valueFloat = std::floorf(val);
+        float valueFloat = std::floor(val);
         return static_cast<int64_t>(valueFloat);
     }
 
@@ -124,7 +124,7 @@ namespace math {
     inline int32_t floorfS32(float val) {
         if (std::isnan(val))
             return 0;
-        float val_f = std::floorf(val);
+        float val_f = std::floor(val);
         if (double(val_f) >= double{ std::numeric_limits<int32_t>::max() })
             return std::numeric_limits<int32_t>::max();
         if (double(val_f) <= double{ std::numeric_limits<int32_t>::min() })
@@ -158,7 +158,7 @@ namespace math {
     inline uint32_t floorfU32(float val) {
         if (std::isnan(val))
             return 0;
-        float val_f = std::floorf(val);
+        float val_f = std::floor(val);
         if (double(val_f) >= double{ std::numeric_limits<uint32_t>::max() })
             return std::numeric_limits<uint32_t>::max();
         if (double(val_f) <= double{ std::numeric_limits<uint32_t>::min() })
@@ -210,7 +210,7 @@ namespace math {
             return 0;
         if (std::isinf(val))
             return 0;
-        float valueFloat = std::ceilf(val);
+        float valueFloat = std::ceil(val);
         return static_cast<int64_t>(valueFloat);
     }
 
@@ -239,7 +239,7 @@ namespace math {
     inline int32_t ceilfS32(float val) {
         if (std::isnan(val))
             return 0;
-        float val_f = std::ceilf(val);
+        float val_f = std::ceil(val);
         if (double(val_f) >= double{ std::numeric_limits<int32_t>::max() })
             return std::numeric_limits<int32_t>::max();
         if (double(val_f) <= double{ std::numeric_limits<int32_t>::min() })
@@ -273,7 +273,7 @@ namespace math {
     inline uint32_t ceilfU32(float val) {
         if (std::isnan(val))
             return 0;
-        float val_f = std::ceilf(val);
+        float val_f = std::ceil(val);
         if (double(val_f) >= double{ std::numeric_limits<uint32_t>::max() })
             return std::numeric_limits<uint32_t>::max();
         if (double(val_f) <= double{ std::numeric_limits<uint32_t>::min() })

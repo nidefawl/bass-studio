@@ -40,6 +40,12 @@ public:
 		return diff.tv_sec*1000000.0+diff.tv_nsec / 1000.0;
 	}
 
+	int64_t getTimeReset() {
+		int64_t i = getTime();
+		iStart = iStop;
+		return i;
+	}
+
 	double getTimeDouble() {
 		queryStop();
 	    struct timespec diff;
@@ -54,22 +60,26 @@ public:
 
 };
 
-hires_timer_t::hires_timer_t() : _M_Iimpl{new Impl { } } {
+hires_timer_t::hires_timer_t() : m_impl{new Impl { } } {
 
 }
 hires_timer_t::~hires_timer_t() {
-	delete _M_Iimpl;
+	delete m_impl;
 }
 void hires_timer_t::reset() {
-	_M_Iimpl->reset();
+	m_impl->reset();
 }
 int64_t hires_timer_t::getTime() {
-	return _M_Iimpl->getTime();
+	return m_impl->getTime();
+}
+/* returns time passed in int64_t MICROSECONDS */
+int64_t hires_timer_t::getTimeReset() {
+    return m_impl->getTimeReset();
 }
 double hires_timer_t::getTimeDouble() {
-	return _M_Iimpl->getTimeDouble();
+	return m_impl->getTimeDouble();
 }
 double hires_timer_t::getTimeDoubleReset() {
-	return _M_Iimpl->getTimeDoubleReset();
+	return m_impl->getTimeDoubleReset();
 }
 #endif
