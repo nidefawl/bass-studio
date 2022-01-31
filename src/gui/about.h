@@ -16,7 +16,7 @@ public:
     ~guidialog_about() {
         removeGuis();
     }
-    void render(NVGcontext* vg) override;
+    void render(NVGcontext* vg);
     void layout() override;
     void buttonClicked(guibase* button) override;
 };

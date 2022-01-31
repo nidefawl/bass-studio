@@ -1,8 +1,9 @@
 #include "guicontainer_dnd_layout.h"
 #include "basectrl.h"
-#include "../host/mainctrl.h"
+#include "host/mainctrl.h"
 #include "gui/container/guicontainer_layout_types.h"
 #include "platform.h"
+#include "fileio.h"
 
 #include <cereal/cereal.hpp>
 #include <cereal/archives/json.hpp>
@@ -823,9 +824,6 @@ guictr_base* guictr_layout_entry::getGui() {
     return ctr.get();
 }
 
-void loadContainerSnapshot(guictr_layout* ctrlayout, guictrlayout_snapshot_t* snapshot);
-void storeContainerSnapshot(guictr_layout* ctrlayout, guictrlayout_snapshot_t* snapshot);
-
 void storeContainerEntrySnapshot(guictr_layout_entry* ctrlayoutEntry, std::shared_ptr<guictrlayout_entry_snapshot_t>& snapshot) {
     dbgassert(ctrlayoutEntry->getType() != container_type::CTR_TYPE_BASE);
     if (ctrlayoutEntry->getFrameType() == layout_ctr_type::GUICTR_LAYOUT) {
@@ -841,7 +839,6 @@ void storeContainerEntrySnapshot(guictr_layout_entry* ctrlayoutEntry, std::share
     snapshot->type  = ctrlayoutEntry->getType();
     snapshot->label = ctrlayoutEntry->getLabel();
 }
-
 
 void loadContainerEntrySnapshot(std::shared_ptr<guictrlayout_entry_snapshot_t>& snapshot, std::shared_ptr<guictr_layout_entry>& out) {
     auto& fac = getContainerFactory();
@@ -868,7 +865,6 @@ void loadContainerEntrySnapshot(std::shared_ptr<guictrlayout_entry_snapshot_t>& 
     }
 }
 
-void writeStringStream(const String& path, Stringstream& sstream);
 bool saveDawViewLayoutSnapshot(dawview_layout_t& snapshot, const String& path) {
     using namespace cereal;
     try {
@@ -947,5 +943,6 @@ template<class Archive>
 void serialize(Archive& archive, dawview_layout_t& m) {
     archive(m.left, m.right, m.splitterPositions);
 }
+
 CEREAL_REGISTER_TYPE(guictrlayout_snapshot_t);
 CEREAL_REGISTER_POLYMORPHIC_RELATION(guictrlayout_entry_snapshot_t, guictrlayout_snapshot_t)
