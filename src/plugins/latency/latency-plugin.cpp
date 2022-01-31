@@ -208,10 +208,10 @@ namespace PluginLatency {
             margin  = 4;
             add(&knoblatency);
         }
-        ~guicontainer_plugin_latency() {
+        ~guicontainer_plugin_latency() override {
             remove(&knoblatency);
         }
-        virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
+        bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
             if (this->contains(mpos)) {
                 ivec2 localMouse = this->toContainerSpace(mpos);
                 for (guibase* gui : guis) {

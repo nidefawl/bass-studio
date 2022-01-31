@@ -21,22 +21,22 @@ public:
                    VstInt32 numParams,
                    VstInt32 numInputs,
                    VstInt32 numOutputs);
-    virtual ~BasePluginVST2();
+    ~BasePluginVST2() override = default;
 
     void createEditorWindow(std::shared_ptr<PluginViewContainers> view);
 
-    virtual void open();     ///< Called when plug-in is initialized
-    virtual void close();    ///< Called when plug-in will be released
-    virtual void suspend() {}///< Called when plug-in is switched to off
-    virtual void resume() {} ///< Called when plug-in is switched to on
+    void open() override;     ///< Called when plug-in is initialized
+    void close() override;    ///< Called when plug-in will be released
+    void suspend() override {}///< Called when plug-in is switched to off
+    void resume() override {} ///< Called when plug-in is switched to on
 
-    virtual void processReplacing(float** inputs, float** outputs, VstInt32 sampleFrames) = 0;
+    void processReplacing(float** inputs, float** outputs, VstInt32 sampleFrames) override = 0;
     virtual std::shared_ptr<PluginViewContainers> createView()                            = 0;
 
 
-    virtual bool getInputProperties(VstInt32 index, VstPinProperties* properties);
-    virtual bool getOutputProperties(VstInt32 index, VstPinProperties* properties);
-    virtual bool getVendorString(char* text);
+    bool getInputProperties(VstInt32 index, VstPinProperties* properties) override;
+    bool getOutputProperties(VstInt32 index, VstPinProperties* properties) override;
+    bool getVendorString(char* text) override;
 
     //virtual void setProgram(VstInt32 program);
     //virtual void setProgramName(char* name);

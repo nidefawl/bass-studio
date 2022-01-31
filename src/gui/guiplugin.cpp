@@ -304,7 +304,7 @@ public:
         addEntry(new ctxtmenu_entry("Duplicate", CMD_DUPLICATE));
         addEntry(new ctxtmenu_entry("Delete", CMD_DELETE));
     }
-    void clicked(int _id) {
+    void clicked(int _id) override {
         ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
         if (_id == CMD_SHOW_PARAM_LIST) {
 //            class guitable_params : public guictr_base {
@@ -513,22 +513,22 @@ public:
     }
     void dragReleaseOn(guibase* target, ivec2 mousepos) override {
     }
-    virtual void setControl(BaseCtrl* parentCtrl) {
+    void setControl(BaseCtrl* parentCtrl) override {
         guibase::setControl(parentCtrl);
         knobTest.setControl(parentCtrl);
     }
-    virtual void setParent(guibase* parent) override {
+    void setParent(guibase* parent) override {
         guibase::setParent(parent);
         dbgassert(knobTest.parent == this);
     }
     String getText() override {
         return entry->label;
     }
-    void layout() {
+    void layout() override {
         knobTest.pos  = pos + ivec2(spacing);
         knobTest.size = ivec2(size.y, size.y) - ivec2(spacing * 2);
     }
-    virtual void render(NVGcontext* vg) {
+    void render(NVGcontext* vg) override {
         MainCtrl* ctrl  = MainCtrl::get();
         float rowHeight = size.y;
         float x         = knobTest.right() + spacing;
@@ -568,8 +568,7 @@ public:
         padding = 0;
         margin  = 0;
     }
-    ~guipluginview_preview() {
-    }
+    ~guipluginview_preview() override = default;
     void determineSize(ivec2& prefSize) override {
         if (sizeTex.x && sizeTex.y) {
             prefSize.x = (int) ((sizeTex.x / (float) sizeTex.y) * prefSize.y);

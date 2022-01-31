@@ -26,18 +26,18 @@ public:
     gui_tempocontrol()
         : guibutton() {
     }
-    void render(NVGcontext* vg) {
+    void render(NVGcontext* vg) override {
         renderWidgetBorder(vg, getStateFlags());
         String tempo = FormatTempo(project_controller_t::get()->getCurrentTempoBPM());
         setFont(vg, G_FONT_SCALE(size.y), G_WHITE, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
         nvgText(vg, pos.x + size.x / 2.0f, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(tempo), NULL);
     }
-    void handleDraggedBegin(MouseEvent& evt) {
+    void handleDraggedBegin(MouseEvent& evt) override {
         if (evt.guiDragged == this) {
             parentCtrl->captureMouse(this);
         }
     }
-    void handleDraggedMove(MouseEvent& evt) {
+    void handleDraggedMove(MouseEvent& evt) override {
         if (evt.guiDragged == this && evt.type == M_EVT_CAPTURED_MOVE) {
             int disty = (int) evt.dragDistance->y / 10;
             if (math::abs(disty) < 1)
@@ -48,7 +48,7 @@ public:
             DawInstance::get()->updateVisibleTrackContents();
         }
     }
-    void handleDraggedRelease(MouseEvent& evt) {
+    void handleDraggedRelease(MouseEvent& evt) override {
     }
 };
 class gui_signaturecontrol_input : public guibutton {
@@ -60,7 +60,7 @@ public:
           idx(_idx) {
     }
 
-    void render(NVGcontext* vg) {
+    void render(NVGcontext* vg) override {
         int32_t fl = getStateFlags();
         renderWidgetBorder(vg, fl);
         setFont(vg, G_FONT_SCALE(size.y), G_WHITE, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
@@ -73,12 +73,12 @@ public:
         String str = StringFormat("%d", n);
         nvgText(vg, pos.x + size.x / 2.0f, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(str), NULL);
     }
-    void handleDraggedBegin(MouseEvent& evt) {
+    void handleDraggedBegin(MouseEvent& evt) override {
         if (evt.guiDragged == this) {
             parentCtrl->captureMouse(this);
         }
     }
-    void handleDraggedMove(MouseEvent& evt) {
+    void handleDraggedMove(MouseEvent& evt) override {
         if (evt.guiDragged == this && evt.type == M_EVT_CAPTURED_MOVE) {
             int disty = (int) evt.dragDistance->y / 20;
             if (math::abs(disty) < 1)
@@ -100,7 +100,7 @@ public:
             }
         }
     }
-    void handleDraggedRelease(MouseEvent& evt) {
+    void handleDraggedRelease(MouseEvent& evt) override {
     }
 };
 class gui_signaturecontrol : public guictr_base {
@@ -116,20 +116,20 @@ public:
         add(&inputNum);
         add(&inputDen);
     }
-    ~gui_signaturecontrol() {
+    ~gui_signaturecontrol() override {
         removeGuis();
     }
 
     bool enabled() {
         return true;
     }
-    void layout() {
+    void layout() override {
         inputNum.size  = ivec2(30, size.y);
         inputDen.size  = ivec2(30, size.y);
         inputNum.pos.x = (size.x / 4) - inputNum.size.x / 2;
         inputDen.pos.x = (size.x / 4) * 3 - inputNum.size.x / 2;
     }
-    void render(NVGcontext* vg) {
+    void render(NVGcontext* vg) override {
         renderWidgetBorder(vg, getStateFlags());
         if (!setScissorTransform(vg)) {
             return;
@@ -155,7 +155,7 @@ public:
     void handleDraggedBegin(MouseEvent& evt) override;
     void handleDraggedMove(MouseEvent& evt) override;
     void handleDraggedRelease(MouseEvent& evt) override;
-    guictxtmenu_base* getTooltip(AppCtrl* appctrl) {
+    guictxtmenu_base* getTooltip(AppCtrl* appctrl) override {
         return parent ? parent->getTooltip(appctrl) : nullptr;
     }
 };
@@ -167,18 +167,18 @@ class gui_timeinput : public guictr_base {
 
 public:
     gui_timeinput(int32_t* _time, const bool isRelative = false);
-    ~gui_timeinput() {
+    ~gui_timeinput() override {
         removeGuis();
     }
     void setRef(int32_t* time);
     void setConnectedBG();
-    void layout();
+    void layout() override;
     void buttonClicked(guibase* button) override {
         if (parent)
             parent->buttonClicked(this);
     }
     void render(NVGcontext* vg) override;
-    guictxtmenu_base* getTooltip(AppCtrl* appctrl);
+    guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
     int32_t getTime();
 };
 
@@ -195,7 +195,7 @@ public:
     }
     void render(NVGcontext* vg) override;
     void prerender(NVGcontext* vg) override;
-    virtual void onTick(AppCtrl* appctrl) {
+    void onTick(AppCtrl* appctrl) override {
     }
     NVGcolor getBackgroundColor(int stateflags) const override;
 };
@@ -247,7 +247,7 @@ public:
         add(&btnAudioOnOff);
         padding = 8;
     }
-    ~guictr_tempocontrols() {
+    ~guictr_tempocontrols() override {
         remove(&btnAudioOnOff);
         remove(&songPos);
         remove(&btnRecord);
@@ -260,7 +260,7 @@ public:
         remove(&loopPos);
         remove(&loopLen);
     }
-    void render(NVGcontext* vg) {
+    void render(NVGcontext* vg) override {
         //guictr_base::setScissorTransform(vg);
         ivec2 posInset = getPosContent();
         nvgTranslate(vg, posInset.x, posInset.y);
@@ -270,7 +270,7 @@ public:
             nvgRestore(vg);
         }
     }
-    void layout() {
+    void layout() override {
         ivec2 cs        = getSizeContent();
         int32_t spacing = 10;
         tempo.pos       = ivec2(5, 5);
@@ -316,5 +316,5 @@ public:
             gui->layout();
         }
     }
-    void buttonClicked(guibase* button);
+    void buttonClicked(guibase* button) override;
 };

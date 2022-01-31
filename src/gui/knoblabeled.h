@@ -24,13 +24,12 @@ protected:
 public:
     guiknob_labeled_base(const bool _renderBackground = true, const bool _isSlider = false) : guiknob(_renderBackground, _isSlider) {
     }
-    virtual ~guiknob_labeled_base() {
-    }
-    virtual void setDisplayValue(float f) override {
+    ~guiknob_labeled_base() override = default;
+    void setDisplayValue(float f) override {
         if (fnGetDisplayValue) {
             valueDisplay = fnGetDisplayValue(f);
         }
     }
     void layout() override;
-    virtual void render(NVGcontext* vg) override;
+    void render(NVGcontext* vg) override;
 };

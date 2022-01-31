@@ -9,18 +9,18 @@ public:
         padding = 0;
         margin  = 0;
     }
-    ~gui_samplesloaded() {
+    ~gui_samplesloaded() override {
         removeGuis();
     }
     void onTick(AppCtrl* ctrl) override {
         guictr_base::onTick(ctrl);
     }
-    void layout() {
+    void layout() override {
         for (guibase* gui : guis) {
             gui->layout();
         }
     }
-    virtual void render(NVGcontext* vg) {
+    void render(NVGcontext* vg) override {
         if (isBackgroundRendered()) {
             renderBackground(vg);
         }

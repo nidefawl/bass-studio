@@ -837,7 +837,7 @@ public:
         add(&selectOutput);
         padding = 0;
     }
-    ~gui_trackcontrols_io() {
+    ~gui_trackcontrols_io() override {
         remove(&selectOutput);
         remove(&selectInput);
     }
@@ -1163,7 +1163,7 @@ public:
         addAutomationLane.icon = ICON_PLUS;
         add(&hideTrack);
     }
-    ~gui_trackcontrols_title() {
+    ~gui_trackcontrols_title() override {
         removeUNCHECKED(&hideAutomation);
         removeUNCHECKED(&hideTrack);
         removeUNCHECKED(&addAutomationLane);
@@ -1356,7 +1356,7 @@ public:
         removeLane.icon = ICON_MINUS;
         add(&removeLane);
     }
-    ~gui_track_subtrack_mixer() {
+    ~gui_track_subtrack_mixer() override {
         remove(&removeLane);
     }
     bool isStaticContainer() override {

@@ -452,10 +452,6 @@ void BaseCtrl::setClipboardText(String s) {
     this->window->setClipboardText(s);
 }
 
-AppCtrl::AppCtrl() {
-}
-AppCtrl::~AppCtrl() {
-}
 void AppCtrl::onAppTick() {
     getTheme()->updateAnimation();
     onTick();

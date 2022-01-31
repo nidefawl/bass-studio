@@ -15,10 +15,8 @@
 class effectbase;
 class gui_pluginlist_entry : public gui_list_entry {
 public:
-    gui_pluginlist_entry() {
-    }
-    virtual ~gui_pluginlist_entry() {
-    }
+    gui_pluginlist_entry() = default;
+    ~gui_pluginlist_entry() override = default;
     virtual effectbase* makeInstance() = 0;
     virtual bool isSynth()             = 0;
 };
@@ -66,7 +64,7 @@ public:
         textField.setPlaceholder("Search");
         textField2.setPlaceholder("SQL error");
     }
-    ~guictr_pluginlibrary() {
+    ~guictr_pluginlibrary() override {
         std::vector<gui_list_entry*> _newList;
         pluginListCtr.setList(_newList);
         remove(&pluginListCtr);
@@ -91,7 +89,7 @@ public:
         pluginListCtr.setList(_newList);
         layout();
     }
-    void layout() {
+    void layout() override {
         textField2.setVisible(!textField2.value().empty());
         ivec2 cs          = getSizeContent();
         textField.pos     = ivec2(0, 0);
@@ -107,7 +105,7 @@ public:
             gui->layout();
         }
     }
-    virtual void render(NVGcontext* vg) {
+    void render(NVGcontext* vg) override {
         if (isBackgroundRendered()) {
             renderBackground(vg);
         }
@@ -178,7 +176,7 @@ public:
         });
         textField.setPlaceholder("Search");
     }
-    ~guictr_modulelibrary() {
+    ~guictr_modulelibrary() override {
         removeGuis();
     }
     void update() {
@@ -192,7 +190,7 @@ public:
         pluginListCtr.setList(_newList);
         layout();
     }
-    void layout() {
+    void layout() override {
         ivec2 cs           = getSizeContent();
         textField.size     = ivec2(cs.x, heightTextField);
         textField.pos      = ivec2(0, 0);
@@ -202,7 +200,7 @@ public:
             gui->layout();
         }
     }
-    virtual void render(NVGcontext* vg) {
+    void render(NVGcontext* vg) override {
         if (isBackgroundRendered()) {
             renderBackground(vg);
         }

@@ -24,9 +24,7 @@ public:
 	Impl() {
 		reset();
 	}
-	~Impl() {
-
-	}
+	~Impl() = default;
 	void reset() {
 	    clock_gettime(CLOCK_MONOTONIC, &iStart);
 	}

@@ -67,8 +67,7 @@ public:
     void killProcess() {
         kill(pid, SIGKILL);
     }
-    ~ProcessRunScope() {
-    }
+    ~ProcessRunScope() = default;
 };
 #elif defined _WIN32
 #include <windows.h>

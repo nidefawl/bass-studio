@@ -10,8 +10,7 @@ protected:
 public:
     pluginwindow(std::shared_ptr<PluginControl> _ctrl) : ctrlShared(_ctrl) {
     }
-    virtual ~pluginwindow() {
-    }
+    ~pluginwindow() override = default;
 
     virtual void onSetParameter(int32_t index, float value) = 0;
     virtual void destroyContextAndWindow()                  = 0;

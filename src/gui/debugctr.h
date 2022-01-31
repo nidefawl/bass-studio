@@ -24,13 +24,13 @@ private:
 
 public:
     gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType);
-    ~gui_ctr_debug();
-    virtual void render(NVGcontext* vg);
-    void layout();
+    ~gui_ctr_debug() override;
+    void render(NVGcontext* vg) override;
+    void layout() override;
     void addStr(String str) {
         g_debugStrings.push_back(std::move(str));
     }
-    void buttonClicked(guibase* button);
+    void buttonClicked(guibase* button) override;
     //bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
     void onTick(AppCtrl* ctrl) override;
 };

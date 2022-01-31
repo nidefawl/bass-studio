@@ -18,7 +18,7 @@ public:
     ngui::Menu* menu;
     bool isMenuOpen = false;
     guimenu_ctxtentry(ngui::Menu* _menu);
-    virtual void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse);
+    void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) override;
 };
 class guictr_menubar;
 class guimenu : public guictxtmenu {
@@ -30,16 +30,15 @@ class guimenu : public guictxtmenu {
 public:
     guictr_menubar* parentMenuBar = NULL;
     guimenu(ngui::Menu* _menu, int _lvl = 0, guimenu_ctxtentry* parent = nullptr);
-    virtual ~guimenu() {
-    }
+    ~guimenu() override = default;
 
-    void clicked(int _id);
+    void clicked(int _id) override;
 
     void clickedElement(ctxtmenu_entry* e, int _id) override;
-    virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
-    virtual void onRemove() override;
-    virtual void onParentWindowClose() override;
-    virtual void layout() override;
+    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
+    void onRemove() override;
+    void onParentWindowClose() override;
+    void layout() override;
 };
 class guictr_menubar_entry : public guibase {
 public:
@@ -49,13 +48,13 @@ public:
     int padding  = 0;
     guictr_menubar_entry(ngui::Menu* _menu, guictr_menubar* _parentMenuBar) : guibase(), menu(_menu), parentMenuBar(_parentMenuBar) {
     }
-    virtual void render(NVGcontext* vg);
-    virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
-    virtual void handleDraggedBegin(MouseEvent& evt);
-    virtual guibase* getFocusedControl() {
+    void render(NVGcontext* vg) override;
+    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
+    void handleDraggedBegin(MouseEvent& evt) override;
+    guibase* getFocusedControl() override {
         return nullptr;
     }
-    virtual guibase* getFocusedContainer() {
+    guibase* getFocusedContainer() override {
         return nullptr;
     }
 };
@@ -68,15 +67,15 @@ public:
     guictr_menubar(ngui::MenuBar& _menubar) : guictr_base(), menubar(_menubar) {
         padding = 0;
     }
-    ~guictr_menubar() {
+    ~guictr_menubar() override {
 
         destroyGuis();
     }
-    virtual void render(NVGcontext* vg);
+    void render(NVGcontext* vg) override;
     void updateMenu() {
         layout();
     }
-    void layout() {
+    void layout() override {
         dbgassert(parentCtrl);
         dbgassert(parentCtrl->vg);
         parentCtrl->closeAllAppMenus();

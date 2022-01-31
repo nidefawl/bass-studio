@@ -26,15 +26,15 @@ public:
     void setHSL(float h, float s, float v, float a);
     void setInt32(int32_t rgba);
     void init();
-    ~gui_color_pick() {
+    ~gui_color_pick() override {
         removeGuis();
     }
-    virtual void buttonClicked(guibase* button) override;
-    void layout();
+    void buttonClicked(guibase* button) override;
+    void layout() override;
     void setRefInt32(int32_t* ptrInt32);
     void setRefNvg(NVGcolor* ptrNvg);
     void render(NVGcontext* vg) override;
-    void handleRightClick(MouseEvent& evt);
+    void handleRightClick(MouseEvent& evt) override;
     NVGcolor getNvg() {
         return nvgColor;
     }

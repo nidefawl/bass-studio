@@ -39,10 +39,10 @@ public:
         buttonColor = color;
         setFlagInternal(FLG_HAS_COLOR_BG);
     }
-    virtual NVGcolor getBackgroundColor(int stateflags) const override;
-    virtual void handleDraggedMove(MouseEvent& evt) {
+    NVGcolor getBackgroundColor(int stateflags) const override;
+    void handleDraggedMove(MouseEvent& evt) override {
     }
-    virtual void handleDraggedRelease(MouseEvent& evt) {
+    void handleDraggedRelease(MouseEvent& evt) override {
         if (parent)
             parent->buttonClicked(this);
     }
@@ -69,7 +69,7 @@ public:
     int getFontSize() {
         return fontSize;
     }
-    void render(NVGcontext* vg) {
+    void render(NVGcontext* vg) override {
         int32_t fl = getStateFlags();
         renderWidgetBorder(vg, fl);
         renderButtonLabel(vg, fl);
@@ -95,7 +95,7 @@ public:
     void setStateRef(bool* _enabledPtr) {
         statePtr = _enabledPtr;
     }
-    void render(NVGcontext* vg) {
+    void render(NVGcontext* vg) override {
         int32_t fl = getStateFlags();
         renderWidgetBorder(vg, fl);
         renderButtonLabel(vg, fl);
@@ -127,5 +127,5 @@ public:
             return fnGetState();
         return true;
     }
-    void render(NVGcontext* vg);
+    void render(NVGcontext* vg) override;
 };

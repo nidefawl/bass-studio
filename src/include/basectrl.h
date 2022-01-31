@@ -136,6 +136,7 @@ public:
         ctrDragHandler.setControl(this);
         ctrDragHandler.setFlag(FLG_RENDER_LABEL, true);
     }
+    virtual ~BaseCtrl() = default;
     window_base* window = nullptr;
     NVGcontext* vg      = nullptr;
     std::vector<guictr_base*> containers;
@@ -239,7 +240,6 @@ public:
     bool mouseInside = false;
     bool isOK        = false;
     bool isOk() const { return isOK; }
-    virtual ~BaseCtrl() = default;
     virtual guitheme_t* getTheme() { return &themes.getRef(); }
     guitheme_mgr* getThemeMgr() { return &themes; }
     ivec2 getScaledSize() const { return {m_size.x * 1.0 / m_scale, m_size.y * 1.0 / m_scale}; }
@@ -314,8 +314,8 @@ public:
 #if WINDOW_HAS_MENUBAR
     ngui::MenuBar menubar;
 #endif
-    AppCtrl();
-    ~AppCtrl() override;
+    AppCtrl() = default;
+    ~AppCtrl() override = default;
     void relayout(int32_t w, int32_t h) override = 0;
     virtual void onChildOverlayWindowClose(window_main*);
     void openContextMenu(guictxtmenu_base* b, ivec2 pos, int flags=1) override;
@@ -395,8 +395,9 @@ class PopupCtrl : public AppCtrl {
     bool bResizeable            = false;
 
 public:
-    PopupCtrl();
-    ~PopupCtrl() override;
+    PopupCtrl() = default;
+    ~PopupCtrl() override = default;
+
     void destroy() override;
     bool isShown() { return this->window && this->window->isShown(); }
     void closePopup() override;

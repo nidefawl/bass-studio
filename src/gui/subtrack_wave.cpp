@@ -34,7 +34,7 @@ public:
     gui_subtrack_waveview(track_gui_entry_t* _entry, DawCtrl* ctrl)
         : gui_track_subtrack(_entry, ctrl->getGrid(), nullptr, 0), grid(ctrl->getGrid()) {
     }
-    ~gui_subtrack_waveview() {
+    ~gui_subtrack_waveview() override {
         for (auto& entry : splits) {
             auto& waveformTex = entry.second.waveformTex;
             if (waveformTex.rendered) {
@@ -45,7 +45,7 @@ public:
             }
         }
     }
-    virtual int subtrackType() override { return SUBTRACK_TYPE_WAVE; }
+    int subtrackType() override { return SUBTRACK_TYPE_WAVE; }
 
     void onTick(AppCtrl* appctrl) override {
         if (culled) {

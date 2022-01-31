@@ -19,7 +19,7 @@ public:
             idx++;
         }
     }
-    void clicked(int _id) {
+    void clicked(int _id) override {
         closeContextMenu();
         if (_id >= 0 && _id < options.size()) {
             parent->onOptionSelected(_id);

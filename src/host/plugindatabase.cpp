@@ -141,30 +141,34 @@ public:
         }
     }
 };
-plugindatabase_t::plugindatabase_t()  = default;
-plugindatabase_t::~plugindatabase_t() = default;
+
 bool plugindatabase_t::resolve(const plugin_snapshot_t& pluginSnapshot, String* _outPath, int loadFlags) {
     return m_impl->resolve(pluginSnapshot, _outPath, loadFlags);
 }
+
 void plugindatabase_t::query(const String& q, std::vector<pluginentry_t>& _out) {
     m_impl->query(q, _out);
 }
+
 void plugindatabase_t::openDatabase() {
     revision++;
     dbgassert(!m_impl);
     String cwdPathDB = toUserdataPath("data/plugins.db3");
     m_impl = new plugindatabase_t::Impl{ cwdPathDB };
 }
+
 void plugindatabase_t::closeDatabase() {
     dbgassert(m_impl);
     delete m_impl;
     m_impl = nullptr;
 }
+
 void plugindatabase_t::reopen() {
     //closeDatabase();
     //openDatabase();
     revision++;
 }
+
 int plugindatabase_t::getRevision() const {
     return revision;
 }

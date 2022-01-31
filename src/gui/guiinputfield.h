@@ -15,13 +15,13 @@ public:
         field.setParent(this);
     }
 
-    void layout() {
+    void layout() override {
         field.pos  = pos;
         field.size = size;
         field.layout();
         field.setFontSize(math::max(4, field.size.y - 2));
     }
-    virtual void setControl(BaseCtrl* parentCtrl) override {
+    void setControl(BaseCtrl* parentCtrl) override {
         guibase::setControl(parentCtrl);
         field.setControl(parentCtrl);
     }
@@ -29,7 +29,7 @@ public:
         return field;
     }
 
-    void render(NVGcontext* vg);
+    void render(NVGcontext* vg) override;
 
     bool focusEvent(MouseHitEvt& evt, bool focused) override;
     void endEdit(bool success);
@@ -37,8 +37,8 @@ public:
     void handleDraggedBegin(MouseEvent& evt) override;
     void handleDraggedMove(MouseEvent& evt) override;
     void handleDraggedRelease(MouseEvent& evt) override;
-    virtual bool handleKeyInput(KeyEvent& kevt) override;
-    virtual bool handleCharInput(unsigned int codepoint) override;
+    bool handleKeyInput(KeyEvent& kevt) override;
+    bool handleCharInput(unsigned int codepoint) override;
 
     virtual String getAsStringLiteral()                        = 0;
     virtual void endEditImpl()                                 = 0;
@@ -118,7 +118,7 @@ class gui_input_filtered : public guibutton {
 public:
     gui_input_filtered(int32_t* _number);
     void setAlignCenter(bool b);
-    virtual void setControl(BaseCtrl* parentCtrl) override {
+    void setControl(BaseCtrl* parentCtrl) override {
         guibase::setControl(parentCtrl);
         field.setControl(parentCtrl);
     }
@@ -128,9 +128,9 @@ public:
     gui_textfield& getField() {
         return field;
     }
-    void layout();
+    void layout() override;
 
-    void render(NVGcontext* vg);
+    void render(NVGcontext* vg) override;
 
     bool focusEvent(MouseHitEvt& evt, bool focused) override;
     void endEdit(bool success);
@@ -138,6 +138,6 @@ public:
     void handleDraggedBegin(MouseEvent& evt) override;
     void handleDraggedMove(MouseEvent& evt) override;
     void handleDraggedRelease(MouseEvent& evt) override;
-    virtual bool handleKeyInput(KeyEvent& kevt) override;
-    virtual bool handleCharInput(unsigned int codepoint) override;
+    bool handleKeyInput(KeyEvent& kevt) override;
+    bool handleCharInput(unsigned int codepoint) override;
 };

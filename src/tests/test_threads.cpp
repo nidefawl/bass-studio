@@ -20,7 +20,7 @@ namespace {
         uint32_t a      = 0;
         uint32_t b      = 0;
         uint32_t result = 0;
-        void run() {
+        void run() override {
             for (uint32_t i = 0; i < 500000; i++) {
                 result = ((result * a) >> 1) + rng.randI();
             }

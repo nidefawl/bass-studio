@@ -46,7 +46,7 @@ protected:
     void onDisable() override;
 
 public:
-    virtual int getModuleType() override { return PLUGIN_TYPE_AU; };
+    int getModuleType() override { return PLUGIN_TYPE_AU; };
 
     const char* getDir() {
         return sDir.c_str();

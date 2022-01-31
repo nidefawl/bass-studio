@@ -376,7 +376,7 @@ public:
         fixed->initFixed();
         addEntry(fixed);
     }
-    void clicked(int _id) {
+    void clicked(int _id) override {
         scaled_grid& grid = m_dawCtrl->getGrid();
         if (_id == 20) {
             dbgassert(m_trackentry);

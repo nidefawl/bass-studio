@@ -8,7 +8,7 @@ class gui_shaderview : public guictr_base {
 
 public:
     gui_shaderview();
-    ~gui_shaderview();
+    ~gui_shaderview() override;
     void prerender(NVGcontext* vg) override;
     void render(NVGcontext* vg) override;
     void onTick(AppCtrl* appctrl) override;

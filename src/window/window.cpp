@@ -285,7 +285,7 @@ public:
 		noRawInput = DAW::settings.vmmode;
 #endif
 	}
-	virtual ~appwindow() {
+	~appwindow() override {
 		//dbgassert(std::find(windowTimerHandleList.begin(), windowTimerHandleList.end(), this) == windowTimerHandleList.end());
 
 #ifdef _WIN32
@@ -482,13 +482,13 @@ public:
 	void maximize() {
 		glfwMaximizeWindow(glfw);
 	}
-    virtual bool filesDropBegin(std::vector<String>& files, ivec2 pos, int kbmods) {
+    bool filesDropBegin(std::vector<String>& files, ivec2 pos, int kbmods) override {
     	return true;
     }
-    virtual bool filesDropMove(ivec2 pos, int kbmods) {
+    bool filesDropMove(ivec2 pos, int kbmods) override {
     	return true;
     }
-    virtual bool filesDropFinal(std::vector<String>& files, ivec2 pos, int kbmods) {
+    bool filesDropFinal(std::vector<String>& files, ivec2 pos, int kbmods) override {
     	return true;
     }
     virtual void menuCommand(const menucmd_t&& command) {
@@ -603,7 +603,7 @@ public:
 //		return &workerThread;
 //	}
 
-	AppCtrl* getCtrl() {
+	AppCtrl* getCtrl() override {
 		return ctrl;
 	}
 	void postRender() override {
@@ -629,7 +629,7 @@ public:
 	}
 	void createMainWindow(const char* title, int w, int h, appwindow_main* parentWindowHandle, int flags = 0);
 	void initControl();
-	void updateMenu() {
+	void updateMenu() override {
 	#if WINDOW_HAS_MENUBAR
 		ngui::MenuBar& menubar = ctrl->getMenubar();
 	#ifdef _WIN32
@@ -665,9 +665,9 @@ public:
 	int getCreationFlags() override {
 		return this->windowCreationFlags;
 	}
-	void destroy();
+	void destroy() override;
     double tmLastShaderReloadMillis = 0.0;
-	void onTick() {
+	void onTick() override {
 		static bool reentrant = false;
 		reentrantblocker block(reentrant);
 	    if (!block.check()) {
@@ -705,7 +705,7 @@ public:
 			w->onRefresh();
 		#endif
 	}
-	void render() {
+	void render() override {
 		renderMain(ctrl);
 	}
 	void renderMain(AppCtrl* const ctrl)
@@ -750,17 +750,17 @@ public:
 			glfwSwapBuffers(glfw);
 		}
 	}
-	void onMouseMoved(ivec2 deltapos) {
+	void onMouseMoved(ivec2 deltapos) override {
 		if (math::abs(deltapos.x)+math::abs(deltapos.y) > 2)
 			this->dblclicktimer = 0;
 		ctrl->mouseMoved(getMousePos(1.0f/ctrl->m_scale), deltapos);
 		flagNeedsRedraw();
 	}
-	virtual void onMouseScrolled(double xoffset, double yoffset) {
+	void onMouseScrolled(double xoffset, double yoffset) override {
 		ctrl->mouseScrolled(xoffset, yoffset);
 		flagNeedsRedraw();
 	}
-	void onMouseButton(int button, int action, int mods) {
+	void onMouseButton(int button, int action, int mods) override {
 		if (action == GLFW_PRESS) {
 			uint64_t timeMillis = getTimeMillis();
 			bool dblClick = this->dblclicktimer != 0 && timeMillis - this->dblclicktimer < 500;
@@ -773,7 +773,7 @@ public:
         lastclickpos = mousepos;
         flagNeedsRedraw();
 	}
-	void onWindowSizeChanged(int width, int height) {
+	void onWindowSizeChanged(int width, int height) override {
 		if (ctrl->isOK) {
 			if (ctrl->m_size.x != width || ctrl->m_size.y != height) {
 				log_printf("size change from %dx%d to %dx%d on window %08X: parent %08X\n", ctrl->m_size.x, ctrl->m_size.y, width, height, (uint64_t)(this), (uint64_t)(parent));
@@ -784,7 +784,7 @@ public:
 			flagNeedsRedraw();
 		}
 	}
-	void onWindowFocusChanged(int focused) {
+	void onWindowFocusChanged(int focused) override {
 		if (focused) {
 			ctrl->focusReceived();
         }else {
@@ -814,15 +814,15 @@ public:
 			parent->onChildOverlayClose(this);
 		}
 	}
-	bool filesDropBegin(std::vector<String>& files, ivec2 pos, int kbmods) {
+	bool filesDropBegin(std::vector<String>& files, ivec2 pos, int kbmods) override {
 		flagNeedsRedraw();
 		return ctrl->filesDropBegin(files, pos, kbmods);
     }
-	bool filesDropMove(ivec2 pos, int kbmods) {
+	bool filesDropMove(ivec2 pos, int kbmods) override {
 		flagNeedsRedraw();
 		return ctrl->filesDropMove(pos, kbmods);
     }
-	bool filesDropFinal(std::vector<String>& files, ivec2 pos, int kbmods) {
+	bool filesDropFinal(std::vector<String>& files, ivec2 pos, int kbmods) override {
 		flagNeedsRedraw();
 		return ctrl->filesDropFinal(files, pos, kbmods);
     }
@@ -830,18 +830,18 @@ public:
 		glfwSetWindowShouldClose(glfw, 1);
 //		onWindowClose();
     }
-    void menuCommand(const menucmd_t&& command) {
+    void menuCommand(const menucmd_t&& command) override {
 #if WINDOW_HAS_MENUBAR
     	ctrl->menuCommand(std::move(command));
 #endif
     }
-    virtual void onMenuOpen(ngui::Menu* menu) {
+    void onMenuOpen(ngui::Menu* menu) override {
 #if WINDOW_HAS_MENUBAR
     	ctrl->onMenuOpen(menu);
 #endif
     }
 #ifdef _WIN32
-	virtual LRESULT windowProc(HWND _hwnd, UINT Msg, WPARAM wParam, LPARAM lParam) override {
+	LRESULT windowProc(HWND _hwnd, UINT Msg, WPARAM wParam, LPARAM lParam) override {
 		if (this->ctrl->hasMenuWindow()) {
 			bool dbg;
 			dbg = !!_hwnd;
@@ -862,12 +862,12 @@ public:
 	}
 #endif
 
-	void onCharInput(unsigned int codepoint) {
+	void onCharInput(unsigned int codepoint) override {
 //		my_printf("main onCharInput 0x%04X\n", codepoint);
 		ctrl->onCharInput(codepoint);
 		flagNeedsRedraw();
 	}
-	void onKeyInput(int key, int scancode, int action, int mods, const char* key_name)
+	void onKeyInput(int key, int scancode, int action, int mods, const char* key_name) override
 	{
 		/*if (action == GLFW_PRESS)*/
 //		my_printf("keyname %s, key %d, scancode %d\n", key_name, key, scancode);
@@ -881,41 +881,41 @@ public:
 		appwindow::onChildDialogClose(child);
 	}
 	void onChildOverlayClose(appwindow* child) override;
-	void captureMouse() {
+	void captureMouse() override {
 		appwindow::captureMouse();
 	}
-	void releaseMouse() {
+	void releaseMouse() override {
 		appwindow::releaseMouse();
 	}
-	void hideSystemCursor() {
+	void hideSystemCursor() override {
 //		appwindow::hideSystemCursor();
 	}
-	bool isMouseCaptured() {
+	bool isMouseCaptured() override {
 		return appwindow::isMouseCaptured();
 	}
-	void onCursorEnter(int entered) {
+	void onCursorEnter(int entered) override {
 		ctrl->onCursorEnter(entered);
 		if (entered)
 			glfwSetCursor(glfw, MouseCursors::cursors[cursorIcon]);
 	}
 	window_dialog* createDialog(const String& sTitle,int w, int h) override;
-	bool isShown() {
+	bool isShown() override {
 		return appwindow::isWindowNotHidden();
 	}
 
 	void getSize(ivec2* size) override {
 		return appwindow::getSize(size);
 	}
-	void getPos(ivec2* pos) {
+	void getPos(ivec2* pos) override {
 		return appwindow::getPos(pos);
 	}
-	void setPos(ivec2 pos) {
+	void setPos(ivec2 pos) override {
 		return appwindow::setPos(pos);
 	}
-	void setSize(ivec2 size) {
+	void setSize(ivec2 size) override {
 		return appwindow::setSize(size);
 	}
-	void requestRedraw() {
+	void requestRedraw() override {
 //		flagNeedsRedraw();
 	}
 	void setClipboardText(String s) override {
@@ -932,14 +932,14 @@ public:
 	int getKeyMods() override {
 		return getKeyMods_();
 	}
-	void updateWindowFromDlg() {
+	void updateWindowFromDlg() override {
 		onRefresh();
 	}
 
 	void fireMouseMoved() override {
 		onMouseMoved(ivec2(0));
 	}
-	void positionOnScreen(ivec2 pos, ivec2 size) {
+	void positionOnScreen(ivec2 pos, ivec2 size) override {
 #ifdef _WIN32
 	    POINT p;
 	    p.x = pos.x;
@@ -969,10 +969,10 @@ public:
 #endif
 	}
 
-	void focus() {
+	void focus() override {
 		glfwFocusWindow(glfw);
 	}
-	void show() {
+	void show() override {
 		appwindow::showWindow();
 
 		//TODO: add this function to GLFW
@@ -987,7 +987,7 @@ public:
 #endif
 	}
 
-	void hide() {
+	void hide() override {
 		appwindow::hideWindow();
 	}
 };
@@ -1053,7 +1053,7 @@ public:
 		glfwDestroyWindow(glfw);
 		glfw = nullptr;
 	}
-	void render()
+	void render() override
     {
         glfwMakeContextCurrent(glfw);
 		if (!init) {
@@ -1094,10 +1094,10 @@ public:
 		this->parent->onChildDialogClose(this);
 		my_printf("END\n", 0);
 	}
-	void onTick() {
+	void onTick() override {
 		flagNeedsRedraw();
 	}
-	void onKeyInput(int key, int scancode, int action, int mods, const char* key_name)
+	void onKeyInput(int key, int scancode, int action, int mods, const char* key_name) override
 	{
 		if (action == GLFW_PRESS) {
 			if (key == GLFW_KEY_ESCAPE) {
@@ -1106,7 +1106,7 @@ public:
 			}
 		}
 	}
-	void show() {
+	void show() override {
 		appwindow::showWindow();
 #ifdef _WIN32
 		if (parent && disablesParent)
@@ -1116,23 +1116,23 @@ public:
 		//TODO: implement linux window enable/disable
 #endif
 	}
-	bool isShown() {
+	bool isShown() override {
 		return appwindow::isWindowNotHidden();
 	}
 
 	void getSize(ivec2* size) override {
 		return appwindow::getSize(size);
 	}
-	void getPos(ivec2* pos) {
+	void getPos(ivec2* pos) override {
 		return appwindow::getPos(pos);
 	}
-	void setPos(ivec2 pos) {
+	void setPos(ivec2 pos) override {
 		return appwindow::setPos(pos);
 	}
-	void setSize(ivec2 size) {
+	void setSize(ivec2 size) override {
 		return appwindow::setSize(size);
 	}
-	void requestRedraw() {
+	void requestRedraw() override {
 		flagNeedsRedraw();
 	}
 	void setClipboardText(String s) override {
@@ -1149,19 +1149,19 @@ public:
 	int getKeyMods() override {
 		return getKeyMods_();
 	}
-	void captureMouse() {
+	void captureMouse() override {
 		appwindow::captureMouse();
 	}
-	void releaseMouse() {
+	void releaseMouse() override {
 		appwindow::releaseMouse();
 	}
-	void hideSystemCursor() {
+	void hideSystemCursor() override {
 //		appwindow::hideSystemCursor();
 	}
-	bool isMouseCaptured() {
+	bool isMouseCaptured() override {
 		return appwindow::isMouseCaptured();
 	}
-	void updateWindowFromDlg() {
+	void updateWindowFromDlg() override {
 		onRefresh();
 	}
 
@@ -1855,7 +1855,7 @@ public:
 		isExternalWindow = true;
 	}
 
-	virtual ~appwindow_plugin() {
+	~appwindow_plugin() override {
 		if (isInitialized) {
 			my_printf("Plugin window was not correctly de-initialized\n", 0);
 		}
@@ -1946,19 +1946,21 @@ public:
 		AEffEditor::close();
 	}
 	///< Receive key down event. Return true only if key was really used!
-	virtual bool onKeyDown (VstKeyCode& keyCode) override	{
+	bool onKeyDown (VstKeyCode& keyCode) override	{
 		return false;
 	}
 	///< Receive key up event. Return true only if key was really used!
-	virtual bool onKeyUp (VstKeyCode& keyCode) override		{
+	bool onKeyUp (VstKeyCode& keyCode) override		{
 		return false;
 	}
 	///< Handle mouse wheel event, distance is positive or negative to indicate wheel direction.
-	virtual bool onWheel(float distance) override {
+	bool onWheel(float distance) override {
 		return false;
 	}
 	///< Set knob mode (if supported by Host). See CKnobMode in VSTGUI.
-	virtual bool setKnobMode (VstInt32 val) override			{ return false; }
+	bool setKnobMode (VstInt32 val) override {
+		return false;
+	}
 
 	//end aeffect overrides
 

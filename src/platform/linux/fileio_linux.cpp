@@ -345,8 +345,7 @@ public:
     Impl(String path) {
     	ok = stat(StringAsCStr(path), &fStat) == 0;
 	}
-	~Impl() {
-	}
+	~Impl() = default;
 };
 FileTimeGetter::FileTimeGetter(const String& path) : m_impl{new FileTimeGetter::Impl{path}} {
 

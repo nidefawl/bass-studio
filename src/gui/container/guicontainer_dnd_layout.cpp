@@ -17,7 +17,7 @@ class guictr_layout_entry_handle_button : public guibutton {
 public:
     guictr_layout_entry_handle_button() : guibutton() {
     }
-    void render(NVGcontext* vg) {
+    void render(NVGcontext* vg) override {
         int32_t fl = getStateFlags();
         //renderWidgetBorder(vg, fl);
         renderButtonLabel(vg, fl);
@@ -54,7 +54,7 @@ public:
         padding = 0;
         margin  = 0;
     }
-    ~guictr_layout_entry_handle() {
+    ~guictr_layout_entry_handle() override {
         remove(&btnClose);
     }
     void buttonClicked(guibase* button) override {

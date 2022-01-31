@@ -163,8 +163,7 @@ public:
     gui_ctr_main ctr_main;
     ViewContainersAdvPlugin() : PluginViewContainersImpl(400, 300) {
     }
-    virtual ~ViewContainersAdvPlugin() {
-    }
+    ~ViewContainersAdvPlugin() override = default;
     void layout(int32_t winW, int32_t winH) override {
         ctr_main.pos  = { 0, 0 };
         ctr_main.size = { winW, winH };

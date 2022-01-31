@@ -86,9 +86,6 @@ BasePluginVST2::BasePluginVST2(audioMasterCallback audioMaster,
     dbgassert(cEffect.numOutputs == numOutputs);
 }
 
-BasePluginVST2::~BasePluginVST2() {
-}
-
 bool BasePluginVST2::getInputProperties(VstInt32 index, VstPinProperties* properties) {
     if (index == 0 || index == 1) {
         properties->flags = kVstPinIsActive | kVstPinIsStereo;

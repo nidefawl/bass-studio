@@ -43,7 +43,7 @@ namespace PluginTestAdv {
 
     public:
         explicit GuiAdvPluginVST2(audioMasterCallback audioMaster);
-        ~GuiAdvPluginVST2() override;
+        ~GuiAdvPluginVST2() override = default;
 
         void processReplacing(float** inputs, float** outputs, VstInt32 sampleFrames) override;
         std::shared_ptr<PluginViewContainers> createView() override;
