@@ -4,3 +4,5 @@ testing/
 .vscode/
 old-versions/
 CMakeCache.txt
+.cache/
+compile_commands.json

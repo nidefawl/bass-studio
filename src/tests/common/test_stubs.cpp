@@ -63,7 +63,7 @@ void log_format_to_logger(Logger* logger, const char* file, int line, const char
 #else
         ret = _snprintf_s(szLogBuf, LOG_BUF_SIZE, _TRUNCATE, "%s:%s:%d %s: %s", szThreadName, szFileShort, line, func, szLogStr);
         if (ret == -1) {
-            ret               = LOG_BUF_SIZE - 1;
+            ret = LOG_BUF_SIZE - 1;
             szLogBuf[ret - 1] = '\n';
         }
 #endif

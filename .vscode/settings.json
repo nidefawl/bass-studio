@@ -1,4 +1,5 @@
 {
+    "cmake.copyCompileCommands": "${workspaceFolder}/compile_commands.json",
     "cmake.buildDirectory": "${workspaceFolder}/build/build-from-vscode/",
     "cmake.configureArgs": ["-DDAW_DEPS_PATH=/workspace/daw/daw-deps", "-DDEPS_BUILD_FOLDER=/workspace/daw/build-deps/install"],
 }

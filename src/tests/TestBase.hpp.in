@@ -28,11 +28,15 @@ template<typename T>
 inline std::string stringify(T* val) {
     constexpr size_t MAX_LEN = 512U;
     char stringBuf[MAX_LEN];
+#ifdef _WIN32
     auto ret = _snprintf_s(stringBuf, MAX_LEN, _TRUNCATE, "%012ZX", reinterpret_cast<size_t>(val));
     if (ret == -1) {
         ret = MAX_LEN - 2;
         stringBuf[MAX_LEN - 1] = '\0';
     }
+#else
+    std::snprintf(stringBuf, MAX_LEN, "%012ZX", reinterpret_cast<size_t>(val));
+#endif
     return std::string(stringBuf);
 }
 
