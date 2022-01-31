@@ -243,7 +243,7 @@ Checks: >
 WarningsAsErrors: ''
 HeaderFilterRegex: '.*\.(h)$'
 AnalyzeTemporaryDtors: false
-FormatStyle:     none
+FormatStyle:     'file'
 UseColor:        true
 CheckOptions:
 - key:             misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic
