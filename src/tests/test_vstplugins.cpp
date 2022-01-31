@@ -10,6 +10,7 @@
 #include "platform.h"
 
 #ifdef _WIN32
+#include "platform/win/platform_win.h"
 #include <windows.h>
 #endif
 
