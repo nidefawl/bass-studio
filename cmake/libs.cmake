@@ -1,22 +1,41 @@
 
-
-find_path(DAW_DEPS_PATH PATHS ${DAW_DEPS_PATH})
+# check if build.py is present, not actually used 
+find_path(DAW_DEPS_PATH NAMES "build.py" PATHS "${CMAKE_SOURCE_DIR}/../daw-deps" "${CMAKE_BINARY_DIR}/../daw-deps" REQUIRED)
 if(NOT DAW_DEPS_PATH)
   message(FATAL_ERROR "Can't find DAW_DEPS_PATH")
 endif()
+message(STATUS "DAW_DEPS_PATH ${DAW_DEPS_PATH}")
+
 if (USE_SHARED_LIBS)
-set(BUILD_PATH_LIB_TYPE "shared")
+  set(BUILD_PATH_LIB_TYPE "shared")
 else()
-set(BUILD_PATH_LIB_TYPE "static")
+  set(BUILD_PATH_LIB_TYPE "static")
 endif()
-set(BUILD_PATH_LIB_RELEASE "lib-${CMAKE_CXX_COMPILER_ID}-release-${BUILD_PATH_LIB_TYPE}")
-set(BUILD_PATH_LIB_DEBUG "lib-${CMAKE_CXX_COMPILER_ID}-debug-${BUILD_PATH_LIB_TYPE}")
-string(TOLOWER ${BUILD_PATH_LIB_RELEASE} BUILD_PATH_LIB_RELEASE)
-string(TOLOWER ${BUILD_PATH_LIB_DEBUG} BUILD_PATH_LIB_DEBUG)
-set(BUILD_PATH_LIB_RELEASE "${DEPS_BUILD_FOLDER}/${BUILD_PATH_LIB_RELEASE}")
-set(BUILD_PATH_LIB_DEBUG "${DEPS_BUILD_FOLDER}/${BUILD_PATH_LIB_DEBUG}")
-message(STATUS "BUILD_PATH_LIB_RELEASE ${BUILD_PATH_LIB_RELEASE}")
+
+string(TOLOWER "lib-${CMAKE_CXX_COMPILER_ID}-debug-${BUILD_PATH_LIB_TYPE}" DAW_DEPS_BUILD_LIBS_DEBUG)
+string(TOLOWER "lib-${CMAKE_CXX_COMPILER_ID}-release-${BUILD_PATH_LIB_TYPE}" DAW_DEPS_BUILD_LIBS_RELEASE)
+
+find_path(DAW_DEPS_INSTALL 
+  NAMES
+    "${DAW_DEPS_BUILD_LIBS_DEBUG}" 
+    "${DAW_DEPS_BUILD_LIBS_RELEASE}" 
+  PATHS 
+    "${DEPS_BUILD_FOLDER}"
+    "${CMAKE_SOURCE_DIR}/../build-deps/install"
+    "${CMAKE_BINARY_DIR}/../build-deps/install"
+)
+
+if(NOT DAW_DEPS_INSTALL)
+  message(FATAL_ERROR "Can't find DAW_DEPS_INSTALL")
+endif()
+message(STATUS "DAW_DEPS_INSTALL ${DAW_DEPS_INSTALL}")
+
+set(BUILD_PATH_LIB_DEBUG "${DAW_DEPS_INSTALL}/${DAW_DEPS_BUILD_LIBS_DEBUG}")
+set(BUILD_PATH_LIB_RELEASE "${DAW_DEPS_INSTALL}/${DAW_DEPS_BUILD_LIBS_RELEASE}")
+
 message(STATUS "BUILD_PATH_LIB_DEBUG ${BUILD_PATH_LIB_DEBUG}")
+message(STATUS "BUILD_PATH_LIB_RELEASE ${BUILD_PATH_LIB_RELEASE}")
+
 find_library(
     GLFW_LIB_RELEASE
     NAMES "glfw3" "glfw3dll"
@@ -125,9 +144,6 @@ if (LINUX)
 endif(LINUX)
 
 
-set(DEPS_BUILD_FOLDER "${DAW_DEPS_PATH}/build" CACHE PATH "deps build-directory")
-
-
 set(USE_SHARED_LIBS Off)
 if (USE_SHARED_LIBS)
     set(LIB_LINKAGE "shared")
@@ -143,9 +159,9 @@ include_directories("${DAW_SRC_PATH}")
 include_directories("${DAW_SRC_PATH}/include")
 include_directories(SYSTEM "${DAW_SRC_PATH}/nanovg")
 include_directories(SYSTEM  
-    ${DEPS_BUILD_FOLDER}/${LIB_GN_EXPR}/glfw/include
-    ${DEPS_BUILD_FOLDER}/${LIB_GN_EXPR}/SQLiteCpp/include
-    ${DEPS_BUILD_FOLDER}/${LIB_GN_EXPR}/soxr/include
+    ${DAW_DEPS_INSTALL}/${LIB_GN_EXPR}/glfw/include
+    ${DAW_DEPS_INSTALL}/${LIB_GN_EXPR}/SQLiteCpp/include
+    ${DAW_DEPS_INSTALL}/${LIB_GN_EXPR}/soxr/include
     ${DAW_DEPS_PATH}/glad/include
     ${DAW_DEPS_PATH}/glad/src
     ${DAW_DEPS_PATH}/glm
