@@ -134,13 +134,13 @@ in playback thread the tickPos accumulates fp math error:
     samplePos += blockSize * numBlocksProcessed; //int
     tickPos += ticksPerBlock * numBlocksProcessed; //double
 
-This can be more significant than I thought when writing it
+This can be more significant than I thought when writing it.  
 It is better to calculate the tickPos from the sample
   
     samplePos += blockSize * numBlocksProcessed; //int
     tickPos = toTick(samplePos); //double
 
-Also make sure to __NEVER__ use floats for tickpos
+Also make sure to __NEVER__ use floats for tickpos.  
 After 4 minutes of playback at 128bpm the floats will produce significant errors after getting round back to int:
 
     At value 2,097,152 32bit floats have a precision of only 0.25
