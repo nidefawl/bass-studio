@@ -25,7 +25,7 @@ void CPP_failedAssert(const char* expr, const char *file, int line);
 #define always_assert(_Expression) dbgassert(_Expression)
 
 #else/* !defined (__cplusplus) */
-#pragma message("C ASSERT")
+
 void C_failedAssert(const char* expr, const char *file, int line);
 
 #define dbgassert(_Expression) \
