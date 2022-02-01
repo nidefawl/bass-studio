@@ -32,7 +32,7 @@ public:
         scrollbarOutside = true;
         maxHeight        = 220;
     }
-    ~guitooltip() {
+    ~guitooltip() override {
         removeGuis();
     }
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
@@ -47,14 +47,14 @@ public:
     bool isTransient() override {
         return !hadMouseFocus;
     }
-    virtual void clicked(int _id) {
+    void clicked(int _id) override {
         closeContextMenu();
     }
-    void onTick(AppCtrl* appctrl) {
+    void onTick(AppCtrl* appctrl) override {
         layout();
     }
-    void layout();
-    void render(NVGcontext* vg) {
+    void layout() override;
+    void render(NVGcontext* vg) override {
         if (isBackgroundRendered()) {
             renderBackground(vg);
         }

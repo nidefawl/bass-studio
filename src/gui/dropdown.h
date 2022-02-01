@@ -26,11 +26,11 @@ public:
         if (parent)
             parent->buttonClicked(this);
     }
-    virtual bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset);
-    virtual void handleRightClick(MouseEvent& evt) {
+    bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) override;
+    void handleRightClick(MouseEvent& evt) override {
     }
-    virtual bool handleKeyInput(KeyEvent& kevt);
-    virtual bool handleCharInput(unsigned int codepoint) {
+    bool handleKeyInput(KeyEvent& kevt) override;
+    bool handleCharInput(unsigned int codepoint) override {
         return false;
     }
     virtual void select(dropdown_field_selectitem req, uint32_t idxOffset);

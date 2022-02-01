@@ -24,7 +24,7 @@ class gui_ctr_main : public guictr_base {
 
 public:
     gui_ctr_main();
-    ~gui_ctr_main() {
+    ~gui_ctr_main() override {
         removeGuis();
     }
     std::vector<String> g_debugStrings;
@@ -37,7 +37,7 @@ public:
         g_debugStrings.push_back(std::move(str));
     }
     bool handleKeyInput(KeyEvent& kevt) override;
-    virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
+    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
         if (this->contains(mpos)) {
             ivec2 localMouse = this->toContainerSpace(mpos);
             for (guibase* gui : guis) {

@@ -24,11 +24,11 @@ public:
         setBackgroundRendered(true);
         dbgassert(getAllocId() > 0);// make sure we are heap allocated
     }
-    ~guidialog_cb_yes_no() {
+    ~guidialog_cb_yes_no() override {
         remove(&btnNo);
         remove(&btnYes);
     }
-    void layout() {
+    void layout() override {
         int sizeW   = getSizeContent().x;
         int sizeH   = getSizeContent().y / 2;
         int y       = sizeH;
@@ -40,11 +40,11 @@ public:
         btnNo.pos   = {sizeW * 2 / 3 - wNo / 2, (sizeH - hBtn) / 2 + y};
         btnNo.size  = {wNo, hBtn};
     }
-    void buttonClicked(guibase* button) {
+    void buttonClicked(guibase* button) override {
         int n = button == &btnYes ? 1 : 0;
         cb(n);
     }
-    void render(NVGcontext* vg) {
+    void render(NVGcontext* vg) override {
         if (isBackgroundRendered()) {
             renderBackground(vg);
         }

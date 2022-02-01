@@ -4,8 +4,7 @@ class debugproperties : public guictr_base {
 public:
     debugproperties() : guictr_base() {
     }
-    virtual ~debugproperties() {
-    }
+    ~debugproperties() override = default;
     virtual void setDebugPropertyHandle(void* ptr) = 0;
 };
 

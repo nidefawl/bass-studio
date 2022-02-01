@@ -153,9 +153,8 @@ foreach (f ${CPP_ALL_FILES})
     list(APPEND CPP_SRC_FILES ${f})
 endforeach ()
 
-if (BUILD_TESTS)
-    list(APPEND CPP_SRC_FILES "src/tests/common/test_environment.cpp")
-endif ()
+
+list(APPEND CPP_SRC_FILES "src/tests/common/test_environment.cpp")
 
 if (NOT MSVC)
     # These files are especially important to have optimized, even in debug builds

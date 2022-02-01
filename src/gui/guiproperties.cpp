@@ -54,9 +54,7 @@ namespace Table {
         virtual void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, GuiColor::constant_t constant) = 0;
         virtual void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, GuiConstant::constant_t constant) = 0;
         virtual void onClick(const click_ctxt_t& ctxt, guitheme_t* theme, UIFont::font_type_t fonttype) = 0;
-        virtual ~click_type_handler() {
-
-        }
+        virtual ~click_type_handler() = default;
     };
 
     template <>
@@ -138,7 +136,7 @@ public:
             idx++;
         }
     }
-    void clicked(int _id) {
+    void clicked(int _id) override {
         closeContextMenu();
         if (_id >= 0 && _id < strFontNames.size()) {
             themeMgr->getRef().setFont(fonttype, strFontNames[_id]);

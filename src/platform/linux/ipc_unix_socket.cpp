@@ -18,12 +18,8 @@ class ipc_server::Impl
 	struct sockaddr_un remote{0};
 	String pathUnlink;
 public:
-	Impl() {
-
-	}
-	~Impl() {
-
-	}
+	Impl() = default;
+	~Impl() = default;
     int server_open(String path) {
     	s = socket(AF_UNIX, SOCK_STREAM, 0);
     	if (s == -1) {
@@ -122,12 +118,8 @@ class ipc_client::Impl
 {
 	int s=0;
 public:
-	Impl() {
-
-	}
-	~Impl() {
-
-	}
+	Impl() = default;
+	~Impl() = default;
     int client_connect(String path) {
     	s = socket(AF_UNIX, SOCK_STREAM, 0);
     	if (s == -1) {

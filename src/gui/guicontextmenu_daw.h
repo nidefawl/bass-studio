@@ -83,7 +83,7 @@ public:
         entries.push_back({ GRID_1_32, 0, 0, 0, "1/32" });
         entries.push_back({ GRID_OFF, 0, 0, 0, "Off" });
     }
-    void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) {
+    void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) override {
         const int h = this->fontSize;
         int n       = 0;
         for (_time_sel_entry& e : entries) {
@@ -115,7 +115,7 @@ public:
     bool contains(ivec2& ctxtSize, ivec2& mouse) {
         return mouse.y >= y && mouse.y < y + height && mouse.x >= 0 && mouse.x < ctxtSize.x;
     }
-    int getClicked(ivec2& ctxtSize, ivec2& mouse) {
+    int getClicked(ivec2& ctxtSize, ivec2& mouse) override {
         if (contains(ctxtSize, mouse)) {
             int n       = fixed ? 10 : 0;
             const int h = this->fontSize;
@@ -140,7 +140,7 @@ public:
         sel          = new ctxtmenu_color_select("Pick Color", 100);
         addEntry(sel);
     }
-    void clicked(int _id) {
+    void clicked(int _id) override {
         if (_id >= sel->id) {
             _id -= sel->id;
             int32_t col = colorPalette[_id];
@@ -165,7 +165,7 @@ public:
         idxImport = i;
         addEntry(new ctxtmenu_entry("Import Track", i++));
     }
-    void clicked(int _id);
+    void clicked(int _id) override;
 };
 
 
@@ -175,5 +175,5 @@ class guictxtmenu_at_param : public guictxtmenu {
 
 public:
     guictxtmenu_at_param(automatable_t* _atl, int32_t _paramIdx);
-    void clicked(int _id);
+    void clicked(int _id) override;
 };

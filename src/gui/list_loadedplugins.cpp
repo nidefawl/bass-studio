@@ -27,8 +27,7 @@ namespace {
             margin  = 0;
             setCanMouseHit(true);
         }
-        ~guigraph2d() {
-        }
+        ~guigraph2d() override = default;
         std::vector<vec2>& getData() {
             return m_data;
         }
@@ -75,7 +74,7 @@ namespace {
             maxHeight        = 220;
         }
 
-        ~gui_test() {
+        ~gui_test() override {
             remove(&graph);
         }
 
@@ -355,7 +354,7 @@ public:
 
         minHTop = y + lineh;
     }
-    virtual void determineSize(ivec2& prefSize) override {
+    void determineSize(ivec2& prefSize) override {
         prefSize.x = math::max(100, prefSize.x);
         prefSize.y = math::max(math::max(minHTop, 100), prefSize.y);
     }
@@ -389,7 +388,7 @@ public:
             return ptrEffA->procStats.timeTrackProcessPlugins > ptrEffB->procStats.timeTrackProcessPlugins;
         });
     }
-    void layout() {
+    void layout() override {
         int32_t rowHeight = 14;
         auto cs           = getSizeContent();
         int32_t w         = cs.x / 128;
@@ -403,7 +402,7 @@ public:
             g->layout();
         }
     }
-    void buttonClicked(guibase* button) {
+    void buttonClicked(guibase* button) override {
         if (STL_CONTAINS(entries, button)) {
             gui_pluginsloaded_list_entry* entry = dynamic_cast<gui_pluginsloaded_list_entry*>(button);
             auto* effectbase                    = safeRefGet(entry->getRef());
@@ -417,7 +416,7 @@ public:
             }
         }
     }
-    virtual void render(NVGcontext* vg) {
+    void render(NVGcontext* vg) override {
         if (isBackgroundRendered()) {
             renderBackground(vg);
         }
@@ -432,7 +431,7 @@ public:
             }
         }
     }
-    ~gui_list_plugins() {
+    ~gui_list_plugins() override {
         removeGuis();
     }
 };
@@ -459,7 +458,7 @@ public:
         add(&listCtr);
         add(&listDeferredCtr);
     }
-    ~gui_pluginsloaded_list() {
+    ~gui_pluginsloaded_list() override {
         removeGuis();
     }
     void onTick(AppCtrl* ctrl) override {
@@ -613,7 +612,7 @@ public:
         scrollTop.maxHeight = -1;
         add(&scrollTop);
     }
-    ~gui_performance() {
+    ~gui_performance() override {
         removeGuis();
     }
     void onTick(AppCtrl* ctrl) override {

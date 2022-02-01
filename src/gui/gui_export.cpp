@@ -41,14 +41,14 @@ public:
         add(&tmTickLen);
         add(&btnLock);
     }
-    ~guictr_timeframe() {
+    ~guictr_timeframe() override {
         removeGuis();
     }
     void onTick(AppCtrl* ctrl) override {
         guictr_base::onTick(ctrl);
         btnLock.drawParm = *pIsLocked ? ICON_OPT_LOCKED : ICON_OPT_UNLOCKED;
     }
-    void layout() {
+    void layout() override {
 
         ivec2 cs      = getSizeContent();
         int32_t inset = INSET_CTR_SPACING;
@@ -69,7 +69,7 @@ public:
             gui->layout();
         }
     }
-    virtual void render(NVGcontext* vg) {
+    void render(NVGcontext* vg) override {
         if (isBackgroundRendered()) {
             renderBackground(vg);
         }
@@ -89,7 +89,7 @@ public:
         }
     }
 
-    void buttonClicked(guibase* button) {
+    void buttonClicked(guibase* button) override {
         if (button == &btnLock) {
             *pIsLocked       = !*pIsLocked;
             btnLock.drawParm = *pIsLocked ? ICON_OPT_LOCKED : ICON_OPT_UNLOCKED;
@@ -125,7 +125,7 @@ public:
         add(&selectFolder);
         add(&btnExport);
     }
-    ~gui_export() {
+    ~gui_export() override {
         removeGuis();
     }
     void onTick(AppCtrl* ctrl) override {
@@ -143,7 +143,7 @@ public:
             }
         }
     }
-    void layout() {
+    void layout() override {
         int32_t inset = INSET_CTR_SPACING;
         ivec2 cs      = getSizeContent();
 
@@ -167,7 +167,7 @@ public:
             gui->layout();
         }
     }
-    virtual void render(NVGcontext* vg) {
+    void render(NVGcontext* vg) override {
         if (isBackgroundRendered()) {
             renderBackground(vg);
         }
@@ -187,7 +187,7 @@ public:
         }
     }
 
-    void buttonClicked(guibase* button) {
+    void buttonClicked(guibase* button) override {
 
         if (button->id == 0x10) {
             selectFolder.setText(settings.exportPath);

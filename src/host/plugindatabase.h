@@ -19,8 +19,9 @@ class plugindatabase_t {
     int revision = -1;
 
 public:
-    plugindatabase_t();
-    ~plugindatabase_t();
+    plugindatabase_t()  = default;
+    ~plugindatabase_t() = default;
+
     bool resolve(const plugin_snapshot_t& pluginSnapshot, String* _outPath, int loadFlags);
     void query(const String& q, std::vector<pluginentry_t>& _out);
     void openDatabase();

@@ -8,9 +8,8 @@ class gui_list_history : public gui_list {
 public:
     gui_list_history() : gui_list() {
     }
-    ~gui_list_history() {
-    }
-    void buttonClicked(guibase* button) {
+    ~gui_list_history() override = default;
+    void buttonClicked(guibase* button) override {
         selectedIdx = indexOfCtr(this->listGuis, button);
         if (selectedIdx > -1) {
             //if (parent) parent->buttonClicked(button);
@@ -49,7 +48,7 @@ public:
         scrollContainer.add(&historyList);
         scrollContainer.maxHeight = -1;
     }
-    ~guictr_history_view() {
+    ~guictr_history_view() override {
         removeGuis();
     }
     void rebuildList() {
@@ -86,7 +85,7 @@ public:
             }
         }
     }
-    void render(NVGcontext* vg) {
+    void render(NVGcontext* vg) override {
         DawInstance* daw = DawInstance::get();
         if (!daw || histRevision != daw->getHist().getRevision()) {
             return;
@@ -118,7 +117,7 @@ public:
 //            //renderDebugF(vg, g, dbgcolorsa[colorIdx++ % 5]);
 //        }
     }
-    virtual void buttonClicked(guibase* button) {
+    void buttonClicked(guibase* button) override {
     }
     void layout() override {
         ivec2 size           = getSizeContent();
@@ -131,7 +130,7 @@ public:
             c->layout();
         }
     }
-    virtual void setControl(BaseCtrl* parentCtrl) {
+    void setControl(BaseCtrl* parentCtrl) override {
         guictr_base::setControl(parentCtrl);
     }
 };

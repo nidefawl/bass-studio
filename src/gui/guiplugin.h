@@ -36,18 +36,18 @@ public:
     std::vector<guibuttontoggle*> guiButtonsTitlebar;
     std::vector<guibuttontoggle*> guiButtonsSidebar;
     guiplugin(effectbase* _effect);
-    ~guiplugin();
+    ~guiplugin() override;
     void addGuiBtnTitlebar(guibuttontoggle* btn);
-    virtual void render(NVGcontext* vg) override;
-    virtual void prerender(NVGcontext* vg) override;
-    virtual void buttonClicked(guibase* _button);
-    virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt);
+    void render(NVGcontext* vg) override;
+    void prerender(NVGcontext* vg) override;
+    void buttonClicked(guibase* _button) override;
+    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
     virtual void layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) = 0;
     void determineSize(ivec2& prefSize) override;
     effectbase* getModule() {
         return effect;
     }
-    virtual void renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2 dragOffset) override {
+    void renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2 dragOffset) override {
         mousepos += dragOffset;
         mousepos -= pos;
         nvgTranslate(vg, mousepos.x, mousepos.y);
@@ -55,7 +55,7 @@ public:
     }
     virtual void renderBase(NVGcontext* vg);
 
-    virtual void layout() override;
+    void layout() override;
 
     void rightClicked(MouseEvent& evt, guibase* button) override;
     void handleRightClick(MouseEvent& evt) override;
@@ -69,16 +69,16 @@ public:
     }
     void setState(bool state) {
     }
-    bool isDragMoveable() {
+    bool isDragMoveable() override {
         return true;
     }
-    virtual bool focusEvent(MouseHitEvt& evt, bool focused) override;
+    bool focusEvent(MouseHitEvt& evt, bool focused) override;
 
-    virtual guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
-    virtual guibase* getDraggedControl() override;
-    virtual void setControl(BaseCtrl* parentCtrl) override;
-    virtual bool isSelected() override;
-    virtual void addProperties(Table::tbl* table);
+    guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
+    guibase* getDraggedControl() override;
+    void setControl(BaseCtrl* parentCtrl) override;
+    bool isSelected() override;
+    void addProperties(Table::tbl* table) override;
 };
 
 class guidropdown_select_program : public guictxtmenu {
@@ -86,7 +86,7 @@ class guidropdown_select_program : public guictxtmenu {
 
 public:
     guidropdown_select_program(effectbase* _plugin);
-    void clicked(int _id);
+    void clicked(int _id) override;
 };
 class guidropdownprogram : public guidropdownbase {
     effectbase* plugin = nullptr;
@@ -94,16 +94,16 @@ class guidropdownprogram : public guidropdownbase {
 public:
     guidropdownprogram(effectbase* _plugin) : guidropdownbase(), plugin(_plugin) {
     }
-    String getString();
-    virtual void handleDraggedRelease(MouseEvent& evt);
-    uint32_t getSelectIndex();
-    uint32_t getLastIndex();
-    void setSelectedIndex(uint32_t idx);
+    String getString() override;
+    void handleDraggedRelease(MouseEvent& evt) override;
+    uint32_t getSelectIndex() override;
+    uint32_t getLastIndex() override;
+    void setSelectedIndex(uint32_t idx) override;
 };
 class guipluginview : public guiplugin {
 public:
     guipluginview(effectbase* _effect);
-    ~guipluginview();
+    ~guipluginview() override;
     effectbase* const effect;
     guidropdownprogram dropdownProgram;
     gui_list params;                    //TODO: use add() on control
@@ -121,18 +121,18 @@ public:
     guictr_base* ctrPreview = nullptr;
     void updateParamList(const String& strParamNameFilter);
 
-    void layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1);
+    void layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) override;
     void render(NVGcontext* vg) override;
     void buttonClicked(guibase* _button) override;
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
-    virtual void setControl(BaseCtrl* parentCtrl) override;
+    void setControl(BaseCtrl* parentCtrl) override;
     void determineSize(ivec2& prefSize) override;
     void prerender(NVGcontext* vg) override;
 };
 class guivstplugin : public guipluginview {
 public:
     guivstplugin(vstplugin* _vst);
-    ~guivstplugin();
+    ~guivstplugin() override;
     vstplugin* const vst;
     guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
 };
@@ -141,6 +141,6 @@ class guiinternalpluginview : public guipluginview {
 
 public:
     guiinternalpluginview(internalplugin* _effect);
-    ~guiinternalpluginview();
+    ~guiinternalpluginview() override;
     guictxtmenu_base* getTooltip(AppCtrl* appctrl) override;
 };

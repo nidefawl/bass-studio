@@ -6,7 +6,7 @@
 
 class input_filter {
 public:
-    virtual ~input_filter() {}
+    virtual ~input_filter() = default;
     virtual bool isAllowedChar(uint32_t codepoint)              = 0;
     virtual void setString(String string, bool trigger = false) = 0;
     virtual bool isReplaceInput()                               = 0;
@@ -105,16 +105,13 @@ public:
     /// Specify a placeholder text to be displayed while the text box is empty.
     void setPlaceholder(const std::string& placeholder) { mPlaceholder = placeholder; }
 
-    /// Set the \ref Theme used to draw this widget
-    //    virtual void setTheme(Theme *theme) override;
-
     /// Sets the callback to execute when the value of this TextBox has changed.
     void setChangeCallback(const std::function<bool(const std::string& str)>& callback) { mCallback = callback; }
     void setEndEditCallback(const std::function<bool(const std::string& str)>& callback) { mCallbackEnd = callback; }
 
-    virtual bool focusEvent(MouseHitEvt& evt, bool focused);
+    bool focusEvent(MouseHitEvt& evt, bool focused) override;
     virtual bool keyboardEvent(int key, int scancode, KeyEventType action, int modifiers);
-    virtual bool handleCharInput(unsigned int codepoint) override;
+    bool handleCharInput(unsigned int codepoint) override;
 
     virtual ivec2 preferredSize(NVGcontext* ctx) const;
 
@@ -122,15 +119,15 @@ public:
     void beginEdit();
     void endEdit(bool success);
 
-    virtual void render(NVGcontext* ctx) override;
+    void render(NVGcontext* ctx) override;
     void updateTextLayout(NVGcontext* ctx);
     void renderTextField(NVGcontext* ctx) const;
-    virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
-    virtual bool handleKeyInput(KeyEvent& kevt) override;
-    virtual void handleRightClick(MouseEvent& evt) override;
-    virtual void handleDraggedBegin(MouseEvent& evt) override;
-    virtual void handleDraggedMove(MouseEvent& evt) override;
-    virtual void handleDraggedRelease(MouseEvent& evt) override;
+    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
+    bool handleKeyInput(KeyEvent& kevt) override;
+    void handleRightClick(MouseEvent& evt) override;
+    void handleDraggedBegin(MouseEvent& evt) override;
+    void handleDraggedMove(MouseEvent& evt) override;
+    void handleDraggedRelease(MouseEvent& evt) override;
     virtual void onTextChange();
     virtual void onTextEndEdit();
 

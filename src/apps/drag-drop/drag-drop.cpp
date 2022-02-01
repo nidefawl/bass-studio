@@ -61,9 +61,9 @@ public:
         padding = 0;
         margin  = 0;
     }
-    ~guictr_dnd_test() { removeGuis(); }
-    void buttonClicked(guibase* button) {}
-    void render(NVGcontext* vg) {
+    ~guictr_dnd_test() override { removeGuis(); }
+    void buttonClicked(guibase* button) override {}
+    void render(NVGcontext* vg) override {
         if (isBackgroundRendered()) {
             renderBackground(vg);
         }
@@ -122,7 +122,7 @@ public:
             }
         }
     }
-    void layout() {
+    void layout() override {
         ctrLayoutTest1->postContentChanged();
         ctrLayoutTest2->postContentChanged();
         ivec2 cs               = getSizeContent();

@@ -36,10 +36,6 @@ namespace PluginTestAdv {
         curProgram = 0;
     }
 
-
-    GuiAdvPluginVST2::~GuiAdvPluginVST2() {
-    }
-
     void GuiAdvPluginVST2::setProgram(VstInt32 program) {
         if (program < 0 || program >= kNumPrograms)
             return;

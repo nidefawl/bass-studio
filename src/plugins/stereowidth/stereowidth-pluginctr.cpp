@@ -45,7 +45,7 @@ class guicontainer_stereowidth : public guictr_base {
 
 public:
     guicontainer_stereowidth();
-    ~guicontainer_stereowidth() {
+    ~guicontainer_stereowidth() override {
         remove(&knobgain);
         remove(&knobwidth);
     }
@@ -181,8 +181,7 @@ public:
     guicontainer_stereowidth ctr_main;
     ViewContainersStereoWidth() : PluginViewContainersImpl(220, 150) {
     }
-    virtual ~ViewContainersStereoWidth() {
-    }
+    ~ViewContainersStereoWidth() override = default;
     void layout(int32_t winW, int32_t winH) override {
         ctr_main.pos  = { 0, 0 };
         ctr_main.size = { winW, winH };

@@ -20,7 +20,7 @@ public:
         setBackgroundRenderedInset(false);
         setSnapSides(ivec4(1));
     }
-    virtual ~guictxtmenu() {
+    ~guictxtmenu() override {
         for (ctxtmenu_entry* e : entries) {
             delete e;
         }
@@ -36,7 +36,7 @@ public:
     virtual void clickedElement(ctxtmenu_entry* e, int _id) {
         clicked(_id);
     }
-    virtual void handleDraggedBegin(MouseEvent& evt) {
+    void handleDraggedBegin(MouseEvent& evt) override {
         ivec2 local = evt.relMousepos;
         for (ctxtmenu_entry* e : entries) {
             int n = e->getClicked(size, local);
@@ -47,7 +47,7 @@ public:
         }
         return;
     }
-    void layout() {
+    void layout() override {
         //TODO: figure out string width here to make life easier laying out context menus
         int y = paddingV;
         for (ctxtmenu_entry* e : entries) {
@@ -67,7 +67,7 @@ public:
         prefSize = newMaxSize;
     }
 
-    void render(NVGcontext* vg) {
+    void render(NVGcontext* vg) override {
         if (isBackgroundRendered()) {
             renderBackground(vg);
         }
@@ -80,7 +80,7 @@ public:
             idx++;
         }
     }
-    void setControl(BaseCtrl* parentCtrl) {
+    void setControl(BaseCtrl* parentCtrl) override {
         guictxtmenu_base::setControl(parentCtrl);
         for (auto* g : entries) {
             g->theme = parentCtrl ? parentCtrl->getTheme() : nullptr;

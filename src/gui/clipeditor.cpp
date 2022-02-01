@@ -66,7 +66,7 @@ public:
         before.removeDuplicates();
         after.removeDuplicates();
     }
-    void undo(DawInstance* daw) {
+    void undo(DawInstance* daw) override {
         track_t* tr = daw->getTracks()[trackIdx];
         if (!tr)
             return;
@@ -78,7 +78,7 @@ public:
         clip->setDirty();
         daw->updateClipViews(clip, cursorBefore);
     }
-    void redo(DawInstance* daw) {
+    void redo(DawInstance* daw) override {
         track_t* tr = daw->getTracks()[trackIdx];
         if (!tr)
             return;
@@ -113,7 +113,7 @@ public:
         before       = oldC;
         cursorBefore = oldCursor;
     }
-    void undo(DawInstance* daw) {
+    void undo(DawInstance* daw) override {
         track_t* tr = daw->getTracks()[trackIdx];
         if (!tr)
             return;
@@ -125,7 +125,7 @@ public:
         clip->setDirty();
         daw->updateClipViews(clip, cursorBefore);
     }
-    void redo(DawInstance* daw) {
+    void redo(DawInstance* daw) override {
         track_t* tr = daw->getTracks()[trackIdx];
         if (!tr)
             return;
@@ -153,7 +153,7 @@ public:
         fixed->initFixed();
         addEntry(fixed);
     }
-    void clicked(int clickedid) {
+    void clicked(int clickedid) override {
         scaled_grid& grid = editor->grid;
         if (clickedid == 110 + 9) {// OFF
             grid.grid_dens.enabled = false;

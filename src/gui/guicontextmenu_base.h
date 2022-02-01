@@ -23,8 +23,7 @@ public:
     RenderResources::NvgImageTexture* icon = nullptr;
     ctxtmenu_entry(String _title, int _id) : id(_id), title(_title) {
     }
-    virtual ~ctxtmenu_entry() {
-    }
+    virtual ~ctxtmenu_entry() = default;
     void setIcon(RenderResources::NvgImageTexture* _icon) {
         this->icon = _icon;
     }
@@ -68,7 +67,7 @@ public:
     ctxtmenu_splitter()
         : ctxtmenu_entry("-", -1) {
     }
-    void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) {
+    void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) override {
         nvgBeginPath(vg);
         nvgMoveTo(vg, 0, y + height / 2);
         nvgLineTo(vg, ctxtSize.x, y + height / 2);
@@ -101,7 +100,7 @@ public:
     void setFontSize(int i) {
         this->fontSize = i;
     }
-    virtual ~guictxtmenu_base() {
+    ~guictxtmenu_base() override {
         destroyGuis();
     }
     virtual bool isTransient() {
@@ -129,7 +128,7 @@ public:
         }
         prefSize = maxSize;
     }
-    virtual void onChildLayoutChanged(guibase* g) override {
+    void onChildLayoutChanged(guibase* g) override {
         //determineSize();
         if (this->parent != NULL) {
             this->parent->onChildLayoutChanged(this);

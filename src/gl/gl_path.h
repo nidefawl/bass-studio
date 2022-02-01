@@ -87,7 +87,7 @@ enum class pathrenderer_type_e : int32_t {
 class IPathRenderer {
 public:
     uint32_t program2dLines;
-    virtual ~IPathRenderer(){};
+    virtual ~IPathRenderer()= default;
     virtual int init()     = 0;
     virtual void destroy() = 0;
 

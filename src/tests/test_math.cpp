@@ -616,7 +616,7 @@ int main() {
         // Print for reference
         auto largeInt    = test_math::getS64AboveS32();
         auto aboveS32Max = static_cast<float>(largeInt);
-        log_printf("roundF32toS32 float(%012X) = %012X\n", largeInt, (int32_t)math::roundfS32((float)aboveS32Max));;
+        log_printf("roundF32toS32 float(%012X) = %012X\n", largeInt, (int32_t)math::roundfS32((float)aboveS32Max));
         log_printf("roundF32toS64 float(%012X) = %012X\n", largeInt, math::roundfS64(aboveS32Max));
         log_printf("sint64 max = %zd\n", 1ULL << 63);
         log_printf("floorS64(std::numeric_limits<float>::infinity()) = %zd\n", math::floorfS64(std::numeric_limits<float>::infinity()));

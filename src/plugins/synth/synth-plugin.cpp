@@ -483,7 +483,7 @@ namespace PluginSynth {
         ParamType getType() {
             return this->type;
         }
-        virtual ~SynthParamBase() = default;
+        ~SynthParamBase() override = default;
         virtual void set(float f) {
         }
         virtual float getAsFloat() {
@@ -1463,10 +1463,10 @@ namespace PluginSynth {
             margin  = 4;
             add(&knobParam0);
         }
-        ~guicontainer_plugin_synth() {
+        ~guicontainer_plugin_synth() override {
             remove(&knobParam0);
         }
-        virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
+        bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
             if (this->contains(mpos)) {
                 ivec2 localMouse = this->toContainerSpace(mpos);
                 for (guibase* gui : guis) {
@@ -1624,8 +1624,7 @@ namespace PluginSynth {
         guicontainer_plugin_synth ctr_main;
         ViewContainers_Plugin_Synth() : PluginViewContainersImpl(280, 360) {
         }
-        virtual ~ViewContainers_Plugin_Synth() {
-        }
+        ~ViewContainers_Plugin_Synth() override = default;
         void layout(int32_t winW, int32_t winH) override {
             ctr_main.pos  = { 0, 0 };
             ctr_main.size = { winW, winH };

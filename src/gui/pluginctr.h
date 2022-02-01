@@ -28,10 +28,10 @@ public:
     guictr_test() : guictr_base() {
         setBackgroundRendered(true);
     }
-    ~guictr_test() {
+    ~guictr_test() override {
         guis.clear();
     }
-    void render(NVGcontext* vg) {
+    void render(NVGcontext* vg) override {
         if (isBackgroundRendered()) {
             renderBackground(vg);
         }
@@ -44,16 +44,16 @@ public:
         nvgResetScissor(vg);
         nvgResetTransform(vg);
     }
-    void layout() {
+    void layout() override {
         for (auto gui : guis) {
             gui->layout();
         }
     }
-    void handleDraggedMove(MouseEvent& evt) {
+    void handleDraggedMove(MouseEvent& evt) override {
         ivec2& guiPos = evt.guiDragged->pos;
         guiPos        = evt.mousepos + evt.dragOffset;
     }
-    void handleDraggedRelease(MouseEvent& evt) {
+    void handleDraggedRelease(MouseEvent& evt) override {
     }
 };
 class guiplaceholder : public guibase {
@@ -61,9 +61,8 @@ public:
     String message;
     guiplaceholder() : guibase() {
     }
-    ~guiplaceholder() {
-    }
-    void render(NVGcontext* vg) {
+    ~guiplaceholder() override = default;
+    void render(NVGcontext* vg) override {
         nvgBeginPath(vg);
         //            float fRnd = theme->getFloat(GuiConstant::CONST_ROUND);
         //            nvgRoundedRect(vg, pos.x, pos.y, size.x, size.y, fRnd);
@@ -92,11 +91,10 @@ public:
     guictr_dragged_plugins() : guictr_base() {
         pos = { 0, 0 };
     }
-    ~guictr_dragged_plugins() {
-    }
+    ~guictr_dragged_plugins() override = default;
     void layout() override {
     }
-    bool isDragMoveable() {
+    bool isDragMoveable() override {
         return true;
     }
     virtual audio_stage_t* getTrackLink() {
@@ -104,10 +102,10 @@ public:
     }
     void renderDragged(NVGcontext* vg, ivec2 mousepos, ivec2 dragOffset) override;
     void setStrings(std::vector<String>& list);
-    void handleDraggedRelease(MouseEvent& evt);
-    void handleDraggedMove(MouseEvent& evt);
-    void dragMoveOn(guibase* target, ivec2 mousepos);
-    void dragReleaseOn(guibase* target, ivec2 mousepos);
+    void handleDraggedRelease(MouseEvent& evt) override;
+    void handleDraggedMove(MouseEvent& evt) override;
+    void dragMoveOn(guibase* target, ivec2 mousepos) override;
+    void dragReleaseOn(guibase* target, ivec2 mousepos) override;
 };
 
 class guictr_plugins : public guictr_base {
@@ -124,11 +122,11 @@ public:
         setBackgroundRendered(true);
         dragged.setParent(this);
     }
-    ~guictr_plugins() {
+    ~guictr_plugins() override {
         removeEntry(guis, &placeholder);
         guis.clear();
     }
-    virtual void setControl(BaseCtrl* parentCtrl) override {
+    void setControl(BaseCtrl* parentCtrl) override {
         guibase::setControl(parentCtrl);
         placeholder.setControl(parentCtrl);
         dragged.setControl(parentCtrl);
@@ -149,17 +147,17 @@ public:
             this->track->scrolloffset = offset;
         }
     }
-    virtual ivec2 toContainerSpace(ivec2 in) const {
+    ivec2 toContainerSpace(ivec2 in) const override {
         ivec2 offsetPos = in - getPosContent();
         offsetPos.x += scrolloffset;
         return offsetPos;
     }
-    virtual ivec2 toParentSpace(ivec2 in) const {
+    ivec2 toParentSpace(ivec2 in) const override {
         in.x -= scrolloffset;
         ivec2 offsetPos = getPosContent() + in;
         return offsetPos;
     }
-    virtual ivec2 toScreenSpace(ivec2 in) const {
+    ivec2 toScreenSpace(ivec2 in) const override {
         in += getPosContent();
         in.x -= scrolloffset;
         if (this->parent != NULL) {
@@ -177,7 +175,7 @@ public:
         nvgStroke(vg);
         nvgLineCap(vg, NVGlineCap::NVG_BUTT);
     }
-    void render(NVGcontext* vg);
+    void render(NVGcontext* vg) override;
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
     bool handleKeyInput(KeyEvent& kevt) override;
     void layout() override;
@@ -200,8 +198,8 @@ public:
         return last->pos.x + last->size.x + 50;
     }
 
-    virtual void onAdded() override;
-    virtual void onTick(AppCtrl* ctrl) override;
+    void onAdded() override;
+    void onTick(AppCtrl* ctrl) override;
     void pluginDragMove(guiplugin* g, ivec2 mousepos) override;
     void pluginDragRelease(guiplugin* g, ivec2 mousepos) override;
     void pluginEntryDragMove(gui_pluginlist_entry* g, ivec2 mousepos) override;
@@ -214,11 +212,11 @@ public:
     void relayout();
     void addGui(effectbase* plugin);
     void onChildLayoutChanged(guibase* g) override;
-    virtual void determineSize(ivec2& prefSize) override;
-    virtual guibase* getDraggedControl() override;
+    void determineSize(ivec2& prefSize) override;
+    guibase* getDraggedControl() override;
     void getEffects(std::vector<effectbase*>& out);
-    virtual bool isSelected() override;
-    void handleRightClick(MouseEvent& evt);
+    bool isSelected() override;
+    void handleRightClick(MouseEvent& evt) override;
 };
 class guictr_pluginview : public guictr_base {
 public:
@@ -228,8 +226,7 @@ public:
         this->ctr_plugins = _plugins;
         setCanMouseHit(true);
     }
-    ~guictr_pluginview() {
-    }
+    ~guictr_pluginview() override = default;
     vec2 getScale() {
         ivec2 cs  = this->getSizeContent();
         ivec2 csp = ctr_plugins->getSizeContent();
@@ -239,8 +236,8 @@ public:
     }
 
 
-    void render(NVGcontext* vg);
-    void handleDraggedBegin(MouseEvent& evt) {
+    void render(NVGcontext* vg) override;
+    void handleDraggedBegin(MouseEvent& evt) override {
         if (evt.guiDragged == this) {
             MainCtrl::get()->showPluginView();
             lastscrolloffset = ctr_plugins->scrolloffset;
@@ -255,13 +252,13 @@ public:
         }
         return 1.0f;
     }
-    void handleDraggedMove(MouseEvent& evt) {
+    void handleDraggedMove(MouseEvent& evt) override {
         if (evt.guiDragged == this) {
             ivec2 move = evt.mousepos - evt.dragStart;
             ctr_plugins->setScrolloffset(lastscrolloffset + (int) (move.x * (1.0 / getMinScale())));
         }
     }
-    void layout() {
+    void layout() override {
     }
 };
 

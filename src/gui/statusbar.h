@@ -9,9 +9,8 @@ public:
     gui_statusbar() : guictr_base() {
         setBackgroundRendered(true);
     }
-    ~gui_statusbar() {
-    }
-    void render(NVGcontext* vg) {
+    ~gui_statusbar() override = default;
+    void render(NVGcontext* vg) override {
         if (isBackgroundRendered()) {
             renderBackground(vg);
         }

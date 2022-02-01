@@ -6,8 +6,8 @@
 
 class gui_scrollcontainer {
 public:
-    gui_scrollcontainer() {}
-    virtual ~gui_scrollcontainer() {}
+    gui_scrollcontainer() = default;
+    virtual ~gui_scrollcontainer() = default;
     virtual ivec2 getScrollTotalSize()                                              = 0;
     virtual ivec2 getScrollViewSize()                                               = 0;
     virtual void scrollOffsetChanged(int dir, float offset)                         = 0;
@@ -25,8 +25,8 @@ public:
     static const int defaultW = 20;
     static const int smallW   = 10;
     gui_scrollbar(int _dir, float _offset, gui_scrollcontainer& _ctr);
-    virtual void render(NVGcontext* vg);
-    virtual void handleDraggedBegin(MouseEvent& evt) {
+    void render(NVGcontext* vg) override;
+    void handleDraggedBegin(MouseEvent&  /*evt*/) override {
         startOffset = scrollOffset;
     }
     void setScrollOffset(float f);
@@ -71,14 +71,14 @@ public:
             setScrollOffset((float) offset);
         }
     }
-    virtual void handleDraggedMove(MouseEvent& evt) {
+    void handleDraggedMove(MouseEvent& evt) override {
         float scrollRange = getScrollRange();
         if (scrollRange > 0) {
             int32_t dragPixels = (evt.mousepos - evt.dragStart)[dir];
             setScrollOffset(startOffset + dragPixels / (float) scrollRange);
         }
     }
-    virtual bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
+    bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) override {
         if (yoffset) {
             ivec2 vcS         = ctr.getScrollTotalSize();
             int32_t cS        = vcS[dir];
@@ -89,6 +89,6 @@ public:
         }
         return true;
     }
-    virtual void handleDraggedRelease(MouseEvent& evt) {
+    void handleDraggedRelease(MouseEvent& evt) override {
     }
 };

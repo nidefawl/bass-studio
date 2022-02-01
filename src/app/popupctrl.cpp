@@ -20,12 +20,6 @@
 
 using namespace std;
 
-PopupCtrl::PopupCtrl() {
-}
-
-PopupCtrl::~PopupCtrl() {
-}
-
 void PopupCtrl::focusLost() {
     //parentCtrl->closeContextMenu();
 }
@@ -135,7 +129,7 @@ public:
         //padding=0;
         //margin=0;
     }
-    void render(NVGcontext* vg) {
+    void render(NVGcontext* vg) override {
         renderFrameBase(vg);
         nvgSave(vg);
         guictr_scrollbar::render(vg);

@@ -18,5 +18,5 @@ public:
     gui_trackmeter(rmsmeterimpl<T, C>* _meterImpl)
         : guibase(), meter(nullptr), meterImpl(_meterImpl) {
     }
-    void render(NVGcontext* vg);
+    void render(NVGcontext* vg) override;
 };

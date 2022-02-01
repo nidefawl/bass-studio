@@ -60,12 +60,12 @@ public:
             knob->setAutomationHandlers();
         }
     }
-    void buttonClicked(guibase* _button);
+    void buttonClicked(guibase* _button) override;
     void rightClicked(MouseEvent& evt, guibase* button) override;
-    virtual ~gui_arp() {
+    ~gui_arp() override {
         removeGuis();
     }
-    virtual void render(NVGcontext* vg) {
+    void render(NVGcontext* vg) override {
         if (!setScissorTransformContainer(vg)) {
             return;
         }
@@ -129,7 +129,7 @@ public:
         return "";
     }
 
-    virtual void layout() override {
+    void layout() override {
         const int32_t hpt = theme->get(GuiConstant::CONST_FIXED_TITLE_HEIGHT);
         int buttonSize    = hpt * 0.8;
         int32_t inset1    = (hpt - buttonSize) / 2;

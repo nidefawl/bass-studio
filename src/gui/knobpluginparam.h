@@ -40,8 +40,7 @@ public:
         setAutomationHandlers();
         //#endif
     }
-    virtual ~guiknob_pluginparam() {
-    }
+    ~guiknob_pluginparam() override = default;
     //#if BUILD_VSTHOST
     void setEffectInstance(vstplugin* _hostSidePlugin) {
         hostSidePlugin   = _hostSidePlugin;
@@ -78,6 +77,6 @@ public:
             this->valueDisplay = "???";
         }
     }
-    virtual void setDisplayValue(float f) override {
+    void setDisplayValue(float f) override {
     }
 };

@@ -18,16 +18,15 @@ public:
     gui_list_entry() : guibase() {
         setCanMouseHit(true);
     }
-    virtual ~gui_list_entry() {
-    }
-    virtual void render(NVGcontext* vg);
-    virtual void handleDraggedBegin(MouseEvent& evt);
-    virtual void handleDraggedMove(MouseEvent& evt);
-    virtual void handleDraggedRelease(MouseEvent& evt);
-    virtual void dragMoveOn(guibase* target, ivec2 mousepos)    = 0;
-    virtual void dragReleaseOn(guibase* target, ivec2 mousepos) = 0;
+    ~gui_list_entry() override = default;
+    void render(NVGcontext* vg) override;
+    void handleDraggedBegin(MouseEvent& evt) override;
+    void handleDraggedMove(MouseEvent& evt) override;
+    void handleDraggedRelease(MouseEvent& evt) override;
+    void dragMoveOn(guibase* target, ivec2 mousepos)    override = 0;
+    void dragReleaseOn(guibase* target, ivec2 mousepos) override = 0;
     virtual String getText()                                    = 0;
-    bool isDragMoveable() {
+    bool isDragMoveable() override {
         return true;
     }
 };
@@ -64,7 +63,7 @@ public:
     void setRenderHR(bool _renderHR) {
         renderHR = _renderHR;
     }
-    ~gui_list() {
+    ~gui_list() override {
         remove(&scrollbar);
         destroyGuis();
     }
@@ -94,12 +93,12 @@ public:
         }
     }
 
-    void scrollOffsetChanged(int dir, float offset) {
+    void scrollOffsetChanged(int dir, float offset) override {
         updateVisible();
     }
 
-    virtual void render(NVGcontext* vg);
-    virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
+    void render(NVGcontext* vg) override;
+    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
     void setList(std::vector<gui_list_entry*> _newList) {
         //newList may contain pointers that are already added
 
@@ -126,7 +125,7 @@ public:
         }
         layout();
     }
-    void layout() {
+    void layout() override {
         ivec2 cs       = getSizeContent();
         int scrollW    = math::max(5, math::min(cs.x / 10, gui_scrollbar::defaultW));
         int entryW     = cs.x - scrollW;
@@ -148,12 +147,12 @@ public:
         }
         updateVisible();
     }
-    virtual bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
+    bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) override {
         return scrollbar.handleMouseScroll(evt, xoffset, yoffset);
     }
-    virtual void buttonClicked(guibase* button);
+    void buttonClicked(guibase* button) override;
 
-    virtual guibase* getFocusedContainer() {
+    guibase* getFocusedContainer() override {
         return this;
     }
 };

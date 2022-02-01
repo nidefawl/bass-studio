@@ -7,8 +7,7 @@
 
 class guidropdown_cb {
 public:
-    virtual ~guidropdown_cb() {
-    }
+    virtual ~guidropdown_cb() = default;
     virtual void onOptionSelected(int _id) = 0;
 };
 
@@ -21,8 +20,7 @@ public:
     std::function<String(int, T&)> fnOptionSelected;
 
 public:
-    ~guidropdown_generic() {
-    }
+    ~guidropdown_generic() override = default;
     void setOptions(const std::vector<T>& vecOptions, String strSelectedVal) {
         this->current = strSelectedVal;
         this->options = vecOptions;

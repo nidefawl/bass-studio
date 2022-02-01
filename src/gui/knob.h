@@ -52,18 +52,18 @@ public:
     void setIsSlider(bool b) {
         this->isSlider = b;
     }
-    virtual void handleDraggedBegin(MouseEvent& evt);
-    virtual void handleDraggedMove(MouseEvent& evt);
-    virtual void handleDraggedRelease(MouseEvent& evt);
+    void handleDraggedBegin(MouseEvent& evt) override;
+    void handleDraggedMove(MouseEvent& evt) override;
+    void handleDraggedRelease(MouseEvent& evt) override;
 
-    virtual bool focusEvent(MouseHitEvt& evt, bool focused) override {
+    bool focusEvent(MouseHitEvt& evt, bool focused) override {
         if (fnFocus) fnFocus(evt, focused);
         return true;
     }
-    virtual bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset);
+    bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) override;
     void handleRightClick(MouseEvent& evt) override;
     void renderButtonAt(NVGcontext* vg, ivec2 insetP, ivec2 insetS);
-    virtual void render(NVGcontext* vg);
+    void render(NVGcontext* vg) override;
     float getValueInternal() {
         return value;
     }

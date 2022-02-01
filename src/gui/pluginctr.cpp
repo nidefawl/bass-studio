@@ -116,7 +116,7 @@ public:
         this->size.x = 260;
         addEntry(new ctxtmenu_entry("Load plugin", CMD_LOAD_PLUGIN));
     }
-    void clicked(int _id) {
+    void clicked(int _id) override {
         auto window = parentCtrl->window;
         // promptUserFilePath initiates a native dialog that would close this context menu
         // so we close it before this happens

@@ -37,7 +37,7 @@ public:
         canTakeInputFocus = true;
         btnSaveNow.setFontScale(0.4);
     }
-    ~gui_autosave() {
+    ~gui_autosave() override {
         removeGuis();
     }
     void setDelay(int64_t tmDelay) {
@@ -57,7 +57,7 @@ public:
 //        return !hadMouseFocus;
         return false;
     }
-    void onTick(AppCtrl* appctrl) {
+    void onTick(AppCtrl* appctrl) override {
         layout();
         int64_t tmLeft = math::max<int32_t>(0, this->tmDelay - ((int64_t) getTimeMillis() - this->tmCreate));
         String fname   = DawInstance::get()->getAutoSaveFilename();
@@ -70,7 +70,7 @@ public:
         }
     }
 
-    void buttonClicked(guibase* button) {
+    void buttonClicked(guibase* button) override {
         closeContextMenu();
         DawInstance::get()->triggerAutoSave();
     }
@@ -81,7 +81,7 @@ public:
             g->layout();
         }
     }
-    void render(NVGcontext* vg) {
+    void render(NVGcontext* vg) override {
         nvgSave(vg);
         guictxtmenu_base::render(vg);
         nvgRestore(vg);

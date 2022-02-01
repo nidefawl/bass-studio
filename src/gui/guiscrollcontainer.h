@@ -31,13 +31,13 @@ public:
         margin  = 0;
         padding = 0;
     }
-    ~guictr_scrollbar() {
+    ~guictr_scrollbar() override {
         removeGuis();
     }
     gui_scrollbar& getScrollbar() {
         return scrollbar;
     }
-    virtual void render(NVGcontext* vg);
+    void render(NVGcontext* vg) override;
     void determineSize(ivec2& prefSize) override;
     void layout() override;
     void onChildLayoutChanged(guibase* g) override;
@@ -51,11 +51,11 @@ public:
     ivec2 getScrollViewSize() override {
         return getSizeContent();
     }
-    void scrollOffsetChanged(int dir, float offset);
-    virtual bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) {
+    void scrollOffsetChanged(int dir, float offset) override;
+    bool handleMouseScroll(MouseEvent& evt, double xoffset, double yoffset) override {
         return scrollbar.handleMouseScroll(evt, xoffset, yoffset);
     }
-    virtual void setControl(BaseCtrl* parentCtrl) override {
+    void setControl(BaseCtrl* parentCtrl) override {
         guictr_base::setControl(parentCtrl);
         scrollbar.setControl(parentCtrl);
     }

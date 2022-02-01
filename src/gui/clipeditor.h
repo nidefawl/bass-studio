@@ -127,16 +127,15 @@ class gui_pianoroll : public guibase, public piano_scale {
 
 public:
     gui_pianoroll(clip_view& _view, layout_pianoroll_t& _layout);
-    ~gui_pianoroll() {
-    }
-    void render(NVGcontext* vg);
+    ~gui_pianoroll() override = default;
+    void render(NVGcontext* vg) override;
 
-    void handleDraggedBegin(MouseEvent& evt);
-    void handleDraggedMove(MouseEvent& evt);
-    virtual void handleDraggedRelease(MouseEvent& evt);
-    virtual void handleRightClick(MouseEvent& evt);
+    void handleDraggedBegin(MouseEvent& evt) override;
+    void handleDraggedMove(MouseEvent& evt) override;
+    void handleDraggedRelease(MouseEvent& evt) override;
+    void handleRightClick(MouseEvent& evt) override;
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;
-    void layout();
+    void layout() override;
     vec2 getNoteFromPos(vec2 pos);
 };
 
@@ -155,10 +154,10 @@ public:
     guibutton btnDuplicateLoop;
     guibutton btnSelectMuted;
     gui_clipsettings(scaled_grid& _grid, clip_view& _view);
-    ~gui_clipsettings();
-    void render(NVGcontext* vg);
+    ~gui_clipsettings() override;
+    void render(NVGcontext* vg) override;
 
-    void layout();
+    void layout() override;
     void renderBackground(NVGcontext* vg) override;
     void buttonClicked(guibase* button) override;
     void showEditClip();
@@ -196,13 +195,13 @@ public:
     void expandSelectionFrame(std::pair<note_t*, note_t*> minMax);
     void setSelectionFrame(std::pair<note_t*, note_t*> minMax);
     void mergeDraggedNotes(dragmode mergeMode);
-    void handleRightClick(MouseEvent& evt);
-    void handleDraggedBegin(MouseEvent& evt);
-    void handleDraggedMove(MouseEvent& evt);
-    void handleDraggedRelease(MouseEvent& evt);
-    bool handleKeyInput(KeyEvent& kevt);
+    void handleRightClick(MouseEvent& evt) override;
+    void handleDraggedBegin(MouseEvent& evt) override;
+    void handleDraggedMove(MouseEvent& evt) override;
+    void handleDraggedRelease(MouseEvent& evt) override;
+    bool handleKeyInput(KeyEvent& kevt) override;
 
-    void layout() {
+    void layout() override {
         for (guibase* gui : guis) {
             gui->layout();
         }
@@ -216,14 +215,14 @@ class gui_clipcontent_notes : public gui_clipcontent {
 public:
     gui_clipcontent_notes(scaled_grid& _grid, clip_view& _view, layout_pianoroll_t& _layout) : gui_clipcontent(_grid, _view, _layout, false) {
     }
-    void render(NVGcontext* vg);
+    void render(NVGcontext* vg) override;
 };
 
 class gui_clipcontent_velocities : public gui_clipcontent {
 public:
     gui_clipcontent_velocities(scaled_grid& _grid, clip_view& _view, layout_pianoroll_t& _layout) : gui_clipcontent(_grid, _view, _layout, true) {
     }
-    void render(NVGcontext* vg);
+    void render(NVGcontext* vg) override;
 };
 
 class ce_constants {
@@ -254,9 +253,9 @@ public:
 public:
     guictr_cliphandles(scaled_grid& _grid, clip_view& _view) : guibase(), grid(_grid), view(_view) {
     }
-    void handleDraggedBegin(MouseEvent& evt);
-    void handleDraggedMove(MouseEvent& evt);
-    void handleDraggedRelease(MouseEvent& evt);
+    void handleDraggedBegin(MouseEvent& evt) override;
+    void handleDraggedMove(MouseEvent& evt) override;
+    void handleDraggedRelease(MouseEvent& evt) override;
     float dist(float x, float y, ivec2 mpos) {
         x = x - mpos.x;
         y = y - mpos.y;
@@ -272,7 +271,7 @@ public:
     float clipLoopEndScrX() {
         return (float) grid.tickToScreenD(view.clip()->loopStart + view.clip()->loopLen);
     }
-    void render(NVGcontext* vg);
+    void render(NVGcontext* vg) override;
 };
 
 class guictr_noteeditor : public guictr_base, public layout_pianoroll_t, grid_changed_cb, ce_constants {
@@ -293,7 +292,7 @@ private:
 
 public:
     guictr_noteeditor(clip_view& _view);
-    ~guictr_noteeditor();
+    ~guictr_noteeditor() override;
 
     void buttonClicked(guibase* button) override;
     void renderBackground(NVGcontext* vg) override;
@@ -324,7 +323,7 @@ private:
 
 public:
     gui_audiocontent(scaled_grid& _grid, clip_view& _view);
-    ~gui_audiocontent();
+    ~gui_audiocontent() override;
     void layout() override;
     void onTick(AppCtrl* appctrl) override;
     void render(NVGcontext* vg) override;
@@ -346,7 +345,7 @@ public:
 private:
 public:
     guictr_audioeditor(clip_view& _view);
-    ~guictr_audioeditor();
+    ~guictr_audioeditor() override;
 
     void buttonClicked(guibase* button) override;
     void renderBackground(NVGcontext* vg) override;
@@ -384,7 +383,7 @@ public:
         add(&arp);
         add(&settings);
     }
-    ~guictr_clipeditor() {
+    ~guictr_clipeditor() override {
         remove(&settings);
         remove(&arp);
         remove(&audioeditor);
@@ -414,11 +413,11 @@ public:
         }
         layout();
     }
-    virtual bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
+    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
         if (!view.clip()) return false;
         return guictr_base::mouseHitTest(mpos, evt);
     }
-    void render(NVGcontext* vg) {
+    void render(NVGcontext* vg) override {
         if (isBackgroundRendered()) {
             renderBackground(vg);
         }
@@ -460,7 +459,7 @@ public:
         //nvgResetScissor(vg);
         nvgResetTransform(vg);
     }
-    void layout() {
+    void layout() override {
         ivec2 cs      = getSizeContent();
         settings.pos  = ivec2(0, 0);
         settings.size = ivec2(250, cs.y);
@@ -481,7 +480,7 @@ public:
             gui->layout();
         }
     }
-    bool handleKeyInput(KeyEvent& kevt) {
+    bool handleKeyInput(KeyEvent& kevt) override {
         if (audioeditor.isVisible()) {
             return audioeditor.handleKeyInput(kevt);
         }
@@ -497,8 +496,7 @@ public:
         : guictr_base(),
           noteeditor(_noteeditor) {
     }
-    ~guictr_clipeditorview() {
-    }
+    ~guictr_clipeditorview() override = default;
     vec2 getScale() {
         ivec2 cs  = this->getSizeContent();
         ivec2 csp = noteeditor.getSizeContent();
@@ -506,7 +504,7 @@ public:
     }
 
 
-    void render(NVGcontext* vg) {
+    void render(NVGcontext* vg) override {
         ivec2 cp = this->getPosContent();
         ivec2 cs = this->getSizeContent();
         if (MainCtrl::get()->isClipEditorVisible()) {
@@ -538,13 +536,13 @@ public:
             nvgFill(vg);
         }
     }
-    void handleDraggedBegin(MouseEvent& evt) {
+    void handleDraggedBegin(MouseEvent& evt) override {
         if (evt.guiDragged == this) {
             MainCtrl::get()->showClipEditor();
             //lastscrolloffset = noteeditor.scrolloffset;
         }
     }
-    void handleDraggedMove(MouseEvent& evt) {
+    void handleDraggedMove(MouseEvent& evt) override {
         if (evt.guiDragged == this) {
             //ivec2 move = evt.mousepos - evt.dragStart;
             //vec2 scale = getScale();
@@ -552,7 +550,7 @@ public:
             //noteeditor.setScrolloffset(lastscrolloffset + (int)(move.x*(1.0 / minScale)));
         }
     }
-    void layout() {
+    void layout() override {
     }
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
         if (this->contains(mpos)) {

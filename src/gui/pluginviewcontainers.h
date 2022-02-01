@@ -10,8 +10,7 @@ class PluginViewContainers {
     bool inUse = true;
 
 public:
-    virtual ~PluginViewContainers() {
-    }
+    virtual ~PluginViewContainers() = default;
     virtual void setVSTPlugin(vstplugin* hostsideplugin)    = 0;
     virtual void onGuiOpen(AudioEffect* eff)                = 0;
     virtual void onGuiClose(AudioEffect* eff)               = 0;

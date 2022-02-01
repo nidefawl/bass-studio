@@ -22,7 +22,7 @@ public:
         maxHeight         = size.y;
         canTakeInputFocus = true;
     }
-    ~guidialog_base() { dbgassert(guis.empty()); }
+    ~guidialog_base() override { dbgassert(guis.empty()); }
     void determineSize(ivec2& prefSize) override {
         if (resizeable) {
             prefSize = math::maxvec2(dialogSize, prefSize);
@@ -30,7 +30,7 @@ public:
             prefSize = dialogSize;
         }
     }
-    virtual bool isDialog() {
+    bool isDialog() override {
         return true;
     }
     bool isDialogResizeable() const {

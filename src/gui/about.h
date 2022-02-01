@@ -13,10 +13,10 @@ class guidialog_about : public guidialog_base {
 
 public:
     guidialog_about();
-    ~guidialog_about() {
+    ~guidialog_about() override {
         removeGuis();
     }
-    void render(NVGcontext* vg);
+    void render(NVGcontext* vg) override;
     void layout() override;
     void buttonClicked(guibase* button) override;
 };

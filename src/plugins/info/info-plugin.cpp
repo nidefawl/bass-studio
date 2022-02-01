@@ -77,8 +77,7 @@ namespace PluginHostInfo {
         std::recursive_mutex& getMutex() {
             return mutex;
         }
-        PluginVST2_HostInfo_impl_t() {
-        }
+        PluginVST2_HostInfo_impl_t() = default;
 
         void processMidiBlockEnd(int sampleFrames) {
             midiQueue.Flush(sampleFrames);
@@ -442,7 +441,7 @@ namespace PluginHostInfo {
             margin  = 4;
             add(&knobParam0);
         }
-        ~guicontainer_plugin_HostInfo() {
+        ~guicontainer_plugin_HostInfo() override {
             remove(&knobParam0);
         }
 

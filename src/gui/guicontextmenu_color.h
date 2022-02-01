@@ -26,7 +26,7 @@ public:
         this->fontSize = _fontSize;
         height         = _fontSize + pad * 2 + (WH + padCell) * ROWS - padCell;
     }
-    void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) {
+    void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) override {
         UTIL_setFont(vg, theme, this->fontSize, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
         nvgText(vg, leftOffset(), y + this->fontSize / 2, StringAsCStr(title), NULL);
         nvgFontSize(vg, this->fontSize - 4);
@@ -67,7 +67,7 @@ public:
     bool contains(ivec2& ctxtSize, ivec2& mouse) {
         return mouse.y >= y && mouse.y < y + height && mouse.x >= 0 && mouse.x < ctxtSize.x;
     }
-    int getClicked(ivec2& ctxtSize, ivec2& mouse) {
+    int getClicked(ivec2& ctxtSize, ivec2& mouse) override {
         if (contains(ctxtSize, mouse)) {
             int y = this->y + this->fontSize + pad - 4;
             for (int col = 0; col < COLS; col++) {
@@ -91,7 +91,7 @@ public:
         ctxtmenu_color_select* colorSelect = new ctxtmenu_color_select("Pick Color", 100);
         addEntry(colorSelect);
     }
-    void clicked(int _id) {
+    void clicked(int _id) override {
         if (_id >= 100) {
             _id -= 100;
             int32_t col = colorPalette[_id];

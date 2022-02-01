@@ -26,7 +26,7 @@ namespace PluginEmptyVST2 {
         guictr_emptyvst() : guictr_base() {
             setBackgroundRendered(true);
         }
-        ~guictr_emptyvst() {
+        ~guictr_emptyvst() override {
             removeGuis();
         }
         bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override;

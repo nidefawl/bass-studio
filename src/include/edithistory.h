@@ -10,7 +10,7 @@ public:
     std::string desc;
     bool errored = false;
     std::string errorDesc;
-    virtual ~action_base()= default;;
+    virtual ~action_base()= default;
     virtual void undo(DawInstance* daw) = 0;
     virtual void redo(DawInstance* daw) = 0;
 
