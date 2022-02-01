@@ -3,7 +3,7 @@
 #include "glheaders.h"
 #include <nanovg.h>
 #include <GLFW/glfw3.h>
-#include <time.h>
+#include <ctime>
 #include <algorithm>
 #include <functional>
 #include <vector>

@@ -1,6 +1,6 @@
 #include "tempocontrols.h"
-#include <stdbool.h>
-#include <stdint.h>
+
+#include <cstdint>
 
 #include "math/seq_math.h"
 #include "str_util.h"

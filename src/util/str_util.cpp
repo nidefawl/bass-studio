@@ -10,7 +10,7 @@
 #include <windows.h>
 #endif
 #if __linux__
-#include <stdio.h>
+#include <cstdio>
 #endif
 
 #if __linux__ || defined(__APPLE__)

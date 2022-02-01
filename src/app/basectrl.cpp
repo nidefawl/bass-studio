@@ -1,6 +1,6 @@
 #include "glheaders.h"
 #include <nanovg.h>
-#include <time.h>
+#include <ctime>
 #include <algorithm>
 #include <functional>
 #include <vector>

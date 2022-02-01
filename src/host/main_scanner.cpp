@@ -36,7 +36,7 @@
 #endif
 #if defined(__linux__) || defined(__APPLE__)
 #include <unistd.h>
-#include <limits.h>
+#include <climits>
 #endif
 #ifdef __APPLE__
 #include <mach-o/dyld.h>

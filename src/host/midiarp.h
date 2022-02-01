@@ -10,7 +10,7 @@
 #include <algorithm>
 #include <array>
 #include <iterator>
-#include <stdint.h>
+#include <cstdint>
 #include <vector>
 
 

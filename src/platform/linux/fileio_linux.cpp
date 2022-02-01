@@ -13,9 +13,9 @@
 #include <string>
 
 #include <limits>
-#include <stdio.h>
-#include <stdint.h>
-#include <stdlib.h>
+#include <cstdio>
+#include <cstdint>
+#include <cstdlib>
 #include <stdexcept>
 #include <sys/types.h>
 #include <sys/stat.h>

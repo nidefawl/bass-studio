@@ -7,7 +7,7 @@
 #include <nanovg.h>
 #include <nanovg_gl.h>
 #include <nanovg_gl_utils.h>
-#include <stdint.h>
+#include <cstdint>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -15,7 +15,7 @@
 #endif
 #define WIN32API_CALLBACK_TYPE __stdcall
 
-#include <math.h>
+#include <cmath>
 #include <vector>
 #include <iostream>
 #include <fstream>

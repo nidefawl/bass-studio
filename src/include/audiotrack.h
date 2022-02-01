@@ -2,7 +2,7 @@
 #include "audiosample.h"
 #include "audioblock.h"
 #include "host/mainctrl.h"
-#include <stdint.h>
+#include <cstdint>
 #include <memory>
 
 class vsthost;

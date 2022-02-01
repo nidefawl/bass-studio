@@ -114,7 +114,7 @@
 #ifndef dr_wav_h
 #define dr_wav_h
 
-#include <stddef.h>
+#include <cstddef>
 
 #if defined(_MSC_VER) && _MSC_VER < 1600
 typedef   signed char    drwav_int8;
@@ -126,7 +126,7 @@ typedef unsigned int     drwav_uint32;
 typedef   signed __int64 drwav_int64;
 typedef unsigned __int64 drwav_uint64;
 #else
-#include <stdint.h>
+#include <cstdint>
 typedef int8_t           drwav_int8;
 typedef uint8_t          drwav_uint8;
 typedef int16_t          drwav_int16;

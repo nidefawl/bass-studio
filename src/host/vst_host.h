@@ -6,9 +6,9 @@
 #include <utility>
 #include <vector>
 #include <atomic>
-#include <stdint.h>
+#include <cstdint>
 #include <map>
-#include <stdbool.h>
+
 #include "../vstsdk-host-2.4/aeffectx.h"
 #include "note.h"
 #include "rand.h"

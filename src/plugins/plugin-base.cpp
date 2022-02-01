@@ -1,5 +1,5 @@
 
-#include <stdint.h>
+#include <cstdint>
 #include "plugin-base.h"
 #include "../vstsdk-plugin-2.4/audioeffectx.h"
 #include "config.h"

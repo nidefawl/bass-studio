@@ -1,5 +1,5 @@
 #pragma once
-#include <stdint.h>
+#include <cstdint>
 
 struct DrawVBO {
     uint32_t vaoId      = 0;

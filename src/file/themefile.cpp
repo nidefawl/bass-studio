@@ -10,7 +10,7 @@
 #include "assert_dbg.h"
 #include "platform.h"
 
-#include <math.h>
+#include <cmath>
 #include <vector>
 #include <iostream>
 #include <sstream>

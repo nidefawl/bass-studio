@@ -23,7 +23,7 @@ void handleStdException(std::exception& e);
 #ifdef HAVE_BUILTIN_TRAP
 #define debugRaiseSegFault() __builtin_trap()
 #else
-#include <stdio.h>
+#include <cstdio>
 #define debugRaiseSegFault()        \
     do {                            \
         int* volatile iptr = 0;     \

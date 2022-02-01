@@ -13,11 +13,11 @@
 #if defined(__linux__) || defined(__APPLE__)
 #include <unistd.h>
 #include <spawn.h>
-#include <signal.h>
+#include <csignal>
 #include <sys/wait.h>
 #include <vector>
 #include <sstream>
-#include <stdio.h>
+#include <cstdio>
 
 extern "C" {
 extern char** environ;

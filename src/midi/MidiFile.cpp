@@ -31,7 +31,7 @@
 #include "MidiFile.h"
 #include "Binasc.h"
 
-#include <string.h>
+#include <cstring>
 #include <iostream>
 #include <iomanip>
 #include <fstream>

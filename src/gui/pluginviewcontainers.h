@@ -1,6 +1,6 @@
 #pragma once
 #include <vector>
-#include <stdint.h>
+#include <cstdint>
 #include "gui.h"
 #include "guicontainer.h"
 #include "logging.h"

@@ -1,6 +1,6 @@
 #pragma once
 #include <vector>
-#include <stdint.h>
+#include <cstdint>
 #include "gui/gui.h"
 #include "gui/guicontainer.h"
 #include "gui/pluginviewcontainers.h"

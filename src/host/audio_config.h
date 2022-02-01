@@ -1,6 +1,6 @@
 #pragma once
 #include "str_util.h"
-#include <stdint.h>
+#include <cstdint>
 #include <vector>
 
 enum class stagebuffer_point {

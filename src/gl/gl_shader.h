@@ -1,7 +1,7 @@
 #pragma once
 #include "glheaders.h"
 
-#include <stdint.h>
+#include <cstdint>
 #include "str_util.h"
 #include "gl/gl_util.h"
 #include "gl/gl_attr.h"

@@ -3,14 +3,14 @@
 #include "config.h"
 #include "math/seq_math.h"
 #include "audioblock.h"
-#include <stdlib.h>
-#include <stdint.h>
+#include <cstdlib>
+#include <cstdint>
 #define _USE_MATH_DEFINES
 #include <cmath>
 #include <memory.h>
 #include <algorithm>
 #include <limits>
-#include <string.h>
+#include <cstring>
 
 namespace dsp_util {
     const float GAIN_DB30    = math::powf(10.0f, 30.0f / 20.0f);// 2.0f

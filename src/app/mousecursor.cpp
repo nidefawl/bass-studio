@@ -1,5 +1,5 @@
 #include <vector>
-#include <stdint.h>
+#include <cstdint>
 #include <memory>
 #include "str_util.h"
 #include "fileio.h"

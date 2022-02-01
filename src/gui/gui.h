@@ -7,7 +7,7 @@
 
 #include "str_util.h"
 #include "event.h"
-#include "math.h"
+#include <cmath>
 #include "saferef.h"
 #include "guicolors.h"
 

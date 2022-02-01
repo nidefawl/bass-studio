@@ -1,15 +1,15 @@
 #if defined(__linux__) || defined (__APPLE__)
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
 #include <fcntl.h>
 #include <unistd.h>
 #include <pwd.h>
 #include <sys/time.h>
 #include <sys/types.h>
-#include <stdio.h>
+#include <cstdio>
 #include <vector>
-#include <time.h>
+#include <ctime>
 #include <thread>
 
 #include "msgbox.h"

@@ -11,7 +11,7 @@
 
 #include "Binasc.h"
 #include <sstream>
-#include <string.h>
+#include <cstring>
 
 using namespace std;
 

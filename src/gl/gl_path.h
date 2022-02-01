@@ -1,6 +1,6 @@
 #pragma once
 #include <vector>
-#include <stdint.h>
+#include <cstdint>
 
 #include "math/vec.h"
 #include "gl_vbo.h"

@@ -20,7 +20,7 @@ int _________asprintf(char** strp, const char* fmt, ...);
 #endif
 
 #ifdef __GNUC__
-#include <string.h>
+#include <cstring>
 #ifndef _T
 #define _T
 #endif

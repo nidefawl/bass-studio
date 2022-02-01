@@ -1,6 +1,6 @@
 #pragma once
-#include <stdbool.h>
-#include <stdint.h>
+
+#include <cstdint>
 #include <vector>
 
 #include "math/seq_math.h"

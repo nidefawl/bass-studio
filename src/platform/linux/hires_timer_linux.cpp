@@ -1,7 +1,7 @@
 #if defined(__linux__) || defined (__APPLE__)
 #include "hires_timer.h"
 #include "exceptions.h"
-#include <time.h>
+#include <ctime>
 
 
 void timespec_diff(struct timespec *start, struct timespec *stop,

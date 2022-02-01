@@ -1,4 +1,4 @@
-#include <stdint.h>
+#include <cstdint>
 #include <memory>
 #include <vector>
 #include <nanovg.h>

@@ -1,14 +1,14 @@
 #include "fft.h"
 
 #define _USE_MATH_DEFINES
-#include <math.h>
+#include <cmath>
 #include <vector>
 #include <array>
 #include <memory>
 #include <algorithm>
 #include <numeric>
-#include <assert.h>
-#include <stdlib.h>
+#include <cassert>
+#include <cstdlib>
 #include <tools/kiss_fftr.h>
 
 

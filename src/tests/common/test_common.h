@@ -1,5 +1,5 @@
 #pragma once
-#include <stdint.h>
+#include <cstdint>
 
 class test_rng {
     uint16_t lfsr = 0xACE1u;
