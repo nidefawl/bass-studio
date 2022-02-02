@@ -149,7 +149,7 @@ audiofile_t* audiocache::loadFile(const String& path, int32_t id) {
                 sample->samples[i] = std::move(loadedSampleChannels[i]);
             }
         }
-        int64_t timeBeginDownsample = getTimeHPint64();
+        int64_t timeBeginDownsample = getTimeMicros();
         int maxDownS                = 1;
         log_printf("Downsampling %s...\n", path.c_str());
         for (int step = 1; step < maxDownS; step++) {
@@ -167,7 +167,7 @@ audiofile_t* audiocache::loadFile(const String& path, int32_t id) {
             }
             sample->downsampled.push_back(std::move(downsampledChannels));
         }
-        int64_t timeDiffDownsample = getTimeHPint64() - timeBeginDownsample;
+        int64_t timeDiffDownsample = getTimeMicros() - timeBeginDownsample;
         log_printf("Downsampling %s took %fsec\n", path.c_str(), timeDiffDownsample / 1000000.0);
         //int nDownSmplSteps = maxDownS - 1;
         //dbgassert(sample->downsampled.size() == nDownSmplSteps);

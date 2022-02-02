@@ -34,7 +34,8 @@ gui_textfield::gui_textfield()
       mMouseDragPos(ivec2(-1, -1)),
       mMouseDownModifier(0),
       mTextOffset(0),
-      mLastClick(0), mVisible(true), mEnabled(true),
+      mVisible(true),
+      mEnabled(true),
       mFocused(false),
       mFontSize(28.0f),
       mMouseFocus(false) {
@@ -77,14 +78,15 @@ void gui_textfield::handleDraggedBegin(MouseEvent& evt) {
         mMouseDownPos      = local;
         mMouseDownModifier = evt.kbmods;
 
-        double time = getTimeMillis() / 1000.0;
-        if (time - mLastClick < 0.25) {
+        //TODO: handle double click detection consistently
+        auto tmNow = getTimeMillis();
+        if (tmNow - m_tmLastClick <= 250) {
             /* Double-click: select all text */
             mSelectionPos = 0;
             mCursorPos    = (int) mValueTemp.size();
             mMouseDownPos = ivec2(-1, -1);
         }
-        mLastClick = time;
+        m_tmLastClick = tmNow;
     }
 }
 void gui_textfield::handleDraggedMove(MouseEvent& evt) {

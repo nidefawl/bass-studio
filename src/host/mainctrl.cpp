@@ -1355,7 +1355,7 @@ void DawCtrl::onTick() {
     mainWindow->requestRedraw();
 
     if (!guiDragged && !guiCaptured && guiOver && (!this->ctxtmenu || ctxtmenu->isTransient())) {
-        double hoverTime = lastHoverTooltipTime;
+        auto hoverTime = tmLastHoveredTooltip;
         if (ctxtmenu && ctxtmenu->isTransient() && (lastTooltipSrc && guiOver && guiOver != lastTooltipSrc)) {
             closeContextMenu();
         }
@@ -1363,8 +1363,8 @@ void DawCtrl::onTick() {
             hoverTime = 0;
         }
         if (!ctxtmenu) {
-            auto timeNow = getTimeMillisd();
-            if (guiOver == lastHoveredTooltip && timeNow - lastHoverTooltipTime >= 360.0) {
+            auto timeNow = getTimeMillis();
+            if (guiOver == lastHoveredTooltip && timeNow - tmLastHoveredTooltip >= 360) {
                 auto newContextMenu = guiOver->getTooltip(this);
                 if (newContextMenu) {
                     newContextMenu->theme = getTheme();
@@ -1377,7 +1377,7 @@ void DawCtrl::onTick() {
                 hoverTime = timeNow;
             }
         }
-        lastHoverTooltipTime = hoverTime;
+        tmLastHoveredTooltip = hoverTime;
         lastHoveredTooltip   = guiOver;
     } else {
         if (ctxtmenu && ctxtmenu->isTransient()) {

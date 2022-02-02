@@ -69,7 +69,7 @@ public:
         std::vector<std::shared_ptr<audiotrack>> tracksInput;
         std::vector<std::shared_ptr<audiotrack>> tracksOutput;
 
-        int32_t lastAudioCallbackInvocationTime_i64 = 0;
+        int64_t lastAudioCallbackInvocationTime_i64 = 0;
 
         audiostream(int32_t streamId, AudioIO::io_cfg_tracks cfg, int32_t nOutputChannels = 0, int32_t nInputChannels = 0);
         ~audiostream();

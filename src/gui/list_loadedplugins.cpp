@@ -242,8 +242,8 @@ public:
         if (!setScissorTransform(vg)) {
             return;
         }
-        if (getTimeHPint64() - timeLastUpdate >= 250000) {
-            timeLastUpdate  = getTimeHPint64();
+        if (getTimeMicros() - timeLastUpdate >= 250000) {
+            timeLastUpdate  = getTimeMicros();
             ThreadLock lock = MainCtrl::getPlayThread()->tryLockThread();
             if (lock.isLocked()) {
                 state = MainCtrl::getPlayThread()->getState();
@@ -444,7 +444,7 @@ class gui_pluginsloaded_list : public guictr_base {
     gui_list_plugins listDeferredCtr;
     guibutton btnLoadAll;
     String curquery     = "";
-    uint64_t lastUpdate = 0;
+    int64_t tmLastUpdate = 0;
     std::vector<gui_pluginsloaded_list_entry*> listEntriesLoadedPlugins;
     std::vector<gui_pluginsloaded_list_entry*> listEntriesDef;
 
@@ -463,9 +463,9 @@ public:
     }
     void onTick(AppCtrl* ctrl) override {
         guictr_base::onTick(ctrl);
-        uint64_t u = getTimeMillis();
-        if (u - lastUpdate > 1000) {
-            lastUpdate = u;
+        auto tmNow = getTimeMillis();
+        if (tmNow - tmLastUpdate > 1000) {
+            tmLastUpdate = tmNow;
             update();
         }
     }

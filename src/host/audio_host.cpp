@@ -61,7 +61,7 @@ static int audioCallback(const void* inputBuffer, void* outputBuffer,
     if (!host) {
         return paAbort;
     }
-    auto timeNow_i64 = getTimeHPint64();
+    auto timeNow_i64 = getTimeMicros();
     if (0 != stream->lastAudioCallbackInvocationTime_i64) {
         host->audioCallbackInvocationDelay_usec = timeNow_i64 - stream->lastAudioCallbackInvocationTime_i64;
     }

@@ -56,7 +56,9 @@ static const char* szLogPrefixes[2] = {
     "CLI: ",
 };
 
+constexpr int32_t timeoutdefault = 120;
 static int logPrefixIdx = 0;
+
 #define LOG_MSG(prefix, fmtString, ...) printf("%s" fmtString "\n", prefix, ##__VA_ARGS__);
 #define LOG(fmtString, ...)                                         \
     LOG_MSG(szLogPrefixes[logPrefixIdx], fmtString, ##__VA_ARGS__); \
@@ -227,7 +229,7 @@ struct vstscanner_server_options {
     bool launchProcess      = true;
     bool checkDiskTimestamp = true;
     String updatePattern;
-    uint32_t unresponsiveTimeoutSeconds = 120;
+    int32_t unresponsiveTimeoutSeconds = timeoutdefault;
 };
 
 static void getPluginData(vstplugin* plugin, response_type_vst24_t* _out) {
@@ -251,17 +253,17 @@ static void getPluginData(vstplugin* plugin, response_type_vst24_t* _out) {
 
 static int readClientResponses(vstscanner_server_options& options, ipc_server& server, request_type_vst24_t& req, SQLite::Statement& queryInsertPlugin, FileFound& file, int64_t timeDisk, bool forcedisable) {
 
-    uint64_t timeStartScan_ms     = getTimeMillis();
-    uint64_t timeoutPluginScan_ms = options.unresponsiveTimeoutSeconds * 1000;
+    auto timeStartScan_ms     = getTimeMillis();
+    auto timeoutPluginScan_ms = options.unresponsiveTimeoutSeconds * 1000;
     uint32_t notificationStep     = 0;
     int nPluginsScanned           = 0;
     while (!userSentQuitRequest) {
         int32_t responseType    = 0;
         int peakRdBufSizeResult = server.peekReadBufferSize();
         if (peakRdBufSizeResult < sizeof(responseType)) {
-            uint64_t timeSince_ms = getTimeMillis() - timeStartScan_ms;
+            auto timeSince_ms = getTimeMillis() - timeStartScan_ms;
             if (-1 == peakRdBufSizeResult || (timeSince_ms > timeoutPluginScan_ms)) {
-                LOG("TIMEOUT: Plugin %s timed out after %llu ms", req.szPath, timeoutPluginScan_ms);
+                LOG("TIMEOUT: Plugin %s timed out after %d ms", req.szPath, timeoutPluginScan_ms);
                 return -4;
             } else {
                 if (notificationStep != (timeSince_ms / 1000)) {
@@ -785,7 +787,6 @@ static int runScannerClient() {
     vsthost::getInstance()->destroy();
     return 0;
 }
-const int timeoutdefault = 120;
 
 int main(int argc, char* argv[]) {
     seqthreads::registerThread("mainthread");

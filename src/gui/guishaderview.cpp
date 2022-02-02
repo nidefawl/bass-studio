@@ -110,7 +110,7 @@ void gui_shaderview::prerender(NVGcontext* vg) {
     auto& vbo     = pipeline->vbo;
     glUseProgram(pipeline->program);
     glm::mat4x4 matProj = glm::ortho(0.f, (float) w, (float) h, 0.f, 1.0f, -1.0f);
-    pipeline->setUniforms(w, h, getTimeMillis());
+    pipeline->setUniforms(w, h, getTimeMillisF());
     glUniformMatrix4fv(pipeline->u_mvp, 1, GL_FALSE, mat_ptr(matProj));
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, pipeline->texture);

@@ -24,7 +24,7 @@ struct TextureAtlasEntry {
     bool inuse = false;
     int id;
     int refCount         = 0;
-    uint64_t releaseTime = 0L;
+    uint64_t tmRelease   = 0L;
     std::vector<gui_waveform_texture_ref*> ptrs;
 };
 struct waveform_update_task_t {

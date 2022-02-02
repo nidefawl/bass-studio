@@ -35,14 +35,13 @@ void setMainHWND(HWND hwnd) {
 }
 }
 
-uint64_t getTimeMillis() {
-    return (uint64_t) timeGetTime();
-}
-double getTimeMillisd() {
-    return (double) timeGetTime();
-}
+/* windows typedefs LONGLONG as __int64_t */
+struct time_perf_count {
+    int64_t count;
+    int64_t freq;
+};
 
-double getTimeHPC() {
+time_perf_count getPerfCount() {
     static LARGE_INTEGER frequency{};
     static LARGE_INTEGER begin{};
     if (frequency.QuadPart == 0) {
@@ -51,26 +50,36 @@ double getTimeHPC() {
     }
     LARGE_INTEGER now{};
     ::QueryPerformanceCounter(&now);
-    return (double) (now.QuadPart - begin.QuadPart) / double(frequency.QuadPart);
+    return {now.QuadPart - begin.QuadPart, frequency.QuadPart};
 }
-int64_t getTimeHPint64() {
-    static LARGE_INTEGER frequency{};
-    if (frequency.QuadPart == 0)
-        ::QueryPerformanceFrequency(&frequency);
-    LARGE_INTEGER now;
-    ::QueryPerformanceCounter(&now);
-    assert(frequency.QuadPart >= 1000000UL);
-    //microseconds resolution
-    int64_t val = (now.QuadPart / (frequency.QuadPart / 1000000UL));
-    assert(val > 0);
-    return val;
+
+double getTimeSecondsD() {
+    time_perf_count time = getPerfCount();
+    return static_cast<double>(time.count) / static_cast<double>(time.freq);
 }
-double getSince(double& d)//checks for overflow
-{
-    double now = getTimeHPC();
-    if (now < d) d = now;
-    return now - d;
+
+int64_t getTimeMillis() {
+    time_perf_count time = getPerfCount();
+    auto freqOver1K = time.freq / 1'000LL;
+    return time.count / freqOver1K;
 }
+
+double getTimeMillisD() {
+    time_perf_count time = getPerfCount();
+    auto freqOver1K = time.freq / 1'000LL;
+    return static_cast<double>(time.count) / static_cast<double>(freqOver1K);
+}
+
+float getTimeMillisF() {
+    return static_cast<float>(getTimeMillisD());
+}
+
+int64_t getTimeMicros() {
+    time_perf_count time = getPerfCount();
+    auto freqOver1M = time.freq / 1'000'000LL;
+    return time.count / freqOver1M;
+}
+
 String getModuleName(HMODULE module) {
     std::vector<TCHAR> pathBuf;
     DWORD copied;

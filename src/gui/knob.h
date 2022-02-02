@@ -104,8 +104,6 @@ public:
         } else if (valuePtr) {
             return *valuePtr;
         } else {
-//            float time = fmod(getTimeMillis() / 1000.0f, 2.0f);
-//            float val  = CLAMP_I(0.9f*sinf(time * FLOAT_PI) + 0.5f, 0.0f, 1.0f);
             return value;
         }
     }

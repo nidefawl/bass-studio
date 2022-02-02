@@ -6,12 +6,10 @@
 #include "platform.h"
 #include "hires_timer.h"
 
-static float startOffset;
 hires_timer_t timer;
 extern "C" {
 void resetShaderTimeOffset() {
     timer.reset();
-    startOffset = (float) getTimeMillisd();
 }
 float glnvg__getTimeMillisf() {
     return (float) timer.getTimeDouble() * 1000.0;

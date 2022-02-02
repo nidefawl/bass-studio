@@ -10,7 +10,6 @@ using fft_processor_hf = fft_processor<512 * 2, 2>;
 
 class audioanaylzer {
 public:
-    double startOfDay       = 0;
     double timeSwitchEffect = 0;
     std::unique_ptr<fft_processor_hf> analyzerHf;
     std::unique_ptr<fft_processor_lf> analyzerLf;
@@ -21,22 +20,20 @@ public:
 
     int64_t lastFrameTime = 0;
     double timeReload     = 0;
-    uint64_t start        = 0;
     int64_t tLast         = 0;
     bool processInput     = true;
-    audioanaylzer() : tLast(getTimeHPint64()) {
+    audioanaylzer() : tLast(getTimeMicros()) {
     }
     void init(audiohost* _host) {
         assert(_host);
         assert(_host->lBlockSize > 0);
         assert(_host->lSampleRate > 0);
         this->host = _host;
-        startOfDay = getTimeMillis();
         analyzerHf = std::make_unique<fft_processor_hf>(_host->lBlockSize, _host->lSampleRate);
         analyzerLf = std::make_unique<fft_processor_lf>(_host->lBlockSize, _host->lSampleRate);
     }
     void onTick() {
-        int64_t tNow   = getTimeHPint64();
+        int64_t tNow   = getTimeMicros();
         int64_t tSince = tNow - tLast;
         if (tSince >= 5000ULL) {
             double tickSince = tSince / 1000000.0;

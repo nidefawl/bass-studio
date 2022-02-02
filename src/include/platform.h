@@ -3,11 +3,12 @@
 #include <vector>
 #include "str_util.h"
 
-uint64_t getTimeMillis();
-double getTimeMillisd();
-double getTimeHPC();
-double getSince(double& d);
-int64_t getTimeHPint64();
+double getTimeSecondsD();
+int64_t getTimeMillis();
+double getTimeMillisD();
+float getTimeMillisF();
+int64_t getTimeMicros();
+
 
 void setMinimumResolutionTimer();
 

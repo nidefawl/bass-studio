@@ -10,7 +10,7 @@ NVGcolor getCursorColor() {
     float f1 = 0.3f;
     NVGcolor cursorColor;
     cursorColor.r = cursorColor.a = 1;
-    cursorColor.g = cursorColor.b = CLAMP_F((1.0f - f1) + sin(getTimeMillis() / 160.0f) * f1);
+    cursorColor.g = cursorColor.b = CLAMP_F((1.0f - f1) + sin(getTimeMillisF() / 160.0f) * f1);
     return cursorColor;
 }
 

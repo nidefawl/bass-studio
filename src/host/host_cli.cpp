@@ -373,9 +373,8 @@ int runCommandLineHost(int argc, const char* argv[]) {
             /** inform host about track layout changes so it resets and updates internal structures */
             host->onTrackLayoutChange();
 
-            double tLastMsg        = getTimeMillisd() / 1000.0;
+            auto tLastMsg = getTimeSecondsD();
             int64_t samplesWritten = 0;
-
 
             projectGlobals.cursor.cursorPos = projectGlobals.loopStart;
             if (fStart >= 0.0) {
@@ -436,7 +435,7 @@ int runCommandLineHost(int argc, const char* argv[]) {
             }
 
             while (!userSentQuitRequest) {
-                auto tNow = getTimeMillisd() / 1000.0;
+                auto tNow = getTimeSecondsD();
                 if (tNow - tLastMsg >= 1.0) {
                     tLastMsg = tNow;
                     // require locking here

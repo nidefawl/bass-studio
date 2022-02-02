@@ -226,7 +226,7 @@ void midihost::handleMessage(PmMessage data, std::vector<MidiIOEvent>& messages)
 }
 
 int32_t getMidiTime(void* userData) {
-    int32_t time = getTimeMillis() & (0x7fffffff);
+    int32_t time = static_cast<int32_t>(static_cast<uint64_t>(getTimeMillis()) & (0x7FFF'FFFFLL));
     return time;
 }
 #define TIMEOUT_TEMP_NOTES 2000

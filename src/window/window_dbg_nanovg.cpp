@@ -172,7 +172,7 @@ void drawDebugWindowNanoVG(NVGcontext* vg, int winW, int winH, float pxratio) {
     ivec2 pos  = { 10, 20 };
     ivec2 size = { 300, 40 };
 #define STEP_MAX 3
-    int step = math::floordS32(((getTimeMillisd() / 1000.0) / 1.5)) % STEP_MAX;
+    int step = math::floordS32(((getTimeMillisD() / 1000.0) / 1.5)) % STEP_MAX;
 
     float steps[STEP_MAX] = { 1.0f, 1.0f / 32.0f, 1.0f / 128.0f };
 

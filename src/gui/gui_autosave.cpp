@@ -40,8 +40,8 @@ public:
     ~gui_autosave() override {
         removeGuis();
     }
-    void setDelay(int64_t tmDelay) {
-        this->tmDelay  = tmDelay;
+    void setDelay(int64_t _tmDelay) {
+        this->tmDelay  = _tmDelay;
         this->tmCreate = getTimeMillis();
     }
 //    bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
@@ -59,7 +59,7 @@ public:
     }
     void onTick(AppCtrl* appctrl) override {
         layout();
-        int64_t tmLeft = math::max<int32_t>(0, this->tmDelay - ((int64_t) getTimeMillis() - this->tmCreate));
+        int64_t tmLeft = math::max(0LL, this->tmDelay - (getTimeMillis() - this->tmCreate));
         String fname   = DawInstance::get()->getAutoSaveFilename();
         str            = StringFormat("Autosave as %s", StringAsCStr(fname));
         str2           = StringFormat("in %d seconds", tmLeft / 1000);

@@ -159,11 +159,11 @@ int main(int, char*[]) {
 
 #ifdef _WIN32
         createWin32Window();
-        double tmLastTick = getTimeHPC();
+        auto tmLastTick = getTimeMillis();
         bool quit         = false;
         while (!fataError && !quit) {
-            double tmNow = getTimeHPC();
-            if (tmNow - tmLastTick >= 0.025) {
+            auto tmNow = getTimeMillis();
+            if (tmNow - tmLastTick >= 250) {
                 tmLastTick = tmNow;
                 TickTest();
             }

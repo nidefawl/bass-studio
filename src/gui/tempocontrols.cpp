@@ -249,11 +249,13 @@ NVGcolor guibutton_audioengine::getBackgroundColor(int stateflags) const {
     if (projCtrl) {
         const auto& globals        = projCtrl->getGlobals();
         const float fBarNumFloor   = (int32_t) stats.tickBar / (int32_t) TICKS_BAR;
-        const auto tmConstantBar   = 60000.0 * 100.0 / globals.tempo100;
-        const float barProgress    = getTimeMillisd() / tmConstantBar;
-        float fMo                  = fmodf(barProgress, 1.0f);
-        const float fBarTmAbsolute = fBarNumFloor + fMo;
-        float t                    = std::sin(fBarTmAbsolute * M_PI * 2.0f) * 0.5f + 0.5f;
+
+        // yikes, this sucks. Taking the tickBar from non-determenistic host stats _and_ using own timer to get per GPU frame progress
+        const auto tmConstantBar  = 60000.0 * 100.0 / static_cast<double>(globals.tempo100);
+        const auto barProgress    = getTimeMillisD() / tmConstantBar;
+        const auto fBarTmAbsolute = fBarNumFloor + fmod(barProgress, 1.0);
+
+        float t = static_cast<float>(std::sin(fBarTmAbsolute * M_PI * 2.0) * 0.5 + 0.5);
 
         vec4 v{ c.r, c.g, c.b, c.a };
         vec4 v2 = v;

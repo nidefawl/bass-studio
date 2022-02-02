@@ -163,7 +163,7 @@ namespace MiniApp {
     class MiniAppCtrl : public AppCtrl {
         T* view = nullptr;
         waveform_test& waveformTest;
-        uint64_t lastTimeRelease = 0;
+        uint64_t tmLastRelease = 0;
         uint32_t renderStep      = 0;
         hires_timer_t timer;
         hires_timer_t timerAll;
@@ -275,8 +275,8 @@ namespace MiniApp {
             for (guictr_base* ctr : containers) {
                 ctr->prerender(nanovgCtxt);
             }
-            if (getTimeMillis() - lastTimeRelease >= 60) {
-                lastTimeRelease = getTimeMillis();
+            if (getTimeMillis() - tmLastRelease >= 60) {
+                tmLastRelease = getTimeMillis();
                 for (auto i = 0u; i < NUM_RENDERERS; i++) {
                     std::vector<waveform_test_entry>& vec = waveformTest.vecs[i];
                     for (waveform_test_entry& e : vec) {

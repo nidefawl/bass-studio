@@ -427,7 +427,7 @@ protected:
     int32_t lastHoveredTrackTicks       = 0;
     void* lastHoveredTooltip            = nullptr;
     void* lastTooltipSrc                = nullptr;
-    double lastHoverTooltipTime         = 0;
+    int64_t tmLastHoveredTooltip        = 0;
     int64_t tmLastRenderUpdatesMs       = 0;
 
 public:

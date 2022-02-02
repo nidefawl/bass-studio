@@ -173,7 +173,7 @@ public:
     ivec2 mMouseDragPos;
     int mMouseDownModifier;
     float mTextOffset;
-    double mLastClick;
+    int64_t m_tmLastClick = 0;
 
 protected:
     bool mVisible;

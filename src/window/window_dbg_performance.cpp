@@ -28,8 +28,8 @@ namespace windowdebug_performance {
     GLint u_mvp             = 0;
     GLint u_renderColor     = 0;
     GLint u_renderInfo      = 0;
-    double timeLastUpdate   = 0.0;
-    double timeLastReload   = 0.0;
+    int64_t tmLastUpdate    = 0;
+    int64_t tmLastReload    = 0;
     float quadSize          = 1024;
     seq_rand rnd;
     const int texW = DBG_PERF_HIST_SIZE;
@@ -41,7 +41,7 @@ namespace windowdebug_performance {
     };
     DrawVBO vbo;
     int loadShader() {
-        timeLastReload = getTimeMillisd();
+        tmLastReload = getTimeMillis();
         String srcVertex;
         String srcFragment;
         int64_t ret = ReadFileText("textured.vsh", srcVertex);
@@ -395,12 +395,12 @@ int initDebugWindowPerformance(NVGcontext* vg) {
 void drawDebugWindowPerformance(NVGcontext* vg, int winW, int winH, float pxratio) {
 
     nCall++;
-    auto tmNow = getTimeMillisd();
-    if (tmNow - timeLastUpdate >= 250) {
-        timeLastUpdate = tmNow;
+    auto tmNow = getTimeMillis();
+    if (tmNow - tmLastUpdate >= 250) {
+        tmLastUpdate = tmNow;
         updateProfilingData();
     }
-    if (tmNow - timeLastReload >= 1600) {
+    if (tmNow - tmLastReload >= 1600) {
         //if (loadShader()) {
         //    //return;
         //}

@@ -245,12 +245,12 @@ public:
     void setValid() {
         this->valid = true;
     }
-    const double minFrameDelaySeconds = 1 / 288.0;
+    const int64_t minFrameDelayMicros = 1'000'0000LL / 288LL;
 
 private:
-    uint64_t tm_lastfps = 0;
+    int64_t tmLastFps = 0;
     String fpsStats;
-    double secondsLastDraw = 0.0;
+    double tmLastDraw = 0.0;
     int skipFrames         = 0;
     bool redrawFlagged     = false;
 
@@ -290,7 +290,7 @@ protected:
     }
 
 public:
-    explicit appwindow(appwindow* _parent) : parent(_parent), tm_lastfps(getTimeMillis()) {
+    explicit appwindow(appwindow* _parent) : parent(_parent), tmLastFps(getTimeMillis()) {
         name[0] = 0;
 #if HAS_APP_SETTINGS
         noRawInput = DAW::settings.vmmode;
@@ -359,8 +359,9 @@ public:
     virtual void onRefresh() {
         PREVENT_REENTRANT("REENTRANT IN RENDER MAIN")
 #ifdef __linux__
-        double delay = getSince(secondsLastDraw);
-        if (delay < minFrameDelaySeconds) {
+        auto tmNowMicros = getTimeMicros();
+        auto tmNowMicros = tmNow - tmLastDraw;
+        if (tmNowMicros < minFrameDelayMicros) {
             skipFrames++;
             return;
         }
@@ -376,20 +377,20 @@ public:
 
     void endFrame() {
 
-        uint64_t tm = getTimeMillis();
-        float since = (tm - tm_lastfps) / 1000.0f;
-        if (frameCountFPS > 0 && since >= 1.0) {
-            float fps = frameCountFPS / since;
+        auto tmNowMicros = getTimeMicros();
+        auto tmNow = tmNowMicros / 1000LL;
+        if (frameCountFPS > 0 && tmLastFps - tmNow >= 1000) {
+            float fps = frameCountFPS / static_cast<float>(tmNow - tmLastFps);
 #if BUILD_VSTHOST
             daw_tls::tlsinstance& tls = daw_tls::getTls();
             tls.renderStats.fps       = fps;
 #endif
-            fpsStats = StringFormat("%.2f fps, %f", fps, secondsLastDraw);
+            fpsStats = StringFormat("%.2f fps, %f", fps, static_cast<double>(tmLastDraw)/1.0e6);
             glfwSetWindowTitle(glfw, StringAsCStr(fpsStats));
-            tm_lastfps    = tm;
+            tmLastFps    = tmNow;
             frameCountFPS = 0;
         }
-        secondsLastDraw = getTimeHPC();
+        tmLastDraw = tmNowMicros;
         redrawFlagged   = false;
         frameCountFPS++;
         frameNumber++;
@@ -620,9 +621,9 @@ public:
 class appwindow_main : public appwindow, public window_main {
     AppCtrl* const ctrl;
     std::shared_ptr<AppCtrl> sharedCtrl;
-    int32_t windowCreationFlags     = 0;
-    uint64_t dblclicktimer          = 0;
-    double tmLastShaderReloadMillis = 0.0;
+    int32_t windowCreationFlags      = 0;
+    int64_t tmDblClick               = 0;
+    int64_t tmLastShaderReloadMillis = 0;
 
 protected:
     void destroyOverlayWindows();
@@ -730,8 +731,8 @@ public:
             overlayWindowsToClose.clear();
         }
 
-        if (getTimeMillisd() - tmLastShaderReloadMillis >= 1000) {
-            tmLastShaderReloadMillis = getTimeMillisd();
+        if (getTimeMillis() - tmLastShaderReloadMillis >= 1000) {
+            tmLastShaderReloadMillis = getTimeMillis();
             //            reloadCustomShaders();
         }
 
@@ -799,7 +800,7 @@ public:
 
     void onMouseMoved(ivec2 deltapos) override {
         if (math::abs(deltapos.x) + math::abs(deltapos.y) > 2)
-            this->dblclicktimer = 0;
+            this->tmDblClick = 0;
         ctrl->mouseMoved(getMousePos(1.0f / ctrl->m_scale), deltapos);
         flagNeedsRedraw();
     }
@@ -811,10 +812,10 @@ public:
 
     void onMouseButton(int button, int action, int mods) override {
         if (action == GLFW_PRESS) {
-            uint64_t timeMillis = getTimeMillis();
-            bool dblClick       = this->dblclicktimer != 0 && timeMillis - this->dblclicktimer < 500;
+            auto tmNow    = getTimeMillis();
+            bool dblClick = this->tmDblClick != 0 && tmNow - this->tmDblClick < 500;
             dblClick &= glm::distance(lastclickpos, mousepos) < 4;
-            this->dblclicktimer = dblClick ? 0 : timeMillis;
+            this->tmDblClick = dblClick ? 0 : tmNow;
             ctrl->mouseDown(getMousePos(1.0f / ctrl->m_scale), button, dblClick);
         } else if (action == GLFW_RELEASE) {
             ctrl->mouseUp(getMousePos(1.0f / ctrl->m_scale), button);
@@ -1900,7 +1901,7 @@ int startApplication(int argc, char* argv[]) {
             if (debugMessageLoop) {
                 if (getTimeMillis() - tmLRDbgPrint >= 1000) {
                     tmLRDbgPrint = getTimeMillis();
-                    log_printf("maxMsgProcessesed %d tmMsgLoop %ld, tmUpdateInternals %ld\n", static_cast<int>(1024 - maxMsgProcess), tmMsgLoop, tmUpdateInternals);
+                    log_printf("maxMsgProcessesed %d tmMsgLoop %zd, tmUpdateInternals %zd\n", static_cast<int>(1024 - maxMsgProcess), tmMsgLoop, tmUpdateInternals);
                 }
                 if (tmLRMsgSent > 0 && getTimeMillis() - tmLRMsgSent >= 1000) {
                     tmLRMsgSent = 0;

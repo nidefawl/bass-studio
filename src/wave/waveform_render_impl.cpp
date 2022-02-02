@@ -126,7 +126,7 @@ void waveformrender::release(gui_waveform_texture_ref* waveformRef) {
         entry.ptrs.erase(it2);
         entry.refCount--;
         if (entry.refCount <= 0) {
-            entry.releaseTime = getTimeMillis();
+            entry.tmRelease = getTimeMillis();
             //log_printf("AtlasEntry refcount <= 0. erasing.\n", 0);
             vec.erase(it);
         }
@@ -415,15 +415,15 @@ int waveformrender::renderUpdates(NVGcontext* ctxt, float pxRatio) {
     this->queuedTasks.clear();
 
     //go over all framebuffers (_atlas.fb)
-    auto now = getTimeMillis();
+    auto tmNow = getTimeMillis();
     for (TextureAtlas& _atlas : atlases) {
         {
             auto it = _atlas.entries.begin();
             for (; it != _atlas.entries.end();) {
                 auto& entry = *it;
                 if (entry.refCount <= 0) {
-                    auto tm = now - entry.releaseTime;
-                    if (tm >= 1000.0) {
+                    auto tmSince = tmNow - entry.tmRelease;
+                    if (tmSince >= 1000) {
                         it = _atlas.entries.erase(it);
                         continue;
                     }

@@ -144,9 +144,9 @@ public:
     }
 
     void run() override {
-        stats.timeStart = getTimeHPint64();
+        stats.timeStart = getTimeMicros();
         vsthost::getInstance()->processBlockTrack(buf, blockProcTask);
-        stats.timeEnd = getTimeHPint64();
+        stats.timeEnd = getTimeMicros();
         isBusy=false;
     }
 
@@ -313,12 +313,12 @@ VstIntPtr audioMasterHost(vsthost* host, vsthost::vsthost_impl* impl, AEffect* e
         //TODO: getOpCodeStats is not a threadsafe implementation
         vst_opcode_stats_t& opcodeStats = plugin->getOpCodeStats(true, opcode);
         opcodeStats.numDispatches++;
-        int32_t tmMillis = getTimeMillis()&0xFFFFFFFF;
-        int32_t tmSince = tmMillis-opcodeStats.tmMillis;
+        int32_t tmMillisS32 = static_cast<int32_t>(static_cast<uint64_t>(getTimeMillis()) & (0x7FFF'FFFFLL));
+        int32_t tmSince = tmMillisS32 - opcodeStats.tmMillis;
         if (tmSince < 2000) {
             throttleLog = opcodeStats.numDispatches > 20;
         } else {
-            opcodeStats.tmMillis = tmMillis;
+            opcodeStats.tmMillis = tmMillisS32;
         }
 
         /**
@@ -715,7 +715,7 @@ inline double PPQ24TickToSample(double midiTickPPQ24, uint32_t bpm100, samplerat
 void vsthost::updateTime(VstTimeInfo& timeinfo, int32_t samplePos, double dTickPos, playback_state state) const {
     timeinfo.samplePos = samplePos;
     timeinfo.sampleRate = (double) m_sampleFormatInternal.sampleRate;
-    timeinfo.nanoSeconds = (double)getTimeMillisd() * 1000000.0L;
+    timeinfo.nanoSeconds = getTimeMicros() * 1000.0;
     timeinfo.ppqPos = (dTickPos/(double)TICKS_QUARTER);
     timeinfo.tempo = prjGlobals.tempo100/100.0;
     timeinfo.barStartPos = floor(dTickPos / (double) TICKS_BAR) * 4;
@@ -1287,7 +1287,7 @@ int32_t vsthost::processRender(project_controller_t* ctrl, int32_t sample, doubl
 
     project_t* const project = ctrl->getProject();
 
-    auto timeNow_i64 = getTimeHPint64();
+    auto timeNow_i64 = getTimeMicros();
     if (0 != stats.lastInvocationTime_i64 && enableProfiling) {
         auto timeDelta = timeNow_i64 - stats.lastInvocationTime_i64;
         stats.timings["Block.timeDelta"] = timeDelta;
@@ -1475,7 +1475,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 
     project_t* project = ctrl->getProject();
 
-    auto timeNow_i64 = getTimeHPint64();
+    auto timeNow_i64 = getTimeMicros();
     if (0 != stats.lastInvocationTime_i64 && enableProfiling) {
         auto timeDelta = timeNow_i64 - stats.lastInvocationTime_i64;
         stats.timings["Block.timeDelta"] = timeDelta;
@@ -2179,11 +2179,11 @@ int32_t vsthost::processBlock(project_controller_t* ctrl,
             blockProcTask.playbackState = playbackState;
             blockProcTask.inLoop = inLoop;
             blockProcTask.debugLogProcessing = debugLogProcessing;
-            auto timeStart = getTimeHPint64();
+            auto timeStart = getTimeMicros();
             processBlockTrack(impl->singleThreadedBuf, blockProcTask);
             lastProcessingGraphs[blockProcTask.trackNode->stageId] = blockProcTask.effectProcessingGraph;
             blockProcTask.effectProcessingGraph = nullptr;
-            auto timeEnd = getTimeHPint64();
+            auto timeEnd = getTimeMicros();
 
             thread_stats_process_timings_t thrdProcStats = {0, blockProcTask.trackNode->stageId, timeStart, timeEnd};
             impl->blockThreadStats.push_back(thrdProcStats);
@@ -2194,7 +2194,7 @@ int32_t vsthost::processBlock(project_controller_t* ctrl,
         Func_CheckUnprocessed funcCheckNodeUnprocessed;
         funcCheckNodeUnprocessed.stagesProcessed.reserve(processingGraph->nodesFlatOrdered.size());
         bool outOfOrderProcessing = true;
-        auto timeEnd = getTimeHPint64();
+        auto timeEnd = getTimeMicros();
         int limR = 0;
         for (bool unprocessed=true; unprocessed; unprocessed=outOfOrderProcessing && tasksQueued.size() != processingGraph->nodesFlatOrdered.size()) {
             for (auto itAudioStage = processingGraph->nodesFlatOrdered.begin(); itAudioStage != processingGraph->nodesFlatOrdered.end(); itAudioStage++) {
@@ -2220,9 +2220,9 @@ int32_t vsthost::processBlock(project_controller_t* ctrl,
                 if (!outOfOrderProcessing) {
                     tasksToFinish = trackNode.dependencies;
                 }
-                auto timeStart = getTimeHPint64();
+                auto timeStart = getTimeMicros();
                 finishTreadTasks(funcCheckNodeUnprocessed.stagesProcessed, tasksToFinish, false);
-                timeEnd = getTimeHPint64();
+                timeEnd = getTimeMicros();
 
                 /* TODO: A lot of stats entries might be created. Especially when one of the threads goes unresponsive (broken plugin for example)
                  * A forced sleep of this thread might increase latency too much

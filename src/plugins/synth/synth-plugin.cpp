@@ -618,7 +618,7 @@ namespace PluginSynth {
 
     public:
         SynthImpl() : SynthState() {
-            auto now = getTimeMillis();
+            auto now = static_cast<uint64_t>(getTimeMillis());
             synthRand.rng_seed(now);
         }
         void setInstance(PluginVST2_Synth* instance) {
