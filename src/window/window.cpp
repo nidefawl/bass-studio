@@ -278,6 +278,7 @@ private:
     }
 
 protected:
+    bool bIsFirstTimeReload = true;
     void reloadCustomShaders() {
         String strSrc1;
         String strSrc2;
@@ -285,7 +286,11 @@ protected:
         int64_t ret2 = ReadFileText("nanovg.fsh", strSrc2);
         if (ret1 != -1 && ret2 != -1) {
             log_printf("loading custom shaders\n", 0);
-            nvgReloadShaders(nanovgCtxt, StringAsCStr(strSrc1), StringAsCStr(strSrc2), 0);
+            int statusErr = nvgReloadShaders(nanovgCtxt, StringAsCStr(strSrc1), StringAsCStr(strSrc2), 0);
+            if (statusErr && bIsFirstTimeReload) {
+                throw appexception("Couldn't initialize nanovg");
+            }
+            bIsFirstTimeReload = false;
         }
     }
 

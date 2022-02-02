@@ -645,14 +645,14 @@ static int glnvg__deleteTexture(GLNVGcontext* gl, int id)
 	return 0;
 }
 
-static void glnvg__dumpShaderError(GLuint shader, const char* name, const char* type)
+static void glnvg__dumpShaderError(GLuint shader, GLint status, const char* name, const char* type)
 {
 	GLchar str[512+1];
 	GLsizei len = 0;
 	glGetShaderInfoLog(shader, 512, &len, str);
 	if (len > 512) len = 512;
 	str[len] = '\0';
-	printf("Shader %s/%s error:\n%s\n", name, type, str);
+	printf("Shader %s/%s error (%d):\n%s\n", name, type, status, str);
 }
 
 static void glnvg__dumpProgramError(GLuint prog, const char* name)
@@ -686,28 +686,25 @@ static int glnvg__recompileShader(GLNVGshader* shader, const char* name, const c
 
     //memset(shader, 0, sizeof(*shader));
     glUseProgram(0);
-    glDeleteProgram(shader->prog);
-    glDeleteShader(shader->vert);
-    glDeleteShader(shader->frag);
     prog = glCreateProgram();
     vert = glCreateShader(GL_VERTEX_SHADER);
     frag = glCreateShader(GL_FRAGMENT_SHADER);
     str[2] = vshader;
-    glShaderSource(shader->vert, 3, str, 0);
+    glShaderSource(vert, 3, str, 0);
     str[2] = fshader;
-    glShaderSource(shader->frag, 3, str, 0);
+    glShaderSource(frag, 3, str, 0);
 
-    glCompileShader(shader->vert);
-    glGetShaderiv(shader->vert, GL_COMPILE_STATUS, &status);
+    glCompileShader(vert);
+    glGetShaderiv(vert, GL_COMPILE_STATUS, &status);
     if (status != GL_TRUE) {
-        glnvg__dumpShaderError(shader->vert, name, "vert");
+        glnvg__dumpShaderError(vert, status, name, "vert");
         return 0;
     }
 
-    glCompileShader(shader->frag);
-    glGetShaderiv(shader->frag, GL_COMPILE_STATUS, &status);
+    glCompileShader(frag);
+    glGetShaderiv(frag, GL_COMPILE_STATUS, &status);
     if (status != GL_TRUE) {
-        glnvg__dumpShaderError(shader->frag, name, "frag");
+        glnvg__dumpShaderError(frag, status, name, "frag");
         return 0;
     }
 
@@ -717,13 +714,16 @@ static int glnvg__recompileShader(GLNVGshader* shader, const char* name, const c
     glBindAttribLocation(prog, 0, "vertex");
     glBindAttribLocation(prog, 1, "tcoord");
 
-    glLinkProgram(shader->prog);
-    glGetProgramiv(shader->prog, GL_LINK_STATUS, &status);
+    glLinkProgram(prog);
+    glGetProgramiv(prog, GL_LINK_STATUS, &status);
     if (status != GL_TRUE) {
         glnvg__dumpProgramError(prog, name);
         return 0;
     }
 
+    glDeleteProgram(shader->prog);
+    glDeleteShader(shader->vert);
+    glDeleteShader(shader->frag);
     shader->prog = prog;
     shader->vert = vert;
     shader->frag = frag;
@@ -762,14 +762,14 @@ static int glnvg__createShader(GLNVGshader* shader, const char* name, const char
 	glCompileShader(vert);
 	glGetShaderiv(vert, GL_COMPILE_STATUS, &status);
 	if (status != GL_TRUE) {
-		glnvg__dumpShaderError(vert, name, "vert");
+		glnvg__dumpShaderError(vert, status, name, "vert");
 		return 0;
 	}
 
 	glCompileShader(frag);
 	glGetShaderiv(frag, GL_COMPILE_STATUS, &status);
 	if (status != GL_TRUE) {
-		glnvg__dumpShaderError(frag, name, "frag");
+		glnvg__dumpShaderError(frag, status, name, "frag");
 		return 0;
 	}
 
