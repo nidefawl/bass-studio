@@ -428,6 +428,7 @@ protected:
     void* lastHoveredTooltip            = nullptr;
     void* lastTooltipSrc                = nullptr;
     double lastHoverTooltipTime         = 0;
+    int64_t tmLastRenderUpdatesMs       = 0;
 
 public:
     String lastKey;

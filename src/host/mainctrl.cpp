@@ -2620,8 +2620,9 @@ void DawCtrl::prerender(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w,
     }
     renderStats.timePrerender = timer.getTime();
 
-    static uint64_t tmLastRenderUpdatesMs = getTimeMillis();
-    if (getTimeMillis() - tmLastRenderUpdatesMs >= 100) {
+    auto tmNow = getTimeMillis();
+    if (tmNow - tmLastRenderUpdatesMs >= 100) {
+        tmLastRenderUpdatesMs = tmNow;
         timer.reset();
 
         int nUpdates = tlsInstance.waveform->renderUpdates(nanovgCtxt, 0);
