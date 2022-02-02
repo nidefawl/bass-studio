@@ -246,7 +246,12 @@ AnalyzeTemporaryDtors: false
 FormatStyle:     'file'
 UseColor:        true
 CheckOptions:
-- key:             misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic
-  value:           true
-- key:             misc-non-private-member-variables-in-classes.IgnorePublicMemberVariables
-  value:           false
+- key:           'cppcoreguidelines-narrowing-conversions.IgnoreConversionFromTypes'
+  value:         'size_t;std::vector::size_type'
+- key:           cppcoreguidelines-narrowing-conversions.WarnOnIntegerToFloatingPointNarrowingConversion
+  value:         'false'
+- key:           misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic
+  value:         true
+- key:           misc-non-private-member-variables-in-classes.IgnorePublicMemberVariables
+  value:         false
+
