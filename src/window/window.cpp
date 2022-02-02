@@ -250,7 +250,7 @@ public:
 private:
     int64_t tmLastFps = 0;
     String fpsStats;
-    double tmLastDraw = 0.0;
+    int64_t tmLastDrawMicros = 0;
     int skipFrames         = 0;
     bool redrawFlagged     = false;
 
@@ -359,9 +359,9 @@ public:
     virtual void onRefresh() {
         PREVENT_REENTRANT("REENTRANT IN RENDER MAIN")
 #ifdef __linux__
-        auto tmNowMicros = getTimeMicros();
-        auto tmNowMicros = tmNow - tmLastDraw;
-        if (tmNowMicros < minFrameDelayMicros) {
+        auto tmNowMicros   = getTimeMicros();
+        auto tmSinceMicros = tmNowMicros - tmLastDrawMicros;
+        if (tmSinceMicros < minFrameDelayMicros) {
             skipFrames++;
             return;
         }
@@ -385,12 +385,12 @@ public:
             daw_tls::tlsinstance& tls = daw_tls::getTls();
             tls.renderStats.fps       = fps;
 #endif
-            fpsStats = StringFormat("%.2f fps, %f", fps, static_cast<double>(tmLastDraw)/1.0e6);
+            fpsStats = StringFormat("%.2f fps, %f", fps, static_cast<double>(tmLastDrawMicros)/1.0e6);
             glfwSetWindowTitle(glfw, StringAsCStr(fpsStats));
             tmLastFps    = tmNow;
             frameCountFPS = 0;
         }
-        tmLastDraw = tmNowMicros;
+        tmLastDrawMicros = tmNowMicros;
         redrawFlagged   = false;
         frameCountFPS++;
         frameNumber++;
@@ -1892,7 +1892,7 @@ int startApplication(int argc, char* argv[]) {
 #if defined(__linux__) || defined(__APPLE__)
             glfwWaitEventsTimeout(0.001);
 
-            if (tmHRNow - tmHRLastFrame >= mainWindow->minFrameDelaySeconds * 1000000L) {
+            if (tmHRNow - tmHRLastFrame >= mainWindow->minFrameDelayMicros) {
                 mainWindow->onRefresh();
                 tmHRLastFrame = tmHRNow;
             }

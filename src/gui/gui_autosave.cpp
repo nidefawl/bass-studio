@@ -59,10 +59,10 @@ public:
     }
     void onTick(AppCtrl* appctrl) override {
         layout();
-        int64_t tmLeft = math::max(0LL, this->tmDelay - (getTimeMillis() - this->tmCreate));
-        String fname   = DawInstance::get()->getAutoSaveFilename();
-        str            = StringFormat("Autosave as %s", StringAsCStr(fname));
-        str2           = StringFormat("in %d seconds", tmLeft / 1000);
+        auto tmLeft  = math::max<int64_t>(0, this->tmDelay - (getTimeMillis() - this->tmCreate));
+        String fname = DawInstance::get()->getAutoSaveFilename();
+        str          = StringFormat("Autosave as %s", StringAsCStr(fname));
+        str2         = StringFormat("in %d seconds", tmLeft / 1000);
         btnSaveNow.setText("Save now");
         if (tmLeft <= 0) {
             closeContextMenu();

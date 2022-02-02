@@ -8,6 +8,7 @@ class hires_timer_t {
 public:
     hires_timer_t();
     ~hires_timer_t();
+
     void reset();
 
     /* returns time passed in int64_t MICROSECONDS */
