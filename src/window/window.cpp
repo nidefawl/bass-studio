@@ -777,9 +777,9 @@ public:
             static const vec4 clearc = int32vec4(0xff121212);
             glClearColor(clearc[0], clearc[1], clearc[2], clearc[3]);
             glStencilMask(~0);
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT)
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
-                    if (ctrl->isVisible()) {
+            if (ctrl->isVisible()) {
                 ctrl->render(this->nanovgCtxt, 0, 0, winwidth, winheight, pxratio);
             }
 
