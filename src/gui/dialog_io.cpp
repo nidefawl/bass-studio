@@ -128,7 +128,6 @@ public:
         return isInput ? c.deviceNameInput == deviceName : c.deviceNameOutput == deviceName;
     }
     bool toggle() {
-        bool bEnbl  = enabled();
         auto& c     = getCnf();
         String& cnf = isInput ? c.deviceNameInput : c.deviceNameOutput;
         cnf         = enabled() ? "" : deviceName;
@@ -863,7 +862,6 @@ public:
 
         int32_t inset                 = 5;
         int32_t buttonW               = math::max(120, cs.x * 2 / 3);
-        int32_t heightList            = math::max(230, cs.y * 2 / 5);
         int32_t height                = 20;
         audioEngineOn->size           = ivec2(buttonW, height);
         audioEngineOn->pos            = ivec2(cs.x - inset * 2 - buttonW, inset);
@@ -1067,7 +1065,6 @@ public:
         ivec2 cs = getSizeContent();
 
         int32_t inset          = 5;
-        int32_t buttonW        = math::max(120, cs.x * 2 / 3);
         int32_t heightList     = math::max(230, cs.y * 2 / 5);
         deviceListInput->pos   = ivec2(inset, inset + (int32_t)(TEXT_FONT_SIZE * 1.2));
         deviceListInput->size  = ivec2((cs.x) - inset * 2, heightList);
@@ -1187,7 +1184,6 @@ public:
 
         int32_t inset      = 5;
         int32_t buttonW    = math::max(120, cs.x * 2 / 3);
-        int32_t heightList = math::max(230, cs.y * 2 / 5);
         int32_t height     = 20;
         selectFolder->size = ivec2(buttonW, height);
         selectFolder->pos  = ivec2(cs.x - inset * 2 - buttonW, inset);

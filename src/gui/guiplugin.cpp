@@ -630,14 +630,6 @@ public:
             return;
         }
         if (tex > 0) {
-            ivec2 sizePrev;
-//            if (sizeTex.x > sizeTex.y) {
-//                sizePrev.x = size.x;
-//                sizePrev.y = (int) ((sizeTex.y / (float) sizeTex.x) * sizePrev.x);
-//            } else {
-//                sizePrev.y = size.y;
-//                sizePrev.x = (int) ((sizeTex.x / (float) sizeTex.y) * sizePrev.y);
-//            }
             drawImage(vg, tex, 1.0f, 0, 0, sizeTex.x, sizeTex.y, 0, 0, size.x, size.y);
         }
         for (auto c : guis) {
@@ -1020,7 +1012,7 @@ void guiplugin::addProperties(Table::tbl* table) {
 }
 
 void guidropdownprogram::setSelectedIndex(uint32_t idx) {
-    if (idx >= 0 && idx < getLastIndex()) {
+    if (idx < getLastIndex()) {
         plugin->setCurrentProgram(idx);
     }
 }

@@ -351,7 +351,6 @@ namespace PluginHostInfo {
             *data = impl->dataPlugin.data();
             return impl->dataPlugin.size();
         }
-        return 0;
     }
 
     ///< Host restores plug-in state

@@ -35,14 +35,14 @@ public:
         for (int col = 0; col < COLS; col++) {
             int cX = pad + (WH + padCell) * col;
             for (int row = 0; row < ROWS; row++) {
-                int idx = col * ROWS + row;
+                int colorIdx = col * ROWS + row;
                 int cY  = pad + (WH + padCell) * row;
                 if (mouse.y >= y + cY && mouse.y < y + cY + WH && mouse.x >= cX && mouse.x < cX + WH) {
-                    focusIdx = idx;
+                    focusIdx = colorIdx;
                 }
                 nvgBeginPath(vg);
                 nvgRect(vg, cX, y + cY, WH, WH);
-                nvgFillColor(vg, g_colorPalette[idx]);
+                nvgFillColor(vg, g_colorPalette[colorIdx]);
                 nvgFill(vg);
                 nvgStrokeColor(vg, G_WHITE);
                 nvgStrokeWidth(vg, 0.5f);

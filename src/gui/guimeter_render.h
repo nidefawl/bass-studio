@@ -168,11 +168,8 @@ void renderMeterAt(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const iv
             nvgText(vg, x2 + lW * 7.8f / 8.0f, y, StringAsCStr(strLevel), NULL);
         }
     }
-
-
-    if (NCHANNELS > 0) {
-        mixedlevels[1] /= (float) NCHANNELS;
-    }
+                    
+    mixedlevels[1] /= (float) NCHANNELS;
     float fMaxAll = mixedlevels[0];
     float lvl     = dsp_util::dBFS(fMaxAll);
     //  if (lvl > dsp_util::DBFS_INF_POS) {

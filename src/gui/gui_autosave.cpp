@@ -91,7 +91,6 @@ public:
 
             ivec2 renderPos(0);
             if (str.length() > 0) {
-                int fontSize     = 0;
                 float fFontScale = 1.0f;
                 ivec2 size       = this->size;
                 size.x           = size.x - btnSaveNow.size.x;

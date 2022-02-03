@@ -194,8 +194,9 @@ void BaseCtrl::mouseDown(ivec2 mousePos, int button, bool doubleclick) {
         dragDistance   = ivec2(0);
         dragStart      = mousePos;
         dragOffset     = gui->toScreenSpace(ivec2(0)) - mousePos;
-        MouseEvent evt = mouseEvent(this, gui, mousePos, button, doubleclick ? M_EVT_DOUBLECLICK : M_EVT_BTN_DOWN);
-        gui->handleMouseDownBegin(evt);
+
+        MouseEvent mouseEvt = mouseEvent(this, gui, mousePos, button, doubleclick ? M_EVT_DOUBLECLICK : M_EVT_BTN_DOWN);
+        gui->handleMouseDownBegin(mouseEvt);
     }
 }
 
@@ -565,9 +566,7 @@ void AppCtrl::openDialog(guidialog_base* _guidialog) {
     this->dialog = _guidialog;
     ivec2 wndPos(0);
     determineWindowPos(_guidialog, mainWindow, m_scale, 0, ivec2(0), wndPos);
-    window_main* dialogWindow = nullptr;
-    int createflags           = 0;
-    dialogWindow              = this->mainWindow->createOverlay(std::make_shared<PopupCtrl>(), WINDOW_IS_DIALOG | WINDOW_IS_RESIZABLE);
+    window_main* dialogWindow = this->mainWindow->createOverlay(std::make_shared<PopupCtrl>(), WINDOW_IS_DIALOG | WINDOW_IS_RESIZABLE);
 
     auto* ctxtWindowTheme = dialogWindow->getCtrl()->getTheme();
     // copy theme from this control to contextWindows control
@@ -610,7 +609,6 @@ void AppCtrl::onChildOverlayWindowClose(window_main* ptr) {
     }
     auto it = std::find_if(menuWindows.begin(), menuWindows.end(), [ptr](const auto& entry) { return entry.wnd == ptr; });
     if (it != menuWindows.end()) {
-        auto lvl      = it - menuWindows.begin();
         auto& menuWnd = *it;
         dbgassert(menuWnd.ctxt);
         menuWnd.ctxt->onParentWindowClose();

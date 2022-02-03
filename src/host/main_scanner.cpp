@@ -438,7 +438,7 @@ static int runScannerServer(vstscanner_server_options options) {
                 if (size > 0) {
                     continue;
                 }
-            } catch (std::exception& e) {
+            } catch (std::exception& /*e*/) {
                 LOG("REMOVE plugin: File at %s is missing", StringAsCStr(path));
             }
             if (!options.dryRun) {

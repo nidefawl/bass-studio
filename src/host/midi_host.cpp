@@ -55,7 +55,6 @@ void midihost::handleMessage(PmMessage data, std::vector<MidiIOEvent>& messages)
     bool verbose = false;
     int command; /* the current command */
     int chan;    /* the midi channel of the current event */
-    int len;     /* used to get constant field width */
 
     /* log_printf("output data %8x; ", data); */
 

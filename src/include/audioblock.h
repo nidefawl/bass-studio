@@ -118,7 +118,7 @@ struct AudioBlock {
     }
 
     void shiftBegin(uint32_t numSamples) {
-        dbgassert(numSamples < 0 || samples > numSamples);
+        dbgassert(samples > numSamples);
         for (uint32_t i = 0; i < channels; i++) {
             buf[i] += numSamples;
         }
@@ -168,8 +168,6 @@ struct AudioBlock {
     }
 
     void copyFromPosToPos(const float * const * const srcBuf, uint32_t offsetIn, uint32_t offsetOut, uint32_t len, uint32_t srcChannels) {
-        dbgassert(offsetIn >= 0);
-        dbgassert(offsetOut >= 0);
         uint32_t nChannels = math::max(srcChannels, channels);
         uint32_t nSamples  = math::min(len, samples);
         dbgassert(offsetOut + nSamples <= samples);

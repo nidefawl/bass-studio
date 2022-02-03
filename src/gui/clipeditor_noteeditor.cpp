@@ -182,8 +182,6 @@ void guictr_cliphandles::render(NVGcontext* vg) {
     if (cs.y <= 0 || cs.x <= 0) {
         return;
     }
-    MainCtrl* ctrl = MainCtrl::get();
-    //DawInstance* daw = DawInstance::get();
     tick_t clipOffset = (view.clip()) ? view.clip()->getOffsetStart() : 0;
     nvgIntersectScissor(vg, pos.x, pos.y, cs.x, cs.y);
     nvgTranslate(vg, pos.x, pos.y);
@@ -596,10 +594,10 @@ audioclip_texture_t makeWaveformFromSample(const project_globals_t& project, sca
 
     samplerate_t sr = vsthost::getInstance()->m_sampleFormatInternal.sampleRate;
 
-    int32_t pxBegin        = 0;
-    int32_t pxEnd          = size.x;
+    int32_t pxBegin = 0;
+    int32_t pxEnd   = size.x;
 
-    double tickBeginOffset = grid.screenToTickD(0);
+    double tickBeginOffset = grid.screenToTickD(pxBegin);
     double tickEnd         = grid.screenToTickD(pxEnd);
 
     double sampleStartOffset = tickToSampleConvert<double, roundmode::floor>(tickBeginOffset, project.tempo100, sr);

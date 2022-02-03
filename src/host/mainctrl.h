@@ -169,28 +169,34 @@ public:
     }
 
     float unfoldNoteClamped(float note) {
-        uint32_t iNote = math::max(0U, math::floorfU32(note));
-        auto len       = notePitches.size();
+        const auto len = notePitches.size();
         if (!len) {
             return 0;
         }
+        
+        int32_t iNote = math::floorfS32(note);
         if (iNote < 0)
             return notePitches[0];
+        
         if (iNote >= len)
             return notePitches[len - 1];
+        
         return notePitches[iNote];
     }
 
     float unfoldNote(float note) {
-        uint32_t iNote = math::max(0U, math::floorfU32(note));
-        auto len       = notePitches.size();
+        const auto len = notePitches.size();
         if (!len) {
             return 0;
         }
+
+        int32_t iNote = math::floorfS32(note);
         if (iNote < 0)
             return notePitches[0] + note;
+
         if (iNote >= len)
             return note - len + 1 + notePitches[len - 1];
+
         return notePitches[iNote];
     }
 
