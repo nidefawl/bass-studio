@@ -233,7 +233,7 @@ int runCommandLineHost(int argc, const char* argv[]) {
             audioHost->initPa();
             midiHost->initPm();
             if (audioHost->startAudio(settings.iosettings)) {
-                host->setOutput(audioHost);
+                host->setOutput(audioHost.get());
             } else {
                 log_printf("audioHost->startAudio() failed\n", 0);
                 return 1;
