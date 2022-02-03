@@ -443,7 +443,7 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
     this->lSampleRate = samplerate;
     this->lBlockSize  = blocksize;
 
-    err               = Pa_StartStream(paStream);
+    err = Pa_StartStream(paStream);
     if (err != paNoError)
         return error("Pa_StartStream", err);
 

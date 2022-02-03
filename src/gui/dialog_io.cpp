@@ -304,9 +304,11 @@ public:
         renderTitleBar(vg, getSizeContent(), this->label, GuiConstant::CONST_SMALL_LABEL_HEIGHT, getSizeContent().y, flags, false);
         renderFrameOutline(vg);
         for (auto c : guis) {
-            nvgSave(vg);
-            c->render(vg);
-            nvgRestore(vg);
+            if (c->isVisible()) {
+                nvgSave(vg);
+                c->render(vg);
+                nvgRestore(vg);
+            }
         }
     }
 
@@ -315,10 +317,11 @@ public:
         int32_t w         = getSizeContent().x - htt;
         int topH          = math::min(getSizeContent().y / 6, w / 3);
         guimeter->pos     = {htt, topH};
-        guimeter->size    = getSizeContent() - ivec2{htt, topH};
+        guimeter->size    = math::maxvec2(ivec2(0), getSizeContent() - ivec2{htt, topH});
         btnTrackType.pos  = {htt, 0};
         btnTrackType.size = {guimeter->size.x, topH};
         for (guibase* gui : guis) {
+            gui->setVisible(gui->size.x>5 && gui->size.y>5);
             gui->layout();
         }
     }
