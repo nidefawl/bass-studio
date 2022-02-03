@@ -230,19 +230,19 @@ int runCommandLineHost(int argc, const char* argv[]) {
         tls.pluginDatabase = &plugindb;
 
         if (!bRenderOnly) {
-            tls.audioHost->initPa();
-            tls.midiHost->initPm();
-            if (tls.audioHost->startAudio(settings.iosettings)) {
-                host->setOutput(tls.audioHost);
+            audioHost->initPa();
+            midiHost->initPm();
+            if (audioHost->startAudio(settings.iosettings)) {
+                host->setOutput(audioHost);
             } else {
                 log_printf("audioHost->startAudio() failed\n", 0);
                 return 1;
             }
-            midihost::getInstance()->startMidi();
+            midiHost->startMidi();
         }
 
         plugindb.openDatabase();
-        vsthost::getInstance()->initThreads();
+        host->initThreads();
 
 #ifdef _WIN32
         HWND hwnd = CreateWindow(wc.lpszClassName, "Window", WS_OVERLAPPEDWINDOW | WS_VISIBLE, 100, 100, 350, 250, nullptr,
@@ -266,7 +266,7 @@ int runCommandLineHost(int argc, const char* argv[]) {
             if (projectFile) {
                 project_snapshot_t& snapshot = projectFile->project;
                 project.copyFrom(snapshot);
-                audiocache::getInstance()->load(projectFile->sampleFileIndex);
+                cache.load(projectFile->sampleFileIndex);
 
                 /** create all audio instances **/
                 for (track_t* t : projectController.getTracks()) {
@@ -564,7 +564,7 @@ int runCommandLineHost(int argc, const char* argv[]) {
             log_printf("DELETE _tracks %d\n", _tracks.size());
             for (track_t* tr : _tracks) {
                 log_printf("DELETE TRACK %s\n", StringAsCStr(tr->name));
-                vsthost::getInstance()->unloadTrack(tr);
+                host->unloadTrack(tr);
                 project.trackList.removeTrack(tr);
             }
             project.trackList.clear();
@@ -580,10 +580,10 @@ int runCommandLineHost(int argc, const char* argv[]) {
         }
         if (!bRenderOnly) {
             host->setOutput(nullptr);
-            tls.midiHost->stopMidi();
-            tls.audioHost->stopAudio();
-            tls.midiHost->deinitPm();
-            tls.audioHost->deinitPa();
+            midiHost->stopMidi();
+            audioHost->stopAudio();
+            midiHost->deinitPm();
+            audioHost->deinitPa();
         }
         host->destroy();
         log_printf("END\n", 0);
