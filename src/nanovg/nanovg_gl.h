@@ -339,11 +339,9 @@ static unsigned int glnvg__nearestPow2(unsigned int num)
 #	define NANOVG_FBO_VALID 1
 #elif defined(NANOVG_GL2)
 // On OS X including glext defines FBO on GL2 too.
-#if !USE_GLAD_GL_HEADERS
-#	ifdef __APPLE__
-#		include <OpenGL/glext.h>
-#		define NANOVG_FBO_VALID 1
-#	endif
+#ifdef __APPLE__
+#	include <OpenGL/glext.h>
+#	define NANOVG_FBO_VALID 1
 #endif
 #endif
 

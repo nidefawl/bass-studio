@@ -36,7 +36,7 @@ include("cmake/libs.cmake")
 
 add_compile_definitions(USE_WIN32_EXC_HOOKS BUILD_VSTHOST=1 BUILD_EXTERNAL_PLUGIN=0)
 #add_compile_definitions(PA_ENABLE_DEBUG_OUTPUT=1)
-add_compile_definitions(VST_FORCE_DEPRECATED=0 USE_GLAD_GL_HEADERS GLM_FORCE_CXX14=1)
+add_compile_definitions(VST_FORCE_DEPRECATED=0 GLM_FORCE_CXX14=1)
 if (WIN32)
     add_compile_definitions(PA_USE_ASIO=1 PA_USE_DS=1 PA_USE_WASAPI=1 PA_USE_WDMKS=1)
 endif (WIN32)

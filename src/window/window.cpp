@@ -161,13 +161,10 @@ static void initOGL() {
     static bool gladInitialized = false;
     if (!gladInitialized) {
         gladInitialized = true;
-        // doesn't actually check availability
         //TODO: check actual required extensions availability
-#ifdef USE_GLAD_GL_HEADERS
         if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress)) {
             throw appexception("Required OpenGL extensions not present.\nConsider updating graphics drivers");
         }
-#endif
     }
 }
 
