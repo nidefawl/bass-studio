@@ -49,6 +49,7 @@ if (CLANG)
 elseif (MSVC)
     add_compile_options(/external:anglebrackets /external:W0)
     add_compile_definitions(_CRT_SECURE_NO_WARNINGS NOMINMAX) 
+    add_compile_options("/MP")
 endif()
 
 if (LINUX)  
