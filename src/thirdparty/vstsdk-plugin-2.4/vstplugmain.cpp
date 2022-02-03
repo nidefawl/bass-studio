@@ -81,7 +81,7 @@ VST_EXPORT AEffect* main_plugin (audioMasterCallback audioMaster) { return VSTPl
 
 //------------------------------------------------------------------------
 #if WIN32
-#include <windows.h>
+#include <Windows.h>
 HINSTANCE hInstance;
 void onModuleLoad(HINSTANCE hInst);
 void onModuleUnload();
