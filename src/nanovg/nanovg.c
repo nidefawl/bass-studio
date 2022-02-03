@@ -30,7 +30,7 @@
 #define FONTSTASH_IMPLEMENTATION
 #include "fontstash.h"
 #define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+#include <stb/stb_image.h>
 #include "config.h"
 
 #ifdef _MSC_VER

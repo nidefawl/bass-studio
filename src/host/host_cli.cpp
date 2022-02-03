@@ -21,7 +21,7 @@
 #include "host/plugin/vst_plugin_handles.h"
 #include "plugindatabase.h"
 #include "threads/playbackthread.h"
-#include "wave/dr_wav.h"
+#include <dr_libs/dr_wav.h>
 #include "tests/common/test_environment.h"
 #include "appconfig.h"
 

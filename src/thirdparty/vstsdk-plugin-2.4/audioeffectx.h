@@ -36,7 +36,7 @@
 
 #include "audioeffect.h"	// Version 1.0 base class AudioEffect
 
-#include "thirdparty/vstsdk-host-2.4/aeffectx.h"// Version 2.x 'C' Extensions and Structures
+#include "vstsdk-host-2.4/aeffectx.h"// Version 2.x 'C' Extensions and Structures
 
 //-------------------------------------------------------------------------------------------------------
 /** Extended VST Effect Class (VST 2.x). */

@@ -2,7 +2,7 @@
 #include "fileio.h"
 #include "exceptions.h"
 #include <cstdint>
-#include <stb_image.h>
+#include <stb/stb_image.h>
 #include <Windows.h>
 #include <vector>
 #include <limits>

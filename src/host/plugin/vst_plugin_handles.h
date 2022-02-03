@@ -1,5 +1,5 @@
 #pragma once
-#include "../vstsdk-host-2.4/aeffectx.h"
+#include <vstsdk-host-2.4/aeffectx.h>
 #include <memory>
 
 #include "../../gui/guiplugin.h"

@@ -9,7 +9,7 @@
 #include <cstdint>
 #include <map>
 
-#include "../vstsdk-host-2.4/aeffectx.h"
+#include <vstsdk-host-2.4/aeffectx.h>
 #include "note.h"
 #include "rand.h"
 #include "hires_timer.h"

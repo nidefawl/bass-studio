@@ -157,6 +157,7 @@ set(LIB_GN_EXPR ${LIB_COMPILER}-$<$<CONFIG:Debug>:debug>$<$<NOT:$<CONFIG:Debug>>
 
 include_directories("${DAW_SRC_PATH}")
 include_directories("${DAW_SRC_PATH}/include")
+include_directories(SYSTEM "${DAW_SRC_PATH}/thirdparty")
 include_directories(SYSTEM "${DAW_SRC_PATH}/nanovg")
 include_directories(SYSTEM  
     ${DAW_DEPS_INSTALL}/${LIB_GN_EXPR}/glfw/include

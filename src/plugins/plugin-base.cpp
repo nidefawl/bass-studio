@@ -1,7 +1,7 @@
 
 #include <cstdint>
 #include "plugin-base.h"
-#include "../vstsdk-plugin-2.4/audioeffectx.h"
+#include <vstsdk-plugin-2.4/audioeffectx.h>
 #include "config.h"
 #include "str_util.h"
 #include "logging.h"

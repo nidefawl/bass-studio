@@ -5,7 +5,7 @@
 #include "math/seq_math.h"
 #include "str_util.h"
 #include "audiosample.h"
-#include "../wave/dr_wav.h"
+#include <dr_libs/dr_wav.h>
 #include "wave/downsample.h"
 #include "wave/waveform_render_impl.h"
 #include "platform.h"

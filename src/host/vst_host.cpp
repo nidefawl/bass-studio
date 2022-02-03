@@ -22,7 +22,7 @@
 #include "plugin/vst_plugin_handles.h"
 #include "vst_window.h"
 
-#include "../vstsdk-host-2.4/aeffectx.h"
+#include <vstsdk-host-2.4/aeffectx.h>
 #include "appsettings.h"
 
 #include "logging.h"
@@ -55,7 +55,7 @@
 #include <dlfcn.h>
 #endif
 
-#include "wave/dr_wav.h"
+#include <dr_libs/dr_wav.h>
 
 #define DBG_PRINT_CALLBACKS
 #ifdef DBG_PRINT_CALLBACKS

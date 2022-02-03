@@ -21,7 +21,7 @@
 #if BUILD_VSTHOST
 #define PAR_STREAMLINES_IMPLEMENTATION
 #endif
-#include "par_streamlines.h"
+#include <par/par_streamlines.h>
 #include <algorithm>
 
 using vec2list = std::vector<vec2>;

@@ -1,6 +1,6 @@
 #pragma once
 #include <cstdint>
-#include "../vstsdk-plugin-2.4/aeffeditor.h"
+#include <vstsdk-plugin-2.4/aeffeditor.h>
 #include "plugincontrol.h"
 
 class pluginwindow : public AEffEditor {

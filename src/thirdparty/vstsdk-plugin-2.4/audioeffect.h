@@ -34,7 +34,7 @@
 
 #pragma once
 
-#include "thirdparty/vstsdk-host-2.4/aeffect.h"// "c" interface
+#include "vstsdk-host-2.4/aeffect.h"// "c" interface
 #include "str_util.h"
 
 class AEffEditor;
