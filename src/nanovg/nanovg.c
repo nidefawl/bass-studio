@@ -242,6 +242,7 @@ static NVGpathCache* nvg__allocPathCache(void)
 
 	return c;
 error:
+    dbgassert(0);
 	nvg__deletePathCache(c);
 	return NULL;
 }
@@ -386,6 +387,7 @@ NVGcontext* nvgCreateInternal(NVGparams* params)
 	return ctx;
 
 error:
+    dbgassert(0);
 	nvgDeleteInternal(ctx);
 	return 0;
 }
@@ -2601,7 +2603,6 @@ void nvgCacheEntryInfo(NVGcontext* ctx, nvg_shape_cache* shapeCache, NVGCacheEnt
 void nvgGetLastCacheResult(NVGcontext* ctx, nvg_shape_cache** pShapeCache)
 {
 	nvg_cache_storage** pStorage = (nvg_cache_storage**)pShapeCache;
-//	printf("nvgGetLastCacheResult: return nvg_path_fill_cache_t 0x%06X\n", (uint64_t)&ctx->cachedPathFill);
     dbgassert(!ctx->cacheStorage || ctx->cacheStorage->ptrPath || ctx->cacheStorage->ptrBatchedVerts);
 	*pStorage = ctx->cacheStorage;
 	ctx->cacheStorage = NULL;
@@ -2636,164 +2637,135 @@ void nvgReleaseCacheResult(nvg_shape_cache* pShapeCache)
 	}
 	free(storage);
 }
-void nvgFill(NVGcontext* ctx)
-{
-	if (ctx->ncommands == 0) {
-		return;
-	}
-	if (ctx->dbgCount > 1) {
-		//dbgassert(0);
-	}
-	NVGstate* state = nvg__getState(ctx);
-	NVGpaint fillPaint = state->fill;
-	int i;
+nvg_cache_storage* deepCopyPathCache(NVGpathCache* cache, int type, float strokeWidth, NVGpaint* pFillPaint, NVGstate* pState) {
 
-	nvg__flattenPaths(ctx);
-	if (ctx->params.edgeAntiAlias && state->shapeAntiAlias)
-		nvg__expandFill(ctx, ctx->fringeWidth, NVG_MITER, 2.4f);
-	else
-		nvg__expandFill(ctx, 0.0f, NVG_MITER, 2.4f);
-
-	// Apply global alpha
-	if (ctx->cacheNextPath) {
-		dbgassert(!ctx->cacheStorage);
-        ctx->cacheStorage = malloc(sizeof(nvg_cache_storage));
-        memset(ctx->cacheStorage, 0, sizeof(nvg_cache_storage));
-        nvg_cache_entry_path_t* pCache = malloc(sizeof(nvg_cache_entry_path_t));
-        memset(pCache, 0, sizeof(nvg_cache_entry_path_t));
-		pCache->type = 0;
-		pCache->strokeWidth = 0;
-		pCache->fillPaint = fillPaint;
-		pCache->state = *state;
-		pCache->len = ctx->cache->npaths;
-		pCache->arrPath = malloc(sizeof(NVGpath)*(pCache->len+1));
-		ctx->cacheStorage->ptrPath = pCache;
-        ctx->cacheStorage->allocationSizeBytes += sizeof(nvg_cache_entry_path_t);
-		ctx->cacheStorage->allocationSizeBytes += sizeof(NVGpath)*(pCache->len+1);
-		memcpy(pCache->arrPath, ctx->cache->paths, sizeof(NVGpath)*pCache->len);
-		for (i = 0; i < pCache->len; i++) {
-			NVGpath* path = &pCache->arrPath[i];
-			if (path->nfill) {
-				NVGvertex *fill = malloc(sizeof(NVGvertex)*(path->nfill+1));
-				ctx->cacheStorage->allocationSizeBytes += sizeof(NVGvertex)*(path->nfill+1);
-				memcpy(fill, path->fill, sizeof(NVGvertex)*path->nfill);
-				path->fill = fill;
-			} else {
-				dbgassert(NULL == path->fill);
-			}
-			if (path->nstroke) {
-				NVGvertex *stroke = malloc(sizeof(NVGvertex)*(path->nstroke+1));
-				ctx->cacheStorage->allocationSizeBytes += sizeof(NVGvertex)*(path->nstroke+1);
-				memcpy(stroke, path->stroke, sizeof(NVGvertex)*path->nstroke);
-				path->stroke = stroke;
-			} else {
-				dbgassert(NULL == path->stroke);
-			}
-		}
-//		ctx->cachedPathFill->arrPath[ctx->cachedPathFill->len] = NULL;
-		memcpy(pCache->bounds, ctx->cache->bounds, sizeof(float)*4);
-//		printf("cache path size %d NVGpath (%d bytes)\n", ctx->cachedPathFill->len, ctx->cachedPathFill->len*sizeof(NVGpath));
-	} else {
-		fillPaint.innerColor.a *= state->alpha;
-		fillPaint.outerColor.a *= state->alpha;
-		ctx->params.renderFill(ctx->params.userPtr, &fillPaint, state->compositeOperation, &state->scissor, ctx->fringeWidth,
-							   ctx->cache->bounds, ctx->cache->paths, ctx->cache->npaths, state->zOffset);
-	}
-
-	// Count triangles
-	for (i = 0; i < ctx->cache->npaths; i++) {
-        const NVGpath* path = &ctx->cache->paths[i];
-		ctx->fillTriCount += path->nfill-2;
-		ctx->fillTriCount += path->nstroke-2;
-		ctx->drawCallCount += 2;
-	}
+    nvg_cache_storage* cacheStorage = malloc(sizeof(nvg_cache_storage));
+    if (!cacheStorage) goto error;
+    memset(cacheStorage, 0, sizeof(nvg_cache_storage));
+    nvg_cache_entry_path_t* pCache = malloc(sizeof(nvg_cache_entry_path_t));
+    if (!pCache) goto error;
+    memset(pCache, 0, sizeof(nvg_cache_entry_path_t));
+    pCache->type          = 0;
+    pCache->strokeWidth   = strokeWidth;
+    pCache->fillPaint     = *pFillPaint;
+    pCache->state         = *pState;
+    pCache->len           = cache->npaths;
+    pCache->arrPath       = malloc(sizeof(NVGpath) * (pCache->len));
+    if (!pCache->arrPath) goto error;
+    cacheStorage->ptrPath = pCache;
+    cacheStorage->allocationSizeBytes += sizeof(nvg_cache_entry_path_t);
+    cacheStorage->allocationSizeBytes += sizeof(NVGpath) * (pCache->len);
+    memcpy(pCache->arrPath, cache->paths, sizeof(NVGpath) * pCache->len);
+    for (int i = 0; i < pCache->len; i++) {
+        NVGpath* path = &pCache->arrPath[i];
+        if (path->nfill) {
+            NVGvertex* fill = malloc(sizeof(NVGvertex) * (path->nfill));
+            if (!fill) goto error;
+            cacheStorage->allocationSizeBytes += sizeof(NVGvertex) * (path->nfill);
+            memcpy(fill, path->fill, sizeof(NVGvertex) * path->nfill);
+            path->fill = fill;
+        } else {
+            dbgassert(NULL == path->fill);
+        }
+        if (path->nstroke) {
+            NVGvertex* stroke = malloc(sizeof(NVGvertex) * ((size_t) path->nstroke));
+            if (!stroke) goto error;
+            cacheStorage->allocationSizeBytes += sizeof(NVGvertex) * (path->nstroke);
+            memcpy(stroke, path->stroke, sizeof(NVGvertex) * path->nstroke);
+            path->stroke = stroke;
+        } else {
+            dbgassert(NULL == path->stroke);
+        }
+    }
+    memcpy(pCache->bounds, cache->bounds, sizeof(float) * 4);
+    return cacheStorage;
+error:
+    dbgassert(0);
+    return NULL;
 }
+void nvgFill(NVGcontext* ctx) {
+    if (ctx->ncommands == 0) {
+        return;
+    }
+    if (ctx->dbgCount > 1) {
+        //dbgassert(0);
+    }
+    NVGstate* state    = nvg__getState(ctx);
+    NVGpaint fillPaint = state->fill;
+    int i;
 
-void nvgStroke(NVGcontext* ctx)
-{
-	if (ctx->ncommands == 0) {
-		return;
-	}
-	NVGstate* state = nvg__getState(ctx);
-	float scale = nvg__getAverageScale(state->xform);
-	float strokeWidth = nvg__clampf(state->strokeWidth * scale, 0.0f, 200.0f);
-	NVGpaint strokePaint = state->stroke;
-	int i;
+    nvg__flattenPaths(ctx);
+    if (ctx->params.edgeAntiAlias && state->shapeAntiAlias)
+        nvg__expandFill(ctx, ctx->fringeWidth, NVG_MITER, 2.4f);
+    else
+        nvg__expandFill(ctx, 0.0f, NVG_MITER, 2.4f);
 
-	if (strokeWidth < ctx->fringeWidth) {
-		// If the stroke width is less than pixel size, use alpha to emulate coverage.
-		// Since coverage is area, scale by alpha*alpha.
-		float alpha = nvg__clampf(strokeWidth / ctx->fringeWidth, 0.0f, 1.0f);
-		strokePaint.innerColor.a *= alpha*alpha;
-		strokePaint.outerColor.a *= alpha*alpha;
-		strokeWidth = ctx->fringeWidth;
-	}
+    // Apply global alpha
+    if (ctx->cacheNextPath) {
+        dbgassert(!ctx->cacheStorage);
+        ctx->cacheStorage = deepCopyPathCache(ctx->cache, 0, 0.0f, &fillPaint, state);
+    } else {
+        fillPaint.innerColor.a *= state->alpha;
+        fillPaint.outerColor.a *= state->alpha;
+        ctx->params.renderFill(ctx->params.userPtr, &fillPaint, state->compositeOperation, &state->scissor, ctx->fringeWidth,
+                               ctx->cache->bounds, ctx->cache->paths, ctx->cache->npaths, state->zOffset);
+    }
 
-
-	nvg__flattenPaths(ctx);
-
-	if (ctx->params.edgeAntiAlias && state->shapeAntiAlias)
-		nvg__expandStroke(ctx, strokeWidth*0.5f, ctx->fringeWidth, state->lineCap, state->lineJoin, state->miterLimit);
-	else
-		nvg__expandStroke(ctx, strokeWidth*0.5f, 0.0f, state->lineCap, state->lineJoin, state->miterLimit);
-
-	if (ctx->cacheNextPath) {
-		dbgassert(!ctx->cacheStorage);
-        ctx->cacheStorage = malloc(sizeof(nvg_cache_storage));
-        dbgassert(ctx->cacheStorage);
-        memset(ctx->cacheStorage, 0, sizeof(nvg_cache_storage));
-        nvg_cache_entry_path_t* pCache = malloc(sizeof(nvg_cache_entry_path_t));
-        dbgassert(pCache);
-        memset(pCache, 0, sizeof(nvg_cache_entry_path_t));
-		pCache->type = 1;
-		pCache->strokeWidth = strokeWidth;
-		pCache->fillPaint = strokePaint;
-		pCache->state = *state;
-		pCache->len = ctx->cache->npaths;
-		pCache->arrPath = malloc(sizeof(NVGpath)*(pCache->len+1));
-		ctx->cacheStorage->ptrPath = pCache;
-        ctx->cacheStorage->allocationSizeBytes += sizeof(nvg_cache_entry_path_t);
-		ctx->cacheStorage->allocationSizeBytes += sizeof(NVGpath)*(pCache->len+1);
-		memcpy(pCache->arrPath, ctx->cache->paths, sizeof(NVGpath)*pCache->len);
-
-		for (i = 0; i < pCache->len; i++) {
-			NVGpath* path = &pCache->arrPath[i];
-			if (path->nfill) {
-				NVGvertex *fill = malloc(sizeof(NVGvertex)*(path->nfill+1));
-				ctx->cacheStorage->allocationSizeBytes += sizeof(NVGvertex)*(path->nfill+1);
-				memcpy(fill, path->fill, sizeof(NVGvertex)*path->nfill);
-				path->fill = fill;
-			} else {
-				dbgassert(NULL == path->fill);
-			}
-			if (path->nstroke) {
-				NVGvertex *stroke = malloc(sizeof(NVGvertex)*(path->nstroke+1));
-				ctx->cacheStorage->allocationSizeBytes += sizeof(NVGvertex)*(path->nstroke+1);
-				memcpy(stroke, path->stroke, sizeof(NVGvertex)*path->nstroke);
-				path->stroke = stroke;
-			} else {
-				dbgassert(NULL == path->stroke);
-			}
-		}
-//		pCache->arrPath[pCache->len] = NULL;
-		memcpy(pCache->bounds, ctx->cache->bounds, sizeof(float)*4);
-//		printf("cache path size %d NVGpath (%d bytes)\n", pCache->len, pCache->len*sizeof(NVGpath));
-	} else {
-
-		// Apply global alpha
-		strokePaint.innerColor.a *= state->alpha;
-		strokePaint.outerColor.a *= state->alpha;
-
-		ctx->params.renderStroke(ctx->params.userPtr, &strokePaint, state->compositeOperation, &state->scissor, ctx->fringeWidth,
-								 strokeWidth, ctx->cache->paths, ctx->cache->npaths, state->zOffset);
-	}
-
-	// Count triangles
+    // Count triangles
     for (i = 0; i < ctx->cache->npaths; i++) {
         const NVGpath* path = &ctx->cache->paths[i];
-		ctx->strokeTriCount += path->nstroke-2;
-		ctx->drawCallCount++;
-	}
+        ctx->fillTriCount += path->nfill - 2;
+        ctx->fillTriCount += path->nstroke - 2;
+        ctx->drawCallCount += 2;
+    }
+}
+
+void nvgStroke(NVGcontext* ctx) {
+    if (ctx->ncommands == 0) {
+        return;
+    }
+    NVGstate* state      = nvg__getState(ctx);
+    float scale          = nvg__getAverageScale(state->xform);
+    float strokeWidth    = nvg__clampf(state->strokeWidth * scale, 0.0f, 200.0f);
+    NVGpaint strokePaint = state->stroke;
+    int i;
+
+    if (strokeWidth < ctx->fringeWidth) {
+        // If the stroke width is less than pixel size, use alpha to emulate coverage.
+        // Since coverage is area, scale by alpha*alpha.
+        float alpha = nvg__clampf(strokeWidth / ctx->fringeWidth, 0.0f, 1.0f);
+        strokePaint.innerColor.a *= alpha * alpha;
+        strokePaint.outerColor.a *= alpha * alpha;
+        strokeWidth = ctx->fringeWidth;
+    }
+
+
+    nvg__flattenPaths(ctx);
+
+    if (ctx->params.edgeAntiAlias && state->shapeAntiAlias)
+        nvg__expandStroke(ctx, strokeWidth * 0.5f, ctx->fringeWidth, state->lineCap, state->lineJoin, state->miterLimit);
+    else
+        nvg__expandStroke(ctx, strokeWidth * 0.5f, 0.0f, state->lineCap, state->lineJoin, state->miterLimit);
+
+    if (ctx->cacheNextPath) {
+        dbgassert(!ctx->cacheStorage);
+        ctx->cacheStorage = deepCopyPathCache(ctx->cache, 1, strokeWidth, &strokePaint, state);
+    } else {
+
+        // Apply global alpha
+        strokePaint.innerColor.a *= state->alpha;
+        strokePaint.outerColor.a *= state->alpha;
+
+        ctx->params.renderStroke(ctx->params.userPtr, &strokePaint, state->compositeOperation, &state->scissor, ctx->fringeWidth,
+                                 strokeWidth, ctx->cache->paths, ctx->cache->npaths, state->zOffset);
+    }
+
+    // Count triangles
+    for (i = 0; i < ctx->cache->npaths; i++) {
+        const NVGpath* path = &ctx->cache->paths[i];
+        ctx->strokeTriCount += path->nstroke - 2;
+        ctx->drawCallCount++;
+    }
 }
 
 // Add fonts
