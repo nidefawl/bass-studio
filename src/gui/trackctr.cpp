@@ -185,7 +185,6 @@ void guictr_tracks::resetView() {
 int loadSubtrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, const track_layout_snapshot_t& snapshot);
 
 void loadTrackLayout(guictr_tracks* guiTracks, track_gui_entry_t* entry, const track_layout_snapshot_t& snapshot) {
-    const std::vector<automationlane_snapshot_t>& atl = snapshot.automationLanes;
     entry->subtracks.clear();
     bool hide = entry->layout.hideSubtracks || entry->layout.hideTrack;
     if (hide) {

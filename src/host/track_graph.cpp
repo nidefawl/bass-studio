@@ -41,9 +41,9 @@ namespace DAW {
                 //inputChannel.stage.stageRef.stageId = TRACKID_INVALID_I32; //FIX: old project files have stageId == 0
             }
             if (outputChannel.getType() == channel_input_type::INPUT_EXTERNAL_AUDIO) {
-                int32_t idx              = outputChannel.externalInputIdx;
-                auto type                = AudioIO::getTrackTypeFromNumChannels(trackImpl->outputPost.channels);
-                String name              = "External " + AudioIO::getTrackNameShort(outputChannel.externalInputType, idx, stagebuffer_point::OUTPUT_POST);
+                int32_t idx = outputChannel.externalInputIdx;
+                String name = "External " + AudioIO::getTrackNameShort(outputChannel.externalInputType, idx, stagebuffer_point::OUTPUT_POST);
+
                 trackImpl->outputChannel = ChannelAudioInput(idx, outputChannel.inputChannelOffset, name, outputChannel.externalInputType);
             } else if (outputChannel.getType() == channel_input_type::INPUT_AUDIOSTAGE) {
                 auto* stage = host->getAudioStage(outputChannel.stage.stageRef);

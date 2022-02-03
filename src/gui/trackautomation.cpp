@@ -314,8 +314,6 @@ bool gui_track_automation::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
             }
         }
         if (evt.type == MouseHitType::MOUSE_RIGHT) {// righclick in selection (create clip etc.)
-            DawInstance* daw  = DawInstance::get();
-            MainCtrl* ctrl    = MainCtrl::get();
             tick_t tick       = grid.screenToTickSnap(mpos.x, SNAP_OFF);
 
             // automation subtracks have priority over parent if they are in the selection range

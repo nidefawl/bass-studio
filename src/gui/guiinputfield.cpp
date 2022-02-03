@@ -186,9 +186,6 @@ String gui_numberinput_field_generic<float>::valueToStringLiteral(float val) {
 template<>
 void gui_numberinput_field_generic<float>::onMouseDragValue(int32_t disty, int32_t absy) {
     if (this->number) {
-        float number_local = getValue();
-//        int32_t u = *reinterpret_cast<int32_t*>(&number_local) + (disty > 0 ? -1 : 1) * absy;
-//        setValue(*reinterpret_cast<float*>(&u));
         setValue(*number - ((disty < 0 ? -1 : 1) * absy) * 0.0001f);
     }
 }

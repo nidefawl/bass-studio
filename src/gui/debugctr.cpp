@@ -239,7 +239,6 @@ void gui_ctr_debug::render(NVGcontext* vg) {
         return;
     }
 
-    int framesSkip = 30;
     if (dgbCtrType == gui_ctr_debug_type_i32::TYPE_2 && impl->sampleformat.sampleRate > 0) {
         auto mikrosPerBlock = (impl->sampleformat.blockSize * 1000000UL) / impl->sampleformat.sampleRate;
         int inset           = 30;
@@ -302,8 +301,6 @@ void gui_ctr_debug::render(NVGcontext* vg) {
             for (int pass = 0; pass < 2; pass++) {
                 nvgBeginPath(vg);
                 for (auto entry : list) {
-                    int32_t stageIdInt = static_cast<int32_t>(entry.stageId);
-                    auto duration      = entry.timeEnd - entry.timeStart;
                     auto posX1         = graphOnlySize.x * (entry.timeStart - minTimeStart) / (float) mikrosPerBlock;
                     auto posX2         = graphOnlySize.x * (entry.timeEnd - minTimeStart) / (float) mikrosPerBlock;
                     float posY         = graphOnlySize.y - 1 - (entry.threadIdx + 1) * yStep;
@@ -518,7 +515,6 @@ void gui_ctr_debug::layout() {
 
 int32_t getNumClipAllocations();//clip.cpp
 void resetHistAndCheck() {
-    auto ctrl         = MainCtrl::get();
     auto daw          = DawInstance::get();
     auto& trackEditor = MainCtrl::getGuiTrackCtr()->trackView;
     trackEditor.action.clipboard.reset();

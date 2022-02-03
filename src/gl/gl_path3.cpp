@@ -132,7 +132,7 @@ void GLPathRendererSimple2::bakePaths(std::vector<vec2list> paths, Uniforms path
 #endif
     dbgassert((sizeof(parsl_position) + sizeof(parsl_annotation)) == 6 * sizeof(float));
     tmpBuffer.resize((sizeof(parsl_position) + sizeof(parsl_annotation)) * mesh->num_vertices);
-    for (int i = 0; i < mesh->num_vertices; ++i) {
+    for (uint32_t i = 0; i < mesh->num_vertices; ++i) {
         int32_t index      = i * 6 + 0;
         tmpBuffer[index++] = mesh->positions[i].x;
         tmpBuffer[index++] = mesh->positions[i].y;

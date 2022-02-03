@@ -166,7 +166,7 @@ void tesselateWaveformEnergy(audiosample_t* sample, float x, float y, audioclip_
         for (int iChannel = 0; iChannel < sample->nChannels; iChannel++) {
             const auto& samplesCh     = smpCh[iChannel];
             const float* samplesChPtr = samplesCh.data();
-            const auto lenSamplesCh   = samplesCh.size();
+            const int64_t lenSamplesCh   = samplesCh.size();
             std::vector<float> lows, highs, energies;
             for (int64_t pixelPos = 0; pixelPos < widthPxRounded; pixelPos++) {
                 int64_t startIndex = math::roundfS32(pixelPos / (float) widthPxRounded * nSamples);
@@ -199,7 +199,8 @@ void tesselateWaveformEnergy(audiosample_t* sample, float x, float y, audioclip_
 
             vec2list vecs;
             vecs.reserve(energies.size() * 4);
-            for (int64_t pixelPos = 0; pixelPos < energies.size(); pixelPos++) {
+            int64_t lenEnergies = energies.size();
+            for (int64_t pixelPos = 0; pixelPos < lenEnergies; pixelPos++) {
                 float fY = (0.5 - 0.5 * energies[pixelPos]) * channelHeight;
                 vec2 vec{ x + pixelPos, py + fY };
                 vecs.push_back(std::move(vec));

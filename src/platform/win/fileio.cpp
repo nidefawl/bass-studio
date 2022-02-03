@@ -73,6 +73,8 @@ public:
                 shareMode   = FILE_SHARE_READ;
                 accessMode  = GENERIC_READ | GENERIC_WRITE;
                 break;
+            default:
+                throw appexception("Invalid file open mode");
         }
         m_handle = CreateFileA(filename.c_str(), accessMode, shareMode,
                                nullptr, createFlags, attr, nullptr);
@@ -149,17 +151,18 @@ int browseForFolder(const String& title, const String& pathStart, String& _out) 
 
 int promptUserFilePath(window_base*, int mode, std::vector<SupportedFileType> fileTypes, String& _out) {
     char supportedFiles[MAX_PATH] = "";
-    int offset                    = 0;
+
+    int offset  = 0;
     fileTypes.push_back(SupportedFileType{ "All Files", "*" });
     for (SupportedFileType& type : fileTypes) {
         //This doesn't look safe, truncating requires extra attention. Watch out!
-        int val = _snprintf(supportedFiles + offset, MAX_PATH - offset, "%s (*.%s)", StringAsCStr(type.desc), StringAsCStr(type.ext));
+        int val = _snprintf(supportedFiles + offset, size_t(MAX_PATH) - offset, "%s (*.%s)", StringAsCStr(type.desc), StringAsCStr(type.ext));
         if (val > 0) {
             offset += val;
             supportedFiles[offset] = 0;
             offset++;
         }
-        val = _snprintf(supportedFiles + offset, MAX_PATH - offset, "*.%s", StringAsCStr(type.ext));
+        val = _snprintf(supportedFiles + offset, size_t(MAX_PATH) - offset, "*.%s", StringAsCStr(type.ext));
         if (val > 0) {
             offset += val;
             supportedFiles[offset] = 0;

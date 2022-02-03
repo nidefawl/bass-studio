@@ -126,8 +126,8 @@ namespace DAW {
         int32_t tickEnd       = _cursor.getTickEnd();
         int32_t trackBegin    = _cursor.getTrackBegin();
         int32_t trackEnd      = _cursor.getTrackEnd();
-        int32_t trackSubBegin = _cursor.getSubTrackBegin();
-        int32_t trackSubEnd   = _cursor.getSubTrackEnd();
+        //int32_t trackSubBegin = _cursor.getSubTrackBegin();
+        //int32_t trackSubEnd   = _cursor.getSubTrackEnd();
         clipboard->srcPos     = tickBegin;
         clipboard->srcTrack   = trackBegin;
         clipboard->selRange   = tickEnd - tickBegin;

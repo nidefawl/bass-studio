@@ -2404,7 +2404,7 @@ void nvgRoundedRectVaryingA(NVGcontext* ctx, float x, float y, float w, float h,
 		float halfh = nvg__absf(h)*0.5f;
 		float rx = nvg__minf(rad, halfw) * nvg__signf(w),
 			  ry = nvg__minf(rad, halfh) * nvg__signf(h);
-		float aafix = 1;
+		//float aafix = 1;
 		float vals[] = {
 			NVG_MOVETO, x-rx, y+1.0f,
 			NVG_BEZIERTO, x-rx+rx*(1 - NVG_KAPPA90), y, x, y + ry*(1 - NVG_KAPPA90), x, y + ry,
@@ -2645,7 +2645,6 @@ void nvgFill(NVGcontext* ctx)
 		//dbgassert(0);
 	}
 	NVGstate* state = nvg__getState(ctx);
-	const NVGpath* path;
 	NVGpaint fillPaint = state->fill;
 	int i;
 
@@ -2672,7 +2671,7 @@ void nvgFill(NVGcontext* ctx)
         ctx->cacheStorage->allocationSizeBytes += sizeof(nvg_cache_entry_path_t);
 		ctx->cacheStorage->allocationSizeBytes += sizeof(NVGpath)*(pCache->len+1);
 		memcpy(pCache->arrPath, ctx->cache->paths, sizeof(NVGpath)*pCache->len);
-		for (int i = 0; i < pCache->len; i++) {
+		for (i = 0; i < pCache->len; i++) {
 			NVGpath* path = &pCache->arrPath[i];
 			if (path->nfill) {
 				NVGvertex *fill = malloc(sizeof(NVGvertex)*(path->nfill+1));
@@ -2703,7 +2702,7 @@ void nvgFill(NVGcontext* ctx)
 
 	// Count triangles
 	for (i = 0; i < ctx->cache->npaths; i++) {
-		path = &ctx->cache->paths[i];
+        const NVGpath* path = &ctx->cache->paths[i];
 		ctx->fillTriCount += path->nfill-2;
 		ctx->fillTriCount += path->nstroke-2;
 		ctx->drawCallCount += 2;
@@ -2719,7 +2718,6 @@ void nvgStroke(NVGcontext* ctx)
 	float scale = nvg__getAverageScale(state->xform);
 	float strokeWidth = nvg__clampf(state->strokeWidth * scale, 0.0f, 200.0f);
 	NVGpaint strokePaint = state->stroke;
-	const NVGpath* path;
 	int i;
 
 	if (strokeWidth < ctx->fringeWidth) {
@@ -2758,7 +2756,7 @@ void nvgStroke(NVGcontext* ctx)
 		ctx->cacheStorage->allocationSizeBytes += sizeof(NVGpath)*(pCache->len+1);
 		memcpy(pCache->arrPath, ctx->cache->paths, sizeof(NVGpath)*pCache->len);
 
-		for (int i = 0; i < pCache->len; i++) {
+		for (i = 0; i < pCache->len; i++) {
 			NVGpath* path = &pCache->arrPath[i];
 			if (path->nfill) {
 				NVGvertex *fill = malloc(sizeof(NVGvertex)*(path->nfill+1));
@@ -2791,8 +2789,8 @@ void nvgStroke(NVGcontext* ctx)
 	}
 
 	// Count triangles
-	for (i = 0; i < ctx->cache->npaths; i++) {
-		path = &ctx->cache->paths[i];
+    for (i = 0; i < ctx->cache->npaths; i++) {
+        const NVGpath* path = &ctx->cache->paths[i];
 		ctx->strokeTriCount += path->nstroke-2;
 		ctx->drawCallCount++;
 	}

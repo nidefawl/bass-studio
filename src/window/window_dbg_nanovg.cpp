@@ -166,13 +166,12 @@ void drawDebugWindowNanoVG(NVGcontext* vg, int winW, int winH, float pxratio) {
 
     glBindVertexArray(0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-    glStencilMask(~0);
+    glStencilMask(~0U);
     glClear(GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
     nvgBeginFrame(vg, winW, winH, pxratio);
     ivec2 pos  = { 10, 20 };
     ivec2 size = { 300, 40 };
 #define STEP_MAX 3
-    int step = math::floordS32(((getTimeMillisD() / 1000.0) / 1.5)) % STEP_MAX;
 
     float steps[STEP_MAX] = { 1.0f, 1.0f / 32.0f, 1.0f / 128.0f };
 

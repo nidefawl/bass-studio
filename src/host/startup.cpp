@@ -44,7 +44,6 @@ void dawinstance_startup_commands(daw_tls::tlsinstance& tls) {
             float fLength = 64.0f;
             // ctrl may still alter project settings during copy here if not locked
             auto& projectGlobals             = dawInstance->getGlobals();
-            project_controller_t* const ctrl = dawInstance;
             my_printf("Tempo100: %d\n", projectGlobals.tempo100);
             my_printf("project.cursor.cursorPos: %d\n", projectGlobals.cursor.cursorPos);
             projectGlobals.cursor.cursorPos = projectGlobals.loopStart;
@@ -107,7 +106,6 @@ void dawinstance_startup_commands(daw_tls::tlsinstance& tls) {
             my_printf("loading %d plugins\n", pluginsDeferred.size());
             for (auto effect : pluginsDeferred) {
                 my_printf("activate %s\n", StringAsCStr(effect->sName));
-                effectbase* effectLoaded = nullptr;
                 host->activateDeferred(effect, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
             }
             auto& trackList = dawInstance->getProject()->trackList;

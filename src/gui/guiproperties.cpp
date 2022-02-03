@@ -799,7 +799,7 @@ void drawColor(NVGcontext* vg, ivec2 pos, ivec2 size, int32_t rgba) {
         sizeQuad, sizeQuad);
     nvgFillColor(vg, rgbaToNvg(rgba));
     nvgFill(vg);
-    nvgFillColor(vg, rgbaToNvg(-1));
+    nvgFillColor(vg, rgbaToNvg(0xFFFFFFFF));
 
 }
 

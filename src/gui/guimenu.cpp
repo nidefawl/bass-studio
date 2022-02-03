@@ -188,8 +188,8 @@ void guimenu::clickedElement(ctxtmenu_entry* e, int _id) {
     if (appCtrl) {
         if (_id > 0) {
             guimenu_ctxtentry* entry = static_cast<guimenu_ctxtentry*>(e);
-            auto e = entry->menu->command;
-            appCtrl->menuCommand(std::move(e));//possibly deletes this
+            auto menuCommand = entry->menu->command;
+            appCtrl->menuCommand(std::move(menuCommand));//possibly deletes this
         }
         appCtrl->closeAllAppMenus();
     }

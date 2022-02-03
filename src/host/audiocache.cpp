@@ -38,7 +38,7 @@ void audiocache::setSamplerate(int32_t _samplerate) {
     std::vector<audiofile_path_t> reloadFiles;
     for (auto it = list.begin(); it != list.end();) {
         auto& w = *it;
-        if (w->sample->sampleRate != _samplerate) {
+        if (w->sample->sampleRate != static_cast<uint32_t>(_samplerate)) {
             reloadFiles.push_back(w->getPath());
             mapId.erase(w->id);
             it = list.erase(it);

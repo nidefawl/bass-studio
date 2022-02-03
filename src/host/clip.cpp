@@ -18,7 +18,7 @@ namespace DebugAlloc {
     Tracker<clip_t> trackerClips;
     template<>
     void printLeaked(int64_t allocId, int64_t allocCount, std::vector<clip_t*>& allocList, std::unordered_map<int64_t, DebugAlloc::AllocInfo>& allocInfo) {
-        dbgassert(allocList.size() == allocCount);
+        dbgassert(static_cast<int64_t>(allocList.size()) == allocCount);
         my_printf("clip_t allocations: %lld\n", allocCount);
         for (auto clip : allocList) {
             auto it = allocInfo.find(clip->allocId);
@@ -619,7 +619,6 @@ void clip_t::adjustStartSamples(tick_t offset) {
 tick_t clip_t::getLen() const {
 
     if (this->lenSamples > 0 && this->clipType == CLIP_AUDIO && project_controller_t::get()) {
-        auto curSampleRate = vsthost::getInstance()->m_sampleFormatInternal.sampleRate;
         auto lenConverted  = project_controller_t::get()->samplesToTicks(this->lenSamples);
         if (lenConverted != len) {
             log_printf("tick vs sample len missmatch. Did the samplerate change?", 0);

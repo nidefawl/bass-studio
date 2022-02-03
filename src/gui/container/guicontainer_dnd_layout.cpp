@@ -707,7 +707,6 @@ void guictr_layout::render(NVGcontext* vg) {
     }
     if (this->id & (1 << 16)) {
         for (auto& h: handles) {
-            int32_t stateFlags = getStateFlags();
             nvgBeginPath(vg);
             nvgRect(vg, h->pos.x, h->pos.y, h->size.x, h->size.y);
             nvgFillColor(vg, rgbaToNvg(0x7f00ff00));

@@ -102,7 +102,6 @@ void guictr_scrollbar::layout() {
             scrollbar.pos  = ivec2(cs.x, 1);
             size.x += scrollW + 2;
         } else {
-            int entryW     = cs.x - scrollW;
             scrollbar.size = ivec2(scrollW - 2, cs.y - 2);
             scrollbar.pos  = ivec2(cs.x - scrollW + 1, 1);
         }

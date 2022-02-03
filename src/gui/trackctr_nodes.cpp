@@ -45,12 +45,12 @@ bool gui_graph_entry::setScissorTransformContainer(NVGcontext* vg) {
     if (sizeInset.y <= 0 || sizeInset.x <= 0) {
         return false;
     }
-    int32_t scissorExpand = 16;
-//    nvgIntersectScissor(vg,
-//                        math::max<int32_t>(0, pos.x - scissorExpand),
-//                        math::max<int32_t>(0, pos.y - scissorExpand),
-//                        size.x + scissorExpand * 2,
-//                        size.y + scissorExpand * 2);
+    /*int32_t scissorExpand = 16;
+    nvgIntersectScissor(vg,
+                        math::max<int32_t>(0, pos.x - scissorExpand),
+                        math::max<int32_t>(0, pos.y - scissorExpand),
+                        size.x + scissorExpand * 2,
+                        size.y + scissorExpand * 2);*/
     nvgTranslate(vg, posInset.x, posInset.y);
     return true;
 }
@@ -165,7 +165,7 @@ namespace DAW {
                 case track_node_type_t::AUDIOSTAGE:
                     dbgassert(nodeDest->stage);
                     if (nodeDest->stage) {
-                        bool b = hasDuplicateRoutings(nodeDest->stage->postEffectRouting, ref);
+                        /*bool b = hasDuplicateRoutings(nodeDest->stage->postEffectRouting, ref);*/
                         removeDuplicateRoutings(nodeDest->stage->postEffectRouting, ref);
                         return true;
                     }
@@ -173,7 +173,7 @@ namespace DAW {
                 case track_node_type_t::EFFECT:
                     dbgassert(nodeDest->effectOptional);
                     if (nodeDest->effectOptional) {
-                        bool b = hasDuplicateRoutings(nodeDest->effectOptional->inputChannels, ref);
+                        /*bool b = hasDuplicateRoutings(nodeDest->effectOptional->inputChannels, ref);*/
                         removeDuplicateRoutings(nodeDest->effectOptional->inputChannels, ref);
                         return true;
                     }
@@ -198,7 +198,7 @@ namespace DAW {
                 case track_node_type_t::AUDIOSTAGE:
                     dbgassert(nodeInput->stage);
                     if (nodeInput->stage) {
-                        bool b = hasDuplicateRoutings(nodeInput->stage->postEffectRouting, ref);
+                        /*bool b = hasDuplicateRoutings(nodeInput->stage->postEffectRouting, ref);*/
                         removeDuplicateRoutings(nodeInput->stage->postEffectRouting, ref);
                         nodeInput->stage->postEffectRouting.push_back(ref);
                         nodeInput->stage->routingState = audiostagerouting_state_t::CUSTOM;
@@ -208,7 +208,7 @@ namespace DAW {
                 case track_node_type_t::EFFECT:
                     dbgassert(nodeInput->effectOptional);
                     if (nodeInput->effectOptional) {
-                        bool b = hasDuplicateRoutings(nodeInput->effectOptional->inputChannels, ref);
+                        /*bool b = hasDuplicateRoutings(nodeInput->effectOptional->inputChannels, ref);*/
                         removeDuplicateRoutings(nodeInput->effectOptional->inputChannels, ref);
                         nodeInput->effectOptional->inputChannels.push_back(ref);
                         nodeInput->effectOptional->getTrackLink()->routingState = audiostagerouting_state_t::CUSTOM;
@@ -471,7 +471,7 @@ void gui_graph_port::dragReleaseOn(guibase* target, ivec2 mousepos) {
     log_printf("dragReleaseOn %s on %s\n", StringAsCStr(this->getClassName()), StringAsCStr(target->getClassName()));
     auto* ptr = dynamic_cast<gui_graph_port*>(target);
     if (ptr != nullptr) {
-        auto node = ptr->parentGraphNode->getProcessingNode();
+        //auto node = ptr->parentGraphNode->getProcessingNode();
         /* only allow input to output connections */
         if (isStageBufferPointInput(stageBufferPoint) == isStageBufferPointInput(ptr->stageBufferPoint)) {
             return;
@@ -579,15 +579,14 @@ void gui_graph::render(NVGcontext* vg) {
     nvgCircleFast(vg, mouseLocal.x, mouseLocal.y, 5.0f);
     nvgFillColor(vg, nvgRGBAf(1, 0, 1, 1));
     nvgFill(vg);
-    float minEdgeDist                             = 0.0f;
-    gui_graph::guictr_graph_impl::edge_t* minEdge = nullptr;
+
     for (gui_graph::guictr_graph_impl::edge_t& edge : impl->edgeList) {
 
         gui_graph_n* graphNodeOutput = edge.grphNodeDest;
         gui_graph_n* graphNodeInput  = edge.grphNodeSrc;
 
         const DAW::processing_track_node_t* nodeInput  = graphNodeInput->getProcessingNode();
-        const DAW::processing_track_node_t* nodeOutput = graphNodeOutput->getProcessingNode();
+        //const DAW::processing_track_node_t* nodeOutput = graphNodeOutput->getProcessingNode();
 
         auto portInputPos  = graphNodeOutput->getPortInputPos();
         auto portOutputPos = graphNodeInput->getPortOutputPos();
@@ -673,8 +672,8 @@ gui_graph::guictr_graph_impl::hit_result gui_graph::guictr_graph_impl::hitTest(v
     for (edge_t& edge : edgeList) {
         gui_graph_n* graphNodeOutput                   = edge.grphNodeDest;
         gui_graph_n* graphNodeInput                    = edge.grphNodeSrc;
-        const DAW::processing_track_node_t* nodeInput  = graphNodeInput->getProcessingNode();
-        const DAW::processing_track_node_t* nodeOutput = graphNodeOutput->getProcessingNode();
+        //const DAW::processing_track_node_t* nodeInput  = graphNodeInput->getProcessingNode();
+        //const DAW::processing_track_node_t* nodeOutput = graphNodeOutput->getProcessingNode();
         auto portInputPos                              = graphNodeOutput->getPortInputPos();
         auto portOutputPos                             = graphNodeInput->getPortOutputPos();
 
@@ -841,7 +840,6 @@ void gui_graph::updateList(bool resetPositions) {
 
         float fontScale      = 14 * theme->getFloat(GuiConstant::CONST_NODES_SCALE);
         int32_t nodeWidth    = 180 * math::max<float>(1.0f, (theme->getFloat(GuiConstant::CONST_NODES_SCALE) * (1.0 / 10.0f)));
-        int32_t nodeHeight   = fontScale * 2;
         ivec2 nodeSize       = ivec2(nodeWidth, nodeWidth);
         int32_t posGridStepX = nodeWidth + fontScale * 4;
         ivec2 posGrid        = ivec2(fontScale, fontScale);
@@ -1188,7 +1186,6 @@ void guictr_nodes_splitview::buttonClicked(guibase* _button) {
 
 void guictr_nodes_splitview::layout() {
 
-    int scrollW      = gui_scrollbar::defaultW;
     ivec2 cs         = getSizeContent();
     projectView.pos  = ivec2(0);
     trackView.pos    = ivec2(0, cs.y / 2);

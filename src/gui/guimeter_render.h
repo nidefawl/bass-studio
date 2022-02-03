@@ -35,23 +35,25 @@ void renderMeterAt(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const iv
     //  nvgFillColor(vg, G_GREEN);
     nvgFill(vg);
     const double scaledZero = dsp_util::scaledRange(0, dsp_util::MTR_FLOOR, dsp_util::MTR_CEIL);
-    float hZero             = (1.0f - scaledZero) * mtrSize.y;
-    float yZero             = mtrPos.y + mtrSize.y - hZero;
-    auto lvls               = meter->getLevels();
-    float x                 = mtrPos.x;
-    float channelW          = (mtrSize.x - (NCHANNELS - 1) * CONST_LAYOUT_MARGIN) / (float) NCHANNELS;
+
+    const float hZero = (1.0f - scaledZero) * mtrSize.y;
+    const float yZero = mtrPos.y + mtrSize.y - hZero;
+    auto lvls         = meter->getLevels();
+    float x           = mtrPos.x;
+    float channelW    = (mtrSize.x - (NCHANNELS - 1) * CONST_LAYOUT_MARGIN) / (float) NCHANNELS;
+
     float mixedlevels[3]    = { 0, 0, 0 };
-    if (mtrSize.y > 4) {
-        //    nvgBeginPath(vg);
-        //    nvgRect(vg, mtrPos.x, mtrPos.y, mtrSize.x, mtrSize.y);
-        //    nvgFillColor(vg, G_WHITE);
-        //    nvgFill(vg);
-        //    nvgBeginPath(vg);
-        //    nvgRect(vg, mtrPos.x+1, mtrPos.y+1, mtrSize.x-2, mtrSize.y-2);
-        //    nvgFillColor(vg, G_GREEN_DRK);
-        //    nvgFill(vg);
-        //    nvgFillColor(vg, G_WHITE);
-    }
+    /*if (mtrSize.y > 4) {
+        nvgBeginPath(vg);
+        nvgRect(vg, mtrPos.x, mtrPos.y, mtrSize.x, mtrSize.y);
+        nvgFillColor(vg, G_WHITE);
+        nvgFill(vg);
+        nvgBeginPath(vg);
+        nvgRect(vg, mtrPos.x + 1, mtrPos.y + 1, mtrSize.x - 2, mtrSize.y - 2);
+        nvgFillColor(vg, G_GREEN_DRK);
+        nvgFill(vg);
+        nvgFillColor(vg, G_WHITE);
+    }*/
     for (int i = 0; i < NCHANNELS; i++) {
         auto& chLvl     = lvls[i];
         float fMax      = chLvl.fMax;
@@ -121,8 +123,6 @@ void renderMeterAt(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const iv
         float stops[steps] = {
             0.0f, -3.0f, -6.0f, -12.0f, -24.0f, -36.0f, -48.0f, -60.0f
         };
-        float hZero = (1.0f - scaledZero) * mtrSize.y;
-        float yZero = mtrPos.y + mtrSize.y - hZero;
         nvgBeginPath(vg);
         nvgMoveTo(vg, mtrPos.x, yZero);
         nvgLineTo(vg, x2 + lW * 2.0f / 8.0f, yZero);
@@ -233,10 +233,11 @@ void renderMeterAt2(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const i
     float channelW    = (mtrSize.x - (nChannels + 1) * spacing) / (float) nChannels;
     int textHeight    = TRACK_HEIGHT_STEP;
     const double scaledZero = dsp_util::scaledRange(0, dsp_util::MTR_FLOOR, dsp_util::MTR_CEIL);
-    float hZero             = (1.0f - scaledZero) * mtrSize.y;
-    float yZero             = mtrPos.y + mtrSize.y - hZero;
 
-    float x              = mtrPos.x + spacing;
+    const float hZero = (1.0f - scaledZero) * mtrSize.y;
+    const float yZero = mtrPos.y + mtrSize.y - hZero;
+    float x = mtrPos.x + spacing;
+
     float mixedlevels[3] = { 0, 0, 0 };
     for (int i = 0; i < NCHANNELS; i++) {
         auto& chLvl     = lvls[i];
@@ -319,8 +320,6 @@ void renderMeterAt2(NVGcontext* vg, guitheme_t* theme, const ivec2& pos, const i
         float stops[steps] = {
             0.0f, -3.0f, -6.0f, -12.0f, -24.0f, -36.0f, -48.0f
         };
-        float hZero = (1.0f - scaledZero) * mtrSize.y;
-        float yZero = mtrPos.y + mtrSize.y - hZero;
         nvgBeginPath(vg);
         nvgMoveTo(vg, x2, yZero);
         nvgLineTo(vg, x2 + lW * 2.0f / 8.0f, yZero);

@@ -34,10 +34,10 @@ namespace dsp_util {
     }
     void fillSaturate(float** buffer, int32_t channels, uint32_t samples) {
         const float maxGain = 1.0;
-        for (int i = 0; i < (channels + 1) / 2; i++) {
-            float* output0 = buffer[i * 2 + 0];
-            float* output1 = buffer[i * 2 + 1];
-            for (uint32_t i = 0; i < samples; i++) {
+        for (int32_t ch = 0; ch < (channels + 1) / 2; ch++) {
+            float* output0 = buffer[ch * 2 + 0];
+            float* output1 = buffer[ch * 2 + 1];
+            for (uint32_t s = 0; s < samples; s++) {
                 *output0 = dsp_util::Saturate(*output0, maxGain);
                 *output1 = dsp_util::Saturate(*output1, maxGain);
                 output0++;
@@ -53,10 +53,10 @@ namespace dsp_util {
     }
     void fillChannels(float** buffer, int32_t channels, uint32_t samples, float f = 0.0f) {
         const float maxGain = 1.0;
-        for (int i = 0; i < (channels + 1) / 2; i++) {
-            float* input0 = buffer[i * 2 + 0];
-            float* input1 = buffer[i * 2 + 1];
-            for (uint32_t i = 0; i < samples; i++) {
+        for (int32_t ch = 0; ch < (channels + 1) / 2; ch++) {
+            float* input0 = buffer[ch * 2 + 0];
+            float* input1 = buffer[ch * 2 + 1];
+            for (uint32_t s = 0; s < samples; s++) {
                 *input0 = f; /* left */
                 *input1 = f; /* right */
                 input0++;

@@ -167,7 +167,7 @@ void DropTargetImpl::getFilePaths(IDataObject* pDataObject, std::vector<String>&
 
             HDROP& hdrop = (HDROP&) data;
 
-            UINT uNumFiles = DragQueryFile(hdrop, -1, nullptr, 0);
+            UINT uNumFiles = DragQueryFile(hdrop, (UINT)-1, nullptr, 0U);
 
             for (UINT uFile = 0; uFile < uNumFiles; uFile++) {
                 // Get the next filename from the HDROP info.

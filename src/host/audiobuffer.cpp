@@ -39,7 +39,7 @@ void AudioBlock::fillNoise(uint32_t seed) {
     seq_rand rnd;
     rnd.rng_seed(seed);
     for (uint32_t i = 0; i < channels; i++) {
-        for (int s = 0; s < samples; s++) {
+        for (uint32_t s = 0; s < samples; s++) {
             buf[i][s] = (rnd.rng_rand(1<<16)/(float)(1<<16))*0.4f;
         }
     }
@@ -79,7 +79,7 @@ void AudioBlock::realloc(uint32_t _samples) {
     }
 }
 void delayAudio(DelayLine* delayLine, AudioBlock* input, AudioBlock* output, samplerate_t delay) {
-    dbgassert(delay >= 0 && delay < 1 << 20);
+    dbgassert(delay < 1 << 20);
     dbgassert(delayLine);
     int32_t bufSize   = (int32_t) input->samples;
     int32_t bufDelay  = delay;

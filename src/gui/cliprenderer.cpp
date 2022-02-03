@@ -238,7 +238,6 @@ void gui_midi_clip::updateClipRenderCache(NVGcontext* vg) {
     }
 
     clip_t* const cl  = m_clip;
-    track_t* const tr = m_track;
     if (cl->getLen() <= 0) {
         impl->reset();
         return;
@@ -423,7 +422,6 @@ void gui_midi_clip::updateClipRenderCache(NVGcontext* vg) {
 void gui_midi_clip::render(NVGcontext* vg) {
     if (!culled) {
         clip_t* const cl  = m_clip;
-        track_t* const tr = m_track;
         if (cl->getLen() <= 0) {
             return;
         }
@@ -447,12 +445,7 @@ void gui_midi_clip::render(NVGcontext* vg) {
             ivec2 posContents  = ivec2(pos.x, pos.y + HEIGHT_CLIP_TITLE + INSET_CLIP_CONTENT);
             ivec2 sizeContents = ivec2(size.x, size.y - HEIGHT_CLIP_TITLE - INSET_CLIP_CONTENT * 2);
 
-            tick_t clipLen               = cl->getLen();
-            float numBars                = clipLen / (float) TICKS_BAR;
-            float barSize                = sizeContents.x / (float) numBars;
-            int64_t notesRendered        = 0;
-            const bool useCaching        = true;
-            noteview_render_t& notesView = cl->getNoteViewRender();
+            int64_t notesRendered = 0;
 
             NVGcolor rgbNote        = theme->getColor(GuiColor::COL_CLIP_NOTE);
             NVGcolor rgbNoteOverlap = theme->getColor(GuiColor::COL_CLIP_NOTE_OVERLAP);
@@ -518,7 +511,7 @@ void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_gui_ent
     cacheValid &= useCaching;
     if (!cacheValid) {
         notesView.curRevision = -1;
-        if (notesView.data != nullptr) {
+        if (notesView.data) {
             notesView.data->reset();
         } else {
             notesView.data = new noteview_cache_impl_t{};

@@ -65,7 +65,7 @@ void syncMenuEntry(bool disabledALL, HMENU menuParent, ngui::Menu* menu, int idx
     if (menu->type != ngui::menu_type::submenu) {
         needsDisable |= disabledALL;
     }
-    if (needsDisable != (flags & MF_GRAYED)) {
+    if (needsDisable != ((flags & MF_GRAYED) != 0)) {
         EnableMenuItem(menuParent, hMenuIdx, MF_BYPOSITION | (needsDisable ? MF_GRAYED : 0));
     }
     if (menu->checked != ((flags & MF_CHECKED) != 0)) {

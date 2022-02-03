@@ -47,7 +47,7 @@ namespace math {
     }
     /* abs(SignedInt) */
     template<typename T>
-    inline std::make_unsigned_t<std::enable_if_t<std::is_integral<T>::value && !std::is_unsigned<T>::value, T>>
+    inline std::enable_if_t<std::is_integral<T>::value && !std::is_unsigned<T>::value, T>
     abs(T a) {
         return a < 0 ? -a : a;
     }

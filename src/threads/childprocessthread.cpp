@@ -112,7 +112,7 @@ public:
             }
             dbgassert((dstEnd - dstOffset) == 1);
             *dstOffset++ = '\0';
-            dbgassert((dstOffset - bufEnv.data()) == totalEnvLen);
+            dbgassert(static_cast<size_t>(dstOffset - bufEnv.data()) == totalEnvLen);
             bufEnv.resize(totalEnvLen);
         } else {
 

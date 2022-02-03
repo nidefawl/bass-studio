@@ -1131,9 +1131,9 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
         tick_t timeOffsetEx   = tickEndExact - tickStartExact;
 
         tick_t timeOffset = 0;
-        const note_t note = this->beginDragNote;
+        const note_t noteDrag = this->beginDragNote;
         if (modeMove == SNAP_LEAST) {
-            tick_t handlePos = dragMode == drag_note_right ? note.end() : note.start();
+            tick_t handlePos = dragMode == drag_note_right ? noteDrag.end() : noteDrag.start();
             if (math::abs(timeOffsetEx) > gridSize / 4) {
                 tick_t next = grid.next(handlePos + timeOffsetEx) - handlePos;
                 tick_t prev = grid.prev(handlePos + timeOffsetEx) - handlePos;
@@ -1188,24 +1188,21 @@ void gui_clipcontent::handleDraggedMove(MouseEvent& evt) {
             }
         }
         {
-            std::vector<note_t> notes   = view.draggedSelection;
-            std::vector<note_t> noteCut = view.draggedSelection;
+            std::vector<note_t> notesDraggedCopy = view.draggedSelection;
+            std::vector<note_t> notesDraggedNoDuplicates = view.draggedSelection;
 
-            auto it    = notes.begin();
-            auto itEnd = notes.end();
+            auto it    = notesDraggedCopy.begin();
+            auto itEnd = notesDraggedCopy.end();
             while (it != itEnd) {
-                note_t& note = *it;
-                it++;
-                if (cutIntersecting(noteCut, note, false) > 0) {
-                    notes = noteCut;
-                    it    = notes.begin();
-                    itEnd = notes.end();
+                note_t& noteTest = *it++;
+                if (cutIntersecting(notesDraggedNoDuplicates, noteTest, false) > 0) {
+                    notesDraggedCopy = notesDraggedNoDuplicates;
+                    it    = notesDraggedCopy.begin();
+                    itEnd = notesDraggedCopy.end();
                 }
             }
-            view.draggedSelection = noteCut;
+            view.draggedSelection = notesDraggedNoDuplicates;
         }
-        //    cutIntersecting()
-        //    std::unique(view.draggedSelection.begin(),view.draggedSelection.end());
         mergeDraggedNotes(dragMode);
         setSelectionFrame(getMinMaxTime(view.draggedSelection));
     }

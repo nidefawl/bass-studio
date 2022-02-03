@@ -689,8 +689,7 @@ void guitrack_editor::prerender(NVGcontext* vg) {
             if (!project.trackList.validTrackIdx(trackIdx)) {
                 continue;
             }
-            trackIdx    = project.trackList.clampTrackIdx(trackIdx);
-            track_t* tr = project.trackList[trackIdx];
+            trackIdx = project.trackList.clampTrackIdx(trackIdx);
             for (auto it = trClipboard->clips.begin(); it != trClipboard->clips.end(); it++) {
                 clip_t* cl = (*it).get();
                 if (cl->clipType == CLIP_AUDIO) {

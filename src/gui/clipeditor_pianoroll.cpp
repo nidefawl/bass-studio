@@ -235,7 +235,7 @@ void gui_pianoroll::render(NVGcontext* vg) {
             nvgBeginPath(vg);
 
             //TODO: iterate noteRealtimePitch, not pitches
-            float y = 0;
+            y = 0;
             for (int i = firstKey; i < len; i++) {
                 int32_t pitch = pitches[i];
                 if (STL_CONTAINS(noteRealtimePitch, pitch)) {
@@ -251,7 +251,7 @@ void gui_pianoroll::render(NVGcontext* vg) {
         }
         if (!notePlayingPitch.empty()) {
             nvgBeginPath(vg);
-            float y = 0;
+            y = 0;
             for (int i = firstKey; i < len; i++) {
                 int32_t pitch = pitches[i];
                 if (STL_CONTAINS(notePlayingPitch, pitch)) {
@@ -267,7 +267,7 @@ void gui_pianoroll::render(NVGcontext* vg) {
         }
         int32_t idx = noteMouse.y < 0 ? -1 : indexOfCtr(pitches, noteMouse.y);
         if (idx >= 0) {
-            float y = (idx - firstKey) * scale;
+            y = (idx - firstKey) * scale;
             if (y < size.y + scale * 2) {//should always be true, unclickable otherwise
                 nvgBeginPath(vg);
                 nvgRect(vg, keysX, h - y, widthKeys, scale);
@@ -280,9 +280,8 @@ void gui_pianoroll::render(NVGcontext* vg) {
 
         nvgStrokeWidth(vg, theme->getFloat(GuiConstant::CONST_PIANOROLL_STROKE_WIDTH));
         nvgStrokeColor(vg, theme->getColor(GuiColor::COL_PIANOROLL_STROKE));
-        y              = 0;
         int lastOctave = -1;
-
+        y = 0;
         for (int i = firstKey; len > 0 && i <= len; i++) {
             int noteOctave = pitches[math::clamp(i, 0, len - 1)] / 12;
             if (i == firstKey || i == len || lastOctave != noteOctave) {
@@ -301,8 +300,8 @@ void gui_pianoroll::render(NVGcontext* vg) {
         nvgStroke(vg);
         const float FONT_SIZE = 24.0f;
         setFont(vg, FONT_SIZE, labelColor, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-        y          = 0;
         lastOctave = -1;
+        y = 0;
         for (int i = firstKey; len > 0 && i <= len; i++) {
             int32_t pitch      = pitches[math::clamp(i, 0, len - 1)];
             int32_t noteOctave = pitch / 12;

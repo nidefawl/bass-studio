@@ -218,7 +218,7 @@ public:
         return true;
     }
     bool handleCharInput(unsigned int codepoint) override {
-        if (mCommitted && codepoint >= 0 && codepoint < 0xFF) {
+        if (mCommitted && codepoint < 0xFF) {
             char keyChar = (char) codepoint;
             if ((keyChar >= '0' && keyChar <= '9') || (keyChar == '-')) {
                 MouseHitEvt evt(MouseHitType::MOUSE_LEFT, 0);
@@ -282,9 +282,9 @@ public:
             return;
         }
         if (evt.type == MouseEventType::M_EVT_DOUBLECLICK) {
-            MouseHitEvt evt(MouseHitType::MOUSE_LEFT, 0);
+            MouseHitEvt mouseHitEvt(MouseHitType::MOUSE_LEFT, 0);
             gui_textfield::setValue(getValueAsString());
-            gui_textfield::focusEvent(evt, true);
+            gui_textfield::focusEvent(mouseHitEvt, true);
             gui_textfield::setSelectionRange(-1, -1);
             return;
         }
@@ -1185,11 +1185,11 @@ public:
         hideTrack.setRadius(buttonRadius);
         hideAutomation.setRadius(buttonRadius - 2);
         addAutomationLane.setRadius(buttonRadius - 2);
-        int32_t inset           = CONST_LAYOUT_MARGIN;
-        int32_t i2              = inset * 2;
-        int32_t h               = TRACK_HEIGHT_STEP - i2;
-        int32_t insetBtn        = (TRACK_HEIGHT_STEP - hideTrack.size.y) / 2;
-        int32_t insetBtn2       = (TRACK_HEIGHT_STEP - hideAutomation.size.y) / 2;
+        int32_t inset    = CONST_LAYOUT_MARGIN;
+        int32_t i2       = inset * 2;
+        int32_t h        = TRACK_HEIGHT_STEP - i2;
+        int32_t insetBtn = (TRACK_HEIGHT_STEP - hideAutomation.size.y) / 2;
+
         const int32_t hideTrIns = (titleHeight - hideTrack.size.y) / 2;
         hideTrack.pos           = ivec2(hideTrIns, hideTrIns);
 
@@ -1207,16 +1207,16 @@ public:
             addUNCHECKED(&addAutomationLane);
             automationSelectDevice.pos = ivec2(inset, yCtrls + inset);
             automationSelectParam.pos  = ivec2(inset, yCtrls + TRACK_HEIGHT_STEP + inset);
-            hideAutomation.pos         = ivec2(inset, size.y - TRACK_HEIGHT_STEP + insetBtn2);
-            addAutomationLane.pos      = ivec2(size.x - inset - addAutomationLane.size.x, size.y - TRACK_HEIGHT_STEP + insetBtn2);
+            hideAutomation.pos         = ivec2(inset, size.y - TRACK_HEIGHT_STEP + insetBtn);
+            addAutomationLane.pos      = ivec2(size.x - inset - addAutomationLane.size.x, size.y - TRACK_HEIGHT_STEP + insetBtn);
         } else if (hCtrls >= TRACK_HEIGHT_STEP * 2) {
             yCtrls += TRACK_HEIGHT_STEP;
             addUNCHECKED(&automationSelectParam);
             addUNCHECKED(&hideAutomation);
             addUNCHECKED(&addAutomationLane);
             automationSelectParam.pos = ivec2(inset, yCtrls + inset);
-            hideAutomation.pos        = ivec2(inset, yCtrls + TRACK_HEIGHT_STEP + insetBtn2);
-            addAutomationLane.pos     = ivec2(size.x - inset - addAutomationLane.size.x, yCtrls + TRACK_HEIGHT_STEP + insetBtn2);
+            hideAutomation.pos        = ivec2(inset, yCtrls + TRACK_HEIGHT_STEP + insetBtn);
+            addAutomationLane.pos     = ivec2(size.x - inset - addAutomationLane.size.x, yCtrls + TRACK_HEIGHT_STEP + insetBtn);
         } else if (hCtrls >= TRACK_HEIGHT_STEP) {
             yCtrls += TRACK_HEIGHT_STEP;
             addUNCHECKED(&automationSelectParam);
@@ -1309,7 +1309,6 @@ public:
             nvgFill(vg);
         }
         setFont(vg, (int) (titleHeight * 0.9), getContrastFontColorNvg(color), G_TITLE_ALIGN);
-        auto textWidth = titleSize.x - hideTrack.right();
         nvgText(vg, hideTrack.right() + INSET_TITLE * 2, 0 + titleHeight / 2, StringAsCStr(m_track->name), nullptr);
 
         for (auto g : guis) {
@@ -1366,8 +1365,8 @@ public:
         const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
         const int buttonRadius          = (TRACK_HEIGHT_STEP - INSET_TRACK_CONTENT * 2) / 2;
         removeLane.setRadius(buttonRadius - 2);
-        int32_t insetBtn2 = (TRACK_HEIGHT_STEP - removeLane.size.y) / 2;
-        removeLane.pos    = ivec2(size.x - removeLane.size.x - insetBtn2, insetBtn2);
+        int32_t insetBtn = (TRACK_HEIGHT_STEP - removeLane.size.y) / 2;
+        removeLane.pos    = ivec2(size.x - removeLane.size.x - insetBtn, insetBtn);
     }
     void buttonClicked(guibase* button) override {
         if (button == &removeLane) {
@@ -1424,9 +1423,6 @@ public:
 
     void handleDraggedMove(MouseEvent& evt) override {
         if (dragMode == DRAG_RESIZE) {
-            int32_t mouseDragDist = evt.relMousepos.y;
-            int32_t heightStep    = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
-            //resize(m_trackentry, subtrack, mouseDragDist, heightStep);
             this->parent->onChildLayoutChanged(this);
         }
     }
@@ -1503,18 +1499,10 @@ void gui_track_controls::renderGroupHandle(NVGcontext* vg) {//TODO: make const, 
     while (p) {
         dbgassert(lvl);
 
-        NVGcolor color = rgbToNvg(p->rgb);
-        //ivec2 titleSize(size.x, size.y);
-        //MainCtrl* ctrl = MainCtrl::get();
-        //const int titleHeight = theme->get(GuiConstant::CONST_TRACK_HEIGHT_TITLE);
-        //const int rectHeight = math::min(titleHeight, size.y);
-
         ivec2 inset{ 2, 0 };
-        int32_t width = 8 * lvl;
-
         nvgBeginPath(vg);
         nvgRect(vg, lvl * 8 - 8 + inset.x, pos.y + inset.y, 8 - inset.x * 2, size.y - inset.y * 2);
-        nvgFillColor(vg, color);
+        nvgFillColor(vg, rgbToNvg(p->rgb));
         nvgFill(vg);
         p = p->parent;
         lvl--;

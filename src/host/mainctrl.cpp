@@ -266,7 +266,6 @@ public:
         auto& centerCtr = ctr_tracks2;
         int winX        = 0;
         int winY        = 0;
-        int winBottom   = winH;
 #if USE_GUI_MENU
         int hMenu = 28;
         winH -= hMenu;
@@ -277,7 +276,6 @@ public:
         int hTopControls    = 0;
         int hStatusBar      = 0;
         int hCenter         = winH - hTopControls - hStatusBar;
-        int hRight          = winH - hTopControls;
         int hTrackCtr       = hCenter;
         splitterCenter.pos  = ivec2(winX, winY + hTrackCtr - 5);
         splitterCenter.size = ivec2(winW, 10);

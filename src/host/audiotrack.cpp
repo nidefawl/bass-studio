@@ -77,15 +77,15 @@ int32_t audiotrack_t::convertToSamples(vsthost* host) {
             if (split->version == data[i]->version) {
                 continue;
             }
-            int preVersion                         = split->version;
-            split->version                         = data[i]->version;
+            //bool resized   = false;
+            //int preVersion = split->version;
+            split->version = data[i]->version;
+
             std::vector<samplechannel_t>& channels = split->sample.samples;
-            bool resized                           = false;
             if (block.channels != channels.size()) {
                 channels.resize(block.channels);
-                resized = true;
+                //resized = true;
             }
-            bool reused = false;
             for (uint32_t j = 0; j < block.channels; j++) {
                 float* srcPtr  = block.buf[j];
                 size_t srcSize = block.samples;
@@ -99,7 +99,7 @@ int32_t audiotrack_t::convertToSamples(vsthost* host) {
 #endif
                 bytesCopied += sizeof(float) * srcSize;
             }
-            //log_printf("block #%d copy %d bytes, present %d, resized %d, reused %d, version %d/%d\n", i, bytesCopied, present, resized, reused, preVersion, data[i]->version);
+            //log_printf("block #%d copy %d bytes, present %d, resized %d, version %d/%d\n", i, bytesCopied, present, resized, preVersion, data[i]->version);
         } else {
             newSplits.push_back(nullptr);
         }

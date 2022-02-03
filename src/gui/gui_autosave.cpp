@@ -35,7 +35,7 @@ public:
         //determineSize(size);
         //maxHeight = size.y;
         canTakeInputFocus = true;
-        btnSaveNow.setFontScale(0.4);
+        btnSaveNow.setFontScale(0.4f);
     }
     ~gui_autosave() override {
         removeGuis();

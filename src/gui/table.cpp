@@ -187,7 +187,6 @@ namespace Table {
         if (renderColWise) {
             ctxt.pos         = pos;
             int nCols        = table.rows[0].cols.size();
-            int nContentRows = table.rows.size();
             for (int xCol = 0; xCol < nCols; xCol++) {
                 float colSizeX = table.colSizes[xCol];
                 ctxt.pos.y     = pos.y;

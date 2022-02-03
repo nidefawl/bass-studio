@@ -155,7 +155,6 @@ public:
 
         inset               = 5;
         int32_t buttonW     = math::max(120, cs.x * 2 / 3);
-        int32_t heightList  = math::max(230, cs.y * 2 / 5);
         int32_t height      = 20;
         selectFolder.size   = ivec2(buttonW, height);
         selectFolder.pos    = ivec2(cs.x - inset * 2 - buttonW, inset);

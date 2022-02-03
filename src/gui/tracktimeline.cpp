@@ -149,8 +149,7 @@ void guitrack_timeline::render(NVGcontext* vg) {
                         nvgFontSize(vg, fontSize * scale);
                         nvgFillColor(vg, rgbToNvg(color));
                         float posXTimeCode = n.screenpos + gap / 2;
-                        float posX         = nvgText(vg, posXTimeCode, this->size.y, StringAsCStr(text), nullptr);
-                        float width        = posX - posXTimeCode;
+                        /*float posX = */nvgText(vg, posXTimeCode, this->size.y, StringAsCStr(text), nullptr);
 
                         //if (this->size.y > 28) {
                         //    text = StringFormat("%d", n.time);
