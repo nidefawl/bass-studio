@@ -26,14 +26,14 @@ void serialize(Archive& ar, windowsize& settings) {
     ar(settings.valid,
        p.flags,
        p.showCmd,
-       p.ptMinPosition.x,
-       p.ptMinPosition.y,
-       p.ptMaxPosition.x,
-       p.ptMaxPosition.y,
-       p.rcNormalPosition.left,
-       p.rcNormalPosition.top,
-       p.rcNormalPosition.right,
-       p.rcNormalPosition.bottom);
+       (int32_t&) p.ptMinPosition.x,
+       (int32_t&) p.ptMinPosition.y,
+       (int32_t&) p.ptMaxPosition.x,
+       (int32_t&) p.ptMaxPosition.y,
+       (int32_t&) p.rcNormalPosition.left,
+       (int32_t&) p.rcNormalPosition.top,
+       (int32_t&) p.rcNormalPosition.right,
+       (int32_t&) p.rcNormalPosition.bottom);
 }
 #endif
 

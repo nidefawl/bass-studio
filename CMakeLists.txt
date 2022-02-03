@@ -54,13 +54,38 @@ endif ()
 
 # set warn flags
 if (MSVC)
-    # /wd4067 unexpected tokens following preprocessor directive
-    # /wd4267 size_t to int
-    # /wd4244 float to int
-    # /wd4100 unreferenced formal parameter
-    # /wd4458 declaration of x hides class member
-    set(BUILD_WARNING_FLAGS /W4 /wd4067 /wd4267 /wd4244 /wd4100 /wd4458)
-    set(BUILD_WARNING_FLAGS /W1 /w14996)
+
+    set(MSVC_WARNINGS_DEBUG 
+        /W4
+        # Disabled warnings
+        /wd4267 # size_t to int
+        /wd4244 # float to int
+        /wd4100 # unreferenced formal parameter
+        /wd4458 # declaration of x hides class member
+        # Enabled warnings not covered by /W4
+        /w14263 # 'function': member function does not override any base class virtual member function
+        /w14265 # 'classname': class has virtual functions, but destructor is not virtual instances of this class may not
+                # be destructed correctly
+        /w14287 # 'operator': unsigned/negative constant mismatch
+        /we4289 # nonstandard extension used: 'variable': loop control variable declared in the for-loop is used outside
+                # the for-loop scope
+        /w14296 # 'operator': expression is always 'boolean_value'
+        /w14311 # 'variable': pointer truncation from 'type1' to 'type2'
+        /w14545 # expression before comma evaluates to a function which is missing an argument list
+        /w14546 # function call before comma missing argument list
+        /w14547 # 'operator': operator before comma has no effect; expected operator with side-effect
+        /w14549 # 'operator': operator before comma has no effect; did you intend 'operator'?
+        /w14555 # expression has no effect; expected expression with side- effect
+        /w14619 # pragma warning: there is no warning number 'number'
+        /w14640 # Enable warning on thread un-safe static member initialization
+        /w14826 # Conversion from 'type1' to 'type_2' is sign-extended. This may cause unexpected runtime behavior.
+        /w14905 # wide string literal cast to 'LPSTR'
+        /w14906 # string literal cast to 'LPWSTR'
+        /w14928 # illegal copy-initialization; more than one user-defined conversion has been implicitly applied
+        /permissive- # standards conformance mode for MSVC compiler.
+    )
+    set(MSVC_WARNINGS_RELEASE /W3 /wd4267 /wd4244 /wd4100 /wd4458 /wd4305)
+    set(BUILD_WARNING_FLAGS $<$<CONFIG:Debug>:${MSVC_WARNINGS_DEBUG}>$<$<NOT:$<CONFIG:Debug>>:${MSVC_WARNINGS_RELEASE}>)
 else ()
     set(BUILD_WARNING_FLAGS -Wall -Wno-inconsistent-missing-override -Wno-unused-parameter)
 endif ()
@@ -217,7 +242,7 @@ message(STATUS "BUILD WARNINGS ${BUILD_WARNING_FLAGS}")
 if (BUILD_DAW_LIB)
     set(LINK_TARGET "dawlib")
     add_library(${LINK_TARGET} STATIC ${CPP_SRC_FILES} ${C_SRC_FILES} ${HDR_FILES})
-    target_compile_options(${LINK_TARGET} PRIVATE $<$<CONFIG:Debug>:${BUILD_WARNING_FLAGS}>)
+    target_compile_options(${LINK_TARGET} PRIVATE ${BUILD_WARNING_FLAGS})
     set_property(TARGET ${LINK_TARGET} PROPERTY DBG_POSTFIX d)
 else ()
     set(LINK_TARGET ${BUILD_NAME})
@@ -225,7 +250,7 @@ else ()
     add_executable(${BUILD_NAME} "src/host/main_daw.cpp" ${RESOURCE_FILES} ${CPP_SRC_FILES} ${C_SRC_FILES} ${HDR_FILES})
     SET_APP_BUILD(${BUILD_NAME})
     ADD_POST_BUILD_COMMANDS(${BUILD_NAME})
-    target_compile_options(${BUILD_NAME} PRIVATE $<$<CONFIG:Debug>:${BUILD_WARNING_FLAGS}>)
+    target_compile_options(${BUILD_NAME} PRIVATE ${BUILD_WARNING_FLAGS})
 endif ()
 
 MACRO(DEFINE_EXECUTABLE target_name target_sources)
@@ -233,7 +258,7 @@ MACRO(DEFINE_EXECUTABLE target_name target_sources)
     SET_APP_BUILD(${target_name})
     target_link_libraries(${target_name} PUBLIC "dawlib")
     ADD_POST_BUILD_COMMANDS(${target_name})
-    target_compile_options(${target_name} PRIVATE $<$<CONFIG:Debug>:${BUILD_WARNING_FLAGS}>)
+    target_compile_options(${target_name} PRIVATE ${BUILD_WARNING_FLAGS})
 ENDMACRO()
 
 if (BUILD_DAW_LIB)
