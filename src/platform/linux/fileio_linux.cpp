@@ -7,7 +7,7 @@
 #include "platform.h"
 #include "logging.h"
 
-#include <stb_image.h>
+#include <stb/stb_image.h>
 #include <vector>
 #include <iostream>
 #include <string>
