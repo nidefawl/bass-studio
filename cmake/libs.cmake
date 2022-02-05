@@ -216,5 +216,5 @@ include_directories(SYSTEM
     ${DAW_DEPS_PATH}/glad/src
     ${DAW_DEPS_PATH}/glm
     ${DAW_DEPS_PATH}/SplineLibrary/spline_library
-    ${DAW_DEPS_PATH}/cereal
+    ${DAW_DEPS_PATH}/cereal/include
     ${DAW_DEPS_PATH}/kissfft)

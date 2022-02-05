@@ -19,12 +19,10 @@
 #include <map>
 
 #include <cereal/cereal.hpp>
-#include <cereal/cereal_optional_nvp.hpp>
 #include <cereal/archives/json.hpp>
 #include <cereal/types/vector.hpp>
 #include <cereal/types/unordered_map.hpp>
 #include <cereal/types/polymorphic.hpp>
-#include <cereal/cereal_optional_nvp.hpp>
 
 using namespace std;
 using namespace cereal;
@@ -108,22 +106,13 @@ template <class Archive>
 void serialize(Archive& archive, theme_data& m) {
     archive(make_nvp("colors", m.mapColors));
     archive(make_nvp("properties", m.mapProperties));
-    make_optional_nvp(archive, "fonts", m.mapFonts);
+    archive(make_nvp("fonts", m.mapFonts));
 }
 template <class Archive>
 void save(Archive& archive, guitheme_t const& m) {
     archive(make_nvp("name", m.name));
-    //archive(make_nvp("colorBg", m.colorBg));
-    //archive(make_nvp("colorBgStroke", m.colorBgStroke));
-    //archive(make_nvp("colorBgHover", m.colorBgHover));
-    //archive(make_nvp("colorBgPressed", m.colorBgPressed));
-    //archive(make_nvp("colorBgFocused", m.colorBgFocused));
-    //archive(make_nvp("colorBgDisabled", m.colorBgDisabled));
-    //archive(make_nvp("colorBgFrameBase", m.colorBgFrameBase));
-    //archive(make_nvp("colorBgFrameOutline", m.colorBgFrameOutline));
-    //archive(make_nvp("colorBgFrameHighlight", m.colorBgFrameHighlight));
-    //archive(make_nvp("colorBgFrameBright", m.colorBgFrameBright));
-    // save new
+
+    // convert theme data to a data structure that is easier to serialize
     theme_data data;
     storeThemeData(m, data);
     archive(make_nvp("data", data));
@@ -139,34 +128,9 @@ void load(Archive& archive, guitheme_t& m) {
     m.mapProperties.clear();
     archive(make_nvp("name", m.name));
 
-    const char* namePtr = archive.getNodeName();
-    if (namePtr && strcmp(namePtr, "mapValues") == 0) {
-        // load old
-
-        std::unordered_map<String, int32_t> mapValues;
-        archive(make_nvp("mapValues", mapValues));
-        archive(make_nvp("mapProperties", m.mapProperties));
-        std::unordered_map<int32_t, int32_t> mapColors;
-        for (auto it = mapValues.begin(); it != mapValues.end(); ++it) {
-            String key = it->first;
-            auto c     = GuiColor::getConstantByName(key);
-            if (c.idx <= 0) continue;
-            mapColors[c.idx] = it->second;
-        }
-        if (m.vecNVGColors.size() != NUM_GUI_COLORS) {
-            m.vecNVGColors.resize(NUM_GUI_COLORS);
-        }
-        for (auto it = mapColors.begin(); it != mapColors.end(); ++it) {
-            if (it->first < 0 || it->first >= NUM_GUI_COLORS) continue;
-            m.vecNVGColors[it->first] = rgbaToNvg(it->second);
-        }
-        m.mapColors = mapColors;
-    } else {
-        // load new
-        theme_data data;
-        archive(make_nvp("data", data));
-        loadThemeData(data, m);
-    }
+    theme_data data;
+    archive(make_nvp("data", data));
+    loadThemeData(data, m);
 }
 template <class Archive>
 void serialize(Archive& archive, themefile& m) {

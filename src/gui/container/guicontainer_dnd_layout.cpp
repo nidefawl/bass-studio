@@ -9,8 +9,6 @@
 #include <cereal/archives/json.hpp>
 #include <cereal/types/vector.hpp>
 #include <cereal/types/polymorphic.hpp>
-#include <cereal/cereal_optional_nvp.hpp>
-
 
 static const int32_t dropIndicatorWidth = 8;
 class guictr_layout_entry_handle_button : public guibutton {
@@ -931,8 +929,7 @@ void loadContainerSnapshot(guictr_layout* ctrlayout, guictrlayout_snapshot_t* sn
 }
 template<class Archive>
 void serialize(Archive& archive, guictrlayout_snapshot_t& m) {
-    archive(m.label, m.type, m.activePosition, m.ctrLayout, m.entries);
-    make_optional_nvp(archive, "splitterPositions", m.splitterPositions);
+    archive(m.label, m.type, m.activePosition, m.ctrLayout, m.entries, m.splitterPositions);
 }
 template<class Archive>
 void serialize(Archive& archive, guictrlayout_entry_snapshot_t& m) {
