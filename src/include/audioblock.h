@@ -168,6 +168,7 @@ struct AudioBlock {
     }
 
     void copyFromPosToPos(const float * const * const srcBuf, uint32_t offsetIn, uint32_t offsetOut, uint32_t len, uint32_t srcChannels) {
+        dbgassert(srcChannels > 0);
         uint32_t nChannels = math::max(srcChannels, channels);
         uint32_t nSamples  = math::min(len, samples);
         dbgassert(offsetOut + nSamples <= samples);
