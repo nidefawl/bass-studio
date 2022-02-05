@@ -53,7 +53,8 @@ struct overlap_buffer_t {
     overlap_buffer_t() : blockA(NUM_CHANNELS, INPUTLEN), blockB(NUM_CHANNELS, INPUTLEN), nChannels(NUM_CHANNELS) {}
     bool feed(const AudioBlock* block, std::array<std::array<float, INPUTLEN>, NUM_CHANNELS>& ins) {
         bool processBlock = false;
-        dst->copyFromPosToPos(block->buf, 0, blockOffset, block->samples, NUM_CHANNELS);
+        dst->copyFromPosToPos(block->buf, 0, blockOffset, block->samples, block->channels);
+
         blockOffset += block->samples;
         if (blockOffset >= INPUTLEN) {
             for (int i = 0; i < NUM_CHANNELS; i++) {
