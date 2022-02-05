@@ -9,7 +9,7 @@
 #include <numeric>
 #include <cassert>
 #include <cstdlib>
-#include <tools/kiss_fftr.h>
+#include <kissfft/kiss_fftr.h>
 
 
 void applyWindowAndPadding(float* in, size_t inLen, std::vector<float>& windowedPadded, int32_t fftlen, float fGain) {

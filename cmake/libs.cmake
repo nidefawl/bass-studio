@@ -36,69 +36,109 @@ set(BUILD_PATH_LIB_RELEASE "${DAW_DEPS_INSTALL}/${DAW_DEPS_BUILD_LIBS_RELEASE}")
 message(STATUS "BUILD_PATH_LIB_DEBUG ${BUILD_PATH_LIB_DEBUG}")
 message(STATUS "BUILD_PATH_LIB_RELEASE ${BUILD_PATH_LIB_RELEASE}")
 
+# find_package* and deps cmakes helpers cannot be used until multi config finds widespread support
+# until then we use this shitty way of defining DEBUG and RELEASE libs seperatly and
+# taking care of confg dependant include paths ourselves
+
 find_library(
     GLFW_LIB_RELEASE
     NAMES "glfw3" "glfw3dll"
     PATHS ${BUILD_PATH_LIB_RELEASE}/glfw/
     PATH_SUFFIXES lib
-    NO_DEFAULT_PATH)
+    NO_DEFAULT_PATH
+    REQUIRED)
 find_library(
-    SQLITECPP_LIB_RELEASE NAMES "SQLiteCpp"
+    KISSFFT_LIB_RELEASE
+    NAMES "kissfft-float"
+    PATHS ${BUILD_PATH_LIB_RELEASE}/kissfft/
+    PATH_SUFFIXES lib
+    NO_DEFAULT_PATH
+    REQUIRED)
+find_library(
+    SQLITECPP_LIB_RELEASE
+    NAMES "SQLiteCpp"
     PATHS ${BUILD_PATH_LIB_RELEASE}/SQLiteCpp/
     PATH_SUFFIXES lib
-    NO_DEFAULT_PATH)
+    NO_DEFAULT_PATH
+    REQUIRED)
 find_library(
-    SQLITE3_LIB_RELEASE NAMES "sqlite3"
+    SQLITE3_LIB_RELEASE
+    NAMES "sqlite3"
     PATHS ${BUILD_PATH_LIB_RELEASE}/SQLiteCpp/
     PATH_SUFFIXES lib
-    NO_DEFAULT_PATH)
+    NO_DEFAULT_PATH
+    REQUIRED)
 find_library(
-    SOXR_LIB_RELEASE NAMES "soxr"
+    SOXR_LIB_RELEASE
+    NAMES "soxr"
     PATHS ${BUILD_PATH_LIB_RELEASE}/soxr/
     PATH_SUFFIXES lib
-    NO_DEFAULT_PATH)
+    NO_DEFAULT_PATH
+    REQUIRED)
 find_library(
-    PORTAUDIO_LIB_RELEASE NAMES "portaudio" "portaudio.dll" "portaudio_static_x64"
+    PORTAUDIO_LIB_RELEASE
+    NAMES "portaudio" "portaudio.dll" "portaudio_static_x64"
     PATHS ${BUILD_PATH_LIB_RELEASE}/portaudio/
     PATH_SUFFIXES lib
-    NO_DEFAULT_PATH)
+    NO_DEFAULT_PATH
+    REQUIRED)
 find_library(
-    PORTMIDI_LIB_RELEASE NAMES "portmidi"
+    PORTMIDI_LIB_RELEASE
+    NAMES "portmidi"
     PATHS ${BUILD_PATH_LIB_RELEASE}/portmidi/
     PATH_SUFFIXES lib
-    NO_DEFAULT_PATH)
+    NO_DEFAULT_PATH
+    REQUIRED)
+
 find_library(
     GLFW_LIB_DEBUG
     NAMES "glfw3" "glfw3dll"
     PATHS ${BUILD_PATH_LIB_DEBUG}/glfw/
     PATH_SUFFIXES lib
-    NO_DEFAULT_PATH)
+    NO_DEFAULT_PATH
+    REQUIRED)
 find_library(
-    SQLITECPP_LIB_DEBUG NAMES "SQLiteCpp"
+    KISSFFT_LIB_DEBUG
+    NAMES "kissfft-float"
+    PATHS ${BUILD_PATH_LIB_DEBUG}/kissfft/
+    PATH_SUFFIXES lib
+    NO_DEFAULT_PATH
+    REQUIRED)
+find_library(
+    SQLITECPP_LIB_DEBUG
+    NAMES "SQLiteCpp"
     PATHS ${BUILD_PATH_LIB_DEBUG}/SQLiteCpp/
     PATH_SUFFIXES lib
-    NO_DEFAULT_PATH)
+    NO_DEFAULT_PATH
+    REQUIRED)
 find_library(
-    SQLITE3_LIB_DEBUG NAMES "sqlite3"
+    SQLITE3_LIB_DEBUG
+    NAMES "sqlite3"
     PATHS ${BUILD_PATH_LIB_DEBUG}/SQLiteCpp/
     PATH_SUFFIXES lib
-    NO_DEFAULT_PATH)
+    NO_DEFAULT_PATH
+    REQUIRED)
 find_library(
     SOXR_LIB_DEBUG
     NAMES "soxrd.dll" "soxrd"
     PATHS ${BUILD_PATH_LIB_DEBUG}/soxr/
     PATH_SUFFIXES lib
-    NO_DEFAULT_PATH)
+    NO_DEFAULT_PATH
+    REQUIRED)
 find_library(
-    PORTAUDIO_LIB_DEBUG NAMES "portaudio" "portaudio.dll" "portaudio_static_x64"
+    PORTAUDIO_LIB_DEBUG
+    NAMES "portaudio" "portaudio.dll" "portaudio_static_x64"
     PATHS ${BUILD_PATH_LIB_DEBUG}/portaudio/
     PATH_SUFFIXES lib
-    NO_DEFAULT_PATH)
+    NO_DEFAULT_PATH
+    REQUIRED)
 find_library(
-    PORTMIDI_LIB_DEBUG NAMES "portmidi"
+    PORTMIDI_LIB_DEBUG
+    NAMES "portmidi"
     PATHS ${BUILD_PATH_LIB_DEBUG}/portmidi/
     PATH_SUFFIXES lib
-    NO_DEFAULT_PATH)
+    NO_DEFAULT_PATH
+    REQUIRED)
 
 # Need both versions to make CMake happy
 if(NOT GLFW_LIB_DEBUG)
@@ -108,53 +148,48 @@ if(NOT GLFW_LIB_RELEASE)
     message(FATAL_ERROR "glfw3 not found in ${BUILD_PATH_LIB_RELEASE}/glfw/lib")
 endif()
 
-# message(STATUS "Looking in ${BUILD_PATH_LIB_DEBUG}")
+
+# pybind is header only and identical in release and debug.
+# it cannot be used out of the box and has to be installed.
+# for simplicity purposes we just install it in both release and debug and check for presence of either.
 set(PYBIND11_CPP_STANDARD -std=c++14)
 find_package(pybind11 REQUIRED PATHS "${BUILD_PATH_LIB_DEBUG}/pybind11" "${BUILD_PATH_LIB_RELEASE}/pybind11") 
 
-# message (STATUS "glfw3 debug = ${GLFW_LIB_DEBUG}")
-# message (STATUS "glfw3 release = ${GLFW_LIB_RELEASE}")
-# message (STATUS "SQLiteCpp debug = ${SQLITECPP_LIB_DEBUG}")
-# message (STATUS "SQLiteCpp release = ${SQLITECPP_LIB_RELEASE}")
-# message (STATUS "soxr debug = ${SOXR_LIB_DEBUG}")
-# message (STATUS "soxr release = ${SOXR_LIB_RELEASE}")
-# message (STATUS "portaudio debug = ${PORTAUDIO_LIB_DEBUG}")
-# message (STATUS "portaudio release = ${PORTAUDIO_LIB_RELEASE}")
-# message (STATUS "portmidi debug = ${PORTMIDI_LIB_DEBUG}")
-# message (STATUS "portmidi release = ${PORTMIDI_LIB_RELEASE}")
+find_package(Threads REQUIRED )
 
-FIND_PACKAGE ( Threads REQUIRED )
 if (LINUX)
-  find_package(X11 REQUIRED)
-  find_package(ALSA REQUIRED)
-  find_package(PkgConfig REQUIRED)
-  pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
+    find_package(X11 REQUIRED)
+    find_package(ALSA REQUIRED)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
 endif(LINUX)
+
 if (APPLE)
-FIND_LIBRARY(APPLE_FOUNDATION_LIBRARY Foundation REQUIRED)
-FIND_LIBRARY(APPLE_FOUNDATION_LIBRARY CoreFoundation REQUIRED)
-  FIND_LIBRARY(APPLE_COREAUDIO_LIBRARY CoreAudio REQUIRED)
-  FIND_LIBRARY(APPLE_AUDIOTOOLBOX_LIBRARY AudioToolbox REQUIRED)
-  FIND_LIBRARY(APPLE_AUDIOUNIT_LIBRARY AudioUnit REQUIRED)
-  FIND_LIBRARY(APPLE_CARBON_LIBRARY Carbon REQUIRED)
-  FIND_LIBRARY(APPLE_COCOA_LIBRARY Cocoa REQUIRED)
-  FIND_LIBRARY(APPLE_IOKIT_LIBRARY IOKit REQUIRED)
-  FIND_LIBRARY(APPLE_OPENGL_LIBRARY OpenGL REQUIRED)
-  FIND_LIBRARY(APPLE_COREVIDEO_LIBRARY CoreVideo REQUIRED)
-  FIND_LIBRARY(APPLE_COREMIDI_LIBRARY CoreMidi REQUIRED)
+    find_library(APPLE_FOUNDATION_LIBRARY Foundation REQUIRED)
+    find_library(APPLE_FOUNDATION_LIBRARY CoreFoundation REQUIRED)
+    find_library(APPLE_COREAUDIO_LIBRARY CoreAudio REQUIRED)
+    find_library(APPLE_AUDIOTOOLBOX_LIBRARY AudioToolbox REQUIRED)
+    find_library(APPLE_AUDIOUNIT_LIBRARY AudioUnit REQUIRED)
+    find_library(APPLE_CARBON_LIBRARY Carbon REQUIRED)
+    find_library(APPLE_COCOA_LIBRARY Cocoa REQUIRED)
+    find_library(APPLE_IOKIT_LIBRARY IOKit REQUIRED)
+    find_library(APPLE_OPENGL_LIBRARY OpenGL REQUIRED)
+    find_library(APPLE_COREVIDEO_LIBRARY CoreVideo REQUIRED)
+    find_library(APPLE_COREMIDI_LIBRARY CoreMidi REQUIRED)
 
 endif(APPLE)
 
 if (LINUX)
-  link_directories(${GTK3_LIBRARY_DIRS})
-  add_definitions(${GTK3_CFLAGS_OTHER})
-  include_directories(SYSTEM ${GTK3_INCLUDE_DIRS})
-  include_directories(SYSTEM ${X11_X11_INCLUDE_PATH})
-  include_directories(SYSTEM ${ALSA_INCLUDE_DIR})
+    link_directories(${GTK3_LIBRARY_DIRS})
+    add_definitions(${GTK3_CFLAGS_OTHER})
+    include_directories(SYSTEM ${GTK3_INCLUDE_DIRS})
+    include_directories(SYSTEM ${X11_X11_INCLUDE_PATH})
+    include_directories(SYSTEM ${ALSA_INCLUDE_DIR})
 endif(LINUX)
 
 
 set(USE_SHARED_LIBS Off)
+
 if (USE_SHARED_LIBS)
     set(LIB_LINKAGE "shared")
 else()
@@ -173,11 +208,13 @@ include_directories(SYSTEM
     ${DAW_DEPS_INSTALL}/${LIB_GN_EXPR}/glfw/include
     ${DAW_DEPS_INSTALL}/${LIB_GN_EXPR}/SQLiteCpp/include
     ${DAW_DEPS_INSTALL}/${LIB_GN_EXPR}/soxr/include
+    ${DAW_DEPS_INSTALL}/${LIB_GN_EXPR}/portaudio/include
+    ${DAW_DEPS_INSTALL}/${LIB_GN_EXPR}/portmidi/include
+    ${DAW_DEPS_INSTALL}/${LIB_GN_EXPR}/kissfft/include
+    ${DAW_DEPS_INSTALL}/${LIB_GN_EXPR}/pybind11/include
     ${DAW_DEPS_PATH}/glad/include
     ${DAW_DEPS_PATH}/glad/src
     ${DAW_DEPS_PATH}/glm
-    ${DAW_DEPS_PATH}/portaudio/include
-    ${DAW_DEPS_PATH}/portmidi/pm_common
     ${DAW_DEPS_PATH}/SplineLibrary/spline_library
     ${DAW_DEPS_PATH}/cereal
     ${DAW_DEPS_PATH}/kissfft)

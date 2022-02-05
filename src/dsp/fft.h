@@ -3,7 +3,7 @@
 #include <array>
 #include "config.h"
 #include "meter.h"
-#include <tools/kiss_fftr.h>
+#include <kissfft/kiss_fftr.h>
 
 constexpr float MIN_FREQ = 20;
 constexpr float MAX_FREQ = 11000;
