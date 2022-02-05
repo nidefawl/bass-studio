@@ -108,7 +108,7 @@ static int audioCallback(const void* inputBuffer, void* outputBuffer,
                 memset(bufferWrite->output->buf[i], 0, bufferWrite->output->samples * sizeof(float));
             }
         } else {
-            dsp_util::fillChannels(outputs, stream->nOutputChannels, framesPerBuffer, 0.0f);
+            bufferWrite->output->clear();
         }
         bufferWrite->submitted      = true;
         bufferWrite->inUse          = true;
