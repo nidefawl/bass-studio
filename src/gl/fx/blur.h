@@ -119,7 +119,7 @@ public:
 
         std::vector<int32_t>& kawaseKernPasses = blur_pass_parameters::getPassConstants(passes);
         for (int p = 0; p < kawaseKernPasses.size(); p++) {
-            glProgramUniform3f(program, u_blurPassProp, pixelScale / (float) w, pixelScale / (float) h, kawaseKernPasses[p]);
+            glUniform3f(u_blurPassProp, pixelScale / (float) w, pixelScale / (float) h, kawaseKernPasses[p]);
             bufferTarget->bind();
             bufferTarget->clearFrameBuffer();
             glBindTexture(GL_TEXTURE_2D, input);
