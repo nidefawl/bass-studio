@@ -48,6 +48,11 @@ find_library(
     PATH_SUFFIXES lib
     NO_DEFAULT_PATH)
 find_library(
+    SQLITE3_LIB_RELEASE NAMES "sqlite3"
+    PATHS ${BUILD_PATH_LIB_RELEASE}/SQLiteCpp/
+    PATH_SUFFIXES lib
+    NO_DEFAULT_PATH)
+find_library(
     SOXR_LIB_RELEASE NAMES "soxr"
     PATHS ${BUILD_PATH_LIB_RELEASE}/soxr/
     PATH_SUFFIXES lib
@@ -58,7 +63,7 @@ find_library(
     PATH_SUFFIXES lib
     NO_DEFAULT_PATH)
 find_library(
-    PORTMIDI_LIB_RELEASE NAMES "portmidi_s"
+    PORTMIDI_LIB_RELEASE NAMES "portmidi"
     PATHS ${BUILD_PATH_LIB_RELEASE}/portmidi/
     PATH_SUFFIXES lib
     NO_DEFAULT_PATH)
@@ -74,6 +79,11 @@ find_library(
     PATH_SUFFIXES lib
     NO_DEFAULT_PATH)
 find_library(
+    SQLITE3_LIB_DEBUG NAMES "sqlite3"
+    PATHS ${BUILD_PATH_LIB_DEBUG}/SQLiteCpp/
+    PATH_SUFFIXES lib
+    NO_DEFAULT_PATH)
+find_library(
     SOXR_LIB_DEBUG
     NAMES "soxrd.dll" "soxrd"
     PATHS ${BUILD_PATH_LIB_DEBUG}/soxr/
@@ -85,7 +95,7 @@ find_library(
     PATH_SUFFIXES lib
     NO_DEFAULT_PATH)
 find_library(
-    PORTMIDI_LIB_DEBUG NAMES "portmidi_s"
+    PORTMIDI_LIB_DEBUG NAMES "portmidi"
     PATHS ${BUILD_PATH_LIB_DEBUG}/portmidi/
     PATH_SUFFIXES lib
     NO_DEFAULT_PATH)
