@@ -1777,7 +1777,8 @@ int startApplication(int argc, char* argv[]) {
 
         glfwSetErrorCallback(glfw_startup_error_callback);
 
-        if (!glfwInit("DAWWINDOW01")) {
+        glfwSetWin32WindowClassName(L"DAWWINDOW01");
+        if (!glfwInit()) {
             showerror("Initialization failed. Couldn't initialize glfw");
             exit(EXIT_FAILURE);
         }
@@ -1879,7 +1880,7 @@ int startApplication(int argc, char* argv[]) {
             }
             int64_t tmMsgLoop = hiresTimer1.getTime();
             hiresTimer1.reset();
-            glfwUpdateInternals();
+            glfwUpdateWin32Internals();
             int64_t tmUpdateInternals = hiresTimer1.getTime();
 #endif//_WIN32
             int64_t tmHRNow = hiresTimer.getTime();
