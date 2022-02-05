@@ -68,9 +68,10 @@ find_library(
     PATH_SUFFIXES lib
     NO_DEFAULT_PATH
     REQUIRED)
+string(TOLOWER "soxr-${CMAKE_CXX_COMPILER_ID}-release" SOXR_RELEASE_DLL_NAME)
 find_library(
     SOXR_LIB_RELEASE
-    NAMES "soxr"
+    NAMES ${SOXR_RELEASE_DLL_NAME}
     PATHS ${BUILD_PATH_LIB_RELEASE}/soxr/
     PATH_SUFFIXES lib
     NO_DEFAULT_PATH
@@ -118,9 +119,10 @@ find_library(
     PATH_SUFFIXES lib
     NO_DEFAULT_PATH
     REQUIRED)
+string(TOLOWER "soxr-${CMAKE_CXX_COMPILER_ID}-debug" SOXR_DEBUG_DLL_NAME)
 find_library(
     SOXR_LIB_DEBUG
-    NAMES "soxrd.dll" "soxrd"
+    NAMES ${SOXR_DEBUG_DLL_NAME}
     PATHS ${BUILD_PATH_LIB_DEBUG}/soxr/
     PATH_SUFFIXES lib
     NO_DEFAULT_PATH
