@@ -248,17 +248,17 @@ else ()
     set(LINK_TARGET ${BUILD_NAME})
     # define main exectuable
     add_executable(${BUILD_NAME} "src/host/main_daw.cpp" ${RESOURCE_FILES} ${CPP_SRC_FILES} ${C_SRC_FILES} ${HDR_FILES})
+    target_compile_options(${BUILD_NAME} PRIVATE ${BUILD_WARNING_FLAGS})
     SET_APP_BUILD(${BUILD_NAME})
     ADD_POST_BUILD_COMMANDS(${BUILD_NAME})
-    target_compile_options(${BUILD_NAME} PRIVATE ${BUILD_WARNING_FLAGS})
 endif ()
 
 MACRO(DEFINE_EXECUTABLE target_name target_sources)
     add_executable(${target_name} ${target_sources})
-    SET_APP_BUILD(${target_name})
-    target_link_libraries(${target_name} PUBLIC "dawlib")
-    ADD_POST_BUILD_COMMANDS(${target_name})
+    target_link_libraries(${target_name} PRIVATE "dawlib")
     target_compile_options(${target_name} PRIVATE ${BUILD_WARNING_FLAGS})
+    SET_APP_BUILD(${target_name})
+    ADD_POST_BUILD_COMMANDS(${target_name})
 ENDMACRO()
 
 if (BUILD_DAW_LIB)
@@ -276,7 +276,12 @@ if (BUILD_DAW_LIB)
     endif ()
 endif ()
 
+target_link_libraries(${LINK_TARGET} PRIVATE optimized ${GLFW_LIB_RELEASE} debug ${GLFW_LIB_DEBUG})
+target_link_libraries(${LINK_TARGET} PRIVATE optimized ${SQLITECPP_LIB_RELEASE} debug ${SQLITECPP_LIB_DEBUG})
 target_link_libraries(${LINK_TARGET} PRIVATE optimized ${SQLITE3_LIB_RELEASE} debug ${SQLITE3_LIB_DEBUG})
+target_link_libraries(${LINK_TARGET} PRIVATE optimized ${SOXR_LIB_RELEASE} debug ${SOXR_LIB_DEBUG})
+target_link_libraries(${LINK_TARGET} PRIVATE optimized ${PORTAUDIO_LIB_RELEASE} debug ${PORTAUDIO_LIB_DEBUG})
+target_link_libraries(${LINK_TARGET} PRIVATE optimized ${PORTMIDI_LIB_RELEASE} debug ${PORTMIDI_LIB_DEBUG})
 
 if (LINUX)
     target_link_libraries(${LINK_TARGET} PRIVATE ${X11_X11_LIB} ${CMAKE_THREAD_LIBS_INIT} ${CMAKE_DL_LIBS} ${ALSA_LIBRARY} ${GTK3_LIBRARIES} GL rt m)
@@ -297,10 +302,14 @@ if (APPLE)
             ${APPLE_COREAUDIO_LIBRARY}
             m)
 endif (APPLE)
+
 if (WIN32)
     target_link_libraries(${LINK_TARGET} PRIVATE dbghelp winmm opengl32 kernel32 gdi32 ole32 uuid comdlg32 setupapi mswsock ws2_32)
 endif (WIN32)
 
+if (WIN32_USE_STACK_PROTECTOR)
+    target_link_libraries(${LINK_TARGET} PRIVATE ssp)
+endif ()
 
 GENERATE_BUILDINFO_CPP()
 

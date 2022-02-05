@@ -52,11 +52,18 @@ elseif (MSVC)
     add_compile_options("/MP")
 endif()
 
-if (LINUX)  
-# stack protector improves debugging corrupted stacks on linux
- # can't use stack-protector with clang/gnu toolchain on windows
-add_compile_options(-fstack-protector)
+
+# if (LINUX OR (WIN32 AND NOT MSVC)) 
+if (LINUX) 
+    if (WIN32)
+        set(WIN32_USE_STACK_PROTECTOR ON)
+    endif()
+    # stack protector improves debugging corrupted stacks on linux
+    add_compile_options(-fstack-protector)
+else()
+    set(WIN32_USE_STACK_PROTECTOR OFF)
 endif()
+message(STATUS "WIN32_USE_STACK_PROTECTOR ${WIN32_USE_STACK_PROTECTOR}")
 
 if (IS_MINGW_BUILD)
   # improve debugging
