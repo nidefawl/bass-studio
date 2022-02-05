@@ -212,8 +212,7 @@ include_directories(SYSTEM
     ${DAW_DEPS_INSTALL}/${LIB_GN_EXPR}/portmidi/include
     ${DAW_DEPS_INSTALL}/${LIB_GN_EXPR}/kissfft/include
     ${DAW_DEPS_INSTALL}/${LIB_GN_EXPR}/pybind11/include
-    ${DAW_DEPS_PATH}/glad/include
-    ${DAW_DEPS_PATH}/glad/src
+    ${DAW_DEPS_PATH}/glad/gl-3.2-core/include
     ${DAW_DEPS_PATH}/glm
     ${DAW_DEPS_PATH}/SplineLibrary/spline_library
     ${DAW_DEPS_PATH}/cereal/include

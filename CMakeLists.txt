@@ -179,7 +179,6 @@ foreach (f ${CPP_ALL_FILES})
 endforeach ()
 
 
-list(APPEND CPP_SRC_FILES "src/tests/common/test_environment.cpp")
 
 if (NOT MSVC)
     # These files are especially important to have optimized, even in debug builds
@@ -209,15 +208,14 @@ if (NOT MSVC)
     set_source_files_properties(${SRC_FILES_NO_OPTIMIZE} PROPERTIES COMPILE_OPTIONS "-O0")
 endif ()
 
-set(CPP_SRC_FILES ${CPP_SRC_FILES} ${MM_SRC_FILES})
-set(ALL_SRC_FILES ${CPP_SRC_FILES})
-list(APPEND ALL_SRC_FILES ${C_SRC_FILES})
-list(APPEND ALL_SRC_FILES ${HDR_FILES})
 
 set(GENERATED_SRC_FILES "${CMAKE_BINARY_DIR}/buildinfo.cpp")
-list(APPEND CPP_SRC_FILES ${GENERATED_SRC_FILES})
-source_group(TREE ${DAW_SRC_PATH} PREFIX "src" FILES ${ALL_SRC_FILES})
+list(APPEND CPP_SRC_FILES "src/tests/common/test_environment.cpp")
+
+source_group(TREE ${DAW_SRC_PATH} PREFIX "src" FILES ${CPP_SRC_FILES} ${HDR_FILES} ${C_SRC_FILES} ${MM_SRC_FILES})
 source_group("generated" FILES ${GENERATED_SRC_FILES})
+
+list(APPEND C_SRC_FILES "${DAW_DEPS_PATH}/glad/gl-3.2-core/src/glad.c")
 
 list(APPEND RESOURCE_FILES "")
 if (MSVC)
@@ -241,13 +239,13 @@ message(STATUS "BUILD WARNINGS ${BUILD_WARNING_FLAGS}")
 # if BUILD_DAW_LIB is OFF we link objects directly to output executable (faster)
 if (BUILD_DAW_LIB)
     set(LINK_TARGET "dawlib")
-    add_library(${LINK_TARGET} STATIC ${CPP_SRC_FILES} ${C_SRC_FILES} ${HDR_FILES})
+    add_library(${LINK_TARGET} STATIC ${CPP_SRC_FILES} ${C_SRC_FILES} ${MM_SRC_FILES} ${GENERATED_SRC_FILES})
     target_compile_options(${LINK_TARGET} PRIVATE ${BUILD_WARNING_FLAGS})
     set_property(TARGET ${LINK_TARGET} PROPERTY DBG_POSTFIX d)
 else ()
     set(LINK_TARGET ${BUILD_NAME})
     # define main exectuable
-    add_executable(${BUILD_NAME} "src/host/main_daw.cpp" ${RESOURCE_FILES} ${CPP_SRC_FILES} ${C_SRC_FILES} ${HDR_FILES})
+    add_executable(${BUILD_NAME} "src/host/main_daw.cpp" ${RESOURCE_FILES} ${CPP_SRC_FILES} ${C_SRC_FILES} ${MM_SRC_FILES} ${GENERATED_SRC_FILES})
     target_compile_options(${BUILD_NAME} PRIVATE ${BUILD_WARNING_FLAGS})
     SET_APP_BUILD(${BUILD_NAME})
     ADD_POST_BUILD_COMMANDS(${BUILD_NAME})
