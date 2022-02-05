@@ -381,8 +381,8 @@ public:
 
         auto tmNowMicros = getTimeMicros();
         auto tmNow = tmNowMicros / 1000LL;
-        if (frameCountFPS > 0 && tmLastFps - tmNow >= 1000) {
-            float fps = frameCountFPS / static_cast<float>(tmNow - tmLastFps);
+        if (frameCountFPS > 0 && tmNow - tmLastFps >= 1000) {
+            float fps = frameCountFPS*1000.0f / static_cast<float>(tmNow - tmLastFps);
 #if BUILD_VSTHOST
             daw_tls::tlsinstance& tls = daw_tls::getTls();
             tls.renderStats.fps       = fps;
