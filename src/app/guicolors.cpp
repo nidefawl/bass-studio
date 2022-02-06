@@ -225,6 +225,7 @@ namespace UIFont {
     const font_type_t FONT_TEXFIELD     = font_type_t("FONT_TEXFIELD", "Roboto-Medium.ttf");
     const font_type_t FONT_CONTEXT_MENU = font_type_t("FONT_CONTEXT_MENU", "Roboto-Medium.ttf");
     const font_type_t FONT_DECIMAL      = font_type_t("FONT_DECIMAL", "Roboto-Medium.ttf");
+    const font_type_t FONT_TEST         = font_type_t("FONT_TEST", "jbmononf.ttf");
 
     void bindFont(NVGcontext* ctx, UIFont::font_instance font) {
         RenderResources::NvgFonts& fonts = RenderResources::perContextFonts[ctx];

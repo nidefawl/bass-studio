@@ -9,7 +9,7 @@
 #include "menu.h"
 #include "gui/trackcontrols.h"
 #include "gui/trackcontent.h"
-
+#include "commands.h"
 
 void dawinstance_startup_commands(daw_tls::tlsinstance& tls) {
     //  if (1==1)
@@ -131,6 +131,6 @@ void dawinstance_startup_commands(daw_tls::tlsinstance& tls) {
     };
     //    dawMainCtrl->setVisible(false);
     //    dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 0));
-    //    dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 2));
+        dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 1));
     dawInstance->loadFile(dawPath + projName, flags);
 }

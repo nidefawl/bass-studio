@@ -61,7 +61,7 @@
 #define G_YELLOW (theme->getColor(GuiColor::COL_LEVEL_IND_YELLOW))
 #define G_YELLOW_DRK (theme->getColor(GuiColor::COL_LEVEL_IND_YELLOW_DRK))
 #define G_YELLOW_DRKER (theme->getColor(GuiColor::COL_LEVEL_IND_YELLOW_DRKER))
-#define G_FONT_MIDDLE_OFFSET(x) (x / 2.0f + 1)
+#define G_FONT_MIDDLE_OFFSET(x) (x / 2.0f)
 #define G_FONT_SCALE(x) ( math::froundf(x * theme->getFloat(GuiConstant::CONST_FONT_SCALE)) )
 #define G_MOVE_HIGHLIGHT nvgRGBA(255, 0, 0, 192)
 
