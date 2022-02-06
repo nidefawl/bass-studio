@@ -311,6 +311,8 @@ struct GLNVGcontext {
 	GLuint stencilFuncMask;
 	GLNVGblend blendFunc;
 	#endif
+
+	int dummyTex;
 	const char* overrideShaderVertex;
 	const char* overrideShaderFragment;
 };
@@ -901,6 +903,10 @@ static int glnvg__renderCreate(void* uptr)
 #endif
 	gl->fragSize = sizeof(GLNVGfragUniforms) + align - sizeof(GLNVGfragUniforms) % align;
 
+	// Some platforms does not allow to have samples to unset textures.
+	// Create empty one which is bound when there's no texture specified.
+	gl->dummyTex = glnvg__renderCreateTexture(gl, NVG_TEXTURE_ALPHA, 1, 1, 0, NULL);
+
 	glnvg__checkError(gl, "create done");
 
 	//glFinish();
@@ -1193,6 +1199,7 @@ static GLNVGfragUniforms* nvg__fragUniformPtr(GLNVGcontext* gl, int i);
 
 static void glnvg__setUniforms(GLNVGcontext* gl, int uniformOffset, int image)
 {
+	GLNVGtexture* tex = NULL;
 #if NANOVG_GL_USE_UNIFORMBUFFER
 	glBindBufferRange(GL_UNIFORM_BUFFER, GLNVG_FRAG_BINDING, gl->fragBuf, uniformOffset, sizeof(GLNVGfragUniforms));
 #else
@@ -1201,12 +1208,14 @@ static void glnvg__setUniforms(GLNVGcontext* gl, int uniformOffset, int image)
 #endif
 
 	if (image != 0) {
-		GLNVGtexture* tex = glnvg__findTexture(gl, image);
-		glnvg__bindTexture(gl, tex != NULL ? tex->tex : 0);
-		glnvg__checkError(gl, "tex paint tex");
-	} else {
-		glnvg__bindTexture(gl, 0);
+		tex = glnvg__findTexture(gl, image);
 	}
+	// If no image is set, use empty texture
+	if (tex == NULL) {
+		tex = glnvg__findTexture(gl, gl->dummyTex);
+	}
+	glnvg__bindTexture(gl, tex != NULL ? tex->tex : 0);
+	glnvg__checkError(gl, "tex paint tex");
 }
 
 static void glnvg__renderViewport(void* uptr, float width, float height, float devicePixelRatio)
@@ -1644,8 +1653,6 @@ static void glnvg__renderFill(void* uptr, NVGpaint* paint, NVGcompositeOperation
 	{
 		call->type = GLNVG_CONVEXFILL;
 		call->triangleCount = 0;	// Bounding box fill quad not needed for convex fill
-	} else {
-		i = 0;
 	}
 
 	// Allocate vertices for all the paths.
@@ -1662,9 +1669,9 @@ static void glnvg__renderFill(void* uptr, NVGpaint* paint, NVGcompositeOperation
 			copy->fillCount = path->nfill;
 			memcpy(&gl->verts[offset], path->fill, sizeof(NVGvertex) * path->nfill);
 #ifdef NVG_3D_MODE
-			for (int i = 0; i < path->nfill; i++) {
-				gl->verts[offset+i].z = zPos;
-				gl->verts[offset+i].w = 1.0f;
+			for (int j = 0; j < path->nfill; j++) {
+				gl->verts[offset+j].z = zPos;
+				gl->verts[offset+j].w = 1.0f;
 			}
 #endif
 			offset += path->nfill;
@@ -1674,9 +1681,9 @@ static void glnvg__renderFill(void* uptr, NVGpaint* paint, NVGcompositeOperation
 			copy->strokeCount = path->nstroke;
 			memcpy(&gl->verts[offset], path->stroke, sizeof(NVGvertex) * path->nstroke);
 #ifdef NVG_3D_MODE
-			for (int i = 0; i < path->nstroke; i++) {
-				gl->verts[offset+i].z = zPos;
-				gl->verts[offset+i].w = 1.0f;
+			for (int j = 0; j < path->nstroke; j++) {
+				gl->verts[offset+j].z = zPos;
+				gl->verts[offset+j].w = 1.0f;
 			}
 #endif
 			offset += path->nstroke;
@@ -1754,9 +1761,9 @@ static void glnvg__renderStroke(void* uptr, NVGpaint* paint, NVGcompositeOperati
 			copy->strokeCount = path->nstroke;
 			memcpy(&gl->verts[offset], path->stroke, sizeof(NVGvertex) * path->nstroke);
 #ifdef NVG_3D_MODE
-			for (int i = 0; i < path->nstroke; i++) {
-				gl->verts[offset+i].z = zPos;
-				gl->verts[offset+i].w = 1.0f;
+			for (int j = 0; j < path->nstroke; j++) {
+				gl->verts[offset+j].z = zPos;
+				gl->verts[offset+j].w = 1.0f;
 			}
 #endif
 			offset += path->nstroke;
@@ -1788,7 +1795,7 @@ error:
 
 static void glnvg__renderTriangles(void* uptr, NVGpaint* paint,
 		NVGcompositeOperationState compositeOperation, NVGscissor* scissor,
-								   const NVGvertex* verts, int nverts, float zPos)
+								   const NVGvertex* verts, int nverts, float zPos, float fringe)
 {
 	GLNVGcontext* gl = (GLNVGcontext*)uptr;
 	GLNVGcall* call = glnvg__allocCall(gl);
@@ -1825,7 +1832,7 @@ static void glnvg__renderTriangles(void* uptr, NVGpaint* paint,
 	call->uniformOffset = glnvg__allocFragUniforms(gl, 1);
 	if (call->uniformOffset == -1) goto error;
 	frag = nvg__fragUniformPtr(gl, call->uniformOffset);
-	glnvg__convertPaint(gl, frag, paint, scissor, 1.0f, 1.0f, -1.0f);
+	glnvg__convertPaint(gl, frag, paint, scissor, 1.0f, fringe, -1.0f);
 	if (paint->image >= 0) {
 		frag->type = NSVG_SHADER_IMG;
 	}
