@@ -2645,7 +2645,7 @@ nvg_cache_storage* deepCopyPathCache(NVGpathCache* cache, int type, float stroke
     nvg_cache_entry_path_t* pCache = malloc(sizeof(nvg_cache_entry_path_t));
     if (!pCache) goto error;
     memset(pCache, 0, sizeof(nvg_cache_entry_path_t));
-    pCache->type          = 0;
+    pCache->type          = type;
     pCache->strokeWidth   = strokeWidth;
     pCache->fillPaint     = *pFillPaint;
     pCache->state         = *pState;
