@@ -316,6 +316,15 @@ public:
     vsthost* getHost() {
         return tls.host;
     }
+    audiocache* getAudioCache() {
+        return tls.audioCache;
+    }
+    midihost* getMidiHost() {
+        return tls.midiHost;
+    }
+    audiohost* getAudioHost() {
+        return tls.audioHost;
+    }
     static DawInstance* get();
 
     void postInit();

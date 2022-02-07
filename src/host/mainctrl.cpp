@@ -1580,7 +1580,7 @@ std::shared_ptr<project_file> DawInstance::createProjectFile() {
     project.copyTo(file->project);
     file->project.globals        = projectGlobals;
     file->project.exportSettings = getExportSettings();
-    audiocache::getInstance()->store(file->sampleFileIndex);
+    tls.audioCache->store(file->sampleFileIndex);
     if (tls.mainCtrl) {
         file->layout.layoutGrid    = tls.mainCtrl->grid;
         file->layout.scrollOffsetX = tls.mainCtrl->view->ctr_tracks.getScrollOffset();
@@ -1623,7 +1623,7 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
     /** make sure call to unloadProject unloaded all vst2 instances **/
     dbgassert(tls.host->getVst2Instances().empty());
     //TODO: assert that audiocache is empty
-    dbgassert(audiocache::getInstance()->isEmpty());
+    dbgassert(tls.audioCache->isEmpty());
 
     /** populates trackList **/
     project.copyFrom(file->project);
@@ -1768,7 +1768,7 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
             /** TODO: vsync **/
             seqthreads::threadSleep(16);
             log_printf("pre load samplefileindex\n", 0);
-            audiocache::getInstance()->load(file->sampleFileIndex);
+            tls.audioCache->load(file->sampleFileIndex);
             log_printf("post load samplefileindex\n", 0);
         }
         log_printf("end sample loading\n", 0);
@@ -1970,7 +1970,7 @@ bool DawCtrl::filesDropBegin(std::vector<String>& files, ivec2 mousepos, int kbm
         if (StrEndsWith(path, ".wav")) {
             String a, b, c, d;
             SplitPath(path, &a, &b, &c, &d);
-            audiofile_t* audio = audiocache::getInstance()->loadFile(path);
+            audiofile_t* audio = daw.getAudioCache()->loadFile(path);
             if (audio) {
                 auto* sample = audio->sample.get();
                 if (sample) {
@@ -2470,8 +2470,7 @@ void MainCtrl::showAutomation(track_t* tr, automatable_t* at, int32_t paramIdx) 
 void DawInstance::setTempo(int32_t _tempo100) {
     playThread.call([this, _tempo100]() {
         projectGlobals.tempo100 = CLAMP_I(_tempo100, 100, 99900);
-    },
-                    true);
+    }, true);
 }
 
 void MainCtrl::destroy() {

@@ -588,11 +588,8 @@ void gui_audiocontent::releaseRendered() {
     waveformRef->rendered = false;
 }
 
-audioclip_texture_t makeWaveformFromSample(const project_globals_t& project, scaled_grid& grid, const clip_audio_t& clipAudio,
+audioclip_texture_t makeWaveformFromSample(const int32_t tempo100, const samplerate_t samplerate, scaled_grid& grid, const clip_audio_t& clipAudio,
                                            const ivec2& pos, const ivec2& size) {
-
-
-    samplerate_t sr = vsthost::getInstance()->m_sampleFormatInternal.sampleRate;
 
     int32_t pxBegin = 0;
     int32_t pxEnd   = size.x;
@@ -600,8 +597,8 @@ audioclip_texture_t makeWaveformFromSample(const project_globals_t& project, sca
     double tickBeginOffset = grid.screenToTickD(pxBegin);
     double tickEnd         = grid.screenToTickD(pxEnd);
 
-    double sampleStartOffset = tickToSampleConvert<double, roundmode::floor>(tickBeginOffset, project.tempo100, sr);
-    double sampleEnd         = tickToSampleConvert<double, roundmode::floor>(tickEnd, project.tempo100, sr);
+    double sampleStartOffset = tickToSampleConvert<double, roundmode::floor>(tickBeginOffset, tempo100, samplerate);
+    double sampleEnd         = tickToSampleConvert<double, roundmode::floor>(tickEnd, tempo100, samplerate);
 
     double lenSamples   = sampleEnd - sampleStartOffset;
     double samplesPerPx = lenSamples / size.x;
@@ -667,21 +664,22 @@ inline bool isAlmostEqualWaveformSample(const audioclip_texture_t& lhs, const au
     return false;
 }
 void gui_audiocontent::updatePosition() {
-    project_globals_t& project = DawInstance::get()->getGlobals();
     const clip_t* clip         = view.clip();
     if (!clip || clip->clipType != CLIP_AUDIO) {
         releaseRendered();
         return;
     }
     auto& clipAudio    = clip->audio;
-    audiofile_t* audio = audiocache::getInstance()->get(clipAudio.id);
+    audiofile_t* audio = dawCtrl->getDaw()->getAudioCache()->get(clipAudio.id);
     if (!audio) {
         releaseRendered();
         return;
     }
+    const auto tempo100 = dawCtrl->getDaw()->getGlobals().tempo100;
+    const auto samplerate = view.track()->audio->sampleFormat.sampleRate;
 
     dbgassert(size.x > 0);
-    audioclip_texture_t waveform = makeWaveformFromSample(project, grid, clipAudio, ivec2(0, 0), size);
+    audioclip_texture_t waveform = makeWaveformFromSample(tempo100, samplerate, grid, clipAudio, ivec2(0, 0), size);
     if (waveform.size.x < 1 || waveform.size.y < 1) {
         releaseRendered();
         waveformRef->waveform = waveform;
@@ -710,7 +708,7 @@ void gui_audiocontent::prerender(NVGcontext* vg) {
         return;
     }
     auto& clipAudio    = clip->audio;
-    audiofile_t* audio = audiocache::getInstance()->get(clipAudio.id);
+    audiofile_t* audio = dawCtrl->getDaw()->getAudioCache()->get(clipAudio.id);
     if (!waveformRef->queued) {
         if (!audio || this->updatedWaveform.size.x < 1 || this->updatedWaveform.size.y < 1) {
             return;

@@ -76,12 +76,12 @@ struct midi_clip_render_cache_t : public noteview_cache_impl_t {
     }
 };
 
-audioclip_texture_t makeWaveformFromClip(const project_globals_t& project, scaled_grid& grid,
+audioclip_texture_t makeWaveformFromClip(const int32_t tempo100, const samplerate_t samplerate, scaled_grid& grid,
                                          ivec2& trackSize, const clip_t* m_clip,
                                          const ivec2& pos, const ivec2& size, ivec2& posClipped, ivec2& sizeClipped) {
 
     samplerate_t sr     = vsthost::getInstance()->m_sampleFormatInternal.sampleRate;
-    double lenSamples   = tickToSampleConvert<double, roundmode::none>(m_clip->getLen(), project.tempo100, sr);
+    double lenSamples   = tickToSampleConvert<double, roundmode::none>(m_clip->getLen(), tempo100, samplerate);
     double samplesPerPx = lenSamples / size.x;
 
     int32_t pxBegin        = posClipped.x;
@@ -95,9 +95,9 @@ audioclip_texture_t makeWaveformFromClip(const project_globals_t& project, scale
         tickEnd         = m_clip->end();
     }
 
-    int64_t sampleBegin       = tickToSampleConvert<int64_t, roundmode::floor>(tickBegin, project.tempo100, sr);
-    int64_t sampleStartOffset = tickToSampleConvert<int64_t, roundmode::floor>(tickBeginOffset + m_clip->offsetStart, project.tempo100, sr);
-    int64_t sampleEnd  = tickToSampleConvert<int64_t, roundmode::floor>(tickEnd + m_clip->offsetStart, project.tempo100, sr);
+    int64_t sampleBegin       = tickToSampleConvert<int64_t, roundmode::floor>(tickBegin, tempo100, samplerate);
+    int64_t sampleStartOffset = tickToSampleConvert<int64_t, roundmode::floor>(tickBeginOffset + m_clip->offsetStart, tempo100, samplerate);
+    int64_t sampleEnd  = tickToSampleConvert<int64_t, roundmode::floor>(tickEnd + m_clip->offsetStart, tempo100, samplerate);
 
     ivec2 startOffset = posClipped - pos;
 

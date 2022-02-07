@@ -162,7 +162,7 @@ void gui_audio_clip::updatePosition(project_globals_t& project, scaled_grid& gri
     size   = this->parent->size;
     culled = !getClipPosition(grid, trackSize, m_clip, pos, size, 0);
 
-    audiofile_t* audio = audiocache::getInstance()->get(m_clip->audio.id);
+    audiofile_t* audio = dawCtrl->getDaw()->getAudioCache()->get(m_clip->audio.id);
 
     if (culled || !audio) {
         releaseRendered();
@@ -183,7 +183,9 @@ void gui_audio_clip::updatePosition(project_globals_t& project, scaled_grid& gri
         return;
     }
 
-    auto waveform = makeWaveformFromClip(project, grid, trackSize, m_clip, pos, size - shrink, posClipped, sizeClipped);
+    const auto tempo100 = dawCtrl->getDaw()->getGlobals().tempo100;
+    const auto samplerate = m_track->audio->sampleFormat.sampleRate;
+    auto waveform = makeWaveformFromClip(tempo100, samplerate, grid, trackSize, m_clip, pos, size - shrink, posClipped, sizeClipped);
     if (waveform.size.x < 1 || waveform.size.y < 1) {
         releaseRendered();
         waveformRef->waveform = waveform;
@@ -229,7 +231,7 @@ void gui_track::prerender(NVGcontext* vg) {
 
 void gui_audio_clip::prerender(NVGcontext* vg) {
     auto& clipAudio    = m_clip->audio;
-    audiofile_t* audio = audiocache::getInstance()->get(clipAudio.id);
+    audiofile_t* audio = dawCtrl->getDaw()->getAudioCache()->get(clipAudio.id);
     if (!waveformRef->queued) {
         if (!audio || this->updatedWaveform.size.x < 1 || this->updatedWaveform.size.y < 1) {
             return;
@@ -269,6 +271,7 @@ void guitooltip<clip_t>::layout() {
     table.colSizes.clear();
     using tbl_rows = std::vector<table_entry_t>;
     {
+        //TODO: fix dawCtrl in tooltips/popups
         audiofile_t* c = audiocache::getInstance()->get(ptr->audio.id);
 
         String path;
