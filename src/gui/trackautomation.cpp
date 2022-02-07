@@ -344,8 +344,8 @@ bool gui_track_automation::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
 }
 
 void gui_track_automation::updateVisibleTrackContents(scaled_grid& editorGrid) {
-    dbgassert(&editorGrid == &this->grid);
-    ivec2 cs                                    = getSizeContent();
+    ivec2 cs = getSizeContent();
+
     std::vector<automation_point_t>& dataPoints = data.points;
     cachedShape.clear();
     segments.clear();

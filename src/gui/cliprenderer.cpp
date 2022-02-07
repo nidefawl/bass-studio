@@ -135,7 +135,7 @@ audioclip_texture_t makeWaveformFromClip(const project_globals_t& project, scale
     return w;
 }
 
-void renderAudioClip(NVGcontext* vg, const guitheme_t* theme, const track_t* tr, const clip_t* cl, const gui_waveform_texture_ref* waveformRef, ivec2 pos, ivec2 size, ivec2 posClipped, ivec2 sizeClipped) {
+void renderAudioClip(NVGcontext* vg, waveformrender* wfrenderer, const guitheme_t* theme, const track_t* tr, const clip_t* cl, const gui_waveform_texture_ref* waveformRef, ivec2 pos, ivec2 size, ivec2 posClipped, ivec2 sizeClipped) {
     if (cl->getLen() <= 0) {
         return;
     }
@@ -159,7 +159,7 @@ void renderAudioClip(NVGcontext* vg, const guitheme_t* theme, const track_t* tr,
     if (sizeClipped.x > 0 && sizeClipped.y > 0 && waveformRef->rendered) {
         nvgSave(vg);
         nvgTranslate(vg, posContents.x, posContents.y);
-        waveformrender::getInstance()->draw(vg, waveformRef, sizeClipped);
+        wfrenderer->draw(vg, waveformRef, sizeClipped);
         nvgRestore(vg);
     }
     if (cl->loopEnabled && cl->loopLen > 0) {

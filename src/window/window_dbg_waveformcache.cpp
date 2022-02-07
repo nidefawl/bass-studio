@@ -104,14 +104,10 @@ int initDebugWindowWaveformCache(NVGcontext*) {
     return 0;
 }
 
-void drawDebugWindowWaveformCache(NVGcontext* ctx, int winW, int winH, float pxratio) {
+void drawDebugWindowWaveformCache(NVGcontext* ctx, int winW, int winH, float pxratio, waveformrender* wfrender) {
 
     std::vector<TextureAtlas> rendered;
-    auto instance = waveformrender::getInstance();
-    if (!instance) {
-        return;
-    }
-    instance->getRenderedTextures(rendered);
+    wfrender->getRenderedTextures(rendered);
 
     float x = 0;
     float y = 0;

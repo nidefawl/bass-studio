@@ -44,9 +44,7 @@ const tick_t INVALID_TICK = 1 << 31;
 void releaseClipResources(clip_t* cl, delete_cb* cb) {
     if (cb)
         cb->preClipDelete(cl);
-    //    if (waveformrender::getInstance()) {
-    //        waveformrender::getInstance()->assertWaveformRefIsUnbound(&cl->audio.waveformRef);
-    //    }
+
     std::vector<track_gui_entry_t*> copyEntries = cl->trackEntries;
     for (track_gui_entry_t* entry : copyEntries) {
         track_t* track = entry->track;

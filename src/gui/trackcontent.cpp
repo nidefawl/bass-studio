@@ -116,7 +116,7 @@ void gui_audio_clip::renderDebugPass(NVGcontext* vg) {
         if (prevIsValid && wfref.queued) {
             wfref.waveform = prevWaveform;
         }
-        renderAudioClip(vg, theme, m_track, m_clip, waveformRef, pos, size, posClipped, sizeClipped);
+        renderAudioClip(vg, dawCtrl->getWaveformRenderer(), theme, m_track, m_clip, waveformRef, pos, size, posClipped, sizeClipped);
         nvgBeginPath(vg);
         nvgRect(vg, posClipped.x, posClipped.y, sizeClipped.x, sizeClipped.y);
         nvgFillColor(vg, rgbaToNvg(0x7Fff00ff));
@@ -136,7 +136,7 @@ void gui_audio_clip::render(NVGcontext* vg) {
         if (prevIsValid && wfref.queued) {
             wfref.waveform = prevWaveform;
         }
-        renderAudioClip(vg, theme, m_track, m_clip, waveformRef, pos, size, posClipped, sizeClipped);
+        renderAudioClip(vg, dawCtrl->getWaveformRenderer(), theme, m_track, m_clip, waveformRef, pos, size, posClipped, sizeClipped);
     }
 }
 
@@ -150,8 +150,8 @@ void gui_audio_clip::handleRightClick(MouseEvent& evt) {
 
 void gui_audio_clip::releaseRendered() {
     //log_printf("releaseRendered\n", 0);
-    dbgassert(waveformrender::getInstance()->isValid(waveformRef));
-    waveformrender::getInstance()->release(waveformRef);
+    dbgassert(dawCtrl->getWaveformRenderer()->isValid(waveformRef));
+    dawCtrl->getWaveformRenderer()->release(waveformRef);
     waveformRef->rendered = false;
 }
 
@@ -193,7 +193,7 @@ void gui_audio_clip::updatePosition(project_globals_t& project, scaled_grid& gri
 
     bool equal = ((waveform.size.y > 0) == (waveformRef->waveform.size.y > 0)) && isEqualWaveform3(waveform, waveformRef->waveform);
 
-    bool canQueue  = waveformrender::getInstance()->canQueueUpdate();
+    bool canQueue  = dawCtrl->getWaveformRenderer()->canQueueUpdate();
     ivec2 sizeDiff = math::absvec2(waveform.size - waveformRef->waveform.size);
     ivec2 limit    = math::maxvec2(ivec2(1), ivec2(waveform.size.x / 4, 16));
     if (!canQueue) {
@@ -242,9 +242,9 @@ void gui_audio_clip::prerender(NVGcontext* vg) {
             waveformRef->waveform = this->updatedWaveform;
             //dbgassert(!waveformRef->queued);
             dbgassert(waveformRef->waveform.size.x > 0 && waveformRef->waveform.size.y > 0);
-            if (waveformrender::getInstance()->queueUpdate(audio, waveformRef)) {
+            if (dawCtrl->getWaveformRenderer()->queueUpdate(audio, waveformRef)) {
                 dbgassert(/*!waveformRef->rendered && */waveformRef->queued);
-                dbgassert(waveformrender::getInstance()->isValid(waveformRef));
+                dbgassert(dawCtrl->getWaveformRenderer()->isValid(waveformRef));
             }
         }
     }

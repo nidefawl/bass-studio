@@ -802,19 +802,19 @@ void DawInstance::setEmptyProject() {
 }
 
 #if CREATE_DEBUG_COMPANION_WINDOW
-void drawDebugWindowWaveformCache(NVGcontext* ctx, int winW, int winH, float pxratio);
+void drawDebugWindowWaveformCache(NVGcontext* ctx, int winW, int winH, float pxratio, waveformrender* wfrender);
 int initDebugWindowWaveformCache(NVGcontext* ctx);
 
-void openDebugWindowWaveformCache(window_main* mainwindow) {
+void openDebugWindowWaveformCache(window_main* mainwindow, waveformrender* wfrender) {
     dbgassert(mainwindow);
     window_dialog* dialog = mainwindow->createDialog("waveform atlas cache", 1280, 720);
     window_init_fn init;
     window_draw_fn drawFn;
-    init.initCallback = [](NVGcontext* ctx) {
+    init.initCallback = [wfrender](NVGcontext* ctx) {
         initDebugWindowWaveformCache(ctx);
     };
-    drawFn.drawCallback = [](NVGcontext* ctx, int winW, int winH, float pxratio) {
-        drawDebugWindowWaveformCache(ctx, winW, winH, pxratio);
+    drawFn.drawCallback = [wfrender](NVGcontext* ctx, int winW, int winH, float pxratio) {
+        drawDebugWindowWaveformCache(ctx, winW, winH, pxratio, wfrender);
     };
     dialog->setDrawFunction(drawFn);
     dialog->setInitFunction(init);
@@ -1037,7 +1037,7 @@ void DawInstance::menuCommand(const menucmd_t&& command) {
                 }
 #if CREATE_DEBUG_COMPANION_WINDOW
                 if (command.argInt == 0) {
-                    openDebugWindowWaveformCache(dynamic_cast<window_main*>(mainCtrl->window));
+                    openDebugWindowWaveformCache(dynamic_cast<window_main*>(mainCtrl->window), mainCtrl->getWaveformRenderer());
                     return;
                 }
                 if (command.argInt == 1) {
@@ -1083,7 +1083,6 @@ void DawCtrl::startApp() {
 }
 
 void MainCtrl::startApp() {
-    waveformrender::getInstance()->init();// move into init()
     view->storeLayout(&layouts[0]);
     for (auto i = 1; i < layouts.size(); i++) {
         std::shared_ptr<dawview_layout_t> viewLayout = loadDawViewLayoutSnapshot(StringFormat("data/view%d.layout", i));
@@ -1166,16 +1165,15 @@ void DawInstance::destroy() {
     companionWindows.clear();
     tls.host->unload();
     tls.host->destroy();
-    audiohost::getInstance()->deinitPa();
-    midihost::getInstance()->deinitPm();
-    waveformrender::getInstance()->destroy();
+    tls.audioHost->deinitPa();
+    tls.midiHost->deinitPm();
     plugindb.closeDatabase();
+
     this->workerThread.stopThread();
     this->workerThread.joinThread();
     this->playThread.stopThread();
     this->playThread.joinThread();
 
-    delete tls.waveform;
     delete tls.audioCache;
     delete tls.midiHost;
     delete tls.audioHost;
@@ -1185,9 +1183,8 @@ void DawInstance::destroy() {
     tls.mainCtrl       = nullptr;
     tls.project        = nullptr;
     tls.pluginDatabase = nullptr;
-    tls.waveform       = nullptr;
     tls.audioCache     = nullptr;
-
+    tls.tlsInitialized = false;
     daw_tls::setTls(tls);
 }
 
@@ -1195,6 +1192,10 @@ void DawCtrl::destroy() {
     if (!isOK) {
         return;
     }
+
+    waveformRenderer->destroy();
+    delete waveformRenderer;
+    waveformRenderer = nullptr;
 
     isOK = false;
     if (viewContainers) {
@@ -1256,9 +1257,7 @@ void MainCtrl::initApp(const std::vector<String>& args) {
 }
 
 bool MainCtrl::initAppWindow(window_main* window, NVGcontext* nanovg) {
-    bool state = DawCtrl::initAppWindow(window, nanovg);
-    daw_tls::getTls().waveform = this->waveformRenderer;
-    return state;
+    return DawCtrl::initAppWindow(window, nanovg);
 }
 
 bool DawCtrl::initAppWindow(window_main* window, NVGcontext* nanovg) {
@@ -1268,6 +1267,7 @@ bool DawCtrl::initAppWindow(window_main* window, NVGcontext* nanovg) {
     this->vg         = nanovg;
 
     this->waveformRenderer = new waveformrender(pathrenderer_type_e::ADV);
+    this->waveformRenderer->init();
 
     themes.loadThemes();
 

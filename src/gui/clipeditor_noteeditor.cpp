@@ -572,7 +572,7 @@ void gui_audiocontent::renderAudioClip(NVGcontext* vg) {
         //        bgWave.a        = 0.3f;
         //        nvgFillColor(vg, bgWave);
         //        nvgFill(vg);
-        waveformrender::getInstance()->draw(vg, waveformRef, size);
+        dawCtrl->getWaveformRenderer()->draw(vg, waveformRef, size);
     }
 
     nvgRestore(vg);
@@ -582,8 +582,8 @@ void gui_audiocontent::render(NVGcontext* vg) {
 }
 void gui_audiocontent::releaseRendered() {
     //my_printf("release %012x from releaseRendered()\n", waveformRef);
-    dbgassert(waveformrender::getInstance()->isValid(waveformRef));
-    waveformrender::getInstance()->release(waveformRef);
+    dbgassert(dawCtrl->getWaveformRenderer()->isValid(waveformRef));
+    dawCtrl->getWaveformRenderer()->release(waveformRef);
     //m_clip->audio.waveformRef.fbId = -1;
     waveformRef->rendered = false;
 }
@@ -689,7 +689,7 @@ void gui_audiocontent::updatePosition() {
         return;
     }
 
-    if (waveformrender::getInstance()->canQueueUpdate()) {
+    if (dawCtrl->getWaveformRenderer()->canQueueUpdate()) {
         bool equal = waveform.size == waveformRef->waveform.size &&
                      clipAudio.id == waveformRef->waveform.audioId &&
                      isAlmostEqualWaveformSample(waveform, waveformRef->waveform);
@@ -721,9 +721,9 @@ void gui_audiocontent::prerender(NVGcontext* vg) {
             waveformRef->waveform = this->updatedWaveform;
             dbgassert(!waveformRef->queued);
             dbgassert(waveformRef->waveform.size.x > 0 && waveformRef->waveform.size.y > 0);
-            if (waveformrender::getInstance()->queueUpdate(audio, waveformRef)) {
+            if (dawCtrl->getWaveformRenderer()->queueUpdate(audio, waveformRef)) {
                 dbgassert(!waveformRef->rendered && waveformRef->queued);
-                dbgassert(waveformrender::getInstance()->isValid(waveformRef));
+                dbgassert(dawCtrl->getWaveformRenderer()->isValid(waveformRef));
             }
         }
     }

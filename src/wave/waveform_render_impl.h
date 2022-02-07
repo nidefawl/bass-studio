@@ -63,7 +63,6 @@ public:
         int64_t comparisonsA    = 0;
         int64_t comparisonsB    = 0;
     };
-    static waveformrender* getInstance();
     explicit waveformrender(pathrenderer_type_e t);
     ~waveformrender();
     void destroy();

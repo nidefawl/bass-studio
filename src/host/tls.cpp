@@ -13,8 +13,7 @@ namespace daw_tls {
     static thread_local tlsinstance tls;
 
     void setTls(tlsinstance& _tls) {
-        dbgassert(_tls.tlsInitialized);
-        dbgassert(!tls.tlsInitialized);
+        dbgassert(_tls.tlsInitialized != tls.tlsInitialized);
         tls = _tls;
     }
     tlsinstance& getTls() {
@@ -38,11 +37,6 @@ project_controller_t* project_controller_t::get() {
     dbgassert(daw_tls::tls.tlsInitialized);
     dbgassert(daw_tls::tls.project);
     return daw_tls::tls.project;
-}
-waveformrender* waveformrender::getInstance() {
-    dbgassert(daw_tls::tls.tlsInitialized);
-    dbgassert(daw_tls::tls.waveform);
-    return daw_tls::tls.waveform;
 }
 audiocache* audiocache::getInstance() {
     dbgassert(daw_tls::tls.tlsInitialized);

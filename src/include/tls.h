@@ -19,7 +19,6 @@ namespace daw_tls {
         vsthost* host                    = nullptr;
         audiohost* audioHost             = nullptr;
         midihost* midiHost               = nullptr;
-        waveformrender* waveform         = nullptr;
         MainCtrl* mainCtrl               = nullptr;
         audiocache* audioCache           = nullptr;
         plugindatabase_t* pluginDatabase = nullptr;

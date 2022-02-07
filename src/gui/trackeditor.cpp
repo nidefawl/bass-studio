@@ -699,7 +699,7 @@ void guitrack_editor::prerender(NVGcontext* vg) {
                     audiofile_t* audio = audiocache::getInstance()->get(cl->audio.id);
                     if (!audio || !getClipPosition(grid, tr->content->size, cl, clipPos, clipSize, 0)) {
                         //my_printf("release %012x from prerender() (clipped) \n", &cl->audio.waveformRef);
-                        waveformrender::getInstance()->release(&cl->audio.waveformRef);
+                        dawCtrl->getWaveformRenderer()->release(&cl->audio.waveformRef);
                         //cl->audio.waveformRef.fbId = -1;
                         //cl->audio.waveformRef.rendered = false;
                         continue;
@@ -715,10 +715,10 @@ void guitrack_editor::prerender(NVGcontext* vg) {
                         if (!waveformRef.rendered || waveform != waveformRef.waveform) {
                             dbgassert(!waveformRef.queued);
                             //my_printf("release %012x from prerender() (refresh) \n", &waveformRef);
-                            waveformrender::getInstance()->release(&waveformRef);
+                            dawCtrl->getWaveformRenderer()->release(&waveformRef);
                             if (waveform.size.x > 0 && waveform.size.y > 0) {
                                 waveformRef.waveform = waveform;
-                                /*int ret = */ waveformrender::getInstance()->queueUpdate(audio, &waveformRef);
+                                /*int ret = */ dawCtrl->getWaveformRenderer()->queueUpdate(audio, &waveformRef);
                             }
 
                             //waveformRef.fbId = ret;

@@ -4,6 +4,8 @@
 #include "math/vec.h"
 #include "audiosample.h"
 
+class waveformrender;
+
 enum SampleMethod {
     sample_straight,
     sample_energy

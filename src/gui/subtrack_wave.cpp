@@ -40,7 +40,7 @@ public:
         for (auto& entry : splits) {
             auto& waveformTex = entry.second.waveformTex;
             if (waveformTex.rendered) {
-                waveformrender* renderer = waveformrender::getInstance();
+                waveformrender* renderer = dawCtrl->getWaveformRenderer();
                 if (renderer) {
                     renderer->release(&waveformTex);
                 }
@@ -89,7 +89,7 @@ public:
             if (wv.waveformTex.rendered) {
                 nvgSave(vg);
                 nvgTranslate(vg, wvLC.splitTexPos.x, wvLC.splitTexPos.y);
-                waveformrender::getInstance()->draw(vg, &waveformTex, wvLC.spliTexSize);
+                dawCtrl->getWaveformRenderer()->draw(vg, &waveformTex, wvLC.spliTexSize);
                 nvgRestore(vg);
             }
 
@@ -113,7 +113,7 @@ public:
                 if (waveformTex.waveform.size.x > 4 && waveformTex.waveform.size.y > 4 && wvSize.x > 4 && wvSize.y > 4 && waveformTex.rendered) {
                     nvgSave(vg);
                     nvgTranslate(vg, wv.splitTexPos.x, wv.splitTexPos.y);
-                    waveformrender::getInstance()->draw(vg, &waveformTex, wv.spliTexSize);
+                    dawCtrl->getWaveformRenderer()->draw(vg, &waveformTex, wv.spliTexSize);
 
                     nvgRestore(vg);
                 }
@@ -129,14 +129,12 @@ public:
         wv->layoutCurrent = wv->layoutUpdated;
         updateCalls++;
         if (!wv->waveformTex.queued) {
-            dbgassert(wv->sampleVersion == wv->sample->version);
-            dbgassert(wv->waveformTex.waveform.size.x > 0 && wv->waveformTex.waveform.size.y > 0);
             wv->waveformTex.waveform = wv->waveformUpdated;
             wv->sampleVersion        = wv->sample->version;
             wv->flagUpdated          = false;
 
             //log_printf("split[%zd] version %zd update!\n", wv->sample->sampleId, wv->sampleVersion);
-            if (!waveformrender::getInstance()->queueUpdate(wv->sample.get(), &wv->waveformTex)) {
+            if (!dawCtrl->getWaveformRenderer()->queueUpdate(wv->sample.get(), &wv->waveformTex)) {
                 log_printf("WORLD ENDS!\n", 0);
             }
         }
@@ -258,7 +256,7 @@ public:
             for (auto& entry : splits) {
                 auto& waveformTex = entry.second.waveformTex;
                 if (!waveformTex.queued) {
-                    waveformrender::getInstance()->release(&waveformTex);
+                    dawCtrl->getWaveformRenderer()->release(&waveformTex);
                     waveformTex.rendered = false;
                 }
             }
@@ -303,7 +301,7 @@ public:
                 || updatedEntry.layout.spliTexSize.x < 1
                 || updatedEntry.layout.spliTexSize.y < 1)
             {
-                waveformrender::getInstance()->release(&entry.waveformTex);
+                dawCtrl->getWaveformRenderer()->release(&entry.waveformTex);
                 entry.flagUpdated          = false;
                 entry.waveformTex.rendered = false;
                 entry.waveformTex.waveform = updatedEntry.waveform;
@@ -320,7 +318,7 @@ public:
                          && isEqualWaveform3(updatedEntry.waveform, texture.waveform)
                          && updatedEntry.layout == entry.layoutCurrent;
 
-            bool canQueue  = waveformrender::getInstance()->canQueueUpdate();
+            bool canQueue  = dawCtrl->getWaveformRenderer()->canQueueUpdate();
             ivec2 sizeDiff = math::absvec2(updatedEntry.waveform.size - texture.waveform.size);
             ivec2 limit    = math::maxvec2(ivec2(1), ivec2(updatedEntry.waveform.size.x / 4, 16));
 
@@ -337,7 +335,7 @@ public:
                 entry.layoutUpdated   = updatedEntry.layout;
                 entry.flagUpdated     = true;
                 if (sizeDiff.x > limit.x || sizeDiff.y > limit.y) {
-                    //waveformrender::getInstance()->release(&entry.waveformTex);
+                    //dawCtrl->getWaveformRenderer()->release(&entry.waveformTex);
                     //entry.waveformTex.rendered = false;
                     //log_printf("layoutUpdated pos %d %d\n", entry.layoutUpdated.splitTexPos.x, entry.layoutUpdated.splitTexPos.y);
                 }
@@ -349,7 +347,7 @@ public:
             if (!stl_contains(waveviewSampleIdsPresent, entry.second.sample->sampleId)) {
                 waveview_entry& waveviewEntry         = entry.second;
                 gui_waveform_texture_ref* waveformRef = &waveviewEntry.waveformTex;
-                waveformrender::getInstance()->release(waveformRef);
+                dawCtrl->getWaveformRenderer()->release(waveformRef);
                 it = splits.erase(it);
             } else {
                 ++it;

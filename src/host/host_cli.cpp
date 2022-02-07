@@ -226,7 +226,6 @@ int runCommandLineHost(int argc, const char* argv[]) {
         tls.audioHost      = audioHost.get();
         tls.midiHost       = midiHost.get();
         tls.audioCache     = &cache;
-        tls.waveform       = nullptr;
         tls.pluginDatabase = &plugindb;
 
         if (!bRenderOnly) {
