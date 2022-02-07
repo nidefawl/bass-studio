@@ -248,10 +248,16 @@ UseColor:        true
 CheckOptions:
 - key:           'cppcoreguidelines-narrowing-conversions.IgnoreConversionFromTypes'
   value:         'size_t;std::vector::size_type'
-- key:           cppcoreguidelines-narrowing-conversions.WarnOnIntegerToFloatingPointNarrowingConversion
+- key:           'cppcoreguidelines-narrowing-conversions.WarnOnIntegerToFloatingPointNarrowingConversion'
   value:         'false'
-- key:           misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic
-  value:         true
-- key:           misc-non-private-member-variables-in-classes.IgnorePublicMemberVariables
-  value:         false
+- key:           'misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic'
+  value:         'true'
+- key:           'misc-non-private-member-variables-in-classes.IgnorePublicMemberVariables'
+  value:         'false'
+- key:           'readability-function-cognitive-complexity.DescribeBasicIncrements'
+  value:         'false'
+- key:           'readability-function-cognitive-complexity.Threshold'
+  value:         '32'
+- key:           'readability-function-cognitive-complexity.IgnoreMacros'
+  value:         'true'
 
