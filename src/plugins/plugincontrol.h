@@ -45,7 +45,7 @@ public:
     bool processGlobalKeyevent(KeyEvent& event) override;
     bool mouseDownPre() override;
 
-    void initApp(std::vector<String>& args) override;
+    void initApp(const std::vector<String>& args) override;
 
     void onGuiOpen(AudioEffect* eff);
     void onGuiClose(AudioEffect* eff);

@@ -3,11 +3,11 @@
 #include <memory>
 #include <vector>
 
-int startApplication(std::vector<String>& args);
+int startApplication(const std::vector<String>& args);
 
 std::shared_ptr<MainCtrl> mainctrl;
 std::shared_ptr<DawInstance> dawInstance;
-std::shared_ptr<AppCtrl> makeApp(std::vector<String>& args) {
+std::shared_ptr<AppCtrl> makeApp(const std::vector<String>& args) {
     dbgassert (!mainctrl);
 
 
@@ -19,6 +19,7 @@ std::shared_ptr<AppCtrl> makeApp(std::vector<String>& args) {
 
     return mainctrl;
 }
+
 void startApp(std::shared_ptr<AppCtrl>& app) {
     dawInstance->startDaw();
     app->startApp();
@@ -32,7 +33,7 @@ void deleteApp() {
 
 int main(int argc, char* argv[]) {
     std::vector<String> vecArgs(&argv[0], &argv[argc]);
-    vecArgs.insert(vecArgs.begin(), {"-log", "daw.log"});
+    vecArgs.insert(vecArgs.end(), {"-log", "daw.log"});
     int retVal = startApplication(vecArgs);
     /**
      * manually end lifetime here before the at-exit destructors for static objects runs.

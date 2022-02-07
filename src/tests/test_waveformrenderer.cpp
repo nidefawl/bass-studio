@@ -33,7 +33,7 @@
 #define NUM_RENDERERS 3u
 
 
-int startApplication(std::vector<String>& args);
+int startApplication(const std::vector<String>& args);
 
 
 struct Menus {
@@ -204,7 +204,7 @@ namespace MiniApp {
                 renderer->init();
             }
         }
-        void initApp(std::vector<String>& args) override {
+        void initApp(const std::vector<String>& args) override {
             daw_tls::tlsinstance _tls;
             _tls.tlsInitialized = true;
             _tls.config         = new app_config_t{};
@@ -367,7 +367,7 @@ namespace MiniApp {
 
 static waveform_test waveformTest;
 
-std::shared_ptr<AppCtrl> makeApp(std::vector<String>& args) {
+std::shared_ptr<AppCtrl> makeApp(const std::vector<String>& args) {
     MiniApp::appctrl = std::make_shared<MiniApp::MiniAppCtrl<MiniApp::ViewContainers_TestNanoVGRenderCache>>(waveformTest);
     MiniApp::appctrl->initApp(args);
     return MiniApp::appctrl;

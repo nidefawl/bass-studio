@@ -363,7 +363,7 @@ public:
     };
 
     virtual void onTick()                                               = 0;
-    virtual void initApp(std::vector<String>& args)                     = 0;
+    virtual void initApp(const std::vector<String>& args)                     = 0;
     virtual bool initAppWindow(window_main* window, NVGcontext* nanovg) = 0;
     virtual void startApp()                                             = 0; /* OpenGL context exists in startApp */
     virtual void destroy()                                              = 0;
@@ -404,7 +404,7 @@ public:
     void relayout(int32_t w, int32_t h) override;
     void open(guictxtmenu_base* ctxtmenu, ivec2 pos, bool bResizeable);
     bool initAppWindow(window_main* window, NVGcontext* nanovg) override;
-    void initApp(std::vector<String>& args) override{};
+    void initApp(const std::vector<String>& args) override{};
     bool initPopup(window_overlay* window, NVGcontext* nanovg);
     void focusReceived() override{};
     void focusLost() override;

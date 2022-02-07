@@ -1678,7 +1678,7 @@ namespace vst_window_mgr {
 }
 #endif
 
-std::shared_ptr<AppCtrl> makeApp(std::vector<String>& args);  // main.cpp
+std::shared_ptr<AppCtrl> makeApp(const std::vector<String>& args);  // main.cpp
 void startApp(std::shared_ptr<AppCtrl>& app);                // main.cpp
 
 void dawinstance_startup_commands(daw_tls::tlsinstance& tls);// Forward declare from startup.cpp
@@ -1688,7 +1688,7 @@ void openGlobalLog(const String& logFileName);               // Forward declare 
 void closeGlobalLog();                                       // Forward declare from util/debug.cpp
 void runSseBenchmarkTests();                                 //Forward declare from benchmark/benchmark-main.cpp
 
-int startApplication(std::vector<String>& args) {
+int startApplication(const std::vector<String>& args) {
     seqthreads::registerThread("mainthread");
 
 #if !defined(NDEBUG) && defined(_WIN32)

@@ -1204,7 +1204,7 @@ void DawInstance::startDaw() {
     plugindb.openDatabase();
 }
 
-void DawInstance::initDaw(std::vector<String>& args) {
+void DawInstance::initDaw(const std::vector<String>& args) {
     dbgassert(initState == 0);
     using DAW::settings;
     initState++;
@@ -1243,14 +1243,14 @@ void DawInstance::initDaw(std::vector<String>& args) {
     this->host = tls.host;
 }
 
-void DawCtrl::initApp(std::vector<String>& args) {
+void DawCtrl::initApp(const std::vector<String>& args) {
 }
 
 MainCtrl::MainCtrl(DawInstance& _daw) : DawCtrl(_daw) {
     log_printf("MainCtrl constructor\n", 0);
 }
 
-void MainCtrl::initApp(std::vector<String>& args) {
+void MainCtrl::initApp(const std::vector<String>& args) {
 }
 
 bool MainCtrl::initAppWindow(window_main* window, NVGcontext* nanovg) {

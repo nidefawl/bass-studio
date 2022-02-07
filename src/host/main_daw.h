@@ -3,4 +3,4 @@
 #include <vector>
 
 int runCommandLineHost(int argc, const char* argv[]);
-int startApplication(std::vector<String>& args);
+int startApplication(const std::vector<String>& args);

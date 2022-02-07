@@ -323,7 +323,7 @@ public:
     static DawInstance* get();
 
     void postInit();
-    void initDaw(std::vector<String>& args);
+    void initDaw(const std::vector<String>& args);
     void startDaw();
 
     void setTempo(int32_t _tempo100) override;
@@ -493,7 +493,7 @@ public:
     void prerender(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float pixelRatio) override;
 
 
-    void initApp(std::vector<String>& args) override;
+    void initApp(const std::vector<String>& args) override;
     bool initAppWindow(window_main* window, NVGcontext* nanovg) override;
 
     void focusReceived() override {
@@ -562,7 +562,7 @@ public:
     static guictr_plugins* getPluginCtr();
     static guictr_tracks* getGuiTrackCtr();
 
-    void initApp(std::vector<String>& args) override;
+    void initApp(const std::vector<String>& args) override;
     bool initAppWindow(window_main* window, NVGcontext* nanovg) override;
 
     void startApp() override;

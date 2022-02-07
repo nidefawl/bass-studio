@@ -87,7 +87,7 @@ using seqthreads::threadSleep;
 void deleteApp() {
 }
 
-std::shared_ptr<AppCtrl> makeApp(std::vector<String>& args) {
+std::shared_ptr<AppCtrl> makeApp(const std::vector<String>& args) {
     return nullptr;
 }
 

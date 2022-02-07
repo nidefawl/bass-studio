@@ -56,7 +56,7 @@ void PluginControl::menuCommand(const menucmd_t&& command) {
     }
 }
 
-void PluginControl::initApp(std::vector<String>& args) {
+void PluginControl::initApp(const std::vector<String>& args) {
 }
 
 PluginControl::PluginControl(std::shared_ptr<PluginViewContainers> _view) : AppCtrl(), view(_view) {
