@@ -198,18 +198,18 @@ public:
 
 // TODO: this should be member of DawInstance
 void updateSrBs() {
-    auto mctrl = DawInstance::get();
-    bool b     = mctrl->isPlaying();
+    DawInstance* daw = DawInstance::get();
+    bool b     = daw->isPlaying();
     if (b) {
 
-        mctrl->stopPlaying();
+        daw->stopPlaying();
     }
-    mctrl->setAudioThreadState(playback_state::status_stop);
-    mctrl->setAudioThreadState(playback_state::status_no_process);
+    daw->setAudioThreadState(playback_state::status_stop);
+    daw->setAudioThreadState(playback_state::status_no_process);
     {
 
         ThreadLock lock  = MainCtrl::getPlayThread()->lockThread();
-        vsthost* host    = vsthost::getInstance();
+        vsthost* host    = daw->getHost();
         audiohost* ahost = audiohost::getInstance();
         ahost->stopAudio();
         host->setOutput(nullptr);
@@ -225,9 +225,9 @@ void updateSrBs() {
     }
     if (settings.startEngine) {
         if (b) {
-            mctrl->startPlaying();
+            daw->startPlaying();
         } else {
-            mctrl->setAudioThreadState(playback_state::status_stop);
+            daw->setAudioThreadState(playback_state::status_stop);
         }
     }
 }

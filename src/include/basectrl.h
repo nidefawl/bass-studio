@@ -362,11 +362,11 @@ public:
         return false;
     };
 
-    virtual void onTick()                                      = 0;
-    virtual void initApp(int argc, char* argv[])               = 0;
-    virtual bool init(window_main* window, NVGcontext* nanovg) = 0;
-    virtual void postInit()                                    = 0; /* OpenGL context exists in postInit */
-    virtual void destroy()                                     = 0;
+    virtual void onTick()                                               = 0;
+    virtual void initApp(std::vector<String>& args)                     = 0;
+    virtual bool initAppWindow(window_main* window, NVGcontext* nanovg) = 0;
+    virtual void startApp()                                             = 0; /* OpenGL context exists in startApp */
+    virtual void destroy()                                              = 0;
     void onAppTick();
     void destroyControl();
     bool hasDialogWindows() override {
@@ -403,14 +403,14 @@ public:
     void closePopup() override;
     void relayout(int32_t w, int32_t h) override;
     void open(guictxtmenu_base* ctxtmenu, ivec2 pos, bool bResizeable);
-    bool init(window_main* window, NVGcontext* nanovg) override;
-    void initApp(int argc, char* argv[]) override{};
+    bool initAppWindow(window_main* window, NVGcontext* nanovg) override;
+    void initApp(std::vector<String>& args) override{};
     bool initPopup(window_overlay* window, NVGcontext* nanovg);
     void focusReceived() override{};
     void focusLost() override;
     void onWindowClose() override;
     void onTick() override;
-    void postInit() override {}; /* OpenGL context exists in postInit */
+    void startApp() override {}; /* OpenGL context exists in postInit */
     bool mouseDownPre() override;
     void render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float ratio) override;
 };

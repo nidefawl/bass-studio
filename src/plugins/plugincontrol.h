@@ -38,14 +38,14 @@ public:
     void mouseMoved(ivec2 mousePos, ivec2 deltaPos) override;
     void menuCommand(const menucmd_t&& command) override;
     void onTick() override;
-    bool init(window_main* window, NVGcontext* nanovg) override;
-    void postInit() override;
+    bool initAppWindow(window_main* window, NVGcontext* nanovg) override;
+    void startApp() override;
     void destroy() override;
     void relayout(int32_t w, int32_t h) override;
     bool processGlobalKeyevent(KeyEvent& event) override;
     bool mouseDownPre() override;
 
-    void initApp(int argc, char* argv[]) override;
+    void initApp(std::vector<String>& args) override;
 
     void onGuiOpen(AudioEffect* eff);
     void onGuiClose(AudioEffect* eff);

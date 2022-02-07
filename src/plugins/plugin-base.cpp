@@ -42,7 +42,7 @@ pluginwindow* createPluginWindow(AudioEffect* _effect, std::shared_ptr<PluginCon
 void BasePluginVST2::createEditorWindow(std::shared_ptr<PluginViewContainers> view) {
     try {
         std::shared_ptr<PluginControl> ctrl = std::make_shared<PluginControl>(view);
-        ctrl->initApp(0, NULL);
+        ctrl->initApp(std::vector<String>());
         int32_t ctrlWidth = 0, ctrlHeight = 0;
         view->getFixedSize(&ctrlWidth, &ctrlHeight);
         pluginwindow* pluginWindow = createPluginWindow(this, ctrl, ctrlWidth, ctrlHeight);

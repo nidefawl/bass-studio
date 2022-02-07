@@ -33,7 +33,7 @@
 #define NUM_RENDERERS 3u
 
 
-int startApplication(int argc, char* argv[]);
+int startApplication(std::vector<String>& args);
 
 
 struct Menus {
@@ -199,12 +199,12 @@ namespace MiniApp {
                     break;
             }
         }
-        void postInit() override {
+        void startApp() override {
             for (auto* renderer : waveformTest.renderers) {
                 renderer->init();
             }
         }
-        void initApp(int argc, char* argv[]) override {
+        void initApp(std::vector<String>& args) override {
             daw_tls::tlsinstance _tls;
             _tls.tlsInitialized = true;
             _tls.config         = new app_config_t{};
@@ -308,7 +308,7 @@ namespace MiniApp {
                 this->mainWindow->requestClose();
             }
         }
-        bool init(window_main* window, NVGcontext* nanovg) override {
+        bool initAppWindow(window_main* window, NVGcontext* nanovg) override {
             this->mainWindow = window;
             this->window     = window;
             this->vg         = nanovg;
@@ -367,9 +367,14 @@ namespace MiniApp {
 
 static waveform_test waveformTest;
 
-std::shared_ptr<AppCtrl> makeApp() {
+std::shared_ptr<AppCtrl> makeApp(std::vector<String>& args) {
     MiniApp::appctrl = std::make_shared<MiniApp::MiniAppCtrl<MiniApp::ViewContainers_TestNanoVGRenderCache>>(waveformTest);
+    MiniApp::appctrl->initApp(args);
     return MiniApp::appctrl;
+}
+
+void startApp(std::shared_ptr<AppCtrl>& app) {
+    app->startApp();
 }
 
 
@@ -378,7 +383,8 @@ void deleteApp() {
 }
 
 int main(int argc, char* argv[]) {
-    int ret = startApplication(argc, argv);
+    std::vector<String> vecArgs(&argv[0], &argv[argc]);
+    int ret = startApplication(vecArgs);
     for (auto i = 0u; i < NUM_RENDERERS; i++) {
         log_printf("Renderer %u took %llumicros\n", i, waveformTest.durations[i]);
     }

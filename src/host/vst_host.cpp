@@ -2126,7 +2126,7 @@ int32_t vsthost::processBlock(project_controller_t* ctrl,
 
     /**
      * Parallelizing processing:
-     * In Host init:
+     * In Host initAppWindow:
      * 0. Spin up n WorkerThreads
      *
      *

@@ -3,35 +3,37 @@
 #include <memory>
 #include <vector>
 
-int startApplication(int argc, char* argv[]);
+int startApplication(std::vector<String>& args);
 
 std::shared_ptr<MainCtrl> mainctrl;
 std::shared_ptr<DawInstance> dawInstance;
-std::shared_ptr<AppCtrl> makeApp() {
-    if (!mainctrl) {
-        dawInstance = std::make_shared<DawInstance>();
-        DawInstance& dawRef = *dawInstance;
-        mainctrl = std::make_shared<MainCtrl>(dawRef);
-        std::vector<std::shared_ptr<AppCtrl>> companions;
-        dawRef.setMainControl(mainctrl.get());
-    }
+std::shared_ptr<AppCtrl> makeApp(std::vector<String>& args) {
+    dbgassert (!mainctrl);
+
+
+    dawInstance = std::make_shared<DawInstance>();
+    dawInstance->initDaw(args);
+    mainctrl = std::make_shared<MainCtrl>(*dawInstance);
+    mainctrl->initApp(args);
+    dawInstance->setMainControl(mainctrl.get());
+
     return mainctrl;
+}
+void startApp(std::shared_ptr<AppCtrl>& app) {
+    dawInstance->startDaw();
+    app->startApp();
+    dawInstance->postInit();
 }
 
 void deleteApp() {
     mainctrl = nullptr;
-}
-
-inline char* StringAsMStr(String& str) {
-    return str.empty() ? nullptr : &*str.begin();
+    dawInstance = nullptr;
 }
 
 int main(int argc, char* argv[]) {
-    std::vector<char*> vecArgs(&argv[0], &argv[argc]);
-    String strExtraArgs[] = {"-log", "daw.log"};
-    vecArgs.push_back(StringAsMStr(strExtraArgs[0]));
-    vecArgs.push_back(StringAsMStr(strExtraArgs[1]));
-    int retVal = startApplication(static_cast<int>(vecArgs.size()), vecArgs.data());
+    std::vector<String> vecArgs(&argv[0], &argv[argc]);
+    vecArgs.insert(vecArgs.begin(), {"-log", "daw.log"});
+    int retVal = startApplication(vecArgs);
     /**
      * manually end lifetime here before the at-exit destructors for static objects runs.
      * the destructors have assertions that might abort/print stacktraces that

@@ -1344,7 +1344,7 @@ void appwindow_main::destroy() {
 }
 
 void appwindow_main::initControl() {
-    if (!ctrl->init(this, this->nanovgCtxt)) {
+    if (!ctrl->initAppWindow(this, this->nanovgCtxt)) {
         throw appexception("Couldn't start application");
     }
 #if BUILD_VSTHOST
@@ -1678,7 +1678,9 @@ namespace vst_window_mgr {
 }
 #endif
 
-std::shared_ptr<AppCtrl> makeApp();
+std::shared_ptr<AppCtrl> makeApp(std::vector<String>& args);  // main.cpp
+void startApp(std::shared_ptr<AppCtrl>& app);                // main.cpp
+
 void dawinstance_startup_commands(daw_tls::tlsinstance& tls);// Forward declare from startup.cpp
 void initColor();                                            // Forward declare from gui/gui.cpp
 void deleteApp();                                            // Forward declare from host/mainctrl.cpp
@@ -1686,7 +1688,7 @@ void openGlobalLog(const String& logFileName);               // Forward declare 
 void closeGlobalLog();                                       // Forward declare from util/debug.cpp
 void runSseBenchmarkTests();                                 //Forward declare from benchmark/benchmark-main.cpp
 
-int startApplication(int argc, char* argv[]) {
+int startApplication(std::vector<String>& args) {
     seqthreads::registerThread("mainthread");
 
 #if !defined(NDEBUG) && defined(_WIN32)
@@ -1710,16 +1712,16 @@ int startApplication(int argc, char* argv[]) {
 
     bool openConsole      = false;
     int centerScreenIdx   = -1;
-    String strLogFilename = "";
+    String strLogFilename;
     try {
-        for (int i = 0; i < argc; i++) {
-            if (argv[i] && strcmp(argv[i], "-center") == 0 && i + 1 < argc) {
-                centerScreenIdx = atoi(argv[i + 1]);
+        for (size_t i = 0; i < args.size(); ++i) {
+            if (args[i] == "-center" && i + 1 < args.size()) {
+                centerScreenIdx = atoi(StringAsCStr(args[i + 1]));
             }
-            if (argv[i] && strcmp(argv[i], "-log") == 0 && i + 1 < argc) {
-                strLogFilename = argv[i + 1];
+            if ("-log" == 0 && i + 1 < args.size()) {
+                strLogFilename = args[i + 1];
             }
-            if (argv[i] && strcmp(argv[i], "-console") == 0) {
+            if ("-console" == 0) {
                 openConsole = true;
             }
         }
@@ -1732,7 +1734,7 @@ int startApplication(int argc, char* argv[]) {
         }
         setResourcePath(strCurWrkDir);
 
-        String cwdPath = "";
+        String cwdPath;
         if (determineUserdataPath(cwdPath)) {
             setUserdataPath(cwdPath + "/daw/");
         }
@@ -1747,10 +1749,8 @@ int startApplication(int argc, char* argv[]) {
             openGlobalLog(toUserdataPath(strLogFilename));
         }
 
-        char* pPath;
-        pPath = getenv("PATH");
+        char* pPath = getenv("PATH");
         if (pPath != nullptr) {
-            ;
             log_printf("getenv PATH: %s\n", pPath);
         }
 
@@ -1784,8 +1784,7 @@ int startApplication(int argc, char* argv[]) {
         }
 
         setAppWindowHints();
-        std::shared_ptr<AppCtrl> ctrl = makeApp();
-        ctrl->initApp(argc, argv);
+        std::shared_ptr<AppCtrl> ctrl = makeApp(args);
 
         std::unique_ptr<appwindow_main> mainWindow = std::make_unique<appwindow_main>(nullptr, ctrl);
         mainWindow->createMainWindow("main window", 1280, 720, nullptr, WINDOW_IS_MAINWINDOW_MASTER);
@@ -1804,7 +1803,8 @@ int startApplication(int argc, char* argv[]) {
 
         enableGlDebugCallback();
         glfwSetErrorCallback(glfw_runtime_error_callback);
-        ctrl->postInit();
+
+        startApp(ctrl);
 
 #if BUILD_VSTHOST
         daw_tls::tlsinstance& tls = daw_tls::getTls();
@@ -2045,7 +2045,7 @@ public:
         appwindow::createBaseWindow(title, w, h, nullptr, parentWindowHandle);
         RenderResources::initResources(nanovgCtxt);
 
-        if (!ctrlShared->init(this, this->nanovgCtxt)) {
+        if (!ctrlShared->initAppWindow(this, this->nanovgCtxt)) {
             throw appexception("Couldn't start application");
         }
     }

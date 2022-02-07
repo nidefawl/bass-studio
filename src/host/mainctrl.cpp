@@ -1074,16 +1074,13 @@ void DawCtrl::menuCommand(const menucmd_t&& command) {
     daw.menuCommand(std::move(command));
 }
 
-void DawCtrl::postInit() {
+void DawCtrl::startApp() {
     BaseCtrl::relayout();
     updateVisibleTrackContents();
 }
 
-void MainCtrl::postInit() {
-    daw.startDaw();
+void MainCtrl::startApp() {
     waveformrender::getInstance()->init();// move into init()
-    daw.postInit();
-    DawCtrl::postInit();
     view->storeLayout(&layouts[0]);
     for (auto i = 1; i < layouts.size(); i++) {
         std::shared_ptr<dawview_layout_t> viewLayout = loadDawViewLayoutSnapshot(StringFormat("data/view%d.layout", i));
@@ -1093,7 +1090,7 @@ void MainCtrl::postInit() {
     }
     view->loadLayout(&layouts[1]);
     dragContainerRelayout(BaseCtrl::drag_ctr_event{ BaseCtrl::drag_ctr_event_type::DRAG_END });
-    BaseCtrl::relayout();
+    DawCtrl::startApp();
 }
 
 void DawInstance::postInit() {
@@ -1207,58 +1204,60 @@ void DawInstance::startDaw() {
     plugindb.openDatabase();
 }
 
-void DawInstance::initDaw(int argc, char* argv[]) {
+void DawInstance::initDaw(std::vector<String>& args) {
     dbgassert(initState == 0);
     using DAW::settings;
     initState++;
-    for (int i = 1; i < argc; i++) {
-        String s = argv[i];
-        if (s == "--load" && i + 1 < argc) {
-            loadProject = argv[i + 1];
+    for (int i = 1; i < args.size(); i++) {
+        if (args[i] == "--load" && i + 1 < args.size()) {
+            loadProject = args[i + 1];
         }
     }
-    daw_tls::tlsinstance& tls = daw_tls::getTls();
-    auto audioHost            = new audiohost();
-    host                      = new vsthost();
-    auto midiHost             = new midihost();
-    if (!vsthost::assignMasterCallback(host)) {
-        delete host;
-        dbgassert(0);
-        throw applogicexception("no empty vst callback slot");
-    }
-    host->setSampleFormat(sampleformat_t{ static_cast<samplerate_t>(settings.iosettings.internalSamplerate), settings.iosettings.internalBlocksize, sampleformat_bits_t::FLOAT_32 });
-    tls.project = this;
-    //    tls.mainCtrl = this;
-    tls.audioHost      = audioHost;
-    tls.host           = host;
-    tls.midiHost       = midiHost;
+
+    daw_tls::tlsinstance tls;
+    tls.tlsInitialized = true;
+
+    tls.project        = this;
+    tls.config         = new app_config_t{};
+    tls.host           = new vsthost();
+    tls.audioHost      = new audiohost();
+    tls.midiHost       = new midihost();
     tls.pluginDatabase = &plugindb;
     tls.audioCache     = new audiocache(settings.iosettings.samplerate);
     tls.waveform       = new waveformrender(pathrenderer_type_e::ADV);
+
+    if (!vsthost::assignMasterCallback(tls.host)) {
+        delete tls.host;
+        dbgassert(0);
+        throw applogicexception("no empty vst callback slot");
+    }
+
+    daw_tls::setTls(tls);
+
+    tls.host->setSampleFormat(sampleformat_t{
+        static_cast<samplerate_t>(settings.iosettings.internalSamplerate),
+        settings.iosettings.internalBlocksize,
+        sampleformat_bits_t::FLOAT_32
+    });
+
+    this->host = tls.host;
 }
 
-void DawCtrl::initApp(int argc, char* argv[]) {
+void DawCtrl::initApp(std::vector<String>& args) {
 }
 
 MainCtrl::MainCtrl(DawInstance& _daw) : DawCtrl(_daw) {
     log_printf("MainCtrl constructor\n", 0);
 }
 
-void MainCtrl::initApp(int argc, char* argv[]) {
-    daw_tls::tlsinstance initTls;
-    initTls.tlsInitialized = true;
-    initTls.config         = new app_config_t{};
-    initTls.mainCtrl       = this;
-    daw_tls::setTls(initTls);
-
-    daw.initDaw(argc, argv);
+void MainCtrl::initApp(std::vector<String>& args) {
 }
 
-bool MainCtrl::init(window_main* window, NVGcontext* nanovg) {
-    return DawCtrl::init(window, nanovg);
+bool MainCtrl::initAppWindow(window_main* window, NVGcontext* nanovg) {
+    return DawCtrl::initAppWindow(window, nanovg);
 }
 
-bool DawCtrl::init(window_main* window, NVGcontext* nanovg) {
+bool DawCtrl::initAppWindow(window_main* window, NVGcontext* nanovg) {
     dbgassert(!this->mainWindow);
     this->mainWindow = window;
     this->window     = window;
@@ -1461,6 +1460,7 @@ void DawInstance::getTrackContainers(std::vector<guictr_tracks*>& trackCointaine
 
 void DawInstance::setMainControl(MainCtrl* _mainCtrl) {
     dbgassert(!this->mainCtrl);
+    daw_tls::getTls().mainCtrl = _mainCtrl;
     this->mainCtrl = _mainCtrl;
     this->dawCtrls.push_back(_mainCtrl);
 }

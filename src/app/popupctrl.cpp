@@ -137,7 +137,7 @@ public:
         renderFrameOutline(vg);
     }
 };
-bool PopupCtrl::init(window_main* _window, NVGcontext* nanovg) {
+bool PopupCtrl::initAppWindow(window_main* _window, NVGcontext* nanovg) {
     guitheme_t themeDefault;
     themeDefault.name = "default";
     themes.setTheme(themeDefault);

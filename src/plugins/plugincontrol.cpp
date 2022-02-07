@@ -56,7 +56,7 @@ void PluginControl::menuCommand(const menucmd_t&& command) {
     }
 }
 
-void PluginControl::initApp(int argc, char* argv[]) {
+void PluginControl::initApp(std::vector<String>& args) {
 }
 
 PluginControl::PluginControl(std::shared_ptr<PluginViewContainers> _view) : AppCtrl(), view(_view) {
@@ -69,10 +69,10 @@ PluginControl::~PluginControl() {
         view = nullptr;
     }
 }
-void PluginControl::postInit() {
+void PluginControl::startApp() {
 }
 
-bool PluginControl::init(window_main* window, NVGcontext* nanovg) {
+bool PluginControl::initAppWindow(window_main* window, NVGcontext* nanovg) {
     this->mainWindow = window;
     this->window     = window;
     this->vg         = nanovg;

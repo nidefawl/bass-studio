@@ -262,7 +262,10 @@ class DawInstance : public project_controller_t, public delete_cb {
     project_t project;
     project_globals_t projectGlobals;
     int initState      = 0;
+    daw_tls::tlsinstance instance;
     vsthost* host      = nullptr;
+    audiohost* audioHost = nullptr;
+    midihost* midiHost = nullptr;
     MainCtrl* mainCtrl = nullptr;
 
     struct DawWindowCompanion {
@@ -320,7 +323,7 @@ public:
     static DawInstance* get();
 
     void postInit();
-    void initDaw(int argc, char* argv[]);
+    void initDaw(std::vector<String>& args);
     void startDaw();
 
     void setTempo(int32_t _tempo100) override;
@@ -480,7 +483,7 @@ public:
     void menuCommand(const menucmd_t&& command) override;
     void updateMenubar() override;
     void onTick() override;
-    void postInit() override;
+    void startApp() override;
     void destroy() override;
     void relayout(int32_t w, int32_t h) override;
     bool processGlobalKeyevent(KeyEvent& event) override;
@@ -490,8 +493,8 @@ public:
     void prerender(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float pixelRatio) override;
 
 
-    void initApp(int argc, char* argv[]) override;
-    bool init(window_main* window, NVGcontext* nanovg) override;
+    void initApp(std::vector<String>& args) override;
+    bool initAppWindow(window_main* window, NVGcontext* nanovg) override;
 
     void focusReceived() override {
     }
@@ -559,10 +562,10 @@ public:
     static guictr_plugins* getPluginCtr();
     static guictr_tracks* getGuiTrackCtr();
 
-    void initApp(int argc, char* argv[]) override;
-    bool init(window_main* window, NVGcontext* nanovg) override;
+    void initApp(std::vector<String>& args) override;
+    bool initAppWindow(window_main* window, NVGcontext* nanovg) override;
 
-    void postInit() override;
+    void startApp() override;
     void onTick() override;
     void setupView() override;
     bool isClipEditorVisible();
