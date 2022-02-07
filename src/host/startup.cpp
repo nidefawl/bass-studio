@@ -10,6 +10,79 @@
 #include "gui/trackcontrols.h"
 #include "gui/trackcontent.h"
 #include "commands.h"
+#include "gui/subtrack.h"
+#include "appconfig.h"
+
+void setLoopPosition(DawCtrl* dawCtrl, float fStart, float fLength) {
+    DawInstance* dawInstance = dawCtrl->getDaw();
+
+    // ctrl may still alter project settings during copy here if not locked
+    auto& projectGlobals             = dawInstance->getGlobals();
+
+    projectGlobals.cursor.cursorPos = projectGlobals.loopStart;
+    if (fStart >= 0.0f) {
+        projectGlobals.cursor.cursorPos = math::roundfS32(fStart * TICKS_BAR);
+        projectGlobals.loopStart        = math::roundfS32(fStart * TICKS_BAR);
+    }
+
+    if (fStart >= 0.0f && fLength >= 0.0f) {
+        projectGlobals.loopEnabled = true;
+        projectGlobals.loopLen     = math::roundfS32(fLength * TICKS_BAR);
+    }
+};
+void setSelection(DawCtrl* dawCtrl, int32_t trackBegin, int32_t trackEnd, float fStart, float fLength) {
+    DAW::Cursor& cursor = dawCtrl->getCursor();
+    cursor.setBegin(math::roundfS32(fStart * TICKS_BAR));
+    cursor.setEnd(math::roundfS32((fStart+fLength) * TICKS_BAR));
+    cursor.setTrackBegin(trackBegin);
+    cursor.setTrackEnd(trackEnd);
+}
+void loadPluginAndInsertOnTrack(DawCtrl* dawCtrl, String modulePath, int32_t trackIdx) {
+    DawInstance* dawInstance = dawCtrl->getDaw();
+    auto* project = dawInstance->getProject();
+    auto* host = dawInstance->getHost();
+    auto trackList = project->getTracksFlatVec();
+
+    if (trackList.size() < trackIdx) {
+        dbgassert(0);
+        return;
+    }
+
+    vstpluginloadres loadRes = vsthost::getInstance()->loadPlugin(modulePath, 0);
+
+    if (loadRes.result != 0) {
+        dbgassert(0);
+        return;
+    }
+
+    audio_stage_t* trImpl1 = trackList[trackIdx]->getStage();
+    host->insertNewPlugin(trImpl1, loadRes.plugin, 0);
+    loadRes.plugin->resume();
+    vsthost::getInstance()->postPluginLoaded(trImpl1, loadRes.plugin);
+
+
+#if 0
+    // example cloning plugin
+    auto defEffect = loadRes.plugin->toDeferred();
+    if (!defEffect) {
+        dbgassert(0);
+        return;
+    }
+    if (!host->addDeferredEffect(defEffect)) {
+        log_printf("Failed loading effect\n", 0);
+        delete defEffect;
+        dbgassert(0);
+        return;
+    }
+    audio_stage_t* trImpl2 = trackList[1]->getStage();
+
+    defEffect->getSnapshot().projectGlobalId = -1;
+    defEffect->load(host);
+    host->insertNewPlugin(trImpl2, defEffect, 0);
+    dbgassert(defEffect->trackImpl == trImpl2);
+    dbgassert(trImpl2->effects.size());
+#endif
+}
 
 void dawinstance_startup_commands(daw_tls::tlsinstance& tls) {
     //  if (1==1)
@@ -22,7 +95,8 @@ void dawinstance_startup_commands(daw_tls::tlsinstance& tls) {
     vsthost* host    = vsthost::getInstance();
     //  String dawPath = "C:/dev/daw/run/";
     String dawPath  = "C:/Users/Michael/daw/run/projects/";
-    String projName = "startup2.project";
+    //String projName = "waveform_debug.project";
+    String projName = "test-wave-2.project";
     //projName = "kshmr-samples-test.project";
     //  projName = "test-empty-midi-loop.project";
     //projName = "arp-test.project";
@@ -30,9 +104,8 @@ void dawinstance_startup_commands(daw_tls::tlsinstance& tls) {
     //projName = "kshmr-samples-test.project";
     //projName = "kshmr-samples-test.project";
     int flags = 0x1;// defer load
-                    //  flags = 0; // no defer load
+    //  flags = 0; // no defer load
     dawInstance->cbProjectLoadCompleteCallback = [tls, dawMainCtrl, dawInstance, host](DawInstance*, std::shared_ptr<project_file> file, int errorState) {
-        DAW::Cursor& cursor = dawMainCtrl->getCursor();
 
 
         /**
@@ -40,27 +113,8 @@ void dawinstance_startup_commands(daw_tls::tlsinstance& tls) {
          */
         const bool dbPlaceLoopPosition = false;
         if (dbPlaceLoopPosition) {
-            float fStart  = 177.0f;
-            float fLength = 64.0f;
-            // ctrl may still alter project settings during copy here if not locked
-            auto& projectGlobals             = dawInstance->getGlobals();
-            my_printf("Tempo100: %d\n", projectGlobals.tempo100);
-            my_printf("project.cursor.cursorPos: %d\n", projectGlobals.cursor.cursorPos);
-            projectGlobals.cursor.cursorPos = projectGlobals.loopStart;
-            if (fStart >= 0.0f) {
-                projectGlobals.cursor.cursorPos = math::roundfS32(fStart * TICKS_BAR);
-                projectGlobals.loopStart        = math::roundfS32(fStart * TICKS_BAR);
-            }
-
-            if (fStart >= 0.0f && fLength >= 0.0f) {
-                projectGlobals.loopEnabled = true;
-                projectGlobals.loopLen     = math::roundfS32(fLength * TICKS_BAR);
-            }
-            cursor.setBegin(projectGlobals.cursor.cursorPos);
-            cursor.setEnd(projectGlobals.cursor.cursorPos);
-            //            cursor.setEnd(projectGlobals.cursor.cursorPos + projectGlobals.loopLen);
-            cursor.setTrackBegin(0);
-            cursor.setTrackEnd(1);
+            setLoopPosition(dawMainCtrl, 177.0f, 64.0f);
+            setSelection(dawMainCtrl, 0, 1, 177.0f, 64.0f);
         }
 
         /**
@@ -69,34 +123,9 @@ void dawinstance_startup_commands(daw_tls::tlsinstance& tls) {
 
         const bool dbgLoadPlugins = false;
         if (dbgLoadPlugins) {
-            auto trackList = tls.project->getTracks().getMidiAudioTracksFlatVec();
-            dbgassert(trackList.size() > 1);
-            vstpluginloadres loadRes =
-                    vsthost::getInstance()->loadPlugin("C:/PluginManager/configs/default/hosts/Ableton/categories/melda/MPowerSynth.dll", 0);
-
-            if (loadRes.plugin && loadRes.result == 0) {
-                audio_stage_t* trImpl1 = trackList[0]->getStage();
-                host->insertNewPlugin(trImpl1, loadRes.plugin, 0);
-                loadRes.plugin->resume();
-                vsthost::getInstance()->postPluginLoaded(trImpl1, loadRes.plugin);
-                auto defEffect = loadRes.plugin->toDeferred();
-                if (defEffect) {
-                    if (!host->addDeferredEffect(defEffect)) {
-                        log_printf("Failed loading effect\n", 0);
-                        delete defEffect;
-                    } else {
-                        audio_stage_t* trImpl2                   = trackList[1]->getStage();
-                        defEffect->getSnapshot().projectGlobalId = -1;
-                        defEffect->load(host);
-                        host->insertNewPlugin(trImpl2, defEffect, 0);
-                        dbgassert(defEffect->trackImpl == trImpl2);
-                        dbgassert(trImpl2->effects.size());
-                    }
-                } else {
-                    // TODO: handle
-                }
-            }
+            loadPluginAndInsertOnTrack(dawMainCtrl, "C:/PluginManager/configs/default/hosts/Ableton/categories/melda/MPowerSynth.dll", 0);
         }
+#if 0
         const bool loadPlugins = 0;
         if (loadPlugins) {
             ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
@@ -117,20 +146,29 @@ void dawinstance_startup_commands(daw_tls::tlsinstance& tls) {
 
             //        dawMainCtrl->menuCommand(CMD_NOARG(CMD_PREFERENCES));
         }
+#endif
 
-
+#if 0
         // open subtrack waveview
-        auto trackList = tls.project->getTracks().getMidiAudioTracksFlatVec();
-        //        dbgassert(trackList.size() > 0 && trackList[0]->audio->guiInstances.size() > 0);
-        //        track_gui_entry_t* trackGui = trackList[0]->audio->guiInstances[0];
-        //    auto gui = makeGuiSubtrack(trackGui, MainCtrl::get(), gui_track_subtrack::SUBTRACK_TYPE_WAVE);
-        //    MainCtrl::getGuiTrackCtr()->addSubTrack(trackGui, gui, true);
-        //    trackGui->parent->layout();
-        //    trackGui->parent->updateVisibleTrackContents();
-        //    dawInstance->startPlaying();
+        dbgassert(dawInstance->getTracks().size() > 1);
+        auto guiTrackCtr = dawMainCtrl->getGuiTrackCtr();
+        auto track = dawInstance->getTracks()[1];
+        track_gui_entry_t* entry;
+        dbgassert(guiTrackCtr->getTrackEntry(track, &entry));
+
+        track->audio->flags |= audiostageflags_t::CONVERT_OUTPUT | audiostageflags_t::WRITE_OUTPUT;
+
+        auto gui = makeGuiSubtrack(entry, dawMainCtrl, gui_track_subtrack::SUBTRACK_TYPE_WAVE);
+        MainCtrl::getGuiTrackCtr()->addSubTrack(entry, gui, true);
+        entry->parent->layout();
+        entry->parent->updateVisibleTrackContents();
+        //dawInstance->startPlaying();
+
+        daw_tls::getTls().config->enableClipRendererDebugLayer=true;
+#endif
     };
     //    dawMainCtrl->setVisible(false);
     //    dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 0));
-        dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 1));
+    //    dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 1));
     dawInstance->loadFile(dawPath + projName, flags);
 }
