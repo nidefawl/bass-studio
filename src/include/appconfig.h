@@ -4,6 +4,7 @@
 #include "str_util.h"
 
 struct app_config_t {
-    bool enableCache            = true;
-    bool disableWaveformUpdates = false;
+    bool enableCache                  = true;
+    bool disableWaveformUpdates       = false;
+    bool enableClipRendererDebugLayer = false;
 };

@@ -53,15 +53,15 @@ class waveformrender {
 
 public:
     struct render_timings {
-        uint64_t tmProcessInputQ = 0;
-        uint64_t tmTesselate     = 0;
-        uint64_t tmFindSpot      = 0;
-        uint64_t tmFindSimiliar  = 0;
-        uint64_t tmBakePaths     = 0;
-        uint64_t tmDrawGL        = 0;
-        uint64_t tmPassed        = 0;
-        uint64_t comparisonsA    = 0;
-        uint64_t comparisonsB    = 0;
+        int64_t tmProcessInputQ = 0;
+        int64_t tmTesselate     = 0;
+        int64_t tmFindSpot      = 0;
+        int64_t tmFindSimiliar  = 0;
+        int64_t tmBakePaths     = 0;
+        int64_t tmDrawGL        = 0;
+        int64_t tmPassed        = 0;
+        int64_t comparisonsA    = 0;
+        int64_t comparisonsB    = 0;
     };
     static waveformrender* getInstance();
     explicit waveformrender(pathrenderer_type_e t);
@@ -75,7 +75,11 @@ public:
     int queueUpdate(samplesource_t* audio, gui_waveform_texture_ref* waveformRef);
     void draw(NVGcontext* ctxt, const gui_waveform_texture_ref* waveformRef, ivec2 size);
     bool isValid(const gui_waveform_texture_ref* waveformRef) const;
+
     void release(gui_waveform_texture_ref* waveformRef);
+    void releaseQueued(gui_waveform_texture_ref* waveformRef);
+    void releaseRendered(gui_waveform_texture_ref* waveformRef);
+
     bool findFreeSpot(ivec2 size, int& atlasIdx, ivec2& pos);
     bool canQueueUpdate();
     render_timings getTimings();
@@ -83,11 +87,11 @@ public:
 
 
 struct wave_split_layout_t {
-    ivec2 pos{ 0 };
-    ivec2 size{ 0 };
+    ivec2 splitTexPos{ 0 };
+    ivec2 spliTexSize{ 0 };
 };
 inline bool operator==(const wave_split_layout_t& lhs, const wave_split_layout_t& rhs) {
-    return lhs.pos == rhs.pos && lhs.size == rhs.size;
+    return lhs.splitTexPos == rhs.splitTexPos && lhs.spliTexSize == rhs.spliTexSize;
 }
 inline bool operator!=(const wave_split_layout_t& lhs, const wave_split_layout_t& rhs) {
     return !operator==(lhs, rhs);

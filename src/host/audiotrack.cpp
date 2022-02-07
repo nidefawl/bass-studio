@@ -13,7 +13,7 @@ static constexpr int32_t PER_BLOCK_SAMPLES = (PER_BLOCK_BYTES / (sizeof(float)))
 /*static*/ int32_t audiotrack_t::GetSplitSampleLength() {
     return PER_BLOCK_SAMPLES;
 }
-std::shared_ptr<audiotrack_split_t> audiotrack_t::getSampleById(int32_t sampleId) {
+std::shared_ptr<audiotrack_split_t> audiotrack_t::getSampleById(int64_t sampleId) {
     //TODO: this lock could be narrowed
     ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
     for (const std::shared_ptr<audiotrack_split_t>& sample : samples) {
@@ -56,7 +56,7 @@ int32_t audiotrack_t::convertToSamples(vsthost* host) {
         int32_t samplePos = i * PER_BLOCK_SAMPLES;
         if (data[i]) {
             auto& block = data[i]->data;
-            audiotrack_split_t* split;
+            audiotrack_split_t* split = nullptr;
             bool present = false;
             if (i >= nSamples || !this->samples[i]) {
                 auto sharedSplit = std::make_shared<audiotrack_split_t>();
@@ -110,11 +110,11 @@ int32_t audiotrack_t::convertToSamples(vsthost* host) {
 
 void copyFromToSample(audiosample_t* dstSample, float** srcBuf, uint32_t offsetIn, uint32_t offsetOut, uint32_t srcSamples, uint32_t srcChannels) {
     //dbgassert(srcSamples == samples);
-    uint32_t nChannels = math::max(srcChannels, (uint32_t) dstSample->nChannels);
-    uint32_t nSamples  = math::min(srcSamples, (uint32_t) dstSample->nSamples);
+    auto nChannels = math::max<uint32_t>(srcChannels, dstSample->nChannels);
+    auto nSamples  = math::min<uint32_t>(srcSamples, dstSample->nSamples);
     for (uint32_t i = 0; i < nChannels; i++) {
-        uint32_t srcChannelIdx = math::min(srcChannels - 1, i);
-        uint32_t dstChannelIdx = math::min((uint32_t) dstSample->nChannels - 1, i);
+        auto srcChannelIdx = math::min<uint32_t>(srcChannels - 1, i);
+        auto dstChannelIdx = math::min<uint32_t>(dstSample->nChannels - 1, i);
         float* srcBufChannel   = srcBuf[srcChannelIdx];
         float* dstBufChannel   = dstSample->samples[dstChannelIdx].data();
         //TODO: this does 2 copys to the same destination when going from stereo to mono (MIX FIRST)

@@ -15,6 +15,7 @@
 #include "host/mainctrl.h"
 #include "logging.h"
 #include "subtrack.h"
+#include "appconfig.h"
 
 #include "guicontextmenu_daw.h"
 
@@ -383,22 +384,28 @@ void guictr_tracks::render(NVGcontext* vg) {
         return;
     }
 
+    auto& dawtls = daw_tls::getTls();
+
+    hires_timer_t timer;
     nvgIntersectScissor(vg, cp.x, cp.y, cs.x, cs.y);
     nvgTranslate(vg, cp.x, cp.y);
 
     nvgSave(vg);
-    hires_timer_t timer;
+    timer.reset();
     trackView.render(vg);
-    daw_tls::getTls().renderStats.timeRenderEditor = timer.getTime();
+    dawtls.renderStats.timeRenderEditor = timer.getTime();
     nvgRestore(vg);
+
     nvgSave(vg);
     trackTopLeft.render(vg);
     nvgRestore(vg);
     nvgSave(vg);
     timer.reset();
     trackControls.render(vg);
-    daw_tls::getTls().renderStats.timeRenderTrackControls = timer.getTime();
+    dawtls.renderStats.timeRenderTrackControls = timer.getTime();
     nvgRestore(vg);
+
+
     nvgSave(vg);
     trackTimeline.render(vg);
     nvgRestore(vg);
@@ -479,9 +486,15 @@ void guictr_tracks::render(NVGcontext* vg) {
     nvgSave(vg);
     loophandles.render(vg);
     nvgRestore(vg);
+
+
     nvgSave(vg);
     scrollbar.render(vg);
     nvgRestore(vg);
+
+    if (dawtls.config->enableClipRendererDebugLayer) {
+        trackView.renderDebugPass(vg);
+    }
 
     if (trackView.size.x > 0) {
         nvgIntersectScissor(vg, trackView.pos.x, 0, trackView.size.x, cs.y);

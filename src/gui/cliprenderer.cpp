@@ -76,27 +76,9 @@ struct midi_clip_render_cache_t : public noteview_cache_impl_t {
     }
 };
 
-bool getClipPosition(scaled_grid& grid, const ivec2& scissorSize, const clip_t* cl, ivec2& pos, ivec2& size, tick_t offset) {
-    tick_t tickBegin  = cl->time + offset;
-    tick_t tickEnd    = cl->time + offset + cl->getLen();
-    double tickBeginX = grid.tickToScreenD(tickBegin);
-    double tickEndX   = grid.tickToScreenD(tickEnd);
-    if (tickEndX < -4 || tickBeginX > scissorSize.x + 4) {
-        return false;
-    }
-    double width = tickEndX - tickBeginX;
-    dbgassert(FitsTypeRange<int32_t>(tickBeginX));
-    dbgassert(FitsTypeRange<int32_t>(tickEndX));
-    int32_t tickBeginPx = (int32_t) round(tickBeginX);
-    int32_t widthPx     = (int32_t) round(width);
-    pos                 = ivec2(tickBeginPx, INSET_TRACK_CONTENT);
-    size                = math::maxvec2(ivec2(widthPx, size.y - INSET_TRACK_CONTENT * 2), ivec2(1));
-    return size.x > 0 && size.y > 0;
-}
-
 audioclip_texture_t makeWaveformFromClip(const project_globals_t& project, scaled_grid& grid,
-                                         ivec2& trackSize, clip_t* m_clip,
-                                         ivec2& pos, ivec2& size, ivec2& posClipped, ivec2& sizeClipped) {
+                                         ivec2& trackSize, const clip_t* m_clip,
+                                         const ivec2& pos, const ivec2& size, ivec2& posClipped, ivec2& sizeClipped) {
 
     samplerate_t sr     = vsthost::getInstance()->m_sampleFormatInternal.sampleRate;
     double lenSamples   = tickToSampleConvert<double, roundmode::none>(m_clip->getLen(), project.tempo100, sr);
@@ -417,6 +399,10 @@ void gui_midi_clip::updateClipRenderCache(NVGcontext* vg) {
         impl->notesRendered   = notesRendered;
         notesView.curRevision = notesView.reqRevision;
     }
+}
+
+void gui_midi_clip::renderDebugPass(NVGcontext* vg) {
+    this->render(vg);
 }
 
 void gui_midi_clip::render(NVGcontext* vg) {

@@ -27,6 +27,55 @@
 
 struct track_gui_entry_t;
 
+constexpr int32_t CLIPPING_STEP_PX = 512;
+constexpr int32_t MARGIN_CLIPPING_PX = 32;
+
+
+bool getClipPosition(scaled_grid& grid, const ivec2& scissorSize, const clip_t* cl, ivec2& pos, ivec2& size, tick_t offset) {
+    tick_t tickBegin  = cl->time + offset;
+    tick_t tickEnd    = cl->time + offset + cl->getLen();
+    double tickBeginX = grid.tickToScreenD(tickBegin);
+    double tickEndX   = grid.tickToScreenD(tickEnd);
+    if (tickEndX < -MARGIN_CLIPPING_PX || tickBeginX > scissorSize.x + MARGIN_CLIPPING_PX) {
+        return false;
+    }
+    double width = tickEndX - tickBeginX;
+
+    dbgassert(FitsTypeRange<int32_t>(tickBeginX));
+    dbgassert(FitsTypeRange<int32_t>(tickEndX));
+
+    int32_t tickBeginPx = math::rounddS32(tickBeginX);
+    int32_t widthPx     = math::rounddS32(width);
+
+    pos  = ivec2(tickBeginPx, INSET_TRACK_CONTENT);
+    size = math::maxvec2(ivec2(widthPx, size.y - INSET_TRACK_CONTENT * 2), ivec2(0));
+
+    //dbgassert(size.x > 0 && size.y > 0);
+
+    return size.x > 0 && size.y > 0;
+}
+
+bool getClippedPosSize(const ivec2& parentSize, ivec2& posClipped, ivec2& sizeClipped) {
+    bool wasClipped = false;
+
+    // apply clipping in steps
+    if (posClipped.x < -MARGIN_CLIPPING_PX) {
+        auto clippingLen = (static_cast<int32_t>(-(posClipped.x + MARGIN_CLIPPING_PX)) / CLIPPING_STEP_PX) * CLIPPING_STEP_PX;
+        posClipped.x += clippingLen;
+        sizeClipped.x -= clippingLen;
+        wasClipped = true;
+    }
+
+    if (posClipped.x + sizeClipped.x > parentSize.x + MARGIN_CLIPPING_PX) {
+        auto over = static_cast<int32_t>((posClipped.x + sizeClipped.x) - (parentSize.x + MARGIN_CLIPPING_PX));
+        auto clippingLen = (over / CLIPPING_STEP_PX) * CLIPPING_STEP_PX;
+        sizeClipped.x -= clippingLen;
+        wasClipped = true;
+    }
+
+    return wasClipped;
+}
+
 gui_audio_clip::gui_audio_clip(track_gui_entry_t* _track, clip_t* _clip)
     : gui_clip(_track, _clip),
       waveformRef(new gui_waveform_texture_ref{})
@@ -55,13 +104,38 @@ void gui_midi_clip::onRemove() {
     m_trackentry->clipsGuis.erase(it1);
 }
 
+void gui_audio_clip::renderDebugPass(NVGcontext* vg) {
+    if (!culled) {
+        ivec2 shrink = ivec2(0, (HEIGHT_CLIP_TITLE + INSET_CLIP_CONTENT * 2));
+        ivec2 sizeClipped = size - shrink;
+        ivec2 posClipped = pos + shrink;
+
+        getClippedPosSize(parent->size, posClipped, sizeClipped);
+
+        gui_waveform_texture_ref wfref = *waveformRef;
+        if (prevIsValid && wfref.queued) {
+            wfref.waveform = prevWaveform;
+        }
+        renderAudioClip(vg, theme, m_track, m_clip, waveformRef, pos, size, posClipped, sizeClipped);
+        nvgBeginPath(vg);
+        nvgRect(vg, posClipped.x, posClipped.y, sizeClipped.x, sizeClipped.y);
+        nvgFillColor(vg, rgbaToNvg(0x7Fff00ff));
+        nvgFill(vg);
+    }
+}
+
 void gui_audio_clip::render(NVGcontext* vg) {
     if (!culled) {
-        ivec2 clipSize    = ivec2(size.x, size.y - (HEIGHT_CLIP_TITLE + INSET_CLIP_CONTENT * 2));
-        ivec2 posClipped  = ivec2(pos.x, pos.y + (HEIGHT_CLIP_TITLE + INSET_CLIP_CONTENT * 2));
-        ivec2 sizeClipped = clipSize;
-        this->parent->scissorClip(posClipped, sizeClipped);
-        sizeClipped.y = clipSize.y;
+        ivec2 shrink = ivec2(0, (HEIGHT_CLIP_TITLE + INSET_CLIP_CONTENT * 2));
+        ivec2 sizeClipped = size - shrink;
+        ivec2 posClipped = pos + shrink;
+
+        getClippedPosSize(parent->size, posClipped, sizeClipped);
+
+        gui_waveform_texture_ref wfref = *waveformRef;
+        if (prevIsValid && wfref.queued) {
+            wfref.waveform = prevWaveform;
+        }
         renderAudioClip(vg, theme, m_track, m_clip, waveformRef, pos, size, posClipped, sizeClipped);
     }
 }
@@ -75,6 +149,7 @@ void gui_audio_clip::handleRightClick(MouseEvent& evt) {
 }
 
 void gui_audio_clip::releaseRendered() {
+    //log_printf("releaseRendered\n", 0);
     dbgassert(waveformrender::getInstance()->isValid(waveformRef));
     waveformrender::getInstance()->release(waveformRef);
     waveformRef->rendered = false;
@@ -84,64 +159,53 @@ void gui_audio_clip::updateClipRenderCache(NVGcontext* vg) {
 }
 
 void gui_audio_clip::updatePosition(project_globals_t& project, scaled_grid& grid, ivec2& trackSize) {
-    size               = this->parent->size;
-    culled             = !getClipPosition(grid, trackSize, m_clip, pos, size, 0);
+    size   = this->parent->size;
+    culled = !getClipPosition(grid, trackSize, m_clip, pos, size, 0);
+
     audiofile_t* audio = audiocache::getInstance()->get(m_clip->audio.id);
+
     if (culled || !audio) {
         releaseRendered();
+        return;
     }
-    //test clipping
-//    ivec2 prevSize = size;
-//    ivec4 clippedP = ivec4(pos, size);
-//    this->parent->scissorClip(clippedP);
-//    pos.x  = clippedP.x;
-//    pos.y  = clippedP.y;
-//    size.x = clippedP.z;
-//    size.y = clippedP.w;
-//    if (size != prevSize) {
-//        my_printf("%d %d -> %d %d\n", prevSize.x, prevSize.y, size.x, size.y);
-//    }
-    if (!culled) {
-        dbgassert(size.x > 0);
-        if (audio) {
-            ivec2 clipSize    = ivec2(size.x, size.y - (HEIGHT_CLIP_TITLE + INSET_CLIP_CONTENT * 2));
-            ivec2 posClipped  = pos;
-            ivec2 sizeClipped = clipSize;
-            this->parent->scissorClip(posClipped, sizeClipped);
-            sizeClipped.y = clipSize.y;
-            if (posClipped.x + sizeClipped.x <= 0 || sizeClipped.x <= 0) {
-                culled = true;
-            } else {
-                auto waveform = makeWaveformFromClip(project, grid, trackSize, m_clip, pos, clipSize, posClipped, sizeClipped);
-                if (waveform.size.x < 1 || waveform.size.y < 1) {
-                    releaseRendered();
-                    waveformRef->waveform = waveform;
-                    this->updatedWaveform = waveform;
-                } else {
-                    bool equal = ((waveform.size.y > 0) == (waveformRef->waveform.size.y > 0)) && isEqualWaveform3(waveform, waveformRef->waveform);
 
-                    bool canQueue  = waveformrender::getInstance()->canQueueUpdate();
-                    ivec2 sizeDiff = math::absvec2(waveform.size - waveformRef->waveform.size);
-                    ivec2 limit    = math::maxvec2(ivec2(1), ivec2(waveform.size.x / 4, 16));
-                    if (!canQueue) {
-                        limit.x = waveform.size.x / 4;
-                    }
-                    if (waveform.clipped || (MainCtrl::get() && !MainCtrl::get()->isZooming())) {
-                        limit = { 0, 0 };
-                    }
-                    if (!equal || (sizeDiff.x > limit.x || sizeDiff.y > limit.y)) {
-//                        if (!equal)
-//                            my_printf("unequal\n", 0);
-//                        else {
-//                            my_printf("sizeDiff %d,%d / %d,%d (canQueue %d)\n", sizeDiff.x, sizeDiff.y, limit.x, limit.y, canQueue);
-//                        }
-                        this->updatedWaveform = waveform;
-                        if (sizeDiff.x > limit.x || sizeDiff.y > limit.y) {
-                            releaseRendered();
-                        }
-                    }
-                }
-            }
+    dbgassert(size.x > 0);
+
+    ivec2 shrink = ivec2(0, (HEIGHT_CLIP_TITLE + INSET_CLIP_CONTENT * 2));
+    ivec2 sizeClipped = size - shrink;
+    ivec2 posClipped = pos + shrink;
+
+    getClippedPosSize(parent->size, posClipped, sizeClipped);
+
+    if (posClipped.x + sizeClipped.x <= 0 || sizeClipped.x <= 0) {
+        releaseRendered();
+        culled = true;
+        return;
+    }
+
+    auto waveform = makeWaveformFromClip(project, grid, trackSize, m_clip, pos, size - shrink, posClipped, sizeClipped);
+    if (waveform.size.x < 1 || waveform.size.y < 1) {
+        releaseRendered();
+        waveformRef->waveform = waveform;
+        this->updatedWaveform = waveform;
+        return;
+    }
+
+    bool equal = ((waveform.size.y > 0) == (waveformRef->waveform.size.y > 0)) && isEqualWaveform3(waveform, waveformRef->waveform);
+
+    bool canQueue  = waveformrender::getInstance()->canQueueUpdate();
+    ivec2 sizeDiff = math::absvec2(waveform.size - waveformRef->waveform.size);
+    ivec2 limit    = math::maxvec2(ivec2(1), ivec2(waveform.size.x / 4, 16));
+    if (!canQueue) {
+        limit.x = waveform.size.x / 4;
+    }
+    if (waveform.clipped || (MainCtrl::get() && !MainCtrl::get()->isZooming())) {
+        limit = { 0, 0 };
+    }
+    if (!equal || (sizeDiff.x > limit.x || sizeDiff.y > limit.y)) {
+        this->updatedWaveform = waveform;
+        if (sizeDiff.x > limit.x || sizeDiff.y > limit.y) {
+            //releaseRendered();
         }
     }
 }
@@ -170,18 +234,22 @@ void gui_audio_clip::prerender(NVGcontext* vg) {
         if (!audio || this->updatedWaveform.size.x < 1 || this->updatedWaveform.size.y < 1) {
             return;
         }
-        if (!culled && (!waveformRef->rendered || (this->updatedWaveform != waveformRef->waveform))) {
-            releaseRendered();
-            dbgassert(!waveformRef->rendered && !waveformRef->queued);
+        if (!culled && !waveformRef->queued && (!waveformRef->rendered || (this->updatedWaveform != waveformRef->waveform))) {
+            //releaseRendered();
+            //dbgassert(!waveformRef->rendered && !waveformRef->queued);
+            this->prevWaveform = waveformRef->waveform;
+            this->prevIsValid = waveformRef->rendered;
             waveformRef->waveform = this->updatedWaveform;
-            dbgassert(!waveformRef->queued);
+            //dbgassert(!waveformRef->queued);
             dbgassert(waveformRef->waveform.size.x > 0 && waveformRef->waveform.size.y > 0);
             if (waveformrender::getInstance()->queueUpdate(audio, waveformRef)) {
-                dbgassert(!waveformRef->rendered && waveformRef->queued);
+                dbgassert(/*!waveformRef->rendered && */waveformRef->queued);
                 dbgassert(waveformrender::getInstance()->isValid(waveformRef));
             }
         }
     }
+    else if (waveformRef->rendered)
+        prevIsValid=false;
 }
 
 using Table::table_entry_t;

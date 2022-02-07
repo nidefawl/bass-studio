@@ -777,6 +777,32 @@ void guitrack_editor::renderAction(NVGcontext* vg, clip_dragaction& renderAction
         }
     }
 }
+
+void guitrack_editor::renderDebugPass(NVGcontext* vg) {
+    ivec2 posInset  = getPosContent();
+    ivec2 sizeInset = getSizeContent();
+
+    if (sizeInset.y <= 0 || sizeInset.x <= 0) {
+        return ;
+    }
+    nvgSave(vg);
+    nvgResetScissor(vg);
+    nvgTranslate(vg, posInset.x, posInset.y);
+
+    for (track_t* g : project.trackList) {
+        track_gui_entry_t* entry;
+        if (iGuiMgr.getPointerEntry(g, &entry)) {
+            if (entry->content->isVisible()) {
+                entry->content->renderDebugPass(vg);
+                for (auto* gSubtrack : entry->subtracks) {
+                    gSubtrack->renderDebugPass(vg);
+                }
+            }
+        }
+    }
+    nvgRestore(vg);
+}
+
 void guitrack_editor::render(NVGcontext* vg) {
     if (!setScissorTransform(vg)) {
         return;
@@ -870,8 +896,9 @@ void guitrack_editor::render(NVGcontext* vg) {
                 dbgassert(0);
                 continue;
             }
-            bool trackVisible = iGuiMgr.isVisible(entry);
-            dbgassert(entry->content->isVisible() == trackVisible);
+
+            dbgassert(entry->content->isVisible() == iGuiMgr.isVisible(entry));
+
             if (entry->content->isVisible()) {
                 nvgSave(vg);
                 entry->content->render(vg);

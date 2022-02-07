@@ -654,7 +654,9 @@ inline bool isAlmostEqualWaveformSample(const audioclip_texture_t& lhs, const au
         //lhs.samplesPerPx == rhs.samplesPerPx &&
         //lhs.scale == rhs.scale &&
         //lhs.scaleX == rhs.scaleX &&
-        lhs.audioId == rhs.audioId && lhs.quality == rhs.quality && lhs.method == rhs.method) {
+        lhs.audioId == rhs.audioId &&
+        lhs.sampleVersion == rhs.sampleVersion &&
+        lhs.quality == rhs.quality && lhs.method == rhs.method) {
 
         if (lhs.clipped || rhs.clipped)
             return lhs.scaleX == rhs.scaleX && lhs.scaleY == rhs.scaleY && lhs.size == rhs.size && lhs.samplesPerPx == rhs.samplesPerPx;
@@ -675,20 +677,24 @@ void gui_audiocontent::updatePosition() {
     audiofile_t* audio = audiocache::getInstance()->get(clipAudio.id);
     if (!audio) {
         releaseRendered();
+        return;
     }
 
     dbgassert(size.x > 0);
-    if (audio) {
-        audioclip_texture_t waveform = makeWaveformFromSample(project, grid, clipAudio, ivec2(0, 0), size);
-        if (waveform.size.x < 1 || waveform.size.y < 1) {
-            releaseRendered();
-            waveformRef->waveform = waveform;
+    audioclip_texture_t waveform = makeWaveformFromSample(project, grid, clipAudio, ivec2(0, 0), size);
+    if (waveform.size.x < 1 || waveform.size.y < 1) {
+        releaseRendered();
+        waveformRef->waveform = waveform;
+        this->updatedWaveform = waveform;
+        return;
+    }
+
+    if (waveformrender::getInstance()->canQueueUpdate()) {
+        bool equal = waveform.size == waveformRef->waveform.size &&
+                     clipAudio.id == waveformRef->waveform.audioId &&
+                     isAlmostEqualWaveformSample(waveform, waveformRef->waveform);
+        if (!equal) {
             this->updatedWaveform = waveform;
-        } else if (waveformrender::getInstance()->canQueueUpdate()) {
-            bool equal = waveform.size == waveformRef->waveform.size && clipAudio.id == waveformRef->waveform.audioId && isAlmostEqualWaveformSample(waveform, waveformRef->waveform);
-            if (!equal) {
-                this->updatedWaveform = waveform;
-            }
         }
     }
 }
@@ -710,7 +716,7 @@ void gui_audiocontent::prerender(NVGcontext* vg) {
             return;
         }
         if ((!waveformRef->rendered || (this->updatedWaveform != waveformRef->waveform))) {
-            releaseRendered();
+            //releaseRendered();
             dbgassert(!waveformRef->rendered && !waveformRef->queued);
             waveformRef->waveform = this->updatedWaveform;
             dbgassert(!waveformRef->queued);

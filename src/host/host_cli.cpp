@@ -544,7 +544,7 @@ int runCommandLineHost(int argc, const char* argv[]) {
                                 float* in1      = sample->samples[0].data();
                                 float* in2      = sample->samples[1].data();
                                 float* largeBuf = blockTrack.buf[0];
-                                for (uint64_t nSample = 0; nSample < sample->nSamples; nSample++) {
+                                for (int64_t nSample = 0; nSample < sample->nSamples; nSample++) {
                                     *largeBuf++ = *in1++;
                                     *largeBuf++ = *in2++;
                                 }

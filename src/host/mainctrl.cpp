@@ -2619,25 +2619,29 @@ void DawCtrl::prerender(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w,
     renderStats.timePrerender = timer.getTime();
 
     auto tmNow = getTimeMillis();
-    if (tmNow - tmLastRenderUpdatesMs >= 100) {
-        tmLastRenderUpdatesMs = tmNow;
+    //if (tmNow - tmLastRenderUpdatesMs >= 1000)
+    //if (tmLastRenderUpdatesMs++%2==0)
+    {
         timer.reset();
 
         int nUpdates = tlsInstance.waveform->renderUpdates(nanovgCtxt, 0);
+        if (nUpdates) {
+            //tmLastRenderUpdatesMs = tmNow;
+        }
         renderStats.numWaveFormsRendered += nUpdates;
         renderStats.timeUpdateWaveforms = timer.getTime();
         if (nUpdates > 15 || renderStats.timeUpdateWaveforms > 20 * 1000) {
-            log_printf("%d updates took %lld\n", nUpdates, renderStats.timeUpdateWaveforms);
+            log_printf("%d updates took %zd\n", nUpdates, renderStats.timeUpdateWaveforms);
             auto timings = tlsInstance.waveform->getTimings();
-            log_printf("waveform.tmPassed\t\t%llu\n", timings.tmPassed);
-            log_printf("waveform.tmProcessInputQ\t%llu\n", timings.tmProcessInputQ);
-            log_printf("waveform.tmFindSimiliar\t%llu\n", timings.tmFindSimiliar);
-            log_printf("waveform.tmFindSpot\t\t%llu\n", timings.tmFindSpot);
-            log_printf("waveform.tmTesselate\t\t%llu\n", timings.tmTesselate);
-            log_printf("waveform.tmBakePaths\t\t%llu\n", timings.tmBakePaths);
-            log_printf("waveform.tmDrawGL\t\t%llu\n", timings.tmDrawGL);
-            log_printf("waveform.comparisonsA\t%llu\n", timings.comparisonsA);
-            log_printf("waveform.comparisonsB\t%llu\n", timings.comparisonsB);
+            log_printf("waveform.tmPassed\t\t%zd\n", timings.tmPassed);
+            log_printf("waveform.tmProcessInputQ\t%zd\n", timings.tmProcessInputQ);
+            log_printf("waveform.tmFindSimiliar\t%zd\n", timings.tmFindSimiliar);
+            log_printf("waveform.tmFindSpot\t\t%zd\n", timings.tmFindSpot);
+            log_printf("waveform.tmTesselate\t\t%zd\n", timings.tmTesselate);
+            log_printf("waveform.tmBakePaths\t\t%zd\n", timings.tmBakePaths);
+            log_printf("waveform.tmDrawGL\t\t%zd\n", timings.tmDrawGL);
+            log_printf("waveform.comparisonsA\t%zd\n", timings.comparisonsA);
+            log_printf("waveform.comparisonsB\t%zd\n", timings.comparisonsB);
         }
     }
 }

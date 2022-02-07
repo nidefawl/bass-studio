@@ -58,7 +58,8 @@ enum ID_BTN : int32_t {
     ID_BTN_TOGGLE_CLIP_RENDER_CACHE,
     ID_BTN_UPDATE_GRID,
     ID_BTN_UPDATE_VISIBLE_TRACK_CONTENTS,
-    ID_BTN_TOGGLE_WAVEFORM_UPDATES
+    ID_BTN_TOGGLE_WAVEFORM_UPDATES,
+    ID_BTN_TOGGLE_CLIPRENDERER_DEBUGLAYER
 };
 constexpr int BTN_FONT_SIZE = 16;
 struct gui_ctr_debug::ctr_debug_impl_t {
@@ -202,6 +203,13 @@ gui_ctr_debug::gui_ctr_debug(gui_ctr_debug_type_i32 debugCtrType)
             auto btn3 = new guibutton;
             btn3->id  = ID_BTN_TOGGLE_WAVEFORM_UPDATES;
             btn3->setText("Disable audio waveform updates");
+            btn3->setFontSize(BTN_FONT_SIZE);
+            debugGuis.push_back(btn3);
+        }
+        {
+            auto btn3 = new guibutton;
+            btn3->id  = ID_BTN_TOGGLE_CLIPRENDERER_DEBUGLAYER;
+            btn3->setText("Enable clip renderer debug layer");
             btn3->setFontSize(BTN_FONT_SIZE);
             debugGuis.push_back(btn3);
         }
@@ -594,6 +602,11 @@ void gui_ctr_debug::buttonClicked(guibase* button) {
             static_cast<guibutton*>(button)->setText(String(daw_tls::getTls().config->disableWaveformUpdates ? "Enable waveform updates" : "Disable waveform updates"));
 
             break;
+        case ID_BTN_TOGGLE_CLIPRENDERER_DEBUGLAYER:
+            daw_tls::getTls().config->enableClipRendererDebugLayer = !daw_tls::getTls().config->enableClipRendererDebugLayer;
+            static_cast<guibutton*>(button)->setText(String(!daw_tls::getTls().config->enableClipRendererDebugLayer ? "Enable clip renderer debug layer" : "Disable clip renderer debug layer"));
+
+            break;
         case ID_BTN_TOGGLE_THREADING:
             auto h = vsthost::getInstance();
             MainCtrl::getPlayThread()->call([]() {
@@ -605,17 +618,6 @@ void gui_ctr_debug::buttonClicked(guibase* button) {
             break;
     }
 }
-//bool gui_ctr_debug::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
-//if (this->contains(mpos)) {
-//ivec2 localMouse = this->toContainerSpace(mpos);
-//for (guibase* gui : guis) {
-//if (gui->mouseHitTest(localMouse, evt)) {
-//return true;
-//}
-//}
-//}
-//return false;
-//}
 
 void gui_ctr_debug::onTick(AppCtrl* ctrl) {
     for (guibase* gui : guis) {

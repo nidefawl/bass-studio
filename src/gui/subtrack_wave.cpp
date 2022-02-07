@@ -26,10 +26,12 @@ class gui_subtrack_waveview : public gui_track_subtrack {
     };
     bool culled = true;
     scaled_grid& grid;
-    std::unordered_map<int32_t, waveview_entry> splits;
+    std::unordered_map<int64_t, waveview_entry> splits;
     int32_t tickOffset  = 0;
     int32_t updateCalls = 0;
 
+    std::vector<audiotrack_split_t*> waveviewSamplesPresent;
+    std::vector<int64_t> waveviewSampleIdsPresent;
 public:
     gui_subtrack_waveview(track_gui_entry_t* _entry, DawCtrl* ctrl)
         : gui_track_subtrack(_entry, ctrl->getGrid(), nullptr, 0), grid(ctrl->getGrid()) {
@@ -40,69 +42,81 @@ public:
             if (waveformTex.rendered) {
                 waveformrender* renderer = waveformrender::getInstance();
                 if (renderer) {
-                    waveformrender::getInstance()->release(&waveformTex);
+                    renderer->release(&waveformTex);
                 }
             }
         }
     }
     int subtrackType() override { return SUBTRACK_TYPE_WAVE; }
 
-    void onTick(AppCtrl* appctrl) override {
+    void onTick(AppCtrl*) override {
         if (culled) {
             return;
         }
         if (tickOffset++ > 60) {
             tickOffset = 0;
             ivec2 ts   = { 0, 0 };
-            updatePosition(DawInstance::get()->getGlobals(), grid, ts, false);
+            updatePosition(dawCtrl->getDaw()->getGlobals(), grid, ts, false);
         }
     }
+
+    void renderDebugPass(NVGcontext* vg) override {
+        int colorIdx                  = 0;
+        static NVGcolor dbgcolorsa[5] = {
+            nvgRGBA(255, 0, 0, 55),
+            nvgRGBA(0, 255, 0, 55),
+            nvgRGBA(0, 0, 255, 55),
+            nvgRGBA(255, 0, 255, 55),
+            nvgRGBA(255, 255, 0, 55)
+        };
+
+        nvgSave(vg);
+        nvgTranslate(vg, pos.x, pos.y);
+        for (auto& entry : splits) {
+            auto& wv = entry.second;
+            auto& waveformTex = wv.waveformTex;
+            auto& wvLC = wv.layoutCurrent;
+            //nvgTranslate(vg, wv.splitTexPos.x, wv.splitTexPos.y);
+
+            nvgBeginPath(vg);
+            nvgRect(vg, wvLC.splitTexPos.x, wvLC.splitTexPos.y, wvLC.spliTexSize.x, wvLC.spliTexSize.y);
+            NVGcolor bgWave = dbgcolorsa[colorIdx % 5];
+            bgWave.a        = 0.3f;
+
+            nvgFillColor(vg, bgWave);
+            nvgFill(vg);
+
+            if (wv.waveformTex.rendered) {
+                nvgSave(vg);
+                nvgTranslate(vg, wvLC.splitTexPos.x, wvLC.splitTexPos.y);
+                waveformrender::getInstance()->draw(vg, &waveformTex, wvLC.spliTexSize);
+                nvgRestore(vg);
+            }
+
+            colorIdx++;
+        }
+
+        nvgRestore(vg);
+    }
+
     void render(NVGcontext* vg) override {
-        //nvgBeginPath(vg);
-        //nvgRect(vg, pos.x, pos.y, size.x, size.y);
-        //nvgFillColor(vg, rgbToNvg(0xff00ff));
-        //nvgFill(vg);
 
         if (!culled) {
-            ivec2 posClipped  = pos;
-            ivec2 sizeClipped = size;
-            this->parent->scissorClip(posClipped, sizeClipped);
-            sizeClipped.y = size.y;
+
             nvgSave(vg);
             nvgTranslate(vg, pos.x, pos.y);
-            int colorIdx                  = 0;
-            static NVGcolor dbgcolorsa[5] = {
-                nvgRGBA(255, 0, 0, 55),
-                nvgRGBA(0, 255, 0, 55),
-                nvgRGBA(0, 0, 255, 55),
-                nvgRGBA(255, 0, 255, 55),
-                nvgRGBA(255, 255, 0, 55)
-            };
 
             for (auto& entry : splits) {
                 auto& wv          = entry.second.layoutCurrent;
                 auto& waveformTex = entry.second.waveformTex;
-                ivec2 wvSize      = wv.size;
+                ivec2 wvSize      = wv.spliTexSize;
                 if (waveformTex.waveform.size.x > 4 && waveformTex.waveform.size.y > 4 && wvSize.x > 4 && wvSize.y > 4 && waveformTex.rendered) {
                     nvgSave(vg);
-                    nvgTranslate(vg, wv.pos.x, wv.pos.y);
-
-                    //nvgBeginPath(vg);
-                    //nvgRect(vg, 0, 0, wvSize.x, wvSize.y);
-                    //nvgFillColor(vg, rgbToNvg(0xFFFFFF));
-                    //nvgFill(vg);
-                    nvgBeginPath(vg);
-                        nvgRect(vg, 2, 2, wvSize.x - 4, wvSize.y - 4);
-                        NVGcolor bgWave = dbgcolorsa[colorIdx % 5];
-                        bgWave.a        = 0.3f;
-                        nvgFillColor(vg, bgWave);
-                    nvgFill(vg);
-                    ivec2 s = waveformTex.waveform.size;
-                    waveformrender::getInstance()->draw(vg, &waveformTex, s);
+                    nvgTranslate(vg, wv.splitTexPos.x, wv.splitTexPos.y);
+                    waveformrender::getInstance()->draw(vg, &waveformTex, wv.spliTexSize);
 
                     nvgRestore(vg);
                 }
-                colorIdx++;
             }
             nvgRestore(vg);
         }
@@ -112,20 +126,20 @@ public:
         nvgRestore(vg);
     }
     void refreshWaveform(waveview_entry* wv) {
-        waveformrender::getInstance()->release(&wv->waveformTex);
-        wv->flagUpdated          = false;
-        wv->waveformTex.rendered = false;
-        if (wv->waveformUpdated.size.x > 0) {
-            dbgassert(wv->layoutUpdated.size.x > 0);
-        }
-        wv->sampleVersion        = wv->sample->version;
-        wv->layoutCurrent        = wv->layoutUpdated;
-        wv->waveformTex.waveform = wv->waveformUpdated;
-        dbgassert(wv->sampleVersion == wv->sample->version);
-        dbgassert(!wv->waveformTex.queued);
-        dbgassert(wv->waveformTex.waveform.size.x > 0 && wv->waveformTex.waveform.size.y > 0);
+        wv->layoutCurrent = wv->layoutUpdated;
         updateCalls++;
-        waveformrender::getInstance()->queueUpdate(wv->sample.get(), &wv->waveformTex);
+        if (!wv->waveformTex.queued) {
+            dbgassert(wv->sampleVersion == wv->sample->version);
+            dbgassert(wv->waveformTex.waveform.size.x > 0 && wv->waveformTex.waveform.size.y > 0);
+            wv->waveformTex.waveform = wv->waveformUpdated;
+            wv->sampleVersion        = wv->sample->version;
+            wv->flagUpdated          = false;
+
+            //log_printf("split[%zd] version %zd update!\n", wv->sample->sampleId, wv->sampleVersion);
+            if (!waveformrender::getInstance()->queueUpdate(wv->sample.get(), &wv->waveformTex)) {
+                log_printf("WORLD ENDS!\n", 0);
+            }
+        }
     }
 
     void prerender(NVGcontext* vg) override {
@@ -136,13 +150,11 @@ public:
         for (auto& entry : splits) {
             auto& wv          = entry.second;
             auto& waveformTex = wv.waveformTex;
-            if (!waveformTex.queued) {
-                if (!wv.sample || wv.waveformUpdated.size.x < 1 || wv.waveformUpdated.size.y < 1) {
-                    continue;
-                }
-                if (wv.flagUpdated) {
-                    refreshWaveform(&entry.second);
-                }
+            if (!wv.sample || wv.waveformUpdated.size.x < 1 || wv.waveformUpdated.size.y < 1) {
+                continue;
+            }
+            if (wv.flagUpdated) {
+                refreshWaveform(&entry.second);
             }
         }
         erase_if(splits, [](const auto& entry) {
@@ -150,54 +162,64 @@ public:
             return !waveformTex.rendered && !waveformTex.queued;
         });
     }
-    bool makeWaveformFromClip(const project_globals_t& project, scaled_grid& grid, const waveview_entry& entry, ivec2& pos, ivec2& size, ivec2& posClipped, ivec2& sizeClipped, waveform_layout_updated_t& out) {
-
-
-        samplerate_t sr = vsthost::getInstance()->m_sampleFormatInternal.sampleRate;
+    bool makeWaveformFromWaveview(const int32_t tempo100, const samplerate_t samplerate,
+                                  const waveview_entry& entry,
+                                  const ivec2& pos, const ivec2& size,
+                                  waveform_layout_updated_t& out) {
         dbgassert(pos.x == 0);
 
-        double tickScreenStart   = grid.screenToTickD(left());
-        double tickScreenEnd     = grid.screenToTickD(right());
-
-        double samplesScreenLen = tickToSampleConvert<double, roundmode::ceil>(tickScreenEnd - tickScreenStart, project.tempo100, sr);
-
-        double tickRenderStart = sampleToTickConvert<double, roundmode::none>(entry.sample->samplePos, project.tempo100, sr);
-        double tickRenderLen = sampleToTickConvert<double, roundmode::none>(entry.sample->sample.nSamples, project.tempo100, sr);
-
-        double samplesPerPx = samplesScreenLen / (double) size.x;
-
-        double posStart   = math::max(0.0, grid.tickToScreenD(tickRenderStart));
-        double posEnd     = math::min((double) size.x, grid.tickToScreenD(tickRenderStart + tickRenderLen));
-        double renderSize = posEnd - posStart;
+        const double tickRenderStart = sampleToTickConvert<double, roundmode::none>(entry.sample->samplePos, tempo100, samplerate);
+        const double tickRenderLen = sampleToTickConvert<double, roundmode::none>(entry.sample->sample.nSamples, tempo100, samplerate);
 
 
-        int64_t sampleBegin       = 0;
-        int64_t sampleBeginOffset = tickToSampleConvert<int64_t, roundmode::floorclamp>(tickScreenStart - tickRenderStart, project.tempo100, sr);
+        const double posStart    = grid.tickToScreenD(tickRenderStart);
+        double renderSizeX = grid.tickLenToScreen(tickRenderLen);
 
-        auto sampleScreenPosStart = tickToSampleConvert<double, roundmode::none>(grid.screenToTickD(posStart), project.tempo100, sr);
-        auto sampleScreenPosEnd   = tickToSampleConvert<double, roundmode::none>(grid.screenToTickD(posEnd), project.tempo100, sr);
+        ivec2 posClipped = { math::floordS32(posStart), 0 };
+        ivec2 sizeClipped = { math::ceildS32(renderSizeX), size.y };
 
-        double nSamples = math::ceild(sampleScreenPosEnd - sampleScreenPosStart);
+        bool wasClipped = getClippedPosSize(parent->size, posClipped, sizeClipped);
 
-        //rare edge case where only few samples cross the left border of the subtrack begin (pos.x = 0)
-        if (nSamples < 1 || posEnd <= posStart) {
+        if (posClipped.x + sizeClipped.x <= 0 || sizeClipped.x <= 0) {
             return false;
         }
 
+        double nSamples = static_cast<double>(entry.sample->sample.nSamples);
+
+        const int64_t sampleBegin       = 0;
+        int64_t sampleBeginOffset = 0;
+
+        if (wasClipped) {
+            double clippedStartTick = grid.screenToTickD(posClipped.x);
+            double clippedEndTick = grid.screenToTickD(posClipped.x + sizeClipped.x);
+
+            auto sampleScreenPosStart = tickToSampleConvert<double, roundmode::none>(clippedStartTick, tempo100, samplerate);
+            auto sampleScreenPosEnd   = tickToSampleConvert<double, roundmode::none>(clippedEndTick, tempo100, samplerate);
+
+
+            sampleBeginOffset = tickToSampleConvert<int64_t, roundmode::floorclamp>(clippedStartTick - tickRenderStart, tempo100, samplerate);
+
+
+            nSamples = math::ceild(sampleScreenPosEnd - sampleScreenPosStart);
+            renderSizeX = static_cast<double>(sizeClipped.x);
+        }
+
         waveform_layout_updated_t newentry;
-        newentry.layout.pos  = { math::floordS32(posStart), 0 };
-        newentry.layout.size = { math::floordS32(renderSize), size.y };
+        newentry.layout.splitTexPos = posClipped;
+        newentry.layout.spliTexSize = sizeClipped;
 
         audioclip_texture_t& w = newentry.waveform;
-        w.quality              = 1;
-        w.scaleX               = 1.0f;
-        w.pos                  = pos;
 
-        w.size = ivec2(0, math::min(size.y, FBO_HEIGHT));
+        w.quality = 1;
+        w.scaleX  = 1.0f;
+        w.pos     = pos;
+        w.size    = ivec2(0, math::min(size.y, FBO_HEIGHT));
 
-        double pxPerSample       = 1.0 / samplesPerPx;
-        constexpr double MAX_RES = 2048;
+        constexpr double MAX_RES     = 2048;
         constexpr double FBO_WIDTH_D = FBO_WIDTH;
+
+        double samplesPerPx   = nSamples / renderSizeX;
+        double pxPerSample    = 1.0 / samplesPerPx;
 
         if (!FitsTypeRange<decltype(w.size.x)>(nSamples * pxPerSample) || nSamples * pxPerSample > FBO_WIDTH_D) {
             w.size.x     = FBO_WIDTH;
@@ -220,6 +242,7 @@ public:
         w.linewidth         = 1.5f;//+min(0.75, max(0.0, grid.zoom*32.0));
         w.method            = SampleMethod::sample_straight;
         w.audioId           = entry.sample->sampleId;
+        w.sampleVersion     = entry.sample->version;
         w.clipped           = false;
 
         out = newentry;
@@ -227,7 +250,10 @@ public:
     }
 
     void updatePosition(const project_globals_t& globals, scaled_grid& grid, ivec2& trackSize, bool throttleRefresh) override {
+
+
         culled = size.x < 1 || size.y < 1;//!getClipPosition(grid, trackSize, m_clip, pos, size, 0);
+
         if (culled) {
             for (auto& entry : splits) {
                 auto& waveformTex = entry.second.waveformTex;
@@ -236,105 +262,102 @@ public:
                     waveformTex.rendered = false;
                 }
             }
+            return;
         }
 
-        if (!culled) {
-            dbgassert(size.x > 0);
-            ivec2 clipSize    = ivec2(size.x, size.y);
-            ivec2 posClipped  = pos;
-            ivec2 sizeClipped = clipSize;
-            this->parent->scissorClip(posClipped, sizeClipped);
-            // subtrack is never scissored. This check has to be removed in case we for
-            // some reason apply left side scissor to parent container
-            dbgassert(pos.x == 0 && pos.x == posClipped.x);
-            sizeClipped.y    = clipSize.y;
-            double tickBegin = grid.screenToTickD(pos.x);
-            double tickEnd   = grid.screenToTickD(pos.x + size.x);
-            samplerate_t sr  = vsthost::getInstance()->m_sampleFormatInternal.sampleRate;
+        double tickBegin = grid.screenToTickD(pos.x);
+        double tickEnd   = grid.screenToTickD(pos.x + size.x);
+        const auto sr = this->m_track->audio->sampleFormat.sampleRate;
+        const int32_t tempo100 = globals.tempo100;
 
-            double trackPosSampleStart = tickToSampleConvert<double, roundmode::none>(tickBegin, globals.tempo100, sr);
-            double trackPosSampleEnd   = tickToSampleConvert<double, roundmode::none>(tickEnd, globals.tempo100, sr);
-            if (posClipped.x + sizeClipped.x <= 0 || sizeClipped.x <= 0) {
-                culled = true;// whole subtrack is culled
-            } else {
-                std::vector<audiotrack_split_t*> samples;
-                std::vector<int32_t> samplesPresent;
-                this->m_track->audio->audioOutput.visitSamples([&samples, &samplesPresent, &trackPosSampleStart, &trackPosSampleEnd](const std::shared_ptr<audiotrack_split_t>& split) {
-                    if (split && split->samplePos < trackPosSampleEnd && split->samplePos + split->getSample()->nSamples > trackPosSampleStart) {
-                        samples.push_back(split.get());
-                        samplesPresent.push_back(split->sampleId);
-                    }
-                });
-                for (auto& sample : samples) {
-                    if (!this->splits.count(sample->sampleId)) {
-                        splits[sample->sampleId] = waveview_entry();
-                    }
-                    waveview_entry& entry = this->splits[sample->sampleId];
-                    auto& texture         = entry.waveformTex;
-                    if (!texture.queued) {
-                        entry.sample = this->m_track->audio->audioOutput.getSampleById(sample->sampleId);
-                        waveform_layout_updated_t updatedEntry;
-                        bool samplesVisible = makeWaveformFromClip(globals, grid, entry, pos, clipSize, posClipped, sizeClipped, updatedEntry);
-                        if (!samplesVisible 
-                            || updatedEntry.waveform.audioId < 0 
-                            || updatedEntry.waveform.size.x < 1 
-                            || updatedEntry.waveform.size.y < 1 
-                            || updatedEntry.layout.size.x < 1 
-                            || updatedEntry.layout.size.y < 1)
-                        {
-                            waveformrender::getInstance()->release(&entry.waveformTex);
-                            entry.flagUpdated          = false;
-                            entry.waveformTex.rendered = false;
-                            entry.waveformTex.waveform = updatedEntry.waveform;
-                            entry.layoutCurrent        = updatedEntry.layout;
-                            entry.waveformUpdated      = updatedEntry.waveform;
-                            entry.layoutUpdated        = updatedEntry.layout;
-                        } else {
-                            dbgassert(updatedEntry.waveform.audioId >= 0 || entry.sample.get() == nullptr);
+        int64_t trackPosSampleStart = tickToSampleConvert<int64_t, roundmode::floor>(tickBegin, tempo100, sr);
+        int64_t trackPosSampleEnd   = tickToSampleConvert<int64_t, roundmode::ceil>(tickEnd, tempo100, sr);
 
-                            bool equal = math::abs((sample->version - entry.sampleVersion)) < 1
-                                         && ((updatedEntry.waveform.size.y > 0) == (texture.waveform.size.y > 0))
-                                         && isEqualWaveform3(updatedEntry.waveform, texture.waveform)
-                                         && updatedEntry.layout == entry.layoutCurrent;
+        waveviewSamplesPresent.clear();
+        waveviewSampleIdsPresent.clear();
 
-                            bool canQueue  = waveformrender::getInstance()->canQueueUpdate();
-                            ivec2 sizeDiff = math::absvec2(updatedEntry.waveform.size - texture.waveform.size);
-                            ivec2 limit    = math::maxvec2(ivec2(1), ivec2(updatedEntry.waveform.size.x / 4, 16));
-
-                            if (!canQueue) {
-                                limit.x = updatedEntry.waveform.size.x / 4;
-                            }
-
-                            if (updatedEntry.waveform.clipped || !throttleRefresh) {
-                                limit = { 0, 0 };
-                            }
-
-                            if (!equal || (sizeDiff.x > limit.x || sizeDiff.y > limit.y)) {
-                                entry.waveformUpdated = updatedEntry.waveform;
-                                entry.layoutUpdated   = updatedEntry.layout;
-                                entry.flagUpdated     = true;
-                                if (sizeDiff.x > limit.x || sizeDiff.y > limit.y) {
-                                    waveformrender::getInstance()->release(&entry.waveformTex);
-                                    entry.waveformTex.rendered = false;
-                                }
-                            }
-                        }
-                    }
+        this->m_track->audio->audioOutput.visitSamples(
+            [this, &trackPosSampleStart, &trackPosSampleEnd]
+            (const std::shared_ptr<audiotrack_split_t>& split) {
+                if (split && split->samplePos < trackPosSampleEnd && split->samplePos + split->getSample()->nSamples > trackPosSampleStart) {
+                    waveviewSamplesPresent.push_back(split.get());
+                    waveviewSampleIdsPresent.push_back(split->sampleId);
                 }
-                for (auto it = splits.begin(); it != splits.end();) {
-                    auto& entry = *it;
-                    if (!stl_contains(samplesPresent, entry.second.sample->sampleId)) {
-                        waveview_entry& waveviewEntry         = entry.second;
-                        gui_waveform_texture_ref* waveformRef = &waveviewEntry.waveformTex;
-                        waveformrender::getInstance()->release(waveformRef);
-                        it = splits.erase(it);
-                    } else {
-                        ++it;
-                    }
+            }
+        );
+
+        for (auto& sample : waveviewSamplesPresent) {
+            if (!this->splits.count(sample->sampleId)) {
+                splits[sample->sampleId] = waveview_entry();
+            }
+            waveview_entry& entry = this->splits[sample->sampleId];
+            auto& texture         = entry.waveformTex;
+
+            entry.sample = this->m_track->audio->audioOutput.getSampleById(sample->sampleId);
+            waveform_layout_updated_t updatedEntry;
+            bool samplesVisible = makeWaveformFromWaveview(tempo100, sr, entry, pos, size, updatedEntry);
+            if (!samplesVisible
+                || updatedEntry.waveform.audioId < 0
+                || updatedEntry.waveform.size.x < 1
+                || updatedEntry.waveform.size.y < 1
+                || updatedEntry.layout.spliTexSize.x < 1
+                || updatedEntry.layout.spliTexSize.y < 1)
+            {
+                waveformrender::getInstance()->release(&entry.waveformTex);
+                entry.flagUpdated          = false;
+                entry.waveformTex.rendered = false;
+                entry.waveformTex.waveform = updatedEntry.waveform;
+                entry.layoutCurrent        = updatedEntry.layout;
+                entry.waveformUpdated      = updatedEntry.waveform;
+                entry.layoutUpdated        = updatedEntry.layout;
+                continue;
+            }
+
+            dbgassert(updatedEntry.waveform.audioId >= 0 || entry.sample.get() == nullptr);
+
+            bool equal = math::abs((sample->version - entry.sampleVersion)) < 1
+                         && ((updatedEntry.waveform.size.y > 0) == (texture.waveform.size.y > 0))
+                         && isEqualWaveform3(updatedEntry.waveform, texture.waveform)
+                         && updatedEntry.layout == entry.layoutCurrent;
+
+            bool canQueue  = waveformrender::getInstance()->canQueueUpdate();
+            ivec2 sizeDiff = math::absvec2(updatedEntry.waveform.size - texture.waveform.size);
+            ivec2 limit    = math::maxvec2(ivec2(1), ivec2(updatedEntry.waveform.size.x / 4, 16));
+
+            if (!canQueue) {
+                limit.x = updatedEntry.waveform.size.x / 4;
+            }
+
+            if (updatedEntry.waveform.clipped || !throttleRefresh) {
+                limit = { 0, 0 };
+            }
+
+            if (!equal || (sizeDiff.x > limit.x || sizeDiff.y > limit.y)) {
+                entry.waveformUpdated = updatedEntry.waveform;
+                entry.layoutUpdated   = updatedEntry.layout;
+                entry.flagUpdated     = true;
+                if (sizeDiff.x > limit.x || sizeDiff.y > limit.y) {
+                    //waveformrender::getInstance()->release(&entry.waveformTex);
+                    //entry.waveformTex.rendered = false;
+                    //log_printf("layoutUpdated pos %d %d\n", entry.layoutUpdated.splitTexPos.x, entry.layoutUpdated.splitTexPos.y);
                 }
             }
         }
+
+        for (auto it = splits.begin(); it != splits.end();) {
+            auto& entry = *it;
+            if (!stl_contains(waveviewSampleIdsPresent, entry.second.sample->sampleId)) {
+                waveview_entry& waveviewEntry         = entry.second;
+                gui_waveform_texture_ref* waveformRef = &waveviewEntry.waveformTex;
+                waveformrender::getInstance()->release(waveformRef);
+                it = splits.erase(it);
+            } else {
+                ++it;
+            }
+        }
+
     }
+
     void renderMixerInfo(NVGcontext* vg) override {
         ThreadLock lock = MainCtrl::getPlayThread()->lockThread();
         gui_track_subtrack::renderMixerInfo(vg);

@@ -13,8 +13,12 @@
 #include "trackautomation.h"
 #include "cliprenderer.h"
 
+bool getClipPosition(scaled_grid& grid, const ivec2& trackSize, const clip_t* cl, ivec2& pos, ivec2& size, tick_t offset);
+bool getClippedPosSize(const ivec2& parentSize, ivec2& posClipped, ivec2& sizeClipped);
+
 struct gui_waveform_texture_ref;
 class guictxtmenu_base;
+
 class gui_clip : public guibase {
 public:
     track_t* const m_track;
@@ -93,9 +97,11 @@ public:
     bool isDragMoveable() override {
         return true;
     }
-    virtual int getClipType()                                                                    = 0;
+
+    virtual int getClipType()                    = 0;
+    virtual void renderDebugPass(NVGcontext* vg) = 0;
+    virtual void updateClipRenderCache(NVGcontext* vg) = 0;
     virtual void updatePosition(project_globals_t& project, scaled_grid& grid, ivec2& trackSize) = 0;
-    virtual void updateClipRenderCache(NVGcontext* vg)                                           = 0;
 };
 struct midi_clip_render_cache_t;
 class gui_midi_clip : public gui_clip {
@@ -112,11 +118,14 @@ public:
     void updatePosition(project_globals_t& project, scaled_grid& grid, ivec2& trackSize) override;
     void prerender(NVGcontext* vg) override;
     void render(NVGcontext* vg) override;
+    void renderDebugPass(NVGcontext* vg) override;
     void onRemove() override;
     void handleRightClick(MouseEvent& evt) override;
     void updateClipRenderCache(NVGcontext* vg) override;
 };
 class gui_audio_clip : public gui_clip {
+    bool prevIsValid = false;
+    audioclip_texture_t prevWaveform;
     audioclip_texture_t updatedWaveform;
     gui_waveform_texture_ref* waveformRef;
 
@@ -132,6 +141,7 @@ public:
     void updateClipRenderCache(NVGcontext* vg) override;
     void prerender(NVGcontext* vg) override;
     void render(NVGcontext* vg) override;
+    void renderDebugPass(NVGcontext* vg) override;
     void releaseRendered();
     void onIdle() override;
     void onTick(AppCtrl* appctrl) override;
@@ -252,6 +262,9 @@ public:
     }
     virtual void updatePosition(const project_globals_t& globals, scaled_grid& grid, ivec2& trackSize, bool throttleRefresh) {
     }
+
+    virtual void renderDebugPass(NVGcontext* vg) {
+    }
 };
 class gui_track_automationlane : public gui_track_subtrack {
 public:
@@ -300,6 +313,24 @@ public:
 
     void prerender(NVGcontext* vg) override;
 
+    void renderDebugPass(NVGcontext* vg) {
+        ivec2 posInset  = getPosContent();
+        ivec2 sizeInset = getSizeContent();
+
+        if (sizeInset.y <= 0 || sizeInset.x <= 0) {
+            return ;
+        }
+
+        nvgSave(vg);
+        nvgTranslate(vg, posInset.x, posInset.y);
+        for (auto& entry : m_trackentry->clipsGuis) {
+            if (entry.second) {
+                entry.second->renderDebugPass(vg);
+            }
+        }
+        nvgRestore(vg);
+    }
+
     void render(NVGcontext* vg) override {
         if (DawInstance::get()->getSelectedTrack() == m_track) {
             nvgBeginPath(vg);
@@ -310,11 +341,9 @@ public:
         nvgSave(vg);
         if (setScissorTransform(vg)) {
             for (auto& entry : m_trackentry->clipsGuis) {
-                guibase* gui = entry.second;
-                if (!gui) {
-                    continue;
+                if (entry.second) {
+                    entry.second->render(vg);
                 }
-                gui->render(vg);
             }
         }
         nvgRestore(vg);
