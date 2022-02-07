@@ -11,6 +11,7 @@
 #include "appsettings.h"
 #include "platform.h"
 #include <portaudio.h>
+#include <pa_win_wasapi.h>
 #include <vector>
 #include <memory>
 #include <numeric>
@@ -279,6 +280,7 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
     int32_t deviceApiIdxSelected    = paNoDevice;
     int32_t deviceIdxSelectedInput  = paNoDevice;
     int32_t deviceIdxSelectedOutput = paNoDevice;
+    PaHostApiTypeId hostApiType = PaHostApiTypeId::paInDevelopment;
     int apiIdxASIO                  = -1;
     for (int i = 0; i < apiCount; i++) {
         const PaHostApiInfo* info = Pa_GetHostApiInfo(i);
@@ -289,6 +291,7 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
             const char* pref = "[ ] ";
             if (!strcmp(selApiNameCStr, info->name)) {
                 deviceApiIdxSelected = i;
+                hostApiType = info->type;
 
                 pref = "[x] ";
             }
@@ -327,6 +330,10 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
     if (deviceIdxSelectedOutput == paNoDevice && deviceIdxSelectedInput == paNoDevice) {
         log_printf("Error: No input or output device.\n", 0);
         return false;
+    }
+
+    if (hostApiType == PaHostApiTypeId::paWASAPI) {
+        log_printf("WASAPI device API. Input is looback: %d\n", PaWasapi_IsLoopback(deviceIdxSelectedInput));
     }
 
 
