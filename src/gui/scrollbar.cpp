@@ -12,8 +12,8 @@
 void gui_scrollbar::render(NVGcontext* vg) {
     float fRnd = theme->getFloat(GuiConstant::CONST_ROUND);
     nvgBeginPath(vg);
-    nvgRoundedRect(vg, pos.x, pos.y, size.x, size.y, fRnd);
-    NVGcolor bg = theme->getColor(GuiColor::COL_BG_DRK);
+    nvgRect(vg, pos.x, pos.y, size.x, size.y);
+    NVGcolor bg = theme->getColor(GuiColor::COL_BASE_BG);
     nvgFillColor(vg, bg);
     nvgFill(vg);
     ivec2 vcS = ctr.getScrollTotalSize();
@@ -31,7 +31,7 @@ void gui_scrollbar::render(NVGcontext* vg) {
             barOff[dir] -= h / 2.0;
             barS[dir] = minHandleHeight;
         }
-        nvgRoundedRect(vg, pos.x + barOff.x + inset, pos.y + barOff.y + inset, barS.x - inset * 2, barS.y - inset * 2, fRnd);
+        nvgRect(vg, pos.x + barOff.x + inset, pos.y + barOff.y + inset, barS.x - inset * 2, barS.y - inset * 2);
 
         bool focused = parentCtrl->guiCtrFocused == this->parent || (parentCtrl->guiDragged == NULL && parentCtrl->guiOver == this);
         if (focused) {
