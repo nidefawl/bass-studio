@@ -11,7 +11,7 @@
 
 #ifdef _WIN32
 #include "platform/win/platform_win.h"
-#include <windows.h>
+#include <Windows.h>
 #endif
 
 #include <exception>
@@ -163,7 +163,7 @@ int main(int, char*[]) {
         bool quit         = false;
         while (!fataError && !quit) {
             auto tmNow = getTimeMillis();
-            if (tmNow - tmLastTick >= 250) {
+            if (tmNow - tmLastTick >= 25) {
                 tmLastTick = tmNow;
                 TickTest();
             }
