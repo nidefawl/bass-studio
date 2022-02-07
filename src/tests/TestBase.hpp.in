@@ -112,9 +112,9 @@ inline void testEqualityFailed(const char* file,
     strDesc += exprLhs;
     strDesc += "\nExpected\t";
     strDesc += exprRhs;
-    strDesc += "\nValues\tLeft-hand:\t";
+    strDesc += "\nValues  Left-hand   ";
     strDesc += strLhs;
-    strDesc += "\n\t\tRight-hand\t";
+    strDesc += "\n        Right-hand  ";
     strDesc += strRhs;
     strDesc += "\n";
     throw std::runtime_error(strDesc);

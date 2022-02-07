@@ -439,8 +439,14 @@ namespace test_math {
 
         TEST_END();
         TEST_BEGIN("math::abs");
+        TEST_ASSERT_EQUAL(abs(  4 ), 4 );
+        TEST_ASSERT_EQUAL(abs( -4 ), 4 );
+
         TEST_ASSERT_EQUAL(abs( std::numeric_limits<int64_t>::max() ), std::numeric_limits<int64_t>::max() );
-        TEST_ASSERT_EQUAL(abs( std::numeric_limits<int32_t>::min() ), -int64_t{std::numeric_limits<int32_t>::min()} );
+
+        /* int32_t overflow. Implementation defined. I expect -2147483648 */
+        TEST_ASSERT_EQUAL(abs( std::numeric_limits<int32_t>::min() ), std::numeric_limits<int32_t>::min() );
+
         TEST_ASSERT_EQUAL(abs( std::numeric_limits<int64_t>::max() ), std::numeric_limits<int64_t>::max() );
         TEST_ASSERT_EQUAL(abs( std::numeric_limits<uint64_t>::max() ), std::numeric_limits<uint64_t>::max() );
         TEST_ASSERT_EQUAL(abs( std::numeric_limits<uint8_t>::max() ), std::numeric_limits<uint8_t>::max() );
@@ -470,10 +476,22 @@ namespace test_math {
 
         TEST_ASSERT_EQUAL(absMax<int64_t>(std::numeric_limits<int32_t>::max(), std::numeric_limits<int64_t>::max()),
                           std::numeric_limits<int64_t>::max());
+
+        TEST_ASSERT_EQUAL(absMax<int64_t>(
+                                  std::numeric_limits<int32_t>::min(),
+                                  std::numeric_limits<int64_t>::min()+1),
+                          std::numeric_limits<int64_t>::min()+1);
+
+        /* sint64 overflow */
         TEST_ASSERT_EQUAL(absMax<int64_t>(
                                   std::numeric_limits<int32_t>::min(),
                                   std::numeric_limits<int64_t>::min()),
-                          std::numeric_limits<int64_t>::min());
+                          std::numeric_limits<int32_t>::min());
+        /* sint32 overflow */
+        TEST_ASSERT_EQUAL(absMax<int32_t>(
+                                  -4,
+                                  std::numeric_limits<int32_t>::min()),
+                          -4);
 
         TEST_ASSERT_EQUAL(absMax<float>(-32.0f, -10000.0f), -10000.0f);
         TEST_ASSERT_EQUAL(absMax<float>(-32.0f, 10000.0f), 10000.0f);

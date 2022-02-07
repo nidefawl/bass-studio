@@ -49,6 +49,7 @@ namespace math {
     template<typename T>
     inline std::enable_if_t<std::is_integral<T>::value && !std::is_unsigned<T>::value, T>
     abs(T a) {
+        /* this will overflow for numeric_limits<T>::min() values */
         return a < 0 ? -a : a;
     }
     /* abs(UnsignedInt) */
