@@ -279,7 +279,7 @@ void guictr_tracks::layout() {
     ivec2 cs       = getSizeContent();
     scrollbar.pos  = ivec2(cs.x - scrollW, 0);
     scrollbar.size = ivec2(scrollW, cs.y);
-    cs.x -= scrollW;
+
     trackTimeline.pos  = ivec2(trackCtrlsLeft ? trackControlsWidth : 0, 0);
     trackTimeline.pos  = ivec2(trackCtrlsLeft ? trackControlsWidth : 0, 0);
     trackTimeline.size = ivec2(cs.x - trackControlsWidth, 32);

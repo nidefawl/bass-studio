@@ -1132,7 +1132,7 @@ void guictr_nodes_editor::layout() {
     ivec2 cs       = getSizeContent();
     scrollbar.pos  = ivec2(cs.x - scrollW, 0);
     scrollbar.size = ivec2(scrollW, cs.y);
-    cs.x -= scrollW;
+
     graph.pos  = { 0, 0 };
     graph.size = cs;
     graph.determineSize(graph.size);
