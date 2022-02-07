@@ -20,10 +20,10 @@ public:
         return projectGlobals->tempo100 / 100.0f;
     }
     int32_t getCurrentTempo() {
-        return static_cast<int32_t>(projectGlobals->tempo100);
+        return projectGlobals->tempo100;
     }
     virtual void setTempo(int32_t _tempo100) {
-        projectGlobals->tempo100 = static_cast<uint32_t>(_tempo100);
+        projectGlobals->tempo100 = _tempo100;
     }
     tick_t& getPlaybackPos() {
         return projectGlobals->playbackPos;

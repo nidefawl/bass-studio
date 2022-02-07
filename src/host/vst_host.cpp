@@ -1170,7 +1170,7 @@ void vsthost::postExportEnd(project_controller_t* ctrl, export_settings_t& expor
     const tick_t tickBegin = exportSettings.exportPos;
     const tick_t tickEnd = tickBegin + exportSettings.exportLen;
     const samplerate_t sr = m_sampleFormatInternal.sampleRate;
-    const uint32_t tempo100 = prjGlobals.tempo100;
+    const int32_t tempo100 = prjGlobals.tempo100;
     const samplerate_t sampleBegin = tickToSampleConvert<samplerate_t, roundmode::floor>(tickBegin, tempo100, sr);
     const samplerate_t sampleEnd = tickToSampleConvert<samplerate_t, roundmode::ceil>(tickEnd, tempo100, sr);
     const samplerate_t numSamples = sampleEnd - sampleBegin;

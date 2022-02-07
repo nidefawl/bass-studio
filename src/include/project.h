@@ -26,7 +26,7 @@ struct project_globals_t {
      * This is applied between processing of blocks
      * TODO: validate positioning of audio processing and note processing after tempo changes
      **/
-    uint32_t tempo100 = 12800;
+    int32_t tempo100 = 12800;
     /** (synced but not mutex locked) Does not affect audio processing on host side, but time info structure sent to plugins */
     uint32_t signatureNum = 4;
     /** (synced but not mutex locked) Does not affect audio processing on host side, but time info structure sent to plugins */
