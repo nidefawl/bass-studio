@@ -262,11 +262,7 @@ class DawInstance : public project_controller_t, public delete_cb {
     project_t project;
     project_globals_t projectGlobals;
     int initState      = 0;
-    daw_tls::tlsinstance instance;
-    vsthost* host      = nullptr;
-    audiohost* audioHost = nullptr;
-    midihost* midiHost = nullptr;
-    MainCtrl* mainCtrl = nullptr;
+    daw_tls::tlsinstance tls;
 
     struct DawWindowCompanion {
         window_main* wnd{ nullptr };
@@ -318,7 +314,7 @@ public:
         return &playThread;
     }
     vsthost* getHost() {
-        return host;
+        return tls.host;
     }
     static DawInstance* get();
 
@@ -426,7 +422,8 @@ private:
 
 class DawCtrl : public AppCtrl {
     Menus menus;
-
+protected:
+    waveformrender* waveformRenderer = nullptr;
 protected:
     hires_timer_t timer;
     seq_rand rand;
@@ -528,6 +525,10 @@ public:
 
     DawInstance* getDaw() {
         return &daw;
+    }
+
+    waveformrender* getWaveformRenderer() {
+        return this->waveformRenderer;
     }
 
     virtual void addTrackToView(track_t* track, int flags)      = 0;

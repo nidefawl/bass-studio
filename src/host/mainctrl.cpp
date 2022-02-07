@@ -689,10 +689,10 @@ void DawInstance::unloadProject() {
         delete track;
     }
 
-    host->releaseProjectResources();
-    daw_tls::getTls().audioCache->unloadAll();
+    tls.host->releaseProjectResources();
+    tls.audioCache->unloadAll();
 
-    auto* ctrl = mainCtrl;
+    auto* ctrl = tls.mainCtrl;
     if (ctrl) {
         auto& trackView = ctrl->view->ctr_tracks.trackView;
         trackView.m_resizePreModifyState.reset();
@@ -708,7 +708,7 @@ void DawInstance::unloadProject() {
 
     {
         std::vector<effectbase*> pluginsDeferred;
-        host->getDeferredEffects(pluginsDeferred);
+        tls.host->getDeferredEffects(pluginsDeferred);
         dbgassert(pluginsDeferred.empty());
     }
     AppWndProc_disableBlockReentrant();
@@ -760,7 +760,9 @@ void DawInstance::loadFile(String path, int flags) {
     timer.reset();
     std::shared_ptr<project_file> f = loadProjectFile(path);
     if (!f) {
-        mainCtrl->setStatusText(StringFormat("Failed loading %s", StringAsCStr(FileNameFromPath(path))));
+        if (tls.mainCtrl) {
+            tls.mainCtrl->setStatusText(StringFormat("Failed loading %s", StringAsCStr(FileNameFromPath(path))));
+        }
     } else {
         DAW::settings.recentfiles.add(path);
         const bool wasUserCallback = (flags & FLAG_INVOKE_USER_CB_DEFERLOAD) != 0;
@@ -775,13 +777,13 @@ void DawInstance::loadFile(String path, int flags) {
             closeContextMenus();
             closeDialogs();
         };
-        if ((flags & FLAG_INVOKE_USER_CB_DEFERLOAD) == 0) {
+        if (!tls.mainCtrl || (flags & FLAG_INVOKE_USER_CB_DEFERLOAD) == 0) {
             cb(flags & FLAG_DEFER_LOAD);
         } else {
             guidialog_cb_yes_no* dlg = new guidialog_cb_yes_no();
             dlg->cb                  = cb;
             dlg->message             = "Load plugins?";
-            mainCtrl->openDialog(dlg);
+            tls.mainCtrl->openDialog(dlg);
         }
     }
 }
@@ -876,7 +878,7 @@ void DawInstance::setSoloState(audio_stage_ref_t ref, bool enableSolo) {
     dbgassert(track);
     dbgassert(track->audio);
     track->audio->flags ^= audiostageflags_t::SOLO;
-    DAW::updateSoloFlag(host, &project, getTracks().getAllTracksFlatVecRef());
+    DAW::updateSoloFlag(tls.host, &project, getTracks().getAllTracksFlatVecRef());
 }
 
 bool DawInstance::onChildOverlayWindowClose(window_main* window) {
@@ -904,6 +906,7 @@ void MainCtrl::onChildOverlayWindowClose(window_main* window) {
 
 void DawInstance::menuCommand(const menucmd_t&& command) {
     try {
+        auto mainCtrl = tls.mainCtrl;
         switch (command.command) {
 
             case CMD_OPEN_VIEW:
@@ -1097,30 +1100,32 @@ void DawInstance::postInit() {
     dbgassert(initState == 2);
     using DAW::settings;
     initState++;
-    audiohost::getInstance()->initPa();
-    midihost::getInstance()->initPm();
+    tls.audioHost->initPa();
+    tls.midiHost->initPm();
     if (settings.startEngine) {
-        audiohost* audioHost = audiohost::getInstance();
-        if (audioHost->startAudio(settings.iosettings)) {
-            host->setOutput(audioHost);
+        if (tls.audioHost->startAudio(settings.iosettings)) {
+            tls.host->setOutput(tls.audioHost);
         } else {
             //notify user
             log_printf("audioHost->startAudio() failed\n", 0);
         }
     }
-    midihost::getInstance()->startMidi();
-    this->playThread.setTls(daw_tls::getTls());
+    tls.midiHost->startMidi();
+
+    this->playThread.setTls(tls);
     this->playThread.startThread(this);
     dbgassert(this->playThread.getState() == playback_state::status_no_process);
-    host->initThreads();
-    this->workerThread.setTls(daw_tls::getTls());
+    tls.host->initThreads();
+
+    this->workerThread.setTls(tls);
     this->workerThread.startThread();
 
     setAudioThreadState(playback_state::status_stop);
+
     this->workerThread.call([]() {
-                          log_printf("WorkerThreadCallTest\n", 0);
-                      })
-            ->wait();
+      log_printf("WorkerThreadCallTest\n", 0);
+    })->wait();
+
     if (!loadProject.empty()) {
         loadFile(loadProject, FLAG_DEFER_LOAD);
     } else {
@@ -1159,8 +1164,8 @@ void DawInstance::destroy() {
         dbgassert(!companion.ctrl->isOk());
     }
     companionWindows.clear();
-    host->unload();
-    host->destroy();
+    tls.host->unload();
+    tls.host->destroy();
     audiohost::getInstance()->deinitPa();
     midihost::getInstance()->deinitPm();
     waveformrender::getInstance()->destroy();
@@ -1169,7 +1174,7 @@ void DawInstance::destroy() {
     this->workerThread.joinThread();
     this->playThread.stopThread();
     this->playThread.joinThread();
-    daw_tls::tlsinstance& tls = daw_tls::getTls();
+
     delete tls.waveform;
     delete tls.audioCache;
     delete tls.midiHost;
@@ -1182,8 +1187,8 @@ void DawInstance::destroy() {
     tls.pluginDatabase = nullptr;
     tls.waveform       = nullptr;
     tls.audioCache     = nullptr;
-    delete host;
-    host = nullptr;
+
+    daw_tls::setTls(tls);
 }
 
 void DawCtrl::destroy() {
@@ -1214,33 +1219,30 @@ void DawInstance::initDaw(const std::vector<String>& args) {
         }
     }
 
-    daw_tls::tlsinstance tls;
-    tls.tlsInitialized = true;
+    daw_tls::tlsinstance& initTls = tls;
+    initTls.tlsInitialized = true;
 
-    tls.project        = this;
-    tls.config         = new app_config_t{};
-    tls.host           = new vsthost();
-    tls.audioHost      = new audiohost();
-    tls.midiHost       = new midihost();
-    tls.pluginDatabase = &plugindb;
-    tls.audioCache     = new audiocache(settings.iosettings.samplerate);
-    tls.waveform       = new waveformrender(pathrenderer_type_e::ADV);
+    initTls.project        = this;
+    initTls.config         = new app_config_t{};
+    initTls.host           = new vsthost();
+    initTls.audioHost      = new audiohost();
+    initTls.midiHost       = new midihost();
+    initTls.pluginDatabase = &plugindb;
+    initTls.audioCache     = new audiocache(settings.iosettings.samplerate);
 
-    if (!vsthost::assignMasterCallback(tls.host)) {
-        delete tls.host;
+    if (!vsthost::assignMasterCallback(initTls.host)) {
+        delete initTls.host;
         dbgassert(0);
         throw applogicexception("no empty vst callback slot");
     }
 
-    daw_tls::setTls(tls);
+    daw_tls::setTls(initTls);
 
-    tls.host->setSampleFormat(sampleformat_t{
+    initTls.host->setSampleFormat(sampleformat_t{
         static_cast<samplerate_t>(settings.iosettings.internalSamplerate),
         settings.iosettings.internalBlocksize,
         sampleformat_bits_t::FLOAT_32
     });
-
-    this->host = tls.host;
 }
 
 void DawCtrl::initApp(const std::vector<String>& args) {
@@ -1254,7 +1256,9 @@ void MainCtrl::initApp(const std::vector<String>& args) {
 }
 
 bool MainCtrl::initAppWindow(window_main* window, NVGcontext* nanovg) {
-    return DawCtrl::initAppWindow(window, nanovg);
+    bool state = DawCtrl::initAppWindow(window, nanovg);
+    daw_tls::getTls().waveform = this->waveformRenderer;
+    return state;
 }
 
 bool DawCtrl::initAppWindow(window_main* window, NVGcontext* nanovg) {
@@ -1262,6 +1266,9 @@ bool DawCtrl::initAppWindow(window_main* window, NVGcontext* nanovg) {
     this->mainWindow = window;
     this->window     = window;
     this->vg         = nanovg;
+
+    this->waveformRenderer = new waveformrender(pathrenderer_type_e::ADV);
+
     themes.loadThemes();
 
     getDefaultTheme()->initTheme();
@@ -1459,14 +1466,15 @@ void DawInstance::getTrackContainers(std::vector<guictr_tracks*>& trackCointaine
 }
 
 void DawInstance::setMainControl(MainCtrl* _mainCtrl) {
-    dbgassert(!this->mainCtrl);
-    daw_tls::getTls().mainCtrl = _mainCtrl;
-    this->mainCtrl = _mainCtrl;
-    this->dawCtrls.push_back(_mainCtrl);
+    dbgassert(!tls.mainCtrl);
+    tls.mainCtrl = _mainCtrl;
+
+    daw_tls::getTls().mainCtrl = tls.mainCtrl;
+    this->dawCtrls.push_back(tls.mainCtrl);
 }
 
 MainCtrl* DawInstance::getMainControl() {
-    return this->mainCtrl;
+    return this->tls.mainCtrl;
 }
 
 guictxtmenu_base* makeGuiAutosave(int64_t delay);
@@ -1502,7 +1510,7 @@ String DawInstance::getAutoSaveFilename() {
 }
 
 void DawInstance::onTick() {
-    const bool bWroteMidiData = host->writeRecordedData(&project);
+    const bool bWroteMidiData = tls.host->writeRecordedData(&project);
 
     if (bWroteMidiData) {
         for (auto ctrl : dawCtrls) {
@@ -1510,7 +1518,7 @@ void DawInstance::onTick() {
         }
     }
 
-    host->onTick();
+    tls.host->onTick();
 
     bool noPopups        = true;
     bool canOpenAutosave = true;
@@ -1543,7 +1551,7 @@ void DawInstance::onTick() {
         }
         log_printf("end of setLoadedProject\n", 0);
     }
-    if (canOpenAutosave && autosaveState.isEnabled) {
+    if (canOpenAutosave && autosaveState.isEnabled && tls.mainCtrl) {
         if (0 == autosaveState.tmLastTrigger) {
             autosaveState.tmLastTrigger = getTimeMillis();
         }
@@ -1552,10 +1560,10 @@ void DawInstance::onTick() {
             if (tmNow - autosaveState.tmLastTrigger > autosaveState.tmReminderDelay) {
                 autosaveState.tmLastTrigger = tmNow;
                 auto tooltip                = makeGuiAutosave(5000);
-                auto ctrlSize               = mainCtrl->m_size;
+                auto ctrlSize               = tls.mainCtrl->m_size;
                 tooltip->size               = ivec2(420, 90);
                 tooltip->maxHeight          = tooltip->size.y;
-                mainCtrl->openContextMenu(tooltip, ivec2(ctrlSize.x / 2, ctrlSize.y - 100) - tooltip->size / 2, BASECTRL_WND_POS_RELATIVE);
+                tls.mainCtrl->openContextMenu(tooltip, ivec2(ctrlSize.x / 2, ctrlSize.y - 100) - tooltip->size / 2, BASECTRL_WND_POS_RELATIVE);
             }
         }
     }
@@ -1573,8 +1581,10 @@ std::shared_ptr<project_file> DawInstance::createProjectFile() {
     file->project.globals        = projectGlobals;
     file->project.exportSettings = getExportSettings();
     audiocache::getInstance()->store(file->sampleFileIndex);
-    file->layout.layoutGrid    = mainCtrl->grid;
-    file->layout.scrollOffsetX = mainCtrl->view->ctr_tracks.getScrollOffset();
+    if (tls.mainCtrl) {
+        file->layout.layoutGrid    = tls.mainCtrl->grid;
+        file->layout.scrollOffsetX = tls.mainCtrl->view->ctr_tracks.getScrollOffset();
+    }
     return file;
 }
 
@@ -1611,7 +1621,7 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
     ThreadLock lock = playThread.lockThread();
     unloadProject();
     /** make sure call to unloadProject unloaded all vst2 instances **/
-    dbgassert(host->getVst2Instances().empty());
+    dbgassert(tls.host->getVst2Instances().empty());
     //TODO: assert that audiocache is empty
     dbgassert(audiocache::getInstance()->isEmpty());
 
@@ -1624,7 +1634,7 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
     /** create all audio instances **/
     for (track_t* t : project.trackList) {
         t->fixClipLengths();
-        host->createAudio(t);
+        tls.host->createAudio(t);
     }
 
 
@@ -1638,20 +1648,20 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
     project.trackList.loadPlugins(file->project);
 
     /** reset maximum stage id and determine new maximum stage id **/
-    host->updateMaximumStageId();
+    tls.host->updateMaximumStageId();
 
     /** remove routings to missing track **/
-    DAW::validateTrackRoutings(host, project.getTracksFlatVec());
+    DAW::validateTrackRoutings(tls.host, project.getTracksFlatVec());
     /** create all gui instances **/
     for (track_t* tr : project.trackList) {
-        DAW::validateEffectRoutings(host, tr->audio);
+        DAW::validateEffectRoutings(tls.host, tr->audio);
     }
 
     /** inform host about track layout changes so it resets and updates internal structures **/
-    host->onTrackLayoutChange();
+    tls.host->onTrackLayoutChange();
 
-    MainCtrl* renderCtrl = this->mainCtrl;
-    if (1) {
+    MainCtrl* renderCtrl = tls.mainCtrl;
+    if (renderCtrl) {
         /**
          * plugin loading was not deferred.
          * handle request to load all plugins.
@@ -1685,7 +1695,7 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
 
             /** get the list of all plugins in deferred loading state **/
             std::vector<effectbase*> pluginsDeferred;
-            host->getDeferredEffects(pluginsDeferred);
+            tls.host->getDeferredEffects(pluginsDeferred);
 
             /**
              * The following loop calls activateDeferred on all tracks, effectively doing the following sequence for each track:
@@ -1730,7 +1740,7 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
                 seqthreads::threadSleep(16);
                 log_printf("pre activateDeferred %s\n", StringAsCStr(ctr.text));
                 effectbase* pluginLoaded;
-                host->activateDeferred(plugin, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &pluginLoaded);
+                tls.host->activateDeferred(plugin, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &pluginLoaded);
                 log_printf("post activateDeferred %s\n", StringAsCStr(ctr.text));
                 if (pluginLoaded) {
                     pluginsLoaded.push_back(pluginLoaded);
@@ -1767,11 +1777,13 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
         for (track_t* tr : project.trackList) {
             tr->getStage()->pluginsChanged();
         }
-        host->onTrackLayoutChange();
+        tls.host->onTrackLayoutChange();
+    } else {
+        //TODO: implement
     }
 
     /** validate cursor state **/
-    auto ctrl = mainCtrl;
+    auto ctrl = tls.mainCtrl;
     if (ctrl) {
         ctrl->view->ctr_tracks.loadTrackLayouts(file->project.trackCtr);
         ctrl->view->ctr_tracks.loadTrackLayouts(file->project.trackReturnCtr);
@@ -1794,7 +1806,7 @@ bool DawInstance::setLoadedProject(std::shared_ptr<project_file> file, int flags
         }
     }
     for (DawCtrl* pDawCtrl : dawCtrls) {
-        if (pDawCtrl == mainCtrl)
+        if (pDawCtrl == tls.mainCtrl)
             continue;
         pDawCtrl->updateVisibleTrackContents();
         pDawCtrl->layoutView();
@@ -1878,12 +1890,12 @@ void DawCtrl::relayout(int32_t w, int32_t h) {
 
 void DawInstance::setSelectedTrackEntry(track_gui_entry_t* trackEntry) {
     selectedTrack = trackEntry ? trackEntry->track : nullptr;
-    mainCtrl->view->ctr_plugins.showTrack(trackEntry && trackEntry->track ? trackEntry->track->audio : nullptr);
+    tls.mainCtrl->view->ctr_plugins.showTrack(trackEntry && trackEntry->track ? trackEntry->track->audio : nullptr);
 }
 
 void DawInstance::setSelectedTrack(track_t* track) {
     selectedTrack = track;
-    mainCtrl->view->ctr_plugins.showTrack(track ? track->audio : nullptr);
+    tls.mainCtrl->view->ctr_plugins.showTrack(track ? track->audio : nullptr);
 }
 
 track_t* DawInstance::getSelectedTrack() {
@@ -2383,7 +2395,7 @@ void DawInstance::addTrackImpl(int32_t trackInsertPos, track_t* newTrack, int fl
         dbgassert(newTrack->audio);
     } else {
         dbgassert(!newTrack->audio);
-        host->createAudio(newTrack);
+        tls.host->createAudio(newTrack);
     }
     for (DawCtrl* pDawCtrl : dawCtrls) {
         if (pDawCtrl->isOk()) {
@@ -2394,7 +2406,7 @@ void DawInstance::addTrackImpl(int32_t trackInsertPos, track_t* newTrack, int fl
         pushHist(new action_modify_track_add(StringFormat("Add %s Track", TrackTypeToName(newTrack->type)), newTrack));
     }
 
-    host->onTrackLayoutChange();
+    tls.host->onTrackLayoutChange();
 }
 
 void DawInstance::removeTrackId(uint32_t trackId) {
@@ -2407,8 +2419,8 @@ void DawInstance::removeTrackImpl(track_t* track, int flags) {
     guictr_plugins* plugins = MainCtrl::getPluginCtr();
     plugins->hideTrack(track->audio);
     // TODO: handle plugins correctly, right now they remain loaded in vsthost
-    if (mainCtrl->clipView.gui && mainCtrl->clipView.gui->m_track == track) {
-        mainCtrl->clipView.set(nullptr);
+    if (tls.mainCtrl && tls.mainCtrl->clipView.gui && tls.mainCtrl->clipView.gui->m_track == track) {
+        tls.mainCtrl->clipView.set(nullptr);
     }
     project.trackList.removeTrack(track);
     for (DawCtrl* pDawCtrl : dawCtrls) {
@@ -2423,7 +2435,7 @@ void DawInstance::removeTrackImpl(track_t* track, int flags) {
     if (flags & FLG_TRK_CHANGE_USER) {
         pushHist(new action_modify_track_remove(StringFormat("Remove %s Track", TrackTypeToName(track->type)), track));
     }
-    host->onTrackLayoutChange();
+    tls.host->onTrackLayoutChange();
 }
 
 track_t* DawInstance::getTrackId(uint32_t trackId) {
@@ -2527,7 +2539,6 @@ bool CompanionCtrl::isZooming() {
 }
 
 void CompanionCtrl::fixCursor() {
-    auto& cursor = getCursor();
     auto& guiMgr = view->ctr_tracks2.guiMgr;
     if (cursor.isSubtrackSelection() && guiMgr.validTrackIdx(cursor.cursorTrack)) {
         const track_gui_entry_t* tr = guiMgr.at(cursor.cursorTrack);
@@ -2604,9 +2615,8 @@ void CompanionCtrl::setEditClip(gui_clip* gclip) {
 
 void DawCtrl::prerender(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float pixelRatio) {
 
-    daw_tls::tlsinstance& tlsInstance = daw_tls::getTls();
+    auto& renderStats = daw_tls::getTls().renderStats;
 
-    auto& renderStats               = tlsInstance.renderStats;
     renderStats.playThreadLockCount = 0;
     renderStats.clipsRendered       = 0;
     renderStats.notesRendered       = 0;
@@ -2624,7 +2634,7 @@ void DawCtrl::prerender(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w,
     {
         timer.reset();
 
-        int nUpdates = tlsInstance.waveform->renderUpdates(nanovgCtxt, 0);
+        int nUpdates = waveformRenderer->renderUpdates(nanovgCtxt, 0);
         if (nUpdates) {
             //tmLastRenderUpdatesMs = tmNow;
         }
@@ -2632,7 +2642,7 @@ void DawCtrl::prerender(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w,
         renderStats.timeUpdateWaveforms = timer.getTime();
         if (nUpdates > 15 || renderStats.timeUpdateWaveforms > 20 * 1000) {
             log_printf("%d updates took %zd\n", nUpdates, renderStats.timeUpdateWaveforms);
-            auto timings = tlsInstance.waveform->getTimings();
+            auto timings = waveformRenderer->getTimings();
             log_printf("waveform.tmPassed\t\t%zd\n", timings.tmPassed);
             log_printf("waveform.tmProcessInputQ\t%zd\n", timings.tmProcessInputQ);
             log_printf("waveform.tmFindSimiliar\t%zd\n", timings.tmFindSimiliar);
