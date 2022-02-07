@@ -1,4 +1,5 @@
 #include <vector>
+#include "samplerate.h"
 
 /**
 * Invoke soxr to downsample single channel audio data
@@ -9,4 +10,4 @@
 * @param downSampleFactor
 * @return 0 = no error
 */
-int downsample(float sampleRate, float* samplesIn, int len, std::vector<float>& samplesOut, int downSampleFactor);
+int downsample(samplerate_t sampleRate, float* samplesIn, int64_t len, std::vector<float>& samplesOut, uint8_t downSampleFactor);

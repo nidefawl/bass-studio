@@ -77,12 +77,14 @@ audiofile_t* audiocache::loadFile(const String& path, int32_t id) {
         log_printf("samples: %d\n", nSamples);
 
         std::unique_ptr<audiosample_t> sample = std::make_unique<audiosample_t>();
-        sample->bitsPerSample                 = wav.bitsPerSample;
-        sample->nChannels                     = wav.channels;
-        sample->sampleRate                    = wav.sampleRate;
-        sample->nSamples                      = 0;
+
+        sample->bitsPerSample = wav.bitsPerSample;
+        sample->nChannels     = wav.channels;
+        sample->sampleRate    = wav.sampleRate;
+        sample->nSamples      = 0;
+
         std::vector<samplechannel_t> loadedSampleChannels;
-        uint64_t numSamplesInput = 0;
+        int64_t numSamplesInput = 0;
         for (int i = 0; i < wav.channels; i++) {
             samplechannel_t channel(wav.totalSampleCount / wav.channels);
             float* out = channel.data();
@@ -90,7 +92,7 @@ audiofile_t* audiocache::loadFile(const String& path, int32_t id) {
                 *out = pSamples[j];
                 out++;
             }
-            numSamplesInput = i == 0 ? channel.size() : math::min<uint64_t>(numSamplesInput, channel.size());
+            numSamplesInput = i == 0 ? static_cast<int64_t>(channel.size()) : math::min<int64_t>(numSamplesInput, channel.size());
             loadedSampleChannels.push_back(std::move(channel));
         }
         if ((int32_t) wav.sampleRate != this->samplerate) {
@@ -131,7 +133,7 @@ audiofile_t* audiocache::loadFile(const String& path, int32_t id) {
                 if (!!error) {
                     log_printf("soxr_process failed: %d %s\n", error, soxr_strerror(error));
                 } else {
-                    sample->nSamples   = offset;
+                    sample->nSamples   = static_cast<int64_t>(offset);
                     sample->sampleRate = this->samplerate;
                     sample->samples.resize(sample->nChannels);
                     for (int i = 0; i < sample->nChannels; i++) {
@@ -150,19 +152,22 @@ audiofile_t* audiocache::loadFile(const String& path, int32_t id) {
             }
         }
         int64_t timeBeginDownsample = getTimeMicros();
-        int maxDownS                = 1;
         log_printf("Downsampling %s...\n", path.c_str());
-        for (int step = 1; step < maxDownS; step++) {
+
+        uint8_t maxDownS = 1;
+        for (uint8_t downsampleStep = 1; downsampleStep < maxDownS; downsampleStep++) {
+            int64_t lenSamplesDownsampled = sample->nSamples >> downsampleStep;
+
+            if (lenSamplesDownsampled < 10)
+                break;
+
             std::vector<samplechannel_t> downsampledChannels(2);
-            for (int i = 0; i < wav.channels; i++) {
-                size_t len = sample->nSamples >> step;
-                if (len < 10)
-                    break;
-                samplechannel_t chDownSmpld(len);
+            for (int32_t i = 0; i < wav.channels; i++) {
+                samplechannel_t chDownSmpld(static_cast<size_t>(lenSamplesDownsampled));
                 downsample(sample->sampleRate,
                            sample->samples.at(i).data(),
                            sample->nSamples,
-                           chDownSmpld, step);
+                           chDownSmpld, downsampleStep);
                 downsampledChannels[i] = std::move(chDownSmpld);
             }
             sample->downsampled.push_back(std::move(downsampledChannels));
