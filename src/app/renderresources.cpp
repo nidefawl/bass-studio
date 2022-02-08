@@ -71,7 +71,7 @@ namespace RenderResources {
                 ImageBuf& buf = imgIconsBuf[i];
                 dbgassert((int)buf.bytes.size() == buf.w * buf.h * 4);
             }
-            load(vg, StringFormat("icons/synth_32px.png"), imgIconsBuf[ICON_SYNTH]);
+            load(vg, StringFormat("icons/synth.png"), imgIconsBuf[ICON_SYNTH]);
             load(vg, StringFormat("icons/effect.png"), imgIconsBuf[ICON_EFFECT]);
             load(vg, StringFormat("icons/folder.png"), imgIconsBuf[ICON_FOLDER]);
             load(vg, StringFormat("icons/folder_open.png"), imgIconsBuf[ICON_FOLDER_OPEN]);
