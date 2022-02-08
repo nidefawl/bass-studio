@@ -1776,8 +1776,10 @@ int startApplication(const std::vector<String>& args) {
 #endif
 
         glfwSetErrorCallback(glfw_startup_error_callback);
-
+        
+#ifdef _WIN32
         glfwSetWin32WindowClassName(L"DAWWINDOW01");
+#endif
         if (!glfwInit()) {
             showerror("Initialization failed. Couldn't initialize glfw");
             exit(EXIT_FAILURE);

@@ -11,7 +11,9 @@
 #include "appsettings.h"
 #include "platform.h"
 #include <portaudio.h>
+#ifdef _WIN32
 #include <pa_win_wasapi.h>
+#endif
 #include <vector>
 #include <memory>
 #include <numeric>
@@ -332,9 +334,11 @@ bool audiohost::startAudio(app_iosettings& iosettings) {
         return false;
     }
 
+#ifdef _WIN32
     if (hostApiType == PaHostApiTypeId::paWASAPI) {
         log_printf("WASAPI device API. Input is looback: %d\n", PaWasapi_IsLoopback(deviceIdxSelectedInput));
     }
+#endif
 
 
     const PaDeviceInfo* devInfo      = deviceIdxSelectedOutput == paNoDevice ? nullptr : Pa_GetDeviceInfo(deviceIdxSelectedOutput);
