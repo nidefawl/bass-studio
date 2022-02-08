@@ -715,9 +715,8 @@ void gui_audiocontent::prerender(NVGcontext* vg) {
         }
         if ((!waveformRef->rendered || (this->updatedWaveform != waveformRef->waveform))) {
             //releaseRendered();
-            dbgassert(!waveformRef->rendered && !waveformRef->queued);
-            waveformRef->waveform = this->updatedWaveform;
             dbgassert(!waveformRef->queued);
+            waveformRef->waveform = this->updatedWaveform;
             dbgassert(waveformRef->waveform.size.x > 0 && waveformRef->waveform.size.y > 0);
             if (dawCtrl->getWaveformRenderer()->queueUpdate(audio, waveformRef)) {
                 dbgassert(!waveformRef->rendered && waveformRef->queued);
