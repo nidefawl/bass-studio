@@ -3312,24 +3312,7 @@ int nvgTextBreakLines(NVGcontext* ctx, const char* string, const char* end, floa
 			} else {
 				float nextWidth = iter.nextx - rowStartX;
 
-				// track last non-white space character
-				if (type == NVG_CHAR || type == NVG_CJK_CHAR) {
-					rowEnd = iter.next;
-					rowWidth = iter.nextx - rowStartX;
-					rowMaxX = q.x1 - rowStartX;
-				}
-				// track last end of a word
-				if (((ptype == NVG_CHAR || ptype == NVG_CJK_CHAR) && type == NVG_SPACE) || type == NVG_CJK_CHAR) {
-					breakEnd = iter.str;
-					breakWidth = rowWidth;
-					breakMaxX = rowMaxX;
-				}
-				// track last beginning of a word
-				if ((ptype == NVG_SPACE && (type == NVG_CHAR || type == NVG_CJK_CHAR)) || type == NVG_CJK_CHAR) {
-					wordStart = iter.str;
-					wordStartX = iter.x;
-					wordMinX = q.x0;
-				}
+
 
 				// Break to new line when a character is beyond break width.
 				if ((type == NVG_CHAR || type == NVG_CJK_CHAR) && nextWidth > breakRowWidth) {
@@ -3377,7 +3360,27 @@ int nvgTextBreakLines(NVGcontext* ctx, const char* string, const char* end, floa
 					breakEnd = rowStart;
 					breakWidth = 0.0;
 					breakMaxX = 0.0;
-				}
+				} else {
+
+                    // track last non-white space character
+                    if (type == NVG_CHAR || type == NVG_CJK_CHAR) {
+                        rowEnd = iter.next;
+                        rowWidth = iter.nextx - rowStartX;
+                        rowMaxX = q.x1 - rowStartX;
+                    }
+                    // track last end of a word
+                    if (((ptype == NVG_CHAR || ptype == NVG_CJK_CHAR) && type == NVG_SPACE) || type == NVG_CJK_CHAR) {
+                        breakEnd = iter.str;
+                        breakWidth = rowWidth;
+                        breakMaxX = rowMaxX;
+                    }
+                    // track last beginning of a word
+                    if ((ptype == NVG_SPACE && (type == NVG_CHAR || type == NVG_CJK_CHAR)) || type == NVG_CJK_CHAR) {
+                        wordStart = iter.str;
+                        wordStartX = iter.x;
+                        wordMinX = q.x0;
+                    }
+                }
 			}
 		}
 
