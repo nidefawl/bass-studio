@@ -817,6 +817,9 @@ static void glnvg__getUniforms(GLNVGshader* shader)
 	shader->loc[GLNVG_LOC_MVP] = glGetUniformLocation(shader->prog, "u_mvp");
 }
 
+static int glnvg__renderCreateTexture(void* uptr, int type, int w, int h, int imageFlags, const unsigned char* data);
+
+
 static int glnvg__renderCreate(void* uptr)
 {
 	GLNVGcontext* gl = (GLNVGcontext*)uptr;
