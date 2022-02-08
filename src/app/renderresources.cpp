@@ -99,6 +99,8 @@ namespace RenderResources {
             load(vg, StringFormat("icons/daw_icon.png"), imgIconsBuf[ICON_DAW_EXE]);
             load(vg, StringFormat("icons/opt_unlocked.png"), imgIconsBuf[ICON_OPT_UNLOCKED]);
             load(vg, StringFormat("icons/opt_locked.png"), imgIconsBuf[ICON_OPT_LOCKED]);
+            load(vg, StringFormat("icons/midiplug.png"), imgIconsBuf[ICON_MIDIPLUG]);
+            load(vg, StringFormat("icons/duplicate.png"), imgIconsBuf[ICON_DUPLICATE]);
 
             for (int i = 0; i < NUM_IMGS; i++) {
                 ImageBuf& buf = imgIconsBuf[i];

@@ -10,6 +10,16 @@ guimenu_ctxtentry::guimenu_ctxtentry(ngui::Menu* _menu)
     }
 }
 
+void guimenu_ctxtentry::layout(ivec2 size, float _fontSize, determine_string_width& strw) {
+    this->fontSize = _fontSize;
+    this->height   = math::roundfS32(_fontSize * 1.1f);
+    auto entryW = leftOffset()+strw.getStringWidth(title, _fontSize, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+    if (icon) entryW += height-4;
+    if (title.find('\t')) entryW += strw.getStringWidth("    ", _fontSize, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+    this->width = math::max(size.x, math::roundfS32(entryW));
+
+}
+
 void guimenu_ctxtentry::render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) {
     if (contains(ctxtSize, mouse)) {
         nvgBeginPath(vg);
@@ -18,30 +28,46 @@ void guimenu_ctxtentry::render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mo
         nvgFill(vg);
     }
     if (this->icon) {
-        ivec2 iconSize(height, height);
-        nvgTranslate(vg, height / 4, y);
-        drawIcon(vg, iconSize, icon);
-        nvgTranslate(vg, -height / 4, -y);
+        nvgTranslate(vg, height / 4, y+2);
+        drawIcon(vg, ivec2(height - 4), icon);
+        nvgTranslate(vg, -height / 4, -(y+2));
     }
-//    nvgText(vg, leftOffset(), y + height / 2, StringAsCStr(title), NULL);
+
     String t1 = title;
     String t2;
-    auto p = title.find("\t");
+    auto p = title.find('\t');
     if (p != String::npos) {
         t1 = title.substr(0, p);
         t2 = title.substr(p + 1);
     }
-    UTIL_setFont(vg, theme, this->fontSize, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-    nvgText(vg, leftOffset(), y + height / 2, StringAsCStr(t1), NULL);
-    int32_t defoffset = (int32_t) round(this->fontSize / 2.4f);
+
+    renderTextLabel(vg,
+                    vec2(leftOffset(), y + height*0.5f),
+                    vec2(width, height),
+                    t1,
+                    theme,
+                    fontSize,
+                    theme->getContrastColor(GuiColor::COL_CTXTMNU_BG),
+                    NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+
+    String rightSide;
     if (t2.length()) {
-        nvgTextAlign(vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
-        nvgText(vg, width - defoffset, y + height / 2, StringAsCStr(t2), NULL);
+        rightSide = t2;
+    } else if (menu->type == ngui::menu_type::submenu) {
+        rightSide = ">";
     }
-    if (menu->type == ngui::menu_type::submenu) {
-        nvgTextAlign(vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
-        nvgText(vg, width - defoffset, y + height / 2, ">", NULL);
+    if (rightSide.length()) {
+        auto defoffset = this->fontSize / 2.4f;
+        renderTextLabel(vg,
+                        vec2(width - defoffset, y + height*0.5f),
+                        vec2(width, height),
+                        rightSide,
+                        theme,
+                        fontSize,
+                        theme->getContrastColor(GuiColor::COL_CTXTMNU_BG),
+                        NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
     }
+
 }
 
 
@@ -75,14 +101,20 @@ void guictr_menubar_entry::render(NVGcontext* vg) {
         nvgFillColor(vg, colHighlight);
         nvgFill(vg);
     }
-    const char* cstr = StringAsCStr(menu->title);
-    setFont(vg, fontSize, G_WHITE, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-    nvgText(vg, pos.x + size.x / 2, pos.y + size.y / 2, cstr, NULL);
+
+    renderTextLabel(vg,
+                    vec2(pos) + vec2(size)*0.5f,
+                    vec2(size),
+                    menu->title,
+                    theme,
+                    fontSize,
+                    theme->getContrastColor(GuiColor::COL_CTXTMNU_BG),
+                    NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
 }
 
 
 guimenu::guimenu(ngui::Menu* _menu, int _lvl, guimenu_ctxtentry* parent) : guictxtmenu() /*, menu(_menu)*/, lvl(_lvl), parentSubmenuEntry(parent) {
-    this->size.x    = 190;
+    //this->size.x    = 190;
     this->maxHeight = 0;
     for (auto e : _menu->children) {
         if (e->type == ngui::menu_type::seperator) {
@@ -100,7 +132,7 @@ void guimenu::layout() {
         entry->fixedLeftOffset = -1;
     }
     guictxtmenu::layout();
-    int leftOffset = 0;
+    float leftOffset = 0;
     for (auto entry : guimenuEntries) {
         leftOffset = math::max(entry->leftOffset(), leftOffset);
     }
@@ -111,11 +143,11 @@ void guimenu::layout() {
 
 void guimenu::onRemove() {
     if (this->parentMenuBar) {
-        this->parentMenuBar->currentMenu = NULL;
+        this->parentMenuBar->currentMenu = nullptr;
     }
     parentCtrl->closeAppMenusAtLvl(lvl);
     for (ctxtmenu_entry* e : entries) {
-        guimenu_ctxtentry* e2 = dynamic_cast<guimenu_ctxtentry*>(e);
+        auto* e2 = dynamic_cast<guimenu_ctxtentry*>(e);
         if (e2)
             e2->isMenuOpen = false;
     }
@@ -161,9 +193,9 @@ bool guimenu::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
                 //close other submenu at same level
                 closeAllSubmenus();
                 //and open new one
-                guimenu* popup        = new guimenu(entryHit->menu, lvl + 1, entryHit);
+                auto* popup        = new guimenu(entryHit->menu, lvl + 1, entryHit);
                 popup->parentMenuBar  = this->parentMenuBar;
-                popup->size.x         = 250;
+                popup->size = math::maxvec2(vec2(APP_MENU_MIN_WIDTH, 0), popup->size);
                 ivec2 screenPosThis   = this->parentCtrl->toScreenSpace(ivec2(0, 0));
                 ivec2 screenPosParent = appCtrlParent->toScreenSpace(ivec2(0, 0));
                 ivec2 screenPos       = screenPosThis - screenPosParent + ivec2(size.x + 2, entryHit->y);
@@ -184,10 +216,10 @@ void guimenu::clickedElement(ctxtmenu_entry* e, int _id) {
     dbgassert(this->parentMenuBar);
     BaseCtrl* ctrlParentBar = this->parentMenuBar->getControl();
     dbgassert(ctrlParentBar);
-    AppCtrl* appCtrl = dynamic_cast<AppCtrl*>(ctrlParentBar);
+    auto* appCtrl = dynamic_cast<AppCtrl*>(ctrlParentBar);
     if (appCtrl) {
         if (_id > 0) {
-            guimenu_ctxtentry* entry = static_cast<guimenu_ctxtentry*>(e);
+            auto* entry = static_cast<guimenu_ctxtentry*>(e);
             auto menuCommand = entry->menu->command;
             appCtrl->menuCommand(std::move(menuCommand));//possibly deletes this
         }
@@ -208,11 +240,16 @@ void guictr_menubar::render(NVGcontext* vg) {
     }
     String strInfo = BuildInfo::BUILD_BINARY_VERSION;
     if (strInfo.length() > 0) {
-        uint32_t fontScale     = math::max<uint32_t>(12, size.y * 0.8);
-        uint32_t padding       = math::max<uint32_t>(0, (size.y - fontScale) / 2);
-        GuiColor::constant_t c = GuiColor::COL_LABEL_INACTIVE;
-        NVGcolor color         = theme->getColor(c);
-        UTIL_setFont(vg, theme, fontScale, color, NVG_ALIGN_RIGHT | NVG_ALIGN_TOP);
-        nvgText(vg, size.x - padding, padding, StringAsCStr(strInfo), NULL);
+        auto fontScale     = math::max(12.f, size.y * 0.8f);
+        auto padding       = math::max(0.f, (size.y - fontScale) * 0.5f);
+
+        renderTextLabel(vg,
+                        vec2(size.x - padding, padding),
+                        vec2(size),
+                        strInfo,
+                        theme,
+                        fontScale,
+                        theme->getColor(GuiColor::COL_LABEL_INACTIVE),
+                        NVG_ALIGN_RIGHT | NVG_ALIGN_TOP);
     }
 }

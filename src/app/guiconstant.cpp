@@ -82,4 +82,5 @@ namespace GuiConstant {
     constant_t CONST_FONT_SIZE_TABLE("CONST_FONT_SIZE_TABLE", 200, 1, 2000);
     constant_t CONST_FONT_SIZE_CONTEXT_MENU("CONST_FONT_SIZE_CONTEXT_MENU", 200, 1, 2000);
     constant_t CONST_LAYOUT_MARGIN("CONST_LAYOUT_MARGIN", 1, 0, 32);
+    constant_t CONST_ROW_HEIGHT("CONST_ROW_HEIGHT", 24, 8, 64);
 } // namespace GuiConstant

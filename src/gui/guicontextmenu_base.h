@@ -1,4 +1,5 @@
 #pragma once
+#include <utility>
 #include <vector>
 #include "math/vec.h"
 #include "event.h"
@@ -14,34 +15,44 @@ class ctxtmenu_entry {
 public:
     int id = 0;
     String title;
-    int width                              = -1;
-    int height                             = 0;
-    int y                                  = 0;
-    int fontSize                           = 0;
-    guitheme_t* theme                      = nullptr;
-    int fixedLeftOffset                    = -1;
+
+    int width             = -1;
+    int height            = 0;
+    int y                 = 0;
+    float fontSize        = 0;
+    float fixedLeftOffset = -1;
+    guitheme_t* theme     = nullptr;
+
     RenderResources::NvgImageTexture* icon = nullptr;
-    ctxtmenu_entry(String _title, int _id) : id(_id), title(_title) {
+
+    ctxtmenu_entry(String _title, int _id)
+        : id(_id), title(std::move(_title))
+    {
     }
+
     virtual ~ctxtmenu_entry() = default;
+
     void setIcon(RenderResources::NvgImageTexture* _icon) {
         this->icon = _icon;
     }
-    virtual void layout(ivec2 size, int32_t _fontSize) {
+
+    virtual void layout(ivec2 size, float _fontSize, determine_string_width& strw) {
         this->fontSize = _fontSize;
-        this->height   = (int32_t) round(_fontSize * 1.1f);
-        this->width    = math::max(size.x, this->width);
+        this->height   = math::roundfS32(_fontSize * 1.1f);
+        this->width = math::max<float>(size.x, leftOffset()+strw.getStringWidth(title, _fontSize, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE));
     }
-    virtual int leftOffset() {
+
+    virtual float leftOffset() {
         if (fixedLeftOffset >= 0) {
             return fixedLeftOffset;
         }
-        int32_t offset = (int32_t) round(this->fontSize / 2.4f);
+        auto offset = this->fontSize / 2.4f;
         if (icon != nullptr) {
             offset += height;
         }
         return offset;
     }
+
     virtual void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) {
         if (contains(ctxtSize, mouse)) {
             nvgBeginPath(vg);
@@ -49,10 +60,17 @@ public:
             nvgFillColor(vg, theme->getColor(GuiColor::COL_CTXTMNU_HILIGHT));
             nvgFill(vg);
         }
-        UTIL_setFont(vg, theme, this->fontSize, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-        nvgText(vg, leftOffset(), y + height / 2, StringAsCStr(title), NULL);
+
+        renderTextLabel(vg,
+                        vec2(leftOffset(), y + height * 0.5f),
+                        vec2(width, height),
+                        title,
+                        theme,
+                        fontSize,
+                        theme->getContrastColor(GuiColor::COL_CTXTMNU_BG),
+                        NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
     }
-    bool contains(ivec2& ctxtSize, ivec2& mouse) {
+    virtual bool contains(ivec2& ctxtSize, ivec2& mouse) const {
         return mouse.y >= y && mouse.y < y + height && mouse.x >= 0 && mouse.x < ctxtSize.x;
     }
     virtual int getClicked(ivec2& ctxtSize, ivec2& mouse) {
@@ -62,43 +80,47 @@ public:
         return -1;
     }
 };
+
 class ctxtmenu_splitter : public ctxtmenu_entry {
 public:
     ctxtmenu_splitter()
         : ctxtmenu_entry("-", -1) {
     }
-    void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) override {
+
+    void render(ivec2 ctxtSize, NVGcontext* vg, int, ivec2) override {
         nvgBeginPath(vg);
-        nvgMoveTo(vg, 0, y + height / 2);
-        nvgLineTo(vg, ctxtSize.x, y + height / 2);
+        nvgMoveTo(vg, 0, y + height * 0.5f);
+        nvgLineTo(vg, ctxtSize.x, y + height * 0.5f);
         nvgStrokeColor(vg, theme->getColor(GuiColor::COL_CTXTMNU_OUTLINE));
         nvgStrokeWidth(vg, 1.0f);
         nvgStroke(vg);
     }
-    void layout(ivec2 size, int32_t _fontSize) override {
+
+    void layout(ivec2, float _fontSize, determine_string_width& strw) override {
         this->fontSize = _fontSize;
-        this->height   = ((int32_t) round(_fontSize * 1.1f)) / 2;
+        this->height   = math::roundfS32(_fontSize * 1.1f * 0.5f);
     }
-    bool contains(ivec2& ctxtSize, ivec2& mouse) {
+
+    bool contains(ivec2&, ivec2&) const override {
         return false;
     }
 };
 class guictxtmenu_base : public guictr_base {
 protected:
     int paddingV = 2;
-    int fontSize = FONT_SIZE_CTXT;
+    float fontSize = FONT_SIZE_CTXT;
 
 public:
     bool scrollbarOutside  = false;
     bool canTakeInputFocus = false;
     int maxHeight          = 360;
-    //int curTooltip = 0;
+
     guictxtmenu_base() : guictr_base() {
         margin  = 0;
         padding = 0;
     }
-    void setFontSize(int i) {
-        this->fontSize = i;
+    void setFontSize(float _fontSize) {
+        this->fontSize = _fontSize;
     }
     ~guictxtmenu_base() override {
         destroyGuis();
@@ -130,7 +152,7 @@ public:
     }
     void onChildLayoutChanged(guibase* g) override {
         //determineSize();
-        if (this->parent != NULL) {
+        if (this->parent) {
             this->parent->onChildLayoutChanged(this);
         }
     }

@@ -30,7 +30,6 @@ namespace {
     constexpr int TITLE_FONT_SIZE = 30;
     constexpr int TEXT_FONT_SIZE  = 20;
     constexpr int BTN_FONT_SIZE   = 16;
-    constexpr int ROW_FONT_SIZE   = 18;
 } // namespace
 namespace GuiConstant {
     extern constant_t CONST_SMALL_LABEL_HEIGHT;
@@ -57,7 +56,7 @@ class guidropdown_setting_options_ctxt_t : public guictxtmenu {
     std::vector<String> strings;
 
 public:
-    guidropdown_setting_options_ctxt_t(guidropdown_setting_options_t* _parent);
+    explicit guidropdown_setting_options_ctxt_t(guidropdown_setting_options_t* _parent);
     void clicked(int _id) override;
 };
 class guidropdown_setting_options_t : public guidropdownbase {
@@ -75,7 +74,7 @@ public:
     void handleDraggedRelease(MouseEvent& evt) override {
         if (options.empty()) return;
         guictxtmenu_base* popup = new guidropdown_setting_options_ctxt_t(this);
-        popup->size             = size;
+        popup->size = size;
         popup->setFontSize(size.y);
         this->parentCtrl->openContextMenu(popup, toScreenSpace(ivec2(0, size.y)) - popup->pos + ivec2(1));
     }
@@ -115,7 +114,12 @@ class gui_listentry_audiodevice : public gui_list_entry {
 
 public:
     gui_listentry_audiodevice(String _deviceAPI, String _deviceName, int32_t _nChannels, bool _isInput)
-        : gui_list_entry(), deviceAPI(_deviceAPI), deviceName(_deviceName), nChannels(_nChannels), isInput(_isInput) {
+        : gui_list_entry(),
+          deviceAPI(std::move(_deviceAPI)),
+          deviceName(std::move(_deviceName)),
+          nChannels(_nChannels),
+          isInput(_isInput)
+    {
         icon = -1;
     }
     String getText() override { return deviceName; }
@@ -144,6 +148,7 @@ public:
         if (icon > -1) {
             x += rowHeight + spacing;
         }
+
         ivec2 inner = size;
         if (ctrl->isCtrOrChildFocused(this)) {
             nvgBeginPath(vg);
@@ -152,46 +157,48 @@ public:
             nvgFill(vg);
         }
         nvgTranslate(vg, pos.x, pos.y);
+
         if (icon > -1) {
             RenderResources::NvgImageTexture& image = RenderResources::imgIcons[icon];
             drawIcon(vg, inner, &image);
         }
-        setFont(vg, (int)(ROW_FONT_SIZE), G_WHITE, G_TITLE_ALIGN);
-        nvgText(vg, x, rowHeight / 2, StringAsCStr(getText()), nullptr);
+
+        renderTextLabel(vg,
+                        vec2(x, rowHeight * 0.5f),
+                        vec2(size),
+                        getText(),
+                        theme,
+                        rowHeight,
+                        theme->getContrastColor(GuiColor::COL_BG_DRKER),
+                        NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+
         ivec2 sizeIcon = ivec2(inner.y - 4);
         ivec2 posIcon  = {inner.x - (int)spacing - sizeIcon.y, (inner.y - sizeIcon.y) / 2};
-
-        nvgTextAlign(vg, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
-        nvgText(vg, posIcon.x - 4, rowHeight / 2, StringAsCStr(StringFormat("%d CH", nChannels)), nullptr);
-        //auto* _entry = safeRefGet(ref);
-        //if (_entry) {
         bool enbl = enabled();
-        setFont(vg, (int)(ROW_FONT_SIZE), theme->getColor(enbl ? GuiColor::COL_ON : GuiColor::COL_OFF), G_TITLE_ALIGN);
-        nvgTextAlign(vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
+
+        renderTextLabel(vg,
+                        vec2(posIcon.x - 4, rowHeight * 0.5f),
+                        vec2(size),
+                        StringFormat("%d CH", nChannels),
+                        theme,
+                        rowHeight,
+                        theme->getColor(enbl ? GuiColor::COL_ON : GuiColor::COL_OFF),
+                        NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+
+
         RenderResources::NvgImageTexture& image = RenderResources::imgIcons[ICON_SPEAKER];
         nvgTranslate(vg, posIcon.x, posIcon.y);
-        nvgBeginPath(vg);
-        nvgRect(vg, 0, 0, sizeIcon.x, sizeIcon.y);
-        nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_DRKER2));
-        nvgFill(vg);
-        //nvgStrokeColor(vg, theme->getColor(GuiColor::COL_GUI_STROKE));
-        //nvgStrokeWidth(vg, theme->getFloat(GuiConstant::CONST_GUI_FRAME_STROKE_WIDTH));
-        nvgStrokeColor(vg, theme->getBgStrokeColor(parent->getFlags()));
-        nvgStrokeWidth(vg, theme->getFloat(GuiConstant::CONST_GUI_FRAME_STROKE_WIDTH));
-        nvgStroke(vg);
-        if (enbl) {
-            drawIcon(vg, sizeIcon, &image, 2);
-        }
+            nvgBeginPath(vg);
+            nvgRect(vg, 0, 0, sizeIcon.x, sizeIcon.y);
+            nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_DRKER2));
+            nvgFill(vg);
+            nvgStrokeColor(vg, theme->getBgStrokeColor(parent->getFlags()));
+            nvgStrokeWidth(vg, theme->getFloat(GuiConstant::CONST_GUI_FRAME_STROKE_WIDTH));
+            nvgStroke(vg);
+            if (enbl) {
+                drawIcon(vg, sizeIcon, &image, 2);
+            }
         nvgTranslate(vg, -posIcon.x, -posIcon.y);
-        //String str = enbl?"On":"Off";bypass
-        //nvgText(vg, size.x-spacing, rowHeight / 2, StringAsCStr(str), NULL);
-        //}
-        //nvgBeginPath(vg);
-        //int i2 = 4;
-        //nvgRect(vg, i2, i2, size.x-i2*2, size.y-i2*2);
-        //nvgFillColor(vg, rgbToNvg(0xFF11ff11));
-        //nvgFill(vg);
-
         nvgTranslate(vg, -pos.x, -pos.y);
     }
 };
@@ -292,9 +299,6 @@ public:
     audiohost::audiostream::audiotrack* getTrack() { return track.get(); }
 
     void render(NVGcontext* vg) override {
-        //if (isBackgroundRendered()) {
-        //renderBackground(vg);
-        //}
         if (!setScissorTransformContainer(vg)) {
             return;
         }
@@ -459,10 +463,6 @@ class guictr_input_meters : public guictr_base {
     const bool isInput;
     int32_t prevStream = 0;
 
-    //
-    //void effectbase::postProcess(AudioBlock* out, int32_t samples, bool hasProcessed) {
-    //meter.update(out, 1.0f);
-    //}
 public:
     explicit guictr_input_meters(const bool _isInput) : guictr_base(), isInput(_isInput) {}
     void render(NVGcontext* vg) override {
@@ -517,7 +517,6 @@ public:
         }
         auto* stream = audiohost::getInstance()->getStream(0);
         if ((prevStream && !stream) || (stream && prevStream != stream->streamId)) {
-            log_printf("on stream change %X -> %X\n", (int64_t)prevStream, (int64_t)stream);
             updateChannels();
         }
     }
@@ -544,15 +543,15 @@ public:
     }
 };
 class guidialog_audio_io : public setting_dialog {
-    guidropdownbase* selectAPI;
-    guidropdownbase* asioDevice;
-    gui_list* deviceListInput;
-    gui_list* deviceListOutput;
     guibutton_audioengine* audioEngineOn;
     guidropdownbase* audioBlockSize;
     guidropdownbase* audioSampleRate;
     guidropdownbase* audioInternalBlockSize;
     guidropdownbase* audioInternalSampleRate;
+    guidropdownbase* selectAPI;
+    guidropdownbase* asioDevice;
+    gui_list* deviceListInput;
+    gui_list* deviceListOutput;
     guictr_input_meters metersInput;
     guictr_input_meters metersOutput;
 
@@ -609,21 +608,25 @@ public:
     }
     ~guidialog_audio_io() override {
         removeGuis();
-        delete deviceListInput;
         delete deviceListOutput;
-        delete selectAPI;
+        delete deviceListInput;
         delete asioDevice;
-        delete audioBlockSize;
-        delete audioEngineOn;
-        delete audioSampleRate;
+        delete selectAPI;
         delete audioInternalSampleRate;
         delete audioInternalBlockSize;
+        delete audioSampleRate;
+        delete audioBlockSize;
+        delete audioEngineOn;
     }
-    guidialog_audio_io() : setting_dialog(), metersInput(true), metersOutput(false) {
-        this->deviceListInput  = new gui_list();
-        this->deviceListOutput = new gui_list();
-        this->audioEngineOn    = new guibutton_audioengine{};
 
+    guidialog_audio_io()
+        : setting_dialog(),
+          audioEngineOn(new guibutton_audioengine{}),
+          deviceListOutput(new gui_list()),
+          deviceListInput(new gui_list()),
+          metersInput(true),
+          metersOutput(false)
+    {
         auto api  = new guidropdown_setting_options_t();
         auto asio = new guidropdown_setting_options_t();
         auto extBlockSize       = new guidropdown_setting_options_t();
@@ -692,8 +695,6 @@ public:
             return StringFormat("%d", settings.iosettings.internalBlocksize);
         };
 
-        //
-
         dbgassert(audiohost::getInstance()->initPa());
         {
             int apiCnt     = Pa_GetHostApiCount();
@@ -753,7 +754,6 @@ public:
 
         selectAPI->setFontScale(0.77f);
         asioDevice->setFontScale(0.77f);
-        //selectDevice->setFontScale(0.77f);
         deviceListInput->setRenderHR(true);
         deviceListInput->setRowMargin(ivec4(0, 1, 0, 1));
         deviceListOutput->setRenderHR(true);
@@ -769,10 +769,10 @@ public:
         selectAPI->setLabel("Audio API");
         asioDevice->setLabel("ASIO Device");
         audioEngineOn->setLabel("Audio Engine");
-        extBlockSize->setLabel("Ext. Blocksize");
-        extSampleRate->setLabel("Ext. Samplerate");
-        intBlockSize->setLabel("Int. Blocksize");
-        intSampleRate->setLabel("Int. Samplerate");
+        extBlockSize->setLabel("External Blocksize");
+        extSampleRate->setLabel("External Samplerate");
+        intBlockSize->setLabel("Internal Blocksize");
+        intSampleRate->setLabel("Internal Samplerate");
         deviceListInput->setLabel("Audio input device");
         deviceListOutput->setLabel("Audio output device");
         metersInput.setFlag(FLG_RENDER_LABEL, true);
@@ -799,6 +799,7 @@ public:
         add(&metersInput);
         add(&metersOutput);
     }
+
     void onTick(AppCtrl* ctrl) override {
         for (guibase* gui : guis) {
             gui->onTick(ctrl);
@@ -813,74 +814,41 @@ public:
             return;
         }
 
-        float lineh;
         setFont(vg, TEXT_FONT_SIZE, G_WHITE, NVG_ALIGN_BOTTOM | NVG_ALIGN_LEFT);
-        nvgTextMetrics(vg, nullptr, nullptr, &lineh);
-        nvgText(vg, 5, this->audioEngineOn->bottom(), StringAsCStr(this->audioEngineOn->label), nullptr);
-        nvgText(vg, 5, this->audioBlockSize->bottom(), StringAsCStr(this->audioBlockSize->label), nullptr);
-        nvgText(vg, 5, this->audioSampleRate->bottom(), StringAsCStr(this->audioSampleRate->label), nullptr);
-        nvgText(vg, 5, this->audioInternalBlockSize->bottom(), StringAsCStr(this->audioInternalBlockSize->label), nullptr);
-        nvgText(vg, 5, this->audioInternalSampleRate->bottom(), StringAsCStr(this->audioInternalSampleRate->label), nullptr);
-        nvgText(vg, 5, this->selectAPI->bottom(), StringAsCStr(this->selectAPI->label), nullptr);
-        if (this->asioDevice->isVisible()) {
-            nvgText(vg, 5, this->asioDevice->bottom(), StringAsCStr(this->asioDevice->label), nullptr);
-        }
-        //if (this->deviceListInput->isVisible()) {
-        //nvgText(vg, 5, this->deviceListInput->top()-2, StringAsCStr(this->deviceListInput->label), nullptr);
-        //}
-        //if (this->deviceListOutput->isVisible()) {
-        //nvgText(vg, 5, this->deviceListOutput->top()-2, StringAsCStr(this->deviceListOutput->label), nullptr);
-        //}
-
 
         for (auto c : guis) {
             nvgSave(vg);
-            //if (c == this->selectAPI) {
-            //nvgIntersectScissor(vg, c->pos.x, c->pos.y, c->size.x, c->size.y);
-            //}
             if (c->isVisible()) {
                 c->render(vg);
             }
             nvgRestore(vg);
         }
-        //if (!this->asioDevice->isVisible()) {
-        //
-        //auto stream = audiohost::getInstance()->getStream(0);
-        //if (stream) {
-        //int nChannels = stream->nInputChannels;
-        //nvgText(vg, 5, this->deviceListInput->bottom()+TEXT_FONT_SIZE+2, StringAsCStr(StringFormat("%d
-        //channels", nChannels)), nullptr);
-        //
-        //nChannels = stream->nOutputChannels;
-        //nvgText(vg, 5, this->deviceListOutput->bottom()+TEXT_FONT_SIZE+2, StringAsCStr(StringFormat("%d
-        //channels", nChannels)), nullptr);
-        //}
-        //}
     }
-    void layout() override {
-        ivec2 cs = getSizeContent();
 
-        int32_t inset                 = 5;
-        int32_t buttonW               = math::max(120, cs.x * 2 / 3);
-        int32_t height                = 20;
-        audioEngineOn->size           = ivec2(buttonW, height);
-        audioEngineOn->pos            = ivec2(cs.x - inset * 2 - buttonW, inset);
-        audioInternalBlockSize->size  = ivec2(buttonW, height);
-        audioInternalBlockSize->pos   = ivec2(cs.x - inset * 2 - buttonW, audioEngineOn->bottom() + inset);
-        audioInternalSampleRate->size = ivec2(buttonW, height);
-        audioInternalSampleRate->pos  = ivec2(cs.x - inset * 2 - buttonW, audioInternalBlockSize->bottom() + inset);
-        audioBlockSize->size          = ivec2(buttonW, height);
-        audioBlockSize->pos           = ivec2(cs.x - inset * 2 - buttonW, inset + audioInternalSampleRate->bottom());
-        audioSampleRate->size         = ivec2(buttonW, height);
-        audioSampleRate->pos          = ivec2(cs.x - inset * 2 - buttonW, audioBlockSize->bottom() + inset);
-        selectAPI->size               = ivec2(buttonW, height);
-        selectAPI->pos                = ivec2(cs.x - inset * 2 - buttonW, audioSampleRate->bottom() + inset);
+    void layout() override {
+        const ivec2 cs = getSizeContent();
+
+        const int32_t inset  = 5;
+        const int32_t height = theme->get(GuiConstant::CONST_ROW_HEIGHT);
+
+        audioEngineOn->size           = ivec2(cs.x - inset * 2, height);
+        audioEngineOn->pos            = ivec2(inset, inset);
+        audioInternalBlockSize->size  = ivec2(cs.x - inset * 2, height);
+        audioInternalBlockSize->pos   = ivec2(inset, audioEngineOn->bottom() + inset);
+        audioInternalSampleRate->size = ivec2(cs.x - inset * 2, height);
+        audioInternalSampleRate->pos  = ivec2(inset, audioInternalBlockSize->bottom() + inset);
+        audioBlockSize->size          = ivec2(cs.x - inset * 2, height);
+        audioBlockSize->pos           = ivec2(inset, inset + audioInternalSampleRate->bottom());
+        audioSampleRate->size         = ivec2(cs.x - inset * 2, height);
+        audioSampleRate->pos          = ivec2(inset, audioBlockSize->bottom() + inset);
+        selectAPI->size               = ivec2(cs.x - inset * 2, height);
+        selectAPI->pos                = ivec2(inset, audioSampleRate->bottom() + inset);
         int32_t h                     = (cs.y - inset) - (selectAPI->bottom() + inset);
         int32_t h1                    = math::max((int)(h * 0.2), 120);
 
         guibase* pNextGui = selectAPI;
-        asioDevice->size  = ivec2(buttonW, height);
-        asioDevice->pos   = ivec2(cs.x - inset * 2 - buttonW, selectAPI->bottom() + inset);
+        asioDevice->size  = ivec2(cs.x - inset * 2, height);
+        asioDevice->pos   = ivec2(inset, selectAPI->bottom() + inset);
         if (asioDevice->isVisible()) {
             pNextGui = asioDevice;
         }
@@ -909,12 +877,8 @@ public:
         for (auto gui : guis) {
             gui->layout();
         }
-        int rowHeight = 30;
-        while (h1 < rowHeight * 6 && rowHeight > 8) {
-            rowHeight -= 4;
-        }
-        deviceListInput->setRowHeight(rowHeight);
-        deviceListOutput->setRowHeight(rowHeight);
+        deviceListInput->setRowHeight(height);
+        deviceListOutput->setRowHeight(height);
     }
 
     void buttonClicked(guibase* button) override {
@@ -939,9 +903,14 @@ class gui_listentry_mididevice : public gui_list_entry {
 
 public:
     gui_listentry_mididevice(String _deviceAPI, String _deviceName, bool _isInput)
-        : gui_list_entry(), deviceAPI(_deviceAPI), deviceName(_deviceName), isInput(_isInput) {
+        : gui_list_entry(),
+          deviceAPI(std::move(_deviceAPI)),
+          deviceName(std::move(_deviceName)),
+          isInput(_isInput)
+    {
         icon = -1;
     }
+
     String getText() override { return deviceName; }
     void dragMoveOn(guibase* target, ivec2 mousepos) override {}
     void dragReleaseOn(guibase* target, ivec2 mousepos) override {}
@@ -952,12 +921,8 @@ public:
     }
     bool enabled() {
         auto& c = getCnf();
-        auto it = std::find_if(c.begin(), c.end(),
-                               [devN = deviceName](const midi_channel& config) { return config.deviceName == devN; });
-        if (it != c.end()) {
-            return true;
-        }
-        return false;
+        auto it = std::find_if(c.begin(), c.end(), [devN = deviceName](const midi_channel& config) { return config.deviceName == devN; });
+        return it != c.end();
     }
     bool toggle() {
         bool bEnbl = enabled();
@@ -974,7 +939,9 @@ public:
         }
         return false;
     }
+
     void render(NVGcontext* vg) override {
+
         BaseCtrl* ctrl  = parentCtrl;
         float spacing   = INSET_TITLE;
         float x         = spacing;
@@ -982,33 +949,60 @@ public:
         if (icon > -1) {
             x += rowHeight + spacing;
         }
+
+        ivec2 inner = size;
         if (ctrl->isCtrOrChildFocused(this)) {
             nvgBeginPath(vg);
-            nvgRect(vg, pos.x, pos.y, size.x, size.y);
+            nvgRect(vg, pos.x, pos.y, inner.x, inner.y);
             nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_DRKER));
             nvgFill(vg);
         }
         nvgTranslate(vg, pos.x, pos.y);
+
         if (icon > -1) {
             RenderResources::NvgImageTexture& image = RenderResources::imgIcons[icon];
-            drawIcon(vg, size, &image);
+            drawIcon(vg, inner, &image);
         }
-        setFont(vg, (int)(ROW_FONT_SIZE), G_WHITE, G_TITLE_ALIGN);
-        nvgText(vg, x, rowHeight / 2, StringAsCStr(getText()), nullptr);
-        //auto* _entry = safeRefGet(ref);
-        //if (_entry) {
+
+        renderTextLabel(vg,
+                        vec2(x, rowHeight * 0.5f),
+                        vec2(size),
+                        getText(),
+                        theme,
+                        rowHeight,
+                        theme->getContrastColor(GuiColor::COL_CTXTMNU_BG),
+                        NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+
+        ivec2 sizeIcon = ivec2(inner.y - 4);
+        ivec2 posIcon  = {inner.x - (int)spacing - sizeIcon.y, (inner.y - sizeIcon.y) / 2};
         bool enbl = enabled();
-        setFont(vg, (int)(ROW_FONT_SIZE), theme->getColor(enbl ? GuiColor::COL_ON : GuiColor::COL_OFF), G_TITLE_ALIGN);
-        nvgTextAlign(vg, NVG_ALIGN_MIDDLE | NVG_ALIGN_RIGHT);
-        String str = enbl ? "On" : "Off";
-        nvgText(vg, size.x - spacing, rowHeight / 2, StringAsCStr(str), nullptr);
-        //}
-        //nvgBeginPath(vg);
-        //int i2 = 4;
-        //nvgRect(vg, i2, i2, size.x-i2*2, size.y-i2*2);
-        //nvgFillColor(vg, rgbToNvg(0xFF11ff11));
-        //nvgFill(vg);
+
+        renderTextLabel(vg,
+                        vec2(posIcon.x - 4, rowHeight * 0.5f),
+                        vec2(size),
+                        enbl ? "On" : "Off",
+                        theme,
+                        rowHeight,
+                        theme->getColor(enbl ? GuiColor::COL_ON : GuiColor::COL_OFF),
+                        NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+
+
+        RenderResources::NvgImageTexture& image = RenderResources::imgIcons[ICON_MIDIPLUG];
+        nvgTranslate(vg, posIcon.x, posIcon.y);
+            nvgBeginPath(vg);
+            nvgRect(vg, 0, 0, sizeIcon.x, sizeIcon.y);
+            nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_DRKER2));
+            nvgFill(vg);
+            nvgStrokeColor(vg, theme->getBgStrokeColor(parent->getFlags()));
+            nvgStrokeWidth(vg, theme->getFloat(GuiConstant::CONST_GUI_FRAME_STROKE_WIDTH));
+            nvgStroke(vg);
+            if (enbl) {
+                drawIcon(vg, sizeIcon, &image, 2);
+            }
+        nvgTranslate(vg, -posIcon.x, -posIcon.y);
         nvgTranslate(vg, -pos.x, -pos.y);
+
+
     }
 };
 
@@ -1022,13 +1016,15 @@ public:
 
     ~guidialog_midi_io() override {
         removeGuis();
-        delete deviceListInput;
         delete deviceListOutput;
+        delete deviceListInput;
     }
-    guidialog_midi_io() : setting_dialog() {
-        deviceListInput  = new gui_list();
-        deviceListOutput = new gui_list();
 
+    guidialog_midi_io()
+        : setting_dialog(),
+          deviceListOutput(new gui_list()),
+          deviceListInput(new gui_list())
+    {
         setBackgroundRendered(true);
         add(deviceListInput);
         add(deviceListOutput);
@@ -1046,33 +1042,36 @@ public:
             return;
         }
 
-        float lineh;
         setFont(vg, TEXT_FONT_SIZE, G_WHITE, NVG_ALIGN_BOTTOM | NVG_ALIGN_LEFT);
-        nvgTextMetrics(vg, nullptr, nullptr, &lineh);
         nvgText(vg, 5, this->deviceListInput->top() - 2, StringAsCStr(this->deviceListInput->label), nullptr);
         nvgText(vg, 5, this->deviceListOutput->top() - 2, StringAsCStr(this->deviceListOutput->label), nullptr);
 
         for (auto c : guis) {
             nvgSave(vg);
-            //if (c == this->selectAPI) {
-            //nvgIntersectScissor(vg, c->pos.x, c->pos.y, c->size.x, c->size.y);
-            //}
             c->render(vg);
             nvgRestore(vg);
         }
     }
-    void layout() override {
-        ivec2 cs = getSizeContent();
 
-        int32_t inset          = 5;
+    void layout() override {
+        const ivec2 cs = getSizeContent();
+
+        const int32_t inset  = 5;
+        const int32_t height = theme->get(GuiConstant::CONST_ROW_HEIGHT);
+
         int32_t heightList     = math::max(230, cs.y * 2 / 5);
+
         deviceListInput->pos   = ivec2(inset, inset + (int32_t)(TEXT_FONT_SIZE * 1.2));
         deviceListInput->size  = ivec2((cs.x) - inset * 2, heightList);
         deviceListOutput->pos  = ivec2(inset, deviceListInput->bottom() + inset + (int32_t)(TEXT_FONT_SIZE * 1.2));
         deviceListOutput->size = ivec2((cs.x) - inset * 2, math::min(cs.y - deviceListOutput->pos.y, heightList));
+
         for (auto gui : guis) {
             gui->layout();
         }
+
+        deviceListInput->setRowHeight(height);
+        deviceListOutput->setRowHeight(height);
     }
     void buttonClicked(guibase* button) override {
         if ((button->id & 0x0F) == 0xF) {
@@ -1136,13 +1135,14 @@ public:
 
     ~guidialog_plugin_settings() override {
         removeGuis();
-        delete scanNow;
         delete selectFolder;
+        delete scanNow;
     }
-    guidialog_plugin_settings() : setting_dialog() {
-        scanNow      = new guibutton();
-        selectFolder = new guibutton();
-
+    guidialog_plugin_settings()
+        : setting_dialog(),
+          scanNow(new guibutton()),
+          selectFolder(new guibutton())
+    {
         setBackgroundRendered(true);
         selectFolder->id = 0x10;
         selectFolder->setText(settings.pluginPath);
@@ -1164,17 +1164,22 @@ public:
             return;
         }
 
-        float lineh;
-        setFont(vg, TEXT_FONT_SIZE, G_WHITE, NVG_ALIGN_BOTTOM | NVG_ALIGN_LEFT);
-        nvgTextMetrics(vg, nullptr, nullptr, &lineh);
-        nvgText(vg, 5, this->selectFolder->bottom(), StringAsCStr(this->selectFolder->label), nullptr);
-        nvgText(vg, 5, this->scanNow->bottom(), StringAsCStr(this->scanNow->label), nullptr);
+        guibase* vstOptions[2]{selectFolder, scanNow};
 
+        for (guibase* option : vstOptions) {
+            renderTextLabel(vg,
+                            vec2(5, option->pos.y) + vec2(0, option->size.y) * 0.5f,
+                            vec2(option->size) - vec2(10, 0),
+                            option->label,
+                            theme,
+                            option->size.y,
+                            theme->getContrastColor(GuiColor::COL_BG_DRKER),
+                            NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+        }
+
+        selectFolder->setText(settings.pluginPath);
         for (auto c : guis) {
             nvgSave(vg);
-            //if (c == this->selectAPI) {
-            //nvgIntersectScissor(vg, c->pos.x, c->pos.y, c->size.x, c->size.y);
-            //}
             c->render(vg);
             nvgRestore(vg);
         }
@@ -1182,9 +1187,10 @@ public:
     void layout() override {
         ivec2 cs = getSizeContent();
 
-        int32_t inset      = 5;
-        int32_t buttonW    = math::max(120, cs.x * 2 / 3);
-        int32_t height     = 20;
+        const int32_t inset   = 5;
+        const int32_t buttonW = math::max(120, cs.x * 2 / 3);
+        const int32_t height  = theme->get(GuiConstant::CONST_ROW_HEIGHT);
+
         selectFolder->size = ivec2(buttonW, height);
         selectFolder->pos  = ivec2(cs.x - inset * 2 - buttonW, inset);
         scanNow->size      = ivec2(buttonW, height);
@@ -1318,7 +1324,7 @@ void guidialog_settings::layout() {
     csize.y -= btnClose.size.y;
 
     int csW         = csize.x - inset * 2;
-    ivec2 buttonPos = {inset, inset * 2};
+    ivec2 buttonPos = { inset, inset * 2 };
     int32_t buttonW = csW / 5;
     for (auto* entry : entries) {
         entry->tabButton.pos  = buttonPos;
@@ -1327,7 +1333,9 @@ void guidialog_settings::layout() {
         buttonPos.y += HEIGHT_DEFAULT_INPUT + inset;
     }
     ivec2 sizeContentTab = ivec2(csW - buttonW - inset * 2, csize.y - inset * 2);
-    for (auto* entry : entries) {
+
+    auto entry = this->activeEntry;
+    if (entry) {
         entry->tabCtr->pos  = ivec2(buttonPos.x + buttonW + inset * 2, inset);
         entry->tabCtr->size = sizeContentTab;
         entry->tabCtr->determineSize(entry->tabCtr->size);
@@ -1347,9 +1355,7 @@ void guidialog_settings::buttonClicked(guibase* button) {
         size_t pos = it - entries.begin();
         setActiveEntry((int32_t)pos);
     }
-    //if (parent) {
-    //parent->buttonClicked(button);
-    //}
+
     switch (button->id) {
         case ID_BTN_CLOSE:
             closeContextMenu();

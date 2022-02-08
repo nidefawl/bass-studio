@@ -828,11 +828,12 @@ std::vector<std::weak_ptr<i_ctr_drop_area>> BaseCtrl::getTargets(MouseEvent& mev
             if (!target.expired()) {
                 // TODO: no need to lock here...
                 auto shrdPtrTarget = target.lock();
+
                 if (shrdPtrTarget->pos.x > m_size.x * 1.0 / m_scale - 10) {
-                    shrdPtrTarget->pos.x -= 10;
+                    //shrdPtrTarget->pos.x -= 10;
                 }
                 if (shrdPtrTarget->pos.x + shrdPtrTarget->size.x < 10) {
-                    shrdPtrTarget->pos.x += 10;
+                    //shrdPtrTarget->pos.x += 10;
                 }
             }
         }

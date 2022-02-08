@@ -30,7 +30,9 @@
 #define ICON_DAW_EXE 25
 #define ICON_OPT_LOCKED 26
 #define ICON_OPT_UNLOCKED 27
-#define NUM_IMGS 28
+#define ICON_MIDIPLUG 28
+#define ICON_DUPLICATE 29
+#define NUM_IMGS 30
 #define MAX_FONTS 256
 
 struct NVGcontext;

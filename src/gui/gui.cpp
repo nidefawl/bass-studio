@@ -97,8 +97,106 @@ float textWidth(NVGcontext* vg, const String& str) {
     nvgTextBounds(vg, 0, 0, StringAsCStr(str), nullptr, bounds);
     return bounds[2] - bounds[0];// maxX - minX;
 }
+
+float determine_string_width::getStringWidth(const String& text, float fontSize, int alignment) {
+    NVGcontext* vg = ctrl->vg;
+    float fontSizeScaled = fontSize;
+    if (theme) {
+        UIFont::font_instance instance = theme->getFont(UIFont::FONT_DEFAULT);
+        UIFont::bindFont(vg, instance);
+        fontSizeScaled = fontSize * theme->getFloat(GuiConstant::CONST_FONT_SCALE);
+    }
+    nvgFontSize(vg, fontSizeScaled);
+    if (alignment) {
+        nvgTextAlign(vg, alignment);
+    }
+    float bounds[4]{ 0 };
+    nvgTextBounds(vg, 0, 0, StringAsCStr(text), nullptr, bounds);
+    return bounds[2] - bounds[0];// maxX - minX;
+}
+
+float renderTextLabel(NVGcontext* vg,
+                     const vec2& pos,
+                     const vec2& bounds,
+                     const String& text,
+                     const guitheme_t* theme,
+                     const float fontSize,
+                     const NVGcolor color,
+                     const int32_t alignment) {
+
+    float fontSizeScaled = fontSize;
+    if (theme) {
+        UIFont::font_instance instance = theme->getFont(UIFont::FONT_DEFAULT);
+        UIFont::bindFont(vg, instance);
+        fontSizeScaled = fontSize * theme->getFloat(GuiConstant::CONST_FONT_SCALE);
+    }
+    nvgFontSize(vg, fontSizeScaled);
+    nvgFillColor(vg, color);
+    nvgTextAlign(vg, alignment);
+    const auto* szText = StringAsCStr(text);
+
+    const float margin = fontSize * 0.5f;
+    int nrows = 0;
+    float f = pos.x;
+    NVGtextRow rows[2]{};
+    if ((nrows = nvgTextBreakLines(vg, szText, nullptr, bounds.x, rows, 2))) {
+        NVGtextRow* row = &rows[0];
+        if (row->maxx-row->minx <= bounds.x || row->width <= bounds.x) {
+           f = nvgText(vg, pos.x, pos.y, row->start, row->end);
+        }
+    }
+    return f;
+}
+
+void renderCenteredMultilineText(NVGcontext* vg, const guitheme_t* const theme, const String& str, float fontSize, GuiColor::constant_t c, ivec2 renderPos, ivec2 size) {
+
+    float fontSizeScaled = fontSize;
+    if (theme) {
+        UIFont::font_instance instance = theme->getFont(UIFont::FONT_DEFAULT);
+        UIFont::bindFont(vg, instance);
+        fontSizeScaled = fontSize * theme->getFloat(GuiConstant::CONST_FONT_SCALE);
+    }
+    NVGcolor color = theme->getColor(c);
+
+    nvgFontSize(vg, fontSizeScaled);
+    nvgFillColor(vg, color);
+    nvgTextAlign(vg, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+
+    float lineh = 0;
+    nvgTextMetrics(vg, NULL, NULL, &lineh);
+
+    auto getNvgMultiLineTextBounds = [lineh](NVGcontext* vg, String s, float maxLineWidth, float* bounds) -> void {
+        auto* btncstr = StringAsCStr(s);
+        NVGtextRow rows[16];
+        int nrows;
+        float textBoundsX = 0;
+        float textBoundsY = 0;
+        if ((nrows = nvgTextBreakLines(vg, btncstr, nullptr, maxLineWidth, rows, 16))) {
+            for (int i = 0; i < nrows; i++) {
+                NVGtextRow* row = &rows[i];
+                textBoundsX     = math::max(textBoundsX, row->width);
+                textBoundsY += lineh;
+            }
+        }
+        bounds[0] = textBoundsX;
+        bounds[1] = textBoundsY;
+    };
+
+    renderPos.y += size.y * 0.5f;
+
+    if (str.find('\n') != String::npos) {
+        float bounds[2];
+        getNvgMultiLineTextBounds(vg, str, size.x, bounds);
+        renderPos.x = size.x / 2.0f - (bounds[0] / 2.0f);
+        renderPos.y = size.y / 2.0f - (bounds[1] / 2.0f);
+        renderPos.y += lineh / 2.0f;
+    }
+
+    nvgTextBox(vg, 0, renderPos.y, size.x, StringAsCStr(str), NULL);
+}
+
 void renderText(NVGcontext* ctx, float x, float y, float maxWidth, const char* string) {
-    NVGtextRow rows[2];
+    NVGtextRow rows[2]{};
     int nrows;
     if ((nrows = nvgTextBreakLines(ctx, string, NULL, maxWidth, rows, 2))) {
         NVGtextRow* row = &rows[0];

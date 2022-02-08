@@ -36,4 +36,5 @@ namespace GuiConstant {
     extern constant_t CONST_TRACK_CONTROLS_WIDTH;
     extern constant_t CONST_LAYOUT_MARGIN;
     extern constant_t CONST_ROUND;
+    extern constant_t CONST_ROW_HEIGHT;
 }// namespace GuiConstant

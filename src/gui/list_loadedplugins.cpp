@@ -251,23 +251,19 @@ public:
             }
         }
         //const int fontSize = 12;
-        int32_t fontSize = 14;
+        int32_t height = theme->get(GuiConstant::CONST_ROW_HEIGHT);
         int32_t w = size.x / 128;
-        fontSize += w * 4;
-        float lineh;
-        setFont(vg, fontSize, G_WHITE, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
-        nvgTextMetrics(vg, nullptr, nullptr, &lineh);
-        int x  = math::max<int32_t>(5, lineh / 2);
-        int y  = x;
-        int x2 = getSizeContent().x - x;
+
+        auto inset = math::max<int32_t>(5, height / 2);
+        int x  = inset;
+        int y  = inset;
+        int x2 = getSizeContent().x - inset;
 
         auto printL = [&](int inset, const char* caption, const String& str) {
             float offsetX = (inset + 1) * x;
-            nvgTextAlign(vg, NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
-            nvgText(vg, offsetX, y, caption, nullptr);
-            nvgTextAlign(vg, NVG_ALIGN_TOP | NVG_ALIGN_RIGHT);
-            nvgText(vg, x2, y, StringAsCStr(str), nullptr);
-            y += lineh;
+            renderTextLabel(vg, vec2(offsetX, y), vec2(size.x - inset*2, height), caption, theme, height, theme->getContrastColor(GuiColor::COL_BG_DRKER), NVG_ALIGN_TOP | NVG_ALIGN_LEFT);
+            renderTextLabel(vg, vec2(x2, y), vec2(size.x - inset*2, height), str, theme, height, theme->getContrastColor(GuiColor::COL_BG_DRKER), NVG_ALIGN_TOP | NVG_ALIGN_RIGHT);
+            y += height;
         };
         auto audioHost = audiohost::getInstance();
 
@@ -287,7 +283,7 @@ public:
         printL(1, "RenderTrackControls", StringFormat("%d µs", renderStats.timeRenderTrackControls));
         printL(0, "Clips in view", StringFormat("%d", renderStats.clipsRendered));
         printL(0, "Notes in view", StringFormat("%d", renderStats.notesRendered));
-        y += lineh / 2;
+        y += height / 2;
 
         printL(0, "Blocks Processed", StringFormat("%d", stats.blocksProcessed));
         printL(0, "Samples Processed", StringFormat("%d", stats.samplesProcessed));
@@ -328,7 +324,7 @@ public:
                 printL(ident, "ProcessOutput", StringFormat("%lld µs", stats.blockMidiStats.tm7ProcessOutput));
             }
         }
-        y += lineh / 2;
+        y += height / 2;
         printL(0, "audioCallback tDelta", StringFormat("%d µs", audioHost ? audioHost->audioCallbackInvocationDelay_usec : 0));
         printL(0, "inputBufferUnderuns", StringFormat("%d", stats.inputBufferUnderuns));
         printL(0, "outputBufferUnderuns", StringFormat("%u", audioHost ? audioHost->bufferUnderuns : 0));
@@ -352,7 +348,7 @@ public:
             printL(0, "clip_render_cache size", StringFormat("%f %s", clipCacheSizeAsDouble, sufArr[clipSufIdx % 3]));
         }
 
-        minHTop = y + lineh;
+        minHTop = y + height;
     }
     void determineSize(ivec2& prefSize) override {
         prefSize.x = math::max(100, prefSize.x);

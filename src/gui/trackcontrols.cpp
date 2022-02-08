@@ -140,11 +140,13 @@ void guitooltip<audio_info_t>::layout() {
     Table::AdjustColSizes(table, getSizeContent() - ivec2(INSET_TABLE << 1));
     size.y = table.rows.size() * table.rowHeight;
 }
+
 template<>
 guitooltip<audio_info_t>::~guitooltip() {
     removeGuis();
     delete ptr;
 }
+
 class gui_trackgain : public gui_textfield {
     automatable_t* paramAutomatable = nullptr;
     int32_t paramIdx                = -1;
@@ -153,7 +155,6 @@ public:
     gui_trackgain() : gui_textfield() {
         setCanMouseHit(true);
         setAlignment(gui_textfield::Alignment::Center);
-        setFontSize(20);
         mReturnCommits = true;
     }
     void setAutomationRef(automatable_t* _paramAutomatable, int32_t _paramIdx) {
@@ -181,8 +182,8 @@ public:
             valColor = GuiColor::COL_KNOB;
         }
         if (paramAutomatable && paramIdx > -1) {
-            ivec2 insetP = pos + ivec2(1);
-            ivec2 insetS = size - ivec2(2);
+            vec2 insetP = vec2(pos + 1);
+            vec2 insetS = vec2(size - 2);
             float gainDb = dsp_util::linScaleToGain(paramAutomatable->getParamValue(paramIdx));
             float f2     = (gainDb - dsp_util::GAIN_DBFLOOR) / (dsp_util::GAIN_DB6 - dsp_util::GAIN_DBFLOOR);
             if (f2 <= 0) {
@@ -199,13 +200,27 @@ public:
                 nvgFillColor(vg, theme->getColor(valColor));
                 nvgFill(vg);
             }
-            setFont(vg, fontSize(), theme->getContrastColor(valColor), NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-            String strLvl = getValueAsString();
-            nvgText(vg, insetP.x + insetS.x / 2.0f, insetP.y + G_FONT_MIDDLE_OFFSET(insetS.y), StringAsCStr(strLvl), NULL);
+
+            if (mCommitted) {
+                const String strLvl = getValueAsString();
+
+                renderTextLabel(vg,
+                                insetP + insetS * 0.5f,
+                                insetS,
+                                strLvl,
+                                theme,
+                                fontSize(),
+                                theme->getContrastColor(valColor),
+                                NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
+            }
         }
         if (!mCommitted) {
             gui_textfield::render(vg);
         }
+    }
+    void layout() override {
+        gui_textfield::layout();
+        setFontSize(size.y);
     }
     String getValueAsString() {
         float gainDb = dsp_util::linScaleToGain(paramAutomatable->getParamValue(paramIdx));
@@ -399,25 +414,11 @@ std::shared_ptr<guibase> getMeter(int32_t t, rmsmeter<16000>* meter);
 /* track io menus */
 class ctxtmenu_entry_track_io : public ctxtmenu_entry {
 public:
-    ctxtmenu_entry_track_io(int32_t _id, String name) : ctxtmenu_entry(name, _id) {
+    ctxtmenu_entry_track_io(int32_t _id, const String& name) : ctxtmenu_entry(name, _id) {
+        log_printf("asddf\n",0);
     }
     ~ctxtmenu_entry_track_io() override = default;
     virtual bool isBus()                = 0;
-};
-class ctxtmenu_entry_bus : public ctxtmenu_entry_track_io {
-public:
-    const DAW::bus_type busType;
-    const String busName;
-    const audio_channel_ref_t stageEndpoint;
-    bool isMenuOpen = false;
-
-    ctxtmenu_entry_bus(int32_t _id, String name, DAW::bus_type bustype, audio_channel_ref_t _stageEndpoint)
-        : ctxtmenu_entry_track_io(_id, name),
-          busType(bustype),
-          busName(name),
-          stageEndpoint(_stageEndpoint) {
-    }
-
     void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) override {
         if (contains(ctxtSize, mouse)) {
             nvgBeginPath(vg);
@@ -425,27 +426,39 @@ public:
             nvgFillColor(vg, theme->getColor(GuiColor::COL_CTXTMNU_HILIGHT));
             nvgFill(vg);
         }
-        UTIL_setFont(vg, theme, this->fontSize, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-        nvgText(vg, leftOffset(), y + height / 2, StringAsCStr(title), NULL);
-        //        if (channel.idx > -1) {
-        //            auto* stream = audiohost::getInstance()->getStream(0);
-        //            if (stream) {
-        //
-        //                auto& allMeters   = isInput ? stream->metersInput : stream->metersOutput;
-        //                int32_t nChannels = AudioIO::getNumChannelsFromTrackType(channel.type);
-        //                auto rmsMtr       = rmsmeter<16000>(allMeters.channels + channel.channelOffset, nChannels);
-        //                ivec2 sizeMeter{ height - 2, height - 2 };
-        //                renderMeterAt(vg, theme, { width - sizeMeter.x + 1, y + 1 }, sizeMeter, &rmsMtr);
-        //            }
-        //        }
+
+        renderTextLabel(vg,
+                        vec2(leftOffset(), y + height * 0.5f),
+                        vec2(width, height),
+                        title,
+                        theme,
+                        fontSize,
+                        theme->getContrastColor(GuiColor::COL_CTXTMNU_BG),
+                        NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
     }
+};
+
+class ctxtmenu_entry_bus : public ctxtmenu_entry_track_io {
+public:
+    const DAW::bus_type busType;
+    const String busName;
+    const audio_channel_ref_t stageEndpoint;
+    bool isMenuOpen = false;
+
+    ctxtmenu_entry_bus(int32_t _id, const String& name, DAW::bus_type bustype, audio_channel_ref_t _stageEndpoint)
+        : ctxtmenu_entry_track_io(_id, name),
+          busType(bustype),
+          busName(name),
+          stageEndpoint(_stageEndpoint) {
+    }
+
     bool isBus() override {
         return true;
     }
 };
 class ctxtmenu_entry_bus_external : public ctxtmenu_entry_bus {
 public:
-    ctxtmenu_entry_bus_external(int32_t _id, String name, audio_channel_ref_t _stageEndpoint)
+    ctxtmenu_entry_bus_external(int32_t _id, const String& name, audio_channel_ref_t _stageEndpoint)
         : ctxtmenu_entry_bus(_id, name, DAW::bus_type::external, _stageEndpoint) {
     }
 };
@@ -453,7 +466,7 @@ class ctxtmenu_entry_bus_internal : public ctxtmenu_entry_bus {
     const audio_stage_ref_t busStage;
 
 public:
-    ctxtmenu_entry_bus_internal(int32_t _id, String name, audio_stage_ref_t _stageBus, audio_channel_ref_t _stageEndpoint)
+    ctxtmenu_entry_bus_internal(int32_t _id, const String& name, audio_stage_ref_t _stageBus, audio_channel_ref_t _stageEndpoint)
         : ctxtmenu_entry_bus(_id, name, DAW::bus_type::internal, _stageEndpoint), busStage(_stageBus) {
     }
     audio_stage_ref_t getStageRef() {
@@ -464,10 +477,12 @@ public:
 
 class ctxtmenu_entry_endpoint : public ctxtmenu_entry_track_io {
 public:
-    ctxtmenu_entry_endpoint(int32_t _id, String name) : ctxtmenu_entry_track_io(_id, name) {
+    ctxtmenu_entry_endpoint(int32_t _id, const String& name) : ctxtmenu_entry_track_io(_id, name) {
+        log_printf("ctxtmenu_entry_endpoint\n",0);
     }
     virtual DAW::channel_ref_t getEndpoint() = 0;
 };
+
 class ctxtmenu_entry_external_channel : public ctxtmenu_entry_endpoint {
 public:
     const AudioIO::io_cfg_channel channel;
@@ -482,14 +497,8 @@ public:
         : ctxtmenu_entry_endpoint(_id, name), channel(), isInput(_isInput) {
     }
     void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) override {
-        if (contains(ctxtSize, mouse)) {
-            nvgBeginPath(vg);
-            nvgRect(vg, 0, y, ctxtSize.x, height);
-            nvgFillColor(vg, theme->getColor(GuiColor::COL_CTXTMNU_HILIGHT));
-            nvgFill(vg);
-        }
-        UTIL_setFont(vg, theme, this->fontSize, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-        nvgText(vg, leftOffset(), y + height / 2, StringAsCStr(title), NULL);
+        ctxtmenu_entry_track_io::render(ctxtSize, vg, idx, mouse);
+
         if (channel.idx > -1) {
             auto* stream = audiohost::getInstance()->getStream(0);
             if (stream) {
@@ -506,8 +515,6 @@ public:
         return false;
     }
     DAW::channel_ref_t getEndpoint() override {
-        //if (id == 0)
-        //return ChannelNone();
         return DAW::ChannelAudioInput(channel.idx,
                                       channel.channelOffset,
                                       "External " + AudioIO::getTrackNameShort(channel.type, channel.idx, isInput),
@@ -522,14 +529,8 @@ public:
         : ctxtmenu_entry_endpoint(_id, name), endpoint(_endpoint) {
     }
     void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) override {
-        if (contains(ctxtSize, mouse)) {
-            nvgBeginPath(vg);
-            nvgRect(vg, 0, y, ctxtSize.x, height);
-            nvgFillColor(vg, theme->getColor(GuiColor::COL_CTXTMNU_HILIGHT));
-            nvgFill(vg);
-        }
-        UTIL_setFont(vg, theme, this->fontSize, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-        nvgText(vg, leftOffset(), y + height / 2, StringAsCStr(title), NULL);
+        ctxtmenu_entry_track_io::render(ctxtSize, vg, idx, mouse);
+
         audio_stage_t* stage = vsthost::getInstance()->getAudioStage(endpoint.stageRef);
         if (stage) {
             track_impl_t* trImpl = dynamic_cast<track_impl_t*>(stage);
@@ -541,9 +542,11 @@ public:
             }
         }
     }
+
     bool isBus() override {
         return false;
     }
+
     DAW::channel_ref_t getEndpoint() override {
         audio_stage_t* stage = vsthost::getInstance()->getAudioStage(endpoint.stageRef);
         if (stage) {
@@ -558,33 +561,18 @@ public:
 };
 class ctxtmenu_entry_default_channel : public ctxtmenu_entry_endpoint {
 public:
-    ctxtmenu_entry_default_channel(int32_t _id, String name)
+    ctxtmenu_entry_default_channel(int32_t _id, const String& name)
         : ctxtmenu_entry_endpoint(_id, name) {
     }
-    void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) override {
-        if (contains(ctxtSize, mouse)) {
-            nvgBeginPath(vg);
-            nvgRect(vg, 0, y, ctxtSize.x, height);
-            nvgFillColor(vg, theme->getColor(GuiColor::COL_CTXTMNU_HILIGHT));
-            nvgFill(vg);
-        }
-        UTIL_setFont(vg, theme, this->fontSize, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-        nvgText(vg, leftOffset(), y + height / 2, StringAsCStr(title), NULL);
-        //TODO: resolve actual dst/src and show name and levels
-        //        audio_stage_t* stage = vsthost::getInstance()->getAudioStage(endpoint.stageRef);
-        //        if (stage) {
-        //            track_impl_t* trImpl = dynamic_cast<track_impl_t*>(stage);
-        //            dbgassert(trImpl);
-        //            if (trImpl) {
-        //                auto rmsMtr = rmsmeter<16000>(trImpl->meter.channels, trImpl->input.channels);
-        //                ivec2 sizeMeter{ height - 2, height - 2 };
-        //                renderMeterAt(vg, theme, { width - sizeMeter.x + 1, y + 1 }, sizeMeter, &rmsMtr);
-        //            }
-        //        }
-    }
+    //
+    //void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) override {
+    //    ctxtmenu_entry_endpoint::render(ctxtSize, vg, idx, mouse);
+    //}
+
     bool isBus() override {
         return false;
     }
+
     DAW::channel_ref_t getEndpoint() override {
         return DAW::ChannelDefaultNone();
     }
@@ -594,11 +582,6 @@ public:
 class guidropdown_select_bus_ctxt : public guictxtmenu {
     const audio_stage_ref_t busStage;
     const audio_channel_ref_t stageEndpoint;
-    void init() {
-        this->size.x   = 120;
-        this->fontSize = FONT_SIZE_CTXT_SMALL;
-        this->paddingV = 0;
-    }
 
 public:
     guidropdown_select_bus_ctxt(audio_stage_ref_t _busStage, audio_channel_ref_t _dstStage)
@@ -634,6 +617,7 @@ public:
             idx++;
         }
     }
+
     explicit guidropdown_select_bus_ctxt(audio_channel_ref_t _stageEndpoint, int lvl = 0)
         : busStage(AudioStageRefNULL()), stageEndpoint(_stageEndpoint) {
         int32_t idx      = 0;
@@ -654,10 +638,12 @@ public:
             }
         }
     }
+
     void addEntry(ctxtmenu_entry* entry) = delete;
     void addEntry(ctxtmenu_entry_track_io* entry) {
         guictxtmenu::addEntry(entry);
     }
+
     void clickedElement(ctxtmenu_entry* e, int _id) override {
         auto ctxtEndpointEntry = static_cast<ctxtmenu_entry_track_io*>(e);
         if (ctxtEndpointEntry->isBus()) {
@@ -684,6 +670,7 @@ public:
             trImpl->outputChannel = entry->getEndpoint();
         }
     }
+
     void closeAllSubmenus() {
         BaseCtrl* appCtrlParent = getControl();
         bool anyOpen            = false;
@@ -699,6 +686,7 @@ public:
             appCtrlParent->closeAppMenusAtLvl(1);
         }
     }
+
     bool mouseHitTest(ivec2 mpos, MouseHitEvt& evt) override {
         if (this->contains(mpos)) {
             ivec2 localMouse         = this->toContainerSpace(mpos);
@@ -738,7 +726,7 @@ public:
                 if (popup) {
                     popup->size = size;
                     popup->setFontSize(entry->fontSize);
-                    popup->size.x = math::max(250, popup->size.x);
+                    popup->size.x = math::max(CONTEXT_MENU_MIN_WIDTH, popup->size.x);
                     ivec2 vPos(right() + 2, pos.y + entryHit->y);
                     parentCtrl->openAppMenu(1, popup, vPos);
                     entry->isMenuOpen = true;
@@ -800,7 +788,7 @@ public:
         auto* popup = new guidropdown_select_bus_ctxt(audio_channel_ref_t{ trImpl->toRef(),  stageBufferPoint});
         popup->size             = size;
         popup->setFontSize(size.y);
-        popup->size.x = math::max(250, popup->size.x);
+        popup->size.x = math::max(CONTEXT_MENU_MIN_WIDTH, popup->size.x);
         this->parentCtrl->openContextMenu(popup, toScreenSpace(ivec2(0, size.y)) - popup->pos + ivec2(1));
     }
 };
@@ -1110,7 +1098,6 @@ public:
     }
     void handleDraggedRelease(MouseEvent& evt) override {
         guictxtmenu_base* popup = new guidropdown_popup_sel_automation_device(m_trackentry);
-        popup->size.x           = 250;
         m_trackentry->parentCtrl->openContextMenu(popup, toScreenSpace(ivec2(0, size.y)) - popup->pos + ivec2(1));
     }
 };
@@ -1284,22 +1271,23 @@ public:
             return;
         }
         NVGcolor color = rgbToNvg(m_track->rgb);
-        ivec2 titleSize(size.x, size.y);
         DawInstance* daw      = DawInstance::get();
         const int titleHeight = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
         const int rectHeight  = math::min(titleHeight, size.y);
         nvgBeginPath(vg);
-        nvgRect(vg, 0, 0, titleSize.x, rectHeight);
+        nvgRect(vg, 0, 0, size.x, rectHeight);
         nvgFillColor(vg, color);
         nvgFill(vg);
+
         //if (ctrl->getSelectedTrack() == m_track) {
-        //color = theme->getColor(GuiColor::COL_BG_SELECTEDTRACK_TITLE);
-        //int posX = hideTrack.right() + INSET_TITLE;
-        //nvgBeginPath(vg);
-        //nvgRect(vg, posX, 0, titleSize.x-posX, rectHeight);
-        //nvgFillColor(vg, color);
-        //nvgFill(vg);
+        //    color    = theme->getColor(GuiColor::COL_BG_SELECTEDTRACK_TITLE);
+        //    int posX = hideTrack.right() + INSET_TITLE;
+        //    nvgBeginPath(vg);
+        //    nvgRect(vg, posX, 0, size.x - posX, rectHeight);
+        //    nvgFillColor(vg, color);
+        //    nvgFill(vg);
         //}
+
         if (daw->getSelectedTrack() == m_track) {
             NVGcolor color2 = theme->getColor(GuiColor::COL_BG_SELECTEDTRACK_TITLE);
             int right       = hideTrack.right() + (hideTrack.pos.x) /*inset*/;
@@ -1308,8 +1296,15 @@ public:
             nvgFillColor(vg, color2);
             nvgFill(vg);
         }
-        setFont(vg, (int) (titleHeight * 0.9), getContrastFontColorNvg(color), G_TITLE_ALIGN);
-        nvgText(vg, hideTrack.right() + INSET_TITLE * 2, 0 + titleHeight / 2, StringAsCStr(m_track->name), nullptr);
+
+        renderTextLabel(vg,
+                        vec2(hideTrack.right() + INSET_TITLE * 2.0f, titleHeight / 2.0f),
+                        vec2(size) - vec2(INSET_TITLE) * 4.0f,
+                        m_track->name,
+                        theme,
+                        titleHeight,
+                        getContrastFontColorNvg(color),
+                        NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
 
         for (auto g : guis) {
             g->render(vg);

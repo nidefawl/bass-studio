@@ -206,29 +206,29 @@ void guictr_layout::getOverlays(MouseEvent& evt, std::vector<std::weak_ptr<i_ctr
         }
         if (ctrLayout == container_layout::SPLIT_V) {
             //subdivide by attaching to top or bottom
-            setOverlayPos(makeDropArea(areaOffset), static_cast<dock_pos>(static_cast<int32_t>(dock_pos::TOP)), ivec2(0), size, -1, -1);
+            setOverlayPos(makeDropArea(areaOffset), dock_pos::TOP, ivec2(0), size, -1, -1);
             vecHandles.push_back(dragdropContainerAreaHelpers[areaOffset++]);
-            setOverlayPos(makeDropArea(areaOffset), static_cast<dock_pos>(static_cast<int32_t>(dock_pos::BOTTOM)), ivec2(0), size, -1, -1);
+            setOverlayPos(makeDropArea(areaOffset), dock_pos::BOTTOM, ivec2(0), size, -1, -1);
             vecHandles.push_back(dragdropContainerAreaHelpers[areaOffset++]);
 
             //keep layout, add new child
-            setOverlayPos(makeDropArea(areaOffset), static_cast<dock_pos>(static_cast<int32_t>(dock_pos::LEFT)), ivec2(0), size, -1, -1);
+            setOverlayPos(makeDropArea(areaOffset), dock_pos::LEFT, ivec2(0), size, -1, -1);
             vecHandles.push_back(dragdropContainerAreaHelpers[areaOffset++]);
-            setOverlayPos(makeDropArea(areaOffset), static_cast<dock_pos>(static_cast<int32_t>(dock_pos::RIGHT)), ivec2(0), size, entries.size(), -1);
+            setOverlayPos(makeDropArea(areaOffset), dock_pos::RIGHT, ivec2(0), size, entries.size(), -1);
             vecHandles.push_back(dragdropContainerAreaHelpers[areaOffset++]);
         }
         if (ctrLayout == container_layout::SPLIT_H) {
             //subdivide by attaching to left and right
-            setOverlayPos(makeDropArea(areaOffset), static_cast<dock_pos>(static_cast<int32_t>(dock_pos::LEFT)), ivec2(0), size, -1, -1);
+            setOverlayPos(makeDropArea(areaOffset), dock_pos::LEFT, ivec2(0), size, -1, -1);
             vecHandles.push_back(dragdropContainerAreaHelpers[areaOffset++]);
-            setOverlayPos(makeDropArea(areaOffset), static_cast<dock_pos>(static_cast<int32_t>(dock_pos::RIGHT)), ivec2(0), size, -1, -1);
+            setOverlayPos(makeDropArea(areaOffset), dock_pos::RIGHT, ivec2(0), size, -1, -1);
             vecHandles.push_back(dragdropContainerAreaHelpers[areaOffset++]);
 
 
             //keep layout, add new child
-            setOverlayPos(makeDropArea(areaOffset), static_cast<dock_pos>(static_cast<int32_t>(dock_pos::TOP)), ivec2(0), size, -1, -1);
+            setOverlayPos(makeDropArea(areaOffset), dock_pos::TOP, ivec2(0), size, -1, -1);
             vecHandles.push_back(dragdropContainerAreaHelpers[areaOffset++]);
-            setOverlayPos(makeDropArea(areaOffset), static_cast<dock_pos>(static_cast<int32_t>(dock_pos::BOTTOM)), ivec2(0), size, entries.size(), -1);
+            setOverlayPos(makeDropArea(areaOffset), dock_pos::BOTTOM, ivec2(0), size, entries.size(), -1);
             vecHandles.push_back(dragdropContainerAreaHelpers[areaOffset++]);
         }
     }
@@ -431,7 +431,7 @@ void i_ctr_drop_area::render(NVGcontext* vg) {
     nvgBeginPath(vg);
     //nvgRoundedRect(vg, pos.x, pos.y, size.x, size.y, 3.0f);
     nvgRect(vg, pos.x, pos.y, size.x, size.y);
-    auto handleColor = rgbaToNvg(0x7f00ff00);
+    auto handleColor = rgbaToNvg(0x3f00ff00);
     switch (this->dockPos) {
         case dock_pos::STACK:
             handleColor = rgbaToNvg(0x7fffff00);
@@ -441,11 +441,14 @@ void i_ctr_drop_area::render(NVGcontext* vg) {
     }
     nvgFillColor(vg, handleColor);
     nvgFill(vg);
-    nvgFillColor(vg, GUI_COLORRGB(30, 255, 30, 255));
-    nvgTextAlign(vg, NVG_ALIGN_LEFT | NVG_ALIGN_TOP);
-    nvgFillColor(vg, rgbaToNvg(0xffffffff));
-
-    renderText(vg, pos.x, pos.y + size.y / 2, 300, StringAsCStr(this->label));
+    renderTextLabel(vg,
+                    vec2(pos) + vec2(0, size.y/2.0),
+                    size,
+                    this->label,
+                    nullptr,
+                    (int) (HEIGHT_CLIP_TITLE * 0.95),
+                    GUI_COLORRGB(125, 255, 125, 255),
+                    NVG_ALIGN_LEFT | NVG_ALIGN_TOP);
 }
 
 Splitter* guictr_layout::getSplitter(int32_t pos) {

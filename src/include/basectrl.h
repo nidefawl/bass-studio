@@ -42,6 +42,15 @@ String menuName(String s, KeyCombo combo);
 #define BASECTRL_WND_POS_ABSOLUTE         2
 #define BASECTRL_OVERLAY_TYPE_CONTEXTMENU 8
 
+class determine_string_width {
+    BaseCtrl* ctrl;
+    guitheme_t* theme;
+public:
+    determine_string_width(BaseCtrl* _ctrl, guitheme_t* _theme) : ctrl(_ctrl), theme(_theme) {
+    }
+    float getStringWidth(const String& text, float fontSize, int alignment = 0);
+};
+
 enum class dock_pos : int32_t { NONE = 0, CENTER, LEFT, RIGHT, TOP, BOTTOM, STACK };
 enum class container_layout : int32_t { SOLE, SPLIT_H, SPLIT_V, TABBED };
 class i_ctr_layout;

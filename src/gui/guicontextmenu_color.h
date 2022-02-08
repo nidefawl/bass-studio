@@ -19,14 +19,16 @@ public:
     ctxtmenu_color_select(String _title, int _id)
         : ctxtmenu_entry(_title, _id) {
         this->id    = _id;
-        this->title = _title;
         this->width = pad * 2 + (WH + padCell) * COLS - padCell;
     }
-    void layout(ivec2 size, int32_t _fontSize) override {
+
+    void layout(ivec2, float _fontSize, determine_string_width& strw) override {
         this->fontSize = _fontSize;
-        height         = _fontSize + pad * 2 + (WH + padCell) * ROWS - padCell;
+        auto tableSize = pad * 2 + (WH + padCell) * ROWS - padCell;
+        height         = math::roundfS32(_fontSize) + tableSize;
     }
-    void render(ivec2 ctxtSize, NVGcontext* vg, int idx, ivec2 mouse) override {
+
+    void render(ivec2, NVGcontext* vg, int idx, ivec2 mouse) override {
         UTIL_setFont(vg, theme, this->fontSize, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
         nvgText(vg, leftOffset(), y + this->fontSize / 2, StringAsCStr(title), NULL);
         nvgFontSize(vg, this->fontSize - 4);
@@ -64,9 +66,11 @@ public:
             nvgStroke(vg);
         }
     }
-    bool contains(ivec2& ctxtSize, ivec2& mouse) {
+
+    bool contains(ivec2& ctxtSize, ivec2& mouse) const override {
         return mouse.y >= y && mouse.y < y + height && mouse.x >= 0 && mouse.x < ctxtSize.x;
     }
+
     int getClicked(ivec2& ctxtSize, ivec2& mouse) override {
         if (contains(ctxtSize, mouse)) {
             int y = this->y + this->fontSize + pad - 4;

@@ -149,8 +149,14 @@ void renderAudioClip(NVGcontext* vg, waveformrender* wfrenderer, const guitheme_
     nvgStroke(vg);
 
     if (cl->name.length()) {
-        UTIL_setFont(vg, theme, (int) (HEIGHT_CLIP_TITLE * 0.95), getContrastFontColor(cl->rgb), G_TITLE_ALIGN);
-        renderText(vg, pos.x + INSET_TITLE, pos.y + HEIGHT_CLIP_TITLE / 2, size.x - INSET_TITLE * 3, StringAsCStr(cl->name));
+        renderTextLabel(vg,
+                        vec2(pos)+vec2(INSET_TITLE, HEIGHT_CLIP_TITLE / 2.0),
+                        size-ivec2(INSET_TITLE * 3, 0),
+                        cl->name,
+                        theme,
+                        HEIGHT_CLIP_TITLE,
+                        getContrastFontColor(cl->rgb),
+                        NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
     }
     ivec2 posContents = ivec2(posClipped.x, pos.y + HEIGHT_CLIP_TITLE + INSET_CLIP_CONTENT);
     tick_t clipLen = cl->getLen();
@@ -422,9 +428,15 @@ void gui_midi_clip::render(NVGcontext* vg) {
         nvgStrokeColor(vg, theme->getColor(GuiColor::COL_CLIP_OUTLINE));
         nvgStrokeWidth(vg, 1.f);
         nvgStroke(vg);
-        if (cl->name.length() && size.x - INSET_TITLE * 3 >= 5) {
-            UTIL_setFont(vg, theme, (int) (HEIGHT_CLIP_TITLE * 0.95), getContrastFontColor(cl->rgb), G_TITLE_ALIGN);
-            renderText(vg, pos.x + INSET_TITLE, pos.y + HEIGHT_CLIP_TITLE / 2, size.x - INSET_TITLE * 3, StringAsCStr(cl->name));
+        if (cl->name.length()) {
+            renderTextLabel(vg,
+                            vec2(pos)+vec2(INSET_TITLE, HEIGHT_CLIP_TITLE / 2.0),
+                            size-ivec2(INSET_TITLE * 3, 0),
+                            cl->name,
+                            theme,
+                            HEIGHT_CLIP_TITLE,
+                            getContrastFontColor(cl->rgb),
+                            NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
         }
         dbgassert(impl->valid);
         if (impl->valid && std::any_of(impl->arr.cbegin(), impl->arr.cend(), [](const auto* ptr) { return !!ptr; })) {
@@ -477,9 +489,15 @@ void renderMidiClip(NVGcontext* vg, const guitheme_t* theme, const track_gui_ent
     nvgStrokeColor(vg, theme->getColor(GuiColor::COL_CLIP_OUTLINE));
     nvgStrokeWidth(vg, 1.f);
     nvgStroke(vg);
-    if (cl->name.length() && size.x - INSET_TITLE * 3 >= 5) {
-        UTIL_setFont(vg, theme, (int) (HEIGHT_CLIP_TITLE * 0.95), getContrastFontColor(cl->rgb), G_TITLE_ALIGN);
-        renderText(vg, pos.x + INSET_TITLE, pos.y + HEIGHT_CLIP_TITLE / 2, size.x - INSET_TITLE * 3, StringAsCStr(cl->name));
+    if (cl->name.length()) {
+        renderTextLabel(vg,
+                        vec2(pos)+vec2(INSET_TITLE, HEIGHT_CLIP_TITLE / 2.0),
+                        size-ivec2(INSET_TITLE * 3, 0),
+                        cl->name,
+                        theme,
+                        HEIGHT_CLIP_TITLE,
+                        getContrastFontColor(cl->rgb),
+                        NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
     }
     ivec2 posContents  = ivec2(pos.x, pos.y + HEIGHT_CLIP_TITLE + INSET_CLIP_CONTENT);
     ivec2 sizeContents = ivec2(size.x, size.y - HEIGHT_CLIP_TITLE - INSET_CLIP_CONTENT * 2);

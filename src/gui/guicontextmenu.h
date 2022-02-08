@@ -45,13 +45,12 @@ public:
                 return;
             }
         }
-        return;
     }
     void layout() override {
-        //TODO: figure out string width here to make life easier laying out context menus
+        determine_string_width strw(parentCtrl, theme);
         int y = paddingV;
         for (ctxtmenu_entry* e : entries) {
-            e->layout(size, fontSize);
+            e->layout(size, fontSize, strw);
             e->y = y;
             y += e->height + paddingV;
         }
@@ -59,6 +58,7 @@ public:
     void determineSize(ivec2& prefSize) override {
         ivec2 newMaxSize = { size.x, paddingV };
         for (ctxtmenu_entry* e : entries) {
+            newMaxSize.x = math::max(newMaxSize.x, e->width);
             newMaxSize.y += e->height + paddingV;
         }
         if (entries.empty()) {

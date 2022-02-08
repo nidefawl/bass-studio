@@ -34,7 +34,15 @@ struct dragdrop_midifile;
 void UTIL_setFont(NVGcontext* vg, const guitheme_t* const theme, float size, NVGcolor color, int alignment);
 float textWidth(NVGcontext* vg, const String& str);
 void renderText(NVGcontext* ctx, float x, float y, float maxWidth, const char* string);
-void renderCenteredMultilineText(NVGcontext* vg, const guitheme_t* const theme, const String& str, int fontScale, GuiColor::constant_t c, ivec2 renderPos, ivec2 size);
+float renderTextLabel(NVGcontext* vg,
+                     const vec2& pos,
+                     const vec2& bounds,
+                     const String& text,
+                     const guitheme_t* theme,
+                     const float fontSize,
+                     const NVGcolor color,
+                     const int32_t alignment);
+void renderCenteredMultilineText(NVGcontext* vg, const guitheme_t* theme, const String& str, float fontScale, GuiColor::constant_t c, ivec2 renderPos, ivec2 size);
 
 void renderDashedLineFrame(NVGcontext* vg, float x, float y, float w, float h, float thickness);
 void drawAttachedBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 posInset, ivec2 sizeInset, int margin);

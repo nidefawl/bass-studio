@@ -95,8 +95,8 @@ void dawinstance_startup_commands(daw_tls::tlsinstance& tls) {
     vsthost* host    = vsthost::getInstance();
     //  String dawPath = "C:/dev/daw/run/";
     String dawPath  = "C:/Users/Michael/daw/run/projects/";
-    //String projName = "waveform_debug.project";
-    String projName = "test-wave-2.project";
+    String projName = "startup2.project";
+    //String projName = "test-wave-2.project";
     //projName = "kshmr-samples-test.project";
     //  projName = "test-empty-midi-loop.project";
     //projName = "arp-test.project";

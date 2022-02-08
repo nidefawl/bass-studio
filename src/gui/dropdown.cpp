@@ -57,22 +57,51 @@ void guidropdownbase::select(dropdown_field_selectitem req, uint32_t idxOffset) 
 
 void guidropdownbase::render(NVGcontext* vg) {
     //    nvgIntersectScissor(vg, pos.x, pos.y, size.x, size.y);
-    renderWidgetBorder(vg, getStateFlags());
-    if (this->label.length()) {
-        setFont(vg, G_FONT_SCALE(size.y), G_WHITE, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
-        String str = getString();
-        float pX   = nvgText(vg, pos.x + size.x - 3, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(str), NULL);
+    auto stateFlags = getStateFlags();
+    renderWidgetBorder(vg, stateFlags
+                       );
+    GuiColor::constant_t c = (stateFlags & FLG_ENBL) ? GuiColor::COL_LABEL_ACTIVE : GuiColor::COL_LABEL_INACTIVE;
+    auto fontSizeScaled = (this->fontSize > 0 ? this->fontSize : size.y) * fFontScale;
 
-        NVGcolor mDisabledTextColor = GUI_COLORA(255, 80);
-        setFont(vg, G_FONT_SCALE(size.y), mDisabledTextColor, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
-        float bounds[4]{0};
-        nvgTextBounds(vg, pos.x + 3.0f, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(this->label), nullptr, bounds);
-        if (pX - 3 > bounds[2]) {
-            nvgText(vg, pos.x + 3.0f, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(this->label), NULL);
+    if (this->label.length()) {
+        //setFont(vg, G_FONT_SCALE(size.y), G_WHITE, NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+        //String str = getString();
+        //float pX   = nvgText(vg, pos.x + size.x - 3, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(str), nullptr);
+
+        float posXContent = renderTextLabel(vg,
+                        vec2(pos) + vec2(size.x - 3, size.y * 0.5f),
+                        vec2(size),
+                        getString(),
+                        theme,
+                        fontSizeScaled,
+                        theme->getColor(c),
+                        NVG_ALIGN_RIGHT | NVG_ALIGN_MIDDLE);
+
+
+        determine_string_width strw(parentCtrl, theme);
+        auto widthLabel = strw.getStringWidth(label, fontSizeScaled, NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
+
+        if (posXContent-pos.x + 3.0f >= widthLabel) {
+
+            renderTextLabel(vg,
+                            vec2(pos) + vec2(3.0f, size.y * 0.5f),
+                            vec2(size),
+                            label,
+                            theme,
+                            fontSizeScaled,
+                            theme->getColor(GuiColor::COL_LABEL_INACTIVE),
+                            NVG_ALIGN_LEFT | NVG_ALIGN_MIDDLE);
         }
     } else {
-        int fontScale = math::roundfS32((this->fontSize > 0 ? this->fontSize : size.y) * fFontScale);
-        setFont(vg, fontScale, G_WHITE, NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
-        nvgText(vg, pos.x + size.x / 2.0f, pos.y + G_FONT_MIDDLE_OFFSET(size.y), StringAsCStr(getString()), NULL);
+
+
+        renderTextLabel(vg,
+                        vec2(pos) + vec2(size) * 0.5f,
+                        vec2(size),
+                        getString(),
+                        theme,
+                        fontSizeScaled,
+                        theme->getColor(c),
+                        NVG_ALIGN_CENTER | NVG_ALIGN_MIDDLE);
     }
 }
