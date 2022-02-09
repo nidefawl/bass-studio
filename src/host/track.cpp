@@ -462,6 +462,7 @@ struct VstEvent_t {
 track_impl_t::~track_impl_t() {
     delete m_midiEventsBuf;
     delete arp;
+    delete midiProcessed;
 }
 
 VstEvent_t* track_impl_t::reallocEvts(size_t size) {
@@ -1038,11 +1039,12 @@ void sortNoteEvents(std::vector<noteevent_t>& noteEvents) {
 
 track_impl_t::track_impl_t(vsthost* const _host, audio_stage_id_t _id, track_t* _track, const samplerate_t _sampleRate, const uint16_t _blockSize, int32_t nChannels)
     : audio_stage_t(_host, _id, /*_track, */ _sampleRate, _blockSize, nChannels, 0),
-      track(_track),
+      arp(new midiarp(this)), track(_track),
       inputChannel(DAW::ChannelDefaultNone()),
-      outputChannel(DAW::ChannelDefaultNone()) {
-    arp = new midiarp(this);
-    midiProcessed = new clip_notes_t();
+      outputChannel(DAW::ChannelDefaultNone()), 
+      midiProcessed(new clip_notes_t()) {
+    
+    
 }
 
 const std::vector<arp_note_t>& track_impl_t::getArpHeldNotes() {
