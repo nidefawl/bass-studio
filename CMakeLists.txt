@@ -118,6 +118,9 @@ foreach (f ${HDR_ALL_FILES})
     if (f MATCHES ".*src/tests/.*$")
         continue()
     endif ()
+    if (f MATCHES ".*src/icon_resource.h$")
+        continue()
+    endif ()
     if (UNIX)
         if (f MATCHES ".*/platform/win/.*$")
             continue()
@@ -181,6 +184,7 @@ foreach (f ${CPP_ALL_FILES})
     endif (MSVC)
     list(APPEND CPP_SRC_FILES ${f})
 endforeach ()
+list(APPEND CPP_SRC_FILES "src/tests/common/test_environment.cpp")
 
 
 
@@ -212,26 +216,28 @@ if (NOT MSVC)
     set_source_files_properties(${SRC_FILES_NO_OPTIMIZE} PROPERTIES COMPILE_OPTIONS "-O0")
 endif ()
 
-
+set(PROJECT_DEPS_SRC_FILES "${PROJECT_DEPS_PATH}/glad/gl-3.2-core/src/glad.c")
 set(GENERATED_SRC_FILES "${CMAKE_BINARY_DIR}/buildinfo.cpp")
-list(APPEND CPP_SRC_FILES "src/tests/common/test_environment.cpp")
-
-source_group(TREE ${PROJECT_SRC_PATH} PREFIX "src" FILES ${CPP_SRC_FILES} ${HDR_FILES} ${C_SRC_FILES} ${MM_SRC_FILES})
-source_group("generated" FILES ${GENERATED_SRC_FILES})
-
-list(APPEND C_SRC_FILES "${PROJECT_DEPS_PATH}/glad/gl-3.2-core/src/glad.c")
 
 list(APPEND RESOURCE_FILES "")
 if (MSVC)
     list(APPEND RESOURCE_FILES "src/icon_resource.h" "src/icon.rc")
 endif ()
 
+source_group(TREE ${PROJECT_SRC_PATH} PREFIX "src" FILES 
+                    ${CPP_SRC_FILES}
+                    ${HDR_FILES}
+                    ${C_SRC_FILES}
+                    ${MM_SRC_FILES})
+source_group("generated" FILES ${GENERATED_SRC_FILES})
+source_group("deps" FILES ${PROJECT_DEPS_SRC_FILES})
+source_group("res" FILES ${RESOURCE_FILES})
+
+
 message(STATUS "PROJECT_DEPS_PATH ${PROJECT_DEPS_PATH}")
 message(STATUS "CMAKE_CXX_COMPILER_ID ${CMAKE_CXX_COMPILER_ID}")
 message(STATUS "CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE}")
-
 message(STATUS "PROJECT_WORKING_DIR ${PROJECT_WORKING_DIR}")
-
 message(STATUS "PROJECT_REQUIRE_LIB ${PROJECT_REQUIRE_LIB}")
 message(STATUS "PROJECT_BUILD_DAW ${PROJECT_BUILD_DAW}")
 message(STATUS "PROJECT_BUILD_TESTS ${PROJECT_BUILD_TESTS} ")
@@ -243,19 +249,33 @@ message(STATUS "BUILD WARNINGS ${BUILD_WARNING_FLAGS}")
 # if PROJECT_REQUIRE_LIB is OFF we link objects directly to output executable (faster)
 if (PROJECT_REQUIRE_LIB)
     set(LINK_TARGET "dawlib")
-    add_library(${LINK_TARGET} STATIC ${CPP_SRC_FILES} ${C_SRC_FILES} ${MM_SRC_FILES} ${GENERATED_SRC_FILES})
+    add_library(${LINK_TARGET} STATIC 
+                            ${CPP_SRC_FILES} 
+                            ${C_SRC_FILES} 
+                            ${MM_SRC_FILES} 
+                            ${GENERATED_SRC_FILES} 
+                            ${PROJECT_DEPS_SRC_FILES} 
+                            ${HDR_FILES})
     target_compile_options(${LINK_TARGET} PRIVATE ${BUILD_WARNING_FLAGS})
     set_property(TARGET ${LINK_TARGET} PROPERTY DBG_POSTFIX d)
 else ()
     set(LINK_TARGET ${PROJECT_NAME})
     # define main exectuable
-    add_executable(${PROJECT_NAME} "src/host/main_daw.cpp" ${RESOURCE_FILES} ${CPP_SRC_FILES} ${C_SRC_FILES} ${MM_SRC_FILES} ${GENERATED_SRC_FILES})
+    add_executable(${PROJECT_NAME} "src/host/main_daw.cpp"
+                            ${RESOURCE_FILES} 
+                            ${CPP_SRC_FILES} 
+                            ${C_SRC_FILES} 
+                            ${MM_SRC_FILES} 
+                            ${GENERATED_SRC_FILES} 
+                            ${PROJECT_DEPS_SRC_FILES} 
+                            ${HDR_FILES})
     target_compile_options(${PROJECT_NAME} PRIVATE ${BUILD_WARNING_FLAGS})
     SET_APP_BUILD(${PROJECT_NAME})
     ADD_POST_BUILD_COMMANDS(${PROJECT_NAME})
 endif ()
 
 MACRO(DEFINE_EXECUTABLE target_name target_sources)
+    source_group("src" FILES ${target_sources})
     add_executable(${target_name} ${target_sources})
     target_link_libraries(${target_name} PRIVATE "dawlib")
     target_compile_options(${target_name} PRIVATE ${BUILD_WARNING_FLAGS})
