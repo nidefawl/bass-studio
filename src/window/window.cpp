@@ -257,7 +257,7 @@ public:
     void setValid() {
         this->valid = true;
     }
-    const int64_t minFrameDelayMicros = 1'000'0000LL / 288LL;
+    const int64_t minFrameDelayMicros = 1'000'000LL / 288LL;
 
 private:
     int64_t tmLastFps = 0;
@@ -382,6 +382,7 @@ public:
             skipFrames++;
             return;
         }
+        skipFrames = 0;
 #endif
         render();
         endFrame();
@@ -844,10 +845,10 @@ public:
     void onWindowSizeChanged(int width, int height) override {
         if (ctrl->isOK) {
             if (ctrl->m_size.x != width || ctrl->m_size.y != height) {
-                log_printf("size change from %dx%d to %dx%d on window %08X: parent %08X\n", ctrl->m_size.x, ctrl->m_size.y, width, height, (uint64_t) (this), (uint64_t) (parent));
+                // log_printf("size change from %dx%d to %dx%d on window %08X: parent %08X\n", ctrl->m_size.x, ctrl->m_size.y, width, height, (uint64_t) (this), (uint64_t) (parent));
                 ctrl->windowSizeChanged(width, height);
             } else {
-                log_printf("skip window resize to %dx%d on window %08X: parent %08X\n", ctrl->m_size.x, ctrl->m_size.y, (uint64_t) (this), (uint64_t) (parent));
+                // log_printf("skip window resize to %dx%d on window %08X: parent %08X\n", ctrl->m_size.x, ctrl->m_size.y, (uint64_t) (this), (uint64_t) (parent));
             }
             flagNeedsRedraw();
         }
