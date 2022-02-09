@@ -5,9 +5,67 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "type": "lldb",
+            "request": "launch",
+            "name": "launch native lldb",
+            "program": "/home/michael/run/DAW-Clang-debug",
+            "args": [],
+            "cwd": "/home/michael/run/",
+        },
+        {
+            "name": "(gdb) Launch a",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "/home/michael/run/DAW-Clang-debug",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "/home/michael/run/",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description":  "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
+            "name": "(gdb) ",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "/home/michael/run/DAW-Clang-debug",
+            "args": [],
+            "stopAtEntry": true,
+            "cwd": "/home/michael/run/",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "miDebuggerPath": "/usr/local/bin/lldb-mi",
+            "setupCommands": [
+                {
+                    "description": "Enable pretty-printing for gdb",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                },
+                {
+                    "description":  "Set Disassembly Flavor to Intel",
+                    "text": "-gdb-set disassembly-flavor intel",
+                    "ignoreFailures": true
+                }
+            ]
+        },
+        {
             "type": "cppdbg",
             "request": "launch",
             "name": "gdb-windows",
+            // "target": "${workspaceFolder}/run/DAW-Clang-debug.exe",
             "cwd": "${workspaceRoot}/run",
             "valuesFormatting": "parseText",
             "MIMode": "gdb",
@@ -48,15 +106,18 @@
             ]
         },
         {
-            "type": "lldb-mi",
+            "type": "cppdbg",
             "request": "launch",
             "name": "Linux (lldb) DAW-Clang-debug",
+            
+            "program": "/home/michael/run/DAW-Clang-debug",
+
             "target": "/home/michael/run/DAW-Clang-debug",
             "cwd": "/home/michael/run/",
             "valuesFormatting": "parseText",
-            "env": {
-                "DISPLAY": "0.0",
-            },
+            // "env": {
+            //     "DISPLAY": "0.0",
+            // },
         },
         {
             "name": "MacOS (lldb) Launch",
