@@ -885,7 +885,8 @@ static int glnvg__renderCreate(void* uptr)
 	glnvg__checkError(gl, "uniform locations");
 	glnvg__getUniforms(&gl->shader);
 
-    if (gl->vertArr == 0) {
+    // only do this once
+    if (gl->vertBuf == 0) {
 	// Create dynamic vertex array
 #if defined NANOVG_GL3
 	if (gl->vertArr == 0) {
