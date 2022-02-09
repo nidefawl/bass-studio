@@ -41,12 +41,13 @@ public:
         while (getline(f, s, ' ')) {
             strings.push_back(s);
         }
-        const char** argv = (const char**) alloca(sizeof(char*) * (strings.size() + 1));
+        const char** argv = (const char**) alloca(sizeof(char*) * (strings.size() + 2));
         for (unsigned i = 0; i < strings.size(); i++) {
-            argv[i] = StringAsCStr(strings[i]);
+            argv[i+1] = StringAsCStr(strings[i]);
         }
-        argv[strings.size()] = 0;
+        argv[strings.size()+1] = nullptr;
         const char* bin      = StringAsCStr(binary);
+        argv[0] = bin;
         procSpawnStatus      = posix_spawn(&pid, bin, NULL, NULL, (char* const*) argv, environ);
         if (procSpawnStatus != 0) {
             String errmsg = StringFormat("posix_spawn(%s, %s) failed",
