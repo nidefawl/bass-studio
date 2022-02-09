@@ -4,8 +4,7 @@ INCLUDE( CheckCXXCompilerFlag )
 
 set(TC_WARNING_FLAGS "")
 
-
-add_compile_definitions("DAW_UNITTEST")
+add_compile_definitions("PROJECT_UNITTEST")
 
 
 IF( CLANG )
@@ -32,7 +31,7 @@ message(STATUS "TESTS WARNINGS ${TC_WARNING_FLAGS}")
 function( DEFINE_TEST test_name link_lib first_source_file)
   set(test_source_list ${first_source_file} ${ARGN})
   ADD_EXECUTABLE( ${test_name} "${test_source_list}")
-  get_filename_component(ABS_WORKING_DIR "${APP_WORKING_DIR}" REALPATH BASE_DIR "${CMAKE_BINARY_DIR}") # CMAKE_SOURCE_DIR for out of source builds?!
+  get_filename_component(ABS_WORKING_DIR "${PROJECT_WORKING_DIR}" REALPATH BASE_DIR "${CMAKE_BINARY_DIR}") # CMAKE_SOURCE_DIR for out of source builds?!
   # SET_TESTS_PROPERTIES( ${test_name} PROPERTIES ENVIRONMENT "LLVM_PROFILE_FILE=${CMAKE_CURRENT_BINARY_DIR}/${test_name}.profraw")
   # As per CMake docs: Add empty generator expr to avoid a configuration subdirectory on multi configs
   set_target_properties(${test_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${ABS_WORKING_DIR}$<0:...>)
@@ -42,7 +41,7 @@ function( DEFINE_TEST test_name link_lib first_source_file)
   if (${link_lib})
     target_link_libraries(${test_name} PRIVATE "dawlib")
   else() 
-    if (WIN32_USE_STACK_PROTECTOR)
+    if (WIN32 AND PROJECT_CFG_USE_STACK_PROTECTOR)
       target_link_libraries(${test_name} PRIVATE ssp)
     endif ()
   endif()
