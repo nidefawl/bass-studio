@@ -101,7 +101,7 @@ size_t GetFileSizeSafe(const String& filename)
 
 int32_t WriteFileVector(const String& filename, vector<uint8_t>& writebuffer)
 {
-	File fobj(filename, O_CREAT|O_WRONLY, 0644);
+	File fobj(filename, O_CREAT|O_WRONLY|O_TRUNC, 0644);
 	ssize_t written = 0;
 	while (written < writebuffer.size()) {
 		ssize_t len =write(fobj.GetHandle(), writebuffer.data(), writebuffer.size());
