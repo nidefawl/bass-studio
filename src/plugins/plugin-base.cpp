@@ -8,7 +8,7 @@
 #include "fileio.h"
 
 #ifdef _WIN32
-#include <windows.h>//this include SUCKS
+#include <Windows.h>//this include SUCKS
 #include <direct.h> //_getcwd
 #endif
 
@@ -17,7 +17,6 @@
 #include "plugins/plugin-window.h"
 #include "../gui/pluginviewcontainers.h"
 #include "exceptions.h"
-#include "handle-exceptions.h"
 #include "msgbox.h"
 #include "platform.h"
 
@@ -196,14 +195,23 @@ void onModuleLoad(HINSTANCE hInst) {
 #else
             showerror("Initialization failed. Couldn't initialize glfw");
 #endif
-            exit(EXIT_FAILURE);
+            //exit(EXIT_FAILURE);
         }
-
-    EXC_CATCH_NO_THROW_DIALOG
+    } catch (std::exception& e) {
+        String excDesc = StringFormat("Fatal error: %s", e.what());
+        ngui::show(StringAsCStr(excDesc), "Error", ngui::Style::Error, ngui::Buttons::OK);
+    } catch (...) {
+        ngui::show("FATAL", "Error", ngui::Style::Error, ngui::Buttons::OK);
+    }
 }
 void onModuleUnload() {
     try {
         glfwTerminate();
-    EXC_CATCH_NO_THROW_DIALOG
+    } catch (std::exception& e) {
+        String excDesc = StringFormat("Fatal error: %s", e.what());
+        ngui::show(StringAsCStr(excDesc), "Error", ngui::Style::Error, ngui::Buttons::OK);
+    } catch (...) {
+        ngui::show("FATAL", "Error", ngui::Style::Error, ngui::Buttons::OK);
+    }
 }
 #endif//BUILD_EXTERNAL_PLUGIN

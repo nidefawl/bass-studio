@@ -10,8 +10,8 @@
 #include <cstdint>
 
 #ifdef _WIN32
-#include <windows.h>
-#include <ole2.h>
+#include <Windows.h>
+#include <Ole2.h>
 #endif
 #define WIN32API_CALLBACK_TYPE __stdcall
 
@@ -1433,6 +1433,12 @@ void AppWndProc_disableBlockReentrant() {
 }
 #endif
 
+
+static appwindow* getUserPointerFromGlfw(GLFWwindow* w) {
+    if (!w) return nullptr;
+    return static_cast<appwindow*>(glfwGetWindowUserPointer(w));
+}
+
 #ifdef _WIN32
 int32_t AppWndProc_BlockReentrantEnabled = 0;
 
@@ -1448,131 +1454,136 @@ LRESULT WIN32API_CALLBACK_TYPE appWndProc(HWND hwnd, UINT Msg, WPARAM wParam, LP
     if (AppWndProc_BlockReentrantEnabled > 0) {
         return DefWindowProc(hwnd, Msg, wParam, lParam);
     }
-    EXC_TRY
-    appwindow* impl        = nullptr;
-    GLFWwindow* glfwWindow = (GLFWwindow*) GetPropW(hwnd, L"GLFW");
-    if (glfwWindow != nullptr) {
-        impl = (appwindow*) glfwGetWindowUserPointer(glfwWindow);
+    try {
+        auto* glfwWindow = static_cast<GLFWwindow*>(GetPropW(hwnd, L"GLFW"));
+        appwindow* wu = getUserPointerFromGlfw(glfwWindow);
+        if (wu && wu->isValid()) {
+            return wu->windowProc(hwnd, Msg, wParam, lParam);
+        }
+        return DefWindowProc(hwnd, Msg, wParam, lParam);
+    } catch (std::exception & e) {
+        handleStdException(e);
     }
-    if (impl != nullptr && impl->isValid()) {
-        return impl->windowProc(hwnd, Msg, wParam, lParam);
-    }
-    return DefWindowProc(hwnd, Msg, wParam, lParam);
-    EXC_CATCH
     return 0;
 }
 #endif
 
 window_dialog* appwindow_main::createDialog(const String& sTitle, int w, int h) {
-    appwindow_dialog* windowDialog         = new appwindow_dialog(this);
-    GLFWwindow* const windowOpengCtxtShare = this->glfw;
-    windowDialog->createDialogWindow(StringAsCStr(sTitle), w, h, windowOpengCtxtShare, this->nanovgCtxt);
+    auto* windowDialog = new appwindow_dialog(this);
+    windowDialog->createDialogWindow(StringAsCStr(sTitle), w, h, this->glfw, this->nanovgCtxt);
     return windowDialog;
-}
-
-static appwindow* getUserData(GLFWwindow* w) {
-    appwindow* impl = (appwindow*) glfwGetWindowUserPointer(w);
-    return impl;
 }
 
 /* Wire up glfw C style callbacks to cpp class instance */
 static void glfw_cb_mousepos(GLFWwindow* w, double x, double y) {
-    EXC_TRY
-    appwindow* wu;
-    if ((wu = getUserData(w)) && wu->isValid())
-        wu->_onMouseMoved(x, y);
-    EXC_CATCH
+    try {
+        appwindow* wu = getUserPointerFromGlfw(w);
+        if (wu && wu->isValid())
+            wu->_onMouseMoved(x, y);
+    } catch (std::exception& e) {
+        handleStdException(e);
+    }
 }
 
 static void glfw_cb_mousebutton(GLFWwindow* w, int button, int action, int mods) {
-    EXC_TRY
-    appwindow* wu;
-    if ((wu = getUserData(w)) && wu->isValid())
-        wu->onMouseButton(button, action, mods);
-    EXC_CATCH
+    try {
+        appwindow* wu = getUserPointerFromGlfw(w);
+        if (wu && wu->isValid())
+            wu->onMouseButton(button, action, mods);
+    } catch (std::exception& e) {
+        handleStdException(e);
+    }
 }
 
 static void glfw_cb_cursorenter(GLFWwindow* w, int entered) {
-    EXC_TRY
-    appwindow* wu;
-    if ((wu = getUserData(w)) && wu->isValid())
-        wu->onCursorEnter(entered);
-    EXC_CATCH
+    try {
+        appwindow* wu = getUserPointerFromGlfw(w);
+        if (wu && wu->isValid())
+            wu->onCursorEnter(entered);
+    } catch (std::exception& e) {
+        handleStdException(e);
+    }
 }
 
 static void glfw_cb_mousescroll(GLFWwindow* w, double xoffset, double yoffset) {
-    EXC_TRY
-    appwindow* wu;
-    if ((wu = getUserData(w)) && wu->isValid())
-        wu->onMouseScrolled(xoffset, yoffset);
-    EXC_CATCH
+    try {
+        appwindow* wu = getUserPointerFromGlfw(w);
+        if (wu && wu->isValid())
+            wu->onMouseScrolled(xoffset, yoffset);
+    } catch (std::exception& e) {
+        handleStdException(e);
+    }
 }
 
 static void glfw_cb_keyinput(GLFWwindow* w, int key, int scancode, int action, int mods) {
-    EXC_TRY
-    const char* key_name = glfwGetKeyName(key, scancode);
-    appwindow* wu;
-    if ((wu = getUserData(w)) && wu->isValid())
-        wu->onKeyInput(key, scancode, action, mods, key_name);
-    EXC_CATCH
+    try {
+        const char* key_name = glfwGetKeyName(key, scancode);
+        appwindow* wu        = getUserPointerFromGlfw(w);
+        if (wu && wu->isValid())
+            wu->onKeyInput(key, scancode, action, mods, key_name);
+    } catch (std::exception& e) {
+        handleStdException(e);
+    }
 }
 
 static void glfw_cb_charinput(GLFWwindow* w, unsigned int codepoint, int mods) {
-    EXC_TRY
-    appwindow* wu;
-    if ((wu = getUserData(w)) && wu->isValid())
-        wu->onCharInput(codepoint);
-    EXC_CATCH
+    try {
+        appwindow* wu = getUserPointerFromGlfw(w);
+        if (wu && wu->isValid())
+            wu->onCharInput(codepoint);
+    } catch (std::exception& e) {
+        handleStdException(e);
+    }
 }
 
 static void glfw_cb_refresh(GLFWwindow* w) {
-    EXC_TRY
-    appwindow* wu;
-    if ((wu = getUserData(w)) && wu->isValid())
-        wu->onRefresh();
-    else
-        log_printf("glfw_cb_refresh on invalid handle %08X\n", (uint64_t) w);
-    EXC_CATCH
+    try {
+        appwindow* wu = getUserPointerFromGlfw(w);
+        if (wu && wu->isValid())
+            wu->onRefresh();
+    } catch (std::exception& e) {
+        handleStdException(e);
+    }
 }
 
 static void glfw_cb_windowclose(GLFWwindow* w) {
-    EXC_TRY
-    appwindow* wu;
-    if ((wu = getUserData(w)) && wu->isValid())
-        wu->onWindowCloseRequest();
-    else
-        log_printf("glfw_cb_windowclose on invalid handle %08X\n", (uint64_t) w);
-    EXC_CATCH
+    try {
+        appwindow* wu = getUserPointerFromGlfw(w);
+        if (wu && wu->isValid())
+            wu->onWindowCloseRequest();
+    } catch (std::exception& e) {
+        handleStdException(e);
+    }
 }
 
 static void glfw_cb_windowfocus(GLFWwindow* w, int focused) {
-    EXC_TRY
-    appwindow* wu;
-    if ((wu = getUserData(w)) && wu->isValid())
-        wu->onWindowFocusChanged(focused);
-    else
-        log_printf("glfw_cb_windowfocus on invalid handle %08X\n", (uint64_t) w);
-    EXC_CATCH
+    try {
+        appwindow* wu = getUserPointerFromGlfw(w);
+        if (wu && wu->isValid())
+            wu->onWindowFocusChanged(focused);
+    } catch (std::exception& e) {
+        handleStdException(e);
+    }
 }
 
 static void glfw_cb_windowwize(GLFWwindow* w, int width, int height) {
-    EXC_TRY
-    appwindow* wu;
-    if ((wu = getUserData(w)) && wu->isValid())
-        wu->onWindowSizeChanged(width, height);
-    else
-        log_printf("glfw_cb_windowwize on invalid handle %08X\n", (uint64_t) w);
-    EXC_CATCH
+    try {
+        appwindow* wu = getUserPointerFromGlfw(w);
+        if (wu && wu->isValid())
+            wu->onWindowSizeChanged(width, height);
+    } catch (std::exception& e) {
+        handleStdException(e);
+    }
 }
 
 static void glfw_cb_framebuffersize(GLFWwindow* w, int width, int height) {
-    EXC_TRY
-    appwindow* wu;
-    if ((wu = getUserData(w)) && wu->isValid())
-        wu->onFramebufferSizeChanged(width, height);
-    else
-        log_printf("glfw_cb_framebuffersize on invalid handle %08X\n", (uint64_t) w);
-    EXC_CATCH
+    try {
+        appwindow* wu = getUserPointerFromGlfw(w);
+        if (wu && wu->isValid())
+            wu->onFramebufferSizeChanged(width, height);
+    } catch (std::exception& e) {
+        handleStdException(e);
+    }
 }
 
 void appwindow::createBaseWindow(const char* title, int w, int h, GLFWwindow* share, void* parentWindowHandle) {
@@ -1980,7 +1991,6 @@ void windowTickTimerRun() {
 #if (BUILD_VSTHOST || BUILD_EXTERNAL_PLUGIN)
 #include "plugins/plugin-window.h"
 #include "plugins/plugincontrol.h"
-#include "plugins/handle-exceptions.h"
 #include <vstsdk-host-2.4/aeffect.h>
 #include <vstsdk-host-2.4/aeffectx.h>
 #include <vstsdk-plugin-2.4/aeffeditor.h>
@@ -2068,54 +2078,64 @@ public:
                 ctrlShared->onGuiOpen(effect);
                 return true;
             }
-            EXC_CATCH_NO_THROW_DIALOG
-            AEffEditor::close();
-            return false;
+        } catch (std::exception& e) {
+            String excDesc = StringFormat("Fatal error: %s", e.what());
+            ngui::show(StringAsCStr(excDesc), "Error", ngui::Style::Error, ngui::Buttons::OK);
+        } catch (...) {
+            ngui::show("FATAL", "Error", ngui::Style::Error, ngui::Buttons::OK);
         }
+        AEffEditor::close();
+        return false;
+    }
 
-        void close() override {
-            try {
-                if (isInitialized) {
-                    glfwMakeContextCurrent(glfw);
-                }
-                ctrlShared->onGuiClose(effect);
-                if (isInitialized) {
-                    hideWindow();
-                    destroyContextAndWindow();
-                }
-                setInvalid();
-                EXC_CATCH_NO_THROW_DIALOG
-                AEffEditor::close();
+    void close() override {
+        try {
+            if (isInitialized) {
+                glfwMakeContextCurrent(glfw);
             }
-
-            ///< Receive key down event. Return true only if key was really used!
-            bool onKeyDown(VstKeyCode & keyCode) override {
-                return false;
+            ctrlShared->onGuiClose(effect);
+            if (isInitialized) {
+                hideWindow();
+                destroyContextAndWindow();
             }
-            ///< Receive key up event. Return true only if key was really used!
-            bool onKeyUp(VstKeyCode & keyCode) override {
-                return false;
-            }
-            ///< Handle mouse wheel event, distance is positive or negative to indicate wheel direction.
-            bool onWheel(float distance) override {
-                return false;
-            }
-            ///< Set knob mode (if supported by Host). See CKnobMode in VSTGUI.
-            bool setKnobMode(VstInt32 val) override {
-                return false;
-            }
-
-            //end aeffect overrides
-
-            void idle() override {
-                if (isInitialized) {
-                    flagNeedsRedraw();
-                }
-            }
-        };
-
-        pluginwindow* createPluginWindow(AudioEffect * _effect, std::shared_ptr<PluginControl> _ctrl, int w, int h) {
-            return new appwindow_plugin(_effect, std::move(_ctrl), w, h);
+            setInvalid();
+        } catch (std::exception& e) {
+            String excDesc = StringFormat("Fatal error: %s", e.what());
+            ngui::show(StringAsCStr(excDesc), "Error", ngui::Style::Error, ngui::Buttons::OK);
+        } catch (...) {
+            ngui::show("FATAL", "Error", ngui::Style::Error, ngui::Buttons::OK);
         }
+        AEffEditor::close();
+    }
+
+    ///< Receive key down event. Return true only if key was really used!
+    bool onKeyDown(VstKeyCode & keyCode) override {
+        return false;
+    }
+    ///< Receive key up event. Return true only if key was really used!
+    bool onKeyUp(VstKeyCode & keyCode) override {
+        return false;
+    }
+    ///< Handle mouse wheel event, distance is positive or negative to indicate wheel direction.
+    bool onWheel(float distance) override {
+        return false;
+    }
+    ///< Set knob mode (if supported by Host). See CKnobMode in VSTGUI.
+    bool setKnobMode(VstInt32 val) override {
+        return false;
+    }
+
+    //end aeffect overrides
+
+    void idle() override {
+        if (isInitialized) {
+            flagNeedsRedraw();
+        }
+    }
+};
+
+pluginwindow* createPluginWindow(AudioEffect * _effect, std::shared_ptr<PluginControl> _ctrl, int w, int h) {
+    return new appwindow_plugin(_effect, std::move(_ctrl), w, h);
+}
 
 #endif

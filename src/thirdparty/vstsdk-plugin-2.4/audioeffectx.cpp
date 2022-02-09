@@ -36,9 +36,8 @@
 #include "aeffeditor.h"
 #include <exception>
 #include "str_util.h"
-#include "plugins/handle-exceptions.h"
-//#include "logging.h"
-
+#include "exceptions.h"
+#include "msgbox.h"
 
 //-----------------------------------------------------------------------------------------------------------------
 // Class AudioEffectX Implementation
@@ -292,7 +291,14 @@ VstIntPtr AudioEffectX::dispatcher (VstInt32 opcode, VstInt32 index, VstIntPtr v
 		default:
 			v = AudioEffect::dispatcher (opcode, index, value, ptr, opt);
 	}
-	EXC_CATCH_DIALOG
+    } catch (std::exception& e) {
+        String excDesc = StringFormat("Fatal error: %s", e.what());
+        ngui::show(StringAsCStr(excDesc), "Error", ngui::Style::Error, ngui::Buttons::OK);
+        throw;
+    } catch (...) {
+        ngui::show("FATAL", "Error", ngui::Style::Error, ngui::Buttons::OK);
+        throw;
+    }
 	return v;
 }
 
