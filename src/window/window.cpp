@@ -1718,10 +1718,10 @@ int startApplication(const std::vector<String>& args) {
             if (args[i] == "-center" && i + 1 < args.size()) {
                 centerScreenIdx = atoi(StringAsCStr(args[i + 1]));
             }
-            if ("-log" == 0 && i + 1 < args.size()) {
+            if (args[i] == "-log" && i + 1 < args.size()) {
                 strLogFilename = args[i + 1];
             }
-            if ("-console" == 0) {
+            if (args[i] == "-console") {
                 openConsole = true;
             }
         }
