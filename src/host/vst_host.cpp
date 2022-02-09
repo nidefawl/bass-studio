@@ -3068,7 +3068,7 @@ int32_t loadLib(String filepath, VSTPluginMain_t** out_fn, HMODULE* out_hmodule)
     return 0;
 }
 
-#define CLOSE_MODULE_HANDLE(handle) dlclose(handle)
+#define CLOSE_MODULE_HANDLE(handle) FreeLibrary(handle)
 
 #endif
 
