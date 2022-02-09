@@ -44,7 +44,7 @@ hit_result gui_track_automation::hitTest(vec2 mpos) {
         float fDstVal = getDstVal();
         ivec2 cs      = getSizeContent();
         float dstValY = dataToCtr(fDstVal, cs.y);
-        float dist    = abs(mpos.y - dstValY);
+        float dist    = math::abs(mpos.y - dstValY);
         if (dist < 10) {
             return { drag_empty, -1, -1, dist };
         }

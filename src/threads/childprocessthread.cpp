@@ -242,10 +242,10 @@ public:
         m_t = std::thread([this, argbinary = binary, argparams = params, argwd = workingDir, argenv = env, argpipe = pipedOutput]() {
             seqthreads::registerThread("childprocessthread");
             try {
-                std::array<char, 2048> TEMP{};
                 std::vector<char> buf;
                 ProcessRunScope scopedProcess(argbinary, argparams, argwd, argenv, argpipe);
 #ifdef _WIN32
+                std::array<char, 2048> TEMP{};
                 m_processHandle = scopedProcess.processInformation.hProcess;
 #endif
                 if (argpipe) {

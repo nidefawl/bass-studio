@@ -61,7 +61,6 @@ public:
 
 private:
     vstplugin* plugin  = nullptr;
-    bool isChildWindow = false;
 
 public:
     ImageBuf capturedFrame;

@@ -27,7 +27,6 @@ using DAW::settings;
 
 namespace {
     constexpr int ID_BTN_CLOSE    = 1;
-    constexpr int TITLE_FONT_SIZE = 30;
     constexpr int TEXT_FONT_SIZE  = 20;
     constexpr int BTN_FONT_SIZE   = 16;
 } // namespace
@@ -622,8 +621,8 @@ public:
     guidialog_audio_io()
         : setting_dialog(),
           audioEngineOn(new guibutton_audioengine{}),
-          deviceListOutput(new gui_list()),
           deviceListInput(new gui_list()),
+          deviceListOutput(new gui_list()),
           metersInput(true),
           metersOutput(false)
     {
@@ -1022,8 +1021,8 @@ public:
 
     guidialog_midi_io()
         : setting_dialog(),
-          deviceListOutput(new gui_list()),
-          deviceListInput(new gui_list())
+          deviceListInput(new gui_list()),
+          deviceListOutput(new gui_list())
     {
         setBackgroundRendered(true);
         add(deviceListInput);

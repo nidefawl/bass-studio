@@ -1295,7 +1295,6 @@ int32_t vsthost::processRender(project_controller_t* ctrl, int32_t sample, doubl
     timerBlock.reset();
     const sampleformat_t& sampleFormat = this->m_sampleFormatInternal;
     const audiostream_properties_t audioProp = getAudioStreamProperties();
-    const bool canProcess = true;
 
     int32_t nBlocksProcessed = 0;
 
@@ -3233,7 +3232,6 @@ void vsthost::checkScanner() {
 
 void vsthost::stopScanner() {
     try {
-        static int nCalls = 0;
         if (this->impl->scanningState && impl->vstscannerProcessThread) {
             if (impl->vstscannerProcessThread->isRunning()) {
                 impl->vstscannerProcessThread->killProcess();

@@ -220,15 +220,14 @@ namespace windowdebug_performance {
                     windowInstance = &prevChannel;
                 }
             }
-            bool isFirstInvocation = false;
             if (!windowInstance) {
                 instancesRenderStats.push_back(ProfilingDataRenderInstance{});
                 windowInstance              = &instancesRenderStats.back();
                 windowInstance->instancePtr = renderWindowStats.instancePtr;
                 windowInstance->tex0        = generateTexture();
                 windowInstance->name        = renderWindowStats.name;
-                isFirstInvocation           = true;
             }
+
             auto& statsArray            = renderWindowStats.stats;
             const int32_t statsArrayLen = statsArray.size();
 
@@ -302,15 +301,14 @@ namespace windowdebug_performance {
                     windowInstance = &prevChannel;
                 }
             }
-            bool isFirstInvocation = false;
             if (!windowInstance) {
                 instancesRenderStats.push_back(ProfilingDataRenderInstance{});
                 windowInstance              = &instancesRenderStats.back();
                 windowInstance->instancePtr = appStats.instancePtr;
                 windowInstance->tex0        = generateTexture();
                 windowInstance->name        = appStats.name;
-                isFirstInvocation           = true;
             }
+            
             auto& statsArray            = appStats.stats;
             const int32_t statsArrayLen = statsArray.size();
 

@@ -8,10 +8,12 @@
 
 void saveThemeFile(themefile& _settings);
 themefile loadThemeFile();
+
 bool hasThemeWithName(const std::vector<guitheme_t>& themes, const String& themeName) {
     auto it = std::find_if(begin(themes), end(themes), [themeName](guitheme_t const& x) { return x.name == themeName; });
     return it != end(themes);
 }
+
 void guitheme_mgr::saveCurrentAsNewTheme(String name) {
     int32_t idx     = 0;
     String baseName = name;
@@ -29,6 +31,7 @@ void guitheme_mgr::saveCurrentAsNewTheme(String name) {
     themes.push_back(copy);
     this->setThemeName(themeName);
 }
+
 void guitheme_mgr::saveThemes() {
 
     for (auto& t : themes) {
@@ -54,6 +57,7 @@ void guitheme_mgr::saveThemes() {
         getGlobalLogger()->logStr(StringFormat("Exception: %s\n", e.what()));
     }
 }
+
 void guitheme_mgr::loadThemes() {
     guitheme_t theme;
     theme.isDefault = true;
@@ -89,29 +93,22 @@ void guitheme_mgr::removeTheme(guitheme_t theme) {
     removeThemeName(theme.name);
 }
 void guitheme_mgr::setTheme(guitheme_t setTheme) {
-    bool has = false;
     for (guitheme_t& theme2 : themes) {
         // save current theme
         if (!theme2.isDefault && theme2.name == current.name) {
             theme2 = current;
-            has    = true;
         }
     }
-    //if (!has) {
-    //themes.push_back(current);
-    //}
     if (setTheme.isDefault) {
         setTheme = defaultTheme;
     }
-    //if (current != setTheme) {
     current = setTheme;
     current.bindFonts();
     if (parent && parent->isOk()) {
         parent->relayout();
     }
-
-    //}
 }
+
 void guitheme_mgr::setThemeName(String themeName) {
     if (themeName == "default") {
         setTheme(defaultTheme);
@@ -125,6 +122,7 @@ void guitheme_mgr::setThemeName(String themeName) {
         setTheme(defaultTheme);
     }
 }
+
 void guitheme_mgr::removeThemeName(String themeName) {
     String nextTheme = "";
     bool erased      = false;
@@ -148,9 +146,11 @@ void guitheme_mgr::removeThemeName(String themeName) {
         }
     }
 }
+
 void guitheme_mgr::getThemes(std::vector<guitheme_t>& _out) {
     _out = this->themes;
 }
+
 void guitheme_mgr::getThemeNames(std::vector<String>& _out) {
     for (guitheme_t& th : this->themes) {
         _out.push_back(th.name);

@@ -499,7 +499,6 @@ void clip_notes_t::updateBounds() {
 
         minNote   = firstNote;
         maxNote   = firstNote;
-        firstNote = firstNote;
         lastNote  = firstNote;
 
         it++;

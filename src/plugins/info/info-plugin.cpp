@@ -578,9 +578,7 @@ namespace PluginHostInfo {
         }
 
         void layout() override {
-            ivec2 cs        = getSizeContent();
             const int inset = 4;
-            //const int knobSize = math::max(32, (cs.x-inset*3)/2);
             knobParam0.size = ivec2(64, 90);
             knobParam0.pos  = ivec2(inset);
             for (guibase* gui : guis) {

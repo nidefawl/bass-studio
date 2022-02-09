@@ -272,7 +272,7 @@ static int readClientResponses(vstscanner_server_options& options, ipc_server& s
                 if (notificationStep != (timeSince_ms / 1000)) {
                     uint64_t secondsLeft = math::max<uint64_t>(0, timeoutPluginScan_ms - timeSince_ms) / 1000;
                     notificationStep     = timeSince_ms / 1000;
-                    LOG("Waiting for Plugin %s to respond... %llus left", req.szPath, secondsLeft);
+                    LOG("Waiting for Plugin %s to respond... %zus left", req.szPath, secondsLeft);
                 }
                 threadSleep(50);
                 continue;

@@ -52,7 +52,6 @@ namespace dsp_util {
         fillNoise(block.buf, block.channels, block.samples);
     }
     void fillChannels(float** buffer, int32_t channels, uint32_t samples, float f = 0.0f) {
-        const float maxGain = 1.0;
         for (int32_t ch = 0; ch < (channels + 1) / 2; ch++) {
             float* input0 = buffer[ch * 2 + 0];
             float* input1 = buffer[ch * 2 + 1];

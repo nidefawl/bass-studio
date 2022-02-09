@@ -318,7 +318,6 @@ private:
     audioclip_texture_t updatedWaveform;
     gui_waveform_texture_ref* waveformRef;
     int32_t tickOffset  = 0;
-    int32_t updateCalls = 0;
     void renderAudioClip(NVGcontext* vg);
 
 public:

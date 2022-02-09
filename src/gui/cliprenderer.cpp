@@ -80,7 +80,6 @@ audioclip_texture_t makeWaveformFromClip(const int32_t tempo100, const samplerat
                                          ivec2& trackSize, const clip_t* m_clip,
                                          const ivec2& pos, const ivec2& size, ivec2& posClipped, ivec2& sizeClipped) {
 
-    samplerate_t sr     = vsthost::getInstance()->m_sampleFormatInternal.sampleRate;
     double lenSamples   = tickToSampleConvert<double, roundmode::none>(m_clip->getLen(), tempo100, samplerate);
     double samplesPerPx = lenSamples / size.x;
 

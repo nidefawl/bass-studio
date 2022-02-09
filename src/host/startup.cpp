@@ -105,7 +105,7 @@ void dawinstance_startup_commands(daw_tls::tlsinstance& tls) {
     //projName = "kshmr-samples-test.project";
     int flags = 0x1;// defer load
     //  flags = 0; // no defer load
-    dawInstance->cbProjectLoadCompleteCallback = [tls, dawMainCtrl, dawInstance, host](DawInstance*, std::shared_ptr<project_file> file, int errorState) {
+    dawInstance->cbProjectLoadCompleteCallback = [dawMainCtrl](DawInstance*, std::shared_ptr<project_file> file, int errorState) {
 
 
         /**
