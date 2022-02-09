@@ -55,18 +55,20 @@ class window_main : public window_base {
 public:
     ~window_main() override = default;
     virtual window_dialog* createDialog(const String& sTitle, int w, int h)      = 0;
-    virtual window_main* createOverlay(std::shared_ptr<AppCtrl> ctrl, int flags) = 0;
+    virtual window_main* createOverlay(std::shared_ptr<AppCtrl> ctrl, ivec2 windowSize, int flags) = 0;
     virtual void closeOverlay(window_main* wnd)                                  = 0;
 
-    virtual void show()                                  = 0;
-    virtual void hide()                                  = 0;
-    virtual void focus()                                 = 0;
-    virtual void requestClose()                          = 0;
-    virtual void updateMenu()                            = 0;
-    virtual void preRender()                             = 0;
-    virtual void postRender()                            = 0;
-    virtual AppCtrl* getCtrl()                           = 0;
-    virtual void positionOnScreen(ivec2 pos, ivec2 size) = 0;
-    virtual bool canResize()                             = 0;
-    virtual int getCreationFlags()                       = 0;
+    virtual void show()            = 0;
+    virtual void hide()            = 0;
+    virtual void focus()           = 0;
+    virtual void requestClose()    = 0;
+    virtual void updateMenu()      = 0;
+    virtual void preRender()       = 0;
+    virtual void postRender()      = 0;
+    virtual AppCtrl* getCtrl()     = 0;
+    virtual bool canResize()       = 0;
+    virtual int getCreationFlags() = 0;
+
+    virtual void positionOnScreen(ivec2 pos, ivec2 size)     = 0;
+    virtual void setSizeLimits(ivec2 minSize, ivec2 maxSize) = 0;
 };

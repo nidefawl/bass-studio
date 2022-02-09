@@ -7,6 +7,7 @@
 #include <memory>
 #include <GLFW/glfw3.h>
 #include "basectrl.h"
+#include "math/seq_math.h"
 #include "theme.h"
 #include "../gui/gui.h"
 #include "../gui/guicontainer.h"
@@ -457,7 +458,7 @@ void AppCtrl::onAppTick() {
     getTheme()->updateAnimation();
     onTick();
 
-    // move this in some garbageCollect() methdo and trigger garbage collection after every window-msg on win32 (linux?)
+    // move this in some garbageCollect() method and trigger garbage collection after every window-msg on win32 (linux?)
     for (auto gui : garbageGuis) {
         delete gui;
     }
@@ -482,47 +483,53 @@ void AppCtrl::closeAppMenusAtLvl(int startlvl) {
         }
     }
 }
-void AppCtrl::openAppMenu(int lvl, guictxtmenu_base* b, ivec2 pos) {
+
+void determineWindowPos(guibase* guicontextmenu, window_main* mainWindow, float m_scale, int flags, ivec2 pos, ivec2& wndPos) {
+    ivec2 windowPos;
+    mainWindow->getPos(&windowPos);
+    wndPos = windowPos;
+    if (flags & BASECTRL_WND_POS_ABSOLUTE) {
+        wndPos = pos;
+    } else if (flags & BASECTRL_WND_POS_RELATIVE) {
+        wndPos = windowPos + ivec2(pos.x * m_scale, pos.y * m_scale);
+    } else {
+        ivec2 windowSize;
+        mainWindow->getSize(&windowSize);
+        wndPos = windowPos + (windowSize - guicontextmenu->size) / 2;
+    }
+}
+
+void AppCtrl::openAppMenu(int lvl, guictxtmenu_base* guicontextmenu, ivec2 pos) {
     while (menuWindows.size() <= lvl) {
         menuWindows.push_back({nullptr, nullptr});
     }
+
+    ivec2 wndPos(0);
+    determineWindowPos(guicontextmenu, mainWindow, m_scale, BASECTRL_WND_POS_RELATIVE, pos, wndPos);
+    
     if (!menuWindows[lvl].wnd) {
-        int createflags = 0;
-        createflags |= WINDOW_BORDERLESS_POPUP;
-        menuWindows[lvl].wnd = this->mainWindow->createOverlay(std::make_shared<PopupCtrl>(), createflags);
+        const int createflags = WINDOW_BORDERLESS_POPUP;
+        auto popupCtrl = std::make_shared<PopupCtrl>();
+        popupCtrl->m_scale = m_scale;
+        popupCtrl->m_size = math::maxvec2(ivec2(20, 20), guicontextmenu->size);
+        *popupCtrl->getTheme() = *getTheme();
+        const ivec2 windowSize = ivec2(vec2(popupCtrl->m_size) * popupCtrl->m_scale);
+        menuWindows[lvl].wnd = this->mainWindow->createOverlay(popupCtrl, windowSize, createflags);
     }
     // TODO: menu change on same level will let this assertion fail
     auto& entry = menuWindows[lvl];
     dbgassert(entry.wnd && !entry.ctxt);
-    entry.ctxt = b;
-    ivec2 windowPos;
-    this->mainWindow->getPos(&windowPos);
-    entry.wnd->getCtrl()->m_scale = m_scale;
-    ivec2 childMenuPos            = pos;
-    // TODO: this OS specific handling should be abstracted away into window.cpp
-#ifdef _WIN32
-#endif
-    childMenuPos += windowPos;
-    static_cast<PopupCtrl*>(entry.wnd->getCtrl())->open(b, childMenuPos, false);
+    entry.ctxt = guicontextmenu;
+
+    auto popupCtrl = entry.wnd->getCtrl();
+    popupCtrl->m_scale = m_scale;
+    // copy theme (again) from this control to contextWindows control
+    *popupCtrl->getTheme() = *getTheme();
+
+    static_cast<PopupCtrl*>(popupCtrl)->open(guicontextmenu, wndPos, false);
 }
-namespace {
-    template <typename T>
-    void determineWindowPos(T* b, window_main* mainWindow, float m_scale, int flags, ivec2 pos, ivec2& wndPos) {
-        ivec2 windowPos;
-        ivec2 windowSize;
-        mainWindow->getPos(&windowPos);
-        mainWindow->getSize(&windowSize);
-        wndPos = windowPos;
-        if (flags & BASECTRL_WND_POS_ABSOLUTE) {
-            wndPos = pos;
-        } else if (flags & BASECTRL_WND_POS_RELATIVE) {
-            wndPos = windowPos + ivec2(pos.x * m_scale, pos.y * m_scale);
-        } else {
-            wndPos = windowPos + (windowSize - b->size) / 2;
-        }
-    }
-} // namespace
-void AppCtrl::openOverlayGui(guictxtmenu_base* b, ivec2 pos, int flags) {
+
+void AppCtrl::openOverlayGui(guictxtmenu_base* guicontextmenu, ivec2 pos, int flags) {
     if (!(flags & BASECTRL_OVERLAY_TYPE_CONTEXTMENU)) {
         dbgassert(0);
         return;
@@ -531,30 +538,36 @@ void AppCtrl::openOverlayGui(guictxtmenu_base* b, ivec2 pos, int flags) {
         closeContextMenu();
     }
 
-    b->setFontSize(getTheme()->getFloat(GuiConstant::CONST_FONT_SIZE_CONTEXT_MENU));
+    guicontextmenu->setFontSize(getTheme()->getFloat(GuiConstant::CONST_FONT_SIZE_CONTEXT_MENU));
 
     dbgassert(!this->ctxtmenu);
-    this->ctxtmenu = b;
+    this->ctxtmenu = guicontextmenu;
 
     ivec2 wndPos(0);
-    determineWindowPos(b, mainWindow, m_scale, flags, pos, wndPos);
+    determineWindowPos(guicontextmenu, mainWindow, m_scale, flags, pos, wndPos);
 
-    int createflags         = WINDOW_BORDERLESS_POPUP;
+    const int createflags = WINDOW_BORDERLESS_POPUP;
     window_main* ctxtWindow = this->contextWindow;
     if (!ctxtWindow || ctxtWindow->getCreationFlags() != createflags) {
         if (ctxtWindow) {
             this->mainWindow->closeOverlay(ctxtWindow);
         }
         dbgassert(!this->contextWindow);
-        ctxtWindow = this->mainWindow->createOverlay(std::make_shared<PopupCtrl>(), createflags);
+
+        auto popupCtrl = std::make_shared<PopupCtrl>();
+        popupCtrl->m_scale = m_scale;
+        popupCtrl->m_size = math::maxvec2(ivec2(20, 20), guicontextmenu->size);
+        *popupCtrl->getTheme() = *getTheme();
+        const ivec2 windowSize = ivec2(vec2(popupCtrl->m_size) * popupCtrl->m_scale);
+        ctxtWindow = this->mainWindow->createOverlay(popupCtrl, windowSize, createflags);
     }
     this->contextWindow = ctxtWindow;
     if (ctxtWindow) {
-        auto* ctxtWindowTheme = ctxtWindow->getCtrl()->getTheme();
-        // copy theme from this control to contextWindows control
-        *ctxtWindowTheme               = *getTheme();
-        ctxtWindow->getCtrl()->m_scale = m_scale;
-        static_cast<PopupCtrl*>(ctxtWindow->getCtrl())->open(b, wndPos, false);
+        auto popupCtrl = ctxtWindow->getCtrl();
+        popupCtrl->m_scale = m_scale;
+        // copy theme (again) from this control to contextWindows control
+        *popupCtrl->getTheme() = *getTheme();
+        static_cast<PopupCtrl*>(popupCtrl)->open(guicontextmenu, wndPos, false);
     } else {
         dbgassert(0);
     }
@@ -566,15 +579,18 @@ void AppCtrl::openDialog(guidialog_base* _guidialog) {
     this->dialog = _guidialog;
     ivec2 wndPos(0);
     determineWindowPos(_guidialog, mainWindow, m_scale, 0, ivec2(0), wndPos);
-    window_main* dialogWindow = this->mainWindow->createOverlay(std::make_shared<PopupCtrl>(), WINDOW_IS_DIALOG | WINDOW_IS_RESIZABLE);
 
-    auto* ctxtWindowTheme = dialogWindow->getCtrl()->getTheme();
-    // copy theme from this control to contextWindows control
-    *ctxtWindowTheme                 = *getTheme();
-    dialogWindow->getCtrl()->m_scale = m_scale;
-    log_printf("open dialogWindow\n", 0);
-    static_cast<PopupCtrl*>(dialogWindow->getCtrl())
-            ->open(_guidialog, wndPos, (dialogWindow->getCreationFlags() & WINDOW_IS_RESIZABLE)); // ugly cast
+    auto popupCtrl = std::make_shared<PopupCtrl>();
+    popupCtrl->m_scale = m_scale;
+    popupCtrl->m_size = math::maxvec2(ivec2(20, 20), _guidialog->size);
+    *popupCtrl->getTheme() = *getTheme();
+    const ivec2 windowSize = ivec2(vec2(popupCtrl->m_size) * popupCtrl->m_scale);
+    
+    window_main* dialogWindow = this->mainWindow->createOverlay(popupCtrl, windowSize, WINDOW_IS_DIALOG | WINDOW_IS_RESIZABLE);
+
+    dialogWindow->setSizeLimits(windowSize, windowSize*2);
+
+    popupCtrl->open(_guidialog, wndPos, (dialogWindow->getCreationFlags() & WINDOW_IS_RESIZABLE));
 }
 void AppCtrl::openContextMenu(guictxtmenu_base* b, ivec2 pos, int flags) {
     // log_printf("open ctxtmenu_base %s\n", StringAsCStr(b->getLabel()));

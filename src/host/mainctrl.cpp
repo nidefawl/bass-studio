@@ -924,11 +924,14 @@ void DawInstance::menuCommand(const menucmd_t&& command) {
             case CMD_OPEN_SECOND_WINDOW:
                 if (companionWindows.empty()) {
                     auto companionCtrlStdPtr = std::make_shared<CompanionCtrl>(*this);
-                    auto compWindowNew       = mainCtrl->mainWindow->createOverlay(companionCtrlStdPtr, WINDOW_IS_MAINWINDOW_SLAVE);
+                    ivec2 windowSize;
+                    mainCtrl->mainWindow->getSize(&windowSize);
+                    auto compWindowNew       = mainCtrl->mainWindow->createOverlay(companionCtrlStdPtr, windowSize, WINDOW_IS_MAINWINDOW_SLAVE);
                     dbgassert(compWindowNew);
                     companionWindows.push_back(DawWindowCompanion{ compWindowNew, companionCtrlStdPtr });
                     initWindowControl(compWindowNew);
                     if (companionCtrlStdPtr->isOk()) {
+                        companionWindows[0].wnd->show();
                         for (track_t* tr : project.trackList) {
                             companionCtrlStdPtr->view->ctr_tracks2.addTrack(tr, FLG_TRK_CHANGE_LOAD);
                         }
@@ -1015,23 +1018,24 @@ void DawInstance::menuCommand(const menucmd_t&& command) {
                 break;
             case CMD_SHOW_DEBUG_WINDOW:
                 if (command.argInt == 3) {
-                    auto companionCtrlStdPtr = std::make_shared<PopupCtrl>();
-                    auto compWindowNew       = mainCtrl->mainWindow->createOverlay(companionCtrlStdPtr, WINDOW_IS_MAINWINDOW_SLAVE);
-                    dbgassert(compWindowNew);
-                    companionWindows.push_back(DawWindowCompanion{ compWindowNew, companionCtrlStdPtr });
-                    initWindowControl(compWindowNew);
-                    if (companionCtrlStdPtr->isOk()) {
-                        auto* ctxtWindowTheme = compWindowNew->getCtrl()->getTheme();
-                        //copy theme from this control to contextWindows control
-                        *ctxtWindowTheme                  = *mainCtrl->getTheme();
-                        compWindowNew->getCtrl()->m_scale = mainCtrl->m_scale;
-                        auto b                            = new guidialog_about;
-                        ivec2 windowPos;
-                        ivec2 windowSize;
-                        mainCtrl->mainWindow->getPos(&windowPos);
-                        mainCtrl->mainWindow->getSize(&windowSize);
-                        ivec2 wndPos = windowPos + (windowSize - b->size) / 2;
-                        static_cast<PopupCtrl*>(compWindowNew->getCtrl())->open(b, wndPos, true);//ugly cast
+
+                    auto guidialog  = new guidialog_about;
+                    auto popupCtrl = std::make_shared<PopupCtrl>();
+                    popupCtrl->m_scale = mainCtrl->m_scale;
+                    popupCtrl->m_size = math::maxvec2(ivec2(20, 20), guidialog->size);
+                    *popupCtrl->getTheme() = *mainCtrl->getTheme();
+                    const ivec2 windowSize = ivec2(vec2(popupCtrl->m_size) * popupCtrl->m_scale);
+
+                    auto dialogWindow = mainCtrl->mainWindow->createOverlay(popupCtrl, windowSize, 0);
+                    
+                    dialogWindow->setSizeLimits(windowSize, windowSize);
+
+                    companionWindows.push_back(DawWindowCompanion{ dialogWindow, popupCtrl });
+
+                    if (popupCtrl->isOk()) {
+                        ivec2 wndPos(0);
+                        determineWindowPos(guidialog, mainCtrl->mainWindow, mainCtrl->m_scale, 0, ivec2(0), wndPos);
+                        popupCtrl->open(guidialog, wndPos, true);
                     }
                     return;
                 }

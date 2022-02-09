@@ -701,7 +701,7 @@ public:
         }
     }
 
-    window_main* createOverlay(std::shared_ptr<AppCtrl> ctrl, int flags) override;
+    window_main* createOverlay(std::shared_ptr<AppCtrl> ctrl, ivec2 windowSize, int flags) override;
 
     void closeOverlay(window_main* wnd) override {
         assert(wnd);
@@ -1050,7 +1050,7 @@ public:
         appwindow::setPos(pos);
 #ifdef __linux__
         /* calling setSize on a hidden window makes the window visible (at the wrong location!)
-         * As workaround on linux positionOnScreen is must bee called twice:
+         * As workaround on linux positionOnScreen is must be called twice:
          * Once before and once after appwindow::show() */
         if (shown) {
             appwindow::setSize(size);
@@ -1058,6 +1058,10 @@ public:
 #else
         appwindow::setSize(size);
 #endif
+    }
+    
+    void setSizeLimits(ivec2 minSize, ivec2 maxSize) override {
+        glfwSetWindowSizeLimits(glfw, minSize.x, minSize.y, maxSize.x, maxSize.y);
     }
 
     void focus() override {
@@ -1283,7 +1287,7 @@ public:
     }
 };
 
-window_main* appwindow_main::createOverlay(std::shared_ptr<AppCtrl> overlayCtrl, int flags) {
+window_main* appwindow_main::createOverlay(std::shared_ptr<AppCtrl> overlayCtrl, ivec2 windowSize, int flags) {
     String sName = StringFormat("%s.child", this->name);
 
     //TODO: document lifetime of control
@@ -1295,8 +1299,6 @@ window_main* appwindow_main::createOverlay(std::shared_ptr<AppCtrl> overlayCtrl,
 
     appwindow_main* parentHandle = nullptr;
 
-    ivec2 windowSize;
-    getSize(&windowSize);
     ow->createMainWindow(StringAsCStr(sName), windowSize.x, windowSize.y, parentHandle, flags);
     if (!(flags & WINDOW_IS_MAINWINDOW_SLAVE)) {
         ow->initControl();
@@ -1412,7 +1414,7 @@ void appwindow_main::createMainWindow(const char* title, int w, int h, appwindow
         //this->nanovgCtxt = parentWindowHandle->nanovgCtxt;
     }
 
-    if (!parent) {
+    if (flags & (WINDOW_IS_MAINWINDOW_SLAVE | WINDOW_IS_MAINWINDOW_MASTER)) {
         glfwSetWindowSizeLimits(glfw, 640, 480, GLFW_DONT_CARE, GLFW_DONT_CARE);
     } else {
         //glfwSetWindowAttrib(glfw, GLFW_FLOATING, GL_TRUE);
@@ -1684,7 +1686,7 @@ void makeWindowContextCurrent(window_base* w) {
 
 void initWindowControl(window_main* windowInitialize) {
     dynamic_cast<appwindow_main*>(windowInitialize)->initControl();
-    dynamic_cast<appwindow_main*>(windowInitialize)->showWindow();
+    // dynamic_cast<appwindow_main*>(windowInitialize)->showWindow();
 }
 
 void destroyWindowControl(window_main* windowInitialize) {

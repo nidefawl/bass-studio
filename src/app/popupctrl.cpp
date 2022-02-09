@@ -96,12 +96,13 @@ void PopupCtrl::open(guictxtmenu_base* _ctxtmenu, ivec2 pos, bool bResizeable) {
     this->guiCtrFocused = _ctxtmenu;
 
     if (this->window) {
-        window_main* appW = static_cast<window_main*>(this->window);
-        m_size            = popupCtrs->size;
-        appW->positionOnScreen(pos - insetCtxtMenu, ivec2(popupCtrs->size.x * m_scale, popupCtrs->size.y * m_scale));
+        auto* appW = dynamic_cast<window_main*>(this->window);
+        m_size = popupCtrs->size;
+        auto scaledSize = ivec2(vec2(m_size) * m_scale);
+        appW->positionOnScreen(pos - insetCtxtMenu, scaledSize);
         appW->show();
 #ifndef _WIN32
-        appW->positionOnScreen(pos - insetCtxtMenu, ivec2(popupCtrs->size.x * m_scale, popupCtrs->size.y * m_scale));
+        appW->positionOnScreen(pos - insetCtxtMenu, scaledSize);
 #endif
         appW->focus();
     }

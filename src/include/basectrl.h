@@ -42,6 +42,8 @@ String menuName(String s, KeyCombo combo);
 #define BASECTRL_WND_POS_ABSOLUTE         2
 #define BASECTRL_OVERLAY_TYPE_CONTEXTMENU 8
 
+void determineWindowPos(guibase* guicontextmenu, window_main* mainWindow, float m_scale, int flags, ivec2 pos, ivec2& wndPos);
+
 class determine_string_width {
     BaseCtrl* ctrl;
     guitheme_t* theme;
@@ -300,6 +302,7 @@ public:
     void setVisible(bool b) { this->bIsVisible = b; }
     virtual bool hasDialogWindows() { return false; }
 };
+
 class AppCtrl : public BaseCtrl {
 protected:
     struct appmenu_window_entry {
