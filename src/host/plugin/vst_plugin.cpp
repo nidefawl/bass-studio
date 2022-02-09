@@ -148,9 +148,7 @@ void vstplugin::load(vsthost* host) {
     effectbase::load(host);
     dbgassert(!this->bIsSetup);
     auto aeffect = handle->aeffect;
-    dbgassert(aeffect->numOutputs > 0);
-    this->blockInputs   = new AudioBlock(math::max(2, aeffect->numInputs), format.blockSize);
-    this->blockOutputs  = new AudioBlock(math::max(2, aeffect->numOutputs), format.blockSize);
+
     aeffect->resvd2     = 0;
     this->vstVersion    = dispatch(effGetVstVersion);
     this->uId           = aeffect->uniqueID;
@@ -163,6 +161,10 @@ void vstplugin::load(vsthost* host) {
 
     this->dispatch(effSetSampleRate, 0, 0, nullptr, (float) format.sampleRate);
     this->dispatch(effSetBlockSize, 0, format.blockSize, nullptr, 0);
+    
+    this->blockInputs   = new AudioBlock(math::max(2, aeffect->numInputs), format.blockSize);
+    this->blockOutputs  = new AudioBlock(math::max(2, aeffect->numOutputs), format.blockSize);
+
     VstPinProperties pin{};
     for (int32_t i = 0; i < aeffect->numInputs; i++) {
         if (this->dispatch(effGetInputProperties, i, 0, &pin)) {
@@ -369,6 +371,7 @@ void vstplugin::makeSnapshot(plugin_snapshot_t& ps, bool storePluginChunks) {
     ps.slot = this->slot;
 }
 
+#if 0
 class guivstplugin_empty : public guiplugin {
     vstplugin* const module;
 
@@ -382,6 +385,7 @@ public:
     void layoutModule(ivec2 pos, ivec2 contentS, int32_t inset1) override {
     }
 };
+#endif
 
 guiplugin* vstplugin::makeGui() {
 

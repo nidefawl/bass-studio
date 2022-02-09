@@ -3067,12 +3067,19 @@ int32_t loadLib(String filepath, VSTPluginMain_t** out_fn, HMODULE* out_hmodule)
 
     return 0;
 }
+
+#define CLOSE_MODULE_HANDLE(handle) dlclose(handle)
+
 #endif
+
 #if defined(__APPLE__)
 
 int32_t loadLib(String filepath, VSTPluginMain_t** out_fn, void** out_hmodule);
 
+#define CLOSE_MODULE_HANDLE(handle) dlclose(handle)
+
 #endif
+
 #if defined(__linux__)
 int32_t loadLib(String filepath, VSTPluginMain_t** out_fn, void** out_hmodule) {
     if (!FileExists(filepath)) {
@@ -3098,87 +3105,91 @@ int32_t loadLib(String filepath, VSTPluginMain_t** out_fn, void** out_hmodule) {
 
     return 0;
 }
+
+#define CLOSE_MODULE_HANDLE(handle) dlclose(handle)
+
 #endif
 
 vstpluginloadres vsthost::loadPlugin(String filepath, int32_t uId, int32_t globalId) {
     dbgassert(masterCallBackSlot);
+
     String path, name, nameWithoutExt;
     SplitPath(filepath, &path, &nameWithoutExt, nullptr, &name);
+
     VSTPluginMain_t* fn = nullptr;
     void* moduleHandle = nullptr;
     AEffect* aeffect = nullptr;
 
-    this->impl->vstShellCurrentUniqueId = static_cast<VstInt32>(0);
 #ifdef _WIN32
-
     HMODULE hmodule = nullptr;
-    int32_t ret = 0;
-    {
-        ret = loadLib(filepath, &fn, &hmodule);
-        if (ret != 0) {
-            return vstpluginloadres(ret, nullptr);
-        }
-        if (uId != 0) {
-            this->impl->vstShellCurrentUniqueId = static_cast<VstInt32>(uId);
-        }
-        aeffect = fn(masterCallBackSlot);
-        if (uId != 0) {
-            this->impl->vstShellCurrentUniqueId = static_cast<VstInt32>(0);
-        }
-        if (!aeffect) {
-            FreeLibrary(hmodule);
-            return vstpluginloadres(-5, nullptr);
-        }
-        if (aeffect->magic != kEffectMagic) {
-            FreeLibrary(hmodule);
-            return vstpluginloadres(-6, nullptr);
-        }
-        if (uId == 0) {
-            // this branch is only reached by the vst scanner application when passing uId == 0
-            VstIntPtr vstIntPtr = aeffect->dispatcher(aeffect, effGetPlugCategory, 0, 0, 0, 0);
-            VstPlugCategory pluginCategory = static_cast<VstPlugCategory>(vstIntPtr);
-            if (pluginCategory == VstPlugCategory::kPlugCategShell) {
-                return vstpluginloadres(1, nullptr, new handles_t(nullptr, aeffect, moduleHandle), filepath, nameWithoutExt);
-            }
-        }
-
-        dbgassert(!aeffect->user);
-        moduleHandle = hmodule;
-    }
-
+#else
+    void* hmodule = nullptr;
 #endif //_WIN32
 
-
-
-#if defined(__linux__) || defined(__APPLE__)
-    void* hmodule = NULL;
     int32_t ret = loadLib(filepath, &fn, &hmodule);
+    moduleHandle = hmodule;
+
     if (ret != 0) {
-        return vstpluginloadres(ret, NULL);
+        return {ret, nullptr};
+    }
+
+    if (uId != 0) {
+        this->impl->vstShellCurrentUniqueId = static_cast<VstInt32>(uId);
+    } else {
+        this->impl->vstShellCurrentUniqueId = static_cast<VstInt32>(0);
     }
 
     aeffect = fn(masterCallBackSlot);
+
+    if (uId != 0) {
+        this->impl->vstShellCurrentUniqueId = static_cast<VstInt32>(0);
+    }
+
     if (!aeffect) {
-        dlclose(hmodule);
-        return vstpluginloadres(-5, NULL);
+        CLOSE_MODULE_HANDLE(hmodule);
+        return {-5, nullptr};
     }
+
     if (aeffect->magic != kEffectMagic) {
-        dlclose(hmodule);
-        return vstpluginloadres(-6, NULL);
+        CLOSE_MODULE_HANDLE(hmodule);
+        return {-6, nullptr};
     }
-    moduleHandle = hmodule;
-#endif
+
+    if (uId == 0) {
+        // this branch is only reached by the vst scanner application when passing uId == 0
+        VstIntPtr vstIntPtr = aeffect->dispatcher(aeffect, effGetPlugCategory, 0, 0, nullptr, 0);
+        auto pluginCategory = static_cast<VstPlugCategory>(vstIntPtr);
+        if (pluginCategory == VstPlugCategory::kPlugCategShell) {
+            return {1, nullptr, new handles_t(nullptr, aeffect, moduleHandle), filepath, nameWithoutExt};
+        }
+    }
+
+    if (aeffect->user) {
+        CLOSE_MODULE_HANDLE(hmodule);
+        return {-7, nullptr};
+    }
+
+    //NOTE: Plugins with no inputs and outputs might exists
+    if (aeffect->numOutputs <= 0 && aeffect->numInputs <= 0) {
+        CLOSE_MODULE_HANDLE(hmodule);
+        return {-8, nullptr};
+    }
 
     globalId = getNextGlobalModuleId(globalId);
-    vstplugin* plugin = new vstplugin(new handles_t(nullptr, aeffect, moduleHandle), globalId, path, nameWithoutExt, -1);
+
+    auto* plugin = new vstplugin(new handles_t(nullptr, aeffect, moduleHandle), globalId, path, nameWithoutExt, -1);
+
     aeffect->user = plugin;
     plugin->handle->localCurrentUniqueId = uId;
+
     pluginInstancesVST2.push_back(plugin);
     pluginInstances.push_back(plugin);
 
     plugin->load(this);
+
     dbgassert(plugin->handle && plugin->handle->aeffect);
-    return vstpluginloadres(0, plugin);
+
+    return { 0, plugin};
 };
 
 void vsthost::scanPlugins() {
