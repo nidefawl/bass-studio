@@ -1,36 +1,40 @@
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.20)
+message(STATUS "CMake version: ${CMAKE_VERSION}")
+
 # Don't use -rdynamic
 if (POLICY CMP0065)
     cmake_policy(SET CMP0065 NEW)
 endif ()
+
 set(CMAKE_USER_MAKE_RULES_OVERRIDE "cmake/msvc-init-override.cmake")
 
-message(STATUS "CMake version: ${CMAKE_VERSION}")
-set(DAW_SRC_PATH "${CMAKE_SOURCE_DIR}/src")
-set(BUILD_NAME "DAW") #TODO rename BUILD_NAME variable
-set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT ${BUILD_NAME})
 
-project(${BUILD_NAME} C CXX)
-option(BUILD_HOST "Build daw" ON)
-option(BUILD_SCANNER "Build plugin scanner" ON)
-option(BUILD_CMDLINE_HOST "Build command line host" ON)
-option(BUILD_TESTS "Build tests" ON)
-option(USE_OPENGL3 "Use OpenGL 3.x instead of OpenGL 2" ON)
-# instead of an installation step we only copy the exectuable to APP_WORKING_DIR
-set(APP_WORKING_DIR "../../run/" CACHE PATH "working directory (run)")
+set(PROJECT_SRC_PATH "${CMAKE_SOURCE_DIR}/src" CACHE PATH "Project source directory")
+set(PROJECT_NAME "DAW" CACHE STRING "Project name")
+# instead of an installation step we only copy the executable to PROJECT_WORKING_DIR
+set(PROJECT_WORKING_DIR "../../run/" CACHE PATH "working directory (run)")
 
-if (BUILD_TESTS OR BUILD_SCANNER OR BUILD_CMDLINE_HOST)
-    set(BUILD_DAW_LIB ON)
+option(PROJECT_BUILD_DAW "Build daw" ON)
+option(PROJECT_BUILD_SCANNER "Build plugin scanner" ON)
+option(PROJECT_BUILD_CLI_HOST "Build command line host" ON)
+option(PROJECT_BUILD_TESTS "Build tests" ON)
+option(PROJECT_CFG_USE_OPENGL3 "Use OpenGL 3.x instead of OpenGL 2" ON)
+
+set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT ${PROJECT_NAME})
+
+project(${PROJECT_NAME} C CXX)
+
+if (PROJECT_BUILD_TESTS OR PROJECT_BUILD_SCANNER OR PROJECT_BUILD_CLI_HOST)
+    set(PROJECT_REQUIRE_LIB ON)
 else ()
-    set(BUILD_DAW_LIB OFF)
+    set(PROJECT_REQUIRE_LIB OFF)
 endif ()
-
-#set(BUILD_DAW_LIB ON) #override
 
 if (NOT MSVC)
     set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CMAKE_COMMAND} -E time")
     set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "${CMAKE_COMMAND} -E time")
 endif ()
+
 include("cmake/setup.cmake")
 include("cmake/libs.cmake")
 
@@ -43,13 +47,13 @@ endif (WIN32)
 if (UNIX)
     add_compile_definitions(PA_USE_ALSA=1 __cdecl="")
 endif (UNIX)
-if (USE_OPENGL3)
+if (PROJECT_CFG_USE_OPENGL3)
     add_compile_definitions(NANOVG_GL3=1)
 else ()
     add_compile_definitions(NANOVG_GL2=1)
 endif ()
-if (BUILD_TESTS)
-    add_compile_definitions(BUILD_TESTS)
+if (PROJECT_BUILD_TESTS)
+    add_compile_definitions(PROJECT_BUILD_TESTS)
 endif ()
 
 # set warn flags
@@ -85,12 +89,12 @@ if (MSVC)
         /permissive- # standards conformance mode for MSVC compiler.
     )
     set(MSVC_WARNINGS_RELEASE /W3 /wd4267 /wd4244 /wd4100 /wd4458 /wd4305)
-    set(BUILD_WARNING_FLAGS $<$<CONFIG:Debug>:${MSVC_WARNINGS_DEBUG}>$<$<NOT:$<CONFIG:Debug>>:${MSVC_WARNINGS_RELEASE}>)
+    set(BUILD_WARNING_FLAGS $<IF:$<CONFIG:Debug>,${MSVC_WARNINGS_DEBUG},${MSVC_WARNINGS_RELEASE}>)
 else ()
     set(BUILD_WARNING_FLAGS -Wall -Wno-inconsistent-missing-override -Wno-unused-parameter)
 endif ()
 
-# march=native optimzation. Turn off for dist build
+# march=native optimization. Turn off for dist build
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG("-march=native" COMPILER_SUPPORTS_MARCH_NATIVE)
 if (COMPILER_SUPPORTS_MARCH_NATIVE)
@@ -212,43 +216,43 @@ endif ()
 set(GENERATED_SRC_FILES "${CMAKE_BINARY_DIR}/buildinfo.cpp")
 list(APPEND CPP_SRC_FILES "src/tests/common/test_environment.cpp")
 
-source_group(TREE ${DAW_SRC_PATH} PREFIX "src" FILES ${CPP_SRC_FILES} ${HDR_FILES} ${C_SRC_FILES} ${MM_SRC_FILES})
+source_group(TREE ${PROJECT_SRC_PATH} PREFIX "src" FILES ${CPP_SRC_FILES} ${HDR_FILES} ${C_SRC_FILES} ${MM_SRC_FILES})
 source_group("generated" FILES ${GENERATED_SRC_FILES})
 
-list(APPEND C_SRC_FILES "${DAW_DEPS_PATH}/glad/gl-3.2-core/src/glad.c")
+list(APPEND C_SRC_FILES "${PROJECT_DEPS_PATH}/glad/gl-3.2-core/src/glad.c")
 
 list(APPEND RESOURCE_FILES "")
 if (MSVC)
     list(APPEND RESOURCE_FILES "src/icon_resource.h" "src/icon.rc")
 endif ()
 
-message(STATUS "DAW_DEPS_PATH ${DAW_DEPS_PATH}")
+message(STATUS "PROJECT_DEPS_PATH ${PROJECT_DEPS_PATH}")
 message(STATUS "CMAKE_CXX_COMPILER_ID ${CMAKE_CXX_COMPILER_ID}")
 message(STATUS "CMAKE_BUILD_TYPE ${CMAKE_BUILD_TYPE}")
 
-message(STATUS "APP_WORKING_DIR ${APP_WORKING_DIR}")
+message(STATUS "PROJECT_WORKING_DIR ${PROJECT_WORKING_DIR}")
 
-message(STATUS "BUILD_DAW_LIB ${BUILD_DAW_LIB}")
-message(STATUS "BUILD_HOST ${BUILD_HOST}")
-message(STATUS "BUILD_TESTS ${BUILD_TESTS} ")
-message(STATUS "BUILD_SCANNER ${BUILD_SCANNER} ")
-message(STATUS "BUILD_CMDLINE_HOST ${BUILD_CMDLINE_HOST}")
+message(STATUS "PROJECT_REQUIRE_LIB ${PROJECT_REQUIRE_LIB}")
+message(STATUS "PROJECT_BUILD_DAW ${PROJECT_BUILD_DAW}")
+message(STATUS "PROJECT_BUILD_TESTS ${PROJECT_BUILD_TESTS} ")
+message(STATUS "PROJECT_BUILD_SCANNER ${PROJECT_BUILD_SCANNER} ")
+message(STATUS "PROJECT_BUILD_CLI_HOST ${PROJECT_BUILD_CLI_HOST}")
 message(STATUS "BUILD WARNINGS ${BUILD_WARNING_FLAGS}")
 
-# build a fat library only if BUILD_DAW_LIB is ON
-# if BUILD_DAW_LIB is OFF we link objects directly to output executable (faster)
-if (BUILD_DAW_LIB)
+# build a fat library only if PROJECT_REQUIRE_LIB is ON
+# if PROJECT_REQUIRE_LIB is OFF we link objects directly to output executable (faster)
+if (PROJECT_REQUIRE_LIB)
     set(LINK_TARGET "dawlib")
     add_library(${LINK_TARGET} STATIC ${CPP_SRC_FILES} ${C_SRC_FILES} ${MM_SRC_FILES} ${GENERATED_SRC_FILES})
     target_compile_options(${LINK_TARGET} PRIVATE ${BUILD_WARNING_FLAGS})
     set_property(TARGET ${LINK_TARGET} PROPERTY DBG_POSTFIX d)
 else ()
-    set(LINK_TARGET ${BUILD_NAME})
+    set(LINK_TARGET ${PROJECT_NAME})
     # define main exectuable
-    add_executable(${BUILD_NAME} "src/host/main_daw.cpp" ${RESOURCE_FILES} ${CPP_SRC_FILES} ${C_SRC_FILES} ${MM_SRC_FILES} ${GENERATED_SRC_FILES})
-    target_compile_options(${BUILD_NAME} PRIVATE ${BUILD_WARNING_FLAGS})
-    SET_APP_BUILD(${BUILD_NAME})
-    ADD_POST_BUILD_COMMANDS(${BUILD_NAME})
+    add_executable(${PROJECT_NAME} "src/host/main_daw.cpp" ${RESOURCE_FILES} ${CPP_SRC_FILES} ${C_SRC_FILES} ${MM_SRC_FILES} ${GENERATED_SRC_FILES})
+    target_compile_options(${PROJECT_NAME} PRIVATE ${BUILD_WARNING_FLAGS})
+    SET_APP_BUILD(${PROJECT_NAME})
+    ADD_POST_BUILD_COMMANDS(${PROJECT_NAME})
 endif ()
 
 MACRO(DEFINE_EXECUTABLE target_name target_sources)
@@ -259,17 +263,15 @@ MACRO(DEFINE_EXECUTABLE target_name target_sources)
     ADD_POST_BUILD_COMMANDS(${target_name})
 ENDMACRO()
 
-if (BUILD_DAW_LIB)
-    # define main exectuable
-    list(APPEND DAW_MAIN_SRC "src/host/main_daw.cpp")
-    list(APPEND DAW_MAIN_SRC ${RESOURCE_FILES})
-    DEFINE_EXECUTABLE(${BUILD_NAME} ${DAW_MAIN_SRC})
+if (PROJECT_REQUIRE_LIB)
+    # define main executable
+    DEFINE_EXECUTABLE(${PROJECT_NAME} "src/host/main_daw.cpp;${RESOURCE_FILES}")
 
-    if (BUILD_SCANNER)
+    if (PROJECT_BUILD_SCANNER)
         DEFINE_EXECUTABLE("vstscanner" "src/host/main_scanner.cpp")
     endif ()
 
-    if (BUILD_CMDLINE_HOST)
+    if (PROJECT_BUILD_CLI_HOST)
         DEFINE_EXECUTABLE("host" "src/host/main_cmdline.cpp")
     endif ()
 endif ()
@@ -306,13 +308,13 @@ if (WIN32)
     target_link_libraries(${LINK_TARGET} PRIVATE dbghelp winmm opengl32 kernel32 gdi32 ole32 uuid comdlg32 setupapi mswsock ws2_32)
 endif (WIN32)
 
-if (WIN32_USE_STACK_PROTECTOR)
+if (WIN32 AND PROJECT_CFG_USE_STACK_PROTECTOR)
     target_link_libraries(${LINK_TARGET} PRIVATE ssp)
 endif ()
 
 GENERATE_BUILDINFO_CPP()
 
-if (BUILD_TESTS)
+if (PROJECT_BUILD_TESTS)
     ENABLE_TESTING()
     ADD_SUBDIRECTORY(src/tests)
 endif ()

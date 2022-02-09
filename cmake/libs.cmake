@@ -1,10 +1,19 @@
+message(STATUS "PROJECT_SRC_PATH ${PROJECT_SRC_PATH}")
+
+if(NOT EXISTS ${PROJECT_SRC_PATH})
+  message(FATAL_ERROR "Can't find PROJECT_SRC_PATH")
+endif()
 
 # check if build.py is present, not actually used 
-find_path(DAW_DEPS_PATH NAMES "build.py" PATHS "${CMAKE_SOURCE_DIR}/../daw-deps" "${CMAKE_BINARY_DIR}/../daw-deps" REQUIRED)
-if(NOT DAW_DEPS_PATH)
-  message(FATAL_ERROR "Can't find DAW_DEPS_PATH")
-endif()
-message(STATUS "DAW_DEPS_PATH ${DAW_DEPS_PATH}")
+find_path(PROJECT_DEPS_PATH
+    NAMES "build.py"
+    PATHS 
+        "${CMAKE_SOURCE_DIR}/../daw-deps"
+        "${CMAKE_BINARY_DIR}/../daw-deps"
+        "D:/dev/daw-deps"
+    REQUIRED)
+
+message(STATUS "PROJECT_DEPS_PATH ${PROJECT_DEPS_PATH}")
 
 if (USE_SHARED_LIBS)
   set(BUILD_PATH_LIB_TYPE "shared")
@@ -12,33 +21,31 @@ else()
   set(BUILD_PATH_LIB_TYPE "static")
 endif()
 
-string(TOLOWER "lib-${CMAKE_CXX_COMPILER_ID}-debug-${BUILD_PATH_LIB_TYPE}" DAW_DEPS_BUILD_LIBS_DEBUG)
-string(TOLOWER "lib-${CMAKE_CXX_COMPILER_ID}-release-${BUILD_PATH_LIB_TYPE}" DAW_DEPS_BUILD_LIBS_RELEASE)
+string(TOLOWER "lib-${CMAKE_CXX_COMPILER_ID}-debug-${BUILD_PATH_LIB_TYPE}" DEPS_BUILD_LIBS_DEBUG)
+string(TOLOWER "lib-${CMAKE_CXX_COMPILER_ID}-release-${BUILD_PATH_LIB_TYPE}" DEPS_BUILD_LIBS_RELEASE)
 
-find_path(DAW_DEPS_INSTALL 
-  NAMES
-    "${DAW_DEPS_BUILD_LIBS_DEBUG}" 
-    "${DAW_DEPS_BUILD_LIBS_RELEASE}" 
-  PATHS 
-    "${DEPS_BUILD_FOLDER}"
-    "${CMAKE_SOURCE_DIR}/../build-deps/install"
-    "${CMAKE_BINARY_DIR}/../build-deps/install"
+find_path(PROJECT_DEPS_INSTALL_PATH 
+    NAMES
+        "${DEPS_BUILD_LIBS_DEBUG}" 
+        "${DEPS_BUILD_LIBS_RELEASE}" 
+    PATHS 
+        "${DEPS_BUILD_FOLDER}"
+        "${CMAKE_SOURCE_DIR}/../build-deps/install"
+        "${CMAKE_BINARY_DIR}/../build-deps/install"
+    REQUIRED
 )
 
-if(NOT DAW_DEPS_INSTALL)
-  message(FATAL_ERROR "Can't find DAW_DEPS_INSTALL")
-endif()
-message(STATUS "DAW_DEPS_INSTALL ${DAW_DEPS_INSTALL}")
+message(STATUS "PROJECT_DEPS_INSTALL_PATH ${PROJECT_DEPS_INSTALL_PATH}")
 
-set(BUILD_PATH_LIB_DEBUG "${DAW_DEPS_INSTALL}/${DAW_DEPS_BUILD_LIBS_DEBUG}")
-set(BUILD_PATH_LIB_RELEASE "${DAW_DEPS_INSTALL}/${DAW_DEPS_BUILD_LIBS_RELEASE}")
+set(BUILD_PATH_LIB_DEBUG "${PROJECT_DEPS_INSTALL_PATH}/${DEPS_BUILD_LIBS_DEBUG}")
+set(BUILD_PATH_LIB_RELEASE "${PROJECT_DEPS_INSTALL_PATH}/${DEPS_BUILD_LIBS_RELEASE}")
 
 message(STATUS "BUILD_PATH_LIB_DEBUG ${BUILD_PATH_LIB_DEBUG}")
 message(STATUS "BUILD_PATH_LIB_RELEASE ${BUILD_PATH_LIB_RELEASE}")
 
 # find_package* and deps cmakes helpers cannot be used until multi config finds widespread support
-# until then we use this shitty way of defining DEBUG and RELEASE libs seperatly and
-# taking care of confg dependant include paths ourselves
+# until then we use this shitty way of defining DEBUG and RELEASE libs separately and
+# taking care of config dependant include paths ourselves
 
 find_library(
     GLFW_LIB_RELEASE
@@ -200,22 +207,29 @@ endif(USE_SHARED_LIBS)
 
 string(TOLOWER "lib-${CMAKE_CXX_COMPILER_ID}" LIB_COMPILER)
 
-set(LIB_GN_EXPR ${LIB_COMPILER}-$<$<CONFIG:Debug>:debug>$<$<NOT:$<CONFIG:Debug>>:release>-${LIB_LINKAGE})
+set(LIB_GN_EXPR ${LIB_COMPILER}-$<IF:$<CONFIG:Debug>,debug,release>-${LIB_LINKAGE})
 
-include_directories("${DAW_SRC_PATH}")
-include_directories("${DAW_SRC_PATH}/include")
-include_directories(SYSTEM "${DAW_SRC_PATH}/thirdparty")
-include_directories(SYSTEM "${DAW_SRC_PATH}/nanovg")
+include_directories("${PROJECT_SRC_PATH}")
+include_directories("${PROJECT_SRC_PATH}/include")
+include_directories(SYSTEM "${PROJECT_SRC_PATH}/thirdparty")
+include_directories(SYSTEM "${PROJECT_SRC_PATH}/nanovg")
 include_directories(SYSTEM  
-    ${DAW_DEPS_INSTALL}/${LIB_GN_EXPR}/glfw/include
-    ${DAW_DEPS_INSTALL}/${LIB_GN_EXPR}/SQLiteCpp/include
-    ${DAW_DEPS_INSTALL}/${LIB_GN_EXPR}/soxr/include
-    ${DAW_DEPS_INSTALL}/${LIB_GN_EXPR}/portaudio/include
-    ${DAW_DEPS_INSTALL}/${LIB_GN_EXPR}/portmidi/include
-    ${DAW_DEPS_INSTALL}/${LIB_GN_EXPR}/kissfft/include
-    ${DAW_DEPS_INSTALL}/${LIB_GN_EXPR}/pybind11/include
-    ${DAW_DEPS_PATH}/glad/gl-3.2-core/include
-    ${DAW_DEPS_PATH}/glm
-    ${DAW_DEPS_PATH}/SplineLibrary/spline_library
-    ${DAW_DEPS_PATH}/cereal/include
-    ${DAW_DEPS_PATH}/kissfft)
+    ${PROJECT_DEPS_INSTALL_PATH}/${LIB_GN_EXPR}/glfw/include
+    ${PROJECT_DEPS_INSTALL_PATH}/${LIB_GN_EXPR}/SQLiteCpp/include
+    ${PROJECT_DEPS_INSTALL_PATH}/${LIB_GN_EXPR}/soxr/include
+    ${PROJECT_DEPS_INSTALL_PATH}/${LIB_GN_EXPR}/portaudio/include
+    ${PROJECT_DEPS_INSTALL_PATH}/${LIB_GN_EXPR}/portmidi/include
+    ${PROJECT_DEPS_INSTALL_PATH}/${LIB_GN_EXPR}/kissfft/include
+    ${PROJECT_DEPS_INSTALL_PATH}/${LIB_GN_EXPR}/pybind11/include
+    ${PROJECT_DEPS_PATH}/glm
+    ${PROJECT_DEPS_PATH}/SplineLibrary/spline_library
+    ${PROJECT_DEPS_PATH}/cereal/include
+    ${PROJECT_DEPS_PATH}/kissfft)
+
+if (PROJECT_CFG_USE_OPENGL3)
+    # use OpenGL 3.2 core profile headers to avoid accidental use of legacy or forward
+    include_directories(SYSTEM ${PROJECT_DEPS_PATH}/glad/gl-3.2-core/include)
+else()
+    # use OpenGL 3.2 compatibility profile headers
+    include_directories(SYSTEM ${PROJECT_DEPS_PATH}/glad/gl-3.2-compat/include)
+endif()
