@@ -898,9 +898,9 @@ std::shared_ptr<dawview_layout_t> loadDawViewLayoutSnapshot(const String& path) 
         }
         return snapshot;
     } catch (const FileIOException& e) {
-        log_printf("loadPluginSnapshot File IO exception: %s (%d)\n", e.what(), e.GetErrorCode());
+        log_printf("loadDawViewLayoutSnapshot File IO exception: %s (%d)\n", e.what(), e.GetErrorCode());
     } catch (const std::exception& e) {
-        log_printf("loadPluginSnapshot exception: %s\n", e.what());
+        log_printf("loadDawViewLayoutSnapshot exception: %s\n", e.what());
     }
     return nullptr;
 }
