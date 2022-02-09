@@ -149,14 +149,29 @@ static void glfw_runtime_error_callback(int error, const char* description) {
 
 static void setAppWindowHints() {
     glfwDefaultWindowHints();
+
+#ifdef NANOVG_GL3
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+#else
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);
+#endif
+
+#ifndef NDEBUG
+    // debug context
+    glfwWindowHint(GLFW_CONTEXT_DEBUG, GL_TRUE);
+#else
+    glfwWindowHint(GLFW_CONTEXT_DEBUG, GL_FALSE);
+#endif
+
     glfwWindowHint(GLFW_STENCIL_BITS, 8);
     glfwWindowHint(GLFW_DEPTH_BITS, 24);
     glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_API);
-    //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-    glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
 }
+
 static void initOGL() {
     static bool gladInitialized = false;
     if (!gladInitialized) {
@@ -1385,7 +1400,7 @@ void appwindow_main::createMainWindow(const char* title, int w, int h, appwindow
         glfwWindowHint(GLFW_FOCUSED, GL_FALSE);
         glfwWindowHint(GLFW_DECORATED, GL_FALSE);
         //glfwWindowHint(GLFW_UTILITY_WINDOW, GL_TRUE);
-        glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, GL_TRUE);
+        //glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, GL_TRUE);
         glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, GL_FALSE);
     }
 
@@ -1796,7 +1811,6 @@ int startApplication(const std::vector<String>& args) {
             exit(EXIT_FAILURE);
         }
 
-        setAppWindowHints();
         std::shared_ptr<AppCtrl> ctrl = makeApp(args);
 
         std::unique_ptr<appwindow_main> mainWindow = std::make_unique<appwindow_main>(nullptr, ctrl);
@@ -1814,7 +1828,10 @@ int startApplication(const std::vector<String>& args) {
         Profiling::profilingRegisterEntry<application_stats_t>(ctrl.get(), "Application Stats");
         Profiling::profilingRegisterEntry<render_stats_t>(mainWindow.get(), "Main Window Renderstats");
 
+#ifndef NDEBUG
         enableGlDebugCallback();
+#endif
+
         glfwSetErrorCallback(glfw_runtime_error_callback);
 
         startApp(ctrl);
