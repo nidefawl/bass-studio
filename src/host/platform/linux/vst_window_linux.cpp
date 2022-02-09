@@ -157,6 +157,6 @@ WINDOW_HANDLE vst_window::getHWND () const
 }
 
 void vst_window::captureWindowFrame() {
-	dbgassert(0&&"Not implemented on this platform");
+	log_printf("Capture window frame not implemented\n", 0);
 }
 #endif
