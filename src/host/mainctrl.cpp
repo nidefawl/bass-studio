@@ -1217,6 +1217,12 @@ void DawInstance::initDaw(const std::vector<String>& args) {
     for (int i = 1; i < args.size(); i++) {
         if (args[i] == "--load" && i + 1 < args.size()) {
             loadProject = args[i + 1];
+            i++;
+            continue;
+        }
+        if (StrEndsWith(args[i], "." PROJECT_FILE_EXT)) {
+            loadProject = args[i];
+            continue;
         }
     }
 

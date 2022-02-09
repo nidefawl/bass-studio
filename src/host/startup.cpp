@@ -84,7 +84,7 @@ void loadPluginAndInsertOnTrack(DawCtrl* dawCtrl, String modulePath, int32_t tra
 #endif
 }
 
-void dawinstance_startup_commands(daw_tls::tlsinstance& tls) {
+void dawinstance_startup_commands(const std::vector<String>& args, daw_tls::tlsinstance& tls) {
     //  if (1==1)
     //    return;
     auto* const dawMainCtrl = tls.mainCtrl;
@@ -93,8 +93,8 @@ void dawinstance_startup_commands(daw_tls::tlsinstance& tls) {
     }
     auto dawInstance = dawMainCtrl->getDaw();
     //  String dawPath = "C:/dev/daw/run/";
-    String dawPath  = "C:/Users/Michael/daw/run/projects/";
-    String projName = "startup2.project";
+    String dawPath  = "./projects/";
+    String projName = "startup.project";
     //String projName = "test-wave-2.project";
     //projName = "kshmr-samples-test.project";
     //  projName = "test-empty-midi-loop.project";
@@ -169,5 +169,6 @@ void dawinstance_startup_commands(daw_tls::tlsinstance& tls) {
     //    dawMainCtrl->setVisible(false);
     //    dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 0));
     //    dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 1));
-    dawInstance->loadFile(dawPath + projName, flags);
+    if (dawInstance->getLoadProjectFilePath().empty())
+        dawInstance->loadFile(dawPath + projName, flags);
 }

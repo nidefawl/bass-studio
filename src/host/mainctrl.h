@@ -374,6 +374,13 @@ public:
      */
     std::shared_ptr<project_file> createProjectFile();
 
+    const String& getLoadProjectFilePath() {
+        return loadProject;
+    }
+    void setLoadProjectFilePath(const String& projectFilePath) {
+        loadProject = projectFilePath;
+    }
+    
     /** assuming current thread is main thread when this is called **/
     /**
      * setLoadedProject - releases current project and resources and loads in new project from passed project_file

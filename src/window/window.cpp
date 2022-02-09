@@ -1707,7 +1707,7 @@ namespace vst_window_mgr {
 std::shared_ptr<AppCtrl> makeApp(const std::vector<String>& args);  // main.cpp
 void startApp(std::shared_ptr<AppCtrl>& app);                // main.cpp
 
-void dawinstance_startup_commands(daw_tls::tlsinstance& tls);// Forward declare from startup.cpp
+void dawinstance_startup_commands(const std::vector<String>& args, daw_tls::tlsinstance& tls);// Forward declare from startup.cpp
 void initColor();                                            // Forward declare from gui/gui.cpp
 void deleteApp();                                            // Forward declare from host/mainctrl.cpp
 void openGlobalLog(const String& logFileName);               // Forward declare from util/debug.cpp
@@ -1741,14 +1741,19 @@ int startApplication(const std::vector<String>& args) {
     String strLogFilename;
     try {
         for (size_t i = 0; i < args.size(); ++i) {
-            if (args[i] == "-center" && i + 1 < args.size()) {
+            if (args[i] == "--center" && i + 1 < args.size()) {
                 centerScreenIdx = atoi(StringAsCStr(args[i + 1]));
+                i++; 
+                continue;
             }
-            if (args[i] == "-log" && i + 1 < args.size()) {
-                strLogFilename = args[i + 1];
+            if (args[i] == "--logfile" && i + 1 < args.size()) {
+                strLogFilename = args[i + 1]; 
+                i++; 
+                continue;
             }
-            if (args[i] == "-console") {
+            if (args[i] == "--console") {
                 openConsole = true;
+                continue;
             }
         }
 
@@ -1838,7 +1843,7 @@ int startApplication(const std::vector<String>& args) {
 
 #if BUILD_VSTHOST
         daw_tls::tlsinstance& tls = daw_tls::getTls();
-        dawinstance_startup_commands(tls);
+        dawinstance_startup_commands(args, tls);
 #endif
 
         hires_timer_t hiresTimer;
