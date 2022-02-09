@@ -1249,8 +1249,8 @@ int64_t vsthost::writeTrackSamplesToDisk(String fOutWave, track_impl_t* trImpl, 
         dbgassert(sample->nChannels == numChannels);
         dbgassert(sample->nChannels == sample->samples.size());
         dbgassert((int64_t) sample->nSamples == SPLIT_SAMPLECOUNT);
-        dbgassert(sample->nSamples == sample->samples[0].size());
-        dbgassert(sample->nSamples == sample->samples[1].size());
+        dbgassert(sample->nSamples == static_cast<int64_t>(sample->samples[0].size()));
+        dbgassert(sample->nSamples == static_cast<int64_t>(sample->samples[1].size()));
         dbgassert(blockFull.samples == sample->nSamples*sample->nChannels);
 
         if (sample->samples.size() >= 2) {

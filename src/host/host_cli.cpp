@@ -536,8 +536,8 @@ int runCommandLineHost(int argc, const char* argv[]) {
                                 auto* sample = split->getSample();
                                 dbgassert(sample->nChannels == trImpl->output.channels);
                                 dbgassert(sample->nChannels == sample->samples.size());
-                                dbgassert(sample->nSamples == sample->samples[0].size());
-                                dbgassert(sample->nSamples == sample->samples[1].size());
+                                dbgassert(sample->nSamples == static_cast<int64_t>(sample->samples[0].size()));
+                                dbgassert(sample->nSamples == static_cast<int64_t>(sample->samples[1].size()));
                                 dbgassert(blockTrack.samples == sample->nSamples * 2);
                                 dbgassert(blockTrack.samples >= sample->nSamples * 2);
                                 float* in1      = sample->samples[0].data();

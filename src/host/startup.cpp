@@ -92,7 +92,6 @@ void dawinstance_startup_commands(daw_tls::tlsinstance& tls) {
         return;
     }
     auto dawInstance = dawMainCtrl->getDaw();
-    vsthost* host    = vsthost::getInstance();
     //  String dawPath = "C:/dev/daw/run/";
     String dawPath  = "C:/Users/Michael/daw/run/projects/";
     String projName = "startup2.project";
