@@ -72,142 +72,94 @@ namespace GuiColor {
         auto& allconstants = _getConstants();
         allconstants.push_back(this);
     }
-    constant_t COL_BASE_BG                 = constant_t("COL_BASE_BG", 0xFF1A1A1A);
-    constant_t COL_BASE_BG_HOVER           = constant_t("COL_BASE_BG_HOVER", 0xFF000000);
-    constant_t COL_BASE_BG_PRESSED         = constant_t("COL_BASE_BG_PRESSED", 0xFF0C0C0C);
-    constant_t COL_BASE_BG_FOCUSED         = constant_t("COL_BASE_BG_FOCUSED", 0xFF4C4C4C);
-    constant_t COL_BASE_BG_DISABLED        = constant_t("COL_BASE_BG_DISABLED", 0xFF000000);
-    constant_t COL_BASE_BG_FRAME_BASE      = constant_t("COL_BASE_BG_FRAMEBASE", 0xFF171717);
-    constant_t COL_BASE_BG_FRAME_BRIGHT    = constant_t("COL_BASE_BG_FRAME_BRIGHT", 0xFF272727);
-    constant_t COL_BASE_BG_FRAME_OUTLINE   = constant_t("COL_BASE_BG_FRAME_OUTLINE", 0xFF060606);
-    constant_t COL_BASE_BG_FRAME_HIGHLIGHT = constant_t("COL_BASE_BG_FRAME_HIGHLIGHT", 0xFF1D1D1D);
-    constant_t COL_BASE_BG_STROKE          = constant_t("COL_BASE_BG_STROKE", 0x339B9B9B);
 
-    constant_t COL_GRID_DRK               = constant_t("COL_GRID_DRK", 0xFF000000);
-    constant_t COL_GRID_BRT               = constant_t("COL_GRID_BRT", 0xFF000000);
-    constant_t COL_LINE_BAR               = constant_t("COL_LINE_BAR", 0xFF000000);
-    constant_t COL_LINE_QRT               = constant_t("COL_LINE_QRT", 0xFF000000);
-    constant_t COL_LINE_XTH               = constant_t("COL_LINE_XTH", 0xFF000000);
-    constant_t COL_BG_DRK                 = constant_t("COL_BG_DRK", 0xFF000000);
-    constant_t COL_BG_BRT                 = constant_t("COL_BG_BRT", 0xFF000000);
-    constant_t COL_LINE_SEPERATOR         = constant_t("COL_LINE_SEPERATOR", 0xFF000000);
-    constant_t COL_CTXTMNU_OUTLINE        = constant_t("COL_CTXTMNU_OUTLINE", 0xFF000000);
-    constant_t COL_CTXTMNU_BG             = constant_t("COL_CTXTMNU_BG", 0xFF000000);
-    constant_t COL_CTXTMNU_HILIGHT        = constant_t("COL_CTXTMNU_HILIGHT", 0xFF000000);
-    constant_t COL_GUI_STROKE             = constant_t("COL_GUI_STROKE", 0xFF000000);
-    constant_t COL_BG_DRK_FOCUSED         = constant_t("COL_BG_DRK_FOCUSED", 0xFF000000);
-    constant_t COL_NOTE                   = constant_t("COL_NOTE", 0xFF000000);
-    constant_t COL_NOTE_PLAYING           = constant_t("COL_NOTE_PLAYING", 0xFF000000);
-    constant_t COL_NOTE_ARP               = constant_t("COL_NOTE_ARP", 0xFF000000);
-    constant_t COL_NOTE_MUTE              = constant_t("COL_NOTE_MUTE", 0xFF000000);
-    constant_t COL_NOTE_OUTLINE           = constant_t("COL_NOTE_OUTLINE", 0xFF000000);
-    constant_t COL_NOTE_SELECTED          = constant_t("COL_NOTE_SELECTED", 0xFFAA88AA);
-    constant_t COL_NOTE_TEXT              = constant_t("COL_NOTE_TEXT", 0xFF000000);
-    constant_t COL_BG_SELECTEDTRACK       = constant_t("COL_BG_SELECTEDTRACK", 0xFF000000);
-    constant_t COL_BG_SELECTEDTRACK_TITLE = constant_t("COL_BG_SELECTEDTRACK_TITLE", 0xFF000000);
-    constant_t COL_BG_DRKER               = constant_t("COL_BG_DRKER", 0xFF000000);
-    constant_t COL_GUI_HANDLE             = constant_t("COL_GUI_HANDLE", 0xFF000000);
-    constant_t COL_GUI_HANDLE_FOCUSED     = constant_t("COL_GUI_HANDLE_FOCUSED", 0xFF323232);
-    constant_t COL_BG_DRKER2              = constant_t("COL_BG_DRKER2", 0xFF000000);
-    constant_t COL_NODES_EDGE             = constant_t("COL_NODES_EDGE", 0xFF323232);
-    constant_t COL_CLEAR_COLOR            = constant_t("COL_CLEAR_COLOR", 0xFF000000);
-    constant_t COL_LABEL_ACTIVE           = constant_t("COL_LABEL_ACTIVE", 0xFF000000);
-    constant_t COL_LABEL_INACTIVE         = constant_t("COL_LABEL_INACTIVE", 0xFF000000);
-    constant_t COL_WHITE("COL_WHITE", 0xFFFFFFFF);
-    constant_t COL_BLACK("COL_BLACK", 0);
-    constant_t COL_BTN_SOLO_BG_ENABLED("COL_BTN_SOLO_BG_ENABLED", 0xFF333ab6);
-    constant_t COL_BTN_SOLO_BG_PARENT("COL_BTN_SOLO_BG_PARENT", 0xFF555ab6);
-    constant_t COL_BTN_SOLO_BG_DISABLED("COL_BTN_SOLO_BG_DISABLED", 0xFF696a74);
-#define TO_U32(r, g, b, a) ((uint32_t)((r & 0xFF) | ((g & 0xFF) << 8) | ((b & 0xFF) << 16) | ((a & 0xFF) << 24)))
-    constant_t COL_LEVEL_IND_GREEN("COL_LEVEL_IND_GREEN", TO_U32(30, 255, 30, 255));
-    constant_t COL_LEVEL_IND_GREEN_DRK("COL_LEVEL_IND_GREEN_DRK", TO_U32(10, 160, 10, 255));
-    constant_t COL_LEVEL_IND_GREEN_DRKER("COL_LEVEL_IND_GREEN_DRKER", TO_U32(5, 120, 5, 255));
-    constant_t COL_LEVEL_IND_YELLOW("COL_LEVEL_IND_YELLOW", TO_U32(255, 255, 30, 255));
-    constant_t COL_LEVEL_IND_YELLOW_DRK("COL_LEVEL_IND_YELLOW_DRK", TO_U32(160, 160, 10, 255));
-    constant_t COL_LEVEL_IND_YELLOW_DRKER("COL_LEVEL_IND_YELLOW_DRKER", TO_U32(120, 120, 5, 255));
-    constant_t COL_ON("COL_ON", TO_U32(210, 240, 210, 255));
-    constant_t COL_OFF("COL_OFF", TO_U32(240, 210, 210, 255));
-    constant_t COL_TEXTBOX_TEXT("COL_TEXTBOX_TEXT", 0xFFE9EAFD);
-    constant_t COL_TEXTBOX_TEXT_DISABLED("COL_TEXTBOX_TEXT_DISABLED", 0xFF666666);
-    constant_t COL_TEXTBOX_TEXT_MARKED("COL_TEXTBOX_TEXT_MARKED", 0xFFFFFFFF);
-
-    constant_t COL_PIANOROLL_WHITE("COL_PIANOROLL_WHITE", 0xFFFFFFFF);
-    constant_t COL_PIANOROLL_BLACK("COL_PIANOROLL_BLACK", 0xFF111111);
-    constant_t COL_PIANOROLL_STROKE("COL_PIANOROLL_STROKE", 0xFF444444);
-    constant_t COL_CLIPEDITOR_SHARP("COL_CLIPEDITOR_SHARP", 0x33111111);
-    constant_t COL_NOTE_REALTIME("COL_NOTE_REALTIME", 0xFFFF00FF);
-    constant_t COL_NOTE_MOUSE("COL_NOTE_MOUSE", 0xFF00FFFF);
-
-    constant_t COL_FOLD_BUTTON("COL_FOLD_BUTTON", 0xFFFF9933);
-
-
-    constant_t COL_CLIP_OUTLINE("COL_CLIP_OUTLINE", 0x0);
-    constant_t COL_CLIP_NOTE("COL_CLIP_NOTE", 0xFFFFFFFF);
-    constant_t COL_CLIP_NOTE_OVERLAP("COL_CLIP_NOTE_OVERLAP", 0xFF0000FF);
-    constant_t COL_CLIP_NOTE_MUTED("COL_CLIP_NOTE_MUTED", 0xFF121212);
-
-    constant_t COL_BTN_BG_DEFAULT_INACTIVE("COL_BTN_BG_DEFAULT_INACTIVE", 0xff202020);
+    constant_t COL_AUTOMATED("COL_AUTOMATED", 0xffcc0056);
+    constant_t COL_BASE_BG("COL_BASE_BG", 0xff101213);
+    constant_t COL_BASE_BG_DISABLED("COL_BASE_BG_DISABLED", 0xff000000);
+    constant_t COL_BASE_BG_FOCUSED("COL_BASE_BG_FOCUSED", 0xff336699);
+    constant_t COL_BASE_BG_FRAME_BASE("COL_BASE_BG_FRAME_BASE", 0xff171717);
+    constant_t COL_BASE_BG_FRAME_BRIGHT("COL_BASE_BG_FRAME_BRIGHT", 0xff272727);
+    constant_t COL_BASE_BG_FRAME_HIGHLIGHT("COL_BASE_BG_FRAME_HIGHLIGHT", 0xff1d1d1d);
+    constant_t COL_BASE_BG_FRAME_OUTLINE("COL_BASE_BG_FRAME_OUTLINE", 0xff060606);
+    constant_t COL_BASE_BG_HOVER("COL_BASE_BG_HOVER", 0xff000000);
+    constant_t COL_BASE_BG_PRESSED("COL_BASE_BG_PRESSED", 0xff0c0c0c);
+    constant_t COL_BASE_BG_STROKE("COL_BASE_BG_STROKE", 0xff101010);
+    constant_t COL_BG_BRT("COL_BG_BRT", 0xff161616);
+    constant_t COL_BG_DRK("COL_BG_DRK", 0xff4e4e4e);
+    constant_t COL_BG_DRKER("COL_BG_DRKER", 0xff2b2b77);
+    constant_t COL_BG_DRKER2("COL_BG_DRKER2", 0xff1d1d1d);
+    constant_t COL_BG_DRK_FOCUSED("COL_BG_DRK_FOCUSED", 0xff969696);
+    constant_t COL_BG_SELECTEDTRACK("COL_BG_SELECTEDTRACK", 0x2742abd8);
+    constant_t COL_BG_SELECTEDTRACK_TITLE("COL_BG_SELECTEDTRACK_TITLE", 0xff1ebafd);
+    constant_t COL_BLACK("COL_BLACK", 0x00000000);
+    constant_t COL_BTN_BG_BYPASS_ACTIVE("COL_BTN_BG_BYPASS_ACTIVE", 0xff80abc0);
     constant_t COL_BTN_BG_DEFAULT_ACTIVE("COL_BTN_BG_DEFAULT_ACTIVE", 0xff404040);
-    constant_t COL_BTN_BG_BYPASS_ACTIVE("COL_BTN_BG_BYPASS_ACTIVE", 0xff80ABC0);
-    constant_t COL_BTN_BG_SHOW_ACTIVE("COL_BTN_BG_SHOW_ACTIVE", 0xff40ABC0);
-
-    constant_t COL_BTN_LOAD_DEF_PLUGINS("COL_BTN_LOAD_DEF_PLUGINS", 0xFFFFFFFF);
-
-    constant_t COL_BTN_RECORD_ARM_BG("COL_BTN_RECORD_ARM_BG", 0xFF442222);
-
-    constant_t COL_PLUGIN_VIEW_FRAME("COL_PLUGIN_VIEW_FRAME", 0x7fffffff);
-
-    constant_t COL_KNOB("COL_KNOB", 0xff00ddff);
+    constant_t COL_BTN_BG_DEFAULT_INACTIVE("COL_BTN_BG_DEFAULT_INACTIVE", 0xff202020);
+    constant_t COL_BTN_BG_SHOW_ACTIVE("COL_BTN_BG_SHOW_ACTIVE", 0xff40abc0);
+    constant_t COL_BTN_LOAD_DEF_PLUGINS("COL_BTN_LOAD_DEF_PLUGINS", 0xffffffff);
+    constant_t COL_BTN_RECORD_ARM_BG("COL_BTN_RECORD_ARM_BG", 0xff442222);
+    constant_t COL_BTN_SOLO_BG_DISABLED("COL_BTN_SOLO_BG_DISABLED", 0xff696a74);
+    constant_t COL_BTN_SOLO_BG_ENABLED("COL_BTN_SOLO_BG_ENABLED", 0xffd63131);
+    constant_t COL_BTN_SOLO_BG_PARENT("COL_BTN_SOLO_BG_PARENT", 0x6ce37777);
+    constant_t COL_CLEAR_COLOR("COL_CLEAR_COLOR", 0xff0f0f0f);
+    constant_t COL_CLIPEDITOR_SHARP("COL_CLIPEDITOR_SHARP", 0x39000000);
+    constant_t COL_CLIP_NOTE("COL_CLIP_NOTE", 0xffc9f2ff);
+    constant_t COL_CLIP_NOTE_MUTED("COL_CLIP_NOTE_MUTED", 0xff121212);
+    constant_t COL_CLIP_NOTE_OVERLAP("COL_CLIP_NOTE_OVERLAP", 0xff0000ff);
+    constant_t COL_CLIP_OUTLINE("COL_CLIP_OUTLINE", 0x7f000000);
+    constant_t COL_CTXTMNU_BG("COL_CTXTMNU_BG", 0xff050505);
+    constant_t COL_CTXTMNU_HILIGHT("COL_CTXTMNU_HILIGHT", 0xff363636);
+    constant_t COL_CTXTMNU_OUTLINE("COL_CTXTMNU_OUTLINE", 0xffffffff);
+    constant_t COL_FOLD_BUTTON("COL_FOLD_BUTTON", 0xffff9933);
+    constant_t COL_GRID_BRT("COL_GRID_BRT", 0x802e363c);
+    constant_t COL_GRID_DRK("COL_GRID_DRK", 0x7b1c1d20);
+    constant_t COL_GUI_HANDLE("COL_GUI_HANDLE", 0xffd7d7d7);
+    constant_t COL_GUI_HANDLE_FOCUSED("COL_GUI_HANDLE_FOCUSED", 0xff4d60d7);
+    constant_t COL_GUI_STROKE("COL_GUI_STROKE", 0xff6b6b6b);
+    constant_t COL_KNOB("COL_KNOB", 0xff466cb8);
     constant_t COL_KNOB_IND("COL_KNOB_IND", 0xffffffff);
-    constant_t COL_AUTOMATED("COL_AUTOMATED", 0xFFEF62DF);
-
-    constant_t COL_PLUG_TITLE("COL_PLUG_TITLE", 0xff151515);
-    constant_t COL_PLUG_TITLE_SELECTED("COL_PLUG_TITLE_SELECTED", 0xff353535);
-    constant_t COL_PLUG_TITLE_FOCUSED("COL_PLUG_TITLE_FOCUSED", 0xffff0000);
+    constant_t COL_LABEL_ACTIVE("COL_LABEL_ACTIVE", 0xffffffff);
     constant_t COL_LABEL_CONTAINER("COL_LABEL_CONTAINER", 0xffd0d0d0);
+    constant_t COL_LABEL_INACTIVE("COL_LABEL_INACTIVE", 0xff808080);
+    constant_t COL_LEVEL_IND_GREEN("COL_LEVEL_IND_GREEN", 0xff97ff1d);
+    constant_t COL_LEVEL_IND_GREEN_DRK("COL_LEVEL_IND_GREEN_DRK", 0xff4d7012);
+    constant_t COL_LEVEL_IND_GREEN_DRKER("COL_LEVEL_IND_GREEN_DRKER", 0xffb3f29b);
+    constant_t COL_LEVEL_IND_YELLOW("COL_LEVEL_IND_YELLOW", 0xffff0000);
+    constant_t COL_LEVEL_IND_YELLOW_DRK("COL_LEVEL_IND_YELLOW_DRK", 0xffff6363);
+    constant_t COL_LEVEL_IND_YELLOW_DRKER("COL_LEVEL_IND_YELLOW_DRKER", 0xffffaa07);
+    constant_t COL_LINE_BAR("COL_LINE_BAR", 0x6e000000);
+    constant_t COL_LINE_QRT("COL_LINE_QRT", 0x2a000000);
+    constant_t COL_LINE_SEPERATOR("COL_LINE_SEPERATOR", 0xcc000000);
+    constant_t COL_LINE_XTH("COL_LINE_XTH", 0x20000000);
+    constant_t COL_NODES_EDGE("COL_NODES_EDGE", 0xff4c4f6e);
+    constant_t COL_NOTE("COL_NOTE", 0xff5fdd77);
+    constant_t COL_NOTE_ARP("COL_NOTE_ARP", 0xff744aff);
+    constant_t COL_NOTE_MOUSE("COL_NOTE_MOUSE", 0xff00ffff);
+    constant_t COL_NOTE_MUTE("COL_NOTE_MUTE", 0xff666666);
+    constant_t COL_NOTE_OUTLINE("COL_NOTE_OUTLINE", 0xff000000);
+    constant_t COL_NOTE_PLAYING("COL_NOTE_PLAYING", 0xffec6900);
+    constant_t COL_NOTE_REALTIME("COL_NOTE_REALTIME", 0xffff00ff);
+    constant_t COL_NOTE_SELECTED("COL_NOTE_SELECTED", 0xe8ea2c2c);
+    constant_t COL_NOTE_TEXT("COL_NOTE_TEXT", 0xff333333);
+    constant_t COL_OFF("COL_OFF", 0xffd2d2f0);
+    constant_t COL_ON("COL_ON", 0xffd2f0d2);
+    constant_t COL_PIANOROLL_BLACK("COL_PIANOROLL_BLACK", 0xff111111);
+    constant_t COL_PIANOROLL_STROKE("COL_PIANOROLL_STROKE", 0x46000000);
+    constant_t COL_PIANOROLL_WHITE("COL_PIANOROLL_WHITE", 0xffe4eefd);
+    constant_t COL_PLUGIN_VIEW_FRAME("COL_PLUGIN_VIEW_FRAME", 0x7fffffff);
+    constant_t COL_PLUG_TITLE("COL_PLUG_TITLE", 0xff4d60d7);
+    constant_t COL_PLUG_TITLE_FOCUSED("COL_PLUG_TITLE_FOCUSED", 0xffb6c4fe);
+    constant_t COL_PLUG_TITLE_SELECTED("COL_PLUG_TITLE_SELECTED", 0xff8f67ff);
+    constant_t COL_TEXTBOX_TEXT("COL_TEXTBOX_TEXT", 0xffe9eafd);
+    constant_t COL_TEXTBOX_TEXT_DISABLED("COL_TEXTBOX_TEXT_DISABLED", 0xff666666);
+    constant_t COL_TEXTBOX_TEXT_MARKED("COL_TEXTBOX_TEXT_MARKED", 0xff4d60d7);
+    constant_t COL_WHITE("COL_WHITE", 0xffe9eafd);
+
 } // namespace GuiColor
 
 NVGcolor rgbaToNvg(uint32_t i);
 uint32_t nvgToRGBA(NVGcolor c);
 NVGcolor mulSatBright(NVGcolor rgb, float sat, float brt);
-namespace GuiColor {
-
-    void initConstants(int colorVal) {
-        int c            = colorVal;
-        int c2           = math::max(5, c - 16);
-        int c3           = math::min(255, c + 16);
-        auto setConstant = [](const GuiColor::constant_t& constantRef, int32_t rgba) { changeConstantDefault(constantRef, rgba); };
-        setConstant(GuiColor::COL_GRID_DRK, GUI_COLOR_HEXA(c, 255));
-        setConstant(GuiColor::COL_GRID_BRT, GUI_COLOR_HEXA(c + 3, 255));
-        setConstant(GuiColor::COL_LINE_BAR, GUI_COLOR_HEXA(c2, 255));
-        setConstant(GuiColor::COL_LINE_QRT, GUI_COLOR_HEXA(c2 + 3, 255));
-        setConstant(GuiColor::COL_LINE_XTH, GUI_COLOR_HEXA(c2 + 6, 255));
-        setConstant(GuiColor::COL_LINE_SEPERATOR, GUI_COLOR_HEXA(c2 - 3, 255));
-        setConstant(GuiColor::COL_BG_DRKER, GUI_COLOR_HEXA(math::max(0, c3 - 20), 255));
-        setConstant(GuiColor::COL_BG_DRKER2, GUI_COLOR_HEXA(math::max(0, c3 - 40), 255));
-        setConstant(GuiColor::COL_BG_DRK, GUI_COLOR_HEXA(c3, 255));
-        setConstant(GuiColor::COL_BG_BRT, GUI_COLOR_HEXA(c3 + 20, 255));
-        int c4 = math::max(5, c - 32);
-        int c5 = math::max(5, c + 32);
-        setConstant(GuiColor::COL_CTXTMNU_OUTLINE, GUI_COLOR_HEXA(255, 255));
-        setConstant(GuiColor::COL_CTXTMNU_BG, GUI_COLOR_HEXA(c4, 255));
-        setConstant(GuiColor::COL_CTXTMNU_HILIGHT, GUI_COLOR_HEXA(c5, 255));
-        auto gridDark = rgbaToNvg(GuiColor::COL_GRID_DRK.defValue);
-        setConstant(GuiColor::COL_GUI_STROKE, nvgToRGBA(mulSatBright(gridDark, 1.3f, 1.4f)));
-        setConstant(GuiColor::COL_BG_DRK_FOCUSED, GUI_COLOR_HEXA(c3 + 48, 255));
-        setConstant(GuiColor::COL_CLEAR_COLOR, (0xff000000));
-
-        setConstant(GuiColor::COL_NOTE, (0xffff9933));
-        setConstant(GuiColor::COL_NOTE_PLAYING, (0xff33ff33));
-        setConstant(GuiColor::COL_NOTE_ARP, (0xff22bb22));
-        setConstant(GuiColor::COL_NOTE_MUTE, (0xff666666));
-        setConstant(GuiColor::COL_NOTE_OUTLINE, (0xff000000));
-        setConstant(GuiColor::COL_NOTE_TEXT, (0xff333333));
-        setConstant(GuiColor::COL_BG_SELECTEDTRACK, GUI_COLOR_HEXA(c3 + 20, 80));
-        setConstant(GuiColor::COL_LABEL_ACTIVE, GUI_COLOR_HEXA(255, 255));
-        setConstant(GuiColor::COL_LABEL_INACTIVE, GUI_COLOR_HEXA(128, 255));
-    }
-} // namespace GuiColor
 
 namespace UIFont {
     static std::vector<font_type_t*>& _getConstants() noexcept {
@@ -254,11 +206,11 @@ namespace UIFont {
         allconstants.push_back(this);
     }
 
-    const font_type_t FONT_DEFAULT      = font_type_t("FONT_DEFAULT", "Roboto-Medium.ttf");
-    const font_type_t FONT_LABEL        = font_type_t("FONT_LABEL", "Roboto-Medium.ttf");
-    const font_type_t FONT_TEXFIELD     = font_type_t("FONT_TEXFIELD", "Roboto-Medium.ttf");
-    const font_type_t FONT_CONTEXT_MENU = font_type_t("FONT_CONTEXT_MENU", "Roboto-Medium.ttf");
-    const font_type_t FONT_DECIMAL      = font_type_t("FONT_DECIMAL", "Roboto-Medium.ttf");
+    const font_type_t FONT_DEFAULT      = font_type_t("FONT_DEFAULT", "Roboto-Regular.ttf");
+    const font_type_t FONT_LABEL        = font_type_t("FONT_LABEL", "Roboto-Regular.ttf");
+    const font_type_t FONT_TEXFIELD     = font_type_t("FONT_TEXFIELD", "Roboto-Regular.ttf");
+    const font_type_t FONT_CONTEXT_MENU = font_type_t("FONT_CONTEXT_MENU", "Roboto-Regular.ttf");
+    const font_type_t FONT_DECIMAL      = font_type_t("FONT_DECIMAL", "Roboto-Regular.ttf");
     const font_type_t FONT_TEST         = font_type_t("FONT_TEST", "jbmononf.ttf");
 
     void bindFont(NVGcontext* ctx, UIFont::font_instance font) {

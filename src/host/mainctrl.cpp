@@ -1271,7 +1271,6 @@ bool DawCtrl::initAppWindow(window_main* window, NVGcontext* nanovg) {
 
     themes.loadThemes();
 
-    getDefaultTheme()->initTheme();
     getDefaultTheme()->bindFonts();
     setupView();
 

@@ -69,9 +69,6 @@ void initColor() {
         }
     }
 
-    GuiColor::initConstants(22);
-
-    getDefaultTheme()->initTheme();
 }
 
 void UTIL_setFont(NVGcontext* vg, const guitheme_t* const theme, float size, NVGcolor color, int alignment) {

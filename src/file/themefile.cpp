@@ -9,6 +9,7 @@
 #include "renderresources.h"
 #include "assert_dbg.h"
 #include "platform.h"
+#include "math/seq_math.h"
 
 #include <cmath>
 #include <vector>
@@ -38,7 +39,7 @@ namespace GuiConstant {
 } // namespace GuiConstant
 
 struct theme_data {
-    std::unordered_map<String, int32_t> mapColors;
+    std::unordered_map<String, uint32_t> mapColors;
     std::unordered_map<String, int32_t> mapProperties;
     std::unordered_map<String, String> mapFonts;
 };
@@ -71,11 +72,8 @@ void loadThemeData(theme_data& data, guitheme_t& out) {
             continue;
         }
         out.mapColors[c.idx] = it->second;
-        if (c.idx < out.vecNVGColors.size()) {
-            out.vecNVGColors[c.idx] = rgbaToNvg(it->second);
-        } else {
-            dbgassert(0);
-        }
+        dbgassert(c.idx < out.vecNVGColors.size());
+        out.vecNVGColors[c.idx] = rgbaToNvg(it->second);
     }
     for (auto it = data.mapProperties.begin(); it != data.mapProperties.end(); ++it) {
         String key                = it->first;
@@ -84,7 +82,7 @@ void loadThemeData(theme_data& data, guitheme_t& out) {
         //dbgassert(c.idx > 0);
         // some constants may not be defined, and thats ok
         if (c.idx > 0) {
-            out.mapProperties[c.idx] = it->second;
+            out.mapProperties[c.idx] = math::clamp<int32_t>(it->second, c.rangeMin, c.rangeMax);
         }
     }
     for (auto it = data.mapFonts.begin(); it != data.mapFonts.end(); ++it) {
@@ -120,12 +118,7 @@ void save(Archive& archive, guitheme_t const& m) {
 
 template <class Archive>
 void load(Archive& archive, guitheme_t& m) {
-    m.mapColors.clear();
-    m.mapProperties.clear();
-    m.mapFonts.clear();
-    m.initTheme();
-    m.mapColors.clear();
-    m.mapProperties.clear();
+    m = guitheme_t();
     archive(make_nvp("name", m.name));
 
     theme_data data;

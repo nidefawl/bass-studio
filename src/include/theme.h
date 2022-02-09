@@ -15,7 +15,7 @@ struct guitheme_t {
     String fileName;
     bool isDefault;
     std::vector<NVGcolor> vecNVGColors;
-    std::unordered_map<int32_t, int32_t> mapColors;
+    std::unordered_map<int32_t, uint32_t> mapColors;
     std::unordered_map<int32_t, int32_t> mapProperties;
     std::unordered_map<int32_t, UIFont::font_instance> mapFonts;
     struct guitheme_override_state_t;

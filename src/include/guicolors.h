@@ -5,8 +5,6 @@
 #include "guiglobals.h"
 #include "str_util.h"
 
-#define NUM_GUI_COLORS 255
-
 namespace GuiColor {
     struct constant_t {
         int32_t idx;

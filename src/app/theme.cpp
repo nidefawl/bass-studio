@@ -65,19 +65,29 @@ guitheme_t::guitheme_t() {
 }
 
 void guitheme_t::initTheme() {
-    vecNVGColors.resize(NUM_GUI_COLORS);
+    vecNVGColors.clear();
     mapColors.clear();
     mapProperties.clear();
     mapFonts.clear();
+    int32_t maxIdx = 0;
+
     std::vector<GuiColor::constant_t> v = GuiColor::getAllConstants();
     for (auto c : v) {
-        mapColors[c.idx]          = c.defValue;
-        this->vecNVGColors[c.idx] = rgbaToNvg(c.defValue);
+        mapColors[c.idx]    = c.defValue;
+        maxIdx = math::max(maxIdx, c.idx);
     }
+    dbgassert(maxIdx == mapColors.size());
+    dbgassert(maxIdx < 300);
+    vecNVGColors.resize(maxIdx+1);
+    for (auto c : v) {
+        vecNVGColors[c.idx] = rgbaToNvg(c.defValue);
+    }
+
     std::vector<GuiConstant::constant_t> v2 = GuiConstant::getAllConstants();
     for (auto c : v2) {
         mapProperties[c.idx] = c.defValue;
     }
+
     auto v3 = UIFont::getAllConstants();
     for (auto c : v3) {
         mapFonts[c.idx] = UIFont::font_instance{c.defValue};
@@ -133,7 +143,6 @@ int32_t guitheme_t::getColorInt32(GuiColor::constant_t _constant) {
 void guitheme_t::setColor(GuiColor::constant_t _constant, int32_t _newValue) {
     if (isDefault) return;
     dbgassert(_constant.idx >= 0 && _constant.idx < this->vecNVGColors.size());
-    dbgassert(_constant.idx < NUM_GUI_COLORS);
     mapColors[_constant.idx]          = _newValue;
     this->vecNVGColors[_constant.idx] = rgbaToNvg(_newValue);
 }
