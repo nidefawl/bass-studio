@@ -19,17 +19,6 @@
 #include "guifonts.h"
 #include "host/mainctrl.h"
 
-namespace GuiColor {
-    constant_t COL_BTN_BG_DEFAULT_INACTIVE("COL_BTN_BG_DEFAULT_INACTIVE", 0xff202020);
-    constant_t COL_BTN_BG_DEFAULT_ACTIVE("COL_BTN_BG_DEFAULT_ACTIVE", 0xff404040);
-    constant_t COL_BTN_BG_BYPASS_ACTIVE("COL_BTN_BG_BYPASS_ACTIVE", 0xff80ABC0);
-    constant_t COL_BTN_BG_SHOW_ACTIVE("COL_BTN_BG_SHOW_ACTIVE", 0xff40ABC0);
-}// namespace GuiColor
-namespace GuiConstant {
-    constant_t CONST_GUI_FRAME_STROKE_WIDTH("CONST_GUI_FRAME_STROKE_WIDTH", 10, 1, 50);
-    constant_t CONST_GUI_INSET_WIDGET_BG("CONST_GUI_INSET_WIDGET_BG", 2, 0, 5);
-}// namespace GuiConstant
-
 NVGcolor g_colorPalette[COLOR_PALETTE_LEN];
 
 static NVGcolor dbgcolors[5] = {

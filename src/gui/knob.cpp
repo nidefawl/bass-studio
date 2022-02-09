@@ -17,12 +17,6 @@
 #include "automation.h"
 #include "host/mainctrl.h"
 
-namespace GuiColor {
-    constant_t COL_KNOB("COL_KNOB", 0xff00ddff);
-    constant_t COL_KNOB_IND("COL_KNOB_IND", 0xffffffff);
-    constant_t COL_AUTOMATED("COL_AUTOMATED", 0xFFEF62DF);
-}// namespace GuiColor
-
 using Table::table_entry_t;
 using Table::tbl;
 using Table::tbl_row_t;

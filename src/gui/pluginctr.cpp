@@ -856,10 +856,6 @@ void guictr_plugins::pluginDragRelease(guiplugin* g, ivec2 mousepos) {
     return;
 }
 
-namespace GuiColor {
-    constant_t COL_PLUGIN_VIEW_FRAME("COL_PLUGIN_VIEW_FRAME", 0x7fffffff);
-}
-
 void guictr_pluginview::render(NVGcontext* vg) {
     ivec2 cp = this->getPosContent();
     ivec2 cs = this->getSizeContent();

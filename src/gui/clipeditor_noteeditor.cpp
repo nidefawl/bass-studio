@@ -17,9 +17,6 @@
 #include "guicontextmenu_daw.h"
 #include "logging.h"
 
-namespace GuiConstant {
-    extern constant_t CONST_CLIPEDITOR_HANDLES_STROKE_WIDTH;
-}
 
 void guictr_cliphandles::handleDraggedBegin(MouseEvent& evt) {
     dragHandle   = drag_handle_none;
@@ -350,9 +347,6 @@ void guictr_cliphandles::render(NVGcontext* vg) {
             nvgStroke(vg);
         }
     }
-}
-namespace GuiColor {
-    constant_t COL_FOLD_BUTTON("COL_FOLD_BUTTON", 0xFFFF9933);
 }
 
 guictr_noteeditor::guictr_noteeditor(clip_view& _view)

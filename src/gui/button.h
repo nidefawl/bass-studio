@@ -12,13 +12,6 @@
 #include "basectrl.h"
 #include "event.h"
 
-namespace GuiColor {
-    extern constant_t COL_BTN_BG_DEFAULT_INACTIVE;
-    extern constant_t COL_BTN_BG_DEFAULT_ACTIVE;
-    extern constant_t COL_BTN_BG_BYPASS_ACTIVE;
-    extern constant_t COL_BTN_BG_SHOW_ACTIVE;
-}// namespace GuiColor
-
 class guibutton : public guibase {
 protected:
     GuiColor::constant_t buttonColor;

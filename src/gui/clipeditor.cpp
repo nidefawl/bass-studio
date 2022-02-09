@@ -15,17 +15,6 @@
 #include "host/vst_host.h"
 #include "guicontextmenu_daw.h"
 
-namespace GuiColor {
-    constant_t COL_PIANOROLL_WHITE("COL_PIANOROLL_WHITE", 0xFFFFFFFF);
-    constant_t COL_PIANOROLL_BLACK("COL_PIANOROLL_BLACK", 0xFF111111);
-    constant_t COL_PIANOROLL_STROKE("COL_PIANOROLL_STROKE", 0xFF444444);
-    constant_t COL_CLIPEDITOR_SHARP("COL_CLIPEDITOR_SHARP", 0x33111111);
-    constant_t COL_NOTE_REALTIME("COL_NOTE_REALTIME", 0xFFFF00FF);
-}// namespace GuiColor
-namespace GuiConstant {
-    constant_t CONST_PIANOROLL_STROKE_WIDTH("CONST_PIANOROLL_STROKE_WIDTH", 10);
-    constant_t CONST_CLIPEDITOR_HANDLES_STROKE_WIDTH("CONST_CLIPEDITOR_HANDLES_STROKE_WIDTH", 10);
-}// namespace GuiConstant
 constexpr int32_t VEL_SELECT_DISTANCE = 16;
 class action_modify_notes : public action_base {
 protected:

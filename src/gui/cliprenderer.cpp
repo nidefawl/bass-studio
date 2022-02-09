@@ -14,18 +14,6 @@
 #include <array>
 #include <nanovg.h>
 
-namespace GuiColor {
-    constant_t COL_CLIP_OUTLINE("COL_CLIP_OUTLINE", 0x0);
-
-    constant_t COL_CLIP_NOTE("COL_CLIP_NOTE", 0xFFFFFFFF);
-    constant_t COL_CLIP_NOTE_OVERLAP("COL_CLIP_NOTE_OVERLAP", 0xFF0000FF);
-    constant_t COL_CLIP_NOTE_MUTED("COL_CLIP_NOTE_MUTED", 0xFF121212);
-}// namespace GuiColor
-
-namespace GuiConstant {
-    constant_t CONST_NOTE_RENDER_MODE("CONST_NOTE_RENDER_MODE", 1, 0, 1);
-}
-
 struct noteview_cache_impl_t {
     bool valid            = false;
     int64_t notesRendered = -1;

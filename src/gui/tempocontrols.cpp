@@ -21,10 +21,6 @@
 #include "appsettings.h"
 
 
-namespace GuiColor {
-    constant_t COL_BTN_RECORD_ARM_BG("COL_BTN_RECORD_ARM_BG", 0xFF442222);
-}
-
 using Table::table_entry_t;
 using Table::tbl;
 using Table::tbl_row_t;

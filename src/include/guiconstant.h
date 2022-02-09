@@ -27,14 +27,28 @@ namespace GuiConstant {
     extern constant_t CONST_TRACK_HEIGHT_TITLE;
     extern constant_t CONST_METER_WIDTH;
     extern constant_t CONST_FIXED_TITLE_HEIGHT;
-    extern constant_t CONST_GUI_FRAME_STROKE_WIDTH;
     extern constant_t CONST_FONT_SCALE;
     extern constant_t CONST_NODES_SCALE;
     extern constant_t CONST_FONT_SIZE_CONTEXT_MENU;
     extern constant_t CONST_FONT_SIZE_TABLE;
-    extern constant_t CONST_GUI_INSET_WIDGET_BG;
     extern constant_t CONST_TRACK_CONTROLS_WIDTH;
     extern constant_t CONST_LAYOUT_MARGIN;
     extern constant_t CONST_ROUND;
+    extern constant_t CONST_FONT_SIZE_CTR_LABEL;
     extern constant_t CONST_ROW_HEIGHT;
+
+    extern constant_t CONST_CLIPEDITOR_HANDLES_STROKE_WIDTH;
+
+    extern constant_t CONST_PIANOROLL_STROKE_WIDTH;
+    extern constant_t CONST_NOTE_RENDER_MODE;
+
+    extern constant_t CONST_SMALL_LABEL_HEIGHT;
+
+    extern constant_t CONST_GUI_FRAME_STROKE_WIDTH;
+    extern constant_t CONST_GUI_INSET_WIDGET_BG;
+
+    extern constant_t CONST_MIXER_WIDTH;
+    extern constant_t CONST_TRACK_IO_WIDTH;
+    extern constant_t CONST_TRACK_CONTROLS_WIDTH;
+
 }// namespace GuiConstant

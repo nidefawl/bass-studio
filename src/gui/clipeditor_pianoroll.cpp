@@ -12,20 +12,6 @@
 
 #include "guicontextmenu_daw.h"
 
-namespace GuiColor {
-    extern constant_t COL_PIANOROLL_WHITE;
-    extern constant_t COL_PIANOROLL_BLACK;
-    extern constant_t COL_PIANOROLL_STROKE;
-    extern constant_t COL_NOTE_REALTIME;
-    extern constant_t COL_NOTE_PLAYING;
-    constant_t COL_NOTE_MOUSE("COL_NOTE_MOUSE", 0xFF00FFFF);
-}// namespace GuiColor
-
-namespace GuiConstant {
-    extern constant_t CONST_PIANOROLL_STROKE_WIDTH;
-}
-
-
 gui_pianoroll::gui_pianoroll(clip_view& _view, layout_pianoroll_t& _layout)
     : guibase(),
       piano_scale(_layout, _view, size.y),
@@ -33,9 +19,11 @@ gui_pianoroll::gui_pianoroll(clip_view& _view, layout_pianoroll_t& _layout)
     keysX     = 0;
     widthKeys = 0;
 }
+
 int32_t toVel(vec2 note) {
     return math::clamp<int32_t>(math::roundfS32(note.x * 127.0f / 1024.0f), 0, 127);
 }
+
 void gui_pianoroll::handleDraggedBegin(MouseEvent& evt) {
     dragMode = dragmode::drag_none;
     if (evt.guiDragged == this) {

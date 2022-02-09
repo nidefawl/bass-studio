@@ -19,10 +19,6 @@
 
 #include "guicontextmenu_daw.h"
 
-namespace GuiConstant {
-    constant_t CONST_TRACK_CONTROLS_WIDTH("CONST_TRACK_CONTROLS_WIDTH", 460);
-}
-
 void guitrack_mixers::render(NVGcontext* vg) {
     if (!setScissorTransform(vg)) {
         return;

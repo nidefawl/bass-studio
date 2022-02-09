@@ -16,11 +16,6 @@
 #include "host/mainctrl.h"
 #include "platform.h"
 
-
-namespace GuiColor {
-    extern constant_t COL_BTN_RECORD_ARM_BG;
-}
-
 class gui_tempocontrol : public guibutton {
 public:
     gui_tempocontrol()

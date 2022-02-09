@@ -14,18 +14,6 @@
 #include "renderresources.h"
 #include "button.h"
 
-namespace GuiColor {
-    constant_t COL_PLUG_TITLE("COL_PLUG_TITLE", 0xff151515);
-    constant_t COL_PLUG_TITLE_SELECTED("COL_PLUG_TITLE_SELECTED", 0xff353535);
-    constant_t COL_PLUG_TITLE_FOCUSED("COL_PLUG_TITLE_FOCUSED", 0xffff0000);
-    constant_t COL_LABEL_CONTAINER("COL_LABEL_CONTAINER", 0xffd0d0d0);
-}// namespace GuiColor
-namespace GuiConstant {
-
-    constant_t CONST_ROUND("CONST_ROUND", 20, 0, 1000);
-    constant_t CONST_FONT_SIZE_CTR_LABEL("CONST_FONT_SIZE_CTR_LABEL", 14);
-}// namespace GuiConstant
-
 void guictr_base::setControl(BaseCtrl* parentCtrl) {
     guibase::setControl(parentCtrl);
     for (guibase* g : guis) {

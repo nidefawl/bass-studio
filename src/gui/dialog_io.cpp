@@ -30,9 +30,7 @@ namespace {
     constexpr int TEXT_FONT_SIZE  = 20;
     constexpr int BTN_FONT_SIZE   = 16;
 } // namespace
-namespace GuiConstant {
-    extern constant_t CONST_SMALL_LABEL_HEIGHT;
-}
+
 using meterType          = rmsmeter<16000>;
 using guimeterTypeMono   = gui_trackmeter<16000, 1>;
 using guimeterTypeStereo = gui_trackmeter<16000, 2>;

@@ -52,6 +52,8 @@ namespace GuiColor {
     extern constant_t COL_NODES_EDGE;
     extern constant_t COL_NOTE;
     extern constant_t COL_NOTE_PLAYING;
+    extern constant_t COL_NOTE_REALTIME;
+    extern constant_t COL_NOTE_MOUSE;
     extern constant_t COL_NOTE_ARP;
     extern constant_t COL_NOTE_MUTE;
     extern constant_t COL_NOTE_OUTLINE;
@@ -80,6 +82,26 @@ namespace GuiColor {
     extern constant_t COL_TEXTBOX_TEXT;
     extern constant_t COL_TEXTBOX_TEXT_DISABLED;
     extern constant_t COL_TEXTBOX_TEXT_MARKED;
+    extern constant_t COL_BTN_BG_DEFAULT_INACTIVE;
+    extern constant_t COL_BTN_BG_DEFAULT_ACTIVE;
+    extern constant_t COL_BTN_BG_BYPASS_ACTIVE;
+    extern constant_t COL_BTN_BG_SHOW_ACTIVE;
+    extern constant_t COL_FOLD_BUTTON;
+
+    extern constant_t COL_PIANOROLL_WHITE;
+    extern constant_t COL_PIANOROLL_BLACK;
+    extern constant_t COL_PIANOROLL_STROKE;
+    extern constant_t COL_CLIPEDITOR_SHARP;
+    extern constant_t COL_CLIP_OUTLINE;
+    extern constant_t COL_CLIP_NOTE;
+    extern constant_t COL_CLIP_NOTE_OVERLAP;
+    extern constant_t COL_CLIP_NOTE_MUTED;
+
+    extern constant_t COL_BTN_LOAD_DEF_PLUGINS;
+    extern constant_t COL_BTN_RECORD_ARM_BG;
+
+    extern constant_t COL_PLUGIN_VIEW_FRAME;
+    extern constant_t COL_LABEL_CONTAINER;
 }// namespace GuiColor
 
 

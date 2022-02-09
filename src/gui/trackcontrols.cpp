@@ -403,10 +403,7 @@ public:
     void handleRightClick(MouseEvent& evt) override {
     }
 };
-namespace GuiColor {
 
-    constant_t COL_BTN_LOAD_DEF_PLUGINS("COL_BTN_LOAD_DEF_PLUGINS", 0xFFFFFFFF);
-}
 class gui_subtrack_waveview;
 
 std::shared_ptr<guibase> getMeter(int32_t t, rmsmeter<16000>* meter);
@@ -1575,13 +1572,11 @@ bool gui_track_controls::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
     }
     return contained;// always need to return true if contained, parent has z-order
 }
-namespace GuiConstant {
-    GuiConstant::constant_t CONST_MIXER_WIDTH("CONST_MIXER_WIDTH", 160);
-    GuiConstant::constant_t CONST_TRACK_IO_WIDTH("CONST_TRACK_IO_WIDTH", 180);
-}// namespace GuiConstant
+
 guibase* gui_track_controls::getTitle() {
     return title;
 }
+
 void gui_track_controls::layout() {
     const int32_t TRACK_HEIGHT_STEP = theme->get(GuiConstant::CONST_TRACK_HEIGHT_STEP);
     const int32_t TRACK_IO_WIDTH    = theme->get(GuiConstant::CONST_TRACK_IO_WIDTH);
