@@ -12,7 +12,7 @@ set(CMAKE_USER_MAKE_RULES_OVERRIDE "cmake/msvc-init-override.cmake")
 set(PROJECT_SRC_PATH "${CMAKE_SOURCE_DIR}/src" CACHE PATH "Project source directory")
 set(PROJECT_NAME "DAW" CACHE STRING "Project name")
 # instead of an installation step we only copy the executable to PROJECT_WORKING_DIR
-set(PROJECT_WORKING_DIR "../../run/" CACHE PATH "working directory (run)")
+set(PROJECT_WORKING_DIR "../run/" CACHE PATH "working directory (run)")
 
 option(PROJECT_BUILD_DAW "Build daw" ON)
 option(PROJECT_BUILD_SCANNER "Build plugin scanner" ON)
