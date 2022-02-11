@@ -1,7 +1,8 @@
-message(STATUS "PROJECT_SRC_PATH ${PROJECT_SRC_PATH}")
-
 if(NOT EXISTS ${PROJECT_SRC_PATH})
   message(FATAL_ERROR "Can't find PROJECT_SRC_PATH")
+endif()
+if (NOT DEFINED MAIN_SRC_PATH)
+  set(MAIN_SRC_PATH ${PROJECT_SRC_PATH})
 endif()
 
 # check if build.py is present, not actually used 
@@ -209,10 +210,10 @@ string(TOLOWER "lib-${CMAKE_CXX_COMPILER_ID}" LIB_COMPILER)
 
 set(LIB_GN_EXPR ${LIB_COMPILER}-$<IF:$<CONFIG:Debug>,debug,release>-${LIB_LINKAGE})
 
-include_directories("${PROJECT_SRC_PATH}")
-include_directories("${PROJECT_SRC_PATH}/include")
-include_directories(SYSTEM "${PROJECT_SRC_PATH}/thirdparty")
-include_directories(SYSTEM "${PROJECT_SRC_PATH}/nanovg")
+include_directories("${MAIN_SRC_PATH}")
+include_directories("${MAIN_SRC_PATH}/include")
+include_directories(SYSTEM "${MAIN_SRC_PATH}/thirdparty")
+include_directories(SYSTEM "${MAIN_SRC_PATH}/nanovg")
 include_directories(SYSTEM  
     ${PROJECT_DEPS_INSTALL_PATH}/${LIB_GN_EXPR}/glfw/include
     ${PROJECT_DEPS_INSTALL_PATH}/${LIB_GN_EXPR}/SQLiteCpp/include

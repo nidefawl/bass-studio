@@ -1,18 +1,10 @@
 cmake_minimum_required(VERSION 3.20)
-message(STATUS "CMake version: ${CMAKE_VERSION}")
-
-# Don't use -rdynamic
-if (POLICY CMP0065)
-    cmake_policy(SET CMP0065 NEW)
-endif ()
-
 set(CMAKE_USER_MAKE_RULES_OVERRIDE "cmake/msvc-init-override.cmake")
-
-
-set(PROJECT_SRC_PATH "${CMAKE_SOURCE_DIR}/src" CACHE PATH "Project source directory")
 set(PROJECT_NAME "DAW" CACHE STRING "Project name")
-# instead of an installation step we only copy the executable to PROJECT_WORKING_DIR
-set(PROJECT_WORKING_DIR "../run/" CACHE PATH "working directory (run)")
+project(${PROJECT_NAME} C CXX)
+include("cmake/setup.cmake")
+include("cmake/libs.cmake")
+include("cmake/warnings.cmake")
 
 option(PROJECT_BUILD_DAW "Build daw" ON)
 option(PROJECT_BUILD_SCANNER "Build plugin scanner" ON)
@@ -20,9 +12,6 @@ option(PROJECT_BUILD_CLI_HOST "Build command line host" ON)
 option(PROJECT_BUILD_TESTS "Build tests" ON)
 option(PROJECT_CFG_USE_OPENGL3 "Use OpenGL 3.x instead of OpenGL 2" ON)
 
-set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT ${PROJECT_NAME})
-
-project(${PROJECT_NAME} C CXX)
 
 if (PROJECT_BUILD_TESTS OR PROJECT_BUILD_SCANNER OR PROJECT_BUILD_CLI_HOST)
     set(PROJECT_REQUIRE_LIB ON)
@@ -30,13 +19,6 @@ else ()
     set(PROJECT_REQUIRE_LIB OFF)
 endif ()
 
-if (NOT MSVC)
-    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CMAKE_COMMAND} -E time")
-    set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "${CMAKE_COMMAND} -E time")
-endif ()
-
-include("cmake/setup.cmake")
-include("cmake/libs.cmake")
 
 add_compile_definitions(USE_WIN32_EXC_HOOKS BUILD_VSTHOST=1 BUILD_EXTERNAL_PLUGIN=0)
 #add_compile_definitions(PA_ENABLE_DEBUG_OUTPUT=1)
@@ -56,49 +38,12 @@ if (PROJECT_BUILD_TESTS)
     add_compile_definitions(PROJECT_BUILD_TESTS)
 endif ()
 
-# set warn flags
-if (MSVC)
-
-    set(MSVC_WARNINGS_DEBUG 
-        /W4
-        # Disabled warnings
-        /wd4267 # size_t to int
-        /wd4244 # float to int
-        /wd4100 # unreferenced formal parameter
-        /wd4458 # declaration of x hides class member
-        # Enabled warnings not covered by /W4
-        /w14263 # 'function': member function does not override any base class virtual member function
-        /w14265 # 'classname': class has virtual functions, but destructor is not virtual instances of this class may not
-                # be destructed correctly
-        /w14287 # 'operator': unsigned/negative constant mismatch
-        /we4289 # nonstandard extension used: 'variable': loop control variable declared in the for-loop is used outside
-                # the for-loop scope
-        /w14296 # 'operator': expression is always 'boolean_value'
-        /w14311 # 'variable': pointer truncation from 'type1' to 'type2'
-        /w14545 # expression before comma evaluates to a function which is missing an argument list
-        /w14546 # function call before comma missing argument list
-        /w14547 # 'operator': operator before comma has no effect; expected operator with side-effect
-        /w14549 # 'operator': operator before comma has no effect; did you intend 'operator'?
-        /w14555 # expression has no effect; expected expression with side- effect
-        /w14619 # pragma warning: there is no warning number 'number'
-        /w14640 # Enable warning on thread un-safe static member initialization
-        /w14826 # Conversion from 'type1' to 'type_2' is sign-extended. This may cause unexpected runtime behavior.
-        /w14905 # wide string literal cast to 'LPSTR'
-        /w14906 # string literal cast to 'LPWSTR'
-        /w14928 # illegal copy-initialization; more than one user-defined conversion has been implicitly applied
-        /permissive- # standards conformance mode for MSVC compiler.
-    )
-    set(MSVC_WARNINGS_RELEASE /W3 /wd4267 /wd4244 /wd4100 /wd4458 /wd4305)
-    set(BUILD_WARNING_FLAGS $<IF:$<CONFIG:Debug>,${MSVC_WARNINGS_DEBUG},${MSVC_WARNINGS_RELEASE}>)
-else ()
-    set(BUILD_WARNING_FLAGS -Wall -Wno-inconsistent-missing-override -Wno-unused-parameter)
-endif ()
 
 # march=native optimization. Turn off for dist build
 include(CheckCXXCompilerFlag)
 CHECK_CXX_COMPILER_FLAG("-march=native" COMPILER_SUPPORTS_MARCH_NATIVE)
 if (COMPILER_SUPPORTS_MARCH_NATIVE)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
+    add_compile_options(-march=native)
 endif ()
 
 

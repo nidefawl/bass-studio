@@ -375,7 +375,7 @@ public:
     };
 
     virtual void onTick()                                               = 0;
-    virtual void initApp(const std::vector<String>& args)                     = 0;
+    virtual void initApp(const std::vector<String>& args)               = 0;
     virtual bool initAppWindow(window_main* window, NVGcontext* nanovg) = 0;
     virtual void startApp()                                             = 0; /* OpenGL context exists in startApp */
     virtual void destroy()                                              = 0;

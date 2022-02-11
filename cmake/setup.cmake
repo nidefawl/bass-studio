@@ -1,4 +1,24 @@
 
+message(STATUS "CMake version: ${CMAKE_VERSION}")
+if(NOT DEFINED PROJECT_NAME) 
+  message(WARNING "Compiler not supported")
+endif()
+
+# Don't use -rdynamic
+if (POLICY CMP0065)
+    cmake_policy(SET CMP0065 NEW)
+endif ()
+
+set(PROJECT_SRC_PATH "${CMAKE_SOURCE_DIR}/src" CACHE PATH "Project source directory")
+# instead of an installation step we only copy the executable to PROJECT_WORKING_DIR
+set(PROJECT_WORKING_DIR "../run/" CACHE PATH "working directory (run)")
+
+set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT ${PROJECT_NAME})
+if (NOT MSVC)
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CMAKE_COMMAND} -E time")
+    set_property(GLOBAL PROPERTY RULE_LAUNCH_LINK "${CMAKE_COMMAND} -E time")
+endif ()
+
 
 set(LINUX FALSE)
 if(UNIX AND NOT APPLE)
@@ -136,5 +156,5 @@ FUNCTION(GENERATE_BUILDINFO_CPP)
   if (BUILDINFO_COMPILE_DEFS)
     string(REPLACE ";" " -D" BUILDINFO_COMPILE_DEFS "-D${BUILDINFO_COMPILE_DEFS}")
   endif()
-  CONFIGURE_FILE( ${PROJECT_SRC_PATH}/app/buildinfo.cpp.in ${CMAKE_BINARY_DIR}/buildinfo.cpp ESCAPE_QUOTES)
+  CONFIGURE_FILE( ${CMAKE_CURRENT_FUNCTION_LIST_DIR}/../src/app/buildinfo.cpp.in ${CMAKE_BINARY_DIR}/buildinfo.cpp ESCAPE_QUOTES)
 ENDFUNCTION()
