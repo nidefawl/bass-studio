@@ -128,6 +128,7 @@ bool determineUserdataPath(String& path) {
         std::vector<char> convertedStr;
         auto errorCode = wcharToSring(CP_UTF8, wPath, ::wcslen(wPath), convertedStr);
         if (!errorCode){
+            convertedStr.pop_back();
             path.assign(convertedStr.begin(), convertedStr.end());
         }
 #endif

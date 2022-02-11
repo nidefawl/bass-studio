@@ -124,13 +124,28 @@ uint32_t wcharToSring(uint32_t codepage, const wchar_t *utf16, size_t utf16_len,
         len  = WideCharToMultiByte(codepage, 0, utf16, (int)utf16_len, converted.data(), (int)converted.size(), nullptr, nullptr);
         if (len > 0) {
             converted.push_back(0);
-            converted.pop_back();
             return 0;
         }
     }
     return ::GetLastError();
 }
 #endif
+
+uint32_t stringToWchar(uint32_t codepage, const char* mbsz, size_t mbsz_len, std::vector<wchar_t>& converted) {
+      WINBASEAPI int WINAPI MultiByteToWideChar (UINT CodePage, DWORD dwFlags, LPCCH lpMultiByteStr, int cbMultiByte, LPWSTR lpWideCharStr, int cchWideChar);
+    int len  = MultiByteToWideChar(codepage, 0, mbsz, (int)mbsz_len, converted.data(), 0);
+    if (len  > 0) {
+        converted.reserve(len);
+        converted.resize(len);
+        converted.front() = 0;
+        len  = MultiByteToWideChar(codepage, 0, mbsz, (int)mbsz_len, converted.data(), (int)converted.size());
+        if (len > 0) {
+            converted.push_back(0);
+            return 0;
+        }
+    }
+    return ::GetLastError();
+}
 #endif//_WIN32
 
 /**
