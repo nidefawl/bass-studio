@@ -1,9 +1,6 @@
-# ignore everything
 build*/
-testing/
 .vscode/
-old-versions/
-CMakeCache.txt
 .cache/
-compile_commands.json
+.vs/
 test/
+compile_commands.json
