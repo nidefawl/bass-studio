@@ -10,6 +10,10 @@
 #ifdef _WIN32
 #include <Windows.h>//this include SUCKS
 #include <direct.h> //_getcwd
+#include "str_win32.h"
+#define GLFW_EXPOSE_NATIVE_WIN32
+#include <GLFW/glfw3.h>
+#include <GLFW/glfw3native.h>
 #endif
 
 #include "plugins/plugin.h"
@@ -183,11 +187,18 @@ void onModuleLoad(HINSTANCE hInst) {
 
     try {
         initColor();
-        char pluginWindowClassName[32];
-        sprintf_s(pluginWindowClassName, 32, "PLUGWND%I64X", (int64_t) &onModuleLoad);
-        log_printf("window class name %s\n", pluginWindowClassName);
         glfwSetErrorCallback(glfw_plugin_error_callback);
-        if (!glfwInit(pluginWindowClassName)) {
+#ifdef _WIN32
+        static wchar_t pluginWindowClassName[128]{};
+        int len = swprintf_s(pluginWindowClassName, 128, L"PLUGIN_WINDOW_%06X", (int) ( ((uint64_t) &onModuleLoad) & 0xFFFFFF ) );
+        dbgassert(len > 0 && len <  128);
+        if (len > 0 && len <  128) {
+            glfwSetWin32WindowClassName(pluginWindowClassName);
+        }
+        
+#endif
+
+        if (!glfwInit()) {
 #ifdef _WIN32
             DWORD error    = GetLastError();
             String message = FormatErrorMessage(error, StringFormat("Couldn't initialize glfw (%d)", error));
