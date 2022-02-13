@@ -35,4 +35,6 @@ namespace AudioIO {
 
     String getTrackNameShort(AudioIO::tracktype type, int32_t index, stagebuffer_point isInput);
     String getTrackName(AudioIO::tracktype type, int32_t index, bool isInput);
+    String getTrackTypeStr(tracktype type);
+    tracktype getNextTrackType(tracktype type);
 }// namespace AudioIO

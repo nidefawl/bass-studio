@@ -4,8 +4,8 @@
 #include <functional>
 
 class guidialog_cb_yes_no : public guidialog_base {
-    int TITLE_FONT_SIZE = 24;
-    int BTN_FONT_SIZE   = 16;
+    static constexpr int TITLE_FONT_SIZE = 24;
+    static constexpr int BTN_FONT_SIZE   = 16;
     guibutton btnYes;
     guibutton btnNo;
 

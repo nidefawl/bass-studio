@@ -176,7 +176,7 @@ std::shared_ptr<guictr_layout> makeTabListCtr1() {
     auto ctr_theme      = std::shared_ptr<guictr_base>(makeCtrTheme());
     auto ctr_history    = std::shared_ptr<guictr_base>(makeCtrHistory());
     auto shaderView     = std::make_shared<gui_shaderview>();
-    auto settings       = std::make_shared<guidialog_settings>();
+    auto settings       = std::make_shared<DialogSettings::guidialog_settings>();
     auto layout         = std::make_shared<guictr_layout>();
 
     ctr->setLayout(container_layout::TABBED);
@@ -211,7 +211,7 @@ std::shared_ptr<guictr_layout> makeTabListCtr2() {
     auto ctr_properties    = std::shared_ptr<guictr_base>(makeCtrProperties());
     auto ctr_loadedplugins = std::shared_ptr<guictr_base>(makeGuiPluginsLoadedList());
     auto ctr_performance   = std::shared_ptr<guictr_base>(makeGuiPerformance());
-    auto settings          = std::make_shared<guidialog_settings>();
+    auto settings          = std::make_shared<DialogSettings::guidialog_settings>();
 
     auto ctr_dbg0 = std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_0);
     auto ctr_dbg1 = std::make_shared<gui_ctr_debug>(gui_ctr_debug::gui_ctr_debug_type_i32::TYPE_1);
@@ -1055,7 +1055,7 @@ void DawInstance::menuCommand(const menucmd_t&& command) {
 #endif
                 break;
             case CMD_PREFERENCES:
-                mainCtrl->openDialog(new guidialog_settings());
+                mainCtrl->openDialog(new DialogSettings::guidialog_settings());
                 break;
             case CMD_EXIT:
                 mainCtrl->mainWindow->requestClose();

@@ -61,7 +61,6 @@ enum ID_BTN : int32_t {
     ID_BTN_TOGGLE_WAVEFORM_UPDATES,
     ID_BTN_TOGGLE_CLIPRENDERER_DEBUGLAYER
 };
-constexpr int BTN_FONT_SIZE = 16;
 struct gui_ctr_debug::ctr_debug_impl_t {
     std::vector<guibase*> debugGuis;
     std::vector<thread_stats_process_timings_t> lastProcessingList;

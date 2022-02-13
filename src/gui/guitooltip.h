@@ -10,19 +10,21 @@
 #include <memory>
 #include <numeric>
 
-#define FONT_SIZE_TOOLTIP_TITLE 18
-#define FONT_SIZE_TOOLTIP_BIG 15
-#define FONT_SIZE_TOOLTIP 16
 
 template<typename T>
 class guitooltip : public guictxtmenu {
 protected:
+    
     T* ptr;
     bool hadMouseFocus = false;
     Table::tbl table;
     gui_textfield textField;
 
 public:
+    static constexpr int FONT_SIZE_TOOLTIP_TITLE = 18;
+    static constexpr int FONT_SIZE_TOOLTIP_BIG = 15;
+    static constexpr int FONT_SIZE_TOOLTIP = 16;
+    
     guitooltip(T* _ptr) : guictxtmenu(), ptr(_ptr) {
         add(&textField);
         setBackgroundRendered(true);
@@ -61,6 +63,7 @@ public:
         if (!setScissorTransform(vg)) {
             return;
         }
+
         setFont(vg, FONT_SIZE_TOOLTIP_TITLE, G_WHITE, NVG_ALIGN_LEFT | NVG_ALIGN_BOTTOM);
         Table::DrawTableNVG(table, vg, theme, ivec2(INSET_TABLE), getSizeContent() - ivec2(INSET_TABLE << 1), FONT_SIZE_TOOLTIP);
         if (textField.isVisible()) {

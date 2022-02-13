@@ -10,6 +10,9 @@
 
 class gui_list;
 class guidropdownbase;
+
+namespace DialogSettings {
+    
 class setting_dialog : public guictr_base {
 public:
     virtual void onDialogShow() = 0;
@@ -32,3 +35,5 @@ public:
     void setActiveEntry(int32_t idx);
     void addEntry(setting_dialog* ctr, String title);
 };
+
+}

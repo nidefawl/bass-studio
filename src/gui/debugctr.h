@@ -12,6 +12,8 @@ class gui_ctr_debug : public guictr_base {
     ctr_debug_impl_t* const impl;
 
 public:
+    static constexpr int BTN_FONT_SIZE = 16;
+
     enum class gui_ctr_debug_type_i32 : int32_t {
         TYPE_0,
         TYPE_1,

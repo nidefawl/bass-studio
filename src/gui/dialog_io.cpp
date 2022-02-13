@@ -23,19 +23,21 @@
 #include <portaudio.h>
 #include <portmidi.h>
 
-using DAW::settings;
 
-namespace {
-    constexpr int ID_BTN_CLOSE    = 1;
-    constexpr int TEXT_FONT_SIZE  = 20;
-    constexpr int BTN_FONT_SIZE   = 16;
-} // namespace
+namespace DialogSettings {
 
-using meterType          = rmsmeter<16000>;
-using guimeterTypeMono   = gui_trackmeter<16000, 1>;
-using guimeterTypeStereo = gui_trackmeter<16000, 2>;
-using guimeterType4Ch    = gui_trackmeter<16000, 4>;
-using guimeterType6Ch    = gui_trackmeter<16000, 6>;
+using ::DAW::settings;
+using namespace ::AudioIO;
+
+using meterType          = ::rmsmeter<16000>;
+using guimeterTypeMono   = ::gui_trackmeter<16000, 1>;
+using guimeterTypeStereo = ::gui_trackmeter<16000, 2>;
+using guimeterType4Ch    = ::gui_trackmeter<16000, 4>;
+using guimeterType6Ch    = ::gui_trackmeter<16000, 6>;
+
+constexpr int ID_BTN_CLOSE    = 1;
+constexpr int TEXT_FONT_SIZE  = 20;
+constexpr int BTN_FONT_SIZE   = 16;
 
 std::shared_ptr<guibase> getMeter(int32_t t, meterType* meter) {
     if (t < 2) return std::make_shared<guimeterTypeMono>(meter);
@@ -236,34 +238,6 @@ void updateSrBs() {
     }
 }
 
-namespace AudioIO {
-    tracktype getNextTrackType(tracktype type) {
-        switch (type) {
-            default:
-            case MONO:
-                return STEREO;
-            case STEREO:
-                return MONO;
-//            case MULTI_CHANNEL_4:
-//                return MULTI_CHANNEL_6;
-//            case MULTI_CHANNEL_6:
-//                return MONO;
-        }
-    }
-    String getTrackTypeStr(tracktype type) {
-        switch (type) {
-            default:
-            case MONO:
-                return "MONO";
-            case STEREO:
-                return "STEREO";
-            case MULTI_CHANNEL_4:
-                return "4CH";
-            case MULTI_CHANNEL_6:
-                return "6CH";
-        }
-    }
-} // namespace AudioIO
 class guictr_input_channel : public guictr_base {
     std::shared_ptr<audiohost::audiostream::audiotrack> track;
     const bool isInput;
@@ -1359,3 +1333,5 @@ void guidialog_settings::buttonClicked(guibase* button) {
             break;
     }
 }
+
+} // namespace

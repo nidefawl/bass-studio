@@ -88,7 +88,7 @@ std::map<container_type, ContainerBuilder>& getContainerFactory() {
             return std::make_shared<gui_shaderview>();
         };
         containerFactory[container_type::CTR_TYPE_SETTINGS] = []() {
-            return std::make_shared<guidialog_settings>();
+            return std::make_shared<DialogSettings::guidialog_settings>();
         };
         containerFactory[container_type::CTR_TYPE_EFFECTLIBRARY] = []() {
             return std::shared_ptr<guictr_base>(makeGuiEffectLibrary());

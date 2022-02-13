@@ -571,4 +571,32 @@ namespace AudioIO {
         }
         return s;
     }
+
+    tracktype getNextTrackType(tracktype type) {
+        switch (type) {
+            default:
+            case MONO:
+                return STEREO;
+            case STEREO:
+                return MONO;
+        //    case MULTI_CHANNEL_4:
+        //        return MULTI_CHANNEL_6;
+        //    case MULTI_CHANNEL_6:
+        //        return MONO;
+        }
+    }
+
+    String getTrackTypeStr(tracktype type) {
+        switch (type) {
+            default:
+            case MONO:
+                return "MONO";
+            case STEREO:
+                return "STEREO";
+            case MULTI_CHANNEL_4:
+                return "4CH";
+            case MULTI_CHANNEL_6:
+                return "6CH";
+        }
+    }
 }
