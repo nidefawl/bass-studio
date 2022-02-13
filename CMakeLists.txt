@@ -244,18 +244,25 @@ if (PROJECT_REQUIRE_LIB)
 endif ()
 
 if (WIN32)
-    target_precompile_headers(${LINK_TARGET} PRIVATE 
-        <Windows.h>
-        "$<$<COMPILE_LANGUAGE:CXX>:<cstddef$<ANGLE-R>>"
-        "$<$<COMPILE_LANGUAGE:CXX>:<vector$<ANGLE-R>>"
-        "$<$<COMPILE_LANGUAGE:CXX>:<algorithm$<ANGLE-R>>"
-        "$<$<COMPILE_LANGUAGE:CXX>:<functional$<ANGLE-R>>"
-        "$<$<COMPILE_LANGUAGE:CXX>:<array$<ANGLE-R>>"
-        "$<$<COMPILE_LANGUAGE:CXX>:include/math/vec.h>"
-        "$<$<COMPILE_LANGUAGE:CXX>:gui/gui.h>"
-        "$<$<COMPILE_LANGUAGE:CXX>:${PROJECT_DEPS_PATH}/glm/glm/glm.hpp>"
-    )
+    target_precompile_headers(${LINK_TARGET} PRIVATE <Windows.h>)
 endif (WIN32)
+
+target_precompile_headers(${LINK_TARGET} PRIVATE 
+    <Windows.h>
+    "$<$<COMPILE_LANGUAGE:CXX>:<cstddef$<ANGLE-R>>"
+    "$<$<COMPILE_LANGUAGE:CXX>:<vector$<ANGLE-R>>"
+    "$<$<COMPILE_LANGUAGE:CXX>:<algorithm$<ANGLE-R>>"
+    "$<$<COMPILE_LANGUAGE:CXX>:<functional$<ANGLE-R>>"
+    "$<$<COMPILE_LANGUAGE:CXX>:<array$<ANGLE-R>>"
+    "$<$<COMPILE_LANGUAGE:CXX>:<fstream$<ANGLE-R>>"
+    "$<$<COMPILE_LANGUAGE:CXX>:include/math/vec.h>"
+    "$<$<COMPILE_LANGUAGE:CXX>:include/basectrl.h>"
+    "$<$<COMPILE_LANGUAGE:CXX>:host/mainctrl.h>"
+    "$<$<COMPILE_LANGUAGE:CXX>:include/fileio.h>"
+    "$<$<COMPILE_LANGUAGE:CXX>:include/renderresources.h>"
+    "$<$<COMPILE_LANGUAGE:CXX>:gui/gui.h>"
+    "$<$<COMPILE_LANGUAGE:CXX>:${PROJECT_DEPS_PATH}/glm/glm/glm.hpp>"
+)
 
 target_link_libraries(${LINK_TARGET} PRIVATE optimized ${GLFW_LIB_RELEASE} debug ${GLFW_LIB_DEBUG})
 target_link_libraries(${LINK_TARGET} PRIVATE optimized ${SQLITECPP_LIB_RELEASE} debug ${SQLITECPP_LIB_DEBUG})
