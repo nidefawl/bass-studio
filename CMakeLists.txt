@@ -159,6 +159,8 @@ if (NOT MSVC)
             src/host/plugin/vst_plugin_dispatch.cpp
             )
     set_source_files_properties(${SRC_FILES_NO_OPTIMIZE} PROPERTIES COMPILE_OPTIONS "-O0")
+    set_source_files_properties(${SRC_FILES_NO_OPTIMIZE} PROPERTIES SKIP_PRECOMPILE_HEADERS ON)
+
 endif ()
 
 set(PROJECT_DEPS_SRC_FILES "${PROJECT_DEPS_PATH}/glad/gl-3.2-core/src/glad.c")
@@ -241,6 +243,20 @@ if (PROJECT_REQUIRE_LIB)
     endif ()
 endif ()
 
+if (WIN32)
+    target_precompile_headers(${LINK_TARGET} PRIVATE 
+        <Windows.h>
+        "$<$<COMPILE_LANGUAGE:CXX>:<cstddef$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<vector$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<algorithm$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<functional$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:<array$<ANGLE-R>>"
+        "$<$<COMPILE_LANGUAGE:CXX>:include/math/vec.h>"
+        "$<$<COMPILE_LANGUAGE:CXX>:gui/gui.h>"
+        "$<$<COMPILE_LANGUAGE:CXX>:${PROJECT_DEPS_PATH}/glm/glm/glm.hpp>"
+    )
+endif (WIN32)
+
 target_link_libraries(${LINK_TARGET} PRIVATE optimized ${GLFW_LIB_RELEASE} debug ${GLFW_LIB_DEBUG})
 target_link_libraries(${LINK_TARGET} PRIVATE optimized ${SQLITECPP_LIB_RELEASE} debug ${SQLITECPP_LIB_DEBUG})
 target_link_libraries(${LINK_TARGET} PRIVATE optimized ${SQLITE3_LIB_RELEASE} debug ${SQLITE3_LIB_DEBUG})
@@ -276,6 +292,7 @@ endif (WIN32)
 if (WIN32 AND PROJECT_CFG_USE_STACK_PROTECTOR)
     target_link_libraries(${LINK_TARGET} PRIVATE ssp)
 endif ()
+
 
 GENERATE_BUILDINFO_CPP()
 

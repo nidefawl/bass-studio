@@ -17,7 +17,7 @@
 #ifdef _MSC_VER
 #include <Windows.h>
 #endif
-
+#define PLUGIN_BUILD_CRASHVERSION
 #if defined(PLUGIN_BUILD_CRASHVERSION)
 #define PLUGIN_EFFECT_NAME "CrashVST2x"
 #else
