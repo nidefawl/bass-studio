@@ -35,11 +35,6 @@
 
 int startApplication(const std::vector<String>& args);
 
-
-struct Menus {
-    ngui::Menu file;
-};
-
 struct waveform_test_entry {
     audiofile_t* sample{};
     gui_waveform_texture_ref ref;

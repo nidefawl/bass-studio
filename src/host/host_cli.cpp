@@ -38,6 +38,9 @@
 #include <memory>
 
 extern volatile bool fataError;
+
+namespace HostCLI {
+    
 bool userSentQuitRequest = false;
 
 #ifdef _WIN32
@@ -592,4 +595,6 @@ int runCommandLineHost(int argc, const char* argv[]) {
         log_printf("unhandled exception\n", 0);
     }
     return 0;
+}
+
 }

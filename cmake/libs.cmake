@@ -15,6 +15,13 @@ find_path(PROJECT_DEPS_PATH
     REQUIRED)
 
 message(STATUS "PROJECT_DEPS_PATH ${PROJECT_DEPS_PATH}")
+set(USE_SHARED_LIBS Off)
+
+if (USE_SHARED_LIBS)
+    set(LIB_LINKAGE "shared")
+else()
+    set(LIB_LINKAGE "static")
+endif(USE_SHARED_LIBS)
 
 if (USE_SHARED_LIBS)
   set(BUILD_PATH_LIB_TYPE "shared")
@@ -24,6 +31,12 @@ endif()
 
 string(TOLOWER "lib-${CMAKE_CXX_COMPILER_ID}-debug-${BUILD_PATH_LIB_TYPE}" DEPS_BUILD_LIBS_DEBUG)
 string(TOLOWER "lib-${CMAKE_CXX_COMPILER_ID}-release-${BUILD_PATH_LIB_TYPE}" DEPS_BUILD_LIBS_RELEASE)
+
+
+string(TOLOWER "lib-${CMAKE_CXX_COMPILER_ID}" LIB_COMPILER)
+
+set(LIB_GN_EXPR ${LIB_COMPILER}-$<IF:$<CONFIG:Debug>,debug,release>-${LIB_LINKAGE})
+
 
 find_path(PROJECT_DEPS_INSTALL_PATH 
     NAMES
@@ -159,6 +172,7 @@ if(NOT GLFW_LIB_RELEASE)
 endif()
 
 
+
 # pybind is header only and identical in release and debug.
 # it cannot be used out of the box and has to be installed.
 # for simplicity purposes we just install it in both release and debug and check for presence of either.
@@ -189,48 +203,46 @@ if (APPLE)
 
 endif(APPLE)
 
-if (LINUX)
-    link_directories(${GTK3_LIBRARY_DIRS})
-    add_definitions(${GTK3_CFLAGS_OTHER})
-    include_directories(SYSTEM ${GTK3_INCLUDE_DIRS})
-    include_directories(SYSTEM ${X11_X11_INCLUDE_PATH})
-    include_directories(SYSTEM ${ALSA_INCLUDE_DIR})
-endif(LINUX)
 
 
-set(USE_SHARED_LIBS Off)
+FUNCTION(SET_TARGET_PROJECT_INCLUDE_DIRS TARGETNAME)
+message(STATUS "TARGETNAME ${TARGETNAME} ")
+message(STATUS "PROJECT_DEPS_INSTALL_PATH ${PROJECT_DEPS_INSTALL_PATH} ")
+message(STATUS "LIB_GN_EXPR ${LIB_GN_EXPR} ")
+message(STATUS "PROJECT_CFG_USE_OPENGL3 ${PROJECT_CFG_USE_OPENGL3} ")
+message(STATUS "MAIN_SRC_PATH ${MAIN_SRC_PATH} ")
+    if (LINUX)
+        target_link_directories(${TARGETNAME} PUBLIC ${GTK3_LIBRARY_DIRS})
+        target_compile_definitions(${TARGETNAME} PUBLIC ${GTK3_CFLAGS_OTHER})
+        target_include_directories(${TARGETNAME} SYSTEM PUBLIC 
+            ${GTK3_INCLUDE_DIRS}
+            ${X11_X11_INCLUDE_PATH}
+            ${ALSA_INCLUDE_DIR})
+    endif(LINUX)
 
-if (USE_SHARED_LIBS)
-    set(LIB_LINKAGE "shared")
-else()
-    set(LIB_LINKAGE "static")
-endif(USE_SHARED_LIBS)
+    target_include_directories(${TARGETNAME} PUBLIC "${MAIN_SRC_PATH}")
+    target_include_directories(${TARGETNAME} PUBLIC "${MAIN_SRC_PATH}/include")
+    target_include_directories(${TARGETNAME} SYSTEM PUBLIC 
+        "${MAIN_SRC_PATH}/thirdparty"
+        "${MAIN_SRC_PATH}/nanovg")
+    target_include_directories(${TARGETNAME} SYSTEM PUBLIC
+        ${PROJECT_DEPS_INSTALL_PATH}/${LIB_GN_EXPR}/glfw/include
+        ${PROJECT_DEPS_INSTALL_PATH}/${LIB_GN_EXPR}/SQLiteCpp/include
+        ${PROJECT_DEPS_INSTALL_PATH}/${LIB_GN_EXPR}/soxr/include
+        ${PROJECT_DEPS_INSTALL_PATH}/${LIB_GN_EXPR}/portaudio/include
+        ${PROJECT_DEPS_INSTALL_PATH}/${LIB_GN_EXPR}/portmidi/include
+        ${PROJECT_DEPS_INSTALL_PATH}/${LIB_GN_EXPR}/kissfft/include
+        ${PROJECT_DEPS_INSTALL_PATH}/${LIB_GN_EXPR}/pybind11/include
+        ${PROJECT_DEPS_PATH}/glm
+        ${PROJECT_DEPS_PATH}/SplineLibrary/spline_library
+        ${PROJECT_DEPS_PATH}/cereal/include
+        ${PROJECT_DEPS_PATH}/kissfft)
 
-string(TOLOWER "lib-${CMAKE_CXX_COMPILER_ID}" LIB_COMPILER)
-
-set(LIB_GN_EXPR ${LIB_COMPILER}-$<IF:$<CONFIG:Debug>,debug,release>-${LIB_LINKAGE})
-
-include_directories("${MAIN_SRC_PATH}")
-include_directories("${MAIN_SRC_PATH}/include")
-include_directories(SYSTEM "${MAIN_SRC_PATH}/thirdparty")
-include_directories(SYSTEM "${MAIN_SRC_PATH}/nanovg")
-include_directories(SYSTEM  
-    ${PROJECT_DEPS_INSTALL_PATH}/${LIB_GN_EXPR}/glfw/include
-    ${PROJECT_DEPS_INSTALL_PATH}/${LIB_GN_EXPR}/SQLiteCpp/include
-    ${PROJECT_DEPS_INSTALL_PATH}/${LIB_GN_EXPR}/soxr/include
-    ${PROJECT_DEPS_INSTALL_PATH}/${LIB_GN_EXPR}/portaudio/include
-    ${PROJECT_DEPS_INSTALL_PATH}/${LIB_GN_EXPR}/portmidi/include
-    ${PROJECT_DEPS_INSTALL_PATH}/${LIB_GN_EXPR}/kissfft/include
-    ${PROJECT_DEPS_INSTALL_PATH}/${LIB_GN_EXPR}/pybind11/include
-    ${PROJECT_DEPS_PATH}/glm
-    ${PROJECT_DEPS_PATH}/SplineLibrary/spline_library
-    ${PROJECT_DEPS_PATH}/cereal/include
-    ${PROJECT_DEPS_PATH}/kissfft)
-
-if (PROJECT_CFG_USE_OPENGL3)
-    # use OpenGL 3.2 core profile headers to avoid accidental use of legacy or forward
-    include_directories(SYSTEM ${PROJECT_DEPS_PATH}/glad/gl-3.2-core/include)
-else()
-    # use OpenGL 3.2 compatibility profile headers
-    include_directories(SYSTEM ${PROJECT_DEPS_PATH}/glad/gl-3.2-compat/include)
-endif()
+    if (PROJECT_CFG_USE_OPENGL3)
+        # use OpenGL 3.2 core profile headers to avoid accidental use of legacy or forward
+        target_include_directories(${TARGETNAME} SYSTEM PUBLIC ${PROJECT_DEPS_PATH}/glad/gl-3.2-core/include)
+    else()
+        # use OpenGL 3.2 compatibility profile headers
+        target_include_directories(${TARGETNAME} SYSTEM PUBLIC ${PROJECT_DEPS_PATH}/glad/gl-3.2-compat/include)
+    endif()
+ENDFUNCTION()

@@ -13,5 +13,5 @@ void startApp(std::shared_ptr<AppCtrl>& app) {
 
 
 int main(int argc, char* argv[]) {
-    return runCommandLineHost(argc, (const char**) argv);
+    return HostCLI::runCommandLineHost(argc, (const char**) argv);
 }

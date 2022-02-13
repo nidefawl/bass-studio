@@ -17,5 +17,5 @@ int main(int argc, char* argv[]) {
                    vecStringArgs.end(),
                    vecArgs.begin(),
                    [](String& param) { return param.c_str(); });
-    return runCommandLineHost((int) vecArgs.size(), vecArgs.data());
+    return HostCLI::runCommandLineHost((int) vecArgs.size(), vecArgs.data());
 }
