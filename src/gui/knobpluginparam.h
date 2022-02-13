@@ -1,3 +1,4 @@
+#pragma once
 #include <nanovg_min.h>
 #include <vector>
 #include <cmath>
