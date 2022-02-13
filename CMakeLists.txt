@@ -20,7 +20,7 @@ else ()
 endif ()
 
 
-add_compile_definitions(USE_WIN32_EXC_HOOKS BUILD_VSTHOST=1 BUILD_EXTERNAL_PLUGIN=0)
+add_compile_definitions(GLFW_INCLUDE_NONE=1 USE_WIN32_EXC_HOOKS BUILD_VSTHOST=1 BUILD_EXTERNAL_PLUGIN=0)
 #add_compile_definitions(PA_ENABLE_DEBUG_OUTPUT=1)
 add_compile_definitions(VST_FORCE_DEPRECATED=0 GLM_FORCE_CXX14=1)
 if (WIN32)
@@ -131,6 +131,14 @@ foreach (f ${CPP_ALL_FILES})
 endforeach ()
 list(APPEND CPP_SRC_FILES "src/tests/common/test_environment.cpp")
 
+foreach (f ${CPP_ALL_FILES})
+if (f MATCHES ".*host/plugin/.*"
+    OR f MATCHES ".*window/window_dbg.*" 
+    OR f MATCHES ".*plugins/.*")
+    set_source_files_properties(${f} PROPERTIES SKIP_UNITY_BUILD_INCLUSION ON)
+endif ()
+
+endforeach ()
 
 
 if (NOT MSVC)
