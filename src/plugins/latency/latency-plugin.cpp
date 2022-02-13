@@ -22,7 +22,6 @@
 
 #include "platform.h"
 
-#include "../plugin.h"
 #include "latency-plugin.h"
 #include "plugins/plugin.h"
 #include "plugins/plugin-base.h"
