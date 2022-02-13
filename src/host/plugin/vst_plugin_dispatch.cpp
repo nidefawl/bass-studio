@@ -1,49 +1,49 @@
 /** NOT PRETTY **/
 
-#include <algorithm>
-#include "vst_plugin.h"
-#include "str_util.h"
-#include "automation.h"
-#include "logging.h"
-#include "vst_plugin_handles.h"
-#include "track_impl.h"
+#include <vstsdk-host-2.4/aeffect.h>
 
+#include <cstddef>
+#include <cstdint>
+
+using namespace std;
+
+class vstplugin;
+
+extern "C" {
+void vst_onException(vstplugin* eff);
 
 #ifdef _WIN32
-#include "windows.h"
+#include <Windows.h>
 
-
-bool isHandledExc(int n) {
+static bool isHandledExc(int n) {
     return true;
 }
 
 #ifdef __MINGW32__
 #include <excpt.h>
 #include "platform/mingw/mingw.exc.h"
-extern "C" int exchandler(_In_ EXCEPTION_POINTERS* lpEP);
 int exchandler(_In_ EXCEPTION_POINTERS* lpEP) {
     if (isHandledExc(lpEP->ExceptionRecord->ExceptionCode)) {
         return EXCEPTION_EXECUTE_HANDLER;
     }
     return EXCEPTION_CONTINUE_SEARCH;
 }
-#endif
-#endif// _WIN32
 
-void dealWithPluginException(effectbase* eff) {
-    log_printf("segfault/fatal exception\n", 0);
-    if (!eff->isBypass()) {
-        eff->setParamValue(PARAM_ENABLE, 0, FLG_PAR_UPDATE_NOSTORE);
-        log_printf("segfault/fatal exception on %s\n", StringAsCStr(eff->getName()));
-    }
+#endif // __MINGW32__
+
+#endif // _WIN32
+
 }
-//VstInt32 opcode, VstInt32 index, VstIntPtr value, void* ptr, float opt
-int64_t vstplugin::dispatch(
-        int32_t opcode,
-        int32_t index,
-        int64_t value,
-        void* ptr,
-        float opt) {
+
+int64_t vst_dispatch(
+    vstplugin* plugin,
+    AEffect* aeffect,
+    int32_t opcode,
+    int32_t index,
+    int64_t value,
+    void* ptr,
+    float opt)
+{
     int64_t l = 0;
 #ifdef _WIN32
 #if defined(_MSC_VER)
@@ -53,16 +53,16 @@ int64_t vstplugin::dispatch(
 #endif
 #endif//ifdef _WIN32
     {
-        l = handle->aeffect->dispatcher(handle->aeffect, opcode, index, value, ptr, opt);
+        l = aeffect->dispatcher(aeffect, opcode, index, value, ptr, opt);
     }
 #ifdef _WIN32
 #if defined(_MSC_VER)
     __except (isHandledExc(GetExceptionCode()) ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH) {
-        dealWithPluginException(this);
+        vst_onException(plugin);
     }
 #elif defined(__MINGW32__)
     __mingw_except_begin("ehvstdisp") {
-        dealWithPluginException(this);
+        vst_onException(plugin);
     }
     __mingw_except_end("ehvstdisp")
 #endif
@@ -85,11 +85,11 @@ float vst_getParameter(vstplugin* plugin, AEffect* aeffect, int32_t idx) {
 #ifdef _WIN32
 #if defined(_MSC_VER)
     __except (isHandledExc(GetExceptionCode()) ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH) {
-        dealWithPluginException(plugin);
+        vst_onException(plugin);
     }
 #elif defined(__MINGW32__)
     __mingw_except_begin("ehvstgetp") {
-        dealWithPluginException(plugin);
+        vst_onException(plugin);
     }
     __mingw_except_end("ehvstgetp")
 #endif
@@ -110,21 +110,20 @@ void vst_setParameter(vstplugin* plugin, AEffect* aeffect, int32_t idx, float va
 #ifdef _WIN32
 #if defined(_MSC_VER)
     __except (isHandledExc(GetExceptionCode()) ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH) {
-        dealWithPluginException(plugin);
+        vst_onException(plugin);
     }
 #elif defined(__MINGW32__)
     __mingw_except_begin("ehvstsetp") {
-        dealWithPluginException(plugin);
+        vst_onException(plugin);
     }
     __mingw_except_end("ehvstsetp")
 #endif
 #endif//ifdef _WIN32
 }
 
-void vstplugin::process(AudioBlock* in, AudioBlock* out, double tick, int32_t samplePos, int32_t numSamples, playback_state state) {
-    dbgassert(!isInSuspend);
-    dbgassert(getTrackLink()->sampleFormat == this->format && in->samples == format.blockSize && out->samples == format.blockSize && format.blockSize > 0 && format.sampleRate > 0);
-    if (handle->aeffect != nullptr) {
+void vst_process(vstplugin* plugin, AEffect* aeffect, float** bufIn, float** bufOut, int32_t numSamples) {
+
+    if (aeffect != nullptr) {
 
 #ifdef _WIN32
 #if defined(_MSC_VER)
@@ -135,10 +134,10 @@ void vstplugin::process(AudioBlock* in, AudioBlock* out, double tick, int32_t sa
 #endif//ifdef _WIN32
         {
 
-            if (handle->aeffect->flags & effFlagsCanReplacing) {
-                handle->aeffect->processReplacing(handle->aeffect, in->buf, out->buf, numSamples);
+            if (aeffect->flags & effFlagsCanReplacing) {
+                aeffect->processReplacing(aeffect, bufIn, bufOut, numSamples);
             } else {
-                handle->aeffect->process(handle->aeffect, in->buf, out->buf, numSamples);
+                aeffect->process(aeffect, bufIn, bufOut, numSamples);
             }
 
         }
@@ -146,11 +145,11 @@ void vstplugin::process(AudioBlock* in, AudioBlock* out, double tick, int32_t sa
 #ifdef _WIN32
 #if defined(_MSC_VER)
         __except (isHandledExc(GetExceptionCode()) ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH) {
-            dealWithPluginException(this);
+            vst_onException(plugin);
         }
 #elif defined(__MINGW32__)
         __mingw_except_begin("ehvstproc") {
-            dealWithPluginException(this);
+            vst_onException(plugin);
         }
         __mingw_except_end("ehvstproc")
 #endif

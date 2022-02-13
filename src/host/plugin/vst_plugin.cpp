@@ -22,6 +22,14 @@
 
 float vst_getParameter(vstplugin* plugin, AEffect* aeffect, int32_t idx);
 void vst_setParameter(vstplugin* plugin, AEffect* aeffect, int32_t idx, float value);
+void vst_process(vstplugin* plugin, AEffect* aeffect, float** bufIn, float** bufOut, int32_t numSamples);
+int64_t vst_dispatch(vstplugin* plugin,
+                  AEffect* aeffect,
+                  int32_t opcode,
+                  int32_t index,
+                  int64_t value,
+                  void* ptr,
+                  float opt);
 
 bool vstplugin::onResize(vst_window*, ivec2) {
     return true;
@@ -161,9 +169,9 @@ void vstplugin::load(vsthost* host) {
 
     this->dispatch(effSetSampleRate, 0, 0, nullptr, (float) format.sampleRate);
     this->dispatch(effSetBlockSize, 0, format.blockSize, nullptr, 0);
-    
-    this->blockInputs   = new AudioBlock(math::max(2, aeffect->numInputs), format.blockSize);
-    this->blockOutputs  = new AudioBlock(math::max(2, aeffect->numOutputs), format.blockSize);
+
+    this->blockInputs  = new AudioBlock(math::max(2, aeffect->numInputs), format.blockSize);
+    this->blockOutputs = new AudioBlock(math::max(2, aeffect->numOutputs), format.blockSize);
 
     VstPinProperties pin{};
     for (int32_t i = 0; i < aeffect->numInputs; i++) {
@@ -651,4 +659,26 @@ String vstplugin::getInfo(std::vector<String>& list) {
 
 handles_t::~handles_t() {
     hmodule = nullptr;// we no longer own
+}
+int64_t vstplugin::dispatch(
+        int32_t opcode,
+        int32_t index,
+        int64_t value,
+        void* ptr,
+        float opt) {
+    return vst_dispatch(this, this->handle->aeffect, opcode, index, value, ptr, opt);
+}
+void vstplugin::process(AudioBlock* in, AudioBlock* out, double tick, int32_t samplePos, int32_t numSamples, playback_state state) {
+    dbgassert(!isInSuspend);
+    dbgassert(getTrackLink()->sampleFormat == this->format && in->samples == format.blockSize && out->samples == format.blockSize && format.blockSize > 0 && format.sampleRate > 0);
+    vst_process(this, this->handle->aeffect, in->buf, out->buf, numSamples);
+}
+
+extern "C" void vst_onException(vstplugin* plugin)
+{
+    log_printf("segfault/fatal exception\n", 0);
+    if (!plugin->isBypass()) {
+        plugin->setParamValue(PARAM_ENABLE, 0, FLG_PAR_UPDATE_NOSTORE);
+        log_printf("segfault/fatal exception on %s\n", StringAsCStr(plugin->getName()));
+    }
 }
