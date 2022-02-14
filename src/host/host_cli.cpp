@@ -58,11 +58,7 @@ static void on_terminate1() {
     log_printf("on_terminate\n", 0);
     //    exit(1); // required on mingw (at least)
 }
-static void on_unexpected1() {
-    log_printf("on_unexpected\n", 0);
-    logStackTrace();
-    //    exit(1); // required on mingw (at least)
-}
+
 #ifdef _WIN32
 static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
     switch (msg) {
@@ -157,7 +153,6 @@ int runCommandLineHost(int argc, const char* argv[]) {
 #endif
 #endif
     std::set_terminate(on_terminate1);
-    std::set_unexpected(on_unexpected1);
 
     String cwdPath;
     if (determineUserdataPath(cwdPath)) {

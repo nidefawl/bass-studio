@@ -2,10 +2,9 @@
 
 #include <vstsdk-host-2.4/aeffect.h>
 
-#include <cstddef>
-#include <cstdint>
+#include <stddef.h>
+#include <stdint.h>
 
-using namespace std;
 
 class vstplugin;
 

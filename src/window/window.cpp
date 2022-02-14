@@ -122,13 +122,6 @@ void on_terminate() {
     getGlobalLogger()->logStr("on_terminate\n");
     //exit(1); // required on mingw (at least)
 }
-void on_unexpected() {
-    getGlobalLogger()->logStr("on_unexpected\n");
-    logStackTrace();
-    fataError = true;
-    //exit(1); // required on mingw (at least)
-}
-
 namespace RenderResources {
     void initResources(NVGcontext* vg);// renderresources.cpp
 }
@@ -1727,7 +1720,6 @@ int startApplication(const std::vector<String>& args) {
 #endif
 
     std::set_terminate(on_terminate);
-    std::set_unexpected(on_unexpected);
 
 #ifdef USE_WIN32_EXC_HOOKS
     setExceptionHandler();

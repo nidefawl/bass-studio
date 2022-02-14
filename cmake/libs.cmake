@@ -171,7 +171,7 @@ endif()
 # pybind is header only and identical in release and debug.
 # it cannot be used out of the box and has to be installed.
 # for simplicity purposes we just install it in both release and debug and check for presence of either.
-set(PYBIND11_CPP_STANDARD -std=c++14)
+set(PYBIND11_CPP_STANDARD -std=c++17)
 find_package(pybind11 REQUIRED PATHS "${BUILD_PATH_LIB_DEBUG}/pybind11" "${BUILD_PATH_LIB_RELEASE}/pybind11") 
 
 find_package(Threads REQUIRED )

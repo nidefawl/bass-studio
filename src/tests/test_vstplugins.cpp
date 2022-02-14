@@ -127,13 +127,11 @@ namespace {
 
 extern volatile bool fataError;
 void on_terminate();
-void on_unexpected();
 
 int main(int, char*[]) {
     seqthreads::registerThread("mainthread");
 
     std::set_terminate(on_terminate);
-    std::set_unexpected(on_unexpected);
 #ifdef USE_WIN32_EXC_HOOKS
     setExceptionHandler();
 #endif
