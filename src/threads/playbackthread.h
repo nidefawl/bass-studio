@@ -30,7 +30,7 @@ public:
 
     // just for debug asserts, not synchronization control, since this has race conditions
     bool isLocked();
-
+    bool isRunning();
 private:
     Impl* _M_impl;
 };

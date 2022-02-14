@@ -279,12 +279,12 @@ class DawInstance : public project_controller_t, public delete_cb {
     int64_t tmLastSave = 0L;
     String projectPathAutosave;
     track_t* selectedTrack = nullptr;
-    String loadProject;
     struct project_to_load_t {
         std::shared_ptr<project_file> projectfile;
         int loadflags;
     };
     std::shared_ptr<project_to_load_t> projectToLoad;
+
     std::shared_ptr<plugin_clipboard_t> pluginClipboard;
     dragdrop_midifile dragdropclip;
     dragdrop_target_indicator_t dragdropTarget;
@@ -327,8 +327,9 @@ public:
     }
     static DawInstance* get();
 
-    void postInit();
-    void initDaw(const std::vector<String>& args);
+    void initProcessingResources();
+    void initRealtimeResources();
+    void initDaw();
     void startDaw();
 
     void setTempo(int32_t _tempo100) override;
@@ -373,13 +374,6 @@ public:
      * @return shared_ptr to project_file instance
      */
     std::shared_ptr<project_file> createProjectFile();
-
-    const String& getLoadProjectFilePath() {
-        return loadProject;
-    }
-    void setLoadProjectFilePath(const String& projectFilePath) {
-        loadProject = projectFilePath;
-    }
     
     /** assuming current thread is main thread when this is called **/
     /**
@@ -496,7 +490,6 @@ public:
     void menuCommand(const menucmd_t&& command) override;
     void updateMenubar() override;
     void onTick() override;
-    void startApp() override;
     void destroy() override;
     void relayout(int32_t w, int32_t h) override;
     bool processGlobalKeyevent(KeyEvent& event) override;
@@ -506,8 +499,10 @@ public:
     void prerender(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, int32_t h, float pixelRatio) override;
 
 
-    void initApp(const std::vector<String>& args) override;
+    void initApp(const std::vector<String>& args) override { };
     bool initAppWindow(window_main* window, NVGcontext* nanovg) override;
+    void startApp() override { };
+
 
     void focusReceived() override {
     }
@@ -566,7 +561,7 @@ class MainCtrl : public DawCtrl {
     friend class DawCtrl;
     DawViewContainersMain* view = nullptr;
     std::array<dawview_layout_t, 10> layouts;
-
+    String loadProject;
 public:
     static MainCtrl* get();
     explicit MainCtrl(DawInstance& _daw);
@@ -580,9 +575,12 @@ public:
     static guictr_tracks* getGuiTrackCtr();
 
     void initApp(const std::vector<String>& args) override;
-    bool initAppWindow(window_main* window, NVGcontext* nanovg) override;
-
     void startApp() override;
+
+    const String& getLoadProjectFilePath() {
+        return loadProject;
+    }
+
     void onTick() override;
     void setupView() override;
     bool isClipEditorVisible();

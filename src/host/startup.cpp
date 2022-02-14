@@ -169,6 +169,6 @@ void dawinstance_startup_commands(const std::vector<String>& args, daw_tls::tlsi
     //    dawMainCtrl->setVisible(false);
     //    dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 0));
     //    dawMainCtrl->menuCommand(CMD_NUMBER_ARG(CMD_SHOW_DEBUG_WINDOW, 1));
-    if (dawInstance->getLoadProjectFilePath().empty())
+    if (dawMainCtrl->getLoadProjectFilePath().empty())
         dawInstance->loadFile(dawPath + projName, flags);
 }

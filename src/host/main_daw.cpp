@@ -9,10 +9,8 @@ std::shared_ptr<MainCtrl> mainctrl;
 std::shared_ptr<DawInstance> dawInstance;
 std::shared_ptr<AppCtrl> makeApp(const std::vector<String>& args) {
     dbgassert (!mainctrl);
-
-
     dawInstance = std::make_shared<DawInstance>();
-    dawInstance->initDaw(args);
+    dawInstance->initDaw();
     mainctrl = std::make_shared<MainCtrl>(*dawInstance);
     mainctrl->initApp(args);
     dawInstance->setMainControl(mainctrl.get());
@@ -22,8 +20,9 @@ std::shared_ptr<AppCtrl> makeApp(const std::vector<String>& args) {
 
 void startApp(std::shared_ptr<AppCtrl>& app) {
     dawInstance->startDaw();
+    dawInstance->initProcessingResources();
+    dawInstance->initRealtimeResources();
     app->startApp();
-    dawInstance->postInit();
 }
 
 void deleteApp() {

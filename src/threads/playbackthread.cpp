@@ -134,6 +134,9 @@ public:
     bool isLocked() {
         return this->m_lockCount > 0;
     }
+    bool isRunning() {
+        return this->m_threadId > 0 && !m_exited;
+    }
     ThreadLock lockThread() {
         ThreadLock t = ThreadLock::MakeThreadLock(m_mutex, this->m_lockCount, false);
         return std::move(t);//CANNOT RELY ON RVO
@@ -405,7 +408,12 @@ ThreadLock PlaybackThread::tryLockThread() {
     }
     return std::move(t);//CANNOT RELY ON RVO
 }
+
 bool PlaybackThread::isLocked() {
+    return _M_impl->isLocked();
+}
+
+bool PlaybackThread::isRunning() {
     return _M_impl->isLocked();
 }
 

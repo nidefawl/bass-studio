@@ -94,7 +94,6 @@ struct thread_stats_process_timings_t {
     }
 };
 #define MAX_AUDIOPROCESSING_THREADS 32
-class vsthost;
 
 class vsthost {
 public:

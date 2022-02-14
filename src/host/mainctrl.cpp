@@ -657,7 +657,7 @@ void CompanionCtrl::resetMouseContext() {
 
 void DawInstance::unloadProject() {
     AppWndProc_enableBlockReentrant();
-    dbgassert(playThread.isLocked());
+    dbgassert(!playThread.isRunning() || playThread.isLocked());
     for (auto* ctrl : dawCtrls) {
         ctrl->closeContextMenu();
         ctrl->resetMouseContext();
@@ -1081,12 +1081,17 @@ void DawCtrl::menuCommand(const menucmd_t&& command) {
     daw.menuCommand(std::move(command));
 }
 
-void DawCtrl::startApp() {
+void MainCtrl::startApp() {
     BaseCtrl::relayout();
     updateVisibleTrackContents();
-}
 
-void MainCtrl::startApp() {
+    //TODO: move this out of here
+    if (!loadProject.empty()) {
+        daw.loadFile(loadProject, FLAG_DEFER_LOAD);
+    } else {
+        daw.setEmptyProject();
+    }
+    
     view->storeLayout(&layouts[0]);
     for (auto i = 1; i < layouts.size(); i++) {
         std::shared_ptr<dawview_layout_t> viewLayout = loadDawViewLayoutSnapshot(StringFormat("data/view%d.layout", i));
@@ -1099,8 +1104,14 @@ void MainCtrl::startApp() {
     DawCtrl::startApp();
 }
 
-void DawInstance::postInit() {
+void DawInstance::initProcessingResources() {
     dbgassert(initState == 2);
+    initState++;
+    tls.host->initThreads();
+}
+
+void DawInstance::initRealtimeResources() {
+    dbgassert(initState == 3);
     using DAW::settings;
     initState++;
     tls.audioHost->initPa();
@@ -1118,7 +1129,7 @@ void DawInstance::postInit() {
     this->playThread.setTls(tls);
     this->playThread.startThread(this);
     dbgassert(this->playThread.getState() == playback_state::status_no_process);
-    tls.host->initThreads();
+
 
     this->workerThread.setTls(tls);
     this->workerThread.startThread();
@@ -1128,12 +1139,6 @@ void DawInstance::postInit() {
     this->workerThread.call([]() {
       log_printf("WorkerThreadCallTest\n", 0);
     })->wait();
-
-    if (!loadProject.empty()) {
-        loadFile(loadProject, FLAG_DEFER_LOAD);
-    } else {
-        setEmptyProject();
-    }
 }
 
 void DawInstance::updateClipViews(clip_t* notifyClip, clip_cursor_t cursor) {
@@ -1148,13 +1153,16 @@ void DawInstance::updateClipViews(clip_t* notifyClip, clip_cursor_t cursor) {
 }
 
 void DawInstance::destroy() {
-    dbgassert(initState == 3);
-    initState = 4;
-    setAudioThreadState(playback_state::status_no_process);
-    //dbgassert(playThread.getState() == playback_state::status_no_process);
-    ThreadLock lock = playThread.lockThread();
-    midihost::getInstance()->stopMidi();
-    audiohost::getInstance()->stopAudio();
+    dbgassert(initState > 2);
+    const bool isRealtimeInstance = initState > 3;
+    initState = -1;
+
+    if (isRealtimeInstance) {
+        setAudioThreadState(playback_state::status_no_process);
+        tls.midiHost->stopMidi();
+        tls.audioHost->stopAudio();
+    }
+
     unloadProject();
     int totalAllocs = getNumClipAllocations();
     if (totalAllocs != 0) {
@@ -1162,21 +1170,26 @@ void DawInstance::destroy() {
         dbgassert(getNumClipAllocations() == 0);
     }
 
-
-    for (auto& companion : companionWindows) {
-        dbgassert(!companion.ctrl->isOk());
-    }
-    companionWindows.clear();
-    tls.host->unload();
-    tls.host->destroy();
-    tls.audioHost->deinitPa();
-    tls.midiHost->deinitPm();
     plugindb.closeDatabase();
 
-    this->workerThread.stopThread();
-    this->workerThread.joinThread();
-    this->playThread.stopThread();
-    this->playThread.joinThread();
+
+    if (isRealtimeInstance) {
+
+        this->workerThread.stopThread();
+        this->workerThread.joinThread();
+        this->playThread.stopThread();
+        this->playThread.joinThread();
+
+        for (auto& companion : companionWindows) {
+            dbgassert(!companion.ctrl->isOk());
+        }
+        companionWindows.clear();
+        tls.audioHost->deinitPa();
+        tls.midiHost->deinitPm();
+    }
+
+    tls.host->unload();
+    tls.host->destroy();
 
     delete tls.audioCache;
     delete tls.midiHost;
@@ -1214,21 +1227,10 @@ void DawInstance::startDaw() {
     plugindb.openDatabase();
 }
 
-void DawInstance::initDaw(const std::vector<String>& args) {
+void DawInstance::initDaw() {
     dbgassert(initState == 0);
     using DAW::settings;
     initState++;
-    for (int i = 1; i < args.size(); i++) {
-        if (args[i] == "--load" && i + 1 < args.size()) {
-            loadProject = args[i + 1];
-            i++;
-            continue;
-        }
-        if (StrEndsWith(args[i], "." PROJECT_FILE_EXT)) {
-            loadProject = args[i];
-            continue;
-        }
-    }
 
     daw_tls::tlsinstance& initTls = tls;
     initTls.tlsInitialized = true;
@@ -1256,18 +1258,22 @@ void DawInstance::initDaw(const std::vector<String>& args) {
     });
 }
 
-void DawCtrl::initApp(const std::vector<String>& args) {
-}
-
 MainCtrl::MainCtrl(DawInstance& _daw) : DawCtrl(_daw) {
     log_printf("MainCtrl constructor\n", 0);
 }
 
 void MainCtrl::initApp(const std::vector<String>& args) {
-}
-
-bool MainCtrl::initAppWindow(window_main* window, NVGcontext* nanovg) {
-    return DawCtrl::initAppWindow(window, nanovg);
+    for (int i = 1; i < args.size(); i++) {
+        if (args[i] == "--load" && i + 1 < args.size()) {
+            loadProject = args[i + 1];
+            i++;
+            continue;
+        }
+        if (StrEndsWith(args[i], "." PROJECT_FILE_EXT)) {
+            loadProject = args[i];
+            continue;
+        }
+    }
 }
 
 bool DawCtrl::initAppWindow(window_main* window, NVGcontext* nanovg) {
@@ -1896,12 +1902,16 @@ void DawCtrl::relayout(int32_t w, int32_t h) {
 
 void DawInstance::setSelectedTrackEntry(track_gui_entry_t* trackEntry) {
     selectedTrack = trackEntry ? trackEntry->track : nullptr;
-    tls.mainCtrl->view->ctr_plugins.showTrack(trackEntry && trackEntry->track ? trackEntry->track->audio : nullptr);
+    if (tls.mainCtrl) {
+        tls.mainCtrl->view->ctr_plugins.showTrack(trackEntry && trackEntry->track ? trackEntry->track->audio : nullptr);
+    }
 }
 
 void DawInstance::setSelectedTrack(track_t* track) {
     selectedTrack = track;
-    tls.mainCtrl->view->ctr_plugins.showTrack(track ? track->audio : nullptr);
+    if (tls.mainCtrl) {
+        tls.mainCtrl->view->ctr_plugins.showTrack(track ? track->audio : nullptr);
+    }
 }
 
 track_t* DawInstance::getSelectedTrack() {
@@ -2422,11 +2432,12 @@ void DawInstance::removeTrackId(uint32_t trackId) {
 }
 
 void DawInstance::removeTrackImpl(track_t* track, int flags) {
-    guictr_plugins* plugins = MainCtrl::getPluginCtr();
-    plugins->hideTrack(track->audio);
-    // TODO: handle plugins correctly, right now they remain loaded in vsthost
-    if (tls.mainCtrl && tls.mainCtrl->clipView.gui && tls.mainCtrl->clipView.gui->m_track == track) {
-        tls.mainCtrl->clipView.set(nullptr);
+    if (tls.mainCtrl) {
+        tls.mainCtrl->getPluginCtr()->hideTrack(track->audio);
+        // TODO: handle plugins correctly, right now they remain loaded in vsthost
+        if (tls.mainCtrl->clipView.gui && tls.mainCtrl->clipView.gui->m_track == track) {
+            tls.mainCtrl->clipView.set(nullptr);
+        }
     }
     project.trackList.removeTrack(track);
     for (DawCtrl* pDawCtrl : dawCtrls) {
