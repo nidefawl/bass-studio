@@ -71,7 +71,6 @@
             "MIMode": "gdb",
             "program": null,
             "windows": {
-                "envFile": "${workspaceRoot}/.vscode/.env_wingdb",
                 "program": "${command:cmake.launchTargetPath}",
                 "miDebuggerPath": "C:\\dev\\gdb\\bin\\gdb.exe",
             },
