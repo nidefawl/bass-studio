@@ -107,16 +107,14 @@ public:
         throw applogicexception(reentrant_err_msg); \
     }
 
-#define EXC_TRY try {
-#define EXC_CATCH                \
-    }                            \
-    catch (std::exception & e) { \
-        handleStdException(e);   \
-    }
 
 void handleStdException(std::exception& e) {
-    getGlobalLogger()->logStr(StringFormat("std::exception: %s\n", e.what()));
-    logStackTrace();
+    try {
+        getGlobalLogger()->logStr(StringFormat("std::exception: %s\n", e.what()));
+        logStackTrace();
+    } catch (std::exception& e) {
+        dbgassert(0);
+    }
     fataError = true;
 }
 
@@ -157,7 +155,7 @@ static void setAppWindowHints() {
 #else
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 2);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_ANY_PROFILE);
 #endif
 
 #ifndef NDEBUG
