@@ -585,9 +585,9 @@ namespace DebugAlloc {
     Tracker<guibase> trackerGUIs;
     template<>
     void printLeaked(int64_t allocId, int64_t allocCount, std::vector<guibase*>& allocList, std::unordered_map<int64_t, DebugAlloc::AllocInfo>& allocInfo) {
-        my_printf("allocCount %lld\n", allocCount);
+        log_printf("allocCount %lld\n", allocCount);
         for (auto gui : allocList) {
-            my_printf("leaked %lld %s \n", gui->allocId, StringAsCStr(gui->getClassName()));// add debug info to clip instance (track/time )
+            log_printf("leaked %lld %s \n", gui->allocId, StringAsCStr(gui->getClassName()));// add debug info to clip instance (track/time )
         }
     }
     template<>

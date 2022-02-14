@@ -601,7 +601,7 @@ public:
     void releaseModule(void* module) {
 #ifdef _WIN32
         String moduleName = getModuleName((HMODULE)module);
-        my_printf("Unload %s\n", StringAsCStr(moduleName));
+        log_printf("Unload %s\n", StringAsCStr(moduleName));
         FreeLibrary((HMODULE)module);
 #endif
 #if defined(__linux__) || defined(__APPLE__)
@@ -2841,21 +2841,21 @@ bool vsthost::moveEffects(audio_stage_t* trp, int32_t src, int32_t dst, int32_t 
     int32_t end = dst+len;
     for (;itOut!=tmpEffects.cend();) {
         if (curEffects.cbegin()+src == itIn) {
-            my_printf("jump input iterator from %d to %d\n", itIn-curEffects.cbegin(), itIn-curEffects.cbegin()+len);
+            log_printf("jump input iterator from %d to %d\n", itIn-curEffects.cbegin(), itIn-curEffects.cbegin()+len);
             itIn+=len;
         }
         int srcPos;
         int outPos = itOut-tmpEffects.begin();
         if (dst2 < end && tmpEffects.cbegin()+dst2 == itOut) {
-            my_printf("dst2 %d\n", dst2);
+            log_printf("dst2 %d\n", dst2);
             srcPos = src2;
             *itOut++ = curEffects[src2++];
             dst2++;
-            my_printf("b writing %d to %d\n", srcPos, outPos);
+            log_printf("b writing %d to %d\n", srcPos, outPos);
         } else {
             srcPos = itIn-curEffects.cbegin();
             *itOut++ = *itIn++;
-            my_printf("a writing %d to %d\n", srcPos, outPos);
+            log_printf("a writing %d to %d\n", srcPos, outPos);
         }
     }
     trp->effects = std::move(tmpEffects);

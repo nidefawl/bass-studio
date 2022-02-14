@@ -833,7 +833,7 @@ void guitrack_editor::addTrackEntry(track_gui_entry_t& e) {
 //    int idx = 0;
 //    for (guibase* child : guis) {
 //        gui_track* t = dynamic_cast<gui_track*>(child);
-//        my_printf("idx %d = %s\n", idx, StringAsCStr(t->m_track->name));
+//        log_printf("idx %d = %s\n", idx, StringAsCStr(t->m_track->name));
 //        idx++;
 //    }
 //#endif

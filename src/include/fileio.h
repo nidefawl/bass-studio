@@ -89,7 +89,7 @@ inline int64_t ReadFileFully(const String& Filename, ByteBuf& ref) {
             }
             size_t cur = file.tellg();
             if (size != (int64_t) cur) {
-                my_printf("read %d bytes, expected %d bytes, BAD!\n", cur, size);
+                log_printf("read %d bytes, expected %d bytes, BAD!\n", cur, size);
             } else {
 
                 return size;

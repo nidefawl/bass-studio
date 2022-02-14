@@ -58,7 +58,7 @@ bool gui_list::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
     if (this->contains(mpos)) {
         ivec2 localMouse = this->toContainerSpace(mpos);
         if (scrollbar.mouseHitTest(localMouse, evt)) {
-//            my_printf("clicked on %s %d\n", scrollbar.getClassName().c_str(), (int) h);
+//            log_printf("clicked on %s %d\n", scrollbar.getClassName().c_str(), (int) h);
             return true;
         }
         ivec2 localMouseOffset = localMouse;
@@ -68,12 +68,12 @@ bool gui_list::mouseHitTest(ivec2 mpos, MouseHitEvt& evt) {
         }
         for (int32_t idx = first; idx < last; idx++) {
             if (listGuis[idx]->mouseHitTest(localMouseOffset, evt)) {
-//                my_printf("clicked on %s %s %d\n", listGuis[idx]->getClassName().c_str(), listGuis[idx]->getText().c_str(), (int) h);
+//                log_printf("clicked on %s %s %d\n", listGuis[idx]->getClassName().c_str(), listGuis[idx]->getText().c_str(), (int) h);
                 return true;
             }
         }
         evt.requestFocus(this);
-//        my_printf("clicked on %s %d\n", getClassName().c_str(), (int) h);
+//        log_printf("clicked on %s %d\n", getClassName().c_str(), (int) h);
         return true;
     }
     return false;

@@ -541,9 +541,9 @@ public:
             std::vector<effectbase*> pluginsDeferred;
             std::vector<audio_stage_t*> audioStagesAffected;
             host->getDeferredEffects(pluginsDeferred);
-            my_printf("loading %d plugins\n", pluginsDeferred.size());
+            log_printf("loading %d plugins\n", pluginsDeferred.size());
             for (auto plugin : pluginsDeferred) {
-                my_printf("activate %s\n", StringAsCStr(plugin->sName));
+                log_printf("activate %s\n", StringAsCStr(plugin->sName));
                 effectbase* effectLoaded = nullptr;
                 host->activateDeferred(plugin, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY, &effectLoaded);
 

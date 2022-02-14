@@ -74,14 +74,14 @@ public:
         const char* fnameFsh = "blur.fsh";
         int newprogram       = compileShaderCombo(srcParser, fnameVsh, fnameFsh);
         if (newprogram < 0) {
-            my_printf("compileProgram failed\n", 0);
+            log_printf("compileProgram failed\n", 0);
             return -1;
         }
         program = newprogram;
         glUseProgram(program);
         u_blurPassProp = glGetUniformLocation(program, "blurPassProp");
         if (bindAttributes()) {
-            my_printf("bind attributes failed\n", 0);
+            log_printf("bind attributes failed\n", 0);
             return -1;
         }
         glGenVertexArrays(1, &vbo.vaoId);

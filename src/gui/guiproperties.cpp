@@ -944,11 +944,11 @@ public:
         int32_t idx = 0;
         _themeMgr->getThemeNames(strThemeNames);
         for (auto str : strThemeNames) {
-            my_printf("added %s\n", StringAsCStr(str));
+            log_printf("added %s\n", StringAsCStr(str));
             addEntry(new ctxtmenu_entry(str, idx));
             idx++;
         }
-        my_printf("added %d themes \n", idx);
+        log_printf("added %d themes \n", idx);
     }
     void clicked(int _id) override {
         closeContextMenu();

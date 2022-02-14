@@ -99,7 +99,7 @@ public:
         if (_id >= 100) {
             _id -= 100;
             int32_t col = colorPalette[_id];
-            my_printf("col: %08X\n", col);
+            log_printf("col: %08X\n", col);
             if (callback) {
                 callback(col);
             }

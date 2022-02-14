@@ -39,7 +39,7 @@ void fillbands(std::vector<float> const& mags, std::vector<float> const& freq, s
         float interp = lower + (upper - lower) * delta;
         newBands[i]  = interp;
         if (i < 10) {
-            //      my_printf("Band #%d is %f * [%d] + %f * [%d]\n", i, delta, binIdx, 1.0f-delta, binIdx+1);
+            //      log_printf("Band #%d is %f * [%d] + %f * [%d]\n", i, delta, binIdx, 1.0f-delta, binIdx+1);
         }
     }
     for (int i = 0; i < numBands; i++) {

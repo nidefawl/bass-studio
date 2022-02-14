@@ -369,12 +369,12 @@ void GLPathRenderer::bakePaths(std::vector<vec2list> paths, Uniforms pathOpt, Ba
             float len = packVertexData2(list, outVdata, idx);
             //      int64_t t = timer.getTime();
             //      dbgassert(t);
-            //      my_printf("%d\n", t+2);
+            //      log_printf("%d\n", t+2);
             size_t flBufPos    = flBufVertsPos * sizeFloatsVert;
             size_t flBakedSize = outVdata.size() * sizeFloatsVert;
             bufFinal.v.resize(flBufPos + flBakedSize);
             memcpy(bufFinal.v.data() + flBufPos, outVdata.data(), flBakedSize * sizeof(float));
-            //      my_printf("processed %d into %d bytes of data\n", list.size()*sizeof(vec2), flBakedSize*sizeof(float));
+            //      log_printf("processed %d into %d bytes of data\n", list.size()*sizeof(vec2), flBakedSize*sizeof(float));
             buildIndices(outVdata.size() / 4, flBufVertsPos, bufFinal.i);
             Uniforms uniforms = pathOpt;
             uniforms.length   = len;

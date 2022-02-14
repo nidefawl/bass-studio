@@ -131,9 +131,9 @@ void dawinstance_startup_commands(const std::vector<String>& args, daw_tls::tlsi
             auto* host      = vsthost::getInstance();
             std::vector<effectbase*> pluginsDeferred;
             host->getDeferredEffects(pluginsDeferred);
-            my_printf("loading %d plugins\n", pluginsDeferred.size());
+            log_printf("loading %d plugins\n", pluginsDeferred.size());
             for (auto effect : pluginsDeferred) {
-                my_printf("activate %s\n", StringAsCStr(effect->sName));
+                log_printf("activate %s\n", StringAsCStr(effect->sName));
                 host->activateDeferred(effect, vsthost::FLAG_HOST_UNLOAD_PLUGIN_NO_NOTIFY);
             }
             auto& trackList = dawInstance->getProject()->trackList;

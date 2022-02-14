@@ -346,27 +346,27 @@ public:
             }
         }
         if (_id == CMD_DELETE) {
-            my_printf("CMD_DELETE %s\n", StringAsCStr(effect->sName));
+            log_printf("CMD_DELETE %s\n", StringAsCStr(effect->sName));
             handlePluginCtrCommand(action_plugin_ctr::PLUGINS_DELETE);
         }
         if (_id == CMD_COPY) {
-            my_printf("CMD_COPY %s\n", StringAsCStr(effect->sName));
+            log_printf("CMD_COPY %s\n", StringAsCStr(effect->sName));
             handlePluginCtrCommand(action_plugin_ctr::PLUGINS_COPY);
         }
         if (_id == CMD_CUT) {
-            my_printf("CMD_CUT %s\n", StringAsCStr(effect->sName));
+            log_printf("CMD_CUT %s\n", StringAsCStr(effect->sName));
             handlePluginCtrCommand(action_plugin_ctr::PLUGINS_CUT);
         }
         if (_id == CMD_PASTE) {
-            my_printf("CMD_PASTE %s\n", StringAsCStr(effect->sName));
+            log_printf("CMD_PASTE %s\n", StringAsCStr(effect->sName));
             handlePluginCtrCommand(action_plugin_ctr::PLUGINS_PASTE);
         }
         if (_id == CMD_PASTE) {
-            my_printf("CMD_COPY %s\n", StringAsCStr(effect->sName));
+            log_printf("CMD_COPY %s\n", StringAsCStr(effect->sName));
             handlePluginCtrCommand(action_plugin_ctr::PLUGINS_COPY);
         }
         if (_id == CMD_DUPLICATE) {
-            my_printf("CMD_DUPLICATE %s\n", StringAsCStr(effect->sName));
+            log_printf("CMD_DUPLICATE %s\n", StringAsCStr(effect->sName));
             handlePluginCtrCommand(action_plugin_ctr::PLUGINS_DUPLICATE);
         }
         if (_id == CMD_SHOW_AUTOMATION) {

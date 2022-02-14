@@ -22,7 +22,7 @@ bool glshader_srcloader::addStageSrc(int32_t type, const char* fname) {
         sources.push_back({type, fname, strSrc});
         return true;
     }
-    my_printf("failed loading %s\n", fname);
+    log_printf("failed loading %s\n", fname);
     return false;
 }
 bool glshader_srcloader::setStageSrc(int32_t type, const String& fname, const String& strSrc) {
@@ -33,7 +33,7 @@ bool glshader_srcloader::reload() {
     for (auto& srcEntry : sources) {
         int64_t ret = ReadFileText(srcEntry.filepath, srcEntry.source);
         if (ret <= 0) {
-            my_printf("failed loading %s\n", StringAsCStr(srcEntry.filepath));
+            log_printf("failed loading %s\n", StringAsCStr(srcEntry.filepath));
             return false;
         }
     }
@@ -46,7 +46,7 @@ int buildShaderProgram(const std::vector<glshader_src>& srcList) {
         auto& srcEntry  = srcList[i];
         GLuint glshader = compileShader(srcEntry.stage, srcEntry.source);
         if (!glshader) {
-            my_printf("failed compiling %s\n", StringAsCStr(srcEntry.filepath));
+            log_printf("failed compiling %s\n", StringAsCStr(srcEntry.filepath));
             return -1;
         }
         compiledShaders[i] = glshader;

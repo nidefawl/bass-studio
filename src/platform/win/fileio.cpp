@@ -232,7 +232,7 @@ void findFilesWithExt(
     }
     String findPattern = strSearchPath + "*";
     if (depth == 0)
-        my_printf("findPattern '%s'\n", findPattern.c_str());
+        log_printf("findPattern '%s'\n", findPattern.c_str());
 
     HANDLE hFile = FindFirstFile(findPattern.c_str(), &file);
     if (hFile != INVALID_HANDLE_VALUE) {
@@ -335,7 +335,7 @@ IOFile* IOFile::openFile(const String& filename, OpenFileMode mode) {
         auto* iofile = new IOFile(impl); // noexcept
         return iofile;
     } catch (const FileIOException& e) {
-        my_printf("IOFile::openFile File IO exception: %s (%d)\n", e.what(), e.GetErrorCode());
+        log_printf("IOFile::openFile File IO exception: %s (%d)\n", e.what(), e.GetErrorCode());
     }
     return nullptr;
 }

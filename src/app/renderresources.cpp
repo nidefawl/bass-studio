@@ -54,7 +54,7 @@ namespace RenderResources {
         void load(NVGcontext* vg, String path, ImageBuf& out) {
             try {
                 if (ReadImage(path, out) < 0) {
-                    my_printf("Error loading image %s\n", StringAsCStr(path));
+                    log_printf("Error loading image %s\n", StringAsCStr(path));
                 } else {
                     //log_printf("%s loaded: %dx%d %d-channel, bufsize: %d\n", StringAsCStr(path), out.w, out.h, out.bitdepth,
                     //out.bytes.size());

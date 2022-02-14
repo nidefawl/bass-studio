@@ -254,7 +254,7 @@ void handleGuiEvents(window_base* w, GtkWidget *dialog) {
 	}
     gtk_widget_destroy(dialog);
     WaitForCleanup();
-	my_printf("Exit loop\n", 0);
+	log_printf("Exit loop\n", 0);
 }
 
 
@@ -319,7 +319,7 @@ int promptUserFilePath(window_base* w, int mode,
 	handleGuiEvents(w, dialog);
 	if (res.result == GTK_RESPONSE_ACCEPT) {
 		_out = res.selected;
-		my_printf("SELECTED PATH: %s\n", StringAsCStr(_out));
+		log_printf("SELECTED PATH: %s\n", StringAsCStr(_out));
 		return 1;
 	}
 	_out = "";

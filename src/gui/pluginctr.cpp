@@ -538,7 +538,7 @@ void guictr_plugins::pluginEntryDragRelease(gui_pluginlist_entry* g, ivec2 mouse
     ThreadLock lock    = MainCtrl::getPlayThread()->lockThread();
     effectbase* effect = g->makeInstance();
     if (effect) {
-        my_printf("Insert effect on %s, parent %s\n", StringAsCStr(getClassName()), parent ? StringAsCStr(parent->getClassName()) : "<null>");
+        log_printf("Insert effect on %s, parent %s\n", StringAsCStr(getClassName()), parent ? StringAsCStr(parent->getClassName()) : "<null>");
 
 
         vsthost::getInstance()->insertNewPlugin(stage, effect, dstSlot);
@@ -596,7 +596,7 @@ void guictr_dragged_plugins::setStrings(std::vector<String>& list) {
     Table::AdjustColSizes(table, size);
 }
 void guictr_plugins::pluginMultiDragMove(guictr_dragged_plugins* g, ivec2 mousepos) {
-    //    my_printf("pluginMultiDragMove %d %d on guictr_plugins %12X\n", mousepos.x, mousepos.y, (int64_t)this);
+    //    log_printf("pluginMultiDragMove %d %d on guictr_plugins %12X\n", mousepos.x, mousepos.y, (int64_t)this);
     MainCtrl::get()->getDragDropTarget().reset();
     if (!this->stage) return;
     audio_stage_t* srcStage = g->getTrackLink();
@@ -778,7 +778,7 @@ void guictr_plugins::pluginMultiDragRelease(guictr_dragged_plugins* g, ivec2 mou
     int first       = g->effects.front()->getSlot();
     int last        = g->effects.back()->getSlot();
 
-    my_printf("move %d plugins from %s:%d to %s:%d\n",
+    log_printf("move %d plugins from %s:%d to %s:%d\n",
               (int) g->effects.size(),
               StringAsCStr(srcStage->getTrack()->name), first,
               StringAsCStr(this->stage->getTrack()->name), dstSlot);
@@ -851,7 +851,7 @@ void guictr_plugins::pluginDragRelease(guiplugin* g, ivec2 mousepos) {
         showTrack(stage);
     } else {
 
-        my_printf("targetslot < 0 %d\n", targetslot);
+        log_printf("targetslot < 0 %d\n", targetslot);
     }
     return;
 }

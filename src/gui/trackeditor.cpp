@@ -43,7 +43,7 @@ public:
     }
 
     void undo(DawInstance* daw) override {
-        my_printf("action_modify_track undo, num tracks: %d\n", before.tracks.size());
+        log_printf("action_modify_track undo, num tracks: %d\n", before.tracks.size());
 
         daw->resetMouseContext();
         daw->resetEditClip();
@@ -53,7 +53,7 @@ public:
         }
         trackallcontainer_t& trCtr = daw->getTracks();
         for (track_snapshot_t* trackStored : before.tracks) {
-            my_printf("trackStored: %s %d\n", TrackTypeToName(trackStored->type), trackStored->localIdx);
+            log_printf("trackStored: %s %d\n", TrackTypeToName(trackStored->type), trackStored->localIdx);
             if (trCtr.validTrackTypeIdx(trackStored->type, trackStored->localIdx)) {
                 track_t* track = trCtr.getTrackTypeIdx(trackStored->type, trackStored->localIdx);
                 if (initAfter) {
@@ -61,12 +61,12 @@ public:
                 }
                 track->getMidi().deleteClips(daw);
                 track->releaseTrackContent();
-                my_printf("TRACKBeforeUndo[%d] HAS %d clips\n", track->projectIdx, track->getMidi().getConstClips().size());
+                log_printf("TRACKBeforeUndo[%d] HAS %d clips\n", track->projectIdx, track->getMidi().getConstClips().size());
                 *track = *trackStored;
-                my_printf("TRACKAfterUndo[%d] HAS %d clips\n", track->projectIdx, track->getMidi().getConstClips().size());
+                log_printf("TRACKAfterUndo[%d] HAS %d clips\n", track->projectIdx, track->getMidi().getConstClips().size());
             } else {
 
-                my_printf("idx is now invalid\n", 0);
+                log_printf("idx is now invalid\n", 0);
             }
         }
         MainCtrl::get()->getCursor() = before.cursor;
@@ -81,7 +81,7 @@ public:
                 track->getMidi().deleteClips(daw);
                 track->releaseTrackContent();
                 *track = *trackStored;
-                my_printf("TRACK[%d] HAS %d clips\n", track->projectIdx, track->getMidi().getConstClips().size());
+                log_printf("TRACK[%d] HAS %d clips\n", track->projectIdx, track->getMidi().getConstClips().size());
             }
         }
         MainCtrl::get()->getCursor() = after.cursor;
@@ -104,7 +104,7 @@ void resizeOtherClips(trackdata_midi_t& midi, clip_t* clip) {
             cutClipRight(c, c->end() - clip->start());
             c->setDirty();
         } else {
-            my_printf("WHUT!\n", 0);
+            log_printf("WHUT!\n", 0);
         }
     }
 }
@@ -471,7 +471,7 @@ void guitrack_editor::dragSelectionMove(gui_clip* gui, MouseEvent& evt) {
             if (action.dragtype == DRAG_CLIPS_RESIZE_LEFT) {
                 if (clip->start() != tick) {
                     int32_t preLen = clip->getLen();
-                    my_printf("pre clip->getLen() %d len %d samples %d\n", clip->getLen(), clip->len, clip->lenSamples);
+                    log_printf("pre clip->getLen() %d len %d samples %d\n", clip->getLen(), clip->len, clip->lenSamples);
                     tick_t offset = tick - clip->time;
                     if (clip->getLen() - offset < MIN_CLIPSIZE) {
                         offset = clip->getLen() - MIN_CLIPSIZE;
@@ -488,7 +488,7 @@ void guitrack_editor::dragSelectionMove(gui_clip* gui, MouseEvent& evt) {
                     clip->time += offset;
                     clip->adjustLen(-offset);
                     clip->adjustStartOffset(offset);
-                    my_printf("post clip->getLen() %d len %d samples %d\n", clip->getLen(), clip->len, clip->lenSamples);
+                    log_printf("post clip->getLen() %d len %d samples %d\n", clip->getLen(), clip->len, clip->lenSamples);
                     int32_t postLen = clip->getLen();
                     dbgassert(postLen == preLen - offset);
                 }
@@ -698,7 +698,7 @@ void guitrack_editor::prerender(NVGcontext* vg) {
                     ivec2 clipSize     = tr->content->size;//TODO: get rid of *tr here, figure out size before and add default fallback
                     audiofile_t* audio = dawCtrl->getDaw()->getAudioCache()->get(cl->audio.id);
                     if (!audio || !getClipPosition(grid, tr->content->size, cl, clipPos, clipSize, 0)) {
-                        //my_printf("release %012x from prerender() (clipped) \n", &cl->audio.waveformRef);
+                        //log_printf("release %012x from prerender() (clipped) \n", &cl->audio.waveformRef);
                         dawCtrl->getWaveformRenderer()->release(&cl->audio.waveformRef);
                         //cl->audio.waveformRef.fbId = -1;
                         //cl->audio.waveformRef.rendered = false;
@@ -714,7 +714,7 @@ void guitrack_editor::prerender(NVGcontext* vg) {
                     if (!waveformRef.queued) {
                         if (!waveformRef.rendered || waveform != waveformRef.waveform) {
                             dbgassert(!waveformRef.queued);
-                            //my_printf("release %012x from prerender() (refresh) \n", &waveformRef);
+                            //log_printf("release %012x from prerender() (refresh) \n", &waveformRef);
                             dawCtrl->getWaveformRenderer()->release(&waveformRef);
                             if (waveform.size.x > 0 && waveform.size.y > 0) {
                                 waveformRef.waveform = waveform;

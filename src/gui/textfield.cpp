@@ -560,15 +560,15 @@ void gui_textfield::updateShiftCursorVisible() {
         mTextOffset += 0 - prevCX + 1;
     //    if (this->mTextOffset != mTextOffset) {
     //        if (nextCX > clipSize.x)
-    //            my_printf("nextCX > clipSize.x %f > %f\n", nextCX, clipSize.x);
+    //            log_printf("nextCX > clipSize.x %f > %f\n", nextCX, clipSize.x);
     //        if (prevCX < 0)
-    //            my_printf("prevCX < 0 %f\n", prevCX);
-    //        my_printf("prevCPos %d\n", prevCPos);
-    //        my_printf("metrics.textBounds[2] %f\n", metrics.textBounds[2]);
-    //        my_printf("pos.x %f\n", (float) pos.x);
-    //        my_printf("drawPos.x %f\n", (float) drawPos.x);
-    //        my_printf("drawPos.x-pos.x %f\n", (float) (drawPos.x - pos.x));
-    //        my_printf("clipPos.x %f\n", (float) clipPos.x);
+    //            log_printf("prevCX < 0 %f\n", prevCX);
+    //        log_printf("prevCPos %d\n", prevCPos);
+    //        log_printf("metrics.textBounds[2] %f\n", metrics.textBounds[2]);
+    //        log_printf("pos.x %f\n", (float) pos.x);
+    //        log_printf("drawPos.x %f\n", (float) drawPos.x);
+    //        log_printf("drawPos.x-pos.x %f\n", (float) (drawPos.x - pos.x));
+    //        log_printf("clipPos.x %f\n", (float) clipPos.x);
     //    }
     this->mTextOffset = mTextOffset;
 }

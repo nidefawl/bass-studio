@@ -285,7 +285,7 @@ void trackallcontainer_t::copyTo(project_snapshot_t& project) {
     trackReturnCtr.copyTo(project.trackReturnCtr);
 }
 void trackallcontainer_t::copyFrom(project_snapshot_t& project) {
-    my_printf("project.tracks: midi: %d returN: %d master: %d\n",
+    log_printf("project.tracks: midi: %d returN: %d master: %d\n",
               project.trackCtr.tracks.size(),
               project.trackReturnCtr.tracks.size(),
               project.trackMasterCtr.tracks.size());
@@ -325,11 +325,11 @@ void trackallcontainer_t::copyTracks(int32_t trackBegin, int32_t trackEnd, track
 
         //TODO: convert trackBegin (gui idx) to track list idx
         if (t->projectIdx >= trackBegin && t->projectIdx <= trackEnd) {
-            my_printf("copy track %d\n", t->projectIdx);
+            log_printf("copy track %d\n", t->projectIdx);
             auto* trackCopy = new track_snapshot_t(t, false);
             _out.tracks.push_back(trackCopy);
         } else {
-            my_printf("NOT copy track %d\n", t->projectIdx);
+            log_printf("NOT copy track %d\n", t->projectIdx);
         }
     }
 }

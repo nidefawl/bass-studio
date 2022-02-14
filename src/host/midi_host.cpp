@@ -231,7 +231,7 @@ int32_t getMidiTime(void* userData) {
 #define TIMEOUT_TEMP_NOTES 2000
 // HACK: inject midi preview note
 int32_t midihost::triggerNote(int32_t deviceIdx, int32_t channel, int32_t pitch, int32_t velocity) {
-    //    my_printf("trigger %d\n", pitch);
+    //    log_printf("trigger %d\n", pitch);
     int32_t status = 0x90 | (channel & 0xF);
     int32_t msg = Pm_Message(status, pitch, velocity);
     int32_t current_timestamp = getMidiTime(nullptr);
@@ -246,7 +246,7 @@ int32_t midihost::triggerNote(int32_t deviceIdx, int32_t channel, int32_t pitch,
 }
 int32_t midihost::killNote(int32_t deviceIdx, int32_t channel, int32_t pitch) {
 
-    //    my_printf("kill %d\n", pitch);
+    //    log_printf("kill %d\n", pitch);
     int32_t status = 0x80 | (channel & 0xF);
     int32_t msg = Pm_Message(status, pitch, 0);
     int32_t current_timestamp = getMidiTime(nullptr);
@@ -553,7 +553,7 @@ bool midihost::startMidi() {
     return isStreaming();
 }
 bool midihost::stopMidi() {
-    my_printf("stopMidi.\n", 0);
+    log_printf("stopMidi.\n", 0);
     bool ret = !this->devicesInput.empty() || !this->devicesInput.empty();
     std::vector<midi_channel> empty;
     syncOpenCloseDeviceList(empty, this->devicesInput);

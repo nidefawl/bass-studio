@@ -277,7 +277,7 @@ void gui_input_filtered::handleDraggedBegin(MouseEvent& evt) {
                 if (rel > 3)
                     rel = 3;
                 rel = 3 - rel;
-                my_printf("relMousepos %d/%d %f %d \n", evt.relMousepos.x, size.x, evt.relMousepos.x * 4.0f / size.x, rel);
+                log_printf("relMousepos %d/%d %f %d \n", evt.relMousepos.x, size.x, evt.relMousepos.x * 4.0f / size.x, rel);
                 this->draggedByte = rel;
                 parentCtrl->captureMouse(this);
             }

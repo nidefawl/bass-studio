@@ -27,7 +27,7 @@ void LoadMidiTask::loadFile() {
                 // tick_t scale = TICKS_QUARTER / tpqMidiFile; // they better use multiple of 8 or something
                 int tracks = midiFile.getTrackCount();
                 if (!tracks) {
-                    my_printf("No tracks in midi file\n", 0);
+                    log_printf("No tracks in midi file\n", 0);
                 }
 
                 tick_t tickClipMin = -1;
@@ -38,14 +38,14 @@ void LoadMidiTask::loadFile() {
                     list.linkEventPairs();
                     int events = list.size();
                     if (!events) {
-                        my_printf("No events in midi track %d\n", track);
+                        log_printf("No events in midi track %d\n", track);
                     }
                     int noteOnEvents = 0;
                     for (int event = 0; event < events; event++) {
                         MidiEvent& evt = list[event];
                         int evtSize    = evt.size();
                         if (evtSize)
-                            //my_printf("Event[%d] = %02X\n", event, evt[0]);
+                            //log_printf("Event[%d] = %02X\n", event, evt[0]);
                             if (evt.isNoteOn()) {
                                 noteOnEvents++;
                                 MidiEvent* evt2 = evt.getLinkedEvent();
@@ -60,14 +60,14 @@ void LoadMidiTask::loadFile() {
                                         note.len   = ((((end - start) * 100) / tpqMidiFile) * TICKS_QUARTER) / 100;
                                         note.pitch = key;
                                         notes.m_list.push_back(note);
-                                        //my_printf("note %d %d - %d\n", key, start, end);
+                                        //log_printf("note %d %d - %d\n", key, start, end);
                                     }
                                 } else {
-                                    my_printf("midi lib failed to link the events\n", 0);
+                                    log_printf("midi lib failed to link the events\n", 0);
                                 }
                             }
                     }
-                    my_printf("%d noteOnEvents in midi track %d\n", noteOnEvents, track);
+                    log_printf("%d noteOnEvents in midi track %d\n", noteOnEvents, track);
                     if (!notes.empty()) {
                         shared_ptr<track_clipboard_t> trClipboard = make_shared<track_clipboard_t>();
                         notes.updateBounds();
@@ -75,7 +75,7 @@ void LoadMidiTask::loadFile() {
 
                         String filepath, name, ext;
                         SplitPath(path, &filepath, &name, &ext);
-                        //my_printf("%s %s %s\n", StringAsCStr(path), StringAsCStr(name), StringAsCStr(ext));
+                        //log_printf("%s %s %s\n", StringAsCStr(path), StringAsCStr(name), StringAsCStr(ext));
                         clip_t clip;
                         clip.clipType = CLIP_MIDI;
                         clip.name     = name;
@@ -111,7 +111,7 @@ void LoadMidiTask::loadFile() {
                 }
             } else {
 
-                my_printf("failed reading %s, its hard\n", StringAsCStr(path));
+                log_printf("failed reading %s, its hard\n", StringAsCStr(path));
             }
         }
     } catch (...) {

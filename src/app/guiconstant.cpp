@@ -46,7 +46,7 @@ namespace GuiConstant {
             if (p == &c) {
                 p->defValue = v;
             } else if (p->idx == c.idx) {
-                my_printf("failed changing default for constant %d\n", p->idx);
+                log_printf("failed changing default for constant %d\n", p->idx);
             }
         }
     }

@@ -575,7 +575,7 @@ void gui_audiocontent::render(NVGcontext* vg) {
     renderAudioClip(vg);
 }
 void gui_audiocontent::releaseRendered() {
-    //my_printf("release %012x from releaseRendered()\n", waveformRef);
+    //log_printf("release %012x from releaseRendered()\n", waveformRef);
     dbgassert(dawCtrl->getWaveformRenderer()->isValid(waveformRef));
     dawCtrl->getWaveformRenderer()->release(waveformRef);
     //m_clip->audio.waveformRef.fbId = -1;

@@ -99,7 +99,7 @@ public:
             char* dstOffset = bufEnv.data();
             char* dstEnd    = bufEnv.data() + totalEnvLen;
             for (const auto& entry : env) {
-                //my_printf("ENV[\"%s\"]\t=\t%s\n", StringAsCStr(entry.name), StringAsCStr(entry.value));
+                //log_printf("ENV[\"%s\"]\t=\t%s\n", StringAsCStr(entry.name), StringAsCStr(entry.value));
                 if (strcpy_s(dstOffset, (dstEnd - dstOffset), StringAsCStr(entry.name)))
                     throw appexception("Failed processing env key");
                 dstOffset += entry.name.length();

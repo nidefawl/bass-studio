@@ -19,15 +19,15 @@ namespace DebugAlloc {
     template<>
     void printLeaked(int64_t allocId, int64_t allocCount, std::vector<clip_t*>& allocList, std::unordered_map<int64_t, DebugAlloc::AllocInfo>& allocInfo) {
         dbgassert(static_cast<int64_t>(allocList.size()) == allocCount);
-        my_printf("clip_t allocations: %lld\n", allocCount);
+        log_printf("clip_t allocations: %lld\n", allocCount);
         for (auto clip : allocList) {
             auto it = allocInfo.find(clip->allocId);
             if (it != allocInfo.end()) {
                 AllocInfo& info = it->second;
 
-                my_printf("leaked %lld %s\n", clip->allocId, StringAsCStr(clip->name));// add debug info to clip instance (track/time )
+                log_printf("leaked %lld %s\n", clip->allocId, StringAsCStr(clip->name));// add debug info to clip instance (track/time )
                 for (String s : info.stacktrace) {
-                    my_printf("%s\n", StringAsCStr(s));
+                    log_printf("%s\n", StringAsCStr(s));
                 }
                 break;
             }

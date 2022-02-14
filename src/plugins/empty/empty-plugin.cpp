@@ -161,7 +161,7 @@ namespace PluginEmptyVST2 {
             int64_t* ptr = nullptr;
             ptr          = static_cast<int64_t*>((void*) 0xBAADF00D);
             int64_t val  = *ptr;
-            my_printf("val = %lld WTF\n", val);
+            log_printf("val = %lld WTF\n", val);
 #endif
         }
         numCalls2++;
