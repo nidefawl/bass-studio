@@ -10,7 +10,7 @@ option(PROJECT_BUILD_DAW "Build daw" ON)
 option(PROJECT_BUILD_SCANNER "Build plugin scanner" ON)
 option(PROJECT_BUILD_CLI_HOST "Build command line host" ON)
 option(PROJECT_BUILD_TESTS "Build tests" ON)
-option(PROJECT_BUILD_BENCHMARKS "Build benchmarks" OFF)
+option(PROJECT_BUILD_BENCHMARKS "Build benchmarks" ON)
 option(PROJECT_CFG_USE_OPENGL3 "Use OpenGL 3.x instead of OpenGL 2" ON)
 option(PROJECT_FORCE_LIB "Force building a lib" ON)
 
