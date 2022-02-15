@@ -3,7 +3,7 @@
 #include "str_util.h"
 #include <vector>
 
-void setGlobalLogger(Logger* logger);
+void setGlobalLogger(Logger* logger) noexcept;
 
 namespace {
 #define LOG_BUFFER_SIZE 4096
