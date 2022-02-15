@@ -38,23 +38,6 @@
 Display* getX11Display();
 Window getX11FromWindowBase(window_base* w);
 
-int64_t ReadImage( const String &Filename, ImageBuf& ref)
-{
-	String path = toResourcePath(Filename);
-	if (!FileExists(path)) {
-		throw appexception(StringAsCStr(StringFormat("File not found: %s", StringAsCStr(path))));
-	}
-	 unsigned char *data = stbi_load(StringAsCStr(path), &ref.w, &ref.h, &ref.bitdepth, 0);
-	 int64_t bufSize = -1;
-	 if (data) {
-		 bufSize = ref.w*ref.h*ref.bitdepth;
-		 ref.bytes.reserve(bufSize);
-		 ref.bytes.assign(data, data+bufSize);
-	 }
-	 stbi_image_free(data);
-	 return bufSize;
-}
-
 using namespace std;
 
 

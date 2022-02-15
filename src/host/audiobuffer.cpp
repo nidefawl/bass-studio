@@ -52,7 +52,7 @@ void AudioBlock::realloc(uint32_t _samples) {
             for (uint32_t i = 0; i < channels; i++) {
                 float* const newBuf = new float[_samples];
                 if (debug) {
-                    log_f(Log::LEVEL_INFO, "AudioBlock buffer[%d] allocate 0x%08X\n", i, reinterpret_cast<int64_t>(newBuf));
+                    log_lf(Log::L_TRACE, "AudioBlock buffer[%d] allocate 0x%08X\n", i, reinterpret_cast<int64_t>(newBuf));
                 }
                 if (!newBuf) {
                     handleFailedAllocation(0x1000, _samples * sizeof(float));
@@ -64,7 +64,7 @@ void AudioBlock::realloc(uint32_t _samples) {
                         }
 
                         if (debug) {
-                            log_printf("AudioBlock buffer[%d] release 0x%08X\n", i, reinterpret_cast<int64_t>(newBuf));
+                            log_lf(Log::L_TRACE, "AudioBlock buffer[%d] release 0x%08X\n", i, reinterpret_cast<int64_t>(newBuf));
                         }
 
                         delete[] buf[i];

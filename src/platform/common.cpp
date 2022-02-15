@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include "str_util.h"
+#include <stb/stb_image.h>
 
 
 String pathResources;// read only app resource directory: C:/program files/daw
@@ -136,4 +137,21 @@ int64_t ReadFileText(const String& filename, String& out, int resourceType) {
         }
     }
     return -1;
+}
+
+
+int64_t ReadImage(const String& Filename, ImageBuf& ref) {
+    String path = toResourcePath(Filename);
+    if (!FileExists(path)) {
+        throw appexception(StringAsCStr(StringFormat("File not found: %s", StringAsCStr(path))));
+    }
+    unsigned char* data = stbi_load(StringAsCStr(path), &ref.w, &ref.h, &ref.bitdepth, 0);
+    if (!data) {
+        throw appexception(StringAsCStr(StringFormat("%s: %s", StringAsCStr(path), stbi_failure_reason())));
+    }
+    int64_t bufSize = ref.w * ref.h * ref.bitdepth;
+    ref.bytes.reserve(bufSize);
+    ref.bytes.assign(data, data + bufSize);
+    stbi_image_free(data);
+    return bufSize;
 }

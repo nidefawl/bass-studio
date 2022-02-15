@@ -2,7 +2,6 @@
 #include "fileio.h"
 #include "exceptions.h"
 #include <cstdint>
-#include <stb/stb_image.h>
 #include <Windows.h>
 #include <vector>
 #include <limits>
@@ -11,22 +10,6 @@
 #include "platform.h"
 #include "platform_win.h"
 #include <shlobj.h>
-
-int64_t ReadImage(const String& Filename, ImageBuf& ref) {
-    String path = toResourcePath(Filename);
-    if (!FileExists(path)) {
-        throw appexception(StringAsCStr(StringFormat("File not found: %s", StringAsCStr(path))));
-    }
-    unsigned char* data = stbi_load(StringAsCStr(path), &ref.w, &ref.h, &ref.bitdepth, 0);
-    if (!data) {
-        throw appexception(StringAsCStr(StringFormat("%s: %s", StringAsCStr(path), stbi_failure_reason())));
-    }
-    int64_t bufSize = ref.w * ref.h * ref.bitdepth;
-    ref.bytes.reserve(bufSize);
-    ref.bytes.assign(data, data + bufSize);
-    stbi_image_free(data);
-    return bufSize;
-}
 
 bool CreateDirectoryIfNotExists(const String& DirPath) {
     return 0 != CreateDirectoryA(StringAsCStr(DirPath), nullptr);

@@ -33,7 +33,9 @@ void openGlobalLog(const String&) {
 #define LOG_BUF_SIZE 4096
 #define MAX_LEN_FILENAME 512
 
-void log_format_to_logger(Logger* logger, const char* file, int line, const char* func, const char* fmt, ...) noexcept {
+namespace Log {
+
+void log_fmt(Logger* logger, Level lvl, const char* file, int line, const char* func, const char* fmt, ...) noexcept {
     char szLogStr[LOG_BUF_SIZE]{ 0 };
     char szFileShort[MAX_LEN_FILENAME]{ 0 };
     char szLogBuf[LOG_BUF_SIZE]{ 0 };
@@ -78,12 +80,14 @@ void log_format_to_logger(Logger* logger, const char* file, int line, const char
     }
 }
 
+} // namespace Log 
+
 extern "C" {
 static bool gTestStub_failedAssert = false;
 void C_failedAssert(const char* expr, const char* file, int line) noexcept {
     if (!gTestStub_failedAssert) {
         gTestStub_failedAssert = true;
-        log_format_to_logger(getGlobalLogger(), file, line, "dbgassert", "Assertion failed: %s\n", expr);
+        ::Log::log_fmt(getGlobalLogger(), ::Log::L_FATAL, file, line, "dbgassert", "Assertion failed: %s\n", expr);
     }
     auto nop = []() {};
     nop();
@@ -98,7 +102,7 @@ void CPP_failedAssert(const char* expr, const char* file, int line) {
     }
     if (!gTestStub_failedAssert) {
         gTestStub_failedAssert = true;
-        log_format_to_logger(getGlobalLogger(), file, line, "dbgassert", "Assertion failed: %s\n", expr);
+        ::Log::log_fmt(getGlobalLogger(), ::Log::L_FATAL, file, line, "dbgassert", "Assertion failed: %s\n", expr);
     }
     auto nop = []() {};
     nop();

@@ -168,7 +168,7 @@ void openGlobalLog(const String& logFileName) {
 #define MAX_LEN_FILENAME 512
 namespace Log {
 
-void log_filtered(std::string_view id, Log::Level lvl, const char* file, int line, const char* func, const char* fmt, ...) noexcept {
+void log_fmt(Logger* logger, Level lvl, const char* file, int line, const char* func, const char* fmt, ...) noexcept {
     char szLogStr[LOG_BUF_SIZE]{ 0 };
     char szFileShort[MAX_LEN_FILENAME]{ 0 };
     char szLogBuf[LOG_BUF_SIZE]{ 0 };
@@ -196,7 +196,7 @@ void log_filtered(std::string_view id, Log::Level lvl, const char* file, int lin
 #ifndef _WIN32
         ret = snprintf(szLogBuf, LOG_BUF_SIZE - 1, "%s:%s: %s", szThreadName, id.data(), szLogStr);
 #else
-        ret = _snprintf_s(szLogBuf, LOG_BUF_SIZE-1, _TRUNCATE, "%s:%s::%s  %s", szThreadName, id.data(), func, szLogStr);
+        ret = _snprintf_s(szLogBuf, LOG_BUF_SIZE-1, _TRUNCATE, "%s:%s::%s  %s", szThreadName, szFileShort, func, szLogStr);
         if (ret == -1) {
             ret = LOG_BUF_SIZE - 1;
             szLogBuf[LOG_BUF_SIZE-2] = '\n';
@@ -210,10 +210,11 @@ void log_filtered(std::string_view id, Log::Level lvl, const char* file, int lin
         szLogStatement = szLogStr;
     }
     if (szLogStatement) {
-        getGlobalLogger()->log(szLogStatement, ret);
+        logger->log(szLogStatement, ret);
     }
 }
-}
+
+} // namespace Log 
 
 void log_format_to_logger(Logger* logger, const char* file, int line, const char* func, const char* fmt, ...) noexcept {
     char szLogStr[LOG_BUF_SIZE]{ 0 };
@@ -266,7 +267,7 @@ static bool failedAssert = false;
 void C_failedAssert(const char* expr, const char* file, int line) noexcept {
     if (!failedAssert) {
         failedAssert = true;
-        log_format_to_logger(getGlobalLogger(), file, line, "dbgassert", "Assertion failed: %s\n", expr);
+        ::Log::log_fmt(getGlobalLogger(), ::Log::L_FATAL, file, line, "dbgassert", "Assertion failed: %s\n", expr);
     }
     auto nop = []() {};
     nop();
@@ -280,7 +281,7 @@ void CPP_failedAssert(const char* expr, const char* file, int line) {
     }
     if (!failedAssert) {
         failedAssert = true;
-        log_format_to_logger(getGlobalLogger(), file, line, "dbgassert", "Assertion failed: %s\n", expr);
+        ::Log::log_fmt(getGlobalLogger(), ::Log::L_FATAL, file, line, "dbgassert", "Assertion failed: %s\n", expr);
     }
     auto nop = []() {};
     nop();

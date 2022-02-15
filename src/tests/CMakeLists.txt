@@ -38,12 +38,14 @@ function( DEFINE_TEST test_name link_lib first_source_file)
   set_target_properties(${test_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${ABS_WORKING_DIR}$<0:...>)
   set_target_properties(${test_name} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ${ABS_WORKING_DIR})
   set_target_properties(${test_name} PROPERTIES OUTPUT_NAME "${test_name}-${BUILD_BINARY_SUFFIX}")
+  set_target_properties(${test_name} PROPERTIES DISABLE_PRECOMPILE_HEADERS ON)
   target_compile_options(${test_name} PRIVATE ${TC_WARNING_FLAGS})
   if (${link_lib})
-    target_link_libraries(${test_name} PUBLIC optimized dawlib debug dawlib)
-    target_precompile_headers(${test_name} REUSE_FROM dawlib)
-  else() 
+    target_link_libraries(${test_name} PUBLIC dawlib)
+  else()
     SET_TARGET_PROJECT_INCLUDE_DIRS(${test_name})
+    get_property(libs TARGET dawlib PROPERTY INTERFACE_LINK_LIBRARIES)
+    target_link_libraries(${test_name} PRIVATE ${libs})
     if (WIN32 AND PROJECT_CFG_USE_STACK_PROTECTOR)
       target_link_libraries(${test_name} PRIVATE ssp)
     endif ()
@@ -54,10 +56,17 @@ function( DEFINE_TEST test_name link_lib first_source_file)
   # message(STATUS "TC TARGET ${test_name} COMPILE_OPTIONS ${TC_FLAGS}")
 endfunction()
 
+
+
 DEFINE_TEST(test_math FALSE test_math.cpp common/test_common.cpp common/test_environment.cpp common/test_stubs.cpp ../util/str_util.cpp ../threads/thread.cpp)
+DEFINE_TEST(test_logger FALSE test_logger.cpp common/test_common.cpp common/test_environment.cpp
+        ../util/logging.cpp
+        ../util/str_util.cpp
+        ../threads/thread.cpp
+        ../platform/${PROJECT_PLATFORM}/fileio.cpp
+        ../platform/${PROJECT_PLATFORM}/platform_${PROJECT_PLATFORM}.cpp)
 DEFINE_TEST(test_audioblock TRUE test_audioblock.cpp common/test_common.cpp)
 DEFINE_TEST(test_resampler TRUE test_resampler.cpp common/test_common.cpp)
-DEFINE_TEST(test_logger TRUE test_logger.cpp common/test_common.cpp)
 DEFINE_TEST(test_notes TRUE test_notes.cpp common/test_common.cpp)
 DEFINE_TEST(test_seqtime TRUE test_seqtime.cpp common/test_common.cpp)
 DEFINE_TEST(test_threads TRUE test_threads.cpp common/test_common.cpp)

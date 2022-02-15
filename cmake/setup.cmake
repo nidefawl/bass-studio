@@ -25,6 +25,13 @@ if(UNIX AND NOT APPLE)
   set(LINUX TRUE)
 endif()
 
+if (UNIX)
+    set(PROJECT_PLATFORM "linux")
+endif()
+if (WIN32)
+    set(PROJECT_PLATFORM "win")
+endif()
+
 set(IS_MINGW_BUILD OFF)
 if (WIN32 AND NOT MSVC)
   set(IS_MINGW_BUILD ON)

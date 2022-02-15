@@ -41,9 +41,31 @@ namespace {
         }
     };
 
-    void testLogPrintf() {
+    void test_log_macros() {
+        TestLogger testLogger;
+        setGlobalLogger(nullptr);
+        log_to(&testLogger, ::Log::L_INFO, "%s %d 0x%016zx %.16f\n", "Test", -123, 0x0F00FF0055AA55BB, 1.e-16);
+        printf("%s\n", testLogger.recvdLog);
+        testLogger.reset();
+        
+        setGlobalLogger(&testLogger);
+        log_lf(::Log::L_INFO, "%s %d 0x%016zx %.16f\n", "Test", -123, 0x0F00FF0055AA55BB, 1.e-16);
+        printf("%s\n", testLogger.recvdLog);
+        testLogger.reset();
+
+        log_printf("%s %d 0x%016zx %.16f\n", "Test", -123, 0x0F00FF0055AA55BB, 1.e-16);
+        printf("%s\n", testLogger.recvdLog);
+        testLogger.reset();
+
+        log_out("%s %d 0x%016zx %.16f\n", "Test", -123, 0x0F00FF0055AA55BB, 1.e-16);
+        printf("%s\n", testLogger.recvdLog);
+        testLogger.reset();
+    }
+
+    void test_log_fmt_limits() {
         TestLogger testLogger;
         setGlobalLogger(&testLogger);
+
         std::vector<char> buf;
         const size_t testLength[] = { 1, 32, 1000, 10000, LOG_BUFFER_SIZE - 2, LOG_BUFFER_SIZE - 1, LOG_BUFFER_SIZE, LOG_BUFFER_SIZE + 1 };
         for (size_t len : testLength) {
@@ -61,8 +83,8 @@ namespace {
             buf.resize(len);
             memset(buf.data(), 'x', buf.size());
             buf.back() = '\0';
-            log_format_to_logger(getGlobalLogger(), buf.data(), 0x7FFFFFFF, buf.data(), buf.data());
-            printf("log_format_to_logger strlen: %llu, Recv strlen %llu\n", safe_strlen(buf.data(), 1UL << 16U), testLogger.recvdSize);
+            Log::log_fmt(getGlobalLogger(), Log::L_FATAL, buf.data(), 0x7FFFFFFF, buf.data(), buf.data());
+            printf("Log::log_fmt strlen: %llu, Recv strlen %llu\n", safe_strlen(buf.data(), 1UL << 16U), testLogger.recvdSize);
             if (len < 100) {
                 printf("STR '%s'\n", testLogger.recvdLog);
             }
@@ -80,6 +102,10 @@ namespace {
             testLogger.reset();
         }
 #endif
+    }
+    void test_log_out() {
+        TestLogger testLogger;
+        setGlobalLogger(&testLogger);
         const char* strmsg = "123123123123123\n";
         log_out(strmsg, 0);
         TEST_ASSERT_THROW(strcmp(testLogger.recvdLog, strmsg) == 0);
@@ -88,6 +114,8 @@ namespace {
 
 }// namespace
 int main() {
-    testLogPrintf();
+    test_log_out();
+    test_log_macros();
+    test_log_fmt_limits();
     return 0;
 }
