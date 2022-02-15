@@ -291,8 +291,8 @@ target_precompile_headers(${LINK_TARGET} PUBLIC
 target_link_libraries(${LINK_TARGET} PUBLIC optimized ${GLFW_LIB_RELEASE} debug ${GLFW_LIB_DEBUG})
 target_link_libraries(${LINK_TARGET} PUBLIC optimized ${SQLITECPP_LIB_RELEASE} debug ${SQLITECPP_LIB_DEBUG})
 target_link_libraries(${LINK_TARGET} PUBLIC optimized ${SQLITE3_LIB_RELEASE} debug ${SQLITE3_LIB_DEBUG})
-target_link_libraries(${LINK_TARGET} PUBLIC optimized ${SOXR_LIB_RELEASE} debug ${SOXR_LIB_DEBUG})
-target_link_libraries(${LINK_TARGET} PUBLIC optimized ${KISSFFT_LIB_RELEASE} debug ${KISSFFT_LIB_DEBUG})
+target_link_libraries(${LINK_TARGET} PUBLIC ${SOXR_LIB_RELEASE})
+target_link_libraries(${LINK_TARGET} PUBLIC optimized ${KISSFFT_LIB} debug ${KISSFFT_LIB})
 target_link_libraries(${LINK_TARGET} PUBLIC optimized ${PORTAUDIO_LIB_RELEASE} debug ${PORTAUDIO_LIB_DEBUG})
 target_link_libraries(${LINK_TARGET} PUBLIC optimized ${PORTMIDI_LIB_RELEASE} debug ${PORTMIDI_LIB_DEBUG})
 
