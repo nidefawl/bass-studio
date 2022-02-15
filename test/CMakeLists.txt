@@ -1,4 +1,4 @@
-CONFIGURE_FILE( TestBase.hpp.in TestBase.hpp )
+CONFIGURE_FILE( TestBase.hpp.in ${CMAKE_CURRENT_LIST_DIR}/TestBase.hpp )
 
 INCLUDE( CheckCXXCompilerFlag )
 
