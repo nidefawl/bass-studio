@@ -23,16 +23,13 @@ else()
   set(BUILD_PATH_LIB_TYPE "static")
 endif()
 
-string(TOLOWER "lib-${CMAKE_CXX_COMPILER_ID}-debug-${BUILD_PATH_LIB_TYPE}" DEPS_BUILD_LIBS_DEBUG)
-string(TOLOWER "lib-${CMAKE_CXX_COMPILER_ID}-release-${BUILD_PATH_LIB_TYPE}" DEPS_BUILD_LIBS_RELEASE)
-
-
-
-
-find_path(PROJECT_DEPS_INSTALL_PATH 
+find_path(PROJECT_DEPS_INSTALL_PATH
     NAMES
-        "${DEPS_BUILD_LIBS_DEBUG}" 
-        "${DEPS_BUILD_LIBS_RELEASE}" 
+        "glfw"
+        "portaudio"
+        "portmidi"
+        "soxr"
+        "glm"
     PATHS 
         "${DEPS_BUILD_FOLDER}"
         "${CMAKE_SOURCE_DIR}/../build-deps/install"
