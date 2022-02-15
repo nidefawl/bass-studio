@@ -154,45 +154,45 @@ int runCommandLineHost(int argc, const char* argv[]) {
 #endif
     std::set_terminate(on_terminate1);
 
-    String cwdPath;
-    if (determineUserdataPath(cwdPath)) {
-        setUserdataPath(cwdPath + "\\daw\\");
-    }
-    using DAW::settings;
-    settings  = loadSettings();
-    String file           = getCmdOption(argc, argv, "-f", "");
-    String fOutWave       = getCmdOption(argc, argv, "-o", "");
-    bool bRenderOnly      = hasCmdOption(argc, argv, "--render");
-    double fStart         = StringToF(getCmdOption(argc, argv, "-s", "-1.0"));
-    double fLength        = StringToF(getCmdOption(argc, argv, "-l", "-1.0"));
-    bool activateDeferred = !(getCmdOption(argc, argv, "-d", "false") != "false");
-
-    if (file.empty()) {
-        log_printf("please specify project file with -f <file>\n", 0);
-        return EXIT_FAILURE;
-    }
-    if (bRenderOnly && fOutWave.empty()) {
-        log_printf("--render requires -o <file>\n", 0);
-        return EXIT_FAILURE;
-    }
-    std::shared_ptr<project_file> projectFile;
-    if (!file.empty()) {
-        try {
-            projectFile = loadProjectFile(file);
-        } catch (std::exception& e) {
-            log_printf("exception %s\n", e.what());
-            return EXIT_FAILURE;
-        } catch (...) {
-            log_printf("unhandled exception\n", 0);
-            return EXIT_FAILURE;
-        }
-        if (!projectFile) {
-            fprintf(stderr, "Error: failed loading file\n");
-            return EXIT_FAILURE;
-        }
-    }
 
     try {
+        String cwdPath;
+        if (determineUserdataPath(cwdPath)) {
+            setUserdataPath(cwdPath + "/daw");
+        }
+        using DAW::settings;
+        settings  = loadSettings();
+        String file           = getCmdOption(argc, argv, "-f", "");
+        String fOutWave       = getCmdOption(argc, argv, "-o", "");
+        bool bRenderOnly      = hasCmdOption(argc, argv, "--render");
+        double fStart         = StringToF(getCmdOption(argc, argv, "-s", "-1.0"));
+        double fLength        = StringToF(getCmdOption(argc, argv, "-l", "-1.0"));
+        bool activateDeferred = !(getCmdOption(argc, argv, "-d", "false") != "false");
+
+        if (file.empty()) {
+            log_printf("please specify project file with -f <file>\n", 0);
+            return EXIT_FAILURE;
+        }
+        if (bRenderOnly && fOutWave.empty()) {
+            log_printf("--render requires -o <file>\n", 0);
+            return EXIT_FAILURE;
+        }
+        std::shared_ptr<project_file> projectFile;
+        if (!file.empty()) {
+            try {
+                projectFile = loadProjectFile(file);
+            } catch (std::exception& e) {
+                log_printf("exception %s\n", e.what());
+                return EXIT_FAILURE;
+            } catch (...) {
+                log_printf("unhandled exception\n", 0);
+                return EXIT_FAILURE;
+            }
+            if (!projectFile) {
+                fprintf(stderr, "Error: failed loading file\n");
+                return EXIT_FAILURE;
+            }
+        }
         daw_tls::tlsinstance initTls;
         initTls.tlsInitialized = true;
         initTls.config         = new app_config_t{};
@@ -586,8 +586,10 @@ int runCommandLineHost(int argc, const char* argv[]) {
         log_printf("END\n", 0);
     } catch (std::exception& e) {
         log_printf("exception %s\n", e.what());
+        return 1;
     } catch (...) {
         log_printf("unhandled exception\n", 0);
+        return 1;
     }
     return 0;
 }

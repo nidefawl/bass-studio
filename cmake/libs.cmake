@@ -194,7 +194,7 @@ endif(APPLE)
 FUNCTION(SET_TARGET_PROJECT_INCLUDE_DIRS TARGETNAME)
     if (LINUX)
         target_link_directories(${TARGETNAME} PUBLIC ${GTK3_LIBRARY_DIRS})
-        target_compile_definitions(${TARGETNAME} PUBLIC ${GTK3_CFLAGS_OTHER})
+        target_compile_options(${TARGETNAME} PUBLIC ${GTK3_CFLAGS_OTHER})
         target_include_directories(${TARGETNAME} SYSTEM PUBLIC 
             ${GTK3_INCLUDE_DIRS}
             ${X11_X11_INCLUDE_PATH}

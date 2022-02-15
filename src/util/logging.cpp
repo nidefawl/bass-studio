@@ -173,13 +173,9 @@ void log_fmt(Logger* logger, Level lvl, const char* file, int line, const char* 
     char szFileShort[MAX_LEN_FILENAME]{ 0 };
     char szLogBuf[LOG_BUF_SIZE]{ 0 };
     va_list args;
-    va_start(args, fmt);
 #ifdef _WIN32
+    va_start(args, fmt);
     int ret = vsnprintf_s(szLogStr, LOG_BUF_SIZE, _TRUNCATE, fmt, args);
-#else
-    //TODO test truncation on linux
-    int ret = vsnprintf(szLogStr, LOG_BUF_SIZE, fmt, args);
-#endif
     va_end(args);
     if (ret == -1) {
         ret = LOG_BUF_SIZE - 1;
@@ -188,13 +184,33 @@ void log_fmt(Logger* logger, Level lvl, const char* file, int line, const char* 
         dbgassert(0);
         return;
     }
+#else
+    //TODO test truncation on apple
+    va_start(args, fmt);
+    int ret = vsnprintf(szLogStr, LOG_BUF_SIZE, fmt, args);
+    va_end(args);
+    if (ret == -1) {
+        dbgassert(0);
+        return;
+    }
+    // linux does the right thing: 
+    // write up to LOG_BUF_SIZE-2 chars and put \0 at LOG_BUF_SIZE-1
+    if (ret >= LOG_BUF_SIZE) {
+        ret = LOG_BUF_SIZE;
+        dbgassert(szLogStr[ret - 1] == '\0');
+    }
+#endif
     const char* szLogStatement = nullptr;
     if (file && line && func) {
         replaceBackslashWithForwardslash(relFileName(file), szFileShort, MAX_LEN_FILENAME);
         String threadName        = seqthreads::getCurrentThreadName();
         const char* szThreadName = StringAsCStr(threadName);
 #ifndef _WIN32
-        ret = snprintf(szLogBuf, LOG_BUF_SIZE - 1, "%s:%s: %s", szThreadName, id.data(), szLogStr);
+        ret = snprintf(szLogBuf, LOG_BUF_SIZE - 1, "%s:%s: %s", szThreadName, szFileShort, szLogStr);
+        if (ret >= LOG_BUF_SIZE) {
+            ret = LOG_BUF_SIZE;
+            dbgassert(szLogStr[ret - 1] == '\0');
+        }
 #else
         ret = _snprintf_s(szLogBuf, LOG_BUF_SIZE-1, _TRUNCATE, "%s:%s::%s  %s", szThreadName, szFileShort, func, szLogStr);
         if (ret == -1) {

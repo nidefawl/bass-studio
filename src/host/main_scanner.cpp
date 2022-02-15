@@ -795,7 +795,7 @@ int main(int argc, char* argv[]) {
     seqthreads::registerThread("mainthread");
     String cwdPath;
     if (determineUserdataPath(cwdPath)) {
-        setUserdataPath(cwdPath + "/daw/");
+        setUserdataPath(cwdPath + "/daw");
     }
     if (argc <= 1) {
         String cwdPathDB = toUserdataPath("data/plugins.db3");

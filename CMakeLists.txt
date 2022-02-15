@@ -272,7 +272,6 @@ if (WIN32)
 endif (WIN32)
 
 target_precompile_headers(${LINK_TARGET} PUBLIC 
-    <Windows.h>
     "$<$<COMPILE_LANGUAGE:CXX>:<cstddef$<ANGLE-R>>"
     "$<$<COMPILE_LANGUAGE:CXX>:<vector$<ANGLE-R>>"
     "$<$<COMPILE_LANGUAGE:CXX>:<algorithm$<ANGLE-R>>"
@@ -297,6 +296,8 @@ target_link_libraries(${LINK_TARGET} PUBLIC optimized ${PORTAUDIO_LIB_RELEASE} d
 target_link_libraries(${LINK_TARGET} PUBLIC optimized ${PORTMIDI_LIB_RELEASE} debug ${PORTMIDI_LIB_DEBUG})
 
 if (LINUX)
+    find_package(Threads REQUIRED) 
+    target_link_libraries(${LINK_TARGET} PUBLIC Threads::Threads)
     target_link_libraries(${LINK_TARGET} PUBLIC ${X11_X11_LIB} ${CMAKE_THREAD_LIBS_INIT} ${CMAKE_DL_LIBS} ${ALSA_LIBRARY} ${GTK3_LIBRARIES} GL rt m)
 endif (LINUX)
 if (APPLE)

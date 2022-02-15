@@ -1,4 +1,5 @@
 #include "fileio.h"
+#include "exceptions.h"
 #include <cstdlib>
 #include <cstdio>
 #include "str_util.h"
