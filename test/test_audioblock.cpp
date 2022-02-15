@@ -1,7 +1,7 @@
 #include "TestBase.hpp"
 #include "audioblock.h"
-#include "tests/common/test_common.h"
-#include "tests/common/test_environment.h"
+#include "common/test_common.h"
+#include "util/testing_environment.h"
 
 namespace {
     void testCopy() {

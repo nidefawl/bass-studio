@@ -22,7 +22,7 @@
 #include "plugindatabase.h"
 #include "threads/playbackthread.h"
 #include <dr_libs/dr_wav.h>
-#include "tests/common/test_environment.h"
+#include "util/testing_environment.h"
 #include "appconfig.h"
 
 #ifdef _WIN32

@@ -1,4 +1,4 @@
-CONFIGURE_FILE( TestBase.hpp.in ${CMAKE_SOURCE_DIR}/src/tests/TestBase.hpp )
+CONFIGURE_FILE( TestBase.hpp.in TestBase.hpp )
 
 INCLUDE( CheckCXXCompilerFlag )
 
@@ -56,15 +56,28 @@ function( DEFINE_TEST test_name link_lib first_source_file)
   # message(STATUS "TC TARGET ${test_name} COMPILE_OPTIONS ${TC_FLAGS}")
 endfunction()
 
+DEFINE_TEST(
+    test_math FALSE 
+    test_math.cpp
+    common/test_common.cpp 
+    common/test_stubs.cpp
+    ../src/util/testing_environment.cpp
+    ../src/util/str_util.cpp
+    ../src/threads/thread.cpp
+)
 
+DEFINE_TEST(
+  test_logger FALSE
+  test_logger.cpp
+  common/test_common.cpp
+  ../src/util/testing_environment.cpp
+  ../src/util/logging.cpp
+  ../src/util/str_util.cpp
+  ../src/threads/thread.cpp
+  ../src/platform/${PROJECT_PLATFORM}/fileio.cpp
+  ../src/platform/${PROJECT_PLATFORM}/platform_${PROJECT_PLATFORM}.cpp
+)
 
-DEFINE_TEST(test_math FALSE test_math.cpp common/test_common.cpp common/test_environment.cpp common/test_stubs.cpp ../util/str_util.cpp ../threads/thread.cpp)
-DEFINE_TEST(test_logger FALSE test_logger.cpp common/test_common.cpp common/test_environment.cpp
-        ../util/logging.cpp
-        ../util/str_util.cpp
-        ../threads/thread.cpp
-        ../platform/${PROJECT_PLATFORM}/fileio.cpp
-        ../platform/${PROJECT_PLATFORM}/platform_${PROJECT_PLATFORM}.cpp)
 DEFINE_TEST(test_audioblock TRUE test_audioblock.cpp common/test_common.cpp)
 DEFINE_TEST(test_resampler TRUE test_resampler.cpp common/test_common.cpp)
 DEFINE_TEST(test_notes TRUE test_notes.cpp common/test_common.cpp)

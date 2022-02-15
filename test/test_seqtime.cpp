@@ -7,7 +7,7 @@
 #include "project.h"
 #include "track.h"
 #include "host/projectcontroller.h"
-#include "tests/common/test_common.h"
+#include "common/test_common.h"
 
 namespace {
     void testTickConversions() {

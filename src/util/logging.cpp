@@ -1,6 +1,6 @@
 #include "str_util.h"
 #include <string_view>
-#include "tests/common/test_environment.h"
+#include "util/testing_environment.h"
 
 #ifdef __GNUC__
 

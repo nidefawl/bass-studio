@@ -2,7 +2,7 @@
 #include <vector>
 #include <cstdint>
 #include <chrono>
-#include "tests/common/test_common.h"
+#include "common/test_common.h"
 #include "thread.h"
 #include "threads/workerthread.h"
 

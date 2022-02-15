@@ -1,5 +1,5 @@
 #include "str_util.h"
-#include "tests/common/test_common.h"
+#include "common/test_common.h"
 #include "../host/vst_host.h"
 #include "tls.h"
 #include "appconfig.h"

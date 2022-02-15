@@ -1,7 +1,7 @@
 #include <vector>
 #include "str_util.h"
 #include "host/main_daw.h"
-#include "tests/common/test_environment.h"
+#include "util/testing_environment.h"
 
 int main(int argc, char* argv[]) {
     daw_test::currentTest = daw_test::TestCases::TEST_HOST_EXCEPTIONS;
