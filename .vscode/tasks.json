@@ -1,0 +1,12 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "shell_run_cmake_build",
+            "type": "process",
+            "args": ["-c", "${command:cmake.tasksBuildCommand}"],
+            "command": "zsh",
+            "problemMatcher": []
+        }
+    ]
+}
