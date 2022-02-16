@@ -19,11 +19,6 @@ namespace DAW {
         int32_t selSubTrackRange = 0;
 
     public:
-        Cursor()                  = default;
-        Cursor(const Cursor& ref) = default;
-        Cursor& operator=(const Cursor& ref) = default;
-        Cursor(Cursor&& ref) noexcept        = default;
-        Cursor& operator=(Cursor&& ref) noexcept = default;
         bool isSubtrackSelection() const {
             return cursorSubTrack > -1;
         }
