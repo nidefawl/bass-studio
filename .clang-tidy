@@ -105,7 +105,6 @@ Checks: >
     cppcoreguidelines-interfaces-global-init,
     cppcoreguidelines-narrowing-conversions,
     cppcoreguidelines-no-malloc,
-    cppcoreguidelines-prefer-member-initializer,
     cppcoreguidelines-pro-type-const-cast,
     cppcoreguidelines-pro-type-cstyle-cast,
     cppcoreguidelines-pro-type-member-init,
