@@ -147,7 +147,7 @@ private:
     SYNCHRONIZED_RW clip_t* recordingClip = nullptr;
     SYNCHRONIZED_RW std::atomic<bool> hasNewRecordedData{};
     SYNCHRONIZED_RW clip_t* recordDataProcessed = nullptr;
-    SYNCHRONIZED_RW VstTimeInfo m_sharedTimeInfo = {};
+    SYNCHRONIZED_RW VstTimeInfo m_sharedTimeInfo = {}; //TODO: remove
     SYNCHRONIZED_RW double lastTickEndPos       = 0;
     playback_state lastState                    = playback_state::status_stop;
     SYNCHRONIZED_RW host_stats_t stats{};

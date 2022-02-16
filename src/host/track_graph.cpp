@@ -115,6 +115,7 @@ namespace DAW {
         removeEntry(ctxt.unresolved, node);
         return true;
     }
+    
     bool buildProcessingGraph(const vsthost* const host, const project_t* const project, const track_vector& tracksFlat, std::shared_ptr<processing_graph_t>& out_procgraph) {
         std::shared_ptr<DAW::track_graph_t> dependencyGraph;
         if (!DAW::buildTrackRoutingGraph(host, project, tracksFlat, dependencyGraph)) {

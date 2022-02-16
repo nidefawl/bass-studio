@@ -85,7 +85,28 @@ namespace DAW {
 
 
     bool removeTrackRoutings(const track_vector& tracksFlat, audiostageid_i32 stageId);
+    /**
+     * @brief Builds the Directed acyclic graph using track list and track routings
+     * 
+     * @param host 
+     * @param project 
+     * @param tracksFlat 
+     * @param out_graph 
+     * @return true graph successfully build
+     * @return false Failed building graph: Cycles detected or something else went wrong
+     */
     bool buildTrackRoutingGraph(const vsthost* host, const project_t* project, const track_vector& tracksFlat, std::shared_ptr<track_graph_t>& out_graph);
+    
+    /**
+     * @brief Builds the Directed acyclic graph using track list and track routings
+     *        and converts it into a structure for processing
+     * @param host 
+     * @param project 
+     * @param tracksFlat 
+     * @param out_procgraph 
+     * @return true graph successfully build
+     * @return false Failed building graph: Cycles detected or something else went wrong
+     */
     bool buildProcessingGraph(const vsthost* host, const project_t* project, const track_vector& tracksFlat, std::shared_ptr<processing_graph_t>& out_procgraph);
     bool validateTrackRoutings(const vsthost* host, const track_vector& tracksFlat);
 

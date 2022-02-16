@@ -1307,23 +1307,14 @@ int32_t vsthost::processRender(project_controller_t* ctrl, int32_t sample, doubl
 
     updateTime(m_sharedTimeInfo, sample, posDouble, state);
 
-
-    /*
-     * Process audio/midi tracks
-     */
-    auto tracksFlatAll = project->trackList.getAllTracksFlatVec(); //TODO: get rid of copy
-    /**
-     * process in reverse order: first children, then parents
-     */
-
     if (enableProfiling) {
         timerProfile.reset();
     }
 
     //TODO: move outside
-    /** turn tree structure into linear pointer array with parents followed by their children **/
+    /** Build the audio graph **/
     std::shared_ptr<DAW::processing_graph_t> processingGraph;
-    if (!DAW::buildProcessingGraph(this, project, tracksFlatAll, processingGraph)) {
+    if (!DAW::buildProcessingGraph(this, project, project->trackList.getAllTracksFlatVecRef(), processingGraph)) {
         log_printf("Failed building track graph\n", 0);
     }
 
@@ -1548,20 +1539,14 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
             stats.timings["Block.MidiRealtimeInput"] = timerProfile.getTime();
         }
 
-        /*
-         * Process audio/midi tracks
-         */
-        auto tracksFlatAll = project->trackList.getAllTracksFlatVec(); //TODO: get rid of copy
-        /**
-         * process in reverse order: first children, then parents
-         */
-
         if (enableProfiling) {
             timerProfile.reset();
         }
-        /** turn tree structure into linear pointer array with parents followed by their children **/
+
+        //TODO: add caching layer for audio graphs
+        /** Build the audio graph **/
         std::shared_ptr<DAW::processing_graph_t> processingGraph;
-        if (!DAW::buildProcessingGraph(this, project, tracksFlatAll, processingGraph)) {
+        if (!DAW::buildProcessingGraph(this, project, project->trackList.getAllTracksFlatVecRef(), processingGraph)) {
             log_printf("Failed building track graph\n", 0);
         }
         if (enableProfiling) {
@@ -2186,8 +2171,8 @@ int32_t vsthost::processBlock(project_controller_t* ctrl,
             return !STL_CONTAINS(stagesProcessed, trackNode->stageId);
         };
         constexpr bool outOfOrderProcessing = true;
-        auto timeEnd = getTimeMicros();
-        int limR = 0;
+        // auto timeEnd = getTimeMicros();
+        // int limR = 0;
         for (bool unprocessed=true; unprocessed; unprocessed=outOfOrderProcessing && tasksQueued.size() != processingGraph->nodesFlatOrdered.size()) {
             for (auto itAudioStage = processingGraph->nodesFlatOrdered.begin(); itAudioStage != processingGraph->nodesFlatOrdered.end(); itAudioStage++) {
                 const DAW::processing_track_node_t* ptrProcessingNode = *itAudioStage;
@@ -2212,9 +2197,9 @@ int32_t vsthost::processBlock(project_controller_t* ctrl,
                 if (!outOfOrderProcessing) {
                     tasksToFinish = trackNode.dependencies;
                 }
-                auto timeStart = getTimeMicros();
+                // auto timeStart = getTimeMicros();
                 finishTreadTasks(stagesProcessed, tasksToFinish, false);
-                timeEnd = getTimeMicros();
+                // timeEnd = getTimeMicros();
 
                 /* TODO: A lot of stats entries might be created. Especially when one of the threads goes unresponsive (broken plugin for example)
                  * A forced sleep of this thread might increase latency too much
