@@ -2137,13 +2137,6 @@ int32_t vsthost::processBlock(project_controller_t* ctrl,
      * 5. after loop wait for all tasks to be finished
      */
 
-    struct Func_CheckUnprocessed {
-        std::vector<audiostageid_i32> stagesProcessed; //TODO: use a tree, unsorted search scales badly
-        bool operator()(const DAW::track_node_t* trackNode) const {
-            return !STL_CONTAINS(stagesProcessed, trackNode->stageId);
-        }
-    };
-
     struct stageId_threadIdx_pair {
         audiostageid_i32 stageId;
         uint32_t threadIdx;
@@ -2181,9 +2174,12 @@ int32_t vsthost::processBlock(project_controller_t* ctrl,
     } else {
         std::vector<stageId_threadIdx_pair> tasksQueued;
 
-        Func_CheckUnprocessed funcCheckNodeUnprocessed;
-        funcCheckNodeUnprocessed.stagesProcessed.reserve(processingGraph->nodesFlatOrdered.size());
-        bool outOfOrderProcessing = true;
+        std::vector<audiostageid_i32> stagesProcessed; //TODO: use a tree, unsorted search scales badly
+        stagesProcessed.reserve(processingGraph->nodesFlatOrdered.size());
+        auto funcCheckNodeUnprocessed=[&stagesProcessed](const DAW::track_node_t* trackNode) {
+            return !STL_CONTAINS(stagesProcessed, trackNode->stageId);
+        };
+        constexpr bool outOfOrderProcessing = true;
         auto timeEnd = getTimeMicros();
         int limR = 0;
         for (bool unprocessed=true; unprocessed; unprocessed=outOfOrderProcessing && tasksQueued.size() != processingGraph->nodesFlatOrdered.size()) {
@@ -2211,18 +2207,18 @@ int32_t vsthost::processBlock(project_controller_t* ctrl,
                     tasksToFinish = trackNode.dependencies;
                 }
                 auto timeStart = getTimeMicros();
-                finishTreadTasks(funcCheckNodeUnprocessed.stagesProcessed, tasksToFinish, false);
+                finishTreadTasks(stagesProcessed, tasksToFinish, false);
                 timeEnd = getTimeMicros();
 
                 /* TODO: A lot of stats entries might be created. Especially when one of the threads goes unresponsive (broken plugin for example)
                  * A forced sleep of this thread might increase latency too much
                  * Until I know a smarter way to handle this I will put a hard limit on the length of the stats vector to avoid OOM situations */
-                if (impl->blockThreadStats.size() < 5000) {
-                    thread_stats_process_timings_t thrdProcStats = {static_cast<uint32_t>(impl->threadCount), TRACKID_INVALID_I32, timeStart, timeEnd};
-                    impl->blockThreadStats.push_back(thrdProcStats);
-                } else {
-                    limR++;// for setting debugger breakpoint
-                }
+                // if (impl->blockThreadStats.size() < 5000) {
+                //     thread_stats_process_timings_t thrdProcStats = {static_cast<uint32_t>(impl->threadCount), TRACKID_INVALID_I32, timeStart, timeEnd};
+                //     impl->blockThreadStats.push_back(thrdProcStats);
+                // } else {
+                //     limR++;// for setting debugger breakpoint
+                // }
                 bool hasUnprocessedInputs = /*!outOfOrderProcessing || */std::any_of(trackNode.children.cbegin(), trackNode.children.cend(), funcCheckNodeUnprocessed);
                 if (!hasUnprocessedInputs) {
 
@@ -2258,7 +2254,7 @@ int32_t vsthost::processBlock(project_controller_t* ctrl,
             }
         }
         std::vector<audiostageid_i32> empty;
-        finishTreadTasks(funcCheckNodeUnprocessed.stagesProcessed, empty, true);
+        finishTreadTasks(stagesProcessed, empty, true);
         bool allProcessed = !std::any_of(processingGraph->nodesFlatOrdered.begin(), processingGraph->nodesFlatOrdered.end(), funcCheckNodeUnprocessed);
          dbgassert(allProcessed);
     }
