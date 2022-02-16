@@ -1,3 +1,4 @@
+#pragma once
 #include "profiling.h"
 #include "str_util.h"
 #include "assert_dbg.h"

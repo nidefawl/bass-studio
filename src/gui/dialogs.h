@@ -1,3 +1,4 @@
+#pragma once
 #include "dialog.h"
 #include "button.h"
 

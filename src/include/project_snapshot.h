@@ -1,3 +1,4 @@
+#pragma once
 #include "project.h"
 #include "track.h"
 #include "track_snapshot.h"
