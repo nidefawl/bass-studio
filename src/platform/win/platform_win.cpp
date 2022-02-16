@@ -1,11 +1,19 @@
+#include "str_util.h"
+#include "math/seq_math.h"
+#include "error.h"
+#include "platform.h"
+#include "str_win32.h"
+#include "logging.h"
+#include "assert_dbg.h"
+#include "msgbox.h"
+#include <shlobj.h>//for knownFolder
+#include <sstream>
 #ifdef _WIN32
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <csignal>
 #include <excpt.h>
-#include "assert_dbg.h"
-#include "msgbox.h"
 #include <Windows.h>
 #ifdef __MINGW32__
 #include "mmsystem.h"
@@ -15,14 +23,6 @@
 #include <fcntl.h>
 #include <io.h>
 #include <vector>
-
-#include "math/seq_math.h"
-#include "str_util.h"
-#include "logging.h"
-#include "error.h"
-#include "str_win32.h"
-#include <shlobj.h>//for knownFolder
-#include <sstream>
 
 
 static HWND mainHWND = nullptr;
@@ -107,40 +107,6 @@ void setMinimumResolutionTimer() {
         log_printf("timeGetDevCaps failed, cannot call timeBeginPeriod\n", 0);
     }
 }
-
-namespace App::Platform {
-String getCurrentWorkingDirectory() {
-    std::vector<TCHAR> pathBuf;
-    DWORD copied;
-    do {
-        pathBuf.resize(pathBuf.size() + MAX_PATH);
-        copied = GetCurrentDirectory(pathBuf.size(), &pathBuf.at(0));
-    } while (copied >= pathBuf.size());
-    pathBuf.resize(copied);
-    String path(pathBuf.begin(), pathBuf.end());
-    return path;
-}
-
-
-bool determineUserdataPath(String& path) {
-    wchar_t *wPath = nullptr;
-    if ((S_OK == SHGetKnownFolderPath(FOLDERID_RoamingAppData, KF_FLAG_CREATE, nullptr, &wPath))) {
-#ifdef USE_WSTRING
-        path = wPath;
-#else
-        std::vector<char> convertedStr;
-        auto errorCode = wcharToSring(CP_UTF8, wPath, ::wcslen(wPath), convertedStr);
-        if (!errorCode){
-            convertedStr.pop_back();
-            path.assign(convertedStr.begin(), convertedStr.end());
-        }
-#endif
-        ::CoTaskMemFree(wPath);
-        return true;
-    }
-    return false;
-}
-} // namespace App::Platform
 
 void allocConsole() {
 #ifndef __MINGW32__
@@ -274,15 +240,47 @@ String FormatErrorMessage(uint32_t error, const String& msg) {
     return msg + " (" + StringTrim(String(buf.data())) + ")";
 }
 
-void sanitizePathToDirectory(String& pathString) {
-    if (pathString.length() && !StrEndsWith(pathString, "/"))
-        pathString += "/";
-    replaceString(pathString, "/", FILE_PATHSEP_STR);
-}
+namespace App::Platform {
+    String getCurrentWorkingDirectory() {
+        std::vector<TCHAR> pathBuf;
+        DWORD copied;
+        do {
+            pathBuf.resize(pathBuf.size() + MAX_PATH);
+            copied = GetCurrentDirectory(pathBuf.size(), &pathBuf.at(0));
+        } while (copied >= pathBuf.size());
+        pathBuf.resize(copied);
+        String path(pathBuf.begin(), pathBuf.end());
+        return path;
+    }
 
-void sanitizePathToFile(String& pathString) {
-    replaceString(pathString, "/", FILE_PATHSEP_STR);
-}
 
+    bool determineUserdataPath(String& path) {
+        wchar_t *wPath = nullptr;
+        if ((S_OK == SHGetKnownFolderPath(FOLDERID_RoamingAppData, KF_FLAG_CREATE, nullptr, &wPath))) {
+#ifdef USE_WSTRING
+            path = wPath;
+#else
+            std::vector<char> convertedStr;
+            auto errorCode = wcharToSring(CP_UTF8, wPath, ::wcslen(wPath), convertedStr);
+            if (!errorCode){
+                convertedStr.pop_back();
+                path.assign(convertedStr.begin(), convertedStr.end());
+            }
+#endif
+            ::CoTaskMemFree(wPath);
+            return true;
+        }
+        return false;
+    }
+    void sanitizePathToDirectory(String& pathString) {
+        if (pathString.length() && !StrEndsWith(pathString, "/"))
+            pathString += "/";
+        replaceString(pathString, "/", FILE_PATHSEP_STR);
+    }
+
+    void sanitizePathToFile(String& pathString) {
+        replaceString(pathString, "/", FILE_PATHSEP_STR);
+    }
+} // namespace App::Platform
 
 #endif

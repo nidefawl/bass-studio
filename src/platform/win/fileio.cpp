@@ -113,7 +113,7 @@ void findFilesWithExtRecursive(
     WIN32_FIND_DATA file;
 
     String strSearchPath = strPath;
-    sanitizePathToDirectory(strSearchPath);
+    App::Platform::sanitizePathToDirectory(strSearchPath);
     String findPattern = strSearchPath + "*";
     if (depth == 0)
         log_printf("findPattern '%s'\n", findPattern.c_str());
