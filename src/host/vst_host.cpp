@@ -1275,12 +1275,17 @@ int64_t vsthost::writeTrackSamplesToDisk(String fOutWave, track_impl_t* trImpl, 
 }
 
 static int32_t dbgStep = 1;
+namespace DebugAlloc {
+    void beginTrace();
+    void endTrace();
+}
 
 int32_t vsthost::processRender(project_controller_t* ctrl, int32_t sample, double posDouble) {
     dbgassert(ctrl);
     dbgassert(m_sampleFormatInternal.blockSize > 0);
     dbgassert(m_sampleFormatInternal.sampleRate > 0);
     const bool enableProfiling = (dbgStep%333) != 0;
+    // DebugAlloc::beginTrace();
 
     project_t* const project = ctrl->getProject();
 
@@ -1424,6 +1429,7 @@ int32_t vsthost::processRender(project_controller_t* ctrl, int32_t sample, doubl
         stats.timings["Block.Tracks.Tick"] = timerProfile.getTimeReset();
     }
 #endif
+    // DebugAlloc::endTrace();
     if (!bypassSampleConversion) {
         int32_t bytesCopied = 0;
         hires_timer_t timerConvert;
