@@ -105,7 +105,7 @@ void ReadFileVector(const String& filename, vector<uint8_t>& out) {
     ThrowLastErrorIf(result == FALSE, "ReadFile failed: " + filename);
 }
 
-void findFilesWithExt(
+void findFilesWithExtRecursive(
         const String& strPath,
         const String& strExt,
         const bool& bRecursive,
@@ -153,10 +153,18 @@ void findFilesWithExt(
 
         if (!subDirs.empty()) {
             for (String& s : subDirs) {
-                findFilesWithExt(s, strExt, bRecursive, _out, depth + 1);
+                findFilesWithExtRecursive(s, strExt, bRecursive, _out, depth + 1);
             }
         }
     }
+}
+
+void findFilesWithExt(
+        String strPath,
+        String strExt,
+        bool bRecursive,
+        std::vector<FileFound>& _out) {
+    findFilesWithExtRecursive(s, strExt, bRecursive, _out, 0);
 }
 
 class FileTimeGetter::Impl {

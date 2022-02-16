@@ -140,10 +140,10 @@ inline String FileNameFromPath(const String& in) {
 }
 
 void findFilesWithExt(
-        const String& strPath,
-        const String& strExt,
-        const bool& bRecursive,
-        std::vector<FileFound>& _out, int depth = 0);
+        String strPath,
+        String strExt,
+        bool bRecursive,
+        std::vector<FileFound>& _out);
 
 class FileTimeGetter {
     class Impl;
