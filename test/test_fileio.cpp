@@ -11,7 +11,7 @@ namespace {
 void test_findFilesWithExt_recursive() {
   TEST_BEGIN("test_findFilesWithExt_recursive");
   std::vector<FileFound> files;
-  auto resPath = toResourcePath("fonts");
+  auto resPath = App::Platform::toResourcePath("fonts");
   findFilesWithExt(resPath, "ttf", true, files);
   printf("findFilesWithExt %d\n", files.size());
   for (auto &file : files) {
@@ -23,7 +23,7 @@ void test_findFilesWithExt_recursive() {
 void test_findFilesWithExt_non_recursive() {
   TEST_BEGIN("test_findFilesWithExt_non_recursive");
   std::vector<FileFound> files;
-  auto resPath = toResourcePath("fonts");
+  auto resPath = App::Platform::toResourcePath("fonts");
   findFilesWithExt(resPath, "ttf", false, files);
   printf("findFilesWithExt %d\n", files.size());
   for (auto &file : files) {
@@ -35,13 +35,7 @@ void test_findFilesWithExt_non_recursive() {
 } // namespace
 
 int main() {
-  String strCurWrkDir = getCurrentWorkingDirectory();
-  if (!FileExists(strCurWrkDir + "/res/")) {
-    strCurWrkDir += "/../res/";
-  } else {
-    strCurWrkDir += "/res/";
-  }
-  setResourcePath(strCurWrkDir);
+  App::Platform::initPlatformEnvironment("daw");
   test_findFilesWithExt_recursive();
   test_findFilesWithExt_non_recursive();
   return 0;

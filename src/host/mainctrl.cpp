@@ -1494,17 +1494,21 @@ guictxtmenu_base* makeGuiAutosave(int64_t delay);
 String getProjectAutosaveFilename(String projectPath) {
     String bakPathName;
     if (projectPath.empty()) {
-        String tmpPath = toUserdataPath("unsaved.project");
+        String tmpPath = App::Platform::toUserdataPath("unsaved.project");
         int count      = 1;
         while (FileExists(tmpPath)) {
-            tmpPath = toUserdataPath(StringFormat("unsaved-%d.project", count));
+            tmpPath = App::Platform::toUserdataPath(StringFormat("unsaved-%d.project", count));
             count++;
         }
         bakPathName = tmpPath;
     } else {
         String path, name, ext, nameExt;//path, name, ext, nameExt
         SplitPath(projectPath, &path, &name, &ext, &nameExt);
-        bakPathName = path + DAW_FILEIO_PATHSEP + name + "-autosave." + ext;
+        bakPathName = path;
+        bakPathName += FILE_PATHSEP_STR;
+        bakPathName += name;
+        bakPathName += "-autosave.";
+        bakPathName += ext;
     }
     return bakPathName;
 }

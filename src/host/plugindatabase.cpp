@@ -153,7 +153,7 @@ void plugindatabase_t::query(const String& q, std::vector<pluginentry_t>& _out) 
 void plugindatabase_t::openDatabase() {
     revision++;
     dbgassert(!m_impl);
-    String cwdPathDB = toUserdataPath("data/plugins.db3");
+    String cwdPathDB = App::Platform::toUserdataPath("data/plugins.db3");
     m_impl = new plugindatabase_t::Impl{ cwdPathDB };
 }
 

@@ -15,14 +15,7 @@ template<class T>
 String typeName(const T& t) {
     return demangleName(typeid(t).name());
 }
-class ThreadSafeFileLogger;
-class Logger {
-public:
-    Logger() noexcept = default;
-    virtual ~Logger() = default;
-    virtual void log(const char* data, size_t len) = 0;
-    virtual void logStr(String s)                  = 0;
-};
+class Logger;
 namespace Log {
     using Id = int32_t;
     enum Level : int32_t {
@@ -36,6 +29,20 @@ namespace Log {
     };
     void log_fmt(Logger* logger, Level lvl, const char* file, int line, const char* func, const char* fmt, ...) noexcept;
 }
+class Logger {
+    Log::Level lvl = Log::LEVEL_ALL;
+public:
+    Logger() noexcept = default;
+    virtual ~Logger() = default;
+    virtual void log(const char* data, size_t len) = 0;
+    virtual void logStr(String s)                  = 0;
+    virtual void setLevel(Log::Level lvl) noexcept {
+        this->lvl = lvl;
+    }
+    virtual Log::Level getLevel() {
+        return this->lvl;
+    }
+};
 Logger* getGlobalLogger() noexcept;
 
 

@@ -156,10 +156,7 @@ int runCommandLineHost(int argc, const char* argv[]) {
 
 
     try {
-        String cwdPath;
-        if (determineUserdataPath(cwdPath)) {
-            setUserdataPath(cwdPath + "/daw");
-        }
+        App::Platform::initPlatformEnvironment("daw");
         using DAW::settings;
         settings  = loadSettings();
         String file           = getCmdOption(argc, argv, "-f", "");

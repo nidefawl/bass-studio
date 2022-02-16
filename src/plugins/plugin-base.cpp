@@ -176,16 +176,8 @@ void onModuleLoad(HINSTANCE hInst) {
     log_printf("moduleName %s\n", StringAsCStr(moduleName));
     String path = "";
     SplitPath(moduleName, &path, nullptr, nullptr, nullptr);
-    String resPath = path + "/res/";
-    log_printf("resPath %s\n", StringAsCStr(resPath));
-    setResourcePath(resPath);
-
-    String cwdPath = "";
-    if (determineUserdataPath(cwdPath)) {
-        setUserdataPath(cwdPath + "/daw/");
-        log_printf("UserdataPath %s\n", StringAsCStr(toUserdataPath("")));
-    }
-
+    App::Platform::initPlatformEnvironment("daw", path);
+    log_printf("resPath %s\n", StringAsCStr(App::Platform::toResourcePath("")));
     try {
         initColor();
         glfwSetErrorCallback(glfw_plugin_error_callback);

@@ -2,32 +2,57 @@
 #include "exceptions.h"
 #include <cstdlib>
 #include <cstdio>
+#include "platform.h"
 #include "str_util.h"
 #include <stb/stb_image.h>
 
+namespace App::Platform {
 
+namespace {
 String pathResources;// read only app resource directory: C:/program files/daw
 String pathUserdata; // writable app directory: C:/users/user/appdata/daw/
+}
 
 String toResourcePath(const String& relPath) {
-    return pathResources + relPath;
+    String path = App::Platform::pathResources + relPath;
+    sanitizePathToFile(path);
+    return path;
 }
 
 String toUserdataPath(const String& relPath) {
-    return pathUserdata + relPath;
+    String path = App::Platform::pathUserdata + relPath;
+    sanitizePathToFile(path);
+    return path;
 }
 
 void setResourcePath(String cwd) {
-    if (cwd.length() && (!StrEndsWith(cwd, "/") && !StrEndsWith(cwd, "\\")))
-        cwd += "/";
-    pathResources = cwd;
+    sanitizePathToDirectory(cwd);
+    App::Platform::pathResources = cwd;
 }
+
 void setUserdataPath(String cwd) {
-    if (cwd.length() && (!StrEndsWith(cwd, "/") && !StrEndsWith(cwd, "\\")))
-        cwd += "/";
+    sanitizePathToDirectory(cwd);
     pathUserdata = cwd;
-    CreateDirectoryIfNotExists(pathUserdata);
 }
+
+void initPlatformEnvironment(const String& appname, const String& optionalCwd) {
+    String cwdPath = !optionalCwd.empty() ? optionalCwd : getCurrentWorkingDirectory();
+    String resourcePath = cwdPath + FILE_PATHSEP_STR + "res";
+    if (!FileExists(resourcePath)) {
+        resourcePath = cwdPath + FILE_PATHSEP_STR + ".." + FILE_PATHSEP_STR + "res";
+    }
+    setResourcePath(resourcePath);
+
+    String userDataPath = appname;
+    if(determineUserdataPath(userDataPath)) {
+        userDataPath = userDataPath + FILE_PATHSEP_STR + appname;
+    }
+    setUserdataPath(userDataPath);
+    if (!App::Platform::pathUserdata.empty()) {
+        CreateDirectoryIfNotExists(App::Platform::pathUserdata);
+    }
+}
+} // namespace App::Platform
 
 #define  READALL_OK           0   /* Success */
 #define  READALL_INVALID    (-1)  /* Invalid parameters */
@@ -112,9 +137,9 @@ int readall(FILE* in, char** dataptr, size_t* sizeptr) {
 int64_t ReadFileText(const String& filename, String& out, int resourceType) {
     String fileResPath;
     if (resourceType == 0) {
-        fileResPath = toResourcePath(filename);
+        fileResPath = App::Platform::toResourcePath(filename);
     } else {
-        fileResPath = toUserdataPath(filename);
+        fileResPath = App::Platform::toUserdataPath(filename);
     }
 
     const char* fname = StringAsCStr(fileResPath);
@@ -142,7 +167,7 @@ int64_t ReadFileText(const String& filename, String& out, int resourceType) {
 
 
 int64_t ReadImage(const String& Filename, ImageBuf& ref) {
-    String path = toResourcePath(Filename);
+    String path = App::Platform::toResourcePath(Filename);
     if (!FileExists(path)) {
         throw appexception(StringAsCStr(StringFormat("File not found: %s", StringAsCStr(path))));
     }

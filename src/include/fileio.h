@@ -14,6 +14,7 @@
 #define shareMode access
 #endif
 #include "logging.h"
+#include "platform.h"
 
 struct ImageBuf {
     std::vector<uint8_t> bytes;
@@ -32,11 +33,6 @@ struct FileFound {
     String name;
     String ext;
 };
-#ifdef _WIN32
-#define DAW_FILEIO_PATHSEP "\\"
-#else
-#define DAW_FILEIO_PATHSEP "/"
-#endif
 
 using ByteBuf = std::vector<uint8_t>;
 
@@ -100,7 +96,9 @@ inline int64_t ReadFileFully(const String& Filename, ByteBuf& ref) {
 }
 
 inline void SplitPath(const String& in, String* path, String* name, String* ext, String* nameExt = nullptr) {
-    std::size_t pathSep = in.find_last_of("/\\");
+    String pathCopy = in;
+    App::Platform::sanitizePathToFile(pathCopy);
+    std::size_t pathSep = pathCopy.find_last_of(FILE_PATHSEP_CHAR);
     String _nameExt;
     if (pathSep == String::npos) {
         _nameExt = in;

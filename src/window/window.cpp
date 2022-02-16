@@ -1750,18 +1750,7 @@ int startApplication(const std::vector<String>& args) {
             }
         }
 
-        String strCurWrkDir = getCurrentWorkingDirectory();
-        if (!FileExists(strCurWrkDir + "/res/")) {
-            strCurWrkDir += "/../res/";
-        } else {
-            strCurWrkDir += "/res/";
-        }
-        setResourcePath(strCurWrkDir);
-
-        String cwdPath;
-        if (determineUserdataPath(cwdPath)) {
-            setUserdataPath(cwdPath + "/daw/");
-        }
+        App::Platform::initPlatformEnvironment("daw");
 
         //TODO: fix rpath/dll path to avoid loading unrelated dyn libs
 
@@ -1770,7 +1759,7 @@ int startApplication(const std::vector<String>& args) {
         }
 
         if (strLogFilename.length()) {
-            openGlobalLog(toUserdataPath(strLogFilename));
+            openGlobalLog(App::Platform::toUserdataPath(strLogFilename));
         }
 
         char* pPath = getenv("PATH");

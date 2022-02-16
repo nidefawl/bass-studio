@@ -1188,10 +1188,10 @@ public:
         if (button->id == 0x10) {
             selectFolder->setText(settings.pluginPath);
             // select folder
-            String out   = "C:/plugins";
+            String out   = DAW_PLATFORM_VST2_PATH_DEFAULT;
             String curre = settings.pluginPath;
+            App::Platform::sanitizePathToDirectory(curre);
 
-            replaceString(curre, "/", "\\");
             if (0 == browseForFolder("Select VST2 Plugin Path", curre, out)) {
                 settings.pluginPath = out;
                 try {

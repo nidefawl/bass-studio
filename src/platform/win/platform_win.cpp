@@ -93,17 +93,7 @@ String getModuleName(HMODULE module) {
     String path(pathBuf.begin(), pathBuf.end());
     return path;
 }
-String getCurrentWorkingDirectory() {
-    std::vector<TCHAR> pathBuf;
-    DWORD copied;
-    do {
-        pathBuf.resize(pathBuf.size() + MAX_PATH);
-        copied = GetCurrentDirectory(pathBuf.size(), &pathBuf.at(0));
-    } while (copied >= pathBuf.size());
-    pathBuf.resize(copied);
-    String path(pathBuf.begin(), pathBuf.end());
-    return path;
-}
+
 void setMinimumResolutionTimer() {
 #define TARGET_RESOLUTION 1u// 1-millisecond target resolution
 
@@ -116,6 +106,19 @@ void setMinimumResolutionTimer() {
     } else {
         log_printf("timeGetDevCaps failed, cannot call timeBeginPeriod\n", 0);
     }
+}
+
+namespace App::Platform {
+String getCurrentWorkingDirectory() {
+    std::vector<TCHAR> pathBuf;
+    DWORD copied;
+    do {
+        pathBuf.resize(pathBuf.size() + MAX_PATH);
+        copied = GetCurrentDirectory(pathBuf.size(), &pathBuf.at(0));
+    } while (copied >= pathBuf.size());
+    pathBuf.resize(copied);
+    String path(pathBuf.begin(), pathBuf.end());
+    return path;
 }
 
 
@@ -137,6 +140,7 @@ bool determineUserdataPath(String& path) {
     }
     return false;
 }
+} // namespace App::Platform
 
 void allocConsole() {
 #ifndef __MINGW32__
@@ -269,5 +273,16 @@ String FormatErrorMessage(uint32_t error, const String& msg) {
         return { buf.data() };
     return msg + " (" + StringTrim(String(buf.data())) + ")";
 }
+
+void sanitizePathToDirectory(String& pathString) {
+    if (pathString.length() && !StrEndsWith(pathString, "/"))
+        pathString += "/";
+    replaceString(pathString, "/", FILE_PATHSEP_STR);
+}
+
+void sanitizePathToFile(String& pathString) {
+    replaceString(pathString, "/", FILE_PATHSEP_STR);
+}
+
 
 #endif

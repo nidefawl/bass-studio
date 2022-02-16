@@ -192,8 +192,7 @@ public:
             selectFolder.setText(settings.exportPath);
             //select folder
             String lastPath = settings.exportPath;
-
-            replaceString(lastPath, "/", "\\");
+            App::Platform::sanitizePathToDirectory(lastPath);
             auto window = parentCtrl->window;
 
             String path = lastPath;

@@ -4,6 +4,7 @@
 #include <sys/types.h>
 #include "msgbox.h"
 #include "str_util.h"
+#include "platform.h"
 #ifdef __linux__
 #include <unistd.h>
 #include <pwd.h>
@@ -94,6 +95,8 @@ String FormatErrorMessage(uint32_t error, const String& msg) {
 
 #ifdef __linux__
 
+namespace App::Platform {
+
 String getCurrentWorkingDirectory() {
     String path;
     char* cwdBuf = getcwd(nullptr, 0);
@@ -119,6 +122,16 @@ bool determineUserdataPath(String& path) {
     }
     return false;
 }
+
+void sanitizePathToDirectory(String& pathString) {
+    if (pathString.length() && !StrEndsWith(pathString, FILE_PATHSEP_STR))
+        pathString += FILE_PATHSEP_STR;
+}
+
+void sanitizePathToFile(String& pathString) {
+}
+
+} // namespace App::Platform
 
 #endif // __linux__
 

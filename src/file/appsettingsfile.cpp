@@ -108,7 +108,7 @@ void serialize(Archive& ar, appsettings& settings) {
 
 appsettings loadSettings() {
     Stringstream ss;
-    String cwdPathSettings = toUserdataPath(SETTINGS_NAME);
+    String cwdPathSettings = App::Platform::toUserdataPath(SETTINGS_NAME);
     ifstream file(cwdPathSettings, ifstream::in);
     if (file) {
         ss << file.rdbuf();
@@ -124,7 +124,7 @@ appsettings loadSettings() {
 }
 
 void saveSettings(appsettings& _settings) {
-    String cwdPathSettings = toUserdataPath(SETTINGS_NAME);
+    String cwdPathSettings = App::Platform::toUserdataPath(SETTINGS_NAME);
     ofstream file;
     file.exceptions(~ofstream::goodbit);
     file.open(cwdPathSettings, ofstream::out);

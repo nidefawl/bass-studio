@@ -1,5 +1,6 @@
 #include <benchmark/benchmark.h>
 #include <array>
+#include "logging.h"
 #include "str_util.h"
 #include "seq_time.h"
 #include "exceptions.h"
@@ -33,13 +34,12 @@ void startApp(std::shared_ptr<AppCtrl>& app) {
 
 int main(int argc, char **argv)
 {
+    getGlobalLogger()->setLevel(Log::L_WARN);
     std::vector<String> args(&argv[0], &argv[argc]);
     setExceptionHandler();
 
-    String cwdPath;
-    if (determineUserdataPath(cwdPath)) {
-        setUserdataPath(cwdPath + "\\daw\\");
-    }
+    App::Platform::initPlatformEnvironment("daw");
+
     auto dawInstance = std::make_shared<DawInstance>();
     try 
     {

@@ -132,7 +132,7 @@ void serialize(Archive& archive, themefile& m) {
 themefile loadThemeFile() {
     Stringstream ss;
 
-    String cwdPathTheme = toUserdataPath(THEMEFILE_NAME);
+    String cwdPathTheme = App::Platform::toUserdataPath(THEMEFILE_NAME);
     ifstream file(cwdPathTheme, ifstream::in);
     if (file) {
         ss << file.rdbuf();
@@ -147,7 +147,7 @@ themefile loadThemeFile() {
     throw std::runtime_error("Failed reading theme file " + cwdPathTheme);
 }
 void saveThemeFile(themefile& _settings) {
-    String cwdPathTheme = toUserdataPath(THEMEFILE_NAME);
+    String cwdPathTheme = App::Platform::toUserdataPath(THEMEFILE_NAME);
     ofstream file;
     file.exceptions(~ofstream::goodbit);
     file.open(cwdPathTheme, ofstream::out);

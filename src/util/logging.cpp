@@ -169,6 +169,9 @@ void openGlobalLog(const String& logFileName) {
 namespace Log {
 
 void log_fmt(Logger* logger, Level lvl, const char* file, int line, const char* func, const char* fmt, ...) noexcept {
+    dbgassert(logger);
+    if (Log::LEVEL_ALL != logger->getLevel() && lvl < logger->getLevel())
+        return;
     char szLogStr[LOG_BUF_SIZE]{ 0 };
     char szFileShort[MAX_LEN_FILENAME]{ 0 };
     char szLogBuf[LOG_BUF_SIZE]{ 0 };
@@ -231,52 +234,6 @@ void log_fmt(Logger* logger, Level lvl, const char* file, int line, const char* 
 }
 
 } // namespace Log 
-
-void log_format_to_logger(Logger* logger, const char* file, int line, const char* func, const char* fmt, ...) noexcept {
-    char szLogStr[LOG_BUF_SIZE]{ 0 };
-    char szFileShort[MAX_LEN_FILENAME]{ 0 };
-    char szLogBuf[LOG_BUF_SIZE]{ 0 };
-    va_list args;
-    va_start(args, fmt);
-#ifdef _WIN32
-    int ret = vsnprintf_s(szLogStr, LOG_BUF_SIZE, _TRUNCATE, fmt, args);
-#else
-    //TODO test truncation on linux
-    int ret = vsnprintf(szLogStr, LOG_BUF_SIZE, fmt, args);
-#endif
-    va_end(args);
-    if (ret == -1) {
-        ret = LOG_BUF_SIZE - 1;
-    }
-    if (ret < 0 || ret >= LOG_BUF_SIZE) {
-        dbgassert(0);
-        return;
-    }
-    const char* szLogStatement = nullptr;
-    if (file && line && func) {
-        replaceBackslashWithForwardslash(relFileName(file), szFileShort, MAX_LEN_FILENAME);
-        String threadName        = seqthreads::getCurrentThreadName();
-        const char* szThreadName = StringAsCStr(threadName);
-#ifndef _WIN32
-        ret = snprintf(szLogBuf, LOG_BUF_SIZE - 1, "%s:%s:%d %s: %s", szThreadName, szFileShort, line, func, szLogStr);
-#else
-        ret = _snprintf_s(szLogBuf, LOG_BUF_SIZE-1, _TRUNCATE, "%s:%s:%d %s: %s", szThreadName, szFileShort, line, func, szLogStr);
-        if (ret == -1) {
-            ret = LOG_BUF_SIZE - 1;
-            szLogBuf[LOG_BUF_SIZE-2] = '\n';
-        }
-        szLogBuf[LOG_BUF_SIZE-1] = '\0';
-#endif
-        if (ret >= 0 && ret < LOG_BUF_SIZE) {
-            szLogStatement = szLogBuf;
-        }
-    } else {
-        szLogStatement = szLogStr;
-    }
-    if (szLogStatement) {
-        logger->log(szLogStatement, ret);
-    }
-}
 
 extern "C" {
 static bool failedAssert = false;
