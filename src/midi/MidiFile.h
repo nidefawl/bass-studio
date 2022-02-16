@@ -66,12 +66,6 @@ class MidiFile {
       int       writeHex                  (const char* aFile,   int width = 25);
       int       writeHex                  (const std::string& aFile, int width = 25);
       int       writeHex                  (std::ostream& out,        int width = 25);
-      int       writeBinasc               (const char* aFile);
-      int       writeBinasc               (const std::string& aFile);
-      int       writeBinasc               (std::ostream& out);
-      int       writeBinascWithComments   (const char* aFile);
-      int       writeBinascWithComments   (const std::string& aFile);
-      int       writeBinascWithComments   (std::ostream& out);
       int       status                    (void);
 
       // track-related functions:

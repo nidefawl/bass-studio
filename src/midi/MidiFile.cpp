@@ -1,4 +1,8 @@
-//
+/*
+ * Modifications (c) Michael Hept 2017-2022
+ * Removed BinAsc support
+ */
+
 // Programmer:    Craig Stuart Sapp <craig@ccrma.stanford.edu>
 // Creation Date: Fri Nov 26 14:12:01 PST 1999
 // Last Modified: Fri Dec  2 13:26:29 PST 1999
@@ -229,9 +233,6 @@ int MidiFile::read(const string& filename) {
 
    if (!input.is_open()) {
       return 0;
-   }
-   if (input.peek() != 'M') {
-      cout << "Loading BINASC file " << filename << endl;
    }
 
    rwstatus = MidiFile::read(input);
@@ -710,54 +711,10 @@ int MidiFile::writeHex(ostream& out, int width) {
    return 1;
 }
 
-
-
-//////////////////////////////
-//
-// MidiFile::writeBinasc -- write a standard MIDI file from data into
-//    the binasc format (ASCII version of the MIDI file).
-//
-
-int MidiFile::writeBinasc(const char* aFile) {
-   fstream output(aFile, ios::out);
-
-   if (!output.is_open()) {
-      cerr << "Error: could not write: " << aFile << endl;
-      return 0;
-   }
-   rwstatus = writeBinasc(output);
-   output.close();
-   return rwstatus;
-}
-
-
-int MidiFile::writeBinascWithComments(const char* aFile) {
-   fstream output(aFile, ios::out);
-
-   if (!output.is_open()) {
-      cerr << "Error: could not write: " << aFile << endl;
-      return 0;
-   }
-   rwstatus = writeBinascWithComments(output);
-   output.close();
-   return rwstatus;
-}
-
-
-int MidiFile::writeBinasc(const string& aFile) {
-   return writeBinasc(aFile.data());
-}
-
-
-int MidiFile::writeBinascWithComments(const string& aFile) {
-   return writeBinascWithComments(aFile.data());
-}
-
-
 //////////////////////////////
 //
 // MidiFile::status -- return the success flag from the last read or
-//    write (writeHex, writeBinasc).
+//    write (writeHex).
 //
 
 int MidiFile::status(void) {
@@ -2742,19 +2699,6 @@ int eventcompare(const void* a, const void* b) {
       return 0;
    }
 }
-
-
-
-//////////////////////////////
-//
-// operator<< -- for printing an ASCII version of the MIDI file
-//
-
-ostream& operator<<(ostream& out, MidiFile& aMidiFile) {
-   aMidiFile.writeBinascWithComments(out);
-   return out;
-}
-
 
 
 //////////////////////////////
