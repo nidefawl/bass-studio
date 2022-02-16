@@ -7,22 +7,22 @@
 #include <cxxabi.h>
 
 
-String demangleName(String to_demangle) {
+String demangleName(const char* to_demangle) {
+    constexpr size_t SIZE_TEMP_BUF = 128;
+    char* szTempHeap = static_cast<char*>(malloc(SIZE_TEMP_BUF));
+    size_t length = SIZE_TEMP_BUF;
     int status = 0;
-    size_t buff_size = 128;
-    auto buff = reinterpret_cast<char*>(std::malloc(buff_size));
-    char * buff2 = __cxxabiv1::__cxa_demangle(to_demangle.c_str(), buff, &buff_size, &status);
+    char * szDemangled = __cxxabiv1::__cxa_demangle(to_demangle, szTempHeap, &length, &status);
     String demangled;
-    if (buff2) {
-        buff = buff2;
-        demangled = buff2;
+    if (szDemangled && length && status) {
+        demangled = szDemangled;
     }
-    std::free(buff);
+    std::free(szDemangled ? szDemangled : szTempHeap);
     return demangled;
 }
 
 #else
-String demangleName(String to_demangle)
+String demangleName(const char* to_demangle)
 {
     return to_demangle;
 }

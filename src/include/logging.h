@@ -10,7 +10,7 @@
 #include <typeinfo>
 #include "str_util.h"
 
-String demangleName(String toDemangle);
+String demangleName(const char* toDemangle);
 template<class T>
 String typeName(const T& t) {
     return demangleName(typeid(t).name());

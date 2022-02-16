@@ -1554,7 +1554,7 @@ void DawInstance::onTick() {
         try {
             setLoadedProject(projectToLoadCpy->projectfile, projectToLoadCpy->loadflags);
         } catch (std::exception& e) {
-            log_printf("Failed loading project: %s %s\n", StringAsCStr(typeName(e)), e.what());
+            log_printf("Failed loading project: %s\n", e.what());
             projectLoadErrored = true;
         } catch (...) {
             log_printf("Failed loading project. Unhandled exception\n", 0);
