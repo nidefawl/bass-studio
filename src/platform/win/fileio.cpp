@@ -164,7 +164,7 @@ void findFilesWithExt(
         String strExt,
         bool bRecursive,
         std::vector<FileFound>& _out) {
-    findFilesWithExtRecursive(s, strExt, bRecursive, _out, 0);
+    findFilesWithExtRecursive(strPath, strExt, bRecursive, _out, 0);
 }
 
 class FileTimeGetter::Impl {
