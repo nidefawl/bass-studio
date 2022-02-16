@@ -26,7 +26,7 @@
             "type": "lldb",
             "request": "launch",
             "program": "${command:cmake.launchTargetPath}",
-            "args": ["-server"],
+            "args": [],
             "cwd": "/home/michael/run",
             "environment": [],
             "stopAtEntry": true,
