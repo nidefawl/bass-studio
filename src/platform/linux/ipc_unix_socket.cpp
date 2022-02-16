@@ -12,162 +12,186 @@
 #include "logging.h"
 
 
-class ipc_server::Impl
-{
-	unsigned int s = 0, s2 = 0;
-	struct sockaddr_un remote{0};
-	String pathUnlink;
+class ipc_server::Impl {
+    int32_t m_fdSockListen = 0;
+    int32_t m_fdSockClient = 0;
+    struct sockaddr_un remote {
+        0
+    };
+    String pathUnlink;
+
 public:
-	Impl() = default;
-	~Impl() = default;
+    Impl()  = default;
+    ~Impl() = default;
+
     int server_open(String path) {
-    	s = socket(AF_UNIX, SOCK_STREAM, 0);
-    	if (s == -1) {
-    		return IPC_SOCKET_ERROR;
-    	}
-    	int ret = unlink(StringAsCStr(path));
-		log_printf("unlink %s returned %d.\n", StringAsCStr(path), ret);
+        int newSocket = socket(AF_UNIX, SOCK_STREAM, 0);
+        if (m_fdSockListen == -1) {
+            return IPC_SOCKET_ERROR;
+        }
+        m_fdSockListen = newSocket;
+        int ret        = unlink(StringAsCStr(path));
+        log_printf("unlink %s returned %d.\n", StringAsCStr(path), ret);
 
-    	struct sockaddr_un local{0};
-    	local.sun_family = AF_UNIX;
-    	  strncpy (local.sun_path, StringAsCStr(path), sizeof (local.sun_path));
-    	  local.sun_path[sizeof (local.sun_path) - 1] = '\0';
-    	  unsigned int len = (offsetof (struct sockaddr_un, sun_path)
-    	           + strlen (local.sun_path));
-    	 ret = bind(s, (struct sockaddr *)&local, len);
-    	if (0 != ret) {
-    		log_printf("bind returned %d. Unlinking unix socket %s\n", ret, StringAsCStr(path));
-    		ret = unlink(StringAsCStr(path));
-    		log_printf("second unlink %s returned %d.\n", StringAsCStr(path), ret);
-        	ret = bind(s, (struct sockaddr *)&local, len);
-			log_printf("second bind returned %d\n", ret);
-        	if (0 != ret) {
-        		return 1;
-        	}
-    	}
-    	pathUnlink = path;
+        struct sockaddr_un local {
+            0
+        };
+        local.sun_family = AF_UNIX;
+        strncpy(local.sun_path, StringAsCStr(path), sizeof(local.sun_path));
+        local.sun_path[sizeof(local.sun_path) - 1] = '\0';
 
-    	listen(s, 5);
-		return IPC_OK;
+        socklen_t len = (offsetof(struct sockaddr_un, sun_path) + strlen(local.sun_path));
+        ret = bind(m_fdSockListen, (struct sockaddr*) &local, len);
+        if (0 != ret) {
+            log_printf("bind returned %d. Unlinking unix socket %s\n", ret, StringAsCStr(path));
+            ret = unlink(StringAsCStr(path));
+            log_printf("second unlink %s returned %d.\n", StringAsCStr(path), ret);
+            ret = bind(m_fdSockListen, (struct sockaddr*) &local, len);
+            log_printf("second bind returned %d\n", ret);
+            if (0 != ret) {
+                return 1;
+            }
+        }
+        pathUnlink = path;
+
+        listen(m_fdSockListen, 5);
+        return IPC_OK;
     }
+
     int server_accept() {
-    	unsigned int msglen = sizeof(remote);
-    	s2 = accept(s, (struct sockaddr *)&(remote), &msglen);
-    	return s2 > 0 ? 0 : 1;
+        uint32_t msglen = sizeof(remote);
+        m_fdSockClient  = accept(m_fdSockListen, (struct sockaddr*) &(remote), &msglen);
+        return m_fdSockClient > 0 ? 0 : 1;
     }
-    int server_read(char *buf, unsigned int buflen) {
-    	return recv(s2, buf, buflen, 0);
-    }
-    int server_send(char *buf, unsigned int buflen) {
-    	return send(s2, buf, buflen, 0);
-    }
-    int server_peekreadbuf() {
-    	char peekBuf[32];
-    	return recv(s2, peekBuf, 32, MSG_PEEK);
-    }
-    void server_close() {
-    	server_disconnect();
-    	if (s > 0) {
-    		close(s);
-			s =  0;
-    	}
-    	if (pathUnlink.length()) {
-    		unlink(StringAsCStr(pathUnlink));
-    	}
 
+    int server_read(char* buf, uint32_t buflen) {
+        return recv(m_fdSockClient, buf, buflen, 0);
     }
+
+    int server_send(char* buf, uint32_t buflen) {
+        return send(m_fdSockClient, buf, buflen, 0);
+    }
+
+    int server_peekreadbuf() {
+        char peekBuf[32];
+        return recv(m_fdSockClient, peekBuf, 32, MSG_PEEK);
+    }
+
+    void server_close() {
+        server_disconnect();
+        if (m_fdSockListen > 0) {
+            close(m_fdSockListen);
+            m_fdSockListen = 0;
+        }
+        if (pathUnlink.length()) {
+            unlink(StringAsCStr(pathUnlink));
+        }
+    }
+
     void server_disconnect() {
-    	if (s2 > 0) {
-    		close(s2);
-			s2 =  0;
-    	}
+        if (m_fdSockClient > 0) {
+            close(m_fdSockClient);
+            m_fdSockClient = 0;
+        }
     }
 };
 
-ipc_server::ipc_server() :
-	m_impl { new ipc_server::Impl {  } } {
+ipc_server::ipc_server() : m_impl{ new ipc_server::Impl{} } {
 }
+
 ipc_server::~ipc_server() {
-	delete m_impl;
+    delete m_impl;
 }
+
 int ipc_server::server_open(String path) {
-	return m_impl->server_open(path);
+    return m_impl->server_open(path);
 }
+
 int ipc_server::server_accept() {
-	return m_impl->server_accept();
+    return m_impl->server_accept();
 }
+
 void ipc_server::server_disconnect() {
-	m_impl->server_disconnect();
+    m_impl->server_disconnect();
 }
+
 void ipc_server::server_close() {
-	m_impl->server_close();
+    m_impl->server_close();
 }
-int ipc_server::sendData(char* buf, unsigned int len) {
-	return m_impl->server_send(buf, len);
+
+int ipc_server::sendData(char* buf, uint32_t len) {
+    return m_impl->server_send(buf, len);
 }
-int ipc_server::readData(char* buf, unsigned int len) {
-	return m_impl->server_read(buf, len);
+
+int ipc_server::readData(char* buf, uint32_t len) {
+    return m_impl->server_read(buf, len);
 }
 
 int ipc_server::peekReadBufferSize() {
-	return m_impl->server_peekreadbuf();
+    return m_impl->server_peekreadbuf();
 }
 
 
-class ipc_client::Impl
-{
-	int s=0;
+class ipc_client::Impl {
+    int m_fdSock = 0;
+
 public:
-	Impl() = default;
-	~Impl() = default;
+    Impl()  = default;
+    ~Impl() = default;
     int client_connect(String path) {
-    	s = socket(AF_UNIX, SOCK_STREAM, 0);
-    	if (s == -1) {
-    		return IPC_SOCKET_ERROR;
-    	}
+        m_fdSock = socket(AF_UNIX, SOCK_STREAM, 0);
+        if (m_fdSock == -1) {
+            return IPC_SOCKET_ERROR;
+        }
 
 
-    	struct sockaddr_un remote{0};
-    	remote.sun_family = AF_UNIX;
-		strncpy (remote.sun_path, StringAsCStr(path), sizeof (remote.sun_path));
-		remote.sun_path[sizeof (remote.sun_path) - 1] = '\0';
+        struct sockaddr_un remote {
+            0
+        };
+        remote.sun_family = AF_UNIX;
+        strncpy(remote.sun_path, StringAsCStr(path), sizeof(remote.sun_path));
+        remote.sun_path[sizeof(remote.sun_path) - 1] = '\0';
 
-		unsigned int len = (offsetof (struct sockaddr_un, sun_path) + strlen (remote.sun_path));
+        uint32_t len = (offsetof(struct sockaddr_un, sun_path) + strlen(remote.sun_path));
 
-    	if (connect(s, (struct sockaddr *)&remote, len) == -1) {
-    		return IPC_CONNECT_FAILED;
-    	}
-		return IPC_OK;
+        if (connect(m_fdSock, (struct sockaddr*) &remote, len) == -1) {
+            return IPC_CONNECT_FAILED;
+        }
+        return IPC_OK;
     }
-    int client_read(char *buf, unsigned int buflen) {
-    	return recv(s, buf, buflen, 0);
+    int client_read(char* buf, uint32_t buflen) {
+        return recv(m_fdSock, buf, buflen, 0);
     }
-    int client_send(char *buf, unsigned int buflen) {
-    	return send(s, buf, buflen, 0);
+    int client_send(char* buf, uint32_t buflen) {
+        return send(m_fdSock, buf, buflen, 0);
     }
     void client_close() {
-    	if (s) {
-        	close(s);
-    	}
+        if (m_fdSock) {
+            close(m_fdSock);
+        }
     }
 };
 
-ipc_client::ipc_client() :
-	m_impl { new ipc_client::Impl {  } } {
+ipc_client::ipc_client() : m_impl{ new ipc_client::Impl{} } {
 }
+
 ipc_client::~ipc_client() {
-	delete m_impl;
+    delete m_impl;
 }
+
 int ipc_client::client_connect(String path) {
-	return m_impl->client_connect(path);
+    return m_impl->client_connect(path);
 }
+
 void ipc_client::client_close() {
-	m_impl->client_close();
+    m_impl->client_close();
 }
-int ipc_client::sendData(char* buf, unsigned int len) {
-	return m_impl->client_send(buf, len);
+
+int ipc_client::sendData(char* buf, uint32_t len) {
+    return m_impl->client_send(buf, len);
 }
-int ipc_client::readData(char* buf, unsigned int len) {
-	return m_impl->client_read(buf, len);
+
+int ipc_client::readData(char* buf, uint32_t len) {
+    return m_impl->client_read(buf, len);
 }
 #endif

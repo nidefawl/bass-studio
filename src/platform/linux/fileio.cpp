@@ -130,8 +130,6 @@ void findFilesWithExt(
         String strExt,
         bool bRecursive,
         std::vector<FileFound>& _out) {
-    std::string myString = "asoidfj";
-    const char* hardcoded = "joiasijfaoiesjf";
     FTS* file_system = nullptr;
     const char* ptr  = StringAsCStr(strPath);
     char* args[2]    = { (char*) ptr, nullptr };
@@ -169,7 +167,7 @@ void findFilesWithExt(
 
 
 class FileTimeGetter::Impl {
-    struct stat fStat;
+    struct stat fStat{};
     bool ok = false;
 
 public:
@@ -183,7 +181,7 @@ public:
         return fStat.st_mtim.tv_sec * 1000L + fStat.st_mtim.tv_nsec / 1000000L;
 #endif
     }
-    Impl(String path) {
+    explicit Impl(String path) {
         ok = stat(StringAsCStr(path), &fStat) == 0;
     }
     ~Impl() = default;
@@ -197,16 +195,11 @@ int64_t FileTimeGetter::getWriteTimeI64() {
     return m_impl->getWriteTimeI64();
 }
 class FileImpl {
-private:
     FILE* m_handle;
-
-    // Declared but not defined, to avoid double closing.
-    FileImpl& operator=(const FileImpl&);
-    FileImpl(const FileImpl&);
 
 public:
     explicit FileImpl(const String& filename, OpenFileMode mode) {
-        String strFileOpenMode = "";
+        String strFileOpenMode;
         switch (mode) {
             case OpenFileMode::READ:
                 strFileOpenMode = "rb";
@@ -220,11 +213,18 @@ public:
         }
         m_handle = fopen64(filename.c_str(), strFileOpenMode.c_str());
 
-        ThrowLastErrorIf(m_handle == NULL,
+        ThrowLastErrorIf(m_handle == nullptr,
                          "fopen64 call failed on file named " + filename);
     }
 
-    ~FileImpl() { fclose(m_handle); }
+    ~FileImpl() { (void)fclose(m_handle); }
+
+
+    /* Disable copies */
+    FileImpl& operator=(const FileImpl&) = delete;
+    FileImpl(const FileImpl&) = delete;
+    FileImpl& operator=( FileImpl&&) = delete;
+    FileImpl(FileImpl&&) = delete;
 
     FILE* GetHandle() { return m_handle; }
 };
@@ -236,17 +236,17 @@ IOFile::~IOFile() {
 }
 void IOFile::write(const char* data, size_t len) {
     if (this->validHandle) {
-        fwrite(data, len, 1, impl->GetHandle());
+        (void)fwrite(data, len, 1, impl->GetHandle());
     }
 }
 void IOFile::flush() {
     if (this->validHandle) {
-        fflush(impl->GetHandle());
+        (void)fflush(impl->GetHandle());
     }
 }
 
 IOFile* IOFile::openFile(const String& filename, OpenFileMode mode) {
-    FileImpl* impl = new FileImpl(filename, mode);
+    auto* impl = new FileImpl(filename, mode);
     if (!impl->GetHandle()) {
         delete impl;
         return nullptr;

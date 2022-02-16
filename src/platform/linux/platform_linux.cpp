@@ -1,21 +1,13 @@
 #if defined(__linux__) || defined(__APPLE__)
 #include <cstdint>
-#include <cstdio>
-#include <cstdlib>
-#include <fcntl.h>
-#include <unistd.h>
-#include <pwd.h>
 #include <sys/time.h>
 #include <sys/types.h>
-#include <cstdio>
-#include <vector>
-#include <ctime>
-#include <thread>
-
 #include "msgbox.h"
 #include "str_util.h"
-#include "threads.h"
-
+#ifdef __linux__
+#include <unistd.h>
+#include <pwd.h>
+#endif
 
 void timespec_diff(struct timespec* start, struct timespec* stop, struct timespec* result) {
     if ((stop->tv_nsec - start->tv_nsec) < 0) {
@@ -28,24 +20,24 @@ void timespec_diff(struct timespec* start, struct timespec* stop, struct timespe
 }
 
 namespace {
-struct timespec getTimeCurrent() {
-    struct timespec tmSpecCurrent{};
-    clock_gettime(CLOCK_MONOTONIC, &tmSpecCurrent);
-    return tmSpecCurrent;
-}
+    struct timespec getTimeCurrent() {
+        struct timespec tmSpecCurrent {};
+        clock_gettime(CLOCK_MONOTONIC, &tmSpecCurrent);
+        return tmSpecCurrent;
+    }
 
-struct timespec& getTimeBegin() {
-    static struct timespec tmSpecStart = getTimeCurrent();
-    return tmSpecStart;
-}
+    struct timespec& getTimeBegin() {
+        static struct timespec tmSpecStart = getTimeCurrent();
+        return tmSpecStart;
+    }
 
-struct timespec getTimeSinceBegin() {
-    auto tmBegin = getTimeBegin();
-    auto tmTemp = getTimeCurrent();
-    timespec_diff(&tmBegin, &tmTemp, &tmTemp);
-    return tmTemp;
-}
-}
+    struct timespec getTimeSinceBegin() {
+        auto tmBegin = getTimeBegin();
+        auto tmTemp  = getTimeCurrent();
+        timespec_diff(&tmBegin, &tmTemp, &tmTemp);
+        return tmTemp;
+    }
+}// namespace
 
 double getTimeSecondsD() {
     auto tmTime = getTimeSinceBegin();
@@ -58,9 +50,9 @@ int64_t getTimeMillis() {
 }
 
 double getTimeMillisD() {
-    auto tmTime = getTimeSinceBegin();
+    auto tmTime           = getTimeSinceBegin();
     double tmDoubleMillis = static_cast<double>(tmTime.tv_sec) * 1000.0;
-    auto nSecsToMillis = tmTime.tv_nsec / 1'000'000L;
+    auto nSecsToMillis    = tmTime.tv_nsec / 1'000'000L;
     return tmDoubleMillis + static_cast<double>(nSecsToMillis);
 }
 float getTimeMillisF() {
@@ -89,7 +81,7 @@ String getKeyName(int scancode) {
 String FormatErrorMessage(uint32_t error, const String& msg) {
     static const int BUFFERLENGTH = 1024;
     std::vector<char> buf(BUFFERLENGTH);
-    char* strErrBuf = strerror_r(error, buf.data(), BUFFERLENGTH);
+    char* strErrBuf = strerror_r((int)error, buf.data(), BUFFERLENGTH);
     if (strErrBuf) {
         String strErrMsg = String(strErrBuf);
         if (!msg.empty()) {
@@ -104,7 +96,7 @@ String FormatErrorMessage(uint32_t error, const String& msg) {
 
 String getCurrentWorkingDirectory() {
     String path;
-    char* cwdBuf = getcwd(NULL, 0);
+    char* cwdBuf = getcwd(nullptr, 0);
     if (cwdBuf) {
         path = cwdBuf;
     }
@@ -113,7 +105,6 @@ String getCurrentWorkingDirectory() {
 }
 
 bool determineUserdataPath(String& path) {
-
     char* homedir = getenv("HOME");
     if (!homedir) {
         uid_t curUid         = getuid();
@@ -129,5 +120,6 @@ bool determineUserdataPath(String& path) {
     return false;
 }
 
-#endif
-#endif
+#endif // __linux__
+
+#endif // defined(__linux__) || defined(__APPLE__)

@@ -4,11 +4,11 @@
 #include <ctime>
 
 
-void timespec_diff(struct timespec* start, struct timespec* stop, struct timespec* result); 
+void timespec_diff(struct timespec* start, struct timespec* stop, struct timespec* result);
 
 class hires_timer_t::Impl {
-    struct timespec iStart{};
-    struct timespec iStop{};
+    struct timespec iStart {};
+    struct timespec iStop {};
 
 public:
     Impl() {
@@ -47,7 +47,7 @@ public:
 
     double getTimeDoubleReset() {
         double valD = getTimeDouble();
-        iStart = iStop;
+        iStart      = iStop;
         return valD;
     }
 };
