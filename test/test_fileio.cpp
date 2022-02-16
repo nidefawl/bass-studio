@@ -2,8 +2,6 @@
 #include "common/test_common.h"
 #include "fileio.h"
 #include "platform.h"
-#include <chrono>
-#include <cstdint>
 #include <vector>
 
 namespace {

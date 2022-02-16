@@ -29,7 +29,6 @@
 //
 
 #include "MidiFile.h"
-#include "Binasc.h"
 
 #include <cstring>
 #include <iostream>
@@ -231,6 +230,9 @@ int MidiFile::read(const string& filename) {
    if (!input.is_open()) {
       return 0;
    }
+   if (input.peek() != 'M') {
+      cout << "Loading BINASC file " << filename << endl;
+   }
 
    rwstatus = MidiFile::read(input);
    return rwstatus;
@@ -244,22 +246,8 @@ int MidiFile::read(const string& filename) {
 int MidiFile::read(istream& input) {
    rwstatus = 1;
    if (input.peek() != 'M') {
-      // If the first byte in the input stream is not 'M', then presume that
-      // the MIDI file is in the binasc format which is an ASCII representation
-      // of the MIDI file.  Convert the binasc content into binary content and
-      // then continue reading with this function.
-      stringstream binarydata;
-      Binasc binasc;
-      binasc.writeToBinary(binarydata, input);
-      binarydata.seekg(0, ios_base::beg);
-      if (binarydata.peek() != 'M') {
-         cerr << "Bad MIDI data input" << endl;
-         rwstatus = 0;
-         return rwstatus;
-      } else {
-         rwstatus = read(binarydata);
-         return rwstatus;
-      }
+      cerr << "Bad MIDI data input" << endl;
+      return rwstatus;
    }
 
    const char* filename = getFilename();
@@ -764,38 +752,6 @@ int MidiFile::writeBinasc(const string& aFile) {
 int MidiFile::writeBinascWithComments(const string& aFile) {
    return writeBinascWithComments(aFile.data());
 }
-
-
-int MidiFile::writeBinasc(ostream& output) {
-   stringstream binarydata;
-   rwstatus = write(binarydata);
-   if (rwstatus == 0) {
-      return 0;
-   }
-
-   Binasc binasc;
-   binasc.setMidiOn();
-   binarydata.seekg(0, ios_base::beg);
-   binasc.readFromBinary(output, binarydata);
-   return 1;
-}
-
-
-int MidiFile::writeBinascWithComments(ostream& output) {
-   stringstream binarydata;
-   rwstatus = write(binarydata);
-   if (rwstatus == 0) {
-      return 0;
-   }
-
-   Binasc binasc;
-   binasc.setMidiOn();
-   binasc.setCommentsOn();
-   binarydata.seekg(0, ios_base::beg);
-   binasc.readFromBinary(output, binarydata);
-   return 1;
-}
-
 
 
 //////////////////////////////

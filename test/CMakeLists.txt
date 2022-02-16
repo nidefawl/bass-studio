@@ -79,6 +79,7 @@ DEFINE_TEST(
 )
 
 DEFINE_TEST(test_fileio TRUE test_fileio.cpp common/test_common.cpp)
+DEFINE_TEST(test_midifile TRUE test_midifile.cpp common/test_common.cpp)
 DEFINE_TEST(test_audioblock TRUE test_audioblock.cpp common/test_common.cpp)
 DEFINE_TEST(test_resampler TRUE test_resampler.cpp common/test_common.cpp)
 DEFINE_TEST(test_notes TRUE test_notes.cpp common/test_common.cpp)
