@@ -648,69 +648,6 @@ int MidiFile::write(ostream& out) {
 }
 
 
-
-//////////////////////////////
-//
-// MidiFile::writeHex -- print the Standard MIDI file as a list of
-//    ASCII Hex bytes, formatted 25 to a line by default, and
-//    two digits for each hex byte code.  If the input width is 0,
-//    then don't wrap lines.
-//
-//  default value: width=25
-//
-
-int MidiFile::writeHex(const char* aFile, int width) {
-   fstream output(aFile, ios::out);
-   if (!output.is_open()) {
-      cerr << "Error: could not write: " << aFile << endl;
-      return 0;
-   }
-   rwstatus = writeHex(output, width);
-   output.close();
-   return rwstatus;
-}
-
-
-//
-// string version of writeHex().
-//
-
-int MidiFile::writeHex(const string& aFile, int width) {
-   return MidiFile::writeHex(aFile.data(), width);
-}
-
-
-//
-// ostream version of writeHex().
-//
-
-int MidiFile::writeHex(ostream& out, int width) {
-   stringstream tempstream;
-   MidiFile::write(tempstream);
-   int value = 0;
-   int len = (int)tempstream.str().length();
-   int wordcount = 1;
-   int linewidth = width >= 0 ? width : 25;
-   for (int i=0; i<len; i++) {
-      value = (unsigned char)tempstream.str()[i];
-      if (linewidth) {
-         if (i < len - 1) {
-            out << (wordcount % linewidth ? ' ' : '\n');
-         }
-         wordcount++;
-      } else {
-         // print with no line breaks
-         if (i < len - 1) {
-            out << ' ';
-         }
-      }
-   }
-   if (linewidth) {
-      out << '\n';
-   }
-   return 1;
-}
-
 //////////////////////////////
 //
 // MidiFile::status -- return the success flag from the last read or

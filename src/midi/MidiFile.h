@@ -1,3 +1,8 @@
+/*
+ * Modifications (c) Michael Hept 2017-2022
+ * Removed BinAsc support
+ */
+
 //
 // Programmer:    Craig Stuart Sapp <craig@ccrma.stanford.edu>
 // Creation Date: Fri Nov 26 14:12:01 PST 1999
@@ -63,9 +68,6 @@ class MidiFile {
       int       write                     (const char* aFile);
       int       write                     (const std::string& aFile);
       int       write                     (std::ostream& out);
-      int       writeHex                  (const char* aFile,   int width = 25);
-      int       writeHex                  (const std::string& aFile, int width = 25);
-      int       writeHex                  (std::ostream& out,        int width = 25);
       int       status                    (void);
 
       // track-related functions:
