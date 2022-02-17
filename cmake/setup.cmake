@@ -115,24 +115,13 @@ if (NOT MSVC)
   endif()
 endif()
 
-if (IS_MINGW_BUILD)
-  find_program(CV2PDB cv2pdb)
-  if (NOT CV2PDB) 
-    message(STATUS "CV2PDB not found. Skipping PDB generation")
-  else() 
-    message(STATUS "CV2PDB found")
-    add_compile_options(-gdwarf-3) #cv2pdb does not produce correct filenames/lines with dwarf > 3
-  endif()
+if (WIN32 AND NOT MSVC AND CLANG)
+  add_compile_options($<$<CONFIG:Debug>:-gcodeview>)
+  add_link_options($<$<CONFIG:Debug>:-Wl,-pdb=>)
 endif()
 
 FUNCTION(ADD_POST_BUILD_COMMANDS targetBuildName)
-  if (IS_MINGW_BUILD AND CV2PDB)
-    add_custom_command(
-        TARGET ${targetBuildName} POST_BUILD
-        COMMAND ${CV2PDB} -k $<TARGET_FILE:${targetBuildName}>
-        COMMENT "Generating PDB for MinGW binary"
-    )
-  endif()
+  # Nothing
 ENDFUNCTION()
 
 # macro to set common properties on an executable
