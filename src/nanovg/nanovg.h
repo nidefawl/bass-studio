@@ -18,7 +18,9 @@
 
 #ifndef NANOVG_H
 #define NANOVG_H
+
 #include "nanovg_min.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -30,6 +32,18 @@ extern "C" {
 #pragma warning(push)
 #pragma warning(disable: 4201)  // nonstandard extension used : nameless struct/union
 #endif
+
+// Create flags
+
+enum NVGcreateFlags {
+	// Flag indicating if geometry based anti-aliasing is used (may not be needed when using MSAA).
+	NVG_ANTIALIAS 		= 1<<0,
+	// Flag indicating if strokes should be drawn using stencil buffer. The rendering will be a little
+	// slower, but path overlaps (i.e. self-intersecting or sharp turns) will be drawn just once.
+	NVG_STENCIL_STROKES	= 1<<1,
+	// Flag indicating that additional debug checks are done.
+	NVG_DEBUG 			= 1<<2,
+};
 
 struct NVGpaint {
 	float xform[6];
@@ -722,7 +736,6 @@ typedef struct NVGparams NVGparams;
 
 // Constructor and destructor, called by the render back-end.
 NVGcontext* nvgCreateInternal(NVGparams* params);
-int nvgReloadShaders(NVGcontext*ctx, const char* shaderSrcVertex, const char* shaderSrcFragment, int n);
 void nvgDeleteInternal(NVGcontext* ctx);
 
 NVGparams* nvgInternalParams(NVGcontext* ctx);

@@ -1,8 +1,6 @@
 #include "glheaders.h"
 #include <memory>
 #include <nanovg.h>
-#include <nanovg_gl.h>
-#include <nanovg_gl_utils.h>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include "math/vec.h"

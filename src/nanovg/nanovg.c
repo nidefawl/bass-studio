@@ -333,12 +333,6 @@ static NVGstate* nvg__getState(NVGcontext* ctx)
 	return &ctx->states[ctx->nstates-1];
 }
 
-int nvgReloadShadersInternal(NVGparams* params)
-{
-	if (params->renderCreate(params->userPtr) == 0)
-		return 1;
-	return 0;
-}
 NVGcontext* nvgCreateInternal(NVGparams* params)
 {
 	FONSparams fontParams;

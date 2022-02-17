@@ -6,7 +6,6 @@
 #endif
 #include <nanovg.h>
 #include <nanovg_gl.h>
-#include <nanovg_gl_utils.h>
 #include <cstdint>
 
 #ifdef _WIN32
@@ -283,13 +282,13 @@ private:
 protected:
     bool bIsFirstTimeReload = true;
     void reloadCustomShaders() {
-        String strSrc1;
-        String strSrc2;
-        int64_t ret1 = ReadFileText("nanovg.vsh", strSrc1);
-        int64_t ret2 = ReadFileText("nanovg.fsh", strSrc2);
+        String strShaderSrcVertex;
+        String strShaderSrcFragment;
+        int64_t ret1 = ReadFileText("nanovg.vsh", strShaderSrcVertex);
+        int64_t ret2 = ReadFileText("nanovg.fsh", strShaderSrcFragment);
         if (ret1 != -1 && ret2 != -1) {
             log_printf("loading custom shaders\n", 0);
-            int statusErr = nvgReloadShaders(nanovgCtxt, StringAsCStr(strSrc1), StringAsCStr(strSrc2), 0);
+            int statusErr = nvgReloadShaders(nanovgCtxt, StringAsCStr(strShaderSrcVertex), StringAsCStr(strShaderSrcFragment));
             if (statusErr && bIsFirstTimeReload) {
                 throw appexception("Couldn't initialize nanovg");
             }
@@ -1706,7 +1705,6 @@ void initColor();                                            // Forward declare 
 void deleteApp();                                            // Forward declare from host/mainctrl.cpp
 void openGlobalLog(const String& logFileName);               // Forward declare from util/debug.cpp
 void closeGlobalLog();                                       // Forward declare from util/debug.cpp
-void runSseBenchmarkTests();                                 //Forward declare from benchmark/benchmark-main.cpp
 
 int startApplication(const std::vector<String>& args) {
     seqthreads::registerThread("mainthread");
@@ -1723,10 +1721,6 @@ int startApplication(const std::vector<String>& args) {
 
 #ifdef USE_WIN32_EXC_HOOKS
     setExceptionHandler();
-#endif
-
-#if BUILD_VSTHOST
-    runSseBenchmarkTests();
 #endif
 
     bool openConsole      = false;

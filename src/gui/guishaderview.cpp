@@ -2,7 +2,6 @@
 #include <vector>
 #include <nanovg.h>
 #include <nanovg_gl.h>
-#include <nanovg_gl_utils.h>
 #include <memory>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>

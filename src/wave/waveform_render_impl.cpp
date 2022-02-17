@@ -3,8 +3,8 @@
 #include "waveform_render_impl.h"
 #include "gl/gl_path.h"
 
-#include "nanovg/nanovg.h"
-#include "nanovg/nanovg_gl.h"
+#include <nanovg.h>
+#include <nanovg_gl.h>
 #include <glm/gtc/matrix_transform.hpp>
 
 #include "math/seq_math.h"

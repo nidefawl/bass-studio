@@ -1259,7 +1259,6 @@ void DawInstance::initDaw() {
 }
 
 MainCtrl::MainCtrl(DawInstance& _daw) : DawCtrl(_daw) {
-    log_printf("MainCtrl constructor\n", 0);
 }
 
 void MainCtrl::initApp(const std::vector<String>& args) {

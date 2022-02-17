@@ -29,7 +29,7 @@ def main():
         with open(strDawDataPath+"/"+shaderFileEntry["PATH"], "rb") as input:
             data = input.read()
             strCString = toCStyleString(data)
-            strCSourceFile += "const char* "
+            strCSourceFile += "const char* const"
             strCSourceFile += shaderFileEntry["VAR_NAME"]
             strCSourceFile += " = "
             strCSourceFile += strCString + "\n\n"
