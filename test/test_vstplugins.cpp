@@ -125,7 +125,7 @@ namespace {
 
 }// namespace
 
-extern volatile bool fataError;
+extern volatile bool fatalError;
 void on_terminate();
 
 int main(int, char*[]) {
@@ -159,7 +159,7 @@ int main(int, char*[]) {
         createWin32Window();
         auto tmLastTick = getTimeMillis();
         bool quit         = false;
-        while (!fataError && !quit) {
+        while (!fatalError && !quit) {
             auto tmNow = getTimeMillis();
             if (tmNow - tmLastTick >= 25) {
                 tmLastTick = tmNow;
@@ -181,9 +181,9 @@ int main(int, char*[]) {
 #endif
     } catch (std::exception& e) {
         printf("std::exception: %s\n", e.what());
-        fataError = true;
+        fatalError = true;
     }
     _tls.host->unload();
     _tls.host->destroy();
-    return fataError ? 0x5A5A5A5A : retVal;
+    return fatalError ? 0x5A5A5A5A : retVal;
 }

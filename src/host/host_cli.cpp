@@ -37,7 +37,7 @@
 #include <cstdlib>
 #include <memory>
 
-extern volatile bool fataError;
+extern volatile bool fatalError;
 
 namespace HostCLI {
     
@@ -115,7 +115,7 @@ void processWindowMessages() {
     MsgWaitForMultipleObjects(0, nullptr, FALSE, timeout, QS_ALLEVENTS);
     MSG msg;
     int maxProcess = 500;
-    while (!fataError && PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE) && maxProcess-- > 0) {
+    while (!fatalError && PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE) && maxProcess-- > 0) {
         if (msg.message == WM_QUIT) {
             break;
         }

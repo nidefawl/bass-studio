@@ -75,7 +75,7 @@ void unregisterWindowTimer(appwindow* wnd) {
 
 void windowTickTimerRun();
 
-volatile bool fataError = false;
+volatile bool fatalError = false;
 
 void enableGlDebugCallback();
 
@@ -114,7 +114,7 @@ void handleStdException(std::exception& e) {
     } catch (std::exception& e) {
         dbgassert(0);
     }
-    fataError = true;
+    fatalError = true;
 }
 
 void on_terminate() {
@@ -1837,14 +1837,14 @@ int startApplication(const std::vector<String>& args) {
 #else
         int64_t tmHRLastFrame = 0;
 #endif
-        while (!fataError && !glfwWindowShouldClose(glfwHandle)) {
+        while (!fatalError && !glfwWindowShouldClose(glfwHandle)) {
 #ifdef _WIN32
             int64_t maxMsgProcess = 1024;
             DWORD timeout         = 5;
             MsgWaitForMultipleObjects(0, nullptr, FALSE, timeout, QS_ALLEVENTS);
             MSG msg;
             hiresTimer1.reset();
-            while (!fataError && PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE) && maxMsgProcess-- > 0) {
+            while (!fatalError && PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE) && maxMsgProcess-- > 0) {
                 appStats.numMessagesProcessed++;
                 cntMessages++;
                 //            logEveryMsec(0, 5000, "Main msg loop");
@@ -1932,7 +1932,7 @@ int startApplication(const std::vector<String>& args) {
         mainWindow->setInvalid();
         mainWindow->destroy();
 
-        if (!fataError) {
+        if (!fatalError) {
             try {
                 saveSettings(DAW::settings);
             } catch (std::exception& e) {
@@ -1959,7 +1959,7 @@ int startApplication(const std::vector<String>& args) {
     printClipAllocations();
     printLeakedAudioBuffers();
 #endif
-    if (fataError) {
+    if (fatalError) {
         log_printf("EXIT_FAILURE\n", 0);
     } else {
         log_printf("EXIT_SUCCESS\n", 0);
@@ -1970,7 +1970,7 @@ int startApplication(const std::vector<String>& args) {
 #ifdef _WIN32
     OleUninitialize();
 #endif
-    return fataError ? 1 : 0;
+    return fatalError ? 1 : 0;
 }
 
 #endif// HAS_MAIN_LOOP

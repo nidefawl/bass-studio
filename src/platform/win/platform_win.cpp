@@ -178,7 +178,7 @@ static int toErrorCode(DWORD excCode) {
     }
 }
 void logStackTrace();
-extern volatile bool fataError;
+extern volatile bool fatalError;
 #define WINAPI __stdcall
 static LONG WINAPI TopLevelExceptionHandler(PEXCEPTION_POINTERS pExceptionInfo) {
     DWORD excCode = pExceptionInfo && pExceptionInfo->ExceptionRecord ? pExceptionInfo->ExceptionRecord->ExceptionCode : 0;
@@ -187,7 +187,7 @@ static LONG WINAPI TopLevelExceptionHandler(PEXCEPTION_POINTERS pExceptionInfo) 
     }
     log_out("Fatal exception: %s (0x%08X)\n", exc_as_str(excCode), (int) excCode);
     logStackTrace();
-    fataError = true;
+    fatalError = true;
     return EXCEPTION_CONTINUE_SEARCH;
 }
 #if defined(_MSC_VER)
@@ -200,7 +200,7 @@ int __cdecl DebugReportHook(int nReportType, char*, int* pnRet) {
 
 void SignalHandler(int signal) {
     if (signal == SIGABRT) {
-        if (!fataError) {
+        if (!fatalError) {
             logStackTrace();
         }
         (void) 0;
