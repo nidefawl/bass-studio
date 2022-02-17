@@ -32,7 +32,6 @@ function( DEFINE_TEST test_name link_lib first_source_file)
   set(test_source_list ${first_source_file} ${ARGN})
   source_group("src" FILES ${test_source_list})
   ADD_EXECUTABLE( ${test_name} "${test_source_list}")
-  get_filename_component(ABS_WORKING_DIR "${PROJECT_WORKING_DIR}" REALPATH BASE_DIR "${CMAKE_BINARY_DIR}") # CMAKE_SOURCE_DIR for out of source builds?!
   # SET_TESTS_PROPERTIES( ${test_name} PROPERTIES ENVIRONMENT "LLVM_PROFILE_FILE=${CMAKE_CURRENT_BINARY_DIR}/${test_name}.profraw")
   # As per CMake docs: Add empty generator expr to avoid a configuration subdirectory on multi configs
   set_target_properties(${test_name} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${ABS_WORKING_DIR}$<0:...>)

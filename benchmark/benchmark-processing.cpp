@@ -2,17 +2,19 @@
 #include <array>
 #include "logging.h"
 #include "str_util.h"
-#include "seq_time.h"
 #include "exceptions.h"
-#include "platform.h"
+#include "appconfig.h"
 #include "appsettings.h"
-#include "project.h"
-#include "host/projectcontroller.h"
+#include "platform.h"
 #include "samplerate.h"
+#include "basectrl.h"
+#include "seq_time.h"
 #include "track.h"
+#include "project.h"
+#include "host/mainctrl.h"
+#include "host/projectcontroller.h"
 #include "host/vst_host.h"
 #include "util/testing_environment.h"
-#include "appconfig.h"
 
 #include <memory>
 
@@ -21,7 +23,7 @@
 #include "platform/win/platform_win.h"
 #endif
 
-extern volatile bool fataError;
+extern volatile bool fatalError;
 
 void deleteApp() {
 }

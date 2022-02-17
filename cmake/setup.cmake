@@ -12,6 +12,7 @@ endif ()
 set(PROJECT_SRC_PATH "${CMAKE_SOURCE_DIR}/src" CACHE PATH "Project source directory")
 # instead of an installation step we only copy the executable to PROJECT_WORKING_DIR
 set(PROJECT_WORKING_DIR "../run/" CACHE PATH "working directory (run)")
+get_filename_component(ABS_WORKING_DIR "${PROJECT_WORKING_DIR}" REALPATH BASE_DIR "${CMAKE_BINARY_DIR}") # CMAKE_SOURCE_DIR for out of source builds?!
 
 set_property(DIRECTORY PROPERTY VS_STARTUP_PROJECT ${PROJECT_NAME})
 # if (NOT MSVC)
@@ -127,8 +128,8 @@ ENDFUNCTION()
 # macro to set common properties on an executable
 FUNCTION(SET_APP_BUILD appname)
   # As per CMake docs: Add empty generator expr to avoid a configuration subdirectory on multi configs
-  set_target_properties(${appname} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${PROJECT_WORKING_DIR}$<0:...>)
-  set_target_properties(${appname} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ${PROJECT_WORKING_DIR})
+  set_target_properties(${appname} PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${ABS_WORKING_DIR}$<0:...>)
+  set_target_properties(${appname} PROPERTIES VS_DEBUGGER_WORKING_DIRECTORY ${ABS_WORKING_DIR})
   set_target_properties(${appname} PROPERTIES OUTPUT_NAME "${appname}-${BUILD_BINARY_SUFFIX}")
 ENDFUNCTION(SET_APP_BUILD)
 

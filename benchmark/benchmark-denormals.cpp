@@ -1,14 +1,37 @@
+#include <benchmark/benchmark.h>
+#include <array>
+#include "logging.h"
+#include "str_util.h"
+#include "exceptions.h"
+#include "appconfig.h"
+#include "appsettings.h"
+#include "platform.h"
+#include "basectrl.h"
+#include "hires_timer.h"
+#include "sse.h"
+
+#include <memory>
 #include <cstdio>
 #include <numeric>
 #include <cmath>
 
 #ifdef _WIN32
-#include <windows.h>
+#include <Windows.h>
 #include <intrin.h>
+#include "platform/win/windowsize.h"
+#include "platform/win/platform_win.h"
 #endif
-#include "sse.h"
-#include "hires_timer.h"
-#include "logging.h"
+
+extern volatile bool fatalError;
+
+void deleteApp() {
+}
+
+std::shared_ptr<AppCtrl> makeApp(const std::vector<String>& args) {
+  return nullptr;
+}
+void startApp(std::shared_ptr<AppCtrl>& app) {
+}
 
 void generateDenormals(float y[16]) {
     const float x[16] = {1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2.0, 2.1, 2.2, 2.3, 2.4, 2.5, 2.6};
