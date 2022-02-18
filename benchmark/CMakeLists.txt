@@ -18,5 +18,6 @@ ENDMACRO()
 if (FORCE_BUILD_BENCHMARKS OR NOT DEFINED CMAKE_BUILD_TYPE OR CMAKE_BUILD_TYPE MATCHES "Release")
     DEFINE_BENCHMARK(benchmark-processing)
     DEFINE_BENCHMARK(benchmark-denormals)
+    DEFINE_BENCHMARK(benchmark-timer)
 endif()
 
