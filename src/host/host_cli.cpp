@@ -46,11 +46,7 @@ bool userSentQuitRequest = false;
 #ifdef _WIN32
 static BOOL WINAPI ConsoleHandler(DWORD dwType) {
     userSentQuitRequest = true;
-    if (dwType == CTRL_C_EVENT) {
-        log_printf("CTRL_C\n", 0);
-        return true;
-    }
-    return false;
+    return true;
 }
 #endif
 
@@ -64,7 +60,11 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
     switch (msg) {
         case WM_CREATE:
             break;
+        case WM_CLOSE:
+            userSentQuitRequest = true;
+            break;
         case WM_DESTROY:
+            userSentQuitRequest = true;
             PostQuitMessage(0);
             return 0;
         default:
@@ -111,7 +111,7 @@ double StringToF(const String& s) { return atof(s.c_str()); }
 
 #ifdef _WIN32
 void processWindowMessages() {
-    DWORD timeout = 5;
+    DWORD timeout = 50;
     MsgWaitForMultipleObjects(0, nullptr, FALSE, timeout, QS_ALLEVENTS);
     MSG msg;
     int maxProcess = 500;
@@ -128,6 +128,11 @@ void processWindowMessages() {}
 #endif
 
 int runCommandLineHost(int argc, const char* argv[]) {
+    seqthreads::registerThread("mainthread");
+    if (!SetConsoleCtrlHandler((PHANDLER_ROUTINE) ConsoleHandler, TRUE)) {
+        fprintf(stderr, "Unable to install handler!\n");
+        return EXIT_FAILURE;
+    }
 #ifdef _WIN32
     WNDCLASS wc;
 
@@ -164,7 +169,7 @@ int runCommandLineHost(int argc, const char* argv[]) {
         bool bRenderOnly      = hasCmdOption(argc, argv, "--render");
         double fStart         = StringToF(getCmdOption(argc, argv, "-s", "-1.0"));
         double fLength        = StringToF(getCmdOption(argc, argv, "-l", "-1.0"));
-        bool activateDeferred = !(getCmdOption(argc, argv, "-d", "false") != "false");
+        bool activateDeferred = getCmdOption(argc, argv, "-d", "true") == "true";
 
         if (file.empty()) {
             log_printf("please specify project file with -f <file>\n", 0);
@@ -260,6 +265,7 @@ int runCommandLineHost(int argc, const char* argv[]) {
             if (projectFile) {
                 project_snapshot_t& snapshot = projectFile->project;
                 project.copyFrom(snapshot);
+                projectGlobals = snapshot.globals;
                 cache.load(projectFile->sampleFileIndex);
 
                 /** create all audio instances **/
@@ -361,9 +367,7 @@ int runCommandLineHost(int argc, const char* argv[]) {
                     trackMaster->getStage()->flags |= audiostageflags_t::CONVERT_OUTPUT;
                 }
             }
-            for (auto* trackMaster : project.trackMasterCtr) {
-                trackMaster->audio->mixer.setParamValue(PARAM_TRACK_GAIN, 0.8f, FLG_PAR_UPDATE_INIT);
-            }
+
             /** inform host about track layout changes so it resets and updates internal structures */
             host->onTrackLayoutChange();
 
@@ -380,11 +384,7 @@ int runCommandLineHost(int argc, const char* argv[]) {
                 //                project.loopLen = math::roundD(fLength*TICKS_BAR);
             }
 
-            std::shared_ptr<DAW::processing_graph_t> processingGraph;
-            AudioBlock blockIn(host->numChannels, host->m_sampleFormatInternal.blockSize);
-            AudioBlock blockOut(host->numChannels, host->m_sampleFormatInternal.blockSize);
             host->prjGlobals = projectGlobals;
-
 
             log_printf("host->sampleFormat.sampleRate: %u\n", host->m_sampleFormatInternal.sampleRate);
             log_printf("host->sampleFormat.blockSize: %u\n", host->m_sampleFormatInternal.blockSize);
@@ -396,31 +396,29 @@ int runCommandLineHost(int argc, const char* argv[]) {
             log_printf("projectController.loopStart: %d\n", projectController.getGlobals().loopStart);
             log_printf("projectController.loopLen: %d\n", projectController.getGlobals().loopLen);
 
-            log_printf("playback start...\n", 0);
-
+            double tickPos    = projectGlobals.cursor.cursorPos;
+            log_printf("playback start at %s\n", StringAsCStr(tickAsBeatString(tickPos)));
 
             const double ticksPerBlock = sampleToTickConvert<double, roundmode::none>(host->m_sampleFormatInternal.blockSize,
                                                                                       host->prjGlobals.tempo100,
                                                                                       host->m_sampleFormatInternal.sampleRate);
 
-            double tickPos    = projectGlobals.cursor.cursorPos;
             int32_t samplePos = tickToSampleConvert<int32_t, roundmode::floor>(projectGlobals.cursor.cursorPos,
                                                                                projectGlobals.tempo100,
                                                                                host->m_sampleFormatInternal.sampleRate);
 
+            if (!SetConsoleCtrlHandler((PHANDLER_ROUTINE) ConsoleHandler, TRUE)) {
+                fprintf(stderr, "Unable to install handler!\n");
+                return EXIT_FAILURE;
+            }
             if (!bRenderOnly) {
                 playThread->addRequest(REQ_STATE, (int)playback_state::status_playback, true);
             } else {
-                /*
-                 * Process audio/midi tracks
-                 */
-                auto tracksFlatAll = project.trackList.getAllTracksFlatVec();
                 /**
-                 * process in reverse order: first children, then parents
+                 * Validate audio routing by building the audio graph once
                  */
-
-                /** turn tree structure into linear pointer array with parents followed by their children **/
-                if (!DAW::buildProcessingGraph(host.get(), &project, tracksFlatAll, processingGraph)) {
+                std::shared_ptr<DAW::processing_graph_t> processingGraph;
+                if (!DAW::buildProcessingGraph(host.get(), &project, project.trackList.getAllTracksFlatVecRef(), processingGraph)) {
                     log_printf("Failed building track graph\n", 0);
                     return -1;
                 }

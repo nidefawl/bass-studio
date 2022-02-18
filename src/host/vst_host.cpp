@@ -189,7 +189,7 @@ public:
     std::vector<audiostageid_i32> waitingTasks;
     std::mutex mtx;
     uint32_t threadsRunningCount = 0;
-    uint32_t threadCount = 4;
+    uint32_t threadCount = NUM_AUDIOPROCESSING_THREADS_INITIAL;
     uint32_t playThreadId = 0;
 
     VstInt32 vstShellCurrentUniqueId = 0;
@@ -2241,13 +2241,17 @@ int32_t vsthost::processBlock(project_controller_t* ctrl,
                         dbgassert(i+1 != MAX_AUDIOPROCESSING_THREADS);
                     }
                     dbgassert(pushd);
+                } else {
+#ifdef _WIN32
+                    YieldProcessor();
+#endif
                 }
             }
         }
         std::vector<audiostageid_i32> empty;
         finishTreadTasks(stagesProcessed, empty, true);
-        bool allProcessed = !std::any_of(processingGraph->nodesFlatOrdered.begin(), processingGraph->nodesFlatOrdered.end(), funcCheckNodeUnprocessed);
-         dbgassert(allProcessed);
+        // bool allProcessed = !std::any_of(processingGraph->nodesFlatOrdered.begin(), processingGraph->nodesFlatOrdered.end(), funcCheckNodeUnprocessed);
+        // dbgassert(allProcessed);
     }
 
     /* Profiling/Timings: Accumulate timings */
@@ -2286,6 +2290,7 @@ int32_t vsthost::processBlock(project_controller_t* ctrl,
 
 void vsthost::initThreads() {
     for (auto & thread : impl->threads) {
+        thread.setRealtimePriority(true);
         thread.setTls(daw_tls::getTls());
     }
     impl->startThreads();

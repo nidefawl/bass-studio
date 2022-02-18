@@ -7,6 +7,7 @@
 #include "assert_dbg.h"
 
 #include "error.h"
+#include "str_util.h"
 #include "thread.h"
 #include "threadlock.h"
 #include "seq_time.h"
@@ -199,7 +200,7 @@ private:
                                     tickPos                = startPos;
                                     ctrl->getPlaybackPos() = startPos;
                                     samplePos              = tickToSampleConvert<int32_t, roundmode::floor>(startPos, bpm100, host->m_sampleFormatInternal.sampleRate);
-                                    log_printf("START ON seconds: %.2f - sample %d\n", toSeconds(startPos, bpm100), samplePos);
+                                    log_printf("START ON %s seconds: %.2f - sample %d\n", StringAsCStr(tickAsBeatString(startPos)), toSeconds(startPos, bpm100), samplePos);
                                     host->onStartPlayback(this->m_prjCtrl);
                                     timer.reset();
                                     timer2.reset();
@@ -304,13 +305,13 @@ private:
                         if (m_status == status_playback) {
                             if (inLoop) {
                                 if (tickPos >= projGlobals.loopStart + projGlobals.loopLen) {
-                                    if (DawInstance::get()) {
-                                        DawInstance::get()->setJumpFromTo(tickPos, projGlobals.loopStart);
-                                    }
+                                    // if (DawInstance::get()) {
+                                    //     DawInstance::get()->setJumpFromTo(tickPos, projGlobals.loopStart);
+                                    // }
                                     double nextTickPos    = projGlobals.loopStart;
                                     int32_t nextSamplePos = tickToSampleConvert<int32_t, roundmode::floor>(nextTickPos, bpm100, sampleRate);
                                     host->onPlaybackJumpFromTo(this->m_prjCtrl, samplePos, tickPos, nextSamplePos, nextTickPos);
-                                    log_printf("JMP FROM %.2f to %.2f\n", tickPos, nextTickPos);
+                                    log_printf("JMP FROM %s to %s\n", StringAsCStr(tickAsBeatString(tickPos)), StringAsCStr(tickAsBeatString(nextTickPos)));
                                     tickPos   = nextTickPos;
                                     samplePos = nextSamplePos;
                                     log_printf("JMP LOOPBEGIN seconds: %.2f - BLOCK %d\n", toSeconds(projGlobals.loopStart, bpm100), samplePos / blockSize);
