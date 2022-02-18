@@ -11,7 +11,7 @@ void test_findFilesWithExt_recursive() {
   std::vector<FileFound> files;
   auto resPath = App::Platform::toResourcePath("fonts");
   findFilesWithExt(resPath, "ttf", true, files);
-  printf("findFilesWithExt %d\n", files.size());
+  printf("findFilesWithExt %zu\n", files.size());
   for (auto &file : files) {
     printf("%s\n", StringAsCStr(file.path));
   }
@@ -23,7 +23,7 @@ void test_findFilesWithExt_non_recursive() {
   std::vector<FileFound> files;
   auto resPath = App::Platform::toResourcePath("fonts");
   findFilesWithExt(resPath, "ttf", false, files);
-  printf("findFilesWithExt %d\n", files.size());
+  printf("findFilesWithExt %zu\n", files.size());
   for (auto &file : files) {
     printf("%s\n", StringAsCStr(file.path));
   }
