@@ -257,14 +257,18 @@ private:
     bool redrawFlagged     = false;
 
     void initContext() {
-        //glfwSwapInterval(-1);
         if (isSharedContextSlave) {
             return;
         }
+        glfwSwapInterval(1);
+        int flags = NVG_ANTIALIAS;
+#ifndef NDEBUG
+        flags |= NVG_DEBUG;
+#endif
 #ifdef NANOVG_GL2
-        nanovgCtxt = nvgCreateGL2(NVG_ANTIALIAS | NVG_DEBUG);
+        nanovgCtxt = nvgCreateGL2(flags);
 #elif defined(NANOVG_GL3)
-        nanovgCtxt = nvgCreateGL3(NVG_ANTIALIAS | NVG_DEBUG);
+        nanovgCtxt = nvgCreateGL3(flags);
 #endif
         if (!nanovgCtxt) {
             throw appexception("Couldn't initialize nanovg");
