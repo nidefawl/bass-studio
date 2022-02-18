@@ -70,6 +70,7 @@ public:
 
     WorkerThread();
     ~WorkerThread() override;
+    void setRealtimePriority(bool isRealtimePriority);
     void startThread();
     void stopThread();
     void joinThread();

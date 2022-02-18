@@ -10,6 +10,10 @@
 #include "workerthread.h"
 #include "assert_dbg.h"
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
 class WorkerThread::ThreadTaskImpl {
     ThreadTask* task;
     std::mutex m_mtx;
@@ -79,7 +83,7 @@ class WorkerThread::Impl {
     std::atomic<bool> m_stop;
     int32_t threadid = 0;
     daw_tls::tlsinstance threadTLS;
-
+    bool isRealtimePriority = false;
 public:
     Impl() {
         std::atomic_init(&m_stop, false);
@@ -91,13 +95,21 @@ public:
     void start() {
         t = std::thread([this]() {
             seqthreads::registerThread("workerthread");
-#ifdef _WIN32
             this->threadid = seqthreads::getCurrentThreadId();
-#endif
             dbgassert(threadTLS.tlsInitialized);
             daw_tls::setTls(threadTLS);
+            if (this->isRealtimePriority) {
+#ifdef _WIN32
+                HANDLE h = reinterpret_cast<HANDLE*>(GetCurrentThread);
+                SetThreadPriority(h, THREAD_PRIORITY_TIME_CRITICAL);
+#endif
+            }
             this->run();
         });
+    }
+    void setRealtimePriority(bool isRealtimePriority) {
+        dbgassert(!t.joinable());
+        this->isRealtimePriority = isRealtimePriority;
     }
     void join() {
         t.join();
@@ -175,6 +187,9 @@ bool WorkerThread::pushTask(ThreadTask* task) {
 }
 void WorkerThread::setTls(daw_tls::tlsinstance tls) {
     m_threadImpl->setTls(tls);
+}
+void WorkerThread::setRealtimePriority(bool isRealtimePriority) {
+    m_threadImpl->setRealtimePriority(isRealtimePriority);
 }
 std::shared_ptr<WorkerThread::ThreadTask> WorkerThread::call(std::function<void()>&& fn) {
     std::shared_ptr<WorkerThread::ThreadTask> task = std::make_shared<ThreadTaskCallStdFn>(fn);
