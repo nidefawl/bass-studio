@@ -98,7 +98,7 @@ public:
             dbgassert(m_threadTls.tlsInitialized);
             daw_tls::setTls(m_threadTls);
 #ifdef _WIN32
-            HANDLE h = reinterpret_cast<HANDLE*>(m_t.native_handle());
+            HANDLE h = reinterpret_cast<HANDLE*>(GetCurrentThread());
             SetThreadPriority(h, THREAD_PRIORITY_TIME_CRITICAL);
 #endif
             this->run();
