@@ -216,6 +216,9 @@ namespace DAW {
 inline bool isChannelConnected(const DAW::channel_ref_t& ch) {
     return ch.stage.stageRef.stageId != TRACKID_INVALID_I32 || ch.externalInputIdx > -1;
 }
+inline bool isTrackSrcSolod(const DAW::track_source_t& src) {
+    return (src.flags & (audiostageflags_t::SOLO|audiostageflags_t::SOLO_PARENT)) != audiostageflags_t::NONE;
+}
 inline channel_ref_t ChannelNone() {
     return channel_ref_t{};
 }

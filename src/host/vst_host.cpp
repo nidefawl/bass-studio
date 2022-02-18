@@ -1863,18 +1863,12 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
     allSources.insert(allSources.end(), trackNode.pushs.begin(), trackNode.pushs.end()); // copy
 
 #if 1
-    struct Func_CheckHasSolo {
-        bool operator()(const DAW::track_source_t& src) const {
-            return (src.flags & (audiostageflags_t::SOLO|audiostageflags_t::SOLO_PARENT)) != audiostageflags_t::NONE;
-        }
-    };
-    Func_CheckHasSolo funcCheckSolo;
-    bool hasSolo = std::any_of(allSources.cbegin(), allSources.cend(), funcCheckSolo);
+    bool hasSolo = std::any_of(allSources.cbegin(), allSources.cend(), DAW::isTrackSrcSolod);
 
     tmp.timer.reset();
     for (const DAW::track_source_t& tracksrc : allSources)
     {
-        if (hasSolo && !funcCheckSolo(tracksrc))
+        if (hasSolo && !DAW::isTrackSrcSolod(tracksrc))
             continue;
         if (DAW::isChannelConnected(tracksrc.channel)) {
             track_audio_src src;
@@ -2401,16 +2395,10 @@ void vsthost::processAudio(audio_stage_t* stage,
 
             std::vector<DAW::effect_source_t> allSources = effNode.pulls; // copy
 
-            struct Func_CheckHasSolo {
-                bool operator()(const DAW::track_source_t& src) const {
-                    return (src.flags & (audiostageflags_t::SOLO|audiostageflags_t::SOLO_PARENT)) != audiostageflags_t::NONE;
-                }
-            };
-            Func_CheckHasSolo funcCheckSolo;
-            bool hasSolo = std::any_of(allSources.cbegin(), allSources.cend(), funcCheckSolo);
+            bool hasSolo = std::any_of(allSources.cbegin(), allSources.cend(), DAW::isTrackSrcSolod);
 
             for (const DAW::effect_source_t& tracksrc : allSources) {
-                if (hasSolo && !funcCheckSolo(tracksrc))
+                if (hasSolo && !DAW::isTrackSrcSolod(tracksrc))
                     continue;
                 if (DAW::isChannelConnected(tracksrc.channel)) {
                     track_audio_src src;
