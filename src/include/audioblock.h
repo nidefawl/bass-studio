@@ -12,25 +12,32 @@ enum alloc_type {
     external_channels_only,
     external_array
 };
-
+struct DelayLine;
 struct AudioBlock {
     enum mix_op : int32_t {
         MIX,
         ADD
     };
+    static std::atomic<int32_t> instanceCstrd;
+    static std::atomic<int32_t> numAllocs;
     static std::atomic<int32_t> instanceCount;
+    static volatile bool recordAllocs;
+    static void BeginTrace();
+    static void EndTrace();
+
     uint32_t channels{};
     uint32_t samples{};
     float** buf{};
     alloc_type allocType = internal;
     bool debug           = false;
 
+
     AudioBlock()                  = delete;
     AudioBlock(const AudioBlock&) = delete;
     AudioBlock& operator=(const AudioBlock&) = delete;
 
     AudioBlock(AudioBlock&& other) noexcept {
-        instanceCount++;
+        //instanceCount++;
         std::swap(allocType, other.allocType);
         std::swap(channels, other.channels);
         std::swap(samples, other.samples);
@@ -50,6 +57,7 @@ struct AudioBlock {
     explicit AudioBlock(uint32_t _channels, uint32_t _samples, bool _bIsDebug = false)
         : channels(_channels), samples(0), buf(new float*[_channels]), allocType(alloc_type::internal), debug(_bIsDebug) {
         instanceCount++;
+        instanceCstrd++;
         for (uint32_t i = 0; i < _channels; i++) {
             buf[i] = nullptr;
         }
@@ -59,11 +67,13 @@ struct AudioBlock {
     explicit AudioBlock(float** buf, uint32_t _channels, uint32_t _samples)
         : channels(_channels), samples(_samples), buf(buf), allocType(alloc_type::external_array) {
         instanceCount++;
+        instanceCstrd++;
     }
 
     explicit AudioBlock(const std::vector<float*>& vecChannels, uint32_t _samples)
         : channels(static_cast<uint32_t>(vecChannels.size())), samples(_samples), buf(new float*[vecChannels.size()]), allocType(alloc_type::external_channels_only) {
         instanceCount++;
+        instanceCstrd++;
         memcpy(buf, vecChannels.data(), vecChannels.size() * sizeof(decltype(vecChannels[0])));
         float** pBuf = buf;
         for (float* channel : vecChannels) {
@@ -74,6 +84,7 @@ struct AudioBlock {
     explicit AudioBlock(const AudioBlock& src, const uint32_t channelOffset, const uint32_t numChannels, const uint32_t sampleOffset, const uint32_t numSamples)
         : channels(numChannels), samples(numSamples), buf(new float*[numChannels]), allocType(alloc_type::external_channels_only) {
         instanceCount++;
+        instanceCstrd++;
         dbgassert(samples);
         for (uint32_t i = 0; i < channels; i++) {
             dbgassert(src.buf[i]);
@@ -242,6 +253,8 @@ struct AudioBlock {
         dbgassert(bdbgProcessed);
     }
 
+    void addFromDelayLineOp(DelayLine* delayLine, const samplerate_t delay, const mix_op op, float gain);
+
     void fillNoise(uint32_t seed);
 
     void realloc(uint32_t _samples);
@@ -251,7 +264,8 @@ struct AudioBlock {
 
 struct DelayLine {
     AudioBlock block;
-    int32_t blockOffset = 0;
+    int32_t writeOffset = 0;
+    uint16_t blockSize = 0;
     static std::atomic<int32_t> instanceCount;
     DelayLine(uint32_t _channels, uint32_t _samples)
         : block(_channels, _samples) {
@@ -267,8 +281,10 @@ struct DelayLine {
     DelayLine(DelayLine&& other) = delete;
     DelayLine& operator=(const DelayLine& other) = delete;
     DelayLine& operator=(DelayLine&& other) = delete;
+    void updateSize(uint16_t _blockSize, uint8_t _numChannels, samplerate_t _delay);
     ~DelayLine() {
         instanceCount--;
     }
 };
 void delayAudio(DelayLine* delayLine, AudioBlock* input, AudioBlock* output, samplerate_t delay);
+void delayLineWrite(DelayLine* delayLine, AudioBlock* input, samplerate_t delay);

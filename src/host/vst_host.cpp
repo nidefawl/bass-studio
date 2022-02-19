@@ -115,9 +115,8 @@ struct vsthost::track_block_processing_task_t {
 
 struct process_scratch_buf_t {
     VstTimeInfo timeinfo{};
-    AudioBlock tempBlock;
     SYNCHRONIZED_RW hires_timer_t timer;// timer for cpu-time profiling
-    process_scratch_buf_t() : tempBlock(8, 256) {
+    process_scratch_buf_t() {
     }
 
     ~process_scratch_buf_t() = default;
@@ -207,6 +206,7 @@ public:
         //delayLines.clear();//TODO: this might free a lot of memory and be expensive: profile!
     }
 
+    //TODO: THIS IS NOT THREADSAFE!
     DelayLine* getDelayLine(uint32_t id, int32_t numChannels) {
         using namespace std;
         lock_guard<mutex> hold(mtx);
@@ -1288,6 +1288,7 @@ int32_t vsthost::processRender(project_controller_t* ctrl, int32_t sample, doubl
     dbgassert(m_sampleFormatInternal.sampleRate > 0);
     const bool enableProfiling = (dbgStep%333) != 0;
     // DebugAlloc::beginTrace();
+    //AudioBlock::BeginTrace();
 
     project_t* const project = ctrl->getProject();
 
@@ -1424,6 +1425,8 @@ int32_t vsthost::processRender(project_controller_t* ctrl, int32_t sample, doubl
     }
 #endif
     // DebugAlloc::endTrace();
+    //AudioBlock::EndTrace();
+
     if (!bypassSampleConversion) {
         int32_t bytesCopied = 0;
         hires_timer_t timerConvert;
@@ -1468,6 +1471,8 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
     dbgassert(m_sampleFormatInternal.blockSize > 0);
     dbgassert(m_sampleFormatInternal.sampleRate > 0);
     const bool enableProfiling = (dbgStep%333) != 0;
+
+    //AudioBlock::BeginTrace();
 
     project_t* project = ctrl->getProject();
 
@@ -1728,6 +1733,7 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
 
         dbgStep++;
     }
+    //AudioBlock::EndTrace();
     if (nBlocksProcessed) {
 
         stats.blocksProcessed += nBlocksProcessed;
@@ -1818,11 +1824,6 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
 
     track->getStage()->procStats.timeTrackApplyAutomation = tmp.timer.getTime();
     dbgassert(tickBlockEnd-processingPos < math::ceildS32(ticksPerBlock+1));
-//            if (dbg == 0) {
-//                log_printf("process track %s\n", StringAsCStr(track->name));
-//                log_printf("process stage 1 %d\n", static_cast<int32_t>(track->audio->stageId));
-//                log_printf("process stage 2 %d\n", static_cast<int32_t>(trackNode.stageId));
-//            }
 
     trackImpl->input.realloc(sampleFormat.blockSize);
     trackImpl->output.realloc(sampleFormat.blockSize);
@@ -1877,10 +1878,6 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
             continue;
         if (DAW::isChannelConnected(tracksrc.channel)) {
             track_audio_src src;
-//                    if (dbg == 0) {
-//                         log_printf("track %s has input %s\n", StringAsCStr(track->name), StringAsCStr(tracksrc.channel.name));
-//                    }
-
             if (DAW::resolveAudioChannel(this, numChannelsTrack, tracksrc.channel, req.ptrExternalInputs, src)) {
                 /**
                  * Mix routed tracks
@@ -1899,19 +1896,13 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
                 dbgassert(trackNode.inputLatency >= tracksrc.latency);
                 samplerate_t delayToMaxInputLatency = trackNode.inputLatency - tracksrc.latency;
 
-                AudioBlock& tempBlock = tmp.tempBlock;
-
                 AudioBlock srcBlock = src.toAudioBlock();
-                DelayLine* delayLine = impl->getDelayLine(tracksrc.trackEdgeId, srcBlock.channels);
-                tempBlock.realloc(srcBlock.samples);
-                dbgassert(srcBlock.samples == tempBlock.samples);
-                dbgassert(srcBlock.channels <= tempBlock.channels);
-                dbgassert((delayLine->block.channels == srcBlock.channels) || (2 == delayLine->block.channels && 1 == srcBlock.channels));
-
-                // TODO: one of the delay lines will always be 0 samples delay
-                delayAudio(delayLine, &srcBlock, &tempBlock, delayToMaxInputLatency);
+                DelayLine* delayLine = nullptr;
+                if (delayToMaxInputLatency > 0) {
+                    delayLine = impl->getDelayLine(tracksrc.trackEdgeId, srcBlock.channels);
+                    delayLineWrite(delayLine, &srcBlock, delayToMaxInputLatency);
+                }
                 float fGainRaw = 0.0f;
-
                 //TODO: apply per-track latency compensation
                 //TODO: apply filtered sample accurate volume automation
                 bool bSuccess = DAW::resolveAutomationAtTime(this, tracksrc.gainAutomation, processingPos, &fGainRaw);
@@ -1919,7 +1910,12 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
                     /* Calculate audio/midi tracks gain level */
                     float fGainTrack;
                     if (dsp_util::getGainLvl(fGainRaw, fGainTrack)) {
-                        trackImpl->addAudio(tempBlock, fGainTrack);
+                        if (delayToMaxInputLatency > 0) {
+                            dbgassert(delayLine);
+                            trackImpl->input.addFromDelayLineOp(delayLine, delayToMaxInputLatency, AudioBlock::mix_op::ADD, fGainTrack);
+                        } else {
+                            trackImpl->input.addFromOp(&srcBlock, AudioBlock::mix_op::ADD, fGainTrack);
+                        }
                     }
                 }
             }
@@ -2373,7 +2369,6 @@ void vsthost::processAudio(audio_stage_t* stage,
         count += stage->effects.size();
     }
 
-    AudioBlock tempBlock(64, 256);
     hires_timer_t timer;
     int64_t timeTotal = 0;
     if (processingGraph != nullptr) {
@@ -2435,22 +2430,10 @@ void vsthost::processAudio(audio_stage_t* stage,
                         samplerate_t delayToMaxInputLatency = effNode.inputLatency - tracksrc.latency;
 
                         AudioBlock srcBlock = src.toAudioBlock();
-                        tempBlock.realloc(srcBlock.samples);
-                        dbgassert(srcBlock.samples == tempBlock.samples);
-
-                        uint32_t nChannels = math::min(srcBlock.channels, tempBlock.channels);
-
-                        DelayLine* delayLine = stage->getEffectDelayLine(tracksrc.trackEdgeId, nChannels);
-
-                        //dbgassert(srcBlock.channels <= tempBlock.channels);
-                        //dbgassert((delayLine->block.channels == srcBlock.channels) ||
-                        //          (2 <= delayLine->block.channels && ((delayLine->block.channels % 2) == 0) && 1 == srcBlock.channels));
-
-                        AudioBlock* srcDelayBlocked = &srcBlock;
-                        // One of the delay lines will always be 0 samples delay
+                        DelayLine* delayLine = nullptr;
                         if (delayToMaxInputLatency > 0) {
-                            delayAudio(delayLine, &srcBlock, &tempBlock, delayToMaxInputLatency);
-                            srcDelayBlocked = &tempBlock;
+                            delayLine = stage->getEffectDelayLine(tracksrc.trackEdgeId, srcBlock.channels);
+                            delayLineWrite(delayLine, &srcBlock, delayToMaxInputLatency);
                         }
 
                         //TODO: apply filtered sample accurate volume automation
@@ -2460,8 +2443,12 @@ void vsthost::processAudio(audio_stage_t* stage,
                             /* Calculate audio/midi tracks gain level */
                             float fGainTrack;
                             if (dsp_util::getGainLvl(fGainRaw, fGainTrack)) {
-                                //trackImpl->addAudio(tempBlock, src.gain * fGainRaw);
-                                blockIn->addFromOp(srcDelayBlocked, AudioBlock::mix_op::ADD, fGainTrack);
+                                if (delayToMaxInputLatency > 0) {
+                                    dbgassert(delayLine);
+                                    blockIn->addFromDelayLineOp(delayLine, delayToMaxInputLatency, AudioBlock::mix_op::ADD, fGainTrack);
+                                } else {
+                                    blockIn->addFromOp(&srcBlock, AudioBlock::mix_op::ADD, fGainTrack);
+                                }
                             }
                         }
                     }
