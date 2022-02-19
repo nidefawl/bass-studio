@@ -310,7 +310,9 @@ void module_group::process(AudioBlock* in, AudioBlock* out, double tick, int32_t
 
     vstHost->processAudio(audio, &audio->input, &audio->output, tick, samplePos, numSamples, state, effProcessingGraph.get());
 
+#ifdef DAW_DEBUG_TRACK_GRAPHS
     //TODO: this code path runs on a workerthread. Store processing-graph add to vsthost::lastProcessingGraphs from playback-thread
+#endif
 
     audio->outputPost.clear();
     /* Calculate group gain level */

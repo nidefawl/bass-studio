@@ -95,6 +95,7 @@ struct thread_stats_process_timings_t {
 };
 #define MAX_AUDIOPROCESSING_THREADS 32
 #define NUM_AUDIOPROCESSING_THREADS_INITIAL 6
+#define DAW_DEBUG_AUDIOGRAPH 0
 
 class vsthost {
 public:
@@ -135,11 +136,11 @@ public:
     std::atomic<int32_t> pluginId{ 1 << 16 };
     std::atomic<int32_t> audioStageId{ 100 };
     std::atomic<int32_t> sampleId{ (1 << 30) };//TODO: collides with audiocache::nextIdx
-
+#if DAW_DEBUG_AUDIOGRAPH
     SYNCHRONIZED_RW std::shared_ptr<DAW::track_graph_t> lastTrackGraph;
     SYNCHRONIZED_RW std::shared_ptr<DAW::processing_graph_t> lastProcessingList;
     SYNCHRONIZED_RW std::map<audiostageid_i32, std::shared_ptr<DAW::processing_graph_t>> lastProcessingGraphs;
-
+#endif
     SYNCHRONIZED_RW hires_timer_t timerAudioTick;// timer for cpu-time profiling
     SYNCHRONIZED_RW hires_timer_t timerBlock;    // timer for cpu-time profiling
     SYNCHRONIZED_RW hires_timer_t timerProfile;  // timer for cpu-time profiling

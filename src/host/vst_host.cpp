@@ -99,7 +99,9 @@ void emptyPrinft(vstplugin* plugin, const char *fmt, ...) {
 
 
 struct vsthost::track_block_processing_task_t {
+#if DAW_DEBUG_AUDIOGRAPH
     std::shared_ptr<DAW::effect_processing_graph_t> effectProcessingGraph;
+#endif
     const DAW::processing_track_node_t* trackNode = nullptr;
     AudioBlock* ptrExternalInputs = nullptr;
     AudioBlock* ptrExternalOutputs = nullptr;
@@ -1322,9 +1324,10 @@ int32_t vsthost::processRender(project_controller_t* ctrl, int32_t sample, doubl
         stats.timings["Block.GraphBuild"] = timerProfile.getTimeReset();
     }
 
+#if DAW_DEBUG_AUDIOGRAPH
     this->lastTrackGraph = processingGraph->trackGraph;
     this->lastProcessingList= processingGraph;
-
+#endif
 
     int32_t samplePosProcess = sample;
     double tickPosProcess = posDouble;
@@ -1553,8 +1556,10 @@ int32_t vsthost::processPlayback(project_controller_t* ctrl, int32_t sample, dou
             stats.timings["Block.GraphBuild"] = timerProfile.getTimeReset();
         }
 
+#if DAW_DEBUG_AUDIOGRAPH
         this->lastTrackGraph = processingGraph->trackGraph;
         this->lastProcessingList= processingGraph;
+#endif
         int64_t timeRouting = 0;
         int64_t timeProcessing = 0;
         int64_t timeResampleOutput = 0;
@@ -1941,11 +1946,13 @@ int32_t vsthost::processBlockTrack(process_scratch_buf_t& tmp, track_block_proce
             if (!DAW::buildEffectProcessingGraph(this, nullptr, trackImpl, effProcessingGraph)) {
                 log_printf("Failed building effect graph\n", 0);
             }
+#if DAW_DEBUG_AUDIOGRAPH
             req.effectProcessingGraph = effProcessingGraph;
+#endif
         }
         /* Processes audio/midi tracks plugin chain */
         processAudio(trackImpl, &trackImpl->input, &trackImpl->output, tickLatencyCompensated, sampleLatencyCompensated, (int32_t)sampleFormat.blockSize, playbackState,
-                     req.effectProcessingGraph.get());
+                     effProcessingGraph.get());
     }
     trackImpl->procStats.numBlocksProcessed++;
 
@@ -2047,8 +2054,10 @@ void vsthost::finishTreadTasks(std::vector<audiostageid_i32>& processFinishedSta
                                         task.stats.timeStart,
                                         task.stats.timeEnd
                                      };
+#if DAW_DEBUG_AUDIOGRAPH
                 lastProcessingGraphs[procTask.trackNode->stageId] = procTask.effectProcessingGraph;
                 procTask.effectProcessingGraph = nullptr;
+#endif
                 impl->blockThreadStats.push_back(thrdProcStats);
                 task.resetTask();
             }
@@ -2149,8 +2158,10 @@ int32_t vsthost::processBlock(project_controller_t* ctrl,
             blockProcTask.debugLogProcessing = debugLogProcessing;
             auto timeStart = getTimeMicros();
             processBlockTrack(impl->singleThreadedBuf, blockProcTask);
+#if DAW_DEBUG_AUDIOGRAPH
             lastProcessingGraphs[blockProcTask.trackNode->stageId] = blockProcTask.effectProcessingGraph;
             blockProcTask.effectProcessingGraph = nullptr;
+#endif
             auto timeEnd = getTimeMicros();
 
             thread_stats_process_timings_t thrdProcStats = {0, blockProcTask.trackNode->stageId, timeStart, timeEnd};
@@ -2213,7 +2224,6 @@ int32_t vsthost::processBlock(project_controller_t* ctrl,
                         if (!task.isInUse()) {
 
                             vsthost::track_block_processing_task_t blockProcTask;
-                            blockProcTask.effectProcessingGraph = nullptr;
                             blockProcTask.trackNode = &trackNode;
                             dbgassert(blockProcTask.trackNode==ptrProcessingNode);
                             blockProcTask.ptrExternalInputs = ptrExternalInputs;
@@ -2542,9 +2552,11 @@ bool vsthost::onTick() {
 }
 
 void vsthost::releaseProjectResources() {
+#if DAW_DEBUG_AUDIOGRAPH
     lastProcessingList = nullptr;
     lastTrackGraph = nullptr;
     //lastProcessingGraphs.clear();
+#endif
 }
 
 void vsthost::unload() {
