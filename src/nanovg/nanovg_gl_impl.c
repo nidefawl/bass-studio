@@ -538,7 +538,7 @@ static int glnvg__recompileShader(GLNVGshader* shader, const char* name, const c
 {
     GLint status;
     GLuint prog, vert, frag;
-    const char* str[3];
+    const char* str[3] = { NULL, NULL, NULL };
     str[0] = header;
     str[1] = opts != NULL ? opts : "";
 
@@ -592,7 +592,7 @@ static int glnvg__createShader(GLNVGshader* shader, const char* name, const char
 {
 	GLint status;
 	GLuint prog, vert, frag;
-	const char* str[3];
+	const char* str[3] = { NULL, NULL, NULL };
 	str[0] = header;
 	str[1] = opts != NULL ? opts : "";
 
@@ -1233,7 +1233,7 @@ static GLenum glnvg_convertBlendFuncFactor(int factor)
 
 static GLNVGblend glnvg__blendCompositeOperation(NVGcompositeOperationState op)
 {
-	GLNVGblend blend;
+	GLNVGblend blend = { 0 };
 	blend.srcRGB = glnvg_convertBlendFuncFactor(op.srcRGB);
 	blend.dstRGB = glnvg_convertBlendFuncFactor(op.dstRGB);
 	blend.srcAlpha = glnvg_convertBlendFuncFactor(op.srcAlpha);
@@ -1289,7 +1289,7 @@ static void glnvg__renderFlush(void* uptr)
 #if NANOVG_GL_USE_UNIFORMBUFFER
 		// Upload ubo for frag shaders
 		glBindBuffer(GL_UNIFORM_BUFFER, gl->fragBuf);
-		glBufferData(GL_UNIFORM_BUFFER, gl->nuniforms * gl->fragSize, gl->uniforms, GL_STREAM_DRAW);
+		glBufferData(GL_UNIFORM_BUFFER, (GLsizeiptr) gl->nuniforms * gl->fragSize, gl->uniforms, GL_STREAM_DRAW);
 #endif
 
 		// Upload vertex data
@@ -1297,7 +1297,7 @@ static void glnvg__renderFlush(void* uptr)
 		glBindVertexArray(gl->vertArr);
 #endif
 #ifdef NVG_3D_MODE
-		for (int i = 0; i < gl->nverts; i++) {
+		for (i = 0; i < gl->nverts; i++) {
 			if (gl->verts[i].w != 1.0f) {
 				dbgassert(0);
 			}
@@ -1367,7 +1367,7 @@ static void glnvg__renderFlush(void* uptr)
 	gl->npaths = 0;
 	gl->ncalls = 0;
 	gl->nuniforms = 0;
-	for (int i = 0; i < gl->nframebuffers; i++) {
+	for (i = 0; i < gl->nframebuffers; i++) {
 		NVGLUTempFramebuffer* fb = &gl->framebuffers[i];
 		fb->inuse = 0;
 		//TODO: renderFlush will get called multiple times per frame
@@ -1444,7 +1444,7 @@ static int glnvg__allocFragUniforms(GLNVGcontext* gl, int n)
 	if (gl->nuniforms+n > gl->cuniforms) {
 		unsigned char* uniforms;
 		int cuniforms = glnvg__maxi(gl->nuniforms+n, 128) + gl->cuniforms/2; // 1.5x Overallocate
-		uniforms = (unsigned char*)realloc(gl->uniforms, structSize * cuniforms);
+		uniforms = (unsigned char*)realloc(gl->uniforms, (size_t) structSize * cuniforms);
 		if (uniforms == NULL) return -1;
 		gl->uniforms = uniforms;
 		gl->cuniforms = cuniforms;
