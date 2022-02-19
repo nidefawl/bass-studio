@@ -49,21 +49,18 @@ mkdir build-deps
 cd build-deps
 python ../daw-deps/build.py
 ```
-
 This will produce both debug and release version of all required libraries in *C:/dev/build-deps/install*
-
 
 ## Building project:
 ```
 "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat" amd64
 cd C:/dev/daw
-mkdir build
-cd build
-cmake -DPROJECT_DEPS_PATH:PATH=C:/dev/daw-deps
+cmake -DPROJECT_DEPS_PATH:PATH=C:/dev/daw-deps -S. -Bbuild
+cmake --build build -config Release
 ```
-- If dependencies were build at some other location `-PROJECT_DEPS_INSTALL_PATH=D:/somefolder/build-deps/build/install` has to be provided.
+- Copy soxr-msvc-release.dll from ../build-deps/install/soxr/bin to ./run
 
-- Ninja can also be used to build the project. Use *-G "Ninja"* for the generator and *--target all* instead
+- If dependencies were build at some other location `-PROJECT_DEPS_INSTALL_PATH=D:/somefolder/build-deps/build/install` has to be provided.
 
 
 Windows + Clang/GCC
@@ -80,14 +77,15 @@ mkdir build-deps
 cd build-deps
 python ../daw-deps/build.py
 ```
+
 - Building project:
 ```
 cd C:/dev/daw
-cmake -G "Ninja" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=Debug -DDAW_DEPS_PATH:PATH=C:/dev/daw-deps -S. -Bbuild
+cmake -G "Ninja" -DCMAKE_BUILD_TYPE=Debug -DPROJECT_DEPS_PATH:PATH=C:/dev/daw-deps -S. -Bbuild
 cmake --build build
 ```
 - Copy libc++.dll and libunwind.dll from the llvm-mingw/bin directory to ./run/
-- Copy soxr-clang-release.dll from ../build-deps/install/soxr/bin to ./run
+- Copy libsoxr-clang-release.dll from ../build-deps/install/soxr/bin to ./run
 
 ## Other toolchains: 
 - Not supported: GCC MinGW64 from MSys2
