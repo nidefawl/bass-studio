@@ -18,12 +18,12 @@ Runtime & Installation
 
 Build requirements
 ==================
-- CMake v3.8+
+- CMake v3.20+
 - Python 3
 - Compiler with C++17 feature support:
-    - Windows: Visual Studio 2019 or llvm-mingw toolchain
-    - Linux: clang 
-    - MacOS: clang
+    - Windows: Visual Studio 2019 or llvm-mingw 14.0.0 toolchain
+    - Linux: clang minimum version 12
+    - MacOS: clang - untested
 
 Build instructions
 ==================
@@ -37,47 +37,32 @@ git clone 'https://github.com/nidefawl/daw-deps.git'
 git clone 'https://github.com/nidefawl/daw.git'
 ```
 
-Windows + Visual Studio
+Windows + Visual Studio 2022
 ==========================
-## Using cmake-gui 
-#### Building dependencies:
-- Set path to source code to C:/dev/daw-deps/
-- Set the build directory to C:/dev/build-deps-msvc/
-- Click configure, generate, open project
-- Rightclick ALL_BUILD and Build
 
-This will produce both debug and release version of all required libraries
+## Building dependencies:
+Open command prompt and build dependencies in *build-deps* next to *daw-deps*
+```
+"C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat" amd64
+cd C:/dev/
+mkdir build-deps
+cd build-deps
+python ../daw-deps/build.py
+```
 
-#### Building project:
-- Set path to source code to C:/dev/daw/
-- Set the build directory to C:/dev/daw/build-daw-msvc/
-- Click configure once
-- Set variable *DAW_DEPS_PATH to C:/dev/daw-deps/ 
-- Set DEPS_BUILD_FOLDER to C:/dev/build-deps-msvc/
-- Configure, Generate and Open Project
-- Select either Debug or RelWithDebInfo as build type
-- Rightclick Solution/Project and Build
+This will produce both debug and release version of all required libraries in *C:/dev/build-deps/install*
 
-## Using CMake to build from command line
-- Run the x64 Native Tools Command Prompt for VS 2019
-- Or run vcvars64.bat of your Visual Studio version from a command prompt:
+
+## Building project:
 ```
-"C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\VC\Auxiliary\Build\vcvars64.bat"
+"C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat" amd64
+cd C:/dev/daw
+mkdir build
+cd build
+cmake -DPROJECT_DEPS_PATH:PATH=C:/dev/daw-deps
 ```
-- Building dependencies:
-```
-cd C:/dev
-cmake -E make_directory "build-deps-msvc"
-cmake -G "Visual Studio 16 2019" -S daw-deps -B "build-deps-msvc"
-cmake --build "build-deps-msvc" --target ALL_BUILD -j 8 --
-```
-- Building project:
-```
-cd C:/dev
-cmake -E make_directory "build-daw-msvc"
-cmake -G "Visual Studio 16 2019" -DDAW_DEPS_PATH=daw-deps -DDEPS_BUILD_FOLDER=build-deps-msvc -S "daw" -B "build-daw-msvc"
-cmake --build "build-daw-msvc" --config RelWithDebInfo --target ALL_BUILD -j 8 --
-```
+- If dependencies were build at some other location `-PROJECT_DEPS_INSTALL_PATH=D:/somefolder/build-deps/build/install` has to be provided.
+
 - Ninja can also be used to build the project. Use *-G "Ninja"* for the generator and *--target all* instead
 
 
@@ -91,18 +76,18 @@ Windows + Clang/GCC
 - Building dependencies using the python script:
 ```
 cd C:/dev/
-python daw-deps/build.py ./build-deps-clang ./install-deps-clang
+mkdir build-deps
+cd build-deps
+python ../daw-deps/build.py
 ```
 - Building project:
 ```
-cd C:/dev/
-cmake -E make_directory "build-daw-clang"
-cmake -G "Ninja" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=Debug -DDAW_DEPS_PATH=daw-deps -DDEPS_BUILD_FOLDER=install-deps-clang -S "daw" -B "build-daw-clang"
-cmake --build "build-daw-clang" --target all -j 8 --
+cd C:/dev/daw
+cmake -G "Ninja" -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=Debug -DDAW_DEPS_PATH:PATH=C:/dev/daw-deps -S. -Bbuild
+cmake --build build
 ```
 - Copy libc++.dll and libunwind.dll from the llvm-mingw/bin directory to ./run/
-Note: I had difficulties debugging with GDB llvm releases versions newer than 9.0.0
-
+- Copy soxr-clang-release.dll from ../build-deps/install/soxr/bin to ./run
 
 ## Other toolchains: 
 - Not supported: GCC MinGW64 from MSys2
@@ -110,7 +95,7 @@ Note: I had difficulties debugging with GDB llvm releases versions newer than 9.
 
 macOS + clang
 =============
-
+# OUTDATED MACOS BUILD INSTRUCTIONS
 - install brew
 ```
 /usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
@@ -139,7 +124,7 @@ Running tests
 =============
 
 ```
-cd %DAW%/build/
+cd C:/dev/daw/build/
 ctest --verbose 
 ctest --output-on-failure # to only see tests that failed
 ```
