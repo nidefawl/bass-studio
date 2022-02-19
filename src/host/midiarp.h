@@ -164,8 +164,8 @@ protected:
     bool isOutputNoteGateOn(const arp_note_t& noteHeldOut);
     void addNote(tick_t start, arp_note_t& note, std::vector<noteevent_t>& noteEvents);
     void processArpInternal(playback_state state, tick_t cursorPos, const std::vector<noteevent_t>& noteEventsIn,
-                            tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int64_t wallClockTime,
+                            tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, float wallClockTime,
                             std::vector<noteevent_t>& noteEventsProcessed);
-    int updateMarkersAndAnimation(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, int64_t wallClockTime);
+    int updateMarkersAndAnimation(tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, float wallClockTime);
     int endOutputNotes(tick_t tick, tick_t start, tick_t end, tick_t loopStart, tick_t loopEnd, std::vector<noteevent_t>& noteEventsProcessed);
 };

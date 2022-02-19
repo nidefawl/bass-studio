@@ -1026,10 +1026,7 @@ void sortNoteEvents(std::vector<noteevent_t>& noteEvents) {
         // sort by tick, pitch, note off, note on
         if (a.tickOffsetInBlock == b.tickOffsetInBlock) {
             if (a.pitch == b.pitch) {
-                if (!a.isNoteOn && b.isNoteOn) {
-                    return true;
-                }
-                return false;
+                return !a.isNoteOn && b.isNoteOn;
             }
             return a.pitch < b.pitch;
         }
