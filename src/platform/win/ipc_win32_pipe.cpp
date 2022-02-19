@@ -4,7 +4,7 @@
 #include "thread.h"
 #include "exceptions.h"
 
-#include <windows.h>
+#include <Windows.h>
 #include <cstdlib>
 
 

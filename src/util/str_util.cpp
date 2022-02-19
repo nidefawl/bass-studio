@@ -7,7 +7,7 @@
 #include "assert_dbg.h"
 
 #ifdef _WIN32
-#include <windows.h>
+#include <Windows.h>
 #endif
 #if __linux__
 #include <cstdio>

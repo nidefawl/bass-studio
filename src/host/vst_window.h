@@ -1,7 +1,7 @@
 #pragma once
 
 #ifdef _WIN32
-#include <windows.h>
+#include <Windows.h>
 #define WINDOW_HANDLE HWND
 #endif
 

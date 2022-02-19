@@ -19,7 +19,7 @@
 #include "logging.h"
 
 #ifdef _WIN32
-#include <windows.h>
+#include <Windows.h>
 #endif
 
 #ifndef _MSC_VER

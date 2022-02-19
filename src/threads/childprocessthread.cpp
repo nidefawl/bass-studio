@@ -71,7 +71,7 @@ public:
     ~ProcessRunScope() = default;
 };
 #elif defined _WIN32
-#include <windows.h>
+#include <Windows.h>
 class ProcessRunScope {
 public:
     DWORD exitCode{};

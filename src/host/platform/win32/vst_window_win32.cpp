@@ -4,7 +4,7 @@
 #include "host/plugin/vst_plugin.h"
 #include "host/mainctrl.h"
 #define WINDOW_HANDLE HWND
-#include <windows.h>
+#include <Windows.h>
 #include <winuser.h>
 #include <tchar.h>
 

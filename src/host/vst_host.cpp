@@ -49,7 +49,7 @@
 #include <deque>
 
 #ifdef _WIN32
-#include <windows.h>
+#include <Windows.h>
 #endif
 #if defined(__linux__) || defined(__APPLE__)
 #include <dlfcn.h>

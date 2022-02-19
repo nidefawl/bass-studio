@@ -7,7 +7,7 @@
 #include "guicontextmenu_base.h"
 #include "buildinfo.h"
 #ifdef _WIN32
-#include <windows.h>
+#include <Windows.h>
 #endif
 
 constexpr int ID_BTN_CLOSE    = 1;

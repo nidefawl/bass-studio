@@ -32,7 +32,7 @@
 #ifdef _WIN32
 #include "platform/win/windowsize.h"
 #include "platform/win/platform_win.h"
-#include <windows.h>
+#include <Windows.h>
 #endif
 #if defined(__linux__) || defined(__APPLE__)
 #include <unistd.h>
