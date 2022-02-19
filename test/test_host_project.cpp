@@ -6,18 +6,13 @@
 #include <iostream>
 #include <vector>
 
-int main(int argc, char* argv[]) {
-    std::vector<String> vecStringArgs{
+int main(int, char*[]) {
+    std::vector<String> args{
         "-f", "cpp-test-data/serum-test.project",
         "-s", "32.0",
         "-l", "12.0",
         "-o", "test-render",
         "--render"
     };
-    std::vector<const char*> vecArgs(vecStringArgs.size());
-    std::transform(vecStringArgs.begin(),
-                   vecStringArgs.end(),
-                   vecArgs.begin(),
-                   [](String& param) { return param.c_str(); });
-    return HostCLI::runCommandLineHost((int) vecArgs.size(), vecArgs.data());
+    return HostCLI::runCommandLineHost(args);
 }

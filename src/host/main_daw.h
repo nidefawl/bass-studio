@@ -3,7 +3,7 @@
 #include <vector>
 
 namespace HostCLI {
-int runCommandLineHost(int argc, const char* argv[]);
+int runCommandLineHost(const std::vector<String>& args);
 }
 
 int startApplication(const std::vector<String>& args);

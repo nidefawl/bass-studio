@@ -1707,10 +1707,10 @@ std::shared_ptr<AppCtrl> makeApp(const std::vector<String>& args);  // main.cpp
 void startApp(std::shared_ptr<AppCtrl>& app);                // main.cpp
 
 void dawinstance_startup_commands(const std::vector<String>& args, daw_tls::tlsinstance& tls);// Forward declare from startup.cpp
-void initColor();                                            // Forward declare from gui/gui.cpp
-void deleteApp();                                            // Forward declare from host/mainctrl.cpp
-void openGlobalLog(const String& logFileName);               // Forward declare from util/debug.cpp
-void closeGlobalLog();                                       // Forward declare from util/debug.cpp
+void initColor();                               // Forward declare from gui/gui.cpp
+void deleteApp();                               // Forward declare from host/mainctrl.cpp
+void openGlobalLog(const String& logFileName);  // Forward declare from util/logging.cpp
+void closeGlobalLog();                          // Forward declare from util/logging.cpp
 
 int startApplication(const std::vector<String>& args) {
     seqthreads::registerThread("mainthread");

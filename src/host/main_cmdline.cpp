@@ -13,5 +13,7 @@ void startApp(std::shared_ptr<AppCtrl>& app) {
 
 
 int main(int argc, char* argv[]) {
-    return HostCLI::runCommandLineHost(argc, (const char**) argv);
+    std::vector<String> vecArgs(&argv[0], &argv[argc]);
+    vecArgs.insert(vecArgs.end(), {"--logfile", "daw-cli.log"});
+    return HostCLI::runCommandLineHost(vecArgs);
 }

@@ -32,7 +32,7 @@ void deleteApp() {
 
 int main(int argc, char* argv[]) {
     std::vector<String> vecArgs(&argv[0], &argv[argc]);
-    vecArgs.insert(vecArgs.end(), {"--log", "daw.log"});
+    vecArgs.insert(vecArgs.end(), {"--logfile", "daw.log"});
     int retVal = startApplication(vecArgs);
     /**
      * manually end lifetime here before the at-exit destructors for static objects runs.

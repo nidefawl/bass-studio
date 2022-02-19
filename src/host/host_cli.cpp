@@ -37,6 +37,9 @@
 #include <cstdlib>
 #include <memory>
 
+void openGlobalLog(const String& logFileName); // Forward declare from util/logging.cpp
+void closeGlobalLog();                         // Forward declare from util/logging.cpp
+
 extern volatile bool fatalError;
 
 namespace HostCLI {
@@ -75,9 +78,9 @@ static LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lPara
 #endif
 
 
-bool hasCmdOption(int argc, const char* argv[], const String& option) {
-    for (int i = 0; i < argc; ++i) {
-        String arg = argv[i];
+bool hasCmdOption(const std::vector<String>& args, const String& option) {
+    for (int i = 0; i < args.size(); ++i) {
+        const String& arg = args[i];
         if (0 == arg.find(option)) {
             std::size_t found = arg.find_last_of(option);
             if (found != String::npos) {
@@ -88,19 +91,19 @@ bool hasCmdOption(int argc, const char* argv[], const String& option) {
     return false;
 }
 
-String getCmdOption(int argc, const char* argv[], const String& option, String defaultVal) {
-    for (int i = 0; i < argc; ++i) {
-        String arg = argv[i];
+String getCmdOption(const std::vector<String>& args, const String& option, String defaultVal) {
+    for (int i = 0; i < args.size(); ++i) {
+        const String& arg = args[i];
         if (0 == arg.find(option)) {
             std::size_t found = arg.find_last_of(option);
             if (found != String::npos) {
                 if (found + 2 < arg.length() && arg[found + 1] == '=') {
                     return arg.substr(found + 2);
-                } else if (i + 1 < argc) {
-                    return argv[i + 1];
-                } else {
-                    return defaultVal;
                 }
+                if (i + 1 < args.size()) {
+                    return args[i + 1];
+                }
+                return defaultVal;
             }
         }
     }
@@ -127,7 +130,7 @@ void processWindowMessages() {
 void processWindowMessages() {}
 #endif
 
-int runCommandLineHost(int argc, const char* argv[]) {
+int runCommandLineHost(const std::vector<String>& args) {
     seqthreads::registerThread("mainthread");
     if (!SetConsoleCtrlHandler((PHANDLER_ROUTINE) ConsoleHandler, TRUE)) {
         fprintf(stderr, "Unable to install handler!\n");
@@ -164,12 +167,18 @@ int runCommandLineHost(int argc, const char* argv[]) {
         App::Platform::initPlatformEnvironment("daw");
         using DAW::settings;
         settings  = loadSettings();
-        String file           = getCmdOption(argc, argv, "-f", "");
-        String fOutWave       = getCmdOption(argc, argv, "-o", "");
-        bool bRenderOnly      = hasCmdOption(argc, argv, "--render");
-        double fStart         = StringToF(getCmdOption(argc, argv, "-s", "-1.0"));
-        double fLength        = StringToF(getCmdOption(argc, argv, "-l", "-1.0"));
-        bool activateDeferred = getCmdOption(argc, argv, "-d", "true") == "true";
+        String file           = getCmdOption(args, "-f", "");
+        String fOutWave       = getCmdOption(args, "-o", "");
+        String strLogFilename = getCmdOption(args, "--logfile", "");
+        bool bRenderOnly      = hasCmdOption(args, "--render");
+        double fStart         = StringToF(getCmdOption(args, "-s", "-1.0"));
+        double fLength        = StringToF(getCmdOption(args, "-l", "-1.0"));
+        bool activateDeferred = getCmdOption(args, "-d", "true") == "true";
+
+
+        if (strLogFilename.length()) {
+            openGlobalLog(App::Platform::toUserdataPath(strLogFilename));
+        }
 
         if (file.empty()) {
             log_printf("please specify project file with -f <file>\n", 0);
@@ -586,6 +595,7 @@ int runCommandLineHost(int argc, const char* argv[]) {
         log_printf("unhandled exception\n", 0);
         return 1;
     }
+    closeGlobalLog();
     return 0;
 }
 
