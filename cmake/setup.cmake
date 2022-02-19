@@ -54,9 +54,12 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+if (WIN32)
+  add_compile_definitions(_CRT_SECURE_NO_WARNINGS NOMINMAX) 
+endif()
+
 if (MSVC)
     add_compile_options(/external:anglebrackets /external:W0)
-    add_compile_definitions(_CRT_SECURE_NO_WARNINGS NOMINMAX) 
     add_compile_options(/MP7)
 else()
     set(PROJECT_CFG_USE_STACK_PROTECTOR "OFF" CACHE STRING "Use fstack-protector (ON/OFF/DebugOnly)")
