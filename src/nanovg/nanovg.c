@@ -26,7 +26,7 @@
 #include <alloca.h>     // alloca
 #endif
 
-#include "nanovg.h"
+#include "nanovg_internal.h"
 #define FONTSTASH_IMPLEMENTATION
 #include "fontstash.h"
 #define STB_IMAGE_IMPLEMENTATION
@@ -688,7 +688,7 @@ void nvgSave(NVGcontext* ctx)
 		return;
 	if (ctx->nstates > 0)
 		memcpy(&ctx->states[ctx->nstates], &ctx->states[ctx->nstates-1], sizeof(NVGstate));
-	ctx->states[ctx->nstates].zOffset -= 2.0f;
+	ctx->states[ctx->nstates].zOffset -= 4.0f;
 	ctx->nstates++;
 }
 
@@ -3098,11 +3098,22 @@ void nvgBatchedRect(NVGcontext* ctx, float x, float y, float w, float h)
 {
 	nvg_appendRect(ctx, x, y, w, h);
 }
-void nvgSetZOffset(NVGcontext* ctx, float z)
+void nvgSetZ(NVGcontext* ctx, float z)
 {
+#ifdef NVG_3D_MODE
 	NVGstate* state = nvg__getState(ctx);
 	state->zOffset = z;
+#endif
 }
+
+void nvgTranslateZ(NVGcontext* ctx, float z)
+{
+#ifdef NVG_3D_MODE
+	NVGstate* state = nvg__getState(ctx);
+	state->zOffset += z;
+#endif
+}
+
 
 void nvgTextBox(NVGcontext* ctx, float x, float y, float breakRowWidth, const char* string, const char* end)
 {

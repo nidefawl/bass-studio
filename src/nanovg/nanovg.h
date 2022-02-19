@@ -24,8 +24,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-//#define NVG_3D_MODE
-
 #define NVG_PI 3.14159265358979323846264338327f
 
 #ifdef _MSC_VER
@@ -542,16 +540,11 @@ void nvgFill(NVGcontext* ctx);
 // Fills the current path with current stroke style.
 void nvgStroke(NVGcontext* ctx);
 
-
-
 void nvgBatchedRender(NVGcontext* ctx);
 void nvgBatchedRect(NVGcontext* ctx, float x, float y, float w, float h);
 void nvgSetPaintColor(NVGcontext* ctx, NVGpaint* paint, NVGcolor color);
-
-#ifdef NVG_3D_MODE
-void nvgSetZOffset(NVGcontext* ctx, float z);
-#endif
-
+void nvgSetZ(NVGcontext* ctx, float z);
+void nvgTranslateZ(NVGcontext* ctx, float z);
 //
 // Text
 //
@@ -668,86 +661,9 @@ void nvgTextMetrics(NVGcontext* ctx, float* ascender, float* descender, float* l
 // Words longer than the max width are slit at nearest character (i.e. no hyphenation).
 int nvgTextBreakLines(NVGcontext* ctx, const char* string, const char* end, float breakRowWidth, NVGtextRow* rows, int maxRows);
 
-//
-// Internal Render API
-//
-enum NVGtexture {
-	NVG_TEXTURE_ALPHA = 0x01,
-	NVG_TEXTURE_RGBA = 0x02,
-};
-
-struct NVGscissor {
-	float xform[6];
-	float extent[2];
-};
-typedef struct NVGscissor NVGscissor;
-struct NVGCachingStructure {
-	int enabled;
-};
-typedef struct NVGCachingStructure NVGCachingStructure;
-
-struct NVGvertex {
-	float x,y,
-#ifdef NVG_3D_MODE
-	z,w,
-#endif
-	u,v;
-};
-typedef struct NVGvertex NVGvertex;
-
-struct NVGpath {
-	int first;
-	int count;
-	unsigned char closed;
-	int nbevel;
-	NVGvertex* fill;
-	int nfill;
-	NVGvertex* stroke;
-	int nstroke;
-	int winding;
-	int convex;
-};
-typedef struct NVGpath NVGpath;
-
-struct NVGCacheEntryInfo {
-	int allocationSizeBytes;
-};
-typedef struct NVGCacheEntryInfo NVGCacheEntryInfo;
-void nvgCacheEntryInfo(NVGcontext* ctx, nvg_shape_cache* ppCache, NVGCacheEntryInfo* info);
-
-struct NVGparams {
-	void* userPtr;
-	int edgeAntiAlias;
-	int (*renderCreate)(void* uptr);
-	int (*renderCreateTexture)(void* uptr, int type, int w, int h, int imageFlags, const unsigned char* data);
-	int (*renderDeleteTexture)(void* uptr, int image);
-	int (*renderUpdateTexture)(void* uptr, int image, int x, int y, int w, int h, const unsigned char* data);
-	int (*renderGetTextureSize)(void* uptr, int image, int* w, int* h);
-	void (*renderViewport)(void* uptr, float width, float height, float devicePixelRatio);
-	void (*renderCancel)(void* uptr);
-	void (*renderFlush)(void* uptr);
-	void (*renderFill)(void* uptr, NVGpaint* paint, NVGcompositeOperationState compositeOperation, NVGscissor* scissor, float fringe, const float* bounds, const NVGpath* paths, int npaths, float z);
-	void (*renderStroke)(void* uptr, NVGpaint* paint, NVGcompositeOperationState compositeOperation, NVGscissor* scissor, float fringe, float strokeWidth, const NVGpath* paths, int npaths, float z);
-	void (*renderTriangles)(void* uptr, NVGpaint* paint, NVGcompositeOperationState compositeOperation, NVGscissor* scissor, const NVGvertex* verts, int nverts, float z, float fringe);
-	void (*renderDelete)(void* uptr);
-	int (*renderGetGLImageHandle)(void* uptr, int image);
-};
-typedef struct NVGparams NVGparams;
-
-// Constructor and destructor, called by the render back-end.
-NVGcontext* nvgCreateInternal(NVGparams* params);
-void nvgDeleteInternal(NVGcontext* ctx);
-
-NVGparams* nvgInternalParams(NVGcontext* ctx);
-
-// Debug function to dump cached path data.
-void nvgDebugDumpPathCache(NVGcontext* ctx);
-
 #ifdef _MSC_VER
 #pragma warning(pop)
 #endif
-
-#define NVG_NOTUSED(v) for (;;) { (void)(1 ? (void)0 : ( (void)(v) ) ); break; }
 
 #ifdef __cplusplus
 }

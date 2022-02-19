@@ -124,6 +124,18 @@ struct NVGLUTempFramebuffer {
 };
 typedef struct NVGLUTempFramebuffer NVGLUTempFramebuffer;
 
+typedef struct {
+ int ncalls;
+ int nverts;
+ int nVertAllocCalls;
+ int npaths;
+ int nuniforms;
+ int vertexSize;
+ int uniformFragSize;
+ int nframebuffers;
+ int nframebuffersInUse;
+} NVGGLRenderStats;
+
 // Functions to create GL framebuffers
 void nvgluBindFramebuffer(NVGLUframebuffer* fb);
 NVGLUframebuffer* nvgluCreateFramebuffer(NVGcontext* ctx, int w, int h, int imageFlags);
@@ -133,6 +145,7 @@ void nvgluDeleteFramebuffer(NVGLUframebuffer* fb);
 NVGLUframebuffer* nvgluCreateTempFramebuffer(NVGcontext* ctx, int w, int h, int imageFlags);
 
 int nvgReloadShaders(NVGcontext* ctx, const char* shaderSrcVertex, const char* shaderSrcFragment);
+void nvglGetRenderStats(NVGcontext* ctx, NVGGLRenderStats* renderStats);
 
 extern const char* const NVG_GLSL_FRAG;
 extern const char* const NVG_GLSL_VERT;

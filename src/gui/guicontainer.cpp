@@ -214,6 +214,7 @@ void guictr_base::drawBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 
     sizeInset += ivec2(margin) * 2;
     if (sizeInset.y > 0 && sizeInset.x > 0) {
         float fRound = theme->getFloat(GuiConstant::CONST_ROUND);
+        nvgTranslateZ(vg, -2.0f);
         nvgBeginPath(vg);
         if (fRound < 0.01f) {
             nvgShapeAntiAlias(vg, 0);
@@ -228,6 +229,7 @@ void guictr_base::drawBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 
         }
         nvgFillColor(vg, bg);
         nvgFill(vg);
+        nvgTranslateZ(vg, -2.0f);
         posInset += borderThickness;
         sizeInset -= borderThickness * 2;
         if (sizeInset.y > 0 && sizeInset.x > 0 && drawInset) {
@@ -236,6 +238,7 @@ void guictr_base::drawBackground(NVGcontext* vg, const guitheme_t* theme, ivec2 
             nvgFillColor(vg, theme->getColor(GuiColor::COL_BG_BRT));
             nvgFill(vg);
         }
+        nvgTranslateZ(vg, 3.0f);
     }
 }
 
@@ -251,6 +254,7 @@ bool guictr_base::setScissorTransformContainer(NVGcontext* vg) {
     //nvgFill(vg);
     nvgIntersectScissor(vg, pos.x, pos.y, size.x, size.y);
     nvgTranslate(vg, posInset.x, posInset.y);
+    nvgTranslateZ(vg, -4.0f);
     return true;
 }
 
@@ -263,6 +267,7 @@ bool guictr_base::setScissorTransform(NVGcontext* vg) {
     int expand = 1;
     nvgIntersectScissor(vg, posInset.x - expand, posInset.y - expand, sizeInset.x + expand * 2, sizeInset.y + expand * 2);
     nvgTranslate(vg, posInset.x, posInset.y);
+    nvgTranslateZ(vg, -4.0f);
     return true;
 }
 

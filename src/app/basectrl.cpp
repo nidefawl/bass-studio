@@ -303,7 +303,6 @@ void BaseCtrl::render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, i
     NVGcolor col = getTheme()->getColor(GuiColor::COL_CLEAR_COLOR);
     glClearColor(col.r, col.g, col.b, col.a);
     glClear(GL_COLOR_BUFFER_BIT);
-    static int test = 0;
     nvgBeginFrame(vg, w, h, ratio);
     nvgScale(vg, m_scale, m_scale);
     nvgLineJoin(vg, NVGlineCap::NVG_BEVEL);
@@ -396,10 +395,6 @@ void BaseCtrl::render(NVGcontext* nanovgCtxt, int32_t x, int32_t y, int32_t w, i
 //    nvgFill(vg);
 
     nvgEndFrame(vg);
-    test++;
-    if (test > 100) {
-        test = 0;
-    }
 }
 void BaseCtrl::onGuiRemoved(void* gui) {
     // Only use gui pointer for comparison!

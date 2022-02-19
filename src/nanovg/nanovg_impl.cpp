@@ -1,6 +1,6 @@
 #include "glheaders.h"
-#include <nanovg.h>
-#include <nanovg_gl.h>
+#include "nanovg_internal.h"
+#include "nanovg_gl.h"
 
 #include "platform.h"
 #include "hires_timer.h"

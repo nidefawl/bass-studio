@@ -20,6 +20,7 @@
 // 3. This notice may not be removed or altered from any source distribution.
 //
 
+#include "nanovg_internal.h"
 #include "nanovg_gl.h"
 #include "glheaders.h"
 #include "assert_dbg.h"
@@ -34,7 +35,9 @@ enum GLNVGuniformLoc {
 	GLNVG_LOC_TEX,
 	GLNVG_LOC_FRAG,
 	GLNVG_LOC_RENDERINFO,
+#ifdef NVG_3D_MODE
 	GLNVG_LOC_MVP,
+#endif
 	GLNVG_MAX_LOCS
 };
 
@@ -194,6 +197,7 @@ struct GLNVGcontext {
 	#endif
 
 	int dummyTex;
+	NVGGLRenderStats renderStats;
 };
 typedef struct GLNVGcontext GLNVGcontext;
 
@@ -672,7 +676,9 @@ static void glnvg__getUniforms(GLNVGshader* shader)
 	shader->loc[GLNVG_LOC_FRAG] = glGetUniformLocation(shader->prog, "frag");
 #endif
 	shader->loc[GLNVG_LOC_RENDERINFO] = glGetUniformLocation(shader->prog, "renderInfo");
+#ifdef NVG_3D_MODE
 	shader->loc[GLNVG_LOC_MVP] = glGetUniformLocation(shader->prog, "u_mvp");
+#endif
 }
 
 static int glnvg__renderCreateTexture(void* uptr, int type, int w, int h, int imageFlags, const unsigned char* data);
@@ -1256,7 +1262,6 @@ static void glnvg__renderFlush(void* uptr)
 {
 	GLNVGcontext* gl = (GLNVGcontext*)uptr;
 	int i;
-
 	if (gl->ncalls > 0) {
 
 		// Setup require GL state.
@@ -1325,15 +1330,18 @@ static void glnvg__renderFlush(void* uptr)
 			0.0,// screensize.x
 			0.0,// screensize.y
 		};
-
+#ifdef NVG_3D_MODE
 		glnvg__updateMvp(gl->shader.loc[GLNVG_LOC_MVP], gl->view[0], gl->view[1]);
-
+#endif
 		glUniform4fv(gl->shader.loc[GLNVG_LOC_RENDERINFO], 1, uniformData);
 
 #if NANOVG_GL_USE_UNIFORMBUFFER
 		glBindBuffer(GL_UNIFORM_BUFFER, gl->fragBuf);
 #endif
-
+#ifdef NVG_3D_DEPTH_TEST_ENABLE
+		glEnable(GL_DEPTH_TEST);
+		glDepthFunc(GL_LEQUAL);
+#endif
 		for (i = 0; i < gl->ncalls; i++) {
 			GLNVGcall* call = &gl->calls[i];
 			glnvg__blendFuncSeparate(gl,&call->blendFunc);
@@ -1356,10 +1364,23 @@ static void glnvg__renderFlush(void* uptr)
 		glStencilOp(GL_KEEP, GL_KEEP, GL_KEEP);
 		glStencilFunc(GL_ALWAYS, 0, 0xffffffff);
 		glDisable(GL_CULL_FACE);
+#ifdef NVG_3D_DEPTH_TEST_ENABLE
+		glDisable(GL_DEPTH_TEST);
+#endif
 		glBindBuffer(GL_ARRAY_BUFFER, 0);
 		glUseProgram(0);
 		glnvg__bindTexture(gl, 0);
 	}
+
+	memset(&gl->renderStats, 0, sizeof(NVGGLRenderStats));
+	gl->renderStats.ncalls = gl->ncalls;
+	gl->renderStats.npaths = gl->npaths;
+	gl->renderStats.nverts = gl->nverts;
+	gl->renderStats.nuniforms = gl->nuniforms;
+	gl->renderStats.nframebuffers = gl->nframebuffers;
+	gl->renderStats.vertexSize = sizeof(NVGvertex);
+	gl->renderStats.uniformFragSize = gl->fragSize;
+	gl->renderStats.nVertAllocCalls = gl->nVertAllocCalls;
 
 	// Reset calls
 	gl->nverts = 0;
@@ -1375,6 +1396,9 @@ static void glnvg__renderFlush(void* uptr)
 			fb->setup = 0;
 			fb->idleframes = 0;
 			nvglu__DeleteFramebuffer(&fb->fb);
+		}
+		if (fb->setup) {
+			gl->renderStats.nframebuffersInUse++;
 		}
 	}
 }
@@ -1427,6 +1451,7 @@ static int glnvg__allocVerts(GLNVGcontext* gl, int n)
 	if (gl->nverts+n > gl->cverts) {
 		NVGvertex* verts;
 		int cverts = glnvg__maxi(gl->nverts + n, 4096) + gl->cverts/2; // 1.5x Overallocate
+		gl->nVertAllocCalls++;
 		verts = (NVGvertex*)realloc(gl->verts, sizeof(NVGvertex) * cverts);
 		if (verts == NULL) return -1;
 		gl->verts = verts;
@@ -1434,7 +1459,6 @@ static int glnvg__allocVerts(GLNVGcontext* gl, int n)
 	}
 	ret = gl->nverts;
 	gl->nverts += n;
-	gl->nVertAllocCalls++;
 	return ret;
 }
 
@@ -1732,6 +1756,13 @@ int nvgReloadShaders(NVGcontext* ctx, const char* shaderSrcVertex, const char* s
 	if (glnvg__recompileShader(&gl->shader, "shader", NVG_GLSL_DEF_HEADER, opts, shaderSrcVertex, shaderSrcFragment) == 0)
 		return 1;
 	return 0;
+}
+
+void nvglGetRenderStats(NVGcontext* ctx, NVGGLRenderStats* renderStats)
+{
+	dbgassert(ctx && renderStats);
+	GLNVGcontext* gl = (GLNVGcontext*)nvgInternalParams(ctx)->userPtr;
+	*renderStats = gl->renderStats;
 }
 
 #if defined NANOVG_GL2

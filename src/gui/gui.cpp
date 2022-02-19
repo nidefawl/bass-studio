@@ -116,6 +116,7 @@ float renderTextLabel(NVGcontext* vg,
         UIFont::bindFont(vg, instance);
         fontSizeScaled = fontSize * theme->getFloat(GuiConstant::CONST_FONT_SCALE);
     }
+    nvgTranslateZ(vg, -2.0f);
     nvgFontSize(vg, fontSizeScaled);
     nvgFillColor(vg, color);
     nvgTextAlign(vg, alignment);
@@ -131,6 +132,7 @@ float renderTextLabel(NVGcontext* vg,
            f = nvgText(vg, pos.x, pos.y, row->start, row->end);
         }
     }
+    nvgTranslateZ(vg, 2.0f);
     return f;
 }
 

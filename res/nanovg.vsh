@@ -21,7 +21,9 @@
 	varying vec2 fpos;
 #endif
 uniform vec4 renderInfo;
+#ifdef NVG_3D_MODE
 uniform mat4 u_mvp;
+#endif
 
 void main(void) {
 	ftcoord = tcoord;

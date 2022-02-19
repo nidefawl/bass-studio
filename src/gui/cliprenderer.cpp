@@ -13,6 +13,7 @@
 #include "appconfig.h"
 #include <array>
 #include <nanovg.h>
+#include <nanovg_internal.h>
 
 struct noteview_cache_impl_t {
     bool valid            = false;

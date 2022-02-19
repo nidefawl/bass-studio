@@ -798,6 +798,8 @@ public:
 
 #if BUILD_VSTHOST
             if (!this->parent) {
+                // NVGGLRenderStats nvglRenderStats;
+                // nvglGetRenderStats(this->nanovgCtxt, &nvglRenderStats);
                 daw_tls::tlsinstance& tls  = daw_tls::getTls();
                 tls.renderStats.timeRender = timer.getTime();
                 Profiling::profilingCommitStats(this, frameNumber, tls.renderStats);
