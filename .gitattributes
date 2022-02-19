@@ -2,12 +2,4 @@
 * text=auto
 *.h linguist-language=cpp
 
-glcorearb.h linguist-vendored
-stb_*.h linguist-vendored
-dr_wav* linguist-vendored
-Polyline2D.h linguist-vendored
-par_streamlines.h linguist-vendored
-fonstash.h linguist-vendored
-stb_truetype.h linguist-vendored
-vstsdk-host-2.4/ linguist-vendored
-vstsdk-plugin-2.4/ linguist-vendored
+src/thirdparty/ linguist-vendored
